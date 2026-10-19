@@ -65,4 +65,9 @@ assert.equal(run("privSection('maya')"),'','viewers see no private block when it
 assert.ok(run("privSection('kira')").includes('class="veil"')&&run("privSection('kira')").includes('veil-content'),'closed private part is a blurred veil with the request action');
 run("S.me.privOn=false");assert.equal(run("privSection('me',{grant:'granted'})"),'','my preview shows no private block when it is off');assert.ok(run("myPrivSection('me')").includes('data-act="privEnable"'),'the owner can switch it on');
 run("S.me.privOn=true;S.me.privText={ru:'',en:''};S.me.media=[];S.me.jars=S.me.jars.filter(j=>j.vis!=='granted')");assert.equal(run("privSection('me',{grant:'granted'})"),'','empty private part: nothing for viewers');assert.ok(run("myPrivSection('me')").includes('data-go="P04"'),'empty private part: the owner is offered to add content');
+// Video is trimmed by a media fragment, never re-encoded; a request only offers what the person really has.
+assert.equal(run("vsrc({url:'/v.webm',trim:{s:1,e:3.3}})"),'/v.webm#t=1.00,3.30');assert.equal(run("vsrc({url:'/v.webm#t=0,9',trim:{s:2,e:4}})"),'/v.webm#t=2.00,4.00');assert.equal(run("vsrc({url:'/v.webm'})"),'/v.webm');
+assert.ok(run("hasPrivatePart('kai')")&&run("hasPrivatePart('kira')")&&!run("hasPrivatePart('sofi')"),'only people who wrote something private have the block');
+assert.deepEqual(JSON.parse(JSON.stringify(run("privScopesOf('kai')"))),['info','interests','photos'],'no video permission is offered when there is no private video');
+assert.equal(run("privSection('sofi')"),'','a person without a private part shows no block at all');
 console.log('PASS RU/EN profile preview: details are public at both levels; the private part (description/interests/photos/video) opens only with access; hidden topics stay hidden; activity tab follows its privacy setting; follow lists drop blocked people');

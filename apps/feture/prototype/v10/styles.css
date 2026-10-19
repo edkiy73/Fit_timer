@@ -2199,3 +2199,22 @@ body.capture-shield>*{visibility:hidden!important}
 .li .selrow:not(.solo)>.selv{color:var(--mute);font-weight:500}
 
 .selrow>.selt small{display:block;margin-top:2px;font-size:12.5px;font-weight:400;line-height:1.35;color:var(--mute)}
+
+/* viewer: media never touches the screen edges on a wide screen; a big close button stays visible on any picture */
+@media (min-width:768px){
+ .vw-track figure{padding:clamp(72px,10vh,110px) clamp(72px,8vw,140px)}
+ .vw-top{padding:20px 24px}
+ .vw-top .ibtn{width:52px;height:52px;background:rgba(255,255,255,.22);box-shadow:0 0 0 1px rgba(255,255,255,.18)}
+ .vw-top .ibtn svg{width:24px;height:24px}
+ .vw-top::before{content:"";position:absolute;inset:0 0 -24px;background:linear-gradient(rgba(0,0,0,.55),transparent);pointer-events:none;z-index:-1}
+ .vw-nav{width:52px;height:52px;margin-top:-26px}.vw-nav.l{left:24px}.vw-nav.r{right:24px}
+}
+.mi img,.pgc img,.mi video{object-position:50% 35%}
+.trim{margin:6px auto 12px;max-width:420px;display:grid;gap:8px}
+.trim-h{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--mute)}.trim-h b{color:var(--ink);font-weight:650}
+.trim label{display:flex;align-items:center;gap:10px;color:var(--mute);font-size:13px}.trim label>span{width:58px}.trim input{flex:1;accent-color:var(--accent)}
+.trim .note{margin:0;font-size:12.5px}
+/* the veil is not a box: blurred placeholders sit right on the panel and fade out downwards (no edge, no outline) */
+.vault .veil{background:none;border:0;border-radius:0;overflow:visible}
+.vault .veil-content{inset:-4px -4px 0;padding:6px 4px 0;-webkit-mask-image:linear-gradient(180deg,#000 35%,transparent 96%);mask-image:linear-gradient(180deg,#000 35%,transparent 96%)}
+.vault .veil-glass{background:none;-webkit-backdrop-filter:none;backdrop-filter:none;min-height:210px}

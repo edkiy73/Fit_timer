@@ -17,15 +17,20 @@ async function compressImage(file){
  finally{URL.revokeObjectURL(src);}
 }
 async function cropImage(item,aspect){
- const img=await decodeImage(item.full||item.url);const cr=item.crop;const [aw,ah]=ASPECTS[aspect];
+ const img=await decodeImage(item.full||item.url);const cr=item.crop;const [aw,ah]=ASPECTS[aspect];const bias=cr.touched?.5:.38;/* automatic framing keeps the upper part (faces, subjects); a hand-made crop is exact */
  // the visible frame covers (fw × fh) source pixels starting at (sx, sy)
  const base=Math.max(aw/img.naturalWidth,ah/img.naturalHeight);const scale=base*cr.z;const fw=aw/scale,fh=ah/scale;
- const sx=Math.max(0,Math.min(img.naturalWidth-fw,(img.naturalWidth-fw)/2-cr.x*img.naturalWidth));const sy=Math.max(0,Math.min(img.naturalHeight-fh,(img.naturalHeight-fh)/2-cr.y*img.naturalHeight));
+ const sx=Math.max(0,Math.min(img.naturalWidth-fw,(img.naturalWidth-fw)/2-cr.x*img.naturalWidth));const sy=Math.max(0,Math.min(img.naturalHeight-fh,(img.naturalHeight-fh)*bias-cr.y*img.naturalHeight));
  const outW=Math.min(1440,Math.round(fw));const outH=Math.round(outW*ah/aw);
  const c=document.createElement('canvas');c.width=outW;c.height=outH;c.getContext('2d').drawImage(img,sx,sy,fw,fh,0,0,outW,outH);
  const blob=await encodeCanvas(c,.86);const url=URL.createObjectURL(blob);localMediaURLs.add(url);return{url,size:blob.size,w:outW,h:outH};
 }
 function videoMeta(url){return new Promise(res=>{const v=document.createElement('video');v.preload='metadata';v.muted=true;v.onloadedmetadata=()=>res({dur:v.duration||0,w:v.videoWidth,h:v.videoHeight});v.onerror=()=>res({dur:0});v.src=url;});}
+/** a profile video is a short clip: longer files are cut to a fragment (the first MAX_CLIP seconds by default, the owner can move it) */
+const MAX_CLIP=60,MIN_CLIP=1;
+/** a trimmed video plays only its fragment (media fragment #t=start,end); nothing is re-encoded */
+const vsrc=m=>{const u=m.url||m.src||'';return m.trim&&m.trim.e>m.trim.s?`${u.split('#')[0]}#t=${m.trim.s.toFixed(2)},${m.trim.e.toFixed(2)}`:u;};
+const vitem=i=>({type:'video',url:i.url,dur:i.dur,fdur:i.fdur,w:i.w,h:i.h,crop:i.crop,trim:i.trim});
 const fmtDur=s=>`${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,'0')}`;
 
 /**
@@ -62,7 +67,7 @@ async function processItem(it){
  const up=S.ui.up;if(!up)return;
  try{
   if(it.type==='image'){const r=await compressImage(it.file);Object.assign(it,{url:r.url,full:r.url,size:r.size,w:r.w,h:r.h});if(up.aspect){const c=await cropImage(it,up.aspect);Object.assign(it,{url:c.url,size:c.size,w:c.w,h:c.h});}}
-  else{const url=URL.createObjectURL(it.file);localMediaURLs.add(url);const m=await videoMeta(url);Object.assign(it,{url,size:it.orig,dur:m.dur,w:m.w,h:m.h});if(m.dur>180){it.status='error';it.err=L('Видео длиннее 3 минут','Video is longer than 3 minutes');upRefresh();return;}}
+  else{const url=URL.createObjectURL(it.file);localMediaURLs.add(url);const m=await videoMeta(url);Object.assign(it,{url,size:it.orig,dur:m.dur,w:m.w,h:m.h});if(m.dur>MAX_CLIP)it.trim={s:0,e:MAX_CLIP},it.dur=MAX_CLIP;it.fdur=m.dur;}
  }catch(e){it.status='error';it.err=L('Не получилось прочитать файл. Подойдут JPG, PNG, WEBP, HEIC с iPhone или MP4','Couldn’t read the file. JPG, PNG, WEBP, iPhone HEIC or MP4 work');upRefresh();return;}
  it.status='up';upRefresh();uploadTick(it);
 }
@@ -86,7 +91,7 @@ function uploaderSheet(){const up=S.ui.up,o=up.o;const ready=up.items.filter(i=>
  return{title:o.title||L('Загрузка','Upload'),body:`${asp}<div class="uplist">${up.items.map((it,i)=>`<div class="uprow ${it.status}" data-up="${it.id}">
   <button class="upthumb" ${it.url?`data-act="upView" data-v="${i}"`:'disabled'} aria-label="${L('Посмотреть','View')}">${it.url?(it.type==='video'?`<video src="${esc(it.url)}" muted playsinline preload="metadata"></video><span class="dur">${I.video}${fmtDur(it.dur||0)}</span>`:`<img src="${esc(it.url)}" alt="">`):`<span class="sk" style="position:absolute;inset:0;border-radius:0"></span>`}</button>
   <div class="tx"><b>${esc(it.name)}</b><small class="upst">${upStatus(it)}</small><div class="upbar"><i style="width:${it.status==='ok'?100:it.progress}%"></i></div>
-   <div class="upacts">${(it.type==='image'&&it.full||it.type==='video'&&it.url)&&up.aspect?`<button class="btn text auto" data-act="upCrop" data-v="${i}">${ic('edit',15)}${L('Кадрировать','Crop')}</button>`:''}${it.status==='error'&&it.url?`<button class="btn text auto" data-act="upRetry" data-v="${i}">${L('Повторить','Retry')}</button>`:''}<button class="btn text auto danger" data-act="upRm" data-v="${i}">${L('Убрать','Remove')}</button></div></div></div>`).join('')}</div>
+   <div class="upacts">${(it.type==='image'&&it.full||it.type==='video'&&it.url)&&(up.aspect||up.o.cropAsk||it.type==='video')?`<button class="btn text auto" data-act="upCrop" data-v="${i}">${ic('edit',15)}${L('Кадрировать','Crop')}</button>`:''}${it.status==='error'&&it.url?`<button class="btn text auto" data-act="upRetry" data-v="${i}">${L('Повторить','Retry')}</button>`:''}<button class="btn text auto danger" data-act="upRm" data-v="${i}">${L('Убрать','Remove')}</button></div></div></div>`).join('')}</div>
   ${up.items.length<(o.max||MEDIA_MAX)-(o.have||0)?`<button class="btn soft mt12" data-act="upMore">${I.plus}${L('Добавить ещё','Add more')} · ${up.items.length+(o.have||0)}/${o.max||MEDIA_MAX}</button>`:''}
   <div class="alert mt12">${I.shield}<span>${L('Фото сжимаем прямо на телефоне и стираем скрытые данные: геометку, модель камеры, дату съёмки. Лица других людей — только с их согласия.','Photos are compressed on your phone and hidden data is wiped: location, camera model, capture date. Other people’s faces only with their consent.')}</span></div>`,
  foot:`<button class="btn primary ${ready&&!busy?'':'off'}" data-act="upDone">${busy?L('Загружаем…','Uploading…'):ready?L(`Готово · ${pl(ready,['файл','файла','файлов'],['file','files'])}`,`Done · ${pl(ready,[],['file','files'])}`):L('Нечего добавить','Nothing to add')}</button>`};}
@@ -96,17 +101,21 @@ ACT.upRetry=a=>{const it=S.ui.up.items[+a.dataset.v];it.status='up';it.progress=
 ACT.upMore=()=>{const up=S.ui.up;const left=(up.o.max||MEDIA_MAX)-(up.o.have||0)-up.items.length;const input=document.createElement('input');input.type='file';input.multiple=true;input.accept=upAccept(up.o.accept);input.hidden=true;document.body.append(input);
  input.addEventListener('change',()=>{const files=[...input.files].slice(0,left);input.remove();for(const f of files){const video=f.type.startsWith('video/');if(!upAllows(up.o.accept,f))continue;const it={id:'u'+Math.random().toString(36).slice(2,8),file:f,type:video?'video':'image',name:f.name,orig:f.size,status:'prep',progress:0,crop:{x:0,y:0,z:1}};up.items.push(it);processItem(it);}upRefresh();},{once:true});input.click();};
 ACT.upView=a=>{const up=S.ui.up;openViewer(up.items.filter(i=>i.url).map(i=>({type:i.type,src:i.url})),+a.dataset.v);};
-ACT.upDone=()=>{const up=S.ui.up;if(!up||up.items.some(i=>i.status==='prep'||i.status==='up'))return;const ok=up.items.filter(i=>i.status==='ok').map(i=>({type:i.type,url:i.url,size:i.size,w:i.w,h:i.h,dur:i.dur,...(i.type==='video'&&up.aspect?{crop:{...i.crop}}:{})}));up.finished=true;closeSheet();S.ui.up=null;
+ACT.upDone=()=>{const up=S.ui.up;if(!up||up.items.some(i=>i.status==='prep'||i.status==='up'))return;const ok=up.items.filter(i=>i.status==='ok').map(i=>({type:i.type,url:i.url,size:i.size,w:i.w,h:i.h,dur:i.dur,fdur:i.fdur,...(i.type==='video'?{trim:i.trim,...(up.aspect?{crop:{...i.crop}}:{})}:{})}));up.finished=true;closeSheet();S.ui.up=null;
  if(S!==up.owner||cur()!==up.route)return;if(ok.length){up.o.done(ok);toast(L(`Добавлено: ${ok.length}`,`Added: ${ok.length}`),{type:'ok'});}};
 
 /* ---------- crop editor: drag to move, pinch / slider to zoom ---------- */
-ACT.upCrop=a=>{const up=S.ui.up;const it=up.items[+a.dataset.v];if(it.type==='video'){openCrop(it.url,up.aspect,it.crop,crop=>{it.crop=crop;S.ui.up=up;sheet(uploaderSheet,{full:true});},'video');return;}openCrop(it.full,up.aspect,it.crop,async crop=>{it.crop=crop;const c=await cropImage(it,up.aspect);Object.assign(it,{url:c.url,size:c.size,w:c.w,h:c.h});S.ui.up=up;sheet(uploaderSheet,{full:true});});};
+ACT.upCrop=async a=>{const up=S.ui.up;const it=up.items[+a.dataset.v];const asp=up.aspect||'4:5';
+ const back=()=>{S.ui.up=up;sheet(uploaderSheet,{full:true});};
+ if(it.type==='video'){openCrop(it.url,asp,it.crop||{x:0,y:0,z:1},(crop,trim)=>{it.crop=crop;it.trim=trim;it.dur=trim?trim.e-trim.s:it.dur;back();},'video',{fdur:it.fdur||it.dur,trim:it.trim});return;}
+ const im=await decodeImage(it.full),sc=Math.max(ASPECTS[asp][0]/im.naturalWidth,ASPECTS[asp][1]/im.naturalHeight)*(it.crop.z||1),fh=ASPECTS[asp][1]/sc,start=it.crop.touched?it.crop:{...it.crop,y:(im.naturalHeight-fh)*(.5-.38)/im.naturalHeight};
+ openCrop(it.full,asp,start,async crop=>{it.crop={...crop,touched:true};const c=await cropImage(it,asp);Object.assign(it,{url:c.url,size:c.size,w:c.w,h:c.h});back();});};
 /** a video is framed, not re-encoded: the chosen crop {x,y,z} is stored with it and applied as a 4:5 frame wherever it is shown */
 function vframe(m,ar=.8){const c=m.crop||{x:0,y:0,z:1},r=(m.w&&m.h)?m.w/m.h:16/9,fw=Math.max(1,r/ar)*c.z,fh=Math.max(1,ar/r)*c.z;return `position:absolute;max-width:none;object-fit:fill;width:${(fw*100).toFixed(2)}%;height:${(fh*100).toFixed(2)}%;left:${(50-fw*50+c.x*fw*100).toFixed(2)}%;top:${(50-fh*50+c.y*fh*100).toFixed(2)}%`;}
-function openCrop(src,aspect,crop,done,kind){
+function openCrop(src,aspect,crop,done,kind,vo){
  const [aw,ah]=ASPECTS[aspect];const st={x:crop.x,y:crop.y,z:crop.z};const prevUp=S.ui.up;
  sheet(()=>({title:L('Кадрирование','Crop'),body:`<div class="crop" style="aspect-ratio:${aw}/${ah}" id="cropBox">${kind==='video'?`<video src="${esc(src)}" id="cropImg" muted loop autoplay playsinline></video>`:`<img src="${esc(src)}" alt="" draggable="false" id="cropImg">`}<div class="crop-grid"><i></i><i></i><i></i><i></i></div></div>
-  <label class="crop-zoom">${ic('search',16)}<input type="range" min="1" max="3" step="0.01" value="${st.z}" id="cropZ" aria-label="${L('Масштаб','Zoom')}"></label>`,
+  <label class="crop-zoom">${ic('search',16)}<input type="range" min="1" max="3" step="0.01" value="${st.z}" id="cropZ" aria-label="${L('Масштаб','Zoom')}"></label>${kind==='video'&&vo?`<div class="trim"><div class="trim-h"><span>${L('Фрагмент','Clip')}</span><b id="trimLbl"></b></div><label><span>${L('Начало','Start')}</span><input type="range" id="trimS" min="0" max="${Math.max(1,vo.fdur)}" step="0.1" value="${vo.trim?vo.trim.s:0}"></label><label><span>${L('Конец','End')}</span><input type="range" id="trimE" min="0" max="${Math.max(1,vo.fdur)}" step="0.1" value="${vo.trim?vo.trim.e:Math.min(vo.fdur,MAX_CLIP)}"></label><p class="note">${L(`Не больше ${MAX_CLIP} секунд`,`Up to ${MAX_CLIP} seconds`)}</p></div>`:''}`,
   foot:`<div class="row g8"><button class="btn soft" style="flex:0 0 auto;width:auto" data-act="cropReset">${L('Сбросить','Reset')}</button><button class="btn primary" data-act="cropOk">${L('Применить','Apply')}</button></div>`}),{full:true,onClose:()=>{if(!S.ui.cropDone&&prevUp){S.ui.up=prevUp;setTimeout(()=>{if(!S.ui.sheet)sheet(uploaderSheet,{full:true});},300);}S.ui.cropDone=false;}});
  S.ui.crop={st,done,aspect};
  requestAnimationFrame(()=>{const box=$('#cropBox'),img=$('#cropImg'),z=$('#cropZ');if(!box)return;
@@ -122,10 +131,16 @@ function openCrop(src,aspect,crop,done,kind){
   const up=e=>{pts.delete(e.pointerId);if(pts.size<2)pinch=null;const r=[...pts.values()][0];if(r)last=r;};
   box.addEventListener('pointerup',up);box.addEventListener('pointercancel',up);
   box.addEventListener('wheel',e=>{e.preventDefault();st.z=Math.max(1,Math.min(3,st.z-e.deltaY*.002));z.value=st.z;apply();},{passive:false});
-  S.ui.crop.apply=apply;});
+  S.ui.crop.apply=apply;
+  if(kind==='video'&&vo){const sEl=$('#trimS'),eEl=$('#trimE'),lbl=$('#trimLbl');if(!sEl)return;const tr=S.ui.crop.trim={s:+sEl.value,e:+eEl.value};
+   const show=()=>{lbl.textContent=`${fmtDur(tr.s)} – ${fmtDur(tr.e)} · ${Math.round(tr.e-tr.s)} ${L('с','s')}`;};
+   const upd=who=>{let s=+sEl.value,e=+eEl.value;if(who==='s'){if(e-s<MIN_CLIP)e=Math.min(vo.fdur,s+MIN_CLIP);if(e-s>MAX_CLIP)e=s+MAX_CLIP;if(e-s<MIN_CLIP)s=Math.max(0,e-MIN_CLIP);}else{if(e-s<MIN_CLIP)s=Math.max(0,e-MIN_CLIP);if(e-s>MAX_CLIP)s=e-MAX_CLIP;if(e-s<MIN_CLIP)e=Math.min(vo.fdur,s+MIN_CLIP);}
+    sEl.value=s;eEl.value=e;tr.s=s;tr.e=e;show();try{img.currentTime=who==='e'?Math.max(s,e-1):s;}catch(_){}};
+   sEl.oninput=()=>upd('s');eEl.oninput=()=>upd('e');show();img.ontimeupdate=()=>{if(img.currentTime>=tr.e||img.currentTime<tr.s-.3)try{img.currentTime=tr.s;}catch(_){}};}
+  });
 }
 ACT.cropReset=()=>{const c=S.ui.crop;Object.assign(c.st,{x:0,y:0,z:1});$('#cropZ').value=1;c.apply&&c.apply();};
-ACT.cropOk=()=>{const c=S.ui.crop;S.ui.cropDone=true;closeSheet(true);c.done({...c.st});};
+ACT.cropOk=()=>{const c=S.ui.crop;S.ui.cropDone=true;closeSheet(true);c.done({...c.st},c.trim?{...c.trim}:undefined);};
 
 /* ---------- full-screen viewer for photos and videos ---------- */
 let VW=null;
@@ -200,7 +215,7 @@ setInterval(()=>{if(VW&&!VW.guard())invalidateViewer();},250);
   const over=document.elementFromPoint(e.clientX,e.clientY)?.closest('.mi');if(!over||over===d.cell||over.parentElement!==d.grid)return;
   const list=cells(d.grid);d.grid.insertBefore(d.cell,list.indexOf(over)>list.indexOf(d.cell)?over.nextSibling:over);});
  const up=e=>{if(!d||e.pointerId!==d.pid)return;const was=d.on,grid=d.grid,order=cells(grid).map(c=>c.dataset.id).join(','),changed=order!==d.start;stop();
-  if(was){swallow=true;setTimeout(()=>{swallow=false;},60);if(changed&&e.type==='pointerup')ACT[grid.dataset.reorder]?.({dataset:{order}});else if(changed||e.type==='pointercancel')refresh();}};
+  if(was){swallow=true;setTimeout(()=>{swallow=false;},60);if(changed&&e.type==='pointerup')ACT[grid.dataset.reorder]?.({dataset:{...grid.dataset,order}});else if(changed||e.type==='pointercancel')refresh();}};
  document.addEventListener('pointerup',up);document.addEventListener('pointercancel',up);
  document.addEventListener('touchmove',e=>{if(d?.on)e.preventDefault();},{passive:false});
  document.addEventListener('contextmenu',e=>{if(d||e.target.closest?.('[data-reorder]>.mi'))e.preventDefault();});
