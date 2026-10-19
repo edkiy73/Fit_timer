@@ -213,7 +213,7 @@ for(const [action,visibility] of [['peJarAdd','public']]){
  run(`ACT.pickTopic({dataset:{v:'${topicId}'}});ACT.interestsStart();ACT.interestAnswer({dataset:{v:'7'}})`);timers.length=0;await finish(run('ACT.interestNext(null)'));
  assert.equal(run(`S.me.jars.find(j=>j.t==='${topicId}').vis`),visibility,'last answer saves directly in its original layer');assert.equal(run('!!S.ui.interestDraft'),false,'no visibility step remains');
 }
-prepare('X01');run('ACT.addJar()');assert.equal(run('S.ui.interestDraft.fixedVis'),false,'general picker preserves the visibility choice');
+prepare('X01');run('ACT.addJar()');assert.equal(run('S.ui.interestDraft.vis'),'public','general picker has no visibility choice either');
 assert.equal((run("SC.X01.render()").match(/data-go="P03"/g)||[]).length,1,'Me keeps only the profile-card preview entry');
 assert.ok(!run("SC.C01.render({})").includes('data-v="joined"'),'no third top-level community tab');assert.ok(run('SC.C02.render()').includes('Ты участник'),'memberships remain reachable');
 console.log('PASS contextual public jars save without a visibility step; general picker and community memberships remain available');
