@@ -5,6 +5,7 @@ const document={querySelector:s=>{if(!nodes.has(s))nodes.set(s,node());return no
 const c={document,console,URL,URLSearchParams,Intl,Date,Set,Map,Promise,structuredClone,innerHeight:844,innerWidth:390,navigator:{language:'ru'},location:{href:'https://example.test/prototype-v10.html',search:'',hash:''},history:{replaceState:noop,pushState:noop,go:noop,back:noop},localStorage:{getItem:()=>null,setItem:noop},matchMedia:()=>({matches:false,addEventListener:noop}),setTimeout:()=>0,clearTimeout:noop,setInterval:()=>0,clearInterval:noop,requestAnimationFrame:noop,MutationObserver:class{observe(){}},addEventListener:noop};c.window=c;vm.createContext(c);
 for(const f of ['data','topics','core','ui','media','s-location','s-auth','s-feed','s-events','s-people','s-profile','s-comm','s-chats','s-me','s-settings','s-completion','s-navigation','qa'])vm.runInContext(fs.readFileSync(root+f+'.js','utf8'),c,{filename:f+'.js'});
 const run=s=>vm.runInContext(s,c);const json=s=>JSON.parse(JSON.stringify(run(s)));
+run('const originalSheetForContext=sheet');
 const text=h=>String(h).replace(/<[^>]*>/g,' ');
 run("render=()=>{};refresh=()=>{};");
 // Private couple data is separate; publishing is a snapshot requiring both approvals.
@@ -196,3 +197,17 @@ console.log('PASS unified profile editor saves rich private text for personal an
  const quote=run("chatQuote({actor:'me',target:'mia',msgs:[{id:'private',me:0,media:{type:'image',url:'SECRET_URL',mode:'once'},text:'SECRET_CAPTION'}]},'private')");assert.ok(!quote.includes('SECRET_URL')&&!quote.includes('SECRET_CAPTION'),'ephemeral quote contains only the media kind');
  const post=run("(()=>{const r={f:{},replyTarget:{id:'r1',a:'mia'}};return SC.F05.render({id:'p1'},r)})()");assert.ok(post.indexOf('class=\"reply-target\"')>post.indexOf('class=\"inputbar\"'),'reply context is part of the composer');
  console.log('PASS stable chat IDs, individual four-person read cursors, safe disappearing-media quotes and attached comment reply context');}
+
+run('sheet=originalSheetForContext');
+// Contextual profile additions keep their public/private destination; the general picker still asks.
+for(const [action,visibility] of [['peJarAdd','public'],['peJarAddPriv','granted']]){
+ prepare('P02');run('QA.offline=false');run(`ACT.${action}()`);const topicId=run('Object.keys(TOPICS).find(t=>!S.me.jars.some(j=>j.t===t))');
+ assert.equal(run('S.ui.interestDraft.fixedVis'),true);assert.equal(run('S.ui.interestDraft.vis'),visibility);
+ run(`ACT.interestsVis({dataset:{v:'${visibility==='public'?'granted':'public'}'}})`);assert.equal(run('S.ui.interestDraft.vis'),visibility,'destination cannot drift to a different profile layer');
+ run(`ACT.pickTopic({dataset:{v:'${topicId}'}});ACT.interestsStart();ACT.interestAnswer({dataset:{v:'7'}})`);timers.length=0;await finish(run('ACT.interestNext(null)'));
+ assert.equal(run(`S.me.jars.find(j=>j.t==='${topicId}').vis`),visibility,'last answer saves directly in its original layer');assert.equal(run('!!S.ui.interestDraft'),false,'no visibility step remains');
+}
+prepare('X01');run('ACT.addJar()');assert.equal(run('S.ui.interestDraft.fixedVis'),false,'general picker preserves the visibility choice');
+assert.equal((run("SC.X01.render()").match(/data-go="P03"/g)||[]).length,1,'Me keeps only the profile-card preview entry');
+assert.ok(!run("SC.C01.render({})").includes('data-v="joined"'),'no third top-level community tab');assert.ok(run('SC.C02.render()').includes('Ты участник'),'memberships remain reachable');
+console.log('PASS contextual public/private jars save without a visibility step; general picker and community memberships remain available');

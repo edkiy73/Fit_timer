@@ -356,7 +356,7 @@ const ACT={}, IN={}, CH={};
 const ROOTS={feed:'F01',people:'D03',groups:'C01',chats:'H01',me:'X01'};
 const ROOT_TAB=Object.fromEntries(Object.entries(ROOTS).map(([t,id])=>[id,t]));
 // spec IDs that are sub-tabs of a root screen
-const ALIAS={Q02:['Q01',{}],Q04:['P02',{owner:'couple'}],M01:['P04',{add:1}],M03:['P04',{}],F03:['F01',{sub:'following'}],E01:['C01',{sub:'events'}],E00:['C01',{sub:'events'}],D06:['D03',{sub:'likes'}],D07:['H01',{sub:'chats'}],C02:['C01',{sub:'joined'}],H06:['H01',{sub:'updates'}]};
+const ALIAS={Q02:['Q01',{}],Q04:['P02',{owner:'couple'}],M01:['P04',{add:1}],M03:['P04',{}],F03:['F01',{sub:'following'}],E01:['C01',{sub:'events'}],E00:['C01',{sub:'events'}],D06:['D03',{sub:'likes'}],D07:['H01',{sub:'chats'}],H06:['H01',{sub:'updates'}]};
 /** open a section of «Я» from anywhere: the hub stays underneath, Back returns to it */
 function openMe(id,p={}){if(S.ui.sheet)closeSheet(true);saveScroll();S.nav.tab='me';S.nav.stacks.me.length=1;if(id==='X01'){render('fade');return;}S.nav.stacks.me.push({id,p:{...p},f:{}});render('fwd');}
 function initNav(){S.nav={tab:'feed',stacks:Object.fromEntries(Object.entries(ROOTS).map(([t,id])=>[t,[{id,p:{}}]])),auth:[{id:'A01',p:{}}]};}
@@ -503,6 +503,8 @@ function empty(icon,title,text,btns=''){return `<div class="empty"><div class="e
 function sw(on){return `<span class="sw ${on?'on':''}" aria-hidden="true"></span>`;}
 function toggleRow(act,title,sub,on,extra=''){return `<button class="li" data-act="${act}" ${extra} role="switch" aria-checked="${!!on}"><span class="tx"><b>${title}</b>${sub?`<small>${sub}</small>`:''}</span>${sw(on)}</button>`;}
 function linkRow(o){return `<button class="li ${o.cls||''}" ${o.go?`data-go="${esc(o.go)}"`:''} ${o.p?`data-p='${esc(JSON.stringify(o.p))}'`:''} ${o.act?`data-act="${esc(o.act)}"`:''} ${o.v?`data-v="${esc(o.v)}"`:''}>${o.icon?`<span class="ico ${o.tone||''}">${I[o.icon]}</span>`:''}${o.av||''}<span class="tx"><b>${safeInline(o.title)}</b>${o.sub?`<small>${safeInline(o.sub)}</small>`:''}</span>${o.val?`<span class="val">${safeInline(o.val)}</span>`:''}${o.badge?`<span class="pill hot">${safeInline(o.badge)}</span>`:''}${o.noChev?'':I.chev}</button>`;}
+/** Identical compact entry and create action for event/community collections. */
+function collectionShortcut({title,count,go,create,createLabel,icon}){return `<div class="myev"><button class="myev-main" data-go="${go}"><span class="ico g">${I[icon]}</span><span class="tx"><b>${title}${count?`<em>${count}</em>`:''}</b></span></button><button class="ibtn add" data-go="${create}" aria-label="${createLabel}">${I.plus}</button></div>`;}
 /** form field bound to route form state (r.f) so language switch / back keeps input */
 function field(o){
  const r=cur();const v=r.f[o.name]??o.value??'';const err=r.err&&r.err[o.name];
