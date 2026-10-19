@@ -2162,6 +2162,10 @@ body.capture-shield>*{visibility:hidden!important}
 .actth>img,.actth>.evimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .actth>.plate,.actth>.pl{position:absolute;inset:0;width:100%;height:100%}
 .actth>i{position:absolute;right:3px;bottom:3px;width:18px;height:18px;border-radius:50%;background:rgba(10,6,10,.62);color:#ff6b86;display:grid;place-items:center}.actth>i svg{width:11px;height:11px}
+
+/* a select row inside a list reads like its neighbours (toggle / link rows): title in ink, current value muted */
+.li .selrow:not(.solo)>span{color:var(--ink);font-weight:600}
+.li .selrow:not(.solo) select{color:var(--mute);font-weight:500}
 </style>
 </head>
 <body>
@@ -5139,7 +5143,7 @@ ACT.peHideCity=()=>{cur().f.city='';cur().dirty=true;refresh();};
 function activityBlock(id,tabs){const on=tabs.filter(t=>t[2]);if(!on.length)return '';S.ui.pa||(S.ui.pa={});const cur_=on.some(t=>t[0]===S.ui.pa[id])?S.ui.pa[id]:on[0][0];const t=on.find(x=>x[0]===cur_);
  return `<section class="grp activity">${on.length>1?tabsRow(on.map(x=>[x[0],x[1],x[2]]),cur_,'profAct','tabs-full'):`<div class="grp-t"><span>${t[1]} · ${t[2]}</span></div>`}${t[3]()}</section>`;}
 /* ---------- activity: what a person did — likes, events, communities, follows. The owner decides who sees the tab (Settings → Privacy) ---------- */
-const ACT_VIS=()=>[['all',L('Все','Everyone')],['followers',L('Подписчики и взаимные','Followers & mutual')],['off',L('Выключена','Off')]];
+const ACT_VIS=()=>[['all',L('Все','Everyone')],['followers',L('Подписчики и взаимные','Followers & mutual')],['off',L('Никто','Nobody')]];
 const actHash=s=>{let h=0;for(const c of String(s))h=(h*31+c.charCodeAt(0))>>>0;return h;};
 const activityMode=id=>(id==='me'?S.me.activityVis:person(id)?.actVis)||'all';
 /** is the activity tab visible to this viewer? `o.asOther` = «as others see me» preview: no access = a stranger, with access = a contact */
@@ -5765,8 +5769,7 @@ SC.K01={title:()=>L('Настройки','Settings'),render:()=>{const m=S.me;re
  <div class="sec" style="margin-top:4px">${L('Аккаунт','Account')}</div><div class="card list">${linkRow({go:'K06',icon:'key',title:L('Вход и безопасность','Sign-in & security'),sub:esc(m.email)||L('почта не указана','no email')})}${linkRow({act:'ageFromMe',icon:'shield',tone:m.ageCheck==='ok'?'g':'a',title:L('Проверка возраста','Age check'),val:{ok:L('подтверждено','verified'),pending:L('проверяется','in progress'),none:L('не пройдена','not done')}[m.ageCheck]})}${linkRow({go:'V01',icon:'verified',tone:'v',title:L('Фото-верификация','Photo verification'),val:{ok:L('подтверждено','verified'),pending:L('проверяется','in review'),rejected:L('не прошла','failed'),none:L('не пройдена','not done')}[m.photoCheck||'none']})}${linkRow({go:'B01',icon:'crown',tone:'l',title:'Premium',val:m.premium?L('активен','active'):L('не подключён','not active')})}</div>
  <div class="sec">${L('Приложение','App')}</div><div class="card list"><div class="li"><span class="ico">${I.globe}</span>${selectRow('k2',L('Язык','Language'),[['system',L('Как в системе','System')],['ru','Русский'],['en','English']],S.langPref||'ru')}</div><div class="li"><span class="ico">${I.moon}</span>${selectRow('k3',L('Тема оформления','Appearance'),[['light',L('Светлая','Light')],['dark',L('Тёмная','Dark')],['auto',L('Системная','System')]],themePref())}</div>${linkRow({go:'K05',icon:'bell',title:L('Уведомления','Notifications')})}</div>
  <div class="sec">${L('Знакомства','Dating')}</div><div class="card list"><div class="li">${selectRow('k4mode',L('Знакомства','Dating'),[['on',L('Включены','On')],['hidden',L('Смотрю незаметно','Browsing hidden')],['off',L('Выключены','Off')]],!m.dating?'off':m.datingVisible?'on':'hidden',{aria:L('Знакомства','Dating')})}</div>${toggleRow('k4social',L('Принимать симпатии из профиля','Accept likes from my profile'),'',m.socialLikes)}</div>
- <div class="sec">${L('Приватность профиля','Profile privacy')}</div><div class="card list"><div class="li">${selectRow('k4act',L('Показывать активность в профиле','Show activity on my profile'),ACT_VIS(),m.activityVis||'all')}</div>${toggleRow('k4rsvp',L('Показывать моё участие в событиях по умолчанию','Show my event attendance by default'),'',m.rsvpShow)}</div>
- <p class="grp-n">${L('Активность — лайки, события, сообщества и подписки. Если выключить, вкладки «Активность» не будет у других; ты её видишь всегда.','Activity covers likes, events, communities and follows. If it’s off, others don’t see the Activity tab; you always do.')}</p>
+ <div class="sec">${L('Приватность профиля','Profile privacy')}</div><div class="card list"><div class="li">${selectRow('k4act',L('Кто видит активность в профиле','Who sees my profile activity'),ACT_VIS(),m.activityVis||'all')}</div>${toggleRow('k4rsvp',L('Показывать моё участие в событиях по умолчанию','Show my event attendance by default'),'',m.rsvpShow)}</div>
  <div class="sec">${L('Чаты','Chats')}</div><div class="card list">${toggleRow('k4blur',L('Размывать входящие фото и видео','Blur incoming photos and video'),L('Пока не нажмёшь, содержимое скрыто','Hidden until you tap'),m.chatBlur!==false)}</div>
  <div class="sec">${L('Данные','Data')}</div><div class="card list">${linkRow({go:'P12',icon:'block',title:L('Заблокированные','Blocked'),val:String(S.blocked.length)})}${linkRow({go:'K07',icon:'download',title:L('Мои данные и удаление','Your data & deletion')})}</div>
  <div class="sec">${L('Поддержка','Support')}</div><div class="card list">${linkRow({go:'S01',icon:'help',title:L('Помощь и безопасность','Help & safety')})}${linkRow({act:'logout',icon:'logout',cls:'danger',title:L('Выйти','Sign out'),noChev:1})}</div>
