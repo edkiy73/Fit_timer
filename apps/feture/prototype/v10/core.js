@@ -146,7 +146,7 @@ const LOGO=()=>'data:image/svg+xml,'+encodeURIComponent(LOGOS[QA.logo||'a']);
 const plate=(key,icon)=>`<div class="plate" style="${PL[key]||PL.rose};position:absolute;inset:0">${icon?`<span class="pi">${I[icon]}</span>`:''}</div>`;
 function person(id){if(id==='couple')return S.pair?.status==='active'?ownedAsPerson(S.ui.couplePreview||coupleProfile()):S.pair?{name:T(S.pair.name),pair:true,members:['me',S.pair.with],jars:[],photo:null}:null;if(id==='me')return meAsPerson();return PEOPLE[id];}
 /* one public identity — the nickname (no separate display name) */
-function pname(id){if(id==='couple'&&!activePair())return L('Совместный профиль недоступен','Couple profile unavailable');if(id==='couple')return T(S.ui.couplePreview?.name||S.pair?.profile?.name||S.pair?.name)||L('Пара','Couple');if(id==='me')return S.me.nick||L('Ты','You');const p=PEOPLE[id];if(!p)return L('Участник','Member');return p.pair&&S.lang!=='en'?p.nameRu:p.name;}
+function pname(id){if(id==='couple'&&!activePair())return T(S.pair?.name)||L('Совместный профиль недоступен','Couple profile unavailable');if(id==='couple')return T(S.ui.couplePreview?.name||S.pair?.profile?.name||S.pair?.name)||L('Пара','Couple');if(id==='me')return S.me.nick||L('Ты','You');const p=PEOPLE[id];if(!p)return L('Участник','Member');return p.pair&&S.lang!=='en'?p.nameRu:p.name;}
 const PUBLIC_VIS={pron:'public',seek:'public',gender:'public',orient:'public',format:'public',status:'public',role:'granted'};
 const requiresDiscoveryPhoto=m=>!!m.dating&&m.datingVisible!==false;
 /** a profile field as another member sees it; S.ui.viewGrant = rendering for someone with private-profile access */

@@ -239,7 +239,7 @@ ACT.rte=a=>{const box=a.closest('.rte-box'),ed=$('.rte-ed',box),c=a.dataset.v;
  rteSync(ed);rteState();};
 function postCard(p,o={}){p={...p,liked:!!(p.reactions?p.reactions.me:p.liked)};
  const mine=ownedIdentity(p.author);const pid=JSON.stringify({id:p.id});
- const head=`<div class="post-h"><button class="who" ${profGo(p.author)}>${av(p.author,'sm')}<span class="tx"><b><span class="nmt">${esc(pname(p.author))}</span>${nameBadges(person(p.author))}</b><small>${F.rel(p.t)}${p.aud==='followers'?` · <span class="aud">${I.people}${L('подписчикам','followers')}</span>`:''}${o.community&&p.community?` · ${esc(T(COMMUNITIES[p.community].name))}`:''}</small></span></button><button class="ibtn ghost sm" data-act="postMenu" data-v="${p.id}" aria-label="${L('Ещё','More')}">${I.more}</button></div>`;
+ const head=`<div class="post-h"><button class="who" ${profGo(p.author)}>${av(p.author,'sm')}<span class="tx"><b><span class="nmt">${esc(p.authorName?T(p.authorName):pname(p.author))}</span>${nameBadges(person(p.author))}</b><small>${F.rel(p.t)}${p.aud==='followers'?` · <span class="aud">${I.people}${L('подписчикам','followers')}</span>`:''}${o.community&&p.community?` · ${esc(T(COMMUNITIES[p.community].name))}`:''}</small></span></button><button class="ibtn ghost sm" data-act="postMenu" data-v="${p.id}" aria-label="${L('Ещё','More')}">${I.more}</button></div>`;
  const media=postMediaHTML(p,o);
  const tags=p.tags&&p.tags.length?`<div class="tags">${p.tags.map(t=>`<button data-go="F04" data-p='${esc(JSON.stringify({id:t}))}'>#${esc(topic(t))}</button>`).join('')}</div>`:'';
  const nC=p.comments.length;

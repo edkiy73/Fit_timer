@@ -1,7 +1,7 @@
 /* ============ D: PEOPLE — discover deck, likes, matches, dating opt-in, filters, history ============ */
 /* V7: browsing Discover needs only dating switched on — no photo, no extra checks. A photo is needed only to be shown to others. */
 const DATING_LIVE=()=>QA.datingLive!==false;window.DATING_ON=DATING_LIVE;
-const pool=()=>!DATING_LIVE()?[]:S.deckOrder.filter(id=>!social().decided[id]&&!isMatch(id)&&!isBlocked(id)&&!relatedFor(actionAuthor(),id)&&PEOPLE[id].dating&&passDating(id,social().filters.dating));
+const pool=()=>!DATING_LIVE()?[]:S.deckOrder.filter(id=>!social().decided[id]&&!isMatch(id)&&!isBlocked(id)&&!relatedFor(actionAuthor(),id)&&!(activePair()&&id===S.pair.with)&&PEOPLE[id].dating&&passDating(id,social().filters.dating));
 function passDating(id,f){const p=PEOPLE[id];if(!p.verified||!p.pair&&p.age<18)return false;
  if((f.placeMode||'city')==='city'&&f.city&&p.city!==f.city)return false;
  if(f.placeMode==='nearby'){const a=f.coords||S.me.location?.coords,b=p.location;if(!a||!b||distanceKm(a,b)>f.dist)return false;}
@@ -169,7 +169,7 @@ function openChat(id,actor=actionAuthor()){if(!PEOPLE[id]||!chatReadable(id,acto
 const dfRows=()=>[['gender',L('Гендер','Gender'),optItems('gender'),optGroups('gender')],['orient',L('Ориентация','Orientation'),optItems('orient'),optGroups('orient')],['format',L('Формат отношений','Relationship format'),optItems('format'),optGroups('format')],['seek',L('Что ищет','Looking for'),optItems('seek')],['role',L('Роль','Role'),optItems('role'),optGroups('role')],['topics',L('Интересы','Interests'),topicItems(Object.keys(TOPICS).filter(t=>!['limits','edge','safety'].includes(TOPICS[t].cat))),topicGroups(Object.keys(TOPICS).filter(t=>!['limits','edge','safety'].includes(TOPICS[t].cat)))]];
 const dfr=()=>S.ui.df;
 const dfRe=()=>{if(S.ui.sheet)resheet();else refresh();};
-function dfMatches(f){return S.deckOrder.filter(id=>!social().decided[id]&&!isMatch(id)&&!isBlocked(id)&&!relatedFor(actionAuthor(),id)&&PEOPLE[id].dating&&passDating(id,f)).length;}
+function dfMatches(f){return S.deckOrder.filter(id=>!social().decided[id]&&!isMatch(id)&&!isBlocked(id)&&!relatedFor(actionAuthor(),id)&&!(activePair()&&id===S.pair.with)&&PEOPLE[id].dating&&passDating(id,f)).length;}
 function dfSheet(){if(!S.ui.df)S.ui.df=JSON.parse(JSON.stringify(social().filters.dating));S.ui.dfsub=null;const f0=S.ui.df;f0.topics=f0.topics||[];f0.placeMode=f0.placeMode||'city';
  sheet(()=>{const f=S.ui.df;if(!f)return{title:'',body:''};const DROWS=dfRows();
   if(S.ui.dfsub){const row=DROWS.find(x=>x[0]===S.ui.dfsub);f[row[0]]=f[row[0]]||[];return{title:row[1],lead:`<button class="ibtn ghost sm" data-act="dfBack" aria-label="${L('К фильтрам','Back to filters')}">${I.back}</button>`,search:row[2].length>10,searchPh:L('Найти вариант','Find an option'),body:`${fChips(row[2],f[row[0]],'dfMulti',{k:row[0],groups:row[3]})}<p class="note sh-empty" hidden>${L('Ничего не нашлось','Nothing found')}</p>`,foot:`<button class="btn primary" data-act="dfBack">${f[row[0]].length?L(`Готово · ${f[row[0]].length}`,`Done · ${f[row[0]].length}`):L('Готово','Done')}</button>`};}

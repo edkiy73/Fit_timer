@@ -52,3 +52,6 @@ console.log('PASS fullscreen private viewer denies a narrowed media scope on the
 
 prepare('Q01');run("S.pair=null;S.pairInvite={nick:'kira',by:'me',status:'pending'};qaApproveAll()");assert.equal(run('activePair()'),false);assert.equal(run("S.pairInvite.status"),'pending');
 console.log('PASS invitation cannot self-accept or inherit a global QA approval');
+
+prepare('D03');run("coupleProfile();S.deckOrder.unshift('kira');S.datingActor='me'");assert.equal(run("pool().includes('kira')"),false,'current partner is never a discover candidate');run("S.datingActor='couple';S.pair.profile.dating=true");assert.equal(run("pool().includes('kira')"),false);
+console.log('PASS partner excluded from both personal and joint discovery');
