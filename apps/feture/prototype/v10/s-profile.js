@@ -40,7 +40,7 @@ ACT.p3Lv=a=>{closeSheet(true);const r=cur();r.p={...r.p,lv:a.dataset.v};refresh(
 ACT.p3lv=a=>{const r=cur();r.p={...r.p,lv:a.dataset.v};refresh();};
 
 ACT.pPhoto=a=>{const id=cur().p.owner==='couple'||cur().id==='Q03'?'couple':cur().id==='P03'?'me':cur().p.id;const preview=cur().p.preview;if(preview)S.ui[id==='couple'?'couplePreview':'profilePreview']=preview;if(!stepPhoto(id,+a.dataset.v)){if(preview)delete S.ui[id==='couple'?'couplePreview':'profilePreview'];const h=$('.hero');h?.classList.remove('nudge-l','nudge-r');void h?.offsetWidth;h?.classList.add(+a.dataset.v<0?'nudge-l':'nudge-r');return;}const h=$('.hero');const ix=S.ui.ph[id];const img=$('.hero>img:not(.mbg),.hero>.vframe,.hero>.plate');if(img){const t=document.createElement('div');t.innerHTML=bigPhoto(id,ix);img.replaceWith(t.firstElementChild);}const bg=$('.hero>.mbg');if(bg){const t=document.createElement('div');t.innerHTML=photoBg(id,ix);if(t.firstElementChild)bg.replaceWith(t.firstElementChild);}$$('.hero .pc-bars i').forEach((b,i)=>b.classList.toggle('on',i===ix));if(preview)delete S.ui[id==='couple'?'couplePreview':'profilePreview'];};
-ACT.pView=()=>{const id=cur().p.owner==='couple'||cur().id==='Q03'?'couple':cur().id==='P03'?'me':cur().p.id;const preview=cur().p.preview;openViewer(preview?(preview.photos||[]).map(ph=>isVideoItem(ph)?{type:'video',src:ph.url,dur:ph.dur}:{type:'image',src:IMG(ph)}):photoItems(id),(S.ui.ph||{})[id]||0);};
+ACT.pView=()=>{const id=cur().p.owner==='couple'||cur().id==='Q03'?'couple':cur().id==='P03'?'me':cur().p.id;const preview=cur().p.preview;openViewer(preview?(preview.photos||[]).map(ph=>isVideoItem(ph)?{type:'video',src:vsrc(ph),dur:ph.dur}:{type:'image',src:IMG(ph)}):photoItems(id),(S.ui.ph||{})[id]||0);};
 ACT.toMap=()=>openMe('X01');
 ACT.shareProfile=()=>toast(L('Ссылка на профиль скопирована. Без входа она ничего не покажет','Profile link copied. It shows nothing without signing in'),{type:'ok'});
 ACT.follow=a=>{const id=a.dataset.v;if(!canAct('follow','me')||isBlocked(id)||id==='me')return;const on=!social('me').follows.has(id);on?social('me').follows.add(id):social('me').follows.delete(id);
@@ -92,7 +92,7 @@ ACT.reqAccess=a=>{const id=a.dataset.v||cur().p.id;if(!needAge(()=>ACT.reqAccess
  const dec=social(accessActor()).reqOut.find(x=>x.p===id&&x.status==='declined'&&Date.now()-x.t<7*DAY);
  if(dec){toast(L('Повторный запрос этому человеку можно отправить через 7 дней после отказа','You can ask this person again 7 days after a decline'),{type:'warn'});return;}
  if(C.quotaLeft()<=0){limitSheet();return;}
- const scopes=REQ_SCOPES.filter(([k])=>allowedScopes(accessActor(),id).includes(k));S.ui.rq={id,actor:accessActor(),ticket:authorTicket(accessActor()),sel:['info']};
+ const avail=privScopesOf(id),scopes=REQ_SCOPES.filter(([k])=>allowedScopes(accessActor(),id).includes(k)&&avail.includes(k));S.ui.rq={id,actor:accessActor(),ticket:authorTicket(accessActor()),sel:[scopes.length&&!scopes.some(x=>x[0]==='info')?scopes[0][0]:'info']};
  sheet(()=>{const o=S.ui.rq;const left=C.quotaLeft(),max=S.quota.max;return{title:L('Запросить приватную часть','Request private part'),body:`<p class="note" data-couple-request ${accessActor()==='couple'?'':'hidden'}>${L(`Доступ для ${esc(pname('couple'))}.`,`Access for ${esc(pname('couple'))}.`)}</p>
  ${chipGroup(scopes.map(([k,l])=>[k,T(l)]),o.sel,'rqPick')}
  <div class="sec">${L('Осталось запросов сегодня','Requests left today')}<b style="color:var(--ink)">${left} ${L('из','of')} ${max}</b></div><div class="quota">${Array.from({length:Math.min(max,15)},(_,i)=>`<i class="${i<left?'':'off'}"></i>`).join('')}</div>
@@ -153,8 +153,8 @@ const activeGrant=receivedGrant;
  *  so «Как видят» (my preview) and a real granted view render through the same code. */
 const SEED_PRIV_JARS=[{t:'shibari',lv:9},{t:'sensory',lv:8},{t:'temperature',lv:6},{t:'roleplay',lv:7},{t:'aftercare',lv:10},{t:'filming',lv:0,limit:'hard'},{t:'strongpain',lv:0,limit:'discuss'},{t:'publicplace',lv:0,limit:'hard'}];
 function privProj(id){
- if(id==='me'||id==='couple'){const m=id==='couple'?(S.ui.couplePreview||coupleProfile()):(S.ui.profilePreview||S.me);return{jars:m.jars.filter(j=>j.vis==='granted'),text:T(m.privText)||'',media:privMedia(m).map(m=>({type:m.type==='video'?'video':'image',src:privSrc(m),style:m.style,sec:m.type==='video'?'video':'photos',dur:m.dur,w:m.w,h:m.h,crop:m.crop}))};}
- const P0=person(id);const own=P0?.photo?photoItems(id).map(x=>x.src):[];return{jars:P0?.photo||P0?.privText?SEED_PRIV_JARS:[],text:T(P0?.privText)||'',media:P0?.photo?[...own,...['/images/v10-content/post-p9-evening-atmosphere-45.webp','/images/v10-content/gallery-e3-club.webp','/images/v10-content/post-p6-latex-night-prep-45.webp','/images/v10-content/gallery-e1-ropes.webp']].slice(0,6).map(src=>({type:'image',src,sec:'photos'})):[]};}
+ if(id==='me'||id==='couple'){const m=id==='couple'?(S.ui.couplePreview||coupleProfile()):(S.ui.profilePreview||S.me);return{jars:m.jars.filter(j=>j.vis==='granted'),text:T(m.privText)||'',media:privMedia(m).map(m=>({type:m.type==='video'?'video':'image',src:privSrc(m),style:m.style,sec:m.type==='video'?'video':'photos',dur:m.dur,w:m.w,h:m.h,crop:m.crop,trim:m.trim}))};}
+ const P0=person(id);const own=P0?.photo?photoItems(id).map(x=>x.src):[];return{jars:P0?.privText?SEED_PRIV_JARS:[],text:T(P0?.privText)||'',media:P0?.privText&&P0?.photo?[...own,...['/images/v10-content/post-p9-evening-atmosphere-45.webp','/images/v10-content/gallery-e3-club.webp','/images/v10-content/post-p6-latex-night-prep-45.webp','/images/v10-content/gallery-e1-ropes.webp']].slice(0,6).map(src=>({type:'image',src,sec:'photos'})):[]};}
 /** sections a grant opens: info → description; interests → the interests placed in the private part; photos → photos; video → video */
 /* private gallery (owner 15.10): no card, no cut-up crops — the first photo large, the rest as 4:5 tiles; watermark per viewer */
 function privGallery(list,o={}){if(!list.length)return '';return `<div class="pgal">${list.map((m,i)=>`<button class="pgc" ${o.act?`data-act="${o.act}" ${o.v!=null?`data-v="${o.v}"`:''} data-i="${i+(o.off||0)}"`:'disabled'} aria-label="${L('Открыть','Open')}">${m.type==='video'?`<video src="${esc(m.src)}" ${m.type==='video'?`style="${vframe(m)}"`:''} muted playsinline preload="metadata"></video><span class="dur">${I.video}${fmtDur(m.dur||0)}</span>`:`<img src="${esc(m.src)}" alt="" draggable="false">`}${o.wm?`<span class="wm">${esc(o.wm)}</span>`:''}</button>`).join('')}</div>`;}
@@ -168,6 +168,8 @@ const privOrdered=list=>{const s=privSplit(list);return [...s.photos,...s.video]
 function privMediaGroups(media,o={}){const s=privSplit(media);let off=0;const groups=[[s.photos,L('Фото','Photos')],[s.video,L('Видео','Video')]].filter(([l])=>l.length);
  return groups.map(([l,t],gi)=>{const h=grp(`${t} · ${l.length}`,privGallery(l,{act:o.act,v:o.v,wm:o.wm,off}),{cls:'bare',foot:gi===groups.length-1?o.foot:''});off+=l.length;return h;}).join('');}
 /** does this person have a private part worth showing to others? (switched on and not empty) */
+/** what a person's private part can actually give: only those permissions are offered in a request */
+function privScopesOf(id){const pr=privProj(id);return REQ_SCOPES.map(x=>x[0]).filter(k=>k==='info'?!!pr.text:k==='interests'?pr.jars.length>0:k==='photos'?pr.media.some(m=>m.type!=='video'):pr.media.some(m=>m.type==='video'));}
 function hasPrivatePart(id){if(id==='me'||id==='couple'){const m=id==='couple'?(S.ui.couplePreview||coupleProfile()):(S.ui.profilePreview||S.me);if(!m||m.privOn===false)return false;const pr=privProj(id);return !!(pr.text||pr.jars.length||pr.media.length);}
  const p=PEOPLE[id];if(!p||p.privOn===false)return false;const pr=privProj(id);return !!(pr.text||pr.jars.length||pr.media.length);}
 function privOpenHTML(id,g,o={}){const pr=privProj(id),has=k=>g.granted.includes(k);
@@ -175,7 +177,7 @@ function privOpenHTML(id,g,o={}){const pr=privProj(id),has=k=>g.granted.includes
  const desc=has('info')&&pr.text?grp(L('Описание','Description'),md(pr.text,'bio')):'';
  const pj=sortJars(pr.jars||[]);const interests=has('interests')&&pj.length?grp(L('Интересы','Interests'),jarsHTML(pj,{act:o.preview?'':'topic',who:id})):'';
  const wm=o.preview?L('ник зрителя','viewer’s nick'):(S.me.nick||'');
- const mediaHTML=privMediaGroups(media,{act:o.preview?'':'privPeek',v:id,wm,foot:o.preview?L('Каждый видит с собственным водяным знаком.','Everyone sees them with their own watermark.'):L('С твоим водяным знаком. Доступ могут отозвать в любой момент — уважай доверие.','With your watermark. Access can be revoked any time — respect the trust.')});
+ const mediaHTML=privMediaGroups(media,{act:o.preview?'privView':'privPeek',v:id,wm,foot:o.preview?L('Каждый видит с собственным водяным знаком.','Everyone sees them with their own watermark.'):L('С твоим водяным знаком. Доступ могут отозвать в любой момент — уважай доверие.','With your watermark. Access can be revoked any time — respect the trust.')});
  return vaultHTML(`${desc}${interests}${mediaHTML}${!desc&&!interests&&!mediaHTML?`<p class="note">${L('Здесь пока ничего нет.','Nothing here yet.')}</p>`:''}`,{open:1,badge:g.until?`<span class="pill v">${esc(F.left(g.until))}</span>`:''});}
 function privSection(id,o={}){
  if(id==='me'||id==='couple'){if(!hasPrivatePart(id))return '';const g=o.grant==='granted'?{granted:['info','interests','photos','video'],until:null}:null;
@@ -185,7 +187,7 @@ function privSection(id,o={}){
  return privOpenHTML(id,g);}
 function myPrivSection(owner='me'){const model=owner==='couple'?(S.ui.couplePreview||coupleProfile()):S.me;
  if(model.privOn===false)return vaultHTML(`<p class="vault-lead">${L('Приватную часть видишь только ты. Включи её, чтобы показывать описание, интересы, фото и видео тем, кому разрешишь.','Only you see the private part. Turn it on to share a description, interests, photos and video with people you allow.')}</p><button class="btn primary" data-act="privEnable" data-v="${owner}">${I.unlock}${L('Включить приватную часть','Turn on the private part')}</button>`,{cls:'off',badge:`<span class="pill">${L('выключена','off')}</span>`});
- const media=privMedia(model).map(m=>({type:m.type==='video'?'video':'image',src:privSrc(m),dur:m.dur,w:m.w,h:m.h,crop:m.crop}));const jars=(model.jars||[]).filter(j=>j.vis==='granted');
+ const media=privMedia(model).map(m=>({type:m.type==='video'?'video':'image',src:privSrc(m),dur:m.dur,w:m.w,h:m.h,crop:m.crop,trim:m.trim}));const jars=(model.jars||[]).filter(j=>j.vis==='granted');
  const parts=`${T(model.privText)?grp(L('Описание','Description'),md(T(model.privText),'bio')):''}${jars.length?grp(L('Интересы','Interests'),jarsHTML(sortJars(jars),{act:'topic',who:'me'})):''}${privMediaGroups(media,{act:'privView',wm:S.me.nick||''})}`;
  return vaultHTML(parts.trim()?parts:`<p class="vault-lead">${L('Пока пусто. Добавь описание, интересы, фото или видео — их увидят только те, кому ты откроешь доступ.','Nothing here yet. Add a description, interests, photos or video — only people you give access to will see them.')}</p><button class="btn soft" data-go="P04" data-p='${esc(JSON.stringify({owner}))}'>${I.plus}${L('Добавить','Add')}</button>`);}
 ACT.privEnable=a=>{const owner=a.dataset.v==='couple'?'couple':'me';if(owner==='couple'&&!coupleWritable())return;const m=editableProfile({p:{owner}});if(!m)return;m.privOn=true;if(owner==='couple')markCoupleDraft();go('P04',{owner});toast(L('Приватная часть включена — добавь, что покажешь','Private part is on — add what you want to share'),{type:'ok'});};
@@ -212,7 +214,7 @@ const miGrid=(k,cells,add)=>`<div class="mgrid" data-reorder="miOrder" data-k="$
 const PUB_MAX=6;
 /** where a main-profile item sits: the draft list r.photos holds photos (src) and videos ({type:'video',url,dur}) in display order */
 function pubMediaEditor(r){const first=r.photos.findIndex(x=>!isVideoItem(x));
- return miGrid('pub',r.photos.map((ph,i)=>miCell({k:'pub',id:String(i),type:isVideoItem(ph)?'video':'image',src:isVideoItem(ph)?ph.url:IMG(ph),dur:ph.dur,w:ph.w,h:ph.h,crop:ph.crop,main:i===first})),r.photos.length<PUB_MAX?miAdd('pub',L('Добавить фото или видео','Add photos or video')):'');}
+ return miGrid('pub',r.photos.map((ph,i)=>miCell({k:'pub',id:String(i),type:isVideoItem(ph)?'video':'image',src:isVideoItem(ph)?vsrc(ph):IMG(ph),dur:ph.dur,w:ph.w,h:ph.h,crop:ph.crop,main:i===first})),r.photos.length<PUB_MAX?miAdd('pub',L('Добавить фото или видео','Add photos or video')):'');}
 /** the private part in the editor: one panel — switch beside the title; description, photos, video, who may ask, access */
 function privEditor(m,r,owner){const sp=privSplit(privMedia(m)),jars=sortJars((m.jars||[]).filter(j=>j.vis==='granted')),grants=givenGrantEntries().length,on=!!r.privOn;
  const head=`<section class="vault" id="privEdit"><div class="vault-h"><span class="vi">${I.lock}</span><div><b>${L('Приватная часть','Private part')}</b></div><button class="vsw" data-act="pePriv" role="switch" aria-checked="${on}" aria-label="${L('Приватная часть','Private part')}">${sw(on)}</button></div>`;
@@ -254,21 +256,25 @@ ACT.peOne=a=>{const r=cur(),k=a.dataset.k;r[k]=toggleIdentityValue(r[k],k,a.data
 ACT.peMulti=a=>{const r=cur(),k=a.dataset.k;r[k]=toggleIdentityValue(r[k],k,a.dataset.v);r.dirty=true;refresh();};
 /* main-profile media (draft until «Сохранить») */
 const pubItem=(r,id)=>{const i=+id;return Number.isInteger(i)&&i>=0&&i<r.photos.length?i:-1;};
-const pubFromUpload=i=>i.type==='video'?{type:'video',url:i.url,dur:i.dur,w:i.w,h:i.h,crop:i.crop}:i.url;
+const pubFromUpload=i=>i.type==='video'?vitem(i):i.url;
 ACT.phAdd=()=>{const r=cur();openUploader({max:PUB_MAX,have:r.photos.length,accept:'media',aspect:'4:5',title:L('Фото и видео профиля','Profile photos & video'),done:items=>{r.photos.push(...items.map(pubFromUpload));r.dirty=true;refresh();}});};
 /** private media (applied right away, like the text of a shared album): list, writer guard and refresh in one place */
 function privEdit(fn){const route=cur();if(route.p.owner==='couple'&&!coupleWritable())return;const model=editableProfile(route);if(!model)return;const session=S.session,pair=S.pair,lease=S.pair?.draftLease;
  return fn(model,()=>{if(S.session!==session||route.p.owner==='couple'&&(S.pair!==pair||!coupleWritable(lease)))return false;if(route.p.owner==='couple')markCoupleDraft();refresh();return true;},route);}
 const privById=(model,id)=>privMedia(model).findIndex(x=>x.id===id);
-ACT.miAdd=a=>{const k=a.dataset.k;if(k==='pub')return ACT.phAdd();const kind=k==='video'?'video':'photos';
- privEdit((model,done,route)=>{const lease=S.pair?.draftLease,pair=S.pair,session=S.session;const have=privSplit(privMedia(model))[kind].length;
-  openUploader({max:PRIV_MAX[kind],have,accept:kind==='video'?'video':'image',aspect:'4:5',title:kind==='video'?L('Приватные видео','Private video'):L('Приватные фото','Private photos'),done:items=>{if(S.session!==session||route.p.owner==='couple'&&(S.pair!==pair||!coupleWritable(lease)))return;const target=route.p.owner==='couple'?editableProfile(route):model;privMedia(target).push(...items.map(i=>({id:'pm'+Math.random().toString(36).slice(2,7),type:i.type,url:i.url,dur:i.dur,...(i.type==='video'?{w:i.w,h:i.h,crop:i.crop}:{})})));if(route.p.owner==='couple')markCoupleDraft();refresh();}});});};
+ACT.miAdd=a=>{const k=a.dataset.k;if(k==='pub')return ACT.phAdd();
+ privEdit((model,done,route)=>{const lease=S.pair?.draftLease,pair=S.pair,session=S.session;const sp=privSplit(privMedia(model)),have=sp.photos.length+sp.video.length,cap=PRIV_MAX.photos+PRIV_MAX.video;
+  /* a photo or a video can be added from either button: each lands in its own list; cropping to 4:5 is optional */
+  openUploader({max:cap,have,accept:'media',aspect:null,cropAsk:true,title:L('Приватные фото и видео','Private photos & video'),done:items=>{if(S.session!==session||route.p.owner==='couple'&&(S.pair!==pair||!coupleWritable(lease)))return;const target=route.p.owner==='couple'?editableProfile(route):model;const list=privMedia(target),now=privSplit(list);let skipped=0;
+   for(const i of items){const kind=i.type==='video'?'video':'photos';if(now[kind].length>=PRIV_MAX[kind]){skipped++;continue;}const it={id:'pm'+Math.random().toString(36).slice(2,7),...(i.type==='video'?vitem(i):{type:i.type,url:i.url})};list.push(it);now[kind].push(it);}
+   if(skipped)toast(L(`Лишнее не добавлено: ${skipped} (фото до ${PRIV_MAX.photos}, видео до ${PRIV_MAX.video})`,`Not added: ${skipped} (up to ${PRIV_MAX.photos} photos, ${PRIV_MAX.video} videos)`),{type:'warn'});
+   if(route.p.owner==='couple')markCoupleDraft();refresh();}});});};
 /** drag-and-drop result: dataset.k = 'pub' | 'photos' | 'video', dataset.order = ids in the new order */
 ACT.miOrder=a=>{const k=a.dataset.k,ids=String(a.dataset.order||'').split(',');
  if(k==='pub'){const r=cur();if(ids.length!==r.photos.length)return refresh();const next=ids.map(i=>r.photos[+i]);if(next.some(x=>x===undefined))return refresh();r.photos=next;r.dirty=true;refresh();return;}
  privEdit((model,done)=>{const list=privMedia(model),mine=list.filter(x=>(k==='video')===(x.type==='video')),byId=new Map(mine.map(x=>[x.id,x]));if(ids.length!==mine.length||ids.some(i=>!byId.has(i)))return refresh();model.media=[...list.filter(x=>!byId.has(x.id)),...ids.map(i=>byId.get(i))];done();});};
 ACT.miView=a=>{closeSheet(true);const k=a.dataset.k,id=a.dataset.v;
- if(k==='pub'){const r=cur();openViewer(r.photos.map(ph=>isVideoItem(ph)?{type:'video',src:ph.url,dur:ph.dur}:{type:'image',src:IMG(ph)}),Math.max(0,pubItem(r,id)));return;}
+ if(k==='pub'){const r=cur();openViewer(r.photos.map(ph=>isVideoItem(ph)?{type:'video',src:vsrc(ph),dur:ph.dur}:{type:'image',src:IMG(ph)}),Math.max(0,pubItem(r,id)));return;}
  const list=privOrdered(privMedia(editableProfile()));openViewer(list.map(m=>({type:m.type==='video'?'video':'image',src:privSrc(m),style:m.style,wm:'@'+(S.me.nick||'')})),Math.max(0,list.findIndex(x=>x.id===id)));};
 ACT.miMenu=a=>{const k=a.dataset.k,id=a.dataset.v,r=cur();
  const item=k==='pub'?r.photos[pubItem(r,id)]:privMedia(editableProfile())[privById(editableProfile(),id)];if(item==null)return;const video=k==='pub'?isVideoItem(item):item.type==='video';
@@ -277,16 +283,16 @@ ACT.miMenu=a=>{const k=a.dataset.k,id=a.dataset.v,r=cur();
 ACT.miReplace=a=>{closeSheet(true);const k=a.dataset.k,id=a.dataset.v;
  if(k==='pub'){const r=cur(),i=pubItem(r,id);if(i<0)return;openUploader({max:1,have:0,accept:'media',aspect:'4:5',title:L('Заменить','Replace'),done:items=>{const j=pubItem(r,id);if(j<0||!items[0])return;r.photos[j]=pubFromUpload(items[0]);r.dirty=true;refresh();}});return;}
  privEdit((model,done,route)=>{const x=privMedia(model).find(m=>m.id===id);if(!x)return;const video=x.type==='video',session=S.session,pair=S.pair,lease=S.pair?.draftLease;
-  openUploader({max:1,have:0,accept:video?'video':'image',aspect:'4:5',title:L('Заменить','Replace'),done:items=>{if(S.session!==session||route.p.owner==='couple'&&(S.pair!==pair||!coupleWritable(lease)))return;const target=route.p.owner==='couple'?editableProfile(route):model,list=privMedia(target),i=list.findIndex(m=>m.id===id);if(i<0||!items[0])return;list[i]={id,type:items[0].type,url:items[0].url,dur:items[0].dur,...(items[0].type==='video'?{w:items[0].w,h:items[0].h,crop:items[0].crop}:{})};if(route.p.owner==='couple')markCoupleDraft();refresh();}});});};
+  openUploader({max:1,have:0,accept:video?'video':'image',aspect:null,cropAsk:true,title:L('Заменить','Replace'),done:items=>{if(S.session!==session||route.p.owner==='couple'&&(S.pair!==pair||!coupleWritable(lease)))return;const target=route.p.owner==='couple'?editableProfile(route):model,list=privMedia(target),i=list.findIndex(m=>m.id===id);if(i<0||!items[0])return;list[i]={id,...(items[0].type==='video'?vitem(items[0]):{type:items[0].type,url:items[0].url})};if(route.p.owner==='couple')markCoupleDraft();refresh();}});});};
 /** crop for photos (re-framed to 4:5) and video (framing stored, applied on display) — main profile and private part alike */
 ACT.miCrop=a=>{closeSheet(true);const k=a.dataset.k,id=a.dataset.v;S.ui.up=null;
  if(k==='pub'){const r=cur(),i=pubItem(r,id);if(i<0)return;const it=r.photos[i];
-  if(isVideoItem(it)){openCrop(it.url,'4:5',it.crop||{x:0,y:0,z:1},crop=>{const j=pubItem(r,id);if(j<0)return;r.photos[j]={...r.photos[j],crop};r.dirty=true;refresh();toast(L('Кадр сохранён','Crop saved'),{type:'ok'});},'video');return;}
-  const src=IMG(it);openCrop(src,'4:5',{x:0,y:0,z:1},async crop=>{const c=await cropImage({full:src,crop},'4:5');const j=pubItem(r,id);if(j<0)return;r.photos[j]=c.url;r.dirty=true;refresh();toast(L('Кадр сохранён','Crop saved'),{type:'ok'});});return;}
+  if(isVideoItem(it)){openCrop(it.url,'4:5',it.crop||{x:0,y:0,z:1},(crop,trim)=>{const j=pubItem(r,id);if(j<0)return;r.photos[j]={...r.photos[j],crop,trim,dur:trim?trim.e-trim.s:r.photos[j].dur};r.dirty=true;refresh();toast(L('Кадр сохранён','Crop saved'),{type:'ok'});},'video',{fdur:it.fdur||it.dur,trim:it.trim});return;}
+  const src=IMG(it);openCrop(src,'4:5',{x:0,y:0,z:1},async crop=>{const c=await cropImage({full:src,crop:{...crop,touched:true}},'4:5');const j=pubItem(r,id);if(j<0)return;r.photos[j]=c.url;r.dirty=true;refresh();toast(L('Кадр сохранён','Crop saved'),{type:'ok'});});return;}
  privEdit((model,done)=>{const x=privMedia(model).find(m=>m.id===id);if(!x)return;
   const save=patch=>privEdit((m2,d2)=>{const y=privMedia(m2).find(m=>m.id===id);if(!y)return;Object.assign(y,patch);if(d2())toast(L('Кадр сохранён','Crop saved'),{type:'ok'});});
-  if(x.type==='video'){openCrop(x.url,'4:5',x.crop||{x:0,y:0,z:1},crop=>save({crop}),'video');return;}
-  const src=privSrc(x);openCrop(src,'4:5',{x:0,y:0,z:1},async crop=>{const c=await cropImage({full:src,crop},'4:5');save({url:c.url,src:undefined});});});};
+  if(x.type==='video'){openCrop(x.url,'4:5',x.crop||{x:0,y:0,z:1},(crop,trim)=>save({crop,trim,dur:trim?trim.e-trim.s:x.dur}),'video',{fdur:x.fdur||x.dur,trim:x.trim});return;}
+  const src=privSrc(x);openCrop(src,'4:5',{x:0,y:0,z:1},async crop=>{const c=await cropImage({full:src,crop:{...crop,touched:true}},'4:5');save({url:c.url,src:undefined});});});};
 ACT.phMain=a=>{closeSheet(true);const r=cur(),i=pubItem(r,a.dataset.v);if(i<0||isVideoItem(r.photos[i]))return;const [ph]=r.photos.splice(i,1);r.photos.unshift(ph);r.dirty=true;refresh();toast(L('Теперь это главное фото','This is now your main photo'),{type:'ok'});};
 /** delete with an undo toast: the item goes back to the same place */
 ACT.miRm=a=>{if(S.ui.sheet)closeSheet(true);const k=a.dataset.k,id=a.dataset.v;
@@ -301,8 +307,8 @@ ACT.peSave=a=>{const r=cur(),session=S.session,pair=S.pair,ticket=authorTicket(r
 
 /* P04 — the private part: what you share by request — description, photos, video (each with its own permission) */
 function privMedia(model=editableProfile()){if(!model)return [];if(!model.media){model.media=S.persona!=='new'?[{id:'pm0',type:'image',src:8},...['/images/v10-content/post-p9-evening-atmosphere-45.webp','/images/v10-content/gallery-e3-club.webp','/images/v10-content/post-p6-latex-night-prep-45.webp','/images/v10-content/gallery-e1-ropes.webp'].map((url,i)=>({id:'pa'+i,type:'image',url}))]:[];}return model.media;}
-const privSrc=m=>m.url||IMG(m.src);
-MEDIA_SRC.priv=()=>privOrdered(privMedia(cur().id==='Q03'?coupleProfile():editableProfile())).map(m=>({type:m.type,url:privSrc(m),style:m.style,dur:m.dur}));
+const privSrc=m=>m.type==='video'?vsrc(m):(m.url||IMG(m.src));
+MEDIA_SRC.priv=()=>{const pv=cur().p?.preview;return privOrdered(privMedia(pv||(cur().id==='Q03'?coupleProfile():editableProfile()))).map(m=>({type:m.type,url:privSrc(m),style:m.style,dur:m.dur}));};
 /* P04 (old standalone screen) now opens the profile editor scrolled to the private block */
 SC.P04={...SC.P02,title:()=>L('Приватная часть','Private part'),render:(p,r)=>SC.P02.render(p,r),after:()=>setTimeout(()=>$('#privEdit')?.scrollIntoView({block:'start'}),60)};
 ACT.privTextSave=a=>{if(cur().p.owner==='couple'&&!coupleWritable())return;const r=cur(),session=S.session,pair=S.pair;const v=fv('privText').trim().slice(0,1000);run(a,()=>{if(S.session!==session||r.p.owner==='couple'&&S.pair!==pair)return;const m=editableProfile(r);if(!m)return;m.privText=v;if(r.p.owner==='couple')markCoupleDraft();r.f.privText=v;r.dirty=false;refresh();},{ms:300,ok:L('Текст сохранён — его видят только те, кому ты откроешь доступ','Saved — only people you share access with can see it')});};
