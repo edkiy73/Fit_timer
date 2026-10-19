@@ -176,10 +176,13 @@ console.log('PASS unified profile editor saves rich private text for personal an
  assert.deepEqual(json("privFieldRows(S.me).map(x=>x[0])").length>0,true,'it is listed in the private part instead');
  run("S.ui.viewGrant=true");assert.deepEqual(json("meAsPerson().role"),[],'even for a viewer with access the main profile does not repeat it');run("S.ui.viewGrant=false");
  prepare('P02',{});run("S.me.vis={...PUBLIC_VIS,role:'granted'};S.me.privOn=true;");const ed=run("SC.P02.render(cur().p,cur())");
- assert.ok(ed.split('id="privEdit"')[1]?.includes('data-act="fieldWhere" data-k="role"'),'the editor shows moved data inside the private panel');assert.ok(!ed.includes('data-act="visCycle"')&&!ed.includes('Who sees these fields')&&!ed.includes('Кто видит эти поля'),'no scattered visibility pills');
- assert.ok(ed.includes('data-act="peReq"'),'who may ask for access is set inside the private panel');
+ assert.ok(ed.split('id="privEdit"')[1]?.includes('data-sel="fieldWhere" data-k="role"'),'the editor shows moved data inside the private panel');assert.ok(!ed.includes('data-act="visCycle"')&&!ed.includes('Who sees these fields')&&!ed.includes('Кто видит эти поля'),'no scattered visibility pills');
+ assert.ok(ed.includes('data-sel="peReq"'),'who may ask for access is set inside the private panel');
  prepare('Q01',{});run("coupleProfile()");const hub=run("SC.Q01.render(cur().p,cur())");assert.ok(!hub.includes('pairHide')&&!hub.includes('pairStopSharing'),'no non-clickable status rows in the pair hub');
  prepare('Q03',{});run("coupleProfile()");assert.ok(!text(run("SC.Q03.render(cur().p,cur())")).match(/Статус отношений|Relationship status/),'a couple page does not show a relationship status');
  prepare('Q09',{});run("coupleProfile();var r=cur();r.init=1;r.mode='approve';r.req='matches'");run("ACT.q9Done()");assert.equal(run("S.pair.profile.requestsFrom"),'matches','settings chosen at creation are applied');
  prepare('P07',{});run("ACT.p7tab({dataset:{v:'withme'}})");assert.equal(run("navNextReplace"),true,'switching a tab replaces the history entry');
  console.log('PASS two layers: private data lives only in the private part, editor panels, couple set-up, tabs do not add history');}
+{prepare('K01',{});const sel=run("selectRow('k2','x',[['ru','Русский'],['en','English']],'ru')");assert.ok(sel.includes('data-sel="k2"')&&!sel.includes('data-act='),'a select must not carry data-act: tapping it would fire the click handler and re-render before a value is chosen');
+ run("CH.sel({value:'en',dataset:{sel:'k2'}})");assert.equal(run("S.lang"),'en','a changed select runs its action');
+ console.log('PASS inline selects: change runs the action, a tap does not re-render');}

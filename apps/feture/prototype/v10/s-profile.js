@@ -14,7 +14,7 @@ function profileView(id,r,o={}){
  const modOf=Object.keys(COMMUNITIES).filter(c=>COMMUNITIES[c].mods.includes(id));
  const kv=identityFields().filter(([k])=>!['pron','gender','orient'].includes(k)&&!(p.pair&&k==='status')).map(([k,title])=>[title,IDENTITY_MULTI.includes(k)?fmtList(p[k]).map(v=>opt(k,v)).join(', '):opt(k,p[k])]).filter(x=>x[1]);
  /* V8: one page — profile, then the private part right after it when access is open. No tabs. */
- const bio=T(p.bio)?`<div class="bio">${md(T(p.bio),'bio')}</div>`:self?`<button class="btn soft sm" data-go="P02" data-p='${esc(JSON.stringify({owner}))}'>${I.plus}${L('Добавить о себе','Add a bio')}</button>`:'';
+ const bio=T(p.bio)?grp(p.pair?L('О нас','About us'):L('О себе','About'),md(T(p.bio),'bio')):'';
  const pj=pubJars(id);
  const body=`${bio}
   ${pj.length?grp(L('Интересы','Interests'),jarShelf(pj,{pre:1,act:'topic',who:id,moreAct:self?(id==='couple'?'coupleJars':'myJarsAll'):'allJars'})):''}

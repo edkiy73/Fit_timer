@@ -3038,8 +3038,8 @@ function tabsRow(items,active,act,cls=''){return seg(items,active,act,cls||'sm')
 /** V8: everything that belongs together lives in one card with a small title above it */
 function grp(title,html,o={}){return `<section class="grp ${o.cls||''}" ${o.id?`id="${o.id}"`:''}>${title?`<div class="grp-t"><span>${title}</span>${o.right||''}</div>`:''}<div class="card ${o.list?'list':''} ${o.flat?'flat':''} ${o.inner||''}">${html}</div>${o.foot?`<p class="grp-n">${o.foot}</p>`:''}</section>`;}
 /** one way to pick a value: a native select with its current text (single choice) or chips (several). No big option blocks. */
-function selectRow(act,label,items,value,o={}){return `<label class="selrow ${label?'':'solo'}">${label?`<span>${label}</span>`:''}<select data-ch="sel" data-act="${act}" ${o.k?`data-k="${o.k}"`:''} aria-label="${esc(label||o.aria||'')}">${items.map(([k,t,,dis])=>`<option value="${esc(k)}" ${String(k)===String(value)?'selected':''} ${dis?'disabled':''}>${esc(t)}</option>`).join('')}</select></label>`;}
-CH.sel=el=>{el.dataset.v=el.value;const fn=ACT[el.dataset.act];if(fn)fn(el);};
+function selectRow(act,label,items,value,o={}){return `<label class="selrow ${label?'':'solo'}">${label?`<span>${label}</span>`:''}<select data-ch="sel" data-sel="${act}" ${o.k?`data-k="${o.k}"`:''} aria-label="${esc(label||o.aria||'')}">${items.map(([k,t,,dis])=>`<option value="${esc(k)}" ${String(k)===String(value)?'selected':''} ${dis?'disabled':''}>${esc(t)}</option>`).join('')}</select></label>`;}
+CH.sel=el=>{el.dataset.v=el.value;const fn=ACT[el.dataset.sel];if(fn)fn(el);};
 function choices(items,sel,act,o={}){if(!o.multi)return selectRow(act,o.label||'',items,[].concat(sel)[0],o);const set=new Set([].concat(sel).filter(x=>x!=null));return `<div class="chips" role="group">${items.map(([k,t,,dis])=>`<button class="chip ${set.has(k)?'on':''}" data-act="${act}" data-v="${esc(k)}" ${o.k?`data-k="${o.k}"`:''} aria-pressed="${set.has(k)}" ${dis?'disabled':''}>${t}</button>`).join('')}</div>`;}
 function empty(icon,title,text,btns=''){return `<div class="empty"><div class="em-ic">${I[icon]}</div><h3>${safeInline(title)}</h3>${text?`<p>${safeInline(text)}</p>`:''}${btns?`<div class="btns">${btns}</div>`:''}</div>`;}
 function sw(on){return `<span class="sw ${on?'on':''}" aria-hidden="true"></span>`;}
@@ -4729,7 +4729,7 @@ function profileView(id,r,o={}){
  const modOf=Object.keys(COMMUNITIES).filter(c=>COMMUNITIES[c].mods.includes(id));
  const kv=identityFields().filter(([k])=>!['pron','gender','orient'].includes(k)&&!(p.pair&&k==='status')).map(([k,title])=>[title,IDENTITY_MULTI.includes(k)?fmtList(p[k]).map(v=>opt(k,v)).join(', '):opt(k,p[k])]).filter(x=>x[1]);
  /* V8: one page — profile, then the private part right after it when access is open. No tabs. */
- const bio=T(p.bio)?`<div class="bio">${md(T(p.bio),'bio')}</div>`:self?`<button class="btn soft sm" data-go="P02" data-p='${esc(JSON.stringify({owner}))}'>${I.plus}${L('Добавить о себе','Add a bio')}</button>`:'';
+ const bio=T(p.bio)?grp(p.pair?L('О нас','About us'):L('О себе','About'),md(T(p.bio),'bio')):'';
  const pj=pubJars(id);
  const body=`${bio}
   ${pj.length?grp(L('Интересы','Interests'),jarShelf(pj,{pre:1,act:'topic',who:id,moreAct:self?(id==='couple'?'coupleJars':'myJarsAll'):'allJars'})):''}
