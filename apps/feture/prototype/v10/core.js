@@ -147,15 +147,12 @@ const plate=(key,icon)=>`<div class="plate" style="${PL[key]||PL.rose};position:
 function person(id){if(id==='couple')return S.pair?.status==='active'?ownedAsPerson(S.ui.couplePreview||coupleProfile()):S.pair?{name:T(S.pair.name),pair:true,members:['me',S.pair.with],jars:[],photo:null}:null;if(id==='me')return meAsPerson();return PEOPLE[id];}
 /* one public identity — the nickname (no separate display name) */
 function pname(id){if(id==='couple'&&!activePair())return T(S.pair?.name)||L('Совместный профиль недоступен','Couple profile unavailable');if(id==='couple')return T(S.ui.couplePreview?.name||S.pair?.profile?.name||S.pair?.name)||L('Пара','Couple');if(id==='me')return S.me.nick||L('Ты','You');const p=PEOPLE[id];if(!p)return L('Участник','Member');return p.pair&&S.lang!=='en'?p.nameRu:p.name;}
-const PUBLIC_VIS={pron:'public',seek:'public',gender:'public',orient:'public',format:'public',status:'public',role:'granted'};
 const requiresDiscoveryPhoto=m=>!!m.dating&&m.datingVisible!==false;
-/** a profile field as another member sees it; S.ui.viewGrant = rendering for someone with private-profile access */
-/** the main profile shows only what is placed in it; data placed in the private part is shown there (privFieldRows), never in both */
-function publicField(m,k){const v=m.vis?.[k]??PUBLIC_VIS[k]??'public';return v==='public'?m[k]:Array.isArray(m[k])?[]:null;}
-const fieldLayer=(m,k)=>m.vis?.[k]??PUBLIC_VIS[k]??'public';
+/** profile details (role, format, …) are always part of the main profile: the owner no longer picks a layer per field */
+const publicField=(m,k)=>m[k];
 function ownedAsPerson(m){return{photo:m.photo,bio:m.bio,city:m.city,dating:!!m.dating,socialLikes:!!m.socialLikes,pair:!!m.pair,members:m.pair?[...m.members]:undefined,pv:m.photoCheck==='ok',premium:!!m.premium,name:m.pair?T(m.name):m.nick,age:m.showAge===false?null:ageOf(m.dob),location:m.location?.coords,pron:publicField(m,'pron'),gender:publicField(m,'gender'),orient:publicField(m,'orient'),format:publicField(m,'format'),status:publicField(m,'status'),role:publicField(m,'role'),seek:publicField(m,'seek')||[],verified:m.ageCheck==='ok',online:true,jars:(m.jars||[]).filter(j=>j.vis==='public')};}
 function meAsPerson(){return ownedAsPerson(S.ui.profilePreview||S.me);}
-function coupleProfile(){const P=S.pair;if(P?.status!=='active')return null;P.id??='pair_'+P.with+'_'+P.since;if(!P.profile)P.profile={pair:true,members:['me',P.with],name:{...P.name},nick:'couple',bio:P.desc||{ru:'',en:''},privText:{ru:'',en:''},photos:[],photo:null,city:null,pron:null,gender:[],orient:[],role:[],status:'couple',format:[],seek:[],vis:{...PUBLIC_VIS},jars:[],history:[],media:[],requestsFrom:'all',socialLikes:false,dating:false,datingVisible:false,showAge:false};return P.profile;}
+function coupleProfile(){const P=S.pair;if(P?.status!=='active')return null;P.id??='pair_'+P.with+'_'+P.since;if(!P.profile)P.profile={pair:true,members:['me',P.with],name:{...P.name},nick:'couple',bio:P.desc||{ru:'',en:''},privText:{ru:'',en:''},photos:[],photo:null,city:null,pron:null,gender:[],orient:[],role:[],status:'couple',format:[],seek:[],jars:[],history:[],media:[],requestsFrom:'all',socialLikes:false,dating:false,datingVisible:false,showAge:false};return P.profile;}
 const pairMember=()=>S.pairMember==='partner'?(S.pair?.with||S.pairInvite?.nick):'me';
 function editableProfile(r=cur()){if(r.p?.owner!=='couple')return S.me;const P=S.pair;if(P?.status!=='active')return null;coupleProfile();P.revision??=0;P.draftBase??=P.revision;if(!P.draft){P.draft=structuredClone(P.profile);P.draftBy=pairMember();P.draftLease=(P.draftLease||0)+1;}return P.draftBy&&P.draftBy!==pairMember()?structuredClone(P.draft):P.draft;}
 function coupleWritable(lease){const P=S.pair;const ok=activePair()&&(!P.draftBy||P.draftBy===pairMember())&&(lease==null||lease===(P.draftLease||0));if(!ok)toast(L('Черновик занят другим участником или изменился. Вернись в профиль пары. Введённые данные остаются здесь.','The draft belongs to the other partner or changed. Return to the couple profile. Your input stays here.'),{type:'warn'});return ok;}
@@ -256,16 +253,20 @@ function av(id,cls='',variant=0){
 /** Photos of a person. Prototype people have one licensed image each, so extra photos are distinct crops of it
  *  (stand-ins for a real 2–6 photo gallery). My own photos are real local files. */
 const CROPS=['','transform:scale(1.45);transform-origin:50% 28%','transform:scale(1.2) translateX(-7%);filter:saturate(1.15) hue-rotate(-8deg)','transform:scale(1.7);transform-origin:40% 60%','transform:scale(1.3) translateX(6%);filter:contrast(1.08) saturate(.9)','transform:scale(2);transform-origin:55% 35%'];
+/** main-profile media is one ordered list: a photo is a src (number / url), a video is {type:'video',url,dur} */
+const isVideoItem=x=>!!x&&typeof x==='object'&&x.type==='video';
+const firstPhoto=list=>(list||[]).find(x=>!isVideoItem(x))??null;
+function hasHeroMedia(id){if(id==='me'||id==='couple'){const m=id==='couple'?(S.ui.couplePreview||coupleProfile()):(S.ui.profilePreview||S.me);return (m.photos||[]).length>0||m.photo!=null;}return !!person(id)?.photo;}
 function photoCount(id){if(id==='me'||id==='couple'){const m=id==='couple'?(S.ui.couplePreview||coupleProfile()):(S.ui.profilePreview||S.me);return Math.max(1,(m.photos||[]).length);}const p=person(id);return p?.photo?Math.min(6,p.nph||1):1;}
-function photoItems(id){if(id==='me'||id==='couple'){const m=id==='couple'?(S.ui.couplePreview||coupleProfile()):(S.ui.profilePreview||S.me);return (m.photos||[]).map(ph=>({type:'image',src:IMG(ph)}));}const p=person(id);if(!p?.photo)return [];return Array.from({length:photoCount(id)},(_,i)=>({type:'image',src:IMG(p.photo),style:CROPS[i%6]}));}
+function photoItems(id){if(id==='me'||id==='couple'){const m=id==='couple'?(S.ui.couplePreview||coupleProfile()):(S.ui.profilePreview||S.me);return (m.photos||[]).map(ph=>isVideoItem(ph)?{type:'video',src:ph.url,dur:ph.dur}:{type:'image',src:IMG(ph)});}const p=person(id);if(!p?.photo)return [];return Array.from({length:photoCount(id)},(_,i)=>({type:'image',src:IMG(p.photo),style:CROPS[i%6]}));}
 function photoBars(id,ix){const n=photoCount(id);return n>1?`<div class="pc-bars" aria-label="${L(`Фото ${ix+1} из ${n}`,`Photo ${ix+1} of ${n}`)}">${Array.from({length:n},(_,i)=>`<i class="${i===ix?'on':''}"></i>`).join('')}</div>`:'';}
 /** step through photos; returns false at the first/last photo (caller can nudge) */
 function stepPhoto(id,d){S.ui.ph=S.ui.ph||{};const n=photoCount(id),i=(S.ui.ph[id]||0)+d;if(i<0||i>=n)return false;S.ui.ph[id]=i;return true;}
 /** blurred backdrop for a whole-photo frame (profile hero): same picture, no framing transform */
-function photoBg(id,v=0){let src=null;if(id==='me'||id==='couple'){const m=id==='couple'?(S.ui.couplePreview||coupleProfile()):(S.ui.profilePreview||S.me);const ph=(m.photos||[])[v]??m.photo;if(ph!=null)src=IMG(ph);}else{const p=person(id);if(p?.photo)src=IMG(p.photo);}return src?`<img class="mbg" src="${src}" alt="" aria-hidden="true" draggable="false">`:'';}
+function photoBg(id,v=0){let src=null;if(id==='me'||id==='couple'){const m=id==='couple'?(S.ui.couplePreview||coupleProfile()):(S.ui.profilePreview||S.me);const ph=(m.photos||[])[v]??m.photo;if(ph!=null&&!isVideoItem(ph))src=IMG(ph);}else{const p=person(id);if(p?.photo)src=IMG(p.photo);}return src?`<img class="mbg" src="${src}" alt="" aria-hidden="true" draggable="false">`:'';}
 function bigPhoto(id,v=0){
  const p=person(id);
- if(id==='me'||id==='couple'){const m=id==='couple'?(S.ui.couplePreview||coupleProfile()):(S.ui.profilePreview||S.me);const ph=(m.photos||[])[v]??m.photo;if(ph!=null)return `<img src="${IMG(ph)}" alt="${esc(pname(id))}" draggable="false">`;return plate('rose','me');}
+ if(id==='me'||id==='couple'){const m=id==='couple'?(S.ui.couplePreview||coupleProfile()):(S.ui.profilePreview||S.me);const ph=(m.photos||[])[v]??m.photo;if(isVideoItem(ph))return `<video src="${esc(ph.url)}" aria-label="${esc(pname(id))}" muted loop playsinline autoplay></video>`;if(ph!=null)return `<img src="${IMG(ph)}" alt="${esc(pname(id))}" draggable="false">`;return plate('rose','me');}
  if(p&&p.photo)return `<img src="${IMG(p.photo)}" alt="${esc(pname(id))}" draggable="false" style="${CROPS[v%6]}">`;
  const key=p&&p.pair?[p.plate,p.plate2,p.plate][v%3]:(p&&p.plate)||'rose';
  return plate(key);

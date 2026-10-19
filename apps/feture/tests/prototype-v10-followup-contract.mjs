@@ -30,10 +30,10 @@ prepare('F05',{id:'p1'});run("var post=postById('p1');identifyReplies('p',post.i
 prepare('C06',{id:'d1'});run("var d=S.discussions.find(x=>x.id==='d1');d.author='me';var child={id:'discussionReply',a:'kai',text:'hi',t:Date.now()};d.replies.push(child);notifyReply('d',d.id,child)");assert.equal(run("S.notifs.filter(n=>n.reply==='discussionReply').length"),1);
 // A second click cannot change/withdraw a vote; only the explicit link does.
 prepare('F05',{id:'p4'});run("var poll=postById('p4');poll.vote=0;ACT.vote({dataset:{v:'p4',i:'1'}})");assert.equal(timers.length,0);assert.equal(run('poll.vote'),0);assert.ok(!run('pollHTML(poll)').includes('data-act="vote"'));assert.equal(run("pollVoters(poll,0).filter(x=>x==='me').length"),1);run("var undo=ACT.unvote({dataset:{v:'p4'}})");await finish(run('undo'));assert.equal(run('poll.vote'),null);
-assert.equal(run('newMe().vis.role'),'only');
+assert.equal(run('newMe().vis'),undefined,'profile details have no per-field layer any more');assert.equal(run('newMe().activityVis'),'all','activity is visible to everyone by default');
 // Roles share the same bounded multi-selection in onboarding, both editors and dating.
 prepare('P02');run("SC.P02.render(cur().p,cur());var originalRole=JSON.stringify(S.me.role);cur().role.push('rigger')");assert.equal(run('JSON.stringify(S.me.role)'),run('originalRole'),'editor role arrays must not alias the profile');
 run("var choices=[];for(const v of ['lead','recv','switch','service','rigger','dom'])choices=toggleIdentityValue(choices,'role',v)");assert.equal(run('choices.length'),5);assert.equal(run("choices.includes('dom')"),false);run("choices=toggleIdentityValue(choices,'role','recv');choices=toggleIdentityValue(choices,'role','dom')");assert.equal(run('choices.length'),5);assert.equal(run("choices.includes('dom')"),true);
-assert.equal(run("identityDraft({role:['lead','rigger']}).role.length"),2);assert.deepEqual(json("publicField(S.me,'role')"),[],'by-access roles stay out of public profile');
+assert.equal(run("identityDraft({role:['lead','rigger']}).role.length"),2);assert.deepEqual(json("publicField(S.me,'role')"),['lead'],'roles are part of the public profile');
 run("PEOPLE.sofi.role=['recv','sub'];var rf={...S.filters.dating,role:['sub']}");assert.equal(run("passDating('sofi',rf)"),true);run("rf.role=['dom']");assert.equal(run("passDating('sofi',rf)"),false);
 console.log('PASS V10 followup: pair privacy/approval/in-flight saves/session switch/preview media; addressed reply notifications/dedup/tombstones; locked polls and matching voter rosters');
