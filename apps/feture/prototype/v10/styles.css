@@ -239,7 +239,7 @@ h3.t{font:650 17px/1.3 var(--font);margin:0 0 6px}
 .seg button.on{color:var(--ink)}
 .seg .knob{position:absolute;top:3px;bottom:3px;left:3px;border-radius:9px;background:var(--surf);box-shadow:0 1px 3px rgba(0,0,0,.12);transition:transform .28s var(--ease)}
 .seg em{font-style:normal;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--accent);color:#fff;font-size:10.5px;font-weight:700;line-height:18px;text-align:center}
-.seg.sm button{min-height:30px;font-size:13px}
+.seg.sm button{min-height:34px;font-size:13.5px}
 .tabs{display:flex;gap:4px;overflow-x:auto;margin:0 calc(-1*var(--gut)) 12px;padding:0 var(--gut);scrollbar-width:none;border-bottom:1px solid var(--line)}
 .tabs::-webkit-scrollbar{display:none}
 .tabs button{position:relative;flex:none;min-height:42px;padding:0 10px;font-size:14.5px;font-weight:600;color:var(--mute);white-space:nowrap;display:flex;align-items:center;gap:6px}
@@ -991,7 +991,7 @@ button.jar:active .vessel{transform:scale(.95)}
 .uprow.ok .upbar i{background:var(--ok)}.uprow.error .upbar i{background:var(--danger)}
 .upacts{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:4px}.upacts .btn{min-height:32px;padding:0;font-size:13px;gap:5px}.upacts .btn.danger{color:var(--danger);background:none}
 .crop{position:relative;width:min(100%,420px);margin:6px auto 14px;border-radius:var(--r-l);overflow:hidden;background:#000;touch-action:none;cursor:grab;user-select:none}
-.crop img{position:absolute;left:0;top:0;max-width:none;will-change:transform}
+.crop img,.crop video{position:absolute;left:0;top:0;max-width:none;will-change:transform}
 .crop-grid{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 2px rgba(255,255,255,.85);border-radius:var(--r-l)}
 .crop-grid i{position:absolute;background:rgba(255,255,255,.35)}.crop-grid i:nth-child(1){left:33.3%;top:0;bottom:0;width:1px}.crop-grid i:nth-child(2){left:66.6%;top:0;bottom:0;width:1px}.crop-grid i:nth-child(3){top:33.3%;left:0;right:0;height:1px}.crop-grid i:nth-child(4){top:66.6%;left:0;right:0;height:1px}
 .crop-zoom{display:flex;align-items:center;gap:10px;max-width:420px;margin:0 auto 10px;color:var(--mute)}.crop-zoom input{flex:1;accent-color:var(--accent)}
@@ -1482,8 +1482,20 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
 /* requests to me: avatar column on the left, name / note / sections / buttons share one text edge with air between them */
 .rqcard>.row{gap:12px;align-items:flex-start}
 .rqcard>.row .note{margin-top:3px;line-height:1.4}
-.rqcard>.chips{margin:10px 0 0 56px}
-.rqcard>.row.g8,.rqcard>.row.mt12{margin:14px 0 0 56px}
+.rqcard>.chips{margin:12px 0 0;gap:6px}
+.rqcard>.row.g8,.rqcard>.row.mt12{margin:16px 0 0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.rqcard>.row>.av{flex:none}
+.rqcard>.row>.grow{min-width:0;overflow-wrap:anywhere}
+.rqcard>.row.g8>.btn{min-width:0;white-space:normal;padding:10px 12px}
+.grant-options{display:grid;gap:0}
+.grant-option{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px;padding:12px 0;text-align:left;border-bottom:1px solid var(--line);font-size:15px}
+.grant-check{display:grid;place-items:center;flex:none;width:24px;height:24px;border:1px solid var(--line);border-radius:7px}
+.grant-option[aria-checked="true"] .grant-check{background:var(--accent);border-color:var(--accent);color:white}
+.grant-check svg{width:17px;height:17px}
+.grant-duration{margin-top:20px}
+.inbox-filters{margin:0 0 16px}
+.inbox-tools{display:flex;justify-content:flex-end;margin:0 0 16px}
+.inbox-read-all{font-size:13px;color:var(--accent);text-decoration:underline;text-underline-offset:3px;padding:4px 0;min-height:28px}
 /* discover on wide screens: the card takes the content column (680px) and the screen height down to the bottom;
    the photo is shown whole on its own blurred backdrop (instafill), like the profile card */
 .pc-ph>.mbg{display:none}
@@ -2130,3 +2142,12 @@ body.capture-shield>*{visibility:hidden!important}
 .seg.tabs-full button{min-height:38px;font-size:13.5px;gap:4px;padding:0 4px}
 .seg.tabs-full em{min-width:16px;height:16px;padding:0 4px;border-radius:8px;font-size:10px;line-height:16px}
 @media (max-width:359px){.seg.tabs-full button{font-size:12px;gap:3px;padding:0 2px}.seg.tabs-full em{min-width:14px;height:14px;line-height:14px;padding:0 3px;font-size:9.5px}}
+
+.hero>.vframe{position:absolute;inset:0;margin:auto;height:100%;aspect-ratio:4/5;max-width:100%;overflow:hidden}
+.hero>.vframe>video{pointer-events:none}
+
+/* activity rows: the picture of the event / community / post, like the cards they open */
+.actth{position:relative;flex:none;width:46px;height:46px;border-radius:13px;overflow:hidden;background:var(--raise);display:grid;place-items:center}
+.actth>img,.actth>.evimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.actth>.plate,.actth>.pl{position:absolute;inset:0;width:100%;height:100%}
+.actth>i{position:absolute;right:3px;bottom:3px;width:18px;height:18px;border-radius:50%;background:rgba(10,6,10,.62);color:#ff6b86;display:grid;place-items:center}.actth>i svg{width:11px;height:11px}

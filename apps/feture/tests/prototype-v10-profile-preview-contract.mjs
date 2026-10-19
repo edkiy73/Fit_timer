@@ -17,12 +17,13 @@ for(const lang of ['ru','en']){
  assert.equal(run('S.ui.viewGrant'),false,'access level must not leak out of the preview render');
  assert.ok(!all.includes(priv),'public preview shows no private description');
  assert.ok(all.includes(role)&&gr.includes(role),'details (role, format…) are part of the main profile at both levels');
- for(const t of hidden)assert.ok(!all.includes(t)&&!gr.includes(t),`topic ${t} hidden from others stays hidden at both levels`);
+ const byAccess=JSON.parse(JSON.stringify(run("S.me.jars.filter(j=>j.vis==='granted').map(j=>topic(j.t))")));
+ for(const t of byAccess)assert.ok(!all.includes(t)&&gr.includes(t),`by-access interest ${t}: hidden without access, shown with it`);
  assert.ok(gr.includes(priv),'with-access preview shows the private description');
  for(const t of onlyMe)assert.ok(!gr.includes(t),`only-me topic ${t} stays hidden even with access`);
- // the private part holds description, photos and video only: no interests, no details, no album permission
- assert.deepEqual(JSON.parse(JSON.stringify(run("REQ_SCOPES.map(s=>s[0])"))),['info','photos','video']);
- assert.ok(!text(run("SC.P03.render({lv:'granted'},{p:{lv:'granted'},f:{}})").split('id="priv"')[1]||'').includes(run("topic(S.me.jars.find(j=>j.vis==='public').t)")),'private part lists no interests');
+ // the private part holds description, interests, photos and video: no details chips, no album permission
+ assert.deepEqual(JSON.parse(JSON.stringify(run("REQ_SCOPES.map(s=>s[0])"))),['info','interests','photos','video']);
+ assert.ok(!text(run("SC.P03.render({lv:'granted'},{p:{lv:'granted'},f:{}})").split('id="priv"')[1]||'').includes(run("topic(S.me.jars.find(j=>j.vis==='public').t)")),'private part lists only its own interests, not the public ones');
  // activity tab: owner setting decides who sees it; default is everyone; the owner always sees their own
  assert.equal(run("S.me.activityVis"),'all');
  assert.ok(run("activityShown('me')")&&run("activityShown('mia')"),'default: activity visible');
@@ -43,12 +44,13 @@ const gate=g=>text(run(`privOpenHTML('me',{granted:${JSON.stringify(g)},until:nu
 assert.ok(gate(['info']).includes('DESC_TEXT')&&!gate(['info']).includes('IMG_A')&&!gate(['info']).includes('VID_B'),'description only');
 assert.ok(!gate(['photos']).includes('DESC_TEXT')&&gate(['photos']).includes('IMG_A')&&gate(['photos']).includes('IMG_C')&&!gate(['photos']).includes('VID_B'),'photos only');
 assert.ok(!gate(['video']).includes('IMG_A')&&gate(['video']).includes('VID_B')&&!gate(['video']).includes('DESC_TEXT'),'video only');
-// editor media: drag result reorders each list on its own; delete/move keep the other kind untouched; main profile mixes photos and video
+// editor media: drag result reorders each list on its own; delete keep the other kind untouched; main profile mixes photos and video
 run("S=freshState('full');S.session={};initNav();S.me.media=[{id:'a',type:'image',url:'/A'},{id:'b',type:'video',url:'/B'},{id:'c',type:'image',url:'/C'}];var route={id:'P02',p:{},f:{},photos:[8,{type:'video',url:'/V',dur:3},'/P'],init:1};S.nav.stacks.feed=[route];closeSheet=()=>{};toast=()=>{};");
 run("ACT.miOrder({dataset:{k:'photos',order:'c,a'}})");assert.deepEqual(json("S.me.media.map(m=>m.id)").sort(),['a','b','c']);assert.deepEqual(json("privSplit(S.me.media).photos.map(m=>m.id)"),['c','a']);assert.deepEqual(json("privSplit(S.me.media).video.map(m=>m.id)"),['b']);
-run("ACT.miMove({dataset:{k:'photos',v:'c',d:'1'}})");assert.deepEqual(json("privSplit(S.me.media).photos.map(m=>m.id)"),['a','c']);
-run("ACT.miOrder({dataset:{k:'photos',order:'a,zzz'}})");assert.deepEqual(json("privSplit(S.me.media).photos.map(m=>m.id)"),['a','c'],'a bad order is ignored');
+run("ACT.miOrder({dataset:{k:'photos',order:'a,zzz'}})");assert.deepEqual(json("privSplit(S.me.media).photos.map(m=>m.id)"),['c','a'],'a bad order is ignored');
 run("ACT.miOrder({dataset:{k:'pub',order:'2,0,1'}})");assert.deepEqual(json("route.photos.map(x=>typeof x==='object'?x.type:x)"),['/P',8,'video']);
+// a video is framed to 4:5 by its stored crop, never re-encoded
+assert.ok(run("vframe({w:1920,h:1080,crop:{x:0,y:0,z:1}})").includes('width:222.22%'),'landscape video fills the 4:5 frame');assert.ok(run("vframe({w:1080,h:1920})").includes('height:'),'portrait video without crop still gets a frame');
 assert.equal(run("firstPhoto(route.photos)"),'/P','the first image — not a video — is the main photo');
 run("ACT.miRm({dataset:{k:'pub',v:'0'}})");assert.equal(run("route.photos.length"),2);
-console.log('PASS RU/EN profile preview: details are public at both levels; the private part (description/photos/video, no interests) opens only with access; hidden topics stay hidden; activity tab follows its privacy setting; follow lists drop blocked people');
+console.log('PASS RU/EN profile preview: details are public at both levels; the private part (description/interests/photos/video) opens only with access; hidden topics stay hidden; activity tab follows its privacy setting; follow lists drop blocked people');

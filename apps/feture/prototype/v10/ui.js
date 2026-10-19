@@ -9,7 +9,7 @@ function jarsHTML(list,o={}){
  return `<div class="jars ${o.pre?'pre':''} ${o.cls||''}">${items.map((j,i)=>{
   const tag=o.act?'button':'div';const attrs=o.act?`data-act="${o.act}" data-v="${j.t}" ${o.who?`data-who="${o.who}" data-ans="${j.limit||j.lv}"${j.dir?` data-dir="${j.dir.join(' ')}"`:''}`:''} aria-label="${esc(topic(j.t))}: ${esc(jarWord(j))}"`:'';
   const was=o.was&&o.was[j.t]!=null?`<small class="was">${L('было','was')} ${o.was[j.t]==='hard'?L('табу','taboo'):o.was[j.t]==='discuss'?L('обсужд.','negot.'):o.was[j.t]}</small>`:'';
-  const vis=o.vis&&j.vis!=='public'?`<span class="jvis">${I.eyeoff}</span>`:'';
+  const vis=o.vis&&j.vis!=='public'?`<span class="jvis">${j.vis==='granted'?I.key:I.eyeoff}</span>`:'';
   if(j.limit)return `<${tag} class="jar ${j.limit==='hard'?'taboo':'discuss'}" ${attrs}><span class="vessel"><span class="jm">${j.limit==='hard'?I.block:I.chat}</span>${vis}</span><span class="jn">${esc(topic(j.t))}</span><span class="jw sr">${j.limit==='hard'?(o.who&&o.who!=='me'?L('нельзя','not for me'):L('табу','taboo')):L('обсуждаемо','negotiable')}</span>${was}</${tag}>`;
   /* the higher the level, the calmer the surface: 8–9 barely ripple, 10 is full to the lid — only bubbles */
   const calm=j.lv>=10?'full':j.lv>=8?'calm':'';

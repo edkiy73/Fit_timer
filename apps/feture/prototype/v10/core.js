@@ -266,7 +266,7 @@ function stepPhoto(id,d){S.ui.ph=S.ui.ph||{};const n=photoCount(id),i=(S.ui.ph[i
 function photoBg(id,v=0){let src=null;if(id==='me'||id==='couple'){const m=id==='couple'?(S.ui.couplePreview||coupleProfile()):(S.ui.profilePreview||S.me);const ph=(m.photos||[])[v]??m.photo;if(ph!=null&&!isVideoItem(ph))src=IMG(ph);}else{const p=person(id);if(p?.photo)src=IMG(p.photo);}return src?`<img class="mbg" src="${src}" alt="" aria-hidden="true" draggable="false">`:'';}
 function bigPhoto(id,v=0){
  const p=person(id);
- if(id==='me'||id==='couple'){const m=id==='couple'?(S.ui.couplePreview||coupleProfile()):(S.ui.profilePreview||S.me);const ph=(m.photos||[])[v]??m.photo;if(isVideoItem(ph))return `<video src="${esc(ph.url)}" aria-label="${esc(pname(id))}" muted loop playsinline autoplay></video>`;if(ph!=null)return `<img src="${IMG(ph)}" alt="${esc(pname(id))}" draggable="false">`;return plate('rose','me');}
+ if(id==='me'||id==='couple'){const m=id==='couple'?(S.ui.couplePreview||coupleProfile()):(S.ui.profilePreview||S.me);const ph=(m.photos||[])[v]??m.photo;if(isVideoItem(ph))return `<div class="vframe"><video src="${esc(ph.url)}" style="${vframe(ph)}" aria-label="${esc(pname(id))}" muted loop playsinline autoplay></video></div>`;if(ph!=null)return `<img src="${IMG(ph)}" alt="${esc(pname(id))}" draggable="false">`;return plate('rose','me');}
  if(p&&p.photo)return `<img src="${IMG(p.photo)}" alt="${esc(pname(id))}" draggable="false" style="${CROPS[v%6]}">`;
  const key=p&&p.pair?[p.plate,p.plate2,p.plate][v%3]:(p&&p.plate)||'rose';
  return plate(key);
