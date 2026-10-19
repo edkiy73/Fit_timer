@@ -187,3 +187,12 @@ console.log('PASS unified profile editor saves rich private text for personal an
  run("CH.sel({value:'en',dataset:{sel:'k2'}})");assert.equal(run("S.lang"),'en','a changed select runs its action');
  console.log('PASS inline selects: change runs the action, a tap does not re-render');}
 
+
+// Read receipts belong to individual participants; quoting disappearing media never embeds its payload.
+{prepare('H02',{id:'mia',actor:'me'});run("ensureThread('mia','me');const rt=ensureThread('mia','me');identifyChatMessages(rt)");
+ const ids=json("ensureThread('mia').msgs.map(m=>m.id)");assert.equal(new Set(ids).size,ids.length,'message IDs are unique');
+ const receipt=run(`(()=>{const a={id:'a',me:1,sender:'me',t:10,text:'A'},b={id:'b',me:1,sender:'me',t:20,text:'B'};const t={actor:'couple',target:'tomeva',members:['me','lina','eva','tom'],readBy:{me:30,lina:25,eva:15},msgs:[a,b]};return {a:chatReceipts(t,a),b:chatReceipts(t,b),members:chatReadMembers(t,b)};})()`);
+ assert.deepEqual(JSON.parse(JSON.stringify(receipt.members)),['lina'],'sender and unread participants do not appear');assert.ok(receipt.a.includes('Eva')&&!receipt.a.includes('Lina'),'Eva remains at the older read position');assert.ok(receipt.b.includes('Lina')&&!receipt.b.includes('Tom'),'only the actual reader appears at the newest message');
+ const quote=run("chatQuote({actor:'me',target:'mia',msgs:[{id:'private',me:0,media:{type:'image',url:'SECRET_URL',mode:'once'},text:'SECRET_CAPTION'}]},'private')");assert.ok(!quote.includes('SECRET_URL')&&!quote.includes('SECRET_CAPTION'),'ephemeral quote contains only the media kind');
+ const post=run("(()=>{const r={f:{},replyTarget:{id:'r1',a:'mia'}};return SC.F05.render({id:'p1'},r)})()");assert.ok(post.indexOf('class=\"reply-target\"')>post.indexOf('class=\"inputbar\"'),'reply context is part of the composer');
+ console.log('PASS stable chat IDs, individual four-person read cursors, safe disappearing-media quotes and attached comment reply context');}

@@ -17,3 +17,9 @@ try{if(new URLSearchParams(location.search).get('long')==='1')qaLong(true);}catc
 
 try{if(new URLSearchParams(location.search).get('nospace')==='1')qaNosp(true);}catch(e){}
 try{if(new URLSearchParams(location.search).get('hostile')==='1')qaNosp(true,'xss');}catch(e){}
+
+// Best-effort web capture protection: print output, PrintScreen and background previews.
+let captureShieldTimer;
+function captureShield(on){document.body.classList.toggle('capture-shield',on);}
+document.addEventListener('visibilitychange',()=>{clearTimeout(captureShieldTimer);captureShield(document.hidden);});
+for(const type of ['keydown','keyup'])document.addEventListener(type,e=>{if(e.key!=='PrintScreen')return;e.preventDefault();clearTimeout(captureShieldTimer);captureShield(true);captureShieldTimer=setTimeout(()=>captureShield(document.hidden),1800);},true);
