@@ -55,3 +55,16 @@ console.log('PASS invitation cannot self-accept or inherit a global QA approval'
 
 prepare('D03');run("coupleProfile();S.deckOrder.unshift('kira');S.datingActor='me'");assert.equal(run("pool().includes('kira')"),false,'current partner is never a discover candidate');run("S.datingActor='couple';S.pair.profile.dating=true");assert.equal(run("pool().includes('kira')"),false);
 console.log('PASS partner excluded from both personal and joint discovery');
+
+// Review-only partner mode must not claim the pair is inactive on personal discussion screens.
+for(const lang of ['ru','en']){
+ prepare('C06',{id:'d1'});run(`S.lang='${lang}';S.pairMember='partner'`);
+ assert.equal(run("authorAllowed('me')"),false,'reviewer still cannot write into Alex personal history');
+ const reason=run("communityAuthorReason('rope','me','comment')");
+ assert.ok(reason.includes('V10'));assert.ok(!/отключён|inactive/.test(reason));
+ run("S.pairMember='me'");assert.equal(run("communityAuthorReason('rope','me','comment')"),'');
+ const replies=run("replyTree('d','d1')");
+ assert.ok(replies.includes(lang==='ru'?'Ответ скрыт: автор заблокирован':'Reply hidden: author blocked'));
+ assert.ok(!replies.includes('Можно ссылку на видео'));
+}
+console.log('PASS discussion explains QA reviewer mode and blocked reply without weakening personal permissions');
