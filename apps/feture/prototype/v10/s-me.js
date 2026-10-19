@@ -35,7 +35,6 @@ SC.X01={root:1,tab:'me',title:()=>L('Я','Me'),render:()=>{const m=S.me;const [n
   ${mePairRow()}<div class="me-acts"><button class="btn secondary sm" data-go="P03">${I.eye}${L('Как видят','Preview')}</button><button class="btn secondary sm" data-go="P02">${I.edit}${L('Изменить','Edit')}</button></div>
   ${nt?`<button class="nextstep" ${nt==='test'?`data-go="X07" data-id="${nid}"`:nt==='topic'?'data-act="addJar"':'data-go="P02"'}><span class="ico">${nt==='P02'?I.camera:I.test}</span><span class="tx"><b>${L('Следующий шаг','Next step')}</b><small>${ns}</small></span>${I.chev}</button>`:''}</div></section>
  ${grp(L('Мои интересы','My interests'),jars.length?jarShelf(m.jars,{max:4,pre:1,act:'editJar',vis:1,add:'addJar',moreAct:'myJarsAll'}):`<div class="jar-empty"><p>${L('Баночка — это один интерес и то, как она тебе откликается: от 1 до 10, «обсуждаемо» или «табу».','A jar is one interest and how it feels to you: 1 to 10, “negotiable” or “taboo”.')}</p><div class="row g8"><button class="btn secondary sm" data-act="addJar">${I.plus}${L('Добавить интерес','Add an interest')}</button></div></div>`,{right:jars.length?`<button data-go="X02">${L('Все','All')} · ${jars.length}</button>`:''})}
- ${grp(L('Тесты','Quizzes'),linkRow({go:'X05',icon:'test',title:L('Узнай себя','Get to know yourself'),sub:L('Новые тесты о тебе','New quizzes about you'),val:L('скоро','soon')}),{list:1})}
  ${grp(L('Активность','Activity'),`${linkRow({go:'E10',icon:'cal',title:L('Мои события','My events'),val:going?String(going):''})}${linkRow({go:'F10',icon:'feed',title:L('Мои публикации','My posts'),val:String(S.myPosts.length)})}${linkRow({go:'P10',p:{id:'me',tab:'followers'},icon:'users3',title:L('Подписчики и подписки','Followers & following'),val:`${followersOf('me').length} · ${followingOf('me').length}`})}${linkRow({go:'G04',icon:'bookmark',title:L('Сохранённое','Saved'),val:String(m.saved.posts.length+m.saved.events.length)})}${linkRow({go:'P07',icon:'unlock',title:L('Доступы','Access'),sub:L('Кому открыто и что открыто мне','Who can see yours and what is open to you')})}`,{list:1})}
  </div></div>`;},after:()=>fillJars()};
 ACT.myJarsAll=()=>go('X02');
@@ -146,7 +145,6 @@ ACT.qeAns=a=>{S.ui.qe.v=ansVal(a.dataset.v);resheet();};
 ACT.qeOk=()=>{const q=S.ui.qe;S.me.tests[q.id].ans[q.t]=q.v;closeSheet(true);refresh();};
 ACT.qeSkip=()=>{const q=S.ui.qe;delete S.me.tests[q.id].ans[q.t];closeSheet(true);refresh();};
 ACT.qSave=()=>{go('X05');};
-SC.X10={title:()=>L('Результат','Result'),valid:p=>!!QUIZ[p.id],render:(p,r)=>SC.X09.render(p,r)};
 SC.X11={title:()=>L('Поделиться','Share'),valid:p=>!!QUIZ[p.id],render:(p,r)=>{const jars=shareableQuizJars(p.id);if(!r.sel)r.sel=jars.slice(0,4).map(j=>j.t);else r.sel=normalizeShareSelection(p.id,r.sel);r.aud=r.aud||'all';const chosen=jars.filter(j=>r.sel.includes(j.t));
  return `${bar(L('Поделиться результатом','Share result'),{back:1,sm:1})}<div class="view nodock cta1"><div class="wrap">
  <div class="sharecard"><div class="sc-top"><img src="${LOGO()}" alt="">FetUre · ${esc(T(QUIZ[p.id].title))}</div>${chosen.length?jarsHTML(chosen):``}</div>
@@ -157,7 +155,7 @@ ACT.x11pick=a=>{const r=cur();r.sel=normalizeShareSelection(r.p.id,r.sel);if(!sh
 ACT.x11aud=a=>{cur().aud=a.dataset.v;refresh();};
 ACT.x11go=a=>{const r=cur();const jars=shareableQuizJars(r.p.id).filter(s=>r.sel.includes(s.t)).slice(0,4);if(!jars.length){toast(L('Выбери хотя бы один интерес для публикации','Choose at least one interest to publish'),{type:'warn'});refresh();return;}run(a,()=>{S.myPosts.unshift({id:'m'+Date.now(),author:'me',t:Date.now(),type:'result',tags:jars.slice(0,3).map(j=>j.t),likes:0,aud:r.aud,status:'published',text:{ru:`Мой результат теста «${QUIZ[r.p.id].title.ru}»`,en:`My “${QUIZ[r.p.id].title.en}” quiz result`},result:jars.map(j=>[j.t,j.lv]),comments:[]});back();},{ok:L('Опубликовано в ленте','Published to the feed')});};
 
-if(QUIZ_SOON)for(const k of ['X07','X08','X09','X10','X11'])SC[k]={title:SC.X05.title,render:SC.X05.render};
+if(QUIZ_SOON)for(const k of ['X07','X08','X09','X11'])SC[k]={title:SC.X05.title,render:SC.X05.render};
 /* G04 — saved */
 SC.G04={title:()=>L('Сохранённое','Saved'),render:()=>{const s=S.me.saved;const posts=s.posts.map(postById).filter(Boolean),evs=s.events.filter(EV);
  return `${bar(L('Сохранённое','Saved'),{back:1,sm:1})}<div class="view nodock"><div class="wrap">
