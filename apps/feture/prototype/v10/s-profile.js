@@ -262,7 +262,7 @@ ACT.peHideCity=()=>{cur().f.city='';cur().dirty=true;refresh();};
 /** small badges after a name: photo verification and Premium. Neither opens private data or chat. */
 function nameBadges(p,sm){if(!p)return '';return `${p.pv?`<span class="nbadge v" title="${L('Фото подтверждено','Photo verified')}" role="img" aria-label="${L('Фото подтверждено','Photo verified')}">${I.check}</span>`:''}${p.premium||S.giftedTo?.has(p)?`<span class="nbadge p" title="Premium" role="img" aria-label="Premium">${I.crown}</span>`:''}`;}
 /** follow graph: counts are always the length of the lists people can open */
-function followingOf(id){const set=id==='me'?S.follows:id==='couple'?new Set():(S.graph[id]||new Set());return [...set].filter(x=>(x==='me'||x==='couple'&&activePair()||PEOPLE[x])&&!isBlocked(x));}
+function followingOf(id){const set=person(id)?.pair?new Set():id==='me'?S.follows:id==='couple'?new Set():(S.graph[id]||new Set());return [...set].filter(x=>(x==='me'||x==='couple'&&activePair()||PEOPLE[x])&&!isBlocked(x));}
 function followersOf(id){return ['me',...(activePair()?['couple']:[]),...Object.keys(PEOPLE)].filter(k=>k!==id&&!isBlocked(k)&&followingOf(k).includes(id));}
 function followCounts(id){const a=followersOf(id).length,b=followingOf(id).length;
  return `<div class="pc-stats"><button data-go="P10" data-p='${esc(JSON.stringify({id,tab:'followers'}))}'><b>${a}</b>${pl(a,['подписчик','подписчика','подписчиков'],['follower','followers'],true)}</button>${person(id)?.pair?'':`<button data-go="P10" data-p='${esc(JSON.stringify({id,tab:'following'}))}'><b>${b}</b>${pl(b,['подписка','подписки','подписок'],['following','following'],true)}</button>`}</div>`;}

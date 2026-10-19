@@ -143,7 +143,7 @@ const COMMUNITIES={
  first:{name:{ru:'Новичкам',en:'First Steps'},plate:'moss',privacy:'open',members:2310,city:'online',topics:['talk','aftercare','slow'],mods:['maya','noa'],
   desc:{ru:'Глупых вопросов нет. Объясняем термины, делимся опытом, помогаем начать безопасно.',en:'No stupid questions. Explaining terms, sharing experience, helping you start safely.'},
   rules:[{ru:'Отвечаем доброжелательно.',en:'Answer kindly.'},{ru:'Не просим и не отправляем откровенные фото.',en:'Don’t ask for or send explicit photos.'}]},
- poly:{name:{ru:'Пары и поли',en:'Couples & Poly'},plate:'amber',cover:'/images/v10-content/community-poly.webp',privacy:'open',members:905,city:'berlin',topics:['intimacy','talk'],mods:['tomeva'],
+ poly:{name:{ru:'Пары и поли',en:'Couples & Poly'},plate:'amber',cover:'/images/v10-content/community-poly.webp',privacy:'open',members:905,city:'berlin',topics:['intimacy','talk'],mods:['eva'],
   desc:{ru:'Договорённости, ревность, календари и всё, что помогает отношениям нескольких людей.',en:'Agreements, jealousy, calendars and everything that helps multi-partner relationships.'},
   rules:[{ru:'Пары пишут от имени обоих только с согласия обоих.',en:'Couples post for both only with both agreeing.'}]},
  circle:{name:{ru:'Круг общения',en:'Conversation Circle'},plate:'sea',cover:'/images/v10-content/community-slow.webp',privacy:'closed',members:1,knownMembers:true,seedMembers:['kai'],city:'online',topics:['talk','slow'],mods:['kai'],
@@ -160,7 +160,7 @@ const DISCUSSIONS=[
  {id:'d6',c:'first',author:'dan',t:ago(20),title:{ru:'Как сказать партнёру о своём интересе?',en:'How do I tell my partner about my interest?'},text:{ru:'Встречаемся три года, боюсь, что не поймёт.',en:'We’ve been together three years, I’m afraid they won’t understand.'},replies:[['maya',{ru:'Начни с карты интересов — можно показать только выбранное.',en:'Start with your map — you can share only what you choose.'}],['kira',{ru:'Мне помог разговор не в спальне, а на прогулке.',en:'For me it helped to talk on a walk, not in the bedroom.'}]]},
  {id:'d7',c:'queer',author:'mia',t:ago(26),title:{ru:'Встреча в субботу: кто идёт?',en:'Saturday meetup: who’s coming?'},text:{ru:'Только для участников группы.',en:'Members only.'},replies:[]},
  {id:'d8',c:'latex',author:'leon',t:ago(70),title:{ru:'Уход: тальк или силикон?',en:'Care: talc or silicone?'},text:{ru:'Спор вечный, давайте с фактами.',en:'The eternal debate — facts please.'},replies:[]},
- {id:'d9',c:'poly',author:'tomeva',t:ago(12),title:{ru:'Общий календарь: ваш опыт',en:'Shared calendar: your experience'},text:{ru:'Пробуем общий календарь на троих. Что работает у вас?',en:'We’re trying a shared calendar for three. What works for you?'},replies:[['kai',{ru:'Цвета по людям и правило «не двигать чужое».',en:'Colour per person and a “don’t move others’ events” rule.'}]]},
+ {id:'d9',c:'poly',author:'eva',t:ago(12),title:{ru:'Общий календарь: ваш опыт',en:'Shared calendar: your experience'},text:{ru:'Пробуем общий календарь на троих. Что работает у вас?',en:'We’re trying a shared calendar for three. What works for you?'},replies:[['kai',{ru:'Цвета по людям и правило «не двигать чужое».',en:'Colour per person and a “don’t move others’ events” rule.'}]]},
 ];
 
 const POSTS=[

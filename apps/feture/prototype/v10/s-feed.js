@@ -97,7 +97,7 @@ const missingPostResult=()=>toast(L('Темы результата больше 
 let composeDraftSeq=0;
 function syncComposeAudience(owner,aud){if(!owner||typeof navHistory==='undefined'||!navHistory)return;for(const entry of navHistory.entries){for(const route of Object.values(entry.nav?.stacks||{}).flat()){if(route.id==='F07'&&route.composeId===owner){route.aud=aud;route.dirty=true;}if(route.id==='F09'&&route.p.draft?.composeId===owner)route.p.draft.aud=aud;}}}
 const composeAudience=()=>cur().id==='F09'?cur().p.draft.aud:cur().aud;
-const ownPost=id=>S.myPosts.find(p=>p.id===id&&!p.hiddenByPair&&ownedIdentity(p.author)&&(p.author==='couple'||pairMember()==='me'));
+const ownPost=id=>S.myPosts.find(p=>p.id===id&&!p.hiddenByPair&&ownedIdentity(p.author)&&(p.author==='couple'||pairMember()==='me')&&(p.status!=='draft'||(p.creator||'me')===pairMember()));
 SC.F07={title:()=>L('Публикация','Post'),valid:p=>!p.id||!!ownPost(p.id),render:(p,r)=>{
  const ex=p.id?postById(p.id):null;
  if(!r.init){r.init=1;r.author=ex?.author||(p.author==='couple'&&activePair()?'couple':'me');r.pairId=ex?.pairId||(r.author==='couple'?(coupleProfile(),S.pair?.id):null);r.composeId='compose'+(++composeDraftSeq);r.pollLocale=S.lang;r.tags=[];r.aud='all';r.media=[];r.poll=null;r.result=false;r.resSel=resEligible().slice(0,4).map(j=>j.t);
@@ -173,7 +173,7 @@ ACT.publish=a=>{const route=cur(),d=route.p.draft;if(!d||d.by&&d.by!==pairMember
  },{ok:()=>{if(!published)return null;if(d.author==='couple'){toast(L('Отправлено партнёру на согласование','Sent to your partner for approval'),{type:'ok',action:{label:L('Посмотреть','View'),fn:()=>go('Q03')}});return null;}toast(hasPhoto?L('Отправлено на проверку. Сообщим, когда опубликуем','Submitted for review. We’ll let you know when it’s live'):L('Опубликовано','Published'),{type:'ok',action:{label:L('Мои публикации','My posts'),fn:()=>go('F10')}});return null;}});};
 
 /* F10 — my posts and drafts */
-SC.F10={title:()=>L('Мои публикации','My posts'),render:()=>{const by=k=>S.myPosts.filter(x=>x.status===k&&!x.hiddenByPair&&(x.author!=='couple'||activePair()));
+SC.F10={title:()=>L('Мои публикации','My posts'),render:()=>{const by=k=>S.myPosts.filter(x=>x.status===k&&!x.hiddenByPair&&(x.author==='couple'?activePair()&&(k!=='draft'||(x.creator||'me')===pairMember()):pairMember()==='me'));
  const drafts=by('draft'),review=by('review'),pub=by('published');const edits=Object.entries(S.postEdits).filter(([id])=>!!ownPost(id));
  return `${bar(L('Мои публикации','My posts'),{back:1,sm:1,actions:`<button class="ibtn" data-go="F07" aria-label="${L('Создать','Create')}">${I.plus}</button>`})}<div class="view nodock"><div class="wrap">
  ${activePair()?jointWorkHTML():''}${drafts.length?grp(L(`Черновики · ${drafts.length}`,`Drafts · ${drafts.length}`),drafts.map(x=>`<button class="li" data-go="F07" data-p='${esc(JSON.stringify({id:x.id}))}'><span class="ico">${I.edit}</span><span class="tx"><b>${esc(T(x.text)).slice(0,60)||L('Без текста','No text')}</b><small>${L('Изменён','Edited')} ${F.rel(x.t)}</small></span>${I.chev}</button>`).join(''),{list:1}):''}
