@@ -19,7 +19,7 @@ SC.D03={root:1,tab:'people',title:()=>L('Люди','People'),render:(p,r)=>{
  const sub=p.sub||'discover';if(sub==='matches')return SC.H01.render({sub:'chats'},r);const n=C.likesIn();
  const tabs=seg([['discover',L('Подборка','Discover')],['likes',L('Симпатии','Likes'),n||'']],sub,'pplSub');
  const right=sub==='discover'&&authorProfile().dating?`<button class="ibtn" data-act="dfSheet" aria-label="${L('Фильтры','Filters')}">${I.filter}${dfCount(social().filters.dating)?`<sup>${dfCount(social().filters.dating)}</sup>`:''}</button>`:bellBtn();
- const head=`<header class="bar">${tabs}${authorPicker()}${right}</header>`;
+ const head=`<header class="bar dating-bar">${tabs}${authorPicker()}${right}</header>`;
  if(sub==='likes')return head+`<div class="view"><div class="wrap">${likesBody(r)}</div></div>`;
  if(sub==='matches')return head+`<div class="view"><div class="wrap">${matchesBody()}</div></div>`;
  if(!DATING_LIVE())return head+`<div class="view"><div class="wrap">${datingSoon()}</div></div>`;

@@ -2076,3 +2076,9 @@ body.qa-viewport{overflow:auto;display:block}body.qa-viewport .stage{position:re
 .vault{margin-top:24px}.layer-sep+.vault{margin-top:0}
 
 .selrow:has(select:focus-visible)::after{background:var(--accent)}
+.dating-bar{flex-wrap:nowrap;gap:8px}.dating-bar>.seg,.dating-bar>.tabs{flex:1;min-width:0}
+.dating-bar .author-trigger{padding:0;width:44px;height:44px;justify-content:center;border-radius:50%;position:relative}
+.dating-bar .author-trigger>span:nth-of-type(2),.dating-bar .author-trigger>svg{display:none}
+.dating-bar .author-trigger .ap-dot{position:absolute;top:-2px;right:-2px}
+@media(max-width:480px){.bar.dating-bar:has(>.author-picker){flex-wrap:nowrap}.bar.dating-bar>.author-picker{order:0;flex:none}}
+.dating-bar .author-trigger{box-shadow:inset 0 0 0 1px var(--line2);background:var(--surf)}
