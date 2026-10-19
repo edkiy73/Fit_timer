@@ -275,7 +275,7 @@ function evStatusPill(id){
  const e=EV(id),r=myR(id);
  if(e.cancelled)return `<span class="pill bad">${L('Отменено','Cancelled')}</span>`;
  if(e.organizer==='me')return `<span class="pill v">${L('Ты организатор','You organise')}</span>`;
- if(isPast(id))return eventAttendanceConfirmed(id)?`<span class="pill">${L('Ты был(а)','You went')}</span>`:'';
+ if(isPast(id))return eventAttendanceConfirmed(id)?`<span class="pill">${L('Ты на событии','You went')}</span>`:'';
  if(r.app==='pending')return `<span class="pill wait">${L('Заявка на рассмотрении','Application pending')}</span>`;
  if(r.app==='approved')return `<span class="pill ok">${L('Заявка одобрена','Approved')}</span>`;
  if(r.app==='declined')return `<span class="pill bad">${L('Заявка отклонена','Declined')}</span>`;
