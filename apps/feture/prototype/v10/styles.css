@@ -991,7 +991,7 @@ button.jar:active .vessel{transform:scale(.95)}
 .uprow.ok .upbar i{background:var(--ok)}.uprow.error .upbar i{background:var(--danger)}
 .upacts{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:4px}.upacts .btn{min-height:32px;padding:0;font-size:13px;gap:5px}.upacts .btn.danger{color:var(--danger);background:none}
 .crop{position:relative;width:min(100%,420px);margin:6px auto 14px;border-radius:var(--r-l);overflow:hidden;background:#000;touch-action:none;cursor:grab;user-select:none}
-.crop img{position:absolute;left:0;top:0;max-width:none;will-change:transform}
+.crop img,.crop video{position:absolute;left:0;top:0;max-width:none;will-change:transform}
 .crop-grid{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 2px rgba(255,255,255,.85);border-radius:var(--r-l)}
 .crop-grid i{position:absolute;background:rgba(255,255,255,.35)}.crop-grid i:nth-child(1){left:33.3%;top:0;bottom:0;width:1px}.crop-grid i:nth-child(2){left:66.6%;top:0;bottom:0;width:1px}.crop-grid i:nth-child(3){top:33.3%;left:0;right:0;height:1px}.crop-grid i:nth-child(4){top:66.6%;left:0;right:0;height:1px}
 .crop-zoom{display:flex;align-items:center;gap:10px;max-width:420px;margin:0 auto 10px;color:var(--mute)}.crop-zoom input{flex:1;accent-color:var(--accent)}
@@ -2142,3 +2142,12 @@ body.capture-shield>*{visibility:hidden!important}
 .seg.tabs-full button{min-height:38px;font-size:13.5px;gap:4px;padding:0 4px}
 .seg.tabs-full em{min-width:16px;height:16px;padding:0 4px;border-radius:8px;font-size:10px;line-height:16px}
 @media (max-width:359px){.seg.tabs-full button{font-size:12px;gap:3px;padding:0 2px}.seg.tabs-full em{min-width:14px;height:14px;line-height:14px;padding:0 3px;font-size:9.5px}}
+
+.hero>.vframe{position:absolute;inset:0;margin:auto;height:100%;aspect-ratio:4/5;max-width:100%;overflow:hidden}
+.hero>.vframe>video{pointer-events:none}
+
+/* activity rows: the picture of the event / community / post, like the cards they open */
+.actth{position:relative;flex:none;width:46px;height:46px;border-radius:13px;overflow:hidden;background:var(--raise);display:grid;place-items:center}
+.actth>img,.actth>.evimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.actth>.plate,.actth>.pl{position:absolute;inset:0;width:100%;height:100%}
+.actth>i{position:absolute;right:3px;bottom:3px;width:18px;height:18px;border-radius:50%;background:rgba(10,6,10,.62);color:#ff6b86;display:grid;place-items:center}.actth>i svg{width:11px;height:11px}
