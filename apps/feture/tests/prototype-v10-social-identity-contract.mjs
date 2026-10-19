@@ -30,7 +30,7 @@ for(const lang of ['ru','en']){
 // actor context stays denied after dissolution; regular shared media remains regular.
 prepare('P07',{owner:'couple'});run("S.pair.proposal=null;var st=social('couple');st.reqIn=[{id:'grant-race',p:'mia',scopes:['info'],status:'new'}];S.ui.gr={id:'grant-race',sel:['info'],term:'7'};ACT.grOk(null);pairSafety('sharing')");await finish();assert.equal(run("st.sharedByMe.length"),0,'safety stop cannot be undone by an in-flight grant');
 prepare('H02',{id:'mia',actor:'couple'});run("social('couple').matches.push({p:'mia'});ensureThread('mia','couple')");assert.ok(run("chatMediaHTML({me:1,media:{mode:'normal',url:'image',type:'image',recipients:['mia']}},0)").includes('data-act="chatMedia"'));run("dissolvePair();S.author='me'");assert.equal(run('authorGuard()'),false);
-prepare('Q02');run("S.pair=null;S.pairInvite={nick:'kira',by:'me',status:'pending'};acceptPairInvitation()");assert.equal(run('activePair()'),true);assert.equal(run('coupleProfile().dating'),false);assert.equal(run('coupleProfile().datingVisible'),false);assert.equal(run('acceptPairInvitation()'),false);
+prepare('Q02');run("S.pair=null;S.pairInvite={nick:'kira',by:'me',status:'pending'};var ownInviteAccept=acceptPairInvitation();S.pairMember='partner';acceptPairInvitation()");assert.equal(run('ownInviteAccept'),false);assert.equal(run('activePair()'),true);assert.equal(run('coupleProfile().dating'),false);assert.equal(run('coupleProfile().datingVisible'),false);assert.equal(run('acceptPairInvitation()'),false);
 console.log('PASS safety stop vs delayed grant, inactive route actor, regular shared media and invitation limits');
 prepare('Q03');run("S.pair.proposal=null;editableProfile({p:{owner:'couple'}}).bio='Explicit approval';markCoupleDraft();submitCoupleDraft();qaApproveAll()");assert.equal(run('S.pair.proposal.status'),'pending','global QA auto approval must not approve a shared profile revision');
 console.log('PASS shared profile always requires an explicit other-partner decision');
@@ -49,3 +49,6 @@ console.log('PASS joint work version replay, public-result owner, archive data p
 
 prepare('P01',{id:'mia'});run("var capturedViewer;openViewer=(items,index,o)=>{capturedViewer=o};var privateGrant=receivedGrant('mia');privateGrant.granted=['info','photos'];ACT.privPeek({dataset:{v:'mia',i:'0'}})");assert.equal(run('capturedViewer.guard()'),true);run("privateGrant.granted=['info']");assert.equal(run('capturedViewer.guard()'),false,'narrowing a media scope revokes an already open viewer');
 console.log('PASS fullscreen private viewer denies a narrowed media scope on the same grant object');
+
+prepare('Q01');run("S.pair=null;S.pairInvite={nick:'kira',by:'me',status:'pending'};qaApproveAll()");assert.equal(run('activePair()'),false);assert.equal(run("S.pairInvite.status"),'pending');
+console.log('PASS invitation cannot self-accept or inherit a global QA approval');

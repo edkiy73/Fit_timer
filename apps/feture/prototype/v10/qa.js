@@ -47,12 +47,12 @@ ACT.qaRestart=()=>restartPrototype();
 window.FT_QA={go:(id,p)=>qaGo(id,p||{}),list:()=>QA_LIST(),screen:()=>cur()&&cur().id,tab:t=>tab(t),back:()=>back(),field:n=>cur()?.f?.[n],approveAll:()=>{QA.autoApprove=true;return qaApproveAll();},
  stress:on=>qaLong(on!==false)};
 /* «Мои запросы → Одобрять сразу» (QA.autoApprove): answers yes to everything the user is waiting for —
-   private-profile requests, couple invite and the partner's consent to couple grants, event applications, closed communities,
+   private-profile requests from seed profiles, event applications, closed communities,
    posts with photos, new community / event review, photo verification. New likes become mutual at once (likePerson). */
 function qaApproveAll(){if(!S?.session)return 0;let n=0;const now=Date.now(),note=x=>S.notifs.unshift({id:'n'+now+'_'+n,t:now,read:false,...x});
  [S,...(activePair()?[social('couple')]:[])].forEach(st=>st.reqOut.forEach(r=>{if(r.status==='pending'&&PEOPLE[r.p]&&!isBlocked(r.p)){r.status='granted';r.granted=[...r.scopes];r.until=now+7*DAY;note({type:'grant',p:r.p,go:['P08',{id:r.p}]});n++;}}));
- if(S.pairInvite?.status==='pending'&&PEOPLE[S.pairInvite.nick]){if(acceptPairInvitation())n++;}
- (S.pair?.grants||[]).forEach(g=>{if(g.partner==='pending'){g.partner='yes';n++;}});
+ // Pair invitations and all joint consents require the other participant's explicit action, even in QA.
+
  if(S.pairProposal&&S.pair){S.pair.name={ru:S.pairProposal,en:S.pairProposal};S.pairProposal=null;n++;}
  Object.entries(S.rsvp||{}).forEach(([id,r])=>{if(r.app==='pending'&&EV(id)){r.app='approved';note({type:'evapp',e:id,go:['E03',{id}]});n++;}});
  [...(S.pendingJoin||[])].forEach(id=>{if(!COMMUNITIES[id])return;S.pendingJoin.delete(id);S.joined.add(id);(S.communityRequests[id]||[]).forEach(q=>{if(q.p==='me'&&q.status==='pending'){q.status='approved';q.updated=now;}});note({type:'groupok',c:id,go:['C03',{id}]});n++;});
