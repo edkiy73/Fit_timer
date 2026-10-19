@@ -63,7 +63,7 @@ function card(id,pos){const p=PEOPLE[id];const ix=(S.ui.ph||{})[id]||0;const sh=
  <div class="pc-ph">${photoBg(id,ix)}${bigPhoto(id,ix)}
   ${photoBars(id,ix)}
   ${photoCount(id)>1?`<div class="pc-zone l" data-ph="-1"></div><div class="pc-zone r" data-ph="1"></div>`:''}<div class="pc-zone c" data-ph="0" aria-hidden="true"></div>
-  <div class="pc-tags">${likesMe?`<span class="pc-liked">${I.heartf}${L('Ты нравишься','Likes you')}</span>`:''}<span class="pc-score"><b>${sh.few?'—':sh.match.length}</b><small>${sh.few?L('мало данных','not enough data'):pl(sh.match.length,['общая тема','общие темы','общих тем'],['shared topic','shared topics'],true)}</small></span></div>
+  <div class="pc-tags">${otherDoneChip(id)}${likesMe?`<span class="pc-liked">${I.heartf}${L('Ты нравишься','Likes you')}</span>`:''}<span class="pc-score"><b>${sh.few?'—':sh.match.length}</b><small>${sh.few?L('мало данных','not enough data'):pl(sh.match.length,['общая тема','общие темы','общих тем'],['shared topic','shared topics'],true)}</small></span></div>
   <div class="stamp l">${L('Да','Like')}</div><div class="stamp n">${L('Мимо','Pass')}</div>
   <div class="pc-info"><h2 class="pc-name"><span class="pcn">${esc(pname(id))}</span>${p.age?`<span>${p.age}</span>`:''}${nameBadges(p)}</h2>
    <div class="pc-who">${[whoLine(id),placeLine(id)].filter(Boolean).map(x=>`<span>${esc(x)}</span>`).join('')}${p.online?`<span class="on">${L('в сети','online')}</span>`:''}</div>
@@ -124,6 +124,10 @@ ACT.undo=()=>{if(cur()?.id!=='D03'||!canAct('dating',datingActor()))return;const
  if((social().undos||0)>=1&&!S.me.premium){premiumSheet('undo');return;}
  const last=h.pop();delete social().decided[last.id];social().history.shift();social().likesOut=social().likesOut.filter(l=>l.p!==last.id);social().undos=(social().undos||0)+1;undoAnim=last.dir;deckRender();toast(L('Вернули предыдущую анкету','Previous profile is back'),{type:'ok'});};
 /** a personal like; only a mutual like opens a chat (R01) */
+/** the other identity of a couple already acted on this candidate: say so on the card (lists stay separate, the card tells who did what) */
+function otherDoneChip(id){if(!activePair())return '';const o=datingActor()==='couple'?'me':'couple',d=social(o);if(!d)return '';
+ const t=d.matches.some(m=>m.p===id)?L('совпадение','match'):d.likesOut.some(l=>l.p===id)?L('симпатия отправлена','like sent'):d.decided?.[id]<0?L('пропущено','passed'):'';
+ return t?`<span class="pc-other">${I.check}${esc(pname(o))}: ${t}</span>`:'';}
 function likePerson(id,src){if(src==='profile'&&!canLikeFrom(actionAuthor(),id))return;if(actionAuthor()==='couple'&&!canAct('dating','couple'))return;if(!authorGuard()||!PEOPLE[id]||relatedFor(actionAuthor(),id)||isBlocked(id)||isMatch(id)||src!=='discover'&&actionAuthor()==='me'&&!(PEOPLE[id]?.pair?authorProfile().dating:authorProfile().socialLikes)||src==='discover'&&!authorProfile().dating||!PEOPLE[id].dating&&!PEOPLE[id].socialLikes)return;
  const theyLike=social().likesIn.some(l=>l.p===id)||QA.autoApprove;
  if(theyLike){social().matches.unshift({p:id,t:Date.now()});social().likesIn=social().likesIn.filter(l=>l.p!==id);if(actionAuthor()==='couple')pairNotify('match',id,{p:id,go:['H02',{id,actor:'couple'}]});else S.notifs.unshift({id:'n'+Date.now(),type:'match',p:id,t:Date.now(),read:true,go:['H01']});ensureThread(id,actionAuthor());showMatch(id);}

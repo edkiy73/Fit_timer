@@ -119,7 +119,7 @@ console.log('PASS unified profile editor saves rich private text for personal an
  console.log('PASS acting identity: remembered modes, couple/personal profile likes with reasons and other-side state, couple page without actions, single pair hub');}
 // One inbox: access requests (personal and couple), partner approvals, host requests; quick share = everything asked for 7 days.
 {prepare('N01',{});run("coupleProfile();S.pair.proposal=null");
- const kinds=run("todoItems().map(x=>x.k+':'+(x.a||''))");assert.ok(kinds.some(k=>k.startsWith('req:me')),'personal requests are decisions');assert.ok(kinds.some(k=>k==='comm:'||k==='event:'),'host requests are decisions');
+ const kinds=run("todoItems().map(x=>x.k+':'+(x.a||''))");assert.ok(kinds.some(k=>k.startsWith('req:me')),'personal requests are decisions');assert.ok(kinds.some(k=>k==='eapp:'||k==='capp:'),'host requests are decisions');
  const html=run("todoHTML()");assert.ok(html.includes('grantQuick')&&html.includes('decline'),'inbox cards decide in place');
  const id=run("S.reqIn.find(r=>r.status==='new').id");const scopes=run(`S.reqIn.find(r=>r.id==='${id}').scopes.join()`);
  await finish(run(`ACT.grantQuick({dataset:{v:'${id}',actor:'me'},classList:{contains:()=>false,add(){},remove(){}},setAttribute(){},removeAttribute(){}})`));
@@ -128,3 +128,25 @@ console.log('PASS unified profile editor saves rich private text for personal an
  assert.ok(!run("SC.D03.render({sub:'discover'},cur())").includes("pplSub\" data-v=\"requests"),'People has no Requests tab');
  const access=run("accessBody({tab:'in'})");assert.ok(!access.includes('data-v="in"'),'Access is a ledger: no incoming-decision tab');
  console.log('PASS one inbox for decisions: personal/couple requests, partner approvals, host requests; quick share for 7 days; People and Access without request tabs');}
+// Host applications are decided in the inbox card itself, with the same guards as the host screens.
+{const btn="classList:{contains:()=>false,add(){},remove(){}},setAttribute(){},removeAttribute(){}";
+ prepare('N01',{});const ea=json("todoItems().filter(x=>x.k==='eapp').map(x=>({e:x.e,p:x.x.p}))");assert.ok(ea.length,'seeded event application shows in the inbox');
+ await finish(run(`ACT.appDecide({dataset:{e:'${ea[0].e}',v:'${ea[0].p}',d:'approved'},${btn}})`));
+ assert.equal(run(`EV('${ea[0].e}').apps.find(a=>a.p==='${ea[0].p}').status`),'approved');
+ prepare('N01',{});const ca=json("todoItems().filter(x=>x.k==='capp').map(x=>({c:x.c,id:x.q.id,p:x.q.p}))");assert.ok(ca.length,'seeded community request shows in the inbox');
+ await finish(run(`ACT.cRequestDecision({dataset:{c:'${ca[0].c}',v:'${ca[0].id}',status:'approved'},${btn}})`));
+ assert.equal(run(`S.communityRequests['${ca[0].c}'].find(q=>q.id==='${ca[0].id}').status`),'approved');
+ prepare('N01',{});const wrongRoute=ca[0];run("S.nav.stacks.feed=[{id:'F01',p:{},f:{}}]");run(`ACT.cRequestDecision({dataset:{c:'${wrongRoute.c}',v:'${wrongRoute.id}',status:'approved'},${btn}})`);
+ assert.equal(run(`S.communityRequests['${wrongRoute.c}'].find(q=>q.id==='${wrongRoute.id}').status`),'pending','a decision from any other screen is refused');
+ assert.equal(run("bellCount()"),run("currentNotifications().filter(n=>!n.read&&n.type!=='req'&&!(n.p&&isBlocked(n.p))).length+todoCount()"),'bell counts decisions once');
+ console.log('PASS inbox decisions on event applications and community requests keep route/ownership guards; bell counts decisions once');}
+// Events in the feed follow the agreed rules; the discovery card says what the other identity already did.
+{prepare('F01',{sub:'foryou'});run("S.me.dating=true;S.joined.add('rope')");
+ const all=json("feedEventPicks()");assert.ok(all.length>0&&all.length<=3,'feed picks 1–3 upcoming events');
+ assert.ok(all.every(id=>run(`!isPast('${id}')&&!EV('${id}').cancelled&&EV('${id}').organizer!=='me'`)),'only upcoming, not cancelled, not my own');
+ run("S.me.feedEvents='off'");assert.equal(json("feedEventPicks()").length,0,'switched off');
+ run("S.me.feedEvents='mine'");assert.ok(json("feedEventPicks()").every(id=>run(`myUpcomingEventIds().includes('${id}')||social('me').follows.has(EV('${id}').organizer)`)),'mine = attending or followed organisers');
+ run("S.me.feedEvents='all'");const first=all[0];run(`ACT.feedEvLess({dataset:{v:'${first}'}})`);assert.ok(!json("feedEventPicks()").includes(first),'«Less of this» hides the event');
+ run("coupleProfile();S.pair.profile.dating=true;S.datingActor='me';social('couple').likesOut.push({p:'mia',src:'discover',t:Date.now()})");assert.ok(run("otherDoneChip('mia')").includes('like sent')||run("otherDoneChip('mia')").includes('симпатия отправлена'),'the card says the couple already liked this person');
+ run("S.datingActor='couple'");assert.equal(run("otherDoneChip('mia')").includes('Alex'),false,'the chip names the other identity, not the acting one');
+ console.log('PASS events in the feed: ranking, limits, off/mine modes, hide; discovery card shows the other identity’s earlier action');}

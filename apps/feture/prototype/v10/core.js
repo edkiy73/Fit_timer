@@ -463,7 +463,9 @@ const C={
 function bar(title,o={}){
  return `<header class="bar ${o.cls||''}">${o.back?`<button class="ibtn ghost" data-back aria-label="${L('Назад','Back')}">${I.back}</button>`:''}${o.lead||''}<h1 class="${o.sm?'sm':''}">${safeInline(title)}${o.sub?`<span class="sub">${safeInline(o.sub)}</span>`:''}</h1>${o.actions||''}</header>`;
 }
-const bellBtn=()=>{const n=C.notif();return `<button class="ibtn" data-go="N01" aria-label="${L('Уведомления','Notifications')}${n?`: ${n}`:''}">${I.bell}${n?`<sup>${n}</sup>`:''}</button>`;};
+/** bell badge: unread notifications that are not decisions + decisions that wait on me (a request notification and its card are one item) */
+const bellCount=()=>currentNotifications().filter(n=>!n.read&&n.type!=='req'&&!(n.p&&isBlocked(n.p))).length+(typeof todoCount==='function'?todoCount():0);
+const bellBtn=()=>{const n=bellCount();return `<button class="ibtn" data-go="N01" aria-label="${L('Уведомления','Notifications')}${n?`: ${n}`:''}">${I.bell}${n?`<sup>${n}</sup>`:''}</button>`;};
 const searchBtn=(scope)=>`<button class="ibtn" data-go="G01" data-p='${esc(JSON.stringify({scope:scope||'all'}))}' aria-label="${L('Поиск','Search')}">${I.search}</button>`;
 /* V8: community first — Events get their own tab; People appear only once dating is switched on in the admin */
 const TABDEF=()=>[['feed',I.feed,L('Лента','Feed'),0],...(window.DATING_ON&&DATING_ON()?[['people',I.people,L('Люди','People'),C.likesIn()]]:[]),['groups',I.groups,L('Комьюнити','Community'),0],['chats',I.chat,L('Чаты','Chats'),C.unreadChats()||(C.newMatches()?'dot':0)],['me',I.me,L('Я','Me'),C.reqIn()]];
