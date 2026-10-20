@@ -1879,9 +1879,7 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
 .poll.voted .poll-undo:hover,.poll .poll-undo:hover{background:color-mix(in srgb,var(--ink) 10%,var(--raise))}
 
 /* replies: order toggle, batch loading, a flash on the reply you just sent */
-.cm-sort{display:inline-flex;gap:2px;padding:3px;margin:0 0 8px;border-radius:12px;background:var(--raise)}
-.cm-sort button{min-height:30px;padding:0 12px;border-radius:9px;font-size:13px;font-weight:600;color:var(--mute)}
-.cm-sort button.on{background:var(--surf);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.cm-sort{margin:0 0 8px}
 .cm-load{display:flex;align-items:center;justify-content:center;width:100%;min-height:44px;margin:8px 0 12px;border-radius:14px;background:var(--raise);font-size:14px;font-weight:600;color:var(--ink)}
 .cm-load:hover{background:color-mix(in srgb,var(--ink) 8%,var(--raise))}
 @keyframes cmFlash{0%,30%{background:color-mix(in srgb,var(--accent) 14%,transparent)}100%{background:transparent}}
@@ -2289,7 +2287,6 @@ input.inp,select.inp{height:48px}
 .attach button{min-height:36px}
 .dock button{font-size:11px}
 .chip.tag{min-height:32px;padding:5px 12px}
-.cm-sort button{min-height:36px}
 
 /* single-choice filter rows (a select inside a bare card) are fields, like every other standalone select */
 .fin-b>.grp>.card{padding:0;background:none;border:0}
@@ -2315,6 +2312,17 @@ button.pill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:no
 .fld-row{display:flex;justify-content:space-between;align-items:baseline;margin-top:12px}.fld-row b{font-weight:600}
 
 /* V11 (UX-33): small controls keep their look but get a 44px tap area */
-.langsw button,.cm-sort button,.fclr{position:relative}
-.langsw button::after,.cm-sort button::after{content:"";position:absolute;inset:-7px -2px}
+
+.langsw button,.fclr{position:relative}
+.langsw button::after{content:"";position:absolute;inset:-7px -2px}
 .fclr::after{content:"";position:absolute;inset:-8px}
+
+/* V11 polish */
+.or-line{display:flex;align-items:center;gap:12px;margin:18px 0 12px;color:var(--faint);font-size:13px}.or-line::before,.or-line::after{content:"";flex:1;height:1px;background:var(--line)}
+.author-reason{margin:12px 2px 0;font-size:13px;line-height:1.4;color:var(--mute)}.author-reason[hidden]{display:none}
+.more-row .tx b{color:var(--accent)}.more-row>svg{color:var(--accent)}
+/* dashed «add» tiles in the media editors: the grid must not clip the outer border */
+.mgrid[data-reorder]{overflow:visible;border-radius:0}
+.mgrid[data-reorder] .mi-add,.mgrid[data-reorder] .mi{border-radius:var(--r)}
+.me-pair .mp-avs,.li .mp-avs{flex:none}
+.me-card{gap:12px}
