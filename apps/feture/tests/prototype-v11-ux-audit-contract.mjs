@@ -66,3 +66,8 @@ const src=f=>fs.readFileSync(root+f,'utf8');
  fresh();const mem=appScreen('C03',{id:'rope',t:'members'});assert.ok(mem.includes('cMoreMembers'),'1285 members: the list is paged');run("ACT.cMoreMembers({dataset:{v:'rope'}})");assert.ok(appScreen('C03',{id:'rope',t:'members'}).includes('участник сообщества'),'next page appends demo rows');
  assert.ok(/\.mgrid\[data-reorder\]\{overflow:visible/.test(fs.readFileSync(root+'styles.css','utf8')),'media editor grid does not clip dashed tiles');
  console.log('PASS owner screenshots round 2');}
+
+/* spacing pass (owner, 20.10): plain stacked content has one vertical rhythm */
+{const css=fs.readFileSync(root+'styles.css','utf8');
+ for(const rule of [':where(.wrap,.auth-wrap,.sh-b)>:where(.btn)+:where(.btn){margin-top:10px}','>.btn.text{margin-inline:auto}','.mb12{margin-bottom:12px}'])assert.ok(css.includes(rule),`spacing rule «${rule}»`);
+ console.log('PASS spacing rhythm rules');}
