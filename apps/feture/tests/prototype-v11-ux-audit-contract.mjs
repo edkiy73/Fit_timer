@@ -55,3 +55,14 @@ const src=f=>fs.readFileSync(root+f,'utf8');
 /* owner: «Я» → «Профиль» / «Профили» */
 {fresh();assert.equal(run('meTabName()'),'Профиль');run("S.pair={status:'active',with:'sofi',since:1,name:{ru:'Мы',en:'Us'}}");assert.equal(run('meTabName()'),'Профили');
  console.log('PASS «Профиль» tab name');}
+
+/* owner screenshots (20.10, round 2) */
+{fresh();
+ const q01=appScreen('Q01',{});assert.ok(q01.includes('or-line')&&q01.includes('pairShareLink')&&!q01.includes('btn text mt12" data-act="pairShareLink"'),'partner link is a divider + secondary button');
+ const x01=appScreen('X01',{});assert.ok(!x01.includes('me-pair')&&!x01.includes('class="nextstep"'),'profile hub: pair and next step are plain list rows');assert.ok(x01.includes('Профиль пары'));
+ fresh();const h01=appScreen('H01',{sub:'chats'});assert.ok(h01.includes('data-go="H05"')&&!h01.includes('btn text" data-go="H05"'),'archive is a header action');
+ assert.ok(/class="cm-sort"><div class="seg/.test(run("replyTree('d','d1')")),'reply order is the shared full-width switch');
+ const c07=appScreen('C07',{id:'rope'});assert.ok(c07.includes('Кто увидит')&&c07.includes('alert mt16'),'audience line has its own title and spacing');
+ fresh();const mem=appScreen('C03',{id:'rope',t:'members'});assert.ok(mem.includes('cMoreMembers'),'1285 members: the list is paged');run("ACT.cMoreMembers({dataset:{v:'rope'}})");assert.ok(appScreen('C03',{id:'rope',t:'members'}).includes('участник сообщества'),'next page appends demo rows');
+ assert.ok(/\.mgrid\[data-reorder\]\{overflow:visible/.test(fs.readFileSync(root+'styles.css','utf8')),'media editor grid does not clip dashed tiles');
+ console.log('PASS owner screenshots round 2');}

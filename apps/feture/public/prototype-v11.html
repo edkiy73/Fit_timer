@@ -1890,9 +1890,7 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
 .poll.voted .poll-undo:hover,.poll .poll-undo:hover{background:color-mix(in srgb,var(--ink) 10%,var(--raise))}
 
 /* replies: order toggle, batch loading, a flash on the reply you just sent */
-.cm-sort{display:inline-flex;gap:2px;padding:3px;margin:0 0 8px;border-radius:12px;background:var(--raise)}
-.cm-sort button{min-height:30px;padding:0 12px;border-radius:9px;font-size:13px;font-weight:600;color:var(--mute)}
-.cm-sort button.on{background:var(--surf);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.cm-sort{margin:0 0 8px}
 .cm-load{display:flex;align-items:center;justify-content:center;width:100%;min-height:44px;margin:8px 0 12px;border-radius:14px;background:var(--raise);font-size:14px;font-weight:600;color:var(--ink)}
 .cm-load:hover{background:color-mix(in srgb,var(--ink) 8%,var(--raise))}
 @keyframes cmFlash{0%,30%{background:color-mix(in srgb,var(--accent) 14%,transparent)}100%{background:transparent}}
@@ -2300,7 +2298,6 @@ input.inp,select.inp{height:48px}
 .attach button{min-height:36px}
 .dock button{font-size:11px}
 .chip.tag{min-height:32px;padding:5px 12px}
-.cm-sort button{min-height:36px}
 
 /* single-choice filter rows (a select inside a bare card) are fields, like every other standalone select */
 .fin-b>.grp>.card{padding:0;background:none;border:0}
@@ -2326,9 +2323,20 @@ button.pill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:no
 .fld-row{display:flex;justify-content:space-between;align-items:baseline;margin-top:12px}.fld-row b{font-weight:600}
 
 /* V11 (UX-33): small controls keep their look but get a 44px tap area */
-.langsw button,.cm-sort button,.fclr{position:relative}
-.langsw button::after,.cm-sort button::after{content:"";position:absolute;inset:-7px -2px}
+
+.langsw button,.fclr{position:relative}
+.langsw button::after{content:"";position:absolute;inset:-7px -2px}
 .fclr::after{content:"";position:absolute;inset:-8px}
+
+/* V11 polish */
+.or-line{display:flex;align-items:center;gap:12px;margin:18px 0 12px;color:var(--faint);font-size:13px}.or-line::before,.or-line::after{content:"";flex:1;height:1px;background:var(--line)}
+.author-reason{margin:12px 2px 0;font-size:13px;line-height:1.4;color:var(--mute)}.author-reason[hidden]{display:none}
+.more-row .tx b{color:var(--accent)}.more-row>svg{color:var(--accent)}
+/* dashed «add» tiles in the media editors: the grid must not clip the outer border */
+.mgrid[data-reorder]{overflow:visible;border-radius:0}
+.mgrid[data-reorder] .mi-add,.mgrid[data-reorder] .mi{border-radius:var(--r)}
+.me-pair .mp-avs,.li .mp-avs{flex:none}
+.me-card{gap:12px}
 </style>
 </head>
 <body>
@@ -3563,7 +3571,7 @@ function replyTree(kind,id){const list=identifyReplies(kind,id),byId=new Map(lis
  const rootSet=new Set(roots);roots.splice(0,roots.length,...route.order.map(id=>byId.get(id)).filter(c=>c&&rootSet.has(c)));
  const PAGE=REPLY_PAGE;const fi=focus?roots.findIndex(r=>r.id===focus||flat(r).some(c=>c.id===focus)):-1;route.shown=Math.max(route.shown||PAGE,fi+1);
  const page=roots.slice(0,route.shown),left=roots.length-page.length;
- const head=roots.length>1?`<div class="cm-sort" role="tablist" aria-label="${L('Порядок ответов','Reply order')}">${[['top',L('Интересные','Top')],['new',L('Новые','Newest')]].map(([k,l])=>`<button role="tab" class="${sort===k?'on':''}" aria-selected="${sort===k}" data-act="thSort" data-v="${k}">${l}</button>`).join('')}</div>`:'';
+ const head=roots.length>1?`<div class="cm-sort">${seg([['top',L('Интересные','Top')],['new',L('Новые','Newest')]],sort,'thSort','sm')}</div>`:'';
  const tail=left?`<button class="cm-load" data-act="thPage" data-left="${left}">${L(`Показать ещё ${Math.min(PAGE,left)} из ${left}`,`Show ${Math.min(PAGE,left)} more of ${left}`)}</button>`:'';
  return head+page.map(root=>{const all=flat(root);/* opens once by itself for a deep link or your new reply; after that you can fold it again */
   route.auto??=[];const want=all.filter(c=>(c.id===focus||(ownedIdentity(c.a)&&c.t>=route.openedAt))&&!route.auto.includes(c.id));if(want.length){route.auto.push(...want.map(c=>c.id));if(!open.includes(root.id))open.push(root.id);}const forced=false;const isOpen=open.includes(root.id)||forced||all.length<=3;const shown=isOpen?all:all.slice(0,2),rest=all.length-shown.length;
@@ -5484,7 +5492,7 @@ SC.C03={title:p=>SC.C03.valid(p)?T(COMMUNITIES[p.id].name):L('Сообществ
   ${!j&&c.privacy==='open'?``:''}`;
  if(t==='events')body=evs.length?`<div class="evgrid">${evs.map((e,i)=>eventCard(e,{i})).join('')}</div>`:empty('cal',L('Ближайших событий нет','No upcoming events'),'',ownsCommunity(id)?`<button class="btn primary" data-go="E11">${L('Создать событие','Create an event')}</button>`:'');
  if(t==='members'){const hosts=communityHostIds(id);const known=[...(c.seedMembers||[]),...(S.communityRequests[id]||[]).filter(x=>x.status==='approved'&&x.showMember).map(x=>x.p)];const vis=[...new Set(c.knownMembers?known:[...['maya','mia','kai','sofi','kira','dan','noa'],...known])].filter(x=>!!PEOPLE[x]&&!c.mods.includes(x)&&canRead).slice(0,12);body=`<div class="sec" style="margin-top:4px">${L('Ведущие','Hosts')}</div><div class="card list">${hosts.map(m=>personRow(m,{sub:L('ведёт сообщество','host')})).join('')}</div>
-  <div class="sec">${pl(C.members(id),['участник','участника','участников'],['member','members'])}</div>${canRead?`<div class="card list">${j&&!ownsCommunity(id)?`<button class="li" data-go="P03">${av('me','')}<span class="tx"><b>${esc(pname('me'))}</b><small>${L('это ты','that’s you')}</small></span>${I.chev}</button>`:''}${vis.map(m=>personRow(m)).join('')}${!vis.length&&ownsCommunity(id)?`<p class="note">${L('Других участников пока нет','No other members yet')}</p>`:''}</div>`:`<p class="note">${L('Список участников доступен после вступления.','The member list is available after joining.')}</p>`}`;}
+  <div class="sec">${pl(C.members(id),['участник','участника','участников'],['member','members'])}</div>${canRead?`<div class="card list">${j&&!ownsCommunity(id)?`<button class="li" data-go="P03">${av('me','')}<span class="tx"><b>${esc(pname('me'))}</b><small>${L('это ты','that’s you')}</small></span>${I.chev}</button>`:''}${vis.map(m=>personRow(m)).join('')}${memberDemoRows(id,hosts.length+vis.length+(j&&!ownsCommunity(id)?1:0))}${!vis.length&&ownsCommunity(id)?`<p class="note">${L('Других участников пока нет','No other members yet')}</p>`:''}</div>`:`<p class="note">${L('Список участников доступен после вступления.','The member list is available after joining.')}</p>`}`;}
  if(t==='rules')body=`<div class="card"><ol class="rules">${c.rules.map(x=>`<li>${esc(T(x))}</li>`).join('')}</ol></div>`;
  return `<header class="bar overlay"><button class="ibtn glass" data-back aria-label="${L('Назад','Back')}">${I.back}</button><span style="flex:1"></span><button class="ibtn glass" data-act="cMenu" aria-label="${L('Ещё','More')}">${I.more}</button></header>
  <div class="view nodock top0"><div class="wrap"><div class="cm-hero">${evCover(c)}</div>
@@ -5496,6 +5504,13 @@ SC.C03={title:p=>SC.C03.valid(p)?T(COMMUNITIES[p.id].name):L('Сообществ
  <div class="row g8 mt16 cm-act">${action}</div>
  <div style="height:18px"></div>${tabs}${body}</div></div>`;}};
 ACT.cTab=a=>setP('t',a.dataset.v);
+/* V11 polish: the list is paged — «Показать ещё» appends the next 20 until the count shown in the header is reached (demo rows: generic members without public profiles) */
+const MEM_NICKS=['lina','tomas','vera','ilya','mara','otto','nika','ruben','alma','kolya','sasha','ines','leo_b','tanya','marek','yuki','pavel','dora','nils','rita'];
+const memberDemo=(id,i)=>{const n=MEM_NICKS[(i*7+id.length)%MEM_NICKS.length]+(i>=MEM_NICKS.length?String(10+i%90):'');return {n,plate:['rose','sea','lilac','amber','coal'][i%5]};};
+function memberDemoRows(id,have){const total=C.members(id),shown=(S.ui.mem??={})[id]||0,left=Math.max(0,total-have-shown);
+ const rows=Array.from({length:shown},(_,i)=>{const m=memberDemo(id,i);return `<div class="li static"><span class="av sm ini"><div class="plate" style="${PL[m.plate]||PL.rose};position:absolute;inset:0"></div><b style="position:relative">${esc(m.n[0].toUpperCase())}</b></span><span class="tx"><b>${esc(m.n)}</b><small>${L('участник сообщества','community member')}</small></span></div>`;}).join('');
+ return rows+(left?`<button class="li more-row" data-act="cMoreMembers" data-v="${id}"><span class="tx"><b>${L('Показать ещё','Show more')}</b><small>${L(`Показано ${have+shown} из ${total}`,`Showing ${have+shown} of ${total}`)}</small></span>${I.down}</button>`:'');}
+ACT.cMoreMembers=a=>{const id=a.dataset.v;(S.ui.mem??={})[id]=((S.ui.mem[id])||0)+20;refresh();};
 ACT.cMenu=()=>sheet(()=>{const id=cur().p.id;return {title:esc(T(COMMUNITIES[id].name)),body:`<div class="card list">${linkRow({act:'shareProfile',icon:'link',title:L('Скопировать ссылку','Copy link'),noChev:1})}${linkRow({act:'cMute',icon:'belloff',title:L('Не присылать уведомления','Mute notifications'),noChev:1})}${S.joined.has(id)&&!ownsCommunity(id)?linkRow({act:'cLeaveMenu',icon:'x',cls:'danger',title:L('Выйти из сообщества','Leave community'),noChev:1}):''}${linkRow({act:'report',v:'group',icon:'flag',cls:'danger',title:L('Пожаловаться','Report'),noChev:1})}</div>`};});
 ACT.cLeaveMenu=()=>{closeSheet(true);ACT.cLeave();};
 ACT.cMute=()=>{closeSheet();toast(L('Уведомления сообщества выключены','Community notifications muted'),{type:'ok'});};
@@ -5529,8 +5544,7 @@ SC.C06={title:()=>L('Обсуждение','Discussion'),valid:p=>!!S.discussion
  <div class="post-h"><button class="who" ${profGo(d.author)}>${av(d.author,'sm')}<span class="tx"><b><span class="nmt">${esc(pname(d.author))}</span>${nameBadges(person(d.author))}</b><small>${F.rel(d.t)}</small></span></button><button class="ibtn ghost sm" data-act="report" data-v="post" aria-label="${L('Пожаловаться','Report')}">${I.flag}</button></div>
  <h2 class="t md" style="margin-top:14px">${esc(T(d.title))}</h2><div style="font-size:15.5px;line-height:1.55">${md(T(d.text))}</div>
  ${mediaPreviews(d.media)}<div class="sec">${pl(d.replies.length,['ответ','ответа','ответов'],['reply','replies'])}</div>
- ${replyTree('d',d.id)||`<p class="note">${L('Ответов пока нет.','No replies yet.')}</p>`}<p class="author-reason" data-author-reason ${communityAuthorReason(cur().id==='C06'?d.c:p.id)?'':'hidden'}>${esc(communityAuthorReason(d.c,'me','comment'))}</p>
- ${!j?`<div class="alert info mt16">${I.info}<span>${L('Чтобы отвечать, вступи в сообщество.','Join the community to reply.')}</span></div><button class="btn primary mt12" data-back>${L('К сообществу','To the community')}</button>`:''}
+ ${replyTree('d',d.id)||`<p class="note">${L('Ответов пока нет.','No replies yet.')}</p>`}${j?`<p class="author-reason" data-author-reason ${communityAuthorReason(cur().id==='C06'?d.c:p.id)?'':'hidden'}>${esc(communityAuthorReason(d.c,'me','comment'))}</p>`:`<div class="alert info mt16">${I.info}<span><b>${L('Отвечать могут участники','Only members can reply')}</b>${L('Вступи в сообщество, чтобы написать ответ.','Join the community to write a reply.')}</span></div><button class="btn primary mt12" data-back>${L('К сообществу','To the community')}</button>`}
  </div></div>${j?`<div class="inputbar">${replyComposer(r)}<textarea id="dr" rows="1" placeholder="${L('Ответить в обсуждении…','Reply to the discussion…')}" data-in="grow" data-enter="sendReply">${esc(r.f.dr||'')}</textarea><button class="ibtn send" data-act="sendReply" aria-label="${L('Отправить','Send')}">${I.send}</button></div>`:''}`;}};
 ACT.sendReply=()=>{const ticket=authorTicket('me');const route=cur(),d=S.discussions.find(x=>x.id===route.p.id);if(!d||!validAuthor(ticket)||!communityAuthorAllowed(d.c,ticket.id,'comment')){toast(L('Ответить могут только участники сообщества','Only community members can reply'),{type:'warn'});return;}const el=$('#dr'),v=el?.value.trim();if(!v){toast(L('Напиши ответ','Write a reply'),{type:'warn'});el?.focus();return;}identifyReplies('d',d.id);const parent=d.replies.find(c=>c.id===route.replyTarget?.id);if(route.replyTarget&&(!parent||parent.deleted||isBlocked(parent.a)))return;const owner=S,session=S.session,x={id:'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,7),parent:parent?.id||null,a:ticket.id,sender:pairMember(),text:{ru:v,en:v},t:Date.now(),status:'pending'};d.replies.push(x);route.f.dr='';delete route.replyTarget;route.scrollTo=x.id;refresh();
  const allowed=()=>S===owner&&S.session===session&&validAuthor(ticket)&&S.discussions.includes(d)&&communityAuthorAllowed(d.c,ticket.id,'comment');
@@ -5542,7 +5556,7 @@ SC.C07={title:()=>L('Новое обсуждение','New discussion'),valid:p=
  ${field({name:'title',label:L('Тема','Topic'),ph:L('Коротко, о чём разговор','In short, what’s it about'),max:120})}
  ${rteField({name:'text',label:L('Текст','Text'),max:3000,ph:L('Подробности, вопрос или опыт','Details, a question or experience')})}
  <div class="sec">${L('Фото и видео','Photos and videos')}<span class="note">${L('до 6 вложений','up to 6 attachments')}</span></div><button class="btn soft" data-act="discussionMedia">${I.image}${L('Добавить фото или видео','Add photos or videos')}</button>${mediaPreviews(r.media,'discussionMediaRemove')}
- <div class="alert">${I.users3}<span>${c.privacy==='closed'?L('Обсуждение увидят только участники — так устроены закрытые сообщества.','Only members will see the discussion — that’s how closed communities work.'):L('Обсуждение увидят все, кто открывает сообщество.','Everyone who opens the community will see the discussion.')}</span></div>
+ <div class="alert mt16">${I.users3}<span><b>${L('Кто увидит','Who will see it')}</b>${c.privacy==='closed'?L('Только участники сообщества.','Community members only.'):L('Все, кто зайдёт в сообщество, — и участники, и гости.','Anyone who visits the community — members and guests.')}</span></div>
  </div></div><div class="ctabar"><div class="wrap"><button class="btn primary" data-act="cdPost">${L('Опубликовать','Publish')}</button></div></div>`;}};
 ACT.cdPost=a=>{const r=cur(),community=r.p.id;
  const ticket=authorTicket('me');const allowed=()=>validAuthor(ticket)&&SC.C07.valid({id:community})&&r.p.id===community&&communityAuthorAllowed(community,ticket.id);
@@ -5594,7 +5608,7 @@ function threadIds(arch,actor=chatAuthor()){const st=chatStore(actor);if(!st)ret
 function chatUnread(t){const reader=pairMember(),seen=t.readBy?.[reader];return seen==null?(t.unread||0):t.msgs.filter(m=>!m.me&&m.t>seen).length;}
 function chatRow(id,actor='me'){const t=ensureThread(id,actor),m=lastMsg(id,actor),n=chatUnread(t);return `<button class="chat-row ${n?'unread':''}" data-go="H02" data-p='${esc(JSON.stringify({id,actor}))}'>${av(id,'round lg')}<span class="tx"><b>${esc(pname(id))}</b><small>${actor==='couple'?esc(pairName())+' · ':''}${m?esc(msgPreview(m)):L('Напиши первым','Say hi first')}</small></span><span class="side2">${n?`<span class="unr">${n}</span>`:''}<time>${m?F.short(m.t):''}</time></span></button>`;}
 SC.H01={root:1,tab:'chats',title:()=>L('Чаты','Chats'),render:p=>{const f=activePair()?(p.kind||'all'):'all',q=(p.q||'').toLowerCase(),owners=(S.pair?.status==='active'||S.pair?.status==='dissolved'?['me','couple']:['me']).filter(a=>f==='all'||f===a);const rows=owners.flatMap(actor=>threadIds(false,actor).filter(id=>!q||pname(id).toLowerCase().includes(q)).map(id=>({id,actor,t:lastMsg(id,actor)?.t||0}))).sort((a,b)=>b.t-a.t);const fresh=owners.filter(actor=>authorAllowed(actor)).flatMap(actor=>social(actor).matches.filter(m=>!social(actor).threads[m.p]?.msgs.length&&!isBlocked(m.p)).map(m=>({...m,actor})));
- return `${bar(L('Чаты','Chats'),{actions:`<button class="ibtn" data-act="chatSearch" aria-label="${L('Поиск по чатам','Search chats')}">${I.search}</button>${bellBtn()}`})}<div class="view"><div class="wrap">${activePair()?seg([['all',L('Все','All')],['me',L('Личные','Personal')],['couple',L('От пары','As a couple')]],f,'chatKind')+(f==='couple'?`<p class="note mt8">${I.couple} ${L(`Здесь вы пишете от имени пары «${esc(pairName())}». Партнёр видит эти чаты.`,`Here you write as the couple “${esc(pairName())}”. Your partner sees these chats.`)}</p>`:''):''}${p.searching?`<input class="inp mt12" id="chatQ" aria-label="${L('Поиск по чатам','Search chats')}" value="${esc(p.q||'')}" data-in="chatQ">`:''}${fresh.length?`<div class="sec">${L('Новые совпадения','New matches')}</div><div class="matches">${fresh.map(m=>`<button data-act="openChat" data-v="${m.p}" data-actor="${m.actor}"><span class="ring2">${av(m.p,'round')}</span><span class="mn">${esc(pname(m.p))}${m.actor==='couple'?' · '+esc(pairName()):''}</span></button>`).join('')}</div>`:''}${rows.map(x=>chatRow(x.id,x.actor)).join('')||empty('chat',L('Пока нет диалогов','No conversations yet'),L('Чат открывается после взаимной симпатии.','A mutual like opens a chat.'))}<button class="btn text" data-go="H05">${L('Архив','Archive')}</button></div></div>`;}};
+ return `${bar(L('Чаты','Chats'),{actions:`<button class="ibtn" data-act="chatSearch" aria-label="${L('Поиск по чатам','Search chats')}">${I.search}</button><button class="ibtn" data-go="H05" aria-label="${L('Архив','Archive')}">${I.archive}</button>${bellBtn()}`})}<div class="view"><div class="wrap">${activePair()?seg([['all',L('Все','All')],['me',L('Личные','Personal')],['couple',L('От пары','As a couple')]],f,'chatKind')+(f==='couple'?`<p class="note mt8">${I.couple} ${L(`Здесь вы пишете от имени пары «${esc(pairName())}». Партнёр видит эти чаты.`,`Here you write as the couple “${esc(pairName())}”. Your partner sees these chats.`)}</p>`:''):''}${p.searching?`<input class="inp mt12" id="chatQ" aria-label="${L('Поиск по чатам','Search chats')}" value="${esc(p.q||'')}" data-in="chatQ">`:''}${fresh.length?`<div class="sec">${L('Новые совпадения','New matches')}</div><div class="matches">${fresh.map(m=>`<button data-act="openChat" data-v="${m.p}" data-actor="${m.actor}"><span class="ring2">${av(m.p,'round')}</span><span class="mn">${esc(pname(m.p))}${m.actor==='couple'?' · '+esc(pairName()):''}</span></button>`).join('')}</div>`:''}${rows.map(x=>chatRow(x.id,x.actor)).join('')||empty('chat',L('Пока нет диалогов','No conversations yet'),L('Чат открывается после взаимной симпатии.','A mutual like opens a chat.'))}</div></div>`;}};
 ACT.chatKind=a=>setP('kind',a.dataset.v);
 ACT.hSub=a=>setSub(a.dataset.v);
 ACT.toPeople=()=>tab('people',{sub:'discover'});
@@ -5814,15 +5828,16 @@ function testCards(){const list=Object.entries(QUIZ).sort(([a],[b])=>(S.me.tests
  return `<div class="tests">${list.map(([id,z])=>{const st=S.me.tests[id]||{};const n=z.topics.length;const got=Object.keys(st.ans||{}).length;return `<button class="tcard" data-go="X07" data-id="${id}"><span class="tc-art">${plate(z.pl)}<span class="tc-ic">${I[z.ic||'test']}</span></span><span class="tc-b"><b>${esc(T(z.title))}</b>${st.done?`<span class="tc-res">${sortJars(quizJars(id)).slice(0,3).map(j=>`<i style="--jc:${j.limit?'var(--line2)':jarColor(j.lv)}">${esc(topic(j.t))} <em>${j.limit==='hard'?L('табу','taboo'):j.limit?L('обсужд.','negot.'):j.lv}</em></i>`).join('')}</span>`:''}<small>${st.done?`${I.check}${L('пройден','done')}${st.t?` · ${F.date(st.t)}`:''}`:got?L(`начат · ${got} из ${n}`,`started · ${got} of ${n}`):pl(n,['интерес','интереса','интересов'],['interest','interests'])}</small></span></button>`;}).join('')}</div>`;}
 
 /* the couple lives with your profile, not in «activity» (owner 15.10): one row inside the profile card */
-function mePairRow(){const P=S.pair;if(P?.status==='active')return `<button class="me-pair on" data-go="Q01"><span class="mp-avs">${av('me','xs')}${av(P.with,'xs')}</span><span class="tx"><b>${esc(pairName())}</b><small>${L('Профиль пары','Couple profile')}</small></span>${I.chev}</button>`;
- return `<button class="me-pair" data-act="pairLink"><span class="mp-ic">${I.couple}</span><span class="tx"><b>${S.pairInvite?L('Приглашение в пару отправлено','Couple invitation sent'):L('С кем-то вместе? Свяжи профили в пару','Together with someone? Link your profiles')}</b><small>${S.pairInvite?L('ждём ответа партнёра','waiting for your partner'):L('Общий профиль, у каждого — свой аккаунт','A shared profile, each keeps their own account')}</small></span>${I.chev}</button>`;}
+/* V11 polish: the couple is a row of the «next steps» list, drawn like every other list row */
+function mePairRow(){const P=S.pair;if(P?.status==='active')return linkRow({go:'Q01',av:`<span class="mp-avs">${av('me','xs')}${av(P.with,'xs')}</span>`,title:esc(pairName()),sub:L('Профиль пары','Couple profile')});
+ return linkRow({act:'pairLink',icon:'couple',tone:'v',title:S.pairInvite?L('Приглашение в пару отправлено','Couple invitation sent'):L('Профиль пары','Couple profile'),sub:S.pairInvite?L('Ждём ответа партнёра','Waiting for your partner'):L('Свяжи профили с партнёром — у каждого свой аккаунт','Link profiles with your partner — each keeps their own account')});}
 SC.X01={root:1,tab:'me',title:()=>meTabName(),render:()=>{const m=S.me;const [ns,nt,nid]=nextStep();
  const head=bar(meTabName(),{actions:`${bellBtn()}<button class="ibtn" data-go="K01" aria-label="${L('Настройки','Settings')}">${I.gear}</button>`});
  const jars=myJars();const going=myUpcomingEventIds().length;
  return head+`<div class="view"><div class="wrap">
- <section class="grp"><div class="card me-card"><button class="me-id" data-go="P03">${av('me','me-av')}<span class="grow"><b>${esc(pname('me'))}</b>${m.city?`<small>${esc(city(m.city))}</small>`:''}</span>${I.chev}</button>
-  ${mePairRow()}<div class="me-acts"><button class="btn secondary sm" data-go="P02">${I.edit}${L('Изменить','Edit')}</button></div>
-  ${nt?`<button class="nextstep" ${nt==='test'?`data-go="X07" data-id="${nid}"`:nt==='topic'?'data-act="addJar"':'data-go="P02"'}><span class="ico">${nt==='P02'?I.camera:I.test}</span><span class="tx"><b>${L('Следующий шаг','Next step')}</b><small>${ns}</small></span>${I.chev}</button>`:''}</div></section>
+ <section class="grp"><div class="card me-card"><button class="me-id" data-go="P03">${av('me','me-av')}<span class="grow"><b>${esc(pname('me'))}</b><small>${m.city?esc(city(m.city)):L('Так тебя видят другие','How others see you')}</small></span>${I.chev}</button>
+  <div class="me-acts"><button class="btn secondary sm" data-go="P02">${I.edit}${L('Изменить профиль','Edit profile')}</button></div></div></section>
+ <section class="grp"><div class="card list">${nt?linkRow({...(nt==='topic'?{act:'addJar'}:{go:'P02'}),icon:nt==='P02'?'camera':'plus',tone:'a',title:L('Следующий шаг','Next step'),sub:ns}):''}${mePairRow()}</div></section>
  ${grp(L('Мои интересы','My interests'),jars.length?jarShelf(m.jars,{max:4,pre:1,act:'editJar',vis:1,add:'addJar',moreAct:'myJarsAll'}):`<div class="jar-empty"><p>${L('Баночка — это один интерес и то, как она тебе откликается: от 1 до 10, «обсуждаемо» или «табу».','A jar is one interest and how it feels to you: 1 to 10, “negotiable” or “taboo”.')}</p><div class="row g8"><button class="btn secondary sm" data-act="addJar">${I.plus}${L('Добавить интерес','Add an interest')}</button></div></div>`,{right:jars.length?`<button data-go="X02">${L('Все','All')} · ${jars.length}</button>`:''})}
  ${grp(L('Активность','Activity'),`${linkRow({go:'E10',icon:'cal',title:L('Мои события','My events'),val:going?String(going):''})}${linkRow({go:'F10',icon:'feed',title:L('Мои публикации','My posts'),val:String(S.myPosts.length)})}${linkRow({go:'P10',p:{id:'me',tab:'followers'},icon:'users3',title:L('Подписчики и подписки','Followers & following'),val:`${followersOf('me').length} · ${followingOf('me').length}`})}${linkRow({go:'G04',icon:'bookmark',title:L('Сохранённое','Saved'),val:String(m.saved.posts.length+m.saved.events.length)})}${linkRow({go:'P07',icon:'unlock',title:L('Доступы','Access')})}`,{list:1})}
  </div></div>`;},after:()=>fillJars()};
@@ -6190,7 +6205,9 @@ SC.Q01={title:()=>L('Связь пары','Couple connection'),render:(p,r)=>{co
  <div class="pair-facts">${[[I.couple,L('Общий профиль пары','A shared couple profile'),L('Фото, описание и интересы пары','Photos, description and interests of the couple')],[I.lock,L('Личное остаётся личным','Personal stays personal'),L('Свои аккаунты, чаты и интересы','Your own accounts, chats and interests')],[I.check,L('Только с согласия обоих','Only if both agree'),L('Каждый подтверждает у себя','Each confirms in their own account')]].map(([i,b,t])=>`<div class="pf"><span class="ico v">${i}</span><span><b>${b}</b><small>${t}</small></span></div>`).join('')}</div>
  ${field({name:'partner',label:L('Ник партнёра','Partner’s nickname'),icon:'at',ph:'nickname',attrs:'autocapitalize="off" spellcheck="false" autocomplete="off" data-enter="v6PairInvite"'})}
  <div class="pair-prev" id="pairPrev"></div>
- <button class="btn text mt12" data-act="pairShareLink">${I.link||''}${L('У партнёра ещё нет аккаунта? Отправь ссылку','Partner has no account yet? Send a link')}</button>
+ <div class="or-line"><span>${L('или','or')}</span></div>
+ <button class="btn secondary" data-act="pairShareLink">${I.link}${L('Скопировать ссылку для партнёра','Copy a link for your partner')}</button>
+ <p class="note center mt8">${L('Если у партнёра ещё нет аккаунта: по ссылке он зарегистрируется и сразу получит приглашение.','If your partner has no account yet: they sign up through the link and get the invitation right away.')}</p>
  </div></div><div class="ctabar"><div class="wrap"><button class="btn primary" data-act="v6PairInvite">${I.send}${L('Пригласить в пару','Invite to couple')}</button></div></div>`;},
  after:()=>{const f=$('[name="partner"]');if(!f)return;const upd=()=>{const n=f.value.trim().replace(/^@/,'').toLowerCase();const ok=PEOPLE[n]&&!PEOPLE[n].pair&&n!==S.me.nick;const o=$('#psOther'),pv=$('#pairPrev');if(o)o.innerHTML=ok?av(n,''):`<span class="ps-q">${I.plus}</span>`;$('.pair-scene')?.classList.toggle('ready',!!ok);if(pv)pv.innerHTML=ok?`<div class="li static">${av(n,'sm')}<span class="tx"><b>${esc(pname(n))}${nameBadges(PEOPLE[n])}</b><small>${esc(whoLine(n))}</small></span><span class="pill ok">${I.check}${L('найден','found')}</span></div>`:n.length>2?`<p class="note">${L('Пока не нашли такой ник — проверь написание','No such nickname yet — check the spelling')}</p>`:'';};f.addEventListener('input',upd);upd();}};
 
