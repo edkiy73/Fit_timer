@@ -2388,3 +2388,8 @@ button.pill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:no
 .actc-th.round{border-radius:50%}.actc-th.round .av{width:100%;height:100%}
 .actc-th.more{font-weight:700;font-size:15px;color:var(--accent);border:1px dashed var(--line2);background:none}
 .actc-list{display:grid;gap:8px}.actc-list>.btn.text{justify-self:start;min-height:36px;padding:0}
+
+/* a liked post with several photos: the thumbnail is a small stack with a photo counter */
+.actc-th.multi{box-shadow:3px -3px 0 -1px var(--raise),5px -5px 0 -2px var(--line2);margin:3px 5px 0 0}
+.actc-n{position:absolute;left:3px;bottom:3px;display:inline-flex;align-items:center;gap:2px;padding:1px 5px 1px 4px;border-radius:99px;background:rgba(10,6,10,.66);color:#fff;font-size:11px;font-weight:700;line-height:1.3}.actc-n svg{width:11px;height:11px}
+.actth .actc-n{left:auto;right:3px;bottom:3px}
