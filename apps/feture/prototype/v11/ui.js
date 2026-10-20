@@ -29,20 +29,20 @@ function shared(id){
  const mine=(authorProfile()?.jars||[]).filter(j=>j.vis==='public'&&!j.limit);
  const theirs=(p.jars||[]).map(normJar).filter(j=>!j.limit);
  const match=mine.filter(j=>j.lv>=6&&theirs.some(x=>x.t===j.t&&x.lv>=6)).map(j=>j.t);
- const complement=[];const discuss=[];
+ const complement=[];const discuss=[];const placed=new Set();/* V11 (UX-11): a topic sits in exactly one group — «Стоит обсудить» wins over «Дополняете» and «Совпадает» */
  const r1=fmtList(publicField(authorProfile()||S.me,'role')),r2=fmtList(p.role);
  const roles=r1.includes('lead')&&r2.includes('recv')?['lead','recv']:r1.includes('recv')&&r2.includes('lead')?['recv','lead']:null;
  if(roles)complement.push(L(`Твоя ${opt('role',roles[0])} и ${opt('role',roles[1])} у ${pname(id)} дополняют друг друга`,`Your ${opt('role',roles[0])} role and ${pname(id)}’s ${opt('role',roles[1])} role complement each other`));
  else if(r1.includes('switch')||r2.includes('switch'))complement.push(L('Среди открытых ролей есть свитч: роли можно договорить вместе','The shared roles include switch: roles are open to agree on'));
  mine.forEach(j=>{const x=theirs.find(y=>y.t===j.t);if(!x)return;
-  if(Math.abs(x.lv-j.lv)>=4){discuss.push(L(`${topic(j.t)}: у тебя ${jarShort(j)}, у ${pname(id)} ${jarShort(x)}`,`${topic(j.t)}: you ${jarShort(j)}, ${pname(id)} ${jarShort(x)}`));return;}
+  if(Math.abs(x.lv-j.lv)>=4){placed.add(j.t);discuss.push(L(`${topic(j.t)}: у тебя ${jarShort(j)}, у ${pname(id)} ${jarShort(x)}`,`${topic(j.t)}: you ${jarShort(j)}, ${pname(id)} ${jarShort(x)}`));return;}
   /* direction: giving meets receiving → complements; both only give (or only receive) → worth agreeing on */
   const a=normDir(j.dir),b=normDir(x.dir);if(!a||!b)return;
   const fits=(a.includes('give')&&b.includes('get'))||(a.includes('get')&&b.includes('give'));
-  if(fits)complement.push(L(`${topic(j.t)}: у тебя ${dirText(a)}, у ${pname(id)} ${dirText(b)} — дополняете друг друга`,`${topic(j.t)}: you — ${dirText(a)}, ${pname(id)} — ${dirText(b)}: you complement each other`));
-  else if(a.length===1&&b.length===1&&a[0]===b[0]&&a[0]!=='watch')discuss.push(L(`${topic(j.t)}: вам обоим ближе ${dirText(a)} — стоит договориться`,`${topic(j.t)}: you both lean to ${dirText(a)} — worth agreeing on`));});
- const mf=fmtList(publicField(authorProfile()||S.me,'format')),tf=fmtList(p.format);if(mf.length&&tf.length&&mf.includes('mono')!==tf.includes('mono'))discuss.push(L(`Формат отношений: ${fmtText(mf,2)} и ${fmtText(tf,2)}`,`Relationship format: ${fmtText(mf,2)} vs ${fmtText(tf,2)}`));else{const both=mf.filter(x=>tf.includes(x));if(both.length)complement.push(L(`Совпадает формат: ${fmtText(both,2)}`,`Same format: ${fmtText(both,2)}`));}
- return{match,complement,discuss:[...new Set(discuss)],few:mine.length<2||theirs.length<2};
+  if(fits){placed.add(j.t);complement.push(L(`${topic(j.t)}: у тебя ${dirText(a)}, у ${pname(id)} ${dirText(b)} — дополняете друг друга`,`${topic(j.t)}: you — ${dirText(a)}, ${pname(id)} — ${dirText(b)}: you complement each other`));}
+  else if(a.length===1&&b.length===1&&a[0]===b[0]&&a[0]!=='watch'){placed.add(j.t);discuss.push(L(`${topic(j.t)}: вам обоим ближе ${dirText(a)} — стоит договориться`,`${topic(j.t)}: you both lean to ${dirText(a)} — worth agreeing on`));}});
+ const mf=fmtList(publicField(authorProfile()||S.me,'format')),tf=fmtList(p.format);if(mf.length&&tf.length&&mf.includes('mono')!==tf.includes('mono'))discuss.push(L(`Формат отношений разный: у тебя — ${fmtText(mf,2)}, в профиле ${pname(id)} — ${fmtText(tf,2)}`,`Different relationship format: you — ${fmtText(mf,2)}, ${pname(id)}’s profile — ${fmtText(tf,2)}`));else{const both=mf.filter(x=>tf.includes(x));if(both.length)complement.push(L(`Совпадает формат: ${fmtText(both,2)}`,`Same format: ${fmtText(both,2)}`));}
+ return{match:match.filter(t=>!placed.has(t)),complement,discuss:[...new Set(discuss)],few:mine.length<2||theirs.length<2};
 }
 /** «what you share» — ONE component for the discovery card and the full profile: summary (opens the full comparison), matches (each topic opens the side-by-side answers),
     what complements, what is worth discussing. Uses only what both of you made visible. */

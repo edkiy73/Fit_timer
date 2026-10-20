@@ -88,7 +88,7 @@ function veilBlock(id){const o=social().reqOut.find(x=>x.p===id&&x.status==='pen
 function veilAction(id,pending){const last=social().reqOut.filter(x=>x.p===id).sort((a,b)=>b.t-a.t)[0],policy=PEOPLE[id]?.requestsFrom||'all';
  if(pending)return `<span class="pill wait">${I.clock}${L('Запрос ждёт ответа','Request pending')}</span><button class="btn soft sm" data-act="cancelReq" data-v="${pending.id}">${L('Отозвать запрос','Withdraw request')}</button>`;
  if(policy==='none'||policy==='matches'&&!isMatch(id))return `<span class="pill">${I.lock}${policy==='none'?L('Запросы сейчас не принимаются','Not accepting requests'):L('Запросы — только после совпадения','Requests after a match only')}</span>`;
- if(last&&last.status==='declined'&&Date.now()-last.t<7*DAY){const d=Math.max(1,Math.ceil((7*DAY-(Date.now()-last.t))/DAY));return `<span class="pill">${I.clock}${L(`Пока без ответа · повторить через ${d} дн.`,`No answer yet · ask again in ${d} d`)}</span>`;}
+ if(last&&last.status==='declined'&&reaskLeft(last)){const d=reaskLeft(last);return `<span class="pill">${I.clock}${L(`Решили не открывать · запросить снова через ${d} дн.`,`Decided not to share · ask again in ${d} d`)}</span>`;}
  const expired=last&&effectiveRequestStatus(last)==='expired';
  return `${expired?`<span class="pill">${I.clock}${L('Прежний доступ закончился','Earlier access has ended')}</span>`:''}<button class="btn dark" data-act="reqAccess" data-v="${id}">${expired?L('Запросить снова','Ask again'):L('Запросить доступ','Request access')}</button>`;}
 function deckRender(){const d=$('#deck');const list=pool();if(!d||!list.length){refresh();return;}d.innerHTML=deckInner(list);initDeck();fillJars();}

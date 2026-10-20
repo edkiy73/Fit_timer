@@ -1,5 +1,7 @@
 /* ============ SEED DATA (prototype only, never a domain source) ============ */
 const HOUR=3600e3, DAY=24*HOUR, NOW=Date.now();
+/* V11 (owner, 20.10): after «решили не открывать» the same person can be asked again only after 30 days */
+const REASK_DAYS=30;
 const ago=h=>NOW-h*HOUR;
 // Event start helper: N days ahead at hh:mm in Berlin-ish UTC offset (prototype precision is enough)
 const at=(days,hh,mm=0)=>{const d=new Date(NOW+days*DAY);d.setUTCHours(hh-2,mm,0,0);return d.getTime();};
