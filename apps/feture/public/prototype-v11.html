@@ -3691,7 +3691,7 @@ function evStatusPill(id){
  const e=EV(id),r=myR(id);
  if(e.cancelled)return `<span class="pill bad">${L('Отменено','Cancelled')}</span>`;
  if(e.organizer==='me')return `<span class="pill v">${L('Ты организатор','You organise')}</span>`;
- if(isPast(id))return eventAttendanceConfirmed(id)?`<span class="pill">${L('Ты на событии','You went')}</span>`:'';
+ if(isPast(id))return eventAttendanceConfirmed(id)?`<span class="pill">${I.check}${L('Посещено','Attended')}</span>`:'';
  if(r.app==='pending')return `<span class="pill wait">${L('Заявка на рассмотрении','Application pending')}</span>`;
  if(r.app==='approved')return `<span class="pill ok">${L('Заявка одобрена','Approved')}</span>`;
  if(r.app==='declined')return `<span class="pill bad">${L('Заявка отклонена','Declined')}</span>`;
@@ -3699,14 +3699,17 @@ function evStatusPill(id){
  if(r.status==='interested')return `<span class="pill v">${L('Интересно','Interested')}</span>`;
  return '';
 }
-function evWhen(id,full){const e=EV(id);const t=F.time(e.start,USER_TZ);const day=full?F.day(e.start):F.date(e.start);
- const diffTz=e.format==='online'&&e.tz!==USER_TZ;return `${day}, ${t}${diffTz?` · ${F.time(e.start,e.tz)} ${F.tzName(e.tz)}`:''}`;}
+/* V11 (UX-09): an in-person event is shown in the venue's local time; an online one in the viewer's time (the organiser's zone as a second line) */
+const evTz=e=>e.format==='online'?USER_TZ:(e.tz||USER_TZ);
+const evAway=e=>e.format==='online'&&!!e.tz&&e.tz!==USER_TZ;
+function evWhen(id,full){const e=EV(id),tz=evTz(e);const t=F.time(e.start,tz);const day=full?F.day(e.start,tz):F.date(e.start,{tz});
+ return `${day}, ${t}${evAway(e)?` ${L('по твоему времени','your time')}`:''}`;}
 function eventCard(id,o={}){
  const e=EV(id);const st=o.neutral?'':evStatusPill(id);
  const fmt=e.format==='online'?`<span>${I.video}${L('Онлайн','Online')}</span>`:`<span>${I.pin}${esc(T(e.area)||city(e.city))}</span>`;
- const meta=`<div class="meta"><span>${I.clock}${F.time(e.start)}</span><span>${I.ticket}${e.price?esc(T(e.price)):L('Бесплатно','Free')}</span></div>`;
- if(o.row)return `<button class="evc row" data-go="E03" data-p='${esc(JSON.stringify({id}))}'><div class="cv">${evCover(e,'cal')}<div class="date"><b>${F.dnum(e.start)}</b><small>${F.mon(e.start)}</small></div></div><div class="bd"><small>${e.format==='online'?L('Онлайн','Online'):esc(city(e.city))} · ${F.time(e.start)}</small><b>${esc(T(e.title))}</b>${st||`<span class="note">${esc(pname(e.organizer))}</span>`}</div></button>`;
- return `<button class="evc" data-go="E03" data-p='${esc(JSON.stringify({id}))}' style="animation-delay:${(o.i||0)*50}ms"><div class="cv">${evCover(e,'cal')}<div class="date"><b>${F.dnum(e.start)}</b><small>${F.mon(e.start)}</small></div><div class="fmt">${fmt}</div>${st?`<div class="my">${st}</div>`:''}</div>
+ const tz=evTz(e);const meta=`<div class="meta"><span>${I.clock}${F.time(e.start,tz)}</span><span>${I.ticket}${e.price?esc(T(e.price)):L('Бесплатно','Free')}</span></div>`;
+ if(o.row)return `<button class="evc row" data-go="E03" data-p='${esc(JSON.stringify({id}))}'><div class="cv">${evCover(e,'cal')}<div class="date"><b>${F.dnum(e.start,tz)}</b><small>${F.mon(e.start,tz)}</small></div></div><div class="bd"><small>${e.format==='online'?L('Онлайн','Online'):esc(city(e.city))} · ${F.time(e.start,tz)}</small><b>${esc(T(e.title))}</b>${st||`<span class="note">${esc(pname(e.organizer))}</span>`}</div></button>`;
+ return `<button class="evc" data-go="E03" data-p='${esc(JSON.stringify({id}))}' style="animation-delay:${(o.i||0)*50}ms"><div class="cv">${evCover(e,'cal')}<div class="date"><b>${F.dnum(e.start,tz)}</b><small>${F.mon(e.start,tz)}</small></div><div class="fmt">${fmt}</div>${st?`<div class="my">${st}</div>`:''}</div>
  <div class="bd"><small>${esc(evType(e.type))} · ${esc(pname(e.organizer))}</small><b>${esc(T(e.title))}</b>${meta}</div></button>`;
 }
 const evCover=(e,icon)=>e.cover?`<img class="evimg" src="${esc(e.cover)}" alt="" draggable="false">`:plate(e.plate,icon);
@@ -4631,9 +4634,9 @@ SC.E03={title:p=>EV(p.id)?T(EV(p.id).title):'',valid:p=>!!EV(p.id)&&(EV(p.id).st
   ${e.community?`<button class="li" data-go="C03" data-id="${e.community}"><span class="av sm" style="position:relative">${plate(COMMUNITIES[e.community].plate)}</span><span class="tx"><b>${esc(T(COMMUNITIES[e.community].name))}</b><small>${L('Сообщество','Community')}</small></span>${I.chev}</button>`:''}
  </div>
  <div class="card list mt12">
-  <div class="li"><span class="ico l">${I.cal}</span><span class="tx"><b>${F.day(e.start)}</b><small>${F.time(e.start)}–${F.time(e.end)} ${diffTz?`${L('у тебя','your time')} · ${F.time(e.start,e.tz)} ${F.tzName(e.tz)}`:F.tzName(USER_TZ)}</small></span></div>
-  <div class="li"><span class="ico v">${e.format==='online'?I.video:I.pin}</span><span class="tx"><b>${e.format==='online'?L('Онлайн','Online'):esc(T(e.area)+', '+city(e.city))}</b><small>${acc?(e.format==='online'?L('Ссылка доступна — нажми «Как подключиться»','Link available — tap “How to join”'):esc(T(e.venue))):e.approval?L('Адрес и ссылка откроются после одобрения заявки','Address and link open after your application is approved'):L('Точное место откроется, когда ответишь «Иду»','The exact place opens once you answer “Going”')}</small></span>${acc?'':`<span class="lockpill">${I.lock}</span>`}</div>
-  <div class="li"><span class="ico a">${I.ticket}</span><span class="tx"><b>${e.price?esc(T(e.price)):L('Бесплатно','Free')}</b><small>${e.external?L(`Билеты: ${e.external}`,`Tickets: ${e.external}`):e.approval?L('Участие по заявке','By application'):L('Можно просто прийти','Just come along')}</small></span></div>
+  <div class="li"><span class="ico l">${I.cal}</span><span class="tx"><b>${F.day(e.start,evTz(e))}</b><small>${F.time(e.start,evTz(e))}–${F.time(e.end,evTz(e))} ${e.format==='online'?L('по твоему времени','your time'):L('местное время','local time')}${evAway(e)?`<br>${L('У организатора','For the organiser')}: ${F.time(e.start,e.tz)}–${F.time(e.end,e.tz)} ${F.tzName(e.tz)}`:''}</small></span></div>
+  <div class="li"><span class="ico v">${e.format==='online'?I.video:I.pin}</span><span class="tx"><b>${e.format==='online'?L('Онлайн','Online'):esc(T(e.area)+', '+city(e.city))}</b>${e.cancelled?'':`<small>${acc?(e.format==='online'?L('Ссылка доступна — нажми «Как подключиться»','Link available — tap “How to join”'):esc(T(e.venue))):e.format==='online'?(e.approval?L('Ссылка на подключение откроется после одобрения заявки','The join link opens once your application is approved'):L('Ссылка на подключение откроется, когда ответишь «Иду»','The join link opens once you answer “Going”')):e.approval?L('Адрес откроется после одобрения заявки','The address opens once your application is approved'):L('Точное место откроется, когда ответишь «Иду»','The exact place opens once you answer “Going”')}</small>`}</span>${acc||e.cancelled?'':`<span class="lockpill">${I.lock}</span>`}</div>
+  ${e.cancelled?'':`  <div class="li"><span class="ico a">${I.ticket}</span><span class="tx"><b>${e.price?esc(T(e.price)):L('Бесплатно','Free')}</b><small>${e.external?L(`Билеты: ${e.external}`,`Tickets: ${e.external}`):e.approval?L('Участие по заявке','By application'):L('Можно просто прийти','Just come along')}</small></span></div>`}
  </div>
  <div class="sec">${L('О событии','About')}</div>${md(T(e.desc),'bio')}
  ${e.gallery?.length?`<div class="sec">${L('Фотографии','Photos')}</div>${mediaGrid(e.gallery,{id})}`:''}
@@ -4664,7 +4667,7 @@ ACT.rvSave=a=>{const id=cur().p.id;const v={...S.ui.rv};const e=EV(id);run(a,()=
 ACT.withdrawApp=()=>{const id=cur().p.id;ask({icon:'doc',title:L('Отозвать заявку?','Withdraw application?'),text:L('Организатор перестанет её видеть. Подать снова можно, пока идёт набор.','The organiser won’t see it anymore. You can apply again while applications are open.'),ok:L('Отозвать','Withdraw'),danger:true}).then(ok=>{if(ok)run(null,()=>{S.rsvp[id]={status:'none',app:'none'};refresh();},{ok:L('Заявка отозвана','Application withdrawn')});});};
 /* E08 venue / joining link; E09 external ticket */
 ACT.venue=()=>{const e=EV(cur().p.id);sheet(()=>({title:e.format==='online'?L('Подключение','How to join'):L('Адрес','Address'),body:e.format==='online'?`<div class="card flat"><div class="flabel">${L('Ссылка','Link')}</div><b style="font-size:16px;word-break:break-all">${esc(e.link||'meet.feture.app')}</b></div>`
- :`<div class="card flat"><b style="font-size:16px">${esc(T(e.venue))}</b><p class="note mt8">${esc(T(e.area))}, ${esc(city(e.city))} · ${F.day(e.start)}, ${F.time(e.start)}</p></div><p class="note mt12">${L('Адрес видят только допущенные участники. Если доступ отзовут, он пропадёт.','Only admitted attendees see the address. If access is revoked it disappears.')}</p>`,
+ :`<div class="card flat"><b style="font-size:16px">${esc(T(e.venue))}</b><p class="note mt8">${esc(T(e.area))}, ${esc(city(e.city))} · ${F.day(e.start,evTz(e))}, ${F.time(e.start,evTz(e))}</p></div><p class="note mt12">${L('Адрес видят только допущенные участники. Если доступ отзовут, он пропадёт.','Only admitted attendees see the address. If access is revoked it disappears.')}</p>`,
  foot:`<button class="btn primary" data-act="extOpen" data-v="${e.format==='online'?'link':'map'}">${e.format==='online'?`${I.ext}${L('Открыть ссылку','Open link')}`:`${I.map}${L('Открыть в картах','Open in maps')}`}</button><button class="btn soft" data-act="addCal">${I.calplus}${L('В календарь','Add to calendar')}</button>`}));};
 ACT.extOpen=()=>{closeSheet();toast(L('Открываем во внешнем приложении','Opening in an external app'),{type:'info'});};
 ACT.extTicket=()=>{const id=cur().p.id,e=EV(id);sheet(()=>({title:L('Билет у организатора','Ticket from organiser'),lead:`<span class="ico a">${I.ticket}</span>`,body:`<div class="card list">${linkRow({icon:'people',title:esc(pname(e.organizer)),sub:L('Организатор','Organiser'),noChev:1})}${linkRow({icon:'globe',title:esc(e.external),sub:L('Сайт продажи','Ticket site'),noChev:1})}${linkRow({icon:'ticket',title:esc(T(e.price))||L('Бесплатно','Free'),sub:L('Цена со слов организатора','Price as stated by the organiser'),noChev:1})}</div>
@@ -4767,7 +4770,7 @@ SC.E15={title:()=>L('Панель организатора','Manage event'),vali
  return `${bar(L('Панель организатора','Manage event'),{back:1,sm:1})}<div class="view nodock"><div class="wrap">
  ${eventCard(id,{row:1})}
  <div class="row mt12" style="justify-content:space-between">${st}<button class="btn text auto" data-go="E03" data-id="${id}">${L('Открыть страницу','View page')} ${ic('chev',16)}</button></div>
- ${e.cancelled?'':pend?`<div class="alert warn mt12">${I.doc}<span><b>${L('Следующий шаг','Next step')}</b>${L(`Ждут решения: ${pend}`,`Awaiting decision: ${pend}`)}</span></div>`:''}
+ ${e.cancelled?'':pend?`<div class="alert warn mt12">${I.doc}<span><b>${L('Следующий шаг','Next step')}</b>${L('Рассмотри заявки ниже — люди ждут ответа.','Review the applications below — people are waiting.')}</span></div>`:''}
  <div class="stat3">${[[pend,L('ждут решения','pending')],[appr,L('одобрено','approved')],[Object.values(S.rsvp).length?0:0,L('интересуются','interested')]].map(([n,l],i)=>`<div><b>${i===2?(e.interested||0):n}</b><small>${l}</small></div>`).join('')}</div>
  <div class="card list">${e.approval?linkRow({go:'E16',p:{id},icon:'doc',tone:'v',title:L('Заявки и допуски','Applications'),badge:pend||''}):''}${linkRow({act:'announce',icon:'bell',tone:'l',title:L('Объявление участникам','Post an update'),sub:L('Придёт в центр уведомлений','Goes to the notification center')})}${linkRow({act:'evEdit',icon:'edit',title:L('Редактировать','Edit'),sub:L('Участникам придёт уведомление об изменении','Attendees get a change notification')})}${e.cancelled?'':linkRow({act:'evCancel',icon:'block',cls:'danger',title:L('Отменить событие','Cancel event'),noChev:1})}</div>
  ${(e.announce||[]).length?`<div class="sec">${L('Отправленные объявления','Sent updates')}</div>${e.announce.map(x=>`<div class="upd"><span class="ico l">${I.bell}</span><span class="tx"><p style="color:var(--ink);margin:0">${esc(x.text)}</p><small>${x.auto?L('отправлено автоматически · ','sent automatically · '):''}${F.rel(x.t)}</small></span></div>`).join('')}`:''}

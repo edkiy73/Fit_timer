@@ -281,7 +281,7 @@ function evStatusPill(id){
  const e=EV(id),r=myR(id);
  if(e.cancelled)return `<span class="pill bad">${L('Отменено','Cancelled')}</span>`;
  if(e.organizer==='me')return `<span class="pill v">${L('Ты организатор','You organise')}</span>`;
- if(isPast(id))return eventAttendanceConfirmed(id)?`<span class="pill">${L('Ты на событии','You went')}</span>`:'';
+ if(isPast(id))return eventAttendanceConfirmed(id)?`<span class="pill">${I.check}${L('Посещено','Attended')}</span>`:'';
  if(r.app==='pending')return `<span class="pill wait">${L('Заявка на рассмотрении','Application pending')}</span>`;
  if(r.app==='approved')return `<span class="pill ok">${L('Заявка одобрена','Approved')}</span>`;
  if(r.app==='declined')return `<span class="pill bad">${L('Заявка отклонена','Declined')}</span>`;
@@ -289,14 +289,17 @@ function evStatusPill(id){
  if(r.status==='interested')return `<span class="pill v">${L('Интересно','Interested')}</span>`;
  return '';
 }
-function evWhen(id,full){const e=EV(id);const t=F.time(e.start,USER_TZ);const day=full?F.day(e.start):F.date(e.start);
- const diffTz=e.format==='online'&&e.tz!==USER_TZ;return `${day}, ${t}${diffTz?` · ${F.time(e.start,e.tz)} ${F.tzName(e.tz)}`:''}`;}
+/* V11 (UX-09): an in-person event is shown in the venue's local time; an online one in the viewer's time (the organiser's zone as a second line) */
+const evTz=e=>e.format==='online'?USER_TZ:(e.tz||USER_TZ);
+const evAway=e=>e.format==='online'&&!!e.tz&&e.tz!==USER_TZ;
+function evWhen(id,full){const e=EV(id),tz=evTz(e);const t=F.time(e.start,tz);const day=full?F.day(e.start,tz):F.date(e.start,{tz});
+ return `${day}, ${t}${evAway(e)?` ${L('по твоему времени','your time')}`:''}`;}
 function eventCard(id,o={}){
  const e=EV(id);const st=o.neutral?'':evStatusPill(id);
  const fmt=e.format==='online'?`<span>${I.video}${L('Онлайн','Online')}</span>`:`<span>${I.pin}${esc(T(e.area)||city(e.city))}</span>`;
- const meta=`<div class="meta"><span>${I.clock}${F.time(e.start)}</span><span>${I.ticket}${e.price?esc(T(e.price)):L('Бесплатно','Free')}</span></div>`;
- if(o.row)return `<button class="evc row" data-go="E03" data-p='${esc(JSON.stringify({id}))}'><div class="cv">${evCover(e,'cal')}<div class="date"><b>${F.dnum(e.start)}</b><small>${F.mon(e.start)}</small></div></div><div class="bd"><small>${e.format==='online'?L('Онлайн','Online'):esc(city(e.city))} · ${F.time(e.start)}</small><b>${esc(T(e.title))}</b>${st||`<span class="note">${esc(pname(e.organizer))}</span>`}</div></button>`;
- return `<button class="evc" data-go="E03" data-p='${esc(JSON.stringify({id}))}' style="animation-delay:${(o.i||0)*50}ms"><div class="cv">${evCover(e,'cal')}<div class="date"><b>${F.dnum(e.start)}</b><small>${F.mon(e.start)}</small></div><div class="fmt">${fmt}</div>${st?`<div class="my">${st}</div>`:''}</div>
+ const tz=evTz(e);const meta=`<div class="meta"><span>${I.clock}${F.time(e.start,tz)}</span><span>${I.ticket}${e.price?esc(T(e.price)):L('Бесплатно','Free')}</span></div>`;
+ if(o.row)return `<button class="evc row" data-go="E03" data-p='${esc(JSON.stringify({id}))}'><div class="cv">${evCover(e,'cal')}<div class="date"><b>${F.dnum(e.start,tz)}</b><small>${F.mon(e.start,tz)}</small></div></div><div class="bd"><small>${e.format==='online'?L('Онлайн','Online'):esc(city(e.city))} · ${F.time(e.start,tz)}</small><b>${esc(T(e.title))}</b>${st||`<span class="note">${esc(pname(e.organizer))}</span>`}</div></button>`;
+ return `<button class="evc" data-go="E03" data-p='${esc(JSON.stringify({id}))}' style="animation-delay:${(o.i||0)*50}ms"><div class="cv">${evCover(e,'cal')}<div class="date"><b>${F.dnum(e.start,tz)}</b><small>${F.mon(e.start,tz)}</small></div><div class="fmt">${fmt}</div>${st?`<div class="my">${st}</div>`:''}</div>
  <div class="bd"><small>${esc(evType(e.type))} · ${esc(pname(e.organizer))}</small><b>${esc(T(e.title))}</b>${meta}</div></button>`;
 }
 const evCover=(e,icon)=>e.cover?`<img class="evimg" src="${esc(e.cover)}" alt="" draggable="false">`:plate(e.plate,icon);
