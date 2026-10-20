@@ -2326,3 +2326,20 @@ button.pill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:no
 .mgrid[data-reorder] .mi-add,.mgrid[data-reorder] .mi{border-radius:var(--r)}
 .me-pair .mp-avs,.li .mp-avs{flex:none}
 .me-card{gap:12px}
+
+/* V11 spacing pass — one vertical rhythm for plain stacked content.
+   :where() keeps these at zero specificity, so an explicit .mt8 / .mb12 on an element still wins. */
+.mb8{margin-bottom:8px}.mb12{margin-bottom:12px}
+:where(.wrap,.auth-wrap,.sh-b)>:where(.btn)+:where(.btn){margin-top:10px}
+:where(.wrap,.auth-wrap,.sh-b)>:where(p,.note,.lead,h1,h2,h3,.alert,.field,.chips,.grp,section,.card)+:where(.btn){margin-top:14px}
+:where(.wrap,.auth-wrap,.sh-b)>:where(.btn)+:where(p,.note,.lead,.alert,.field,.card,section,.grp){margin-top:12px}
+:where(.wrap,.auth-wrap,.sh-b)>:where(h1,h2,h3,.t)+:where(p,.lead){margin-top:8px}
+:where(.wrap,.auth-wrap,.sh-b)>:where(p,.lead,.note)+:where(p,.lead,.note){margin-top:10px}
+:where(.wrap,.auth-wrap,.sh-b)>.btn.text{margin-inline:auto}
+:where(.wrap,.auth-wrap)>:where(.chips)+:where(.card,.empty,.rqcard){margin-top:12px}
+.check+.check{margin-top:2px}
+:where(.wrap,.auth-wrap)>:where(.grp,section)+.check{margin-top:12px}
+.stat3+.card,.stat3+.alert{margin-top:12px}
+.note+.empty,.lead+.empty{margin-top:12px}
+.card.flat>.note+*{margin-top:6px}
+.soon-wrap .soon .btn{margin-top:18px}
