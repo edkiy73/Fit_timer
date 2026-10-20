@@ -337,7 +337,7 @@ ACT.peHideCity=()=>{cur().f.city='';cur().dirty=true;refresh();};
 /** small badges after a name: photo verification and Premium. Neither opens private data or chat. */
 /** one block for everything a person does (posts, events they run, communities they lead): the only tabbed part of a profile */
 function activityBlock(id,tabs){const on=tabs.filter(t=>t[2]);if(!on.length)return '';S.ui.pa||(S.ui.pa={});const cur_=on.some(t=>t[0]===S.ui.pa[id])?S.ui.pa[id]:on[0][0];const t=on.find(x=>x[0]===cur_);
- return `<section class="grp activity">${on.length>1?tabsRow(on.map(x=>[x[0],x[1],x[2]]),cur_,'profAct','tabs-full'):`<div class="grp-t"><span>${t[1]} · ${t[2]}</span></div>`}${t[3]()}</section>`;}
+ return `<section class="grp activity">${on.length>1?tabsRow(on.map(x=>[x[0],x[1]]),cur_,'profAct','tabs-full'):`<div class="grp-t"><span>${t[1]}</span></div>`}${t[3]()}</section>`;}
 /* ---------- activity: what a person did — likes, events, communities, follows. The owner decides who sees the tab (Settings → Privacy) ---------- */
 const ACT_VIS=()=>[['all',L('Все','Everyone')],['followers',L('Подписчики и взаимные','Followers & mutual')],['off',L('Никто','Nobody')]];
 const actHash=s=>{let h=0;for(const c of String(s))h=(h*31+c.charCodeAt(0))>>>0;return h;};

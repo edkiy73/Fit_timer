@@ -61,7 +61,7 @@ const src=f=>fs.readFileSync(root+f,'utf8');
  const q01=appScreen('Q01',{});assert.ok(q01.includes('or-line')&&q01.includes('pairShareLink')&&!q01.includes('btn text mt12" data-act="pairShareLink"'),'partner link is a divider + secondary button');
  const x01=appScreen('X01',{});assert.ok(!x01.includes('me-pair')&&!x01.includes('class="nextstep"'),'profile hub: pair and next step are plain list rows');assert.ok(x01.includes('Профиль пары'));
  fresh();const h01=appScreen('H01',{sub:'chats'});assert.ok(h01.includes('data-go="H05"')&&!h01.includes('btn text" data-go="H05"'),'archive is a header action');
- assert.ok(/class="cm-sort"><div class="seg/.test(run("replyTree('d','d1')")),'reply order is the shared full-width switch');
+ assert.ok(/cm-sort"><span class="sortlab">[\s\S]*data-sel="thSort"/.test(run("replyTree('d','d1')")),'reply order is a sort control, not tabs');
  const c07=appScreen('C07',{id:'rope'});assert.ok(c07.includes('Кто увидит')&&c07.includes('alert mt16'),'audience line has its own title and spacing');
  fresh();const mem=appScreen('C03',{id:'rope',t:'members'});assert.ok(mem.includes('cMoreMembers'),'1285 members: the list is paged');run("ACT.cMoreMembers({dataset:{v:'rope'}})");assert.ok(appScreen('C03',{id:'rope',t:'members'}).includes('участник сообщества'),'next page appends demo rows');
  assert.ok(/\.mgrid\[data-reorder\]\{overflow:visible/.test(fs.readFileSync(root+'styles.css','utf8')),'media editor grid does not clip dashed tiles');
@@ -71,3 +71,15 @@ const src=f=>fs.readFileSync(root+f,'utf8');
 {const css=fs.readFileSync(root+'styles.css','utf8');
  for(const rule of [':where(.wrap,.auth-wrap,.sh-b)>:where(.btn)+:where(.btn){margin-top:10px}','>.btn.text{margin-inline:auto}','.mb12{margin-bottom:12px}'])assert.ok(css.includes(rule),`spacing rule «${rule}»`);
  console.log('PASS spacing rhythm rules');}
+
+/* owner round 3 (21.10) */
+{fresh();
+ const prof=appScreen('P01',{id:'maya'});assert.ok(!/class="seg tabs-full[^"]*"[\s\S]{0,400}<em>/.test(prof),'profile activity tabs carry no counters');
+ const stream=run("followStream(allPosts().filter(x=>followingOf('me').includes(x.author)),'all',true)");assert.ok(stream.some(x=>x.k!=='post')&&stream.some(x=>x.k==='post'),'«Подписки» mixes posts with followed people’s activity');
+ assert.ok(json("followStream(allPosts().filter(x=>followingOf('me').includes(x.author)),'events',true)").every(x=>x.k==='event'),'the kind switch narrows the stream');
+ assert.ok(json("followStream(allPosts().filter(x=>followingOf('me').includes(x.author)),'all',false)").every(x=>x.k==='post'),'topic filters hide activity cards');
+ const card=run("actCard({k:'follow',who:'maya',p:'mia',t:Date.now()-3600e3},0)");assert.ok(card.includes('теперь следит')&&!/следил[аи]?\b|подписал(ся|ась)/.test(card),'activity lines are gender-neutral');
+ assert.ok(!run("authorPicker()").includes('author-picker'),'no author picker without a couple');
+ const f07=appScreen('F07',{type:'text'});assert.ok(f07.includes('Кому открыта приватная часть'),'audience names the private part');
+ const sc=run("SC.D03.render({sub:'discover'},{p:{sub:'discover'},f:{}})");assert.ok(!sc.includes('мало данных'),'no «not enough data» plate on the deck');
+ console.log('PASS owner round 3');}
