@@ -419,7 +419,7 @@ function popChips(items,sel,act,more,o={}){if(items.length<=(o.lim||6)+2)return 
 function fInline(r){
  if(r.search&&r.pick){const pk=r.pick();return `<section class="fin"><div class="fin-t"><b>${r.label}</b><span>${L('можно несколько','pick any')}</span></div>${popChips(pk.items,pk.sel,pk.act,`data-act="fOpen" data-v="${r.k}"`,{groups:pk.groups})}</section>`;}
  if(r.search)return `<section class="fin"><div class="fin-t"><b>${r.label}</b><span>${L('можно несколько','pick any')}</span></div><div class="chips">${r.on()?`<span class="chip on static">${esc(r.summary())}</span>`:''}<button class="chip more" data-act="fOpen" data-v="${r.k}">${ic('search',14)}${L('Все варианты','All options')}</button></div></section>`;
- const html=r.body().replace(/<section class="fsec"[^>]*><div class="sec">\s*<\/div>/g,'<section class="fsec">');const single=/role="radiogroup"/.test(html);
+ const html=r.body().replace(/<section class="fsec"[^>]*><div class="sec">\s*<\/div>/g,'<section class="fsec">');const single=/role="radiogroup"|data-ch="sel"/.test(html);
  return `<section class="fin"><div class="fin-t"><b>${r.label}</b><span>${single?L('один вариант','one option'):L('можно несколько','pick any')}</span></div><div class="fin-b">${html}</div></section>`;}
 /* ---------- V8 filters, Feeld-style: a tidy list «category → current choice»; a row opens its options with search ---------- */
 const sumOf=(items,sel,none)=>{const l=items.filter(([id])=>sel.includes(id)).map(x=>x[1]);return l.length?(l.slice(0,2).join(', ')+(l.length>2?` +${l.length-2}`:'')):(none||L('Любые','Any'));};
