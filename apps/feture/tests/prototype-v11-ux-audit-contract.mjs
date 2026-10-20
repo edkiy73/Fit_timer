@@ -83,3 +83,8 @@ const src=f=>fs.readFileSync(root+f,'utf8');
  const f07=appScreen('F07',{type:'text'});assert.ok(f07.includes('Кому открыта приватная часть'),'audience names the private part');
  const sc=run("SC.D03.render({sub:'discover'},{p:{sub:'discover'},f:{}})");assert.ok(!sc.includes('мало данных'),'no «not enough data» plate on the deck');
  console.log('PASS owner round 3');}
+
+/* chat header: pills only when they say something */
+{fresh();run("S.me.jars=[]");/* a new account with no interests yet: nothing in common to show */const ari=appScreen('H02',{id:'ari'});assert.ok(!ari.includes('chat-ctx')&&!ari.includes('мало общего')&&!ari.includes('Приватная часть закрыта'),'Ari has no shared context and no private part: no pills');
+ fresh();const mia=appScreen('H02',{id:'mia'});assert.ok(mia.includes('chat-ctx')&&mia.includes('общий интерес'),'a person with shared context keeps the pill');
+ console.log('PASS chat header pills');}
