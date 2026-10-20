@@ -25,15 +25,15 @@ ACT.evReset=()=>{S.filters.events=EF_DEF();refresh();};
 /* E02 — event filters */
 ACT.evFilters=(a,e,pre)=>{S.ui.ef=pre||JSON.parse(JSON.stringify(Object.assign(EF_DEF(),S.filters.events)));const target=S.ui.efTarget;
  const FMT=()=>[['all',L('Все','All')],['offline',L('Офлайн','In person')],['online',L('Онлайн','Online')]],WHEN=()=>[['any',L('Любое время','Any time')],['week',L('Эта неделя','This week')],['weekend',L('Выходные','Weekend')],['month',L('Этот месяц','This month')]],TYP=()=>['meetup','workshop','talk','party','edu'].map(t=>[t,evType(t)]),LANG=[['ru','Русский'],['en','English'],['de','Deutsch']],PRICE=()=>[['any',L('Любая','Any')],['free',L('Бесплатно','Free')],['paid',L('Платно','Paid')]];
- const one=(k,items,title)=>({k,label:title,on:()=>S.ui.ef[k]!==items[0][0],summary:()=>items.find(x=>x[0]===S.ui.ef[k])[1],body:()=>grp('',choices(items,S.ui.ef[k],'efSet',{k}))});
+ const one=(k,items,title)=>({k,label:title,on:()=>S.ui.ef[k]!==items[0][0],clear:()=>{S.ui.ef[k]=items[0][0];},summary:()=>items.find(x=>x[0]===S.ui.ef[k])[1],body:()=>fitChips(items)?fchoices(items,S.ui.ef[k],'efSet',{k}):grp('',choices(items,S.ui.ef[k],'efSet',{k}))});
  filterSheet({title:L('Фильтры событий','Event filters'),draft:()=>S.ui.ef,count:()=>evFiltered(S.ui.ef).length,
   applyLabel:n=>n?L(`Показать ${pl(n,['событие','события','событий'],[])}`,`Show ${pl(n,[],['event','events'])}`):L('Нет подходящих событий','No matching events'),
   reset:()=>{S.ui.ef=EF_DEF();},apply:()=>{if(target==='search'&&cur().id==='G01'){S.filters.search.events=S.ui.ef;S.ui.efTarget=null;}else S.filters.events=S.ui.ef;},
   note:L('Город — из твоего профиля.','City comes from your profile.'),
   rows:[one('format',FMT(),L('Формат','Format')),one('when',WHEN(),L('Когда','When')),
-   {k:'types',label:L('Тип','Type'),on:()=>S.ui.ef.types.length,summary:()=>sumOf(TYP(),S.ui.ef.types,L('Любой','Any')),body:()=>fChips(TYP(),S.ui.ef.types,'efMulti',{k:'types'})},
+   {k:'types',label:L('Тип','Type'),on:()=>S.ui.ef.types.length,clear:()=>{S.ui.ef.types=[];},summary:()=>sumOf(TYP(),S.ui.ef.types,L('Любой','Any')),body:()=>fChips(TYP(),S.ui.ef.types,'efMulti',{k:'types'})},
    one('price',PRICE(),L('Стоимость','Price')),
-   {k:'open',label:L('Участие','Admission'),on:()=>S.ui.ef.open,summary:()=>S.ui.ef.open?L('Без заявки','No application'):L('Любое','Any'),body:()=>grp('',choices([['0',L('Любое','Any')],['1',L('Без заявки — просто прийти','No application — just come')]],S.ui.ef.open?'1':'0','efOpen'))}]});};
+   {k:'open',label:L('Участие','Admission'),on:()=>S.ui.ef.open,clear:()=>{S.ui.ef.open=false;},summary:()=>S.ui.ef.open?L('Без заявки','No application'):L('Любое','Any'),body:()=>grp('',choices([['0',L('Любое','Any')],['1',L('Без заявки — просто прийти','No application — just come')]],S.ui.ef.open?'1':'0','efOpen'))}]});};
 ACT.efSet=a=>{S.ui.ef[a.dataset.k]=a.dataset.v;resheet();};
 ACT.efMulti=a=>{const arr=S.ui.ef[a.dataset.k];const i=arr.indexOf(a.dataset.v);i<0?arr.push(a.dataset.v):arr.splice(i,1);resheet();};
 ACT.efOpen=a=>{S.ui.ef.open=a?.dataset?.v?a.dataset.v==='1':!S.ui.ef.open;resheet();};

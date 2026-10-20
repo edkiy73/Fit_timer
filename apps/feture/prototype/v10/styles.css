@@ -2297,3 +2297,17 @@ input.inp,select.inp{height:48px}
 /* the scrolling chips of a filter line stop at the «Filters» button instead of sliding under it */
 .filterline .chips.scroll{margin-right:0;padding-right:10px}
 button.pill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* «reset this filter» — a round ✕ in the section header; appears only when the section has a value */
+.fin-t{align-items:center;min-height:28px}
+.fin-t>span,.fin-t>.fin-v{margin-left:auto}
+.fclr{flex:none;width:28px;height:28px;margin-left:10px;border-radius:50%;display:grid;place-items:center;background:var(--raise);color:var(--mute)}
+.fclr svg{width:14px;height:14px}
+.fin-t>b:first-child+.fclr{margin-left:auto}
+/* a city field: one row, the ✕ clears it */
+.fld{display:flex;align-items:center;gap:8px;min-height:48px;margin-top:10px;padding:0 10px 0 14px;border:1px solid var(--line2);border-radius:var(--r);background:var(--fld)}
+.fld-main{flex:1;min-width:0;display:flex;align-items:center;gap:10px;min-height:46px;text-align:left;font-size:15px;font-weight:600}
+.fld-main svg{width:18px;height:18px;flex:none;color:var(--mute)}.fld-main span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fld>svg{width:18px;height:18px;flex:none;color:var(--faint);margin-right:4px}
+.fld .fclr{margin:0}
+.fld-row{display:flex;justify-content:space-between;align-items:baseline;margin-top:12px}.fld-row b{font-weight:600}
