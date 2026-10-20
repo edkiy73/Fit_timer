@@ -17,7 +17,7 @@ function profileView(id,r,o={}){
  const kv=identityFields().filter(([k])=>!['pron','gender','orient'].includes(k)&&!(p.pair&&k==='status')).map(([k,title])=>[title,IDENTITY_MULTI.includes(k)?fmtList(p[k]).map(v=>opt(k,v)).join(', '):opt(k,p[k])]).filter(x=>x[1]);
  /* V8: one page — profile, then the private part right after it when access is open. No tabs. */
  const bio=T(p.bio)?grp(p.pair?L('О нас','About us'):L('О себе','About'),md(T(p.bio),'bio')):'';
- const pj=pubJars(id);const actItems=activityShown(id,o)?activityOf(id):[];
+ const pj=pubJars(id);const actItems=activityShown(id,o)?activityOf(id).filter(x=>!(x.k==='like'&&(id==='me'?o.asOther&&S.me.showLikes===false:person(id)?.hideLikes))):[];
  const body=`${bio}${detailsGroup(id)}
   ${pj.length?grp(L('Интересы','Interests'),jarShelf(pj,{pre:1,act:'topic',who:id,moreAct:self?(id==='couple'?'coupleJars':'myJarsAll'):'allJars'})):''}
   ${self?myPrivSection(owner):me?(privSection(id,o)||(o.asOther&&!hasPrivatePart(id)?`<div class="owner-only">${myPrivSection(owner)}</div>`:'')):`<div data-private-context="${id}">${privSection(id)}</div>`}
@@ -350,7 +350,7 @@ function activityOf(id){const out=[],pub=p=>p.aud==='all'&&!p.unavailable&&!isBl
   Object.entries(S.rsvp||{}).filter(([e,v])=>EV(e)&&['going','interested'].includes(v.status)).forEach(([e,v],i)=>out.push({k:'event',e,st:v.status,t:Date.now()-(i+2)*DAY}));
   [...S.joined].filter(c=>COMMUNITIES[c]&&!COMMUNITIES[c].hidden).forEach((c,i)=>out.push({k:'comm',c,t:Date.now()-(i+4)*DAY}));
   followingOf('me').forEach((p,i)=>out.push({k:'follow',p,t:Date.now()-(i+3)*DAY*1.5}));}
- else{allPosts().filter(p=>p.author!==id&&pub(p)&&actHash(id+p.id)%3===0).slice(0,6).forEach(p=>out.push({k:'like',post:p,t:Math.min(Date.now()-HOUR,p.t+(actHash(id+p.id)%7+1)*20*60e3)}));
+ else{allPosts().filter(p=>p.author!==id&&pub(p)&&actHash(id+p.id)%3===0).slice(0,6).forEach((p,i)=>out.push({k:'like',post:p,t:actHash(id)%2===0?Date.now()-(i+1)*26*60e3:Math.min(Date.now()-HOUR,p.t+(actHash(id+p.id)%7+1)*20*60e3)}));
   allEventIds().filter(e=>!EV(e).cancelled&&EV(e).status!=='review'&&!EV(e).private&&actHash(id+e)%4===0).slice(0,2).forEach((e,i)=>out.push({k:'event',e,st:'going',t:Date.now()-(i+1)*DAY*2}));
   Object.keys(COMMUNITIES).filter(c=>!COMMUNITIES[c].hidden&&COMMUNITIES[c].privacy==='open'&&(COMMUNITIES[c].mods.includes(id)||actHash(id+c)%4===0)).slice(0,2).forEach((c,i)=>out.push({k:'comm',c,t:Date.now()-(i+5)*DAY}));
   followingOf(id).slice(0,2).forEach((p,i)=>out.push({k:'follow',p,t:Date.now()-(i+2)*DAY*1.7}));}
