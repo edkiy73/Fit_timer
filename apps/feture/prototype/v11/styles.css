@@ -2373,8 +2373,6 @@ button.pill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:no
 .cm-sort .selrow>.selv{font-size:14px;font-weight:600;color:var(--violet)}
 
 /* V11: activity cards in «Подписки» */
-.feedkind{margin:0 0 6px}
-.feedkind .selrow>.selv{font-size:14px;font-weight:600;color:var(--violet)}
 .actc{display:flex;gap:12px;padding:14px 0;border-bottom:1px solid var(--line);animation:rise .3s var(--ease) both}
 .actc-av{flex:none;align-self:flex-start}
 .actc-b{flex:1;min-width:0;display:grid;gap:10px}
