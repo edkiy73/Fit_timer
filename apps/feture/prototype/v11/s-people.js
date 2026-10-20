@@ -55,6 +55,7 @@ function datingSoon(){const on=S.me.notifyDating;return `<div class="soon"><div 
 ACT.notifyDating=a=>run(a,()=>{S.me.notifyDating=!S.me.notifyDating;refresh();},{ms:300,ok:()=>S.me.notifyDating?L('Готово — пришлём уведомление о запуске','Done — we’ll notify you at launch'):L('Не будем напоминать','We won’t remind you')});
 
 /* deck */
+ACT.deckCoachOk=()=>{S.ui.deckCoach=1;$('.pc-coach')?.remove();};
 function deckInner(list){const a=list[0],b=list[1];return `${b?card(b,'next'):''}${card(a,'top')}<div class="acts onphoto" id="acts"><button class="act undo ${social().dhist&&social().dhist.length?'':'off'}" data-act="undo" aria-label="${L('Вернуть предыдущую анкету','Bring back the previous profile')}">${I.undo}</button><button class="act pass" data-act="decide" data-v="-1" aria-label="${L('Пропустить','Pass')}">${I.x}</button>${hasPrivatePart(a)?`<button class="act req" data-act="reqAccess" data-v="${a}" aria-label="${L('Запросить приватную часть','Request private part')}">${I.key}</button>`:''}<button class="act like" data-act="decide" data-v="1" aria-label="${L('Нравится человек','Like this person')}">${I.heartf}</button></div>`;}
 function card(id,pos){const p=PEOPLE[id];const ix=(S.ui.ph||{})[id]||0;const sh=shared(id);const likesMe=social().likesIn.some(l=>l.p===id);
  const post=allPosts().filter(x=>x.author===id).sort((a,b)=>b.t-a.t)[0];
@@ -64,7 +65,7 @@ function card(id,pos){const p=PEOPLE[id];const ix=(S.ui.ph||{})[id]||0;const sh=
   ${photoBars(id,ix)}
   ${photoCount(id)>1?`<div class="pc-zone l" data-ph="-1"></div><div class="pc-zone r" data-ph="1"></div>`:''}<div class="pc-zone c" data-ph="0" aria-hidden="true"></div>
   <div class="pc-tags">${otherDoneChip(id)}${likesMe?`<span class="pc-liked">${I.heartf}${L('Ты нравишься','Likes you')}</span>`:''}<span class="pc-score"><b>${sh.few?'—':sh.match.length}</b><small>${sh.few?L('мало данных','not enough data'):pl(sh.match.length,['общий интерес','общих интереса','общих интересов'],['shared interest','shared interests'],true)}</small></span></div>
-  <div class="stamp l">${L('Да','Like')}</div><div class="stamp n">${L('Мимо','Pass')}</div>
+  <div class="stamp l">${L('Нравится','Like')}</div><div class="stamp n">${L('Пропустить','Pass')}</div>${pos==='top'&&!S.ui.deckCoach?`<div class="pc-coach" role="note"><span>${L('Смахни вправо — нравится, влево — пропустить. Или нажми кнопки внизу.','Swipe right to like, left to pass. Or use the buttons below.')}</span><button class="btn sm soft auto" data-act="deckCoachOk">${L('Понятно','Got it')}</button></div>`:''}
   <div class="pc-info"><h2 class="pc-name"><span class="pcn">${esc(pname(id))}</span>${p.age?`<span>${p.age}</span>`:''}${nameBadges(p)}</h2>
    <div class="pc-who">${p.pair?`<span>${esc(whoLine(id))}</span>`:''}${placeLine(id)?`<span class="pl">${I.pin}${esc(placeLine(id))}</span>`:''}${p.online?`<span class="on">${L('в сети','online')}</span>`:''}</div>
    <div class="pc-hint">${I.down}${L('Листай вниз — что у вас общего','Scroll down — what you share')}</div></div>

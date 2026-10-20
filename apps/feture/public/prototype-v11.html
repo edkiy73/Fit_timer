@@ -918,6 +918,8 @@ button.jar:active .vessel{transform:scale(.95)}
 .stamp{position:absolute;top:96px;z-index:4;padding:6px 12px;border:3px solid;border-radius:12px;font:800 24px/1 var(--font);pointer-events:none;text-transform:uppercase}
 .stamp.l{left:20px;color:#6BD3A4;transform:rotate(-14deg);opacity:var(--l)}
 .stamp.n{right:20px;color:#FF6B80;transform:rotate(14deg);opacity:var(--n)}
+/* V11 (UX-27): one-time swipe coach mark on the first card */
+.pc-coach{position:absolute;left:12px;right:12px;top:118px;z-index:5;display:flex;align-items:center;gap:10px;padding:10px 10px 10px 14px;border-radius:16px;background:rgba(20,10,16,.74);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);color:#fff;font-size:13.5px;line-height:1.35}.pc-coach span{flex:1}
 .pc-hint{display:flex;align-items:center;gap:6px;margin-top:12px;font-size:12px;opacity:.75}.pc-hint svg{width:15px;height:15px}
 .pc-body{padding:18px 16px 110px}
 .pc-foot{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}
@@ -2322,6 +2324,11 @@ button.pill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:no
 .fld>svg{width:18px;height:18px;flex:none;color:var(--faint);margin-right:4px}
 .fld .fclr{margin:0}
 .fld-row{display:flex;justify-content:space-between;align-items:baseline;margin-top:12px}.fld-row b{font-weight:600}
+
+/* V11 (UX-33): small controls keep their look but get a 44px tap area */
+.langsw button,.cm-sort button,.fclr{position:relative}
+.langsw button::after,.cm-sort button::after{content:"";position:absolute;inset:-7px -2px}
+.fclr::after{content:"";position:absolute;inset:-8px}
 </style>
 </head>
 <body>
@@ -4857,6 +4864,7 @@ function datingSoon(){const on=S.me.notifyDating;return `<div class="soon"><div 
 ACT.notifyDating=a=>run(a,()=>{S.me.notifyDating=!S.me.notifyDating;refresh();},{ms:300,ok:()=>S.me.notifyDating?L('Готово — пришлём уведомление о запуске','Done — we’ll notify you at launch'):L('Не будем напоминать','We won’t remind you')});
 
 /* deck */
+ACT.deckCoachOk=()=>{S.ui.deckCoach=1;$('.pc-coach')?.remove();};
 function deckInner(list){const a=list[0],b=list[1];return `${b?card(b,'next'):''}${card(a,'top')}<div class="acts onphoto" id="acts"><button class="act undo ${social().dhist&&social().dhist.length?'':'off'}" data-act="undo" aria-label="${L('Вернуть предыдущую анкету','Bring back the previous profile')}">${I.undo}</button><button class="act pass" data-act="decide" data-v="-1" aria-label="${L('Пропустить','Pass')}">${I.x}</button>${hasPrivatePart(a)?`<button class="act req" data-act="reqAccess" data-v="${a}" aria-label="${L('Запросить приватную часть','Request private part')}">${I.key}</button>`:''}<button class="act like" data-act="decide" data-v="1" aria-label="${L('Нравится человек','Like this person')}">${I.heartf}</button></div>`;}
 function card(id,pos){const p=PEOPLE[id];const ix=(S.ui.ph||{})[id]||0;const sh=shared(id);const likesMe=social().likesIn.some(l=>l.p===id);
  const post=allPosts().filter(x=>x.author===id).sort((a,b)=>b.t-a.t)[0];
@@ -4866,7 +4874,7 @@ function card(id,pos){const p=PEOPLE[id];const ix=(S.ui.ph||{})[id]||0;const sh=
   ${photoBars(id,ix)}
   ${photoCount(id)>1?`<div class="pc-zone l" data-ph="-1"></div><div class="pc-zone r" data-ph="1"></div>`:''}<div class="pc-zone c" data-ph="0" aria-hidden="true"></div>
   <div class="pc-tags">${otherDoneChip(id)}${likesMe?`<span class="pc-liked">${I.heartf}${L('Ты нравишься','Likes you')}</span>`:''}<span class="pc-score"><b>${sh.few?'—':sh.match.length}</b><small>${sh.few?L('мало данных','not enough data'):pl(sh.match.length,['общий интерес','общих интереса','общих интересов'],['shared interest','shared interests'],true)}</small></span></div>
-  <div class="stamp l">${L('Да','Like')}</div><div class="stamp n">${L('Мимо','Pass')}</div>
+  <div class="stamp l">${L('Нравится','Like')}</div><div class="stamp n">${L('Пропустить','Pass')}</div>${pos==='top'&&!S.ui.deckCoach?`<div class="pc-coach" role="note"><span>${L('Смахни вправо — нравится, влево — пропустить. Или нажми кнопки внизу.','Swipe right to like, left to pass. Or use the buttons below.')}</span><button class="btn sm soft auto" data-act="deckCoachOk">${L('Понятно','Got it')}</button></div>`:''}
   <div class="pc-info"><h2 class="pc-name"><span class="pcn">${esc(pname(id))}</span>${p.age?`<span>${p.age}</span>`:''}${nameBadges(p)}</h2>
    <div class="pc-who">${p.pair?`<span>${esc(whoLine(id))}</span>`:''}${placeLine(id)?`<span class="pl">${I.pin}${esc(placeLine(id))}</span>`:''}${p.online?`<span class="on">${L('в сети','online')}</span>`:''}</div>
    <div class="pc-hint">${I.down}${L('Листай вниз — что у вас общего','Scroll down — what you share')}</div></div>
@@ -5136,7 +5144,7 @@ ACT.rqPick=a=>{const o=S.ui.rq;if(!o||!validAuthor(o.ticket)||!allowedScopes(o.a
 ACT.rqSend=a=>{const o=S.ui.rq;if(!o?.sel.length)return;const ticket=o.ticket||authorTicket(o.actor||'me'),reason=requestReason(o.id,ticket.id);if(!validAuthor(ticket))return;if(reason){toast(reason,{type:'warn'});return;}const scopes=cleanScopes(o.sel).filter(s=>allowedScopes(ticket.id,o.id).includes(s));if(!scopes.length)return;let sent=false;
  return run(a,()=>{if(!validAuthor(ticket)||requestReason(o.id,ticket.id)||S.ui.rq!==o)return;social(ticket.id).reqOut.unshift({id:'o'+Date.now(),p:o.id,actor:ticket.id,pairId:ticket.id==='couple'?S.pair.id:null,viewers:realMembers(ticket.id),scopes,t:Date.now(),status:'pending'});autoResolve();S.quota.used++;sent=true;closeSheet();refresh();},{ok:()=>sent?L('Запрос отправлен','Request sent'):null});};
 /* B02 — the single paywall moment: quota of new outgoing requests */
-function limitSheet(){sheet(()=>({title:L('Запросы на сегодня закончились','No requests left today'),lead:`<span class="ico a">${I.timer}</span>`,body:``,foot:`<button class="btn primary" data-act="closeSheet">${L('Понятно','Got it')}</button>`}));}
+function limitSheet(){sheet(()=>({title:L('Запросы на сегодня закончились','No requests left today'),lead:`<span class="ico a">${I.timer}</span>`,body:(()=>{const ts=[...S.reqOut,...(S.pair?.social?.reqOut||[])].map(x=>x.t).filter(t=>Date.now()-t<DAY);const next=ts.length?Math.min(...ts)+DAY:Date.now();return `<p class="lead">${L(`За сутки можно отправить ${S.quota.max} запросов. Следующий станет доступен в ${F.time(next)}.`,`You can send ${S.quota.max} requests per 24 hours. The next one is available at ${F.time(next)}.`)}</p><p class="note">${L('Уже отправленные запросы продолжают ждать ответа.','Requests you’ve sent keep waiting for an answer.')}</p>`;})(),foot:`<button class="btn primary" data-act="closeSheet">${L('Понятно','Got it')}</button>`}));}
 ACT.cancelReq=a=>{const x=social().reqOut.find(y=>y.id===a.dataset.v);run(a,()=>{x.status='cancelled';closeSheet();refresh();},{ok:L('Запрос отменён. Попытка не возвращается','Request cancelled. The attempt isn’t refunded')});};
 ACT.toAccess=a=>{closeSheet(true);go('P07',{tab:a.dataset.v||'byme'});};
 
@@ -6065,12 +6073,12 @@ const PLANS=()=>[['year',L('Год','Yearly'),'79,99 €',L('6,67 € в мес�
 // V7.1: minimal Premium while the audience grows (owner). The list is meant to be admin-configurable.
 const PREM_FEATS=()=>[['undo','undo',L('Вернуть пропущенных','Bring back passed profiles'),L('Любую анкету за 7 дней — не только последнюю','Any profile from the last 7 days, not only the last one')],['history','hist',L('Вся история просмотров','Full viewing history'),L('Все просмотренные за неделю','Everyone you saw this week')]];
 const FREE_ALWAYS=()=>[L('симпатии и чат при взаимности','likes and chat when mutual'),L('запросы приватной части','private part requests'),L('все фильтры','all filters'),L('кто тебе симпатизирует','who liked you'),L('приватность, блокировки, удаление','privacy, blocking, deletion')];
-function premHero(kind){const f=PREM_FEATS().find(x=>x[0]===kind);return `<div class="pw-hero"><span class="pw-crown">${I.crown}</span><b>FetUre Premium</b><p>${f?f[2]:L('Больше возможностей — то же уважение к границам','More possibilities — the same respect for boundaries')}</p><i></i><i></i></div>`;}
-function premFeats(kind){return `<div class="pw-feats">${PREM_FEATS().map(([k,i,t,s])=>`<div class="pw-f ${k===kind?'on':''}"><span class="ico ${k===kind?'l':''}">${I[i]}</span><span class="tx"><b>${t}</b><small>${s}</small></span>${k===kind?`<span class="pill hot">${L('нужно сейчас','you need this')}</span>`:''}</div>`).join('')}</div>`;}
+function premHero(kind){const f=PREM_FEATS().find(x=>x[0]===kind);return `<div class="pw-hero"><span class="pw-crown">${I.crown}</span><b>FetUre Premium</b><p>${L('Больше возможностей — то же уважение к границам','More possibilities — the same respect for boundaries')}</p><i></i><i></i></div>`;}
+function premFeats(kind){return `<div class="pw-feats">${PREM_FEATS().map(([k,i,t,s])=>`<div class="pw-f ${k===kind?'on':''}"><span class="ico ${k===kind?'l':''}">${I[i]}</span><span class="tx"><b>${t}</b><small>${s}</small></span>${k===kind?`<span class="pill hot">${L('для этого','for this')}</span>`:''}</div>`).join('')}</div>`;}
 function premPlans(cur){return `<div class="pw-plans">${PLANS().map(([k,t,pr,s,badge])=>`<button class="pw-plan ${cur===k?'on':''}" data-act="pwPlan" data-v="${k}" aria-pressed="${cur===k}">${badge?`<em>${badge}</em>`:''}<b>${t}</b><span class="pr">${pr}</span><small>${s}</small></button>`).join('')}</div>`;}
 const planPrice=k=>PLANS().find(x=>x[0]===k)[2];
 function paywall(kind,o={}){S.ui.plan=S.ui.plan||'year';sheet(()=>({title:false,body:`<div class="pw-sheet"><button class="ibtn ghost sm pw-x" data-act="closeSheet" aria-label="${L('Закрыть','Close')}">${I.close}</button>${premHero(kind)}${o.note?`<div class="alert warn mt12">${I.timer}<span>${o.note}</span></div>`:''}${premFeats(kind)}${premPlans(S.ui.plan)}</div>`,
- foot:`<button class="btn primary" data-act="bBuy" autofocus>${L(`Оформить · ${planPrice(S.ui.plan)}`,`Get Premium · ${planPrice(S.ui.plan)}`)}</button><p class="note center" style="margin:0">${L('Отмена в любой момент в магазине приложений. Premium не покупает чужое согласие.','Cancel any time in the app store. Premium never buys anyone’s consent.')} <a href="#" data-act="pwMore">${L('Подробнее','Details')}</a></p>`}),{full:false});}
+ foot:`<button class="btn primary" data-act="bBuy" autofocus>${L(`Оформить · ${planPrice(S.ui.plan)}`,`Get Premium · ${planPrice(S.ui.plan)}`)}</button><p class="note center" style="margin:0">${L('Отменить можно в любой момент в магазине приложений. Premium не обходит чужие настройки приватности.','Cancel any time in the app store. Premium never bypasses other people’s privacy settings.')} <a href="#" data-act="pwMore">${L('Подробнее','Details')}</a></p>`}),{full:false});}
 ACT.pwPlan=a=>{S.ui.plan=a.dataset.v;if(cur().id==='B01')cur().plan=a.dataset.v;S.ui.sheet?resheet():refresh();};
 ACT.pwMore=(a,e)=>{e?.preventDefault();closeSheet(true);go('B01');};
 SC.B01={title:()=>'Premium',render:(p,r)=>{const m=S.me;r.plan=r.plan||S.ui.plan||'year';S.ui.plan=r.plan;return `${bar('',{back:1})}<div class="view nodock ${m.premium?'':'cta1'}"><div class="wrap">

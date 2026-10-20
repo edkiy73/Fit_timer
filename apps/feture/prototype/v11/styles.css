@@ -907,6 +907,8 @@ button.jar:active .vessel{transform:scale(.95)}
 .stamp{position:absolute;top:96px;z-index:4;padding:6px 12px;border:3px solid;border-radius:12px;font:800 24px/1 var(--font);pointer-events:none;text-transform:uppercase}
 .stamp.l{left:20px;color:#6BD3A4;transform:rotate(-14deg);opacity:var(--l)}
 .stamp.n{right:20px;color:#FF6B80;transform:rotate(14deg);opacity:var(--n)}
+/* V11 (UX-27): one-time swipe coach mark on the first card */
+.pc-coach{position:absolute;left:12px;right:12px;top:118px;z-index:5;display:flex;align-items:center;gap:10px;padding:10px 10px 10px 14px;border-radius:16px;background:rgba(20,10,16,.74);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);color:#fff;font-size:13.5px;line-height:1.35}.pc-coach span{flex:1}
 .pc-hint{display:flex;align-items:center;gap:6px;margin-top:12px;font-size:12px;opacity:.75}.pc-hint svg{width:15px;height:15px}
 .pc-body{padding:18px 16px 110px}
 .pc-foot{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}
@@ -2311,3 +2313,8 @@ button.pill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:no
 .fld>svg{width:18px;height:18px;flex:none;color:var(--faint);margin-right:4px}
 .fld .fclr{margin:0}
 .fld-row{display:flex;justify-content:space-between;align-items:baseline;margin-top:12px}.fld-row b{font-weight:600}
+
+/* V11 (UX-33): small controls keep their look but get a 44px tap area */
+.langsw button,.cm-sort button,.fclr{position:relative}
+.langsw button::after,.cm-sort button::after{content:"";position:absolute;inset:-7px -2px}
+.fclr::after{content:"";position:absolute;inset:-8px}
