@@ -3816,7 +3816,7 @@ function fInline(r){
  if(r.search&&r.pick){const pk=r.pick();return `<section class="fin"><div class="fin-t"><b>${r.label}</b><span>${L('можно несколько','pick any')}</span></div>${popChips(pk.items,pk.sel,pk.act,`data-act="fOpen" data-v="${r.k}"`,{groups:pk.groups})}</section>`;}
  if(r.search)return `<section class="fin"><div class="fin-t"><b>${r.label}</b><span>${L('можно несколько','pick any')}</span></div><div class="chips">${r.on()?`<span class="chip on static">${esc(r.summary())}</span>`:''}<button class="chip more" data-act="fOpen" data-v="${r.k}">${ic('search',14)}${L('Все варианты','All options')}</button></div></section>`;
  const html=r.body().replace(/<section class="fsec"[^>]*><div class="sec">\s*<\/div>/g,'<section class="fsec">');const single=/role="radiogroup"|data-ch="sel"/.test(html);
- return `<section class="fin"><div class="fin-t"><b>${r.label}</b><span>${single?L('один вариант','one option'):L('можно несколько','pick any')}</span></div><div class="fin-b">${html}</div></section>`;}
+ return `<section class="fin"><div class="fin-t"><b>${r.label}</b>${single?'':`<span>${L('можно несколько','pick any')}</span>`}</div><div class="fin-b">${html}</div></section>`;}
 /* ---------- V8 filters, Feeld-style: a tidy list «category → current choice»; a row opens its options with search ---------- */
 const sumOf=(items,sel,none)=>{const l=items.filter(([id])=>sel.includes(id)).map(x=>x[1]);return l.length?(l.slice(0,2).join(', ')+(l.length>2?` +${l.length-2}`:'')):(none||L('Любые','Any'));};
 function filterSheet(cfg){S.ui.fcfg=cfg;S.ui.fsub=null;const start=JSON.stringify(cfg.draft());
@@ -3825,7 +3825,7 @@ function filterSheet(cfg){S.ui.fcfg=cfg;S.ui.fsub=null;const start=JSON.stringif
   const n=c.count();return{title:c.title,head:`<button class="btn text auto" data-act="fReset">${L('Сбросить','Reset')}</button>`,
    body:`${c.top?c.top():''}${c.rows.map(fInline).join('')}${c.note?`<p class="grp-n">${c.note}</p>`:''}${!n?`<p class="note mt12">${L('С такими фильтрами пока ничего нет. Можно применить их или изменить выбор.','Nothing matches yet. You can apply these filters or change your choices.')}</p>`:''}`,
    foot:`<button class="btn primary" data-act="fApply">${c.noCount?L('Применить','Apply'):n?c.applyLabel(n):L('Применить фильтры','Apply filters')}</button>`};},
- {full:true,guard:()=>JSON.stringify(S.ui.fcfg.draft())!==start,back:()=>{if(S.ui.fsub){S.ui.fsub=null;resheet();return true;}return false;}});}
+ {full:true,back:()=>{if(S.ui.fsub){S.ui.fsub=null;resheet();return true;}return false;}});}
 ACT.fOpen=a=>{S.ui.fsub=a.dataset.v;S.ui.shq='';resheet();$('#sheet .sh-b')&&($('#sheet .sh-b').scrollTop=0);};
 ACT.fBack=()=>{S.ui.fsub=null;S.ui.shq='';resheet();};
 ACT.fReset=()=>{S.ui.fcfg.reset();resheet();};
@@ -4367,17 +4367,18 @@ ACT.rmFilter=a=>{const fk=cur().p.sub==='following'?'following':'feed';const f=S
 ACT.clearFeedFilters=()=>{const fk=cur().p.sub==='following'?'following':'feed';S.filters[fk]={};refresh();};
 
 /* F02 — feed filters: include / exclude topics, post types; applies to the current tab only */
-ACT.feedFilters=a=>{const fk=a.dataset.v;const d=JSON.parse(JSON.stringify(S.filters[fk]));d.tags=d.tags||[];d.ex=d.ex||[];d.types=d.types||[];S.ui.ff={fk,d};
+ACT.feedFilters=a=>{const fk=a.dataset.v;const d=JSON.parse(JSON.stringify(S.filters[fk]));d.tags=d.tags||[];d.ex=d.ex||[];d.types=d.types||[];d.src=fk==='following'?'following':'foryou';S.ui.ff={fk,d};
  const src=()=>fk==='following'?allPosts().filter(x=>social('me').follows.has(x.author)||x.author==='me'):allPosts();const TI=topicItems();
  filterSheet({noCount:1,title:L('Фильтры ленты','Feed filters'),draft:()=>S.ui.ff.d,count:()=>filterPosts(src(),S.ui.ff.d).length,
-  top:fk==='feed'?()=>`<div class="card list">${toggleRow('ffEvents',L('Показывать события','Show events'),'',S.ui.ff.d.events!==false)}</div>`:null,
+  top:()=>`<div class="card list"><div class="li">${selectRow('ffSrc',L('Публикации','Posts'),[['foryou',L('Все','All')],['following',L('Только подписки','Following only')]],S.ui.ff.d.src)}</div>${S.ui.ff.d.src==='foryou'?toggleRow('ffEvents',L('Показывать события','Show events'),'',S.ui.ff.d.events!==false):''}</div>`,
   applyLabel:n=>n?L(`Показать ${pl(n,['публикацию','публикации','публикаций'],[])}`,`Show ${pl(n,[],['post','posts'])}`):L('Нет подходящих публикаций','No matching posts'),
-  reset:()=>{S.ui.ff.d={tags:[],ex:[],types:[]};},apply:()=>{S.filters[fk]=S.ui.ff.d;},
+  reset:()=>{S.ui.ff.d={tags:[],ex:[],types:[],src:'foryou'};},apply:()=>{const d=S.ui.ff.d,src=d.src==='following'?'following':'foryou';delete d.src;S.filters[src==='following'?'following':'feed']=d;if(src!==(fk==='following'?'following':'foryou'))setSub(src);},
   note:fk==='following'?L('Действует только для подписок.','Applies to Following only.'):'',
   rows:[{k:'types',label:L('Что в публикации','Post contains'),on:()=>S.ui.ff.d.types.length,summary:()=>sumOf(TYPES(),S.ui.ff.d.types,L('Всё','Anything')),body:()=>fChips(TYPES(),S.ui.ff.d.types,'ffType')},
    {k:'tags',label:L('Показывать интересы','Show interests'),search:1,pick:()=>({items:TI,sel:S.ui.ff.d.tags,act:'ffTag',groups:topicGroups()}),on:()=>S.ui.ff.d.tags.length,summary:()=>sumOf(TI,S.ui.ff.d.tags,L('Все интересы','All interests')),body:()=>fChips(TI,S.ui.ff.d.tags,'ffTag',{groups:topicGroups()})},
    {k:'ex',label:L('Скрывать интересы','Hide interests'),search:1,pick:()=>({items:TI,sel:S.ui.ff.d.ex,act:'ffEx',groups:topicGroups()}),on:()=>S.ui.ff.d.ex.length,summary:()=>sumOf(TI,S.ui.ff.d.ex,L('Ничего не скрыто','Nothing hidden')),body:()=>fChips(TI,S.ui.ff.d.ex,'ffEx',{groups:topicGroups()})}]});};
 const ffToggle=(k)=>a=>{const d=S.ui.ff.d;const v=a.dataset.v;const arr=d[k];const i=arr.indexOf(v);i<0?arr.push(v):arr.splice(i,1);if(k==='tags')d.ex=d.ex.filter(x=>x!==v);if(k==='ex')d.tags=d.tags.filter(x=>x!==v);resheet();};
+ACT.ffSrc=a=>{S.ui.ff.d.src=a.dataset.v;resheet();};
 ACT.ffEvents=()=>{S.ui.ff.d.events=S.ui.ff.d.events===false;resheet();};
 ACT.ffTag=ffToggle('tags');ACT.ffEx=ffToggle('ex');ACT.ffType=ffToggle('types');
 ACT.ffReset=()=>{S.ui.ff.d={tags:[],ex:[],types:[]};resheet();};
@@ -4951,7 +4952,7 @@ function dfSheet(){if(!S.ui.df)S.ui.df=JSON.parse(JSON.stringify(social().filter
   if(S.ui.dfsub){const row=DROWS.find(x=>x[0]===S.ui.dfsub);f[row[0]]=f[row[0]]||[];return{title:row[1],lead:`<button class="ibtn ghost sm" data-act="dfBack" aria-label="${L('К фильтрам','Back to filters')}">${I.back}</button>`,search:row[2].length>10,searchPh:L('Найти вариант','Find an option'),body:`${fChips(row[2],f[row[0]],'dfMulti',{k:row[0],groups:row[3]})}<p class="note sh-empty" hidden>${L('Ничего не нашлось','Nothing found')}</p>`,foot:`<button class="btn primary" data-act="dfBack">${f[row[0]].length?L(`Готово · ${f[row[0]].length}`,`Done · ${f[row[0]].length}`):L('Готово','Done')}</button>`};}
   const n=dfMatches(f);
   return{title:L('Фильтры знакомств','Dating filters'),head:`<button class="btn text auto" data-act="dfReset">${L('Сбросить','Reset')}</button>`,
-   body:`<section class="fin"><div class="fin-t"><b>${L('Кого показывать','Show')}</b><span>${L('один вариант','one option')}</span></div><div class="fin-b">${choices([['all',L('Все','All')],['people',L('Люди','People')],['pairs',L('Пары','Couples')]],f.show,'dfShow')}</div></section>
+   body:`<section class="fin"><div class="fin-t"><b>${L('Кого показывать','Show')}</b></div><div class="fin-b">${choices([['all',L('Все','All')],['people',L('Люди','People')],['pairs',L('Пары','Couples')]],f.show,'dfShow')}</div></section>
  <section class="fin"><div class="fin-t"><b>${L('Возраст','Age')}</b><b class="fin-v" id="ageLbl">${f.age[0]}–${f.age[1]}</b></div><div class="card"><div class="dual"><span class="trk"><i style="left:${(f.age[0]-18)/81*100}%;right:${100-(f.age[1]-18)/81*100}%"></i></span><input type="range" min="18" max="99" value="${f.age[0]}" data-in="dfAge" data-i="0" aria-label="${L('Минимальный возраст','Minimum age')}"><input type="range" min="18" max="99" value="${f.age[1]}" data-in="dfAge" data-i="1" aria-label="${L('Максимальный возраст','Maximum age')}"></div></div></section>
  <section class="fin"><div class="fin-t"><b>${L('Где искать','Where')}</b></div><div class="card">${locationFields(f,'dfCity','dfPlaceMode','dfGeo').replace(/^<div class="sec">[^<]*<\/div>/,'')}${f.city&&f.placeMode==='city'?`<button class="btn text auto" data-act="dfAnyCity">${L('Искать в любом городе','Search any city')}</button>`:''}${f.placeMode==='nearby'?`<div class="row" style="justify-content:space-between;margin-top:10px"><span class="note">${L('Радиус','Radius')}</span><b id="distLbl">${L(`до ${f.dist} км`,`up to ${f.dist} km`)}</b></div><div class="dual single"><span class="trk"><i style="left:0;right:${100-(f.dist-5)/95*100}%"></i></span><input type="range" min="5" max="100" step="5" value="${f.dist}" data-in="dfDist" aria-label="${L('Расстояние','Distance')}"></div>`:''}</div></section>
  ${DROWS.map(([k,l,items,groups])=>`<section class="fin"><div class="fin-t"><b>${l}</b><span>${L('можно несколько','pick any')}</span></div>${popChips(items,f[k]||[],'dfMulti',`data-act="dfOpen" data-v="${k}"`,{groups,k,lim:k==='topics'?6:groups?groups[0][1].length:items.length})}</section>`).join('')}
