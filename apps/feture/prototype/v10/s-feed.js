@@ -41,15 +41,16 @@ ACT.clearFeedFilters=()=>{const fk=cur().p.sub==='following'?'following':'feed';
 ACT.feedFilters=a=>{const fk=a.dataset.v;const d=JSON.parse(JSON.stringify(S.filters[fk]));d.tags=d.tags||[];d.ex=d.ex||[];d.types=d.types||[];d.src=fk==='following'?'following':'foryou';S.ui.ff={fk,d};
  const src=()=>fk==='following'?allPosts().filter(x=>social('me').follows.has(x.author)||x.author==='me'):allPosts();const TI=topicItems();
  filterSheet({noCount:1,title:L('Фильтры ленты','Feed filters'),draft:()=>S.ui.ff.d,count:()=>filterPosts(src(),S.ui.ff.d).length,
-  top:()=>`<div class="card list"><div class="li">${selectRow('ffSrc',L('Публикации','Posts'),[['foryou',L('Все','All')],['following',L('Только подписки','Following only')]],S.ui.ff.d.src)}</div>${S.ui.ff.d.src==='foryou'?toggleRow('ffEvents',L('Показывать события','Show events'),'',S.ui.ff.d.events!==false):''}</div>`,
+  top:()=>`<section class="fin"><div class="fin-t"><b>${L('Публикации','Posts')}</b>${S.ui.ff.d.src==='following'?fclr('src','ffSrcClear'):''}</div>${fchoices([['foryou',L('Все','All')],['following',L('Только подписки','Following only')]],S.ui.ff.d.src,'ffSrc')}</section>${S.ui.ff.d.src==='foryou'?`<div class="card list">${toggleRow('ffEvents',L('Показывать события','Show events'),'',S.ui.ff.d.events!==false)}</div>`:''}`,
   applyLabel:n=>n?L(`Показать ${pl(n,['публикацию','публикации','публикаций'],[])}`,`Show ${pl(n,[],['post','posts'])}`):L('Нет подходящих публикаций','No matching posts'),
   reset:()=>{S.ui.ff.d={tags:[],ex:[],types:[],src:'foryou'};},apply:()=>{const d=S.ui.ff.d,src=d.src==='following'?'following':'foryou';delete d.src;S.filters[src==='following'?'following':'feed']=d;if(src!==(fk==='following'?'following':'foryou'))setSub(src);},
   note:fk==='following'?L('Действует только для подписок.','Applies to Following only.'):'',
-  rows:[{k:'types',label:L('Что в публикации','Post contains'),on:()=>S.ui.ff.d.types.length,summary:()=>sumOf(TYPES(),S.ui.ff.d.types,L('Всё','Anything')),body:()=>fChips(TYPES(),S.ui.ff.d.types,'ffType')},
-   {k:'tags',label:L('Показывать интересы','Show interests'),search:1,pick:()=>({items:TI,sel:S.ui.ff.d.tags,act:'ffTag',groups:topicGroups()}),on:()=>S.ui.ff.d.tags.length,summary:()=>sumOf(TI,S.ui.ff.d.tags,L('Все интересы','All interests')),body:()=>fChips(TI,S.ui.ff.d.tags,'ffTag',{groups:topicGroups()})},
-   {k:'ex',label:L('Скрывать интересы','Hide interests'),search:1,pick:()=>({items:TI,sel:S.ui.ff.d.ex,act:'ffEx',groups:topicGroups()}),on:()=>S.ui.ff.d.ex.length,summary:()=>sumOf(TI,S.ui.ff.d.ex,L('Ничего не скрыто','Nothing hidden')),body:()=>fChips(TI,S.ui.ff.d.ex,'ffEx',{groups:topicGroups()})}]});};
+  rows:[{k:'types',label:L('Что в публикации','Post contains'),on:()=>S.ui.ff.d.types.length,clear:()=>{S.ui.ff.d.types=[];},summary:()=>sumOf(TYPES(),S.ui.ff.d.types,L('Всё','Anything')),body:()=>fChips(TYPES(),S.ui.ff.d.types,'ffType')},
+   {k:'tags',label:L('Показывать интересы','Show interests'),search:1,clear:()=>{S.ui.ff.d.tags=[];},pick:()=>({items:TI,sel:S.ui.ff.d.tags,act:'ffTag',groups:topicGroups()}),on:()=>S.ui.ff.d.tags.length,summary:()=>sumOf(TI,S.ui.ff.d.tags,L('Все интересы','All interests')),body:()=>fChips(TI,S.ui.ff.d.tags,'ffTag',{groups:topicGroups()})},
+   {k:'ex',label:L('Скрывать интересы','Hide interests'),search:1,clear:()=>{S.ui.ff.d.ex=[];},pick:()=>({items:TI,sel:S.ui.ff.d.ex,act:'ffEx',groups:topicGroups()}),on:()=>S.ui.ff.d.ex.length,summary:()=>sumOf(TI,S.ui.ff.d.ex,L('Ничего не скрыто','Nothing hidden')),body:()=>fChips(TI,S.ui.ff.d.ex,'ffEx',{groups:topicGroups()})}]});};
 const ffToggle=(k)=>a=>{const d=S.ui.ff.d;const v=a.dataset.v;const arr=d[k];const i=arr.indexOf(v);i<0?arr.push(v):arr.splice(i,1);if(k==='tags')d.ex=d.ex.filter(x=>x!==v);if(k==='ex')d.tags=d.tags.filter(x=>x!==v);resheet();};
 ACT.ffSrc=a=>{S.ui.ff.d.src=a.dataset.v;resheet();};
+ACT.ffSrcClear=()=>{S.ui.ff.d.src='foryou';resheet();};
 ACT.ffEvents=()=>{S.ui.ff.d.events=S.ui.ff.d.events===false;resheet();};
 ACT.ffTag=ffToggle('tags');ACT.ffEx=ffToggle('ex');ACT.ffType=ffToggle('types');
 ACT.ffReset=()=>{S.ui.ff.d={tags:[],ex:[],types:[]};resheet();};

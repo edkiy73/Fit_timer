@@ -2308,6 +2308,20 @@ input.inp,select.inp{height:48px}
 /* the scrolling chips of a filter line stop at the «Filters» button instead of sliding under it */
 .filterline .chips.scroll{margin-right:0;padding-right:10px}
 button.pill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* «reset this filter» — a round ✕ in the section header; appears only when the section has a value */
+.fin-t{align-items:center;min-height:28px}
+.fin-t>span,.fin-t>.fin-v{margin-left:auto}
+.fclr{flex:none;width:28px;height:28px;margin-left:10px;border-radius:50%;display:grid;place-items:center;background:var(--raise);color:var(--mute)}
+.fclr svg{width:14px;height:14px}
+.fin-t>b:first-child+.fclr{margin-left:auto}
+/* a city field: one row, the ✕ clears it */
+.fld{display:flex;align-items:center;gap:8px;min-height:48px;margin-top:10px;padding:0 10px 0 14px;border:1px solid var(--line2);border-radius:var(--r);background:var(--fld)}
+.fld-main{flex:1;min-width:0;display:flex;align-items:center;gap:10px;min-height:46px;text-align:left;font-size:15px;font-weight:600}
+.fld-main svg{width:18px;height:18px;flex:none;color:var(--mute)}.fld-main span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fld>svg{width:18px;height:18px;flex:none;color:var(--faint);margin-right:4px}
+.fld .fclr{margin:0}
+.fld-row{display:flex;justify-content:space-between;align-items:baseline;margin-top:12px}.fld-row b{font-weight:600}
 </style>
 </head>
 <body>
@@ -3812,11 +3826,17 @@ function updCard(u){const src=u.e?T(EV(u.e).title):T(COMMUNITIES[u.c].name);retu
 /** a long list inside a filter: the chosen ones and a few popular ones as chips, the rest behind «Все · N» (same as chipPicker) */
 function popChips(items,sel,act,more,o={}){if(items.length<=(o.lim||6)+2)return `<div class="chips">${items.map(([id,l])=>chipBtn(id,l,sel.includes(id),act,o)).join('')}</div>`;const pop=(o.groups?o.groups[0][1]:items.map(x=>x[0])).slice(0,o.lim||6);const shown=items.filter(([id])=>sel.includes(id)||pop.includes(id));
  return `<div class="chips">${shown.map(([id,l])=>chipBtn(id,l,sel.includes(id),act,o)).join('')}<button class="chip more" ${more}>${ic('search',14)}${L('Все','All')} · ${items.length}</button></div>`;}
+/** single choice inside a filter: if the options fit in one row they are chips (one tap), otherwise a select field */
+const fitChips=items=>items.length<=4&&items.reduce((w,[,l])=>w+String(l).length*7.4+38,0)<=340;
+function choiceChips(items,sel,act,o={}){return `<div class="chips" role="radiogroup">${items.map(([id,l])=>`<button class="chip ${String(id)===String(sel)?'on':''}" role="radio" aria-checked="${String(id)===String(sel)}" data-act="${act}" data-v="${esc(id)}" ${o.k?`data-k="${o.k}"`:''}>${esc(l)}</button>`).join('')}</div>`;}
+const fchoices=(items,sel,act,o={})=>fitChips(items)?choiceChips(items,sel,act,o):choices(items,sel,act,o);
+/** «reset this filter» icon in a section header — shown only when the section has a value */
+const fclr=(k,act='fClear')=>`<button class="fclr" data-act="${act}" data-v="${k}" aria-label="${L('Сбросить','Reset')}">${I.close}</button>`;
 function fInline(r){
- if(r.search&&r.pick){const pk=r.pick();return `<section class="fin"><div class="fin-t"><b>${r.label}</b><span>${L('можно несколько','pick any')}</span></div>${popChips(pk.items,pk.sel,pk.act,`data-act="fOpen" data-v="${r.k}"`,{groups:pk.groups})}</section>`;}
- if(r.search)return `<section class="fin"><div class="fin-t"><b>${r.label}</b><span>${L('можно несколько','pick any')}</span></div><div class="chips">${r.on()?`<span class="chip on static">${esc(r.summary())}</span>`:''}<button class="chip more" data-act="fOpen" data-v="${r.k}">${ic('search',14)}${L('Все','All')}</button></div></section>`;
+ if(r.search&&r.pick){const pk=r.pick();return `<section class="fin"><div class="fin-t"><b>${r.label}</b><span>${L('можно несколько','pick any')}</span>${r.on()&&r.clear?fclr(r.k):''}</div>${popChips(pk.items,pk.sel,pk.act,`data-act="fOpen" data-v="${r.k}"`,{groups:pk.groups})}</section>`;}
+ if(r.search)return `<section class="fin"><div class="fin-t"><b>${r.label}</b><span>${L('можно несколько','pick any')}</span>${r.on()&&r.clear?fclr(r.k):''}</div><div class="chips">${r.on()?`<span class="chip on static">${esc(r.summary())}</span>`:''}<button class="chip more" data-act="fOpen" data-v="${r.k}">${ic('search',14)}${L('Все','All')}</button></div></section>`;
  const html=r.body().replace(/<section class="fsec"[^>]*><div class="sec">\s*<\/div>/g,'<section class="fsec">');const single=/role="radiogroup"|data-ch="sel"/.test(html);
- return `<section class="fin"><div class="fin-t"><b>${r.label}</b>${single?'':`<span>${L('можно несколько','pick any')}</span>`}</div><div class="fin-b">${html}</div></section>`;}
+ return `<section class="fin"><div class="fin-t"><b>${r.label}</b>${single?'':`<span>${L('можно несколько','pick any')}</span>`}${r.on()&&r.clear?fclr(r.k):''}</div><div class="fin-b">${html}</div></section>`;}
 /* ---------- V8 filters, Feeld-style: a tidy list «category → current choice»; a row opens its options with search ---------- */
 const sumOf=(items,sel,none)=>{const l=items.filter(([id])=>sel.includes(id)).map(x=>x[1]);return l.length?(l.slice(0,2).join(', ')+(l.length>2?` +${l.length-2}`:'')):(none||L('Любые','Any'));};
 function filterSheet(cfg){S.ui.fcfg=cfg;S.ui.fsub=null;const start=JSON.stringify(cfg.draft());
@@ -3828,6 +3848,7 @@ function filterSheet(cfg){S.ui.fcfg=cfg;S.ui.fsub=null;const start=JSON.stringif
  {full:true,back:()=>{if(S.ui.fsub){S.ui.fsub=null;resheet();return true;}return false;}});}
 ACT.fOpen=a=>{S.ui.fsub=a.dataset.v;S.ui.shq='';resheet();$('#sheet .sh-b')&&($('#sheet .sh-b').scrollTop=0);};
 ACT.fBack=()=>{S.ui.fsub=null;S.ui.shq='';resheet();};
+ACT.fClear=a=>{const r=S.ui.fcfg.rows.find(x=>x.k===a.dataset.v);if(r&&r.clear)r.clear();resheet();};
 ACT.fReset=()=>{S.ui.fcfg.reset();resheet();};
 ACT.fApply=()=>{S.ui.fcfg.apply();closeSheet();refresh();toast(L('Фильтры применены','Filters applied'),{type:'ok'});};
 /** a single option list for one filter category: chips grouped, searchable */
@@ -4370,15 +4391,16 @@ ACT.clearFeedFilters=()=>{const fk=cur().p.sub==='following'?'following':'feed';
 ACT.feedFilters=a=>{const fk=a.dataset.v;const d=JSON.parse(JSON.stringify(S.filters[fk]));d.tags=d.tags||[];d.ex=d.ex||[];d.types=d.types||[];d.src=fk==='following'?'following':'foryou';S.ui.ff={fk,d};
  const src=()=>fk==='following'?allPosts().filter(x=>social('me').follows.has(x.author)||x.author==='me'):allPosts();const TI=topicItems();
  filterSheet({noCount:1,title:L('Фильтры ленты','Feed filters'),draft:()=>S.ui.ff.d,count:()=>filterPosts(src(),S.ui.ff.d).length,
-  top:()=>`<div class="card list"><div class="li">${selectRow('ffSrc',L('Публикации','Posts'),[['foryou',L('Все','All')],['following',L('Только подписки','Following only')]],S.ui.ff.d.src)}</div>${S.ui.ff.d.src==='foryou'?toggleRow('ffEvents',L('Показывать события','Show events'),'',S.ui.ff.d.events!==false):''}</div>`,
+  top:()=>`<section class="fin"><div class="fin-t"><b>${L('Публикации','Posts')}</b>${S.ui.ff.d.src==='following'?fclr('src','ffSrcClear'):''}</div>${fchoices([['foryou',L('Все','All')],['following',L('Только подписки','Following only')]],S.ui.ff.d.src,'ffSrc')}</section>${S.ui.ff.d.src==='foryou'?`<div class="card list">${toggleRow('ffEvents',L('Показывать события','Show events'),'',S.ui.ff.d.events!==false)}</div>`:''}`,
   applyLabel:n=>n?L(`Показать ${pl(n,['публикацию','публикации','публикаций'],[])}`,`Show ${pl(n,[],['post','posts'])}`):L('Нет подходящих публикаций','No matching posts'),
   reset:()=>{S.ui.ff.d={tags:[],ex:[],types:[],src:'foryou'};},apply:()=>{const d=S.ui.ff.d,src=d.src==='following'?'following':'foryou';delete d.src;S.filters[src==='following'?'following':'feed']=d;if(src!==(fk==='following'?'following':'foryou'))setSub(src);},
   note:fk==='following'?L('Действует только для подписок.','Applies to Following only.'):'',
-  rows:[{k:'types',label:L('Что в публикации','Post contains'),on:()=>S.ui.ff.d.types.length,summary:()=>sumOf(TYPES(),S.ui.ff.d.types,L('Всё','Anything')),body:()=>fChips(TYPES(),S.ui.ff.d.types,'ffType')},
-   {k:'tags',label:L('Показывать интересы','Show interests'),search:1,pick:()=>({items:TI,sel:S.ui.ff.d.tags,act:'ffTag',groups:topicGroups()}),on:()=>S.ui.ff.d.tags.length,summary:()=>sumOf(TI,S.ui.ff.d.tags,L('Все интересы','All interests')),body:()=>fChips(TI,S.ui.ff.d.tags,'ffTag',{groups:topicGroups()})},
-   {k:'ex',label:L('Скрывать интересы','Hide interests'),search:1,pick:()=>({items:TI,sel:S.ui.ff.d.ex,act:'ffEx',groups:topicGroups()}),on:()=>S.ui.ff.d.ex.length,summary:()=>sumOf(TI,S.ui.ff.d.ex,L('Ничего не скрыто','Nothing hidden')),body:()=>fChips(TI,S.ui.ff.d.ex,'ffEx',{groups:topicGroups()})}]});};
+  rows:[{k:'types',label:L('Что в публикации','Post contains'),on:()=>S.ui.ff.d.types.length,clear:()=>{S.ui.ff.d.types=[];},summary:()=>sumOf(TYPES(),S.ui.ff.d.types,L('Всё','Anything')),body:()=>fChips(TYPES(),S.ui.ff.d.types,'ffType')},
+   {k:'tags',label:L('Показывать интересы','Show interests'),search:1,clear:()=>{S.ui.ff.d.tags=[];},pick:()=>({items:TI,sel:S.ui.ff.d.tags,act:'ffTag',groups:topicGroups()}),on:()=>S.ui.ff.d.tags.length,summary:()=>sumOf(TI,S.ui.ff.d.tags,L('Все интересы','All interests')),body:()=>fChips(TI,S.ui.ff.d.tags,'ffTag',{groups:topicGroups()})},
+   {k:'ex',label:L('Скрывать интересы','Hide interests'),search:1,clear:()=>{S.ui.ff.d.ex=[];},pick:()=>({items:TI,sel:S.ui.ff.d.ex,act:'ffEx',groups:topicGroups()}),on:()=>S.ui.ff.d.ex.length,summary:()=>sumOf(TI,S.ui.ff.d.ex,L('Ничего не скрыто','Nothing hidden')),body:()=>fChips(TI,S.ui.ff.d.ex,'ffEx',{groups:topicGroups()})}]});};
 const ffToggle=(k)=>a=>{const d=S.ui.ff.d;const v=a.dataset.v;const arr=d[k];const i=arr.indexOf(v);i<0?arr.push(v):arr.splice(i,1);if(k==='tags')d.ex=d.ex.filter(x=>x!==v);if(k==='ex')d.tags=d.tags.filter(x=>x!==v);resheet();};
 ACT.ffSrc=a=>{S.ui.ff.d.src=a.dataset.v;resheet();};
+ACT.ffSrcClear=()=>{S.ui.ff.d.src='foryou';resheet();};
 ACT.ffEvents=()=>{S.ui.ff.d.events=S.ui.ff.d.events===false;resheet();};
 ACT.ffTag=ffToggle('tags');ACT.ffEx=ffToggle('ex');ACT.ffType=ffToggle('types');
 ACT.ffReset=()=>{S.ui.ff.d={tags:[],ex:[],types:[]};resheet();};
@@ -4558,15 +4580,15 @@ ACT.evReset=()=>{S.filters.events=EF_DEF();refresh();};
 /* E02 — event filters */
 ACT.evFilters=(a,e,pre)=>{S.ui.ef=pre||JSON.parse(JSON.stringify(Object.assign(EF_DEF(),S.filters.events)));const target=S.ui.efTarget;
  const FMT=()=>[['all',L('Все','All')],['offline',L('Офлайн','In person')],['online',L('Онлайн','Online')]],WHEN=()=>[['any',L('Любое время','Any time')],['week',L('Эта неделя','This week')],['weekend',L('Выходные','Weekend')],['month',L('Этот месяц','This month')]],TYP=()=>['meetup','workshop','talk','party','edu'].map(t=>[t,evType(t)]),LANG=[['ru','Русский'],['en','English'],['de','Deutsch']],PRICE=()=>[['any',L('Любая','Any')],['free',L('Бесплатно','Free')],['paid',L('Платно','Paid')]];
- const one=(k,items,title)=>({k,label:title,on:()=>S.ui.ef[k]!==items[0][0],summary:()=>items.find(x=>x[0]===S.ui.ef[k])[1],body:()=>grp('',choices(items,S.ui.ef[k],'efSet',{k}))});
+ const one=(k,items,title)=>({k,label:title,on:()=>S.ui.ef[k]!==items[0][0],clear:()=>{S.ui.ef[k]=items[0][0];},summary:()=>items.find(x=>x[0]===S.ui.ef[k])[1],body:()=>fitChips(items)?fchoices(items,S.ui.ef[k],'efSet',{k}):grp('',choices(items,S.ui.ef[k],'efSet',{k}))});
  filterSheet({title:L('Фильтры событий','Event filters'),draft:()=>S.ui.ef,count:()=>evFiltered(S.ui.ef).length,
   applyLabel:n=>n?L(`Показать ${pl(n,['событие','события','событий'],[])}`,`Show ${pl(n,[],['event','events'])}`):L('Нет подходящих событий','No matching events'),
   reset:()=>{S.ui.ef=EF_DEF();},apply:()=>{if(target==='search'&&cur().id==='G01'){S.filters.search.events=S.ui.ef;S.ui.efTarget=null;}else S.filters.events=S.ui.ef;},
   note:L('Город — из твоего профиля.','City comes from your profile.'),
   rows:[one('format',FMT(),L('Формат','Format')),one('when',WHEN(),L('Когда','When')),
-   {k:'types',label:L('Тип','Type'),on:()=>S.ui.ef.types.length,summary:()=>sumOf(TYP(),S.ui.ef.types,L('Любой','Any')),body:()=>fChips(TYP(),S.ui.ef.types,'efMulti',{k:'types'})},
+   {k:'types',label:L('Тип','Type'),on:()=>S.ui.ef.types.length,clear:()=>{S.ui.ef.types=[];},summary:()=>sumOf(TYP(),S.ui.ef.types,L('Любой','Any')),body:()=>fChips(TYP(),S.ui.ef.types,'efMulti',{k:'types'})},
    one('price',PRICE(),L('Стоимость','Price')),
-   {k:'open',label:L('Участие','Admission'),on:()=>S.ui.ef.open,summary:()=>S.ui.ef.open?L('Без заявки','No application'):L('Любое','Any'),body:()=>grp('',choices([['0',L('Любое','Any')],['1',L('Без заявки — просто прийти','No application — just come')]],S.ui.ef.open?'1':'0','efOpen'))}]});};
+   {k:'open',label:L('Участие','Admission'),on:()=>S.ui.ef.open,clear:()=>{S.ui.ef.open=false;},summary:()=>S.ui.ef.open?L('Без заявки','No application'):L('Любое','Any'),body:()=>grp('',choices([['0',L('Любое','Any')],['1',L('Без заявки — просто прийти','No application — just come')]],S.ui.ef.open?'1':'0','efOpen'))}]});};
 ACT.efSet=a=>{S.ui.ef[a.dataset.k]=a.dataset.v;resheet();};
 ACT.efMulti=a=>{const arr=S.ui.ef[a.dataset.k];const i=arr.indexOf(a.dataset.v);i<0?arr.push(a.dataset.v):arr.splice(i,1);resheet();};
 ACT.efOpen=a=>{S.ui.ef.open=a?.dataset?.v?a.dataset.v==='1':!S.ui.ef.open;resheet();};
@@ -4950,12 +4972,14 @@ function dfMatches(f){return S.deckOrder.filter(id=>!social().decided[id]&&!isMa
 function dfSheet(){if(!S.ui.df)S.ui.df=JSON.parse(JSON.stringify(social().filters.dating));S.ui.dfsub=null;const f0=S.ui.df;f0.topics=f0.topics||[];f0.placeMode=f0.placeMode||'city';
  sheet(()=>{const f=S.ui.df;if(!f)return{title:'',body:''};const DROWS=dfRows();
   if(S.ui.dfsub){const row=DROWS.find(x=>x[0]===S.ui.dfsub);f[row[0]]=f[row[0]]||[];return{title:row[1],lead:`<button class="ibtn ghost sm" data-act="dfBack" aria-label="${L('К фильтрам','Back to filters')}">${I.back}</button>`,search:row[2].length>10,searchPh:L('Найти вариант','Find an option'),body:`${fChips(row[2],f[row[0]],'dfMulti',{k:row[0],groups:row[3]})}<p class="note sh-empty" hidden>${L('Ничего не нашлось','Nothing found')}</p>`,foot:`<button class="btn primary" data-act="dfBack">${f[row[0]].length?L(`Готово · ${f[row[0]].length}`,`Done · ${f[row[0]].length}`):L('Готово','Done')}</button>`};}
-  const n=dfMatches(f);
+  const n=dfMatches(f);const wm=f.placeMode==='nearby'?'nearby':(f.where==='city'||f.city)?'city':'any',wOn=wm!=='any';
   return{title:L('Фильтры знакомств','Dating filters'),head:`<button class="btn text auto" data-act="dfReset">${L('Сбросить','Reset')}</button>`,
-   body:`<section class="fin"><div class="fin-t"><b>${L('Кого показывать','Show')}</b></div><div class="fin-b">${choices([['all',L('Все','All')],['people',L('Люди','People')],['pairs',L('Пары','Couples')]],f.show,'dfShow')}</div></section>
- <section class="fin"><div class="fin-t"><b>${L('Возраст','Age')}</b><b class="fin-v" id="ageLbl">${f.age[0]}–${f.age[1]}</b></div><div class="card"><div class="dual"><span class="trk"><i style="left:${(f.age[0]-18)/81*100}%;right:${100-(f.age[1]-18)/81*100}%"></i></span><input type="range" min="18" max="99" value="${f.age[0]}" data-in="dfAge" data-i="0" aria-label="${L('Минимальный возраст','Minimum age')}"><input type="range" min="18" max="99" value="${f.age[1]}" data-in="dfAge" data-i="1" aria-label="${L('Максимальный возраст','Maximum age')}"></div></div></section>
- <section class="fin"><div class="fin-t"><b>${L('Где искать','Where')}</b></div><div class="card">${locationFields(f,'dfCity','dfPlaceMode','dfGeo').replace(/^<div class="sec">[^<]*<\/div>/,'')}${f.city&&f.placeMode==='city'?`<button class="btn text auto" data-act="dfAnyCity">${L('Искать в любом городе','Search any city')}</button>`:''}${f.placeMode==='nearby'?`<div class="row" style="justify-content:space-between;margin-top:10px"><span class="note">${L('Радиус','Radius')}</span><b id="distLbl">${L(`до ${f.dist} км`,`up to ${f.dist} km`)}</b></div><div class="dual single"><span class="trk"><i style="left:0;right:${100-(f.dist-5)/95*100}%"></i></span><input type="range" min="5" max="100" step="5" value="${f.dist}" data-in="dfDist" aria-label="${L('Расстояние','Distance')}"></div>`:''}</div></section>
- ${DROWS.map(([k,l,items,groups])=>`<section class="fin"><div class="fin-t"><b>${l}</b><span>${L('можно несколько','pick any')}</span></div>${popChips(items,f[k]||[],'dfMulti',`data-act="dfOpen" data-v="${k}"`,{groups,k,lim:k==='topics'?6:groups?groups[0][1].length:items.length})}</section>`).join('')}
+   body:`<section class="fin"><div class="fin-t"><b>${L('Кого показывать','Show')}</b>${f.show&&f.show!=='all'?fclr('show','dfClear'):''}</div>${fchoices([['all',L('Все','All')],['people',L('Люди','People')],['pairs',L('Пары','Couples')]],f.show||'all','dfShow')}</section>
+ <section class="fin"><div class="fin-t"><b>${L('Возраст','Age')}</b><b class="fin-v" id="ageLbl">${f.age[0]}–${f.age[1]}</b>${f.age[0]!==18||f.age[1]!==99?fclr('age','dfClear'):''}</div><div class="card"><div class="dual"><span class="trk"><i style="left:${(f.age[0]-18)/81*100}%;right:${100-(f.age[1]-18)/81*100}%"></i></span><input type="range" min="18" max="99" value="${f.age[0]}" data-in="dfAge" data-i="0" aria-label="${L('Минимальный возраст','Minimum age')}"><input type="range" min="18" max="99" value="${f.age[1]}" data-in="dfAge" data-i="1" aria-label="${L('Максимальный возраст','Maximum age')}"></div></div></section>
+ <section class="fin"><div class="fin-t"><b>${L('Где искать','Where')}</b>${wOn?fclr('where','dfClear'):''}</div>${choiceChips([['any',L('Везде','Anywhere')],['city',L('Город','City')],['nearby',L('Рядом','Nearby')]],wm,'dfWhere')}
+  ${wm==='city'?`<div class="fld"><button class="fld-main" data-act="dfCity">${I.pin}<span>${f.city?esc(placeCaption(f.city)):L('Выбрать страну и город','Choose country and city')}</span></button>${f.city?fclr('city','dfAnyCity'):I.chev}</div>`:''}
+  ${wm==='nearby'?`<div class="fld-row"><span class="note">${L('Радиус','Radius')}</span><b id="distLbl">${L(`до ${f.dist} км`,`up to ${f.dist} km`)}</b></div><div class="dual single"><span class="trk"><i style="left:0;right:${100-(f.dist-5)/95*100}%"></i></span><input type="range" min="5" max="100" step="5" value="${f.dist}" data-in="dfDist" aria-label="${L('Расстояние','Distance')}"></div><p class="note mt8">${L('Только примерная область около 5 км. Точная точка и адрес не сохраняются и не показываются.','Only a coarse area of about 5 km. Your exact position and address are never stored or shown.')}</p>`:''}</section>
+ ${DROWS.map(([k,l,items,groups])=>`<section class="fin"><div class="fin-t"><b>${l}</b><span>${L('можно несколько','pick any')}</span>${(f[k]||[]).length?fclr(k,'dfClear'):''}</div>${popChips(items,f[k]||[],'dfMulti',`data-act="dfOpen" data-v="${k}"`,{groups,k,lim:k==='topics'?6:groups?groups[0][1].length:items.length})}</section>`).join('')}
  `,
    foot:`<button class="btn primary" data-act="dfApply">${L('Применить','Apply')}</button>`};},{full:true});}
 ACT.dfSheet=()=>{S.ui.df=null;dfSheet();};
@@ -4963,7 +4987,7 @@ ACT.dfBack=()=>{S.ui.dfsub=null;resheet();};
 ACT.dfOpen=a=>{S.ui.dfsub=a.dataset.v;resheet();};
 ACT.dfShow=a=>{dfr().show=a.dataset.v;dfRe();};
 ACT.dfMulti=a=>{const d=dfr();d[a.dataset.k]=d[a.dataset.k]||[];if(a.dataset.k==='role')d.role=toggleIdentityValue(d.role,'role',a.dataset.v);else{const arr=d[a.dataset.k];const i=arr.indexOf(a.dataset.v);i<0?arr.push(a.dataset.v):arr.splice(i,1);}dfRe();};
-ACT.dfReset=()=>{S.ui.df={show:'all',age:[18,99],dist:100,gender:[],orient:[],format:[],seek:[],topics:[],role:[],placeMode:'city',city:'',coords:null};dfRe();};
+ACT.dfReset=()=>{S.ui.df={show:'all',age:[18,99],dist:100,gender:[],orient:[],format:[],seek:[],topics:[],role:[],placeMode:'city',where:'any',city:'',coords:null};dfRe();};
 IN.dfAge=el=>{const f=dfr();const i=+el.dataset.i;let v=+el.value;if(i===0)v=Math.min(v,f.age[1]-1);else v=Math.max(v,f.age[0]+1);el.value=v;f.age[i]=v;$('#ageLbl').textContent=`${f.age[0]}–${f.age[1]}`;const t=el.parentNode.querySelector('.trk i');t.style.left=(f.age[0]-18)/81*100+'%';t.style.right=100-(f.age[1]-18)/81*100+'%';clearTimeout(S.ui.dfT);S.ui.dfT=setTimeout(dfRe,350);};
 IN.dfDist=el=>{const f=dfr();f.dist=+el.value;$('#distLbl').textContent=L(`до ${f.dist} км`,`up to ${f.dist} km`);el.parentNode.querySelector('.trk i').style.right=100-(f.dist-5)/95*100+'%';clearTimeout(S.ui.dfT);S.ui.dfT=setTimeout(dfRe,350);};
 ACT.dfApply=()=>{const f=dfr();if(f.placeMode==='nearby'&&!f.coords&&!S.me.location?.coords){toast(L('Укажи примерное расположение или выбери поиск по городу','Set approximate location or search by city'),{type:'warn'});return;}social().filters.dating={...f,age:[Math.max(18,f.age[0]),Math.max(18,f.age[1])]};S.ui.df=null;closeSheet(true);if(cur().id==='D04')back();else refresh();toast(L('Фильтры применены','Filters applied'),{type:'ok'});};
@@ -4982,6 +5006,8 @@ ACT.restore=a=>{const id=a.dataset.v;run(a,()=>{delete social().decided[id];S.de
 
 ACT.dfCity=()=>{const keep=S.ui.df;openCityPicker(keep.city,id=>{keep.city=id;S.ui.df=keep;dfSheet();});};
 ACT.dfAnyCity=()=>{dfr().city='';dfRe();};
+ACT.dfWhere=a=>{const f=dfr(),v=a.dataset.v;f.where=v;if(v==='any'){f.placeMode='city';f.city='';}else if(v==='nearby')return ACT.dfPlaceMode({dataset:{v:'nearby'}});else{f.placeMode='city';if(!f.city)return ACT.dfCity();}dfRe();};
+ACT.dfClear=a=>{const f=dfr(),k=a.dataset.v;if(k==='show')f.show='all';else if(k==='age')f.age=[18,99];else if(k==='where'){f.where='any';f.placeMode='city';f.city='';f.coords=null;f.dist=100;}else f[k]=[];dfRe();};
 ACT.dfPlaceMode=a=>{dfr().placeMode=a.dataset.v;dfr().coords=dfr().coords||S.me.location?.coords||null;dfRe();};
 ACT.dfGeo=()=>{const keep=S.ui.df;requestCoarseLocation(coords=>{keep.coords=coords;keep.city=nearestKnownCity(coords);S.ui.df=keep;if(S.ui.sheet)resheet();else dfSheet();});};
 
@@ -5417,9 +5443,9 @@ ACT.cFilters=()=>{S.ui.cf={privacy:'all',online:false,...S.filters.comm,topics:[
  filterSheet({title:L('Фильтры сообществ','Community filters'),draft:()=>S.ui.cf,count:cnt,applyLabel:n=>n?L(`Показать ${pl(n,['сообщество','сообщества','сообществ'],[])}`,`Show ${pl(n,[],['community','communities'])}`):L('Ничего не подходит','Nothing matches'),
   reset:()=>{S.ui.cf={privacy:'all',online:false,topics:[]};},apply:()=>{const f=S.ui.cf;f.topic=f.topics.length===1?f.topics[0]:'';S.filters.comm=f;},
   note:L('Скрытые сообщества в каталоге не показываются — туда попадают по приглашению.','Hidden communities never appear in the catalogue — they’re invite-only.'),
-  rows:[{k:'topics',label:L('Интересы','Interests'),search:1,pick:()=>({items:TI,sel:S.ui.cf.topics,act:'cfTopic',groups:topicGroups(used)}),on:()=>S.ui.cf.topics.length,summary:()=>sumOf(TI,S.ui.cf.topics,L('Все интересы','All interests')),body:()=>fChips(TI,S.ui.cf.topics,'cfTopic',{groups:topicGroups(used)})},
-   {k:'privacy',label:L('Вступление','Joining'),on:()=>S.ui.cf.privacy!=='all',summary:()=>PR().find(x=>x[0]===S.ui.cf.privacy)[1],body:()=>grp('',choices(PR(),S.ui.cf.privacy,'cfSet'))},
-   {k:'online',label:L('Где','Where'),on:()=>S.ui.cf.online,summary:()=>S.ui.cf.online?L('Только онлайн','Online only'):L('Везде','Anywhere'),body:()=>grp('',choices([['0',L('Везде','Anywhere')],['1',L('Только онлайн','Online only')]],S.ui.cf.online?'1':'0','cfOnline'))}]});};
+  rows:[{k:'topics',label:L('Интересы','Interests'),search:1,clear:()=>{S.ui.cf.topics=[];},pick:()=>({items:TI,sel:S.ui.cf.topics,act:'cfTopic',groups:topicGroups(used)}),on:()=>S.ui.cf.topics.length,summary:()=>sumOf(TI,S.ui.cf.topics,L('Все интересы','All interests')),body:()=>fChips(TI,S.ui.cf.topics,'cfTopic',{groups:topicGroups(used)})},
+   {k:'privacy',label:L('Вступление','Joining'),on:()=>S.ui.cf.privacy!=='all',clear:()=>{S.ui.cf.privacy='all';},summary:()=>PR().find(x=>x[0]===S.ui.cf.privacy)[1],body:()=>fchoices(PR(),S.ui.cf.privacy,'cfSet')},
+   {k:'online',label:L('Где','Where'),on:()=>S.ui.cf.online,clear:()=>{S.ui.cf.online=false;},summary:()=>S.ui.cf.online?L('Только онлайн','Online only'):L('Везде','Anywhere'),body:()=>fchoices([['0',L('Везде','Anywhere')],['1',L('Только онлайн','Online only')]],S.ui.cf.online?'1':'0','cfOnline')}]});};
 ACT.cfSet=a=>{S.ui.cf.privacy=a.dataset.v;resheet();};ACT.cfOnline=a=>{S.ui.cf.online=a?.dataset?.v?a.dataset.v==='1':!S.ui.cf.online;resheet();};
 ACT.cfApply=()=>{const f=S.ui.cf;f.topic=f.topics.length===1?f.topics[0]:'';S.filters.comm=f;closeSheet();refresh();};
 

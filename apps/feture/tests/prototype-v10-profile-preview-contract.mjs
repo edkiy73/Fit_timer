@@ -94,7 +94,13 @@ const none=run("Object.keys(PEOPLE).find(id=>!PEOPLE[id].pair&&!social().likesOu
 run("ACT.endConn({dataset:{v:'maya'}});");const pop=String(run("__m.body"));assert.ok(pop.includes('Твоя симпатия снимается')&&pop.includes('не блокировка'),'the popup says what happens');
 // Filters: the feed filter sheet has the «All / Following only» source; closing a filter sheet never asks «close without saving?»; single-choice rows carry no hint.
 run("S=freshState('full');S.session={};initNav();toast=()=>{};closeSheet=()=>{};refresh=()=>{};globalThis.__s=null;sheet=(b,o)=>{globalThis.__s={b,o}}");
-run("ACT.feedFilters({dataset:{v:'feed'}})");const fsh=run("__s.b()");assert.ok(String(fsh.body).includes('data-sel="ffSrc"')&&String(fsh.body).includes('Только подписки'),'the feed filter has the Following-only source');
+run("ACT.feedFilters({dataset:{v:'feed'}})");const fsh=run("__s.b()");assert.ok(String(fsh.body).includes('data-act="ffSrc"')&&String(fsh.body).includes('Только подписки'),'the feed filter has the Following-only source');
 assert.ok(!run("__s.o.guard"),'filter sheets have no «close without saving?» guard');
 assert.ok(!String(fsh.body).includes('один вариант'),'no «one option» hints');
+// Filters v2: short single choices are chips, long ones stay a select; every section with a value has a ✕ that clears just that section.
+assert.ok(run("fitChips([['a','Все'],['b','Офлайн'],['c','Онлайн']])")&&!run("fitChips([['a','Любое время'],['b','Эта неделя'],['c','Выходные'],['d','Этот месяц']])"),'chips only when the options fit in one row');
+assert.ok(run("fchoices([['a','Все'],['b','Люди']],'a','x')").includes('role="radio"')&&run("fchoices([['a','Любое время'],['b','Эта неделя'],['c','Выходные'],['d','Этот месяц']],'a','x')").includes('data-ch="sel"'),'chips or select by width');
+run("sheet=b=>{globalThis.__s={b}};ACT.evFilters({dataset:{}});");const ev0=String(run("__s.b().body")).includes('data-act="fClear"');run("ACT.efSet({dataset:{k:'format',v:'online'}})");const ev1=String(run("__s.b().body"));assert.ok(!ev0&&ev1.includes('data-act="fClear" data-v="format"'),'a ✕ appears only after a value is chosen');
+run("ACT.fClear({dataset:{v:'format'}})");assert.equal(run("S.ui.ef.format"),'all','✕ resets that section only');
+run("S.ui.df=null;ACT.dfSheet();");run("ACT.dfWhere({dataset:{v:'nearby'}})");assert.equal(run("S.ui.df.placeMode"),'nearby');run("ACT.dfClear({dataset:{v:'where'}})");assert.ok(run("S.ui.df.placeMode")==='city'&&!run("S.ui.df.city"),'the «Where» ✕ returns to anywhere');
 console.log('PASS RU/EN profile preview: details are public at both levels; the private part (description/interests/photos/video) opens only with access; hidden topics stay hidden; activity tab follows its privacy setting; follow lists drop blocked people');
