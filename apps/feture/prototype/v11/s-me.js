@@ -26,9 +26,9 @@ function testCards(){const list=Object.entries(QUIZ).sort(([a],[b])=>(S.me.tests
 
 /* the couple lives with your profile, not in «activity» (owner 15.10): one row inside the profile card */
 function mePairRow(){const P=S.pair;if(P?.status==='active')return `<button class="me-pair on" data-go="Q01"><span class="mp-avs">${av('me','xs')}${av(P.with,'xs')}</span><span class="tx"><b>${esc(pairName())}</b><small>${L('Профиль пары','Couple profile')}</small></span>${I.chev}</button>`;
- return `<button class="me-pair" data-act="pairLink"><span class="mp-ic">${I.couple}</span><span class="tx"><b>${S.pairInvite?L('Приглашение в пару отправлено','Couple invitation sent'):L('Вы пара? Свяжите профили','A couple? Link your profiles')}</b><small>${S.pairInvite?L('ждём ответа партнёра','waiting for your partner'):L('Общий профиль, у каждого — свой аккаунт','A shared profile, each keeps their own account')}</small></span>${I.chev}</button>`;}
-SC.X01={root:1,tab:'me',title:()=>L('Я','Me'),render:()=>{const m=S.me;const [ns,nt,nid]=nextStep();
- const head=bar(L('Я','Me'),{actions:`${bellBtn()}<button class="ibtn" data-go="K01" aria-label="${L('Настройки','Settings')}">${I.gear}</button>`});
+ return `<button class="me-pair" data-act="pairLink"><span class="mp-ic">${I.couple}</span><span class="tx"><b>${S.pairInvite?L('Приглашение в пару отправлено','Couple invitation sent'):L('С кем-то вместе? Свяжи профили в пару','Together with someone? Link your profiles')}</b><small>${S.pairInvite?L('ждём ответа партнёра','waiting for your partner'):L('Общий профиль, у каждого — свой аккаунт','A shared profile, each keeps their own account')}</small></span>${I.chev}</button>`;}
+SC.X01={root:1,tab:'me',title:()=>meTabName(),render:()=>{const m=S.me;const [ns,nt,nid]=nextStep();
+ const head=bar(meTabName(),{actions:`${bellBtn()}<button class="ibtn" data-go="K01" aria-label="${L('Настройки','Settings')}">${I.gear}</button>`});
  const jars=myJars();const going=myUpcomingEventIds().length;
  return head+`<div class="view"><div class="wrap">
  <section class="grp"><div class="card me-card"><button class="me-id" data-go="P03">${av('me','me-av')}<span class="grow"><b>${esc(pname('me'))}</b>${m.city?`<small>${esc(city(m.city))}</small>`:''}</span>${I.chev}</button>

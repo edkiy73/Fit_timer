@@ -141,7 +141,7 @@ function likePerson(id,src){if(src==='profile'&&!canLikeFrom(actionAuthor(),id))
 /* D08 — it’s mutual */
 function showMatch(id){S.ui.matchContext={id,actor:actionAuthor(),ticket:authorTicket()};const m=$('#matchLayer');const sh=sharedSummary(id);
  m.innerHTML=`<div class="match" role="dialog" aria-modal="true" aria-label="${L('Это взаимно','It’s mutual')}"><div class="pair">${av(actionAuthor(),'')}<span class="heart">${I.heartf}</span>${av(id,'')}</div><h2>${L('Это взаимно','It’s mutual')}</h2><p>${L(`${actionAuthor()==='couple'?esc(pname('couple')):'Ты'} и ${esc(pname(id))} понравились друг другу. ${sh}.`,`${actionAuthor()==='couple'?esc(pname('couple')):'You'} and ${esc(pname(id))} like each other. ${sh}.`)}</p>
- <button class="btn primary" data-act="matchChat" data-v="${id}">${I.chat}${L('Написать первым','Send the first message')}</button><button class="btn soft" data-act="matchClose">${L('Смотреть дальше','Keep browsing')}</button></div>`;
+ <button class="btn primary" data-act="matchChat" data-v="${id}">${I.chat}${L('Написать сообщение','Send a message')}</button><button class="btn soft" data-act="matchClose">${L('Смотреть дальше','Keep browsing')}</button></div>`;
  m.style.pointerEvents='auto';$('.match .btn',m).focus();}
 ACT.matchClose=()=>{const m=$('#matchLayer');m.innerHTML='';m.style.pointerEvents='none';if(cur().id==='D03')refresh();};
 ACT.matchChat=a=>{const context=S.ui.matchContext;ACT.matchClose();if(!context||context.id!==a.dataset.v||!validAuthor(context.ticket))return;openChat(context.id,context.actor);};

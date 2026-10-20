@@ -179,7 +179,7 @@ function needAge(then){
  sheet(()=>({title:L('Нужна проверка возраста','Age check needed'),lead:`<span class="ico l">${I.shield}</span>`,body:`<p class="lead">${L('Это действие доступно только после проверки 18+. Дата рождения при регистрации — самодекларация, её недостаточно.','This is available only after an 18+ check. The date of birth you entered is self-declared and isn’t enough.')}</p>
  <div class="fact"><i class="g">${I.check}</i><span>${L('Займёт 1–2 минуты: селфи для оценки возраста или документ','Takes 1–2 minutes: a selfie age estimate or an ID')}</span></div>
  <div class="fact"><i class="g">${I.check}</i><span>${L('Проверку делает отдельный сервис; фото не становится аватаром и не публикуется','A separate service checks it; the photo never becomes your avatar or gets published')}</span></div>
- ${S.me.ageCheck==='pending'?`<div class="alert warn mt12">${I.clock}<span>${L('Проверка уже идёт — статус в «Я → Настройки».','A check is already in progress — see Me → Settings.')}</span></div>`:''}`,
+ ${S.me.ageCheck==='pending'?`<div class="alert warn mt12">${I.clock}<span>${L('Проверка уже идёт — статус в «Профиль → Настройки».','A check is already in progress — see Profile → Settings.')}</span></div>`:''}`,
  foot:S.me.ageCheck==='pending'?`<button class="btn soft" data-act="closeSheet">${L('Понятно','OK')}</button>`:`<button class="btn primary" data-act="ageStart">${L('Пройти проверку','Start the check')}</button><button class="btn text" data-act="closeSheet">${L('Не сейчас','Not now')}</button>`}));
  S.ui.ageThen=then;return false;
 }
