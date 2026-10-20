@@ -4549,7 +4549,7 @@ ACT.createType=a=>{const t=a.dataset.v;closeSheet(true);if(t==='event')return go
 ACT.composeX=a=>go('F07',{x:a.dataset.x});
 
 /* F07 — editor; F08 audience; F09 preview */
-const AUD=()=>[['all',I.globe,L('Все участники','All members'),L('Видно в ленте и в твоём профиле','Visible in the feed and on your profile')],['followers',I.people,L('Подписчики','Followers'),L('Только те, кто подписан на тебя','Only people who follow you')],['granted',I.key,(n=>L(`Кому открыта приватная часть · ${n}`,`People with your private part · ${n}`))(givenGrantEntries().length),L('Люди, у которых есть доступ к твоей приватной части','People you’ve shared your private part with')]];
+const AUD=()=>[['all',I.globe,L('Все участники','All members'),L('Видно в ленте и в твоём профиле','Visible in the feed and on your profile')],['followers',I.people,L('Подписчики','Followers'),L('Только те, кто подписан на тебя','Only people who follow you')],['granted',I.key,(n=>L(`Приватная часть${n?` · ${n}`:''}`,`Private part${n?` · ${n}`:''}`))(givenGrantEntries().length),L('Люди, у которых есть доступ к твоей приватной части','People you’ve shared your private part with')]];
 const POLL_MAX=10;
 /* V8: start minimal — text and three buttons; each block opens only when asked, in its own card */
 const resEligible=(actor=actionAuthor())=>(authorProfile(actor)?.jars||[]).filter(j=>!j.limit&&j.vis==='public'&&Number.isInteger(j.lv)&&j.lv>=1&&j.lv<=10);
