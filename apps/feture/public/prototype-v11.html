@@ -2390,6 +2390,15 @@ button.pill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:no
 .actc-t{margin:0;font-size:14.5px;line-height:1.4;color:var(--ink)}.actc-t b{font-weight:650}.actc-t small{display:block;margin-top:2px;font-size:12px;color:var(--faint)}
 .actc-p{display:flex;align-items:center;gap:12px;width:100%;padding:8px;border-radius:var(--r);background:var(--surf);border:1px solid var(--line);text-align:left}
 .actc-p .tx{flex:1;min-width:0}.actc-p .tx b{display:block;font-size:14px;font-weight:600;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.actc-p .tx small{display:block;margin-top:2px;font-size:12px;color:var(--mute)}
+
+/* V11: grouped activity */
+.actc-hd{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}.actc-hd .ibtn{flex:none;margin:-6px -8px 0 0}
+.actc-strip{display:flex;gap:6px}
+.actc-th{position:relative;flex:none;width:54px;height:54px;border-radius:12px;overflow:hidden;background:var(--raise);display:grid;place-items:center;color:var(--accent)}
+.actc-th>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.actc-th svg{width:20px;height:20px}
+.actc-th.round{border-radius:50%}.actc-th.round .av{width:100%;height:100%}
+.actc-th.more{font-weight:700;font-size:15px;color:var(--accent);border:1px dashed var(--line2);background:none}
+.actc-list{display:grid;gap:8px}.actc-list>.btn.text{justify-self:start;min-height:36px;padding:0}
 </style>
 </head>
 <body>
@@ -2506,7 +2515,7 @@ const PEOPLE={
  mia:{pv:true,premium:true,privText:{ru:'Перед первой сессией всегда созваниваемся. Стоп-слово — «красный», жест — два хлопка. После — обязательно чай и разговор.',en:'We always call before a first session. Safeword is “red”, gesture is two taps. Afterwards — tea and a talk, always.'},name:'Mia',age:29,photo:3,nph:5,city:'berlin',km:3,gender:['transw'],orient:['queer'],format:['poly','play'],status:'partnered',role:['switch'],seek:['dates','exp'],verified:true,online:true,dating:true,
   bio:{ru:'Люблю людей, которые говорят прямо, не торопят события и заранее обсуждают ожидания. Практикую шибари шесть лет.',en:'I like people who speak directly, don’t rush and agree on expectations up front. Six years of shibari.'},
   jars:[['shibari',10,['give','watch']],['bondage',8,['give']],['aftercare',10,['give','get']],['roleplay',8,'all']]},
- kai:{privText:{ru:'Пишу медленно. Перед встречей — звонок, на встрече — стоп-слово «стоп». Лучше начать с простого.',en:'I write slowly. A call before we meet, the word “stop” as a safeword. Better to start simple.'},pv:true,name:'Kai',age:27,photo:4,nph:2,city:'berlin',km:5,gender:['nb'],orient:['pan'],format:'ra',role:['switch'],seek:['chat','friends'],verified:true,online:false,last:{ru:'в сети сегодня',en:'active today'},dating:true,
+ kai:{hideLikes:true,privText:{ru:'Пишу медленно. Перед встречей — звонок, на встрече — стоп-слово «стоп». Лучше начать с простого.',en:'I write slowly. A call before we meet, the word “stop” as a safeword. Better to start simple.'},pv:true,name:'Kai',age:27,photo:4,nph:2,city:'berlin',km:5,gender:['nb'],orient:['pan'],format:'ra',role:['switch'],seek:['chat','friends'],verified:true,online:false,last:{ru:'в сети сегодня',en:'active today'},dating:true,
   bio:{ru:'Ищу людей, с которыми можно спокойно говорить о границах. Остальное приложится.',en:'Looking for people I can calmly talk boundaries with. The rest will follow.'},
   jars:[['service',8,['give']],['bondage',6,['get']],['rituals',8],['talk',10],{t:'filming',lv:0,limit:'hard'}]},
  maya:{privOn:false,actVis:'followers',pv:true,name:'Maya',age:31,photo:5,nph:3,city:'hamburg',km:null,gender:['woman'],orient:['queer'],format:'mono',role:[],seek:['chat'],verified:true,online:true,dating:false,socialLikes:true,
@@ -4469,18 +4478,42 @@ SC.F01={root:1,tab:'feed',title:()=>L('Лента','Feed'),render:(p)=>{
  ${body}</div></div>`;}};
 ACT.feedSub=a=>setSub(a.dataset.v);
 const FEED_KINDS=()=>[['posts',L('Публикации','Posts')],['likes',L('Лайки','Likes')],['events',L('События','Events')],['comm',L('Сообщества','Communities')],['follows',L('Подписки','Follows')]];
-/** posts of followed people + their visible activity, newest first; `kind` narrows it, `withAct` is false while topic filters are on */
+/** posts of followed people + their visible activity, newest first. Two or more of the same kind by the same person on the same day fold into one card. */
 function followStream(posts,kinds,withAct){const items=[],all=!kinds.length,has=k=>all||kinds.includes(k);
  if(has('posts'))posts.forEach(p=>items.push({k:'post',t:p.t,p}));
- if(withAct)followingOf('me').filter(id=>person(id)&&activityShown(id)).forEach(id=>activityOf(id).slice(0,3).forEach(x=>{const key={like:'likes',event:'events',comm:'comm',follow:'follows'}[x.k];if(has(key))items.push({...x,who:id});}));
+ if(withAct){const muted=S.mutedActivity||new Set(),groups={};
+  followingOf('me').filter(id=>person(id)&&activityShown(id)&&!muted.has(id)).forEach(id=>activityOf(id).slice(0,6).forEach(x=>{const key={like:'likes',event:'events',comm:'comm',follow:'follows'}[x.k];if(!has(key)||(x.k==='like'&&person(id)?.hideLikes))return;const gid=id+'|'+x.k+'|'+new Date(x.t).toDateString();(groups[gid]??=[]).push({...x,who:id});}));
+  Object.entries(groups).forEach(([gid,g])=>g.length>=2?items.push({k:'group',kind:g[0].k,who:g[0].who,gid,items:g.sort((a,b)=>b.t-a.t),t:Math.max(...g.map(x=>x.t))}):items.push(g[0]));}
  return items.sort((a,b)=>b.t-a.t).slice(0,60);}
-/** one activity card: who + what in a neutral present-tense line, and a tappable preview of the thing itself */
-function actCard(x,i){const who=x.who,nm=`<b>${esc(pname(who))}</b>`;let text,prev;const pv=(go,p,thumb,t,s)=>`<button class="actc-p" data-go="${go}" data-p='${esc(JSON.stringify(p))}'><span class="actth ${thumb[1]||''}">${thumb[0]}</span><span class="tx"><b>${t}</b>${s?`<small>${s}</small>`:''}</span></button>`;
- if(x.k==='like'){const p=x.post,img=(p.media||[]).find(m=>m.type==='image'&&m.url);text=L(`${nm}: нравится публикация ${esc(pname(p.author))}`,`${nm} likes ${esc(pname(p.author))}’s post`);prev=pv('F05',{id:p.id},[img?`<img src="${esc(img.url)}" alt="" loading="lazy" draggable="false"><i>${I.heartf}</i>`:I.heartf,img?'':'ic'],esc(mdPlain(T(p.text)).slice(0,80)||L('Публикация','Post')),'');}
- else if(x.k==='event'){const e=EV(x.e);text=x.st==='interested'?L(`${nm}: интересует событие`,`${nm} is interested in an event`):L(`${nm} идёт на событие`,`${nm} is going to an event`);prev=pv('E03',{id:x.e},[evCover(e,'cal'),''],esc(T(e.title)),`${F.date(e.start)} · ${e.format==='online'?L('онлайн','online'):esc(city(e.city))}`);}
- else if(x.k==='comm'){const c=COMMUNITIES[x.c];text=L(`${nm} в сообществе`,`${nm} is in a community`);prev=pv('C03',{id:x.c},[commAv(c),''],esc(T(c.name)),pl(C.members(x.c),['участник','участника','участников'],['member','members']));}
- else{text=L(`${nm} теперь следит за ${esc(pname(x.p))}`,`${nm} now follows ${esc(pname(x.p))}`);prev=pv('P01',{id:x.p},[av(x.p,''),'round'],esc(pname(x.p)),esc(whoLine(x.p)));}
- return `<div class="actc" style="animation-delay:${(i||0)*40}ms"><button class="actc-av" data-go="P01" data-p='${esc(JSON.stringify({id:who}))}' aria-label="${esc(pname(who))}">${av(who,'sm')}</button><div class="actc-b"><p class="actc-t">${text}<small>${F.rel(x.t)}</small></p>${prev}</div></div>`;}
+/** the tappable preview of one activity item (used by single cards and by the expanded list of a group) */
+function actPrev(x){const pv=(go,p,thumb,t,s)=>`<button class="actc-p" data-go="${go}" data-p='${esc(JSON.stringify(p))}'><span class="actth ${thumb[1]||''}">${thumb[0]}</span><span class="tx"><b>${t}</b>${s?`<small>${s}</small>`:''}</span></button>`;
+ if(x.k==='like'){const p=x.post,img=(p.media||[]).find(m=>m.type==='image'&&m.url);return pv('F05',{id:p.id},[img?`<img src="${esc(img.url)}" alt="" loading="lazy" draggable="false"><i>${I.heartf}</i>`:I.heartf,img?'':'ic'],esc(mdPlain(T(p.text)).slice(0,80)||L('Публикация','Post')),`${esc(pname(p.author))} · ${F.rel(x.t)}`);}
+ if(x.k==='event'){const e=EV(x.e);return pv('E03',{id:x.e},[evCover(e,'cal'),''],esc(T(e.title)),`${F.date(e.start)} · ${e.format==='online'?L('онлайн','online'):esc(city(e.city))}`);}
+ if(x.k==='comm'){const c=COMMUNITIES[x.c];return pv('C03',{id:x.c},[commAv(c),''],esc(T(c.name)),pl(C.members(x.c),['участник','участника','участников'],['member','members']));}
+ return pv('P01',{id:x.p},[av(x.p,''),'round'],esc(pname(x.p)),esc(whoLine(x.p)));}
+/** one activity card: who + what in a neutral present-tense line; a group adds a strip of thumbnails («+N» expands the whole list in place) */
+function actCard(x,i){const who=x.who,nm=`<b>${esc(pname(who))}</b>`;let text,body;
+ const head=(t)=>`<div class="actc-hd"><p class="actc-t">${t}<small>${F.rel(x.t)}</small></p><button class="ibtn ghost sm" data-act="actMenu" data-v="${esc(who)}" aria-label="${L('Ещё','More')}">${I.more}</button></div>`;
+ if(x.k==='group'){const n=x.items.length,open=S.ui.actOpen?.has(x.gid);
+  const th=(g)=>{if(g.k==='like'){const img=(g.post.media||[]).find(m=>m.type==='image'&&m.url);return `<button class="actc-th" data-go="F05" data-p='${esc(JSON.stringify({id:g.post.id}))}' aria-label="${esc(pname(g.post.author))}">${img?`<img src="${esc(img.url)}" alt="" loading="lazy" draggable="false">`:I.heartf}</button>`;}
+   if(g.k==='follow')return `<button class="actc-th round" data-go="P01" data-p='${esc(JSON.stringify({id:g.p}))}' aria-label="${esc(pname(g.p))}">${av(g.p,'')}</button>`;return '';};
+  if(x.kind==='like')text=L(`${nm}: нравится ${pl(n,['публикация','публикации','публикаций'],[])}`,`${nm} likes ${n} posts`);
+  else if(x.kind==='follow')text=L(`${nm} теперь следит за ${n} ${n%10===1&&n%100!==11?'человеком':'людьми'}`,`${nm} now follows ${n} people`);
+  else if(x.kind==='event')text=L(`${nm}: в планах ${pl(n,['событие','события','событий'],[])}`,`${nm} has ${n} events planned`);
+  else text=L(`${nm} в ${n} сообществах`,`${nm} is in ${n} communities`);
+  const strip=['like','follow'].includes(x.kind);
+  if(open)body=`<div class="actc-list">${x.items.map(actPrev).join('')}<button class="btn text auto" data-act="actOpen" data-v="${esc(x.gid)}">${L('Свернуть','Collapse')}</button></div>`;
+  else if(strip)body=`<div class="actc-strip">${x.items.slice(0,5).map(th).join('')}${n>5?`<button class="actc-th more" data-act="actOpen" data-v="${esc(x.gid)}" aria-label="${L('Показать все','Show all')}">+${n-5}</button>`:''}</div>`;
+  else body=`<div class="actc-list">${x.items.slice(0,2).map(actPrev).join('')}${n>2?`<button class="btn text auto" data-act="actOpen" data-v="${esc(x.gid)}">${L(`Ещё ${n-2}`,`${n-2} more`)}</button>`:''}</div>`;
+  return `<div class="actc" style="animation-delay:${(i||0)*40}ms"><button class="actc-av" data-go="P01" data-p='${esc(JSON.stringify({id:who}))}' aria-label="${esc(pname(who))}">${av(who,'sm')}</button><div class="actc-b">${head(text)}${body}</div></div>`;}
+ if(x.k==='like')text=L(`${nm}: нравится публикация ${esc(pname(x.post.author))}`,`${nm} likes ${esc(pname(x.post.author))}’s post`);
+ else if(x.k==='event')text=x.st==='interested'?L(`${nm}: интересует событие`,`${nm} is interested in an event`):L(`${nm} идёт на событие`,`${nm} is going to an event`);
+ else if(x.k==='comm')text=L(`${nm} в сообществе`,`${nm} is in a community`);
+ else text=L(`${nm} теперь следит за ${esc(pname(x.p))}`,`${nm} now follows ${esc(pname(x.p))}`);
+ return `<div class="actc" style="animation-delay:${(i||0)*40}ms"><button class="actc-av" data-go="P01" data-p='${esc(JSON.stringify({id:who}))}' aria-label="${esc(pname(who))}">${av(who,'sm')}</button><div class="actc-b">${head(text)}${actPrev(x)}</div></div>`;}
+ACT.actOpen=a=>{const o=S.ui.actOpen??=new Set();const g=a.dataset.v;o.has(g)?o.delete(g):o.add(g);refresh();};
+ACT.actMenu=a=>{const id=a.dataset.v;sheet(()=>({title:esc(pname(id)),body:`<div class="card list">${linkRow({go:'P01',p:{id},icon:'me',title:L('Открыть профиль','Open profile'),noChev:1})}${linkRow({act:'actMute',v:id,icon:'belloff',title:L('Не показывать активность','Hide this person’s activity'),sub:L('Публикации в ленте останутся','Their posts stay in your feed'),noChev:1})}</div>`}));};
+ACT.actMute=a=>{const id=a.dataset.v;(S.mutedActivity??=new Set()).add(id);closeSheet(true);refresh();toast(L(`Активность ${pname(id)} скрыта из ленты`,`${pname(id)}’s activity is hidden from your feed`),{type:'ok',action:{label:L('Вернуть','Undo'),fn:()=>{S.mutedActivity.delete(id);refresh();}}});};
 ACT.quickTag=a=>{const fk=cur().p.sub==='following'?'following':'feed';const f=S.filters[fk];f.tags=f.tags||[];const v=a.dataset.v;const k=f.tags.indexOf(v);k<0?f.tags.push(v):f.tags.splice(k,1);refresh();};
 ACT.rmFilter=a=>{const fk=cur().p.sub==='following'?'following':'feed';const f=S.filters[fk];f[a.dataset.k]=(f[a.dataset.k]||[]).filter(x=>x!==a.dataset.v);refresh();};
 ACT.clearFeedFilters=()=>{const fk=cur().p.sub==='following'?'following':'feed';S.filters[fk]={};refresh();};
@@ -5129,7 +5162,7 @@ function profileView(id,r,o={}){
  const kv=identityFields().filter(([k])=>!['pron','gender','orient'].includes(k)&&!(p.pair&&k==='status')).map(([k,title])=>[title,IDENTITY_MULTI.includes(k)?fmtList(p[k]).map(v=>opt(k,v)).join(', '):opt(k,p[k])]).filter(x=>x[1]);
  /* V8: one page — profile, then the private part right after it when access is open. No tabs. */
  const bio=T(p.bio)?grp(p.pair?L('О нас','About us'):L('О себе','About'),md(T(p.bio),'bio')):'';
- const pj=pubJars(id);const actItems=activityShown(id,o)?activityOf(id):[];
+ const pj=pubJars(id);const actItems=activityShown(id,o)?activityOf(id).filter(x=>!(x.k==='like'&&(id==='me'?o.asOther&&S.me.showLikes===false:person(id)?.hideLikes))):[];
  const body=`${bio}${detailsGroup(id)}
   ${pj.length?grp(L('Интересы','Interests'),jarShelf(pj,{pre:1,act:'topic',who:id,moreAct:self?(id==='couple'?'coupleJars':'myJarsAll'):'allJars'})):''}
   ${self?myPrivSection(owner):me?(privSection(id,o)||(o.asOther&&!hasPrivatePart(id)?`<div class="owner-only">${myPrivSection(owner)}</div>`:'')):`<div data-private-context="${id}">${privSection(id)}</div>`}
@@ -5462,7 +5495,7 @@ function activityOf(id){const out=[],pub=p=>p.aud==='all'&&!p.unavailable&&!isBl
   Object.entries(S.rsvp||{}).filter(([e,v])=>EV(e)&&['going','interested'].includes(v.status)).forEach(([e,v],i)=>out.push({k:'event',e,st:v.status,t:Date.now()-(i+2)*DAY}));
   [...S.joined].filter(c=>COMMUNITIES[c]&&!COMMUNITIES[c].hidden).forEach((c,i)=>out.push({k:'comm',c,t:Date.now()-(i+4)*DAY}));
   followingOf('me').forEach((p,i)=>out.push({k:'follow',p,t:Date.now()-(i+3)*DAY*1.5}));}
- else{allPosts().filter(p=>p.author!==id&&pub(p)&&actHash(id+p.id)%3===0).slice(0,6).forEach(p=>out.push({k:'like',post:p,t:Math.min(Date.now()-HOUR,p.t+(actHash(id+p.id)%7+1)*20*60e3)}));
+ else{allPosts().filter(p=>p.author!==id&&pub(p)&&actHash(id+p.id)%3===0).slice(0,6).forEach((p,i)=>out.push({k:'like',post:p,t:actHash(id)%2===0?Date.now()-(i+1)*26*60e3:Math.min(Date.now()-HOUR,p.t+(actHash(id+p.id)%7+1)*20*60e3)}));
   allEventIds().filter(e=>!EV(e).cancelled&&EV(e).status!=='review'&&!EV(e).private&&actHash(id+e)%4===0).slice(0,2).forEach((e,i)=>out.push({k:'event',e,st:'going',t:Date.now()-(i+1)*DAY*2}));
   Object.keys(COMMUNITIES).filter(c=>!COMMUNITIES[c].hidden&&COMMUNITIES[c].privacy==='open'&&(COMMUNITIES[c].mods.includes(id)||actHash(id+c)%4===0)).slice(0,2).forEach((c,i)=>out.push({k:'comm',c,t:Date.now()-(i+5)*DAY}));
   followingOf(id).slice(0,2).forEach((p,i)=>out.push({k:'follow',p,t:Date.now()-(i+2)*DAY*1.7}));}
@@ -6093,7 +6126,7 @@ SC.K01={title:()=>L('Настройки','Settings'),render:()=>{const m=S.me;re
  <div class="sec" style="margin-top:4px">${L('Аккаунт','Account')}</div><div class="card list">${linkRow({go:'K06',icon:'key',title:L('Вход и безопасность','Sign-in & security'),sub:esc(m.email)||L('почта не указана','no email')})}${linkRow({act:'ageFromMe',icon:'shield',tone:m.ageCheck==='ok'?'g':'a',title:L('Проверка возраста','Age check'),sub:L('Нужна для знакомств','Needed for dating'),val:{ok:L('подтверждено','verified'),pending:L('проверяется','in progress'),none:L('не пройдена','not done')}[m.ageCheck]})}${linkRow({go:'V01',icon:'verified',tone:'v',title:L('Фото-верификация','Photo verification'),sub:L('Галочка у имени','A badge by your name'),val:{ok:L('подтверждено','verified'),pending:L('проверяется','in review'),rejected:L('не прошла','failed'),none:L('не пройдена','not done')}[m.photoCheck||'none']})}${linkRow({go:'B01',icon:'crown',tone:'l',title:'Premium',sub:L('Больше возможностей','More features'),val:m.premium?L('активен','active'):L('не подключён','not active')})}</div>
  <div class="sec">${L('Приложение','App')}</div><div class="card list"><div class="li"><span class="ico">${I.globe}</span>${selectRow('k2',L('Язык','Language'),[['system',L('Как в системе','System')],['ru','Русский'],['en','English']],S.langPref||'ru',{sub:L('Язык интерфейса','Interface language')})}</div><div class="li"><span class="ico">${I.moon}</span>${selectRow('k3',L('Тема оформления','Appearance'),[['light',L('Светлая','Light')],['dark',L('Тёмная','Dark')],['auto',L('Системная','System')]],themePref(),{sub:L('Как выглядит приложение','How the app looks')})}</div>${linkRow({go:'K05',icon:'bell',title:L('Уведомления','Notifications'),sub:L('Что и когда приходит','What arrives and when')})}</div>
  <div class="sec">${L('Знакомства','Dating')}</div><div class="card list"><div class="li">${selectRow('k4mode',L('Режим','Mode'),[['on',L('Включены','On')],['hidden',L('Смотрю незаметно','Browsing hidden')],['off',L('Выключены','Off')]],!m.dating?'off':m.datingVisible?'on':'hidden',{aria:L('Знакомства','Dating'),sub:L('Подборка и просмотр анкет','Discover and browsing')})}</div>${toggleRow('k4social',L('Принимать симпатии из профиля','Accept likes from my profile'),L('Симпатию можно отправить из профиля','A like can be sent from your profile'),m.socialLikes)}</div>
- <div class="sec">${L('Приватность профиля','Profile privacy')}</div><div class="card list"><div class="li">${selectRow('k4act',L('Кто видит активность','Who sees my activity'),ACT_VIS(),m.activityVis||'all',{sub:L('Лайки, события, подписки','Likes, events, follows')})}</div>${toggleRow('k4rsvp',L('Показывать моё участие в событиях по умолчанию','Show my event attendance by default'),L('Видно, на какие события ты идёшь','Shows which events you attend'),m.rsvpShow)}</div>
+ <div class="sec">${L('Приватность профиля','Profile privacy')}</div><div class="card list"><div class="li">${selectRow('k4act',L('Кто видит активность','Who sees my activity'),ACT_VIS(),m.activityVis||'all',{sub:L('Лайки, события, подписки','Likes, events, follows')})}</div>${toggleRow('k4likes',L('Показывать мои лайки подписчикам','Show my likes to followers'),L('Без этого лайки не попадают в их ленту и в твою активность','Without it your likes stay out of their feed and your activity'),m.showLikes!==false)}${toggleRow('k4rsvp',L('Показывать моё участие в событиях по умолчанию','Show my event attendance by default'),L('Видно, на какие события ты идёшь','Shows which events you attend'),m.rsvpShow)}</div>
  <div class="sec">${L('Чаты','Chats')}</div><div class="card list">${toggleRow('k4blur',L('Размывать входящие фото и видео','Blur incoming photos and video'),L('Пока не нажмёшь, содержимое скрыто','Hidden until you tap'),m.chatBlur!==false)}</div>
  <div class="sec">${L('Данные','Data')}</div><div class="card list">${linkRow({go:'P12',icon:'block',title:L('Заблокированные','Blocked'),sub:L('Не увидят тебя и не напишут','They can’t see or message you'),val:String(S.blocked.length)})}${linkRow({go:'K07',icon:'download',title:L('Мои данные и удаление','Your data & deletion'),sub:L('Архив данных и удаление аккаунта','Data archive and account deletion')})}</div>
  <div class="sec">${L('Поддержка','Support')}</div><div class="card list">${linkRow({go:'S01',icon:'help',title:L('Помощь и безопасность','Help & safety'),sub:L('Правила, жалобы, поддержка','Rules, reports, support')})}${linkRow({act:'logout',icon:'logout',cls:'danger',title:L('Выйти','Sign out'),noChev:1})}</div>
@@ -6106,6 +6139,7 @@ function applyTheme(t){t=t==='light'||t==='dark'?t:'auto';const r=document.docum
 ACT.k3=a=>{applyTheme(a.dataset.v);refresh();};
 ACT.k4blur=()=>{S.me.chatBlur=S.me.chatBlur===false;refresh();toast(S.me.chatBlur!==false?L('Входящие фото и видео размываются','Incoming photos and video are blurred'):L('Входящие фото и видео показываются сразу','Incoming photos and video show right away'));};
 ACT.k4vis=a=>{if(!S.me.datingVisible&&!S.me.photo){toast(L('Чтобы показаться в подборке, добавь фото','Add a photo to appear in Discover'),{type:'warn',action:{label:L('Добавить','Add'),fn:()=>go('P02')}});return;}run(null,()=>{S.me.datingVisible=!S.me.datingVisible;refresh();},{ms:300,ok:()=>S.me.datingVisible?L('Ты снова в подборке','You’re back in Discover'):L('Ты смотришь незаметно','You’re browsing hidden')});};
+ACT.k4likes=()=>{S.me.showLikes=S.me.showLikes===false;refresh();toast(S.me.showLikes!==false?L('Лайки видны подписчикам','Likes are visible to followers'):L('Лайки скрыты','Likes are hidden'),{type:'ok'});};
 ACT.k4act=a=>run(null,()=>{S.me.activityVis=['all','followers','off'].includes(a.dataset.v)?a.dataset.v:'all';refresh();},{ms:300,ok:L('Сохранено','Saved')});
 ACT.k4social=()=>run(null,()=>{S.me.socialLikes=!S.me.socialLikes;refresh();},{ms:300,ok:L('Сохранено','Saved')});
 ACT.k4rsvp=()=>run(null,()=>{S.me.rsvpShow=!S.me.rsvpShow;refresh();},{ms:300,ok:L('Сохранено','Saved')});

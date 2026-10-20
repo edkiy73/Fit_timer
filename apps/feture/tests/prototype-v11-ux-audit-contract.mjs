@@ -93,3 +93,14 @@ const src=f=>fs.readFileSync(root+f,'utf8');
 {fresh();run("globalThis.__s=null;sheet=(b,o)=>{globalThis.__s={b,o}};closeSheet=()=>{}");run("ACT.feedFilters({dataset:{v:'following'}})");const fsh=String(run("__s.b()").body);assert.ok(fsh.includes('Что показывать')&&fsh.includes('data-act="ffKind"'),'«Что показывать» chips are in the Following filter');
  const feed=appScreen('F01',{sub:'following'});assert.ok(!feed.includes('feedkind')&&!feed.includes('feedKind'),'no kind row on the feed');
  console.log('PASS kinds live in the filter sheet');}
+
+/* grouped activity in «Подписки» (owner, 21.10): 2+ of a kind by one person on one day fold into one card; «+N» expands in place; likes can be hidden */
+{fresh();const posts="allPosts().filter(x=>followingOf('me').includes(x.author))";
+ const st=json(`followStream(${posts},[],true)`);const groups=st.filter(x=>x.k==='group');assert.ok(groups.length>0&&groups.every(g=>g.items.length>=2&&g.items.every(i=>i.who===g.who&&i.k===g.kind)),'2+ same-kind items by one person fold into a group');
+ assert.ok(!st.some(x=>x.k==='like'&&groups.some(g=>g.who===x.who&&g.kind==='like')),'folded items are not repeated as single cards');
+ assert.ok(!st.some(x=>(x.who==='kai')&&(x.k==='like'||x.kind==='like')),'a person who hides likes shows none');
+ const g=groups[0];const html=run(`actCard(${JSON.stringify(g)},0)`);assert.ok(html.includes('actc-strip')||html.includes('actc-list'),'a group renders a strip or a list');
+ run("S.ui.actOpen=undefined");run(`ACT.actOpen({dataset:{v:${JSON.stringify(g.gid)}}})`);assert.ok(run(`actCard(${JSON.stringify(g)},0)`).includes('Свернуть'),'expanding opens the whole list in place');
+ run(`ACT.actMute({dataset:{v:${JSON.stringify(g.who)}}})`);assert.ok(!json(`followStream(${posts},[],true)`).some(x=>(x.who===g.who)&&x.k!=='post'),'«Hide this person’s activity» removes their activity but keeps their posts');
+ assert.ok(run("SC.K01.render({},{p:{},f:{}})").includes('k4likes'),'settings: «Show my likes to followers»');assert.equal(run("S.me.showLikes!==false"),true,'likes are shown by default');
+ console.log('PASS grouped activity');}

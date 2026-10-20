@@ -39,18 +39,42 @@ SC.F01={root:1,tab:'feed',title:()=>L('Лента','Feed'),render:(p)=>{
  ${body}</div></div>`;}};
 ACT.feedSub=a=>setSub(a.dataset.v);
 const FEED_KINDS=()=>[['posts',L('Публикации','Posts')],['likes',L('Лайки','Likes')],['events',L('События','Events')],['comm',L('Сообщества','Communities')],['follows',L('Подписки','Follows')]];
-/** posts of followed people + their visible activity, newest first; `kind` narrows it, `withAct` is false while topic filters are on */
+/** posts of followed people + their visible activity, newest first. Two or more of the same kind by the same person on the same day fold into one card. */
 function followStream(posts,kinds,withAct){const items=[],all=!kinds.length,has=k=>all||kinds.includes(k);
  if(has('posts'))posts.forEach(p=>items.push({k:'post',t:p.t,p}));
- if(withAct)followingOf('me').filter(id=>person(id)&&activityShown(id)).forEach(id=>activityOf(id).slice(0,3).forEach(x=>{const key={like:'likes',event:'events',comm:'comm',follow:'follows'}[x.k];if(has(key))items.push({...x,who:id});}));
+ if(withAct){const muted=S.mutedActivity||new Set(),groups={};
+  followingOf('me').filter(id=>person(id)&&activityShown(id)&&!muted.has(id)).forEach(id=>activityOf(id).slice(0,6).forEach(x=>{const key={like:'likes',event:'events',comm:'comm',follow:'follows'}[x.k];if(!has(key)||(x.k==='like'&&person(id)?.hideLikes))return;const gid=id+'|'+x.k+'|'+new Date(x.t).toDateString();(groups[gid]??=[]).push({...x,who:id});}));
+  Object.entries(groups).forEach(([gid,g])=>g.length>=2?items.push({k:'group',kind:g[0].k,who:g[0].who,gid,items:g.sort((a,b)=>b.t-a.t),t:Math.max(...g.map(x=>x.t))}):items.push(g[0]));}
  return items.sort((a,b)=>b.t-a.t).slice(0,60);}
-/** one activity card: who + what in a neutral present-tense line, and a tappable preview of the thing itself */
-function actCard(x,i){const who=x.who,nm=`<b>${esc(pname(who))}</b>`;let text,prev;const pv=(go,p,thumb,t,s)=>`<button class="actc-p" data-go="${go}" data-p='${esc(JSON.stringify(p))}'><span class="actth ${thumb[1]||''}">${thumb[0]}</span><span class="tx"><b>${t}</b>${s?`<small>${s}</small>`:''}</span></button>`;
- if(x.k==='like'){const p=x.post,img=(p.media||[]).find(m=>m.type==='image'&&m.url);text=L(`${nm}: нравится публикация ${esc(pname(p.author))}`,`${nm} likes ${esc(pname(p.author))}’s post`);prev=pv('F05',{id:p.id},[img?`<img src="${esc(img.url)}" alt="" loading="lazy" draggable="false"><i>${I.heartf}</i>`:I.heartf,img?'':'ic'],esc(mdPlain(T(p.text)).slice(0,80)||L('Публикация','Post')),'');}
- else if(x.k==='event'){const e=EV(x.e);text=x.st==='interested'?L(`${nm}: интересует событие`,`${nm} is interested in an event`):L(`${nm} идёт на событие`,`${nm} is going to an event`);prev=pv('E03',{id:x.e},[evCover(e,'cal'),''],esc(T(e.title)),`${F.date(e.start)} · ${e.format==='online'?L('онлайн','online'):esc(city(e.city))}`);}
- else if(x.k==='comm'){const c=COMMUNITIES[x.c];text=L(`${nm} в сообществе`,`${nm} is in a community`);prev=pv('C03',{id:x.c},[commAv(c),''],esc(T(c.name)),pl(C.members(x.c),['участник','участника','участников'],['member','members']));}
- else{text=L(`${nm} теперь следит за ${esc(pname(x.p))}`,`${nm} now follows ${esc(pname(x.p))}`);prev=pv('P01',{id:x.p},[av(x.p,''),'round'],esc(pname(x.p)),esc(whoLine(x.p)));}
- return `<div class="actc" style="animation-delay:${(i||0)*40}ms"><button class="actc-av" data-go="P01" data-p='${esc(JSON.stringify({id:who}))}' aria-label="${esc(pname(who))}">${av(who,'sm')}</button><div class="actc-b"><p class="actc-t">${text}<small>${F.rel(x.t)}</small></p>${prev}</div></div>`;}
+/** the tappable preview of one activity item (used by single cards and by the expanded list of a group) */
+function actPrev(x){const pv=(go,p,thumb,t,s)=>`<button class="actc-p" data-go="${go}" data-p='${esc(JSON.stringify(p))}'><span class="actth ${thumb[1]||''}">${thumb[0]}</span><span class="tx"><b>${t}</b>${s?`<small>${s}</small>`:''}</span></button>`;
+ if(x.k==='like'){const p=x.post,img=(p.media||[]).find(m=>m.type==='image'&&m.url);return pv('F05',{id:p.id},[img?`<img src="${esc(img.url)}" alt="" loading="lazy" draggable="false"><i>${I.heartf}</i>`:I.heartf,img?'':'ic'],esc(mdPlain(T(p.text)).slice(0,80)||L('Публикация','Post')),`${esc(pname(p.author))} · ${F.rel(x.t)}`);}
+ if(x.k==='event'){const e=EV(x.e);return pv('E03',{id:x.e},[evCover(e,'cal'),''],esc(T(e.title)),`${F.date(e.start)} · ${e.format==='online'?L('онлайн','online'):esc(city(e.city))}`);}
+ if(x.k==='comm'){const c=COMMUNITIES[x.c];return pv('C03',{id:x.c},[commAv(c),''],esc(T(c.name)),pl(C.members(x.c),['участник','участника','участников'],['member','members']));}
+ return pv('P01',{id:x.p},[av(x.p,''),'round'],esc(pname(x.p)),esc(whoLine(x.p)));}
+/** one activity card: who + what in a neutral present-tense line; a group adds a strip of thumbnails («+N» expands the whole list in place) */
+function actCard(x,i){const who=x.who,nm=`<b>${esc(pname(who))}</b>`;let text,body;
+ const head=(t)=>`<div class="actc-hd"><p class="actc-t">${t}<small>${F.rel(x.t)}</small></p><button class="ibtn ghost sm" data-act="actMenu" data-v="${esc(who)}" aria-label="${L('Ещё','More')}">${I.more}</button></div>`;
+ if(x.k==='group'){const n=x.items.length,open=S.ui.actOpen?.has(x.gid);
+  const th=(g)=>{if(g.k==='like'){const img=(g.post.media||[]).find(m=>m.type==='image'&&m.url);return `<button class="actc-th" data-go="F05" data-p='${esc(JSON.stringify({id:g.post.id}))}' aria-label="${esc(pname(g.post.author))}">${img?`<img src="${esc(img.url)}" alt="" loading="lazy" draggable="false">`:I.heartf}</button>`;}
+   if(g.k==='follow')return `<button class="actc-th round" data-go="P01" data-p='${esc(JSON.stringify({id:g.p}))}' aria-label="${esc(pname(g.p))}">${av(g.p,'')}</button>`;return '';};
+  if(x.kind==='like')text=L(`${nm}: нравится ${pl(n,['публикация','публикации','публикаций'],[])}`,`${nm} likes ${n} posts`);
+  else if(x.kind==='follow')text=L(`${nm} теперь следит за ${n} ${n%10===1&&n%100!==11?'человеком':'людьми'}`,`${nm} now follows ${n} people`);
+  else if(x.kind==='event')text=L(`${nm}: в планах ${pl(n,['событие','события','событий'],[])}`,`${nm} has ${n} events planned`);
+  else text=L(`${nm} в ${n} сообществах`,`${nm} is in ${n} communities`);
+  const strip=['like','follow'].includes(x.kind);
+  if(open)body=`<div class="actc-list">${x.items.map(actPrev).join('')}<button class="btn text auto" data-act="actOpen" data-v="${esc(x.gid)}">${L('Свернуть','Collapse')}</button></div>`;
+  else if(strip)body=`<div class="actc-strip">${x.items.slice(0,5).map(th).join('')}${n>5?`<button class="actc-th more" data-act="actOpen" data-v="${esc(x.gid)}" aria-label="${L('Показать все','Show all')}">+${n-5}</button>`:''}</div>`;
+  else body=`<div class="actc-list">${x.items.slice(0,2).map(actPrev).join('')}${n>2?`<button class="btn text auto" data-act="actOpen" data-v="${esc(x.gid)}">${L(`Ещё ${n-2}`,`${n-2} more`)}</button>`:''}</div>`;
+  return `<div class="actc" style="animation-delay:${(i||0)*40}ms"><button class="actc-av" data-go="P01" data-p='${esc(JSON.stringify({id:who}))}' aria-label="${esc(pname(who))}">${av(who,'sm')}</button><div class="actc-b">${head(text)}${body}</div></div>`;}
+ if(x.k==='like')text=L(`${nm}: нравится публикация ${esc(pname(x.post.author))}`,`${nm} likes ${esc(pname(x.post.author))}’s post`);
+ else if(x.k==='event')text=x.st==='interested'?L(`${nm}: интересует событие`,`${nm} is interested in an event`):L(`${nm} идёт на событие`,`${nm} is going to an event`);
+ else if(x.k==='comm')text=L(`${nm} в сообществе`,`${nm} is in a community`);
+ else text=L(`${nm} теперь следит за ${esc(pname(x.p))}`,`${nm} now follows ${esc(pname(x.p))}`);
+ return `<div class="actc" style="animation-delay:${(i||0)*40}ms"><button class="actc-av" data-go="P01" data-p='${esc(JSON.stringify({id:who}))}' aria-label="${esc(pname(who))}">${av(who,'sm')}</button><div class="actc-b">${head(text)}${actPrev(x)}</div></div>`;}
+ACT.actOpen=a=>{const o=S.ui.actOpen??=new Set();const g=a.dataset.v;o.has(g)?o.delete(g):o.add(g);refresh();};
+ACT.actMenu=a=>{const id=a.dataset.v;sheet(()=>({title:esc(pname(id)),body:`<div class="card list">${linkRow({go:'P01',p:{id},icon:'me',title:L('Открыть профиль','Open profile'),noChev:1})}${linkRow({act:'actMute',v:id,icon:'belloff',title:L('Не показывать активность','Hide this person’s activity'),sub:L('Публикации в ленте останутся','Their posts stay in your feed'),noChev:1})}</div>`}));};
+ACT.actMute=a=>{const id=a.dataset.v;(S.mutedActivity??=new Set()).add(id);closeSheet(true);refresh();toast(L(`Активность ${pname(id)} скрыта из ленты`,`${pname(id)}’s activity is hidden from your feed`),{type:'ok',action:{label:L('Вернуть','Undo'),fn:()=>{S.mutedActivity.delete(id);refresh();}}});};
 ACT.quickTag=a=>{const fk=cur().p.sub==='following'?'following':'feed';const f=S.filters[fk];f.tags=f.tags||[];const v=a.dataset.v;const k=f.tags.indexOf(v);k<0?f.tags.push(v):f.tags.splice(k,1);refresh();};
 ACT.rmFilter=a=>{const fk=cur().p.sub==='following'?'following':'feed';const f=S.filters[fk];f[a.dataset.k]=(f[a.dataset.k]||[]).filter(x=>x!==a.dataset.v);refresh();};
 ACT.clearFeedFilters=()=>{const fk=cur().p.sub==='following'?'following':'feed';S.filters[fk]={};refresh();};
