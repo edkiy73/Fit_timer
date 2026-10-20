@@ -325,7 +325,7 @@ function chipGroup(items,selected,act,o={}){
  // keep the original order and every chip already on screen: selecting never moves chips around
  S.ui.chipShown=S.ui.chipShown||{};const shown=S.ui.chipShown[key]=new Set([...(S.ui.chipShown[key]||[]),...items.slice(0,lim).map(x=>x[0]),...sel]);
  const first=items.filter(([id])=>shown.has(id));
- return `<div class="chips">${first.map(([id,l])=>chipBtn(id,l,sel.has(id),act,o)).join('')}<button class="chip more" data-act="chipAll" data-v="${key}">${ic('search',14)}${L('Все варианты','All options')} · ${items.length}</button></div>`;
+ return `<div class="chips">${first.map(([id,l])=>chipBtn(id,l,sel.has(id),act,o)).join('')}<button class="chip more" data-act="chipAll" data-v="${key}">${ic('search',14)}${L('Все','All')} · ${items.length}</button></div>`;
 }
 const chipPicker=o=>chipGroup(o.items,o.sel,o.act,{title:o.title,max:o.max,groups:o.cats?topicGroups(o.items.map(x=>x[0])):o.groups});
 const optGroups=g=>{const b=OPT_BASE[g]||8;const ids=OPT[g].map(x=>x[0]);return [[L('Популярное','Popular'),ids.slice(0,b)],[L('Ещё варианты','More options'),ids.slice(b)]];};
@@ -348,7 +348,7 @@ function toggleIdentityValue(value,k,v){if(!OPT[k]?.some(x=>x[0]===v))return val
 const topicGroups=ids=>{ids=ids||Object.keys(TOPICS);return CATS.map(c=>[T(c),ids.filter(t=>TOPICS[t]?.cat===c.id)]).filter(g=>g[1].length);};
 ACT.chipFold=a=>{const key=a.dataset.v;S.ui.unfold=S.ui.unfold||{};const box=a.closest('.chips');const open=box.classList.toggle('folded')===false;S.ui.unfold[key]=open;a.textContent=open?L('Свернуть','Show less'):L(`Ещё ${a.dataset.n}`,`${a.dataset.n} more`);};
 ACT.chipAll=a=>openChipPicker(a.dataset.v);
-function openChipPicker(key){S.ui.pickKey=key;sheet(()=>{const r=S.ui.chipReg[key];const sel=new Set(r.sel);const groups=r.groups||[[L('Все варианты','All options'),r.items.map(x=>x[0])]];const label=id=>r.items.find(x=>x[0]===id)?.[1]||id;
+function openChipPicker(key){S.ui.pickKey=key;sheet(()=>{const r=S.ui.chipReg[key];const sel=new Set(r.sel);const groups=r.groups||[[L('Все','All'),r.items.map(x=>x[0])]];const label=id=>r.items.find(x=>x[0]===id)?.[1]||id;
  return{title:r.title||L('Выбор','Choose'),search:true,searchPh:L('Найти вариант','Find an option'),head:`<span class="pill ${sel.size?'v':''}">${r.max?`${sel.size}/${r.max}`:sel.size}</span>`,
  body:groups.map(([t,ids])=>`<section class="fsec" data-t="${esc(t.toLowerCase())}"><div class="sec">${esc(t)}</div><div class="chips">${ids.filter(id=>r.items.some(x=>x[0]===id)).map(id=>chipBtn(id,label(id),sel.has(id),'chipPick',{ex:r.ex,key})).join('')}</div></section>`).join('')+`<p class="note sh-empty" hidden>${L('Такого варианта нет. Попробуй другое слово — ищем по-русски и по-английски.','No such option. Try another word — we search in Russian and English.')}</p>`,
  foot:`<div class="row g8">${sel.size?`<button class="btn soft" style="flex:0 0 auto;width:auto" data-act="chipClear" data-v="${key}">${L('Сбросить','Clear')}</button>`:''}<button class="btn primary" data-act="closeSheet">${sel.size?L(`Готово · ${sel.size}`,`Done · ${sel.size}`):L('Готово','Done')}</button></div>`};},{full:true});}
@@ -413,12 +413,12 @@ function updCard(u){const src=u.e?T(EV(u.e).title):T(COMMUNITIES[u.c].name);retu
 
 
 /* V10 revision: every category of a section sits in one popup as chips; only long searchable lists keep a small picker */
-/** a long list inside a filter: the chosen ones and a few popular ones as chips, the rest behind «Все варианты · N» (same as chipPicker) */
+/** a long list inside a filter: the chosen ones and a few popular ones as chips, the rest behind «Все · N» (same as chipPicker) */
 function popChips(items,sel,act,more,o={}){if(items.length<=(o.lim||6)+2)return `<div class="chips">${items.map(([id,l])=>chipBtn(id,l,sel.includes(id),act,o)).join('')}</div>`;const pop=(o.groups?o.groups[0][1]:items.map(x=>x[0])).slice(0,o.lim||6);const shown=items.filter(([id])=>sel.includes(id)||pop.includes(id));
- return `<div class="chips">${shown.map(([id,l])=>chipBtn(id,l,sel.includes(id),act,o)).join('')}<button class="chip more" ${more}>${ic('search',14)}${L('Все варианты','All options')} · ${items.length}</button></div>`;}
+ return `<div class="chips">${shown.map(([id,l])=>chipBtn(id,l,sel.includes(id),act,o)).join('')}<button class="chip more" ${more}>${ic('search',14)}${L('Все','All')} · ${items.length}</button></div>`;}
 function fInline(r){
  if(r.search&&r.pick){const pk=r.pick();return `<section class="fin"><div class="fin-t"><b>${r.label}</b><span>${L('можно несколько','pick any')}</span></div>${popChips(pk.items,pk.sel,pk.act,`data-act="fOpen" data-v="${r.k}"`,{groups:pk.groups})}</section>`;}
- if(r.search)return `<section class="fin"><div class="fin-t"><b>${r.label}</b><span>${L('можно несколько','pick any')}</span></div><div class="chips">${r.on()?`<span class="chip on static">${esc(r.summary())}</span>`:''}<button class="chip more" data-act="fOpen" data-v="${r.k}">${ic('search',14)}${L('Все варианты','All options')}</button></div></section>`;
+ if(r.search)return `<section class="fin"><div class="fin-t"><b>${r.label}</b><span>${L('можно несколько','pick any')}</span></div><div class="chips">${r.on()?`<span class="chip on static">${esc(r.summary())}</span>`:''}<button class="chip more" data-act="fOpen" data-v="${r.k}">${ic('search',14)}${L('Все','All')}</button></div></section>`;
  const html=r.body().replace(/<section class="fsec"[^>]*><div class="sec">\s*<\/div>/g,'<section class="fsec">');const single=/role="radiogroup"|data-ch="sel"/.test(html);
  return `<section class="fin"><div class="fin-t"><b>${r.label}</b>${single?'':`<span>${L('можно несколько','pick any')}</span>`}</div><div class="fin-b">${html}</div></section>`;}
 /* ---------- V8 filters, Feeld-style: a tidy list «category → current choice»; a row opens its options with search ---------- */
