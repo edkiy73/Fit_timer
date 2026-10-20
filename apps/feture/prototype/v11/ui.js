@@ -93,7 +93,7 @@ ACT.pollPeople=a=>{const p=postById(a.dataset.v),i=+a.dataset.i;if(!p?.poll?.[i]
 
 function postMediaHTML(p,o={}){let h='';const m=postMedia(p);if(m.length)h+=mediaGrid(m,{id:p.id});
  if(p.poll)h+=pollHTML(p,o);
- if(p.result)h+=`<div class="testcard" style="--n:${Math.min(4,p.result.length)}" aria-label="${L('Результат теста','Quiz result')}">${jarsHTML(p.result,{act:o.preview?'':'topic',who:p.author})}</div>`;
+ if(p.result)h+=`<div class="testcard" style="--n:${Math.min(4,p.result.length)}" aria-label="${L('Интересы','Interests')}">${jarsHTML(p.result,{act:o.preview?'':'topic',who:p.author})}</div>`;
  return h;}
 /** Post Markdown, FetLife-like and safe: the text is escaped first, raw HTML never runs.
  *  Supported: **bold**, *italic*, ~~strike~~, `code`, > quote, - / 1. lists, ## heading, [text](https://…).
@@ -307,7 +307,7 @@ const evType=t=>({workshop:L('Мастер-класс','Workshop'),talk:L('Об�
 const commAv=c=>evCover(c,'users3');
 function commCard(id,o={}){
  const c=COMMUNITIES[id];const j=S.joined.has(id),pend=S.pendingJoin.has(id);
- const state=ownsCommunity(id)?`<span class="pill ok">${I.gear}${L('Ты ведёшь','You host')}</span>`:j?`<span class="pill ok">${I.check}${L('Ты участник','Member')}</span>`:pend?`<span class="pill wait">${L('Заявка отправлена','Request sent')}</span>`:c.privacy==='closed'?`<span class="pill">${I.lock}${L('По заявке','By request')}</span>`:'';
+ const state=o.noState?'':ownsCommunity(id)?`<span class="pill ok">${I.gear}${L('Ты ведёшь','You host')}</span>`:j?`<span class="pill ok">${I.check}${L('Ты участник','Member')}</span>`:pend?`<span class="pill wait">${L('На рассмотрении','Under review')}</span>`:c.privacy==='closed'?`<span class="pill">${I.lock}${L('По заявке','By request')}</span>`:'';
  return `<button class="cmc" data-go="C03" data-p='${esc(JSON.stringify({id}))}' style="animation-delay:${(o.i||0)*40}ms"><div class="cv" style="position:relative">${commAv(c)}</div><div class="tx"><b>${esc(T(c.name))}</b><small>${esc(mdPlain(T(c.desc)))}</small><div class="meta"><span>${pl(C.members(id),['участник','участника','участников'],['member','members'])}</span><span>·</span><span>${c.city==='online'?L('онлайн','online'):esc(city(c.city))}</span>${state?` ${state}`:''}</div></div></button>`;
 }
 
@@ -328,7 +328,7 @@ function chipGroup(items,selected,act,o={}){
  return `<div class="chips">${first.map(([id,l])=>chipBtn(id,l,sel.has(id),act,o)).join('')}<button class="chip more" data-act="chipAll" data-v="${key}">${ic('search',14)}${L('Все','All')} · ${items.length}</button></div>`;
 }
 const chipPicker=o=>chipGroup(o.items,o.sel,o.act,{title:o.title,max:o.max,groups:o.cats?topicGroups(o.items.map(x=>x[0])):o.groups});
-const optGroups=g=>{const b=OPT_BASE[g]||8;const ids=OPT[g].map(x=>x[0]);return [[L('Популярное','Popular'),ids.slice(0,b)],[L('Ещё варианты','More options'),ids.slice(b)]];};
+const optGroups=g=>{const b=OPT_BASE[g]||8;const ids=optList(g).map(x=>x[0]);return [[L('Популярное','Popular'),ids.slice(0,b)],[L('Ещё варианты','More options'),ids.slice(b)]];};
 /** Shared identity choices: same IDs, multiplicity and catalog in onboarding/profile. */
 const IDENTITY_KEYS=['gender','orient','role','status','format','seek'];
 const IDENTITY_MULTI=['gender','orient','format','role','seek'];
@@ -376,7 +376,9 @@ function pickLocalMedia(accept,multiple=true){return new Promise(resolve=>{
  }finish(chosen);},{once:true});input.click();
 });}
 function mediaPreviews(files,removeAct){return files?.length?`<div class="attachment-preview">${files.map((f,i)=>`<figure>${f.type==='video'?`<video controls playsinline preload="metadata" src="${esc(f.url)}"></video>`:`<img src="${esc(f.url)}" alt="${esc(f.name)}" loading="lazy">`}<figcaption>${esc(f.name)}</figcaption>${removeAct?`<button class="btn soft auto" data-act="${removeAct}" data-v="${i}">${L('Убрать','Remove')}</button>`:''}</figure>`).join('')}</div>`:'';}
-const optItems=g=>OPT[g].map(x=>[x[0],S.lang==='en'?x[2]:x[1]]);
+/* «мы пара» is not a personal status (V11, UX-03): a couple is made by linking two accounts; the couple profile keeps status 'couple' internally */
+const optList=g=>OPT[g].filter(x=>!(g==='status'&&x[0]==='couple'));
+const optItems=g=>optList(g).map(x=>[x[0],S.lang==='en'?x[2]:x[1]]);
 
 const topicItems=ids=>(ids||Object.keys(TOPICS)).map(t=>[t,topic(t)]);
 

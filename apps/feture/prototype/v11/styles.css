@@ -692,7 +692,7 @@ button.jar:active .vessel{transform:scale(.95)}
 .c3{display:flex;align-items:center;gap:12px;padding:14px 0;border-top:1px solid var(--line);text-align:left}
 .c3:first-child{border-top:0}
 .c3 .ico{width:24px}.c3 .tx{flex:1;min-width:0}.c3 b{display:block;font-size:15px;font-weight:600}.c3 small{display:block;font-size:13px;color:var(--mute);line-height:1.4;margin-top:1px}.c3>svg{width:18px;height:18px;color:var(--faint)}
-.create-q{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.create-qt{margin:16px 2px 0;font-size:13px;color:var(--mute)}.create-q{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
 .create-q button{display:grid;justify-items:center;gap:6px;padding:12px 6px;border-radius:var(--r);border:1px dashed var(--line2);font-size:12px;font-weight:600;color:var(--mute)}
 .create-q svg{width:20px;height:20px;color:var(--ink)}
 .pollopt{margin-bottom:8px}.pollopt .inwrap{display:flex;align-items:center}.pollopt .n{position:absolute;left:14px;font-weight:700;color:var(--faint);font-size:14px;z-index:1}.pollopt .inp{padding-left:38px;padding-right:44px}.pollopt .ibtn{position:absolute;right:4px}
