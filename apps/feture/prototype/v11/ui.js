@@ -338,7 +338,7 @@ const IDENTITY_MULTI=['gender','orient','format','role','seek'];
 const identityFields=()=>[
  ['gender',L('Гендер','Gender'),L('До пяти выбранных вариантов.','Up to five selected options.')],
  ['orient',L('Ориентация','Orientation'),L('До пяти выбранных вариантов.','Up to five selected options.')],
- ['role',L('Роль','Role'),L('До пяти вариантов. Это не согласие на практики.','Up to five options. This is not consent to any practice.')],
+ ['role',L('Роль','Role'),L('До пяти вариантов.','Up to five options.')],
  ['status',L('Статус отношений','Relationship status'),L('Необязательно.','Optional.')],
  ['format',L('Формат отношений','Relationship format'),L('До пяти выбранных вариантов.','Up to five selected options.')],
  ['seek',L('Ищу','Looking for'),L('Можно выбрать несколько.','You can choose more than one.')]
