@@ -80,7 +80,7 @@ const src=f=>fs.readFileSync(root+f,'utf8');
  assert.ok(json("followStream(allPosts().filter(x=>followingOf('me').includes(x.author)),'all',false)").every(x=>x.k==='post'),'topic filters hide activity cards');
  const card=run("actCard({k:'follow',who:'maya',p:'mia',t:Date.now()-3600e3},0)");assert.ok(card.includes('теперь следит')&&!/следил[аи]?\b|подписал(ся|ась)/.test(card),'activity lines are gender-neutral');
  assert.ok(!run("authorPicker()").includes('author-picker'),'no author picker without a couple');
- const f07=appScreen('F07',{type:'text'});assert.ok(f07.includes('Кому открыта приватная часть'),'audience names the private part');
+ const f07=appScreen('F07',{type:'text'});assert.ok(f07.includes('Приватная часть')&&!f07.includes('Кому открыта'),'audience is a short «Приватная часть · N»');
  const sc=run("SC.D03.render({sub:'discover'},{p:{sub:'discover'},f:{}})");assert.ok(!sc.includes('мало данных'),'no «not enough data» plate on the deck');
  console.log('PASS owner round 3');}
 
