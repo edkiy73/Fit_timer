@@ -75,9 +75,9 @@ const src=f=>fs.readFileSync(root+f,'utf8');
 /* owner round 3 (21.10) */
 {fresh();
  const prof=appScreen('P01',{id:'maya'});assert.ok(!/class="seg tabs-full[^"]*"[\s\S]{0,400}<em>/.test(prof),'profile activity tabs carry no counters');
- const stream=run("followStream(allPosts().filter(x=>followingOf('me').includes(x.author)),'all',true)");assert.ok(stream.some(x=>x.k!=='post')&&stream.some(x=>x.k==='post'),'«Подписки» mixes posts with followed people’s activity');
- assert.ok(json("followStream(allPosts().filter(x=>followingOf('me').includes(x.author)),'events',true)").every(x=>x.k==='event'),'the kind switch narrows the stream');
- assert.ok(json("followStream(allPosts().filter(x=>followingOf('me').includes(x.author)),'all',false)").every(x=>x.k==='post'),'topic filters hide activity cards');
+ const stream=run("followStream(allPosts().filter(x=>followingOf('me').includes(x.author)),[],true)");assert.ok(stream.some(x=>x.k!=='post')&&stream.some(x=>x.k==='post'),'«Подписки» mixes posts with followed people’s activity');
+ assert.ok(json("followStream(allPosts().filter(x=>followingOf('me').includes(x.author)),['events'],true)").every(x=>x.k==='event'),'the «Что показывать» filter narrows the stream');
+ assert.ok(json("followStream(allPosts().filter(x=>followingOf('me').includes(x.author)),[],false)").every(x=>x.k==='post'),'topic filters hide activity cards');
  const card=run("actCard({k:'follow',who:'maya',p:'mia',t:Date.now()-3600e3},0)");assert.ok(card.includes('теперь следит')&&!/следил[аи]?\b|подписал(ся|ась)/.test(card),'activity lines are gender-neutral');
  assert.ok(!run("authorPicker()").includes('author-picker'),'no author picker without a couple');
  const f07=appScreen('F07',{type:'text'});assert.ok(f07.includes('Приватная часть')&&!f07.includes('Кому открыта'),'audience is a short «Приватная часть · N»');
@@ -88,3 +88,8 @@ const src=f=>fs.readFileSync(root+f,'utf8');
 {fresh();run("S.me.jars=[]");/* a new account with no interests yet: nothing in common to show */const ari=appScreen('H02',{id:'ari'});assert.ok(!ari.includes('chat-ctx')&&!ari.includes('мало общего')&&!ari.includes('Приватная часть закрыта'),'Ari has no shared context and no private part: no pills');
  fresh();const mia=appScreen('H02',{id:'mia'});assert.ok(mia.includes('chat-ctx')&&mia.includes('общий интерес'),'a person with shared context keeps the pill');
  console.log('PASS chat header pills');}
+
+/* the kind choice lives in the filter sheet as chips, not as a row on the feed */
+{fresh();run("globalThis.__s=null;sheet=(b,o)=>{globalThis.__s={b,o}};closeSheet=()=>{}");run("ACT.feedFilters({dataset:{v:'following'}})");const fsh=String(run("__s.b()").body);assert.ok(fsh.includes('Что показывать')&&fsh.includes('data-act="ffKind"'),'«Что показывать» chips are in the Following filter');
+ const feed=appScreen('F01',{sub:'following'});assert.ok(!feed.includes('feedkind')&&!feed.includes('feedKind'),'no kind row on the feed');
+ console.log('PASS kinds live in the filter sheet');}
