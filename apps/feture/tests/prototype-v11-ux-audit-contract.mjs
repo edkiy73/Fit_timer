@@ -85,6 +85,6 @@ const src=f=>fs.readFileSync(root+f,'utf8');
  console.log('PASS owner round 3');}
 
 /* chat header: pills only when they say something */
-{fresh();const ari=appScreen('H02',{id:'ari'});assert.ok(!ari.includes('chat-ctx')&&!ari.includes('мало общего')&&!ari.includes('Приватная часть закрыта'),'Ari has no shared context and no private part: no pills');
- const mia=appScreen('H02',{id:'mia'});assert.ok(mia.includes('chat-ctx')&&mia.includes('общий интерес'),'a person with shared context keeps the pill');
+{fresh();run("S.me.jars=[]");/* a new account with no interests yet: nothing in common to show */const ari=appScreen('H02',{id:'ari'});assert.ok(!ari.includes('chat-ctx')&&!ari.includes('мало общего')&&!ari.includes('Приватная часть закрыта'),'Ari has no shared context and no private part: no pills');
+ fresh();const mia=appScreen('H02',{id:'mia'});assert.ok(mia.includes('chat-ctx')&&mia.includes('общий интерес'),'a person with shared context keeps the pill');
  console.log('PASS chat header pills');}
