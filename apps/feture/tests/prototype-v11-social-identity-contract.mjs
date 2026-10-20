@@ -146,7 +146,7 @@ console.log('PASS unified profile editor saves rich private text for personal an
 {prepare('F01',{sub:'foryou'});run("S.me.dating=true;S.joined.add('rope')");
  const all=json("feedEventPicks()");assert.ok(all.length>0&&all.length<=3,'feed picks 1–3 upcoming events');
  assert.ok(all.every(id=>run(`!isPast('${id}')&&!EV('${id}').cancelled&&EV('${id}').organizer!=='me'`)),'only upcoming, not cancelled, not my own');
- run("S.filters.feed.events=false");assert.equal(json("feedEventPicks()").length,0,'switched off');
+ run("S.filters.feed.events=false");assert.ok(json("feedEventPicks()").length>0,'events are always on: the old switch no longer hides them');
 
  run("S.filters.feed.events=true");const first=all[0];run(`ACT.feedEvLess({dataset:{v:'${first}'}})`);assert.ok(!json("feedEventPicks()").includes(first),'«Less of this» hides the event');
  run("coupleProfile();S.pair.profile.dating=true;S.datingActor='me';social('couple').likesOut.push({p:'mia',src:'discover',t:Date.now()})");assert.ok(run("otherDoneChip('mia')").includes('like sent')||run("otherDoneChip('mia')").includes('симпатия отправлена'),'the card says the couple already liked this person');

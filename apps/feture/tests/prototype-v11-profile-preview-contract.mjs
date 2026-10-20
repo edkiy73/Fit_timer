@@ -94,7 +94,7 @@ const none=run("Object.keys(PEOPLE).find(id=>!PEOPLE[id].pair&&!social().likesOu
 run("ACT.endConn({dataset:{v:'maya'}});");const pop=String(run("__m.body"));assert.ok(pop.includes('Твоя симпатия снимается')&&pop.includes('не блокировка'),'the popup says what happens');
 // Filters: the feed filter sheet has the «All / Following only» source; closing a filter sheet never asks «close without saving?»; single-choice rows carry no hint.
 run("S=freshState('full');S.session={};initNav();toast=()=>{};closeSheet=()=>{};refresh=()=>{};globalThis.__s=null;sheet=(b,o)=>{globalThis.__s={b,o}}");
-run("ACT.feedFilters({dataset:{v:'feed'}})");const fsh=run("__s.b()");assert.ok(String(fsh.body).includes('data-act="ffSrc"')&&String(fsh.body).includes('Только подписки'),'the feed filter has the Following-only source');
+run("ACT.feedFilters({dataset:{v:'feed'}})");const fsh=run("__s.b()");assert.ok(!String(fsh.body).includes('ffSrc')&&!String(fsh.body).includes('ffEvents'),'the feed filter has no source switch and no events toggle (the tab and the always-on events cover them)');
 assert.ok(!run("__s.o.guard"),'filter sheets have no «close without saving?» guard');
 assert.ok(!String(fsh.body).includes('один вариант'),'no «one option» hints');
 // Filters v2: short single choices are chips, long ones stay a select; every section with a value has a ✕ that clears just that section.

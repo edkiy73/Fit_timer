@@ -142,7 +142,8 @@ function replyTree(kind,id){const list=identifyReplies(kind,id),byId=new Map(lis
  const rootSet=new Set(roots);roots.splice(0,roots.length,...route.order.map(id=>byId.get(id)).filter(c=>c&&rootSet.has(c)));
  const PAGE=REPLY_PAGE;const fi=focus?roots.findIndex(r=>r.id===focus||flat(r).some(c=>c.id===focus)):-1;route.shown=Math.max(route.shown||PAGE,fi+1);
  const page=roots.slice(0,route.shown),left=roots.length-page.length;
- const head=roots.length>1?`<div class="cm-sort">${seg([['top',L('Интересные','Top')],['new',L('Новые','Newest')]],sort,'thSort','sm')}</div>`:'';
+ /* V11: replies order is a sort control («Сортировка: Сначала интересные ⌄»), not a pair of tabs */
+ const head=roots.length>1?`<div class="fl-row cm-sort"><span class="sortlab">${I.sort}${L('Сортировка','Sort')}</span>${selectRow('thSort','',[['top',L('Сначала интересные','Top first')],['new',L('Сначала новые','Newest first')]],sort,{aria:L('Порядок ответов','Reply order')})}</div>`:'';
  const tail=left?`<button class="cm-load" data-act="thPage" data-left="${left}">${L(`Показать ещё ${Math.min(PAGE,left)} из ${left}`,`Show ${Math.min(PAGE,left)} more of ${left}`)}</button>`:'';
  return head+page.map(root=>{const all=flat(root);/* opens once by itself for a deep link or your new reply; after that you can fold it again */
   route.auto??=[];const want=all.filter(c=>(c.id===focus||(ownedIdentity(c.a)&&c.t>=route.openedAt))&&!route.auto.includes(c.id));if(want.length){route.auto.push(...want.map(c=>c.id));if(!open.includes(root.id))open.push(root.id);}const forced=false;const isOpen=open.includes(root.id)||forced||all.length<=3;const shown=isOpen?all:all.slice(0,2),rest=all.length-shown.length;
