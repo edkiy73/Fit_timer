@@ -13,6 +13,8 @@
 /* Layout: one list; each row = two liquid drops flowing out of the avatars, length and thickness = strength, merging softly with lava droplets. Tokens = FetUre V11. */
 @property --ra{syntax:"<number>";inherits:true;initial-value:0}
 @property --rb{syntax:"<number>";inherits:true;initial-value:0}
+@property --gx{syntax:"<length>";inherits:true;initial-value:14px}
+@property --pt{syntax:"<length>";inherits:true;initial-value:0px}
 :root{
   --bg:#F5F3F0; --surf:#FFFFFF; --raise:#ECE8E3; --line:#E6E2DD; --line2:#D2CDC6;
   --ink:#17151A; --mute:#66616B; --faint:#9B969F;
@@ -84,11 +86,18 @@ main.wrap{padding-block:16px 72px;display:grid;gap:22px}
 .chem .score small{display:block;margin-top:4px;font-size:15px;letter-spacing:0;color:var(--mute);-webkit-text-fill-color:var(--mute);font-weight:700}
 .chem .what{font-size:14px;color:var(--mute)}
 .chem .what b{color:var(--ink)}
-.repel .part.l{width:min(var(--wl),calc(50% - 18px));animation:repL 1.6s ease-in-out infinite;animation-delay:calc(var(--d) + 1.4s)}
-.repel .part.r{width:min(var(--wr),calc(50% - 18px));animation:repR 1.6s ease-in-out infinite;animation-delay:calc(var(--d) + 1.4s)}
-@keyframes repL{0%,100%{transform:none}50%{transform:translateX(-4px)}}
-@keyframes repR{0%,100%{transform:none}50%{transform:translateX(4px)}}
-.repel .lab.wl{clip-path:inset(0 calc(50% + 18px) 0 0)}.repel .lab.wr{clip-path:inset(0 0 0 calc(50% + 18px))}
+.repel .goo{filter:none}
+.repel{animation:ga 1.4s var(--spring) both,gb 1.4s var(--spring) both,poke 2.8s cubic-bezier(.5,0,.5,1) infinite;animation-delay:var(--d),calc(var(--d) + .1s),calc(var(--d) + 1.4s)}
+.repel .part.l{width:min(var(--wl),calc(50% - 6px - var(--gx)));clip-path:polygon(0 0,calc(100% - var(--pt)) 0,100% 50%,calc(100% - var(--pt)) 100%,0 100%)}
+.repel .part.r{width:min(var(--wr),calc(50% - 6px - var(--gx)));clip-path:polygon(var(--pt) 0,100% 0,100% 100%,var(--pt) 100%,0 50%)}
+@keyframes poke{0%{--gx:16px;--pt:0px}25%{--gx:2px;--pt:6px}35%{--gx:-2px;--pt:20px}55%{--gx:-2px;--pt:20px}68%{--gx:26px;--pt:12px}85%{--gx:18px;--pt:0px}100%{--gx:16px;--pt:0px}}
+.repel .lab.wl{clip-path:inset(0 calc(100% - 6px - min(var(--wl),calc(50% - 6px - var(--gx)))) 0 0)}.repel .lab.wr{clip-path:inset(0 0 0 calc(100% - 6px - min(var(--wr),calc(50% - 6px - var(--gx)))))}
+.pl{position:absolute;top:50%;width:var(--ps);height:var(--ps);margin-top:calc(var(--ps) / -2);border-radius:50%;opacity:0}
+.pl.l{left:calc(6px + var(--wl) - var(--ps));background:var(--me);animation:pullR var(--pd) ease-in-out infinite;animation-delay:calc(var(--d) + 1.4s + var(--dd))}
+.pl.r{right:calc(6px + var(--wr) - var(--ps));background:var(--them);animation:pullL var(--pd) ease-in-out infinite;animation-delay:calc(var(--d) + 1.4s + var(--dd))}
+@keyframes pullR{0%{opacity:1;transform:translateX(0)}70%{opacity:1}100%{opacity:0;transform:translateX(calc((100cqw - 12px - var(--wl) - var(--wr)) * var(--reach)))}}
+@keyframes pullL{0%{opacity:1;transform:translateX(0)}70%{opacity:1}100%{opacity:0;transform:translateX(calc((100cqw - 12px - var(--wl) - var(--wr)) * var(--reach) * -1))}}
+.gr{container-type:inline-size}
 .det .v.no{color:var(--danger)}
 .gr.hard{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--danger) 18%,var(--raise)) 0 6px,var(--raise) 6px 12px)}
 .gr.soft::before{content:"";position:absolute;inset:0;border-radius:99px;border:1.5px dashed color-mix(in srgb,var(--warn) 70%,transparent);z-index:0}
@@ -155,19 +164,22 @@ main.wrap{padding-block:16px 72px;display:grid;gap:22px}
 <script>
 (function(){
 const CASES=[
-  ['Реакция',[['Классический секс',{v:10},{v:10},{mutual:true}],['Оральные ласки',{v:10,d:['give']},{v:9,d:['get']}],['Массаж с маслом',{v:9,d:['give','get']},{v:10,d:['give','get']}],['Забота после',{v:10,d:['give']},{v:10,d:['get']}],['Связывание',{v:9,d:['get']},{v:10,d:['give']}],['Шибари',{v:8,d:['give']},{v:10,d:['get']}],['Латекс-вечеринки',{v:9,d:['give','get','watch']},{v:9,d:['give','get','watch']}],['Ролевые игры',{v:8,d:['watch']},{v:9,d:['give','watch']}]]],
-  ['Не подходят по ролям',[['Оральный секс',{v:10,d:['get']},{v:10,d:['get']}],['Анальный секс',{v:9,d:['give']},{v:10,d:['give']}]]],
-  ['Нет реакции',[['Латекс',{v:5,d:['get']},{v:5}],['Массаж',{v:1},{v:1}],['Воск',{v:3,d:['get']},{v:1,d:['give']}],['Показ',{v:1,d:['watch']},{v:10,d:['give']}],['Сенсорные игры',{v:8,d:['get']},{v:3,d:['get']}],['Контроль',{v:7,d:['get']},{v:8,d:['give']}]]],
-  ['Границы',[['Порка',{v:7},{limit:'hard'}],['Игры с дыханием',{limit:'soft'},{v:8}],['Сильная боль',{limit:'hard'},{limit:'hard'}]]],
+  ['Реакция',[['Классический секс',{v:10},{v:10}],['Оральные ласки',{v:10,d:['give']},{v:9,d:['get']}],['Забота после',{v:10},{v:10,d:['get']}],['Связывание',{v:9,d:['get']},{v:10,d:['give','watch']}],['Шибари',{v:8},{v:10}],['Ролевые игры',{v:8,d:['watch']},{v:9}]]],
+  ['Есть к чему стремиться',[['Латекс',{v:5},{v:5}],['Контроль',{v:7,d:['get']},{v:8,d:['give']}],['Воск',{v:3},{v:4}],['Массаж',{v:2},{v:2}],['Показ',{v:1},{v:10}],['Игры с дыханием',{limit:'soft'},{v:8}]]],
+  ['Не подходят по ролям',[['Анальный секс',{v:9,d:['give']},{v:10,d:['give']}],['Оральный секс',{v:10,d:['get']},{v:10,d:['get']}],['Сенсорные игры',{v:6,d:['get','watch']},{v:5,d:['get','watch']}]]],
+  ['Границы',[['Порка',{v:7},{limit:'hard'}],['Сильная боль',{limit:'hard'},{limit:'hard'}]]],
   ['Нет в карте',[['Эксперименты',null,{v:6}]]]
 ];
+const ALL=['give','get','watch'];
+CASES.forEach(c=>c[1].forEach(r=>[1,2].forEach(k=>{const e=r[k];if(e&&typeof e.v==='number'&&(!e.d||e.d.length===3))e.d=ALL;})));
 const kind=e=>!e?'none':e.limit==='hard'?'hard':e.limit?'soft':'v';
 const DW={give:'даю',get:'получаю',watch:'смотрю'};
 const dirW=d=>!d||!d.length?'':d.length===3?'всё':d.map(x=>DW[x]).join(' · ');
 const rel=(a,b,o={})=>{if(o.mutual&&kind(a)==='v'&&kind(b)==='v')return 'mutual';const x=a&&a.d,y=b&&b.d;if(!x||!y||kind(a)!=='v'||kind(b)!=='v')return null;
   const two=d=>d.includes('give')&&d.includes('get');if(two(x)&&two(y))return 'both';
   if((x.includes('give')&&y.includes('get'))||(x.includes('get')&&y.includes('give')))return 'fit';
-  if(x.length===1&&y.length===1&&x[0]===y[0]&&x[0]!=='watch')return 'same';return null;};
+  const act=d=>d.filter(z=>z!=='watch');const ax=act(x),ay=act(y);
+  if(ax.length===1&&ay.length===1&&ax[0]===ay[0])return 'same';return null;};
 const side=(e,who)=>{const k=kind(e);
   const cap=(role==='cap'||role==='flow')&&k==='v'&&dirW(e.d)?`<em>${dirW(e.d)}</em>`:'';
   const val=k==='v'?`<span class="nv">${e.v}${cap}</span>`:k==='hard'?'<small class="t">табу</small>':k==='soft'?'<small class="s">обсуд.</small>':'<small class="x">—</small>';
@@ -177,7 +189,7 @@ const H=v=>38;
 function row([t,a,b,o={}],i){
   const ka=kind(a),kb=kind(b),blocked=ka==='hard'||kb==='hard';
   const A=ka==='v'?a.v:0,B=kb==='v'?b.v:0;
-  const RR=rel(a,b,o),repel=RR==='same'&&!blocked;
+  const RR=rel(a,b,o),repel=RR==='same'&&!blocked&&A+B>=13,still=RR==='same'&&!blocked&&!repel;
   const meet=!!(A&&B&&!blocked&&A+B>=17&&!repel);
   const half=()=>'';
   const m=Math.min(A,B);
@@ -196,7 +208,13 @@ function row([t,a,b,o={}],i){
       dr+=`<span class="dr m" style="--go:${go}px;--yy:${yy}px;--dd:${dd}s;--ds:${ds}px"></span><span class="dr t" style="--go:${go}px;--yy:${yy}px;--dd:${(+dd+1.3).toFixed(2)}s;--ds:${ds}px"></span>`;}}
   const ir=99, mw=0, jr=meet?A/(A+B):.5;
   let fz='';if(meet){const n=m-7;for(let k=0;k<n*2;k++)fz+=`<span class="fz" style="--fs:${3+(k%3)}px;--fx:${((k%2?1:-1)*(3+k*3))}px;--fd:${(k*.45).toFixed(2)}s"></span>`;}
-  const goo=`<div class="goo">${A?`<span class="blob l"></span><span class="part l" style="--h:${H(A)}px"></span>`:''}${B?`<span class="blob r"></span><span class="part r" style="--h:${H(B)}px"></span>`:''}${mw?'<span class="mix"></span>':''}${dr}</div>${fz}`;
+  let pl='';
+  if(!meet&&!blocked&&!repel&&!still&&(A||B)){const soft=ka==='soft'||kb==='soft';const m2=soft?Math.max(A,B):Math.min(A,B);
+    const n=soft?1:m2>=5?3:m2>=3?2:1,ps=soft?7:6+Math.min(m2,6),pd=(soft?3.6:3.2-m2*.12).toFixed(2),reach=soft?.9:.55;
+    for(let k=0;k<n;k++){const dd=(k*(+pd)/n).toFixed(2);
+      if(A)pl+=`<span class="pl l" style="--ps:${ps}px;--pd:${pd}s;--dd:${dd}s;--reach:${reach}"></span>`;
+      if(B)pl+=`<span class="pl r" style="--ps:${ps}px;--pd:${pd}s;--dd:${(+dd+(+pd)/2/n).toFixed(2)}s;--reach:${reach}"></span>`;}}
+  const goo=`<div class="goo">${pl}${A?`<span class="blob l"></span><span class="part l" style="--h:${H(A)}px"></span>`:''}${B?`<span class="blob r"></span><span class="part r" style="--h:${H(B)}px"></span>`:''}${mw?'<span class="mix"></span>':''}${dr}</div>${fz}`;
   const lab=cls=>`<div class="lab ${cls}">${side(a,'me')}<span class="nm">${t}</span>${side(b,'them')}</div>`;
   const blk=blocked||ka==='soft'||kb==='soft'||!A||!B;
   const R2=rel(a,b,o),vt=R2==='mutual'?'<span class="v fit">взаимно — роли не нужны</span>':R2==='both'?'<span class="v fit">обоюдно: оба даёте и получаете</span>':R2==='fit'?'<span class="v fit">дополняете друг друга</span>':R2==='same'?'<span class="v no">оба '+(a.d[0]==='give'?'даёте':'получаете')+' — не подходит</span>':'<span class="v"></span>';
