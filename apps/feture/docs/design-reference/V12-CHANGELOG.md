@@ -42,3 +42,12 @@ Decision record: `public/prototype-v11-compare-matrix.html`. Notes: `public/prot
 - Interest names in capsules wrap to two lines instead of being cut with «…».
 - Reason lines under comparison rows shortened to one line («Вы оба хотите давать», «Общая граница»).
 - Removed the prototype-only «Сравнить с» switcher from P05; the six test people are in the discovery deck instead, so comparison looks exactly like the real screen.
+
+## 2026-10-21 — owner phone review
+
+- Top-aligned left thumbnails across activity, member, chat, request and profile rows; shorter text remains centred.
+- Added «Мои интересы / My interests» to post attachments; poll question/options/footer form one card.
+- One separator per mixed-feed boundary; removed counters from the first two Access tabs.
+- New couple invitations work immediately after dissolution or expiry. Recovery ends when the new invitation is accepted. The new identity inherits no grants, trust, chats or drafts; former post text remains in a separate archive.
+- Acceptance uses the invited partner, not the former partner; focused contract covers both timings and repeated replacement.
+- QA join toast uses community names instead of rope/first and identifies the test action.
