@@ -45,7 +45,7 @@ p{margin:0;max-width:60ch}
 .lead{color:var(--mute);font-size:15.5px}
 .top{display:flex;justify-content:space-between;align-items:center;gap:12px}
 .eyebrow{font-size:13px;color:var(--accent);font-weight:700}
-.btn{font:600 13px var(--font);color:var(--ink);background:var(--surf);border:1px solid var(--line2);border-radius:99px;padding:7px 14px;cursor:pointer;min-height:36px}
+.btn{font:600 13px var(--font);color:var(--ink);background:var(--surf);border:1px solid var(--line2);border-radius:99px;padding:7px 12px;cursor:pointer;min-height:36px;white-space:nowrap;flex:none}
 button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bar);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
 .bar .wrap{padding-block:10px;display:flex;justify-content:flex-end}
@@ -55,7 +55,7 @@ main.wrap{padding-block:16px 72px;display:grid;gap:22px}
 .rows{display:grid;gap:8px}
 
 .gr{position:relative;height:50px;border-radius:99px;background:var(--raise);isolation:isolate;
-  --wl:calc(56px + (100% - 122px) * var(--ra) * .58);--wr:calc(56px + (100% - 122px) * var(--rb) * .58);--jx:calc((100% + var(--wl) - var(--wr)) / 2);
+  --hb:calc(var(--sw) - 10px);--wl:calc(var(--hb) + (100% - 2 * var(--hb) - 10px) * var(--ra) * .58);--wr:calc(var(--hb) + (100% - 2 * var(--hb) - 10px) * var(--rb) * .58);--jx:calc((100% + var(--wl) - var(--wr)) / 2);
   animation:ga 1.4s var(--spring) both,gb 1.4s var(--spring) both;animation-delay:var(--d),calc(var(--d) + .1s)}
 @keyframes ga{from{--ra:0}}@keyframes gb{from{--rb:0}}
 .goo{position:absolute;inset:0;filter:url(#goo)}
@@ -63,7 +63,7 @@ main.wrap{padding-block:16px 72px;display:grid;gap:22px}
 .half.l{left:6px}.half.r{right:6px}
 .half.hard{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--danger) 24%,transparent) 0 6px,transparent 6px 12px)}
 .half.soft{border:1.5px dashed color-mix(in srgb,var(--warn) 65%,transparent)}
-.blob{position:absolute;top:6px;width:68px;height:38px;border-radius:99px}
+.blob{position:absolute;top:6px;width:calc(var(--sw) + 2px);height:38px;border-radius:99px}
 .blob.l{left:6px;background:var(--me)}.blob.r{right:6px;background:var(--them)}
 .part{position:absolute;top:50%;height:var(--h);margin-top:calc(var(--h) / -2);border-radius:99px}
 .part.l{left:6px;width:var(--wl);background:var(--me)}
@@ -94,9 +94,29 @@ main.wrap{padding-block:16px 72px;display:grid;gap:22px}
 
 .lab{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 6px;z-index:5;pointer-events:none}
 .lab .nm{flex:1;min-width:0;text-align:center;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.side{display:flex;align-items:center;gap:6px;flex:none;width:66px;font-weight:850;font-size:15px;font-variant-numeric:tabular-nums}
+.side{display:flex;align-items:center;gap:6px;flex:none;width:var(--sw);font-weight:850;font-size:15px;font-variant-numeric:tabular-nums}
 .side.r{justify-content:flex-end}
 .side small{font-size:11px;font-weight:750}
+.nv{display:grid;line-height:1;gap:2px}
+.side.r .nv{justify-items:end}
+.nv em{font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.01em;opacity:.9;white-space:nowrap}
+.role-cap,.role-flow{--sw:96px}
+:root{--sw:66px}
+.det{display:grid;grid-template-rows:0fr;transition:grid-template-rows .45s var(--spring)}
+.item.open .det{grid-template-rows:1fr}
+.det>div{overflow:hidden;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:0 14px;font-size:13px;color:var(--mute)}
+.item.open .det>div{padding:6px 14px 2px}
+.det b{color:var(--ink);font-weight:700}
+.det .v{font-weight:700;text-align:center}
+.det .v.fit{color:var(--ok,#1D7A51)}.det .v.same{color:var(--warn)}
+.item{display:grid;cursor:pointer}
+.seg{display:flex;background:var(--raise);border-radius:99px;padding:3px;flex:1}
+.seg button{flex:1;font:650 13px var(--font);color:var(--mute);background:none;border:0;border-radius:99px;padding:7px 6px;cursor:pointer;min-height:36px;white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--surf);color:var(--ink);box-shadow:0 2px 6px -2px var(--shadow)}
+.dr.fr{background:var(--fc);animation:flowR 1.9s linear infinite both;animation-delay:calc(var(--d) + 1.3s + var(--dd))}
+.dr.fl{background:var(--fc);animation:flowL 1.9s linear infinite both;animation-delay:calc(var(--d) + 1.3s + var(--dd))}
+@keyframes flowR{0%{opacity:0;transform:translate(-36px,0)}15%{opacity:1}85%{opacity:1}100%{opacity:0;transform:translate(calc(var(--go) + 24px),var(--yy))}}
+@keyframes flowL{0%{opacity:0;transform:translate(36px,0)}15%{opacity:1}85%{opacity:1}100%{opacity:0;transform:translate(calc(-1 * var(--go) - 24px),calc(-1 * var(--yy)))}}
 .side.on{color:#fff}
 .av{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;flex:none;font:800 12px/1 var(--font);color:#fff}
 .av.me{background:color-mix(in srgb,var(--me) 80%,#000)}.av.them{background:color-mix(in srgb,var(--them) 78%,#000)}
@@ -116,23 +136,29 @@ main.wrap{padding-block:16px 72px;display:grid;gap:22px}
 <div class="wrap"><header class="intro">
   <div class="top"><span class="eyebrow">FetUre V11 · химия</span><button class="btn" id="themeBtn" type="button">Тема: системная</button></div>
   <h1>Химия: где у вас реакция</h1>
-  <p class="lead">Капля вытекает из аватара с оценкой. Чем сильнее интерес, тем она длиннее. Если обоим сильно, капли дотягиваются и мягко сливаются, а через перемычку перетекают капельки: место встречи смещается к тому, у кого оценка ниже: 10/10 — ровно посередине, 8/10 — заметно ближе к тебе. Чем выше общий интерес, тем больше капелек и пузырьков. Подписи над группами только для этой страницы.</p>
+  <p class="lead">Роли (даю, получаю, смотрю, всё) — три способа показать, переключатель сверху. «Подпись»: роль мелко под цифрой. «По нажатию»: строка раскрывается и говорит, дополняете ли вы друг друга. «Подпись + поток»: если один даёт, а другой получает, капельки текут только от того, кто даёт, к тому, кто получает. Капля вытекает из аватара с оценкой. Чем сильнее интерес, тем она длиннее. Если обоим сильно, капли дотягиваются и мягко сливаются, а через перемычку перетекают капельки: место встречи смещается к тому, у кого оценка ниже: 10/10 — ровно посередине, 8/10 — заметно ближе к тебе. Чем выше общий интерес, тем больше капелек и пузырьков. Подписи над группами только для этой страницы.</p>
 </header></div>
-<div class="bar"><div class="wrap"><button class="btn" id="replay" type="button">Ещё раз</button></div></div>
+<div class="bar"><div class="wrap" style="gap:8px;align-items:center"><div class="seg" role="group" aria-label="Как показать роль"><button type="button" id="r_cap">Подпись</button><button type="button" id="r_tap">По нажатию</button><button type="button" id="r_flow">Подпись + поток</button></div><button class="btn" id="replay" type="button">Ещё раз</button></div></div>
 
 <main class="wrap" id="root"></main>
 
 <script>
 (function(){
 const CASES=[
-  ['Реакция',[['Забота после',{v:10},{v:10}],['Связывание',{v:9},{v:10}],['Шибари',{v:8},{v:10}],['Латекс-вечеринки',{v:9},{v:9}],['Ролевые игры',{v:8},{v:9}]]],
-  ['Нет реакции',[['Латекс',{v:5},{v:5}],['Массаж',{v:1},{v:1}],['Воск',{v:3},{v:1}],['Показ',{v:1},{v:10}],['Сенсорные игры',{v:8},{v:3}],['Контроль',{v:7},{v:8}]]],
+  ['Реакция',[['Забота после',{v:10,d:['give']},{v:10,d:['get']}],['Связывание',{v:9,d:['get']},{v:10,d:['give']}],['Шибари',{v:8,d:['give']},{v:10,d:['give']}],['Латекс-вечеринки',{v:9,d:['give','get','watch']},{v:9,d:['give','get','watch']}],['Ролевые игры',{v:8,d:['watch']},{v:9,d:['give','watch']}]]],
+  ['Нет реакции',[['Латекс',{v:5,d:['get']},{v:5}],['Массаж',{v:1},{v:1}],['Воск',{v:3,d:['get']},{v:1,d:['give']}],['Показ',{v:1,d:['watch']},{v:10,d:['give']}],['Сенсорные игры',{v:8,d:['get']},{v:3,d:['get']}],['Контроль',{v:7,d:['get']},{v:8,d:['give']}]]],
   ['Границы',[['Порка',{v:7},{limit:'hard'}],['Игры с дыханием',{limit:'soft'},{v:8}],['Сильная боль',{limit:'hard'},{limit:'hard'}]]],
   ['Нет в карте',[['Эксперименты',null,{v:6}]]]
 ];
 const kind=e=>!e?'none':e.limit==='hard'?'hard':e.limit?'soft':'v';
+const DW={give:'даю',get:'получаю',watch:'смотрю'};
+const dirW=d=>!d||!d.length?'':d.length===3?'всё':d.map(x=>DW[x]).join(' · ');
+const rel=(a,b)=>{const x=a&&a.d,y=b&&b.d;if(!x||!y||kind(a)!=='v'||kind(b)!=='v')return null;
+  if((x.includes('give')&&y.includes('get'))||(x.includes('get')&&y.includes('give')))return 'fit';
+  if(x.length===1&&y.length===1&&x[0]===y[0]&&x[0]!=='watch')return 'same';return null;};
 const side=(e,who)=>{const k=kind(e);
-  const val=k==='v'?`<span>${e.v}</span>`:k==='hard'?'<small class="t">табу</small>':k==='soft'?'<small class="s">обсуд.</small>':'<small class="x">—</small>';
+  const cap=(role==='cap'||role==='flow')&&k==='v'&&dirW(e.d)?`<em>${dirW(e.d)}</em>`:'';
+  const val=k==='v'?`<span class="nv">${e.v}${cap}</span>`:k==='hard'?'<small class="t">табу</small>':k==='soft'?'<small class="s">обсуд.</small>':'<small class="x">—</small>';
   const av=`<i class="av ${who}">${who==='me'?'Я':'M'}</i>`;
   return `<span class="side ${who==='me'?'l':'r'} ${k==='v'?'on':''}">${who==='me'?av+val:val+av}</span>`;};
 const H=v=>38;
@@ -142,8 +168,13 @@ function row([t,a,b],i){
   const meet=!!(A&&B&&!blocked&&A+B>=17);
   const half=()=>'';
   const m=Math.min(A,B);
-  let dr='';
-  if(meet){const n=m>=10?3:m>=9?2:1,go=10+(m-7)*12,ds=6+(m-7)*3;
+  let dr='';const R=rel(a,b);
+  const giverMe=R==='fit'&&a.d.includes('give')&&b.d.includes('get'), giverThem=R==='fit'&&b.d.includes('give')&&a.d.includes('get');
+  if(meet&&role==='flow'&&(giverMe||giverThem)){const n=m>=10?4:m>=9?3:2,go=10+(m-7)*12,ds=6+(m-7)*3;
+    for(let k=0;k<n;k++){const dd=(k*1.9/n).toFixed(2),yy=(k%2?-1:1)*(1+k);
+      if(giverMe)dr+=`<span class="dr fr" style="--fc:var(--me);--go:${go}px;--yy:${yy}px;--dd:${dd}s;--ds:${ds}px"></span>`;
+      if(giverThem)dr+=`<span class="dr fl" style="--fc:var(--them);--go:${go}px;--yy:${yy}px;--dd:${dd}s;--ds:${ds}px"></span>`;}}
+  else if(meet){const n=m>=10?3:m>=9?2:1,go=10+(m-7)*12,ds=6+(m-7)*3;
     for(let k=0;k<n;k++){const dd=(k*2.6/n).toFixed(2),yy=(k%2?-1:1)*(2+k*2);
       dr+=`<span class="dr m" style="--go:${go}px;--yy:${yy}px;--dd:${dd}s;--ds:${ds}px"></span><span class="dr t" style="--go:${go}px;--yy:${yy}px;--dd:${(+dd+1.3).toFixed(2)}s;--ds:${ds}px"></span>`;}}
   const ir=99, mw=0, jr=meet?A/(A+B):.5;
@@ -151,13 +182,18 @@ function row([t,a,b],i){
   const goo=`<div class="goo">${A?`<span class="blob l"></span><span class="part l" style="--h:${H(A)}px"></span>`:''}${B?`<span class="blob r"></span><span class="part r" style="--h:${H(B)}px"></span>`:''}${mw?'<span class="mix"></span>':''}${dr}</div>${fz}`;
   const lab=cls=>`<div class="lab ${cls}">${side(a,'me')}<span class="nm">${t}</span>${side(b,'them')}</div>`;
   const blk=blocked||ka==='soft'||kb==='soft'||!A||!B;
-  return `<div class="gr ${blocked?'hard':(ka==='soft'||kb==='soft')?'soft':''} ${meet?'meet':''}" style="--ir:${ir}px;--mw:${mw}px;--jr:${jr.toFixed(3)};--ra:${A/10};--rb:${B/10};--d:${(i*.07).toFixed(2)}s">${half(ka,'l')}${half(kb,'r')}${goo}${lab('')}${A?lab('wl'):''}${B?lab('wr'):''}</div>`;
+  const R2=rel(a,b),vt=R2==='fit'?'<span class="v fit">дополняете друг друга</span>':R2==='same'?'<span class="v same">оба '+(a.d[0]==='give'?'даёте':'получаете')+' — договоритесь</span>':'<span class="v"></span>';
+  const det=role==='tap'&&(dirW(a&&a.d)||dirW(b&&b.d))?`<div class="det"><div><span>Ты: <b>${dirW(a&&a.d)||'—'}</b></span>${vt}<span>M: <b>${dirW(b&&b.d)||'—'}</b></span></div></div>`:'';
+  return `<div class="item">`+`<div class="gr ${blocked?'hard':(ka==='soft'||kb==='soft')?'soft':''} ${meet?'meet':''}" style="--ir:${ir}px;--mw:${mw}px;--jr:${jr.toFixed(3)};--ra:${A/10};--rb:${B/10};--d:${(i*.07).toFixed(2)}s">${half(ka,'l')}${half(kb,'r')}${goo}${lab('')}${A?lab('wl'):''}${B?lab('wr'):''}</div>`+det+`</div>`;
 }
 function chem(){
   let mn=0,mx=0,react=0;CASES.flatMap(c=>c[1]).forEach(([,a,b])=>{if(kind(a)==='v'&&kind(b)==='v'){mn+=Math.min(a.v,b.v);mx+=Math.max(a.v,b.v);if(a.v+b.v>=17)react++;}});
   const sc=Math.round(mn/mx*100);const word=sc>=80?'Сильная химия':sc>=60?'Есть химия':sc>=40?'Искрит местами':'Пока слабо';
   return `<div class="chem"><span class="pair"><i class="av me">Я</i><i class="av them">M</i></span><span class="score">${sc}%<small>${word}</small></span><span class="what">Реакция в <b>${react}</b> интересах</span></div>`;}
-function draw(){let i=0;document.getElementById('root').innerHTML=chem()+CASES.map(([h,rows])=>`<div class="case"><h3>${h}</h3><div class="rows">${rows.map(r=>row(r,i++)).join('')}</div></div>`).join('');}
+let role='cap';
+function draw(){document.getElementById('root').className='wrap role-'+role;['cap','tap','flow'].forEach(k=>document.getElementById('r_'+k).setAttribute('aria-pressed',role===k));let i=0;document.getElementById('root').innerHTML=chem()+CASES.map(([h,rows])=>`<div class="case"><h3>${h}</h3><div class="rows">${rows.map(r=>row(r,i++)).join('')}</div></div>`).join('');}
+['cap','tap','flow'].forEach(k=>document.getElementById('r_'+k).onclick=()=>{role=k;draw();});
+document.getElementById('root').addEventListener('click',e=>{const it=e.target.closest('.item');if(it&&role==='tap')it.classList.toggle('open');});
 draw();
 document.getElementById('replay').onclick=draw;
 const modes=['system','light','dark'],names={system:'системная',light:'светлая',dark:'тёмная'};
