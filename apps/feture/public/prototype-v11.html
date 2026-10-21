@@ -2404,6 +2404,12 @@ button.pill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:no
 .actc-th.multi{box-shadow:3px -3px 0 -1px var(--raise),5px -5px 0 -2px var(--line2);margin:3px 5px 0 0}
 .actc-n{position:absolute;left:3px;bottom:3px;display:inline-flex;align-items:center;gap:2px;padding:1px 5px 1px 4px;border-radius:99px;background:rgba(10,6,10,.66);color:#fff;font-size:11px;font-weight:700;line-height:1.3}.actc-n svg{width:11px;height:11px}
 .actth .actc-n{left:auto;right:3px;bottom:3px}
+
+/* liked posts without a photo: text snippet, poll and interests tiles */
+.actc-th.txt{align-items:start;justify-items:start;padding:6px;background:var(--surf);border:1px solid var(--line);color:var(--mute);font-size:9.5px;line-height:1.25;text-align:left}
+.actc-th.txt span{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+.actc-th.kind{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:var(--surf);border:1px solid var(--line);color:var(--accent)}.actc-th.kind svg{width:20px;height:20px}.actc-th.kind small{font-size:9.5px;font-weight:650;color:var(--mute)}
+.actth.ic svg,.actth.kind svg{width:20px;height:20px;color:var(--accent)}
 </style>
 </head>
 <body>
@@ -4498,9 +4504,15 @@ function followStream(posts,kinds,withAct){const items=[],all=!kinds.length,has=
   followingOf('me').filter(id=>person(id)&&activityShown(id)&&!muted.has(id)).forEach(id=>activityOf(id).slice(0,12).forEach(x=>{const key={like:'likes',event:'events',comm:'comm',follow:'follows'}[x.k];if(!has(key)||(x.k==='like'&&person(id)?.hideLikes))return;const gid=id+'|'+x.k+'|'+new Date(x.t).toDateString();(groups[gid]??=[]).push({...x,who:id});}));
   Object.entries(groups).forEach(([gid,g])=>g.length>=2?items.push({k:'group',kind:g[0].k,who:g[0].who,gid,items:g.sort((a,b)=>b.t-a.t),t:Math.max(...g.map(x=>x.t))}):items.push(g[0]));}
  return items.sort((a,b)=>b.t-a.t).slice(0,60);}
+/** thumbnail of a liked post by what it is: photo (stack + counter when several), poll, interests, or a text snippet */
+function likeThumb(p,row){const img=(p.media||[]).find(m=>m.type==='image'&&m.url),mc=(p.media||[]).filter(m=>m.url).length;
+ if(img)return {cls:mc>1?'multi':'',html:`<img src="${esc(img.url)}" alt="" loading="lazy" draggable="false">${mc>1?`<span class="actc-n">${I.image}${mc}</span>`:''}`,mc};
+ if(p.poll||p.type==='poll')return {cls:'kind',html:`${I.poll}${row?'':`<small>${L('Опрос','Poll')}</small>`}`,mc:0};
+ if(p.result||p.type==='result')return {cls:'kind',html:`${I.test}${row?'':`<small>${L('Интересы','Interests')}</small>`}`,mc:0};
+ return row?{cls:'ic',html:I.edit,mc:0}:{cls:'txt',html:`<span>${esc(mdPlain(T(p.text)).slice(0,40))}</span>`,mc:0};}
 /** the tappable preview of one activity item (used by single cards and by the expanded list of a group) */
 function actPrev(x){const pv=(go,p,thumb,t,s)=>`<button class="actc-p" data-go="${go}" data-p='${esc(JSON.stringify(p))}'><span class="actth ${thumb[1]||''}">${thumb[0]}</span><span class="tx"><b>${t}</b>${s?`<small>${s}</small>`:''}</span></button>`;
- if(x.k==='like'){const p=x.post,img=(p.media||[]).find(m=>m.type==='image'&&m.url),mc=(p.media||[]).filter(m=>m.url).length;return pv('F05',{id:p.id},[img?`<img src="${esc(img.url)}" alt="" loading="lazy" draggable="false"><i>${I.heartf}</i>${mc>1?`<span class="actc-n">${I.image}${mc}</span>`:''}`:I.heartf,img?'':'ic'],esc(mdPlain(T(p.text)).slice(0,80)||L('Публикация','Post')),`${esc(pname(p.author))}${mc>1?` · ${pl(mc,['фото','фото','фото'],['photo','photos'])}`:''} · ${F.rel(x.t)}`);}
+ if(x.k==='like'){const p=x.post,t=likeThumb(p,1);return pv('F05',{id:p.id},[t.html,t.cls],esc(mdPlain(T(p.text)).slice(0,80)||L('Публикация','Post')),`${esc(pname(p.author))}${t.mc>1?` · ${pl(t.mc,['фото','фото','фото'],['photo','photos'])}`:''} · ${F.rel(x.t)}`);}
  if(x.k==='event'){const e=EV(x.e);return pv('E03',{id:x.e},[evCover(e,'cal'),''],esc(T(e.title)),`${F.date(e.start)} · ${e.format==='online'?L('онлайн','online'):esc(city(e.city))}`);}
  if(x.k==='comm'){const c=COMMUNITIES[x.c];return pv('C03',{id:x.c},[commAv(c),''],esc(T(c.name)),pl(C.members(x.c),['участник','участника','участников'],['member','members']));}
  return pv('P01',{id:x.p},[av(x.p,''),'round'],esc(pname(x.p)),esc(whoLine(x.p)));}
@@ -4508,7 +4520,7 @@ function actPrev(x){const pv=(go,p,thumb,t,s)=>`<button class="actc-p" data-go="
 function actCard(x,i){const who=x.who,nm=`<b>${esc(pname(who))}</b>`;let text,body;
  const head=(t)=>`<div class="actc-hd"><p class="actc-t">${t}<small>${F.rel(x.t)}</small></p><button class="ibtn ghost sm" data-act="actMenu" data-v="${esc(who)}" aria-label="${L('Ещё','More')}">${I.more}</button></div>`;
  if(x.k==='group'){const n=x.items.length,open=S.ui.actOpen?.has(x.gid);
-  const th=(g)=>{if(g.k==='like'){const img=(g.post.media||[]).find(m=>m.type==='image'&&m.url);const mc=(g.post.media||[]).filter(m=>m.url).length;return `<button class="actc-th ${mc>1?'multi':''}" data-go="F05" data-p='${esc(JSON.stringify({id:g.post.id}))}' aria-label="${esc(pname(g.post.author))}">${img?`<img src="${esc(img.url)}" alt="" loading="lazy" draggable="false">`:I.heartf}${mc>1?`<span class="actc-n">${I.image}${mc}</span>`:''}</button>`;}
+  const th=(g)=>{if(g.k==='like'){const t=likeThumb(g.post);return `<button class="actc-th ${t.cls}" data-go="F05" data-p='${esc(JSON.stringify({id:g.post.id}))}' aria-label="${esc(pname(g.post.author))}">${t.html}</button>`;}
    if(g.k==='follow')return `<button class="actc-th round" data-go="P01" data-p='${esc(JSON.stringify({id:g.p}))}' aria-label="${esc(pname(g.p))}">${av(g.p,'')}</button>`;return '';};
   if(x.kind==='like')text=L(`${nm}: нравится ${pl(n,['публикация','публикации','публикаций'],[])}`,`${nm} likes ${n} posts`);
   else if(x.kind==='follow')text=L(`${nm} теперь следит за ${n} ${n%10===1&&n%100!==11?'человеком':'людьми'}`,`${nm} now follows ${n} people`);
@@ -5505,7 +5517,7 @@ function activityShown(id,o={}){if(id==='couple'||person(id)?.pair)return false;
  if(o.asOther)return o.grant==='granted';return social('me').follows.has(id)||isMatch(id);}
 /* V11: believable demo activity — who did what, hours ago. Likes are [postId,h], events [eventId,status,h], communities [id,h], follows {n,from,step} (taken from the follow graph). */
 const ACT_LOG={
- noa:{likes:[['p10',.3],['p11',.5],['p12',.8],['p13',1.1],['p2',1.5],['p9',1.9],['p15',2.2],['p16',2.6]],events:[['e3','going',20]],follows:{n:1,from:30,step:1}},
+ noa:{likes:[['p10',.3],['p5',.5],['p11',.8],['p4',1.1],['p12',1.5],['p1',1.9],['p3',2.2],['p9',2.6]],events:[['e3','going',20]],follows:{n:1,from:30,step:1}},
  kira:{likes:[['p11',5],['p13',5.3],['p12',5.6],['p2',6],['p14',6.4]],events:[['e1','going',9]],follows:{n:4,from:26,step:.2}},
  sofi:{likes:[['p10',12]],follows:{n:6,from:3,step:.1}},
  maya:{likes:[['p11',30],['p10',30.4],['p9',31]],comm:[['slow',50]],follows:{n:3,from:28,step:.3}},

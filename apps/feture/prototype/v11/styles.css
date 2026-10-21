@@ -2393,3 +2393,9 @@ button.pill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:no
 .actc-th.multi{box-shadow:3px -3px 0 -1px var(--raise),5px -5px 0 -2px var(--line2);margin:3px 5px 0 0}
 .actc-n{position:absolute;left:3px;bottom:3px;display:inline-flex;align-items:center;gap:2px;padding:1px 5px 1px 4px;border-radius:99px;background:rgba(10,6,10,.66);color:#fff;font-size:11px;font-weight:700;line-height:1.3}.actc-n svg{width:11px;height:11px}
 .actth .actc-n{left:auto;right:3px;bottom:3px}
+
+/* liked posts without a photo: text snippet, poll and interests tiles */
+.actc-th.txt{align-items:start;justify-items:start;padding:6px;background:var(--surf);border:1px solid var(--line);color:var(--mute);font-size:9.5px;line-height:1.25;text-align:left}
+.actc-th.txt span{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+.actc-th.kind{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:var(--surf);border:1px solid var(--line);color:var(--accent)}.actc-th.kind svg{width:20px;height:20px}.actc-th.kind small{font-size:9.5px;font-weight:650;color:var(--mute)}
+.actth.ic svg,.actth.kind svg{width:20px;height:20px;color:var(--accent)}
