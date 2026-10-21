@@ -59,10 +59,10 @@ main.wrap{padding-block:16px 72px;display:grid;gap:22px}
   animation:ga 1.4s var(--spring) both,gb 1.4s var(--spring) both;animation-delay:var(--d),calc(var(--d) + .1s)}
 @keyframes ga{from{--ra:0}}@keyframes gb{from{--rb:0}}
 .goo{position:absolute;inset:0;filter:url(#goo)}
-.half{position:absolute;top:6px;bottom:6px;width:calc(50% - 6px);z-index:0}
-.half.l{left:6px;border-radius:99px 0 0 99px}.half.r{right:6px;border-radius:0 99px 99px 0}
+.half{position:absolute;top:6px;bottom:6px;width:calc(50% - 9px);z-index:0;border-radius:99px}
+.half.l{left:6px}.half.r{right:6px}
 .half.hard{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--danger) 24%,transparent) 0 6px,transparent 6px 12px)}
-.half.soft{border-block:1.5px dashed color-mix(in srgb,var(--warn) 65%,transparent)}
+.half.soft{border:1.5px dashed color-mix(in srgb,var(--warn) 65%,transparent)}
 .blob{position:absolute;top:6px;width:68px;height:38px;border-radius:99px}
 .blob.l{left:6px;background:var(--me)}.blob.r{right:6px;background:var(--them)}
 .part{position:absolute;top:50%;height:var(--h);margin-top:calc(var(--h) / -2);border-radius:99px}
@@ -84,7 +84,7 @@ main.wrap{padding-block:16px 72px;display:grid;gap:22px}
 .chem .score small{font-size:16px;letter-spacing:0;color:var(--mute);-webkit-text-fill-color:var(--mute);font-weight:700;margin-left:6px}
 .chem .what{font-size:14px;color:var(--mute)}
 .chem .what b{color:var(--ink)}
-.blk .part.l{width:min(var(--wl),calc(50% - 6px))}.blk .part.r{width:min(var(--wr),calc(50% - 6px))}
+.blk .part.l{width:min(var(--wl),calc(50% - 9px))}.blk .part.r{width:min(var(--wr),calc(50% - 9px))}
 .dr{position:absolute;top:50%;left:var(--jx);width:var(--ds);height:var(--ds);margin:calc(var(--ds) / -2) 0 0 calc(var(--ds) / -2);border-radius:50%;opacity:0;animation-delay:calc(var(--d) + 1.3s + var(--dd))}
 .dr.m{background:var(--me);animation:toR 2.6s ease-in-out infinite both;animation-delay:calc(var(--d) + 1.3s + var(--dd))}
 .dr.t{background:var(--them);animation:toL 2.6s ease-in-out infinite both;animation-delay:calc(var(--d) + 1.3s + var(--dd))}
