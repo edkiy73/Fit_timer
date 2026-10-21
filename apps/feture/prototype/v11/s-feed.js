@@ -46,15 +46,23 @@ function followStream(posts,kinds,withAct){const items=[],all=!kinds.length,has=
   followingOf('me').filter(id=>person(id)&&activityShown(id)&&!muted.has(id)).forEach(id=>activityOf(id).slice(0,12).forEach(x=>{const key={like:'likes',event:'events',comm:'comm',follow:'follows'}[x.k];if(!has(key)||(x.k==='like'&&person(id)?.hideLikes))return;const gid=id+'|'+x.k+'|'+new Date(x.t).toDateString();(groups[gid]??=[]).push({...x,who:id});}));
   Object.entries(groups).forEach(([gid,g])=>g.length>=2?items.push({k:'group',kind:g[0].k,who:g[0].who,gid,items:g.sort((a,b)=>b.t-a.t),t:Math.max(...g.map(x=>x.t))}):items.push(g[0]));}
  return items.sort((a,b)=>b.t-a.t).slice(0,60);}
-/** thumbnail of a liked post by what it is: photo (stack + counter when several), poll, interests, or a text snippet */
-function likeThumb(p,row){const img=(p.media||[]).find(m=>m.type==='image'&&m.url),mc=(p.media||[]).filter(m=>m.url).length;
- if(img)return {cls:mc>1?'multi':'',html:`<img src="${esc(img.url)}" alt="" loading="lazy" draggable="false">${mc>1?`<span class="actc-n">${I.image}${mc}</span>`:''}`,mc};
- if(p.poll||p.type==='poll')return {cls:'kind',html:`${I.poll}${row?'':`<small>${L('Опрос','Poll')}</small>`}`,mc:0};
- if(p.result||p.type==='result')return {cls:'kind',html:`${I.test}${row?'':`<small>${L('Интересы','Interests')}</small>`}`,mc:0};
- return row?{cls:'ic',html:I.edit,mc:0}:{cls:'txt',html:`<span>${esc(mdPlain(T(p.text)).slice(0,40))}</span>`,mc:0};}
+/** what a post is made of: media (photos / one or more videos), a poll, interests, text */
+function postParts(p){const media=(p.media||[]).filter(m=>m.url),photos=media.filter(m=>m.type!=='video').length,videos=media.filter(m=>m.type==='video').length;return {media,photos,videos,poll:!!(p.poll||p.type==='poll'),result:!!(p.result||p.type==='result')};}
+/** «6 фото · видео · опрос · интересы» — the composition of a post in words */
+function partsLine(p){const q=postParts(p),a=[];if(q.videos)a.push(q.videos>1?pl(q.videos,['видео','видео','видео'],['video','videos']):L('видео','video'));if(q.photos)a.push(pl(q.photos,['фото','фото','фото'],['photo','photos']));if(q.poll)a.push(L('опрос','poll'));if(q.result)a.push(L('интересы','interests'));return a.join(' · ');}
+/** thumbnail of a liked post: the first photo / video poster if there is media (counter for several, play mark for video), otherwise a poll / interests / text tile; extra parts ride as small marks */
+function likeThumb(p,row){const q=postParts(p),first=q.media[0],n=q.media.length;
+ const marks=`${q.poll&&n?`<i class="actc-x">${I.poll}</i>`:''}${q.result&&n?`<i class="actc-x r">${I.test}</i>`:''}`;
+ if(first){const src=first.type==='video'?first.poster:first.url;
+  const body=src?`<img src="${esc(src)}" alt="" loading="lazy" draggable="false">`:`<span class="actc-vid">${I.video}</span>`;
+  const cnt=n>1?`<span class="actc-n">${q.videos?I.video:I.image}${n}</span>`:first.type==='video'?`<span class="actc-n">${I.video}${fmtDur(first.dur||0)}</span>`:'';
+  return {cls:n>1?'multi':'',html:body+cnt+(row?'':marks),mc:n,parts:partsLine(p)};}
+ if(q.poll)return {cls:'kind',html:`${I.poll}${row?'':`<small>${L('Опрос','Poll')}</small>`}`,mc:0,parts:partsLine(p)};
+ if(q.result)return {cls:'kind',html:`${I.test}${row?'':`<small>${L('Интересы','Interests')}</small>`}`,mc:0,parts:partsLine(p)};
+ return row?{cls:'ic',html:I.edit,mc:0,parts:''}:{cls:'txt',html:`<span>${esc(mdPlain(T(p.text)).slice(0,40))}</span>`,mc:0,parts:''};}
 /** the tappable preview of one activity item (used by single cards and by the expanded list of a group) */
 function actPrev(x){const pv=(go,p,thumb,t,s)=>`<button class="actc-p" data-go="${go}" data-p='${esc(JSON.stringify(p))}'><span class="actth ${thumb[1]||''}">${thumb[0]}</span><span class="tx"><b>${t}</b>${s?`<small>${s}</small>`:''}</span></button>`;
- if(x.k==='like'){const p=x.post,t=likeThumb(p,1);return pv('F05',{id:p.id},[t.html,t.cls],esc(mdPlain(T(p.text)).slice(0,80)||L('Публикация','Post')),`${esc(pname(p.author))}${t.mc>1?` · ${pl(t.mc,['фото','фото','фото'],['photo','photos'])}`:''} · ${F.rel(x.t)}`);}
+ if(x.k==='like'){const p=x.post,t=likeThumb(p,1);return pv('F05',{id:p.id},[t.html,t.cls],esc(mdPlain(T(p.text)).slice(0,80)||L('Публикация','Post')),`${esc(pname(p.author))}${t.parts?` · ${t.parts}`:''} · ${F.rel(x.t)}`);}
  if(x.k==='event'){const e=EV(x.e);return pv('E03',{id:x.e},[evCover(e,'cal'),''],esc(T(e.title)),`${F.date(e.start)} · ${e.format==='online'?L('онлайн','online'):esc(city(e.city))}`);}
  if(x.k==='comm'){const c=COMMUNITIES[x.c];return pv('C03',{id:x.c},[commAv(c),''],esc(T(c.name)),pl(C.members(x.c),['участник','участника','участников'],['member','members']));}
  return pv('P01',{id:x.p},[av(x.p,''),'round'],esc(pname(x.p)),esc(whoLine(x.p)));}
