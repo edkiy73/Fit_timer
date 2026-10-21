@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FetUre — матрица сравнения</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400..850&display=swap" rel="stylesheet">
+<style>
+/* Layout: single reading column, decision document. Tokens = FetUre V11. Category colours are semantic. */
+:root{
+  --bg:#F5F3F0; --surf:#FFFFFF; --raise:#ECE8E3; --line:#E6E2DD; --line2:#D2CDC6;
+  --ink:#17151A; --mute:#66616B; --faint:#9B969F;
+  --accent:#D0153A; --violet:#6550D8;
+  --c-match:#1D7A51; --c-match-s:#E2F2EA;
+  --c-comp:#6550D8; --c-comp-s:#EDEAFC;
+  --c-try:#2F6FB3; --c-try-s:#E3EEF9;
+  --c-disc:#9A5D00; --c-disc-s:#F7EDDB;
+  --c-no:#C4182F; --c-no-s:#FBE5E8;
+  --c-hide:#66616B; --c-hide-s:#ECE8E3;
+  --font:"Onest",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111012; --surf:#1B191D; --raise:#242127; --line:#2D2A30; --line2:#3E3A42;
+  --ink:#F3F0F4; --mute:#A9A3AD; --faint:#77717B; --accent:#FF4566; --violet:#A797FF;
+  --c-match:#6BD3A4; --c-match-s:#173226; --c-comp:#A797FF; --c-comp-s:#2A2442; --c-try:#7DB6F0; --c-try-s:#16273A;
+  --c-disc:#E9B663; --c-disc-s:#3A2D17; --c-no:#FF6B80; --c-no-s:#3D161D; --c-hide:#A9A3AD; --c-hide-s:#242127; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111012; --surf:#1B191D; --raise:#242127; --line:#2D2A30; --line2:#3E3A42;
+  --ink:#F3F0F4; --mute:#A9A3AD; --faint:#77717B; --accent:#FF4566; --violet:#A797FF;
+  --c-match:#6BD3A4; --c-match-s:#173226; --c-comp:#A797FF; --c-comp-s:#2A2442; --c-try:#7DB6F0; --c-try-s:#16273A;
+  --c-disc:#E9B663; --c-disc-s:#3A2D17; --c-no:#FF6B80; --c-no-s:#3D161D; --c-hide:#A9A3AD; --c-hide-s:#242127; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15.5px/1.6 var(--font);-webkit-font-smoothing:antialiased}
+main{max-width:760px;margin:0 auto;padding-block:32px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:36px}
+h1,h2,h3{margin:0;text-wrap:balance}
+h1{font-size:clamp(30px,6vw,42px);line-height:1.04;letter-spacing:-.04em;font-weight:850}
+h2{font-size:23px;letter-spacing:-.03em;font-weight:800;line-height:1.15}
+h3{font-size:15px;font-weight:750}
+p{margin:0;max-width:66ch}
+.k{font-size:13px;font-weight:700;color:var(--accent)}
+.lead{color:var(--mute);font-size:16.5px}
+section{display:grid;gap:14px}
+ul,ol{margin:0;padding-left:20px;display:grid;gap:6px;max-width:66ch}
+.note{font-size:14px;color:var(--mute)}
+.box{background:var(--surf);border:1px solid var(--line);border-radius:16px;padding:16px;display:grid;gap:10px}
+.cat{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;padding:3px 10px;border-radius:99px;white-space:nowrap}
+.cat.match{background:var(--c-match-s);color:var(--c-match)}.cat.comp{background:var(--c-comp-s);color:var(--c-comp)}.cat.try{background:var(--c-try-s);color:var(--c-try)}
+.cat.disc{background:var(--c-disc-s);color:var(--c-disc)}.cat.no{background:var(--c-no-s);color:var(--c-no)}.cat.hide{background:var(--c-hide-s);color:var(--c-hide)}
+.cats{display:grid;gap:10px}
+.cats .row{display:grid;grid-template-columns:200px 1fr;gap:12px;align-items:start}
+@media (max-width:560px){.cats .row{grid-template-columns:1fr;gap:4px}}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:16px;background:var(--surf)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:10px;border-top:1px solid var(--line);text-align:left;vertical-align:top}
+thead th{border-top:0;font-size:12px;color:var(--mute);font-weight:700;letter-spacing:.03em}
+tbody th{font-weight:700;white-space:nowrap}
+td small{display:block;color:var(--mute);font-size:12px;margin-top:3px}
+.mx{min-width:640px}
+.mx td{text-align:center}.mx td .cat{white-space:normal;justify-content:center}
+.flag{border-left:3px solid var(--accent);padding:2px 0 2px 12px}
+.q{counter-reset:q;display:grid;gap:12px}
+.q > div{background:var(--surf);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:grid;gap:6px}
+.q b{font-weight:750}
+/* static UI sketch */
+.ui{background:var(--surf);border:1px solid var(--line);border-radius:22px;padding:16px;display:grid;gap:14px}
+.ui h4{margin:0;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);font-weight:700;display:flex;gap:8px;align-items:center}
+.ui h4 i{width:8px;height:8px;border-radius:50%;background:var(--cc)}
+.r{position:relative;height:46px;border-radius:99px;background:var(--raise);overflow:hidden}
+.r .f{position:absolute;left:4px;top:4px;bottom:4px;width:calc((100% - 8px) * var(--v) / 10);border-radius:99px;background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 78%,#000),var(--accent))}
+.r .t{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;padding:0 6px 0 16px;font-size:14.5px;font-weight:700}
+.r .t.w{color:#fff;clip-path:inset(0 calc(100% - 4px - (100% - 8px) * var(--v) / 10) 0 0)}
+.r .t .them{display:flex;align-items:center;gap:6px}
+.r .t .them b{font-weight:850;font-variant-numeric:tabular-nums}
+.r .t .them i{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font:800 12px/1 var(--font);font-style:normal;color:#fff;background:color-mix(in srgb,var(--violet) 78%,#000)}
+.r .t .mine{font-weight:850;font-variant-numeric:tabular-nums;margin-left:auto;margin-right:10px;opacity:.95}
+.rows{display:grid;gap:8px}
+</style>
+</head>
+<body>
+
+<main>
+  <header style="display:grid;gap:12px">
+    <span class="k">FetUre V11 · сравнение двух людей</span>
+    <h1>Матрица сравнения интересов</h1>
+    <p class="lead">Разбор того, как сравнение уже устроено в V11 и в спецификации, где наши эксперименты с каплями от этого ушли, и предложение одной простой системы: какие параметры сравниваем, какие получаются исходы и как их показать.</p>
+  </header>
+
+  <section>
+    <h2>1. Где сравнение уже есть в приложении</h2>
+    <ul>
+      <li><b>Анкета в знакомствах и профиль человека</b> — блок «Что у вас общего»: кружок с числом общих интересов, ниже «Совпадает», «Дополняете друг друга», «Стоит обсудить».</li>
+      <li><b>Экран «Что у вас общего»</b> (P05) — те же три группы целиком, плюс «Мало данных».</li>
+      <li><b>Окно «Это взаимно»</b>, список симпатий, совпадения, шапка чата — одна строка-итог: «3 общих интереса, дополняете друг друга».</li>
+      <li><b>Сравнение по одной теме</b> — ответы обоих рядом, строкой на человека.</li>
+    </ul>
+    <p class="note">То есть сравнение — это прежде всего объяснение в знакомствах и профиле, а не отдельная игра. Новый визуал должен встать в эти места, а не жить отдельно.</p>
+  </section>
+
+  <section>
+    <h2>2. Правила, которые уже зафиксированы</h2>
+    <div class="box">
+      <p class="flag"><b>Без общего процента.</b> Спецификация прямо запрещает «87% совместимости» без проверенной методики. В V11 это записано как «категории, без универсальной оценки».</p>
+      <p class="flag"><b>Только то, что видно обоим.</b> Сравниваются публичные интересы (и приватные — только по выданному доступу). Скрытое не участвует.</p>
+      <p class="flag"><b>Границы не раскрываются.</b> Нельзя писать «не подходит из-за его табу», если табу — частное поле. Жёсткая граница не может выглядеть как совпадение.</p>
+      <p class="flag"><b>Категории спецификации:</b> совпадает · дополняется · стоит обсудить · недостаточно данных.</p>
+    </div>
+    <p class="note">Что из наших демо этому противоречит: процент «химии» в шапке и показ чужого «табу» в строке сравнения. Это надо убрать или согласовать отдельно.</p>
+  </section>
+
+  <section>
+    <h2>3. Что сравниваем</h2>
+    <p>У каждого человека по каждому интересу — два параметра. Всё остальное (профиль, формат отношений) уже сравнивается отдельно и сюда не входит.</p>
+    <div class="tw"><table>
+      <thead><tr><th>Параметр</th><th>Значения</th><th>Как группируем для сравнения</th></tr></thead>
+      <tbody>
+        <tr><th>Отношение</th><td>1–10, «обсуждаемо», «табу», не отмечено / скрыто</td><td><b>Сильно</b> 6–10 · <b>Слабо</b> 1–5 · обсуждаемо · табу · нет данных<small>6/6 и 6/10 — одно и то же «сильно у обоих», как ты и сказал. Порог 6 уже стоит в V11.</small></td></tr>
+        <tr><th>Роль</th><td>«всё» (по умолчанию) или 1–2 из: даю, получаю, смотрю</td><td><b>Подходят</b>: у кого-то «всё», или даю ↔ получаю, или есть «смотрю» · <b>Не сходятся</b>: оба только «даю» или оба только «получаю»<small>«Смотрю» + «смотрю» — не критично, считаем «подходят».</small></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>4. Исходы — шесть, и каждый понятен словом</h2>
+    <div class="cats">
+      <div class="row"><span class="cat match">Совпадает</span><p>Сильно у обоих, роли подходят. Главная группа, её показываем первой.</p></div>
+      <div class="row"><span class="cat comp">Дополняете друг друга</span><p>Совпадает, и роли явно дополняют: один «даю», другой «получаю». Подвид «Совпадает», самый ценный.</p></div>
+      <div class="row"><span class="cat try">Можно попробовать</span><p>Обоим интересно, но не сильно, и уровни близки (разница до 3). Например 5/5, 3/4, 6/4. Это то, «к чему стремиться».</p></div>
+      <div class="row"><span class="cat disc">Стоит обсудить</span><p>Уровни сильно расходятся (разница 4+), или у кого-то «обсуждаемо». Например 10/3, 8/2.</p></div>
+      <div class="row"><span class="cat no">Не сходится по ролям</span><p>Обоим сильно, но роли одинаковые: оба только «даю» или оба только «получаю». Совпадением не считается.</p></div>
+      <div class="row"><span class="cat hide">Не показываем</span><p>Табу у кого-то, или интерес есть только у одного, или он скрыт. Ничего не раскрываем; в счёт «мало данных».</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>5. Матрица: ты × он</h2>
+    <p class="note">Строка — твоё отношение, столбец — его. Внутри — исход до учёта ролей.</p>
+    <div class="tw"><table class="mx">
+      <thead><tr><th></th><th>Сильно 6–10</th><th>Слабо 1–5</th><th>Обсуждаемо</th><th>Табу</th><th>Нет / скрыто</th></tr></thead>
+      <tbody>
+        <tr><th>Сильно 6–10</th><td><span class="cat match">Совпадает</span><small>роли решают: дополняете / не сходится</small></td><td><span class="cat try">Можно попробовать</span><small>если разница до 3</small><span class="cat disc" style="margin-top:6px">Стоит обсудить</span><small>если разница 4+</small></td><td><span class="cat disc">Стоит обсудить</span></td><td><span class="cat hide">Не показываем</span></td><td><span class="cat hide">Не показываем</span></td></tr>
+        <tr><th>Слабо 1–5</th><td><span class="cat try">Можно попробовать</span><small>или «обсудить» при разнице 4+</small></td><td><span class="cat try">Можно попробовать</span></td><td><span class="cat disc">Стоит обсудить</span></td><td><span class="cat hide">Не показываем</span></td><td><span class="cat hide">Не показываем</span></td></tr>
+        <tr><th>Обсуждаемо</th><td><span class="cat disc">Стоит обсудить</span></td><td><span class="cat disc">Стоит обсудить</span></td><td><span class="cat disc">Стоит обсудить</span></td><td><span class="cat hide">Не показываем</span></td><td><span class="cat hide">Не показываем</span></td></tr>
+        <tr><th>Табу</th><td colspan="5"><span class="cat hide">Не показываем</span><small>ни тебе, ни ему — граница остаётся частной</small></td></tr>
+        <tr><th>Нет / скрыто</th><td colspan="5"><span class="cat hide">Не показываем</span><small>идёт в «мало данных»</small></td></tr>
+      </tbody>
+    </table></div>
+    <div class="tw"><table>
+      <thead><tr><th>Поверх «Совпадает» — роли</th><th>Итог</th></tr></thead>
+      <tbody>
+        <tr><td>Один «даю», другой «получаю» (или в ответах есть такая пара)</td><td><span class="cat comp">Дополняете друг друга</span></td></tr>
+        <tr><td>У кого-то «всё», или есть «смотрю»</td><td><span class="cat match">Совпадает</span></td></tr>
+        <tr><td>Оба только «даю» / оба только «получаю»</td><td><span class="cat no">Не сходится по ролям</span></td></tr>
+      </tbody>
+    </table></div>
+    <p class="note">Для «Можно попробовать» и «Стоит обсудить» роли пока не влияют — чтобы не плодить комбинации. Их можно показать подписью.</p>
+  </section>
+
+  <section>
+    <h2>6. Как это может выглядеть — спокойно и без движения</h2>
+    <p>Список в P05 и в блоке профиля разбит по исходам — те же группы, что уже есть в V11. Строка — эталонная капсула: твоя заливка и название внутри, справа его аватар и оценка. Цвет группы — только у заголовка, сами строки одинаковые, поэтому их легко сравнивать.</p>
+    <div class="ui">
+      <h4 style="--cc:var(--c-comp)"><i></i>Дополняете друг друга</h4>
+      <div class="rows">
+        <div class="r" style="--v:10"><span class="f"></span><div class="t"><span>Забота после</span><span class="mine">10</span><span class="them"><b>10</b><i>M</i></span></div><div class="t w"><span>Забота после</span><span class="mine">10</span><span class="them"><b>10</b><i>M</i></span></div></div>
+      </div>
+      <h4 style="--cc:var(--c-match)"><i></i>Совпадает</h4>
+      <div class="rows">
+        <div class="r" style="--v:8"><span class="f"></span><div class="t"><span>Шибари</span><span class="mine">8</span><span class="them"><b>9</b><i>M</i></span></div><div class="t w"><span>Шибари</span><span class="mine">8</span><span class="them"><b>9</b><i>M</i></span></div></div>
+        <div class="r" style="--v:7"><span class="f"></span><div class="t"><span>Ролевые игры</span><span class="mine">7</span><span class="them"><b>6</b><i>M</i></span></div><div class="t w"><span>Ролевые игры</span><span class="mine">7</span><span class="them"><b>6</b><i>M</i></span></div></div>
+      </div>
+      <h4 style="--cc:var(--c-try)"><i></i>Можно попробовать</h4>
+      <div class="rows">
+        <div class="r" style="--v:5"><span class="f"></span><div class="t"><span>Латекс</span><span class="mine">5</span><span class="them"><b>5</b><i>M</i></span></div><div class="t w"><span>Латекс</span><span class="mine">5</span><span class="them"><b>5</b><i>M</i></span></div></div>
+      </div>
+      <h4 style="--cc:var(--c-disc)"><i></i>Стоит обсудить</h4>
+      <div class="rows">
+        <div class="r" style="--v:10"><span class="f"></span><div class="t"><span>Контроль</span><span class="mine">10</span><span class="them"><b>3</b><i>M</i></span></div><div class="t w"><span>Контроль</span><span class="mine">10</span><span class="them"><b>3</b><i>M</i></span></div></div>
+      </div>
+    </div>
+    <p class="note">Это набросок для обсуждения логики, не финальный визуал. Движение пока не добавляем; позже можно одно — плавное появление строк.</p>
+  </section>
+
+  <section>
+    <h2>7. Что нужно решить</h2>
+    <div class="q">
+      <div><b>Процент «химии»: убираем?</b><span>Спецификация запрещает общий процент. Предлагаю вместо него итог словами: «4 совпадения, дополняете друг друга в 1, стоит обсудить 2».</span></div>
+      <div><b>Пороги: «сильно» от 6, «сильно расходится» от разницы 4?</b><span>Оба числа уже стоят в V11. Если устраивают — матрица готова.</span></div>
+      <div><b>Табу второго человека: никогда не показываем?</b><span>Так требуют правила приватности. Альтернатива — показывать «не совпадает» без причины, но и это частично раскрывает границу.</span></div>
+      <div><b>«Не сходится по ролям»: показывать отдельной группой или прятать?</b><span>Это не секрет (роль — часть публичного ответа), но может звучать резко. Можно мягче: «Роли не совпали».</span></div>
+    </div>
+  </section>
+</main>
+</body>
+</html>
