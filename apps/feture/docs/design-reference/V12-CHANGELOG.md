@@ -51,3 +51,9 @@ Decision record: `public/prototype-v11-compare-matrix.html`. Notes: `public/prot
 - New couple invitations work immediately after dissolution or expiry. Recovery ends when the new invitation is accepted. The new identity inherits no grants, trust, chats or drafts; former post text remains in a separate archive.
 - Acceptance uses the invited partner, not the former partner; focused contract covers both timings and repeated replacement.
 - QA join toast uses community names instead of rope/first and identifies the test action.
+
+## 2026-10-21 — follow-up phone refinements
+
+- «Мои интересы» attachment heading: 13px, quieter weight and muted colour; 12px card padding matches polls on all sides.
+- «Скоро рядом» is a proper feed item with a top divider and 16px vertical padding, matching posts; heading aligns with the content edge.
+- Removed obsolete QA actions that simulate the partner joining/leaving communities or being restricted there, including their toast handlers. Community participation is personal, not a shared-couple action. This does not change real personal membership or expose a partner’s activity.
