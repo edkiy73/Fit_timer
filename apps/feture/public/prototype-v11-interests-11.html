@@ -68,6 +68,7 @@ main.wrap{padding-block:16px 72px;display:grid;gap:22px}
 .part{position:absolute;top:50%;height:var(--h);margin-top:calc(var(--h) / -2);border-radius:99px}
 .part.l{left:6px;width:var(--wl);background:var(--me)}
 .part.r{right:6px;width:var(--wr);background:var(--them)}
+.gr.meet{--jx:calc(6px + (100% - 12px) * (.5 + (var(--jr) - .5) * 2.2))}
 .meet .part.l{width:calc(var(--jx) - 5px);border-radius:99px var(--ir) var(--ir) 99px}
 .meet .part.r{width:calc(100% - 5px - var(--jx));border-radius:var(--ir) 99px 99px var(--ir)}
 .mix{position:absolute;top:6px;height:38px;left:calc(var(--jx) - var(--mw) / 2);width:var(--mw);background:linear-gradient(90deg,var(--me),var(--them))}
@@ -114,7 +115,7 @@ main.wrap{padding-block:16px 72px;display:grid;gap:22px}
 <div class="wrap"><header class="intro">
   <div class="top"><span class="eyebrow">FetUre V11 · химия</span><button class="btn" id="themeBtn" type="button">Тема: системная</button></div>
   <h1>Химия: где у вас реакция</h1>
-  <p class="lead">Капля вытекает из аватара с оценкой. Чем сильнее интерес, тем она длиннее. Если обоим сильно, капли дотягиваются и мягко сливаются, а через перемычку перетекают капельки: 8/9 — едва коснулись, «талия» и одна капелька; 9/10 — перемычка шире; 10/10 — слились полностью, капелек больше всего. Подписи над группами только для этой страницы.</p>
+  <p class="lead">Капля вытекает из аватара с оценкой. Чем сильнее интерес, тем она длиннее. Если обоим сильно, капли дотягиваются и мягко сливаются, а через перемычку перетекают капельки: место встречи смещается к тому, у кого оценка ниже: 10/10 — ровно посередине, 8/10 — заметно ближе к тебе. Чем выше общий интерес, тем больше капелек и пузырьков. Подписи над группами только для этой страницы.</p>
 </header></div>
 <div class="bar"><div class="wrap"><button class="btn" id="replay" type="button">Ещё раз</button></div></div>
 
@@ -144,12 +145,12 @@ function row([t,a,b],i){
   if(meet){const n=m>=10?3:m>=9?2:1,go=10+(m-7)*12,ds=6+(m-7)*3;
     for(let k=0;k<n;k++){const dd=(k*2.6/n).toFixed(2),yy=(k%2?-1:1)*(2+k*2);
       dr+=`<span class="dr m" style="--go:${go}px;--yy:${yy}px;--dd:${dd}s;--ds:${ds}px"></span><span class="dr t" style="--go:${go}px;--yy:${yy}px;--dd:${(+dd+1.3).toFixed(2)}s;--ds:${ds}px"></span>`;}}
-  const ir=meet?(m>=10?0:m>=9?8:99):99, mw=meet?(m>=10?44:m>=9?22:0):0;
+  const ir=99, mw=0, jr=meet?A/(A+B):.5;
   let fz='';if(meet){const n=m-7;for(let k=0;k<n*2;k++)fz+=`<span class="fz" style="--fs:${3+(k%3)}px;--fx:${((k%2?1:-1)*(3+k*3))}px;--fd:${(k*.45).toFixed(2)}s"></span>`;}
   const goo=`<div class="goo">${A?`<span class="blob l"></span><span class="part l" style="--h:${H(A)}px"></span>`:''}${B?`<span class="blob r"></span><span class="part r" style="--h:${H(B)}px"></span>`:''}${mw?'<span class="mix"></span>':''}${dr}</div>${fz}`;
   const lab=cls=>`<div class="lab ${cls}">${side(a,'me')}<span class="nm">${t}</span>${side(b,'them')}</div>`;
   const blk=blocked||ka==='soft'||kb==='soft'||!A||!B;
-  return `<div class="gr ${blk?'blk':''} ${meet?'meet':''}" style="--ir:${ir}px;--mw:${mw}px;--ra:${A/10};--rb:${B/10};--d:${(i*.07).toFixed(2)}s">${half(ka,'l')}${half(kb,'r')}${goo}${lab('')}${A?lab('wl'):''}${B?lab('wr'):''}</div>`;
+  return `<div class="gr ${blk?'blk':''} ${meet?'meet':''}" style="--ir:${ir}px;--mw:${mw}px;--jr:${jr.toFixed(3)};--ra:${A/10};--rb:${B/10};--d:${(i*.07).toFixed(2)}s">${half(ka,'l')}${half(kb,'r')}${goo}${lab('')}${A?lab('wl'):''}${B?lab('wr'):''}</div>`;
 }
 function chem(){
   let mn=0,mx=0,react=0;CASES.flatMap(c=>c[1]).forEach(([,a,b])=>{if(kind(a)==='v'&&kind(b)==='v'){mn+=Math.min(a.v,b.v);mx+=Math.max(a.v,b.v);if(a.v+b.v>=17)react++;}});
