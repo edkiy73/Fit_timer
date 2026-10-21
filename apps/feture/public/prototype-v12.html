@@ -2473,6 +2473,30 @@ button.pill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:no
 .cmp-pick .chips{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
 .cmp-head{display:grid;justify-items:center;text-align:center;gap:2px;margin-top:6px}.cmp-head b{display:block;font-size:17px;font-weight:750;line-height:1.25}.cmp-head small{color:var(--mute);font-size:13px}
 .cmp-groups .cg:first-child{margin-top:16px}
+
+/* ===== V12 — interests as reference capsules (replace the V11 jars everywhere) ===== */
+.jars.caps{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:8px!important;min-width:0}
+.sc{position:relative;display:block;width:100%;height:44px;border-radius:99px;background:var(--raise);overflow:hidden;border:0;padding:0;margin:0;font:inherit;color:inherit;text-align:left;isolation:isolate}
+button.sc{cursor:pointer}button.sc:active{transform:scale(.985)}
+.sc{--fw:min(max(36px,calc((100% - 8px) * var(--v) / 10)),calc(100% - 86px))}.sc.full{--fw:calc(100% - 8px)}
+.sc-f{position:absolute;left:4px;top:4px;bottom:4px;width:var(--fw);border-radius:99px;background:linear-gradient(90deg,var(--jc0),var(--jc));transition:width .9s cubic-bezier(.3,1.2,.5,1) var(--d,0s)}
+.jars.pre .sc-f{width:0}
+.sc-l{position:absolute;inset:0;display:flex;align-items:center;gap:6px;padding:0 14px 0 16px;font-size:14.5px;font-weight:650;color:var(--ink);z-index:2;pointer-events:none}
+.sc-l.w{color:#fff;z-index:3;clip-path:inset(0 calc(100% - 4px - var(--fw)) 0 0);transition:opacity .3s}
+.jars.pre .sc-l.w{opacity:0}
+.sc-l.c{justify-content:center;color:var(--mute);font-weight:650}
+.sc-l.c svg{width:16px;height:16px}
+.sc-n{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc-v{flex:none;display:grid;justify-items:end;line-height:1;gap:2px;font-variant-numeric:tabular-nums}
+.sc-v b{font-size:15px;font-weight:850}.sc-v em{font-style:normal;font-size:9.5px;font-weight:700;opacity:.85;white-space:nowrap}
+.sc-vis{flex:none;display:inline-grid;opacity:.6}.sc-vis svg{width:13px;height:13px}
+.sc-was{flex:none;font-size:11px;font-weight:650;color:var(--warn)}.sc-l.w .sc-was{color:#fff;opacity:.85}
+.sc-lim{flex:none;font-size:12.5px;font-weight:700}.sc-lim.t{color:var(--danger)}.sc-lim.s{color:var(--warn)}
+.sc.hard{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--danger) 16%,var(--raise)) 0 6px,var(--raise) 6px 12px)}
+.sc.soft::after,.sc.more::after,.sc.add::after{content:"";position:absolute;inset:0;border-radius:inherit;border:1.5px dashed color-mix(in srgb,var(--warn) 65%,transparent);pointer-events:none}
+.sc.more,.sc.add{background:none}.sc.more::after,.sc.add::after{border-color:var(--line2)}
+.sc.add .sc-l.c{color:var(--accent)}
+.testcard .jars.caps{gap:6px!important}.testcard .sc{height:38px}.testcard .sc-l{font-size:13px}
 </style>
 </head>
 <body>
@@ -3601,15 +3625,17 @@ function commitJointPost(q,reviewer,delegated=false){
 function jarColor(v){v=Math.max(1,Math.min(10,+v||1));return `color-mix(in srgb,var(--accent) ${Math.round(35+(v-1)/9*65)}%,var(--accent-deep))`;}
 const jarInk=v=>(+v||1)>=6?'#fff':'#1A1414';
 function jarsHTML(list,o={}){
+ /* V12: «jars» are now the reference capsule — one row per interest: fill = level, the topic inside, level and role at the end.
+    Same signature and options as the V11 jar shelf, so every screen that showed jars now shows capsules. */
  const items=list.map(normJar);
- return `<div class="jars ${o.pre?'pre':''} ${o.cls||''}">${items.map((j,i)=>{
-  const tag=o.act?'button':'div';const attrs=o.act?`data-act="${o.act}" data-v="${j.t}" ${o.who?`data-who="${o.who}" data-ans="${j.limit||j.lv}"${j.dir?` data-dir="${j.dir.join(' ')}"`:''}`:''} aria-label="${esc(topic(j.t))}: ${esc(jarWord(j))}"`:'';
-  const was=o.was&&o.was[j.t]!=null?`<small class="was">${L('было','was')} ${o.was[j.t]==='hard'?L('табу','taboo'):o.was[j.t]==='discuss'?L('обсужд.','negot.'):o.was[j.t]}</small>`:'';
-  const vis=o.vis&&j.vis!=='public'?`<span class="jvis">${j.vis==='granted'?I.key:I.eyeoff}</span>`:'';
-  if(j.limit)return `<${tag} class="jar ${j.limit==='hard'?'taboo':'discuss'}" ${attrs}><span class="vessel"><span class="jm">${j.limit==='hard'?I.block:I.chat}</span>${vis}</span><span class="jn">${esc(topic(j.t))}</span><span class="jw sr">${j.limit==='hard'?(o.who&&o.who!=='me'?L('нельзя','not for me'):L('табу','taboo')):L('обсуждаемо','negotiable')}</span>${was}</${tag}>`;
-  /* the higher the level, the calmer the surface: 8–9 barely ripple, 10 is full to the lid — only bubbles */
-  const calm=j.lv>=10?'full':j.lv>=8?'calm':'';
-  return `<${tag} class="jar ${calm}" ${attrs} style="--v:${j.lv};--jc:${jarColor(j.lv)};--jt:${jarInk(j.lv)};--d:${(i%6)*.35}s"><span class="vessel"><span class="fill"><i class="bub"></i>${j.lv>=8?'<i class="bub b2"></i>':''}</span><b class="lv">${j.lv}</b>${vis}</span><span class="jn">${esc(topic(j.t))}</span>${was}</${tag}>`;}).join('')}${o.more?`<button class="jar more" data-act="${o.more.act}" data-v="${o.more.v}"><span class="vessel"><b>+${o.more.n}</b></span><span class="jn">${L('ещё','more')}</span></button>`:''}${o.add?`<button class="jar add" data-act="${o.add}"><span class="vessel">${I.plus}</span><span class="jn">${L('Добавить','Add')}</span></button>`:''}</div>`;
+ const row=(j,i)=>{const tag=o.act?'button':'div';const attrs=o.act?`data-act="${o.act}" data-v="${j.t}" ${o.who?`data-who="${o.who}" data-ans="${j.limit||j.lv}"${j.dir?` data-dir="${j.dir.join(' ')}"`:''}`:''} aria-label="${esc(topic(j.t))}: ${esc(jarWord(j))}"`:'';
+  const was=o.was&&o.was[j.t]!=null?`<small class="sc-was">${L('было','was')} ${o.was[j.t]==='hard'?L('табу','taboo'):o.was[j.t]==='discuss'?L('обсужд.','negot.'):o.was[j.t]}</small>`:'';
+  const vis=o.vis&&j.vis&&j.vis!=='public'?`<span class="sc-vis">${j.vis==='granted'?I.key:I.eyeoff}</span>`:'';
+  if(j.limit){const w=j.limit==='hard'?(o.who&&o.who!=='me'?L('нельзя','not for me'):L('табу','taboo')):L('обсуждаемо','negotiable');
+   return `<${tag} class="sc ${j.limit==='hard'?'hard':'soft'}" ${attrs}><span class="sc-l"><span class="sc-n">${esc(topic(j.t))}</span>${vis}${was}<span class="sc-lim ${j.limit==='hard'?'t':'s'}">${w}</span></span></${tag}>`;}
+  const rw=roleWord(j);const lab=cls=>`<span class="sc-l ${cls}"><span class="sc-n">${esc(topic(j.t))}</span>${vis}${was}<span class="sc-v"><b>${j.lv}</b>${rw?`<em>${esc(rw)}</em>`:''}</span></span>`;
+  return `<${tag} class="sc ${j.lv>=10?'full':''}" ${attrs} style="--v:${j.lv};--jc0:${jarColor(Math.max(1,j.lv-3))};--jc:${jarColor(j.lv)};--d:${(i%8)*.04}s"><span class="sc-f"></span>${lab('')}${lab('w')}</${tag}>`;};
+ return `<div class="jars caps ${o.pre?'pre':''} ${o.cls||''}">${items.map(row).join('')}${o.more?`<button class="sc more" data-act="${o.more.act}" data-v="${o.more.v}"><span class="sc-l c">${L(`Ещё ${o.more.n}`,`${o.more.n} more`)}</span></button>`:''}${o.add?`<button class="sc add" data-act="${o.add}"><span class="sc-l c">${I.plus}${L('Добавить интерес','Add an interest')}</span></button>`:''}</div>`;
 }
 /** one answer row: level badge + name (one line, cut with «…») + the answer under it. Long nicknames and long words never squeeze each other. */
 function ansRow(name,j,note=''){const n=j?normJar(j):null;const badge=!n?'<span class="ar-lv none">—</span>':n.limit?`<span class="ar-lv ${n.limit==='hard'?'taboo':'discuss'}">${n.limit==='hard'?I.block:I.chat}</span>`:`<span class="ar-lv" style="--jc:${jarColor(n.lv)};--jt:${jarInk(n.lv)}">${n.lv}</span>`;
@@ -4380,7 +4406,7 @@ ACT.setLang=a=>{S.lang=a.dataset.v;document.documentElement.lang=S.lang;refresh(
    The slider is one grid cell: slides cross-fade, the bar of the active slide fills and moves on (no timers to clean up);
    hover/focus pauses it, reduced motion turns autoplay off. Visuals are decorative; the words carry the meaning. */
 const W_SLIDES=()=>[
- {k:L('Баночки','Jars'),h:L('Интересы — баночками, а не анкетой','Interests as jars, not a form'),p:L('Каждый интерес — от 1 до 10, «обсуждаемо» или «табу». И как тебе ближе: давать, получать или смотреть.','Every interest is 1 to 10, “negotiable” or “taboo”. Plus how you like it: giving, receiving or watching.'),
+ {k:L('Интересы','Interests'),h:L('Интересы — шкалой, а не анкетой','Interests on a scale, not a form'),p:L('Каждый интерес — от 1 до 10, «обсуждаемо» или «табу». И как тебе ближе: давать, получать или смотреть.','Every interest is 1 to 10, “negotiable” or “taboo”. Plus how you like it: giving, receiving or watching.'),
   v:()=>`<div class="wf-jars">${jarsHTML([{t:'shibari',lv:10,dir:['give']},{t:'aftercare',lv:8,dir:['get']},{t:'roleplay',lv:6,dir:DIRS},{t:'latex',lv:3,dir:['watch']}],{pre:1})}</div>`},
  {k:L('Приватность','Privacy'),h:L('Покажи ровно столько, сколько решишь','Show exactly as much as you choose'),p:L('Приватная часть — описание, интересы, фото и видео — открывается только тем, кому разрешишь ты. По умолчанию она закрыта.','Your private part — a description, interests, photos and video — opens only for people you allow. It’s closed by default.'),
   v:()=>`<div class="wf-layers">${[[I.globe,L('Ник и фото','Nickname & photo'),L('всем','everyone'),'ok'],[I.key,L('Приватная часть: описание, интересы, фото, видео','Private part: description, interests, photos, video'),L('по доступу','by access'),'v'],[I.eyeoff,L('Дневник','Journal'),L('только я','only me'),'']].map(([i,b,e,c],n)=>`<div class="wf-row" style="--n:${n}"><span class="wf-ic">${i}</span><b>${b}</b><em class="${c}">${e}</em></div>`).join('')}</div>`},
@@ -6119,7 +6145,7 @@ SC.X01={root:1,tab:'me',title:()=>meTabName(),render:()=>{const m=S.me;const [ns
  <section class="grp"><div class="card me-card"><button class="me-id" data-go="P03">${av('me','me-av')}<span class="grow"><b>${esc(pname('me'))}</b><small>${m.city?esc(city(m.city)):L('Так тебя видят другие','How others see you')}</small></span>${I.chev}</button>
   <div class="me-acts"><button class="btn secondary sm" data-go="P02">${I.edit}${L('Изменить профиль','Edit profile')}</button></div></div></section>
  <section class="grp"><div class="card list">${nt?linkRow({...(nt==='topic'?{act:'addJar'}:{go:'P02'}),icon:nt==='P02'?'camera':'plus',tone:'a',title:L('Следующий шаг','Next step'),sub:ns}):''}${mePairRow()}</div></section>
- ${grp(L('Мои интересы','My interests'),jars.length?jarShelf(m.jars,{max:4,pre:1,act:'editJar',vis:1,add:'addJar',moreAct:'myJarsAll'}):`<div class="jar-empty"><p>${L('Баночка — это один интерес и то, как она тебе откликается: от 1 до 10, «обсуждаемо» или «табу».','A jar is one interest and how it feels to you: 1 to 10, “negotiable” or “taboo”.')}</p><div class="row g8"><button class="btn secondary sm" data-act="addJar">${I.plus}${L('Добавить интерес','Add an interest')}</button></div></div>`,{right:jars.length?`<button data-go="X02">${L('Все','All')} · ${jars.length}</button>`:''})}
+ ${grp(L('Мои интересы','My interests'),jars.length?jarShelf(m.jars,{max:4,pre:1,act:'editJar',vis:1,add:'addJar',moreAct:'myJarsAll'}):`<div class="jar-empty"><p>${L('Интерес — это одна тема и то, как она тебе откликается: от 1 до 10, «обсуждаемо» или «табу».','An interest is one topic and how it feels to you: 1 to 10, “negotiable” or “taboo”.')}</p><div class="row g8"><button class="btn secondary sm" data-act="addJar">${I.plus}${L('Добавить интерес','Add an interest')}</button></div></div>`,{right:jars.length?`<button data-go="X02">${L('Все','All')} · ${jars.length}</button>`:''})}
  ${grp(L('Активность','Activity'),`${linkRow({go:'E10',icon:'cal',title:L('Мои события','My events'),val:going?String(going):''})}${linkRow({go:'F10',icon:'feed',title:L('Мои публикации','My posts'),val:String(S.myPosts.length)})}${linkRow({go:'P10',p:{id:'me',tab:'followers'},icon:'users3',title:L('Подписчики и подписки','Followers & following'),val:`${followersOf('me').length} · ${followingOf('me').length}`})}${linkRow({go:'G04',icon:'bookmark',title:L('Сохранённое','Saved'),val:String(m.saved.posts.length+m.saved.events.length)})}${linkRow({go:'P07',icon:'unlock',title:L('Доступы','Access')})}`,{list:1})}
  </div></div>`;},after:()=>fillJars()};
 ACT.myJarsAll=()=>go('X02');
@@ -6149,7 +6175,7 @@ function topicPicker(initial,ownerIn,visIn){if(cur().p.owner==='couple'&&!couple
  sheet(()=>{
   if(d.stage==='pick'){const have=model.jars.map(j=>j.t);return{title:L('Добавить интересы','Add interests'),sub:L('Выбери несколько интересов, затем настрой каждый.','Choose several interests, then set each one.'),search:true,searchPh:L('Найти интерес','Find an interest'),body:CATS.map(c=>{const ts=Object.keys(TOPICS).filter(t=>TOPICS[t].cat===c.id&&!have.includes(t));return ts.length?fsec(T(c),`<div class="chips">${ts.map(t=>`<button class="chip ${d.selected.includes(t)?'on':''}" aria-pressed="${d.selected.includes(t)}" data-act="pickTopic" data-v="${t}" data-txt="${chipTxt(t,topic(t))}">${esc(topic(t))}</button>`).join('')}</div>`):'';}).join('')+`<p class="note sh-empty" hidden>${L('Такого интереса пока нет.','No such interest yet.')}</p>`,foot:`<button class="btn primary" data-act="interestsStart" ${d.selected.length?'':'disabled'}>${L('Продолжить','Continue')}${d.selected.length?` · ${d.selected.length}`:''}</button>`};}
   if(d.stage==='answer'){const t=d.selected[d.step];return{title:topic(t),sub:L(`Интерес ${d.step+1} из ${d.selected.length}`,`Interest ${d.step+1} of ${d.selected.length}`),body:`<div class="qprog"><i style="width:${(d.step+1)/d.selected.length*100}%"></i></div><p class="topic-desc">${esc(T(TOPIC_DESC[t]))}</p>${grp(topicQ(t),answerHTML(d.answers[t]??null,'interestAnswer',{t,dir:d.dirs[t],dirAct:'interestDir'}),{cls:'bare'})}`,foot:`<div class="row g8"><button class="btn secondary" data-act="interestBack">${L('Назад','Back')}</button><button class="btn primary" data-act="interestNext" ${d.answers[t]==null?'disabled':''}>${d.step===d.selected.length-1?(d.fixedVis?L('Добавить в профиль','Add to profile'):L('Продолжить','Continue')):L('Дальше','Next')}</button></div>`};}
-  return{title:L('Кому показывать интересы?','Who can see these interests?'),sub:L(`Готово: ${d.selected.length}. Сохрани, чтобы добавить баночки в профиль.`,`${d.selected.length} ready. Save to add the jars to your profile.`),body:`${d.selected.map(t=>ansRow(topic(t),jarFrom(t,d.answers[t],{dir:d.dirs[t]}))).join('')}${grp(L('Кто видит','Who can see'),choices([['public',L('Все','Everyone'),L('В профиле и для совпадений. Табу будет показано как «нельзя».','On your profile and for matching. Taboo is shown as “not for me”.')],['granted',L('По доступу','By access'),L('Те, кому открыт приватную часть','People with access to your private part')],['only',L('Только я','Only me')]],d.vis,'interestsVis'))}`,foot:`<button class="btn primary" data-act="interestsSave">${L('Добавить в профиль','Add to profile')}</button><div class="row g8 mt12"><button class="btn secondary" data-act="interestBack">${L('Назад','Back')}</button><button class="btn soft" data-act="interestsDiscard">${L('Выйти без сохранения','Leave without saving')}</button></div>`};
+  return{title:L('Кому показывать интересы?','Who can see these interests?'),sub:L(`Готово: ${d.selected.length}. Сохрани, чтобы добавить интересы в профиль.`,`${d.selected.length} ready. Save to add them to your profile.`),body:`${d.selected.map(t=>ansRow(topic(t),jarFrom(t,d.answers[t],{dir:d.dirs[t]}))).join('')}${grp(L('Кто видит','Who can see'),choices([['public',L('Все','Everyone'),L('В профиле и для совпадений. Табу будет показано как «нельзя».','On your profile and for matching. Taboo is shown as “not for me”.')],['granted',L('По доступу','By access'),L('Те, кому открыт приватную часть','People with access to your private part')],['only',L('Только я','Only me')]],d.vis,'interestsVis'))}`,foot:`<button class="btn primary" data-act="interestsSave">${L('Добавить в профиль','Add to profile')}</button><div class="row g8 mt12"><button class="btn secondary" data-act="interestBack">${L('Назад','Back')}</button><button class="btn soft" data-act="interestsDiscard">${L('Выйти без сохранения','Leave without saving')}</button></div>`};
  },{full:true,guard:()=>d.selected.length>0,onClose:()=>{if(S.ui.interestDraft===d)delete S.ui.interestDraft;}});
 }
 ACT.pickTopic=a=>{const d=S.ui.interestDraft,t=a.dataset.v;if(!d||!TOPICS[t])return;const i=d.selected.indexOf(t);if(i<0)d.selected.push(t);else{d.selected.splice(i,1);delete d.answers[t];}resheet();};
@@ -6220,7 +6246,7 @@ const normalizeShareSelection=(id,sel)=>[...new Set(sel||[])].filter(t=>shareabl
 SC.X09={title:()=>L('Результат','Result'),valid:p=>!!QUIZ[p.id],render:(p)=>{const z=QUIZ[p.id];const js=sortJars(quizJars(p.id));const skipped=z.topics.length-js.length;
  const g=[[L('Интересно','Into it'),js.filter(j=>!j.limit)],[L('Обсуждаемо','Negotiable'),js.filter(j=>j.limit==='discuss')],[L('Табу','Taboo'),js.filter(j=>j.limit==='hard')]].filter(x=>x[1].length);
  return `${bar('',{back:1})}<div class="view nodock cta2"><div class="wrap"><p class="q-cat">${L('Тест','Quiz')} · ${esc(T(z.title))}</p><h1 class="t">${L('Результат теста','Quiz result')}</h1>
- <p class="lead">${[g.map(([t,l])=>`${t.toLowerCase()} — ${l.length}`).join(', '),skipped?L(`пропущено — ${skipped}`,`skipped — ${skipped}`):''].filter(Boolean).join(', ')}. ${L('Нажми на баночку, чтобы поправить ответ.','Tap a jar to adjust your answer.')}</p>
+ <p class="lead">${[g.map(([t,l])=>`${t.toLowerCase()} — ${l.length}`).join(', '),skipped?L(`пропущено — ${skipped}`,`skipped — ${skipped}`):''].filter(Boolean).join(', ')}. ${L('Нажми на интерес, чтобы поправить ответ.','Tap an interest to adjust your answer.')}</p>
  ${g.map(([t,l])=>grp(`${t} · ${l.length}`,jarsHTML(l,{pre:1,act:'qEdit'}),{cls:'bare'})).join('')||`<p class="note">${L('Все интересы пропущены.','You skipped every interest.')}</p>`}
 
  </div></div><div class="ctabar"><div class="wrap"><button class="btn primary ${js.length?'':'off'}" data-act="qSave" data-v="${p.id}">${L('Готово','Done')}</button>${js.some(j=>!j.limit)?`<button class="btn secondary" data-go="X11" data-id="${p.id}">${I.share}${L('Поделиться','Share')}</button>`:''}</div></div>`;},after:()=>fillJars()};

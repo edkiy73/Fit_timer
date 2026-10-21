@@ -11,3 +11,9 @@ Decision record: `public/prototype-v11-compare-matrix.html`. Notes: `public/prot
 - Limits are compared only when public; hidden/granted answers are never used or hinted at.
 - UI: reference capsule rows (static) on P05 and in the profile/discovery compat block.
 - Test data: more public answers for the full persona; people zoe, mark, ira, ren, vera, oli; P05 «Compare with» switcher; QA menu entries.
+
+## 2026-10-21 — jars replaced everywhere
+
+- `jarsHTML` now renders the reference capsule rows (same options), so every screen that showed V11 jars shows capsules: my interests, profile, other profiles, quiz results, posts, welcome slide.
+- Fill stops before the score for 1–9; 10 fills the whole row. Hard limit = hatch, negotiable = dashed outline.
+- UI copy no longer says «баночка».
