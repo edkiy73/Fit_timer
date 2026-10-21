@@ -57,3 +57,14 @@ Decision record: `public/prototype-v11-compare-matrix.html`. Notes: `public/prot
 - «Мои интересы» attachment heading: 13px, quieter weight and muted colour; 12px card padding matches polls on all sides.
 - «Скоро рядом» is a proper feed item with a top divider and 16px vertical padding, matching posts; heading aligns with the content edge.
 - Removed obsolete QA actions that simulate the partner joining/leaving communities or being restricted there, including their toast handlers. Community participation is personal, not a shared-couple action. This does not change real personal membership or expose a partner’s activity.
+
+## 2026-10-21 — phone review, round 3
+
+- Event attendance visibility is selected on each event (Show by default); removed the global setting. Visibility changes do not change RSVP or admission.
+- Photo verification uses a bounded preview card, compact retake action and expandable explanatory details. Cancelling a retake preserves the previous selfie.
+- Footer button groups use one 8px gap, without stacked automatic margins.
+- Interest pages show the description and either the saved capsule or one add-interest action.
+- Applicant answer text aligns with the outer card; event/community request cards share compact spacing.
+- Age range has no enclosing card border. History card names use a dedicated class, ellipsis and a gradient (fixes notification-card style collision).
+- Unavailable profile likes are a small status line, leaving Follow as the action.
+- Event/community management entries share one button; dashboard counters open their related lists, including empty states. The owned sample event includes two explicitly public interested people, so the list can be tested.

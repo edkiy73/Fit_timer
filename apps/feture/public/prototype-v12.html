@@ -2510,6 +2510,34 @@ button.sc{cursor:pointer}button.sc:active{transform:scale(.985)}
 .posts>.actc{border-bottom:0;border-top:1px solid var(--line)}
 .posts>.actc:first-child{border-top:0}
 
+
+/* V12 phone review: shared action spacing, request cards and compact profile states. */
+.ctabar>.wrap>.btn+.btn,.ctabar>.wrap>.btn+button{margin-top:0}
+.ctabar>.wrap{gap:8px}
+.interest-summary{display:grid;gap:12px;margin:12px 0 20px}
+.interest-summary>p{margin:0;font-size:15px;line-height:1.55}
+.interest-summary>.jars,.interest-summary>.btn{margin:0}
+.age-filter{padding:8px 0;background:none;border:0}
+.hcard .history-name{position:absolute;left:0;right:0;bottom:0;z-index:2;display:block;border:0;border-radius:0;padding:28px 8px 10px;background:linear-gradient(transparent,rgba(10,6,10,.85));font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.profile-like-note{display:flex;align-items:center;justify-content:center;gap:6px;margin:10px 0 0;font-size:13px;line-height:1.4;color:var(--mute)}
+.profile-like-note svg{width:16px;height:16px;flex:none}
+.application-card{padding:16px}
+.application-card>.li:first-child{padding:0;min-height:44px;border:0}
+.application-card>.note{margin:12px 0 0}
+.application-card>.application-answer{margin:12px 0 0;padding:0;border:0;background:none;white-space:pre-wrap;line-height:1.5}
+.application-card .application-answer>.note{margin:0 0 6px}
+.application-card>.row:last-child{margin-top:12px}
+.application-card>.application-answer:last-child{margin-bottom:0}
+.stat3>button{text-align:left;color:var(--ink);font:inherit;min-width:0;transition:background .15s}
+.stat3>button:hover{background:var(--raise)}.stat3>button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.entity-manage{margin:16px 0}.manage-entry{width:auto;min-width:140px}
+.pv-capture{display:grid;grid-template-columns:minmax(100px,136px) minmax(0,1fr);gap:16px;align-items:center}
+.pv-preview{aspect-ratio:4/5;overflow:hidden;border-radius:var(--r);background:var(--raise)}
+.pv-preview img{display:block;width:100%;height:100%;object-fit:contain}
+.pv-capture-info{min-width:0}.pv-capture-info>b{font-size:15px}.pv-capture-info>.note{margin:8px 0 12px;line-height:1.45}
+.pv-about>summary{min-height:44px;display:flex;align-items:center;cursor:pointer;font-size:14px;color:var(--mute);font-weight:550}
+.pv-about .card{margin-top:8px}.pv-about .li small{line-height:1.45}
+@media(max-width:359px){.pv-capture{grid-template-columns:1fr}.pv-preview{width:160px;justify-self:center}.pv-capture-info{text-align:center}}
 </style>
 </head>
 <body>
@@ -2764,7 +2792,7 @@ const allowedScopes=(owner,viewer)=>REQ_SCOPES.filter(([k])=>owner!=='couple'||P
 function fullMe(){return{privText:{ru:'Новичок в верёвке, поэтому сначала — разговор и короткая встреча на нейтральной территории. Не люблю сюрпризов.',en:'New to rope, so first a talk and a short meeting on neutral ground. I don’t like surprises.'},
  nick:'alex_b',name:'Alex',showAge:true,dob:'1994-03-14',photo:8,photos:[8],city:'berlin',gender:['man'],orient:['bi'],format:['open','play'],status:'single',role:['lead'],seek:['dates','chat'],
  bio:{ru:'Говорю прямо, слушаю внимательно. Люблю верёвку, долгие прогулки и людей, которые знают свои границы.',en:'I speak directly and listen closely. I love rope, long walks and people who know their limits.'},
- email:'alex@mail.com',methods:['email','google'],dating:true,datingVisible:true,socialLikes:true,requestsFrom:'all',activityVis:'all',rsvpShow:true,ageCheck:'ok',premium:false,
+ email:'alex@mail.com',methods:['email','google'],dating:true,datingVisible:true,socialLikes:true,requestsFrom:'all',activityVis:'all',ageCheck:'ok',premium:false,
  jars:[
   {t:'bondage',lv:8,dir:['give'],real:'practice',vis:'public'},{t:'shibari',lv:6,dir:['give'],real:'try',vis:'public'},{t:'roleplay',lv:8,dir:['give','get'],real:'practice',vis:'public'},{t:'aftercare',lv:10,real:'practice',vis:'public'},
   {t:'control',lv:8,dir:['give'],real:'practice',vis:'granted'},{t:'sensory',lv:6,dir:['give','get','watch'],real:'fantasy',vis:'granted'},{t:'experiments',lv:10,real:'try',vis:'only'},{t:'intimacy',lv:8,real:'practice',vis:'public'},
@@ -2781,7 +2809,7 @@ function fullMe(){return{privText:{ru:'Новичок в верёвке, поэ�
 };}
 function newMe(){return{
  nick:'',name:'',showAge:false,dob:'',photo:null,photos:[],city:null,gender:[],orient:[],format:[],status:null,role:[],seek:[],bio:{ru:'',en:''},
- email:'',methods:[],dating:false,datingVisible:false,socialLikes:true,requestsFrom:'all',activityVis:'all',rsvpShow:true,ageCheck:'none',premium:false,
+ email:'',methods:[],dating:false,datingVisible:false,socialLikes:true,requestsFrom:'all',activityVis:'all',ageCheck:'none',premium:false,
  jars:[],history:[],journal:[],tests:{},saved:{posts:[],events:[],topics:[]},fresh:true};}
 
 function freshState(persona){
@@ -2848,7 +2876,7 @@ function freshState(persona){
  };
  if(persona==='pair'){st.likesIn=st.likesIn.filter(x=>x.p!=='kira');st.reqOut=st.reqOut.filter(x=>x.p!=='kira');st.deckOrder=st.deckOrder.filter(x=>x!=='kira');st.communityRequests.circle=st.communityRequests.circle.filter(x=>x.p!=='kira');st.notifs=st.notifs.filter(x=>x.p!=='kira');st.follows.add('kira');st.graph.kira.add('me');}
  // organizer event for the full persona (E15/E16)
- if(full){st.extraEvents.e8={title:{ru:'Клуб чтения: «Больше двух»',en:'Book club: “More Than Two”'},type:'talk',format:'online',start:at(8,19),end:at(8,20,30),tz:'Europe/Berlin',price:null,organizer:'me',community:'slow',approval:true,plate:'plum',link:'https://meet.feture.app/bookclub',desc:{ru:'Обсуждаем по главе в неделю. Камера по желанию.',en:'One chapter a week. Camera optional.'},reqs:[],q:[{ru:'Эта книга уже была в твоём списке чтения?',en:'Have you read the book before?'}],status:'published',apps:[{p:'kira',status:'pending',answer:{ru:'Нет, начну с вами',en:'No, I’ll start with you'}},{p:'ari',status:'approved',answer:{ru:'Да, дважды',en:'Yes, twice'}},{p:'lina',status:'pending',answer:{ru:'Частично',en:'Partly'}}],announce:[]};}
+ if(full){st.extraEvents.e8={title:{ru:'Клуб чтения: «Больше двух»',en:'Book club: “More Than Two”'},type:'talk',format:'online',start:at(8,19),end:at(8,20,30),tz:'Europe/Berlin',price:null,organizer:'me',community:'slow',approval:true,interestedPeople:['mia','noa'],plate:'plum',link:'https://meet.feture.app/bookclub',desc:{ru:'Обсуждаем по главе в неделю. Камера по желанию.',en:'One chapter a week. Camera optional.'},reqs:[],q:[{ru:'Эта книга уже была в твоём списке чтения?',en:'Have you read the book before?'}],status:'published',apps:[{p:'kira',status:'pending',answer:{ru:'Нет, начну с вами',en:'No, I’ll start with you'}},{p:'ari',status:'approved',answer:{ru:'Да, дважды',en:'Yes, twice'}},{p:'lina',status:'pending',answer:{ru:'Частично',en:'Partly'}}],announce:[]};}
  return st;
 }
 
@@ -3631,6 +3659,7 @@ function commitJointPost(q,reviewer,delegated=false){
 
 
 /* ---- ui.js ---- */
+const manageEntry=(screen,id)=>`<button class="btn md soft manage-entry" data-go="${screen}" data-id="${esc(id)}">${I.gear}${L('Управление','Manage')}</button>`;
 /* ============ SHARED COMPONENTS ============ */
 /** jars: list of {t,lv,limit,vis} or [t,lv]. V9: one vessel, one colour; the fill is the level 1–10.
  *  «обсуждаемо» — dashed outline, «табу» — crossed out. o.more adds a «+N» tile, o.was shows the previous answer. */
@@ -4126,6 +4155,7 @@ function openAuthorMenu(a,after){if(closeAuthorMenu())return;authorMenuAction=af
  const off=id=>kind==='dating'&&id==='couple'&&!authorProfile('couple')?.dating;
  m.innerHTML=`<p class="am-t">${kind==='dating'?L('Знакомиться как','Meet as'):L('Опубликовать как','Post as')}</p>`+['me','couple'].map(id=>`<button role="menuitemradio" aria-checked="${cur_===id}" ${off(id)?'aria-disabled="true"':''} data-act="chooseAuthor" data-v="${id}" data-k="${kind}">${av(id,'sm')}<span><b>${esc(pname(id))}</b><small>${sub(id)}</small></span>${cur_===id?I.check:''}</button>`).join('');document.body.append(m);const box=a.getBoundingClientRect();m.style.left=Math.max(8,Math.min(box.left,innerWidth-288))+'px';m.style.top=Math.min(box.bottom+6,innerHeight-210)+'px';m.showPopover();syncModal();m.querySelector('[aria-checked="true"]')?.focus({preventScroll:true});a.setAttribute('aria-expanded','true');m.addEventListener('toggle',e=>{if(e.newState==='closed'&&m.isConnected&&$('#authorMenu')===m)closeAuthorMenu();});}
 ACT.authorMenu=a=>openAuthorMenu(a);
+
 
 
 /* ---- media.js ---- */
@@ -4768,9 +4798,8 @@ ACT.retryComment=a=>{const x=postById(cur().p.id);if(!x)return;const c=identifyR
 /* F04 — topic feed */
 SC.F04={title:p=>topic(p.id),valid:p=>!!TOPICS[p.id],render:(p)=>{const posts=filterPosts(allPosts(),{}).filter(x=>x.tags.includes(p.id));const comms=Object.keys(COMMUNITIES).filter(c=>COMMUNITIES[c].topics.includes(p.id));const mine=S.me.jars.find(j=>j.t===p.id);
  return `${bar('#'+esc(topic(p.id)),{back:1,sm:1,actions:searchBtn('posts')})}<div class="view nodock"><div class="wrap">
- <div class="card flat"><p style="margin:0 0 12px;font-size:15px">${esc(T(TOPIC_DESC[p.id])||L('Живые публикации и сообщества по интересу.','Live posts and communities on this interest.'))}</p>
- <div class="row g8">${mine?`<span class="pill ok">${I.check}${L('В твоих интересах','In your interests')}</span><button class="btn md soft" data-act="editJar" data-v="${p.id}">${L('Изменить ответ','Edit answer')}</button>`:`<button class="btn md primary" data-act="editJar" data-v="${p.id}">${I.plus}${L('Добавить в интересы','Add to interests')}</button>`}<button class="btn md soft" data-act="topic" data-v="${p.id}">${I.book}${L('О теме','About')}</button></div>
- </div>
+ <div class="interest-summary"><p>${esc(T(TOPIC_DESC[p.id])||L('Публикации и сообщества по этому интересу.','Posts and communities for this interest.'))}</p>
+ ${mine?jarsHTML([mine],{act:'editJar',vis:1}):`<button class="btn soft" data-act="editJar" data-v="${p.id}">${I.plus}${L('Добавить интерес к себе','Add this interest')}</button>`}</div>
  ${comms.length?`<div class="sec">${L('Сообщества','Communities')}</div>${comms.map((c,i)=>commCard(c,{i})).join('')}`:''}
  <div class="sec">${L('Публикации','Posts')}</div>${posts.length?`<div class="posts">${posts.map((x,i)=>postCard(x,{i})).join('')}</div>`:`<p class="note">${L('Публикаций по интересу пока нет.','No posts on this interest yet.')}</p>`}</div></div>`;}};
 
@@ -4882,6 +4911,7 @@ ACT.discardPostEdits=a=>{const id=a.dataset.v,owner=S,edit=S.postEdits[id];if(!e
 
 
 
+
 /* ---- s-events.js ---- */
 /* ============ E: EVENTS — catalog, filters, details, RSVP/application/ticket, my events, organiser ============ */
 const EF_DEF=()=>({format:'all',when:'any',types:[],price:'any',open:false});
@@ -4937,10 +4967,10 @@ SC.E03={title:p=>EV(p.id)?T(EV(p.id).title):'',valid:p=>!!EV(p.id)&&(EV(p.id).st
   if(!rsvpRow||e.approval)lines.push([I.check,L('Ответ','Answer'),{none:L('не выбран','not chosen'),interested:L('интересуюсь — это не заявка и не билет','interested — not an application or ticket'),going:e.approval&&r.app!=='approved'?L('хочу пойти — допуск ещё не получен','want to attend — admission not confirmed'):L('иду','going'),not:L('не иду','not going')}[r.status||'none']]);
   if(e.approval)lines.push([I.doc,L('Заявка','Application'),{none:L('не подана — нужна для участия','not submitted — required to attend'),pending:L('на рассмотрении у организатора','being reviewed by the organiser'),approved:L('одобрена','approved'),declined:L('отклонена','declined')}[r.app||'none']]);
   if(e.price||e.external)lines.push([I.ticket,L('Билет','Ticket'),e.external?(r.ticket==='self'?L('отмечено: билет куплен на сайте','you marked it as bought on the site'):L('продаётся на сайте организатора, мы его не проверяем','sold on the organiser’s site; we don’t verify it')):L(`оплата на месте, ${esc(T(e.price))}`,`pay at the door, ${esc(T(e.price))}`)]);
-  lines.push([I.eyeoff,L('Видимость','Visibility'),(eventAttendanceConfirmed(id)&&(r.show??S.me.rsvpShow))?L('другие видят, что ты идёшь — меняется в настройках','others can see you’re going — change in settings'):L('участие видит только организатор — меняется в настройках','only the organiser sees it — change in settings')]);
+
  }
  let cta='';
- if(orgMe)cta=`<button class="btn primary" data-go="E15" data-id="${id}">${I.gear}${L('Панель организатора','Manage event')}</button>`;
+ if(orgMe)cta='';
  else if(e.cancelled)cta=`<button class="btn soft" data-act="similar">${L('Похожие события','Similar events')}</button>`;
  else if(past)cta=`<button class="btn soft off">${L('Событие прошло','This event has ended')}</button>`;
  else if(e.approval&&r.app==='none'||e.approval&&!r.app)cta=`<button class="btn primary" data-go="E06" data-id="${id}">${I.doc}${L('Подать заявку','Apply to attend')}</button>`;
@@ -4951,6 +4981,7 @@ SC.E03={title:p=>EV(p.id)?T(EV(p.id).title):'',valid:p=>!!EV(p.id)&&(EV(p.id).st
  else cta='';
  return `<header class="bar overlay"><button class="ibtn glass" data-back aria-label="${L('Назад','Back')}">${I.back}</button><span style="flex:1"></span><button class="ibtn glass" data-act="saveEvent" data-v="${id}" aria-pressed="${saved}" aria-label="${L('Сохранить','Save')}">${saved?I.bookmarkf:I.bookmark}</button><button class="ibtn glass" data-act="evShare" aria-label="${L('Поделиться','Share')}">${I.share}</button><button class="ibtn glass" data-act="evMenu" aria-label="${L('Ещё','More')}">${I.more}</button></header>
  <div class="view nodock top0 cta1"><div class="wrap"><div class="ev-hero">${evCover(e,'cal')}<div class="pc-info"><div class="row g8" style="margin-bottom:10px"><span class="pill" style="background:rgba(255,255,255,.2);color:#fff">${e.format==='online'?I.video:I.pin}${e.format==='online'?L('Онлайн','Online'):esc(city(e.city))}</span><span class="pill" style="background:rgba(255,255,255,.2);color:#fff">${esc(evType(e.type))}</span></div><h2 class="ev-title">${esc(T(e.title))}</h2></div></div>
+ ${orgMe?`<div class="entity-manage">${manageEntry('E15',id)}</div>`:''}
  ${e.cancelled?`<div class="alert err mt16">${I.alert}<span><b>${L('Событие отменено','Event cancelled')}</b>${esc(T(e.cancelled))}</span></div>`:''}
  ${e.status==='review'?`<div class="alert warn mt16">${I.clock}<span><b>${L('На проверке','In review')}</b>${L('Пока событие видишь только ты. Обычно проверка занимает до часа.','Only you can see the event for now. Review usually takes under an hour.')}</span></div>`:''}
  <div class="card list mt16">
@@ -4966,6 +4997,7 @@ SC.E03={title:p=>EV(p.id)?T(EV(p.id).title):'',valid:p=>!!EV(p.id)&&(EV(p.id).st
  ${e.gallery?.length?`<div class="sec">${L('Фотографии','Photos')}</div>${mediaGrid(e.gallery,{id})}`:''}
  ${e.reqs&&e.reqs.length?`<div class="sec">${L('Условия участия','Requirements')}</div><div class="card">${e.reqs.map(x=>`<div class="fact"><i class="v">${I.check}</i><span>${esc(T(x))}</span></div>`).join('')}<p class="note mt8">${L('Условия задаёт организатор. FetUre не даёт медицинских и юридических гарантий.','The organiser sets the requirements. FetUre gives no medical or legal guarantees.')}</p></div>`:''}
  ${rsvpRow}
+ ${!orgMe&&!e.cancelled&&!past?`<div class="card list mt12"><div class="li">${selectRow('eventVisibility',L('Видимость участия','Attendance visibility'),[['show',L('Показывать','Show')],['hide',L('Скрывать','Hide')]],r.show===false?'hide':'show',{sub:L('Организатор всегда видит твоё участие','The organiser always sees your attendance')})}</div></div>`:''}
  ${lines.length?`<div class="sec">${L('Твой статус','Your status')}</div><div class="card list">${lines.map(([i,b,s])=>`<div class="statusline"><span class="ico">${i}</span><span class="tx"><b>${b}</b><small>${s}</small></span></div>`).join('')}</div>`:''}
  ${(e.announce||[]).length||S.updates.some(u=>u.e===id)?`<div class="sec">${L('Объявления организатора','Organiser updates')}</div>${S.updates.filter(u=>u.e===id).map(updCard).join('')}`:''}
  </div></div>
@@ -4976,10 +5008,11 @@ ACT.evMenu=()=>sheet(()=>({title:L('Событие','Event'),body:`<div class="c
 ACT.addCal=()=>{closeSheet();toast(L('Добавлено в календарь','Added to calendar'),{type:'ok'});};
 ACT.similar=()=>{back();setTimeout(()=>tab('events'),50);};
 /* E05 — RSVP and privacy */
-ACT.rsvpClear=a=>{const id=cur().p.id;const prev={...myR(id)};run(a,()=>{S.rsvp[id]={...myR(id),status:'none',show:false};refresh();},{ok:L('Ответ снят. Заявка и отметка о билете сохранены','Answer removed. Application and ticket note kept'),undo:()=>{S.rsvp[id]=prev;refresh();}});};
+ACT.rsvpClear=a=>{const id=cur().p.id;const prev={...myR(id)};run(a,()=>{S.rsvp[id]={...myR(id),status:'none',show:myR(id).show??true};refresh();},{ok:L('Ответ снят. Заявка и отметка о билете сохранены','Answer removed. Application and ticket note kept'),undo:()=>{S.rsvp[id]=prev;refresh();}});};
 ACT.rsvp=a=>{const id=cur().p.id;const e=EV(id);const v=a.dataset.v;if(myR(id).status===v&&a.closest?.('.rsvp'))return ACT.rsvpClear(a);
-  run(a,()=>{S.rsvp[id]={...myR(id),status:v,show:myR(id).show??S.me.rsvpShow};refresh();},{ok:v==='going'?(e.external?L('Ты идёшь. Билет — на сайте организатора','You’re going. Get the ticket on the organiser’s site'):L('Ты идёшь. Место открыто ниже','You’re going. The place is shown below')):v==='interested'?L('Отметили «Интересно». Это не заявка и не билет','Marked “Interested”. That’s not an application or ticket'):L('Отметили «Не иду»','Marked “Not going”')});};
-ACT.rsvpPrivacy=()=>{const id=cur().p.id;S.ui.rv={status:myR(id).status,show:myR(id).show??S.me.rsvpShow};rsvpSheet(id);};
+  run(a,()=>{S.rsvp[id]={...myR(id),status:v,show:myR(id).show??true};refresh();},{ok:v==='going'?(e.external?L('Ты идёшь. Билет — на сайте организатора','You’re going. Get the ticket on the organiser’s site'):L('Ты идёшь. Место открыто ниже','You’re going. The place is shown below')):v==='interested'?L('Отметили «Интересно». Это не заявка и не билет','Marked “Interested”. That’s not an application or ticket'):L('Отметили «Не иду»','Marked “Not going”')});};
+ACT.eventVisibility=a=>{const id=cur().p.id,e=EV(id),owner=S,session=S.session;if(!e||e.organizer==='me'||e.cancelled||isPast(id))return;const show=a.dataset.v==='show';run(a,()=>{if(S!==owner||S.session!==session)return;S.rsvp[id]={...myR(id),show};refresh();},{ms:200,ok:L('Видимость сохранена','Visibility saved')});};
+ACT.rsvpPrivacy=()=>{const id=cur().p.id;S.ui.rv={status:myR(id).status,show:myR(id).show??true};rsvpSheet(id);};
 function rsvpSheet(id){const e=EV(id);sheet(()=>{const v=S.ui.rv;return{title:L('Ответ и видимость','RSVP and privacy'),body:`
  <div class="card list">${selectRow('rvSet',L('Ответ','Answer'),[['none',L('Без ответа','No response')],['interested',L('Интересно','Interested')],['going',L('Иду','Going')]],v.status)}</div>
  <div class="card list mt16">${toggleRow('rvShow',L('Показывать моё участие другим','Show my attendance to others'),L('Организатор видит всех, кто идёт','The organiser always sees who’s going'),v.show)}</div>
@@ -5095,15 +5128,16 @@ SC.E15={title:()=>L('Панель организатора','Manage event'),vali
  ${eventCard(id,{row:1})}
  <div class="row mt12" style="justify-content:space-between">${st}<button class="btn text auto" data-go="E03" data-id="${id}">${L('Открыть страницу','View page')} ${ic('chev',16)}</button></div>
  ${e.cancelled?'':pend?`<div class="alert warn mt12">${I.doc}<span><b>${L('Следующий шаг','Next step')}</b>${L('Рассмотри заявки ниже — люди ждут ответа.','Review the applications below — people are waiting.')}</span></div>`:''}
- <div class="stat3">${[[pend,L('ждут решения','pending')],[appr,L('одобрено','approved')],[Object.values(S.rsvp).length?0:0,L('интересуются','interested')]].map(([n,l],i)=>`<div><b>${i===2?(e.interested||0):n}</b><small>${l}</small></div>`).join('')}</div>
+ <div class="stat3">${[[pend,L('ждут решения','pending'),'E16','pending'],[appr,L('одобрено','approved'),'E16','approved'],[(e.interestedPeople||[]).length,L('интересуются','interested'),'E17','']].map(([n,l,go,k])=>`<button type="button" data-go="${go}" data-p='${esc(JSON.stringify({id,k}))}'><b>${n}</b><small>${l}</small></button>`).join('')}</div>
  <div class="card list">${e.approval?linkRow({go:'E16',p:{id},icon:'doc',tone:'v',title:L('Заявки и допуски','Applications'),badge:pend||''}):''}${linkRow({act:'announce',icon:'bell',tone:'l',title:L('Объявление участникам','Post an update'),sub:L('Придёт в центр уведомлений','Goes to the notification center')})}${linkRow({act:'evEdit',icon:'edit',title:L('Редактировать','Edit'),sub:L('Участникам придёт уведомление об изменении','Attendees get a change notification')})}${e.cancelled?'':linkRow({act:'evCancel',icon:'block',cls:'danger',title:L('Отменить событие','Cancel event'),noChev:1})}</div>
  ${(e.announce||[]).length?`<div class="sec">${L('Отправленные объявления','Sent updates')}</div>${e.announce.map(x=>`<div class="upd"><span class="ico l">${I.bell}</span><span class="tx"><p style="color:var(--ink);margin:0">${esc(x.text)}</p><small>${x.auto?L('отправлено автоматически · ','sent automatically · '):''}${F.rel(x.t)}</small></span></div>`).join('')}`:''}
  </div></div>`;}};
 SC.E16={title:()=>L('Заявки','Applications'),valid:p=>!!EV(p.id)&&EV(p.id).organizer==='me',render:(p)=>{const e=EV(p.id);const k=p.k||'pending';const list=(e.apps||[]).filter(a=>a.status===k);
  return `${bar(L('Заявки','Applications'),{back:1,sm:1,sub:esc(T(e.title))})}<div class="view nodock"><div class="wrap">${seg([['pending',L('Ждут','Pending'),(e.apps||[]).filter(a=>a.status==='pending').length||''],['approved',L('Одобрены','Approved')],['declined',L('Отклонены','Declined')]],k,'e16tab')}
- ${list.length?list.map(a=>`<div class="card" style="margin-bottom:10px"><div class="row"><button class="plink row g12 grow" style="text-align:left" ${profGo(a.p)}>${av(a.p,'')}<span class="grow"><b style="display:block">${esc(pname(a.p))}, ${person(a.p).age}</b><small class="note" style="display:block">${esc(whoLine(a.p))}</small></span></button></div><div class="card flat mt12" style="padding:12px 14px"><div class="note">${esc(T((e.q||[{ru:'Ответ',en:'Answer'}])[0]))}</div><div style="margin-top:4px">${esc(T(a.answer))}</div></div>
+ ${list.length?list.map(a=>`<div class="card application-card mt12"><div class="row"><button class="plink row g12 grow" style="text-align:left" ${profGo(a.p)}>${av(a.p,'')}<span class="grow"><b style="display:block">${esc(pname(a.p))}, ${person(a.p).age}</b><small class="note" style="display:block">${esc(whoLine(a.p))}</small></span></button></div><div class="application-answer"><div class="note">${esc(T((e.q||[{ru:'Ответ',en:'Answer'}])[0]))}</div><div style="margin-top:4px">${esc(T(a.answer))}</div></div>
   ${k==='pending'?`<div class="row g8 mt12"><button class="btn md primary" data-act="appDecide" data-v="${a.p}" data-d="approved">${L('Одобрить','Approve')}</button><button class="btn md soft" data-act="appDecide" data-v="${a.p}" data-d="declined">${L('Отклонить','Decline')}</button></div>`:''}</div>`).join(''):empty('doc',L('Здесь пусто','Nothing here'),k==='pending'?L('Новые заявки появятся здесь и в уведомлениях.','New applications appear here and in notifications.'):'')}
  </div></div>`;}};
+SC.E17={title:()=>L('Интересуются событием','Interested in this event'),valid:p=>!!EV(p.id)&&EV(p.id).organizer==='me',render:p=>{const e=EV(p.id),ids=[...new Set(e.interestedPeople||[])].filter(id=>person(id)&&!isBlocked(id));return `${bar(L('Интересуются событием','Interested in this event'),{back:1,sm:1,sub:esc(T(e.title))})}<div class="view"><div class="wrap">${ids.length?`<div class="card list">${ids.map(id=>personRow(id)).join('')}</div>`:empty('eye',L('Пока никто','Nobody yet'),L('Здесь появятся люди, публично отметившие «Интересно».','People who publicly mark “Interested” will appear here.'))}</div></div>`;}};
 ACT.e16tab=a=>setP('k',a.dataset.v);
 ACT.appDecide=a=>{const e=EV(a.dataset.e||cur().p.id);const x=e.apps.find(y=>y.p===a.dataset.v);run(a,()=>{x.status=a.dataset.d;refresh();},{ok:a.dataset.d==='approved'?L(`Заявка ${pname(x.p)} принята. Адрес откроется у участника`,`${pname(x.p)} approved. The address is now visible to them`):L('Заявка отклонена','Application declined'),undo:()=>{x.status='pending';refresh();}});};
 ACT.announce=()=>{S.ui.an='';sheet(()=>({title:L('Объявление','Update'),body:`<p class="lead">${L('Получат все, кто ответил «Иду» или подал заявку. Ответить лично они не смогут — это не чат.','Everyone who answered “Going” or applied will receive it. They can’t reply privately — it’s not a chat.')}</p><label class="field" data-field="an"><textarea class="inp" id="anText" rows="4" maxlength="500" placeholder="${L('Например: начало переносится на 19:30','E.g.: start moves to 19:30')}" autofocus></textarea></label>`,foot:`<button class="btn primary" data-act="anSend">${I.send}${L('Отправить','Send')}</button>`}));};
@@ -5116,6 +5150,7 @@ ACT.cDo=a=>{const e=EV(cur().p.id);const reason=$('#cReason').value.trim();run(a
 function zonedParts(ts,tz){const p=new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(ts);return Object.fromEntries(p.filter(x=>x.type!=='literal').map(x=>[x.type,+x.value]));}
 function zonedDay(ts,tz){const p=zonedParts(ts,tz);return `${p.year}-${String(p.month).padStart(2,'0')}-${String(p.day).padStart(2,'0')}`;}
 function zonedTime(y,m,d,h,mi,tz){if(![y,m,d,h,mi].every(Number.isFinite))return NaN;const target=Date.UTC(y,m-1,d,h,mi);let ts=target;for(let i=0;i<4;i++){const p=zonedParts(ts,tz);const delta=target-Date.UTC(p.year,p.month-1,p.day,p.hour,p.minute);if(!delta)break;ts+=delta;}const p=zonedParts(ts,tz);return p.year===y&&p.month===m&&p.day===d&&p.hour===h&&p.minute===mi?ts:NaN;}
+
 
 
 /* ---- s-people.js ---- */
@@ -5306,7 +5341,7 @@ function dfSheet(){if(!S.ui.df)S.ui.df=JSON.parse(JSON.stringify(social().filter
   const n=dfMatches(f);const wm=f.placeMode==='nearby'?'nearby':(f.where==='city'||f.city)?'city':'any',wOn=wm!=='any';
   return{title:L('Фильтры знакомств','Dating filters'),head:`<button class="btn text auto" data-act="dfReset">${L('Сбросить','Reset')}</button>`,
    body:`<section class="fin"><div class="fin-t"><b>${L('Кого показывать','Show')}</b>${f.show&&f.show!=='all'?fclr('show','dfClear'):''}</div>${fchoices([['all',L('Все','All')],['people',L('Люди','People')],['pairs',L('Пары','Couples')]],f.show||'all','dfShow')}</section>
- <section class="fin"><div class="fin-t"><b>${L('Возраст','Age')}</b><b class="fin-v" id="ageLbl">${f.age[0]}–${f.age[1]}</b>${f.age[0]!==18||f.age[1]!==99?fclr('age','dfClear'):''}</div><div class="card"><div class="dual"><span class="trk"><i style="left:${(f.age[0]-18)/81*100}%;right:${100-(f.age[1]-18)/81*100}%"></i></span><input type="range" min="18" max="99" value="${f.age[0]}" data-in="dfAge" data-i="0" aria-label="${L('Минимальный возраст','Minimum age')}"><input type="range" min="18" max="99" value="${f.age[1]}" data-in="dfAge" data-i="1" aria-label="${L('Максимальный возраст','Maximum age')}"></div></div></section>
+ <section class="fin"><div class="fin-t"><b>${L('Возраст','Age')}</b><b class="fin-v" id="ageLbl">${f.age[0]}–${f.age[1]}</b>${f.age[0]!==18||f.age[1]!==99?fclr('age','dfClear'):''}</div><div class="age-filter"><div class="dual"><span class="trk"><i style="left:${(f.age[0]-18)/81*100}%;right:${100-(f.age[1]-18)/81*100}%"></i></span><input type="range" min="18" max="99" value="${f.age[0]}" data-in="dfAge" data-i="0" aria-label="${L('Минимальный возраст','Minimum age')}"><input type="range" min="18" max="99" value="${f.age[1]}" data-in="dfAge" data-i="1" aria-label="${L('Максимальный возраст','Maximum age')}"></div></div></section>
  <section class="fin"><div class="fin-t"><b>${L('Где искать','Where')}</b>${wOn?fclr('where','dfClear'):''}</div>${choiceChips([['any',L('Везде','Anywhere')],['city',L('Город','City')],['nearby',L('Рядом','Nearby')]],wm,'dfWhere')}
   ${wm==='city'?`<div class="fld"><button class="fld-main" data-act="dfCity">${I.pin}<span>${f.city?esc(placeCaption(f.city)):L('Выбрать страну и город','Choose country and city')}</span></button>${f.city?fclr('city','dfAnyCity'):I.chev}</div>`:''}
   ${wm==='nearby'?`<div class="fld-row"><span class="note">${L('Радиус','Radius')}</span><b id="distLbl">${L(`до ${f.dist} км`,`up to ${f.dist} km`)}</b></div><div class="dual single"><span class="trk"><i style="left:0;right:${100-(f.dist-5)/95*100}%"></i></span><input type="range" min="5" max="100" step="5" value="${f.dist}" data-in="dfDist" aria-label="${L('Расстояние','Distance')}"></div><p class="note mt8">${L('Только примерная область около 5 км. Точная точка и адрес не сохраняются и не показываются.','Only a coarse area of about 5 km. Your exact position and address are never stored or shown.')}</p>`:''}</section>
@@ -5329,7 +5364,7 @@ SC.D04={tab:'people',title:()=>L('Фильтры знакомств','Dating fil
 SC.D09={title:()=>L('Просмотренные','Recently viewed'),render:(p)=>{const k=p.k||'all';const hist=social().history.filter(h=>PEOPLE[h.p]&&!isBlocked(h.p)&&(k==='all'||(k==='pass'?h.d<0:h.d>0)));
  return `${bar(L('Просмотренные','Recently viewed'),{back:1,sm:1})}<div class="view nodock"><div class="wrap">
  ${seg([['all',L('Все','All')],['pass',L('Пропущенные','Passed')],['like',L('Симпатии','Liked')]],k,'d9tab','sm')}
- ${hist.length?`<div class="hist">${hist.map((h,i)=>{const lock=!S.me.premium&&i>0;return `<button class="hcard ${lock?'lock':''}" data-act="${lock?'premD9':h.d<0?'restore':'go'}" data-v="${h.d<0?h.p:'P01'}" data-p='${esc(JSON.stringify({id:h.p}))}'>${bigPhoto(h.p)}<span class="mk ${h.d>0?'l':''}">${h.d>0?I.heartf:I.x}</span><span class="nm">${lock?'••••':esc(pname(h.p))}</span></button>`;}).join('')}</div>`:empty('hist',L('Пусто','Empty'),L('Здесь появятся просмотренные анкеты.','Profiles you’ve viewed will show up here.'))}
+ ${hist.length?`<div class="hist">${hist.map((h,i)=>{const lock=!S.me.premium&&i>0;return `<button class="hcard ${lock?'lock':''}" data-act="${lock?'premD9':h.d<0?'restore':'go'}" data-v="${h.d<0?h.p:'P01'}" data-p='${esc(JSON.stringify({id:h.p}))}'>${bigPhoto(h.p)}<span class="mk ${h.d>0?'l':''}">${h.d>0?I.heartf:I.x}</span><span class="history-name">${lock?'••••':esc(pname(h.p))}</span></button>`;}).join('')}</div>`:empty('hist',L('Пусто','Empty'),L('Здесь появятся просмотренные анкеты.','Profiles you’ve viewed will show up here.'))}
  ${!S.me.premium&&hist.length>1?`<div class="paywall"><b>${L('Вся история за неделю','The whole week of history')}</b><p>${L('Бесплатно видна последняя анкета. Premium хранит 7 дней просмотров.','The last profile is free. Premium keeps 7 days of views.')}</p><button class="btn" data-act="premD9">${L('Открыть всю неделю','Unlock the whole week')}</button></div>`:''}</div></div>`;}};
 ACT.d9tab=a=>setP('k',a.dataset.v);
 ACT.premD9=()=>premiumSheet('history');
@@ -5346,6 +5381,7 @@ ACT.dfGeo=()=>{const keep=S.ui.df;requestCoarseLocation(coords=>{keep.coords=coo
 for(const key of ['enableDating','datingPeek','goVisible']){const original=ACT[key];ACT[key]=(...args)=>{if(actionAuthor()==='couple'){go('P02',{owner:'couple'});return;}return original(...args);};}
 
 
+
 /* ---- s-profile.js ---- */
 /* ============ P: PROFILES, PRIVATE LAYER & ACCESS, SAFETY ============ */
 /** my own preview: would a stranger see a «Like» button? — it follows my dating / profile-likes settings */
@@ -5357,16 +5393,16 @@ function profileView(id,r,o={}){
  const sh=me?null:shared(id);const inert=h=>o.asOther?h.replace(/ data-(act|go|p|v|id)=("[^"]*"|'[^']*')/g,'').replace(/<button /g,'<button data-act="demoNote" ').replace(/ btn soft off"/g,' btn soft"'):h;
  const keys=[...fmtList(p.format).slice(0,2).map(x=>opt('format',x)),...fmtList(p.role).filter(v=>v!=='none').slice(0,2).map(v=>opt('role',v)),...(p.dating?(p.seek||[]).slice(0,2).map(s=>opt('seek',s)):[])].filter(Boolean);
  const isPartner=activePair()&&id===S.pair.with;
- const likeBtn=isPartner?'':mutual?`<button class="btn primary" data-act="openChat" data-v="${id}" data-actor="${act.a}">${I.chat}${L('Написать','Message')}</button>`:liked?`<button class="btn on" data-act="unlikeP" data-v="${id}" data-actor="${act.a}" aria-pressed="true" title="${L('Нажми, чтобы отменить симпатию','Tap to withdraw the like')}">${I.heartf}${L('Отправлено','Sent')}</button>`:canLike||o.asOther&&acceptsLikes(id)?`<button class="btn primary" data-act="likeProfile" data-v="${id}">${I.heartf}${L('Нравится','Like')}</button>`:`<button class="btn soft off" data-act="likesOffNote" data-v="${id}">${I.heart}${L('Не принимает симпатии','Not accepting likes')}</button>`;
+ const likeBtn=isPartner?'':mutual?`<button class="btn primary" data-act="openChat" data-v="${id}" data-actor="${act.a}">${I.chat}${L('Написать','Message')}</button>`:liked?`<button class="btn on" data-act="unlikeP" data-v="${id}" data-actor="${act.a}" aria-pressed="true" title="${L('Нажми, чтобы отменить симпатию','Tap to withdraw the like')}">${I.heartf}${L('Отправлено','Sent')}</button>`:canLike||o.asOther&&acceptsLikes(id)?`<button class="btn primary" data-act="likeProfile" data-v="${id}">${I.heartf}${L('Нравится','Like')}</button>`:'';
  const pending=social().reqOut.find(x=>x.p===id&&x.status==='pending');
  const acts=self?`<div class="row g8" style="margin-top:16px"><button class="btn primary" data-go="P02" data-p='${esc(JSON.stringify({owner}))}'>${I.edit}${L('Редактировать','Edit profile')}</button><button class="btn soft" data-act="shareProfile">${I.share}${L('Поделиться','Share')}</button></div>`
-  :inert(`<div class="p-acts">${likeBtn}<button class="btn soft" data-act="follow" data-v="${id}" aria-pressed="${social('me').follows.has(id)}" title="${social('me').follows.has(id)?L('Нажми, чтобы отписаться','Tap to unfollow'):''}">${social('me').follows.has(id)?`${I.check}${L('В подписках','Following')}`:L('Подписаться','Follow')}</button></div>${!o.asOther&&!isPartner&&!mutual&&!liked&&canLike?profileActorLine(id,act):''}`);
+  :inert(`<div class="p-acts">${likeBtn}<button class="btn soft" data-act="follow" data-v="${id}" aria-pressed="${social('me').follows.has(id)}" title="${social('me').follows.has(id)?L('Нажми, чтобы отписаться','Tap to unfollow'):''}">${social('me').follows.has(id)?`${I.check}${L('В подписках','Following')}`:L('Подписаться','Follow')}</button></div>${!isPartner&&!mutual&&!liked&&!canLike&&!(o.asOther&&acceptsLikes(id))?`<p class="profile-like-note">${I.heart}<span>${L('Симпатии выключены','Likes are off')}</span></p>`:''}${!o.asOther&&!isPartner&&!mutual&&!liked&&canLike?profileActorLine(id,act):''}`);
  const orgEvents=allEventIds().filter(e=>EV(e).organizer===id&&!isPast(e)&&!EV(e).cancelled&&EV(e).status!=='review');
  const modOf=Object.keys(COMMUNITIES).filter(c=>COMMUNITIES[c].mods.includes(id));
  const kv=identityFields().filter(([k])=>!['pron','gender','orient'].includes(k)&&!(p.pair&&k==='status')).map(([k,title])=>[title,IDENTITY_MULTI.includes(k)?fmtList(p[k]).map(v=>opt(k,v)).join(', '):opt(k,p[k])]).filter(x=>x[1]);
  /* V8: one page — profile, then the private part right after it when access is open. No tabs. */
  const bio=T(p.bio)?grp(p.pair?L('О нас','About us'):L('О себе','About'),md(T(p.bio),'bio')):'';
- const pj=pubJars(id);const actItems=activityShown(id,o)?activityOf(id).filter(x=>!(x.k==='like'&&(id==='me'?o.asOther&&S.me.showLikes===false:person(id)?.hideLikes))):[];
+ const pj=pubJars(id);const actItems=activityShown(id,o)?activityOf(id).filter(x=>!(x.k==='like'&&(id==='me'?o.asOther&&S.me.showLikes===false:person(id)?.hideLikes))&&!(x.k==='event'&&id==='me'&&o.asOther&&myR(x.e).show===false)):[];
  const body=`${bio}${detailsGroup(id)}
   ${pj.length?grp(L('Интересы','Interests'),jarShelf(pj,{pre:1,act:'topic',who:id,moreAct:self?(id==='couple'?'coupleJars':'myJarsAll'):'allJars'})):''}
   ${self?myPrivSection(owner):me?(privSection(id,o)||(o.asOther&&!hasPrivatePart(id)?`<div class="owner-only">${myPrivSection(owner)}</div>`:'')):`<div data-private-context="${id}">${privSection(id)}</div>`}
@@ -5761,6 +5797,7 @@ ACT.pairSocialLikes=()=>{cur().socialLikes=!cur().socialLikes;cur().dirty=true;r
 ACT.pairRequests=a=>{cur().requestsFrom=a.dataset.v;cur().dirty=true;refresh();};
 
 
+
 /* ---- s-comm.js ---- */
 /* ============ C: COMMUNITIES ============ */
 const myComms=()=>Object.keys(COMMUNITIES).filter(c=>ownsCommunity(c));
@@ -5801,7 +5838,7 @@ SC.C03={title:p=>SC.C03.valid(p)?T(COMMUNITIES[p.id].name):L('Сообществ
  const discs=S.discussions.filter(d=>d.c===id&&(d.author!=='couple'||activePair())).sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)||b.t-a.t);
  const evs=allEventIds().filter(e=>EV(e).community===id&&!isPast(e)&&EV(e).status!=='review');
  const canRead=c.privacy==='open'||j;
- const action=ownsCommunity(id)?`<button class="btn md soft" data-act="cManage">${I.gear}${L('Управление','Manage')}</button>`:j?`<span class="pill ok">${I.check}${L('Ты участник','Member')}</span>`:pend?`<span class="pill wait">${I.clock}${L('Заявка на рассмотрении','Request under review')}</span><button class="btn md soft auto" style="flex:0 0 auto;margin-left:auto" data-act="cCancelReq">${L('Отозвать','Withdraw')}</button>`:`<button class="btn md primary" data-act="cJoin">${c.privacy==='closed'?L('Подать заявку','Request to join'):L('Вступить','Join')}</button>`;
+ const action=ownsCommunity(id)?manageEntry('C10',id):j?`<span class="pill ok">${I.check}${L('Ты участник','Member')}</span>`:pend?`<span class="pill wait">${I.clock}${L('Заявка на рассмотрении','Request under review')}</span><button class="btn md soft auto" style="flex:0 0 auto;margin-left:auto" data-act="cCancelReq">${L('Отозвать','Withdraw')}</button>`:`<button class="btn md primary" data-act="cJoin">${c.privacy==='closed'?L('Подать заявку','Request to join'):L('Вступить','Join')}</button>`;
  const tabs=tabsRow([['disc',L('Обсуждения','Discussions')],['events',L('События','Events')],['members',L('Участники','Members')],['rules',L('Правила','Rules')]],t,'cTab','tabs-full');/* V11: no counters on tabs (as in profiles) — the full names fit */
  let body='';
  if(t==='disc')body=!canRead?`<div class="veil" style="min-height:200px"><div class="veil-content"><div class="bar-sk" style="width:70%"></div><div class="bar-sk"></div><div class="bar-sk" style="width:50%"></div><div class="bar-sk"></div></div><div class="veil-glass"><div class="lockdot">${I.lock}</div><b>${L('Обсуждения видят участники','Discussions are for members')}</b><p>${pend?L('Заявка у ведущих. Обсуждения откроются, когда её одобрят.','Your request is with the hosts. Discussions open once it’s approved.'):L('Подай заявку — ведущие рассмотрят её.','Request to join — the hosts will review it.')}</p></div></div>`
@@ -5853,6 +5890,7 @@ ACT.cLeave=()=>{const owner=S,session=S.session,route=cur(),id=route.p.id,c=COMM
 ACT.cCancelReq=()=>{const owner=S,session=S.session,route=cur(),id=route.p.id;if(!session||!S.pendingJoin.has(id))return;
  const active=()=>S===owner&&S.session===session&&cur()===route&&S.pendingJoin.has(id);return ask({title:L('Отозвать заявку?','Withdraw request?'),ok:L('Отозвать','Withdraw'),danger:true}).then(ok=>{if(!ok||!active())return;let removed=false;return run(null,()=>{if(!active())return;removed=S.pendingJoin.delete(id);if(removed)for(const req of S.communityRequests[id]||[])if(req.p==='me'&&req.status==='pending'){req.status='withdrawn';req.updated=Date.now();}refresh();},{ok:()=>removed?L('Заявка отозвана','Request withdrawn'):null});});};
 ACT.cManage=()=>go('C10',{id:cur().p.id});
+ACT.communityReports=a=>{if(!ownsCommunity(a.dataset.v))return;sheet(()=>({title:L('Жалобы сообщества','Community reports'),body:empty('flag',L('Жалоб пока нет','No reports yet'),'')}));};
 
 /* C06 — discussion thread */
 SC.C06={title:()=>L('Обсуждение','Discussion'),valid:p=>!!S.discussions.find(d=>d.id===p.id),render:(p,r)=>{const d=S.discussions.find(x=>x.id===p.id);const c=COMMUNITIES[d.c];if(!SC.C03.valid({id:d.c}))return unavailable();const j=communityMemberCanWrite(d.c,'me','comment');if(d.author==='couple'&&!activePair())return `${bar(L('Обсуждение недоступно','Discussion unavailable'),{back:1})}<div class="view">${empty('lock',L('Совместный профиль отключён','Couple profile is inactive'),'')}</div>`;
@@ -5900,7 +5938,7 @@ ACT.c8Save=a=>{const r=cur();r.err={};const nm=fv('name').trim();if(nm.length<3)
  if(Object.keys(r.err).length){refresh();shakeFirstErr();return;}
  run(a,()=>{const id='c'+Date.now();COMMUNITIES[id]={name:{ru:nm,en:nm},plate:r.f.plate,privacy:r.f.privacy==='hidden'?'closed':r.f.privacy,hidden:r.f.privacy==='hidden',members:0,city:S.me.city||'online',topics:r.f.topics,mods:['me'],desc:{ru:fv('desc'),en:fv('desc')},rules:fv('rules').split('\n').filter(Boolean).map(x=>({ru:x,en:x})),status:'review'};S.managedCommunities.add(id);r.dirty=false;go('C03',{id},{replace:true});autoResolve();},{ok:L('Отправлено на проверку. Пока сообщество видишь только ты','Submitted for review. Only you can see it for now')});};
 SC.C10={title:()=>L('Управление','Manage'),valid:p=>!!COMMUNITIES[p.id]&&ownsCommunity(p.id),render:(p)=>{if(!ownsCommunity(p.id))return unavailable();const c=COMMUNITIES[p.id];return `${bar(L('Управление','Manage'),{back:1,sm:1,sub:esc(T(c.name)),actions:authorPicker()})}<div class="view nodock"><div class="wrap">
- <div class="stat3"><div><b>${C.members(p.id)}</b><small>${L('участников','members')}</small></div><div><b>${S.discussions.filter(d=>d.c===p.id).length}</b><small>${L('обсуждений','discussions')}</small></div><div><b>0</b><small>${L('жалоб','reports')}</small></div></div>
+ <div class="stat3"><button type="button" data-go="C03" data-p='${esc(JSON.stringify({id:p.id,t:'members'}))}'><b>${C.members(p.id)}</b><small>${L('участников','members')}</small></button><button type="button" data-go="C03" data-p='${esc(JSON.stringify({id:p.id,t:'disc'}))}'><b>${S.discussions.filter(d=>d.c===p.id).length}</b><small>${L('обсуждений','discussions')}</small></button><button type="button" data-act="communityReports" data-v="${p.id}"><b>0</b><small>${L('жалоб','reports')}</small></button></div>
  <div class="card list">${linkRow({act:'soon',icon:'doc',tone:'v',title:L('Заявки на вступление','Join requests'),val:(S.communityRequests[p.id]||[]).filter(x=>x.status==='pending').length||'0'})}${linkRow({act:'soon',icon:'edit',title:L('Описание и правила','Description and rules')})}${linkRow({act:'soon',icon:'people',title:L('Ведущие','Hosts')})}</div>
  </div></div>`;}};
 ACT.soon=()=>toast(L('Этот экран — в следующей версии макета','This screen is in the next prototype version'),{type:'info'});
@@ -5913,6 +5951,7 @@ ACT.cfTopic=a=>{const f=S.ui.cf;f.topics=f.topics||[];const i=f.topics.indexOf(a
 const discussionAfter=SC.C06.after;SC.C06.after=(p,r)=>{discussionAfter?.(p,r);scrollToReply(p);};
 
 ACT.shareCommunityPartner=()=>{const id=cur().id==='C06'?S.discussions.find(d=>d.id===cur().p.id)?.c:cur().p.id;copyReviewLink('C03',{id});};
+
 
 
 /* ---- s-chats.js ---- */
@@ -6359,7 +6398,7 @@ SC.K01={title:()=>L('Настройки','Settings'),render:()=>{const m=S.me;re
  <div class="sec" style="margin-top:4px">${L('Аккаунт','Account')}</div><div class="card list">${linkRow({go:'K06',icon:'key',title:L('Вход и безопасность','Sign-in & security'),sub:esc(m.email)||L('почта не указана','no email')})}${linkRow({act:'ageFromMe',icon:'shield',tone:m.ageCheck==='ok'?'g':'a',title:L('Проверка возраста','Age check'),sub:L('Нужна для знакомств','Needed for dating'),val:{ok:L('подтверждено','verified'),pending:L('проверяется','in progress'),none:L('не пройдена','not done')}[m.ageCheck]})}${linkRow({go:'V01',icon:'verified',tone:'v',title:L('Фото-верификация','Photo verification'),sub:L('Галочка у имени','A badge by your name'),val:{ok:L('подтверждено','verified'),pending:L('проверяется','in review'),rejected:L('не прошла','failed'),none:L('не пройдена','not done')}[m.photoCheck||'none']})}${linkRow({go:'B01',icon:'crown',tone:'l',title:'Premium',sub:L('Больше возможностей','More features'),val:m.premium?L('активен','active'):L('не подключён','not active')})}</div>
  <div class="sec">${L('Приложение','App')}</div><div class="card list"><div class="li"><span class="ico">${I.globe}</span>${selectRow('k2',L('Язык','Language'),[['system',L('Как в системе','System')],['ru','Русский'],['en','English']],S.langPref||'ru',{sub:L('Язык интерфейса','Interface language')})}</div><div class="li"><span class="ico">${I.moon}</span>${selectRow('k3',L('Тема оформления','Appearance'),[['light',L('Светлая','Light')],['dark',L('Тёмная','Dark')],['auto',L('Системная','System')]],themePref(),{sub:L('Как выглядит приложение','How the app looks')})}</div>${linkRow({go:'K05',icon:'bell',title:L('Уведомления','Notifications'),sub:L('Что и когда приходит','What arrives and when')})}</div>
  <div class="sec">${L('Знакомства','Dating')}</div><div class="card list"><div class="li">${selectRow('k4mode',L('Режим','Mode'),[['on',L('Включены','On')],['hidden',L('Смотрю незаметно','Browsing hidden')],['off',L('Выключены','Off')]],!m.dating?'off':m.datingVisible?'on':'hidden',{aria:L('Знакомства','Dating'),sub:L('Подборка и просмотр анкет','Discover and browsing')})}</div>${toggleRow('k4social',L('Принимать симпатии из профиля','Accept likes from my profile'),L('Симпатию можно отправить из профиля','A like can be sent from your profile'),m.socialLikes)}</div>
- <div class="sec">${L('Приватность профиля','Profile privacy')}</div><div class="card list"><div class="li">${selectRow('k4act',L('Кто видит активность','Who sees my activity'),ACT_VIS(),m.activityVis||'all',{sub:L('Лайки, события, подписки','Likes, events, follows')})}</div>${toggleRow('k4likes',L('Показывать мои лайки подписчикам','Show my likes to followers'),L('Без этого лайки не попадают в их ленту и в твою активность','Without it your likes stay out of their feed and your activity'),m.showLikes!==false)}${toggleRow('k4rsvp',L('Показывать моё участие в событиях по умолчанию','Show my event attendance by default'),L('Видно, на какие события ты идёшь','Shows which events you attend'),m.rsvpShow)}</div>
+ <div class="sec">${L('Приватность профиля','Profile privacy')}</div><div class="card list"><div class="li">${selectRow('k4act',L('Кто видит активность','Who sees my activity'),ACT_VIS(),m.activityVis||'all',{sub:L('Лайки, события, подписки','Likes, events, follows')})}</div>${toggleRow('k4likes',L('Показывать мои лайки подписчикам','Show my likes to followers'),L('Без этого лайки не попадают в их ленту и в твою активность','Without it your likes stay out of their feed and your activity'),m.showLikes!==false)}</div>
  <div class="sec">${L('Чаты','Chats')}</div><div class="card list">${toggleRow('k4blur',L('Размывать входящие фото и видео','Blur incoming photos and video'),L('Пока не нажмёшь, содержимое скрыто','Hidden until you tap'),m.chatBlur!==false)}</div>
  <div class="sec">${L('Данные','Data')}</div><div class="card list">${linkRow({go:'P12',icon:'block',title:L('Заблокированные','Blocked'),sub:L('Не увидят тебя и не напишут','They can’t see or message you'),val:String(S.blocked.length)})}${linkRow({go:'K07',icon:'download',title:L('Мои данные и удаление','Your data & deletion'),sub:L('Архив данных и удаление аккаунта','Data archive and account deletion')})}</div>
  <div class="sec">${L('Поддержка','Support')}</div><div class="card list">${linkRow({go:'S01',icon:'help',title:L('Помощь и безопасность','Help & safety'),sub:L('Правила, жалобы, поддержка','Rules, reports, support')})}${linkRow({act:'logout',icon:'logout',cls:'danger',title:L('Выйти','Sign out'),noChev:1})}</div>
@@ -6375,7 +6414,7 @@ ACT.k4vis=a=>{if(!S.me.datingVisible&&!S.me.photo){toast(L('Чтобы пока�
 ACT.k4likes=()=>{S.me.showLikes=S.me.showLikes===false;refresh();toast(S.me.showLikes!==false?L('Лайки видны подписчикам','Likes are visible to followers'):L('Лайки скрыты','Likes are hidden'),{type:'ok'});};
 ACT.k4act=a=>run(null,()=>{S.me.activityVis=['all','followers','off'].includes(a.dataset.v)?a.dataset.v:'all';refresh();},{ms:300,ok:L('Сохранено','Saved')});
 ACT.k4social=()=>run(null,()=>{S.me.socialLikes=!S.me.socialLikes;refresh();},{ms:300,ok:L('Сохранено','Saved')});
-ACT.k4rsvp=()=>run(null,()=>{S.me.rsvpShow=!S.me.rsvpShow;refresh();},{ms:300,ok:L('Сохранено','Saved')});
+
 ACT.k4off=()=>ask({icon:'heart',tone:'l',title:L('Выключить знакомства?','Turn off dating?'),text:L('Ты пропадёшь из подборки и перестанешь видеть анкеты. Совпадения, чаты и выданные доступы останутся.','You’ll disappear from Discover and stop seeing profiles. Matches, chats and shared access stay.'),ok:L('Выключить','Turn off'),danger:true}).then(ok=>{if(ok)run(null,()=>{S.me.dating=false;S.me.datingVisible=false;refresh();},{ok:L('Знакомства выключены','Dating is off')});else refresh();});
 /* K05 — V7 notifications: safe mode by default, push + email channels per category, quiet hours and email digest */
 const NOTIF_CATS=()=>[['match',I.chat,L('Совпадения и сообщения','Matches & messages'),L('Взаимная симпатия, новое сообщение','A mutual like, a new message')],['likes',I.heart,L('Новые симпатии','New likes'),L('Собираем вместе, не чаще раза в час','Grouped, at most hourly')],['req',I.key,L('Запросы и доступы','Requests & access'),L('Кто-то просит открыть приватное, тебе открыли доступ','Someone asks for private sections, access shared with you')],['events',I.cal,L('События','Events'),L('Изменения, отмены, напоминания за день','Changes, cancellations, day-before reminders')],['replies',I.feed,L('Ответы и реакции','Replies & reactions'),L('Ответы на твои публикации и обсуждения','Replies to your posts and discussions')],['follows',I.users3,L('Новые подписчики','New followers'),L('Кто подписывается на твои публикации','Who starts following your posts')],['groups',I.groups,L('Сообщества','Communities'),L('Объявления ведущих, решения по заявке','Host announcements, join decisions')],['news',I.spark,L('Новости FetUre','FetUre news'),L('Новые функции — не чаще раза в месяц','New features — at most monthly')]];
@@ -6459,13 +6498,14 @@ SC.V01={title:()=>L('Фото-верификация','Photo verification'),rend
  else body=`${st==='rejected'?`<div class="alert err">${I.alert}<span><b>${L('Не получилось подтвердить','We couldn’t verify it')}</b>${esc(T(m.photoCheckReason)||L('Лицо плохо видно.','The face isn’t clearly visible.'))} ${L('Попробуй ещё раз — это бесплатно.','Try again — it’s free.')}</span></div>`:''}
   
   <div class="pv-pose"><span class="ico v" aria-hidden="true">${I.camera}</span><span><small>${L('Жест для селфи','Selfie gesture')}</small><b>${pose[0]}</b></span></div>
+
+  ${r.selfie?`<section class="card pv-capture mt12"><div class="pv-preview"><img src="${esc(r.selfie)}" alt="${L('Твоё селфи','Your selfie')}"></div><div class="pv-capture-info"><b>${L('Селфи готово','Selfie ready')}</b><p class="note">${L('Проверь, что лицо и жест хорошо видны. Это фото не появится в профиле.','Check that your face and gesture are clear. This photo will not appear on your profile.')}</p><button class="btn soft md" data-act="pvRetake">${I.camera}${L('Переснять','Retake')}</button></div></section>`:''}
   <div class="card list mt12">${[L('Лицо целиком, без маски, очков от солнца и фильтров','Your whole face — no mask, sunglasses or filters'),L('Хороший свет, только ты в кадре','Good light, only you in the frame'),L('В профиле должно быть хотя бы одно фото, где видно лицо','At least one profile photo must show your face')].map(t=>`<div class="li static"><span class="ico">${I.check}</span><span class="tx"><small style="color:var(--ink);font-size:14px">${t}</small></span></div>`).join('')}</div>
-  ${r.selfie?`<div class="pv-selfie mt16"><img src="${esc(r.selfie)}" alt="${L('Твоё селфи','Your selfie')}"><button class="btn text auto" data-act="pvRetake">${L('Переснять','Retake')}</button></div>`:''}
-  <div class="mt16">${about}</div>`;
+  <details class="pv-about mt16"><summary>${L('Как работает проверка','How verification works')}</summary>${about}</details>`;
  const cta=st==='none'||st==='rejected'?`<div class="ctabar"><div class="wrap">${r.selfie?`<button class="btn primary" data-act="pvSend">${L('Отправить на проверку','Send for review')}</button>`:`<button class="btn primary" data-act="pvShot">${I.camera}${L('Сделать селфи','Take a selfie')}</button>`}</div></div>`:'';
  return `${bar(L('Фото-верификация','Photo verification'),{back:1,sm:1})}<div class="view nodock ${cta?'cta1':''}"><div class="wrap">${body}</div></div>${cta}`;}};
 ACT.pvShot=async()=>{const r=cur(),owner=S;if(!S.me.photo){toast(L('Сначала добавь фото в профиль — сравнивать не с чем','Add a profile photo first — there’s nothing to compare with'),{type:'warn',action:{label:L('Добавить','Add'),fn:()=>go('P02')}});return;}const f=await pickLocalMedia('image/*',false);if(S!==owner||cur()!==r||!f.length)return;r.selfie=f[0].url;r.dirty=true;refresh();};
-ACT.pvRetake=()=>{const r=cur();r.selfie=null;ACT.pvShot();};
+ACT.pvRetake=()=>ACT.pvShot();
 ACT.pvSend=a=>{const r=cur();if(!r.selfie)return;run(a,()=>{S.me.photoCheck='pending';S.me.photoCheckReason=null;r.selfie=null;r.dirty=false;refresh();autoResolve();},{ok:L('Отправлено. Обычно проверка занимает до 24 часов','Sent. Review usually takes up to 24 hours')});};
 /** QA: resolve a pending check (stands in for the reviewer) */
 function pvResolve(ok){const m=S.me;if(m.photoCheck!=='pending')return toast(L('Нет проверки в ожидании','No pending check'));m.photoCheck=ok?'ok':'rejected';m.photoCheckAt=Date.now();m.photoCheckReason=ok?null:{ru:'Лицо на селфи закрыто рукой или плохо видно.',en:'The face in the selfie is covered or hard to see.'};S.notifs.unshift({id:'n'+Date.now(),type:'pv',ok,t:Date.now(),read:false,go:['V01',{}]});refresh();renderSide();}
@@ -6506,6 +6546,7 @@ SC.MAINT={title:()=>L('Технические работы','Maintenance'),rende
 ACT.maintenanceRetry=()=>{refresh();if(QA.maintenance)toast(L('Работы ещё идут','Maintenance is still in progress'),{type:'info'});};
 
 ACT.k4mode=a=>{const v=a.dataset.v,m=S.me;if(v==='off'){if(m.dating)ACT.k4off();return;}if(!m.dating){ACT.enableDating();return;}if(v==='on'&&!m.datingVisible)ACT.k4vis();else if(v==='hidden'&&m.datingVisible)ACT.k4vis();};
+
 
 
 /* ---- s-completion.js ---- */
@@ -6610,7 +6651,7 @@ ACT.pairInvitationAnswer=a=>{if(S.pairMember!=='partner')return;if(a.dataset.v==
 SC.C11={title:()=>L('Заявки сообщества','Community requests'),valid:p=>ownsCommunity(p.id),render:p=>{if(!ownsCommunity(p.id))return unavailable();const all=S.communityRequests[p.id]||[],pending=all.filter(x=>x.status==='pending'),done=all.filter(x=>x.status!=='pending');const t=p.t==='history'?'history':'pending',list=t==='history'?done:pending;
  return `${bar(L('Заявки сообщества','Community requests'),{back:1,sm:1,sub:esc(T(COMMUNITIES[p.id].name))})}<div class="view nodock"><div class="wrap">${seg([['pending',L('Новые','New'),pending.length||''],['history',L('Решения','Decisions'),done.length||'']],t,'cRequestsTab')}
  
- ${list.map(req=>`<section class="card mt12">${personRow(req.p)}<p class="note">${F.rel(req.updated||req.t)}${req.status!=='pending'?' · '+({approved:L('Одобрено','Approved'),declined:L('Отклонено','Declined'),withdrawn:L('Отозвана','Withdrawn')}[req.status]||''):''}</p><p style="white-space:pre-wrap">${esc(T(req.answer))}</p>${req.status==='pending'?`<div class="row g8"><button class="btn soft" data-act="cRequestDecision" data-v="${esc(req.id)}" data-status="declined">${L('Отклонить','Decline')}</button><button class="btn primary" data-act="cRequestDecision" data-v="${esc(req.id)}" data-status="approved">${L('Одобрить','Approve')}</button></div>`:''}</section>`).join('')||empty('doc',t==='history'?L('Решений пока нет','No decisions yet'):L('Новых заявок нет','No new requests'),L('Ответы участников видны только ведущим этого сообщества.','Applicant answers are visible only to this community’s hosts.'))}</div></div>`;}};
+ ${list.map(req=>`<section class="card application-card mt12">${personRow(req.p)}<p class="note">${F.rel(req.updated||req.t)}${req.status!=='pending'?' · '+({approved:L('Одобрено','Approved'),declined:L('Отклонено','Declined'),withdrawn:L('Отозвана','Withdrawn')}[req.status]||''):''}</p><p class="application-answer">${esc(T(req.answer))}</p>${req.status==='pending'?`<div class="row g8"><button class="btn soft" data-act="cRequestDecision" data-v="${esc(req.id)}" data-status="declined">${L('Отклонить','Decline')}</button><button class="btn primary" data-act="cRequestDecision" data-v="${esc(req.id)}" data-status="approved">${L('Одобрить','Approve')}</button></div>`:''}</section>`).join('')||empty('doc',t==='history'?L('Решений пока нет','No decisions yet'):L('Новых заявок нет','No new requests'),L('Ответы участников видны только ведущим этого сообщества.','Applicant answers are visible only to this community’s hosts.'))}</div></div>`;}};
 ACT.cRequestsTab=a=>setP('t',a.dataset.v);
 ACT.cRequestDecision=a=>{const owner=S,session=S.session,route=cur(),id=a.dataset.c||route.p.id,status=a.dataset.status,req=(S.communityRequests[id]||[]).find(x=>x.id===a.dataset.v),community=COMMUNITIES[id],applicant=req?.p,reviewedAnswer=JSON.stringify(req?.answer);
  const allowed=()=>S===owner&&S.session===session&&cur()===route&&(route.id==='C11'||route.id==='N01'&&a.dataset.c===id)&&ownsCommunity(id)&&COMMUNITIES[id]===community&&community.status!=='review'&&(S.communityRequests[id]||[]).includes(req)&&req?.status==='pending'&&req.p===applicant&&JSON.stringify(req.answer)===reviewedAnswer&&req.p!=='me'&&!!PEOPLE[req.p];
@@ -6649,6 +6690,7 @@ SC.Q08={title:()=>L('Совместный архив','Joint archive'),valid:()=
 let trustConsentForm=null;
 ACT.pairTrustOpen=()=>{if(!authorAllowed('couple'))return;const P=S.pair;coupleProfile();const form=trustConsentForm={id:'trust_'+Date.now()+'_'+Math.random().toString(36).slice(2),ticket:authorTicket('couple')};const mine=P.trust?.consents?.includes(pairMember());sheet(()=>({title:L('Подтверждение партнёром','Partner approval'),body:`<div>${realMembers('couple').map(id=>`<div class="trust-status"><b>${esc(pname(id))}</b><span>${P.trust?.consents?.includes(id)?L('Согласен','Agreed'):L('Не подтверждено','Not confirmed')}</span></div>`).join('')}</div>`,foot:`<div class="review-foot"><button class="btn ${mine?'soft':'primary'}" data-act="pairTrustSet" data-form="${esc(form.id)}" data-v="${mine?'off':'on'}" data-pair="${esc(P.id)}" data-epoch="${P.safetyEpoch||0}">${mine?L('Вернуть подтверждения','Require approval again'):L('Отключить подтверждения','Turn off approval')}</button></div>`}));};
 ACT.pairTrustSet=a=>{const P=S.pair,form=trustConsentForm;if(!form||a.dataset.form!==form.id||!validAuthor(form.ticket))return;if(!P||a.dataset.pair!==P.id||Number(a.dataset.epoch)!==(P.safetyEpoch||0)||!authorAllowed('couple'))return;if(setPairTrust(a.dataset.v==='on')){trustConsentForm=null;closeSheet();refresh();}};
+
 
 /* ---- s-navigation.js ---- */
 /* Browser/system Back shares the application navigation, with private drafts in memory. */
