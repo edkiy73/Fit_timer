@@ -76,7 +76,7 @@ assert.ok(!/<button[^>]*disabled/.test(pv.split('class="p-acts"')[1]?.split('</d
 assert.ok(pv.includes('Нравится')&&!pv.includes('Не принимает симпатии'),'my preview shows «Like» while my dating / profile likes are on');run("S.me.dating=false;S.me.socialLikes=false");assert.ok(run("SC.P03.render({lv:'all'},{p:{lv:'all'},f:{}})").includes('Не принимает симпатии'),'…and «Likes off» when both are off');
 assert.ok(pv.includes('class="compat"')&&pv.includes('cp-demo')&&!pv.includes('Общие интересы — у каждого свои'),'the preview shows the real «what you share» block with a small demo note');
 // activity rows share one 46px tile whatever the row shows (picture, heart, avatar): text never shifts between rows.
-{const rows=run("activityList('mia',activityOf('mia'))");const leads=[...rows.matchAll(/<button class="li [^"]*"[^>]*>(<span class="[^"]*">)/g)].map(m=>m[1]);assert.ok(leads.length>3&&leads.every(l=>/\bpth\b/.test(l)),'every activity row starts with the same tile');}
+{const rows=run("activityList('mia',activityOf('mia'))");const leads=[...rows.matchAll(/<button class="ecard[^"]*"[^>]*>(<span class="[^"]*">)/g)].map(m=>m[1]);assert.ok(leads.length>3&&leads.every(l=>/\bpth\b/.test(l)),'every activity row starts with the same tile');}
 // One profile content everywhere: the discovery card and the full profile render the same details card, shared block and private panel; no pronouns anywhere.
 run("S=freshState('full');S.session={};initNav();");
 for(const id of ['kira','mia','maya','tomeva']){const det=run(`detailsGroup('${id}')`),card=run(`card('${id}','top')`),prof=run(`profileView('${id}',{p:{},f:{}})`);

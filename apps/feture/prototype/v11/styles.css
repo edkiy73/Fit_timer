@@ -2369,8 +2369,6 @@ button.pill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:no
 .actc-av{flex:none;align-self:flex-start}
 .actc-b{flex:1;min-width:0;display:grid;gap:10px}
 .actc-t{margin:0;font-size:14.5px;line-height:1.4;color:var(--ink)}.actc-t b{font-weight:650}.actc-t small{display:block;margin-top:2px;font-size:12px;color:var(--faint)}
-.actc-p{display:flex;align-items:center;gap:12px;width:100%;padding:8px;border-radius:var(--r);background:var(--surf);border:1px solid var(--line);text-align:left}
-.actc-p .tx{flex:1;min-width:0}.actc-p .tx b{display:block;font-size:14px;font-weight:600;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.actc-p .tx small{display:block;margin-top:2px;font-size:12px;color:var(--mute)}
 
 /* V11: grouped activity */
 .actc-hd{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}.actc-hd .ibtn{flex:none;margin:-6px -8px 0 0}
@@ -2422,3 +2420,18 @@ button.pill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:no
 .pth-x{position:absolute;top:3px;right:3px;display:flex;gap:2px}
 .pth-x i{width:16px;height:16px;border-radius:50%;display:grid;place-items:center;background:rgba(10,6,10,.6);color:#fff}.pth-x i svg{width:10px;height:10px}
 .pth-n b,.mcell .dur b,.upthumb .dur b{display:inline-flex;align-items:center;gap:2px;height:100%;line-height:1;font-weight:500}
+
+/* ONE entity card (.ecard): post / person / event / community preview in the feed's activity and in a profile's activity.
+   square · [kicker] · title 14.5/600 · optional line · one meta row of 13px icons at 12px */
+.ecards,.actc-list{display:grid;gap:8px}
+.ecard{display:flex;align-items:center;gap:12px;width:100%;padding:8px;border-radius:var(--r);background:var(--surf);border:1px solid var(--line);text-align:left}
+.ecard .tx{flex:1;min-width:0;display:grid;gap:2px}
+.ecard .tx b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:14.5px;font-weight:600;line-height:1.3}
+.ecard.one .tx b{display:flex;align-items:center;gap:0;white-space:nowrap}.ecard.one .tx b .fnm{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.ecard .fag{flex:none;font-weight:500;color:var(--mute);margin-right:2px}
+.ecard .tx b .nbadge{flex:none}.ecard .tx b .nbadge svg{width:15px;height:15px}
+.ecard .tx small{display:block;margin:0;font-size:12.5px;line-height:1.35;color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ec-v{font-style:normal;font-size:11.5px;font-weight:600;line-height:1.2;color:var(--accent)}
+.ec-r{display:flex;flex-wrap:wrap;align-items:center;gap:2px 12px;font-size:12px;line-height:1.3;color:var(--faint)}
+.ec-m{display:inline-flex;align-items:center;gap:4px;min-width:0}.ec-m svg{width:13px;height:13px;flex:none}
+.ec-m.on{color:var(--ok,#3fbf7f)}.ec-dot{width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block}
