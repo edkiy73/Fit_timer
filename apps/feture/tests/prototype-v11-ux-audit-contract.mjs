@@ -104,3 +104,10 @@ const src=f=>fs.readFileSync(root+f,'utf8');
  run(`ACT.actMute({dataset:{v:${JSON.stringify(g.who)}}})`);assert.ok(!json(`followStream(${posts},[],true)`).some(x=>(x.who===g.who)&&x.k!=='post'),'«Hide this person’s activity» removes their activity but keeps their posts');
  assert.ok(run("SC.K01.render({},{p:{},f:{}})").includes('k4likes'),'settings: «Show my likes to followers»');assert.equal(run("S.me.showLikes!==false"),true,'likes are shown by default');
  console.log('PASS grouped activity');}
+
+/* believable demo activity: a 5+ burst, a follow group, photo counters on multi-image posts */
+{fresh();const st=json("followStream(allPosts().filter(x=>followingOf('me').includes(x.author)),[],true)");const gr=st.filter(x=>x.k==='group');
+ assert.ok(gr.some(g=>g.kind==='like'&&g.items.length>=7),'one person liked 7+ posts in a burst («+N» tile)');assert.ok(gr.some(g=>g.kind==='follow'&&g.items.length>=6),'one person followed 6 people');
+ assert.ok(run("allPosts().filter(p=>(p.media||[]).length>=4).length")>=2&&run("allPosts().some(p=>(p.media||[]).length===2)"),'demo posts with 2, 3, 4 and 6 photos exist');
+ const g=gr.find(x=>x.kind==='like'&&x.items.length>=7);assert.ok(run(`actCard(${JSON.stringify(g)},0)`).includes('actc-n'),'a liked multi-photo post shows a photo counter');
+ console.log('PASS demo activity');}

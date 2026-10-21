@@ -2399,6 +2399,11 @@ button.pill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:no
 .actc-th.round{border-radius:50%}.actc-th.round .av{width:100%;height:100%}
 .actc-th.more{font-weight:700;font-size:15px;color:var(--accent);border:1px dashed var(--line2);background:none}
 .actc-list{display:grid;gap:8px}.actc-list>.btn.text{justify-self:start;min-height:36px;padding:0}
+
+/* a liked post with several photos: the thumbnail is a small stack with a photo counter */
+.actc-th.multi{box-shadow:3px -3px 0 -1px var(--raise),5px -5px 0 -2px var(--line2);margin:3px 5px 0 0}
+.actc-n{position:absolute;left:3px;bottom:3px;display:inline-flex;align-items:center;gap:2px;padding:1px 5px 1px 4px;border-radius:99px;background:rgba(10,6,10,.66);color:#fff;font-size:11px;font-weight:700;line-height:1.3}.actc-n svg{width:11px;height:11px}
+.actth .actc-n{left:auto;right:3px;bottom:3px}
 </style>
 </head>
 <body>
@@ -2504,7 +2509,7 @@ for(const k of Object.keys(OPT))OPT[k]=OPT[k].filter(x=>x[0]!=='unspecified');
 const CITY={berlin:{ru:'Берлин',en:'Berlin'},hamburg:{ru:'Гамбург',en:'Hamburg'},moscow:{ru:'Москва',en:'Moscow'},online:{ru:'Онлайн',en:'Online'}};
 
 /** Who follows whom (seed). 'me' entries exist only for the full persona. Counts in profiles are always the length of these lists. */
-const FOLLOW_SEED={sofi:['mia','kira','me'],leon:['mia','maya'],mia:['maya','kai','sofi','me'],kai:['maya','mia','noa','me'],maya:['mia','noa'],ari:['kai'],kira:['sofi','mia','lina'],lina:['kira','me'],tomeva:['mia','maya'],lenamax:['tomeva','kira'],nikajonas:['noa','me'],dan:['me'],noa:['maya','kai']};
+const FOLLOW_SEED={sofi:['mia','kira','me','maya','noa','kai'],leon:['mia','maya'],mia:['maya','kai','sofi','me'],kai:['maya','mia','noa','me','kira'],maya:['mia','noa','sofi'],ari:['kai'],kira:['sofi','mia','lina','noa'],lina:['kira','me'],tomeva:['mia','maya'],lenamax:['tomeva','kira'],nikajonas:['noa','me'],dan:['me','noa','kai'],noa:['maya','kai','kira']};
 const PEOPLE={
  sofi:{pv:true,name:'Sofi',age:26,photo:1,nph:3,city:'berlin',km:4,gender:['woman'],orient:['bi'],format:['open','serious'],status:'single',role:['recv'],seek:['dates','chat'],verified:true,online:true,dating:true,
   bio:{ru:'Люблю долгие переписки перед встречей и людей, которые не торопят. Фотографирую плёнку.',en:'I love long chats before meeting and people who don’t rush. I shoot film.'},
@@ -2597,6 +2602,14 @@ const POSTS=[
  {id:'p7',author:'ari',t:ago(14),type:'text',media:[{type:'image',url:'/images/v10-content/post-p7-morning-coffee-45.webp'}],tags:['rituals','service'],likes:9,aud:'all',text:{ru:'Маленький ритуал утра: кофе, список дел и одно доброе сообщение. Удивительно, как это меняет день.',en:'A small morning ritual: coffee, a to-do list and one kind message. Amazing how it changes the day.'},comments:[]},
  {id:'p8',author:'noa',t:ago(40),type:'text',tags:['talk','aftercare'],likes:66,aud:'all',text:{ru:'Напоминание: «забота после» нужна не только тому, кто был в принимающей роли.',en:'Reminder: aftercare isn’t only for the person in the receiving role.'},comments:[['sofi',{ru:'Очень важно, спасибо.',en:'So important, thank you.'}]]},
  {id:'p9',author:'kira',t:ago(55),type:'text',media:[{type:'image',url:'/images/v10-content/post-p9-evening-atmosphere-45.webp'}],tags:['sensory'],likes:21,aud:'all',text:{ru:'Попробовали вечер без телефонов и света — только звук и прикосновения. Записала ощущения в дневник, делюсь кусочком.',en:'We tried an evening with no phones or lights — just sound and touch. Wrote it in my journal, sharing a piece.'},comments:[]},
+ {id:'p10',author:'kira',t:ago(3),type:'photo',comments:[],media:[{type:'image',url:'/images/v10-content/gallery-e3-club.webp'},{type:'image',url:'/images/v10-content/event-e3-latex-night.webp'},{type:'image',url:'/images/v10-content/post-p6-latex-night-prep-45.webp'},{type:'image',url:'/images/v10-content/post-p9-evening-atmosphere-45.webp'}],plate:'latex',tags:['latex'],likes:19,aud:'all',text:{ru:'Готовимся к пятнице: свет, музыка и правила на входе. Фото с репетиции.',en:'Getting ready for Friday: light, music and the door rules. Photos from rehearsal.'}},
+ {id:'p11',author:'mia',t:ago(6),type:'photo',comments:[],media:[{type:'image',url:'/images/v10-content/gallery-e1-ropes.webp'},{type:'image',url:'/images/v10-content/event-e1-shibari-workshop.webp'},{type:'image',url:'/images/v10-content/post-p2-rope-details.webp'},{type:'image',url:'/images/v10-content/post-p2-rope-details-45.webp'},{type:'image',url:'/images/v10-content/discussion-d1-rope-basics.webp'},{type:'image',url:'/images/v10-content/community-rope.webp'}],plate:'rose',tags:['shibari', 'bondage'],likes:37,aud:'all',text:{ru:'Подборка с последних занятий — что получилось, а что будем повторять.',en:'A set from the latest classes — what worked and what we’ll repeat.'}},
+ {id:'p12',author:'kai',t:ago(8),type:'photo',comments:[],media:[{type:'image',url:'/images/v10-content/gallery-e4-cafe.webp'},{type:'image',url:'/images/v10-content/event-e4-newcomers-coffee.webp'}],plate:'amber',tags:['slow'],likes:14,aud:'all',text:{ru:'Кофе для новичков: пришло больше людей, чем мы ждали. Спасибо, что пришли.',en:'Newcomers coffee: more people came than we expected. Thank you.'}},
+ {id:'p13',author:'maya',t:ago(11),type:'photo',comments:[],media:[{type:'image',url:'/images/v10-content/event-e6-community-picnic.webp'},{type:'image',url:'/images/v10-content/community-slow.webp'},{type:'image',url:'/images/v10-content/community-poly.webp'}],plate:'sea',tags:['talk'],likes:26,aud:'all',text:{ru:'Пикник сообщества: фото с воскресенья.',en:'Community picnic: photos from Sunday.'}},
+ {id:'p14',author:'noa',t:ago(16),type:'photo',comments:[],media:[{type:'image',url:'/images/v10-content/event-e5-aftercare-workshop.webp'}],plate:'lilac',tags:['aftercare'],likes:18,aud:'all',text:{ru:'После мастерской «забота после»: записали главные мысли в одну страницу.',en:'After the aftercare workshop: we put the main ideas on one page.'}},
+ {id:'p15',author:'sofi',t:ago(21),type:'photo',comments:[],media:[{type:'image',url:'/images/v10-content/discussion-d3-communication.webp'},{type:'image',url:'/images/v10-content/community-queer.webp'},{type:'image',url:'/images/v10-content/community-latex.webp'},{type:'image',url:'/images/v10-content/event-e2-boundaries-circle.webp'},{type:'image',url:'/images/v10-content/gallery-e4-cafe.webp'}],plate:'rose',tags:['slow', 'talk'],likes:22,aud:'all',text:{ru:'Пять кадров с круга о границах — без лиц, только атмосфера.',en:'Five frames from the boundaries circle — no faces, just atmosphere.'}},
+ {id:'p16',author:'leon',t:ago(26),type:'photo',comments:[],media:[{type:'image',url:'/images/v10-content/event-e3-latex-night.webp'},{type:'image',url:'/images/v10-content/community-latex.webp'}],plate:'coal',tags:['latex'],likes:31,aud:'all',text:{ru:'Тест света для новой вечеринки.',en:'Lighting test for the new party.'}},
+ {id:'p17',author:'dan',t:ago(33),type:'text',comments:[],tags:['talk'],likes:8,aud:'all',text:{ru:'Первый раз пишу здесь. Читаю вас давно, спасибо за спокойный тон.',en:'First time posting here. Been reading for a while — thanks for the calm tone.'}}
 ];
 
 const EVENTS={
@@ -2648,7 +2661,7 @@ function freshState(persona){
  const st={
   persona,lang:'ru',session:null,datingActor:'me',
   me:full?fullMe():newMe(),
-  follows:new Set(full?['maya','mia','kai','noa']:[]),
+  follows:new Set(full?['maya','mia','kai','noa','sofi','kira','dan']:[]),
   graph:Object.fromEntries(Object.entries(FOLLOW_SEED).map(([k,v])=>[k,new Set(full?v:v.filter(x=>x!=='me'))])),
   joined:new Set(full?['rope','first']:[]), pendingJoin:new Set(full?['queer']:[]),
   managedCommunities:new Set(full?['circle']:[]), communityMembers:{},
@@ -4482,12 +4495,12 @@ const FEED_KINDS=()=>[['posts',L('Публикации','Posts')],['likes',L('Л
 function followStream(posts,kinds,withAct){const items=[],all=!kinds.length,has=k=>all||kinds.includes(k);
  if(has('posts'))posts.forEach(p=>items.push({k:'post',t:p.t,p}));
  if(withAct){const muted=S.mutedActivity||new Set(),groups={};
-  followingOf('me').filter(id=>person(id)&&activityShown(id)&&!muted.has(id)).forEach(id=>activityOf(id).slice(0,6).forEach(x=>{const key={like:'likes',event:'events',comm:'comm',follow:'follows'}[x.k];if(!has(key)||(x.k==='like'&&person(id)?.hideLikes))return;const gid=id+'|'+x.k+'|'+new Date(x.t).toDateString();(groups[gid]??=[]).push({...x,who:id});}));
+  followingOf('me').filter(id=>person(id)&&activityShown(id)&&!muted.has(id)).forEach(id=>activityOf(id).slice(0,12).forEach(x=>{const key={like:'likes',event:'events',comm:'comm',follow:'follows'}[x.k];if(!has(key)||(x.k==='like'&&person(id)?.hideLikes))return;const gid=id+'|'+x.k+'|'+new Date(x.t).toDateString();(groups[gid]??=[]).push({...x,who:id});}));
   Object.entries(groups).forEach(([gid,g])=>g.length>=2?items.push({k:'group',kind:g[0].k,who:g[0].who,gid,items:g.sort((a,b)=>b.t-a.t),t:Math.max(...g.map(x=>x.t))}):items.push(g[0]));}
  return items.sort((a,b)=>b.t-a.t).slice(0,60);}
 /** the tappable preview of one activity item (used by single cards and by the expanded list of a group) */
 function actPrev(x){const pv=(go,p,thumb,t,s)=>`<button class="actc-p" data-go="${go}" data-p='${esc(JSON.stringify(p))}'><span class="actth ${thumb[1]||''}">${thumb[0]}</span><span class="tx"><b>${t}</b>${s?`<small>${s}</small>`:''}</span></button>`;
- if(x.k==='like'){const p=x.post,img=(p.media||[]).find(m=>m.type==='image'&&m.url);return pv('F05',{id:p.id},[img?`<img src="${esc(img.url)}" alt="" loading="lazy" draggable="false"><i>${I.heartf}</i>`:I.heartf,img?'':'ic'],esc(mdPlain(T(p.text)).slice(0,80)||L('Публикация','Post')),`${esc(pname(p.author))} · ${F.rel(x.t)}`);}
+ if(x.k==='like'){const p=x.post,img=(p.media||[]).find(m=>m.type==='image'&&m.url),mc=(p.media||[]).filter(m=>m.url).length;return pv('F05',{id:p.id},[img?`<img src="${esc(img.url)}" alt="" loading="lazy" draggable="false"><i>${I.heartf}</i>${mc>1?`<span class="actc-n">${I.image}${mc}</span>`:''}`:I.heartf,img?'':'ic'],esc(mdPlain(T(p.text)).slice(0,80)||L('Публикация','Post')),`${esc(pname(p.author))}${mc>1?` · ${pl(mc,['фото','фото','фото'],['photo','photos'])}`:''} · ${F.rel(x.t)}`);}
  if(x.k==='event'){const e=EV(x.e);return pv('E03',{id:x.e},[evCover(e,'cal'),''],esc(T(e.title)),`${F.date(e.start)} · ${e.format==='online'?L('онлайн','online'):esc(city(e.city))}`);}
  if(x.k==='comm'){const c=COMMUNITIES[x.c];return pv('C03',{id:x.c},[commAv(c),''],esc(T(c.name)),pl(C.members(x.c),['участник','участника','участников'],['member','members']));}
  return pv('P01',{id:x.p},[av(x.p,''),'round'],esc(pname(x.p)),esc(whoLine(x.p)));}
@@ -4495,7 +4508,7 @@ function actPrev(x){const pv=(go,p,thumb,t,s)=>`<button class="actc-p" data-go="
 function actCard(x,i){const who=x.who,nm=`<b>${esc(pname(who))}</b>`;let text,body;
  const head=(t)=>`<div class="actc-hd"><p class="actc-t">${t}<small>${F.rel(x.t)}</small></p><button class="ibtn ghost sm" data-act="actMenu" data-v="${esc(who)}" aria-label="${L('Ещё','More')}">${I.more}</button></div>`;
  if(x.k==='group'){const n=x.items.length,open=S.ui.actOpen?.has(x.gid);
-  const th=(g)=>{if(g.k==='like'){const img=(g.post.media||[]).find(m=>m.type==='image'&&m.url);return `<button class="actc-th" data-go="F05" data-p='${esc(JSON.stringify({id:g.post.id}))}' aria-label="${esc(pname(g.post.author))}">${img?`<img src="${esc(img.url)}" alt="" loading="lazy" draggable="false">`:I.heartf}</button>`;}
+  const th=(g)=>{if(g.k==='like'){const img=(g.post.media||[]).find(m=>m.type==='image'&&m.url);const mc=(g.post.media||[]).filter(m=>m.url).length;return `<button class="actc-th ${mc>1?'multi':''}" data-go="F05" data-p='${esc(JSON.stringify({id:g.post.id}))}' aria-label="${esc(pname(g.post.author))}">${img?`<img src="${esc(img.url)}" alt="" loading="lazy" draggable="false">`:I.heartf}${mc>1?`<span class="actc-n">${I.image}${mc}</span>`:''}</button>`;}
    if(g.k==='follow')return `<button class="actc-th round" data-go="P01" data-p='${esc(JSON.stringify({id:g.p}))}' aria-label="${esc(pname(g.p))}">${av(g.p,'')}</button>`;return '';};
   if(x.kind==='like')text=L(`${nm}: нравится ${pl(n,['публикация','публикации','публикаций'],[])}`,`${nm} likes ${n} posts`);
   else if(x.kind==='follow')text=L(`${nm} теперь следит за ${n} ${n%10===1&&n%100!==11?'человеком':'людьми'}`,`${nm} now follows ${n} people`);
@@ -5490,11 +5503,27 @@ const activityMode=id=>(id==='me'?S.me.activityVis:person(id)?.actVis)||'all';
 /** is the activity tab visible to this viewer? `o.asOther` = «as others see me» preview: no access = a stranger, with access = a contact */
 function activityShown(id,o={}){if(id==='couple'||person(id)?.pair)return false;if(id==='me'&&!o.asOther)return true;const m=activityMode(id);if(m==='off')return false;if(m==='all')return true;
  if(o.asOther)return o.grant==='granted';return social('me').follows.has(id)||isMatch(id);}
+/* V11: believable demo activity — who did what, hours ago. Likes are [postId,h], events [eventId,status,h], communities [id,h], follows {n,from,step} (taken from the follow graph). */
+const ACT_LOG={
+ noa:{likes:[['p10',.3],['p11',.5],['p12',.8],['p13',1.1],['p2',1.5],['p9',1.9],['p15',2.2],['p16',2.6]],events:[['e3','going',20]],follows:{n:1,from:30,step:1}},
+ kira:{likes:[['p11',5],['p13',5.3],['p12',5.6],['p2',6],['p14',6.4]],events:[['e1','going',9]],follows:{n:4,from:26,step:.2}},
+ sofi:{likes:[['p10',12]],follows:{n:6,from:3,step:.1}},
+ maya:{likes:[['p11',30],['p10',30.4],['p9',31]],comm:[['slow',50]],follows:{n:3,from:28,step:.3}},
+ mia:{likes:[['p13',7],['p12',7.4]],events:[['e5','interested',12]],comm:[['rope',70]]},
+ kai:{likes:[['p10',4],['p11',4.2],['p13',4.5]],events:[['e1','going',15]],follows:{n:2,from:40,step:.5}},
+ dan:{likes:[['p3',22],['p5',22.4],['p8',22.9],['p9',23]],events:[['e1','going',40],['e3','going',40.2],['e6','going',40.5]],follows:{n:3,from:60,step:.2}},
+ tomeva:{likes:[['p8',18]],comm:[['poly',90]]},
+ ari:{likes:[['p10',10],['p11',10.3]]}};
 function activityOf(id){const out=[],pub=p=>p.aud==='all'&&!p.unavailable&&!isBlocked(p.author);
  if(id==='me'){allPosts().filter(p=>(p.reactions?p.reactions.me:p.liked)&&!isBlocked(p.author)).forEach((p,i)=>out.push({k:'like',post:p,t:p.likedAt||p.t+i}));
   Object.entries(S.rsvp||{}).filter(([e,v])=>EV(e)&&['going','interested'].includes(v.status)).forEach(([e,v],i)=>out.push({k:'event',e,st:v.status,t:Date.now()-(i+2)*DAY}));
   [...S.joined].filter(c=>COMMUNITIES[c]&&!COMMUNITIES[c].hidden).forEach((c,i)=>out.push({k:'comm',c,t:Date.now()-(i+4)*DAY}));
   followingOf('me').forEach((p,i)=>out.push({k:'follow',p,t:Date.now()-(i+3)*DAY*1.5}));}
+ else if(ACT_LOG[id]){const L0=ACT_LOG[id],H=3600e3,post=pid=>allPosts().find(x=>x.id===pid);
+  (L0.likes||[]).forEach(([pid,h])=>{const q=post(pid);if(q&&q.author!==id&&pub(q))out.push({k:'like',post:q,t:Date.now()-h*H});});
+  (L0.events||[]).forEach(([e,st,h])=>{if(EV(e)&&!EV(e).cancelled&&EV(e).status!=='review')out.push({k:'event',e,st,t:Date.now()-h*H});});
+  (L0.comm||[]).forEach(([c,h])=>{if(COMMUNITIES[c]&&!COMMUNITIES[c].hidden)out.push({k:'comm',c,t:Date.now()-h*H});});
+  if(L0.follows)followingOf(id).slice(0,L0.follows.n).forEach((p2,i)=>out.push({k:'follow',p:p2,t:Date.now()-(L0.follows.from+i*L0.follows.step)*H}));}
  else{allPosts().filter(p=>p.author!==id&&pub(p)&&actHash(id+p.id)%3===0).slice(0,6).forEach((p,i)=>out.push({k:'like',post:p,t:actHash(id)%2===0?Date.now()-(i+1)*26*60e3:Math.min(Date.now()-HOUR,p.t+(actHash(id+p.id)%7+1)*20*60e3)}));
   allEventIds().filter(e=>!EV(e).cancelled&&EV(e).status!=='review'&&!EV(e).private&&actHash(id+e)%4===0).slice(0,2).forEach((e,i)=>out.push({k:'event',e,st:'going',t:Date.now()-(i+1)*DAY*2}));
   Object.keys(COMMUNITIES).filter(c=>!COMMUNITIES[c].hidden&&COMMUNITIES[c].privacy==='open'&&(COMMUNITIES[c].mods.includes(id)||actHash(id+c)%4===0)).slice(0,2).forEach((c,i)=>out.push({k:'comm',c,t:Date.now()-(i+5)*DAY}));

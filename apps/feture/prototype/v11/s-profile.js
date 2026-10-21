@@ -345,11 +345,27 @@ const activityMode=id=>(id==='me'?S.me.activityVis:person(id)?.actVis)||'all';
 /** is the activity tab visible to this viewer? `o.asOther` = «as others see me» preview: no access = a stranger, with access = a contact */
 function activityShown(id,o={}){if(id==='couple'||person(id)?.pair)return false;if(id==='me'&&!o.asOther)return true;const m=activityMode(id);if(m==='off')return false;if(m==='all')return true;
  if(o.asOther)return o.grant==='granted';return social('me').follows.has(id)||isMatch(id);}
+/* V11: believable demo activity — who did what, hours ago. Likes are [postId,h], events [eventId,status,h], communities [id,h], follows {n,from,step} (taken from the follow graph). */
+const ACT_LOG={
+ noa:{likes:[['p10',.3],['p11',.5],['p12',.8],['p13',1.1],['p2',1.5],['p9',1.9],['p15',2.2],['p16',2.6]],events:[['e3','going',20]],follows:{n:1,from:30,step:1}},
+ kira:{likes:[['p11',5],['p13',5.3],['p12',5.6],['p2',6],['p14',6.4]],events:[['e1','going',9]],follows:{n:4,from:26,step:.2}},
+ sofi:{likes:[['p10',12]],follows:{n:6,from:3,step:.1}},
+ maya:{likes:[['p11',30],['p10',30.4],['p9',31]],comm:[['slow',50]],follows:{n:3,from:28,step:.3}},
+ mia:{likes:[['p13',7],['p12',7.4]],events:[['e5','interested',12]],comm:[['rope',70]]},
+ kai:{likes:[['p10',4],['p11',4.2],['p13',4.5]],events:[['e1','going',15]],follows:{n:2,from:40,step:.5}},
+ dan:{likes:[['p3',22],['p5',22.4],['p8',22.9],['p9',23]],events:[['e1','going',40],['e3','going',40.2],['e6','going',40.5]],follows:{n:3,from:60,step:.2}},
+ tomeva:{likes:[['p8',18]],comm:[['poly',90]]},
+ ari:{likes:[['p10',10],['p11',10.3]]}};
 function activityOf(id){const out=[],pub=p=>p.aud==='all'&&!p.unavailable&&!isBlocked(p.author);
  if(id==='me'){allPosts().filter(p=>(p.reactions?p.reactions.me:p.liked)&&!isBlocked(p.author)).forEach((p,i)=>out.push({k:'like',post:p,t:p.likedAt||p.t+i}));
   Object.entries(S.rsvp||{}).filter(([e,v])=>EV(e)&&['going','interested'].includes(v.status)).forEach(([e,v],i)=>out.push({k:'event',e,st:v.status,t:Date.now()-(i+2)*DAY}));
   [...S.joined].filter(c=>COMMUNITIES[c]&&!COMMUNITIES[c].hidden).forEach((c,i)=>out.push({k:'comm',c,t:Date.now()-(i+4)*DAY}));
   followingOf('me').forEach((p,i)=>out.push({k:'follow',p,t:Date.now()-(i+3)*DAY*1.5}));}
+ else if(ACT_LOG[id]){const L0=ACT_LOG[id],H=3600e3,post=pid=>allPosts().find(x=>x.id===pid);
+  (L0.likes||[]).forEach(([pid,h])=>{const q=post(pid);if(q&&q.author!==id&&pub(q))out.push({k:'like',post:q,t:Date.now()-h*H});});
+  (L0.events||[]).forEach(([e,st,h])=>{if(EV(e)&&!EV(e).cancelled&&EV(e).status!=='review')out.push({k:'event',e,st,t:Date.now()-h*H});});
+  (L0.comm||[]).forEach(([c,h])=>{if(COMMUNITIES[c]&&!COMMUNITIES[c].hidden)out.push({k:'comm',c,t:Date.now()-h*H});});
+  if(L0.follows)followingOf(id).slice(0,L0.follows.n).forEach((p2,i)=>out.push({k:'follow',p:p2,t:Date.now()-(L0.follows.from+i*L0.follows.step)*H}));}
  else{allPosts().filter(p=>p.author!==id&&pub(p)&&actHash(id+p.id)%3===0).slice(0,6).forEach((p,i)=>out.push({k:'like',post:p,t:actHash(id)%2===0?Date.now()-(i+1)*26*60e3:Math.min(Date.now()-HOUR,p.t+(actHash(id+p.id)%7+1)*20*60e3)}));
   allEventIds().filter(e=>!EV(e).cancelled&&EV(e).status!=='review'&&!EV(e).private&&actHash(id+e)%4===0).slice(0,2).forEach((e,i)=>out.push({k:'event',e,st:'going',t:Date.now()-(i+1)*DAY*2}));
   Object.keys(COMMUNITIES).filter(c=>!COMMUNITIES[c].hidden&&COMMUNITIES[c].privacy==='open'&&(COMMUNITIES[c].mods.includes(id)||actHash(id+c)%4===0)).slice(0,2).forEach((c,i)=>out.push({k:'comm',c,t:Date.now()-(i+5)*DAY}));
