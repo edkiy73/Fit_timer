@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FetUre V11 — вместо баночек</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400..900&display=swap" rel="stylesheet">
+<style>
+/* Layout: one column; four physical metaphors for "two people, one interest". me = accent red, them = violet. Tokens = FetUre V11. */
+@property --p{syntax:"<percentage>";inherits:true;initial-value:0%}
+@property --q{syntax:"<percentage>";inherits:true;initial-value:0%}
+:root{
+  --bg:#F5F3F0; --surf:#FFFFFF; --raise:#ECE8E3; --line:#E6E2DD; --line2:#D2CDC6;
+  --ink:#17151A; --mute:#66616B; --faint:#9B969F;
+  --accent:#D0153A; --violet:#6550D8; --hot:#F2622E;
+  --warn:#9A5D00; --danger:#C4182F; --danger-soft:#FBE5E8;
+  --me:var(--accent); --them:var(--violet); --blend:multiply;
+  --bar:rgba(245,243,240,.9); --shadow:rgba(30,10,25,.2);
+  --font:"Onest",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --spring:cubic-bezier(.34,1.4,.55,1);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111012; --surf:#1B191D; --raise:#242127; --line:#2D2A30; --line2:#3E3A42;
+  --ink:#F3F0F4; --mute:#A9A3AD; --faint:#77717B;
+  --accent:#FF4566; --violet:#A797FF; --hot:#FF8A5C;
+  --warn:#E9B663; --danger:#FF6B80; --danger-soft:#3D161D;
+  --blend:screen; --bar:rgba(17,16,18,.9); --shadow:rgba(0,0,0,.6); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111012; --surf:#1B191D; --raise:#242127; --line:#2D2A30; --line2:#3E3A42;
+  --ink:#F3F0F4; --mute:#A9A3AD; --faint:#77717B;
+  --accent:#FF4566; --violet:#A797FF; --hot:#FF8A5C;
+  --warn:#E9B663; --danger:#FF6B80; --danger-soft:#3D161D;
+  --blend:screen; --bar:rgba(17,16,18,.9); --shadow:rgba(0,0,0,.6); color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--font);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bar)}
+.wrap{max-width:560px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.intro{padding-block:28px 12px;display:grid;gap:10px}
+h1,h2{margin:0;text-wrap:balance}
+h1{font-size:clamp(28px,6vw,36px);line-height:1.05;letter-spacing:-.04em;font-weight:850}
+h2{font-size:22px;letter-spacing:-.03em;font-weight:800;line-height:1.15}
+p{margin:0;max-width:60ch}
+.lead{color:var(--mute);font-size:15.5px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.eyebrow{font-size:13px;color:var(--accent);font-weight:700}
+.btn{font:600 13px var(--font);color:var(--ink);background:var(--surf);border:1px solid var(--line2);border-radius:99px;padding:7px 14px;cursor:pointer;min-height:36px}
+button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.jump{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bar);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.jump .wrap{padding-block:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.jump a{font-size:13.5px;font-weight:650;color:var(--ink);text-decoration:none;padding:6px 12px;border-radius:99px;background:var(--raise)}
+.jump a b{color:var(--accent)}
+.jump .btn{margin-left:auto}
+main.wrap{padding-block:16px 72px;display:grid;gap:40px}
+section.v{display:grid;gap:14px;scroll-margin-top:64px}
+section.v + section.v{padding-top:24px;border-top:1px solid var(--line)}
+.vh{display:grid;gap:4px}
+.vh .k{font-size:13px;font-weight:700;color:var(--accent)}
+.rule{font-size:14px;font-weight:650;color:var(--ink);background:var(--raise);border-radius:12px;padding:8px 12px}
+.pc{font-size:13.5px;color:var(--mute)}
+.pc b{color:var(--ink);font-weight:650}
+.list{display:grid;gap:8px}
+.lim{font-size:12.5px;font-weight:700}
+.lim.t{color:var(--danger)}.lim.s{color:var(--warn)}.lim.x{color:var(--faint)}
+.hatch{background:repeating-linear-gradient(135deg,var(--danger-soft) 0 6px,var(--raise) 6px 12px)!important}
+.dashed{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--warn) 70%,transparent)}
+
+/* ===== 1 · СЛИЯНИЕ: two liquid drops grow from the edges and merge in the middle ===== */
+.gr{position:relative;height:46px;border-radius:99px;background:var(--raise);overflow:hidden;isolation:isolate}
+.gr .goo{position:absolute;inset:0;filter:url(#goo)}
+.gr .bl{position:absolute;top:5px;bottom:5px;border-radius:99px;min-width:36px}
+.gr .bl.l{left:5px;width:calc(var(--p) * .56);background:linear-gradient(90deg,var(--me),var(--hot))}
+.gr .bl.r{right:5px;width:calc(var(--q) * .56);background:var(--them)}
+.gr.go{animation:gp 1.3s var(--spring) both,gq 1.3s var(--spring) .15s both;animation-delay:var(--d),calc(var(--d) + .15s)}
+@keyframes gp{from{--p:0%}}@keyframes gq{from{--q:0%}}
+.gr .num{position:absolute;top:50%;transform:translateY(-50%);z-index:3;font:850 14px/1 var(--font);color:#fff;font-variant-numeric:tabular-nums}
+.gr .num.l{left:18px}.gr .num.r{right:18px}
+.gr .nm{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:4;font-size:14px;font-weight:700;white-space:nowrap;padding:4px 10px;border-radius:99px;background:var(--surf);box-shadow:0 1px 4px var(--shadow);max-width:52%;overflow:hidden;text-overflow:ellipsis;transition:background .4s,color .4s}
+.gr.merged .nm{background:transparent;box-shadow:none;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.35)}
+.gr.merged{box-shadow:0 0 0 0 transparent;animation-name:gp,gq,heat;animation-duration:1.3s,1.3s,2.6s;animation-iteration-count:1,1,infinite;animation-delay:var(--d),calc(var(--d) + .15s),calc(var(--d) + 1.4s)}
+@keyframes heat{50%{box-shadow:0 0 22px -2px color-mix(in srgb,var(--hot) 70%,transparent)}}
+.gr .num.lim{color:inherit;font-size:12px}
+
+/* ===== 2 · КРУГИ ===== */
+.vr{display:grid;grid-template-columns:78px minmax(0,1fr) auto;align-items:center;gap:10px;padding:4px 0;border-bottom:1px solid var(--line)}
+.vr:last-child{border-bottom:0}
+.vr svg{width:78px;height:46px;overflow:visible}
+.vr circle{mix-blend-mode:var(--blend);transition:transform 1s var(--spring);transform-box:fill-box;transform-origin:center}
+.vr .c1{fill:var(--me);fill-opacity:.85}.vr .c2{fill:var(--them);fill-opacity:.85}
+.vr.pre .c1{transform:translateX(-14px)}.vr.pre .c2{transform:translateX(14px)}
+.vr .nm{font-size:15px;font-weight:650;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vr .tag{font-size:12.5px;font-weight:700;color:var(--mute);white-space:nowrap}
+.vr .tag.hot{color:var(--hot)}
+
+/* ===== 3 · МАГНИТЫ ===== */
+.mg{position:relative;height:46px;border-radius:99px;background:var(--raise);overflow:visible}
+.mg .nm{position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:14px;font-weight:650;z-index:1;color:var(--mute)}
+.mg .rail{position:absolute;left:46%;right:18px;top:50%;height:2px;margin-top:-1px;background:var(--line2);border-radius:2px}
+.mg .rail::before{content:"";position:absolute;left:0;right:0;top:-3px;height:8px;background:linear-gradient(90deg,var(--line2) 1.5px,transparent 1.5px) 0 0/calc(100% / 9 - .2px) 100% repeat-x;opacity:.7}
+.mg .bd{position:absolute;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;display:grid;place-items:center;font:850 12px/1 var(--font);color:#fff;z-index:3;
+  left:calc((var(--v) - 1) / 9 * 100%);box-shadow:0 0 0 2.5px var(--raise),0 4px 10px -4px var(--shadow);transition:left 1.1s var(--spring),transform .3s}
+.mg .bd.me{background:var(--me)}.mg .bd.them{background:var(--them)}
+.mg.pre .bd.me{left:0%}.mg.pre .bd.them{left:100%}
+.mg .str{position:absolute;top:50%;height:2px;margin-top:-1px;z-index:2;left:calc((var(--lo) - 1) / 9 * 100%);width:calc((var(--hi) - var(--lo)) / 9 * 100%);
+  background:repeating-linear-gradient(90deg,var(--mute) 0 4px,transparent 4px 7px);opacity:.55;transition:all 1.1s var(--spring);animation:stretch 1.6s ease-in-out infinite}
+@keyframes stretch{50%{transform:scaleY(2.2)}}
+.mg.pre .str{left:0;width:100%}
+.mg.snap .bd.me{transform:translateX(-7px)}.mg.snap .bd.them{transform:translateX(7px)}
+.mg.snap .halo{position:absolute;top:50%;width:54px;height:34px;margin:-17px 0 0 -27px;left:calc((var(--hi) + var(--lo) - 2) / 18 * 100%);border-radius:99px;z-index:2;
+  background:radial-gradient(closest-side,color-mix(in srgb,var(--hot) 55%,transparent),transparent);animation:spark 1.8s ease-in-out infinite;animation-delay:1.1s}
+@keyframes spark{50%{transform:scale(1.25);opacity:.6}}
+.mg.snap .nm{color:var(--ink)}
+.mg .lt{position:absolute;right:16px;top:50%;transform:translateY(-50%)}
+.mg.hatch .nm{color:var(--ink)}
+
+/* ===== 4 · ВОЛНА ===== */
+.wv{position:relative;height:46px;border-radius:99px;background:var(--raise);overflow:hidden;display:grid;grid-template-columns:minmax(0,42%) 1fr;align-items:center}
+.wv .nm{padding-left:16px;font-size:14px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wv .sea{position:relative;height:100%;overflow:hidden;-webkit-mask:linear-gradient(90deg,transparent,#000 14%,#000 92%,transparent);mask:linear-gradient(90deg,transparent,#000 14%,#000 92%,transparent)}
+.wv svg{position:absolute;left:0;top:0;width:200%;height:100%;animation:sail 3.2s linear infinite}
+.wv path{fill:none;stroke-width:2.6;stroke-linecap:round}
+.wv .pm{stroke:var(--me)}.wv .pt{stroke:var(--them);mix-blend-mode:var(--blend)}
+@keyframes sail{to{transform:translateX(-50%)}}
+.wv.sync .pm{stroke:url(#syncgrad);stroke-width:4}
+.wv.sync{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--hot) 45%,transparent)}
+.wv .lt{padding-right:16px;text-align:right}
+
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <filter id="goo"><feGaussianBlur in="SourceGraphic" stdDeviation="7" result="b"/><feColorMatrix in="b" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -9" result="g"/><feComposite in="SourceGraphic" in2="g" operator="atop"/></filter>
+    <linearGradient id="syncgrad" x1="0" x2="1"><stop offset="0" stop-color="#D0153A"/><stop offset=".5" stop-color="#F2622E"/><stop offset="1" stop-color="#6550D8"/></linearGradient>
+  </defs>
+</svg>
+
+<div class="wrap"><header class="intro">
+  <div class="top"><span class="eyebrow">FetUre V11 · сравнение двоих</span><button class="btn" id="themeBtn" type="button">Тема: системная</button></div>
+  <h1>Совпадение, которое видно без легенды</h1>
+  <p class="lead">Четыре физические метафоры: каждую можно понять за секунду, без цифр и подсказок. <b style="color:var(--me)">Красный — ты</b>, <b style="color:var(--them)">фиолетовый — mars_and_v</b>. Профиль остаётся капсулой.</p>
+</header></div>
+
+<nav class="jump" aria-label="Варианты"><div class="wrap"><a href="#v1"><b>1</b> Слияние</a><a href="#v2"><b>2</b> Круги</a><a href="#v3"><b>3</b> Магниты</a><a href="#v4"><b>4</b> Волна</a><button class="btn" id="replay" type="button">Ещё раз</button></div></nav>
+
+<main class="wrap">
+  <section class="v" id="v1">
+    <div class="vh"><span class="k">1 · Слияние</span><h2>Две капли тянутся друг к другу</h2></div>
+    <p class="rule">Твоя капля слева, его справа. Сильнее интерес — длиннее капля. Если обоим горячо, капли сливаются в одну, и название тонет в общем цвете.</p>
+    <div class="list" id="l1"></div>
+    <p class="pc"><b>Почему работает:</b> слияние читается телом, а не головой. Сразу видно, где вы вместе, а где между вами пустота. Это всё та же капсула с текстом внутри.</p>
+  </section>
+
+  <section class="v" id="v2">
+    <div class="vh"><span class="k">2 · Круги</span><h2>Два круга, пересечение — общее</h2></div>
+    <p class="rule">Каждый круг — один из вас, его размер — сила интереса. Чем больше пересечение, тем больше у вас общего.</p>
+    <div class="list" id="l2"></div>
+    <p class="pc"><b>Почему работает:</b> круги Эйлера понятны всем со школы. Строка остаётся строкой, графика — маленький знак слева.</p>
+  </section>
+
+  <section class="v" id="v3">
+    <div class="vh"><span class="k">3 · Магниты</span><h2>Две бусины на одной шкале</h2></div>
+    <p class="rule">Бусины стоят на твоём и его уровне. Если вы рядом, они примагничиваются и искрят. Если далеко — между ними натянута нить.</p>
+    <div class="list" id="l3"></div>
+    <p class="pc"><b>Почему работает:</b> показывает не просто «кто больше», а насколько вы близки. Красиво анимируется: бусины съезжаются с краёв.</p>
+  </section>
+
+  <section class="v" id="v4">
+    <div class="vh"><span class="k">4 · Волна</span><h2>Ловите ли вы одну волну</h2></div>
+    <p class="rule">Две волны: высота — сила интереса. Совпали — волны идут в такт и сливаются в одну яркую. Разошлись — бьются вразнобой.</p>
+    <div class="list" id="l4"></div>
+    <p class="pc"><b>Почему работает:</b> выражение «на одной волне» знают все. Самый атмосферный вариант, хорош в тёмной теме.</p>
+  </section>
+
+  <p class="lead">Табу никогда не превращается в совпадение: строка штрихуется, и ничего не тянется навстречу. Видны только интересы, которые mars_and_v открыл тебе.</p>
+</main>
+
+<script>
+(function(){
+const ROWS=[
+  ['Забота после',{v:9},{v:10}],
+  ['Связывание',{v:8},{v:9}],
+  ['Шибари',{v:10},{v:3}],
+  ['Ролевые игры',{v:6},{v:8}],
+  ['Латекс',{v:5},{v:5}],
+  ['Сенсорные игры',{v:2},{v:8}],
+  ['Показ',{limit:'soft'},{v:7}],
+  ['Контроль',{v:7},{limit:'hard'}],
+  ['Эксперименты',null,{v:6}]
+];
+const kind=e=>!e?'none':e.limit==='hard'?'hard':e.limit?'soft':'v';
+const lim=(a,b)=>{const ka=kind(a),kb=kind(b);
+  if(ka==='hard'||kb==='hard')return `<span class="lim t">табу ${ka==='hard'?'у тебя':'у него'}</span>`;
+  if(ka==='soft'||kb==='soft')return `<span class="lim s">обсудить</span>`;
+  if(ka==='none')return `<span class="lim x">нет у тебя</span>`;return '';};
+const $=id=>document.getElementById(id);
+const D=i=>(i*.08).toFixed(2);
+
+function draw(){
+/* 1 */
+$('l1').innerHTML=ROWS.map(([t,a,b],i)=>{const ka=kind(a),kb=kind(b);
+  if(ka==='hard'||kb==='hard')return `<div class="gr hatch"><span class="nm">${t}</span><span class="num r lim">${lim(a,b)}</span></div>`;
+  const pa=ka==='v'?a.v*10:0,pb=kb==='v'?b.v*10:0;const merged=pa&&pb&&a.v+b.v>=17;
+  return `<div class="gr go ${merged?'merged':''} ${ka==='soft'?'dashed':''}" style="--p:${pa}%;--q:${pb}%;--d:${D(i)}s"><div class="goo">${pa?'<span class="bl l"></span>':''}${pb?'<span class="bl r"></span>':''}</div>${pa?`<span class="num l">${a.v}</span>`:`<span class="num l lim" style="left:16px">${lim(a,b)}</span>`}${pb?`<span class="num r">${b.v}</span>`:''}<span class="nm">${t}</span></div>`;}).join('');
+/* 2 */
+$('l2').innerHTML=ROWS.map(([t,a,b],i)=>{const ka=kind(a),kb=kind(b);
+  if(ka!=='v'||kb!=='v'){const one=ka==='v'?['c1',a.v]:kb==='v'?['c2',b.v]:null;
+    return `<div class="vr"><svg viewBox="0 0 78 46">${one&&!(ka==='hard'||kb==='hard')?`<circle class="${one[0]}" cx="${one[0]==='c1'?26:52}" cy="23" r="${7+one[1]*1.3}"/>`:''}<circle cx="${ka==='v'?52:26}" cy="23" r="12" fill="none" stroke="${ka==='hard'||kb==='hard'?'var(--danger)':'var(--warn)'}" stroke-width="1.6" stroke-dasharray="3 3"/></svg><span class="nm">${t}</span>${lim(a,b)}</div>`;}
+  const r1=7+a.v*1.3,r2=7+b.v*1.3,ov=Math.min(a.v,b.v)*2.5,d=Math.max(2,r1+r2-ov);
+  const share=Math.min(a.v,b.v);const tag=share>=8?'<span class="tag hot">почти целиком</span>':share>=5?'<span class="tag">много общего</span>':'<span class="tag">чуть-чуть</span>';
+  return `<div class="vr pre" data-d="${D(i)}"><svg viewBox="0 0 78 46"><circle class="c1" cx="${39-d/2}" cy="23" r="${r1}"/><circle class="c2" cx="${39+d/2}" cy="23" r="${r2}"/></svg><span class="nm">${t}</span>${tag}</div>`;}).join('');
+/* 3 */
+$('l3').innerHTML=ROWS.map(([t,a,b],i)=>{const ka=kind(a),kb=kind(b);
+  if(ka!=='v'||kb!=='v'){const hard=ka==='hard'||kb==='hard';
+    return `<div class="mg ${hard?'hatch':''} ${!hard&&ka==='soft'?'dashed':''}"><span class="nm">${t}</span>${!hard&&kb==='v'?`<span class="rail"><span class="bd them" style="--v:${b.v}">${b.v}</span></span>`:''}${!hard&&ka==='v'?`<span class="rail"><span class="bd me" style="--v:${a.v}">${a.v}</span></span>`:''}${hard||ka!=='v'&&kb!=='v'?`<span class="lt">${lim(a,b)}</span>`:''}</div>`;}
+  const lo=Math.min(a.v,b.v),hi=Math.max(a.v,b.v),snap=hi-lo<=1;
+  return `<div class="mg pre ${snap?'snap':''}" data-d="${D(i)}"><span class="nm">${t}</span><span class="rail" style="--lo:${lo};--hi:${hi}">${snap?'<span class="halo"></span>':'<span class="str"></span>'}<span class="bd them" style="--v:${b.v}">${b.v}</span><span class="bd me" style="--v:${a.v}">${a.v}</span></span></div>`;}).join('');
+/* 4 */
+const wave=(amp,phase)=>{let s='';for(let x=0;x<=400;x+=4){const y=23-amp*Math.sin((x/100)*Math.PI*2+phase);s+=(x?'L':'M')+x+' '+y.toFixed(1);}return s;};
+$('l4').innerHTML=ROWS.map(([t,a,b],i)=>{const ka=kind(a),kb=kind(b);
+  if(ka!=='v'||kb!=='v'){const hard=ka==='hard'||kb==='hard';const one=!hard&&(ka==='v'?['pm',a.v]:kb==='v'?['pt',b.v]:null);
+    return `<div class="wv ${hard?'hatch':''}"><span class="nm">${t}</span>${one?`<span class="sea"><svg viewBox="0 0 400 46" preserveAspectRatio="none"><path class="${one[0]}" d="${wave(one[1]*1.7,0)}"/></svg></span>`:`<span class="lt">${lim(a,b)}</span>`}</div>`;}
+  const sync=Math.abs(a.v-b.v)<=1,ph=Math.abs(a.v-b.v)*0.45;
+  return `<div class="wv ${sync?'sync':''}"><span class="nm">${t}</span><span class="sea"><svg viewBox="0 0 400 46" preserveAspectRatio="none"><path class="pt" d="${wave(b.v*1.7,ph)}"/><path class="pm" d="${wave(a.v*1.7,0)}"/></svg></span></div>`;}).join('');
+// run the "pre" → final transitions
+requestAnimationFrame(()=>requestAnimationFrame(()=>{document.querySelectorAll('.pre').forEach(el=>{setTimeout(()=>el.classList.remove('pre'),parseFloat(el.dataset.d||0)*1000+120);});}));
+}
+draw();
+$('replay').onclick=draw;
+const modes=['system','light','dark'],names={system:'системная',light:'светлая',dark:'тёмная'};
+let m=document.documentElement.getAttribute('data-theme')||'system';
+const tb=$('themeBtn');tb.textContent='Тема: '+names[m];
+tb.addEventListener('click',()=>{m=modes[(modes.indexOf(m)+1)%3];if(m==='system')document.documentElement.removeAttribute('data-theme');else document.documentElement.setAttribute('data-theme',m);tb.textContent='Тема: '+names[m];});
+})();
+</script>
+</body>
+</html>
