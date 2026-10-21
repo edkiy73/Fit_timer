@@ -11,8 +11,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400..900&display=swap" rel="stylesheet">
 <style>
 /* Layout: one column; four sections, same rows, four junction styles. Drops grow from the centre towards each avatar and always touch. Tokens = FetUre V11. */
-@property --pa{syntax:"<number>";inherits:true;initial-value:0}
-@property --pb{syntax:"<number>";inherits:true;initial-value:0}
+@property --ra{syntax:"<number>";inherits:true;initial-value:0}
+@property --rb{syntax:"<number>";inherits:true;initial-value:0}
 @property --bw{syntax:"<percentage>";inherits:true;initial-value:14%}
 :root{
   --bg:#F5F3F0; --surf:#FFFFFF; --raise:#ECE8E3; --line:#E6E2DD; --line2:#D2CDC6;
@@ -65,43 +65,45 @@ section.v + section.v{padding-top:24px;border-top:1px solid var(--line)}
 /* ---- row ---- */
 .gr{position:relative;height:48px;border-radius:99px;background:var(--raise);isolation:isolate;
   animation:ga 1.2s var(--spring) both,gb 1.2s var(--spring) both;animation-delay:var(--d),var(--d)}
-@keyframes ga{from{--pa:0}}@keyframes gb{from{--pb:0}}
-.trk{position:absolute;top:0;bottom:0;left:var(--side);right:var(--side)}
-.half{position:absolute;top:6px;bottom:6px;width:50%;z-index:0}
-.half.l{right:50%}.half.r{left:50%}
-.half.hard{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--danger) 24%,transparent) 0 6px,transparent 6px 12px);border-radius:8px}
+@keyframes ga{from{--ra:0}}@keyframes gb{from{--rb:0}}
+.trk{position:absolute;inset:0}
+.half{position:absolute;top:5px;bottom:5px;width:calc(50% - 5px);z-index:0}
+.half.l{left:5px;border-radius:99px 0 0 99px}.half.r{right:5px;border-radius:0 99px 99px 0}
+.half.hard{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--danger) 24%,transparent) 0 6px,transparent 6px 12px)}
 .half.soft{border-block:1.5px dashed color-mix(in srgb,var(--warn) 65%,transparent)}
-.part{position:absolute;top:11px;bottom:11px}
-.part.l{right:50%;width:calc(var(--pa) * 5%);background:var(--me);border-radius:99px 0 0 99px}
-.part.r{left:50%;width:calc(var(--pb) * 5%);background:var(--them);border-radius:0 99px 99px 0}
+.part{position:absolute;top:5px;bottom:5px}
+.part.l{left:5px;width:calc((100% - 10px) * var(--ra));background:var(--me);border-radius:99px 0 0 99px}
+.part.r{right:5px;width:calc((100% - 10px) * var(--rb));background:var(--them);border-radius:0 99px 99px 0}
 .part.l.solo{border-radius:99px}.part.r.solo{border-radius:99px}
-.lab{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 6px;z-index:5;pointer-events:none}
+.lab{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 5px;z-index:5;pointer-events:none}
 .lab .nm{flex:1;min-width:0;text-align:center;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.side{display:flex;align-items:center;gap:6px;flex:none;width:calc(var(--side) - 8px);font-weight:850;font-size:15px;font-variant-numeric:tabular-nums}
+.side{display:flex;align-items:center;gap:6px;flex:none;width:calc(var(--side) - 6px);font-weight:850;font-size:15px;font-variant-numeric:tabular-nums}
 .side.r{justify-content:flex-end}
 .side small{font-size:11px;font-weight:750}
-.av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:none;font:800 12px/1 var(--font);color:#fff}
+.av{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;flex:none;font:800 12px/1 var(--font);color:#fff}
 .av.me{background:color-mix(in srgb,var(--me) 80%,#000)}.av.them{background:color-mix(in srgb,var(--them) 78%,#000)}
-.lab.w{color:#fff;clip-path:inset(0 calc(var(--side) + (100% - 2 * var(--side)) * (.5 - var(--pb) * .05)) 0 calc(var(--side) + (100% - 2 * var(--side)) * (.5 - var(--pa) * .05)))}
-.lab.w .side{visibility:hidden}
+.lab.wl{color:#fff;clip-path:inset(0 calc(100% - 5px - (100% - 10px) * var(--ra)) 0 0)}
+.lab.wr{color:#fff;clip-path:inset(0 0 0 calc(100% - 5px - (100% - 10px) * var(--rb)))}
+.lab.wl .side.r,.lab.wr .side.l{visibility:hidden}
 .t{color:var(--danger)}.s{color:var(--warn)}.x{color:var(--faint)}
 
 /* 1 · ПЕРЕЛИВ — one body, colours flow into each other */
-.V1 .body{position:absolute;top:11px;bottom:11px;border-radius:99px;left:calc(50% - var(--pa) * 5%);width:calc((var(--pa) + var(--pb)) * 5%);
+.V1 .body{position:absolute;top:5px;bottom:5px;border-radius:99px;left:5px;right:5px;clip-path:inset(0 calc((100% * (1 - var(--ra) - var(--rb)))) 0 0 round 99px);
   background:linear-gradient(90deg,var(--me) 0%,var(--me) calc(var(--r) - var(--bw)),var(--them) calc(var(--r) + var(--bw)),var(--them) 100%);animation:breathe 3.2s ease-in-out infinite}
 @keyframes breathe{50%{--bw:26%}}
-.V1 .body::after{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(180deg,rgba(255,255,255,.28),transparent 55%)}
+.V1 .body::after{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(180deg,rgba(255,255,255,.22),transparent 55%)}
 
 /* 2 · БУСИНА — a swelling drop at the junction, size = shared strength */
-.V2 .part{top:15px;bottom:15px}
+.V2 .part{top:9px;bottom:9px}
 .V2 .goo{position:absolute;inset:0;filter:url(#goo)}
-.V2 .bead{position:absolute;left:50%;top:50%;width:var(--bs);height:var(--bs);margin:calc(var(--bs) / -2) 0 0 calc(var(--bs) / -2);border-radius:50%;
+.V2 .bead{position:absolute;left:calc(5px + (100% - 10px) * var(--ra));top:50%;width:var(--bs);height:var(--bs);margin:calc(var(--bs) / -2) 0 0 calc(var(--bs) / -2);border-radius:50%;
   background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.45),transparent 40%),linear-gradient(90deg,var(--me),var(--them));animation:swell 2.6s ease-in-out infinite;animation-delay:calc(var(--d) + 1.2s)}
 @keyframes swell{50%{transform:scale(1.12)}}
 
 /* 3 · ПАЗЛ — two halves click together */
 .V3 .part{transition:none}
-.V3 .part.l::after{content:"";position:absolute;right:-8px;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:50%;background:var(--me)}
+.V3 .part.l{z-index:2}
+.V3 .part.l::after{content:"";position:absolute;right:-9.5px;top:50%;width:19px;height:19px;margin-top:-9.5px;border-radius:50%;background:var(--me)}
 .V3 .part.r{-webkit-mask:radial-gradient(circle 9px at 0 50%,transparent 97%,#000);mask:radial-gradient(circle 9px at 0 50%,transparent 97%,#000)}
 .V3 .part.l.solo::after{display:none}.V3 .part.r.solo{-webkit-mask:none;mask:none}
 .V3 .part.l{animation:snapL .9s var(--spring) both;animation-delay:calc(var(--d) + .6s)}
@@ -111,7 +113,7 @@ section.v + section.v{padding-top:24px;border-top:1px solid var(--line)}
 
 /* 4 · ЛАВА — droplets travel across the seam */
 .V4 .goo{position:absolute;inset:0;filter:url(#goo)}
-.V4 .dr{position:absolute;top:50%;left:50%;width:15px;height:15px;margin:-7.5px 0 0 -7.5px;border-radius:50%}
+.V4 .dr{position:absolute;top:50%;left:calc(5px + (100% - 10px) * var(--ra));width:15px;height:15px;margin:-7.5px 0 0 -7.5px;border-radius:50%}
 .V4 .dr.m{background:var(--me);animation:toR 2.4s ease-in-out infinite;animation-delay:var(--dd)}
 .V4 .dr.t{background:var(--them);animation:toL 2.4s ease-in-out infinite;animation-delay:var(--dd)}
 @keyframes toR{0%{transform:translate(-14px,0)}50%{transform:translate(var(--go),var(--yy))}100%{transform:translate(-14px,0)}}
@@ -127,16 +129,16 @@ section.v + section.v{padding-top:24px;border-top:1px solid var(--line)}
 </defs></svg>
 
 <div class="wrap"><header class="intro">
-  <div class="top"><span class="eyebrow">FetUre V11 · капли из центра</span><button class="btn" id="themeBtn" type="button">Тема: системная</button></div>
-  <h1>Капли, которые всегда держатся друг за друга</h1>
-  <p class="lead">Капли растут из центра: твоя — к тебе, его — к нему. Вместе они занимают столько, сколько вы набрали вдвоём: 10 и 10 — вся строка, 1 и 1 — капелька в центре, 3 и 1 — короткая капля, где красного втрое больше. Ниже четыре способа соединить капли на стыке, на одних и тех же примерах.</p>
+  <div class="top"><span class="eyebrow">FetUre V11 · слияние, доли</span><button class="btn" id="themeBtn" type="button">Тема: системная</button></div>
+  <h1>Капли от аватаров, которые всегда встречаются</h1>
+  <p class="lead">Как в «Слиянии»: твоя капля растёт от твоего аватара слева, его — от его аватара справа. Но теперь они всегда встречаются и делят строку по вашим оценкам: 3 и 1 — 75% красного и 25% фиолетового, 10 и 10 — пополам. Ниже четыре способа соединить капли на стыке, на одних и тех же примерах.</p>
 </header></div>
 
 <nav class="jump" aria-label="Варианты"><div class="wrap"><a href="#v1"><b>1</b> Перелив</a><a href="#v2"><b>2</b> Бусина</a><a href="#v3"><b>3</b> Пазл</a><a href="#v4"><b>4</b> Лава</a><button class="btn" id="replay" type="button">Ещё раз</button></div></nav>
 
 <main class="wrap">
   <section class="v V1" id="v1"><div class="vh"><span class="k">1 · Перелив</span><h2>Цвета перетекают друг в друга</h2><p class="lead">Одно тело, без шва. Красный плавно переходит в фиолетовый, граница перелива медленно дышит.</p></div><div class="rows" data-v="1"></div></section>
-  <section class="v V2" id="v2"><div class="vh"><span class="k">2 · Бусина</span><h2>На стыке набухает капля</h2><p class="lead">Там, где капли встречаются, вздувается бусина. Чем сильнее общий интерес (меньшая из двух оценок), тем она крупнее. 1/1 — едва заметна, 10/10 — выходит за края.</p></div><div class="rows" data-v="2"></div></section>
+  <section class="v V2" id="v2"><div class="vh"><span class="k">2 · Бусина</span><h2>На стыке набухает капля</h2><p class="lead">Там, где капли встречаются, вздувается бусина. Чем сильнее общий интерес (меньшая из двух оценок), тем она крупнее. Так 10/10 и 1/1 отличаются, хотя делят строку одинаково.</p></div><div class="rows" data-v="2"></div></section>
   <section class="v V3" id="v3"><div class="vh"><span class="k">3 · Пазл</span><h2>Половинки защёлкиваются</h2><p class="lead">Твоя часть входит в его, как деталь пазла. При появлении половинки съезжаются и с лёгким отскоком встают на место.</p></div><div class="rows" data-v="3"></div></section>
   <section class="v V4" id="v4"><div class="vh"><span class="k">4 · Лава</span><h2>Через шов перетекают капельки</h2><p class="lead">Как в лава-лампе: красные капельки уходят на его сторону, фиолетовые — на твою. Чем выше общий интерес, тем их больше и тем дальше они заходят.</p></div><div class="rows" data-v="4"></div></section>
 </main>
@@ -163,18 +165,21 @@ const side=(e,who)=>{const k=kind(e);
   return `<span class="side ${who==='me'?'l':'r'}">${who==='me'?av+val:val+av}</span>`;};
 function row(V,[t,a,b],i){
   const ka=kind(a),kb=kind(b),blocked=ka==='hard'||kb==='hard';
-  const A=ka==='v'?a.v:0,B=kb==='v'?b.v:0,both=A&&B&&!blocked;
+  const A=ka==='v'?a.v:0,B=kb==='v'?b.v:0,both=!!(A&&B&&!blocked);
+  let ra=0,rb=0;
+  if(both){ra=Math.min(.8,Math.max(.2,A/(A+B)));rb=1-ra;} else {ra=A?.5:0;rb=B?.5:0;}
   const half=(k,s)=>k==='hard'||k==='soft'?`<span class="half ${s} ${k}"></span>`:'';
   const solo=both?'':'solo';
+  const parts=`${A?`<span class="part l ${solo}"></span>`:''}${B?`<span class="part r ${solo}"></span>`:''}`;
   let inner='';
-  if(V==='1'){ inner=both?`<span class="body" style="--r:${(A/(A+B)*100).toFixed(1)}%"></span>`:`${A?'<span class="part l solo"></span>':''}${B?'<span class="part r solo"></span>':''}`; }
-  if(V==='2'){ const bs=both?16+Math.min(A,B)*2.6:0; inner=`<div class="goo">${A?`<span class="part l ${solo}"></span>`:''}${B?`<span class="part r ${solo}"></span>`:''}${both?`<span class="bead" style="--bs:${bs}px"></span>`:''}</div>`; }
-  if(V==='3'){ inner=`${A?`<span class="part l ${solo}"></span>`:''}${B?`<span class="part r ${solo}"></span>`:''}`; }
+  if(V==='1') inner=both?`<span class="body" style="--r:${(ra*100).toFixed(1)}%"></span>`:parts;
+  if(V==='2'){ const bs=both?16+Math.min(A,B)*2.8:0; inner=`<div class="goo">${parts}${both?`<span class="bead" style="--bs:${bs}px"></span>`:''}</div>`; }
+  if(V==='3') inner=parts;
   if(V==='4'){ let dr='';if(both){const n=Math.max(1,Math.round(Math.min(A,B)/3));const go=10+Math.min(A,B)*4;
-      for(let k=0;k<n;k++){const dd=(k*2.4/n).toFixed(2);const yy=(k%2?-1:1)*(4+k*2);dr+=`<span class="dr m" style="--go:${go}px;--yy:${yy}px;--dd:${dd}s"></span><span class="dr t" style="--go:${go}px;--yy:${yy}px;--dd:${(+dd+1.2).toFixed(2)}s"></span>`;}}
-    inner=`<div class="goo">${A?`<span class="part l ${solo}"></span>`:''}${B?`<span class="part r ${solo}"></span>`:''}${dr}</div>`; }
+      for(let k=0;k<n;k++){const dd=(k*2.4/n).toFixed(2);const yy=(k%2?-1:1)*(3+k*2);dr+=`<span class="dr m" style="--go:${go}px;--yy:${yy}px;--dd:${dd}s"></span><span class="dr t" style="--go:${go}px;--yy:${yy}px;--dd:${(+dd+1.2).toFixed(2)}s"></span>`;}}
+    inner=`<div class="goo">${parts}${dr}</div>`; }
   const lab=cls=>`<div class="lab ${cls}">${side(a,'me')}<span class="nm">${t}</span>${side(b,'them')}</div>`;
-  return `<div class="gr" style="--pa:${A};--pb:${B};--d:${(i*.07).toFixed(2)}s"><div class="trk">${half(ka,'l')}${half(kb,'r')}${inner}</div>${lab('')}${A||B?lab('w'):''}</div>`;
+  return `<div class="gr" style="--ra:${ra.toFixed(3)};--rb:${rb.toFixed(3)};--d:${(i*.07).toFixed(2)}s"><div class="trk">${half(ka,'l')}${half(kb,'r')}${inner}</div>${lab('')}${A?lab('wl'):''}${B?lab('wr'):''}</div>`;
 }
 function draw(){document.querySelectorAll('[data-v]').forEach(el=>{el.innerHTML=ROWS.map((r,i)=>row(el.dataset.v,r,i)).join('');});}
 draw();
