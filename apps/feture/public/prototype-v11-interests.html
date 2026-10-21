@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FetUre V11 — вместо баночек</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400..800&display=swap" rel="stylesheet">
+<style>
+/* Layout: one reading column; each variant = profile shelf + post preview + verdict. Tokens = FetUre V11. */
+:root{
+  --bg:#F5F3F0; --surf:#FFFFFF; --raise:#F0EDE9; --line:#E6E2DD; --line2:#D2CDC6;
+  --ink:#17151A; --mute:#66616B; --faint:#9B969F;
+  --accent:#D0153A; --accent-deep:#6E0A22; --accent-soft:#FBE7EB;
+  --violet:#6550D8; --warn:#9A5D00; --warn-soft:#F7EDDB; --danger:#C4182F; --danger-soft:#FBE5E8; --ok:#1D7A51;
+  --blend:multiply;
+  --font:"Onest",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --ease:cubic-bezier(.2,.8,.2,1); --r:14px; --r-l:18px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111012; --surf:#1B191D; --raise:#242127; --line:#2D2A30; --line2:#3E3A42;
+  --ink:#F3F0F4; --mute:#A9A3AD; --faint:#77717B;
+  --accent:#FF4566; --accent-deep:#8F1030; --accent-soft:#3A1520;
+  --violet:#A797FF; --warn:#E9B663; --warn-soft:#3A2D17; --danger:#FF6B80; --danger-soft:#3D161D; --ok:#6BD3A4;
+  --blend:screen; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111012; --surf:#1B191D; --raise:#242127; --line:#2D2A30; --line2:#3E3A42;
+  --ink:#F3F0F4; --mute:#A9A3AD; --faint:#77717B;
+  --accent:#FF4566; --accent-deep:#8F1030; --accent-soft:#3A1520;
+  --violet:#A797FF; --warn:#E9B663; --warn-soft:#3A2D17; --danger:#FF6B80; --danger-soft:#3D161D; --ok:#6BD3A4;
+  --blend:screen; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--font);-webkit-font-smoothing:antialiased}
+main{max-width:760px;margin:0 auto;padding-block:28px 72px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:40px}
+h1,h2,h3{margin:0;text-wrap:balance}
+h1{font-size:clamp(28px,6vw,40px);line-height:1.05;letter-spacing:-.035em;font-weight:800}
+h2{font-size:26px;letter-spacing:-.03em;font-weight:750;line-height:1.1}
+h3{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);font-weight:650}
+p{margin:0;max-width:62ch}
+.lead{color:var(--mute);font-size:16px}
+header{display:grid;gap:14px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.eyebrow{font-size:13px;color:var(--accent);font-weight:700}
+.btn{font:600 13px var(--font);color:var(--ink);background:var(--surf);border:1px solid var(--line2);border-radius:99px;padding:7px 14px;cursor:pointer;min-height:36px}
+.btn:focus-visible,.chip:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+nav{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;background:var(--raise);color:var(--ink);text-decoration:none;font-size:14px;font-weight:600}
+.chip b{color:var(--accent)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--mute)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend svg{width:14px;height:14px}
+
+section.v{display:grid;gap:18px;padding-top:28px;border-top:1px solid var(--line);scroll-margin-top:12px}
+.vh{display:grid;gap:6px}
+.vh .k{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.02em}
+.block{display:grid;gap:10px;min-width:0}
+.post{background:var(--surf);border:1px solid var(--line);border-radius:var(--r-l);padding:14px;display:grid;gap:10px;min-width:0}
+.post .who{display:flex;align-items:center;gap:10px;font-size:14px}
+.post .who i{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--violet));flex:none}
+.post .who small{display:block;color:var(--mute);font-size:12px}
+.post p{font-size:14px}
+.verdict{display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:14px}
+.verdict ul{margin:4px 0 0;padding-left:18px;color:var(--mute)}
+.verdict li{margin:2px 0}
+.verdict .pro h3{color:var(--ok)}.verdict .con h3{color:var(--warn)}
+@media (max-width:520px){.verdict{grid-template-columns:1fr}}
+.ico{width:12px;height:12px;flex:none}
+.vis{display:inline-grid;place-items:center;color:var(--faint)}
+.vis svg{width:12px;height:12px}
+
+/* ===== A · ПУЛЬС ===== */
+.pulse{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.pl{display:grid;grid-template-columns:1fr auto;grid-template-rows:auto 26px;column-gap:8px;padding:10px 12px 8px;border-radius:var(--r);background:var(--surf);border:1px solid var(--line);min-width:0;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.pl .n{font-size:14px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:5px}
+.pl .lv{font-size:15px;font-weight:800;color:var(--jc);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.pl .wave{grid-column:1/-1;overflow:hidden;height:26px;color:var(--jc);-webkit-mask:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);mask:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}
+.pl .wave svg{display:block;width:200%;height:26px;animation:wv var(--sp,4s) linear infinite}
+@keyframes wv{to{transform:translateX(-50%)}}
+.pl.neg .lv{color:var(--warn);font-size:12px;font-weight:700}.pl.neg .wave{color:var(--warn)}
+.pl.tab{background:repeating-linear-gradient(135deg,var(--surf) 0 7px,var(--raise) 7px 8px)}
+.pl.tab .lv{color:var(--danger);font-size:12px;font-weight:700}.pl.tab .wave{color:var(--danger)}
+.pl.more,.pl.add{border-style:dashed;place-content:center;grid-template-rows:auto;color:var(--mute);font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:6px;min-height:68px}
+.pl.more b{color:var(--ink)}
+.pl:hover{border-color:var(--jc,var(--ink))}
+.pulse.mini{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.pulse.mini .pl{padding:8px 10px 6px;grid-template-rows:auto 18px}
+.pulse.mini .pl .wave,.pulse.mini .pl .wave svg{height:18px}
+.pulse.mini .pl .n{font-size:13px}
+
+/* ===== B · НАКАЛ (типографика) ===== */
+.heat{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px;line-height:1.15}
+.ht{font:inherit;background:none;border:0;padding:2px 0;cursor:pointer;color:var(--jc);font-size:calc(13px + var(--v) * 1.35px);font-weight:calc(360 + var(--v) * 44);letter-spacing:calc(var(--v) * -.004em);display:inline-flex;align-items:baseline;gap:3px;white-space:nowrap}
+.ht sup{font-size:11px;font-weight:700;color:var(--mute);letter-spacing:0;position:relative;top:-.4em}
+.ht .vis{align-self:center}
+.ht.neg{color:var(--warn);font-size:15px;font-weight:500;font-style:italic;text-decoration:underline dotted 1.5px;text-underline-offset:4px}
+.ht.tab{color:var(--danger);font-size:15px;font-weight:500;text-decoration:line-through 1.5px}
+.ht.more{color:var(--mute);font-size:14px;font-weight:600}
+.ht.add{color:var(--accent);font-size:14px;font-weight:650}
+.ht:hover:not(.more):not(.add){text-shadow:0 0 18px color-mix(in srgb,var(--jc) 45%,transparent)}
+.heat.glow .ht:not(.neg):not(.tab):not(.more):not(.add){animation:glow 3.2s ease-in-out infinite;animation-delay:var(--d)}
+@keyframes glow{50%{text-shadow:0 0 calc(var(--v) * 1.6px) color-mix(in srgb,var(--jc) 50%,transparent)}}
+.heat.mini{gap:2px 12px}
+.heat.mini .ht{font-size:calc(12px + var(--v) * .8px)}
+
+/* ===== C · ОТПЕЧАТОК ===== */
+.print{display:grid;grid-template-columns:minmax(0,240px) minmax(0,1fr);gap:20px;align-items:center}
+@media (max-width:560px){.print{grid-template-columns:1fr;justify-items:center}}
+.print svg.bloom{width:100%;max-width:240px;height:auto;overflow:visible}
+.petal{transition:opacity .2s;cursor:pointer}
+.bloom.focus .petal{opacity:.22}.bloom.focus .petal.on{opacity:1}
+.bloom .breathe{animation:br 5s ease-in-out infinite;transform-origin:120px 120px}
+@keyframes br{50%{transform:scale(1.025)}}
+.plist{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:2px 16px;width:100%}
+@media (max-width:440px){.plist{grid-template-columns:1fr}}
+.plist li{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:8px;font-size:14px;cursor:pointer;min-width:0}
+.plist li.on{background:var(--raise)}
+.plist li i{width:10px;height:10px;border-radius:3px;background:var(--jc);flex:none}
+.plist li.neg i{background:none;border:1.5px dashed var(--warn)}
+.plist li.tab i{background:var(--danger);border-radius:50%}
+.plist li span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plist li b{font-variant-numeric:tabular-nums;font-size:13px}
+.plist li.neg b{color:var(--warn);font-weight:600;font-size:12px}.plist li.tab b{color:var(--danger);font-weight:600;font-size:12px}
+.duo{display:grid;grid-template-columns:120px 1fr;gap:14px;align-items:center}
+@media (max-width:420px){.duo{grid-template-columns:1fr;justify-items:center}}
+.duo svg{width:120px;height:120px;overflow:visible}
+.duo .m{display:grid;gap:6px;font-size:13px;color:var(--mute)}
+.duo .m b{color:var(--ink)}
+.sw{display:inline-block;width:10px;height:10px;border-radius:3px;vertical-align:-1px;margin-right:4px}
+
+/* ===== D · ЦИФЕРБЛАТ ===== */
+.dials{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:14px 6px}
+.dl{font:inherit;color:inherit;background:none;border:0;padding:4px 2px;display:grid;justify-items:center;gap:4px;cursor:pointer;min-width:0;text-align:center}
+.dl .face{position:relative;width:60px;height:60px;display:grid;place-items:center}
+.dl svg.ring{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.dl .seg{fill:none;stroke-width:5;stroke-linecap:round}
+.dl .seg.off{stroke:var(--line2)}
+.dl .seg.lit{stroke:var(--jc);stroke-dasharray:var(--len) 200;stroke-dashoffset:var(--len);animation:lit .5s var(--ease) forwards;animation-delay:var(--d)}
+@keyframes lit{to{stroke-dashoffset:0}}
+.dl .num{position:relative;font-size:19px;font-weight:800;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.dl .num svg{width:20px;height:20px;display:block}
+.dl .n{font-size:13px;font-weight:550;line-height:1.25;max-width:100%;overflow-wrap:break-word;hyphens:auto}
+.dl .w{font-size:12px;font-weight:600;line-height:1.2}
+.dl .vis{position:absolute;right:-2px;bottom:-2px;width:18px;height:18px;border-radius:50%;background:var(--surf);box-shadow:0 0 0 1px var(--line)}
+.dl .vis svg{width:11px;height:11px}
+.dl.neg .seg.off{stroke:var(--warn);stroke-dasharray:2 4;stroke-width:2.5}.dl.neg .num,.dl.neg .w{color:var(--warn)}
+.dl.tab .seg.off{stroke:color-mix(in srgb,var(--danger) 35%,transparent)}.dl.tab .num,.dl.tab .w{color:var(--danger)}
+.dl.more .face,.dl.add .face{border:1.5px dashed var(--line2);border-radius:50%;color:var(--mute)}
+.dl.more .num{font-size:16px}
+.dl:hover .face{transform:rotate(-8deg)}.dl .face{transition:transform .3s var(--ease)}
+.dials.mini{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 2px}
+.dials.mini .face{width:44px;height:44px}.dials.mini .num{font-size:15px}.dials.mini .n{font-size:12px}
+
+.compare{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surf)}
+.compare table{border-collapse:collapse;width:100%;min-width:540px;font-size:14px}
+.compare th,.compare td{text-align:left;padding:10px 12px;border-top:1px solid var(--line);vertical-align:top}
+.compare thead th{border-top:0;font-size:12px;color:var(--mute);font-weight:650;letter-spacing:.04em;text-transform:uppercase}
+.compare td.y{color:var(--ok);font-weight:600}.compare td.m{color:var(--warn);font-weight:600}
+.foot{color:var(--mute);font-size:13px}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.dl .seg.lit{stroke-dashoffset:0}}
+</style>
+</head>
+<body>
+
+<main>
+  <header>
+    <div class="top"><span class="eyebrow">FetUre V11 · дизайн-исследование</span><button class="btn" id="themeBtn" type="button">Тема: системная</button></div>
+    <h1>Вместо баночек: четыре варианта</h1>
+    <p class="lead">Баночка показывает один интерес и его отклик: от 1 до 10, «обсуждаемо» или «табу». Ниже те же данные в четырёх новых формах. Каждая показана в профиле и компактно, внутри поста. Нажми на любой интерес: варианты живые.</p>
+    <nav aria-label="Варианты">
+      <a class="chip" href="#pulse"><b>A</b> Пульс</a>
+      <a class="chip" href="#heat"><b>B</b> Накал</a>
+      <a class="chip" href="#print"><b>C</b> Отпечаток</a>
+      <a class="chip" href="#dial"><b>D</b> Циферблат</a>
+      <a class="chip" href="#sum">Сравнение</a>
+    </nav>
+    <div class="legend" id="legend"></div>
+  </header>
+
+  <section class="v" id="pulse">
+    <div class="vh"><span class="k">A · Пульс</span><h2>Интерес как сердцебиение</h2>
+      <p class="lead">Каждый интерес — живая линия. Чем выше отклик, тем чаще и выше волна. «Обсуждаемо» — редкий пунктир, «табу» — ровная линия, как отсутствие пульса.</p></div>
+    <div class="block"><h3>В профиле</h3><div class="pulse" id="pulseFull"></div></div>
+    <div class="block"><h3>В посте</h3><div class="post" id="pulsePost"></div></div>
+    <div class="verdict"><div class="pro"><h3>Плюсы</h3><ul><li>Сразу читается как «живое», в тему близости и тела</li><li>Плитки ниже баночек: в два раза больше интересов на экран</li><li>Название не обрезается вертикалью сосуда</li></ul></div><div class="con"><h3>Минусы</h3><ul><li>Много анимации при длинном списке: нужен лимит или пауза за кадром</li><li>Разницу 6 и 7 глаз не видит, держится на цифре</li></ul></div></div>
+  </section>
+
+  <section class="v" id="heat">
+    <div class="vh"><span class="k">B · Накал</span><h2>Интересы как типографика</h2>
+      <p class="lead">Никаких иконок и сосудов. Отклик задаёт толщину и размер слова: Onest переменный, от 400 до 800. Самое сильное звучит громче. «Обсуждаемо» — курсив с точечным подчёркиванием, «табу» — зачёркнуто.</p></div>
+    <div class="block"><h3>В профиле</h3><div class="heat glow" id="heatFull"></div></div>
+    <div class="block"><h3>В посте</h3><div class="post" id="heatPost"></div></div>
+    <div class="verdict"><div class="pro"><h3>Плюсы</h3><ul><li>Самый компактный: 12 интересов в три строки</li><li>Выглядит как журнальная вёрстка, у конкурентов такого нет</li><li>Легко вставить в пост, комментарий, карточку знакомства</li></ul></div><div class="con"><h3>Минусы</h3><ul><li>Слабее как «объект»: не хочется коллекционировать</li><li>Длинные названия на 10 занимают много места</li></ul></div></div>
+  </section>
+
+  <section class="v" id="print">
+    <div class="vh"><span class="k">C · Отпечаток</span><h2>Вся карта интересов одним знаком</h2>
+      <p class="lead">Интересы складываются в цветок: лепесток длиннее, когда отклик сильнее. У каждого человека получается свой узор. «Обсуждаемо» — пунктирный контур, «табу» — красная точка у края. Наведи на лепесток или строку.</p></div>
+    <div class="block"><h3>В профиле</h3><div class="print"><svg class="bloom" id="bloomFull" viewBox="0 0 240 240" role="img" aria-label="Отпечаток интересов"></svg><ul class="plist" id="bloomList"></ul></div></div>
+    <div class="block"><h3>В посте и в знакомствах: два отпечатка поверх друг друга</h3><div class="post" id="bloomPost"></div></div>
+    <div class="verdict"><div class="pro"><h3>Плюсы</h3><ul><li>Самое узнаваемое и «своё»: можно сделать аватар-знак и шарить</li><li>Совпадение двух людей видно без процентов</li><li>Один объект вместо сетки: очень компактно</li></ul></div><div class="con"><h3>Минусы</h3><ul><li>Без легенды не прочитать конкретный интерес</li><li>Порядок лепестков должен быть стабильным (по таксономии), иначе узоры не сравнить</li></ul></div></div>
+  </section>
+
+  <section class="v" id="dial">
+    <div class="vh"><span class="k">D · Циферблат</span><h2>Шкала из десяти делений</h2>
+      <p class="lead">Ближе всего к баночкам по роли: та же сетка, но предмет — тахометр. Десять делений по дуге, загораются по очереди. Цифра в центре, видимость на ободке.</p></div>
+    <div class="block"><h3>В профиле</h3><div class="dials" id="dialFull"></div></div>
+    <div class="block"><h3>В посте</h3><div class="post" id="dialPost"></div></div>
+    <div class="verdict"><div class="pro"><h3>Плюсы</h3><ul><li>Шкала 1–10 считывается буквально: деления и есть баллы</li><li>Прямая замена баночки, переделка минимальная</li><li>Квадратная плитка ниже баночки на треть</li></ul></div><div class="con"><h3>Минусы</h3><ul><li>Кольца прогресса есть у многих, оригинальность средняя</li><li>Без цвета значения читаются одинаково</li></ul></div></div>
+  </section>
+
+  <section class="v" id="sum">
+    <div class="vh"><span class="k">Сравнение</span><h2>Что выбрать</h2></div>
+    <div class="compare"><table>
+      <thead><tr><th>Вариант</th><th>Компактность</th><th>Необычность</th><th>Точность 1–10</th><th>Переделка</th></tr></thead>
+      <tbody>
+        <tr><th>A · Пульс</th><td class="y">высокая</td><td class="y">высокая</td><td class="m">по цифре</td><td class="m">средняя</td></tr>
+        <tr><th>B · Накал</th><td class="y">максимальная</td><td class="y">высокая</td><td class="m">по цифре</td><td class="y">малая</td></tr>
+        <tr><th>C · Отпечаток</th><td class="y">максимальная</td><td class="y">очень высокая</td><td class="m">через легенду</td><td class="m">большая</td></tr>
+        <tr><th>D · Циферблат</th><td class="y">высокая</td><td class="m">средняя</td><td class="y">точная</td><td class="y">малая</td></tr>
+      </tbody></table></div>
+    <p>Можно совместить: <b>Отпечаток</b> как знак профиля наверху и в знакомствах, а под ним список в стиле <b>Накала</b> или <b>Пульса</b>. Так у каждого человека появится свой символ, а детали остаются читаемыми.</p>
+    <p class="foot">Данные на странице примерные. Цвет уровня, «обсуждаемо», «табу» и значки видимости взяты из V11 без изменений.</p>
+  </section>
+</main>
+
+<script>
+(function(){
+const sv=d=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const I={
+  key:sv('<circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16.5 6.5l2 2M14.5 8.5l2 2"/>'),
+  eyeoff:sv('<path d="M4 4l16 16M9.9 5.7A9.6 9.6 0 0 1 12 5.5C18 5.5 21.5 12 21.5 12a17 17 0 0 1-3 3.8M6.3 7.4A16 16 0 0 0 2.5 12S6 18.5 12 18.5a9 9 0 0 0 4-.9"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>'),
+  block:sv('<circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/>'),
+  chat:sv('<path d="M20 11.5a8 8 0 0 1-11.6 7.1L4 20l1.2-4A8 8 0 1 1 20 11.5z"/>'),
+  plus:sv('<path d="M12 5v14M5 12h14"/>')
+};
+// Sample map, same shape as V11 jars: level 1–10 or limit, plus visibility.
+const ME=[
+  {t:'Шибари',v:10,vis:'public'},{t:'Забота после',v:10,vis:'granted'},{t:'Связывание',v:8,vis:'granted'},
+  {t:'Контроль',v:8,vis:'private'},{t:'Ролевые игры',v:7,vis:'public'},{t:'Латекс',v:5,vis:'granted'},
+  {t:'Массаж',v:4,vis:'public'},{t:'Сенсорные игры',v:3,vis:'public'},
+  {t:'Показ',limit:'soft',vis:'granted'},{t:'Сильная боль',limit:'hard',vis:'private'}
+];
+const EXTRA=4;
+const POST=[{t:'Связывание',v:9},{t:'Сенсорные игры',v:7},{t:'Эксперименты',v:6},{t:'Показ',limit:'soft'}];
+const jc=v=>`color-mix(in srgb,var(--accent) ${Math.round(35+(v-1)/9*65)}%,var(--accent-deep))`;
+const vis=j=>j.vis&&j.vis!=='public'?`<span class="vis" title="${j.vis==='granted'?'по доступу':'только я'}">${j.vis==='granted'?I.key:I.eyeoff}</span>`:'';
+const word=j=>j.limit==='hard'?'табу':j.limit==='soft'?'обсуждаемо':'';
+const $=id=>document.getElementById(id);
+const who=(name,meta)=>`<div class="who"><i></i><div><b>${name}</b><small>${meta}</small></div></div>`;
+
+$('legend').innerHTML=`<span>${I.key} по доступу</span><span>${I.eyeoff} только я</span><span style="color:var(--warn)">${I.chat} обсуждаемо</span><span style="color:var(--danger)">${I.block} табу</span>`;
+
+/* A — pulse: a seamless wave; level sets amplitude, frequency and speed */
+function wave(j){
+  const W=120,H=26,mid=H/2;
+  if(j.limit==='hard')return `<svg viewBox="0 0 ${W*2} ${H}" preserveAspectRatio="none"><path d="M0 ${mid}H${W*2}" stroke="currentColor" stroke-width="2" fill="none"/></svg>`;
+  if(j.limit==='soft')return `<svg viewBox="0 0 ${W*2} ${H}" preserveAspectRatio="none"><path d="M0 ${mid}H${W*2}" stroke="currentColor" stroke-width="2" stroke-dasharray="3 6" fill="none" stroke-linecap="round"/></svg>`;
+  const k=Math.max(1,Math.round(1+j.v*.45)),amp=1.5+j.v*1.05,pts=[];
+  for(let x=0;x<=W*2;x+=2){const p=x/W*k*Math.PI*2;const beat=Math.pow(Math.max(0,Math.sin(p)),j.v>6?3:1);pts.push(`${x} ${(mid-(beat*amp*1.6-amp*.3)*(.55+.45*Math.sin(p*.5+1))).toFixed(1)}`);}
+  return `<svg viewBox="0 0 ${W*2} ${H}" preserveAspectRatio="none" style="--sp:${(5.2-j.v*.32).toFixed(2)}s"><path d="M${pts.join('L')}" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/></svg>`;
+}
+const pl=j=>{const c=j.limit==='hard'?'tab':j.limit?'neg':'';
+  return `<button class="pl ${c}" style="--jc:${j.v?jc(j.v):'var(--ink)'}" type="button"><span class="n">${j.t}${vis(j)}</span><span class="lv">${j.v||word(j)}</span><span class="wave">${wave(j)}</span></button>`;};
+$('pulseFull').innerHTML=ME.map(pl).join('')+`<button class="pl more" type="button"><b>+${EXTRA}</b> ещё</button><button class="pl add" type="button">${I.plus.replace('<svg','<svg class="ico" style="width:16px;height:16px"')} Добавить</button>`;
+$('pulsePost').innerHTML=who('lina_rope','прошла «Карту ощущений» · 2 ч')+`<p>Неожиданно высоко сенсорика. Кто проходил, сравним?</p><div class="pulse mini">${POST.map(pl).join('')}</div>`;
+
+/* B — heat: variable font weight and size */
+const ht=(j,i)=>{const c=j.limit==='hard'?'tab':j.limit?'neg':'';
+  return `<button class="ht ${c}" type="button" style="--v:${j.v||0};--jc:${j.v?jc(j.v):'var(--ink)'};--d:${(i%5)*.6}s">${j.t}${j.v?`<sup>${j.v}</sup>`:''}${vis(j)}</button>`;};
+$('heatFull').innerHTML=ME.map(ht).join('')+`<button class="ht more" type="button">+${EXTRA} ещё</button><button class="ht add" type="button">+ Добавить</button>`;
+$('heatPost').innerHTML=who('lina_rope','прошла «Карту ощущений» · 2 ч')+`<p>Неожиданно высоко сенсорика. Кто проходил, сравним?</p><div class="heat mini">${POST.map(ht).join('')}</div>`;
+
+/* C — print: radial bloom, stable order */
+function bloom(list,o={}){
+  const C=120,n=list.length,out=[];
+  out.push(`<circle cx="${C}" cy="${C}" r="112" fill="none" stroke="var(--line)" stroke-dasharray="1 5"/>`);
+  out.push(`<circle cx="${C}" cy="${C}" r="56" fill="none" stroke="var(--line)" stroke-dasharray="1 5"/>`);
+  list.forEach((j,i)=>{
+    const a=i*360/n,w=Math.min(26,Math.PI*2*48/n*.62);
+    if(j.limit==='hard'){out.push(`<g class="petal" data-i="${i}" transform="rotate(${a} ${C} ${C})"><circle cx="${C}" cy="${C-104}" r="6" fill="var(--danger)"/><path d="M${C-3} ${C-107}l6 6" stroke="var(--surf)" stroke-width="1.6"/></g>`);return;}
+    const len=j.limit?54:22+j.v*9;
+    const fill=j.limit?'none':(o.color||jc(j.v));
+    const stroke=j.limit?'stroke="var(--warn)" stroke-width="1.5" stroke-dasharray="3 3"':'';
+    out.push(`<g class="petal" data-i="${i}" transform="rotate(${a} ${C} ${C})"><path d="M${C} ${C-6} C${C-w} ${C-len*.35} ${C-w*.7} ${C-len*.92} ${C} ${C-len} C${C+w*.7} ${C-len*.92} ${C+w} ${C-len*.35} ${C} ${C-6}Z" fill="${fill}" ${o.op?`fill-opacity="${o.op}" style="mix-blend-mode:var(--blend)"`:'fill-opacity=".88"'} ${stroke}/></g>`);
+  });
+  if(!o.bare)out.push(`<circle cx="${C}" cy="${C}" r="17" fill="var(--surf)" stroke="var(--line2)"/><text x="${C}" y="${C+5}" text-anchor="middle" font-family="var(--font)" font-weight="800" font-size="14" fill="var(--ink)">${list.length+EXTRA}</text>`);
+  return `<g class="breathe">${out.join('')}</g>`;
+}
+const bf=$('bloomFull'),bl=$('bloomList');
+bf.innerHTML=bloom(ME);
+bl.innerHTML=ME.map((j,i)=>`<li data-i="${i}" tabindex="0" class="${j.limit==='hard'?'tab':j.limit?'neg':''}" style="--jc:${j.v?jc(j.v):'none'}"><i></i><span>${j.t}</span>${vis(j)}<b>${j.v||word(j)}</b></li>`).join('')+`<li><i style="background:none;border:1.5px dashed var(--line2)"></i><span>+${EXTRA} ещё</span></li>`;
+function focus(i){bf.classList.toggle('focus',i!=null);bf.querySelectorAll('.petal').forEach(p=>p.classList.toggle('on',p.dataset.i==i));bl.querySelectorAll('li').forEach(l=>l.classList.toggle('on',l.dataset.i==i&&i!=null));}
+[bf,bl].forEach(el=>{el.addEventListener('pointerover',e=>{const t=e.target.closest('[data-i]');focus(t?t.dataset.i:null);});el.addEventListener('pointerleave',()=>focus(null));el.addEventListener('focusin',e=>{const t=e.target.closest('[data-i]');if(t)focus(t.dataset.i);});el.addEventListener('focusout',()=>focus(null));});
+// Two people on one shared axis order
+const AX=['Шибари','Забота после','Связывание','Контроль','Ролевые игры','Латекс','Массаж','Сенсорные игры'];
+const A1=[10,10,8,8,7,5,4,3],B1=[3,9,9,2,8,7,6,8];
+const mk=v=>AX.map((t,i)=>({t,v:v[i]}));
+$('bloomPost').innerHTML=who('mars_and_v','совпадение с тобой')+`<div class="duo"><svg viewBox="0 0 240 240" role="img" aria-label="Два отпечатка поверх друг друга">${bloom(mk(A1),{bare:1,color:'var(--accent)',op:.6})}${bloom(mk(B1),{bare:1,color:'var(--violet)',op:.6})}</svg><div class="m"><span><i class="sw" style="background:var(--accent)"></i>ты · <i class="sw" style="background:var(--violet)"></i>mars_and_v</span><span>Сильнее всего совпадаете: <b>Забота после</b>, <b>Связывание</b>, <b>Ролевые игры</b></span><span>Только у тебя: <b>Шибари</b>, <b>Контроль</b></span></div></div>`;
+
+/* D — dial: 10 arc segments over 270° */
+function ring(j,size){
+  const C=30,R=25,out=[],start=135,span=270,seg=span/10,gap=6;
+  const pt=(deg)=>{const r=deg*Math.PI/180;return [(C+R*Math.cos(r)).toFixed(2),(C+R*Math.sin(r)).toFixed(2)];};
+  const len=(R*Math.PI*2*(seg-gap)/360).toFixed(2);
+  for(let k=0;k<10;k++){const a0=start+k*seg+gap/2,a1=a0+seg-gap,[x0,y0]=pt(a0),[x1,y1]=pt(a1);
+    const lit=j.v&&k<j.v;
+    out.push(`<path class="seg ${lit?'lit':'off'}" style="--len:${len};--d:${(k*.05).toFixed(2)}s" d="M${x0} ${y0}A${R} ${R} 0 0 1 ${x1} ${y1}"/>`);}
+  return `<svg class="ring" viewBox="0 0 60 60" aria-hidden="true">${out.join('')}</svg>`;
+}
+const dl=j=>{const c=j.limit==='hard'?'tab':j.limit?'neg':'';
+  const num=j.limit==='hard'?I.block:j.limit?I.chat:j.v;
+  return `<button class="dl ${c}" type="button" style="--jc:${j.v?jc(j.v):'var(--ink)'}"><span class="face">${ring(j)}<span class="num">${num}</span>${vis(j)}</span><span class="n">${j.t}</span>${j.limit?`<span class="w">${word(j)}</span>`:''}</button>`;};
+$('dialFull').innerHTML=ME.map(dl).join('')+`<button class="dl more" type="button"><span class="face"><span class="num">+${EXTRA}</span></span><span class="n">ещё</span></button><button class="dl add" type="button"><span class="face"><span class="num">${I.plus}</span></span><span class="n">Добавить</span></button>`;
+$('dialPost').innerHTML=who('lina_rope','прошла «Карту ощущений» · 2 ч')+`<p>Неожиданно высоко сенсорика. Кто проходил, сравним?</p><div class="dials mini">${POST.map(dl).join('')}</div>`;
+
+/* theme toggle: system → light → dark */
+const modes=['system','light','dark'],names={system:'системная',light:'светлая',dark:'тёмная'};
+let m=document.documentElement.getAttribute('data-theme')||'system';
+const tb=$('themeBtn');tb.textContent='Тема: '+names[m];
+tb.addEventListener('click',()=>{m=modes[(modes.indexOf(m)+1)%3];if(m==='system')document.documentElement.removeAttribute('data-theme');else document.documentElement.setAttribute('data-theme',m);tb.textContent='Тема: '+names[m];});
+})();
+</script>
+</body>
+</html>
