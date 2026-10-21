@@ -71,7 +71,7 @@ main.wrap{padding-block:16px 72px;display:grid;gap:22px}
 .part{position:absolute;top:50%;height:var(--h);margin-top:calc(var(--h) / -2);border-radius:99px}
 .part.l{left:6px;width:var(--wl);background:var(--me)}
 .part.r{right:6px;width:var(--wr);background:var(--them)}
-.gr.meet{--jx:calc(6px + (100% - 12px) * (.5 + (var(--jr) - .5) * 2.2))}
+.gr.meet,.gr.repel{--jx:calc(6px + (100cqw - 12px) * (.5 + (var(--jr) - .5) * 2.2))}
 .meet .part.l{width:calc(var(--jx) - 5px);border-radius:99px var(--ir) var(--ir) 99px}
 .meet .part.r{width:calc(100% - 5px - var(--jx));border-radius:var(--ir) 99px 99px var(--ir)}
 .mix{position:absolute;top:6px;height:38px;left:calc(var(--jx) - var(--mw) / 2);width:var(--mw);background:linear-gradient(90deg,var(--me),var(--them))}
@@ -89,10 +89,10 @@ main.wrap{padding-block:16px 72px;display:grid;gap:22px}
 .chem .what b{color:var(--ink)}
 .repel .goo{filter:none}
 .repel{animation:ga 1.4s var(--spring) both,gb 1.4s var(--spring) both,poke 5.6s ease-in-out infinite;animation-delay:var(--d),calc(var(--d) + .1s),calc(var(--d) + 1.4s)}
-.repel .part.l{width:min(var(--wl),calc(50% - 6px - var(--gx)))}
-.repel .part.r{width:min(var(--wr),calc(50% - 6px - var(--gx)))}
+.repel .part.l{width:min(var(--wl),calc(var(--jx) - 6px - var(--gx)))}
+.repel .part.r{width:min(var(--wr),calc(100cqw - 6px - var(--jx) - var(--gx)))}
 @keyframes poke{0%{--gx:7px}22%{--gx:0px}27%{--gx:3px}32%{--gx:0px}40%{--gx:4px}62%{--gx:7px}100%{--gx:7px}}
-.repel .lab.wl{clip-path:inset(0 calc(100% - 6px - min(var(--wl),calc(50% - 6px - var(--gx)))) 0 0)}.repel .lab.wr{clip-path:inset(0 0 0 calc(100% - 6px - min(var(--wr),calc(50% - 6px - var(--gx)))))}
+.repel .lab.wl{clip-path:inset(0 calc(100% - 6px - min(var(--wl),calc(var(--jx) - 6px - var(--gx)))) 0 0)}.repel .lab.wr{clip-path:inset(0 0 0 calc(100% - 6px - min(var(--wr),calc(100cqw - 6px - var(--jx) - var(--gx)))))}
 .tp{position:absolute;inset:0;z-index:2;filter:url(#goo2);pointer-events:none}
 .tp .cap{position:absolute;top:6px;width:38px;height:38px;border-radius:50%}
 .tp.l .cap{left:calc(6px + var(--el) - 38px);background:var(--me)}.tp.r .cap{right:calc(6px + var(--er) - 38px);background:var(--them)}
@@ -189,7 +189,7 @@ main.wrap{padding-block:16px 72px;display:grid;gap:22px}
 const CASES=[
   ['Реакция',[['Классический секс',{v:10},{v:10}],['Оральные ласки',{v:10,d:['give']},{v:9,d:['get']}],['Забота после',{v:10},{v:10,d:['get']}],['Связывание',{v:9,d:['get']},{v:10,d:['give','watch']}],['Шибари',{v:8},{v:10}],['Ролевые игры',{v:8,d:['watch']},{v:9}]]],
   ['Есть к чему стремиться',[['Латекс',{v:5},{v:5}],['Контроль',{v:7,d:['get']},{v:8,d:['give']}],['Воск',{v:3},{v:4}],['Массаж',{v:2},{v:2}],['Показ',{v:1},{v:10}],['Игры с дыханием',{limit:'soft'},{v:8}]]],
-  ['Не подходят по ролям',[['Анальный секс',{v:9,d:['give']},{v:10,d:['give']}],['Оральный секс',{v:10,d:['get']},{v:10,d:['get']}],['Сенсорные игры',{v:6,d:['get','watch']},{v:5,d:['get','watch']}]]],
+  ['Не подходят по ролям',[['Оральный секс',{v:10,d:['get']},{v:10,d:['get']}],['Анальный секс',{v:9,d:['give']},{v:10,d:['give']}],['Фистинг',{v:8,d:['give']},{v:10,d:['give']}],['Сенсорные игры',{v:6,d:['get','watch']},{v:5,d:['get','watch']}]]],
   ['Границы',[['Порка',{v:7},{limit:'hard'}],['Сильная боль',{limit:'hard'},{limit:'hard'}]]],
   ['Нет в карте',[['Эксперименты',null,{v:6}]]]
 ];
@@ -229,7 +229,7 @@ function row([t,a,b,o={}],i){
   else if(meet){const n=m>=10?3:m>=9?2:1,go=10+(m-7)*12,ds=6+(m-7)*3;
     for(let k=0;k<n;k++){const dd=(k*5.2/n).toFixed(2),yy=(k%2?-1:1)*(2+k*2);
       dr+=`<span class="dr m" style="--go:${go}px;--yy:${yy}px;--dd:${dd}s;--ds:${ds}px"></span><span class="dr t" style="--go:${go}px;--yy:${yy}px;--dd:${(+dd+2.6).toFixed(2)}s;--ds:${ds}px"></span>`;}}
-  const ir=99, mw=0, jr=meet?A/(A+B):.5;
+  const ir=99, mw=0, jr=(meet||repel)?A/(A+B):.5;
   let fz='';if(meet){const n=m-7;for(let k=0;k<n*2;k++)fz+=`<span class="fz" style="--fs:${3+(k%3)}px;--fx:${((k%2?1:-1)*(3+k*3))}px;--fd:${(k*.9).toFixed(2)}s"></span>`;}
   let sd='';
   let pl='',bd='';
