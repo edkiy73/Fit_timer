@@ -2416,3 +2416,8 @@ button.pill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:no
 .actc-th{width:58px;height:58px;overflow:hidden}.actc-th>img{border-radius:0}
 .actc-xs{position:absolute;top:3px;right:3px;display:flex;gap:2px}
 .actc-xs i{width:16px;height:16px;border-radius:50%;display:grid;place-items:center;background:rgba(10,6,10,.66);color:#fff}.actc-xs i svg{width:10px;height:10px}
+/* a video is recognisable at a glance: a round play mark in the middle of its poster (feed posts and activity tiles) */
+.mplay{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;display:grid;place-items:center;background:rgba(10,6,10,.5);color:#fff;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);box-shadow:0 0 0 1.5px rgba(255,255,255,.35) inset;pointer-events:none}
+.mplay svg{width:26px;height:26px;margin-left:3px}
+.mgrid:not(.n1) .mplay{width:44px;height:44px;margin:-22px 0 0 -22px}.mgrid:not(.n1) .mplay svg{width:20px;height:20px}
+.actc-th .mplay,.actth .mplay{width:24px;height:24px;margin:-12px 0 0 -12px;box-shadow:none}.actc-th .mplay svg,.actth .mplay svg{width:12px;height:12px;margin-left:2px}

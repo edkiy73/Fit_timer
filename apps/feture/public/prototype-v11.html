@@ -2427,6 +2427,11 @@ button.pill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:no
 .actc-th{width:58px;height:58px;overflow:hidden}.actc-th>img{border-radius:0}
 .actc-xs{position:absolute;top:3px;right:3px;display:flex;gap:2px}
 .actc-xs i{width:16px;height:16px;border-radius:50%;display:grid;place-items:center;background:rgba(10,6,10,.66);color:#fff}.actc-xs i svg{width:10px;height:10px}
+/* a video is recognisable at a glance: a round play mark in the middle of its poster (feed posts and activity tiles) */
+.mplay{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;display:grid;place-items:center;background:rgba(10,6,10,.5);color:#fff;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);box-shadow:0 0 0 1.5px rgba(255,255,255,.35) inset;pointer-events:none}
+.mplay svg{width:26px;height:26px;margin-left:3px}
+.mgrid:not(.n1) .mplay{width:44px;height:44px;margin:-22px 0 0 -22px}.mgrid:not(.n1) .mplay svg{width:20px;height:20px}
+.actc-th .mplay,.actth .mplay{width:24px;height:24px;margin:-12px 0 0 -12px;box-shadow:none}.actc-th .mplay svg,.actth .mplay svg{width:12px;height:12px;margin-left:2px}
 </style>
 </head>
 <body>
@@ -2955,7 +2960,7 @@ const city=id=>T(CITY[id])||'';
 /* ---------- icons (24px grid, one stroke family) ---------- */
 const sv=(d,w)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w||2}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const I={copy:sv('<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/>'),at:sv('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.5"/><path d="M15.5 8v7h2"/>'),
- back:sv('<path d="M15 18l-6-6 6-6"/>',2.4), chev:sv('<path d="M9 6l6 6-6 6"/>',2.2), down:sv('<path d="M6 9l6 6 6-6"/>',2.2), close:sv('<path d="M6 6l12 12M18 6L6 18"/>',2.4),
+ back:sv('<path d="M15 18l-6-6 6-6"/>',2.4), chev:sv('<path d="M9 6l6 6-6 6"/>',2.2), down:sv('<path d="M6 9l6 6 6-6"/>',2.2), playf:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.6v12.8a1 1 0 0 0 1.5.86l10.4-6.4a1 1 0 0 0 0-1.72L9.5 4.74A1 1 0 0 0 8 5.6z" fill="currentColor"/></svg>', close:sv('<path d="M6 6l12 12M18 6L6 18"/>',2.4),
  feed:sv('<rect x="3.5" y="3.5" width="17" height="17" rx="5"/><path d="M3.5 14l4.5-4 5 4.5 3-2.5 4.5 3.5"/>'),
  people:sv('<circle cx="9" cy="8" r="3.4"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 4.6a3.4 3.4 0 0 1 0 6.8M18 14.2c2.2.6 3.5 2.6 3.5 5.8"/>'),
  groups:sv('<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.7 2.6 14.3 0 17M12 3.5c-2.6 2.7-2.6 14.3 0 17"/>'),
@@ -4188,7 +4193,7 @@ const mfImg=(src,style,lazy)=>`<img class="mbg" src="${esc(src)}" alt="" aria-hi
 document.addEventListener('load',e=>{const img=e.target;if(!img.classList?.contains('mfg'))return;const f=img.parentElement;if(!f?.dataset.fit||!img.naturalWidth)return;const [lo,hi]=f.dataset.fit.split(',').map(Number);f.style.setProperty('--ar',fitAr(img.naturalWidth/img.naturalHeight,lo,hi));},true);
 /** media grid for posts and albums: 1 → full, 2 → halves, 3+ → mosaic; tap opens the viewer */
 function mediaGrid(list,o={}){if(!list||!list.length)return '';const n=list.length;const id=o.id||'';
- return `<div class="mgrid n${Math.min(n,4)}" ${o.attrs||''}>${list.slice(0,4).map((m,i)=>`<button class="mcell mf" ${n===1?`data-fit=".8,1.91" ${m.w&&m.h?`style="--ar:${fitAr(m.w/m.h,.8,1.91)}"`:''}`:''} data-act="mView" data-v="${esc(id)}" data-i="${i}" aria-label="${L('Открыть на весь экран','Open full screen')}">${m.type==='video'?`<video src="${esc(m.url)}" ${m.poster?`poster="${esc(m.poster)}"`:''} muted playsinline preload="metadata"></video><span class="dur">${I.video}${fmtDur(m.dur||0)}</span>`:m.type==='plate'?plate(m.key,'image'):mfImg(m.url,m.style,'lazy')}${i===3&&n>4?`<span class="more">+${n-4}</span>`:''}</button>`).join('')}</div>`;}
+ return `<div class="mgrid n${Math.min(n,4)}" ${o.attrs||''}>${list.slice(0,4).map((m,i)=>`<button class="mcell mf" ${n===1?`data-fit=".8,1.91" ${m.w&&m.h?`style="--ar:${fitAr(m.w/m.h,.8,1.91)}"`:''}`:''} data-act="mView" data-v="${esc(id)}" data-i="${i}" aria-label="${L('Открыть на весь экран','Open full screen')}">${m.type==='video'?`<video src="${esc(m.url)}" ${m.poster?`poster="${esc(m.poster)}"`:''} muted playsinline preload="metadata"></video><span class="mplay">${I.playf}</span><span class="dur">${I.video}${fmtDur(m.dur||0)}</span>`:m.type==='plate'?plate(m.key,'image'):mfImg(m.url,m.style,'lazy')}${i===3&&n>4?`<span class="more">+${n-4}</span>`:''}</button>`).join('')}</div>`;}
 const MEDIA_SRC={};
 ACT.mView=(a,e)=>{e?.stopPropagation();const id=a.dataset.v;const list=(MEDIA_SRC[id]?MEDIA_SRC[id]():postById(id)?.media||EV(id)?.gallery)||[];openViewer(list.map(m=>m.type==='plate'?m:{type:m.type,src:m.url,style:m.style}),+a.dataset.i);};
 
@@ -4536,7 +4541,8 @@ function likeThumb(p,row){const q=postParts(p),first=q.media[0],n=q.media.length
  if(first){const src=first.type==='video'?first.poster:first.url;
   const body=src?`<img src="${esc(src)}" alt="" loading="lazy" draggable="false">`:`<span class="actc-vid">${I.video}</span>`;
   const cnt=q.photos&&(q.photos>1||q.videos)?`<span class="actc-n">${I.image}${q.photos}</span>`:q.videos>1?`<span class="actc-n">${I.video}${q.videos}</span>`:q.videos?`<span class="actc-n">${I.video}${fmtDur(first.dur||0)}</span>`:'';
-  return {cls:n>1?'multi':'',html:body+cnt+(row?'':marks),mc:n,parts:partsLine(p)};}
+  const play=first.type==='video'?`<span class="mplay">${I.playf}</span>`:'';
+  return {cls:n>1?'multi':'',html:body+play+cnt+(row?'':marks),mc:n,parts:partsLine(p)};}
  if(q.poll)return {cls:'kind',html:`${I.poll}${row?'':`<small>${L('Опрос','Poll')}</small>`}`,mc:0,parts:partsLine(p)};
  if(q.result)return {cls:'kind',html:`${I.test}${row?'':`<small>${L('Интересы','Interests')}</small>`}`,mc:0,parts:partsLine(p)};
  return row?{cls:'ic',html:I.edit,mc:0,parts:''}:{cls:'txt',html:`<span>${esc(mdPlain(T(p.text)).slice(0,40))}</span>`,mc:0,parts:''};}

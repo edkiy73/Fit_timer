@@ -59,7 +59,8 @@ function likeThumb(p,row){const q=postParts(p),first=q.media[0],n=q.media.length
  if(first){const src=first.type==='video'?first.poster:first.url;
   const body=src?`<img src="${esc(src)}" alt="" loading="lazy" draggable="false">`:`<span class="actc-vid">${I.video}</span>`;
   const cnt=q.photos&&(q.photos>1||q.videos)?`<span class="actc-n">${I.image}${q.photos}</span>`:q.videos>1?`<span class="actc-n">${I.video}${q.videos}</span>`:q.videos?`<span class="actc-n">${I.video}${fmtDur(first.dur||0)}</span>`:'';
-  return {cls:n>1?'multi':'',html:body+cnt+(row?'':marks),mc:n,parts:partsLine(p)};}
+  const play=first.type==='video'?`<span class="mplay">${I.playf}</span>`:'';
+  return {cls:n>1?'multi':'',html:body+play+cnt+(row?'':marks),mc:n,parts:partsLine(p)};}
  if(q.poll)return {cls:'kind',html:`${I.poll}${row?'':`<small>${L('Опрос','Poll')}</small>`}`,mc:0,parts:partsLine(p)};
  if(q.result)return {cls:'kind',html:`${I.test}${row?'':`<small>${L('Интересы','Interests')}</small>`}`,mc:0,parts:partsLine(p)};
  return row?{cls:'ic',html:I.edit,mc:0,parts:''}:{cls:'txt',html:`<span>${esc(mdPlain(T(p.text)).slice(0,40))}</span>`,mc:0,parts:''};}
