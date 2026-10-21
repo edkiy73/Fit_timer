@@ -53,6 +53,7 @@ ul,ol{margin:0;padding-left:20px;display:grid;gap:6px;max-width:66ch}
 .cats{display:grid;gap:10px}
 .cats .row{display:grid;grid-template-columns:200px 1fr;gap:12px;align-items:start}
 @media (max-width:560px){.cats .row{grid-template-columns:1fr;gap:4px}}
+.cats .row > .cat{justify-self:start}
 .tw{overflow-x:auto;border:1px solid var(--line);border-radius:16px;background:var(--surf)}
 table{border-collapse:collapse;width:100%;font-size:14px}
 th,td{padding:10px;border-top:1px solid var(--line);text-align:left;vertical-align:top}
@@ -124,14 +125,14 @@ td small{display:block;color:var(--mute);font-size:12px;margin-top:3px}
   </section>
 
   <section>
-    <h2>4. Исходы — шесть, и каждый понятен словом</h2>
+    <h2>4. Исходы — каждый понятен словом</h2>
     <div class="cats">
       <div class="row"><span class="cat match">Совпадает</span><p>Сильно у обоих, роли подходят. Главная группа, её показываем первой.</p></div>
       <div class="row"><span class="cat comp">Дополняете друг друга</span><p>Совпадает, и роли явно дополняют: один «даю», другой «получаю». Подвид «Совпадает», самый ценный.</p></div>
       <div class="row"><span class="cat try">Можно попробовать</span><p>Обоим интересно, но не сильно, и уровни близки (разница до 3). Например 5/5, 3/4, 6/4. Это то, «к чему стремиться».</p></div>
       <div class="row"><span class="cat disc">Стоит обсудить</span><p>Уровни сильно расходятся (разница 4+), или у кого-то «обсуждаемо». Например 10/3, 8/2.</p></div>
-      <div class="row"><span class="cat no">Не сходится по ролям</span><p>Обоим сильно, но роли одинаковые: оба только «даю» или оба только «получаю». Совпадением не считается.</p></div>
-      <div class="row"><span class="cat hide">Не показываем</span><p>Табу у кого-то, или интерес есть только у одного, или он скрыт. Ничего не раскрываем; в счёт «мало данных».</p></div>
+      <div class="row"><span class="cat no">Границы</span><p>У кого-то табу, и это табу открыто публично. Строка спокойная: «У M — табу», без оценки. Если табу у обоих — «Общая граница»: это тоже знак совместимости.</p></div>
+      <div class="row"><span class="cat hide">Не показываем</span><p>Табу скрыто или открыто только по доступу, интерес есть только у одного, или он скрыт. Ничего не раскрываем; в счёт «мало данных».</p></div>
     </div>
   </section>
 
@@ -141,10 +142,10 @@ td small{display:block;color:var(--mute);font-size:12px;margin-top:3px}
     <div class="tw"><table class="mx">
       <thead><tr><th></th><th>Сильно 6–10</th><th>Слабо 1–5</th><th>Обсуждаемо</th><th>Табу</th><th>Нет / скрыто</th></tr></thead>
       <tbody>
-        <tr><th>Сильно 6–10</th><td><span class="cat match">Совпадает</span><small>роли решают: дополняете / не сходится</small></td><td><span class="cat try">Можно попробовать</span><small>если разница до 3</small><span class="cat disc" style="margin-top:6px">Стоит обсудить</span><small>если разница 4+</small></td><td><span class="cat disc">Стоит обсудить</span></td><td><span class="cat hide">Не показываем</span></td><td><span class="cat hide">Не показываем</span></td></tr>
-        <tr><th>Слабо 1–5</th><td><span class="cat try">Можно попробовать</span><small>или «обсудить» при разнице 4+</small></td><td><span class="cat try">Можно попробовать</span></td><td><span class="cat disc">Стоит обсудить</span></td><td><span class="cat hide">Не показываем</span></td><td><span class="cat hide">Не показываем</span></td></tr>
-        <tr><th>Обсуждаемо</th><td><span class="cat disc">Стоит обсудить</span></td><td><span class="cat disc">Стоит обсудить</span></td><td><span class="cat disc">Стоит обсудить</span></td><td><span class="cat hide">Не показываем</span></td><td><span class="cat hide">Не показываем</span></td></tr>
-        <tr><th>Табу</th><td colspan="5"><span class="cat hide">Не показываем</span><small>ни тебе, ни ему — граница остаётся частной</small></td></tr>
+        <tr><th>Сильно 6–10</th><td><span class="cat match">Совпадает</span><small>роли решают: дополняете / не сходится</small></td><td><span class="cat try">Можно попробовать</span><small>если разница до 3</small><span class="cat disc" style="margin-top:6px">Стоит обсудить</span><small>если разница 4+</small></td><td><span class="cat disc">Стоит обсудить</span></td><td><span class="cat no">Границы</span><small>если открыто</small></td><td><span class="cat hide">Не показываем</span></td></tr>
+        <tr><th>Слабо 1–5</th><td><span class="cat try">Можно попробовать</span><small>или «обсудить» при разнице 4+</small></td><td><span class="cat try">Можно попробовать</span></td><td><span class="cat disc">Стоит обсудить</span></td><td><span class="cat no">Границы</span><small>если открыто</small></td><td><span class="cat hide">Не показываем</span></td></tr>
+        <tr><th>Обсуждаемо</th><td><span class="cat disc">Стоит обсудить</span></td><td><span class="cat disc">Стоит обсудить</span></td><td><span class="cat disc">Стоит обсудить</span></td><td><span class="cat no">Границы</span><small>если открыто</small></td><td><span class="cat hide">Не показываем</span></td></tr>
+        <tr><th>Табу</th><td colspan="5"><span class="cat no">Границы</span><small>только если табу открыто публично; скрытое — <span class="cat hide" style="padding:0 6px">не показываем</span></small></td></tr>
         <tr><th>Нет / скрыто</th><td colspan="5"><span class="cat hide">Не показываем</span><small>идёт в «мало данных»</small></td></tr>
       </tbody>
     </table></div>
@@ -153,7 +154,7 @@ td small{display:block;color:var(--mute);font-size:12px;margin-top:3px}
       <tbody>
         <tr><td>Один «даю», другой «получаю» (или в ответах есть такая пара)</td><td><span class="cat comp">Дополняете друг друга</span></td></tr>
         <tr><td>У кого-то «всё», или есть «смотрю»</td><td><span class="cat match">Совпадает</span></td></tr>
-        <tr><td>Оба только «даю» / оба только «получаю»</td><td><span class="cat no">Не сходится по ролям</span></td></tr>
+        <tr><td>Оба только «даю» / оба только «получаю»</td><td><span class="cat disc">Стоит обсудить</span><small>«Вы оба хотите получать» — в «Совпадает» не попадает</small></td></tr>
       </tbody>
     </table></div>
     <p class="note">Для «Можно попробовать» и «Стоит обсудить» роли пока не влияют — чтобы не плодить комбинации. Их можно показать подписью.</p>
@@ -185,13 +186,31 @@ td small{display:block;color:var(--mute);font-size:12px;margin-top:3px}
   </section>
 
   <section>
-    <h2>7. Что нужно решить</h2>
+    <h2>7. Решения</h2>
     <div class="q">
-      <div><b>Процент «химии»: убираем?</b><span>Спецификация запрещает общий процент. Предлагаю вместо него итог словами: «4 совпадения, дополняете друг друга в 1, стоит обсудить 2».</span></div>
-      <div><b>Пороги: «сильно» от 6, «сильно расходится» от разницы 4?</b><span>Оба числа уже стоят в V11. Если устраивают — матрица готова.</span></div>
-      <div><b>Табу второго человека: никогда не показываем?</b><span>Так требуют правила приватности. Альтернатива — показывать «не совпадает» без причины, но и это частично раскрывает границу.</span></div>
-      <div><b>«Не сходится по ролям»: показывать отдельной группой или прятать?</b><span>Это не секрет (роль — часть публичного ответа), но может звучать резко. Можно мягче: «Роли не совпали».</span></div>
+      <div><b>Процент «химии» — убираем. ✓</b><span>Вместо него итог словами: «4 совпадения, дополняете друг друга в 1, стоит обсудить 2». Так и требует спецификация.</span></div>
+      <div><b>Пороги — оставляем. ✓</b><span>«Сильно» от 6, «сильно расходится» при разнице 4+. Оба уже стоят в V11.</span></div>
+      <div><b>Табу второго человека — учитываем, если оно открыто.</b><span><b>Как сейчас:</b> в сравнении табу не участвует вообще, в подборе знакомств тоже. При этом публичное табу и так видно в профиле с подписью «нельзя».<br><b>Рекомендация:</b> табу — такой же ответ, как оценка, и подчиняется той же видимости.</span>
+        <ul>
+          <li><b>Открыто публично</b> → строка в группе «Границы»: «У M — табу», твоя оценка рядом. Никогда не попадает в «Совпадает» и в счётчик общих интересов. Это безопасность: человек сразу видит, что не стоит предлагать.</li>
+          <li><b>Табу у обоих</b> → «Общая граница». Совпадение границ — полезный сигнал, его стоит показывать.</li>
+          <li><b>Открыто только по доступу</b> → участвует только в приватном сравнении после доступа.</li>
+          <li><b>Скрыто</b> → не участвует и не раскрывается ни прямо, ни косвенно (никаких «не подходит, причину не скажем»).</li>
+        </ul>
+        <span>В подбор знакомств табу пока не вмешиваем — это отдельное решение, к сравнению не относится.</span></div>
+      <div><b>Оба «даю» / оба «получаю» — в «Стоит обсудить».</b><span><b>Как сейчас:</b> V11 так и делает: «вам обоим ближе даю — стоит договориться».<br><b>Рекомендация:</b> оставить. Роль — предпочтение, а не граница: люди её обсуждают и меняют. Отдельная резкая группа «не сходится» звучит как приговор и плодит категории. Но в «Совпадает» и счётчик такая пара не попадает — честно: совпадения по сути нет. Формулировку сделать прямее: «Вы оба хотите получать — так не сработает, если никто не уступит».</span></div>
     </div>
+  </section>
+  <section>
+    <h2>8. Итог: пять групп</h2>
+    <div class="cats">
+      <div class="row"><span class="cat match">Совпадает</span><p>сильно у обоих, роли подходят</p></div>
+      <div class="row"><span class="cat comp">Дополняете друг друга</span><p>совпадает + даю ↔ получаю</p></div>
+      <div class="row"><span class="cat try">Можно попробовать</span><p>интересно обоим, не сильно, уровни близки</p></div>
+      <div class="row"><span class="cat disc">Стоит обсудить</span><p>сильно расходитесь, «обсуждаемо», одинаковые роли</p></div>
+      <div class="row"><span class="cat no">Границы</span><p>открытое табу у кого-то; общая граница</p></div>
+    </div>
+    <p class="note">Если согласен — следующий шаг: перенести эту логику в функцию сравнения V11 и перерисовать блок «Что у вас общего» и экран P05 в эталонной капсуле, без анимаций.</p>
   </section>
 </main>
 </body>
