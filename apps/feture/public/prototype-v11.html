@@ -2440,12 +2440,18 @@ button.pill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:no
 .ecard .tx b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:14.5px;font-weight:600;line-height:1.3}
 .ecard.one .tx b{display:flex;align-items:center;gap:0;white-space:nowrap}.ecard.one .tx b .fnm{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .ecard .fag{flex:none;font-weight:500;color:var(--mute);margin-right:2px}
-.ecard .tx b .nbadge{flex:none}.ecard .tx b .nbadge svg{width:15px;height:15px}
+.ecard .tx b .nbadge{flex:none;top:0;margin-left:.15em}
 .ecard .tx small{display:block;margin:0;font-size:12.5px;line-height:1.35;color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ec-v{font-style:normal;font-size:11.5px;font-weight:600;line-height:1.2;color:var(--accent)}
 .ec-r{display:flex;flex-wrap:wrap;align-items:center;gap:2px 12px;font-size:12px;line-height:1.3;color:var(--faint)}
 .ec-m{display:inline-flex;align-items:center;gap:4px;min-width:0}.ec-m svg{width:13px;height:13px;flex:none}
 .ec-m.on{color:var(--ok,#3fbf7f)}.ec-dot{width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block}
+
+/* a picture on the left of a row / card sits at the TOP of it, never vertically centred; what trails on the right (chevron, button, time) stays centred */
+.ecard,.cmc,.evc.row,.chat-row,.frow-go,.me-id,.rqrow .top,.plink.row,.post-h .who,
+.li:has(>.av:first-child),.li:has(>.pth:first-child),.li:has(>img:first-child),.li:has(>.evimg:first-child),.li:has(>.cv:first-child),.li:has(>.mp-avs:first-child),.row:has(>.plink:first-child){align-items:flex-start}
+.chat-row>:not(:first-child):not(.tx),.me-id>:not(:first-child):not(.tx),
+.li:has(>.av:first-child)>:not(:first-child):not(.tx),.li:has(>.pth:first-child)>:not(:first-child):not(.tx),.li:has(>img:first-child)>:not(:first-child):not(.tx),.li:has(>.evimg:first-child)>:not(:first-child):not(.tx),.li:has(>.cv:first-child)>:not(:first-child):not(.tx),.li:has(>.mp-avs:first-child)>:not(:first-child):not(.tx){align-self:center}
 </style>
 </head>
 <body>
