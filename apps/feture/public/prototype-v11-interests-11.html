@@ -15,6 +15,7 @@
 @property --rb{syntax:"<number>";inherits:true;initial-value:0}
 @property --gx{syntax:"<length>";inherits:true;initial-value:14px}
 @property --pt{syntax:"<length>";inherits:true;initial-value:0px}
+@property --bx{syntax:"<length>";inherits:true;initial-value:0px}
 @property --rr{syntax:"<length>";inherits:true;initial-value:99px}
 :root{
   --bg:#F5F3F0; --surf:#FFFFFF; --raise:#ECE8E3; --line:#E6E2DD; --line2:#D2CDC6;
@@ -94,6 +95,19 @@ main.wrap{padding-block:16px 72px;display:grid;gap:22px}
 .repel .part.r{width:calc(100cqw - 6px - var(--jx) - var(--gx))}
 @keyframes poke{0%{--gx:7px;animation-timing-function:cubic-bezier(.55,0,.9,.5)}22%{--gx:0px;animation-timing-function:cubic-bezier(.1,.6,.4,1)}26%{--gx:3px;animation-timing-function:cubic-bezier(.6,0,.9,.6)}29%{--gx:0px;animation-timing-function:cubic-bezier(.1,.6,.4,1)}31.5%{--gx:1.2px;animation-timing-function:cubic-bezier(.6,0,.9,.6)}33.5%{--gx:0px;animation-timing-function:cubic-bezier(.3,0,.3,1)}60%{--gx:7px}100%{--gx:7px}}
 .repel .lab.wl{clip-path:inset(0 calc(100% - var(--jx) + var(--gx)) 0 0)}.repel .lab.wr{clip-path:inset(0 0 0 calc(var(--jx) + var(--gx)))}
+.lk .cap{position:absolute;top:6px;width:38px;height:38px;border-radius:50%}
+.lk .cap.l{left:calc(6px + var(--wl) - 38px);background:var(--me)}.lk .cap.r{right:calc(6px + var(--wr) - 38px);background:var(--them)}
+.lk .th{position:absolute;top:50%;left:calc(6px + var(--wl) - 12px);right:calc(6px + var(--wr) - 12px);height:var(--th);margin-top:calc(var(--th) / -2);border-radius:99px;background:linear-gradient(90deg,var(--me),var(--them));animation:thp 6s ease-in-out infinite;animation-delay:calc(var(--d) + 1.4s)}
+@keyframes thp{50%{transform:scaleY(1.18)}}
+.breath .part.l{width:calc(var(--el) + var(--bx))}.breath .part.r{width:calc(var(--er) + var(--bx))}
+.breath{animation:ga 1.4s var(--spring) both,gb 1.4s var(--spring) both,brx 6s ease-in-out infinite;animation-delay:var(--d),calc(var(--d) + .1s),calc(var(--d) + 1.4s)}
+@keyframes brx{0%,100%{--bx:0px}50%{--bx:7px}}
+.rp-shiver .repel{animation:ga 1.4s var(--spring) both,gb 1.4s var(--spring) both,shiver 6s linear infinite;animation-delay:var(--d),calc(var(--d) + .1s),calc(var(--d) + 1.4s)}
+@keyframes shiver{0%{--gx:9px;animation-timing-function:cubic-bezier(.4,0,.2,1)}25%{--gx:3px;animation-timing-function:linear}28%{--gx:3.8px}31%{--gx:2.6px}34%{--gx:3.8px}37%{--gx:2.6px}40%{--gx:3.8px}43%{--gx:2.6px}46%{--gx:3px;animation-timing-function:cubic-bezier(.4,0,.2,1)}72%{--gx:9px}100%{--gx:9px}}
+.rp-none .repel{animation:ga 1.4s var(--spring) both,gb 1.4s var(--spring) both;--gx:6px}
+.case .opts{display:flex;gap:6px;flex-wrap:wrap}
+.case .opts button{font:600 12.5px var(--font);border:1px solid var(--line2);background:var(--surf);color:var(--mute);border-radius:99px;padding:4px 10px;cursor:pointer}
+.case .opts button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .tp{position:absolute;inset:0;z-index:2;filter:url(#goo2);pointer-events:none}
 .tp .cap{position:absolute;top:6px;width:38px;height:38px;border-radius:50%}
 .tp.l .cap{left:calc(6px + var(--el) - 38px);background:var(--me)}.tp.r .cap{right:calc(6px + var(--er) - 38px);background:var(--them)}
@@ -189,7 +203,8 @@ main.wrap{padding-block:16px 72px;display:grid;gap:22px}
 (function(){
 const CASES=[
   ['Реакция',[['Классический секс',{v:10},{v:10}],['Оральные ласки',{v:10,d:['give']},{v:9,d:['get']}],['Забота после',{v:10},{v:10,d:['get']}],['Связывание',{v:9,d:['get']},{v:10,d:['give','watch']}],['Шибари',{v:8},{v:10}],['Ролевые игры',{v:8,d:['watch']},{v:9}]]],
-  ['Есть к чему стремиться',[['Латекс',{v:5},{v:5}],['Контроль',{v:7,d:['get']},{v:8,d:['give']}],['Воск',{v:3},{v:4}],['Массаж',{v:2},{v:2}],['Показ',{v:1},{v:10}],['Игры с дыханием',{limit:'soft'},{v:8}]]],
+  ['Совпадаете по уровню',[['Латекс',{v:5},{v:5}],['Контроль',{v:7,d:['get']},{v:8,d:['give']}],['Воск',{v:3},{v:4}],['Массаж',{v:2},{v:2}]]],
+  ['Есть к чему стремиться',[['Показ',{v:1},{v:10}],['Перья',{v:3},{v:8}],['Ролевые сценки',{v:6},{v:2}],['Игры с дыханием',{limit:'soft'},{v:8}]]],
   ['Не подходят по ролям',[['Оральный секс',{v:10,d:['get']},{v:10,d:['get']}],['Анальный секс',{v:9,d:['give']},{v:10,d:['give']}],['Фистинг',{v:8,d:['give']},{v:10,d:['give']}],['Сенсорные игры',{v:6,d:['get','watch']},{v:5,d:['get','watch']}]]],
   ['Границы',[['Порка',{v:7},{limit:'hard'}],['Сильная боль',{limit:'hard'},{limit:'hard'}]]],
   ['Нет в карте',[['Эксперименты',null,{v:6}]]]
@@ -234,7 +249,9 @@ function row([t,a,b,o={}],i){
   let fz='';if(meet){const n=m-7;for(let k=0;k<n*2;k++)fz+=`<span class="fz" style="--fs:${3+(k%3)}px;--fx:${((k%2?1:-1)*(3+k*3))}px;--fd:${(k*.9).toFixed(2)}s"></span>`;}
   let sd='';
   let pl='',bd='';
-  if(!meet&&!blocked&&!repel&&!still&&(A||B)){const soft=ka==='soft'||kb==='soft';const m2=soft?3:Math.min(A,B);
+  const link=!meet&&!blocked&&!repel&&!still&&A&&B&&Math.abs(A-B)<=1;
+  if(link)bd+=`<span class="tp lk" style="--th:${(3+Math.min(A,B)*1.7).toFixed(1)}px"><i class="cap l"></i><i class="cap r"></i><i class="th"></i></span>`;
+  if(!meet&&!blocked&&!repel&&!still&&!link&&(A||B)&&pot==='drops'){const soft=ka==='soft'||kb==='soft';const m2=soft?3:Math.min(A,B);
     const n=m2>=5?2:1,pd=(9.2-Math.min(m2,10)*.2).toFixed(2),ps=Math.round(9+Math.min(m2,8)*.45);
     for(let k=0;k<n;k++){const dd=(k*(+pd)/n).toFixed(2);
       if(A){pl+=`<span class="dp l" style="--ps:${ps}px;--pd:${pd}s;--dd:${dd}s"></span>`;bd+=`<span class="tp l"><i class="cap"></i><i class="dg" style="--ps:${ps}px;--pd:${pd}s;--dd:${dd}s"></i></span>`;}
@@ -244,16 +261,17 @@ function row([t,a,b,o={}],i){
   const blk=blocked||ka==='soft'||kb==='soft'||!A||!B;
   const R2=rel(a,b,o),vt=R2==='mutual'?'<span class="v fit">взаимно — роли не нужны</span>':R2==='both'?'<span class="v fit">обоюдно: оба даёте и получаете</span>':R2==='fit'?'<span class="v fit">дополняете друг друга</span>':R2==='same'?'<span class="v no">оба '+(a.d[0]==='give'?'даёте':'получаете')+' — не подходит</span>':'<span class="v"></span>';
   const det=role==='tap'&&(dirW(a&&a.d)||dirW(b&&b.d)||o.mutual)?`<div class="det"><div><span>Ты: <b>${o.mutual?'вместе':dirW(a&&a.d)||'—'}</b></span>${vt}<span>M: <b>${o.mutual?'вместе':dirW(b&&b.d)||'—'}</b></span></div></div>`:'';
-  return `<div class="item">`+`<div class="gr ${pl?'tow':''} ${repel?'repel':''} ${blocked?'hard':(ka==='soft'||kb==='soft')?'soft':''} ${meet?'meet':''}" style="--ir:${ir}px;--mw:${mw}px;--jr:${jr.toFixed(3)};--ra:${A/10};--rb:${B/10};--d:${(i*.07).toFixed(2)}s">${half(ka,'l')}${half(kb,'r')}${goo}${lab('')}${A?lab('wl'):''}${B?lab('wr'):''}</div>`+det+`</div>`;
+  return `<div class="item">`+`<div class="gr ${pl||(!meet&&!blocked&&!repel&&!still&&!link&&(A||B))?'tow':''} ${!meet&&!blocked&&!repel&&!still&&!link&&(A||B)&&pot==='breath'?'breath':''} ${link?'link':''} ${repel?'repel':''} ${blocked?'hard':(ka==='soft'||kb==='soft')?'soft':''} ${meet?'meet':''}" style="--ir:${ir}px;--mw:${mw}px;--jr:${jr.toFixed(3)};--ra:${A/10};--rb:${B/10};--d:${(i*.07).toFixed(2)}s">${half(ka,'l')}${half(kb,'r')}${goo}${lab('')}${A?lab('wl'):''}${B?lab('wr'):''}</div>`+det+`</div>`;
 }
 function chem(){
-  let mn=0,mx=0,react=0;CASES.flatMap(c=>c[1]).forEach(([,a,b,o])=>{if(kind(a)==='v'&&kind(b)==='v'){const no=rel(a,b,o||{})==='same';mn+=no?0:Math.min(a.v,b.v);mx+=Math.max(a.v,b.v);if(a.v+b.v>=17&&!no)react++;}});
+  let mn=0,mx=0,react=0,lnk=0;CASES.flatMap(c=>c[1]).forEach(([,a,b,o])=>{if(kind(a)==='v'&&kind(b)==='v'){const no=rel(a,b,o||{})==='same';mn+=no?0:Math.min(a.v,b.v);mx+=Math.max(a.v,b.v);if(a.v+b.v>=17&&!no)react++;else if(!no&&Math.abs(a.v-b.v)<=1)lnk++;}});
   const sc=Math.round(mn/mx*100);const word=sc>=80?'Сильная химия':sc>=60?'Есть химия':sc>=40?'Искрит местами':'Пока слабо';
-  return `<div class="chem"><span class="pair"><i class="av me">Я</i><i class="av them">M</i></span><span class="score">${sc}%<small>${word}</small></span><span class="what">Реакция в <b>${react}</b> интересах</span></div>`;}
-let role='cap';
-function draw(){document.getElementById('root').className='wrap role-'+role;['cap','tap','flow'].forEach(k=>document.getElementById('r_'+k).setAttribute('aria-pressed',role===k));let i=0;document.getElementById('root').innerHTML=chem()+CASES.map(([h,rows])=>`<div class="case"><h3>${h}</h3><div class="rows">${rows.map(r=>row(r,i++)).join('')}</div></div>`).join('');}
+  return `<div class="chem"><span class="pair"><i class="av me">Я</i><i class="av them">M</i></span><span class="score">${sc}%<small>${word}</small></span><span class="what">Реакция в <b>${react}</b> · связь в <b>${lnk}</b> интересах</span></div>`;}
+let role='cap',pot='drops',rp='knock';
+const OPTS={'Есть к чему стремиться':['pot',[['drops','Капли'],['breath','Дыхание'],['none','Без анимации']]],'Не подходят по ролям':['rp',[['knock','Тук-тук'],['shiver','Дрожь'],['none','Без анимации']]]};
+function draw(){document.getElementById('root').className='wrap role-'+role+' rp-'+rp;['cap','tap','flow'].forEach(k=>document.getElementById('r_'+k).setAttribute('aria-pressed',role===k));let i=0;document.getElementById('root').innerHTML=chem()+CASES.map(([h,rows])=>`<div class="case"><h3>${h}</h3>${OPTS[h]?`<div class="opts">${OPTS[h][1].map(([k,l])=>`<button type="button" data-o="${OPTS[h][0]}" data-k="${k}" aria-pressed="${(OPTS[h][0]==='pot'?pot:rp)===k}">${l}</button>`).join('')}</div>`:''}<div class="rows">${rows.map(r=>row(r,i++)).join('')}</div></div>`).join('');}
 ['cap','tap','flow'].forEach(k=>document.getElementById('r_'+k).onclick=()=>{role=k;draw();});
-document.getElementById('root').addEventListener('click',e=>{const it=e.target.closest('.item');if(it&&role==='tap')it.classList.toggle('open');});
+document.getElementById('root').addEventListener('click',e=>{const ob=e.target.closest('[data-o]');if(ob){if(ob.dataset.o==='pot')pot=ob.dataset.k;else rp=ob.dataset.k;draw();return;}const it=e.target.closest('.item');if(it&&role==='tap')it.classList.toggle('open');});
 draw();
 document.getElementById('replay').onclick=draw;
 const modes=['system','light','dark'],names={system:'системная',light:'светлая',dark:'тёмная'};
