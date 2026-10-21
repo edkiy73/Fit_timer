@@ -2397,11 +2397,9 @@ button.pill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:no
 .actc-th{position:relative;flex:none;width:54px;height:54px;border-radius:12px;overflow:hidden;background:var(--raise);display:grid;place-items:center;color:var(--accent)}
 .actc-th>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.actc-th svg{width:20px;height:20px}
 .actc-th.round{border-radius:50%}.actc-th.round .av{width:100%;height:100%}
-.actc-th.more{font-weight:700;font-size:15px;color:var(--accent);border:1px dashed var(--line2);background:none}
 .actc-list{display:grid;gap:8px}.actc-list>.btn.text{justify-self:start;min-height:36px;padding:0}
 
 /* a liked post with several photos: the thumbnail is a small stack with a photo counter */
-.actc-th.multi{box-shadow:3px -3px 0 -1px var(--raise),5px -5px 0 -2px var(--line2);margin:3px 5px 0 0}
 .actc-n{position:absolute;left:3px;bottom:3px;display:inline-flex;align-items:center;gap:2px;padding:1px 5px 1px 4px;border-radius:99px;background:rgba(10,6,10,.66);color:#fff;font-size:11px;font-weight:700;line-height:1.3}.actc-n svg{width:11px;height:11px}
 .actth .actc-n{left:auto;right:3px;bottom:3px}
 
@@ -2414,17 +2412,26 @@ button.pill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:no
 /* a post made of several things: the first media is the thumbnail, extra parts ride as small marks */
 .actc-th{overflow:visible}.actc-th>img{border-radius:12px}
 .actc-vid{display:grid;place-items:center;position:absolute;inset:0;border-radius:12px;background:var(--raise);color:var(--mute)}
-.actc-x{position:absolute;top:-4px;right:-4px;width:18px;height:18px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;box-shadow:0 0 0 2px var(--bg)}.actc-x svg{width:10px;height:10px}
-.actc-x.r{right:15px;background:var(--violet)}
 .actc-th.txt,.actc-th.kind{overflow:hidden}
 
-/* the strip shows as many as fit and fades out on the right, like the filter chips; scroll sideways, the last tile opens the full list */
-.actc-strip{overflow-x:auto;scrollbar-width:none;margin-right:calc(-1*var(--gut));padding-right:var(--gut);-webkit-mask-image:linear-gradient(90deg,#000 82%,transparent);mask-image:linear-gradient(90deg,#000 82%,transparent);-webkit-overflow-scrolling:touch}
+/* activity strip: tiles scroll sideways under a fixed «+N» pill on the right (same idea as the chips under «Фильтры»); fades appear only on the side that has more */
+.actc-row{display:flex;align-items:center;gap:8px;min-width:0}
+.actc-strip{position:relative}.actc-th.txt span{hyphens:auto}
+.actc-strip{--fl:0px;--fr:0px;flex:1;min-width:0;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;-webkit-overflow-scrolling:touch;-webkit-mask-image:linear-gradient(90deg,transparent,#000 var(--fl),#000 calc(100% - var(--fr)),transparent);mask-image:linear-gradient(90deg,transparent,#000 var(--fl),#000 calc(100% - var(--fr)),transparent)}
 .actc-strip::-webkit-scrollbar{display:none}
-.actc-th.more{flex-direction:column;gap:1px;color:var(--accent)}.actc-th.more b{font-size:13px;font-weight:700;line-height:1}
-.actc-th.more.round{border-radius:50%}
+.actc-strip.fl{--fl:22px}.actc-strip.fr{--fr:40px}
+.actc-more{flex:none;min-width:44px;height:36px;padding:0 12px;border-radius:99px;border:1px solid var(--line);background:var(--surf);color:var(--accent);font-size:14px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.actc-more svg{width:18px;height:18px}
 .actc-hd .ibtn{margin-right:0}
-.actc-th.more small{font-size:10px;font-weight:650;color:var(--mute)}
+/* every tile is one clean rounded square: media stays inside it, marks sit inside the corner, nothing pokes out of the scrolling row */
+.actc-th{width:58px;height:58px;overflow:hidden}.actc-th>img{border-radius:0}
+.actc-xs{position:absolute;top:3px;right:3px;display:flex;gap:2px}
+.actc-xs i{width:16px;height:16px;border-radius:50%;display:grid;place-items:center;background:rgba(10,6,10,.66);color:#fff}.actc-xs i svg{width:10px;height:10px}
+/* a video is recognisable at a glance: a round play mark in the middle of its poster (feed posts and activity tiles) */
+.mplay{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;display:grid;place-items:center;background:rgba(10,6,10,.5);color:#fff;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);box-shadow:0 0 0 1.5px rgba(255,255,255,.35) inset;pointer-events:none}
+.mplay svg{width:26px;height:26px;margin-left:3px}
+.mgrid:not(.n1) .mplay{width:44px;height:44px;margin:-22px 0 0 -22px}.mgrid:not(.n1) .mplay svg{width:20px;height:20px}
+.actc-th .mplay,.actth .mplay{width:24px;height:24px;margin:-12px 0 0 -12px;box-shadow:none}.actc-th .mplay svg,.actth .mplay svg{width:12px;height:12px;margin-left:2px}
 </style>
 </head>
 <body>
@@ -2953,7 +2960,7 @@ const city=id=>T(CITY[id])||'';
 /* ---------- icons (24px grid, one stroke family) ---------- */
 const sv=(d,w)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w||2}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const I={copy:sv('<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/>'),at:sv('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.5"/><path d="M15.5 8v7h2"/>'),
- back:sv('<path d="M15 18l-6-6 6-6"/>',2.4), chev:sv('<path d="M9 6l6 6-6 6"/>',2.2), down:sv('<path d="M6 9l6 6 6-6"/>',2.2), close:sv('<path d="M6 6l12 12M18 6L6 18"/>',2.4),
+ back:sv('<path d="M15 18l-6-6 6-6"/>',2.4), chev:sv('<path d="M9 6l6 6-6 6"/>',2.2), down:sv('<path d="M6 9l6 6 6-6"/>',2.2), playf:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.6v12.8a1 1 0 0 0 1.5.86l10.4-6.4a1 1 0 0 0 0-1.72L9.5 4.74A1 1 0 0 0 8 5.6z" fill="currentColor"/></svg>', close:sv('<path d="M6 6l12 12M18 6L6 18"/>',2.4),
  feed:sv('<rect x="3.5" y="3.5" width="17" height="17" rx="5"/><path d="M3.5 14l4.5-4 5 4.5 3-2.5 4.5 3.5"/>'),
  people:sv('<circle cx="9" cy="8" r="3.4"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 4.6a3.4 3.4 0 0 1 0 6.8M18 14.2c2.2.6 3.5 2.6 3.5 5.8"/>'),
  groups:sv('<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.7 2.6 14.3 0 17M12 3.5c-2.6 2.7-2.6 14.3 0 17"/>'),
@@ -4186,7 +4193,7 @@ const mfImg=(src,style,lazy)=>`<img class="mbg" src="${esc(src)}" alt="" aria-hi
 document.addEventListener('load',e=>{const img=e.target;if(!img.classList?.contains('mfg'))return;const f=img.parentElement;if(!f?.dataset.fit||!img.naturalWidth)return;const [lo,hi]=f.dataset.fit.split(',').map(Number);f.style.setProperty('--ar',fitAr(img.naturalWidth/img.naturalHeight,lo,hi));},true);
 /** media grid for posts and albums: 1 → full, 2 → halves, 3+ → mosaic; tap opens the viewer */
 function mediaGrid(list,o={}){if(!list||!list.length)return '';const n=list.length;const id=o.id||'';
- return `<div class="mgrid n${Math.min(n,4)}" ${o.attrs||''}>${list.slice(0,4).map((m,i)=>`<button class="mcell mf" ${n===1?`data-fit=".8,1.91" ${m.w&&m.h?`style="--ar:${fitAr(m.w/m.h,.8,1.91)}"`:''}`:''} data-act="mView" data-v="${esc(id)}" data-i="${i}" aria-label="${L('Открыть на весь экран','Open full screen')}">${m.type==='video'?`<video src="${esc(m.url)}" ${m.poster?`poster="${esc(m.poster)}"`:''} muted playsinline preload="metadata"></video><span class="dur">${I.video}${fmtDur(m.dur||0)}</span>`:m.type==='plate'?plate(m.key,'image'):mfImg(m.url,m.style,'lazy')}${i===3&&n>4?`<span class="more">+${n-4}</span>`:''}</button>`).join('')}</div>`;}
+ return `<div class="mgrid n${Math.min(n,4)}" ${o.attrs||''}>${list.slice(0,4).map((m,i)=>`<button class="mcell mf" ${n===1?`data-fit=".8,1.91" ${m.w&&m.h?`style="--ar:${fitAr(m.w/m.h,.8,1.91)}"`:''}`:''} data-act="mView" data-v="${esc(id)}" data-i="${i}" aria-label="${L('Открыть на весь экран','Open full screen')}">${m.type==='video'?`<video src="${esc(m.url)}" ${m.poster?`poster="${esc(m.poster)}"`:''} muted playsinline preload="metadata"></video><span class="mplay">${I.playf}</span><span class="dur">${I.video}${fmtDur(m.dur||0)}</span>`:m.type==='plate'?plate(m.key,'image'):mfImg(m.url,m.style,'lazy')}${i===3&&n>4?`<span class="more">+${n-4}</span>`:''}</button>`).join('')}</div>`;}
 const MEDIA_SRC={};
 ACT.mView=(a,e)=>{e?.stopPropagation();const id=a.dataset.v;const list=(MEDIA_SRC[id]?MEDIA_SRC[id]():postById(id)?.media||EV(id)?.gallery)||[];openViewer(list.map(m=>m.type==='plate'?m:{type:m.type,src:m.url,style:m.style}),+a.dataset.i);};
 
@@ -4529,11 +4536,13 @@ function postParts(p){const media=(p.media||[]).filter(m=>m.url),photos=media.fi
 function partsLine(p){const q=postParts(p),a=[];if(q.videos)a.push(q.videos>1?pl(q.videos,['видео','видео','видео'],['video','videos']):L('видео','video'));if(q.photos)a.push(pl(q.photos,['фото','фото','фото'],['photo','photos']));if(q.poll)a.push(L('опрос','poll'));if(q.result)a.push(L('интересы','interests'));return a.join(' · ');}
 /** thumbnail of a liked post: the first photo / video poster if there is media (counter for several, play mark for video), otherwise a poll / interests / text tile; extra parts ride as small marks */
 function likeThumb(p,row){const q=postParts(p),first=q.media[0],n=q.media.length;
- const marks=`${q.poll&&n?`<i class="actc-x">${I.poll}</i>`:''}${q.result&&n?`<i class="actc-x r">${I.test}</i>`:''}`;
+ /* a media tile names the photos in its counter; a video next to photos, a poll and interests ride as small marks inside the top-right corner */
+ const mk=[q.photos&&q.videos&&I.video,q.poll&&I.poll,q.result&&I.test].filter(Boolean),marks=n&&mk.length?`<span class="actc-xs">${mk.map(m=>`<i>${m}</i>`).join('')}</span>`:'';
  if(first){const src=first.type==='video'?first.poster:first.url;
   const body=src?`<img src="${esc(src)}" alt="" loading="lazy" draggable="false">`:`<span class="actc-vid">${I.video}</span>`;
-  const cnt=n>1?`<span class="actc-n">${q.videos?I.video:I.image}${n}</span>`:first.type==='video'?`<span class="actc-n">${I.video}${fmtDur(first.dur||0)}</span>`:'';
-  return {cls:n>1?'multi':'',html:body+cnt+(row?'':marks),mc:n,parts:partsLine(p)};}
+  const cnt=q.photos&&(q.photos>1||q.videos)?`<span class="actc-n">${I.image}${q.photos}</span>`:q.videos>1?`<span class="actc-n">${I.video}${q.videos}</span>`:q.videos?`<span class="actc-n">${I.video}${fmtDur(first.dur||0)}</span>`:'';
+  const play=first.type==='video'?`<span class="mplay">${I.playf}</span>`:'';
+  return {cls:n>1?'multi':'',html:body+play+cnt+(row?'':marks),mc:n,parts:partsLine(p)};}
  if(q.poll)return {cls:'kind',html:`${I.poll}${row?'':`<small>${L('Опрос','Poll')}</small>`}`,mc:0,parts:partsLine(p)};
  if(q.result)return {cls:'kind',html:`${I.test}${row?'':`<small>${L('Интересы','Interests')}</small>`}`,mc:0,parts:partsLine(p)};
  return row?{cls:'ic',html:I.edit,mc:0,parts:''}:{cls:'txt',html:`<span>${esc(mdPlain(T(p.text)).slice(0,40))}</span>`,mc:0,parts:''};}
@@ -4555,7 +4564,7 @@ function actCard(x,i){const who=x.who,nm=`<b>${esc(pname(who))}</b>`;let text,bo
   else text=L(`${nm} в ${n} сообществах`,`${nm} is in ${n} communities`);
   const strip=['like','follow'].includes(x.kind);
   if(open)body=`<div class="actc-list">${x.items.map(actPrev).join('')}<button class="btn text auto" data-act="actOpen" data-v="${esc(x.gid)}">${L('Свернуть','Collapse')}</button></div>`;
-  else if(strip)body=`<div class="actc-strip">${x.items.slice(0,12).map(th).join('')}${n>2?`<button class="actc-th more ${x.kind==='follow'?'round':''}" data-act="actOpen" data-v="${esc(x.gid)}" aria-label="${L('Показать все','Show all')}"><b>${n}</b><small>${L('все','all')}</small></button>`:''}</div>`;
+  else if(strip)body=`<div class="actc-row"><div class="actc-strip">${x.items.slice(0,12).map(th).join('')}</div><button class="actc-more" data-act="actOpen" data-v="${esc(x.gid)}" aria-label="${L('Показать все','Show all')}" hidden></button></div>`;
   else body=`<div class="actc-list">${x.items.slice(0,2).map(actPrev).join('')}${n>2?`<button class="btn text auto" data-act="actOpen" data-v="${esc(x.gid)}">${L(`Ещё ${n-2}`,`${n-2} more`)}</button>`:''}</div>`;
   return `<div class="actc" style="animation-delay:${(i||0)*40}ms"><button class="actc-av" data-go="P01" data-p='${esc(JSON.stringify({id:who}))}' aria-label="${esc(pname(who))}">${av(who,'sm')}</button><div class="actc-b">${head(text)}${body}</div></div>`;}
  if(x.k==='like')text=L(`${nm}: нравится публикация ${esc(pname(x.post.author))}`,`${nm} likes ${esc(pname(x.post.author))}’s post`);
@@ -4563,6 +4572,14 @@ function actCard(x,i){const who=x.who,nm=`<b>${esc(pname(who))}</b>`;let text,bo
  else if(x.k==='comm')text=L(`${nm} в сообществе`,`${nm} is in a community`);
  else text=L(`${nm} теперь следит за ${esc(pname(x.p))}`,`${nm} now follows ${esc(pname(x.p))}`);
  return `<div class="actc" style="animation-delay:${(i||0)*40}ms"><button class="actc-av" data-go="P01" data-p='${esc(JSON.stringify({id:who}))}' aria-label="${esc(pname(who))}">${av(who,'sm')}</button><div class="actc-b">${head(text)}${actPrev(x)}</div></div>`;}
+/** a strip scrolls under a fixed «+N» on the right, like the chips under «Фильтры»: N = tiles still hidden to the right; fades show on the side that has more */
+function actFit(r){const s=r.firstElementChild,b=r.lastElementChild;b.hidden=false;
+ const over=s.scrollWidth>s.clientWidth+1;if(!over){b.hidden=true;s.classList.remove('fl','fr');return;}
+ const more=s.scrollLeft+s.clientWidth<s.scrollWidth-2,edge=s.scrollLeft+s.clientWidth-(more?14:-1),hid=[...s.children].filter(t=>t.offsetLeft+t.offsetWidth>edge).length;
+ s.classList.toggle('fl',s.scrollLeft>2);s.classList.toggle('fr',more);
+ b.innerHTML=hid?`+${hid}`:I.down;}
+const actObs=typeof ResizeObserver==='function'?new ResizeObserver(es=>es.forEach(e=>actFit(e.target))):null;
+new MutationObserver(()=>$$('.actc-row:not([data-fit])').forEach(r=>{r.dataset.fit=1;actFit(r);actObs?.observe(r);requestAnimationFrame(()=>actFit(r));r.firstElementChild.addEventListener('scroll',()=>actFit(r),{passive:true});})).observe(document.body,{childList:true,subtree:true});
 ACT.actOpen=a=>{const o=S.ui.actOpen??=new Set();const g=a.dataset.v;o.has(g)?o.delete(g):o.add(g);refresh();};
 ACT.actMenu=a=>{const id=a.dataset.v;sheet(()=>({title:esc(pname(id)),body:`<div class="card list">${linkRow({go:'P01',p:{id},icon:'me',title:L('Открыть профиль','Open profile'),noChev:1})}${linkRow({act:'actMute',v:id,icon:'belloff',title:L('Не показывать активность','Hide this person’s activity'),sub:L('Публикации в ленте останутся','Their posts stay in your feed'),noChev:1})}</div>`}));};
 ACT.actMute=a=>{const id=a.dataset.v;(S.mutedActivity??=new Set()).add(id);closeSheet(true);refresh();toast(L(`Активность ${pname(id)} скрыта из ленты`,`${pname(id)}’s activity is hidden from your feed`),{type:'ok',action:{label:L('Вернуть','Undo'),fn:()=>{S.mutedActivity.delete(id);refresh();}}});};

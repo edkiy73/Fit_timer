@@ -54,11 +54,13 @@ function postParts(p){const media=(p.media||[]).filter(m=>m.url),photos=media.fi
 function partsLine(p){const q=postParts(p),a=[];if(q.videos)a.push(q.videos>1?pl(q.videos,['видео','видео','видео'],['video','videos']):L('видео','video'));if(q.photos)a.push(pl(q.photos,['фото','фото','фото'],['photo','photos']));if(q.poll)a.push(L('опрос','poll'));if(q.result)a.push(L('интересы','interests'));return a.join(' · ');}
 /** thumbnail of a liked post: the first photo / video poster if there is media (counter for several, play mark for video), otherwise a poll / interests / text tile; extra parts ride as small marks */
 function likeThumb(p,row){const q=postParts(p),first=q.media[0],n=q.media.length;
- const marks=`${q.poll&&n?`<i class="actc-x">${I.poll}</i>`:''}${q.result&&n?`<i class="actc-x r">${I.test}</i>`:''}`;
+ /* a media tile names the photos in its counter; a video next to photos, a poll and interests ride as small marks inside the top-right corner */
+ const mk=[q.photos&&q.videos&&I.video,q.poll&&I.poll,q.result&&I.test].filter(Boolean),marks=n&&mk.length?`<span class="actc-xs">${mk.map(m=>`<i>${m}</i>`).join('')}</span>`:'';
  if(first){const src=first.type==='video'?first.poster:first.url;
   const body=src?`<img src="${esc(src)}" alt="" loading="lazy" draggable="false">`:`<span class="actc-vid">${I.video}</span>`;
-  const cnt=n>1?`<span class="actc-n">${q.videos?I.video:I.image}${n}</span>`:first.type==='video'?`<span class="actc-n">${I.video}${fmtDur(first.dur||0)}</span>`:'';
-  return {cls:n>1?'multi':'',html:body+cnt+(row?'':marks),mc:n,parts:partsLine(p)};}
+  const cnt=q.photos&&(q.photos>1||q.videos)?`<span class="actc-n">${I.image}${q.photos}</span>`:q.videos>1?`<span class="actc-n">${I.video}${q.videos}</span>`:q.videos?`<span class="actc-n">${I.video}${fmtDur(first.dur||0)}</span>`:'';
+  const play=first.type==='video'?`<span class="mplay">${I.playf}</span>`:'';
+  return {cls:n>1?'multi':'',html:body+play+cnt+(row?'':marks),mc:n,parts:partsLine(p)};}
  if(q.poll)return {cls:'kind',html:`${I.poll}${row?'':`<small>${L('Опрос','Poll')}</small>`}`,mc:0,parts:partsLine(p)};
  if(q.result)return {cls:'kind',html:`${I.test}${row?'':`<small>${L('Интересы','Interests')}</small>`}`,mc:0,parts:partsLine(p)};
  return row?{cls:'ic',html:I.edit,mc:0,parts:''}:{cls:'txt',html:`<span>${esc(mdPlain(T(p.text)).slice(0,40))}</span>`,mc:0,parts:''};}
@@ -80,7 +82,7 @@ function actCard(x,i){const who=x.who,nm=`<b>${esc(pname(who))}</b>`;let text,bo
   else text=L(`${nm} в ${n} сообществах`,`${nm} is in ${n} communities`);
   const strip=['like','follow'].includes(x.kind);
   if(open)body=`<div class="actc-list">${x.items.map(actPrev).join('')}<button class="btn text auto" data-act="actOpen" data-v="${esc(x.gid)}">${L('Свернуть','Collapse')}</button></div>`;
-  else if(strip)body=`<div class="actc-strip">${x.items.slice(0,12).map(th).join('')}${n>2?`<button class="actc-th more ${x.kind==='follow'?'round':''}" data-act="actOpen" data-v="${esc(x.gid)}" aria-label="${L('Показать все','Show all')}"><b>${n}</b><small>${L('все','all')}</small></button>`:''}</div>`;
+  else if(strip)body=`<div class="actc-row"><div class="actc-strip">${x.items.slice(0,12).map(th).join('')}</div><button class="actc-more" data-act="actOpen" data-v="${esc(x.gid)}" aria-label="${L('Показать все','Show all')}" hidden></button></div>`;
   else body=`<div class="actc-list">${x.items.slice(0,2).map(actPrev).join('')}${n>2?`<button class="btn text auto" data-act="actOpen" data-v="${esc(x.gid)}">${L(`Ещё ${n-2}`,`${n-2} more`)}</button>`:''}</div>`;
   return `<div class="actc" style="animation-delay:${(i||0)*40}ms"><button class="actc-av" data-go="P01" data-p='${esc(JSON.stringify({id:who}))}' aria-label="${esc(pname(who))}">${av(who,'sm')}</button><div class="actc-b">${head(text)}${body}</div></div>`;}
  if(x.k==='like')text=L(`${nm}: нравится публикация ${esc(pname(x.post.author))}`,`${nm} likes ${esc(pname(x.post.author))}’s post`);
@@ -88,6 +90,14 @@ function actCard(x,i){const who=x.who,nm=`<b>${esc(pname(who))}</b>`;let text,bo
  else if(x.k==='comm')text=L(`${nm} в сообществе`,`${nm} is in a community`);
  else text=L(`${nm} теперь следит за ${esc(pname(x.p))}`,`${nm} now follows ${esc(pname(x.p))}`);
  return `<div class="actc" style="animation-delay:${(i||0)*40}ms"><button class="actc-av" data-go="P01" data-p='${esc(JSON.stringify({id:who}))}' aria-label="${esc(pname(who))}">${av(who,'sm')}</button><div class="actc-b">${head(text)}${actPrev(x)}</div></div>`;}
+/** a strip scrolls under a fixed «+N» on the right, like the chips under «Фильтры»: N = tiles still hidden to the right; fades show on the side that has more */
+function actFit(r){const s=r.firstElementChild,b=r.lastElementChild;b.hidden=false;
+ const over=s.scrollWidth>s.clientWidth+1;if(!over){b.hidden=true;s.classList.remove('fl','fr');return;}
+ const more=s.scrollLeft+s.clientWidth<s.scrollWidth-2,edge=s.scrollLeft+s.clientWidth-(more?14:-1),hid=[...s.children].filter(t=>t.offsetLeft+t.offsetWidth>edge).length;
+ s.classList.toggle('fl',s.scrollLeft>2);s.classList.toggle('fr',more);
+ b.innerHTML=hid?`+${hid}`:I.down;}
+const actObs=typeof ResizeObserver==='function'?new ResizeObserver(es=>es.forEach(e=>actFit(e.target))):null;
+new MutationObserver(()=>$$('.actc-row:not([data-fit])').forEach(r=>{r.dataset.fit=1;actFit(r);actObs?.observe(r);requestAnimationFrame(()=>actFit(r));r.firstElementChild.addEventListener('scroll',()=>actFit(r),{passive:true});})).observe(document.body,{childList:true,subtree:true});
 ACT.actOpen=a=>{const o=S.ui.actOpen??=new Set();const g=a.dataset.v;o.has(g)?o.delete(g):o.add(g);refresh();};
 ACT.actMenu=a=>{const id=a.dataset.v;sheet(()=>({title:esc(pname(id)),body:`<div class="card list">${linkRow({go:'P01',p:{id},icon:'me',title:L('Открыть профиль','Open profile'),noChev:1})}${linkRow({act:'actMute',v:id,icon:'belloff',title:L('Не показывать активность','Hide this person’s activity'),sub:L('Публикации в ленте останутся','Their posts stay in your feed'),noChev:1})}</div>`}));};
 ACT.actMute=a=>{const id=a.dataset.v;(S.mutedActivity??=new Set()).add(id);closeSheet(true);refresh();toast(L(`Активность ${pname(id)} скрыта из ленты`,`${pname(id)}’s activity is hidden from your feed`),{type:'ok',action:{label:L('Вернуть','Undo'),fn:()=>{S.mutedActivity.delete(id);refresh();}}});};
