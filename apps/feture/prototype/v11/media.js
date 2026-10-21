@@ -32,6 +32,10 @@ const MAX_CLIP=60,MIN_CLIP=1;
 const vsrc=m=>{const u=m.url||m.src||'';return m.trim&&m.trim.e>m.trim.s?`${u.split('#')[0]}#t=${m.trim.s.toFixed(2)},${m.trim.e.toFixed(2)}`:u;};
 const vitem=i=>({type:'video',url:i.url,dur:i.dur,fdur:i.fdur,w:i.w,h:i.h,crop:i.crop,trim:i.trim});
 const fmtDur=s=>`${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,'0')}`;
+/** the one media capsule used on every preview: photos «▣ 3», a lone video «🎥 0:06», several videos «🎥 2», a mix «▣ 3 🎥 1»; a lone photo needs none */
+function mediaBadge(photos,videos,dur,cls){const a=[];if(photos&&(photos>1||videos))a.push(`${I.image}${photos}`);if(videos)a.push(`${I.video}${videos>1||photos?videos:fmtDur(dur||0)}`);return a.length?`<span class="${cls}">${a.map(x=>`<b>${x}</b>`).join('')}</span>`:'';}
+/** the round play mark on a video poster — the same in the feed and in the full-screen viewer */
+const playMark=(act)=>act?`<button type="button" class="mplay" data-act="${act}" aria-label="${L('Смотреть','Play')}">${I.playf}</button>`:`<span class="mplay" aria-hidden="true">${I.playf}</span>`;
 
 /**
  * Open the uploader. o = {max, accept:'image'|'media', aspect:'4:5'|'1:1'|'16:9'|null, aspects:[...], title, have, done(items)}
@@ -156,11 +160,12 @@ function openViewer(items,index=0,o={}){
  const el=$('#viewer')||Object.assign(document.createElement('div'),{id:'viewer',className:'viewer'});if(!el.isConnected)$('#layer').append(el);
  VW={guard,items,i:Math.max(0,Math.min(items.length-1,index)),opener:document.activeElement,onClose:o.onClose||null,label:o.label||''};
  el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label',L('Просмотр','Viewer'));
- el.innerHTML=`<div class="vw-track" id="vwTrack">${items.map(m=>`<figure>${m.type==='video'?`<video src="${esc(m.src)}" ${m.poster?`poster="${esc(m.poster)}"`:''} controls playsinline preload="metadata"></video>`:m.type==='plate'?`<div class="vw-plate">${plate(m.key)}</div>`:`<img src="${esc(m.src)}" alt="" draggable="false" style="${vwStyle(m.style)}">`}${m.wm?`<div class="vw-wm" aria-hidden="true">${Array.from({length:18},()=>`<span>${esc(m.wm)}</span>`).join('')}</div>`:''}</figure>`).join('')}</div>
+ el.innerHTML=`<div class="vw-track" id="vwTrack">${items.map(m=>`<figure>${m.type==='video'?`<video src="${esc(m.src)}" ${m.poster?`poster="${esc(m.poster)}"`:''} controls playsinline preload="metadata"></video>${playMark('vwPlay')}`:m.type==='plate'?`<div class="vw-plate">${plate(m.key)}</div>`:`<img src="${esc(m.src)}" alt="" draggable="false" style="${vwStyle(m.style)}">`}${m.wm?`<div class="vw-wm" aria-hidden="true">${Array.from({length:18},()=>`<span>${esc(m.wm)}</span>`).join('')}</div>`:''}</figure>`).join('')}</div>
  <div class="vw-top"><span class="vw-n" id="vwN"></span>${o.label?`<span class="vw-label">${esc(o.label)}</span>`:''}<button class="ibtn glass" data-act="vwClose" aria-label="${L('Закрыть','Close')}">${I.close}</button></div>
  ${items.length>1?`<button class="vw-nav l" data-act="vwStep" data-v="-1" aria-label="${L('Предыдущее','Previous')}">${I.back}</button><button class="vw-nav r" data-act="vwStep" data-v="1" aria-label="${L('Следующее','Next')}">${I.chev}</button><div class="vw-dots">${items.map(()=>'<i></i>').join('')}</div>`:''}`;
  el.style.removeProperty('--dy');requestAnimationFrame(()=>{el.classList.add('on');syncModal();$('[data-act="vwClose"]',el).focus({preventScroll:true});});
  vwGo(VW.i,true);
+ $$('#vwTrack video').forEach(v=>{const f=v.parentNode,s=()=>f.classList.toggle('playing',!v.paused);v.addEventListener('play',s);v.addEventListener('pause',s);v.addEventListener('ended',s);});
  const tr=$('#vwTrack');let sx=0,sy=0,dx=0,dy=0,id=null,mode=null;
  let lastTap=0,px=0,py=0;VW.z={k:1,x:0,y:0};
  tr.onpointerdown=e=>{if(e.target.closest('video'))return;id=e.pointerId;sx=e.clientX;sy=e.clientY;dx=dy=0;mode=null;px=VW.z.x;py=VW.z.y;tr.setPointerCapture(id);};
@@ -181,6 +186,7 @@ function vwGo(i,instant){if(!VW)return;if(!VW.guard()){invalidateViewer();return
  $('#viewer .vw-nav.l')?.toggleAttribute('disabled',i===0);$('#viewer .vw-nav.r')?.toggleAttribute('disabled',i===VW.items.length-1);}
 function closeViewer(){const el=$('#viewer');if(!el||!el.classList.contains('on'))return false;el.classList.remove('on');el.querySelectorAll('video').forEach(v=>v.pause());const op=VW?.opener,cb=VW?.onClose;VW=null;if(cb)setTimeout(cb,0);setTimeout(()=>{if(!el.classList.contains('on')){el.innerHTML='';el.style.removeProperty('--dy');}},260);syncModal();if(op?.isConnected)op.focus({preventScroll:true});return true;}
 ACT.vwClose=()=>closeViewer();
+ACT.vwPlay=a=>{a.closest('figure')?.querySelector('video')?.play();};
 ACT.vwStep=a=>vwGo(VW.i+(+a.dataset.v));
 document.addEventListener('keydown',e=>{if(!VW)return;if(e.key==='ArrowRight'){vwGo(VW.i+1);e.stopImmediatePropagation();}if(e.key==='ArrowLeft'){vwGo(VW.i-1);e.stopImmediatePropagation();}if(e.key==='Escape'){closeViewer();e.stopImmediatePropagation();}},true);
 
@@ -192,7 +198,7 @@ const mfImg=(src,style,lazy)=>`<img class="mbg" src="${esc(src)}" alt="" aria-hi
 document.addEventListener('load',e=>{const img=e.target;if(!img.classList?.contains('mfg'))return;const f=img.parentElement;if(!f?.dataset.fit||!img.naturalWidth)return;const [lo,hi]=f.dataset.fit.split(',').map(Number);f.style.setProperty('--ar',fitAr(img.naturalWidth/img.naturalHeight,lo,hi));},true);
 /** media grid for posts and albums: 1 → full, 2 → halves, 3+ → mosaic; tap opens the viewer */
 function mediaGrid(list,o={}){if(!list||!list.length)return '';const n=list.length;const id=o.id||'';
- return `<div class="mgrid n${Math.min(n,4)}" ${o.attrs||''}>${list.slice(0,4).map((m,i)=>`<button class="mcell mf" ${n===1?`data-fit=".8,1.91" ${m.w&&m.h?`style="--ar:${fitAr(m.w/m.h,.8,1.91)}"`:''}`:''} data-act="mView" data-v="${esc(id)}" data-i="${i}" aria-label="${L('Открыть на весь экран','Open full screen')}">${m.type==='video'?`<video src="${esc(m.url)}" ${m.poster?`poster="${esc(m.poster)}"`:''} muted playsinline preload="metadata"></video><span class="mplay">${I.playf}</span><span class="dur">${I.video}${fmtDur(m.dur||0)}</span>`:m.type==='plate'?plate(m.key,'image'):mfImg(m.url,m.style,'lazy')}${i===3&&n>4?`<span class="more">+${n-4}</span>`:''}</button>`).join('')}</div>`;}
+ return `<div class="mgrid n${Math.min(n,4)}" ${o.attrs||''}>${list.slice(0,4).map((m,i)=>`<button class="mcell mf" ${n===1?`data-fit=".8,1.91" ${m.w&&m.h?`style="--ar:${fitAr(m.w/m.h,.8,1.91)}"`:''}`:''} data-act="mView" data-v="${esc(id)}" data-i="${i}" aria-label="${L('Открыть на весь экран','Open full screen')}">${m.type==='video'?`<video src="${esc(m.url)}" ${m.poster?`poster="${esc(m.poster)}"`:''} muted playsinline preload="metadata"></video>${i===3&&n>4?'':playMark()+mediaBadge(0,1,m.dur,'dur')}`:m.type==='plate'?plate(m.key,'image'):mfImg(m.url,m.style,'lazy')}${i===3&&n>4?`<span class="more">+${n-4}</span>`:''}</button>`).join('')}</div>`;}
 const MEDIA_SRC={};
 ACT.mView=(a,e)=>{e?.stopPropagation();const id=a.dataset.v;const list=(MEDIA_SRC[id]?MEDIA_SRC[id]():postById(id)?.media||EV(id)?.gallery)||[];openViewer(list.map(m=>m.type==='plate'?m:{type:m.type,src:m.url,style:m.style}),+a.dataset.i);};
 

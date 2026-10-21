@@ -2427,11 +2427,18 @@ button.pill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:no
 .actc-th{width:58px;height:58px;overflow:hidden}.actc-th>img{border-radius:0}
 .actc-xs{position:absolute;top:3px;right:3px;display:flex;gap:2px}
 .actc-xs i{width:16px;height:16px;border-radius:50%;display:grid;place-items:center;background:rgba(10,6,10,.66);color:#fff}.actc-xs i svg{width:10px;height:10px}
-/* a video is recognisable at a glance: a round play mark in the middle of its poster (feed posts and activity tiles) */
-.mplay{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;display:grid;place-items:center;background:rgba(10,6,10,.5);color:#fff;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);box-shadow:0 0 0 1.5px rgba(255,255,255,.35) inset;pointer-events:none}
-.mplay svg{width:26px;height:26px;margin-left:3px}
-.mgrid:not(.n1) .mplay{width:44px;height:44px;margin:-22px 0 0 -22px}.mgrid:not(.n1) .mplay svg{width:20px;height:20px}
-.actc-th .mplay,.actth .mplay{width:24px;height:24px;margin:-12px 0 0 -12px;box-shadow:none}.actc-th .mplay svg,.actth .mplay svg{width:12px;height:12px;margin-left:2px}
+/* media marks — one language everywhere: a dark capsule bottom-left names the media (▣ 3 · 🎥 0:06 · 🎥 2 · ▣ 3 🎥 1), round marks of the same tone top-right name the extras (poll, interests), a round play sits in the middle of a video poster */
+.actc-n,.mcell .dur,.upthumb .dur{display:inline-flex;align-items:center;gap:5px;background:rgba(10,6,10,.6);color:#fff;font-weight:700;border-radius:99px}
+.actc-n b,.mcell .dur b,.upthumb .dur b{display:inline-flex;align-items:center;gap:2px;font-weight:700}
+.actc-n{padding:1px 5px 1px 4px;gap:4px}
+.mplay{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;padding:0;border:0;border-radius:50%;display:grid;place-items:center;background:rgba(10,6,10,.5);color:#fff;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);box-shadow:0 0 0 1.5px rgba(255,255,255,.35) inset;pointer-events:none}
+.mplay svg{width:24px;height:24px}
+.mgrid:not(.n1) .mplay{width:44px;height:44px;margin:-22px 0 0 -22px}.mgrid:not(.n1) .mplay svg{width:19px;height:19px}
+/* the viewer shows the same play mark while a video is paused instead of the browser's own; the browser's control bar stays for seeking */
+.vw-track .mplay{width:68px;height:68px;margin:-34px 0 0 -34px;pointer-events:auto;cursor:pointer;z-index:2}.vw-track .mplay svg{width:30px;height:30px}
+.vw-track figure.playing .mplay{opacity:0;pointer-events:none}
+.vw-track video::-webkit-media-controls-overlay-play-button{display:none}
+.vw-track video::-webkit-media-controls-start-playback-button{display:none!important}
 </style>
 </head>
 <body>
@@ -2960,7 +2967,7 @@ const city=id=>T(CITY[id])||'';
 /* ---------- icons (24px grid, one stroke family) ---------- */
 const sv=(d,w)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w||2}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const I={copy:sv('<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/>'),at:sv('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.5"/><path d="M15.5 8v7h2"/>'),
- back:sv('<path d="M15 18l-6-6 6-6"/>',2.4), chev:sv('<path d="M9 6l6 6-6 6"/>',2.2), down:sv('<path d="M6 9l6 6 6-6"/>',2.2), playf:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.6v12.8a1 1 0 0 0 1.5.86l10.4-6.4a1 1 0 0 0 0-1.72L9.5 4.74A1 1 0 0 0 8 5.6z" fill="currentColor"/></svg>', close:sv('<path d="M6 6l12 12M18 6L6 18"/>',2.4),
+ back:sv('<path d="M15 18l-6-6 6-6"/>',2.4), chev:sv('<path d="M9 6l6 6-6 6"/>',2.2), down:sv('<path d="M6 9l6 6 6-6"/>',2.2), playf:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.2 6.6v10.8l8.3-5.4z" fill="currentColor" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/></svg>', close:sv('<path d="M6 6l12 12M18 6L6 18"/>',2.4),
  feed:sv('<rect x="3.5" y="3.5" width="17" height="17" rx="5"/><path d="M3.5 14l4.5-4 5 4.5 3-2.5 4.5 3.5"/>'),
  people:sv('<circle cx="9" cy="8" r="3.4"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 4.6a3.4 3.4 0 0 1 0 6.8M18 14.2c2.2.6 3.5 2.6 3.5 5.8"/>'),
  groups:sv('<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.7 2.6 14.3 0 17M12 3.5c-2.6 2.7-2.6 14.3 0 17"/>'),
@@ -4033,6 +4040,10 @@ const MAX_CLIP=60,MIN_CLIP=1;
 const vsrc=m=>{const u=m.url||m.src||'';return m.trim&&m.trim.e>m.trim.s?`${u.split('#')[0]}#t=${m.trim.s.toFixed(2)},${m.trim.e.toFixed(2)}`:u;};
 const vitem=i=>({type:'video',url:i.url,dur:i.dur,fdur:i.fdur,w:i.w,h:i.h,crop:i.crop,trim:i.trim});
 const fmtDur=s=>`${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,'0')}`;
+/** the one media capsule used on every preview: photos «▣ 3», a lone video «🎥 0:06», several videos «🎥 2», a mix «▣ 3 🎥 1»; a lone photo needs none */
+function mediaBadge(photos,videos,dur,cls){const a=[];if(photos&&(photos>1||videos))a.push(`${I.image}${photos}`);if(videos)a.push(`${I.video}${videos>1||photos?videos:fmtDur(dur||0)}`);return a.length?`<span class="${cls}">${a.map(x=>`<b>${x}</b>`).join('')}</span>`:'';}
+/** the round play mark on a video poster — the same in the feed and in the full-screen viewer */
+const playMark=(act)=>act?`<button type="button" class="mplay" data-act="${act}" aria-label="${L('Смотреть','Play')}">${I.playf}</button>`:`<span class="mplay" aria-hidden="true">${I.playf}</span>`;
 
 /**
  * Open the uploader. o = {max, accept:'image'|'media', aspect:'4:5'|'1:1'|'16:9'|null, aspects:[...], title, have, done(items)}
@@ -4157,11 +4168,12 @@ function openViewer(items,index=0,o={}){
  const el=$('#viewer')||Object.assign(document.createElement('div'),{id:'viewer',className:'viewer'});if(!el.isConnected)$('#layer').append(el);
  VW={guard,items,i:Math.max(0,Math.min(items.length-1,index)),opener:document.activeElement,onClose:o.onClose||null,label:o.label||''};
  el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label',L('Просмотр','Viewer'));
- el.innerHTML=`<div class="vw-track" id="vwTrack">${items.map(m=>`<figure>${m.type==='video'?`<video src="${esc(m.src)}" ${m.poster?`poster="${esc(m.poster)}"`:''} controls playsinline preload="metadata"></video>`:m.type==='plate'?`<div class="vw-plate">${plate(m.key)}</div>`:`<img src="${esc(m.src)}" alt="" draggable="false" style="${vwStyle(m.style)}">`}${m.wm?`<div class="vw-wm" aria-hidden="true">${Array.from({length:18},()=>`<span>${esc(m.wm)}</span>`).join('')}</div>`:''}</figure>`).join('')}</div>
+ el.innerHTML=`<div class="vw-track" id="vwTrack">${items.map(m=>`<figure>${m.type==='video'?`<video src="${esc(m.src)}" ${m.poster?`poster="${esc(m.poster)}"`:''} controls playsinline preload="metadata"></video>${playMark('vwPlay')}`:m.type==='plate'?`<div class="vw-plate">${plate(m.key)}</div>`:`<img src="${esc(m.src)}" alt="" draggable="false" style="${vwStyle(m.style)}">`}${m.wm?`<div class="vw-wm" aria-hidden="true">${Array.from({length:18},()=>`<span>${esc(m.wm)}</span>`).join('')}</div>`:''}</figure>`).join('')}</div>
  <div class="vw-top"><span class="vw-n" id="vwN"></span>${o.label?`<span class="vw-label">${esc(o.label)}</span>`:''}<button class="ibtn glass" data-act="vwClose" aria-label="${L('Закрыть','Close')}">${I.close}</button></div>
  ${items.length>1?`<button class="vw-nav l" data-act="vwStep" data-v="-1" aria-label="${L('Предыдущее','Previous')}">${I.back}</button><button class="vw-nav r" data-act="vwStep" data-v="1" aria-label="${L('Следующее','Next')}">${I.chev}</button><div class="vw-dots">${items.map(()=>'<i></i>').join('')}</div>`:''}`;
  el.style.removeProperty('--dy');requestAnimationFrame(()=>{el.classList.add('on');syncModal();$('[data-act="vwClose"]',el).focus({preventScroll:true});});
  vwGo(VW.i,true);
+ $$('#vwTrack video').forEach(v=>{const f=v.parentNode,s=()=>f.classList.toggle('playing',!v.paused);v.addEventListener('play',s);v.addEventListener('pause',s);v.addEventListener('ended',s);});
  const tr=$('#vwTrack');let sx=0,sy=0,dx=0,dy=0,id=null,mode=null;
  let lastTap=0,px=0,py=0;VW.z={k:1,x:0,y:0};
  tr.onpointerdown=e=>{if(e.target.closest('video'))return;id=e.pointerId;sx=e.clientX;sy=e.clientY;dx=dy=0;mode=null;px=VW.z.x;py=VW.z.y;tr.setPointerCapture(id);};
@@ -4182,6 +4194,7 @@ function vwGo(i,instant){if(!VW)return;if(!VW.guard()){invalidateViewer();return
  $('#viewer .vw-nav.l')?.toggleAttribute('disabled',i===0);$('#viewer .vw-nav.r')?.toggleAttribute('disabled',i===VW.items.length-1);}
 function closeViewer(){const el=$('#viewer');if(!el||!el.classList.contains('on'))return false;el.classList.remove('on');el.querySelectorAll('video').forEach(v=>v.pause());const op=VW?.opener,cb=VW?.onClose;VW=null;if(cb)setTimeout(cb,0);setTimeout(()=>{if(!el.classList.contains('on')){el.innerHTML='';el.style.removeProperty('--dy');}},260);syncModal();if(op?.isConnected)op.focus({preventScroll:true});return true;}
 ACT.vwClose=()=>closeViewer();
+ACT.vwPlay=a=>{a.closest('figure')?.querySelector('video')?.play();};
 ACT.vwStep=a=>vwGo(VW.i+(+a.dataset.v));
 document.addEventListener('keydown',e=>{if(!VW)return;if(e.key==='ArrowRight'){vwGo(VW.i+1);e.stopImmediatePropagation();}if(e.key==='ArrowLeft'){vwGo(VW.i-1);e.stopImmediatePropagation();}if(e.key==='Escape'){closeViewer();e.stopImmediatePropagation();}},true);
 
@@ -4193,7 +4206,7 @@ const mfImg=(src,style,lazy)=>`<img class="mbg" src="${esc(src)}" alt="" aria-hi
 document.addEventListener('load',e=>{const img=e.target;if(!img.classList?.contains('mfg'))return;const f=img.parentElement;if(!f?.dataset.fit||!img.naturalWidth)return;const [lo,hi]=f.dataset.fit.split(',').map(Number);f.style.setProperty('--ar',fitAr(img.naturalWidth/img.naturalHeight,lo,hi));},true);
 /** media grid for posts and albums: 1 → full, 2 → halves, 3+ → mosaic; tap opens the viewer */
 function mediaGrid(list,o={}){if(!list||!list.length)return '';const n=list.length;const id=o.id||'';
- return `<div class="mgrid n${Math.min(n,4)}" ${o.attrs||''}>${list.slice(0,4).map((m,i)=>`<button class="mcell mf" ${n===1?`data-fit=".8,1.91" ${m.w&&m.h?`style="--ar:${fitAr(m.w/m.h,.8,1.91)}"`:''}`:''} data-act="mView" data-v="${esc(id)}" data-i="${i}" aria-label="${L('Открыть на весь экран','Open full screen')}">${m.type==='video'?`<video src="${esc(m.url)}" ${m.poster?`poster="${esc(m.poster)}"`:''} muted playsinline preload="metadata"></video><span class="mplay">${I.playf}</span><span class="dur">${I.video}${fmtDur(m.dur||0)}</span>`:m.type==='plate'?plate(m.key,'image'):mfImg(m.url,m.style,'lazy')}${i===3&&n>4?`<span class="more">+${n-4}</span>`:''}</button>`).join('')}</div>`;}
+ return `<div class="mgrid n${Math.min(n,4)}" ${o.attrs||''}>${list.slice(0,4).map((m,i)=>`<button class="mcell mf" ${n===1?`data-fit=".8,1.91" ${m.w&&m.h?`style="--ar:${fitAr(m.w/m.h,.8,1.91)}"`:''}`:''} data-act="mView" data-v="${esc(id)}" data-i="${i}" aria-label="${L('Открыть на весь экран','Open full screen')}">${m.type==='video'?`<video src="${esc(m.url)}" ${m.poster?`poster="${esc(m.poster)}"`:''} muted playsinline preload="metadata"></video>${i===3&&n>4?'':playMark()+mediaBadge(0,1,m.dur,'dur')}`:m.type==='plate'?plate(m.key,'image'):mfImg(m.url,m.style,'lazy')}${i===3&&n>4?`<span class="more">+${n-4}</span>`:''}</button>`).join('')}</div>`;}
 const MEDIA_SRC={};
 ACT.mView=(a,e)=>{e?.stopPropagation();const id=a.dataset.v;const list=(MEDIA_SRC[id]?MEDIA_SRC[id]():postById(id)?.media||EV(id)?.gallery)||[];openViewer(list.map(m=>m.type==='plate'?m:{type:m.type,src:m.url,style:m.style}),+a.dataset.i);};
 
@@ -4536,13 +4549,12 @@ function postParts(p){const media=(p.media||[]).filter(m=>m.url),photos=media.fi
 function partsLine(p){const q=postParts(p),a=[];if(q.videos)a.push(q.videos>1?pl(q.videos,['видео','видео','видео'],['video','videos']):L('видео','video'));if(q.photos)a.push(pl(q.photos,['фото','фото','фото'],['photo','photos']));if(q.poll)a.push(L('опрос','poll'));if(q.result)a.push(L('интересы','interests'));return a.join(' · ');}
 /** thumbnail of a liked post: the first photo / video poster if there is media (counter for several, play mark for video), otherwise a poll / interests / text tile; extra parts ride as small marks */
 function likeThumb(p,row){const q=postParts(p),first=q.media[0],n=q.media.length;
- /* a media tile names the photos in its counter; a video next to photos, a poll and interests ride as small marks inside the top-right corner */
- const mk=[q.photos&&q.videos&&I.video,q.poll&&I.poll,q.result&&I.test].filter(Boolean),marks=n&&mk.length?`<span class="actc-xs">${mk.map(m=>`<i>${m}</i>`).join('')}</span>`:'';
+ /* a media tile: the media capsule bottom-left (mediaBadge, as in the feed), a poll and interests as round marks of the same style top-right */
+ const mk=[q.poll&&I.poll,q.result&&I.test].filter(Boolean),marks=n&&mk.length?`<span class="actc-xs">${mk.map(m=>`<i>${m}</i>`).join('')}</span>`:'';
  if(first){const src=first.type==='video'?first.poster:first.url;
   const body=src?`<img src="${esc(src)}" alt="" loading="lazy" draggable="false">`:`<span class="actc-vid">${I.video}</span>`;
-  const cnt=q.photos&&(q.photos>1||q.videos)?`<span class="actc-n">${I.image}${q.photos}</span>`:q.videos>1?`<span class="actc-n">${I.video}${q.videos}</span>`:q.videos?`<span class="actc-n">${I.video}${fmtDur(first.dur||0)}</span>`:'';
-  const play=first.type==='video'?`<span class="mplay">${I.playf}</span>`:'';
-  return {cls:n>1?'multi':'',html:body+play+cnt+(row?'':marks),mc:n,parts:partsLine(p)};}
+  const cnt=mediaBadge(q.photos,q.videos,first.dur,'actc-n');
+  return {cls:n>1?'multi':'',html:body+cnt+(row?'':marks),mc:n,parts:partsLine(p)};}
  if(q.poll)return {cls:'kind',html:`${I.poll}${row?'':`<small>${L('Опрос','Poll')}</small>`}`,mc:0,parts:partsLine(p)};
  if(q.result)return {cls:'kind',html:`${I.test}${row?'':`<small>${L('Интересы','Interests')}</small>`}`,mc:0,parts:partsLine(p)};
  return row?{cls:'ic',html:I.edit,mc:0,parts:''}:{cls:'txt',html:`<span>${esc(mdPlain(T(p.text)).slice(0,40))}</span>`,mc:0,parts:''};}
