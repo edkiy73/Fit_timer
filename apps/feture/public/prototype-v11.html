@@ -2447,11 +2447,10 @@ button.pill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:no
 .ec-m{display:inline-flex;align-items:center;gap:4px;min-width:0}.ec-m svg{width:13px;height:13px;flex:none}
 .ec-m.on{color:var(--ok,#3fbf7f)}.ec-dot{width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block}
 
-/* a picture on the left of a row / card sits at the TOP of it, never vertically centred; what trails on the right (chevron, button, time) stays centred */
-.ecard,.cmc,.evc.row,.chat-row,.frow-go,.me-id,.rqrow .top,.plink.row,.post-h .who,
-.li:has(>.av:first-child),.li:has(>.pth:first-child),.li:has(>img:first-child),.li:has(>.evimg:first-child),.li:has(>.cv:first-child),.li:has(>.mp-avs:first-child),.row:has(>.plink:first-child){align-items:flex-start}
-.chat-row>:not(:first-child):not(.tx),.me-id>:not(:first-child):not(.tx),
-.li:has(>.av:first-child)>:not(:first-child):not(.tx),.li:has(>.pth:first-child)>:not(:first-child):not(.tx),.li:has(>img:first-child)>:not(:first-child):not(.tx),.li:has(>.evimg:first-child)>:not(:first-child):not(.tx),.li:has(>.cv:first-child)>:not(:first-child):not(.tx),.li:has(>.mp-avs:first-child)>:not(:first-child):not(.tx){align-self:center}
+/* a picture on the left of a row / card sits at the TOP of the row; the text beside it stays centred, so if the picture fills the block's height the text is centred against the picture,
+   and if the text is taller than the picture the picture stays at the top (the row grows with the text) */
+.ecard>.pth,.cmc>.cv,.evc.row>.cv,.chat-row>:first-child,.frow-go>:first-child,.me-id>:first-child,.rqrow .top>:first-child,.plink.row>:first-child,.post-h .who>:first-child,
+.li>.av:first-child,.li>.pth:first-child,.li>img:first-child,.li>.evimg:first-child,.li>.cv:first-child,.li>.mp-avs:first-child,.row>.plink:first-child{align-self:flex-start}
 </style>
 </head>
 <body>
