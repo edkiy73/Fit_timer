@@ -347,7 +347,7 @@ function activityShown(id,o={}){if(id==='couple'||person(id)?.pair)return false;
  if(o.asOther)return o.grant==='granted';return social('me').follows.has(id)||isMatch(id);}
 /* V11: believable demo activity — who did what, hours ago. Likes are [postId,h], events [eventId,status,h], communities [id,h], follows {n,from,step} (taken from the follow graph). */
 const ACT_LOG={
- noa:{likes:[['p10',.3],['p11',.5],['p12',.8],['p13',1.1],['p2',1.5],['p9',1.9],['p15',2.2],['p16',2.6]],events:[['e3','going',20]],follows:{n:1,from:30,step:1}},
+ noa:{likes:[['p10',.3],['p5',.5],['p11',.8],['p4',1.1],['p12',1.5],['p1',1.9],['p3',2.2],['p9',2.6]],events:[['e3','going',20]],follows:{n:1,from:30,step:1}},
  kira:{likes:[['p11',5],['p13',5.3],['p12',5.6],['p2',6],['p14',6.4]],events:[['e1','going',9]],follows:{n:4,from:26,step:.2}},
  sofi:{likes:[['p10',12]],follows:{n:6,from:3,step:.1}},
  maya:{likes:[['p11',30],['p10',30.4],['p9',31]],comm:[['slow',50]],follows:{n:3,from:28,step:.3}},

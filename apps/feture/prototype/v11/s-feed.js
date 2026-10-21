@@ -46,9 +46,15 @@ function followStream(posts,kinds,withAct){const items=[],all=!kinds.length,has=
   followingOf('me').filter(id=>person(id)&&activityShown(id)&&!muted.has(id)).forEach(id=>activityOf(id).slice(0,12).forEach(x=>{const key={like:'likes',event:'events',comm:'comm',follow:'follows'}[x.k];if(!has(key)||(x.k==='like'&&person(id)?.hideLikes))return;const gid=id+'|'+x.k+'|'+new Date(x.t).toDateString();(groups[gid]??=[]).push({...x,who:id});}));
   Object.entries(groups).forEach(([gid,g])=>g.length>=2?items.push({k:'group',kind:g[0].k,who:g[0].who,gid,items:g.sort((a,b)=>b.t-a.t),t:Math.max(...g.map(x=>x.t))}):items.push(g[0]));}
  return items.sort((a,b)=>b.t-a.t).slice(0,60);}
+/** thumbnail of a liked post by what it is: photo (stack + counter when several), poll, interests, or a text snippet */
+function likeThumb(p,row){const img=(p.media||[]).find(m=>m.type==='image'&&m.url),mc=(p.media||[]).filter(m=>m.url).length;
+ if(img)return {cls:mc>1?'multi':'',html:`<img src="${esc(img.url)}" alt="" loading="lazy" draggable="false">${mc>1?`<span class="actc-n">${I.image}${mc}</span>`:''}`,mc};
+ if(p.poll||p.type==='poll')return {cls:'kind',html:`${I.poll}${row?'':`<small>${L('Опрос','Poll')}</small>`}`,mc:0};
+ if(p.result||p.type==='result')return {cls:'kind',html:`${I.test}${row?'':`<small>${L('Интересы','Interests')}</small>`}`,mc:0};
+ return row?{cls:'ic',html:I.edit,mc:0}:{cls:'txt',html:`<span>${esc(mdPlain(T(p.text)).slice(0,40))}</span>`,mc:0};}
 /** the tappable preview of one activity item (used by single cards and by the expanded list of a group) */
 function actPrev(x){const pv=(go,p,thumb,t,s)=>`<button class="actc-p" data-go="${go}" data-p='${esc(JSON.stringify(p))}'><span class="actth ${thumb[1]||''}">${thumb[0]}</span><span class="tx"><b>${t}</b>${s?`<small>${s}</small>`:''}</span></button>`;
- if(x.k==='like'){const p=x.post,img=(p.media||[]).find(m=>m.type==='image'&&m.url),mc=(p.media||[]).filter(m=>m.url).length;return pv('F05',{id:p.id},[img?`<img src="${esc(img.url)}" alt="" loading="lazy" draggable="false"><i>${I.heartf}</i>${mc>1?`<span class="actc-n">${I.image}${mc}</span>`:''}`:I.heartf,img?'':'ic'],esc(mdPlain(T(p.text)).slice(0,80)||L('Публикация','Post')),`${esc(pname(p.author))}${mc>1?` · ${pl(mc,['фото','фото','фото'],['photo','photos'])}`:''} · ${F.rel(x.t)}`);}
+ if(x.k==='like'){const p=x.post,t=likeThumb(p,1);return pv('F05',{id:p.id},[t.html,t.cls],esc(mdPlain(T(p.text)).slice(0,80)||L('Публикация','Post')),`${esc(pname(p.author))}${t.mc>1?` · ${pl(t.mc,['фото','фото','фото'],['photo','photos'])}`:''} · ${F.rel(x.t)}`);}
  if(x.k==='event'){const e=EV(x.e);return pv('E03',{id:x.e},[evCover(e,'cal'),''],esc(T(e.title)),`${F.date(e.start)} · ${e.format==='online'?L('онлайн','online'):esc(city(e.city))}`);}
  if(x.k==='comm'){const c=COMMUNITIES[x.c];return pv('C03',{id:x.c},[commAv(c),''],esc(T(c.name)),pl(C.members(x.c),['участник','участника','участников'],['member','members']));}
  return pv('P01',{id:x.p},[av(x.p,''),'round'],esc(pname(x.p)),esc(whoLine(x.p)));}
@@ -56,7 +62,7 @@ function actPrev(x){const pv=(go,p,thumb,t,s)=>`<button class="actc-p" data-go="
 function actCard(x,i){const who=x.who,nm=`<b>${esc(pname(who))}</b>`;let text,body;
  const head=(t)=>`<div class="actc-hd"><p class="actc-t">${t}<small>${F.rel(x.t)}</small></p><button class="ibtn ghost sm" data-act="actMenu" data-v="${esc(who)}" aria-label="${L('Ещё','More')}">${I.more}</button></div>`;
  if(x.k==='group'){const n=x.items.length,open=S.ui.actOpen?.has(x.gid);
-  const th=(g)=>{if(g.k==='like'){const img=(g.post.media||[]).find(m=>m.type==='image'&&m.url);const mc=(g.post.media||[]).filter(m=>m.url).length;return `<button class="actc-th ${mc>1?'multi':''}" data-go="F05" data-p='${esc(JSON.stringify({id:g.post.id}))}' aria-label="${esc(pname(g.post.author))}">${img?`<img src="${esc(img.url)}" alt="" loading="lazy" draggable="false">`:I.heartf}${mc>1?`<span class="actc-n">${I.image}${mc}</span>`:''}</button>`;}
+  const th=(g)=>{if(g.k==='like'){const t=likeThumb(g.post);return `<button class="actc-th ${t.cls}" data-go="F05" data-p='${esc(JSON.stringify({id:g.post.id}))}' aria-label="${esc(pname(g.post.author))}">${t.html}</button>`;}
    if(g.k==='follow')return `<button class="actc-th round" data-go="P01" data-p='${esc(JSON.stringify({id:g.p}))}' aria-label="${esc(pname(g.p))}">${av(g.p,'')}</button>`;return '';};
   if(x.kind==='like')text=L(`${nm}: нравится ${pl(n,['публикация','публикации','публикаций'],[])}`,`${nm} likes ${n} posts`);
   else if(x.kind==='follow')text=L(`${nm} теперь следит за ${n} ${n%10===1&&n%100!==11?'человеком':'людьми'}`,`${nm} now follows ${n} people`);

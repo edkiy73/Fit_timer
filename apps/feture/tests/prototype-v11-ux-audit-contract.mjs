@@ -111,3 +111,8 @@ const src=f=>fs.readFileSync(root+f,'utf8');
  assert.ok(run("allPosts().filter(p=>(p.media||[]).length>=4).length")>=2&&run("allPosts().some(p=>(p.media||[]).length===2)"),'demo posts with 2, 3, 4 and 6 photos exist');
  const g=gr.find(x=>x.kind==='like'&&x.items.length>=7);assert.ok(run(`actCard(${JSON.stringify(g)},0)`).includes('actc-n'),'a liked multi-photo post shows a photo counter');
  console.log('PASS demo activity');}
+
+/* liked posts without a photo get their own tiles */
+{fresh();assert.equal(run("likeThumb(postById('p5')).cls"),'txt','text post: snippet tile');assert.equal(run("likeThumb(postById('p4')).cls"),'kind','poll: poll tile');assert.equal(run("likeThumb(postById('p1')).cls"),'kind','interests post: interests tile');
+ assert.equal(run("likeThumb(postById('p11')).cls"),'multi','several photos: stack with counter');assert.equal(run("likeThumb(postById('p9')).cls"),'','one photo: plain thumbnail');
+ console.log('PASS like thumbnails by post type');}
