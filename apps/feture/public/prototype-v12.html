@@ -2442,63 +2442,64 @@ button.pill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:no
 .vw-track video::-webkit-media-controls-overlay-play-button{display:none}
 .vw-track video::-webkit-media-controls-start-playback-button{display:none!important}
 
-/* ===== V12 — comparison rows: the reference capsule, static ===== */
+/* ===== V12 — capsule rows (interests + comparison). Track = translucent ink, fill = translucent accent, grows like a poll bar ===== */
+:root{--trk:color-mix(in srgb,var(--ink) 7%,transparent);--fill0:color-mix(in srgb,var(--accent) 20%,transparent)}
+@keyframes capGrow{from{width:0}}
 .cg{display:grid;gap:8px;margin-top:18px}
 .cg-h{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
 .cg-h i{width:8px;height:8px;border-radius:50%;background:var(--cc,var(--mute))}
 .cg-h b{font-size:12px;color:var(--faint);font-weight:700}
 .cg-h.k-comp{--cc:var(--violet)}.cg-h.k-match{--cc:var(--ok)}.cg-h.k-try{--cc:#2F6FB3}.cg-h.k-disc{--cc:var(--warn)}.cg-h.k-bound{--cc:var(--danger)}
 .cg-rows{display:grid;gap:8px}
-.compat .cg-rows{margin-top:10px}
+.compat .cg-rows{margin:0;padding:0 12px 12px}
 .cr-item{display:grid;gap:4px;width:100%;text-align:left;background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer}
-.cr{position:relative;display:block;height:46px;border-radius:99px;background:var(--raise);overflow:hidden;isolation:isolate}
-.cr-f{position:absolute;left:4px;top:4px;bottom:4px;width:calc(40px + (100% - 132px) * var(--v) / 10);border-radius:99px;background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 78%,#000),var(--accent))}
-.cr.hard{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--danger) 16%,var(--raise)) 0 6px,var(--raise) 6px 12px)}
-.cr.soft{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--warn) 65%,transparent);background:var(--raise);background-image:none}
-.cr.soft{outline:0;box-shadow:none}.cr.soft::after{content:"";position:absolute;inset:0;border-radius:inherit;border:1.5px dashed color-mix(in srgb,var(--warn) 65%,transparent);pointer-events:none}
+.cr,.sc{--fa:calc(24% + var(--lv,5) * 3.2%)}
+.cr{position:relative;display:block;height:46px;border-radius:99px;background:var(--trk);overflow:hidden;isolation:isolate}
+.cr-f{position:absolute;left:4px;top:4px;bottom:4px;width:calc(40px + (100% - 132px) * var(--v) / 10);border-radius:99px;
+ background:linear-gradient(90deg,var(--fill0),color-mix(in srgb,var(--accent) var(--fa),transparent));animation:capGrow 1.1s var(--ease) both}
+.cr.hard{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--danger) 18%,transparent) 0 6px,var(--trk) 6px 12px)}
+.cr.soft::after{content:"";position:absolute;inset:0;border-radius:inherit;border:1.5px dashed color-mix(in srgb,var(--warn) 65%,transparent);pointer-events:none}
 .cr-l{position:absolute;inset:0;display:flex;align-items:center;gap:6px;padding:0 4px;z-index:2;color:var(--ink);pointer-events:none}
-.cr-l.w{color:#fff;z-index:3;clip-path:inset(0 calc(100% - 4px - 40px - (100% - 132px) * var(--v) / 10) 0 0)}
-.cr-l.w .cr-av{visibility:hidden}
 .cr-av{flex:none;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font:800 12px/1 var(--font);font-style:normal;color:#fff}
-.cr-av.me{background:color-mix(in srgb,var(--accent) 80%,#000)}.cr-av.them{background:color-mix(in srgb,var(--violet) 78%,#000)}
+.cr-av.me{background:var(--accent)}.cr-av.them{background:var(--violet)}
+:root:not([data-theme="dark"]) .cr-av.them{background:color-mix(in srgb,var(--violet) 92%,#000)}
 .cr-v{flex:none;min-width:34px;display:grid;line-height:1;gap:2px;font-variant-numeric:tabular-nums}
 .cr-v.r{justify-items:end;text-align:right}
 .cr-v b{font-size:15px;font-weight:850}
-.cr-v em{font-style:normal;font-size:9.5px;font-weight:700;opacity:.85;white-space:nowrap}
+.cr-v em{font-style:normal;font-size:9.5px;font-weight:700;opacity:.8;white-space:nowrap}
 .cr-v .lim{font-size:11px;font-weight:750}.cr-v .lim.t{color:var(--danger)}.cr-v .lim.s{color:var(--warn)}
-.cr-l.w .cr-v .lim{color:#fff}
 .cr-n{flex:1;min-width:0;text-align:center;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cr-why{margin:0 0 2px;padding:0 14px;font-size:12.5px;color:var(--mute);line-height:1.35}
-.cp-more{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-top:10px;padding:8px 12px;border-radius:99px;border:0;background:var(--raise);color:var(--ink);font:600 13px var(--font);cursor:pointer}
+.cp-more{display:flex;align-items:center;justify-content:center;gap:6px;width:calc(100% - 24px);margin:0 12px 12px;padding:8px 12px;border-radius:99px;border:0;background:var(--trk);color:var(--ink);font:600 13px var(--font);cursor:pointer}
 .cp-more svg{width:14px;height:14px}
 .cmp-pick{display:grid;gap:6px;margin-bottom:14px}.cmp-pick>span{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
 .cmp-pick .chips{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
 .cmp-head{display:grid;justify-items:center;text-align:center;gap:2px;margin-top:6px}.cmp-head b{display:block;font-size:17px;font-weight:750;line-height:1.25}.cmp-head small{color:var(--mute);font-size:13px}
 .cmp-groups .cg:first-child{margin-top:16px}
-
-/* ===== V12 — interests as reference capsules (replace the V11 jars everywhere) ===== */
+/* ===== V12 — interests as capsules (replace the V11 jars everywhere) ===== */
 .jars.caps{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:8px!important;min-width:0}
-.sc{position:relative;display:block;width:100%;height:44px;border-radius:99px;background:var(--raise);overflow:hidden;border:0;padding:0;margin:0;font:inherit;color:inherit;text-align:left;isolation:isolate}
+.sc{position:relative;display:block;width:100%;height:44px;border-radius:99px;background:var(--trk);overflow:hidden;border:0;padding:0;margin:0;font:inherit;color:inherit;text-align:left;isolation:isolate;--lv:5}
 button.sc{cursor:pointer}button.sc:active{transform:scale(.985)}
 .sc{--fw:min(max(36px,calc((100% - 8px) * var(--v) / 10)),calc(100% - 86px))}.sc.full{--fw:calc(100% - 8px)}
-.sc-f{position:absolute;left:4px;top:4px;bottom:4px;width:var(--fw);border-radius:99px;background:linear-gradient(90deg,var(--jc0),var(--jc));transition:width .9s cubic-bezier(.3,1.2,.5,1) var(--d,0s)}
-.jars.pre .sc-f{width:0}
+.sc-f{position:absolute;left:4px;top:4px;bottom:4px;width:var(--fw);border-radius:99px;background:linear-gradient(90deg,var(--fill0),color-mix(in srgb,var(--accent) var(--fa),transparent));animation:capGrow 1.1s var(--ease) both;animation-delay:var(--d,0s)}
 .sc-l{position:absolute;inset:0;display:flex;align-items:center;gap:6px;padding:0 14px 0 16px;font-size:14.5px;font-weight:650;color:var(--ink);z-index:2;pointer-events:none}
-.sc-l.w{color:#fff;z-index:3;clip-path:inset(0 calc(100% - 4px - var(--fw)) 0 0);transition:opacity .3s}
-.jars.pre .sc-l.w{opacity:0}
 .sc-l.c{justify-content:center;color:var(--mute);font-weight:650}
 .sc-l.c svg{width:16px;height:16px}
 .sc-n{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sc-v{flex:none;display:grid;justify-items:end;line-height:1;gap:2px;font-variant-numeric:tabular-nums}
-.sc-v b{font-size:15px;font-weight:850}.sc-v em{font-style:normal;font-size:9.5px;font-weight:700;opacity:.85;white-space:nowrap}
+.sc-v b{font-size:15px;font-weight:850}.sc-v em{font-style:normal;font-size:9.5px;font-weight:700;opacity:.8;white-space:nowrap}
 .sc-vis{flex:none;display:inline-grid;opacity:.6}.sc-vis svg{width:13px;height:13px}
-.sc-was{flex:none;font-size:11px;font-weight:650;color:var(--warn)}.sc-l.w .sc-was{color:#fff;opacity:.85}
+.sc-was{flex:none;font-size:11px;font-weight:650;color:var(--warn)}
 .sc-lim{flex:none;font-size:12.5px;font-weight:700}.sc-lim.t{color:var(--danger)}.sc-lim.s{color:var(--warn)}
-.sc.hard{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--danger) 16%,var(--raise)) 0 6px,var(--raise) 6px 12px)}
+.sc.hard{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--danger) 18%,transparent) 0 6px,var(--trk) 6px 12px)}
 .sc.soft::after,.sc.more::after,.sc.add::after{content:"";position:absolute;inset:0;border-radius:inherit;border:1.5px dashed color-mix(in srgb,var(--warn) 65%,transparent);pointer-events:none}
 .sc.more,.sc.add{background:none}.sc.more::after,.sc.add::after{border-color:var(--line2)}
 .sc.add .sc-l.c{color:var(--accent)}
 .testcard .jars.caps{gap:6px!important}.testcard .sc{height:38px}.testcard .sc-l{font-size:13px}
+/* polls: the same translucent fill with rounded ends (no wavy jar edge) */
+.poll .pfill{border-radius:14px;-webkit-mask:none;mask:none;animation:none}
+.poll .pbub{display:none}
+.poll.anim .pfill{animation:pollFill 1.1s var(--ease) both}
 </style>
 </head>
 <body>
@@ -3636,7 +3637,7 @@ function jarsHTML(list,o={}){
   if(j.limit){const w=j.limit==='hard'?(o.who&&o.who!=='me'?L('нельзя','not for me'):L('табу','taboo')):L('обсуждаемо','negotiable');
    return `<${tag} class="sc ${j.limit==='hard'?'hard':'soft'}" ${attrs}><span class="sc-l"><span class="sc-n">${esc(topic(j.t))}</span>${vis}${was}<span class="sc-lim ${j.limit==='hard'?'t':'s'}">${w}</span></span></${tag}>`;}
   const rw=roleWord(j);const lab=cls=>`<span class="sc-l ${cls}"><span class="sc-n">${esc(topic(j.t))}</span>${vis}${was}<span class="sc-v"><b>${j.lv}</b>${rw?`<em>${esc(rw)}</em>`:''}</span></span>`;
-  return `<${tag} class="sc ${j.lv>=10?'full':''}" ${attrs} style="--v:${j.lv};--jc0:${jarColor(Math.max(1,j.lv-3))};--jc:${jarColor(j.lv)};--d:${(i%8)*.04}s"><span class="sc-f"></span>${lab('')}${lab('w')}</${tag}>`;};
+  return `<${tag} class="sc ${j.lv>=10?'full':''}" ${attrs} style="--v:${j.lv};--lv:${j.lv};--d:${(i%8)*.04}s"><span class="sc-f"></span>${lab('')}</${tag}>`;};
  return `<div class="jars caps ${o.pre?'pre':''} ${o.cls||''}">${items.map(row).join('')}${o.more?`<button class="sc more" data-act="${o.more.act}" data-v="${o.more.v}"><span class="sc-l c">${L(`Ещё ${o.more.n}`,`${o.more.n} more`)}</span></button>`:''}${o.add?`<button class="sc add" data-act="${o.add}"><span class="sc-l c">${I.plus}${L('Добавить интерес','Add an interest')}</span></button>`:''}</div>`;
 }
 /** one answer row: level badge + name (one line, cut with «…») + the answer under it. Long nicknames and long words never squeeze each other. */
@@ -3690,7 +3691,7 @@ function cmpRow(r,id,o={}){const a=r.a,b=r.b;const lv=a.limit?0:a.lv;
  const lab=cls=>`<div class="cr-l ${cls}"><i class="cr-av me">${L('Я','Me').charAt(0)}</i><span class="cr-v">${val(a)}${roleWord(a)?`<em>${esc(roleWord(a))}</em>`:''}</span><span class="cr-n">${esc(topic(r.t))}</span><span class="cr-v r">${val(b)}${roleWord(b)?`<em>${esc(roleWord(b))}</em>`:''}</span><i class="cr-av them">${ini}</i></div>`;
  const why=o.why!==false&&(r.why&&r.why!=='')?`<p class="cr-why">${esc(cmpWhy(r,id))}</p>`:'';
  const wrapT=o.plain?'div':'button';const wrapA=o.plain?'':` data-act="topic" data-v="${esc(r.t)}" data-who="${esc(id)}"`;
- return `<${wrapT} class="cr-item"${wrapA}><span class="cr ${a.limit==='hard'||b.limit==='hard'?'hard':''} ${a.limit==='discuss'||b.limit==='discuss'?'soft':''}" style="--v:${lv}">${lv?'<span class="cr-f"></span>':''}${lab('')}${lv?lab('w'):''}</span>${why}</${wrapT}>`;}
+ return `<${wrapT} class="cr-item"${wrapA}><span class="cr ${a.limit==='hard'||b.limit==='hard'?'hard':''} ${a.limit==='discuss'||b.limit==='discuss'?'soft':''}" style="--v:${lv};--lv:${lv}">${lv?'<span class="cr-f"></span>':''}${lab('')}</span>${why}</${wrapT}>`;}
 function cmpGroups(id,sh,o={}){return CMP_GROUPS.map(([k,title,cls])=>{const rows=sh.rows[k];if(!rows.length)return '';const list=o.max?rows.slice(0,o.max):rows;
  return `<div class="cg"><div class="cg-h ${cls}"><i></i><span>${title}</span><b>${rows.length}</b></div><div class="cg-rows">${list.map(r=>cmpRow(r,id,o)).join('')}</div></div>`;}).join('');}
 /** «what you share» — ONE component for the discovery card and the full profile: summary (opens the full comparison), matches (each topic opens the side-by-side answers),

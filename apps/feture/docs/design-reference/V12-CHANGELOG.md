@@ -29,3 +29,9 @@ Decision record: `public/prototype-v11-compare-matrix.html`. Notes: `public/prot
 - Review step: sheet fits its content (was full-height with a big gap above Save); Cancel · Back · Save in one row; editing an item from the review returns to the review.
 - Edit sheet uses the add-flow order: role chips (preset «Всё»), audience chips, then the level; role chips are dimmed for taboo/negotiable.
 - Other person's interest sheet shows the comparison capsule instead of the old badge row.
+
+## 2026-10-21 — translucent capsules, poll-style fill
+
+- Track is translucent (`--trk`), fill is a translucent accent whose strength follows the level; one label (no white duplicate), same grow animation as polls.
+- Poll fill: rounded ends, no wavy mask, no bubbles.
+- Compat block in profile/discovery: inner padding; «Я» avatar is a solid accent circle.
