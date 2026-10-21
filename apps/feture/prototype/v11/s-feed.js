@@ -65,12 +65,20 @@ function likeThumb(p){const q=postParts(p),first=q.media[0],n=q.media.length;
  return {cls:'txt',html:`<span>${esc(mdPlain(T(p.text)).slice(0,40))}</span>`,parts:''};}
 /** the square itself: a span inside a row, a button of its own inside a strip */
 const pth=(html,cls='',btn='')=>btn?`<button class="pth ${cls}" ${btn}>${html}</button>`:`<span class="pth ${cls}">${html}</span>`;
-/** the tappable preview of one activity item (used by single cards and by the expanded list of a group) */
-function actPrev(x){const pv=(go,p,thumb,t,s)=>`<button class="actc-p" data-go="${go}" data-p='${esc(JSON.stringify(p))}'>${pth(thumb[0],thumb[1])}<span class="tx"><b>${t}</b>${s?`<small>${s}</small>`:''}</span></button>`;
- if(x.k==='like'){const p=x.post,t=likeThumb(p);return pv('F05',{id:p.id},[t.html,t.cls],esc(mdPlain(T(p.text)).slice(0,80)||L('Публикация','Post')),`${esc(pname(p.author))}${t.parts?` · ${t.parts}`:''} · ${F.rel(x.t)}`);}
- if(x.k==='event'){const e=EV(x.e);return pv('E03',{id:x.e},[evCover(e,'cal'),''],esc(T(e.title)),`${F.date(e.start)} · ${e.format==='online'?L('онлайн','online'):esc(city(e.city))}`);}
- if(x.k==='comm'){const c=COMMUNITIES[x.c];return pv('C03',{id:x.c},[commAv(c),''],esc(T(c.name)),pl(C.members(x.c),['участник','участника','участников'],['member','members']));}
- return pv('P01',{id:x.p},[av(x.p,''),'round'],esc(pname(x.p)),esc(whoLine(x.p)));}
+/** ONE entity card for every place that previews a post / person / event / community — the feed's activity (single, expanded list) and a profile's activity.
+ Same square (pth), same title, one meta line of small icons; `verb` (a kicker) and `time` are added where the place needs them. */
+const ecm=(ic,t)=>t&&I[ic]?`<span class="ec-m">${I[ic]}${t}</span>`:'';
+function entityCard(o){return `<button class="ecard ${o.one?'one':''}" data-go="${o.go}" data-p='${esc(JSON.stringify(o.p))}'>${pth(o.sq[0],o.sq[1])}<span class="tx">${o.verb?`<i class="ec-v">${o.verb}</i>`:''}<b>${o.title}</b>${o.sub?`<small>${o.sub}</small>`:''}${o.metas.filter(Boolean).length?`<span class="ec-r">${o.metas.filter(Boolean).join('')}</span>`:''}</span></button>`;}
+/** the tappable preview of one activity item; o.verb / o.time add the kicker and the «when» for lists without a headline (profile) */
+function actPrev(x,o={}){const when=o.time?ecm('clock',F.rel(x.t)):'';
+ if(x.k==='like'){const p=x.post,t=likeThumb(p),n=(p.likes||0)+(p.reactions?Object.values(p.reactions).filter(Boolean).length:p.liked?1:0);
+  return entityCard({go:'F05',p:{id:p.id},sq:[t.html,t.cls],verb:o.verb&&L('Нравится','Likes'),title:esc(mdPlain(T(p.text)).slice(0,80)||L('Публикация','Post')),sub:`${esc(pname(p.author))}${t.parts?` · ${t.parts}`:''}`,metas:[ecm('heart',n),ecm('chat',(p.comments||[]).length),when]});}
+ if(x.k==='event'){const e=EV(x.e),on=e.format==='online';
+  return entityCard({go:'E03',p:{id:x.e},sq:[evCover(e,'cal'),''],verb:o.verb&&(x.st==='interested'?L('Интересует событие','Interested in an event'):L('Идёт на событие','Going to an event')),title:esc(T(e.title)),metas:[ecm('cal',F.date(e.start)),on?ecm('globe',L('онлайн','online')):ecm('pin',esc(city(e.city))),when]});}
+ if(x.k==='comm'){const c=COMMUNITIES[x.c];
+  return entityCard({go:'C03',p:{id:x.c},sq:[commAv(c),''],verb:o.verb&&L('В сообществе','In a community'),title:esc(T(c.name)),metas:[ecm('people',pl(C.members(x.c),['участник','участника','участников'],['member','members'])),when]});}
+ const pe=person(x.p);
+ return entityCard({go:'P01',p:{id:x.p},one:1,sq:[av(x.p,''),'round'],verb:o.verb&&L('Подписка','Follows'),title:`<span class="fnm">${esc(pname(x.p))}</span>${pe?.age?`<span class="fag">, ${pe.age}</span>`:''}${nameBadges(pe,1)}`,sub:esc(whoLine(x.p)),metas:[ecm('pin',esc(city(pe?.city)||'')),pe?.online?`<span class="ec-m on"><i class="ec-dot"></i>${L('в сети','online')}</span>`:ecm('clock',esc(presence(x.p))),when]});}
 /** one activity card: who + what in a neutral present-tense line; a group adds a strip of thumbnails («+N» expands the whole list in place) */
 function actCard(x,i){const who=x.who,nm=`<b>${esc(pname(who))}</b>`;let text,body;
  const head=(t)=>`<div class="actc-hd"><p class="actc-t">${t}<small>${F.rel(x.t)}</small></p><button class="ibtn ghost sm" data-act="actMenu" data-v="${esc(who)}" aria-label="${L('Ещё','More')}">${I.more}</button></div>`;
