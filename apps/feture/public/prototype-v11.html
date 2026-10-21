@@ -2160,10 +2160,6 @@ body.capture-shield>*{visibility:hidden!important}
 .hero>.vframe>video{pointer-events:none}
 
 /* activity rows: the picture of the event / community / post, like the cards they open */
-.actth{position:relative;flex:none;width:46px;height:46px;border-radius:13px;overflow:hidden;background:var(--raise);display:grid;place-items:center}
-.actth>img,.actth>.evimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.actth>.plate,.actth>.pl{position:absolute;inset:0;width:100%;height:100%}
-.actth>i{position:absolute;right:3px;bottom:3px;width:18px;height:18px;border-radius:50%;background:rgba(10,6,10,.62);color:#ff6b86;display:grid;place-items:center}.actth>i svg{width:11px;height:11px}
 
 /* fields, editors and jars are almost transparent: they take the colour of whatever panel they sit on (grey page, violet private panel) */
 .inp,.rte-box{background:var(--fld)}
@@ -2257,10 +2253,6 @@ body.capture-shield>*{visibility:hidden!important}
 .compat .cp-t b{background:var(--ok-soft);color:var(--ok)}
 
 /* activity rows: every row has the same 46px tile (picture, heart or avatar), so text never shifts from row to row */
-.actth.ic{background:var(--accent-soft);color:var(--accent)}.actth.ic svg{width:22px;height:22px}
-.actth.round{border-radius:50%}
-.actth .av{position:absolute;inset:0;width:100%;height:100%;border-radius:0}
-.actth .av img,.actth .av .av-in{width:100%;height:100%}
 
 .pc-who .pl{display:inline-flex;align-items:center;gap:4px}.pc-who .pl svg{width:14px;height:14px;flex:none}
 .kv{margin:0}
@@ -2394,29 +2386,17 @@ button.pill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:no
 /* V11: grouped activity */
 .actc-hd{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}.actc-hd .ibtn{flex:none;margin:-6px -8px 0 0}
 .actc-strip{display:flex;gap:6px}
-.actc-th{position:relative;flex:none;width:54px;height:54px;border-radius:12px;overflow:hidden;background:var(--raise);display:grid;place-items:center;color:var(--accent)}
-.actc-th>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.actc-th svg{width:20px;height:20px}
-.actc-th.round{border-radius:50%}.actc-th.round .av{width:100%;height:100%}
 .actc-list{display:grid;gap:8px}.actc-list>.btn.text{justify-self:start;min-height:36px;padding:0}
 
 /* a liked post with several photos: the thumbnail is a small stack with a photo counter */
-.actc-n{position:absolute;left:3px;bottom:3px;display:inline-flex;align-items:center;gap:2px;padding:1px 5px 1px 4px;border-radius:99px;background:rgba(10,6,10,.66);color:#fff;font-size:11px;font-weight:700;line-height:1.3}.actc-n svg{width:11px;height:11px}
-.actth .actc-n{left:auto;right:3px;bottom:3px}
 
 /* liked posts without a photo: text snippet, poll and interests tiles */
-.actc-th.txt{align-items:start;justify-items:start;padding:6px;background:var(--surf);border:1px solid var(--line);color:var(--mute);font-size:9.5px;line-height:1.25;text-align:left}
-.actc-th.txt span{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
-.actc-th.kind{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:var(--surf);border:1px solid var(--line);color:var(--accent)}.actc-th.kind svg{width:20px;height:20px}.actc-th.kind small{font-size:9.5px;font-weight:650;color:var(--mute)}
-.actth.ic svg,.actth.kind svg{width:20px;height:20px;color:var(--accent)}
 
 /* a post made of several things: the first media is the thumbnail, extra parts ride as small marks */
-.actc-th{overflow:visible}.actc-th>img{border-radius:12px}
-.actc-vid{display:grid;place-items:center;position:absolute;inset:0;border-radius:12px;background:var(--raise);color:var(--mute)}
-.actc-th.txt,.actc-th.kind{overflow:hidden}
 
 /* activity strip: tiles scroll sideways under a fixed «+N» pill on the right (same idea as the chips under «Фильтры»); fades appear only on the side that has more */
 .actc-row{display:flex;align-items:center;gap:8px;min-width:0}
-.actc-strip{position:relative}.actc-th.txt span{hyphens:auto}
+.actc-strip{position:relative}
 .actc-strip{--fl:0px;--fr:0px;flex:1;min-width:0;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;-webkit-overflow-scrolling:touch;-webkit-mask-image:linear-gradient(90deg,transparent,#000 var(--fl),#000 calc(100% - var(--fr)),transparent);mask-image:linear-gradient(90deg,transparent,#000 var(--fl),#000 calc(100% - var(--fr)),transparent)}
 .actc-strip::-webkit-scrollbar{display:none}
 .actc-strip.fl{--fl:22px}.actc-strip.fr{--fr:40px}
@@ -2424,13 +2404,8 @@ button.pill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:no
 .actc-more svg{width:18px;height:18px}
 .actc-hd .ibtn{margin-right:0}
 /* every tile is one clean rounded square: media stays inside it, marks sit inside the corner, nothing pokes out of the scrolling row */
-.actc-th{width:58px;height:58px;overflow:hidden}.actc-th>img{border-radius:0}
-.actc-xs{position:absolute;top:3px;right:3px;display:flex;gap:2px}
-.actc-xs i{width:16px;height:16px;border-radius:50%;display:grid;place-items:center;background:rgba(10,6,10,.66);color:#fff}.actc-xs i svg{width:10px;height:10px}
 /* media marks — one language everywhere: a dark capsule bottom-left names the media (▣ 3 · 🎥 0:06 · 🎥 2 · ▣ 3 🎥 1), round marks of the same tone top-right name the extras (poll, interests), a round play sits in the middle of a video poster */
-.actc-n,.mcell .dur,.upthumb .dur{display:inline-flex;align-items:center;gap:5px;background:rgba(10,6,10,.6);color:#fff;font-weight:700;border-radius:99px}
-.actc-n b,.mcell .dur b,.upthumb .dur b{display:inline-flex;align-items:center;gap:2px;font-weight:700}
-.actc-n{padding:1px 5px 1px 4px;gap:4px}
+.pth-n,.mcell .dur,.upthumb .dur{display:inline-flex;align-items:center;gap:5px;background:rgba(10,6,10,.6);color:#fff;font-weight:700;border-radius:99px}
 .mplay{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;padding:0;border:0;border-radius:50%;display:grid;place-items:center;background:rgba(10,6,10,.5);color:#fff;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);box-shadow:0 0 0 1.5px rgba(255,255,255,.35) inset;pointer-events:none}
 .mplay svg{width:24px;height:24px}
 .mgrid:not(.n1) .mplay{width:44px;height:44px;margin:-22px 0 0 -22px}.mgrid:not(.n1) .mplay svg{width:19px;height:19px}
@@ -2439,6 +2414,25 @@ button.pill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:no
 .vw-track figure.playing .mplay{opacity:0;pointer-events:none}
 .vw-track video::-webkit-media-controls-overlay-play-button{display:none}
 .vw-track video::-webkit-media-controls-start-playback-button{display:none!important}
+
+/* ONE preview square (.pth) — activity strip, expanded activity list, profile activity: same size, same frame, same marks.
+   media: photo / poster + one capsule bottom-left (.pth-n) + round extras top-right (.pth-x); no media: an icon + label (.kind) or a text snippet (.txt) */
+.pth{--s:58px;position:relative;flex:none;width:var(--s);height:var(--s);border-radius:12px;overflow:hidden;background:var(--raise);display:grid;place-items:center;color:var(--accent);padding:0;border:0}
+.pth.round{border-radius:50%}
+.pth>img,.pth>.evimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.pth>.plate,.pth>.pl{position:absolute;inset:0;width:100%;height:100%}
+.pth .av{position:absolute;inset:0;width:100%;height:100%;border-radius:0}.pth .av img,.pth .av .av-in{width:100%;height:100%}
+.pth>svg{width:22px;height:22px}
+.pth-ph{position:absolute;inset:0;display:grid;place-items:center;color:var(--mute)}.pth-ph svg{width:20px;height:20px}
+.pth.kind,.pth.txt{background:var(--surf);box-shadow:inset 0 0 0 1px var(--line)}
+.pth.kind{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}.pth.kind svg{width:20px;height:20px}.pth.kind small{font-size:9.5px;font-weight:650;color:var(--mute)}
+.pth.txt{align-items:start;justify-items:start;padding:6px;color:var(--mute);font-size:9.5px;line-height:1.25;text-align:left}
+.pth.txt span{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word;hyphens:auto}
+.pth-n{position:absolute;left:3px;bottom:3px;max-width:calc(100% - 6px);padding:1px 5px 1px 4px;gap:4px;font-size:10.5px;line-height:1.35}
+.pth-n svg{width:11px;height:11px}
+.pth-x{position:absolute;top:3px;right:3px;display:flex;gap:2px}
+.pth-x i{width:16px;height:16px;border-radius:50%;display:grid;place-items:center;background:rgba(10,6,10,.6);color:#fff}.pth-x i svg{width:10px;height:10px}
+.pth-n b,.mcell .dur b,.upthumb .dur b{display:inline-flex;align-items:center;gap:2px;font-weight:700}
 </style>
 </head>
 <body>
@@ -4040,8 +4034,9 @@ const MAX_CLIP=60,MIN_CLIP=1;
 const vsrc=m=>{const u=m.url||m.src||'';return m.trim&&m.trim.e>m.trim.s?`${u.split('#')[0]}#t=${m.trim.s.toFixed(2)},${m.trim.e.toFixed(2)}`:u;};
 const vitem=i=>({type:'video',url:i.url,dur:i.dur,fdur:i.fdur,w:i.w,h:i.h,crop:i.crop,trim:i.trim});
 const fmtDur=s=>`${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,'0')}`;
-/** the one media capsule used on every preview: photos «▣ 3», a lone video «🎥 0:06», several videos «🎥 2», a mix «▣ 3 🎥 1»; a lone photo needs none */
-function mediaBadge(photos,videos,dur,cls){const a=[];if(photos&&(photos>1||videos))a.push(`${I.image}${photos}`);if(videos)a.push(`${I.video}${videos>1||photos?videos:fmtDur(dur||0)}`);return a.length?`<span class="${cls}">${a.map(x=>`<b>${x}</b>`).join('')}</span>`:'';}
+/** the one media capsule: «▣ 3» photos, «🎥» a video, «🎥 2» videos, «▣ 3 🎥» a mix; a lone photo needs none. A count shows only when it is above one.
+ The feed's own video cell passes its duration («🎥 0:06»); previews pass null — no time on a square. */
+function mediaBadge(photos,videos,dur,cls){const a=[],c=n=>n>1?n:'';if(photos&&(photos>1||videos))a.push(`${I.image}${c(photos)}`);if(videos)a.push(`${I.video}${dur!=null&&!photos&&videos===1?fmtDur(dur||0):c(videos)}`);return a.length?`<span class="${cls}">${a.map(x=>`<b>${x}</b>`).join('')}</span>`:'';}
 /** the round play mark on a video poster — the same in the feed and in the full-screen viewer */
 const playMark=(act)=>act?`<button type="button" class="mplay" data-act="${act}" aria-label="${L('Смотреть','Play')}">${I.playf}</button>`:`<span class="mplay" aria-hidden="true">${I.playf}</span>`;
 
@@ -4547,20 +4542,22 @@ function followStream(posts,kinds,withAct){const items=[],all=!kinds.length,has=
 function postParts(p){const media=(p.media||[]).filter(m=>m.url),photos=media.filter(m=>m.type!=='video').length,videos=media.filter(m=>m.type==='video').length;return {media,photos,videos,poll:!!(p.poll||p.type==='poll'),result:!!(p.result||p.type==='result')};}
 /** «6 фото · видео · опрос · интересы» — the composition of a post in words */
 function partsLine(p){const q=postParts(p),a=[];if(q.videos)a.push(q.videos>1?pl(q.videos,['видео','видео','видео'],['video','videos']):L('видео','video'));if(q.photos)a.push(pl(q.photos,['фото','фото','фото'],['photo','photos']));if(q.poll)a.push(L('опрос','poll'));if(q.result)a.push(L('интересы','interests'));return a.join(' · ');}
-/** thumbnail of a liked post: the first photo / video poster if there is media (counter for several, play mark for video), otherwise a poll / interests / text tile; extra parts ride as small marks */
-function likeThumb(p,row){const q=postParts(p),first=q.media[0],n=q.media.length;
- /* a media tile: the media capsule bottom-left (mediaBadge, as in the feed), a poll and interests as round marks of the same style top-right */
- const mk=[q.poll&&I.poll,q.result&&I.test].filter(Boolean),marks=n&&mk.length?`<span class="actc-xs">${mk.map(m=>`<i>${m}</i>`).join('')}</span>`:'';
+/** ONE preview square (.pth) for every activity place — the strip, the expanded list, a profile's activity. A post shows its first photo / video poster
+ with one media capsule bottom-left (mediaBadge without durations) and round poll / interests marks top-right; a post without media is a poll / interests / text square.
+ Events, communities and people use the same square via pth(). */
+function likeThumb(p){const q=postParts(p),first=q.media[0],n=q.media.length;
+ const mk=[q.poll&&I.poll,q.result&&I.test].filter(Boolean),marks=mk.length?`<span class="pth-x">${mk.map(m=>`<i>${m}</i>`).join('')}</span>`:'';
  if(first){const src=first.type==='video'?first.poster:first.url;
-  const body=src?`<img src="${esc(src)}" alt="" loading="lazy" draggable="false">`:`<span class="actc-vid">${I.video}</span>`;
-  const cnt=mediaBadge(q.photos,q.videos,first.dur,'actc-n');
-  return {cls:n>1?'multi':'',html:body+cnt+(row?'':marks),mc:n,parts:partsLine(p)};}
- if(q.poll)return {cls:'kind',html:`${I.poll}${row?'':`<small>${L('Опрос','Poll')}</small>`}`,mc:0,parts:partsLine(p)};
- if(q.result)return {cls:'kind',html:`${I.test}${row?'':`<small>${L('Интересы','Interests')}</small>`}`,mc:0,parts:partsLine(p)};
- return row?{cls:'ic',html:I.edit,mc:0,parts:''}:{cls:'txt',html:`<span>${esc(mdPlain(T(p.text)).slice(0,40))}</span>`,mc:0,parts:''};}
+  const body=src?`<img src="${esc(src)}" alt="" loading="lazy" draggable="false">`:`<span class="pth-ph">${I.video}</span>`;
+  return {cls:n>1?'multi':'',html:body+mediaBadge(q.photos,q.videos,null,'pth-n')+marks,parts:partsLine(p)};}
+ if(q.poll)return {cls:'kind',html:`${I.poll}<small>${L('Опрос','Poll')}</small>`,parts:partsLine(p)};
+ if(q.result)return {cls:'kind',html:`${I.test}<small>${L('Интересы','Interests')}</small>`,parts:partsLine(p)};
+ return {cls:'txt',html:`<span>${esc(mdPlain(T(p.text)).slice(0,40))}</span>`,parts:''};}
+/** the square itself: a span inside a row, a button of its own inside a strip */
+const pth=(html,cls='',btn='')=>btn?`<button class="pth ${cls}" ${btn}>${html}</button>`:`<span class="pth ${cls}">${html}</span>`;
 /** the tappable preview of one activity item (used by single cards and by the expanded list of a group) */
-function actPrev(x){const pv=(go,p,thumb,t,s)=>`<button class="actc-p" data-go="${go}" data-p='${esc(JSON.stringify(p))}'><span class="actth ${thumb[1]||''}">${thumb[0]}</span><span class="tx"><b>${t}</b>${s?`<small>${s}</small>`:''}</span></button>`;
- if(x.k==='like'){const p=x.post,t=likeThumb(p,1);return pv('F05',{id:p.id},[t.html,t.cls],esc(mdPlain(T(p.text)).slice(0,80)||L('Публикация','Post')),`${esc(pname(p.author))}${t.parts?` · ${t.parts}`:''} · ${F.rel(x.t)}`);}
+function actPrev(x){const pv=(go,p,thumb,t,s)=>`<button class="actc-p" data-go="${go}" data-p='${esc(JSON.stringify(p))}'>${pth(thumb[0],thumb[1])}<span class="tx"><b>${t}</b>${s?`<small>${s}</small>`:''}</span></button>`;
+ if(x.k==='like'){const p=x.post,t=likeThumb(p);return pv('F05',{id:p.id},[t.html,t.cls],esc(mdPlain(T(p.text)).slice(0,80)||L('Публикация','Post')),`${esc(pname(p.author))}${t.parts?` · ${t.parts}`:''} · ${F.rel(x.t)}`);}
  if(x.k==='event'){const e=EV(x.e);return pv('E03',{id:x.e},[evCover(e,'cal'),''],esc(T(e.title)),`${F.date(e.start)} · ${e.format==='online'?L('онлайн','online'):esc(city(e.city))}`);}
  if(x.k==='comm'){const c=COMMUNITIES[x.c];return pv('C03',{id:x.c},[commAv(c),''],esc(T(c.name)),pl(C.members(x.c),['участник','участника','участников'],['member','members']));}
  return pv('P01',{id:x.p},[av(x.p,''),'round'],esc(pname(x.p)),esc(whoLine(x.p)));}
@@ -4568,8 +4565,8 @@ function actPrev(x){const pv=(go,p,thumb,t,s)=>`<button class="actc-p" data-go="
 function actCard(x,i){const who=x.who,nm=`<b>${esc(pname(who))}</b>`;let text,body;
  const head=(t)=>`<div class="actc-hd"><p class="actc-t">${t}<small>${F.rel(x.t)}</small></p><button class="ibtn ghost sm" data-act="actMenu" data-v="${esc(who)}" aria-label="${L('Ещё','More')}">${I.more}</button></div>`;
  if(x.k==='group'){const n=x.items.length,open=S.ui.actOpen?.has(x.gid);
-  const th=(g)=>{if(g.k==='like'){const t=likeThumb(g.post);return `<button class="actc-th ${t.cls}" data-go="F05" data-p='${esc(JSON.stringify({id:g.post.id}))}' aria-label="${esc(pname(g.post.author))}">${t.html}</button>`;}
-   if(g.k==='follow')return `<button class="actc-th round" data-go="P01" data-p='${esc(JSON.stringify({id:g.p}))}' aria-label="${esc(pname(g.p))}">${av(g.p,'')}</button>`;return '';};
+  const th=(g)=>{if(g.k==='like'){const t=likeThumb(g.post);return pth(t.html,t.cls,`data-go="F05" data-p='${esc(JSON.stringify({id:g.post.id}))}' aria-label="${esc(pname(g.post.author))}"`);}
+   if(g.k==='follow')return pth(av(g.p,''),'round',`data-go="P01" data-p='${esc(JSON.stringify({id:g.p}))}' aria-label="${esc(pname(g.p))}"`);return '';};
   if(x.kind==='like')text=L(`${nm}: нравится ${pl(n,['публикация','публикации','публикаций'],[])}`,`${nm} likes ${n} posts`);
   else if(x.kind==='follow')text=L(`${nm} теперь следит за ${n} ${n%10===1&&n%100!==11?'человеком':'людьми'}`,`${nm} now follows ${n} people`);
   else if(x.kind==='event')text=L(`${nm}: в планах ${pl(n,['событие','события','событий'],[])}`,`${nm} has ${n} events planned`);
@@ -5598,10 +5595,10 @@ function activityOf(id){const out=[],pub=p=>p.aud==='all'&&!p.unavailable&&!isBl
   followingOf(id).slice(0,2).forEach((p,i)=>out.push({k:'follow',p,t:Date.now()-(i+2)*DAY*1.7}));}
  return out.sort((a,b)=>b.t-a.t);}
 function activityList(id,items,o={}){const rows=items.slice(0,12).map(x=>{
-  if(x.k==='like')return linkRow({go:'F05',p:{id:x.post.id},...((x.post.media||[]).find(m=>m.type==='image'&&m.url)?{av:`<span class="actth"><img src="${esc(x.post.media.find(m=>m.type==='image'&&m.url).url)}" alt="" loading="lazy" draggable="false"><i>${I.heartf}</i></span>`}:{av:`<span class="actth ic">${I.heartf}</span>`}),title:L(`Лайк · публикация ${pname(x.post.author)}`,`Like · ${pname(x.post.author)}’s post`),sub:`${mdPlain(T(x.post.text)).slice(0,70)||L('Публикация','Post')} · ${F.rel(x.t)}`});
-  if(x.k==='event')return linkRow({go:'E03',p:{id:x.e},av:`<span class="actth">${evCover(EV(x.e),'cal')}</span>`,title:x.st==='interested'?L('Интересует событие','Interested in an event'):L('Идёт на событие','Going to an event'),sub:`${T(EV(x.e).title)} · ${F.rel(x.t)}`});
-  if(x.k==='comm')return linkRow({go:'C03',p:{id:x.c},av:`<span class="actth">${commAv(COMMUNITIES[x.c])}</span>`,title:L('Сообщество','Community'),sub:`${T(COMMUNITIES[x.c].name)} · ${F.rel(x.t)}`});
-  return linkRow({go:'P01',p:{id:x.p},av:`<span class="actth round">${av(x.p,'')}</span>`,title:L('Подписка','Followed'),sub:`${pname(x.p)} · ${F.rel(x.t)}`});}).join('');
+  if(x.k==='like')return linkRow({go:'F05',p:{id:x.post.id},av:(t=>pth(t.html,t.cls))(likeThumb(x.post)),title:L(`Лайк · публикация ${pname(x.post.author)}`,`Like · ${pname(x.post.author)}’s post`),sub:`${mdPlain(T(x.post.text)).slice(0,70)||L('Публикация','Post')} · ${F.rel(x.t)}`});
+  if(x.k==='event')return linkRow({go:'E03',p:{id:x.e},av:pth(evCover(EV(x.e),'cal')),title:x.st==='interested'?L('Интересует событие','Interested in an event'):L('Идёт на событие','Going to an event'),sub:`${T(EV(x.e).title)} · ${F.rel(x.t)}`});
+  if(x.k==='comm')return linkRow({go:'C03',p:{id:x.c},av:pth(commAv(COMMUNITIES[x.c])),title:L('Сообщество','Community'),sub:`${T(COMMUNITIES[x.c].name)} · ${F.rel(x.t)}`});
+  return linkRow({go:'P01',p:{id:x.p},av:pth(av(x.p,''),'round'),title:L('Подписка','Followed'),sub:`${pname(x.p)} · ${F.rel(x.t)}`});}).join('');
  const mode=ACT_VIS().find(x=>x[0]===activityMode(id));
  return `<div class="card list">${rows}</div>${o.self?`<p class="note mt12">${L('Видят','Visible to')}: ${esc(mode[1].toLowerCase())} · <button class="btn text auto" data-go="K01">${L('Изменить в настройках','Change in settings')}</button></p>`:''}`;}
 ACT.profAct=a=>{const id=cur().p.id||(cur().p.owner==='couple'?'couple':'me');S.ui.pa||(S.ui.pa={});S.ui.pa[id]=a.dataset.v;refresh();};
@@ -6482,7 +6479,10 @@ const helpRender=SC.S01.render;SC.S01.render=(...a)=>{let html=helpRender(...a);
 ACT.v6Help=a=>{const [title,text]=helpText()[a.dataset.v];sheet(()=>({title,body:`<p class="lead">${text}</p>`}));};
 
 // Hash links update in place. Copy links are real; no sensitive form input enters URLs.
-const renderV6=render;render=function(dir,keep){renderV6(dir,keep);const r=cur();const hash=r.id+(r.p.id?':'+encodeURIComponent(r.p.id):'');history.replaceState(history.state,'','#'+hash);};
+/* the open tab of a screen (sub / tab / kind / t / k route params, never form input) rides in the hash too, so a reload keeps it: #F01;sub=following */
+const TAB_KEYS=['sub','tab','kind','t','k'];
+const tabHash=p=>TAB_KEYS.filter(k=>typeof p[k]==='string'&&p[k]).map(k=>`;${k}=${encodeURIComponent(p[k])}`).join('');
+const renderV6=render;render=function(dir,keep){renderV6(dir,keep);const r=cur();const hash=r.id+(r.p.id?':'+encodeURIComponent(r.p.id):'')+tabHash(r.p);history.replaceState(history.state,'','#'+hash);};
 
 ACT.sharePost=a=>copyReviewLink('F05',{id:a?.dataset?.v||cur().p.id});
 
@@ -6785,7 +6785,8 @@ initNav();
 const _render=render;render=function(dir,keep){$('#root').classList.toggle('auth',!S.session);_render(dir,keep);};
 // deep link: #D03 or #P01:mia opens a screen directly (review convenience)
 const h=decodeURIComponent((location.hash||'').slice(1));
-if(h){const [id,arg]=h.split(':');if(SC[id]){if(SC[id].auth)qaGo(id,{});else qaGo(id,arg?{id:arg}:{});}else render('fade');}else render('fade');
+if(h){const [head,...tabs]=h.split(';'),[id,arg]=head.split(':');const tp={};tabs.forEach(x=>{const [k,v]=x.split('=');if(TAB_KEYS.includes(k)&&v)tp[k]=v;});
+ if(SC[id]){if(SC[id].auth)qaGo(id,{});else qaGo(id,{...(arg?{id:arg}:{}),...tp});}else render('fade');}else render('fade');
 matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',()=>{if(themePref()==='auto')refresh();});
 
 startNavHistory();

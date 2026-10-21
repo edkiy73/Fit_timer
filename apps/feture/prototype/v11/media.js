@@ -32,8 +32,9 @@ const MAX_CLIP=60,MIN_CLIP=1;
 const vsrc=m=>{const u=m.url||m.src||'';return m.trim&&m.trim.e>m.trim.s?`${u.split('#')[0]}#t=${m.trim.s.toFixed(2)},${m.trim.e.toFixed(2)}`:u;};
 const vitem=i=>({type:'video',url:i.url,dur:i.dur,fdur:i.fdur,w:i.w,h:i.h,crop:i.crop,trim:i.trim});
 const fmtDur=s=>`${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,'0')}`;
-/** the one media capsule used on every preview: photos «▣ 3», a lone video «🎥 0:06», several videos «🎥 2», a mix «▣ 3 🎥 1»; a lone photo needs none */
-function mediaBadge(photos,videos,dur,cls){const a=[];if(photos&&(photos>1||videos))a.push(`${I.image}${photos}`);if(videos)a.push(`${I.video}${videos>1||photos?videos:fmtDur(dur||0)}`);return a.length?`<span class="${cls}">${a.map(x=>`<b>${x}</b>`).join('')}</span>`:'';}
+/** the one media capsule: «▣ 3» photos, «🎥» a video, «🎥 2» videos, «▣ 3 🎥» a mix; a lone photo needs none. A count shows only when it is above one.
+ The feed's own video cell passes its duration («🎥 0:06»); previews pass null — no time on a square. */
+function mediaBadge(photos,videos,dur,cls){const a=[],c=n=>n>1?n:'';if(photos&&(photos>1||videos))a.push(`${I.image}${c(photos)}`);if(videos)a.push(`${I.video}${dur!=null&&!photos&&videos===1?fmtDur(dur||0):c(videos)}`);return a.length?`<span class="${cls}">${a.map(x=>`<b>${x}</b>`).join('')}</span>`:'';}
 /** the round play mark on a video poster — the same in the feed and in the full-screen viewer */
 const playMark=(act)=>act?`<button type="button" class="mplay" data-act="${act}" aria-label="${L('Смотреть','Play')}">${I.playf}</button>`:`<span class="mplay" aria-hidden="true">${I.playf}</span>`;
 

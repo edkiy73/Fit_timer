@@ -52,20 +52,22 @@ function followStream(posts,kinds,withAct){const items=[],all=!kinds.length,has=
 function postParts(p){const media=(p.media||[]).filter(m=>m.url),photos=media.filter(m=>m.type!=='video').length,videos=media.filter(m=>m.type==='video').length;return {media,photos,videos,poll:!!(p.poll||p.type==='poll'),result:!!(p.result||p.type==='result')};}
 /** «6 фото · видео · опрос · интересы» — the composition of a post in words */
 function partsLine(p){const q=postParts(p),a=[];if(q.videos)a.push(q.videos>1?pl(q.videos,['видео','видео','видео'],['video','videos']):L('видео','video'));if(q.photos)a.push(pl(q.photos,['фото','фото','фото'],['photo','photos']));if(q.poll)a.push(L('опрос','poll'));if(q.result)a.push(L('интересы','interests'));return a.join(' · ');}
-/** thumbnail of a liked post: the first photo / video poster if there is media (counter for several, play mark for video), otherwise a poll / interests / text tile; extra parts ride as small marks */
-function likeThumb(p,row){const q=postParts(p),first=q.media[0],n=q.media.length;
- /* a media tile: the media capsule bottom-left (mediaBadge, as in the feed), a poll and interests as round marks of the same style top-right */
- const mk=[q.poll&&I.poll,q.result&&I.test].filter(Boolean),marks=n&&mk.length?`<span class="actc-xs">${mk.map(m=>`<i>${m}</i>`).join('')}</span>`:'';
+/** ONE preview square (.pth) for every activity place — the strip, the expanded list, a profile's activity. A post shows its first photo / video poster
+ with one media capsule bottom-left (mediaBadge without durations) and round poll / interests marks top-right; a post without media is a poll / interests / text square.
+ Events, communities and people use the same square via pth(). */
+function likeThumb(p){const q=postParts(p),first=q.media[0],n=q.media.length;
+ const mk=[q.poll&&I.poll,q.result&&I.test].filter(Boolean),marks=mk.length?`<span class="pth-x">${mk.map(m=>`<i>${m}</i>`).join('')}</span>`:'';
  if(first){const src=first.type==='video'?first.poster:first.url;
-  const body=src?`<img src="${esc(src)}" alt="" loading="lazy" draggable="false">`:`<span class="actc-vid">${I.video}</span>`;
-  const cnt=mediaBadge(q.photos,q.videos,first.dur,'actc-n');
-  return {cls:n>1?'multi':'',html:body+cnt+(row?'':marks),mc:n,parts:partsLine(p)};}
- if(q.poll)return {cls:'kind',html:`${I.poll}${row?'':`<small>${L('Опрос','Poll')}</small>`}`,mc:0,parts:partsLine(p)};
- if(q.result)return {cls:'kind',html:`${I.test}${row?'':`<small>${L('Интересы','Interests')}</small>`}`,mc:0,parts:partsLine(p)};
- return row?{cls:'ic',html:I.edit,mc:0,parts:''}:{cls:'txt',html:`<span>${esc(mdPlain(T(p.text)).slice(0,40))}</span>`,mc:0,parts:''};}
+  const body=src?`<img src="${esc(src)}" alt="" loading="lazy" draggable="false">`:`<span class="pth-ph">${I.video}</span>`;
+  return {cls:n>1?'multi':'',html:body+mediaBadge(q.photos,q.videos,null,'pth-n')+marks,parts:partsLine(p)};}
+ if(q.poll)return {cls:'kind',html:`${I.poll}<small>${L('Опрос','Poll')}</small>`,parts:partsLine(p)};
+ if(q.result)return {cls:'kind',html:`${I.test}<small>${L('Интересы','Interests')}</small>`,parts:partsLine(p)};
+ return {cls:'txt',html:`<span>${esc(mdPlain(T(p.text)).slice(0,40))}</span>`,parts:''};}
+/** the square itself: a span inside a row, a button of its own inside a strip */
+const pth=(html,cls='',btn='')=>btn?`<button class="pth ${cls}" ${btn}>${html}</button>`:`<span class="pth ${cls}">${html}</span>`;
 /** the tappable preview of one activity item (used by single cards and by the expanded list of a group) */
-function actPrev(x){const pv=(go,p,thumb,t,s)=>`<button class="actc-p" data-go="${go}" data-p='${esc(JSON.stringify(p))}'><span class="actth ${thumb[1]||''}">${thumb[0]}</span><span class="tx"><b>${t}</b>${s?`<small>${s}</small>`:''}</span></button>`;
- if(x.k==='like'){const p=x.post,t=likeThumb(p,1);return pv('F05',{id:p.id},[t.html,t.cls],esc(mdPlain(T(p.text)).slice(0,80)||L('Публикация','Post')),`${esc(pname(p.author))}${t.parts?` · ${t.parts}`:''} · ${F.rel(x.t)}`);}
+function actPrev(x){const pv=(go,p,thumb,t,s)=>`<button class="actc-p" data-go="${go}" data-p='${esc(JSON.stringify(p))}'>${pth(thumb[0],thumb[1])}<span class="tx"><b>${t}</b>${s?`<small>${s}</small>`:''}</span></button>`;
+ if(x.k==='like'){const p=x.post,t=likeThumb(p);return pv('F05',{id:p.id},[t.html,t.cls],esc(mdPlain(T(p.text)).slice(0,80)||L('Публикация','Post')),`${esc(pname(p.author))}${t.parts?` · ${t.parts}`:''} · ${F.rel(x.t)}`);}
  if(x.k==='event'){const e=EV(x.e);return pv('E03',{id:x.e},[evCover(e,'cal'),''],esc(T(e.title)),`${F.date(e.start)} · ${e.format==='online'?L('онлайн','online'):esc(city(e.city))}`);}
  if(x.k==='comm'){const c=COMMUNITIES[x.c];return pv('C03',{id:x.c},[commAv(c),''],esc(T(c.name)),pl(C.members(x.c),['участник','участника','участников'],['member','members']));}
  return pv('P01',{id:x.p},[av(x.p,''),'round'],esc(pname(x.p)),esc(whoLine(x.p)));}
@@ -73,8 +75,8 @@ function actPrev(x){const pv=(go,p,thumb,t,s)=>`<button class="actc-p" data-go="
 function actCard(x,i){const who=x.who,nm=`<b>${esc(pname(who))}</b>`;let text,body;
  const head=(t)=>`<div class="actc-hd"><p class="actc-t">${t}<small>${F.rel(x.t)}</small></p><button class="ibtn ghost sm" data-act="actMenu" data-v="${esc(who)}" aria-label="${L('Ещё','More')}">${I.more}</button></div>`;
  if(x.k==='group'){const n=x.items.length,open=S.ui.actOpen?.has(x.gid);
-  const th=(g)=>{if(g.k==='like'){const t=likeThumb(g.post);return `<button class="actc-th ${t.cls}" data-go="F05" data-p='${esc(JSON.stringify({id:g.post.id}))}' aria-label="${esc(pname(g.post.author))}">${t.html}</button>`;}
-   if(g.k==='follow')return `<button class="actc-th round" data-go="P01" data-p='${esc(JSON.stringify({id:g.p}))}' aria-label="${esc(pname(g.p))}">${av(g.p,'')}</button>`;return '';};
+  const th=(g)=>{if(g.k==='like'){const t=likeThumb(g.post);return pth(t.html,t.cls,`data-go="F05" data-p='${esc(JSON.stringify({id:g.post.id}))}' aria-label="${esc(pname(g.post.author))}"`);}
+   if(g.k==='follow')return pth(av(g.p,''),'round',`data-go="P01" data-p='${esc(JSON.stringify({id:g.p}))}' aria-label="${esc(pname(g.p))}"`);return '';};
   if(x.kind==='like')text=L(`${nm}: нравится ${pl(n,['публикация','публикации','публикаций'],[])}`,`${nm} likes ${n} posts`);
   else if(x.kind==='follow')text=L(`${nm} теперь следит за ${n} ${n%10===1&&n%100!==11?'человеком':'людьми'}`,`${nm} now follows ${n} people`);
   else if(x.kind==='event')text=L(`${nm}: в планах ${pl(n,['событие','события','событий'],[])}`,`${nm} has ${n} events planned`);

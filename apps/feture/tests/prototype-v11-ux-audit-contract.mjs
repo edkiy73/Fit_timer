@@ -109,7 +109,7 @@ const src=f=>fs.readFileSync(root+f,'utf8');
 {fresh();const st=json("followStream(allPosts().filter(x=>followingOf('me').includes(x.author)),[],true)");const gr=st.filter(x=>x.k==='group');
  assert.ok(gr.some(g=>g.kind==='like'&&g.items.length>=7),'one person liked 7+ posts in a burst («+N» tile)');assert.ok(gr.some(g=>g.kind==='follow'&&g.items.length>=6),'one person followed 6 people');
  assert.ok(run("allPosts().filter(p=>(p.media||[]).length>=4).length")>=2&&run("allPosts().some(p=>(p.media||[]).length===2)"),'demo posts with 2, 3, 4 and 6 photos exist');
- const g=gr.find(x=>x.kind==='like'&&x.items.length>=7);assert.ok(run(`actCard(${JSON.stringify(g)},0)`).includes('actc-n'),'a liked multi-photo post shows a photo counter');
+ const g=gr.find(x=>x.kind==='like'&&x.items.length>=7);assert.ok(run(`actCard(${JSON.stringify(g)},0)`).includes('pth-n'),'a liked multi-photo post shows a photo counter');
  console.log('PASS demo activity');}
 
 /* liked posts without a photo get their own tiles */
@@ -120,6 +120,7 @@ const src=f=>fs.readFileSync(root+f,'utf8');
 /* a post that has everything at once */
 {fresh();const all=run("postParts(postById('p19'))");assert.ok(all.videos===1&&all.photos===3&&all.poll&&all.result,'p19 has a video, 3 photos, a poll and interests');
  assert.equal(run("partsLine(postById('p19'))"),'видео · 3 фото · опрос · интересы','the composition reads in words');
- const t=json("likeThumb(postById('p19'))");assert.ok(t.cls==='multi'&&t.html.includes('actc-x')&&t.html.includes('actc-n'),'thumbnail = first media + counter + marks for the poll and the interests');
- assert.ok(run("likeThumb(postById('p18')).html").includes('0:06')||run("likeThumb(postById('p18')).html").includes('actc-n'),'a lone video shows its duration');
+ const t=json("likeThumb(postById('p19'))");assert.ok(t.cls==='multi'&&t.html.includes('pth-x')&&t.html.includes('pth-n'),'thumbnail = first media + counter + marks for the poll and the interests');
+ {const h=run("likeThumb(postById('p18')).html");assert.ok(h.includes('pth-n')&&!h.includes('0:06'),'a lone video on a preview square: video mark, no duration');}
+ assert.ok(run("reviewLink('F01',{})").includes('#F01'),'review links still work');
  console.log('PASS everything-at-once post');}
