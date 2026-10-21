@@ -84,7 +84,8 @@ main.wrap{padding-block:16px 72px;display:grid;gap:22px}
 .chem .score small{font-size:16px;letter-spacing:0;color:var(--mute);-webkit-text-fill-color:var(--mute);font-weight:700;margin-left:6px}
 .chem .what{font-size:14px;color:var(--mute)}
 .chem .what b{color:var(--ink)}
-.blk .part.l{width:min(var(--wl),calc(50% - 9px))}.blk .part.r{width:min(var(--wr),calc(50% - 9px))}
+.gr.hard{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--danger) 18%,var(--raise)) 0 6px,var(--raise) 6px 12px)}
+.gr.soft::before{content:"";position:absolute;inset:3px;border-radius:99px;border:1.5px dashed color-mix(in srgb,var(--warn) 70%,transparent);z-index:0}
 .dr{position:absolute;top:50%;left:var(--jx);width:var(--ds);height:var(--ds);margin:calc(var(--ds) / -2) 0 0 calc(var(--ds) / -2);border-radius:50%;opacity:0;animation-delay:calc(var(--d) + 1.3s + var(--dd))}
 .dr.m{background:var(--me);animation:toR 2.6s ease-in-out infinite both;animation-delay:calc(var(--d) + 1.3s + var(--dd))}
 .dr.t{background:var(--them);animation:toL 2.6s ease-in-out infinite both;animation-delay:calc(var(--d) + 1.3s + var(--dd))}
@@ -139,7 +140,7 @@ function row([t,a,b],i){
   const ka=kind(a),kb=kind(b),blocked=ka==='hard'||kb==='hard';
   const A=ka==='v'?a.v:0,B=kb==='v'?b.v:0;
   const meet=!!(A&&B&&!blocked&&A+B>=17);
-  const half=(k,s)=>k==='hard'||k==='soft'?`<span class="half ${s} ${k}"></span>`:'';
+  const half=()=>'';
   const m=Math.min(A,B);
   let dr='';
   if(meet){const n=m>=10?3:m>=9?2:1,go=10+(m-7)*12,ds=6+(m-7)*3;
@@ -150,7 +151,7 @@ function row([t,a,b],i){
   const goo=`<div class="goo">${A?`<span class="blob l"></span><span class="part l" style="--h:${H(A)}px"></span>`:''}${B?`<span class="blob r"></span><span class="part r" style="--h:${H(B)}px"></span>`:''}${mw?'<span class="mix"></span>':''}${dr}</div>${fz}`;
   const lab=cls=>`<div class="lab ${cls}">${side(a,'me')}<span class="nm">${t}</span>${side(b,'them')}</div>`;
   const blk=blocked||ka==='soft'||kb==='soft'||!A||!B;
-  return `<div class="gr ${blk?'blk':''} ${meet?'meet':''}" style="--ir:${ir}px;--mw:${mw}px;--jr:${jr.toFixed(3)};--ra:${A/10};--rb:${B/10};--d:${(i*.07).toFixed(2)}s">${half(ka,'l')}${half(kb,'r')}${goo}${lab('')}${A?lab('wl'):''}${B?lab('wr'):''}</div>`;
+  return `<div class="gr ${blocked?'hard':(ka==='soft'||kb==='soft')?'soft':''} ${meet?'meet':''}" style="--ir:${ir}px;--mw:${mw}px;--jr:${jr.toFixed(3)};--ra:${A/10};--rb:${B/10};--d:${(i*.07).toFixed(2)}s">${half(ka,'l')}${half(kb,'r')}${goo}${lab('')}${A?lab('wl'):''}${B?lab('wr'):''}</div>`;
 }
 function chem(){
   let mn=0,mx=0,react=0;CASES.flatMap(c=>c[1]).forEach(([,a,b])=>{if(kind(a)==='v'&&kind(b)==='v'){mn+=Math.min(a.v,b.v);mx+=Math.max(a.v,b.v);if(a.v+b.v>=17)react++;}});
