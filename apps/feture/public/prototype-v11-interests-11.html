@@ -91,13 +91,13 @@ main.wrap{padding-block:16px 72px;display:grid;gap:22px}
 .repel{animation:ga 1.4s var(--spring) both,gb 1.4s var(--spring) both,poke 2.8s cubic-bezier(.5,0,.5,1) infinite;animation-delay:var(--d),calc(var(--d) + .1s),calc(var(--d) + 1.4s)}
 .repel .part.l{width:min(var(--wl),calc(50% - 6px - var(--gx)));border-radius:99px var(--rr) var(--rr) 99px}
 .repel .part.r{width:min(var(--wr),calc(50% - 6px - var(--gx)));border-radius:var(--rr) 99px 99px var(--rr)}
-@keyframes poke{0%{--gx:18px;--rr:99px}30%{--gx:0px;--rr:99px}36%{--gx:-1px;--rr:3px}52%{--gx:28px;--rr:3px}74%{--gx:22px;--rr:99px}100%{--gx:18px;--rr:99px}}
+@keyframes poke{0%{--gx:18px;--rr:99px}30%{--gx:0px;--rr:99px}35%{--gx:-1px;--rr:3px}39%{--gx:3px;--rr:6px}58%{--gx:28px;--rr:99px}78%{--gx:22px;--rr:99px}100%{--gx:18px;--rr:99px}}
 .repel .lab.wl{clip-path:inset(0 calc(100% - 6px - min(var(--wl),calc(50% - 6px - var(--gx)))) 0 0)}.repel .lab.wr{clip-path:inset(0 0 0 calc(100% - 6px - min(var(--wr),calc(50% - 6px - var(--gx)))))}
-.dp{position:absolute;z-index:2;top:50%;width:var(--ps);height:var(--ps);margin-top:calc(var(--ps) / -2);border-radius:50%;opacity:0;animation:drift var(--pd) cubic-bezier(.25,.6,.35,1) infinite;animation-delay:calc(var(--d) + 1.4s + var(--dd))}
-.dp.l{left:calc(6px + var(--el) - var(--ps) / 2);background:var(--me)}
-.dp.r{right:calc(6px + var(--er) - var(--ps) / 2);background:var(--them);animation-name:driftL}
-@keyframes drift{0%{opacity:0;transform:translateX(0) scale(.4)}12%{opacity:1;transform:translateX(calc(var(--ps) * .6)) scale(1)}80%{opacity:.8}100%{opacity:0;transform:translateX(max(0px,calc((100cqw - 12px - var(--el) - var(--er)) / 2 - 6px))) scale(.7)}}
-@keyframes driftL{0%{opacity:0;transform:translateX(0) scale(.4)}12%{opacity:1;transform:translateX(calc(var(--ps) * -.6)) scale(1)}80%{opacity:.8}100%{opacity:0;transform:translateX(calc(max(0px,calc((100cqw - 12px - var(--el) - var(--er)) / 2 - 6px)) * -1)) scale(.7)}}
+.dp{position:absolute;top:50%;width:var(--ps);height:var(--ps);margin-top:calc(var(--ps) / -2);border-radius:50%;transform:scale(0);animation:drift var(--pd) cubic-bezier(.3,.5,.4,1) infinite both;animation-delay:calc(var(--d) + 1.4s + var(--dd))}
+.dp.l{left:calc(6px + var(--el) - var(--ps));background:var(--me)}
+.dp.r{right:calc(6px + var(--er) - var(--ps));background:var(--them);animation-name:driftL}
+@keyframes drift{0%{transform:translateX(0) scale(.5)}18%{transform:translateX(calc(var(--ps) * .5)) scale(1)}34%{transform:translateX(calc(var(--ps) * 1.6)) scale(.95)}100%{transform:translateX(max(var(--ps),calc((100cqw - 12px - var(--el) - var(--er)) / 2 + var(--ps) / 2))) scale(0)}}
+@keyframes driftL{0%{transform:translateX(0) scale(.5)}18%{transform:translateX(calc(var(--ps) * -.5)) scale(1)}34%{transform:translateX(calc(var(--ps) * -1.6)) scale(.95)}100%{transform:translateX(calc(max(var(--ps),calc((100cqw - 12px - var(--el) - var(--er)) / 2 + var(--ps) / 2)) * -1)) scale(0)}}
 .tn{position:absolute;top:50%;width:var(--ts);height:var(--ts);margin-top:calc(var(--ts) / -2);border-radius:50%;animation:reach var(--pd) ease-in-out infinite;animation-delay:calc(var(--d) + 1.4s + var(--td,0s))}
 .tow{--el:min(var(--wl),calc(100cqw - 60px - var(--wr)));--er:min(var(--wr),calc(100cqw - 60px - var(--wl)))}
 .tow .part.l{width:var(--el)}.tow .part.r{width:var(--er)}
@@ -225,11 +225,11 @@ function row([t,a,b,o={}],i){
   let sd='';
   let pl='';
   if(!meet&&!blocked&&!repel&&!still&&(A||B)){const soft=ka==='soft'||kb==='soft';const m2=soft?3:Math.min(A,B);
-    const n=m2>=5?2:1,pd=(4.4-Math.min(m2,10)*.1).toFixed(2),ps=Math.round(6+Math.min(m2,8)*.5);
+    const n=m2>=5?2:1,pd=(4.6-Math.min(m2,10)*.1).toFixed(2),ps=Math.round(12+Math.min(m2,8)*.8);
     for(let k=0;k<n;k++){const dd=(k*(+pd)/n).toFixed(2);
       if(A)pl+=`<span class="dp l" style="--ps:${ps}px;--pd:${pd}s;--dd:${dd}s"></span>`;
       if(B)pl+=`<span class="dp r" style="--ps:${ps}px;--pd:${pd}s;--dd:${(+dd+(+pd)/(2*n)).toFixed(2)}s"></span>`;}}
-  const goo=sd+pl+`<div class="goo">${A?`<span class="blob l"></span><span class="part l" style="--h:${H(A)}px"></span>`:''}${B?`<span class="blob r"></span><span class="part r" style="--h:${H(B)}px"></span>`:''}${mw?'<span class="mix"></span>':''}${dr}</div>${fz}`;
+  const goo=sd+`<div class="goo">${pl}${A?`<span class="blob l"></span><span class="part l" style="--h:${H(A)}px"></span>`:''}${B?`<span class="blob r"></span><span class="part r" style="--h:${H(B)}px"></span>`:''}${mw?'<span class="mix"></span>':''}${dr}</div>${fz}`;
   const lab=cls=>`<div class="lab ${cls}">${side(a,'me')}<span class="nm">${t}</span>${side(b,'them')}</div>`;
   const blk=blocked||ka==='soft'||kb==='soft'||!A||!B;
   const R2=rel(a,b,o),vt=R2==='mutual'?'<span class="v fit">взаимно — роли не нужны</span>':R2==='both'?'<span class="v fit">обоюдно: оба даёте и получаете</span>':R2==='fit'?'<span class="v fit">дополняете друг друга</span>':R2==='same'?'<span class="v no">оба '+(a.d[0]==='give'?'даёте':'получаете')+' — не подходит</span>':'<span class="v"></span>';
