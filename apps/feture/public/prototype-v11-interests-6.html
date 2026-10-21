@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FetUre V11 — вместо баночек</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400..900&display=swap" rel="stylesheet">
+<style>
+/* Layout: one list, fixed grid [capsule | Я | M]; numbers live in fixed columns so nothing shifts. Tokens = FetUre V11. */
+@property --m{syntax:"<percentage>";inherits:true;initial-value:0%}
+@property --M{syntax:"<percentage>";inherits:true;initial-value:0%}
+:root{
+  --bg:#F5F3F0; --surf:#FFFFFF; --raise:#ECE8E3; --line:#E6E2DD; --line2:#D2CDC6;
+  --ink:#17151A; --mute:#66616B; --faint:#9B969F;
+  --accent:#D0153A; --violet:#6550D8; --hot:#F2622E;
+  --warn:#9A5D00; --danger:#C4182F; --danger-soft:#FBE5E8;
+  --me:var(--accent); --them:var(--violet); --on:#FFFFFF;
+  --bar:rgba(245,243,240,.9); --shadow:rgba(30,10,25,.2);
+  --font:"Onest",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --spring:cubic-bezier(.34,1.4,.55,1); --col:34px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111012; --surf:#1B191D; --raise:#242127; --line:#2D2A30; --line2:#3E3A42;
+  --ink:#F3F0F4; --mute:#A9A3AD; --faint:#77717B;
+  --accent:#FF4566; --violet:#A797FF; --hot:#FF8A5C;
+  --warn:#E9B663; --danger:#FF6B80; --danger-soft:#3D161D;
+  --bar:rgba(17,16,18,.9); --shadow:rgba(0,0,0,.6); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111012; --surf:#1B191D; --raise:#242127; --line:#2D2A30; --line2:#3E3A42;
+  --ink:#F3F0F4; --mute:#A9A3AD; --faint:#77717B;
+  --accent:#FF4566; --violet:#A797FF; --hot:#FF8A5C;
+  --warn:#E9B663; --danger:#FF6B80; --danger-soft:#3D161D;
+  --bar:rgba(17,16,18,.9); --shadow:rgba(0,0,0,.6); color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--font);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bar)}
+.wrap{max-width:560px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.intro{padding-block:28px 12px;display:grid;gap:10px}
+h1{margin:0;font-size:clamp(28px,6vw,36px);line-height:1.05;letter-spacing:-.04em;font-weight:850;text-wrap:balance}
+p{margin:0;max-width:60ch}
+.lead{color:var(--mute);font-size:15.5px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.eyebrow{font-size:13px;color:var(--accent);font-weight:700}
+.btn{font:600 13px var(--font);color:var(--ink);background:var(--surf);border:1px solid var(--line2);border-radius:99px;padding:7px 14px;cursor:pointer;min-height:36px}
+button:focus-visible,.r:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sticky{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bar);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.sticky .wrap{padding-block:10px;display:grid;gap:10px}
+.seg{display:flex;background:var(--raise);border-radius:99px;padding:3px}
+.seg button{flex:1;font:650 14px var(--font);color:var(--mute);background:none;border:0;border-radius:99px;padding:7px 8px;cursor:pointer;min-height:36px;white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--surf);color:var(--ink);box-shadow:0 2px 6px -2px var(--shadow)}
+
+/* column header + rows share one grid */
+.grid{display:grid;grid-template-columns:minmax(0,1fr) var(--col);column-gap:6px;align-items:center}
+.cmp .grid{grid-template-columns:minmax(0,1fr) var(--col) var(--col)}
+.head{font-size:12px;font-weight:700;color:var(--mute);letter-spacing:.04em}
+.head .c{text-align:center}
+.head .c.me{color:var(--me)}.head .c.them{color:var(--them)}
+.head .c.them,.n.them{display:none}
+.cmp .head .c.them,.cmp .n.them{display:block}
+.key{display:none;font-size:13px;color:var(--mute);gap:14px;flex-wrap:wrap}
+.cmp .key{display:flex}
+.key span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:22px;height:10px;border-radius:99px;display:inline-block}
+.sw.sh{background:linear-gradient(90deg,var(--me),var(--them))}
+.sw.st{background:repeating-linear-gradient(-45deg,color-mix(in srgb,var(--them) 60%,transparent) 0 3px,color-mix(in srgb,var(--them) 30%,transparent) 3px 6px)}
+
+main.wrap{padding-block:14px 64px;display:grid;gap:8px}
+.item{display:grid;row-gap:8px}
+.r{position:relative;height:44px;border-radius:99px;background:var(--raise);overflow:hidden;isolation:isolate;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .2s var(--spring);
+  animation:inm 1.1s var(--spring) both,inM 1.1s var(--spring) both;animation-delay:var(--d),calc(var(--d) + .15s)}
+.r:active{transform:scale(.98)}
+@keyframes inm{from{--m:0%}}@keyframes inM{from{--M:0%}}
+.f{position:absolute;top:0;bottom:0;z-index:1}
+.f.sh{left:0;width:var(--m);border-radius:99px;background:linear-gradient(90deg,var(--c0),var(--c1))}
+.f.sh.joined{border-radius:99px 0 0 99px}
+.f.tl{left:var(--m);width:calc(var(--M) - var(--m));border-radius:0 99px 99px 0;
+  background:repeating-linear-gradient(-45deg,color-mix(in srgb,var(--tc) 55%,transparent) 0 6px,color-mix(in srgb,var(--tc) 30%,transparent) 6px 12px);background-size:17px 17px;animation:flow 1.4s linear infinite}
+.f.tl.alone{border-radius:99px}
+@keyframes flow{to{background-position:17px 0}}
+.f.sh::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.32) 48%,transparent 62%);background-size:260% 100%;animation:sheen 3.4s ease-in-out infinite;animation-delay:calc(var(--d) + 1.2s)}
+@keyframes sheen{from{background-position:130% 0}to{background-position:-130% 0}}
+.lab{position:absolute;inset:0;display:flex;align-items:center;gap:6px;padding:0 16px;z-index:3;pointer-events:none;font-size:14.5px;font-weight:650;min-width:0}
+.lab span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lab.inv{color:var(--on);z-index:4;clip-path:inset(0 calc(100% - var(--m)) 0 0)}
+.vis{display:inline-grid;place-items:center;flex:none;opacity:.6}
+.vis svg{width:13px;height:13px}
+.cmp .vis{display:none}
+.r.hard{background:repeating-linear-gradient(135deg,var(--danger-soft) 0 7px,var(--raise) 7px 14px)}
+.r.soft::after{content:"";position:absolute;inset:0;border-radius:inherit;border:1.5px dashed color-mix(in srgb,var(--warn) 70%,transparent);z-index:5;pointer-events:none}
+.n{text-align:center;font:800 16px/1 var(--font);font-variant-numeric:tabular-nums}
+.n.me{color:var(--me)}.n.them{color:var(--them)}
+.n small{font-size:11px;font-weight:750}
+.n .t{color:var(--danger)}.n .s{color:var(--warn)}.n .x{color:var(--faint);font-weight:600}
+.det{display:grid;grid-template-rows:0fr;transition:grid-template-rows .5s var(--spring)}
+.item.open .det{grid-template-rows:1fr}
+.det>div{overflow:hidden;display:grid;row-gap:6px}
+.dl{height:10px;border-radius:99px;background:var(--raise);overflow:hidden;margin:0 16px}
+.dl span{display:block;height:100%;border-radius:99px;width:0;transition:width .7s var(--spring) .08s}
+.item.open .dl span{width:var(--w)}
+.dl.me span{background:linear-gradient(90deg,var(--me),var(--hot))}.dl.them span{background:var(--them)}
+.det .n{font-size:13px}
+.det .n.me.empty,.det .n.them.empty{visibility:hidden}
+.item.open .r{box-shadow:0 0 0 2px var(--line2)}
+.more{display:flex;gap:8px;flex-wrap:wrap;padding-top:6px}
+.more button{font:650 14px var(--font);border-radius:99px;padding:8px 14px;cursor:pointer;min-height:40px;border:0;background:var(--raise);color:var(--ink)}
+.more button.add{background:none;color:var(--accent);border:1.5px dashed color-mix(in srgb,var(--accent) 45%,var(--line2))}
+.cmp .more{display:none}
+.note{font-size:13px;color:var(--mute);padding-top:14px}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap"><header class="intro">
+  <div class="top"><span class="eyebrow">FetUre V11 · капсула «Общее»</span><button class="btn" id="themeBtn" type="button">Тема: системная</button></div>
+  <h1>Интересы: профиль и сравнение</h1>
+  <p class="lead">Одна строка — один интерес. Цифры всегда в своих колонках справа, поэтому ничего не прыгает. В сравнении градиент — то, что у вас общее, полоски — на сколько у одного больше, его цветом. Нажми на строку, чтобы увидеть обе шкалы отдельно.</p>
+</header></div>
+
+<div class="sticky" id="stk"><div class="wrap">
+  <div class="seg" role="group" aria-label="Режим">
+    <button type="button" id="mSolo" aria-pressed="false">Мой профиль</button>
+    <button type="button" id="mCmp" aria-pressed="true">Сравнить с mars_and_v</button>
+  </div>
+  <div class="key"><span><i class="sw sh"></i>общее</span><span><i class="sw st"></i>у него больше</span><span><i class="sw st" style="--them:var(--me)"></i>у тебя больше</span></div>
+  <div class="grid head"><span>Интерес</span><span class="c me">Я</span><span class="c them">M</span></div>
+</div></div>
+
+<main class="wrap" id="root"></main>
+
+<script>
+(function(){
+const sv=d=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const I={
+  key:sv('<circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16.5 6.5l2 2M14.5 8.5l2 2"/>'),
+  eyeoff:sv('<path d="M4 4l16 16M9.9 5.7A9.6 9.6 0 0 1 12 5.5C18 5.5 21.5 12 21.5 12a17 17 0 0 1-3 3.8M6.3 7.4A16 16 0 0 0 2.5 12S6 18.5 12 18.5a9 9 0 0 0 4-.9"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>')
+};
+const ROWS=[
+  ['Шибари',{v:10},{v:3}],
+  ['Забота после',{v:9,vis:'granted'},{v:10}],
+  ['Связывание',{v:8,vis:'granted'},{v:9}],
+  ['Ролевые игры',{v:6},{v:8}],
+  ['Латекс',{v:5,vis:'granted'},{v:5}],
+  ['Массаж',{v:4},{v:6}],
+  ['Сенсорные игры',{v:2},{v:8}],
+  ['Контроль',{v:7,vis:'private'},{limit:'hard'}],
+  ['Показ',{limit:'soft',vis:'granted'},{v:7}],
+  ['Сильная боль',{limit:'hard',vis:'private'},{limit:'hard'}],
+  ['Эксперименты',null,{v:6}]
+];
+const EXTRA=4;
+const heat=v=>v<=5?`color-mix(in oklch,var(--violet) ${Math.round((5-v)/4*100)}%,var(--accent))`:`color-mix(in oklch,var(--accent) ${Math.round((10-v)/5*100)}%,var(--hot))`;
+const kind=e=>!e?'none':e.limit==='hard'?'hard':e.limit?'soft':'v';
+const vis=e=>e&&e.vis&&e.vis!=='public'?`<span class="vis">${e.vis==='granted'?I.key:I.eyeoff}</span>`:'';
+let mode='cmp';
+const num=(e,who)=>{const k=kind(e);
+  const inner=k==='hard'?'<small class="t">табу</small>':k==='soft'?'<small class="s">?</small>':k==='none'?'<span class="x">—</span>':`<span class="cnt" data-to="${e.v}">${e.v}</span>`;
+  return `<span class="n ${who}">${inner}</span>`;};
+function item([t,a,b],i){
+  const cmp=mode==='cmp',ka=kind(a),kb=kind(b);
+  const hard=ka==='hard'||(cmp&&kb==='hard'), soft=!hard&&(ka==='soft'||(cmp&&kb==='soft'));
+  const pa=!hard&&ka==='v'?a.v*10:0, pb=cmp&&!hard&&kb==='v'?b.v*10:0;
+  let m,M,c0,c1,tc;
+  if(!cmp){m=pa;M=pa;c0=pa?heat(Math.max(1,a.v-4)):'';c1=pa?heat(a.v):'';}
+  else{m=Math.min(pa,pb);M=Math.max(pa,pb);c0='var(--me)';c1='var(--them)';tc=pa>pb?'var(--me)':'var(--them)';}
+  const tail=M>m, shared=m>0;
+  const st=`--m:${m}%;--M:${M}%;--c0:${c0};--c1:${c1};--tc:${tc};--d:${(i*.06).toFixed(2)}s`;
+  const r=`<div class="r ${hard?'hard':soft?'soft':''}" tabindex="0" style="${st}">${shared?`<span class="f sh ${tail?'joined':''}"></span>`:''}${tail?`<span class="f tl ${shared?'':'alone'}"></span>`:''}<div class="lab"><span>${t}</span>${vis(a)}</div>${shared?`<div class="lab inv"><span>${t}</span>${vis(a)}</div>`:''}</div>`;
+  const det=cmp?`<div class="det"><div><div class="grid"><div class="dl me"><span style="--w:${ka==='v'?a.v*10:0}%"></span></div><span></span><span></span></div><div class="grid"><div class="dl them"><span style="--w:${kb==='v'?b.v*10:0}%"></span></div><span></span><span></span></div></div></div>`:'';
+  return `<div class="item ${cmp&&i===0?'open':''}"><div class="grid">${r}${num(a,'me')}${num(b,'them')}</div>${det}</div>`;
+}
+function countUp(){
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  document.querySelectorAll('#root .grid > .n .cnt').forEach((el,k)=>{const to=+el.dataset.to;const row=el.closest('.item');const idx=[...row.parentNode.children].indexOf(row);const t0=performance.now()+idx*60;el.textContent='0';
+    const step=now=>{const p=Math.min(1,Math.max(0,(now-t0)/900));el.textContent=Math.round(to*(1-Math.pow(1-p,3)));if(p<1)requestAnimationFrame(step);};requestAnimationFrame(step);});
+}
+function render(){
+  const cmp=mode==='cmp';
+  document.getElementById('root').classList.toggle('cmp',cmp);document.getElementById('stk').classList.toggle('cmp',cmp);
+  const list=cmp?ROWS:ROWS.filter(r=>r[1]);
+  document.getElementById('root').innerHTML=list.map(item).join('')+`<div class="more"><button type="button">Показать все · ${ROWS.filter(r=>r[1]).length+EXTRA}</button><button class="add" type="button">+ Добавить</button></div><p class="note">${cmp?'Видны только интересы, которые mars_and_v открыл тебе. Если у кого-то табу, строка штрихуется и заливки нет. «?» — обсуждаемо.':'«?» — обсуждаемо, штриховка — табу. Значок у названия показывает, кто видит интерес.'}</p>`;
+  document.getElementById('mSolo').setAttribute('aria-pressed',!cmp);document.getElementById('mCmp').setAttribute('aria-pressed',cmp);
+  countUp();
+}
+document.getElementById('root').addEventListener('click',e=>{const it=e.target.closest('.item');if(it&&mode==='cmp')it.classList.toggle('open');});
+document.getElementById('root').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('r')){e.preventDefault();e.target.click();}});
+document.getElementById('mSolo').onclick=()=>{mode='solo';render();};
+document.getElementById('mCmp').onclick=()=>{mode='cmp';render();};
+render();
+const modes=['system','light','dark'],names={system:'системная',light:'светлая',dark:'тёмная'};
+let m=document.documentElement.getAttribute('data-theme')||'system';
+const tb=document.getElementById('themeBtn');tb.textContent='Тема: '+names[m];
+tb.addEventListener('click',()=>{m=modes[(modes.indexOf(m)+1)%3];if(m==='system')document.documentElement.removeAttribute('data-theme');else document.documentElement.setAttribute('data-theme',m);tb.textContent='Тема: '+names[m];});
+})();
+</script>
+</body>
+</html>
