@@ -397,6 +397,8 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:im
 .sheet .sh-b{flex:1;min-height:0;overflow-y:auto;padding:8px 16px 20px;overscroll-behavior:contain}
 .sheet .sh-f{flex:none;padding:10px 16px calc(14px + var(--safe-b));border-top:1px solid var(--line);display:grid;gap:8px;background:var(--bg)}
 .sheet .sh-f .row .btn{flex:1}
+.sheet .sh-f .sh-f3 .btn{padding-inline:10px;min-width:0}.sheet .sh-f .sh-f3 .btn.primary{flex:1.5}
+.grp.dim{opacity:.4;pointer-events:none}
 .sheet .grp:first-child{margin-top:4px}
 .sheet .card{background:var(--surf)}
 .sheet.full{top:0;max-height:none;border-radius:0}
@@ -3687,7 +3689,8 @@ function cmpRow(r,id,o={}){const a=r.a,b=r.b;const lv=a.limit?0:a.lv;
  const ini=esc((pname(id)||'?').trim().charAt(0).toUpperCase());
  const lab=cls=>`<div class="cr-l ${cls}"><i class="cr-av me">${L('Я','Me').charAt(0)}</i><span class="cr-v">${val(a)}${roleWord(a)?`<em>${esc(roleWord(a))}</em>`:''}</span><span class="cr-n">${esc(topic(r.t))}</span><span class="cr-v r">${val(b)}${roleWord(b)?`<em>${esc(roleWord(b))}</em>`:''}</span><i class="cr-av them">${ini}</i></div>`;
  const why=o.why!==false&&(r.why&&r.why!=='')?`<p class="cr-why">${esc(cmpWhy(r,id))}</p>`:'';
- return `<button class="cr-item" data-act="topic" data-v="${esc(r.t)}" data-who="${esc(id)}"><span class="cr ${a.limit==='hard'||b.limit==='hard'?'hard':''} ${a.limit==='discuss'||b.limit==='discuss'?'soft':''}" style="--v:${lv}">${lv?'<span class="cr-f"></span>':''}${lab('')}${lv?lab('w'):''}</span>${why}</button>`;}
+ const wrapT=o.plain?'div':'button';const wrapA=o.plain?'':` data-act="topic" data-v="${esc(r.t)}" data-who="${esc(id)}"`;
+ return `<${wrapT} class="cr-item"${wrapA}><span class="cr ${a.limit==='hard'||b.limit==='hard'?'hard':''} ${a.limit==='discuss'||b.limit==='discuss'?'soft':''}" style="--v:${lv}">${lv?'<span class="cr-f"></span>':''}${lab('')}${lv?lab('w'):''}</span>${why}</${wrapT}>`;}
 function cmpGroups(id,sh,o={}){return CMP_GROUPS.map(([k,title,cls])=>{const rows=sh.rows[k];if(!rows.length)return '';const list=o.max?rows.slice(0,o.max):rows;
  return `<div class="cg"><div class="cg-h ${cls}"><i></i><span>${title}</span><b>${rows.length}</b></div><div class="cg-rows">${list.map(r=>cmpRow(r,id,o)).join('')}</div></div>`;}).join('');}
 /** «what you share» — ONE component for the discovery card and the full profile: summary (opens the full comparison), matches (each topic opens the side-by-side answers),
@@ -6169,32 +6172,35 @@ SC.X04={title:()=>L('История интересов','Interest history'),vali
 
 /* Batch interests are a temporary draft, independent of quiz answers. */
 ACT.addJar=()=>topicPicker();ACT.addLimit=()=>topicPicker();
+/* V12: «how you like it» and «who sees» as chips — the same in the add flow and in the edit sheet. Empty role = «всё». */
+const roleChipsHTML=(t,dir,act,off)=>{if(!hasDir(t))return '';const d=normDir(dir)||[...DIRS];const all=d.length===DIRS.length;
+ return grp(L('Как тебе ближе','How you like it'),`<div class="chips">${[['all',L('Всё','All of it')],['give',L('Давать','Giving')],['get',L('Получать','Receiving')],['watch',L('Смотреть','Watching')]].map(([k,l])=>{const on=k==='all'?all:!all&&d.includes(k);return `<button class="chip ${on?'on':''}" aria-pressed="${on}" data-act="${act}" data-v="${k}" ${off?'tabindex="-1" aria-disabled="true"':''}>${l}</button>`;}).join('')}</div>`,{cls:'bare '+(off?'dim':'')});};
+const visChipsHTML=(vis,act,note)=>grp(L('Кто видит','Who can see'),`<div class="chips">${[['public',L('Все','Everyone')],['granted',L('По доступу','By access')],['only',L('Только я','Only me')]].map(([k,l])=>`<button class="chip ${vis===k?'on':''}" aria-pressed="${vis===k}" data-act="${act}" data-v="${k}">${l}</button>`).join('')}</div>${note?`<p class="note" style="margin-top:6px">${note}</p>`:''}`,{cls:'bare'});
 function topicPicker(initial,ownerIn,visIn){if(cur().p.owner==='couple'&&!coupleWritable())return;
  const owner=ownerIn||cur().p.owner||'me',model=editableProfile({p:{owner}});if(!model)return;
  const d={owner,session:S.session,pair:S.pair,lease:S.pair?.draftLease||0,selected:initial&&TOPICS[initial]&&!model.jars.some(j=>j.t===initial)?[initial]:[],answers:{},dirs:{},vt:{},step:0,stage:'pick',vis:visIn||'public',fixedVis:['public','granted'].includes(visIn)};S.ui.interestDraft=d;
  sheet(()=>{
   if(d.stage==='pick'){const have=model.jars.map(j=>j.t);return{title:L('Добавить интересы','Add interests'),sub:L('Выбери несколько интересов, затем настрой каждый.','Choose several interests, then set each one.'),search:true,searchPh:L('Найти интерес','Find an interest'),body:CATS.map(c=>{const ts=Object.keys(TOPICS).filter(t=>TOPICS[t].cat===c.id&&!have.includes(t));return ts.length?fsec(T(c),`<div class="chips">${ts.map(t=>`<button class="chip ${d.selected.includes(t)?'on':''}" aria-pressed="${d.selected.includes(t)}" data-act="pickTopic" data-v="${t}" data-txt="${chipTxt(t,topic(t))}">${esc(topic(t))}</button>`).join('')}</div>`):'';}).join('')+`<p class="note sh-empty" hidden>${L('Такого интереса пока нет.','No such interest yet.')}</p>`,foot:`<button class="btn primary" data-act="interestsStart" ${d.selected.length?'':'disabled'}>${L('Продолжить','Continue')}${d.selected.length?` · ${d.selected.length}`:''}</button>`};}
-  if(d.stage==='answer'){const t=d.selected[d.step];const dir=d.dirs[t]||DIRS;const vis=d.vt[t]||d.vis;const all=dir.length===DIRS.length;
+  if(d.stage==='answer'){const t=d.selected[d.step];const vis=d.vt[t]||d.vis;
    /* V12: «how you like it» and «who sees» come first, preset to «all» / the default audience; a tap on the answer moves on */
-   const roleChips=hasDir(t)?grp(L('Как тебе ближе','How you like it'),`<div class="chips">${[['all',L('Всё','All of it')],['give',L('Давать','Giving')],['get',L('Получать','Receiving')],['watch',L('Смотреть','Watching')]].map(([k,l])=>{const on=k==='all'?all:!all&&dir.includes(k);return `<button class="chip ${on?'on':''}" aria-pressed="${on}" data-act="interestDir" data-v="${k}">${l}</button>`;}).join('')}</div>`,{cls:'bare'}):'';
-   const visChips=d.fixedVis?'':grp(L('Кто видит','Who can see'),`<div class="chips">${[['public',L('Все','Everyone')],['granted',L('По доступу','By access')],['only',L('Только я','Only me')]].map(([k,l])=>`<button class="chip ${vis===k?'on':''}" aria-pressed="${vis===k}" data-act="interestVisT" data-v="${k}">${l}</button>`).join('')}</div>`,{cls:'bare'});
+   const roleChips=roleChipsHTML(t,d.dirs[t],'interestDir');const visChips=d.fixedVis?'':visChipsHTML(vis,'interestVisT');
    return{title:topic(t),sub:L(`Интерес ${d.step+1} из ${d.selected.length}`,`Interest ${d.step+1} of ${d.selected.length}`),body:`<div class="qprog"><i style="width:${(d.step+1)/d.selected.length*100}%"></i></div><p class="topic-desc">${esc(T(TOPIC_DESC[t]))}</p>${roleChips}${visChips}${grp(topicQ(t),answerHTML(d.answers[t]??null,'interestAnswer',{t}),{cls:'bare'})}`,
-    foot:`<div class="row g8"><button class="btn secondary" data-act="interestBack">${L('Назад','Back')}</button>${d.answers[t]!=null?`<button class="btn primary" data-act="interestNext">${d.step===d.selected.length-1?L('К проверке','Review'):L('Дальше','Next')}</button>`:''}</div>`};}
+    foot:d.fromReview?`<button class="btn primary" data-act="interestNext">${L('К проверке','Back to review')}</button>`:`<div class="row g8"><button class="btn secondary" data-act="interestBack">${L('Назад','Back')}</button>${d.answers[t]!=null?`<button class="btn primary" data-act="interestNext">${d.step===d.selected.length-1?L('К проверке','Review'):L('Дальше','Next')}</button>`:''}</div>`};}
   const drafted=d.selected.map(t=>jarFrom(t,d.answers[t],{dir:d.dirs[t],vis:d.fixedVis?d.vis:(d.vt[t]||d.vis)}));
   return{title:L('Проверь ответы','Check your answers'),sub:L(`Готово: ${d.selected.length}. Нажми на интерес, чтобы поправить.`,`${d.selected.length} ready. Tap an interest to change it.`),body:jarsHTML(drafted,{act:'interestEditStep',vis:1}),
-   foot:`<button class="btn primary" data-act="interestsSave">${L('Сохранить','Save')}</button><div class="row g8 mt12"><button class="btn secondary" data-act="interestBack">${L('Назад','Back')}</button><button class="btn soft" data-act="interestsDiscard">${L('Отменить','Cancel')}</button></div>`};
- },{full:true,guard:()=>d.selected.length>0,onClose:()=>{if(S.ui.interestDraft===d)delete S.ui.interestDraft;}});
+   foot:`<div class="row g8 sh-f3"><button class="btn soft" data-act="interestsDiscard">${L('Отменить','Cancel')}</button><button class="btn secondary" data-act="interestBack">${L('Назад','Back')}</button><button class="btn primary" data-act="interestsSave">${L('Сохранить','Save')}</button></div>`};
+ },{get full(){return d.stage!=='review';},guard:()=>d.selected.length>0,onClose:()=>{if(S.ui.interestDraft===d)delete S.ui.interestDraft;}});
 }
 ACT.pickTopic=a=>{const d=S.ui.interestDraft,t=a.dataset.v;if(!d||!TOPICS[t])return;const i=d.selected.indexOf(t);if(i<0)d.selected.push(t);else{d.selected.splice(i,1);delete d.answers[t];}resheet();};
 ACT.interestsStart=()=>{const d=S.ui.interestDraft;if(!d?.selected.length)return;d.selected.forEach(t=>{d.dirs[t]??=[...DIRS];});d.stage='answer';d.step=0;S.ui.shq='';resheet();};
 ACT.interestAnswer=a=>{const d=S.ui.interestDraft;if(!d||d.stage!=='answer')return;const step=d.step;d.answers[d.selected[step]]=ansVal(a.dataset.v);resheet();
  /* V12: answering moves on — a short pause so the choice is visible */
- setTimeout(()=>{if(S.ui.interestDraft!==d||d.stage!=='answer'||d.step!==step)return;if(step<d.selected.length-1)d.step++;else d.stage='review';resheet();},260);};
+ setTimeout(()=>{if(S.ui.interestDraft!==d||d.stage!=='answer'||d.step!==step)return;if(d.fromReview){d.fromReview=false;d.stage='review';}else if(step<d.selected.length-1)d.step++;else d.stage='review';resheet();},260);};
 ACT.interestDir=a=>{const d=S.ui.interestDraft;if(!d||d.stage!=='answer')return;const t=d.selected[d.step];d.dirs[t]=toggleDir(d.dirs[t],a.dataset.v)||[...DIRS];resheet();};
 ACT.interestVisT=a=>{const d=S.ui.interestDraft;if(!d||d.stage!=='answer'||d.fixedVis||!['public','granted','only'].includes(a.dataset.v))return;d.vt[d.selected[d.step]]=a.dataset.v;resheet();};
-ACT.interestEditStep=a=>{const d=S.ui.interestDraft;if(!d||d.stage!=='review')return;const i=d.selected.indexOf(a.dataset.v);if(i<0)return;d.step=i;d.stage='answer';resheet();};
-ACT.interestNext=a=>{const d=S.ui.interestDraft;if(!d||d.answers[d.selected[d.step]]==null)return;if(d.step<d.selected.length-1)d.step++;else d.stage='review';resheet();};
-ACT.interestBack=()=>{const d=S.ui.interestDraft;if(!d)return;if(d.stage==='review'){d.stage='answer';d.step=d.selected.length-1;}else if(d.step>0)d.step--;else d.stage='pick';resheet();};
+ACT.interestEditStep=a=>{const d=S.ui.interestDraft;if(!d||d.stage!=='review')return;const i=d.selected.indexOf(a.dataset.v);if(i<0)return;d.step=i;d.stage='answer';d.fromReview=true;resheet();};
+ACT.interestNext=a=>{const d=S.ui.interestDraft;if(!d||d.answers[d.selected[d.step]]==null)return;if(d.fromReview){d.fromReview=false;d.stage='review';}else if(d.step<d.selected.length-1)d.step++;else d.stage='review';resheet();};
+ACT.interestBack=()=>{const d=S.ui.interestDraft;if(!d)return;if(d.stage==='review'){d.stage='answer';d.step=d.selected.length-1;}else if(d.fromReview){d.fromReview=false;d.stage='review';}else if(d.step>0)d.step--;else d.stage='pick';resheet();};
 ACT.interestsVis=a=>{const d=S.ui.interestDraft;if(d&&!d.fixedVis&&['public','granted','only'].includes(a.dataset.v)){d.vis=a.dataset.v;resheet();}};
 ACT.interestsDiscard=()=>closeSheet();
 ACT.interestsSave=a=>{const d=S.ui.interestDraft;if(!d||d.stage!=='review'||d.session!==S.session||!d.selected.length||d.selected.some(t=>d.answers[t]==null))return;
@@ -6204,14 +6210,16 @@ ACT.interestsSave=a=>{const d=S.ui.interestDraft;if(!d||d.stage!=='review'||d.se
  },{ms:300,ok:L('Интересы добавлены','Interests added')});};
 ACT.editJar=a=>{if(S.ui.sheet)closeSheet(true);if(!editableProfile().jars.some(j=>j.t===a.dataset.v)){topicPicker(a.dataset.v);return;}openJar(a.dataset.v);};
 /* the jar sheet: what it is → your answer → who sees. Nothing is preselected for a new topic. */
-function openJar(t,owner=cur().p.owner||'me'){const model=editableProfile({p:{owner}});if(!model)return;const ex=model.jars.find(j=>j.t===t);S.ui.jar={t,v:jv(ex),dir:normDir(ex?.dir),vis:ex?.vis||'only',owner,session:S.session};const start=JSON.stringify(S.ui.jar);
+function openJar(t,owner=cur().p.owner||'me'){const model=editableProfile({p:{owner}});if(!model)return;const ex=model.jars.find(j=>j.t===t);S.ui.jar={t,v:jv(ex),dir:normDir(ex?.dir)||[...DIRS],vis:ex?.vis||'public',owner,session:S.session};const start=JSON.stringify(S.ui.jar);
  sheet(()=>{const j=S.ui.jar;const taboo=j.v==='hard';
+ /* V12: same order as when adding — how you like it, who sees, then the answer */
  return{title:topic(t),sub:T(CATS.find(c=>c.id===TOPICS[t]?.cat)||''),body:`<p class="topic-desc">${esc(T(TOPIC_DESC[t]))}</p>
- ${grp(topicQ(t),answerHTML(j.v,'jarAns',{t,dir:j.dir,dirAct:'jarDir'}),{cls:'bare'})}
- ${j.v==null?'':grp(L('Кто видит','Who can see'),choices([['only',L('Только я','Only me')],['granted',L('По доступу','By access'),L('Те, кому ты откроешь приватную часть','People you share your private part with')],['public',L('Все','Everyone'),taboo?L('Другие увидят в профиле: «нельзя». Без подробностей','Others see “not for me” on your profile. No details'):L('В профиле и для совпадений','On your profile and for matching')]],j.vis,'jarVis'))}`,
+ ${roleChipsHTML(t,j.dir,'jarDir',j.v==='hard'||j.v==='discuss')}
+ ${visChipsHTML(j.vis,'jarVis',j.vis==='public'&&taboo?L('Другие увидят в профиле: «нельзя». Без подробностей','Others see “not for me” on your profile. No details'):'')}
+ ${grp(topicQ(t),answerHTML(j.v,'jarAns',{t}),{cls:'bare'})}`,
  foot:`<div class="row g8">${ex?`<button class="btn secondary icon" data-act="jarDel" aria-label="${L('Убрать','Remove')}">${I.trash}</button>`:''}<button class="btn primary ${j.v==null?'off':''}" data-act="jarSave">${ex?L('Сохранить','Save'):L('Добавить','Add')}</button></div>`};},{guard:()=>JSON.stringify(S.ui.jar)!==start});}
 ACT.jarAns=a=>{const j=S.ui.jar;j.v=ansVal(a.dataset.v);resheet();};
-ACT.jarDir=a=>{const j=S.ui.jar;if(!j)return;j.dir=toggleDir(j.dir,a.dataset.v);resheet();};
+ACT.jarDir=a=>{const j=S.ui.jar;if(!j)return;j.dir=toggleDir(j.dir,a.dataset.v)||[...DIRS];resheet();};
 ACT.jarVis=a=>{S.ui.jar.vis=a.dataset.v;resheet();};
 ACT.jarSave=a=>{const j=S.ui.jar;if(j.owner==='couple'&&!coupleWritable())return;if(j.v==null||j.session!==S.session)return;const pair=S.pair;run(a,()=>{if(S.session!==j.session||j.owner==='couple'&&S.pair!==pair)return;const model=editableProfile({p:{owner:j.owner}});if(!model)return;const arr=model.jars,i=arr.findIndex(x=>x.t===j.t),old=arr[i];const val=jarFrom(j.t,j.v,{vis:j.vis,dir:j.dir});if(i>=0)arr[i]=val;else arr.push(val);model.history.unshift({t:Date.now(),topic:j.t,from:old?jv(old):'—',to:j.v,dir:val.dir,src:'manual'});let msg='';if(j.owner==='couple'){markCoupleDraft();msg=coupleQuickSubmit();}closeSheet();refresh();if(msg)setTimeout(()=>toast(msg,{type:'ok'}),350);},{ms:300,ok:L('Сохранено','Saved')});};
 ACT.jarDel=()=>{const {t,owner,session}=S.ui.jar;closeSheet(true);ask({icon:'trash',tone:'l',title:L(`Убрать «${topic(t)}»?`,`Remove “${topic(t)}”?`),text:L('История изменений сохранится — её видишь только ты.','Change history is kept — only you can see it.'),ok:L('Убрать','Remove'),danger:true}).then(ok=>{if(ok&&S.session===session){const model=editableProfile({p:{owner}});if(!model)return;model.jars=model.jars.filter(j=>j.t!==t);let msg='';if(owner==='couple'){markCoupleDraft();msg=coupleQuickSubmit();}refresh();toast(msg||L('Убрано','Removed'),{type:'ok'});}});};
@@ -6222,7 +6230,7 @@ ACT.jarDel=()=>{const {t,owner,session}=S.ui.jar;closeSheet(true);ask({icon:'tra
 function openTopic(t,who,ans,dir){const other=who&&who!=='me'&&person(who);const shown=ans!=null&&ans!==''?jarFrom(t,ansVal(ans),{dir:dir?dir.split(' '):undefined}):null;
  const theirs=other?(shown||(other.jars||[]).map(normJar).find(x=>x.t===t)||null):null;const mine=S.me.jars.find(j=>j.t===t);
  sheet(()=>({title:topic(t),sub:T(CATS.find(c=>c.id===TOPICS[t]?.cat)||''),body:`<p class="topic-desc">${esc(T(TOPIC_DESC[t]))}</p>
- ${grp(theirs?L('Как откликается','How it feels'):L('Твой ответ','Your answer'),`${theirs?ansRow(pname(who),theirs):''}${ansRow(L('Ты','You'),mine||null,mine&&mine.vis!=='public'?L('видишь только ты','only you see it'):'')}`,{list:1})}`,
+ ${theirs&&mine?grp(L('Как откликается','How it feels'),`${cmpRow({t,a:normJar(mine),b:theirs},who,{plain:1,why:false})}${mine.vis&&mine.vis!=='public'?`<p class="note" style="margin-top:8px">${L('Твой ответ видишь только ты','Only you see your answer')}</p>`:''}`,{cls:'bare'}):theirs?grp(L(`Ответ ${esc(pname(who))}`,`${esc(pname(who))}’s answer`),jarsHTML([theirs],{}),{cls:'bare'})+`<p class="note">${L('У тебя этого интереса пока нет.','You don’t have this interest yet.')}</p>`:grp(L('Твой ответ','Your answer'),jarsHTML(mine?[mine]:[],{vis:1}),{cls:'bare'})}`,
  foot:`<button class="btn ${mine?'secondary':'primary'}" data-act="editJar" data-v="${t}">${mine?L('Изменить у себя','Edit mine'):`${I.plus}${L('Добавить к себе','Add to mine')}`}</button>`}));}
 ACT.topic=a=>openTopic(a.dataset.v,a.dataset.who,a.dataset.ans,a.dataset.dir);
 /** all public jars of a person, grouped by category */

@@ -23,3 +23,9 @@ Decision record: `public/prototype-v11-compare-matrix.html`. Notes: `public/prot
 - Each interest step starts with «Как тебе ближе» (preset «Всё») and «Кто видит» chips (per interest; hidden when the audience is fixed).
 - Tapping a level, «обсуждаемо» or «табу» moves to the next interest after a short pause.
 - Final step «Проверь ответы»: drafted answers as capsules (tap to edit), Save / Back / Cancel. Replaces the old single «who sees» step.
+
+## 2026-10-21 — UI/UX pass on the add/edit flow
+
+- Review step: sheet fits its content (was full-height with a big gap above Save); Cancel · Back · Save in one row; editing an item from the review returns to the review.
+- Edit sheet uses the add-flow order: role chips (preset «Всё»), audience chips, then the level; role chips are dimmed for taboo/negotiable.
+- Other person's interest sheet shows the comparison capsule instead of the old badge row.
