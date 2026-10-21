@@ -1,0 +1,20 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>FetUre V12 — что изменено</title><style>
+:root{--bg:#F3EEF2;--surf:#fff;--ink:#1E1219;--mute:#6F5A67;--line:#E6DAE3;--acc:#E01A3E;--lil:#5C47D6}
+@media(prefers-color-scheme:dark){:root{--bg:#1A0F16;--surf:#241520;--ink:#FBF0F4;--mute:#BCA4B1;--line:#3E2636;--acc:#FF3355;--lil:#B9A6FF}}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:860px;margin:auto;padding:28px 16px 64px}h1{font-size:clamp(28px,6vw,42px);line-height:1.1;letter-spacing:-.03em}h2{margin-top:36px;font-size:24px}
+a{color:var(--lil)}code{background:var(--surf);border:1px solid var(--line);border-radius:6px;padding:1px 5px;font-size:.88em}
+li{margin:4px 0}.cta{display:inline-block;margin:6px 0 10px;padding:12px 18px;border-radius:14px;background:var(--acc);color:#fff;font-weight:700;text-decoration:none}
+</style></head><body><main><a class="cta" href="prototype-v12.html?persona=full#P05:zoe">Открыть сравнение в V12 →</a>
+<h1>FetUre V12 — что изменено</h1>
+<p>V12 — копия V11 с новой системой сравнения двух людей. V11 остаётся замороженной: <code>public/prototype-v11.html</code>. Логика и решения — <a href="prototype-v11-compare-matrix.html">матрица сравнения</a>.</p>
+<h2>21.10.2026 — сравнение интересов</h2>
+<ul>
+<li><b>Без общего процента.</b> Итог словами: «8 совпадений, дополняете в 5».</li>
+<li><b>Пять групп:</b> Дополняете друг друга · Совпадает · Можно попробовать · Стоит обсудить · Границы.</li>
+<li><b>Правила.</b> «Сильно» — 6–10, «слабо» — 1–5. Оба сильно → совпадает; один «даю», другой «получаю» → дополняете; оба только «даю» или оба только «получаю» → стоит обсудить. Разница 4+ → стоит обсудить. Близкие слабые уровни → можно попробовать. «Обсуждаемо» → стоит обсудить.</li>
+<li><b>Границы.</b> Табу участвует, только если оно открыто публично: «У Vera это табу», «Общая граница». Скрытые и приватные ответы не используются и не раскрываются.</li>
+<li><b>Вид.</b> Строка — эталонная капсула: моя заливка с названием внутри, по краям обе оценки и роли. Без анимаций.</li>
+<li><b>Где:</b> экран «Что у вас общего» (P05) и блок в профиле/анкете (первые 3 совпадения + «Ещё»).</li>
+<li><b>Тестовые данные.</b> У Alex добавлены публичные ответы. Новые люди: Zoe (дополняете), Mark (одинаковые роли), Ira (понемногу), Ren (по-разному), Vera (границы), Oli (мало данных). На P05 есть переключатель «Сравнить с», в меню экранов — пункты «Сравнение · …».</li>
+</ul></main></body></html>
