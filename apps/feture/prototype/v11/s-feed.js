@@ -80,7 +80,7 @@ function actCard(x,i){const who=x.who,nm=`<b>${esc(pname(who))}</b>`;let text,bo
   else text=L(`${nm} в ${n} сообществах`,`${nm} is in ${n} communities`);
   const strip=['like','follow'].includes(x.kind);
   if(open)body=`<div class="actc-list">${x.items.map(actPrev).join('')}<button class="btn text auto" data-act="actOpen" data-v="${esc(x.gid)}">${L('Свернуть','Collapse')}</button></div>`;
-  else if(strip)body=`<div class="actc-strip">${x.items.slice(0,5).map(th).join('')}${n>5?`<button class="actc-th more" data-act="actOpen" data-v="${esc(x.gid)}" aria-label="${L('Показать все','Show all')}">+${n-5}</button>`:''}</div>`;
+  else if(strip)body=`<div class="actc-strip">${x.items.slice(0,12).map(th).join('')}${n>2?`<button class="actc-th more ${x.kind==='follow'?'round':''}" data-act="actOpen" data-v="${esc(x.gid)}" aria-label="${L('Показать все','Show all')}"><b>${n}</b><small>${L('все','all')}</small></button>`:''}</div>`;
   else body=`<div class="actc-list">${x.items.slice(0,2).map(actPrev).join('')}${n>2?`<button class="btn text auto" data-act="actOpen" data-v="${esc(x.gid)}">${L(`Ещё ${n-2}`,`${n-2} more`)}</button>`:''}</div>`;
   return `<div class="actc" style="animation-delay:${(i||0)*40}ms"><button class="actc-av" data-go="P01" data-p='${esc(JSON.stringify({id:who}))}' aria-label="${esc(pname(who))}">${av(who,'sm')}</button><div class="actc-b">${head(text)}${body}</div></div>`;}
  if(x.k==='like')text=L(`${nm}: нравится публикация ${esc(pname(x.post.author))}`,`${nm} likes ${esc(pname(x.post.author))}’s post`);
