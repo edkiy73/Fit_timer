@@ -91,18 +91,18 @@ main.wrap{padding-block:16px 72px;display:grid;gap:22px}
 .repel{animation:ga 1.4s var(--spring) both,gb 1.4s var(--spring) both,poke 5.6s ease-in-out infinite;animation-delay:var(--d),calc(var(--d) + .1s),calc(var(--d) + 1.4s)}
 .repel .part.l{width:min(var(--wl),calc(50% - 6px - var(--gx)))}
 .repel .part.r{width:min(var(--wr),calc(50% - 6px - var(--gx)))}
-@keyframes poke{0%{--gx:14px}22%{--gx:0px}27%{--gx:6px}32%{--gx:0px}40%{--gx:7px}62%{--gx:14px}100%{--gx:14px}}
+@keyframes poke{0%{--gx:7px}22%{--gx:0px}27%{--gx:3px}32%{--gx:0px}40%{--gx:4px}62%{--gx:7px}100%{--gx:7px}}
 .repel .lab.wl{clip-path:inset(0 calc(100% - 6px - min(var(--wl),calc(50% - 6px - var(--gx)))) 0 0)}.repel .lab.wr{clip-path:inset(0 0 0 calc(100% - 6px - min(var(--wr),calc(50% - 6px - var(--gx)))))}
-.dg{position:absolute;top:50%;width:var(--ps);height:var(--ps);margin-top:calc(var(--ps) / -2);border-radius:50%;opacity:0;animation:dg var(--pd) cubic-bezier(.5,0,.7,.4) infinite both;animation-delay:calc(var(--d) + 1.4s + var(--dd))}
-.dg.l{left:calc(6px + var(--el) - var(--ps));background:var(--me)}
-.dg.r{right:calc(6px + var(--er) - var(--ps));background:var(--them);animation-name:dgL}
-@keyframes dg{0%{opacity:1;transform:translateX(0)}24%{opacity:1;transform:translateX(calc(var(--ps) * 1.7))}24.5%,100%{opacity:0;transform:translateX(calc(var(--ps) * 1.7))}}
-@keyframes dgL{0%{opacity:1;transform:translateX(0)}24%{opacity:1;transform:translateX(calc(var(--ps) * -1.7))}24.5%,100%{opacity:0;transform:translateX(calc(var(--ps) * -1.7))}}
-.dp{position:absolute;z-index:2;top:50%;width:var(--ps);height:var(--ps);margin-top:calc(var(--ps) / -2);border-radius:50%;opacity:0;animation:drift var(--pd) linear infinite both;animation-delay:calc(var(--d) + 1.4s + var(--dd))}
+.dg{position:absolute;top:50%;width:calc(var(--ps) * 1.9);height:calc(var(--ps) * 1.9);margin-top:calc(var(--ps) * -.95);border-radius:50%;animation:dg var(--pd) ease-in-out infinite both;animation-delay:calc(var(--d) + 1.4s + var(--dd))}
+.dg.l{left:calc(6px + var(--el) - var(--ps) * 1.9);background:var(--me)}
+.dg.r{right:calc(6px + var(--er) - var(--ps) * 1.9);background:var(--them);animation-name:dgL}
+@keyframes dg{0%{transform:translateX(0)}20%{transform:translateX(calc(var(--ps) * 1.15))}36%,100%{transform:translateX(0)}}
+@keyframes dgL{0%{transform:translateX(0)}20%{transform:translateX(calc(var(--ps) * -1.15))}36%,100%{transform:translateX(0)}}
+.dp{position:absolute;z-index:2;top:50%;width:var(--ps);height:var(--ps);margin-top:calc(var(--ps) / -2);border-radius:50%;opacity:0;animation:drift var(--pd) ease-in-out infinite both;animation-delay:calc(var(--d) + 1.4s + var(--dd))}
 .dp.l{left:calc(6px + var(--el) - var(--ps));background:var(--me)}
 .dp.r{right:calc(6px + var(--er) - var(--ps));background:var(--them);animation-name:driftL}
-@keyframes drift{0%,24%{opacity:0;transform:translateX(calc(var(--ps) * 1.7)) scale(1)}24.5%{opacity:1;transform:translateX(calc(var(--ps) * 1.7)) scale(1);animation-timing-function:cubic-bezier(.2,.6,.4,1)}68%{opacity:0;transform:translateX(max(calc(var(--ps) * 2.2),calc((100cqw - 12px - var(--el) - var(--er)) * .36))) scale(.25)}100%{opacity:0}}
-@keyframes driftL{0%,24%{opacity:0;transform:translateX(calc(var(--ps) * -1.7)) scale(1)}24.5%{opacity:1;transform:translateX(calc(var(--ps) * -1.7)) scale(1);animation-timing-function:cubic-bezier(.2,.6,.4,1)}68%{opacity:0;transform:translateX(calc(max(calc(var(--ps) * 2.2),calc((100cqw - 12px - var(--el) - var(--er)) * .36)) * -1)) scale(.25)}100%{opacity:0}}
+@keyframes drift{0%,15%{opacity:0;transform:translate(calc(var(--ps) * .9),0) scale(.5)}18%{opacity:1;transform:translate(calc(var(--ps) * 1.05),0) scale(.6)}25%{opacity:1;transform:translate(calc(var(--ps) * 1.9),0) scale(.9)}38%{opacity:1;transform:translate(calc((max(calc(var(--ps) * 2.8),calc((100cqw - 12px - var(--el) - var(--er)) * .36)) * .45 + var(--ps) * 1.1)),-3px) scale(.75)}52%{opacity:.85;transform:translate(calc((max(calc(var(--ps) * 2.8),calc((100cqw - 12px - var(--el) - var(--er)) * .36)) * .75 + var(--ps) * .5)),1.5px) scale(.55)}66%{opacity:0;transform:translate(calc(max(calc(var(--ps) * 2.8),calc((100cqw - 12px - var(--el) - var(--er)) * .36))),-1px) scale(.3)}100%{opacity:0}}
+@keyframes driftL{0%,15%{opacity:0;transform:translate(calc(-1 * var(--ps) * .9),0) scale(.5)}18%{opacity:1;transform:translate(calc(-1 * var(--ps) * 1.05),0) scale(.6)}25%{opacity:1;transform:translate(calc(-1 * var(--ps) * 1.9),0) scale(.9)}38%{opacity:1;transform:translate(calc(-1 * (max(calc(var(--ps) * 2.8),calc((100cqw - 12px - var(--el) - var(--er)) * .36)) * .45 + var(--ps) * 1.1)),-3px) scale(.75)}52%{opacity:.85;transform:translate(calc(-1 * (max(calc(var(--ps) * 2.8),calc((100cqw - 12px - var(--el) - var(--er)) * .36)) * .75 + var(--ps) * .5)),1.5px) scale(.55)}66%{opacity:0;transform:translate(calc(-1 * max(calc(var(--ps) * 2.8),calc((100cqw - 12px - var(--el) - var(--er)) * .36))),-1px) scale(.3)}100%{opacity:0}}
 .tn{position:absolute;top:50%;width:var(--ts);height:var(--ts);margin-top:calc(var(--ts) / -2);border-radius:50%;animation:reach var(--pd) ease-in-out infinite;animation-delay:calc(var(--d) + 1.4s + var(--td,0s))}
 .tow{--el:min(var(--wl),calc(100cqw - 60px - var(--wr)));--er:min(var(--wr),calc(100cqw - 60px - var(--wl)))}
 .tow .part.l{width:var(--el)}.tow .part.r{width:var(--er)}
@@ -230,7 +230,7 @@ function row([t,a,b,o={}],i){
   let sd='';
   let pl='',bd='';
   if(!meet&&!blocked&&!repel&&!still&&(A||B)){const soft=ka==='soft'||kb==='soft';const m2=soft?3:Math.min(A,B);
-    const n=m2>=5?2:1,pd=(9.2-Math.min(m2,10)*.2).toFixed(2),ps=Math.round(12+Math.min(m2,8)*.8);
+    const n=m2>=5?2:1,pd=(9.2-Math.min(m2,10)*.2).toFixed(2),ps=Math.round(9+Math.min(m2,8)*.45);
     for(let k=0;k<n;k++){const dd=(k*(+pd)/n).toFixed(2);
       if(A){pl+=`<span class="dp l" style="--ps:${ps}px;--pd:${pd}s;--dd:${dd}s"></span>`;bd+=`<span class="dg l" style="--ps:${ps}px;--pd:${pd}s;--dd:${dd}s"></span>`;}
       if(B){const d2=(+dd+(+pd)/(2*n)).toFixed(2);pl+=`<span class="dp r" style="--ps:${ps}px;--pd:${pd}s;--dd:${d2}s"></span>`;bd+=`<span class="dg r" style="--ps:${ps}px;--pd:${pd}s;--dd:${d2}s"></span>`;}}}
