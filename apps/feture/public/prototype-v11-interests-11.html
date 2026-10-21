@@ -81,9 +81,15 @@ main.wrap{padding-block:16px 72px;display:grid;gap:22px}
 .chem .pair .av{width:52px;height:52px;font-size:16px}
 .chem .pair .av + .av{margin-left:-14px}
 .chem .score{font-size:40px;font-weight:850;letter-spacing:-.05em;line-height:1;background:linear-gradient(90deg,var(--me),var(--them));-webkit-background-clip:text;background-clip:text;color:transparent}
-.chem .score small{font-size:16px;letter-spacing:0;color:var(--mute);-webkit-text-fill-color:var(--mute);font-weight:700;margin-left:6px}
+.chem .score small{display:block;margin-top:4px;font-size:15px;letter-spacing:0;color:var(--mute);-webkit-text-fill-color:var(--mute);font-weight:700}
 .chem .what{font-size:14px;color:var(--mute)}
 .chem .what b{color:var(--ink)}
+.repel .part.l{width:min(var(--wl),calc(50% - 18px));animation:repL 1.6s ease-in-out infinite;animation-delay:calc(var(--d) + 1.4s)}
+.repel .part.r{width:min(var(--wr),calc(50% - 18px));animation:repR 1.6s ease-in-out infinite;animation-delay:calc(var(--d) + 1.4s)}
+@keyframes repL{0%,100%{transform:none}50%{transform:translateX(-4px)}}
+@keyframes repR{0%,100%{transform:none}50%{transform:translateX(4px)}}
+.repel .lab.wl{clip-path:inset(0 calc(50% + 18px) 0 0)}.repel .lab.wr{clip-path:inset(0 0 0 calc(50% + 18px))}
+.det .v.no{color:var(--danger)}
 .gr.hard{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--danger) 18%,var(--raise)) 0 6px,var(--raise) 6px 12px)}
 .gr.soft::before{content:"";position:absolute;inset:0;border-radius:99px;border:1.5px dashed color-mix(in srgb,var(--warn) 70%,transparent);z-index:0}
 .dr{position:absolute;top:50%;left:var(--jx);width:var(--ds);height:var(--ds);margin:calc(var(--ds) / -2) 0 0 calc(var(--ds) / -2);border-radius:50%;opacity:0;animation-delay:calc(var(--d) + 1.3s + var(--dd))}
@@ -140,7 +146,7 @@ main.wrap{padding-block:16px 72px;display:grid;gap:22px}
 <div class="wrap"><header class="intro">
   <div class="top"><span class="eyebrow">FetUre V11 · химия</span><button class="btn" id="themeBtn" type="button">Тема: системная</button></div>
   <h1>Химия: где у вас реакция</h1>
-  <p class="lead">Роли (даю, получаю, смотрю, всё) — три способа показать, переключатель сверху. «Подпись»: роль мелко под цифрой. «По нажатию»: строка раскрывается и говорит, дополняете ли вы друг друга. «Подпись + поток»: один даёт, другой получает — капельки текут от дающего к получающему; взаимный интерес (классический секс) или оба «даю и получаю» — текут в обе стороны; оба только «даю» — летят навстречу и лопаются на стыке: стоит договориться. Капля вытекает из аватара с оценкой. Чем сильнее интерес, тем она длиннее. Если обоим сильно, капли дотягиваются и мягко сливаются, а через перемычку перетекают капельки: место встречи смещается к тому, у кого оценка ниже: 10/10 — ровно посередине, 8/10 — заметно ближе к тебе. Чем выше общий интерес, тем больше капелек и пузырьков. Подписи над группами только для этой страницы.</p>
+  <p class="lead">Роли (даю, получаю, смотрю, всё) — три способа показать, переключатель сверху. «Подпись»: роль мелко под цифрой. «По нажатию»: строка раскрывается и говорит, дополняете ли вы друг друга. «Подпись + поток»: один даёт, другой получает — капельки текут от дающего к получающему; взаимный интерес (классический секс) или оба «даю и получаю» — текут в обе стороны; оба только «даю» или оба только «получаю» — химии нет: капли отталкиваются, как одинаковые полюса, и не входят в процент. Капля вытекает из аватара с оценкой. Чем сильнее интерес, тем она длиннее. Если обоим сильно, капли дотягиваются и мягко сливаются, а через перемычку перетекают капельки: место встречи смещается к тому, у кого оценка ниже: 10/10 — ровно посередине, 8/10 — заметно ближе к тебе. Чем выше общий интерес, тем больше капелек и пузырьков. Подписи над группами только для этой страницы.</p>
 </header></div>
 <div class="bar"><div class="wrap" style="gap:8px;align-items:center"><div class="seg" role="group" aria-label="Как показать роль"><button type="button" id="r_cap">Подпись</button><button type="button" id="r_tap">По нажатию</button><button type="button" id="r_flow">Подпись + поток</button></div><button class="btn" id="replay" type="button">Ещё раз</button></div></div>
 
@@ -149,7 +155,8 @@ main.wrap{padding-block:16px 72px;display:grid;gap:22px}
 <script>
 (function(){
 const CASES=[
-  ['Реакция',[['Классический секс',{v:10},{v:10},{mutual:true}],['Оральные ласки',{v:10,d:['give']},{v:10,d:['give']}],['Массаж с маслом',{v:9,d:['give','get']},{v:10,d:['give','get']}],['Забота после',{v:10,d:['give']},{v:10,d:['get']}],['Связывание',{v:9,d:['get']},{v:10,d:['give']}],['Шибари',{v:8,d:['give']},{v:10,d:['give']}],['Латекс-вечеринки',{v:9,d:['give','get','watch']},{v:9,d:['give','get','watch']}],['Ролевые игры',{v:8,d:['watch']},{v:9,d:['give','watch']}]]],
+  ['Реакция',[['Классический секс',{v:10},{v:10},{mutual:true}],['Оральные ласки',{v:10,d:['give']},{v:9,d:['get']}],['Массаж с маслом',{v:9,d:['give','get']},{v:10,d:['give','get']}],['Забота после',{v:10,d:['give']},{v:10,d:['get']}],['Связывание',{v:9,d:['get']},{v:10,d:['give']}],['Шибари',{v:8,d:['give']},{v:10,d:['get']}],['Латекс-вечеринки',{v:9,d:['give','get','watch']},{v:9,d:['give','get','watch']}],['Ролевые игры',{v:8,d:['watch']},{v:9,d:['give','watch']}]]],
+  ['Не подходят по ролям',[['Оральный секс',{v:10,d:['get']},{v:10,d:['get']}],['Анальный секс',{v:9,d:['give']},{v:10,d:['give']}]]],
   ['Нет реакции',[['Латекс',{v:5,d:['get']},{v:5}],['Массаж',{v:1},{v:1}],['Воск',{v:3,d:['get']},{v:1,d:['give']}],['Показ',{v:1,d:['watch']},{v:10,d:['give']}],['Сенсорные игры',{v:8,d:['get']},{v:3,d:['get']}],['Контроль',{v:7,d:['get']},{v:8,d:['give']}]]],
   ['Границы',[['Порка',{v:7},{limit:'hard'}],['Игры с дыханием',{limit:'soft'},{v:8}],['Сильная боль',{limit:'hard'},{limit:'hard'}]]],
   ['Нет в карте',[['Эксперименты',null,{v:6}]]]
@@ -170,7 +177,8 @@ const H=v=>38;
 function row([t,a,b,o={}],i){
   const ka=kind(a),kb=kind(b),blocked=ka==='hard'||kb==='hard';
   const A=ka==='v'?a.v:0,B=kb==='v'?b.v:0;
-  const meet=!!(A&&B&&!blocked&&A+B>=17);
+  const RR=rel(a,b,o),repel=RR==='same'&&!blocked;
+  const meet=!!(A&&B&&!blocked&&A+B>=17&&!repel);
   const half=()=>'';
   const m=Math.min(A,B);
   let dr='';const R=rel(a,b,o);
@@ -191,12 +199,12 @@ function row([t,a,b,o={}],i){
   const goo=`<div class="goo">${A?`<span class="blob l"></span><span class="part l" style="--h:${H(A)}px"></span>`:''}${B?`<span class="blob r"></span><span class="part r" style="--h:${H(B)}px"></span>`:''}${mw?'<span class="mix"></span>':''}${dr}</div>${fz}`;
   const lab=cls=>`<div class="lab ${cls}">${side(a,'me')}<span class="nm">${t}</span>${side(b,'them')}</div>`;
   const blk=blocked||ka==='soft'||kb==='soft'||!A||!B;
-  const R2=rel(a,b,o),vt=R2==='mutual'?'<span class="v fit">взаимно — роли не нужны</span>':R2==='both'?'<span class="v fit">обоюдно: оба даёте и получаете</span>':R2==='fit'?'<span class="v fit">дополняете друг друга</span>':R2==='same'?'<span class="v same">оба '+(a.d[0]==='give'?'даёте':'получаете')+' — договоритесь</span>':'<span class="v"></span>';
+  const R2=rel(a,b,o),vt=R2==='mutual'?'<span class="v fit">взаимно — роли не нужны</span>':R2==='both'?'<span class="v fit">обоюдно: оба даёте и получаете</span>':R2==='fit'?'<span class="v fit">дополняете друг друга</span>':R2==='same'?'<span class="v no">оба '+(a.d[0]==='give'?'даёте':'получаете')+' — не подходит</span>':'<span class="v"></span>';
   const det=role==='tap'&&(dirW(a&&a.d)||dirW(b&&b.d)||o.mutual)?`<div class="det"><div><span>Ты: <b>${o.mutual?'вместе':dirW(a&&a.d)||'—'}</b></span>${vt}<span>M: <b>${o.mutual?'вместе':dirW(b&&b.d)||'—'}</b></span></div></div>`:'';
-  return `<div class="item">`+`<div class="gr ${blocked?'hard':(ka==='soft'||kb==='soft')?'soft':''} ${meet?'meet':''}" style="--ir:${ir}px;--mw:${mw}px;--jr:${jr.toFixed(3)};--ra:${A/10};--rb:${B/10};--d:${(i*.07).toFixed(2)}s">${half(ka,'l')}${half(kb,'r')}${goo}${lab('')}${A?lab('wl'):''}${B?lab('wr'):''}</div>`+det+`</div>`;
+  return `<div class="item">`+`<div class="gr ${repel?'repel':''} ${blocked?'hard':(ka==='soft'||kb==='soft')?'soft':''} ${meet?'meet':''}" style="--ir:${ir}px;--mw:${mw}px;--jr:${jr.toFixed(3)};--ra:${A/10};--rb:${B/10};--d:${(i*.07).toFixed(2)}s">${half(ka,'l')}${half(kb,'r')}${goo}${lab('')}${A?lab('wl'):''}${B?lab('wr'):''}</div>`+det+`</div>`;
 }
 function chem(){
-  let mn=0,mx=0,react=0;CASES.flatMap(c=>c[1]).forEach(([,a,b])=>{if(kind(a)==='v'&&kind(b)==='v'){mn+=Math.min(a.v,b.v);mx+=Math.max(a.v,b.v);if(a.v+b.v>=17)react++;}});
+  let mn=0,mx=0,react=0;CASES.flatMap(c=>c[1]).forEach(([,a,b,o])=>{if(kind(a)==='v'&&kind(b)==='v'){const no=rel(a,b,o||{})==='same';mn+=no?0:Math.min(a.v,b.v);mx+=Math.max(a.v,b.v);if(a.v+b.v>=17&&!no)react++;}});
   const sc=Math.round(mn/mx*100);const word=sc>=80?'Сильная химия':sc>=60?'Есть химия':sc>=40?'Искрит местами':'Пока слабо';
   return `<div class="chem"><span class="pair"><i class="av me">Я</i><i class="av them">M</i></span><span class="score">${sc}%<small>${word}</small></span><span class="what">Реакция в <b>${react}</b> интересах</span></div>`;}
 let role='cap';
