@@ -53,7 +53,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .seg button{flex:1;font:650 14px var(--font);color:var(--mute);background:none;border:0;border-radius:99px;padding:7px 8px;cursor:pointer;min-height:36px;white-space:nowrap}
 .seg button[aria-pressed="true"]{background:var(--surf);color:var(--ink);box-shadow:0 2px 6px -2px var(--shadow)}
 .whos{display:none;justify-content:space-between;font-size:13px;font-weight:750;padding:0 6px}
-.cmp .whos{display:flex}
+.cmp .whos{display:none}
 .whos .me{color:var(--me)}.whos .them{color:var(--them)}
 main.wrap{padding-block:14px 64px;display:grid;gap:8px}
 
@@ -68,7 +68,16 @@ main.wrap{padding-block:14px 64px;display:grid;gap:8px}
 .gr .bl.r{right:5px;width:var(--wr);background:linear-gradient(270deg,color-mix(in srgb,var(--them) 75%,var(--bg)),var(--them))}
 /* widths: profile — the drop may fill the whole row; compare — each drop up to ~56% so two strong ones meet */
 .gr{--wl:calc(var(--p) - 10px);--wr:0px}
-.cmp .gr{--wl:calc(var(--p) * .56);--wr:calc(var(--q) * .56)}
+.cmp .gr{--wl:calc(36px + var(--p) * .46);--wr:calc(36px + var(--q) * .46)}
+.cmp .lab{justify-content:space-between;padding:0 8px}
+.cmp .lab .nm{flex:1;text-align:center}
+.side{display:flex;align-items:center;gap:6px;flex:none;min-width:58px;font-weight:850;font-size:15px;font-variant-numeric:tabular-nums}
+.side.r{justify-content:flex-end}
+.side small{font-size:11.5px;font-weight:750}
+.av{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;flex:none;font:800 12px/1 var(--font);color:#fff;box-shadow:0 0 0 2px var(--surf)}
+.av.me{background:linear-gradient(135deg,var(--me),var(--hot))}
+.av.them{background:linear-gradient(135deg,var(--them),color-mix(in srgb,var(--them) 60%,#fff))}
+.lab.wl .av,.lab.wr .av{visibility:hidden}
 .lab{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 18px;z-index:3;pointer-events:none;font-size:14.5px;font-weight:700}
 .cmp .lab{justify-content:center}
 .lab .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
@@ -102,7 +111,7 @@ main.wrap{padding-block:14px 64px;display:grid;gap:8px}
 <div class="wrap"><header class="intro">
   <div class="top"><span class="eyebrow">FetUre V11 · слияние</span><button class="btn" id="themeBtn" type="button">Тема: системная</button></div>
   <h1>Интересы: капли, которые сливаются</h1>
-  <p class="lead">В профиле — одна капля на интерес. В сравнении навстречу твоей тянется капля mars_and_v. Если интерес взаимный и сильный, капли сливаются, а строка начинает светиться. Текст лежит прямо на строке и белеет там, где его накрывает капля.</p>
+  <p class="lead">В профиле — одна капля на интерес. В сравнении навстречу твоей тянется капля mars_and_v. Если интерес взаимный и сильный, капли сливаются, а строка начинает светиться. С краёв капсулы — аватар и оценка каждого.</p>
 </header></div>
 
 <div class="sticky" id="stk"><div class="wrap">
@@ -136,28 +145,29 @@ const kind=e=>!e?'none':e.limit==='hard'?'hard':e.limit?'soft':'v';
 let mode='cmp';
 const $=id=>document.getElementById(id);
 
+function side(e,who){const k=kind(e);
+  const val=k==='v'?`<span>${e.v}</span>`:k==='hard'?'<small class="t">табу</small>':k==='soft'?'<small class="s">обсудить</small>':'<small class="x">—</small>';
+  const av=`<i class="av ${who}">${who==='me'?'Я':'M'}</i>`;
+  return `<span class="side ${who==='me'?'l':'r'}">${who==='me'?av+val:val+av}</span>`;}
 function row([t,a,b],i){
   const cmp=mode==='cmp',ka=kind(a),kb=kind(b);
   const d=`--d:${(i*.07).toFixed(2)}s`;
-  const hard=ka==='hard'||(cmp&&kb==='hard');
-  if(hard){const who=ka==='hard'&&cmp&&kb==='hard'?'табу у обоих':ka==='hard'?'табу':'табу у mars_and_v';
-    return `<div class="gr hard"><div class="lab"><span class="nm">${t}</span><span class="t" style="font-size:12.5px">${cmp?'':who}</span></div>${cmp?`<span class="lim r t">${who}</span>`:''}</div>`;}
-  const pa=ka==='v'?a.v*10:0, pb=cmp&&kb==='v'?b.v*10:0;
-  const merged=cmp&&pa&&pb&&a.v+b.v>=17;
-  const soft=ka==='soft'||(cmp&&kb==='soft');
-  const c0=cmp?'var(--me)':pa?heat(Math.max(1,a.v-4)):'', c1=cmp?'color-mix(in srgb,var(--me) 70%,var(--hot))':pa?heat(a.v):'';
-  const lab=cls=>`<div class="lab ${cls}"><span class="nm">${t}</span>${pa?`<span class="v">${a.v}</span>`:''}</div>`;
-  let lims='';
-  if(cmp){ if(ka==='soft')lims+=`<span class="lim l s">обсудить</span>`; else if(ka==='none')lims+=`<span class="lim l x">нет у тебя</span>`;
-           if(kb==='soft')lims+=`<span class="lim r s">обсудить</span>`; }
-  else if(ka==='soft')lims+=`<span class="lim r s">обсуждаемо</span>`;
-  return `<div class="gr ${merged?'merged':''} ${soft?'soft':''}" style="--p:${pa}%;--q:${pb}%;--c0:${c0};--c1:${c1};${d}"><div class="goo">${pa?'<span class="bl l"></span>':''}${pb?'<span class="bl r"></span>':''}</div>${lab('ink')}${pa?lab('wl'):''}${pb?lab('wr'):''}${lims}</div>`;
+  if(!cmp){
+    if(ka==='hard')return `<div class="gr hard"><div class="lab"><span class="nm">${t}</span><span class="t" style="font-size:12.5px">табу</span></div></div>`;
+    const pa=ka==='v'?a.v*10:0;
+    const lab=cls=>`<div class="lab ${cls}"><span class="nm">${t}</span>${pa?`<span class="v">${a.v}</span>`:'<span class="s" style="font-size:12.5px">обсуждаемо</span>'}</div>`;
+    return `<div class="gr ${ka==='soft'?'soft':''}" style="--p:${pa}%;--q:0%;--c0:${pa?heat(Math.max(1,a.v-4)):''};--c1:${pa?heat(a.v):''};${d}"><div class="goo">${pa?'<span class="bl l"></span>':''}</div>${lab('ink')}${pa?lab('wl'):''}</div>`;}
+  const hard=ka==='hard'||kb==='hard';
+  const pa=!hard&&ka==='v'?a.v*10:0, pb=!hard&&kb==='v'?b.v*10:0;
+  const merged=pa&&pb&&a.v+b.v>=17, soft=!hard&&(ka==='soft'||kb==='soft');
+  const lab=cls=>`<div class="lab ${cls}">${side(a,'me')}<span class="nm">${t}</span>${side(b,'them')}</div>`;
+  return `<div class="gr ${hard?'hard':''} ${merged?'merged':''} ${soft?'soft':''}" style="--p:${pa}%;--q:${pb}%;--c0:var(--me);--c1:color-mix(in srgb,var(--me) 70%,var(--hot));${d}"><div class="goo">${pa?'<span class="bl l"></span>':''}${pb?'<span class="bl r"></span>':''}</div>${lab('ink')}${pa?lab('wl'):''}${pb?lab('wr'):''}</div>`;
 }
 function render(){
   const cmp=mode==='cmp';
   $('root').classList.toggle('cmp',cmp);
   const list=cmp?ROWS:ROWS.filter(r=>r[1]);
-  $('root').innerHTML=`<div class="whos"><span class="me">← ты</span><span class="them">mars_and_v →</span></div>`+list.map(row).join('')+`<div class="more"><button type="button">Показать все · ${ROWS.filter(r=>r[1]).length+EXTRA}</button><button class="add" type="button">+ Добавить</button></div><p class="note">${cmp?'Слились — сильно нравится обоим. Между каплями пусто — интерес не взаимный. Табу никогда не сливается. Видны только интересы, которые mars_and_v открыл тебе.':'Капля длиннее и горячее — интерес сильнее. Пунктир — обсуждаемо, штриховка — табу.'}</p>`;
+  $('root').innerHTML=`<div class="whos"><span class="me">← ты</span><span class="them">mars_and_v →</span></div>`+list.map(row).join('')+`<div class="more"><button type="button">Показать все · ${ROWS.filter(r=>r[1]).length+EXTRA}</button><button class="add" type="button">+ Добавить</button></div>`;
   $('mSolo').setAttribute('aria-pressed',!cmp);$('mCmp').setAttribute('aria-pressed',cmp);
 }
 $('mSolo').onclick=()=>{mode='solo';render();};
