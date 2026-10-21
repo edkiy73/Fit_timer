@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FetUre V11 — вместо баночек</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400..900&display=swap" rel="stylesheet">
+<style>
+/* Layout: one list of 46px "merge" capsules; profile = one drop, compare = two drops meeting in the middle. Tokens = FetUre V11. */
+@property --p{syntax:"<percentage>";inherits:true;initial-value:0%}
+@property --q{syntax:"<percentage>";inherits:true;initial-value:0%}
+:root{
+  --bg:#F5F3F0; --surf:#FFFFFF; --raise:#ECE8E3; --line:#E6E2DD; --line2:#D2CDC6;
+  --ink:#17151A; --mute:#66616B; --faint:#9B969F;
+  --accent:#D0153A; --violet:#6550D8; --hot:#F2622E;
+  --warn:#9A5D00; --danger:#C4182F; --danger-soft:#FBE5E8;
+  --me:var(--accent); --them:var(--violet);
+  --bar:rgba(245,243,240,.9); --shadow:rgba(30,10,25,.2);
+  --font:"Onest",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --spring:cubic-bezier(.34,1.4,.55,1);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111012; --surf:#1B191D; --raise:#242127; --line:#2D2A30; --line2:#3E3A42;
+  --ink:#F3F0F4; --mute:#A9A3AD; --faint:#77717B;
+  --accent:#FF4566; --violet:#A797FF; --hot:#FF8A5C;
+  --warn:#E9B663; --danger:#FF6B80; --danger-soft:#3D161D;
+  --bar:rgba(17,16,18,.9); --shadow:rgba(0,0,0,.6); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111012; --surf:#1B191D; --raise:#242127; --line:#2D2A30; --line2:#3E3A42;
+  --ink:#F3F0F4; --mute:#A9A3AD; --faint:#77717B;
+  --accent:#FF4566; --violet:#A797FF; --hot:#FF8A5C;
+  --warn:#E9B663; --danger:#FF6B80; --danger-soft:#3D161D;
+  --bar:rgba(17,16,18,.9); --shadow:rgba(0,0,0,.6); color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--font);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bar)}
+.wrap{max-width:560px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.intro{padding-block:28px 12px;display:grid;gap:10px}
+h1{margin:0;font-size:clamp(28px,6vw,36px);line-height:1.05;letter-spacing:-.04em;font-weight:850;text-wrap:balance}
+p{margin:0;max-width:60ch}
+.lead{color:var(--mute);font-size:15.5px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.eyebrow{font-size:13px;color:var(--accent);font-weight:700}
+.btn{font:600 13px var(--font);color:var(--ink);background:var(--surf);border:1px solid var(--line2);border-radius:99px;padding:7px 14px;cursor:pointer;min-height:36px}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sticky{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bar);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.sticky .wrap{padding-block:10px;display:flex;gap:8px;align-items:center}
+.seg{flex:1;display:flex;background:var(--raise);border-radius:99px;padding:3px}
+.seg button{flex:1;font:650 14px var(--font);color:var(--mute);background:none;border:0;border-radius:99px;padding:7px 8px;cursor:pointer;min-height:36px;white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--surf);color:var(--ink);box-shadow:0 2px 6px -2px var(--shadow)}
+.whos{display:none;justify-content:space-between;font-size:13px;font-weight:750;padding:0 6px}
+.cmp .whos{display:flex}
+.whos .me{color:var(--me)}.whos .them{color:var(--them)}
+main.wrap{padding-block:14px 64px;display:grid;gap:8px}
+
+/* ---- the merge capsule ---- */
+.gr{position:relative;height:46px;border-radius:99px;background:var(--raise);overflow:hidden;isolation:isolate;
+  animation:gp 1.3s var(--spring) both,gq 1.3s var(--spring) both;animation-delay:var(--d),calc(var(--d) + .15s)}
+@keyframes gp{from{--p:0%}}@keyframes gq{from{--q:0%}}
+.gr .goo{position:absolute;inset:0}
+.cmp .gr .goo{filter:url(#goo)}
+.gr .bl{position:absolute;top:5px;bottom:5px;border-radius:99px}
+.gr .bl.l{left:5px;width:var(--wl);background:linear-gradient(90deg,var(--c0),var(--c1))}
+.gr .bl.r{right:5px;width:var(--wr);background:linear-gradient(270deg,color-mix(in srgb,var(--them) 75%,var(--bg)),var(--them))}
+/* widths: profile — the drop may fill the whole row; compare — each drop up to ~56% so two strong ones meet */
+.gr{--wl:calc(var(--p) - 10px);--wr:0px}
+.cmp .gr{--wl:calc(var(--p) * .56);--wr:calc(var(--q) * .56)}
+.lab{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 18px;z-index:3;pointer-events:none;font-size:14.5px;font-weight:700}
+.cmp .lab{justify-content:center}
+.lab .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.lab .v{font-weight:850;font-variant-numeric:tabular-nums}
+.cmp .lab .v{display:none}
+.lab.wl{color:#fff;clip-path:inset(0 calc(100% - 5px - var(--wl)) 0 0)}
+.lab.wr{color:#fff;clip-path:inset(0 0 0 calc(100% - 5px - var(--wr)))}
+.gr.merged{animation-name:gp,gq,heat;animation-duration:1.3s,1.3s,2.8s;animation-iteration-count:1,1,infinite;animation-delay:var(--d),calc(var(--d) + .15s),calc(var(--d) + 1.4s)}
+@keyframes heat{50%{box-shadow:0 0 22px -3px color-mix(in srgb,var(--hot) 70%,transparent)}}
+.gr.merged .lab.ink{color:transparent}
+.gr .lim{position:absolute;top:50%;transform:translateY(-50%);z-index:4;font-size:12px;font-weight:700}
+.gr .lim.l{left:18px}.gr .lim.r{right:18px}
+.t{color:var(--danger)}.s{color:var(--warn)}.x{color:var(--faint)}
+.gr.hard{background:repeating-linear-gradient(135deg,var(--danger-soft) 0 6px,var(--raise) 6px 12px)}
+.gr.soft::after{content:"";position:absolute;inset:0;border-radius:inherit;border:1.5px dashed color-mix(in srgb,var(--warn) 70%,transparent);z-index:5}
+.cmp .gr.hard .lab,.cmp .gr.lim-row .lab{justify-content:center}
+.more{display:flex;gap:8px;flex-wrap:wrap;padding-top:6px}
+.more button{font:650 14px var(--font);border-radius:99px;padding:8px 14px;cursor:pointer;min-height:40px;border:0;background:var(--raise);color:var(--ink)}
+.more button.add{background:none;color:var(--accent);border:1.5px dashed color-mix(in srgb,var(--accent) 45%,var(--line2))}
+.cmp .more{display:none}
+.note{font-size:13px;color:var(--mute);padding-top:10px}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <filter id="goo"><feGaussianBlur in="SourceGraphic" stdDeviation="7" result="b"/><feColorMatrix in="b" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -9" result="g"/><feComposite in="SourceGraphic" in2="g" operator="atop"/></filter>
+</defs></svg>
+
+<div class="wrap"><header class="intro">
+  <div class="top"><span class="eyebrow">FetUre V11 · слияние</span><button class="btn" id="themeBtn" type="button">Тема: системная</button></div>
+  <h1>Интересы: капли, которые сливаются</h1>
+  <p class="lead">В профиле — одна капля на интерес. В сравнении навстречу твоей тянется капля mars_and_v. Если интерес взаимный и сильный, капли сливаются, а строка начинает светиться. Текст лежит прямо на строке и белеет там, где его накрывает капля.</p>
+</header></div>
+
+<div class="sticky" id="stk"><div class="wrap">
+  <div class="seg" role="group" aria-label="Режим">
+    <button type="button" id="mSolo" aria-pressed="false">Мой профиль</button>
+    <button type="button" id="mCmp" aria-pressed="true">Сравнить с mars_and_v</button>
+  </div>
+  <button class="btn" id="replay" type="button">Ещё раз</button>
+</div></div>
+
+<main class="wrap" id="root"></main>
+
+<script>
+(function(){
+const ROWS=[
+  ['Забота после',{v:9},{v:10}],
+  ['Связывание',{v:8},{v:9}],
+  ['Шибари',{v:10},{v:3}],
+  ['Ролевые игры',{v:6},{v:8}],
+  ['Латекс',{v:5},{v:5}],
+  ['Массаж',{v:4},{v:6}],
+  ['Сенсорные игры',{v:2},{v:8}],
+  ['Показ',{limit:'soft'},{v:7}],
+  ['Контроль',{v:7},{limit:'hard'}],
+  ['Сильная боль',{limit:'hard'},{limit:'hard'}],
+  ['Эксперименты',null,{v:6}]
+];
+const EXTRA=4;
+const heat=v=>v<=5?`color-mix(in oklch,var(--violet) ${Math.round((5-v)/4*100)}%,var(--accent))`:`color-mix(in oklch,var(--accent) ${Math.round((10-v)/5*100)}%,var(--hot))`;
+const kind=e=>!e?'none':e.limit==='hard'?'hard':e.limit?'soft':'v';
+let mode='cmp';
+const $=id=>document.getElementById(id);
+
+function row([t,a,b],i){
+  const cmp=mode==='cmp',ka=kind(a),kb=kind(b);
+  const d=`--d:${(i*.07).toFixed(2)}s`;
+  const hard=ka==='hard'||(cmp&&kb==='hard');
+  if(hard){const who=ka==='hard'&&cmp&&kb==='hard'?'табу у обоих':ka==='hard'?'табу':'табу у mars_and_v';
+    return `<div class="gr hard"><div class="lab"><span class="nm">${t}</span><span class="t" style="font-size:12.5px">${cmp?'':who}</span></div>${cmp?`<span class="lim r t">${who}</span>`:''}</div>`;}
+  const pa=ka==='v'?a.v*10:0, pb=cmp&&kb==='v'?b.v*10:0;
+  const merged=cmp&&pa&&pb&&a.v+b.v>=17;
+  const soft=ka==='soft'||(cmp&&kb==='soft');
+  const c0=cmp?'var(--me)':pa?heat(Math.max(1,a.v-4)):'', c1=cmp?'color-mix(in srgb,var(--me) 70%,var(--hot))':pa?heat(a.v):'';
+  const lab=cls=>`<div class="lab ${cls}"><span class="nm">${t}</span>${pa?`<span class="v">${a.v}</span>`:''}</div>`;
+  let lims='';
+  if(cmp){ if(ka==='soft')lims+=`<span class="lim l s">обсудить</span>`; else if(ka==='none')lims+=`<span class="lim l x">нет у тебя</span>`;
+           if(kb==='soft')lims+=`<span class="lim r s">обсудить</span>`; }
+  else if(ka==='soft')lims+=`<span class="lim r s">обсуждаемо</span>`;
+  return `<div class="gr ${merged?'merged':''} ${soft?'soft':''}" style="--p:${pa}%;--q:${pb}%;--c0:${c0};--c1:${c1};${d}"><div class="goo">${pa?'<span class="bl l"></span>':''}${pb?'<span class="bl r"></span>':''}</div>${lab('ink')}${pa?lab('wl'):''}${pb?lab('wr'):''}${lims}</div>`;
+}
+function render(){
+  const cmp=mode==='cmp';
+  $('root').classList.toggle('cmp',cmp);
+  const list=cmp?ROWS:ROWS.filter(r=>r[1]);
+  $('root').innerHTML=`<div class="whos"><span class="me">← ты</span><span class="them">mars_and_v →</span></div>`+list.map(row).join('')+`<div class="more"><button type="button">Показать все · ${ROWS.filter(r=>r[1]).length+EXTRA}</button><button class="add" type="button">+ Добавить</button></div><p class="note">${cmp?'Слились — сильно нравится обоим. Между каплями пусто — интерес не взаимный. Табу никогда не сливается. Видны только интересы, которые mars_and_v открыл тебе.':'Капля длиннее и горячее — интерес сильнее. Пунктир — обсуждаемо, штриховка — табу.'}</p>`;
+  $('mSolo').setAttribute('aria-pressed',!cmp);$('mCmp').setAttribute('aria-pressed',cmp);
+}
+$('mSolo').onclick=()=>{mode='solo';render();};
+$('mCmp').onclick=()=>{mode='cmp';render();};
+$('replay').onclick=render;
+render();
+const modes=['system','light','dark'],names={system:'системная',light:'светлая',dark:'тёмная'};
+let m=document.documentElement.getAttribute('data-theme')||'system';
+const tb=$('themeBtn');tb.textContent='Тема: '+names[m];
+tb.addEventListener('click',()=>{m=modes[(modes.indexOf(m)+1)%3];if(m==='system')document.documentElement.removeAttribute('data-theme');else document.documentElement.setAttribute('data-theme',m);tb.textContent='Тема: '+names[m];});
+})();
+</script>
+</body>
+</html>
