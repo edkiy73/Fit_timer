@@ -4510,8 +4510,10 @@ const FEED_KINDS=()=>[['posts',L('Публикации','Posts')],['likes',L('Л
 function followStream(posts,kinds,withAct){const items=[],all=!kinds.length,has=k=>all||kinds.includes(k);
  if(has('posts'))posts.forEach(p=>items.push({k:'post',t:p.t,p}));
  if(withAct){const muted=S.mutedActivity||new Set(),groups={};
-  followingOf('me').filter(id=>person(id)&&activityShown(id)&&!muted.has(id)).forEach(id=>activityOf(id).slice(0,12).forEach(x=>{const key={like:'likes',event:'events',comm:'comm',follow:'follows'}[x.k];if(!has(key)||(x.k==='like'&&person(id)?.hideLikes))return;const gid=id+'|'+x.k+'|'+new Date(x.t).toDateString();(groups[gid]??=[]).push({...x,who:id});}));
-  Object.entries(groups).forEach(([gid,g])=>g.length>=2?items.push({k:'group',kind:g[0].k,who:g[0].who,gid,items:g.sort((a,b)=>b.t-a.t),t:Math.max(...g.map(x=>x.t))}):items.push(g[0]));}
+  followingOf('me').filter(id=>person(id)&&activityShown(id)&&!muted.has(id)).forEach(id=>activityOf(id).slice(0,12).forEach(x=>{const key={like:'likes',event:'events',comm:'comm',follow:'follows'}[x.k];if(!has(key)||(x.k==='like'&&person(id)?.hideLikes))return;(groups[id+'|'+x.k]??=[]).push({...x,who:id});}));
+  /* a burst = actions of one kind by one person with no pause longer than 6 hours between them (not a calendar day, so midnight never splits it) */
+  Object.entries(groups).forEach(([key,list])=>{list.sort((a,b)=>b.t-a.t);const bursts=[];list.forEach(x=>{const cur=bursts[bursts.length-1];cur&&cur[cur.length-1].t-x.t<=6*HOUR?cur.push(x):bursts.push([x]);});
+   bursts.forEach(g=>g.length>=2?items.push({k:'group',kind:g[0].k,who:g[0].who,gid:key+'|'+Math.round(g[0].t/6e4),items:g,t:g[0].t}):items.push(g[0]));});}
  return items.sort((a,b)=>b.t-a.t).slice(0,60);}
 /** what a post is made of: media (photos / one or more videos), a poll, interests, text */
 function postParts(p){const media=(p.media||[]).filter(m=>m.url),photos=media.filter(m=>m.type!=='video').length,videos=media.filter(m=>m.type==='video').length;return {media,photos,videos,poll:!!(p.poll||p.type==='poll'),result:!!(p.result||p.type==='result')};}

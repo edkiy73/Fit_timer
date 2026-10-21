@@ -96,7 +96,7 @@ const src=f=>fs.readFileSync(root+f,'utf8');
 
 /* grouped activity in «Подписки» (owner, 21.10): 2+ of a kind by one person on one day fold into one card; «+N» expands in place; likes can be hidden */
 {fresh();const posts="allPosts().filter(x=>followingOf('me').includes(x.author))";
- const st=json(`followStream(${posts},[],true)`);const groups=st.filter(x=>x.k==='group');assert.ok(groups.length>0&&groups.every(g=>g.items.length>=2&&g.items.every(i=>i.who===g.who&&i.k===g.kind)),'2+ same-kind items by one person fold into a group');
+ const st=json(`followStream(${posts},[],true)`);const groups=st.filter(x=>x.k==='group');assert.ok(groups.length>0&&groups.every(g=>g.items.length>=2&&g.items.every(i=>i.who===g.who&&i.k===g.kind)),'2+ same-kind items by one person fold into a burst group');
  assert.ok(!st.some(x=>x.k==='like'&&groups.some(g=>g.who===x.who&&g.kind==='like')),'folded items are not repeated as single cards');
  assert.ok(!st.some(x=>(x.who==='kai')&&(x.k==='like'||x.kind==='like')),'a person who hides likes shows none');
  const g=groups[0];const html=run(`actCard(${JSON.stringify(g)},0)`);assert.ok(html.includes('actc-strip')||html.includes('actc-list'),'a group renders a strip or a list');
