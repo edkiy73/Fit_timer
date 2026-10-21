@@ -372,10 +372,10 @@ function activityOf(id){const out=[],pub=p=>p.aud==='all'&&!p.unavailable&&!isBl
   followingOf(id).slice(0,2).forEach((p,i)=>out.push({k:'follow',p,t:Date.now()-(i+2)*DAY*1.7}));}
  return out.sort((a,b)=>b.t-a.t);}
 function activityList(id,items,o={}){const rows=items.slice(0,12).map(x=>{
-  if(x.k==='like')return linkRow({go:'F05',p:{id:x.post.id},...((x.post.media||[]).find(m=>m.type==='image'&&m.url)?{av:`<span class="actth"><img src="${esc(x.post.media.find(m=>m.type==='image'&&m.url).url)}" alt="" loading="lazy" draggable="false"><i>${I.heartf}</i></span>`}:{av:`<span class="actth ic">${I.heartf}</span>`}),title:L(`Лайк · публикация ${pname(x.post.author)}`,`Like · ${pname(x.post.author)}’s post`),sub:`${mdPlain(T(x.post.text)).slice(0,70)||L('Публикация','Post')} · ${F.rel(x.t)}`});
-  if(x.k==='event')return linkRow({go:'E03',p:{id:x.e},av:`<span class="actth">${evCover(EV(x.e),'cal')}</span>`,title:x.st==='interested'?L('Интересует событие','Interested in an event'):L('Идёт на событие','Going to an event'),sub:`${T(EV(x.e).title)} · ${F.rel(x.t)}`});
-  if(x.k==='comm')return linkRow({go:'C03',p:{id:x.c},av:`<span class="actth">${commAv(COMMUNITIES[x.c])}</span>`,title:L('Сообщество','Community'),sub:`${T(COMMUNITIES[x.c].name)} · ${F.rel(x.t)}`});
-  return linkRow({go:'P01',p:{id:x.p},av:`<span class="actth round">${av(x.p,'')}</span>`,title:L('Подписка','Followed'),sub:`${pname(x.p)} · ${F.rel(x.t)}`});}).join('');
+  if(x.k==='like')return linkRow({go:'F05',p:{id:x.post.id},av:(t=>pth(t.html,t.cls))(likeThumb(x.post)),title:L(`Лайк · публикация ${pname(x.post.author)}`,`Like · ${pname(x.post.author)}’s post`),sub:`${mdPlain(T(x.post.text)).slice(0,70)||L('Публикация','Post')} · ${F.rel(x.t)}`});
+  if(x.k==='event')return linkRow({go:'E03',p:{id:x.e},av:pth(evCover(EV(x.e),'cal')),title:x.st==='interested'?L('Интересует событие','Interested in an event'):L('Идёт на событие','Going to an event'),sub:`${T(EV(x.e).title)} · ${F.rel(x.t)}`});
+  if(x.k==='comm')return linkRow({go:'C03',p:{id:x.c},av:pth(commAv(COMMUNITIES[x.c])),title:L('Сообщество','Community'),sub:`${T(COMMUNITIES[x.c].name)} · ${F.rel(x.t)}`});
+  return linkRow({go:'P01',p:{id:x.p},av:pth(av(x.p,''),'round'),title:L('Подписка','Followed'),sub:`${pname(x.p)} · ${F.rel(x.t)}`});}).join('');
  const mode=ACT_VIS().find(x=>x[0]===activityMode(id));
  return `<div class="card list">${rows}</div>${o.self?`<p class="note mt12">${L('Видят','Visible to')}: ${esc(mode[1].toLowerCase())} · <button class="btn text auto" data-go="K01">${L('Изменить в настройках','Change in settings')}</button></p>`:''}`;}
 ACT.profAct=a=>{const id=cur().p.id||(cur().p.owner==='couple'?'couple':'me');S.ui.pa||(S.ui.pa={});S.ui.pa[id]=a.dataset.v;refresh();};
