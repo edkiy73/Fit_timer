@@ -116,3 +116,10 @@ const src=f=>fs.readFileSync(root+f,'utf8');
 {fresh();assert.equal(run("likeThumb(postById('p5')).cls"),'txt','text post: snippet tile');assert.equal(run("likeThumb(postById('p4')).cls"),'kind','poll: poll tile');assert.equal(run("likeThumb(postById('p1')).cls"),'kind','interests post: interests tile');
  assert.equal(run("likeThumb(postById('p11')).cls"),'multi','several photos: stack with counter');assert.equal(run("likeThumb(postById('p9')).cls"),'','one photo: plain thumbnail');
  console.log('PASS like thumbnails by post type');}
+
+/* a post that has everything at once */
+{fresh();const all=run("postParts(postById('p19'))");assert.ok(all.videos===1&&all.photos===3&&all.poll&&all.result,'p19 has a video, 3 photos, a poll and interests');
+ assert.equal(run("partsLine(postById('p19'))"),'видео · 3 фото · опрос · интересы','the composition reads in words');
+ const t=json("likeThumb(postById('p19'))");assert.ok(t.cls==='multi'&&t.html.includes('actc-x')&&t.html.includes('actc-n'),'thumbnail = first media + counter + marks for the poll and the interests');
+ assert.ok(run("likeThumb(postById('p18')).html").includes('0:06')||run("likeThumb(postById('p18')).html").includes('actc-n'),'a lone video shows its duration');
+ console.log('PASS everything-at-once post');}
