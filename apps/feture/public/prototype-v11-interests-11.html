@@ -71,7 +71,8 @@ main.wrap{padding-block:16px 72px;display:grid;gap:22px}
 .part{position:absolute;top:50%;height:var(--h);margin-top:calc(var(--h) / -2);border-radius:99px}
 .part.l{left:6px;width:var(--wl);background:var(--me)}
 .part.r{right:6px;width:var(--wr);background:var(--them)}
-.gr.meet,.gr.repel{--jx:calc(6px + (100cqw - 12px) * (.5 + (var(--jr) - .5) * 2.2))}
+.gr.meet{--jx:calc(6px + (100cqw - 12px) * (.5 + (var(--jr) - .5) * 2.2))}
+.gr.repel{--jx:calc(6px + (100cqw - 12px) * var(--jr))}
 .meet .part.l{width:calc(var(--jx) - 5px);border-radius:99px var(--ir) var(--ir) 99px}
 .meet .part.r{width:calc(100% - 5px - var(--jx));border-radius:var(--ir) 99px 99px var(--ir)}
 .mix{position:absolute;top:6px;height:38px;left:calc(var(--jx) - var(--mw) / 2);width:var(--mw);background:linear-gradient(90deg,var(--me),var(--them))}
@@ -88,11 +89,11 @@ main.wrap{padding-block:16px 72px;display:grid;gap:22px}
 .chem .what{font-size:14px;color:var(--mute)}
 .chem .what b{color:var(--ink)}
 .repel .goo{filter:none}
-.repel{animation:ga 1.4s var(--spring) both,gb 1.4s var(--spring) both,poke 5.6s ease-in-out infinite;animation-delay:var(--d),calc(var(--d) + .1s),calc(var(--d) + 1.4s)}
-.repel .part.l{width:min(var(--wl),calc(var(--jx) - 6px - var(--gx)))}
-.repel .part.r{width:min(var(--wr),calc(100cqw - 6px - var(--jx) - var(--gx)))}
-@keyframes poke{0%{--gx:7px}22%{--gx:0px}27%{--gx:3px}32%{--gx:0px}40%{--gx:4px}62%{--gx:7px}100%{--gx:7px}}
-.repel .lab.wl{clip-path:inset(0 calc(100% - 6px - min(var(--wl),calc(var(--jx) - 6px - var(--gx)))) 0 0)}.repel .lab.wr{clip-path:inset(0 0 0 calc(100% - 6px - min(var(--wr),calc(100cqw - 6px - var(--jx) - var(--gx)))))}
+.repel{animation:ga 1.4s var(--spring) both,gb 1.4s var(--spring) both,poke 5.6s linear infinite;animation-delay:var(--d),calc(var(--d) + .1s),calc(var(--d) + 1.4s)}
+.repel .part.l{width:calc(var(--jx) - 6px - var(--gx))}
+.repel .part.r{width:calc(100cqw - 6px - var(--jx) - var(--gx))}
+@keyframes poke{0%{--gx:7px;animation-timing-function:cubic-bezier(.55,0,.9,.5)}22%{--gx:0px;animation-timing-function:cubic-bezier(.1,.6,.4,1)}26%{--gx:3px;animation-timing-function:cubic-bezier(.6,0,.9,.6)}29%{--gx:0px;animation-timing-function:cubic-bezier(.1,.6,.4,1)}31.5%{--gx:1.2px;animation-timing-function:cubic-bezier(.6,0,.9,.6)}33.5%{--gx:0px;animation-timing-function:cubic-bezier(.3,0,.3,1)}60%{--gx:7px}100%{--gx:7px}}
+.repel .lab.wl{clip-path:inset(0 calc(100% - var(--jx) + var(--gx)) 0 0)}.repel .lab.wr{clip-path:inset(0 0 0 calc(var(--jx) + var(--gx)))}
 .tp{position:absolute;inset:0;z-index:2;filter:url(#goo2);pointer-events:none}
 .tp .cap{position:absolute;top:6px;width:38px;height:38px;border-radius:50%}
 .tp.l .cap{left:calc(6px + var(--el) - 38px);background:var(--me)}.tp.r .cap{right:calc(6px + var(--er) - 38px);background:var(--them)}
@@ -212,7 +213,7 @@ const H=v=>38;
 function row([t,a,b,o={}],i){
   const ka=kind(a),kb=kind(b),blocked=ka==='hard'||kb==='hard';
   const A=ka==='v'?a.v:0,B=kb==='v'?b.v:0;
-  const RR=rel(a,b,o),repel=RR==='same'&&!blocked&&A+B>=13,still=RR==='same'&&!blocked&&!repel;
+  const RR=rel(a,b,o),repel=RR==='same'&&!blocked&&A+B>=17,still=RR==='same'&&!blocked&&!repel;
   const meet=!!(A&&B&&!blocked&&A+B>=17&&!repel);
   const half=()=>'';
   const m=Math.min(A,B);
