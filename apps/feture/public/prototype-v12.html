@@ -159,7 +159,7 @@ body.frame .layer,body.frame .toasts{position:absolute}
 .dock button span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;padding:0 2px}
 .dock button svg{width:24px;height:24px}
 .dock button.on{color:var(--ink)}
-.dock em{position:absolute;top:2px;left:calc(50% + 6px);min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--accent);color:#fff;font:700 11px/17px var(--font);font-style:normal;text-align:center;box-shadow:0 0 0 2px var(--surf)}
+.dock em{position:absolute;top:2px;left:calc(50% + 6px);min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--accent);color:#fff;font:700 11px/17px var(--font);font-style:normal;text-align:center;box-shadow:none}
 .dock em.dot{min-width:8px;width:8px;height:8px;padding:0;top:6px;left:calc(50% + 9px)}
 .main>.ctabar{position:relative;flex:none;z-index:20;margin-top:-24px;padding:24px var(--gut) calc(12px + var(--safe-b));background:linear-gradient(to bottom,color-mix(in srgb,var(--bg) 0%,transparent),var(--bg) 24px)}
 .ctabar .wrap{display:grid;gap:8px}
@@ -1147,7 +1147,7 @@ button.jar:active .vessel{transform:scale(.95)}
 .dock button svg{width:23px;height:23px}
 .dock button.on::before{content:"";position:absolute;inset:0;border-radius:18px;background:var(--raise);z-index:-1;animation:pop .3s var(--ease)}
 .dock button.on svg{color:var(--accent)}
-.dock em{top:4px;box-shadow:0 0 0 2px var(--nav)}
+.dock em{top:4px;box-shadow:none}
 .dock em.dot{top:8px}
 .toasts{bottom:calc(var(--dock) + 24px + var(--safe-b))}
 .qa-fab{bottom:calc(var(--dock) + 24px + var(--safe-b))}
@@ -2468,12 +2468,10 @@ button.pill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:no
 .cr-v b{font-size:15px;font-weight:850}
 .cr-v em{font-style:normal;font-size:9.5px;font-weight:700;opacity:.8;white-space:nowrap}
 .cr-v .lim{font-size:11px;font-weight:750}.cr-v .lim.t{color:var(--danger)}.cr-v .lim.s{color:var(--warn)}
-.cr-n{flex:1;min-width:0;text-align:center;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cr-n{flex:1;min-width:0;text-align:center;font-size:14px;font-weight:700;line-height:1.15;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
 .cr-why{margin:0 0 2px;padding:0 14px;font-size:12.5px;color:var(--mute);line-height:1.35}
 .cp-more{display:flex;align-items:center;justify-content:center;gap:6px;width:calc(100% - 24px);margin:0 12px 12px;padding:8px 12px;border-radius:99px;border:0;background:var(--trk);color:var(--ink);font:600 13px var(--font);cursor:pointer}
 .cp-more svg{width:14px;height:14px}
-.cmp-pick{display:grid;gap:6px;margin-bottom:14px}.cmp-pick>span{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
-.cmp-pick .chips{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
 .cmp-head{display:grid;justify-items:center;text-align:center;gap:2px;margin-top:6px}.cmp-head b{display:block;font-size:17px;font-weight:750;line-height:1.25}.cmp-head small{color:var(--mute);font-size:13px}
 .cmp-groups .cg:first-child{margin-top:16px}
 /* ===== V12 — interests as capsules (replace the V11 jars everywhere) ===== */
@@ -2485,7 +2483,7 @@ button.sc{cursor:pointer}button.sc:active{transform:scale(.985)}
 .sc-l{position:absolute;inset:0;display:flex;align-items:center;gap:6px;padding:0 14px 0 16px;font-size:14.5px;font-weight:650;color:var(--ink);z-index:2;pointer-events:none}
 .sc-l.c{justify-content:center;color:var(--mute);font-weight:650}
 .sc-l.c svg{width:16px;height:16px}
-.sc-n{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc-n{flex:1;min-width:0;line-height:1.15;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
 .sc-v{flex:none;display:grid;justify-items:end;line-height:1;gap:2px;font-variant-numeric:tabular-nums}
 .sc-v b{font-size:15px;font-weight:850}.sc-v em{font-style:normal;font-size:9.5px;font-weight:700;opacity:.8;white-space:nowrap}
 .sc-vis{flex:none;display:inline-grid;opacity:.6}.sc-vis svg{width:13px;height:13px}
@@ -2651,7 +2649,7 @@ const PEOPLE={
  mark:{name:'Mark',age:35,photo:6,nph:1,city:'berlin',km:9,gender:['man'],orient:['gay'],format:['play'],role:['lead'],seek:['dates'],verified:true,online:false,last:{ru:'в сети сегодня',en:'active today'},dating:true,
   bio:{ru:'Тестовый профиль V12: сильные интересы, но одинаковые роли.',en:'V12 test profile: strong interests, same roles.'},
   jars:[['bondage',9,['give']],['ds',10,['give']],['spanking',8,['get']],['aftercare',7],['roleplay',3],['intimacy',6],{t:'strongpain',lv:0,limit:'hard'},['talk',4]]},
- ira:{name:'Ira',age:24,photo:7,nph:1,city:'hamburg',km:280,gender:['woman'],orient:['hetero'],format:['serious'],role:['exploring'],seek:['chat'],verified:true,online:true,dating:true,
+ ira:{name:'Ira',age:24,photo:7,nph:1,city:'berlin',km:5,gender:['woman'],orient:['hetero'],format:['serious'],role:['exploring'],seek:['chat'],verified:true,online:true,dating:true,
   bio:{ru:'Тестовый профиль V12: всё интересно, но понемногу.',en:'V12 test profile: curious about everything, a little.'},
   jars:[['latex',4],['toys',3],['talk',5],['shibari',4,['get']],['intimacy',5],['tantra',3],['aftercare',5],['bondage',3]]},
  ren:{name:'Ren',age:31,photo:9,nph:1,city:'berlin',km:2,gender:['nb'],orient:['pan'],format:['open'],role:['switch'],seek:['exp'],verified:true,online:false,last:{ru:'в сети вчера',en:'active yesterday'},dating:true,
@@ -2660,7 +2658,7 @@ const PEOPLE={
  vera:{name:'Vera',age:30,photo:1,nph:1,city:'berlin',km:7,gender:['woman'],orient:['queer'],format:['poly'],role:['switch'],seek:['dates','friends'],verified:true,online:true,dating:true,
   bio:{ru:'Тестовый профиль V12: много открытых границ.',en:'V12 test profile: many public boundaries.'},
   jars:[{t:'bondage',lv:0,limit:'hard'},{t:'spanking',lv:0,limit:'hard'},{t:'publicplace',lv:0,limit:'discuss'},['aftercare',9],{t:'strongpain',lv:0,limit:'hard'},['latex',7],{t:'ds',lv:0,limit:'discuss'},['talk',8],{t:'roleplay',lv:0,limit:'hard',vis:'only'}]},
- oli:{name:'Oli',age:26,photo:3,nph:1,city:'online',gender:['man'],orient:['bi'],format:['open'],role:['recv'],seek:['chat'],verified:true,online:false,last:{ru:'в сети неделю назад',en:'active a week ago'},dating:true,
+ oli:{name:'Oli',age:26,photo:3,nph:1,city:'berlin',km:8,gender:['man'],orient:['bi'],format:['open'],role:['recv'],seek:['chat'],verified:true,online:false,last:{ru:'в сети неделю назад',en:'active a week ago'},dating:true,
   bio:{ru:'Тестовый профиль V12: почти ничего не открыто.',en:'V12 test profile: almost nothing is public.'},
   jars:[['toys',6],{t:'bondage',lv:9,dir:['get'],vis:'only'},{t:'ds',lv:8,vis:'granted'}]},
  noa:{name:'Noa',age:34,plate:'sea',city:'moscow',gender:['nb'],orient:['queer'],format:'ra',role:[],seek:['chat'],dating:false,verified:true,bio:{ru:'Психолог, веду онлайн-круги о согласии.',en:'Counsellor, I host online circles on consent.'},jars:[['talk',10],['aftercare',10]]},
@@ -2797,7 +2795,7 @@ function freshState(persona){
   myEvents:full?['e8']:[],
   extraEvents:{},
   decided:{}, // personId -> 1 like / -1 pass (discover)
-  deckOrder:['kira','lenamax','leon','ari','nikajonas','tomeva'],
+  deckOrder:['kira','lenamax','leon','ari','nikajonas','tomeva','zoe','mark','ira','ren','vera','oli'],
   likesIn:full?[{p:'kira',src:'discover',t:ago(3)},{p:'lenamax',src:'discover',t:ago(9)},{p:'leon',src:'profile',t:ago(20)},{p:'ari',src:'discover',t:ago(40)}]:[],
   likesOut:full?[{p:'maya',src:'profile',t:ago(10)}]:[],
   matches:full?[{p:'mia',t:ago(26)},{p:'kai',t:ago(120)},{p:'sofi',t:ago(5)},{p:'lina',t:ago(1)},{p:'tomeva',t:ago(24)}]:[],
@@ -3678,11 +3676,11 @@ function shared(id){
 const CMP_GROUPS=[['complement',L('Дополняете друг друга','You complement each other'),'k-comp'],['match',L('Совпадает','In common'),'k-match'],['try',L('Можно попробовать','Worth trying'),'k-try'],['discuss',L('Стоит обсудить','Worth discussing'),'k-disc'],['bound',L('Границы','Boundaries'),'k-bound']];
 const ROLE_W={give:L('даю','give'),get:L('получаю','receive'),watch:L('смотрю','watch')};
 const roleWord=j=>!j||j.limit||isLimitCat(j.t)?'':!j.dir||j.dir.length===3?L('всё','all'):j.dir.map(x=>ROLE_W[x]).join(' · ');
-function cmpWhy(r,id){const n=pname(id);return r.why==='give'?L(`Вы оба хотите давать — так не сработает, если никто не уступит`,`You both want to give — it won’t work unless someone switches`)
- :r.why==='get'?L(`Вы оба хотите получать — так не сработает, если никто не уступит`,`You both want to receive — it won’t work unless someone switches`)
- :r.why==='gap'?L(`Хотите очень по-разному`,`You want it very differently`)
+function cmpWhy(r,id){const n=pname(id);return r.why==='give'?L('Вы оба хотите давать','You both want to give')
+ :r.why==='get'?L('Вы оба хотите получать','You both want to receive')
+ :r.why==='gap'?L('Хотите очень по-разному','You want it very differently')
  :r.why==='soft'?L(`${r.a.limit?'У тебя':'У '+n} — «обсуждаемо»`,`${r.a.limit?'You marked':n+' marked'} it negotiable`)
- :r.why==='both'?L('Общая граница — это не для вас обоих','A shared boundary — not for either of you')
+ :r.why==='both'?L('Общая граница','A shared boundary')
  :r.why==='me'?L('У тебя это табу','It’s a hard limit for you'):r.why==='them'?L(`У ${n} это табу`,`It’s a hard limit for ${n}`):'';}
 /** one comparison row — the reference capsule: my fill with the topic inside, both scores at the ends */
 function cmpRow(r,id,o={}){const a=r.a,b=r.b;const lv=a.limit?0:a.lv;
@@ -5417,9 +5415,7 @@ function doBlock(id){social().reqOut=social().reqOut.filter(x=>x.p!==id);social(
 
 /* P05 — shared interests: categories, no universal score */
 SC.P05={title:()=>L('Что у вас общего','Shared interests'),valid:p=>!!PEOPLE[p.id]&&!isBlocked(p.id),render:(p)=>{const id=p.id;const s=shared(id);const g=receivedGrant(id);
- const pick=Object.keys(PEOPLE).filter(k=>(PEOPLE[k].jars||[]).length&&!PEOPLE[k].pair&&!isBlocked(k));
  return `${bar(L('Что у вас общего','Shared interests'),{back:1,sm:1})}<div class="view nodock"><div class="wrap">
- <div class="cmp-pick"><span>${L('Сравнить с','Compare with')}</span><div class="chips">${pick.map(k=>`<button class="chip ${k===id?'on':''}" data-act="cmpWith" data-v="${k}" aria-pressed="${k===id}">${esc(pname(k))}</button>`).join('')}</div></div>
  ${venn(s.few?'?':s.match.length,{pre:1})}<div class="cmp-head"><b>${esc(sharedSummary(id,s))}</b><small>${L('Ты и','You and')} ${esc(pname(id))}</small></div>
  ${s.few?`<div class="alert mt12">${I.info}<span><b>${L('Мало данных','Not enough data')}</b>${L('Чтобы сравнивать, нужно хотя бы по два открытых интереса у каждого.','To compare, each of you needs at least two public interests.')}</span></div>`:''}
  <div class="cmp-groups">${cmpGroups(id,s)}</div>
@@ -5427,7 +5423,6 @@ SC.P05={title:()=>L('Что у вас общего','Shared interests'),valid:p=
  <div class="alert mt16">${I.lock}<span>${L('Сравниваем только то, что вы оба открыли. Скрытые интересы и границы не участвуют и не раскрываются.','We compare only what you both made visible. Hidden interests and limits are never used or revealed.')} ${g?L('Приватная часть доступна отдельно.','The private part is available separately.'):''}</span></div>
  ${S.me.jars.filter(j=>j.vis==='public').length<3?`<button class="btn soft mt12" data-act="toMap">${L('Открыть больше своих интересов','Make more of your interests public')}</button>`:''}
  </div></div>`;},after:()=>playVenn()};
-ACT.cmpWith=a=>{const r=cur();if(r&&r.id==='P05'){r.p={...r.p,id:a.dataset.v};refresh();}};
 
 /* P06 — request private access: categories, quota, no message, no chat */
 ACT.reqAccess=a=>{const id=a.dataset.v||cur().p.id;if(!needAge(()=>ACT.reqAccess({dataset:{v:id}})))return;

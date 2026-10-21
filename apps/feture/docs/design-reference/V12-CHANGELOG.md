@@ -35,3 +35,10 @@ Decision record: `public/prototype-v11-compare-matrix.html`. Notes: `public/prot
 - Track is translucent (`--trk`), fill is a translucent accent whose strength follows the level; one label (no white duplicate), same grow animation as polls.
 - Poll fill: rounded ends, no wavy mask, no bubbles.
 - Compat block in profile/discovery: inner padding; «Я» avatar is a solid accent circle.
+
+## 2026-10-21 — polish from phone review
+
+- Dock counters have no ring (the dock is translucent over any content).
+- Interest names in capsules wrap to two lines instead of being cut with «…».
+- Reason lines under comparison rows shortened to one line («Вы оба хотите давать», «Общая граница»).
+- Removed the prototype-only «Сравнить с» switcher from P05; the six test people are in the discovery deck instead, so comparison looks exactly like the real screen.
