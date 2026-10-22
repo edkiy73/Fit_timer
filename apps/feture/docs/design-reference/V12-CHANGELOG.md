@@ -153,3 +153,11 @@ Decision record: `public/prototype-v11-compare-matrix.html`. Notes: `public/prot
 - Approval setting changed → partner is told («Теперь ты можешь действовать от пары без согласования» / «Партнёр снова хочет согласовывать…»).
 - Messages a partner wrote in a couple chat count as unread for the other member.
 - Archive and mute of couple chats stay shared (owner decision).
+
+## 2026-10-22 — Tab counters
+
+- Every tab (`.seg`): when the label does not fit next to its counter, the counter moves to the tab's corner (measured after each render/resize), so the label stays whole.
+- Counters show only what waits on you: community requests «Решения» lost its counter (decided items); the bell no longer counts a couple request/approval twice (notification + «Нужно решить»).
+- Chats: «Личные» / «От пары» tabs show unread chats per profile.
+- «Профили» dock badge = decisions about your profiles (access requests, couple approvals, couple invitation); the Profiles screen shows a «Нужно решить» row with the same number, opening the inbox.
+- Totals on tabs (discussions, events, access lists, profile activity) stay removed: they are not something to do.
