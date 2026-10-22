@@ -183,3 +183,6 @@ prepare('C10',{id:'circle'});run("ACT.c10Priv({dataset:{v:'open',k:'circle'}})")
 prepare('F01');const evA=run("allEventIds().find(e=>EV(e).approval&&EV(e).organizer!=='me'&&!isPast(e))");run(`S.rsvp['${evA}']={...myR('${evA}'),status:'going',app:'pending'};S.nav.stacks.feed.push({id:'E03',p:{id:'${evA}'},f:{}})`);
 const e03=text(run("SC.E03.render(cur().p,cur())"));assert.ok(e03.includes('Заявка на рассмотрении')&&!e03.includes('Твой статус'),'one clear attendance status');
 console.log('PASS comparison as the acting profile, invite reasons, community access, clear attendance status');
+// The dot on the People author avatar counts only the other profile's new likes (requests live on «Профили»).
+prepare('D03');run("coupleProfile();S.datingActor='couple'");assert.equal(run("otherActorWaiting()"),run("waitingLikes('me')"),'only likes of the other profile');
+console.log('PASS People author dot = the other profile’s new likes');
