@@ -170,7 +170,7 @@ prepare('C03',{id:'circle',t:'members'});const mem=run("SC.C03.render(cur().p,cu
 run("ACT.cMemberDo({dataset:{v:'host|circle|kai'}})");assert.ok(!run("COMMUNITIES.circle.mods.includes('kai')"),'host removed');run("ACT.cMemberDo({dataset:{v:'host|circle|kai'}})");assert.ok(run("COMMUNITIES.circle.mods.includes('kai')"),'host added back');
 run("ACT.cMemberDo({dataset:{v:'mute|circle|mia'}})");assert.equal(run("communityMemberCanWrite('circle','mia')"),false,'a muted member cannot post');
 prepare('C03',{id:'rope',t:'members'});assert.ok(!run("SC.C03.render(cur().p,cur())").includes('data-act="cMember"'),'members cannot manage others');
-prepare('F01');const ev1=run("allEventIds().find(e=>EV(e).organizer!=='me')");const crowd=json(`eventCrowd('${ev1}')`);assert.ok(crowd.going.length+crowd.interested.length>0);
+prepare('F01');const ev1=run("allEventIds().find(e=>EV(e).organizer!=='me'&&!EV(e).approval)");const crowd=json(`eventCrowd('${ev1}')`);assert.ok(crowd.going.length+crowd.interested.length>0);
 run(`S.rsvp['${ev1}']={...myR('${ev1}'),status:'going',show:false}`);assert.ok(!json(`eventCrowd('${ev1}')`).going.includes('me'),'hidden attendance is not listed');assert.ok(json(`eventCrowd('${ev1}')`).meHidden);
 prepare('N01',{k:'all'});const n01=run("SC.N01.render(cur().p,cur())");assert.ok(n01.indexOf('inbox-read-all')<n01.indexOf('inbox-filters'),'read-all sits right under the tabs');
 console.log('PASS community hosts and members management, who is going, read-all under the tabs');
