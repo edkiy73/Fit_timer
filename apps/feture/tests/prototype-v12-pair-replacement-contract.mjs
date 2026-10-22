@@ -88,14 +88,14 @@ console.log('PASS untouched partner draft does not block the Discover switch');
 prepare('Q01');run("coupleProfile();S.pairMember='partner';setPairTrust(false);S.pairMember='me';editableProfile({p:{owner:'couple'}}).bio='v1';markCoupleDraft(true);submitCoupleDraft();var pid=S.pair.proposal.id");
 run("S.pairMember='partner'");assert.equal(run("returnWork('profile',pid,'другое фото')"),true);run("S.pairMember='me'");
 assert.equal(run("S.pair.proposal.status"),'returned');assert.ok(run("todoItems().some(x=>x.k==='profileBack')"),'sender has the returned version to do');
-assert.ok(text(run("NTXT.pair(S.notifs.find(n=>n.pairEvent==='returned'))")).includes('другое фото'),'note rides in the notification');
+assert.ok(text(run("NTXT.pair(currentNotifications().find(n=>n.pairEvent==='returned'))")).includes('другое фото'),'note rides in the notification');
 assert.ok(run("pairStatusHTML()").includes('другое фото'));
 run("ACT.pairCancelChanges()");assert.equal(run("S.pair.proposal"),null);assert.equal(run("S.pair.draft"),null);assert.equal(run("T(S.pair.profile.bio)")===run("'v1'"),false,'discard keeps the published profile');
 prepare('P07',{owner:'couple'});run("coupleProfile();S.pairMember='partner';setPairTrust(false);S.pairMember='me';var rq={id:'rb1',p:'mia',status:'new',scopes:['info']};social('couple').reqIn=[rq];queueJointGrant(rq,{sel:['info']},null)");
 assert.ok(!run("todoItems().some(x=>x.k==='req'&&x.r.id==='rb1')"),'a queued couple decision is not offered twice');
 run("S.pairMember='partner'");assert.equal(run("returnWork('joint','grant_rb1','',1)"),true);run("S.pairMember='me'");
 assert.ok(run("todoItems().some(x=>x.k==='joint'&&x.q.id==='grant_rb1'&&x.q.status==='returned')"));
-assert.ok(!text(run("NTXT.pair(S.notifs.find(n=>n.pairEvent==='workReturned'))")).includes('Новое уведомление'));
+assert.ok(!text(run("NTXT.pair(currentNotifications().find(n=>n.pairEvent==='workReturned'))")).includes('Новое уведомление'));
 run("queueJointGrant(rq,{sel:['info']},null)");assert.equal(run("jointQueue().grant_rb1.status"),'pending');assert.equal(run("jointQueue().grant_rb1.version"),2,'change decision sends a new version');
 run("ACT.jointCancel({dataset:{v:'grant_rb1'}})");assert.equal(run("jointQueue().grant_rb1"),undefined);assert.ok(run("todoItems().some(x=>x.k==='req'&&x.r.id==='rb1')"),'withdrawn decision puts the request back');
 console.log('PASS sent back for changes: note, inbox, status, rework, discard and access way out');
@@ -112,3 +112,21 @@ prepare('N01',{k:'all'});run("coupleProfile().dating=true;S.datingActor='me';rec
 assert.equal(run("cur().id+'/'+cur().p.sub+'/'+datingActor()"),'D03/likes/couple','like notification opens the couple likes');
 prepare('N01',{k:'all'});run("coupleProfile();receiveCoupleRequest('vera',['info']);ACT.openNotif({dataset:{v:S.notifs.find(n=>n.pairEvent==='req').id}})");assert.equal(run("cur().id+'/'+cur().p.k"),'N01/todo','request notification opens «Нужно решить»');
 console.log('PASS couple likes and requests: notifications for both, dock badges, opening the right place');
+// Couple events audit: no self-notifications, every event has text, partner learns about trust changes, blocks, partner messages, grants and reviewed posts.
+const pn=m=>json(`(S.pair.notifications['${m}']||[]).map(n=>n.pairEvent)`);const partner=()=>run('S.pair.with');
+prepare('Q01');run("coupleProfile();S.pair.notifications={};S.pairMember='partner';setPairTrust(false);S.pairMember='me';S.pair.notifications={};editableProfile({p:{owner:'couple'}}).bio='v1';markCoupleDraft(true);submitCoupleDraft()");
+assert.deepEqual(pn('me'),[],'the author is not notified about their own proposal');assert.deepEqual(pn(partner()),['proposal']);
+run("S.pairMember='partner';commitCoupleProposal(S.pair,S.pair.with,S.pair.proposal.id)");assert.deepEqual(pn('me'),['profileApproved'],'the author learns it was approved');assert.ok(!pn(partner()).includes('profileApproved'),'the reviewer is not notified');
+prepare('Q01');run("coupleProfile();S.pair.notifications={};setPairTrust(false)");assert.deepEqual(pn(partner()),['trustOff'],'partner learns approval is required again');run("setPairTrust(false)");assert.deepEqual(pn(partner()),['trustOff'],'no change, no notification');
+run("setPairTrust(true)");assert.ok(text(run("NTXT.pair(S.pair.notifications[S.pair.with][0])")).includes('без согласования'));
+prepare('P07',{owner:'couple'});run("coupleProfile();S.pair.notifications={};var rq={id:'ra1',p:'mia',status:'new',scopes:['info']};social('couple').reqIn=[rq];queueJointGrant(rq,{sel:['info']},null)");
+assert.equal(run("rq.status"),'open');const wa=run("S.pair.notifications[S.pair.with].find(n=>n.pairEvent==='workApproved')");assert.ok(wa,'partner learns access was shared');
+assert.ok(!text(run("NTXT.pair(S.pair.notifications[S.pair.with].find(n=>n.pairEvent==='workApproved'))")).includes('Новое уведомление'),'approved work has its own text');assert.deepEqual(pn('me'),[]);
+prepare('D03');run("coupleProfile();S.pair.notifications={};social('couple').likesIn=[{p:'ari',t:1}];doBlock('ari')");assert.deepEqual(pn(partner()),['blocked'],'partner learns the couple lost this person');assert.ok(text(run("NTXT.pair(S.pair.notifications[S.pair.with][0])")).includes(run("pname('ari')")));
+run("S.pair.notifications={};doBlock('ren')");assert.deepEqual(pn(partner()),[],'a person the couple never met is a personal block');
+prepare('H01');run("coupleProfile();var th=ensureThread('mia','couple');th.unread=0;th.msgs.length=0;th.msgs.push({me:1,sender:S.pair.with,text:{ru:'hi',en:'hi'},t:Date.now()})");assert.equal(run("chatUnread(th)"),1,'partner’s message in the couple chat is unread for me');
+run("th.msgs.push({me:1,sender:'me',text:{ru:'hi',en:'hi'},t:Date.now()})");assert.equal(run("chatUnread(th)"),1,'my own message is not unread');
+prepare('F01');run("coupleProfile();S.pair.notifications={};social('couple').reqOut=[{id:'co1',p:'mia',actor:'couple',scopes:['info'],status:'pending',t:1}];S.myPosts.unshift({id:'cpx',author:'couple',status:'review',text:{ru:'x',en:'x'}});qaApproveAll()");
+for(const m of ['me',partner()]){assert.ok(pn(m).includes('grant'),'both learn the couple got access');assert.ok(pn(m).includes('postok'),'both learn the joint post passed review');}
+assert.deepEqual(json("S.pair.notifications.me.find(n=>n.pairEvent==='grant').go"),['P08',{id:'mia',actor:'couple'}],'opens the couple’s view of the access');
+console.log('PASS couple events: no self-notifications, texts for every event, trust, blocks, partner messages, grants and reviewed posts');

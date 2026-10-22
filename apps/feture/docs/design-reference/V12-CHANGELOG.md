@@ -143,3 +143,13 @@ Decision record: `public/prototype-v11-compare-matrix.html`. Notes: `public/prot
 - New request to the couple's private part → «Запрос к приватной части пары от X» to both; tapping it opens «Нужно решить».
 - Dock badges «Люди» and «Профили» count personal and couple likes/requests together (same rules as the likes list and «Нужно решить»); the avatar counter in Люди no longer counts passed or matched likes.
 - Couple notifications about another person name that person (like, request, message, reply, match).
+
+## 2026-10-22 — Couple events audit fixes
+
+- A member's own action no longer notifies them; only the partner hears about it. Events from other people still reach both.
+- Approved joint post / access now has its own text (was «Новое уведомление»); direct actions without approval read «Новая публикация от пары» / «Доступ от пары открыт для X». «Профиль пары обновлён» replaces a gendered line.
+- Couple's outgoing request granted → «Паре открыли приватную часть от X» to both, opening the couple's view. Joint post passed review → both members.
+- Partner blocked someone the couple knew → partner gets «X в блокировке у партнёра — …».
+- Approval setting changed → partner is told («Теперь ты можешь действовать от пары без согласования» / «Партнёр снова хочет согласовывать…»).
+- Messages a partner wrote in a couple chat count as unread for the other member.
+- Archive and mute of couple chats stay shared (owner decision).
