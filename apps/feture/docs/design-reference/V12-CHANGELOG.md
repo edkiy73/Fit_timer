@@ -126,3 +126,12 @@ Decision record: `public/prototype-v11-compare-matrix.html`. Notes: `public/prot
 - Toasts raised right before navigating back (e.g. «Изменения отправлены партнёру на подтверждение», «Профиль обновлён» after «Сохранить») were wiped by the history-driven back render a moment later. A toast younger than 1 s now survives that render.
 - An untouched couple draft (the partner only opened the couple editor or interests) no longer blocks turning «Показывать пару в знакомствах» back on.
 - The couple interests screen is titled «Интересы пары» (was «Мои интересы»).
+
+## 2026-10-22 — Sent back for changes, simpler approvals
+
+- «Вернуть на доработку» (profile, joint post, private access) opens one small sheet with an optional note («Что поправить»). The note shows in the notification, the inbox row, couple settings, the editor banner and the review sheet.
+- The sender sees a returned version as something to do: it lands in «Нужно решить», couple settings show «Вернули на доработку», the Profiles card says «Изменения вернули на доработку», the couple editor opens with a banner. Actions: rework (edit profile / edit post / change the access decision) or discard («Отменить изменения / публикацию / решение»).
+- Access no longer dead-ends: «Изменить решение» reopens the grant sheet (new version), «Отменить решение» puts the request back in «Нужно решить». A couple request already answered is not offered twice while it waits.
+- Couple notifications have real text for every event (no more «Новое уведомление»).
+- Profile and interests are one approval: the review sheet no longer lists changed fields — «<имя> предлагает изменения профиля пары», «Посмотреть профиль», «Одобрить / Вернуть на доработку». Less linked data to maintain.
+- «Моё подтверждение»: one question, two choices as a list with a short subtitle each, one short note; the long paragraph is gone.
