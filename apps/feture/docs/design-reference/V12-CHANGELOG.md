@@ -104,3 +104,10 @@ Decision record: `public/prototype-v11-compare-matrix.html`. Notes: `public/prot
 - A couple's gender, orientation and age are no longer stored on the couple: they come from each member's own profile, only what that member shows publicly (hidden age stays hidden). Seed couples without member accounts carry the same public data per member.
 - «Данные пары» on the profile lists each member («Lena — женщина, би, 31») before role, format and «Ищу». The couple editor shows the same rows read-only («Из личных профилей») with a link to edit your own profile.
 - Discover filters now apply to couples (owner decision): gender and orientation — at least one member matches; age — every member with a shown age is inside the range.
+
+## 2026-10-22 — Couple members, defaults on creation
+
+- «Участники» on a couple profile shows each member's own gender and orientation (and age if shown) instead of «личный профиль»; long lists clamp to two lines, the full list is on the member's profile. «Данные пары» keeps only the couple's own role, format and «Ищу».
+- Seed couples read member data from their member profiles (Lena 31 woman bi, Max 34 man hetero; Nika 29, Jonas 31, both bi).
+- A new couple is shown in Discover by default; it appears once there is a couple photo. Saving the couple profile without a photo is allowed; turning Discover back on needs 18+ confirmation of both partners.
+- Creating a couple and the invitation sheet explain the defaults: shown in Discover, either partner edits and changes show at once with a notification, approval is opt-in per partner in couple settings, hiding from Discover and closing the private part are always immediate.

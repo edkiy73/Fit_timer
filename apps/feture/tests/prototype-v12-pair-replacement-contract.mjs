@@ -62,9 +62,10 @@ assert.equal(run('C.likesIn()'),run("social().likesIn.filter(l=>!isMatch(l.p)&&!
 assert.ok(!text(run("likesBody(cur())")).includes(run("sharedSummary(passId)")),'likes cards carry no match captions');
 prepare('P02',{owner:'couple'});assert.ok(!run("SC.P02.render(cur().p,cur())").includes('data-act="pairDating"'),'Discover visibility is not a profile-editor field');
 prepare('Q01');run("coupleProfile()");assert.ok(run("SC.Q01.render({},cur())").includes('data-act="pairDating"'));
-run("coupleProfile().photos=[1];coupleProfile().photo=1;S.me.ageCheck='ok';PEOPLE[S.pair.with].verified=true;ACT.pairDating()");assert.equal(run('pairDatingState()'),'on');assert.equal(run('S.pair.profile.datingVisible'),true);
-run("ACT.pairDating()");assert.equal(run('pairDatingState()'),'off');
-prepare('Q01');run("coupleProfile();S.pairMember='partner';setPairTrust(false);S.pairMember='me';coupleProfile().photos=[1];coupleProfile().photo=1;S.me.ageCheck='ok';PEOPLE[S.pair.with].verified=true;ACT.pairDating()");
+assert.equal(run('pairDatingState()'),'on','a new couple is shown in Discover by default');
+run("S.me.ageCheck='ok';PEOPLE[S.pair.with].verified=true;ACT.pairDating()");assert.equal(run('pairDatingState()'),'off');
+run("ACT.pairDating()");assert.equal(run('pairDatingState()'),'on');assert.equal(run('S.pair.profile.datingVisible'),true);
+prepare('Q01');run("coupleProfile().dating=false;coupleProfile().datingVisible=false;S.pairMember='partner';setPairTrust(false);S.pairMember='me';S.me.ageCheck='ok';PEOPLE[S.pair.with].verified=true;ACT.pairDating()");
 assert.equal(run('pairDatingState()'),'pending');assert.equal(run('S.pair.profile.datingVisible'),false);
 assert.ok(run("profGo('couple')").includes('data-go="P03"'));
 console.log('PASS likes pass/undo without captions, couple Discover visibility in couple settings, couple profile uses the solo preview');
@@ -76,5 +77,6 @@ assert.ok(pairsFor({gender:['woman']}).includes('lenamax'));assert.deepEqual(pai
 assert.deepEqual(pairsFor({age:[30,33]}),[],'every member with a shown age must be in range');assert.ok(pairsFor({age:[29,34]}).includes('lenamax'));
 run("coupleProfile()");assert.deepEqual(json("pairPeople('couple').map(m=>m.id)"),['me',run('S.pair.with')]);
 run("S.me.showAge=false");assert.equal(run("pairPeople('couple')[0].age"),null,'hidden personal age is not exposed through the couple');
-assert.ok(run("detailsGroup('lenamax')").includes('Lena'));
+assert.ok(text(run("pairLine('lenamax')")).includes(run("opt('orient','hetero')")),'members block shows each member’s own data');assert.ok(!run("detailsGroup('lenamax')").includes('Lena'));
+run("S.pair=null;S.pairInvite=null");assert.ok(run("SC.Q01.render({},cur())").includes(run("L('Сразу после создания','Right after you create it')")),'defaults are explained on creation');
 console.log('PASS couple details from members, Discover filters for couples');
