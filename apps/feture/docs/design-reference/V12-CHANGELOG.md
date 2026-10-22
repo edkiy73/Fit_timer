@@ -120,3 +120,9 @@ Decision record: `public/prototype-v11-compare-matrix.html`. Notes: `public/prot
 - «Ищу» / «Что ищет» / «Что ищем» → «В поиске» everywhere in V12 (profile, couple details, Discover filters, couple change review) — reads correctly for one person and for a couple.
 - Folded details summary (solo and couple): one line per field — the field name («Гендер», «Ориентация», …) bold in the primary text colour, the chosen values muted after it.
 - Owner: the titles above the chips inside the details card are back to the standard field-label style (the bold/primary-colour variant is reverted); only the folded summary keeps bold field names.
+
+## 2026-10-22 — Found while walking the couple approval flows
+
+- Toasts raised right before navigating back (e.g. «Изменения отправлены партнёру на подтверждение», «Профиль обновлён» after «Сохранить») were wiped by the history-driven back render a moment later. A toast younger than 1 s now survives that render.
+- An untouched couple draft (the partner only opened the couple editor or interests) no longer blocks turning «Показывать пару в знакомствах» back on.
+- The couple interests screen is titled «Интересы пары» (was «Мои интересы»).
