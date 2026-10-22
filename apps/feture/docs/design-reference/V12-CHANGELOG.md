@@ -119,3 +119,4 @@ Decision record: `public/prototype-v11-compare-matrix.html`. Notes: `public/prot
 - Section titles inside the details card («Из личных профилей», «Роль», «Формат отношений», «В поиске») are bolder and in the primary text colour.
 - «Ищу» / «Что ищет» / «Что ищем» → «В поиске» everywhere in V12 (profile, couple details, Discover filters, couple change review) — reads correctly for one person and for a couple.
 - Folded details summary (solo and couple): one line per field — the field name («Гендер», «Ориентация», …) bold in the primary text colour, the chosen values muted after it.
+- Owner: the titles above the chips inside the details card are back to the standard field-label style (the bold/primary-colour variant is reverted); only the folded summary keeps bold field names.
