@@ -56,3 +56,15 @@ assert.equal(run('T(S.pair.proposal.text.bio)'),'Editor pending');assert.equal(r
 prepare('D03');run("S.me.socialLikes=false;var likeTarget=pool().find(id=>!PEOPLE[id].pair);likePerson(likeTarget,'discover')");assert.ok(run('S.likesOut.some(x=>x.p===likeTarget)||isMatch(likeTarget)'));
 run("PEOPLE[likeTarget].socialLikes=false");assert.equal(run("canLikeFrom('me',likeTarget)"),false);assert.equal(run('PEOPLE[likeTarget].dating'),true);
 console.log('PASS preference-change pending-grant regression, actual editor auto-save and independent dating likes');
+// People round 5: likes «Тебе» pass + undo, couple Discover visibility lives in couple settings, couple profile = solo preview screen.
+prepare('D03',{sub:'likes'});run("var passId=social().likesIn.find(l=>!l.passed&&!isMatch(l.p)).p;ACT.likePass({dataset:{v:passId}})");
+assert.equal(run('C.likesIn()'),run("social().likesIn.filter(l=>!isMatch(l.p)&&!isBlocked(l.p)&&!l.passed).length"));assert.equal(run('social().decided[passId]'),-1);
+assert.ok(!text(run("likesBody(cur())")).includes(run("sharedSummary(passId)")),'likes cards carry no match captions');
+prepare('P02',{owner:'couple'});assert.ok(!run("SC.P02.render(cur().p,cur())").includes('data-act="pairDating"'),'Discover visibility is not a profile-editor field');
+prepare('Q01');run("coupleProfile()");assert.ok(run("SC.Q01.render({},cur())").includes('data-act="pairDating"'));
+run("coupleProfile().photos=[1];coupleProfile().photo=1;S.me.ageCheck='ok';PEOPLE[S.pair.with].verified=true;ACT.pairDating()");assert.equal(run('pairDatingState()'),'on');assert.equal(run('S.pair.profile.datingVisible'),true);
+run("ACT.pairDating()");assert.equal(run('pairDatingState()'),'off');
+prepare('Q01');run("coupleProfile();S.pairMember='partner';setPairTrust(false);S.pairMember='me';coupleProfile().photos=[1];coupleProfile().photo=1;S.me.ageCheck='ok';PEOPLE[S.pair.with].verified=true;ACT.pairDating()");
+assert.equal(run('pairDatingState()'),'pending');assert.equal(run('S.pair.profile.datingVisible'),false);
+assert.ok(run("profGo('couple')").includes('data-go="P03"'));
+console.log('PASS likes pass/undo without captions, couple Discover visibility in couple settings, couple profile uses the solo preview');
