@@ -111,3 +111,10 @@ Decision record: `public/prototype-v11-compare-matrix.html`. Notes: `public/prot
 - Seed couples read member data from their member profiles (Lena 31 woman bi, Max 34 man hetero; Nika 29, Jonas 31, both bi).
 - A new couple is shown in Discover by default; it appears once there is a couple photo. Saving the couple profile without a photo is allowed; turning Discover back on needs 18+ confirmation of both partners.
 - Creating a couple and the invitation sheet explain the defaults: shown in Discover, either partner edits and changes show at once with a notification, approval is opt-in per partner in couple settings, hiding from Discover and closing the private part are always immediate.
+
+## 2026-10-22 — Profile editor chips, «В поиске»
+
+- Chips in «Данные о тебе / Данные пары» no longer jump: the card no longer folds itself after the first pick (its open state is fixed per visit), and the summary above the chips is shown only while the card is folded — it never changes height under your finger.
+- The folded summary lists every chosen value of every field (it used to cut to two values and three fields).
+- Section titles inside the details card («Из личных профилей», «Роль», «Формат отношений», «В поиске») are bolder and in the primary text colour.
+- «Ищу» / «Что ищет» / «Что ищем» → «В поиске» everywhere in V12 (profile, couple details, Discover filters, couple change review) — reads correctly for one person and for a couple.
