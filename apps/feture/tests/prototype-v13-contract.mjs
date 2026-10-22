@@ -272,3 +272,9 @@ assert.ok(run(`S.discussions.find(d=>d.id==='${dd}').liked`));assert.ok(run("Obj
 prepare('F01');run("ensureV13();S.myPosts.unshift({...postFromDraft({author:'me',tags:[],aud:'all',text:'x',media:[{type:'image',url:'/images/v10-content/gallery-e1-ropes.webp'}],poll:null,result:null,people:[S.pair?.with||'kira']},'kp1'),status:'published'})");
 assert.ok(run("activePair()"),'test state has an active couple');{run("S.pairMember='partner'");assert.ok(json("todoItems().filter(x=>x.k==='tag').map(x=>x.post.id)").includes('kp1'),'the partner gets the photo mark');run("ACT.tagAnswer({dataset:{v:'kp1|yes'}});S.pairMember='me'");assert.ok(json("S.notifs.map(n=>n.type)").includes('tagok'),'Alex learns the partner agreed');}
 console.log('PASS discussion likes, partner photo marks');
+// Media mosaic takes the pictures' proportions: standard shots need no blurred fill; only extreme ones do.
+prepare('F01');const mz=r=>json(`(m=>({H:m.H,k:m.cells.map(c=>c[2]/c[3])}))(mosaic(${JSON.stringify(r)}))`);
+for(const [rs,tol] of [[[1.5,1.5],.1],[[0.8,0.8],.1],[[1.5,1.5,1.5],.1],[[1.5,1.5,1.5,1.5],.1],[[0.75,1.5,1.5,1.5],.1],[[0.8,1.5],.2]]){const m=mz(rs);assert.ok(m.H>=.5&&m.H<=1.25,'post height stays within 4:5 … 2:1');
+ const off=m.k.reduce((t,k,i)=>Math.max(t,Math.abs(Math.log(k/rs[i]))),0);assert.ok(off<tol,`cells follow the pictures (${rs}) — fill only where needed`);}
+assert.ok(run("mediaGrid([{type:'image',url:'/images/v10-content/gallery-e1-ropes.webp'},{type:'image',url:'/images/v10-content/gallery-e3-club.webp'}],{id:'x'})").includes('mgrid mos'));
+console.log('PASS media mosaic follows picture proportions');
