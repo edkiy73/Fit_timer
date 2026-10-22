@@ -199,3 +199,10 @@ Decision record: `public/prototype-v11-compare-matrix.html`. Notes: `public/prot
 ## 2026-10-22 — Inbox without settings
 
 - Notification settings are no longer reachable from the inbox (neither header nor bottom row); they live in «Настройки».
+
+## 2026-10-22 — Notification audit, community composer, clickable avatars
+
+- Every action that touches another person now notifies them (model deliveries): like, match, follow, access request, access opened / declined (personal and couple), event application decision, organiser update to attendees, community join decision, made / removed as host, muted / unmuted, removed from a community, couple invitation sent / answered. Couple targets reach both partners. The inviter gets «Приглашение принято — пара создана».
+- Community «Начать обсуждение» uses the feed composer (avatar, photo, poll, «+»), with proper spacing; photo/poll shortcuts open the editor ready.
+- Avatars in request, application and invitation cards open the profile (only the name did).
+- Fixed «Управление»: «Описание и правила» opened join requests because of an old string replace; now it opens the description editor.
