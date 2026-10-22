@@ -78,3 +78,9 @@ Decision record: `public/prototype-v11-compare-matrix.html`. Notes: `public/prot
 - Couple approval preferences are independent per member, defaulting to no approval. A member chooses whether the partner's shared actions need their approval, including profile/settings/interests/media/posts/private access. Immediate changes still notify both members.
 - Saving the couple profile automatically publishes or submits the complete revision. Removed the second Send draft step; accepting/rejecting checks current proposal identity, revision, draft version and session. Preference revisions invalidate in-flight writes without invalidating unrelated pending grants.
 - Added focused V12 contracts for independent defaults, automatic delivery, stale profile/grant rejection and real personal grant actions. Prototype-only: no backend or frozen V10/V11 changes.
+
+## 2026-10-22 — People header repaired
+
+- «Просмотренные» is an icon button in the single header row (tabs · couple author · history · filters), not a second full-width row. It appears only in Discover while dating is on; the Likes tab keeps the bell.
+- With a couple profile the previous `nowrap` + full-width history entry collapsed the Discover/Likes tabs to zero width and pushed the label off-screen. Tabs now use `minmax(0,1fr)` columns and never wrap.
+- ≤374px: tighter gaps/padding, 36px icons, 40px author avatar. ≤359px with a couple: 34/36px controls and the Likes counter sits on the tab corner, so both labels stay whole at 320px.
