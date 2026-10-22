@@ -165,3 +165,12 @@ const card=text(run("reqCardHTML({id:'q',p:'leon',scopes:['info'],t:Date.now(),s
 assert.ok(text(run("reqCardHTML({id:'q',p:'leon',scopes:['info'],t:Date.now(),status:'new'},'me')")).includes('Просит открыть твою приватную часть'));
 prepare('Q09');run("coupleProfile()");const q9=run("SC.Q09.render({},cur())");assert.ok(q9.includes('class="li"')&&q9.includes('selrow')&&!q9.includes('selrow solo'),'couple setup uses labelled select rows');
 console.log('PASS couple actions reach the partner, clear request cards, standard selects in couple setup');
+// Community owner manages hosts and members from the member list; events show who is going; «Прочитать все» is a button under the tabs.
+prepare('C03',{id:'circle',t:'members'});const mem=run("SC.C03.render(cur().p,cur())");assert.ok(mem.includes('data-act="cMember"'),'owner can open a member menu');
+run("ACT.cMemberDo({dataset:{v:'host|circle|kai'}})");assert.ok(!run("COMMUNITIES.circle.mods.includes('kai')"),'host removed');run("ACT.cMemberDo({dataset:{v:'host|circle|kai'}})");assert.ok(run("COMMUNITIES.circle.mods.includes('kai')"),'host added back');
+run("ACT.cMemberDo({dataset:{v:'mute|circle|mia'}})");assert.equal(run("communityMemberCanWrite('circle','mia')"),false,'a muted member cannot post');
+prepare('C03',{id:'rope',t:'members'});assert.ok(!run("SC.C03.render(cur().p,cur())").includes('data-act="cMember"'),'members cannot manage others');
+prepare('F01');const ev1=run("allEventIds().find(e=>EV(e).organizer!=='me')");const crowd=json(`eventCrowd('${ev1}')`);assert.ok(crowd.going.length+crowd.interested.length>0);
+run(`S.rsvp['${ev1}']={...myR('${ev1}'),status:'going',show:false}`);assert.ok(!json(`eventCrowd('${ev1}')`).going.includes('me'),'hidden attendance is not listed');assert.ok(json(`eventCrowd('${ev1}')`).meHidden);
+prepare('N01',{k:'all'});const n01=run("SC.N01.render(cur().p,cur())");assert.ok(n01.indexOf('inbox-read-all')<n01.indexOf('inbox-filters'),'read-all sits right under the tabs');
+console.log('PASS community hosts and members management, who is going, read-all under the tabs');
