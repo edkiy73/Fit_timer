@@ -174,3 +174,12 @@ prepare('F01');const ev1=run("allEventIds().find(e=>EV(e).organizer!=='me'&&!EV(
 run(`S.rsvp['${ev1}']={...myR('${ev1}'),status:'going',show:false}`);assert.ok(!json(`eventCrowd('${ev1}')`).going.includes('me'),'hidden attendance is not listed');assert.ok(json(`eventCrowd('${ev1}')`).meHidden);
 prepare('N01',{k:'all'});const n01=run("SC.N01.render(cur().p,cur())");assert.ok(n01.indexOf('inbox-read-all')<n01.indexOf('inbox-filters'),'read-all sits right under the tabs');
 console.log('PASS community hosts and members management, who is going, read-all under the tabs');
+// Comparison uses the profile you act as; invite says why a person can't be invited; owner sets community access; event status is one clear line.
+prepare('F01');run("coupleProfile();S.datingActor='couple';coupleProfile().dating=true;S.nav.stacks.feed.push({id:'P05',p:{id:'kira',actor:'couple'},f:{}})");
+assert.equal(run("compareActor('kira')"),'couple','P05 compares as the couple');run("cur().p.actor='me'");assert.equal(run("compareActor('kira')"),'me');
+assert.ok(run("pairInviteIssue('eva')").includes('уже в паре'),'a person in a couple is named as such');assert.ok(run("pairInviteIssue('Eva')").includes('уже в паре'),'nickname case does not matter');
+assert.ok(run("pairInviteIssue('evatom')||pairInviteIssue('nosuchnick')").length>0);assert.equal(run("pairInviteIssue('kai')"),'');
+prepare('C10',{id:'circle'});run("ACT.c10Priv({dataset:{v:'open',k:'circle'}})");assert.equal(run("COMMUNITIES.circle.privacy"),'open','owner changes who can join');
+prepare('F01');const evA=run("allEventIds().find(e=>EV(e).approval&&EV(e).organizer!=='me'&&!isPast(e))");run(`S.rsvp['${evA}']={...myR('${evA}'),status:'going',app:'pending'};S.nav.stacks.feed.push({id:'E03',p:{id:'${evA}'},f:{}})`);
+const e03=text(run("SC.E03.render(cur().p,cur())"));assert.ok(e03.includes('Заявка на рассмотрении')&&!e03.includes('Твой статус'),'one clear attendance status');
+console.log('PASS comparison as the acting profile, invite reasons, community access, clear attendance status');
