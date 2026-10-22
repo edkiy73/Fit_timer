@@ -2558,6 +2558,7 @@ button.sc{cursor:pointer}button.sc:active{transform:scale(.985)}
 .pe-form>.li{border-top:0;padding:0;min-height:0}
 .sel-btn{display:flex;align-items:center;gap:10px;text-align:left;color:var(--ink);cursor:pointer}.sel-btn>svg{flex:none;width:20px;height:20px;color:var(--faint)}.sel-btn>svg:last-child{width:18px;height:18px;margin-left:auto}.sel-btn>span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sel-btn>span.sel-ph{color:var(--faint)}
 .member-row small{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.pair-wrap>.grp{margin-top:10px}
+.pe-sums{display:grid;gap:6px;margin-top:8px}.pe-sum{font-size:13px;line-height:1.4;color:var(--mute)}.pe-sum b{display:inline;font-size:13px;font-weight:700;color:var(--ink);margin-right:4px}
 .pe-who .flabel{font-size:14px;font-weight:700;color:var(--ink)}
 .pe-who .kv{margin-top:2px}.pe-own{margin-top:4px;padding-inline:0}
 .pe-who{background:var(--surf);border:1px solid var(--line);border-radius:var(--r-l);padding:0 16px}.pe-who>.li{border-top:0}.pe-who>.field{margin:0 0 16px}.pe-who>.li[aria-expanded="true"]{padding-bottom:8px}
@@ -5694,8 +5695,8 @@ SC.P02={title:()=>L('Редактировать профиль','Edit profile'),
  const fields=identityFields().filter(([k])=>owner!=='couple'||COUPLE_FIELDS.includes(k));
  /* your details are folded into one summary row inside the same card; open by default only while nothing is chosen */
  const whoOpen=r.openWho??=!fields.some(([k])=>fmtList(r[k]).length);/* decided once per visit: picking the first chip must not fold the card under your finger */
- const whoSum=fields.map(([k,t])=>{const v=fmtList(r[k]).map(x=>opt(k,x)).filter(Boolean).join(', ');return v?`${t}: ${v}`:'';}).filter(Boolean);
- const whoRow=`<button class="li" data-act="peWho" aria-expanded="${whoOpen}"><span class="tx"><b>${owner==='couple'?L('Данные пары','Couple details'):L('Данные о тебе','Your details')}</b>${whoOpen?'':`<small>${whoSum.length?esc(whoSum.join(' · ')):L('Пока ничего не выбрано','Nothing chosen yet')}</small>`}</span><span class="chv ${whoOpen?'open':''}">${I.down}</span></button>`;
+ const whoSum=fields.map(([k,t])=>{const v=fmtList(r[k]).map(x=>opt(k,x)).filter(Boolean).join(', ');return v?`<span class="pe-sum"><b>${esc(t)}</b> ${esc(v)}</span>`:'';}).filter(Boolean);
+ const whoRow=`<button class="li" data-act="peWho" aria-expanded="${whoOpen}"><span class="tx"><b>${owner==='couple'?L('Данные пары','Couple details'):L('Данные о тебе','Your details')}</b>${whoOpen?'':whoSum.length?`<span class="pe-sums">${whoSum.join('')}</span>`:`<small>${L('Пока ничего не выбрано','Nothing chosen yet')}</small>`}</span><span class="chv ${whoOpen?'open':''}">${I.down}</span></button>`;
  return `${bar(L('Профиль','Profile'),{back:1,sm:1,actions:`<button class="btn text auto" data-act="previewDraft">${L('Как видят','Preview')}</button>`})}<div class="view nodock cta1"><div class="wrap">
  <section class="grp"><div class="grp-t"><span>${L('Фото и видео','Photos & video')}</span><span class="note">${r.photos.length}/${PUB_MAX}</span></div><div class="card form-card">${pubMediaEditor(r)}</div></section>
  <section class="grp"><div class="card form-card pe-form">
