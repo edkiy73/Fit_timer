@@ -135,3 +135,4 @@ Decision record: `public/prototype-v11-compare-matrix.html`. Notes: `public/prot
 - Couple notifications have real text for every event (no more «Новое уведомление»).
 - Profile and interests are one approval: the review sheet no longer lists changed fields — «<имя> предлагает изменения профиля пары», «Посмотреть профиль», «Одобрить / Вернуть на доработку». Less linked data to maintain.
 - «Моё подтверждение»: one question, two choices as a list with a short subtitle each, one short note; the long paragraph is gone.
+- «Моё подтверждение» names all three kinds of couple actions in the question: profile changes, posts and private access.
