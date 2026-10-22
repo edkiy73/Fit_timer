@@ -98,3 +98,9 @@ Decision record: `public/prototype-v11-compare-matrix.html`. Notes: `public/prot
 - Profile editor (solo and couple): «Данные о тебе / Данные пары» is a card in the same style as «Данные» on the profile; the city is a bordered select (pin, value, chevron) like the other inputs.
 - No dividers inside the main editor card: toggles, fields, the city select and the details card share one 16px rhythm.
 - Couple settings (Q01): sections use the standard group (title 8px above its card) instead of grid rows, so the title-to-card gap matches every other screen.
+
+## 2026-10-22 — Couple details from personal profiles, couple search
+
+- A couple's gender, orientation and age are no longer stored on the couple: they come from each member's own profile, only what that member shows publicly (hidden age stays hidden). Seed couples without member accounts carry the same public data per member.
+- «Данные пары» on the profile lists each member («Lena — женщина, би, 31») before role, format and «Ищу». The couple editor shows the same rows read-only («Из личных профилей») with a link to edit your own profile.
+- Discover filters now apply to couples (owner decision): gender and orientation — at least one member matches; age — every member with a shown age is inside the range.

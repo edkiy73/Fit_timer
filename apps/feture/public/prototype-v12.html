@@ -2557,6 +2557,7 @@ button.sc{cursor:pointer}button.sc:active{transform:scale(.985)}
 /* V12 profile editor: one rhythm (16px) without dividers — city is a bordered select, «your details» is a card like «Данные» on the profile */
 .pe-form>.li{border-top:0;padding:0;min-height:0}
 .sel-btn{display:flex;align-items:center;gap:10px;text-align:left;color:var(--ink);cursor:pointer}.sel-btn>svg{flex:none;width:20px;height:20px;color:var(--faint)}.sel-btn>svg:last-child{width:18px;height:18px;margin-left:auto}.sel-btn>span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sel-btn>span.sel-ph{color:var(--faint)}
+.pe-who .kv{margin-top:2px}.pe-own{margin-top:4px;padding-inline:0}
 .pe-who{background:var(--surf);border:1px solid var(--line);border-radius:var(--r-l);padding:0 16px}.pe-who>.li{border-top:0}.pe-who>.field{margin:0 0 16px}.pe-who>.li[aria-expanded="true"]{padding-bottom:8px}
 .video-fill-frame{position:relative;isolation:isolate;overflow:hidden}
 .video-fill-frame>video:not(.mbg){background:transparent!important;object-fit:contain}
@@ -2693,13 +2694,13 @@ const PEOPLE={
  lina:{name:'Lina',age:28,photo:9,nph:3,city:'berlin',km:7,gender:['woman'],orient:['bi'],format:'open',role:['switch'],seek:['dates','chat'],verified:true,online:false,last:{ru:'в сети вчера',en:'active yesterday'},dating:true,
   bio:{ru:'Путешествую, готовлю для друзей, исследую себя без спешки.',en:'Travelling, cooking for friends, exploring myself at my own pace.'},
   jars:[['roleplay',8],['experiments',8],['intimacy',8]]},
- tomeva:{premium:true,members:['eva','tom'],name:'Eva & Tom',nameRu:'Eva и Tom',age:null,pair:true,plate:'amber',plate2:'ember',city:'berlin',km:3,gender:['woman','man'],orient:['bi'],format:'swing',role:['switch'],seek:['exp','friends'],verified:true,online:true,dating:true,
+ tomeva:{premium:true,members:['eva','tom'],name:'Eva & Tom',nameRu:'Eva и Tom',age:null,pair:true,plate:'amber',plate2:'ember',city:'berlin',km:3,format:'swing',role:['switch'],seek:['exp','friends'],verified:true,online:true,dating:true,
   bio:{ru:'Пара, вместе 3 года. Отвечаем вдвоём, первая встреча — только в общественном месте.',en:'A couple, together 3 years. We reply together; first meeting in a public place only.'},
   jars:[['experiments',10],['exhibition',6],['intimacy',8]],pairNote:{ru:'пара · вместе 3 года',en:'couple · 3 years together'}},
- lenamax:{pair:true,name:'Lena & Max',nameRu:'Lena и Max',age:null,photo:'p1',city:'berlin',km:5,gender:['woman','man'],orient:['hetero','bi'],format:['open'],status:'partnered',role:['switch'],seek:['exp','events'],verified:true,pv:true,online:true,dating:true,
+ lenamax:{pair:true,name:'Lena & Max',nameRu:'Lena и Max',age:null,photo:'p1',city:'berlin',km:5,mem:[{name:'Lena',gender:['woman'],orient:['bi'],age:31},{name:'Max',gender:['man'],orient:['hetero'],age:34}],format:['open'],status:'partnered',role:['switch'],seek:['exp','events'],verified:true,pv:true,online:true,dating:true,
   bio:{ru:'Пара, вместе 6 лет. Ходим на латекс-вечеринки, ищем пару или человека для общения и совместных выходов. Сначала переписка с обоими.',en:'A couple, together 6 years. We go to latex parties and look for a couple or a person to talk to and go out with. Chat with both of us first.'},
   jars:[['latex',10],['exhibition',8],['roleplay',7],['control',6]],pairNote:{ru:'пара · вместе 6 лет',en:'couple · 6 years together'}},
- nikajonas:{pair:true,name:'Nika & Jonas',nameRu:'Nika и Jonas',age:null,photo:'p2',city:'berlin',km:8,gender:['woman','man'],orient:['bi'],format:['poly'],status:'partnered',role:['switch'],seek:['friends','dates'],verified:true,online:false,last:{ru:'в сети вчера',en:'active yesterday'},dating:true,
+ nikajonas:{pair:true,name:'Nika & Jonas',nameRu:'Nika и Jonas',age:null,photo:'p2',city:'berlin',km:8,mem:[{name:'Nika',gender:['woman'],orient:['bi'],age:29},{name:'Jonas',gender:['man'],orient:['bi'],age:31}],format:['poly'],status:'partnered',role:['switch'],seek:['friends','dates'],verified:true,online:false,last:{ru:'в сети вчера',en:'active yesterday'},dating:true,
   bio:{ru:'Полиаморная пара. Любим долгие разговоры, кофейни и медленный темп. Пишите, если хочется познакомиться спокойно.',en:'A polyamorous couple. We love long talks, cafés and a slow pace. Write if you want to get to know each other calmly.'},
   jars:[['talk',10],['slow',9],['intimacy',8],['sensory',6]],pairNote:{ru:'пара · вместе 2 года',en:'couple · 2 years together'}},
  eva:{name:'Eva',age:32,plate:'amber',city:'berlin',gender:['woman'],orient:['bi'],format:'swing',role:['switch'],seek:['exp','friends'],verified:true,pv:true,online:true,dating:false,pairOf:'tomeva',
@@ -3771,6 +3772,7 @@ function compatBlock(id,o={}){const demo=!!o.demo;
 function detailsGroup(id){const p=person(id);if(!p)return '';
  const only=p.pair?['role','format','seek']:null;
  const rows=identityFields().filter(([k])=>(!only||only.includes(k))&&(k!=='seek'||p.dating)).map(([k,title])=>{const v=IDENTITY_MULTI.includes(k)?fmtList(p[k]).map(x=>opt(k,x)).filter(Boolean).join(', '):opt(k,p[k]);return v?[title,v]:null;}).filter(Boolean);
+ if(p.pair)rows.unshift(...pairPeople(id).map(m=>[m.name,memberLine(m)]).filter(r=>r[1]));
  return rows.length?grp(p.pair?L('Данные пары','Couple details'):L('Данные','Details'),`<dl class="kv">${rows.map(([k,v])=>`<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>`):'';}
 function sharedSummary(id,sh){const s=sh||shared(id);if(s.few)return L('Пока мало общего контекста','Not much shared context yet');
  const R=s.rows,parts=[];const n=R.match.length+R.complement.length;
@@ -3781,7 +3783,13 @@ function sharedSummary(id,sh){const s=sh||shared(id);if(s.few)return L('Пока
  const out=parts.join(', ');return out?out.charAt(0).toUpperCase()+out.slice(1):L('Есть что обсудить','Something to talk about');}
 
 /* ---------- people ---------- */
-function whoLine(id){const p=person(id);if(!p)return '';const g=(p.gender||[]).map(x=>opt('gender',x)).join(', ');const o=(p.orient||[]).map(x=>opt('orient',x)).join(', ');return [p.pair?T(p.pairNote):'',[g,o].filter(Boolean).join(', ')].filter(Boolean).join(' · ');}
+/* V12: a couple's gender, orientation and age are never stored on the couple — each member's own profile is the source, and only what that member shows publicly.
+   Seed couples whose members have no account in the prototype carry the same public data in `mem`. */
+function pairPeople(id){const p=person(id);if(!p?.pair)return [];if(p.mem)return p.mem.map(m=>({...m}));
+ return realMembers(id).map(m=>{const q=person(m);return q?{id:m,name:pname(m),gender:q.gender||[],orient:q.orient||[],age:q.age??null}:null;}).filter(Boolean);}
+const pairUnion=(id,k)=>[...new Set(pairPeople(id).flatMap(m=>m[k]||[]))];
+const memberLine=m=>[...(m.gender||[]).map(x=>opt('gender',x)),...(m.orient||[]).map(x=>opt('orient',x)),m.age??''].filter(Boolean).join(', ');
+function whoLine(id){const p=person(id);if(!p)return '';const g=(p.pair?pairUnion(id,'gender'):p.gender||[]).map(x=>opt('gender',x)).join(', ');const o=(p.pair?pairUnion(id,'orient'):p.orient||[]).map(x=>opt('orient',x)).join(', ');return [p.pair?T(p.pairNote):'',[g,o].filter(Boolean).join(', ')].filter(Boolean).join(' · ');}
 function placeLine(id){const p=person(id);if(!p)return '';const km=S.me.location?.mode==='nearby'?nearbyDistance(id):null;return [city(p.city),km!==null?L(`около ${Math.max(5,km)} км`,`about ${Math.max(5,km)} km`):''].filter(Boolean).join(' · ');}
 function presence(id){const p=person(id);if(!p)return '';return p.online?L('сейчас в сети','online now'):T(p.last)||'';}
 /** attributes that open a person's profile (own profile for me) */
@@ -5200,9 +5208,11 @@ function passDating(id,f){const p=PEOPLE[id];if(!p.verified||!p.pair&&p.age<18)r
  if((f.placeMode||'city')==='city'&&f.city&&p.city!==f.city)return false;
  if(f.placeMode==='nearby'){const a=f.coords||S.me.location?.coords,b=p.location;if(!a||!b||distanceKm(a,b)>f.dist)return false;}
  if(f.show==='people'&&p.pair)return false;if(f.show==='pairs'&&!p.pair)return false;
- if(!p.pair&&(p.age<f.age[0]||p.age>f.age[1]))return false;
- if(f.gender.length&&!p.pair&&!p.gender.some(g=>f.gender.includes(g)))return false;
- if((f.orient||[]).length&&!p.pair&&!(p.orient||[]).some(o=>f.orient.includes(o)))return false;
+ /* couples (owner 22.10): every member with a shown age is inside the range; gender/orientation — at least one member matches */
+ const mem=p.pair?pairPeople(id):[p],inAge=a=>a==null||a>=f.age[0]&&a<=f.age[1];
+ if(p.pair?!mem.every(m=>inAge(m.age)):p.age<f.age[0]||p.age>f.age[1])return false;
+ if(f.gender.length&&!mem.some(m=>(m.gender||[]).some(g=>f.gender.includes(g))))return false;
+ if((f.orient||[]).length&&!mem.some(m=>(m.orient||[]).some(o=>f.orient.includes(o))))return false;
  if(f.format.length&&!fmtList(p.format).some(x=>f.format.includes(x)))return false;
  if(f.seek.length&&!p.seek.some(s=>f.seek.includes(s)))return false;
  if((f.role||[]).length&&!fmtList(p.role).some(v=>f.role.includes(v)))return false;
@@ -5692,7 +5702,7 @@ SC.P02={title:()=>L('Редактировать профиль','Edit profile'),
  ${owner!=='couple'?toggleRow('peShowAge',L('Показывать возраст в профиле','Show age on profile'),'',r.showAge):''}
  ${rteField({name:'bio',label:L('О себе','About you'),max:500,ph:L('Пара фраз о том, что для тебя важно','A few lines about what matters to you')})}
  <div class="field"><span>${L('Город','City')}</span><button type="button" class="inp sel-btn" data-act="peCity" aria-haspopup="dialog">${I.pin}<span class="${r.f.city?'':'sel-ph'}">${r.f.city?esc(placeCaption(r.f.city)):L('Не показывать','Don’t show')}</span>${I.down}</button></div>
- <div class="pe-who">${whoRow}${whoOpen?fields.map(([k,title])=>`<div class="field"><span class="flabel">${title}</span>${identityChoices(k,r[k],IDENTITY_MULTI.includes(k)?'peMulti':'peOne')}</div>`).join(''):''}</div>
+ <div class="pe-who">${whoRow}${whoOpen&&owner==='couple'?`<div class="field"><span class="flabel">${L('Из личных профилей','From personal profiles')}</span><dl class="kv">${pairPeople('couple').map(m=>`<dt>${esc(m.name)}</dt><dd>${esc(memberLine(m))||`<span class="note">${L('не указано','not set')}</span>`}</dd>`).join('')}</dl><div class="fhint">${L('Гендер, ориентация и возраст берутся из личного профиля каждого — меняются там.','Gender, orientation and age come from each partner’s own profile — change them there.')}</div><button type="button" class="btn text auto pe-own" data-go="P02">${L('Изменить в моём профиле','Edit in my profile')} ${ic('chev',16)}</button></div>`:''}${whoOpen?fields.map(([k,title])=>`<div class="field"><span class="flabel">${title}</span>${identityChoices(k,r[k],IDENTITY_MULTI.includes(k)?'peMulti':'peOne')}</div>`).join(''):''}</div>
  </div></section>${peJars(m,owner)}${privEditor(m,r,owner)}
  </div></div><div class="ctabar"><div class="wrap"><button class="btn primary" data-act="peSave">${L('Сохранить','Save')}</button></div></div>`;}};
 ACT.peWho=()=>{const r=cur();const f=identityFields().filter(([k])=>r.p.owner!=='couple'||COUPLE_FIELDS.includes(k));const was=r.openWho??!f.some(([k])=>fmtList(r[k]).length);r.openWho=!was;refresh();};
