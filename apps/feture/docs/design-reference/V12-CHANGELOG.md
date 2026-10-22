@@ -92,3 +92,8 @@ Decision record: `public/prototype-v11-compare-matrix.html`. Notes: `public/prot
 - People header: the author avatar is the size of the neighbouring icon buttons (40/36/34px), no ring or background — just the photo.
 - «Показывать пару в знакомствах» moved from the couple profile editor to couple settings (Q01, renamed «Настройки пары»). Off is immediate for either partner; on is published at once when partners trust each other, otherwise it waits for the partner.
 - Couple profile uses the solo components: on Profiles it is the same card as the solo profile (tap — «как видят», «Изменить профиль», gear — couple settings); the couple page (Q03 and all couple links) is the same «как видят» screen as the solo profile, whose ⋯ menu adds «Настройки пары».
+
+## 2026-10-22 — Profile editor rhythm
+
+- Profile editor (solo and couple): «Данные о тебе / Данные пары» is a card in the same style as «Данные» on the profile; the city is a bordered select (pin, value, chevron) like the other inputs.
+- No dividers inside the main editor card: toggles, fields, the city select and the details card share one 16px rhythm.

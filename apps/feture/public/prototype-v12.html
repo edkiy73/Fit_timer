@@ -2554,6 +2554,10 @@ button.sc{cursor:pointer}button.sc:active{transform:scale(.985)}
 .lk .lkx{position:absolute;right:8px;top:8px;z-index:3;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;color:#fff;background:rgba(10,6,10,.55);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}.lk .lkx svg{width:16px;height:16px}
 /* V12 couple card on the Profiles hub: same card as the solo profile, two actions side by side */
 .me-acts.two{grid-template-columns:minmax(0,1fr) auto}.me-acts.two .btn:last-child{width:auto;aspect-ratio:1;padding:0}
+/* V12 profile editor: one rhythm (16px) without dividers — city is a bordered select, «your details» is a card like «Данные» on the profile */
+.pe-form>.li{border-top:0;padding:0;min-height:0}
+.sel-btn{display:flex;align-items:center;gap:10px;text-align:left;color:var(--ink);cursor:pointer}.sel-btn>svg{flex:none;width:20px;height:20px;color:var(--faint)}.sel-btn>svg:last-child{width:18px;height:18px;margin-left:auto}.sel-btn>span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sel-btn>span.sel-ph{color:var(--faint)}
+.pe-who{background:var(--surf);border:1px solid var(--line);border-radius:var(--r-l);padding:0 16px}.pe-who>.li{border-top:0}.pe-who>.field{margin:0 0 16px}.pe-who>.li[aria-expanded="true"]{padding-bottom:8px}
 .video-fill-frame{position:relative;isolation:isolate;overflow:hidden}
 .video-fill-frame>video:not(.mbg){background:transparent!important;object-fit:contain}
 .video-fill-frame>.video-fill-bg{position:absolute!important;inset:-12%!important;width:124%!important;height:124%!important;max-width:none;object-fit:cover!important;filter:blur(26px) saturate(1.15) brightness(.85);opacity:.9;z-index:-1!important;pointer-events:none;transform:none!important}
@@ -5683,12 +5687,12 @@ SC.P02={title:()=>L('Редактировать профиль','Edit profile'),
  const whoRow=`<button class="li" data-act="peWho" aria-expanded="${whoOpen}"><span class="tx"><b>${owner==='couple'?L('Данные пары','Couple details'):L('Данные о тебе','Your details')}</b><small>${whoSum.length?esc(whoSum.slice(0,3).join(' · ')):L('Пока ничего не выбрано','Nothing chosen yet')}</small></span><span class="chv ${whoOpen?'open':''}">${I.down}</span></button>`;
  return `${bar(L('Профиль','Profile'),{back:1,sm:1,actions:`<button class="btn text auto" data-act="previewDraft">${L('Как видят','Preview')}</button>`})}<div class="view nodock cta1"><div class="wrap">
  <section class="grp"><div class="grp-t"><span>${L('Фото и видео','Photos & video')}</span><span class="note">${r.photos.length}/${PUB_MAX}</span></div><div class="card form-card">${pubMediaEditor(r)}</div></section>
- <section class="grp"><div class="card form-card">
+ <section class="grp"><div class="card form-card pe-form">
  ${field({name:'nick',label:owner==='couple'?L('Название пары','Couple name'):L('Ник','Nickname'),icon:'at',attrs:'autocapitalize="off" spellcheck="false"'})}
  ${owner!=='couple'?toggleRow('peShowAge',L('Показывать возраст в профиле','Show age on profile'),'',r.showAge):''}
  ${rteField({name:'bio',label:L('О себе','About you'),max:500,ph:L('Пара фраз о том, что для тебя важно','A few lines about what matters to you')})}
- <button class="li" data-act="peCity"><span class="ico">${I.pin}</span><span class="tx"><b>${L('Город','City')}</b><small>${r.f.city?esc(placeCaption(r.f.city)):L('Не показывать','Don’t show')}</small></span>${I.chev}</button>
-  ${whoRow}${whoOpen?fields.map(([k,title])=>`<div class="field"><span class="flabel">${title}</span>${identityChoices(k,r[k],IDENTITY_MULTI.includes(k)?'peMulti':'peOne')}</div>`).join(''):''}
+ <div class="field"><span>${L('Город','City')}</span><button type="button" class="inp sel-btn" data-act="peCity" aria-haspopup="dialog">${I.pin}<span class="${r.f.city?'':'sel-ph'}">${r.f.city?esc(placeCaption(r.f.city)):L('Не показывать','Don’t show')}</span>${I.down}</button></div>
+ <div class="pe-who">${whoRow}${whoOpen?fields.map(([k,title])=>`<div class="field"><span class="flabel">${title}</span>${identityChoices(k,r[k],IDENTITY_MULTI.includes(k)?'peMulti':'peOne')}</div>`).join(''):''}</div>
  </div></section>${peJars(m,owner)}${privEditor(m,r,owner)}
  </div></div><div class="ctabar"><div class="wrap"><button class="btn primary" data-act="peSave">${L('Сохранить','Save')}</button></div></div>`;}};
 ACT.peWho=()=>{const r=cur();const f=identityFields().filter(([k])=>r.p.owner!=='couple'||COUPLE_FIELDS.includes(k));const was=r.openWho??!f.some(([k])=>fmtList(r[k]).length);r.openWho=!was;refresh();};
