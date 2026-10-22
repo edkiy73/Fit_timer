@@ -252,6 +252,8 @@ h3.t{font:650 17px/1.3 var(--font);margin:0 0 6px}
 .seg .knob{position:absolute;top:3px;bottom:3px;left:3px;border-radius:9px;background:var(--surf);box-shadow:0 1px 3px rgba(0,0,0,.12);transition:transform .28s var(--ease)}
 .seg em{font-style:normal;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--accent);color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center}
 .seg.sm button{min-height:34px;font-size:14px}
+/* a counter that would cut the label short sits on the tab's corner instead (fitTabCounters) */
+.seg button.em-up em{position:absolute;top:1px;right:1px;z-index:2;min-width:15px;height:15px;line-height:15px;padding:0 3px;font-size:10px}
 .tabs{display:flex;gap:4px;overflow-x:auto;margin:0 calc(-1*var(--gut)) 12px;padding:0 var(--gut);scrollbar-width:none;border-bottom:1px solid var(--line)}
 .tabs::-webkit-scrollbar{display:none}
 .tabs button{position:relative;flex:none;min-height:42px;padding:0 10px;font-size:15px;font-weight:600;color:var(--mute);white-space:nowrap;display:flex;align-items:center;gap:6px}
@@ -3458,6 +3460,10 @@ function tab(t,p){
 }
 /** re-render current screen in place (state changed), keeping scroll */
 function refresh(){saveScroll();render(null,true);}
+/* tabs: when the label does not fit next to its counter, the counter moves to the tab's corner so the label stays whole */
+function fitTabCounters(){document.querySelectorAll('.seg button').forEach(b=>{const e=b.querySelector('em'),t=b.querySelector('span');if(!e||!t)return;b.classList.remove('em-up');if(t.scrollWidth>t.clientWidth+1)b.classList.add('em-up');});}
+let fitTabsQueued=false;const queueFitTabs=()=>{if(fitTabsQueued)return;fitTabsQueued=true;requestAnimationFrame(()=>{fitTabsQueued=false;fitTabCounters();});};
+new MutationObserver(queueFitTabs).observe(document.body,{childList:true,subtree:true});addEventListener('resize',queueFitTabs);
 /* switching a tab or a filter inside a screen replaces the history entry: Back leaves the screen, it does not walk through the tabs */
 function setP(k,v){cur().p[k]=v;navNextReplace=true;refresh();}
 /** switch a root sub-tab: resets that sub-tab's scroll */
@@ -3515,13 +3521,15 @@ function ownsCommunity(id){return !!S?.session&&!!COMMUNITIES[id]&&!!S.managedCo
 const C={
  likesIn:()=>social().likesIn.filter(l=>!isMatch(l.p)&&!isBlocked(l.p)&&!l.passed).length,
  newMatches:()=>social().matches.filter(m=>(!social().threads[m.p]||!social().threads[m.p].msgs.length)&&!isBlocked(m.p)).length,
- unreadChats:()=>['me',...(activePair()?['couple']:[])].reduce((n,a)=>n+Object.entries(social(a).threads).filter(([k,t])=>chatUnread(t)&&!social(a).archived.has(k)&&!isBlocked(k)).length,0),
+ unreadFor:a=>Object.entries(social(a)?.threads||{}).filter(([k,t])=>chatUnread(t)&&!social(a).archived.has(k)&&!isBlocked(k)).length,
+ unreadChats:()=>['me',...(activePair()?['couple']:[])].reduce((n,a)=>n+C.unreadFor(a),0),
  notif:()=>currentNotifications().filter(n=>!n.read&&!(n.p&&isBlocked(n.p))).length,
  updates:()=>S.updates.filter(u=>!u.read).length,
  reqIn:()=>social().reqIn.filter(r=>r.status==='new'&&!isBlocked(r.p)).length,
  /* dock badges: personal and couple together — the couple's likes and requests must not hide behind the profile switcher */
  likesAll:()=>ownIdentities().reduce((n,a)=>n+waitingLikes(a),0),
  reqAll:()=>ownIdentities().reduce((n,a)=>n+waitingReqs(a),0),
+ meTodo:()=>todoItems().filter(x=>['req','profile','profileBack','joint','pinv'].includes(x.k)).length,
  quotaLeft:()=>Math.max(0,S.quota.max-[...S.reqOut,...(S.pair?.social?.reqOut||[])].filter(x=>Date.now()-x.t<DAY).length),
  joined:()=>S.joined.size,
  members:id=>COMMUNITIES[id].members+((S.joined.has(id)||ownsCommunity(id))?1:0)+(S.communityMembers[id]?.size||0), // base count excludes the viewer
@@ -3532,13 +3540,15 @@ function bar(title,o={}){
  return `<header class="bar ${o.cls||''}">${o.back?`<button class="ibtn ghost" data-back aria-label="${L('Назад','Back')}">${I.back}</button>`:''}${o.lead||''}<h1 class="${o.sm?'sm':''}">${safeInline(title)}${o.sub?`<span class="sub">${safeInline(o.sub)}</span>`:''}</h1>${o.actions||''}</header>`;
 }
 /** bell badge: unread notifications that are not decisions + decisions that wait on me (a request notification and its card are one item) */
-const bellCount=()=>currentNotifications().filter(n=>!n.read&&n.type!=='req'&&!(n.p&&isBlocked(n.p))).length+(typeof todoCount==='function'?todoCount():0);
+/* a notification whose decision sits in «Нужно решить» is counted once, there */
+const TODO_PAIR_EVENTS=new Set(['req','proposal','postApproval','grantApproval','returned','workReturned']);
+const bellCount=()=>currentNotifications().filter(n=>!n.read&&n.type!=='req'&&!(n.type==='pair'&&TODO_PAIR_EVENTS.has(n.pairEvent))&&!(n.p&&isBlocked(n.p))).length+(typeof todoCount==='function'?todoCount():0);
 const bellBtn=()=>{const n=bellCount();return `<button class="ibtn" data-go="N01" aria-label="${L('Уведомления','Notifications')}${n?`: ${n}`:''}">${I.bell}${n?`<sup>${n}</sup>`:''}</button>`;};
 const searchBtn=(scope)=>`<button class="ibtn" data-go="G01" data-p='${esc(JSON.stringify({scope:scope||'all'}))}' aria-label="${L('Поиск','Search')}">${I.search}</button>`;
 /* V8: community first — Events get their own tab; People appear only once dating is switched on in the admin */
 /* V11 (owner, 20.10): the «Я» tab is «Профиль»; with an active couple it holds two profiles — «Профили» */
 const meTabName=()=>activePair()?L('Профили','Profiles'):L('Профиль','Profile');
-const TABDEF=()=>[['feed',I.feed,L('Лента','Feed'),0],...(window.DATING_ON&&DATING_ON()?[['people',I.people,L('Люди','People'),C.likesAll()]]:[]),['groups',I.groups,L('Комьюнити','Community'),0],['chats',I.chat,L('Чаты','Chats'),C.unreadChats()||(C.newMatches()?'dot':0)],['me',I.me,meTabName(),C.reqAll()]];
+const TABDEF=()=>[['feed',I.feed,L('Лента','Feed'),0],...(window.DATING_ON&&DATING_ON()?[['people',I.people,L('Люди','People'),C.likesAll()]]:[]),['groups',I.groups,L('Комьюнити','Community'),0],['chats',I.chat,L('Чаты','Chats'),C.unreadChats()||(C.newMatches()?'dot':0)],['me',I.me,meTabName(),C.meTodo()]];
 function dockHTML(){
  const td=TABDEF();return `<nav class="dock" style="grid-template-columns:repeat(${td.length},1fr)" aria-label="${L('Разделы','Sections')}">${td.map(([t,icn,l,n])=>`<button class="${S.nav.tab===t?'on':''}" data-tab="${t}" aria-label="${l}${n&&n!=='dot'?`, ${n}`:''}" ${S.nav.tab===t?'aria-current="page"':''}>${icn}<span>${l}</span>${n==='dot'?'<em class="dot"></em>':n?`<em>${n}</em>`:''}</button>`).join('')}</nav>`;
 }
@@ -6055,7 +6065,7 @@ function threadIds(arch,actor=chatAuthor()){const st=chatStore(actor);if(!st)ret
 function chatUnread(t){const reader=pairMember(),seen=t.readBy?.[reader],partner=m=>m.me&&m.sender&&m.sender!==reader;return seen==null?(t.unread||0)+t.msgs.filter(partner).length:t.msgs.filter(m=>(!m.me||partner(m))&&m.t>seen).length;}
 function chatRow(id,actor='me'){const t=ensureThread(id,actor),m=lastMsg(id,actor),n=chatUnread(t);return `<button class="chat-row ${n?'unread':''}" data-go="H02" data-p='${esc(JSON.stringify({id,actor}))}'>${av(id,'round lg')}<span class="tx"><b>${esc(pname(id))}</b><small>${actor==='couple'?esc(pairName())+' · ':''}${m?esc(msgPreview(m)):L('Напиши первым','Say hi first')}</small></span><span class="side2">${n?`<span class="unr">${n}</span>`:''}<time>${m?F.short(m.t):''}</time></span></button>`;}
 SC.H01={root:1,tab:'chats',title:()=>L('Чаты','Chats'),render:p=>{const f=activePair()?(p.kind||'all'):'all',q=(p.q||'').toLowerCase(),owners=(S.pair?.status==='active'||S.pair?.status==='dissolved'?['me','couple']:['me']).filter(a=>f==='all'||f===a);const rows=owners.flatMap(actor=>threadIds(false,actor).filter(id=>!q||pname(id).toLowerCase().includes(q)).map(id=>({id,actor,t:lastMsg(id,actor)?.t||0}))).sort((a,b)=>b.t-a.t);const fresh=owners.filter(actor=>authorAllowed(actor)).flatMap(actor=>social(actor).matches.filter(m=>!social(actor).threads[m.p]?.msgs.length&&!isBlocked(m.p)).map(m=>({...m,actor})));
- return `${bar(L('Чаты','Chats'),{actions:`<button class="ibtn" data-act="chatSearch" aria-label="${L('Поиск по чатам','Search chats')}">${I.search}</button><button class="ibtn" data-go="H05" aria-label="${L('Архив','Archive')}">${I.archive}</button>${bellBtn()}`})}<div class="view"><div class="wrap">${activePair()?seg([['all',L('Все','All')],['me',L('Личные','Personal')],['couple',L('От пары','As a couple')]],f,'chatKind')+(f==='couple'?`<p class="note mt8">${I.couple} ${L(`Здесь вы пишете от имени пары «${esc(pairName())}». Партнёр видит эти чаты.`,`Here you write as the couple “${esc(pairName())}”. Your partner sees these chats.`)}</p>`:''):''}${p.searching?`<input class="inp mt12" id="chatQ" aria-label="${L('Поиск по чатам','Search chats')}" value="${esc(p.q||'')}" data-in="chatQ">`:''}${fresh.length?`<div class="sec">${L('Новые совпадения','New matches')}</div><div class="matches">${fresh.map(m=>`<button data-act="openChat" data-v="${m.p}" data-actor="${m.actor}"><span class="ring2">${av(m.p,'round')}</span><span class="mn">${esc(pname(m.p))}${m.actor==='couple'?' · '+esc(pairName()):''}</span></button>`).join('')}</div>`:''}${rows.map(x=>chatRow(x.id,x.actor)).join('')||empty('chat',L('Пока нет диалогов','No conversations yet'),L('Чат открывается после взаимной симпатии.','A mutual like opens a chat.'))}</div></div>`;}};
+ return `${bar(L('Чаты','Chats'),{actions:`<button class="ibtn" data-act="chatSearch" aria-label="${L('Поиск по чатам','Search chats')}">${I.search}</button><button class="ibtn" data-go="H05" aria-label="${L('Архив','Archive')}">${I.archive}</button>${bellBtn()}`})}<div class="view"><div class="wrap">${activePair()?seg([['all',L('Все','All')],['me',L('Личные','Personal'),C.unreadFor('me')||''],['couple',L('От пары','As a couple'),C.unreadFor('couple')||'']],f,'chatKind')+(f==='couple'?`<p class="note mt8">${I.couple} ${L(`Здесь вы пишете от имени пары «${esc(pairName())}». Партнёр видит эти чаты.`,`Here you write as the couple “${esc(pairName())}”. Your partner sees these chats.`)}</p>`:''):''}${p.searching?`<input class="inp mt12" id="chatQ" aria-label="${L('Поиск по чатам','Search chats')}" value="${esc(p.q||'')}" data-in="chatQ">`:''}${fresh.length?`<div class="sec">${L('Новые совпадения','New matches')}</div><div class="matches">${fresh.map(m=>`<button data-act="openChat" data-v="${m.p}" data-actor="${m.actor}"><span class="ring2">${av(m.p,'round')}</span><span class="mn">${esc(pname(m.p))}${m.actor==='couple'?' · '+esc(pairName()):''}</span></button>`).join('')}</div>`:''}${rows.map(x=>chatRow(x.id,x.actor)).join('')||empty('chat',L('Пока нет диалогов','No conversations yet'),L('Чат открывается после взаимной симпатии.','A mutual like opens a chat.'))}</div></div>`;}};
 ACT.chatKind=a=>setP('kind',a.dataset.v);
 ACT.hSub=a=>setSub(a.dataset.v);
 ACT.toPeople=()=>tab('people',{sub:'discover'});
@@ -6291,7 +6301,7 @@ SC.X01={root:1,tab:'me',title:()=>meTabName(),render:()=>{const m=S.me;const [ns
  <section class="grp"><div class="card me-card"><button class="me-id" data-go="P03">${av('me','me-av')}<span class="grow"><b>${esc(pname('me'))}</b><small>${m.city?esc(city(m.city)):L('Так тебя видят другие','How others see you')}</small></span>${I.chev}</button>
   <div class="me-acts"><button class="btn secondary sm" data-go="P02">${I.edit}${L('Изменить профиль','Edit profile')}</button></div></div></section>
  ${mePairCard()}
- ${(r=>r?`<section class="grp"><div class="card list">${r}</div></section>`:'')(`${nt?linkRow({...(nt==='topic'?{act:'addJar'}:{go:'P02'}),icon:nt==='P02'?'camera':'plus',tone:'a',title:L('Следующий шаг','Next step'),sub:ns}):''}${mePairRow()}`)}
+ ${(r=>r?`<section class="grp"><div class="card list">${r}</div></section>`:'')(`${C.meTodo()?linkRow({go:'N01',p:{k:'todo'},icon:'clock',tone:'a',title:L('Нужно решить','To decide'),sub:L('Запросы доступа и согласования пары','Access requests and couple approvals'),badge:String(C.meTodo())}):''}${nt?linkRow({...(nt==='topic'?{act:'addJar'}:{go:'P02'}),icon:nt==='P02'?'camera':'plus',tone:'a',title:L('Следующий шаг','Next step'),sub:ns}):''}${mePairRow()}`)}
  ${grp(L('Мои интересы','My interests'),jars.length?jarShelf(m.jars,{max:4,pre:1,act:'editJar',vis:1,add:'addJar',moreAct:'myJarsAll'}):`<div class="jar-empty"><p>${L('Интерес — это одна тема и то, как она тебе откликается: от 1 до 10, «обсуждаемо» или «табу».','An interest is one topic and how it feels to you: 1 to 10, “negotiable” or “taboo”.')}</p><div class="row g8"><button class="btn secondary sm" data-act="addJar">${I.plus}${L('Добавить интерес','Add an interest')}</button></div></div>`,{right:jars.length?`<button data-go="X02">${L('Все','All')} · ${jars.length}</button>`:''})}
  ${grp(L('Активность','Activity'),`${linkRow({go:'E10',icon:'cal',title:L('Мои события','My events'),val:going?String(going):''})}${linkRow({go:'F10',icon:'feed',title:L('Мои публикации','My posts'),val:String(S.myPosts.length)})}${linkRow({go:'P10',p:{id:'me',tab:'followers'},icon:'users3',title:L('Подписчики и подписки','Followers & following'),val:`${followersOf('me').length} · ${followingOf('me').length}`})}${linkRow({go:'G04',icon:'bookmark',title:L('Сохранённое','Saved'),val:String(m.saved.posts.length+m.saved.events.length)})}${linkRow({go:'P07',icon:'unlock',title:L('Доступы','Access')})}`,{list:1})}
  </div></div>`;},after:()=>fillJars()};
@@ -6763,7 +6773,7 @@ ACT.pairInvitationAnswer=a=>{if(S.pairMember!=='partner')return;if(a.dataset.v==
 
 // Community management never grants personal chat access.
 SC.C11={title:()=>L('Заявки сообщества','Community requests'),valid:p=>ownsCommunity(p.id),render:p=>{if(!ownsCommunity(p.id))return unavailable();const all=S.communityRequests[p.id]||[],pending=all.filter(x=>x.status==='pending'),done=all.filter(x=>x.status!=='pending');const t=p.t==='history'?'history':'pending',list=t==='history'?done:pending;
- return `${bar(L('Заявки сообщества','Community requests'),{back:1,sm:1,sub:esc(T(COMMUNITIES[p.id].name))})}<div class="view nodock"><div class="wrap">${seg([['pending',L('Новые','New'),pending.length||''],['history',L('Решения','Decisions'),done.length||'']],t,'cRequestsTab')}
+ return `${bar(L('Заявки сообщества','Community requests'),{back:1,sm:1,sub:esc(T(COMMUNITIES[p.id].name))})}<div class="view nodock"><div class="wrap">${seg([['pending',L('Новые','New'),pending.length||''],['history',L('Решения','Decisions')]],t,'cRequestsTab')}
  
  ${list.map(req=>`<section class="card application-card mt12">${personRow(req.p)}<p class="note">${F.rel(req.updated||req.t)}${req.status!=='pending'?' · '+({approved:L('Одобрено','Approved'),declined:L('Отклонено','Declined'),withdrawn:L('Отозвана','Withdrawn')}[req.status]||''):''}</p><p class="application-answer">${esc(T(req.answer))}</p>${req.status==='pending'?`<div class="row g8"><button class="btn soft" data-act="cRequestDecision" data-v="${esc(req.id)}" data-status="declined">${L('Отклонить','Decline')}</button><button class="btn primary" data-act="cRequestDecision" data-v="${esc(req.id)}" data-status="approved">${L('Одобрить','Approve')}</button></div>`:''}</section>`).join('')||empty('doc',t==='history'?L('Решений пока нет','No decisions yet'):L('Новых заявок нет','No new requests'),L('Ответы участников видны только ведущим этого сообщества.','Applicant answers are visible only to this community’s hosts.'))}</div></div>`;}};
 ACT.cRequestsTab=a=>setP('t',a.dataset.v);

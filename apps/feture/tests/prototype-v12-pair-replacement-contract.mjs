@@ -130,3 +130,12 @@ prepare('F01');run("coupleProfile();S.pair.notifications={};social('couple').req
 for(const m of ['me',partner()]){assert.ok(pn(m).includes('grant'),'both learn the couple got access');assert.ok(pn(m).includes('postok'),'both learn the joint post passed review');}
 assert.deepEqual(json("S.pair.notifications.me.find(n=>n.pairEvent==='grant').go"),['P08',{id:'mia',actor:'couple'}],'opens the couple’s view of the access');
 console.log('PASS couple events: no self-notifications, texts for every event, trust, blocks, partner messages, grants and reviewed posts');
+// Counters show only what waits on me: decided items never count, a decision is counted once, Profiles shows what to decide about my profiles.
+prepare('F01');run("coupleProfile();S.pair.notifications={};receiveCoupleRequest('vera',['info'])");
+const todoN=run("todoCount()");assert.equal(run("bellCount()"),run("currentNotifications().filter(n=>!n.read&&n.type!=='req'&&!(n.type==='pair'&&TODO_PAIR_EVENTS.has(n.pairEvent))).length")+todoN);
+assert.ok(!json("currentNotifications().filter(n=>!n.read&&n.type!=='req'&&!(n.type==='pair'&&TODO_PAIR_EVENTS.has(n.pairEvent)))").some(n=>n.pairEvent==='req'),'a couple request is counted once, in «Нужно решить»');
+assert.equal(run("C.meTodo()"),run("todoItems().filter(x=>['req','profile','profileBack','joint','pinv'].includes(x.k)).length"));assert.equal(run("TABDEF().find(x=>x[0]==='me')[3]"),run("C.meTodo()"));
+assert.ok(text(run("SC.X01.render({},cur())")).includes(run("L('Нужно решить','To decide')")),'Profiles shows where the decisions are');
+run("var cid=Object.keys(COMMUNITIES)[0];S.communityRequests[cid]=[{id:'d1',p:'mia',status:'approved',t:1},{id:'d2',p:'ari',status:'declined',t:1},{id:'d3',p:'ren',status:'pending',t:1}];S.managedCommunities=new Set([cid]);COMMUNITIES[cid].owner='me'");
+const c11=run("SC.C11.render({id:cid},cur())");assert.ok(/Новые<\/span><em>1<\/em>/.test(c11),'one new request');assert.ok(!/Решения<\/span><em>/.test(c11),'decided requests have no counter');
+console.log('PASS counters: decided items never count, a decision counts once, Profiles shows what to decide');
