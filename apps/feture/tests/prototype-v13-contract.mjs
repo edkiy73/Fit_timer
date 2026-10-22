@@ -211,12 +211,42 @@ prepare('F01');run("S.nav.stacks.feed.push({id:'F07',p:{},f:{}});SC.F07.render(c
 assert.ok(run("SC.F07.render(cur().p,cur())").includes('data-sel=\"setAlbum\"'),'composer offers an album for posts with pictures');
 assert.equal(run("postFromDraft({...draftOf(cur()),text:'x'},'t1').album"),'alX','album travels with the post');
 run("S.myPosts.unshift({...postFromDraft({...draftOf(cur()),text:'x'},'t2'),status:'published'})");assert.ok(json("galleryPosts('me','alX').map(x=>x.id)").includes('t2'),'published post lands in its album');
-prepare('F01');run("syncProfileGallery('me',S.me.photos,new Set([phKey(firstPhoto(S.me.photos))]))");
+prepare('F01');run("S.me.galPh=[phKey(firstPhoto(S.me.photos))];syncProfileGallery('me',S.me.photos,new Set(S.me.galPh))");
 assert.equal(run("S.myPosts.filter(x=>x.profilePhoto).length"),1,'a chosen profile photo becomes a gallery post');assert.ok(run("myAlbums('me').some(a=>a.id==='me_profile')"),'«Фото профиля» album');
-assert.ok(json("galleryPosts('me').map(x=>x.profilePhoto||'')").some(Boolean));run("syncProfileGallery('me',S.me.photos,new Set())");assert.equal(run("S.myPosts.filter(x=>x.profilePhoto).length"),0,'unticked photo leaves the gallery');
+assert.ok(json("galleryPosts('me').map(x=>x.profilePhoto||'')").some(Boolean));run("S.me.galPh=[];syncProfileGallery('me',S.me.photos,new Set())");assert.equal(run("S.myPosts.filter(x=>x.profilePhoto).length"),0,'unticked photo leaves the gallery');
 prepare('F01');const n1=text(run("postCard(postById('n1'),{})"));assert.ok(n1.includes('Читать полностью')&&n1.includes('мин чтения'),'note card: title, excerpt, read more');
 assert.ok(json("galleryPosts('noa').every(x=>x.type!=='note')"),'notes are not gallery tiles');
 run("S.nav.stacks.feed.push({id:'F07',p:{x:'note'},f:{}})");const nf=run("SC.F07.render(cur().p,cur())");assert.ok(nf.includes('name=\"ntitle\"')&&nf.includes('data-max=\"10000\"'),'note editor: title and 10 000 characters');
 const d=json("({...draftOf(cur()),note:true,noteTitle:'Заголовок',text:'Длинный текст'})");assert.equal(json(`postFromDraft(${JSON.stringify(d)},'nn').type`),'note');
 const pv=run("profileView('noa',{p:{id:'noa'},f:{}})");assert.ok(pv.includes('Заметки'),'profile has a «Notes» tab');
 console.log('PASS albums in the composer, profile photos in the gallery, notes');
+// Links: both sides confirm; the more private visibility wins; blocked people and couples never get links; answers reach the other person.
+prepare('F01');run("ensureV13();S.socialDeliveries={}");assert.ok(json("todoItems().map(x=>x.k)").includes('link'),'incoming link request waits in «Нужно решить»');
+run("ACT.linkAnswer({dataset:{v:'lk2|yes'}})");assert.equal(run("links().find(l=>l.id==='lk2').status"),'ok');assert.ok(run("(S.socialDeliveries.kai||[]).some(n=>n.type==='linkOk')"),'Kai learns the link was confirmed');
+assert.ok(json("linksShown('kai').map(l=>linkOther(l,'kai'))").includes('me'),'confirmed link shows on both profiles');
+assert.equal(run("linkVis({a:'x',b:'y',vis:{x:'all',y:'us'}})"),'us','the more private choice wins');
+assert.equal(json("linksShown('sofi').length"),0,'followers-only link is hidden from non-followers');
+assert.ok(run("linkIssue('leon')").includes('не принимает'),'people can refuse link requests');assert.ok(run("linkIssue('tomeva')").length>0,'couples have no personal links');
+run("S.nav.stacks.feed.push({id:'P22',p:{id:'noa'},f:{}});SC.P22.render(cur().p,cur());cur().kind='ds';cur().side=null;ACT.linkSend(btn({}))");assert.ok(!run("!!linkWith('noa')"),'a two-sided kind needs my side');
+run("cur().side='sub';ACT.linkSend(btn({}))");timers.splice(0).forEach(f=>f());await new Promise(r=>setTimeout(r,0));assert.equal(run("linkWith('noa')?.side?.noa"),'dom','the other person gets the opposite side');assert.ok(run("(S.socialDeliveries.noa||[]).some(n=>n.type==='linkReq')"));
+run("doBlock('mia')");assert.ok(!run("!!linkWith('mia')"),'blocking removes the link');
+console.log('PASS links: two-sided confirmation, visibility, refusals, blocking');
+// People on photos: a marked person confirms before others see the post; anyone pictured can hide it; new photos ask again.
+prepare('F01');run("ensureV13();S.socialDeliveries={}");assert.ok(run("consentHidden(postById('p11'))"),'post waits for my consent');assert.ok(run("postVisible(postById('p11'))"),'the marked person can open it');
+assert.ok(json("filterPosts(allPosts(),{}).map(p=>p.id)").every(id=>id!=='p11'),'not in the feed until everyone agrees');assert.ok(json("todoItems().map(x=>x.k)").includes('tag'));
+run("ACT.tagAnswer({dataset:{v:'p11|yes'}})");assert.ok(!run("consentHidden(postById('p11'))"));assert.ok(run("(S.socialDeliveries.mia||[]).some(n=>n.type==='tagOk')"),'author learns about consent');
+assert.ok(text(run("postCard(postById('p11'),{})")).includes('На фото'),'confirmed people are named');
+run("postById('p2').disputed={by:'me',t:1}");assert.ok(!run("postVisible(postById('p2'))"),'«that’s me» hides the post for everyone');
+const pp=json("postPeople({media:[{url:'a'}],people:[]},{media:[{url:'a'}],people:[{p:'kai',st:'no'}]})");assert.equal(pp.people[0].st,'no','a declined mark stays while the photos are the same');
+const pn2=json("postPeople({media:[{url:'b'}],people:['kai']},{media:[{url:'a'}],people:[{p:'kai',st:'no'}],disputed:{by:'x'}})");assert.equal(pn2.people[0].st,'pending','new photos ask again');assert.equal(pn2.disputed,null);
+run("S.myPosts.unshift({...postFromDraft({author:'me',tags:[],aud:'all',text:'x',media:[{type:'image',url:'/images/v10-content/gallery-e1-ropes.webp'}],poll:null,result:null,people:['kai']},'tp1'),status:'published'});askTagged()");
+assert.ok(run("(S.socialDeliveries.kai||[]).some(n=>n.type==='tagReq')"),'marked person gets a request');assert.ok(!json("filterPosts(allPosts(),{}).map(p=>p.id)").includes('tp1'));
+run("qaV13('no')");assert.ok(json("S.notifs.map(n=>n.type)").includes('tagno'),'author learns about a refusal');
+console.log('PASS photo consent: marks, refusals, «that’s me», re-asking after new photos');
+// «Популярное»: only my interests, never taboo, only public and visible posts; hosts manage community picks.
+prepare('F01');run("ensureV13()");const mine=json("myInterestTags()"),taboo=json("[...myTaboo()]");const pop=json("popularPosts('').map(p=>({t:p.tags,aud:p.aud,id:p.id}))");
+assert.ok(pop.every(p=>p.aud==='all'&&p.t.some(t=>mine.includes(t))&&!p.t.some(t=>taboo.includes(t))),'only my interests, no taboo, public only');
+assert.ok(text(run("SC.F01.render({sub:'popular'})")).includes('Самое обсуждаемое за неделю'),'feed has a Popular tab');
+run("S.reportedPosts=new Set(popularPosts('').slice(0,1).map(p=>p.id))");assert.ok(!json("popularPosts('').map(p=>p.id)").some(id=>run("S.reportedPosts.has('"+id+"')")),'reported posts drop out');
+const pdx=json("popularDiscs('rope').map(d=>d.id)");if(pdx.length){run(`S.popOff=new Set(['${pdx[0]}'])`);assert.ok(!json("popularDiscs('rope').map(d=>d.id)").includes(pdx[0]),'hosts can keep a discussion out of Popular');}
+console.log('PASS Popular: interests only, no taboo, public, reports and host choices respected');
