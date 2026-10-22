@@ -139,3 +139,21 @@ assert.ok(text(run("SC.X01.render({},cur())")).includes(run("L('Нужно ре�
 run("var cid=Object.keys(COMMUNITIES)[0];S.communityRequests[cid]=[{id:'d1',p:'mia',status:'approved',t:1},{id:'d2',p:'ari',status:'declined',t:1},{id:'d3',p:'ren',status:'pending',t:1}];S.managedCommunities=new Set([cid]);COMMUNITIES[cid].owner='me'");
 const c11=run("SC.C11.render({id:cid},cur())");assert.ok(/Новые<\/span><em>1<\/em>/.test(c11),'one new request');assert.ok(!/Решения<\/span><em>/.test(c11),'decided requests have no counter');
 console.log('PASS counters: decided items never count, a decision counts once, Profiles shows what to decide');
+// One editor for posts and community discussions; the author (me / couple) is chosen the same way for posts, discussions and replies.
+prepare('F01');run("coupleProfile();var cid=[...S.joined][0];S.pair.memberCommunities={};S.pair.memberCommunities[S.pair.with]=[];S.nav.stacks.feed.push({id:'C07',p:{id:cid},f:{}});SC.C07.render(cur().p,cur())");
+assert.equal(run("cur().id+'/'+cur().p.community"),'F07/'+run('cid'),'«Новое обсуждение» is the post editor in community mode');
+assert.equal(run("authorKind()"),'compose');assert.ok(run("coupleAuthorBlock('compose')").includes(run("pname(S.pair.with)")),'the menu says the partner is not in the community');
+run("cur().author='couple'");assert.equal(run("publishDiscussion({community:cid,author:'couple',title:'Тема обсуждения',text:'Текст',media:[],tags:[],poll:null,result:null,by:'me'})"),null,'no couple discussion while the partner is outside');
+run("S.pair.memberCommunities[S.pair.with]=[cid];S.pair.approvalRequired={};S.pair.approvalRequired[S.pair.with]=true;var n0=S.discussions.length");
+const qid=run("publishDiscussion({community:cid,author:'couple',pairId:S.pair.id,title:'Тема обсуждения',text:'Текст',media:[],tags:['bondage'],poll:['Да','Нет'],pollQ:'Вопрос?',result:null,by:'me',aud:'all'})");
+assert.ok(qid,'couple discussion goes to approval');assert.equal(run("S.discussions.length"),run('n0'),'not published before approval');
+run(`S.pairMember='partner';approveJointWork('${qid}',1,S.pair.with);S.pairMember='me'`);const disc=json(`S.discussions.find(d=>d.id==='${qid}')`);
+assert.equal(disc.c,run('cid'));assert.equal(disc.author,'couple');assert.equal(disc.poll.length,2,'polls work in discussions');assert.ok(run(`postById('${qid}')`),'poll votes find the discussion');
+prepare('F01');run("coupleProfile();var cid=[...S.joined][0];S.pair.memberCommunities={};S.pair.memberCommunities[S.pair.with]=[cid];S.discussions.unshift({id:'dx',c:cid,author:'me',t:1,title:{ru:'x',en:'x'},text:{ru:'x',en:'x'},media:[],replies:[]});S.nav.stacks.feed.push({id:'C06',p:{id:'dx'},f:{}})");
+assert.equal(run("authorKind()"),'reply');run("cur().replyAuthor='couple';document.querySelector('#dr').value='Ответ от пары';ACT.sendReply()");
+assert.equal(run("S.discussions[0].replies.at(-1)?.a"),'couple','a reply can come from the couple');
+run("S.pair.memberCommunities[S.pair.with]=[];document.querySelector('#dr').value='Ещё';ACT.sendReply()");assert.equal(run("S.discussions[0].replies.length"),1,'not when the partner is outside the community');
+prepare('F01');run("coupleProfile();var px=S.posts.find(x=>!x.unavailable&&x.author!=='couple');S.nav.stacks.feed.push({id:'F05',p:{id:px.id},f:{}});cur().replyAuthor='couple';document.querySelector('#cmt').value='Ответ пары';ACT.sendComment()");
+assert.equal(run("px.comments.at(-1).a"),'couple','post replies can come from the couple');
+assert.ok(run("SC.F07.render({},cur())").includes('author-picker av-only'),'the author is an avatar in the header');
+console.log('PASS one editor for posts and discussions, author choice for posts, discussions and replies');
