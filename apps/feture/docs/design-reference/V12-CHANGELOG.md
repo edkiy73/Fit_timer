@@ -136,3 +136,10 @@ Decision record: `public/prototype-v11-compare-matrix.html`. Notes: `public/prot
 - Profile and interests are one approval: the review sheet no longer lists changed fields — «<имя> предлагает изменения профиля пары», «Посмотреть профиль», «Одобрить / Вернуть на доработку». Less linked data to maintain.
 - «Моё подтверждение»: one question, two choices as a list with a short subtitle each, one short note; the long paragraph is gone.
 - «Моё подтверждение» names all three kinds of couple actions in the question: profile changes, posts and private access.
+
+## 2026-10-22 — Couple likes and requests reach both members
+
+- New couple like → «Новая симпатия пары от X» to both members; tapping it opens Люди → Симпатии as the couple. A couple hidden from Discover gets no new likes.
+- New request to the couple's private part → «Запрос к приватной части пары от X» to both; tapping it opens «Нужно решить».
+- Dock badges «Люди» and «Профили» count personal and couple likes/requests together (same rules as the likes list and «Нужно решить»); the avatar counter in Люди no longer counts passed or matched likes.
+- Couple notifications about another person name that person (like, request, message, reply, match).
