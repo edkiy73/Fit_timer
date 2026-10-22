@@ -1236,6 +1236,9 @@ button.jar:active .vessel{transform:scale(.95)}
 .mcell.mf>video{background:transparent}
 .mgrid.n1 .mcell{aspect-ratio:var(--ar,4/5);max-height:min(560px,62dvh);width:100%}
 .mgrid.n1{justify-items:stretch}
+.mgrid.mos{display:block;position:relative;width:100%;max-height:none}
+.mgrid.mos>.mcell{position:absolute;aspect-ratio:auto;min-height:0;border-radius:0}
+
 @container stage (min-width:768px){
   .main>.inputbar{padding-inline:max(10px,calc((100% - 700px) / 2))}
 }
@@ -4454,14 +4457,16 @@ function openViewer(items,index=0,o={}){
  $$('#vwTrack video:not(.video-fill-bg)').forEach(v=>{const f=v.parentNode,s=()=>f.classList.toggle('playing',!v.paused);v.addEventListener('play',s);v.addEventListener('pause',s);v.addEventListener('ended',s);});
  const tr=$('#vwTrack');let sx=0,sy=0,dx=0,dy=0,id=null,mode=null;
  let lastTap=0,px=0,py=0;VW.z={k:1,x:0,y:0};
- tr.onpointerdown=e=>{if(e.target.closest('video'))return;id=e.pointerId;sx=e.clientX;sy=e.clientY;dx=dy=0;mode=null;px=VW.z.x;py=VW.z.y;tr.setPointerCapture(id);};
+ let onVid=false;/* on a video the gesture is captured only once it is clearly a swipe: taps stay with the player, the bottom strip stays with its controls */
+ tr.onpointerdown=e=>{const v=e.target.closest('video');if(v&&e.clientY>v.getBoundingClientRect().bottom-72)return;onVid=!!v;id=e.pointerId;sx=e.clientX;sy=e.clientY;dx=dy=0;mode=null;px=VW.z.x;py=VW.z.y;if(!onVid)tr.setPointerCapture(id);};
+ tr.addEventListener('click',e=>{if(VW?.swiped&&Date.now()-VW.swiped<400){e.preventDefault();e.stopPropagation();}},true);
  tr.ondblclick=e=>{if(e.pointerType==='touch')return;e.preventDefault();vwZoomToggle(e.clientX,e.clientY);};
  tr.onpointermove=e=>{if(e.pointerId!==id)return;dx=e.clientX-sx;dy=e.clientY-sy;
   if(VW.z.k>1){if(Math.hypot(dx,dy)>4)mode='pan';if(mode==='pan'){VW.z.x=px+dx;VW.z.y=py+dy;VW.z.anim=0;vwZoomClamp();vwZoomApply();}return;}
-  if(!mode&&Math.hypot(dx,dy)>8)mode=Math.abs(dx)>Math.abs(dy)?'x':'y';
+  if(!mode&&Math.hypot(dx,dy)>8){mode=Math.abs(dx)>Math.abs(dy)?'x':'y';if(onVid){try{tr.setPointerCapture(id);}catch(_){}}}
   if(mode==='x'){tr.style.transition='none';tr.style.transform=`translateX(calc(${-VW.i*100}% + ${dx}px))`;}
   if(mode==='y'&&dy>0){el.style.setProperty('--dy',dy+'px');el.classList.add('drag');}};
- tr.onpointerup=tr.onpointercancel=e=>{if(e.pointerId!==id)return;id=null;tr.style.transition='';el.classList.remove('drag');
+ tr.onpointerup=tr.onpointercancel=e=>{if(e.pointerId!==id)return;id=null;tr.style.transition='';el.classList.remove('drag');if(mode)VW.swiped=Date.now();if(onVid&&!mode){onVid=false;return;}onVid=false;
   if(mode==='x'&&Math.abs(dx)>60)vwGo(VW.i+(dx<0?1:-1));else if(mode==='y'&&dy>110)closeViewer();else{vwGo(VW.i);el.style.removeProperty('--dy');}
   if(mode==='pan')return;
   if(!mode&&e.type==='pointerup'&&e.pointerType==='touch'){const now=Date.now();if(now-lastTap<300){lastTap=0;vwZoomToggle(e.clientX,e.clientY);return;}lastTap=now;}
@@ -4482,9 +4487,30 @@ document.addEventListener('keydown',e=>{if(!VW)return;if(e.key==='ArrowRight'){v
 const fitAr=(r,lo,hi)=>Math.max(lo,Math.min(hi,r)).toFixed(4);
 const mfImg=(src,style,lazy)=>`<img class="mbg" src="${esc(src)}" alt="" aria-hidden="true" draggable="false"${lazy?' loading="lazy"':''}><img class="mfg" src="${esc(src)}" alt="" draggable="false"${lazy?' loading="lazy"':''} style="${style||''}">`;
 document.addEventListener('load',e=>{const img=e.target;if(!img.classList?.contains('mfg'))return;const f=img.parentElement;if(!f?.dataset.fit||!img.naturalWidth)return;const [lo,hi]=f.dataset.fit.split(',').map(Number);f.style.setProperty('--ar',fitAr(img.naturalWidth/img.naturalHeight,lo,hi));},true);
-/** media grid for posts and albums: 1 → full, 2 → halves, 3+ → mosaic; tap opens the viewer */
-function mediaGrid(list,o={}){if(!list||!list.length)return '';const n=list.length;const id=o.id||'';
- return `<div class="mgrid n${Math.min(n,4)}" ${o.attrs||''}>${list.slice(0,4).map((m,i)=>`<button class="mcell mf" ${n===1?`data-fit=".8,1.91" ${m.w&&m.h?`style="--ar:${fitAr(m.w/m.h,.8,1.91)}"`:''}`:''} data-act="mView" data-v="${esc(id)}" data-i="${i}" aria-label="${L('Открыть на весь экран','Open full screen')}">${m.type==='video'?`<video src="${esc(m.url)}" ${m.poster?`poster="${esc(m.poster)}"`:''} muted playsinline preload="metadata"></video>${i===3&&n>4?'':playMark()+mediaBadge(0,1,m.dur,'dur')}`:m.type==='plate'?plate(m.key,'image'):mfImg(m.url,m.style,'lazy')}${i===3&&n>4?`<span class="more">+${n-4}</span>`:''}</button>`).join('')}</div>`;}
+/* V13 — the mosaic follows the pictures' own proportions: of a few candidate layouts the one that needs the least blurred fill wins,
+   so the fill appears only where a picture really doesn't fit (very wide/tall shots or a post that would get too tall). */
+const MEDIA_AR={"/images/v10-content/community-latex.webp":1.5,"/images/v10-content/community-poly.webp":1.5,"/images/v10-content/community-queer.webp":1.5,"/images/v10-content/community-rope.webp":1.5,"/images/v10-content/community-slow.webp":1.5,"/images/v10-content/discussion-d1-rope-basics.webp":1.5,"/images/v10-content/discussion-d3-communication.webp":1.5,"/images/v10-content/event-e1-shibari-workshop.webp":1.5,"/images/v10-content/event-e2-boundaries-circle.webp":1.5,"/images/v10-content/event-e3-latex-night.webp":1.5,"/images/v10-content/event-e4-newcomers-coffee.webp":1.5,"/images/v10-content/event-e5-aftercare-workshop.webp":1.5,"/images/v10-content/event-e6-community-picnic.webp":1.5,"/images/v10-content/gallery-e1-ropes.webp":1.5,"/images/v10-content/gallery-e3-club.webp":1.5,"/images/v10-content/gallery-e4-cafe.webp":1.5,"/images/v10-content/post-p2-rope-details-45.webp":0.8,"/images/v10-content/post-p2-rope-details.webp":1.5,"/images/v10-content/post-p6-latex-night-prep-45.webp":0.8,"/images/v10-content/post-p6-latex-night-prep.webp":1.5,"/images/v10-content/post-p7-morning-coffee-45.webp":0.8,"/images/v10-content/post-p7-morning-coffee.webp":1.5,"/images/v10-content/post-p9-evening-atmosphere-45.webp":0.8,"/images/v10-content/post-p9-evening-atmosphere.webp":1.5},AR_SEEN={};
+const mediaAr=m=>{if(!m||m.type==='plate')return 1;if(m.w&&m.h)return m.w/m.h;const u=String(m.url||m.src||'');return MEDIA_AR[u]||AR_SEEN[u]||(/-45\.webp/.test(u)?.8:null);};
+function mosaic(rs){const n=rs.length,R=rs.map(r=>Math.max(.5,Math.min(2.4,r||1))),lay=[];
+ const rows=parts=>{let y=0;const cells=[];for(const row of parts){const sum=row.reduce((t,i)=>t+R[i],0),h=1/sum;let x=0;for(const i of row){const w=R[i]/sum;cells[i]=[x,y,w,h];x+=w;}y+=h;}return {cells,H:y};};
+ const col=(big,rest)=>{const S=rest.reduce((t,i)=>t+1/R[i],0),w2=1/(1+R[big]*S),w1=1-w2,H=w2*S,cells=[];cells[big]=[0,0,w1,H];let y=0;for(const i of rest){const h=w2/R[i];cells[i]=[w1,y,w2,h];y+=h;}return {cells,H};};
+ if(n===2)lay.push(rows([[0,1]]),rows([[0],[1]]));
+ if(n===3)lay.push(rows([[0],[1,2]]),col(0,[1,2]),rows([[0,1],[2]]),rows([[0,1,2]]));
+ if(n>=4)lay.push(rows([[0,1],[2,3]]),rows([[0],[1,2,3]]),col(0,[1,2,3]));
+ let best=null;for(const l of lay){const H=Math.max(.5,Math.min(1.25,l.H)),k=H/l.H,cells=l.cells.map(([x,y,w,h])=>[x,y*k,w,h*k]),area=c=>c[2]*c[3];
+  const score=Math.abs(1-k)*3+(cells.some(c=>Math.min(c[2],c[3])<.2)?1:0)+(area(cells[0])+1e-6<Math.max(...cells.map(area))?.15:0)+Math.abs(Math.log(H/.8))*.3+rs.reduce((t,r,i)=>t+(r?Math.abs(Math.log(R[i]/r)):0),0);
+  if(!best||score<best.score)best={cells,H,score};}
+ return best;}
+/* cell boxes in % of the frame, with a 3px seam between neighbours */
+const mosaicBox=([x,y,w,h],H)=>{const g=1.5,l=x>1e-3?g:0,r=x+w<.999?g:0,t=y>1e-3?g:0,b=y+h<H-1e-3?g:0;return `left:calc(${(x*100).toFixed(3)}% + ${l}px);top:calc(${(y/H*100).toFixed(3)}% + ${t}px);width:calc(${(w*100).toFixed(3)}% - ${l+r}px);height:calc(${(h/H*100).toFixed(3)}% - ${t+b}px)`;};
+function relayoutMosaic(g){const cells=[...g.querySelectorAll(':scope>.mcell')];const rs=cells.map(c=>+c.dataset.ar||null);const m=mosaic(rs);g.style.aspectRatio=(1/m.H).toFixed(4);cells.forEach((c,i)=>c.setAttribute('style',mosaicBox(m.cells[i],m.H)));}
+/* a picture whose proportions were unknown at render time re-lays its grid once it loads (and is remembered for next time) */
+const learnAr=(el,w,h)=>{if(!w||!h)return;const src=el.getAttribute('src')||'';AR_SEEN[src.split('#')[0]]=w/h;const c=el.closest('.mgrid.mos>.mcell');if(c&&!c.dataset.ar){c.dataset.ar=(w/h).toFixed(4);relayoutMosaic(c.parentElement);}};
+document.addEventListener('load',e=>{const t=e.target;if(t.classList?.contains('mfg'))learnAr(t,t.naturalWidth,t.naturalHeight);},true);
+document.addEventListener('loadedmetadata',e=>{const t=e.target;if(t.tagName==='VIDEO')learnAr(t,t.videoWidth,t.videoHeight);},true);
+/** media grid for posts and albums: 1 → full, 2+ → a mosaic shaped by the pictures; tap opens the viewer */
+function mediaGrid(list,o={}){if(!list||!list.length)return '';const n=list.length;const id=o.id||'';const shown=list.slice(0,4),rs=shown.map(mediaAr),mo=n>1?mosaic(rs):null;
+ return `<div class="mgrid ${mo?'mos':'n1'}" ${mo?`style="aspect-ratio:${(1/mo.H).toFixed(4)}"`:''} ${o.attrs||''}>${shown.map((m,i)=>`<button class="mcell mf" ${n===1?`data-fit=".8,1.91" ${m.w&&m.h?`style="--ar:${fitAr(m.w/m.h,.8,1.91)}"`:''}`:`style="${mosaicBox(mo.cells[i],mo.H)}" ${rs[i]?`data-ar="${rs[i].toFixed(4)}"`:''}`} data-act="mView" data-v="${esc(id)}" data-i="${i}" aria-label="${L('Открыть на весь экран','Open full screen')}">${m.type==='video'?`<video src="${esc(m.url)}" ${m.poster?`poster="${esc(m.poster)}"`:''} muted playsinline preload="metadata"></video>${i===3&&n>4?'':playMark()+mediaBadge(0,1,m.dur,'dur')}`:m.type==='plate'?plate(m.key,'image'):mfImg(m.url,m.style,'lazy')}${i===3&&n>4?`<span class="more">+${n-4}</span>`:''}</button>`).join('')}</div>`;}
 const MEDIA_SRC={};
 ACT.mView=(a,e)=>{e?.stopPropagation();const id=a.dataset.v;const list=(MEDIA_SRC[id]?MEDIA_SRC[id]():postById(id)?.media||EV(id)?.gallery)||[];openViewer(list.map(m=>m.type==='plate'?m:{type:m.type,src:m.url,style:m.style}),+a.dataset.i);};
 

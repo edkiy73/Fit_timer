@@ -48,3 +48,8 @@ V13 is a copy of V12 (`public/prototype-v12.html`, now frozen). Contract test: `
 - **Discussion likes**: a like button and «Нравится: …» on the discussion screen, ♥ count in the community list. The author is notified, and likes count towards «Популярное за неделю».
 - **Partner mode**: a photo mark on the partner reaches the partner's «Нужно решить», and their answer comes back to Alex as a notification. The partner's inbox also shows mentions and likes addressed to them.
 - **«Что изменено» page**: `public/prototype-v13-notes.html`, linked from the V13 footer.
+
+## 2026-10-22 — media mosaic without needless fill, swipe over video in the viewer
+
+- **Post mosaic**: cells now take the pictures' own proportions. The layout is chosen among a few candidates (side by side, stacked, big + row, big + column, 2×2), and the one needing the least blurred fill wins, with the post height kept between 2:1 and 4:5. Standard shots (3:2, 4:5) get no fill at all. Fill appears only for extreme ratios or when a layout would make the post too tall or too flat. Demo image proportions are known up front; unknown ones (uploads, video) re-lay the grid once loaded and are remembered.
+- **Viewer**: swipe left/right now works over a video too. A tap still belongs to the player, and the bottom 72 px strip keeps the native controls (scrubbing doesn't flip slides).
