@@ -99,3 +99,16 @@ assert.ok(!text(run("NTXT.pair(S.notifs.find(n=>n.pairEvent==='workReturned'))")
 run("queueJointGrant(rq,{sel:['info']},null)");assert.equal(run("jointQueue().grant_rb1.status"),'pending');assert.equal(run("jointQueue().grant_rb1.version"),2,'change decision sends a new version');
 run("ACT.jointCancel({dataset:{v:'grant_rb1'}})");assert.equal(run("jointQueue().grant_rb1"),undefined);assert.ok(run("todoItems().some(x=>x.k==='req'&&x.r.id==='rb1')"),'withdrawn decision puts the request back');
 console.log('PASS sent back for changes: note, inbox, status, rework, discard and access way out');
+// Someone likes or asks the couple: both members are notified, dock badges count the couple too, and the notification opens the right place.
+prepare('F01');run("coupleProfile().dating=true;S.datingActor='me';social('couple').likesIn=[];social('couple').reqIn=[];S.pair.notifications={}");
+const people0=run("C.likesAll()"),me0=run("C.reqAll()");
+run("receiveCoupleLike('ari');receiveCoupleRequest('vera',['info'])");
+assert.equal(run("C.likesAll()"),people0+1,'People badge counts the couple like');assert.equal(run("C.reqAll()"),me0+1,'Profiles badge counts the couple request');
+for(const m of ['me',run('S.pair.with')])assert.deepEqual(json(`S.pair.notifications['${m}'].map(n=>n.pairEvent).sort()`),['like','req'],'both members are notified');
+assert.ok(text(run("NTXT.pair(S.notifs.find(n=>n.pairEvent==='like'))")).includes(run("pname('ari')")),'the notification names who liked');
+run("social('couple').likesIn[0].passed=true");assert.equal(run("C.likesAll()"),people0,'a passed like stops counting');
+run("coupleProfile().dating=false;receiveCoupleLike('ren')");assert.ok(!run("social('couple').likesIn.some(l=>l.p==='ren')"),'a hidden couple gets no new likes');
+prepare('N01',{k:'all'});run("coupleProfile().dating=true;S.datingActor='me';receiveCoupleLike('ari');receiveCoupleRequest('vera',['info']);ACT.openNotif({dataset:{v:S.notifs.find(n=>n.pairEvent==='like').id}})");
+assert.equal(run("cur().id+'/'+cur().p.sub+'/'+datingActor()"),'D03/likes/couple','like notification opens the couple likes');
+prepare('N01',{k:'all'});run("coupleProfile();receiveCoupleRequest('vera',['info']);ACT.openNotif({dataset:{v:S.notifs.find(n=>n.pairEvent==='req').id}})");assert.equal(run("cur().id+'/'+cur().p.k"),'N01/todo','request notification opens «Нужно решить»');
+console.log('PASS couple likes and requests: notifications for both, dock badges, opening the right place');
