@@ -84,3 +84,18 @@ console.log('PASS couple details from members, Discover filters for couples');
 prepare('Q01');run("coupleProfile().dating=false;coupleProfile().datingVisible=false;S.me.ageCheck='ok';PEOPLE[S.pair.with].verified=true;S.pairMember='partner';editableProfile({p:{owner:'couple'}});S.pairMember='me';ACT.pairDating()");
 assert.equal(run('pairDatingState()'),'on','partner’s untouched draft must not lock the Discover switch');
 console.log('PASS untouched partner draft does not block the Discover switch');
+// Sent back for changes: optional note, sender sees it in the inbox and the notification, can rework or discard; access has a way out.
+prepare('Q01');run("coupleProfile();S.pairMember='partner';setPairTrust(false);S.pairMember='me';editableProfile({p:{owner:'couple'}}).bio='v1';markCoupleDraft(true);submitCoupleDraft();var pid=S.pair.proposal.id");
+run("S.pairMember='partner'");assert.equal(run("returnWork('profile',pid,'другое фото')"),true);run("S.pairMember='me'");
+assert.equal(run("S.pair.proposal.status"),'returned');assert.ok(run("todoItems().some(x=>x.k==='profileBack')"),'sender has the returned version to do');
+assert.ok(text(run("NTXT.pair(S.notifs.find(n=>n.pairEvent==='returned'))")).includes('другое фото'),'note rides in the notification');
+assert.ok(run("pairStatusHTML()").includes('другое фото'));
+run("ACT.pairCancelChanges()");assert.equal(run("S.pair.proposal"),null);assert.equal(run("S.pair.draft"),null);assert.equal(run("T(S.pair.profile.bio)")===run("'v1'"),false,'discard keeps the published profile');
+prepare('P07',{owner:'couple'});run("coupleProfile();S.pairMember='partner';setPairTrust(false);S.pairMember='me';var rq={id:'rb1',p:'mia',status:'new',scopes:['info']};social('couple').reqIn=[rq];queueJointGrant(rq,{sel:['info']},null)");
+assert.ok(!run("todoItems().some(x=>x.k==='req'&&x.r.id==='rb1')"),'a queued couple decision is not offered twice');
+run("S.pairMember='partner'");assert.equal(run("returnWork('joint','grant_rb1','',1)"),true);run("S.pairMember='me'");
+assert.ok(run("todoItems().some(x=>x.k==='joint'&&x.q.id==='grant_rb1'&&x.q.status==='returned')"));
+assert.ok(!text(run("NTXT.pair(S.notifs.find(n=>n.pairEvent==='workReturned'))")).includes('Новое уведомление'));
+run("queueJointGrant(rq,{sel:['info']},null)");assert.equal(run("jointQueue().grant_rb1.status"),'pending');assert.equal(run("jointQueue().grant_rb1.version"),2,'change decision sends a new version');
+run("ACT.jointCancel({dataset:{v:'grant_rb1'}})");assert.equal(run("jointQueue().grant_rb1"),undefined);assert.ok(run("todoItems().some(x=>x.k==='req'&&x.r.id==='rb1')"),'withdrawn decision puts the request back');
+console.log('PASS sent back for changes: note, inbox, status, rework, discard and access way out');
