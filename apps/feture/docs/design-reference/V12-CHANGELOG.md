@@ -97,3 +97,4 @@ Decision record: `public/prototype-v11-compare-matrix.html`. Notes: `public/prot
 
 - Profile editor (solo and couple): «Данные о тебе / Данные пары» is a card in the same style as «Данные» on the profile; the city is a bordered select (pin, value, chevron) like the other inputs.
 - No dividers inside the main editor card: toggles, fields, the city select and the details card share one 16px rhythm.
+- Couple settings (Q01): sections use the standard group (title 8px above its card) instead of grid rows, so the title-to-card gap matches every other screen.
