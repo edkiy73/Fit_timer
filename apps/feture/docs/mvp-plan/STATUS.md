@@ -8,7 +8,7 @@
 
 **V10, пары Я/Мы (15.10):** реализованы A–E в прототипе: один author control, версия профиля с согласием второго, отдельные social actions, права обоих в community, совместные чаты/notifications и dissolution/recovery/expiry. Сборка/6 focused contracts/162 route renders проходят; публикация и browser acceptance фиксируются в PR. React/backend/настоящие две сессии и native не реализованы этим срезом.
 
-**V12 phone review, 21.10:** standalone fixes for thumbnail alignment, interests heading, poll card, mixed-feed separators, Access counters and couple replacement. Focused replacement contract added; React/backend unchanged. Browser/device acceptance tracked separately.
+**V12 phone review, 22.10:** owner follow-ups in standalone V12: complete visibility chips, shared inbox alignment, counter-free Access tabs, scope/duration chips, video Instafill, persistent Viewed entry and distinct profile/discovery likes. Couple profile saves publish/request automatically; each member independently defaults to no approval, including private grants. Focused revision/session/preference/grant contracts; React/backend/native unchanged. Browser and CI evidence recorded in the PR.
 
 ## Главное
 

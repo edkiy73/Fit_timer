@@ -68,3 +68,13 @@ Decision record: `public/prototype-v11-compare-matrix.html`. Notes: `public/prot
 - Age range has no enclosing card border. History card names use a dedicated class, ellipsis and a gradient (fixes notification-card style collision).
 - Unavailable profile likes are a small status line, leaving Follow as the action.
 - Event/community management entries share one button; dashboard counters open their related lists, including empty states. The owned sample event includes two explicitly public interested people, so the list can be tested.
+
+## 2026-10-22 — owner review: access, shared approvals and remaining UI
+
+- Attendance visibility uses complete Show/Hide chips. Event/community management entries share full-width sizing. Inbox application answers use the same left edge and compact spacing as application pages.
+- Access has no tab counters. Scope and expiry are chips; private Interests permission removed (description/photos/video only). Personal grants tested through the actual inbox action.
+- Recently viewed remains reachable from the People header while candidates remain. Profile likes explicitly disabled can coexist with dating likes; settings explain the distinction.
+- Every video frame uses the photo Instafill pattern: whole content over a blurred backdrop, including previews, private galleries and full-screen playback. An intentionally selected crop is retained.
+- Couple approval preferences are independent per member, defaulting to no approval. A member chooses whether the partner's shared actions need their approval, including profile/settings/interests/media/posts/private access. Immediate changes still notify both members.
+- Saving the couple profile automatically publishes or submits the complete revision. Removed the second Send draft step; accepting/rejecting checks current proposal identity, revision, draft version and session. Preference revisions invalidate in-flight writes without invalidating unrelated pending grants.
+- Added focused V12 contracts for independent defaults, automatic delivery, stale profile/grant rejection and real personal grant actions. Prototype-only: no backend or frozen V10/V11 changes.
