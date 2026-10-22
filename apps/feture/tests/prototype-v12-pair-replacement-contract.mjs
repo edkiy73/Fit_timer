@@ -186,3 +186,14 @@ console.log('PASS comparison as the acting profile, invite reasons, community ac
 // The dot on the People author avatar counts only the other profile's new likes (requests live on «Профили»).
 prepare('D03');run("coupleProfile();S.datingActor='couple'");assert.equal(run("otherActorWaiting()"),run("waitingLikes('me')"),'only likes of the other profile');
 console.log('PASS People author dot = the other profile’s new likes');
+// Every action that touches another person tells them (deliveries), the couple variants reach both partners.
+prepare('F01');run("S.socialDeliveries={}");const got=(to,type)=>run(`(S.socialDeliveries['${to}']||[]).some(n=>n.type==='${type}')`);
+run("ACT.flwToggle({dataset:{v:'lina'}})");assert.ok(got('lina','follow'),'follow');
+run("var rq={id:'qq1',p:'kai',scopes:['info'],status:'new',t:1};S.reqIn.unshift(rq)");
+run("var btn=d=>({dataset:d,classList:{contains:()=>false,add(){},remove(){},toggle(){}},closest:()=>null,setAttribute(){},removeAttribute(){},getAttribute:()=>null,querySelector:()=>null,innerHTML:'',textContent:''})");run("declineReq(btn({v:'qq1'}))");timers.splice(0).forEach(f=>f());await new Promise(r=>setTimeout(r,0));assert.ok(got('kai','reqDeclined'),'declined request');
+run("var ev=allEventIds().find(e=>EV(e).organizer==='me'&&(EV(e).apps||[]).some(x=>x.status==='pending'));var ap=EV(ev).apps.find(x=>x.status==='pending');S.nav.stacks.feed.push({id:'E16',p:{id:ev},f:{}});ACT.appDecide(btn({e:ev,v:ap.p,d:'approved'}))");timers.splice(0).forEach(f=>f());await new Promise(r=>setTimeout(r,0));
+assert.ok(got(run('ap.p'),'evapp'),'event application decision');
+run("ACT.cMemberDo({dataset:{v:'mute|circle|kai'}})");assert.ok(got('kai','communityMuted'),'muted member');run("ACT.cMemberDo({dataset:{v:'host|circle|kai'}})");assert.ok(got('kai','hostRemoved'),'host change');
+prepare('F01');run("S.socialDeliveries={};S.pair=null;S.pairInvite={nick:'kai',status:'pending',by:'me',t:1};S.pairMember='partner';acceptPairInvitation('kai');S.pairMember='me'");
+assert.ok(json("(S.pair.notifications.me||[]).map(n=>n.pairEvent)").includes('pairCreated'),'inviter learns the invitation was accepted');
+console.log('PASS outgoing notifications: follow, declined request, event decision, community roles, accepted pair invitation');
