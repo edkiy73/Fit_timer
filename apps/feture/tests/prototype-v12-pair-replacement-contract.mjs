@@ -157,3 +157,11 @@ prepare('F01');run("coupleProfile();var px=S.posts.find(x=>!x.unavailable&&x.aut
 assert.equal(run("px.comments.at(-1).a"),'couple','post replies can come from the couple');
 assert.ok(run("SC.F07.render({},cur())").includes('author-picker av-only'),'the author is an avatar in the header');
 console.log('PASS one editor for posts and discussions, author choice for posts, discussions and replies');
+// Acting as the couple tells the partner: replies, likes, access requests; request cards say what is asked and of whom; couple setup uses the standard select rows.
+prepare('F01');run("coupleProfile();S.pair.notifications={};var px=S.posts.find(x=>!x.unavailable&&x.author!=='couple');var c={id:'cr9',a:'couple',sender:'me',text:{ru:'x',en:'x'},parent:null,t:Date.now(),status:'pending'};px.comments.push(c);sendPostReply(c,px,cur(),S,S.session)");
+timers.splice(0).forEach(f=>f());await new Promise(r=>setTimeout(r,0));
+assert.ok(json("(S.pair.notifications[S.pair.with]||[]).map(n=>n.pairEvent)").includes('coupleReply'),'partner learns about a reply as the couple');assert.ok(!json("(S.pair.notifications.me||[]).map(n=>n.pairEvent)").includes('coupleReply'),'not the author');
+const card=text(run("reqCardHTML({id:'q',p:'leon',scopes:['info'],t:Date.now(),status:'new'},'couple')"));assert.ok(card.includes('Просит открыть приватную часть пары'),'request card says what and of whom');
+assert.ok(text(run("reqCardHTML({id:'q',p:'leon',scopes:['info'],t:Date.now(),status:'new'},'me')")).includes('Просит открыть твою приватную часть'));
+prepare('Q09');run("coupleProfile()");const q9=run("SC.Q09.render({},cur())");assert.ok(q9.includes('class="li"')&&q9.includes('selrow')&&!q9.includes('selrow solo'),'couple setup uses labelled select rows');
+console.log('PASS couple actions reach the partner, clear request cards, standard selects in couple setup');

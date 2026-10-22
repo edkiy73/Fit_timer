@@ -169,3 +169,10 @@ Decision record: `public/prototype-v11-compare-matrix.html`. Notes: `public/prot
 - «Новое обсуждение» is the post editor in community mode: topic field, same text editor, photos/video, poll, interests, post interests and author choice; «Кто увидит» follows the community. As the couple it follows the same approval as posts.
 - In a community the couple option is shown but unavailable when a partner is not a member: «Kira не состоит в этом сообществе». Nothing else is offered.
 - Replies as the couple appear right away (like couple chat messages). Discussions render polls, interests and media like posts.
+
+## 2026-10-22 — Couple setup selects, clear request cards, tags, couple actions notify the partner
+
+- «Настройте пару» uses the standard labelled select rows in one card («Моё подтверждение: Нужно / Не нужно», «Кто просит доступ»), not wide solo selects. Short select values no longer get cut (value keeps its width up to 55%).
+- Access request cards say what is asked and of whom: «Просит открыть твою приватную часть» / «…приватную часть пары Alex и Kira».
+- Tags look the same in discussions, joint review and posts (separate, tappable) — they were glued together outside the feed.
+- Acting as the couple notifies the partner: a reply as the couple, a like as the couple, an access request as the couple; a discussion published as the couple reads «Новое обсуждение от пары».
