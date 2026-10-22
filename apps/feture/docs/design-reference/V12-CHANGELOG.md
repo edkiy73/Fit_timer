@@ -161,3 +161,11 @@ Decision record: `public/prototype-v11-compare-matrix.html`. Notes: `public/prot
 - Chats: «Личные» / «От пары» tabs show unread chats per profile.
 - «Профили» dock badge = decisions about your profiles (access requests, couple approvals, couple invitation); the Profiles screen shows a «Нужно решить» row with the same number, opening the inbox.
 - Totals on tabs (discussions, events, access lists, profile activity) stay removed: they are not something to do.
+
+## 2026-10-22 — One editor for posts and discussions, couple replies
+
+- Event: «Видимость участия» is a normal section with a switch («Показывать моё участие»), not a loose card with chips.
+- The author (me / couple) is an avatar button in the header, as in People: new post, new discussion. Replies (posts and discussions) have the same avatar in the input bar; the menu reads «Ответить как».
+- «Новое обсуждение» is the post editor in community mode: topic field, same text editor, photos/video, poll, interests, post interests and author choice; «Кто увидит» follows the community. As the couple it follows the same approval as posts.
+- In a community the couple option is shown but unavailable when a partner is not a member: «Kira не состоит в этом сообществе». Nothing else is offered.
+- Replies as the couple appear right away (like couple chat messages). Discussions render polls, interests and media like posts.
