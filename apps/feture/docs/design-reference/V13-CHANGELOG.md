@@ -19,3 +19,25 @@ V13 is a copy of V12 (`public/prototype-v12.html`, now frozen). Contract test: `
 - **«Популярное»**: a third feed tab showing the most discussed posts of the week in my interests. Replies weigh more than likes. Taboo topics, follower-only posts, reported posts, posts under review and posts without everyone's consent never show. «Как подбираем» explains the rules, and there is no ranking of people. Communities with 4+ discussions get «Популярное за неделю». The new discussion menu lets hosts pin or unpin, keep a discussion out of Popular, or remove it (the author is notified); authors can delete their own.
 - **Notifications**: incoming link requests and photo marks land in «Нужно решить». Link confirmations, refusals and removals, photo-mark confirmations, refusals and removals, disputes and host removals land in the inbox, with a «Связи» filter. Every one of these actions also notifies the other person. QA panel: «Связи и отметки на фото: ответ людей».
 - **Round-1 fixes**: profile-photo gallery marks live on the profile, so couple changes wait for the partner. Own posts under review appear in the own gallery with a clock mark. Empty albums are hidden from others. The «Фото профиля» album can't be deleted. «Мои публикации» doesn't count gallery-only posts. Drafts of notes show their title. Search finds notes by title. Reported posts are hidden for the reporter.
+
+## 2026-10-22 — likes, albums, moderation, @mentions, following notes
+
+- **Likes**:
+  - Liking someone's post notifies the author. In the author's inbox, likes on one post fold into one line («Mia и ещё 2 — нравится твоя публикация»).
+  - The post screen shows «Нравится: Leon, Zoe, Lena и ещё 8». Tapping it opens the list of people. Those who hide their likes are counted but not listed.
+- **Albums**:
+  - Albums are cards with covers (Все / albums / Со мной / Новый альбом) instead of plain chips.
+  - New album settings: who sees it (всем / подписчикам), order (сначала новые / старые), cover (pick a post), move left/right, rename, delete.
+  - A followers-only album makes its posts followers-only too, with a confirmation. Opening the album asks whether to open its posts as well.
+  - The composer and «Альбом в галерее» keep a post's audience in step with its album. Others never see followers-only albums.
+- **Moderation (admin, M01)**:
+  - The queue holds «это я на фото» disputes and reports on posts. The moderator chooses «Удалить публикацию», or «Вернуть» / «Нарушений нет».
+  - Both sides are told the outcome. The author sees «Удалено модераторами» with the reason on their post, and the reporter gets «Жалоба рассмотрена».
+  - Removed posts disappear from the feed, the profile, the gallery and Popular.
+- **@mentions**:
+  - The composer has an «Упомянуть» tool (people picker). `@name` in posts, discussions and replies becomes a profile link.
+  - Mentioned people are notified once per post. People who limit mentions are not notified, and the author is told that before publishing.
+  - A mentioned person can «Убрать упоминание меня»: their name stays as plain text and the author is told.
+  - New setting: «Кто может упоминать меня» (все / мои подписки / никто).
+- **Following notes**: the «Заметки» tab of someone's profile has «Следить за заметками». Their new notes reach «Подписки» and the inbox even without following the person, and the author isn't notified. The feed filter gains «Заметки».
+- **QA**: «Активность других людей» simulates likes on my posts, a new note, and opens moderation.
