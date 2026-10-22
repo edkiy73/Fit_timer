@@ -41,3 +41,10 @@ V13 is a copy of V12 (`public/prototype-v12.html`, now frozen). Contract test: `
   - New setting: «Кто может упоминать меня» (все / мои подписки / никто).
 - **Following notes**: the «Заметки» tab of someone's profile has «Следить за заметками». Their new notes reach «Подписки» and the inbox even without following the person, and the author isn't notified. The feed filter gains «Заметки».
 - **QA**: «Активность других людей» simulates likes on my posts, a new note, and opens moderation.
+
+## 2026-10-22 — mentions at the caret, discussion likes, partner photo marks, V13 notes page
+
+- **@mentions**: typing `@ma` shows up to 5 people under the editor. A pick replaces the typed part, and people who limit mentions are marked «без уведомления». «Упомянуть» inserts at the caret instead of the end of the text.
+- **Discussion likes**: a like button and «Нравится: …» on the discussion screen, ♥ count in the community list. The author is notified, and likes count towards «Популярное за неделю».
+- **Partner mode**: a photo mark on the partner reaches the partner's «Нужно решить», and their answer comes back to Alex as a notification. The partner's inbox also shows mentions and likes addressed to them.
+- **«Что изменено» page**: `public/prototype-v13-notes.html`, linked from the V13 footer.
