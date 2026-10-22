@@ -2540,7 +2540,10 @@ button.sc{cursor:pointer}button.sc:active{transform:scale(.985)}
 @media(max-width:359px){.pv-capture{grid-template-columns:1fr}.pv-preview{width:160px;justify-self:center}.pv-capture-info{text-align:center}}
 
 /* V12: permanent history entry shares the measured header; videos use the same full-image frame as photos. */
-.dating-bar{flex-wrap:wrap}.dating-history-entry{flex:0 0 100%;display:flex;justify-content:flex-end}.dating-history-entry .btn{min-height:32px;padding:4px 0;font-size:12px;gap:6px}.dating-history-entry svg{width:16px;height:16px}
+/* V12 people header: one row — tabs, couple author, viewed history, filters. Never wraps, tabs keep their width. */
+.bar.dating-bar{flex-wrap:nowrap}.dating-bar>.seg{flex:1 1 auto;min-width:0;grid-auto-columns:minmax(0,1fr)}.dating-bar>.seg button{min-width:0;padding:0 4px}.dating-bar>.seg button>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dating-bar>.seg em{flex:none}
+@media(max-width:374px){.bar.dating-bar{gap:4px;padding-inline:12px}.dating-bar>.seg em{min-width:16px;height:16px;line-height:16px;padding:0 4px;font-size:10px}.dating-bar>.seg button{padding:0 2px}.dating-bar>.ibtn{width:36px;height:36px}.dating-bar>.ibtn svg{width:20px;height:20px}.dating-bar .author-trigger{width:40px;height:40px}.dating-bar>.seg button{font-size:12px;gap:3px}}
+@media(max-width:359px){.bar.dating-bar:has(>.author-picker){gap:4px}.dating-bar:has(>.author-picker)>.ibtn{width:34px;height:34px}.dating-bar .author-trigger{width:36px;height:36px}.dating-bar:has(>.author-picker)>.seg button{font-size:12px;padding:0 6px}.dating-bar:has(>.author-picker)>.seg em{position:absolute;top:1px;right:1px;min-width:15px;height:15px;line-height:15px;padding:0 3px;font-size:10px}}
 .video-fill-frame{position:relative;isolation:isolate;overflow:hidden}
 .video-fill-frame>video:not(.mbg){background:transparent!important;object-fit:contain}
 .video-fill-frame>.video-fill-bg{position:absolute!important;inset:-12%!important;width:124%!important;height:124%!important;max-width:none;object-fit:cover!important;filter:blur(26px) saturate(1.15) brightness(.85);opacity:.9;z-index:-1!important;pointer-events:none;transform:none!important}
@@ -5196,7 +5199,8 @@ SC.D03={root:1,tab:'people',title:()=>L('Люди','People'),render:(p,r)=>{
  const sub=p.sub||'discover';if(sub==='matches')return SC.H01.render({sub:'chats'},r);const n=C.likesIn();
  const tabs=seg([['discover',L('Подборка','Discover')],['likes',L('Симпатии','Likes'),n||'']],sub,'pplSub');
  const right=sub==='discover'&&authorProfile().dating?`<button class="ibtn" data-act="dfSheet" aria-label="${L('Фильтры','Filters')}">${I.filter}${dfCount(social().filters.dating)?`<sup>${dfCount(social().filters.dating)}</sup>`:''}</button>`:bellBtn();
- const head=`<header class="bar dating-bar">${tabs}${authorPicker()}${right}<div class="dating-history-entry"><button class="btn text auto" data-go="D09">${I.hist}${L('Просмотренные','Viewed profiles')}</button></div></header>`;
+ const hist=sub==='discover'&&DATING_LIVE()&&authorProfile().dating?`<button class="ibtn" data-go="D09" aria-label="${L('Просмотренные','Viewed profiles')}" title="${L('Просмотренные','Viewed profiles')}">${I.hist}</button>`:'';
+ const head=`<header class="bar dating-bar">${tabs}${authorPicker()}${hist}${right}</header>`;
  if(sub==='likes')return head+`<div class="view"><div class="wrap">${likesBody(r)}</div></div>`;
  if(sub==='matches')return head+`<div class="view"><div class="wrap">${matchesBody()}</div></div>`;
  if(!DATING_LIVE())return head+`<div class="view"><div class="wrap">${datingSoon()}</div></div>`;
