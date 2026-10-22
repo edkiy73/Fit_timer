@@ -182,3 +182,12 @@ Decision record: `public/prototype-v11-compare-matrix.html`. Notes: `public/prot
 - Community owner: in «Участники» tapping a person opens a menu — make a host / remove as host, stop posting / allow posting, remove from the community (with confirmation). «Управление» links to join requests (C11) and to «Ведущие и участники»; members see the list read-only.
 - Event: a «Кто идёт» section (avatars, going / interested counts) opens a list with «Идут / Интересуются». People who hid their attendance are counted, not listed; your own pending application does not count as going.
 - «Прочитать все» is a quiet full-width button right under the tabs (light fill, outline, accent text).
+
+## 2026-10-22 — Community access, event attendance, comparison as the couple, profile author, invite reasons
+
+- Community owner sets «Кто может вступить: Открытое / По заявке» in «Управление → Доступ» (closed = only members see discussions).
+- Event: «Твой статус» checklist replaced by one «Участие» card with a single clear state (Нужна заявка / На рассмотрении / Одобрена / Не одобрена) plus payment. «Кто идёт и интересуется» names both groups.
+- Comparison is made for the profile you act as: from the couple it compares the couple's interests (avatar «М», «Alex и Kira и X»), on the profile, in Discover and in the full comparison.
+- Profile: the author is the avatar button next to «Нравится» (as in People); the menu shows what each profile already has with this person (совпадение / симпатия отправлена) and why the couple is unavailable. The floating «От пары … Изменить» lines are gone.
+- Notifications: the settings gear moved from the header (same spot as the bell — easy to hit by accident) to a «Настройки уведомлений» row at the bottom.
+- Pair invite names the reason: already in a couple, couple profile, own nickname, not found; case-insensitive nickname.
