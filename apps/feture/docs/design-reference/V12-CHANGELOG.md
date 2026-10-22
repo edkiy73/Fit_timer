@@ -191,3 +191,7 @@ Decision record: `public/prototype-v11-compare-matrix.html`. Notes: `public/prot
 - Profile: the author is the avatar button next to «Нравится» (as in People); the menu shows what each profile already has with this person (совпадение / симпатия отправлена) and why the couple is unavailable. The floating «От пары … Изменить» lines are gone.
 - Notifications: the settings gear moved from the header (same spot as the bell — easy to hit by accident) to a «Настройки уведомлений» row at the bottom.
 - Pair invite names the reason: already in a couple, couple profile, own nickname, not found; case-insensitive nickname.
+
+## 2026-10-22 — People author dot
+
+- The number on the author avatar in People counts only the other profile's new likes (it used to add access requests, which belong to «Профили»). The author menu says it: «Новые симпатии: N».
