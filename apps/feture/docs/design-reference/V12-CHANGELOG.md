@@ -176,3 +176,9 @@ Decision record: `public/prototype-v11-compare-matrix.html`. Notes: `public/prot
 - Access request cards say what is asked and of whom: «Просит открыть твою приватную часть» / «…приватную часть пары Alex и Kira».
 - Tags look the same in discussions, joint review and posts (separate, tappable) — they were glued together outside the feed.
 - Acting as the couple notifies the partner: a reply as the couple, a like as the couple, an access request as the couple; a discussion published as the couple reads «Новое обсуждение от пары».
+
+## 2026-10-22 — Community hosts and members, who is going, read-all button
+
+- Community owner: in «Участники» tapping a person opens a menu — make a host / remove as host, stop posting / allow posting, remove from the community (with confirmation). «Управление» links to join requests (C11) and to «Ведущие и участники»; members see the list read-only.
+- Event: a «Кто идёт» section (avatars, going / interested counts) opens a list with «Идут / Интересуются». People who hid their attendance are counted, not listed; your own pending application does not count as going.
+- «Прочитать все» is a quiet full-width button right under the tabs (light fill, outline, accent text).
