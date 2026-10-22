@@ -84,3 +84,11 @@ Decision record: `public/prototype-v11-compare-matrix.html`. Notes: `public/prot
 - «Просмотренные» is an icon button in the single header row (tabs · couple author · history · filters), not a second full-width row. It appears only in Discover while dating is on; the Likes tab keeps the bell.
 - With a couple profile the previous `nowrap` + full-width history entry collapsed the Discover/Likes tabs to zero width and pushed the label off-screen. Tabs now use `minmax(0,1fr)` columns and never wrap.
 - ≤374px: tighter gaps/padding, 36px icons, 40px author avatar. ≤359px with a couple: 34/36px controls and the Likes counter sits on the tab corner, so both labels stay whole at 320px.
+
+## 2026-10-22 — People and couple profile, owner round
+
+- Likes «Тебе»: cards show only name and age (no source chip, no match captions). New × on each card — don't answer and remove from the list (counts as passed in Discover, with Undo). Cards swipe like the deck: right — like back, left — pass; a tap still opens the profile.
+- Deck key button: when access is already open it scrolls the same card to the private part instead of opening the full profile.
+- People header: the author avatar is the size of the neighbouring icon buttons (40/36/34px), no ring or background — just the photo.
+- «Показывать пару в знакомствах» moved from the couple profile editor to couple settings (Q01, renamed «Настройки пары»). Off is immediate for either partner; on is published at once when partners trust each other, otherwise it waits for the partner.
+- Couple profile uses the solo components: on Profiles it is the same card as the solo profile (tap — «как видят», «Изменить профиль», gear — couple settings); the couple page (Q03 and all couple links) is the same «как видят» screen as the solo profile, whose ⋯ menu adds «Настройки пары».
