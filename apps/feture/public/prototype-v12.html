@@ -3354,7 +3354,7 @@ function run(btn,work,o={}){
 /* ---------- toasts ---------- */
 function toast(msg,o={}){
  const box=$('#toasts');if(!box)return;
- const el=document.createElement('div');el.className='toast '+(o.type||'');el.setAttribute('role',o.type==='err'?'alert':'status');
+ const el=document.createElement('div');el.className='toast '+(o.type||'');el.dataset.t=Date.now();el.setAttribute('role',o.type==='err'?'alert':'status');
  const icn={ok:I.okc,err:I.alert,warn:I.warn,info:I.info}[o.type]||'';
  el.innerHTML=`${icn}<span class="tx">${esc(msg)}</span>${o.action?`<button class="tb">${esc(o.action.label)}</button>`:''}`;
  if(o.action)el.querySelector('.tb').onclick=()=>{dismiss();o.action.fn();};
@@ -3467,7 +3467,8 @@ function render(dir,keep){
  const m=main();
  m.classList.toggle('has-dock',dock);m.classList.toggle('replying',!!keep&&m.classList.contains('replying'));
  m.innerHTML=(QA.offline?`<div class="netbar" role="status">${I.wifioff}${L('Нет соединения — показываем сохранённое','Offline — showing what’s loaded')}</div>`:'')+html+(dock?dockHTML():'');
- if(dir&&!keep&&dir!=='fade-keep')$$('#toasts .toast:not(.keep)').forEach(t=>t.remove());
+ /* a toast raised by the action that caused this navigation (save → back through browser history renders a moment later) survives it */
+ if(dir&&!keep&&dir!=='fade-keep')$$('#toasts .toast:not(.keep)').forEach(t=>{if(Date.now()-(+t.dataset.t||0)>1000)t.remove();});
  m.dataset.screen=QA.maintenance?'MAINT':r.id;
  const reply=dock&&$(':scope>.inputbar',m);
  m.classList.toggle('has-reply',!!reply);
@@ -5864,6 +5865,8 @@ function pairDatingState(){const P=S.pair,pub=coupleProfile();if(!pub)return 'of
 ACT.pairDating=()=>{if(!authorAllowed('couple'))return;const P=S.pair,pub=coupleProfile(),state=pairDatingState();
  if(state!=='off'){pairSafety('dating');return;}
  if(S.me.ageCheck!=='ok'||!PEOPLE[P.with]?.verified){toast(L('Для знакомств нужно подтверждение 18+ обоих участников','Discover requires 18+ confirmation for both partners'),{type:'warn'});return;}
+ /* an untouched draft (the partner only opened the editor or the interests) must not block the switch */
+ if(P.draft&&!coupleDraftChanged()){P.draft=null;P.draftBy=null;}
  if(P.proposal?.status==='pending'||P.draft&&coupleDraftChanged()){toast(L('Сначала завершите изменения профиля пары — они ещё не сохранены или ждут согласия','Finish the couple profile changes first — they are unsaved or awaiting approval'),{type:'warn'});return;}
  const m=editableProfile({p:{owner:'couple'}});if(!m||!coupleWritable())return;const trusted=pairTrusted();m.dating=true;m.datingVisible=true;markCoupleDraft(true);
  if(submitCoupleDraft()){refresh();toast(trusted?L('Пара показывается в знакомствах','The couple is shown in Discover'):L('Отправлено партнёру — пара появится в знакомствах после согласия','Sent to your partner — the couple appears in Discover once they agree'),{type:'ok'});}};
@@ -6278,8 +6281,8 @@ SC.X01={root:1,tab:'me',title:()=>meTabName(),render:()=>{const m=S.me;const [ns
  </div></div>`;},after:()=>fillJars()};
 ACT.myJarsAll=()=>go('X02');
 /* X02 — all my jars, grouped by answer */
-SC.X02={title:()=>L('Мои интересы','My interests'),valid:p=>p.owner!=='couple'||S.pair?.status==='active',render:(p,r)=>{const all=sortJars(editableProfile(r).jars);const g=[[L('Интересно','Into it'),all.filter(j=>!j.limit)],[L('Обсуждаемо','Negotiable'),all.filter(j=>j.limit==='discuss')],[L('Табу','Taboo'),all.filter(j=>j.limit==='hard')]].filter(x=>x[1].length);
- return `${bar(L('Мои интересы','My interests'),{back:1,sm:1,actions:`<button class="ibtn" data-go="X04" data-p='${esc(JSON.stringify({owner:p.owner}))}' aria-label="${L('История','History')}">${I.hist}</button><button class="ibtn" data-act="addJar" aria-label="${L('Добавить интерес','Add an interest')}">${I.plus}</button>`})}<div class="view nodock"><div class="wrap">
+SC.X02={title:p=>p?.owner==='couple'?L('Интересы пары','Couple interests'):L('Мои интересы','My interests'),valid:p=>p.owner!=='couple'||S.pair?.status==='active',render:(p,r)=>{const all=sortJars(editableProfile(r).jars);const g=[[L('Интересно','Into it'),all.filter(j=>!j.limit)],[L('Обсуждаемо','Negotiable'),all.filter(j=>j.limit==='discuss')],[L('Табу','Taboo'),all.filter(j=>j.limit==='hard')]].filter(x=>x[1].length);
+ return `${bar(p.owner==='couple'?L('Интересы пары','Couple interests'):L('Мои интересы','My interests'),{back:1,sm:1,actions:`<button class="ibtn" data-go="X04" data-p='${esc(JSON.stringify({owner:p.owner}))}' aria-label="${L('История','History')}">${I.hist}</button><button class="ibtn" data-act="addJar" aria-label="${L('Добавить интерес','Add an interest')}">${I.plus}</button>`})}<div class="view nodock"><div class="wrap">
  ${all.length?g.map(([t,l])=>grp(`${t} · ${l.length}`,jarsHTML(l,{pre:1,act:p.owner==='couple'?'editCoupleJar':'editJar',vis:1}))).join(''):p.owner==='couple'?empty('spark',L('Общих интересов пока нет','No couple interests yet'),L('Добавьте общие интересы вручную. Изменения сохраняются сразу или ждут подтверждения — по настройкам каждого участника. Личные ответы не копируются.','Add couple interests yourselves. Changes apply immediately or await approval, according to each partner’s settings. Personal answers are not copied.'),`<button class="btn primary" data-act="addJar">${L('Добавить интерес','Add an interest')}</button>`):empty('test',L('Пока пусто','Empty for now'),L('Выбери интересы и настрой, как они тебе откликаются.','Choose interests and set how they feel to you.'),`<button class="btn primary" data-act="addJar">${L('Добавить интересы','Add interests')}</button>`)}
  <p class="grp-n">${I.eyeoff} ${L('только ты','only you')} · ${I.key} ${L('по доступу','by access')} · ${L('без значка — видно всем','no icon — everyone')}. ${L('Табу показывается в профиле как «нельзя», только если выбрано «Все».','Taboo shows on your profile as “not for me” only if you chose “Everyone”.')}</p></div></div>`;},after:()=>fillJars()};
 /* Quizzes are paused (owner, 15.10.2026): the entry stays, the screen says «скоро». New quizzes will not write to jars.

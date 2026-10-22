@@ -80,3 +80,7 @@ run("S.me.showAge=false");assert.equal(run("pairPeople('couple')[0].age"),null,'
 assert.ok(text(run("pairLine('lenamax')")).includes(run("opt('orient','hetero')")),'members block shows each member’s own data');assert.ok(!run("detailsGroup('lenamax')").includes('Lena'));
 run("S.pair=null;S.pairInvite=null");assert.ok(run("SC.Q01.render({},cur())").includes(run("L('Сразу после создания','Right after you create it')")),'defaults are explained on creation');
 console.log('PASS couple details from members, Discover filters for couples');
+// An untouched draft opened by the partner does not block turning Discover back on.
+prepare('Q01');run("coupleProfile().dating=false;coupleProfile().datingVisible=false;S.me.ageCheck='ok';PEOPLE[S.pair.with].verified=true;S.pairMember='partner';editableProfile({p:{owner:'couple'}});S.pairMember='me';ACT.pairDating()");
+assert.equal(run('pairDatingState()'),'on','partner’s untouched draft must not lock the Discover switch');
+console.log('PASS untouched partner draft does not block the Discover switch');
