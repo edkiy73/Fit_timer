@@ -195,3 +195,7 @@ Decision record: `public/prototype-v11-compare-matrix.html`. Notes: `public/prot
 ## 2026-10-22 — People author dot
 
 - The number on the author avatar in People counts only the other profile's new likes (it used to add access requests, which belong to «Профили»). The author menu says it: «Новые симпатии: N».
+
+## 2026-10-22 — Inbox without settings
+
+- Notification settings are no longer reachable from the inbox (neither header nor bottom row); they live in «Настройки».
