@@ -68,3 +68,13 @@ prepare('Q01');run("coupleProfile();S.pairMember='partner';setPairTrust(false);S
 assert.equal(run('pairDatingState()'),'pending');assert.equal(run('S.pair.profile.datingVisible'),false);
 assert.ok(run("profGo('couple')").includes('data-go="P03"'));
 console.log('PASS likes pass/undo without captions, couple Discover visibility in couple settings, couple profile uses the solo preview');
+// Couple gender/orientation/age come from members' own profiles; Discover filters: any member for gender/orientation, every shown age in range.
+prepare('D03');run("var df={show:'all',age:[18,99],dist:100,gender:[],orient:[],format:[],seek:[],topics:[],role:[],placeMode:'city',city:'',coords:null}");
+const pairsFor=f=>json(`Object.keys(PEOPLE).filter(k=>PEOPLE[k].pair&&passDating(k,Object.assign({},df,${JSON.stringify(f)})))`);
+assert.deepEqual(pairsFor({orient:['hetero']}),['lenamax'],'one hetero member is enough');
+assert.ok(pairsFor({gender:['woman']}).includes('lenamax'));assert.deepEqual(pairsFor({gender:['nonbinary']}),[]);
+assert.deepEqual(pairsFor({age:[30,33]}),[],'every member with a shown age must be in range');assert.ok(pairsFor({age:[29,34]}).includes('lenamax'));
+run("coupleProfile()");assert.deepEqual(json("pairPeople('couple').map(m=>m.id)"),['me',run('S.pair.with')]);
+run("S.me.showAge=false");assert.equal(run("pairPeople('couple')[0].age"),null,'hidden personal age is not exposed through the couple');
+assert.ok(run("detailsGroup('lenamax')").includes('Lena'));
+console.log('PASS couple details from members, Discover filters for couples');
