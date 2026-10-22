@@ -266,3 +266,9 @@ run("S.myPosts.unshift({...postFromDraft({author:'me',tags:[],aud:'all',text:'П
 prepare('F01');run("ensureV13();ACT.noteSub({dataset:{v:'lina'}});qaV13b('note')");assert.ok(json("S.notifs.map(n=>n.type)").includes('noteNew'),'new note of a followed author reaches the inbox');
 assert.ok(json("filterPosts(allPosts(),{types:['note']}).every(p=>p.type==='note')"),'feed can filter notes');
 console.log('PASS likes to authors, albums (followers-only, cover, order), moderation outcomes, mentions, following notes');
+// Discussions can be liked (author notified, counted in Popular); the partner answers photo marks about them; replies with @ notify.
+prepare('F01');run("ensureV13();S.socialDeliveries={}");const dd=run("S.discussions.find(d=>d.author!=='me'&&d.author!=='couple').id");run(`ACT.likeDisc({dataset:{v:'${dd}'}})`);
+assert.ok(run(`S.discussions.find(d=>d.id==='${dd}').liked`));assert.ok(run("Object.values(S.socialDeliveries).flat().some(n=>n.type==='postLike')"),'discussion author learns about the like');
+prepare('F01');run("ensureV13();S.myPosts.unshift({...postFromDraft({author:'me',tags:[],aud:'all',text:'x',media:[{type:'image',url:'/images/v10-content/gallery-e1-ropes.webp'}],poll:null,result:null,people:[S.pair?.with||'kira']},'kp1'),status:'published'})");
+assert.ok(run("activePair()"),'test state has an active couple');{run("S.pairMember='partner'");assert.ok(json("todoItems().filter(x=>x.k==='tag').map(x=>x.post.id)").includes('kp1'),'the partner gets the photo mark');run("ACT.tagAnswer({dataset:{v:'kp1|yes'}});S.pairMember='me'");assert.ok(json("S.notifs.map(n=>n.type)").includes('tagok'),'Alex learns the partner agreed');}
+console.log('PASS discussion likes, partner photo marks');
