@@ -23,3 +23,36 @@ for(const expired of [false,true]){
  assert.equal(run('S.pairHistory.length'),2);assert.equal(run('S.pairHistory[1].posts.length'),1);assert.equal(run('S.pairHistory[1].posts[0].text'),'second pair');
  console.log('PASS replacement with DIFFERENT partner, fresh social state and distinct archives',expired?'after expiry':'immediately');
 }
+// Each member independently opts in to reviewing the partner's shared actions.
+for(const lang of ['ru','en']){
+ prepare();run(`S.lang='${lang}';coupleProfile()`);
+ assert.equal(run('pairTrusted()'),true);
+ run('setPairTrust(false)');assert.equal(run('pairApprovalRequired()'),true);assert.equal(run('pairTrusted()'),true);
+ run("S.pairMember='partner'");assert.equal(run('pairTrusted()'),false);assert.equal(run('pairApprovalRequired()'),false);
+ run("setPairTrust(false);S.pairMember='me';setPairTrust(true)");assert.equal(run('pairTrusted()'),false);
+ run("S.pairMember='partner'");assert.equal(run('pairTrusted()'),true);
+ prepare();run("coupleProfile();editableProfile({p:{owner:'couple'}}).bio='new';markCoupleDraft(true)");
+ assert.equal(run('submitCoupleDraft()'),true);assert.equal(run('T(S.pair.profile.bio)'),'new');assert.equal(run('S.pair.proposal'),null);
+ assert.ok(run("S.pair.notifications[S.pair.with].some(n=>n.pairEvent==='profileUpdated')"));
+ prepare();run("coupleProfile();S.pairMember='partner';setPairTrust(false);S.pairMember='me';editableProfile({p:{owner:'couple'}}).bio='pending v1';markCoupleDraft(true);submitCoupleDraft();var v1=S.pair.proposal.id;S.pair.draft.bio='pending v2';markCoupleDraft(true);submitCoupleDraft();var v2=S.pair.proposal.id;S.pairMember='partner'");
+ assert.equal(run('commitCoupleProposal(S.pair,pairMember(),v1)'),false);
+ assert.equal(run('commitCoupleProposal(S.pair,pairMember(),v2)'),true);assert.equal(run('T(S.pair.profile.bio)'),'pending v2');
+ prepare('P07',{owner:'couple'});run("coupleProfile();var req={id:'v12grant',p:'mia',status:'new',scopes:['info']};social('couple').reqIn=[req]");
+ assert.equal(run("queueJointGrant(req,{sel:['info']},null)"),true);assert.equal(run('req.status'),'open');assert.ok(run("givenGrant('mia')"));
+ prepare('P07',{owner:'couple'});run("coupleProfile();S.pairMember='partner';setPairTrust(false);S.pairMember='me';var req={id:'v12grant',p:'mia',status:'new',scopes:['info']};social('couple').reqIn=[req];queueJointGrant(req,{sel:['info']},null);var q=jointQueue()['grant_v12grant']");
+ assert.equal(run('req.status'),'new');run('setPairTrust(false)');assert.equal(run('approveJointWork(q.id,q.version,pairMember(),true)'),false);
+ run("S.pairMember='partner';S.pair.revision=(S.pair.revision||0)+1");assert.equal(run('approveJointWork(q.id,q.version)'),false);
+ prepare('N01');run("var grBtn=Object.assign(document.querySelector('test'),{dataset:{v:'r1',actor:'me'}});ACT.grant(grBtn)");
+ assert.deepEqual(json('S.ui.gr.sel'),['info','photos']);
+ await finish(run("ACT.grOk(document.querySelector('test'))"));assert.equal(run("S.reqIn.find(x=>x.id==='r1').status"),'open');assert.ok(run("S.sharedByMe.find(x=>x.p==='kai')"));
+ console.log('PASS independent approval preferences, automatic profile delivery, stale revisions and private grants',lang);
+}
+prepare('P07',{owner:'couple'});run("coupleProfile();S.pairMember='partner';setPairTrust(false);S.pairMember='me';var prefReq={id:'pref-grant',p:'mia',status:'new',scopes:['info']};social('couple').reqIn=[prefReq];queueJointGrant(prefReq,{sel:['info']},null);setPairTrust(false);S.pairMember='partner';var prefQ=jointQueue()['grant_pref-grant']");
+assert.equal(run('approveJointWork(prefQ.id,prefQ.version)'),true,'unrelated personal preference change cannot strand pending grants');
+prepare('P02',{owner:'couple'});run("SC.P02.render(cur().p,cur());cur().f.bio='Saved directly from editor';ACT.peSave(document.querySelector('test'))");await finish();
+assert.equal(run('T(S.pair.profile.bio)'),'Saved directly from editor');assert.equal(run('S.pair.proposal'),null);
+prepare('P02',{owner:'couple'});run("S.pairMember='partner';setPairTrust(false);S.pairMember='me';SC.P02.render(cur().p,cur());cur().f.bio='Editor pending';ACT.peSave(document.querySelector('test'))");await finish();
+assert.equal(run('T(S.pair.proposal.text.bio)'),'Editor pending');assert.equal(run('S.pair.proposal.status'),'pending');assert.ok(!run("pairStatusHTML().includes('data-act=\"pairSubmit\"')"));
+prepare('D03');run("S.me.socialLikes=false;var likeTarget=pool().find(id=>!PEOPLE[id].pair);likePerson(likeTarget,'discover')");assert.ok(run('S.likesOut.some(x=>x.p===likeTarget)||isMatch(likeTarget)'));
+run("PEOPLE[likeTarget].socialLikes=false");assert.equal(run("canLikeFrom('me',likeTarget)"),false);assert.equal(run('PEOPLE[likeTarget].dating'),true);
+console.log('PASS preference-change pending-grant regression, actual editor auto-save and independent dating likes');
