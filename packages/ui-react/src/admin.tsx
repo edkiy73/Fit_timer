@@ -26,7 +26,7 @@ export interface AdminPanelProps {
   locale?: 'ru' | 'en';
   extraSections?: readonly AdminSection[];
   /** Optional product-local opt-out for globally shared Core observability tabs. */
-  hiddenCoreTabs?: readonly ('overview' | 'errors')[];
+  hiddenCoreTabs?: readonly ('overview' | 'errors' | 'users')[];
   /** Require a real protected server read before showing the admin workspace (opt-in). */
   validateKeyOnConnect?: boolean;
   /** Readable names of the product's analytics events, in the Admin language. */
@@ -275,7 +275,7 @@ function HealthView({health, copy}: {health: AdminHealth | null; copy: Copy}){
 const NO_SECTIONS: readonly AdminSection[] = [];
 
 const NO_LABELS: Readonly<Record<string, string>> = {};
-const NO_HIDDEN_CORE_TABS: readonly ('overview' | 'errors')[] = [];
+const NO_HIDDEN_CORE_TABS: readonly ('overview' | 'errors' | 'users')[] = [];
 
 type EventTotals = Record<string, {count?: number; unique?: number}>;
 type Platforms = {android?: number; ios?: number; web?: number};
@@ -412,7 +412,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
   const [tab, setTab] = useState<Tab>(() => {
     try{
       const stored = sessionStorage.getItem('appbase.admin.tab') || 'health';
-      return hiddenCoreTabs.includes(stored as 'overview' | 'errors') ? 'health' : stored;
+      return hiddenCoreTabs.includes(stored as 'overview' | 'errors' | 'users') ? 'health' : stored;
     }catch(_){ return 'health'; }
   });
   const [health, setHealth] = useState<AdminHealth | null>(null);
@@ -431,7 +431,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
     ['health', copy.health], ['overview', copy.overview], ['users', copy.users], ['payments', copy.payments],
     ['errors', copy.errors], ['storage', copy.storage], ['campaigns', copy.campaigns], ['ai', copy.ai], ['billing-keys', copy.billingKeys], ['legal', copy.legal],
     ...extraSections.map(section => [section.id, section.label] as const)
-  ].filter(([id]) => !hiddenCoreTabs.includes(id as 'overview' | 'errors')) as ReadonlyArray<readonly [string,string]>, [copy, extraSections, hiddenCoreTabs]);
+  ].filter(([id]) => !hiddenCoreTabs.includes(id as 'overview' | 'errors' | 'users')) as ReadonlyArray<readonly [string,string]>, [copy, extraSections, hiddenCoreTabs]);
 
   const navGroups = useMemo(() => {
     const core = [
@@ -494,7 +494,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
 
   const loadProtected = useCallback(async (target: Tab, adminKey = key) => {
     // These tabs load their own data.
-    if(hiddenCoreTabs.includes(target as 'overview' | 'errors')) return;
+    if(hiddenCoreTabs.includes(target as 'overview' | 'errors' | 'users')) return;
     if(target === 'health' || target === 'campaigns' || target === 'ai' || target === 'billing-keys' || target === 'legal' || extraSections.some(section => section.id === target)) return;
     if(!adminKey){ setData(null); return; }
     setBusy(true);

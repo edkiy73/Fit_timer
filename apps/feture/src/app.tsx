@@ -38,12 +38,14 @@ import {CatalogAdmin} from './feture/catalog-admin';
 import {ModerationAdmin} from './feture/moderation-admin';
 import {OperatorsAdmin} from './feture/operators-admin';
 import {MetricsAdmin} from './feture/metrics-admin';
+import {FetureUsersAdmin} from './feture/users-admin';
 import {QaAdultAdmin} from './feture/qa-adult-admin';
 import {OperatorPage} from './feture/operator-page';
 import {ShareLinksPage,SharedCardPage} from './feture/share-links-page';
 import {ComparisonPage} from './feture/comparison-page';
 import type {AdminSection} from '@appbase/ui-react/admin.js';
 const productAdminSections:readonly AdminSection[]=[
+  {id:'feture-users',label:'Пользователи',group:'Участники FetUre',render:context=><FetureUsersAdmin {...context}/>},
   // Keep IDs stable: AppBase persists the last selected tab in sessionStorage.
   {id:'feture-moderation',label:'Модерация публикаций',group:'Проверка и доступ',render:context=><ModerationAdmin {...context}/>},
   {id:'feture-qa-adult',label:'Временный доступ 18+',group:'Проверка и доступ',render:context=><QaAdultAdmin {...context}/>},
@@ -54,7 +56,7 @@ const productAdminSections:readonly AdminSection[]=[
   {id:'feture-metrics',label:'Активность FetUre',group:'Наблюдение',render:context=><MetricsAdmin {...context}/>}
 ];
 
-const hiddenFetureCoreTabs = ['overview','errors'] as const;
+const hiddenFetureCoreTabs = ['overview','errors','users'] as const;
 const PRODUCT_NAME = 'FetUre';
 // Handle step at first sign-in: config/product.json → auth.askHandle.
 const ASK_HANDLE = product.auth?.askHandle !== false;
