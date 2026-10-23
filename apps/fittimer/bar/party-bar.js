@@ -511,10 +511,10 @@ const cocktails = [
     variations:[
       {name:"Чуть суше", recipe:"Та же база, но сироп 10 и кола 25–30", ingredients:["vodka","gin","rum","tequila","triple","cola"], abv:20, taste:"Меньше сладости."},
       {name:"Без сиропа", recipe:"Водка 15 + джин 15 + ром 15 + текила 15 + Triple Sec 20 + лимон 20 + кола 35", ingredients:["vodka","gin","rum","tequila","triple","cola"], abv:19, taste:"Резче, проще по составу."}]},
-  {name:"Texas Tea", mtop:10, family:"Кола · твист", base:"Мультибаза", abv:20,
+  {name:"Texas Tea", family:"Кола · твист", base:"Мультибаза", abv:20,
     art:{shape:"highball", c1:"#70401e", c2:"#bb7b3d", ice:5, garnish:"lemon", bubbles:true, bg1:"#160e0c", bg2:"#4b2c17"},
     desc:"Long Island плюс бурбон. Плотнее и висковее.",
-    tags:["кола","лонг","крепкое","виски"],
+    tags:["кола","лонг","крепкое","виски","микс"],
     main:{recipe:"Водка 10 + джин 10 + белый ром 10 + текила 10 + бурбон 15 + Triple Sec 15 + лимон 25 + сироп 10 + кола 30", ingredients:["vodka","gin","rum","tequila","bourbon","triple","cola"], taste:"Карамель бурбона, цитрус, кола."},
     who:"Как Long Island, но с виски.",
     extras:[{name:"Лимонный сок 20–25 мл", mode:"required", effect:"Держит сладость."},{name:"Сахарный сироп 5–10 мл", mode:"required", effect:"Скругляет кислоту."},{name:"Лимонная цедра", mode:"optional", effect:"Свежий аромат."}],
@@ -566,7 +566,7 @@ const cocktails = [
     variations:[
       {name:"Без Бенедиктина", recipe:"Бурбон 25 + бренди 25 + сладкий красный вермут 25", ingredients:["bourbon","brandy","sweetV"], abv:28, taste:"Проще и суше."},
       {name:"Ирландский", recipe:"Ирландский виски 25 + бренди 25 + сладкий красный вермут 25", ingredients:["irish","brandy","sweetV"], abv:27, taste:"Мягче и фруктовее."}]},
-  {name:"Between the Sheets", mtop:3, family:"Микс · сауэр", base:"Мультибаза", abv:24,
+  {name:"Between the Sheets", mtop:4, family:"Микс · сауэр", base:"Мультибаза", abv:24,
     art:{shape:"nick", c1:"#e0a64a", c2:"#f6dc9a", ice:0, garnish:"lemon", bg1:"#17110a", bg2:"#4a3416"},
     desc:"Ром и коньяк с апельсином и лимоном. Sidecar, который стал смелее.",
     tags:["кислое","цитрус","апельсин","крепкое","микс"],
@@ -577,7 +577,7 @@ const cocktails = [
     variations:[
       {name:"Мягче", recipe:"Белый ром 20 + бренди 30 + Triple Sec 20 + лимонный сок 15 + сироп 5", ingredients:["rum","brandy","triple"], abv:22, taste:"Круглее и слаще."},
       {name:"Sidecar", recipe:"Бренди 50 + Triple Sec 20 + лимонный сок 20", ingredients:["brandy","triple"], abv:25, taste:"Без рома — это наш Sidecar.", same:"Sidecar"}]},
-  {name:"Vesper", mtop:4, family:"Микс · Бонд", base:"Мультибаза", abv:32,
+  {name:"Vesper", mtop:5, family:"Микс · Бонд", base:"Мультибаза", abv:32,
     art:{shape:"nick", c1:"#e9e4c8", c2:"#fbf8ea", ice:0, garnish:"lemon", bg1:"#0f1113", bg2:"#2c3236"},
     desc:"Мартини Джеймса Бонда: джин и водка вместе. Встряхнуть, не смешивать.",
     tags:["крепкое","сухое","джин","микс"],
@@ -588,7 +588,7 @@ const cocktails = [
     variations:[
       {name:"Мягче", recipe:"Джин 45 + водка 20 + сухой вермут 15", ingredients:["gin","vodka","dryV"], abv:30, taste:"Меньше джина, легче пьётся."},
       {name:"Dry Martini", recipe:"Джин 60 + сухой вермут 10", ingredients:["gin","dryV"], abv:32, taste:"Без водки — это наш Dry Martini.", same:"Dry Martini"}]},
-  {name:"Saratoga", mtop:5, family:"Микс · классика", base:"Мультибаза", abv:28,
+  {name:"Saratoga", mtop:7, family:"Микс · классика", base:"Мультибаза", abv:28,
     art:{shape:"nick", c1:"#7a2f14", c2:"#c9783a", ice:0, garnish:"twist", bg1:"#180e09", bg2:"#4c2815"},
     desc:"Бурбон, коньяк и красный вермут поровну. Manhattan, у которого два характера.",
     tags:["крепкое","виски","мягкое","микс","вечер"],
@@ -599,7 +599,7 @@ const cocktails = [
     variations:[
       {name:"Суше", recipe:"Бурбон 35 + бренди 35 + сладкий красный вермут 20", ingredients:["bourbon","brandy","sweetV"], abv:31, taste:"Крепче, вермута меньше."},
       {name:"Perfect", recipe:"Бурбон 30 + бренди 30 + сладкий красный вермут 15 + сухой вермут 15", ingredients:["bourbon","brandy","sweetV","dryV"], abv:28, taste:"Суше и сложнее."}]},
-  {name:"Scorpion", mtop:6, family:"Микс · тики на компанию", base:"Мультибаза", abv:14,
+  {name:"Scorpion", mtop:8, family:"Микс · тики на компанию", base:"Мультибаза", abv:14,
     art:{shape:"highball", c1:"#f0a640", c2:"#fbd88a", ice:4, garnish:"orange", bg1:"#120f0a", bg2:"#3e3016"},
     desc:"Ром, коньяк и апельсин. Тики-классика, которую делают сразу большой чашей на всех.",
     tags:["цитрус","апельсин","лёгкое","микс"],
@@ -610,7 +610,7 @@ const cocktails = [
     variations:[
       {name:"С амаретто", recipe:"Белый ром 45 + бренди 15 + амаретто 10 + апельсиновый сок 60 + лимонный сок 20", ingredients:["rum","brandy","amaretto"], abv:15, taste:"Если нет оршада — миндаль из амаретто."},
       {name:"Чаша на 6", recipe:"Белый ром 270 + бренди 90 + апельсиновый сок 360 + лимонный сок 120 + оршад 90", ingredients:["rum","brandy"], abv:14, taste:"Смешать в чаше со льдом, разливать половником."}]},
-  {name:"Corpse Reviver №2", mtop:7, family:"Микс · реанимация", base:"Мультибаза", abv:20,
+  {name:"Corpse Reviver №2", mtop:9, family:"Микс · реанимация", base:"Мультибаза", abv:20,
     art:{shape:"nick", c1:"#e6d88e", c2:"#f8f0c2", ice:0, garnish:"lemon", bg1:"#11120c", bg2:"#383820"},
     desc:"«Воскреситель» поровну: джин, апельсиновый ликёр, аперитив и лимон. Свежий и бодрый.",
     tags:["кислое","цитрус","джин","апельсин","микс"],
@@ -621,7 +621,7 @@ const cocktails = [
     variations:[
       {name:"Мягче", recipe:"Джин 25 + Triple Sec 25 + сладкий красный вермут 15 + лимонный сок 20", ingredients:["gin","triple","sweetV"], abv:21, taste:"Темнее и слаще."},
       {name:"White Lady", recipe:"Джин 50 + Triple Sec 20 + лимонный сок 20", ingredients:["gin","triple"], abv:24, taste:"Без вермута — это наш White Lady.", same:"White Lady"}]},
-  {name:"Paper Plane", mtop:8, family:"Микс · современная классика", base:"Мультибаза", abv:18,
+  {name:"Paper Plane", family:"Микс · современная классика", base:"Мультибаза", abv:18,
     art:{shape:"nick", c1:"#e8783a", c2:"#f6b36e", ice:0, garnish:"none", bg1:"#170d08", bg2:"#4a2412"},
     desc:"Бурбон, Aperol, амаро и лимон поровну. Самый известный коктейль 2000-х.",
     tags:["кислое","горькое","апельсин","виски","микс"],
@@ -632,7 +632,7 @@ const cocktails = [
     variations:[
       {name:"С Jägermeister", recipe:"Бурбон 25 + Aperol 25 + Jägermeister 15 + лимонный сок 25", ingredients:["bourbon","aperol","jager"], abv:18, taste:"Если нет амаро — травы из Jäger."},
       {name:"Горче", recipe:"Бурбон 25 + Campari 20 + амаро 25 + лимонный сок 25", ingredients:["bourbon","bitter"], abv:19, taste:"Строже и суше."}]},
-  {name:"Fish House Punch", mtop:9, family:"Микс · пунш на компанию", base:"Мультибаза", abv:13,
+  {name:"Fish House Punch", family:"Микс · пунш на компанию", base:"Мультибаза", abv:13,
     art:{shape:"wine", c1:"#d9902f", c2:"#f3cd84", ice:2, garnish:"lemon", bg1:"#150f08", bg2:"#40301a"},
     desc:"Пунш с 1732 года: ром и коньяк, чай и лимон. Делается большой чашей.",
     tags:["цитрус","лёгкое","микс"],
@@ -642,11 +642,44 @@ const cocktails = [
     serve:"Смешать в чаше с большим куском льда. Разливать половником в бокалы, долька лимона.",
     variations:[
       {name:"Чаша на 8", recipe:"Белый ром 240 + бренди 160 + персиковый ликёр 80 + лимонный сок 160 + сахарный сироп 120 + холодный чай 320", ingredients:["rum","brandy"], abv:13, taste:"Сделать за час до гостей и держать на льду."},
-      {name:"Без персика", recipe:"Белый ром 30 + бренди 25 + лимонный сок 20 + сахарный сироп 15 + холодный чай 40", ingredients:["rum","brandy"], abv:13, taste:"Суше и проще."}]}
+      {name:"Без персика", recipe:"Белый ром 30 + бренди 25 + лимонный сок 20 + сахарный сироп 15 + холодный чай 40", ingredients:["rum","brandy"], abv:13, taste:"Суше и проще."}]},
+  {name:"Suffering Bastard", mtop:3, family:"Микс · джин + бурбон", base:"Мультибаза", abv:12,
+    art:{shape:"highball", c1:"#c98a3a", c2:"#ecc27a", ice:5, garnish:"lime", bubbles:true, bg1:"#150f08", bg2:"#43301a"},
+    desc:"Джин и бурбон поровну, лайм и имбирное пиво. Придуман в Каире в 1942-м как лекарство от похмелья.",
+    tags:["цитрус","лёгкое","джин","виски","микс"],
+    main:{recipe:"Джин 30 мл + бурбон 30 мл + лаймовый сок 15 мл + сахарный сироп 10 мл + 2 дэша биттера + имбирное пиво 90 мл", ingredients:["gin","bourbon"], taste:"Имбирь, лайм, мягкая карамель бурбона и травы джина."},
+    who:"Тем, кто любит Moscow Mule, но хочет поинтереснее.",
+    extras:[{name:"Имбирное пиво 90 мл", mode:"required", effect:"Острый имбирь и газ — без него это другой коктейль."},{name:"Ангостура или orange bitters", mode:"recommended", effect:"2 дэша — пряность и связка двух баз."},{name:"Веточка мяты", mode:"optional", effect:"Свежий аромат сверху."}],
+    serve:"Джин, бурбон, лайм, сироп и биттер встряхнуть со льдом. Процедить в хайбол со льдом, долить имбирным пивом, долька лайма.",
+    variations:[
+      {name:"С коньяком", recipe:"Джин 30 + бренди 30 + лаймовый сок 15 + сахарный сироп 10 + имбирное пиво 90", ingredients:["gin","brandy"], abv:12, taste:"Оригинал 1942 года: мягче и фруктовее."},
+      {name:"С имбирным элем", recipe:"Джин 30 + бурбон 30 + лаймовый сок 15 + имбирный эль или спрайт 90", ingredients:["gin","bourbon"], abv:12, taste:"Если нет имбирного пива — слаще и мягче."}]},
+  {name:"Dead Bastard", mtop:10, family:"Микс · четыре базы", base:"Мультибаза", abv:15,
+    art:{shape:"highball", c1:"#a8662a", c2:"#dba45c", ice:5, garnish:"lime", bubbles:true, bg1:"#130d08", bg2:"#3f2815"},
+    desc:"Старший брат Suffering Bastard: джин, бурбон, коньяк и ром в одном стакане.",
+    tags:["цитрус","крепкое","джин","виски","микс"],
+    main:{recipe:"Джин 20 мл + бурбон 20 мл + бренди 20 мл + белый ром 20 мл + лаймовый сок 15 мл + сахарный сироп 10 мл + 2 дэша биттера + имбирное пиво 90 мл", ingredients:["gin","bourbon","brandy","rum"], taste:"Имбирь и лайм впереди, сзади — тёплая крепость четырёх баз."},
+    who:"Для смелых: пьётся как лимонад, бьёт как Long Island.",
+    extras:[{name:"Имбирное пиво 90 мл", mode:"required", effect:"Держит всю конструкцию."},{name:"Ангостура или orange bitters", mode:"recommended", effect:"2 дэша — связывает базы."}],
+    serve:"Всё, кроме имбирного пива, встряхнуть со льдом. Процедить в хайбол со льдом, долить имбирным пивом, долька лайма.",
+    variations:[
+      {name:"Полегче", recipe:"Джин 15 + бурбон 15 + бренди 15 + белый ром 15 + лаймовый сок 15 + сахарный сироп 10 + имбирное пиво 120", ingredients:["gin","bourbon","brandy","rum"], abv:12, taste:"Больше имбиря, меньше градуса."},
+      {name:"Две базы", recipe:"Джин 30 + бурбон 30 + лаймовый сок 15 + сироп 10 + имбирное пиво 90", ingredients:["gin","bourbon"], abv:12, taste:"Это уже Suffering Bastard.", same:"Suffering Bastard"}]},
+  {name:"Fog Cutter", mtop:6, family:"Микс · тики", base:"Мультибаза", abv:16,
+    art:{shape:"highball", c1:"#eb9a3c", c2:"#fbd185", ice:5, garnish:"orange", bg1:"#140e08", bg2:"#46301a"},
+    desc:"Тики-классика Trader Vic's: ром, джин и коньяк, апельсин, миндаль и шерри сверху.",
+    tags:["цитрус","апельсин","крепкое","джин","микс"],
+    main:{recipe:"Белый ром 45 мл + бренди 30 мл + джин 15 мл + апельсиновый сок 45 мл + лимонный сок 30 мл + сироп оршад 15 мл + херес 15 мл сверху", ingredients:["rum","brandy","gin"], taste:"Апельсин и миндаль, ромовая сладость, ореховый херес в конце."},
+    who:"Любителям Scorpion и Mai Tai — покрепче и посложнее.",
+    extras:[{name:"Апельсиновый сок 45 мл", mode:"required", effect:"Основа вкуса."},{name:"Сироп оршад 15 мл", mode:"recommended", effect:"Миндаль. Можно заменить амаретто 10 мл."},{name:"Херес 15 мл", mode:"recommended", effect:"Сухой ореховый слой сверху."},{name:"Лимонный сок 30 мл", mode:"required", effect:"Кислота."}],
+    serve:"Всё, кроме хереса, встряхнуть со льдом. Процедить в высокий бокал на лёд, сверху аккуратно влить херес.",
+    variations:[
+      {name:"Без хереса", recipe:"Белый ром 45 + бренди 30 + джин 15 + апельсиновый сок 45 + лимонный сок 30 + оршад 15", ingredients:["rum","brandy","gin"], abv:16, taste:"Проще, фруктовее."},
+      {name:"С амаретто", recipe:"Белый ром 45 + бренди 30 + джин 15 + амаретто 10 + апельсиновый сок 45 + лимонный сок 30", ingredients:["rum","brandy","gin","amaretto"], abv:17, taste:"Если нет оршада."}]}
 ];
 
 const BASES = ["Все","Бурбон","Ирландский виски","Джин","Белый ром","Текила","Водка","Aperol","Campari","Jägermeister","Бренди","Амаретто","Мультибаза"];
-const STYLES = ["Любой вкус","Корлеоне","мягкое","лёгкое","крепкое","горькое","кислое","сухое","виски","джин","апельсин","кофе","кола","шоты","микс"];
+const STYLES = ["Любой вкус","Корлеоне","мягкое","лёгкое","крепкое","горькое","кислое","сухое","виски","джин","апельсин","кофе","кола","шоты","миксы"];
 
 const BASKET = [
   {name:"Ядро бара", level:"Сначала это", cls:"core", items:["Бурбон","Джин","Красный вермут","Сухой вермут","Campari","Aperol","Triple Sec"], note:"Закрывает Boulevardier, Negroni, Old Pal, Gin & It и почти всё «Выбор Дона»."},
@@ -724,7 +757,8 @@ const ADDONS = [
   {group:"Газировка", note:"Брать холодной и маленькими бутылками — газ не выдохнется", items:[
     {name:"Содовая", rx:/содов|^сода/, why:"Без вкуса, просто газ."},
     {name:"Спрайт или тоник", rx:/спрайт|тоник/, why:"Для текила-бума."},
-    {name:"Энергетик", rx:/энергетик/, why:"Для Jägerbomb."}]},
+    {name:"Энергетик", rx:/энергетик/, why:"Для Jägerbomb."},
+    {name:"Имбирное пиво", rx:/имбирн/, why:"Для Suffering и Dead Bastard. Острее имбирного эля."}]},
   {group:"Ликёры и аперитивы", note:"Маленьких бутылок хватит на весь вечер", items:[
     {name:"Амаро (Nonino, Montenegro, Averna)", rx:/амаро/, why:"Травяная горечь для Paper Plane."},
     {name:"Бенедиктин", rx:/бенедиктин/, why:"Медово-травяной ликёр для Vieux Carré."},
@@ -768,7 +802,7 @@ if(!S.pantry.size) S.pantryOn=false;
 cocktails.forEach((c,i)=>{c.i=i;if(c.mtop&&!c.tags.includes("микс"))c.tags.push("микс");c.txt=[c.name,c.family,c.desc,c.base,c.who,c.serve,...c.tags,c.main.recipe,c.main.taste,...c.variations.flatMap(v=>[v.name,v.recipe,v.taste])].join(" ").toLowerCase();});
 /* «Семья» и выбор вечеринки хранятся по названию: номера сдвигаются, когда в меню добавляются коктейли.
    Старые сохранения были номерами в меню до шотов — переводим их в названия по тому порядку. */
-const ADDED_LATER=new Set(["B-52","Jägerbomb","Боярский","Медуза","Tequila Slammer","Baby Guinness","Green Tea Shot","Pickleback","Mind Eraser","Vieux Carré","Between the Sheets","Vesper","Saratoga","Scorpion","Corpse Reviver №2","Paper Plane","Fish House Punch"]);
+const ADDED_LATER=new Set(["B-52","Jägerbomb","Боярский","Медуза","Tequila Slammer","Baby Guinness","Green Tea Shot","Pickleback","Mind Eraser","Vieux Carré","Between the Sheets","Vesper","Saratoga","Scorpion","Corpse Reviver №2","Paper Plane","Fish House Punch","Suffering Bastard","Dead Bastard","Fog Cutter"]);
 const byName=n=>cocktails.find(c=>c.name===n);
 function loadNames(key,legacyKey){
   let names=store.get(key,null);
@@ -791,9 +825,9 @@ function visible(){
   const q=S.q.trim().toLowerCase();
   return cocktails.filter(c=>
     (S.base==="Все"||c.base===S.base)&&
-    (S.style==="Любой вкус"||c.tags.includes(S.style)||c.txt.includes(S.style))&&
+    (S.style==="Любой вкус"||c.tags.includes(S.style==="миксы"?"микс":S.style)||c.txt.includes(S.style))&&
     (!q||c.txt.includes(q)||(S.notes[c.name]||"").toLowerCase().includes(q))&&
-    (!S.pantryOn||makeable(c).length>0)).sort((a,b)=>S.style==="шоты"?(a.top||99)-(b.top||99):S.style==="микс"?(a.mtop||99)-(b.mtop||99):0);
+    (!S.pantryOn||makeable(c).length>0)).sort((a,b)=>S.style==="шоты"?(a.top||99)-(b.top||99):S.style==="миксы"?(a.mtop||99)-(b.mtop||99):0);
 }
 const plural=(n,a,b,c)=>{n=Math.abs(n)%100;const m=n%10;return n>10&&n<20?c:m>1&&m<5?b:m===1?a:c};
 
@@ -875,7 +909,7 @@ function card(c,k){
 /* ---------- menu ---------- */
 function renderRails(){
   $("#bases").innerHTML=BASES.map(b=>`<button class="tab ${S.base===b?"on":""}" data-base="${b}" type="button">${b}</button>`).join("");
-  $("#styles").innerHTML=`<button class="pill mybar ${S.pantryOn?"on":""}" data-mybar type="button" aria-pressed="${S.pantryOn}">Мой бар (${S.pantry.size})</button>`+STYLES.map(s=>`<button class="pill ${S.style===s?"on":""}" data-style="${s}" type="button">${s==="шоты"?"топ-10 шотов":s==="микс"?"топ-10 миксов":s}</button>`).join("");
+  $("#styles").innerHTML=`<button class="pill mybar ${S.pantryOn?"on":""}" data-mybar type="button" aria-pressed="${S.pantryOn}">Мой бар (${S.pantry.size})</button>`+STYLES.map(s=>`<button class="pill ${S.style===s?"on":""}" data-style="${s}" type="button">${s}</button>`).join("");
 }
 function renderMenu(){
   const list=visible();
