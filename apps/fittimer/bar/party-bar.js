@@ -1398,7 +1398,7 @@ const deckById=id=>DECKS.find(d=>d.id===id);
 const esc=s=>String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 const HAT=`<svg class="g-corner" viewBox="0 0 24 24"><path d="M2.5 15.5c4 2.6 15 2.6 19 0"/><path d="M5.5 15c0-4.5 1.6-9 4-9 1.1 0 1.6 1.2 2.5 1.2S13.4 6 14.5 6c2.4 0 4 4.5 4 9"/></svg>`;
 const WATER=["Дон бережёт семью","Пауза: все пьют воду. Потом продолжаем."];
-function openCards(tab="decks"){openPanel("cards",tab==="activity"?"Шифровка":"Карты Дона");G.tab=tab;G.view="decks";if(tab==="activity")A.view="setup";renderCards()}
+function openCards(tab="decks"){openPanel("cards",tab==="activity"?"Шифровка Дона":"Карты Дона");G.tab=tab;G.view="decks";if(tab==="activity")A.view="setup";renderCards()}
 /* «Разгоняемся»: игра делится на этапы по уровням колод; верхний этап — самый длинный,
    чтобы взрослые карты были и в короткой игре. На каждом ходу карта берётся из колоды этапа,
    иногда — на уровень ниже (передышка) или выше (анонс). Карты не повторяются. */
