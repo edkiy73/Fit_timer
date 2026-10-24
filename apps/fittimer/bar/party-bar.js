@@ -743,14 +743,14 @@ const STYLES = ["Любой вкус","Корлеоне","мягкое","лёг�
 const BASKET = [
   {name:"Ядро бара", level:"Сначала это", cls:"core", items:["Бурбон","Джин","Красный вермут","Сухой вермут","Campari","Aperol","Triple Sec"], note:"Закрывает Boulevardier, Negroni, Old Pal, Gin & It и почти всё «Выбор Дона»."},
   {name:"Следом", level:"Очень желательно", cls:"", items:["Ирландский виски","Белый ром","Angostura"], note:"Плюс Irish Manhattan, Rum Bitter, Daiquiri и Mojito."},
-  {name:"Расширение", level:"Потом", cls:"", items:["Текила","Jägermeister"], note:"Margarita, Batanga и травяная ветка."},
-  {name:"Под любимый коктейль", level:"По желанию", cls:"", items:["Водка","Бренди","Амаретто","Кофейный ликёр"], note:"Для основного меню почти не нужны."}
+  {name:"Для миксов", level:"Хочется больше", cls:"", items:["Бренди","Текила"], note:"Бренди открывает почти все миксы: Vieux Carré, Saratoga, Sidecar, Scorpion, Fog Cutter. Текила — Margarita и Long Island."},
+  {name:"Под любимый коктейль", level:"По желанию", cls:"", items:["Водка","Амаретто","Кофейный ликёр","Jägermeister"], note:"Godfather, Espresso Martini, White Russian, шоты и Jägerbomb."}
 ];
 const BASKET_KEY = {"Бурбон":"bourbon","Джин":"gin","Красный вермут":"sweetV","Сухой вермут":"dryV","Campari":"bitter","Aperol":"aperol","Triple Sec":"triple","Ирландский виски":"irish","Белый ром":"rum","Текила":"tequila","Jägermeister":"jager","Водка":"vodka","Бренди":"brandy","Амаретто":"amaretto","Кофейный ликёр":"coffee"};
-const BASKET_CAT = {"Бурбон":"Бурбон","Джин":"Джин","Красный вермут":"Сладкий красный вермут","Сухой вермут":"Сухой вермут","Campari":"Aperol / Campari / Jägermeister","Aperol":"Aperol / Campari / Jägermeister","Triple Sec":"Апельсиновый ликёр","Ирландский виски":"Ирландский виски","Белый ром":"Белый ром","Angostura":"Биттеры","Текила":"Текила","Jägermeister":"Aperol / Campari / Jägermeister","Водка":"Водка","Кофейный ликёр":"Кофейный ликёр"};
+const BASKET_CAT = {"Бурбон":"Бурбон","Джин":"Джин","Красный вермут":"Сладкий красный вермут","Сухой вермут":"Сухой вермут","Campari":"Aperol / Campari / Jägermeister","Aperol":"Aperol / Campari / Jägermeister","Triple Sec":"Апельсиновый ликёр","Ирландский виски":"Ирландский виски","Белый ром":"Белый ром","Angostura":"Биттеры","Текила":"Текила","Jägermeister":"Aperol / Campari / Jägermeister","Водка":"Водка","Кофейный ликёр":"Кофейный ликёр","Бренди":"Бренди / коньяк","Амаретто":"Амаретто"};
 
 const SHOP = [
-  {category:"Бурбон",note:"Boulevardier, Old Pal, Whiskey Sour",options:[
+  {category:"Бурбон",note:"Boulevardier, Whiskey Sour, Paper Plane, Suffering Bastard",options:[
     {tier:"Бюджет",cls:"",name:"Jim Beam White 700 мл",price:"≈ Rp 380k",why:"Рабочая бутылка для миксов."},
     {tier:"Цена/качество",cls:"value",name:"Bulleit Bourbon 700 мл",price:"≈ Rp 680k",why:"Суше и прянее, дружит с Campari."},
     {tier:"Получше",cls:"good",name:"Jim Beam Black 750 мл",price:"≈ Rp 725k",why:"Больше дуба и карамели."}]},
@@ -758,11 +758,11 @@ const SHOP = [
     {tier:"Бюджет",cls:"",name:"Emerald Glens Green 700 мл",price:"≈ Rp 380k",why:"Мягкая недорогая база."},
     {tier:"Цена/качество",cls:"value",name:"Jameson 700 мл",price:"≈ Rp 450k",why:"Самый универсальный."},
     {tier:"Получше",cls:"good",name:"Jameson Black Barrel 700 мл",price:"≈ Rp 790k",why:"Ваниль, дерево, тело."}]},
-  {category:"Джин",note:"Negroni, Gin & It, Gimlet, Tom Collins",options:[
+  {category:"Джин",note:"Negroni, Gimlet, Vesper, Corpse Reviver, Fog Cutter",options:[
     {tier:"Бюджет",cls:"",name:"Seagram's Dry / Gordon's Dry",price:"≈ Rp 285k",why:"Нормально для Negroni и sour."},
     {tier:"Цена/качество",cls:"value",name:"Tanqueray Dry 750 мл",price:"≈ Rp 450k",why:"Яркий можжевельник пробивает Campari."},
     {tier:"Получше",cls:"good",name:"Roku Gin 700 мл",price:"≈ Rp 550k",why:"Тоньше и ароматнее."}]},
-  {category:"Белый ром",note:"Daiquiri, Mojito, Cuba Libre, Rum Bitter",options:[
+  {category:"Белый ром",note:"Daiquiri, Mojito, Cuba Libre, Scorpion, Fog Cutter",options:[
     {tier:"Бюджет",cls:"",name:"Robinson Light Rum 680 мл",price:"≈ Rp 250k",why:"Недорогая база."},
     {tier:"Цена/качество",cls:"value",name:"Bacardi Carta Blanca 750 мл",price:"≈ Rp 300k",why:"Чистый универсальный."},
     {tier:"Получше",cls:"good",name:"Havana Club 3 Años 750 мл",price:"≈ Rp 450k",why:"Хорош в Daiquiri и Cuba Libre."}]},
@@ -770,7 +770,7 @@ const SHOP = [
     {tier:"Бюджет",cls:"",name:"Jose Cuervo Especial Reposado 750 мл",price:"≈ Rp 375k",why:"Сойдёт для коктейлей."},
     {tier:"Цена/качество",cls:"value",name:"El Jimador Reposado 750 мл",price:"≈ Rp 560k",why:"Лучший апгрейд для Margarita."},
     {tier:"Получше",cls:"good",name:"Espolòn Blanco 750 мл",price:"≈ Rp 830k",why:"Чистая агава, можно и так."}]},
-  {category:"Водка",note:"Cosmopolitan, Long Island, Colorado Bulldog",options:[
+  {category:"Водка",note:"Cosmopolitan, Long Island, White Russian, шоты",options:[
     {tier:"Бюджет",cls:"",name:"Smirnoff Red 700 мл",price:"≈ Rp 250k",why:"Для коктейлей хватает."},
     {tier:"Цена/качество",cls:"value",name:"Stoli Premium 700 мл",price:"≈ Rp 490k",why:"Чище и мягче."},
     {tier:"Получше",cls:"good",name:"Grey Goose 750 мл",price:"≈ Rp 650k",why:"В Long Island переплата теряется."}]},
@@ -790,7 +790,14 @@ const SHOP = [
     {tier:"Мягкий",cls:"",name:"Aperol 700 мл",price:"≈ Rp 450k",why:"Мягкие твисты и хайболы."},
     {tier:"Горький",cls:"value",name:"Campari 750 мл",price:"≈ Rp 690k",why:"Ключ к Negroni и Boulevardier."},
     {tier:"Травяной",cls:"good",name:"Jägermeister 700 мл",price:"≈ Rp 370k",why:"Если любите травяное."}]},
-  {category:"Кофейный ликёр",note:"Colorado Bulldog и десерты",options:[
+  {category:"Бренди / коньяк",note:"Sidecar, Vieux Carré, Saratoga, Scorpion, Fog Cutter",options:[
+    {tier:"Бюджет",cls:"",name:"Robinson Brandy 700 мл",price:"≈ Rp 250k",why:"Для пуншей и Scorpion хватает."},
+    {tier:"Цена/качество",cls:"value",name:"St-Rémy VSOP 700 мл",price:"≈ Rp 600k",why:"Мягкий, фруктовый — лучший для миксов."},
+    {tier:"Получше",cls:"good",name:"Hennessy VS 700 мл",price:"≈ Rp 950k",why:"Для Vieux Carré, Sidecar и French Connection."}]},
+  {category:"Амаретто",note:"Godfather, Amaretto Sour, French Connection",options:[
+    {tier:"Бюджет",cls:"",name:"Bols Amaretto 700 мл",price:"≈ Rp 400k",why:"Сладкий, для миксов нормально."},
+    {tier:"Лучший выбор",cls:"value",name:"Disaronno 700 мл",price:"≈ Rp 650k",why:"Тот самый вкус марципана. Бутылки хватит надолго."}]},
+  {category:"Кофейный ликёр",note:"Espresso Martini, White Russian, B-52",options:[
     {tier:"Бюджет",cls:"",name:"Balimoon Coffee 700 мл",price:"≈ Rp 230k",why:"Локальный недорогой."},
     {tier:"Лучший выбор",cls:"value",name:"Kahlúa 750 мл",price:"≈ Rp 430k",why:"Классика; дороже искать незачем."}]},
   {category:"Биттеры",note:"Капли — одной бутылки хватит надолго",options:[
@@ -825,12 +832,15 @@ const ADDONS = [
     {name:"Сливочный ликёр (Baileys)", rx:/сливочн/, why:"Слои в B-52, Baby Guinness, Медузе."},
     {name:"Кокосовый ликёр (Malibu)", rx:/кокосов/, why:"Для Медузы."},
     {name:"Персиковый ликёр", rx:/персиков/, why:"Для Green Tea Shot."},
+    {name:"Херес (амонтильядо или фино)", rx:/херес/, why:"Сухой ореховый слой сверху Fog Cutter."},
+    {name:"Абсент", rx:/абсент/, why:"Одна капля в Corpse Reviver. Маленькой бутылки хватит на годы."},
+    {name:"Красное вино", rx:/красного вина|красное вино/, why:"Слой сверху Whiskey Sour — получится New York Sour."},
     {name:"Blue Curaçao", rx:/curaçao|curacao/, why:"Синий цвет. Только если хочется шоу."}]},
   {group:"Молочное, специи, закуска", note:"Мелочи, без которых рецепт не тот", items:[
     {name:"Сливки или молоко", rx:/сливк|молок/, why:"Для White Russian и Colorado Bulldog."},
     {name:"Яйца", rx:/белок/, why:"Белок даёт пенку в sour-коктейлях. По желанию."},
     {name:"Мята", rx:/мят/, why:"Свежая, для Mojito."},
-    {name:"Соль", rx:/соль|saline/, why:"Щепотка делает вкус ярче. Для ободка Margarita."},
+    {name:"Соль", rx:/сол[ьи]|saline/, why:"Щепотка делает вкус ярче. Для ободка Margarita."},
     {name:"Табаско", rx:/табаско/, why:"Для Боярского."},
     {name:"Огурцы в рассоле", rx:/огуречн/, why:"Рассол — для Pickleback, огурцы — закуска."},
     {name:"Коктейльная вишня", rx:/вишн/, why:"Для Manhattan."},
