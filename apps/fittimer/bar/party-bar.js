@@ -868,7 +868,7 @@ const S={
   pantryOn:store.get("pantryOn",false), favs:new Set(), notes:store.get("notes",{}), rates:store.get("rates",{}), shopTab:"bottles"
 };
 if(!S.pantry.size) S.pantryOn=false;
-cocktails.forEach((c,i)=>{c.i=i;if(c.mtop&&!c.tags.includes("микс"))c.tags.push("микс");c.txt=[c.name,c.family,c.desc,c.about,c.base,c.who,c.serve,...c.tags,c.main.recipe,c.main.taste,...c.variations.flatMap(v=>[v.name,v.recipe,v.taste])].join(" ").toLowerCase();});
+cocktails.forEach((c,i)=>{c.i=i;if(c.mtop&&!c.tags.includes("микс"))c.tags.push("микс");c.txt=[c.name,c.family,c.desc,c.about,c.base,c.who,c.serve,...c.tags,c.main.recipe,c.main.taste,...c.variations.flatMap(v=>[v.name,v.recipe,v.taste]),...c.extras.flatMap(x=>[x.name,x.effect])].join(" ").toLowerCase();if(/angostura|ангостур/.test(c.txt))c.txt+=" angostura ангостура";});
 /* «Семья» и выбор вечеринки хранятся по названию: номера сдвигаются, когда в меню добавляются коктейли.
    Старые сохранения были номерами в меню до шотов — переводим их в названия по тому порядку. */
 const ADDED_LATER=new Set(["B-52","Jägerbomb","Боярский","Медуза","Tequila Slammer","Baby Guinness","Green Tea Shot","Pickleback","Mind Eraser","Vieux Carré","Between the Sheets","Vesper","Saratoga","Scorpion","Corpse Reviver №2","Paper Plane","Fish House Punch","Suffering Bastard","Dead Bastard","Fog Cutter"]);
