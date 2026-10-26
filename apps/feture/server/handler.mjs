@@ -4,6 +4,7 @@ import { resolveAccount } from './accounts.mjs';
 import { FeError, fail } from './errors.mjs';
 import { once } from './ops.mjs';
 import { actingProfile } from './profiles.mjs';
+import { limit } from './limits.mjs';
 
 /**
  * `POST /api/fe` — the new command endpoint (docs/server/S2-API.md). Domains register commands;
@@ -13,8 +14,9 @@ import { actingProfile } from './profiles.mjs';
  * @typedef {import('./accounts.mjs').AccountRow} AccountRow @typedef {import('./profiles.mjs').Acting} Acting
  * @typedef {{media: import('./media/assets.mjs').MediaConfig, pepper?: string}} Cfg   pepper is filled in by the handler
  * @typedef {{
- *   input: import('zod').ZodType, profile: boolean, write: boolean,
- *   run: (q: Q, ctx: {account: AccountRow, acting: Acting | null, input: any, cfg: Cfg}) => Promise<Record<string, unknown>>
+ *   input: import('zod').ZodType, profile: boolean, write: boolean, ledger?: boolean, allowPaused?: boolean,
+ *   rate?: {kind: string, max: number, window: string},
+ *   run: (q: Q, ctx: {account: AccountRow, acting: Acting | null, input: any, cfg: Cfg, coreAccountHash: string}) => Promise<Record<string, unknown>>
  * }} Command
  * @typedef {{headers: Record<string, string | string[] | undefined>, method?: string, body?: unknown,
  *   [Symbol.asyncIterator]?: () => AsyncIterator<Uint8Array>}} Req
@@ -71,17 +73,24 @@ export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota
       const input = parsed.data;
       const account = await resolveAccount(db, pepper, core);
       const profileId = header(req, 'x-fe-profile');
+      // Per-account limits are committed on their own, before the command: a failed attempt (not found, rule) still counts.
+      const rate = cmd.rate;
+      const replay = rate && typeof input.opId === 'string'
+        && (await db.query('select 1 from feture.op_ledger where account_id = $1 and op_id = $2', [account.id, input.opId])).length > 0;
+      if (rate && !replay) await db.tx(q => limit(q, account.id, rate.kind, rate.max, rate.window));
       // Membership is checked before a stored result can be replayed: a former member gets 403, not old results.
-      if (cmd.profile) await actingProfile(db, account.id, profileId, { write: cmd.write });
+      if (cmd.profile) await actingProfile(db, account.id, profileId, { write: cmd.write, allowPaused: cmd.allowPaused });
       /** @param {Q} q */
       const exec = async q => {
-        const acting = cmd.profile ? await actingProfile(q, account.id, profileId, { write: cmd.write }) : null;
-        return cmd.run(q, { account, acting, input, cfg: { ...cfg, pepper } });
+        const acting = cmd.profile ? await actingProfile(q, account.id, profileId, { write: cmd.write, allowPaused: cmd.allowPaused }) : null;
+        // coreAccountHash is stable across Core re-registrations; only for markers that must survive them (under-18).
+        return cmd.run(q, { account, acting, input, cfg: { ...cfg, pepper }, coreAccountHash: core.accountHash });
       };
       const result = !cmd.write ? await exec(db)
         // The acting profile is part of the request: the same opId under another profile is a conflict, not a replay.
-        : typeof input.opId === 'string' ? await once(db, account.id, { opId: input.opId, action, input: { profileId, input } }, exec)
+        : typeof input.opId === 'string' && cmd.ledger !== false ? await once(db, account.id, { opId: input.opId, action, input: { profileId, input } }, exec)
         : await db.tx(exec);
+      if ('requestId' in result) throw new Error('reserved_result_field'); // the HTTP request id owns this name
       return send(200, { ok: true, ...result }, 'ok');
     } catch (error) {
       if (error instanceof FeError) return send(error.status, { ok: false, error: error.code, ...error.extra }, error.code);

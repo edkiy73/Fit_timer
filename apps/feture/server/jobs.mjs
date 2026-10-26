@@ -1,6 +1,7 @@
 // @ts-check
 import { drain, enqueue } from './outbox.mjs';
 import { scanAsset, servedKeys } from './media/scan.mjs';
+import { deleteCouple } from './commands/couples.mjs';
 
 /** Queue worker (S2 §8, D7). Called every minute by pg_cron + pg_net (Vercel Hobby cron is daily only)
  * through `POST /api/fe?jobs=1` with the jobs secret. Every handler is idempotent.
@@ -24,11 +25,27 @@ export function mediaHandlers(db, deps) {
       if (!deps.scan) throw new Error('media_unavailable');
       await scanAsset(db, deps.scan, id(item));
     },
-    // Removed or rejected: served copies go at once; the quarantined upload waits for media.purge.
+    // Removed, rejected or blocked: served copies go at once; the quarantined upload waits for media.purge
+    // (and is never purged when blocked: it is evidence).
     'media.hide': async (/** @type {any} */ item) => {
       const [row] = await db.query(`select state from feture.media_asset where id = $1`, [id(item)]);
-      if (!row || !['removed', 'rejected'].includes(row.state)) return;
+      if (!row || !['removed', 'rejected', 'blocked'].includes(row.state)) return;
       for (const key of servedKeys(id(item))) await storage().remove(key);
+    },
+    // CSAM match or suspicion (S4 §5): the uploader's account and person profile, and the owning profile, are
+    // suspended at once and their sessions end at the next request (resolveAccount refuses suspended accounts).
+    // The quarantined original stays as evidence (never purged while blocked); reporting is a staff step.
+    'safety.csamMatch': async (/** @type {any} */ item) => {
+      await db.tx(async q => {
+        const [m] = await q.query(`select owner_profile_id, uploaded_by, state from feture.media_asset where id = $1`, [id(item)]);
+        if (!m || m.state !== 'blocked') return;
+        await q.query(`update feture.account set state = 'suspended', updated_at = now() where id = $1 and state = 'active'`, [m.uploaded_by]);
+        await q.query(
+          `update feture.profile set state = 'suspended', restore_until = null, paused_at = null, updated_at = now()
+           where state in ('active', 'paused') and (id = $1 or id = (select person_profile_id from feture.account where id = $2))`,
+          [m.owner_profile_id, m.uploaded_by]);
+        await enqueue(q, 'moderation.csamCase', m.owner_profile_id, { assetId: id(item), account: m.uploaded_by });
+      });
     },
     // Deletes the upload and copies of a removed or rejected asset — never of a blocked one (evidence, S4), and
     // never before a CSAM scanner looked at it: such bytes are kept, scanned when a scanner exists, and the purge
@@ -74,10 +91,33 @@ export async function sweepOpLedger(db) {
   return rows.length;
 }
 
+/** Under-18 markers and lookup counters do not need to live forever. @param {Db} db */
+export async function sweepMarkers(db) {
+  if (!(await db.query(`select to_regclass('feture.u18_event') is not null ok`))[0].ok) return 0;
+  const a = await db.query(`delete from feture.u18_event where created_at < now() - interval '1 year' returning 1`);
+  const b = await db.query(`delete from feture.rate_event where created_at < now() - interval '2 days' returning 1`);
+  return a.length + b.length;
+}
+
+/** Couples nobody restored within 30 days are deleted (S1 §5). @param {Db} db */
+export async function sweepExpiredCouples(db) {
+  if (!(await db.query(`select to_regclass('feture.couple_restore') is not null ok`))[0].ok) return 0;
+  const due = await db.query(`select id from feture.profile where kind = 'couple' and state = 'paused' and restore_until < now() limit 50`);
+  for (const c of due) {
+    await db.tx(async q => {
+      const [still] = await q.query(`select 1 from feture.profile where id = $1 and state = 'paused' and restore_until < now() for update`, [c.id]);
+      if (still) await deleteCouple(q, c.id, 'not_restored');
+    });
+  }
+  return due.length;
+}
+
 /** One worker tick. @param {Db} db @param {JobDeps} deps */
 export async function runJobs(db, deps) {
   const processed = await drain(db, mediaHandlers(db, deps), { limit: deps.limit ?? 10, lockSeconds: 120 });
   const expired = await sweepExpiredUploads(db);
   const ledger = await sweepOpLedger(db);
-  return { processed, expired, ledger };
+  const markers = await sweepMarkers(db);
+  const couples = await sweepExpiredCouples(db);
+  return { processed, expired, ledger, markers, couples };
 }

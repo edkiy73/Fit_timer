@@ -1,5 +1,5 @@
 // @ts-check
-import { fail } from './errors.mjs';
+import { FeError, fail } from './errors.mjs';
 import { enqueue } from './outbox.mjs';
 
 /** @typedef {import('./db.mjs').Q} Q @typedef {import('./profiles.mjs').Acting} Acting */
@@ -76,7 +76,18 @@ export async function decideApproval(q, acting, { approvalId, choice }) {
   if (choice === 'approve') {
     const kind = KINDS.get(row.kind);
     if (!kind) fail(500, 'approval_kind_unknown');
-    await kind.apply(q, row);
+    // If the target changed meanwhile (request declined, revision moved), the change cannot apply any more:
+    // undo whatever apply did, close the approval as cancelled and tell both, instead of leaving it pending.
+    await q.query('savepoint approval_apply');
+    try {
+      await kind.apply(q, row);
+    } catch (error) {
+      if (!(error instanceof FeError) || ![400, 404, 409, 422].includes(error.status)) throw error;
+      await q.query('rollback to savepoint approval_apply');
+      await close(q, row.id, 'cancelled', null);
+      await enqueue(q, 'decide.resolved', acting.profileId, { approvalId: row.id, kind: row.kind, state: 'cancelled', for: row.requested_by });
+      return { state: 'cancelled', applied: false, reason: error.code };
+    }
   }
   const state = choice === 'approve' ? 'approved' : 'returned';
   await close(q, row.id, state, acting.accountId);
@@ -99,12 +110,13 @@ export async function cancelApproval(q, acting, approvalId) {
  * @param {Q} q @param {Acting} acting */
 export async function listApprovals(q, acting) {
   const rows = await q.query(
-    `select id, kind, target_type, target_id, summary, requested_by, created_at, expires_at
+    `select id, kind, target_type, target_id, change, summary, requested_by, created_at, expires_at
      from feture.partner_approval
      where profile_id = $1 and state = 'pending' and expires_at > now() order by created_at`,
     [acting.profileId]);
   return rows.map(r => ({
-    id: r.id, kind: r.kind, targetType: r.target_type, targetId: r.target_id, summary: r.summary,
+    // Both partners see exactly what would change (values, not just field names) before deciding.
+    id: r.id, kind: r.kind, targetType: r.target_type, targetId: r.target_id, change: r.change, summary: r.summary,
     mine: r.requested_by === acting.accountId, createdAt: r.created_at, expiresAt: r.expires_at,
   }));
 }
