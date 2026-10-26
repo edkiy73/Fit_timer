@@ -1,0 +1,379 @@
+{
+ "persona": "full",
+ "screens": [
+  {
+   "id": "K01",
+   "pr": {},
+   "l": "Настройки",
+   "clicks": [
+    {
+     "c": {
+      "i": 0,
+      "tag": "button",
+      "act": null,
+      "go": null,
+      "back": true,
+      "tab": null,
+      "v": null,
+      "p": null,
+      "disabled": false,
+      "text": "Назад"
+     },
+     "how": "clicked",
+     "res": [
+      "screen K01→F01"
+     ],
+     "errors": [],
+     "warns": []
+    },
+    {
+     "c": {
+      "i": 1,
+      "tag": "button",
+      "act": null,
+      "go": "K06",
+      "back": false,
+      "tab": null,
+      "v": null,
+      "p": null,
+      "disabled": false,
+      "text": "Вход и безопасность alex@mail.com"
+     },
+     "how": "clicked",
+     "res": [
+      "screen K01→K06"
+     ],
+     "errors": [],
+     "warns": []
+    },
+    {
+     "c": {
+      "i": 2,
+      "tag": "button",
+      "act": "ageFromMe",
+      "go": null,
+      "back": false,
+      "tab": null,
+      "v": null,
+      "p": null,
+      "disabled": false,
+      "text": "Проверка возраста Нужна для знакомств подтверждено"
+     },
+     "how": "clicked",
+     "res": [
+      "dom changed"
+     ],
+     "errors": [],
+     "warns": [
+      "no action ageFromMe"
+     ]
+    },
+    {
+     "c": {
+      "i": 3,
+      "tag": "button",
+      "act": null,
+      "go": "V01",
+      "back": false,
+      "tab": null,
+      "v": null,
+      "p": null,
+      "disabled": false,
+      "text": "Фото-верификация Галочка у имени не пройдена"
+     },
+     "how": "clicked",
+     "res": [
+      "screen K01→V01"
+     ],
+     "errors": [],
+     "warns": []
+    },
+    {
+     "c": {
+      "i": 4,
+      "tag": "button",
+      "act": null,
+      "go": "B01",
+      "back": false,
+      "tab": null,
+      "v": null,
+      "p": null,
+      "disabled": false,
+      "text": "Premium Больше возможностей не подключён"
+     },
+     "how": "clicked",
+     "res": [
+      "screen K01→B01"
+     ],
+     "errors": [],
+     "warns": []
+    },
+    {
+     "c": {
+      "i": 5,
+      "tag": "select",
+      "act": null,
+      "go": null,
+      "back": false,
+      "tab": null,
+      "v": null,
+      "p": null,
+      "disabled": false,
+      "text": "Как в системе Русский English"
+     },
+     "res": "input"
+    },
+    {
+     "c": {
+      "i": 6,
+      "tag": "select",
+      "act": null,
+      "go": null,
+      "back": false,
+      "tab": null,
+      "v": null,
+      "p": null,
+      "disabled": false,
+      "text": "Светлая Тёмная Системная"
+     },
+     "res": "input"
+    },
+    {
+     "c": {
+      "i": 7,
+      "tag": "button",
+      "act": null,
+      "go": "K05",
+      "back": false,
+      "tab": null,
+      "v": null,
+      "p": null,
+      "disabled": false,
+      "text": "Уведомления Что и когда приходит"
+     },
+     "how": "clicked",
+     "res": [
+      "screen K01→K05"
+     ],
+     "errors": [],
+     "warns": []
+    },
+    {
+     "c": {
+      "i": 8,
+      "tag": "button",
+      "act": "k4blur",
+      "go": null,
+      "back": false,
+      "tab": null,
+      "v": null,
+      "p": null,
+      "disabled": false,
+      "text": "Размывать входящие фото и видео Пока не нажмёшь, содержимое скрыто"
+     },
+     "how": "clicked",
+     "res": [
+      "toast «Входящие фото и видео показываются сразу»"
+     ],
+     "errors": [],
+     "warns": []
+    },
+    {
+     "c": {
+      "i": 9,
+      "tag": "button",
+      "act": null,
+      "go": "P12",
+      "back": false,
+      "tab": null,
+      "v": null,
+      "p": null,
+      "disabled": false,
+      "text": "Заблокированные Не увидят тебя и не напишут 1"
+     },
+     "how": "clicked",
+     "res": [
+      "screen K01→P12"
+     ],
+     "errors": [],
+     "warns": []
+    },
+    {
+     "c": {
+      "i": 10,
+      "tag": "button",
+      "act": null,
+      "go": "K07",
+      "back": false,
+      "tab": null,
+      "v": null,
+      "p": null,
+      "disabled": false,
+      "text": "Мои данные и удаление Архив данных и удаление аккаунта"
+     },
+     "how": "clicked",
+     "res": [
+      "screen K01→K07"
+     ],
+     "errors": [],
+     "warns": []
+    },
+    {
+     "c": {
+      "i": 11,
+      "tag": "button",
+      "act": null,
+      "go": "S01",
+      "back": false,
+      "tab": null,
+      "v": null,
+      "p": null,
+      "disabled": false,
+      "text": "Помощь и безопасность Правила, жалобы, поддержка"
+     },
+     "how": "clicked",
+     "res": [
+      "screen K01→S01"
+     ],
+     "errors": [],
+     "warns": []
+    },
+    {
+     "c": {
+      "i": 12,
+      "tag": "button",
+      "act": "logout",
+      "go": null,
+      "back": false,
+      "tab": null,
+      "v": null,
+      "p": null,
+      "disabled": false,
+      "text": "Выйти"
+     },
+     "how": "clicked",
+     "res": [
+      "dialog «Выйти из аккаунта?»"
+     ],
+     "errors": [],
+     "warns": []
+    },
+    {
+     "c": {
+      "i": 13,
+      "tag": "button",
+      "act": null,
+      "go": null,
+      "back": false,
+      "tab": "feed",
+      "v": null,
+      "p": null,
+      "disabled": false,
+      "text": "Лента"
+     },
+     "how": "clicked",
+     "res": [
+      "screen K01→F01"
+     ],
+     "errors": [],
+     "warns": []
+    },
+    {
+     "c": {
+      "i": 14,
+      "tag": "button",
+      "act": null,
+      "go": null,
+      "back": false,
+      "tab": "people",
+      "v": null,
+      "p": null,
+      "disabled": false,
+      "text": "Люди 4"
+     },
+     "how": "clicked",
+     "res": [
+      "screen K01→D03",
+      "toast «Вправо — нравится, влево — пропустить»"
+     ],
+     "errors": [],
+     "warns": []
+    },
+    {
+     "c": {
+      "i": 15,
+      "tag": "button",
+      "act": null,
+      "go": null,
+      "back": false,
+      "tab": "groups",
+      "v": null,
+      "p": null,
+      "disabled": false,
+      "text": "Комьюнити"
+     },
+     "how": "clicked",
+     "res": [
+      "screen K01→C01"
+     ],
+     "errors": [],
+     "warns": []
+    },
+    {
+     "c": {
+      "i": 16,
+      "tag": "button",
+      "act": null,
+      "go": null,
+      "back": false,
+      "tab": "chats",
+      "v": null,
+      "p": null,
+      "disabled": false,
+      "text": "Чаты 2"
+     },
+     "how": "clicked",
+     "res": [
+      "screen K01→H01"
+     ],
+     "errors": [],
+     "warns": []
+    },
+    {
+     "c": {
+      "i": 17,
+      "tag": "button",
+      "act": null,
+      "go": null,
+      "back": false,
+      "tab": "me",
+      "v": null,
+      "p": null,
+      "disabled": false,
+      "text": "Я 10"
+     },
+     "how": "clicked",
+     "res": [
+      "screen K01→X01"
+     ],
+     "errors": [],
+     "warns": []
+    }
+   ],
+   "count": 18,
+   "tested": 18
+  }
+ ],
+ "overlays": {
+  "dialog:Выйти из аккаунта?": {
+   "from": "K01",
+   "pr": {},
+   "via": "logout||false||||Выйти",
+   "kind": "dialog",
+   "title": "Выйти из аккаунта?",
+   "controls": 0,
+   "clicks": [],
+   "shot": "ovl/full/dialog_Выйти_из_аккаунта_"
+  }
+ }
+}

@@ -1,0 +1,693 @@
+[
+ {
+  "mode": "long",
+  "id": "F01",
+  "pr": {
+   "sub": "foryou"
+  },
+  "lay": {
+   "overflowX": [],
+   "clipped": [
+    "span «Популярное»",
+    "b «Большой вечер знакомства для новичков: верёвка, разговоры, п»",
+    "span «Комьюнити»"
+   ],
+   "smallTargets": [
+    "span.mention «@noa» 41×20",
+    "button «#Разговор о границах» 151×21",
+    "button «#Забота после» 101×21",
+    "button «#Ролевые игры» 105×21",
+    "button «#Латекс» 57×21",
+    "button «#Шибари» 64×21",
+    "button «#Медленный темп» 125×21",
+    "button.linkbtn «Реже такое» 67×16",
+    "button «#Ритуалы» 67×21",
+    "button «#Сервис» 60×21",
+    "button «alexandrina.maximila» 128×20",
+    "button «#Сенсорные игры» 123×21",
+    "button «#Близость» 72×21"
+   ],
+   "distorted": [],
+   "docOverflow": false
+  },
+  "err": [],
+  "n": "long-F01-foryou"
+ },
+ {
+  "mode": "long",
+  "id": "F05",
+  "pr": {
+   "id": "p1"
+  },
+  "lay": {
+   "overflowX": [],
+   "clipped": [
+    "span «Комьюнити»"
+   ],
+   "smallTargets": [
+    "button «#Ролевые игры» 105×21",
+    "button «#Разговор о границах» 151×21",
+    "select «Сначала интересные Сначала новые» 170×18",
+    "button.plink.pnm «jean.baptiste.montgo» 170×23"
+   ],
+   "distorted": [],
+   "docOverflow": false
+  },
+  "err": [],
+  "n": "long-F05-p1"
+ },
+ {
+  "mode": "long",
+  "id": "D03",
+  "pr": {
+   "sub": "discover"
+  },
+  "lay": {
+   "overflowX": [],
+   "clipped": [
+    "span «Комьюнити»"
+   ],
+   "smallTargets": [
+    "button «0 подписчиков» 97×30",
+    "button «2 подписки» 75×30",
+    "button «Все · 8» 43×20"
+   ],
+   "distorted": [],
+   "docOverflow": false
+  },
+  "err": [],
+  "n": "long-D03-discover"
+ },
+ {
+  "mode": "long",
+  "id": "D03",
+  "pr": {
+   "sub": "likes"
+  },
+  "lay": {
+   "overflowX": [],
+   "clipped": [
+    "span «Комьюнити»"
+   ],
+   "smallTargets": [],
+   "distorted": [],
+   "docOverflow": false
+  },
+  "err": [],
+  "n": "long-D03-likes"
+ },
+ {
+  "mode": "long",
+  "id": "P01",
+  "pr": {
+   "id": "mia"
+  },
+  "lay": {
+   "overflowX": [],
+   "clipped": [
+    "span.wm «alexandra.valentina1»",
+    "span «Публикации»",
+    "span «Сообщества»",
+    "span «Комьюнити»"
+   ],
+   "smallTargets": [
+    "button «Все · 12» 47×20",
+    "button «#Ролевые игры» 105×21",
+    "button «#Разговор о границах» 151×21",
+    "button «#Шибари» 64×21"
+   ],
+   "distorted": [],
+   "docOverflow": false
+  },
+  "err": [],
+  "n": "long-P01-mia"
+ },
+ {
+  "mode": "long",
+  "id": "C01",
+  "pr": {
+   "sub": "discover"
+  },
+  "lay": {
+   "overflowX": [],
+   "clipped": [
+    "span «Комьюнити»"
+   ],
+   "smallTargets": [],
+   "distorted": [],
+   "docOverflow": false
+  },
+  "err": [],
+  "n": "long-C01-discover"
+ },
+ {
+  "mode": "long",
+  "id": "C01",
+  "pr": {
+   "sub": "events"
+  },
+  "lay": {
+   "overflowX": [],
+   "clipped": [
+    "b «Большой вечер знакомства для новичков: верёвка, разговоры, п»",
+    "span «Комьюнити»"
+   ],
+   "smallTargets": [],
+   "distorted": [],
+   "docOverflow": false
+  },
+  "err": [],
+  "n": "long-C01-events"
+ },
+ {
+  "mode": "long",
+  "id": "C03",
+  "pr": {
+   "id": "rope"
+  },
+  "lay": {
+   "overflowX": [],
+   "clipped": [
+    "b «Большой вечер знакомства для новичков: верёвка, разговоры, п»",
+    "span «Комьюнити»"
+   ],
+   "smallTargets": [],
+   "distorted": [],
+   "docOverflow": false
+  },
+  "err": [],
+  "n": "long-C03-rope"
+ },
+ {
+  "mode": "long",
+  "id": "E03",
+  "pr": {
+   "id": "e1"
+  },
+  "lay": {
+   "overflowX": [],
+   "clipped": [
+    "span «Комьюнити»"
+   ],
+   "smallTargets": [],
+   "distorted": [],
+   "docOverflow": false
+  },
+  "err": [],
+  "n": "long-E03-e1"
+ },
+ {
+  "mode": "long",
+  "id": "H01",
+  "pr": {
+   "sub": "chats"
+  },
+  "lay": {
+   "overflowX": [],
+   "clipped": [
+    "span.mn «alexandrina.maximila»",
+    "span.mn «jean.baptiste.montgo»",
+    "small «Eva: Тогда в субботу в кафе?»",
+    "small «Здорово, что получилось встретиться! В четверг будет ещё оди»",
+    "span «Комьюнити»"
+   ],
+   "smallTargets": [],
+   "distorted": [],
+   "docOverflow": false
+  },
+  "err": [],
+  "n": "long-H01-chats"
+ },
+ {
+  "mode": "long",
+  "id": "H02",
+  "pr": {
+   "id": "mia"
+  },
+  "lay": {
+   "overflowX": [],
+   "clipped": [
+    "b «anastasia_valentina2»",
+    "span «Комьюнити»"
+   ],
+   "smallTargets": [
+    "button.pill.hot «2 совпадения, дополняете в 2, обсудить 2» 282×24",
+    "button.pill.ok «Приватное открыто друг другу» 219×24",
+    "button.msg-readers «Прочитали: anastasia_valentina2» 24×28"
+   ],
+   "distorted": [],
+   "docOverflow": false
+  },
+  "err": [],
+  "n": "long-H02-mia"
+ },
+ {
+  "mode": "long",
+  "id": "N01",
+  "pr": {},
+  "lay": {
+   "overflowX": [],
+   "clipped": [
+    "span «Комьюнити»"
+   ],
+   "smallTargets": [],
+   "distorted": [],
+   "docOverflow": false
+  },
+  "err": [],
+  "n": "long-N01-"
+ },
+ {
+  "mode": "long",
+  "id": "X01",
+  "pr": {},
+  "lay": {
+   "overflowX": [],
+   "clipped": [
+    "span «alexandra.valentina1»",
+    "b «Мастерские»",
+    "b «Новый альбом»",
+    "span «Комьюнити»"
+   ],
+   "smallTargets": [
+    "button «Изменить» 63×20",
+    "button «История» 55×20",
+    "button «Загрузить» 80×20",
+    "button «Управлять» 67×20"
+   ],
+   "distorted": [],
+   "docOverflow": false
+  },
+  "err": [],
+  "n": "long-X01-"
+ },
+ {
+  "mode": "long",
+  "id": "P07",
+  "pr": {
+   "tab": "in"
+  },
+  "lay": {
+   "overflowX": [],
+   "clipped": [
+    "span «Открыто мной»",
+    "span «Открыто мне»",
+    "span «Мои запросы»",
+    "span «Комьюнити»"
+   ],
+   "smallTargets": [
+    "button.plink.pnm «anastasia_valentina2» 138×21",
+    "button.plink.pnm «jean.baptiste.montgo» 141×21"
+   ],
+   "distorted": [],
+   "docOverflow": false
+  },
+  "err": [],
+  "n": "long-P07-in"
+ },
+ {
+  "mode": "long",
+  "id": "E10",
+  "pr": {},
+  "lay": {
+   "overflowX": [],
+   "clipped": [
+    "b «Большой вечер знакомства для новичков: верёвка, разговоры, п»",
+    "b «Клуб чтения: «Больше двух»»",
+    "span «Комьюнити»"
+   ],
+   "smallTargets": [],
+   "distorted": [],
+   "docOverflow": false
+  },
+  "err": [],
+  "n": "long-E10-"
+ },
+ {
+  "mode": "long",
+  "id": "C02",
+  "pr": {},
+  "lay": {
+   "overflowX": [],
+   "clipped": [
+    "span «Комьюнити»"
+   ],
+   "smallTargets": [],
+   "distorted": [],
+   "docOverflow": false
+  },
+  "err": [],
+  "n": "long-C02-"
+ },
+ {
+  "mode": "nosp",
+  "id": "F01",
+  "pr": {
+   "sub": "foryou"
+  },
+  "lay": {
+   "overflowX": [],
+   "clipped": [
+    "span «Популярное»",
+    "span.nmt «6m_W.m_W.m_W.m_W.m_W»",
+    "span.nmt «mm_W.m_W.m_W.m_W.m_W»",
+    "b «evruf8:ПриветWorldДлинноеСловоLongWord2026ЁёПриветWorldДлинн»",
+    "b «evrueq:01234567890123456789012345678901234567890123456789012»",
+    "b «evrufu:https://example.com/Unbreakablepathsegment0123456789?»",
+    "span.nmt «nickv:https://example.com/Unbreakablepathsegment0123456789?q»",
+    "span «Комьюнити»"
+   ],
+   "smallTargets": [
+    "button «#Разговор о границах» 151×21",
+    "button «#Забота после» 101×21",
+    "button «#Ролевые игры» 105×21",
+    "button «#Латекс» 57×21",
+    "button «#Шибари» 64×21",
+    "button «#Медленный темп» 125×21",
+    "button.linkbtn «Реже такое» 67×16",
+    "button «#Ритуалы» 67×21",
+    "button «#Сервис» 60×21",
+    "button «27012345678901234567» 150×20",
+    "button «#Сенсорные игры» 123×21",
+    "button «#Близость» 72×21"
+   ],
+   "distorted": [],
+   "docOverflow": false
+  },
+  "err": [],
+  "n": "nosp-F01-foryou"
+ },
+ {
+  "mode": "nosp",
+  "id": "F05",
+  "pr": {
+   "id": "p1"
+  },
+  "lay": {
+   "overflowX": [],
+   "clipped": [
+    "span.nmt «6m_W.m_W.m_W.m_W.m_W»",
+    "span «Комьюнити»"
+   ],
+   "smallTargets": [
+    "button «#Ролевые игры» 105×21",
+    "button «#Разговор о границах» 151×21",
+    "select «Сначала интересные Сначала новые» 170×18",
+    "button.plink.pnm «b0123456789012345678» 193×23"
+   ],
+   "distorted": [],
+   "docOverflow": false
+  },
+  "err": [],
+  "n": "nosp-F05-p1"
+ },
+ {
+  "mode": "nosp",
+  "id": "D03",
+  "pr": {
+   "sub": "discover"
+  },
+  "lay": {
+   "overflowX": [],
+   "clipped": [
+    "span «Комьюнити»"
+   ],
+   "smallTargets": [
+    "button «0 подписчиков» 97×30",
+    "button «2 подписки» 75×30",
+    "button «Все · 8» 43×20"
+   ],
+   "distorted": [],
+   "docOverflow": false
+  },
+  "err": [],
+  "n": "nosp-D03-discover"
+ },
+ {
+  "mode": "nosp",
+  "id": "D03",
+  "pr": {
+   "sub": "likes"
+  },
+  "lay": {
+   "overflowX": [],
+   "clipped": [
+    "span «Комьюнити»"
+   ],
+   "smallTargets": [],
+   "distorted": [],
+   "docOverflow": false
+  },
+  "err": [],
+  "n": "nosp-D03-likes"
+ },
+ {
+  "mode": "nosp",
+  "id": "P01",
+  "pr": {
+   "id": "mia"
+  },
+  "lay": {
+   "overflowX": [],
+   "clipped": [
+    "span.wm «h2m_W.m_W.m_W.m_W.m_»",
+    "span «Публикации»",
+    "span «Сообщества»",
+    "span.nmt «6m_W.m_W.m_W.m_W.m_W»",
+    "span «Комьюнити»"
+   ],
+   "smallTargets": [
+    "button «Все · 12» 47×20",
+    "button «#Ролевые игры» 105×21",
+    "button «#Разговор о границах» 151×21",
+    "button «#Шибари» 64×21"
+   ],
+   "distorted": [],
+   "docOverflow": false
+  },
+  "err": [],
+  "n": "nosp-P01-mia"
+ },
+ {
+  "mode": "nosp",
+  "id": "C01",
+  "pr": {
+   "sub": "discover"
+  },
+  "lay": {
+   "overflowX": [],
+   "clipped": [
+    "span «Комьюнити»"
+   ],
+   "smallTargets": [],
+   "distorted": [],
+   "docOverflow": false
+  },
+  "err": [],
+  "n": "nosp-C01-discover"
+ },
+ {
+  "mode": "nosp",
+  "id": "C01",
+  "pr": {
+   "sub": "events"
+  },
+  "lay": {
+   "overflowX": [],
+   "clipped": [
+    "b «evrugh:01234567890123456789012345678901234567890123456789012»",
+    "span «Комьюнити»"
+   ],
+   "smallTargets": [],
+   "distorted": [],
+   "docOverflow": false
+  },
+  "err": [],
+  "n": "nosp-C01-events"
+ },
+ {
+  "mode": "nosp",
+  "id": "C03",
+  "pr": {
+   "id": "rope"
+  },
+  "lay": {
+   "overflowX": [],
+   "clipped": [
+    "b «evrueq:01234567890123456789012345678901234567890123456789012»",
+    "span «Комьюнити»"
+   ],
+   "smallTargets": [],
+   "distorted": [],
+   "docOverflow": false
+  },
+  "err": [],
+  "n": "nosp-C03-rope"
+ },
+ {
+  "mode": "nosp",
+  "id": "E03",
+  "pr": {
+   "id": "e1"
+  },
+  "lay": {
+   "overflowX": [],
+   "clipped": [
+    "span «Комьюнити»"
+   ],
+   "smallTargets": [],
+   "distorted": [],
+   "docOverflow": false
+  },
+  "err": [],
+  "n": "nosp-E03-e1"
+ },
+ {
+  "mode": "nosp",
+  "id": "H01",
+  "pr": {
+   "sub": "chats"
+  },
+  "lay": {
+   "overflowX": [],
+   "clipped": [
+    "span.mn «0alexandrina.maximil»",
+    "span.mn «r0123456789012345678»",
+    "b «6m_W.m_W.m_W.m_W.m_W»",
+    "b «nickv:https://example.com/Unbreakablepathsegment0123456789?q»",
+    "small «msgrulk:WМШЩWМШЩЖЫWMШЩWМШЩWМШЩЖЫWMШЩWМШЩWМШЩЖЫWMШЩWМШЩWМШЩЖЫ»",
+    "b «b0123456789012345678»",
+    "small «msgruli:first.last.nospaces.first.last.nospaces.first.last.n»",
+    "span «Комьюнити»"
+   ],
+   "smallTargets": [],
+   "distorted": [],
+   "docOverflow": false
+  },
+  "err": [],
+  "n": "nosp-H01-chats"
+ },
+ {
+  "mode": "nosp",
+  "id": "H02",
+  "pr": {
+   "id": "mia"
+  },
+  "lay": {
+   "overflowX": [],
+   "clipped": [
+    "b «6m_W.m_W.m_W.m_W.m_W»",
+    "span «Комьюнити»"
+   ],
+   "smallTargets": [
+    "button.pill.hot «2 совпадения, дополняете в 2, обсудить 2» 282×24",
+    "button.pill.ok «Приватное открыто друг другу» 219×24",
+    "button.msg-readers «Прочитали: 6m_W.m_W.m_W.m_W.m_W» 24×28"
+   ],
+   "distorted": [],
+   "docOverflow": false
+  },
+  "err": [],
+  "n": "nosp-H02-mia"
+ },
+ {
+  "mode": "nosp",
+  "id": "N01",
+  "pr": {},
+  "lay": {
+   "overflowX": [],
+   "clipped": [
+    "span «Комьюнити»"
+   ],
+   "smallTargets": [],
+   "distorted": [],
+   "docOverflow": false
+  },
+  "err": [],
+  "n": "nosp-N01-"
+ },
+ {
+  "mode": "nosp",
+  "id": "X01",
+  "pr": {},
+  "lay": {
+   "overflowX": [],
+   "clipped": [
+    "span «h2m_W.m_W.m_W.m_W.m_»",
+    "b «Мастерские»",
+    "b «Новый альбом»",
+    "span «Комьюнити»"
+   ],
+   "smallTargets": [
+    "button «Изменить» 63×20",
+    "button «История» 55×20",
+    "button «Загрузить» 80×20",
+    "button «Управлять» 67×20"
+   ],
+   "distorted": [],
+   "docOverflow": false
+  },
+  "err": [],
+  "n": "nosp-X01-"
+ },
+ {
+  "mode": "nosp",
+  "id": "P07",
+  "pr": {
+   "tab": "in"
+  },
+  "lay": {
+   "overflowX": [],
+   "clipped": [
+    "span «Открыто мной»",
+    "span «Открыто мне»",
+    "span «Мои запросы»",
+    "span «Комьюнити»"
+   ],
+   "smallTargets": [
+    "button.plink.pnm «6m_W.m_W.m_W.m_W.m_W» 182×21",
+    "button.plink.pnm «b0123456789012345678» 164×21"
+   ],
+   "distorted": [],
+   "docOverflow": false
+  },
+  "err": [],
+  "n": "nosp-P07-in"
+ },
+ {
+  "mode": "nosp",
+  "id": "E10",
+  "pr": {},
+  "lay": {
+   "overflowX": [],
+   "clipped": [
+    "b «evrueq:01234567890123456789012345678901234567890123456789012»",
+    "b «evruf8:ПриветWorldДлинноеСловоLongWord2026ЁёПриветWorldДлинн»",
+    "b «evrugp:WМШЩWМШЩЖЫWMШЩWМШЩWМШЩЖЫWMШЩWМШЩWМШЩЖЫWMШЩWМШЩWМШЩЖЫW»",
+    "b «evrug9:first.last.nospaces.first.@verylongsubdomainnamewitho»",
+    "span «Комьюнити»"
+   ],
+   "smallTargets": [],
+   "distorted": [],
+   "docOverflow": false
+  },
+  "err": [],
+  "n": "nosp-E10-"
+ },
+ {
+  "mode": "nosp",
+  "id": "C02",
+  "pr": {},
+  "lay": {
+   "overflowX": [],
+   "clipped": [
+    "span «Комьюнити»"
+   ],
+   "smallTargets": [],
+   "distorted": [],
+   "docOverflow": false
+  },
+  "err": [],
+  "n": "nosp-C02-"
+ }
+]
