@@ -3096,6 +3096,14 @@ body:has(#sheet.on) .qa-fab,body:has(#dialog.on) .qa-fab{opacity:0!important;poi
 /* V21 (CPL-019): notifications of a stopped / deleted couple read as history */
 .whom.gone{color:var(--mute)}
 .nt:has(.whom.gone) .tx{color:var(--mute)}
+/* V21 (CHAT-001): in a conversation the message field is always there (no «Написать ответ» step on phones) —
+   «Ответить» in the message menu and conversation starters land in a visible, focused field */
+.main.has-dock[data-screen="H02"]>.reply-launch{display:none}
+.main.has-dock.has-reply[data-screen="H02"]>.inputbar{display:flex}
+/* V21 (CHAT-002): «к последним» floats above whatever closes the screen — the message field or, in an ended chat, the dock */
+.main[data-screen="H02"] .chat-down{bottom:calc(var(--ctah,64px) + 12px)}
+.main[data-screen="H02"] .chat-down.low{bottom:calc(16px + var(--safe-b))}
+.main.has-dock[data-screen="H02"] .chat-down.low{bottom:calc(var(--dock-space,80px) + 12px)}
 /* ==== V21 · couple · CSS end ==== */
 /* · */
 /* · */
