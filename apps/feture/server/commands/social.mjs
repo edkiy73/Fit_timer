@@ -3,6 +3,7 @@ import { socialCommands } from '../../contracts/social.mjs';
 import { fail } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { lockPair } from './discover.mjs';
+import { endConversations } from './chats.mjs';
 
 /** Slice B social graph: blocks, follows, article subscriptions, feed hides, saved items (S1 §7).
  * A block belongs to the profile that made it and ends that profile's ties with the other side; visibility is
@@ -58,6 +59,7 @@ async function cutPair(q, blocker, blocked) {
     `update feture.profile_match set ended_at = now(), ended_by_profile = $1
      where ended_at is null and profile_a = least($1::uuid, $2::uuid) and profile_b = greatest($1::uuid, $2::uuid) returning id`, [blocker, blocked]);
   if (ended[0]) await enqueue(q, 'match.ended', blocker, { matchId: ended[0].id, with: blocked });
+  await endConversations(q, blocker, blocked, 'block');
 }
 
 /** Blocks `target` from the acting profile (and, explicitly, from the account's other profile).

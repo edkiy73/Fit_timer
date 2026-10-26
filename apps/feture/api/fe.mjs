@@ -19,6 +19,7 @@ import { communities } from '../server/commands/communities.mjs';
 import { events } from '../server/commands/events.mjs';
 import { photos } from '../server/commands/photos.mjs';
 import { discover } from '../server/commands/discover.mjs';
+import { chats } from '../server/commands/chats.mjs';
 import { runJobs } from '../server/jobs.mjs';
 import { createR2Storage } from '../server/media/r2.mjs';
 import { createSupabaseStorage } from '../server/media/supabase-storage.mjs';
@@ -71,7 +72,7 @@ const handler = db && createFeHandler({
   db,
   pepper: env.FETURE_ID_PEPPER ?? '',
   cfg: { media: { storage: media.storage, delivery: media.delivery } },
-  commands: { ...platform, ...me, ...access, ...couples, ...staff, ...social, ...posts, ...moderation, ...communities, ...events, ...photos, ...discover },
+  commands: { ...platform, ...me, ...access, ...couples, ...staff, ...social, ...posts, ...moderation, ...communities, ...events, ...photos, ...discover, ...chats },
   authenticate: req => authenticate(req, store),
   quota: async (req, coreKey) => { // coreKey: Core account hash, only for the ephemeral rate-limit key
     // Same budget as /api/domain: per account across devices and IPs, plus a per-IP cap.

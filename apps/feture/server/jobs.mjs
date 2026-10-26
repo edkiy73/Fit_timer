@@ -4,6 +4,7 @@ import { scanAsset, servedKeys } from './media/scan.mjs';
 import { deleteCouple } from './commands/couples.mjs';
 import { settlePublication } from './commands/posts.mjs';
 import { settleAvatarsOf } from './commands/photos.mjs';
+import { sweepEphemeral } from './commands/chats.mjs';
 
 /** Queue worker (S2 §8, D7). Called every minute by pg_cron + pg_net (Vercel Hobby cron is daily only)
  * through `POST /api/fe?jobs=1` with the jobs secret. Every handler is idempotent.
@@ -137,5 +138,6 @@ export async function runJobs(db, deps) {
   const ledger = await sweepOpLedger(db);
   const markers = await sweepMarkers(db);
   const couples = await sweepExpiredCouples(db);
-  return { processed, expired, ledger, markers, couples };
+  const ephemeral = await sweepEphemeral(db);
+  return { processed, expired, ledger, markers, couples, ephemeral };
 }
