@@ -160,8 +160,8 @@ async function sendLike(q, acting, target, source) {
     const [match] = await q.query(
       `insert into feture.profile_match (profile_a, profile_b) values (least($1::uuid, $2::uuid), greatest($1::uuid, $2::uuid)) returning id`, [acting.profileId, target]);
     const conversationId = await openConversation(q, match.id, acting.profileId, target);
-    await enqueue(q, 'match.created', acting.profileId, { matchId: match.id, with: target, conversationId });
-    await enqueue(q, 'match.created', target, { matchId: match.id, with: acting.profileId, conversationId });
+    await enqueue(q, 'match.created', acting.profileId, { matchId: match.id, with: target, conversationId, by: acting.accountId });
+    await enqueue(q, 'match.created', target, { matchId: match.id, with: acting.profileId, conversationId, by: acting.accountId });
     return { state: 'matched', matchId: match.id, conversationId };
   }
   await q.query(`insert into feture.profile_like (from_profile_id, to_profile_id, source, initiator_account_id) values ($1, $2, $3, $4)`,

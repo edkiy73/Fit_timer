@@ -59,7 +59,14 @@ const pick = payload => Object.fromEntries(KEEP.filter(k => payload[k] !== undef
  * @param {{type: string, actor?: string | null, objectType?: string | null, objectId?: string | null, data?: object}} n
  * @param {{account: string, profile: string | null}[]} recipients */
 async function write(q, item, n, recipients) {
+  const by = /** @type {any} */ (item.payload).by;
   for (const r of recipients) {
+    if (by && r.account === by) continue; // never to the account that caused it
+    if (n.objectType === 'post' && n.objectId && r.profile) {
+      // A post the recipient may not see is not announced either.
+      const [v] = await q.query('select feture.post_visible(p, $2, $3) ok from feture.post p where p.id = $1', [n.objectId, r.profile, r.account]);
+      if (!v?.ok) continue;
+    }
     // Never to the account that caused it, never about someone hidden by a block.
     if (n.actor) {
       const [{ skip }] = await q.query(
@@ -76,7 +83,13 @@ async function write(q, item, n, recipients) {
 
 /** Members of a profile, or the explicit `for` account(s). @param {Q} q @param {string | null} profileId @param {any} payload */
 async function recipientsOf(q, profileId, payload) {
-  if (payload.for) return [payload.for].flat().map((/** @type {string} */ a) => ({ account: a, profile: profileId }));
+  if ('for' in payload) {
+    const accounts = [payload.for].flat().filter(Boolean);
+    if (!profileId) return accounts.map((/** @type {string} */ a) => ({ account: a, profile: null }));
+    // Only while still a member of the profile it is addressed to (an ex-partner gets nothing).
+    const rows = await q.query(`select account_id from feture.profile_member where profile_id = $1 and account_id = any($2) and state = 'active'`, [profileId, accounts]);
+    return rows.map(r => ({ account: r.account_id, profile: profileId }));
+  }
   if (!profileId) return [];
   const rows = await q.query(`select account_id from feture.profile_member where profile_id = $1 and state = 'active'`, [profileId]);
   return rows.map(r => ({ account: r.account_id, profile: profileId }));
@@ -129,6 +142,18 @@ export function notifyHandlers(db) {
       await write(q, item, { type: 'notePublished', actor: item.profile_id, objectType: 'post', objectId: p.postId }, rows.map(r => ({ account: r.account_id, profile: r.subscriber_profile_id })));
     });
   };
+  // Chat messages make no inbox row; push delivery comes with a provider.
+  handlers['message.created'] = async () => {};
+  // A like is announced only while it still stands (a retried item must not bring back a withdrawn one).
+  const plain = handlers['like.received'];
+  handlers['like.received'] = async item => {
+    const [l] = await db.query(`select 1 from feture.profile_like where from_profile_id = $1 and to_profile_id = $2 and state in ('active', 'matched')`,
+      [/** @type {any} */ (item.payload).from, item.profile_id]);
+    if (l) await plain(item);
+  };
+  // A returned approval is already in «Нужно решить» of the one who asked; only other outcomes are news.
+  const decided = handlers['decide.resolved'];
+  handlers['decide.resolved'] = async item => { if (/** @type {any} */ (item.payload).state !== 'returned') await decided(item); };
   // A withdrawn like takes its notification back (V21: «они не узнают»).
   handlers['like.withdrawn'] = async item => {
     const p = /** @type {any} */ (item.payload);

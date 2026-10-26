@@ -11,6 +11,9 @@ import { sha256 } from '../hash.mjs';
  */
 
 const ACTOR = `json_build_object('id', ap.id, 'kind', ap.kind, 'handle', ap.handle, 'name', ap.name)`;
+// A notification for a profile stays only while the recipient is still one of its members (not an ex-partner).
+const STILL_MEMBER = `(n.addressee_profile_id is null or exists (select 1 from feture.profile_member pm where pm.profile_id = n.addressee_profile_id and pm.account_id = n.recipient_account_id and pm.state = 'active'))`;
+const CHAT_MEMBER = `exists (select 1 from feture.profile_member pm where pm.profile_id = cm.profile_id and pm.account_id = cm.account_id and pm.state = 'active')`;
 
 /** Everything waiting for the account to decide, newest first. @param {Q} q @param {string} accountId */
 async function decisions(q, accountId) {
@@ -57,22 +60,24 @@ const run = {
       if (!Array.isArray(cur) || typeof cur[0] !== 'string' || !/^[0-9a-f-]{36}$/.test(cur[1]) || Number.isNaN(Date.parse(cur[0]))) fail(400, 'invalid_input', { fields: ['cursor'] });
     }
     const rows = await q.query(
-      `select n.id, n.type, n.object_type, n.object_id, n.data, n.created_at, n.read_at, n.addressee_profile_id, adr.kind addressee_kind,
+      `select n.id, n.type, n.object_type, n.object_id, n.data, n.created_at, n.created_at::text cursor_at, n.read_at, n.addressee_profile_id, adr.kind addressee_kind,
          case when ap.id is null then null else ${ACTOR} end actor
        from feture.notification n left join feture.profile ap on ap.id = n.actor_profile_id left join feture.profile adr on adr.id = n.addressee_profile_id
        where n.recipient_account_id = $1 and n.retracted_at is null
          and (ap.id is null or ap.state = 'active' and (n.addressee_profile_id is null or not feture.blocked(n.addressee_profile_id, ap.id)))
+         and ${STILL_MEMBER}
          and ($2::timestamptz is null or (n.created_at, n.id) < ($2::timestamptz, $3::uuid))
        order by n.created_at desc, n.id desc limit 51`, [account.id, cur?.[0] ?? null, cur?.[1] ?? null]);
     const page = rows.slice(0, 50);
     const last = page[page.length - 1];
     return {
       // «Тебе» / «Паре» by the profile it is addressed to.
-      items: page.map(({ addressee_kind, addressee_profile_id, object_type, object_id, created_at, read_at, ...r }) => ({
+      items: page.map(({ addressee_kind, addressee_profile_id, object_type, object_id, created_at, read_at, cursor_at: _, ...r }) => ({
         ...r, label: addressee_kind === 'couple' ? 'couple' : 'me', addressee: addressee_profile_id, object: object_type ? { type: object_type, id: object_id } : null,
         at: created_at, read: !!read_at,
       })),
-      next: rows.length > 50 ? Buffer.from(JSON.stringify([new Date(last.created_at).toISOString(), last.id])).toString('base64url') : null,
+      // Full microsecond precision: rows in the same millisecond as the page edge are not skipped.
+      next: rows.length > 50 ? Buffer.from(JSON.stringify([last.cursor_at, last.id])).toString('base64url') : null,
     };
   },
 
@@ -101,13 +106,15 @@ const run = {
       `select
          (select count(*)::int from feture.notification n left join feture.profile ap on ap.id = n.actor_profile_id
           where n.recipient_account_id = $1 and n.read_at is null and n.retracted_at is null
-            and (ap.id is null or ap.state = 'active' and (n.addressee_profile_id is null or not feture.blocked(n.addressee_profile_id, ap.id)))) notifications,
+            and (ap.id is null or ap.state = 'active' and (n.addressee_profile_id is null or not feture.blocked(n.addressee_profile_id, ap.id)))
+            and ${STILL_MEMBER}) notifications,
          (select count(*)::int from feture.conversation_member cm join feture.conversation c on c.id = cm.conversation_id
             join feture.profile o on o.id = case when c.profile_a = cm.profile_id then c.profile_b else c.profile_a end
-          where cm.account_id = $1 and not cm.archived and not feture.blocked(cm.profile_id, o.id)
+          where cm.account_id = $1 and not cm.archived and not feture.blocked(cm.profile_id, o.id) and ${CHAT_MEMBER}
             and exists (select 1 from feture.message m where m.conversation_id = c.id and m.seq > cm.last_read_seq and m.sender_account_id is distinct from $1)) chats,
          (select count(*)::int from feture.conversation_member cm join feture.conversation c on c.id = cm.conversation_id
-          where cm.account_id = $1 and c.state = 'active' and c.last_seq = 0) new_matches,
+            join feture.profile o on o.id = case when c.profile_a = cm.profile_id then c.profile_b else c.profile_a end
+          where cm.account_id = $1 and c.state = 'active' and c.last_seq = 0 and not cm.archived and not feture.blocked(cm.profile_id, o.id) and ${CHAT_MEMBER}) new_matches,
          (select count(*)::int from feture.profile_like l join feture.profile_member m on m.profile_id = l.to_profile_id and m.account_id = $1 and m.state = 'active'
             join feture.profile ap on ap.id = l.from_profile_id
           where l.state = 'active' and ap.state = 'active' and not feture.blocked(l.to_profile_id, ap.id)) likes`, [account.id]);

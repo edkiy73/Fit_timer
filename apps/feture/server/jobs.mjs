@@ -13,7 +13,7 @@ import { notifyHandlers } from './notify.mjs';
  * outbox until their handlers ship, instead of being parked unread.
  * @typedef {import('./db.mjs').Db} Db
  * @typedef {import('./media/scan.mjs').ScanDeps} ScanDeps
- * @typedef {{scan: ScanDeps | null, limit?: number}} JobDeps
+ * @typedef {{scan: ScanDeps | null, limit?: number, notifyLimit?: number}} JobDeps
  */
 
 /** @param {Db} db @param {JobDeps} deps */
@@ -134,7 +134,10 @@ export async function sweepExpiredCouples(db) {
 
 /** One worker tick. @param {Db} db @param {JobDeps} deps */
 export async function runJobs(db, deps) {
-  const processed = await drain(db, { ...mediaHandlers(db, deps), ...notifyHandlers(db) }, { limit: deps.limit ?? 10, lockSeconds: 120 });
+  // Media first with its own budget, so a burst of likes never delays scans and publication; then the inbox.
+  const media = await drain(db, mediaHandlers(db, deps), { limit: deps.limit ?? 10, lockSeconds: 120 });
+  const inbox = await drain(db, notifyHandlers(db), { limit: deps.notifyLimit ?? 200, lockSeconds: 120 });
+  const processed = media + inbox;
   const expired = await sweepExpiredUploads(db);
   const ledger = await sweepOpLedger(db);
   const markers = await sweepMarkers(db);

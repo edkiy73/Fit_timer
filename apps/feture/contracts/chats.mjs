@@ -25,7 +25,8 @@ export const chatsCommands = {
       body: text(2000).default(''), replyTo: id.optional(),
     }),
   },
-  'chat.openMedia': { profile: true, write: true, input: z.strictObject({ opId, messageId: id }) },
+  // The view row makes opening idempotent; a replay must never hand out a link again.
+  'chat.openMedia': { profile: true, write: true, ledger: false, input: z.strictObject({ opId, messageId: id }) },
   'chat.read': { profile: true, write: true, ledger: false, input: z.strictObject({ conversationId: id, upToSeq: seq }) },
   'chat.mute': { profile: true, write: true, ledger: false, input: z.strictObject({ conversationId: id, on: z.boolean() }) },
   'chat.archive': { profile: true, write: true, ledger: false, input: z.strictObject({ conversationId: id, on: z.boolean() }) },

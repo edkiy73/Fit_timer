@@ -52,6 +52,17 @@ create table feture.message_media_view (
   done boolean not null default false,
   primary key (message_id, viewer_account_id)
 );
+create index message_media_view_open on feture.message_media_view (message_id) where not done;
+-- One file, one message: a burnt ephemeral file can never live on in another conversation.
+create unique index message_one_asset on feture.message (media_asset_id) where media_asset_id is not null;
+
+-- Matches made before conversations existed get theirs.
+insert into feture.conversation (match_id, profile_a, profile_b)
+select m.id, m.profile_a, m.profile_b from feture.profile_match m
+where m.ended_at is null and not exists (select 1 from feture.conversation c where c.match_id = m.id);
+insert into feture.conversation_member (conversation_id, account_id, profile_id)
+select c.id, pm.account_id, pm.profile_id from feture.conversation c join feture.profile_member pm on pm.profile_id in (c.profile_a, c.profile_b) and pm.state = 'active'
+on conflict do nothing;
 
 do $$
 declare t text;

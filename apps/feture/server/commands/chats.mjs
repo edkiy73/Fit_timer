@@ -117,7 +117,12 @@ export async function sweepEphemeral(db) {
        or v.opened_at is not null and v.opened_at + (case m.media_mode when 't15' then 15 when 't120' then 120 else 1440 end) * interval '1 minute' < now()
        or v.opened_at is null and m.created_at < now() - interval '${UNOPENED_DAYS} days')
      returning v.message_id`);
-  for (const id of new Set(due.map(r => r.message_id))) await db.tx(q => burnIfDone(q, id));
+  // Also files whose last view finished but whose burn was lost (a crash between the two steps).
+  const finished = await db.query(
+    `select m.id message_id from feture.message m join feture.media_asset a on a.id = m.media_asset_id
+     where m.media_mode <> 'normal' and a.state not in ('removed', 'blocked')
+       and not exists (select 1 from feture.message_media_view v where v.message_id = m.id and not v.done) limit 200`);
+  for (const id of new Set([...due, ...finished].map(r => r.message_id))) await db.tx(q => burnIfDone(q, id));
   return due.length;
 }
 
@@ -135,6 +140,7 @@ const run = {
        join feture.profile sp on sp.id = cm.profile_id
        join feture.profile o on o.id = case when c.profile_a = cm.profile_id then c.profile_b else c.profile_a end
        where cm.account_id = $1 and cm.archived = $2 and ($3 = 'all' or $3 = 'me' and sp.kind = 'person' or $3 = 'couple' and sp.kind = 'couple')
+         and exists (select 1 from feture.profile_member pm where pm.profile_id = cm.profile_id and pm.account_id = cm.account_id and pm.state = 'active')
          and not feture.blocked(cm.profile_id, o.id) and (c.last_seq > 0 or c.state = 'active')
        order by coalesce(c.last_message_at, c.created_at) desc limit 200`, [account.id, input.archived, input.filter]);
     const assets = await q.query('select * from feture.media_asset where id = any($1)', [rows.map(r => r.avatar_asset_id).filter(Boolean)]);
@@ -198,11 +204,14 @@ const run = {
     const c = await memberOf(q, input.conversationId, acting, { lock: true });
     await requireOpen(q, c);
     const [asset] = await q.query(
-      `select id from feture.media_asset where id = $1 and owner_profile_id = $2 and purpose = 'chat' and state in ('uploaded', 'scanning', 'needs_review', 'approved')`,
+      `select id, state, view_rule from feture.media_asset where id = $1 and owner_profile_id = $2 and purpose = 'chat' and state in ('uploaded', 'scanning', 'needs_review', 'approved')`,
       [input.assetId, acting.profileId]);
     if (!asset) fail(400, 'invalid_input', { fields: ['assetId'] });
+    // The mode was chosen at upload (view rule); an ephemeral file goes out only once it passed its checks.
+    if ((input.mode === 'normal') !== (asset.view_rule === 'normal')) fail(400, 'invalid_input', { fields: ['mode'] });
+    if (input.mode !== 'normal' && asset.state !== 'approved') fail(409, 'conflict', { rule: 'pending' });
     const [used] = await q.query('select 1 from feture.message where media_asset_id = $1', [input.assetId]);
-    if (used) fail(409, 'conflict', { rule: 'already_sent' }); // one file, one message (an ephemeral one must burn for good)
+    if (used) fail(409, 'conflict', { rule: 'already_sent' }); // one file, one message (a unique index backs this)
     if (input.mode !== 'normal') {
       // Ephemeral media: everyone on both sides confirmed an adult.
       const [{ ok }] = await q.query(
@@ -221,11 +230,18 @@ const run = {
   async 'chat.openMedia'(q, { acting: a, input, cfg }) {
     // The first conscious tap starts the timer («once» closes at once); a render never does.
     const acting = need(a);
-    const [m] = await q.query('select * from feture.message where id = $1', [input.messageId]);
+    // Locked: two partners opening at once must still burn the file when both are done.
+    const [m] = await q.query('select * from feture.message where id = $1 for update', [input.messageId]);
     if (!m) fail(404, 'not_found');
-    await memberOf(q, m.conversation_id, acting);
-    if (m.media_mode === 'normal' || !m.media_asset_id) fail(400, 'invalid_input', { fields: ['messageId'] });
+    const c = await memberOf(q, m.conversation_id, acting);
+    if (!m.media_asset_id) fail(400, 'invalid_input', { fields: ['messageId'] });
     const [asset] = await q.query('select * from feture.media_asset where id = $1', [m.media_asset_id]);
+    const [prefs] = await q.query('select show_explicit from feture.account where id = $1', [acting.accountId]);
+    if (m.media_mode === 'normal') {
+      // Blurred by default (chatBlur); a tap shows it, explicit only for those who turned it on.
+      const media = asset ? await mediaDto(cfg.media, asset, { viewerProfileId: acting.profileId, place: 'chat', showExplicit: prefs.show_explicit, opened: true, staff: false }).catch(() => null) : null;
+      return { media, until: null, gone: !media };
+    }
     if (m.author_profile_id === acting.profileId) {
       // The sender may look at their own file until it burns out.
       if (!asset || asset.state === 'removed') return { media: null, gone: true };
@@ -240,10 +256,13 @@ const run = {
       return { media: null, gone: true }; // returned, not thrown: the closing writes must commit
     }
     if (state === 'unopened') {
+      // Nothing is used up unless the viewer can really see it now.
+      if (c.state !== 'active') fail(409, 'conflict', { rule: 'ended' });
+      if (!asset || asset.state !== 'approved' || !asset.copies_at) fail(409, 'conflict', { rule: 'pending' });
+      if (asset.explicitness !== 'safe' && !prefs.show_explicit) fail(422, 'rule_violation', { rule: 'explicit_off' });
       await q.query(`update feture.message_media_view set opened_at = now(), done = $3 where message_id = $1 and viewer_account_id = $2`,
         [m.id, acting.accountId, m.media_mode === 'once']);
     }
-    const [prefs] = await q.query('select show_explicit from feture.account where id = $1', [acting.accountId]);
     const media = asset && asset.state !== 'removed'
       ? await mediaDto(cfg.media, { ...asset, view_rule: 'once' }, { viewerProfileId: acting.profileId, place: 'chat', showExplicit: prefs.show_explicit, opened: true, staff: false }).catch(() => null)
       : null;
