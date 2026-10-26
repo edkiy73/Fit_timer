@@ -3,6 +3,7 @@ import { meCommands, NOTIFICATION_DEFAULTS, PROFILE_SETTINGS } from '../../contr
 import { fail, isUniqueViolation } from '../errors.mjs';
 import { hmac } from '../hash.mjs';
 import { mediaDto } from '../media/assets.mjs';
+import { photosFor } from './photos.mjs';
 import { grantedScopes } from '../access.mjs';
 import { enqueue } from '../outbox.mjs';
 import { narrowCouple, needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
@@ -126,6 +127,7 @@ async function profileView(q, viewer, profileId, media) {
     city,
     details,
     avatar,
+    photos: await photosFor(q, p.id, viewer.profileId, media),
     ...(own ? { rev: p.rev, showAge: !!p.show_age, detailsVis: p.details_vis ?? null, state: p.state } : {}),
   };
 }
