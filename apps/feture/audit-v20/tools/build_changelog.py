@@ -21,6 +21,12 @@ In V21: fixed {vs['fixed']}, partial {vs['partial']}, not reproduced {vs['not-re
 
 - Headings use **Geologica**, body text stays **Onest**.
 - The brand red is **#DF234A**. In dark theme filled buttons use #DF234A too (white text 4.7:1); red text and icons in dark theme stay the lighter #FF4566 so they read on the dark background.
+- Interests by access open together with «Описание» (ME-025).
+- Quizzes are removed (ME-041).
+- In a couple, the dock «Я/Мы» keeps opening «Действовать как» (CPL-007).
+- Terms and privacy texts stay short summaries in the prototype; the final texts are edited in the admin (AUTH-015).
+- Everyone starts in Discover — a person and a couple; without a photo nobody sees you there. Onboarding says so, offers a photo right away and lets you switch Discover off (AUTH-019). `AGENTS.md` notes the change.
+- «Как видят» shows the real «Что у вас общего» block computed with a sample viewer (CPL-023).
 
 ## Shared components and navigation (lead)
 

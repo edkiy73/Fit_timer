@@ -7,16 +7,18 @@ Integration into the React app: `docs/design-reference/V21-INTEGRATION-GUIDE.md`
 ## In numbers
 
 The audit found 302 issues (P0 5, P1 33, P2 120, P3 144).
-In V21: fixed 284, partial 11, not reproduced 4, moved to the React spec 2, needs the owner 1. Every item with what was done and how it was checked: `apps/feture/audit-v20/V21-FIX-STATUS.md`.
+In V21: fixed 286, partial 7, not reproduced 4, moved to the React spec 3, needs the owner 1. Every item with what was done and how it was checked: `apps/feture/audit-v20/V21-FIX-STATUS.md`.
 
 ## Owner decisions taken for V21 (27.10.2026)
 
 - Headings use **Geologica**, body text stays **Onest**.
 - The brand red is **#DF234A**. In dark theme filled buttons use #DF234A too (white text 4.7:1); red text and icons in dark theme stay the lighter #FF4566 so they read on the dark background.
-
-## V20 #1277 carried into V21
-
-PR #1277 changed V20 while the audit ran. Its owner decisions are in V21: a Premium gift to a couple goes to both partners (price for two, both named, confirmation names both); a couple's private part opens only with both — the partner always confirms, either partner can close it at once, and «Мы → Приватное» lists what waits. Its 19 second-pass fixes were merged with the V21 fixes of the same screens (details: `apps/feture/audit-v20/work/merge-1277.md`).
+- Interests by access open together with «Описание» (ME-025).
+- Quizzes are removed (ME-041).
+- In a couple, the dock «Я/Мы» keeps opening «Действовать как» (CPL-007).
+- Terms and privacy texts stay short summaries in the prototype; the final texts are edited in the admin (AUTH-015).
+- Everyone starts in Discover — a person and a couple; without a photo nobody sees you there. Onboarding says so, offers a photo right away and lets you switch Discover off (AUTH-019). `AGENTS.md` notes the change.
+- «Как видят» shows the real «Что у вас общего» block computed with a sample viewer (CPL-023).
 
 ## Shared components and navigation (lead)
 
@@ -506,14 +508,10 @@ Per-finding detail: `fixes-couple.json`. Screens: `audit-v20/screens/v21/couple/
 
 ## Open for the owner and partial items
 
-- **AUTH-015** (частично): Пункт «Приватно по умолчанию» переписан под реальные метки; в лист добавлены «Условия использования» и «Политика приватности» — листы с кратким структурированным текстом и «Назад». Финальная юридическая редакция — за владельцем.
-- **AUTH-019** (частично): В первой ленте после регистрации — закрываемая карточка «Заверши профиль» (что не заполнено) с кнопкой «Заполнить». Не сделано: в Q01 «Пара видна в знакомствах» отражает реальный дефолт пары (dating:true в coupleProfile) — менять дефолт пары нужно в разделе пары/владельцем.
 - **ME-025** (частично): Лист «Открыть доступ» предлагает только то, что есть в приватной части (нет «Видео», если видео нет), с количеством («Фото · 4»); текст «Отозвать можно в любой момент: «Я → Приватное»». Отдельного права на «Интересы по доступу» нет — нужен ответ владельца.
-- **CPL-007** (частично): Правило V19 (док «Я/Мы» открывает «Действовать как») сохранено — это решение владельца и контракт. Сделано: нажатие на уже выбранную карточку в листе открывает профиль (вся карточка — цель, 2 нажатия без поиска мелкой иконки); при несохранённом вводе не уводит. Вопрос владельцу: должно ли нажатие на вкладку в паре сразу открывать «Я», а лист — по повторному/долгому нажатию?
 - **FEED-043** (частично): В обсуждении C06 ряд действий как у поста: лайк, ответы (с числом, фокус поля), поделиться; заголовок и счётчик считают только живые ответы. «Сохранить» для обсуждений не добавлено — «Сохранённое» (G04) пока хранит только публикации.
 - **COMM-013** (частично): Аватар сообщества с обложкой — плашка с иконкой, не та же фотография; вкладки C03 при переполнении получают маску на краю. Подпись дока на 320px — общий док (сделано лидом).
 - **CPL-011** (частично): Кнопка аккаунта в боковой панели рисует aria-expanded по факту открытого поповера и сбрасывается при закрытии; в листе на телефоне фокус сразу на выбранной карточке. Не сделано: закрытие поповера повторным кликом по той же кнопке (поповер модальный, #root инертен) — закрывается Esc/кликом вне.
-- **CPL-023** (частично): В «Как видят» кнопки читаются как у зрителя: «Нравится» и «Подписаться» (без «от пары»). Блок «Что у вас общего» оставлен: по контракту V10 превью показывает настоящий блок с пометкой-демо; если владелец хочет плашку вместо него — это изменение правила V10.
 - **NTF-003** (частично): Имя в карточках решений везде «имя, возраст» (связи, приглашение в пару, запросы, заявки). Аватар «Eva и Tom» с буквами — у участников этой демо-пары нет фото, компонент av() тот же, что везде.
 - **VIS-005** (частично): Выбиваемые из шкалы 22 px → 24 px (уведомления, участники сообщества), герой пары 80 → 88 px. Полная шкала 24/36/44/56/88 описана в V21-INTEGRATION-GUIDE для React; переписывать все 12 размеров в прототипе не стали, чтобы не трогать сотни экранов.
 - **VIS-006** (частично): Кегль табов в шапке выровнен до 14 px; кнопки следующей карточки подборки 48 px. Текущая карточка подборки осталась 46 px из-за раскладки карточки — описано для React.
