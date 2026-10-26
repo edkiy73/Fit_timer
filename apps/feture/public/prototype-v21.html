@@ -3061,6 +3061,45 @@ body:has(#sheet.on) .qa-fab,body:has(#dialog.on) .qa-fab{opacity:0!important;poi
 .onb-c .cmc .tx>small{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 /* V21 (AUTH-017): the community picture in the sign-up preview sheet */
 .onb-pv-av{position:relative;display:block;width:48px;height:48px;border-radius:14px;overflow:hidden;flex:none}.onb-pv-av>*{width:100%!important;height:100%!important;border-radius:inherit}
+/* V21 (AUTH-004): the terms link sits under the checkbox text, outside the checkbox */
+.auth-wrap>.btn.terms-read{display:flex;width:fit-content;margin:-6px auto 6px 34px;min-height:36px;padding:0;font-size:14px}
+/* V21 (SET-017): the disabled «Новый код через N с» stays readable */
+#resend:disabled{color:var(--mute);opacity:1}
+/* V21 (AUTH-008): slide text is never cut — the picture shrinks instead; very short phones scroll (buttons stay pinned) */
+@container stage (max-width:767px){
+ .welcome.wv .w-txt p{display:block;-webkit-line-clamp:unset;overflow:visible}
+ .welcome.wv .w-show{flex:1 1 0;min-height:auto;overflow:clip}
+ .welcome.wv .w-stage,.welcome.wv .w-slide{min-height:auto}
+ .welcome.wv .w-vis{min-height:56px}
+}
+@media (max-height:700px){.welcome.wv .w-vis{min-height:0}}
+@media (max-height:600px){.welcome.wv .w-vis{display:none}.welcome.wv .w-sub-s{font-size:13px}}
+@media (max-height:640px){.welcome.wv .w-txt p{-webkit-line-clamp:unset}}
+/* V21 (AUTH-009): the short positioning line is shown wherever the long subtitle is hidden */
+.w-sub-s{display:none;margin:0;font-size:14px;line-height:1.4;color:var(--mute)}
+@container stage (max-width:767px){.welcome.wv .w-sub-s{display:block}}
+@media (max-height:700px){.welcome.wv .w-sub-s{display:block}}
+/* V21 (AUTH-024): slider bars keep their look but get a 44 px tall touch zone; a touch screen does not stay «hovered» */
+.welcome.wv .w-pb{height:44px;margin-block:-14px}
+@media (hover:none){.w-show:not(:focus-within):hover .w-pb.on i{animation-play-state:running}}
+/* V21 (AUTH-025): «День / Месяц / Год» fit at 320 px */
+@container stage (max-width:359px){.dob{grid-template-columns:minmax(76px,.9fr) 1.45fr 1fr;gap:6px}.dob select.inp{font-size:15px;padding-left:10px;padding-right:24px;background-position:right 4px center}}
+/* V21 (AUTH-021): on a computer the sign-up forms are a card with the logo; the welcome buttons stay on one line */
+.auth-logo{display:none}
+@container stage (min-width:1024px){
+ .root.auth .view .auth-wrap{max-width:460px;margin:32px auto 48px;padding:32px;background:var(--surf);border-radius:28px;box-shadow:var(--shadow-s)}
+ .root.auth .auth-logo{display:flex;align-items:center;gap:10px;margin:0 0 20px;font:800 22px/1 var(--font);letter-spacing:-.04em}
+ .root.auth .auth-logo img{width:32px;height:32px;border-radius:9px}.root.auth .auth-logo i{font-style:normal;color:var(--accent)}
+ .root.auth .main>.ctabar>.wrap{max-width:460px}
+}
+.auth-wrap>.seg+h2{margin-top:20px}
+.welcome.wv .w-cta .btn{white-space:nowrap}
+/* V21 (SET-017): field hints, «или по почте» and «можно несколько» use the readable secondary tone (≥4.5:1 in both themes) */
+.fhint,.divider,.fin-t span{color:var(--mute)}
+/* V21 (SET-018): white text on a solid accent fill reaches 4.5:1 in the dark theme (≈5.1:1); the welcome button gradient too */
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) :is(.btn.primary,.pill.hot,.pw-plan em){background:#D61F45}}
+:root[data-theme="dark"] :is(.btn.primary,.pill.hot,.pw-plan em){background:#D61F45}
+.welcome.wv .w-cta .btn.primary{background:linear-gradient(135deg,#E2244C,#C8123F)}
 /* ==== V21 · auth · CSS end ==== */
 /* · */
 /* · */
@@ -5188,6 +5227,7 @@ SC.A01={auth:1,title:()=>L('Приветствие','Welcome'),render:()=>{const
    <p class="w-kick"><i></i>${L('18+ · приватно по умолчанию','18+ · private by default')}</p>
    <h1 class="w-title">${L('Свой круг. <em>Свои</em> границы.','Your circle. <em>Your</em> limits.')}</h1>
    <p class="w-sub">${L('Соцсеть 18+: пиши, обсуждай, приходи на встречи. Показывай ровно столько, сколько решишь. Знакомства — только если захочешь.','An 18+ social network: post, talk, come to meet-ups. Show exactly as much as you choose. Dating only if you want it.')}</p>
+   <p class="w-sub-s">${/* V21 (AUTH-009): the positioning stays on phones in a short form */L('Соцсеть 18+. Знакомства — только если захочешь.','An 18+ social network. Dating only if you want it.')}</p>
   </div>
   <section class="w-show" aria-roledescription="${L('карусель','carousel')}" aria-label="${L('Главное в FetUre','FetUre highlights')}">
    <div class="w-prog">${sl.map((x,n)=>`<button class="w-pb ${n===cur?'on':''} ${n<cur?'done':''}" data-act="wSlide" data-v="${n}" aria-label="${nn(n)} · ${esc(x.k)}" aria-current="${n===cur}"><i></i></button>`).join('')}</div>
@@ -5205,7 +5245,9 @@ SC.A01={auth:1,title:()=>L('Приветствие','Welcome'),render:()=>{const
   let x0=null,y0=0;const st=$('.w-stage',show);
   st.addEventListener('pointerdown',e=>{x0=e.clientX;y0=e.clientY;});
   st.addEventListener('pointerup',e=>{if(x0==null)return;const dx=e.clientX-x0,dy=e.clientY-y0;x0=null;if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy))wShow((S.ui.wIdx||0)+(dx<0?1:-1));});
-  st.addEventListener('pointercancel',()=>{x0=null;});}};
+  st.addEventListener('pointercancel',()=>{x0=null;});
+  /* V21 (AUTH-024): a tap focuses a bar and paused the slider for good — it resumes 4 s after the last touch */
+  show.addEventListener('pointerup',e=>{if(e.pointerType==='mouse')return;clearTimeout(S.ui.wResume);S.ui.wResume=setTimeout(()=>{const a=document.activeElement;if(a&&show.isConnected&&show.contains(a))a.blur();},4000);});}};
 /* fit each slide's picture into the space it has: as large as possible (up to 1.12 on a desktop), never cut, never squeezed unevenly */
 function wFit(){const max=innerWidth>=1024?1.12:1;$$('.w-vis').forEach(v=>{const c=v.firstElementChild;if(!c)return;c.style.transform='none';const cs=getComputedStyle(v),pw=v.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight),ph=v.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom);const w=c.scrollWidth,h=c.scrollHeight;if(!w||!h)return;const k=Math.min(max,pw/w,ph/h);c.style.transformOrigin='50% 0';c.style.transform=`translateY(${Math.max(0,(ph-h*k)/2).toFixed(1)}px) scale(${k.toFixed(3)})`;});}
 /* switch slides in place — no re-render, so the aura and the page don't flash */
@@ -5219,7 +5261,8 @@ function wPlay(i,first){const s=$$('.w-slide')[i];if(!s)return;const j=$('.jars'
 ACT.wSlide=a=>{const v=a.dataset.v,i=S.ui.wIdx||0;wShow(v==='next'?i+1:v==='prev'?i-1:+v);};
 
 ACT.terms=()=>sheet(()=>({title:L('Условия и приватность','Terms and privacy'),body:`
- ${[[I.shield,L('Тебе 18+','You are 18+'),L('Дата рождения нужна, чтобы подтвердить 18+. Её никто не увидит. Возраст можно показывать в профиле по твоему выбору.','Your birth date confirms you are 18+. Nobody sees it. You choose whether to show your age on your profile.')],[I.lock,L('Приватно по умолчанию','Private by default'),L('Интересы и ответы тестов видишь только ты.','Your interests and quiz answers are visible only to you.')],[I.heart,L('Чат — только взаимно','Chat only when mutual'),L('Никто не напишет тебе без взаимной симпатии.','Nobody can message you without a mutual like.')],[I.trash,L('Твои данные — твои','Your data is yours'),L('Экспорт и удаление доступны всегда и бесплатно.','Export and deletion are always available and free.')]].map(([i,b,s])=>`<div class="fact"><i class="v">${i}</i><span><b>${b}.</b> ${s}</span></div>`).join('')}`,foot:`<button class="btn primary" data-act="closeSheet">${L('Понятно','Got it')}</button>`}));
+ ${[[I.shield,L('Тебе 18+','You are 18+'),L('Дата рождения нужна, чтобы подтвердить 18+. Её никто не увидит. Возраст можно показывать в профиле по твоему выбору.','Your birth date confirms you are 18+. Nobody sees it. You choose whether to show your age on your profile.')],[I.lock,L('Приватно по умолчанию','Private by default'),/* V21 (AUTH-015): matches the real visibility tags */L('Приватная часть открывается только тем, кому разрешишь. Что видно всем — отмечено в профиле меткой «Видят все».','Your private part opens only to people you allow. What everyone can see is marked “Everyone” on your profile.')],[I.heart,L('Чат — только взаимно','Chat only when mutual'),L('Никто не напишет тебе без взаимной симпатии.','Nobody can message you without a mutual like.')],[I.trash,L('Твои данные — твои','Your data is yours'),L('Экспорт и удаление доступны всегда и бесплатно.','Export and deletion are always available and free.')]].map(([i,b,s])=>`<div class="fact"><i class="v">${i}</i><span><b>${b}.</b> ${s}</span></div>`).join('')}
+ <div class="card list mt16">${linkRow({act:'legalDoc',v:'terms',icon:'doc',title:L('Условия использования','Terms of use')})}${linkRow({act:'legalDoc',v:'privacy',icon:'lock',title:L('Политика приватности','Privacy policy')})}</div>`,foot:`<button class="btn primary" data-act="closeSheet">${L('Понятно','Got it')}</button>`}));
 
 SC.A02={auth:1,title:p=>p.mode==='in'?L('Вход','Sign in'):L('Регистрация','Sign up'),render:(p)=>{const up=p.mode!=='in';return `${bar('',{back:1,actions:langSw()})}<div class="view nodock"><div class="auth-wrap">
  ${seg([['up',L('Регистрация','Sign up')],['in',L('Вход','Sign in')]],up?'up':'in','authMode')}
@@ -5227,25 +5270,30 @@ SC.A02={auth:1,title:p=>p.mode==='in'?L('Вход','Sign in'):L('Регистр�
  
  <div class="oauth"><button class="btn oa apple" data-act="oauth" data-v="apple">${I.apple}${L('Продолжить с Apple','Continue with Apple')}</button><button class="btn oa" data-act="oauth" data-v="google">${I.google}${L('Продолжить с Google','Continue with Google')}</button></div>
  <div class="divider">${L('или по почте','or with email')}</div>
- ${field({name:'email',label:L('Электронная почта','Email'),type:'email',ph:'name@mail.com',icon:'mail',attrs:'autocomplete="email" inputmode="email" data-enter="sendCode"',hint:L('Пароль не нужен — пришлём код из 6 цифр.','No password — we’ll send a 6-digit code.')})}
- <button class="btn primary" data-act="sendCode">${L('Получить код','Get code')}</button>
+ ${(()=>{const r=cur(),left=Math.max(0,Math.ceil(((r.limitUntil||0)-Date.now())/1000));if(left)r.err={...r.err,email:L('Слишком много попыток с этой почтой. Подожди немного — потом пришлём новый код.','Too many attempts with this email. Wait a little — then we’ll send a new code.')};else if(r.limitUntil){r.limitUntil=0;if(r.err)delete r.err.email;}
+ return `${field({name:'email',label:L('Электронная почта','Email'),type:'email',ph:'name@mail.com',icon:'mail',attrs:'autocomplete="email" inputmode="email" data-enter="sendCode" data-in="authEmail"',hint:L('Пароль не нужен — пришлём код из 6 цифр.','No password — we’ll send a 6-digit code.')}).replace('data-in="f" ','')}
+ <button class="btn primary" data-act="sendCode" id="sendCodeBtn" ${left?'disabled':''}>${left?L(`Получить код через ${left} с`,`Get code in ${left}s`):L('Получить код','Get code')}</button>`;})()}
  
  </div></div>`;}};
+SC.A02.after=(p,r)=>{clearInterval(S.ui.limT);if(!(r.limitUntil>Date.now()))return;S.ui.limT=setInterval(()=>{const b=$('#sendCodeBtn');if(!b||cur()!==r){clearInterval(S.ui.limT);return;}const left=Math.max(0,Math.ceil((r.limitUntil-Date.now())/1000));if(left)b.textContent=L(`Получить код через ${left} с`,`Get code in ${left}s`);else{clearInterval(S.ui.limT);refresh();}},1000);};
+/* the limit belongs to that address: another address can ask for a code right away */
+IN.authEmail=el=>{const r=cur();if(r.limitUntil&&el.value.trim().toLowerCase()===r.limitEmail){r.f.email=el.value;return;}IN.f(el);if(!r.limitUntil)return;r.limitUntil=0;clearInterval(S.ui.limT);setErr('email','');const b=$('#sendCodeBtn');if(b){b.disabled=false;b.textContent=L('Получить код','Get code');}};
 ACT.authMode=a=>{cur().p.mode=a.dataset.v;refresh();};
 ACT.sendCode=a=>{
  const v=fv('email');const e=V.email(v);setErr('email',e);if(e){shakeFirstErr();return;}
  const btn=a.classList.contains('btn')?a:$('[data-act="sendCode"].btn');
- if(/^limit@/i.test(v.trim())){toast(L('Слишком много попыток. Новый код можно запросить через 60 секунд','Too many attempts. You can request a new code in 60 seconds'),{type:'err'});return;}
+ if(!/^limit@/i.test(v.trim()))cur().limitUntil=0;
+ if(/^limit@/i.test(v.trim())){/* V21 (AUTH-007): the limit is an error under the field with a live countdown on the button */const r=cur();if(!(r.limitUntil>Date.now()))r.limitUntil=Date.now()+60e3;r.limitEmail=v.trim().toLowerCase();refresh();return;}
  run(btn,()=>go('A03',{email:v.trim(),mode:cur().p.mode||'up'}),{});
 };
 ACT.oauth=a=>{const prov=a.dataset.v;const mode=cur().p.mode||'up';
  S.ui.oa={prov,acc:0,hide:true};
  sheet(()=>{const o=S.ui.oa;const g=prov==='google';
   const accs=g?[['alex.b@gmail.com','Alex B.'],['new.person@gmail.com',L('Новый аккаунт','New account')]]:[];
-  return{title:g?L('Вход через Google','Sign in with Google'):L('Вход через Apple','Sign in with Apple'),lead:`<span class="ico" style="background:${g?'var(--surf)':'var(--ink)'};color:${g?'':'var(--bg)'};border:1px solid var(--line)">${g?I.google:I.apple}</span>`,
+  return{title:/* V21 (AUTH-012): neutral for sign-up and sign-in */g?L('Продолжить с Google','Continue with Google'):L('Продолжить с Apple','Continue with Apple'),lead:`<span class="ico" style="background:${g?'var(--surf)':'var(--ink)'};color:${g?'':'var(--bg)'};border:1px solid var(--line)">${g?I.google:I.apple}</span>`,
   body:g?`${accs.map(([m,n],i)=>`<button class="acct ${o.acc===i?'on':''}" data-act="oaAcc" data-v="${i}"><span class="av sm ini">${plate(i?'sea':'rose')}<b style="position:relative">${n[0]}</b></span><span class="grow"><b>${n}</b><small>${m}</small></span>${o.acc===i?I.check:''}</button>`).join('')}`
   :`<button class="radio ${o.hide?'':'on'}" data-act="oaHide" data-v="0"><i></i><span class="tx">${L('Поделиться почтой','Share my email')}<small>alex@icloud.com</small></span></button><button class="radio ${o.hide?'on':''}" data-act="oaHide" data-v="1"><i></i><span class="tx">${L('Скрыть почту','Hide my email')}<small>x7k2…@privaterelay.appleid.com</small></span></button>`,
-  foot:`<button class="btn ${g?'primary':'dark'}" data-act="oaGo" data-v="${prov}" data-m="${mode}">${g?L('Продолжить','Continue'):`${I.apple}${L('Продолжить с Face ID','Continue with Face ID')}`}</button>`};});};
+  foot:`<button class="btn ${g?'primary':'dark'}" data-act="oaGo" data-v="${prov}" data-m="${mode}">${g?L('Продолжить','Continue'):`${I.apple}${L('Продолжить','Continue')}`}</button>`};});};
 ACT.oaAcc=a=>{S.ui.oa.acc=+a.dataset.v;resheet();};
 ACT.oaHide=a=>{S.ui.oa.hide=a.dataset.v==='1';resheet();};
 ACT.oaGo=a=>{const o=S.ui.oa;const existing=o.prov==='google'&&o.acc===0;
@@ -5257,10 +5305,10 @@ ACT.oaGo=a=>{const o=S.ui.oa;const existing=o.prov==='google'&&o.acc===0;
 
 SC.A03={auth:1,title:()=>L('Код из письма','Email code'),valid:p=>!!p.email,render:(p,r)=>{const left=Math.max(0,30-Math.round((Date.now()-(r.sent||(r.sent=Date.now())))/1000));const m=p.email.replace(/^(.)(.*)(@.*)$/,(x,a,b,c)=>a+'•'.repeat(Math.min(6,b.length))+c);return `${bar('',{back:1})}<div class="view nodock"><div class="auth-wrap">
  <h2 class="t">${L('Введи код','Enter the code')}</h2><p class="lead">${L('Отправили 6 цифр на','We sent 6 digits to')} <b>${esc(m)}</b>. ${L('Код действует 10 минут.','The code is valid for 10 minutes.')}</p>
- <div class="code ${r.err&&r.err.code?'err':''}" data-field="code">${[0,1,2,3,4,5].map(i=>`<input inputmode="numeric" autocomplete="one-time-code" aria-label="${L('Цифра','Digit')} ${i+1}" data-in="code" data-i="${i}" value="${esc((r.f.code||'')[i]||'')}" ${i===0?'autofocus':''}>`).join('')}</div>
+ <div class="code ${r.err&&r.err.code?'err':''}" data-field="code">${[0,1,2,3,4,5].map(i=>`<input inputmode="numeric" autocomplete="one-time-code" aria-label="${L('Цифра','Digit')} ${i+1}" data-in="code" data-i="${i}" value="${esc((r.f.code||'')[i]||'')}" ${i===0?'autofocus':''} ${r.locked?'disabled':''}>`).join('')}</div>
  ${r.err&&r.err.code?`<div class="ferr">${I.alert}${r.err.code}</div>`:''}
- <button class="btn primary mt24" data-act="checkCode">${L('Подтвердить','Confirm')}</button>
- <div class="authrow mt16"><button class="btn text auto" data-back>${L('Изменить адрес','Change email')}</button><button class="btn text auto" data-act="resend" ${left?'disabled style="color:var(--faint)"':''} id="resend">${left?L(`Новый код через ${left} с`,`Resend in ${left}s`):L('Отправить ещё раз','Resend code')}</button></div>
+ <button class="btn primary mt24" data-act="checkCode" ${r.locked?'disabled':''}>${L('Подтвердить','Confirm')}</button>
+ <div class="authrow mt16"><button class="btn text auto" data-back>${L('Изменить адрес','Change email')}</button><button class="btn text auto" data-act="resend" ${left?'disabled':''} id="resend">${left?L(`Новый код через ${left} с`,`Resend in ${left}s`):L('Отправить ещё раз','Resend code')}</button></div>
  </div></div>`;},after:(p,r)=>{const f=$('.code input');f&&f.focus();clearInterval(S.ui.tm);S.ui.tm=setInterval(()=>{const b=$('#resend');if(!b||cur()!==r){clearInterval(S.ui.tm);return;}const left=Math.max(0,30-Math.round((Date.now()-r.sent)/1000));if(left){b.textContent=L(`Новый код через ${left} с`,`Resend in ${left}s`);}else{b.disabled=false;b.style.color='';b.textContent=L('Отправить ещё раз','Resend code');clearInterval(S.ui.tm);}},1000);}};
 IN.code=(el,e)=>{const r=cur();const ins=$$('.code input');let v=el.value.replace(/\D/g,'');
  const start=+el.dataset.i;
@@ -5271,27 +5319,32 @@ document.addEventListener('keydown',e=>{if(e.key==='Backspace'&&e.target.dataset
 ACT.checkCode=a=>{const r=cur();const c=r.f.code||'';
  const fail=msg=>{r.err={code:msg};refresh();shakeFirstErr();};
  if(c.length<6)return fail(L('Введи все 6 цифр','Enter all 6 digits'));
- run(a,()=>{if(c==='000000'){r.tries=(r.tries||5)-1;return fail(L(`Неверный код. Осталось попыток: ${r.tries}`,`Wrong code. Attempts left: ${r.tries}`));}
-  if(c==='999999')return fail(L('Код истёк. Запроси новый','The code has expired. Request a new one'));
-  if(r.p.mode==='in'){signIn(S.persona==='pair'?'pair':'full');toast(L('С возвращением, Alex','Welcome back, Alex'),{type:'ok'});}
-  else go('A04',{email:r.p.email,via:'email'});});};
-ACT.resend=a=>run(a,()=>{cur().sent=Date.now();cur().f.code='';refresh();},{ok:L('Новый код отправлен','New code sent')});
+ if(r.locked)return;
+ /* V21 (AUTH-005/AUTH-006): wrong digits are cleared; after 5 wrong codes the input locks until a new code; an expired code makes «Отправить ещё раз» available at once */
+ run(a,()=>{if(c==='000000'){r.tries=(r.tries??5)-1;r.f.code='';if(r.tries<=0){r.locked=true;r.sent=Date.now()-30e3;return fail(L('Попытки закончились. Запроси новый код','No attempts left. Request a new code'));}return fail(L(`Неверный код. Осталось попыток: ${r.tries}`,`Wrong code. Attempts left: ${r.tries}`));}
+  if(c==='999999'){r.f.code='';r.sent=Date.now()-30e3;return fail(L('Код истёк. Запроси новый','The code has expired. Request a new one'));}
+  /* V21 (AUTH-013): the email decides — the existing account (alex@…) signs in from either mode, any other address creates a new account */
+  const known=/^alex@/i.test(r.p.email||'');
+  if(known){signIn(S.persona==='pair'?'pair':'full');toast(r.p.mode==='in'?L('С возвращением, Alex','Welcome back, Alex'):L('Аккаунт с этой почтой уже есть — входим','An account with this email exists — signing you in'),{type:'ok'});}
+  else{if(r.p.mode==='in')toast(L('Аккаунта с этой почтой ещё нет — создадим новый','No account with this email yet — let’s create one'),{type:'info'});go('A04',{email:r.p.email,via:'email'});}});};
+ACT.resend=a=>run(a,()=>{const r=cur();r.sent=Date.now();r.f.code='';r.tries=5;r.locked=false;r.err={};refresh();},{ok:L('Новый код отправлен','New code sent')});
 
 /* A04 — minimal profile with date of birth (owner requirement 13.10.2026) */
 const MONTHS=()=>S.lang==='en'?['January','February','March','April','May','June','July','August','September','October','November','December']:['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
-SC.A04={auth:1,title:()=>L('Профиль','Profile'),render:(p,r)=>{const yNow=new Date(NOW).getFullYear();return `${bar('',{back:1,actions:`<span class="pill">1 / 3</span>`})}<div class="view nodock cta1"><div class="auth-wrap">
+SC.A04={auth:1,title:()=>L('Профиль','Profile'),render:(p,r)=>{const yNow=new Date(NOW).getFullYear();/* V21 (AUTH-011): years 13…100 back (under-18 is still caught by the date), days follow the month */const dMax=r.f.mm?new Date(+(r.f.yy||2000),+r.f.mm,0).getDate():31;if(+r.f.dd>dMax)r.f.dd='';return `${bar('',{back:1})}<div class="view nodock cta1"><div class="auth-wrap">
  <div class="steps"><i class="on"></i><i></i><i></i></div>
  <h2 class="t">${L('Как тебя называть','What should we call you')}</h2>
  ${p.via&&p.via!=='email'?`<div class="alert ok mb16" style="margin-bottom:16px">${I.okc}<span>${L('Вход подтверждён через','Signed in with')} ${p.via==='google'?'Google':'Apple'} · ${esc(p.email)}</span></div>`:''}
  ${(h=>r.nickOk&&r.nickOk===r.f.nick&&!(r.err&&r.err.nick)?h.replace(/<div class="fhint">[\s\S]*?<\/div>/,m=>m.replace('<div class="fhint">','<div class="fhint" style="display:none">')+nickOkHTML()):h)(field({name:'nick',label:L('Ник','Nickname'),ph:'alex_b',icon:'at',attrs:'autocomplete="username" autocapitalize="off" spellcheck="false" data-in="nick"',hint:L('Латиница, цифры, точка и _. Начало и конец — буква или цифра. По нику тебя смогут найти.','Latin letters, digits, dot and _, starting and ending with a letter or digit. People can find you by it.')}).replace('data-in="f" ',''))}
  
  <div class="field ${r.err&&r.err.dob?'err':''}" data-field="dob"><span class="flabel">${L('Дата рождения','Date of birth')}</span>
-  <div class="dob"><select class="inp" name="dd" data-ch="dob" aria-label="${L('День','Day')}"><option value="">${L('День','Day')}</option>${Array.from({length:31},(_,i)=>`<option ${r.f.dd==i+1?'selected':''}>${i+1}</option>`).join('')}</select>
+  <div class="dob"><select class="inp" name="dd" data-ch="dob" aria-label="${L('День','Day')}"><option value="">${L('День','Day')}</option>${Array.from({length:dMax},(_,i)=>`<option ${r.f.dd==i+1?'selected':''}>${i+1}</option>`).join('')}</select>
   <select class="inp" name="mm" data-ch="dob" aria-label="${L('Месяц','Month')}"><option value="">${L('Месяц','Month')}</option>${MONTHS().map((m,i)=>`<option value="${i+1}" ${r.f.mm==i+1?'selected':''}>${m}</option>`).join('')}</select>
-  <select class="inp" name="yy" data-ch="dob" aria-label="${L('Год','Year')}"><option value="">${L('Год','Year')}</option>${Array.from({length:90},(_,i)=>yNow-i).map(y=>`<option ${r.f.yy==y?'selected':''}>${y}</option>`).join('')}</select></div>
+  <select class="inp" name="yy" data-ch="dob" aria-label="${L('Год','Year')}"><option value="">${L('Год','Year')}</option>${Array.from({length:88},(_,i)=>yNow-13-i).map(y=>`<option ${r.f.yy==y?'selected':''}>${y}</option>`).join('')}</select></div>
   ${r.err&&r.err.dob?`<div class="ferr">${I.alert}${r.err.dob}</div>`:`<div class="fhint">${r.f.dd&&r.f.mm&&r.f.yy&&!V.dob(r.f.dd,r.f.mm,r.f.yy)?`<span style="color:var(--mint);font-weight:600">${L('Тебе','You are')} ${ageOf(`${r.f.yy}-${String(r.f.mm).padStart(2,'0')}-${String(r.f.dd).padStart(2,'0')}`)}.</span> `:''}${L('Нужна, чтобы подтвердить 18+. Дату никто не увидит. Ты выбираешь, показывать ли возраст в профиле.','Needed to confirm 18+. Nobody sees the date. You choose whether to show your age on your profile.')}</div>`}</div>
  <div class="hr"></div>
- <button class="check ${r.f.terms?'on':''} ${r.err&&r.err.terms?'err':''}" data-act="chk" data-v="terms" data-field="terms" role="checkbox" aria-checked="${!!r.f.terms}"><i>${I.check}</i><span>${L('Принимаю','I accept the')} <a href="#" data-act="terms">${L('условия и политику приватности','terms and privacy policy')}</a>${r.err&&r.err.terms?`<span class="ferr" style="margin-top:4px">${I.alert}${r.err.terms}</span>`:''}</span></button>
+ <button class="check ${r.f.terms?'on':''} ${r.err&&r.err.terms?'err':''}" data-act="chk" data-v="terms" data-field="terms" role="checkbox" aria-checked="${!!r.f.terms}"><i>${I.check}</i><span>${/* V21 (AUTH-004): the whole row toggles; the terms open from a separate link below */L('Принимаю условия и политику приватности','I accept the terms and privacy policy')}${r.err&&r.err.terms?`<span class="ferr" style="margin-top:4px">${I.alert}${r.err.terms}</span>`:''}</span></button>
+ <button class="btn text auto terms-read" data-act="terms">${L('Читать условия и политику','Read the terms and policy')}</button>
  <button class="check ${r.f.news?'on':''}" data-act="chk" data-v="news" role="checkbox" aria-checked="${!!r.f.news}"><i>${I.check}</i><span>${L('Присылать новости FetUre на почту','Email me FetUre news')} <span class="note">· ${L('необязательно','optional')}</span></span></button>
  </div></div><div class="ctabar"><div class="wrap"><button class="btn primary" data-act="saveA04">${L('Дальше','Continue')}</button></div></div>`;}};
 I.at=sv('<circle cx="12" cy="12" r="3.6"/><path d="M15.6 12v1.4a2.6 2.6 0 0 0 5.2 0V12a8.8 8.8 0 1 0-3.5 7"/>');
@@ -5301,7 +5354,7 @@ const nickOkHTML=()=>`<div class="fok">${I.okc}${L('Ник свободен','Ni
 function nickVerdict(ok){const f=$('[data-field="nick"]');if(!f)return;$('.fok',f)?.remove();if(!ok)return;const h=$('.fhint',f);if(h){h.style.display='none';h.insertAdjacentHTML('afterend',nickOkHTML());}}
 let nickT;IN.nick=el=>{IN.f(el);clearTimeout(nickT);const r=cur(),v=el.value;r.nickOk=null;nickVerdict(false);setErr('nick','');
  nickT=setTimeout(()=>{if(cur()!==r||r.f.nick!==v||v.trim().length<3)return;const e=V.nick(v);setErr('nick',e);if(!e){r.nickOk=v;nickVerdict(true);}},450);};
-CH.dob=el=>{const r=cur();r.f[el.name]=el.value;r.dirty=true;if(r.err)delete r.err.dob;refresh();};
+CH.dob=el=>{const r=cur();r.f[el.name]=el.value;r.dirty=true;r.err=r.err||{};delete r.err.dob;/* V21 (AUTH-011): a wrong date shows right away */if(r.f.dd&&r.f.mm&&r.f.yy){const d=V.dob(r.f.dd,r.f.mm,r.f.yy);if(d&&d!=='U18')r.err.dob=d;}refresh();};
 ACT.chk=a=>{const r=cur();r.f[a.dataset.v]=!r.f[a.dataset.v];if(r.err)delete r.err[a.dataset.v];refresh();};
 ACT.saveA04=a=>{const r=cur();r.err={};
  const n=V.nick(fv('nick'));if(n)r.err.nick=n;
@@ -5309,19 +5362,24 @@ ACT.saveA04=a=>{const r=cur();r.err={};
  if(!r.f.terms)r.err.terms=L('Без согласия с условиями аккаунт не создать','You need to accept the terms to create an account');
  if(Object.keys(r.err).length){refresh();shakeFirstErr();toast(L('Проверь отмеченные поля','Check the highlighted fields'),{type:'err'});return;}
  if(d==='U18'){go('A04X',{},{replace:false});return;}
+ /* V21 (AUTH-023): after «под 18» a new date needs an explicit confirmation */
+ if(r.u18retry&&!r.u18ok){ask({icon:'shield',tone:'a',title:L('Подтверди дату рождения','Confirm your date of birth'),text:L(`Ты меняешь дату после сообщения, что тебе нет 18. Подтверди, что ${r.f.dd}.${String(r.f.mm).padStart(2,'0')}.${r.f.yy} — твоя настоящая дата рождения. Неверная дата нарушает правила FetUre — такой аккаунт блокируют.`,`You changed the date after we said you are under 18. Confirm that ${r.f.dd}.${String(r.f.mm).padStart(2,'0')}.${r.f.yy} is your real date of birth. A false date breaks FetUre rules — such accounts are blocked.`),ok:L('Подтверждаю','I confirm'),cancel:L('Изменить','Change')}).then(ok=>{if(ok&&cur()===r){r.u18ok=true;ACT.saveA04(a);}});return;}
  run(a,()=>{
   // a new account starts empty: keep only the language and the open sign-up flow
   const nav=S.nav,lang=S.lang;S=freshState('new');S.nav=nav;S.lang=lang;QA.seen={};
   S.me.nick=fv('nick').trim();S.me.dob=`${r.f.yy}-${String(r.f.mm).padStart(2,'0')}-${String(r.f.dd).padStart(2,'0')}`;S.me.email=r.p.email||'';S.me.methods=[r.p.via||'email'];S.me.detailsVis='only';/* V21 (AUTH-016): private by default */
   go('A05',{step:1});});};
-SC.A04X={auth:1,title:()=>'18+',render:()=>`${bar('',{back:1})}<div class="view nodock"><div class="auth-wrap">${empty('shield',L('FetUre только для взрослых','FetUre is for adults only'),L('Судя по дате рождения, тебе ещё нет 18. Мы не создали аккаунт и не сохранили введённые данные.','Based on your date of birth you’re not 18 yet. We didn’t create an account or keep what you entered.'),`<button class="btn soft" data-back>${L('Дата указана неверно','The date is wrong')}</button><button class="btn text" data-act="toWelcome">${L('На главную','Back to start')}</button>`)}</div></div>`};
-ACT.toWelcome=()=>{S.nav.auth=[{id:'A01',p:{},f:{}}];render('back');};
+SC.A04X={auth:1,title:()=>'18+',render:()=>`${bar('',{back:1})}<div class="view nodock"><div class="auth-wrap">${empty('shield',L('FetUre только для взрослых','FetUre is for adults only'),L('Судя по дате рождения, тебе ещё нет 18. Мы не создали аккаунт и не сохранили введённые данные.','Based on your date of birth you’re not 18 yet. We didn’t create an account or keep what you entered.'),`<button class="btn soft" data-act="u18Fix">${L('Дата указана неверно','The date is wrong')}</button><button class="btn text" data-act="toWelcome">${L('На главную','Back to start')}</button>`)}</div></div>`};
+/* V21 (AUTH-010): «На главную» drops the sign-up from history — Back does not bring the form or its data back */
+ACT.toWelcome=()=>{S.nav.auth=[{id:'A01',p:{},f:{}}];render('back');startNavHistory();};
+/* V21 (AUTH-023): «Дата указана неверно» returns to the form with an empty date; the new date is confirmed explicitly */
+ACT.u18Fix=()=>{const st=S.nav.auth;if(cur().id==='A04X')st.pop();const r=cur();if(r.id!=='A04'){go('A04',{});return;}r.f.dd=r.f.mm=r.f.yy='';r.err={};r.u18retry=true;r.u18ok=false;render('back');};
 
 /* A05 — optional first steps: identity (private by default) → where to start */
 SC.A05={auth:1,title:()=>L('Первые шаги','First steps'),render:(p,r)=>{
  /* community first — interests → communities. Quizzes are «скоро» (owner, 15.10) and no longer part of onboarding. Dating is not part of onboarding. */
  if(p.step>=2){r.f.tp=r.f.tp||[];const pop=['shibari','bondage','talk','aftercare','slow','latex','roleplay','sensory','intimacy','rituals','service','experiments'];const comms=Object.keys(COMMUNITIES).filter(c=>!COMMUNITIES[c].hidden&&(!r.f.tp.length||COMMUNITIES[c].topics.some(t=>r.f.tp.includes(t)))).slice(0,4);
-  return `${bar('',{back:1,actions:`<span class="pill">3 / 3</span>`})}<div class="view nodock cta1"><div class="auth-wrap">
+  return `${bar('',{back:1})}<div class="view nodock cta1"><div class="auth-wrap">
   <div class="steps"><i class="on"></i><i class="on"></i><i class="on"></i></div><h2 class="t">${L('Что тебе интересно?','What are you into?')}</h2>
   ${grp(L('Интересы','Interests'),`<div class="chips">${pop.map(t=>chipBtn(t,topic(t),r.f.tp.includes(t),'onbTopic')).join('')}</div>`)}
   <div class="grp"><div class="grp-t"><span>${L('Сообщества для тебя','Communities for you')}</span></div>${comms.map(c=>`<div class="onb-c">${/* V21 (AUTH-017): no app screens inside sign-up — the card opens a short preview sheet */commCard(c).replace('data-go="C03"',`data-act="onbPreview" data-v="${esc(c)}"`)}${onbJoinBtn(c)}</div>`).join('')}</div>
@@ -5330,7 +5388,7 @@ SC.A05={auth:1,title:()=>L('Первые шаги','First steps'),render:(p,r)=>
  /* V21 (AUTH-016): the answers below are sensitive — say who sees them; «only you» by default (private by default) */
  const dv=r.f.detailsVis||'only',dvNote={only:L('Гендер, ориентацию, роль и статус увидишь только ты. Изменить можно в «Я → Видимость».','Only you see your gender, orientation, role and status. Change it in Me → Visibility.'),granted:L('Увидят только те, кому ты откроешь приватную часть.','Only people you open your private part to will see them.'),all:L('Увидят все, кто откроет твой профиль.','Everyone who opens your profile will see them.')}[dv];
  const visSec=`<section class="fin"><div class="fin-t"><b>${L('Кто увидит ответы ниже','Who sees the answers below')}</b></div>${choiceChips([['only',L('Только ты','Only you')],['granted',L('По доступу','By access')],['all',L('Все','Everyone')]],dv,'onbDetailsVis')}<p class="fhint mt8">${dvNote}</p></section>`;
- return `${bar(L('О тебе','About you'),{back:1,actions:`<span class="pill">2 / 3</span>`})}<div class="view nodock cta2"><div class="auth-wrap identity-onboarding"><div class="steps"><i class="on"></i><i class="on"></i><i></i></div><section class="fin"><div class="fin-t"><b>${L('Ты здесь с партнёром?','Are you here with a partner?')}</b></div>${choiceChips([['yes',L('Да, вместе','Yes, together')],['no',L('Нет, только я','No, just me')]],r.f.withPartner||'','onbPartner')}${r.f.withPartner==='yes'?`<p class="fhint mt8">${L('После регистрации пригласишь партнёра.','After sign-up you’ll invite your partner.')}</p>`:''}</section>${visSec}${identityFields().map(([k,title])=>`<section class="fin"><div class="fin-t"><b>${title}</b>${IDENTITY_MULTI.includes(k)?`<span>${L('можно несколько','pick any')}</span>`:''}</div>${identityChoices(k,r.f[k],'idPick')}</section>`).join('')}</div></div></div><div class="ctabar"><div class="wrap"><button class="btn primary" data-act="a05next">${L('Сохранить и продолжить','Save and continue')}</button><button class="btn secondary" data-act="a05skip">${L('Заполнить позже','Fill in later')}</button></div></div>`;}};
+ return `${bar('',{back:1})}<div class="view nodock cta2"><div class="auth-wrap identity-onboarding"><div class="steps"><i class="on"></i><i class="on"></i><i></i></div><h2 class="t">${/* V21 (AUTH-014): one indicator (the bar) and the same h2 on every step */L('Расскажи о себе','Tell us about you')}</h2><section class="fin"><div class="fin-t"><b>${L('Ты здесь с партнёром?','Are you here with a partner?')}</b></div>${choiceChips([['yes',L('Да, вместе','Yes, together')],['no',L('Нет, только я','No, just me')]],r.f.withPartner||'','onbPartner')}${r.f.withPartner==='yes'?`<p class="fhint mt8">${L('После регистрации пригласишь партнёра.','After sign-up you’ll invite your partner.')}</p>`:''}</section>${visSec}${identityFields().map(([k,title])=>`<section class="fin"><div class="fin-t"><b>${title}</b>${IDENTITY_MULTI.includes(k)?`<span>${L('можно несколько','pick any')}</span>`:''}</div>${identityChoices(k,r.f[k],'idPick')}</section>`).join('')}</div></div></div><div class="ctabar"><div class="wrap"><button class="btn primary" data-act="a05next">${L('Сохранить и продолжить','Save and continue')}</button><button class="btn secondary" data-act="a05skip">${L('Заполнить позже','Fill in later')}</button></div></div>`;}};
 ACT.onbPartner=a=>{const r=cur();r.f.withPartner=r.f.withPartner===a.dataset.v?null:a.dataset.v;refresh();};
 ACT.idPick=a=>{const r=cur(),k=a.dataset.k;if(!IDENTITY_KEYS.includes(k))return;r.f[k]=toggleIdentityValue(r.f[k],k,a.dataset.v);r.dirty=true;refresh();};
 function applyIdentityDraft(){const r=cur();Object.assign(S.me,identityDraft(r.f));S.me.detailsVis=r.f.detailsVis||'only';r.dirty=false;}
@@ -8508,6 +8566,23 @@ const nickTaken=v=>{v=v.trim().toLowerCase();return TAKEN.includes(v)||Object.ke
 {const _vn=V.nick;V.nick=function(v){const e=_vn.call(this,v);if(e)return e;const t=v.trim();
  if(!/^[a-z0-9](?:[a-z0-9_]|\.(?!\.))*[a-z0-9]$/i.test(t)||!/[a-z]/i.test(t))return L('Начни и закончи буквой или цифрой, без «..», хотя бы одна буква','Start and end with a letter or digit, no “..”, at least one letter');
  if(nickTaken(t))return L('Этот ник уже занят','This nickname is taken');return '';};}
+/* V21 (AUTH-007): no «..», a local part of at most 64 characters */
+{const _ve=V.email;V.email=function(v){const e=_ve.call(this,v);if(e)return e;const t=v.trim(),loc=t.split('@')[0];if(/\.\./.test(t)||loc.length>64||/^\.|\.@|@\./.test(t))return L('Похоже, в адресе ошибка. Пример: name@mail.com','That doesn’t look like an email. Example: name@mail.com');return '';};}
+/* V21 (AUTH-015): the terms and the privacy policy can be read before accepting them (short structured text; the final legal wording is the owner's) */
+const LEGAL=()=>({terms:[L('Условия использования','Terms of use'),[
+ [L('Кто может пользоваться','Who can use FetUre'),L('Только взрослые, 18+. Один человек — один аккаунт; пара — общий профиль двух аккаунтов.','Adults only, 18+. One person — one account; a couple is a shared profile of two accounts.')],
+ [L('Согласие прежде всего','Consent first'),L('Нельзя публиковать чужие фото и данные без разрешения, давить, угрожать и писать непрошеные сообщения.','No posting other people’s photos or data without permission, no pressure, threats or unsolicited messages.')],
+ [L('Публикации и модерация','Posts and moderation'),L('Фото и публикации могут проверяться. Нарушения скрываем, за повторные — ограничиваем аккаунт.','Photos and posts may be reviewed. We hide violations and restrict accounts that repeat them.')],
+ [L('Premium','Premium'),L('Premium добавляет удобства в знакомствах и не покупает чужое согласие. Отмена — в магазине приложений.','Premium adds dating conveniences and never buys anyone’s consent. Cancel in the app store.')],
+ [L('Удаление','Deletion'),L('Удалить аккаунт можно в любой момент в «Настройки → Мои данные и удаление».','You can delete your account any time in Settings → Your data & deletion.')]]],
+ privacy:[L('Политика приватности','Privacy policy'),[
+ [L('Что мы храним','What we store'),L('Почту, дату рождения (только для проверки 18+), профиль, публикации, переписку и настройки.','Your email, date of birth (only to confirm 18+), profile, posts, messages and settings.')],
+ [L('Кто что видит','Who sees what'),L('У каждого блока профиля есть метка: «Видят все», «По доступу» или «Только ты». Приватная часть открывается только тем, кому разрешишь.','Every profile block has a tag: “Everyone”, “By access” or “Only you”. Your private part opens only to people you allow.')],
+ [L('Проверки','Checks'),L('Селфи для проверки возраста или фото-верификации видит только проверка; в профиль оно не попадает и удаляется после решения.','A selfie for the age check or photo verification is seen only by the review; it never reaches your profile and is deleted after the decision.')],
+ [L('Твои права','Your rights'),L('Скачать свои данные и удалить аккаунт можно в любой момент и бесплатно.','You can download your data and delete your account any time, for free.')]]]});
+ACT.legalDoc=a=>{const doc=LEGAL()[a.dataset.v];if(!doc)return;sheet(()=>({title:doc[0],body:doc[1].map(([h,t])=>`<h3 class="t">${h}</h3><p class="note" style="margin:0 0 14px">${t}</p>`).join(''),foot:`<button class="btn soft" data-act="terms">${I.back}${L('Назад','Back')}</button>`}));};
+/* V21 (AUTH-021): the sign-up forms carry the logo (shown as a card header on a computer) */
+['A02','A03','A04','A04X','A05'].forEach(id=>{const _r=SC[id].render;SC[id].render=function(...a){return _r.apply(this,a).replace('<div class="auth-wrap">',`<div class="auth-wrap"><div class="auth-logo" aria-hidden="true"><img src="${LOGO()}" alt=""><b>Fet<i>Ure</i></b></div>`);};});
 /* ==== V21 · auth · JS end ==== */
 /* · */
 /* · */
