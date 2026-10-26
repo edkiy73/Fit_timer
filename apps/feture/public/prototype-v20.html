@@ -6077,7 +6077,7 @@ SC.D03={root:1,tab:'people',title:()=>L('Люди','People'),render:(p,r)=>{
  let list=pool();const requested=S.ui.datingCandidate;if(requested&&list.includes(requested)){list=[requested,...list.filter(id=>id!==requested)];S.deckOrder=[requested,...S.deckOrder.filter(id=>id!==requested)];}delete S.ui.datingCandidate;
  if(!list.length)return head+`<div class="view"><div class="wrap">${deckEmpty()}</div></div>`;
  return head+`<div class="view deckmode"><div class="deck" id="deck">${deckInner(list)}</div></div>`;},
- after:(p)=>{if((p.sub||'discover')==='discover'&&$('#deck')){initDeck();/* the swipe tip is a short toast, once per session */if(!S.ui.deckCoach&&(matchMedia('(pointer:coarse)').matches||innerWidth<768)){S.ui.deckCoach=1;toast(L('Вправо — нравится, влево — пропустить','Swipe right to like, left to pass'),{type:'info',ms:2600});$('#toasts')?.classList.add('at-top');}}if(p.sub==='likes')initLikeSwipes();fillJars();}};
+ after:(p)=>{if((p.sub||'discover')==='discover'&&$('#deck')){initDeck();/* the swipe tip is a short toast, once per session */if(!S.ui.deckCoach&&matchMedia('(any-pointer:coarse)').matches){/* any touch input — phone, tablet of any size, touch laptop; a mouse-only computer uses the buttons */S.ui.deckCoach=1;toast(L('Вправо — нравится, влево — пропустить','Swipe right to like, left to pass'),{type:'info',ms:2600});$('#toasts')?.classList.add('at-top');}}if(p.sub==='likes')initLikeSwipes();fillJars();}};
 ACT.pplSub=a=>setSub(a.dataset.v);
 
 /* D01 — dating is off: no candidate photos, names or counts. V7: two honest ways in. */
@@ -6118,15 +6118,11 @@ function card(id,pos){const p=PEOPLE[id];const ix=(S.ui.ph||{})[id]||0;const sh=
   <div class="stamp l">${L('Нравится','Like')}</div><div class="stamp n">${L('Пропустить','Pass')}</div>
   <div class="pc-info"><h2 class="pc-name"><span class="pcn">${esc(pname(id))}</span>${p.age?`<span>${p.age}</span>`:''}${nameBadges(p)}</h2>
    <div class="pc-who">${p.pair?`<span>${esc(whoLine(id))}</span>`:''}${placeLine(id)?`<span class="pl">${I.pin}${esc(placeLine(id))}</span>`:''}${p.online?`<span class="on">${L('в сети','online')}</span>`:''}</div>
-   <div class="pc-hint">${I.down}${L('Листай вниз — что у вас общего','Scroll down — what you share')}</div></div>
+   ${followCounts(id)}<div class="pc-hint">${I.down}${L('Листай вниз — весь профиль и что у вас общего','Scroll down — the whole profile and what you share')}</div></div>
  </div>
- <div class="pc-body">
-  ${compatBlock(id)}
-  <div class="sec">${L('О себе','About')}</div>${md(T(p.bio),'bio')}${detailsGroup(id)}
-  <div class="sec">${L('Интересы','Interests')}</div>${jarShelf(pubJars(id),{pre:1,act:'topic',who:id,moreAct:'allJars'})}
-  ${post?`<div class="sec">${L('Публикация','Post')} · ${F.rel(post.t)}</div><button class="quote" data-go="F05" data-id="${post.id}"><p>${esc(T(post.text))}</p>${ic('chev',18)}</button>`:''}
-  <div class="mt16" data-private-context="${id}">${privSection(id)}</div>
-  <div class="pc-foot"><button class="btn soft" data-go="P01" data-p='${esc(JSON.stringify({id,actor:datingActor()}))}'>${L('Полный профиль','Full profile')}</button><button class="btn soft" data-act="follow" data-v="${id}">${social('me').follows.has(id)?L('В подписках','Following'):L('Подписаться','Follow')}</button></div>
+ <div class="pc-body pc-full">
+  ${/* V20: Discover shows the whole profile in the profile's own layout, not a shorter copy */pos==='top'?profileView(id,{p:{}},{bodyOnly:1}):''}
+  <div class="pc-foot"><button class="btn soft" data-act="follow" data-v="${id}">${social(activeActor()).follows.has(id)?`${I.check}${L('В подписках','Following')}`:activeActor()==='couple'?L('Подписаться от\u00a0пары','Follow as us'):L('Подписаться','Follow')}</button></div>
   
  </div></article>`;}
 /** private layer: no real data is sent before access — the veil hides placeholders only */
@@ -6335,6 +6331,8 @@ function profileView(id,r,o={}){
   ${galleryBlock(id,self,o)}
   ${self?ownPrivBlock(owner):me?(privSection(id,o)||(o.asOther&&!hasPrivatePart(id)?`<div class="owner-only">${myPrivSection(owner)}</div>`:'')):`<div data-private-context="${id}">${privSection(id)}</div>`}
   ${activityBlock(id,[['posts',L('Публикации','Posts'),posts.length,()=>`<div class="posts">${inert(posts.slice(0,3).map((x,i)=>postCard(x,{i})).join(''))}</div>`],['notes',L('Статьи','Notes'),notes.length||(self?1:0),()=>notes.length?`${me||o.asOther?'':noteSubRow(id)}<div class="posts">${inert(notes.slice(0,3).map((x,i)=>postCard(x,{i})).join(''))}</div>`:`<div class="note-empty"><p class="note">${L('Статья — длинный текст с заголовком: история, опыт, разбор.','An article is a long read with a title: a story, an experience, a breakdown.')}</p><button class="btn soft" data-go="F07" data-p='${esc(JSON.stringify({x:'note',...(id==='couple'?{author:'couple'}:{})}))}'>${I.doc}${L('Написать статью','Write an article')}</button></div>`],['events',L('События','Events'),orgEvents.length,()=>orgEvents.map(e=>eventCard(e,{row:1,neutral:o.asOther})).join('<div style="height:8px"></div>')],...(actItems.length?[['activity',L('Активность','Activity'),actItems.length,()=>activityList(id,actItems,{self:self})]]:[]),['comm',L('Сообщества','Communities'),modOf.length,()=>modOf.map((c,i)=>commCard(c,{i})).join('')]])}`;
+ /* the same profile under a Discover card: everything below the photo, without the page's own buttons */
+ if(o.bodyOnly)return `${lede}${socialContext(id,orgEvents,modOf)}${pairLine(id,o)}<div class="mt12">${compatBlock(id,{compact:1})}</div>${body}`;
  const html=`<header class="bar overlay">${o.root?(o.headL||''):`<button class="ibtn glass" data-back aria-label="${L('Назад','Back')}">${I.back}</button>`}<span style="flex:1"></span>${self?(o.headR||''):o.asOther?'':inert(`<button class="ibtn glass" data-act="profileMenu" data-v="${id}" aria-label="${L('Ещё','More')}">${I.more}</button>`)}</header>
  <div class="view ${o.root?'':'nodock '}top0 profile-page">${o.root?'<h1 class="sr-only">'+esc(meTabName())+'</h1>':''}<div class="wrap">
  ${o.banner||''}

@@ -167,5 +167,10 @@ Not verified: real devices, touch drag on hardware, a live couple on two clients
 
 - The card that covered the deck («Смахни вправо — нравится, влево — пропустить. Или нажми кнопки внизу.» with «Понятно») is gone.
 - On a phone the tip is now a short notice under the deck tabs: «Вправо — нравится, влево — пропустить». It shows once per session for 2.6 s and never covers the like and pass buttons.
-- On desktop, where you click the buttons, there is no tip.
+- The tip is shown wherever there is touch input (`any-pointer: coarse`): a phone, a tablet of any size, a touch laptop. A mouse-only computer uses the buttons and gets no tip.
+- **Discover shows the whole profile.** Under the photo the card no longer has its own shorter copy (about, details, interests, one post, «Полный профиль»). It renders the same body as the profile page, in the same layout:
+  - members, details, links, interests, gallery and the private part;
+  - posts, articles, events and communities, plus «Что у вас общего»;
+  - follower counts in the header.
+  - «Подписаться» stays at the end, and the like and pass buttons stay on the card.
 - The profile like button reads «Нравится от пары» (the dot between the words is gone). On a narrow phone, «Нравится от пары» and «Подписаться от пары» wrap as «Нравится / от пары» instead of being cut off.
