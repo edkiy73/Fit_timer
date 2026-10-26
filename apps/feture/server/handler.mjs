@@ -25,7 +25,7 @@ export const MAX_BODY = 16 * 1024;
 
 /**
  * @param {{db: Db, pepper: string, cfg: Cfg, commands: Record<string, Command>,
- *   authenticate: (req: Req) => Promise<{accountHash: string}>,
+ *   authenticate: (req: Req) => Promise<{accountHash: string, accountGeneration?: string}>,
  *   quota: (req: Req, coreKey: string) => Promise<boolean>,
  *   cors: (req: Req, res: Res) => boolean,
  *   log: (event: {requestId: string, action: string, outcome: string}) => void}} deps
@@ -51,8 +51,8 @@ export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota
         res.setHeader('Allow', 'POST, OPTIONS');
         return send(405, { ok: false, error: 'method_not_allowed' }, 'method_not_allowed');
       }
-      const { accountHash } = await authenticate(req);
-      if (!(await quota(req, accountHash))) {
+      const core = await authenticate(req);
+      if (!(await quota(req, core.accountHash))) {
         res.setHeader('Retry-After', '60');
         fail(429, 'rate_limited');
       }
@@ -64,15 +64,18 @@ export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota
       const parsed = cmd.input.safeParse(rest);
       if (!parsed.success) fail(400, 'invalid_input', { fields: [...new Set(parsed.error.issues.map(i => i.path.join('.') || '(root)'))] });
       const input = parsed.data;
-      const account = await resolveAccount(db, pepper, accountHash);
+      const account = await resolveAccount(db, pepper, core);
       const profileId = header(req, 'x-fe-profile');
+      // Membership is checked before a stored result can be replayed: a former member gets 403, not old results.
+      if (cmd.profile) await actingProfile(db, account.id, profileId, { write: cmd.write });
       /** @param {Q} q */
       const exec = async q => {
         const acting = cmd.profile ? await actingProfile(q, account.id, profileId, { write: cmd.write }) : null;
         return cmd.run(q, { account, acting, input, cfg });
       };
       const result = !cmd.write ? await exec(db)
-        : typeof input.opId === 'string' ? await once(db, account.id, { opId: input.opId, action, input }, exec)
+        // The acting profile is part of the request: the same opId under another profile is a conflict, not a replay.
+        : typeof input.opId === 'string' ? await once(db, account.id, { opId: input.opId, action, input: { profileId, input } }, exec)
         : await db.tx(exec);
       return send(200, { ok: true, ...result }, 'ok');
     } catch (error) {

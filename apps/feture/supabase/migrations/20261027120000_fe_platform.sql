@@ -83,6 +83,22 @@ create unique index profile_member_person_single on feture.profile_member (profi
   where profile_kind = 'person';
 create index profile_member_account on feture.profile_member (account_id) where state = 'active';
 
+-- A couple has at most two active members. The profile row lock serialises concurrent joins.
+create function feture.profile_member_couple_limit() returns trigger
+language plpgsql set search_path = pg_catalog, feture as $$
+begin
+  if new.profile_kind = 'couple' and new.state = 'active' then
+    perform 1 from feture.profile where id = new.profile_id for update;
+    if (select count(*) from feture.profile_member
+        where profile_id = new.profile_id and state = 'active' and account_id <> new.account_id) >= 2 then
+      raise exception 'feture_couple_full' using errcode = '23514';
+    end if;
+  end if;
+  return new;
+end $$;
+create trigger profile_member_couple_limit before insert or update of state on feture.profile_member
+  for each row execute function feture.profile_member_couple_limit();
+
 -- Partner consent: a widening change by one partner waits for the other (V21 guide §5.4).
 create table feture.partner_approval (
   id uuid primary key default feture.uuid_v7(),
@@ -129,6 +145,7 @@ create table feture.outbox (
   available_at timestamptz not null default now(),
   attempts integer not null default 0,
   locked_until timestamptz,
+  lock_token uuid,  -- fencing: only the worker holding the current claim may complete or retry it
   done_at timestamptz,
   last_error text
 );
@@ -163,6 +180,8 @@ create table feture.media_asset (
   approved_at timestamptz,
   removed_at timestamptz,
   check ((view_rule = 'timer') = (view_seconds is not null)),
+  -- Nothing is shown without an explicitness label; an unlabelled approval would default to public.
+  check (state <> 'approved' or explicitness <> 'unknown'),
   -- Avatars and community/event covers are public everywhere, so they can never be approved as explicit.
   check (not (purpose in ('avatar', 'community', 'event') and explicitness = 'explicit' and state = 'approved'))
 );
@@ -215,3 +234,4 @@ begin
 end $$;
 grant usage on sequence feture.outbox_id_seq to feture_api;
 grant execute on function feture.uuid_v7() to feture_api;
+grant execute on function feture.profile_member_couple_limit() to feture_api;

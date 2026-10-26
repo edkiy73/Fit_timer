@@ -58,13 +58,14 @@ export function presign(c, { method, url, headers = {}, expiresSeconds, now = ne
   return `${u.origin}${encPath(u.pathname)}?${qs}&X-Amz-Signature=${signature(c, day, toSign)}`;
 }
 
-/** Headers for a server-side request without body (HEAD, DELETE, GET).
- * @param {Creds} c @param {{method: string, url: string, now?: Date}} req @returns {Record<string, string>} */
-export function signHeaders(c, { method, url, now = new Date() }) {
+/** Headers for a server-side request. Without a body (HEAD, DELETE, GET) the payload hash is that of ''.
+ * A server PUT signs `UNSIGNED-PAYLOAD` (TLS protects the body; the key itself is server-chosen).
+ * @param {Creds} c @param {{method: string, url: string, now?: Date, unsignedPayload?: boolean}} req @returns {Record<string, string>} */
+export function signHeaders(c, { method, url, now = new Date(), unsignedPayload = false }) {
   const u = new URL(url);
   const date = amzDate(now), day = date.slice(0, 8);
   const scope = `${day}/${c.region}/${c.service ?? 's3'}/aws4_request`;
-  const payload = hex('');
+  const payload = unsignedPayload ? 'UNSIGNED-PAYLOAD' : hex('');
   const headers = { host: u.host, 'x-amz-content-sha256': payload, 'x-amz-date': date };
   const h = canonicalHeaders(headers);
   const qs = [...u.searchParams].map(([k, v]) => enc(k) + '=' + enc(v)).sort().join('&');

@@ -35,6 +35,13 @@ export function needsPartner(acting, kind) {
  * @param {{kind: string, targetType: string, targetId: string | null, change: Record<string, unknown>, summary: unknown[]}} req */
 export async function requestApproval(q, acting, req) {
   if (!needsPartner(acting, req.kind)) fail(500, 'approval_not_needed');
+  // Expired or stale pendings would otherwise hold the one-pending-per-target slot forever.
+  await q.query(
+    `update feture.partner_approval a set state = case when a.expires_at <= now() then 'expired' else 'cancelled' end, decided_at = now()
+     from feture.profile p
+     where p.id = a.profile_id and a.profile_id = $1 and a.state = 'pending'
+       and (a.expires_at <= now() or a.safety_epoch <> p.safety_epoch)`,
+    [acting.profileId]);
   const rows = await q.query(
     `insert into feture.partner_approval (profile_id, kind, target_type, target_id, change, summary, requested_by, safety_epoch)
      select $1, $2, $3, $4, $5, $6, $7, safety_epoch from feture.profile where id = $1
@@ -45,22 +52,26 @@ export async function requestApproval(q, acting, req) {
   return { approvalId: /** @type {string} */ (rows[0].id) };
 }
 
-/** The partner (never the requester) approves or returns a pending change.
+/** The partner (never the requester) approves or returns a pending change. An expired or stale change is
+ * closed and reported as `{state}` without applying it (not thrown, so the closing write commits).
+ * The profile row is locked too: a concurrent narrowing (narrowCouple) waits for this decision or vice versa.
  * @param {Q} q @param {Acting} acting @param {{approvalId: string, choice: 'approve' | 'return'}} input */
 export async function decideApproval(q, acting, { approvalId, choice }) {
   const [row] = await q.query(
     `select a.id, a.profile_id, a.kind, a.target_type, a.target_id, a.change, a.summary, a.state, a.requested_by,
        a.expires_at <= now() expired, a.safety_epoch <> p.safety_epoch stale
      from feture.partner_approval a join feture.profile p on p.id = a.profile_id
-     where a.id = $1 and a.profile_id = $2 for update of a`,
+     where a.id = $1 and a.profile_id = $2 for update of a, p`,
     [approvalId, acting.profileId]);
   if (!row) fail(404, 'not_found');
   if (row.state !== 'pending') fail(409, 'conflict', { state: row.state });
   if (row.requested_by === acting.accountId) fail(403, 'forbidden');
   if (row.expired || row.stale) {
     // Expired, or a partner narrowed something since (hid the couple, closed access): never apply.
-    await close(q, row.id, row.expired ? 'expired' : 'cancelled', null);
-    fail(409, 'conflict', { state: row.expired ? 'expired' : 'cancelled' });
+    const state = row.expired ? 'expired' : 'cancelled';
+    await close(q, row.id, state, null);
+    await enqueue(q, 'decide.resolved', acting.profileId, { approvalId: row.id, kind: row.kind, state, for: row.requested_by });
+    return { state, applied: false };
   }
   if (choice === 'approve') {
     const kind = KINDS.get(row.kind);
@@ -70,7 +81,7 @@ export async function decideApproval(q, acting, { approvalId, choice }) {
   const state = choice === 'approve' ? 'approved' : 'returned';
   await close(q, row.id, state, acting.accountId);
   await enqueue(q, 'decide.resolved', acting.profileId, { approvalId: row.id, kind: row.kind, state, for: row.requested_by });
-  return { state };
+  return { state, applied: choice === 'approve' };
 }
 
 /** The requester withdraws their own pending change. @param {Q} q @param {Acting} acting @param {string} approvalId */
@@ -105,7 +116,9 @@ async function close(q, id, state, by) {
 
 /** Any member's immediate safety action on a couple (hide from Discover, close the private part, revoke all,
  * stop the couple): bumps the epoch and cancels every pending widening, so nothing approved later can
- * reopen what was just closed. @param {Q} q @param {Acting} acting @param {string} reason short code */
+ * reopen what was just closed. Narrowing commands call this FIRST, before their own revocations: the epoch
+ * update locks the profile row, so a decision already applying a widening finishes before the revocation reads.
+ * @param {Q} q @param {Acting} acting @param {string} reason short code */
 export async function narrowCouple(q, acting, reason) {
   if (acting.kind !== 'couple') return { cancelled: 0 };
   await q.query('update feture.profile set safety_epoch = safety_epoch + 1, updated_at = now() where id = $1', [acting.profileId]);
