@@ -14,6 +14,7 @@ src=swap(src,"assert.ok(run(\"SC.P01.render(cur().p,cur())\").includes('class=\"
 /* V20: «Что у вас общего», a grant page and access asked from a profile follow the dock — not the actor saved in the route */
 {const A="assert.equal(run(\"compareActor('kira')\"),'me');",B="assert.equal(run(\"compareActor('kira')\"),'couple','V20: compare follows the dock, not the route');";src=swap(src,"src+=`\n// ---- V14 ----","src=swap(src,"+JSON.stringify(A)+","+JSON.stringify(B)+");\nsrc+=`\n// ---- V14 ----");}
 /* V20: an article is a post — its pictures are gallery tiles like any other */
+{const A="assert.ok(run(\"linkIssue('tomeva')\").length>0,'couples have no personal links');",B="assert.equal(run(\"linkIssue('tomeva')\"),'','V20.2: a link can be with a couple');";src=swap(src,"src+=`\n// ---- V14 ----","src=swap(src,"+JSON.stringify(A)+","+JSON.stringify(B)+");\nsrc+=`\n// ---- V14 ----");}
 {const A="assert.ok(json(\"galleryPosts('noa').every(x=>x.type!=='note')\"),'notes are not gallery tiles');",B="assert.ok(json(\"galleryPosts('noa').length>0\"),'V20: articles with pictures are gallery tiles');";src=swap(src,"src+=`\n// ---- V14 ----","src=swap(src,"+JSON.stringify(A)+","+JSON.stringify(B)+");\nsrc+=`\n// ---- V14 ----");}
 /* V19: the composer takes its author from the one mode, not from a composer-only switch */
 src=swap(src,"S.composeActor='couple';setPairTrust(true)","S.actor='couple';setPairTrust(true)");
@@ -24,12 +25,15 @@ src=swap(src,'`\n// ---- V14 ----',`\`
 assert.equal(run("meTabName()"),'Я','the tab is called «Я»');
 prepare('X01');run("S.nav.tab='me';S.nav.stacks.me=[{id:'X01',p:{},f:{}}]");let x=run("SC.X01.render(cur().p,cur())");
 assert.ok(x.includes('data-act="meLayer"')&&!x.includes('profile-page'),'«Я» is one screen with three layers, not a copy of the public profile');
-for(const k of ['basics','details','priv'])assert.ok(x.includes('&quot;only&quot;:&quot;'+k+'&quot;')||x.includes('"only":"'+k+'"'),'block '+k+' opens its own short editor');
+for(const k of ['basics','details'])assert.ok(x.includes('&quot;only&quot;:&quot;'+k+'&quot;')||x.includes('"only":"'+k+'"'),'block '+k+' opens its own short editor');
+assert.ok(!x.includes('&quot;only&quot;:&quot;priv&quot;')&&!x.includes('"only":"priv"'),'V20.2: the private part is not on the Profile tab');
 assert.ok(!x.includes('shareProfile')&&!x.includes('privLens')&&!x.includes('demoNote'),'no share button, no in-page lens, no demo buttons');
 assert.ok(!x.includes('data-go="P07"')&&!x.includes('data-go="Q01"'),'no access or couple-settings shortcuts mixed into the profile layer');
 run("ACT.meLayer({dataset:{v:'vis'}})");x=run("SC.X01.render(cur().p,cur())");
-assert.ok(x.includes('data-sel="k4mode"')&&x.includes('data-sel="reqFrom"')&&x.includes('lv&quot;:&quot;card')||x.includes('"lv":"card"'),'Visibility holds Discover, who may ask and the Discover card preview');
-assert.ok(x.includes('data-act="revoke"'),'who has access is managed in Visibility');
+assert.ok(x.includes('data-sel="k4mode"')&&x.includes('data-sel="k4act"')&&(x.includes('lv&quot;:&quot;card')||x.includes('"lv":"card"')),'V20.2: Visibility holds Discover, the card preview and who sees activity');
+assert.ok(!x.includes('data-act="revoke"')&&!x.includes('data-sel="reqFrom"'),'V20.2: access lives on the Private tab');
+run("ACT.meLayer({dataset:{v:'priv'}})");x=run("SC.X01.render(cur().p,cur())");
+assert.ok(x.includes('data-act="revoke"')&&x.includes('data-sel="reqFrom"')&&(x.includes('&quot;only&quot;:&quot;priv&quot;')||x.includes('"only":"priv"')),'V20.2: the Private tab holds what access opens, who has it and who may ask');
 run("ACT.meLayer({dataset:{v:'mine'}})");x=run("SC.X01.render(cur().p,cur())");
 assert.ok(x.includes('data-go="F10"')&&x.includes('mine&quot;:1')||x.includes('"mine":1'),'Mine is lists only, incl. what others shared with me');
 assert.ok(!x.includes('data-sel=')&&!x.includes('editJar'),'Mine has no settings and no profile content');
@@ -145,6 +149,34 @@ run("ACT.pairMode({dataset:{v:'off'}})");assert.equal(run("coupleProfile().datin
 // reply boxes name the couple
 run("S.actor='couple';S.nav.stacks.feed=[{id:'F05',p:{id:'p1'},f:{}}]");assert.ok(run("SC.F05.render(cur().p,cur())").includes('Ответить от пары'),'the reply box says «от пары»');run("S.actor='me'");
 console.log('PASS V20.1: couple events and communities, per-profile blocks, couple discover mode, «от пары» texts');
+// ---- V20.2: «Я» by topic, couple parity, staged photo order, re-review only for real changes
+prepare('X01');run("S.actor='me';S.nav.tab='me';S.nav.stacks.me=[{id:'X01',p:{},f:{}}]");x=run("SC.X01.render(cur().p,cur())");
+assert.ok(!x.includes('me18-st'),'no status chips under the name');for(const v of ['profile','priv','vis','mine'])assert.ok(x.includes('data-act="meLayer" data-v="'+v+'"'),'tab '+v);
+assert.ok(x.includes('data-act="linkAnswer"'),'a new link request is answered right on the Profile tab');
+run("S.actor='couple'");x=run("SC.X01.render(cur().p,cur())");assert.ok(x.includes('Eva')&&x.includes('data-act="linkAnswer"'),'the couple has links and answers its requests in place');
+assert.ok(run("todoItems().some(i=>i.k==='link'&&linkSelf(i.l)==='couple')"),'the couple’s link requests reach «Нужно решить»');
+run("ACT.linkAnswer({dataset:{v:'lk10|yes'}})");assert.equal(run("links().find(l=>l.id==='lk10').status"),'ok','the couple confirms a link');
+assert.equal(run("linkIssue('nikajonas')"),'','the couple can propose a link to another couple');assert.ok(run("linkIssue(S.pair.with)").length>0,'not to its own member');
+run("S.nav.stacks.me.push({id:'P22',p:{id:'nikajonas'},f:{}});SC.P22.render(cur().p,cur())");run("var lkP=ACT.linkSend("+stub+")");await finish(run("lkP"));
+assert.ok(run("links().some(l=>l.a==='couple'&&l.b==='nikajonas'&&l.by==='couple')"),'the request goes from the couple');
+run("S.nav.stacks.me=[{id:'X01',p:{layer:'vis'},f:{}}]");x=run("SC.X01.render(cur().p,cur())");for(const k of ['k4social','k4likes'])assert.ok(x.includes('data-act="'+k+'"'),'couple has '+k);for(const k of ['k4act','k4mention'])assert.ok(x.includes('data-sel="'+k+'"'),'couple has '+k);
+run("S.pairMember='partner';setPairTrust(false);S.pairMember='me';S.pair.proposal=null;S.pair.draft=null;coupleProfile().activityVis='all'");
+run("ACT.k4act({dataset:{v:'off',k:'couple'}})");assert.equal(run("coupleProfile().activityVis"),'off','closing applies at once');
+run("ACT.k4act({dataset:{v:'all',k:'couple'}})");assert.equal(run("coupleProfile().activityVis"),'off','opening up waits for the partner');assert.equal(run("S.pair.proposal?.status"),'pending');assert.ok(run("pendingSetting('activityVis')"));
+assert.ok(run("proposalDiff(S.pair.proposal)").includes('Кто видит активность'),'the partner sees the setting in the review');
+run("S.pairMember='partner'");run("commitCoupleProposal(S.pair)");run("S.pairMember='me'");assert.equal(run("coupleProfile().activityVis"),'all','approved');
+run("S.actor='me';S.nav.stacks.me=[{id:'X01',p:{},f:{}},{id:'P02',p:{only:'media'},f:{}}];SC.P02.render(cur().p,cur())");const ph0=run("JSON.stringify(S.me.profileRefs19)");
+run("var free=mediaLibrary19('me').filter(p=>p.aud==='all').flatMap(p=>realMedia(p).map(m=>mediaRef19(p,m))).find(r=>!profItems20('me').some(x=>x.ref===r));ACT.phToggle({dataset:{owner:'me',v:free}})");
+assert.equal(run("JSON.stringify(S.me.profileRefs19)"),ph0,'the photo editor does not save on the fly');assert.ok(run("cur().dirty"),'leaving with changes asks first');
+run("var phP=ACT.phSave({...("+stub+"),dataset:{owner:'me'}})");await finish(run("phP"));assert.ok(run("S.me.profileRefs19.includes(free)"),'«Сохранить» writes the photos');
+run("var pp={status:'published',aud:'followers',media:[{type:'image',url:'a'}],text:'Один два три четыре пять шесть семь',title:''}");
+assert.equal(run("editNeedsReview(pp,{...pp,text:pp.text+' восемь'})"),false,'a small text edit goes live');assert.equal(run("editNeedsReview(pp,{...pp,aud:'only'})"),false,'narrowing the audience goes live');
+assert.equal(run("editNeedsReview(pp,{...pp,media:[...pp.media,{type:'image',url:'b'}]})"),true,'a new picture is reviewed');assert.equal(run("editNeedsReview(pp,{...pp,aud:'all'})"),true,'a wider audience is reviewed');
+assert.equal(run("editNeedsReview(pp,{...pp,text:'новое '.repeat(30)})"),true,'a large rewrite is reviewed');assert.equal(run("editNeedsReview(null,pp)"),true,'a new post with pictures is reviewed');
+run("S.actor='me';var hp=S.posts.find(x=>!ownedIdentity(x.author)&&filterPosts([x],'all').length).id,ha=S.posts.find(x=>!ownedIdentity(x.author)&&x.id!==hp&&filterPosts([x],'all').length).author;S.actor='couple';ACT.hidePost({dataset:{v:hp}});ACT.muteAuthor({dataset:{v:ha}})");
+assert.equal(run("filterPosts([postById(hp)],'all').length"),0,'hidden in the couple’s feed');run("S.actor='me'");assert.equal(run("filterPosts([postById(hp)],'all').length"),1,'hiding as the couple does not hide it for me');assert.ok(run("S.posts.filter(x=>x.author===ha).some(x=>filterPosts([x],'all').length)"),'muting as the couple does not mute for me');
+run("ACT.hidePost({dataset:{v:hp}});S.actor='couple';feedSet('hiddenPosts').delete(hp)");assert.equal(run("filterPosts([postById(hp)],'all').length"),1,'hiding as me does not hide it for the couple');run("S.actor='me'");
+console.log('PASS V20.2: «Я» tabs by topic, couple links and settings, staged profile photos, re-review only for real changes, feed hiding per profile');
 console.log('PASS V20: split-circle couple avatar, two profile cards, the mode reaches «Что у вас общего», profile photos from posts (one video, review mark, drag), feed optional for uploads, same «Я» for the couple, select mode');
 console.log('PASS V19 rules in V20: one «Я / Мы» mode in the dock — couple likes, follows, communities and events; event answers ask the partner when approval is on');
 \n// ---- V14 ----`);
