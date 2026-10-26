@@ -3,6 +3,7 @@ import { meCommands, NOTIFICATION_DEFAULTS, PROFILE_SETTINGS } from '../../contr
 import { fail, isUniqueViolation } from '../errors.mjs';
 import { hmac } from '../hash.mjs';
 import { mediaDto } from '../media/assets.mjs';
+import { grantedScopes } from '../access.mjs';
 
 /** Slice C «Я»: registration, onboarding, profile, settings, interests (S1 §3–4, S2-CATALOG «C»).
  * Couple profiles are read here; their writes go through partner approvals in slice E and are refused for now.
@@ -25,6 +26,26 @@ export function ageOn(birthDate, now = new Date()) {
   return age;
 }
 
+/** Most generous reading of a birth date: the person counts as 18 if it is their 18th birthday anywhere on Earth
+ * (UTC+14), so nobody is locked out on the morning of their birthday. @param {string} birthDate */
+const ageAnywhere = birthDate => ageOn(birthDate, new Date(Date.now() + 14 * 3600e3));
+/** Documents that must be accepted to register (V21 A04, AUTH-015). Registration refuses if any is not published. */
+const MANDATORY_DOCS = ['terms', 'privacy', 'community', 'adult-content'];
+/** Stems nobody may use at the start of a nickname, also through 0/o, 1/l/i, 3/e, 5/s look-alikes and separators. */
+const RESERVED_STEMS = ['admin', 'support', 'moder', 'feture', 'official', 'staff', 'security', 'helpdesk', 'system', 'root', 'team'];
+/** @param {string} h */
+const skeleton = h => h.toLowerCase().replace(/[._]/g, '').replace(/0/g, 'o').replace(/[1i]/g, 'l').replace(/3/g, 'e').replace(/5/g, 's');
+
+/** Per-account sliding window for lookups that reveal existence. @param {Q} q @param {string} accountId @param {string} kind
+ * @param {number} max @param {string} window postgres interval */
+async function limit(q, accountId, kind, max, window) {
+  await q.query(`select pg_advisory_xact_lock(hashtext('feture-rate:' || $1 || ':' || $2))`, [accountId, kind]);
+  const [{ n }] = await q.query(
+    `select count(*)::int n from feture.rate_event where account_id = $1 and kind = $2 and created_at > now() - $3::interval`, [accountId, kind, window]);
+  if (n >= max) fail(429, 'rate_limited');
+  await q.query('insert into feture.rate_event (account_id, kind) values ($1, $2)', [accountId, kind]);
+}
+
 /** @param {Acting | null} acting @returns {Acting} */
 const need = acting => { if (!acting) throw new Error('acting profile missing'); return acting; };
 /** Writes of couple profiles need partner approvals (slice E). @param {Acting} acting */
@@ -45,20 +66,28 @@ async function checkOptions(q, input) {
   }
 }
 
-/** @param {Q} q @param {string} h @returns {Promise<'ok' | 'reserved' | 'taken'>} */
-async function handleState(q, h) {
+/** @param {Q} q @param {string} h @param {string | null} [self] the profile renaming itself (its own hold does not count)
+ * @returns {Promise<'ok' | 'reserved' | 'taken'>} */
+async function handleState(q, h, self = null) {
+  const sk = skeleton(h);
+  if (RESERVED_STEMS.some(stem => sk.startsWith(skeleton(stem)))) return 'reserved';
   const [r] = await q.query(
-    `select exists (select 1 from feture.reserved_handle where handle = lower($1)) reserved,
-            exists (select 1 from feture.profile where lower(handle) = lower($1)) taken`, [h]);
-  return r.reserved ? 'reserved' : r.taken ? 'taken' : 'ok';
+    `select exists (select 1 from feture.reserved_handle where handle = lower($1) or handle = $2) reserved,
+            exists (select 1 from feture.profile where lower(handle) = lower($1) and id is distinct from $3) taken,
+            exists (select 1 from feture.handle_hold where handle = lower($1) and until > now() and profile_id is distinct from $3) held`,
+    [h, sk, self]);
+  return r.reserved ? 'reserved' : r.taken || r.held ? 'taken' : 'ok';
 }
 
-/** @param {Q} q @param {string} locale */
+/** Current documents that must be accepted. Fails closed: if any mandatory document is not published (or not
+ * readable) in this locale, nobody registers. @param {Q} q @param {string} locale */
 async function requiredDocuments(q, locale) {
   const [{ exists }] = await q.query(`select to_regclass('public.feture_document_current') is not null "exists"`);
-  if (!exists) return [];
-  return q.query(
+  if (!exists) fail(503, 'unavailable');
+  const rows = await q.query(
     `select id::text, document_key, content_hash from public.feture_document_current where locale = $1 and requires_accept`, [locale]);
+  if (!MANDATORY_DOCS.every(k => rows.some(r => r.document_key === k))) fail(503, 'unavailable');
+  return rows;
 }
 
 /** Viewer-dependent projection of a profile (S1 §4). Blocks join this check in slice F. @param {Q} q
@@ -78,9 +107,10 @@ async function profileView(q, viewer, profileId, media) {
     [profileId, viewer.accountId]);
   if (!p || (!p.own && p.state !== 'active')) fail(404, 'not_found');
   const own = p.own;
-  // Details: own view sees everything; others per details_vis (couples always show role/format/seek).
-  // `granted` opens with the private-part grant (slice C2); until then it counts as hidden.
-  const detailsOpen = own || p.kind === 'couple' || p.details_vis === 'all';
+  // Details: own view sees everything; others per details_vis (couples always show role/format/seek);
+  // `granted` opens together with the private part's «Описание и интересы» (info) access.
+  const detailsOpen = own || p.kind === 'couple' || p.details_vis === 'all'
+    || (p.details_vis === 'granted' && (await grantedScopes(q, profileId, viewer)).includes('info'));
   const details = {};
   for (const field of Object.keys(DETAIL_KINDS)) {
     if (p.kind === 'couple' && !COUPLE_DETAILS.has(field)) continue;
@@ -116,26 +146,30 @@ const run = {
     return { categories, topics, options, places };
   },
 
-  async 'nick.check'(q, { input }) {
+  async 'nick.check'(q, { input, account }) {
+    await limit(q, account.id, 'nick.check', 30, '10 minutes');
     const parsed = meCommands['account.create'].input.shape.handle.safeParse(input.handle);
     if (!parsed.success) return { available: false, reason: 'format' };
     const state = await handleState(q, parsed.data);
     return state === 'ok' ? { available: true } : { available: false, reason: state };
   },
 
-  async 'account.create'(q, { account, input, cfg }) {
-    const [acc] = await q.query('select person_profile_id from feture.account where id = $1 for update', [account.id]);
+  async 'account.create'(q, { account, input, cfg, coreAccountHash }) {
+    const [acc] = await q.query(
+      'select person_profile_id, coalesce(age_verified_until > now(), false) verified from feture.account where id = $1 for update', [account.id]);
     if (acc.person_profile_id) fail(409, 'conflict', { state: 'registered' });
-    const u18Key = hmac(String(cfg.pepper), 'feture-u18:v1:' + account.id);
-    if (ageOn(input.birthDate) < 18) {
+    // A future date or an impossible age is a typo, not an age: refused without leaving any marker.
+    if (Date.parse(input.birthDate) > Date.now() + 14 * 3600e3 || ageOn(input.birthDate) > 110) fail(400, 'invalid_input', { fields: ['birthDate'] });
+    // Keyed on the Core login without its generation, so deleting and re-creating the login does not erase it.
+    const u18Key = hmac(String(cfg.pepper), 'feture-u18:v1:' + coreAccountHash);
+    if (ageAnywhere(input.birthDate) < 18) {
       // Nothing about the person is kept except that an under-18 attempt happened (AUTH-023).
       await q.query('insert into feture.u18_event (key_hmac) values ($1)', [u18Key]);
       return { ok: false, rule: 'under_18' };
     }
-    // After an under-18 attempt a new date alone is not enough: the age must be verified by the provider.
+    // After an under-18 attempt a new date alone is not enough: the age must be verified (provider or staff).
     const [{ seen }] = await q.query('select exists (select 1 from feture.u18_event where key_hmac = $1) seen', [u18Key]);
-    if (seen) fail(422, 'rule_violation', { rule: 'age_check_required' });
-    if (ageOn(input.birthDate) > 110) fail(400, 'invalid_input', { fields: ['birthDate'] });
+    if (seen && !acc.verified) fail(422, 'rule_violation', { rule: 'age_check_required' });
     const docs = await requiredDocuments(q, input.locale);
     const given = new Map(input.documents.map((/** @type {any} */ d) => [d.id, d.contentHash]));
     const missing = docs.filter(d => given.get(d.id) !== d.content_hash).map(d => d.document_key);
@@ -157,8 +191,8 @@ const run = {
       [account.id, profileId, input.birthDate, input.newsOptIn]);
     for (const d of docs) {
       await q.query(
-        `insert into feture.consent (account_id, document_version_id, document_key, content_hash) values ($1, $2, $3, $4) on conflict do nothing`,
-        [account.id, d.id, d.document_key, d.content_hash]);
+        `insert into feture.consent (account_id, document_version_id, document_key, content_hash, locale) values ($1, $2, $3, $4, $5) on conflict do nothing`,
+        [account.id, d.id, d.document_key, d.content_hash, input.locale]);
     }
     return { ok: true, profileId };
   },
@@ -194,7 +228,11 @@ const run = {
     if (input.handle !== undefined && input.handle !== p.handle) {
       if (input.handle.toLowerCase() !== String(p.handle).toLowerCase()) {
         if (p.recently) fail(422, 'rule_violation', { rule: 'handle_change_cooldown' });
-        if (await handleState(q, input.handle) !== 'ok') fail(409, 'conflict', { field: 'handle' });
+        if (await handleState(q, input.handle, acting.profileId) !== 'ok') fail(409, 'conflict', { field: 'handle' });
+        // The old nickname stays held for 30 days: nobody else can take it and pose as the previous owner.
+        await q.query(
+          `insert into feture.handle_hold (handle, profile_id, until) values (lower($1), $2, now() + interval '30 days')
+           on conflict (handle) do update set profile_id = excluded.profile_id, until = excluded.until`, [p.handle, acting.profileId]);
       }
       try {
         // Only a new nickname starts the 30-day cooldown; changing letter case does not.
@@ -273,9 +311,7 @@ const run = {
   },
 
   async 'place.submit'(q, { account, input }) {
-    const [{ n }] = await q.query(
-      `select count(*)::int n from feture.place where submitted_by = $1 and created_at > now() - interval '1 day'`, [account.id]);
-    if (n >= 5) fail(429, 'rate_limited');
+    await limit(q, account.id, 'place.submit', 5, '1 day');
     const [p] = await q.query(
       `insert into feture.place (country, name_ru, name_en, state, submitted_by) values ($1, $2, $2, 'pending', $3) returning id`,
       [input.country, input.name, account.id]);
@@ -291,12 +327,13 @@ const run = {
       const [p] = await q.query(`select 1 from feture.profile where id = $1 and state = 'active'`, [input.profileId]);
       if (!p) fail(404, 'not_found');
     }
-    // Others see public interests only (granted ones open with the private-part grant in slice C2);
-    // a public hard limit shows only that it is a limit (V21: «нельзя» without details).
+    // Others see public interests, plus «По доступу» ones with the info grant (ME-025: they open with the
+    // description); a hard limit shows only that it is a limit (V21: «нельзя» without details).
+    const info = !own && (await grantedScopes(q, input.profileId, acting)).includes('info');
     const rows = await q.query(
       `select i.topic_id, i.value, i.mark, i.dir, i.vis from feture.interest i join feture.topic t on t.id = i.topic_id
-       where i.profile_id = $1 and ($2 or (i.vis = 'public' and not t.hidden)) order by t.position`,
-      [input.profileId, own]);
+       where i.profile_id = $1 and ($2 or ((i.vis = 'public' or (i.vis = 'granted' and $3)) and not t.hidden)) order by t.position`,
+      [input.profileId, own, info]);
     return {
       items: rows.map(r => own
         ? { topicId: r.topic_id, value: r.value, mark: r.mark, dir: r.dir, vis: r.vis }
@@ -345,14 +382,23 @@ const run = {
   },
 
   async 'interests.history'(q, { acting, input }) {
+    // Opaque keyset cursor over (created_at, id) at full precision: rows written in one statement are never skipped.
+    let after = null;
+    if (input.cursor) {
+      try { after = JSON.parse(Buffer.from(input.cursor, 'base64url').toString('utf8')); } catch { /* invalid below */ }
+      if (!Array.isArray(after) || after.length !== 2 || typeof after[0] !== 'string' || typeof after[1] !== 'string') fail(400, 'invalid_input', { fields: ['cursor'] });
+    }
     const rows = await q.query(
-      `select id, topic_id, kind, from_state, to_state, source, created_at from feture.interest_history
-       where profile_id = $1 and ($2::timestamptz is null or created_at < $2) order by created_at desc, id desc limit $3`,
-      [need(acting).profileId, input.before ?? null, input.limit + 1]);
-    const items = rows.slice(0, input.limit).map(r => ({
-      id: r.id, topicId: r.topic_id, kind: r.kind, from: r.from_state, to: r.to_state, archived: r.source === 'test_archived', at: r.created_at,
-    }));
-    return { items, next: rows.length > input.limit ? items[items.length - 1].at : null };
+      `select id, topic_id, kind, from_state, to_state, source, created_at, created_at::text at_text from feture.interest_history
+       where profile_id = $1 and ($2::text is null or (created_at, id) < ($2::timestamptz, $3::uuid))
+       order by created_at desc, id desc limit $4`,
+      [need(acting).profileId, after?.[0] ?? null, after?.[1] ?? null, input.limit + 1]);
+    const page = rows.slice(0, input.limit);
+    const last = page[page.length - 1];
+    return {
+      items: page.map(r => ({ id: r.id, topicId: r.topic_id, kind: r.kind, from: r.from_state, to: r.to_state, archived: r.source === 'test_archived', at: r.created_at })),
+      next: rows.length > input.limit ? Buffer.from(JSON.stringify([last.at_text, last.id])).toString('base64url') : null,
+    };
   },
 };
 

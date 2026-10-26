@@ -13,6 +13,10 @@ const codes = (/** @type {number} */ max) => z.array(code).max(max).refine(v => 
 export const text = (/** @type {number} */ max) => z.string().max(max * 2).transform(v => v.normalize('NFC').trim())
   .refine(v => v.length <= max, { message: 'too_long' })
   .refine(v => !/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F‪-‮⁦-⁩​-‏﻿]/.test(v), { message: 'bad_characters' });
+/** Single-line text for names: also no line breaks, tabs or invisible/blank-looking characters, and not blank. */
+export const line = (/** @type {number} */ max) => text(max)
+  .refine(v => !/[\t\n\r\u00AD\u061C\u115F\u1160\u2028\u2029\u2060-\u2064\u3164\uFFA0]/.test(v), { message: 'bad_characters' })
+  .refine(v => v.replace(/\s/g, '').length > 0, { message: 'blank' });
 const birthDate = z.iso.date();
 const detailsVis = z.enum(['only', 'granted', 'all']);
 const discoverMode = z.enum(['visible', 'hidden', 'off']);
@@ -56,8 +60,9 @@ export const NOTIFICATION_DEFAULTS = Object.freeze({
 export const meCommands = {
   'catalog.get': { profile: false, write: false, input: z.strictObject({}) },
   'nick.check': { profile: false, write: false, input: z.strictObject({ handle: z.string().max(40) }) },
+  // No idempotency ledger: registration is idempotent by nature, and an under-18 answer must leave no trace.
   'account.create': {
-    profile: false, write: true,
+    profile: false, write: true, ledger: false,
     input: z.strictObject({
       opId,
       handle,
@@ -84,7 +89,7 @@ export const meCommands = {
       opId,
       rev: z.int().positive(),
       handle: handle.optional(),
-      name: text(60).optional(),
+      name: line(60).optional(),
       bio: text(500).optional(),
       cityId: id.nullable().optional(),
       showAge: z.boolean().optional(),
@@ -114,7 +119,7 @@ export const meCommands = {
   'notifications.settings.update': { profile: false, write: true, input: z.strictObject({ opId, settings: notificationSettings }) },
   'place.submit': {
     profile: false, write: true,
-    input: z.strictObject({ opId, country: z.string().regex(/^[A-Z]{2}$/), name: text(80).refine(v => v.length >= 2, { message: 'too_short' }) }),
+    input: z.strictObject({ opId, country: z.string().regex(/^[A-Z]{2}$/), name: line(80).refine(v => v.length >= 2, { message: 'too_short' }) }),
   },
   'interests.list': { profile: true, write: false, input: z.strictObject({ profileId: id }) },
   'interests.set': {
@@ -132,6 +137,6 @@ export const meCommands = {
   'interests.remove': { profile: true, write: true, input: z.strictObject({ opId, topicId: code }) },
   'interests.history': {
     profile: true, write: false,
-    input: z.strictObject({ limit: z.int().min(1).max(50).default(30), before: z.iso.datetime().optional() }),
+    input: z.strictObject({ limit: z.int().min(1).max(50).default(30), cursor: z.string().max(200).optional() }),
   },
 };

@@ -13,8 +13,8 @@ import { actingProfile } from './profiles.mjs';
  * @typedef {import('./accounts.mjs').AccountRow} AccountRow @typedef {import('./profiles.mjs').Acting} Acting
  * @typedef {{media: import('./media/assets.mjs').MediaConfig, pepper?: string}} Cfg   pepper is filled in by the handler
  * @typedef {{
- *   input: import('zod').ZodType, profile: boolean, write: boolean,
- *   run: (q: Q, ctx: {account: AccountRow, acting: Acting | null, input: any, cfg: Cfg}) => Promise<Record<string, unknown>>
+ *   input: import('zod').ZodType, profile: boolean, write: boolean, ledger?: boolean,
+ *   run: (q: Q, ctx: {account: AccountRow, acting: Acting | null, input: any, cfg: Cfg, coreAccountHash: string}) => Promise<Record<string, unknown>>
  * }} Command
  * @typedef {{headers: Record<string, string | string[] | undefined>, method?: string, body?: unknown,
  *   [Symbol.asyncIterator]?: () => AsyncIterator<Uint8Array>}} Req
@@ -76,12 +76,14 @@ export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota
       /** @param {Q} q */
       const exec = async q => {
         const acting = cmd.profile ? await actingProfile(q, account.id, profileId, { write: cmd.write }) : null;
-        return cmd.run(q, { account, acting, input, cfg: { ...cfg, pepper } });
+        // coreAccountHash is stable across Core re-registrations; only for markers that must survive them (under-18).
+        return cmd.run(q, { account, acting, input, cfg: { ...cfg, pepper }, coreAccountHash: core.accountHash });
       };
       const result = !cmd.write ? await exec(db)
         // The acting profile is part of the request: the same opId under another profile is a conflict, not a replay.
-        : typeof input.opId === 'string' ? await once(db, account.id, { opId: input.opId, action, input: { profileId, input } }, exec)
+        : typeof input.opId === 'string' && cmd.ledger !== false ? await once(db, account.id, { opId: input.opId, action, input: { profileId, input } }, exec)
         : await db.tx(exec);
+      if ('requestId' in result) throw new Error('reserved_result_field'); // the HTTP request id owns this name
       return send(200, { ok: true, ...result }, 'ok');
     } catch (error) {
       if (error instanceof FeError) return send(error.status, { ok: false, error: error.code, ...error.extra }, error.code);

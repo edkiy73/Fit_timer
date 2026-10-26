@@ -74,10 +74,19 @@ export async function sweepOpLedger(db) {
   return rows.length;
 }
 
+/** Under-18 markers and lookup counters do not need to live forever. @param {Db} db */
+export async function sweepMarkers(db) {
+  if (!(await db.query(`select to_regclass('feture.u18_event') is not null ok`))[0].ok) return 0;
+  const a = await db.query(`delete from feture.u18_event where created_at < now() - interval '1 year' returning 1`);
+  const b = await db.query(`delete from feture.rate_event where created_at < now() - interval '2 days' returning 1`);
+  return a.length + b.length;
+}
+
 /** One worker tick. @param {Db} db @param {JobDeps} deps */
 export async function runJobs(db, deps) {
   const processed = await drain(db, mediaHandlers(db, deps), { limit: deps.limit ?? 10, lockSeconds: 120 });
   const expired = await sweepExpiredUploads(db);
   const ledger = await sweepOpLedger(db);
-  return { processed, expired, ledger };
+  const markers = await sweepMarkers(db);
+  return { processed, expired, ledger, markers };
 }

@@ -65,6 +65,7 @@ create table feture.consent (
   account_id uuid not null references feture.account(id) on delete cascade,
   document_version_id uuid not null,
   document_key text not null,
+  locale text not null check (locale in ('ru', 'en')),
   content_hash text not null check (content_hash ~ '^[a-f0-9]{64}$'),
   accepted_at timestamptz not null default now(),
   primary key (account_id, document_version_id)
@@ -76,8 +77,22 @@ create table feture.notification_settings (
   updated_at timestamptz not null default now()
 );
 
--- Nickname change policy (Q24): at most once per 30 days.
+-- Nickname change policy (Q24): at most once per 30 days, and the old nickname stays held for 30 days
+-- so nobody can take it and pose as its former owner.
 alter table feture.profile add column handle_changed_at timestamptz;
+create table feture.handle_hold (
+  handle text primary key check (handle = lower(handle)),
+  profile_id uuid not null references feture.profile(id) on delete cascade,
+  until timestamptz not null
+);
+
+-- Small per-account rate limits for lookups that reveal whether something exists (nick.check, place.submit).
+create table feture.rate_event (
+  account_id uuid not null references feture.account(id) on delete cascade,
+  kind text not null check (kind ~ '^[a-z][a-z_.]{1,31}$'),
+  created_at timestamptz not null default now()
+);
+create index rate_event_window on feture.rate_event (account_id, kind, created_at);
 
 -- Public profile details. Person-only fields are null for couples.
 create table feture.profile_details (
@@ -140,7 +155,7 @@ create index interest_history_profile on feture.interest_history (profile_id, cr
 do $$
 declare t text;
 begin
-  foreach t in array array['topic_category', 'topic', 'profile_option', 'place', 'reserved_handle', 'u18_event', 'consent',
+  foreach t in array array['topic_category', 'topic', 'profile_option', 'place', 'reserved_handle', 'u18_event', 'consent', 'handle_hold', 'rate_event',
     'notification_settings', 'profile_details', 'profile_settings', 'interest', 'interest_history'] loop
     execute format('alter table feture.%I enable row level security', t);
     execute format('alter table feture.%I force row level security', t);
@@ -149,10 +164,14 @@ begin
     execute format('grant select, insert, update, delete on feture.%I to feture_api', t);
   end loop;
   -- Current legal documents are published by the admin into the legacy schema; the API only reads them.
+  -- The view is security_invoker over an RLS table, so feture_api needs its own read policy, not only a grant.
+  if to_regclass('public.feture_document_versions') is not null then
+    execute 'grant select on public.feture_document_versions to feture_api';
+    if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'feture_document_versions' and policyname = 'feture_api_read') then
+      execute 'create policy feture_api_read on public.feture_document_versions for select to feture_api using (true)';
+    end if;
+  end if;
   if to_regclass('public.feture_document_current') is not null then
     execute 'grant select on public.feture_document_current to feture_api';
-    if to_regclass('public.feture_document_versions') is not null then
-      execute 'grant select on public.feture_document_versions to feture_api';
-    end if;
   end if;
 end $$;
