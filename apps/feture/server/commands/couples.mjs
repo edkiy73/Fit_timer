@@ -75,10 +75,11 @@ const run = {
     if (handle.toLowerCase() === String(me.handle).toLowerCase()) fail(422, 'rule_violation', { rule: 'self' });
     // Exact nickname of a person; couples cannot be invited. Not found and unavailable look the same.
     const [target] = await q.query(
-      `select m.account_id from feture.profile p join feture.profile_member m on m.profile_id = p.id and m.state = 'active'
+      `select m.account_id, feture.blocked($2, p.id) blocked from feture.profile p join feture.profile_member m on m.profile_id = p.id and m.state = 'active'
        join feture.account a on a.id = m.account_id and a.state = 'active'
-       where lower(p.handle) = lower($1) and p.kind = 'person' and p.state = 'active'`, [handle]);
-    if (!target) fail(404, 'not_found');
+       where lower(p.handle) = lower($1) and p.kind = 'person' and p.state = 'active'`, [handle, me.person_profile_id]);
+    // Blocked either way looks the same as not found.
+    if (!target || target.blocked) fail(404, 'not_found');
     // After a decline the same person is not asked again for a week.
     const [{ declined }] = await q.query(
       `select exists (select 1 from feture.couple_invite where from_account = $1 and to_account = $2 and state = 'declined'

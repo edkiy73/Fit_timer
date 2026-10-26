@@ -2,6 +2,7 @@
 import { drain, enqueue } from './outbox.mjs';
 import { scanAsset, servedKeys } from './media/scan.mjs';
 import { deleteCouple } from './commands/couples.mjs';
+import { settlePublication } from './commands/posts.mjs';
 
 /** Queue worker (S2 §8, D7). Called every minute by pg_cron + pg_net (Vercel Hobby cron is daily only)
  * through `POST /api/fe?jobs=1` with the jobs secret. Every handler is idempotent.
@@ -31,7 +32,10 @@ export function mediaHandlers(db, deps) {
       const [row] = await db.query(`select state from feture.media_asset where id = $1`, [id(item)]);
       if (!row || !['removed', 'rejected', 'blocked'].includes(row.state)) return;
       for (const key of servedKeys(id(item))) await storage().remove(key);
+      await settlePosts(db, id(item));
     },
+    // A checked file may complete posts waiting for their media (or send them back if it was rejected).
+    'media.approved': async (/** @type {any} */ item) => { await settlePosts(db, id(item)); },
     // CSAM match or suspicion (S4 §5): the uploader's account and person profile, and the owning profile, are
     // suspended at once and their sessions end at the next request (resolveAccount refuses suspended accounts).
     // The quarantined original stays as evidence (never purged while blocked); reporting is a staff step.
@@ -69,6 +73,15 @@ export function mediaHandlers(db, deps) {
       for (const key of [row.storage_key, ...servedKeys(id(item))]) await storage().remove(key);
     },
   };
+}
+
+/** Posts on review that use this file are published or returned to their author. @param {Db} db @param {string} assetId */
+async function settlePosts(db, assetId) {
+  if (!(await db.query(`select to_regclass('feture.post') is not null ok`))[0].ok) return;
+  const posts = await db.query(
+    `select p.id from feture.media_attachment a join feture.post p on p.id = a.target_id
+     where a.target_type = 'post' and a.asset_id = $1 and p.state = 'review'`, [assetId]);
+  for (const p of posts) await db.tx(q => settlePublication(q, p.id));
 }
 
 /** Upload intents that were never committed are closed; their quarantine key is handled by media.purge three

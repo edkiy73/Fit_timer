@@ -100,6 +100,8 @@ async function profileView(q, viewer, profileId, media) {
      where p.id = $1`,
     [profileId, viewer.accountId]);
   if (!p || (!p.own && p.state !== 'active')) fail(404, 'not_found');
+  // Blocked either way: the profile does not exist for the viewer (S1 §0.6).
+  if (!p.own && (await q.query('select feture.blocked($1, $2) b', [viewer.profileId, profileId]))[0].b) fail(404, 'not_found');
   const own = p.own;
   // Details: own view sees everything; others per details_vis (couples always show role/format/seek);
   // `granted` opens together with the private part's «Описание и интересы» (info) access.
@@ -402,8 +404,8 @@ const run = {
       `select exists (select 1 from feture.profile_member where profile_id = $1 and account_id = $2 and state = 'active') own`,
       [input.profileId, acting.accountId]);
     if (!own) {
-      const [p] = await q.query(`select 1 from feture.profile where id = $1 and state = 'active'`, [input.profileId]);
-      if (!p) fail(404, 'not_found');
+      const [p] = await q.query(`select feture.blocked($2, id) b from feture.profile where id = $1 and state = 'active'`, [input.profileId, acting.profileId]);
+      if (!p || p.b) fail(404, 'not_found');
     }
     // Others see public interests, plus «По доступу» ones with the info grant (ME-025: they open with the
     // description); a hard limit shows only that it is a limit (V21: «нельзя» without details).
