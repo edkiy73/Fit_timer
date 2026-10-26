@@ -178,7 +178,7 @@ run("S.actor='me';var hp=S.posts.find(x=>!ownedIdentity(x.author)&&filterPosts([
 assert.equal(run("filterPosts([postById(hp)],'all').length"),0,'hidden in the couple’s feed');run("S.actor='me'");assert.equal(run("filterPosts([postById(hp)],'all').length"),1,'hiding as the couple does not hide it for me');assert.ok(run("S.posts.filter(x=>x.author===ha).some(x=>filterPosts([x],'all').length)"),'muting as the couple does not mute for me');
 run("ACT.hidePost({dataset:{v:hp}});S.actor='couple';feedSet('hiddenPosts').delete(hp)");assert.equal(run("filterPosts([postById(hp)],'all').length"),1,'hiding as me does not hide it for the couple');run("S.actor='me'");
 assert.ok(run("profileView('kai',{p:{}},{bodyOnly:1})").includes(run("galleryBlock('kai',false,{})").slice(0,40))||run("profileView('kai',{p:{}},{bodyOnly:1})").length>200,'Discover reuses the profile body');
-{const deck=run("(S.actor='me',S.nav.tab='people',S.nav.stacks.people=[{id:'D03',p:{},f:{}}],SC.D03.render(cur().p,cur()))");assert.ok(!deck.includes('Полный профиль')&&deck.includes('pc-full'),'Discover shows the whole profile, not a short card with «Полный профиль»');assert.ok(!deck.includes('pc-coach'),'no coach card over the deck');}
+{const deck=run("(S.actor='me',S.nav.tab='people',S.nav.stacks.people=[{id:'D03',p:{},f:{}}],SC.D03.render(cur().p,cur()))");assert.ok(deck.includes('pc-full')&&deck.includes('data-act="follow"')&&deck.includes('Полный профиль'),'Discover shows the whole profile, then «Подписаться» and «Полный профиль» (both full width)');assert.ok(!deck.includes('pc-coach'),'no coach card over the deck');}
 // counters: one number for «Нужно решить», and every number is what the screen behind it lists
 run("S.actor='me';S.nav.tab='me'");assert.equal(run("C.meTodo()"),run("todoCount()"),'the «Я» badge, the profile row and the inbox tab are one number');
 assert.equal(run("TABDEF().find(x=>x[0]==='me')[3]"),run("C.meTodo()"));
@@ -188,6 +188,18 @@ assert.equal(run("(()=>{const w=todoItems().map(todoWhom);return w.filter(x=>x==
 assert.equal(run("notifications=currentNotifications().filter(notifNew).length"),run("bellCount()-todoCount()"),'the «Все уведомления» number is what the bell adds to decisions');
 assert.equal(run("TABDEF().find(x=>x[0]==='people')[3]"),run("C.likesIn()||(C.likesAll()?'dot':0)"),'the «Люди» badge is the likes tab number of the acting profile');
 run("go('N01',{k:'all'})");{const t=run("SC.N01.render({k:'all'},cur())");assert.ok(t.includes('class="whom'),'notifications say whether they are for you or for the couple');}
+// interests: the sheet compares with the profile you act as, and edits that profile
+run("S.actor='couple';S.nav.tab='feed';S.nav.stacks.feed=[{id:'P01',p:{id:'sofi'},f:{}}]");assert.equal(run("jarOwner('sofi')"),'couple');
+run("openTopic('bondage','sofi')");{const sh=run("document.querySelector('#sheet,.sheet')?.innerHTML||''");}
+assert.equal(run("jarEditAct(jarOwner('sofi'))"),'editCoupleJar','as the couple the interest sheet edits the couple');
+assert.ok(run("(authorProfile(jarOwner('sofi'))?.jars||[]).some(j=>j.t==='bondage')"),'the demo couple has its own interests to compare');
+run("S.actor='me'");assert.equal(run("jarOwner('sofi')"),'me');assert.equal(run("jarEditAct('me')"),'editJar');
+{const fresh=run("Object.keys(PEOPLE).find(k=>!PEOPLE[k].pair&&!social('me').follows.has(k)&&!social('couple').follows.has(k))");assert.ok(fresh);assert.ok(run("followBtnHTML('"+fresh+"')").includes('Подписаться'),'one follow button for the profile page and the Discover card');run("S.actor='couple'");assert.ok(run("followBtnHTML('"+fresh+"')").includes('Подписаться от'),'as the couple the follow button says so');run("S.actor='me'");}
+// gallery: a new album works from every button (the click dispatcher passes the event as the 2nd argument) and the profile grid has no padded card
+run("S.ui.albumThen='stale';ACT.galAlbumNew(null,{type:'click'})");assert.equal(run("S.ui.albumThen"),null,'an event is not a callback: the album is created and the screen refreshes');
+run("S.ui.albumThen=null;var cbHit=0;ACT.galAlbumNew(null,al=>{cbHit=1})");assert.equal(run("typeof S.ui.albumThen"),'function','a real callback (from the post editor) is kept');
+assert.ok(run("galleryBlock('mia',false,{})").includes('grp bare'),'the profile gallery grid sits on the page like the other blocks');
+run("S.actor='couple';S.nav.tab='me';S.nav.stacks.me=[{id:'X01',p:{},f:{}}]");assert.ok(run("galleryOwn20('couple')").includes('galNewAlbumMe'));run("S.actor='me'");
 console.log('PASS V20.2: «Я» tabs by topic, couple links and settings, staged profile photos, re-review only for real changes, feed hiding per profile');
 console.log('PASS V20: split-circle couple avatar, two profile cards, the mode reaches «Что у вас общего», profile photos from posts (one video, review mark, drag), feed optional for uploads, same «Я» for the couple, select mode');
 console.log('PASS V19 rules in V20: one «Я / Мы» mode in the dock — couple likes, follows, communities and events; event answers ask the partner when approval is on');
