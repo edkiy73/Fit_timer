@@ -198,3 +198,15 @@ Not verified: real devices, touch drag on hardware, a live couple on two clients
   - They wrap into rows instead of scrolling sideways, so a new album is visible at once. The second and later ones used to land off-screen to the right.
   - A new album is created right there, without a trip to the gallery screen, for the profile you act as (the couple's albums were created for «Я» before).
   - On the gallery screen, a new album no longer failed silently: the dispatcher passed the click event as the callback of «Новый альбом», so after the album was created `then(al)` threw and the screen did not refresh. Only a real callback counts now. The screen scrolls the chosen album into view.
+
+## 2026-10-26 — solo and couple audit
+
+The full list is in `V20-SOLO-COUPLE-AUDIT.md`. What changed:
+- couples have the «Активность» tab, and a profile lists the events and communities it organises (a couple's are not on «Я» any more);
+- followers and following: the same tabs for a couple; follow, unfollow and undo act as the profile you act as;
+- the «⋯» menu of a couple offers «Указать связь», from the profile you act as;
+- the private part of a couple is edited like «Я»: description, interests and photos by access; «on» means «not switched off» everywhere;
+- the demo couple Eva & Tom has a private part, so access can be requested from a couple;
+- «Действовать как»: both cards are 76 px;
+- an empty «Данные пары» is one short line;
+- the gallery grid no longer clips the dashed «Добавить» tile.

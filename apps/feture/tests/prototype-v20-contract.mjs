@@ -200,6 +200,17 @@ run("S.ui.albumThen='stale';ACT.galAlbumNew(null,{type:'click'})");assert.equal(
 run("S.ui.albumThen=null;var cbHit=0;ACT.galAlbumNew(null,al=>{cbHit=1})");assert.equal(run("typeof S.ui.albumThen"),'function','a real callback (from the post editor) is kept');
 assert.ok(run("galleryBlock('mia',false,{})").includes('grp bare'),'the profile gallery grid sits on the page like the other blocks');
 run("S.actor='couple';S.nav.tab='me';S.nav.stacks.me=[{id:'X01',p:{},f:{}}]");assert.ok(run("galleryOwn20('couple')").includes('galNewAlbumMe'));run("S.actor='me'");
+// couple/solo parity on profile pages
+run("S.actor='couple'");assert.equal(run("activityShown('couple')"),true,'the couple has the activity tab on its own profile');
+run("coupleProfile().activityVis='off'");assert.equal(run("activityShown('couple',{asOther:true,grant:'all'})"),false,'«Кто видит активность: никто» hides it from others, like a person');run("coupleProfile().activityVis='all'");assert.equal(run("activityShown('couple',{asOther:true,grant:'all'})"),true);
+assert.ok(run("activityOf('couple').length")>0,'the couple has activity to show');
+assert.equal((run("SC.P10.render({id:'couple',tab:'following'},cur())").match(/data-act=\"flwTab\"/g)||[]).length,2,'followers and following tabs for the couple too');
+run("S.actor='me'");
+assert.ok(run("hasPrivatePart('tomeva')"),'the demo couple has a private part, so access can be requested from a couple');
+run("S.extraEvents=S.extraEvents||{};S.extraEvents.zcpl={...Object.values(S.extraEvents)[0]||{},organizer:'me',orgAs:'couple',status:'published',cancelled:false,start:Date.now()+3*86400000,end:Date.now()+3*86400000+7200000,title:{ru:'Вечер вдвоём',en:'Evening for two'}}");
+assert.ok(run("orgEventsOf('couple').includes('zcpl')"),'what the couple organises is on the couple profile');assert.ok(!run("orgEventsOf('me').includes('zcpl')"),'and not on «Я»');
+assert.ok(run("hostedCommunitiesOf('couple')").every(c=>run("COMMUNITIES['"+c+"'].orgAs")==='couple'));
+run("S.actor='couple';S.nav.tab='me';S.nav.stacks.me=[{id:'P02',p:{owner:'couple',only:'priv'},f:{}}]");{const h=run("SC.P02.render(cur().p,cur())");assert.ok(h.includes('privEdit')&&h.includes('Описание')&&h.includes('Фото и видео по доступу'),'the couple edits its private part with the same sections as «Я»');assert.ok(h.includes('aria-checked="true"'),'«on» unless switched off, as on the «Приватное» tab');}run("S.actor='me'");
 console.log('PASS V20.2: «Я» tabs by topic, couple links and settings, staged profile photos, re-review only for real changes, feed hiding per profile');
 console.log('PASS V20: split-circle couple avatar, two profile cards, the mode reaches «Что у вас общего», profile photos from posts (one video, review mark, drag), feed optional for uploads, same «Я» for the couple, select mode');
 console.log('PASS V19 rules in V20: one «Я / Мы» mode in the dock — couple likes, follows, communities and events; event answers ask the partner when approval is on');

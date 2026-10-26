@@ -2986,6 +2986,21 @@ button[disabled].demo-off{opacity:.55;cursor:default}
 .alb20 .alb{width:calc((100% - 30px)/4)}
 .alb20 .alb-c{width:100%;height:auto;aspect-ratio:1}
 .alb20 .alb b{max-width:100%}
+
+/* «Действовать как»: both profiles have the same card height in every view */
+.actor-options{display:grid;gap:10px}
+.actor-options .actor-card{height:76px;min-height:76px;border-radius:var(--r-l)}
+.actor-options .actor-select{padding:8px 12px;min-height:0;height:100%;gap:12px;align-items:center}
+.actor-options .actor-select .av{width:44px;height:44px}
+.actor-options .actor-select .tx{display:grid;gap:2px;align-content:center}
+.actor-options .actor-select small{margin:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.3}
+.actor-options .actor-open{width:52px}
+/* an empty details block is one short line, not a tall card */
+.blk-btn:has(>.blk-empty){padding-top:12px;padding-bottom:12px}
+.blk-empty{margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* the gallery grid no longer clips its tiles: dashed «Добавить» keeps its whole border, tiles are rounded one by one */
+.ggrid{overflow:visible;border-radius:0;gap:4px}
+.gtile{border-radius:12px}
 </style>
 </head>
 <body>
@@ -3117,7 +3132,7 @@ const PEOPLE={
  lina:{name:'Lina',age:28,photo:9,nph:3,city:'berlin',km:7,gender:['woman'],orient:['bi'],format:'open',role:['switch'],seek:['dates','chat'],verified:true,online:false,last:{ru:'в сети вчера',en:'active yesterday'},dating:true,
   bio:{ru:'Путешествую, готовлю для друзей, исследую себя без спешки.',en:'Travelling, cooking for friends, exploring myself at my own pace.'},
   jars:[['roleplay',8],['experiments',8],['intimacy',8]]},
- tomeva:{premium:true,members:['eva','tom'],name:'Eva & Tom',nameRu:'Eva и Tom',age:null,pair:true,plate:'amber',plate2:'ember',city:'berlin',km:3,format:'swing',role:['switch'],seek:['exp','friends'],verified:true,online:true,dating:true,
+ tomeva:{privText:{ru:'Фото вдвоём и описание — только тем, с кем мы уже переписывались.',en:'Photos of us and a description — only for people we have already talked to.'},pv:true,nph:3,premium:true,members:['eva','tom'],name:'Eva & Tom',nameRu:'Eva и Tom',age:null,pair:true,plate:'amber',plate2:'ember',city:'berlin',km:3,format:'swing',role:['switch'],seek:['exp','friends'],verified:true,online:true,dating:true,
   bio:{ru:'Пара, вместе 3 года. Отвечаем вдвоём, первая встреча — только в общественном месте.',en:'A couple, together 3 years. We reply together; first meeting in a public place only.'},
   jars:[['experiments',10],['exhibition',6],['intimacy',8]],pairNote:{ru:'пара · вместе 3 года',en:'couple · 3 years together'}},
  lenamax:{pair:true,name:'Lena & Max',nameRu:'Lena и Max',age:null,photo:'p1',city:'berlin',km:5,format:['open'],status:'partnered',role:['switch'],seek:['exp','events'],verified:true,pv:true,online:true,dating:true,
@@ -6330,6 +6345,10 @@ for(const key of ['enableDating','datingPeek','goVisible']){const original=ACT[k
 const acceptsLikes=id=>{const m=id==='couple'?coupleProfile():(S.ui.profilePreview||S.me);return !!(m&&(id==='couple'?m.dating:m.socialLikes!==false));};
 /* V14 — the social context of a person: where you meet them, before their scores */
 function commVisibleMembers(c){const cm=COMMUNITIES[c];if(!cm)return new Set();const known=[...(cm.seedMembers||[]),...(S.communityRequests[c]||[]).filter(x=>x.status==='approved'&&x.showMember).map(x=>x.p)];return new Set([...(cm.mods||[]),...(cm.knownMembers?known:['maya','mia','kai','sofi','kira','dan','noa',...known])]);}
+/** events and communities a profile organises: what the couple makes is the couple's, not «Я» (it is stored under my account with «от пары») */
+const orgEventsOf=id=>allEventIds().filter(e=>evOrg(EV(e))===id&&!isPast(e)&&!EV(e).cancelled&&EV(e).status!=='review');
+const commAsCouple=c=>COMMUNITIES[c]?.orgAs==='couple'&&activePair();
+const hostedCommunitiesOf=id=>Object.keys(COMMUNITIES).filter(c=>id==='couple'?commAsCouple(c):COMMUNITIES[c].mods.includes(id)&&!(id==='me'&&commAsCouple(c)));
 function socialContext(id,orgEvents,modOf){const p=person(id);if(!p||id==='me'||id==='couple')return '';const ids=p.pair?[id,...(p.members||[])]:[id];
  const together=Object.keys(COMMUNITIES).filter(c=>(joinedSet().has(c)||ownsCommunity(c))&&COMMUNITIES[c].status!=='review'&&!modOf.includes(c)&&ids.some(x=>commVisibleMembers(c).has(x)));
  const rows=[];
@@ -6350,8 +6369,7 @@ function profileView(id,r,o={}){
  const pending=social().reqOut.find(x=>x.p===id&&x.status==='pending');
  const acts=self?`<div class="row g8" style="margin-top:16px"><button class="btn primary" data-go="P02" data-p='${esc(JSON.stringify({owner}))}'>${I.edit}${L('Редактировать','Edit profile')}</button>${owner==='couple'?`<button class="btn soft" data-go="Q01">${I.gear}${L('Настройки пары','Couple settings')}</button>`:''}</div>`
   :inert(`${!o.asOther&&!isPartner&&!me&&activePair()?'':''}<div class="p-acts">${likeBtn}${followBtnHTML(id)}</div>${!isPartner&&!mutual&&!liked&&!canLike&&!(o.asOther&&acceptsLikes(id))?`<p class="profile-like-note">${I.heart}<span>${act.why==='coupleOff'?L('Знакомства пары выключены — от пары симпатию не отправить','Couple dating is off — no likes as us'):act.why==='solo'?L('От пары сюда симпатию не отправить. Сменить профиль — аватар внизу','No likes as us here. Switch profile with the avatar below'):(p.dating?L('Симпатии — в знакомствах','Likes available in Discover'):L('Симпатии выключены','Likes are off'))}</span></p>`:''}`);
- const orgEvents=allEventIds().filter(e=>EV(e).organizer===id&&!isPast(e)&&!EV(e).cancelled&&EV(e).status!=='review');
- const modOf=Object.keys(COMMUNITIES).filter(c=>COMMUNITIES[c].mods.includes(id));
+ const orgEvents=orgEventsOf(id),modOf=hostedCommunitiesOf(id);
  const kv=identityFields().filter(([k])=>!['pron','gender','orient'].includes(k)&&!(p.pair&&k==='status')).map(([k,title])=>[title,IDENTITY_MULTI.includes(k)?fmtList(p[k]).map(v=>opt(k,v)).join(', '):opt(k,p[k])]).filter(x=>x[1]);
  /* V8: one page — profile, then the private part right after it when access is open. No tabs. */
  const bio='';const lede=T(p.bio)?`<div class="p-bio">${md(T(p.bio),'bio')}</div>`:'';
@@ -6476,7 +6494,7 @@ function meProfileLayer(owner){const m=meModel(owner),p=person(owner),P=S.pair,q
  if(owner==='couple')h+=grp(L('Участники','Members'),pairPeople('couple').map(x=>`<div class="li static">${av(x.id,'sm')}<span class="tx"><b>${esc(x.name)}</b><small>${esc(memberLine(x))||L('не указано','not set')}</small></span></div>`).join(''),{list:1});
  h+=mePhotos20(owner);
  h+=blk18(L('Основное','Basics'),'all',owner,'basics',`<span class="blk-name">${esc(owner==='couple'?pairName():pname('me'))}${p?.age?`, ${p.age}`:''}${placeLine(owner)?` · ${esc(placeLine(owner))}`:''}</span>${T(m.bio)?`<span class="blk-bio">${esc(T(m.bio).replace(/[*_~`>#\[\]()]/g,'').slice(0,240))}</span>`:`<span class="blk-bio">${L('Пара фраз о себе — пока пусто','A few lines about you — empty for now')}</span>`}`);
- const dg=detailsGroup(owner).match(/<dl class="kv">[\s\S]*?<\/dl>/);h+=blk18(owner==='couple'?L('Данные пары','Couple details'):L('Данные','Details'),'all',owner,'details',dg?dg[0]:`<p class="blk-empty">${owner==='couple'?L('Роль, формат и что вы ищете помогают найти своих.','Role, format and what you look for help the right people find you.'):L('Роль, формат и что ищешь помогают найти своих.','Role, format and what you look for help the right people find you.')}</p>`);
+ const dg=detailsGroup(owner).match(/<dl class="kv">[\s\S]*?<\/dl>/);h+=blk18(owner==='couple'?L('Данные пары','Couple details'):L('Данные','Details'),'all',owner,'details',dg?dg[0]:`<p class="blk-empty">${owner==='couple'?L('Роль, формат, что ищете — добавьте','Role, format, what you look for — add them'):L('Роль, формат, что ищешь — добавь','Role, format, what you look for — add them')}</p>`);
  h+=meJars18(owner)+galleryOwn20(owner)+linksBlock(owner,true,{});
  return h;}
 /* ----- Видимость layer ----- */
@@ -6548,7 +6566,7 @@ ACT.r04ok=a=>{S.ui.r04seen=1;closeSheet(true);run(null,()=>{withActor('me',()=>l
 ACT.unlikeP=a=>withActor(a.dataset.actor||'me',()=>ACT.unlike(a));
 
 /* profile menu: share / report / block */
-ACT.profileMenu=a=>{const id=a.dataset.v,lk=PEOPLE[id]&&!PEOPLE[id].pair&&!PEOPLE[id].members?linkWith(id):null;sheet(()=>({title:esc(pname(id)),body:`<div class="card list">${linkRow({act:'shareProfile',icon:'link',title:L('Скопировать ссылку','Copy link'),noChev:1})}${PEOPLE[id]&&!PEOPLE[id].pair&&!PEOPLE[id].members&&!(activePair()&&id===S.pair.with)?lk?linkRow({...(lk.status==='ok'?{go:'P22',p:{id}}:lk.by==='me'?{act:'linkMenu',v:lk.id}:{go:'P21'}),icon:'users3',title:lk.status==='ok'?L('Связь: ','Link: ')+esc(linkLabel(lk,'me')):lk.by==='me'?L('Запрос связи отправлен','Link request sent'):L('Предлагает связь','Proposes a link'),sub:lk.status==='ok'?L('Изменить или настроить видимость','Change it or who sees it'):lk.by==='me'?L('Ждёт подтверждения','Awaiting confirmation'):esc(linkLabel(lk,'me')),noChev:1}):linkRow({act:'linkPick',v:id,icon:'users3',title:L('Указать связь','Add a link'),sub:linkIssue(id)||L('Отношения, практика, наставничество — подтверждают оба','Relationship, practice, mentoring — both confirm'),noChev:1}):''}${social().likesOut.some(l=>l.p===id)||isMatch(id)?linkRow({act:'endConn',v:id,icon:'x',title:L('Прекратить общение','End connection'),sub:isMatch(id)?L('Закрыть чат и снять симпатию','Close the chat and withdraw your like'):L('Снять симпатию','Withdraw your like'),noChev:1}):''}${PEOPLE[id]&&!PEOPLE[id].pair?linkRow({act:'giftPremium',v:id,icon:'crown',tone:'l',title:L('Подарить Premium','Gift Premium'),noChev:1}):''}${linkRow({act:'report',v:'person',icon:'flag',cls:'danger',title:L('Пожаловаться','Report'),noChev:1})}${linkRow({act:'block',v:id,icon:'block',cls:'danger',title:L('Заблокировать','Block'),sub:L('Прекратит контакт и все доступы','Ends contact and all access'),noChev:1})}</div>`}));};
+ACT.profileMenu=a=>{const id=a.dataset.v,me=LSELF(),lk=PEOPLE[id]?linkWith(id):null;sheet(()=>({title:esc(pname(id)),body:`<div class="card list">${linkRow({act:'shareProfile',icon:'link',title:L('Скопировать ссылку','Copy link'),noChev:1})}${PEOPLE[id]&&!(activePair()&&id===S.pair.with)?lk?linkRow({...(lk.status==='ok'?{go:'P22',p:{id}}:lk.by===me?{act:'linkMenu',v:lk.id}:{go:'P21',p:{id:me}}),icon:'users3',title:lk.status==='ok'?L('Связь: ','Link: ')+esc(linkLabel(lk,me)):lk.by===me?L('Запрос связи отправлен','Link request sent'):L('Предлагает связь','Proposes a link'),sub:lk.status==='ok'?L('Изменить или настроить видимость','Change it or who sees it'):lk.by===me?L('Ждёт подтверждения','Awaiting confirmation'):esc(linkLabel(lk,me)),noChev:1}):linkRow({act:'linkPick',v:id,icon:'users3',title:L('Указать связь','Add a link'),sub:linkIssue(id)||L('Отношения, практика, наставничество — подтверждают оба','Relationship, practice, mentoring — both confirm'),noChev:1}):''}${social().likesOut.some(l=>l.p===id)||isMatch(id)?linkRow({act:'endConn',v:id,icon:'x',title:L('Прекратить общение','End connection'),sub:isMatch(id)?L('Закрыть чат и снять симпатию','Close the chat and withdraw your like'):L('Снять симпатию','Withdraw your like'),noChev:1}):''}${PEOPLE[id]&&!PEOPLE[id].pair?linkRow({act:'giftPremium',v:id,icon:'crown',tone:'l',title:L('Подарить Premium','Gift Premium'),noChev:1}):''}${linkRow({act:'report',v:'person',icon:'flag',cls:'danger',title:L('Пожаловаться','Report'),noChev:1})}${linkRow({act:'block',v:id,icon:'block',cls:'danger',title:L('Заблокировать','Block'),sub:L('Прекратит контакт и все доступы','Ends contact and all access'),noChev:1})}</div>`}));};
 /* S02 — report */
 ACT.report=a=>{const kind=a.dataset.v||'person';S.ui.rp={why:'',block:kind==='person',who:a.dataset.who||null,post:a.dataset.post||null};closeSheet(true);
  sheet(()=>{const o=S.ui.rp;return{title:L('Пожаловаться','Report'),body:`${[['threat',L('Угрозы или шантаж','Threats or blackmail')],['private',L('Чужие приватные материалы','Someone else’s private content')],['minor',L('Похоже на несовершеннолетнего','Looks underage')],['spam',L('Спам или мошенничество','Spam or scam')],['other',L('Другое','Something else')]].map(([k,l])=>`<button class="radio ${o.why===k?'on':''}" data-act="rpWhy" data-v="${k}"><i></i><span class="tx">${l}</span></button>`).join('')}
@@ -6728,7 +6746,7 @@ function privEditor(m,r,owner,block){const sp=privSplit(privMedia(m)),jars=sortJ
 ACT.pePriv=()=>{const r=cur();r.privOn=!r.privOn;r.dirty=true;refresh();};
 ACT.peReq=a=>{const r=cur();r.reqFrom=a.dataset.v;r.dirty=true;refresh();};
 SC.P02={title:()=>L('Редактировать профиль','Edit profile'),valid:p=>p.owner!=='couple'||S.pair?.status==='active',render:(p,r)=>{const m=editableProfile(r);const owner=p.owner||'me';
- if(!r.init){r.init=1;Object.assign(r.f,{nick:owner==='couple'?T(m.name):m.nick,bio:T(m.bio),city:m.city||''});r.photos=[...m.photos];r.gender=[...m.gender];r.orient=[...m.orient];r.format=[...fmtList(m.format)];r.status=m.status||null;r.role=[...fmtList(m.role)];r.showAge=m.showAge!==false;r.seek=[...(m.seek||[])];r.pairVersion=S.pair?.draftVersion||0;r.pairLease=S.pair?.draftLease||0;r.datingVisible=!!m.datingVisible;r.socialLikes=m.socialLikes!==false;r.requestsFrom=m.requestsFrom||'all';r.reqFrom=r.requestsFrom;r.privOn=m.privOn??(privMedia(m).length>0||!!T(m.privText));r.f.privText=T(m.privText)||'';r.galPh=new Set(m.galPh||[]);}
+ if(!r.init){r.init=1;Object.assign(r.f,{nick:owner==='couple'?T(m.name):m.nick,bio:T(m.bio),city:m.city||''});r.photos=[...m.photos];r.gender=[...m.gender];r.orient=[...m.orient];r.format=[...fmtList(m.format)];r.status=m.status||null;r.role=[...fmtList(m.role)];r.showAge=m.showAge!==false;r.seek=[...(m.seek||[])];r.pairVersion=S.pair?.draftVersion||0;r.pairLease=S.pair?.draftLease||0;r.datingVisible=!!m.datingVisible;r.socialLikes=m.socialLikes!==false;r.requestsFrom=m.requestsFrom||'all';r.reqFrom=r.requestsFrom;r.privOn=m.privOn!==false;/* same rule as the «Приватное» tab: on unless it was switched off */r.f.privText=T(m.privText)||'';r.galPh=new Set(m.galPh||[]);}
  S.ui.privSec='';
  const fields=identityFields().filter(([k])=>owner!=='couple'||COUPLE_FIELDS.includes(k));
  /* your details are folded into one summary row inside the same card; open by default only while nothing is chosen */
@@ -6941,8 +6959,8 @@ const ACT_VIS=()=>[['all',L('Все','Everyone')],['followers',L('Подписч
 const actHash=s=>{let h=0;for(const c of String(s))h=(h*31+c.charCodeAt(0))>>>0;return h;};
 const activityMode=id=>(id==='me'?S.me.activityVis:id==='couple'?coupleProfile()?.activityVis:person(id)?.actVis)||'all';
 /** is the activity tab visible to this viewer? `o.asOther` = «as others see me» preview: no access = a stranger, with access = a contact */
-function activityShown(id,o={}){if(id==='couple'||person(id)?.pair)return false;if(id==='me'&&!o.asOther)return true;const m=activityMode(id);if(m==='off')return false;if(m==='all')return true;
- if(o.asOther)return o.grant==='granted';return social('me').follows.has(id)||isMatch(id);}
+function activityShown(id,o={}){if((id==='me'||id==='couple'&&activePair())&&!o.asOther)return true;const m=activityMode(id);if(m==='off')return false;if(m==='all')return true;
+ if(o.asOther)return o.grant==='granted';return social(activeActor()).follows.has(id)||isMatch(id);}
 /* V11: believable demo activity — who did what, hours ago. Likes are [postId,h], events [eventId,status,h], communities [id,h], follows {n,from,step} (taken from the follow graph). */
 const ACT_LOG={
  noa:{likes:[['p10',.3],['p19',.4],['p5',.5],['p11',.8],['p4',1.1],['p18',1.3],['p12',1.5],['p1',1.9],['p3',2.2],['p9',2.6]],events:[['e3','going',20]],follows:{n:1,from:30,step:1}},
@@ -6983,20 +7001,20 @@ function followingOf(id){const set=person(id)?.pair?new Set():id==='me'?S.follow
 function followersOf(id){return ['me',...(activePair()?['couple']:[]),...Object.keys(PEOPLE)].filter(k=>k!==id&&!isBlocked(k)&&followingOf(k).includes(id));}
 function followCounts(id){const a=followersOf(id).length,b=followingOf(id).length;
  return `<div class="pc-stats"><button data-go="P10" data-p='${esc(JSON.stringify({id,tab:'followers'}))}'><b>${a}</b>${pl(a,['подписчик','подписчика','подписчиков'],['follower','followers'],true)}</button>${person(id)?.pair?'':`<button data-go="P10" data-p='${esc(JSON.stringify({id,tab:'following'}))}'><b>${b}</b>${pl(b,['подписка','подписки','подписок'],['following','following'],true)}</button>`}</div>`;}
-SC.P10={title:p=>p.tab==='following'?L('Подписки','Following'):L('Подписчики','Followers'),valid:p=>(p.id==='me'||p.id==='couple'&&S.pair?.status==='active'||!!PEOPLE[p.id])&&!isBlocked(p.id),render:(p)=>{const id=p.id,tab=p.tab==='following'?'following':'followers',mine=id==='me';
+SC.P10={title:p=>p.tab==='following'?L('Подписки','Following'):L('Подписчики','Followers'),valid:p=>(p.id==='me'||p.id==='couple'&&S.pair?.status==='active'||!!PEOPLE[p.id])&&!isBlocked(p.id),render:(p)=>{const id=p.id,tab=p.tab==='following'?'following':'followers',mine=id==='me'||id==='couple'&&activePair();
  const list=tab==='following'?followingOf(id):followersOf(id);
- const row=k=>{const self=k==='me';const fol=social('me').follows.has(k);
+ const row=k=>{const self=k==='me'||k==='couple';const fol=social(activeActor()).follows.has(k);
   const act=self?`<span class="note">${L('это ты','you')}</span>`
    :mine&&tab==='followers'?`<button class="btn sm ${fol?'soft':'primary'}" data-act="flwToggle" data-v="${k}" aria-pressed="${fol}">${fol?L('Отписаться','Unfollow'):L('Подписаться','Follow back')}</button>`
    :`<button class="btn sm ${fol?'soft':'primary'}" data-act="flwToggle" data-v="${k}" aria-pressed="${fol}">${fol?L('Отписаться','Unfollow'):L('Подписаться','Follow')}</button>`;
   return `<div class="li frow"><button class="frow-go" data-go="${self?'P03':'P01'}" ${self?'':`data-p='${esc(JSON.stringify({id:k}))}'`}>${av(k,'')}<span class="tx"><b><span class="fnm">${esc(pname(k))}</span>${nameBadges(person(k),1)}</b><small>${esc(placeLine(k)||'')}</small></span></button>${act}</div>`;};
  const who=mine?'':` · ${esc(pname(id))}`;
  return `${bar((tab==='following'?L('Подписки','Following'):L('Подписчики','Followers'))+who,{back:1,sm:1,actions:authorPicker()})}<div class="view nodock"><div class="wrap">
- ${person(id)?.pair?'':seg([['followers',`${L('Подписчики','Followers')} · ${followersOf(id).length}`],['following',`${L('Подписки','Following')} · ${followingOf(id).length}`]],tab,'flwTab')}
+ ${seg([['followers',`${L('Подписчики','Followers')} · ${followersOf(id).length}`],['following',`${L('Подписки','Following')} · ${followingOf(id).length}`]],tab,'flwTab')}
  ${mine&&tab==='followers'?``:''}
  ${list.length?`<div class="card list mt12">${list.map(row).join('')}</div>`:empty('people',tab==='following'?L('Подписок пока нет','Not following anyone yet'):L('Подписчиков пока нет','No followers yet'),'')}</div></div>`;}};
 ACT.flwTab=a=>{const r=cur();r.p={...r.p,tab:a.dataset.v};refresh();};
-ACT.flwToggle=a=>{const id=a.dataset.v,actor=activeActor();if(!canAct('follow',actor)||!(PEOPLE[id]||id==='couple'&&activePair())||isBlocked(id)||ownedIdentity(id))return;const on=!social(actor).follows.has(id);on?social(actor).follows.add(id):social('me').follows.delete(id);if(on)notifyOther(id,'follow','me_'+id,{p:'me'});refresh();toast(on?L(`Подписка на ${pname(id)}`,`Following ${pname(id)}`):L(`Подписка на ${pname(id)} отменена`,`Unfollowed ${pname(id)}`),{type:on?'ok':'',action:{label:L('Отменить','Undo'),fn:()=>{if(isBlocked(id))return;on?social('me').follows.delete(id):social('me').follows.add(id);refresh();}}});};
+ACT.flwToggle=a=>{const id=a.dataset.v,actor=activeActor();if(!canAct('follow',actor)||!(PEOPLE[id]||id==='couple'&&activePair())||isBlocked(id)||ownedIdentity(id))return;const on=!social(actor).follows.has(id);on?social(actor).follows.add(id):social(actor).follows.delete(id);if(on)notifyOther(id,'follow','me_'+id,{p:'me'});refresh();toast(on?L(`Подписка на ${pname(id)}`,`Following ${pname(id)}`):L(`Подписка на ${pname(id)} отменена`,`Unfollowed ${pname(id)}`),{type:on?'ok':'',action:{label:L('Отменить','Undo'),fn:()=>{if(isBlocked(id))return;on?social(actor).follows.delete(id):social(actor).follows.add(id);refresh();}}});};
 
 /** couple links on a profile: a couple profile names its two accounts, each partner links to the couple */
 function pairLine(id,o={}){const p=person(id);if(!p)return '';
