@@ -199,3 +199,53 @@ test('edits: minor applies, major goes to review; reports hide and can block; co
     assert.equal((await call('ub', pair, { action: 'post.delete', opId: op(), postId: cp.id })).state, 'archived');
   } finally { await pg.close(); }
 });
+
+test('review fixes: approval bound to the version, disputes need photos and survive edits, hides do not leak, drafts stay the writer’s', async () => {
+  const { pg, db, call, person, coupleOf } = await setup();
+  try {
+    const a = await person('ua', 'Alex'), b = await person('ub', 'Kira'), c = await person('uc', 'Noa');
+    const pair = await coupleOf([a, b]);
+    await db.query(`update feture.profile_member set approves_partner = true where profile_id = $1`, [pair]);
+    // Approval is for the version the partner saw.
+    const d = await call('ua', pair, { action: 'post.saveDraft', opId: op(), post: draft('Версия 1') });
+    const pend = await call('ua', pair, { action: 'post.publish', opId: op(), postId: d.id });
+    await call('ua', pair, { action: 'post.saveDraft', opId: op(), postId: d.id, post: draft('Версия 2, другая') });
+    const late = await call('ub', pair, { action: 'decide.approval', opId: op(), approvalId: pend.pending.approvalId, choice: 'approve' });
+    assert.notEqual(late.applied, true);
+    assert.equal((await call('ua', pair, { action: 'post.get', postId: d.id })).post.state, 'draft');
+    // The partner cannot read or edit the draft.
+    assert.equal((await call('ub', pair, { action: 'post.get', postId: d.id })).status, 404);
+    assert.equal((await call('ub', pair, { action: 'post.edit', opId: op(), postId: d.id, rev: 3, post: draft('Чужое') })).status, 404);
+
+    // Disputes need photos; reordering photos neither lifts a dispute nor re-asks marked people.
+    const text = await publish(call, 'ua', a, draft('Только текст'));
+    assert.equal((await call('uc', c, { action: 'tag.object', opId: op(), postId: text.id })).rule, 'no_photos');
+    const i1 = await asset(db, a), i2 = await asset(db, a);
+    const photo = await publish(call, 'ua', a, draft('Фото', { mediaIds: [i1, i2] }));
+    await call('uc', c, { action: 'tag.object', opId: op(), postId: photo.id });
+    const rev = (await call('ua', a, { action: 'post.get', postId: photo.id })).post.rev;
+    await call('ua', a, { action: 'post.edit', opId: op(), postId: photo.id, rev, post: draft('Фото', { mediaIds: [i2, i1] }) });
+    assert.equal((await call('ub', b, { action: 'post.get', postId: photo.id })).status, 404); // still disputed
+    // Marks only on posts for everyone.
+    assert.deepEqual((await call('ua', a, { action: 'post.saveDraft', opId: op(), post: draft('x', { mediaIds: [i1], tags: [c], audience: 'followers' }) })).fields, ['tags']);
+
+    // Hiding a post one cannot see is refused, and the hidden list shows only what is still visible.
+    const secret = await publish(call, 'ua', a, draft('Подписчикам только', { audience: 'followers' }));
+    assert.equal((await call('uc', c, { action: 'feedHide.set', opId: op(), kind: 'post', targetId: secret.id, on: true })).status, 404);
+    await call('uc', c, { action: 'feedHide.set', opId: op(), kind: 'post', targetId: text.id, on: true });
+    await call('ua', a, { action: 'block.set', opId: op(), profileId: c, on: true });
+    assert.equal((await call('uc', c, { action: 'feedHide.list' })).items[0].target, null);
+
+    // Deleting a reported post keeps it as evidence.
+    const rep = await publish(call, 'ub', b, draft('Спорный'));
+    await call('ua', a, { action: 'report.create', opId: op(), targetType: 'post', targetId: rep.id, reason: 'spam' });
+    assert.equal((await call('ub', b, { action: 'post.delete', opId: op(), postId: rep.id })).state, 'archived');
+
+    // A block on a person also ends follows of the couples they are in.
+    const e = await person('ue', 'Lev');
+    await call('ue', e, { action: 'follow.set', opId: op(), profileId: pair, on: true });
+    await call('ua', pair, { action: 'follow.set', opId: op(), profileId: e, on: true });
+    await call('ue', e, { action: 'block.set', opId: op(), profileId: a, on: true });
+    assert.equal((await db.query(`select count(*)::int n from feture.follow where follower_profile_id = $1 or target_profile_id = $1`, [e]))[0].n, 0);
+  } finally { await pg.close(); }
+});

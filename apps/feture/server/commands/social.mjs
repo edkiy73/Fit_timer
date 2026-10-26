@@ -28,6 +28,16 @@ async function otherProfile(q, acting, target) {
  * ways, requests both ways. Likes, matches and chats join here in slices F and G. History is kept, never deleted.
  * @param {Q} q @param {string} blocker @param {string} blocked */
 async function cutTies(q, blocker, blocked) {
+  // Ties to the blocked person's couples go too, so nothing comes back on unblock.
+  const sides = await q.query(
+    `select x.id from feture.profile x where x.id in (select feture.profile_people($1))
+        or exists (select 1 from feture.profile_member m join feture.account a on a.id = m.account_id
+                   where m.profile_id = x.id and m.state = 'active' and a.person_profile_id in (select feture.profile_people($1)))`, [blocked]);
+  for (const s of sides) await cutPair(q, blocker, s.id);
+}
+
+/** @param {Q} q @param {string} blocker @param {string} blocked */
+async function cutPair(q, blocker, blocked) {
   await q.query(`delete from feture.follow where (follower_profile_id = $1 and target_profile_id = $2) or (follower_profile_id = $2 and target_profile_id = $1)`, [blocker, blocked]);
   await q.query(`delete from feture.note_subscription where (subscriber_profile_id = $1 and author_profile_id = $2) or (subscriber_profile_id = $2 and author_profile_id = $1)`, [blocker, blocked]);
   await q.query(
@@ -94,7 +104,11 @@ const run = {
     const rows = await q.query(
       `insert into feture.follow (follower_profile_id, target_profile_id, acted_by) values ($1, $2, $3) on conflict do nothing returning 1`,
       [acting.profileId, input.profileId, acting.accountId]);
-    if (rows.length) {
+    // Follow, unfollow, follow again: told once a day per person.
+    const [{ told }] = await q.query(
+      `select exists (select 1 from feture.outbox where topic = 'follow.created' and profile_id = $1 and payload->>'from' = $2 and created_at > now() - interval '1 day') told`,
+      [input.profileId, acting.profileId]);
+    if (rows.length && !told) {
       await enqueue(q, 'follow.created', input.profileId, { from: acting.profileId });
       if (acting.kind === 'couple') await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: 'follow' });
     }
@@ -119,6 +133,10 @@ const run = {
     const acting = need(a);
     if (input.on) {
       if (input.kind === 'author' || input.kind === 'activity') await otherProfile(q, acting, input.targetId);
+      if (input.kind === 'post') {
+        const [v] = await q.query(`select 1 from feture.post p where p.id = $1 and feture.post_visible(p, $2, $3)`, [input.targetId, acting.profileId, acting.accountId]);
+        if (!v) fail(404, 'not_found');
+      }
       await q.query(`insert into feture.feed_hide (profile_id, kind, target_id) values ($1, $2, $3) on conflict do nothing`, [acting.profileId, input.kind, input.targetId]);
     } else {
       await q.query(`delete from feture.feed_hide where profile_id = $1 and kind = $2 and target_id = $3`, [acting.profileId, input.kind, input.targetId]);
@@ -131,9 +149,10 @@ const run = {
     const items = await q.query(
       `select h.kind, h.target_id, h.created_at,
          case when h.kind in ('author', 'activity') then (select json_build_object('id', p.id, 'handle', p.handle, 'name', p.name) from feture.profile p where p.id = h.target_id and p.state = 'active')
-              when h.kind = 'post' then (select json_build_object('id', x.id, 'excerpt', left(coalesce(x.title, x.body), 60)) from feture.post x where x.id = h.target_id and x.state = 'published')
+              when h.kind = 'post' then (select json_build_object('id', x.id, 'excerpt', left(coalesce(x.title, x.body), 60)) from feture.post x
+                                         where x.id = h.target_id and feture.post_visible(x, $1, $2))
          end target
-       from feture.feed_hide h where h.profile_id = $1 order by h.created_at desc limit 200`, [acting.profileId]);
+       from feture.feed_hide h where h.profile_id = $1 order by h.created_at desc limit 200`, [acting.profileId, acting.accountId]);
     return { items, count: items.length };
   },
 
@@ -158,8 +177,8 @@ const run = {
 
   async 'profile.followers'(q, { acting: a, input }) {
     const acting = need(a);
-    const [{ b }] = await q.query('select feture.blocked($1, $2) b', [acting.profileId, input.profileId]);
-    if (b) fail(404, 'not_found');
+    const [t] = await q.query(`select feture.blocked($1, id) b from feture.profile where id = $2 and state = 'active'`, [acting.profileId, input.profileId]);
+    if (!t || t.b) fail(404, 'not_found');
     const col = input.following ? ['follower_profile_id', 'target_profile_id'] : ['target_profile_id', 'follower_profile_id'];
     const items = await q.query(
       `select p.id, p.kind, p.handle, p.name, f.created_at from feture.follow f join feture.profile p on p.id = f.${col[1]}

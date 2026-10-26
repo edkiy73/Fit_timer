@@ -200,7 +200,8 @@ $$;
 create function feture.post_visible(p feture.post, viewer uuid, viewer_account uuid) returns boolean
 language sql stable set search_path = pg_catalog, feture as $$
   select case
-    when exists (select 1 from feture.profile_member m where m.profile_id = p.owner_profile_id and m.account_id = viewer_account and m.state = 'active') then true
+    when exists (select 1 from feture.profile_member m where m.profile_id = p.owner_profile_id and m.account_id = viewer_account and m.state = 'active')
+      then p.state <> 'draft' or p.created_by = viewer_account   -- a couple's draft is its writer's alone
     else p.state = 'published' and p.disputed_at is null
       and exists (select 1 from feture.profile o where o.id = p.owner_profile_id and o.state = 'active')
       and not feture.blocked(viewer, p.owner_profile_id)

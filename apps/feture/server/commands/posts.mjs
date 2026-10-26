@@ -83,6 +83,8 @@ async function writeParts(q, postId, f, acting, { keepVotes = false } = {}) {
   // Photo marks: people only, not the author's own members, not blocked either way. Changed media re-ask everyone.
   const [old] = await q.query(`select array_agg(profile_id) ids from feture.photo_tag where post_id = $1`, [postId]);
   const oldIds = new Set(old?.ids ?? []);
+  // Marking people works on posts everyone can see: a marked person must see what they are asked to agree to.
+  if (f.tags.length && f.audience !== 'all') fail(400, 'invalid_input', { fields: ['tags'] });
   if (f.tags.length) {
     const ok = await q.query(
       `select p.id from feture.profile p where p.id = any($1) and p.kind = 'person' and p.state = 'active'
@@ -117,7 +119,12 @@ async function writeMentions(q, sourceType, sourceId, text, authorProfileId) {
  * @param {Q} q @param {string} postId */
 async function announce(q, postId) {
   const [p] = await q.query('select owner_profile_id, type from feture.post where id = $1', [postId]);
-  const mentions = await q.query(`update feture.mention set notified = true where source_type = 'post' and source_id = $1 and not notified and not removed returning profile_id`, [postId]);
+  // Only people who can see the post hear about it (no hint of a post they may not read).
+  const mentions = await q.query(
+    `update feture.mention m set notified = true from feture.post p
+     where m.source_type = 'post' and m.source_id = $1 and p.id = m.source_id and not m.notified and not m.removed
+       and feture.post_visible(p, m.profile_id, (select a.id from feture.account a where a.person_profile_id = m.profile_id))
+     returning m.profile_id`, [postId]);
   for (const m of mentions) await enqueue(q, 'mention.created', m.profile_id, { postId, from: p.owner_profile_id });
   const tags = await q.query(`update feture.photo_tag set asked_at = now() where post_id = $1 and state = 'pending' and asked_at is null returning profile_id`, [postId]);
   for (const t of tags) await enqueue(q, 'tag.requested', t.profile_id, { postId, from: p.owner_profile_id });
@@ -166,6 +173,7 @@ async function doPublish(q, postId, ownerProfileId) {
 async function doEdit(q, postId, actor, rev, f) {
   const [p] = await q.query('select * from feture.post where id = $1 and owner_profile_id = $2 for update', [postId, actor.profileId]);
   if (!p) fail(404, 'not_found');
+  if (p.state === 'draft' && p.created_by !== actor.accountId) fail(404, 'not_found'); // a couple's draft is its writer's alone
   if (p.rev !== rev) fail(409, 'conflict', { rev: p.rev });
   if (p.state === 'draft') {
     await q.query(`update feture.post set type = $2, title = $3, body = $4, in_feed = $5, topics = $6, album_id = $7, rev = rev + 1, updated_at = now() where id = $1`,
@@ -187,18 +195,26 @@ async function doEdit(q, postId, actor, rev, f) {
     await enqueue(q, 'moderation.postRevision', actor.profileId, { postId, revisionId: r.id });
     return { state: p.state, revision: r.id, review: true };
   }
-  const mediaChanged = JSON.stringify(oldMedia) !== JSON.stringify(f.mediaIds);
+  // Reordering the same photos is not a change of photos (no re-asking marked people).
+  const mediaChanged = JSON.stringify([...oldMedia].sort()) !== JSON.stringify([...f.mediaIds].sort());
   await q.query(`update feture.post set type = $2, title = $3, body = $4, in_feed = $5, topics = $6, album_id = $7, rev = rev + 1, edited_at = now(), updated_at = now() where id = $1`,
     [postId, f.type, f.title ?? null, f.body, f.inFeed, f.topics, f.albumId ?? null]);
   if (mediaChanged) await q.query(`update feture.photo_tag set state = 'pending', asked_at = null, decided_at = null where post_id = $1`, [postId]);
-  if (mediaChanged) await q.query(`update feture.post set disputed_at = null where id = $1`, [postId]);
+  // A dispute («это я на фото») is lifted only by staff (S4), never by an edit.
   await writeParts(q, postId, f, actor, { keepVotes: true });
   await writeMentions(q, 'post', postId, f.body, actor.profileId);
   await announce(q, postId);
   return { state: p.state, rev: p.rev + 1 };
 }
 
-registerApprovalKind('post.publish', { apply: async (q, row) => { await doPublish(q, String(row.target_id), row.profile_id); } });
+registerApprovalKind('post.publish', {
+  apply: async (q, row) => {
+    // The partner approved exactly this version: if the draft changed since, nothing is published.
+    const [p] = await q.query('select rev from feture.post where id = $1', [row.target_id]);
+    if (!p || p.rev !== /** @type {any} */ (row.change).rev) fail(409, 'conflict', { rule: 'changed_since_approval' });
+    await doPublish(q, String(row.target_id), row.profile_id);
+  },
+});
 registerApprovalKind('post.edit', {
   apply: async (q, row) => {
     const c = /** @type {any} */ (row.change);
@@ -247,7 +263,7 @@ function readCursor(c) {
   if (!c) return null;
   try {
     const [at, id] = JSON.parse(Buffer.from(c, 'base64url').toString('utf8'));
-    if (typeof at === 'string' && /^[0-9a-f-]{36}$/.test(id) && !Number.isNaN(Date.parse(at))) return { at, id };
+    if (typeof at === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id) && !Number.isNaN(Date.parse(at))) return { at, id };
   } catch { /* invalid below */ }
   fail(400, 'invalid_input', { fields: ['cursor'] });
 }
@@ -262,6 +278,8 @@ const run = {
       const [p] = await q.query(`select state, created_by from feture.post where id = $1 and owner_profile_id = $2 for update`, [postId, acting.profileId]);
       if (!p || p.created_by !== acting.accountId) fail(404, 'not_found'); // a couple's draft belongs to the partner who wrote it
       if (p.state !== 'draft') fail(409, 'conflict', { state: p.state });
+      // Changing a draft the partner is asked to approve withdraws that request: they must see the final version.
+      await q.query(`update feture.partner_approval set state = 'cancelled', decided_at = now() where target_type = 'post' and target_id = $1 and state = 'pending'`, [postId]);
       await q.query(`update feture.post set type = $2, title = $3, body = $4, in_feed = $5, topics = $6, album_id = $7, rev = rev + 1, updated_at = now() where id = $1`,
         [postId, f.type, f.title ?? null, f.body, f.inFeed, f.topics, f.albumId ?? null]);
     } else {
@@ -277,11 +295,12 @@ const run = {
 
   async 'post.publish'(q, { acting: a, input }) {
     const acting = need(a);
-    const [p] = await q.query(`select state, created_by from feture.post where id = $1 and owner_profile_id = $2`, [input.postId, acting.profileId]);
+    const [p] = await q.query(`select state, created_by, rev, type, title, body, audience from feture.post where id = $1 and owner_profile_id = $2`, [input.postId, acting.profileId]);
     if (!p || p.created_by !== acting.accountId) fail(404, 'not_found');
     if (p.state !== 'draft') fail(409, 'conflict', { state: p.state });
     if (needsPartner(acting, 'post.publish')) {
-      return { pending: await requestApproval(q, acting, { kind: 'post.publish', targetType: 'post', targetId: input.postId, change: { postId: input.postId }, summary: ['post'] }) };
+      const change = { postId: input.postId, rev: p.rev, type: p.type, title: p.title, body: p.body, audience: p.audience };
+      return { pending: await requestApproval(q, acting, { kind: 'post.publish', targetType: 'post', targetId: input.postId, change, summary: ['post'] }) };
     }
     const out = await doPublish(q, input.postId, acting.profileId);
     if (acting.kind === 'couple') await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: 'post' });
@@ -290,10 +309,15 @@ const run = {
 
   async 'post.edit'(q, { acting: a, input }) {
     const acting = need(a);
-    const [p] = await q.query(`select state, audience from feture.post where id = $1 and owner_profile_id = $2`, [input.postId, acting.profileId]);
+    const [p] = await q.query(`select * from feture.post where id = $1 and owner_profile_id = $2`, [input.postId, acting.profileId]);
     if (!p) fail(404, 'not_found');
-    if (p.state !== 'draft' && needsPartner(acting, 'post.edit') && AUD.indexOf(input.post.audience) >= AUD.indexOf(p.audience)) {
-      // Narrowing the audience of a couple post never waits; any other change of a live couple post does.
+    // Only narrowing the audience, with nothing else changed, skips the partner of a couple post.
+    const f = input.post;
+    const media = (await q.query(`select asset_id from feture.media_attachment where target_type = 'post' and target_id = $1 order by position`, [input.postId])).map(r => r.asset_id);
+    const onlyNarrowing = AUD.indexOf(f.audience) < AUD.indexOf(p.audience) && f.type === p.type && (f.title ?? null) === p.title && f.body === p.body
+      && f.inFeed === p.in_feed && JSON.stringify(f.topics) === JSON.stringify(p.topics) && JSON.stringify(f.mediaIds) === JSON.stringify(media)
+      && !f.poll && !f.tags.length && !f.interests.length;
+    if (p.state !== 'draft' && needsPartner(acting, 'post.edit') && !onlyNarrowing) {
       return { pending: await requestApproval(q, acting, { kind: 'post.edit', targetType: 'post', targetId: input.postId, change: { rev: input.rev, post: input.post }, summary: ['post'] }) };
     }
     return doEdit(q, input.postId, acting, input.rev, input.post);
@@ -304,10 +328,12 @@ const run = {
     const [p] = await q.query(`select state from feture.post where id = $1 and owner_profile_id = $2 for update`, [input.postId, acting.profileId]);
     if (!p) fail(404, 'not_found');
     await q.query(`update feture.partner_approval set state = 'cancelled', decided_at = now() where target_type = 'post' and target_id = $1 and state = 'pending'`, [input.postId]);
-    if (acting.kind === 'couple') {
+    // A post removed by moderation or under open reports is only hidden, so the evidence stays for staff (S4 §3).
+    const [{ reported }] = await q.query(`select exists (select 1 from feture.report where target_type = 'post' and target_id = $1 and state = 'open') reported`, [input.postId]);
+    if (acting.kind === 'couple' || p.state === 'removed' || reported) {
       // A couple's post is hidden into the couple's archive, not destroyed by one partner (V21 «Скрыть совместную»).
       await q.query(`update feture.post set state = 'archived', updated_at = now() where id = $1`, [input.postId]);
-      await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: 'post_archived' });
+      if (acting.kind === 'couple') await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: 'post_archived' });
       return { state: 'archived' };
     }
     await q.query(`delete from feture.media_attachment where target_type = 'post' and target_id = $1`, [input.postId]);
@@ -391,7 +417,11 @@ const run = {
     const rows = await q.query(
       `insert into feture.reaction (target_type, target_id, profile_id, acted_by) values ($1, $2, $3, $4) on conflict do nothing returning 1`,
       [input.targetType, input.targetId, viewer.profileId, viewer.accountId]);
-    if (rows.length && !p.own) await enqueue(q, 'reaction.created', p.owner_profile_id, { postId, from: viewer.profileId, targetType: input.targetType });
+    // Like, unlike, like again: the author hears about it once a day per post and person.
+    const [{ told }] = await q.query(
+      `select exists (select 1 from feture.outbox where topic = 'reaction.created' and profile_id = $1 and payload->>'postId' = $2
+         and payload->>'from' = $3 and created_at > now() - interval '1 day') told`, [p.owner_profile_id, postId, viewer.profileId]);
+    if (rows.length && !p.own && !told) await enqueue(q, 'reaction.created', p.owner_profile_id, { postId, from: viewer.profileId, targetType: input.targetType });
     return { liked: true };
   },
 
@@ -495,6 +525,9 @@ const run = {
     const viewer = need(a);
     const p = await visiblePost(q, input.postId, viewer);
     if (p.own) fail(422, 'rule_violation', { rule: 'own_post' });
+    // «Это я на фото» only makes sense where there are photos; text posts go through reports.
+    const [{ n }] = await q.query(`select count(*)::int n from feture.media_attachment where target_type = 'post' and target_id = $1`, [input.postId]);
+    if (!n) fail(422, 'rule_violation', { rule: 'no_photos' });
     const [t] = await q.query('select state from feture.photo_tag where post_id = $1 and profile_id = $2', [input.postId, viewer.profileId]);
     if (t) {
       await q.query(`update feture.photo_tag set state = 'no', decided_at = now() where post_id = $1 and profile_id = $2`, [input.postId, viewer.profileId]);
