@@ -23,6 +23,7 @@ import { chats } from '../server/commands/chats.mjs';
 import { inbox } from '../server/commands/inbox.mjs';
 import { people } from '../server/commands/people.mjs';
 import { premium } from '../server/commands/premium.mjs';
+import { accounts } from '../server/commands/account.mjs';
 import { runJobs } from '../server/jobs.mjs';
 import { createR2Storage } from '../server/media/r2.mjs';
 import { createSupabaseStorage } from '../server/media/supabase-storage.mjs';
@@ -33,6 +34,7 @@ const require = createRequire(import.meta.url);
 const { store } = require('../../../packages/core/server/store');
 const { allowedOrigin, rateOkScoped } = require('../../../packages/core/server/util');
 const Supabase = require('../../../packages/core/server/supabase');
+const CorePush = require('../../../packages/core/server/push');
 const { authenticate } = require('../lib/feture/identity');
 
 const env = process.env;
@@ -75,7 +77,7 @@ const handler = db && createFeHandler({
   db,
   pepper: env.FETURE_ID_PEPPER ?? '',
   cfg: { media: { storage: media.storage, delivery: media.delivery } },
-  commands: { ...platform, ...me, ...access, ...couples, ...staff, ...social, ...posts, ...moderation, ...communities, ...events, ...photos, ...discover, ...chats, ...inbox, ...people, ...premium },
+  commands: { ...platform, ...me, ...access, ...couples, ...staff, ...social, ...posts, ...moderation, ...communities, ...events, ...photos, ...discover, ...chats, ...inbox, ...people, ...premium, ...accounts },
   authenticate: req => authenticate(req, store),
   quota: async (req, coreKey) => { // coreKey: Core account hash, only for the ephemeral rate-limit key
     // Same budget as /api/domain: per account across devices and IPs, plus a per-IP cap.
@@ -108,7 +110,10 @@ export default async function fe(/** @type {any} */ req, /** @type {any} */ res)
     if (!db) return json(res, 503, { ok: false, error: 'unavailable' });
     try {
       const scan = media.storage ? { storage: /** @type {any} */ (media.storage), scanner: null, classifier: null, renderer: media.renderer } : null;
-      return json(res, 200, { ok: true, ...(await runJobs(db, { scan })) });
+      // Push goes through Core's FCM/APNs transport once its keys are set; until then nothing is sent.
+      const info = CorePush.pushInfo();
+      const push = info.android || info.ios ? { send: CorePush.sendToDevice } : null;
+      return json(res, 200, { ok: true, ...(await runJobs(db, { scan, push })) });
     } catch {
       return json(res, 503, { ok: false, error: 'unavailable' });
     }

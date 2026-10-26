@@ -132,8 +132,9 @@ const run = {
   async 'push.register'(q, { account, input }) {
     // A device belongs to whoever signed in on it last.
     await q.query(
-      `insert into feture.push_device (token_hash, account_id, platform, token) values ($1, $2, $3, $4)
-       on conflict (token_hash) do update set account_id = $2, platform = $3, last_seen_at = now()`, [sha256(input.token), account.id, input.platform, input.token]);
+      `insert into feture.push_device (token_hash, account_id, platform, token, tz) values ($1, $2, $3, $4, coalesce($5, 'UTC'))
+       on conflict (token_hash) do update set account_id = $2, platform = $3, tz = coalesce($5, push_device.tz), last_seen_at = now()`,
+      [sha256(input.token), account.id, input.platform, input.token, input.tz ?? null]);
     return { registered: true };
   },
 

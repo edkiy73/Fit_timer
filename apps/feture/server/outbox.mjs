@@ -5,7 +5,7 @@
  * then delivered again. Fencing (`lock_token`) only stops the stale worker from marking it done.
  * @typedef {import('./db.mjs').Db} Db @typedef {import('./db.mjs').Q} Q
  * @typedef {{id: string, topic: string, profile_id: string | null, payload: Record<string, unknown>,
- *   attempts: number, lock_token: string}} OutboxItem
+ *   attempts: number, lock_token: string, created_at?: Date | string}} OutboxItem
  */
 
 export const MAX_ATTEMPTS = 10;
@@ -39,7 +39,7 @@ export async function claim(db, { topics, limit = 20, lockSeconds = 60 }) {
        where done_at is null and available_at <= now() and attempts < $3 and topic = any($4)
          and (locked_until is null or locked_until < now())
        order by id limit $1 for update skip locked)
-     returning id::text, topic, profile_id, payload, attempts, lock_token::text`,
+     returning id::text, topic, profile_id, payload, attempts, lock_token::text, created_at`,
     [limit, lockSeconds, MAX_ATTEMPTS, topics]);
 }
 

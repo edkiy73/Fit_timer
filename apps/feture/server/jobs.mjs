@@ -6,6 +6,7 @@ import { settlePublication } from './commands/posts.mjs';
 import { settleAvatarsOf } from './commands/photos.mjs';
 import { sweepEphemeral } from './commands/chats.mjs';
 import { notifyHandlers } from './notify.mjs';
+import { pushHandlers, sweepPushSent } from './push.mjs';
 import { sweepSelfies, verificationHandlers } from './commands/premium.mjs';
 
 /** Queue worker (S2 §8, D7). Called every minute by pg_cron + pg_net (Vercel Hobby cron is daily only)
@@ -14,7 +15,7 @@ import { sweepSelfies, verificationHandlers } from './commands/premium.mjs';
  * outbox until their handlers ship, instead of being parked unread.
  * @typedef {import('./db.mjs').Db} Db
  * @typedef {import('./media/scan.mjs').ScanDeps} ScanDeps
- * @typedef {{scan: ScanDeps | null, limit?: number, notifyLimit?: number}} JobDeps
+ * @typedef {{scan: ScanDeps | null, limit?: number, notifyLimit?: number, push?: import('./push.mjs').Transport | null}} JobDeps
  */
 
 /** @param {Db} db @param {JobDeps} deps */
@@ -66,6 +67,17 @@ export function mediaHandlers(db, deps) {
       const [row] = await db.query(
         `select state, storage_key, bytes, csam_checked_at is not null checked from feture.media_asset where id = $1`, [id(item)]);
       if (!row || !['removed', 'rejected'].includes(row.state)) return;
+      // A file an open report is about stays as evidence until the report is decided (account deletion included).
+      const [held] = await db.query(
+        `select 1 from feture.report r where r.state = 'open' and (
+           r.target_type = 'media' and r.target_id = $1
+           or r.target_type = 'post' and exists (select 1 from feture.media_attachment a where a.target_type = 'post' and a.target_id = r.target_id and a.asset_id = $1)
+           or r.target_type = 'conversation' and exists (select 1 from feture.message m where m.media_asset_id = $1 and m.id = any(r.message_ids)))
+         limit 1`, [id(item)]).catch(() => []);
+      if (held) {
+        await db.tx(q => enqueue(q, 'media.purge', item.profile_id ?? null, { assetId: id(item) }, { delaySeconds: 24 * 3600 }));
+        return;
+      }
       const stored = await storage().head(row.storage_key);
       if (stored && !row.checked) {
         await db.tx(async q => {
@@ -153,7 +165,9 @@ export async function runJobs(db, deps) {
   // Media first with its own budget, so a burst of likes never delays scans and publication; then the inbox.
   const media = await drain(db, { ...mediaHandlers(db, deps), ...verificationHandlers(db) }, { limit: deps.limit ?? 10, lockSeconds: 120 });
   const inbox = await drain(db, notifyHandlers(db), { limit: deps.notifyLimit ?? 200, lockSeconds: 120 });
-  const processed = media + inbox;
+  // Pushes in a small batch of their own, so a slow provider never outlives the claim.
+  const pushes = await drain(db, pushHandlers(db, deps.push ?? null), { limit: 20, lockSeconds: 300 });
+  const processed = media + inbox + pushes;
   const expired = await sweepExpiredUploads(db);
   const ledger = await sweepOpLedger(db);
   const markers = await sweepMarkers(db);
@@ -161,5 +175,8 @@ export async function runJobs(db, deps) {
   const ephemeral = await sweepEphemeral(db);
   const reminders = await sweepEventReminders(db);
   const selfies = await sweepSelfies(db);
+  await sweepPushSent(db);
+  // Finished outbox items stay a week (some «told already today» checks read them), then go.
+  await db.query(`delete from feture.outbox where done_at < now() - interval '7 days'`);
   return { processed, expired, ledger, markers, couples, ephemeral, reminders, selfies };
 }
