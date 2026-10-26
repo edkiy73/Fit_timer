@@ -5,6 +5,7 @@ import { deleteCouple } from './commands/couples.mjs';
 import { settlePublication } from './commands/posts.mjs';
 import { settleAvatarsOf } from './commands/photos.mjs';
 import { sweepEphemeral } from './commands/chats.mjs';
+import { notifyHandlers } from './notify.mjs';
 
 /** Queue worker (S2 §8, D7). Called every minute by pg_cron + pg_net (Vercel Hobby cron is daily only)
  * through `POST /api/fe?jobs=1` with the jobs secret. Every handler is idempotent.
@@ -133,7 +134,7 @@ export async function sweepExpiredCouples(db) {
 
 /** One worker tick. @param {Db} db @param {JobDeps} deps */
 export async function runJobs(db, deps) {
-  const processed = await drain(db, mediaHandlers(db, deps), { limit: deps.limit ?? 10, lockSeconds: 120 });
+  const processed = await drain(db, { ...mediaHandlers(db, deps), ...notifyHandlers(db) }, { limit: deps.limit ?? 10, lockSeconds: 120 });
   const expired = await sweepExpiredUploads(db);
   const ledger = await sweepOpLedger(db);
   const markers = await sweepMarkers(db);
