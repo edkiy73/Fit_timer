@@ -24,11 +24,30 @@ async function currentCouple(q, accountId) {
   return r ?? null;
 }
 
-/** Deletes a couple now: members leave, the profile is closed, its access and pending changes end.
- * @param {Q} q @param {string} profileId @param {string} reason */
+/** Ends the couple's own outgoing side: its pending requests to others are cancelled and access others gave it is
+ * revoked (it does not come back on restore). @param {Q} q @param {string} profileId */
+async function closeOutgoing(q, profileId) {
+  await q.query(
+    `update feture.access_request set state = 'closed', closed_reason = 'couple_stopped', decided_at = now()
+     where requester_profile_id = $1 and state = 'pending'`, [profileId]);
+  await q.query(`update feture.access_grant set revoked_at = now() where viewer_profile_id = $1 and revoked_at is null`, [profileId]);
+}
+
+/** Deletes a couple now: members leave, access both ways and pending changes end, and the couple's own content
+ * (interests, history, private part, details, private media) is deleted (S1 §16). @param {Q} q @param {string} profileId @param {string} reason */
 export async function deleteCouple(q, profileId, reason) {
   await closeAll(q, profileId, 'couple_stopped');
+  await closeOutgoing(q, profileId);
   await q.query(`update feture.partner_approval set state = 'cancelled', decided_at = now() where profile_id = $1 and state = 'pending'`, [profileId]);
+  for (const t of ['interest', 'interest_history', 'private_part']) await q.query(`delete from feture.${t} where profile_id = $1`, [profileId]);
+  await q.query(`update feture.profile_details set bio = '', city_id = null, roles = '{}', formats = '{}', seeks = '{}' where profile_id = $1`, [profileId]);
+  const media = await q.query(
+    `update feture.media_asset set state = 'removed', removed_at = now() where owner_profile_id = $1 and state not in ('removed', 'blocked') returning id`, [profileId]);
+  for (const m of media) {
+    await enqueue(q, 'media.hide', profileId, { assetId: m.id });
+    await enqueue(q, 'media.purge', profileId, { assetId: m.id });
+  }
+  await q.query(`delete from feture.media_attachment where target_type = 'private' and target_id = $1`, [profileId]);
   const members = await q.query(
     `update feture.profile_member set state = 'left', left_at = now() where profile_id = $1 and state = 'active' returning account_id`, [profileId]);
   await q.query(
@@ -39,8 +58,10 @@ export async function deleteCouple(q, profileId, reason) {
 /** @type {Record<keyof typeof couplesCommands, Command['run']>} */
 const run = {
   async 'couple.invite'(q, { account, input }) {
+    // Limited by the handler (10 a day, failures included) so invitations cannot pester or probe who is in a couple.
     const [me] = await q.query(
-      `select a.person_profile_id, p.name, p.handle from feture.account a join feture.profile p on p.id = a.person_profile_id where a.id = $1`, [account.id]);
+      `select a.person_profile_id, p.name, p.handle from feture.account a join feture.profile p on p.id = a.person_profile_id
+       where a.id = $1 and a.state = 'active' and p.state = 'active'`, [account.id]);
     if (!me) fail(422, 'rule_violation', { rule: 'registration_required' });
     const mine = await currentCouple(q, account.id);
     if (mine?.state === 'active') fail(422, 'rule_violation', { rule: 'already_in_couple' });
@@ -55,8 +76,14 @@ const run = {
     // Exact nickname of a person; couples cannot be invited. Not found and unavailable look the same.
     const [target] = await q.query(
       `select m.account_id from feture.profile p join feture.profile_member m on m.profile_id = p.id and m.state = 'active'
+       join feture.account a on a.id = m.account_id and a.state = 'active'
        where lower(p.handle) = lower($1) and p.kind = 'person' and p.state = 'active'`, [handle]);
     if (!target) fail(404, 'not_found');
+    // After a decline the same person is not asked again for a week.
+    const [{ declined }] = await q.query(
+      `select exists (select 1 from feture.couple_invite where from_account = $1 and to_account = $2 and state = 'declined'
+         and answered_at > now() - interval '7 days') declined`, [account.id, target.account_id]);
+    if (declined) fail(422, 'rule_violation', { rule: 'invite_cooldown' });
     if (await currentCouple(q, target.account_id)) fail(422, 'rule_violation', { rule: 'partner_in_couple' });
     try {
       const [inv] = await q.query(`insert into feture.couple_invite (from_account, to_account) values ($1, $2) returning id`, [account.id, target.account_id]);
@@ -71,7 +98,7 @@ const run = {
   async 'couple.invites'(q, { account }) {
     await q.query(`update feture.couple_invite set state = 'expired', answered_at = now() where state = 'pending' and expires_at < now() and (from_account = $1 or to_account = $1)`, [account.id]);
     const card = (/** @type {string} */ col) => `(select json_build_object('id', p.id, 'handle', p.handle, 'name', p.name)
-      from feture.account a join feture.profile p on p.id = a.person_profile_id where a.id = i.${col})`;
+      from feture.account a join feture.profile p on p.id = a.person_profile_id where a.id = i.${col} and a.state = 'active' and p.state = 'active')`;
     const outgoing = await q.query(
       `select i.id, i.state, i.created_at, i.answered_at, ${card('to_account')} profile from feture.couple_invite i
        where i.from_account = $1 order by i.created_at desc limit 5`, [account.id]);
@@ -100,8 +127,12 @@ const run = {
       await enqueue(q, 'couple.declined', null, { inviteId: inv.id, for: inv.from_account });
       return { state: 'declined' };
     }
-    // Both must still be free: either may have joined another couple since.
+    // Both must still be free and active: either may have joined another couple or been suspended since.
     if (await currentCouple(q, inv.from_account) || await currentCouple(q, account.id)) fail(409, 'conflict', { rule: 'already_in_couple' });
+    const [{ active }] = await q.query(
+      `select count(*)::int active from feture.account a join feture.profile p on p.id = a.person_profile_id
+       where a.id = any($1) and a.state = 'active' and p.state = 'active'`, [[inv.from_account, account.id]]);
+    if (active !== 2) fail(409, 'conflict', { rule: 'unavailable' });
     const names = await q.query(
       `select coalesce(nullif(p.name, ''), p.handle) n from feture.account a join feture.profile p on p.id = a.person_profile_id where a.id = any($1)
        order by array_position($1, a.id)`, [[inv.from_account, account.id]]);
@@ -153,6 +184,9 @@ const run = {
     // A safety action: immediate, by either partner; nothing pending can reopen anything afterwards.
     await narrowCouple(q, acting, 'couple_stopped');
     const closed = await closeAll(q, acting.profileId, 'couple_stopped');
+    await closeOutgoing(q, acting.profileId);
+    // Approval settings start over if the couple is restored (V21 dissolvePair).
+    await q.query(`update feture.profile_member set approves_partner = false where profile_id = $1`, [acting.profileId]);
     await q.query(`update feture.profile_settings set discover_mode = 'off', updated_at = now() where profile_id = $1`, [acting.profileId]);
     const [p] = await q.query(
       `update feture.profile set state = 'paused', paused_at = now(), restore_until = now() + interval '30 days', updated_at = now()

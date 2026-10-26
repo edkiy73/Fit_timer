@@ -123,3 +123,66 @@ test('a paused couple blocks a new one unless the person chooses to end it for g
     assert.equal((await call('ub', pair, { action: 'couple.restore', opId: op() })).status, 403); // the old couple is gone for both
   } finally { await pg.close(); }
 });
+
+test('review fixes: partner sees values, stop closes the couple’s outgoing side, invite cooldown and limit, narrowing interests', async () => {
+  const { pg, db, call, person } = await setup();
+  try {
+    const a = await person('ua', 'Alex'), b = await person('ub', 'Kira'), d = await person('ud', 'Mia');
+    const inv = await call('ua', null, { action: 'couple.invite', opId: op(), handle: 'Kira' });
+    const pair = (await call('ub', null, { action: 'couple.inviteAnswer', opId: op(), inviteId: inv.id, accept: true })).profileId;
+    await call('ub', pair, { action: 'couple.setApproval', opId: op(), approvesPartner: true });
+
+    // The partner decides on values, not on field names.
+    const p = await call('ua', pair, { action: 'profile.update', opId: op(), rev: 1, bio: 'Нас двое' });
+    const list = (await call('ub', pair, { action: 'decide.approvals' })).items;
+    assert.equal(list.find(x => x.id === p.pending.approvalId).change.bio, 'Нас двое');
+
+    // Narrowing an interest never waits; widening does.
+    await call('ub', pair, { action: 'interests.set', opId: op(), topicId: 'bondage', value: 6, vis: 'public' }); // Kira: Alex does not ask
+    assert.equal((await call('ua', pair, { action: 'interests.set', opId: op(), topicId: 'bondage', value: 6, vis: 'only' })).vis, 'only');
+    assert.ok((await call('ua', pair, { action: 'interests.set', opId: op(), topicId: 'bondage', value: 6, vis: 'public' })).pending);
+
+    // The couple's outgoing request and the access Mia gave it end when it stops, and do not come back.
+    await call('ud', d, { action: 'private.setText', opId: op(), text: 'Мой текст' });
+    await db.query(`update feture.account set age_verified_until = now() + interval '1 year' where person_profile_id = any($1)`, [[a, b]]);
+    const r1 = await call('ua', pair, { action: 'access.request', opId: op(), profileId: d, scopes: ['info'] });
+    await call('ud', d, { action: 'access.grant', opId: op(), requestId: r1.id, scopes: ['info'], term: 'none' });
+    await db.query(`update feture.access_request set state = 'declined', decided_at = now() - interval '40 days' where id = $1`, [r1.id]); // make room for a second one
+    const r2 = await call('ub', pair, { action: 'access.request', opId: op(), profileId: d, scopes: ['info'] });
+    assert.equal(r2.status, 200);
+    assert.equal((await call('ua', pair, { action: 'private.get', profileId: d })).text, 'Мой текст');
+    await call('ua', pair, { action: 'couple.stop', opId: op(), confirm: true });
+    const [req] = await db.query('select state, closed_reason from feture.access_request where id = $1', [r2.id]);
+    assert.deepEqual([req.state, req.closed_reason], ['closed', 'couple_stopped']);
+    assert.equal((await db.query(`select count(*)::int n from feture.access_grant where viewer_profile_id = $1 and revoked_at is null`, [pair]))[0].n, 0);
+    assert.equal((await db.query(`select count(*)::int n from feture.profile_member where profile_id = $1 and approves_partner`, [pair]))[0].n, 0);
+    await call('ua', pair, { action: 'couple.restore', opId: op() });
+    await call('ub', pair, { action: 'couple.restore', opId: op() });
+    assert.equal((await call('ua', pair, { action: 'private.get', profileId: d })).text, undefined);
+  } finally { await pg.close(); }
+});
+
+test('invitations: a week of quiet after a decline, ten a day, deleted couples keep no content', async () => {
+  const { pg, db, call, person } = await setup();
+  try {
+    await person('ua', 'Alex'); await person('ub', 'Kira');
+    const inv = await call('ua', null, { action: 'couple.invite', opId: op(), handle: 'Kira' });
+    await call('ub', null, { action: 'couple.inviteAnswer', opId: op(), inviteId: inv.id, accept: false });
+    assert.equal((await call('ua', null, { action: 'couple.invite', opId: op(), handle: 'Kira' })).rule, 'invite_cooldown');
+    for (let i = 0; i < 8; i++) await call('ua', null, { action: 'couple.invite', opId: op(), handle: 'nobody' + i }); // not found, still counted
+    assert.equal((await call('ua', null, { action: 'couple.invite', opId: op(), handle: 'nobody9' })).status, 429);
+
+    const [{ id: x }] = await db.query(`select id from feture.account where person_profile_id = (select id from feture.profile where handle = 'Kira')`);
+    await person('uc', 'Noa');
+    const inv2 = await call('uc', null, { action: 'couple.invite', opId: op(), handle: 'Kira' });
+    const pair = (await call('ub', null, { action: 'couple.inviteAnswer', opId: op(), inviteId: inv2.id, accept: true })).profileId;
+    await call('ub', pair, { action: 'interests.set', opId: op(), topicId: 'bondage', value: 6, vis: 'public' });
+    await call('ub', pair, { action: 'couple.stop', opId: op(), confirm: true });
+    await db.query(`update feture.profile set restore_until = now() - interval '1 minute' where id = $1`, [pair]);
+    const { runJobs } = await import('../server/jobs.mjs');
+    await runJobs(db, { scan: null });
+    assert.equal((await db.query('select count(*)::int n from feture.interest where profile_id = $1', [pair]))[0].n, 0);
+    assert.equal((await db.query('select count(*)::int n from feture.interest_history where profile_id = $1', [pair]))[0].n, 0);
+    assert.ok(x);
+  } finally { await pg.close(); }
+});

@@ -156,10 +156,11 @@ const run = {
       return { on: true };
     }
     // Switching off revokes every access and closes every request (V21 ME-003/022): say how many first.
-    await lockOwner(q, acting.profileId);
     const counts = await openCounts(q, acting.profileId);
     if ((counts.grants || counts.requests) && !input.confirm) return { confirmRequired: true, ...counts };
+    // Lock order everywhere: profile row (narrowCouple / decideApproval) before the settings row (lockOwner).
     if (acting.kind === 'couple') await narrowCouple(q, acting, 'private_off');
+    await lockOwner(q, acting.profileId);
     const closed = await closeAll(q, acting.profileId, 'private_off');
     await q.query(`update feture.profile_settings set private_on = false, updated_at = now() where profile_id = $1`, [acting.profileId]);
     return { on: false, ...closed };
@@ -280,7 +281,6 @@ const run = {
 
   async 'access.revokeAll'(q, { acting: a, input }) {
     const acting = need(a);
-    await lockOwner(q, acting.profileId);
     const counts = await openCounts(q, acting.profileId);
     if ((counts.grants || counts.requests) && !input.confirm) return { confirmRequired: true, ...counts };
     if (acting.kind === 'couple') {

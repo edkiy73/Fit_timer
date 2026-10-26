@@ -38,16 +38,6 @@ const RESERVED_STEMS = ['admin', 'support', 'moder', 'feture', 'official', 'staf
 /** @param {string} h */
 const skeleton = h => h.toLowerCase().replace(/[._]/g, '').replace(/0/g, 'o').replace(/[1i]/g, 'l').replace(/3/g, 'e').replace(/5/g, 's');
 
-/** Per-account sliding window for lookups that reveal existence. @param {Q} q @param {string} accountId @param {string} kind
- * @param {number} max @param {string} window postgres interval */
-async function limit(q, accountId, kind, max, window) {
-  await q.query(`select pg_advisory_xact_lock(hashtext('feture-rate:' || $1 || ':' || $2))`, [accountId, kind]);
-  const [{ n }] = await q.query(
-    `select count(*)::int n from feture.rate_event where account_id = $1 and kind = $2 and created_at > now() - $3::interval`, [accountId, kind, window]);
-  if (n >= max) fail(429, 'rate_limited');
-  await q.query('insert into feture.rate_event (account_id, kind) values ($1, $2)', [accountId, kind]);
-}
-
 /** @param {Acting | null} acting @returns {Acting} */
 const need = acting => { if (!acting) throw new Error('acting profile missing'); return acting; };
 /** Person-only actions (onboarding). @param {Acting} acting */
@@ -245,8 +235,7 @@ const run = {
     return { categories, topics, options, places };
   },
 
-  async 'nick.check'(q, { input, account }) {
-    await limit(q, account.id, 'nick.check', 30, '10 minutes');
+  async 'nick.check'(q, { input }) {
     const parsed = meCommands['account.create'].input.shape.handle.safeParse(input.handle);
     if (!parsed.success) return { available: false, reason: 'format' };
     const state = await handleState(q, parsed.data);
@@ -401,7 +390,6 @@ const run = {
   },
 
   async 'place.submit'(q, { account, input }) {
-    await limit(q, account.id, 'place.submit', 5, '1 day');
     const [p] = await q.query(
       `insert into feture.place (country, name_ru, name_en, state, submitted_by) values ($1, $2, $2, 'pending', $3) returning id`,
       [input.country, input.name, account.id]);
@@ -434,7 +422,12 @@ const run = {
   async 'interests.set'(q, { acting: a, input }) {
     const acting = need(a);
     const { opId: _, ...change } = input;
-    if (acting.kind === 'couple' && needsPartner(acting, 'interests.set')) {
+    // For a couple, a change that only closes (the interest becomes less visible) never waits for the partner.
+    const VIS = ['only', 'granted', 'public'];
+    const [prev] = acting.kind === 'couple'
+      ? await q.query('select vis from feture.interest where profile_id = $1 and topic_id = $2', [acting.profileId, change.topicId]) : [];
+    const narrowing = !!prev && (VIS.indexOf(change.vis) < VIS.indexOf(prev.vis) || change.vis === 'only');
+    if (acting.kind === 'couple' && !narrowing && needsPartner(acting, 'interests.set')) {
       const [t] = await q.query('select 1 from feture.topic where id = $1 and not hidden', [change.topicId]);
       if (!t) fail(400, 'invalid_input', { fields: ['topicId'] });
       return { pending: await requestApproval(q, acting, { kind: 'interests.set', targetType: 'interest:' + change.topicId, targetId: null, change, summary: [change.topicId] }) };
@@ -463,7 +456,7 @@ const run = {
     let after = null;
     if (input.cursor) {
       try { after = JSON.parse(Buffer.from(input.cursor, 'base64url').toString('utf8')); } catch { /* invalid below */ }
-      if (!Array.isArray(after) || after.length !== 2 || typeof after[0] !== 'string' || !/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(\.\d{1,6})?([+-]\d{2}(:?\d{2})?|Z)?$/.test(after[0])
+      if (!Array.isArray(after) || after.length !== 2 || typeof after[0] !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])[ T]([01]\d|2[0-3]):[0-5]\d:[0-5]\d(\.\d{1,6})?([+-]\d{2}(:?\d{2})?|Z)?$/.test(after[0])
         || typeof after[1] !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(after[1])) {
         fail(400, 'invalid_input', { fields: ['cursor'] });
       }

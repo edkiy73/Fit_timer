@@ -6,7 +6,7 @@ import { id, opId } from './platform.mjs';
 
 export const couplesCommands = {
   'couple.invite': {
-    profile: false, write: true,
+    profile: false, write: true, rate: { kind: 'couple.invite', max: 10, window: '1 day' },
     input: z.strictObject({ opId, handle: z.string().trim().max(40), replacePaused: z.boolean().optional() }),
   },
   'couple.invites': { profile: false, write: false, input: z.strictObject({}) },

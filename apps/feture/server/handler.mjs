@@ -4,6 +4,7 @@ import { resolveAccount } from './accounts.mjs';
 import { FeError, fail } from './errors.mjs';
 import { once } from './ops.mjs';
 import { actingProfile } from './profiles.mjs';
+import { limit } from './limits.mjs';
 
 /**
  * `POST /api/fe` — the new command endpoint (docs/server/S2-API.md). Domains register commands;
@@ -14,6 +15,7 @@ import { actingProfile } from './profiles.mjs';
  * @typedef {{media: import('./media/assets.mjs').MediaConfig, pepper?: string}} Cfg   pepper is filled in by the handler
  * @typedef {{
  *   input: import('zod').ZodType, profile: boolean, write: boolean, ledger?: boolean, allowPaused?: boolean,
+ *   rate?: {kind: string, max: number, window: string},
  *   run: (q: Q, ctx: {account: AccountRow, acting: Acting | null, input: any, cfg: Cfg, coreAccountHash: string}) => Promise<Record<string, unknown>>
  * }} Command
  * @typedef {{headers: Record<string, string | string[] | undefined>, method?: string, body?: unknown,
@@ -71,6 +73,9 @@ export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota
       const input = parsed.data;
       const account = await resolveAccount(db, pepper, core);
       const profileId = header(req, 'x-fe-profile');
+      // Per-account limits are committed on their own, before the command: a failed attempt (not found, rule) still counts.
+      const rate = cmd.rate;
+      if (rate) await db.tx(q => limit(q, account.id, rate.kind, rate.max, rate.window));
       // Membership is checked before a stored result can be replayed: a former member gets 403, not old results.
       if (cmd.profile) await actingProfile(db, account.id, profileId, { write: cmd.write, allowPaused: cmd.allowPaused });
       /** @param {Q} q */

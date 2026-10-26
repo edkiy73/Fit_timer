@@ -25,10 +25,11 @@ export function mediaHandlers(db, deps) {
       if (!deps.scan) throw new Error('media_unavailable');
       await scanAsset(db, deps.scan, id(item));
     },
-    // Removed or rejected: served copies go at once; the quarantined upload waits for media.purge.
+    // Removed, rejected or blocked: served copies go at once; the quarantined upload waits for media.purge
+    // (and is never purged when blocked: it is evidence).
     'media.hide': async (/** @type {any} */ item) => {
       const [row] = await db.query(`select state from feture.media_asset where id = $1`, [id(item)]);
-      if (!row || !['removed', 'rejected'].includes(row.state)) return;
+      if (!row || !['removed', 'rejected', 'blocked'].includes(row.state)) return;
       for (const key of servedKeys(id(item))) await storage().remove(key);
     },
     // Deletes the upload and copies of a removed or rejected asset — never of a blocked one (evidence, S4), and

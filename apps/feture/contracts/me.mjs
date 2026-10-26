@@ -59,8 +59,7 @@ export const NOTIFICATION_DEFAULTS = Object.freeze({
 
 export const meCommands = {
   'catalog.get': { profile: false, write: false, input: z.strictObject({}) },
-  // Runs in a transaction (write) so its per-account rate limit is serialised.
-  'nick.check': { profile: false, write: true, ledger: false, input: z.strictObject({ handle: z.string().max(40) }) },
+  'nick.check': { profile: false, write: false, rate: { kind: 'nick.check', max: 30, window: '10 minutes' }, input: z.strictObject({ handle: z.string().max(40) }) },
   // No idempotency ledger: registration is idempotent by nature, and an under-18 answer must leave no trace.
   'account.create': {
     profile: false, write: true, ledger: false,
@@ -119,7 +118,7 @@ export const meCommands = {
   'notifications.settings.get': { profile: false, write: false, input: z.strictObject({}) },
   'notifications.settings.update': { profile: false, write: true, input: z.strictObject({ opId, settings: notificationSettings }) },
   'place.submit': {
-    profile: false, write: true,
+    profile: false, write: true, rate: { kind: 'place.submit', max: 5, window: '1 day' },
     input: z.strictObject({ opId, country: z.string().regex(/^[A-Z]{2}$/), name: line(80).refine(v => v.length >= 2, { message: 'too_short' }) }),
   },
   'interests.list': { profile: true, write: false, input: z.strictObject({ profileId: id }) },
