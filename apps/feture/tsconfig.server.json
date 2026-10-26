@@ -16,6 +16,9 @@
   "include": [
     "lib/feture/**/*.js",
     "lib/feture/**/*.d.ts",
-    "tools/seed-*.mjs"
+    "tools/seed-*.mjs",
+    "server/**/*.mjs",
+    "contracts/**/*.mjs",
+    "workers/**/*.mjs"
   ]
 }
