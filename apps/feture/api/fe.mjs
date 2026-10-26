@@ -4,7 +4,7 @@
 import '../lib/product.js';
 import postgres from 'postgres';
 import { createRequire } from 'node:module';
-import { timingSafeEqual } from 'node:crypto';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { fromPostgres } from '../server/db.mjs';
 import { createFeHandler } from '../server/handler.mjs';
 import { platform } from '../server/commands/platform.mjs';
@@ -25,6 +25,8 @@ import { people } from '../server/commands/people.mjs';
 import { premium } from '../server/commands/premium.mjs';
 import { accounts } from '../server/commands/account.mjs';
 import { runJobs } from '../server/jobs.mjs';
+import { dsa, takeNotice } from '../server/commands/dsa.mjs';
+import { readJson } from '../server/handler.mjs';
 import { createR2Storage } from '../server/media/r2.mjs';
 import { createSupabaseStorage } from '../server/media/supabase-storage.mjs';
 import { signedStorageDelivery, tokenDelivery } from '../server/media/delivery.mjs';
@@ -35,6 +37,7 @@ const { store } = require('../../../packages/core/server/store');
 const { allowedOrigin, rateOkScoped } = require('../../../packages/core/server/util');
 const Supabase = require('../../../packages/core/server/supabase');
 const CorePush = require('../../../packages/core/server/push');
+const CoreMail = require('../../../packages/core/server/mail');
 const { authenticate } = require('../lib/feture/identity');
 
 const env = process.env;
@@ -77,7 +80,7 @@ const handler = db && createFeHandler({
   db,
   pepper: env.FETURE_ID_PEPPER ?? '',
   cfg: { media: { storage: media.storage, delivery: media.delivery } },
-  commands: { ...platform, ...me, ...access, ...couples, ...staff, ...social, ...posts, ...moderation, ...communities, ...events, ...photos, ...discover, ...chats, ...inbox, ...people, ...premium, ...accounts },
+  commands: { ...platform, ...me, ...access, ...couples, ...staff, ...social, ...posts, ...moderation, ...communities, ...events, ...photos, ...discover, ...chats, ...inbox, ...people, ...premium, ...accounts, ...dsa },
   authenticate: req => authenticate(req, store),
   quota: async (req, coreKey) => { // coreKey: Core account hash, only for the ephemeral rate-limit key
     // Same budget as /api/domain: per account across devices and IPs, plus a per-IP cap.
@@ -103,8 +106,11 @@ function json(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
+/** @param {any} req @param {string} name */
+const flag = (req, name) => new URL(String(req.url || '/'), 'http://x').searchParams.get(name) === '1';
+
 export default async function fe(/** @type {any} */ req, /** @type {any} */ res) {
-  if (String(req.url || '').includes('jobs=1')) {
+  if (flag(req, 'jobs')) {
     const auth = String(req.headers?.authorization || '');
     if (req.method !== 'POST' || !sameSecret(auth.replace(/^Bearer /, ''), env.FETURE_JOBS_SECRET ?? '')) return json(res, 401, { ok: false });
     if (!db) return json(res, 503, { ok: false, error: 'unavailable' });
@@ -113,9 +119,36 @@ export default async function fe(/** @type {any} */ req, /** @type {any} */ res)
       // Push goes through Core's FCM/APNs transport once its keys are set; until then nothing is sent.
       const info = CorePush.pushInfo();
       const push = info.android || info.ios ? { send: CorePush.sendToDevice } : null;
-      return json(res, 200, { ok: true, ...(await runJobs(db, { scan, push })) });
+      // Only a real sending domain: Resend's test domain delivers to its owner alone.
+      const mailInfo = CoreMail.mailInfo();
+      const mail = mailInfo.ready && !mailInfo.testDomain ? (/** @type {{to: string, subject: string, text: string}} */ m) => CoreMail.sendMail(m) : null;
+      return json(res, 200, { ok: true, ...(await runJobs(db, { scan, push, mail })) });
     } catch {
       return json(res, 503, { ok: false, error: 'unavailable' });
+    }
+  }
+  if (flag(req, 'notice')) {
+    // The public notice form (DSA art. 16): no account needed. JSON only (so another site cannot post it through its
+    // visitors without a preflight), from our own origins, a few an hour per network address, a cap for everyone
+    // together, and at most three a day naming the same reply address (we never become a way to mail strangers).
+    if (cors(req, res)) return;
+    if (req.method !== 'POST') return json(res, 405, { ok: false });
+    if (!/^application\/json\b/i.test(String(req.headers?.['content-type'] || ''))) return json(res, 415, { ok: false, error: 'json_only' });
+    const origin = req.headers?.origin;
+    const allowed = allowedOrigin(req);
+    if (origin && allowed !== '*' && allowed !== origin) return json(res, 403, { ok: false });
+    if (!db) return json(res, 503, { ok: false, error: 'unavailable' });
+    if (!(await rateOkScoped(req, 'feture-notice-ip', 5, '', 3600, true))) return json(res, 429, { ok: false, error: 'rate_limited' });
+    if (!(await rateOkScoped(req, 'feture-notice-all', 200, 'all', 3600, true))) return json(res, 429, { ok: false, error: 'rate_limited' });
+    try {
+      const body = await readJson(req);
+      const email = typeof body.senderEmail === 'string' ? body.senderEmail.trim().toLowerCase() : '';
+      if (email && !(await rateOkScoped(req, 'feture-notice-to', 3, createHash('sha256').update(email).digest('hex'), 86400, true))) return json(res, 429, { ok: false, error: 'rate_limited' });
+      const out = await takeNotice(db, body);
+      return json(res, out.status, out.body);
+    } catch (error) {
+      const status = /** @type {any} */ (error)?.status;
+      return json(res, status === 400 || status === 413 ? status : 503, { ok: false, error: status === 413 ? 'too_large' : status === 400 ? 'invalid_input' : 'unavailable' });
     }
   }
   if (handler) return handler(req, res);

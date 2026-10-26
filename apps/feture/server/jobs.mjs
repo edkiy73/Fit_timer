@@ -7,6 +7,7 @@ import { settleAvatarsOf } from './commands/photos.mjs';
 import { sweepEphemeral } from './commands/chats.mjs';
 import { notifyHandlers } from './notify.mjs';
 import { pushHandlers, sweepPushSent } from './push.mjs';
+import { noticeHandlers, sweepNotices } from './commands/dsa.mjs';
 import { sweepSelfies, verificationHandlers } from './commands/premium.mjs';
 
 /** Queue worker (S2 §8, D7). Called every minute by pg_cron + pg_net (Vercel Hobby cron is daily only)
@@ -15,7 +16,8 @@ import { sweepSelfies, verificationHandlers } from './commands/premium.mjs';
  * outbox until their handlers ship, instead of being parked unread.
  * @typedef {import('./db.mjs').Db} Db
  * @typedef {import('./media/scan.mjs').ScanDeps} ScanDeps
- * @typedef {{scan: ScanDeps | null, limit?: number, notifyLimit?: number, push?: import('./push.mjs').Transport | null}} JobDeps
+ * @typedef {{scan: ScanDeps | null, limit?: number, notifyLimit?: number, push?: import('./push.mjs').Transport | null,
+ *   mail?: import('./commands/dsa.mjs').Mailer | null}} JobDeps
  */
 
 /** @param {Db} db @param {JobDeps} deps */
@@ -165,6 +167,8 @@ export async function runJobs(db, deps) {
   // Media first with its own budget, so a burst of likes never delays scans and publication; then the inbox.
   const media = await drain(db, { ...mediaHandlers(db, deps), ...verificationHandlers(db) }, { limit: deps.limit ?? 10, lockSeconds: 120 });
   const inbox = await drain(db, notifyHandlers(db), { limit: deps.notifyLimit ?? 200, lockSeconds: 120 });
+  // Replies to notices in a small batch of their own: a slow mail service never outlives the claim.
+  await drain(db, noticeHandlers(db, deps.mail ?? null), { limit: 10, lockSeconds: 300 });
   // Pushes in a small batch of their own, so a slow provider never outlives the claim.
   const pushes = await drain(db, pushHandlers(db, deps.push ?? null), { limit: 20, lockSeconds: 300 });
   const processed = media + inbox + pushes;
@@ -176,6 +180,7 @@ export async function runJobs(db, deps) {
   const reminders = await sweepEventReminders(db);
   const selfies = await sweepSelfies(db);
   await sweepPushSent(db);
+  await sweepNotices(db);
   // Finished outbox items stay a week (some «told already today» checks read them), then go.
   await db.query(`delete from feture.outbox where done_at < now() - interval '7 days'`);
   return { processed, expired, ledger, markers, couples, ephemeral, reminders, selfies };
