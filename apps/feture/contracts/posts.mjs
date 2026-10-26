@@ -24,6 +24,7 @@ export const postFields = z.strictObject({
   interests: unique(z.array(code).max(4)).default([]),
   albumId: id.optional(),
   tags: unique(z.array(id).max(10)).default([]),
+  communityId: id.optional(),   // a discussion in a community (slice D)
 }).refine(v => v.type === 'note' ? (v.title?.length ?? 0) >= 3 && v.body.length >= 20 : v.body.length <= 1000, { message: 'type_rules', path: ['body'] })
   .refine(v => v.body.length > 0 || v.mediaIds.length > 0 || !!v.poll || v.interests.length > 0, { message: 'empty_post', path: ['body'] })
   .refine(v => !v.tags.length || v.mediaIds.length > 0, { message: 'tags_need_media', path: ['tags'] });

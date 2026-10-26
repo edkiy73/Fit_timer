@@ -5,6 +5,7 @@ import { enqueue } from '../outbox.mjs';
 import { needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
 import { mediaDto } from '../media/assets.mjs';
 import { blockProfile } from './social.mjs';
+import { canWrite } from './communities.mjs';
 
 /** Slice B: posts and what hangs on them (S1 §8, extract/feed-content.md).
  * Rules: text without media publishes at once (Q1); media waits until every file is checked; explicit media only in
@@ -21,6 +22,14 @@ const MENTION = /@([A-Za-z0-9_.]{3,20})/g;
 
 /** @param {Acting | null} acting @returns {Acting} */
 const need = acting => { if (!acting) throw new Error('acting profile missing'); return acting; };
+
+/** Discussions: the community must be published and the acting profile allowed to write there (members who are not
+ * read-only; a couple when it or both partners are members). @param {Q} q @param {string | null | undefined} communityId @param {Acting} acting */
+async function requireCommunityWriter(q, communityId, acting) {
+  if (!communityId) return;
+  const [c] = await q.query(`select state from feture.community where id = $1`, [communityId]);
+  if (!c || c.state !== 'published' || !(await canWrite(q, communityId, acting))) fail(403, 'forbidden', { rule: 'community_members_only' });
+}
 
 /** @param {Q} q @param {string} postId @param {Acting} viewer @returns {Promise<any>} */
 async function visiblePost(q, postId, viewer) {
@@ -221,6 +230,9 @@ registerApprovalKind('post.publish', {
     // The partner approved exactly this version: if the draft changed since, nothing is published.
     const [p] = await q.query('select rev from feture.post where id = $1', [row.target_id]);
     if (!p || p.rev !== /** @type {any} */ (row.change).rev) fail(409, 'conflict', { rule: 'changed_since_approval' });
+    // Still allowed to write in the community at the moment of publication.
+    const [d] = await q.query('select p.community_id, o.kind from feture.post p join feture.profile o on o.id = p.owner_profile_id where p.id = $1', [row.target_id]);
+    await requireCommunityWriter(q, d.community_id, /** @type {Acting} */ ({ profileId: row.profile_id, accountId: row.requested_by, kind: d.kind }));
     await doPublish(q, String(row.target_id), row.profile_id);
   },
 });
@@ -292,10 +304,13 @@ const run = {
       await q.query(`update feture.post set type = $2, title = $3, body = $4, in_feed = $5, topics = $6, album_id = $7, rev = rev + 1, updated_at = now() where id = $1`,
         [postId, f.type, f.title ?? null, f.body, f.inFeed, f.topics, f.albumId ?? null]);
     } else {
+      await requireCommunityWriter(q, f.communityId, acting);
+      // A discussion is for the community: everyone there, never in the main feed.
+      if (f.communityId) { f.audience = 'all'; f.inFeed = false; }
       [{ id: postId }] = await q.query(
-        `insert into feture.post (owner_profile_id, created_by, type, title, body, audience, in_feed, topics, album_id)
-         values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning id`,
-        [acting.profileId, acting.accountId, f.type, f.title ?? null, f.body, f.audience, f.inFeed, f.topics, f.albumId ?? null]);
+        `insert into feture.post (owner_profile_id, created_by, type, title, body, audience, in_feed, topics, album_id, community_id)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) returning id`,
+        [acting.profileId, acting.accountId, f.type, f.title ?? null, f.body, f.audience, f.inFeed, f.topics, f.albumId ?? null, f.communityId ?? null]);
     }
     await writeParts(q, postId, f, acting);
     await writeMentions(q, 'post', postId, f.body, acting.profileId);
@@ -304,9 +319,10 @@ const run = {
 
   async 'post.publish'(q, { acting: a, input }) {
     const acting = need(a);
-    const [p] = await q.query(`select state, created_by, rev, type, title, body, audience from feture.post where id = $1 and owner_profile_id = $2`, [input.postId, acting.profileId]);
+    const [p] = await q.query(`select state, created_by, rev, type, title, body, audience, community_id from feture.post where id = $1 and owner_profile_id = $2`, [input.postId, acting.profileId]);
     if (!p || p.created_by !== acting.accountId) fail(404, 'not_found');
     if (p.state !== 'draft') fail(409, 'conflict', { state: p.state });
+    await requireCommunityWriter(q, p.community_id, acting);
     if (needsPartner(acting, 'post.publish')) {
       const change = { postId: input.postId, rev: p.rev, type: p.type, title: p.title, body: p.body, audience: p.audience };
       return { pending: await requestApproval(q, acting, { kind: 'post.publish', targetType: 'post', targetId: input.postId, change, summary: ['post'] }) };
@@ -419,6 +435,7 @@ const run = {
       : (await q.query(`select post_id from feture.reply where id = $1 and state = 'published'`, [input.targetId]))[0]?.post_id;
     if (!postId) fail(404, 'not_found');
     const p = await visiblePost(q, postId, viewer);
+    if (input.on && p.community_id) await requireCommunityWriter(q, p.community_id, viewer); // only members react in a community
     if (!input.on) {
       await q.query(`delete from feture.reaction where target_type = $1 and target_id = $2 and profile_id = $3`, [input.targetType, input.targetId, viewer.profileId]);
       return { liked: false };
@@ -436,7 +453,8 @@ const run = {
 
   async 'poll.vote'(q, { acting: a, input }) {
     const viewer = need(a);
-    await visiblePost(q, input.postId, viewer);
+    const p = await visiblePost(q, input.postId, viewer);
+    if (p.community_id) await requireCommunityWriter(q, p.community_id, viewer); // only members vote in a community
     const [poll] = await q.query('select options from feture.poll where post_id = $1', [input.postId]);
     if (!poll) fail(404, 'not_found');
     if (input.option === null) {
@@ -458,6 +476,7 @@ const run = {
     const viewer = need(a);
     const p = await visiblePost(q, input.postId, viewer);
     if (p.state !== 'published') fail(409, 'conflict', { state: p.state });
+    if (p.community_id) await requireCommunityWriter(q, p.community_id, viewer);
     let parentAuthor = null;
     if (input.parentId) {
       const [parent] = await q.query(`select author_profile_id from feture.reply where id = $1 and post_id = $2 and state = 'published'`, [input.parentId, input.postId]);
