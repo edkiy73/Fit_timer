@@ -211,7 +211,8 @@
   "status": "checked",
   "notes": "Лайки раздельны для Я/Мы; закладка общая (by design); «Поделиться» — тост «Ссылка скопирована».",
   "issues": [
-   "FEED-019"
+   "FEED-019",
+   "FEED-042"
   ]
  },
  {
@@ -600,7 +601,8 @@
   "issues": [
    "FEED-003",
    "FEED-006",
-   "FEED-007"
+   "FEED-007",
+   "FEED-041"
   ]
  },
  {
@@ -727,6 +729,35 @@
   "notes": "Проверены только термины статьи.",
   "issues": [
    "FEED-037"
+  ]
+ },
+ {
+  "type": "scenario",
+  "id": "saved-sync",
+  "name": "Закладка ↔ «Сохранённое» (G04) ↔ счётчик «Моё»",
+  "opened_by": "закладка на карточке",
+  "personas": [
+   "full",
+   "pair-couple"
+  ],
+  "status": "checked",
+  "notes": "Демо-сохранённый p8 рассинхронизирован; дубли.",
+  "issues": [
+   "FEED-042"
+  ]
+ },
+ {
+  "type": "state",
+  "id": "C06-compare",
+  "name": "Сравнение ряда действий поста и обсуждения сообщества",
+  "opened_by": "C06 d1",
+  "personas": [
+   "full"
+  ],
+  "status": "checked",
+  "notes": "",
+  "issues": [
+   "FEED-043"
   ]
  },
  {

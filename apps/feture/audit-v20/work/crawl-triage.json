@@ -12,7 +12,673 @@
   ]
  ],
  "errors": [],
- "nochange": [],
+ "nochange": [
+  [
+   "F01{\"sub\": \"foryou\"}",
+   "feedSub «Для тебя»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "F01{\"sub\": \"foryou\"}",
+   "feed «Лента»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "F01{\"sub\": \"following\"}",
+   "feedSub «Подписки»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "F01{\"sub\": \"following\"}",
+   "feed «Лента»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "F05{\"id\": \"p1\"}",
+   "focusReply «2»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "F05{\"id\": \"p1\"}",
+   "dockReply «Написать ответ»",
+   [
+    "full",
+    "new",
+    "pair-couple"
+   ]
+  ],
+  [
+   "F05{\"id\": \"n1\"}",
+   "focusReply «0»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "F05{\"id\": \"n1\"}",
+   "dockReply «Написать ответ»",
+   [
+    "full",
+    "new",
+    "pair-couple"
+   ]
+  ],
+  [
+   "F01{\"sub\": \"popular\"}",
+   "feed «Лента»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "F04{\"id\": \"shibari\"}",
+   "F04 «#Шибари»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "F07{\"type\": \"text\"}",
+   "postMedia «Фото, видео»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "F07{\"type\": \"poll\"}",
+   "postMedia «Фото, видео»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "C01{\"sub\": \"events\"}",
+   "cSub «События»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "C01{\"sub\": \"events\"}",
+   "groups «Комьюнити»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "E11",
+   "rte «Отменить»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "E11",
+   "rte «Повторить»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "E11",
+   "evfCover «Загрузить фото 16:9»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "E11",
+   "evfGal «Добавить фото места или прошлых встреч»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D03{\"sub\": \"discover\"}",
+   "pplSub «Подборка»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "dfSheet «Фильтры»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "undo «Вернуть предыдущую анкету»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "decide «Пропустить»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "decide «Нравится человек»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D03{\"sub\": \"likes\"}",
+   "pplSub «Симпатии 3»",
+   [
+    "full"
+   ]
+  ],
+  [
+   "D03{\"sub\": \"likes\"}",
+   "people «Люди 3»",
+   [
+    "full"
+   ]
+  ],
+  [
+   "P02",
+   "rte «Отменить»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "P02",
+   "rte «Повторить»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "P04",
+   "rte «Отменить»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "P04",
+   "rte «Повторить»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "C01{\"sub\": \"discover\"}",
+   "cSub «Сообщества»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "C01{\"sub\": \"discover\"}",
+   "groups «Комьюнити»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "C06{\"id\": \"d1\"}",
+   "mView «Открыть на весь экран»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "C06{\"id\": \"d1\"}",
+   "dockReply «Написать ответ»",
+   [
+    "full",
+    "pair-couple"
+   ]
+  ],
+  [
+   "C07{\"id\": \"rope\"}",
+   "postMedia «Фото, видео»",
+   [
+    "full",
+    "pair-couple"
+   ]
+  ],
+  [
+   "C08",
+   "rte «Отменить»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "C08",
+   "rte «Повторить»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "H01{\"sub\": \"chats\"}",
+   "chats «Чаты»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "H01{\"kind\": \"couple\"}",
+   "chats «Чаты 2»",
+   [
+    "full",
+    "new"
+   ]
+  ],
+  [
+   "H02{\"id\": \"mia\"}",
+   "chatDown «К последним сообщениям»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "H02{\"id\": \"mia\"}",
+   "dockReply «Написать ответ»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "H02{\"id\": \"sofi\"}",
+   "chatDown «К последним сообщениям»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "H02{\"id\": \"sofi\"}",
+   "dockReply «Написать ответ»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "X01",
+   "meLayer «Профиль»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "K01",
+   "ageFromMe «Проверка возраста Нужна для знакомств подтверждено»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "K05",
+   "k5cat «Пуш: Совпадения и сообщения»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "K05",
+   "k5cat «Почта: Совпадения и сообщения»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "OVL sheet:Шибари",
+   "jarVis «Все»",
+   [
+    "full",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "OVL sheet:Фильтры событий",
+   "efSet «Офлайн»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "OVL sheet:Фильтры знакомств",
+   "dfReset «Сбросить»",
+   [
+    "full",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "OVL sheet:Фильтры знакомств",
+   "dfWhere «Везде»",
+   [
+    "full",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "OVL sheet:Фильтры знакомств",
+   "dfShow «Все»",
+   [
+    "full",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "OVL sheet:(untitled sheet)",
+   "pwPlan «−44% Год 79,99 € 6,67 € в месяц»",
+   [
+    "full",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "OVL sheet:Открыть доступ",
+   "grTerm «7 дней»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "OVL sheet:Подарить Premium",
+   "giftPay «Укажи получателя»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D03{\"sub\": \"discover\"}",
+   "people «Люди»",
+   [
+    "new",
+    "pair-me"
+   ]
+  ],
+  [
+   "D03{\"sub\": \"likes\"}",
+   "pplSub «Симпатии»",
+   [
+    "new",
+    "pair-me"
+   ]
+  ],
+  [
+   "D03{\"sub\": \"likes\"}",
+   "people «Люди»",
+   [
+    "new",
+    "pair-me"
+   ]
+  ],
+  [
+   "C06{\"id\": \"d1\"}",
+   "rLike «1»",
+   [
+    "new",
+    "pair-me"
+   ]
+  ],
+  [
+   "C06{\"id\": \"d1\"}",
+   "rReply «Ответить Kai»",
+   [
+    "new"
+   ]
+  ],
+  [
+   "C06{\"id\": \"d1\"}",
+   "rLike «3»",
+   [
+    "new",
+    "pair-me"
+   ]
+  ],
+  [
+   "C06{\"id\": \"d1\"}",
+   "rReply «Ответить Dan»",
+   [
+    "new"
+   ]
+  ],
+  [
+   "OVL sheet:Контроль",
+   "jarVis «По доступу»",
+   [
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D03{\"sub\": \"likes\"}",
+   "pplSub «Симпатии 2»",
+   [
+    "pair-couple"
+   ]
+  ],
+  [
+   "D03{\"sub\": \"likes\"}",
+   "people «Люди 2»",
+   [
+    "pair-couple"
+   ]
+  ],
+  [
+   "H01{\"kind\": \"couple\"}",
+   "chats «Чаты»",
+   [
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "OVL sheet:Сенсорные игры",
+   "jarDir «Всё»",
+   [
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "OVL sheet:Сенсорные игры",
+   "jarVis «По доступу»",
+   [
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "OVL sheet:Моё подтверждение",
+   "pairTrustPick «Без моего подтверждения Профиль, публикации и дост»",
+   [
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "F05{\"id\": \"p1\"}",
+   "dockReply «Написать ответ от пары»",
+   [
+    "pair-me"
+   ]
+  ],
+  [
+   "F05{\"id\": \"n1\"}",
+   "dockReply «Написать ответ от пары»",
+   [
+    "pair-me"
+   ]
+  ],
+  [
+   "C06{\"id\": \"d1\"}",
+   "dockReply «Написать ответ от пары»",
+   [
+    "pair-me"
+   ]
+  ],
+  [
+   "OVL sheet:Шибари",
+   "jarDir «Всё»",
+   [
+    "pair-me"
+   ]
+  ],
+  [
+   "OVL sheet:Шибари",
+   "jarSave «Добавить»",
+   [
+    "pair-me"
+   ]
+  ]
+ ],
  "intercept": [
   [
    "D03{\"sub\": \"discover\"}",
@@ -359,6 +1025,16 @@
    ]
   ],
   [
+   "P04",
+   "peWho «Данные о тебе Гендер мужчина Ориентация би Роль ве»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
    "H02{\"id\": \"mia\"}",
    "chatDown «К последним сообщениям»",
    [
@@ -550,6 +1226,13 @@
   [
    "D04",
    "me «? Я»",
+   [
+    "new"
+   ]
+  ],
+  [
+   "P04",
+   "peWho «Данные о тебе»",
    [
     "new"
    ]

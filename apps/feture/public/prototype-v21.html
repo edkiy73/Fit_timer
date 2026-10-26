@@ -3041,6 +3041,10 @@ button[disabled].demo-off{opacity:.55;cursor:default}
 .plink.pnm{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
 
 /* ==== V21 · lead · CSS start ==== */
+/* V21 (RESP-003): on the narrowest phones the editor title stays whole next to «В черновик» */
+@container stage (max-width:374px){.main>.bar>.btn.text{padding:0 8px;font-size:13.5px}.main>.bar>h1.sm{font-size:15px}}
+/* V21 (GEN-003): the review tab hides while a sheet or dialog is open */
+body:has(#sheet.on) .qa-fab,body:has(#dialog.on) .qa-fab{opacity:0!important;pointer-events:none}
 /* ==== V21 · lead · CSS end ==== */
 /* · */
 /* · */
@@ -4124,7 +4128,7 @@ function dockHTML(){document.body?.classList?.toggle?.('as-couple',activeActor()
 function renderSide(){
  const s=$('#side');if(!s)return;
  if(!S.session){s.innerHTML='';return;}
- s.innerHTML=`<div class="brand"><img src="${LOGO()}" alt=""><b>Fet<i>Ure</i></b></div><nav aria-label="${L('Разделы','Sections')}">${TABDEF().map(([t,icn,l,n])=>`<button class="navb ${S.nav.tab===t?'on':''}" data-tab="${t}">${icn}<span>${l}</span>${n==='dot'?'<em style="min-width:9px;width:9px;height:9px;padding:0"></em>':n?`<em>${n}</em>`:''}</button>`).join('')}</nav>
+ s.innerHTML=`<div class="brand"><img src="${LOGO()}" alt=""><b>Fet<i>Ure</i></b></div><nav aria-label="${L('Разделы','Sections')}">${TABDEF().map(([t,icn,l,n])=>`<button class="navb ${S.nav.tab===t?'on':''}" data-tab="${t}">${t==='me'?I.me/* V21 (RESP-001): one avatar of yourself in the sidebar — the account button below */:icn}<span>${l}</span>${n==='dot'?'<em style="min-width:9px;width:9px;height:9px;padding:0"></em>':n?`<em>${n}</em>`:''}</button>`).join('')}</nav>
  <button class="btn primary create" data-act="create" aria-label="${L('Создать','Create')}">${I.plus}<span>${L('Создать','Create')}</span></button><div class="sp"></div>
  <button class="mebtn" ${activePair()?'data-act="dockMe" aria-haspopup="menu" aria-expanded="false"':'data-tab="me"'}>${av(activeActor(),'')}<span>${esc(activeActor()==='couple'?pairName():pname('me'))}${activePair()?`<small>${activeActor()==='couple'?L('Профиль пары','Couple profile'):L('Личный профиль','Personal profile')}</small>`:''}</span>${activePair()?`<span class="mebtn-sw" aria-hidden="true">${I.down}</span>`:''}</button>`;
 }
@@ -7596,7 +7600,7 @@ function setActor(v){const id=v==='couple'&&activePair()?'couple':'me';if(S.ui.a
  if(r)delete r.replyAuthor;if(r?.id==='D03')deckBusy=false;
  render('fade',true);toast(id==='couple'?L(`Теперь от пары «${pairName()}»`,`Now as “${pairName()}”`):L('Теперь от себя','Now as yourself'),{type:'ok',ms:2000});}
 /* V20 — what waits on a profile, in words */
-function actorWaitLine(v){const l=waitingLikes(v),q=waitingReqs(v);return [l?pl(l,['новая симпатия','новые симпатии','новых симпатий'],['new like','new likes']):'',q?pl(q,['запрос доступа','запроса доступа','запросов доступа'],['access request','access requests']):''].filter(Boolean).join(' · ');}
+function actorWaitLine(v){const l=waitingLikes(v),q=waitingReqs(v);return [l?pl(l,['симпатия','симпатии','симпатий'],['like','likes']):'',q?pl(q,['запрос','запроса','запросов'],['request','requests']):''/* V21 (RESP-004): short enough to read whole on a 320 px phone */].filter(Boolean).join(' · ');}
 function actorCardsHTML(){const current=activeActor(),q=S.pair?.proposal;
  const sub=v=>{if(v==='couple'&&q?.status==='pending'&&q.by!==pairMember())return `<i class="ar-dot"></i>${L(`${esc(pname(q.by))} предлагает изменения`,`${esc(pname(q.by))} proposes changes`)}`;const w=actorWaitLine(v);return w?`<i class="ar-dot"></i>${esc(w)}`:(v==='couple'?L('Профиль пары','Couple profile'):L('Личный профиль','Personal profile'));};
  const card=v=>`<div class="actor-card ${current===v?'selected':''}"><button class="actor-select" role="menuitemradio" aria-checked="${current===v}" data-act="meSwitchTo" data-v="${v}">${av(v,'')}<span class="tx"><b>${esc(v==='couple'?pairName():pname('me'))}</b><small>${sub(v)}</small></span><span class="ar-ck" aria-hidden="true">${current===v?I.check:''}</span></button><button class="actor-open" role="menuitem" data-act="dockOpenMe" data-v="${v}" aria-label="${esc(current===v?L('Открыть профиль','Open profile'):v==='couple'?L('Перейти в профиль пары','Go to the couple profile'):L('Перейти в мой профиль','Go to my profile'))}" title="${esc(L('Открыть профиль','Open profile'))}">${I.me}</button></div>`;

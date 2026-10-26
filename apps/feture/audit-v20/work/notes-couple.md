@@ -20,3 +20,8 @@ Scripts: scratchpad `pw/couple/*.mjs` (lib.mjs wraps ../h.mjs). Screens: `audit-
 ## Not checked / partial
 - Q10 (needs a second couple in history), attach → send media sheet (file chooser), dark theme, EN.
 - Real two-client couple behaviour (prototype simulates partner via QA).
+
+## Result (written)
+- findings-couple.json: 40 findings — P0 1, P1 7, P2 17, P3 15. coverage-couple.json: 38 entries.
+- Referenced lead items instead of duplicating: VIS-009 (see-through chat header), RESP-001 (two own avatars in sidebar), RESP-004 (wait line at 320), RESP-002.
+- Not filed (seen, low value / by design): violet top stripe in «Мы»; Esc on a screen without overlay = back; «Одобрено сразу» QA toast.
