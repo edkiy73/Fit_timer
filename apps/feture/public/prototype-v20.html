@@ -2956,6 +2956,9 @@ button[disabled].demo-off{opacity:.55;cursor:default}
 .p3-seg{position:absolute;z-index:3;top:calc(14px + var(--safe-t,0px));left:66px;right:16px;height:40px}.p3-seg .seg{height:40px}.bar-seg{flex:1;min-width:0;margin-left:-2px}.bar-seg .seg{height:40px}
 .jar-more{display:flex;margin:8px auto 0}
 .ph-slots.reordering .mi{will-change:transform}
+
+/* the swipe tip sits under the deck tabs, never over the like/pass buttons */
+#toasts.at-top{top:calc(64px + var(--safe-t,0px));bottom:auto}
 </style>
 </head>
 <body>
@@ -6071,7 +6074,7 @@ SC.D03={root:1,tab:'people',title:()=>L('Люди','People'),render:(p,r)=>{
  let list=pool();const requested=S.ui.datingCandidate;if(requested&&list.includes(requested)){list=[requested,...list.filter(id=>id!==requested)];S.deckOrder=[requested,...S.deckOrder.filter(id=>id!==requested)];}delete S.ui.datingCandidate;
  if(!list.length)return head+`<div class="view"><div class="wrap">${deckEmpty()}</div></div>`;
  return head+`<div class="view deckmode"><div class="deck" id="deck">${deckInner(list)}</div></div>`;},
- after:(p)=>{if((p.sub||'discover')==='discover'&&$('#deck'))initDeck();if(p.sub==='likes')initLikeSwipes();fillJars();}};
+ after:(p)=>{if((p.sub||'discover')==='discover'&&$('#deck')){initDeck();/* the swipe tip is a short toast, once per session */if(!S.ui.deckCoach&&(matchMedia('(pointer:coarse)').matches||innerWidth<768)){S.ui.deckCoach=1;toast(L('Вправо — нравится, влево — пропустить','Swipe right to like, left to pass'),{type:'info',ms:2600});$('#toasts')?.classList.add('at-top');}}if(p.sub==='likes')initLikeSwipes();fillJars();}};
 ACT.pplSub=a=>setSub(a.dataset.v);
 
 /* D01 — dating is off: no candidate photos, names or counts. V7: two honest ways in. */
@@ -6109,7 +6112,7 @@ function card(id,pos){const p=PEOPLE[id];const ix=(S.ui.ph||{})[id]||0;const sh=
   ${photoBars(id,ix)}
   ${photoCount(id)>1?`<div class="pc-zone l" data-ph="-1"></div><div class="pc-zone r" data-ph="1"></div>`:''}<div class="pc-zone c" data-ph="0" aria-hidden="true"></div>
   <div class="pc-tags">${otherDoneChip(id)}${likesMe?`<span class="pc-liked">${I.heartf}${L('Ты нравишься','Likes you')}</span>`:''}${!sh.few&&sh.match.length?`<span class="pc-score"><b>${sh.match.length}</b><small>${pl(sh.match.length,['общий интерес','общих интереса','общих интересов'],['shared interest','shared interests'],true)}</small></span>`:''}</div>
-  <div class="stamp l">${L('Нравится','Like')}</div><div class="stamp n">${L('Пропустить','Pass')}</div>${pos==='top'&&!S.ui.deckCoach?`<div class="pc-coach" role="note"><span>${L('Смахни вправо — нравится, влево — пропустить. Или нажми кнопки внизу.','Swipe right to like, left to pass. Or use the buttons below.')}</span><button class="btn sm soft auto" data-act="deckCoachOk">${L('Понятно','Got it')}</button></div>`:''}
+  <div class="stamp l">${L('Нравится','Like')}</div><div class="stamp n">${L('Пропустить','Pass')}</div>
   <div class="pc-info"><h2 class="pc-name"><span class="pcn">${esc(pname(id))}</span>${p.age?`<span>${p.age}</span>`:''}${nameBadges(p)}</h2>
    <div class="pc-who">${p.pair?`<span>${esc(whoLine(id))}</span>`:''}${placeLine(id)?`<span class="pl">${I.pin}${esc(placeLine(id))}</span>`:''}${p.online?`<span class="on">${L('в сети','online')}</span>`:''}</div>
    <div class="pc-hint">${I.down}${L('Листай вниз — что у вас общего','Scroll down — what you share')}</div></div>

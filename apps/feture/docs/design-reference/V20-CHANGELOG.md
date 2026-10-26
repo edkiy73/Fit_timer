@@ -162,3 +162,9 @@ Owner decisions for this round:
   - «Ещё N» under the interests is centred.
 
 Not verified: real devices, touch drag on hardware, a live couple on two clients.
+
+## 2026-10-26 — swipe tip
+
+- The card that covered the deck («Смахни вправо — нравится, влево — пропустить. Или нажми кнопки внизу.» with «Понятно») is gone.
+- On a phone the tip is now a short notice under the deck tabs: «Вправо — нравится, влево — пропустить». It shows once per session for 2.6 s and never covers the like and pass buttons.
+- On desktop, where you click the buttons, there is no tip.
