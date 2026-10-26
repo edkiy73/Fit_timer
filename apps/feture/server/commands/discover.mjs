@@ -4,6 +4,7 @@ import { fail } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { mediaDto } from '../media/assets.mjs';
 import { checkOptions } from './me.mjs';
+import { endConversations, openConversation } from './chats.mjs';
 
 /** Slice F: Discover, likes and matches (S1 §11, extract/people-discover-chats.md).
  * The pool: visible profiles with an approved safe avatar, active and unrestricted, no block either way, not related
@@ -158,9 +159,10 @@ async function sendLike(q, acting, target, source) {
     }
     const [match] = await q.query(
       `insert into feture.profile_match (profile_a, profile_b) values (least($1::uuid, $2::uuid), greatest($1::uuid, $2::uuid)) returning id`, [acting.profileId, target]);
-    await enqueue(q, 'match.created', acting.profileId, { matchId: match.id, with: target });
-    await enqueue(q, 'match.created', target, { matchId: match.id, with: acting.profileId });
-    return { state: 'matched', matchId: match.id };
+    const conversationId = await openConversation(q, match.id, acting.profileId, target);
+    await enqueue(q, 'match.created', acting.profileId, { matchId: match.id, with: target, conversationId, by: acting.accountId });
+    await enqueue(q, 'match.created', target, { matchId: match.id, with: acting.profileId, conversationId, by: acting.accountId });
+    return { state: 'matched', matchId: match.id, conversationId };
   }
   await q.query(`insert into feture.profile_like (from_profile_id, to_profile_id, source, initiator_account_id) values ($1, $2, $3, $4)`,
     [acting.profileId, target, source, acting.accountId]);
@@ -371,6 +373,7 @@ const run = {
     if (input.revokeMyGrant) {
       await q.query(`update feture.access_grant set revoked_at = now() where owner_profile_id = $1 and viewer_profile_id = $2 and revoked_at is null`, [acting.profileId, input.profileId]);
     }
+    await endConversations(q, acting.profileId, input.profileId, 'unmatch');
     await enqueue(q, 'match.ended', acting.profileId, { matchId: rows[0].id, with: input.profileId });
     return { ended: true };
   },

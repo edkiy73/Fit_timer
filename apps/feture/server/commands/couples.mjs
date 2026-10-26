@@ -1,5 +1,6 @@
 // @ts-check
 import { couplesCommands } from '../../contracts/couples.mjs';
+import { endConversations } from './chats.mjs';
 import { fail, isUniqueViolation } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { narrowCouple } from '../approvals.mjs';
@@ -48,6 +49,12 @@ export async function deleteCouple(q, profileId, reason) {
     await enqueue(q, 'media.purge', profileId, { assetId: m.id });
   }
   await q.query(`delete from feture.media_attachment where target_type = 'private' and target_id = $1`, [profileId]);
+  // The couple's matches and conversations end; the other side keeps the history.
+  await q.query(`update feture.profile_match set ended_at = now(), ended_by_profile = $1 where ended_at is null and (profile_a = $1 or profile_b = $1)`, [profileId]);
+  await q.query(`update feture.profile_like set state = 'withdrawn', updated_at = now() where state = 'active' and (from_profile_id = $1 or to_profile_id = $1)`, [profileId]);
+  await endConversations(q, profileId, null, 'pair_ended');
+  // Ex-partners keep nothing of the couple's conversations; the other side keeps its history.
+  await q.query(`delete from feture.conversation_member where profile_id = $1`, [profileId]);
   const members = await q.query(
     `update feture.profile_member set state = 'left', left_at = now() where profile_id = $1 and state = 'active' returning account_id`, [profileId]);
   await q.query(

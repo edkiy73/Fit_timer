@@ -4,6 +4,8 @@ import { scanAsset, servedKeys } from './media/scan.mjs';
 import { deleteCouple } from './commands/couples.mjs';
 import { settlePublication } from './commands/posts.mjs';
 import { settleAvatarsOf } from './commands/photos.mjs';
+import { sweepEphemeral } from './commands/chats.mjs';
+import { notifyHandlers } from './notify.mjs';
 
 /** Queue worker (S2 §8, D7). Called every minute by pg_cron + pg_net (Vercel Hobby cron is daily only)
  * through `POST /api/fe?jobs=1` with the jobs secret. Every handler is idempotent.
@@ -11,7 +13,7 @@ import { settleAvatarsOf } from './commands/photos.mjs';
  * outbox until their handlers ship, instead of being parked unread.
  * @typedef {import('./db.mjs').Db} Db
  * @typedef {import('./media/scan.mjs').ScanDeps} ScanDeps
- * @typedef {{scan: ScanDeps | null, limit?: number}} JobDeps
+ * @typedef {{scan: ScanDeps | null, limit?: number, notifyLimit?: number}} JobDeps
  */
 
 /** @param {Db} db @param {JobDeps} deps */
@@ -132,10 +134,14 @@ export async function sweepExpiredCouples(db) {
 
 /** One worker tick. @param {Db} db @param {JobDeps} deps */
 export async function runJobs(db, deps) {
-  const processed = await drain(db, mediaHandlers(db, deps), { limit: deps.limit ?? 10, lockSeconds: 120 });
+  // Media first with its own budget, so a burst of likes never delays scans and publication; then the inbox.
+  const media = await drain(db, mediaHandlers(db, deps), { limit: deps.limit ?? 10, lockSeconds: 120 });
+  const inbox = await drain(db, notifyHandlers(db), { limit: deps.notifyLimit ?? 200, lockSeconds: 120 });
+  const processed = media + inbox;
   const expired = await sweepExpiredUploads(db);
   const ledger = await sweepOpLedger(db);
   const markers = await sweepMarkers(db);
   const couples = await sweepExpiredCouples(db);
-  return { processed, expired, ledger, markers, couples };
+  const ephemeral = await sweepEphemeral(db);
+  return { processed, expired, ledger, markers, couples, ephemeral };
 }

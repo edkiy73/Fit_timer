@@ -113,9 +113,11 @@ async function ownAsset(q, acting, assetId, { lock = false } = {}) {
  * @param {MediaConfig} cfg
  * @param {{id: string, owner_profile_id: string, kind: string, purpose: string, state: string, explicitness: string,
  *   width: number | null, height: number | null, view_rule: string, copies_at?: unknown}} asset
- * @param {{viewerProfileId: string, place: Place, showExplicit: boolean, staff?: boolean}} ctx
+ * @param {{viewerProfileId: string, place: Place, showExplicit: boolean, staff?: boolean, opened?: boolean, blurAll?: boolean}} ctx
  *   showExplicit: the viewer turned explicit content on — on the website, as Apple 1.2 requires —
  *   and has not asked to blur it (chatBlur). The same answer applies in the apps once set.
+ *   opened: a view-once/timer media the viewer has consciously opened just now (chat.openMedia).
+ *   blurAll: the viewer asked to blur all incoming chat media (chatBlur).
  */
 export async function mediaDto(cfg, asset, ctx) {
   const own = asset.owner_profile_id === ctx.viewerProfileId;
@@ -127,7 +129,7 @@ export async function mediaDto(cfg, asset, ctx) {
   const explicit = asset.explicitness !== 'safe';
   if (explicit && ctx.place === 'public' && !own) return null; // never in public places (Apple 1.1.4 / 1.2)
   // View-once/timer media always start covered; explicit starts covered unless the viewer turned it on.
-  const blurred = !own && !ctx.staff && (asset.view_rule !== 'normal' || (explicit && !ctx.showExplicit));
+  const blurred = !own && !ctx.staff && ((asset.view_rule !== 'normal' && !ctx.opened) || (explicit && !ctx.showExplicit) || (!!ctx.blurAll && !ctx.opened));
   // Until the served copies exist (upload still being checked) there is nothing to link to.
   if (!asset.copies_at) {
     return { id: asset.id, kind: asset.kind, w: asset.width, h: asset.height, pending: true, explicit, blurred, viewRule: asset.view_rule, src: null };
