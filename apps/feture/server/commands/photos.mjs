@@ -46,8 +46,14 @@ export async function photosFor(q, profileId, viewerProfileId, media) {
   return out;
 }
 
+/** @param {Q} q @param {string} profileId */
+async function currentPhotos(q, profileId) {
+  return (await q.query(`select asset_id from feture.media_attachment where target_type = 'avatar' and target_id = $1 order by position`, [profileId])).map(r => r.asset_id);
+}
+
 /** @param {Q} q @param {string} profileId @param {string[]} ids */
 async function doPhotosSet(q, profileId, ids) {
+  await q.query('select 1 from feture.profile where id = $1 for update', [profileId]); // one list change at a time
   const assets = ids.length ? await q.query(
     `select id, kind from feture.media_asset where id = any($1) and owner_profile_id = $2 and purpose = 'avatar'
        and state in ('uploaded', 'scanning', 'needs_review', 'approved')`, [ids, profileId]) : [];
@@ -64,17 +70,26 @@ async function doPhotosSet(q, profileId, ids) {
 }
 
 registerApprovalKind('profile.photos', {
-  apply: async (q, row) => { await doPhotosSet(q, row.profile_id, /** @type {any} */ (row.change).assetIds); },
+  apply: async (q, row) => {
+    // The partner approved the additions; anything removed from the list since stays removed.
+    const c = /** @type {any} */ (row.change);
+    await q.query('select 1 from feture.profile where id = $1 for update', [row.profile_id]);
+    const now = await currentPhotos(q, row.profile_id);
+    await doPhotosSet(q, row.profile_id, c.assetIds.filter((/** @type {string} */ i) => now.includes(i) || c.adds.includes(i)));
+  },
 });
 
 /** @type {Record<keyof typeof photosCommands, Command['run']>} */
 const run = {
   async 'profile.photosSet'(q, { acting: a, input }) {
     const acting = need(a);
-    const current = (await q.query(`select asset_id from feture.media_attachment where target_type = 'avatar' and target_id = $1`, [acting.profileId])).map(r => r.asset_id);
-    const adds = input.assetIds.some((/** @type {string} */ i) => !current.includes(i));
-    if (adds && needsPartner(acting, 'profile.photos')) {
-      return { pending: await requestApproval(q, acting, { kind: 'profile.photos', targetType: 'profile', targetId: acting.profileId, change: { assetIds: input.assetIds }, summary: ['photos'] }) };
+    const current = await currentPhotos(q, acting.profileId);
+    const adds = input.assetIds.filter((/** @type {string} */ i) => !current.includes(i));
+    if (adds.length && needsPartner(acting, 'profile.photos')) {
+      // Removals and reordering of photos already there apply now; the new ones wait for the partner.
+      const keep = input.assetIds.filter((/** @type {string} */ i) => current.includes(i));
+      if (JSON.stringify(keep) !== JSON.stringify(current)) await doPhotosSet(q, acting.profileId, keep);
+      return { pending: await requestApproval(q, acting, { kind: 'profile.photos', targetType: 'profile', targetId: acting.profileId, change: { assetIds: input.assetIds, adds }, summary: ['photos'] }) };
     }
     const out = await doPhotosSet(q, acting.profileId, input.assetIds);
     if (acting.kind === 'couple') await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: 'photos' });

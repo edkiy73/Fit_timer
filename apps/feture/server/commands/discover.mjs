@@ -20,20 +20,36 @@ const need = acting => { if (!acting) throw new Error('acting profile missing');
 const DEFAULT_FILTER = { show: 'all', ageMin: 18, ageMax: 99, cityId: null, genders: [], orients: [], formats: [], seeks: [], roles: [], topics: [] };
 
 /** Pool predicate for viewer $1 (no filter): who may appear in the viewer's Discover at all. */
-const POOL = `p.id <> $1 and feture.discoverable(p.id) and not feture.blocked($1, p.id) and not feture.related($1, p.id)
+const POOL = `p.id <> $1 and p.state = 'active'
+  and exists (select 1 from feture.profile_settings s where s.profile_id = p.id and s.discover_mode = 'visible') and feture.discoverable(p.id) and not feture.blocked($1, p.id) and not feture.related($1, p.id)
   and not exists (select 1 from feture.discover_decision x where x.profile_id = $1 and x.target_profile_id = p.id)
   and not exists (select 1 from feture.profile_match m where m.ended_at is null and m.profile_a = least($1, p.id) and m.profile_b = greatest($1, p.id))`;
-/** Filter predicate over parameters $2–$11 (see filterParams). A couple passes the age range when every member does,
- * and gender/orientation when at least one member matches (V21 pool). */
+/** Filter predicate over parameters $2–$11 (see filterParams). It matches only what the profile shows everyone, so
+ * neither the deck nor the count can reveal hidden details or a hidden age: details of a person only with
+ * details_vis 'all' (a couple's role, format and seek are always public); a narrowed age range only over shown ages,
+ * every member of a couple in range; gender/orientation when at least one member of a couple matches (V21 pool). */
+const PUBLIC_PEOPLE = `select pd.* from feture.profile_details pd where pd.profile_id in (select feture.profile_people(p.id)) and pd.details_vis = 'all'`;
+const OWN_PUBLIC = `(p.kind = 'couple' or d.details_vis = 'all')`;
 const FILTER = `($2 = 'all' or $2 = 'people' and p.kind = 'person' or $2 = 'pairs' and p.kind = 'couple')
-  and (select coalesce(bool_and(x between $3 and $4), false) from unnest(feture.profile_ages(p.id)) x)
+  and ($3 = 18 and $4 = 99 or (
+        select count(*) > 0 and coalesce(bool_and(coalesce(pd.show_age, false) and extract(year from age(current_date, a.birth_date)) between $3 and $4), false)
+        from feture.profile_member m join feture.account a on a.id = m.account_id left join feture.profile_details pd on pd.profile_id = a.person_profile_id
+        where m.profile_id = p.id and m.state = 'active'))
   and ($5::uuid is null or d.city_id = $5)
-  and (cardinality($6::text[]) = 0 or exists (select 1 from feture.profile_details pd where pd.profile_id in (select feture.profile_people(p.id)) and pd.genders && $6))
-  and (cardinality($7::text[]) = 0 or exists (select 1 from feture.profile_details pd where pd.profile_id in (select feture.profile_people(p.id)) and pd.orients && $7))
-  and (cardinality($8::text[]) = 0 or d.formats && $8) and (cardinality($9::text[]) = 0 or d.seeks && $9) and (cardinality($10::text[]) = 0 or d.roles && $10)
+  and (cardinality($6::text[]) = 0 or exists (select 1 from (${PUBLIC_PEOPLE}) x where x.genders && $6))
+  and (cardinality($7::text[]) = 0 or exists (select 1 from (${PUBLIC_PEOPLE}) x where x.orients && $7))
+  and (cardinality($8::text[]) = 0 or ${OWN_PUBLIC} and d.formats && $8) and (cardinality($9::text[]) = 0 or ${OWN_PUBLIC} and d.seeks && $9)
+  and (cardinality($10::text[]) = 0 or ${OWN_PUBLIC} and d.roles && $10)
   and (cardinality($11::text[]) = 0 or exists (select 1 from feture.interest i where i.profile_id = p.id and i.vis = 'public' and i.value is not null and i.topic_id = any($11)))`;
 /** @param {any} f */
 const filterParams = f => [f.show, f.ageMin, f.ageMax, f.cityId, f.genders, f.orients, f.formats, f.seeks, f.roles, f.topics];
+
+/** Serializes everything that changes likes or the match between two profiles (two likes at the same moment must
+ * still make a match). @param {Q} q @param {string} a @param {string} b */
+export async function lockPair(q, a, b) {
+  const [x, y] = [a, b].sort();
+  await q.query(`select pg_advisory_xact_lock(hashtextextended('fe-pair:' || $1 || ':' || $2, 0))`, [x, y]);
+}
 
 /** @param {Q} q @param {string} accountId */
 export async function isPremium(q, accountId) {
@@ -115,8 +131,9 @@ async function sendLike(q, acting, target, source) {
   if (t.related) fail(422, 'rule_violation', { rule: 'related' });
   const [m] = await q.query(`select 1 from feture.profile_match where ended_at is null and profile_a = least($1::uuid, $2::uuid) and profile_b = greatest($1::uuid, $2::uuid)`, [acting.profileId, target]);
   if (m) fail(409, 'conflict', { rule: 'already_matched' });
+  await lockPair(q, acting.profileId, target);
   const mine = await modeOf(q, acting.profileId), theirs = await modeOf(q, target);
-  const [back] = await q.query(`select id from feture.profile_like where from_profile_id = $1 and to_profile_id = $2 and state = 'active' for update`, [target, acting.profileId]);
+  const [back] = await q.query(`select id from feture.profile_like where from_profile_id = $1 and to_profile_id = $2 and state = 'active'`, [target, acting.profileId]);
   if (!back) {
     if (mine.discover_mode === 'off' && (source === 'discover' || acting.kind === 'couple' || t.kind === 'couple' || !mine.accept_profile_likes)) {
       fail(422, 'rule_violation', { rule: 'own_discover_off' });
@@ -128,13 +145,17 @@ async function sendLike(q, acting, target, source) {
       if ((acting.kind === 'couple' || t.kind === 'couple') && theirs.discover_mode === 'off') fail(422, 'rule_violation', { rule: 'couples_via_discover_only' });
     }
   }
-  const [already] = await q.query(`select id from feture.profile_like where from_profile_id = $1 and to_profile_id = $2 and state = 'active'`, [acting.profileId, target]);
-  if (already) return { state: 'liked' };
+  // A dismissed like still looks sent to its sender: they never learn it was dismissed.
+  const [already] = await q.query(`select id from feture.profile_like where from_profile_id = $1 and to_profile_id = $2 and state in ('active', 'dismissed')`, [acting.profileId, target]);
+  if (already && !back) return { state: 'liked' };
   await decide(q, acting, target, 'like', source);
   if (back) {
     await q.query(`update feture.profile_like set state = 'matched', updated_at = now() where id = $1`, [back.id]);
-    await q.query(`insert into feture.profile_like (from_profile_id, to_profile_id, source, initiator_account_id, state) values ($1, $2, $3, $4, 'matched')`,
-      [acting.profileId, target, source, acting.accountId]);
+    if (already) await q.query(`update feture.profile_like set state = 'matched', updated_at = now() where id = $1`, [already.id]);
+    else {
+      await q.query(`insert into feture.profile_like (from_profile_id, to_profile_id, source, initiator_account_id, state) values ($1, $2, $3, $4, 'matched')`,
+        [acting.profileId, target, source, acting.accountId]);
+    }
     const [match] = await q.query(
       `insert into feture.profile_match (profile_a, profile_b) values (least($1::uuid, $2::uuid), greatest($1::uuid, $2::uuid)) returning id`, [acting.profileId, target]);
     await enqueue(q, 'match.created', acting.profileId, { matchId: match.id, with: target });
@@ -143,16 +164,35 @@ async function sendLike(q, acting, target, source) {
   }
   await q.query(`insert into feture.profile_like (from_profile_id, to_profile_id, source, initiator_account_id) values ($1, $2, $3, $4)`,
     [acting.profileId, target, source, acting.accountId]);
-  await enqueue(q, 'like.received', target, { from: acting.profileId });
+  // Like, withdraw, like again: the target hears about it at most once a day.
+  const [{ told }] = await q.query(
+    `select exists (select 1 from feture.outbox where topic = 'like.received' and profile_id = $1 and payload->>'from' = $2 and created_at > now() - interval '1 day') told`,
+    [target, acting.profileId]);
+  if (!told) await enqueue(q, 'like.received', target, { from: acting.profileId });
   if (acting.kind === 'couple') await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: 'like', target });
   return { state: 'liked' };
 }
 
 /** Withdraws the viewer's active like; the target's notification goes too. @param {Q} q @param {string} from @param {string} to */
 async function withdrawLike(q, from, to) {
-  const rows = await q.query(`update feture.profile_like set state = 'withdrawn', updated_at = now() where from_profile_id = $1 and to_profile_id = $2 and state = 'active' returning id`, [from, to]);
-  if (rows[0]) await enqueue(q, 'like.withdrawn', to, { from });
+  await lockPair(q, from, to);
+  const rows = await q.query(
+    `update feture.profile_like l set state = 'withdrawn', updated_at = now() from (select id, state from feture.profile_like
+       where from_profile_id = $1 and to_profile_id = $2 and state in ('active', 'dismissed') for update) old
+     where l.id = old.id returning old.state`, [from, to]);
+  // Only an active like had a notification to take back; a dismissed one answers the same, so nothing is revealed.
+  if (rows.some(r => r.state === 'active')) await enqueue(q, 'like.withdrawn', to, { from });
   return rows.length > 0;
+}
+
+/** One free undo a day (shared with «Вернуть»), unlimited with Premium (Q6). @param {Q} q @param {string} accountId */
+async function spendUndo(q, accountId) {
+  await q.query(`select pg_advisory_xact_lock(hashtextextended('fe-undo:' || $1, 0))`, [accountId]);
+  if (!(await isPremium(q, accountId))) {
+    const [{ n }] = await q.query(`select count(*)::int n from feture.rate_event where account_id = $1 and kind = 'discover.undo' and created_at > now() - interval '1 day'`, [accountId]);
+    if (n >= 1) fail(403, 'premium_required');
+  }
+  await q.query(`insert into feture.rate_event (account_id, kind) values ($1, 'discover.undo')`, [accountId]);
 }
 
 /** @type {Record<keyof typeof discoverCommands, Command['run']>} */
@@ -176,6 +216,7 @@ const run = {
   async 'discover.count'(q, { acting: a, input }) {
     // «Показать · N» for a filter draft; capped so it cannot be used to measure the whole membership.
     const viewer = need(a);
+    if ((await modeOf(q, viewer.profileId)).discover_mode === 'off') fail(422, 'rule_violation', { rule: 'own_discover_off' });
     await checkFilter(q, input.filter);
     const [{ n }] = await q.query(
       `select count(*)::int n from (select 1 from feture.profile p left join feture.profile_details d on d.profile_id = p.id
@@ -218,14 +259,11 @@ const run = {
     const [last] = await q.query(
       `select target_profile_id, decision, source from feture.discover_decision where profile_id = $1 order by decided_at desc limit 1 for update`, [acting.profileId]);
     if (!last) fail(404, 'not_found', { rule: 'nothing_to_undo' });
+    await lockPair(q, acting.profileId, last.target_profile_id);
     const [m] = await q.query(`select 1 from feture.profile_match where ended_at is null and profile_a = least($1::uuid, $2::uuid) and profile_b = greatest($1::uuid, $2::uuid)`,
       [acting.profileId, last.target_profile_id]);
     if (m) fail(409, 'conflict', { rule: 'already_mutual' });
-    if (!(await isPremium(q, acting.accountId))) {
-      const [{ n }] = await q.query(`select count(*)::int n from feture.rate_event where account_id = $1 and kind = 'discover.undo' and created_at > now() - interval '1 day'`, [acting.accountId]);
-      if (n >= 1) fail(403, 'premium_required');
-    }
-    await q.query(`insert into feture.rate_event (account_id, kind) values ($1, 'discover.undo')`, [acting.accountId]);
+    await spendUndo(q, acting.accountId);
     await q.query('delete from feture.discover_decision where profile_id = $1 and target_profile_id = $2', [acting.profileId, last.target_profile_id]);
     if (last.decision === 'like') await withdrawLike(q, acting.profileId, last.target_profile_id);
     if (last.decision === 'pass' && last.source === 'likes') {
@@ -233,16 +271,20 @@ const run = {
       await q.query(
         `update feture.profile_like set state = 'active', updated_at = now()
          where id = (select id from feture.profile_like where from_profile_id = $1 and to_profile_id = $2 and state = 'dismissed' order by updated_at desc limit 1)
-           and not exists (select 1 from feture.profile_like where from_profile_id = $1 and to_profile_id = $2 and state = 'active')`,
+           and not exists (select 1 from feture.profile_like where from_profile_id = $1 and to_profile_id = $2 and state = 'active')
+           and not feture.blocked($1, $2)`,
         [last.target_profile_id, acting.profileId]);
     }
     return { profileId: last.target_profile_id, decision: last.decision };
   },
 
   async 'discover.restore'(q, { acting: a, input }) {
+    // «Вернуть» from the history is an undo too: the same daily allowance (Q6).
     const acting = need(a);
-    const rows = await q.query(`delete from feture.discover_decision where profile_id = $1 and target_profile_id = $2 and decision = 'pass' returning 1`, [acting.profileId, input.profileId]);
-    if (!rows[0]) fail(404, 'not_found');
+    const [d] = await q.query(`select 1 from feture.discover_decision where profile_id = $1 and target_profile_id = $2 and decision = 'pass' and source = 'discover' for update`, [acting.profileId, input.profileId]);
+    if (!d) fail(404, 'not_found');
+    await spendUndo(q, acting.accountId);
+    await q.query(`delete from feture.discover_decision where profile_id = $1 and target_profile_id = $2`, [acting.profileId, input.profileId]);
     return { restored: true };
   },
 
@@ -270,6 +312,7 @@ const run = {
   async 'like.dismiss'(q, { acting: a, input }) {
     // The sender is never told; the dismissal is a «pass» that one undo can bring back.
     const acting = need(a);
+    await lockPair(q, acting.profileId, input.profileId);
     const rows = await q.query(
       `update feture.profile_like set state = 'dismissed', updated_at = now() where from_profile_id = $1 and to_profile_id = $2 and state = 'active' returning id`,
       [input.profileId, acting.profileId]);
@@ -294,7 +337,7 @@ const run = {
     const rows = await q.query(
       `select l.to_profile_id id, l.created_at, l.source, ip.handle initiator from feture.profile_like l join feture.profile p on p.id = l.to_profile_id
        join feture.account ia on ia.id = l.initiator_account_id left join feture.profile ip on ip.id = ia.person_profile_id
-       where l.from_profile_id = $1 and l.state = 'active' and p.state = 'active' and not feture.blocked($1, p.id)
+       where l.from_profile_id = $1 and l.state in ('active', 'dismissed') and p.state = 'active' and not feture.blocked($1, p.id)
        order by l.created_at desc limit 200`, [viewer.profileId]);
     const people = await cards(q, viewer, rows.map(r => r.id), cfg.media);
     return {
@@ -319,6 +362,7 @@ const run = {
   async 'match.end'(q, { acting: a, input }) {
     // «Прекратить общение»: the other side is not told; optionally the viewer's own grant goes too.
     const acting = need(a);
+    await lockPair(q, acting.profileId, input.profileId);
     const rows = await q.query(
       `update feture.profile_match set ended_at = now(), ended_by_profile = $1
        where ended_at is null and profile_a = least($1::uuid, $2::uuid) and profile_b = greatest($1::uuid, $2::uuid) returning id`, [acting.profileId, input.profileId]);

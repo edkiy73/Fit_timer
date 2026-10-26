@@ -18,7 +18,7 @@ const source = z.enum(['discover', 'profile', 'likes']);
 export const discoverCommands = {
   'discover.filter': { profile: true, write: false, input: z.strictObject({}) },
   'discover.setFilter': { profile: true, write: true, input: z.strictObject({ opId, filter: filterFields }) },
-  'discover.count': { profile: true, write: false, input: z.strictObject({ filter: filterFields }) },
+  'discover.count': { profile: true, write: false, rate: { kind: 'discover.count', max: 300, window: '1 day' }, input: z.strictObject({ filter: filterFields }) },
   'discover.deck': { profile: true, write: false, input: z.strictObject({ limit: z.int().min(1).max(20).default(10) }) },
   'discover.decide': {
     profile: true, write: true, rate: { kind: 'discover.decide', max: 1000, window: '1 day' },

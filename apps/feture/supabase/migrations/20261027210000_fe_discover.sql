@@ -67,7 +67,7 @@ language sql stable set search_path = pg_catalog, feture as $$
        bb as (select account_id from feture.profile_member where profile_id = b and state = 'active')
   select exists (select 1 from aa join bb using (account_id))
       or exists (select 1 from feture.profile_member x join feture.profile_member y on y.profile_id = x.profile_id and y.state = 'active'
-                 join feture.profile c on c.id = x.profile_id and c.kind = 'couple' and c.state in ('active', 'paused')
+                 join feture.profile c on c.id = x.profile_id and c.kind = 'couple' and c.state in ('active', 'paused', 'suspended')
                  where x.state = 'active' and x.account_id in (select account_id from aa) and y.account_id in (select account_id from bb))
 $$;
 
@@ -79,7 +79,8 @@ language sql stable set search_path = pg_catalog, feture as $$
   where m.profile_id = p and m.state = 'active' and a.birth_date is not null
 $$;
 
--- In the Discover pool: visible, active people only (no restricted account), an approved safe avatar.
+-- In the Discover pool: visible, active people only (no restricted account), an approved safe avatar; a couple only
+-- with both partners present and both confirmed adults (pairMode) — checked here, so an expired check hides it too.
 create function feture.discoverable(p uuid) returns boolean
 language sql stable set search_path = pg_catalog, feture as $$
   select exists (
@@ -90,6 +91,10 @@ language sql stable set search_path = pg_catalog, feture as $$
   and not exists (
     select 1 from feture.profile_member m join feture.account a on a.id = m.account_id
     where m.profile_id = p and m.state = 'active' and a.state <> 'active')
+  and (select x.kind = 'person' or (
+         select count(*) = 2 and coalesce(bool_and(coalesce(a.age_verified_until > now(), false)), false)
+         from feture.profile_member m join feture.account a on a.id = m.account_id where m.profile_id = p and m.state = 'active')
+       from feture.profile x where x.id = p)
 $$;
 
 do $$

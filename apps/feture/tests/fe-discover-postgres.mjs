@@ -78,18 +78,24 @@ test('likes: mutual makes a match, withdraw and dismiss stay private, undo once 
     await call('uc', c, { action: 'discover.decide', opId: op(), profileId: a, decision: 'pass' });
     assert.equal((await call('uc', c, { action: 'discover.undo', opId: op() })).error, 'premium_required');
     assert.equal((await call('uc', c, { action: 'discover.history' })).items.length, 1);
+    // «Вернуть» from the history shares the daily allowance.
+    assert.equal((await call('uc', c, { action: 'discover.restore', opId: op(), profileId: a })).error, 'premium_required');
+    await db.query(`update feture.account set premium_until = now() + interval '1 month' where person_profile_id = $1`, [c]);
     await call('uc', c, { action: 'discover.restore', opId: op(), profileId: a });
     assert.ok((await deck('uc', c)).includes('Alex'));
-    await db.query(`update feture.account set premium_until = now() + interval '1 month' where person_profile_id = $1`, [c]);
     await call('uc', c, { action: 'discover.decide', opId: op(), profileId: a, decision: 'like' });
     assert.equal((await call('uc', c, { action: 'discover.undo', opId: op() })).decision, 'like');
     assert.deepEqual((await call('ua', a, { action: 'likes.incoming' })).items, []); // the withdrawn like is gone
 
-    // Dismissing a like: the sender is not told; their like is no longer listed.
+    // Dismissing a like: the sender is never told — their like still looks sent, liking again changes nothing,
+    // withdrawing answers the same.
     await call('uc', c, { action: 'discover.decide', opId: op(), profileId: a, decision: 'like' });
     await call('ua', a, { action: 'like.dismiss', opId: op(), profileId: c });
     assert.deepEqual((await call('ua', a, { action: 'likes.incoming' })).items, []);
-    assert.equal((await call('uc', c, { action: 'likes.outgoing' })).items.length, 0);
+    assert.equal((await call('uc', c, { action: 'likes.outgoing' })).items.length, 1);
+    assert.equal((await call('uc', c, { action: 'like.send', opId: op(), profileId: a, source: 'profile' })).state, 'liked');
+    assert.deepEqual((await call('ua', a, { action: 'likes.incoming' })).items, []);
+    assert.equal((await call('uc', c, { action: 'like.withdraw', opId: op(), profileId: a })).withdrawn, true);
   } finally { await pg.close(); }
 });
 
@@ -125,5 +131,36 @@ test('a couple is visible in Discover only when both partners confirmed their ag
     const pair = await coupleOf([b, c]);
     await db.query(`update feture.profile_settings set discover_mode = 'off' where profile_id = $1`, [pair]);
     assert.equal((await call('ub', pair, { action: 'profile.setVisibility', opId: op(), setting: 'discoverMode', value: 'visible' })).rule, 'age_not_verified');
+  } finally { await pg.close(); }
+});
+
+test('review fixes: couples need both ages confirmed, filters see only public details and shown ages, count needs Discover on, a like back after a stuck pair still matches', async () => {
+  const { pg, db, call, coupleOf, member, withPhoto, deck } = await world();
+  try {
+    const a = await member('ua', 'Alex'), b = await member('ub', 'Kira', { birthDate: '2000-05-01' }), c = await member('uc', 'Noa', { verified: false });
+    const pair = await coupleOf([b, c]);
+    await withPhoto(pair);
+    assert.ok(!(await deck('ua', a)).includes('Пара')); // visible by default, but not until both confirmed their age
+    await db.query(`update feture.account set age_verified_until = now() + interval '1 year' where person_profile_id = $1`, [c]);
+    assert.equal((await call('ua', a, { action: 'discover.deck' })).items.filter((/** @type {any} */ x) => x.kind === 'couple').length, 1);
+
+    // Hidden details and a hidden age never filter.
+    await db.query(`update feture.profile_details set genders = '{woman}', details_vis = 'only', show_age = false where profile_id = $1`, [b]);
+    const f = { show: 'people', ageMin: 18, ageMax: 99, cityId: null, genders: ['woman'], orients: [], formats: [], seeks: [], roles: [], topics: [] };
+    const count = async (/** @type {any} */ x) => (await call('ua', a, { action: 'discover.count', filter: x })).count;
+    assert.equal(await count(f), 0);
+    assert.equal(await count({ ...f, genders: [], ageMin: 24, ageMax: 27 }), 0);
+    await db.query(`update feture.profile_details set details_vis = 'all', show_age = true where profile_id = $1`, [b]);
+    assert.equal(await count(f), 1);
+    assert.equal(await count({ ...f, genders: [], ageMin: 24, ageMax: 27 }), 1);
+    await call('ua', a, { action: 'profile.setVisibility', opId: op(), setting: 'discoverMode', value: 'off' });
+    assert.equal((await call('ua', a, { action: 'discover.count', filter: f })).rule, 'own_discover_off');
+    await call('ua', a, { action: 'profile.setVisibility', opId: op(), setting: 'discoverMode', value: 'visible' });
+
+    // Two likes that crossed (both active, no match): the next like still makes the match.
+    const [{ id: accA }] = await db.query('select id from feture.account where person_profile_id = $1', [a]);
+    const [{ id: accB }] = await db.query('select id from feture.account where person_profile_id = $1', [b]);
+    await db.query(`insert into feture.profile_like (from_profile_id, to_profile_id, source, initiator_account_id) values ($1, $2, 'discover', $3), ($2, $1, 'discover', $4)`, [a, b, accA, accB]);
+    assert.equal((await call('ua', a, { action: 'like.send', opId: op(), profileId: b, source: 'likes' })).state, 'matched');
   } finally { await pg.close(); }
 });
