@@ -425,8 +425,11 @@ const run = {
     // For a couple, a change that only closes (the interest becomes less visible) never waits for the partner.
     const VIS = ['only', 'granted', 'public'];
     const [prev] = acting.kind === 'couple'
-      ? await q.query('select vis from feture.interest where profile_id = $1 and topic_id = $2', [acting.profileId, change.topicId]) : [];
-    const narrowing = !!prev && (VIS.indexOf(change.vis) < VIS.indexOf(prev.vis) || change.vis === 'only');
+      ? await q.query('select value, mark, dir, vis from feture.interest where profile_id = $1 and topic_id = $2', [acting.profileId, change.topicId]) : [];
+    // Narrowing = the same content shown to fewer people, or the interest becomes private; new content always counts as a change.
+    const sameContent = !!prev && prev.value === (change.value ?? null) && prev.mark === (change.mark ?? null)
+      && JSON.stringify([...prev.dir].sort()) === JSON.stringify([...(change.mark ? [] : change.dir ?? [])].sort());
+    const narrowing = !!prev && (change.vis === 'only' || (sameContent && VIS.indexOf(change.vis) < VIS.indexOf(prev.vis)));
     if (acting.kind === 'couple' && !narrowing && needsPartner(acting, 'interests.set')) {
       const [t] = await q.query('select 1 from feture.topic where id = $1 and not hidden', [change.topicId]);
       if (!t) fail(400, 'invalid_input', { fields: ['topicId'] });

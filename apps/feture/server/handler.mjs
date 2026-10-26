@@ -75,7 +75,9 @@ export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota
       const profileId = header(req, 'x-fe-profile');
       // Per-account limits are committed on their own, before the command: a failed attempt (not found, rule) still counts.
       const rate = cmd.rate;
-      if (rate) await db.tx(q => limit(q, account.id, rate.kind, rate.max, rate.window));
+      const replay = rate && typeof input.opId === 'string'
+        && (await db.query('select 1 from feture.op_ledger where account_id = $1 and op_id = $2', [account.id, input.opId])).length > 0;
+      if (rate && !replay) await db.tx(q => limit(q, account.id, rate.kind, rate.max, rate.window));
       // Membership is checked before a stored result can be replayed: a former member gets 403, not old results.
       if (cmd.profile) await actingProfile(db, account.id, profileId, { write: cmd.write, allowPaused: cmd.allowPaused });
       /** @param {Q} q */

@@ -140,6 +140,9 @@ test('review fixes: partner sees values, stop closes the couple’s outgoing sid
     // Narrowing an interest never waits; widening does.
     await call('ub', pair, { action: 'interests.set', opId: op(), topicId: 'bondage', value: 6, vis: 'public' }); // Kira: Alex does not ask
     assert.equal((await call('ua', pair, { action: 'interests.set', opId: op(), topicId: 'bondage', value: 6, vis: 'only' })).vis, 'only');
+    await call('ub', pair, { action: 'interests.set', opId: op(), topicId: 'shibari', value: 4, vis: 'public' });
+    // Showing it to fewer people but with new content is a change the partner decides on.
+    assert.ok((await call('ua', pair, { action: 'interests.set', opId: op(), topicId: 'shibari', value: 9, vis: 'granted' })).pending);
     assert.ok((await call('ua', pair, { action: 'interests.set', opId: op(), topicId: 'bondage', value: 6, vis: 'public' })).pending);
 
     // The couple's outgoing request and the access Mia gave it end when it stops, and do not come back.

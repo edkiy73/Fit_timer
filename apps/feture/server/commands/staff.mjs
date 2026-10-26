@@ -10,6 +10,8 @@ import { enqueue } from '../outbox.mjs';
  */
 
 const REVIEWERS = ['owner', 'lead', 'moderator', 'verifier'];
+/** Media tokens name a profile as the viewer: staff view as their person profile. @param {{person_profile_id: string | null, id: string}} account */
+const staffProfile = account => account.person_profile_id ?? account.id;
 const PUBLIC_ONLY = new Set(['avatar', 'community', 'event']);
 
 /** @param {Q} q @param {string} accountId @param {string[]} roles @returns {Promise<string[]>} the staff member's roles */
@@ -26,11 +28,11 @@ async function journal(q, staff, action, targetType, targetId, detail = {}) {
     [staff, action, targetType, targetId, JSON.stringify(detail)]);
 }
 
-/** @param {Q} q @param {string} accountId @param {string} assetId */
-async function reviewable(q, accountId, assetId) {
+/** @param {Q} q @param {string} accountId @param {string} assetId @param {{lock?: boolean}} [opts] */
+async function reviewable(q, accountId, assetId, { lock = false } = {}) {
   const [a] = await q.query(
     `select m.*, exists (select 1 from feture.profile_member pm where pm.profile_id = m.owner_profile_id and pm.account_id = $2) own
-     from feture.media_asset m where m.id = $1`, [assetId, accountId]);
+     from feture.media_asset m where m.id = $1 ${lock ? 'for update of m' : ''}`, [assetId, accountId]);
   if (!a) fail(404, 'not_found');
   if (a.own) fail(403, 'forbidden'); // never about one's own profiles or couple
   return a;
@@ -46,17 +48,16 @@ const run = {
   async 'staff.grant'(q, { account, input }) {
     await requireStaff(q, account.id, ['owner']);
     const [t] = await q.query(
-      `select a.id from feture.profile p join feture.account a on a.person_profile_id = p.id where lower(p.handle) = lower($1) and p.kind = 'person'`,
+      `select a.id from feture.profile p join feture.account a on a.person_profile_id = p.id
+       where lower(p.handle) = lower($1) and p.kind = 'person' and a.state = 'active' and p.state = 'active'`,
       [String(input.handle).replace(/^@/, '')]);
     if (!t) fail(404, 'not_found');
     if (t.id === account.id) fail(422, 'rule_violation', { rule: 'self' });
-    if (input.grant) {
-      await q.query(`insert into feture.staff_role (account_id, role, granted_by) values ($1, $2, $3) on conflict do nothing`, [t.id, input.role, account.id]);
-    } else {
-      await q.query(`update feture.staff_role set revoked_at = now() where account_id = $1 and role = $2 and revoked_at is null`, [t.id, input.role]);
-    }
-    await journal(q, account.id, input.grant ? 'staff.grant' : 'staff.revoke', 'account', t.id, { role: input.role });
-    return { ok: true };
+    const changed = input.grant
+      ? await q.query(`insert into feture.staff_role (account_id, role, granted_by) values ($1, $2, $3) on conflict do nothing returning 1`, [t.id, input.role, account.id])
+      : await q.query(`update feture.staff_role set revoked_at = now() where account_id = $1 and role = $2 and revoked_at is null returning 1`, [t.id, input.role]);
+    if (changed.length) await journal(q, account.id, input.grant ? 'staff.grant' : 'staff.revoke', 'account', t.id, { role: input.role });
+    return { changed: changed.length > 0 };
   },
 
   async 'staff.mediaQueue'(q, { account, input, cfg }) {
@@ -69,7 +70,7 @@ const run = {
        order by (m.purpose = 'verification') desc, m.created_at limit $2`, [account.id, input.limit]);
     // The queue shows blurred previews; the full picture opens through staff.mediaView, which is journalled.
     const blur = cfg.media.delivery && rows.some(r => r.copies_at)
-      ? await cfg.media.delivery.urls(rows.filter(r => r.copies_at).map(r => ({ assetId: r.id, variant: /** @type {const} */ ('blur'), viewerProfileId: account.id, ttlSeconds: 300 })))
+      ? await cfg.media.delivery.urls(rows.filter(r => r.copies_at).map(r => ({ assetId: r.id, variant: /** @type {const} */ ('blur'), viewerProfileId: staffProfile(account), ttlSeconds: 300 })))
       : [];
     let i = 0;
     return {
@@ -83,31 +84,37 @@ const run = {
   async 'staff.mediaView'(q, { account, input, cfg }) {
     await requireStaff(q, account.id, REVIEWERS);
     const a = await reviewable(q, account.id, input.assetId);
+    // Staff see content only for what is waiting for them (S4 §3), never blocked material or private media at large.
+    if (a.state !== 'needs_review') fail(409, 'conflict', { state: a.state });
     await journal(q, account.id, 'media.view', 'media', a.id);
     if (!a.copies_at || !cfg.media.delivery) return { src: null };
     const variants = /** @type {const} */ (['card', 'full']);
-    const urls = await cfg.media.delivery.urls(variants.map(variant => ({ assetId: a.id, variant, viewerProfileId: account.id, ttlSeconds: 120 })));
+    const urls = await cfg.media.delivery.urls(variants.map(variant => ({ assetId: a.id, variant, viewerProfileId: staffProfile(account), ttlSeconds: 120 })));
     return { src: { card: urls[0], full: urls[1] } };
   },
 
   async 'staff.mediaDecide'(q, { account, input }) {
     await requireStaff(q, account.id, REVIEWERS);
-    const a = await reviewable(q, account.id, input.assetId);
-    if (a.state !== 'needs_review') fail(409, 'conflict', { state: a.state });
+    const a = await reviewable(q, account.id, input.assetId, { lock: true });
+    // Suspected CSAM can be escalated from any outcome (a later look, a report); everything else decides waiting media only.
+    const escalate = input.decision === 'reject' && input.reason === 'csam_suspected';
+    if (a.state === 'blocked' || (!escalate && a.state !== 'needs_review') || (escalate && !['needs_review', 'approved', 'rejected', 'removed'].includes(a.state))) {
+      fail(409, 'conflict', { state: a.state });
+    }
     if (input.decision === 'approve') {
       if (input.explicit && PUBLIC_ONLY.has(a.purpose)) fail(422, 'rule_violation', { rule: 'explicit_not_allowed' });
       if (!a.copies_at) fail(422, 'rule_violation', { rule: 'no_copies' }); // nothing to show yet; it must be re-scanned
       await q.query(
         `update feture.media_asset set state = 'approved', approved_at = now(), explicitness = $2, explicitness_source = 'staff', reject_reason = null
-         where id = $1 and state = 'needs_review'`, [a.id, input.explicit ? 'explicit' : 'safe']);
+         where id = $1`, [a.id, input.explicit ? 'explicit' : 'safe']);
       await enqueue(q, 'media.approved', a.owner_profile_id, { assetId: a.id });
     } else if (input.reason === 'csam_suspected') {
       // Suspected CSAM without a scanner match: blocked like a match and escalated (S4 §5); evidence is kept.
-      await q.query(`update feture.media_asset set state = 'blocked', reject_reason = 'csam_suspected' where id = $1 and state = 'needs_review'`, [a.id]);
+      await q.query(`update feture.media_asset set state = 'blocked', reject_reason = 'csam_suspected' where id = $1`, [a.id]);
       await enqueue(q, 'media.hide', a.owner_profile_id, { assetId: a.id, force: true });
       await enqueue(q, 'safety.csamMatch', a.owner_profile_id, { assetId: a.id, source: 'staff' });
     } else {
-      await q.query(`update feture.media_asset set state = 'rejected', reject_reason = $2 where id = $1 and state = 'needs_review'`, [a.id, input.reason]);
+      await q.query(`update feture.media_asset set state = 'rejected', reject_reason = $2 where id = $1`, [a.id, input.reason]);
       await enqueue(q, 'media.hide', a.owner_profile_id, { assetId: a.id });
       await enqueue(q, 'media.purge', a.owner_profile_id, { assetId: a.id }, { delaySeconds: 30 * 24 * 3600 }); // kept 30 days for an appeal
     }

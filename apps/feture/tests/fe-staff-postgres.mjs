@@ -49,8 +49,24 @@ test('staff: roles are server-side, owner grants, queue excludes own media, deci
     const topics = (await db.query(`select topic from feture.outbox where payload->>'assetId' = $1`, [avatar])).map(r => r.topic).sort();
     assert.deepEqual(topics, ['media.hide', 'safety.csamMatch']);
 
+    // Staff do not open media outside the queue: approved, blocked, private media in general.
+    assert.equal((await call('um', null, { action: 'staff.mediaView', assetId: theirs })).status, 409);
+    assert.equal((await call('um', null, { action: 'staff.mediaView', assetId: avatar })).status, 409);
+    // An approved file can still be escalated as suspected CSAM; a blocked one cannot be decided again.
+    const later = await pendingAsset(db, user);
+    await call('um', null, { action: 'staff.mediaDecide', opId: op(), assetId: later, decision: 'approve', explicit: false });
+    assert.equal((await call('um', null, { action: 'staff.mediaDecide', opId: op(), assetId: later, decision: 'reject', reason: 'spam' })).status, 409);
+    assert.equal((await call('um', null, { action: 'staff.mediaDecide', opId: op(), assetId: later, decision: 'reject', reason: 'csam_suspected' })).state, 'blocked');
+    assert.equal((await call('um', null, { action: 'staff.mediaDecide', opId: op(), assetId: avatar, decision: 'reject', reason: 'csam_suspected' })).status, 409);
+    // The CSAM event suspends the uploader at once; the next request is refused.
+    const { mediaHandlers } = await import('../server/jobs.mjs');
+    await mediaHandlers(db, { scan: null })['safety.csamMatch']({ payload: { assetId: avatar } });
+    assert.equal((await call('uu', user, { action: 'profile.settings' })).status, 403);
+    const [acc] = await db.query('select state from feture.account where person_profile_id = $1', [user]);
+    assert.equal(acc.state, 'suspended');
+
     const j = await call('uo', null, { action: 'staff.journal' });
-    assert.deepEqual(j.items.map(i => i.action).sort(), ['media.approve', 'media.reject', 'media.view', 'staff.grant']);
+    assert.deepEqual([...new Set(j.items.map(i => i.action))].sort(), ['media.approve', 'media.reject', 'media.view', 'staff.grant']);
     assert.equal((await call('um', null, { action: 'staff.journal' })).status, 403); // moderators do not read the journal
     await pg.exec('reset role; set role feture_api');
     await assert.rejects(db.query('delete from feture.staff_action'), /permission denied|immutable/);

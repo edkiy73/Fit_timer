@@ -32,6 +32,21 @@ export function mediaHandlers(db, deps) {
       if (!row || !['removed', 'rejected', 'blocked'].includes(row.state)) return;
       for (const key of servedKeys(id(item))) await storage().remove(key);
     },
+    // CSAM match or suspicion (S4 §5): the uploader's account and person profile, and the owning profile, are
+    // suspended at once and their sessions end at the next request (resolveAccount refuses suspended accounts).
+    // The quarantined original stays as evidence (never purged while blocked); reporting is a staff step.
+    'safety.csamMatch': async (/** @type {any} */ item) => {
+      await db.tx(async q => {
+        const [m] = await q.query(`select owner_profile_id, uploaded_by, state from feture.media_asset where id = $1`, [id(item)]);
+        if (!m || m.state !== 'blocked') return;
+        await q.query(`update feture.account set state = 'suspended', updated_at = now() where id = $1 and state = 'active'`, [m.uploaded_by]);
+        await q.query(
+          `update feture.profile set state = 'suspended', restore_until = null, paused_at = null, updated_at = now()
+           where state in ('active', 'paused') and (id = $1 or id = (select person_profile_id from feture.account where id = $2))`,
+          [m.owner_profile_id, m.uploaded_by]);
+        await enqueue(q, 'moderation.csamCase', m.owner_profile_id, { assetId: id(item), account: m.uploaded_by });
+      });
+    },
     // Deletes the upload and copies of a removed or rejected asset — never of a blocked one (evidence, S4), and
     // never before a CSAM scanner looked at it: such bytes are kept, scanned when a scanner exists, and the purge
     // is re-queued a day later (re-queued, not retried, so it never runs out of attempts).
