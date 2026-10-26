@@ -210,3 +210,10 @@ The full list is in `V20-SOLO-COUPLE-AUDIT.md`. What changed:
 - «Действовать как»: both cards are 76 px;
 - an empty «Данные пары» is one short line;
 - the gallery grid no longer clips the dashed «Добавить» tile.
+
+## 2026-10-26 — owner decisions and the second solo/couple pass
+
+- **Premium gift to a couple:** both partners get it; the sheet names both and shows the price for two.
+- **A couple's private part opens only with both:** the partner always confirms; «Подтверждение партнёром» now covers the profile and posts. Either partner can close it at once. What waits for approval is listed on «Мы → Приватное».
+- **Chat after a match of one partner:** unchanged — a personal match stays personal.
+- **Second pass:** a crawler clicked every button on 51–54 screens for seven viewers (solo, «Я», «Мы»; RU/EN; 390/1280). No JS errors. Fixed 19 mismatches — couple wording on «Мы» screens, empty «Публикации пары», couple lists showing personal communities and likes, EN event buttons off-screen, search tabs clipped, the empty photo tile, interest filters with one kind, stale path hints. Details: `V20-SOLO-COUPLE-AUDIT.md`, items 11–29.
