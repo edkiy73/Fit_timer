@@ -96,7 +96,7 @@ for id_, o in plan.get('overrides', {}).items():
 V21L = {'fixed': 'исправлено', 'partial': 'частично', 'needs-owner': 'нужно решение владельца', 'not-reproduced': 'не воспроизвелось в V21',
         'wont-fix': 'не исправляем', 'spec': 'перенесено в спецификацию React', 'open': 'не исправлено'}
 fixes = {}
-for f in sorted(glob.glob(os.path.join(W, 'fixes-*.json'))):
+for f in sorted(glob.glob(os.path.join(W, 'fixes-*.json')), key=lambda f: f.endswith('fixes-lead.json')):  # the lead's file (owner decisions, merge follow-ups) wins
     for e in load(f, []):
         if isinstance(e, dict) and e.get('id'): fixes[e['id']] = e
 for x in issues:
