@@ -48,6 +48,7 @@ const TYPES = /** @type {Record<string, {type: string, actor?: string, object?: 
   'couple.narrowed': { type: 'pair.narrowed' },
   'couple.changed': { type: 'pair.acted' },
   'couple.approvalChanged': { type: 'pair.trust' },
+  'verification.decided': { type: 'ageCheck' },
   'link.accepted': { type: 'linkAccepted', actor: 'from' },
   'link.declined': { type: 'linkDeclined', actor: 'from' },
   'link.changed': { type: 'linkChanged', actor: 'from' },

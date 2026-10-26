@@ -4,6 +4,7 @@ import { fail } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { mediaDto } from '../media/assets.mjs';
 import { checkOptions } from './me.mjs';
+import { isPremium } from './premium.mjs';
 import { endConversations, openConversation } from './chats.mjs';
 
 /** Slice F: Discover, likes and matches (S1 §11, extract/people-discover-chats.md).
@@ -52,11 +53,6 @@ export async function lockPair(q, a, b) {
   await q.query(`select pg_advisory_xact_lock(hashtextextended('fe-pair:' || $1 || ':' || $2, 0))`, [x, y]);
 }
 
-/** @param {Q} q @param {string} accountId */
-export async function isPremium(q, accountId) {
-  const [a] = await q.query('select premium_until > now() p from feture.account where id = $1', [accountId]);
-  return !!a?.p;
-}
 
 /** @param {Q} q @param {string} profileId */
 async function filterOf(q, profileId) {
@@ -187,10 +183,11 @@ async function withdrawLike(q, from, to) {
   return rows.length > 0;
 }
 
-/** One free undo a day (shared with «Вернуть»), unlimited with Premium (Q6). @param {Q} q @param {string} accountId */
-async function spendUndo(q, accountId) {
+/** One free undo a day (shared with «Вернуть»), unlimited with Premium (Q6; a couple has it through either partner, Q12).
+ * @param {Q} q @param {string} accountId @param {string} profileId */
+async function spendUndo(q, accountId, profileId) {
   await q.query(`select pg_advisory_xact_lock(hashtextextended('fe-undo:' || $1, 0))`, [accountId]);
-  if (!(await isPremium(q, accountId))) {
+  if (!(await isPremium(q, accountId, profileId))) {
     const [{ n }] = await q.query(`select count(*)::int n from feture.rate_event where account_id = $1 and kind = 'discover.undo' and created_at > now() - interval '1 day'`, [accountId]);
     if (n >= 1) fail(403, 'premium_required');
   }
@@ -265,7 +262,7 @@ const run = {
     const [m] = await q.query(`select 1 from feture.profile_match where ended_at is null and profile_a = least($1::uuid, $2::uuid) and profile_b = greatest($1::uuid, $2::uuid)`,
       [acting.profileId, last.target_profile_id]);
     if (m) fail(409, 'conflict', { rule: 'already_mutual' });
-    await spendUndo(q, acting.accountId);
+    await spendUndo(q, acting.accountId, acting.profileId);
     await q.query('delete from feture.discover_decision where profile_id = $1 and target_profile_id = $2', [acting.profileId, last.target_profile_id]);
     if (last.decision === 'like') await withdrawLike(q, acting.profileId, last.target_profile_id);
     if (last.decision === 'pass' && last.source === 'likes') {
@@ -285,7 +282,7 @@ const run = {
     const acting = need(a);
     const [d] = await q.query(`select 1 from feture.discover_decision where profile_id = $1 and target_profile_id = $2 and decision = 'pass' and source = 'discover' for update`, [acting.profileId, input.profileId]);
     if (!d) fail(404, 'not_found');
-    await spendUndo(q, acting.accountId);
+    await spendUndo(q, acting.accountId, acting.profileId);
     await q.query(`delete from feture.discover_decision where profile_id = $1 and target_profile_id = $2`, [acting.profileId, input.profileId]);
     return { restored: true };
   },
@@ -293,7 +290,7 @@ const run = {
   async 'discover.history'(q, { acting: a, input, cfg }) {
     // Free: the newest decision only; Premium: seven days.
     const viewer = need(a);
-    const premium = await isPremium(q, viewer.accountId);
+    const premium = await isPremium(q, viewer.accountId, viewer.profileId);
     const rows = await q.query(
       `select x.target_profile_id id, x.decision, x.decided_at from feture.discover_decision x join feture.profile p on p.id = x.target_profile_id
        where x.profile_id = $1 and ($2 = 'all' or x.decision = $2) and p.state = 'active' and not feture.blocked($1, p.id)
