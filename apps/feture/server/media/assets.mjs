@@ -112,7 +112,7 @@ async function ownAsset(q, acting, assetId, { lock = false } = {}) {
  * Domains decide *whether* the viewer may see the place (post, chat, private part); this decides *how*.
  * @param {MediaConfig} cfg
  * @param {{id: string, owner_profile_id: string, kind: string, purpose: string, state: string, explicitness: string,
- *   width: number | null, height: number | null, view_rule: string}} asset
+ *   width: number | null, height: number | null, view_rule: string, copies_at?: unknown}} asset
  * @param {{viewerProfileId: string, place: Place, showExplicit: boolean, staff?: boolean}} ctx
  *   showExplicit: the viewer turned explicit content on — on the website, as Apple 1.2 requires —
  *   and has not asked to blur it (chatBlur). The same answer applies in the apps once set.
@@ -128,6 +128,10 @@ export async function mediaDto(cfg, asset, ctx) {
   if (explicit && ctx.place === 'public' && !own) return null; // never in public places (Apple 1.1.4 / 1.2)
   // View-once/timer media always start covered; explicit starts covered unless the viewer turned it on.
   const blurred = !own && !ctx.staff && (asset.view_rule !== 'normal' || (explicit && !ctx.showExplicit));
+  // Until the served copies exist (upload still being checked) there is nothing to link to.
+  if (!asset.copies_at) {
+    return { id: asset.id, kind: asset.kind, w: asset.width, h: asset.height, pending: true, explicit, blurred, viewRule: asset.view_rule, src: null };
+  }
   if (!cfg.delivery) fail(503, 'unavailable');
   const ttl = asset.view_rule === 'normal' ? TTL.normal : TTL.once;
   /** @type {import('./delivery.mjs').Variant[]} */

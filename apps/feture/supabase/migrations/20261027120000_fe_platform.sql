@@ -177,6 +177,10 @@ create table feture.media_asset (
   created_at timestamptz not null default now(),
   upload_expires_at timestamptz not null default now() + interval '15 minutes',
   scanned_at timestamptz,
+  csam_checked_at timestamptz,   -- set only when a CSAM scanner answered pass or match; the upload is never purged before
+  copies_at timestamptz,         -- served copies (o/, v/) exist; viewers get no URLs before
+  scan_token uuid,               -- the scan currently holding the asset (lease), so two scans never overlap
+  scan_lock_until timestamptz,
   approved_at timestamptz,
   removed_at timestamptz,
   check ((view_rule = 'timer') = (view_seconds is not null)),

@@ -20,25 +20,27 @@ export async function enqueue(q, topic, profileId, payload = {}, { delaySeconds 
     [topic, profileId, JSON.stringify(payload), delaySeconds]);
 }
 
-/** Claims ready items; parallel workers never get the same item. Items that used up their attempts
- * without reporting back (the worker died mid-item) are parked here instead of being retried forever.
- * @param {Db} db @param {{limit?: number, lockSeconds?: number}} [opts] @returns {Promise<OutboxItem[]>} */
-export async function claim(db, { limit = 20, lockSeconds = 60 } = {}) {
+/** Claims ready items of the given topics; parallel workers never get the same item. Topics without a
+ * handler yet stay untouched. Items that used up their attempts without reporting back (the worker died
+ * mid-item) are parked instead of being retried forever.
+ * @param {Db} db @param {{topics: string[], limit?: number, lockSeconds?: number}} opts @returns {Promise<OutboxItem[]>} */
+export async function claim(db, { topics, limit = 20, lockSeconds = 60 }) {
   await db.query(
     `update feture.outbox set available_at = 'infinity', locked_until = null, lock_token = null,
        last_error = coalesce(last_error, 'worker_lost')
-     where done_at is null and attempts >= $1 and available_at <> 'infinity' and (locked_until is null or locked_until < now())`,
-    [MAX_ATTEMPTS]);
+     where done_at is null and attempts >= $1 and available_at <> 'infinity' and (locked_until is null or locked_until < now())
+       and topic = any($2)`,
+    [MAX_ATTEMPTS, topics]);
   return db.query(
     `update feture.outbox set locked_until = now() + make_interval(secs => $2), attempts = attempts + 1,
        lock_token = gen_random_uuid()
      where id in (
        select id from feture.outbox
-       where done_at is null and available_at <= now() and attempts < $3
+       where done_at is null and available_at <= now() and attempts < $3 and topic = any($4)
          and (locked_until is null or locked_until < now())
        order by id limit $1 for update skip locked)
      returning id::text, topic, profile_id, payload, attempts, lock_token::text`,
-    [limit, lockSeconds, MAX_ATTEMPTS]);
+    [limit, lockSeconds, MAX_ATTEMPTS, topics]);
 }
 
 /** @param {Db} db @param {OutboxItem} item @returns {Promise<boolean>} false: the claim was lost to another worker */
@@ -62,15 +64,14 @@ export async function retryLater(db, item, reason, { park = false } = {}) {
     [item.id, CODE.test(reason) ? reason : 'error', parked, item.lock_token]);
 }
 
-/** Processes one batch with topic handlers. Unknown topics are parked at once, not retried.
- * Error messages are stored only when they look like a code, never free text.
+/** Processes one batch of the topics that have handlers. Error messages are stored only when they look
+ * like a code, never free text.
  * @param {Db} db @param {Record<string, (item: OutboxItem) => Promise<void>>} handlers
  * @param {{limit?: number, lockSeconds?: number}} [opts] */
 export async function drain(db, handlers, opts = {}) {
-  const items = await claim(db, opts);
+  const items = await claim(db, { ...opts, topics: Object.keys(handlers) });
   for (const item of items) {
-    const handle = Object.hasOwn(handlers, item.topic) ? handlers[item.topic] : null;
-    if (!handle) { await retryLater(db, item, 'no_handler', { park: true }); continue; }
+    const handle = handlers[item.topic];
     try {
       await handle(item);
       await complete(db, item);

@@ -11,7 +11,7 @@ import { actingProfile } from './profiles.mjs';
  * transaction, idempotency, error mapping and the access log.
  * @typedef {import('./db.mjs').Db} Db @typedef {import('./db.mjs').Q} Q
  * @typedef {import('./accounts.mjs').AccountRow} AccountRow @typedef {import('./profiles.mjs').Acting} Acting
- * @typedef {{media: import('./media/assets.mjs').MediaConfig}} Cfg
+ * @typedef {{media: import('./media/assets.mjs').MediaConfig, pepper?: string}} Cfg   pepper is filled in by the handler
  * @typedef {{
  *   input: import('zod').ZodType, profile: boolean, write: boolean,
  *   run: (q: Q, ctx: {account: AccountRow, acting: Acting | null, input: any, cfg: Cfg}) => Promise<Record<string, unknown>>
@@ -51,7 +51,12 @@ export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota
         res.setHeader('Allow', 'POST, OPTIONS');
         return send(405, { ok: false, error: 'method_not_allowed' }, 'method_not_allowed');
       }
-      const core = await authenticate(req);
+      let core;
+      try { core = await authenticate(req); } catch (error) {
+        // Only the identity check may answer 401; a 401 from storage or another backend is an outage.
+        const status = /** @type {{status?: unknown}} */ (error)?.status;
+        fail(status === 401 ? 401 : 503, status === 401 ? 'auth_required' : 'unavailable');
+      }
       if (!(await quota(req, core.accountHash))) {
         res.setHeader('Retry-After', '60');
         fail(429, 'rate_limited');
@@ -71,7 +76,7 @@ export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota
       /** @param {Q} q */
       const exec = async q => {
         const acting = cmd.profile ? await actingProfile(q, account.id, profileId, { write: cmd.write }) : null;
-        return cmd.run(q, { account, acting, input, cfg });
+        return cmd.run(q, { account, acting, input, cfg: { ...cfg, pepper } });
       };
       const result = !cmd.write ? await exec(db)
         // The acting profile is part of the request: the same opId under another profile is a conflict, not a replay.
@@ -80,10 +85,6 @@ export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota
       return send(200, { ok: true, ...result }, 'ok');
     } catch (error) {
       if (error instanceof FeError) return send(error.status, { ok: false, error: error.code, ...error.extra }, error.code);
-      const status = /** @type {{status?: unknown}} */ (error)?.status;
-      if (status === 401 || status === 503) { // Core identity errors (lib/feture/errors.js shape)
-        return send(status, { ok: false, error: status === 401 ? 'auth_required' : 'unavailable' }, String(status));
-      }
       return send(503, { ok: false, error: 'unavailable' }, 'error');
     }
   };

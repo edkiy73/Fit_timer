@@ -208,15 +208,16 @@ test('partner approvals: partner decides, stored states, stale and expired never
   } finally { await pg.close(); }
 });
 
-test('outbox: delays, non-overlapping claims, fencing, backoff, parking of unknown topics and lost workers', async () => {
+test('outbox: delays, non-overlapping claims, fencing, backoff, unhandled topics untouched, lost workers parked', async () => {
   const { pg, db } = await setup();
   try {
     await enqueue(db, 'push.send', null, { n: 1 });
     await enqueue(db, 'push.send', null, { n: 2 });
     await enqueue(db, 'media.purge', null, { n: 3 }, { delaySeconds: 3600 });
     await enqueue(db, 'mystery.topic', null, { n: 4 });
-    const [first, second] = await Promise.all([claim(db, { limit: 1 }), claim(db, { limit: 5 })]);
-    assert.equal(first.length + second.length, 3);
+    const topics = ['push.send', 'media.purge'];
+    const [first, second] = await Promise.all([claim(db, { topics, limit: 1 }), claim(db, { topics, limit: 5 })]);
+    assert.equal(first.length + second.length, 2); // the delayed one waits, the unhandled topic is never claimed
     // A stale worker whose claim was taken over cannot mark the item done.
     const stale = first[0] ?? second[0];
     await db.query(`update feture.outbox set lock_token = gen_random_uuid() where id = $1`, [stale.id]);
@@ -226,11 +227,12 @@ test('outbox: delays, non-overlapping claims, fencing, backoff, parking of unkno
     await drain(db, { 'push.send': async item => { seen.push(item.payload.n); if (item.payload.n === 2) throw new Error('Provider said: bad token for alex@example.com'); } });
     assert.deepEqual(seen.sort(), [1, 2]);
     const rows = await db.query(`select payload->>'n' n, done_at is not null done, last_error, available_at = 'infinity' parked, available_at > now() later from feture.outbox order by id`);
-    assert.deepEqual(rows.map(r => [r.n, r.done, r.last_error, r.parked]), [['1', true, null, false], ['2', false, 'error', false], ['3', false, null, false], ['4', false, 'no_handler', true]]);
+    // A topic without a handler yet is left alone (not parked), so it is delivered once its handler ships.
+    assert.deepEqual(rows.map(r => [r.n, r.done, r.last_error, r.parked]), [['1', true, null, false], ['2', false, 'error', false], ['3', false, null, false], ['4', false, null, false]]);
     assert.equal(rows[1].later, true);
     // A worker that died mid-item never reported back: after the last attempt the item is parked.
     await db.query(`update feture.outbox set attempts = 10, available_at = now(), locked_until = now() - interval '1 second' where payload->>'n' = '2'`);
-    assert.equal((await claim(db)).length, 0);
+    assert.equal((await claim(db, { topics })).length, 0);
     const [lost] = await db.query(`select available_at = 'infinity' parked, last_error from feture.outbox where payload->>'n' = '2'`);
     assert.deepEqual([lost.parked, lost.last_error], [true, 'error']);
   } finally { await pg.close(); }
@@ -266,6 +268,19 @@ test('media: intent limits, quarantine upload, commit, scan decisions, swap afte
     assert.deepEqual(await db.tx(q => commitUpload(q, asA, cfg, up.assetId)), { state: 'uploaded' });
     assert.equal(await scanAsset(db, deps(null, null), up.assetId), 'rejected'); // signature mismatch
     assert.equal(storage.objects.has(ORIGINAL_KEY(up.assetId)), false);
+    // Rejected without any CSAM check: the upload is kept (and re-checked later), never purged unchecked.
+    const purgeNoScanner = mediaHandlers(db, { scan: deps(null, null) })['media.purge'];
+    await purgeNoScanner({ payload: { assetId: up.assetId }, profile_id: pa });
+    assert.ok(storage.objects.has(`u/${up.assetId}`));
+    assert.equal(await scanAsset(db, deps(scanner('pass'), null), up.assetId), 'rejected'); // checked later, stays rejected
+    assert.equal((await row(up.assetId)).reject_reason, 'invalid_file');
+    await purgeNoScanner({ payload: { assetId: up.assetId }, profile_id: pa });
+    assert.equal(storage.objects.has(`u/${up.assetId}`), false); // now it may go
+    // A wrong declared type does not skip the CSAM check.
+    const typed = await intent({ purpose: 'post' });
+    storage.objects.set(`u/${typed.assetId}`, { bytes: PNG, mime: 'image/jpeg' });
+    await db.tx(q => commitUpload(q, asA, cfg, typed.assetId));
+    assert.equal(await scanAsset(db, deps(scanner('match'), null), typed.assetId), 'blocked');
 
     const upload = async (purpose, explicit) => {
       const r = await intent({ purpose, explicit });
@@ -306,7 +321,14 @@ test('media: intent limits, quarantine upload, commit, scan decisions, swap afte
     const dodge = await upload('post');
     assert.deepEqual(await db.tx(q => removeAsset(q, asA, dodge)), { state: 'removed' });
     const purge = mediaHandlers(db, { scan: deps(scanner('match'), null) })['media.purge'];
-    await assert.rejects(purge({ payload: { assetId: dodge } }), /not_scanned/);
+    await purge({ payload: { assetId: dodge }, profile_id: pa }); // unchecked: kept, scan and a later purge queued
+    assert.ok(storage.objects.has(`u/${dodge}`));
+    const requeued = await db.query(`select topic, available_at > now() + interval '23 hours' later from feture.outbox where payload->>'assetId' = $1 and topic in ('media.scan', 'media.purge') order by id desc limit 2`, [dodge]);
+    assert.deepEqual(requeued.map(r => [r.topic, r.later]).sort(), [['media.purge', true], ['media.scan', false]]);
+    // Without a scanner a removed upload stays unchecked and is never purged.
+    assert.equal(await scanAsset(db, deps(null, null), dodge), 'removed');
+    await purge({ payload: { assetId: dodge }, profile_id: pa });
+    assert.ok(storage.objects.has(`u/${dodge}`));
     assert.equal(await scanAsset(db, deps(scanner('match'), null), dodge), 'blocked');
     await purge({ payload: { assetId: dodge } }); // blocked: nothing deleted
     assert.ok(storage.objects.has(`u/${dodge}`));
@@ -314,13 +336,16 @@ test('media: intent limits, quarantine upload, commit, scan decisions, swap afte
     await db.tx(q => removeAsset(q, asA, harmless));
     assert.equal(await scanAsset(db, deps(scanner('pass'), classifier('safe')), harmless), 'removed');
     assert.equal(storage.objects.has(ORIGINAL_KEY(harmless)), false); // a removed file is never published
-    await purge({ payload: { assetId: harmless } });
+    await purge({ payload: { assetId: harmless }, profile_id: pa });
     assert.equal(storage.objects.has(`u/${harmless}`), false);
 
     const rows = Object.fromEntries((await db.query('select * from feture.media_asset')).map(r => [r.id, r]));
     const view = (id, ctx) => mediaDto(cfg, rows[id], { viewerProfileId: pb, place: 'public', showExplicit: false, ...ctx });
     assert.equal(await view(noProvider, {}), null); // waiting for review: only the author sees it
     assert.equal((await view(noProvider, { viewerProfileId: pa })).pending, true);
+    const fresh = await upload('post'); // committed, not scanned yet: no copies, so no links (not a 503)
+    const freshDto = await mediaDto(cfg, await row(fresh), { viewerProfileId: pa, place: 'own', showExplicit: false });
+    assert.deepEqual([freshDto.pending, freshDto.src], [true, null]);
     assert.equal(await view(csam, {}), null);
     assert.equal(await view(explicitPost, {}), null); // explicit never in public places
     assert.equal((await view(safePost, {})).explicit, false);
@@ -357,10 +382,23 @@ test('media: intent limits, quarantine upload, commit, scan decisions, swap afte
     storage.objects.set(`u/${stale.assetId}`, { bytes: JPEG, mime: 'image/jpeg' });
     await db.query(`update feture.media_asset set upload_expires_at = now() - interval '1 minute' where id = $1`, [stale.assetId]);
     await db.query(`insert into feture.op_ledger (account_id, op_id, action, request_hash, result, created_at) values ($1, gen_random_uuid(), 'x', '\\x00', '{}', now() - interval '8 days')`, [a.id]);
-    const tick = await runJobs(db, { scan: deps(null, null) });
+    const tick = await runJobs(db, { scan: deps(scanner('pass'), null) });
     assert.deepEqual([tick.expired, tick.ledger], [1, 1]);
-    assert.equal(storage.objects.has(`u/${stale.assetId}`), false);
     assert.equal((await row(stale.assetId)).state, 'removed');
+    // Three hours later the purge finds bytes that arrived anyway: they are scanned before deletion.
+    await mediaHandlers(db, { scan: deps(scanner('pass'), null) })['media.purge']({ payload: { assetId: stale.assetId }, profile_id: pa });
+    assert.ok(storage.objects.has(`u/${stale.assetId}`));
+    assert.equal(await scanAsset(db, deps(scanner('pass'), null), stale.assetId), 'removed');
+    assert.ok((await row(stale.assetId)).csam_checked_at);
+    await mediaHandlers(db, { scan: deps(scanner('pass'), null) })['media.purge']({ payload: { assetId: stale.assetId }, profile_id: pa });
+    assert.equal(storage.objects.has(`u/${stale.assetId}`), false);
+
+    // Two scans never overlap: the second one sees the lease and retries later.
+    const leased = await upload('post');
+    await db.query(`update feture.media_asset set scan_lock_until = now() + interval '5 minutes', scan_token = gen_random_uuid() where id = $1`, [leased]);
+    await assert.rejects(scanAsset(db, deps(scanner('pass'), classifier('safe')), leased), /scan_busy/);
+    await db.query(`update feture.media_asset set scan_lock_until = now() - interval '1 second' where id = $1`, [leased]);
+    assert.equal(await scanAsset(db, deps(scanner('pass'), classifier('safe')), leased), 'approved');
   } finally { await pg.close(); }
 });
 
@@ -465,5 +503,10 @@ test('/api/fe stays off without its environment; jobs need the secret', async ()
   const off = await call({});
   assert.deepEqual([off.statusCode, off.body.error, off.headers['Cache-Control']], [503, 'unavailable', 'no-store']);
   assert.equal((await call({ url: '/api/fe?jobs=1' })).statusCode, 401);
+  const { cors } = await import('../api/fe.mjs');
+  const pre = { statusCode: 0, headers: {}, ended: false, setHeader(k, v) { if (this.ended) throw new Error('headers sent'); this.headers[k] = v; }, end() { this.ended = true; } };
+  assert.equal(cors({ method: 'OPTIONS', headers: {} }, pre), true);
+  assert.equal(pre.statusCode, 204);
+  assert.match(pre.headers['Access-Control-Allow-Headers'], /X-Fe-Profile/);
   assert.equal((await call({ url: '/api/fe?jobs=1', headers: { authorization: 'Bearer ' } })).statusCode, 401);
 });

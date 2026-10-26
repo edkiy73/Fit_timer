@@ -16,7 +16,7 @@ import { createSharpRenderer } from '../server/media/render.mjs';
 
 const require = createRequire(import.meta.url);
 const { store } = require('../../../packages/core/server/store');
-const { cors: coreCors, rateOkScoped } = require('../../../packages/core/server/util');
+const { allowedOrigin, rateOkScoped } = require('../../../packages/core/server/util');
 const Supabase = require('../../../packages/core/server/supabase');
 const { authenticate } = require('../lib/feture/identity');
 
@@ -43,12 +43,17 @@ function mediaBackend() {
 }
 const media = mediaBackend();
 
-/** Core CORS plus the acting-profile header this endpoint needs. */
-const cors = (/** @type {any} */ req, /** @type {any} */ res) => {
-  const done = coreCors(req, res);
+/** Core's origin policy with this endpoint's headers. Core's cors() answers the preflight before a caller
+ * could add X-Fe-Profile, so the headers are set here, before any response is sent. */
+export function cors(/** @type {any} */ req, /** @type {any} */ res) {
+  const origin = allowedOrigin(req);
+  if (origin) res.setHeader('Access-Control-Allow-Origin', origin);
+  if (origin && origin !== '*') res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Fit-Email, X-Fit-Device, X-Fit-Token, X-Fe-Profile');
-  return done;
-};
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  if (req.method === 'OPTIONS') { res.statusCode = 204; res.end(); return true; }
+  return false;
+}
 
 const db = sql ? fromPostgres(sql) : null;
 const handler = db && createFeHandler({
