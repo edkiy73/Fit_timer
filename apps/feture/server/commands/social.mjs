@@ -46,6 +46,14 @@ async function cutPair(q, blocker, blocked) {
   await q.query(
     `update feture.access_request set state = 'closed', closed_reason = 'blocked', decided_at = now() where state = 'pending'
      and ((owner_profile_id = $1 and requester_profile_id = $2) or (owner_profile_id = $2 and requester_profile_id = $1))`, [blocker, blocked]);
+  // Likes both ways and the match go; unblocking brings nothing back.
+  await q.query(
+    `update feture.profile_like set state = 'withdrawn', updated_at = now() where state in ('active', 'matched')
+     and ((from_profile_id = $1 and to_profile_id = $2) or (from_profile_id = $2 and to_profile_id = $1))`, [blocker, blocked]);
+  const ended = await q.query(
+    `update feture.profile_match set ended_at = now(), ended_by_profile = $1
+     where ended_at is null and profile_a = least($1::uuid, $2::uuid) and profile_b = greatest($1::uuid, $2::uuid) returning id`, [blocker, blocked]);
+  if (ended[0]) await enqueue(q, 'match.ended', blocker, { matchId: ended[0].id, with: blocked });
 }
 
 /** Blocks `target` from the acting profile (and, explicitly, from the account's other profile).
