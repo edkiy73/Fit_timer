@@ -31,7 +31,8 @@ language sql stable set search_path = pg_catalog, feture as $$
 $$;
 
 -- Chat reports carry the selected messages (Q27); the report's target is the conversation.
-alter table feture.report add column message_ids uuid[] check (message_ids is null or cardinality(message_ids) between 1 and 20);
+alter table feture.report add column message_ids uuid[] check (message_ids is null or cardinality(message_ids) between 1 and 20),
+  add column reported_profile_id uuid references feture.profile(id) on delete set null;   -- for chats: the side reported
 alter table feture.report drop constraint report_target_type_check;
 alter table feture.report add constraint report_target_type_check
   check (target_type in ('profile', 'post', 'reply', 'discussion', 'community', 'event', 'message', 'media', 'conversation'));
@@ -44,6 +45,7 @@ create table feture.appeal (
   target_type text not null check (target_type in ('post', 'reply', 'community', 'event', 'profile')),
   target_id uuid not null,
   body text not null check (char_length(body) between 10 and 1000),
+  staff_action_id uuid not null references feture.staff_action(id),   -- the staff decision under appeal
   state text not null default 'open' check (state in ('open', 'granted', 'denied')),
   decided_by uuid references feture.account(id) on delete set null,
   note text check (note is null or char_length(note) <= 500),

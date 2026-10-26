@@ -13,6 +13,7 @@ export const moderationCommands = {
       opId,
       targetType: z.enum(['profile', 'post', 'reply', 'community', 'event', 'conversation']),
       targetId: id,
+      reportedProfileId: id.optional(),   // a chat: which side's reports this decides
       decision: z.enum(['keep', 'remove']),
       // Statement of reasons for the author (DSA art. 17): which rule.
       rule: z.enum(['minors', 'threats', 'private_material', 'spam', 'illegal', 'community_rules']).optional(),

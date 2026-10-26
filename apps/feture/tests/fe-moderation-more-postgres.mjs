@@ -111,3 +111,45 @@ test('city queue and event reminders the day before, once, to admitted people', 
     assert.ok((await call('ub', null, { action: 'notifications.list' })).items.some((/** @type {any} */ n) => n.type === 'eventReminder'));
   } finally { await pg.close(); }
 });
+
+test('review fixes: no appeal against a host removal, restore returns the previous state, the appealed decider never decides, restriction closes links and likes', async () => {
+  const { pg, db, call, member } = await world();
+  try {
+    const a = await member('ua', 'Alex'), b = await member('ub', 'Kira');
+    // A discussion removed by the community's host is not a staff decision: nothing to appeal here.
+    const cr = await call('ua', a, { action: 'community.create', opId: op(), name: 'Клуб для теста', privacy: 'open', ...base });
+    const qrev = (await call('um', null, { action: 'staff.communityQueue' })).items.find((/** @type {any} */ x) => x.id === cr.id).rev;
+    await call('um', null, { action: 'staff.communityDecide', opId: op(), communityId: cr.id, rev: qrev, decision: 'approve' });
+    await call('ub', b, { action: 'community.join', opId: op(), communityId: cr.id, rulesAccepted: true });
+    const d = await call('ub', b, { action: 'post.saveDraft', opId: op(), post: { type: 'post', body: 'Тема', audience: 'all', inFeed: true, topics: [], mediaIds: [], interests: [], tags: [], communityId: cr.id } });
+    await call('ub', b, { action: 'post.publish', opId: op(), postId: d.id });
+    await call('ua', a, { action: 'discussion.host', opId: op(), postId: d.id, change: 'remove' });
+    assert.equal((await call('ub', b, { action: 'appeal.create', opId: op(), targetType: 'post', targetId: d.id, body: 'Верните, пожалуйста, мою тему' })).rule, 'nothing_to_appeal');
+
+    // A cancelled event that staff hid comes back cancelled, never published.
+    const ev = { title: 'Вечер знакомств', kind: 'meetup', description: 'Спокойный вечер для знакомства, без спешки и давления.',
+      format: 'online', joinUrl: 'https://meet.example/x', tz: 'Europe/Berlin', startsAt: new Date(Date.now() + 5 * 864e5).toISOString(), endsAt: new Date(Date.now() + 5 * 864e5 + 36e5).toISOString() };
+    const r = await call('ub', b, { action: 'event.submit', opId: op(), event: ev });
+    const erev = async () => (await call('um', null, { action: 'staff.eventQueue' })).items.find((/** @type {any} */ x) => x.id === r.id)?.rev;
+    await call('um', null, { action: 'staff.eventDecide', opId: op(), eventId: r.id, rev: await erev(), decision: 'approve' });
+    await call('ub', b, { action: 'event.cancel', opId: op(), eventId: r.id });
+    const [{ rev }] = await db.query('select rev from feture.event where id = $1', [r.id]);
+    await call('um', null, { action: 'staff.eventDecide', opId: op(), eventId: r.id, rev, decision: 'hide' });
+    const ap = await call('ub', b, { action: 'appeal.create', opId: op(), targetType: 'event', targetId: r.id, body: 'Событие было отменено, но не нарушало правил' });
+    await call('ul', null, { action: 'staff.appealDecide', opId: op(), appealId: ap.id, grant: true });
+    const [{ state }] = await db.query('select state from feture.event where id = $1', [r.id]);
+    assert.equal(state, 'cancelled');
+
+    // The lead who restricted may not decide the appeal, even after someone else touched the profile.
+    await call('ul', null, { action: 'staff.restrict', opId: op(), profileId: a, on: true, rule: 'spam' });
+    await call('ub', b, { action: 'report.create', opId: op(), targetType: 'profile', targetId: a, reason: 'spam' });
+    await call('um', null, { action: 'staff.reportDecide', opId: op(), targetType: 'profile', targetId: a, decision: 'keep' });
+    const ap2 = await call('ua', a, { action: 'appeal.create', opId: op(), targetType: 'profile', targetId: a, body: 'Я ничего не рассылал, проверьте' });
+    assert.equal((await call('ul', null, { action: 'staff.appealDecide', opId: op(), appealId: ap2.id, grant: true })).rule, 'same_staff');
+
+    // A restricted profile neither accepts links nor gets a like back into a match.
+    const l = await call('ub', b, { action: 'link.propose', opId: op(), profileId: a, kind: 'friend' });
+    assert.equal(l.status, 404);
+    assert.equal((await call('ub', b, { action: 'like.send', opId: op(), profileId: a, source: 'profile' })).status, 404);
+  } finally { await pg.close(); }
+});

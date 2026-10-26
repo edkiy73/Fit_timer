@@ -127,6 +127,7 @@ async function sendLike(q, acting, target, source) {
   const [t] = await q.query(
     `select p.id, p.kind, p.state, feture.blocked($1, p.id) blocked, feture.related($1, p.id) related from feture.profile p where p.id = $2`, [acting.profileId, target]);
   if (!t || t.state !== 'active' || t.blocked) fail(404, 'not_found');
+  if ((await q.query('select feture.restricted($1) r', [target]))[0].r) fail(404, 'not_found'); // a restricted profile takes no new likes or matches
   if (t.related) fail(422, 'rule_violation', { rule: 'related' });
   const [m] = await q.query(`select 1 from feture.profile_match where ended_at is null and profile_a = least($1::uuid, $2::uuid) and profile_b = greatest($1::uuid, $2::uuid)`, [acting.profileId, target]);
   if (m) fail(409, 'conflict', { rule: 'already_matched' });
@@ -327,7 +328,7 @@ const run = {
     const viewer = need(a);
     const rows = await q.query(
       `select l.from_profile_id id, l.created_at from feture.profile_like l join feture.profile p on p.id = l.from_profile_id
-       where l.to_profile_id = $1 and l.state = 'active' and p.state = 'active' and not feture.blocked($1, p.id)
+       where l.to_profile_id = $1 and l.state = 'active' and p.state = 'active' and not feture.blocked($1, p.id) and not feture.restricted(p.id)
        order by l.created_at desc limit 200`, [viewer.profileId]);
     const people = await cards(q, viewer, rows.map(r => r.id), cfg.media);
     return { items: people.map(p => ({ profile: p, at: rows.find(r => r.id === p.id)?.created_at })) };

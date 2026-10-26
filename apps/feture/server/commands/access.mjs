@@ -60,6 +60,7 @@ async function applyGrant(q, { requestId, ownerId, scopes, term, by }) {
      join feture.profile_settings s on s.profile_id = r.owner_profile_id join feture.profile p on p.id = r.owner_profile_id
      where r.id = $1 and r.owner_profile_id = $2 for update of r`, [requestId, ownerId]);
   if (!r || r.state !== 'pending') fail(409, 'conflict', { state: r?.state ?? 'missing' });
+  if ((await q.query('select feture.restricted($1) r', [r.requester_profile_id]))[0].r) fail(409, 'conflict', { rule: 'unavailable' });
   if (!r.private_on || r.owner_state !== 'active') fail(422, 'rule_violation', { rule: 'private_off' });
   const available = await availableScopes(q, ownerId);
   if (!scopes.every(s => available.includes(s))) fail(422, 'rule_violation', { rule: 'scope_not_available' });

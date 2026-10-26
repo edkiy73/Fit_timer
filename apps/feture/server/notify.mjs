@@ -138,6 +138,11 @@ export function notifyHandlers(db) {
     ['event.announcement', 'eventAnnouncement', true], ['event.reminder', 'eventReminder', true]])) {
     handlers[topic] = async item => {
       const p = /** @type {any} */ (item.payload);
+      if (topic === 'event.reminder') {
+        // Only for an event still going ahead at that time.
+        const [e] = await db.query(`select 1 from feture.event where id = $1 and state = 'published' and starts_at > now()`, [p.eventId]);
+        if (!e) return;
+      }
       await db.tx(async q => write(q, item, { type, actor: item.profile_id, objectType: 'event', objectId: p.eventId, data: pick(p) }, await eventFollowers(q, p.eventId, admittedOnly)));
     };
   }

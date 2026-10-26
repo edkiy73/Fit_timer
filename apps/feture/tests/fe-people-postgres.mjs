@@ -93,3 +93,16 @@ test('every rate limit kind fits the rate_event column (a mismatch fails every c
     }
   }
 });
+
+test('review fix: each endpoint’s «followers» choice holds on both pages', async () => {
+  const { pg, call, person } = await setup();
+  try {
+    const a = await person('ua', 'Alex'), b = await person('ub', 'Kira'), c = await person('uc', 'Noa');
+    const l = await call('ua', a, { action: 'link.propose', opId: op(), profileId: b, kind: 'friend', vis: 'followers' });
+    await call('ub', b, { action: 'link.answer', opId: op(), linkId: l.id, accept: true, vis: 'all' });
+    await call('uc', c, { action: 'follow.set', opId: op(), profileId: b, on: true });
+    assert.deepEqual((await call('uc', c, { action: 'links.ofProfile', profileId: b })).items, []); // Alex chose followers of Alex
+    await call('uc', c, { action: 'follow.set', opId: op(), profileId: a, on: true });
+    assert.equal((await call('uc', c, { action: 'links.ofProfile', profileId: b })).items.length, 1);
+  } finally { await pg.close(); }
+});

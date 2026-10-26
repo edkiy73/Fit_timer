@@ -1,7 +1,7 @@
 // @ts-check
 import { randomInt } from 'node:crypto';
 import { premiumCommands } from '../../contracts/premium.mjs';
-import { fail } from '../errors.mjs';
+import { fail, isUniqueViolation } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { mediaDto } from '../media/assets.mjs';
 import { journal, requireStaff } from './staff.mjs';
@@ -52,6 +52,26 @@ export function verificationHandlers(db) {
   };
 }
 
+/** Selfies that never made it into a submitted check go after six hours; started checks expire after 30 minutes.
+ * @param {Db} db */
+export async function sweepSelfies(db) {
+  if (!(await db.query(`select to_regclass('feture.age_check') is not null ok`))[0].ok) return 0;
+  await db.query(`update feture.age_check set state = 'expired' where state = 'started' and created_at < now() - make_interval(mins => $1)`, [START_MINUTES]);
+  return db.tx(async q => {
+    const rows = await q.query(
+      `update feture.media_asset m set state = 'removed', removed_at = now()
+       where m.id in (select id from feture.media_asset where purpose = 'verification' and state not in ('removed', 'blocked') and created_at < now() - interval '6 hours'
+                        and not exists (select 1 from feture.age_check c where c.asset_id = media_asset.id and c.state in ('submitted', 'approved', 'rejected'))
+                      limit 200)
+       returning m.id, m.owner_profile_id`);
+    for (const r of rows) {
+      await enqueue(q, 'media.hide', r.owner_profile_id, { assetId: r.id });
+      await enqueue(q, 'media.purge', r.owner_profile_id, { assetId: r.id });
+    }
+    return rows.length;
+  });
+}
+
 /** @type {Record<keyof typeof premiumCommands, Command['run']>} */
 const run = {
   async 'premium.status'(q, { acting, account }) {
@@ -66,6 +86,7 @@ const run = {
     await requireStaff(q, account.id, ['owner', 'lead']);
     const [t] = await q.query(`select a.id from feture.account a join feture.profile p on p.id = a.person_profile_id where lower(p.handle) = lower($1) and a.state = 'active'`, [input.handle]);
     if (!t) fail(404, 'not_found');
+    if (t.id === account.id) fail(403, 'forbidden'); // never to oneself
     const [e] = await q.query(
       `insert into feture.entitlement (account_id, source, starts_at, ends_at, granted_by, reason)
        select $1, 'staff', now(), greatest(now(), coalesce((select premium_until from feture.account where id = $1), now())) + make_interval(days => $2), $3, $4
@@ -93,8 +114,13 @@ const run = {
     await q.query(`update feture.age_check set state = 'expired' where account_id = $1 and state = 'started' and created_at < now() - make_interval(mins => $2)`, [account.id, START_MINUTES]);
     const [open] = await q.query(`select id, gesture, state from feture.age_check where account_id = $1 and state in ('started', 'submitted')`, [account.id]);
     if (open) return { id: open.id, gesture: open.gesture, state: open.state };
-    const [c] = await q.query(`insert into feture.age_check (account_id, gesture) values ($1, $2) returning id, gesture`, [account.id, GESTURES[randomInt(GESTURES.length)]]);
-    return { id: c.id, gesture: c.gesture, state: 'started' };
+    try {
+      const [c] = await q.query(`insert into feture.age_check (account_id, gesture) values ($1, $2) returning id, gesture`, [account.id, GESTURES[randomInt(GESTURES.length)]]);
+      return { id: c.id, gesture: c.gesture, state: 'started' };
+    } catch (error) {
+      if (isUniqueViolation(error)) fail(409, 'conflict', { rule: 'check_open' }); // a parallel start won; ask again
+      throw error;
+    }
   },
 
   async 'verification.ageSubmit'(q, { account, input }) {
@@ -104,7 +130,8 @@ const run = {
     if (c.state !== 'started' || c.late) fail(409, 'conflict', { state: c.late ? 'expired' : c.state });
     const [m] = await q.query(
       `select 1 from feture.media_asset m join feture.account a on a.person_profile_id = m.owner_profile_id
-       where m.id = $1 and a.id = $2 and m.purpose = 'verification' and m.state in ('uploaded', 'scanning', 'needs_review', 'approved')`, [input.assetId, account.id]);
+       where m.id = $1 and a.id = $2 and m.purpose = 'verification' and m.state in ('uploaded', 'scanning', 'needs_review', 'approved')
+         and m.created_at >= $3 and not exists (select 1 from feture.age_check x where x.asset_id = m.id)`, [input.assetId, account.id, c.created_at]);
     if (!m) fail(400, 'invalid_input', { fields: ['assetId'] });
     await q.query(`update feture.age_check set state = 'submitted', asset_id = $2, submitted_at = now() where id = $1`, [c.id, input.assetId]);
     await enqueue(q, 'moderation.ageCheck', null, { checkId: c.id });
@@ -121,7 +148,7 @@ const run = {
   },
 
   async 'staff.ageCheckQueue'(q, { account, input, cfg }) {
-    await requireStaff(q, account.id, ['owner', 'lead', 'moderator']);
+    await requireStaff(q, account.id, ['owner', 'lead', 'moderator', 'verifier']);
     const rows = await q.query(
       `select c.id, c.gesture, c.submitted_at, c.asset_id, p.id profile_id, p.handle, p.avatar_asset_id avatar_id
        from feture.age_check c join feture.account a on a.id = c.account_id join feture.profile p on p.id = a.person_profile_id
@@ -130,7 +157,9 @@ const run = {
     for (const r of rows) {
       const [selfie] = await q.query('select * from feture.media_asset where id = $1', [r.asset_id]);
       const [avatar] = r.avatar_id ? await q.query('select * from feture.media_asset where id = $1', [r.avatar_id]) : [null];
-      const ctx = { viewerProfileId: account.id, place: /** @type {const} */ ('own'), showExplicit: true, staff: true };
+      const ctx = { viewerProfileId: account.person_profile_id ?? account.id, place: /** @type {const} */ ('own'), showExplicit: true, staff: true };
+      // Every look at a selfie is journaled (S4 §3).
+      await journal(q, account.id, 'age.view', 'account', null, { checkId: r.id });
       items.push({
         id: r.id, gesture: r.gesture, submittedAt: r.submitted_at, profile: { id: r.profile_id, handle: r.handle },
         selfie: selfie ? await mediaDto(cfg.media, selfie, ctx).catch(() => null) : null,
@@ -141,11 +170,16 @@ const run = {
   },
 
   async 'staff.ageCheckDecide'(q, { account, input }) {
-    await requireStaff(q, account.id, ['owner', 'lead', 'moderator']);
+    await requireStaff(q, account.id, ['owner', 'lead', 'moderator', 'verifier']);
     const [c] = await q.query('select * from feture.age_check where id = $1 for update', [input.checkId]);
     if (!c) fail(404, 'not_found');
     if (c.account_id === account.id) fail(403, 'forbidden');
     if (c.state !== 'submitted') fail(409, 'conflict', { state: c.state });
+    if (input.approve) {
+      // Never approved without the selfie in front of staff.
+      const [s] = await q.query(`select 1 from feture.media_asset where id = $1 and state in ('needs_review', 'approved') and copies_at is not null`, [c.asset_id]);
+      if (!s) fail(409, 'conflict', { rule: 'selfie_missing' });
+    }
     await q.query(`update feture.age_check set state = $2, reason = $3, decided_by = $4, decided_at = now() where id = $1`,
       [c.id, input.approve ? 'approved' : 'rejected', input.approve ? null : input.reason, account.id]);
     if (input.approve) {

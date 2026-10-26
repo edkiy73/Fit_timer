@@ -65,9 +65,9 @@ const run = {
     const rows = await q.query(
       `select m.id, m.purpose, m.kind, m.explicitness, m.reject_reason reason, m.created_at, m.copies_at, m.width, m.height
        from feture.media_asset m
-       where m.state = 'needs_review'
+       where m.state = 'needs_review' and m.purpose <> 'verification'   -- selfies are decided in the age-check queue
          and not exists (select 1 from feture.profile_member pm where pm.profile_id = m.owner_profile_id and pm.account_id = $1)
-       order by (m.purpose = 'verification') desc, m.created_at limit $2`, [account.id, input.limit]);
+       order by m.created_at limit $2`, [account.id, input.limit]);
     // The queue shows blurred previews; the full picture opens through staff.mediaView, which is journalled.
     const blur = cfg.media.delivery && rows.some(r => r.copies_at)
       ? await cfg.media.delivery.urls(rows.filter(r => r.copies_at).map(r => ({ assetId: r.id, variant: /** @type {const} */ ('blur'), viewerProfileId: staffProfile(account), ttlSeconds: 300 })))

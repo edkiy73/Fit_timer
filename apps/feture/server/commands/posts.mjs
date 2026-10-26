@@ -612,18 +612,21 @@ const run = {
       ownerProfile = c.other; snapshot = { messages: msgs.map(m => ({ seq: Number(m.seq), body: m.body, media: m.media, at: m.created_at })) };
     }
     if (ownerProfile === viewer.profileId) fail(422, 'rule_violation', { rule: 'own_content' });
-    try {
-      const [r] = await q.query(
-        `insert into feture.report (reporter_profile_id, reporter_account, target_type, target_id, target_rev, reason, details, message_ids, snapshot)
-         values ($1, $2, $3, $4, $5, $6, $7, $8, case when $9::jsonb is not null then $9::jsonb when $3 = 'post' then (select jsonb_build_object('title', title, 'body', body, 'audience', audience) from feture.post where id = $4)
-                   when $3 = 'reply' then (select jsonb_build_object('body', body) from feture.reply where id = $4)
-                   else (select jsonb_build_object('name', p.name, 'handle', p.handle, 'bio', d.bio) from feture.profile p left join feture.profile_details d on d.profile_id = p.id where p.id = $4) end)
-         returning id`,
-        [viewer.profileId, account.id, input.targetType, input.targetId, rev, input.reason, input.details, input.messageIds ?? null, snapshot ? JSON.stringify(snapshot) : null]);
-      await enqueue(q, 'moderation.report', ownerProfile, { reportId: r.id, reason: input.reason });
-    } catch (error) {
-      if (!isUniqueViolation(error)) throw error; // one open report per target: repeating it is a no-op
-    }
+    // One open report per target and reporter. Repeating it never fails the transaction; for a chat, newly selected
+    // messages are added to the evidence.
+    const [r] = await q.query(
+      `insert into feture.report (reporter_profile_id, reporter_account, target_type, target_id, target_rev, reason, details, message_ids, reported_profile_id, snapshot)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $10, case when $9::jsonb is not null then $9::jsonb when $3 = 'post' then (select jsonb_build_object('title', title, 'body', body, 'audience', audience) from feture.post where id = $4)
+                 when $3 = 'reply' then (select jsonb_build_object('body', body) from feture.reply where id = $4)
+                 else (select jsonb_build_object('name', p.name, 'handle', p.handle, 'bio', d.bio) from feture.profile p left join feture.profile_details d on d.profile_id = p.id where p.id = $4) end)
+       on conflict (reporter_profile_id, target_type, target_id) where state = 'open' do update set
+         message_ids = case when report.target_type = 'conversation'
+           then (select array_agg(m) from (select distinct unnest(coalesce(report.message_ids, '{}') || coalesce(excluded.message_ids, '{}')) m limit 20) x) else report.message_ids end,
+         snapshot = case when report.target_type = 'conversation'
+           then jsonb_build_object('messages', coalesce(report.snapshot->'messages', '[]'::jsonb) || coalesce(excluded.snapshot->'messages', '[]'::jsonb)) else report.snapshot end
+       returning id, (xmax = 0) inserted`,
+      [viewer.profileId, account.id, input.targetType, input.targetId, rev, input.reason, input.details, input.messageIds ?? null, snapshot ? JSON.stringify(snapshot) : null, input.targetType === 'conversation' ? ownerProfile : null]);
+    if (r.inserted) await enqueue(q, 'moderation.report', ownerProfile, { reportId: r.id, reason: input.reason });
     // The reporter stops seeing what they reported (V21 rpSend); blocking is optional.
     if (input.targetType === 'post') await q.query(`insert into feture.feed_hide (profile_id, kind, target_id) values ($1, 'post', $2) on conflict do nothing`, [viewer.profileId, input.targetId]);
     if (input.alsoBlock && ownerProfile) await blockProfile(q, viewer, ownerProfile);

@@ -1,5 +1,6 @@
 // @ts-check
 import { eventsCommands } from '../../contracts/events.mjs';
+import { requireUnrestricted } from '../profiles.mjs';
 import { fail, isUniqueViolation } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
@@ -188,6 +189,7 @@ async function doUpdate(q, acting, eventId, rev, f) {
       ...(timeChanged ? ['time'] : []),
       ...(f.placeId !== e.place_id || f.area !== e.area || f.exactAddress !== e.exact_address ? ['place'] : []),
     ];
+    if (timeChanged) await q.query('update feture.event set reminded_at = null where id = $1', [e.id]); // a new time, a new reminder
     if (changes.length) {
       await q.query(`insert into feture.event_announcement (event_id, automatic, changes) values ($1, true, $2)`, [e.id, changes]);
       await enqueue(q, 'event.changed', e.organizer_profile_id, { eventId: e.id, changes });
@@ -419,6 +421,7 @@ const run = {
 
   async 'event.rsvp'(q, { acting: a, input }) {
     const acting = need(a);
+    if (input.status === 'going' || input.status === 'interested') await requireUnrestricted(q, acting);
     const e = await openFor(q, input.eventId, acting.profileId, acting.accountId);
     // Clearing the answer clears the ticket mark too (EVT-028).
     const c = { status: input.status, showInList: input.status === null ? null : input.showInList, ticketMarked: input.status === null ? null : input.ticketMarked };
@@ -439,6 +442,7 @@ const run = {
 
   async 'event.apply'(q, { acting: a, input }) {
     const acting = need(a);
+    await requireUnrestricted(q, acting);
     const e = await openFor(q, input.eventId, acting.profileId, acting.accountId);
     const c = { answers: input.answers, note: input.note };
     checkApplication(e, c);
@@ -588,7 +592,7 @@ const run = {
     } else fail(409, 'conflict', { state: e.state });
     await enqueue(q, 'event.' + input.decision, e.organizer_profile_id, { eventId: e.id });
     await journal(q, account.id, 'event.' + input.decision, 'event', e.id, {
-      rev: e.rev, reason: input.reason || null, decided: e.state === 'in_review' ? { title: e.title, description: e.description, cover: e.cover_asset_id } : e.pending_change,
+      from: e.state, rev: e.rev, reason: input.reason || null, decided: e.state === 'in_review' ? { title: e.title, description: e.description, cover: e.cover_asset_id } : e.pending_change,
     });
     return { decision: input.decision };
   },

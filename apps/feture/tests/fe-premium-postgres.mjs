@@ -71,3 +71,20 @@ test('age check: needs an approved profile photo, server-chosen gesture, staff o
     assert.equal(n, 1);
   } finally { await pg.close(); }
 });
+
+test('review fixes: a selfie is used once and must be fresh; never approved without it; no Premium for oneself', async () => {
+  const { pg, db, call, person } = await world();
+  try {
+    assert.equal((await call('uo', null, { action: 'staff.premiumGrant', opId: op(), handle: 'Boss', days: 30, reason: 'сам себе' })).status, 403);
+    const a = await person('ua', 'Alex', { verified: false });
+    await db.query('update feture.profile set avatar_asset_id = $1 where id = $2', [await asset(db, a, 'avatar'), a]);
+    const old = await asset(db, a, 'verification', 'needs_review');
+    await db.query(`update feture.media_asset set created_at = now() - interval '1 hour' where id = $1`, [old]);
+    const s = await call('ua', null, { action: 'verification.ageStart', opId: op() });
+    assert.deepEqual((await call('ua', null, { action: 'verification.ageSubmit', opId: op(), checkId: s.id, assetId: old })).fields, ['assetId']);
+    const selfie = await asset(db, a, 'verification', 'needs_review');
+    await call('ua', null, { action: 'verification.ageSubmit', opId: op(), checkId: s.id, assetId: selfie });
+    await db.query(`update feture.media_asset set state = 'removed' where id = $1`, [selfie]);
+    assert.equal((await call('um', null, { action: 'staff.ageCheckDecide', opId: op(), checkId: s.id, approve: true })).rule, 'selfie_missing');
+  } finally { await pg.close(); }
+});

@@ -1,5 +1,6 @@
 // @ts-check
 import { socialCommands } from '../../contracts/social.mjs';
+import { requireUnrestricted } from '../profiles.mjs';
 import { fail } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { lockPair } from './discover.mjs';
@@ -109,6 +110,7 @@ const run = {
 
   async 'follow.set'(q, { acting: a, input }) {
     const acting = need(a);
+    if (input.on) await requireUnrestricted(q, acting);
     if (!input.on) {
       await q.query(`delete from feture.follow where follower_profile_id = $1 and target_profile_id = $2`, [acting.profileId, input.profileId]);
       return { following: false };

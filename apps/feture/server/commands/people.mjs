@@ -44,6 +44,9 @@ async function endpoint(q, linkId, acting) {
 async function doPropose(q, acting, c) {
   await requireUnrestricted(q, acting);
   const t = await otherProfile(q, acting, c.profileId);
+  if ((await q.query('select feture.restricted($1) r', [t.id]))[0].r) fail(404, 'not_found');
+  // Counting and inserting under a lock per profile, so parallel proposals cannot pass the limit of 30.
+  for (const p of [acting.profileId, t.id].sort()) await q.query(`select pg_advisory_xact_lock(hashtextextended('fe-links:' || $1, 0))`, [p]);
   if (t.related) fail(422, 'rule_violation', { rule: 'own_partner' });
   const [s] = await q.query('select links_from from feture.profile_settings where profile_id = $1', [t.id]);
   if (!s || s.links_from === 'none') fail(422, 'rule_violation', { rule: 'links_closed' });
@@ -70,7 +73,9 @@ async function doPropose(q, acting, c) {
 
 /** Accepts a pending link (also the apply of an approved couple acceptance). @param {Q} q @param {Acting} acting @param {string} linkId @param {string} vis */
 async function doAccept(q, acting, linkId, vis) {
+  await requireUnrestricted(q, acting);
   const l = await endpoint(q, linkId, acting);
+  if ((await q.query('select feture.restricted($1) r', [l.other]))[0].r) fail(409, 'conflict', { rule: 'unavailable' });
   if (l.me !== 'b' || l.state !== 'pending') fail(409, 'conflict', { rule: 'not_pending' });
   await q.query(`update feture.profile_link set state = 'ok', b_vis = $2, confirmed_at = now(), updated_at = now() where id = $1`, [l.id, vis]);
   await enqueue(q, 'link.accepted', l.a_profile_id, { linkId: l.id, from: acting.profileId });
@@ -91,8 +96,10 @@ registerApprovalKind('link.visibility', {
 
 /** The acting profile an approved change runs as. @param {Q} q @param {any} row @returns {Promise<Acting>} */
 async function actingOf(q, row) {
-  const [p] = await q.query('select kind from feture.profile where id = $1', [row.profile_id]);
-  return /** @type {Acting} */ ({ profileId: row.profile_id, accountId: row.requested_by, kind: p.kind, partnerAccountId: null });
+  const [p] = await q.query(
+    `select p.kind, (select account_id from feture.profile_member where profile_id = p.id and account_id <> $2 and state = 'active' limit 1) partner
+     from feture.profile p where p.id = $1`, [row.profile_id, row.requested_by]);
+  return /** @type {Acting} */ ({ profileId: row.profile_id, accountId: row.requested_by, kind: p.kind, partnerAccountId: p.partner ?? null });
 }
 
 /** «Что у вас общего» rows for one shared public topic (V21 compatBlock): a public hard limit is a boundary, a
@@ -179,8 +186,10 @@ const run = {
   async 'link.proposeChange'(q, { acting: a, input }) {
     // The current link stays until the other side confirms the new kind.
     const acting = need(a);
+    await requireUnrestricted(q, acting);
     const l = await endpoint(q, input.linkId, acting);
     if (l.state !== 'ok') fail(409, 'conflict', { rule: 'not_confirmed' });
+    if (l.change && l.change.by !== acting.profileId) fail(409, 'conflict', { rule: 'change_pending' }); // answer theirs first
     const mine = input.mySide ?? null, theirs = input.mySide ? OPPOSITE[/** @type {keyof typeof OPPOSITE} */ (input.mySide)] : null;
     const change = { kind: input.kind, aSide: l.me === 'a' ? mine : theirs, bSide: l.me === 'a' ? theirs : mine, by: acting.profileId };
     await q.query(`update feture.profile_link set change = $2, updated_at = now() where id = $1`, [l.id, JSON.stringify(change)]);
@@ -228,18 +237,19 @@ const run = {
     const rows = await q.query(
       `select l.id, l.kind, case when l.a_profile_id = $1 then l.a_side else l.b_side end side,
          o.id other_id, o.kind other_kind, o.handle other_handle, o.name other_name,
-         case when 'us' in (l.a_vis, l.b_vis) then 'us' when 'followers' in (l.a_vis, l.b_vis) then 'followers' else 'all' end vis
+         case when l.a_profile_id = $1 then l.a_vis else l.b_vis end my_vis, case when l.a_profile_id = $1 then l.b_vis else l.a_vis end other_vis
        from feture.profile_link l join feture.profile o on o.id = case when l.a_profile_id = $1 then l.b_profile_id else l.a_profile_id end
        where $1 in (l.a_profile_id, l.b_profile_id) and l.state = 'ok' and o.state = 'active' and not feture.blocked($2, o.id)`,
       [input.profileId, viewer.profileId]);
     const [{ inside }] = await q.query(
       `select exists (select 1 from feture.profile_member where profile_id = $1 and account_id = $2 and state = 'active') inside`, [input.profileId, viewer.accountId]);
-    const [{ follows }] = await q.query(`select exists (select 1 from feture.follow where follower_profile_id = $1 and target_profile_id = $2) follows`, [viewer.profileId, input.profileId]);
+    const follows = async (/** @type {string} */ p) => (await q.query(`select exists (select 1 from feture.follow where follower_profile_id = $1 and target_profile_id = $2) f`, [viewer.profileId, p]))[0].f;
     const shown = [];
     for (const r of rows) {
       const [{ otherSide }] = await q.query(`select exists (select 1 from feture.profile_member where profile_id = $1 and account_id = $2 and state = 'active') "otherSide"`, [r.other_id, viewer.accountId]);
-      const endpointViewer = inside || otherSide;
-      if (r.vis === 'all' || endpointViewer || (r.vis === 'followers' && follows)) {
+      // Each endpoint's own choice holds: «us» — only the two of them; «followers» — followers of that endpoint.
+      const fits = async (/** @type {string} */ vis, /** @type {string} */ owner) => vis === 'all' || (vis === 'followers' && await follows(owner));
+      if (inside || otherSide || (await fits(r.my_vis, input.profileId) && await fits(r.other_vis, r.other_id))) {
         shown.push({ id: r.id, kind: r.kind, side: r.side, other: { id: r.other_id, kind: r.other_kind, handle: r.other_handle, name: r.other_name || r.other_handle } });
       }
     }
