@@ -48,6 +48,10 @@ const TYPES = /** @type {Record<string, {type: string, actor?: string, object?: 
   'couple.narrowed': { type: 'pair.narrowed' },
   'couple.changed': { type: 'pair.acted' },
   'couple.approvalChanged': { type: 'pair.trust' },
+  'link.accepted': { type: 'linkAccepted', actor: 'from' },
+  'link.declined': { type: 'linkDeclined', actor: 'from' },
+  'link.changed': { type: 'linkChanged', actor: 'from' },
+  'link.removed': { type: 'linkRemoved', actor: 'from' },
 });
 /** Payload fields kept in `data` (codes and ids only, never free text). */
 const KEEP = ['what', 'change', 'reason', 'state', 'kind', 'resolution', 'rule', 'targetType', 'targetId', 'answer', 'outcome', 'changes', 'approves'];

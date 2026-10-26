@@ -60,6 +60,7 @@ async function cutPair(q, blocker, blocked) {
      where ended_at is null and profile_a = least($1::uuid, $2::uuid) and profile_b = greatest($1::uuid, $2::uuid) returning id`, [blocker, blocked]);
   if (ended[0]) await enqueue(q, 'match.ended', blocker, { matchId: ended[0].id, with: blocked });
   await endConversations(q, blocker, blocked, 'block');
+  await q.query(`delete from feture.profile_link where least(a_profile_id, b_profile_id) = least($1::uuid, $2::uuid) and greatest(a_profile_id, b_profile_id) = greatest($1::uuid, $2::uuid)`, [blocker, blocked]);
 }
 
 /** Blocks `target` from the acting profile (and, explicitly, from the account's other profile).

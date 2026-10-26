@@ -87,7 +87,7 @@ async function modeOf(q, profileId) {
 
 /** Cards of profiles for the viewer: name, ages they show, city, avatar, «Ты нравишься», public interests in common.
  * @param {Q} q @param {Acting} viewer @param {string[]} ids @param {import('../media/assets.mjs').MediaConfig} media */
-async function cards(q, viewer, ids, media) {
+export async function cards(q, viewer, ids, media) {
   if (!ids.length) return [];
   const rows = await q.query(
     `select p.id, p.kind, p.handle, p.name, p.avatar_asset_id, pl.name_ru city_ru, pl.name_en city_en,
