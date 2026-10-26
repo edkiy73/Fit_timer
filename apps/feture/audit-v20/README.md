@@ -1,7 +1,7 @@
 # FetUre V20 — UX/UI и функциональный аудит прототипа
 
 Аудит `apps/feture/public/prototype-v20.html` (то же, что https://feture-mvp.vercel.app/prototype-v20.html) — 26–27.10.2026.
-Прототип не изменялся. Исправления выполнены в **V21** (`public/prototype-v21.html`), статус каждого пункта — в [V21-FIX-STATUS.md](V21-FIX-STATUS.md).
+Прототип не изменялся. Аудит шёл на V20 до PR #1277; изменения #1277 (решения владельца по паре и второй проход соло/пара) перенесены в V21 — `work/merge-1277.md`. Исправления выполнены в **V21** (`public/prototype-v21.html`), статус каждого пункта — в [V21-FIX-STATUS.md](V21-FIX-STATUS.md).
 
 ## Документы
 

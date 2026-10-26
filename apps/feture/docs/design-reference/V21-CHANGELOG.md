@@ -14,6 +14,10 @@ In V21: fixed 284, partial 11, not reproduced 4, moved to the React spec 2, need
 - Headings use **Geologica**, body text stays **Onest**.
 - The brand red is **#DF234A**. In dark theme filled buttons use #DF234A too (white text 4.7:1); red text and icons in dark theme stay the lighter #FF4566 so they read on the dark background.
 
+## V20 #1277 carried into V21
+
+PR #1277 changed V20 while the audit ran. Its owner decisions are in V21: a Premium gift to a couple goes to both partners (price for two, both named, confirmation names both); a couple's private part opens only with both — the partner always confirms, either partner can close it at once, and «Мы → Приватное» lists what waits. Its 19 second-pass fixes were merged with the V21 fixes of the same screens (details: `apps/feture/audit-v20/work/merge-1277.md`).
+
 ## Shared components and navigation (lead)
 
 - **Header back «‹»** leaves the screen within its own tab (`headerBack`). It no longer jumps to another tab; the browser/system Back still walks the shared history (NAV-001).
