@@ -123,3 +123,41 @@ Notes for reviewers: `public/prototype-v20-notes.html`. Contract test: `tests/pr
 Not done: links for a couple, and the personal privacy settings (activity, mentions, likes) for the couple. Both need data the prototype doesn't have yet.
 
 Not verified: real devices, touch long-press drag on hardware, screen readers, a live couple on two clients.
+
+## 2026-10-26 — third round: «Я» by topic, couple parity
+
+Owner decisions for this round:
+- «Я» gets four tabs by topic;
+- small edits of an approved post skip review;
+- couple settings work like the couple's discover mode;
+- the couple gets links like a person.
+
+- **«Я» has four tabs by topic:**
+  - **Профиль** — what everyone sees: photos, basics, details, interests, gallery, links;
+  - **Приватное** — what access opens, the requests, who has access and who may ask. Only three people are listed, then «Все · N» opens the full list;
+  - **Видимость** — discover mode, the Discover card, likes from the profile, who sees activity, who can mention you, likes shown to followers. The couple also has its own section here;
+  - **Моё** — lists only. For the couple it also shows what is waiting for the partner.
+- **No status chips under the name.** A tab with something new carries a small dot: new links, access requests, a couple setting waiting for the partner. «Нужно решить» is one row, shown only when something is waiting.
+- **Links:**
+  - a new request is answered right in the «Связи» block, and its title says how many are new;
+  - the couple has links too, with people and with other couples;
+  - its requests come to the same «Нужно решить» as personal ones;
+  - the partner is told when the couple adds or confirms a link.
+- **Couple parity:** likes from the profile, who sees activity, who can mention us, likes shown to followers, and who can propose links.
+  - Closing or limiting a setting applies at once, and the partner is notified.
+  - Opening one up goes through the partner when approval is on. The setting shows «Ждёт согласия партнёра», and the partner sees it in the change review.
+- **Profile photos editor:** changes are a draft until «Сохранить» (for the couple without trust: «Отправить партнёру»). Leaving with unsaved changes asks first. A post uploaded from the editor is added to the draft.
+- **Dragging photos on the profile:**
+  - the first cell stays the big one while you drag;
+  - cells glide to their new places instead of jumping;
+  - pictures already loaded are reused after a re-render, so nothing blinks on drop.
+- **Editing an approved post:**
+  - new pictures, a wider audience, or a large text change (more than 30% new words, at least 12) go to review;
+  - meanwhile everyone sees the approved version, and «Мои публикации» lists the change under «Правки на проверке»;
+  - anything smaller goes live at once.
+- **Smaller fixes:**
+  - no ring around the dock avatar;
+  - «Как видят» tabs line up with the back button and have the same gaps in all three views;
+  - «Ещё N» under the interests is centred.
+
+Not verified: real devices, touch drag on hardware, a live couple on two clients.
