@@ -173,7 +173,10 @@ run("var pp={status:'published',aud:'followers',media:[{type:'image',url:'a'}],t
 assert.equal(run("editNeedsReview(pp,{...pp,text:pp.text+' восемь'})"),false,'a small text edit goes live');assert.equal(run("editNeedsReview(pp,{...pp,aud:'only'})"),false,'narrowing the audience goes live');
 assert.equal(run("editNeedsReview(pp,{...pp,media:[...pp.media,{type:'image',url:'b'}]})"),true,'a new picture is reviewed');assert.equal(run("editNeedsReview(pp,{...pp,aud:'all'})"),true,'a wider audience is reviewed');
 assert.equal(run("editNeedsReview(pp,{...pp,text:'новое '.repeat(30)})"),true,'a large rewrite is reviewed');assert.equal(run("editNeedsReview(null,pp)"),true,'a new post with pictures is reviewed');
-console.log('PASS V20.2: «Я» tabs by topic, couple links and settings, staged profile photos, re-review only for real changes');
+run("S.actor='me';var hp=S.posts.find(x=>!ownedIdentity(x.author)&&filterPosts([x],'all').length).id,ha=S.posts.find(x=>!ownedIdentity(x.author)&&x.id!==hp&&filterPosts([x],'all').length).author;S.actor='couple';ACT.hidePost({dataset:{v:hp}});ACT.muteAuthor({dataset:{v:ha}})");
+assert.equal(run("filterPosts([postById(hp)],'all').length"),0,'hidden in the couple’s feed');run("S.actor='me'");assert.equal(run("filterPosts([postById(hp)],'all').length"),1,'hiding as the couple does not hide it for me');assert.ok(run("S.posts.filter(x=>x.author===ha).some(x=>filterPosts([x],'all').length)"),'muting as the couple does not mute for me');
+run("ACT.hidePost({dataset:{v:hp}});S.actor='couple';feedSet('hiddenPosts').delete(hp)");assert.equal(run("filterPosts([postById(hp)],'all').length"),1,'hiding as me does not hide it for the couple');run("S.actor='me'");
+console.log('PASS V20.2: «Я» tabs by topic, couple links and settings, staged profile photos, re-review only for real changes, feed hiding per profile');
 console.log('PASS V20: split-circle couple avatar, two profile cards, the mode reaches «Что у вас общего», profile photos from posts (one video, review mark, drag), feed optional for uploads, same «Я» for the couple, select mode');
 console.log('PASS V19 rules in V20: one «Я / Мы» mode in the dock — couple likes, follows, communities and events; event answers ask the partner when approval is on');
 \n// ---- V14 ----`);

@@ -155,6 +155,7 @@ Owner decisions for this round:
   - new pictures, a wider audience, or a large text change (more than 30% new words, at least 12) go to review;
   - meanwhile everyone sees the approved version, and «Мои публикации» lists the change under «Правки на проверке»;
   - anything smaller goes live at once.
+- **Hiding from the feed belongs to the profile that hid it.** A post, an author or someone’s activity hidden in «Мы» stays visible in «Я», and the other way round. The menu and the toast say whose feed changes. Lists saved before this stay with «Я».
 - **Smaller fixes:**
   - no ring around the dock avatar;
   - «Как видят» tabs line up with the back button and have the same gaps in all three views;
