@@ -191,3 +191,50 @@ test('couples: submit waits for the partner, «идём» waits for the partner,
     assert.equal((await call('uc', c, { action: 'event.get', eventId: inside })).event.communityId, cr.id);
   } finally { await pg.close(); }
 });
+
+test('review fixes: announcements for admitted people, real zones only, admission frozen, narrowing at once, closed community events stay closed', async () => {
+  const { pg, db, call, coupleOf, a, b, c, ev, publish, decide } = await world();
+  try {
+    assert.deepEqual((await call('ua', a, { action: 'event.submit', opId: op(), event: ev({ tz: '+01:00' }) })).fields, ['event.tz']);
+    const id = await publish('ua', a);
+    await call('ua', a, { action: 'event.announce', opId: op(), eventId: id, body: 'Код двери 4711' });
+    // «Не иду» is not a way to read the organizer's words; «интересно» sees only that something changed.
+    await call('uc', c, { action: 'event.rsvp', opId: op(), eventId: id, status: 'not_going' });
+    assert.deepEqual((await call('uc', c, { action: 'event.get', eventId: id })).event.announcements, []);
+    await call('uc', c, { action: 'event.rsvp', opId: op(), eventId: id, status: 'interested' });
+    const rev = (await call('ua', a, { action: 'event.get', eventId: id })).event.rev;
+    await call('ua', a, { action: 'event.update', opId: op(), eventId: id, rev, event: ev({ startsAt: at(9), endsAt: at(9, 2) }) });
+    assert.deepEqual((await call('uc', c, { action: 'event.get', eventId: id })).event.announcements.map((/** @type {any} */ n) => [n.body, n.changes]), [[null, ['time']]]);
+    // Who is admitted does not change under people's feet.
+    const rev2 = (await call('ua', a, { action: 'event.get', eventId: id })).event.rev;
+    assert.equal((await call('ua', a, { action: 'event.update', opId: op(), eventId: id, rev: rev2, event: ev({ startsAt: at(9), endsAt: at(9, 2), requiresApplication: true, questions: ['Зачем?'] }) })).rule, 'admission_frozen');
+    // A new link waits for staff; the major change can be taken back by sending the old value.
+    const up = await call('ua', a, { action: 'event.update', opId: op(), eventId: id, rev: rev2, event: ev({ startsAt: at(9), endsAt: at(9, 2), title: 'Другой заголовок' }) });
+    assert.deepEqual(up.review, ['title']);
+    await call('ua', a, { action: 'event.update', opId: op(), eventId: id, rev: up.rev, event: ev({ startsAt: at(9), endsAt: at(9, 2) }) });
+    assert.equal((await call('ua', a, { action: 'event.get', eventId: id })).event.pendingChange, null);
+
+    // A couple hiding from the list or stepping down does not wait for the partner.
+    const pair = await coupleOf([b, c]);
+    await db.query(`update feture.profile_member set approves_partner = true where profile_id = $1`, [pair]);
+    await db.query(`insert into feture.event_rsvp (event_id, profile_id, status, show_in_list, acted_by) select $1, $2, 'going', true, id from feture.account where person_profile_id = $3`, [id, pair, b]);
+    assert.equal((await call('ub', pair, { action: 'event.rsvp', opId: op(), eventId: id, status: 'going', showInList: false })).status, 'going');
+    assert.equal((await call('ub', pair, { action: 'event.rsvp', opId: op(), eventId: id, status: 'interested' })).status, 'interested');
+    assert.ok((await call('ub', pair, { action: 'event.rsvp', opId: op(), eventId: id, status: 'going' })).pending);
+    // Nor may a partner's couple answer the partner's own event.
+    const mine = await publish('ub', b, { title: 'Вечер от Киры' });
+    assert.equal((await call('uc', pair, { action: 'event.rsvp', opId: op(), eventId: mine, status: 'not_going' })).rule, 'own_event');
+
+    // An event made for a closed community stays for its members after the community opens.
+    const cr = await call('uc', c, { action: 'community.create', opId: op(), name: 'Был закрытым', privacy: 'closed', joinQuestion: 'Кто вы?', description: 'Встречи и разговоры о верёвке для новичков', topics: ['shibari'], rules: ['Уважать границы'] });
+    const qrev = async () => (await call('um', null, { action: 'staff.communityQueue' })).items.find((/** @type {any} */ x) => x.id === cr.id).rev;
+    await call('um', null, { action: 'staff.communityDecide', opId: op(), communityId: cr.id, rev: await qrev(), decision: 'approve' });
+    const inside = await publish('uc', c, { communityId: cr.id, title: 'Встреча своих' });
+    const crev = (await call('uc', c, { action: 'community.get', communityId: cr.id })).community.rev;
+    await call('uc', c, { action: 'community.update', opId: op(), communityId: cr.id, rev: crev, privacy: 'open' });
+    await call('um', null, { action: 'staff.communityDecide', opId: op(), communityId: cr.id, rev: await qrev(), decision: 'approve' });
+    assert.equal((await call('ua', a, { action: 'community.get', communityId: cr.id })).community.privacy, 'open');
+    assert.equal((await call('ua', a, { action: 'event.get', eventId: inside })).status, 404);
+    void decide;
+  } finally { await pg.close(); }
+});

@@ -13,7 +13,9 @@ const price = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('external'), amount, currency: CURRENCY, ticketUrl: https }),
 ]);
 const plate = z.enum(['lilac', 'rose', 'sea', 'amber', 'moss', 'coal']);
-const tz = z.string().max(64).refine(v => { try { new Intl.DateTimeFormat('en', { timeZone: v }); return true; } catch { return false; } }, { message: 'unknown_zone' });
+// IANA region names only: offsets like «+01:00» mean something else to Postgres (the server checks pg_timezone_names too).
+const ZONES = new Set([...Intl.supportedValuesOf('timeZone'), 'UTC']);
+const tz = z.string().max(64).refine(v => ZONES.has(v), { message: 'unknown_zone' });
 
 /** What an event is made of (V21 evfValidate); the same shape for submit and the base of edits. */
 const base = {

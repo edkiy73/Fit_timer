@@ -5,6 +5,7 @@ import { enqueue } from '../outbox.mjs';
 import { needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
 import { journal, requireStaff } from './staff.mjs';
 import { ageOn } from './me.mjs';
+import { mediaDto } from '../media/assets.mjs';
 
 /** Slice D2: events (S1 §10, extract/communities-events.md §1.8–1.12).
  * An event belongs to the organizing profile (a couple can organize) and goes to staff before it is published; a couple
@@ -16,7 +17,8 @@ import { ageOn } from './me.mjs';
  * @typedef {import('../profiles.mjs').Acting} Acting
  */
 
-const MAJOR = ['title', 'description', 'coverAssetId'];
+// Checked by staff before they replace the published values: text, cover, the join link and ticket price/link.
+const MAJOR = ['title', 'description', 'coverAssetId', 'joinUrl', 'price', 'requirements'];
 const COLS = {
   title: 'title', kind: 'kind', description: 'description', format: 'format', placeId: 'place_id', area: 'area', exactAddress: 'exact_address',
   joinUrl: 'join_url', tz: 'tz', startsAt: 'starts_at', endsAt: 'ends_at', price: 'price', requiresApplication: 'requires_application',
@@ -30,6 +32,12 @@ const need = acting => { if (!acting) throw new Error('acting profile missing');
 const values = f => Object.keys(COLS).map(k => k === 'price' ? JSON.stringify(f[k]) : f[k]);
 /** @param {any} v */
 const iso = v => v instanceof Date ? v.toISOString() : v;
+/** Order-independent equality for form values (jsonb reorders object keys). @param {any} a @param {any} b */
+const same = (a, b) => {
+  const norm = (/** @type {any} */ v) => JSON.stringify(v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort()) : v ?? null);
+  return norm(a) === norm(b);
+};
+const RANK = { not_going: 0, interested: 1, going: 2 };
 
 /** The form of an event row (for drafts made from a withdrawn event). @param {any} e */
 function formOf(e) {
@@ -43,6 +51,8 @@ function formOf(e) {
 /** Place, cover and community of an event: an approved place or one the author submitted, the organizer's own event
  * cover, a published community the organizing profile owns or hosts (V21 EVT-038). @param {Q} q @param {Acting} acting @param {any} f */
 async function checkRefs(q, acting, f) {
+  const [zone] = await q.query('select 1 from pg_timezone_names where name = $1', [f.tz]);
+  if (!zone) fail(400, 'invalid_input', { fields: ['tz'] });
   if (f.placeId) {
     const [pl] = await q.query(`select 1 from feture.place where id = $1 and (state = 'approved' or state = 'pending' and submitted_by = $2)`, [f.placeId, acting.accountId]);
     if (!pl) fail(400, 'invalid_input', { fields: ['placeId'] });
@@ -77,10 +87,34 @@ async function visibleEvent(q, eventId, viewer) {
   return e;
 }
 
-/** Open for answers: published, not over, not one's own. @param {any} e */
-function requireOpen(e) {
-  if (e.own) fail(422, 'rule_violation', { rule: 'own_event' });
+/** The event open for an answer from `profileId` (acting through `accountId`): visible to them, published, not over,
+ * and not their own nor their partner's or couple's. Locked against a concurrent cancel or hide; the same checks run when
+ * a partner approves the answer later. @param {Q} q @param {string} eventId @param {string} profileId @param {string} accountId */
+async function openFor(q, eventId, profileId, accountId) {
+  const [e] = await q.query(
+    `select e.*, e.ends_at <= now() past,
+       exists (select 1 from feture.profile_member x join feture.profile_member y on x.account_id = y.account_id
+               where x.profile_id = e.organizer_profile_id and y.profile_id = $2 and x.state = 'active' and y.state = 'active') related
+     from feture.event e where e.id = $1 and feture.event_visible(e, $2, $3) for share of e`, [eventId, profileId, accountId]);
+  if (!e) fail(404, 'not_found');
+  if (e.related) fail(422, 'rule_violation', { rule: 'own_event' });
   if (e.state !== 'published' || e.past) fail(409, 'conflict', { state: e.past ? 'past' : e.state });
+  return e;
+}
+
+/** @param {Q} q @param {any} e @param {string} profileId @param {any} c */
+async function checkRsvp(q, e, profileId, c) {
+  if (c.ticketMarked && e.price?.kind !== 'external') fail(400, 'invalid_input', { fields: ['ticketMarked'] });
+  if (c.status === 'going' && e.requires_application) {
+    const [ok] = await q.query(`select 1 from feture.event_application where event_id = $1 and profile_id = $2 and state = 'approved'`, [e.id, profileId]);
+    if (!ok) fail(422, 'rule_violation', { rule: 'application_first' });
+  }
+}
+
+/** @param {any} e @param {any} c */
+function checkApplication(e, c) {
+  if (!e.requires_application) fail(422, 'rule_violation', { rule: 'no_application' });
+  if (c.answers.length !== e.questions.length) fail(400, 'invalid_input', { fields: ['answers'] });
 }
 
 /** Cancels the profile's pending partner approvals of one kind for a target (a replaced or withdrawn answer).
@@ -111,7 +145,6 @@ async function writeRsvp(q, eventId, profileId, accountId, c) {
 
 /** @param {Q} q @param {any} e @param {string} profileId @param {string} accountId @param {any} c */
 async function writeApplication(q, e, profileId, accountId, c) {
-  if (c.answers.length !== e.questions.length) fail(400, 'invalid_input', { fields: ['answers'] });
   try {
     const [a] = await q.query(`insert into feture.event_application (event_id, profile_id, answers, note, acted_by) values ($1, $2, $3, $4, $5) returning id`,
       [e.id, profileId, c.answers, c.note, accountId]);
@@ -131,26 +164,29 @@ async function doUpdate(q, acting, eventId, rev, f) {
   if (e.rev !== rev) fail(409, 'conflict', { rev: e.rev });
   if (!['pending_partner', 'in_review', 'rejected', 'published'].includes(e.state)) fail(409, 'conflict', { state: e.state });
   if ((f.communityId ?? null) !== e.community_id) fail(400, 'invalid_input', { fields: ['communityId'] }); // the community link stays
+  // Who is admitted depends on these: once published they stay, so nobody's «иду» or approval silently stops counting.
+  if (e.state === 'published' && (f.requiresApplication !== e.requires_application || !same(f.questions, e.questions))) {
+    fail(422, 'rule_violation', { rule: 'admission_frozen' });
+  }
   await checkRefs(q, acting, { ...f, communityId: null });
   const timeChanged = Date.parse(f.startsAt) !== new Date(e.starts_at).getTime() || Date.parse(f.endsAt) !== new Date(e.ends_at).getTime();
   if (timeChanged && Date.parse(f.startsAt) <= Date.now()) fail(400, 'invalid_input', { fields: ['startsAt'] });
   const keys = Object.keys(COLS).filter(k => e.state !== 'published' || !MAJOR.includes(k));
   const later = e.state === 'published'
-    ? Object.fromEntries(MAJOR.filter(k => JSON.stringify(f[k] ?? null) !== JSON.stringify(formOf(e)[/** @type {keyof ReturnType<typeof formOf>} */ (k)] ?? null)).map(k => [k, f[k] ?? null]))
+    ? Object.fromEntries(MAJOR.filter(k => !same(f[k], formOf(e)[/** @type {keyof ReturnType<typeof formOf>} */ (k)])).map(k => [k, f[k] ?? null]))
     : {};
   const all = values(f), cols = Object.keys(COLS);
   await q.query(
     `update feture.event set ${keys.map((k, i) => `${COLS[/** @type {keyof typeof COLS} */ (k)]} = $${i + 2}`).join(', ')},
-       pending_change = case when $${keys.length + 2}::jsonb = '{}'::jsonb then pending_change else coalesce(pending_change, '{}'::jsonb) || $${keys.length + 2}::jsonb end,
+       pending_change = nullif($${keys.length + 2}::jsonb, '{}'::jsonb),
        rev = rev + 1, updated_at = now() where id = $1`,
     [e.id, ...keys.map(k => all[cols.indexOf(k)]), JSON.stringify(later)]);
   if (Object.keys(later).length) await enqueue(q, 'moderation.event', e.organizer_profile_id, { eventId: e.id, change: true });
   if (e.state === 'published') {
-    // People who answered learn about a new time, place or link; their answers stay.
+    // People who answered learn about a new time or place at once; their answers stay. A new link waits for staff.
     const changes = [
       ...(timeChanged ? ['time'] : []),
       ...(f.placeId !== e.place_id || f.area !== e.area || f.exactAddress !== e.exact_address ? ['place'] : []),
-      ...(f.joinUrl !== e.join_url ? ['link'] : []),
     ];
     if (changes.length) {
       await q.query(`insert into feture.event_announcement (event_id, automatic, changes) values ($1, true, $2)`, [e.id, changes]);
@@ -170,8 +206,15 @@ async function doUpdate(q, acting, eventId, rev, f) {
 registerApprovalKind('event.submit', {
   apply: async (q, row) => {
     // The partner approved exactly this version: if it changed since, it waits for a new approval.
-    const [e] = await q.query(`select state, rev from feture.event where id = $1 for update`, [row.target_id]);
+    const [e] = await q.query(`select state, rev, starts_at <= now() started, community_id from feture.event where id = $1 for update`, [row.target_id]);
     if (!e || e.state !== 'pending_partner' || e.rev !== /** @type {any} */ (row.change).rev) fail(409, 'conflict', { rule: 'changed_since_approval' });
+    if (e.started) fail(409, 'conflict', { rule: 'started' });
+    if (e.community_id) {
+      const [h] = await q.query(
+        `select 1 from feture.community c join feture.community_member m on m.community_id = c.id
+         where c.id = $1 and c.state = 'published' and m.profile_id = $2 and m.state = 'active' and m.role in ('owner', 'host')`, [e.community_id, row.profile_id]);
+      if (!h) fail(409, 'conflict', { rule: 'community_hosts_only' });
+    }
     await toStaff(q, String(row.target_id), row.profile_id);
   },
 });
@@ -185,17 +228,15 @@ registerApprovalKind('event.update', {
 registerApprovalKind('event.rsvp', {
   apply: async (q, row) => {
     const c = /** @type {any} */ (row.change);
-    const [e] = await q.query(`select state, ends_at <= now() past, requires_application from feture.event where id = $1`, [row.target_id]);
-    if (!e || e.state !== 'published' || e.past) fail(409, 'conflict');
-    await writeRsvp(q, String(row.target_id), row.profile_id, row.requested_by, c);
+    const e = await openFor(q, String(row.target_id), row.profile_id, row.requested_by);
+    await checkRsvp(q, e, row.profile_id, c);
+    await writeRsvp(q, e.id, row.profile_id, row.requested_by, c);
   },
 });
 registerApprovalKind('event.apply', {
   apply: async (q, row) => {
-    const [e] = await q.query(`select *, ends_at <= now() past from feture.event where id = $1`, [row.target_id]);
-    if (!e || e.state !== 'published' || e.past) fail(409, 'conflict');
-    const [{ b }] = await q.query('select feture.blocked($1, $2) b', [row.profile_id, e.organizer_profile_id]);
-    if (b) fail(409, 'conflict');
+    const e = await openFor(q, String(row.target_id), row.profile_id, row.requested_by);
+    checkApplication(e, row.change);
     await writeApplication(q, e, row.profile_id, row.requested_by, row.change);
   },
 });
@@ -277,7 +318,7 @@ const run = {
     return { state: 'cancelled' };
   },
 
-  async 'event.get'(q, { acting: a, input }) {
+  async 'event.get'(q, { acting: a, input, cfg }) {
     const viewer = need(a);
     const e = await visibleEvent(q, input.eventId, viewer);
     const [mine] = await q.query(
@@ -285,17 +326,26 @@ const run = {
               (select json_build_object('id', x.id, 'state', x.state, 'rev', x.rev) from feture.event_application x where x.event_id = $1 and x.profile_id = $2 order by x.created_at desc limit 1) application,
               (select json_build_object('kind', p.kind, 'change', p.change) from feture.partner_approval p where p.profile_id = $2 and p.target_id = $1 and p.state = 'pending' and p.kind in ('event.rsvp', 'event.apply') limit 1) waiting`,
       [e.id, viewer.profileId]);
-    const counts = await crowd(q, e);
+    const counts = await crowd(q, e, viewer.profileId);
     const org = await q.query(`select p.id, p.kind, p.handle, p.name from feture.profile p where p.id = $1`, [e.organizer_profile_id]);
-    const participant = e.own || e.admitted || !!mine.rsvp || !!mine.application;
-    const announcements = participant
-      ? await q.query(`select id, body, automatic, changes, created_at from feture.event_announcement where event_id = $1 order by created_at desc limit 50`, [e.id])
+    // The organizer's words are for admitted people (they may name the place); people who are interested or still
+    // waiting for an answer learn only that the time or place changed.
+    const follows = ['going', 'interested'].includes(mine.rsvp?.status) || ['pending', 'approved'].includes(mine.application?.state);
+    const announcements = e.own || e.admitted || follows
+      ? await q.query(
+        `select id, body, automatic, changes, created_at from feture.event_announcement where event_id = $1 and ($2 or automatic) order by created_at desc limit 50`,
+        [e.id, e.own || e.admitted])
       : [];
+    let cover = null;
+    if (e.cover_asset_id) {
+      const [asset] = await q.query('select * from feture.media_asset where id = $1', [e.cover_asset_id]);
+      if (asset) cover = await mediaDto(cfg.media, asset, { viewerProfileId: viewer.profileId, place: 'public', showExplicit: false, staff: false }).catch(() => null);
+    }
     return {
       event: {
         id: e.id, title: e.title, kind: e.kind, description: e.description, format: e.format, placeId: e.place_id, area: e.area, tz: e.tz,
         startsAt: iso(e.starts_at), endsAt: iso(e.ends_at), price: e.price, requiresApplication: e.requires_application, questions: e.questions,
-        requirements: e.requirements, plate: e.plate, communityId: e.community_id, state: e.state, past: e.past,
+        requirements: e.requirements, plate: e.plate, cover, communityId: e.community_id, state: e.state, past: e.past,
         cancelReason: e.state === 'cancelled' ? e.cancel_reason : null, organizer: org[0], going: counts.going, interested: counts.interested,
         // Only admitted people get the exact place; everyone else gets a hint while the event is open.
         exactAddress: e.admitted ? e.exact_address : null, joinUrl: e.admitted ? e.join_url : null,
@@ -355,9 +405,9 @@ const run = {
        where x.profile_id = $1 and x.state in ('pending', 'approved') and feture.event_visible(e, $1, $2) order by e.starts_at limit 100`, [viewer.profileId, viewer.accountId]);
     const waiting = await q.query(
       `select ${pick}, p.kind approval from feture.partner_approval p join feture.event e on e.id = p.target_id
-       where p.profile_id = $1 and p.state = 'pending' and p.kind in ('event.rsvp', 'event.apply')`, [viewer.profileId]);
+       where p.profile_id = $1 and p.state = 'pending' and p.kind in ('event.rsvp', 'event.apply') and feture.event_visible(e, $1, $2)`, [viewer.profileId, viewer.accountId]);
     const drafts = await q.query(`select id, form->>'title' title, step, updated_at from feture.event_draft where owner_profile_id = $1 order by updated_at desc`, [viewer.profileId]);
-    const going = [...applications.filter(r => r.application_state === 'approved'), ...answered.filter(r => r.status === 'going' && !r.past)];
+    const going = [...applications.filter(r => r.application_state === 'approved' && r.state === 'published'), ...answered.filter(r => r.status === 'going' && !r.past && r.state === 'published')];
     return {
       going: [...new Map(going.map(r => [r.id, r])).values()],
       waiting, applications: applications.filter(r => r.application_state === 'pending'),
@@ -369,17 +419,15 @@ const run = {
 
   async 'event.rsvp'(q, { acting: a, input }) {
     const acting = need(a);
-    const e = await visibleEvent(q, input.eventId, acting);
-    requireOpen(e);
-    if (input.ticketMarked && e.price?.kind !== 'external') fail(400, 'invalid_input', { fields: ['ticketMarked'] });
-    if (input.status === 'going' && e.requires_application) {
-      const [ok] = await q.query(`select 1 from feture.event_application where event_id = $1 and profile_id = $2 and state = 'approved'`, [e.id, acting.profileId]);
-      if (!ok) fail(422, 'rule_violation', { rule: 'application_first' });
-    }
+    const e = await openFor(q, input.eventId, acting.profileId, acting.accountId);
     // Clearing the answer clears the ticket mark too (EVT-028).
     const c = { status: input.status, showInList: input.status === null ? null : input.showInList, ticketMarked: input.status === null ? null : input.ticketMarked };
-    // A couple saying «идём» or «интересно», or showing itself in the list, is a widening the partner decides on.
-    const widening = (input.status === 'going' || input.status === 'interested' || input.showInList === true) && needsPartner(acting, 'event.rsvp');
+    await checkRsvp(q, e, acting.profileId, c);
+    // A couple moving up (to «интересно» or «идём») or showing itself in the list widens what others see: the partner
+    // decides on that. Going down or hiding from the list applies at once.
+    const [cur] = await q.query('select status, show_in_list from feture.event_rsvp where event_id = $1 and profile_id = $2', [e.id, acting.profileId]);
+    const rank = (/** @type {string | null | undefined} */ v) => v ? RANK[/** @type {keyof typeof RANK} */ (v)] : 0;
+    const widening = (rank(input.status) > rank(cur?.status) || (input.showInList === true && !cur?.show_in_list)) && needsPartner(acting, 'event.rsvp');
     if (widening) {
       await dropPending(q, acting.profileId, 'event.rsvp', e.id); // a new answer replaces the waiting one
       return { pending: await requestApproval(q, acting, { kind: 'event.rsvp', targetType: 'event', targetId: e.id, change: c, summary: [e.title, input.status] }) };
@@ -391,11 +439,9 @@ const run = {
 
   async 'event.apply'(q, { acting: a, input }) {
     const acting = need(a);
-    const e = await visibleEvent(q, input.eventId, acting);
-    requireOpen(e);
-    if (!e.requires_application) fail(422, 'rule_violation', { rule: 'no_application' });
+    const e = await openFor(q, input.eventId, acting.profileId, acting.accountId);
     const c = { answers: input.answers, note: input.note };
-    if (c.answers.length !== e.questions.length) fail(400, 'invalid_input', { fields: ['answers'] });
+    checkApplication(e, c);
     if (needsPartner(acting, 'event.apply')) {
       return { pending: await requestApproval(q, acting, { kind: 'event.apply', targetType: 'event', targetId: e.id, change: c, summary: [e.title] }) };
     }
@@ -440,9 +486,11 @@ const run = {
 
   async 'event.applicationDecide'(q, { acting: a, input }) {
     const acting = need(a);
+    // The event first, then the application: the same order as cancel and hide, so they never deadlock.
+    const [ref] = await q.query('select event_id from feture.event_application where id = $1', [input.applicationId]);
+    if (!ref) fail(404, 'not_found');
+    const e = await ownEvent(q, ref.event_id, acting);
     const [x] = await q.query('select * from feture.event_application where id = $1 for update', [input.applicationId]);
-    if (!x) fail(404, 'not_found');
-    const e = await ownEvent(q, x.event_id, acting);
     if (e.state !== 'published' || new Date(e.ends_at).getTime() <= Date.now()) fail(409, 'conflict', { state: e.state });
     if (x.rev !== input.rev) fail(409, 'conflict', { rev: x.rev });
     // pending → approved | declined; approved ⇄ declined (revoke, or «всё-таки одобрить», EVT-018).
@@ -490,9 +538,10 @@ const run = {
   async 'staff.eventQueue'(q, { account, input }) {
     await requireStaff(q, account.id, ['owner', 'lead', 'moderator']);
     const items = await q.query(
-      `select e.id, e.rev, e.title, e.kind, e.description, e.format, e.area, e.starts_at, e.ends_at, e.price, e.requirements, e.questions,
-         e.cover_asset_id, e.community_id, e.state, e.pending_change, e.created_at
-       from feture.event e
+      `select e.id, e.rev, e.title, e.kind, e.description, e.format, e.area, e.exact_address, e.join_url, e.starts_at, e.ends_at, e.price,
+         e.requirements, e.questions, e.cover_asset_id, e.community_id, e.state, e.pending_change, e.created_at,
+         json_build_object('id', o.id, 'kind', o.kind, 'handle', o.handle) organizer
+       from feture.event e join feture.profile o on o.id = e.organizer_profile_id
        where (e.state = 'in_review' or e.state = 'published' and e.pending_change is not null)
          and not exists (select 1 from feture.profile_member m where m.profile_id = e.organizer_profile_id and m.account_id = $1)
        order by e.created_at limit $2`, [account.id, input.limit]);
@@ -519,12 +568,18 @@ const run = {
         if (!m) fail(422, 'rule_violation', { rule: 'cover_not_approved' });
       }
       if (e.state === 'in_review') {
+        if (new Date(e.starts_at).getTime() <= Date.now()) fail(409, 'conflict', { rule: 'started' });
         await q.query(`update feture.event set state = 'published', published_at = now(), reject_reason = null, rev = rev + 1, updated_at = now() where id = $1`, [e.id]);
       } else if (e.state === 'published' && e.pending_change) {
         const keys = Object.keys(change);
         await q.query(
           `update feture.event set ${keys.map((k, i) => `${COLS[/** @type {keyof typeof COLS} */ (k)]} = $${i + 2}`).join(', ')}${keys.length ? ',' : ''}
-             pending_change = null, rev = rev + 1, updated_at = now() where id = $1`, [e.id, ...keys.map(k => change[k])]);
+             pending_change = null, rev = rev + 1, updated_at = now() where id = $1`, [e.id, ...keys.map(k => k === 'price' ? JSON.stringify(change[k]) : change[k])]);
+        if (Object.hasOwn(change, 'joinUrl') && change.joinUrl !== e.join_url) {
+          // Admitted people learn that the link changed once staff let it through.
+          await q.query(`insert into feture.event_announcement (event_id, automatic, changes) values ($1, true, '{link}')`, [e.id]);
+          await enqueue(q, 'event.changed', e.organizer_profile_id, { eventId: e.id, changes: ['link'] });
+        }
       } else fail(409, 'conflict', { state: e.state });
     } else if (e.state === 'in_review') {
       await q.query(`update feture.event set state = 'rejected', reject_reason = $2, rev = rev + 1, updated_at = now() where id = $1`, [e.id, input.reason || null]);
@@ -539,14 +594,15 @@ const run = {
   },
 };
 
-/** Counts for the event page: «идут» never includes pending applications. @param {Q} q @param {any} e */
-async function crowd(q, e) {
+/** Counts for the event page: «идут» never includes pending applications; people hidden by a block are not counted
+ * (as in event.attendees). @param {Q} q @param {any} e @param {string} viewer */
+async function crowd(q, e, viewer) {
   const [c] = await q.query(
     `select
-       (case when $2 then (select coalesce(sum(case when p.kind = 'couple' then 2 else 1 end), 0) from feture.event_application x join feture.profile p on p.id = x.profile_id where x.event_id = $1 and x.state = 'approved' and p.state = 'active')
-             else (select coalesce(sum(case when p.kind = 'couple' then 2 else 1 end), 0) from feture.event_rsvp r join feture.profile p on p.id = r.profile_id where r.event_id = $1 and r.status = 'going' and p.state = 'active') end)::int going,
-       (select coalesce(sum(case when p.kind = 'couple' then 2 else 1 end), 0) from feture.event_rsvp r join feture.profile p on p.id = r.profile_id where r.event_id = $1 and r.status = 'interested' and p.state = 'active')::int interested,
-       (select count(*) from feture.event_application x where x.event_id = $1 and x.state = 'pending')::int pending`, [e.id, e.requires_application]);
+       (case when $2 then (select coalesce(sum(case when p.kind = 'couple' then 2 else 1 end), 0) from feture.event_application x join feture.profile p on p.id = x.profile_id where x.event_id = $1 and x.state = 'approved' and p.state = 'active' and not feture.blocked($3, p.id))
+             else (select coalesce(sum(case when p.kind = 'couple' then 2 else 1 end), 0) from feture.event_rsvp r join feture.profile p on p.id = r.profile_id where r.event_id = $1 and r.status = 'going' and p.state = 'active' and not feture.blocked($3, p.id)) end)::int going,
+       (select coalesce(sum(case when p.kind = 'couple' then 2 else 1 end), 0) from feture.event_rsvp r join feture.profile p on p.id = r.profile_id where r.event_id = $1 and r.status = 'interested' and p.state = 'active' and not feture.blocked($3, p.id))::int interested,
+       (select count(*) from feture.event_application x where x.event_id = $1 and x.state = 'pending')::int pending`, [e.id, e.requires_application, viewer]);
   return c;
 }
 

@@ -5,7 +5,8 @@ create table feture.event (
   id uuid primary key default feture.uuid_v7(),
   organizer_profile_id uuid not null references feture.profile(id) on delete cascade,
   created_by uuid not null references feture.account(id),
-  community_id uuid references feture.community(id) on delete set null,
+  community_id uuid references feture.community(id) on delete cascade,   -- never falls open to the public
+  members_only boolean not null default false,                           -- created while the community was closed
   title text not null check (char_length(title) between 5 and 80),
   kind text not null check (kind in ('meetup', 'workshop', 'talk', 'party')),
   description text not null check (char_length(description) between 20 and 1500),
@@ -87,6 +88,18 @@ create table feture.event_announcement (
   created_at timestamptz not null default now()
 );
 
+-- An event of a closed or hidden community stays members-only after the community opens (as discussions do).
+create function feture.event_members_only() returns trigger
+language plpgsql set search_path = pg_catalog, feture as $$
+begin
+  if new.community_id is not null and (tg_op = 'INSERT' or new.state = 'published') then
+    new.members_only := new.members_only or exists (select 1 from feture.community c where c.id = new.community_id and c.privacy <> 'open');
+  end if;
+  return new;
+end $$;
+create trigger event_members_only before insert or update of state on feture.event
+  for each row execute function feture.event_members_only();
+
 -- Event visible to a viewer: published or cancelled (or the viewer is in the organizing profile), organizer active,
 -- no block either way; an event of a closed or hidden community only for its members (Q30).
 create function feture.event_visible(e feture.event, viewer uuid, viewer_account uuid) returns boolean
@@ -98,7 +111,7 @@ language sql stable set search_path = pg_catalog, feture as $$
       and not feture.blocked(viewer, e.organizer_profile_id)
       and (e.community_id is null or exists (
             select 1 from feture.community c where c.id = e.community_id and c.state = 'published'
-              and (c.privacy = 'open' or feture.community_reader(c.id, viewer))))
+              and (c.privacy = 'open' and not e.members_only or feture.community_reader(c.id, viewer))))
   end
 $$;
 
