@@ -15,6 +15,7 @@ src=swap(src,"assert.ok(run(\"SC.P01.render(cur().p,cur())\").includes('class=\"
 {const A="assert.equal(run(\"compareActor('kira')\"),'me');",B="assert.equal(run(\"compareActor('kira')\"),'couple','V20: compare follows the dock, not the route');";src=swap(src,"src+=`\n// ---- V14 ----","src=swap(src,"+JSON.stringify(A)+","+JSON.stringify(B)+");\nsrc+=`\n// ---- V14 ----");}
 /* V20: an article is a post — its pictures are gallery tiles like any other */
 {const A="assert.ok(run(\"linkIssue('tomeva')\").length>0,'couples have no personal links');",B="assert.equal(run(\"linkIssue('tomeva')\"),'','V20.2: a link can be with a couple');";src=swap(src,"src+=`\n// ---- V14 ----","src=swap(src,"+JSON.stringify(A)+","+JSON.stringify(B)+");\nsrc+=`\n// ---- V14 ----");}
+{const A="assert.equal(run(\"C.meTodo()\"),run(\"todoItems().filter(x=>['req','profile','profileBack','joint','pinv'].includes(x.k)).length\"));",B="assert.equal(run(\"C.meTodo()\"),run(\"todoItems().length\"),'V20.3: the «Я» badge is the whole «Нужно решить» number');";src=swap(src,"src+=`\n// ---- V14 ----","src=swap(src,"+JSON.stringify(A)+","+JSON.stringify(B)+");\nsrc+=`\n// ---- V14 ----");}
 {const A="assert.ok(json(\"galleryPosts('noa').every(x=>x.type!=='note')\"),'notes are not gallery tiles');",B="assert.ok(json(\"galleryPosts('noa').length>0\"),'V20: articles with pictures are gallery tiles');";src=swap(src,"src+=`\n// ---- V14 ----","src=swap(src,"+JSON.stringify(A)+","+JSON.stringify(B)+");\nsrc+=`\n// ---- V14 ----");}
 /* V19: the composer takes its author from the one mode, not from a composer-only switch */
 src=swap(src,"S.composeActor='couple';setPairTrust(true)","S.actor='couple';setPairTrust(true)");
@@ -178,6 +179,15 @@ assert.equal(run("filterPosts([postById(hp)],'all').length"),0,'hidden in the co
 run("ACT.hidePost({dataset:{v:hp}});S.actor='couple';feedSet('hiddenPosts').delete(hp)");assert.equal(run("filterPosts([postById(hp)],'all').length"),1,'hiding as me does not hide it for the couple');run("S.actor='me'");
 assert.ok(run("profileView('kai',{p:{}},{bodyOnly:1})").includes(run("galleryBlock('kai',false,{})").slice(0,40))||run("profileView('kai',{p:{}},{bodyOnly:1})").length>200,'Discover reuses the profile body');
 {const deck=run("(S.actor='me',S.nav.tab='people',S.nav.stacks.people=[{id:'D03',p:{},f:{}}],SC.D03.render(cur().p,cur()))");assert.ok(!deck.includes('Полный профиль')&&deck.includes('pc-full'),'Discover shows the whole profile, not a short card with «Полный профиль»');assert.ok(!deck.includes('pc-coach'),'no coach card over the deck');}
+// counters: one number for «Нужно решить», and every number is what the screen behind it lists
+run("S.actor='me';S.nav.tab='me'");assert.equal(run("C.meTodo()"),run("todoCount()"),'the «Я» badge, the profile row and the inbox tab are one number');
+assert.equal(run("TABDEF().find(x=>x[0]==='me')[3]"),run("C.meTodo()"));
+run("links().push({id:'lkT',a:'nikajonas',b:'couple',kind:'friend',status:'pending',by:'nikajonas',vis:{nikajonas:'all',couple:'all'},t:Date.now()})");assert.ok(run("activePair()"));assert.equal(run("todoWhom(todoItems().find(i=>i.k==='link'&&i.l.id==='lkT'))"),'couple','a request to the couple is the couple’s decision');
+run("go('N01',{k:'todo'})");{const t=run("SC.N01.render(cur().p,cur())");assert.ok(t.includes('whom-sec us')&&t.includes('whom-sec'),'the inbox splits «Нужно решить» into «Тебе» and «Паре»');assert.equal((t.match(/class="sec whom-sec/g)||[]).length,2);}
+assert.equal(run("(()=>{const w=todoItems().map(todoWhom);return w.filter(x=>x==='me').length+w.filter(x=>x==='couple').length})()"),run("todoCount()"),'every decision belongs to you or to the couple');
+assert.equal(run("notifications=currentNotifications().filter(notifNew).length"),run("bellCount()-todoCount()"),'the «Все уведомления» number is what the bell adds to decisions');
+assert.equal(run("TABDEF().find(x=>x[0]==='people')[3]"),run("C.likesIn()||(C.likesAll()?'dot':0)"),'the «Люди» badge is the likes tab number of the acting profile');
+run("go('N01',{k:'all'})");{const t=run("SC.N01.render({k:'all'},cur())");assert.ok(t.includes('class="whom'),'notifications say whether they are for you or for the couple');}
 console.log('PASS V20.2: «Я» tabs by topic, couple links and settings, staged profile photos, re-review only for real changes, feed hiding per profile');
 console.log('PASS V20: split-circle couple avatar, two profile cards, the mode reaches «Что у вас общего», profile photos from posts (one video, review mark, drag), feed optional for uploads, same «Я» for the couple, select mode');
 console.log('PASS V19 rules in V20: one «Я / Мы» mode in the dock — couple likes, follows, communities and events; event answers ask the partner when approval is on');
