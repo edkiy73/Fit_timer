@@ -3,6 +3,7 @@ import { drain, enqueue } from './outbox.mjs';
 import { scanAsset, servedKeys } from './media/scan.mjs';
 import { deleteCouple } from './commands/couples.mjs';
 import { settlePublication } from './commands/posts.mjs';
+import { settleAvatarsOf } from './commands/photos.mjs';
 
 /** Queue worker (S2 §8, D7). Called every minute by pg_cron + pg_net (Vercel Hobby cron is daily only)
  * through `POST /api/fe?jobs=1` with the jobs secret. Every handler is idempotent.
@@ -33,9 +34,13 @@ export function mediaHandlers(db, deps) {
       if (!row || !['removed', 'rejected', 'blocked'].includes(row.state)) return;
       for (const key of servedKeys(id(item))) await storage().remove(key);
       await settlePosts(db, id(item));
+      await db.tx(q => settleAvatarsOf(q, id(item)));
     },
     // A checked file may complete posts waiting for their media (or send them back if it was rejected).
-    'media.approved': async (/** @type {any} */ item) => { await settlePosts(db, id(item)); },
+    'media.approved': async (/** @type {any} */ item) => {
+      await settlePosts(db, id(item));
+      await db.tx(q => settleAvatarsOf(q, id(item))); // a profile photo that passed may become the avatar
+    },
     // CSAM match or suspicion (S4 §5): the uploader's account and person profile, and the owning profile, are
     // suspended at once and their sessions end at the next request (resolveAccount refuses suspended accounts).
     // The quarantined original stays as evidence (never purged while blocked); reporting is a staff step.

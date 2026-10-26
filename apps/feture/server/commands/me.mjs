@@ -3,6 +3,7 @@ import { meCommands, NOTIFICATION_DEFAULTS, PROFILE_SETTINGS } from '../../contr
 import { fail, isUniqueViolation } from '../errors.mjs';
 import { hmac } from '../hash.mjs';
 import { mediaDto } from '../media/assets.mjs';
+import { photosFor } from './photos.mjs';
 import { grantedScopes } from '../access.mjs';
 import { enqueue } from '../outbox.mjs';
 import { narrowCouple, needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
@@ -44,7 +45,7 @@ const need = acting => { if (!acting) throw new Error('acting profile missing');
 const personOnly = acting => { if (acting.kind !== 'person') fail(422, 'rule_violation', { rule: 'couple_changes_not_available' }); };
 
 /** Option codes must exist in the catalog and not be hidden. @param {Q} q @param {Record<string, unknown>} input */
-async function checkOptions(q, input) {
+export async function checkOptions(q, input) {
   for (const [field, kind] of Object.entries(DETAIL_KINDS)) {
     const list = /** @type {string[] | undefined} */ (input[field]);
     if (!list?.length) continue;
@@ -126,6 +127,7 @@ async function profileView(q, viewer, profileId, media) {
     city,
     details,
     avatar,
+    photos: await photosFor(q, p.id, viewer.profileId, media),
     ...(own ? { rev: p.rev, showAge: !!p.show_age, detailsVis: p.details_vis ?? null, state: p.state } : {}),
   };
 }
@@ -187,6 +189,14 @@ const OPENNESS = /** @type {Record<string, unknown[]>} */ ({
 
 /** @param {Q} q @param {string} profileId @param {keyof typeof PROFILE_SETTINGS} setting @param {unknown} value */
 async function doSetVisibility(q, profileId, setting, value) {
+  if (setting === 'discoverMode' && value === 'visible') {
+    // A couple shows up in Discover only when both partners confirmed they are adults (pairMode).
+    const [x] = await q.query(
+      `select p.kind, coalesce(bool_and(coalesce(a.age_verified_until > now(), false)), false) ok from feture.profile p
+       join feture.profile_member m on m.profile_id = p.id and m.state = 'active' join feture.account a on a.id = m.account_id
+       where p.id = $1 group by p.kind`, [profileId]);
+    if (x?.kind === 'couple' && !x.ok) fail(422, 'rule_violation', { rule: 'age_not_verified' });
+  }
   await q.query(`update feture.profile_settings set ${SETTING_COLUMN[setting]} = $2, updated_at = now() where profile_id = $1`, [profileId, value]);
   return { setting, value };
 }

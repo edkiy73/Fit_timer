@@ -2,6 +2,7 @@
 import { socialCommands } from '../../contracts/social.mjs';
 import { fail } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
+import { lockPair } from './discover.mjs';
 
 /** Slice B social graph: blocks, follows, article subscriptions, feed hides, saved items (S1 §7).
  * A block belongs to the profile that made it and ends that profile's ties with the other side; visibility is
@@ -46,6 +47,17 @@ async function cutPair(q, blocker, blocked) {
   await q.query(
     `update feture.access_request set state = 'closed', closed_reason = 'blocked', decided_at = now() where state = 'pending'
      and ((owner_profile_id = $1 and requester_profile_id = $2) or (owner_profile_id = $2 and requester_profile_id = $1))`, [blocker, blocked]);
+  // Likes both ways (dismissed ones too) and the match go; unblocking brings nothing back.
+  await lockPair(q, blocker, blocked);
+  const likes = await q.query(
+    `update feture.profile_like l set state = 'withdrawn', updated_at = now() from (select id, state, from_profile_id, to_profile_id from feture.profile_like
+       where state in ('active', 'matched', 'dismissed') and ((from_profile_id = $1 and to_profile_id = $2) or (from_profile_id = $2 and to_profile_id = $1)) for update) old
+     where l.id = old.id returning old.state, old.from_profile_id, old.to_profile_id`, [blocker, blocked]);
+  for (const l of likes) if (l.state === 'active') await enqueue(q, 'like.withdrawn', l.to_profile_id, { from: l.from_profile_id });
+  const ended = await q.query(
+    `update feture.profile_match set ended_at = now(), ended_by_profile = $1
+     where ended_at is null and profile_a = least($1::uuid, $2::uuid) and profile_b = greatest($1::uuid, $2::uuid) returning id`, [blocker, blocked]);
+  if (ended[0]) await enqueue(q, 'match.ended', blocker, { matchId: ended[0].id, with: blocked });
 }
 
 /** Blocks `target` from the acting profile (and, explicitly, from the account's other profile).
