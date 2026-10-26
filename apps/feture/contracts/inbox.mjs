@@ -11,7 +11,10 @@ export const inboxCommands = {
   'inbox.counts': { profile: false, write: false, input: z.strictObject({}) },
   'push.register': {
     profile: false, write: true, rate: { kind: 'push.register', max: 20, window: '1 day' },
-    input: z.strictObject({ opId, platform: z.enum(['ios', 'android', 'web']), token: z.string().min(8).max(4096) }),
+    input: z.strictObject({
+      opId, platform: z.enum(['ios', 'android', 'web']), token: z.string().min(8).max(4096),
+      tz: z.string().max(64).refine(v => { try { new Intl.DateTimeFormat('en', { timeZone: v }); return true; } catch { return false; } }, { message: 'unknown_zone' }).default('UTC'),
+    }),
   },
   'push.unregister': { profile: false, write: true, input: z.strictObject({ opId, token: z.string().min(8).max(4096) }) },
 };

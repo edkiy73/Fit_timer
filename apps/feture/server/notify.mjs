@@ -8,6 +8,9 @@
  * @typedef {import('./db.mjs').Db} Db @typedef {import('./db.mjs').Q} Q @typedef {import('./outbox.mjs').OutboxItem} OutboxItem
  */
 
+import { enqueue } from './outbox.mjs';
+import { pushKind } from './push.mjs';
+
 /** topic → notification type, the payload key naming the actor profile, and the object. */
 const TYPES = /** @type {Record<string, {type: string, actor?: string, object?: [string, string]}>} */ ({
   'like.received': { type: 'like', actor: 'from' },
@@ -82,10 +85,11 @@ async function write(q, item, n, recipients) {
            or ($3::uuid is not null and feture.blocked($3, $1)) skip`, [n.actor, r.account, r.profile]);
       if (skip) continue;
     }
-    await q.query(
+    const added = await q.query(
       `insert into feture.notification (recipient_account_id, addressee_profile_id, type, actor_profile_id, object_type, object_id, data, source)
-       values ($1, $2, $3, $4, $5, $6, $7, $8) on conflict (source, recipient_account_id) do nothing`,
+       values ($1, $2, $3, $4, $5, $6, $7, $8) on conflict (source, recipient_account_id) do nothing returning id`,
       [r.account, r.profile, n.type, n.actor ?? null, n.objectType ?? null, n.objectId ?? null, JSON.stringify(n.data ?? {}), item.id]);
+    if (added[0]) await enqueue(q, 'push.deliver', r.profile, { account: r.account, kind: pushKind(n.type) });
   }
 }
 
@@ -156,8 +160,24 @@ export function notifyHandlers(db) {
       await write(q, item, { type: 'notePublished', actor: item.profile_id, objectType: 'post', objectId: p.postId }, rows.map(r => ({ account: r.account_id, profile: r.subscriber_profile_id })));
     });
   };
-  // Chat messages make no inbox row; push delivery comes with a provider.
-  handlers['message.created'] = async () => {};
+  // Chat messages make no inbox row, only a push to the members who did not mute the conversation.
+  handlers['message.created'] = async item => {
+    await db.tx(async q => {
+      for (const r of await recipientsOf(q, item.profile_id, item.payload)) await enqueue(q, 'push.deliver', r.profile, { account: r.account, kind: 'messages' });
+    });
+  };
+  // Things to decide are in «Нужно решить», not in the inbox; the recipients get a push.
+  for (const topic of ['decide.created', 'access.requested', 'community.requested', 'event.applied', 'couple.invited', 'tag.requested']) {
+    handlers[topic] = async item => {
+      await db.tx(async q => {
+        for (const r of await recipientsOf(q, item.profile_id, item.payload)) {
+          const by = /** @type {any} */ (item.payload).from;
+          if (by && (await q.query(`select feture.blocked($1, $2) b`, [r.profile ?? by, by]))[0].b) continue;
+          await enqueue(q, 'push.deliver', r.profile, { account: r.account, kind: 'decide' });
+        }
+      });
+    };
+  }
   // A like is announced only while it still stands (a retried item must not bring back a withdrawn one).
   const plain = handlers['like.received'];
   handlers['like.received'] = async item => {

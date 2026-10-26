@@ -86,4 +86,7 @@ function pushInfo(){
     apnsVars:Object.keys(process.env).filter(k=>/^APNS_/.test(k)).sort()
   };
 }
-module.exports={sendPushToAccountHash,notificationPrefs,pushInfo};
+/** One message to one device token, for apps that keep their own device list (FetUre keeps it in its own database).
+ * Throws with `invalidToken` when the token is gone, so the caller can drop it. */
+function sendToDevice(platform,token,message){return platform==='ios'?sendIos(token,message):sendAndroid(token,message);}
+module.exports={sendPushToAccountHash,notificationPrefs,pushInfo,sendToDevice};

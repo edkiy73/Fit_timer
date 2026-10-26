@@ -34,6 +34,7 @@ const require = createRequire(import.meta.url);
 const { store } = require('../../../packages/core/server/store');
 const { allowedOrigin, rateOkScoped } = require('../../../packages/core/server/util');
 const Supabase = require('../../../packages/core/server/supabase');
+const CorePush = require('../../../packages/core/server/push');
 const { authenticate } = require('../lib/feture/identity');
 
 const env = process.env;
@@ -109,7 +110,10 @@ export default async function fe(/** @type {any} */ req, /** @type {any} */ res)
     if (!db) return json(res, 503, { ok: false, error: 'unavailable' });
     try {
       const scan = media.storage ? { storage: /** @type {any} */ (media.storage), scanner: null, classifier: null, renderer: media.renderer } : null;
-      return json(res, 200, { ok: true, ...(await runJobs(db, { scan })) });
+      // Push goes through Core's FCM/APNs transport once its keys are set; until then nothing is sent.
+      const info = CorePush.pushInfo();
+      const push = info.android || info.ios ? { send: CorePush.sendToDevice } : null;
+      return json(res, 200, { ok: true, ...(await runJobs(db, { scan, push })) });
     } catch {
       return json(res, 503, { ok: false, error: 'unavailable' });
     }
