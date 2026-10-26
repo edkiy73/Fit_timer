@@ -58,6 +58,7 @@ Verified with Chromium:
   - Discover acts as the couple;
   - chats stay shared;
   - the mode is remembered across tabs.
-- QA_RESULT
+- 13 flows across the app in «Мы» (feed, Discover, communities, a community, an event, chats, «Я» and its Visibility, a profile, the composer, the dock sheet, notifications), plus the feed in «Я». These ran for 3 personas × RU/EN × 320/390/768/1440 × light/dark: 232 states, because couple flows run only for the persona with a couple and a few states had no clickable switch. Result: no JS errors and no page overflow.
+- On desktop, the review «V19» button covered the sidebar profile switch and was moved to the right.
 
 Not verified: real devices, screen readers, live two-client couples, user testing.
