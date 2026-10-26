@@ -182,3 +182,31 @@ Not verified: real devices, touch drag on hardware, a live couple on two clients
 - **Discover card, bottom corners.** The like/pass bar painted a square backdrop over the card's rounded bottom corners on a phone. It now follows the card's corners.
 - **Ended one-view and disappearing media.** It was one line with a repeated word that wrapped at a «·», inside a pill inside the bubble. Now it is an icon and two short lines: «Фото · один просмотр» / «Уже просмотрено», or «Видео · исчезающее» / «Время вышло». It inherits the bubble's colours, so it reads in light, dark, mine and theirs.
 - **Couple chats hint.** «Переписки от имени пары «Alex и Kira». Их видит и ваш партнёр.» It replaces the longer text with a misaligned icon. The English tab «Couple chats» is «Couple», so it fits at 320 px.
+
+## 2026-10-26 — Discover and gallery, assembled the same way
+
+- **Discover card.**
+  - «Подписаться» and «Полный профиль» are full width, one under the other. «Подписаться» is the same button as on the profile page; as the couple it says «Подписаться от пары».
+  - The card is the profile body: the order and the blocks are the same as the profile page, and the follow button is one shared piece.
+- **Interests compare with the profile you act as.** Tapping an interest on a profile, on a topic page or in «Что у вас общего» compared only with the personal profile, even in «Мы». Now:
+  - as the couple it compares with the couple's interests, and the sheet says «Ответ пары» / «У пары этого интереса пока нет»;
+  - the button edits the couple's interest («Изменить у пары» / «Добавить паре»);
+  - the preview of the couple's own profile compares the couple with itself, not with «Я».
+  - The demo couple now has its own interests, and «Принимать симпатии из профиля» is on by default for a new couple.
+- **Gallery on the profile.** The grid sat inside a padded card, so it started further right than the other blocks. It now sits on the page like interests do.
+- **Albums on «Я».**
+  - They wrap into rows instead of scrolling sideways, so a new album is visible at once. The second and later ones used to land off-screen to the right.
+  - A new album is created right there, without a trip to the gallery screen, for the profile you act as (the couple's albums were created for «Я» before).
+  - On the gallery screen, a new album no longer failed silently: the dispatcher passed the click event as the callback of «Новый альбом», so after the album was created `then(al)` threw and the screen did not refresh. Only a real callback counts now. The screen scrolls the chosen album into view.
+
+## 2026-10-26 — solo and couple audit
+
+The full list is in `V20-SOLO-COUPLE-AUDIT.md`. What changed:
+- couples have the «Активность» tab, and a profile lists the events and communities it organises (a couple's are not on «Я» any more);
+- followers and following: the same tabs for a couple; follow, unfollow and undo act as the profile you act as;
+- the «⋯» menu of a couple offers «Указать связь», from the profile you act as;
+- the private part of a couple is edited like «Я»: description, interests and photos by access; «on» means «not switched off» everywhere;
+- the demo couple Eva & Tom has a private part, so access can be requested from a couple;
+- «Действовать как»: both cards are 76 px;
+- an empty «Данные пары» is one short line;
+- the gallery grid no longer clips the dashed «Добавить» tile.

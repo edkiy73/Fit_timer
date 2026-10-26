@@ -2977,6 +2977,30 @@ button[disabled].demo-off{opacity:.55;cursor:default}
 .eph-gone .eg-tx{display:grid;min-width:0;gap:1px}
 .eph-gone b{color:inherit;font-size:14px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .eph-gone small{font-size:12.5px;opacity:.7}
+
+/* Discover card: both actions are full width */
+.pc-foot,.pc-full .pc-foot{grid-template-columns:1fr}.pc-foot .btn{width:100%}
+
+/* «Я» → Галерея: albums wrap into a grid, so a new album is visible at once; no extra inset */
+.alb20{flex-wrap:wrap;overflow:visible;margin:0;padding:0;gap:14px 10px}
+.alb20 .alb{width:calc((100% - 30px)/4)}
+.alb20 .alb-c{width:100%;height:auto;aspect-ratio:1}
+.alb20 .alb b{max-width:100%}
+
+/* «Действовать как»: both profiles have the same card height in every view */
+.actor-options{display:grid;gap:10px}
+.actor-options .actor-card{height:76px;min-height:76px;border-radius:var(--r-l)}
+.actor-options .actor-select{padding:8px 12px;min-height:0;height:100%;gap:12px;align-items:center}
+.actor-options .actor-select .av{width:44px;height:44px}
+.actor-options .actor-select .tx{display:grid;gap:2px;align-content:center}
+.actor-options .actor-select small{margin:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.3}
+.actor-options .actor-open{width:52px}
+/* an empty details block is one short line, not a tall card */
+.blk-btn:has(>.blk-empty){padding-top:12px;padding-bottom:12px}
+.blk-empty{margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* the gallery grid no longer clips its tiles: dashed «Добавить» keeps its whole border, tiles are rounded one by one */
+.ggrid{overflow:visible;border-radius:0;gap:4px}
+.gtile{border-radius:12px}
 </style>
 </head>
 <body>
@@ -3108,7 +3132,7 @@ const PEOPLE={
  lina:{name:'Lina',age:28,photo:9,nph:3,city:'berlin',km:7,gender:['woman'],orient:['bi'],format:'open',role:['switch'],seek:['dates','chat'],verified:true,online:false,last:{ru:'в сети вчера',en:'active yesterday'},dating:true,
   bio:{ru:'Путешествую, готовлю для друзей, исследую себя без спешки.',en:'Travelling, cooking for friends, exploring myself at my own pace.'},
   jars:[['roleplay',8],['experiments',8],['intimacy',8]]},
- tomeva:{premium:true,members:['eva','tom'],name:'Eva & Tom',nameRu:'Eva и Tom',age:null,pair:true,plate:'amber',plate2:'ember',city:'berlin',km:3,format:'swing',role:['switch'],seek:['exp','friends'],verified:true,online:true,dating:true,
+ tomeva:{privText:{ru:'Фото вдвоём и описание — только тем, с кем мы уже переписывались.',en:'Photos of us and a description — only for people we have already talked to.'},pv:true,nph:3,premium:true,members:['eva','tom'],name:'Eva & Tom',nameRu:'Eva и Tom',age:null,pair:true,plate:'amber',plate2:'ember',city:'berlin',km:3,format:'swing',role:['switch'],seek:['exp','friends'],verified:true,online:true,dating:true,
   bio:{ru:'Пара, вместе 3 года. Отвечаем вдвоём, первая встреча — только в общественном месте.',en:'A couple, together 3 years. We reply together; first meeting in a public place only.'},
   jars:[['experiments',10],['exhibition',6],['intimacy',8]],pairNote:{ru:'пара · вместе 3 года',en:'couple · 3 years together'}},
  lenamax:{pair:true,name:'Lena & Max',nameRu:'Lena и Max',age:null,photo:'p1',city:'berlin',km:5,format:['open'],status:'partnered',role:['switch'],seek:['exp','events'],verified:true,pv:true,online:true,dating:true,
@@ -3309,7 +3333,7 @@ function freshState(persona){
   // an invitation to form a couple that waits in the decisions inbox (the main persona is not in a couple yet)
   pairIncoming:persona==='full'?{from:'sofi',t:ago(2),status:'pending'}:null,
   // in the pair persona Kira is my partner's separate account, not a like/request in my queues
-  pair:persona==='pair'?{id:'pair_alex_kira_seed',status:'active',with:'kira',since:ago(24*40),name:{ru:'Alex и Kira',en:'Alex & Kira'},
+  pair:persona==='pair'?{id:'pair_alex_kira_seed',status:'active',with:'kira',since:ago(24*40),seedJars:[{t:'bondage',lv:8,dir:['give','get'],real:'practice',vis:'public'},{t:'aftercare',lv:10,real:'practice',vis:'public'},{t:'roleplay',lv:7,dir:['give','get'],real:'practice',vis:'public'},{t:'sensory',lv:6,dir:['give','get'],real:'try',vis:'public'},{t:'exhibition',lv:5,real:'fantasy',vis:'public'}],name:{ru:'Alex и Kira',en:'Alex & Kira'},
    desc:{ru:'Пара, вместе год. Отвечаем по очереди, о встречах договариваемся вдвоём.',en:'A couple, together a year. We reply in turns and agree on meetings together.'},
    rules:{ru:'Сначала переписка с обоими, потом встреча в людном месте.',en:'Chat with both of us first, then meet somewhere public.'},
    proposal:null,
@@ -3614,7 +3638,7 @@ const requiresDiscoveryPhoto=m=>!!m.dating&&m.datingVisible!==false;
 const publicField=(m,k)=>m[k];
 function ownedAsPerson(m){return{photo:m.photo,bio:m.bio,city:m.city,dating:!!m.dating,socialLikes:m.socialLikes!==false,pair:!!m.pair,members:m.pair?[...m.members]:undefined,pv:m.photoCheck==='ok',premium:!!m.premium,name:m.pair?T(m.name):m.nick,age:m.showAge===false?null:ageOf(m.dob),location:m.location?.coords,gender:publicField(m,'gender'),orient:publicField(m,'orient'),format:publicField(m,'format'),status:publicField(m,'status'),role:publicField(m,'role'),seek:publicField(m,'seek')||[],verified:m.ageCheck==='ok',online:true,jars:(m.jars||[]).filter(j=>j.vis==='public')};}
 function meAsPerson(){return ownedAsPerson(S.ui.profilePreview||S.me);}
-function coupleProfile(){const P=S.pair;if(P?.status!=='active')return null;P.id??='pair_'+P.with+'_'+P.since;if(!P.profile)P.profile={pair:true,members:['me',P.with],name:{...P.name},nick:'couple',bio:P.desc||{ru:'',en:''},privText:{ru:'',en:''},photos:[],photo:null,city:null,gender:[],orient:[],role:[],status:'couple',format:[],seek:[],jars:[],history:[],media:[],requestsFrom:'all',socialLikes:false,dating:true,datingVisible:true,showAge:false};return P.profile;}
+function coupleProfile(){const P=S.pair;if(P?.status!=='active')return null;P.id??='pair_'+P.with+'_'+P.since;if(!P.profile)P.profile={pair:true,members:['me',P.with],name:{...P.name},nick:'couple',bio:P.desc||{ru:'',en:''},privText:{ru:'',en:''},photos:[],photo:null,city:null,gender:[],orient:[],role:[],status:'couple',format:[],seek:[],jars:(P.seedJars||[]).map(j=>({...j})),history:[],media:[],requestsFrom:'all',socialLikes:true,dating:true,datingVisible:true,showAge:false};return P.profile;}
 const pairMember=()=>S.pairMember==='partner'?(S.pair?.with||S.pairInvite?.nick):'me';
 function editableProfile(r=cur()){if(r.p?.owner!=='couple'&&!(r.id==='X01'&&activeActor()==='couple'))return S.me;/* V19: «Я» in «Мы» mode edits the couple */const P=S.pair;if(P?.status!=='active')return null;coupleProfile();P.revision??=0;P.draftBase??=P.revision;if(!P.draft){P.draft=structuredClone(P.profile);P.draftBy=pairMember();P.draftLease=(P.draftLease||0)+1;}return P.draftBy&&P.draftBy!==pairMember()?structuredClone(P.draft):P.draft;}
 function coupleWritable(lease){const P=S.pair;const ok=activePair()&&(!P.draftBy||P.draftBy===pairMember())&&(lease==null||lease===(P.draftLease||0));if(!ok)toast(L('Черновик занят другим участником или изменился. Вернись в профиль пары. Введённые данные остаются здесь.','The draft belongs to the other partner or changed. Return to the couple profile. Your input stays here.'),{type:'warn'});return ok;}
@@ -4234,7 +4258,7 @@ function cmpExplain(r,id,k){const n=pname(id),a=r.a,b=r.b,has=(j,x)=>!j.dir||j.d
     what complements, what is worth discussing. Uses only what both of you made visible. */
 function compatBlock(id,o={}){const demo=!!o.demo;
  /* demo (my own preview): compare me with myself-as-a-visitor, so the block looks exactly as a real visitor's */
- const sh=demo?(()=>{const mine=(S.me.jars||[]).map(normJar).filter(j=>j.vis==='public'&&!j.limit).slice(0,3);const rows=mine.map(j=>({t:j.t,a:j,b:j}));return{match:rows.map(r=>r.t),complement:[],discuss:[],rows:{match:rows,complement:[],try:[],discuss:[],bound:[]},facts:[],few:!rows.length};})():shared(id);
+ const sh=demo?(()=>{const mine=(authorProfile(o.as||'me')?.jars||[]).map(normJar).filter(j=>j.vis==='public'&&!j.limit).slice(0,3);const rows=mine.map(j=>({t:j.t,a:j,b:j}));return{match:rows.map(r=>r.t),complement:[],discuss:[],rows:{match:rows,complement:[],try:[],discuss:[],bound:[]},facts:[],few:!rows.length};})():shared(id);
  const top=[...sh.rows.complement,...sh.rows.match].slice(0,3);
  if(o.compact)return `<section class="compat v14c"><button class="cp-h" ${demo?'disabled aria-disabled="true"':`data-go="P05" data-p='${esc(JSON.stringify({id,actor:compareActor(id)}))}'`}>${venn(sh.few?'?':sh.match.length,{mini:1})}<span class="grow"><b>${sh.few?L('Пока мало общего','Not much in common yet'):L('Есть темы для разговора','Things to talk about')}</b><span>${esc(compatWords(sh))}</span></span>${I.chev}</button></section>`;
  const more=sh.rows.try.length+sh.rows.discuss.length+sh.rows.bound.length;
@@ -5377,12 +5401,12 @@ const albumsOf=id=>{seedGallery(id);const own=id==='me'||id==='couple';if(own)se
 function galTile(x,id,album,o={}){const m=realMedia(x),f=m[0],n=m.length;
  return `<button class="gtile" data-go="F05" data-p='${esc(JSON.stringify({id:x.id,gal:{o:id,a:album||null}}))}' aria-label="${esc(T(x.title)||T(x.text)||L('Публикация','Post'))}">${f.type==='video'?`<video src="${esc(f.url)}#t=0.5" ${f.poster?`poster="${esc(f.poster)}"`:''} muted playsinline preload="metadata"></video><span class="gt-k">${I.playf}</span>`:`<img src="${esc(f.url)}" alt="" loading="lazy" draggable="false">`}${n>1?`<span class="gt-n">${I.image}${n}</span>`:''}${ownedIdentity(x.author)&&x.aud==='followers'?`<span class="gt-a">${I.people}</span>`:''}${ownedIdentity(x.author)&&(x.status==='review'||consentHidden(x))?`<span class="gt-w" title="${x.status==='review'?L('На проверке','In review'):L('Ждёт согласия','Waiting for consent')}">${I.clock}</span>`:''}</button>`;}
 function galleryBlock(id,self,o={}){const list=galleryPosts(id,null,o).filter(p=>self||p.aud!=='granted');if(!list.length&&!self)return '';const max=12,shown=list.slice(0,self?max-1:max);
- return grp(L('Галерея','Gallery'),`<div class="ggrid">${self?`<button class="gtile add" data-act="galAdd" data-v="${id}" aria-label="${L('Добавить в галерею','Add to gallery')}">${I.plus}<small>${L('Добавить','Add')}</small></button>`:''}${shown.map(x=>galTile(x,id,null)).join('')}</div>${list.length>shown.length?`<button class="btn soft mt12" data-go="P20" data-p='${esc(JSON.stringify({id}))}'>${L(`Смотреть всё · ${list.length}`,`See all · ${list.length}`)}</button>`:''}`,{right:list.length?`<button data-go="P20" data-p='${esc(JSON.stringify({id}))}'>${L('Все','All')} · ${list.length}</button>`:''});}
+ return grp(L('Галерея','Gallery'),`<div class="ggrid">${self?`<button class="gtile add" data-act="galAdd" data-v="${id}" aria-label="${L('Добавить в галерею','Add to gallery')}">${I.plus}<small>${L('Добавить','Add')}</small></button>`:''}${shown.map(x=>galTile(x,id,null)).join('')}</div>${list.length>shown.length?`<button class="btn soft mt12" data-go="P20" data-p='${esc(JSON.stringify({id}))}'>${L(`Смотреть всё · ${list.length}`,`See all · ${list.length}`)}</button>`:''}`,{cls:'bare',right:list.length?`<button data-go="P20" data-p='${esc(JSON.stringify({id}))}'>${L('Все','All')} · ${list.length}</button>`:''});}
 ACT.galAdd=a=>{const v=a?.dataset?.v,owner=v==='couple'||!v&&activeActor()==='couple'?'couple':'me';go('F07',{x:'media',aud:'all',...(owner==='couple'?{author:'couple'}:{}),...(a?.dataset?.a?{album:a.dataset.a}:{})});};
 ACT.galAlbum=a=>setP('a',a.dataset.v||null);
 const myAlbums=(owner=composeActor())=>((S.albums??={})[owner]??=[]);
-ACT.galAlbumNew=(a,then)=>{const owner=cur().p.id==='couple'||cur().author==='couple'?'couple':'me';S.ui.albumName='';sheet(()=>({title:L('Новый альбом','New album'),body:`<label class="field"><span>${L('Название','Name')}</span><input class="inp" id="albumName" maxlength="40" placeholder="${L('Например, «Мастерские»','E.g. “Workshops”')}" autofocus></label>`,foot:`<button class="btn primary" data-act="galAlbumCreate" data-v="${owner}">${L('Создать','Create')}</button>`}));S.ui.albumThen=then||null;};
-ACT.galAlbumCreate=a=>{const name=$('#albumName')?.value.trim();if(!name){$('#albumName')?.classList.add('err');return;}const owner=a.dataset.v,al={id:'al'+Date.now(),name:{ru:name,en:name}};myAlbums(owner).push(al);closeSheet();const then=S.ui.albumThen;S.ui.albumThen=null;if(then)return then(al);if(cur().id==='P20')setP('a',al.id);else refresh();toast(L('Альбом создан','Album created'),{type:'ok'});};
+ACT.galAlbumNew=(a,then)=>{const owner=a?.dataset?.owner||(cur().p.id==='couple'||cur().author==='couple'||cur().id==='X01'&&activeActor()==='couple'?'couple':'me');S.ui.albumName='';sheet(()=>({title:L('Новый альбом','New album'),body:`<label class="field"><span>${L('Название','Name')}</span><input class="inp" id="albumName" maxlength="40" placeholder="${L('Например, «Мастерские»','E.g. “Workshops”')}" autofocus></label>`,foot:`<button class="btn primary" data-act="galAlbumCreate" data-v="${owner}">${L('Создать','Create')}</button>`}));S.ui.albumThen=typeof then==='function'?then:null;/* the click dispatcher passes the event as the 2nd argument: only a real callback counts */};
+ACT.galAlbumCreate=a=>{const name=$('#albumName')?.value.trim();if(!name){$('#albumName')?.classList.add('err');return;}const owner=a.dataset.v,al={id:'al'+Date.now(),name:{ru:name,en:name}};myAlbums(owner).push(al);closeSheet();const then=S.ui.albumThen;S.ui.albumThen=null;if(typeof then==='function')return then(al);if(cur().id==='P20')setP('a',al.id);else refresh();toast(L(`Альбом «${esc(name)}» создан`,`Album “${esc(name)}” created`),{type:'ok'});};
 ACT.postAlbum=a=>{const p=ownPost(a.dataset.v)||postById(a.dataset.v);if(!p||!ownedIdentity(p.author))return;const owner=p.author==='couple'?'couple':'me';
  sheet(()=>({title:L('Альбом в галерее','Gallery album'),body:`<div class="card list">${[[null,L('Без альбома','No album')],...myAlbums(owner).map(x=>[x.id,T(x.name)])].map(([k,t])=>linkRow({act:'postAlbumSet',v:p.id+'|'+(k||''),icon:(p.album||null)===k?'check':'image',title:esc(t),noChev:1})).join('')}${linkRow({act:'postAlbumNew',v:p.id,icon:'plus',title:L('Новый альбом…','New album…'),noChev:1})}</div>`}));};
 ACT.postAlbumSet=a=>{const [id,al]=a.dataset.v.split('|');const p=ownPost(id)||postById(id);if(!p)return;p.album=al||null;if(al&&albumOf(p.author==='couple'?'couple':'me',al)?.vis==='followers'&&p.aud!=='followers'){p.aud='followers';toast(L('Альбом только для подписчиков — публикация тоже','The album is followers-only — so is the post'),{type:'info'});}closeSheet(true);refresh();toast(al?L('Перенесено в альбом','Moved to the album'):L('Убрано из альбома','Removed from the album'),{type:'ok'});};
@@ -5583,6 +5607,7 @@ SC.P20={title:()=>L('Галерея','Gallery'),valid:p=>!!person(p.id)&&!isBloc
  ${list.length||own&&a!=='@tagged'?`<div class="ggrid">${own&&a!=='@tagged'&&!r.sel?`<button class="gtile add" data-act="galAdd" data-v="${id}" ${a?`data-a="${esc(a)}"`:''}>${I.plus}<small>${L('Загрузить','Upload')}</small></button>`:''}${list.map(x=>r.sel?galSelTile(x,r.sel.has(x.id)):galTile(x,id,a)).join('')}</div>`:empty('image',L('Здесь пока пусто','Nothing here yet'),'')}
  ${own&&a&&a!=='@tagged'&&!list.length?`<p class="note mt12">${L('Загрузи сюда или переложи из галереи: «Выбрать» → «В альбом».','Upload here, or move from the gallery: “Select” → “To album”.')}</p>`:''}
  </div></div>${r.sel?(n=>`<div class="ctabar"><div class="wrap"><p class="sel-count" aria-live="polite">${n?L(`Выбрано: ${n}`,`Selected: ${n}`):L('Нажми на фото, чтобы выбрать','Tap photos to select')}</p><div class="sel-bar"><button class="btn soft" data-act="galSelAlbum" ${n?'':'disabled'}>${I.image}${L('В альбом','To album')}</button><button class="btn soft" data-act="galSelAud" ${n?'':'disabled'}>${I.people}${L('Кто видит','Audience')}</button><button class="btn soft" data-act="galSelProf" ${n?'':'disabled'}>${I.check}${L('В профиль','To profile')}</button><button class="btn soft danger" data-act="galSelDel" ${n?'':'disabled'}>${I.trash}${L('Удалить','Delete')}</button></div></div></div>`)(r.sel.size):''}`;}};
+SC.P20.after=()=>{const on=$('#main .alb-row .alb.on'),row=on?.parentElement;if(row&&on.offsetLeft+on.offsetWidth>row.clientWidth+row.scrollLeft||on&&on.offsetLeft<row.scrollLeft)row.scrollTo({left:Math.max(0,on.offsetLeft-16),behavior:'smooth'});};
 ACT.galAlbumVis=a=>{const owner=cur().p.id==='couple'?'couple':'me',al=albumOf(owner,a.dataset.k),v=a.dataset.v;if(!al||!ALB_VIS().some(x=>x[0]===v)||al.vis===v)return;const posts=S.myPosts.filter(x=>x.album===al.id&&x.author===owner);closeSheet(true);
  if(v==='followers'){ask({icon:'people',tone:'v',title:L('Только для подписчиков?','Followers only?'),text:L(`Публикации альбома (${posts.length}) тоже станут видны только подписчикам — в ленте, профиле и галерее.`,`The album’s posts (${posts.length}) also become followers-only — in the feed, profile and gallery.`),ok:L('Закрыть альбом','Restrict the album')}).then(ok=>{if(!ok)return;al.vis='followers';posts.forEach(x=>x.aud='followers');refresh();toast(L('Альбом видят только подписчики','Only followers see the album'),{type:'ok'});});return;}
  ask({icon:'globe',tone:'v',title:L('Открыть альбом всем?','Open the album to everyone?'),text:L('Публикации внутри тоже станут видны всем. Можно оставить их для подписчиков — тогда откроется только сам альбом.','Its posts become public too. Or keep them for followers — then only the album opens.'),ok:L('Открыть с публикациями','Open with posts'),cancel:L('Только альбом','Album only')}).then(ok=>{al.vis='all';if(ok)posts.forEach(x=>x.aud='all');refresh();toast(L('Альбом открыт всем','Album open to everyone'),{type:'ok'});});};
@@ -5657,10 +5682,10 @@ ACT.sendComment=()=>{const route=cur(),el=$('#cmt'),v=el?.value.trim();if(!v){el
 ACT.retryComment=a=>{const x=postById(cur().p.id);if(!x)return;const c=identifyReplies('p',x.id).find(c=>c.id===a.dataset.v)||x.comments[+a.dataset.v];if(!c||c.status!=='failed'||!ownedIdentity(c.a))return;sendPostReply(c,x,cur(),S,S.session);};
 
 /* F04 — topic feed */
-SC.F04={title:p=>topic(p.id),valid:p=>!!TOPICS[p.id],render:(p)=>{const posts=filterPosts(allPosts(),{}).filter(x=>x.tags.includes(p.id));const comms=Object.keys(COMMUNITIES).filter(c=>COMMUNITIES[c].topics.includes(p.id));const mine=S.me.jars.find(j=>j.t===p.id);
+SC.F04={title:p=>topic(p.id),valid:p=>!!TOPICS[p.id],render:(p)=>{const posts=filterPosts(allPosts(),{}).filter(x=>x.tags.includes(p.id));const comms=Object.keys(COMMUNITIES).filter(c=>COMMUNITIES[c].topics.includes(p.id));const A=activeActor(),mine=(authorProfile(A)?.jars||[]).find(j=>j.t===p.id);
  return `${bar('#'+esc(topic(p.id)),{back:1,sm:1,actions:searchBtn('posts')})}<div class="view nodock"><div class="wrap">
  <div class="interest-summary"><p>${esc(T(TOPIC_DESC[p.id])||L('Публикации и сообщества по этому интересу.','Posts and communities for this interest.'))}</p>
- ${mine?jarsHTML([mine],{act:'editJar',vis:1}):`<button class="btn soft" data-act="editJar" data-v="${p.id}">${I.plus}${L('Добавить интерес к себе','Add this interest')}</button>`}</div>
+ ${mine?jarsHTML([mine],{act:jarEditAct(A),vis:1}):`<button class="btn soft" data-act="${jarEditAct(A)}" data-v="${p.id}">${I.plus}${A==='couple'?L('Добавить интерес паре','Add this interest for the couple'):L('Добавить интерес к себе','Add this interest')}</button>`}</div>
  ${comms.length?`<div class="sec">${L('Сообщества','Communities')}</div>${comms.map((c,i)=>commCard(c,{i})).join('')}`:''}
  <div class="sec">${L('Публикации','Posts')}</div>${posts.length?`<div class="posts">${posts.map((x,i)=>postCard(x,{i})).join('')}</div>`:`<p class="note">${L('Публикаций по интересу пока нет.','No posts on this interest yet.')}</p>`}</div></div>`;}};
 
@@ -6140,7 +6165,7 @@ function card(id,pos){const p=PEOPLE[id];const ix=(S.ui.ph||{})[id]||0;const sh=
  </div>
  <div class="pc-body pc-full">
   ${/* V20: Discover shows the whole profile in the profile's own layout, not a shorter copy */pos==='top'?profileView(id,{p:{}},{bodyOnly:1}):''}
-  <div class="pc-foot"><button class="btn soft" data-act="follow" data-v="${id}">${social(activeActor()).follows.has(id)?`${I.check}${L('В подписках','Following')}`:activeActor()==='couple'?L('Подписаться от\u00a0пары','Follow as us'):L('Подписаться','Follow')}</button></div>
+  <div class="pc-foot">${followBtnHTML(id)}<button class="btn soft" data-go="P01" data-p='${esc(JSON.stringify({id,actor:activeActor()}))}'>${L('Полный профиль','Full profile')}</button></div>
   
  </div></article>`;}
 /** private layer: no real data is sent before access — the veil hides placeholders only */
@@ -6320,6 +6345,10 @@ for(const key of ['enableDating','datingPeek','goVisible']){const original=ACT[k
 const acceptsLikes=id=>{const m=id==='couple'?coupleProfile():(S.ui.profilePreview||S.me);return !!(m&&(id==='couple'?m.dating:m.socialLikes!==false));};
 /* V14 — the social context of a person: where you meet them, before their scores */
 function commVisibleMembers(c){const cm=COMMUNITIES[c];if(!cm)return new Set();const known=[...(cm.seedMembers||[]),...(S.communityRequests[c]||[]).filter(x=>x.status==='approved'&&x.showMember).map(x=>x.p)];return new Set([...(cm.mods||[]),...(cm.knownMembers?known:['maya','mia','kai','sofi','kira','dan','noa',...known])]);}
+/** events and communities a profile organises: what the couple makes is the couple's, not «Я» (it is stored under my account with «от пары») */
+const orgEventsOf=id=>allEventIds().filter(e=>evOrg(EV(e))===id&&!isPast(e)&&!EV(e).cancelled&&EV(e).status!=='review');
+const commAsCouple=c=>COMMUNITIES[c]?.orgAs==='couple'&&activePair();
+const hostedCommunitiesOf=id=>Object.keys(COMMUNITIES).filter(c=>id==='couple'?commAsCouple(c):COMMUNITIES[c].mods.includes(id)&&!(id==='me'&&commAsCouple(c)));
 function socialContext(id,orgEvents,modOf){const p=person(id);if(!p||id==='me'||id==='couple')return '';const ids=p.pair?[id,...(p.members||[])]:[id];
  const together=Object.keys(COMMUNITIES).filter(c=>(joinedSet().has(c)||ownsCommunity(c))&&COMMUNITIES[c].status!=='review'&&!modOf.includes(c)&&ids.some(x=>commVisibleMembers(c).has(x)));
  const rows=[];
@@ -6327,6 +6356,8 @@ function socialContext(id,orgEvents,modOf){const p=person(id);if(!p||id==='me'||
  if(together.length)rows.push(`<button class="pctx" data-go="C03" data-p='${esc(JSON.stringify({id:together[0]}))}'>${I.people}<span>${L('Вместе с тобой в','With you in')} <b>${together.slice(0,2).map(c=>esc(T(COMMUNITIES[c].name))).join(', ')}</b>${together.length>2?L(` и ещё ${together.length-2}`,` and ${together.length-2} more`):''}</span>${I.chev}</button>`);
  orgEvents.slice(0,1).forEach(e=>{const ev=EV(e),tz=evTz(ev);rows.push(`<button class="pctx" data-go="E03" data-p='${esc(JSON.stringify({id:e}))}'>${I.cal}<span>${L('Проводит','Hosting')} <b>${esc(T(ev.title))}</b> · ${esc(F.date(ev.start,{tz}))}</span>${I.chev}</button>`);});
  return rows.length?`<div class="p-ctx">${rows.join('')}</div>`:'';}
+/** one «Подписаться» for the profile page and the Discover card; as the couple it says so */
+function followBtnHTML(id){const f=social(activeActor()).follows.has(id);return `<button class="btn soft" data-act="follow" data-v="${id}" aria-pressed="${f}" title="${f?L('Нажми, чтобы отписаться','Tap to unfollow'):''}">${f?`${I.check}${L('В подписках','Following')}`:activeActor()==='couple'?L('Подписаться от\u00a0пары','Follow as us'):L('Подписаться','Follow')}</button>`;}
 function profileView(id,r,o={}){
  const me=id==='me'||id==='couple',self=me&&!o.asOther;if(self)o={...o,...ownPageParts(id,o)};const owner=id==='couple'?'couple':'me';if(me&&r.p.preview)S.ui[id==='couple'?'couplePreview':'profilePreview']=r.p.preview;const p=person(id);const ix=(S.ui.ph||{})[id]||0;const t=r.p.t||'about';
  const displayName=me?(p.name||p.nick||L('Ты','You')):pname(id);const allMine=(me?S.myPosts.filter(x=>x.status==='published'&&!x.hiddenByPair&&x.author===id&&!x.galleryOnly):allPosts().filter(x=>x.author===id&&!x.galleryOnly&&!consentHidden(x))).sort((a,b)=>b.t-a.t);const visibleMine=allMine.filter(x=>mediaPreviewAllowed19(x,o));const posts=visibleMine.filter(x=>x.type!=='note'),notes=visibleMine.filter(x=>x.type==='note');
@@ -6337,9 +6368,8 @@ function profileView(id,r,o={}){
  const likeBtn=isPartner?'':mutual?`<button class="btn primary" data-act="openChat" data-v="${id}" data-actor="${act.a}">${I.chat}${L('Написать','Message')}</button>`:liked?`<button class="btn on" data-act="unlikeP" data-v="${id}" data-actor="${act.a}" aria-pressed="true" title="${L('Нажми, чтобы отменить симпатию','Tap to withdraw the like')}">${I.heartf}${L('Отправлено','Sent')}</button>`:canLike||o.asOther&&acceptsLikes(id)?`<button class="btn primary" data-act="likeProfile" data-v="${id}">${I.heartf}${asUs&&!o.asOther?L('Нравится от\u00a0пары','Like as us'):L('Нравится','Like')}</button>`:'';
  const pending=social().reqOut.find(x=>x.p===id&&x.status==='pending');
  const acts=self?`<div class="row g8" style="margin-top:16px"><button class="btn primary" data-go="P02" data-p='${esc(JSON.stringify({owner}))}'>${I.edit}${L('Редактировать','Edit profile')}</button>${owner==='couple'?`<button class="btn soft" data-go="Q01">${I.gear}${L('Настройки пары','Couple settings')}</button>`:''}</div>`
-  :inert(`${!o.asOther&&!isPartner&&!me&&activePair()?'':''}<div class="p-acts">${likeBtn}<button class="btn soft" data-act="follow" data-v="${id}" aria-pressed="${social(activeActor()).follows.has(id)}" title="${social(activeActor()).follows.has(id)?L('Нажми, чтобы отписаться','Tap to unfollow'):''}">${social(activeActor()).follows.has(id)?`${I.check}${L('В подписках','Following')}`:activeActor()==='couple'?L('Подписаться от\u00a0пары','Follow as us'):L('Подписаться','Follow')}</button></div>${!isPartner&&!mutual&&!liked&&!canLike&&!(o.asOther&&acceptsLikes(id))?`<p class="profile-like-note">${I.heart}<span>${act.why==='coupleOff'?L('Знакомства пары выключены — от пары симпатию не отправить','Couple dating is off — no likes as us'):act.why==='solo'?L('От пары сюда симпатию не отправить. Сменить профиль — аватар внизу','No likes as us here. Switch profile with the avatar below'):(p.dating?L('Симпатии — в знакомствах','Likes available in Discover'):L('Симпатии выключены','Likes are off'))}</span></p>`:''}`);
- const orgEvents=allEventIds().filter(e=>EV(e).organizer===id&&!isPast(e)&&!EV(e).cancelled&&EV(e).status!=='review');
- const modOf=Object.keys(COMMUNITIES).filter(c=>COMMUNITIES[c].mods.includes(id));
+  :inert(`${!o.asOther&&!isPartner&&!me&&activePair()?'':''}<div class="p-acts">${likeBtn}${followBtnHTML(id)}</div>${!isPartner&&!mutual&&!liked&&!canLike&&!(o.asOther&&acceptsLikes(id))?`<p class="profile-like-note">${I.heart}<span>${act.why==='coupleOff'?L('Знакомства пары выключены — от пары симпатию не отправить','Couple dating is off — no likes as us'):act.why==='solo'?L('От пары сюда симпатию не отправить. Сменить профиль — аватар внизу','No likes as us here. Switch profile with the avatar below'):(p.dating?L('Симпатии — в знакомствах','Likes available in Discover'):L('Симпатии выключены','Likes are off'))}</span></p>`:''}`);
+ const orgEvents=orgEventsOf(id),modOf=hostedCommunitiesOf(id);
  const kv=identityFields().filter(([k])=>!['pron','gender','orient'].includes(k)&&!(p.pair&&k==='status')).map(([k,title])=>[title,IDENTITY_MULTI.includes(k)?fmtList(p[k]).map(v=>opt(k,v)).join(', '):opt(k,p[k])]).filter(x=>x[1]);
  /* V8: one page — profile, then the private part right after it when access is open. No tabs. */
  const bio='';const lede=T(p.bio)?`<div class="p-bio">${md(T(p.bio),'bio')}</div>`:'';
@@ -6357,7 +6387,7 @@ function profileView(id,r,o={}){
  <div class="hero">${p.pair&&!hasHeroMedia(id)?`<div class="plate" style="${PL[p.plate]||PL.rose};position:absolute;inset:0"></div><div class="hero-pairav">${av(id,'xl')}</div>`:me&&!hasHeroMedia(id)?`<div class="plate" style="${PL.rose};position:absolute;inset:0"><span class="pi">${I.me}</span></div>`:photoBg(id,ix)+bigPhoto(id,ix)}${photoBars(id,ix)}${photoCount(id)>1?`<button class="pc-zone l" data-act="pPhoto" data-v="-1" aria-label="${L('Предыдущее фото','Previous photo')}"></button><button class="pc-zone r" data-act="pPhoto" data-v="1" aria-label="${L('Следующее фото','Next photo')}"></button>`:''}${hasHeroMedia(id)?`<button class="pc-zone c" data-act="pView" aria-label="${L('Открыть фото на весь экран','Open photo full screen')}"></button>`:''}
   <div class="pc-info"><h2 class="pc-name"><span class="pcn">${esc(displayName)}</span>${p.age?`<span>${p.age}</span>`:''}${nameBadges(p)}</h2><div class="pc-who">${p.pair?`<span>${esc(whoLine(id))}</span>`:''}${placeLine(id)?`<span class="pl">${I.pin}${esc(placeLine(id))}</span>`:''}${!self&&p.online?`<span class="on">${L('в сети','online')}</span>`:''}</div>${followCounts(id)}</div></div>
  ${lede}${self?'':socialContext(id,orgEvents,modOf)}${acts}${o.root&&activePair()&&id==='me'?'':pairLine(id,o)}${o.before||''}${o.after||''}
- ${!me?`<div class="mt12">${compatBlock(id,{compact:1})}</div>`:o.asOther?`<div class="mt12">${compatBlock(id,{demo:1,compact:1})}</div>`:''}
+ ${!me?`<div class="mt12">${compatBlock(id,{compact:1})}</div>`:o.asOther?`<div class="mt12">${compatBlock(id,{demo:1,compact:1,as:id==='couple'?'couple':'me'})}</div>`:''}
  ${body}${o.footer||''}</div></div>`;if(me)delete S.ui[id==='couple'?'couplePreview':'profilePreview'];return html;
 }
 /* ---------- V18: «Я» — one screen, three layers ----------
@@ -6464,7 +6494,7 @@ function meProfileLayer(owner){const m=meModel(owner),p=person(owner),P=S.pair,q
  if(owner==='couple')h+=grp(L('Участники','Members'),pairPeople('couple').map(x=>`<div class="li static">${av(x.id,'sm')}<span class="tx"><b>${esc(x.name)}</b><small>${esc(memberLine(x))||L('не указано','not set')}</small></span></div>`).join(''),{list:1});
  h+=mePhotos20(owner);
  h+=blk18(L('Основное','Basics'),'all',owner,'basics',`<span class="blk-name">${esc(owner==='couple'?pairName():pname('me'))}${p?.age?`, ${p.age}`:''}${placeLine(owner)?` · ${esc(placeLine(owner))}`:''}</span>${T(m.bio)?`<span class="blk-bio">${esc(T(m.bio).replace(/[*_~`>#\[\]()]/g,'').slice(0,240))}</span>`:`<span class="blk-bio">${L('Пара фраз о себе — пока пусто','A few lines about you — empty for now')}</span>`}`);
- const dg=detailsGroup(owner).match(/<dl class="kv">[\s\S]*?<\/dl>/);h+=blk18(owner==='couple'?L('Данные пары','Couple details'):L('Данные','Details'),'all',owner,'details',dg?dg[0]:`<p class="blk-empty">${owner==='couple'?L('Роль, формат и что вы ищете помогают найти своих.','Role, format and what you look for help the right people find you.'):L('Роль, формат и что ищешь помогают найти своих.','Role, format and what you look for help the right people find you.')}</p>`);
+ const dg=detailsGroup(owner).match(/<dl class="kv">[\s\S]*?<\/dl>/);h+=blk18(owner==='couple'?L('Данные пары','Couple details'):L('Данные','Details'),'all',owner,'details',dg?dg[0]:`<p class="blk-empty">${owner==='couple'?L('Роль, формат, что ищете — добавьте','Role, format, what you look for — add them'):L('Роль, формат, что ищешь — добавь','Role, format, what you look for — add them')}</p>`);
  h+=meJars18(owner)+galleryOwn20(owner)+linksBlock(owner,true,{});
  return h;}
 /* ----- Видимость layer ----- */
@@ -6536,7 +6566,7 @@ ACT.r04ok=a=>{S.ui.r04seen=1;closeSheet(true);run(null,()=>{withActor('me',()=>l
 ACT.unlikeP=a=>withActor(a.dataset.actor||'me',()=>ACT.unlike(a));
 
 /* profile menu: share / report / block */
-ACT.profileMenu=a=>{const id=a.dataset.v,lk=PEOPLE[id]&&!PEOPLE[id].pair&&!PEOPLE[id].members?linkWith(id):null;sheet(()=>({title:esc(pname(id)),body:`<div class="card list">${linkRow({act:'shareProfile',icon:'link',title:L('Скопировать ссылку','Copy link'),noChev:1})}${PEOPLE[id]&&!PEOPLE[id].pair&&!PEOPLE[id].members&&!(activePair()&&id===S.pair.with)?lk?linkRow({...(lk.status==='ok'?{go:'P22',p:{id}}:lk.by==='me'?{act:'linkMenu',v:lk.id}:{go:'P21'}),icon:'users3',title:lk.status==='ok'?L('Связь: ','Link: ')+esc(linkLabel(lk,'me')):lk.by==='me'?L('Запрос связи отправлен','Link request sent'):L('Предлагает связь','Proposes a link'),sub:lk.status==='ok'?L('Изменить или настроить видимость','Change it or who sees it'):lk.by==='me'?L('Ждёт подтверждения','Awaiting confirmation'):esc(linkLabel(lk,'me')),noChev:1}):linkRow({act:'linkPick',v:id,icon:'users3',title:L('Указать связь','Add a link'),sub:linkIssue(id)||L('Отношения, практика, наставничество — подтверждают оба','Relationship, practice, mentoring — both confirm'),noChev:1}):''}${social().likesOut.some(l=>l.p===id)||isMatch(id)?linkRow({act:'endConn',v:id,icon:'x',title:L('Прекратить общение','End connection'),sub:isMatch(id)?L('Закрыть чат и снять симпатию','Close the chat and withdraw your like'):L('Снять симпатию','Withdraw your like'),noChev:1}):''}${PEOPLE[id]&&!PEOPLE[id].pair?linkRow({act:'giftPremium',v:id,icon:'crown',tone:'l',title:L('Подарить Premium','Gift Premium'),noChev:1}):''}${linkRow({act:'report',v:'person',icon:'flag',cls:'danger',title:L('Пожаловаться','Report'),noChev:1})}${linkRow({act:'block',v:id,icon:'block',cls:'danger',title:L('Заблокировать','Block'),sub:L('Прекратит контакт и все доступы','Ends contact and all access'),noChev:1})}</div>`}));};
+ACT.profileMenu=a=>{const id=a.dataset.v,me=LSELF(),lk=PEOPLE[id]?linkWith(id):null;sheet(()=>({title:esc(pname(id)),body:`<div class="card list">${linkRow({act:'shareProfile',icon:'link',title:L('Скопировать ссылку','Copy link'),noChev:1})}${PEOPLE[id]&&!(activePair()&&id===S.pair.with)?lk?linkRow({...(lk.status==='ok'?{go:'P22',p:{id}}:lk.by===me?{act:'linkMenu',v:lk.id}:{go:'P21',p:{id:me}}),icon:'users3',title:lk.status==='ok'?L('Связь: ','Link: ')+esc(linkLabel(lk,me)):lk.by===me?L('Запрос связи отправлен','Link request sent'):L('Предлагает связь','Proposes a link'),sub:lk.status==='ok'?L('Изменить или настроить видимость','Change it or who sees it'):lk.by===me?L('Ждёт подтверждения','Awaiting confirmation'):esc(linkLabel(lk,me)),noChev:1}):linkRow({act:'linkPick',v:id,icon:'users3',title:L('Указать связь','Add a link'),sub:linkIssue(id)||L('Отношения, практика, наставничество — подтверждают оба','Relationship, practice, mentoring — both confirm'),noChev:1}):''}${social().likesOut.some(l=>l.p===id)||isMatch(id)?linkRow({act:'endConn',v:id,icon:'x',title:L('Прекратить общение','End connection'),sub:isMatch(id)?L('Закрыть чат и снять симпатию','Close the chat and withdraw your like'):L('Снять симпатию','Withdraw your like'),noChev:1}):''}${PEOPLE[id]&&!PEOPLE[id].pair?linkRow({act:'giftPremium',v:id,icon:'crown',tone:'l',title:L('Подарить Premium','Gift Premium'),noChev:1}):''}${linkRow({act:'report',v:'person',icon:'flag',cls:'danger',title:L('Пожаловаться','Report'),noChev:1})}${linkRow({act:'block',v:id,icon:'block',cls:'danger',title:L('Заблокировать','Block'),sub:L('Прекратит контакт и все доступы','Ends contact and all access'),noChev:1})}</div>`}));};
 /* S02 — report */
 ACT.report=a=>{const kind=a.dataset.v||'person';S.ui.rp={why:'',block:kind==='person',who:a.dataset.who||null,post:a.dataset.post||null};closeSheet(true);
  sheet(()=>{const o=S.ui.rp;return{title:L('Пожаловаться','Report'),body:`${[['threat',L('Угрозы или шантаж','Threats or blackmail')],['private',L('Чужие приватные материалы','Someone else’s private content')],['minor',L('Похоже на несовершеннолетнего','Looks underage')],['spam',L('Спам или мошенничество','Spam or scam')],['other',L('Другое','Something else')]].map(([k,l])=>`<button class="radio ${o.why===k?'on':''}" data-act="rpWhy" data-v="${k}"><i></i><span class="tx">${l}</span></button>`).join('')}
@@ -6559,7 +6589,7 @@ SC.P05={title:()=>L('Что у вас общего','Shared interests'),valid:p=
  <div class="cmp-groups">${cmpGroups(id,s,{explain:1})}</div>
  ${s.facts.length?`<div class="cg"><div class="cg-h k-disc"><i></i><span>${L('Ещё стоит обсудить','Also worth discussing')}</span></div>${s.facts.map(f=>`<p class="cr-why">${esc(f)}</p>`).join('')}</div>`:''}
  <div class="alert mt16">${I.lock}<span>${L('Числа — насколько тема интересна каждому, от 1 до 10, по собственной оценке. Сравниваем только то, что вы оба открыли. Скрытые интересы и границы не участвуют и не раскрываются.','Numbers show how much each of you is into a topic, 1 to 10, by your own rating. We compare only what you both made visible. Hidden interests and limits are never used or revealed.')} ${g?L('Приватная часть доступна отдельно.','The private part is available separately.'):''}</span></div>
- ${S.me.jars.filter(j=>j.vis==='public').length<3?`<button class="btn soft mt12" data-act="toMap">${L('Открыть больше своих интересов','Make more of your interests public')}</button>`:''}
+ ${(authorProfile(compareActor(id))?.jars||[]).filter(j=>j.vis==='public').length<3?`<button class="btn soft mt12" data-act="toMap">${compareActor(id)==='couple'?L('Открыть больше общих интересов','Make more couple interests public'):L('Открыть больше своих интересов','Make more of your interests public')}</button>`:''}
  </div></div>`;},after:()=>playVenn()};
 
 /* P06 — request private access: categories, quota, no message, no chat */
@@ -6716,7 +6746,7 @@ function privEditor(m,r,owner,block){const sp=privSplit(privMedia(m)),jars=sortJ
 ACT.pePriv=()=>{const r=cur();r.privOn=!r.privOn;r.dirty=true;refresh();};
 ACT.peReq=a=>{const r=cur();r.reqFrom=a.dataset.v;r.dirty=true;refresh();};
 SC.P02={title:()=>L('Редактировать профиль','Edit profile'),valid:p=>p.owner!=='couple'||S.pair?.status==='active',render:(p,r)=>{const m=editableProfile(r);const owner=p.owner||'me';
- if(!r.init){r.init=1;Object.assign(r.f,{nick:owner==='couple'?T(m.name):m.nick,bio:T(m.bio),city:m.city||''});r.photos=[...m.photos];r.gender=[...m.gender];r.orient=[...m.orient];r.format=[...fmtList(m.format)];r.status=m.status||null;r.role=[...fmtList(m.role)];r.showAge=m.showAge!==false;r.seek=[...(m.seek||[])];r.pairVersion=S.pair?.draftVersion||0;r.pairLease=S.pair?.draftLease||0;r.datingVisible=!!m.datingVisible;r.socialLikes=m.socialLikes!==false;r.requestsFrom=m.requestsFrom||'all';r.reqFrom=r.requestsFrom;r.privOn=m.privOn??(privMedia(m).length>0||!!T(m.privText));r.f.privText=T(m.privText)||'';r.galPh=new Set(m.galPh||[]);}
+ if(!r.init){r.init=1;Object.assign(r.f,{nick:owner==='couple'?T(m.name):m.nick,bio:T(m.bio),city:m.city||''});r.photos=[...m.photos];r.gender=[...m.gender];r.orient=[...m.orient];r.format=[...fmtList(m.format)];r.status=m.status||null;r.role=[...fmtList(m.role)];r.showAge=m.showAge!==false;r.seek=[...(m.seek||[])];r.pairVersion=S.pair?.draftVersion||0;r.pairLease=S.pair?.draftLease||0;r.datingVisible=!!m.datingVisible;r.socialLikes=m.socialLikes!==false;r.requestsFrom=m.requestsFrom||'all';r.reqFrom=r.requestsFrom;r.privOn=m.privOn!==false;/* same rule as the «Приватное» tab: on unless it was switched off */r.f.privText=T(m.privText)||'';r.galPh=new Set(m.galPh||[]);}
  S.ui.privSec='';
  const fields=identityFields().filter(([k])=>owner!=='couple'||COUPLE_FIELDS.includes(k));
  /* your details are folded into one summary row inside the same card; open by default only while nothing is chosen */
@@ -6839,7 +6869,7 @@ function galleryOwn20(owner){const all=galleryPosts(owner),albums=albumsOf(owner
  const mos=all.flatMap(p=>realMedia(p).filter(m=>m.type!=='video').map(m=>m.url)).slice(0,4);const cards=[albCard({act:'galOpenAlbum',v:'',name:L('Все','All'),n:all.length,cover:mos.length<4?albumCover(owner,null,all):null}).replace(/<span class="alb-c">[\s\S]*?<\/span>(?=<b>)/,m=>mos.length>=4?`<span class="alb-c mos4">${mos.map(u=>`<img src="${esc(u)}" alt="" loading="lazy">`).join('')}</span>`:m),...albums.map(x=>{const l=galleryPosts(owner,x.id);return albCard({act:'galOpenAlbum',v:x.id,name:T(x.name),n:l.length,cover:albumCover(owner,x,l),lock:x.vis==='followers'});}),albCard({act:'galNewAlbumMe',name:L('Новый альбом','New album'),icon:'plus'})];
  return `<section class="grp gal20" id="meGal" data-drop="1"><div class="grp-t"><span>${L('Галерея','Gallery')}</span><button data-act="galAdd" data-v="${owner}">${I.plus}${L('Загрузить','Upload')}</button></div><div class="alb-row alb20">${cards.join('')}</div></section>`;}
 ACT.galOpenAlbum=a=>go('P20',{id:activeActor()==='couple'?'couple':'me',...(a.dataset.v?{a:a.dataset.v}:{})});
-ACT.galNewAlbumMe=()=>{go('P20',{id:activeActor()==='couple'?'couple':'me'});ACT.galAlbumNew();};
+ACT.galNewAlbumMe=()=>ACT.galAlbumNew({dataset:{owner:activeActor()==='couple'?'couple':'me'}});
 /* the private part: one block — description, pictures by access, interests by access */
 const privPosts20=owner=>mediaLibrary19(owner).filter(p=>p.aud==='granted');
 function mePriv20(owner){const m=meModel(owner);
@@ -6929,8 +6959,8 @@ const ACT_VIS=()=>[['all',L('Все','Everyone')],['followers',L('Подписч
 const actHash=s=>{let h=0;for(const c of String(s))h=(h*31+c.charCodeAt(0))>>>0;return h;};
 const activityMode=id=>(id==='me'?S.me.activityVis:id==='couple'?coupleProfile()?.activityVis:person(id)?.actVis)||'all';
 /** is the activity tab visible to this viewer? `o.asOther` = «as others see me» preview: no access = a stranger, with access = a contact */
-function activityShown(id,o={}){if(id==='couple'||person(id)?.pair)return false;if(id==='me'&&!o.asOther)return true;const m=activityMode(id);if(m==='off')return false;if(m==='all')return true;
- if(o.asOther)return o.grant==='granted';return social('me').follows.has(id)||isMatch(id);}
+function activityShown(id,o={}){if((id==='me'||id==='couple'&&activePair())&&!o.asOther)return true;const m=activityMode(id);if(m==='off')return false;if(m==='all')return true;
+ if(o.asOther)return o.grant==='granted';return social(activeActor()).follows.has(id)||isMatch(id);}
 /* V11: believable demo activity — who did what, hours ago. Likes are [postId,h], events [eventId,status,h], communities [id,h], follows {n,from,step} (taken from the follow graph). */
 const ACT_LOG={
  noa:{likes:[['p10',.3],['p19',.4],['p5',.5],['p11',.8],['p4',1.1],['p18',1.3],['p12',1.5],['p1',1.9],['p3',2.2],['p9',2.6]],events:[['e3','going',20]],follows:{n:1,from:30,step:1}},
@@ -6971,20 +7001,20 @@ function followingOf(id){const set=person(id)?.pair?new Set():id==='me'?S.follow
 function followersOf(id){return ['me',...(activePair()?['couple']:[]),...Object.keys(PEOPLE)].filter(k=>k!==id&&!isBlocked(k)&&followingOf(k).includes(id));}
 function followCounts(id){const a=followersOf(id).length,b=followingOf(id).length;
  return `<div class="pc-stats"><button data-go="P10" data-p='${esc(JSON.stringify({id,tab:'followers'}))}'><b>${a}</b>${pl(a,['подписчик','подписчика','подписчиков'],['follower','followers'],true)}</button>${person(id)?.pair?'':`<button data-go="P10" data-p='${esc(JSON.stringify({id,tab:'following'}))}'><b>${b}</b>${pl(b,['подписка','подписки','подписок'],['following','following'],true)}</button>`}</div>`;}
-SC.P10={title:p=>p.tab==='following'?L('Подписки','Following'):L('Подписчики','Followers'),valid:p=>(p.id==='me'||p.id==='couple'&&S.pair?.status==='active'||!!PEOPLE[p.id])&&!isBlocked(p.id),render:(p)=>{const id=p.id,tab=p.tab==='following'?'following':'followers',mine=id==='me';
+SC.P10={title:p=>p.tab==='following'?L('Подписки','Following'):L('Подписчики','Followers'),valid:p=>(p.id==='me'||p.id==='couple'&&S.pair?.status==='active'||!!PEOPLE[p.id])&&!isBlocked(p.id),render:(p)=>{const id=p.id,tab=p.tab==='following'?'following':'followers',mine=id==='me'||id==='couple'&&activePair();
  const list=tab==='following'?followingOf(id):followersOf(id);
- const row=k=>{const self=k==='me';const fol=social('me').follows.has(k);
+ const row=k=>{const self=k==='me'||k==='couple';const fol=social(activeActor()).follows.has(k);
   const act=self?`<span class="note">${L('это ты','you')}</span>`
    :mine&&tab==='followers'?`<button class="btn sm ${fol?'soft':'primary'}" data-act="flwToggle" data-v="${k}" aria-pressed="${fol}">${fol?L('Отписаться','Unfollow'):L('Подписаться','Follow back')}</button>`
    :`<button class="btn sm ${fol?'soft':'primary'}" data-act="flwToggle" data-v="${k}" aria-pressed="${fol}">${fol?L('Отписаться','Unfollow'):L('Подписаться','Follow')}</button>`;
   return `<div class="li frow"><button class="frow-go" data-go="${self?'P03':'P01'}" ${self?'':`data-p='${esc(JSON.stringify({id:k}))}'`}>${av(k,'')}<span class="tx"><b><span class="fnm">${esc(pname(k))}</span>${nameBadges(person(k),1)}</b><small>${esc(placeLine(k)||'')}</small></span></button>${act}</div>`;};
  const who=mine?'':` · ${esc(pname(id))}`;
  return `${bar((tab==='following'?L('Подписки','Following'):L('Подписчики','Followers'))+who,{back:1,sm:1,actions:authorPicker()})}<div class="view nodock"><div class="wrap">
- ${person(id)?.pair?'':seg([['followers',`${L('Подписчики','Followers')} · ${followersOf(id).length}`],['following',`${L('Подписки','Following')} · ${followingOf(id).length}`]],tab,'flwTab')}
+ ${seg([['followers',`${L('Подписчики','Followers')} · ${followersOf(id).length}`],['following',`${L('Подписки','Following')} · ${followingOf(id).length}`]],tab,'flwTab')}
  ${mine&&tab==='followers'?``:''}
  ${list.length?`<div class="card list mt12">${list.map(row).join('')}</div>`:empty('people',tab==='following'?L('Подписок пока нет','Not following anyone yet'):L('Подписчиков пока нет','No followers yet'),'')}</div></div>`;}};
 ACT.flwTab=a=>{const r=cur();r.p={...r.p,tab:a.dataset.v};refresh();};
-ACT.flwToggle=a=>{const id=a.dataset.v,actor=activeActor();if(!canAct('follow',actor)||!(PEOPLE[id]||id==='couple'&&activePair())||isBlocked(id)||ownedIdentity(id))return;const on=!social(actor).follows.has(id);on?social(actor).follows.add(id):social('me').follows.delete(id);if(on)notifyOther(id,'follow','me_'+id,{p:'me'});refresh();toast(on?L(`Подписка на ${pname(id)}`,`Following ${pname(id)}`):L(`Подписка на ${pname(id)} отменена`,`Unfollowed ${pname(id)}`),{type:on?'ok':'',action:{label:L('Отменить','Undo'),fn:()=>{if(isBlocked(id))return;on?social('me').follows.delete(id):social('me').follows.add(id);refresh();}}});};
+ACT.flwToggle=a=>{const id=a.dataset.v,actor=activeActor();if(!canAct('follow',actor)||!(PEOPLE[id]||id==='couple'&&activePair())||isBlocked(id)||ownedIdentity(id))return;const on=!social(actor).follows.has(id);on?social(actor).follows.add(id):social(actor).follows.delete(id);if(on)notifyOther(id,'follow','me_'+id,{p:'me'});refresh();toast(on?L(`Подписка на ${pname(id)}`,`Following ${pname(id)}`):L(`Подписка на ${pname(id)} отменена`,`Unfollowed ${pname(id)}`),{type:on?'ok':'',action:{label:L('Отменить','Undo'),fn:()=>{if(isBlocked(id))return;on?social(actor).follows.delete(id):social(actor).follows.add(id);refresh();}}});};
 
 /** couple links on a profile: a couple profile names its two accounts, each partner links to the couple */
 function pairLine(id,o={}){const p=person(id);if(!p)return '';
@@ -7537,11 +7567,14 @@ ACT.jarDel=()=>{const {t,owner,session}=S.ui.jar;closeSheet(true);ask({icon:'tra
 /* «Как откликается» always pairs the person whose jar was tapped with you. The tapped jar carries the answer it showed
    (data-ans), so a jar from a private layer or a quiz result still shows that person’s row. Opened from a topic page there is no
    other person: the group is then «Твой ответ», one row. */
-function openTopic(t,who,ans,dir){const other=who&&who!=='me'&&person(who);const shown=ans!=null&&ans!==''?jarFrom(t,ansVal(ans),{dir:dir?dir.split(' '):undefined}):null;
- const theirs=other?(shown||(other.jars||[]).map(normJar).find(x=>x.t===t)||null):null;const mine=S.me.jars.find(j=>j.t===t);
+/** whose answers the sheet compares: the profile you act as («Я» or the couple) */
+const jarOwner=who=>who&&who!=='me'&&who!=='couple'&&activePair()?compareActor(who):activeActor();
+const jarEditAct=o=>o==='couple'?'editCoupleJar':'editJar';
+function openTopic(t,who,ans,dir){const other=who&&who!=='me'&&person(who);const A=jarOwner(who),us=A==='couple';const shown=ans!=null&&ans!==''?jarFrom(t,ansVal(ans),{dir:dir?dir.split(' '):undefined}):null;
+ const theirs=other?(shown||(other.jars||[]).map(normJar).find(x=>x.t===t)||null):null;const mine=(authorProfile(A)?.jars||[]).find(j=>j.t===t);
  sheet(()=>({title:topic(t),sub:T(CATS.find(c=>c.id===TOPICS[t]?.cat)||''),body:`<p class="topic-desc">${esc(T(TOPIC_DESC[t]))}</p>
- ${theirs&&mine?grp(L('Как откликается','How it feels'),`${cmpRow({t,a:normJar(mine),b:theirs},who,{plain:1,why:false})}${mine.vis&&mine.vis!=='public'?`<p class="note" style="margin-top:8px">${L('Твой ответ видишь только ты','Only you see your answer')}</p>`:''}`,{cls:'bare'}):theirs?grp(L(`Ответ ${esc(pname(who))}`,`${esc(pname(who))}’s answer`),jarsHTML([theirs],{}),{cls:'bare'})+`<p class="note">${L('У тебя этого интереса пока нет.','You don’t have this interest yet.')}</p>`:grp(L('Твой ответ','Your answer'),jarsHTML(mine?[mine]:[],{vis:1}),{cls:'bare'})}`,
- foot:`<button class="btn ${mine?'secondary':'primary'}" data-act="editJar" data-v="${t}">${mine?L('Изменить у себя','Edit mine'):`${I.plus}${L('Добавить к себе','Add to mine')}`}</button>`}));}
+ ${theirs&&mine?grp(L('Как откликается','How it feels'),`${cmpRow({t,a:normJar(mine),b:theirs},who,{plain:1,why:false})}${mine.vis&&mine.vis!=='public'?`<p class="note" style="margin-top:8px">${us?L('Этот ответ видите только вы двое','Only the two of you see this answer'):L('Твой ответ видишь только ты','Only you see your answer')}</p>`:''}`,{cls:'bare'}):theirs?grp(L(`Ответ ${esc(pname(who))}`,`${esc(pname(who))}’s answer`),jarsHTML([theirs],{}),{cls:'bare'})+`<p class="note">${us?L('У пары этого интереса пока нет.','The couple doesn’t have this interest yet.'):L('У тебя этого интереса пока нет.','You don’t have this interest yet.')}</p>`:grp(us?L('Ответ пары','The couple’s answer'):L('Твой ответ','Your answer'),jarsHTML(mine?[mine]:[],{vis:1}),{cls:'bare'})}`,
+ foot:`<button class="btn ${mine?'secondary':'primary'}" data-act="${jarEditAct(A)}" data-v="${t}">${mine?(us?L('Изменить у пары','Edit for the couple'):L('Изменить у себя','Edit mine')):`${I.plus}${us?L('Добавить паре','Add for the couple'):L('Добавить к себе','Add to mine')}`}</button>`}));}
 ACT.topic=a=>openTopic(a.dataset.v,a.dataset.who,a.dataset.ans,a.dataset.dir);
 /** all public jars of a person, grouped by category */
 ACT.allJars=a=>{const who=a.dataset.v;const list=sortJars((person(who)?.jars||[]).filter(j=>!normJar(j).vis||normJar(j).vis==='public'));
