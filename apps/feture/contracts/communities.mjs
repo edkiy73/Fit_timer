@@ -64,6 +64,6 @@ export const communitiesCommands = {
   'staff.communityQueue': { profile: false, write: false, input: z.strictObject({ limit: z.int().min(1).max(50).default(20) }) },
   'staff.communityDecide': {
     profile: false, write: true,
-    input: z.strictObject({ opId, communityId: id, decision: z.enum(['approve', 'reject']), reason: text(300).default('') }),
+    input: z.strictObject({ opId, communityId: id, rev: z.int().positive(), decision: z.enum(['approve', 'reject']), reason: text(300).default('') }),
   },
 };

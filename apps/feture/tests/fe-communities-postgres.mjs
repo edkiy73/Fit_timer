@@ -20,18 +20,23 @@ async function world() {
   await db.query(`insert into feture.staff_role (account_id, role) select id, 'owner' from feture.account where person_profile_id = $1`, [boss]);
   await call('uo', null, { action: 'staff.grant', opId: op(), handle: 'Mira', role: 'moderator', grant: true });
   const a = await person('ua', 'Alex'), b = await person('ub', 'Kira'), c = await person('uc', 'Noa');
+  /** Staff decide on the version they saw in the queue. */
+  const decide = async (communityId, decision = 'approve') => {
+    const item = (await call('um', null, { action: 'staff.communityQueue' })).items.find((/** @type {any} */ x) => x.id === communityId);
+    return call('um', null, { action: 'staff.communityDecide', opId: op(), communityId, rev: item.rev, decision });
+  };
   /** Creates and publishes a community owned by `profile`. */
   const make = async (user, profile, extra) => {
     const r = await call(user, profile, { action: 'community.create', opId: op(), ...base, ...extra });
     assert.equal(r.status, 200, JSON.stringify(r));
-    assert.equal((await call('um', null, { action: 'staff.communityDecide', opId: op(), communityId: r.id, decision: 'approve' })).decision, 'approve');
+    assert.equal((await decide(r.id)).decision, 'approve');
     return r.id;
   };
-  return { ...env, a, b, c, make };
+  return { ...env, a, b, c, make, decide };
 }
 
 test('created communities wait for staff; catalog; names unique; major edits wait, minor apply', async () => {
-  const { pg, call, a, b } = await world();
+  const { pg, call, a, b, decide } = await world();
   try {
     const r = await call('ua', a, { action: 'community.create', opId: op(), name: 'Узлы и разговоры', privacy: 'open', ...base });
     assert.equal(r.state, 'in_review');
@@ -40,7 +45,11 @@ test('created communities wait for staff; catalog; names unique; major edits wai
     assert.equal((await call('ub', b, { action: 'community.create', opId: op(), name: 'УЗЛЫ И РАЗГОВОРЫ', privacy: 'open', ...base })).field, 'name');
     const queue = (await call('um', null, { action: 'staff.communityQueue' })).items;
     assert.ok(queue.some(x => x.id === r.id));
-    await call('um', null, { action: 'staff.communityDecide', opId: op(), communityId: r.id, decision: 'approve' });
+    // Staff decide on what they saw: an edit after the card was opened needs a fresh look.
+    const seenRev = (await call('um', null, { action: 'staff.communityQueue' })).items.find((/** @type {any} */ x) => x.id === r.id).rev;
+    await call('ua', a, { action: 'community.update', opId: op(), communityId: r.id, rev: seenRev, description: 'Совсем другое описание после открытия карточки' });
+    assert.equal((await call('um', null, { action: 'staff.communityDecide', opId: op(), communityId: r.id, rev: seenRev, decision: 'approve' })).status, 409);
+    await decide(r.id);
     assert.deepEqual((await call('ub', b, { action: 'community.catalog' })).items.map(i => i.name), ['Узлы и разговоры']);
 
     const got = (await call('ua', a, { action: 'community.get', communityId: r.id })).community;
@@ -48,7 +57,7 @@ test('created communities wait for staff; catalog; names unique; major edits wai
     assert.deepEqual(upd.review, ['name']);
     const seen = (await call('ub', b, { action: 'community.get', communityId: r.id })).community;
     assert.deepEqual([seen.name, seen.rules.length], ['Узлы и разговоры', 2]); // rules at once, the new name after staff
-    await call('um', null, { action: 'staff.communityDecide', opId: op(), communityId: r.id, decision: 'approve' });
+    await decide(r.id);
     assert.equal((await call('ub', b, { action: 'community.get', communityId: r.id })).community.name, 'Узлы, разговоры и чай');
     assert.equal((await call('ub', b, { action: 'community.update', opId: op(), communityId: r.id, rev: 9, rules: ['x'] })).status, 403);
   } finally { await pg.close(); }
@@ -137,5 +146,56 @@ test('discussions: members write, closed ones are for members, read-only cannot 
     await call('ua', a, { action: 'community.member', opId: op(), communityId: open, profileId: b, change: 'canWrite' });
     const pair = await coupleOf([b, c]);
     assert.equal((await post('ub', pair, open, 'Тема от пары')).state, 'published');
+  } finally { await pg.close(); }
+});
+
+test('review fixes: refs on update, wider privacy keeps old discussions for members, bans cover couples, couples read, votes and host limits', async () => {
+  const { pg, db, call, coupleOf, a, b, c, make, decide } = await world();
+  try {
+    const post = async (user, prof, communityId, body) => {
+      const d = await call(user, prof, { action: 'post.saveDraft', opId: op(), post: draft(body, { communityId }) });
+      if (d.status !== 200) return d;
+      return { id: d.id, ...(await call(user, prof, { action: 'post.publish', opId: op(), postId: d.id })) };
+    };
+    // Someone else's photo never becomes a cover, not even through an edit.
+    const [{ id: foreign }] = await db.query(`insert into feture.media_asset (owner_profile_id, uploaded_by, kind, purpose, mime, declared_bytes, storage_key, state)
+      select $1, account_id, 'image', 'community', 'image/jpeg', 10, 'u/x', 'uploaded' from feture.profile_member where profile_id = $1 returning id`, [b]);
+    const closed = await make('ua', a, { name: 'Был закрытым', privacy: 'closed', joinQuestion: 'Кто вы?' });
+    let got = (await call('ua', a, { action: 'community.get', communityId: closed })).community;
+    assert.deepEqual((await call('ua', a, { action: 'community.update', opId: op(), communityId: closed, rev: got.rev, coverAssetId: foreign })).fields, ['coverAssetId']);
+
+    // A discussion written while closed stays for members after the community opens.
+    const inside = await post('ua', a, closed, 'Писалось только для своих');
+    got = (await call('ua', a, { action: 'community.get', communityId: closed })).community;
+    assert.deepEqual((await call('ua', a, { action: 'community.update', opId: op(), communityId: closed, rev: got.rev, privacy: 'open' })).review, ['privacy', 'joinQuestion']);
+    await decide(closed);
+    const now = (await call('ub', b, { action: 'community.get', communityId: closed })).community;
+    assert.deepEqual([now.privacy, now.joinQuestion], ['open', null]);
+    assert.equal((await call('ub', b, { action: 'post.get', postId: inside.id })).status, 404);
+    const later = await post('ua', a, closed, 'Это уже для всех');
+    assert.equal((await call('ub', b, { action: 'post.get', postId: later.id })).status, 200);
+    // Only members vote; hosts do not remove the owner's discussions.
+    assert.equal((await call('ub', b, { action: 'poll.vote', opId: op(), postId: later.id, option: 0 })).rule, 'community_members_only');
+    await call('ub', b, { action: 'community.join', opId: op(), communityId: closed, rulesAccepted: true });
+    await call('ua', a, { action: 'community.member', opId: op(), communityId: closed, profileId: b, change: 'host' });
+    assert.equal((await call('ub', b, { action: 'discussion.host', opId: op(), postId: later.id, change: 'remove' })).status, 403);
+
+    // A ban covers the person's couple: it has to ask.
+    const open = await make('ua', a, { name: 'Открытое для пар', privacy: 'open' });
+    await call('uc', c, { action: 'community.join', opId: op(), communityId: open, rulesAccepted: true });
+    await call('ua', a, { action: 'community.member', opId: op(), communityId: open, profileId: c, change: 'remove' });
+    const pair = await coupleOf([b, c]);
+    assert.equal((await call('ub', pair, { action: 'community.join', opId: op(), communityId: open, rulesAccepted: true })).state, 'requested');
+
+    // A couple whose partners are both members reads a closed community's discussions.
+    const club = await make('ua', a, { name: 'Клуб для двоих', privacy: 'closed', joinQuestion: 'Кто вы?' });
+    for (const [u, prof] of [['ub', b], ['uc', c]]) {
+      const r = await call(u, prof, { action: 'community.join', opId: op(), communityId: club, rulesAccepted: true, answer: 'Хотим вместе учиться' });
+      const pending = (await call('ua', a, { action: 'community.requests', communityId: club })).items.find((/** @type {any} */ x) => x.id === r.id);
+      await call('ua', a, { action: 'community.requestDecide', opId: op(), requestId: r.id, rev: pending.rev, approve: true });
+    }
+    const t = await post('ua', a, club, 'Закрытая тема клуба');
+    assert.equal((await call('ub', pair, { action: 'post.get', postId: t.id })).status, 200);
+    assert.equal((await call('ub', pair, { action: 'community.discussions', communityId: club })).locked, false);
   } finally { await pg.close(); }
 });

@@ -33,7 +33,7 @@ async function visible(q, id, viewer, invite) {
   if (!c) fail(404, 'not_found');
   if (c.can_see) return c;
   if (invite && c.state === 'published' && c.privacy === 'hidden') {
-    const [inv] = await q.query(`select 1 from feture.community_invite where token_hash = $1 and community_id = $2 and revoked_at is null`, [sha256(invite), id]);
+    const [inv] = await q.query(`select 1 from feture.community_invite where token_hash = $1 and community_id = $2 and revoked_at is null and expires_at > now()`, [sha256(invite), id]);
     const [{ b }] = await q.query('select feture.blocked($1, $2) b', [viewer.profileId, c.owner_profile_id]);
     if (inv && !b) return c;
   }
@@ -44,6 +44,12 @@ async function visible(q, id, viewer, invite) {
 async function membership(q, communityId, profileId) {
   const [m] = await q.query(`select * from feture.community_member where community_id = $1 and profile_id = $2`, [communityId, profileId]);
   return m ?? null;
+}
+
+/** @param {Q} q @param {string} communityId @param {string} profileId */
+async function isReader(q, communityId, profileId) {
+  const [{ ok }] = await q.query('select feture.community_reader($1, $2) ok', [communityId, profileId]);
+  return ok;
 }
 
 /** Owner or host acting for the community (the acting profile, or its owner profile for the owner role).
@@ -67,14 +73,38 @@ export async function canWrite(q, communityId, acting) {
   return ok;
 }
 
-/** @param {Q} q @param {string} ownerProfileId @param {string} accountId @param {any} f */
-async function createCommunity(q, ownerProfileId, accountId, f) {
-  const [{ n }] = await q.query('select count(*)::int n from feture.topic where id = any($1) and not hidden', [f.topics]);
-  if (n !== f.topics.length) fail(400, 'invalid_input', { fields: ['topics'] });
+/** Topics, cover and place of a create or an edit: known topics, the owner's own community cover, an approved place
+ * or one the author submitted. @param {Q} q @param {string} ownerProfileId @param {string} accountId @param {any} f */
+async function checkRefs(q, ownerProfileId, accountId, f) {
+  if (f.topics) {
+    const [{ n }] = await q.query('select count(*)::int n from feture.topic where id = any($1) and not hidden', [f.topics]);
+    if (n !== f.topics.length) fail(400, 'invalid_input', { fields: ['topics'] });
+  }
   if (f.coverAssetId) {
     const [a] = await q.query(`select 1 from feture.media_asset where id = $1 and owner_profile_id = $2 and purpose = 'community' and state in ('uploaded', 'scanning', 'needs_review', 'approved')`, [f.coverAssetId, ownerProfileId]);
     if (!a) fail(400, 'invalid_input', { fields: ['coverAssetId'] });
   }
+  if (f.placeId) {
+    const [pl] = await q.query(`select 1 from feture.place where id = $1 and (state = 'approved' or state = 'pending' and submitted_by = $2)`, [f.placeId, accountId]);
+    if (!pl) fail(400, 'invalid_input', { fields: ['placeId'] });
+  }
+}
+
+/** Is a profile kept out of a community: blocked with its owner, or one of the profile's people (or their couple) was
+ * removed from it (a ban covers the person and the couple alike, Q14)? @param {Q} q @param {any} c @param {string} profileId */
+async function keptOut(q, c, profileId) {
+  const [{ out, banned }] = await q.query(
+    `select feture.blocked($2, $3) out,
+       exists (select 1 from feture.community_member cm
+               join feture.profile_member x on x.profile_id = cm.profile_id
+               join feture.profile_member y on y.account_id = x.account_id and y.profile_id = $2
+               where cm.community_id = $1 and cm.state = 'removed') banned`, [c.id, profileId, c.owner_profile_id]);
+  return { out, banned };
+}
+
+/** @param {Q} q @param {string} ownerProfileId @param {string} accountId @param {any} f */
+async function createCommunity(q, ownerProfileId, accountId, f) {
+  await checkRefs(q, ownerProfileId, accountId, f);
   let c;
   try {
     [c] = await q.query(
@@ -104,10 +134,18 @@ registerApprovalKind('community.create', {
 registerApprovalKind('community.join', {
   apply: async (q, row) => {
     const c = /** @type {any} */ (row.change);
-    const [cm] = await q.query(`select state, privacy from feture.community where id = $1`, [c.communityId]);
+    const [cm] = await q.query(`select id, state, privacy, owner_profile_id from feture.community where id = $1`, [c.communityId]);
     if (!cm || cm.state !== 'published') fail(409, 'conflict');
+    // Re-checked at approval: a block since, a ban, a hidden community whose invitation was revoked meanwhile.
+    const { out, banned } = await keptOut(q, cm, row.profile_id);
+    if (out) fail(409, 'conflict');
+    if (cm.privacy === 'hidden') {
+      const [inv] = await q.query(`select 1 from feture.community_invite where token_hash = decode($1, 'hex') and community_id = $2 and revoked_at is null and expires_at > now()`, [c.inviteHash ?? '', cm.id]);
+      if (!inv) fail(409, 'conflict');
+    }
     const m = await membership(q, c.communityId, row.profile_id);
-    if (cm.privacy === 'open' && m?.state !== 'removed') await joinNow(q, c.communityId, row.profile_id, row.requested_by);
+    if (m?.state === 'active') fail(409, 'conflict');
+    if (cm.privacy === 'open' && !banned) await joinNow(q, c.communityId, row.profile_id, row.requested_by);
     else await q.query(`insert into feture.community_request (community_id, profile_id, answer, acted_by) values ($1, $2, $3, $4)`, [c.communityId, row.profile_id, c.answer, row.requested_by]);
   },
 });
@@ -129,10 +167,8 @@ const run = {
     const [c] = await q.query(`select * from feture.community where id = $1 for update`, [input.communityId]);
     if (c.rev !== input.rev) fail(409, 'conflict', { rev: c.rev });
     const { opId: _, communityId: __, rev: ___, ...f } = input;
-    if (f.topics) {
-      const [{ n }] = await q.query('select count(*)::int n from feture.topic where id = any($1) and not hidden', [f.topics]);
-      if (n !== f.topics.length) fail(400, 'invalid_input', { fields: ['topics'] });
-    }
+    await checkRefs(q, c.owner_profile_id, acting.accountId, f);
+    if (f.privacy === 'open') f.joinQuestion = null; // an open community has no join question
     /** @type {Record<string, unknown>} */
     const now = /** @type {Record<string, unknown>} */ ({}), later = /** @type {Record<string, unknown>} */ ({});
     for (const [k, v] of Object.entries(f)) {
@@ -140,6 +176,8 @@ const run = {
       const major = c.state === 'published' && (MAJOR.includes(k) || (k === 'privacy' && PRIVACY.indexOf(String(v)) > PRIVACY.indexOf(c.privacy)));
       (major ? later : now)[k] = v;
     }
+    // A join question that comes with opening the community waits together with the privacy change.
+    if ('privacy' in later && 'joinQuestion' in now) { later.joinQuestion = now.joinQuestion; delete now.joinQuestion; }
     if (Object.keys(now).length) {
       const keys = Object.keys(now);
       await q.query(
@@ -221,14 +259,15 @@ const run = {
     if (c.state !== 'published') fail(409, 'conflict', { state: c.state });
     const m = await membership(q, c.id, acting.profileId);
     if (m?.state === 'active') fail(409, 'conflict', { state: 'member' });
+    const { banned } = await keptOut(q, c, acting.profileId);
     const [{ pending }] = await q.query(`select exists (select 1 from feture.community_request where community_id = $1 and profile_id = $2 and state = 'pending') pending`, [c.id, acting.profileId]);
     if (pending) fail(409, 'conflict', { state: 'pending' });
     if (c.privacy !== 'open' && c.join_question && input.answer.length < 10) fail(400, 'invalid_input', { fields: ['answer'] });
     // A couple joining shows the couple there: a widening the partner decides on when they asked to.
     if (needsPartner(acting, 'community.join')) {
-      return { pending: await requestApproval(q, acting, { kind: 'community.join', targetType: 'community', targetId: c.id, change: { communityId: c.id, answer: input.answer }, summary: [c.name] }) };
+      return { pending: await requestApproval(q, acting, { kind: 'community.join', targetType: 'community', targetId: c.id, change: { communityId: c.id, answer: input.answer, inviteHash: input.invite ? sha256(input.invite).toString('hex') : null }, summary: [c.name] }) };
     }
-    if (c.privacy === 'open' && m?.state !== 'removed') {
+    if (c.privacy === 'open' && !banned) {
       await joinNow(q, c.id, acting.profileId, acting.accountId);
       return { state: 'member' };
     }
@@ -265,9 +304,11 @@ const run = {
     const [r] = await q.query(`select * from feture.community_request where id = $1 for update`, [input.requestId]);
     if (!r) fail(404, 'not_found');
     await requireHost(q, r.community_id, acting, 'host');
-    const [c] = await q.query(`select state from feture.community where id = $1`, [r.community_id]);
+    const [c] = await q.query(`select id, state, owner_profile_id from feture.community where id = $1`, [r.community_id]);
     if (c.state !== 'published') fail(409, 'conflict', { state: c.state });
     if (r.state !== 'pending' || r.rev !== input.rev) fail(409, 'conflict', { state: r.state, rev: r.rev });
+    const [{ active }] = await q.query(`select exists (select 1 from feture.profile where id = $1 and state = 'active') active`, [r.profile_id]);
+    if (input.approve && (!active || (await keptOut(q, c, r.profile_id)).out)) fail(409, 'conflict', { rule: 'requester_unavailable' });
     const [{ own }] = await q.query(
       `select exists (select 1 from feture.profile_member x join feture.profile_member y on x.account_id = y.account_id where x.profile_id = $1 and y.profile_id = $2) own`,
       [r.profile_id, acting.profileId]);
@@ -317,7 +358,7 @@ const run = {
   async 'community.members'(q, { acting: a, input }) {
     const viewer = need(a);
     const c = await visible(q, input.communityId, viewer);
-    const reader = c.privacy === 'open' || c.own || (await membership(q, c.id, viewer.profileId))?.state === 'active';
+    const reader = c.privacy === 'open' || c.own || await isReader(q, c.id, viewer.profileId);
     const [{ n }] = await q.query(`select count(*)::int n from feture.community_member where community_id = $1 and state = 'active'`, [c.id]);
     if (!reader) return { count: n, items: null }; // closed: the list opens after joining
     const items = await q.query(
@@ -337,8 +378,8 @@ const run = {
     }
     // An unguessable link; it lets the holder see the community and ask to join, never admits by itself.
     const token = randomBytes(24).toString('base64url');
-    await q.query(`insert into feture.community_invite (token_hash, community_id, created_by) values ($1, $2, $3)`, [sha256(token), input.communityId, acting.accountId]);
-    return { token };
+    const [inv] = await q.query(`insert into feture.community_invite (token_hash, community_id, created_by) values ($1, $2, $3) returning expires_at`, [sha256(token), input.communityId, acting.accountId]);
+    return { token, expiresAt: inv.expires_at };
   },
 
   async 'community.discussions'(q, { acting: a, input }) {
@@ -349,15 +390,18 @@ const run = {
          (select count(*)::int from feture.reply r where r.post_id = p.id and r.state = 'published') replies
        from feture.post p where p.community_id = $1 and p.state = 'published' and feture.post_visible(p, $2, $3)
        order by p.pinned desc, p.published_at desc limit 50`, [c.id, viewer.profileId, viewer.accountId]);
-    const locked = c.privacy !== 'open' && !c.own && (await membership(q, c.id, viewer.profileId))?.state !== 'active';
+    const locked = c.privacy !== 'open' && !c.own && !(await isReader(q, c.id, viewer.profileId));
     return { locked, items: locked ? [] : rows };
   },
 
   async 'discussion.host'(q, { acting: a, input }) {
     const acting = need(a);
-    const [p] = await q.query(`select id, community_id, owner_profile_id from feture.post where id = $1 and community_id is not null for update`, [input.postId]);
+    const [p] = await q.query(
+      `select p.id, p.community_id, p.owner_profile_id, c.owner_profile_id community_owner from feture.post p join feture.community c on c.id = p.community_id
+       where p.id = $1 and p.state = 'published' for update of p`, [input.postId]);
     if (!p) fail(404, 'not_found');
-    await requireHost(q, p.community_id, acting, 'host');
+    const me = await requireHost(q, p.community_id, acting, 'host');
+    if (input.change === 'remove' && p.owner_profile_id === p.community_owner && me.role !== 'owner') fail(403, 'forbidden');
     const sets = { pin: 'pinned = true', unpin: 'pinned = false', excludePopular: 'popular_excluded = true', includePopular: 'popular_excluded = false', remove: `state = 'removed', removed_reason = 'host'` };
     await q.query(`update feture.post set ${sets[/** @type {keyof typeof sets} */ (input.change)]}, updated_at = now() where id = $1`, [p.id]);
     if (input.change === 'remove') await enqueue(q, 'discussion.removed', p.owner_profile_id, { postId: p.id, communityId: p.community_id });
@@ -367,7 +411,7 @@ const run = {
   async 'staff.communityQueue'(q, { account, input }) {
     await requireStaff(q, account.id, ['owner', 'lead', 'moderator']);
     const items = await q.query(
-      `select c.id, c.name, c.description, c.topics, c.privacy, c.rules, c.state, c.pending_change, c.created_at
+      `select c.id, c.rev, c.name, c.description, c.topics, c.privacy, c.join_question, c.rules, c.cover_asset_id, c.place_id, c.state, c.pending_change, c.created_at
        from feture.community c
        where (c.state = 'in_review' or c.pending_change is not null)
          and not exists (select 1 from feture.profile_member m where m.profile_id = c.owner_profile_id and m.account_id = $1)
@@ -381,6 +425,14 @@ const run = {
     if (!c) fail(404, 'not_found');
     const [{ own }] = await q.query(`select exists (select 1 from feture.profile_member where profile_id = $1 and account_id = $2) own`, [c.owner_profile_id, account.id]);
     if (own) fail(403, 'forbidden');
+    // Staff decide on exactly what they saw: any edit since bumps rev.
+    if (c.rev !== input.rev) fail(409, 'conflict', { rev: c.rev });
+    const next = { ...c, ...Object.fromEntries(Object.entries(c.pending_change ?? {}).filter(([k]) => Object.hasOwn(COLS, k)).map(([k, v]) => [COLS[/** @type {keyof typeof COLS} */ (k)], v])) };
+    if (input.decision === 'approve' && next.cover_asset_id) {
+      // A cover is public everywhere: it must have passed its checks and be safe.
+      const [a] = await q.query(`select 1 from feture.media_asset where id = $1 and owner_profile_id = $2 and purpose = 'community' and state = 'approved' and explicitness = 'safe'`, [next.cover_asset_id, c.owner_profile_id]);
+      if (!a) fail(422, 'rule_violation', { rule: 'cover_not_approved' });
+    }
     if (c.state === 'in_review') {
       await q.query(
         input.decision === 'approve'
@@ -389,7 +441,7 @@ const run = {
         input.decision === 'approve' ? [c.id] : [c.id, input.reason]);
     } else if (c.pending_change) {
       if (input.decision === 'approve') {
-        const keys = Object.keys(c.pending_change).filter(k => k in COLS);
+        const keys = Object.keys(c.pending_change).filter(k => Object.hasOwn(COLS, k));
         if (keys.length) {
           await q.query(
             `update feture.community set ${keys.map((k, i) => `${COLS[/** @type {keyof typeof COLS} */ (k)]} = $${i + 2}`).join(', ')}, pending_change = null, updated_at = now() where id = $1`,
@@ -400,7 +452,10 @@ const run = {
       }
     } else fail(409, 'conflict', { state: c.state });
     await enqueue(q, input.decision === 'approve' ? 'community.published' : 'community.rejected', c.owner_profile_id, { communityId: c.id });
-    await journal(q, account.id, 'community.' + input.decision, 'community', c.id);
+    await journal(q, account.id, 'community.' + input.decision, 'community', c.id, {
+      rev: c.rev, reason: input.reason || null,
+      decided: c.state === 'in_review' ? { name: c.name, description: c.description, privacy: c.privacy, rules: c.rules, cover: c.cover_asset_id } : c.pending_change,
+    });
     return { decision: input.decision };
   },
 };

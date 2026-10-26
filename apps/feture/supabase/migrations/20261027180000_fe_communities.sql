@@ -58,13 +58,28 @@ create table feture.community_invite (
   community_id uuid not null references feture.community(id) on delete cascade,
   created_by uuid not null references feture.account(id),
   created_at timestamptz not null default now(),
+  expires_at timestamptz not null default now() + interval '30 days',
   revoked_at timestamptz
 );
 
 alter table feture.post
   add constraint post_community_fk foreign key (community_id) references feture.community(id) on delete cascade,
   add column pinned boolean not null default false,
-  add column popular_excluded boolean not null default false;
+  add column popular_excluded boolean not null default false,
+  add column members_only boolean not null default false;
+
+-- A discussion written while the community was closed or hidden stays members-only after the privacy widens:
+-- it was written for members (stamped at creation and again at publication).
+create function feture.post_members_only() returns trigger
+language plpgsql set search_path = pg_catalog, feture as $$
+begin
+  if new.community_id is not null and (tg_op = 'INSERT' or new.state = 'published') then
+    new.members_only := new.members_only or exists (select 1 from feture.community c where c.id = new.community_id and c.privacy <> 'open');
+  end if;
+  return new;
+end $$;
+create trigger post_members_only before insert or update of state on feture.post
+  for each row execute function feture.post_members_only();
 
 -- Community visible to a viewer: published (or the viewer is in the owning profile), owner active, no block either way.
 -- Hidden communities: members only (invite holders reach them through community.get with the token).
@@ -79,10 +94,15 @@ language sql stable set search_path = pg_catalog, feture as $$
   end
 $$;
 
--- A member who may read the community's discussions: an active member, or (couple) the couple is a member.
+-- A member who may read the community's discussions: an active member, or a couple whose partners are both active
+-- members (such a couple may also write there).
 create function feture.community_reader(community uuid, viewer uuid) returns boolean
 language sql stable set search_path = pg_catalog, feture as $$
   select exists (select 1 from feture.community_member cm where cm.community_id = community and cm.profile_id = viewer and cm.state = 'active')
+    or exists (select 1 from feture.profile v where v.id = viewer and v.kind = 'couple')
+       and (select count(*) = 2 from feture.profile_member pm join feture.account a on a.id = pm.account_id
+            join feture.community_member cm on cm.community_id = community and cm.profile_id = a.person_profile_id and cm.state = 'active'
+            where pm.profile_id = viewer and pm.state = 'active')
 $$;
 
 -- Posts gain one rule: a discussion of a closed or hidden community is for its members (and its owner).
@@ -98,7 +118,7 @@ language sql stable set search_path = pg_catalog, feture as $$
            or exists (select 1 from feture.photo_tag t where t.post_id = p.id and t.profile_id = viewer and t.state <> 'no'))
       and (p.community_id is null or exists (
             select 1 from feture.community c where c.id = p.community_id and c.state = 'published'
-              and (c.privacy = 'open' or feture.community_reader(c.id, viewer)
+              and (c.privacy = 'open' and not p.members_only or feture.community_reader(c.id, viewer)
                    or exists (select 1 from feture.profile_member m where m.profile_id = c.owner_profile_id and m.account_id = viewer_account and m.state = 'active'))))
       and case p.audience
         when 'all' then true

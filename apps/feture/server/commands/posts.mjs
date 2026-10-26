@@ -230,6 +230,9 @@ registerApprovalKind('post.publish', {
     // The partner approved exactly this version: if the draft changed since, nothing is published.
     const [p] = await q.query('select rev from feture.post where id = $1', [row.target_id]);
     if (!p || p.rev !== /** @type {any} */ (row.change).rev) fail(409, 'conflict', { rule: 'changed_since_approval' });
+    // Still allowed to write in the community at the moment of publication.
+    const [d] = await q.query('select p.community_id, o.kind from feture.post p join feture.profile o on o.id = p.owner_profile_id where p.id = $1', [row.target_id]);
+    await requireCommunityWriter(q, d.community_id, /** @type {Acting} */ ({ profileId: row.profile_id, accountId: row.requested_by, kind: d.kind }));
     await doPublish(q, String(row.target_id), row.profile_id);
   },
 });
@@ -450,7 +453,8 @@ const run = {
 
   async 'poll.vote'(q, { acting: a, input }) {
     const viewer = need(a);
-    await visiblePost(q, input.postId, viewer);
+    const p = await visiblePost(q, input.postId, viewer);
+    if (p.community_id) await requireCommunityWriter(q, p.community_id, viewer); // only members vote in a community
     const [poll] = await q.query('select options from feture.poll where post_id = $1', [input.postId]);
     if (!poll) fail(404, 'not_found');
     if (input.option === null) {
