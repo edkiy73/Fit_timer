@@ -82,3 +82,51 @@ test('reports: grouped and ordered, decided once with reasons, reporters told; d
     for (const act of ['report.remove', 'report.keep', 'dispute.restore', 'revision.approve', 'sanction.suspend', 'sanction.lift']) assert.ok(j.includes(act), act);
   } finally { await pg.close(); }
 });
+
+test('review fixes: no suspension through reports, rank rules, suspension covers the couple, owner-only lifts, stale revisions', async () => {
+  const { pg, db, call, person, coupleOf } = await setup();
+  try {
+    const boss = await person('uo', 'Boss'), lead = await person('ul', 'Lena'), mod = await person('um', 'Mira');
+    const a = await person('ua', 'Alex'), b = await person('ub', 'Kira'), c = await person('uc', 'Noa');
+    await db.query(`insert into feture.staff_role (account_id, role) select id, 'owner' from feture.account where person_profile_id = $1`, [boss]);
+    await call('uo', null, { action: 'staff.grant', opId: op(), handle: 'Lena', role: 'lead', grant: true });
+    await call('uo', null, { action: 'staff.grant', opId: op(), handle: 'Mira', role: 'moderator', grant: true });
+
+    // Profiles are never removed through a report decision, and a decision needs an open report.
+    await call('ub', b, { action: 'report.create', opId: op(), targetType: 'profile', targetId: a, reason: 'threat' });
+    assert.equal((await call('um', null, { action: 'staff.reportDecide', opId: op(), targetType: 'profile', targetId: a, decision: 'remove', rule: 'threats' })).status, 400);
+    const d = await call('ua', a, { action: 'post.saveDraft', opId: op(), post: draft('Без жалоб') });
+    await call('ua', a, { action: 'post.publish', opId: op(), postId: d.id });
+    assert.equal((await call('um', null, { action: 'staff.reportDecide', opId: op(), targetType: 'post', targetId: d.id, decision: 'remove', rule: 'spam' })).rule, 'no_open_reports');
+
+    // Rank: a lead cannot suspend the owner or another lead.
+    assert.equal((await call('ul', null, { action: 'staff.sanction', opId: op(), profileId: boss, decision: 'suspend', rule: 'threats' })).status, 403);
+
+    // Suspending a person stops their couple too: the partner cannot keep acting as it.
+    const pair = await coupleOf([a, c]);
+    assert.equal((await call('ul', null, { action: 'staff.sanction', opId: op(), profileId: a, decision: 'suspend', rule: 'minors' })).state, 'suspended');
+    assert.equal((await call('uc', pair, { action: 'profile.settings' })).status, 403);
+    assert.equal((await call('uc', c, { action: 'profile.settings' })).status, 200); // the partner's own profile is untouched
+    // A 'minors' suspension is lifted by the owner only.
+    assert.equal((await call('ul', null, { action: 'staff.sanction', opId: op(), profileId: a, decision: 'lift', rule: 'appeal_granted' })).status, 403);
+    assert.equal((await call('uo', null, { action: 'staff.sanction', opId: op(), profileId: a, decision: 'lift', rule: 'appeal_granted' })).state, 'active');
+
+    // A revision made on an older version is stale once the author edited again; staff may open media of reported posts.
+    const [{ account_id }] = await db.query('select account_id from feture.profile_member where profile_id = $1', [a]);
+    const mk = async () => (await db.query(
+      `insert into feture.media_asset (owner_profile_id, uploaded_by, kind, purpose, storage_key, mime, declared_bytes, state, explicitness, copies_at)
+       values ($1, $2, 'image', 'post', 'u/' || gen_random_uuid(), 'image/jpeg', 10, 'approved', 'safe', now()) returning id`, [a, account_id]))[0].id;
+    const i1 = await mk(), i2 = await mk();
+    const p = await call('ua', a, { action: 'post.saveDraft', opId: op(), post: draft('Фото', { mediaIds: [i1] }) });
+    await call('ua', a, { action: 'post.publish', opId: op(), postId: p.id });
+    const r1 = (await call('ua', a, { action: 'post.get', postId: p.id })).post.rev;
+    await call('ua', a, { action: 'post.edit', opId: op(), postId: p.id, rev: r1, post: draft('Фото', { mediaIds: [i1, i2] }) }); // major → review
+    await call('ua', a, { action: 'post.edit', opId: op(), postId: p.id, rev: r1, post: draft('Фото.', { mediaIds: [i1] }) });   // minor → supersedes it
+    assert.deepEqual((await call('um', null, { action: 'staff.revisionQueue' })).items, []);
+    assert.equal((await call('um', null, { action: 'staff.mediaView', assetId: i1 })).status, 409);
+    await call('ub', b, { action: 'report.create', opId: op(), targetType: 'post', targetId: p.id, reason: 'private' });
+    assert.ok((await call('um', null, { action: 'staff.mediaView', assetId: i1 })).src);
+    const queue = (await call('um', null, { action: 'staff.reportQueue' })).items;
+    assert.equal(queue.find(x => x.targetId === p.id).reported.body, 'Фото.'); // evidence snapshot taken at report time
+  } finally { await pg.close(); }
+});

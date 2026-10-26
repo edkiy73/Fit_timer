@@ -17,7 +17,8 @@ export const moderationCommands = {
       // Statement of reasons for the author (DSA art. 17): which rule.
       rule: z.enum(['minors', 'threats', 'private_material', 'spam', 'illegal', 'community_rules']).optional(),
       note: text(500).default(''),
-    }).refine(v => v.decision === 'keep' || !!v.rule, { message: 'remove needs a rule', path: ['rule'] }),
+    }).refine(v => v.decision === 'keep' || !!v.rule, { message: 'remove needs a rule', path: ['rule'] })
+      .refine(v => v.targetType !== 'profile' || v.decision === 'keep', { message: 'profiles are sanctioned through staff.sanction', path: ['decision'] }),
   },
   'staff.disputeQueue': { profile: false, write: false, input: z.strictObject({ limit: z.int().min(1).max(50).default(20) }) },
   'staff.disputeDecide': {

@@ -84,8 +84,13 @@ const run = {
   async 'staff.mediaView'(q, { account, input, cfg }) {
     await requireStaff(q, account.id, REVIEWERS);
     const a = await reviewable(q, account.id, input.assetId);
-    // Staff see content only for what is waiting for them (S4 §3), never blocked material or private media at large.
-    if (a.state !== 'needs_review') fail(409, 'conflict', { state: a.state });
+    // Staff see content only for what is waiting for them (S4 §3): media on review, or media of a post under open
+    // reports or a dispute; never blocked material or private media at large.
+    const [{ inCase }] = await q.query(
+      `select exists (select 1 from feture.media_attachment ma join feture.post p on p.id = ma.target_id
+         where ma.target_type = 'post' and ma.asset_id = $1
+           and (p.disputed_at is not null or exists (select 1 from feture.report r where r.target_type = 'post' and r.target_id = p.id and r.state = 'open'))) "inCase"`, [a.id]);
+    if (a.state === 'blocked' || (a.state !== 'needs_review' && !inCase)) fail(409, 'conflict', { state: a.state });
     await journal(q, account.id, 'media.view', 'media', a.id);
     if (!a.copies_at || !cfg.media.delivery) return { src: null };
     const variants = /** @type {const} */ (['card', 'full']);
