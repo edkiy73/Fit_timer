@@ -1,0 +1,57 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>FetUre V19 — что изменено</title><style>
+:root{--bg:#F3EEF2;--surf:#fff;--ink:#1E1219;--mute:#6F5A67;--line:#E6DAE3;--acc:#E01A3E;--lil:#5C47D6}
+@media(prefers-color-scheme:dark){:root{--bg:#1A0F16;--surf:#241520;--ink:#FBF0F4;--mute:#BCA4B1;--line:#3E2636;--acc:#FF3355;--lil:#B9A6FF}}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:920px;margin:auto;padding:28px 16px 64px}h1{font-size:clamp(28px,6vw,42px);line-height:1.1;letter-spacing:-.03em}h2{margin-top:40px;font-size:24px}h3{margin:24px 0 6px;font-size:18px}
+a{color:var(--lil)}code{background:var(--surf);border:1px solid var(--line);border-radius:6px;padding:1px 5px;font-size:.88em}
+li{margin:4px 0}.cta{display:inline-block;margin:6px 8px 10px 0;padding:12px 18px;border-radius:14px;background:var(--acc);color:#fff;font-weight:700;text-decoration:none}.cta.soft{background:var(--surf);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+.lead{font-size:18px}.box{padding:16px 18px;border-radius:16px;background:var(--surf);border:1px solid var(--line)}
+.shots{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-top:12px}.shots.wide{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+figure{margin:0}figure img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);background:var(--surf)}figcaption{margin-top:6px;font-size:13px;color:var(--mute);line-height:1.4}
+table{width:100%;border-collapse:collapse;font-size:15px}td,th{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{color:var(--mute);font-weight:600}
+</style></head><body><main>
+<a class="cta" href="prototype-v19.html#F01">Открыть V19 →</a><a class="cta soft" href="prototype-v18.html#X01">V18</a>
+<h1>FetUre V19 — «Я / Мы» в докбаре</h1>
+<p class="lead">Теперь «Я» или «Мы» выбирается в одном месте — аватаром в докбаре — и действует на всё приложение. В режиме «Мы» лайки, подписки, сообщества, события и публикации идут от пары, как у соло. Уведомления, чаты и «Нужно решить» общие.</p>
+<p>V18 сохранена без изменений. Журнал — <code>docs/design-reference/V19-CHANGELOG.md</code>. Контракт — <code>tests/prototype-v19-contract.mjs</code>: правила V13, V14 и V18 плюс проверки V19.</p>
+
+<h2>Решения владельца</h2>
+<table><tr><th>Вопрос</th><th>Решение</th></tr>
+<tr><td>Согласие партнёра</td><td>Нужно только для ответа на событие, и только если партнёр включил подтверждение. Лайки, подписки и вступление в сообщества идут сразу, партнёру приходит уведомление.</td></tr>
+<tr><td>События и сообщества</td><td>«Идём» от пары занимает 2 места. В сообщество пара вступает как один участник; в закрытое — по заявке, её одобряет ведущий.</td></tr>
+<tr><td>Режим после перезапуска</td><td>Запоминается последний выбор. В прототипе он живёт до перезагрузки страницы, как и все данные.</td></tr>
+<tr><td>Аватар в доке</td><td>Нажатие открывает «Действовать как»: «Я», «Мы» и «Открыть профиль».</td></tr>
+</table>
+
+<h2>Как это работает</h2>
+<h3>Докбар</h3>
+<p>Вместо значка «Я» — аватар текущего профиля: свой или двойной аватар пары в фиолетовом кольце. Подпись под ним — «Я» или «Мы». Без пары нажатие просто открывает профиль. С парой открывается лист «Действовать как»: «Я · alex_b» и «Мы · Alex и Kira» со счётчиками новых симпатий и запросов у каждого, ниже «Открыть профиль». На компьютере тот же лист открывает кнопка с аватаром внизу боковой панели.</p>
+<h3>Режим всегда виден</h3>
+<p>В «Мы» по верху экрана идёт фиолетовая полоса. У сердечек появляется метка «Мы». На кнопках прямо написано, от кого действие: «Нравится · от пары», «Подписаться от пары», «Вступить от пары», «Идём · 2 места», «Опубликовать как · Мы». Подписи-кнопки автора в редакторе, профиле и подборке открывают тот же лист из докбара: переключатель один.</p>
+<h3>Что от чьего имени</h3>
+<ul>
+<li><b>Режим решает:</b> лайки публикаций, обсуждений и ответов; подписки; вступление в сообщества; ответы на события; новые публикации; подборка знакомств и симпатии; экран «Я».</li>
+<li><b>Своё имя решает:</b> чат отвечает от того профиля, которому написали; уведомление, запрос доступа и уже созданная публикация — от своего профиля.</li>
+<li><b>Общее:</b> уведомления, чаты (с фильтром «Личные / От пары»), «Нужно решить», сохранённое, блокировки, настройки.</li>
+<li><b>Раздельное:</b> членство в сообществах, ответы на события, подписки, реакции, симпатии и подборка, доступы.</li>
+</ul>
+<h3>Без молчаливых подмен</h3>
+<p>Если в режиме «Мы» симпатию от пары отправить нельзя (у пары выключены знакомства или человека нет в знакомствах), кнопки «Нравится» нет. Вместо неё объяснение и подсказка «Сменить профиль — аватар внизу». Раньше в таком случае симпатия молча уходила от «Я».</p>
+<p>Ссылка на свой второй профиль (например, на пару в ленте, когда включено «Я») открывает его только для просмотра и не переключает режим.</p>
+<h3>События с согласием</h3>
+<p>Если партнёр включил подтверждение, ответ «Идём» или «Интересно» от пары уходит ему на согласование. На событии появляется «Ждёт Kira», у партнёра — пункт в «Нужно решить» с кнопками «Одобрить / Вернуть». «Не идём» и снятие ответа срабатывают сразу.</p>
+
+<h2>Экраны</h2>
+<div class="shots">
+<figure><img src="images/v19/01-dock-sheet.webp" alt="" loading="lazy"><figcaption>«Действовать как» из докбара</figcaption></figure>
+<figure><img src="images/v19/02-feed-us.webp" alt="" loading="lazy"><figcaption>Лента в режиме «Мы»</figcaption></figure>
+<figure><img src="images/v19/03-profile-us.webp" alt="" loading="lazy"><figcaption>Чужой профиль: «Нравится · от пары», «Подписаться от пары»</figcaption></figure>
+<figure><img src="images/v19/04-event-us.webp" alt="" loading="lazy"><figcaption>Событие: «Пойдёте вдвоём?», «Идём · 2 места»</figcaption></figure>
+<figure><img src="images/v19/05-community-us.webp" alt="" loading="lazy"><figcaption>Сообщество: «Вступить от пары»</figcaption></figure>
+<figure><img src="images/v19/06-me-us.webp" alt="" loading="lazy"><figcaption>«Я» в режиме «Мы» — профиль пары</figcaption></figure>
+</div>
+
+<h2>Проверено</h2>
+<p id="verified">VERIFIED</p>
+<p>Не проверено: реальные устройства, экранные дикторы, живая пара с двух телефонов, проверка на людях.</p>
+</main></body></html>
