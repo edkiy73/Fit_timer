@@ -1,5 +1,6 @@
 // @ts-check
 import { accessCommands } from '../../contracts/access.mjs';
+import { requireUnrestricted } from '../profiles.mjs';
 import { fail } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { needsPartner, narrowCouple, registerApprovalKind, requestApproval } from '../approvals.mjs';
@@ -198,6 +199,7 @@ const run = {
 
   async 'access.request'(q, { acting: a, input, account }) {
     const acting = need(a);
+    await requireUnrestricted(q, acting);
     // One request budget per account across «Я» and «Мы»; serialised so parallel requests cannot all pass.
     await q.query(`select pg_advisory_xact_lock(hashtext('feture-access-quota:' || $1))`, [acting.accountId]);
     // Every account that would see the private part must be verified adult: both partners for a couple (Q26).

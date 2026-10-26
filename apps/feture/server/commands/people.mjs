@@ -4,6 +4,7 @@ import { fail, isUniqueViolation } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
 import { cards } from './discover.mjs';
+import { requireUnrestricted } from '../profiles.mjs';
 
 /** Slice F2: people search, links between profiles, «Что у вас общего» (S1 §11, extract/people-discover-chats.md).
  * Search matches the start of a nickname or name, from two characters, never anyone hidden by a block (Q8). A link is
@@ -41,6 +42,7 @@ async function endpoint(q, linkId, acting) {
 
 /** Proposes a link (also the apply of an approved couple proposal). @param {Q} q @param {Acting} acting @param {any} c */
 async function doPropose(q, acting, c) {
+  await requireUnrestricted(q, acting);
   const t = await otherProfile(q, acting, c.profileId);
   if (t.related) fail(422, 'rule_violation', { rule: 'own_partner' });
   const [s] = await q.query('select links_from from feture.profile_settings where profile_id = $1', [t.id]);
@@ -114,6 +116,7 @@ const run = {
     const rows = await q.query(
       `select p.id from feture.profile p
        where p.state = 'active' and p.id <> $1 and (lower(p.handle) like $2 || '%' or lower(p.name) like $2 || '%') and not feture.blocked($1, p.id)
+         and not feture.restricted(p.id)
        order by (lower(p.handle) = $3) desc, lower(p.handle) limit 20`, [viewer.profileId, prefix, input.q.toLowerCase()]);
     return { items: await cards(q, viewer, rows.map(r => r.id), cfg.media) };
   },
@@ -146,6 +149,7 @@ const run = {
 
   async 'link.propose'(q, { acting: a, input }) {
     const acting = need(a);
+    await requireUnrestricted(q, acting);
     const { opId: _, ...c } = input;
     if (needsPartner(acting, 'link.propose')) {
       await otherProfile(q, acting, c.profileId);

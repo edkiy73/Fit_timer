@@ -49,6 +49,9 @@ const TYPES = /** @type {Record<string, {type: string, actor?: string, object?: 
   'couple.changed': { type: 'pair.acted' },
   'couple.approvalChanged': { type: 'pair.trust' },
   'verification.decided': { type: 'ageCheck' },
+  'profile.restricted': { type: 'profileRestricted' },
+  'profile.unrestricted': { type: 'profileUnrestricted' },
+  'appeal.decided': { type: 'appealDecided' },
   'link.accepted': { type: 'linkAccepted', actor: 'from' },
   'link.declined': { type: 'linkDeclined', actor: 'from' },
   'link.changed': { type: 'linkChanged', actor: 'from' },
@@ -131,7 +134,8 @@ export function notifyHandlers(db) {
     };
   }
   // Event updates go to the people following the event, not to the organizer the item is addressed to.
-  for (const [topic, type, admittedOnly] of /** @type {const} */ ([['event.cancelled', 'eventCancelled', false], ['event.changed', 'eventChanged', false], ['event.announcement', 'eventAnnouncement', true]])) {
+  for (const [topic, type, admittedOnly] of /** @type {const} */ ([['event.cancelled', 'eventCancelled', false], ['event.changed', 'eventChanged', false],
+    ['event.announcement', 'eventAnnouncement', true], ['event.reminder', 'eventReminder', true]])) {
     handlers[topic] = async item => {
       const p = /** @type {any} */ (item.payload);
       await db.tx(async q => write(q, item, { type, actor: item.profile_id, objectType: 'event', objectId: p.eventId, data: pick(p) }, await eventFollowers(q, p.eventId, admittedOnly)));

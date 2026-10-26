@@ -584,16 +584,42 @@ const run = {
       if (!p) fail(404, 'not_found');
       ownerProfile = p.id;
     }
+    /** @type {any} */
+    let snapshot = null;
+    if (input.targetType === 'community') {
+      const [c] = await q.query(`select c.owner_profile_id, c.name, c.description, c.rules from feture.community c where c.id = $1 and feture.community_visible(c, $2, $3)`,
+        [input.targetId, viewer.profileId, viewer.accountId]);
+      if (!c) fail(404, 'not_found');
+      ownerProfile = c.owner_profile_id; snapshot = { name: c.name, description: c.description, rules: c.rules };
+    }
+    if (input.targetType === 'event') {
+      const [e] = await q.query(`select e.organizer_profile_id, e.title, e.description, e.area, e.rev from feture.event e where e.id = $1 and feture.event_visible(e, $2, $3)`,
+        [input.targetId, viewer.profileId, viewer.accountId]);
+      if (!e) fail(404, 'not_found');
+      ownerProfile = e.organizer_profile_id; rev = e.rev; snapshot = { title: e.title, description: e.description, area: e.area };
+    }
+    if (input.targetType === 'conversation') {
+      // Only a member reports a chat, and only the other side's messages, which are copied as evidence.
+      const [c] = await q.query(
+        `select case when c.profile_a = cm.profile_id then c.profile_b else c.profile_a end other from feture.conversation c
+         join feture.conversation_member cm on cm.conversation_id = c.id and cm.account_id = $2 and cm.profile_id = $3 where c.id = $1`,
+        [input.targetId, viewer.accountId, viewer.profileId]);
+      if (!c) fail(404, 'not_found');
+      const msgs = await q.query(
+        `select seq, body, media_asset_id is not null media, created_at from feture.message where conversation_id = $1 and id = any($2) and author_profile_id = $3 order by seq`,
+        [input.targetId, input.messageIds, c.other]);
+      if (msgs.length !== input.messageIds.length) fail(400, 'invalid_input', { fields: ['messageIds'] });
+      ownerProfile = c.other; snapshot = { messages: msgs.map(m => ({ seq: Number(m.seq), body: m.body, media: m.media, at: m.created_at })) };
+    }
     if (ownerProfile === viewer.profileId) fail(422, 'rule_violation', { rule: 'own_content' });
     try {
       const [r] = await q.query(
-        `insert into feture.report (reporter_profile_id, reporter_account, target_type, target_id, target_rev, reason, details, snapshot)
-         values ($1, $2, $3, $4, $5, $6, $7,
-           case $3 when 'post' then (select jsonb_build_object('title', title, 'body', body, 'audience', audience) from feture.post where id = $4)
-                   when 'reply' then (select jsonb_build_object('body', body) from feture.reply where id = $4)
+        `insert into feture.report (reporter_profile_id, reporter_account, target_type, target_id, target_rev, reason, details, message_ids, snapshot)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, case when $9::jsonb is not null then $9::jsonb when $3 = 'post' then (select jsonb_build_object('title', title, 'body', body, 'audience', audience) from feture.post where id = $4)
+                   when $3 = 'reply' then (select jsonb_build_object('body', body) from feture.reply where id = $4)
                    else (select jsonb_build_object('name', p.name, 'handle', p.handle, 'bio', d.bio) from feture.profile p left join feture.profile_details d on d.profile_id = p.id where p.id = $4) end)
          returning id`,
-        [viewer.profileId, account.id, input.targetType, input.targetId, rev, input.reason, input.details]);
+        [viewer.profileId, account.id, input.targetType, input.targetId, rev, input.reason, input.details, input.messageIds ?? null, snapshot ? JSON.stringify(snapshot) : null]);
       await enqueue(q, 'moderation.report', ownerProfile, { reportId: r.id, reason: input.reason });
     } catch (error) {
       if (!isUniqueViolation(error)) throw error; // one open report per target: repeating it is a no-op

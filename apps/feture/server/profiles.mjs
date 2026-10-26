@@ -38,6 +38,13 @@ export async function actingProfile(q, accountId, profileId, { write, allowPause
   });
 }
 
+/** A restricted profile (S4 §4) may not start anything new with other people: likes, access requests, messages, links.
+ * A person's restriction covers the couples they act as. @param {Q} q @param {Acting} acting */
+export async function requireUnrestricted(q, acting) {
+  const [{ r }] = await q.query('select feture.restricted($1) r', [acting.profileId]);
+  if (r) fail(403, 'forbidden', { rule: 'restricted' });
+}
+
 /** Profiles the account may act as, for «Действовать как». @param {Q} q @param {string} accountId */
 export async function myProfiles(q, accountId) {
   return q.query(

@@ -3,6 +3,7 @@ import { chatsCommands } from '../../contracts/chats.mjs';
 import { fail } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { mediaDto } from '../media/assets.mjs';
+import { requireUnrestricted } from '../profiles.mjs';
 
 /** Slice G1: conversations and messages (S1 §12, extract/people-discover-chats.md §1.11–1.12, §2.5).
  * A conversation comes only with a match (a request, grant, follow or gift never opens one). Members are the accounts of
@@ -193,6 +194,7 @@ const run = {
 
   async 'chat.send'(q, { acting: a, input }) {
     const acting = need(a);
+    await requireUnrestricted(q, acting);
     const c = await memberOf(q, input.conversationId, acting, { lock: true });
     await requireOpen(q, c);
     const out = await append(q, c, acting, { body: input.body, replyTo: input.replyTo });
@@ -201,6 +203,7 @@ const run = {
 
   async 'chat.sendMedia'(q, { acting: a, input }) {
     const acting = need(a);
+    await requireUnrestricted(q, acting);
     const c = await memberOf(q, input.conversationId, acting, { lock: true });
     await requireOpen(q, c);
     const [asset] = await q.query(

@@ -4,6 +4,7 @@ import { fail } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { mediaDto } from '../media/assets.mjs';
 import { checkOptions } from './me.mjs';
+import { requireUnrestricted } from '../profiles.mjs';
 import { isPremium } from './premium.mjs';
 import { endConversations, openConversation } from './chats.mjs';
 
@@ -122,6 +123,7 @@ async function decide(q, acting, target, decision, source) {
 /** Sends a like, or makes a match when the target already likes the sender (V21 likePerson, canLikeFrom).
  * @param {Q} q @param {Acting} acting @param {string} target @param {'discover' | 'profile' | 'likes'} source */
 async function sendLike(q, acting, target, source) {
+  await requireUnrestricted(q, acting);
   const [t] = await q.query(
     `select p.id, p.kind, p.state, feture.blocked($1, p.id) blocked, feture.related($1, p.id) related from feture.profile p where p.id = $2`, [acting.profileId, target]);
   if (!t || t.state !== 'active' || t.blocked) fail(404, 'not_found');

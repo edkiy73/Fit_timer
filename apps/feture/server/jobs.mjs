@@ -120,6 +120,21 @@ export async function sweepMarkers(db) {
   return a.length + b.length;
 }
 
+/** A reminder the day before to the people admitted to an event («События: … напоминания за день»), once.
+ * @param {Db} db */
+export async function sweepEventReminders(db) {
+  if (!(await db.query(`select to_regclass('feture.event') is not null ok`))[0].ok) return 0;
+  return db.tx(async q => {
+    const due = await q.query(
+      `update feture.event set reminded_at = now() where id in (
+         select id from feture.event where state = 'published' and reminded_at is null and starts_at > now() and starts_at <= now() + interval '24 hours'
+         order by starts_at limit 100 for update skip locked)
+       returning id, organizer_profile_id`);
+    for (const e of due) await enqueue(q, 'event.reminder', e.organizer_profile_id, { eventId: e.id });
+    return due.length;
+  });
+}
+
 /** Couples nobody restored within 30 days are deleted (S1 §5). @param {Db} db */
 export async function sweepExpiredCouples(db) {
   if (!(await db.query(`select to_regclass('feture.couple_restore') is not null ok`))[0].ok) return 0;
@@ -144,5 +159,6 @@ export async function runJobs(db, deps) {
   const markers = await sweepMarkers(db);
   const couples = await sweepExpiredCouples(db);
   const ephemeral = await sweepEphemeral(db);
-  return { processed, expired, ledger, markers, couples, ephemeral };
+  const reminders = await sweepEventReminders(db);
+  return { processed, expired, ledger, markers, couples, ephemeral, reminders };
 }
