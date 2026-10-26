@@ -24,6 +24,7 @@ async function requestBlocker(q, viewer, ownerId) {
   const [o] = await q.query(
     `select p.state, s.private_on, s.requests_from from feture.profile p join feture.profile_settings s on s.profile_id = p.id where p.id = $1`, [ownerId]);
   if (!o || o.state !== 'active') return 'unavailable';
+  if ((await q.query('select feture.blocked($1, $2) b', [viewer.profileId, ownerId]))[0].b) return 'unavailable';
   if (!o.private_on) return 'private_off';
   if (await related(q, viewer.profileId, ownerId)) return 'related';
   // «Только взаимные» opens with matches (slice F); until then nobody qualifies.
@@ -118,6 +119,7 @@ const run = {
       `select p.state, s.private_on, pp.text from feture.profile p join feture.profile_settings s on s.profile_id = p.id
        left join feture.private_part pp on pp.profile_id = p.id where p.id = $1`, [input.profileId]);
     if (!o || (!own && o.state !== 'active')) fail(404, 'not_found');
+    if (!own && (await q.query('select feture.blocked($1, $2) b', [viewer.profileId, input.profileId]))[0].b) fail(404, 'not_found');
     const available = await availableScopes(q, input.profileId);
     const scopes = own ? available : (o.private_on ? await grantedScopes(q, input.profileId, viewer) : []);
     if (!own && !o.private_on) return { exists: false };
