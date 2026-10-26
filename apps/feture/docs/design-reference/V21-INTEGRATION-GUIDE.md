@@ -2,6 +2,7 @@
 
 Для владельца и для любого исполнителя (Claude, ChatGPT/Codex, человек), который переносит утверждённый UX прототипа V21 в рабочее приложение `apps/feture/src`.
 Прочитайте вместе с `apps/feture/AGENTS.md`, `docs/mvp-plan/STATUS.md`, `docs/ui-quality.md`, `docs/design-reference/DESIGN-INTEGRATION.md`, `VISUAL-CONTRACT-V4.md`.
+Сервер, база, медиа, модерация и порядок работ до первых пользователей — [V21-PLATFORM-DECISIONS.md](V21-PLATFORM-DECISIONS.md) (решения по стеку, что оставить и что переписать на сервере, каких спецификаций не хватает).
 
 ## 1. Что такое V21 и что из неё переносить
 
