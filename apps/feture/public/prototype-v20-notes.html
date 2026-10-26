@@ -1,0 +1,71 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>FetUre V20 — что изменено</title><style>
+:root{--bg:#F3EEF2;--surf:#fff;--ink:#1E1219;--mute:#6F5A67;--line:#E6DAE3;--acc:#E01A3E;--lil:#5C47D6}
+@media(prefers-color-scheme:dark){:root{--bg:#1A0F16;--surf:#241520;--ink:#FBF0F4;--mute:#BCA4B1;--line:#3E2636;--acc:#FF3355;--lil:#B9A6FF}}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:920px;margin:auto;padding:28px 16px 64px}h1{font-size:clamp(28px,6vw,42px);line-height:1.1;letter-spacing:-.03em}h2{margin-top:40px;font-size:24px}h3{margin:24px 0 6px;font-size:18px}
+a{color:var(--lil)}code{background:var(--surf);border:1px solid var(--line);border-radius:6px;padding:1px 5px;font-size:.88em}
+li{margin:4px 0}.cta{display:inline-block;margin:6px 8px 10px 0;padding:12px 18px;border-radius:14px;background:var(--acc);color:#fff;font-weight:700;text-decoration:none}.cta.soft{background:var(--surf);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+.lead{font-size:18px}.box{padding:16px 18px;border-radius:16px;background:var(--surf);border:1px solid var(--line)}
+.shots{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-top:12px}.shots.wide{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+figure{margin:0}figure img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);background:var(--surf)}figcaption{margin-top:6px;font-size:13px;color:var(--mute);line-height:1.4}
+table{width:100%;border-collapse:collapse;font-size:15px}td,th{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{color:var(--mute);font-weight:600}
+</style></head><body><main>
+<a class="cta" href="prototype-v20.html#X01">Открыть V20 →</a><a class="cta soft" href="prototype-v19.html#X01">V19</a>
+<h1>FetUre V20 — профиль, переключатель и фото</h1>
+<p class="lead">V20 исправляет то, как #1270 сделал правильную идею. Переключатель «Я / Мы» остаётся один, в доке, но стал аккуратным и больше не меняет режим втихую. Фото профиля меняются прямо на «Я» перетаскиванием. Загрузка в галерею больше не равна посту в ленте. Альбомы видны.</p>
+<p>V19 (вместе с #1270) заморожена. Журнал — <code>docs/design-reference/V20-CHANGELOG.md</code>. Контракт — <code>tests/prototype-v20-contract.mjs</code>: правила V13, V14, V18, V19 плюс проверки V20. План с разбором #1270 владелец видел до начала работы.</p>
+
+<h2>Решения владельца</h2>
+<table><tr><th>Вопрос</th><th>Решение</th></tr>
+<tr><td>Загрузка и лента</td><td>Выложить в ленту — по выбору: переключатель «Также выложить в ленту», по умолчанию выключен.</td></tr>
+<tr><td>Смена «Я / Мы»</td><td>Только в доке. В композере, ответах и чате — строка «Публикуется от …» / «Ответ от …», её нельзя нажать.</td></tr>
+<tr><td>Модерация фото профиля</td><td>Можно поставить сразу. Владелец видит с меткой «На проверке», остальные — после проверки.</td></tr>
+<tr><td>Видео в профиле</td><td>Одно, и не на первом месте.</td></tr>
+</table>
+
+<h2>Что из #1270 оставили, что заменили</h2>
+<ul>
+<li><b>Оставили:</b> нет кнопок выбора автора у композера, ответов и в профиле; нет метки «Мы» на сердечках; пара со своим фото показывает его; превью нового поста следует за доком.</li>
+<li><b>Заменили:</b> «каждая загрузка — публикация», фото профиля как ссылки на посты, приватные фото как посты «по доступу», общую сетку публичного и приватного, лист «Раньше / Позже», док на экранах ввода и при клавиатуре.</li>
+<li><b>Вернули из V19:</b> перетаскивание, кадрирование, замену, отдельные сетки приватных фото и видео.</li>
+</ul>
+
+<h2>Как это работает</h2>
+<h3>Док и «Действовать как»</h3>
+<p>Аватар в доке — 24 px, как остальные значки. В «Мы» вокруг него фиолетовое кольцо с зазором, бейдж стоит на углу, а не на лице. Пара без своего фото — два лица участников, не буква. Нажатие открывает две строки и одну ссылку. Выбранная строка — сиреневая с галочкой. Вместо голой цифры написано, что ждёт: «3 новые симпатии · 1 запрос доступа». «Открыть мой профиль» открывает только текущий профиль и режим не меняет. На компьютере тот же выбор — маленькое окно у аватара внизу боковой панели (стрелки, Esc).</p>
+<h3>Фото профиля на «Я»</h3>
+<p>Блок выглядит так, как его видят другие: большое главное фото и пять маленьких. Свои фото перетаскиваются прямо здесь, порядок сохраняется сразу, в тосте есть «Отменить». Нажатие на фото — посмотреть, сделать главным, кадрировать 4:5, заменить, показать в галерее, убрать из профиля. Пустое место с «+» одно, остальные — бледные. Фото пары открывают редактор: изменения идут через один черновик и согласие партнёра.</p>
+<h3>Редактор фото</h3>
+<p>Та же раскладка, перетаскивание, кнопки «Загрузить» и «Из галереи». Из галереи можно отметить несколько фото — они встанут по номерам. Видео одно и не первым: лишнее не добавится, а видео на первом месте сдвинется с подсказкой.</p>
+<h3>Галерея и альбомы</h3>
+<p>На «Я» — обложки альбомов со счётчиками, «Новый альбом», «Загрузить» и последние фото. Значок на обложке — только подписчикам. Приватные фото здесь не появляются: они в приватной части.</p>
+<p>Загрузка: файлы → один лист: альбом, кто видит, «Поставить в профиль», «Также выложить в ленту». Без ленты каждый файл — отдельный пункт галереи, в ленту он не попадает. С лентой — одна публикация. Новые фото проходят проверку. От пары — после согласия партнёра, если вы не доверяете друг другу.</p>
+<p>В галерее есть «Выбрать»: отмечаешь несколько фото, внизу «В альбом», «Кто видит», «В профиль», «Удалить». Док на это время скрыт. Фото, которое стало «только подписчикам», уходит из профиля — профиль видят все.</p>
+<h3>На компьютере и с клавиатуры</h3>
+<p>Файлы можно бросить на фото профиля, редактор, галерею или приватную часть. Alt + стрелки переставляют фото в любой сетке с перетаскиванием, новое место озвучивается.</p>
+
+<h2>Экраны</h2>
+<div class="shots">
+<figure><img src="images/v20/01-switcher.webp" alt="" loading="lazy"><figcaption>«Действовать как»: две строки и одна ссылка</figcaption></figure>
+<figure><img src="images/v20/03-me-photos.webp" alt="" loading="lazy"><figcaption>«Я» → фото профиля: главное и маленькие, метка «На проверке»</figcaption></figure>
+<figure><img src="images/v20/04-photo-sheet.webp" alt="" loading="lazy"><figcaption>Нажатие на фото</figcaption></figure>
+<figure><img src="images/v20/05-editor-pick.webp" alt="" loading="lazy"><figcaption>«Из галереи» — несколько фото по номерам</figcaption></figure>
+<figure><img src="images/v20/06-gallery-block.webp" alt="" loading="lazy"><figcaption>Галерея на «Я» с альбомами</figcaption></figure>
+<figure><img src="images/v20/07-upload.webp" alt="" loading="lazy"><figcaption>Загрузка: альбом, аудитория, профиль, лента</figcaption></figure>
+<figure><img src="images/v20/08-select.webp" alt="" loading="lazy"><figcaption>Галерея: выбрать несколько</figcaption></figure>
+<figure><img src="images/v20/09-composer-us.webp" alt="" loading="lazy"><figcaption>Композер в «Мы»: «Публикуется от …»</figcaption></figure>
+</div>
+<div class="shots wide">
+<figure><img src="images/v20/02-switcher-desktop.webp" alt="" loading="lazy"><figcaption>Компьютер: выбор у аватара в боковой панели</figcaption></figure>
+<figure><img src="images/v20/10-me-desktop.webp" alt="" loading="lazy"><figcaption>Компьютер: фото профиля в пять колонок</figcaption></figure>
+</div>
+
+<h2>Проверено</h2>
+<ul>
+<li>Контракт V20 вместе с правилами V13, V14, V18 и V19 — проходит.</li>
+<li>Chromium, с настоящими файлами через окно выбора: загрузка в галерею и в профиль, перетаскивание, лист фото, «Из галереи», режим выбора, выбор профиля на телефоне и компьютере, автор в композере и ответах.</li>
+<li>Матрица: 3 персоны × RU/EN × 320/390/768/1440 × светлая/тёмная на 14 экранах (лента, выбор профиля, «Я» и «Мы», редактор фото, «Из галереи», галерея и режим выбора, загрузка, добавление фото профиля, приватная часть, композер в «Мы», «Как видят», чаты) — 576 состояний, без ошибок JS и горизонтального скролла. 96 состояний пропущены: у персон без пары нет режима «Мы», у новой персоны — галереи.</li>
+<li>Длинный, «враждебный» и слитный текст на 320 и 390 px — 66 состояний. Новые экраны чистые. В ленте слитные хэштеги без пробелов распирают экран — так же в V18 и V19, не связано с V20.</li>
+</ul>
+<p>Не проверено: реальные устройства, перетаскивание долгим нажатием на телефоне, скринридеры, живая пара на двух клиентах, пользовательские тесты.</p>
+</main></body></html>
