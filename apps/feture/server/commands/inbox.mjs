@@ -45,6 +45,13 @@ async function decisions(q, accountId) {
        join feture.profile ap on ap.id = x.profile_id
        where e.organizer_profile_id in (${mine}) and x.state = 'pending' and ap.state = 'active' and not feture.blocked(e.organizer_profile_id, ap.id)
        union all
+       select case when l.state = 'pending' then 'link' else 'linkChange' end, l.id, case when l.a_profile_id in (${mine}) then l.a_profile_id else l.b_profile_id end, ${ACTOR}, null, l.updated_at
+       from feture.profile_link l
+       join feture.profile ap on ap.id = case when l.state = 'pending' then l.a_profile_id when l.a_profile_id in (${mine}) then l.b_profile_id else l.a_profile_id end
+       where (l.state = 'pending' and l.b_profile_id in (${mine})
+              or l.state = 'ok' and l.change is not null and (l.a_profile_id in (${mine}) or l.b_profile_id in (${mine})) and (l.change->>'by')::uuid not in (${mine}))
+         and ap.state = 'active' and not feture.blocked(case when l.a_profile_id in (${mine}) then l.a_profile_id else l.b_profile_id end, ap.id)
+       union all
        select 'tag', t.post_id, t.profile_id, ${ACTOR}, t.post_id, coalesce(t.asked_at, p.published_at)
        from feture.photo_tag t join feture.post p on p.id = t.post_id and p.state = 'published' join feture.profile ap on ap.id = p.owner_profile_id
        where t.profile_id in (${mine}) and t.state = 'pending' and ap.state = 'active' and not feture.blocked(t.profile_id, ap.id)

@@ -1,5 +1,6 @@
 // @ts-check
 import { socialCommands } from '../../contracts/social.mjs';
+import { requireUnrestricted } from '../profiles.mjs';
 import { fail } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { lockPair } from './discover.mjs';
@@ -60,6 +61,7 @@ async function cutPair(q, blocker, blocked) {
      where ended_at is null and profile_a = least($1::uuid, $2::uuid) and profile_b = greatest($1::uuid, $2::uuid) returning id`, [blocker, blocked]);
   if (ended[0]) await enqueue(q, 'match.ended', blocker, { matchId: ended[0].id, with: blocked });
   await endConversations(q, blocker, blocked, 'block');
+  await q.query(`delete from feture.profile_link where least(a_profile_id, b_profile_id) = least($1::uuid, $2::uuid) and greatest(a_profile_id, b_profile_id) = greatest($1::uuid, $2::uuid)`, [blocker, blocked]);
 }
 
 /** Blocks `target` from the acting profile (and, explicitly, from the account's other profile).
@@ -108,6 +110,7 @@ const run = {
 
   async 'follow.set'(q, { acting: a, input }) {
     const acting = need(a);
+    if (input.on) await requireUnrestricted(q, acting);
     if (!input.on) {
       await q.query(`delete from feture.follow where follower_profile_id = $1 and target_profile_id = $2`, [acting.profileId, input.profileId]);
       return { following: false };

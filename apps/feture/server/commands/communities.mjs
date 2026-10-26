@@ -1,5 +1,6 @@
 // @ts-check
 import { randomBytes } from 'node:crypto';
+import { requireUnrestricted } from '../profiles.mjs';
 import { communitiesCommands } from '../../contracts/communities.mjs';
 import { fail, isUniqueViolation } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
@@ -255,6 +256,7 @@ const run = {
 
   async 'community.join'(q, { acting: a, input }) {
     const acting = need(a);
+    await requireUnrestricted(q, acting);
     const c = await visible(q, input.communityId, acting, input.invite);
     if (c.state !== 'published') fail(409, 'conflict', { state: c.state });
     const m = await membership(q, c.id, acting.profileId);
@@ -371,6 +373,7 @@ const run = {
 
   async 'community.invite'(q, { acting: a, input }) {
     const acting = need(a);
+    await requireUnrestricted(q, acting);
     await requireHost(q, input.communityId, acting, 'host');
     if (input.revokeAll) {
       await q.query(`update feture.community_invite set revoked_at = now() where community_id = $1 and revoked_at is null`, [input.communityId]);

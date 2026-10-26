@@ -3,6 +3,7 @@ import { chatsCommands } from '../../contracts/chats.mjs';
 import { fail } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { mediaDto } from '../media/assets.mjs';
+import { requireUnrestricted } from '../profiles.mjs';
 
 /** Slice G1: conversations and messages (S1 §12, extract/people-discover-chats.md §1.11–1.12, §2.5).
  * A conversation comes only with a match (a request, grant, follow or gift never opens one). Members are the accounts of
@@ -98,7 +99,9 @@ function ephemeralState(m, view) {
 async function burnIfDone(q, messageId) {
   const [x] = await q.query(
     `select m.media_asset_id from feture.message m where m.id = $1 and m.media_asset_id is not null
-       and not exists (select 1 from feture.message_media_view v where v.message_id = m.id and not v.done)`, [messageId]);
+       and not exists (select 1 from feture.message_media_view v where v.message_id = m.id and not v.done)
+       -- A file in an open report stays as evidence until the report is decided.
+       and not exists (select 1 from feture.report r where r.state = 'open' and r.target_type = 'conversation' and m.id = any(r.message_ids))`, [messageId]);
   if (!x) return;
   const rows = await q.query(`update feture.media_asset set state = 'removed', removed_at = now() where id = $1 and state not in ('removed', 'blocked') returning owner_profile_id`, [x.media_asset_id]);
   if (rows[0]) {
@@ -193,6 +196,7 @@ const run = {
 
   async 'chat.send'(q, { acting: a, input }) {
     const acting = need(a);
+    await requireUnrestricted(q, acting);
     const c = await memberOf(q, input.conversationId, acting, { lock: true });
     await requireOpen(q, c);
     const out = await append(q, c, acting, { body: input.body, replyTo: input.replyTo });
@@ -201,6 +205,7 @@ const run = {
 
   async 'chat.sendMedia'(q, { acting: a, input }) {
     const acting = need(a);
+    await requireUnrestricted(q, acting);
     const c = await memberOf(q, input.conversationId, acting, { lock: true });
     await requireOpen(q, c);
     const [asset] = await q.query(

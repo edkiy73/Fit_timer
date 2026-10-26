@@ -4,6 +4,8 @@ import { fail } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { mediaDto } from '../media/assets.mjs';
 import { checkOptions } from './me.mjs';
+import { requireUnrestricted } from '../profiles.mjs';
+import { isPremium } from './premium.mjs';
 import { endConversations, openConversation } from './chats.mjs';
 
 /** Slice F: Discover, likes and matches (S1 §11, extract/people-discover-chats.md).
@@ -52,11 +54,6 @@ export async function lockPair(q, a, b) {
   await q.query(`select pg_advisory_xact_lock(hashtextextended('fe-pair:' || $1 || ':' || $2, 0))`, [x, y]);
 }
 
-/** @param {Q} q @param {string} accountId */
-export async function isPremium(q, accountId) {
-  const [a] = await q.query('select premium_until > now() p from feture.account where id = $1', [accountId]);
-  return !!a?.p;
-}
 
 /** @param {Q} q @param {string} profileId */
 async function filterOf(q, profileId) {
@@ -87,7 +84,7 @@ async function modeOf(q, profileId) {
 
 /** Cards of profiles for the viewer: name, ages they show, city, avatar, «Ты нравишься», public interests in common.
  * @param {Q} q @param {Acting} viewer @param {string[]} ids @param {import('../media/assets.mjs').MediaConfig} media */
-async function cards(q, viewer, ids, media) {
+export async function cards(q, viewer, ids, media) {
   if (!ids.length) return [];
   const rows = await q.query(
     `select p.id, p.kind, p.handle, p.name, p.avatar_asset_id, pl.name_ru city_ru, pl.name_en city_en,
@@ -126,9 +123,11 @@ async function decide(q, acting, target, decision, source) {
 /** Sends a like, or makes a match when the target already likes the sender (V21 likePerson, canLikeFrom).
  * @param {Q} q @param {Acting} acting @param {string} target @param {'discover' | 'profile' | 'likes'} source */
 async function sendLike(q, acting, target, source) {
+  await requireUnrestricted(q, acting);
   const [t] = await q.query(
     `select p.id, p.kind, p.state, feture.blocked($1, p.id) blocked, feture.related($1, p.id) related from feture.profile p where p.id = $2`, [acting.profileId, target]);
   if (!t || t.state !== 'active' || t.blocked) fail(404, 'not_found');
+  if ((await q.query('select feture.restricted($1) r', [target]))[0].r) fail(404, 'not_found'); // a restricted profile takes no new likes or matches
   if (t.related) fail(422, 'rule_violation', { rule: 'related' });
   const [m] = await q.query(`select 1 from feture.profile_match where ended_at is null and profile_a = least($1::uuid, $2::uuid) and profile_b = greatest($1::uuid, $2::uuid)`, [acting.profileId, target]);
   if (m) fail(409, 'conflict', { rule: 'already_matched' });
@@ -187,10 +186,11 @@ async function withdrawLike(q, from, to) {
   return rows.length > 0;
 }
 
-/** One free undo a day (shared with «Вернуть»), unlimited with Premium (Q6). @param {Q} q @param {string} accountId */
-async function spendUndo(q, accountId) {
+/** One free undo a day (shared with «Вернуть»), unlimited with Premium (Q6; a couple has it through either partner, Q12).
+ * @param {Q} q @param {string} accountId @param {string} profileId */
+async function spendUndo(q, accountId, profileId) {
   await q.query(`select pg_advisory_xact_lock(hashtextextended('fe-undo:' || $1, 0))`, [accountId]);
-  if (!(await isPremium(q, accountId))) {
+  if (!(await isPremium(q, accountId, profileId))) {
     const [{ n }] = await q.query(`select count(*)::int n from feture.rate_event where account_id = $1 and kind = 'discover.undo' and created_at > now() - interval '1 day'`, [accountId]);
     if (n >= 1) fail(403, 'premium_required');
   }
@@ -265,7 +265,7 @@ const run = {
     const [m] = await q.query(`select 1 from feture.profile_match where ended_at is null and profile_a = least($1::uuid, $2::uuid) and profile_b = greatest($1::uuid, $2::uuid)`,
       [acting.profileId, last.target_profile_id]);
     if (m) fail(409, 'conflict', { rule: 'already_mutual' });
-    await spendUndo(q, acting.accountId);
+    await spendUndo(q, acting.accountId, acting.profileId);
     await q.query('delete from feture.discover_decision where profile_id = $1 and target_profile_id = $2', [acting.profileId, last.target_profile_id]);
     if (last.decision === 'like') await withdrawLike(q, acting.profileId, last.target_profile_id);
     if (last.decision === 'pass' && last.source === 'likes') {
@@ -285,7 +285,7 @@ const run = {
     const acting = need(a);
     const [d] = await q.query(`select 1 from feture.discover_decision where profile_id = $1 and target_profile_id = $2 and decision = 'pass' and source = 'discover' for update`, [acting.profileId, input.profileId]);
     if (!d) fail(404, 'not_found');
-    await spendUndo(q, acting.accountId);
+    await spendUndo(q, acting.accountId, acting.profileId);
     await q.query(`delete from feture.discover_decision where profile_id = $1 and target_profile_id = $2`, [acting.profileId, input.profileId]);
     return { restored: true };
   },
@@ -293,7 +293,7 @@ const run = {
   async 'discover.history'(q, { acting: a, input, cfg }) {
     // Free: the newest decision only; Premium: seven days.
     const viewer = need(a);
-    const premium = await isPremium(q, viewer.accountId);
+    const premium = await isPremium(q, viewer.accountId, viewer.profileId);
     const rows = await q.query(
       `select x.target_profile_id id, x.decision, x.decided_at from feture.discover_decision x join feture.profile p on p.id = x.target_profile_id
        where x.profile_id = $1 and ($2 = 'all' or x.decision = $2) and p.state = 'active' and not feture.blocked($1, p.id)
@@ -328,7 +328,7 @@ const run = {
     const viewer = need(a);
     const rows = await q.query(
       `select l.from_profile_id id, l.created_at from feture.profile_like l join feture.profile p on p.id = l.from_profile_id
-       where l.to_profile_id = $1 and l.state = 'active' and p.state = 'active' and not feture.blocked($1, p.id)
+       where l.to_profile_id = $1 and l.state = 'active' and p.state = 'active' and not feture.blocked($1, p.id) and not feture.restricted(p.id)
        order by l.created_at desc limit 200`, [viewer.profileId]);
     const people = await cards(q, viewer, rows.map(r => r.id), cfg.media);
     return { items: people.map(p => ({ profile: p, at: rows.find(r => r.id === p.id)?.created_at })) };

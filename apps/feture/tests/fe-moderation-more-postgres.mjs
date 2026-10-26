@@ -1,0 +1,155 @@
+// S4 step 4 on PGlite as feture_api: restriction, reports on chats/communities/events, appeals, the city queue, event reminders.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { platform } from '../server/commands/platform.mjs';
+import { me } from '../server/commands/me.mjs';
+import { social } from '../server/commands/social.mjs';
+import { posts } from '../server/commands/posts.mjs';
+import { staff } from '../server/commands/staff.mjs';
+import { moderation } from '../server/commands/moderation.mjs';
+import { communities } from '../server/commands/communities.mjs';
+import { events } from '../server/commands/events.mjs';
+import { discover } from '../server/commands/discover.mjs';
+import { chats } from '../server/commands/chats.mjs';
+import { people } from '../server/commands/people.mjs';
+import { inbox } from '../server/commands/inbox.mjs';
+import { sweepEventReminders } from '../server/jobs.mjs';
+import { setup as baseSetup, op } from './fe-helpers.mjs';
+
+const setup = () => baseSetup({ commands: { ...platform, ...me, ...social, ...posts, ...staff, ...moderation, ...communities, ...events, ...discover, ...chats, ...people, ...inbox } });
+const base = { description: 'Встречи и разговоры о верёвке для новичков', topics: ['shibari'], rules: ['Уважать границы'] };
+
+async function world() {
+  const env = await setup();
+  const { db, call, person } = env;
+  const boss = await person('uo', 'Boss');
+  await person('um', 'Mira'); await person('ul', 'Lead');
+  await db.query(`insert into feture.staff_role (account_id, role) select id, 'owner' from feture.account where person_profile_id = $1`, [boss]);
+  await call('uo', null, { action: 'staff.grant', opId: op(), handle: 'Mira', role: 'moderator', grant: true });
+  await call('uo', null, { action: 'staff.grant', opId: op(), handle: 'Lead', role: 'lead', grant: true });
+  const member = async (/** @type {string} */ user, /** @type {string} */ handle) => {
+    const id = await person(user, handle);
+    const [{ account_id }] = await db.query('select account_id from feture.profile_member where profile_id = $1 limit 1', [id]);
+    const [a] = await db.query(
+      `insert into feture.media_asset (owner_profile_id, uploaded_by, kind, purpose, storage_key, mime, declared_bytes, state, explicitness, copies_at)
+       values ($1, $2, 'image', 'avatar', 'u/' || gen_random_uuid(), 'image/jpeg', 10, 'approved', 'safe', now()) returning id`, [id, account_id]);
+    await db.query('update feture.profile set avatar_asset_id = $1 where id = $2', [a.id, id]);
+    return id;
+  };
+  return { ...env, member };
+}
+
+test('restriction: out of Discover and search, no likes, messages, links or requests; moderators apply it, rank rules hold', async () => {
+  const { pg, call, member } = await world();
+  try {
+    const a = await member('ua', 'Alex'), b = await member('ub', 'Kira');
+    await call('ua', a, { action: 'discover.decide', opId: op(), profileId: b, decision: 'like' });
+    const conv = (await call('ub', b, { action: 'like.send', opId: op(), profileId: a, source: 'likes' })).conversationId;
+    assert.equal((await call('ua', null, { action: 'staff.restrict', opId: op(), profileId: b, on: true, rule: 'spam' })).status, 403);
+    await call('um', null, { action: 'staff.restrict', opId: op(), profileId: b, on: true, rule: 'spam' });
+    assert.equal((await call('ub', b, { action: 'chat.send', opId: op(), conversationId: conv, body: 'Купи' })).rule, 'restricted');
+    assert.equal((await call('ub', b, { action: 'link.propose', opId: op(), profileId: a, kind: 'friend' })).rule, 'restricted');
+    assert.deepEqual((await call('ua', a, { action: 'people.search', q: 'kir' })).items, []);
+    assert.equal((await call('ua', a, { action: 'chat.send', opId: op(), conversationId: conv, body: 'Ок' })).seq, 1); // the other side may still answer
+    // Appeal: a lead who did not restrict decides it.
+    const ap = await call('ub', b, { action: 'appeal.create', opId: op(), targetType: 'profile', targetId: b, body: 'Это была ошибка, я не рассылаю спам' });
+    assert.equal((await call('ul', null, { action: 'staff.appealQueue' })).items[0].id, ap.id);
+    await call('ul', null, { action: 'staff.appealDecide', opId: op(), appealId: ap.id, grant: true, note: 'Ошибка' });
+    assert.equal((await call('ub', b, { action: 'chat.send', opId: op(), conversationId: conv, body: 'Спасибо' })).seq, 2);
+  } finally { await pg.close(); }
+});
+
+test('reports: a chat with the selected messages, communities and events; removal hides, the appeal restores; reporters stay unnamed', async () => {
+  const { pg, call, member } = await world();
+  try {
+    const a = await member('ua', 'Alex'), b = await member('ub', 'Kira');
+    await call('ua', a, { action: 'discover.decide', opId: op(), profileId: b, decision: 'like' });
+    const conv = (await call('ub', b, { action: 'like.send', opId: op(), profileId: a, source: 'likes' })).conversationId;
+    const bad = await call('ub', b, { action: 'chat.send', opId: op(), conversationId: conv, body: 'Угроза' });
+    const mine = await call('ua', a, { action: 'chat.send', opId: op(), conversationId: conv, body: 'Моё' });
+    assert.deepEqual((await call('ua', a, { action: 'report.create', opId: op(), targetType: 'conversation', targetId: conv, reason: 'threat' })).fields, ['messageIds']);
+    assert.deepEqual((await call('ua', a, { action: 'report.create', opId: op(), targetType: 'conversation', targetId: conv, messageIds: [mine.id], reason: 'threat' })).fields, ['messageIds']);
+    await call('ua', a, { action: 'report.create', opId: op(), targetType: 'conversation', targetId: conv, messageIds: [bad.id], reason: 'threat' });
+    const card = (await call('um', null, { action: 'staff.reportQueue' })).items.find((/** @type {any} */ i) => i.targetType === 'conversation');
+    assert.deepEqual([card.author.handle, card.reported.messages[0].body], ['Kira', 'Угроза']);
+    assert.equal((await call('um', null, { action: 'staff.reportDecide', opId: op(), targetType: 'conversation', targetId: conv, decision: 'remove', rule: 'threats' })).status, 400);
+
+    const cr = await call('ub', b, { action: 'community.create', opId: op(), name: 'Плохое сообщество', privacy: 'open', ...base });
+    const qrev = (await call('um', null, { action: 'staff.communityQueue' })).items.find((/** @type {any} */ x) => x.id === cr.id).rev;
+    await call('um', null, { action: 'staff.communityDecide', opId: op(), communityId: cr.id, rev: qrev, decision: 'approve' });
+    await call('ua', a, { action: 'report.create', opId: op(), targetType: 'community', targetId: cr.id, reason: 'spam' });
+    await call('um', null, { action: 'staff.reportDecide', opId: op(), targetType: 'community', targetId: cr.id, decision: 'remove', rule: 'spam' });
+    assert.equal((await call('ua', a, { action: 'community.get', communityId: cr.id })).status, 404);
+    const ap = await call('ub', b, { action: 'appeal.create', opId: op(), targetType: 'community', targetId: cr.id, body: 'Там нет спама, проверьте ещё раз' });
+    assert.equal((await call('um', null, { action: 'staff.appealDecide', opId: op(), appealId: ap.id, grant: true })).status, 403); // leads only
+    await call('ul', null, { action: 'staff.appealDecide', opId: op(), appealId: ap.id, grant: true });
+    assert.equal((await call('ua', a, { action: 'community.get', communityId: cr.id })).community.name, 'Плохое сообщество');
+  } finally { await pg.close(); }
+});
+
+test('city queue and event reminders the day before, once, to admitted people', async () => {
+  const { pg, db, call, member } = await world();
+  try {
+    const a = await member('ua', 'Alex'), b = await member('ub', 'Kira');
+    const [{ id: city }] = await db.query(`insert into feture.place (country, name_ru, state) values ('DE', 'Лейпциг', 'pending') returning id`);
+    assert.ok((await call('um', null, { action: 'staff.placeQueue' })).items.some((/** @type {any} */ x) => x.id === city));
+    await call('um', null, { action: 'staff.placeDecide', opId: op(), placeId: city, decision: 'approve', nameEn: 'Leipzig' });
+    const [{ state, name_en }] = await db.query('select state, name_en from feture.place where id = $1', [city]);
+    assert.deepEqual([state, name_en], ['approved', 'Leipzig']);
+
+    const ev = { title: 'Вечер знакомств', kind: 'meetup', description: 'Спокойный вечер для знакомства, без спешки и давления.',
+      format: 'online', joinUrl: 'https://meet.example/x', tz: 'Europe/Berlin', startsAt: new Date(Date.now() + 20 * 36e5).toISOString(), endsAt: new Date(Date.now() + 23 * 36e5).toISOString() };
+    const r = await call('ua', a, { action: 'event.submit', opId: op(), event: ev });
+    const erev = (await call('um', null, { action: 'staff.eventQueue' })).items.find((/** @type {any} */ x) => x.id === r.id).rev;
+    await call('um', null, { action: 'staff.eventDecide', opId: op(), eventId: r.id, rev: erev, decision: 'approve' });
+    await call('ub', b, { action: 'event.rsvp', opId: op(), eventId: r.id, status: 'going' });
+    assert.equal(await sweepEventReminders(db), 1);
+    assert.equal(await sweepEventReminders(db), 0);
+    const { notifyHandlers } = await import('../server/notify.mjs');
+    const { drain } = await import('../server/outbox.mjs');
+    await drain(db, notifyHandlers(db), { limit: 100 });
+    assert.ok((await call('ub', null, { action: 'notifications.list' })).items.some((/** @type {any} */ n) => n.type === 'eventReminder'));
+  } finally { await pg.close(); }
+});
+
+test('review fixes: no appeal against a host removal, restore returns the previous state, the appealed decider never decides, restriction closes links and likes', async () => {
+  const { pg, db, call, member } = await world();
+  try {
+    const a = await member('ua', 'Alex'), b = await member('ub', 'Kira');
+    // A discussion removed by the community's host is not a staff decision: nothing to appeal here.
+    const cr = await call('ua', a, { action: 'community.create', opId: op(), name: 'Клуб для теста', privacy: 'open', ...base });
+    const qrev = (await call('um', null, { action: 'staff.communityQueue' })).items.find((/** @type {any} */ x) => x.id === cr.id).rev;
+    await call('um', null, { action: 'staff.communityDecide', opId: op(), communityId: cr.id, rev: qrev, decision: 'approve' });
+    await call('ub', b, { action: 'community.join', opId: op(), communityId: cr.id, rulesAccepted: true });
+    const d = await call('ub', b, { action: 'post.saveDraft', opId: op(), post: { type: 'post', body: 'Тема', audience: 'all', inFeed: true, topics: [], mediaIds: [], interests: [], tags: [], communityId: cr.id } });
+    await call('ub', b, { action: 'post.publish', opId: op(), postId: d.id });
+    await call('ua', a, { action: 'discussion.host', opId: op(), postId: d.id, change: 'remove' });
+    assert.equal((await call('ub', b, { action: 'appeal.create', opId: op(), targetType: 'post', targetId: d.id, body: 'Верните, пожалуйста, мою тему' })).rule, 'nothing_to_appeal');
+
+    // A cancelled event that staff hid comes back cancelled, never published.
+    const ev = { title: 'Вечер знакомств', kind: 'meetup', description: 'Спокойный вечер для знакомства, без спешки и давления.',
+      format: 'online', joinUrl: 'https://meet.example/x', tz: 'Europe/Berlin', startsAt: new Date(Date.now() + 5 * 864e5).toISOString(), endsAt: new Date(Date.now() + 5 * 864e5 + 36e5).toISOString() };
+    const r = await call('ub', b, { action: 'event.submit', opId: op(), event: ev });
+    const erev = async () => (await call('um', null, { action: 'staff.eventQueue' })).items.find((/** @type {any} */ x) => x.id === r.id)?.rev;
+    await call('um', null, { action: 'staff.eventDecide', opId: op(), eventId: r.id, rev: await erev(), decision: 'approve' });
+    await call('ub', b, { action: 'event.cancel', opId: op(), eventId: r.id });
+    const [{ rev }] = await db.query('select rev from feture.event where id = $1', [r.id]);
+    await call('um', null, { action: 'staff.eventDecide', opId: op(), eventId: r.id, rev, decision: 'hide' });
+    const ap = await call('ub', b, { action: 'appeal.create', opId: op(), targetType: 'event', targetId: r.id, body: 'Событие было отменено, но не нарушало правил' });
+    await call('ul', null, { action: 'staff.appealDecide', opId: op(), appealId: ap.id, grant: true });
+    const [{ state }] = await db.query('select state from feture.event where id = $1', [r.id]);
+    assert.equal(state, 'cancelled');
+
+    // The lead who restricted may not decide the appeal, even after someone else touched the profile.
+    await call('ul', null, { action: 'staff.restrict', opId: op(), profileId: a, on: true, rule: 'spam' });
+    await call('ub', b, { action: 'report.create', opId: op(), targetType: 'profile', targetId: a, reason: 'spam' });
+    await call('um', null, { action: 'staff.reportDecide', opId: op(), targetType: 'profile', targetId: a, decision: 'keep' });
+    const ap2 = await call('ua', a, { action: 'appeal.create', opId: op(), targetType: 'profile', targetId: a, body: 'Я ничего не рассылал, проверьте' });
+    assert.equal((await call('ul', null, { action: 'staff.appealDecide', opId: op(), appealId: ap2.id, grant: true })).rule, 'same_staff');
+
+    // A restricted profile neither accepts links nor gets a like back into a match.
+    const l = await call('ub', b, { action: 'link.propose', opId: op(), profileId: a, kind: 'friend' });
+    assert.equal(l.status, 404);
+    assert.equal((await call('ub', b, { action: 'like.send', opId: op(), profileId: a, source: 'profile' })).status, 404);
+  } finally { await pg.close(); }
+});

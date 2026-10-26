@@ -1,5 +1,6 @@
 // @ts-check
 import { accessCommands } from '../../contracts/access.mjs';
+import { requireUnrestricted } from '../profiles.mjs';
 import { fail } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { needsPartner, narrowCouple, registerApprovalKind, requestApproval } from '../approvals.mjs';
@@ -59,6 +60,7 @@ async function applyGrant(q, { requestId, ownerId, scopes, term, by }) {
      join feture.profile_settings s on s.profile_id = r.owner_profile_id join feture.profile p on p.id = r.owner_profile_id
      where r.id = $1 and r.owner_profile_id = $2 for update of r`, [requestId, ownerId]);
   if (!r || r.state !== 'pending') fail(409, 'conflict', { state: r?.state ?? 'missing' });
+  if ((await q.query('select feture.restricted($1) r', [r.requester_profile_id]))[0].r) fail(409, 'conflict', { rule: 'unavailable' });
   if (!r.private_on || r.owner_state !== 'active') fail(422, 'rule_violation', { rule: 'private_off' });
   const available = await availableScopes(q, ownerId);
   if (!scopes.every(s => available.includes(s))) fail(422, 'rule_violation', { rule: 'scope_not_available' });
@@ -198,6 +200,7 @@ const run = {
 
   async 'access.request'(q, { acting: a, input, account }) {
     const acting = need(a);
+    await requireUnrestricted(q, acting);
     // One request budget per account across «Я» and «Мы»; serialised so parallel requests cannot all pass.
     await q.query(`select pg_advisory_xact_lock(hashtext('feture-access-quota:' || $1))`, [acting.accountId]);
     // Every account that would see the private part must be verified adult: both partners for a couple (Q26).

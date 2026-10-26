@@ -1,6 +1,6 @@
 // @ts-check
 import { moderationCommands } from '../../contracts/moderation.mjs';
-import { fail } from '../errors.mjs';
+import { fail, isUniqueViolation } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { journal, requireStaff } from './staff.mjs';
 import { applyEdit, settlePublication } from './posts.mjs';
@@ -25,10 +25,13 @@ async function targetOwner(q, staffAccount, type, id) {
   const [t] = await q.query(
     type === 'post' ? `select owner_profile_id owner, state from feture.post where id = $1 for update`
       : type === 'reply' ? `select author_profile_id owner, state from feture.reply where id = $1 for update`
-        : `select id owner, state from feture.profile where id = $1 for update`, [id]);
+        : type === 'community' ? `select owner_profile_id owner, state from feture.community where id = $1 for update`
+          : type === 'event' ? `select organizer_profile_id owner, state from feture.event where id = $1 for update`
+            : type === 'conversation' ? `select profile_a owner, profile_b other, state from feture.conversation where id = $1 for update`
+              : `select id owner, state from feture.profile where id = $1 for update`, [id]);
   if (!t) fail(404, 'not_found');
   const [{ own }] = await q.query(
-    `select exists (select 1 from feture.profile_member where profile_id = $1 and account_id = $2) own`, [t.owner, staffAccount]);
+    `select exists (select 1 from feture.profile_member where profile_id in ($1, $3) and account_id = $2) own`, [t.owner, staffAccount, t.other ?? t.owner]);
   if (own) fail(403, 'forbidden');
   return t;
 }
@@ -83,8 +86,9 @@ const run = {
       `select r.target_type, r.target_id, count(*)::int reports, min(r.created_at) first_at, max(r.created_at) last_at,
          array_agg(distinct r.reason) reasons, min(${PRIORITY.replace(/reason/g, 'r.reason')}) priority,
          array_remove(array_agg(nullif(r.details, '')), null) details,
-         (array_agg(r.snapshot order by r.created_at) filter (where r.snapshot is not null))[1] snapshot
-       from feture.report r where r.state = 'open' group by r.target_type, r.target_id
+         (array_agg(r.snapshot order by r.created_at) filter (where r.snapshot is not null))[1] snapshot,
+         (array_agg(r.reporter_profile_id order by r.created_at))[1] first_reporter, r.reported_profile_id
+       from feture.report r where r.state = 'open' group by r.target_type, r.target_id, r.reported_profile_id
        order by priority, first_at limit $1`, [input.limit]);
     const items = [];
     for (const g of groups) {
@@ -96,8 +100,16 @@ const run = {
              from feture.post p where p.id = $1`
           : g.target_type === 'reply'
             ? `select author_profile_id owner, left(body, 400) excerpt, state, 0 media from feture.reply where id = $1`
-            : `select p.id owner, coalesce(p.name, '') || ' @' || coalesce(p.handle, '') || ' — ' || left(coalesce(d.bio, ''), 300) excerpt, p.state, 0 media
-               from feture.profile p left join feture.profile_details d on d.profile_id = p.id where p.id = $1`, [g.target_id]);
+            : g.target_type === 'community'
+              ? `select owner_profile_id owner, name || ' — ' || left(description, 300) excerpt, state, 0 media from feture.community where id = $1`
+              : g.target_type === 'event'
+                ? `select organizer_profile_id owner, title || ' — ' || left(description, 300) excerpt, state, 0 media from feture.event where id = $1`
+                // A chat: the side reported by the first reporter; the evidence is the copied messages.
+                : g.target_type === 'conversation'
+                  ? `select $2::uuid owner, '' excerpt, state, 0 media from feture.conversation where id = $1`
+                  : `select p.id owner, coalesce(p.name, '') || ' @' || coalesce(p.handle, '') || ' — ' || left(coalesce(d.bio, ''), 300) excerpt, p.state, 0 media
+               from feture.profile p left join feture.profile_details d on d.profile_id = p.id where p.id = $1`,
+        g.target_type === 'conversation' ? [g.target_id, g.reported_profile_id] : [g.target_id]);
       if (!snap) continue;
       const [{ own }] = await q.query(`select exists (select 1 from feture.profile_member where profile_id = $1 and account_id = $2) own`, [snap.owner, account.id]);
       if (own) continue;
@@ -113,22 +125,30 @@ const run = {
     await requireStaff(q, account.id, MODERATORS);
     const t = await targetOwner(q, account.id, input.targetType, input.targetId);
     // A decision answers open reports, once, on live content.
-    const [{ open }] = await q.query(`select count(*)::int open from feture.report where target_type = $1 and target_id = $2 and state = 'open'`, [input.targetType, input.targetId]);
+    const side = input.targetType === 'conversation' ? input.reportedProfileId ?? null : null;
+    const [{ open }] = await q.query(`select count(*)::int open from feture.report where target_type = $1 and target_id = $2 and state = 'open' and ($3::uuid is null or reported_profile_id = $3)`,
+      [input.targetType, input.targetId, side]);
     if (!open) fail(409, 'conflict', { rule: 'no_open_reports' });
-    const live = input.targetType === 'post' ? ['published', 'review'] : input.targetType === 'reply' ? ['published'] : ['active'];
+    const live = input.targetType === 'post' ? ['published', 'review'] : input.targetType === 'reply' ? ['published']
+      : input.targetType === 'community' ? ['published'] : input.targetType === 'event' ? ['published', 'cancelled'] : ['active'];
     if (input.decision === 'remove' && !live.includes(t.state)) fail(409, 'conflict', { state: t.state });
     if (input.decision === 'remove') {
       if (input.targetType === 'post') await q.query(`update feture.post set state = 'removed', removed_reason = $2, updated_at = now() where id = $1`, [input.targetId, input.rule]);
       if (input.targetType === 'reply') await q.query(`update feture.reply set state = 'removed' where id = $1`, [input.targetId]);
+      if (input.targetType === 'community') await q.query(`update feture.community set state = 'hidden', reject_reason = $2, updated_at = now() where id = $1`, [input.targetId, input.rule]);
+      if (input.targetType === 'event') {
+        await q.query(`update feture.event set state = 'hidden', reject_reason = $2, rev = rev + 1, updated_at = now() where id = $1`, [input.targetId, input.rule]);
+        await q.query(`update feture.event_application set state = 'closed', decided_at = now(), rev = rev + 1 where event_id = $1 and state = 'pending'`, [input.targetId]);
+      }
       // The author learns what was removed and under which rule, and how to appeal (DSA art. 17).
       await enqueue(q, 'content.removed', t.owner, { targetType: input.targetType, targetId: input.targetId, rule: input.rule });
     }
     const reporters = await q.query(
       `update feture.report set state = 'resolved', resolution = $3, resolved_at = now()
-       where target_type = $1 and target_id = $2 and state = 'open' returning reporter_profile_id`,
-      [input.targetType, input.targetId, input.decision === 'remove' ? 'removed' : 'kept']);
+       where target_type = $1 and target_id = $2 and state = 'open' and ($4::uuid is null or reported_profile_id = $4) returning reporter_profile_id`,
+      [input.targetType, input.targetId, input.decision === 'remove' ? 'removed' : 'kept', side]);
     for (const r of reporters) await enqueue(q, 'report.resolved', r.reporter_profile_id, { targetType: input.targetType, resolution: input.decision === 'remove' ? 'removed' : 'kept' });
-    await journal(q, account.id, 'report.' + input.decision, input.targetType, input.targetId, { rule: input.rule ?? null, reports: reporters.length, note: input.note });
+    await journal(q, account.id, 'report.' + input.decision, input.targetType, input.targetId, { from: t.state, rule: input.rule ?? null, reports: reporters.length, note: input.note });
     return { resolved: reporters.length, action: input.decision };
   },
 
@@ -159,7 +179,7 @@ const run = {
       await q.query(`update feture.post set state = 'removed', removed_reason = 'consent', updated_at = now() where id = $1`, [input.postId]);
       await enqueue(q, 'content.removed', t.owner, { targetType: 'post', targetId: input.postId, rule: 'consent' });
     }
-    await journal(q, account.id, input.restore ? 'dispute.restore' : 'dispute.remove', 'post', input.postId);
+    await journal(q, account.id, input.restore ? 'dispute.restore' : 'dispute.remove', 'post', input.postId, { from: t.state });
     return { state: input.restore ? 'published' : 'removed' };
   },
 
@@ -215,7 +235,140 @@ const run = {
     await journal(q, account.id, 'sanction.' + input.decision, 'profile', input.profileId, { rule: input.rule });
     return { state: input.decision === 'suspend' ? 'suspended' : 'active' };
   },
+
+  async 'staff.restrict'(q, { account, input }) {
+    // Restriction (S4 §4): out of Discover and search, no new likes, access requests, messages or links; the access
+    // it was given is revoked. Lighter than a suspension, so moderators may apply it.
+    const roles = await requireStaff(q, account.id, MODERATORS);
+    await targetOwner(q, account.id, 'profile', input.profileId);
+    await checkRank(q, roles, input.profileId);
+    if (input.on && input.rule === 'appeal_granted') fail(400, 'invalid_input', { fields: ['rule'] });
+    if (!input.on) {
+      // Restrictions for minors or illegal content are lifted by leads only.
+      const [{ rule }] = await q.query(`select coalesce(restriction_rule, '') rule from feture.profile where id = $1`, [input.profileId]);
+      if (OWNER_ONLY_LIFT.has(rule) && !roles.some(r => r === 'owner' || r === 'lead')) fail(403, 'forbidden');
+    }
+    const rows = await q.query(
+      `update feture.profile set restricted_at = $2, restriction_rule = $3, updated_at = now() where id = $1 and (restricted_at is null) = $4 returning id`,
+      [input.profileId, input.on ? new Date() : null, input.on ? input.rule : null, input.on]);
+    if (!rows[0]) fail(409, 'conflict', { rule: input.on ? 'already_restricted' : 'not_restricted' });
+    if (input.on) {
+      // The person and the couples they act as.
+      const sides = `select $1::uuid union select m.profile_id from feture.profile_member m join feture.account a on a.id = m.account_id
+                     where a.person_profile_id = $1 and m.state = 'active'`;
+      await q.query(`update feture.access_grant set revoked_at = now() where viewer_profile_id in (${sides}) and revoked_at is null`, [input.profileId]);
+      await q.query(`update feture.access_request set state = 'closed', closed_reason = 'revoked', decided_at = now() where requester_profile_id in (${sides}) and state = 'pending'`, [input.profileId]);
+    }
+    await enqueue(q, input.on ? 'profile.restricted' : 'profile.unrestricted', input.profileId, { rule: input.rule });
+    await journal(q, account.id, input.on ? 'restrict.on' : 'restrict.off', 'profile', input.profileId, { rule: input.rule, note: input.note });
+    return { restricted: input.on };
+  },
+
+  async 'staff.placeQueue'(q, { account, input }) {
+    await requireStaff(q, account.id, [...MODERATORS, 'verifier']);
+    const items = await q.query(
+      `select pl.id, pl.country, pl.name_ru, pl.name_en, pl.created_at,
+         (select count(*)::int from feture.profile_details d where d.city_id = pl.id) used
+       from feture.place pl where pl.state = 'pending' order by pl.created_at limit $1`, [input.limit]);
+    return { items };
+  },
+
+  async 'staff.placeDecide'(q, { account, input }) {
+    await requireStaff(q, account.id, [...MODERATORS, 'verifier']);
+    const rows = await q.query(
+      `update feture.place set state = $2, name_ru = coalesce($3, name_ru), name_en = coalesce($4, name_en) where id = $1 and state = 'pending' returning id`,
+      [input.placeId, input.decision === 'approve' ? 'approved' : 'rejected', input.nameRu ?? null, input.nameEn ?? null]);
+    if (!rows[0]) fail(409, 'conflict');
+    await journal(q, account.id, 'place.' + input.decision, 'place', input.placeId, {});
+    return { decision: input.decision };
+  },
+
+  async 'appeal.create'(q, { acting: a, input }) {
+    // The author appeals a removal (or a restriction of their profile); a lead who did not decide it looks again.
+    if (!a) throw new Error('acting profile missing');
+    const own = {
+      post: `select owner_profile_id o, state = 'removed' hit from feture.post where id = $1`,
+      reply: `select author_profile_id o, state = 'removed' hit from feture.reply where id = $1`,
+      community: `select owner_profile_id o, state = 'hidden' hit from feture.community where id = $1`,
+      event: `select organizer_profile_id o, state = 'hidden' hit from feture.event where id = $1`,
+      profile: `select id o, restricted_at is not null hit from feture.profile where id = $1`,
+    }[/** @type {'post'} */ (input.targetType)];
+    const [t] = await q.query(own, [input.targetId]);
+    if (!t || t.o !== a.profileId) fail(404, 'not_found');
+    if (!t.hit) fail(409, 'conflict', { rule: 'nothing_to_appeal' });
+    // Only a staff decision is appealed here (a host's removal in a community is the community's own matter).
+    const [d] = await q.query(
+      `select id from feture.staff_action where target_type = $1 and target_id = $2 and action = any($3) order by created_at desc limit 1`,
+      [input.targetType, input.targetId, APPEALABLE[/** @type {keyof typeof APPEALABLE} */ (input.targetType)]]);
+    if (!d) fail(409, 'conflict', { rule: 'nothing_to_appeal' });
+    try {
+      const [r] = await q.query(`insert into feture.appeal (account_id, profile_id, target_type, target_id, body, staff_action_id) values ($1, $2, $3, $4, $5, $6) returning id`,
+        [a.accountId, a.profileId, input.targetType, input.targetId, input.body, d.id]);
+      await enqueue(q, 'moderation.appeal', a.profileId, { appealId: r.id });
+      return { id: r.id, state: 'open' };
+    } catch (error) {
+      if (isUniqueViolation(error)) fail(409, 'conflict', { rule: 'appeal_open' });
+      throw error;
+    }
+  },
+
+  async 'staff.appealQueue'(q, { account, input }) {
+    await requireStaff(q, account.id, ['owner', 'lead']);
+    const items = await q.query(
+      `select ap.id, ap.target_type, ap.target_id, ap.body, ap.created_at, p.handle,
+         (select json_build_object('action', s.action, 'detail', s.detail, 'at', s.created_at, 'mine', s.staff_account_id = $1) from feture.staff_action s
+          where s.id = ap.staff_action_id) decision
+       from feture.appeal ap join feture.profile p on p.id = ap.profile_id
+       where ap.state = 'open' and not exists (select 1 from feture.profile_member m where m.profile_id = ap.profile_id and m.account_id = $1)
+       order by ap.created_at limit $2`, [account.id, input.limit]);
+    return { items };
+  },
+
+  async 'staff.appealDecide'(q, { account, input }) {
+    await requireStaff(q, account.id, ['owner', 'lead']);
+    const [ap] = await q.query('select * from feture.appeal where id = $1 for update', [input.appealId]);
+    if (!ap) fail(404, 'not_found');
+    if (ap.state !== 'open') fail(409, 'conflict', { state: ap.state });
+    const [{ own }] = await q.query(`select exists (select 1 from feture.profile_member where profile_id = $1 and account_id = $2) own`, [ap.profile_id, account.id]);
+    if (own) fail(403, 'forbidden');
+    // Another person looks again: whoever made the decision under appeal may not decide the appeal.
+    const [decision] = await q.query(`select staff_account_id, detail from feture.staff_action where id = $1`, [ap.staff_action_id]);
+    if (decision.staff_account_id === account.id) fail(403, 'forbidden', { rule: 'same_staff' });
+    let restored = false;
+    if (input.grant) restored = await restoreTarget(q, ap.target_type, ap.target_id, decision.detail?.from ?? null);
+    await q.query(`update feture.appeal set state = $2, decided_by = $3, note = nullif($4, ''), decided_at = now() where id = $1`,
+      [ap.id, input.grant ? 'granted' : 'denied', account.id, input.note]);
+    await enqueue(q, 'appeal.decided', ap.profile_id, { appealId: ap.id, state: input.grant ? 'granted' : 'denied', targetType: ap.target_type, targetId: ap.target_id });
+    await journal(q, account.id, input.grant ? 'appeal.grant' : 'appeal.deny', ap.target_type, ap.target_id, { appealId: ap.id, note: input.note });
+    return { state: input.grant ? 'granted' : 'denied', restored };
+  },
 };
+
+/** Staff decisions that may be appealed, per target. */
+const APPEALABLE = {
+  post: ['report.remove', 'dispute.remove'], reply: ['report.remove'], community: ['report.remove'], event: ['report.remove', 'event.hide'], profile: ['restrict.on'],
+};
+
+/** Puts the target back where it was before the decision (never simply «published»): a post that was still being
+ * checked goes through its checks again; a cancelled event stays cancelled.
+ * @param {Q} q @param {string} type @param {string} id @param {string | null} from @returns {Promise<boolean>} */
+async function restoreTarget(q, type, id, from) {
+  if (type === 'post') {
+    if (from === 'review') {
+      const rows = await q.query(`update feture.post set state = 'review', removed_reason = null, updated_at = now() where id = $1 and state = 'removed' returning id`, [id]);
+      if (rows[0]) await settlePublication(q, id);
+      return rows.length > 0;
+    }
+    return (await q.query(`update feture.post set state = 'published', removed_reason = null, updated_at = now() where id = $1 and state = 'removed' returning id`, [id])).length > 0;
+  }
+  if (type === 'reply') return (await q.query(`update feture.reply set state = 'published' where id = $1 and state = 'removed' and body <> '' returning id`, [id])).length > 0;
+  if (type === 'community') return (await q.query(`update feture.community set state = 'published', reject_reason = null, updated_at = now() where id = $1 and state = 'hidden' returning id`, [id])).length > 0;
+  if (type === 'event') {
+    const back = from === 'cancelled' ? 'cancelled' : 'published';
+    return (await q.query(`update feture.event set state = $2, reject_reason = null, rev = rev + 1, updated_at = now() where id = $1 and state = 'hidden' returning id`, [id, back])).length > 0;
+  }
+  return (await q.query(`update feture.profile set restricted_at = null, restriction_rule = null, updated_at = now() where id = $1 and restricted_at is not null returning id`, [id])).length > 0;
+}
 
 /** @type {Record<string, Command>} */
 export const moderation = Object.fromEntries(

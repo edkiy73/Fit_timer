@@ -59,11 +59,13 @@ export const postsCommands = {
     profile: true, write: true, rate: { kind: 'report.create', max: 10, window: '1 day' },
     input: z.strictObject({
       opId,
-      targetType: z.enum(['profile', 'post', 'reply']),
+      // A chat is reported as its conversation with the selected messages (Q27).
+      targetType: z.enum(['profile', 'post', 'reply', 'community', 'event', 'conversation']),
       targetId: id,
+      messageIds: z.array(id).min(1).max(20).transform(v => [...new Set(v)]).optional(),
       reason: z.enum(['threat', 'private', 'minor', 'spam', 'other']),
       details: text(500).default(''),
       alsoBlock: z.boolean().default(false),
-    }),
+    }).refine(v => (v.targetType === 'conversation') === !!v.messageIds, { message: 'messages_for_chats_only', path: ['messageIds'] }),
   },
 };

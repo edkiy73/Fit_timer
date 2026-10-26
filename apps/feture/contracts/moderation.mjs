@@ -11,14 +11,15 @@ export const moderationCommands = {
     profile: false, write: true,
     input: z.strictObject({
       opId,
-      targetType: z.enum(['profile', 'post', 'reply']),
+      targetType: z.enum(['profile', 'post', 'reply', 'community', 'event', 'conversation']),
       targetId: id,
+      reportedProfileId: id.optional(),   // a chat: which side's reports this decides
       decision: z.enum(['keep', 'remove']),
       // Statement of reasons for the author (DSA art. 17): which rule.
       rule: z.enum(['minors', 'threats', 'private_material', 'spam', 'illegal', 'community_rules']).optional(),
       note: text(500).default(''),
     }).refine(v => v.decision === 'keep' || !!v.rule, { message: 'remove needs a rule', path: ['rule'] })
-      .refine(v => v.targetType !== 'profile' || v.decision === 'keep', { message: 'profiles are sanctioned through staff.sanction', path: ['decision'] }),
+      .refine(v => !['profile', 'conversation'].includes(v.targetType) || v.decision === 'keep', { message: 'people are sanctioned through staff.sanction or staff.restrict', path: ['decision'] }),
   },
   'staff.disputeQueue': { profile: false, write: false, input: z.strictObject({ limit: z.int().min(1).max(50).default(20) }) },
   'staff.disputeDecide': {
@@ -43,4 +44,23 @@ export const moderationCommands = {
       note: text(500).default(''),
     }),
   },
+  'staff.restrict': {
+    profile: false, write: true,
+    input: z.strictObject({
+      opId, profileId: id, on: z.boolean(),
+      rule: z.enum(['minors', 'threats', 'private_material', 'spam', 'illegal', 'community_rules', 'appeal_granted']),
+      note: text(500).default(''),
+    }),
+  },
+  'staff.placeQueue': { profile: false, write: false, input: z.strictObject({ limit: z.int().min(1).max(50).default(20) }) },
+  'staff.placeDecide': {
+    profile: false, write: true,
+    input: z.strictObject({ opId, placeId: id, decision: z.enum(['approve', 'reject']), nameRu: text(80).optional(), nameEn: text(80).optional() }),
+  },
+  'appeal.create': {
+    profile: true, write: true, rate: { kind: 'appeal.create', max: 5, window: '1 day' },
+    input: z.strictObject({ opId, targetType: z.enum(['post', 'reply', 'community', 'event', 'profile']), targetId: id, body: text(1000).refine(v => v.length >= 10, { message: 'too_short' }) }),
+  },
+  'staff.appealQueue': { profile: false, write: false, input: z.strictObject({ limit: z.int().min(1).max(50).default(20) }) },
+  'staff.appealDecide': { profile: false, write: true, input: z.strictObject({ opId, appealId: id, grant: z.boolean(), note: text(500).default('') }) },
 };

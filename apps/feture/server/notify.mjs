@@ -48,6 +48,14 @@ const TYPES = /** @type {Record<string, {type: string, actor?: string, object?: 
   'couple.narrowed': { type: 'pair.narrowed' },
   'couple.changed': { type: 'pair.acted' },
   'couple.approvalChanged': { type: 'pair.trust' },
+  'verification.decided': { type: 'ageCheck' },
+  'profile.restricted': { type: 'profileRestricted' },
+  'profile.unrestricted': { type: 'profileUnrestricted' },
+  'appeal.decided': { type: 'appealDecided' },
+  'link.accepted': { type: 'linkAccepted', actor: 'from' },
+  'link.declined': { type: 'linkDeclined', actor: 'from' },
+  'link.changed': { type: 'linkChanged', actor: 'from' },
+  'link.removed': { type: 'linkRemoved', actor: 'from' },
 });
 /** Payload fields kept in `data` (codes and ids only, never free text). */
 const KEEP = ['what', 'change', 'reason', 'state', 'kind', 'resolution', 'rule', 'targetType', 'targetId', 'answer', 'outcome', 'changes', 'approves'];
@@ -126,9 +134,15 @@ export function notifyHandlers(db) {
     };
   }
   // Event updates go to the people following the event, not to the organizer the item is addressed to.
-  for (const [topic, type, admittedOnly] of /** @type {const} */ ([['event.cancelled', 'eventCancelled', false], ['event.changed', 'eventChanged', false], ['event.announcement', 'eventAnnouncement', true]])) {
+  for (const [topic, type, admittedOnly] of /** @type {const} */ ([['event.cancelled', 'eventCancelled', false], ['event.changed', 'eventChanged', false],
+    ['event.announcement', 'eventAnnouncement', true], ['event.reminder', 'eventReminder', true]])) {
     handlers[topic] = async item => {
       const p = /** @type {any} */ (item.payload);
+      if (topic === 'event.reminder') {
+        // Only for an event still going ahead at that time.
+        const [e] = await db.query(`select 1 from feture.event where id = $1 and state = 'published' and starts_at > now()`, [p.eventId]);
+        if (!e) return;
+      }
       await db.tx(async q => write(q, item, { type, actor: item.profile_id, objectType: 'event', objectId: p.eventId, data: pick(p) }, await eventFollowers(q, p.eventId, admittedOnly)));
     };
   }
