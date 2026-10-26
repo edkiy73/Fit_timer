@@ -13,7 +13,7 @@ import { actingProfile } from './profiles.mjs';
  * @typedef {import('./accounts.mjs').AccountRow} AccountRow @typedef {import('./profiles.mjs').Acting} Acting
  * @typedef {{media: import('./media/assets.mjs').MediaConfig, pepper?: string}} Cfg   pepper is filled in by the handler
  * @typedef {{
- *   input: import('zod').ZodType, profile: boolean, write: boolean, ledger?: boolean,
+ *   input: import('zod').ZodType, profile: boolean, write: boolean, ledger?: boolean, allowPaused?: boolean,
  *   run: (q: Q, ctx: {account: AccountRow, acting: Acting | null, input: any, cfg: Cfg, coreAccountHash: string}) => Promise<Record<string, unknown>>
  * }} Command
  * @typedef {{headers: Record<string, string | string[] | undefined>, method?: string, body?: unknown,
@@ -72,10 +72,10 @@ export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota
       const account = await resolveAccount(db, pepper, core);
       const profileId = header(req, 'x-fe-profile');
       // Membership is checked before a stored result can be replayed: a former member gets 403, not old results.
-      if (cmd.profile) await actingProfile(db, account.id, profileId, { write: cmd.write });
+      if (cmd.profile) await actingProfile(db, account.id, profileId, { write: cmd.write, allowPaused: cmd.allowPaused });
       /** @param {Q} q */
       const exec = async q => {
-        const acting = cmd.profile ? await actingProfile(q, account.id, profileId, { write: cmd.write }) : null;
+        const acting = cmd.profile ? await actingProfile(q, account.id, profileId, { write: cmd.write, allowPaused: cmd.allowPaused }) : null;
         // coreAccountHash is stable across Core re-registrations; only for markers that must survive them (under-18).
         return cmd.run(q, { account, acting, input, cfg: { ...cfg, pepper }, coreAccountHash: core.accountHash });
       };

@@ -11,10 +11,11 @@ import { fail } from './errors.mjs';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 /** Resolves the `X-Fe-Profile` header. Never falls back to the person profile (V21 guide §5.1).
- * A paused couple stays readable (30-day restore window) but refuses writes.
- * @param {Q} q @param {string} accountId @param {unknown} profileId @param {{write: boolean}} mode
+ * A paused couple stays readable (30-day restore window) but refuses writes, except commands made for that
+ * window (`allowPaused`: restore).
+ * @param {Q} q @param {string} accountId @param {unknown} profileId @param {{write: boolean, allowPaused?: boolean}} mode
  * @returns {Promise<Acting>} */
-export async function actingProfile(q, accountId, profileId, { write }) {
+export async function actingProfile(q, accountId, profileId, { write, allowPaused = false }) {
   if (typeof profileId !== 'string' || !UUID.test(profileId)) fail(400, 'profile_required');
   const [row] = await q.query(
     `select p.id, p.kind, p.state, o.account_id partner, coalesce(o.approves_partner, false) partner_approves
@@ -25,7 +26,7 @@ export async function actingProfile(q, accountId, profileId, { write }) {
     [profileId, accountId]);
   if (!row || !['active', 'paused'].includes(row.state)) fail(403, 'profile_forbidden');
   const writable = row.state === 'active';
-  if (write && !writable) fail(403, 'profile_read_only');
+  if (write && !writable && !(allowPaused && row.state === 'paused')) fail(403, 'profile_read_only');
   return Object.freeze({
     accountId,
     profileId: row.id,

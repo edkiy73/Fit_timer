@@ -364,7 +364,10 @@ test('media: intent limits, quarantine upload, commit, scan decisions, swap afte
     assert.equal(await verifyMediaToken(SECRET, token, { assetId: explicitPost, variant: 'card' }), null);
     assert.equal(await verifyMediaToken('x'.repeat(40), token, { assetId: safePost, variant: 'card' }), null);
     assert.equal(await verifyMediaToken(SECRET, token, { assetId: safePost, variant: 'card', now: Date.now() + 3600e3 }), null);
-    assert.equal(await verifyMediaToken(SECRET, token.replace(/.$/, c => c === 'A' ? 'B' : 'A'), { assetId: safePost, variant: 'card' }), null);
+    // Tamper inside the signature (the last base64url character carries two unused bits, so changing it can be a no-op).
+    const at = token.length - 10;
+    const forged = token.slice(0, at) + (token[at] === 'A' ? 'B' : 'A') + token.slice(at + 1);
+    assert.equal(await verifyMediaToken(SECRET, forged, { assetId: safePost, variant: 'card' }), null);
     const signed = await mediaDto({ storage, delivery: signedStorageDelivery(storage) }, rows[safePost], { viewerProfileId: pb, place: 'public', showExplicit: false });
     assert.equal(signed.src.card, `https://store.test/sign/v/${safePost}/card.webp?ttl=600`);
 

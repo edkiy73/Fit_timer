@@ -15,7 +15,7 @@ export const text = (/** @type {number} */ max) => z.string().max(max * 2).trans
   .refine(v => !/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F‪-‮⁦-⁩​-‏﻿]/.test(v), { message: 'bad_characters' });
 /** Single-line text for names: also no line breaks, tabs or invisible/blank-looking characters, and not blank. */
 export const line = (/** @type {number} */ max) => text(max)
-  .refine(v => !/[\t\n\r\u00AD\u061C\u115F\u1160\u2028\u2029\u2060-\u2064\u3164\uFFA0]/.test(v), { message: 'bad_characters' })
+  .refine(v => !/[\t\n\r\u00AD\u034F\u061C\u115F\u1160\u180E\u2028\u2029\u2060-\u2064\u2800\u3164\uFE00-\uFE0F\uFFA0\u{E0000}-\u{E007F}]/u.test(v), { message: 'bad_characters' })
   .refine(v => v.replace(/\s/g, '').length > 0, { message: 'blank' });
 const birthDate = z.iso.date();
 const detailsVis = z.enum(['only', 'granted', 'all']);
@@ -59,7 +59,8 @@ export const NOTIFICATION_DEFAULTS = Object.freeze({
 
 export const meCommands = {
   'catalog.get': { profile: false, write: false, input: z.strictObject({}) },
-  'nick.check': { profile: false, write: false, input: z.strictObject({ handle: z.string().max(40) }) },
+  // Runs in a transaction (write) so its per-account rate limit is serialised.
+  'nick.check': { profile: false, write: true, ledger: false, input: z.strictObject({ handle: z.string().max(40) }) },
   // No idempotency ledger: registration is idempotent by nature, and an under-18 answer must leave no trace.
   'account.create': {
     profile: false, write: true, ledger: false,

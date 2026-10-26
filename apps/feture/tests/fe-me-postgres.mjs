@@ -182,9 +182,24 @@ test('interests: scale or mark, direction rules, visibility for others, owner-on
     assert.equal((await call('ua', a, { action: 'interests.history', cursor: 'not-a-cursor' })).status, 400);
     assert.equal((await call('ub', a, { action: 'interests.history' })).status, 403);
 
-    // Couple profiles are read-only here until slice E brings partner approvals.
+    // As a couple: applies at once while the partner does not ask to approve; waits for the partner once they do.
     const pc = await coupleOf([a, b]);
-    const coupleWrite = await call('ua', pc, { action: 'interests.set', opId: op(), topicId: 'bondage', value: 5, vis: 'public' });
-    assert.deepEqual([coupleWrite.status, coupleWrite.rule], [422, 'couple_changes_not_available']);
+    const direct = await call('ua', pc, { action: 'interests.set', opId: op(), topicId: 'bondage', value: 5, vis: 'public' });
+    assert.deepEqual([direct.status, direct.value], [200, 5]);
+    const [{ id: kiraAccount }] = await db.query('select id from feture.account where person_profile_id = $1', [b]);
+    await db.query('update feture.profile_member set approves_partner = true where profile_id = $1 and account_id = $2', [pc, kiraAccount]);
+    const waits = await call('ua', pc, { action: 'interests.set', opId: op(), topicId: 'shibari', value: 7, vis: 'public' });
+    assert.ok(waits.pending?.approvalId);
+    assert.equal((await call('ub', pc, { action: 'interests.list', profileId: pc })).items.length, 1);
+    const ok = await call('ub', pc, { action: 'decide.approval', opId: op(), approvalId: waits.pending.approvalId, choice: 'approve' });
+    assert.equal(ok.applied, true);
+    assert.equal((await call('ub', pc, { action: 'interests.list', profileId: pc })).items.length, 2);
+    // Narrowing (removing) never waits.
+    assert.equal((await call('ua', pc, { action: 'interests.remove', opId: op(), topicId: 'shibari' })).removed, true);
+    // Person-only fields are refused for a couple; a widening setting waits, a narrowing one does not.
+    assert.deepEqual((await call('ua', pc, { action: 'profile.update', opId: op(), rev: 1, genders: ['woman'] })).fields, ['genders']);
+    assert.ok((await call('ua', pc, { action: 'profile.update', opId: op(), rev: 1, bio: 'Мы' })).pending?.approvalId);
+    assert.equal((await call('ua', pc, { action: 'profile.setVisibility', opId: op(), setting: 'discoverMode', value: 'off' })).value, 'off');
+    assert.ok((await call('ua', pc, { action: 'profile.setVisibility', opId: op(), setting: 'discoverMode', value: 'visible' })).pending?.approvalId);
   } finally { await pg.close(); }
 });

@@ -18,8 +18,10 @@ export async function grantedScopes(q, ownerProfileId, viewer) {
     `select g.scopes from feture.access_grant g
      join feture.profile_settings s on s.profile_id = g.owner_profile_id
      join feture.profile p on p.id = g.owner_profile_id
+     join feture.profile v on v.id = g.viewer_profile_id
      where g.owner_profile_id = $1 and g.viewer_profile_id = $2 and g.revoked_at is null
-       and (g.until is null or g.until > now()) and $3 = any(g.viewer_account_ids) and s.private_on and p.state = 'active'`,
+       and (g.until is null or g.until > now()) and $3 = any(g.viewer_account_ids) and s.private_on
+       and p.state = 'active' and v.state = 'active'`,
     [ownerProfileId, viewer.profileId, viewer.accountId]);
   return row?.scopes ?? [];
 }
@@ -37,6 +39,12 @@ export async function availableScopes(q, ownerProfileId) {
                where a.target_type = 'private' and a.target_id = $1 and m.kind = 'video' and m.state in ('uploaded', 'scanning', 'needs_review', 'approved')) video`,
     [ownerProfileId]);
   return SCOPES.filter(s => r[s]);
+}
+
+/** Serialises everything that opens or closes the owner's private part (grant, request, switch off, close all):
+ * a grant can never slip in after a «close everything» read the grants. @param {Q} q @param {string} ownerProfileId */
+export async function lockOwner(q, ownerProfileId) {
+  await q.query('select 1 from feture.profile_settings where profile_id = $1 for update', [ownerProfileId]);
 }
 
 /** Members of a profile, for a couple both: the accounts a grant is for. @param {Q} q @param {string} profileId */

@@ -4,6 +4,8 @@ import { fail, isUniqueViolation } from '../errors.mjs';
 import { hmac } from '../hash.mjs';
 import { mediaDto } from '../media/assets.mjs';
 import { grantedScopes } from '../access.mjs';
+import { enqueue } from '../outbox.mjs';
+import { narrowCouple, needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
 
 /** Slice C «Я»: registration, onboarding, profile, settings, interests (S1 §3–4, S2-CATALOG «C»).
  * Couple profiles are read here; their writes go through partner approvals in slice E and are refused for now.
@@ -32,7 +34,7 @@ const ageAnywhere = birthDate => ageOn(birthDate, new Date(Date.now() + 14 * 360
 /** Documents that must be accepted to register (V21 A04, AUTH-015). Registration refuses if any is not published. */
 const MANDATORY_DOCS = ['terms', 'privacy', 'community', 'adult-content'];
 /** Stems nobody may use at the start of a nickname, also through 0/o, 1/l/i, 3/e, 5/s look-alikes and separators. */
-const RESERVED_STEMS = ['admin', 'support', 'moder', 'feture', 'official', 'staff', 'security', 'helpdesk', 'system', 'root', 'team'];
+const RESERVED_STEMS = ['admin', 'support', 'moder', 'feture', 'official', 'staff', 'helpdesk'];
 /** @param {string} h */
 const skeleton = h => h.toLowerCase().replace(/[._]/g, '').replace(/0/g, 'o').replace(/[1i]/g, 'l').replace(/3/g, 'e').replace(/5/g, 's');
 
@@ -48,7 +50,7 @@ async function limit(q, accountId, kind, max, window) {
 
 /** @param {Acting | null} acting @returns {Acting} */
 const need = acting => { if (!acting) throw new Error('acting profile missing'); return acting; };
-/** Writes of couple profiles need partner approvals (slice E). @param {Acting} acting */
+/** Person-only actions (onboarding). @param {Acting} acting */
 const personOnly = acting => { if (acting.kind !== 'person') fail(422, 'rule_violation', { rule: 'couple_changes_not_available' }); };
 
 /** Option codes must exist in the catalog and not be hidden. @param {Q} q @param {Record<string, unknown>} input */
@@ -70,13 +72,15 @@ async function checkOptions(q, input) {
  * @returns {Promise<'ok' | 'reserved' | 'taken'>} */
 async function handleState(q, h, self = null) {
   const sk = skeleton(h);
-  if (RESERVED_STEMS.some(stem => sk.startsWith(skeleton(stem)))) return 'reserved';
+  // Service-like stems anywhere in the nickname (the_admin, real_feture), through look-alikes.
+  if (RESERVED_STEMS.some(stem => sk.includes(skeleton(stem)))) return 'reserved';
+  const reserved = await q.query('select handle from feture.reserved_handle');
+  if (reserved.some(r => skeleton(r.handle) === sk)) return 'reserved';
   const [r] = await q.query(
-    `select exists (select 1 from feture.reserved_handle where handle = lower($1) or handle = $2) reserved,
-            exists (select 1 from feture.profile where lower(handle) = lower($1) and id is distinct from $3) taken,
-            exists (select 1 from feture.handle_hold where handle = lower($1) and until > now() and profile_id is distinct from $3) held`,
-    [h, sk, self]);
-  return r.reserved ? 'reserved' : r.taken || r.held ? 'taken' : 'ok';
+    `select exists (select 1 from feture.profile where lower(handle) = lower($1) and id is distinct from $2::uuid) taken,
+            exists (select 1 from feture.handle_hold where handle = lower($1) and until > now() and profile_id is distinct from $2::uuid) held`,
+    [h, self]);
+  return r.taken || r.held ? 'taken' : 'ok';
 }
 
 /** Current documents that must be accepted. Fails closed: if any mandatory document is not published (or not
@@ -134,6 +138,101 @@ async function profileView(q, viewer, profileId, media) {
   };
 }
 
+/** Fields only a person has (couples take theirs from the members' personal profiles). */
+const PERSON_FIELDS = ['handle', 'showAge', 'detailsVis', 'genders', 'orients', 'status'];
+
+/** Profile edit, shared by the direct path and an approved couple change. Re-checks the revision.
+ * @param {Q} q @param {string} profileId @param {string} accountId @param {Record<string, any>} input */
+async function doProfileUpdate(q, profileId, accountId, input) {
+  await checkOptions(q, input);
+  const [p] = await q.query(
+    `select rev, handle, handle_changed_at > now() - interval '30 days' recently from feture.profile where id = $1 for update`, [profileId]);
+  if (p.rev !== input.rev) fail(409, 'conflict', { rev: p.rev });
+  if (input.handle !== undefined && input.handle !== p.handle) {
+    if (input.handle.toLowerCase() !== String(p.handle).toLowerCase()) {
+      if (p.recently) fail(422, 'rule_violation', { rule: 'handle_change_cooldown' });
+      if (await handleState(q, input.handle, profileId) !== 'ok') fail(409, 'conflict', { field: 'handle' });
+      // The old nickname stays held for 30 days: nobody else can take it and pose as the previous owner.
+      await q.query(
+        `insert into feture.handle_hold (handle, profile_id, until) values (lower($1), $2, now() + interval '30 days')
+         on conflict (handle) do update set profile_id = excluded.profile_id, until = excluded.until`, [p.handle, profileId]);
+    }
+    try {
+      // Only a new nickname starts the 30-day cooldown; changing letter case does not.
+      await q.query(
+        `update feture.profile set handle = $2, handle_changed_at = case when lower(handle) = lower($2) then handle_changed_at else now() end where id = $1`,
+        [profileId, input.handle]);
+    } catch (error) {
+      if (isUniqueViolation(error)) fail(409, 'conflict', { field: 'handle' });
+      throw error;
+    }
+  }
+  if (input.cityId) {
+    // Own submitted cities may be used at once; others' pending or rejected ones may not.
+    const [c] = await q.query(
+      `select 1 from feture.place where id = $1 and (state = 'approved' or (state = 'pending' and submitted_by = $2))`, [input.cityId, accountId]);
+    if (!c) fail(400, 'invalid_input', { fields: ['cityId'] });
+  }
+  if (input.name !== undefined) await q.query('update feture.profile set name = $2 where id = $1', [profileId, input.name]);
+  /** @type {[string, unknown][]} */
+  const sets = [];
+  const map = { bio: 'bio', cityId: 'city_id', showAge: 'show_age', detailsVis: 'details_vis', genders: 'genders', orients: 'orients', roles: 'roles', formats: 'formats', seeks: 'seeks', status: 'status' };
+  for (const [k, col] of Object.entries(map)) if (input[k] !== undefined) sets.push([col, input[k]]);
+  if (sets.length) {
+    await q.query(
+      `update feture.profile_details set ${sets.map(([col], i) => `${col} = $${i + 2}`).join(', ')}, updated_at = now() where profile_id = $1`,
+      [profileId, ...sets.map(([, v]) => v)]);
+  }
+  const [{ rev }] = await q.query('update feture.profile set rev = rev + 1, updated_at = now() where id = $1 returning rev', [profileId]);
+  return { rev };
+}
+
+/** Setting values from most closed to most open: a move to the left narrows (immediate for a couple). */
+const OPENNESS = /** @type {Record<string, unknown[]>} */ ({
+  discoverMode: ['off', 'hidden', 'visible'], acceptProfileLikes: [false, true], requestsFrom: ['none', 'matches', 'all'],
+  linksFrom: ['none', 'follow', 'all'], mentionsFrom: ['none', 'follow', 'all'], activityVis: ['off', 'followers', 'all'], showLikes: [false, true],
+});
+
+/** @param {Q} q @param {string} profileId @param {keyof typeof PROFILE_SETTINGS} setting @param {unknown} value */
+async function doSetVisibility(q, profileId, setting, value) {
+  await q.query(`update feture.profile_settings set ${SETTING_COLUMN[setting]} = $2, updated_at = now() where profile_id = $1`, [profileId, value]);
+  return { setting, value };
+}
+
+/** Interest upsert with history, shared by the direct path and an approved couple change.
+ * @param {Q} q @param {string} profileId @param {string} accountId @param {Record<string, any>} input */
+async function doInterestSet(q, profileId, accountId, input) {
+  const [t] = await q.query('select category_id from feture.topic where id = $1 and not hidden', [input.topicId]);
+  if (!t) fail(400, 'invalid_input', { fields: ['topicId'] });
+  if (input.dir?.length && t.category_id === 'limits') fail(400, 'invalid_input', { fields: ['dir'] });
+  const [prev] = await q.query(
+    'select value, mark, dir, vis from feture.interest where profile_id = $1 and topic_id = $2 for update', [profileId, input.topicId]);
+  const next = { value: input.value ?? null, mark: input.mark ?? null, dir: input.mark ? [] : (input.dir ?? []), vis: input.vis };
+  await q.query(
+    `insert into feture.interest (profile_id, topic_id, value, mark, dir, vis) values ($1, $2, $3, $4, $5, $6)
+     on conflict (profile_id, topic_id) do update set value = excluded.value, mark = excluded.mark, dir = excluded.dir, vis = excluded.vis, updated_at = now()`,
+    [profileId, input.topicId, next.value, next.mark, next.dir, next.vis]);
+  const level = (/** @type {any} */ x) => x ? { value: x.value, mark: x.mark, dir: x.dir } : null;
+  if (JSON.stringify(level(prev)) !== JSON.stringify(level(next))) {
+    await q.query(
+      `insert into feture.interest_history (profile_id, topic_id, kind, from_state, to_state, acted_by) values ($1, $2, 'value', $3, $4, $5)`,
+      [profileId, input.topicId, JSON.stringify(level(prev)), JSON.stringify(level(next)), accountId]);
+  }
+  if (prev && prev.vis !== next.vis) {
+    await q.query(
+      `insert into feture.interest_history (profile_id, topic_id, kind, from_state, to_state, acted_by) values ($1, $2, 'vis', $3, $4, $5)`,
+      [profileId, input.topicId, JSON.stringify({ vis: prev.vis }), JSON.stringify({ vis: next.vis }), accountId]);
+  }
+  return { topicId: input.topicId, ...next };
+}
+
+// Couple changes waiting for the partner are applied by the same code, as the partner who asked.
+registerApprovalKind('profile.update', { apply: async (q, row) => { await doProfileUpdate(q, row.profile_id, row.requested_by, row.change); } });
+registerApprovalKind('profile.setVisibility', {
+  apply: async (q, row) => { await doSetVisibility(q, row.profile_id, /** @type {any} */ (row.change.setting), row.change.value); },
+});
+registerApprovalKind('interests.set', { apply: async (q, row) => { await doInterestSet(q, row.profile_id, row.requested_by, row.change); } });
+
 /** @type {Record<keyof typeof meCommands, Command['run']>} */
 const run = {
   async 'catalog.get'(q) {
@@ -159,7 +258,10 @@ const run = {
       'select person_profile_id, coalesce(age_verified_until > now(), false) verified from feture.account where id = $1 for update', [account.id]);
     if (acc.person_profile_id) fail(409, 'conflict', { state: 'registered' });
     // A future date or an impossible age is a typo, not an age: refused without leaving any marker.
-    if (Date.parse(input.birthDate) > Date.now() + 14 * 3600e3 || ageOn(input.birthDate) > 110) fail(400, 'invalid_input', { fields: ['birthDate'] });
+    // A date in the future, of a small child (a picker default) or of 110+ years is a typo: no marker.
+    if (Date.parse(input.birthDate) > Date.now() + 14 * 3600e3 || ageOn(input.birthDate) < 5 || ageOn(input.birthDate) > 110) {
+      fail(400, 'invalid_input', { fields: ['birthDate'] });
+    }
     // Keyed on the Core login without its generation, so deleting and re-creating the login does not erase it.
     const u18Key = hmac(String(cfg.pepper), 'feture-u18:v1:' + coreAccountHash);
     if (ageAnywhere(input.birthDate) < 18) {
@@ -220,49 +322,21 @@ const run = {
 
   async 'profile.update'(q, { acting: a, input }) {
     const acting = need(a);
-    personOnly(acting);
-    await checkOptions(q, input);
-    const [p] = await q.query(
-      `select rev, handle, handle_changed_at > now() - interval '30 days' recently from feture.profile where id = $1 for update`, [acting.profileId]);
-    if (p.rev !== input.rev) fail(409, 'conflict', { rev: p.rev });
-    if (input.handle !== undefined && input.handle !== p.handle) {
-      if (input.handle.toLowerCase() !== String(p.handle).toLowerCase()) {
-        if (p.recently) fail(422, 'rule_violation', { rule: 'handle_change_cooldown' });
-        if (await handleState(q, input.handle, acting.profileId) !== 'ok') fail(409, 'conflict', { field: 'handle' });
-        // The old nickname stays held for 30 days: nobody else can take it and pose as the previous owner.
-        await q.query(
-          `insert into feture.handle_hold (handle, profile_id, until) values (lower($1), $2, now() + interval '30 days')
-           on conflict (handle) do update set profile_id = excluded.profile_id, until = excluded.until`, [p.handle, acting.profileId]);
+    const { opId: _, ...change } = input;
+    if (acting.kind === 'couple') {
+      const personal = PERSON_FIELDS.filter(k => change[k] !== undefined);
+      if (personal.length) fail(400, 'invalid_input', { fields: personal });
+      await checkOptions(q, change);
+      if (needsPartner(acting, 'profile.update')) {
+        const [p] = await q.query('select rev from feture.profile where id = $1', [acting.profileId]);
+        if (p.rev !== change.rev) fail(409, 'conflict', { rev: p.rev });
+        return { pending: await requestApproval(q, acting, { kind: 'profile.update', targetType: 'profile', targetId: acting.profileId, change, summary: Object.keys(change).filter(k => k !== 'rev') }) };
       }
-      try {
-        // Only a new nickname starts the 30-day cooldown; changing letter case does not.
-        await q.query(
-          `update feture.profile set handle = $2, handle_changed_at = case when lower(handle) = lower($2) then handle_changed_at else now() end where id = $1`,
-          [acting.profileId, input.handle]);
-      } catch (error) {
-        if (isUniqueViolation(error)) fail(409, 'conflict', { field: 'handle' });
-        throw error;
-      }
+      const out = await doProfileUpdate(q, acting.profileId, acting.accountId, change);
+      await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: 'profile' });
+      return out;
     }
-    if (input.cityId) {
-      // Own submitted cities may be used at once; others' pending or rejected ones may not.
-      const [c] = await q.query(
-        `select 1 from feture.place where id = $1 and (state = 'approved' or (state = 'pending' and submitted_by = $2))`,
-        [input.cityId, acting.accountId]);
-      if (!c) fail(400, 'invalid_input', { fields: ['cityId'] });
-    }
-    if (input.name !== undefined) await q.query('update feture.profile set name = $2 where id = $1', [acting.profileId, input.name]);
-    /** @type {[string, unknown][]} */
-    const sets = [];
-    const map = { bio: 'bio', cityId: 'city_id', showAge: 'show_age', detailsVis: 'details_vis', genders: 'genders', orients: 'orients', roles: 'roles', formats: 'formats', seeks: 'seeks', status: 'status' };
-    for (const [k, col] of Object.entries(map)) if (input[k] !== undefined) sets.push([col, input[k]]);
-    if (sets.length) {
-      await q.query(
-        `update feture.profile_details set ${sets.map(([col], i) => `${col} = $${i + 2}`).join(', ')}, updated_at = now() where profile_id = $1`,
-        [acting.profileId, ...sets.map(([, v]) => v)]);
-    }
-    const [{ rev }] = await q.query('update feture.profile set rev = rev + 1, updated_at = now() where id = $1 returning rev', [acting.profileId]);
-    return { rev };
+    return doProfileUpdate(q, acting.profileId, acting.accountId, change);
   },
 
   async 'profile.settings'(q, { acting }) {
@@ -278,10 +352,26 @@ const run = {
 
   async 'profile.setVisibility'(q, { acting: a, input }) {
     const acting = need(a);
-    personOnly(acting);
-    const col = SETTING_COLUMN[/** @type {keyof typeof PROFILE_SETTINGS} */ (input.setting)];
-    await q.query(`update feture.profile_settings set ${col} = $2, updated_at = now() where profile_id = $1`, [acting.profileId, input.value]);
-    return { setting: input.setting, value: input.value };
+    const setting = /** @type {keyof typeof PROFILE_SETTINGS} */ (input.setting);
+    if (acting.kind === 'couple') {
+      const [cur] = await q.query(`select ${SETTING_COLUMN[setting]} v from feture.profile_settings where profile_id = $1`, [acting.profileId]);
+      const order = OPENNESS[setting];
+      const widening = order.indexOf(input.value) > order.indexOf(cur.v);
+      if (!widening) {
+        // Narrowing is immediate; hiding from Discover is a safety action that voids pending widenings.
+        if (setting === 'discoverMode') await narrowCouple(q, acting, 'discover_narrowed');
+        const out = await doSetVisibility(q, acting.profileId, setting, input.value);
+        await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: setting });
+        return out;
+      }
+      if (needsPartner(acting, 'profile.setVisibility')) {
+        return { pending: await requestApproval(q, acting, { kind: 'profile.setVisibility', targetType: 'setting:' + setting, targetId: null, change: { setting, value: input.value }, summary: [setting] }) };
+      }
+      const out = await doSetVisibility(q, acting.profileId, setting, input.value);
+      await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: setting });
+      return out;
+    }
+    return doSetVisibility(q, acting.profileId, setting, input.value);
   },
 
   async 'settings.get'(q, { account }) {
@@ -343,40 +433,27 @@ const run = {
 
   async 'interests.set'(q, { acting: a, input }) {
     const acting = need(a);
-    personOnly(acting);
-    const [t] = await q.query('select category_id from feture.topic where id = $1 and not hidden', [input.topicId]);
-    if (!t) fail(400, 'invalid_input', { fields: ['topicId'] });
-    if (input.dir?.length && t.category_id === 'limits') fail(400, 'invalid_input', { fields: ['dir'] });
-    const [prev] = await q.query(
-      'select value, mark, dir, vis from feture.interest where profile_id = $1 and topic_id = $2 for update', [acting.profileId, input.topicId]);
-    const next = { value: input.value ?? null, mark: input.mark ?? null, dir: input.mark ? [] : (input.dir ?? []), vis: input.vis };
-    await q.query(
-      `insert into feture.interest (profile_id, topic_id, value, mark, dir, vis) values ($1, $2, $3, $4, $5, $6)
-       on conflict (profile_id, topic_id) do update set value = excluded.value, mark = excluded.mark, dir = excluded.dir, vis = excluded.vis, updated_at = now()`,
-      [acting.profileId, input.topicId, next.value, next.mark, next.dir, next.vis]);
-    const level = (/** @type {any} */ s) => s ? { value: s.value, mark: s.mark, dir: s.dir } : null;
-    if (JSON.stringify(level(prev)) !== JSON.stringify(level(next))) {
-      await q.query(
-        `insert into feture.interest_history (profile_id, topic_id, kind, from_state, to_state, acted_by) values ($1, $2, 'value', $3, $4, $5)`,
-        [acting.profileId, input.topicId, JSON.stringify(level(prev)), JSON.stringify(level(next)), acting.accountId]);
+    const { opId: _, ...change } = input;
+    if (acting.kind === 'couple' && needsPartner(acting, 'interests.set')) {
+      const [t] = await q.query('select 1 from feture.topic where id = $1 and not hidden', [change.topicId]);
+      if (!t) fail(400, 'invalid_input', { fields: ['topicId'] });
+      return { pending: await requestApproval(q, acting, { kind: 'interests.set', targetType: 'interest:' + change.topicId, targetId: null, change, summary: [change.topicId] }) };
     }
-    if (prev && prev.vis !== next.vis) {
-      await q.query(
-        `insert into feture.interest_history (profile_id, topic_id, kind, from_state, to_state, acted_by) values ($1, $2, 'vis', $3, $4, $5)`,
-        [acting.profileId, input.topicId, JSON.stringify({ vis: prev.vis }), JSON.stringify({ vis: next.vis }), acting.accountId]);
-    }
-    return { topicId: input.topicId, ...next };
+    const out = await doInterestSet(q, acting.profileId, acting.accountId, change);
+    if (acting.kind === 'couple') await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: 'interests' });
+    return out;
   },
 
   async 'interests.remove'(q, { acting: a, input }) {
     const acting = need(a);
-    personOnly(acting);
+    // Removing an interest only narrows what others may see: immediate for a couple too.
     const [prev] = await q.query(
       'delete from feture.interest where profile_id = $1 and topic_id = $2 returning value, mark, dir', [acting.profileId, input.topicId]);
     if (prev) {
       await q.query(
         `insert into feture.interest_history (profile_id, topic_id, kind, from_state, to_state, acted_by) values ($1, $2, 'value', $3, null, $4)`,
         [acting.profileId, input.topicId, JSON.stringify(prev), acting.accountId]);
+      if (acting.kind === 'couple') await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: 'interests' });
     }
     return { removed: !!prev };
   },
@@ -386,7 +463,10 @@ const run = {
     let after = null;
     if (input.cursor) {
       try { after = JSON.parse(Buffer.from(input.cursor, 'base64url').toString('utf8')); } catch { /* invalid below */ }
-      if (!Array.isArray(after) || after.length !== 2 || typeof after[0] !== 'string' || typeof after[1] !== 'string') fail(400, 'invalid_input', { fields: ['cursor'] });
+      if (!Array.isArray(after) || after.length !== 2 || typeof after[0] !== 'string' || !/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(\.\d{1,6})?([+-]\d{2}(:?\d{2})?|Z)?$/.test(after[0])
+        || typeof after[1] !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(after[1])) {
+        fail(400, 'invalid_input', { fields: ['cursor'] });
+      }
     }
     const rows = await q.query(
       `select id, topic_id, kind, from_state, to_state, source, created_at, created_at::text at_text from feture.interest_history

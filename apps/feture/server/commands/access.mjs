@@ -4,7 +4,7 @@ import { fail } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { needsPartner, narrowCouple, registerApprovalKind, requestApproval } from '../approvals.mjs';
 import { mediaDto } from '../media/assets.mjs';
-import { availableScopes, grantedScopes, LIMITS, memberAccounts, related } from '../access.mjs';
+import { availableScopes, grantedScopes, LIMITS, lockOwner, memberAccounts, related } from '../access.mjs';
 
 /** Slice C2: private part and access (S1 §6). Narrowing (decline, narrow, revoke, switch off) applies at once;
  * opening the private part of a couple to someone always needs both partners (V21 «только вдвоём»).
@@ -32,8 +32,7 @@ async function requestBlocker(q, viewer, ownerId) {
     `select
        exists (select 1 from feture.access_request where requester_profile_id = $1 and owner_profile_id = $2 and state = 'pending') pending,
        (select decided_at + make_interval(days => $3) from feture.access_request
-         where requester_profile_id = $1 and owner_profile_id = $2 and state = 'declined' order by decided_at desc limit 1) reask_at,
-       exists (select 1 from feture.access_grant where owner_profile_id = $2 and viewer_profile_id = $1 and revoked_at is null and (until is null or until > now())) granted`,
+         where requester_profile_id = $1 and owner_profile_id = $2 and state = 'declined' order by decided_at desc limit 1) reask_at`,
     [viewer.profileId, ownerId, LIMITS.reaskDays]);
   if (r.pending) return 'pending';
   if (r.reask_at && new Date(r.reask_at) > new Date()) return 'cooldown';
@@ -53,6 +52,7 @@ async function quotaLeft(q, acting) {
 /** Issues (or replaces) the grant for a pending request; shared by the direct path and the couple approval.
  * @param {Q} q @param {{requestId: string, ownerId: string, scopes: Scope[], term: keyof typeof TERM, by: string}} g */
 async function applyGrant(q, { requestId, ownerId, scopes, term, by }) {
+  await lockOwner(q, ownerId);
   const [r] = await q.query(
     `select r.*, s.private_on, p.state owner_state from feture.access_request r
      join feture.profile_settings s on s.profile_id = r.owner_profile_id join feture.profile p on p.id = r.owner_profile_id
@@ -90,7 +90,8 @@ registerApprovalKind('private.on', {
 });
 
 /** Revokes every grant and closes every pending request of the owner. @param {Q} q @param {string} ownerId @param {string} reason */
-async function closeAll(q, ownerId, reason) {
+export async function closeAll(q, ownerId, reason) {
+  await lockOwner(q, ownerId);
   const grants = await q.query(
     `update feture.access_grant set revoked_at = now() where owner_profile_id = $1 and revoked_at is null returning viewer_profile_id`, [ownerId]);
   const requests = await q.query(
@@ -139,7 +140,7 @@ const run = {
       `select until from feture.access_grant where owner_profile_id = $1 and viewer_profile_id = $2 and revoked_at is null`, [input.profileId, viewer.profileId]);
     return {
       exists: true, own, on: o.private_on, scopes, until: g?.until ?? null,
-      text: scopes.includes('info') ? (o.text ?? '') : null,
+      text: own || scopes.includes('info') ? (o.text ?? '') : null,
       media: shown,
       ...(own ? { available, counts: await openCounts(q, input.profileId) } : {}),
     };
@@ -155,6 +156,7 @@ const run = {
       return { on: true };
     }
     // Switching off revokes every access and closes every request (V21 ME-003/022): say how many first.
+    await lockOwner(q, acting.profileId);
     const counts = await openCounts(q, acting.profileId);
     if ((counts.grants || counts.requests) && !input.confirm) return { confirmRequired: true, ...counts };
     if (acting.kind === 'couple') await narrowCouple(q, acting, 'private_off');
@@ -195,15 +197,18 @@ const run = {
     const acting = need(a);
     // One request budget per account across «Я» and «Мы»; serialised so parallel requests cannot all pass.
     await q.query(`select pg_advisory_xact_lock(hashtext('feture-access-quota:' || $1))`, [acting.accountId]);
-    const [{ verified }] = await q.query(`select coalesce(age_verified_until > now(), false) verified from feture.account where id = $1`, [account.id]);
-    if (!verified) fail(422, 'rule_violation', { rule: 'age_check_required' });
+    // Every account that would see the private part must be verified adult: both partners for a couple (Q26).
+    const viewers = await memberAccounts(q, acting.profileId);
+    const [{ unverified }] = await q.query(
+      `select count(*)::int unverified from feture.account where id = any($1) and coalesce(age_verified_until > now(), false) = false`, [viewers]);
+    if (unverified || !viewers.includes(account.id)) fail(422, 'rule_violation', { rule: 'age_check_required' });
+    await lockOwner(q, input.profileId);
     const blocker = await requestBlocker(q, acting, input.profileId);
     if (blocker === 'unavailable') fail(404, 'not_found');
     if (blocker) fail(422, 'rule_violation', { rule: blocker });
     if (await quotaLeft(q, acting) <= 0) fail(429, 'rate_limited', { rule: 'request_quota' });
     const available = await availableScopes(q, input.profileId);
     if (!input.scopes.every((/** @type {Scope} */ s) => available.includes(s))) fail(422, 'rule_violation', { rule: 'scope_not_available' });
-    const viewers = await memberAccounts(q, acting.profileId);
     const [r] = await q.query(
       `insert into feture.access_request (requester_profile_id, owner_profile_id, viewer_account_ids, scopes, acted_by)
        values ($1, $2, $3, $4, $5) returning id`, [acting.profileId, input.profileId, viewers, input.scopes, acting.accountId]);
@@ -229,7 +234,8 @@ const run = {
     if (needsPartner(acting, 'access.grant')) {
       const pending = await requestApproval(q, acting, {
         kind: 'access.grant', targetType: 'access_request', targetId: input.requestId,
-        change: { requestId: input.requestId, scopes: input.scopes, term: input.term }, summary: input.scopes,
+        // The partner decides on everything that opens: what, and for how long.
+        change: { requestId: input.requestId, scopes: input.scopes, term: input.term }, summary: [...input.scopes, `term:${input.term}`],
       });
       return { pending };
     }
@@ -274,6 +280,7 @@ const run = {
 
   async 'access.revokeAll'(q, { acting: a, input }) {
     const acting = need(a);
+    await lockOwner(q, acting.profileId);
     const counts = await openCounts(q, acting.profileId);
     if ((counts.grants || counts.requests) && !input.confirm) return { confirmRequired: true, ...counts };
     if (acting.kind === 'couple') {
@@ -286,7 +293,8 @@ const run = {
 
   async 'access.lists'(q, { acting: a, input }) {
     const acting = need(a);
-    const who = `(select json_build_object('id', p.id, 'kind', p.kind, 'handle', p.handle, 'name', p.name) from feture.profile p where p.id = %s)`;
+    // Other profiles that are no longer active (paused, suspended, deleted) are not named.
+    const who = `(select json_build_object('id', p.id, 'kind', p.kind, 'handle', p.handle, 'name', p.name) from feture.profile p where p.id = %s and p.state = 'active')`;
     if (input.tab === 'out') {
       const items = await q.query(
         `select r.id, r.scopes, r.state, r.created_at, r.decided_at, ${who.replace('%s', 'r.owner_profile_id')} profile,

@@ -1,6 +1,7 @@
 // @ts-check
 import { drain, enqueue } from './outbox.mjs';
 import { scanAsset, servedKeys } from './media/scan.mjs';
+import { deleteCouple } from './commands/couples.mjs';
 
 /** Queue worker (S2 §8, D7). Called every minute by pg_cron + pg_net (Vercel Hobby cron is daily only)
  * through `POST /api/fe?jobs=1` with the jobs secret. Every handler is idempotent.
@@ -82,11 +83,25 @@ export async function sweepMarkers(db) {
   return a.length + b.length;
 }
 
+/** Couples nobody restored within 30 days are deleted (S1 §5). @param {Db} db */
+export async function sweepExpiredCouples(db) {
+  if (!(await db.query(`select to_regclass('feture.couple_restore') is not null ok`))[0].ok) return 0;
+  const due = await db.query(`select id from feture.profile where kind = 'couple' and state = 'paused' and restore_until < now() limit 50`);
+  for (const c of due) {
+    await db.tx(async q => {
+      const [still] = await q.query(`select 1 from feture.profile where id = $1 and state = 'paused' and restore_until < now() for update`, [c.id]);
+      if (still) await deleteCouple(q, c.id, 'not_restored');
+    });
+  }
+  return due.length;
+}
+
 /** One worker tick. @param {Db} db @param {JobDeps} deps */
 export async function runJobs(db, deps) {
   const processed = await drain(db, mediaHandlers(db, deps), { limit: deps.limit ?? 10, lockSeconds: 120 });
   const expired = await sweepExpiredUploads(db);
   const ledger = await sweepOpLedger(db);
   const markers = await sweepMarkers(db);
-  return { processed, expired, ledger, markers };
+  const couples = await sweepExpiredCouples(db);
+  return { processed, expired, ledger, markers, couples };
 }
