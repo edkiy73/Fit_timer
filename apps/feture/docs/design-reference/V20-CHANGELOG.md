@@ -162,3 +162,23 @@ Owner decisions for this round:
   - «Ещё N» under the interests is centred.
 
 Not verified: real devices, touch drag on hardware, a live couple on two clients.
+
+## 2026-10-26 — swipe tip
+
+- The card that covered the deck («Смахни вправо — нравится, влево — пропустить. Или нажми кнопки внизу.» with «Понятно») is gone.
+- On a phone the tip is now a short notice under the deck tabs: «Вправо — нравится, влево — пропустить». It shows once per session for 2.6 s and never covers the like and pass buttons.
+- The tip is shown wherever there is touch input (`any-pointer: coarse`): a phone, a tablet of any size, a touch laptop. A mouse-only computer uses the buttons and gets no tip.
+- **Discover shows the whole profile.** Under the photo the card no longer has its own shorter copy (about, details, interests, one post, «Полный профиль»). It renders the same body as the profile page, in the same layout:
+  - members, details, links, interests, gallery and the private part;
+  - posts, articles, events and communities, plus «Что у вас общего»;
+  - follower counts in the header.
+  - «Подписаться» stays at the end, and the like and pass buttons stay on the card.
+- The profile like button reads «Нравится от пары» (the dot between the words is gone). On a narrow phone, «Нравится от пары» and «Подписаться от пары» wrap as «Нравится / от пары» instead of being cut off.
+- **Counters.** Every number is what the screen behind it lists.
+  - «Нужно решить» is one number everywhere: the «Я» tab, the row on the profile and the inbox tab. Before, the tab and the row counted only some decisions (3) while the inbox listed all of them (9).
+  - «Все уведомления» shows how many notifications are still news. A notification whose decision sits in «Нужно решить» is counted once, there, and no longer shows as unread in the list.
+  - The «Люди» badge is the number on the likes tab of the profile you act as. The other profile's new likes show as a dot.
+- **Whose it is.** With a couple, «Нужно решить» is split into «Тебе» and «Паре «…»», each with a count. Notifications carry a small «Тебе» or «Паре» tag.
+- **Discover card, bottom corners.** The like/pass bar painted a square backdrop over the card's rounded bottom corners on a phone. It now follows the card's corners.
+- **Ended one-view and disappearing media.** It was one line with a repeated word that wrapped at a «·», inside a pill inside the bubble. Now it is an icon and two short lines: «Фото · один просмотр» / «Уже просмотрено», or «Видео · исчезающее» / «Время вышло». It inherits the bubble's colours, so it reads in light, dark, mine and theirs.
+- **Couple chats hint.** «Переписки от имени пары «Alex и Kira». Их видит и ваш партнёр.» It replaces the longer text with a misaligned icon. The English tab «Couple chats» is «Couple», so it fits at 320 px.
