@@ -27,7 +27,7 @@ async function currentCouple(q, accountId) {
 
 /** Ends the couple's own outgoing side: its pending requests to others are cancelled and access others gave it is
  * revoked (it does not come back on restore). @param {Q} q @param {string} profileId */
-async function closeOutgoing(q, profileId) {
+export async function closeOutgoing(q, profileId) {
   await q.query(
     `update feture.access_request set state = 'closed', closed_reason = 'couple_stopped', decided_at = now()
      where requester_profile_id = $1 and state = 'pending'`, [profileId]);
