@@ -22,6 +22,9 @@ test('notices: anyone can send one; an address is needed except for child abuse;
     assert.deepEqual((await takeNotice(db, notice({ senderEmail: undefined }))).body.fields, ['senderEmail']);
     assert.equal((await takeNotice(db, notice({ goodFaith: false }))).status, 400);
     assert.equal((await takeNotice(db, notice({ targetUrl: 'javascript:alert(1)' }))).status, 400);
+    assert.equal((await takeNotice(db, notice({ explanation: '😀😀😀😀😀😀😀😀😀😀' }))).status, 400);
+    assert.equal((await takeNotice(db, notice({ targetUrl: 'https://feture.app/\u202ep/1' }))).status, 400);
+    assert.equal((await takeNotice(db, notice({ senderEmail: 'x<victim@evil.com>' }))).status, 400);
     assert.equal((await takeNotice(db, notice())).status, 200);
     assert.equal((await takeNotice(db, notice({ reason: 'csam', senderEmail: undefined, explanation: 'На этой странице изображение ребёнка сексуального характера.' }))).status, 200);
 
@@ -40,8 +43,16 @@ test('notices: anyone can send one; an address is needed except for child abuse;
     const again = await db.query(`select id::text, topic, profile_id, payload, attempts, lock_token::text from feture.outbox where topic = 'notice.decided'`);
     for (const it of again) await handlers['notice.decided'](/** @type {any} */ (it));
     assert.equal(mails.length, 1); // only the one with an address, and only once
-    assert.match(mails[0].text, /удалили его по правилу «illegal»/);
+    assert.match(mails[0].text, /удалили его: незаконный контент/);
+    // Two workers at once (a claim that expired mid-send): still one mail.
+    await db.query(`update feture.dsa_notice set replied_at = null where id = $1`, [q[1].id]);
+    await Promise.all(again.map(it => handlers['notice.decided'](/** @type {any} */ (it))).concat(again.map(it => handlers['notice.decided'](/** @type {any} */ (it)))));
+    assert.equal(mails.length, 2);
+    // No mail service: no handler, decided items wait instead of being given up.
+    assert.deepEqual(Object.keys(noticeHandlers(db, null)), []);
 
+    assert.deepEqual((await call('uo', null, { action: 'staff.transparency', from: '0000-01-01', to: '2027-12-31' })).fields, ['from']);
+    assert.deepEqual((await call('uo', null, { action: 'staff.transparency', from: '2026-10-01', to: '2026-10-05' })).fields, ['to']);
     const t = await call('uo', null, { action: 'staff.transparency', from: '2026-01-01', to: '2027-12-31' });
     assert.deepEqual(t.notices.map((/** @type {any} */ r) => [r.reason, r.received, r.removed]), [['csam', 1, 1], ['illegal', 1, 1]]);
     assert.ok(!JSON.stringify(t).includes('@'));

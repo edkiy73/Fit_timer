@@ -2,20 +2,23 @@
 /** S4 steps 5–6: notices of illegal content without an account (DSA art. 16) and transparency figures (art. 15). */
 import * as z from 'zod';
 import { id, opId } from './platform.mjs';
-import { text } from './me.mjs';
+import { line, text } from './me.mjs';
 
 /** The public form (no account): `POST /api/fe?notice=1`. */
 export const noticeInput = z.strictObject({
-  targetUrl: z.string().trim().min(8).max(500).regex(/^https:\/\/\S+$/),
+  // Printable ASCII only (no look-alike or direction-changing characters), a real https URL.
+  targetUrl: z.string().trim().min(8).max(500).regex(/^[\x21-\x7e]+$/)
+    .refine(v => { try { return new URL(v).protocol === 'https:'; } catch { return false; } }, { message: 'https_only' }),
   reason: z.enum(['csam', 'minors', 'threats', 'private_material', 'illegal', 'ip', 'other']),
-  explanation: text(2000).refine(v => v.length >= 20, { message: 'too_short' }),
-  senderName: z.string().trim().max(120).optional(),
-  senderEmail: z.string().trim().max(254).regex(/^[^@\s]+@[^@\s]+\.[^@\s]+$/).optional(),
+  explanation: text(2000).refine(v => [...v].length >= 20, { message: 'too_short' }),
+  // Name and address as art. 16(2)(c) asks; the address is used only to answer.
+  senderName: line(120).optional(),
+  senderEmail: z.string().trim().max(254).regex(/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/).optional(),
   locale: z.enum(['ru', 'en']).default('en'),
   goodFaith: z.literal(true),
 }).refine(v => v.reason === 'csam' || !!v.senderEmail, { message: 'email_required', path: ['senderEmail'] });
 
-const day = z.iso.date();
+const day = z.iso.date().refine(v => v >= '2020-01-01' && v <= '2100-12-31', { message: 'out_of_range' });
 export const dsaCommands = {
   'staff.noticeQueue': { profile: false, write: false, input: z.strictObject({ limit: z.int().min(1).max(50).default(20) }) },
   'staff.noticeDecide': {
@@ -26,5 +29,9 @@ export const dsaCommands = {
       note: text(500).default(''),
     }).refine(v => v.outcome !== 'removed' || !!v.rule, { message: 'rule_required', path: ['rule'] }),
   },
-  'staff.transparency': { profile: false, write: false, input: z.strictObject({ from: day, to: day }) },
+  // At least four weeks, so the figures never describe a single day's decisions about a few people.
+  'staff.transparency': {
+    profile: false, write: false,
+    input: z.strictObject({ from: day, to: day }).refine(v => (Date.parse(v.to) - Date.parse(v.from)) / 864e5 >= 27, { message: 'period_too_short', path: ['to'] }),
+  },
 };

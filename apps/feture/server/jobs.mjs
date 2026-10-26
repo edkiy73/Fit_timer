@@ -166,7 +166,9 @@ export async function sweepExpiredCouples(db) {
 export async function runJobs(db, deps) {
   // Media first with its own budget, so a burst of likes never delays scans and publication; then the inbox.
   const media = await drain(db, { ...mediaHandlers(db, deps), ...verificationHandlers(db) }, { limit: deps.limit ?? 10, lockSeconds: 120 });
-  const inbox = await drain(db, { ...notifyHandlers(db), ...noticeHandlers(db, deps.mail ?? null) }, { limit: deps.notifyLimit ?? 200, lockSeconds: 120 });
+  const inbox = await drain(db, notifyHandlers(db), { limit: deps.notifyLimit ?? 200, lockSeconds: 120 });
+  // Replies to notices in a small batch of their own: a slow mail service never outlives the claim.
+  await drain(db, noticeHandlers(db, deps.mail ?? null), { limit: 10, lockSeconds: 300 });
   // Pushes in a small batch of their own, so a slow provider never outlives the claim.
   const pushes = await drain(db, pushHandlers(db, deps.push ?? null), { limit: 20, lockSeconds: 300 });
   const processed = media + inbox + pushes;
