@@ -8,7 +8,7 @@
 <title>FetUre V21 — прототип</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400..800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geologica:wght@500..800&family=Onest:wght@400..800&display=swap" rel="stylesheet">
 <style>/* =====================================================================
    FetUre V9 — design system written from scratch. Claude, 14.10.2026.
    Rules: one accent colour; icons are monochrome (no coloured tiles);
@@ -21,7 +21,7 @@
 :root{
   --bg:#F5F3F0; --bg2:#ECE9E5; --surf:#FFFFFF; --raise:#F0EDE9; --line:#E6E2DD; --line2:#D2CDC6;
   --ink:#17151A; --mute:#66616B; --faint:#9B969F;
-  --accent:#D0153A; --accent-deep:#6E0A22; --accent-ink:#FFFFFF; --accent-soft:#FBE7EB;
+  --accent:#DF234A; --accent-deep:#6E0A22; --accent-ink:#FFFFFF; --accent-soft:#FCE3E8; --accent-fill:var(--accent);
   --violet:#6550D8; --violet-soft:#EDEAFC;
   --ok:#1D7A51; --ok-soft:#E2F2EA; --warn:#9A5D00; --warn-soft:#F7EDDB; --danger:#C4182F; --danger-soft:#FBE5E8;
   /* legacy names used by inline styles */
@@ -32,7 +32,7 @@
   --shadow:0 18px 44px -24px rgba(20,12,18,.38); --shadow-s:0 6px 16px -10px rgba(20,12,18,.32);
   --nav:rgba(255,255,255,.86);
   --fld:color-mix(in srgb,var(--ink) 5%,transparent);
-  --font:"Onest",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font:"Onest",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; --font-head:"Geologica","Onest",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --ease:cubic-bezier(.2,.8,.2,1);
   --dock:64px; --gut:16px; --r-s:10px; --r:14px; --r-l:18px; --r-xl:24px;
   --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
@@ -41,7 +41,7 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#111012; --bg2:#0B0A0C; --surf:#1B191D; --raise:#242127; --line:#2D2A30; --line2:#3E3A42;
   --ink:#F3F0F4; --mute:#A9A3AD; --faint:#77717B;
-  --accent:#FF4566; --accent-deep:#8F1030; --accent-ink:#FFFFFF; --accent-soft:#3A1520;
+  --accent:#FF4566; --accent-deep:#8F1030; --accent-ink:#FFFFFF; --accent-soft:#3A1520; --accent-fill:#DF234A;
   --violet:#A797FF; --violet-soft:#2A2442;
   --ok:#6BD3A4; --ok-soft:#173226; --warn:#E9B663; --warn-soft:#3A2D17; --danger:#FF6B80; --danger-soft:#3D161D;
   --skin:#EBAA8F; --skin-soft:#3B2620;
@@ -51,7 +51,7 @@
 :root[data-theme="dark"]{
   --bg:#111012; --bg2:#0B0A0C; --surf:#1B191D; --raise:#242127; --line:#2D2A30; --line2:#3E3A42;
   --ink:#F3F0F4; --mute:#A9A3AD; --faint:#77717B;
-  --accent:#FF4566; --accent-deep:#8F1030; --accent-ink:#FFFFFF; --accent-soft:#3A1520;
+  --accent:#FF4566; --accent-deep:#8F1030; --accent-ink:#FFFFFF; --accent-soft:#3A1520; --accent-fill:#DF234A;
   --violet:#A797FF; --violet-soft:#2A2442;
   --ok:#6BD3A4; --ok-soft:#173226; --warn:#E9B663; --warn-soft:#3A2D17; --danger:#FF6B80; --danger-soft:#3D161D;
   --skin:#EBAA8F; --skin-soft:#3B2620;
@@ -919,7 +919,7 @@ button.jar:active .vessel{transform:scale(.95)}
 
 /* ============ PREMIUM ============ */
 .pw-x{position:absolute;right:12px;top:12px;z-index:3;background:rgba(255,255,255,.18);color:#fff}
-.pw-hero{position:relative;overflow:hidden;margin:0 0 14px;padding:22px 18px 20px;border-radius:var(--r-xl);color:#fff;background:linear-gradient(140deg,#2A1420,#8A1030 70%,#D0153A)}
+.pw-hero{position:relative;overflow:hidden;margin:0 0 14px;padding:22px 18px 20px;border-radius:var(--r-xl);color:#fff;background:linear-gradient(140deg,#2A1420,#8A1030 70%,#DF234A)}
 .pw-hero b{display:block;font:700 24px/1.15 var(--font);letter-spacing:-.025em;margin-top:12px}
 .pw-hero p{margin:6px 0 0;font-size:15px;opacity:.9;max-width:300px}
 .pw-hero i{display:none}
@@ -941,7 +941,7 @@ button.jar:active .vessel{transform:scale(.95)}
 .paywall p{margin:4px 0 12px;font-size:13px;opacity:.75}
 .paywall .btn{background:var(--accent);color:#fff;min-height:46px}
 .quota{display:flex;gap:4px;margin:6px 0 4px}.quota i{flex:1;height:6px;border-radius:6px;background:var(--accent)}.quota i.off{background:var(--line)}
-.prem{padding:22px 20px;border-radius:var(--r-xl);color:#fff;background:linear-gradient(140deg,#2A1420,#8A1030 70%,#D0153A)}
+.prem{padding:22px 20px;border-radius:var(--r-xl);color:#fff;background:linear-gradient(140deg,#2A1420,#8A1030 70%,#DF234A)}
 
 /* ============ SEARCH ============ */
 .sbar{display:flex;gap:8px;align-items:center;padding:calc(8px + var(--safe-t)) var(--gut) 8px}
@@ -969,7 +969,7 @@ button.jar:active .vessel{transform:scale(.95)}
 .pc-ph{position:relative;height:100%;min-height:0;border-radius:var(--r-xl) var(--r-xl) 0 0;overflow:hidden}
 .pc-ph>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .pc-tags{position:absolute;left:14px;right:14px;top:24px;z-index:3;display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
-.pc-liked{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;background:#fff;color:#D0153A;font-size:12px;font-weight:700}
+.pc-liked{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;background:#fff;color:#DF234A;font-size:12px;font-weight:700}
 .pc-liked svg{width:14px;height:14px}
 .pc-score{margin-left:auto;padding:7px 11px 6px;border-radius:var(--r);background:rgba(10,6,10,.55);color:#fff;text-align:right;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
 .pc-score b{display:block;font:700 20px/1 var(--font)}.pc-score small{font-size:11px;opacity:.85}
@@ -3045,6 +3045,20 @@ button[disabled].demo-off{opacity:.55;cursor:default}
 @container stage (max-width:374px){.main>.bar>.btn.text{padding:0 8px;font-size:13.5px}.main>.bar>h1.sm{font-size:15px}}
 /* V21 (GEN-003): the review tab hides while a sheet or dialog is open */
 body:has(#sheet.on) .qa-fab,body:has(#dialog.on) .qa-fab{opacity:0!important;pointer-events:none}
+/* V21 (GEN-002): small text controls keep their look but get a ≥44 px tap area */
+.tags>button,.grp-t button,.grp-t a,.linkbtn,.mention{position:relative}
+.tags>button::after,.grp-t button::after,.grp-t a::after,.linkbtn::after{content:"";position:absolute;inset:-12px -6px}
+.mention::after{content:"";position:absolute;inset:-12px -2px}
+.tags{row-gap:10px}
+/* V21 (VIS-005): the off-scale 22 px avatars join the 24 px step; the couple hero uses the 88 px step */
+.cm-avs .av,.whom-sec .av{width:24px;height:24px}
+.profile-page .hero>.hero-pairav .av.xl{width:88px;height:88px}
+/* V21 (VIS-006): the Discover card buttons are the same 48 px buttons as on the profile */
+.pc .btn.soft,.deck .btn.soft{min-height:48px}
+/* V21 (owner decision 27.10.2026): headings in Geologica, body stays Onest; the brand red is #DF234A.
+   In dark theme filled buttons use #DF234A (white text ≥4.5:1, SET-018) while red text and icons keep the lighter #FF4566. */
+h1,h2,h3,.pc-name,.ev-title,.sh-h h2,#dialog h2,.brand b,.me18-who b,.bar h1{font-family:var(--font-head)}
+.btn.primary,.ibtn.add,.composer .ibtn.add,.myev .ibtn.add,#dialog .btn.danger{background:var(--accent-fill);border-color:var(--accent-fill)}
 /* ==== V21 · lead · CSS end ==== */
 /* · */
 /* · */

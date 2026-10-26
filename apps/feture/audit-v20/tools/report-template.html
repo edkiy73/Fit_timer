@@ -85,6 +85,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--
 .tbl th{font-size:12px;color:var(--faint);text-transform:uppercase;letter-spacing:.05em;font-weight:600;position:sticky;top:0;background:var(--surf)}
 .tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);max-height:75vh}
 .badge{font-size:11.5px;font-weight:600;border-radius:99px;padding:1px 8px;white-space:nowrap}
+.badge.v21-fixed{background:var(--oks);color:var(--ok)}.badge.v21-partial,.badge.v21-needs-owner{background:var(--p2s);color:var(--p2)}.badge.v21-open{background:var(--p0s);color:var(--p0)}.badge.v21-spec,.badge.v21-wont-fix,.badge.v21-not-reproduced{background:var(--raise);color:var(--mute)}
 .badge.checked{background:var(--oks);color:var(--ok)}.badge.partial{background:var(--p2s);color:var(--p2)}.badge.unreachable{background:var(--p0s);color:var(--p0)}.badge.not-checked{background:var(--raise);color:var(--mute)}
 .prose{max-width:80ch;display:grid;gap:12px}
 .prose p,.prose li{margin:0}
@@ -190,6 +191,7 @@ function issueHTML(i){const s=stOf(i);
    ${i.code?`<dt>Код</dt><dd class="mono">${esc(i.code)}</dd>`:''}
    ${i.related?.length?`<dt>Связано</dt><dd class="rel">${i.related.map(r=>ISS.some(x=>x.id===r)?`<a href="#${esc(r)}" data-jump="${esc(r)}">${esc(r)}</a>`:`<span class="mono">${esc(r)}</span> `).join('')}</dd>`:''}
    ${i.phase?`<dt>Этап плана</dt><dd>${esc(i.phase)}</dd>`:''}
+   ${i.v21?`<dt>V21</dt><dd><span class="badge v21-${esc(i.v21.status)}">${esc(i.v21.label)}</span>${i.v21.what?` ${esc(i.v21.what)}`:''}${i.v21.verify?`<br><span class="sub">Проверено: ${esc(i.v21.verify)}</span>`:''}</dd>`:''}
   </dl>
   ${i.screens?.length?`<div class="shots">${i.screens.map((s,k)=>`<button type="button" data-shot="${esc(i.id)}" data-k="${k}" aria-label="Скриншот ${k+1}"><img loading="lazy" src="${esc(shotUrl(s))}" alt="${esc(i.id)} — скриншот ${k+1}"></button>`).join('')}</div>`:''}
   <div class="status-ctl"><span class="stat">Статус:</span>${STATUS.map(([k,l])=>`<button type="button" class="chip" data-setst="${k}" data-id="${esc(i.id)}" aria-pressed="${s===k}">${l}</button>`).join('')}</div>

@@ -91,7 +91,23 @@ for n, x in enumerate(issues): x['order'] = n + 1
 for id_, o in plan.get('overrides', {}).items():
     for x in issues:
         if x['id'] == id_: x.update(o)
-for x in issues: x.setdefault('status', 'open')
+
+# ---------- V21 fix status ----------
+V21L = {'fixed': 'исправлено', 'partial': 'частично', 'needs-owner': 'нужно решение владельца', 'not-reproduced': 'не воспроизвелось в V21',
+        'wont-fix': 'не исправляем', 'spec': 'перенесено в спецификацию React', 'open': 'не исправлено'}
+fixes = {}
+for f in sorted(glob.glob(os.path.join(W, 'fixes-*.json'))):
+    for e in load(f, []):
+        if isinstance(e, dict) and e.get('id'): fixes[e['id']] = e
+for x in issues:
+    e = fixes.get(x['id'])
+    if not e:
+        for d_id, canon in dupes.items():
+            if canon == x['id'] and d_id in fixes: e = fixes[d_id]
+    x['v21'] = {'status': (e or {}).get('status', 'open'), 'what': (e or {}).get('what', ''), 'verify': (e or {}).get('verify', ''),
+                'screens': [norm_shot(s) for s in (e or {}).get('screens', []) or []]}
+    x['v21']['label'] = V21L.get(x['v21']['status'], x['v21']['status'])
+    x['status'] = {'fixed': 'fixed', 'partial': 'wip', 'spec': 'skip', 'wont-fix': 'skip', 'not-reproduced': 'fixed'}.get(x['v21']['status'], 'open')
 
 # ---------- coverage ----------
 coverage = []
@@ -146,7 +162,7 @@ json.dump(all_cov, open(os.path.join(ROOT, 'data/coverage.json'), 'w', encoding=
 json.dump(popups, open(os.path.join(ROOT, 'data/popups.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 
 # ---------- screenshots ----------
-shots = sorted({s for x in issues for s in x['screens']} | {p['shot'] + '.png' for p in popups if p.get('shot')})
+shots = sorted({s for x in issues for s in x['screens'] + x['v21']['screens']} | {p['shot'] + '.png' for p in popups if p.get('shot')})
 json.dump(shots, open(os.path.join(ROOT, 'img-list.json'), 'w'), indent=0)
 def webp(s): return 'img/' + re.sub(r'\.png$', '.webp', s, flags=re.I)
 
@@ -163,6 +179,7 @@ def md_issue(x, full=True):
     L.append(f"- **Проверка после исправления:** {x.get('verify','')}")
     if x.get('code'): L.append(f"- **Код:** `{x['code']}`")
     L.append(f"- **Этап плана:** {x['phase']}")
+    L.append(f"- **V21:** {x['v21']['label']}" + (f" — {x['v21']['what']}" if x['v21']['what'] else ''))
     if x['screens']: L.append('- **Скриншоты:** ' + ' '.join(f'[{os.path.basename(s)}]({webp(s)})' for s in x['screens']))
     return '\n'.join(L) + '\n'
 
@@ -241,6 +258,19 @@ for i, ph in enumerate(plan['phases']):
     for x in xs: out.append(f"| {x['order']} | {x['id']} | {x['priority']} | {CAT[x['category']]} | {x['section']} | {x['title']} |")
 open(os.path.join(ROOT, '06-fix-plan.md'), 'w', encoding='utf-8').write('\n'.join(out))
 
+# V21 fix status
+vs = collections.Counter(x['v21']['status'] for x in issues)
+out = [hdr('Статус исправлений V21'), 'Что сделано в `public/prototype-v21.html` по каждому пункту аудита V20. «Как проверено» — реальные клики в браузере на V21.', '',
+       '| Статус | Кол-во |', '|---|---|'] + [f"| {V21L.get(k,k)} | {v} |" for k, v in vs.most_common()] + ['']
+for st in ['needs-owner', 'partial', 'spec', 'wont-fix', 'not-reproduced', 'open', 'fixed']:
+    xs = [x for x in issues if x['v21']['status'] == st]
+    if not xs: continue
+    out.append(f"\n## {V21L.get(st, st).capitalize()} ({len(xs)})\n")
+    out.append('| ID | P | Проблема | Что сделано в V21 | Как проверено |\n|---|---|---|---|---|')
+    for x in sorted(xs, key=lambda x: (PRI.index(x['priority']), x['id'])):
+        out.append(f"| {x['id']} | {x['priority']} | {x['title'].replace('|','/')} | {x['v21']['what'].replace('|','/')} | {x['v21']['verify'].replace('|','/')} |")
+open(os.path.join(ROOT, 'V21-FIX-STATUS.md'), 'w', encoding='utf-8').write('\n'.join(out))
+
 # ---------- overview (hand-written md) -> html ----------
 def md2html(md):
     h = []; lst = None
@@ -270,10 +300,10 @@ def md2html(md):
     return '\n'.join(h)
 ov_md = open(os.path.join(T, 'overview.md'), encoding='utf-8').read() if os.path.exists(os.path.join(T, 'overview.md')) else '# Обзор\n\n(будет дописан)'
 ov_md = ov_md.replace('{{SUMMARY_TABLE}}', summary_tbl).replace('{{TOTAL}}', str(len(issues)))
-open(os.path.join(ROOT, '01-overview.md'), 'w', encoding='utf-8').write(hdr('01 · Обзор качества') + re.sub(r'^# .*\n', '', ov_md))
+open(os.path.join(ROOT, '01-overview.md'), 'w', encoding='utf-8').write(hdr('01 · Обзор качества') + re.sub(r'^# .*\n', '', ov_md).replace('](#', '](report.html#'))
 
 # ---------- html ----------
-rep_issues = [{**x, 'screens': [re.sub(r'\.png$', '.webp', s, flags=re.I) for s in x['screens']]} for x in issues]
+rep_issues = [{**x, 'screens': [re.sub(r'\.png$', '.webp', s, flags=re.I) for s in x['screens'] + x['v21']['screens']]} for x in issues]
 rep_pop = [{**p, 'shot': None} for p in popups]
 data = {'meta': {'lead': plan.get('lead', ''), 'shotBase': 'img/', 'coverageCount': len(inv_cov) + len([c for c in coverage if c.get('type') in ('screen', 'popup')]),
                  'popupLead': f"{len(popups)} уникальных листов, меню и диалогов. Краулер открыл каждый и нажал все кнопки; агенты проверили их вручную.",
