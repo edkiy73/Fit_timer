@@ -195,16 +195,23 @@ async function doEdit(q, postId, actor, rev, f) {
     await enqueue(q, 'moderation.postRevision', actor.profileId, { postId, revisionId: r.id });
     return { state: p.state, revision: r.id, review: true };
   }
+  return applyEdit(q, postId, actor, f, oldMedia);
+}
+
+/** Writes an edit over a live post (minor edits, and major ones once staff approved the revision).
+ * @param {Q} q @param {string} postId @param {{profileId: string, accountId: string}} actor @param {any} f @param {string[]} oldMedia */
+export async function applyEdit(q, postId, actor, f, oldMedia) {
   // Reordering the same photos is not a change of photos (no re-asking marked people).
   const mediaChanged = JSON.stringify([...oldMedia].sort()) !== JSON.stringify([...f.mediaIds].sort());
-  await q.query(`update feture.post set type = $2, title = $3, body = $4, in_feed = $5, topics = $6, album_id = $7, rev = rev + 1, edited_at = now(), updated_at = now() where id = $1`,
-    [postId, f.type, f.title ?? null, f.body, f.inFeed, f.topics, f.albumId ?? null]);
+  const [p] = await q.query(
+    `update feture.post set type = $2, title = $3, body = $4, in_feed = $5, topics = $6, album_id = $7, rev = rev + 1, edited_at = now(), updated_at = now()
+     where id = $1 returning state, rev`, [postId, f.type, f.title ?? null, f.body, f.inFeed, f.topics, f.albumId ?? null]);
   if (mediaChanged) await q.query(`update feture.photo_tag set state = 'pending', asked_at = null, decided_at = null where post_id = $1`, [postId]);
   // A dispute («это я на фото») is lifted only by staff (S4), never by an edit.
   await writeParts(q, postId, f, actor, { keepVotes: true });
   await writeMentions(q, 'post', postId, f.body, actor.profileId);
   await announce(q, postId);
-  return { state: p.state, rev: p.rev + 1 };
+  return { state: p.state, rev: p.rev };
 }
 
 registerApprovalKind('post.publish', {
