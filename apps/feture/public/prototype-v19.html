@@ -164,7 +164,7 @@ body.frame .layer,body.frame .toasts{position:absolute}
 .main>.ctabar{position:relative;flex:none;z-index:20;margin-top:-24px;padding:24px var(--gut) calc(12px + var(--safe-b));background:linear-gradient(to bottom,color-mix(in srgb,var(--bg) 0%,transparent),var(--bg) 24px)}
 .ctabar .wrap{display:grid;gap:8px}
 .ctabar .row .btn{flex:1}
-html.kb .dock,html.kb .qa-fab{display:none!important}
+html.kb .qa-fab{display:none!important}
 html.kb .main>.ctabar{padding-bottom:10px}
 .netbar{flex:none;display:flex;align-items:center;justify-content:center;gap:8px;padding:calc(6px + var(--safe-t)) 12px 6px;background:var(--ink);color:var(--bg);font-size:12px;font-weight:600}
 .netbar svg{width:15px;height:15px}
@@ -2100,11 +2100,11 @@ body.qa-viewport{overflow:auto;display:block}body.qa-viewport .stage{position:re
  .main.has-dock{--dock-space:calc(var(--dock) + 22px + var(--safe-b))}
  .main.has-dock>.view:not(.deckmode){padding-bottom:calc(var(--dock-space) + 18px)}
  .main.has-dock.hascta>.ctabar{margin-bottom:var(--dock-space);padding-bottom:8px}
- .main.has-dock.replying>.dock{display:none}
+ .main.has-dock>.inputbar{margin-bottom:var(--dock-space)}
  .main.has-dock.has-reply:not(.replying)>.inputbar{display:none}
  .main.has-dock.replying>.reply-launch{display:none}
- html.kb .main.has-dock>.ctabar{margin-bottom:0}
- html.kb .main.has-dock>.view:not(.deckmode){padding-bottom:24px}
+ html.kb .main.has-dock>.ctabar{margin-bottom:var(--dock-space)}
+ html.kb .main.has-dock>.view:not(.deckmode){padding-bottom:var(--dock-space)}
 }
 @container stage (min-width:768px){.reply-launch{display:none!important}}
 .main.has-dock.has-reply.replying>.inputbar{display:flex}
@@ -2774,9 +2774,6 @@ button.sc{cursor:pointer}button.sc:active{transform:scale(.985)}
 .dock-av.us{box-shadow:0 0 0 2px #7c5cff}
 .dock button.on .dock-av{box-shadow:0 0 0 2px var(--acc)}.dock button.on .dock-av.us{box-shadow:0 0 0 2px #7c5cff}
 body.as-couple::before{content:"";position:fixed;left:0;right:0;top:0;height:3px;background:#7c5cff;z-index:60;pointer-events:none}
-body.as-couple [data-act="likePost"],body.as-couple [data-act="likeDisc"],body.as-couple [data-act="rLike"]{position:relative}
-body.as-couple [data-act="likePost"]::after,body.as-couple [data-act="likeDisc"]::after,body.as-couple [data-act="rLike"]::after{content:"Мы";font-size:10px;font-weight:700;line-height:1;padding:2px 4px;border-radius:5px;background:#7c5cff;color:#fff;margin-left:4px}
-html[lang="en"] body.as-couple [data-act="likePost"]::after,html[lang="en"] body.as-couple [data-act="likeDisc"]::after,html[lang="en"] body.as-couple [data-act="rLike"]::after{content:"Us"}
 .cnt18{margin-left:auto;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#e01a3e;color:#fff;font-size:12px;font-style:normal;font-weight:700;display:inline-grid;place-items:center}
 /* V18 — «Я»: compact head, three layers, blocks that open their own short editor */
 .me18-h{display:flex;align-items:center;gap:10px;padding-top:4px;padding-bottom:8px}
@@ -2833,6 +2830,21 @@ button[disabled].demo-off{opacity:.55;cursor:default}
 .lens-row+.vault,.lens-row+.lens-empty{margin-top:0}
 .lens-empty{padding:16px;border-radius:var(--r,18px);border:1px dashed var(--line2,#ddd)}
 .own-only .grp-t small{font-weight:500}
+
+/* V19 owner corrections: one identity, one avatar footprint, one switch. */
+.actor-options{display:grid;gap:12px}.actor-card{border:1px solid var(--line);border-radius:var(--r-l);overflow:hidden;background:var(--surf)}
+.actor-card.selected{border:2px solid var(--accent);background:color-mix(in srgb,var(--accent) 6%,var(--surf))}
+.actor-select{display:flex;align-items:center;gap:12px;width:100%;padding:16px;text-align:left;min-height:78px}.actor-select .tx{flex:1;min-width:0}.actor-select b,.actor-select small{display:block;overflow-wrap:anywhere}.actor-select small{font-size:12px;color:var(--mute);margin-top:4px}
+.actor-radio{width:20px;height:20px;border:1.5px solid var(--line2);border-radius:50%;flex:none}.selected .actor-radio{border:6px solid var(--accent)}
+.actor-open{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:44px;padding:10px 16px;border-top:1px solid var(--line);font-size:13px;font-weight:600}.actor-open svg{width:16px;height:16px}
+.match .av{flex-shrink:0}.av:not(.pair){aspect-ratio:1}.p-author:empty{display:none}
+
+
+.media-featured19{padding:14px 0 16px}.media-featured-head19{display:flex;gap:12px;justify-content:space-between;align-items:center;margin-bottom:12px}.media-featured-head19 b{font-size:14px}.media-featured-head19 button{font-size:12px;font-weight:600;color:var(--accent);min-height:44px;text-align:right}
+.media-selected19{display:flex;gap:8px;overflow:auto;padding:2px}.media-selected19>button{position:relative;flex:0 0 76px;width:76px;height:96px;border-radius:12px;overflow:hidden}.media-selected19 img{width:100%;height:100%;object-fit:cover}.media-selected19 span{position:absolute;bottom:0;left:0;right:0;background:#0009;color:white;font-size:10px;padding:4px}
+.media-filters19{margin-bottom:12px}.media-label19{position:absolute;bottom:6px;right:6px;display:flex;padding:4px;border-radius:7px;background:#0009;color:white}.media-label19:empty{display:none}.media-label19 svg{width:14px;height:14px}
+.media-choices19{display:grid;gap:14px}.media-choice19{display:grid;grid-template-columns:92px minmax(0,1fr);gap:14px}.media-choice-img19{height:116px;border-radius:12px;overflow:hidden}.media-choice-img19 img,.media-choice-img19 video{width:100%;height:100%;object-fit:cover}.media-choice-actions19{display:flex;flex-wrap:wrap;align-content:center;align-items:center;gap:6px 12px}.media-choice-actions19>.btn{min-height:44px}.media-choice-actions19>.note{width:100%}
+
 </style>
 </head>
 <body>
@@ -3454,7 +3466,7 @@ const I={copy:sv('<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 
 const ic=(n,s)=>s?I[n].replace('<svg',`<svg style="width:${s}px;height:${s}px"`):I[n];
 
 /* ---------- media ---------- */
-const IMG=n=>typeof n==='string'&&/^(blob:|data:image\/|\/images\/)/.test(n)?n:(window.FT_IMG&&window.FT_IMG[n])||`images/profile-${n}-45.webp`;
+const IMG=n=>typeof n==='string'&&/^(blob:|data:image\/|https?:\/\/|\/?images\/)/.test(n)?n:(window.FT_IMG&&window.FT_IMG[n])||`images/profile-${n}-45.webp`;
 /* V7: the test mark is gone. Three vector options for the owner (QA drawer → Логотип); A is the default. */
 const LOGOS={
  a:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'><defs><linearGradient id='a' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='#FF4F6D'/><stop offset='1' stop-color='#C2134A'/></linearGradient><linearGradient id='b' x1='0' y1='1' x2='1' y2='0'><stop offset='0' stop-color='#6A52F0'/><stop offset='1' stop-color='#C3B3FF'/></linearGradient></defs><rect width='120' height='120' rx='32' fill='#1E1219'/><circle cx='47' cy='60' r='23' fill='none' stroke='url(#a)' stroke-width='12'/><circle cx='73' cy='60' r='23' fill='none' stroke='url(#b)' stroke-width='12'/><path d='M51 37.4A23 23 0 0 1 65.6 45.2' fill='none' stroke='#1E1219' stroke-width='17'/><path d='M51 37.4A23 23 0 0 1 65.6 45.2' fill='none' stroke='url(#a)' stroke-width='12'/></svg>`,
@@ -3543,7 +3555,7 @@ function receiveCoupleRequest(p,scopes){const st=social('couple');if(!activePair
 const AUTHOR_TITLE=k=>k==='dating'&&cur()?.id==='P01'?L('От имени','Acting as'):k==='dating'?L('Знакомиться как','Meet as'):k==='reply'?L('Ответить как','Reply as'):L('Опубликовать как','Post as');
 /* V14 — the author is said in words next to the action: «Я» / «Мы» and the name; full variant also names the action ("Опубликовать как") */
 const AUTHOR_WORD=id=>id==='couple'?L('Мы','We'):L('Я','Me');
-function authorPicker(fixed,shown,variant){const r=cur(),k=authorKind();if(!k)return '';if(!activePair())return '';/* V11: with no couple there is one author — no picker, on create and on edit alike */const id=fixed||shown||(r.id==='P01'?likeActor(r.p.id).a:kindActor(k));const immutable=!!fixed||r.id==='F09';const w=r.id==='D03'&&!immutable?otherActorWaiting():0;const v=variant||(['F07','P01'].includes(r.id)?'full':'short');return `<span class="author-picker v14 ${v}" data-author-picker data-variant="${v}"><button type="button" class="author-trigger" ${immutable?'disabled':`data-act="authorMenu" data-k="${k}"`} aria-label="${AUTHOR_TITLE(k)}: ${esc(AUTHOR_WORD(id))}, ${esc(pname(id))}${w?`. ${L('Новые симпатии у другого профиля','New likes on the other profile')}: ${w}`:''}" ${immutable?'':'aria-haspopup="menu"'}>${av(id,'xs')}<span class="ap-l">${v==='full'?`<small>${AUTHOR_TITLE(k)}</small>`:''}<b>${esc(AUTHOR_WORD(id))}<span class="ap-n"> · ${esc(pname(id))}</span></b></span>${w?`<i class="ap-dot">${w}</i>`:''}${immutable?'':I.down}</button></span>`;}
+function authorPicker(){return ''; /* The dock is the sole profile switch. Actions already name their author. */}
 /** who sends a like from this profile: the remembered dating mode, narrowed by what the target and the couple allow */
 function likeActor(id){const t=PEOPLE[id],want=datingActor();if(want==='couple'){if(!canAct('dating','couple')||!authorProfile('couple')?.dating)return{a:'couple',why:'coupleOff'};if(!t?.dating||relatedFor('couple',id))return{a:'couple',why:'solo'};return{a:'couple'};}return{a:'me'};}
 function canLikeFrom(actor,id){const t=PEOPLE[id];if(!t)return false;if(actor==='couple')return !!t.dating;if(t.pair)return !!t.dating;return t.socialLikes!==false&&!!(t.dating||t.socialLikes);}
@@ -3571,13 +3583,7 @@ function paintAuthor(){
 function av(id,cls='',variant=0){
  const p=person(id);let inner,st='',k='';
  if(!p)inner=plate('night');
- else if(p.pair){/* a pair is always two overlapping circles — member photo, else its initial on the member's plate (never one shared monogram) */
-  const nm=(p.name||'').split(/\s*(?:&|и|and)\s*/).filter(Boolean);
-  const half=i=>{const m=p.members?.[i],q=m&&person(m),ph=q?.photo||(!q?p.photo:null);
-   if(ph)return `<span class="avh"><img src="${IMG(ph)}" alt="" loading="lazy" draggable="false" ${!q?`style="transform:scale(1.7);transform-origin:${i?'72% 40%':'28% 40%'}"`:''}></span>`;
-   const pl=q?.plate||(i?p.plate2||p.plate:p.plate)||'night',nameI=q?.name||nm[i]||'?';
-   return `<span class="avh ini">${plate(pl)}<b>${esc([...String(nameI)][0]||'?')}</b></span>`;};
-  return `<span class="av pair ${cls}">${half(0)}${half(1)}</span>`;}
+
  else if(p.photo)inner=`<img src="${IMG(p.photo)}" alt="" loading="lazy" draggable="false" style="${variant?'transform:scale(1.35);object-position:50% 25%':''}">`;
  else{k='ini';inner=`${plate(p.plate||'night')}<b style="position:relative">${esc((p.name||'?')[0])}</b>`;}
  // online: the dot sits on the circle's edge, so the picture is clipped by an inner circle, not by the avatar itself
@@ -3747,10 +3753,11 @@ function setP(k,v){cur().p[k]=v;navNextReplace=true;refresh();}
 function setSub(v){const r=cur();if(r.p.sub===v)return;r.p.sub=v;r.scroll=0;navNextReplace=true;render('fade');}
 
 // Ordinary routes keep global navigation; focused tasks opt out explicitly.
-const DOCKLESS=new Set(['A07','V01','MAINT','H02','F07','F09','E06','E11','P02','P04','C07','C08','X08','X11']);
+const DOCKLESS=new Set(['A07','V01','MAINT']);
 const screenHasDock=(id,sc=SC[id])=>!!S.session&&!QA.maintenance&&!sc?.auth&&!DOCKLESS.has(id)&&sc?.dock!==false;
 const main=()=>$('#main');
 function render(dir,keep){
+ syncMediaLibraries19();
  closeAuthorMenu();
  const r=cur();const sc=QA.maintenance?SC.MAINT:SC[r.id];document.body.classList.toggle('maintenance',!!QA.maintenance);
  let html;
@@ -3956,7 +3963,7 @@ function socialDelivery(identity,type,key,extra={}){if(identity==='couple'){pair
 
 // Collapse reply entry while browsing; give the composer the full bottom area on focus.
 ACT.dockReply=()=>{main().classList.add('replying');$('.inputbar textarea',main())?.focus();syncChrome();};
-document.addEventListener('focusout',()=>{const m=main();if(m?.classList.contains('replying'))requestAnimationFrame(()=>{if(!$('.inputbar',m)?.contains(document.activeElement)&&!$('#authorMenu')?.contains(document.activeElement)){m.classList.remove('replying');syncChrome();}});});
+document.addEventListener('focusout',()=>{const m=main();if(m?.classList.contains('replying'))requestAnimationFrame(()=>{if(!$('.inputbar',m)?.contains(document.activeElement)&&!$('#authorMenu')?.contains(document.activeElement)&&!$('#sheet.on [data-act="meSwitchTo"]')&&!S.ui.actorReplyExpanded19){m.classList.remove('replying');syncChrome();}});});
 
 
 
@@ -4315,7 +4322,7 @@ ACT.rte=a=>{const box=a.closest('.rte-box'),ed=$('.rte-ed',box),c=a.dataset.v;
  rteSync(ed);rteState();};
 function postCard(p,o={}){p={...p,liked:!!(p.reactions?p.reactions[activeActor()]:activeActor()==='me'&&p.liked)};MD_SKIP=new Set(p.unmentioned||[]);
  const mine=ownedIdentity(p.author);const pid=JSON.stringify({id:p.id});
- const head=`<div class="post-h"><button class="who" ${profGo(p.author)}>${av(p.author,'sm')}<span class="tx"><b><span class="nmt">${esc(p.authorName?T(p.authorName):pname(p.author))}</span>${nameBadges(person(p.author))}</b><small>${F.rel(p.t)}${p.aud==='followers'?` · <span class="aud">${I.people}${L('подписчикам','followers')}</span>`:''}${o.community&&p.community?` · ${esc(T(COMMUNITIES[p.community].name))}`:''}</small></span></button><button class="ibtn ghost sm" data-act="postMenu" data-v="${p.id}" aria-label="${L('Ещё','More')}">${I.more}</button></div>`;
+ const head=`<div class="post-h"><button class="who" ${profGo(p.author)}>${av(p.author,'sm')}<span class="tx"><b><span class="nmt">${esc(p.authorName?T(p.authorName):pname(p.author))}</span>${nameBadges(person(p.author))}</b><small>${F.rel(p.t)}${p.aud&&p.aud!=='all'?` · <span class="aud">${p.aud==='granted'?I.key:p.aud==='only'?I.eyeoff:I.people}${p.aud==='granted'?L('по доступу','by access'):p.aud==='only'?L('только мне','only me'):L('подписчикам','followers')}</span>`:''}${o.community&&p.community?` · ${esc(T(COMMUNITIES[p.community].name))}`:''}</small></span></button><button class="ibtn ghost sm" data-act="postMenu" data-v="${p.id}" aria-label="${L('Ещё','More')}">${I.more}</button></div>`;
  const media=postMediaHTML(p,o);
  const tags=p.tags&&p.tags.length?`<div class="tags">${p.tags.map(t=>`<button data-go="F04" data-p='${esc(JSON.stringify({id:t}))}'>#${esc(topic(t))}</button>`).join('')}</div>`:'';
  const nC=p.comments.length;
@@ -5059,7 +5066,7 @@ ACT.ageDone=()=>{const then=S.ui.ageThen;S.ui.ageThen=null;back();then&&setTimeo
 /* ============ F: FEED (For you / Following / Events), POSTS, CREATE ============ */
 const TYPES=()=>[['note',L('Заметки','Notes')],['text',L('Только текст','Text only')],['photo',L('С фото и видео','With photos & video')],['poll',L('С опросом','With a poll')],['result',L('С интересами','With interests')]];
 const filtN=f=>(f.tags||[]).length+(f.ex||[]).length+(f.types||[]).length+(f.kinds||[]).length;
-function filterPosts(list,f){return list.filter(p=>!p.galleryOnly&&!consentHidden(p)&&!(S.hiddenPosts&&S.hiddenPosts.has(p.id))&&!(S.mutedAuthors&&S.mutedAuthors.has(p.author))&&!isBlocked(p.author)
+function filterPosts(list,f){return list.filter(p=>mediaPreviewAllowed19(p)&&!p.galleryOnly&&!consentHidden(p)&&!(S.hiddenPosts&&S.hiddenPosts.has(p.id))&&!(S.mutedAuthors&&S.mutedAuthors.has(p.author))&&!isBlocked(p.author)
  &&(!(f.tags||[]).length||p.tags.some(t=>f.tags.includes(t)))&&!p.tags.some(t=>(f.ex||[]).includes(t))&&(!(f.types||[]).length||postKinds(p).some(k=>f.types.includes(k))));}
 
 /** events in the feed: upcoming within 14 days, never cancelled/under review; priority — mine (going/applied) → organisers I follow →
@@ -5210,19 +5217,19 @@ function seedGallery(id){S.galSeeded??=new Set();if(S.galSeeded.has(id)||!PEOPLE
 const realMedia=p=>(p.media||[]).filter(m=>m.type!=='plate'&&m.url);
 const galleryOwner=id=>id==='couple'?'couple':id;
 /* every published post with real photos/video by this author, newest first; an album narrows it */
-function galleryPosts(id,album){seedGallery(id);const mine=id==='me'||id==='couple';if(mine)syncProfileGallery(id,(id==='couple'?coupleProfile():S.me)?.photos||[],new Set((id==='couple'?coupleProfile():S.me)?.galPh||[]));
+function galleryPosts(id,album,o={}){seedGallery(id);const mine=id==='me'||id==='couple';if(mine)syncProfileGallery(id,(id==='couple'?coupleProfile():S.me)?.photos||[],new Set((id==='couple'?coupleProfile():S.me)?.galPh||[]));
  if(album==='@tagged')return taggedPosts(id);
  const list=(mine?S.myPosts.filter(x=>(x.status==='published'||x.status==='review')&&!x.hiddenByPair&&x.author===id):S.posts.filter(x=>x.author===id&&(x.aud!=='followers'||social('me').follows.has(id))&&!isBlocked(id)&&!consentHidden(x)))
   .filter(x=>realMedia(x).length&&!x.unavailable&&x.type!=='note');
- const al=album&&(S.albums?.[galleryOwner(id)]||[]).find(x=>x.id===album);return list.filter(x=>!album||x.album===album).filter(x=>!x.removed).sort((a,b)=>al?.sort==='old'?a.t-b.t:b.t-a.t);}
+ const al=album&&(S.albums?.[galleryOwner(id)]||[]).find(x=>x.id===album);return list.filter(x=>!album||x.album===album).filter(x=>!x.removed&&mediaPreviewAllowed19(x,o)).sort((a,b)=>al?.sort==='old'?a.t-b.t:b.t-a.t);}
 /* posts by others where this person is marked and agreed */
-const taggedPosts=id=>[...allPosts(),...S.posts.filter(x=>x.galleryOnly)].filter((x,i,a)=>a.indexOf(x)===i&&x.author!==id&&realMedia(x).length&&x.type!=='note'&&!isBlocked(x.author)&&(x.people||[]).some(t=>t.p===id&&t.st==='ok')&&!consentHidden(x)&&(x.aud!=='followers'||social('me').follows.has(x.author)||ownedIdentity(x.author))).sort((a,b)=>b.t-a.t);
+const taggedPosts=(id,o={})=>[...allPosts(),...S.posts.filter(x=>x.galleryOnly)].filter((x,i,a)=>a.indexOf(x)===i&&mediaPreviewAllowed19(x,o)&&x.author!==id&&realMedia(x).length&&x.type!=='note'&&!isBlocked(x.author)&&(x.people||[]).some(t=>t.p===id&&t.st==='ok')&&!consentHidden(x)&&(x.aud!=='followers'||social('me').follows.has(x.author)||ownedIdentity(x.author))).sort((a,b)=>b.t-a.t);
 const albumsOf=id=>{seedGallery(id);const own=id==='me'||id==='couple';return ((S.albums??={})[galleryOwner(id)]||[]).filter(x=>own||x.vis!=='followers'||social('me').follows.has(id));};
 function galTile(x,id,album,o={}){const m=realMedia(x),f=m[0],n=m.length;
  return `<button class="gtile" data-go="F05" data-p='${esc(JSON.stringify({id:x.id,gal:{o:id,a:album||null}}))}' aria-label="${esc(T(x.title)||T(x.text)||L('Публикация','Post'))}">${f.type==='video'?`<video src="${esc(f.url)}#t=0.5" ${f.poster?`poster="${esc(f.poster)}"`:''} muted playsinline preload="metadata"></video><span class="gt-k">${I.playf}</span>`:`<img src="${esc(f.url)}" alt="" loading="lazy" draggable="false">`}${n>1?`<span class="gt-n">${I.image}${n}</span>`:''}${ownedIdentity(x.author)&&(x.status==='review'||consentHidden(x))?`<span class="gt-w" title="${x.status==='review'?L('На проверке','In review'):L('Ждёт согласия','Waiting for consent')}">${I.clock}</span>`:''}</button>`;}
-function galleryBlock(id,self,o={}){const list=galleryPosts(id);if(!list.length&&!self)return '';const max=12,shown=list.slice(0,self?max-1:max);
+function galleryBlock(id,self,o={}){const list=galleryPosts(id,null,o).filter(p=>self||p.aud!=='granted');if(!list.length&&!self)return '';const max=12,shown=list.slice(0,self?max-1:max);
  return grp(L('Галерея','Gallery'),`<div class="ggrid">${self?`<button class="gtile add" data-act="galAdd" data-v="${id}" aria-label="${L('Добавить в галерею','Add to gallery')}">${I.plus}<small>${L('Добавить','Add')}</small></button>`:''}${shown.map(x=>galTile(x,id,null)).join('')}</div>${list.length>shown.length?`<button class="btn soft mt12" data-go="P20" data-p='${esc(JSON.stringify({id}))}'>${L(`Смотреть всё · ${list.length}`,`See all · ${list.length}`)}</button>`:''}`,{right:list.length?`<button data-go="P20" data-p='${esc(JSON.stringify({id}))}'>${L('Все','All')} · ${list.length}</button>`:''});}
-ACT.galAdd=a=>go('F07',{x:'media',...(a.dataset.v==='couple'?{author:'couple'}:{}),...(a.dataset.a?{album:a.dataset.a}:{})});
+ACT.galAdd=a=>go('F07',{x:'media',aud:S.ui.mediaFilter19==='granted'?'granted':S.ui.mediaFilter19==='followers'?'followers':'all',...(a.dataset.a?{album:a.dataset.a}:{})});
 ACT.galAlbum=a=>setP('a',a.dataset.v||null);
 const myAlbums=(owner=composeActor())=>((S.albums??={})[owner]??=[]);
 ACT.galAlbumNew=(a,then)=>{const owner=cur().p.id==='couple'||cur().author==='couple'?'couple':'me';S.ui.albumName='';sheet(()=>({title:L('Новый альбом','New album'),body:`<label class="field"><span>${L('Название','Name')}</span><input class="inp" id="albumName" maxlength="40" placeholder="${L('Например, «Мастерские»','E.g. “Workshops”')}" autofocus></label>`,foot:`<button class="btn primary" data-act="galAlbumCreate" data-v="${owner}">${L('Создать','Create')}</button>`}));S.ui.albumThen=then||null;};
@@ -5330,7 +5337,7 @@ const viewerId=()=>pairMember()==='me'||!activePair()?'me':S.pair.with;
 const ownerView=p=>pairMember()==='me'?ownedIdentity(p.author):p.author==='couple'&&activePair();
 const taggedMe=p=>(p?.people||[]).find(x=>x.p===viewerId());
 /** who may open a post: the author, people marked on it, everyone else only once all marked people agreed */
-const postVisible=p=>!!p&&(ownedIdentity(p.author)||!!taggedMe(p)&&!p.disputed||!consentHidden(p));
+const postVisible=p=>!!p&&mediaPreviewAllowed19(p)&&(ownedIdentity(p.author)||!!taggedMe(p)&&!p.disputed||!consentHidden(p));
 const tagNames=(p,st)=>(p.people||[]).filter(x=>!st||x.st===st).map(x=>esc(pname(x.p))).join(', ');
 function peopleLine(p){const ok=(p.people||[]).filter(x=>x.st==='ok'&&person(x.p)&&!isBlocked(x.p));if(!ok.length||consentHidden(p))return '';return `<div class="tagged">${I.users3}<span>${L('На фото:','In the photo:')} ${ok.map(x=>`<button ${profGo(x.p)}>${x.p==='me'?L('ты','you'):esc(pname(x.p))}</button>`).join(', ')}</span></div>`;}
 /* banner on a post that is hidden: the author sees why; a person marked on it decides here */
@@ -5521,10 +5528,10 @@ const ownPost=id=>S.myPosts.find(p=>p.id===id&&!p.hiddenByPair&&ownedIdentity(p.
 SC.F07={title:p=>p?.community?L('Новое обсуждение','New discussion'):L('Публикация','Post'),valid:p=>p.community?!!COMMUNITIES[p.community]&&(joinedSet().has(p.community)||ownsCommunity(p.community)):!p.id||!!ownPost(p.id),render:(p,r)=>{
  const cm=p.community||null;
  const ex=p.id?postById(p.id):null;
- if(!r.init){r.init=1;r.author=ex?.author||(p.author==='couple'&&activePair()||activeActor()==='couple'?'couple':'me');r.pairId=ex?.pairId||(r.author==='couple'?(coupleProfile(),S.pair?.id):null);r.composeId='compose'+(++composeDraftSeq);r.pollLocale=S.lang;r.tags=[];r.aud='all';r.media=[];r.poll=null;r.result=false;r.resSel=resEligible().slice(0,4).map(j=>j.t);r.album=p.album||null;r.note=p.x==='note';r.people=[];
+ if(!r.init){r.init=1;r.author=ex?.author||(p.author==='couple'&&activePair()||activeActor()==='couple'?'couple':'me');r.pairId=ex?.pairId||(r.author==='couple'?(coupleProfile(),S.pair?.id):null);r.composeId='compose'+(++composeDraftSeq);r.pollLocale=S.lang;r.tags=[];r.aud=['all','followers','granted','only'].includes(p.aud)?p.aud:'all';r.media=[];r.poll=null;r.result=false;r.resSel=resEligible().slice(0,4).map(j=>j.t);r.album=p.album||null;r.note=p.x==='note';r.people=[];
   if(ex){r.people=structuredClone(ex.people||[]);r.album=ex.album||null;r.note=ex.type==='note';r.f.ntitle=T(ex.title)||'';r.f.text=T(ex.text);r.f.pollQ=T(ex.pollQ)||'';r.tags=[...ex.tags];r.aud=ex.aud;r.media=(ex.media||[]).slice();r.poll=ex.poll?{opts:ex.poll.map(x=>T(x[0]))}:null;r.result=!!ex.result;if(ex.result)r.resSel=ex.result.map(x=>x[0]);}
   const saved=S.postEdits[p.id]?.draft;if(saved){r.author=ex?.author||saved.author||'me';r.f.text=saved.text;r.f.title=saved.title||'';r.f.pollQ=saved.pollQ||'';r.tags=[...saved.tags];r.aud=saved.aud;r.media=saved.media.slice();r.poll=saved.poll?{opts:[...saved.poll]}:null;r.pollLocale=saved.pollLocale||S.lang;r.result=!!saved.result;r.resSel=saved.result?[...saved.result]:[];if(saved.album!==undefined)r.album=saved.album;if(saved.people)r.people=saved.people.map(id=>(ex?.people||[]).find(x=>x.p===id)||{p:id,st:'pending'});r.note=!!saved.note;r.f.ntitle=saved.noteTitle||'';}
-  if(cm&&r.author==='couple'&&!communityAuthorAllowed(cm,'couple'))r.author='me';
+  /* Community write rights are checked at send time; never switch author silently. */
   if(p.x==='poll'||p.type==='poll')r.poll={opts:['','']};if(p.x==='result')r.result=true;if(p.x==='media')setTimeout(()=>{if(cur()===r)ACT.postMedia();},250);}
  r.resSel=postResultSelection(r);
  const a=AUD().find(x=>x[0]===r.aud)||AUD()[0];const m=r.media;const el=resEligible();
@@ -5596,7 +5603,7 @@ SC.F09={title:()=>L('Предпросмотр','Preview'),valid:p=>!!p.draft&&(!
  return `${bar(L('Предпросмотр','Preview'),{back:1,sm:1})}<div class="view nodock cta1"><div class="wrap">
  <div class="card preview-post" style="padding:0 16px;margin-top:10px">${d.title?`<h2 class="t md" style="margin:14px 0 0">${esc(d.title)}</h2>`:''}${postCard(fake,{detail:1,preview:1})}</div>
  ${d.community?communityAudienceNote(d.community):`<div class="card list mt16"><div class="li"><span class="ico v">${I.eye}</span>${selectRow('setAud',L('Кто увидит','Who can see this'),AUD().map(([k,,t])=>[k,t]),composeAudience())}</div>`}${hasPhoto?`<div class="card list mt16">${linkRow({icon:'shield',tone:'a',title:L('Проверка фото и видео','Photo & video review'),sub:L('Обычно до 30 минут. До этого публикацию видишь только ты','Usually under 30 minutes. Until then only you can see it'),noChev:1})}</div>`:''}
- </div></div><div class="ctabar"><div class="wrap"><div class="row g8"><button class="btn soft" style="flex:0 0 auto;width:auto" data-back>${L('Изменить','Edit')}</button><button class="btn primary" data-act="publish">${d.author==='couple'&&!pairTrusted()?L('На согласование','Request approval'):hasPhoto?L('Отправить на проверку','Submit for review'):L('Опубликовать','Publish')}</button></div></div></div>`;}};
+ </div></div><div class="ctabar"><div class="wrap"><div class="row g8"><button class="btn soft" style="flex:0 0 auto;width:auto" data-back>${L('Изменить','Edit')}</button><button class="btn primary" data-act="publish">${d.author==='couple'&&!pairTrusted()?L('На согласование','Request approval'):hasPhoto?(d.author==='couple'?L('На проверку от пары','Review as the couple'):L('Отправить на проверку','Submit for review')):d.author==='couple'?L('Опубликовать от пары','Publish as the couple'):L('Опубликовать','Publish')}</button></div></div></div>`;}};
 ACT.back=()=>back();
 function finishPostCompose(route,composeId){
  const trim=st=>{let i=composeId?st.findIndex(r=>r.id==='F07'&&r.composeId===composeId):-1;if(i<0&&composeId)i=st.findIndex(r=>r.id==='F09'&&r.p.draft?.composeId===composeId);if(i<0)i=st.indexOf(route);if(i>=0){st.splice(Math.max(1,i));return true;}return false;};
@@ -6159,7 +6166,7 @@ function socialContext(id,orgEvents,modOf){const p=person(id);if(!p||id==='me'||
  return rows.length?`<div class="p-ctx">${rows.join('')}</div>`:'';}
 function profileView(id,r,o={}){
  const me=id==='me'||id==='couple',self=me&&!o.asOther;if(self)o={...o,...ownPageParts(id,o)};const owner=id==='couple'?'couple':'me';if(me&&r.p.preview)S.ui[id==='couple'?'couplePreview':'profilePreview']=r.p.preview;const p=person(id);const ix=(S.ui.ph||{})[id]||0;const t=r.p.t||'about';
- const displayName=me?(p.name||p.nick||L('Ты','You')):pname(id);const allMine=(me?S.myPosts.filter(x=>x.status==='published'&&!x.hiddenByPair&&x.author===id&&!x.galleryOnly):allPosts().filter(x=>x.author===id&&!x.galleryOnly&&!consentHidden(x))).sort((a,b)=>b.t-a.t);const posts=allMine.filter(x=>x.type!=='note'),notes=allMine.filter(x=>x.type==='note');
+ const displayName=me?(p.name||p.nick||L('Ты','You')):pname(id);const allMine=(me?S.myPosts.filter(x=>x.status==='published'&&!x.hiddenByPair&&x.author===id&&!x.galleryOnly):allPosts().filter(x=>x.author===id&&!x.galleryOnly&&!consentHidden(x))).sort((a,b)=>b.t-a.t);const visibleMine=allMine.filter(x=>mediaPreviewAllowed19(x,o));const posts=visibleMine.filter(x=>x.type!=='note'),notes=visibleMine.filter(x=>x.type==='note');
  const act=!me&&activePair()?likeActor(id):{a:activeActor()};const lk=withActor(act.a,()=>({mutual:!me&&isMatch(id),liked:!me&&social().likesOut.some(l=>l.p===id)}));const mutual=lk.mutual,liked=lk.liked,canLike=!self&&!act.why&&canLikeFrom(act.a,id);
  const sh=me?null:shared(id);const asUs=act.a==='couple';const inert=h=>o.asOther?h.replace(/ data-(act|go|p|v|id)=("[^"]*"|'[^']*')/g,'').replace(/<button /g,'<button disabled aria-disabled="true" ').replace(/ btn soft off"/g,' btn soft"').replace(/class="btn /g,'class="demo-off btn '):h;
  const keys=[...fmtList(p.format).slice(0,2).map(x=>opt('format',x)),...fmtList(p.role).filter(v=>v!=='none').slice(0,2).map(v=>opt('role',v)),...(p.dating?(p.seek||[]).slice(0,2).map(s=>opt('seek',s)):[])].filter(Boolean);
@@ -6167,7 +6174,7 @@ function profileView(id,r,o={}){
  const likeBtn=isPartner?'':mutual?`<button class="btn primary" data-act="openChat" data-v="${id}" data-actor="${act.a}">${I.chat}${L('Написать','Message')}</button>`:liked?`<button class="btn on" data-act="unlikeP" data-v="${id}" data-actor="${act.a}" aria-pressed="true" title="${L('Нажми, чтобы отменить симпатию','Tap to withdraw the like')}">${I.heartf}${L('Отправлено','Sent')}</button>`:canLike||o.asOther&&acceptsLikes(id)?`<button class="btn primary" data-act="likeProfile" data-v="${id}">${I.heartf}${asUs&&!o.asOther?L('Нравится · от пары','Like · as us'):L('Нравится','Like')}</button>`:'';
  const pending=social().reqOut.find(x=>x.p===id&&x.status==='pending');
  const acts=self?`<div class="row g8" style="margin-top:16px"><button class="btn primary" data-go="P02" data-p='${esc(JSON.stringify({owner}))}'>${I.edit}${L('Редактировать','Edit profile')}</button>${owner==='couple'?`<button class="btn soft" data-go="Q01">${I.gear}${L('Настройки пары','Couple settings')}</button>`:''}</div>`
-  :inert(`${!o.asOther&&!isPartner&&!me&&activePair()?`<div class="p-author">${authorPicker()}</div>`:''}<div class="p-acts">${likeBtn}<button class="btn soft" data-act="follow" data-v="${id}" aria-pressed="${social(activeActor()).follows.has(id)}" title="${social(activeActor()).follows.has(id)?L('Нажми, чтобы отписаться','Tap to unfollow'):''}">${social(activeActor()).follows.has(id)?`${I.check}${L('В подписках','Following')}`:activeActor()==='couple'?L('Подписаться от пары','Follow as us'):L('Подписаться','Follow')}</button></div>${!isPartner&&!mutual&&!liked&&!canLike&&!(o.asOther&&acceptsLikes(id))?`<p class="profile-like-note">${I.heart}<span>${act.why==='coupleOff'?L('Знакомства пары выключены — от пары симпатию не отправить','Couple dating is off — no likes as us'):act.why==='solo'?L('От пары сюда симпатию не отправить. Сменить профиль — аватар внизу','No likes as us here. Switch profile with the avatar below'):(p.dating?L('Симпатии — в знакомствах','Likes available in Discover'):L('Симпатии выключены','Likes are off'))}</span></p>`:''}`);
+  :inert(`${!o.asOther&&!isPartner&&!me&&activePair()?'':''}<div class="p-acts">${likeBtn}<button class="btn soft" data-act="follow" data-v="${id}" aria-pressed="${social(activeActor()).follows.has(id)}" title="${social(activeActor()).follows.has(id)?L('Нажми, чтобы отписаться','Tap to unfollow'):''}">${social(activeActor()).follows.has(id)?`${I.check}${L('В подписках','Following')}`:activeActor()==='couple'?L('Подписаться от пары','Follow as us'):L('Подписаться','Follow')}</button></div>${!isPartner&&!mutual&&!liked&&!canLike&&!(o.asOther&&acceptsLikes(id))?`<p class="profile-like-note">${I.heart}<span>${act.why==='coupleOff'?L('Знакомства пары выключены — от пары симпатию не отправить','Couple dating is off — no likes as us'):act.why==='solo'?L('От пары сюда симпатию не отправить. Сменить профиль — аватар внизу','No likes as us here. Switch profile with the avatar below'):(p.dating?L('Симпатии — в знакомствах','Likes available in Discover'):L('Симпатии выключены','Likes are off'))}</span></p>`:''}`);
  const orgEvents=allEventIds().filter(e=>EV(e).organizer===id&&!isPast(e)&&!EV(e).cancelled&&EV(e).status!=='review');
  const modOf=Object.keys(COMMUNITIES).filter(c=>COMMUNITIES[c].mods.includes(id));
  const kv=identityFields().filter(([k])=>!['pron','gender','orient'].includes(k)&&!(p.pair&&k==='status')).map(([k,title])=>[title,IDENTITY_MULTI.includes(k)?fmtList(p[k]).map(v=>opt(k,v)).join(', '):opt(k,p[k])]).filter(x=>x[1]);
@@ -6176,7 +6183,7 @@ function profileView(id,r,o={}){
  const pj=pubJars(id);const actItems=activityShown(id,o)?activityOf(id).filter(x=>!(x.k==='like'&&(id==='me'?o.asOther&&S.me.showLikes===false:person(id)?.hideLikes))&&!(x.k==='event'&&id==='me'&&o.asOther&&myR(x.e).show===false)):[];
  const body=`${bio}${self?ownDetails(id):detailsGroup(id)}${linksBlock(id,me,o)}
   ${self?ownJars(id):pj.length?grp(L('Интересы','Interests'),jarShelf(pj,{pre:1,act:'topic',who:id,moreAct:self?(id==='couple'?'coupleJars':'myJarsAll'):'allJars'})):''}
-  ${galleryBlock(id,self)}
+  ${galleryBlock(id,self,o)}
   ${self?ownPrivBlock(owner):me?(privSection(id,o)||(o.asOther&&!hasPrivatePart(id)?`<div class="owner-only">${myPrivSection(owner)}</div>`:'')):`<div data-private-context="${id}">${privSection(id)}</div>`}
   ${activityBlock(id,[['posts',L('Публикации','Posts'),posts.length,()=>`<div class="posts">${inert(posts.slice(0,3).map((x,i)=>postCard(x,{i})).join(''))}</div>`],['notes',L('Заметки','Notes'),notes.length||(self?1:0),()=>notes.length?`${me||o.asOther?'':noteSubRow(id)}<div class="posts">${inert(notes.slice(0,3).map((x,i)=>postCard(x,{i})).join(''))}</div>`:`<div class="note-empty"><p class="note">${L('Заметка — длинный текст с заголовком: история, опыт, разбор.','A note is a long read with a title: a story, an experience, a breakdown.')}</p><button class="btn soft" data-go="F07" data-p='${esc(JSON.stringify({x:'note',...(id==='couple'?{author:'couple'}:{})}))}'>${I.doc}${L('Написать заметку','Write a note')}</button></div>`],['events',L('События','Events'),orgEvents.length,()=>orgEvents.map(e=>eventCard(e,{row:1,neutral:o.asOther})).join('<div style="height:8px"></div>')],...(actItems.length?[['activity',L('Активность','Activity'),actItems.length,()=>activityList(id,actItems,{self:self})]]:[]),['comm',L('Сообщества','Communities'),modOf.length,()=>modOf.map((c,i)=>commCard(c,{i})).join('')]])}`;
  const html=`<header class="bar overlay">${o.root?(o.headL||''):`<button class="ibtn glass" data-back aria-label="${L('Назад','Back')}">${I.back}</button>`}<span style="flex:1"></span>${self?(o.headR||''):o.asOther?'':inert(`<button class="ibtn glass" data-act="profileMenu" data-v="${id}" aria-label="${L('Ещё','More')}">${I.more}</button>`)}</header>
@@ -6192,6 +6199,64 @@ function profileView(id,r,o={}){
    Профиль: what I show, as blocks in the order others see them; each block opens a short editor of its own.
    Видимость: who sees what — Discover, access requests, who has access, profile privacy (and couple rules for «Мы»).
    Моё: lists only. «Я / Мы» is switched on the name (and by a long press on the tab); the layout stays the same. */
+/* V19 media: posts own the files; profile photos are ordered references to their images.
+   photos/media remain read projections for the existing preview and scoped-access renderer. */
+function mediaOwnerModel19(owner){return owner==='couple'?coupleProfile():S.me;}
+function mediaRef19(p,m){return p.id+'|'+m.url;}
+function mediaLibrary19(owner){return S.myPosts.filter(p=>p.author===owner&&!p.hiddenByPair&&!p.removed&&!p.unavailable&&['published','review','pending'].includes(p.status)&&realMedia(p).length&&!p.community&&p.type!=='note'&&(owner!=='couple'||p.pairId===S.pair?.id));}
+function initMediaLibrary19(owner){const model=mediaOwnerModel19(owner);if(!model||model.mediaLibrary19)return;
+ model.mediaLibrary19=true;model.profileRefs19=[];
+ const add=(item,aud,index)=>{const media=item.type==='video'?{...item,url:item.url||vsrc(item)}:{type:'image',url:item.url||IMG(item.src??item)};
+  let post=mediaLibrary19(owner).find(p=>p.aud===aud&&realMedia(p).some(m=>m.url===media.url));
+  if(!post){post={id:'media19_'+owner+'_'+Date.now().toString(36)+'_'+aud+'_'+index,author:owner,pairId:owner==='couple'?S.pair?.id:null,creator:pairMember(),status:'published',t:Date.now()-(index+30)*DAY,type:'photo',aud,text:{ru:'',en:''},tags:[],likes:0,comments:[],people:[],media:[media]};S.myPosts.push(post);}
+  return mediaRef19(post,realMedia(post).find(m=>m.url===media.url));};
+ (model.photos||[]).forEach((ph,i)=>{const item=isVideoItem(ph)?{...ph,type:'video',url:vsrc(ph)}:{type:'image',url:IMG(ph)};const ref=add(item,'all',i);if(item.type!=='video')model.profileRefs19.push(ref);});
+ privMedia(model).forEach((m,i)=>add({...m,url:privSrc(m)},'granted',i));
+ // The old opt-in gallery mirror must no longer create or remove posts.
+ model.galPh=[];
+ // Existing draft/proposal snapshots adopt references before they can be committed.
+ if(owner==='couple')for(const draft of [S.pair.draft,S.pair.proposal?.text])if(draft&&!draft.mediaLibrary19){draft.mediaLibrary19=true;draft.galPh=[];draft.profileRefs19=(draft.photos||[]).filter(ph=>!isVideoItem(ph)).map(ph=>{const url=IMG(ph),p=mediaLibrary19(owner).find(p=>p.aud==='all'&&realMedia(p).some(x=>x.url===url));return p?mediaRef19(p,realMedia(p).find(x=>x.url===url)):null;}).filter(Boolean);}
+ syncMediaProjection19(owner);
+}
+function publicMediaPost19(p){return p?.aud==='all'&&p.status==='published'&&!p.hiddenByPair&&!p.removed&&!p.unavailable&&!consentHidden(p);}
+function syncMediaProjection19(owner){const model=mediaOwnerModel19(owner);if(!model?.mediaLibrary19)return;
+ const posts=mediaLibrary19(owner),byRef=new Map(posts.flatMap(p=>realMedia(p).map(m=>[mediaRef19(p,m),{p,m}])));
+ const project=m=>m.type==='video'?{...m,type:'video'}:m.url;
+ const apply=m=>{if(!m?.profileRefs19)return;const refs=m.profileRefs19.filter(ref=>{const x=byRef.get(ref);return x&&x.p.aud==='all'&&x.m.type!=='video';});m.profileRefs19=refs;m.photos=refs.filter(ref=>publicMediaPost19(byRef.get(ref).p)).map(ref=>project(byRef.get(ref).m));m.photo=firstPhoto(m.photos);
+  m.media=posts.filter(p=>p.aud==='granted'&&p.status==='published'&&!consentHidden(p)).flatMap(p=>realMedia(p).map(x=>({...x,id:mediaRef19(p,x)})));};
+ apply(model);if(owner==='couple'){apply(S.pair?.draft);apply(S.pair?.proposal?.text);}
+}
+function syncMediaLibraries19(){for(const owner of ['me',...(activePair()?['couple']:[])])if(mediaOwnerModel19(owner)?.mediaLibrary19)syncMediaProjection19(owner);}
+function mediaPreviewAllowed19(p,o={}){if(!p||p.hiddenByPair||p.removed||p.unavailable)return false;
+ if(!o.asOther&&ownerView(p))return true;
+ if(p.status&&p.status!=='published')return false;if(consentHidden(p)&&(o.asOther||!taggedMe(p)||p.disputed))return false;
+ if(p.aud==='all'||!p.aud)return true;if(p.aud==='only')return false;
+ if(o.asOther)return p.aud==='granted'&&o.grant==='granted'&&mediaOwnerModel19(p.author)?.privOn!==false;
+ if(p.aud==='followers')return social().follows.has(p.author);
+ if(p.aud==='granted'){const grant=receivedGrant(p.author),media=realMedia(p);return !!grant&&(media.length?media.every(m=>grant.granted?.includes(m.type==='video'?'video':'photos')):grant.granted?.includes('info'));}return false;}
+function mediaLibraryBlock19(owner){initMediaLibrary19(owner);const list=mediaLibrary19(owner),m=mediaOwnerModel19(owner),filter=S.ui.mediaFilter19||'all';
+ const filtered=list.filter(p=>filter==='profile'?realMedia(p).some(x=>m.profileRefs19.includes(mediaRef19(p,x))):filter==='all'||p.aud===filter);
+ const tiles=filtered.slice(0,11).map(p=>{const first=realMedia(p)[0],isProfile=realMedia(p).some(x=>m.profileRefs19.includes(mediaRef19(p,x)));return `<button class="gtile" data-act="mediaPost19" data-v="${esc(p.id)}" aria-label="${esc(L('Настроить фото и видео','Manage photos and video'))}">${first.type==='video'?`<video src="${esc(first.url)}" muted playsinline preload="metadata"></video>`:`<img src="${esc(first.url)}" alt="" loading="lazy">`}<span class="media-label19">${p.status!=='published'?I.clock:p.aud==='granted'?I.key:p.aud==='followers'?I.people:p.aud==='only'?I.eyeoff:isProfile?I.me:''}</span></button>`;}).join('');
+ const profile=m.photos||[];
+ return `<section class="grp media-library19"><div class="grp-t"><span>${L('Фото и видео','Photos & video')}</span><button data-go="P20" data-p='${esc(JSON.stringify({id:owner}))}'>${L('Альбомы','Albums')}</button></div><div class="media-featured19"><div class="media-featured-head19"><b>${L('Фото профиля','Profile photos')}</b><button data-act="mediaFilter19" data-v="profile">${L('Выбрать и упорядочить','Choose & arrange')}</button></div>${profile.length?`<div class="media-selected19">${profile.map((ph,i)=>`<button data-act="mediaSelected19" data-v="${i}" data-owner="${owner}" aria-label="${esc(i?L(`Фото профиля ${i+1}`,`Profile photo ${i+1}`):L('Главное фото','Main photo'))}"><img src="${esc(IMG(ph))}" alt="">${i===0?`<span>${L('Главное','Main')}</span>`:''}</button>`).join('')}</div>`:`<p class="note">${L('Выбери публичное фото из галереи для шапки и знакомств.','Choose a public gallery photo for your profile and Discover.')}</p>`}</div><div class="chips media-filters19">${[['all',L('Все','All')],['profile',L('В профиле','In profile')],['granted',L('По доступу','By access')],['followers',L('Подписчикам','Followers')]].map(([k,t])=>`<button class="chip ${filter===k?'on':''}" aria-pressed="${filter===k}" data-act="mediaFilter19" data-v="${k}">${t}</button>`).join('')}</div><div class="ggrid"><button class="gtile add" data-act="galAdd" data-v="${owner}" aria-label="${L('Добавить фото или видео','Add photos or video')}">${I.plus}<small>${L('Добавить','Add')}</small></button>${tiles}</div>${filtered.length>11?`<button class="btn text auto mt8" data-go="P20" data-p='${esc(JSON.stringify({id:owner}))}'>${L('Все публикации','All posts')} · ${filtered.length}</button>`:''}<p class="grp-n">${L('Каждая загрузка — публикация. Её аудитория действует и в галерее. Фото профиля выбираются из публичных публикаций.','Each upload is a post. Its audience applies in the gallery too. Profile photos come from public posts.')}</p></section>`;
+}
+ACT.mediaFilter19=a=>{S.ui.mediaFilter19=a.dataset.v;refresh();};
+ACT.mediaSelected19=a=>{const owner=a.dataset.owner,m=mediaOwnerModel19(owner),photo=m?.photos?.[+a.dataset.v];if(photo==null)return;const url=IMG(photo),p=mediaLibrary19(owner).find(p=>realMedia(p).some(x=>x.url===url&&(m.profileRefs19||[]).includes(mediaRef19(p,x))));if(p)ACT.mediaPost19({dataset:{v:p.id}});};
+
+function mediaPostSheet19(postId){const p=ownPost(postId);if(!p||!realMedia(p).length)return null;const owner=p.author,m=mediaOwnerModel19(owner),editing=owner==='couple'&&S.pair?.draftBy===pairMember()?S.pair.draft:m,refs=editing?.profileRefs19||m.profileRefs19||[];
+ const imageRows=realMedia(p).map((x,i)=>{const ref=mediaRef19(p,x),at=refs.indexOf(ref);return `<div class="media-choice19"><div class="media-choice-img19">${x.type==='video'?`<video src="${esc(x.url)}" muted playsinline preload="metadata"></video>`:`<img src="${esc(x.url)}" alt="">`}</div><div class="media-choice-actions19">${publicMediaPost19(p)&&x.type!=='video'?`<button class="btn soft sm" data-act="mediaUse19" data-v="${esc(p.id)}" data-i="${i}" aria-pressed="${at>=0}">${at>=0?L('Убрать из профиля','Remove from profile'):L('В профиль','Use in profile')}</button>${at>0?`<button class="btn text auto" data-act="mediaMain19" data-v="${esc(p.id)}" data-i="${i}">${L('Сделать главным','Make main')}</button>`:at===0?`<span class="note">${L('Главное фото','Main photo')}</span>`:''}${at>0?`<button class="btn text auto" data-act="mediaOrder19" data-v="${esc(p.id)}" data-i="${i}" data-d="-1">${L('Раньше','Move earlier')}</button>`:''}${at>=0&&at<refs.length-1?`<button class="btn text auto" data-act="mediaOrder19" data-v="${esc(p.id)}" data-i="${i}" data-d="1">${L('Позже','Move later')}</button>`:''}`:`<span class="note">${x.type==='video'?L('Видео остаётся в галерее','Video stays in the gallery'):L('Для фото профиля нужна публичная публикация, прошедшая проверку','Profile photos need a reviewed public post')}</span>`}</div></div>`;}).join('');
+ return {title:L('Фото и видео','Photos & video'),body:`<div class="media-choices19">${imageRows}</div><div class="card list mt16">${linkRow({act:'mediaOpen19',v:p.id,icon:'feed',title:L('Открыть публикацию','Open post')})}${linkRow({act:'editPost',v:p.id,icon:'edit',title:L('Изменить публикацию','Edit post'),sub:L('Фото, видео, текст и аудитория','Photos, video, text and audience')})}</div><p class="note mt12">${L('Аудитория','Audience')}: ${esc(AUD().find(x=>x[0]===p.aud)?.[2]||'')}. ${L('Убрать фото из профиля можно без удаления публикации.','Removing a profile photo keeps the post.')}</p>${owner==='couple'&&S.pair?.proposal?.status==='pending'?`<p class="note mt8">${L('Изменения фото профиля ждут партнёра.','Profile photo changes await your partner.')}</p>`:''}`};}
+ACT.mediaPost19=a=>{const id=a.dataset.v;if(!ownPost(id))return;sheet(()=>mediaPostSheet19(id)||{title:L('Недоступно','Unavailable'),body:''});};
+ACT.mediaOpen19=a=>{closeSheet(true);go('F05',{id:a.dataset.v});};
+function changeProfileRef19(a,action){const post=ownPost(a.dataset.v),item=post&&realMedia(post)[+a.dataset.i];if(!post||!item||!publicMediaPost19(post)||item.type==='video')return;
+ const owner=post.author;if(owner==='couple'&&!coupleWritable())return;initMediaLibrary19(owner);const model=owner==='couple'?editableProfile({p:{owner:'couple'}}):S.me;if(!model)return;
+ const ref=mediaRef19(post,item),refs=model.profileRefs19??=[],at=refs.indexOf(ref);
+ if(action==='toggle'){if(at>=0)refs.splice(at,1);else if(refs.length<PUB_MAX)refs.push(ref);else return toast(L('В профиле до 6 фото','Up to 6 profile photos'),{type:'warn'});}
+ if(action==='main'&&at>0){refs.splice(at,1);refs.unshift(ref);}
+ if(action==='order'&&at>=0){const next=at+Number(a.dataset.d);if(next<0||next>=refs.length)return;[refs[at],refs[next]]=[refs[next],refs[at]];}
+ syncMediaProjection19(owner);if(owner==='couple'){markCoupleDraft();coupleQuickSubmit();}refresh();resheet();}
+ACT.mediaUse19=a=>changeProfileRef19(a,'toggle');ACT.mediaMain19=a=>changeProfileRef19(a,'main');ACT.mediaOrder19=a=>changeProfileRef19(a,'order');
+
 const AUD18=k=>({all:[L('Видят все','Everyone'),''],dating:[L('Знакомства','Discover'),'d'],granted:[L('По доступу','By access'),'k'],only:[L('Только ты','Only you'),'w']})[k];
 const audTag=k=>{const [t,c]=AUD18(k);return `<span class="aud ${c}">${k==='granted'?I.key:k==='only'?I.eyeoff:''}${t}</span>`;};
 const meOwnerOf=()=>activeActor();
@@ -6228,16 +6293,15 @@ function meJars18(owner){const m=meModel(owner),all=m.jars||[],f=['public','gran
  return `<section class="grp bare" id="meJars"><div class="grp-t"><span>${title} · ${all.length}</span>${owner==='me'?`<button data-go="X04" data-p='{}'>${L('История','History')}</button>`:''}</div><div class="jar-f">${filters}</div>${jarsHTML(shown,{pre:1,act,vis:1,add:'addJar'})}${list.length>8?`<button class="btn text auto mt8" data-act="jarsAll">${open?L('Свернуть','Show less'):L(`Показать все · ${list.length}`,`Show all · ${list.length}`)}</button>`:''}<p class="grp-n">${I.key} ${L('по доступу','by access')} · ${I.eyeoff} ${L('только ты','only you')} · ${L('без значка — видят все','no icon — everyone')}. ${L('Нажми на интерес, чтобы изменить его.','Tap an interest to change it.')}</p></section>`;}
 ACT.jarF=a=>{S.ui.jarF=a.dataset.v;S.ui.jarsAll=false;navNextReplace=true;refresh();};
 ACT.jarsAll=()=>{S.ui.jarsAll=!S.ui.jarsAll;navNextReplace=true;refresh();};
-function mePriv18(owner){const m=meModel(owner);if(m.privOn===false)return `<section class="grp"><div class="grp-t"><span>${L('Приватная часть','Private part')}</span><span class="aud">${L('выключена','off')}</span></div><div class="vault off"><div class="vault-b"><p class="vault-lead">${owner==='couple'?L('Описание, фото и видео, которые вы показываете только тем, кому откроете доступ.','A description, photos and video you show only to people you give access.'):L('Описание, фото и видео, которые ты показываешь только тем, кому откроешь доступ.','A description, photos and video you show only to people you give access.')}</p><button class="btn primary" data-act="privEnable" data-v="${owner}">${I.unlock}${L('Включить приватную часть','Turn on the private part')}</button></div></div></section>`;
- const sp=privSplit(privMedia(m)),pj=(m.jars||[]).filter(j=>j.vis==='granted').length,txt=T(m.privText),bits=[txt?L('описание','description'):'',sp.photos.length?pl(sp.photos.length,['фото','фото','фото'],['photo','photos']):'',sp.video.length?pl(sp.video.length,['видео','видео','видео'],['video','videos']):'',pj?pl(pj,['интерес','интереса','интересов'],['interest','interests']):''].filter(Boolean);
- return `<section class="grp"><div class="grp-t"><span>${L('Приватная часть','Private part')}</span>${audTag('granted')}</div><button class="card blk-btn vault" ${blockGo(owner,'priv')} style="display:block"><span class="vault-h" style="padding:0 0 8px"><span class="vi">${I.lock}</span><b>${bits.length?esc(bits.join(' · ')):L('Пока пусто','Empty for now')}</b></span>${txt?`<span class="blk-bio">${esc(txt.slice(0,160))}</span>`:''}${sp.photos.length?`<span class="blk-strip mt8">${privOrdered(privMedia(m)).filter(x=>x.type!=='video').slice(0,4).map(x=>`<span><img src="${esc(privSrc(x))}" alt="" draggable="false"></span>`).join('')}</span>`:''}<span class="chv">${I.chev}</span></button><p class="grp-n">${grantCount(owner)?pl(grantCount(owner),['человеку открыт доступ','людям открыт доступ','людям открыт доступ'],['person has access','people have access']):L('Пока никому не открыто','Not shared with anyone yet')}. ${L('Интересы «по доступу» — в общем списке интересов.','Interests “by access” are in the main interest list.')}</p></section>`;}
+function mePriv18(owner){const m=meModel(owner);return blk18(L('Приватное описание','Private description'),'granted',owner,'priv',`<span class="blk-bio">${esc(T(m.privText)||L('Добавить описание по доступу','Add a description by access'))}</span>`);}
+
 function meProfileLayer(owner){const m=meModel(owner),p=person(owner),P=S.pair,q=P?.proposal;let h='';
  if(owner==='couple'&&q){const mine=q.by===pairMember();h+=q.status==='returned'?`<button class="alert warn me18-ban" data-act="pairReturned">${I.edit}<span><b>${mine?L('Изменения вернули на доработку','Changes sent back'):L('Ждём новую версию','Waiting for a new version')}</b>${q.note?`«${esc(q.note)}»`:''}</span></button>`:q.status==='pending'?`<button class="alert ${mine?'':'warn'} me18-ban" data-act="pairReview">${I.clock}<span><b>${mine?L(`Изменения ждут ${esc(pname(S.pair.with))}`,`Changes wait for ${esc(pname(S.pair.with))}`):L(`${esc(pname(q.by))} предлагает изменения`,`${esc(pname(q.by))} proposes changes`)}</b>${mine?L('Это один черновик: новые правки просто обновят его.','It is one draft: new edits simply update it.'):L('Посмотреть, что меняется, и решить','See what changes and decide')}</span></button>`:'';}
  if(owner==='couple')h+=grp(L('Участники','Members'),pairPeople('couple').map(x=>`<div class="li static">${av(x.id,'sm')}<span class="tx"><b>${esc(x.name)}</b><small>${esc(memberLine(x))||L('не указано','not set')}</small></span></div>`).join(''),{list:1,foot:L('Гендер, ориентация и возраст берутся из личного профиля каждого и меняются там.','Gender, orientation and age come from each partner’s own profile and are changed there.')});
- h+=blk18(L('Фото и видео','Photos & video'),'all',owner,'media',mediaStrip(m.photos||[],owner==='couple'?L('Добавьте фото пары — без него пары нет в подборке','Add a couple photo — without one the couple isn’t in Discover'):L('Добавь фото — без него тебя нет в подборке','Add a photo — without one you’re not in Discover')),{foot:L('Первое фото — главное: его видят в подборке и в шапке профиля.','The first photo is the main one: shown in Discover and at the top of your profile.')});
+ h+=mediaLibraryBlock19(owner);
  h+=blk18(L('Основное','Basics'),'all',owner,'basics',`<span class="blk-name">${esc(owner==='couple'?pairName():pname('me'))}${p?.age?`, ${p.age}`:''}${placeLine(owner)?` · ${esc(placeLine(owner))}`:''}</span>${T(m.bio)?`<span class="blk-bio">${esc(T(m.bio).replace(/[*_~`>#\[\]()]/g,'').slice(0,240))}</span>`:`<span class="blk-bio">${L('Пара фраз о себе — пока пусто','A few lines about you — empty for now')}</span>`}`);
  const dg=detailsGroup(owner).match(/<dl class="kv">[\s\S]*?<\/dl>/);h+=blk18(owner==='couple'?L('Данные пары','Couple details'):L('Данные','Details'),'all',owner,'details',dg?dg[0]:`<p class="blk-empty">${owner==='couple'?L('Роль, формат и что вы ищете помогают найти своих.','Role, format and what you look for help the right people find you.'):L('Роль, формат и что ищешь помогают найти своих.','Role, format and what you look for help the right people find you.')}</p>`);
- h+=meJars18(owner)+mePriv18(owner)+galleryBlock(owner,true)+(owner==='me'?linksBlock('me',true,{}):'');
+ h+=meJars18(owner)+mePriv18(owner)+(owner==='me'?linksBlock('me',true,{}):'');
  return h;}
 /* ----- Видимость layer ----- */
 function meVisLayer(owner){const m=meModel(owner);let h='';
@@ -6475,8 +6539,7 @@ function privEditor(m,r,owner,block){const sp=privSplit(privMedia(m)),jars=sortJ
  return `${head}
  <div class="vault-b">
  <section class="grp"><div class="grp-t"><span>${L('Описание','Description')}</span></div><div class="card form-card">${rteField({name:'privText',label:'',max:1000,ph:L('Как тебе удобно договариваться, что важно до встречи','How you like to agree on things, what matters before meeting')})}</div></section>
- ${kind('photos',L('Фото','Photos'),L('Добавить фото','Add photos'))}
- ${kind('video',L('Видео','Video'),L('Добавить видео','Add video'))}
+ <p class="note">${L('Закрытые фото и видео — в общем разделе «Фото и видео» с фильтром «По доступу».','Private photos and video are in Photos & video under By access.')}</p>
  ${block?`<p class="note mt12">${L('Кто может просить доступ и кому уже открыто — в «Я → Видимость».','Who may ask and who already has access — in Me → Visibility.')}</p>`:`${owner==='couple'?`<div class="card list mt12">${linkRow({go:'Q05',icon:'unlock',title:L('Кому открыто','Who has access'),val:String(grants)})}</div>`:''}
  <div class="card list mt16"><div class="li">${selectRow('peReq',L('Кто может просить доступ','Who may ask'),[['all',L('Все','Everyone')],['matches',L('Взаимные','Mutual')],['none',L('Никто','Nobody')]],r.reqFrom||'all')}</div></div>
  ${grants?`<div class="vault-act"><button class="btn text danger auto" data-act="revokeAll">${L('Отозвать все доступы','Revoke all access')}</button></div>`:''}`}
@@ -6491,12 +6554,13 @@ SC.P02={title:()=>L('Редактировать профиль','Edit profile'),
  const whoOpen=r.openWho??=(p.at==='details'||p.only==='details'||!fields.some(([k])=>fmtList(r[k]).length));/* decided once per visit: picking the first chip must not fold the card under your finger */
  const whoSum=fields.map(([k,t])=>{const v=fmtList(r[k]).map(x=>opt(k,x)).filter(Boolean).join(', ');return v?`<span class="pe-sum"><b>${esc(t)}</b> ${esc(v)}</span>`:'';}).filter(Boolean);
  const whoRow=`<button class="li" data-act="peWho" aria-expanded="${whoOpen}"><span class="tx"><b>${owner==='couple'?L('Данные пары','Couple details'):L('Данные о тебе','Your details')}</b>${whoOpen?'':whoSum.length?`<span class="pe-sums">${whoSum.join('')}</span>`:`<small>${L('Пока ничего не выбрано','Nothing chosen yet')}</small>`}</span><span class="chv ${whoOpen?'open':''}">${I.down}</span></button>`;
+ if(p.only==='media')return `${bar(L('Фото и видео','Photos & video'),{back:1,sm:1})}<div class="view"><div class="wrap">${mediaLibraryBlock19(owner)}</div></div>`;
  const show=k=>!p.only||p.only===k;
  const peTitle={media:L('Фото и видео','Photos & video'),basics:L('Основное','Basics'),details:owner==='couple'?L('Данные пары','Couple details'):L('Данные','Details'),priv:L('Приватная часть','Private part')}[p.only]||(owner==='couple'?L('Профиль пары','Couple profile'):L('Мой профиль','My profile'));
  const peAud={media:audTag('all'),basics:audTag('all'),details:audTag('all'),priv:audTag('granted')}[p.only]||'';
  return `${bar(peTitle,{back:1,sm:1,actions:peAud})}<div class="view nodock cta1"><div class="wrap">
  ${owner==='couple'&&S.pair?.proposal?.status==='returned'&&S.pair.proposal.by===pairMember()?(q=>`<div class="alert warn ret-banner">${I.edit}<span><b>${L(`${esc(pname(q.returnedBy))} просит доработать`,`${esc(pname(q.returnedBy))} asks for changes`)}</b>${q.note?`«${esc(q.note)}»`:L('Без комментария','No comment')}<button class="btn text auto" data-act="pairCancelChanges">${L('Отменить изменения','Discard changes')}</button></span></div>`)(S.pair.proposal):''}
- ${show('media')?`<section class="grp" id="peMedia"><div class="grp-t"><span>${L('Фото и видео','Photos & video')}</span><span class="note">${r.photos.length}/${PUB_MAX}</span></div><div class="card form-card">${pubMediaEditor(r)}</div>${p.only?`<p class="grp-n">${L('Первое фото — главное. Нажми на фото: посмотреть, заменить, кадрировать, показать в галерее.','The first photo is the main one. Tap a photo to view, replace, crop or show it in the gallery.')}</p>`:''}</section>`:''}
+ ${show('media')?mediaLibraryBlock19(owner):''}
  ${show('basics')||show('details')?`<section class="grp"><div class="card form-card pe-form">`:''}
  ${show('basics')?`${field({name:'nick',label:owner==='couple'?L('Название пары','Couple name'):L('Ник','Nickname'),icon:'at',attrs:'autocapitalize="off" spellcheck="false"'})}
  ${owner!=='couple'?toggleRow('peShowAge',L('Показывать возраст в профиле','Show age on profile'),'',r.showAge):''}
@@ -6553,7 +6617,7 @@ ACT.miCrop=a=>{closeSheet(true);const k=a.dataset.k,id=a.dataset.v;S.ui.up=null;
 const phKey=ph=>isVideoItem(ph)?(ph.url||ph.src||''):IMG(ph);
 ACT.phGal=a=>{closeSheet(true);const r=cur(),i=pubItem(r,a.dataset.v);if(i<0)return;const k=phKey(r.photos[i]);r.galPh??=new Set();const on=!r.galPh.has(k);on?r.galPh.add(k):r.galPh.delete(k);r.dirty=true;refresh();toast(on?L('Появится в галерее после сохранения','Will appear in the gallery once saved'):L('Уберём из галереи после сохранения','Will leave the gallery once saved'),{type:'ok'});};
 function galPhSwap(r,was,now){const k=phKey(was);if(r.galPh?.has(k)){r.galPh.delete(k);r.galPh.add(phKey(now));}}
-function syncProfileGallery(owner,photos,sel){const want=photos.filter(ph=>sel?.has(phKey(ph))),keys=want.map(phKey),albumId=owner+'_profile';
+function syncProfileGallery(owner,photos,sel){if(mediaOwnerModel19(owner)?.mediaLibrary19)return;const want=photos.filter(ph=>sel?.has(phKey(ph))),keys=want.map(phKey),albumId=owner+'_profile';
  for(let i=S.myPosts.length-1;i>=0;i--){const x=S.myPosts[i];if(x.profilePhoto&&x.author===owner&&!keys.includes(x.profilePhoto))S.myPosts.splice(i,1);}
  if(!want.length)return;const albums=myAlbums(owner);if(!albums.some(x=>x.id===albumId))albums.unshift({id:albumId,name:{ru:'Фото профиля',en:'Profile photos'}});
  want.forEach((ph,i)=>{const k=phKey(ph),media=[isVideoItem(ph)?{type:'video',url:vsrc(ph),dur:ph.dur||0}:{type:'image',url:IMG(ph)}],ex=S.myPosts.find(x=>x.profilePhoto===k&&x.author===owner);
@@ -6568,7 +6632,7 @@ ACT.miRm=a=>{if(S.ui.sheet)closeSheet(true);const k=a.dataset.k,id=a.dataset.v;
   toast(was.type==='video'?L('Видео удалено','Video removed'):L('Фото удалено','Photo removed'),{action:{label:L('Вернуть','Undo'),fn:()=>{if(cur()!==route||owner==='couple'&&!coupleWritable())return;const m=editableProfile(route),l=privMedia(m);if(!l.some(x=>x.id===was.id))l.splice(Math.min(i,l.length),0,was);if(owner==='couple')markCoupleDraft();refresh();}}});});};
 ACT.peSave=a=>{const r=cur(),session=S.session,pair=S.pair,ticket=authorTicket(r.p.owner==='couple'?'couple':'me');if(r.p.owner==='couple'&&(!coupleWritable(r.pairLease)||(S.pair.draftVersion||0)!==r.pairVersion)){toast(L('Черновик изменился. Открой актуальную версию; введённые данные остаются здесь.','The draft changed. Open the current version; your input stays here.'),{type:'warn'});return;}if(r.p.owner!=='couple'&&requiresDiscoveryPhoto(editableProfile(r))&&firstPhoto(r.photos)==null){toast(L('Для показа в подборке нужно хотя бы одно фото','At least one photo is required to appear in Discover'),{type:'warn'});return;}r.err={};const nk=fv('nick').trim();const ne=r.p.owner==='couple'?(nk.length<2||nk.length>60?L('От 2 до 60 символов','2 to 60 characters'):''):nk.toLowerCase()===S.me.nick.toLowerCase()?'':V.nick(nk);if(ne)r.err.nick=ne;if(fv('bio').length>500)r.err.bio=L('Максимум 500 символов','500 characters max');
  if(Object.keys(r.err).length){refresh();shakeFirstErr();toast(L('Проверь отмеченные поля','Check the highlighted fields'),{type:'err'});return;}
- const bio=fv('bio');run(a,()=>{if(S.session!==session||cur()!==r||!validAuthor(ticket)||r.p.owner==='couple'&&S.pair!==pair)return;if(r.p.owner==='couple'&&(!coupleWritable(r.pairLease)||(S.pair.draftVersion||0)!==r.pairVersion)){toast(L('Черновик изменён в другом редакторе. Открой его заново; введённые данные сохранены на этом экране.','The draft changed in another editor. Reopen it; this screen keeps your input.'),{type:'warn'});return;}const m=editableProfile(r);if(!m)return;Object.assign(m,{nick:r.p.owner==='couple'?'couple':nk,...(r.p.owner==='couple'?{name:editedText(m.name,nk)}:{}),bio:editedText(m.bio,bio),city:r.f.city||null,photos:[...r.photos],photo:firstPhoto(r.photos),showAge:r.showAge,gender:r.gender,orient:r.orient,format:[...r.format],status:r.status,role:[...r.role],seek:[...r.seek],privOn:!!r.privOn,requestsFrom:r.reqFrom,...(r.privOn?{privText:editedText(m.privText,fv('privText').trim().slice(0,1000))}:{}),...(r.p.owner==='couple'?{socialLikes:false,requestsFrom:r.reqFrom}:{})});m.galPh=[...(r.galPh||[])].filter(k=>r.photos.some(ph=>phKey(ph)===k));if(r.p.owner!=='couple')syncProfileGallery('me',r.photos,r.galPh);if(r.p.owner==='couple'){markCoupleDraft(true);if(coupleDraftChanged())submitCoupleDraft();}r.dirty=false;back();},{ok:r.p.owner==='couple'&&!pairTrusted()?L('Изменения отправлены партнёру на подтверждение','Changes sent to your partner for approval'):L('Профиль обновлён','Profile updated')});};
+ const bio=fv('bio');run(a,()=>{if(S.session!==session||cur()!==r||!validAuthor(ticket)||r.p.owner==='couple'&&S.pair!==pair)return;if(r.p.owner==='couple'&&(!coupleWritable(r.pairLease)||(S.pair.draftVersion||0)!==r.pairVersion)){toast(L('Черновик изменён в другом редакторе. Открой его заново; введённые данные сохранены на этом экране.','The draft changed in another editor. Reopen it; this screen keeps your input.'),{type:'warn'});return;}const m=editableProfile(r);if(!m)return;Object.assign(m,{nick:r.p.owner==='couple'?'couple':nk,...(r.p.owner==='couple'?{name:editedText(m.name,nk)}:{}),bio:editedText(m.bio,bio),city:r.f.city||null,photos:[...(m.mediaLibrary19?m.photos:r.photos)],photo:firstPhoto(m.mediaLibrary19?m.photos:r.photos),showAge:r.showAge,gender:r.gender,orient:r.orient,format:[...r.format],status:r.status,role:[...r.role],seek:[...r.seek],privOn:!!r.privOn,requestsFrom:r.reqFrom,...(r.privOn?{privText:editedText(m.privText,fv('privText').trim().slice(0,1000))}:{}),...(r.p.owner==='couple'?{socialLikes:false,requestsFrom:r.reqFrom}:{})});m.galPh=[...(r.galPh||[])].filter(k=>r.photos.some(ph=>phKey(ph)===k));if(r.p.owner!=='couple')syncProfileGallery('me',r.photos,r.galPh);if(r.p.owner==='couple'){markCoupleDraft(true);if(coupleDraftChanged())submitCoupleDraft();}r.dirty=false;back();},{ok:r.p.owner==='couple'&&!pairTrusted()?L('Изменения отправлены партнёру на подтверждение','Changes sent to your partner for approval'):L('Профиль обновлён','Profile updated')});};
 
 /* P04 — the private part: what you share by request — description, photos, video (each with its own permission) */
 function privMedia(model=editableProfile()){if(!model)return [];if(!model.media){model.media=S.persona!=='new'?[{id:'pm0',type:'image',src:8},...['/images/v10-content/post-p9-evening-atmosphere-45.webp','/images/v10-content/gallery-e3-club.webp','/images/v10-content/post-p6-latex-night-prep-45.webp','/images/v10-content/gallery-e1-ropes.webp'].map((url,i)=>({id:'pa'+i,type:'image',url}))]:[];}return model.media;}
@@ -6586,7 +6650,7 @@ ACT.pairLink=()=>{sheet(()=>({title:L('Профиль пары','Couple profile'
  <label class="field mt16"><span>${L('Ник партнёра','Partner’s nickname')}</span><div class="inwrap">${I.at}<input class="inp" id="pairNick" placeholder="kira" autocapitalize="off"></div></label>`,foot:`<button class="btn primary" data-act="pairSend">${L('Отправить приглашение','Send invitation')}</button>`}));};
 ACT.pairSend=a=>{const v=$('#pairNick').value.trim().toLowerCase();if(!v){$('#pairNick').classList.add('err');toast(L('Укажи ник партнёра','Enter your partner’s nickname'),{type:'err'});return;}if(!PEOPLE[v]){$('#pairNick').classList.add('err');toast(L('Такого ника нет. Проверь написание','No such nickname. Check the spelling'),{type:'err'});return;}run(a,()=>{S.pairInvite={p:v,t:Date.now()};closeSheet();refresh();},{ok:L(`Приглашение отправлено ${pname(v)}. Пара появится после её/его согласия`,`Invitation sent to ${pname(v)}. The couple appears once they accept`)});};
 
-ACT.previewDraft=()=>{const r=cur();const m=editableProfile(r);const value={...m,...(r.p.owner==='couple'?{name:{ru:fv('nick'),en:fv('nick')}}:{}),nick:fv('nick'),bio:{ru:fv('bio'),en:fv('bio')},city:r.f.city||null,photos:[...r.photos],photo:firstPhoto(r.photos),showAge:r.showAge,gender:[...r.gender],orient:[...r.orient],format:[...r.format],status:r.status,role:[...r.role],seek:[...r.seek],privOn:!!r.privOn,...(r.privOn?{privText:{ru:fv('privText'),en:fv('privText')}}:{})};go('P03',{preview:value,owner:r.p.owner},{keepDraft:true});};
+ACT.previewDraft=()=>{const r=cur();const m=editableProfile(r);const value={...m,...(r.p.owner==='couple'?{name:{ru:fv('nick'),en:fv('nick')}}:{}),nick:fv('nick'),bio:{ru:fv('bio'),en:fv('bio')},city:r.f.city||null,photos:[...(m.mediaLibrary19?m.photos:r.photos)],photo:firstPhoto(m.mediaLibrary19?m.photos:r.photos),showAge:r.showAge,gender:[...r.gender],orient:[...r.orient],format:[...r.format],status:r.status,role:[...r.role],seek:[...r.seek],privOn:!!r.privOn,...(r.privOn?{privText:{ru:fv('privText'),en:fv('privText')}}:{})};go('P03',{preview:value,owner:r.p.owner},{keepDraft:true});};
 ACT.peCity=()=>openCityPicker(cur().f.city,id=>{cur().f.city=id;cur().dirty=true;refresh();},{clear:1});
 ACT.peHideCity=()=>{cur().f.city='';cur().dirty=true;refresh();};
 
@@ -7086,16 +7150,21 @@ SC.X01={root:1,tab:'me',title:()=>meTabName(),render:(p,r)=>{const owner=meOwner
  return `<h1 class="sr-only">${esc(meTabName())}</h1><div class="view me18">${meHead18(owner,r)}<div class="wrap">${layer==='vis'?meVisLayer(owner):layer==='mine'?meMineLayer(owner):meProfileLayer(owner)}</div></div>`;},after:()=>fillJars()};
 ACT.myJarsAll=()=>go('X02');
 /* V19: «Действовать как» — the only place to switch. Counts show what waits on each profile. */
-function setActor(v){const id=v==='couple'&&activePair()?'couple':'me';if(id===activeActor())return;const r=cur();S.actor=id;S.datingEpoch=(S.datingEpoch||0)+1;S.ui.jarF='all';S.ui.jarsAll=false;
- if(r?.id==='F07'&&!ownPost(r.p.id)?.status){r.author=id;r.pairId=id==='couple'?S.pair.id:null;r.resSel=[];}
+function setActor(v){const id=v==='couple'&&activePair()?'couple':'me';if(S.ui.actorReplyExpanded19){main().classList.add('replying');S.ui.actorReplyExpanded19=false;}if(id===activeActor())return;const r=cur();S.actor=id;S.datingEpoch=(S.datingEpoch||0)+1;S.ui.jarF='all';S.ui.jarsAll=false;
+ const pairId=id==='couple'?S.pair.id:null;
+ const updateDraft=route=>{const existing=ownPost(route.p?.id);if(route.id==='F07'&&(!existing||existing.status==='draft')){route.author=id;route.pairId=pairId;route.resSel=[];}};
+ if(r?.id==='F07')updateDraft(r);
+ if(r?.id==='F09'){const draft=r.p.draft,existing=ownPost(draft?.edit);if(draft&&(!existing||existing.status==='draft')){draft.author=id;draft.pairId=pairId;draft.by=pairMember();draft.result=null;for(const st of Object.values(S.nav.stacks))for(const route of st)if(route.composeId===draft.composeId)updateDraft(route);}}
+
  if(r)delete r.replyAuthor;if(r?.id==='D03')deckBusy=false;
- render('fade');toast(id==='couple'?L(`Теперь от пары: лайки, подписки, события и публикации идут от «${pairName()}»`,`Now as the couple: likes, follows, events and posts go out as “${pairName()}”`):L('Теперь от себя','Now as yourself'),{type:'ok'});}
-ACT.dockMe=()=>{if(!activePair()){openMe('X01');return;}const P=S.pair,q=P?.proposal,cur0=activeActor();
- const waits=a=>waitingLikes(a)+waitingReqs(a),row=(v,title,sub)=>`<button class="li" data-act="meSwitchTo" data-v="${v}" aria-pressed="${cur0===v}">${av(v,'sm')}<span class="tx"><b>${title}</b><small>${sub}</small></span>${waits(v)?`<span class="cnt18">${waits(v)}</span>`:''}${cur0===v?`<span class="ico g">${I.check}</span>`:''}</button>`;
- sheet(()=>({title:L('Действовать как','Act as'),body:`<div class="card list">${row('me',`${L('Я','Me')} · ${esc(pname('me'))}`,L('Лайки, подписки, события и публикации — от тебя','Likes, follows, events and posts — as you'))}${row('couple',`${L('Мы','Us')} · ${esc(pairName())}`,q?.status==='pending'&&q.by!==pairMember()?L(`${esc(pname(q.by))} предлагает изменения профиля`,`${esc(pname(q.by))} proposes profile changes`):L('То же самое — от пары. Партнёр получает уведомление','The same — as the couple. Your partner is notified'))}</div>
- <div class="card list mt12">${linkRow({act:'dockOpenMe',icon:'me',title:activeActor()==='couple'?L('Открыть профиль пары','Open the couple profile'):L('Открыть мой профиль','Open my profile')})}</div>
- <p class="note mt12">${L('Чаты, уведомления и «Нужно решить» общие: у каждого пункта видно, от кого он. Ответ в чате идёт от того профиля, которому написали.','Chats, notifications and “To decide” are shared: each item shows whose it is. A chat reply goes out from the profile that was written to.')}</p>`}));};
-ACT.dockOpenMe=()=>{closeSheet(true);openMe('X01');};
+ render('fade',true);toast(id==='couple'?L(`Теперь от пары: лайки, подписки, события и публикации идут от «${pairName()}»`,`Now as the couple: likes, follows, events and posts go out as “${pairName()}”`):L('Теперь от себя','Now as yourself'),{type:'ok'});}
+ACT.dockMe=()=>{if(!activePair()){openMe('X01');return;}
+ S.ui.actorReplyExpanded19=main().classList.contains('replying');
+ const current=activeActor(),waits=v=>waitingLikes(v)+waitingReqs(v);
+ const row=v=>`<div class="actor-card ${current===v?'selected':''}"><button class="actor-select" data-act="meSwitchTo" data-v="${v}" aria-pressed="${current===v}">${av(v,'sm')}<span class="tx"><b>${esc(pname(v))}</b><small>${v==='couple'?L('Профиль пары','Couple profile'):L('Личный профиль','Personal profile')}${current===v?` · ${L('Выбран','Selected')}`:''}</small></span>${waits(v)?`<span class="cnt18">${waits(v)}</span>`:''}<span class="actor-radio" aria-hidden="true"></span></button><button class="actor-open" data-act="dockOpenMe" data-v="${v}" aria-label="${esc(L(`Открыть профиль ${pname(v)}`,`Open ${pname(v)}’s profile`))}">${L('Открыть профиль','Open profile')}${I.chev}</button></div>`;
+ sheet(()=>({title:L('Действовать как','Act as'),body:`<div class="actor-options">${row('me')}${row('couple')}</div>`}));};
+ACT.dockOpenMe=a=>{closeSheet(true);setActor(a?.dataset.v||activeActor());openMe('X01');};
+
 /* X02 — all my jars, grouped by answer */
 SC.X02={title:p=>p?.owner==='couple'?L('Интересы пары','Couple interests'):L('Мои интересы','My interests'),valid:p=>p.owner!=='couple'||S.pair?.status==='active',render:(p,r)=>{const all=sortJars(editableProfile(r).jars);const g=[[L('Интересно','Into it'),all.filter(j=>!j.limit)],[L('Обсуждаемо','Negotiable'),all.filter(j=>j.limit==='discuss')],[L('Табу','Taboo'),all.filter(j=>j.limit==='hard')]].filter(x=>x[1].length);
  return `${bar(p.owner==='couple'?L('Интересы пары','Couple interests'):L('Мои интересы','My interests'),{back:1,sm:1,actions:`<button class="ibtn" data-go="X04" data-p='${esc(JSON.stringify({owner:p.owner}))}' aria-label="${L('История','History')}">${I.hist}</button><button class="ibtn" data-act="addJar" aria-label="${L('Добавить интерес','Add an interest')}">${I.plus}</button>`})}<div class="view nodock"><div class="wrap">
@@ -7805,7 +7874,8 @@ function nospPayload(tag,lim,n,nick){
   `&lt;img src=x onerror=__x('${id}')&gt; &#60;b&#62; &amp;amp; &#x3C;script&#x3E;`,
   `\u202E\u2066RTL-OVERRIDE\u2069\u200B\u200D\uFEFF${id} \u202Dtext`,
   `Z̷̢̛̖͓̰a̸̺͉̽l̴̡̛g̵̨͚o̷͍̓ ${'\u0336\u0334\u0335\u0337\u0489'.repeat(40)} ${id}`,
-  `<style>*{display:none!important}</style><meta http-equiv=refresh content="0;url=javascript:__x('${id}')"><base href="https://evil.example/">`,
+  `<style>*{display:none!important}
+</style><meta http-equiv=refresh content="0;url=javascript:__x('${id}')"><base href="https://evil.example/">`,
   `**bold** _it_ ~~s~~ \`code\` \n# h\n- li\n> q\n\n\n![img](https://x.y/a.png) [a](https://x.y) ${id}`,
   `\u0000\u0001\r\n\t<!--${id}--><![CDATA[x]]><?php echo 1 ?>`,
   `data:text/html,<script>__x('${id}')<\/script> vbscript:x file:///etc/passwd`,

@@ -62,3 +62,12 @@ Verified with Chromium:
 - On desktop, the review «V19» button covered the sidebar profile switch and was moved to the right.
 
 Not verified: real devices, screen readers, live two-client couples, user testing.
+
+## 2026-10-26 — owner cleanup: one switch and one media library
+
+- Removed author pickers beside composers, replies and profile actions, and the purple Us badge on reaction buttons. Existing author action text remains.
+- Every couple uses one ordinary avatar: its own profile photo, otherwise its initial. Chat/match/dock dimensions are shared with solo identities.
+- The dock switch has two clearly selected identity cards, each with its own Open profile action. Focused screens and reply entry keep global navigation. New composer/preview drafts follow the selected identity; published posts and chat threads retain their owner.
+- The Me profile has one Photos & video manager. Uploads use the post editor and audience. Profile images are ordered references to reviewed public post images; private media is projected from by-access posts. The old public/private media upload editors are replaced with this manager.
+- Restriction/deletion removes public profile use; temporary review hides projections while preserving references. Existing couple drafts/proposals adopt references to prevent deleted media returning through stale snapshots. Text-only closed posts require the info scope; photo/video posts require their corresponding media scopes. Tagged galleries respect audience too.
+- Validation: full existing npm run test:prototype suite passed, including focused V19 media ownership/privacy, review/deletion, stale draft and composer-preview checks. Independent read-only review completed and findings addressed. Live browser layout checks recorded in the PR after preview deployment.
