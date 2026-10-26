@@ -1,0 +1,16 @@
+# Media domain Worker (docs/server/S3-MEDIA.md). Copy to wrangler.toml, fill the account and route, then:
+#   npx wrangler secret put MEDIA_TOKEN_SECRET   # same value as FETURE_MEDIA_TOKEN_SECRET in Vercel
+#   npx wrangler deploy
+name = "feture-media"
+main = "index.mjs"
+compatibility_date = "2026-10-01"
+# account_id = "<cloudflare account id>"
+# routes = [{ pattern = "media.<domain>/*", zone_name = "<domain>" }]
+
+[[r2_buckets]]
+binding = "ORIGINALS"
+bucket_name = "feture-media"   # create with: npx wrangler r2 bucket create feture-media --jurisdiction eu
+jurisdiction = "eu"
+
+[images]
+binding = "IMAGES"
