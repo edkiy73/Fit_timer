@@ -173,7 +173,7 @@ function buildFilters(){
  const secs=[...new Set(ISS.map(i=>i.group||i.section))];
  chips($('#fSec'),secs.map(s=>[s,s,ISS.filter(i=>(i.group||i.section)===s).length]),F.sec);
 }
-const shotUrl=s=>D.meta.shotBase+s;
+const shotUrl=s=>(window.SHOTS&&window.SHOTS[s])||D.meta.shotBase+s;/* the standalone copy embeds the screenshots */
 function issueHTML(i){const s=stOf(i);
  const li=a=>a&&a.length?`<ul>${a.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'—';
  return `<details class="iss" id="${esc(i.id)}" data-status="${s}"><summary><span class="pr ${i.priority}">${i.priority}</span><span><span class="st-t">${esc(i.title||i.component)}</span><span class="st-m"><span class="mono">${esc(i.id)}</span><span>${esc(i.section)}</span><span class="cat">${CAT[i.category]||esc(i.category)}</span>${i.screens?.length?`<span>скриншотов: ${i.screens.length}</span>`:''}</span></span><span class="stat ${s}">${STATUS.find(x=>x[0]===s)[1]}</span></summary>
