@@ -13,10 +13,12 @@ src=swap(src,"text(f07).includes('Опубликовать как')&&text(f07).i
 src=swap(src,"assert.ok(run(\"SC.P01.render(cur().p,cur())\").includes('class=\"p-author\"'),'profile actions say who acts')","assert.ok(!run(\"SC.P01.render(cur().p,cur())\").includes('class=\"p-author\"'),'V19: no author avatar beside profile actions')");
 /* V20: «Что у вас общего», a grant page and access asked from a profile follow the dock — not the actor saved in the route */
 {const A="assert.equal(run(\"compareActor('kira')\"),'me');",B="assert.equal(run(\"compareActor('kira')\"),'couple','V20: compare follows the dock, not the route');";src=swap(src,"src+=`\n// ---- V14 ----","src=swap(src,"+JSON.stringify(A)+","+JSON.stringify(B)+");\nsrc+=`\n// ---- V14 ----");}
+/* V20: an article is a post — its pictures are gallery tiles like any other */
+{const A="assert.ok(json(\"galleryPosts('noa').every(x=>x.type!=='note')\"),'notes are not gallery tiles');",B="assert.ok(json(\"galleryPosts('noa').length>0\"),'V20: articles with pictures are gallery tiles');";src=swap(src,"src+=`\n// ---- V14 ----","src=swap(src,"+JSON.stringify(A)+","+JSON.stringify(B)+");\nsrc+=`\n// ---- V14 ----");}
 /* V19: the composer takes its author from the one mode, not from a composer-only switch */
 src=swap(src,"S.composeActor='couple';setPairTrust(true)","S.actor='couple';setPairTrust(true)");
 /* V19: the dating mode is the app mode — inside the V14 contract, rename it in the V13 source before it runs */
-src=swap(src,"src+=`\n// ---- V14 ----","src=src.split('S.dating'+'Actor').join('S.actor');\nsrc+=`\n// ---- V14 ----");
+src=swap(src,"src+=`\n// ---- V14 ----","src=src.split('S.dating'+'Actor').join('S.actor').split('Заме'+'тки').join('Статьи');\nsrc+=`\n// ---- V14 ----");
 src=swap(src,'`\n// ---- V14 ----',`\`
 // ---- V18 ----
 assert.equal(run("meTabName()"),'Я','the tab is called «Я»');
@@ -33,7 +35,7 @@ assert.ok(x.includes('data-go="F10"')&&x.includes('mine&quot;:1')||x.includes('"
 assert.ok(!x.includes('data-sel=')&&!x.includes('editJar'),'Mine has no settings and no profile content');
 run("coupleProfile();ACT.meSwitchTo({dataset:{v:'couple'}})");assert.equal(run("activeActor()"),'couple');assert.equal(run("cur().p.layer"),'mine','switching profile keeps the layer');
 assert.equal(run("actionAuthor()"),'couple','«Мы» acts as the couple');assert.ok(run("editableProfile()!==S.me"));
-run("ACT.meLayer({dataset:{v:'vis'}})");x=run("SC.X01.render(cur().p,cur())");assert.ok(x.includes('data-act="pairDating"')&&x.includes('data-act="pairTrustOpen"'),'couple rules live in the couple’s Visibility');
+run("ACT.meLayer({dataset:{v:'vis'}})");x=run("SC.X01.render(cur().p,cur())");assert.ok(x.includes('data-sel="pairMode"')&&x.includes('data-act="pairTrustOpen"'),'couple rules live in the couple’s Visibility');
 assert.ok(!run("SC.K01.render({},cur())").includes('data-sel="k4mode"'),'Settings no longer copy dating and privacy switches');
 prepare('P03',{lv:'card'});assert.ok(run("SC.P03.render(cur().p,cur())").includes('card18'),'«Как видят» shows the Discover card');
 prepare('P03',{});const p3=run("SC.P03.render(cur().p,cur())");assert.ok(!p3.includes('demoNote')&&p3.includes('disabled'),'preview buttons are disabled, never fake');
@@ -57,10 +59,10 @@ if(cid){run("social('couple').joined=new Set(['"+cid+"'])");assert.ok(run("joine
 var ev=run("allEventIds().find(e=>!EV(e).approval&&EV(e).organizer!=='me'&&!isPast(e)&&!EV(e).cancelled)");
 run("S.nav.stacks.feed.push({id:'E03',p:{id:'"+ev+"'},f:{}});setPairTrust(true);S.pairMember='partner';setPairTrust(true);S.pairMember='me';var personalBefore=JSON.stringify(S.rsvp['"+ev+"']||null);var rsvpP=ACT.rsvp({dataset:{v:'going'},classList:{contains:()=>false,add:()=>{},remove:()=>{}},closest:()=>null,setAttribute:()=>{},removeAttribute:()=>{}})");await finish(run("rsvpP"));
 assert.equal(run("social('couple').rsvp['"+ev+"'].status"),'going','the couple answers an event directly when no approval is asked');assert.equal(run("JSON.stringify(S.rsvp['"+ev+"']||null)"),run("personalBefore"),'the personal answer is untouched');
-assert.ok(text(run("SC.E03.render(cur().p,cur())")).includes('2 места'),'«Идём» takes two places');
+assert.ok(text(run("SC.E03.render(cur().p,cur())")).includes('Идём вдвоём'),'the couple answers together');
 run("delete social('couple').rsvp['"+ev+"'];S.pairMember='partner';setPairTrust(false);S.pairMember='me';ACT.rsvp({dataset:{v:'going'},classList:{contains:()=>false,add:()=>{},remove:()=>{}},closest:()=>null,setAttribute:()=>{},removeAttribute:()=>{}})");
 assert.ok(!run("social('couple').rsvp['"+ev+"']?.status"),'with partner approval switched on the answer waits');assert.equal(run("jointQueue()['rsvp_"+ev+"'].status"),'pending');
-run("S.pairMember='partner';S.nav.stacks.feed.push({id:'N01',p:{k:'todo'},f:{}})");assert.ok(run("SC.N01.render(cur().p,cur())").includes('rsvp_'),'the partner finds the event answer in «Нужно решить»');run("ACT.jointReview({dataset:{v:'rsvp_"+ev+"'}})");assert.ok(text(run("S.ui.sheet.build().body")).includes('2 места'),'the review says what the couple answers');run("closeSheet(true)");
+run("S.pairMember='partner';S.nav.stacks.feed.push({id:'N01',p:{k:'todo'},f:{}})");assert.ok(run("SC.N01.render(cur().p,cur())").includes('rsvp_'),'the partner finds the event answer in «Нужно решить»');run("ACT.jointReview({dataset:{v:'rsvp_"+ev+"'}})");assert.ok(text(run("S.ui.sheet.build().body")).includes('Идём вдвоём'),'the review says what the couple answers');run("closeSheet(true)");
 run("S.pairMember='partner'");assert.equal(run("approveJointWork('rsvp_"+ev+"',jointQueue()['rsvp_"+ev+"'].version)"),true);run("S.pairMember='me'");assert.equal(run("social('couple').rsvp['"+ev+"'].status"),'going','after the partner approves, the couple is going');
 // a like from a profile never silently goes out as «Я» while in «Мы»
 run("S.actor='couple';coupleProfile().dating=false");assert.ok(run("likeActor('mia').a")==='couple'&&!!run("likeActor('mia').why"),'in «Мы» a blocked like stays blocked, never falls back to «Я»');
@@ -125,6 +127,24 @@ run("ACT.meLayer({dataset:{v:'mine'}});S.actor='couple'");x20=run("SC.X01.render
 run("S.nav.stacks.me.push({id:'P20',p:{id:'me'},f:{}});ACT.galSel();cur().sel.add('own_me_0')");run("SC.P20.render(cur().p,cur())");assert.equal(run("SC.P20.dock"),false,'select mode hides the dock');
 run("ACT.galSelAlbumSet({dataset:{v:'me_a1'}})");assert.equal(run("S.myPosts.find(p=>p.id==='own_me_0').album"),'me_a1','«В альбом» moves the picked posts');
 run("S.actor='me';S.nav.stacks.me.push({id:'P10',p:{id:'me',tab:'followers'},f:{}});setActor('couple')");assert.equal(run("cur().p.id"),'couple','an open own page follows the dock');run("setActor('me');S.nav.stacks.me.pop()");
+// a couple event (organiser = the couple, partner approval when switched on) and a couple community
+const stub="{dataset:{},classList:{contains:()=>false,add:()=>{},remove:()=>{}},closest:()=>null,setAttribute:()=>{},removeAttribute:()=>{}}";
+prepare('E11');run("S.actor='couple';S.pairMember='partner';setPairTrust(false);S.pairMember='me';SC.E11.render(cur().p,cur());Object.assign(cur().f,{title:'Evening for two',type:'meetup',desc:'A calm evening for two couples',date:isoDay(NOW+3*DAY),city:'berlin',addr:'Mitte'});evFromForm(cur()).orgAs");
+assert.equal(run("cur().asCouple"),true,'an event made in «Мы» is the couple’s');
+run("var evBefore=Object.keys(S.extraEvents);var evP=ACT.evfSubmit("+stub+")");await finish(run("evP"));run("var evNew=Object.keys(S.extraEvents).find(k=>!evBefore.includes(k))");
+assert.equal(run("S.extraEvents[evNew].orgAs"),'couple','the organiser is the couple');assert.equal(run("S.extraEvents[evNew].holdPair"),true,'with partner approval on, the event waits');assert.equal(run("jointQueue()['event_'+evNew].status"),'pending');
+run("S.pairMember='partner'");assert.equal(run("approveJointWork('event_'+evNew,1)"),true,'the partner approves the event');run("S.pairMember='me'");assert.equal(run("S.extraEvents[evNew].holdPair"),false);
+assert.ok(run("myEventIds('organize').includes(evNew)"),'the couple lists it as organised');run("S.actor='me'");assert.ok(!run("myEventIds('organize').includes(evNew)"),'«Я» does not list the couple’s event');
+assert.equal(run("typeof evOrg"),'function');assert.ok(text(run("(S.actor='couple',SC.E03.render({id:evNew},{}))")).includes('Alex'),'the event page names the couple as organiser');run("S.actor='me'");
+// blocks belong to the profile that made them
+run("S.blocked=[];S.actor='couple';doBlock('mia')");assert.ok(run("isBlocked('mia')"),'blocked as the couple');run("S.actor='me'");assert.ok(!run("isBlocked('mia')"),'still visible as myself');
+run("S.actor='couple';ACT.blockBoth({dataset:{v:'mia'}});S.actor='me'");assert.ok(run("isBlocked('mia')"),'«and for me too» blocks both');run("S.blocked=[]");
+// the couple has the three discover modes
+run("S.actor='couple';coupleProfile().dating=true;coupleProfile().datingVisible=true;ACT.pairMode({dataset:{v:'hidden'}})");assert.equal(run("coupleProfile().dating&&!coupleProfile().datingVisible"),true,'«Смотрим незаметно»: browsing without being shown');
+run("ACT.pairMode({dataset:{v:'off'}})");assert.equal(run("coupleProfile().dating"),false,'«Выключены»');run("S.actor='me'");
+// reply boxes name the couple
+run("S.actor='couple';S.nav.stacks.feed=[{id:'F05',p:{id:'p1'},f:{}}]");assert.ok(run("SC.F05.render(cur().p,cur())").includes('Ответить от пары'),'the reply box says «от пары»');run("S.actor='me'");
+console.log('PASS V20.1: couple events and communities, per-profile blocks, couple discover mode, «от пары» texts');
 console.log('PASS V20: split-circle couple avatar, two profile cards, the mode reaches «Что у вас общего», profile photos from posts (one video, review mark, drag), feed optional for uploads, same «Я» for the couple, select mode');
 console.log('PASS V19 rules in V20: one «Я / Мы» mode in the dock — couple likes, follows, communities and events; event answers ask the partner when approval is on');
 \n// ---- V14 ----`);
