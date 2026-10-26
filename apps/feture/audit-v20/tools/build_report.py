@@ -261,6 +261,7 @@ open(os.path.join(ROOT, '06-fix-plan.md'), 'w', encoding='utf-8').write('\n'.joi
 # V21 fix status
 vs = collections.Counter(x['v21']['status'] for x in issues)
 out = [hdr('Статус исправлений V21'), 'Что сделано в `public/prototype-v21.html` по каждому пункту аудита V20. «Как проверено» — реальные клики в браузере на V21.', '',
+       '## Проверка собранной V21', ''] + [f'- {t}' for t in plan.get('v21_check', [])] + ['', '## Итог по статусам', '',
        '| Статус | Кол-во |', '|---|---|'] + [f"| {V21L.get(k,k)} | {v} |" for k, v in vs.most_common()] + ['']
 for st in ['needs-owner', 'partial', 'spec', 'wont-fix', 'not-reproduced', 'open', 'fixed']:
     xs = [x for x in issues if x['v21']['status'] == st]
