@@ -83,6 +83,43 @@ Notes for reviewers: `public/prototype-v20-notes.html`. Contract test: `tests/pr
 - **The couple:** «Моё» now has «События пары» and «Сохранённое» (shared by both profiles).
 - **Demo personas** get their own gallery with albums («Мастерские», «Вечера» for followers only; the couple's «Вдвоём»). The new persona starts empty.
 
+## 2026-10-26 — second round: owner review of the merged V20
+
+- **Article instead of «Заметка».** An article is a regular post with a title and a long text: any photos and videos, a poll, «Мои интересы». Its pictures go to the gallery and albums like any other post's. Before, an article had one cover and its pictures were left out of the gallery.
+- **«Показать в ленте»** is on by default everywhere, including uploads from the profile and gallery. The line that repeated the switch is gone. Private uploads keep the feed off and hide the switch.
+- **Texts «от пары»:**
+  - reply boxes read «Ответить от пары…», the chat box «Сообщение от пары», and the reply launcher «Написать ответ от пары»;
+  - an event answer reads «Нам интересно / Идём вдвоём / Не идём» (the `2 места` wording is gone), with toasts in «вы» form;
+  - the community strip shows the couple's avatar and «Обсуждение от пары»;
+  - the member row reads «это вы».
+  - Buttons wrap instead of clipping at 320 px.
+- **«Действовать как»:** the whole card switches. «Открыть профиль» is a separate round icon button on the right edge, divided by a line, so a tap on the card can't open the profile by mistake. The footer is true: «Чаты, уведомления и «Нужно решить» приходят в одно место. У каждого видно, кому адресовано».
+- **Dock avatar** is no longer cut at the left. The generic dock rule (`overflow:hidden`, padding on spans) had been clipping it.
+- **No profile photo:** one compact prompt row with a camera icon instead of a huge empty card. The empty ghost slots only appear next to real photos.
+- **Photo frame:** the picker shows 4:5 tiles, exactly what the profile crops to. Uploading from the profile asks for a 4:5 frame and names it in the title.
+- **Chats:** the filter reads «Чаты пары», and a couple's rows carry a violet «Чат пары» tag, so they no longer look like they came from the couple.
+- **Disappearing media:** the cartoon match is replaced by a quiet ring with an eye that shows the time left.
+- **«Моя карточка в подборке»** has no icon. Inside «Как видят», the tabs sit on the back button's line.
+- **Counters on «Моё»** come from the screens they open:
+  - posts and articles are counted and listed for the current profile only;
+  - events count what the events screen lists, and a couple's events are listed separately;
+  - saved counts what is visible;
+  - followers and following are counted for the couple too.
+- **Private part:** interests by access are now part of it. The block on «Я» shows them as chips, and the editor lists them with «Добавить».
+- **Blocks belong to the profile that made them.** A block from «Мы» doesn't hide the person in «Я», and the other way round. The confirmation says whose block it is. In the list, «И для пары / И для меня» passes a block on to the other profile.
+- **Settings:** the «moved to Me → Visibility» section and the stale version line are gone.
+- **The couple's discover mode** is the same three-way choice as a person's: visible, browsing hidden, off. Hiding is immediate. Turning on goes through the partner when approval is on.
+- **Events in «Мы»:**
+  - the organiser is the couple, shown by name and avatar, and listed in the couple's events and not in «Я»;
+  - with partner approval on, the event waits in «Нужно решить», and the partner approves or sends it back;
+  - otherwise the partner is notified.
+- **Creating an event:**
+  - the header back button goes one step back, and «Назад» is labelled;
+  - format and price are chips like the type;
+  - the price has a currency choice (€ $ £ ₽ CHF).
+- **A community made in «Мы»** is hosted by the couple. The couple joins it, and the partner is notified.
+- **Fixed on the way:** the feed's long words wrap, and the «Идут / Интересуются» line keeps at most three faces on a narrow screen.
+
 Not done: links for a couple, and the personal privacy settings (activity, mentions, likes) for the couple. Both need data the prototype doesn't have yet.
 
 Not verified: real devices, touch long-press drag on hardware, screen readers, a live couple on two clients.
