@@ -80,3 +80,32 @@ test('deletion: confirmed by nickname; the couple goes (partner stays), ties end
     assert.notEqual(fresh.profileId, a);
   } finally { await pg.close(); }
 });
+
+test('review fixes: no self-deletion under a restriction or a suspended couple; attendees see the cancellation; the old nickname hold moves to the deleted profile', async () => {
+  const { pg, db, call, coupleOf, member } = await world();
+  try {
+    const a = await member('ua', 'Alex'), b = await member('ub', 'Kira'), c = await member('uc', 'Noa');
+    await db.query(`update feture.profile set restricted_at = now(), restriction_rule = 'spam' where id = $1`, [c]);
+    assert.equal((await call('uc', null, { action: 'account.delete', opId: op(), confirmHandle: 'Noa' })).rule, 'support_required');
+    const pair = await coupleOf([a, b]);
+    await db.query(`update feture.profile set state = 'suspended' where id = $1`, [pair]);
+    assert.equal((await call('ub', null, { action: 'account.delete', opId: op(), confirmHandle: 'Kira' })).rule, 'support_required');
+    await db.query(`update feture.profile set state = 'active' where id = $1`, [pair]);
+
+    // An event Alex organises: Kira's cancellation notice is visible in her inbox, naming nobody.
+    const [{ id: ev }] = await db.query(
+      `insert into feture.event (organizer_profile_id, created_by, title, kind, description, format, join_url, tz, starts_at, ends_at, state)
+       select $1, account_id, 'Вечер знакомств', 'meetup', 'Спокойный вечер для знакомства, без спешки и давления.', 'online', 'https://meet.example/x', 'UTC',
+         now() + interval '3 days', now() + interval '3 days 2 hours', 'published' from feture.profile_member where profile_id = $1 limit 1 returning id`, [a]);
+    await db.query(`insert into feture.event_rsvp (event_id, profile_id, status, acted_by) select $1, $2, 'going', account_id from feture.profile_member where profile_id = $2 limit 1`, [ev, c]);
+    await db.query(`insert into feture.handle_hold (handle, profile_id, until) values ('alex', $1, now() - interval '1 day')`, [b]);
+    await call('ua', null, { action: 'account.delete', opId: op(), confirmHandle: 'Alex' });
+    const { notifyHandlers } = await import('../server/notify.mjs');
+    const { drain } = await import('../server/outbox.mjs');
+    await drain(db, notifyHandlers(db), { limit: 100 });
+    const items = (await call('uc', null, { action: 'notifications.list' })).items;
+    assert.ok(items.some((/** @type {any} */ n) => n.type === 'eventCancelled' && n.actor === null));
+    const [{ profile_id }] = await db.query(`select profile_id from feture.handle_hold where handle = 'alex'`);
+    assert.equal(profile_id, a);
+  } finally { await pg.close(); }
+});

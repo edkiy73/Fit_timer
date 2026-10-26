@@ -16,6 +16,21 @@ import { endConversations } from './chats.mjs';
 
 const HOLD_DAYS = 30;
 
+/** Communities a profile owns close (members are told) and its future events are cancelled (people who answered are
+ * told); events nobody saw yet go. Used for the person and for each couple deleted with the account.
+ * @param {Q} q @param {string} owner */
+async function closeOwned(q, owner) {
+  const closed = await q.query(`update feture.community set state = 'deleted', updated_at = now() where owner_profile_id = $1 and state <> 'deleted' returning id, state`, [owner]);
+  for (const c of closed) await enqueue(q, 'community.closed', owner, { communityId: c.id, organizerGone: true });
+  const cancelled = await q.query(
+    `update feture.event set state = 'cancelled', cancelled_at = now(), rev = rev + 1, updated_at = now() where organizer_profile_id = $1 and state = 'published' and ends_at > now() returning id`, [owner]);
+  for (const e of cancelled) {
+    await q.query(`update feture.event_application set state = 'closed', decided_at = now(), rev = rev + 1 where event_id = $1 and state = 'pending'`, [e.id]);
+    await enqueue(q, 'event.cancelled', owner, { eventId: e.id, organizerGone: true });
+  }
+  await q.query(`delete from feture.event where organizer_profile_id = $1 and state in ('pending_partner', 'in_review', 'rejected')`, [owner]);
+}
+
 /** Ends the person profile's ties and hides its content. @param {Q} q @param {string} pp person profile */
 async function clearPerson(q, pp) {
   // Access both ways and requests.
@@ -45,14 +60,7 @@ async function clearPerson(q, pp) {
   // Communities and events: memberships end; owned ones close; organised events are cancelled.
   await q.query(`update feture.community_member set state = 'left', role = 'member' where profile_id = $1 and state = 'active'`, [pp]);
   await q.query(`update feture.community_request set state = 'withdrawn', decided_at = now(), rev = rev + 1 where profile_id = $1 and state = 'pending'`, [pp]);
-  await q.query(`update feture.community set state = 'deleted', updated_at = now() where owner_profile_id = $1 and state <> 'deleted'`, [pp]);
-  const cancelled = await q.query(
-    `update feture.event set state = 'cancelled', cancelled_at = now(), rev = rev + 1, updated_at = now() where organizer_profile_id = $1 and state = 'published' and ends_at > now() returning id`, [pp]);
-  for (const e of cancelled) {
-    await q.query(`update feture.event_application set state = 'closed', decided_at = now(), rev = rev + 1 where event_id = $1 and state = 'pending'`, [e.id]);
-    await enqueue(q, 'event.cancelled', pp, { eventId: e.id });
-  }
-  await q.query(`delete from feture.event where organizer_profile_id = $1 and state in ('pending_partner', 'in_review', 'rejected')`, [pp]);
+  await closeOwned(q, pp);
   await q.query(`delete from feture.event_rsvp where profile_id = $1`, [pp]);
   await q.query(`update feture.event_application set state = 'withdrawn', decided_at = now(), rev = rev + 1 where profile_id = $1 and state in ('pending', 'approved')`, [pp]);
   // Files: out of sight now, bytes purged by the queue (never before a CSAM check, never evidence).
@@ -69,12 +77,23 @@ const run = {
     const [a] = await q.query(
       `select a.id, a.person_profile_id, p.handle from feture.account a left join feture.profile p on p.id = a.person_profile_id where a.id = $1 for update of a`, [account.id]);
     if (!a.person_profile_id || (a.handle ?? '').toLowerCase() !== input.confirmHandle.toLowerCase()) fail(400, 'invalid_input', { fields: ['confirmHandle'] });
-    // Couples first: the partner keeps their own profile and a text archive.
+    // Under a moderation decision (a restriction, a suspended couple) deletion goes through support, so it never
+    // becomes a way out of the decision or a way to destroy what it is about.
+    const [{ held }] = await q.query(
+      `select feture.restricted($1) or exists (select 1 from feture.profile_member m join feture.profile p on p.id = m.profile_id
+         where m.account_id = $2 and m.state = 'active' and p.kind = 'couple' and p.state = 'suspended') held`, [a.person_profile_id, a.id]);
+    if (held) fail(409, 'conflict', { rule: 'support_required' });
+    // Out of reach first: a like, an invitation answer or a request racing this deletion waits for it and then fails.
+    await q.query(`update feture.profile set state = 'deleted', updated_at = now() where id = $1`, [a.person_profile_id]);
+    await q.query(`update feture.couple_invite set state = 'withdrawn', answered_at = now() where (from_account = $1 or to_account = $1) and state = 'pending'`, [a.id]);
+    // Couples next (also one created by an invitation accepted a moment ago): the partner keeps their own profile.
     const couples = await q.query(
       `select p.id from feture.profile_member m join feture.profile p on p.id = m.profile_id
-       where m.account_id = $1 and m.state = 'active' and p.kind = 'couple' and p.state in ('active', 'paused', 'suspended')`, [a.id]);
-    for (const c of couples) await deleteCouple(q, c.id, 'member_deleted');
-    await q.query(`update feture.couple_invite set state = 'withdrawn', answered_at = now() where (from_account = $1 or to_account = $1) and state = 'pending'`, [a.id]);
+       where m.account_id = $1 and m.state = 'active' and p.kind = 'couple' and p.state in ('active', 'paused')`, [a.id]);
+    for (const c of couples) {
+      await closeOwned(q, c.id);
+      await deleteCouple(q, c.id, 'member_deleted');
+    }
     await q.query(`update feture.partner_approval set state = 'cancelled', decided_at = now() where requested_by = $1 and state = 'pending'`, [a.id]);
     await clearPerson(q, a.person_profile_id);
     // The account itself: no way back in, nothing personal left on it.
@@ -83,13 +102,12 @@ const run = {
     await q.query(`update feture.staff_role set revoked_at = now() where account_id = $1 and revoked_at is null`, [a.id]);
     if (a.handle) {
       await q.query(`insert into feture.handle_hold (handle, profile_id, until) values (lower($1), $2, now() + make_interval(days => $3))
-                     on conflict (handle) do update set until = excluded.until`, [a.handle, a.person_profile_id, HOLD_DAYS]);
+                     on conflict (handle) do update set until = excluded.until, profile_id = excluded.profile_id`, [a.handle, a.person_profile_id, HOLD_DAYS]);
     }
     await q.query(`update feture.profile set state = 'deleted', handle = null, name = '', avatar_asset_id = null, updated_at = now() where id = $1`, [a.person_profile_id]);
     await q.query(`update feture.profile_member set state = 'left', left_at = now() where account_id = $1 and state = 'active'`, [a.id]);
     await q.query(`update feture.account set state = 'deleted', birth_date = null, news_opt_in = false, updated_at = now() where id = $1`, [a.id]);
     await q.query(`delete from feture.account_link where account_id = $1`, [a.id]);
-    await enqueue(q, 'account.deleted', null, { account: a.id });
     return { deleted: true };
   },
 
@@ -110,7 +128,17 @@ const run = {
            from feture.profile p left join feture.profile_details d on d.profile_id = p.id left join feture.profile_settings s on s.profile_id = p.id
            where p.id in (${mine})`),
         posts: await many(`select id, type, title, body, audience, state, created_at, published_at from feture.post where owner_profile_id in (${mine}) and created_by = $1 order by created_at limit 5000`),
-        replies: await many(`select id, post_id, body, created_at from feture.reply where author_profile_id in (${mine}) and state = 'published' order by created_at limit 5000`),
+        replies: await many(`select id, post_id, body, created_at from feture.reply where author_profile_id in (${mine}) and sent_by = $1 and state = 'published' order by created_at limit 5000`),
+        interestHistory: await many(`select h.profile_id, h.topic_id, h.kind, h.from_state, h.to_state, h.created_at from feture.interest_history h where h.profile_id in (${mine}) order by h.created_at limit 5000`),
+        blocks: await many(`select b.blocker_profile_id, t.handle, b.created_at from feture.block b join feture.profile t on t.id = b.blocked_profile_id where b.blocker_profile_id in (${mine})`),
+        saved: await many(`select profile_id, kind, target_id, created_at from feture.saved_item where profile_id in (${mine})`),
+        discoverFilter: await many(`select * from feture.discover_filter where profile_id in (${mine})`),
+        discoverDecisions: await many(`select d.profile_id, t.handle, d.decision, d.decided_at from feture.discover_decision d join feture.profile t on t.id = d.target_profile_id where d.profile_id in (${mine}) and d.acted_by = $1`),
+        links: await many(
+          `select l.kind, l.state, o.handle, l.created_at from feture.profile_link l join feture.profile o on o.id = case when l.a_profile_id in (${mine}) then l.b_profile_id else l.a_profile_id end
+           where l.a_profile_id in (${mine}) or l.b_profile_id in (${mine})`),
+        notificationSettings: await one(`select settings from feture.notification_settings where account_id = $1`),
+        pushDevices: await many(`select platform, tz, created_at, last_seen_at from feture.push_device where account_id = $1`),
         following: await many(`select f.follower_profile_id from_profile, t.handle, f.created_at from feture.follow f join feture.profile t on t.id = f.target_profile_id where f.follower_profile_id in (${mine})`),
         likesSent: await many(`select l.from_profile_id from_profile, t.handle, l.state, l.created_at from feture.profile_like l join feture.profile t on t.id = l.to_profile_id where l.from_profile_id in (${mine}) and l.initiator_account_id = $1`),
         matches: await many(

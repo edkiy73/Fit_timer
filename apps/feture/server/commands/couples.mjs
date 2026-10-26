@@ -138,9 +138,10 @@ const run = {
     }
     // Both must still be free and active: either may have joined another couple or been suspended since.
     if (await currentCouple(q, inv.from_account) || await currentCouple(q, account.id)) fail(409, 'conflict', { rule: 'already_in_couple' });
+    // Locked: an account being deleted right now finishes first, and is then seen as gone.
     const [{ active }] = await q.query(
-      `select count(*)::int active from feture.account a join feture.profile p on p.id = a.person_profile_id
-       where a.id = any($1) and a.state = 'active' and p.state = 'active'`, [[inv.from_account, account.id]]);
+      `select count(*)::int active from (select a.state, p.state pstate from feture.account a join feture.profile p on p.id = a.person_profile_id
+       where a.id = any($1) for share of a, p) x where x.state = 'active' and x.pstate = 'active'`, [[inv.from_account, account.id]]);
     if (active !== 2) fail(409, 'conflict', { rule: 'unavailable' });
     const names = await q.query(
       `select coalesce(nullif(p.name, ''), p.handle) n from feture.account a join feture.profile p on p.id = a.person_profile_id where a.id = any($1)

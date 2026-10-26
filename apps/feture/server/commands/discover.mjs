@@ -125,7 +125,7 @@ async function decide(q, acting, target, decision, source) {
 async function sendLike(q, acting, target, source) {
   await requireUnrestricted(q, acting);
   const [t] = await q.query(
-    `select p.id, p.kind, p.state, feture.blocked($1, p.id) blocked, feture.related($1, p.id) related from feture.profile p where p.id = $2`, [acting.profileId, target]);
+    `select p.id, p.kind, p.state, feture.blocked($1, p.id) blocked, feture.related($1, p.id) related from feture.profile p where p.id = $2 for share`, [acting.profileId, target]);
   if (!t || t.state !== 'active' || t.blocked) fail(404, 'not_found');
   if ((await q.query('select feture.restricted($1) r', [target]))[0].r) fail(404, 'not_found'); // a restricted profile takes no new likes or matches
   if (t.related) fail(422, 'rule_violation', { rule: 'related' });

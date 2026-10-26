@@ -20,7 +20,9 @@ async function world() {
   /** @type {{platform: string, token: string, message: any}[]} */
   const sent = [];
   const transport = { send: async (/** @type {string} */ p, /** @type {string} */ token, /** @type {any} */ message) => {
-    if (token.startsWith('gone')) throw Object.assign(new Error('fcm_failed'), { invalidToken: true });
+    if (token.startsWith('gone')) throw Object.assign(new Error('fcm_failed'), { invalidToken: true, status: 404, detail: 'UNREGISTERED' });
+    // A misconfigured project answers 404 too, but says nothing about the token: the token stays.
+    if (token.startsWith('misconf')) throw Object.assign(new Error('fcm_failed'), { invalidToken: true, status: 404, detail: 'Requested entity was not found.' });
     sent.push({ platform: p, token, message });
   } };
   const deliver = async () => { while ((await drain(db, { ...notifyHandlers(db), ...pushHandlers(db, transport) }, { limit: 100 })) > 0) { /* until empty */ } };
@@ -44,6 +46,7 @@ test('a like: one neutral push (no names), grouped hourly; «normal» says what 
     const a = await member('ua', 'Alex'), b = await member('ub', 'Kira'), c = await member('uc', 'Noa');
     await call('ub', null, { action: 'push.register', opId: op(), platform: 'ios', token: 'tok-kira-1', tz: 'Europe/Berlin' });
     await call('ub', null, { action: 'push.register', opId: op(), platform: 'android', token: 'gone-kira-2' });
+    await call('ub', null, { action: 'push.register', opId: op(), platform: 'android', token: 'misconf-kira-3' });
     await call('ua', a, { action: 'like.send', opId: op(), profileId: b, source: 'profile' });
     await call('uc', c, { action: 'like.send', opId: op(), profileId: b, source: 'profile' });
     await deliver();
@@ -52,6 +55,10 @@ test('a like: one neutral push (no names), grouped hourly; «normal» says what 
     assert.ok(!JSON.stringify(sent[0]).includes('Alex'));
     const [{ n }] = await db.query(`select count(*)::int n from feture.push_device where token = 'gone-kira-2'`);
     assert.equal(n, 0);
+    assert.equal((await db.query(`select count(*)::int n from feture.push_device where token = 'misconf-kira-3'`))[0].n, 1);
+    // Re-registering without a zone keeps the one known.
+    await call('ub', null, { action: 'push.register', opId: op(), platform: 'ios', token: 'tok-kira-1' });
+    assert.equal((await db.query(`select tz from feture.push_device where token = 'tok-kira-1'`))[0].tz, 'Europe/Berlin');
 
     await db.query(`update feture.notification_settings set settings = settings || '{"mode": "normal"}' where account_id = (select id from feture.account where person_profile_id = $1)`, [b]);
     // The other side likes back: Kira gets «Новое совпадение» (whoever made the match gets nothing about it).
@@ -91,4 +98,21 @@ test('quiet hours in the device time zone, also across midnight', () => {
   assert.equal(inQuietHours({ on: true, from: '23:00', to: '08:00' }, 'America/New_York', at), false);
   assert.equal(inQuietHours({ on: false, from: '23:00', to: '08:00' }, 'Europe/Berlin', at), false);
   assert.equal(inQuietHours({ on: true, from: '01:00', to: '02:00' }, 'Europe/Moscow', at), true);
+});
+
+test('review fixes: a retried item never pushes twice; nothing is pushed about someone gone', async () => {
+  const { pg, db, call, sent, member } = await world();
+  try {
+    const a = await member('ua', 'Alex'), b = await member('ub', 'Kira');
+    await call('ub', null, { action: 'push.register', opId: op(), platform: 'ios', token: 'tok-kira-1', tz: 'UTC' });
+    await call('ua', a, { action: 'like.send', opId: op(), profileId: b, source: 'profile' });
+    const handlers = { ...notifyHandlers(db), ...pushHandlers(db, { send: async (/** @type {string} */ p, /** @type {string} */ t, /** @type {any} */ m) => { sent.push({ platform: p, token: t, message: m }); } }) };
+    const items = await db.query(`select id::text, topic, profile_id, payload, attempts, lock_token::text, created_at from feture.outbox where done_at is null order by id`);
+    // Every handler runs twice for each item, as after a lost claim.
+    for (const it of items) { if (handlers[it.topic]) { await handlers[it.topic](it); await handlers[it.topic](it); } }
+    const pushes = await db.query(`select id::text, topic, profile_id, payload, attempts, lock_token::text, created_at from feture.outbox where topic = 'push.deliver'`);
+    assert.equal(pushes.length, 1);
+    for (const it of pushes) { await handlers['push.deliver'](it); await handlers['push.deliver'](it); }
+    assert.equal(sent.length, 1);
+  } finally { await pg.close(); }
 });
