@@ -1,0 +1,231 @@
+<title>FetUre V20 Audit</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geologica:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a defect tracker — sticky filter rail on wide screens, one column of issue rows that expand in place; summary strip on top. */
+:root{
+  --bg:#f6f4f7; --surf:#ffffff; --raise:#efebf2; --line:#e2dce7; --ink:#1d1622; --mute:#6c6274; --faint:#9a90a3;
+  --accent:#6b3fd6; --accent-ink:#ffffff; --accent-soft:#ece5fb;
+  --p0:#c81e3d; --p0s:#fde7eb; --p1:#d0561a; --p1s:#fdeee4; --p2:#a87a00; --p2s:#fbf3d6; --p3:#4e6a8a; --p3s:#e8eef5;
+  --ok:#1f8a5b; --oks:#e2f4ea;
+  --font:"Geologica",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --r:12px; --shadow:0 1px 2px rgba(29,22,34,.06),0 4px 16px rgba(29,22,34,.05);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141017; --surf:#1d1722; --raise:#271f2d; --line:#342a3b; --ink:#f1ecf4; --mute:#aa9fb3; --faint:#7d7286;
+  --accent:#a78bfa; --accent-ink:#160f1c; --accent-soft:#2c2340;
+  --p0:#ff6b85; --p0s:#3a1620; --p1:#ff9a5c; --p1s:#3a2316; --p2:#e8c04a; --p2s:#352c12; --p3:#8fb0d6; --p3s:#1d2836;
+  --ok:#56d39a; --oks:#163024; --shadow:none; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141017; --surf:#1d1722; --raise:#271f2d; --line:#342a3b; --ink:#f1ecf4; --mute:#aa9fb3; --faint:#7d7286;
+  --accent:#a78bfa; --accent-ink:#160f1c; --accent-soft:#2c2340;
+  --p0:#ff6b85; --p0s:#3a1620; --p1:#ff9a5c; --p1s:#3a2316; --p2:#e8c04a; --p2s:#352c12; --p3:#8fb0d6; --p3s:#1d2836;
+  --ok:#56d39a; --oks:#163024; --shadow:none; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--font);margin:0}
+.wrap{max-width:1280px;margin:0 auto;padding-block:20px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{text-wrap:balance;margin:0}
+h1{font-size:26px;font-weight:700;letter-spacing:-.01em}
+h2{font-size:19px;font-weight:650}
+.sub{color:var(--mute);font-size:14px;max-width:72ch}
+.mono{font-family:var(--mono);font-size:12.5px}
+header.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;margin-bottom:16px}
+nav.tabs{display:flex;gap:4px;flex-wrap:wrap;background:var(--raise);padding:4px;border-radius:12px;margin:0 0 18px}
+nav.tabs button{font:600 14px var(--font);color:var(--mute);background:none;border:0;padding:8px 14px;border-radius:9px;cursor:pointer}
+nav.tabs button[aria-selected="true"]{background:var(--surf);color:var(--ink);box-shadow:var(--shadow)}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:18px}
+.tile{background:var(--surf);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
+.tile b{display:block;font-size:24px;font-variant-numeric:tabular-nums;line-height:1.1}
+.tile span{color:var(--mute);font-size:12.5px}
+.tile.p0 b{color:var(--p0)}.tile.p1 b{color:var(--p1)}.tile.p2 b{color:var(--p2)}.tile.p3 b{color:var(--p3)}.tile.done b{color:var(--ok)}
+.layout{display:grid;grid-template-columns:270px minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:860px){.layout{grid-template-columns:minmax(0,1fr)}}
+aside.filters{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);background:var(--surf);border:1px solid var(--line);border-radius:var(--r);padding:14px;display:grid;gap:14px;max-height:calc(100vh - 24px);overflow:auto}
+@media (max-width:860px){aside.filters{position:static;max-height:none}}
+.fgrp{display:grid;gap:6px}
+.fgrp>label,.fgrp>.lbl{font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:500 13px var(--font);border:1px solid var(--line);background:var(--surf);color:var(--ink);border-radius:99px;padding:5px 10px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.chip em{font-style:normal;font-variant-numeric:tabular-nums;opacity:.7;font-size:12px}
+input[type=search],select{width:100%;font:15px var(--font);color:var(--ink);background:var(--raise);border:1px solid var(--line);border-radius:10px;padding:9px 11px}
+.btnrow{display:flex;gap:6px;flex-wrap:wrap}
+.btn{font:600 13px var(--font);border:1px solid var(--line);background:var(--raise);color:var(--ink);border-radius:10px;padding:7px 11px;cursor:pointer}
+.count{color:var(--mute);font-size:13.5px;margin:0 0 10px}
+.list{display:grid;gap:10px}
+details.iss{background:var(--surf);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+details.iss[data-status="fixed"]{opacity:.62}
+details.iss>summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 12px;padding:12px 14px;align-items:start}
+details.iss>summary::-webkit-details-marker{display:none}
+.pr{font:700 12px var(--mono);border-radius:6px;padding:3px 7px;white-space:nowrap}
+.pr.P0{background:var(--p0s);color:var(--p0)}.pr.P1{background:var(--p1s);color:var(--p1)}.pr.P2{background:var(--p2s);color:var(--p2)}.pr.P3{background:var(--p3s);color:var(--p3)}
+.st-t{font-weight:600;font-size:15px;line-height:1.35}
+.st-m{color:var(--mute);font-size:12.5px;display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:3px}
+.cat{font-size:11.5px;font-weight:600;border-radius:99px;padding:1px 8px;background:var(--raise);color:var(--mute)}
+.stat{font-size:12px;font-weight:600;color:var(--mute);white-space:nowrap}
+.stat.fixed{color:var(--ok)}.stat.wip{color:var(--accent)}.stat.skip{color:var(--faint)}
+.body{border-top:1px solid var(--line);padding:14px;display:grid;gap:12px}
+.kv{display:grid;grid-template-columns:150px minmax(0,1fr);gap:4px 14px}
+@media (max-width:600px){.kv{grid-template-columns:minmax(0,1fr)}.kv dt{margin-top:6px}}
+.kv dt{font-size:12px;font-weight:600;color:var(--faint);text-transform:uppercase;letter-spacing:.05em;padding-top:2px}
+.kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.kv ol,.kv ul{margin:0;padding-left:18px}
+.fix{background:var(--accent-soft);border-radius:10px;padding:10px 12px}
+.shots{display:flex;gap:8px;flex-wrap:wrap}
+.shots button{border:1px solid var(--line);border-radius:8px;padding:0;background:var(--raise);cursor:zoom-in;overflow:hidden;width:150px;height:110px}
+.shots img{width:100%;height:100%;object-fit:cover;object-position:top;display:block}
+.status-ctl{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.status-ctl .chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.rel a{color:var(--accent);text-decoration:none;font-family:var(--mono);font-size:12.5px;margin-right:8px}
+table.tbl{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--surf)}
+.tbl th,.tbl td{border-bottom:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+.tbl th{font-size:12px;color:var(--faint);text-transform:uppercase;letter-spacing:.05em;font-weight:600;position:sticky;top:0;background:var(--surf)}
+.tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);max-height:75vh}
+.badge{font-size:11.5px;font-weight:600;border-radius:99px;padding:1px 8px;white-space:nowrap}
+.badge.checked{background:var(--oks);color:var(--ok)}.badge.partial{background:var(--p2s);color:var(--p2)}.badge.unreachable{background:var(--p0s);color:var(--p0)}.badge.not-checked{background:var(--raise);color:var(--mute)}
+.prose{max-width:80ch;display:grid;gap:12px}
+.prose p,.prose li{margin:0}
+.prose ul,.prose ol{margin:0;padding-left:20px;display:grid;gap:4px}
+.phase{background:var(--surf);border:1px solid var(--line);border-radius:var(--r);padding:14px;display:grid;gap:8px}
+.phase h3{font-size:16px}
+.ids{display:flex;flex-wrap:wrap;gap:6px}
+.ids a{font:600 12px var(--mono);text-decoration:none;border-radius:6px;padding:2px 6px;background:var(--raise);color:var(--ink)}
+dialog#lb{border:0;padding:0;background:transparent;max-width:min(96vw,1400px);max-height:94vh}
+dialog#lb::backdrop{background:rgba(10,6,14,.82)}
+dialog#lb img{max-width:min(96vw,1400px);max-height:88vh;display:block;border-radius:8px;background:#fff}
+dialog#lb .cap{color:#f1ecf4;font-size:13px;padding:8px 2px;display:flex;justify-content:space-between;gap:12px}
+dialog#lb button{font:600 13px var(--font);background:#2a2230;color:#f1ecf4;border:0;border-radius:8px;padding:6px 10px;cursor:pointer}
+.empty{padding:30px;text-align:center;color:var(--mute);background:var(--surf);border:1px dashed var(--line);border-radius:var(--r)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>FetUre V20 — аудит прототипа</h1>
+      <p class="sub" id="lead"></p>
+    </div>
+    <div class="btnrow">
+      <button class="btn" id="exportBtn" type="button">Скопировать статусы</button>
+      <button class="btn" id="resetBtn" type="button">Сбросить статусы</button>
+    </div>
+  </header>
+  <nav class="tabs" role="tablist" aria-label="Разделы отчёта">
+    <button role="tab" data-view="issues" aria-selected="true" id="tab-issues">Проблемы</button>
+    <button role="tab" data-view="plan" aria-selected="false" id="tab-plan">План исправлений</button>
+    <button role="tab" data-view="popups" aria-selected="false" id="tab-popups">Попапы и состояния</button>
+    <button role="tab" data-view="coverage" aria-selected="false" id="tab-coverage">Покрытие</button>
+    <button role="tab" data-view="overview" aria-selected="false" id="tab-overview">Обзор</button>
+  </nav>
+  <div class="strip" id="strip"></div>
+
+  <section id="view-issues">
+    <div class="layout">
+      <aside class="filters" aria-label="Фильтры">
+        <div class="fgrp"><label for="q">Поиск</label><input type="search" id="q" placeholder="ID, текст, экран…"></div>
+        <div class="fgrp"><span class="lbl">Приоритет</span><div class="chips" id="fPri"></div></div>
+        <div class="fgrp"><span class="lbl">Тип</span><div class="chips" id="fCat"></div></div>
+        <div class="fgrp"><span class="lbl">Статус</span><div class="chips" id="fStat"></div></div>
+        <div class="fgrp"><span class="lbl">Раздел</span><div class="chips" id="fSec"></div></div>
+        <div class="fgrp"><label for="sort">Порядок</label>
+          <select id="sort"><option value="pri">По приоритету</option><option value="plan">По плану исправлений</option><option value="id">По ID</option><option value="sec">По разделу</option></select></div>
+        <div class="btnrow"><button class="btn" id="clearF" type="button">Сбросить фильтры</button><button class="btn" id="expandAll" type="button">Раскрыть все</button></div>
+      </aside>
+      <div style="min-width:0">
+        <p class="count" id="count"></p>
+        <div class="list" id="list"></div>
+      </div>
+    </div>
+  </section>
+  <section id="view-plan" hidden></section>
+  <section id="view-popups" hidden></section>
+  <section id="view-coverage" hidden></section>
+  <section id="view-overview" hidden></section>
+</div>
+<dialog id="lb"><div class="cap"><span id="lbCap"></span><span class="btnrow"><button type="button" id="lbPrev">←</button><button type="button" id="lbNext">→</button><button type="button" id="lbClose">Закрыть</button></span></div><img id="lbImg" alt=""></dialog>
+
+<script type="application/json" id="data">/*__DATA__*/</script>
+<script>
+(function(){
+const D=JSON.parse(document.getElementById('data').textContent);
+const ISS=D.issues, $=s=>document.querySelector(s), esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const KEY='feture-v20-audit-status';
+let ST={};try{ST=JSON.parse(localStorage.getItem(KEY)||'{}')||{};}catch(e){ST={};}
+const saveST=()=>{try{localStorage.setItem(KEY,JSON.stringify(ST));}catch(e){}};
+const STATUS=[['open','Открыто'],['wip','В работе'],['fixed','Исправлено'],['skip','Отложено']];
+const stOf=i=>ST[i.id]||i.status||'open';
+const CAT={functional:'Функциональная',ux:'UX',ui:'UI',product:'Продуктовая'};
+const PRI=['P0','P1','P2','P3'];
+const F={pri:new Set(),cat:new Set(),stat:new Set(),sec:new Set(),q:''};
+$('#lead').textContent=D.meta.lead;
+function strip(){const c=p=>ISS.filter(i=>i.priority===p).length;const done=ISS.filter(i=>stOf(i)==='fixed').length;
+ $('#strip').innerHTML=[['Всего проблем',ISS.length,''],['P0 · блокеры',c('P0'),'p0'],['P1 · серьёзные',c('P1'),'p1'],['P2 · заметные',c('P2'),'p2'],['P3 · полировка',c('P3'),'p3'],['Исправлено',done+' / '+ISS.length,'done'],['Экранов и попапов',D.meta.coverageCount,'']].map(([l,n,k])=>`<div class="tile ${k}"><b>${n}</b><span>${l}</span></div>`).join('');}
+function chips(el,items,set){el.innerHTML=items.map(([v,l,n])=>`<button type="button" class="chip" data-v="${esc(v)}" aria-pressed="${set.has(v)}">${esc(l)}${n!=null?` <em>${n}</em>`:''}</button>`).join('');
+ el.onclick=e=>{const b=e.target.closest('.chip');if(!b)return;const v=b.dataset.v;set.has(v)?set.delete(v):set.add(v);b.setAttribute('aria-pressed',set.has(v));render();};}
+function buildFilters(){
+ chips($('#fPri'),PRI.map(p=>[p,p,ISS.filter(i=>i.priority===p).length]),F.pri);
+ chips($('#fCat'),Object.entries(CAT).map(([k,l])=>[k,l,ISS.filter(i=>i.category===k).length]),F.cat);
+ chips($('#fStat'),STATUS.map(([k,l])=>[k,l,ISS.filter(i=>stOf(i)===k).length]),F.stat);
+ const secs=[...new Set(ISS.map(i=>i.section))].sort((a,b)=>a.localeCompare(b,'ru'));
+ chips($('#fSec'),secs.map(s=>[s,s,ISS.filter(i=>i.section===s).length]),F.sec);
+}
+const shotUrl=s=>D.meta.shotBase+s;
+function issueHTML(i){const s=stOf(i);
+ const li=a=>a&&a.length?`<ul>${a.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'—';
+ return `<details class="iss" id="${esc(i.id)}" data-status="${s}"><summary><span class="pr ${i.priority}">${i.priority}</span><span><span class="st-t">${esc(i.title||i.component)}</span><span class="st-m"><span class="mono">${esc(i.id)}</span><span>${esc(i.section)}</span><span class="cat">${CAT[i.category]||esc(i.category)}</span>${i.screens?.length?`<span>скриншотов: ${i.screens.length}</span>`:''}</span></span><span class="stat ${s}">${STATUS.find(x=>x[0]===s)[1]}</span></summary>
+ <div class="body">
+  <dl class="kv">
+   <dt>Компонент</dt><dd>${esc(i.component)}</dd>
+   <dt>Состояние</dt><dd>${esc(i.state)}</dd>
+   <dt>Шаги</dt><dd>${i.steps?.length?`<ol>${i.steps.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`:'—'}</dd>
+   <dt>Сейчас</dt><dd>${esc(i.actual)}</dd>
+   <dt>Почему плохо</dt><dd>${esc(i.why)}</dd>
+   <dt>Как должно быть</dt><dd>${esc(i.expected)}</dd>
+   <dt>Исправление</dt><dd class="fix">${esc(i.fix)}</dd>
+   <dt>Где ещё</dt><dd>${li(i.places)}</dd>
+   <dt>Проверка</dt><dd>${esc(i.verify)}</dd>
+   ${i.code?`<dt>Код</dt><dd class="mono">${esc(i.code)}</dd>`:''}
+   ${i.related?.length?`<dt>Связано</dt><dd class="rel">${i.related.map(r=>ISS.some(x=>x.id===r)?`<a href="#${esc(r)}" data-jump="${esc(r)}">${esc(r)}</a>`:`<span class="mono">${esc(r)}</span> `).join('')}</dd>`:''}
+   ${i.phase?`<dt>Этап плана</dt><dd>${esc(i.phase)}</dd>`:''}
+  </dl>
+  ${i.screens?.length?`<div class="shots">${i.screens.map((s,k)=>`<button type="button" data-shot="${esc(i.id)}" data-k="${k}" aria-label="Скриншот ${k+1}"><img loading="lazy" src="${esc(shotUrl(s))}" alt="${esc(i.id)} — скриншот ${k+1}"></button>`).join('')}</div>`:''}
+  <div class="status-ctl"><span class="stat">Статус:</span>${STATUS.map(([k,l])=>`<button type="button" class="chip" data-setst="${k}" data-id="${esc(i.id)}" aria-pressed="${s===k}">${l}</button>`).join('')}</div>
+ </div></details>`;}
+function sorted(list){const v=$('#sort').value;const pi=p=>PRI.indexOf(p);
+ return [...list].sort((a,b)=>v==='id'?a.id.localeCompare(b.id):v==='sec'?a.section.localeCompare(b.section,'ru')||pi(a.priority)-pi(b.priority):v==='plan'?(a.order??999)-(b.order??999):pi(a.priority)-pi(b.priority)||(a.order??999)-(b.order??999));}
+function match(i){if(F.pri.size&&!F.pri.has(i.priority))return false;if(F.cat.size&&!F.cat.has(i.category))return false;if(F.stat.size&&!F.stat.has(stOf(i)))return false;if(F.sec.size&&!F.sec.has(i.section))return false;
+ if(F.q){const t=[i.id,i.title,i.section,i.component,i.actual,i.fix,i.state,(i.places||[]).join(' '),i.code].join(' ').toLowerCase();return F.q.split(/\s+/).every(w=>t.includes(w));}return true;}
+function render(){const l=sorted(ISS.filter(match));$('#count').textContent=`Показано ${l.length} из ${ISS.length}`;$('#list').innerHTML=l.length?l.map(issueHTML).join(''):'<div class="empty">Нет проблем под эти фильтры.</div>';}
+$('#q').oninput=e=>{F.q=e.target.value.trim().toLowerCase();render();};
+$('#sort').onchange=render;
+$('#clearF').onclick=()=>{F.pri.clear();F.cat.clear();F.stat.clear();F.sec.clear();F.q='';$('#q').value='';buildFilters();render();};
+$('#expandAll').onclick=e=>{const open=e.target.dataset.open!=='1';document.querySelectorAll('#list details').forEach(d=>d.open=open);e.target.dataset.open=open?'1':'0';e.target.textContent=open?'Свернуть все':'Раскрыть все';};
+document.addEventListener('click',e=>{
+ const b=e.target.closest('[data-setst]');if(b){ST[b.dataset.id]=b.dataset.setst;saveST();const d=b.closest('details');const keep=d.open;strip();buildFilters();const html=issueHTML(ISS.find(i=>i.id===b.dataset.id));d.outerHTML=html;const nd=document.getElementById(b.dataset.id);if(nd)nd.open=keep;return;}
+ const j=e.target.closest('[data-jump]');if(j){e.preventDefault();show('issues');F.pri.clear();F.cat.clear();F.stat.clear();F.sec.clear();F.q='';$('#q').value='';buildFilters();render();const d=document.getElementById(j.dataset.jump);if(d){d.open=true;d.scrollIntoView({block:'start'});}return;}
+ const s=e.target.closest('[data-shot]');if(s){openLb(s.dataset.shot,+s.dataset.k);}
+});
+let LB=null;function openLb(id,k){const i=ISS.find(x=>x.id===id)||D.popupShots?.[id];const list=i.screens||i;LB={list,k,id};drawLb();$('#lb').showModal();}
+function drawLb(){const s=LB.list[LB.k];$('#lbImg').src=shotUrl(s);$('#lbCap').textContent=`${LB.id} · ${LB.k+1}/${LB.list.length} · ${s}`;}
+$('#lbClose').onclick=()=>$('#lb').close();$('#lbPrev').onclick=()=>{LB.k=(LB.k-1+LB.list.length)%LB.list.length;drawLb();};$('#lbNext').onclick=()=>{LB.k=(LB.k+1)%LB.list.length;drawLb();};
+$('#lb').addEventListener('click',e=>{if(e.target.id==='lb')$('#lb').close();});
+document.addEventListener('keydown',e=>{if(!$('#lb').open)return;if(e.key==='ArrowRight')$('#lbNext').click();if(e.key==='ArrowLeft')$('#lbPrev').click();});
+$('#exportBtn').onclick=async()=>{const txt=JSON.stringify(Object.fromEntries(ISS.map(i=>[i.id,stOf(i)])),null,1);try{await navigator.clipboard.writeText(txt);$('#exportBtn').textContent='Скопировано';}catch(e){const t=document.createElement('textarea');t.value=txt;document.body.append(t);t.select();$('#exportBtn').textContent='Выделено — нажми Ctrl/Cmd+C';}setTimeout(()=>$('#exportBtn').textContent='Скопировать статусы',2500);};
+let resetArm=false;$('#resetBtn').onclick=e=>{if(!resetArm){resetArm=true;e.target.textContent='Точно сбросить?';setTimeout(()=>{resetArm=false;e.target.textContent='Сбросить статусы';},3000);return;}ST={};saveST();resetArm=false;e.target.textContent='Сбросить статусы';strip();buildFilters();render();};
+// other views
+function plan(){$('#view-plan').innerHTML=`<div class="prose" style="max-width:none">${D.plan.map(p=>`<div class="phase"><h3>${esc(p.title)}</h3><p class="sub">${esc(p.text)}</p><div class="ids">${p.ids.map(id=>{const i=ISS.find(x=>x.id===id);return i?`<a href="#${esc(id)}" data-jump="${esc(id)}" title="${esc(i.title||i.component)}">${esc(id)} · ${i.priority}</a>`:'';}).join('')}</div></div>`).join('')}</div>`;}
+function popups(){const P=D.popups;$('#view-popups').innerHTML=`<p class="sub" style="margin-bottom:12px">${esc(D.meta.popupLead)}</p><div class="tblwrap"><table class="tbl"><thead><tr><th>Попап / меню / диалог</th><th>Тип</th><th>Где открывается</th><th>Чем открывается</th><th>Кнопок</th><th>Персоны</th><th>Проверка</th><th>Проблемы</th></tr></thead><tbody>${P.map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(p.kind)}</td><td class="mono">${esc((p.from||[]).join(', '))}</td><td>${esc((p.via||[]).join('; '))}</td><td>${p.controls??''}</td><td>${esc((p.personas||[]).join(', '))}</td><td><span class="badge ${esc(p.status||'checked')}">${esc(p.statusLabel||p.status||'')}</span></td><td class="ids">${(p.issues||[]).map(id=>`<a href="#${esc(id)}" data-jump="${esc(id)}">${esc(id)}</a>`).join('')}</td></tr>`).join('')}</tbody></table></div>`;}
+function coverage(){const C=D.coverage;$('#view-coverage').innerHTML=`<p class="sub" style="margin-bottom:12px">${esc(D.meta.coverageLead)}</p><div class="tblwrap"><table class="tbl"><thead><tr><th>Тип</th><th>ID</th><th>Название</th><th>Как открыть</th><th>Персоны</th><th>Статус</th><th>Заметки</th><th>Проблемы</th></tr></thead><tbody>${C.map(c=>`<tr><td>${esc(c.type)}</td><td class="mono">${esc(c.id)}</td><td>${esc(c.name)}</td><td>${esc(c.opened_by)}</td><td>${esc((c.personas||[]).join(', '))}</td><td><span class="badge ${esc(c.status)}">${esc(c.status)}</span></td><td>${esc(c.notes)}</td><td class="ids">${(c.issues||[]).map(id=>`<a href="#${esc(id)}" data-jump="${esc(id)}">${esc(id)}</a>`).join('')}</td></tr>`).join('')}</tbody></table></div>`;}
+function overview(){$('#view-overview').innerHTML=`<div class="prose">${D.overviewHTML}</div>`;}
+function show(v){document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.view===v));document.querySelectorAll('section[id^=view-]').forEach(s=>s.hidden=s.id!=='view-'+v);try{localStorage.setItem(KEY+'-tab',v);}catch(e){}}
+document.querySelector('nav.tabs').onclick=e=>{const b=e.target.closest('button');if(b)show(b.dataset.view);};
+strip();buildFilters();render();plan();popups();coverage();overview();
+const h=(location.hash||'').slice(1);
+if(h&&document.getElementById(h)&&ISS.some(i=>i.id===h)){const d=document.getElementById(h);d.open=true;d.scrollIntoView();}
+else if(['plan','popups','coverage','overview','issues'].includes(h))show(h);
+else{let t=null;try{t=localStorage.getItem(KEY+'-tab');}catch(e){}if(t)show(t);}
+})();
+</script>

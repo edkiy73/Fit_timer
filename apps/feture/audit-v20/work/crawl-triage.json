@@ -1,0 +1,693 @@
+{
+ "dead": [
+  [
+   "K01",
+   "ageFromMe «Проверка возраста Нужна для знакомств подтверждено»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ]
+ ],
+ "errors": [],
+ "nochange": [],
+ "intercept": [
+  [
+   "D03{\"sub\": \"discover\"}",
+   "P10 «0 подписчиков»",
+   [
+    "full",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D03{\"sub\": \"discover\"}",
+   "follow «Подписаться»",
+   [
+    "full",
+    "pair-couple"
+   ]
+  ],
+  [
+   "D03{\"sub\": \"discover\"}",
+   "P01 «Полный профиль»",
+   [
+    "full",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "pplSub «Подборка»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "pplSub «Симпатии 3»",
+   [
+    "full"
+   ]
+  ],
+  [
+   "D04",
+   "D09 «Просмотренные»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "dfSheet «Фильтры»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "P10 «0 подписчиков»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "P10 «1 подписка»",
+   [
+    "full"
+   ]
+  ],
+  [
+   "D04",
+   "follow «Подписаться»",
+   [
+    "full",
+    "new",
+    "pair-couple"
+   ]
+  ],
+  [
+   "D04",
+   "P01 «Полный профиль»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "C03 «Ведёт сообщество Латекс-клуб»",
+   [
+    "full"
+   ]
+  ],
+  [
+   "D04",
+   "E03 «Проводит Latex Night · 4 нояб»",
+   [
+    "full"
+   ]
+  ],
+  [
+   "D04",
+   "P05 «1 Есть темы для разговора дополняете друг друга в »",
+   [
+    "full"
+   ]
+  ],
+  [
+   "D04",
+   "P01 «Ari Отношения D/s · саб»",
+   [
+    "full"
+   ]
+  ],
+  [
+   "D04",
+   "topic «Контроль 10 даю»",
+   [
+    "full"
+   ]
+  ],
+  [
+   "D04",
+   "topic «Ролевые игры 8 даю · получаю»",
+   [
+    "full"
+   ]
+  ],
+  [
+   "D04",
+   "P20 «Все · 11»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "F05 «2»",
+   [
+    "full",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "profAct «Публикации»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "profAct «События»",
+   [
+    "full"
+   ]
+  ],
+  [
+   "D04",
+   "postMenu «Ещё»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "mView «Открыть на весь экран»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "F04 «#Латекс»",
+   [
+    "full",
+    "new"
+   ]
+  ],
+  [
+   "D04",
+   "likePost «31»",
+   [
+    "full"
+   ]
+  ],
+  [
+   "D04",
+   "savePost «Сохранить»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "sharePost «Поделиться»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "undo «Вернуть предыдущую анкету»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "decide «Пропустить»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "decide «Нравится человек»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "feed «Лента»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "people «Люди 3»",
+   [
+    "full"
+   ]
+  ],
+  [
+   "D04",
+   "groups «Комьюнити»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "chats «Чаты 2»",
+   [
+    "full",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "me «Я 7»",
+   [
+    "full"
+   ]
+  ],
+  [
+   "P01{\"id\": \"mia\"}",
+   "pView «Открыть фото на весь экран»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "P01{\"id\": \"maya\"}",
+   "pView «Открыть фото на весь экран»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "P08{\"id\": \"mia\"}",
+   "pView «Открыть фото на весь экран»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "P03",
+   "pView «Открыть фото на весь экран»",
+   [
+    "full",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "H02{\"id\": \"mia\"}",
+   "chatDown «К последним сообщениям»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "H02{\"id\": \"sofi\"}",
+   "chatDown «К последним сообщениям»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "P03{\"lv\": \"granted\"}",
+   "pView «Открыть фото на весь экран»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "OVL sheet:Узлы и разговоры",
+   "cLeaveMenu «Выйти из сообщества»",
+   [
+    "full",
+    "pair-couple"
+   ]
+  ],
+  [
+   "OVL sheet:Квир Берлин",
+   "cLeaveMenu «Выйти из сообщества»",
+   [
+    "full",
+    "pair-couple"
+   ]
+  ],
+  [
+   "OVL sheet:Подарить Premium",
+   "giftAnon «Не показывать, от кого Получатель увидит «подарок »",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "OVL sheet:Подарить Premium",
+   "giftPay «Укажи получателя»",
+   [
+    "full",
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "F04{\"id\": \"shibari\"}",
+   "sharePost «Поделиться»",
+   [
+    "new"
+   ]
+  ],
+  [
+   "D04",
+   "pplSub «Симпатии»",
+   [
+    "new",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "P10 «4 подписчика»",
+   [
+    "new"
+   ]
+  ],
+  [
+   "D04",
+   "P05 «? Пока мало общего Сравним, когда у вас обоих буде»",
+   [
+    "new"
+   ]
+  ],
+  [
+   "D04",
+   "topic «Сенсорные игры 10 всё»",
+   [
+    "new"
+   ]
+  ],
+  [
+   "D04",
+   "topic «Близость 10 всё»",
+   [
+    "new"
+   ]
+  ],
+  [
+   "D04",
+   "F05 «4»",
+   [
+    "new"
+   ]
+  ],
+  [
+   "D04",
+   "F05 «Готовимся к вечеринке.»",
+   [
+    "new"
+   ]
+  ],
+  [
+   "D04",
+   "reqAccess «Запросить доступ»",
+   [
+    "new"
+   ]
+  ],
+  [
+   "D04",
+   "profAct «Активность»",
+   [
+    "new",
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "P01 «Kira 3 ч назад»",
+   [
+    "new"
+   ]
+  ],
+  [
+   "D04",
+   "likePost «19»",
+   [
+    "new"
+   ]
+  ],
+  [
+   "D04",
+   "F04 «#Сенсорные игры»",
+   [
+    "new"
+   ]
+  ],
+  [
+   "D04",
+   "likePost «21»",
+   [
+    "new"
+   ]
+  ],
+  [
+   "D04",
+   "reqAccess «Запросить приватную часть»",
+   [
+    "new"
+   ]
+  ],
+  [
+   "D04",
+   "people «Люди»",
+   [
+    "new",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "chats «Чаты»",
+   [
+    "new"
+   ]
+  ],
+  [
+   "D04",
+   "me «? Я»",
+   [
+    "new"
+   ]
+  ],
+  [
+   "D03{\"sub\": \"discover\"}",
+   "P10 «2 подписки»",
+   [
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D03{\"sub\": \"discover\"}",
+   "undo «Вернуть предыдущую анкету»",
+   [
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "pplSub «Симпатии 2»",
+   [
+    "pair-couple"
+   ]
+  ],
+  [
+   "D04",
+   "P05 «0 Есть темы для разговора можно попробовать 1. Сов»",
+   [
+    "pair-couple"
+   ]
+  ],
+  [
+   "D04",
+   "P01 «Leon Отношения D/s · дом»",
+   [
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "topic «Сервис 10 всё»",
+   [
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "topic «Ритуалы 8 всё»",
+   [
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "F05 «Маленький ритуал утра: кофе, список дел и одно доб»",
+   [
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "F04 «#Ритуалы»",
+   [
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "F04 «#Сервис»",
+   [
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "likePost «9»",
+   [
+    "pair-couple",
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "people «Люди 2»",
+   [
+    "pair-couple"
+   ]
+  ],
+  [
+   "D04",
+   "dockMe «Я 6»",
+   [
+    "pair-couple"
+   ]
+  ],
+  [
+   "D03{\"sub\": \"discover\"}",
+   "follow «Подписаться от пары»",
+   [
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "follow «Подписаться от пары»",
+   [
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "P05 «0 Есть темы для разговора Есть что обсудить. Совпа»",
+   [
+    "pair-me"
+   ]
+  ],
+  [
+   "D04",
+   "dockMe «Мы 6»",
+   [
+    "pair-me"
+   ]
+  ],
+  [
+   "OVL sheet:Шибари",
+   "jarSave «Добавить»",
+   [
+    "pair-me"
+   ]
+  ]
+ ]
+}

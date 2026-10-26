@@ -1,0 +1,1578 @@
+[
+ {
+  "type": "screen",
+  "id": "A01",
+  "name": "Приветствие",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "A02",
+  "name": "Регистрация: Apple, Google, почта",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "A02",
+  "name": "Вход",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "A03",
+  "name": "Код из письма",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "A04",
+  "name": "Профиль и дата рождения",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "A04X",
+  "name": "Младше 18",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "A05",
+  "name": "Кто ты (необязательно)",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "A05",
+  "name": "Интересы и сообщества",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "F01",
+  "name": "Лента · для тебя",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "F01",
+  "name": "Подписки",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "F05",
+  "name": "Публикация и ответы",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "F05",
+  "name": "Статья",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "P20",
+  "name": "Галерея профиля",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "M01",
+  "name": "Модерация (админка)",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "F01",
+  "name": "Популярное",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "P21",
+  "name": "Мои связи",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "P22",
+  "name": "Новая связь",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "F04",
+  "name": "Тема #шибари",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "!create",
+  "name": "Создать: выбор типа",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "F07",
+  "name": "Редактор публикации",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "F07",
+  "name": "Редактор опроса",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "F10",
+  "name": "Мои публикации",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "C01",
+  "name": "События",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "E03",
+  "name": "Событие с заявкой",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "E03",
+  "name": "Онлайн-событие",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "E03",
+  "name": "Билет у организатора",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "E03",
+  "name": "Отменённое событие",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "E06",
+  "name": "Заявка на участие",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "E10",
+  "name": "Мои события",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "E11",
+  "name": "Создать событие",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "E15",
+  "name": "Панель организатора",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "E16",
+  "name": "Заявки участников",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "D03",
+  "name": "Подборка со свайпами",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "!datingOff",
+  "name": "Знакомства выключены",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "D04",
+  "name": "Фильтры знакомств",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "D03",
+  "name": "Симпатии",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "H01",
+  "name": "Взаимные контакты",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "full",
+   "new",
+   "new",
+   "pair-couple",
+   "pair-couple",
+   "pair-me",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "!match",
+  "name": "Это взаимно",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "D09",
+  "name": "Просмотренные",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "!deckEnd",
+  "name": "Анкеты закончились",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "P01",
+  "name": "Профиль · Mia",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "P01",
+  "name": "Профиль без знакомств · Maya",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "P01",
+  "name": "Профиль пары",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "P05",
+  "name": "Что у вас общего",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "P05",
+  "name": "Сравнение · Zoe (дополняете)",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "P05",
+  "name": "Сравнение · Mark (одинаковые роли)",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "P05",
+  "name": "Сравнение · Ira (понемногу)",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "P05",
+  "name": "Сравнение · Ren (по-разному)",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "P05",
+  "name": "Сравнение · Vera (границы)",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "P05",
+  "name": "Сравнение · Oli (мало данных)",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "!req",
+  "name": "Запрос доступа",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "P07",
+  "name": "Доступы · ко мне",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "P07",
+  "name": "Доступы · мои запросы",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "!grant",
+  "name": "Что открыть (решение)",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "P08",
+  "name": "Открытый мне профиль",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "P03",
+  "name": "Мой профиль глазами других",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "P02",
+  "name": "Редактор профиля",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "P04",
+  "name": "Приватная часть",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "full",
+   "new",
+   "new",
+   "pair-couple",
+   "pair-couple",
+   "pair-me",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "C01",
+  "name": "Каталог",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "C02",
+  "name": "Мои сообщества",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "C03",
+  "name": "Открытое сообщество",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "C03",
+  "name": "Закрытое сообщество",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "C06",
+  "name": "Обсуждение",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "C07",
+  "name": "Новое обсуждение",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "C08",
+  "name": "Создать сообщество",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "H01",
+  "name": "Совместные чаты",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "H02",
+  "name": "Диалог",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "H02",
+  "name": "Новый диалог: с чего начать",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "N01",
+  "name": "Уведомления",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "X01",
+  "name": "Раздел «Профиль»",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "!jar",
+  "name": "Отметка по теме",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "X05",
+  "name": "Тесты",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "X04",
+  "name": "История карты",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "!topic",
+  "name": "Тема в чужом профиле",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "X07",
+  "name": "Описание теста",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "X08",
+  "name": "Вопрос теста",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "!result",
+  "name": "Результат теста",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "G04",
+  "name": "Сохранённое",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "G01",
+  "name": "Поиск с фильтрами",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "K01",
+  "name": "Настройки",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "K05",
+  "name": "Уведомления",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "K06",
+  "name": "Вход и сессии",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "K07",
+  "name": "Данные и удаление",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "B01",
+  "name": "Premium",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "!paywall",
+  "name": "Окно Premium (возврат анкеты)",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "!limit",
+  "name": "Лимит запросов",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "A07",
+  "name": "Проверка возраста",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "Q01",
+  "name": "Связь пары",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "Q03",
+  "name": "Общий профиль пары (аккаунт «В паре»)",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "P01",
+  "name": "Половина пары · Eva",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "P10",
+  "name": "Мои подписчики",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "P10",
+  "name": "Подписки Mia",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "P03",
+  "name": "Как видят: с доступом",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "N01",
+  "name": "Приглашение в пару",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "Q05",
+  "name": "Общие доступы",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "Q09",
+  "name": "Настройка пары после создания",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "Q06",
+  "name": "Разъединить пару",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ },
+ {
+  "type": "screen",
+  "id": "S01",
+  "name": "Помощь",
+  "opened_by": "QA-панель экранов / FT_QA.go",
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Автопроход: скриншот, проверка вёрстки, список элементов, JS-ошибки.",
+  "issues": [],
+  "source": "auto"
+ }
+]

@@ -1,0 +1,1078 @@
+{
+ "sheet:Создать": {
+  "from": [
+   "F01"
+  ],
+  "via": [
+   "create «Создать»"
+  ],
+  "kind": "sheet",
+  "controls": 3,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Создать"
+ },
+ "sheet:Публикация": {
+  "from": [
+   "F05"
+  ],
+  "via": [
+   "postMenu «Ещё»"
+  ],
+  "kind": "sheet",
+  "controls": 5,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Публикация"
+ },
+ "sheet:Ролевые игры": {
+  "from": [
+   "F05"
+  ],
+  "via": [
+   "topic «Ролевые игры 8 всё»"
+  ],
+  "kind": "sheet",
+  "controls": 2,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Ролевые_игры"
+ },
+ "sheet:Показ": {
+  "from": [
+   "F05"
+  ],
+  "via": [
+   "topic «Показ 2 всё»"
+  ],
+  "kind": "sheet",
+  "controls": 2,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Показ"
+ },
+ "sheet:Ответ": {
+  "from": [
+   "F05"
+  ],
+  "via": [
+   "rMore «Ещё»"
+  ],
+  "kind": "sheet",
+  "controls": 4,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Ответ"
+ },
+ "sheet:Как подбираем популярное": {
+  "from": [
+   "F01"
+  ],
+  "via": [
+   "popInfo «Как подбираем»"
+  ],
+  "kind": "sheet",
+  "controls": 1,
+  "personas": [
+   "full",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Как_подбираем_популярное"
+ },
+ "sheet:Добавить связь": {
+  "from": [
+   "P21"
+  ],
+  "via": [
+   "linkAdd «Добавить связь»"
+  ],
+  "kind": "sheet",
+  "controls": 4,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple"
+  ],
+  "shot": "ovl/full/sheet_Добавить_связь"
+ },
+ "sheet:Mia": {
+  "from": [
+   "P01",
+   "P21"
+  ],
+  "via": [
+   "linkMenu «Mia Партнёры по практике»",
+   "profileMenu «Ещё»"
+  ],
+  "kind": "sheet",
+  "controls": 5,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Mia"
+ },
+ "sheet:Шибари": {
+  "from": [
+   "F04",
+   "P01"
+  ],
+  "via": [
+   "editCoupleJar «Добавить интерес паре»",
+   "editJar «Шибари 6 даю»",
+   "topic «Шибари 10 даю · смотрю»"
+  ],
+  "kind": "sheet",
+  "controls": 9,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Шибари"
+ },
+ "sheet:Упомянуть": {
+  "from": [
+   "F07"
+  ],
+  "via": [
+   "mentionPick «Упомянуть»"
+  ],
+  "kind": "sheet",
+  "controls": 4,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Упомянуть"
+ },
+ "sheet:Темы публикации": {
+  "from": [
+   "F07"
+  ],
+  "via": [
+   "chipAll «Все · 75»"
+  ],
+  "kind": "sheet",
+  "controls": 5,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Темы_публикации"
+ },
+ "sheet:Фильтры событий": {
+  "from": [
+   "C01"
+  ],
+  "via": [
+   "evFilters «Фильтры»"
+  ],
+  "kind": "sheet",
+  "controls": 10,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Фильтры_событий"
+ },
+ "sheet:Событие": {
+  "from": [
+   "E03"
+  ],
+  "via": [
+   "evMenu «Ещё»"
+  ],
+  "kind": "sheet",
+  "controls": 4,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Событие"
+ },
+ "dialog:Отозвать заявку?": {
+  "from": [
+   "E03"
+  ],
+  "via": [
+   "withdrawApp «Отозвать заявку»"
+  ],
+  "kind": "dialog",
+  "controls": 2,
+  "personas": [
+   "full",
+   "pair-couple"
+  ],
+  "shot": "ovl/full/dialog_Отозвать_заявку_"
+ },
+ "sheet:Объявление": {
+  "from": [
+   "E15"
+  ],
+  "via": [
+   "announce «Объявление участникам Придёт в центр уве»"
+  ],
+  "kind": "sheet",
+  "controls": 3,
+  "personas": [
+   "full",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Объявление"
+ },
+ "sheet:Отменить событие?": {
+  "from": [
+   "E15"
+  ],
+  "via": [
+   "evCancel «Отменить событие»"
+  ],
+  "kind": "sheet",
+  "controls": 4,
+  "personas": [
+   "full",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Отменить_событие_"
+ },
+ "sheet:Фильтры знакомств": {
+  "from": [
+   "D03"
+  ],
+  "via": [
+   "dfSheet «Фильтры»"
+  ],
+  "kind": "sheet",
+  "controls": 11,
+  "personas": [
+   "full",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Фильтры_знакомств"
+ },
+ "sheet:Сенсорные игры": {
+  "from": [
+   "D03",
+   "D04",
+   "P02"
+  ],
+  "via": [
+   "editJar «Сенсорные игры 6 всё»",
+   "topic «Сенсорные игры 10 всё»"
+  ],
+  "kind": "sheet",
+  "controls": 2,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Сенсорные_игры"
+ },
+ "sheet:Близость": {
+  "from": [
+   "D03",
+   "D04",
+   "P01"
+  ],
+  "via": [
+   "topic «Близость 10 всё»",
+   "topic «Близость 8 всё»"
+  ],
+  "kind": "sheet",
+  "controls": 2,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Близость"
+ },
+ "sheet:Контроль": {
+  "from": [
+   "D04",
+   "P02",
+   "P04"
+  ],
+  "via": [
+   "editJar «Контроль 8 даю»",
+   "topic «Контроль 10 даю»"
+  ],
+  "kind": "sheet",
+  "controls": 2,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Контроль"
+ },
+ "sheet:(untitled sheet)": {
+  "from": [
+   "D09"
+  ],
+  "via": [
+   "premD9 «••••»"
+  ],
+  "kind": "sheet",
+  "controls": 5,
+  "personas": [
+   "full",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_untitled_sheet_"
+ },
+ "sheet:Забота после": {
+  "from": [
+   "P01"
+  ],
+  "via": [
+   "topic «Забота после 10 даю · получаю»"
+  ],
+  "kind": "sheet",
+  "controls": 2,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Забота_после"
+ },
+ "sheet:Maya": {
+  "from": [
+   "P01"
+  ],
+  "via": [
+   "profileMenu «Ещё»"
+  ],
+  "kind": "sheet",
+  "controls": 7,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Maya"
+ },
+ "sheet:Разговор о границах": {
+  "from": [
+   "P01"
+  ],
+  "via": [
+   "topic «Разговор о границах 10 всё»"
+  ],
+  "kind": "sheet",
+  "controls": 2,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Разговор_о_границах"
+ },
+ "sheet:Eva и Tom": {
+  "from": [
+   "P01"
+  ],
+  "via": [
+   "profileMenu «Ещё»"
+  ],
+  "kind": "sheet",
+  "controls": 6,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Eva_и_Tom"
+ },
+ "sheet:Эксперименты": {
+  "from": [
+   "P01"
+  ],
+  "via": [
+   "topic «Эксперименты 10 всё»"
+  ],
+  "kind": "sheet",
+  "controls": 2,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Эксперименты"
+ },
+ "sheet:Запросить приватную часть": {
+  "from": [
+   "D04",
+   "P01"
+  ],
+  "via": [
+   "reqAccess «Запросить доступ»"
+  ],
+  "kind": "sheet",
+  "controls": 3,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Запросить_приватную_часть"
+ },
+ "sheet:Связывание": {
+  "from": [
+   "P05",
+   "Q03"
+  ],
+  "via": [
+   "topic «М 8 даю · получаю Связывание 8 даю M Теб»",
+   "topic «Связывание 8 даю · получаю»",
+   "topic «Я 8 даю Связывание 9 получаю Z Тебе ближ»"
+  ],
+  "kind": "sheet",
+  "controls": 2,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Связывание"
+ },
+ "sheet:Игрушки": {
+  "from": [
+   "P05"
+  ],
+  "via": [
+   "topic «Я 3 всё Игрушки 6 всё O Интерес есть у о»"
+  ],
+  "kind": "sheet",
+  "controls": 2,
+  "personas": [
+   "full",
+   "pair-couple"
+  ],
+  "shot": "ovl/full/sheet_Игрушки"
+ },
+ "sheet:Доступ для Mia": {
+  "from": [
+   "P07"
+  ],
+  "via": [
+   "narrow «Изменить»"
+  ],
+  "kind": "sheet",
+  "controls": 5,
+  "personas": [
+   "full",
+   "pair-couple"
+  ],
+  "shot": "ovl/full/sheet_Доступ_для_Mia"
+ },
+ "dialog:Отозвать доступ у Mia?": {
+  "from": [
+   "P07"
+  ],
+  "via": [
+   "revoke «Отозвать»"
+  ],
+  "kind": "dialog",
+  "controls": 2,
+  "personas": [
+   "full",
+   "pair-couple"
+  ],
+  "shot": "ovl/full/dialog_Отозвать_доступ_у_Mia_"
+ },
+ "sheet:Доступ для Kai": {
+  "from": [
+   "P07"
+  ],
+  "via": [
+   "narrow «Изменить»"
+  ],
+  "kind": "sheet",
+  "controls": 4,
+  "personas": [
+   "full",
+   "pair-couple"
+  ],
+  "shot": "ovl/full/sheet_Доступ_для_Kai"
+ },
+ "dialog:Отозвать доступ у Kai?": {
+  "from": [
+   "P07"
+  ],
+  "via": [
+   "revoke «Отозвать»"
+  ],
+  "kind": "dialog",
+  "controls": 2,
+  "personas": [
+   "full",
+   "pair-couple"
+  ],
+  "shot": "ovl/full/dialog_Отозвать_доступ_у_Kai_"
+ },
+ "sheet:Интересы · alex_b": {
+  "from": [
+   "P03"
+  ],
+  "via": [
+   "allJars «Ещё 7»"
+  ],
+  "kind": "sheet",
+  "controls": 3,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Интересы_alex_b"
+ },
+ "sheet:Фото и видео": {
+  "from": [
+   "P02",
+   "P04"
+  ],
+  "via": [
+   "mediaSelected19 «Главное»"
+  ],
+  "kind": "sheet",
+  "controls": 4,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Фото_и_видео"
+ },
+ "sheet:Город": {
+  "from": [
+   "P02"
+  ],
+  "via": [
+   "peCity «Берлин · Германия»",
+   "peCity «Не показывать»"
+  ],
+  "kind": "sheet",
+  "controls": 5,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Город"
+ },
+ "sheet:Добавить интересы": {
+  "from": [
+   "F01",
+   "P02"
+  ],
+  "via": [
+   "addJar «Добавить интересы»",
+   "peJarAddPriv «Добавить»"
+  ],
+  "kind": "sheet",
+  "controls": 5,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Добавить_интересы"
+ },
+ "dialog:Отозвать все доступы?": {
+  "from": [
+   "P02",
+   "P04"
+  ],
+  "via": [
+   "revokeAll «Отозвать все доступы»"
+  ],
+  "kind": "dialog",
+  "controls": 2,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/dialog_Отозвать_все_доступы_"
+ },
+ "sheet:Узлы и разговоры": {
+  "from": [
+   "C03"
+  ],
+  "via": [
+   "cMenu «Ещё»"
+  ],
+  "kind": "sheet",
+  "controls": 5,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Узлы_и_разговоры"
+ },
+ "sheet:Квир Берлин": {
+  "from": [
+   "C03"
+  ],
+  "via": [
+   "cMenu «Ещё»"
+  ],
+  "kind": "sheet",
+  "controls": 5,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Квир_Берлин"
+ },
+ "sheet:Обсуждение": {
+  "from": [
+   "C06"
+  ],
+  "via": [
+   "discMenu «Ещё»"
+  ],
+  "kind": "sheet",
+  "controls": 3,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Обсуждение"
+ },
+ "sheet:Выбор": {
+  "from": [
+   "C08"
+  ],
+  "via": [
+   "chipAll «Все · 75»"
+  ],
+  "kind": "sheet",
+  "controls": 5,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Выбор"
+ },
+ "sheet:Действовать как": {
+  "from": [
+   "F01",
+   "H01"
+  ],
+  "via": [
+   "dockMe «Мы 9»",
+   "dockMe «Я 9»"
+  ],
+  "kind": "sheet",
+  "controls": 5,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Действовать_как"
+ },
+ "sheet:Прочитали": {
+  "from": [
+   "H02"
+  ],
+  "via": [
+   "chatReadInfo «Прочитали: Mia»"
+  ],
+  "kind": "sheet",
+  "controls": 1,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Прочитали"
+ },
+ "sheet:Sofi": {
+  "from": [
+   "H02"
+  ],
+  "via": [
+   "chatMenu «Информация о диалоге»"
+  ],
+  "kind": "sheet",
+  "controls": 8,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Sofi"
+ },
+ "sheet:Отметка на фото": {
+  "from": [
+   "N01"
+  ],
+  "via": [
+   "tagReview «Посмотреть»"
+  ],
+  "kind": "sheet",
+  "controls": 3,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Отметка_на_фото"
+ },
+ "sheet:Открыть доступ": {
+  "from": [
+   "N01"
+  ],
+  "via": [
+   "grant «Открыть доступ»"
+  ],
+  "kind": "sheet",
+  "controls": 6,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Открыть_доступ"
+ },
+ "dialog:Отклонить заявку?": {
+  "from": [
+   "N01"
+  ],
+  "via": [
+   "cRequestDecision «Отклонить»"
+  ],
+  "kind": "dialog",
+  "controls": 2,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/dialog_Отклонить_заявку_"
+ },
+ "dialog:Выйти из аккаунта?": {
+  "from": [
+   "K01"
+  ],
+  "via": [
+   "logout «Выйти»"
+  ],
+  "kind": "dialog",
+  "controls": 2,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/dialog_Выйти_из_аккаунта_"
+ },
+ "sheet:Удалить аккаунт навсегда?": {
+  "from": [
+   "K07"
+  ],
+  "via": [
+   "k7del «Удалить аккаунт…»"
+  ],
+  "kind": "sheet",
+  "controls": 4,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Удалить_аккаунт_навсегда_"
+ },
+ "sheet:Подарить Premium": {
+  "from": [
+   "B01"
+  ],
+  "via": [
+   "giftPremium «Подарить Premium другому Точный получате»"
+  ],
+  "kind": "sheet",
+  "controls": 6,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Подарить_Premium"
+ },
+ "sheet:Eva": {
+  "from": [
+   "P01"
+  ],
+  "via": [
+   "profileMenu «Ещё»"
+  ],
+  "kind": "sheet",
+  "controls": 6,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Eva"
+ },
+ "dialog:Разъединить пару?": {
+  "from": [
+   "Q06"
+  ],
+  "via": [
+   "v6PairUnlink «Разъединить»"
+  ],
+  "kind": "dialog",
+  "controls": 2,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/dialog_Разъединить_пару_"
+ },
+ "sheet:Подтверждение возраста": {
+  "from": [
+   "S01"
+  ],
+  "via": [
+   "v6Help «Как прошла проверка возраста»"
+  ],
+  "kind": "sheet",
+  "controls": 1,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Подтверждение_возраста"
+ },
+ "sheet:Кто видит личное": {
+  "from": [
+   "S01"
+  ],
+  "via": [
+   "v6Help «Кто видит мою приватную часть»"
+  ],
+  "kind": "sheet",
+  "controls": 1,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/full/sheet_Кто_видит_личное"
+ },
+ "sheet:Гендер": {
+  "from": [
+   "P02"
+  ],
+  "via": [
+   "chipAll «Все · 29»"
+  ],
+  "kind": "sheet",
+  "controls": 5,
+  "personas": [
+   "new"
+  ],
+  "shot": "ovl/new/sheet_Гендер"
+ },
+ "sheet:Ориентация": {
+  "from": [
+   "P02"
+  ],
+  "via": [
+   "chipAll «Все · 17»"
+  ],
+  "kind": "sheet",
+  "controls": 5,
+  "personas": [
+   "new"
+  ],
+  "shot": "ovl/new/sheet_Ориентация"
+ },
+ "sheet:Правила сообщества": {
+  "from": [
+   "C03"
+  ],
+  "via": [
+   "cJoin «Вступить от пары»",
+   "cJoin «Вступить»"
+  ],
+  "kind": "sheet",
+  "controls": 3,
+  "personas": [
+   "new",
+   "pair-me"
+  ],
+  "shot": "ovl/new/sheet_Правила_сообщества"
+ },
+ "sheet:Заявка в сообщество": {
+  "from": [
+   "C03"
+  ],
+  "via": [
+   "cJoin «Заявка от пары»",
+   "cJoin «Подать заявку»"
+  ],
+  "kind": "sheet",
+  "controls": 4,
+  "personas": [
+   "new",
+   "pair-me"
+  ],
+  "shot": "ovl/new/sheet_Заявка_в_сообщество"
+ },
+ "sheet:Латекс": {
+  "from": [
+   "D03"
+  ],
+  "via": [
+   "topic «Латекс 10 всё»"
+  ],
+  "kind": "sheet",
+  "controls": 2,
+  "personas": [
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/pair-couple/sheet_Латекс"
+ },
+ "sheet:Сервис": {
+  "from": [
+   "D04"
+  ],
+  "via": [
+   "topic «Сервис 10 всё»"
+  ],
+  "kind": "sheet",
+  "controls": 2,
+  "personas": [
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/pair-couple/sheet_Сервис"
+ },
+ "sheet:Ритуалы": {
+  "from": [
+   "D04"
+  ],
+  "via": [
+   "topic «Ритуалы 8 всё»"
+  ],
+  "kind": "sheet",
+  "controls": 2,
+  "personas": [
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/pair-couple/sheet_Ритуалы"
+ },
+ "sheet:Моё подтверждение": {
+  "from": [
+   "Q01"
+  ],
+  "via": [
+   "pairTrustOpen «Подтверждение партнёром Действия партнёр»"
+  ],
+  "kind": "sheet",
+  "controls": 4,
+  "personas": [
+   "pair-couple",
+   "pair-me"
+  ],
+  "shot": "ovl/pair-couple/sheet_Моё_подтверждение"
+ },
+ "sheet:Связь пары": {
+  "from": [
+   "P21"
+  ],
+  "via": [
+   "linkAdd «Добавить связь»"
+  ],
+  "kind": "sheet",
+  "controls": 4,
+  "personas": [
+   "pair-me"
+  ],
+  "shot": "ovl/pair-me/sheet_Связь_пары"
+ }
+}

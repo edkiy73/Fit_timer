@@ -1,0 +1,1336 @@
+[
+ {
+  "name": "(untitled sheet)",
+  "kind": "Bottom sheet",
+  "from": [
+   "D09"
+  ],
+  "via": [
+   "premD9 «••••»"
+  ],
+  "controls": 5,
+  "personas": [
+   "full",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_untitled_sheet_"
+ },
+ {
+  "name": "Eva",
+  "kind": "Bottom sheet",
+  "from": [
+   "P01"
+  ],
+  "via": [
+   "profileMenu «Ещё»"
+  ],
+  "controls": 6,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Eva"
+ },
+ {
+  "name": "Eva и Tom",
+  "kind": "Bottom sheet",
+  "from": [
+   "P01"
+  ],
+  "via": [
+   "profileMenu «Ещё»"
+  ],
+  "controls": 6,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Eva_и_Tom"
+ },
+ {
+  "name": "Maya",
+  "kind": "Bottom sheet",
+  "from": [
+   "P01"
+  ],
+  "via": [
+   "profileMenu «Ещё»"
+  ],
+  "controls": 7,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Maya"
+ },
+ {
+  "name": "Mia",
+  "kind": "Bottom sheet",
+  "from": [
+   "P01",
+   "P21"
+  ],
+  "via": [
+   "linkMenu «Mia Партнёры по практике»",
+   "profileMenu «Ещё»"
+  ],
+  "controls": 5,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Mia"
+ },
+ {
+  "name": "Sofi",
+  "kind": "Bottom sheet",
+  "from": [
+   "H02"
+  ],
+  "via": [
+   "chatMenu «Информация о диалоге»"
+  ],
+  "controls": 8,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Sofi"
+ },
+ {
+  "name": "Близость",
+  "kind": "Bottom sheet",
+  "from": [
+   "D03",
+   "D04",
+   "P01"
+  ],
+  "via": [
+   "topic «Близость 10 всё»",
+   "topic «Близость 8 всё»"
+  ],
+  "controls": 2,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Близость"
+ },
+ {
+  "name": "Выбор",
+  "kind": "Bottom sheet",
+  "from": [
+   "C08"
+  ],
+  "via": [
+   "chipAll «Все · 75»"
+  ],
+  "controls": 5,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Выбор"
+ },
+ {
+  "name": "Гендер",
+  "kind": "Bottom sheet",
+  "from": [
+   "P02"
+  ],
+  "via": [
+   "chipAll «Все · 29»"
+  ],
+  "controls": 5,
+  "personas": [
+   "new"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/new/sheet_Гендер"
+ },
+ {
+  "name": "Город",
+  "kind": "Bottom sheet",
+  "from": [
+   "P02"
+  ],
+  "via": [
+   "peCity «Берлин · Германия»",
+   "peCity «Не показывать»"
+  ],
+  "controls": 5,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Город"
+ },
+ {
+  "name": "Действовать как",
+  "kind": "Bottom sheet",
+  "from": [
+   "F01",
+   "H01"
+  ],
+  "via": [
+   "dockMe «Мы 9»",
+   "dockMe «Я 9»"
+  ],
+  "controls": 5,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Действовать_как"
+ },
+ {
+  "name": "Добавить интересы",
+  "kind": "Bottom sheet",
+  "from": [
+   "F01",
+   "P02"
+  ],
+  "via": [
+   "addJar «Добавить интересы»",
+   "peJarAddPriv «Добавить»"
+  ],
+  "controls": 5,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Добавить_интересы"
+ },
+ {
+  "name": "Добавить связь",
+  "kind": "Bottom sheet",
+  "from": [
+   "P21"
+  ],
+  "via": [
+   "linkAdd «Добавить связь»"
+  ],
+  "controls": 4,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Добавить_связь"
+ },
+ {
+  "name": "Доступ для Kai",
+  "kind": "Bottom sheet",
+  "from": [
+   "P07"
+  ],
+  "via": [
+   "narrow «Изменить»"
+  ],
+  "controls": 4,
+  "personas": [
+   "full",
+   "pair-couple"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Доступ_для_Kai"
+ },
+ {
+  "name": "Доступ для Mia",
+  "kind": "Bottom sheet",
+  "from": [
+   "P07"
+  ],
+  "via": [
+   "narrow «Изменить»"
+  ],
+  "controls": 5,
+  "personas": [
+   "full",
+   "pair-couple"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Доступ_для_Mia"
+ },
+ {
+  "name": "Забота после",
+  "kind": "Bottom sheet",
+  "from": [
+   "P01"
+  ],
+  "via": [
+   "topic «Забота после 10 даю · получаю»"
+  ],
+  "controls": 2,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Забота_после"
+ },
+ {
+  "name": "Запросить приватную часть",
+  "kind": "Bottom sheet",
+  "from": [
+   "D04",
+   "P01"
+  ],
+  "via": [
+   "reqAccess «Запросить доступ»"
+  ],
+  "controls": 3,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Запросить_приватную_часть"
+ },
+ {
+  "name": "Заявка в сообщество",
+  "kind": "Bottom sheet",
+  "from": [
+   "C03"
+  ],
+  "via": [
+   "cJoin «Заявка от пары»",
+   "cJoin «Подать заявку»"
+  ],
+  "controls": 4,
+  "personas": [
+   "new",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/new/sheet_Заявка_в_сообщество"
+ },
+ {
+  "name": "Игрушки",
+  "kind": "Bottom sheet",
+  "from": [
+   "P05"
+  ],
+  "via": [
+   "topic «Я 3 всё Игрушки 6 всё O Интерес есть у о»"
+  ],
+  "controls": 2,
+  "personas": [
+   "full",
+   "pair-couple"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Игрушки"
+ },
+ {
+  "name": "Интересы · alex_b",
+  "kind": "Bottom sheet",
+  "from": [
+   "P03"
+  ],
+  "via": [
+   "allJars «Ещё 7»"
+  ],
+  "controls": 3,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Интересы_alex_b"
+ },
+ {
+  "name": "Как подбираем популярное",
+  "kind": "Bottom sheet",
+  "from": [
+   "F01"
+  ],
+  "via": [
+   "popInfo «Как подбираем»"
+  ],
+  "controls": 1,
+  "personas": [
+   "full",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Как_подбираем_популярное"
+ },
+ {
+  "name": "Квир Берлин",
+  "kind": "Bottom sheet",
+  "from": [
+   "C03"
+  ],
+  "via": [
+   "cMenu «Ещё»"
+  ],
+  "controls": 5,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Квир_Берлин"
+ },
+ {
+  "name": "Контроль",
+  "kind": "Bottom sheet",
+  "from": [
+   "D04",
+   "P02",
+   "P04"
+  ],
+  "via": [
+   "editJar «Контроль 8 даю»",
+   "topic «Контроль 10 даю»"
+  ],
+  "controls": 2,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Контроль"
+ },
+ {
+  "name": "Кто видит личное",
+  "kind": "Bottom sheet",
+  "from": [
+   "S01"
+  ],
+  "via": [
+   "v6Help «Кто видит мою приватную часть»"
+  ],
+  "controls": 1,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Кто_видит_личное"
+ },
+ {
+  "name": "Латекс",
+  "kind": "Bottom sheet",
+  "from": [
+   "D03"
+  ],
+  "via": [
+   "topic «Латекс 10 всё»"
+  ],
+  "controls": 2,
+  "personas": [
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/pair-couple/sheet_Латекс"
+ },
+ {
+  "name": "Моё подтверждение",
+  "kind": "Bottom sheet",
+  "from": [
+   "Q01"
+  ],
+  "via": [
+   "pairTrustOpen «Подтверждение партнёром Действия партнёр»"
+  ],
+  "controls": 4,
+  "personas": [
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/pair-couple/sheet_Моё_подтверждение"
+ },
+ {
+  "name": "Обсуждение",
+  "kind": "Bottom sheet",
+  "from": [
+   "C06"
+  ],
+  "via": [
+   "discMenu «Ещё»"
+  ],
+  "controls": 3,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Обсуждение"
+ },
+ {
+  "name": "Объявление",
+  "kind": "Bottom sheet",
+  "from": [
+   "E15"
+  ],
+  "via": [
+   "announce «Объявление участникам Придёт в центр уве»"
+  ],
+  "controls": 3,
+  "personas": [
+   "full",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Объявление"
+ },
+ {
+  "name": "Ориентация",
+  "kind": "Bottom sheet",
+  "from": [
+   "P02"
+  ],
+  "via": [
+   "chipAll «Все · 17»"
+  ],
+  "controls": 5,
+  "personas": [
+   "new"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/new/sheet_Ориентация"
+ },
+ {
+  "name": "Ответ",
+  "kind": "Bottom sheet",
+  "from": [
+   "F05"
+  ],
+  "via": [
+   "rMore «Ещё»"
+  ],
+  "controls": 4,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Ответ"
+ },
+ {
+  "name": "Открыть доступ",
+  "kind": "Bottom sheet",
+  "from": [
+   "N01"
+  ],
+  "via": [
+   "grant «Открыть доступ»"
+  ],
+  "controls": 6,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Открыть_доступ"
+ },
+ {
+  "name": "Отменить событие?",
+  "kind": "Bottom sheet",
+  "from": [
+   "E15"
+  ],
+  "via": [
+   "evCancel «Отменить событие»"
+  ],
+  "controls": 4,
+  "personas": [
+   "full",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Отменить_событие_"
+ },
+ {
+  "name": "Отметка на фото",
+  "kind": "Bottom sheet",
+  "from": [
+   "N01"
+  ],
+  "via": [
+   "tagReview «Посмотреть»"
+  ],
+  "controls": 3,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Отметка_на_фото"
+ },
+ {
+  "name": "Подарить Premium",
+  "kind": "Bottom sheet",
+  "from": [
+   "B01"
+  ],
+  "via": [
+   "giftPremium «Подарить Premium другому Точный получате»"
+  ],
+  "controls": 6,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Подарить_Premium"
+ },
+ {
+  "name": "Подтверждение возраста",
+  "kind": "Bottom sheet",
+  "from": [
+   "S01"
+  ],
+  "via": [
+   "v6Help «Как прошла проверка возраста»"
+  ],
+  "controls": 1,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Подтверждение_возраста"
+ },
+ {
+  "name": "Показ",
+  "kind": "Bottom sheet",
+  "from": [
+   "F05"
+  ],
+  "via": [
+   "topic «Показ 2 всё»"
+  ],
+  "controls": 2,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Показ"
+ },
+ {
+  "name": "Правила сообщества",
+  "kind": "Bottom sheet",
+  "from": [
+   "C03"
+  ],
+  "via": [
+   "cJoin «Вступить от пары»",
+   "cJoin «Вступить»"
+  ],
+  "controls": 3,
+  "personas": [
+   "new",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/new/sheet_Правила_сообщества"
+ },
+ {
+  "name": "Прочитали",
+  "kind": "Bottom sheet",
+  "from": [
+   "H02"
+  ],
+  "via": [
+   "chatReadInfo «Прочитали: Mia»"
+  ],
+  "controls": 1,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Прочитали"
+ },
+ {
+  "name": "Публикация",
+  "kind": "Bottom sheet",
+  "from": [
+   "F05"
+  ],
+  "via": [
+   "postMenu «Ещё»"
+  ],
+  "controls": 5,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Публикация"
+ },
+ {
+  "name": "Разговор о границах",
+  "kind": "Bottom sheet",
+  "from": [
+   "P01"
+  ],
+  "via": [
+   "topic «Разговор о границах 10 всё»"
+  ],
+  "controls": 2,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Разговор_о_границах"
+ },
+ {
+  "name": "Ритуалы",
+  "kind": "Bottom sheet",
+  "from": [
+   "D04"
+  ],
+  "via": [
+   "topic «Ритуалы 8 всё»"
+  ],
+  "controls": 2,
+  "personas": [
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/pair-couple/sheet_Ритуалы"
+ },
+ {
+  "name": "Ролевые игры",
+  "kind": "Bottom sheet",
+  "from": [
+   "F05"
+  ],
+  "via": [
+   "topic «Ролевые игры 8 всё»"
+  ],
+  "controls": 2,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Ролевые_игры"
+ },
+ {
+  "name": "Связывание",
+  "kind": "Bottom sheet",
+  "from": [
+   "P05",
+   "Q03"
+  ],
+  "via": [
+   "topic «М 8 даю · получаю Связывание 8 даю M Теб»",
+   "topic «Связывание 8 даю · получаю»",
+   "topic «Я 8 даю Связывание 9 получаю Z Тебе ближ»"
+  ],
+  "controls": 2,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Связывание"
+ },
+ {
+  "name": "Связь пары",
+  "kind": "Bottom sheet",
+  "from": [
+   "P21"
+  ],
+  "via": [
+   "linkAdd «Добавить связь»"
+  ],
+  "controls": 4,
+  "personas": [
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/pair-me/sheet_Связь_пары"
+ },
+ {
+  "name": "Сенсорные игры",
+  "kind": "Bottom sheet",
+  "from": [
+   "D03",
+   "D04",
+   "P02"
+  ],
+  "via": [
+   "editJar «Сенсорные игры 6 всё»",
+   "topic «Сенсорные игры 10 всё»"
+  ],
+  "controls": 2,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Сенсорные_игры"
+ },
+ {
+  "name": "Сервис",
+  "kind": "Bottom sheet",
+  "from": [
+   "D04"
+  ],
+  "via": [
+   "topic «Сервис 10 всё»"
+  ],
+  "controls": 2,
+  "personas": [
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/pair-couple/sheet_Сервис"
+ },
+ {
+  "name": "Событие",
+  "kind": "Bottom sheet",
+  "from": [
+   "E03"
+  ],
+  "via": [
+   "evMenu «Ещё»"
+  ],
+  "controls": 4,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Событие"
+ },
+ {
+  "name": "Создать",
+  "kind": "Bottom sheet",
+  "from": [
+   "F01"
+  ],
+  "via": [
+   "create «Создать»"
+  ],
+  "controls": 3,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [
+   "VIS-004"
+  ],
+  "shot": "ovl/full/sheet_Создать"
+ },
+ {
+  "name": "Темы публикации",
+  "kind": "Bottom sheet",
+  "from": [
+   "F07"
+  ],
+  "via": [
+   "chipAll «Все · 75»"
+  ],
+  "controls": 5,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Темы_публикации"
+ },
+ {
+  "name": "Удалить аккаунт навсегда?",
+  "kind": "Bottom sheet",
+  "from": [
+   "K07"
+  ],
+  "via": [
+   "k7del «Удалить аккаунт…»"
+  ],
+  "controls": 4,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Удалить_аккаунт_навсегда_"
+ },
+ {
+  "name": "Узлы и разговоры",
+  "kind": "Bottom sheet",
+  "from": [
+   "C03"
+  ],
+  "via": [
+   "cMenu «Ещё»"
+  ],
+  "controls": 5,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Узлы_и_разговоры"
+ },
+ {
+  "name": "Упомянуть",
+  "kind": "Bottom sheet",
+  "from": [
+   "F07"
+  ],
+  "via": [
+   "mentionPick «Упомянуть»"
+  ],
+  "controls": 4,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Упомянуть"
+ },
+ {
+  "name": "Фильтры знакомств",
+  "kind": "Bottom sheet",
+  "from": [
+   "D03"
+  ],
+  "via": [
+   "dfSheet «Фильтры»"
+  ],
+  "controls": 11,
+  "personas": [
+   "full",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Фильтры_знакомств"
+ },
+ {
+  "name": "Фильтры событий",
+  "kind": "Bottom sheet",
+  "from": [
+   "C01"
+  ],
+  "via": [
+   "evFilters «Фильтры»"
+  ],
+  "controls": 10,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Фильтры_событий"
+ },
+ {
+  "name": "Фото и видео",
+  "kind": "Bottom sheet",
+  "from": [
+   "P02",
+   "P04"
+  ],
+  "via": [
+   "mediaSelected19 «Главное»"
+  ],
+  "controls": 4,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Фото_и_видео"
+ },
+ {
+  "name": "Шибари",
+  "kind": "Bottom sheet",
+  "from": [
+   "F04",
+   "P01"
+  ],
+  "via": [
+   "editCoupleJar «Добавить интерес паре»",
+   "editJar «Шибари 6 даю»",
+   "topic «Шибари 10 даю · смотрю»"
+  ],
+  "controls": 9,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Шибари"
+ },
+ {
+  "name": "Эксперименты",
+  "kind": "Bottom sheet",
+  "from": [
+   "P01"
+  ],
+  "via": [
+   "topic «Эксперименты 10 всё»"
+  ],
+  "controls": 2,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/sheet_Эксперименты"
+ },
+ {
+  "name": "Выйти из аккаунта?",
+  "kind": "Диалог подтверждения",
+  "from": [
+   "K01"
+  ],
+  "via": [
+   "logout «Выйти»"
+  ],
+  "controls": 2,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/dialog_Выйти_из_аккаунта_"
+ },
+ {
+  "name": "Отклонить заявку?",
+  "kind": "Диалог подтверждения",
+  "from": [
+   "N01"
+  ],
+  "via": [
+   "cRequestDecision «Отклонить»"
+  ],
+  "controls": 2,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/dialog_Отклонить_заявку_"
+ },
+ {
+  "name": "Отозвать все доступы?",
+  "kind": "Диалог подтверждения",
+  "from": [
+   "P02",
+   "P04"
+  ],
+  "via": [
+   "revokeAll «Отозвать все доступы»"
+  ],
+  "controls": 2,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/dialog_Отозвать_все_доступы_"
+ },
+ {
+  "name": "Отозвать доступ у Kai?",
+  "kind": "Диалог подтверждения",
+  "from": [
+   "P07"
+  ],
+  "via": [
+   "revoke «Отозвать»"
+  ],
+  "controls": 2,
+  "personas": [
+   "full",
+   "pair-couple"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/dialog_Отозвать_доступ_у_Kai_"
+ },
+ {
+  "name": "Отозвать доступ у Mia?",
+  "kind": "Диалог подтверждения",
+  "from": [
+   "P07"
+  ],
+  "via": [
+   "revoke «Отозвать»"
+  ],
+  "controls": 2,
+  "personas": [
+   "full",
+   "pair-couple"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/dialog_Отозвать_доступ_у_Mia_"
+ },
+ {
+  "name": "Отозвать заявку?",
+  "kind": "Диалог подтверждения",
+  "from": [
+   "E03"
+  ],
+  "via": [
+   "withdrawApp «Отозвать заявку»"
+  ],
+  "controls": 2,
+  "personas": [
+   "full",
+   "pair-couple"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/dialog_Отозвать_заявку_"
+ },
+ {
+  "name": "Разъединить пару?",
+  "kind": "Диалог подтверждения",
+  "from": [
+   "Q06"
+  ],
+  "via": [
+   "v6PairUnlink «Разъединить»"
+  ],
+  "controls": 2,
+  "personas": [
+   "full",
+   "new",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "statusLabel": "краулер: все кнопки нажаты",
+  "issues": [],
+  "shot": "ovl/full/dialog_Разъединить_пару_"
+ }
+]

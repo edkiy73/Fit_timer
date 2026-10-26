@@ -1,0 +1,686 @@
+[
+ {
+  "type": "screen",
+  "id": "D03",
+  "name": "Люди → Подборка",
+  "opened_by": "Док «Люди»",
+  "personas": [
+   "full",
+   "pair-me",
+   "pair-couple",
+   "new"
+  ],
+  "status": "checked",
+  "notes": "Свайпы мышью и touch (CDP) вправо/влево, короткий жест возвращает карточку, флик по скорости, стрелки ←/→, кнопки, тап-зоны фото, прокрутка карточки (полный профиль внутри), ключ доступа (pending/granted — прокрутка к приватной части).",
+  "issues": [
+   "PPL-002",
+   "PPL-003",
+   "PPL-005",
+   "PPL-007",
+   "PPL-015"
+  ]
+ },
+ {
+  "type": "state",
+  "id": "D03-tip",
+  "name": "Подсказка свайпа",
+  "opened_by": "Первый вход в Люди на touch",
+  "personas": [
+   "full"
+  ],
+  "status": "checked",
+  "notes": "Один раз за сессию, 2.6 с; перекрывает метки карточки.",
+  "issues": [
+   "PPL-007"
+  ]
+ },
+ {
+  "type": "state",
+  "id": "D03-undo",
+  "name": "Вернуть анкету: бесплатно 1 раз → Premium, с Premium",
+  "opened_by": "Кнопка undo",
+  "personas": [
+   "full"
+  ],
+  "status": "checked",
+  "notes": "После совпадения undo заблокирован навсегда.",
+  "issues": [
+   "PPL-002",
+   "PPL-016"
+  ]
+ },
+ {
+  "type": "popup",
+  "id": "sheet:Premium(undo)",
+  "name": "Окно Premium (возврат анкеты)",
+  "opened_by": "Вторая отмена без Premium",
+  "personas": [
+   "full"
+  ],
+  "status": "checked",
+  "notes": "",
+  "issues": [
+   "PPL-016"
+  ]
+ },
+ {
+  "type": "state",
+  "id": "D01",
+  "name": "Знакомства выключены (Я)",
+  "opened_by": "QA !datingOff / Я → Видимость → Выключены",
+  "personas": [
+   "full",
+   "new"
+  ],
+  "status": "checked",
+  "notes": "«Смотреть незаметно», «Смотреть и показываться» работают.",
+  "issues": []
+ },
+ {
+  "type": "state",
+  "id": "D01-couple",
+  "name": "Знакомства пары выключены",
+  "opened_by": "Мы, режим «Выключены»",
+  "personas": [
+   "pair-couple"
+  ],
+  "status": "checked",
+  "notes": "Ведёт в Q01 с другим переключателем.",
+  "issues": [
+   "PPL-009"
+  ]
+ },
+ {
+  "type": "state",
+  "id": "D10",
+  "name": "Анкеты закончились",
+  "opened_by": "Пролистать всех / фильтры / QA !deckEnd",
+  "personas": [
+   "full"
+  ],
+  "status": "checked",
+  "notes": "",
+  "issues": [
+   "PPL-013"
+  ]
+ },
+ {
+  "type": "state",
+  "id": "D11",
+  "name": "Знакомства: Скоро (админка)",
+  "opened_by": "QA «Знакомства в админке: Скоро»",
+  "personas": [
+   "full"
+  ],
+  "status": "checked",
+  "notes": "Вкладка Люди пропадает из дока.",
+  "issues": [
+   "PPL-008"
+  ]
+ },
+ {
+  "type": "screen",
+  "id": "D06",
+  "name": "Симпатии: Тебе / Твои",
+  "opened_by": "Люди → Симпатии",
+  "personas": [
+   "full",
+   "pair-me",
+   "pair-couple",
+   "new"
+  ],
+  "status": "checked",
+  "notes": "Ответить (кнопка и свайп touch вправо), убрать (кнопка и свайп мышью влево), «Отменить» в тосте, тап открывает профиль, «Твои» → отменить симпатию с undo; бейдж дока = счётчик вкладки = длина списка (4→3→2).",
+  "issues": [
+   "PPL-014"
+  ]
+ },
+ {
+  "type": "state",
+  "id": "D08",
+  "name": "Это взаимно (человек, пара, от пары)",
+  "opened_by": "Взаимная симпатия; QA !match",
+  "personas": [
+   "full",
+   "pair-me",
+   "pair-couple"
+  ],
+  "status": "checked",
+  "notes": "«Написать сообщение» → H02 нужного профиля; «Смотреть дальше»; Esc.",
+  "issues": [
+   "PPL-005",
+   "PPL-006",
+   "PPL-017",
+   "PRF-030"
+  ]
+ },
+ {
+  "type": "screen",
+  "id": "H01-mutual",
+  "name": "Взаимные контакты",
+  "opened_by": "QA H01 chats",
+  "personas": [
+   "full"
+  ],
+  "status": "partial",
+  "notes": "Список чатов — раздел чатов; проверено только наличие строк после совпадения.",
+  "issues": []
+ },
+ {
+  "type": "popup",
+  "id": "sheet:Фильтры знакомств",
+  "name": "D04 Фильтры знакомств",
+  "opened_by": "Кнопка фильтров в Подборке; QA D04",
+  "personas": [
+   "full",
+   "pair-me",
+   "pair-couple"
+  ],
+  "status": "checked",
+  "notes": "Где искать (Везде/Город/Рядом), радиус, Кого показывать, возраст (клавиатура, мышь, touch), все 6 подсписков, поиск в списке, «Готово · N», ✕ у строк, Сбросить, Показать · N = длина подборки, «Применить всё равно», бейдж на кнопке.",
+  "issues": [
+   "PPL-001",
+   "PPL-004",
+   "PPL-012"
+  ]
+ },
+ {
+  "type": "popup",
+  "id": "sheet:Город",
+  "name": "Выбор города из фильтров",
+  "opened_by": "Фильтры → Город",
+  "personas": [
+   "full"
+  ],
+  "status": "checked",
+  "notes": "Выбор возвращает к фильтрам; Esc закрывает всё.",
+  "issues": [
+   "PPL-004"
+  ]
+ },
+ {
+  "type": "popup",
+  "id": "sheet:Гендер/…/Интересы",
+  "name": "Подсписки фильтров",
+  "opened_by": "Фильтры → строка",
+  "personas": [
+   "full"
+  ],
+  "status": "checked",
+  "notes": "",
+  "issues": [
+   "PPL-004"
+  ]
+ },
+ {
+  "type": "screen",
+  "id": "D09",
+  "name": "Недавно просмотренные",
+  "opened_by": "Кнопка истории в Подборке",
+  "personas": [
+   "full",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Все/Пропущенные/Симпатии, блок без Premium, лист Premium, с Premium: возврат пропущенного, открытие лайкнутого.",
+  "issues": [
+   "PPL-010",
+   "PPL-011"
+  ]
+ },
+ {
+  "type": "screen",
+  "id": "P01",
+  "name": "Чужой профиль",
+  "opened_by": "Карточка → Полный профиль; QA",
+  "personas": [
+   "full",
+   "pair-me",
+   "pair-couple"
+  ],
+  "status": "checked",
+  "notes": "Mia, Maya, Eva и Tom, Eva, Tom, Lena и Max, Kira, Ari, Zoe, Kai, Leon, Noa, Sofi, Dan(блок), Mark, Ren, Vera, Oli, Ira, Nika и Jonas, Lena, Max — шапка, действия, блоки, вкладки, 390/320/1440.",
+  "issues": [
+   "PRF-004",
+   "PRF-005",
+   "PRF-006",
+   "PRF-007",
+   "PRF-012",
+   "PRF-020",
+   "PRF-023",
+   "PRF-024",
+   "PRF-029"
+  ]
+ },
+ {
+  "type": "control",
+  "id": "P01 follow",
+  "name": "Подписаться/отписаться (Я и Мы)",
+  "opened_by": "Кнопка в профиле и на карточке",
+  "personas": [
+   "full",
+   "pair-me",
+   "pair-couple"
+  ],
+  "status": "checked",
+  "notes": "",
+  "issues": [
+   "PRF-002",
+   "PPL-003"
+  ]
+ },
+ {
+  "type": "control",
+  "id": "P01 like",
+  "name": "Нравится из профиля (Я, Мы, знакомства выкл.)",
+  "opened_by": "Кнопка «Нравится» / «Нравится от пары»",
+  "personas": [
+   "full",
+   "pair-me",
+   "pair-couple"
+  ],
+  "status": "checked",
+  "notes": "R04-лист при выключенных знакомствах, «Отправлено» → отмена.",
+  "issues": [
+   "PRF-003"
+  ]
+ },
+ {
+  "type": "popup",
+  "id": "sheet:R04",
+  "name": "Симпатия из профиля",
+  "opened_by": "Нравится при выключенных знакомствах",
+  "personas": [
+   "full"
+  ],
+  "status": "checked",
+  "notes": "",
+  "issues": []
+ },
+ {
+  "type": "popup",
+  "id": "sheet:profileMenu",
+  "name": "Меню ⋯ профиля",
+  "opened_by": "⋯ в шапке профиля",
+  "personas": [
+   "full",
+   "pair-me",
+   "pair-couple"
+  ],
+  "status": "checked",
+  "notes": "Скопировать ссылку, Связь/Указать связь/Предлагает связь, Прекратить общение, Подарить Premium, Пожаловаться, Заблокировать. Пункта «Скрыть» в меню нет.",
+  "issues": [
+   "PRF-014",
+   "PRF-015"
+  ]
+ },
+ {
+  "type": "popup",
+  "id": "sheet:Подарить Premium",
+  "name": "Подарок Premium",
+  "opened_by": "⋯ → Подарить Premium",
+  "personas": [
+   "full"
+  ],
+  "status": "partial",
+  "notes": "Открыт, контролы на месте; оплату не проводил (покупка).",
+  "issues": []
+ },
+ {
+  "type": "popup",
+  "id": "sheet:Пожаловаться",
+  "name": "Жалоба",
+  "opened_by": "⋯ → Пожаловаться",
+  "personas": [
+   "full"
+  ],
+  "status": "checked",
+  "notes": "Без причины — ошибка, с причиной и «Также заблокировать» выкл.",
+  "issues": []
+ },
+ {
+  "type": "popup",
+  "id": "sheet:Прекратить общение",
+  "name": "Прекратить общение",
+  "opened_by": "⋯ → Прекратить общение",
+  "personas": [
+   "full"
+  ],
+  "status": "partial",
+  "notes": "Открыт; подтверждение не нажимал (относится к чатам).",
+  "issues": []
+ },
+ {
+  "type": "popup",
+  "id": "dialog:Заблокировать",
+  "name": "Блок (Я, Я в паре, Мы)",
+  "opened_by": "⋯ → Заблокировать",
+  "personas": [
+   "full",
+   "pair-me",
+   "pair-couple"
+  ],
+  "status": "checked",
+  "notes": "",
+  "issues": [
+   "PRF-001"
+  ]
+ },
+ {
+  "type": "scenario",
+  "id": "block-e2e",
+  "name": "Блок → исчезает → разблокировать в P12",
+  "opened_by": "Профиль ⋯ → Настройки → Заблокированные",
+  "personas": [
+   "pair-me",
+   "pair-couple"
+  ],
+  "status": "checked",
+  "notes": "Блок задевает другой профиль.",
+  "issues": [
+   "PRF-001",
+   "PRF-022"
+  ]
+ },
+ {
+  "type": "screen",
+  "id": "P12",
+  "name": "Заблокированные",
+  "opened_by": "Настройки → Заблокированные",
+  "personas": [
+   "pair-me",
+   "pair-couple"
+  ],
+  "status": "checked",
+  "notes": "«И для пары / И для меня», разблокировка.",
+  "issues": [
+   "PRF-022"
+  ]
+ },
+ {
+  "type": "screen",
+  "id": "P10",
+  "name": "Подписчики/подписки чужого профиля",
+  "opened_by": "Счётчики в шапке",
+  "personas": [
+   "full",
+   "pair-me",
+   "pair-couple"
+  ],
+  "status": "checked",
+  "notes": "Отписка/подписка в строке + отмена.",
+  "issues": [
+   "PRF-021",
+   "PRF-002"
+  ]
+ },
+ {
+  "type": "screen",
+  "id": "P20",
+  "name": "Галерея чужого профиля",
+  "opened_by": "«Все · N» в блоке Галерея",
+  "personas": [
+   "full"
+  ],
+  "status": "checked",
+  "notes": "Альбомы, открытие публикации.",
+  "issues": [
+   "PRF-028"
+  ]
+ },
+ {
+  "type": "popup",
+  "id": "sheet:topic",
+  "name": "Лист темы (openTopic) в чужом профиле и P05",
+  "opened_by": "Тап по интересу",
+  "personas": [
+   "full",
+   "pair-me",
+   "pair-couple"
+  ],
+  "status": "checked",
+  "notes": "Я и Мы: «Изменить у себя / у пары».",
+  "issues": [
+   "PRF-011"
+  ]
+ },
+ {
+  "type": "screen",
+  "id": "P05",
+  "name": "Что у вас общего: Mia, Zoe, Mark, Ira, Ren, Vera, Oli, Eva и Tom",
+  "opened_by": "Блок «Есть темы для разговора»; QA",
+  "personas": [
+   "full",
+   "pair-couple"
+  ],
+  "status": "checked",
+  "notes": "Я и Мы.",
+  "issues": [
+   "PRF-011",
+   "PRF-027",
+   "PPL-005",
+   "PPL-006"
+  ]
+ },
+ {
+  "type": "popup",
+  "id": "sheet:Запросить приватную часть",
+  "name": "Запрос доступа (!req)",
+  "opened_by": "Вуаль → Запросить доступ; ключ в подборке",
+  "personas": [
+   "full",
+   "pair-me",
+   "pair-couple"
+  ],
+  "status": "checked",
+  "notes": "Чипы, отправка неактивна без выбора, лимит, «Доступ для Alex и Kira» в Мы. Сообщение в запросе не предусмотрено (по дизайну).",
+  "issues": []
+ },
+ {
+  "type": "popup",
+  "id": "sheet:Запрос уже отправлен",
+  "name": "Повторный тап по запросу",
+  "opened_by": "Ключ в подборке при ожидании",
+  "personas": [
+   "full"
+  ],
+  "status": "checked",
+  "notes": "Отменить запрос, Все мои запросы → P07.",
+  "issues": [
+   "PRF-017"
+  ]
+ },
+ {
+  "type": "popup",
+  "id": "sheet:Запросы на сегодня закончились",
+  "name": "Лимит запросов",
+  "opened_by": "QA !limit",
+  "personas": [
+   "full"
+  ],
+  "status": "checked",
+  "notes": "",
+  "issues": []
+ },
+ {
+  "type": "screen",
+  "id": "P07",
+  "name": "Доступы: Открыто мной / Открыто мне / Мои запросы",
+  "opened_by": "QA; «Все мои запросы»",
+  "personas": [
+   "full",
+   "pair-couple",
+   "pair-me"
+  ],
+  "status": "checked",
+  "notes": "Фильтр «Ждут ответа», отмена, изменить, отозвать.",
+  "issues": [
+   "PRF-009",
+   "PRF-010",
+   "PRF-016",
+   "PRF-018"
+  ]
+ },
+ {
+  "type": "popup",
+  "id": "sheet:Открыть доступ",
+  "name": "Решение «Что открыть»",
+  "opened_by": "Я → Приватное → Открыть доступ; QA !grant",
+  "personas": [
+   "full",
+   "pair-couple"
+  ],
+  "status": "checked",
+  "notes": "Скоупы, срок 24ч/7д/без срока, сводка, пустой выбор; Мы — «партнёр увидит».",
+  "issues": [
+   "PRF-019"
+  ]
+ },
+ {
+  "type": "popup",
+  "id": "sheet:Доступ для …",
+  "name": "Сузить доступ",
+  "opened_by": "P07 → Изменить",
+  "personas": [
+   "full"
+  ],
+  "status": "checked",
+  "notes": "",
+  "issues": [
+   "PRF-016"
+  ]
+ },
+ {
+  "type": "popup",
+  "id": "dialog:Отозвать доступ",
+  "name": "Отзыв доступа",
+  "opened_by": "P07 → Отозвать",
+  "personas": [
+   "full"
+  ],
+  "status": "checked",
+  "notes": "",
+  "issues": []
+ },
+ {
+  "type": "screen",
+  "id": "P08",
+  "name": "Открытый мне профиль",
+  "opened_by": "P07 → Открыто мне; QA",
+  "personas": [
+   "full"
+  ],
+  "status": "checked",
+  "notes": "Просмотр приватных фото с водяным знаком.",
+  "issues": [
+   "PRF-007",
+   "PRF-008"
+  ]
+ },
+ {
+  "type": "state",
+  "id": "expiry/re-ask",
+  "name": "Истёк / решили не открывать / 30 дней",
+  "opened_by": "P07 Мои запросы",
+  "personas": [
+   "full"
+  ],
+  "status": "partial",
+  "notes": "Видно только в P07; на профилях Ari/Leon недостижимо (нет приватной части).",
+  "issues": [
+   "PRF-018"
+  ]
+ },
+ {
+  "type": "scenario",
+  "id": "qaAuto",
+  "name": "QA «Мои запросы → Одобрять сразу»",
+  "opened_by": "QA-панель",
+  "personas": [
+   "full"
+  ],
+  "status": "checked",
+  "notes": "По умолчанию включено: все симпатии взаимны, запросы одобряются через 1.2 с; проверено и с «Ждать ответа».",
+  "issues": []
+ },
+ {
+  "type": "screen",
+  "id": "P21",
+  "name": "Мои связи / Связи пары",
+  "opened_by": "⋯ → Предлагает связь; QA",
+  "personas": [
+   "full",
+   "pair-couple"
+  ],
+  "status": "checked",
+  "notes": "Подтвердить/отклонить входящее, удалить, меню связи.",
+  "issues": [
+   "PRF-025",
+   "PRF-026"
+  ]
+ },
+ {
+  "type": "screen",
+  "id": "P22",
+  "name": "Новая связь",
+  "opened_by": "⋯ → Указать связь",
+  "personas": [
+   "full",
+   "pair-couple"
+  ],
+  "status": "checked",
+  "notes": "Вид связи, роль (ошибка без роли), видимость, отправка; QA Подтвердить/Отказать.",
+  "issues": [
+   "PRF-026"
+  ]
+ },
+ {
+  "type": "popup",
+  "id": "sheet:Связь (linkMenu)",
+  "name": "Меню подтверждённой связи",
+  "opened_by": "P21 → строка",
+  "personas": [
+   "full"
+  ],
+  "status": "checked",
+  "notes": "Открыть профиль, изменить, кто видит, удалить (диалог).",
+  "issues": []
+ },
+ {
+  "type": "state",
+  "id": "responsive",
+  "name": "320 и 1440",
+  "opened_by": "Viewport",
+  "personas": [
+   "pair-me",
+   "pair-couple"
+  ],
+  "status": "checked",
+  "notes": "D03, Симпатии, D04, P01 (Mia, Eva и Tom, в Мы), P05, P07, D09, меню, «Это взаимно».",
+  "issues": [
+   "PRF-005",
+   "PRF-010",
+   "PRF-006"
+  ]
+ },
+ {
+  "type": "state",
+  "id": "dark",
+  "name": "Тёмная тема",
+  "opened_by": "—",
+  "personas": [],
+  "status": "not-checked",
+  "notes": "Не проверял в этом разделе.",
+  "issues": []
+ },
+ {
+  "type": "state",
+  "id": "en",
+  "name": "Английский",
+  "opened_by": "—",
+  "personas": [],
+  "status": "not-checked",
+  "notes": "Не проверял в этом разделе.",
+  "issues": []
+ }
+]
