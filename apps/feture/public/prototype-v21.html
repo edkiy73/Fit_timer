@@ -8547,11 +8547,12 @@ function proposalTitle21(q,named){const was=S.pair?.profile||{},now=q?.text||{},
  const who=named?esc(pname(q.by)):L('Партнёр','Your partner');
  return vis&&!prof?L(`${who} предлагает изменить видимость пары`,`${who} proposes a change to the couple’s visibility`):vis?L(`${who} предлагает изменения профиля и видимости`,`${who} proposes profile and visibility changes`):L(`${who} предлагает изменения профиля`,`${who} proposes profile changes`);}
 /* V21 (CPL-017): word-level difference of two texts (LCS over words), escaped */
-function wordDiff21(a,b){const A=a.split(/(\s+)/).filter(Boolean),B=b.split(/(\s+)/).filter(Boolean);if(A.length*B.length>90000)return `<del>${esc(a)}</del> <ins>${esc(b)}</ins>`;
- const n=A.length,m=B.length,T=Array.from({length:n+1},()=>new Uint16Array(m+1));for(let i=n-1;i>=0;i--)for(let j=m-1;j>=0;j--)T[i][j]=A[i]===B[j]?T[i+1][j+1]+1:Math.max(T[i+1][j],T[i][j+1]);
- let i=0,j=0,out='';const put=(tag,w)=>{out+=/^\s+$/.test(w)?w:tag?`<${tag}>${esc(w)}</${tag}>`:esc(w);};
+function wordDiff21(a,b){const A=a.split(/\s+/).filter(Boolean),B=b.split(/\s+/).filter(Boolean),n=A.length,m=B.length;if(n*m>90000)return `<del>${esc(a)}</del> <ins>${esc(b)}</ins>`;
+ const T=Array.from({length:n+1},()=>new Uint16Array(m+1));for(let i=n-1;i>=0;i--)for(let j=m-1;j>=0;j--)T[i][j]=A[i]===B[j]?T[i+1][j+1]+1:Math.max(T[i+1][j],T[i][j+1]);
+ const ops=[];const put=(k,w)=>{const l=ops[ops.length-1];if(l&&l[0]===k)l[1].push(w);else ops.push([k,[w]]);};let i=0,j=0;
  while(i<n&&j<m){if(A[i]===B[j]){put('',A[i]);i++;j++;}else if(T[i+1][j]>=T[i][j+1])put('del',A[i++]);else put('ins',B[j++]);}
- while(i<n)put('del',A[i++]);while(j<m)put('ins',B[j++]);return out.replace(/<\/del>(\s*)<del>/g,'$1').replace(/<\/ins>(\s*)<ins>/g,'$1');}
+ while(i<n)put('del',A[i++]);while(j<m)put('ins',B[j++]);
+ return ops.map(([k,w])=>k?`<${k}>${esc(w.join(' '))}</${k}>`:esc(w.join(' '))).join(' ');}
 /* ==== V21 · couple · JS end ==== */
 /* · */
 /* · */
