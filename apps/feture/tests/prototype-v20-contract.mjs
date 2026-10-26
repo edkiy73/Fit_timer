@@ -1,16 +1,18 @@
-/* V20 keeps every V14 rule: the V14 contract (which itself runs the V13 contract) runs against the V20 file, with the dating mode
-   read as the app mode (S.datingActor → S.actor), then the V18 and V19 rules, then the V20 checks — the switcher, profile photos,
-   gallery uploads that are not feed posts, select mode. */
+/* V20 keeps every rule of V19 with the owner's #1270 decisions (V13, V14, V18, V19 contracts), then checks the V20 fixes. */
+/* V19 keeps every V14 rule: the V14 contract (which itself runs the V13 contract) runs against the V19 file, with the dating mode
+   read as the app mode (S.datingActor → S.actor), then the V19 checks — one «Я / Мы» mode, switched on the avatar in the dock. */
 import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import { pathToFileURL } from 'node:url';
 const base=fs.readFileSync(new URL('./prototype-v14-contract.mjs',import.meta.url),'utf8');
 const swap=(s,a,b)=>{if(!s.includes(a))throw new Error('V14 contract changed: '+a);return s.replace(a,b);};
 let src=swap(base,"new URL('../public/prototype-v14.html',import.meta.url).href",JSON.stringify(new URL('../public/prototype-v20.html',import.meta.url).href));
 src=swap(src,"new URL('./prototype-v13-contract.mjs',import.meta.url)",'new URL('+JSON.stringify(new URL('./prototype-v13-contract.mjs',import.meta.url).href)+')');
 src=swap(src,"src+=`\n// ---- V14 ----","src=swap(src,\"assert.ok(run(\\\"profGo('couple')\\\").includes('data-go=\\\"P03\\\"'))\",\"assert.ok(run(\\\"profGo('couple')\\\").includes('data-v=\\\"couple\\\"'),'V17: my couple opens the profile tab, not a preview')\");\nsrc+=`\n// ---- V14 ----");
-/* V20 (with #1270): no author pickers — the dock is the switch; the composer and reply bars name the author in a read-only line */
-src=swap(src,"includes('author-picker v14 full'),'V14: the author is named in words above the text'","includes('as-line full'),'V20: the composer names the author in a read-only line, no picker'");
-src=swap(src,"text(f07).includes('Опубликовать как')&&text(f07).includes('Мы')","text(f07).includes('Публикуется от')&&text(f07).includes('Alex')");
-src=swap(src,"assert.ok(run(\"SC.P01.render(cur().p,cur())\").includes('class=\"p-author\"'),'profile actions say who acts')","assert.ok(!run(\"SC.P01.render(cur().p,cur())\").includes('class=\"p-author\"'),'V20: no author switch beside profile actions — the buttons name the author')");
+/* Owner revision: action text names the author; no avatar/picker beside actions. */
+src=swap(src,"includes('author-picker v14 full'),'V14: the author is named in words above the text'","includes('publishNow'),'V19: the publish action remains without a duplicate author picker'");
+src=swap(src,"text(f07).includes('Опубликовать как')&&text(f07).includes('Мы')","text(f07).includes('Опубликовать от пары')&&!f07.includes('data-author-picker')");
+src=swap(src,"assert.ok(run(\"SC.P01.render(cur().p,cur())\").includes('class=\"p-author\"'),'profile actions say who acts')","assert.ok(!run(\"SC.P01.render(cur().p,cur())\").includes('class=\"p-author\"'),'V19: no author avatar beside profile actions')");
+/* V20: «Что у вас общего», a grant page and access asked from a profile follow the dock — not the actor saved in the route */
+{const A="assert.equal(run(\"compareActor('kira')\"),'me');",B="assert.equal(run(\"compareActor('kira')\"),'couple','V20: compare follows the dock, not the route');";src=swap(src,"src+=`\n// ---- V14 ----","src=swap(src,"+JSON.stringify(A)+","+JSON.stringify(B)+");\nsrc+=`\n// ---- V14 ----");}
 /* V19: the composer takes its author from the one mode, not from a composer-only switch */
 src=swap(src,"S.composeActor='couple';setPairTrust(true)","S.actor='couple';setPairTrust(true)");
 /* V19: the dating mode is the app mode — inside the V14 contract, rename it in the V13 source before it runs */
@@ -20,7 +22,7 @@ src=swap(src,'`\n// ---- V14 ----',`\`
 assert.equal(run("meTabName()"),'Я','the tab is called «Я»');
 prepare('X01');run("S.nav.tab='me';S.nav.stacks.me=[{id:'X01',p:{},f:{}}]");let x=run("SC.X01.render(cur().p,cur())");
 assert.ok(x.includes('data-act="meLayer"')&&!x.includes('profile-page'),'«Я» is one screen with three layers, not a copy of the public profile');
-for(const k of ['media','basics','details','priv'])assert.ok(x.includes('&quot;only&quot;:&quot;'+k+'&quot;')||x.includes('"only":"'+k+'"'),'block '+k+' opens its own short editor');
+for(const k of ['basics','details','priv'])assert.ok(x.includes('&quot;only&quot;:&quot;'+k+'&quot;')||x.includes('"only":"'+k+'"'),'block '+k+' opens its own short editor');
 assert.ok(!x.includes('shareProfile')&&!x.includes('privLens')&&!x.includes('demoNote'),'no share button, no in-page lens, no demo buttons');
 assert.ok(!x.includes('data-go="P07"')&&!x.includes('data-go="Q01"'),'no access or couple-settings shortcuts mixed into the profile layer');
 run("ACT.meLayer({dataset:{v:'vis'}})");x=run("SC.X01.render(cur().p,cur())");
@@ -65,40 +67,67 @@ run("S.actor='couple';coupleProfile().dating=false");assert.ok(run("likeActor('m
 // owned threads act as themselves; viewing the other own profile does not switch the mode
 assert.equal(run("S.nav.stacks.feed.push({id:'H02',p:{id:'kai',actor:'me'},f:{}});actionAuthor()"),'me','a chat thread keeps its own identity');
 run("S.actor='me';ACT.openOwn({dataset:{v:'couple'}})");assert.equal(run("activeActor()"),'me');assert.equal(run("cur().id"),'P03','the couple profile opens read-only, the mode stays «Я»');
+// Media ownership and privacy are stable contracts despite the changing UI.
+prepare('X01');run("initMediaLibrary19('me');initMediaLibrary19('couple')");
+const mediaCount=run("S.myPosts.length");run("initMediaLibrary19('me');initMediaLibrary19('couple')");assert.equal(run("S.myPosts.length"),mediaCount,'opening media again never duplicates posts');
+assert.ok(run("S.me.photos.every(src=>mediaLibrary19('me').some(p=>p.aud==='all'&&realMedia(p).some(m=>m.url===IMG(src))))"),'profile photos reference public posts');
+run("var p19=mediaLibrary19('me').find(p=>p.aud==='all'&&realMedia(p).some(m=>m.type!=='video'));var ref19=mediaRef19(p19,realMedia(p19)[0]);var original19=p19.aud;p19.aud='granted';syncMediaProjection19('me')");
+assert.ok(!run("S.me.profileRefs19.includes(ref19)"),'restricting a post removes its public profile photo');
+assert.equal(run("mediaPreviewAllowed19(p19,{asOther:true})"),false,'closed posts stay out of public previews');
+assert.equal(run("mediaPreviewAllowed19(p19,{asOther:true,grant:'granted'})"),true,'access preview can see a closed post');
+assert.equal(run("mediaPreviewAllowed19({...p19,status:'review'},{asOther:true,grant:'granted'})"),false,'access does not bypass media review');
+assert.ok(run("S.me.media.some(m=>m.id===ref19)"),'private media derives from the same post');
+run("p19.hiddenByPair=true;syncMediaProjection19('me')");assert.ok(!run("S.me.media.some(m=>m.id===ref19)"),'a hidden post disappears from private projections too');
+prepare('X01');run("coupleProfile().photos=[1];coupleProfile().photo=1;initMediaLibrary19('me');initMediaLibrary19('couple');var solo19=JSON.stringify(S.me.photos);var cp19=mediaLibrary19('couple').find(p=>p.aud==='all');var ci19=realMedia(cp19).findIndex(m=>m.type!=='video');S.pairMember='partner';setPairTrust(false);S.pairMember='me';var before19=JSON.stringify(coupleProfile().photos);changeProfileRef19({dataset:{v:cp19.id,i:String(ci19)}},'toggle')");
+assert.equal(run("JSON.stringify(S.me.photos)"),run('solo19'),'couple media changes do not touch solo');
+assert.equal(run("JSON.stringify(coupleProfile().photos)"),run('before19'),'unapproved selection never changes published couple photos');
+assert.equal(run("S.pair.proposal.status"),'pending','the couple photo selection follows partner approval');
+assert.equal(run("authorPicker()"),'','no duplicate picker remains');
+assert.ok(!run("av('couple')").includes('avh'),'one shared avatar per couple');
+for(const screen of ['F07','F09','F05','C06','P02','H02'])assert.equal(run("screenHasDock('"+screen+"')"),true,screen+' keeps global navigation');
+prepare('X01');run("coupleProfile().photos=[1];coupleProfile().photo=1;editableProfile({p:{owner:'couple'}});initMediaLibrary19('couple');var stale19=mediaLibrary19('couple').find(p=>p.aud==='all');stale19.hiddenByPair=true;syncMediaProjection19('couple');S.pair.draft.bio='updated description';markCoupleDraft();submitCoupleDraft();initMediaLibrary19('couple')");
+assert.equal(run("coupleProfile().photos.length"),0,'a pre-library draft cannot resurrect deleted media');
+prepare('X01');run("initMediaLibrary19('me');var reviewed19=mediaLibrary19('me').find(p=>p.aud==='all');var refs19=JSON.stringify(S.me.profileRefs19);reviewed19.status='review';syncMediaProjection19('me')");
+assert.equal(run("JSON.stringify(S.me.profileRefs19)"),run('refs19'),'temporary review preserves photo references');
+run("reviewed19.status='published';syncMediaProjection19('me')");assert.ok(run("S.me.photos.length>0"),'approval restores selected photos');
+prepare('F01');run("var marked19={id:'marked-private',author:'mia',status:'published',aud:'granted',text:{ru:'private',en:'private'},media:[{type:'image',url:'/images/private.jpg'}],tags:[],people:[{p:'kai',st:'ok'}],comments:[],t:Date.now()};S.posts.push(marked19);S.reqOut=[]");
+assert.ok(!run("taggedPosts('kai').some(p=>p.id==='marked-private')"),'photo marks never bypass the post audience');
+prepare('F07');run("SC.F07.render(cur().p,cur());var parent19=cur();parent19.f.text='keep text';parent19.media=[{type:'image',url:'/images/a.jpg'}];var draft19=draftOf(parent19);S.nav.stacks.feed.push({id:'F09',p:{draft:draft19},f:{}});setActor('couple')");
+assert.equal(run("cur().p.draft.author"),'couple','preview follows the dock for a new post');assert.equal(run("parent19.author"),'couple','the parent composer follows too');assert.equal(run("parent19.f.text"),'keep text','switching keeps the draft');assert.equal(run("parent19.media.length"),1,'switching keeps media');
+console.log('PASS V19 media rules in V20: single upload, public selection, private projections, hidden/review gates, separate owners and partner approval');
 // ---- V20 ----
 run("S=freshState('pair');S.session={};initNav();S.nav.tab='me';S.nav.stacks.me=[{id:'X01',p:{},f:{}}];S.actor='me'");
-assert.ok(run("dockHTML()").includes('me-tab'),'the dock tab carries the avatar slot class');
-run("ACT.dockMe()");let sh=run("S.ui.sheet.build().body");assert.equal((sh.match(/class="actor-row"/g)||[]).length,2,'«Действовать как» has two rows');assert.equal((sh.match(/data-act="dockOpenMe"/g)||[]).length,1,'one «Открыть профиль»');
-assert.ok(sh.includes('aria-checked="true"')&&sh.includes('role="menuitemradio"'),'the current profile is checked');
-run("closeSheet(true);ACT.dockOpenMe()");assert.equal(run("activeActor()"),'me','«Открыть профиль» never switches the mode');
-assert.ok(run("av('couple')").includes('av pair'),'a couple without its own photo shows both members');run("coupleProfile().photos=['/images/v10-content/post-p7-morning-coffee-45.webp'];coupleProfile().photo=coupleProfile().photos[0]");assert.ok(!run("av('couple')").includes('avh'),'a couple with a photo shows that photo');run("coupleProfile().photos=[];coupleProfile().photo=null");
-run("S.nav.stacks.feed=[{id:'P01',p:{id:'mia'},f:{}}];S.nav.tab='feed'");assert.equal(run("authorPicker()"),'','no author picker beside actions');run("S.nav.tab='me'");
-// profile photos: rules, live order, review, others' view
-assert.equal(run("JSON.stringify(phRules([{type:'video',url:'v.mp4'},'/images/a.webp'],1).map(x=>typeof x))"),'["string","object"]','a video is never the main item');
-assert.equal(run("phRules([{type:'video',url:'1'},{type:'video',url:'2'},'/images/a.webp'],1).length"),2,'one video per profile');
-run("setMyPhotos(['/images/v10-content/gallery-e1-ropes.webp','/images/v10-content/gallery-e3-club.webp'],{quiet:true})");x=run("SC.X01.render(cur().p,cur())");
-assert.ok(x.includes('id="mePh"')&&x.includes('data-reorder="phLiveOrder"'),'«Я» shows the profile photos and reorders them in place');
-run("ACT.phLiveOrder({dataset:{order:'1,0'}})");assert.equal(run("S.me.photos[0]"),'/images/v10-content/gallery-e3-club.webp','dragging reorders the live profile');assert.equal(run("S.me.photo"),'/images/v10-content/gallery-e3-club.webp','the first photo is the main one');
-assert.equal(run("addToProfile('me',['/images/v10-content/post-p2-rope-details.webp'],{review:true})"),1);assert.ok(run("S.me.phReview.length===1"),'a new profile photo waits for review');
-run("S.nav.stacks.me.push({id:'P03',p:{},f:{}})");assert.ok(!run("photoItems('me').some(x=>x.src.includes('post-p2-rope-details'))"),'others don’t see a photo in review');run("S.nav.stacks.me.pop()");assert.ok(run("photoItems('me').some(x=>x.src.includes('post-p2-rope-details'))"),'the owner sees it at once');
-run("qaApproveAll()");assert.equal(run("S.me.phReview.length"),0,'review approves profile photos');
-// the gallery: own albums, uploads that are not feed posts, the feed only on request
-assert.ok(run("galleryPosts('me').length>0&&albumsOf('me').some(a=>a.id==='me_a0')"),'demo personas have an own gallery with albums');
-x=run("SC.X01.render(cur().p,cur())");assert.ok(x.includes('id="meGal"')&&x.includes('data-act="galOpenAlbum"'),'«Я» shows the gallery with albums');
-{const gal=(x.split('id="meGal"')[1]||'').split('</section>')[0];assert.ok(gal.length>100&&!run("privMedia(S.me).map(privSrc)").some(u=>gal.includes(u)),'private media never show in the gallery block');}
-run("var n0=S.myPosts.length;galDest('me','me_a0',[{type:'image',url:'/images/v10-content/gallery-e4-cafe.webp'},{type:'image',url:'/images/v10-content/post-p9-evening-atmosphere.webp'}]);ACT.gdCommit()");
-assert.equal(run("S.myPosts.length-n0"),2,'each upload is its own gallery item');assert.ok(run("S.myPosts.slice(0,2).every(p=>p.galleryOnly&&p.album==='me_a0'&&p.status==='review')"),'gallery uploads stay out of the feed and are reviewed');
-assert.ok(!run("filterPosts(S.myPosts.slice(0,2),{}).length"),'gallery-only uploads never reach the feed');
-run("galDest('me',null,[{type:'image',url:'/images/v10-content/gallery-e1-ropes.webp'}]);S.ui.gd.feed=true;ACT.gdCommit()");assert.ok(run("!S.myPosts[0].galleryOnly"),'«Также выложить в ленту» makes one feed post');
-run("S.actor='couple';S.pairMember='partner';setPairTrust(false);S.pairMember='me';galDest('couple',null,[{type:'image',url:'/images/v10-content/gallery-e4-cafe.webp'}]);ACT.gdCommit()");
-assert.ok(run("Object.values(jointQueue()).some(q=>q.kind==='post'&&q.status==='pending'&&q.draft.galleryOnly)"),'a couple upload waits for the partner');run("S.actor='me'");
-// select mode on the gallery
-run("S.nav.stacks.me.push({id:'P20',p:{id:'me'},f:{}});ACT.galSel();cur().sel.add('own_me_0');cur().sel.add('own_me_1')");run("SC.P20.render(cur().p,cur())");assert.equal(run("SC.P20.dock"),false,'select mode hides the dock');
-run("ACT.galSelAlbumSet({dataset:{v:'me_a1'}})");assert.ok(run("['own_me_0','own_me_1'].every(id=>S.myPosts.find(p=>p.id===id).album==='me_a1')"),'«В альбом» moves the picked items');
-run("S.me.photos=[realMedia(S.myPosts.find(p=>p.id==='own_me_0'))[0].url];ACT.galSel();cur().sel.add('own_me_0');ACT.galSelAudSet({dataset:{v:'followers'}})");assert.equal(run("S.me.photos.length"),0,'a photo made followers-only leaves the public profile');
-console.log('PASS V20: one switcher (rows, one link, no silent switch), profile photos live on «Я» with review, gallery uploads with albums that are not feed posts, select mode');
+assert.ok(run("av('couple')").includes('av split')&&!run("av('couple')").includes('avh'),'a couple without a photo is one circle split in two halves');
+run("var cpp=coupleProfile().photo;coupleProfile().photo='/images/v10-content/post-p7-morning-coffee-45.webp'");assert.ok(!run("av('couple')").includes('split'),'a couple with a photo shows that photo');run("coupleProfile().photo=cpp");
+assert.ok(run("dockHTML()").includes('me-tab'),'the dock avatar slot carries its class');
+run("ACT.dockMe()");let sh=run("S.ui.sheet.build().body");assert.equal((sh.match(/class="actor-card/g)||[]).length,2,'two profile cards');assert.equal((sh.match(/data-act="dockOpenMe"/g)||[]).length,2,'each card opens its profile');
+run("closeSheet(true);ACT.dockOpenMe({dataset:{v:'couple'}})");assert.equal(run("activeActor()"),'couple','«Перейти в профиль пары» switches to it');assert.equal(run("cur().id"),'X01','and opens it');
+run("S.nav.stacks.me.push({id:'P05',p:{id:'kira',actor:'me'},f:{}})");assert.equal(run("compareActor('kira')"),'couple','«Что у вас общего» follows the dock');run("S.nav.stacks.me.pop();S.actor='me'");
+// profile photos: picked from public posts, one video never first, drag order, review mark
+run("initMediaLibrary19('me')");const n0=run("profItems20('me').length");assert.ok(n0>=1,'the profile shows its photos');
+const pub=run("JSON.stringify(mediaLibrary19('me').filter(p=>p.aud==='all').flatMap(p=>realMedia(p).map(m=>m.url)))"),priv=run("JSON.stringify(privPosts20('me').flatMap(p=>realMedia(p).map(m=>m.url)))");assert.ok(!JSON.parse(priv).some(u=>JSON.parse(pub).includes(u)),'no picture is both public and private');
+assert.ok(run("galleryPosts('me').length>0&&galleryPosts('me').every(p=>p.aud!=='granted')"),'the gallery holds public posts; private ones live in the private part');
+run("var vp={id:'v20vid',author:'me',status:'published',aud:'all',type:'post',t:Date.now(),media:[{type:'video',url:'/v.mp4',dur:5},{type:'video',url:'/w.mp4',dur:5}],text:{ru:'',en:''},tags:[],comments:[],people:[]};S.myPosts.push(vp)");
+assert.equal(run("refRules20('me',[mediaRef19(vp,vp.media[0]),...profItems20('me').map(x=>x.ref)],1).findIndex(r=>r.startsWith('v20vid'))"),1,'a video never stands first');
+assert.equal(run("refRules20('me',[...profItems20('me').map(x=>x.ref),mediaRef19(vp,vp.media[0]),mediaRef19(vp,vp.media[1])],1).filter(r=>r.startsWith('v20vid')).length"),1,'one video per profile');
+run("var np={id:'v20new',author:'me',status:'review',aud:'all',type:'post',galleryOnly:true,t:Date.now(),media:[{type:'image',url:'/images/v10-content/gallery-e4-cafe.webp'}],text:{ru:'',en:''},tags:[],comments:[],people:[]};S.myPosts.unshift(np);addPostToProfile20('me','v20new')");
+assert.ok(run("profItems20('me').some(x=>x.p.id==='v20new')"),'a new upload can go on the profile before review');assert.ok(run("SC.X01.render(cur().p,cur())").includes('ph-rev'),'it is marked «На проверке» for the owner');assert.ok(!run("S.me.photos.some(ph=>String(ph).includes('gallery-e4-cafe'))"),'others don’t see it yet');
+run("ACT.phRefOrder({dataset:{owner:'me',order:profItems20('me').map((x,i)=>i).reverse().join(',')}})");assert.equal(run("profItems20('me')[0].p.id"),'v20new','drag reorders the profile');
+// the post editor: «Показать в ленте» off for profile/gallery uploads
+run("S.nav.stacks.me.push({id:'F07',p:{x:'media',feed:false,aud:'all',toProfile:'me'},f:{}});SC.F07.render(cur().p,cur())");assert.equal(run("cur().feed"),false,'profile uploads start with the feed off');
+assert.ok(run("draftOf(cur()).galleryOnly===true&&draftOf(cur()).toProfile==='me'"),'the draft keeps «not in the feed» and «to the profile»');run("ACT.setFeed()");assert.equal(run("draftOf(cur()).galleryOnly"),false,'the toggle puts it in the feed');run("S.nav.stacks.me.pop()");
+assert.ok(!run("filterPosts([np],{}).length"),'a gallery-only post stays out of the feed');
+// «Я»: same blocks for me and us, albums, no floating hints
+let x20=run("SC.X01.render(cur().p,cur())");assert.ok(x20.includes('id="mePh"')&&x20.includes('id="meGal"')&&x20.includes('data-act="galOpenAlbum"'),'«Я» shows profile photos and gallery albums');
+assert.ok(!x20.includes('Каждая загрузка')&&!x20.includes('без значка — видят все'),'no floating hints');
+run("ACT.meLayer({dataset:{v:'mine'}});S.actor='couple'");x20=run("SC.X01.render(cur().p,cur())");assert.ok(x20.includes('data-go="E10"')&&x20.includes('data-go="G04"'),'the couple has its events and saved');assert.ok(!x20.includes('Здесь только списки'));run("S.actor='me';ACT.meLayer({dataset:{v:'profile'}})");
+// gallery select mode
+run("S.nav.stacks.me.push({id:'P20',p:{id:'me'},f:{}});ACT.galSel();cur().sel.add('own_me_0')");run("SC.P20.render(cur().p,cur())");assert.equal(run("SC.P20.dock"),false,'select mode hides the dock');
+run("ACT.galSelAlbumSet({dataset:{v:'me_a1'}})");assert.equal(run("S.myPosts.find(p=>p.id==='own_me_0').album"),'me_a1','«В альбом» moves the picked posts');
+run("S.actor='me';S.nav.stacks.me.push({id:'P10',p:{id:'me',tab:'followers'},f:{}});setActor('couple')");assert.equal(run("cur().p.id"),'couple','an open own page follows the dock');run("setActor('me');S.nav.stacks.me.pop()");
+console.log('PASS V20: split-circle couple avatar, two profile cards, the mode reaches «Что у вас общего», profile photos from posts (one video, review mark, drag), feed optional for uploads, same «Я» for the couple, select mode');
 console.log('PASS V19 rules in V20: one «Я / Мы» mode in the dock — couple likes, follows, communities and events; event answers ask the partner when approval is on');
 \n// ---- V14 ----`);
 src=src.replace("const tmp=path.join(os.tmpdir(),'feture-v14-contract-'","const tmp=path.join(os.tmpdir(),'feture-v14in20-contract-'");
 const tmp=path.join(os.tmpdir(),'feture-v20-contract-'+process.pid+'.mjs');fs.writeFileSync(tmp,src);
-try{await import(pathToFileURL(tmp).href);}finally{fs.rmSync(tmp,{force:true});}
+try{await import(pathToFileURL(tmp).href);}finally{if(!process.env.KEEP)fs.rmSync(tmp,{force:true});}
