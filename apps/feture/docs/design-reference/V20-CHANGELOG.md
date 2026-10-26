@@ -168,3 +168,4 @@ Not verified: real devices, touch drag on hardware, a live couple on two clients
 - The card that covered the deck («Смахни вправо — нравится, влево — пропустить. Или нажми кнопки внизу.» with «Понятно») is gone.
 - On a phone the tip is now a short notice under the deck tabs: «Вправо — нравится, влево — пропустить». It shows once per session for 2.6 s and never covers the like and pass buttons.
 - On desktop, where you click the buttons, there is no tip.
+- The profile like button reads «Нравится от пары» (the dot between the words is gone). On a narrow phone, «Нравится от пары» and «Подписаться от пары» wrap as «Нравится / от пары» instead of being cut off.
