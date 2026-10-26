@@ -43,7 +43,7 @@ export function mediaHandlers(db, deps) {
       await db.tx(async q => {
         const [m] = await q.query(`select owner_profile_id, uploaded_by, state from feture.media_asset where id = $1`, [id(item)]);
         if (!m || m.state !== 'blocked') return;
-        await q.query(`update feture.account set state = 'suspended', updated_at = now() where id = $1 and state = 'active'`, [m.uploaded_by]);
+        await q.query(`update feture.account set state = 'suspended', suspension_rule = 'csam', updated_at = now() where id = $1 and state = 'active'`, [m.uploaded_by]);
         await q.query(
           `update feture.profile set state = 'suspended', restore_until = null, paused_at = null, updated_at = now()
            where state in ('active', 'paused') and (id = $1 or id = (select person_profile_id from feture.account where id = $2))`,

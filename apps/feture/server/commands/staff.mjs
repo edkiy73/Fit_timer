@@ -15,7 +15,7 @@ const staffProfile = account => account.person_profile_id ?? account.id;
 const PUBLIC_ONLY = new Set(['avatar', 'community', 'event']);
 
 /** @param {Q} q @param {string} accountId @param {string[]} roles @returns {Promise<string[]>} the staff member's roles */
-async function requireStaff(q, accountId, roles) {
+export async function requireStaff(q, accountId, roles) {
   const rows = await q.query(`select role from feture.staff_role where account_id = $1 and revoked_at is null`, [accountId]);
   const mine = rows.map(r => /** @type {string} */ (r.role));
   if (!mine.some(r => roles.includes(r))) fail(403, 'forbidden');
@@ -23,7 +23,7 @@ async function requireStaff(q, accountId, roles) {
 }
 
 /** @param {Q} q @param {string} staff @param {string} action @param {string} targetType @param {string | null} targetId @param {Record<string, unknown>} [detail] */
-async function journal(q, staff, action, targetType, targetId, detail = {}) {
+export async function journal(q, staff, action, targetType, targetId, detail = {}) {
   await q.query(`insert into feture.staff_action (staff_account_id, action, target_type, target_id, detail) values ($1, $2, $3, $4, $5)`,
     [staff, action, targetType, targetId, JSON.stringify(detail)]);
 }
@@ -84,8 +84,13 @@ const run = {
   async 'staff.mediaView'(q, { account, input, cfg }) {
     await requireStaff(q, account.id, REVIEWERS);
     const a = await reviewable(q, account.id, input.assetId);
-    // Staff see content only for what is waiting for them (S4 §3), never blocked material or private media at large.
-    if (a.state !== 'needs_review') fail(409, 'conflict', { state: a.state });
+    // Staff see content only for what is waiting for them (S4 §3): media on review, or media of a post under open
+    // reports or a dispute; never blocked material or private media at large.
+    const [{ inCase }] = await q.query(
+      `select exists (select 1 from feture.media_attachment ma join feture.post p on p.id = ma.target_id
+         where ma.target_type = 'post' and ma.asset_id = $1
+           and (p.disputed_at is not null or exists (select 1 from feture.report r where r.target_type = 'post' and r.target_id = p.id and r.state = 'open'))) "inCase"`, [a.id]);
+    if (a.state === 'blocked' || (a.state !== 'needs_review' && !inCase)) fail(409, 'conflict', { state: a.state });
     await journal(q, account.id, 'media.view', 'media', a.id);
     if (!a.copies_at || !cfg.media.delivery) return { src: null };
     const variants = /** @type {const} */ (['card', 'full']);

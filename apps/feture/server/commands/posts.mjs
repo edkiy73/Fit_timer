@@ -190,21 +190,30 @@ async function doEdit(q, postId, actor, rev, f) {
     || AUD.indexOf(f.audience) > AUD.indexOf(p.audience) || words.added > Math.max(12, Math.ceil(words.total * 0.3)));
   if (major) {
     await q.query(`update feture.post_revision set state = 'superseded', decided_at = now() where post_id = $1 and state = 'review'`, [postId]);
-    const [r] = await q.query(`insert into feture.post_revision (post_id, payload, submitted_by) values ($1, $2, $3) returning id`,
-      [postId, JSON.stringify(f), actor.accountId]);
+    const [r] = await q.query(`insert into feture.post_revision (post_id, payload, submitted_by, base_rev) values ($1, $2, $3, $4) returning id`,
+      [postId, JSON.stringify(f), actor.accountId, p.rev]);
     await enqueue(q, 'moderation.postRevision', actor.profileId, { postId, revisionId: r.id });
     return { state: p.state, revision: r.id, review: true };
   }
+  // A minor edit after a major one replaces it: staff review only the latest wish of the author.
+  await q.query(`update feture.post_revision set state = 'superseded', decided_at = now() where post_id = $1 and state = 'review'`, [postId]);
+  return applyEdit(q, postId, actor, f, oldMedia);
+}
+
+/** Writes an edit over a live post (minor edits, and major ones once staff approved the revision).
+ * @param {Q} q @param {string} postId @param {{profileId: string, accountId: string}} actor @param {any} f @param {string[]} oldMedia */
+export async function applyEdit(q, postId, actor, f, oldMedia) {
   // Reordering the same photos is not a change of photos (no re-asking marked people).
   const mediaChanged = JSON.stringify([...oldMedia].sort()) !== JSON.stringify([...f.mediaIds].sort());
-  await q.query(`update feture.post set type = $2, title = $3, body = $4, in_feed = $5, topics = $6, album_id = $7, rev = rev + 1, edited_at = now(), updated_at = now() where id = $1`,
-    [postId, f.type, f.title ?? null, f.body, f.inFeed, f.topics, f.albumId ?? null]);
+  const [p] = await q.query(
+    `update feture.post set type = $2, title = $3, body = $4, in_feed = $5, topics = $6, album_id = $7, rev = rev + 1, edited_at = now(), updated_at = now()
+     where id = $1 returning state, rev`, [postId, f.type, f.title ?? null, f.body, f.inFeed, f.topics, f.albumId ?? null]);
   if (mediaChanged) await q.query(`update feture.photo_tag set state = 'pending', asked_at = null, decided_at = null where post_id = $1`, [postId]);
   // A dispute («это я на фото») is lifted only by staff (S4), never by an edit.
   await writeParts(q, postId, f, actor, { keepVotes: true });
   await writeMentions(q, 'post', postId, f.body, actor.profileId);
   await announce(q, postId);
-  return { state: p.state, rev: p.rev + 1 };
+  return { state: p.state, rev: p.rev };
 }
 
 registerApprovalKind('post.publish', {
@@ -533,7 +542,7 @@ const run = {
       await q.query(`update feture.photo_tag set state = 'no', decided_at = now() where post_id = $1 and profile_id = $2`, [input.postId, viewer.profileId]);
     } else {
       // «Это я на фото — против публикации»: hidden for everyone at once until staff decide; the objector is not named.
-      await q.query(`update feture.post set disputed_at = coalesce(disputed_at, now()) where id = $1`, [input.postId]);
+      await q.query(`update feture.post set disputed_at = coalesce(disputed_at, now()), disputed_by = coalesce(disputed_by, $2) where id = $1`, [input.postId, viewer.profileId]);
       await enqueue(q, 'moderation.dispute', p.owner_profile_id, { postId: input.postId, by: viewer.profileId });
     }
     await enqueue(q, 'post.disputed', p.owner_profile_id, { postId: input.postId });
@@ -559,7 +568,12 @@ const run = {
     if (ownerProfile === viewer.profileId) fail(422, 'rule_violation', { rule: 'own_content' });
     try {
       const [r] = await q.query(
-        `insert into feture.report (reporter_profile_id, reporter_account, target_type, target_id, target_rev, reason, details) values ($1, $2, $3, $4, $5, $6, $7) returning id`,
+        `insert into feture.report (reporter_profile_id, reporter_account, target_type, target_id, target_rev, reason, details, snapshot)
+         values ($1, $2, $3, $4, $5, $6, $7,
+           case $3 when 'post' then (select jsonb_build_object('title', title, 'body', body, 'audience', audience) from feture.post where id = $4)
+                   when 'reply' then (select jsonb_build_object('body', body) from feture.reply where id = $4)
+                   else (select jsonb_build_object('name', p.name, 'handle', p.handle, 'bio', d.bio) from feture.profile p left join feture.profile_details d on d.profile_id = p.id where p.id = $4) end)
+         returning id`,
         [viewer.profileId, account.id, input.targetType, input.targetId, rev, input.reason, input.details]);
       await enqueue(q, 'moderation.report', ownerProfile, { reportId: r.id, reason: input.reason });
     } catch (error) {
