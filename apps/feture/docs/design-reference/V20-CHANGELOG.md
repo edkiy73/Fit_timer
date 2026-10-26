@@ -181,3 +181,4 @@ Not verified: real devices, touch drag on hardware, a live couple on two clients
 - **Whose it is.** With a couple, «Нужно решить» is split into «Тебе» and «Паре «…»», each with a count. Notifications carry a small «Тебе» or «Паре» tag.
 - **Discover card, bottom corners.** The like/pass bar painted a square backdrop over the card's rounded bottom corners on a phone. It now follows the card's corners.
 - **Ended one-view and disappearing media.** It was one line with a repeated word that wrapped at a «·», inside a pill inside the bubble. Now it is an icon and two short lines: «Фото · один просмотр» / «Уже просмотрено», or «Видео · исчезающее» / «Время вышло». It inherits the bubble's colours, so it reads in light, dark, mine and theirs.
+- **Couple chats hint.** «Переписки от имени пары «Alex и Kira». Их видит и ваш партнёр.» It replaces the longer text with a misaligned icon. The English tab «Couple chats» is «Couple», so it fits at 320 px.
