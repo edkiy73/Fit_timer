@@ -1,17 +1,23 @@
-# Auth / Settings auditor — notes
+# Auth / Settings auditor — notes (status: done)
 
-Scripts: scratchpad `pw/auth/` (u.mjs helpers, chain.mjs = register through UI, sN.mjs scenario scripts,
-fbN.py finding batches → `python3 build.py` writes `work/findings-auth.json`).
+Scripts: scratchpad `pw/auth/` (u.mjs helpers, chain.mjs = register through UI, s1–s28 scenario scripts,
+contrast.mjs = automatic WCAG check, fb1–fb4.py finding batches → `python3 build.py` writes `work/findings-auth.json`,
+cov.py → `work/coverage-auth.json`). Screenshots: `screens/issues/auth/**`.
 
-## Done
-- A01 welcome: slides (bars, swipe mouse+touch, no autoplay under reduced motion), RU/EN, terms sheet, 320/375/390/430/768/1024/1440.
-- A02: validation, limit@, mode switch, lang switch, Enter, Apple/Google sheets in both modes.
-- A03: empty, 000000 ×6 (counter bug), 999999, paste, letters, backspace, resend timer 30 s, change email.
-- A04: nick live check (stale/contradicting), taken list, formats, DOB edge cases, terms row tap, U18 → A04X, back/home.
-- A05: step 1 picks, chip «Все» sheet, partner yes/no, skip; step 2 topics → communities, join/request, card tap leak (pre-session C03/C06/P01).
-- Full chain → first screen (feed filtered by onboarding topics; partner yes → Q01).
+## Result
+48 findings: P1 ×5, P2 ×19, P3 ×24 (AUTH-001…025, SET-001…023).
 
-## Next
-- AUTH: onboarding interests not saved to profile; Q01 «Пара видна в знакомствах»; new-user empty states.
-- A07 age check, V01 photo verification, K01 + all rows (SET-001 ageFromMe), K05/K06/K07, P12, S01, logout.
-- B01 Premium, paywall, limit, gift, premium on/off. MAINT, offline, long/nosp/xss. EN pass, dark pass.
+## Covered
+- A01 welcome (slides, swipe mouse/touch, autoplay, RU/EN, 320–1440), terms sheet.
+- A02/A03/A04/A04X/A05 (both steps)/full registration chain to the first screen, OAuth sheets, U18, back/history.
+- A07 age check (all states), needAge sheet, V01 (send, approve, reject), K01 + every row, K05, K06, K07 + delete,
+  P12 (Я/Мы, «И для пары»), S01 + help sheets, logout.
+- B01 (buy offline/online, cancel, restore), gift (all validation paths), received gift, paywall, limit, Premium on/off undo.
+- Maintenance, offline, long/no-space/hostile texts, EN pass (main tabs + my screens), dark pass with contrast numbers.
+
+## Not checked / notes for the lead
+- D09 history paywall (people section), chip picker limit inside sheet.
+- Cross-cutting (not filed by me, for VIS): dock label «Комьюнити» clipped at 320 px; inactive dock labels contrast
+  2.85:1 light / 3.73:1 dark; desktop sidebar has two buttons to «Я» (nav item + avatar) for a single persona;
+  dock tab is «Комьюнити» while QA/spec call the tab «Сообщества».
+- «Все уведомления» counter did not visibly change after a photo-verification rejection notification (not verified in depth — notifications auditor).

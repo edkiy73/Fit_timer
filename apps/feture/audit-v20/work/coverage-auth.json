@@ -1,0 +1,620 @@
+[
+ {
+  "type": "screen",
+  "id": "A01",
+  "name": "Приветствие",
+  "opened_by": "старт, «На главную», выход",
+  "personas": [
+   "без сессии"
+  ],
+  "status": "checked",
+  "notes": "6 слайдов: полоски, свайп мышью/тачем, автоплей (reduced motion выкл.), RU/EN, 320/375/390/430/768/1024/1440, офлайн, техработы",
+  "issues": [
+   "AUTH-008",
+   "AUTH-009",
+   "AUTH-021",
+   "AUTH-024",
+   "SET-022"
+  ]
+ },
+ {
+  "type": "popup",
+  "id": "terms",
+  "name": "Лист «Условия и приватность»",
+  "opened_by": "A01 «условиями», A04 ссылка в чекбоксе",
+  "personas": [
+   "без сессии"
+  ],
+  "status": "checked",
+  "notes": "Esc, ✕, «Понятно»",
+  "issues": [
+   "AUTH-015",
+   "AUTH-004"
+  ]
+ },
+ {
+  "type": "screen",
+  "id": "A02",
+  "name": "Регистрация / Вход",
+  "opened_by": "A01 кнопки, сегмент",
+  "personas": [
+   "без сессии"
+  ],
+  "status": "checked",
+  "notes": "валидация почты, limit@, Enter, смена режима и языка с сохранением почты, офлайн, 320/1440, dark",
+  "issues": [
+   "AUTH-007",
+   "AUTH-013",
+   "AUTH-021",
+   "SET-017"
+  ]
+ },
+ {
+  "type": "popup",
+  "id": "oauth-apple",
+  "name": "Лист «Вход через Apple»",
+  "opened_by": "A02 «Продолжить с Apple»",
+  "personas": [
+   "без сессии"
+  ],
+  "status": "checked",
+  "notes": "поделиться/скрыть почту, оба режима",
+  "issues": [
+   "AUTH-012"
+  ]
+ },
+ {
+  "type": "popup",
+  "id": "oauth-google",
+  "name": "Лист «Вход через Google»",
+  "opened_by": "A02 «Продолжить с Google»",
+  "personas": [
+   "без сессии"
+  ],
+  "status": "checked",
+  "notes": "существующий аккаунт (вход) и новый (A04) в обоих режимах, офлайн",
+  "issues": [
+   "AUTH-012",
+   "AUTH-013"
+  ]
+ },
+ {
+  "type": "screen",
+  "id": "A03",
+  "name": "Код из письма",
+  "opened_by": "A02 «Получить код»",
+  "personas": [
+   "без сессии"
+  ],
+  "status": "checked",
+  "notes": "пусто, 000000×6, 999999, вставка, буквы, Backspace, таймер 30 с, «Отправить ещё раз», «Изменить адрес», офлайн, 320",
+  "issues": [
+   "AUTH-005",
+   "AUTH-006",
+   "SET-017"
+  ]
+ },
+ {
+  "type": "screen",
+  "id": "A04",
+  "name": "Профиль и дата рождения",
+  "opened_by": "A03 верный код, OAuth новый аккаунт",
+  "personas": [
+   "без сессии"
+  ],
+  "status": "checked",
+  "notes": "ник: alex/kira/форматы/длина; дата: 31.02, будущее, 18 сегодня, U18; условия; «Назад» с данными → диалог; 320/1440, dark, EN",
+  "issues": [
+   "AUTH-001",
+   "AUTH-002",
+   "AUTH-003",
+   "AUTH-004",
+   "AUTH-011",
+   "AUTH-014",
+   "AUTH-025"
+  ]
+ },
+ {
+  "type": "popup",
+  "id": "leave-A04",
+  "name": "Диалог «Выйти без сохранения?»",
+  "opened_by": "A04 «Назад» с введёнными данными",
+  "personas": [
+   "без сессии"
+  ],
+  "status": "checked",
+  "notes": "",
+  "issues": []
+ },
+ {
+  "type": "screen",
+  "id": "A04X",
+  "name": "Младше 18",
+  "opened_by": "A04 с датой <18 лет",
+  "personas": [
+   "без сессии"
+  ],
+  "status": "checked",
+  "notes": "«Дата указана неверно», «На главную», системное «Назад»",
+  "issues": [
+   "AUTH-010",
+   "AUTH-023"
+  ]
+ },
+ {
+  "type": "screen",
+  "id": "A05-1",
+  "name": "Первые шаги: о тебе",
+  "opened_by": "A04 «Дальше»",
+  "personas": [
+   "без сессии"
+  ],
+  "status": "checked",
+  "notes": "партнёр да/нет, все группы чипов, лимит 5, «Сохранить и продолжить», «Заполнить позже», возврат со шага 2",
+  "issues": [
+   "AUTH-014",
+   "AUTH-016"
+  ]
+ },
+ {
+  "type": "popup",
+  "id": "chipAll",
+  "name": "Лист выбора «Все · N» (гендер и др.)",
+  "opened_by": "A05 шаг 1 «Все · 29»",
+  "personas": [
+   "без сессии"
+  ],
+  "status": "partial",
+  "notes": "открыт и закрыт Esc; выбор внутри листа сверх 5 не проверялся",
+  "issues": []
+ },
+ {
+  "type": "screen",
+  "id": "A05-2",
+  "name": "Первые шаги: интересы и сообщества",
+  "opened_by": "A05 шаг 1",
+  "personas": [
+   "без сессии"
+  ],
+  "status": "checked",
+  "notes": "фильтр сообществ по интересам, вступить/отменить, заявка/отозвать, тап по карточке (утечка в C03/C06/P01), «Готово», long/nosp/xss, 1440",
+  "issues": [
+   "AUTH-017",
+   "AUTH-018",
+   "AUTH-022"
+  ]
+ },
+ {
+  "type": "scenario",
+  "id": "REG-E2E",
+  "name": "Полная регистрация до приложения",
+  "opened_by": "A01 → A02 → A03 → A04 → A05.1 → A05.2 → «Готово»",
+  "personas": [
+   "без сессии"
+  ],
+  "status": "checked",
+  "notes": "без партнёра → F01 с фильтрами; с партнёром → Q01; «Назад» после входа → «Выйти из приложения?»; что видно в «Я», Люди, Сообщества, Чаты, Настройки у нового",
+  "issues": [
+   "AUTH-016",
+   "AUTH-017",
+   "AUTH-018",
+   "AUTH-019",
+   "AUTH-020"
+  ]
+ },
+ {
+  "type": "scenario",
+  "id": "QA-restart",
+  "name": "«Начать регистрацию заново» (QA)",
+  "opened_by": "QA-панель",
+  "personas": [
+   "full"
+  ],
+  "status": "checked",
+  "notes": "перезагрузка на A01 persona=new",
+  "issues": []
+ },
+ {
+  "type": "screen",
+  "id": "A07",
+  "name": "Проверка возраста",
+  "opened_by": "лист needAge («Пройти проверку»), QA",
+  "personas": [
+   "new",
+   "full"
+  ],
+  "status": "checked",
+  "notes": "селфи/документ, отказ камеры, загрузка документа, ожидание, успех, уход во время ожидания",
+  "issues": [
+   "SET-002",
+   "SET-003",
+   "SET-004"
+  ]
+ },
+ {
+  "type": "popup",
+  "id": "needAge",
+  "name": "Лист «Нужна проверка возраста»",
+  "opened_by": "QA «Проверка возраста: Обязательна» + «Запросить доступ»",
+  "personas": [
+   "new"
+  ],
+  "status": "checked",
+  "notes": "обычный и «уже идёт»",
+  "issues": [
+   "SET-002",
+   "SET-003"
+  ]
+ },
+ {
+  "type": "screen",
+  "id": "V01",
+  "name": "Фото-верификация",
+  "opened_by": "K01 строка",
+  "personas": [
+   "full",
+   "new"
+  ],
+  "status": "checked",
+  "notes": "нет фото → тост; выбор файла; отправка; автоодобрение; отклонение (QA); уведомление",
+  "issues": [
+   "SET-005"
+  ]
+ },
+ {
+  "type": "screen",
+  "id": "K01",
+  "name": "Настройки",
+  "opened_by": "«Я» → шестерёнка",
+  "personas": [
+   "full",
+   "pair-me",
+   "pair-couple",
+   "new"
+  ],
+  "status": "checked",
+  "notes": "все строки; язык/тема; размытие; Я/Мы; EN; dark; 320/1440; офлайн; nosp",
+  "issues": [
+   "SET-001",
+   "SET-002",
+   "SET-011",
+   "SET-015",
+   "SET-021",
+   "SET-023"
+  ]
+ },
+ {
+  "type": "control",
+  "id": "K01-age",
+  "name": "Строка «Проверка возраста»",
+  "opened_by": "K01",
+  "personas": [
+   "full",
+   "pair-me",
+   "pair-couple",
+   "new"
+  ],
+  "status": "checked",
+  "notes": "мёртвая (no action ageFromMe)",
+  "issues": [
+   "SET-001"
+  ]
+ },
+ {
+  "type": "screen",
+  "id": "K05",
+  "name": "Уведомления",
+  "opened_by": "K01",
+  "personas": [
+   "full"
+  ],
+  "status": "checked",
+  "notes": "режимы, каналы, категории, письма, тихие часы, возврат на экран (состояние сохраняется), офлайн, dark, EN",
+  "issues": [
+   "SET-006",
+   "SET-007",
+   "SET-015"
+  ]
+ },
+ {
+  "type": "screen",
+  "id": "K06",
+  "name": "Вход и безопасность",
+  "opened_by": "K01",
+  "personas": [
+   "full",
+   "new"
+  ],
+  "status": "checked",
+  "notes": "подключить/отвязать Google и Apple, завершить сессию, офлайн",
+  "issues": [
+   "SET-008"
+  ]
+ },
+ {
+  "type": "screen",
+  "id": "K07",
+  "name": "Мои данные и удаление",
+  "opened_by": "K01",
+  "personas": [
+   "full",
+   "pair-couple"
+  ],
+  "status": "checked",
+  "notes": "скачать, удаление: пусто/регистр/пробелы/Enter/Esc/верный ник (full и pair), офлайн",
+  "issues": [
+   "SET-009"
+  ]
+ },
+ {
+  "type": "popup",
+  "id": "del-sheet",
+  "name": "Лист «Удалить аккаунт навсегда?»",
+  "opened_by": "K07 «Удалить аккаунт…»",
+  "personas": [
+   "full",
+   "pair-couple"
+  ],
+  "status": "checked",
+  "notes": "",
+  "issues": [
+   "SET-009"
+  ]
+ },
+ {
+  "type": "screen",
+  "id": "P12",
+  "name": "Заблокированные",
+  "opened_by": "K01",
+  "personas": [
+   "full",
+   "pair-me",
+   "pair-couple"
+  ],
+  "status": "checked",
+  "notes": "разблокировать (диалог, Esc), «И для пары/И для меня», пусто",
+  "issues": []
+ },
+ {
+  "type": "popup",
+  "id": "unblock",
+  "name": "Диалог «Разблокировать …?»",
+  "opened_by": "P12 «Разблокировать»",
+  "personas": [
+   "full"
+  ],
+  "status": "checked",
+  "notes": "",
+  "issues": []
+ },
+ {
+  "type": "screen",
+  "id": "S01",
+  "name": "Помощь и безопасность",
+  "opened_by": "K01",
+  "personas": [
+   "full"
+  ],
+  "status": "checked",
+  "notes": "5 листов помощи",
+  "issues": [
+   "SET-010"
+  ]
+ },
+ {
+  "type": "popup",
+  "id": "help",
+  "name": "Листы помощи (5 шт.)",
+  "opened_by": "S01 строки",
+  "personas": [
+   "full"
+  ],
+  "status": "checked",
+  "notes": "",
+  "issues": [
+   "SET-010"
+  ]
+ },
+ {
+  "type": "popup",
+  "id": "logout",
+  "name": "Диалог «Выйти из аккаунта?»",
+  "opened_by": "K01 «Выйти»",
+  "personas": [
+   "full"
+  ],
+  "status": "checked",
+  "notes": "Esc, клик по фону, подтверждение (онлайн и офлайн) → A01",
+  "issues": []
+ },
+ {
+  "type": "screen",
+  "id": "B01",
+  "name": "Premium",
+  "opened_by": "K01 строка, «Подробнее» в пейволе",
+  "personas": [
+   "full"
+  ],
+  "status": "checked",
+  "notes": "тарифы, покупка (офлайн/онлайн), отмена продления, восстановление, подарок, получение подарка (QA)",
+  "issues": [
+   "SET-012",
+   "SET-013"
+  ]
+ },
+ {
+  "type": "popup",
+  "id": "bBuy",
+  "name": "Лист «Подтверждение» покупки",
+  "opened_by": "B01/пейвол «Оформить»",
+  "personas": [
+   "full"
+  ],
+  "status": "checked",
+  "notes": "",
+  "issues": []
+ },
+ {
+  "type": "popup",
+  "id": "gift",
+  "name": "Лист «Подарить Premium»",
+  "opened_by": "B01 «Подарить Premium другому»",
+  "personas": [
+   "full"
+  ],
+  "status": "checked",
+  "notes": "пусто, себе, нет ника, заблокированный, mia (уже Premium), срок, аноним, guard при закрытии, оплата офлайн/онлайн",
+  "issues": [
+   "SET-013"
+  ]
+ },
+ {
+  "type": "popup",
+  "id": "paywall",
+  "name": "Окно Premium (возврат анкеты)",
+  "opened_by": "QA «Окно Premium»; второй возврат в Discover без Premium",
+  "personas": [
+   "full"
+  ],
+  "status": "checked",
+  "notes": "тариф, «Подробнее», ✕, покупка из окна; 1440 модальное",
+  "issues": [
+   "SET-014"
+  ]
+ },
+ {
+  "type": "popup",
+  "id": "limit",
+  "name": "Лист «Запросы на сегодня закончились»",
+  "opened_by": "QA «Лимит запросов»",
+  "personas": [
+   "full"
+  ],
+  "status": "checked",
+  "notes": "с Premium и без — одинаково",
+  "issues": [
+   "SET-010"
+  ]
+ },
+ {
+  "type": "state",
+  "id": "premium-on-off",
+  "name": "Premium вкл/выкл",
+  "opened_by": "QA «Premium», покупка",
+  "personas": [
+   "full"
+  ],
+  "status": "partial",
+  "notes": "возврат анкеты с Premium и без; история просмотров D09 не проверялась (раздел «Люди»)",
+  "issues": [
+   "SET-012"
+  ]
+ },
+ {
+  "type": "state",
+  "id": "MAINT",
+  "name": "Техработы",
+  "opened_by": "QA «Техработы»",
+  "personas": [
+   "без сессии",
+   "full"
+  ],
+  "status": "checked",
+  "notes": "A01/A02/K07, системное «Назад», прерванный запрос, dark/EN/1440",
+  "issues": [
+   "SET-016"
+  ]
+ },
+ {
+  "type": "state",
+  "id": "offline",
+  "name": "Нет сети",
+  "opened_by": "QA «Сеть: Нет»",
+  "personas": [
+   "без сессии",
+   "full"
+  ],
+  "status": "checked",
+  "notes": "вход, код, A04, «Готово», OAuth, настройки, K06/K07/P12, подарок, оплата, выход",
+  "issues": [
+   "SET-015"
+  ]
+ },
+ {
+  "type": "state",
+  "id": "stress",
+  "name": "Длинные тексты / без пробелов / опасные символы",
+  "opened_by": "QA",
+  "personas": [
+   "full"
+  ],
+  "status": "checked",
+  "notes": "K01, K05, K06, K07, P12, B01, V01, лист удаления, подарок, A05 шаг 2, A01; исполнения скриптов нет",
+  "issues": [
+   "SET-021",
+   "AUTH-022"
+  ]
+ },
+ {
+  "type": "state",
+  "id": "EN",
+  "name": "Английский язык",
+  "opened_by": "QA «Язык: EN» и переключатель на A01/A02",
+  "personas": [
+   "full",
+   "pair-couple",
+   "без сессии"
+  ],
+  "status": "checked",
+  "notes": "все основные вкладки + мои экраны, листы и диалоги; поиск кириллицы и обрезки",
+  "issues": [
+   "SET-019",
+   "SET-020"
+  ]
+ },
+ {
+  "type": "state",
+  "id": "dark",
+  "name": "Тёмная тема",
+  "opened_by": "QA «Тема: Тёмная»",
+  "personas": [
+   "без сессии",
+   "full"
+  ],
+  "status": "checked",
+  "notes": "автоматическая проверка контраста + скриншоты всех моих экранов",
+  "issues": [
+   "SET-017",
+   "SET-018"
+  ]
+ },
+ {
+  "type": "state",
+  "id": "responsive",
+  "name": "320 / 1024 / 1440",
+  "opened_by": "viewport",
+  "personas": [
+   "без сессии",
+   "full"
+  ],
+  "status": "checked",
+  "notes": "A01–A05, K01–K07, P12, S01, B01, V01, A07, пейвол, листы",
+  "issues": [
+   "AUTH-021",
+   "AUTH-025",
+   "SET-019"
+  ]
+ },
+ {
+  "type": "popup",
+  "id": "actor-sheet",
+  "name": "«Действовать как» (EN проверка)",
+  "opened_by": "док «Я» у пары",
+  "personas": [
+   "pair-me"
+  ],
+  "status": "partial",
+  "notes": "проверен только перевод",
+  "issues": []
+ }
+]

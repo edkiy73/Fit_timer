@@ -169,8 +169,8 @@ function buildFilters(){
  chips($('#fPri'),PRI.map(p=>[p,p,ISS.filter(i=>i.priority===p).length]),F.pri);
  chips($('#fCat'),Object.entries(CAT).map(([k,l])=>[k,l,ISS.filter(i=>i.category===k).length]),F.cat);
  chips($('#fStat'),STATUS.map(([k,l])=>[k,l,ISS.filter(i=>stOf(i)===k).length]),F.stat);
- const secs=[...new Set(ISS.map(i=>i.section))].sort((a,b)=>a.localeCompare(b,'ru'));
- chips($('#fSec'),secs.map(s=>[s,s,ISS.filter(i=>i.section===s).length]),F.sec);
+ const secs=[...new Set(ISS.map(i=>i.group||i.section))];
+ chips($('#fSec'),secs.map(s=>[s,s,ISS.filter(i=>(i.group||i.section)===s).length]),F.sec);
 }
 const shotUrl=s=>D.meta.shotBase+s;
 function issueHTML(i){const s=stOf(i);
@@ -196,7 +196,7 @@ function issueHTML(i){const s=stOf(i);
  </div></details>`;}
 function sorted(list){const v=$('#sort').value;const pi=p=>PRI.indexOf(p);
  return [...list].sort((a,b)=>v==='id'?a.id.localeCompare(b.id):v==='sec'?a.section.localeCompare(b.section,'ru')||pi(a.priority)-pi(b.priority):v==='plan'?(a.order??999)-(b.order??999):pi(a.priority)-pi(b.priority)||(a.order??999)-(b.order??999));}
-function match(i){if(F.pri.size&&!F.pri.has(i.priority))return false;if(F.cat.size&&!F.cat.has(i.category))return false;if(F.stat.size&&!F.stat.has(stOf(i)))return false;if(F.sec.size&&!F.sec.has(i.section))return false;
+function match(i){if(F.pri.size&&!F.pri.has(i.priority))return false;if(F.cat.size&&!F.cat.has(i.category))return false;if(F.stat.size&&!F.stat.has(stOf(i)))return false;if(F.sec.size&&!F.sec.has(i.group||i.section))return false;
  if(F.q){const t=[i.id,i.title,i.section,i.component,i.actual,i.fix,i.state,(i.places||[]).join(' '),i.code].join(' ').toLowerCase();return F.q.split(/\s+/).every(w=>t.includes(w));}return true;}
 function render(){const l=sorted(ISS.filter(match));$('#count').textContent=`Показано ${l.length} из ${ISS.length}`;$('#list').innerHTML=l.length?l.map(issueHTML).join(''):'<div class="empty">Нет проблем под эти фильтры.</div>';}
 $('#q').oninput=e=>{F.q=e.target.value.trim().toLowerCase();render();};

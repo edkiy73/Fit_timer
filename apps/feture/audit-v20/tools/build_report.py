@@ -51,6 +51,7 @@ for f in sorted(glob.glob(os.path.join(W, 'findings-*.json'))):
         x['screens'] = [norm_shot(s) for s in x['screens'] if s]
         x.setdefault('section', SRC_LABEL[src] if src in SRC_LABEL else src)
         x['title'] = x.get('title') or first_sentence(x.get('actual'), 110)
+        x['group'] = SRC_LABEL.get(src, src)
         issues.append(x)
 
 # de-duplicate ids
