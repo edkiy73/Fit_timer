@@ -8,6 +8,7 @@ import { timingSafeEqual } from 'node:crypto';
 import { fromPostgres } from '../server/db.mjs';
 import { createFeHandler } from '../server/handler.mjs';
 import { platform } from '../server/commands/platform.mjs';
+import { me } from '../server/commands/me.mjs';
 import { runJobs } from '../server/jobs.mjs';
 import { createR2Storage } from '../server/media/r2.mjs';
 import { createSupabaseStorage } from '../server/media/supabase-storage.mjs';
@@ -60,7 +61,7 @@ const handler = db && createFeHandler({
   db,
   pepper: env.FETURE_ID_PEPPER ?? '',
   cfg: { media: { storage: media.storage, delivery: media.delivery } },
-  commands: { ...platform },
+  commands: { ...platform, ...me },
   authenticate: req => authenticate(req, store),
   quota: async (req, coreKey) => { // coreKey: Core account hash, only for the ephemeral rate-limit key
     // Same budget as /api/domain: per account across devices and IPs, plus a per-IP cap.
