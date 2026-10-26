@@ -25,6 +25,8 @@ import { people } from '../server/commands/people.mjs';
 import { premium } from '../server/commands/premium.mjs';
 import { accounts } from '../server/commands/account.mjs';
 import { runJobs } from '../server/jobs.mjs';
+import { dsa, takeNotice } from '../server/commands/dsa.mjs';
+import { readJson } from '../server/handler.mjs';
 import { createR2Storage } from '../server/media/r2.mjs';
 import { createSupabaseStorage } from '../server/media/supabase-storage.mjs';
 import { signedStorageDelivery, tokenDelivery } from '../server/media/delivery.mjs';
@@ -35,6 +37,7 @@ const { store } = require('../../../packages/core/server/store');
 const { allowedOrigin, rateOkScoped } = require('../../../packages/core/server/util');
 const Supabase = require('../../../packages/core/server/supabase');
 const CorePush = require('../../../packages/core/server/push');
+const CoreMail = require('../../../packages/core/server/mail');
 const { authenticate } = require('../lib/feture/identity');
 
 const env = process.env;
@@ -77,7 +80,7 @@ const handler = db && createFeHandler({
   db,
   pepper: env.FETURE_ID_PEPPER ?? '',
   cfg: { media: { storage: media.storage, delivery: media.delivery } },
-  commands: { ...platform, ...me, ...access, ...couples, ...staff, ...social, ...posts, ...moderation, ...communities, ...events, ...photos, ...discover, ...chats, ...inbox, ...people, ...premium, ...accounts },
+  commands: { ...platform, ...me, ...access, ...couples, ...staff, ...social, ...posts, ...moderation, ...communities, ...events, ...photos, ...discover, ...chats, ...inbox, ...people, ...premium, ...accounts, ...dsa },
   authenticate: req => authenticate(req, store),
   quota: async (req, coreKey) => { // coreKey: Core account hash, only for the ephemeral rate-limit key
     // Same budget as /api/domain: per account across devices and IPs, plus a per-IP cap.
@@ -113,9 +116,24 @@ export default async function fe(/** @type {any} */ req, /** @type {any} */ res)
       // Push goes through Core's FCM/APNs transport once its keys are set; until then nothing is sent.
       const info = CorePush.pushInfo();
       const push = info.android || info.ios ? { send: CorePush.sendToDevice } : null;
-      return json(res, 200, { ok: true, ...(await runJobs(db, { scan, push })) });
+      const mail = CoreMail.mailInfo().ready ? (/** @type {{to: string, subject: string, text: string}} */ m) => CoreMail.sendMail(m) : null;
+      return json(res, 200, { ok: true, ...(await runJobs(db, { scan, push, mail })) });
     } catch {
       return json(res, 503, { ok: false, error: 'unavailable' });
+    }
+  }
+  if (String(req.url || '').includes('notice=1')) {
+    // The public notice form (DSA art. 16): no account needed, a few notices an hour per address.
+    if (cors(req, res)) return;
+    if (req.method !== 'POST') return json(res, 405, { ok: false });
+    if (!db) return json(res, 503, { ok: false, error: 'unavailable' });
+    if (!(await rateOkScoped(req, 'feture-notice-ip', 5, '', 3600, true))) return json(res, 429, { ok: false, error: 'rate_limited' });
+    try {
+      const out = await takeNotice(db, await readJson(req));
+      return json(res, out.status, out.body);
+    } catch (error) {
+      const status = /** @type {any} */ (error)?.status;
+      return json(res, status === 400 || status === 413 ? status : 503, { ok: false, error: status === 413 ? 'too_large' : status === 400 ? 'invalid_input' : 'unavailable' });
     }
   }
   if (handler) return handler(req, res);

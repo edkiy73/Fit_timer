@@ -106,7 +106,7 @@ function header(req, name) {
 }
 
 /** Vercel may hand a parsed body, a string/Buffer, or a stream. @param {Req} req @returns {Promise<Record<string, unknown>>} */
-async function readJson(req) {
+export async function readJson(req) {
   let raw;
   if (req.body && typeof req.body === 'object' && !Buffer.isBuffer(req.body)) raw = JSON.stringify(req.body);
   else if (typeof req.body === 'string' || Buffer.isBuffer(req.body)) raw = String(req.body);
