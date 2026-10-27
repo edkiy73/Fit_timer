@@ -186,10 +186,14 @@ const run = {
 
   async 'saved.list'(q, { acting: a, input }) {
     const acting = need(a);
-    // Items no longer visible are dropped by the feed query that renders them; here only the saved keys per profile.
+    // Only what the viewer may still open: a deleted, hidden or blocked post or event is left out, not linked to a 404.
     const items = await q.query(
-      `select kind, target_id, created_at from feture.saved_item where profile_id = $1 and ($2::text is null or kind = $2) order by created_at desc limit 200`,
-      [acting.profileId, input.kind ?? null]);
+      `select s.kind, s.target_id, s.created_at from feture.saved_item s
+       where s.profile_id = $1 and ($2::text is null or s.kind = $2)
+         and (s.kind not in ('post', 'discussion') or exists (select 1 from feture.post p where p.id::text = s.target_id and feture.post_visible(p, $1, $3)))
+         and (s.kind <> 'event' or exists (select 1 from feture.event e where e.id::text = s.target_id and feture.event_visible(e, $1, $3)))
+       order by s.created_at desc limit 200`,
+      [acting.profileId, input.kind ?? null, acting.accountId]);
     return { items };
   },
 

@@ -260,3 +260,15 @@ test('review fixes: approval bound to the version, disputes need photos and surv
     assert.equal((await db.query(`select count(*)::int n from feture.follow where follower_profile_id = $1 or target_profile_id = $1`, [e]))[0].n, 0);
   } finally { await pg.close(); }
 });
+
+test('saved list keeps only what the viewer may still open', async () => {
+  const { pg, call, person } = await setup();
+  try {
+    const a = await person('ua', 'Alex'), b = await person('ub', 'Kira');
+    const keep = await publish(call, 'ua', a, draft('Остаётся')), gone = await publish(call, 'ua', a, draft('Удалён'));
+    for (const p of [keep, gone]) assert.equal((await call('ub', b, { action: 'saved.set', opId: op(), kind: 'post', targetId: p.id, on: true })).status, 200);
+    assert.equal((await call('ua', a, { action: 'post.delete', opId: op(), postId: gone.id })).status, 200);
+    const list = await call('ub', b, { action: 'saved.list' });
+    assert.deepEqual(list.items.map(i => i.target_id), [keep.id]);
+  } finally { await pg.close(); }
+});
