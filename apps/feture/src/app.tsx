@@ -29,6 +29,7 @@ import { LinksScreen, LinkEditScreen } from './fe/links';
 import { FollowsScreen, GalleryScreen, SearchScreen, TopicScreen } from './fe/browse';
 import { InterestsScreen, InterestsHistoryScreen } from './fe/interests';
 import { StaffScreen } from './fe/staff';
+import { AgeCheckScreen } from './fe/age-check';
 import { FeedTab, PostScreen, ComposeScreen, EditPostScreen } from './fe/feed';
 import { CreateCommunityScreen, EditCommunityScreen } from './fe/create-community';
 import { CreateEventScreen, EditEventScreen } from './fe/create-event';
@@ -301,6 +302,7 @@ export const routes: RouteObject[] = [
         {path:'settings/data', element:<DataScreen />},
         {path:'settings/hidden', element:<HiddenFeedScreen />},
         {path:'settings/blocked', element:<BlockedScreen />},
+        {path:'settings/age', element:<AgeCheckScreen />},
         {path:'chats', element:<ChatsTab />},
         {path:'chats/:id', element:<ChatScreen />},
         {path:'me', element:<MeTab />},

@@ -5,6 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Lock,LockOpen,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {Av,Btn,Empty} from './ui';
+import {AgeCheckLink} from './age-check';
 import {useFe} from './session';
 import {when} from './feed';
 
@@ -83,6 +84,6 @@ export function PrivateOf({profileId}:{profileId:string}){
    :<div className="card"><div className="fact"><i className="v"><Lock/></i><span>{t('fe.priv.closed').replace('{scopes}',(p.available??[]).map(s=>t('fe.priv.scope.'+s)).join(', '))}</span></div>
     {p.canRequest?<Btn kind="soft" size="md" icon={LockOpen} onClick={request} disabled={busy} className="mt12">{t('fe.priv.ask')}</Btn>:p.reason&&<p className="note mt8">{t('fe.priv.reason.'+p.reason)}</p>}
    </div>}
-  {note&&<div className="alert ok mt8" role="status"><span>{note}</span></div>}
+  {note&&<div className="alert ok mt8" role="status"><span>{note}{note===t('fe.rule.age_check_required')&&<><br/><AgeCheckLink/></>}</span></div>}
  </section>;
 }

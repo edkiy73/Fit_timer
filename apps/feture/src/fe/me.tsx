@@ -3,8 +3,9 @@ import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {ChevronRight,Eye,Lock,Plus,Settings,X} from 'lucide-react';
-import {feErrorMessage,newOpId} from '../feture/fe-api';
+import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Av,Btn,Empty,Seg} from './ui';
+import {AgeCheckLink} from './age-check';
 import {useFe} from './session';
 import {PrivateLayer} from './private';
 import {BellButton} from './inbox';
@@ -159,7 +160,7 @@ function Visibility({p,settings,onChanged}:{p:Profile,settings:{discoverMode:str
  const set=async(setting:string,value:string)=>{
   setBusy(true);setFailure('');setWait('');
   try{const r=await call(setting==='detailsVis'?'profile.update':'profile.setVisibility',setting==='detailsVis'?{opId:newOpId(),rev:p.rev,detailsVis:value}:{opId:newOpId(),setting,value},ok);if(r.pending)setWait(t('fe.cw.waitPartner'));onChanged();}
-  catch(e){setFailure(feErrorMessage(e,t));}finally{setBusy(false);}
+  catch(e){setFailure(e instanceof FeError&&e.rule==='age_not_verified'?t('fe.age.couple'):feErrorMessage(e,t));}finally{setBusy(false);}
  };
  const hasPhoto=p.photos.some(x=>!x.pending);
  return <>
@@ -172,6 +173,6 @@ function Visibility({p,settings,onChanged}:{p:Profile,settings:{discoverMode:str
    <p className="note mt8">{t('fe.reg.vis.note.'+(p.detailsVis??'only'))}</p>
   </section>}
   {wait&&<div className="alert ok" role="status"><span>{wait}</span></div>}
-  {failure&&<div className="alert err" role="alert"><span>{failure}</span></div>}
+  {failure&&<div className="alert err" role="alert"><span>{failure}{failure===t('fe.age.couple')&&<><br/><AgeCheckLink/></>}</span></div>}
  </>;
 }
