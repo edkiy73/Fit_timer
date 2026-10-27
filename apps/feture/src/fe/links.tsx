@@ -2,12 +2,11 @@ import {useCallback,useEffect,useRef,useState} from 'react';
 import {useNavigate,useParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {ChevronRight,CircleAlert,Info,Link2,Pencil,Plus,Trash2,User,Users,X} from 'lucide-react';
+import {CircleAlert,Link2,Pencil,Plus,Trash2,User,Users,X} from 'lucide-react';
 import {useToast as useToastV21} from './toast';
 import {newOpId} from '../feture/fe-api';
-import {Av,Bar,Btn,Empty,View,Skel} from './ui';
+import {Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,Group,Note,RadioList,Row,SectionLabel,SelectRow,Skel,View} from './kit';
 import {useFe} from './session';
-import {SelectRow} from './create-community';
 import {NameBadges,withAge} from './faces';
 import {KINDS,SIDES,Sheet,linkLabel,linksMineRes,mediaSrc,personName,personProfileRes,pxError,useToast,type Kind,type LinkView,type LinksMine,type PersonProfile} from './profile-extras';
 
@@ -44,21 +43,27 @@ export function LinksBlock({onChanged}:{onChanged?:()=>void}){
    toast(accept?(l.change?t('fe.ln.t.changeOk'):t('fe.ln.t.confirmed')):t('fe.ln.t.declined'),{type:'ok'});load();onChanged?.();}
   catch(e){toast(pxError(e,t),{type:'err'});}finally{setBusy(false);}};
  const title=inc.length?fill(t(inc.length===1?'fe.mx.lk.titleNew1':'fe.mx.lk.titleNew'),{n:inc.length}):t('fe.mx.lk.title');
- return <section className={'grp'+(list.length?'':' bare')}>
-  <div className="grp-t"><span>{title}</span>{(list.length||inc.length)?<button type="button" onClick={manage}>{t('fe.mx.lk.manage')}</button>:null}</div>
-  {inc.length>0&&<div className="lk-inc">{inc.map(l=>{const name=nameOf(l);const go=()=>navigate('/n/people/'+l.other.id);
-   return <div key={l.id} className="card rqcard lk-req" style={{marginBottom:10}}>
-    <div className="row"><button type="button" className="rq-av" aria-label={name} onClick={go}><Av name={name} seed={l.other.id} size="sm" src={l.other.avatar}/></button>
-     <button type="button" className="grow" style={{textAlign:'left'}} onClick={go}><b style={{fontSize:15}}>{withAge(name,l.other)}<NameBadges p={l.other}/></b>
-      <div className="note">{l.change?fill(t('fe.ln.proposesChange'),{from:linkLabel(t,l.kind,l.side),to:t('fe.px.lk.k.'+l.change.kind)}):fill(couple?t('fe.ln.proposesCouple'):t('fe.ln.proposes'),{label:linkLabel(t,l.kind,l.side)})}</div></button></div>
-    <div className="row g8 mt12"><Btn size="md" disabled={busy} onClick={()=>answer(l,true)}>{t('fe.ln.confirm')}</Btn><Btn size="md" kind="soft" disabled={busy} onClick={()=>answer(l,false)}>{t('fe.ln.decline')}</Btn></div>
-   </div>;})}</div>}
-  {list.length?<div className="card list">{list.slice(0,4).map(l=>{const name=nameOf(l);const v=l.vis;
-   return <button key={l.id} type="button" className="li" onClick={()=>navigate('/n/people/'+l.other.id)}><Av name={name} seed={l.other.id} size="sm" src={l.other.avatar}/>
-    <span className="tx"><b>{name}<NameBadges p={l.other}/></b><small>{linkLabel(t,l.kind,l.side)+(v!=='all'?' · '+(v==='us'?t('fe.mx.lk.visUs'):t('fe.mx.lk.visFollowers')):'')}</small></span><ChevronRight/></button>;})}</div>
-   :<div className="card"><button type="button" className="ph-empty" onClick={manage}><span className="pe-ic"><Link2/></span>
-    <span className="tx"><b>{t('fe.mx.lk.add')}</b><small>{couple?t('fe.mx.lk.addSubCouple'):t('fe.mx.lk.addSub')}</small></span><Plus/></button></div>}
- </section>;
+ return <Group bare={!list.length} title={title} action={(list.length||inc.length)?<button type="button" onClick={manage}>{t('fe.mx.lk.manage')}</button>:null}>
+  {inc.length>0&&<div className="lk-inc">{inc.map(l=><LinkRequest key={l.id} l={l} couple={couple} small busy={busy} onAnswer={a=>void answer(l,a)}/>)}</div>}
+  {list.length?<Card list>{list.slice(0,4).map(l=>{const name=nameOf(l);const v=l.vis;
+   return <Row key={l.id} av={<Av name={name} seed={l.other.id} size="sm" src={l.other.avatar}/>} title={<>{name}<NameBadges p={l.other}/></>}
+    sub={linkLabel(t,l.kind,l.side)+(v!=='all'?' · '+(v==='us'?t('fe.mx.lk.visUs'):t('fe.mx.lk.visFollowers')):'')} onClick={()=>navigate('/n/people/'+l.other.id)}/>;})}</Card>
+   :<Card><button type="button" className="ph-empty" onClick={manage}><span className="pe-ic"><Link2/></span>
+    <span className="tx"><b>{t('fe.mx.lk.add')}</b><small>{couple?t('fe.mx.lk.addSubCouple'):t('fe.mx.lk.addSub')}</small></span><Plus/></button></Card>}
+ </Group>;
+}
+
+/** A proposal (or a kind change) that waits for the acting profile's answer: who, what, «Подтвердить / Отклонить».
+ * `small` is the compact card of the Me profile layer. */
+function LinkRequest({l,couple,small,busy,onAnswer}:{l:LinkView,couple:boolean,small?:boolean,busy:boolean,onAnswer:(accept:boolean)=>void}){
+ const {t}=useI18n();const navigate=useNavigate();const name=nameOf(l);const go=()=>navigate('/n/people/'+l.other.id);
+ const who=<>{withAge(name,l.other)}<NameBadges p={l.other}/></>;
+ return <Card className="rqcard lk-req">
+  <div className="row"><button type="button" className="rq-av" aria-label={name} onClick={go}><Av name={name} seed={l.other.id} size={small?'sm':''} src={l.other.avatar}/></button>
+   <button type="button" className="grow" onClick={go}>{small?<b>{who}</b>:<b style={{fontSize:16}}>{who}</b>}
+    <Note>{l.change?fill(t('fe.ln.proposesChange'),{from:linkLabel(t,l.kind,l.side),to:t('fe.px.lk.k.'+l.change.kind)}):fill(couple?t('fe.ln.proposesCouple'):t('fe.ln.proposes'),{label:linkLabel(t,l.kind,l.side)})}</Note></button></div>
+  <div className="row g8 mt12"><Btn size="md" disabled={busy} onClick={()=>onAnswer(true)}>{t('fe.ln.confirm')}</Btn><Btn size="md" kind="soft" disabled={busy} onClick={()=>onAnswer(false)}>{t('fe.ln.decline')}</Btn></div>
+ </Card>;
 }
 
 /** `/n/me/links` — SC.P21 for the own profile. */
@@ -79,10 +84,8 @@ export function LinksScreen(){
  const waiting=r?[...r.incoming,...r.confirmed.filter(l=>l.change&&!l.change.mine)]:[];
  const visWord=(v:Vis)=>v==='us'?t('fe.ln.visUs'):v==='followers'?t('fe.ln.visFollowers'):'';
  const row=(l:LinkView,pend:boolean,extra:string)=>{const name=nameOf(l);
-  return <button key={l.id} type="button" className="li" onClick={()=>setMenu({l,pend})}>
-   <Av name={name} seed={l.other.id} size="sm" src={l.other.avatar}/>
-   <span className="tx"><b>{name}<NameBadges p={l.other}/></b><small>{[linkLabel(t,l.kind,l.side),pend?'':visWord(l.vis),extra].filter(Boolean).join(' · ')}</small></span><ChevronRight/>
-  </button>;};
+  return <Row key={l.id} av={<Av name={name} seed={l.other.id} size="sm" src={l.other.avatar}/>} title={<>{name}<NameBadges p={l.other}/></>}
+   sub={[linkLabel(t,l.kind,l.side),pend?'':visWord(l.vis),extra].filter(Boolean).join(' · ')} onClick={()=>setMenu({l,pend})}/>;};
  const m=menu?.l;
  return <>
   <Bar title={couple?t('fe.ln.titleCouple'):t('fe.ln.title')} back/>
@@ -91,45 +94,31 @@ export function LinksScreen(){
     :!r?<Skel kind="list"/>
     :<>
      {waiting.length>0&&<>
-      <div className="sec" style={{marginTop:6}}>{t('fe.ln.waiting')}</div>
-      {waiting.map(l=>{const name=nameOf(l);const go=()=>navigate('/n/people/'+l.other.id);
-       return <div key={l.id} className="card rqcard" style={{marginBottom:10}}>
-        <div className="row">
-         <button type="button" className="rq-av" aria-label={name} onClick={go}><Av name={name} seed={l.other.id} src={l.other.avatar}/></button>
-         <button type="button" className="grow" style={{textAlign:'left'}} onClick={go}><b style={{fontSize:16}}>{withAge(name,l.other)}<NameBadges p={l.other}/></b>
-          <div className="note">{l.change?fill(t('fe.ln.proposesChange'),{from:linkLabel(t,l.kind,l.side),to:t('fe.px.lk.k.'+l.change.kind)})
-           :fill(couple?t('fe.ln.proposesCouple'):t('fe.ln.proposes'),{label:linkLabel(t,l.kind,l.side)})}</div></button>
-        </div>
-        <div className="row g8 mt12">
-         <Btn size="md" disabled={busy} onClick={()=>answer(l,true)}>{t('fe.ln.confirm')}</Btn>
-         <Btn size="md" kind="soft" disabled={busy} onClick={()=>answer(l,false)}>{t('fe.ln.decline')}</Btn>
-        </div>
-       </div>;})}
+      <SectionLabel>{t('fe.ln.waiting')}</SectionLabel>
+      <div className="lk-inc">{waiting.map(l=><LinkRequest key={l.id} l={l} couple={couple} busy={busy} onAnswer={a=>void answer(l,a)}/>)}</div>
      </>}
-     <section className="grp"><div className="grp-t"><span>{fill(t('fe.ln.confirmed'),{n:r.confirmed.length})}</span></div>
-      {r.confirmed.length?<div className="card list">{r.confirmed.map(l=>row(l,false,l.change?.mine?t('fe.ln.changePending'):''))}</div>
-       :<div className="card"><div className="lk-empty"><p className="note">{t('fe.ln.emptyText')}</p><p className="note">{t('fe.ln.emptyHow')}</p></div></div>}
-     </section>
-     {r.sent.length>0&&<section className="grp"><div className="grp-t"><span>{fill(t('fe.ln.sent'),{n:r.sent.length})}</span></div>
-      <div className="card list">{r.sent.map(l=>row(l,true,t('fe.ln.awaiting')))}</div>
-     </section>}
-     {from&&<section className="grp"><div className="grp-t"><span>{t('fe.ln.requests')}</span></div>
-      <div className="card list"><div className="li"><SelectRow label={t('fe.ln.from')} value={from} items={(['all','follow','none'] as const).map(v=>[v,t('fe.ln.from.'+v)] as [LinksFrom,string])}
-       onChange={v=>{if(busy)return;setFrom(v);void act(()=>call('profile.setVisibility',{opId:newOpId(),setting:'linksFrom',value:v},ok),t('fe.ln.t.saved'));}}/></div></div>
-      <p className="grp-n">{t('fe.ln.fromFoot')}</p>
-     </section>}
+     <Group title={fill(t('fe.ln.confirmed'),{n:r.confirmed.length})}>
+      {r.confirmed.length?<Card list>{r.confirmed.map(l=>row(l,false,l.change?.mine?t('fe.ln.changePending'):''))}</Card>
+       :<Card><div className="lk-empty"><Note>{t('fe.ln.emptyText')}</Note><Note>{t('fe.ln.emptyHow')}</Note></div></Card>}
+     </Group>
+     {r.sent.length>0&&<Group title={fill(t('fe.ln.sent'),{n:r.sent.length})}>
+      <Card list>{r.sent.map(l=>row(l,true,t('fe.ln.awaiting')))}</Card>
+     </Group>}
+     {from&&<Group title={t('fe.ln.requests')} foot={t('fe.ln.fromFoot')}>
+      <Card list><div className="li"><SelectRow label={t('fe.ln.from')} value={from} options={(['all','follow','none'] as const).map(v=>[v,t('fe.ln.from.'+v)] as const)}
+       onChange={v=>{if(busy)return;setFrom(v);void act(()=>call('profile.setVisibility',{opId:newOpId(),setting:'linksFrom',value:v},ok),t('fe.ln.t.saved'));}}/></div></Card>
+     </Group>}
     </>}
   </View>
   {menu&&m&&<Sheet title={nameOf(m)} onClose={closeMenu}>
-   <div className="card list">
-    <button type="button" className="li" onClick={()=>{closeMenu();navigate('/n/people/'+m.other.id);}}><span className="ico"><User/></span><span className="tx"><b>{t('fe.ln.open')}</b><small>{linkLabel(t,m.kind,m.side)}</small></span></button>
-    {!menu.pend&&<button type="button" className="li" onClick={()=>{closeMenu();navigate('/n/people/'+m.other.id+'/link');}}><span className="ico"><Pencil/></span><span className="tx"><b>{t('fe.ln.change')}</b><small>{t('fe.ln.changeSub')}</small></span></button>}
-    {!menu.pend&&<div className="li"><SelectRow label={t('fe.px.lk.vis')} value={m.vis} items={visItems(t)}
+   <Card list>
+    <Row noChev icon={User} title={t('fe.ln.open')} sub={linkLabel(t,m.kind,m.side)} onClick={()=>{closeMenu();navigate('/n/people/'+m.other.id);}}/>
+    {!menu.pend&&<Row noChev icon={Pencil} title={t('fe.ln.change')} sub={t('fe.ln.changeSub')} onClick={()=>{closeMenu();navigate('/n/people/'+m.other.id+'/link');}}/>}
+    {!menu.pend&&<div className="li"><SelectRow label={t('fe.px.lk.vis')} value={m.vis} options={visItems(t)}
      onChange={v=>{if(busy)return;setMenu({l:{...m,vis:v},pend:false});void act(()=>call('link.setVisibility',{opId:newOpId(),linkId:m.id,vis:v},ok),t('fe.ln.t.saved'));}}/></div>}
-    <button type="button" className="li danger" disabled={busy} onClick={()=>{if(menu.pend){closeMenu();void act(()=>call('link.remove',{opId:newOpId(),linkId:m.id},ok),t('fe.ln.t.cancelled'));}else{closeMenu();setRemoving(m);}}}>
-     <span className="ico">{menu.pend?<X/>:<Trash2/>}</span><span className="tx"><b>{menu.pend?t('fe.ln.cancelReq'):t('fe.ln.remove')}</b>{!menu.pend&&<small>{t('fe.ln.removeSub')}</small>}</span>
-    </button>
-   </div>
+    <Row danger icon={menu.pend?X:Trash2} title={menu.pend?t('fe.ln.cancelReq'):t('fe.ln.remove')} sub={menu.pend?undefined:t('fe.ln.removeSub')} disabled={busy}
+     onClick={()=>{if(menu.pend){closeMenu();void act(()=>call('link.remove',{opId:newOpId(),linkId:m.id},ok),t('fe.ln.t.cancelled'));}else{closeMenu();setRemoving(m);}}}/>
+   </Card>
    {!menu.pend&&<p className="grp-n">{t('fe.ln.visNote')}</p>}
   </Sheet>}
   {removing&&<Sheet title={t('fe.ln.removeTitle')} onClose={closeRemove} foot={<>
@@ -185,37 +174,31 @@ export function LinkEditScreen(){
   :<Btn onClick={send} disabled={busy}>{conf?changed?t('fe.ln.p22.proposeChange'):t('fe.ln.p22.save'):t('fe.ln.p22.send')}</Btn>;
  return <>
   <Bar title={conf?t('fe.ln.p22.edit'):t('fe.ln.p22.new')} back/>
-  <div className="view nodock cta1"><div className="wrap">
+  <View className="nodock cta1">
    {error?<Empty icon={Users} role="alert" title={t('fe.feed.unavailable')} text={pxError(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :!p||!mine?<Skel kind="list"/>
     :<>
-     <div className="card list mt12"><button type="button" className="li" onClick={()=>navigate('/n/people/'+id)}>
-      <Av name={name} seed={p.id} src={mediaSrc(p.avatar)}/><span className="tx"><b>{name}{p.age?', '+p.age:''}</b>{city&&<small>{city}</small>}</span><ChevronRight/>
-     </button></div>
-     {done?<div className="alert ok mt16" role="status"><span>{done}</span></div>
-      :ex&&ex.st!=='ok'?<div className="alert info mt16"><Info/><span>{fill(ex.st==='in'?t('fe.ln.p22.incoming'):t('fe.ln.p22.sentAlready'),{name})}</span></div>
+     <Card list className="mt12"><Row av={<Av name={name} seed={p.id} src={mediaSrc(p.avatar)}/>} title={<>{name}{p.age?', '+p.age:''}</>} sub={city} onClick={()=>navigate('/n/people/'+id)}/></Card>
+     {done?<Alert kind="ok" noIcon className="mt16">{done}</Alert>
+      :ex&&ex.st!=='ok'?<Alert kind="info" className="mt16">{fill(ex.st==='in'?t('fe.ln.p22.incoming'):t('fe.ln.p22.sentAlready'),{name})}</Alert>
       :<>
-       <section className="grp p22-kinds21"><div className="grp-t"><span>{t('fe.px.lk.kind')}</span></div>
-        <div className="card list" role="radiogroup" aria-label={t('fe.px.lk.kind')}>
-         {KINDS.map(k=><button key={k} type="button" className={'radio'+(kind===k?' on':'')} role="radio" aria-checked={kind===k} onClick={()=>{setKind(k);setSide(conf&&k===conf.kind?conf.side:null);setSideErr(false);setErr('');}}>
-          <i/><span className="tx">{t('fe.px.lk.k.'+k)}{SIDES[k]&&<small className="note">{SIDES[k]!.map(s=>t('fe.px.lk.s.'+s).toLowerCase()).join(' / ')}</small>}</span></button>)}
-        </div>
-       </section>
-       {sides&&<section className="grp"><div className="grp-t"><span>{we?t('fe.px.lk.sideWe'):t('fe.px.lk.side')}</span></div>
-        <div className="card">
-         <div className="chips">{sides.map(s=><button key={s} type="button" className={'chip'+(mySide===s?' on':'')} aria-pressed={mySide===s} onClick={()=>{setSide(s);setSideErr(false);setErr('');}}>
-          {(we?t('fe.px.lk.we'):t('fe.px.lk.i'))+' · '+t('fe.px.lk.s.'+s).toLowerCase()}</button>)}</div>
+       <Group className="p22-kinds21" title={t('fe.px.lk.kind')}>
+        <RadioList label={t('fe.px.lk.kind')} value={kind} options={KINDS.map(k=>[k,t('fe.px.lk.k.'+k),SIDES[k]?.map(s=>t('fe.px.lk.s.'+s).toLowerCase()).join(' / ')] as const)}
+         onChange={k=>{setKind(k);setSide(conf&&k===conf.kind?conf.side:null);setSideErr(false);setErr('');}}/>
+       </Group>
+       {sides&&<Group title={we?t('fe.px.lk.sideWe'):t('fe.px.lk.side')} foot={fill(t('fe.px.lk.opposite'),{name})}>
+        <Card>
+         <Chips>{sides.map(s=><Chip key={s} on={mySide===s} onClick={()=>{setSide(s);setSideErr(false);setErr('');}}>
+          {(we?t('fe.px.lk.we'):t('fe.px.lk.i'))+' · '+t('fe.px.lk.s.'+s).toLowerCase()}</Chip>)}</Chips>
          {sideErr&&<div className="ferr"><CircleAlert/>{t('fe.px.lk.pickSide')}</div>}
-        </div>
-        <p className="grp-n">{fill(t('fe.px.lk.opposite'),{name})}</p>
-       </section>}
-       <section className="grp"><div className="card list"><div className="li"><SelectRow label={t('fe.px.lk.vis')} value={vis} items={visItems(t)} onChange={setVis}/></div></div>
-        <p className="grp-n">{t('fe.px.lk.visFoot')}</p></section>
-       <div className="alert info mt16"><Info/><span>{conf?changed?fill(t('fe.ln.p22.infoChange'),{name}):t('fe.ln.p22.infoVis'):fill(t('fe.ln.p22.infoNew'),{name})}</span></div>
+        </Card>
+       </Group>}
+       <Group foot={t('fe.px.lk.visFoot')}><Card list><div className="li"><SelectRow label={t('fe.px.lk.vis')} value={vis} options={visItems(t)} onChange={setVis}/></div></Card></Group>
+       <Alert kind="info" className="mt16">{conf?changed?fill(t('fe.ln.p22.infoChange'),{name}):t('fe.ln.p22.infoVis'):fill(t('fe.ln.p22.infoNew'),{name})}</Alert>
       </>}
-     {err&&!sideErr&&<div className="alert err mt12" role="alert"><span>{err}</span></div>}
+     {err&&!sideErr&&<Alert kind="err" noIcon className="mt12">{err}</Alert>}
     </>}
-  </div></div>
+  </View>
   {p&&mine&&<div className="ctabar"><div className="wrap">{cta}</div></div>}
  </>;
 }

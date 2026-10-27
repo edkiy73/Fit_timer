@@ -2,9 +2,9 @@ import {useCallback,useEffect,useRef,useState} from 'react';
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Check,ChevronRight,Clock,X} from 'lucide-react';
+import {Check,Clock,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Av,Btn,Layer} from './ui';
+import {Alert,Av,Btn,Card,Group,Note,Row,Sheet} from './kit';
 import {useFe} from './session';
 
 /** V21 Q03 «Профиль пары» on the Me tab (prototype meProfileLayer/meVisLayer with owner 'couple'): the members,
@@ -42,9 +42,9 @@ function useCoupleMembers(){
 export function CoupleMembers(){
  const {t}=useI18n();const members=useCoupleMembers();
  if(!members?.length)return null;
- return <section className="grp"><div className="grp-t"><span>{t('fe.cw.members')}</span></div><div className="card list">
+ return <Group title={t('fe.cw.members')}><Card list>
   {members.map(m=><div key={m.profileId} className="li static"><Av name={nameOf(m)} seed={m.profileId} size="sm"/><span className="tx"><b>{nameOf(m)}</b>{m.handle&&m.name?<small>@{m.handle}</small>:null}</span></div>)}
- </div></section>;
+ </Card></Group>;
 }
 
 /** Banners of the couple's pending changes; `tick` changes after every own write so a new `pending` shows at once. */
@@ -72,10 +72,7 @@ const kindTitle=(a:Approval,t:(k:string)=>string)=>t('fe.cw.kind.'+(KINDS.includ
 function ApprovalSheet({a,base,partner,onClose,onDone}:{a:Approval,base:CoupleBase,partner:string,onClose:()=>void,onDone:(msg:string)=>void}){
  const {call}=useFe();const {t}=useI18n();
  const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
- const sheet=useRef<HTMLDivElement>(null);const op=useRef(newOpId());
- useEffect(()=>{sheet.current?.focus({preventScroll:true});},[]);
- useEffect(()=>{const key=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();onClose();}};
-  document.addEventListener('keydown',key);return ()=>document.removeEventListener('keydown',key);},[onClose]);
+ const op=useRef(newOpId());
  const run=async(action:'approve'|'return'|'cancel')=>{
   if(busy)return;setBusy(true);setFailure('');
   try{
@@ -86,23 +83,13 @@ function ApprovalSheet({a,base,partner,onClose,onDone}:{a:Approval,base:CoupleBa
   }catch(e){setFailure(feErrorMessage(e,t));op.current=newOpId();}finally{setBusy(false);}
  };
  const title=t('fe.cw.sheetTitle');
- return <Layer>
-  <div className="scrim on" onClick={onClose}/>
-  <div ref={sheet} className="sheet on" role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}>
-   <div className="grab"/>
-   <div className="sh-h"><div className="sh-ht"><h2>{title}</h2><p>{kindTitle(a,t)}</p></div>
-    <button type="button" className="ibtn ghost sm" aria-label={t('fe.cw.close')} onClick={onClose}><X/></button></div>
-   <div className="sh-b">
-    <p className="lead">{a.mine?t('fe.cw.leadMine'):t('fe.cw.leadTheirs',{name:partner})}</p>
-    <Diff a={a} base={base}/>
-    {failure&&<div className="alert err mt12" role="alert"><span>{failure}</span></div>}
-   </div>
-   <div className="sh-f">{a.mine
-    ?<Btn kind="soft" disabled={busy} onClick={()=>run('cancel')}>{t('fe.cw.cancel')}</Btn>
-    :<><Btn disabled={busy} onClick={()=>run('approve')}>{t('fe.cw.approve')}</Btn><Btn kind="soft" className="mt8" disabled={busy} onClick={()=>run('return')}>{t('fe.cw.return')}</Btn></>}
-   </div>
-  </div>
- </Layer>;
+ return <Sheet title={title} sub={kindTitle(a,t)} onClose={onClose} foot={a.mine
+   ?<Btn kind="soft" disabled={busy} onClick={()=>run('cancel')}>{t('fe.cw.cancel')}</Btn>
+   :<><Btn disabled={busy} onClick={()=>run('approve')}>{t('fe.cw.approve')}</Btn><Btn kind="soft" className="mt8" disabled={busy} onClick={()=>run('return')}>{t('fe.cw.return')}</Btn></>}>
+  <p className="lead">{a.mine?t('fe.cw.leadMine'):t('fe.cw.leadTheirs',{name:partner})}</p>
+  <Diff a={a} base={base}/>
+  {failure&&<Alert kind="err" noIcon className="mt12">{failure}</Alert>}
+ </Sheet>;
 }
 
 /** `proposalDiff()` — field by field, the old value struck through where the screen knows it. */
@@ -128,7 +115,7 @@ function Diff({a,base}:{a:Approval,base:CoupleBase}){
  }else if(a.kind==='profile.setVisibility'&&typeof c.setting==='string'){
   rows.push({k:c.setting,label:label(c.setting),now:word(c.value)});
  }else for(const s of a.summary??[])if(typeof s==='string')rows.push({k:s,label:label(s),now:word(c[s])});
- if(!rows.length)return <p className="note">{t('fe.cw.noDiff')}</p>;
+ if(!rows.length)return <Note>{t('fe.cw.noDiff')}</Note>;
  return <dl className="diff">{rows.map(r=><div key={r.k}><dt>{r.label}</dt><dd>{r.was!==undefined&&<div className="was">{r.was}</div>}<div className="now">{r.now}</div></dd></div>)}</dl>;
 }
 
@@ -136,8 +123,9 @@ function Diff({a,base}:{a:Approval,base:CoupleBase}){
  * both are decided on the pair screen (Q01/Q06), which shows the current setting and the confirmation. */
 export function CoupleVisGroup(){
  const {t}=useI18n();const navigate=useNavigate();
- return <section className="grp"><div className="grp-t"><span>{t('fe.cw.pair')}</span></div><div className="card list">
-  <button type="button" className="li" onClick={()=>navigate('/n/me/pair')}><span className="ico"><Check/></span><span className="tx"><b>{t('fe.mx.cp.approval')}</b><small>{t('fe.mx.cp.approvalSub')}</small></span><ChevronRight/></button>
-  <button type="button" className="li danger" onClick={()=>navigate('/n/me/pair?stop=1')}><span className="ico"><X/></span><span className="tx"><b>{t('fe.mx.cp.unlink')}</b></span><ChevronRight/></button>
- </div></section>;
+ return <Group title={t('fe.cw.pair')}><Card list>
+  <Row icon={Check} title={t('fe.mx.cp.approval')} sub={t('fe.mx.cp.approvalSub')} onClick={()=>navigate('/n/me/pair')}/>
+  {/* `danger` as a class keeps the chevron: this row opens a screen, the decision is made there. */}
+  <Row icon={X} className="danger" title={t('fe.mx.cp.unlink')} onClick={()=>navigate('/n/me/pair?stop=1')}/>
+ </Card></Group>;
 }

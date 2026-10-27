@@ -2,9 +2,9 @@ import {useCallback,useEffect,useRef,useState} from 'react';
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {AtSign,Check,Heart,ShieldCheck,TriangleAlert,Users,X} from 'lucide-react';
+import {AtSign,Check,Heart,ShieldCheck,Users,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Av,Bar,Btn,View,Skel} from './ui';
+import {Alert,Av,Bar,Btn,Card,Group,H,Input,Note,Pill,Row,Skel,ToggleRow,View} from './kit';
 import {useFe} from './session';
 import {Ask} from './me';
 import {useToast} from './toast';
@@ -68,18 +68,18 @@ export function PairScreen(){
    <Bar title={t('fe.pq.stopped')} back="/n/me"/>
    <View className="nodock"><div className="pair-wrap">
     <div className="pair-scene"><span className="ps-av me"><Av name={nameOf(me)} seed={me?.profileId}/></span><span className="ps-link"><i/><i/><i/><b><Heart/></b></span><span className="ps-av ot"><Av name={nameOf(other)} seed={other?.profileId}/></span></div>
-    <h2 className="t center">{t('fe.pq.stoppedTitle')}</h2>
+    <H level={2} className="t center">{t('fe.pq.stoppedTitle')}</H>
     <p className="lead center">{t('fe.pq.stoppedLead')}</p>
-    <p className="note center">{t('fe.pq.agreed',{n:agreed,date:until})}</p>
+    <Note className="center">{t('fe.pq.agreed',{n:agreed,date:until})}</Note>
     <div className="btns mt16">
      {me?.restoreAgreed?<Btn icon={Check} disabled>{t('fe.pq.waitPartner',{name:nameOf(other)})}</Btn>
       :<Btn disabled={busy} busy={busy} onClick={()=>act(async()=>{const r=await call('couple.restore',{opId:newOpId()},z.object({ok:z.literal(true),state:z.string().optional()}).passthrough(),{profileId:couple.id});
         toast(r.state==='active'?t('fe.pq.restored'):t('fe.pq.waitPartner',{name:nameOf(other)}),{type:'ok'});if(r.state==='active')reload();})}>{t('fe.pq.restore')}</Btn>}
      <Btn kind="soft" disabled={busy} onClick={()=>setAskNew(true)}>{t('fe.pq.new')}</Btn>
-     <p className="note center">{t('fe.pq.newNote')}</p>
+     <Note className="center">{t('fe.pq.newNote')}</Note>
      {acting?.kind==='couple'&&person&&<Btn kind="text" onClick={()=>{setActing(person.id);navigate('/n/me');}}>{t('fe.pq.toPersonal')}</Btn>}
     </div>
-    {failure&&<div className="alert err mt12" role="alert"><span>{failure}</span></div>}
+    {failure&&<Alert kind="err" noIcon className="mt12">{failure}</Alert>}
    </div></View>
    {askNew&&<Ask icon={Users} danger title={t('fe.pq.newTitle')} text={t('fe.pq.newText',{name:c.name||`${nameOf(me)} ${t('fe.pair.and')} ${nameOf(other)}`})} ok={t('fe.pq.newOk')}
     onCancel={()=>setAskNew(false)} onOk={()=>{setAskNew(false);if(acting?.kind==='couple'&&person)setActing(person.id);setFresh(true);}}/>}
@@ -91,24 +91,24 @@ export function PairScreen(){
    <Bar title={t('fe.pair.settings')} back="/n/me"/>
    <View><div className="pair-wrap">
     <div className="pair-scene on"><span className="ps-av me"><Av name={nameOf(me)} seed={me?.profileId}/></span><span className="ps-link"><i/><i/><i/><b><Heart/></b></span><span className="ps-av ot"><Av name={nameOf(other)} seed={other?.profileId}/></span></div>
-    <h2 className="t center">{c.name||`${nameOf(me)} ${t('fe.pair.and')} ${nameOf(other)}`}</h2>
-    <p className="note center">{t('fe.pair.since').replace('{date}',new Date(c.since).toLocaleDateString(locale==='en'?'en':'ru',{day:'numeric',month:'long',year:'numeric'}))}</p>
-    {c.state==='paused'?<div className="alert warn mt12"><TriangleAlert/><span>{t('fe.pair.paused').replace('{date}',c.restoreUntil?new Date(c.restoreUntil).toLocaleDateString(locale==='en'?'en':'ru'):'')}</span></div>:null}
+    <H level={2} className="t center">{c.name||`${nameOf(me)} ${t('fe.pair.and')} ${nameOf(other)}`}</H>
+    <Note className="center">{t('fe.pair.since').replace('{date}',new Date(c.since).toLocaleDateString(locale==='en'?'en':'ru',{day:'numeric',month:'long',year:'numeric'}))}</Note>
+    {c.state==='paused'?<Alert kind="warn" className="mt12">{t('fe.pair.paused').replace('{date}',c.restoreUntil?new Date(c.restoreUntil).toLocaleDateString(locale==='en'?'en':'ru'):'')}</Alert>:null}
     <div className="pair-sets">
-     <section className="grp"><div className="grp-t"><span>{t('fe.pair.approval')}</span></div><div className="card list">
-      <button type="button" className="li" role="switch" aria-checked={!!me?.approvesPartner} disabled={busy} onClick={()=>act(()=>call('couple.setApproval',{opId:newOpId(),approvesPartner:!me?.approvesPartner},ok,{profileId:couple.id}))}>
-       <span className="ico"><ShieldCheck/></span><span className="tx"><b>{t('fe.pair.approvalTitle')}</b><small>{me?.approvesPartner?t('fe.pair.approvalOn'):t('fe.pair.approvalOff')}</small></span><span className={'sw'+(me?.approvesPartner?' on':'')} aria-hidden="true"/>
-      </button></div></section>
-     <section className="grp"><div className="grp-t"><span>{t('fe.pair.act')}</span></div>
-      <Btn kind="soft" onClick={()=>{setActing(couple.id);navigate('/n/me');}}>{t('fe.pair.actAsUs')}</Btn></section>
-     {c.state==='active'&&<section className="grp"><div className="grp-t"><span>{t('fe.pair.careful')}</span></div>
-      {!confirmStop?<div className="card list"><button type="button" className="li danger" onClick={()=>setConfirmStop(true)}><span className="ico"><X/></span><span className="tx"><b>{t('fe.pair.stop')}</b></span></button></div>
-       :<div className="card"><p>{t('fe.pair.stopText')}</p><div className="btns mt12">
+     <Group title={t('fe.pair.approval')}><Card list>
+      <ToggleRow icon={ShieldCheck} title={t('fe.pair.approvalTitle')} sub={me?.approvesPartner?t('fe.pair.approvalOn'):t('fe.pair.approvalOff')} on={!!me?.approvesPartner} disabled={busy}
+       onClick={()=>act(()=>call('couple.setApproval',{opId:newOpId(),approvesPartner:!me?.approvesPartner},ok,{profileId:couple.id}))}/>
+     </Card></Group>
+     <Group title={t('fe.pair.act')}>
+      <Btn kind="soft" onClick={()=>{setActing(couple.id);navigate('/n/me');}}>{t('fe.pair.actAsUs')}</Btn></Group>
+     {c.state==='active'&&<Group title={t('fe.pair.careful')}>
+      {!confirmStop?<Card list><Row icon={X} danger title={t('fe.pair.stop')} onClick={()=>setConfirmStop(true)}/></Card>
+       :<Card><p>{t('fe.pair.stopText')}</p><div className="btns mt12">
         <Btn kind="danger" disabled={busy} onClick={()=>act(()=>call('couple.stop',{opId:newOpId(),confirm:true},ok,{profileId:couple.id}),()=>{setConfirmStop(false);reload();})}>{t('fe.pair.stop')}</Btn>
-        <Btn kind="text" onClick={()=>setConfirmStop(false)}>{t('fe.cancel')}</Btn></div></div>}
-     </section>}
+        <Btn kind="text" onClick={()=>setConfirmStop(false)}>{t('fe.cancel')}</Btn></div></Card>}
+     </Group>}
     </div>
-    {failure&&<div className="alert err" role="alert"><span>{failure}</span></div>}
+    {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
    </div></View>
   </>;
  }
@@ -117,23 +117,23 @@ export function PairScreen(){
   <Bar title={t('fe.pair.title')} back="/n/me"/>
   <View><div className="pair-wrap">
    <div className={'pair-scene'+(out?' on':lookup.hit?' ready':'')}><span className="ps-av me"><Av name={meName} seed={person?.id} src={person?.avatar}/></span><span className="ps-link"><i/><i/><i/><b><Heart/></b></span>
-    <span className="ps-av ot">{out?.profile?<Av name={nameOf(out.profile)} seed={out.profile.id}/>:lookup.hit?<Av name={nameOf(lookup.hit)} seed={lookup.hit.id} src={thumb(lookup.hit)}/>:<span className="av ini"><b style={{position:'relative'}}>?</b></span>}</span></div>
-   <h2 className="t center">{out?t('fe.pair.waiting').replace('{name}',nameOf(out.profile)):t('fe.pair.inviteTitle')}</h2>
-   <p className="note center">{t('fe.pair.inviteText')}</p>
+    <span className="ps-av ot">{out?.profile?<Av name={nameOf(out.profile)} seed={out.profile.id}/>:lookup.hit?<Av name={nameOf(lookup.hit)} seed={lookup.hit.id} src={thumb(lookup.hit)}/>:<span className="av ini"><b>?</b></span>}</span></div>
+   <H level={2} className="t center">{out?t('fe.pair.waiting').replace('{name}',nameOf(out.profile)):t('fe.pair.inviteTitle')}</H>
+   <Note className="center">{t('fe.pair.inviteText')}</Note>
    {inv===null?<Skel kind="list"/>:<>
-    {inv.incoming.map(i=><div key={i.id} className="card rqcard mt12"><div className="row"><span className="rq-av"><Av name={nameOf(i.profile)} seed={i.profile?.id??i.id}/></span>
-     <div className="grow"><b style={{fontSize:16}}>{nameOf(i.profile)}</b><div className="note">{t('fe.inbox.kind.pinv')} · {when(i.created_at,locale)}</div></div></div>
+    {inv.incoming.map(i=><Card key={i.id} className="rqcard mt12"><div className="row"><span className="rq-av"><Av name={nameOf(i.profile)} seed={i.profile?.id??i.id}/></span>
+     <div className="grow"><b style={{fontSize:16}}>{nameOf(i.profile)}</b><Note>{t('fe.inbox.kind.pinv')} · {when(i.created_at,locale)}</Note></div></div>
      <div className="row g8 mt12"><Btn size="md" disabled={busy} onClick={()=>act(()=>call('couple.inviteAnswer',{opId:newOpId(),inviteId:i.id,accept:true},ok,{asAccount:true}),reload)}>{t('fe.inbox.accept')}</Btn>
-      <Btn size="md" kind="soft" disabled={busy} onClick={()=>act(()=>call('couple.inviteAnswer',{opId:newOpId(),inviteId:i.id,accept:false},ok,{asAccount:true}))}>{t('fe.priv.decline')}</Btn></div></div>)}
+      <Btn size="md" kind="soft" disabled={busy} onClick={()=>act(()=>call('couple.inviteAnswer',{opId:newOpId(),inviteId:i.id,accept:false},ok,{asAccount:true}))}>{t('fe.priv.decline')}</Btn></div></Card>)}
     {out?<div className="btns mt16"><Btn kind="soft" disabled={busy} onClick={()=>act(()=>call('couple.inviteWithdraw',{opId:newOpId(),inviteId:out.id},ok,{asAccount:true}))}>{t('fe.pair.withdraw')}</Btn></div>
-     :<div className="card form-card mt16">
-      <label className="field"><span>{t('fe.pair.partnerNick')}</span><div className="inwrap"><AtSign/><input className="inp" value={nick} onChange={e=>setNick(e.target.value.replace(/^@/,''))} placeholder="nickname" autoCapitalize="off" spellCheck={false} maxLength={20}/></div><div className="fhint">{t('fe.pair.nickHint')}</div></label>
-      {lookup.hit?<div className="li static"><Av name={nameOf(lookup.hit)} seed={lookup.hit.id} src={thumb(lookup.hit)} size="sm"/><span className="tx"><b>{nameOf(lookup.hit)}</b><small>@{lookup.hit.handle}</small></span><span className="pill ok"><Check/>{t('fe.pq.found')}</span></div>
-       :lookup.issue?<p className="note">{t('fe.pq.issue.'+lookup.issue)}</p>:null}
+     :<Card form className="mt16">
+      <label className="field"><span>{t('fe.pair.partnerNick')}</span><div className="inwrap"><AtSign/><Input value={nick} onChange={e=>setNick(e.target.value.replace(/^@/,''))} placeholder="nickname" autoCapitalize="off" spellCheck={false} maxLength={20}/></div><div className="fhint">{t('fe.pair.nickHint')}</div></label>
+      {lookup.hit?<div className="li static"><Av name={nameOf(lookup.hit)} seed={lookup.hit.id} src={thumb(lookup.hit)} size="sm"/><span className="tx"><b>{nameOf(lookup.hit)}</b><small>@{lookup.hit.handle}</small></span><Pill tone="ok" icon={Check}>{t('fe.pq.found')}</Pill></div>
+       :lookup.issue?<Note>{t('fe.pq.issue.'+lookup.issue)}</Note>:null}
       <Btn disabled={busy||!lookup.hit} onClick={()=>act(async()=>{await call('couple.invite',{opId:op.current,handle:nick.trim(),...(couple&&fresh?{replacePaused:true}:{})},ok,{asAccount:true});op.current=newOpId();setNick('');if(couple&&fresh)reload();})}>{t('fe.pair.invite')}</Btn>
-     </div>}
+     </Card>}
    </>}
-   {failure&&<div className="alert err mt12" role="alert"><span>{failure}</span></div>}
+   {failure&&<Alert kind="err" noIcon className="mt12">{failure}</Alert>}
   </div></View>
  </>;
 }
@@ -141,7 +141,7 @@ export function PairEntry(){
  const {state}=useFe();const {t}=useI18n();const navigate=useNavigate();
  if(state.status!=='ready')return null;
  const couple=state.boot.profiles.find(p=>p.kind==='couple');
- return <section className="grp"><div className="grp-t"><span>{t('fe.pair.section')}</span></div><div className="card list">
-  <button type="button" className="li" onClick={()=>navigate('/n/me/pair')}><span className="ico v"><Heart/></span><span className="tx"><b>{couple?(couple.name||t('fe.pair.ourProfile')):t('fe.pair.entry')}</b><small>{couple?t('fe.pair.entryOn'):t('fe.pair.entryOff')}</small></span></button>
- </div></section>;
+ return <Group title={t('fe.pair.section')}><Card list>
+  <Row icon={Heart} tone="v" noChev title={couple?(couple.name||t('fe.pair.ourProfile')):t('fe.pair.entry')} sub={couple?t('fe.pair.entryOn'):t('fe.pair.entryOff')} onClick={()=>navigate('/n/me/pair')}/>
+ </Card></Group>;
 }
