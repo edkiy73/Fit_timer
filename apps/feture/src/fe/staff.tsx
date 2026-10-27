@@ -98,9 +98,9 @@ export function StaffScreen(){
 function Queues(){
  const {call}=useFe();const {t}=useI18n();
  const [data,setData]=useState<Loaded|null>(null);const [tab,setTab]=useState<QueueId|null>(null);const [notice,setNotice]=useState('');
- const load=useCallback(()=>{
+ const load=useCallback((fresh=false)=>{
   setData(null);setNotice('');
-  void Promise.allSettled(QUEUE_IDS.map(id=>call(QUEUES[id].action,{limit:LIMIT},QUEUES[id].schema as z.ZodType<{items:unknown[]}>,{asAccount:true}))).then(rs=>{
+  void Promise.allSettled(QUEUE_IDS.map(id=>call(QUEUES[id].action,{limit:LIMIT},QUEUES[id].schema as z.ZodType<{items:unknown[]}>,{asAccount:true,fresh}))).then(rs=>{
    const next:Record<string,{items:unknown[]}|{error:unknown}>={};
    rs.forEach((r,i)=>{const id=QUEUE_IDS[i]!;if(r.status==='fulfilled')next[id]={items:r.value.items};else if(!forbidden(r.reason))next[id]={error:r.reason};});
    setData(next as Loaded);
@@ -122,9 +122,9 @@ function Queues(){
   {/* The queue switch on the one tab control: more than four queues scroll sideways, each with its count. */}
   <Seg value={tab} onChange={id=>{setTab(id);setNotice('');}} label={t('fe.staff.queuesLabel')} options={avail.map(id=>({id,label:id==='photo'?t('fe.pc.staff.tab'):t('fe.staff.q.'+id),n:count(id)}))}/>
   {(tab==='dispute'||tab==='report')&&<Alert kind="info" icon={ShieldCheck} className="mt12"><b>{t('fe.staff.howTitle')}</b>{t('fe.staff.howText')}</Alert>}
-  <div className="st-tools"><Btn kind="text" size="sm" auto icon={RefreshCw} onClick={load}>{t('fe.staff.refresh')}</Btn></div>
+  <div className="st-tools"><Btn kind="text" size="sm" auto icon={RefreshCw} onClick={()=>load(true)}>{t('fe.staff.refresh')}</Btn></div>
   {notice&&<Alert kind="ok" icon={Check} className="mb12">{notice}</Alert>}
-  {!current?null:'error' in current?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(current.error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
+  {!current?null:'error' in current?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(current.error,t)}><Btn kind="soft" onClick={()=>load(true)}>{t('fe.retry')}</Btn></Empty>
    :!current.items.length?<Empty icon={Inbox} title={t('fe.staff.qEmpty')} text={t('fe.staff.qEmptyText')}/>
    :<><SectionLabel>{t('fe.staff.inQueue',{n:count(tab)})}</SectionLabel><QueueList id={tab} items={current.items} onDone={key=>done(tab,key)}/></>}
  </>;
