@@ -2,7 +2,7 @@ import {useCallback,useEffect,useRef,useState} from 'react';
 import {useLocation,useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Bookmark,ChartColumn,Ellipsis,Heart,Image as ImageIcon,Lock,MessageCircle,Newspaper,Plus,SendHorizontal,Share2,Trash2,X} from 'lucide-react';
+import {Bookmark,ChartColumn,Ellipsis,Heart,Image as ImageIcon,Lock,MessageCircle,Newspaper,Plus,Search,SendHorizontal,Share2,Trash2,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {Av,Bar,Btn,Empty,Seg,View} from './ui';
 import {useFe} from './session';
@@ -51,7 +51,7 @@ export function FeedTab(){
  useEffect(()=>{load();},[load]);
  const me=nameOf(acting);
  return <>
-  <Bar title={t('fe.nav.feed')}><BellButton/></Bar>
+  <Bar title={t('fe.nav.feed')}><button type="button" className="ibtn" aria-label={t('fe.br.search')} onClick={()=>navigate('/n/search')}><Search/></button><BellButton/></Bar>
   <View>
    <div className="mb12"><Seg value={tab} onChange={v=>{setNotice('');setTab(v);}} options={[{id:'forYou',label:t('fe.feed.tab.forYou')},{id:'following',label:t('fe.feed.tab.following')}]}/></div>
    {notice&&<div className="alert ok mb12" role="status"><span>{notice}</span></div>}
