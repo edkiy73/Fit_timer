@@ -33,7 +33,7 @@ export const MAX_BODY = 16 * 1024;
  *   authenticate: (req: Req) => Promise<{accountHash: string, accountGeneration?: string}>,
  *   quota: (req: Req, coreKey: string) => Promise<boolean>,
  *   cors: (req: Req, res: Res) => boolean,
- *   log: (event: {requestId: string, action: string, outcome: string}) => void,
+ *   log: (event: {requestId: string, action: string, outcome: string, ms: number, stages: Record<string, number>}) => void,
  *   signals?: import('./realtime.mjs').Signals | null}} deps
  */
 export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota, cors, log, signals = null }) {
@@ -42,7 +42,9 @@ export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota
     const requestId = randomUUID();
     let action = 'unknown';
     // Stage timings (ms) for the access log and Server-Timing: where a slow request spends its time.
-    const t0 = Date.now(); let tPrev = t0; /** @type {[string, number][]} */ const stages = [];
+    const t0 = Date.now(); let tPrev = t0;
+    /** @type {[string, number][]} */
+    const stages = [];
     const mark = (/** @type {string} */ name) => { const now = Date.now(); stages.push([name, now - tPrev]); tPrev = now; };
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
