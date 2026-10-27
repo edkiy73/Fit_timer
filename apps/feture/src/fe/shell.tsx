@@ -1,4 +1,4 @@
-import type {CSSProperties} from 'react';
+import {useState,type CSSProperties} from 'react';
 import {Outlet,useLocation,useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Globe,Image as FeedIcon,Lock,MessageCircle,Plus,User,Users,X,type LucideIcon} from 'lucide-react';
@@ -6,6 +6,7 @@ import {feErrorMessage} from '../feture/fe-api';
 import {Av,Btn,Empty} from './ui';
 import {FeSessionProvider,useFe} from './session';
 import {Register} from './register';
+import {Welcome,welcomeSeen} from './welcome';
 import {ToastProvider} from './toast';
 import './v21.css';
 import './shell.css';
@@ -25,8 +26,10 @@ function Center({children}:{children:React.ReactNode}){
 }
 
 function FeGate(){
- const {state,reload}=useFe();const {t}=useI18n();const navigate=useNavigate();const {pathname}=useLocation();
+ const {state,reload}=useFe();const {t}=useI18n();const navigate=useNavigate();const {pathname}=useLocation();const [welcomed,setWelcomed]=useState(welcomeSeen);
  if(state.status==='loading')return <Center><p className="note" role="status">{t('fe.loading')}</p></Center>;
+ // V21 A01: a signed-out visitor sees the welcome slides once, then the existing sign-in.
+ if(state.status==='signedOut'&&!welcomed)return <Welcome onStart={()=>{setWelcomed(true);navigate('/account?returnTo='+encodeURIComponent(pathname));}}/>;
  if(state.status==='signedOut')return <Center><Empty icon={Lock} title={t('fe.signIn.title')} text={t('fe.signIn.text')}>
   <Btn onClick={()=>navigate('/account?returnTo='+encodeURIComponent(pathname))}>{t('fe.signIn.action')}</Btn></Empty></Center>;
  if(state.status==='error')return <Center><Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(state.error,t)}>
