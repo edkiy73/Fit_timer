@@ -3,7 +3,7 @@ import {useNavigate,useParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Ban,Check,ChevronDown,ChevronLeft,ChevronRight,Clock,Ellipsis,Flag,Heart,History,Info,Link as LinkIcon,Lock,LockOpen,MapPin,MessageCircle,ShieldCheck,Undo2,Users,X} from 'lucide-react';
+import {Ban,Check,ChevronDown,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,Flag,Heart,History,Info,Link as LinkIcon,Lock,LockOpen,MapPin,MessageCircle,ShieldCheck,Undo2,Users,X} from 'lucide-react';
 import {Av,Bar,Btn,Empty,Seg,View,plate,Layer,Skel} from './ui';
 import {useFe} from './session';
 import {PhotoBadge} from './photo-check';
@@ -195,10 +195,16 @@ export function PhotoViewer({srcs,index,onClose}:{srcs:string[],index:number,onC
 /* ---------- the profile body (profileView: details, links, interests, gallery, private part, posts) ---------- */
 const DETAILS:[string,string][]=[['genders','gender'],['orients','orient'],['roles','role'],['status','status'],['formats','format'],['seeks','seek']];
 const COUPLE_DETAILS=new Set(['roles','formats','seeks']);
-const optionsRes=z.object({ok:z.literal(true),options:z.array(z.object({kind:z.string(),code:z.string(),ru:z.string().nullable(),en:z.string().nullable()}))});
+const named={ru:z.string().nullable(),en:z.string().nullable()};
+/** One schema for `catalog.get` on these screens: the read cache keys on the schema, so one object means one request. */
+export const catalogRes=z.object({ok:z.literal(true),options:z.array(z.object({kind:z.string(),code:z.string(),...named})),
+ topics:z.array(z.object({id:z.string(),categoryId:z.string(),...named}).passthrough()),
+ categories:z.array(z.object({id:z.string(),...named}).passthrough()),
+ places:z.array(z.object({id:z.string(),...named}).passthrough())}).passthrough();
+export type Catalog=z.infer<typeof catalogRes>;
 function useOptions(){
- const {call}=useFe();const {locale}=useI18n();const [opts,setOpts]=useState<z.infer<typeof optionsRes>['options']>([]);
- useEffect(()=>{call('catalog.get',{},optionsRes,{asAccount:true}).then(r=>setOpts(r.options)).catch(()=>{});},[call]);
+ const {call}=useFe();const {locale}=useI18n();const [opts,setOpts]=useState<Catalog['options']>([]);
+ useEffect(()=>{call('catalog.get',{},catalogRes,{asAccount:true}).then(r=>setOpts(r.options)).catch(()=>{});},[call]);
  return (kind:string,code:string)=>{const o=opts.find(x=>x.kind===kind&&x.code===code);return o?((locale==='en'?o.en||o.ru:o.ru||o.en)??code):code;};
 }
 /** detailsGroup: every chosen detail in one card; a couple shows role, format and «в поиске». */
@@ -236,6 +242,12 @@ const privRes=z.object({ok:z.literal(true),exists:z.boolean(),own:z.boolean().op
 type Priv=z.infer<typeof privRes>;
 const outReqRes=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),state:z.string(),profile:z.object({id:z.uuid()}).passthrough().nullable()}).passthrough())}).passthrough();
 const accessReq=z.object({ok:z.literal(true)}).passthrough();
+/** Whether a profile has a private part and what of it is open to the viewer; the same read as PrivateVault's. */
+export function usePrivate(profileId:string){
+ const {call}=useFe();const [p,setP]=useState<Priv|null>(null);
+ useEffect(()=>{setP(null);call('private.get',{profileId},privRes).then(setP).catch(()=>{});},[call,profileId]);
+ return p;
+}
 /** vaultHTML + veilBlock / privOpenHTML: the private part from the outside. Before access nothing real is sent — the
  * veil hides placeholders only. `preview` draws it as a viewer would see it, with inert buttons. */
 export function PrivateVault({profileId,name,preview}:{profileId:string,name:string,preview?:'all'|'granted'|undefined}){
@@ -364,11 +376,10 @@ const compatRes=z.discriminatedUnion('few',[
  z.object({ok:z.literal(true),few:z.literal(false),count:z.number(),items:z.array(compatItem)}),
 ]);
 type Compat=z.infer<typeof compatRes>;
-const topicsRes=z.object({ok:z.literal(true),topics:z.array(z.object({id:z.string(),ru:z.string().nullable(),en:z.string().nullable()}).passthrough())});
 
 function useTopics(){
  const {call}=useFe();const {locale}=useI18n();const [names,setNames]=useState<Map<string,string>>(new Map());
- useEffect(()=>{call('catalog.get',{},topicsRes,{asAccount:true}).then(r=>setNames(new Map(r.topics.map(x=>[x.id,(locale==='en'?x.en||x.ru:x.ru||x.en)||x.id])))).catch(()=>{});},[call,locale]);
+ useEffect(()=>{call('catalog.get',{},catalogRes,{asAccount:true}).then(r=>setNames(new Map(r.topics.map(x=>[x.id,(locale==='en'?x.en||x.ru:x.ru||x.en)||x.id])))).catch(()=>{});},[call,locale]);
  return (id:string)=>names.get(id)??id;
 }
 const byGroup=(c:Compat)=>{const out:Record<Group,CompatItem[]>={complement:[],match:[],try:[],discuss:[],bound:[]};if(!c.few)for(const i of c.items)out[i.group].push(i);
@@ -502,6 +513,7 @@ export function LinksSection({profileId,inert}:{profileId:string,inert?:boolean|
 }
 
 /* ---------- the person menu (S02) ---------- */
+const feedHiddenRes=z.object({ok:z.literal(true),items:z.array(z.object({kind:z.string(),target_id:z.string()}).passthrough())}).passthrough();
 const REASONS=['threat','private','minor','spam','other'] as const;
 
 function Report({profileId,onClose,onDone}:{profileId:string,onClose:()=>void,onDone:(msg:string,blocked:boolean)=>void}){
@@ -562,10 +574,15 @@ function EndConnection({profileId,name,mutual,onClose,onDone}:{profileId:string,
 export function PersonMenu({profileId,name,step,setStep,blocked,setBlocked,toast,rel,onRel}:{profileId:string,name:string,step:MenuStep,setStep:(s:MenuStep)=>void,
  blocked:boolean,setBlocked:(b:boolean)=>void,toast:(msg:string,err?:boolean)=>void,rel?:Relation|null|undefined,onRel?:(()=>void)|undefined}){
  const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const [busy,setBusy]=useState(false);
- const [link,setLink]=useState<{state:'ok'|'sent'|'in',view:LinkView}|null>(null);
+ const [link,setLink]=useState<{state:'ok'|'sent'|'in',view:LinkView}|null>(null);const [hidden,setHidden]=useState<boolean|null>(null);
  useEffect(()=>{if(step!=='menu'||blocked)return;call('links.mine',{},linksMineRes).then(r=>{const f=(l:LinkView[])=>l.find(x=>x.other.id===profileId);
-  const c=f(r.confirmed),s=f(r.sent),i=f(r.incoming);setLink(c?{state:'ok',view:c}:s?{state:'sent',view:s}:i?{state:'in',view:i}:null);}).catch(()=>{});},[step,blocked,call,profileId]);
+  const c=f(r.confirmed),s=f(r.sent),i=f(r.incoming);setLink(c?{state:'ok',view:c}:s?{state:'sent',view:s}:i?{state:'in',view:i}:null);}).catch(()=>{});
+  call('feedHide.list',{},feedHiddenRes).then(r=>setHidden(r.items.some(x=>x.kind==='author'&&x.target_id===profileId))).catch(()=>setHidden(null));},[step,blocked,call,profileId]);
  const close=useCallback(()=>setStep(null),[setStep]);
+ // «Скрыть из ленты» (the post menu's «Не показывать»): posts and activity leave the feed; the person is not told.
+ const hide=async()=>{const on=!hidden;setBusy(true);
+  try{await call('feedHide.set',{opId:newOpId(),kind:'author',targetId:profileId,on},ok);setHidden(on);close();toast(fill(t(on?'fe.px.menu.hidden':'fe.px.menu.unhidden'),{name}));}
+  catch(e){toast(pxError(e,t),true);}finally{setBusy(false);}};
  const unblock=async()=>{setBusy(true);
   try{await call('block.set',{opId:newOpId(),profileId,on:false},ok);setBlocked(false);close();toast(t('fe.px.bl.undone'));}
   catch(e){toast(pxError(e,t),true);}finally{setBusy(false);}};
@@ -578,6 +595,7 @@ export function PersonMenu({profileId,name,step,setStep,blocked,setBlocked,toast
    {link?.state==='ok'?row(<Users/>,t('fe.px.menu.linkIs')+linkLabel(t,link.view.kind,link.view.side),()=>{close();navigate('/n/people/'+profileId+'/link');},t('fe.px.menu.linkIsSub'))
     :link?row(<Users/>,t(link.state==='sent'?'fe.px.menu.linkSent':'fe.px.menu.linkIn'),()=>{close();navigate('/n/me/links');},link.state==='sent'?t('fe.px.menu.linkSentSub'):linkLabel(t,link.view.kind,link.view.side))
     :row(<Users/>,t('fe.px.menu.link'),()=>{close();navigate('/n/people/'+profileId+'/link');},t('fe.px.menu.linkSub'))}
+   {hidden!==null&&(hidden?row(<Eye/>,t('fe.px.menu.unhide'),hide):row(<EyeOff/>,t('fe.px.menu.hide'),hide,t('fe.px.menu.hideSub')))}
    {(rel?.liked||rel?.mutual)&&row(<X/>,t('fe.px.menu.end'),()=>setStep('end'),t(rel.mutual?'fe.px.menu.endMatch':'fe.px.menu.endLike'))}
    {row(<Flag/>,t('fe.px.menu.report'),()=>setStep('report'),undefined,true)}
    {row(<Ban/>,t('fe.px.menu.block'),()=>setStep('block'),t('fe.px.menu.blockSub'),true)}
