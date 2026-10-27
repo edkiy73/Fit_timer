@@ -20,8 +20,8 @@ export const ACCEPT = DOCS.filter(d => d.required).map(d => ({ id: d.id, content
 let ops = 0;
 export const op = () => `018f0000-0000-7000-8000-${String(++ops).padStart(12, '0')}`;
 
-/** @param {{commands: Record<string, any>, migrations?: string[]}} opts */
-export async function setup({ commands, migrations = MIGRATIONS }) {
+/** @param {{commands: Record<string, any>, migrations?: string[], signals?: (db: any) => any, realtime?: {url: string, key: string}}} opts */
+export async function setup({ commands, migrations = MIGRATIONS, signals, realtime }) {
   const pg = new PGlite();
   await pg.exec('create role anon; create role authenticated;');
   await pg.exec(`
@@ -39,7 +39,8 @@ export async function setup({ commands, migrations = MIGRATIONS }) {
   const db = fromPglite(pg);
   const handler = createFeHandler({
     db, pepper: 'p'.repeat(40), commands,
-    cfg: { media: { storage: null, delivery: tokenDelivery('s'.repeat(40), 'https://media.test') } },
+    cfg: { media: { storage: null, delivery: tokenDelivery('s'.repeat(40), 'https://media.test') }, realtime: realtime ?? null },
+    signals: signals ? signals(db) : null,
     authenticate: async req => ({ accountHash: String(req.headers['x-test-user']), accountGeneration: String(req.headers['x-test-gen'] ?? 'g1') }),
     quota: async () => true, cors: () => false, log: () => {},
   });
