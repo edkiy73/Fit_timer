@@ -33,6 +33,8 @@ import { createSupabaseStorage } from '../server/media/supabase-storage.mjs';
 import { signedStorageDelivery, tokenDelivery } from '../server/media/delivery.mjs';
 import { createSharpRenderer } from '../server/media/render.mjs';
 import { broadcastSender, createSignals } from '../server/realtime.mjs';
+import { pushTransport } from '../server/push.mjs';
+import { webPushFromEnv } from '../server/webpush.mjs';
 
 const require = createRequire(import.meta.url);
 const { store } = require('../../../packages/core/server/store');
@@ -80,6 +82,9 @@ export function cors(/** @type {any} */ req, /** @type {any} */ res) {
 
 const db = sql ? fromPostgres(sql, POOL) : null;
 
+/** Web push with our own VAPID keys (FE_VAPID_PUBLIC_KEY / FE_VAPID_PRIVATE_KEY / FE_VAPID_SUBJECT); off without them. */
+const webPush = configured ? webPushFromEnv(env) : null;
+
 /** Realtime «something new» signals (S2 §8): public Broadcast channels named by an opaque per-profile token, so no
  * JWT secret is needed. The URL and publishable key are public (they go to the client); the secret key only sends. */
 const supabaseUrl = String(env.SUPABASE_URL || '').trim().replace(/\/$/, '');
@@ -109,7 +114,8 @@ async function cachedAuth(req) {
 const handler = db && createFeHandler({
   db,
   pepper: env.FETURE_ID_PEPPER ?? '',
-  cfg: { media: { storage: media.storage, delivery: media.delivery }, realtime: signals ? { url: supabaseUrl, key: String(env.SUPABASE_PUBLISHABLE_KEY) } : null },
+  cfg: { media: { storage: media.storage, delivery: media.delivery }, realtime: signals ? { url: supabaseUrl, key: String(env.SUPABASE_PUBLISHABLE_KEY) } : null,
+    push: webPush ? { webKey: webPush.publicKey } : null },
   signals,
   commands: { ...platform, ...me, ...access, ...couples, ...staff, ...social, ...posts, ...moderation, ...communities, ...events, ...photos, ...discover, ...chats, ...inbox, ...people, ...premium, ...verification, ...accounts, ...dsa },
   authenticate: req => cachedAuth(req),
@@ -148,9 +154,9 @@ export default async function fe(/** @type {any} */ req, /** @type {any} */ res)
     if (!db) return json(res, 503, { ok: false, error: 'unavailable' });
     try {
       const scan = media.storage ? { storage: /** @type {any} */ (media.storage), scanner: null, classifier: null, renderer: media.renderer } : null;
-      // Push goes through Core's FCM/APNs transport once its keys are set; until then nothing is sent.
+      // Browsers get web push with our VAPID keys; phones go through Core's FCM/APNs once its keys are set.
       const info = CorePush.pushInfo();
-      const push = info.android || info.ios ? { send: CorePush.sendToDevice } : null;
+      const push = pushTransport({ native: info.android || info.ios ? CorePush.sendToDevice : null, web: webPush });
       // Only a real sending domain: Resend's test domain delivers to its owner alone.
       const mailInfo = CoreMail.mailInfo();
       const mail = mailInfo.ready && !mailInfo.testDomain ? (/** @type {{to: string, subject: string, text: string}} */ m) => CoreMail.sendMail(m) : null;

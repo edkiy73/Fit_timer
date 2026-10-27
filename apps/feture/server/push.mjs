@@ -8,7 +8,9 @@ import { enqueue } from './outbox.mjs';
  * decide: push on or off, per category, quiet hours in the device's time zone (nothing is sent then), likes at most
  * once an hour. Gone tokens are dropped; devices unseen for 60 days get nothing.
  * @typedef {import('./db.mjs').Db} Db @typedef {import('./db.mjs').Q} Q @typedef {import('./outbox.mjs').OutboxItem} OutboxItem
- * @typedef {{send: (platform: string, token: string, message: {title: string, body: string, data: Record<string, string>}) => Promise<unknown>}} Transport
+ * @typedef {{title: string, body: string, data: Record<string, string>}} Message
+ * @typedef {{send: (platform: string, token: string, message: Message) => Promise<unknown>, platforms?: string[]}} Transport
+ *   platforms: the device kinds this transport can reach (all when absent)
  */
 
 const TEXT = {
@@ -35,10 +37,29 @@ export async function queuePush(q, item, r, kind, notificationId) {
   if (fresh[0]) await enqueue(q, 'push.deliver', r.profile, { account: r.account, kind, ...(notificationId ? { notificationId } : {}) });
 }
 
+/** Where a tap on the push opens the app (hash routes of the /n screens). Fixed addresses only: never an id. */
+const OPENS = { messages: '/#/n/chats', match: '/#/n/chats', decide: '/#/n/inbox' };
+
+/** One transport for every device kind: the web sender (webpush.mjs, our own VAPID keys) and the native one (Core's
+ * FCM/APNs) side by side. null when neither is configured. A new native sender is one more entry here.
+ * @param {{native?: ((platform: string, token: string, message: Message) => Promise<unknown>) | null,
+ *   web?: {send: (token: string, message: Message) => Promise<unknown>} | null}} senders @returns {Transport | null} */
+export function pushTransport({ native = null, web = null }) {
+  if (!native && !web) return null;
+  return {
+    platforms: [...(native ? ['ios', 'android'] : []), ...(web ? ['web'] : [])],
+    send: (platform, token, message) => {
+      if (platform === 'web') return web ? web.send(token, message) : Promise.reject(new Error('push_no_web'));
+      return native ? native(platform, token, message) : Promise.reject(new Error('push_no_native'));
+    },
+  };
+}
+
 /** A token the store says is gone for good. Anything else (a wrong project or bundle id) keeps the token.
  * @param {any} error */
 function goneToken(error) {
   if (!error?.invalidToken) return false;
+  if (error.gone === true) return true; // web push: 404 / 410 from the push service, or a subscription we cannot use
   return error.status === 410 || /Unregistered|BadDeviceToken|UNREGISTERED/.test(String(error.detail ?? ''));
 }
 
@@ -106,7 +127,8 @@ export function pushHandlers(db, transport) {
       const t = TEXT[String(a.locale).startsWith('en') ? 'en' : 'ru'];
       const body = settings.mode === 'normal' ? t[/** @type {keyof typeof t} */ (p.kind)] ?? t.other : t.safe;
       const devices = await db.query(
-        `select token_hash, platform, token, tz from feture.push_device where account_id = $1 and platform in ('ios', 'android') and last_seen_at > now() - interval '60 days'`, [p.account]);
+        `select token_hash, platform, token, tz from feture.push_device where account_id = $1 and platform = any($2::text[]) and last_seen_at > now() - interval '60 days'`,
+        [p.account, transport.platforms ?? ['ios', 'android', 'web']]);
       let sent = 0;
       for (const d of devices) {
         if (inQuietHours(settings.quiet, d.tz)) continue;
@@ -114,7 +136,10 @@ export function pushHandlers(db, transport) {
         const first = await db.query(`insert into feture.push_sent (key) values ($1) on conflict do nothing returning key`, [`d:${item.id}:${Buffer.from(d.token_hash).toString('hex')}`]);
         if (!first[0]) continue;
         try {
-          await withTimeout(transport.send(d.platform, d.token, { title: t.title, body, data: { t: p.kind === 'messages' ? 'chat' : p.kind === 'decide' ? 'decide' : 'notif' } }));
+          await withTimeout(transport.send(d.platform, d.token, { title: t.title, body, data: {
+            t: p.kind === 'messages' ? 'chat' : p.kind === 'decide' ? 'decide' : 'notif',
+            url: OPENS[/** @type {keyof typeof OPENS} */ (p.kind)] ?? '/#/n/inbox',
+          } }));
           sent++;
         } catch (error) {
           if (goneToken(error)) await db.query('delete from feture.push_device where token_hash = $1', [d.token_hash]);

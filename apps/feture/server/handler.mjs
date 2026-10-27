@@ -12,8 +12,10 @@ import { limit } from './limits.mjs';
  * transaction, idempotency, error mapping and the access log.
  * @typedef {import('./db.mjs').Db} Db @typedef {import('./db.mjs').Q} Q
  * @typedef {import('./accounts.mjs').AccountRow} AccountRow @typedef {import('./profiles.mjs').Acting} Acting
- * @typedef {{media: import('./media/assets.mjs').MediaConfig, pepper?: string, realtime?: {url: string, key: string} | null}} Cfg
- *   pepper is filled in by the handler; realtime: the public Supabase URL and publishable key for the client socket
+ * @typedef {{media: import('./media/assets.mjs').MediaConfig, pepper?: string, realtime?: {url: string, key: string} | null,
+ *   push?: {webKey: string} | null}} Cfg
+ *   pepper is filled in by the handler; realtime: the public Supabase URL and publishable key for the client socket;
+ *   push.webKey: the public VAPID key browsers subscribe with (the private one never leaves the job worker)
  * @typedef {{
  *   input: import('zod').ZodType, profile: boolean, write: boolean, ledger?: boolean, allowPaused?: boolean,
  *   rate?: {kind: string, max: number, window: string},
