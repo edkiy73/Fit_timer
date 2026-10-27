@@ -1,5 +1,5 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {useNavigate,useParams} from 'react-router';
+import {useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Plus,Calendar,CircleCheck,Clock,Globe,Link as LinkIcon,Lock,MapPin,Ticket,Users,Video,X,ChevronLeft,Star,Check,Ban} from 'lucide-react';
@@ -7,6 +7,7 @@ import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {Av,Bar,Btn,Empty,Seg,View,plate} from './ui';
 import {useFe} from './session';
 import {when} from './feed';
+import {CommunityHostEntry,CommunityJoin,DiscussionHostTools,EventAnnouncements,EventApplication,EventHostEntry,isCommunityHost} from './host';
 
 /** Slice D (V21 C01, C03, E03) with the prototype's markup: community catalogue and page (discussions, rules,
  * join), events catalogue and event page (RSVP; the exact address or link only for admitted people — server). */
@@ -86,16 +87,15 @@ function Catalog(){
 }
 
 export function CommunityScreen(){
- const {id=''}=useParams();const {call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const topics=useTopics();
+ const {id=''}=useParams();const {call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const topics=useTopics();const invite=useSearchParams()[0].get('invite')??undefined;
  const [c,setC]=useState<z.infer<typeof community>|null>(null);const [discs,setDiscs]=useState<z.infer<typeof discRes>|null>(null);const [error,setError]=useState<unknown>(null);
- const [tab,setTab]=useState<'disc'|'events'|'rules'>('disc');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [rules,setRules]=useState(false);
- const load=useCallback(()=>{setError(null);Promise.all([call('community.get',{communityId:id},commRes),call('community.discussions',{communityId:id},discRes)])
-  .then(([a,b])=>{setC(a.community);setDiscs(b);}).catch(setError);},[call,id]);
+ const [tab,setTab]=useState<'disc'|'events'|'rules'>('disc');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const load=useCallback(()=>{setError(null);Promise.all([call('community.get',{communityId:id,...(invite?{invite}:{})},commRes),call('community.discussions',{communityId:id},discRes).catch(e=>{if(invite)return {ok:true as const,locked:true,items:[]};throw e;})])
+  .then(([a,b])=>{setC(a.community);setDiscs(b);}).catch(setError);},[call,id,invite]);
  useEffect(()=>{load();},[load]);
- const join=async()=>{setBusy(true);setFailure('');try{await call('community.join',{opId:newOpId(),communityId:id,rulesAccepted:true},ok);setRules(false);load();}catch(e){setFailure(feErrorMessage(e,t));}finally{setBusy(false);}};
  const leave=async()=>{setBusy(true);setFailure('');try{await call('community.leave',{opId:newOpId(),communityId:id},ok);load();}catch(e){setFailure(feErrorMessage(e,t));}finally{setBusy(false);}};
  const tname=(x:string)=>{const v=topics.find(o=>o.id===x);return v?(locale==='en'?v.en:v.ru):x;};
- const member=c?.me?.state==='active';
+ const member=c?.me?.state==='active';const host=isCommunityHost(c);
  return <>
   <header className="bar overlay ev-bar">
    <button type="button" className="ibtn glass" aria-label={t('fe.back')} onClick={()=>navigate('/n/communities')}><ChevronLeft/></button>
@@ -110,24 +110,19 @@ export function CommunityScreen(){
       <div className="cm-meta"><span><Users/><b>{plural(c.members,['участник','участника','участников'],['member','members'],locale)}</b></span><span>{c.privacy==='open'?<Globe/>:<Lock/>}{t('fe.comm.privacy.'+c.privacy)}</span></div></div>
      <div className="md bio cdesc"><p>{c.description}</p></div>
      <div className="chips mt12">{c.topics.map(x=><span key={x} className="chip tag">#{tname(x)}</span>)}</div>
-     <div className="row g8 mt16 cm-act">
-      {member?<><span className="pill ok"><CircleCheck/>{t('fe.comm.member')}</span>{c.me?.role==='member'&&<Btn kind="text" size="sm" auto onClick={leave} disabled={busy}>{t('fe.comm.leave')}</Btn>}</>
-       :c.request?<span className="pill wait">{t('fe.comm.requested')}</span>
-       :<Btn auto onClick={()=>setRules(true)} disabled={busy}>{c.privacy==='open'?t('fe.comm.join'):t('fe.comm.request')}</Btn>}
-     </div>
-     {rules&&<section className="grp"><div className="grp-t"><span>{t('fe.comm.rulesTitle')}</span></div>
-      <div className="card">{c.rules.map((r,i)=><div key={i} className="fact"><i className="v"><Check/></i><span>{r}</span></div>)}</div>
-      <div className="btns mt12"><Btn onClick={join} disabled={busy}>{t('fe.comm.accept')}</Btn><Btn kind="text" onClick={()=>setRules(false)}>{t('fe.cancel')}</Btn></div></section>}
+     {member?<div className="row g8 mt16 cm-act">
+      {host?<CommunityHostEntry c={c}/>:<><span className="pill ok"><CircleCheck/>{t('fe.comm.member')}</span>{c.me?.role==='member'&&<Btn kind="text" size="sm" auto onClick={leave} disabled={busy}>{t('fe.comm.leave')}</Btn>}</>}
+     </div>:<CommunityJoin c={c} invite={invite} onChange={load}/>}
      {failure&&<div className="alert err" role="alert"><span>{failure}</span></div>}
      <div style={{height:14}}/>
      <div className="tabs14" role="tablist">{(['disc','events','rules'] as const).map(k=><button key={k} type="button" role="tab" aria-selected={tab===k} className={tab===k?'on':''} onClick={()=>setTab(k)}>{t('fe.comm.tab.'+k)}</button>)}</div>
      {tab==='disc'?(discs?.locked?<Empty icon={Lock} title={t('fe.comm.locked')} text={t('fe.comm.lockedText')}/>:<>
       {member&&<div className="composer c-composer"><button type="button" className="cmp-main" onClick={()=>navigate('/n/feed/new?community='+c.id)}><span>{t('fe.comm.newTopic')}</span></button></div>}
       {discs&&discs.items.length===0?<Empty icon={Users} title={t('fe.comm.noDisc')} text={member?t('fe.comm.noDiscMember'):t('fe.comm.noDiscGuest')}/>
-       :<div className="card list">{discs?.items.map(d=><button key={d.id} type="button" className="disc" onClick={()=>navigate('/n/feed/post/'+d.id)}>
+       :<div className="card list">{discs?.items.map(d=><div key={d.id}><button type="button" className="disc" onClick={()=>navigate('/n/feed/post/'+d.id)}>
         {d.pinned&&<span className="pill v" style={{marginBottom:6}}>{t('fe.comm.pinned')}</span>}
         {d.title&&<b>{d.title}</b>}<p>{d.excerpt}</p><small className="note">{when(d.published_at,locale)} · {t('fe.feed.repliesCount').replace('{n}',String(d.replies))}</small>
-       </button>)}</div>}
+       </button>{host&&<DiscussionHostTools postId={d.id} pinned={d.pinned} onDone={load}/>}</div>)}</div>}
      </>)
      :tab==='events'?<EventList communityId={c.id}/>
      :<div className="card">{c.rules.map((r,i)=><div key={i} className="fact"><i className="v"><Check/></i><span>{r}</span></div>)}</div>}
@@ -185,6 +180,7 @@ export function EventScreen(){
       <h2 className="ev-title" tabIndex={-1}>{e.title}</h2>
       {e.me.rsvp&&<div className="ev-hero-st"><span className="pill v">{t('fe.ev.rsvp.'+e.me.rsvp)}</span></div>}
      </div></div>
+     <EventHostEntry e={e}/>
      {e.organizer&&<div className="card list mt16"><button type="button" className="li" onClick={()=>navigate('/n/people/'+e.organizer!.id)}><Av name={e.organizer.name||e.organizer.handle||'?'} seed={e.organizer.id} size="sm"/><span className="tx"><b>{e.organizer.name||'@'+e.organizer.handle}</b><small>{t('fe.ev.organizer')}</small></span></button></div>}
      {e.state==='cancelled'?<div className="alert err mt12"><Ban/><span>{t('fe.ev.cancelledText')}</span></div>
       :!e.past&&!e.requiresApplication&&<section className="rsvp-box"><div className="rsvp-h"><b>{t('fe.ev.question')}</b>{e.me.rsvp&&<Btn kind="text" auto onClick={()=>rsvp(null)} disabled={busy}>{t('fe.ev.clear')}</Btn>}</div>
@@ -193,6 +189,7 @@ export function EventScreen(){
          <button key={v} type="button" className={cls+(e.me.rsvp===v?' on':'')} role="radio" aria-checked={e.me.rsvp===v} onClick={()=>rsvp(v)} disabled={busy}><Ic/><span>{t('fe.ev.rsvp.'+v)}</span></button>)}
        </div></section>}
      {failure&&<div className="alert err" role="alert"><span>{failure}</span></div>}
+     <EventApplication e={e} onChange={load}/>
      <div className="card list mt12">
       <div className="li"><span className="ico l"><Calendar/></span><span className="tx"><b>{fmt(e.startsAt,{weekday:'short',day:'numeric',month:'long'})}</b><small>{fmt(e.startsAt,{hour:'2-digit',minute:'2-digit'})}–{fmt(e.endsAt,{hour:'2-digit',minute:'2-digit'})} {t('fe.ev.yourTime')}</small></span></div>
       <div className="li"><span className="ico v">{e.format==='online'?<Video/>:<MapPin/>}</span><span className="tx"><b>{e.format==='online'?t('fe.ev.online'):e.area}</b>
@@ -201,6 +198,7 @@ export function EventScreen(){
      </div>
      <div className="sec">{t('fe.ev.about')}</div><div className="md bio"><p>{e.description}</p></div>
      {e.requirements&&<><div className="sec">{t('fe.ev.requirements')}</div><div className="card"><p className="note">{e.requirements}</p></div></>}
+     <EventAnnouncements items={e.announcements}/>
      <p className="note mt12">{t('fe.ev.counts').replace('{going}',String(e.going)).replace('{interested}',String(e.interested))}</p>
     </>}
   </div></div>
