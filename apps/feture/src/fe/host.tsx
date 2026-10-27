@@ -2,14 +2,14 @@ import {useCallback,useEffect,useRef,useState,type ReactNode} from 'react';
 import {useLocation,useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Ban,Bell,Check,ChevronRight,CircleCheck,Clock,Copy,Ellipsis,FileText,Info,Link as LinkIcon,Lock,Pencil,Pin,PinOff,Send,Settings,Trash2,User,UserMinus,UserPlus,Users,X,type LucideIcon} from 'lucide-react';
+import {Ban,Bell,ChevronRight,CircleCheck,Clock,Copy,Ellipsis,FileText,Info,Link as LinkIcon,Lock,Pencil,Pin,PinOff,Send,Settings,Trash2,User,UserMinus,UserPlus,Users,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Av,Bar,Btn,Empty,Skel} from './ui';
+import {Alert,Ask,Av,Bar,Btn,Card,IconBtn,Check,Empty,Group,Note,Pill,Row,SectionLabel,Seg,Sheet,Skel,SubBar,TextArea} from './kit';
 import {useFe} from './session';
 import {useToast} from './toast';
 import {when} from './feed';
 import {FErr,Field,SelectRow,shakeFirstErr} from './create-community';
-import {Ask,CSheet,LinkRow,SegN,SubBar,appUrl,copyLink,fill,okRes,pl,plWord} from './comm-kit';
+import {appUrl,copyLink,fill,okRes,pl,plWord} from './comm-kit';
 import {EventCard} from './communities';
 import {faceFields,NameBadges,withAge} from './faces';
 
@@ -63,10 +63,10 @@ function Loading({error,retry,kind='list'}:{error:unknown,retry:()=>void,kind?:'
   :<Skel kind={kind}/>;
 }
 /** `personRow()` — avatar, name, a line under it and the chevron (opens the profile). */
-function PersonRow({p,sub,right,onClick}:{p:Prof,sub?:string|undefined,right?:ReactNode,onClick?:()=>void}){
+function PersonRow({p,sub,end,onClick}:{p:Prof,sub?:string|undefined,end?:ReactNode,onClick?:()=>void}){
  const navigate=useNavigate();const {acting}=useFe();
- return <button type="button" className="li" onClick={onClick??(()=>navigate(p.id===acting?.id?'/n/me':'/n/people/'+p.id))}><Av name={pname(p)} seed={p.id} src={p.avatar}/>
-  <span className="tx"><b>{withAge(pname(p),p)}<NameBadges p={p}/></b>{sub?<small>{sub}</small>:p.handle&&p.name?<small>@{p.handle}</small>:null}</span>{right??<ChevronRight/>}</button>;
+ return <Row av={<Av name={pname(p)} seed={p.id} src={p.avatar}/>} title={<>{withAge(pname(p),p)}<NameBadges p={p}/></>} sub={sub||(p.handle&&p.name?'@'+p.handle:undefined)}
+  end={end} onClick={onClick??(()=>navigate(p.id===acting?.id?'/n/me':'/n/people/'+p.id))}/>;
 }
 
 /* ---------------- Communities ---------------- */
@@ -77,8 +77,8 @@ export function CommunityHostEntry({c}:{c:{id:string,me?:{role:string,state:stri
  if(!isHost(c))return null;
  const n=typeof c.pendingRequests==='number'?c.pendingRequests:0;
  return <>
-  <button type="button" className="btn md soft manage-entry" onClick={()=>navigate(`/n/communities/${c.id}/manage`)}><Settings/>{t('fe.host.manage')}</button>
-  {n>0&&<button type="button" className="btn text auto" style={{marginLeft:'auto',whiteSpace:'nowrap'}} onClick={()=>navigate(`/n/communities/${c.id}/requests`)}>{pl(n,t('fe.cm.newRequests'),locale)} <ChevronRight/></button>}
+  <Btn kind="soft" size="md" className="manage-entry" icon={Settings} onClick={()=>navigate(`/n/communities/${c.id}/manage`)}>{t('fe.host.manage')}</Btn>
+  {n>0&&<Btn kind="text" auto style={{marginLeft:'auto',whiteSpace:'nowrap'}} onClick={()=>navigate(`/n/communities/${c.id}/requests`)}>{pl(n,t('fe.cm.newRequests'),locale)} <ChevronRight/></Btn>}
  </>;
 }
 
@@ -99,17 +99,16 @@ export function JoinSheet({c,invite,onClose,onDone}:{c:{id:string,name:string,pr
    onDone(r.pending?t('fe.host.join.waitingPartner'):r.state==='member'?fill(t(couple?'fe.cm.joinedCouple':'fe.cm.joined'),{name:c.name}):t('fe.cm.requestSent'));
   }catch(x){setFailure(feErrorMessage(x,t));}finally{setBusy(false);}
  };
- return <CSheet title={closed?t('fe.host.join.requestTitle'):t('fe.host.join.rulesTitle')} onClose={onClose}
+ return <Sheet title={closed?t('fe.host.join.requestTitle'):t('fe.host.join.rulesTitle')} onClose={onClose}
   foot={<Btn onClick={send} busy={busy} disabled={busy}>{closed?t('fe.host.join.send'):t('fe.host.join.join')}</Btn>}>
-  <div className="card flat"><ol className="rules">{c.rules.map((r,i)=><li key={i}>{r}</li>)}</ol></div>
+  <Card className="flat"><ol className="rules">{c.rules.map((r,i)=><li key={i}>{r}</li>)}</ol></Card>
   {q&&<div className="mt16"><Field name="answer" label={q} value={answer} onChange={v=>{setAnswer(v);if(err.answer)setErr({...err,answer:undefined});}} err={err.answer} textarea rows={3} max={300}
    ph={t('fe.host.join.answerPh')} hint={t('fe.host.join.answerHint')}/></div>}
   <div className={'field'+(err.ok?' err':'')} style={{marginTop:16}}>
-   <button type="button" className={'check'+(accepted?' on':'')+(err.ok?' err':'')} aria-pressed={accepted} onClick={()=>{setAccepted(v=>!v);setErr({...err,ok:undefined});}}>
-    <i><Check/></i><span>{t('fe.host.join.accept')}{err.ok&&<FErr>{err.ok}</FErr>}</span></button>
+   <Check on={accepted} error={!!err.ok} onChange={v=>{setAccepted(v);setErr({...err,ok:undefined});}}>{t('fe.host.join.accept')}{err.ok&&<FErr>{err.ok}</FErr>}</Check>
   </div>
-  {failure&&<div className="alert err mt12" role="alert"><Info/><span>{failure}</span></div>}
- </CSheet>;
+  {failure&&<Alert kind="err" icon={Info} className="mt12">{failure}</Alert>}
+ </Sheet>;
 }
 
 /** Host tools for one discussion: pin / unpin and remove (with an ask() confirmation). */
@@ -120,10 +119,10 @@ export function DiscussionHostSheet({d,onClose,onDone}:{d:{id:string,title:strin
   try{await call('discussion.host',{opId:newOpId(),postId:d.id,change},okRes);onDone(t('fe.cm.disc.'+change));}catch(x){toast(feErrorMessage(x,t),{type:'err'});}finally{setBusy(false);}
  };
  if(confirm)return <Ask icon={Trash2} danger title={t('fe.host.disc.removeQ')} text={t('fe.host.disc.removeText')} ok={t('fe.host.disc.remove')} busy={busy} onOk={()=>void act('remove')} onCancel={()=>setConfirm(false)}/>;
- return <CSheet title={d.title||t('fe.cm.discussion')} onClose={onClose}><div className="card list">
-  <LinkRow icon={d.pinned?PinOff:Pin} tone="v" title={d.pinned?t('fe.host.disc.unpin'):t('fe.host.disc.pin')} noChev disabled={busy} onClick={()=>void act(d.pinned?'unpin':'pin')}/>
-  <LinkRow icon={Trash2} danger title={t('fe.host.disc.remove')} noChev disabled={busy} onClick={()=>setConfirm(true)}/>
- </div></CSheet>;
+ return <Sheet title={d.title||t('fe.cm.discussion')} onClose={onClose}><Card list>
+  <Row icon={d.pinned?PinOff:Pin} tone="v" title={d.pinned?t('fe.host.disc.unpin'):t('fe.host.disc.pin')} noChev disabled={busy} onClick={()=>void act(d.pinned?'unpin':'pin')}/>
+  <Row icon={Trash2} danger title={t('fe.host.disc.remove')} noChev disabled={busy} onClick={()=>setConfirm(true)}/>
+ </Card></Sheet>;
 }
 
 /** C03 «Участники» (and C09): hosts, then members; a host taps a person to make them a host, stop them posting or remove them. */
@@ -140,24 +139,24 @@ export function MembersList({c,data,onChange}:{c:{id:string,me?:{role:string,sta
  const items=data.items;
  const sub=(m:Mem)=>m.id===acting?.id?(m.role==='owner'?t('fe.cm.youOwner'):t('fe.host.mem.you')):m.role==='owner'?t('fe.cm.owner'):m.role==='host'?t('fe.cm.hostSub'):m.read_only?t('fe.cm.cantPost'):undefined;
  const canManage=(m:Mem)=>host&&m.id!==acting?.id&&m.role!=='owner'&&(m.role!=='host'||owner);
- const row=(m:Mem)=><PersonRow key={m.id} p={m} sub={sub(m)??(m.handle&&m.name?'@'+m.handle:t('fe.cm.memberSub'))} {...(canManage(m)?{onClick:()=>setOpen(m),right:<span className="ibtn ghost sm" aria-hidden="true"><Ellipsis/></span>}:{})}/>;
+ const row=(m:Mem)=><PersonRow key={m.id} p={m} sub={sub(m)??(m.handle&&m.name?'@'+m.handle:t('fe.cm.memberSub'))} {...(canManage(m)?{onClick:()=>setOpen(m),end:<IconBtn icon={Ellipsis} kind="ghost" size="sm" label={t('fe.cm.more')} onClick={()=>setOpen(m)}/>}:{})}/>;
  const hosts=items?.filter(m=>m.role!=='member')??[];const members=items?.filter(m=>m.role==='member')??[];
  return <>
   {host&&<p className="note" style={{margin:'4px 0 12px'}}>{t('fe.host.mem.hint')}</p>}
-  {items===null?<><div className="sec">{pl(data.count,t('fe.cm.members'),locale)}</div><p className="note">{t('fe.host.mem.afterJoin')}</p></>:<>
+  {items===null?<><SectionLabel>{pl(data.count,t('fe.cm.members'),locale)}</SectionLabel><Note>{t('fe.host.mem.afterJoin')}</Note></>:<>
    <div className="sec" style={{marginTop:4}}>{t('fe.host.mem.hosts')}</div>
-   <div className="card list">{hosts.map(row)}</div>
-   <div className="sec">{pl(data.count,t('fe.cm.members'),locale)}</div>
-   {members.length?<div className="card list">{members.map(row)}</div>:<p className="note">{t('fe.cm.noOtherMembers')}</p>}
+   <Card list>{hosts.map(row)}</Card>
+   <SectionLabel>{pl(data.count,t('fe.cm.members'),locale)}</SectionLabel>
+   {members.length?<Card list>{members.map(row)}</Card>:<Note>{t('fe.cm.noOtherMembers')}</Note>}
   </>}
-  {open&&!confirm&&<CSheet title={pname(open)} onClose={()=>setOpen(null)}><div className="card list">
-   <LinkRow icon={User} title={t('fe.host.mem.profile')} onClick={()=>navigate('/n/people/'+open.id)}/>
-   {owner&&<LinkRow icon={open.role==='host'?UserMinus:UserPlus} tone="v" noChev disabled={busy} title={open.role==='host'?t('fe.host.mem.unhost'):t('fe.host.mem.makeHost')}
+  {open&&!confirm&&<Sheet title={pname(open)} onClose={()=>setOpen(null)}><Card list>
+   <Row icon={User} title={t('fe.host.mem.profile')} onClick={()=>navigate('/n/people/'+open.id)}/>
+   {owner&&<Row icon={open.role==='host'?UserMinus:UserPlus} tone="v" noChev disabled={busy} title={open.role==='host'?t('fe.host.mem.unhost'):t('fe.host.mem.makeHost')}
     sub={open.role==='host'?t('fe.host.mem.unhostSub'):t('fe.host.mem.makeHostSub')} onClick={()=>void change(open,open.role==='host'?'unhost':'host')}/>}
-   {open.role==='member'&&<LinkRow icon={Lock} noChev disabled={busy} title={open.read_only?t('fe.host.mem.canWrite'):t('fe.host.mem.makeReadOnly')} sub={open.read_only?undefined:t('fe.host.mem.readOnlySub')}
+   {open.role==='member'&&<Row icon={Lock} noChev disabled={busy} title={open.read_only?t('fe.host.mem.canWrite'):t('fe.host.mem.makeReadOnly')} sub={open.read_only?undefined:t('fe.host.mem.readOnlySub')}
     onClick={()=>void change(open,open.read_only?'canWrite':'readOnly')}/>}
-   {open.role==='member'&&<LinkRow icon={X} danger noChev disabled={busy} title={t('fe.host.mem.remove')} onClick={()=>setConfirm(true)}/>}
-  </div></CSheet>}
+   {open.role==='member'&&<Row icon={X} danger noChev disabled={busy} title={t('fe.host.mem.remove')} onClick={()=>setConfirm(true)}/>}
+  </Card></Sheet>}
   {open&&confirm&&<Ask icon={X} danger title={t('fe.host.mem.removeQ').replace('{name}',pname(open))} text={t('fe.host.mem.removeText')} ok={t('fe.host.mem.removeOk')} busy={busy}
    onOk={()=>void change(open,'remove')} onCancel={()=>setConfirm(false)}/>}
  </>;
@@ -190,20 +189,19 @@ export function CommunityManageScreen(){
      <button type="button" onClick={()=>navigate(`/n/communities/${id}`)}><b>{data.discs}</b><small>{plWord(data.discs,t('fe.cm.discussions'),locale)}</small></button>
      <button type="button" onClick={()=>navigate(`/n/communities/${id}/requests`)}><b>{n}</b><small>{t('fe.host.requestsWaiting')}</small></button>
     </div>
-    <div className="card list">
-     <LinkRow icon={FileText} tone="v" title={t('fe.host.requests')} badge={n||undefined} onClick={()=>navigate(`/n/communities/${id}/requests`)}/>
-     <LinkRow icon={Users} title={t('fe.host.membersTitle')} sub={t('fe.host.membersSub')} onClick={()=>navigate(`/n/communities/${id}?t=members`)}/>
-     {owner&&<LinkRow icon={Pencil} title={t('fe.cm.descRules')} onClick={()=>navigate(`/n/communities/${id}/edit`)}/>}
-    </div>
-    <div className="sec">{t('fe.host.access')}</div>
-    <div className="card list">
-     {owner?<div className="li"><span className="ico"><Lock/></span>
-      <SelectRow label={t('fe.cc.privacy')} value={c.privacy as 'open'|'closed'|'hidden'} onChange={v=>{void setPrivacy(v);}}
+    <Card list>
+     <Row icon={FileText} tone="v" title={t('fe.host.requests')} badge={n||undefined} onClick={()=>navigate(`/n/communities/${id}/requests`)}/>
+     <Row icon={Users} title={t('fe.host.membersTitle')} sub={t('fe.host.membersSub')} onClick={()=>navigate(`/n/communities/${id}?t=members`)}/>
+     {owner&&<Row icon={Pencil} title={t('fe.cm.descRules')} onClick={()=>navigate(`/n/communities/${id}/edit`)}/>}
+    </Card>
+    <SectionLabel>{t('fe.host.access')}</SectionLabel>
+    <Card list>
+     {owner?<SelectRow icon={Lock} label={t('fe.cc.privacy')} value={c.privacy as 'open'|'closed'|'hidden'} onChange={v=>{void setPrivacy(v);}}
        sub={pendingPrivacy?t('fe.ece.priv.pending').replace('{p}',t('fe.cc.privacy.'+pendingPrivacy)):t('fe.ece.priv.sub.'+c.privacy)}
-       items={(['open','closed','hidden'] as const).map(k=>[k,t('fe.cc.privacy.'+k)])}/></div>
+       items={(['open','closed','hidden'] as const).map(k=>[k,t('fe.cc.privacy.'+k)])}/>
       :<div className="li"><span className="ico"><Lock/></span><span className="tx"><b>{t('fe.cc.privacy')}</b><small>{t('fe.ece.priv.sub.'+c.privacy)}</small></span><span className="val">{t('fe.cc.privacy.'+c.privacy)}</span></div>}
      {c.privacy==='hidden'&&<InviteRows communityId={id}/>}
-    </div>
+    </Card>
    </>}
   </div></div>
  </>;
@@ -226,9 +224,9 @@ function InviteRows({communityId}:{communityId:string}){
   catch(x){toast(feErrorMessage(x,t),{type:'err'});}finally{setBusy(false);}
  };
  return <>
-  <LinkRow icon={LinkIcon} title={t('fe.host.invite.title')} sub={t('fe.cm.inviteSub')} noChev onClick={()=>void create()} disabled={busy}/>
-  {link&&<button type="button" className="li" onClick={()=>void copy(link)}><span className="ico"><Copy/></span><span className="tx"><b style={{wordBreak:'break-all'}}>{link}</b></span></button>}
-  <LinkRow icon={Ban} danger title={t('fe.host.invite.revokeAll')} noChev onClick={()=>setConfirm(true)} disabled={busy}/>
+  <Row icon={LinkIcon} title={t('fe.host.invite.title')} sub={t('fe.cm.inviteSub')} noChev onClick={()=>void create()} disabled={busy}/>
+  {link&&<Row icon={Copy} noChev title={<span style={{wordBreak:'break-all'}}>{link}</span>} onClick={()=>void copy(link)}/>}
+  <Row icon={Ban} danger title={t('fe.host.invite.revokeAll')} noChev onClick={()=>setConfirm(true)} disabled={busy}/>
   {confirm&&<Ask icon={Ban} danger title={t('fe.host.invite.revokeQ')} text={t('fe.host.invite.revokeText')} ok={t('fe.host.invite.revoke')} busy={busy} onOk={()=>void revoke()} onCancel={()=>setConfirm(false)}/>}
  </>;
 }
@@ -251,16 +249,16 @@ export function CommunityRequestsScreen(){
  return <>
   <SubBar title={t('fe.cm.reqTitle')} sub={c?.name} back={`/n/communities/${id}`}/>
   <div className="view nodock"><div className="wrap">
-   <SegN value={tab} onChange={v=>setSp(v==='history'?{t:'history'}:{},{replace:true})} label={t('fe.cm.reqTitle')}
+   <Seg value={tab} onChange={v=>setSp(v==='history'?{t:'history'}:{},{replace:true})} label={t('fe.cm.reqTitle')}
     options={[{id:'pending',label:t('fe.host.req.tabNew'),n:c?.pendingRequests},{id:'history',label:t('fe.host.req.tabHistory')}]}/>
    {!items?<Loading error={error} retry={load} kind="card"/>
     :!items.length?<Empty icon={FileText} title={tab==='history'?t('fe.host.req.noHistory'):t('fe.host.req.none')} text={t('fe.host.req.privacy')}/>
-    :items.map(r=><section key={r.id} className="card application-card mt12">
+    :items.map(r=><Card key={r.id} className="application-card mt12">
      <PersonRow p={r.profile}/>
-     <p className="note">{when(r.decided_at??r.created_at,locale)}{r.state!=='pending'?' · '+t('fe.host.req.state.'+r.state):''}</p>
+     <Note>{when(r.decided_at??r.created_at,locale)}{r.state!=='pending'?' · '+t('fe.host.req.state.'+r.state):''}</Note>
      {r.answer&&<p className="application-answer">{r.answer}</p>}
      {r.state==='pending'&&<div className="row g8"><Btn onClick={()=>void decide(r,true)} disabled={!!busy} busy={busy===r.id}>{t('fe.host.approve')}</Btn><Btn kind="soft" onClick={()=>void decide(r,false)} disabled={!!busy}>{t('fe.host.decline')}</Btn></div>}
-    </section>)}
+    </Card>)}
   </div></div>
  </>;
 }
@@ -287,8 +285,8 @@ export function EventApplicationLines({e}:{e:{requiresApplication:boolean,me:Rec
  const parsed=application.nullable().optional().safeParse(e.me.application);const app=parsed.success?parsed.data??null:null;
  const st=e.me.waiting?'waiting':app&&['pending','approved','declined'].includes(app.state)?app.state:'none';
  const Icon=({none:FileText,pending:Clock,approved:CircleCheck,declined:X,waiting:Clock} as Record<string,LucideIcon>)[st]!;
- return <><div className="sec">{t('fe.host.ev.attendance')}</div>
-  <div className="card list"><div className="statusline"><span className="ico"><Icon/></span><span className="tx"><b>{t('fe.host.app.st.'+st)}</b><small>{t('fe.host.app.stText.'+st)}</small></span></div></div></>;
+ return <><SectionLabel>{t('fe.host.ev.attendance')}</SectionLabel>
+  <Card list><div className="statusline"><span className="ico"><Icon/></span><span className="tx"><b>{t('fe.host.app.st.'+st)}</b><small>{t('fe.host.app.stText.'+st)}</small></span></div></Card></>;
 }
 
 /** E06 — the application: answers to the organiser's questions, a note and the requirements. */
@@ -317,17 +315,16 @@ export function EventApplyScreen(){
    {!e?<Loading error={error} retry={load} kind="card"/>
     :!open?<Empty icon={Lock} title={t('fe.host.app.closed')}/>
     :<>
-     <div className="alert info"><Info/><span>{couple?t('fe.host.app.infoCouple'):t('fe.host.app.info')}</span></div>
-     <section className="grp"><div className="grp-t"><span>{t('fe.host.app.answers')}</span></div><div className="card form-card">
+     <Alert kind="info">{couple?t('fe.host.app.infoCouple'):t('fe.host.app.info')}</Alert>
+     <Group title={t('fe.host.app.answers')}><Card form>
       {qs.map((q,i)=><Field key={i} name={'q'+i} label={q} value={answers[i]??''} textarea rows={3} max={300} err={err['q'+i]}
        onChange={v=>{const a=[...answers];a[i]=v;setAnswers(a);if(err['q'+i]){const n={...err};delete n['q'+i];setErr(n);}}}/>)}
       <Field name="note" label={t('fe.host.app.note')} value={note} onChange={setNote} opt ph={t('fe.host.app.notePh')} textarea rows={2} max={300}/>
-     </div></section>
+     </Card></Group>
      <div className={'field'+(err.ok?' err':'')}>
-      <button type="button" className={'check'+(accepted?' on':'')+(err.ok?' err':'')} aria-pressed={accepted} onClick={()=>{setAccepted(v=>!v);const n={...err};delete n.ok;setErr(n);}}>
-       <i><Check/></i><span>{t('fe.host.app.accept')}{err.ok&&<FErr>{err.ok}</FErr>}</span></button>
+      <Check on={accepted} error={!!err.ok} onChange={v=>{setAccepted(v);const n={...err};delete n.ok;setErr(n);}}>{t('fe.host.app.accept')}{err.ok&&<FErr>{err.ok}</FErr>}</Check>
      </div>
-     {failure&&<div className="alert err mt12" role="alert"><X/><span>{failure}</span></div>}
+     {failure&&<Alert kind="err" icon={X} className="mt12">{failure}</Alert>}
     </>}
   </div></div>
   {open&&<div className="ctabar"><div className="wrap"><Btn onClick={()=>void send()} busy={busy} disabled={busy}>{couple?t('fe.host.app.sendCouple'):t('fe.host.app.send')}</Btn></div></div>}
@@ -358,9 +355,9 @@ export function EventManageScreen(){
  const mine=!!e&&e.organizer?.id===acting?.id;
  const cancelled=e?.state==='cancelled';const open=!!e&&e.state==='published'&&!e.past;
  const pend=e?.pendingApplications??0;
- const st=(ev:Ev)=>ev.state==='cancelled'?<span className="pill bad">{t('fe.host.ev.st.cancelled')}</span>:ev.state==='pending_partner'?<span className="pill wait"><Clock/>{t('fe.cm.waitsPartnerT')}</span>
-  :ev.state==='published'?<span className="pill ok">{ev.past?t('fe.host.ev.st.past'):t('fe.host.ev.st.published')}</span>:ev.state==='rejected'?<span className="pill bad">{t('fe.cm.rejected')}</span>
-  :<span className="pill wait">{t('fe.host.ev.st.review')}</span>;
+ const st=(ev:Ev)=>ev.state==='cancelled'?<Pill tone="bad">{t('fe.host.ev.st.cancelled')}</Pill>:ev.state==='pending_partner'?<Pill tone="wait" icon={Clock}>{t('fe.cm.waitsPartnerT')}</Pill>
+  :ev.state==='published'?<Pill tone="ok">{ev.past?t('fe.host.ev.st.past'):t('fe.host.ev.st.published')}</Pill>:ev.state==='rejected'?<Pill tone="bad">{t('fe.cm.rejected')}</Pill>
+  :<Pill tone="wait">{t('fe.host.ev.st.review')}</Pill>;
  const tiles:[number,string,string][]=!e?[]:e.requiresApplication
   ?[[pend,t('fe.host.ev.tile.pending'),`/n/events/${id}/applications`],[e.going,t('fe.host.ev.tile.approved'),`/n/events/${id}/applications?k=approved`],[e.interested,t('fe.host.ev.tile.interested'),`/n/events/${id}/attendees?k=interested`]]
   :[[e.going,t('fe.host.ev.tile.going'),`/n/events/${id}/attendees?k=going`],[e.interested,t('fe.host.ev.tile.interested'),`/n/events/${id}/attendees?k=interested`]];
@@ -370,28 +367,28 @@ export function EventManageScreen(){
    {!e?<Loading error={error} retry={load} kind="card"/>:!mine?<Empty icon={Lock} title={t('fe.host.ev.onlyOrganizer')}/>:<>
     <EventCard e={asCard(e)} row org={e.organizer?pname(e.organizer as {name?:string|null,handle?:string|null}):undefined}/>
     <div className="row mt12" style={{justifyContent:'space-between'}}>{st(e)}<Btn kind="text" auto onClick={()=>navigate(`/n/events/${id}`)}>{t('fe.host.ev.viewPage')} <ChevronRight/></Btn></div>
-    {cancelled&&e.cancelReason&&<div className="alert err mt12"><Ban/><span>{e.cancelReason}</span></div>}
-    {e.state==='pending_partner'&&<div className="alert warn mt12"><Clock/><span><b>{t('fe.cm.waitsPartnerT')}</b>{t('fe.cm.waitsPartnerText')}</span></div>}
-    {!cancelled&&pend>0&&<div className="alert warn mt12"><FileText/><span><b>{t('fe.host.ev.next')}</b>{fill(t('fe.cm.reviewN'),{n:pl(pend,t('fe.cm.applicationsAcc'),locale)})}
-     <button type="button" className="btn text auto" style={{display:'flex',marginTop:6}} onClick={()=>navigate(`/n/events/${id}/applications`)}>{t('fe.host.ev.openApps')} <ChevronRight/></button></span></div>}
+    {cancelled&&e.cancelReason&&<Alert kind="err" icon={Ban} className="mt12">{e.cancelReason}</Alert>}
+    {e.state==='pending_partner'&&<Alert kind="warn" icon={Clock} className="mt12"><b>{t('fe.cm.waitsPartnerT')}</b>{t('fe.cm.waitsPartnerText')}</Alert>}
+    {!cancelled&&pend>0&&<Alert kind="warn" icon={FileText} className="mt12"><b>{t('fe.host.ev.next')}</b>{fill(t('fe.cm.reviewN'),{n:pl(pend,t('fe.cm.applicationsAcc'),locale)})}
+     <Btn kind="text" auto style={{display:'flex',marginTop:6}} onClick={()=>navigate(`/n/events/${id}/applications`)}>{t('fe.host.ev.openApps')} <ChevronRight/></Btn></Alert>}
     {!cancelled&&<div className={'stat3'+(e.requiresApplication?'':' two')}>{tiles.map(([n,l,go])=><button key={go} type="button" onClick={()=>navigate(go)}><b>{n}</b><small>{l}</small></button>)}</div>}
-    <div className="card list">
-     {e.requiresApplication&&!cancelled&&<LinkRow icon={FileText} tone="v" title={t('fe.cm.appsAndAdmission')} badge={pend||undefined} onClick={()=>navigate(`/n/events/${id}/applications`)}/>}
-     {open&&<LinkRow icon={Bell} tone="l" title={t('fe.host.ev.announce')} sub={t('fe.host.ev.announceSub')} onClick={()=>{setErr('');setMode('announce');}}/>}
-     {!cancelled&&!e.past&&['pending_partner','in_review','rejected','published'].includes(e.state)&&<LinkRow icon={Pencil} title={t('fe.ece.edit')} sub={t('fe.ece.e.editSub')} onClick={()=>navigate(`/n/events/${id}/edit`)}/>}
-     {open&&<LinkRow icon={Ban} danger title={t('fe.host.ev.cancel')} noChev onClick={()=>setMode('cancel')}/>}
-    </div>
-    {!!e.announcements?.length&&<><div className="sec">{t('fe.host.ev.sent')}</div>{e.announcements.map(a=><div key={a.id} className="upd"><span className="ico l"><Bell/></span><span className="tx">
+    <Card list>
+     {e.requiresApplication&&!cancelled&&<Row icon={FileText} tone="v" title={t('fe.cm.appsAndAdmission')} badge={pend||undefined} onClick={()=>navigate(`/n/events/${id}/applications`)}/>}
+     {open&&<Row icon={Bell} tone="l" title={t('fe.host.ev.announce')} sub={t('fe.host.ev.announceSub')} onClick={()=>{setErr('');setMode('announce');}}/>}
+     {!cancelled&&!e.past&&['pending_partner','in_review','rejected','published'].includes(e.state)&&<Row icon={Pencil} title={t('fe.ece.edit')} sub={t('fe.ece.e.editSub')} onClick={()=>navigate(`/n/events/${id}/edit`)}/>}
+     {open&&<Row icon={Ban} danger title={t('fe.host.ev.cancel')} noChev onClick={()=>setMode('cancel')}/>}
+    </Card>
+    {!!e.announcements?.length&&<><SectionLabel>{t('fe.host.ev.sent')}</SectionLabel>{e.announcements.map(a=><div key={a.id} className="upd"><span className="ico l"><Bell/></span><span className="tx">
      <p style={{color:'var(--ink)',margin:0}}>{a.body}</p><small>{a.automatic?t('fe.cm.auto'):''}{when(a.created_at,locale)}</small></span></div>)}</>}
    </>}
   </div></div>
-  {e&&mode==='announce'&&<CSheet title={t('fe.host.ev.announceTitle')} onClose={()=>setMode('')} foot={<Btn icon={Send} onClick={()=>void announce()} busy={busy} disabled={busy}>{t('fe.host.ev.send')}</Btn>}>
+  {e&&mode==='announce'&&<Sheet title={t('fe.host.ev.announceTitle')} onClose={()=>setMode('')} foot={<Btn icon={Send} onClick={()=>void announce()} busy={busy} disabled={busy}>{t('fe.host.ev.send')}</Btn>}>
    <p className="lead">{t('fe.host.ev.announceLead')}</p>
    <Field name="announce" label={t('fe.host.ev.announceLabel')} value={body} onChange={v=>{setBody(v);setErr('');}} err={err||undefined} textarea rows={4} max={500} ph={t('fe.host.ev.announcePh')}/>
-  </CSheet>}
+  </Sheet>}
   {e&&mode==='cancel'&&<Ask icon={Ban} danger title={t('fe.host.ev.cancelQ')} text={t('fe.host.ev.cancelText')} ok={t('fe.host.ev.cancel')} busy={busy} onOk={()=>void cancel()} onCancel={()=>setMode('')}>
    <label className="field" style={{display:'block',textAlign:'left'}}><span>{t('fe.host.ev.reason')}<i>{t('fe.host.optional')}</i></span>
-    <textarea className="inp" rows={3} maxLength={300} value={reason} onChange={x=>setReason(x.target.value)}/></label>
+    <TextArea rows={3} maxLength={300} value={reason} onChange={x=>setReason(x.target.value)}/></label>
    <p style={{marginTop:8}}>{t('fe.host.ev.refunds')}</p>
   </Ask>}
  </>;
@@ -416,20 +413,20 @@ export function EventApplicationsScreen(){
  return <>
   <SubBar title={t('fe.cm.appsTitle')} sub={data?.e.title} back={`/n/events/${id}/manage`}/>
   <div className="view nodock"><div className="wrap">
-   <SegN value={k} onChange={v=>setSp({k:v},{replace:true})} label={t('fe.cm.appsTitle')}
+   <Seg value={k} onChange={v=>setSp({k:v},{replace:true})} label={t('fe.cm.appsTitle')}
     options={(['pending','approved','declined'] as const).map(s=>({id:s,label:t('fe.host.apps.tab.'+s),n:data?.lists[s].length}))}/>
    {!items?<Loading error={error} retry={load} kind="card"/>
     :!items.length?<Empty icon={FileText} title={t('fe.host.apps.empty')} {...(k==='pending'?{text:t('fe.host.apps.emptyText')}:{})}/>
-    :items.map(a=><div key={a.id} className="card application-card mt12">
+    :items.map(a=><Card key={a.id} className="application-card mt12">
      <div className="row"><button type="button" className="plink row g12 grow" style={{textAlign:'left'}} onClick={()=>navigate('/n/people/'+a.profile.id)}><Av name={pname(a.profile)} seed={a.profile.id} src={a.profile.avatar}/>
       <span className="grow"><b style={{display:'block'}}>{pname(a.profile)}{a.people.length===1&&a.people[0]!.age?`, ${a.people[0]!.age}`:''}<NameBadges p={a.profile}/></b>
        <small className="note" style={{display:'block'}}>{a.people.length>1?a.people.map(p=>[p.handle?'@'+p.handle:'',p.age?String(p.age):''].filter(Boolean).join(', ')).join(' · ')+' · ':''}{when(a.created_at,locale)}</small></span></button></div>
-     {a.answers.map((x,i)=><div key={i} className="application-answer">{qs[i]&&<div className="note">{qs[i]}</div>}<div style={{marginTop:4}}>{x}</div></div>)}
-     {a.note&&<div className="application-answer"><div className="note">{t('fe.host.app.note')}</div><div style={{marginTop:4}}>{a.note}</div></div>}
+     {a.answers.map((x,i)=><div key={i} className="application-answer">{qs[i]&&<Note>{qs[i]}</Note>}<div style={{marginTop:4}}>{x}</div></div>)}
+     {a.note&&<div className="application-answer"><Note>{t('fe.host.app.note')}</Note><div style={{marginTop:4}}>{a.note}</div></div>}
      {k==='pending'?<div className="row g8 mt12"><Btn size="md" onClick={()=>void decide(a,true)} disabled={!!busy} busy={busy===a.id}>{t('fe.host.approve')}</Btn><Btn kind="soft" size="md" onClick={()=>void decide(a,false)} disabled={!!busy}>{t('fe.host.decline')}</Btn></div>
       :cancelled?null:k==='approved'?<div className="row g8 mt12"><Btn kind="soft" size="md" onClick={()=>setConfirm(a)} disabled={!!busy}>{t('fe.host.apps.revoke')}</Btn></div>
       :<div className="row g8 mt12"><Btn kind="soft" size="md" onClick={()=>void decide(a,true)} disabled={!!busy} busy={busy===a.id}>{t('fe.host.apps.approveAfter')}</Btn></div>}
-    </div>)}
+    </Card>)}
   </div></div>
   {confirm&&<Ask icon={X} danger title={t('fe.host.apps.revokeQ').replace('{name}',pname(confirm.profile))} text={t('fe.host.apps.revokeText')} ok={t('fe.host.apps.revokeOk')} busy={busy===confirm.id}
    onOk={()=>void decide(confirm,false)} onCancel={()=>setConfirm(null)}/>}
@@ -446,12 +443,12 @@ export function EventAttendeesScreen(){
  return <>
   <SubBar title={t('fe.cm.crowdTitle')} sub={data?.e.title}/>
   <div className="view nodock"><div className="wrap">
-   <SegN small value={k} onChange={v=>setSp({k:v},{replace:true})} label={t('fe.cm.crowdTitle')} options={[{id:'going',label:data?.e.past?t('fe.cm.attended'):t('fe.host.att.going')},{id:'interested',label:t('fe.host.att.interested')}]}/>
+   <Seg small value={k} onChange={v=>setSp({k:v},{replace:true})} label={t('fe.cm.crowdTitle')} options={[{id:'going',label:data?.e.past?t('fe.cm.attended'):t('fe.host.att.going')},{id:'interested',label:t('fe.host.att.interested')}]}/>
    {!data?<Loading error={error} retry={load}/>:<>
-    {data.l.items.length?<div className="card list">{data.l.items.map(p=><PersonRow key={p.id} p={p} sub={p.id===acting?.id?t(p.kind==='couple'?'fe.cm.thatsYouTwo':'fe.cm.thatsYou'):p.kind==='couple'?t('fe.host.att.couple'):undefined}/>)}</div>
-     :<p className="note">{t('fe.cm.nobody')}</p>}
-    {k==='going'&&data.l.items.some(p=>p.kind==='couple')&&<p className="note mt12">{t('fe.cm.coupleTwo')}</p>}
-    {k==='going'&&!org&&data.l.hidden>0&&<p className="note mt12">{fill(t('fe.cm.hiddenN'),{n:data.l.hidden})}</p>}
+    {data.l.items.length?<Card list>{data.l.items.map(p=><PersonRow key={p.id} p={p} sub={p.id===acting?.id?t(p.kind==='couple'?'fe.cm.thatsYouTwo':'fe.cm.thatsYou'):p.kind==='couple'?t('fe.host.att.couple'):undefined}/>)}</Card>
+     :<Note>{t('fe.cm.nobody')}</Note>}
+    {k==='going'&&data.l.items.some(p=>p.kind==='couple')&&<Note className="mt12">{t('fe.cm.coupleTwo')}</Note>}
+    {k==='going'&&!org&&data.l.hidden>0&&<Note className="mt12">{fill(t('fe.cm.hiddenN'),{n:data.l.hidden})}</Note>}
    </>}
   </div></div>
  </>;

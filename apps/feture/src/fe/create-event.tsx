@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Calendar,Check,ChevronLeft,CircleAlert,Clock,EyeOff,Link as LinkIcon,Lock,MapPin,RefreshCw,Ticket,Unlock,Video} from 'lucide-react';
 import {FeError,feErrorMessage} from '../feture/fe-api';
-import {Av,Bar,Btn,Empty,Seg,View,Skel} from './ui';
+import {Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,Group,Note,Seg,SectionLabel,Select,Skel,Steps,ToggleRow,View} from './kit';
 import {useFe} from './session';
 import {ChipGroup,CoverField,FErr,Field,PLATE_KEYS,SelectRow,namedPlate,placeName,reviewNotice,shakeFirstErr,useCatalog,useOp,type Cover,type PlateKey} from './create-community';
 
@@ -243,7 +243,7 @@ function EventEditor({edit,reload}:{edit?:Edit,reload?:()=>void}){
  const names=[1,2,3,4].map(i=>t('fe.ce.step.'+i));
  const places:[string,string][]=(catalog?.places??[]).map(p=>[p.id,placeName(p,locale)]);
  const tzItems:[string,string][]=[...(!ZONES.some(([z])=>z===f.tz)?[[f.tz,`${f.tz} · ${t('fe.ce.tzSelected')}`] as [string,string]]:[]),...ZONES.map(([z,k])=>[z,t(k)] as [string,string])];
- const chip=(on:boolean,label:string,onClick:()=>void,key:string)=><button key={key} type="button" className={'chip'+(on?' on':'')} aria-pressed={on} onClick={onClick}>{label}</button>;
+ const chip=(on:boolean,label:string,onClick:()=>void,key:string)=><Chip key={key} on={on} onClick={onClick}>{label}</Chip>;
 
  let body:ReactNode=null;
  if(step===1)body=<>
@@ -260,8 +260,8 @@ function EventEditor({edit,reload}:{edit?:Edit,reload?:()=>void}){
   {err.cover&&<FErr>{err.cover}</FErr>}
  </>;
  if(step===2)body=<>
-  <div className="field"><span className="flabel">{t('fe.ce.format')}</span><div className="chips">
-   {(['offline','online'] as const).map(k=>chip(f.format===k,t('fe.ce.'+k),()=>set('format',k),k))}</div></div>
+  <div className="field"><span className="flabel">{t('fe.ce.format')}</span><Chips>
+   {(['offline','online'] as const).map(k=>chip(f.format===k,t('fe.ce.'+k),()=>set('format',k),k))}</Chips></div>
   <Field name="date" label={t('fe.ce.date')} type="date" min={isoDay(Date.now())} value={f.date} onChange={v=>set('date',v)} err={err.date}/>
   <Field name="date2" label={t('fe.ce.date2')} type="date" opt min={f.date} value={f.date2} onChange={v=>{set('date2',v);setErr(e=>({...e,t2:''}));}}/>
   <div className="row g8" style={{alignItems:'flex-start'}}>
@@ -269,23 +269,22 @@ function EventEditor({edit,reload}:{edit?:Edit,reload?:()=>void}){
    <div className="grow"><Field name="t2" label={t('fe.ce.t2')} type="time" value={f.t2} onChange={v=>set('t2',v)} err={err.t2||undefined}/></div>
   </div>
   <label className={'field'+(err.tz?' err':'')} data-field="tz"><span>{t('fe.ce.tz')}</span>
-   <select className="inp" name="tz" value={f.tz} onChange={e=>set('tz',e.target.value)}>{tzItems.map(([z,l])=><option key={z} value={z}>{l}</option>)}</select>
+   <Select label={t('fe.ce.tz')} value={f.tz} onChange={v=>set('tz',v)} options={tzItems}/>
    {err.tz?<FErr>{err.tz}</FErr>:<div className="fhint">{t('fe.ce.tzHint')}</div>}</label>
   {f.format==='offline'?<>
    <label className={'field'+(err.placeId?' err':'')} data-field="city"><span>{t('fe.ce.city')}</span>
-    <select className="inp" name="city" value={f.placeId} onChange={e=>set('placeId',e.target.value)}>{!f.placeId&&<option value="">—</option>}{places.map(([id,l])=><option key={id} value={id}>{l}</option>)}</select>
+    <Select label={t('fe.ce.city')} value={f.placeId} onChange={v=>set('placeId',v)} options={[...(!f.placeId?[['','—'] as [string,string]]:[]),...places]}/>
     {err.placeId&&<FErr>{err.placeId}</FErr>}</label>
    <Field name="area" label={t('fe.ce.area')} ph={t('fe.ce.areaPh')} value={f.area} onChange={v=>set('area',v)} err={err.area}/>
    <Field name="addr" label={t('fe.ce.addr')} icon={Lock} ph={t('fe.ce.addrPh')} value={f.exactAddress} onChange={v=>set('exactAddress',v)} err={err.exactAddress}/>
   </>:<Field name="link" label={t('fe.ce.link')} icon={LinkIcon} type="url" inputMode="url" ph="https://" value={f.joinUrl} onChange={v=>set('joinUrl',v)} err={err.joinUrl}/>}
  </>;
  if(step===3)body=<>
-  <div className="card list"><button type="button" className="li" role="switch" aria-checked={f.requiresApplication} disabled={frozen} onClick={()=>set('requiresApplication',!f.requiresApplication)}>
-   <span className="tx"><b>{t('fe.ce.approval')}</b><small>{frozen?t('fe.ece.e.frozen'):t('fe.ce.approvalSub')}</small></span><span className={'sw'+(f.requiresApplication?' on':'')} aria-hidden="true"/></button></div>
-  {frozen&&f.requiresApplication&&f.question.trim()&&<div className="field mt12"><span className="flabel">{t('fe.ce.question')}</span><p className="note">{f.question.trim()}</p></div>}
+  <Card list><ToggleRow title={t('fe.ce.approval')} sub={frozen?t('fe.ece.e.frozen'):t('fe.ce.approvalSub')} on={f.requiresApplication} disabled={frozen} onClick={()=>set('requiresApplication',!f.requiresApplication)}/></Card>
+  {frozen&&f.requiresApplication&&f.question.trim()&&<div className="field mt12"><span className="flabel">{t('fe.ce.question')}</span><Note>{f.question.trim()}</Note></div>}
   {!frozen&&f.requiresApplication&&<><div style={{height:12}}/><Field name="q0" label={t('fe.ce.question')} ph={t('fe.ce.questionPh')} max={120} value={f.question} onChange={v=>set('question',v)} err={err.question}/></>}
-  <div className="field mt12"><span className="flabel">{t('fe.ce.price')}</span><div className="chips">
-   {(['free','door','ext'] as const).map(k=>chip(f.price===k,t('fe.ce.price.'+k),()=>set('price',k),k))}</div></div>
+  <div className="field mt12"><span className="flabel">{t('fe.ce.price')}</span><Chips>
+   {(['free','door','ext'] as const).map(k=>chip(f.price===k,t('fe.ce.price.'+k),()=>set('price',k),k))}</Chips></div>
   {f.price!=='free'&&<div className="row g8 ev-price" style={{alignItems:'flex-start'}}>
    <div className="grow"><Field name="amount" label={t('fe.ce.amount')} ph="15" inputMode="decimal" value={f.amount} onChange={v=>set('amount',v)} err={err.amount}/></div>
    <div className="ev-cur"><SelectRow aria={t('fe.ce.currency')} value={f.currency} onChange={v=>set('currency',v)} items={CURRENCIES.map(([s])=>[s,s])}/></div>
@@ -310,38 +309,36 @@ function EventEditor({edit,reload}:{edit?:Edit,reload?:()=>void}){
     <div className="bd"><small>{f.kind?t('fe.ce.kind.'+f.kind):''}{acting?' · '+acting.name:''}</small><b>{f.title.trim()}</b>
      <div className="meta"><span><Clock/>{ok?fmt(start,{hour:'2-digit',minute:'2-digit'}):''}</span><span><Ticket/>{priceText}</span></div></div>
    </div></div>
-   <div className="card list mt12"><div className="li"><span className={'ico'+(pv==='ok'?' g':'')}>{pv==='ok'?<Unlock/>:<Lock/>}</span>
-    <span className="tx"><b>{f.format==='online'?t('fe.ce.pv.link'):t('fe.ce.pv.address')}</b><small>{pv==='ok'?(f.format==='online'?f.joinUrl.trim():f.exactAddress.trim()):t('fe.ce.pv.hidden')}</small></span></div></div>
-   <div className="card list mt12">
+   <Card list className="mt12"><div className="li"><span className={'ico'+(pv==='ok'?' g':'')}>{pv==='ok'?<Unlock/>:<Lock/>}</span>
+    <span className="tx"><b>{f.format==='online'?t('fe.ce.pv.link'):t('fe.ce.pv.address')}</b><small>{pv==='ok'?(f.format==='online'?f.joinUrl.trim():f.exactAddress.trim()):t('fe.ce.pv.hidden')}</small></span></div></Card>
+   <Card list className="mt12">
     <div className="li"><span className="ico l"><Calendar/></span><span className="tx"><b>{ok?fmt(start,{weekday:'short',day:'numeric',month:'long'}):''}</b>
      <small>{ok?`${fmt(start,{hour:'2-digit',minute:'2-digit'})}–${fmt(end,{hour:'2-digit',minute:'2-digit'})}`:''} {f.format==='online'?t('fe.ce.pv.yourTime'):t('fe.ce.pv.localTime')}</small></span></div>
     <div className="li"><span className="ico a"><Ticket/></span><span className="tx"><b>{priceText}</b>
      <small>{f.price==='ext'?t('fe.ce.pv.ticketOn').replace('{site}',site):f.requiresApplication?t('fe.ce.pv.byApplication'):t('fe.ce.pv.justCome')}</small></span></div>
-   </div>
-   {f.description.trim()&&<><div className="sec">{t('fe.ce.pv.about')}</div><div className="md bio"><p>{f.description.trim()}</p></div></>}
-   {f.requirements.trim()&&<><div className="sec">{t('fe.ce.reqs')}</div><div className="card"><div className="fact"><i className="v"><Check/></i><span>{f.requirements.trim()}</span></div></div></>}
-   {f.requiresApplication&&f.question.trim()&&<><div className="sec">{t('fe.ce.question')}</div><p className="note">{f.question.trim()}</p></>}
-   <div className="alert warn mt12"><Clock/><span>{edit?(frozen?t('fe.ece.e.reviewPublished'):t('fe.ece.e.reviewBefore')):couple?t('fe.ce.reviewCouple'):t('fe.ce.review')}</span></div>
+   </Card>
+   {f.description.trim()&&<><SectionLabel>{t('fe.ce.pv.about')}</SectionLabel><div className="md bio"><p>{f.description.trim()}</p></div></>}
+   {f.requirements.trim()&&<><SectionLabel>{t('fe.ce.reqs')}</SectionLabel><Card><div className="fact"><i className="v"><Check/></i><span>{f.requirements.trim()}</span></div></Card></>}
+   {f.requiresApplication&&f.question.trim()&&<><SectionLabel>{t('fe.ce.question')}</SectionLabel><Note>{f.question.trim()}</Note></>}
+   <Alert kind="warn" icon={Clock} className="mt12">{edit?(frozen?t('fe.ece.e.reviewPublished'):t('fe.ece.e.reviewBefore')):couple?t('fe.ce.reviewCouple'):t('fe.ce.review')}</Alert>
   </>;
  }
 
  return <>
-  <header className="bar">
-   <button type="button" className="ibtn ghost" aria-label={t('fe.back')} onClick={back}><ChevronLeft/></button>
-   <h1 className="sm" tabIndex={-1}>{edit?t('fe.ece.e.title'):draftId?t('fe.ce.titleDraft'):t('fe.ce.title')}</h1>
-   {!edit&&<button type="button" className="btn text auto" onClick={toDraft} disabled={busy}>{t('fe.ce.toDraft')}</button>}
-  </header>
+  <Bar title={edit?t('fe.ece.e.title'):draftId?t('fe.ce.titleDraft'):t('fe.ce.title')} small onBack={back}>
+   {!edit&&<Btn kind="text" auto onClick={toDraft} disabled={busy}>{t('fe.ce.toDraft')}</Btn>}
+  </Bar>
   <div className="view nodock cta1"><div className="wrap">
-   <div className="stepper"><span>{step}/4 · {names[step-1]}</span><div className="qprog"><i style={{width:`${step*25}%`}}/></div></div>
+   <Steps step={step} total={4} name={names[step-1]!}/>
    {edit&&edit.pendingChange!=null&&step===1&&<div className="alert warn" style={{marginBottom:12}}><Clock/><span>{t('fe.ece.e.pendingChange')}</span></div>}
-   {step<4?<section className="grp"><div className="card form-card">{body}</div></section>:body}
-   {notice&&<div ref={noticeRef} className={'alert mt12 '+notice.kind} role={notice.kind==='ok'?'status':'alert'}><span>{notice.text}{stale&&reload&&<button type="button" className="btn text auto" style={{display:'flex',marginTop:6}} onClick={reload}><RefreshCw/>{t('fe.ece.reload')}</button>}</span></div>}
+   {step<4?<Group><Card form>{body}</Card></Group>:body}
+   {notice&&<Alert ref={noticeRef} kind={notice.kind} noIcon className="mt12">{notice.text}{stale&&reload&&<Btn kind="text" auto icon={RefreshCw} style={{display:'flex',marginTop:6}} onClick={reload}>{t('fe.ece.reload')}</Btn>}</Alert>}
    {draftId&&(asking
     ?<div className="alert warn mt12" role="alertdialog"><span>{t('fe.ce.draftDeleteAsk')}</span><div className="row g8 mt8"><Btn kind="danger" size="sm" auto onClick={removeDraft} disabled={busy}>{t('fe.ce.draftDeleteOk')}</Btn><Btn kind="text" size="sm" auto onClick={()=>setAsking(false)}>{t('fe.ce.cancel')}</Btn></div></div>
     :<div className="row mt12"><Btn kind="text" size="sm" auto onClick={()=>setAsking(true)} disabled={busy}>{t('fe.ce.draftDelete')}</Btn></div>)}
   </div></div>
   <div className="ctabar"><div className="wrap"><div className="row g8">
-   {step>1&&<button type="button" className="btn soft" style={{flex:'0 0 auto',width:'auto'}} onClick={back} disabled={busy}><ChevronLeft/>{t('fe.ce.back')}</button>}
+   {step>1&&<Btn kind="soft" fit icon={ChevronLeft} onClick={back} disabled={busy}>{t('fe.ce.back')}</Btn>}
    <Btn onClick={step<4?next:submit} disabled={busy}>{busy?(step<4?t('fe.ce.saving'):t('fe.ce.sending')):step<4?t('fe.ce.next'):edit?t('fe.ece.save'):t('fe.ce.submit')}</Btn>
   </div></div></div>
  </>;
