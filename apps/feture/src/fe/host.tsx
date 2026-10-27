@@ -1,12 +1,12 @@
 import {useCallback,useEffect,useState,type ReactNode} from 'react';
-import {useNavigate,useParams,useSearchParams} from 'react-router';
+import {useLocation,useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Ban,Bell,Check,ChevronRight,CircleCheck,Clock,Copy,Eye,FileText,Link as LinkIcon,Lock,MoreHorizontal,Pin,PinOff,Send,Settings,Trash2,TriangleAlert,User,UserMinus,UserPlus,Users,X,type LucideIcon} from 'lucide-react';
-import {feErrorMessage,newOpId} from '../feture/fe-api';
+import {Ban,Bell,Check,ChevronRight,CircleCheck,Clock,Copy,Eye,FileText,Link as LinkIcon,Lock,MoreHorizontal,Pencil,Pin,PinOff,Send,Settings,Trash2,TriangleAlert,User,UserMinus,UserPlus,Users,X,type LucideIcon} from 'lucide-react';
+import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Av,Bar,Btn,Empty,Seg,View} from './ui';
 import {useFe} from './session';
-import {FErr,Field,shakeFirstErr} from './create-community';
+import {FErr,Field,SelectRow,shakeFirstErr} from './create-community';
 
 /** Tools for community hosts and event organisers (V21 C05 join with the question, C09/C10 members and manage,
  * C11 requests; E06 apply, E15 organiser panel, E16 applications, E17/E18 attendees). The server decides who may
@@ -17,7 +17,8 @@ const prof=z.object({id:z.uuid(),kind:z.string(),handle:z.string().nullable(),na
 type Prof=z.infer<typeof prof>;
 const pname=(p:{name?:string|null,handle?:string|null})=>p.name||(p.handle?'@'+p.handle:'?');
 
-const commSchema=z.object({ok:z.literal(true),community:z.object({id:z.uuid(),name:z.string(),privacy:z.string(),members:z.number(),rules:z.array(z.string()),
+const updateRes=z.object({ok:z.literal(true),rev:z.number(),review:z.array(z.string()).default([])}).passthrough();
+const commSchema=z.object({ok:z.literal(true),community:z.object({id:z.uuid(),name:z.string(),privacy:z.string(),members:z.number(),rules:z.array(z.string()),rev:z.number().optional(),pendingChange:z.unknown().optional(),
  joinQuestion:z.string().nullable(),me:z.object({role:z.string(),state:z.string()}).passthrough().nullable(),request:z.object({id:z.uuid()}).nullable(),
  pendingRequests:z.number().optional()}).passthrough()});
 type Comm=z.infer<typeof commSchema>['community'];
@@ -154,9 +155,22 @@ export function DiscussionHostTools({postId,pinned,onDone}:{postId:string,pinned
 
 /** C10 — community manage: counts, requests, members, invite link. */
 export function CommunityManageScreen(){
- const {id=''}=useParams();const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();
+ const {id=''}=useParams();const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const location=useLocation();
  const fetch=useCallback(()=>call('community.get',{communityId:id},commSchema).then(r=>r.community),[call,id]);
  const {data:c,error,load}=useLoad(fetch);
+ // The edit screen comes back with what happened to the edit (saved, or waiting for staff).
+ const [done,setDone]=useState(()=>{const n=(location.state as {notice?:unknown}|null)?.notice;return typeof n==='string'?n:'';});
+ const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const owner=!!c&&c.me?.role==='owner'&&c.me.state==='active'&&typeof c.rev==='number';
+ const pendingPrivacy=(()=>{const p=c?.pendingChange;return p&&typeof p==='object'&&'privacy' in p&&typeof (p as {privacy?:unknown}).privacy==='string'?(p as {privacy:string}).privacy:'';})();
+ const setPrivacy=async(privacy:'open'|'closed'|'hidden')=>{
+  if(!c||busy||privacy===c.privacy||typeof c.rev!=='number')return;
+  setBusy(true);setFailure('');setDone('');
+  try{
+   const r=await call('community.update',{opId:newOpId(),communityId:id,rev:c.rev,privacy},updateRes);
+   setDone(r.review.includes('privacy')?t('fe.ece.priv.review'):t('fe.ece.priv.now.'+privacy));load();
+  }catch(x){setFailure(feErrorMessage(x,t));if(x instanceof FeError&&x.code==='conflict')load();}finally{setBusy(false);}
+ };
  return <>
   <Bar title={t('fe.host.manage')} back={`/n/communities/${id}`}/>
   <View className="nodock">
@@ -169,8 +183,14 @@ export function CommunityManageScreen(){
     <div className="card list">
      <LinkRow icon={FileText} tone="v" title={t('fe.host.requests')} badge={c.pendingRequests||undefined} onClick={()=>navigate(`/n/communities/${id}/requests`)}/>
      <LinkRow icon={Users} title={t('fe.host.membersTitle')} sub={t('fe.host.membersSub')} onClick={()=>navigate(`/n/communities/${id}/members`)}/>
+     {owner&&<LinkRow icon={Pencil} title={t('fe.ece.edit')} sub={t('fe.ece.c.editSub')} onClick={()=>navigate(`/n/communities/${id}/edit`)}/>}
     </div>
+    <Failure text={failure}/><Done text={done}/>
     <div className="sec">{t('fe.host.access')}</div>
+    {owner&&<div className="card list" style={{marginBottom:12}}><div className="li"><span className="ico"><Lock/></span>
+     <SelectRow label={t('fe.cc.privacy')} value={c.privacy as 'open'|'closed'|'hidden'} onChange={v=>{void setPrivacy(v);}}
+      sub={pendingPrivacy?t('fe.ece.priv.pending').replace('{p}',t('fe.cc.privacy.'+pendingPrivacy)):t('fe.ece.priv.sub.'+c.privacy)}
+      items={(['open','closed','hidden'] as const).map(k=>[k,t('fe.cc.privacy.'+k)])}/></div></div>}
     <InviteBox communityId={id}/>
    </>}
   </View>
@@ -373,11 +393,12 @@ export function EventApplyScreen(){
 
 /** E15 — the organiser panel: counts, applications, an announcement, cancelling. */
 export function EventManageScreen(){
- const {id=''}=useParams();const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();
+ const {id=''}=useParams();const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const location=useLocation();
  const fetch=useCallback(()=>call('event.get',{eventId:id},evSchema).then(r=>r.event),[call,id]);
  const {data:e,error,load}=useLoad(fetch);
  const [mode,setMode]=useState<''|'announce'|'cancel'>('');const [body,setBody]=useState('');const [reason,setReason]=useState('');
- const [err,setErr]=useState('');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [done,setDone]=useState('');
+ const [err,setErr]=useState('');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const [done,setDone]=useState(()=>{const n=(location.state as {notice?:unknown}|null)?.notice;return typeof n==='string'?n:'';});
  const announce=async()=>{
   const b=body.trim();if(b.length<5){setErr(t('fe.host.ev.announceShort'));shakeFirstErr();return;}
   setBusy(true);setFailure('');
@@ -408,6 +429,7 @@ export function EventManageScreen(){
     <div className="card list">
      {e.requiresApplication&&e.state!=='cancelled'&&<LinkRow icon={FileText} tone="v" title={t('fe.host.ev.apps')} badge={e.pendingApplications||undefined} onClick={()=>navigate(`/n/events/${id}/applications`)}/>}
      <LinkRow icon={Users} title={t('fe.host.ev.attendees')} onClick={()=>navigate(`/n/events/${id}/attendees?k=going`)}/>
+     {!e.past&&['pending_partner','in_review','rejected','published'].includes(e.state)&&<LinkRow icon={Pencil} title={t('fe.ece.edit')} sub={e.state==='published'?t('fe.ece.e.editSub'):undefined} onClick={()=>navigate(`/n/events/${id}/edit`)}/>}
      {open&&<LinkRow icon={Bell} tone="l" title={t('fe.host.ev.announce')} sub={t('fe.host.ev.announceSub')} noChev onClick={()=>{setMode(mode==='announce'?'':'announce');setDone('');}}/>}
      {open&&<LinkRow icon={Ban} danger title={t('fe.host.ev.cancel')} noChev onClick={()=>{setMode(mode==='cancel'?'':'cancel');setDone('');}}/>}
     </div>
