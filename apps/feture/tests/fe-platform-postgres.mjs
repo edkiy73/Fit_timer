@@ -465,7 +465,7 @@ test('/api/fe handler: auth, schema, acting profile, idempotent writes bound to 
     await pg.exec('reset role; revoke all on feture.op_ledger from feture_api; set role feture_api');
     const broken = await call({ ...intent, opId: '018f0000-0000-7000-8000-0000000000b2' }, { 'x-fe-profile': pa });
     assert.deepEqual([broken.statusCode, broken.body.error, Object.keys(broken.body).sort()], [503, 'unavailable', ['error', 'ok', 'requestId']]);
-    assert.ok(log.every(e => Object.keys(e).sort().join() === 'action,outcome,requestId'));
+    assert.ok(log.every(e => Object.keys(e).sort().join() === 'action,ms,outcome,requestId,stages' && typeof e.ms === 'number' && Object.values(e.stages).every(v => typeof v === 'number')));
     assert.ok(!JSON.stringify(log).includes('core-a'));
   } finally { await pg.close(); }
 });
