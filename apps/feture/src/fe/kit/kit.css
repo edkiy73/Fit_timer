@@ -166,3 +166,8 @@ button.pill{cursor:pointer}
 .v21 .k-cam.doc .k-cam-guide{width:82%;aspect-ratio:1.42;border-radius:var(--r)}
 .v21 .k-cam-hint{position:absolute;left:var(--s-4);right:var(--s-4);bottom:var(--s-4);text-align:center;color:var(--cam-ink);font:var(--t-body-strong);font-size:var(--fs-sm)}
 .v21 .k-cam>img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+/* CheckList — rows with a box: several values from a list. */
+.v21 .radio.k-chk i{display:grid;place-items:center;border-radius:var(--r-xs)}
+.v21 .radio.k-chk i svg{width:14px;height:14px;opacity:0;color:var(--accent-ink)}
+.v21 .radio.k-chk.on i{border:2px solid var(--accent);background:var(--accent)}
+.v21 .radio.k-chk.on i svg{opacity:1}
