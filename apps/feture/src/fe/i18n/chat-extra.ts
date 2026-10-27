@@ -83,7 +83,7 @@ export const ru = {
   'fe.chx.coupleSees': "видит и партнёр",
   'fe.chx.noChats': "Пока нет диалогов",
   'fe.chx.noChatsText': "Чат открывается после взаимной симпатии.",
-  'fe.chx.sayFirst': "Напиши первым",
+  'fe.chx.sayFirst': "Начни разговор",
   'fe.chx.endedRow': "Контакт прекращён",
   'fe.chx.matchSys': "Взаимная симпатия.",
   'fe.chx.starters': "С чего начать",
