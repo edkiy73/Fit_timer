@@ -1,5 +1,8 @@
 // Staff area as the qa moderator (persona `staff`): queues, a real photo-check decision end to end, Premium
-// grant/revoke, the journal. The people decided on are fresh `temp` persons of the lane, deleted at the end.
+// grant/revoke, the journal. The photo check is submitted by `mate` (it has an approved photo; rejecting its check
+// changes nothing else); Premium goes to a fresh `temp` person, deleted at the end. Premium and the journal need the
+// lead (or owner / auditor) role: with only «moderator» on qa-staff they fail early and say so.
+const needRole = async (t, roles) => { const me = await t.api('staff.me', {}); if (!me.roles?.some(r => roles.includes(r))) throw new Error(`qa-staff needs one of ${roles.join('/')} (has ${me.roles?.join(',') || 'none'}) — granted by the owner out of band`); };
 import fs from 'node:fs';
 const until = async (fn, ms = 30000) => { const end = Date.now() + ms; let last; while (Date.now() < end) { try { return await fn(); } catch (e) { last = e; await new Promise(r => setTimeout(r, 700)); } } throw last; };
 const IMG = new URL('../../../public/images/profile-3-45.webp', import.meta.url).pathname;
@@ -21,7 +24,7 @@ export default [
    await t.tap('header.bar button[aria-label="Назад"]'); await t.page.waitForURL(/\/n\/me/);
  } },
  { name: 'Staff: a submitted photo check is rejected with a reason; the person sees «rejected» (API)', persona: 'staff', route: '/n/staff', run: async t => {
-   const tmp = await t.persona('temp'), who = tmp.email;
+   const tmp = null, who = (await t.persona('mate')).email;
    try {
    const st = await t.api('verification.photoStatus', {}, who);
    if (st.state !== 'pending') {
@@ -47,6 +50,7 @@ export default [
    } finally { await drop(t, tmp); }
  } },
  { name: 'Staff Premium: grant to a fresh account, status on, revoke with confirm, status off (API)', persona: 'staff', route: '/n/staff', run: async t => {
+   await needRole(t, ['owner', 'lead']);
    const tmp = await t.persona('temp'), other = tmp.email, otherNick = tmp.handle;
    try {
      await t.see('.seg'); await t.tap('.seg >> text=Премиум');
@@ -65,6 +69,7 @@ export default [
    } finally { await drop(t, tmp); }
  } },
  { name: 'Staff journal: filter by an id and clear', persona: 'staff', route: '/n/staff', run: async t => {
+   await needRole(t, ['owner', 'lead', 'auditor']);
    await t.see('.seg'); await t.tap('.seg >> text=Журнал');
    await t.page.locator('.view .card.list, .view .empty').first().waitFor({ timeout: 15000 });
    const f = t.page.getByLabel('ID объекта (необязательно)');
