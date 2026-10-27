@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Calendar,Check,ChevronLeft,CircleAlert,Clock,EyeOff,Link as LinkIcon,Lock,MapPin,RefreshCw,Ticket,Unlock,Video} from 'lucide-react';
 import {FeError,feErrorMessage} from '../feture/fe-api';
-import {Av,Bar,Btn,Empty,Seg,View} from './ui';
+import {Av,Bar,Btn,Empty,Seg,View,Skel} from './ui';
 import {useFe} from './session';
 import {ChipGroup,CoverField,FErr,Field,PLATE_KEYS,SelectRow,namedPlate,placeName,reviewNotice,shakeFirstErr,useCatalog,useOp,type Cover,type PlateKey} from './create-community';
 
@@ -151,7 +151,7 @@ export function EditEventScreen(){
  return <>
   <Bar title={t('fe.ece.e.title')} back small/>
   <View className="nodock">{error?<Empty icon={CircleAlert} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={reload}>{t('fe.retry')}</Btn></Empty>
-   :!e?<p className="note" role="status">{t('fe.loading')}</p>
+   :!e?<Skel kind="list"/>
    :!mine?<Empty icon={Lock} title={t('fe.ece.e.onlyOrganiser')}/>
    :<Empty icon={Lock} title={t('fe.ece.e.closed')} text={t('fe.ece.e.closedText')}/>}</View>
  </>;

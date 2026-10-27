@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,Bell,Check,ChevronRight,CircleCheck,Clock,Copy,Eye,FileText,Link as LinkIcon,Lock,MoreHorizontal,Pencil,Pin,PinOff,Send,Settings,Trash2,TriangleAlert,User,UserMinus,UserPlus,Users,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Av,Bar,Btn,Empty,Seg,View} from './ui';
+import {Av,Bar,Btn,Empty,Seg,View,Skel} from './ui';
 import {useFe} from './session';
 import {FErr,Field,SelectRow,shakeFirstErr} from './create-community';
 
@@ -75,7 +75,7 @@ function useLoad<T>(fn:()=>Promise<T>){
 function Loading({error,retry}:{error:unknown,retry:()=>void}){
  const {t}=useI18n();
  return error?<Empty icon={Lock} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={retry}>{t('fe.retry')}</Btn></Empty>
-  :<p className="note" role="status">{t('fe.loading')}</p>;
+  :<Skel kind="list"/>;
 }
 
 /* ---------------- Communities ---------------- */

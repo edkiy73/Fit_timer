@@ -5,7 +5,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {BookOpen,ChevronLeft,ChevronRight,CircleCheck,Clock,History,Image as ImageIcon,Info,Pencil,Plus,Search as SearchIcon,Users,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Av,Bar,Btn,Empty,Seg,View,plate} from './ui';
+import {Av,Bar,Btn,Empty,Seg,View,plate,Skel} from './ui';
 import {useFe} from './session';
 import {PostCard,postSchema,type Post} from './feed';
 import {InterestSheet,Jars,useInterests} from './interests';
@@ -114,7 +114,7 @@ export function TopicScreen(){
     {comms.length>0&&<><div className="sec">{t('fe.br.communities')}</div>{comms.map(c=><CommunityCard key={c.id} c={c} tname={tname}/>)}</>}
     <div className="sec">{t('fe.br.posts')}</div>
     {error&&!posts?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>load()}>{t('fe.retry')}</Btn></Empty>
-     :posts===null?<p className="note" role="status">{t('fe.loading')}</p>
+     :posts===null?<Skel kind="list"/>
      :posts.length===0?<><p className="note">{t('fe.br.topic.noPosts')}</p><Btn kind="soft" className="mt12" icon={Pencil} onClick={()=>navigate('/n/feed/new')}>{t('fe.br.topic.write',{name})}</Btn></>
      :<><PostList items={posts} setItems={f=>setPosts(list=>list?f(list):list)}/>
       {next&&<Btn kind="soft" onClick={()=>load(next)} disabled={more}>{more?t('fe.loading'):t('fe.feed.more')}</Btn>}</>}
@@ -209,7 +209,7 @@ export function SearchScreen(){
     {(scope==='posts'||scope==='communities'||scope==='events')&&<div className="alert info mt16"><Info/><span>{t('fe.br.catalogHint')}</span></div>}
    </>
    :error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}/>
-   :!res||busy&&!sections.length?<p className="note" role="status">{t('fe.loading')}</p>
+   :!res||busy&&!sections.length?<Skel kind="list"/>
    :sections.length?<>{sections}</>
    :<Empty icon={SearchIcon} title={t('fe.br.nothing')} text={t('fe.br.nothingText')}/>}
   </View>
@@ -250,7 +250,7 @@ export function FollowsScreen(){
     {id:'following',label:t('fe.br.following')+(lists?' · '+countLabel(lists.following.length):'')}]}/>
    {failure&&<div className="alert err mt12" role="alert"><span>{failure}</span></div>}
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
-    :list===null?<p className="note mt12" role="status">{t('fe.loading')}</p>
+    :list===null?<Skel kind="list"/>
     :!list.length?<Empty icon={Users} title={tab==='following'?t('fe.br.noFollowing'):t('fe.br.noFollowers')}/>
     :<div className="card list mt12">{list.map(k=>{const self=own.has(k.id);const fol=myFollows.has(k.id);
      return <div key={k.id} className="li frow">
@@ -301,7 +301,7 @@ export function GalleryScreen(){
   <Bar title={t('fe.br.gallery')+(p?' · '+nameOf(p):'')} back/>
   <View>
    {error?<Empty icon={X} role="alert" title={t('fe.feed.unavailable')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
-    :!p?<p className="note" role="status">{t('fe.loading')}</p>
+    :!p?<Skel kind="list"/>
     :!list.length?<Empty icon={ImageIcon} title={t('fe.br.galleryEmpty')}/>
     :<div className="ggrid">{list.map((m,i)=><button key={i} type="button" className="gtile" aria-label={t('fe.br.photoN',{n:i+1,total:list.length})}
      onClick={e=>{opener.current=e.currentTarget;setOpen(i);}}>

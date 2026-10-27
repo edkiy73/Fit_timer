@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Archive,ArchiveRestore,Ban,Camera,Check,CheckCheck,ChevronLeft,Clock,Ellipsis,Eye,Flag,Image as ImageIcon,Info,MessageCircle,Plus,SendHorizontal,User,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Av,Bar,Btn,Empty,Seg,View} from './ui';
+import {Av,Bar,Btn,Empty,Seg,View,Layer,Skel} from './ui';
 import {AgeCheckLink} from './age-check';
 import {useFe,useRealtime} from './session';
 
@@ -45,7 +45,7 @@ export function ChatsTab(){
   <View>
    <Seg small={false} value={filter} onChange={setFilter} options={[{id:'all',label:t('fe.chats.all')},{id:'me',label:t('fe.chats.personal')},{id:'couple',label:t('fe.chats.couple')}]}/>
    {error&&!items?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
-    :items===null?<p className="note" role="status">{t('fe.loading')}</p>
+    :items===null?<Skel kind="list"/>
     :!items.length?(archived?<Empty icon={Archive} title={t('fe.chx.archiveEmpty')} text={t('fe.chx.archiveEmptyText')}/>
      :<Empty icon={MessageCircle} title={t('fe.chats.empty')} text={t('fe.chats.emptyText')}><Btn kind="soft" onClick={()=>navigate('/n/people')}>{t('fe.chats.toPeople')}</Btn></Empty>)
     :<>
@@ -68,7 +68,7 @@ function Sheet({title,lead,onClose,foot,children}:{title:string,lead?:ReactNode,
  const {t}=useI18n();const ref=useRef<HTMLDivElement>(null);
  useEffect(()=>{const opener=document.activeElement as HTMLElement|null;ref.current?.focus({preventScroll:true});return ()=>{opener?.focus?.({preventScroll:true});};},[]);
  useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();onClose();}};addEventListener('keydown',k);return ()=>removeEventListener('keydown',k);},[onClose]);
- return <div className="layer">
+ return <Layer>
   <div className="scrim on" onClick={onClose}/>
   <div ref={ref} className="sheet on" role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}>
    <div className="grab"/>
@@ -76,7 +76,7 @@ function Sheet({title,lead,onClose,foot,children}:{title:string,lead?:ReactNode,
    <div className="sh-b">{children}</div>
    {foot&&<div className="sh-f">{foot}</div>}
   </div>
- </div>;
+ </Layer>;
 }
 /** `linkRow()` without a chevron. */
 function Li({icon:Icon,tone,danger,title,sub,onClick}:{icon:LucideIcon,tone?:string,danger?:boolean,title:string,sub?:string,onClick:()=>void}){

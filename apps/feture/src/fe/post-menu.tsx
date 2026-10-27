@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,EyeOff,Flag,Pencil,Trash2,UserX,X} from 'lucide-react';
 import type {LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Btn} from './ui';
+import {Btn,Layer} from './ui';
 import {useFe} from './session';
 import type {Post} from './feed';
 
@@ -72,13 +72,13 @@ export function PostMenu({post,onClose,onRemove}:{post:Post,onClose:()=>void,onR
  const head=<div className="sh-h"><div className="sh-ht"><h2>{title}</h2></div>
   <button type="button" className="ibtn ghost sm" aria-label={t('fe.pm.close')} onClick={onClose}><X/></button></div>;
  const err=failure&&<div className="alert err mt12" role="alert"><span>{failure}</span></div>;
- const confirm=(Icon:LucideIcon,h:string,text:string,ok:string,act:()=>void)=><div className="layer">
+ const confirm=(Icon:LucideIcon,h:string,text:string,ok:string,act:()=>void)=><Layer>
   <div className="scrim on" onClick={()=>go('menu')}/>
   <div ref={sheet} className="dialog on" role="alertdialog" aria-modal="true" aria-label={h} tabIndex={-1}>
    <div className="ico l"><Icon/></div><h2>{h}</h2><p>{text}</p>{err&&<div className="mb12">{err}</div>}
    <div className="btns"><Btn kind="danger" onClick={act} disabled={busy}>{ok}</Btn><Btn kind="soft" onClick={()=>go('menu')} disabled={busy}>{t('fe.pm.cancel')}</Btn></div>
   </div>
- </div>;
+ </Layer>;
 
  // A confirmation replaces the sheet with the prototype's `ask()` dialog in the same layer.
  if(view==='delete')return confirm(Trash2,couple?t('fe.pm.delTitleCouple'):t('fe.pm.delTitle'),couple?t('fe.pm.delTextCouple'):t('fe.pm.delText'),couple?t('fe.pm.hideOk'):t('fe.pm.delete'),del);
@@ -112,10 +112,10 @@ export function PostMenu({post,onClose,onRemove}:{post:Post,onClose:()=>void,onR
   </>}
  </div>{err}</div>;
 
- return <div className="layer">
+ return <Layer>
   <div className="scrim on" onClick={onClose}/>
   <div ref={sheet} className="sheet on" role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}>
    <div className="grab"/>{head}{content}
   </div>
- </div>;
+ </Layer>;
 }

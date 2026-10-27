@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Bell,Inbox,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Av,Bar,Btn,Empty,Seg,View} from './ui';
+import {Av,Bar,Btn,Empty,Seg,View,Skel} from './ui';
 import {useFe,useRealtime} from './session';
 import {when} from './feed';
 
@@ -57,7 +57,7 @@ export function InboxScreen(){
   <View>
    <Seg value={tab} onChange={setTab} options={[{id:'todo',label:t('fe.inbox.todo')+(decide?.length?' · '+decide.length:'')},{id:'all',label:t('fe.inbox.all')+(unread?' · '+unread:'')}]}/>
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
-    :decide===null||notes===null?<p className="note" role="status">{t('fe.loading')}</p>
+    :decide===null||notes===null?<Skel kind="list"/>
     :tab==='todo'?(decide.length===0?<Empty icon={Inbox} title={t('fe.inbox.noTodo')} text={t('fe.inbox.noTodoText')}/>
      :groups.map(([label,list])=><div key={label}>
       <div className="sec whom-sec"><span>{t('fe.inbox.whom.'+label)}</span><b>{list.length}</b></div>

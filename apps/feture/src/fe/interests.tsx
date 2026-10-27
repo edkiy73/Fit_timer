@@ -5,7 +5,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,EyeOff,History,KeyRound,MessageCircle,Pencil,Plus,Sparkles,Trash2,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Bar,Btn,Empty,View} from './ui';
+import {Bar,Btn,Empty,View,Skel} from './ui';
 import {useFe} from './session';
 import {when} from './feed';
 
@@ -179,7 +179,7 @@ export function InterestsScreen(){
   <View className="nodock">
    {notice&&<div className="alert ok" role="status"><span>{notice}</span></div>}
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
-    :!items?<p className="note" role="status">{t('fe.loading')}</p>
+    :!items?<Skel kind="list"/>
     :<>
      {all.length?groups.map(([g,l])=><section key={g} className="grp"><div className="grp-t"><span>{t('fe.int.group.'+g)} · {l.length}</span></div>
       <div className="card"><Jars list={l} topics={topics} onOpen={setOpen}/></div></section>)
@@ -222,7 +222,7 @@ export function InterestsHistoryScreen(){
   <Bar title={t('fe.int.hist.title')} back="/n/me/interests"/>
   <View className="nodock">
    {error&&!items?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>load()}>{t('fe.retry')}</Btn></Empty>
-    :!items?<p className="note" role="status">{t('fe.loading')}</p>
+    :!items?<Skel kind="list"/>
     :<section className="grp"><div className="card list">
       {items.length?items.map(h=><div key={h.id} className="li static"><span className="ico">{h.archived?<Sparkles/>:<Pencil/>}</span>
        <span className="tx"><b>{name(h.topicId)}</b><small>{text(h)} · {t(h.archived?'fe.int.hist.archived':'fe.int.hist.manual')}</small></span><span className="val">{when(h.at,locale)}</span></div>)

@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Bookmark,Calendar,Globe,Newspaper,X} from 'lucide-react';
 import {feErrorMessage} from '../feture/fe-api';
-import {Btn,Empty,Seg,plate} from './ui';
+import {Btn,Empty,Seg,plate,Skel} from './ui';
 import {useFe} from './session';
 import {PostCard,postSchema,type Post} from './feed';
 import {useToast} from './toast';
@@ -43,7 +43,7 @@ function MyPosts(){
  const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();
  const {data,setData,error,load}=useLoad(useCallback(()=>call('me.posts',{},posts),[call]));
  if(error)return <Failed error={error} retry={load}/>;
- if(!data)return <p className="note" role="status">{t('fe.loading')}</p>;
+ if(!data)return <Skel kind="post"/>;
  if(!data.items.length)return <Empty icon={Newspaper} title={t('fe.mine.noPosts')} text={t('fe.mine.noPostsText')}><Btn kind="soft" onClick={()=>navigate('/n/feed/new')}>{t('fe.feed.new')}</Btn></Empty>;
  return <>{data.items.map(p=><PostCard key={p.id} post={p} onChange={(np:Post)=>setData(d=>d?{...d,items:d.items.map(x=>x.id===np.id?np:x)}:d)}
   onRemove={r=>{setData(d=>d?{...d,items:d.items.filter(x=>x.id!==r.postId)}:d);toast(r.notice,{type:'ok'});}}/>)}</>;
@@ -53,7 +53,7 @@ function MyCommunities(){
  const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();
  const {data,error,load}=useLoad(useCallback(()=>call('community.mine',{},comms),[call]));
  if(error)return <Failed error={error} retry={load}/>;
- if(!data)return <p className="note" role="status">{t('fe.loading')}</p>;
+ if(!data)return <Skel kind="post"/>;
  const all=[...data.hosting,...data.member];
  if(!all.length&&!data.requests.length)return <Empty icon={Globe} title={t('fe.mine.noComms')} text={t('fe.mine.noCommsText')}><Btn kind="soft" onClick={()=>navigate('/n/communities')}>{t('fe.mine.toCatalog')}</Btn></Empty>;
  return <div className="card list">
@@ -71,7 +71,7 @@ function MyEvents(){
  const {call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();
  const {data,error,load}=useLoad(useCallback(()=>call('event.mine',{},evs),[call]));
  if(error)return <Failed error={error} retry={load}/>;
- if(!data)return <p className="note" role="status">{t('fe.loading')}</p>;
+ if(!data)return <Skel kind="post"/>;
  const groups:[string,z.infer<typeof ev>[]][]=[['going',data.going],['applications',data.applications],['interested',data.interested],['organizing',data.organizing]];
  if(groups.every(([,l])=>!l.length))return <Empty icon={Calendar} title={t('fe.mine.noEvents')} text={t('fe.mine.noEventsText')}/>;
  return <>{groups.filter(([,l])=>l.length).map(([k,l])=><section key={k} className="grp"><div className="grp-t"><span>{t('fe.mine.ev.'+k)}</span></div><div className="card list">
@@ -84,7 +84,7 @@ function Saved(){
  const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();
  const {data,error,load}=useLoad(useCallback(()=>call('saved.list',{},saved),[call]));
  if(error)return <Failed error={error} retry={load}/>;
- if(!data)return <p className="note" role="status">{t('fe.loading')}</p>;
+ if(!data)return <Skel kind="post"/>;
  if(!data.items.length)return <Empty icon={Bookmark} title={t('fe.mine.noSaved')} text={t('fe.mine.noSavedText')}/>;
  return <div className="card list">{data.items.map(s=><button key={s.kind+s.target_id} type="button" className="li" onClick={()=>navigate(s.kind==='event'?'/n/events/'+s.target_id:'/n/feed/post/'+s.target_id)}>
   <span className="ico"><Bookmark/></span><span className="tx"><b>{t('fe.mine.savedKind.'+s.kind)}</b><small>{new Date(s.created_at).toLocaleDateString()}</small></span>

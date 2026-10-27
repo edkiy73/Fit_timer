@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import {BookOpen,CalendarDays,Check,ChevronRight,Crown,Globe,Heart,History,Lock,LogOut,Mail,Shield,Smartphone,TriangleAlert,Undo2,X,type LucideIcon} from 'lucide-react';
 import {feErrorMessage} from '../feture/fe-api';
-import {Bar,Btn,Empty,View} from './ui';
+import {Bar,Btn,Empty,View,Skel} from './ui';
 import {useFe} from './session';
 import {Sheet} from './profile-extras';
 
@@ -39,7 +39,7 @@ export function PremiumScreen(){
   <View className={'nodock'+(status&&!premium?' cta1':'')}>
    <div className="pw-hero"><span className="pw-crown"><Crown/></span><b>FetUre Premium</b><p>{t('fe.ax.prem.lead')}</p><i/><i/></div>
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
-    :!status?<p className="note mt12" role="status">{t('fe.loading')}</p>:<>
+    :!status?<Skel kind="list"/>:<>
     {premium&&<div className="alert ok mt12" role="status"><Check/><span>{status.viaPartner
      ?<><b>{t('fe.ax.prem.viaPartner')}</b>{t('fe.ax.prem.viaPartnerText')}</>
      :<><b>{t('fe.ax.prem.active')}</b>{status.until?t('fe.ax.prem.until',{date:date(status.until)}):''}</>}</span></div>}

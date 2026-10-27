@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Camera,Clock,Hand,ImagePlus,Lock,RefreshCw,ScanFace,Send,ShieldCheck,UserCheck,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Bar,Btn,Empty,View} from './ui';
+import {Bar,Btn,Empty,View,Skel} from './ui';
 import {useFe} from './session';
 
 /** V21 A07 «Проверка возраста» on /api/fe (server/commands/premium.mjs): the server picks a gesture
@@ -72,7 +72,7 @@ export function AgeCheckScreen(){
 
  const alertErr=failure?<div className="alert err mt12" role="alert"><X/><span>{failure}</span></div>:null;
  if(error)return <><Bar title={t('fe.age.title')} back="/n/settings"/><View className="nodock"><Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty></View></>;
- if(!s)return <><Bar title={t('fe.age.title')} back="/n/settings"/><View className="nodock"><p className="note" role="status">{t('fe.loading')}</p></View></>;
+ if(!s)return <><Bar title={t('fe.age.title')} back="/n/settings"/><View className="nodock"><Skel kind="list"/></View></>;
 
  const c=s.check;
  // 18+ confirmed and still valid.

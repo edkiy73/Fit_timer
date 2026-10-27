@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {AtSign,Heart,ShieldCheck,TriangleAlert,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Av,Bar,Btn,View} from './ui';
+import {Av,Bar,Btn,View,Skel} from './ui';
 import {useFe} from './session';
 import {when} from './feed';
 
@@ -69,7 +69,7 @@ export function PairScreen(){
     <span className="ps-av ot">{out?.profile?<Av name={nameOf(out.profile)} seed={out.profile.id}/>:<span className="av ini"><b style={{position:'relative'}}>?</b></span>}</span></div>
    <h2 className="t center">{out?t('fe.pair.waiting').replace('{name}',nameOf(out.profile)):t('fe.pair.inviteTitle')}</h2>
    <p className="note center">{t('fe.pair.inviteText')}</p>
-   {inv===null?<p className="note" role="status">{t('fe.loading')}</p>:<>
+   {inv===null?<Skel kind="list"/>:<>
     {inv.incoming.map(i=><div key={i.id} className="card rqcard mt12"><div className="row"><span className="rq-av"><Av name={nameOf(i.profile)} seed={i.profile?.id??i.id}/></span>
      <div className="grow"><b style={{fontSize:16}}>{nameOf(i.profile)}</b><div className="note">{t('fe.inbox.kind.pinv')} · {when(i.created_at,locale)}</div></div></div>
      <div className="row g8 mt12"><Btn size="md" disabled={busy} onClick={()=>act(()=>call('couple.inviteAnswer',{opId:newOpId(),inviteId:i.id,accept:true},ok,{asAccount:true}),reload)}>{t('fe.inbox.accept')}</Btn>

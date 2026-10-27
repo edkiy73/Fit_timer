@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Lock,LockOpen,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Av,Btn,Empty} from './ui';
+import {Av,Btn,Empty,Skel} from './ui';
 import {AgeCheckLink} from './age-check';
 import {useFe} from './session';
 import {when} from './feed';
@@ -30,7 +30,7 @@ export function PrivateLayer({profileId}:{profileId:string}){
  const act=async(fn:()=>Promise<unknown>)=>{setBusy(true);setFailure('');try{await fn();load();}catch(e){setFailure(feErrorMessage(e,t));}finally{setBusy(false);}};
  const scopeLabel=(s:string)=>t('fe.priv.scope.'+s);
  if(error)return <Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>;
- if(!mine)return <p className="note" role="status">{t('fe.loading')}</p>;
+ if(!mine)return <Skel kind="list"/>;
  return <>
   {reqs.length>0&&<section className="grp"><div className="grp-t"><span>{t('fe.priv.requests')} · {reqs.length}</span></div>
    <div className="chips mb12" role="radiogroup" aria-label={t('fe.priv.term')}>{(['1d','7d','30d','none'] as const).map(v=><button key={v} type="button" role="radio" aria-checked={term===v} className={'chip'+(term===v?' on':'')} onClick={()=>setTerm(v)}>{t('fe.priv.term.'+v)}</button>)}</div>

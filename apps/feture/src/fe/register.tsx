@@ -6,7 +6,7 @@ import {apiUrl} from '../api-url';
 import {documentsResponse} from '../feture/document-model';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {AtSign,CircleAlert,CircleCheck,Check,ShieldAlert} from 'lucide-react';
-import {Btn,Empty} from './ui';
+import {Btn,Empty,Skel} from './ui';
 import {useFe} from './session';
 
 /** V21 A04 (nickname, date of birth, consent) → A04X (under 18) → A05 «Tell us about you» (sensitive answers,
@@ -101,7 +101,7 @@ function Account({onCreated,onUnder18}:{onCreated:(profileId:string)=>void,onUnd
    <i><Check/></i><span>{t('fe.reg.news')} <span className="note">· {t('fe.reg.optional')}</span></span>
   </button>
   {failure&&<div className="alert err" role="alert"><CircleAlert/><span>{failure}</span></div>}
-  <div className="ctabar"><div className="wrap"><Btn onClick={submit} disabled={busy}>{busy?t('fe.loading'):t('fe.reg.continue')}</Btn></div></div>
+  <div className="ctabar"><div className="wrap"><Btn onClick={submit} disabled={busy} busy={busy}>{t('fe.reg.continue')}</Btn></div></div>
  </div>;
 }
 
@@ -147,12 +147,12 @@ function AboutYou({profileId}:{profileId:string}){
   <section className="fin"><div className="fin-t"><b>{t('fe.reg.vis.title')}</b></div>
    {chips((['only','granted','all'] as const).map(v=>[v,t('fe.reg.vis.'+v)]),v=>v===vis,v=>setVis(v as typeof vis),true)}
    <p className="fhint mt8">{t('fe.reg.vis.note.'+vis)}</p></section>
-  {options===null?<p className="note" role="status">{t('fe.loading')}</p>:KINDS.map(kind=>{
+  {options===null?<Skel kind="list"/>:KINDS.map(kind=>{
    const list=options.filter(o=>o.kind===kind);if(!list.length)return null;
    return <section key={kind} className="fin"><div className="fin-t"><b>{t('fe.reg.kind.'+kind)}</b>{LIMIT[kind]>1&&<span>{t('fe.reg.pickAny')}</span>}</div>
     {chips(list.map(o=>[o.code,label(o)]),c=>picked[kind].includes(c),c=>toggle(kind,c))}</section>;
   })}
   {failure&&<div className="alert err" role="alert"><CircleAlert/><span>{failure}</span></div>}
-  <div className="ctabar"><div className="wrap"><Btn onClick={finish} disabled={busy}>{busy?t('fe.loading'):t('fe.reg.done')}</Btn><Btn kind="text" onClick={reload} disabled={busy}>{t('fe.reg.skip')}</Btn></div></div>
+  <div className="ctabar"><div className="wrap"><Btn onClick={finish} disabled={busy} busy={busy}>{t('fe.reg.done')}</Btn><Btn kind="text" onClick={reload} disabled={busy}>{t('fe.reg.skip')}</Btn></div></div>
  </div>;
 }

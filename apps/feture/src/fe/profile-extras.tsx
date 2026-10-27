@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Ban,Check,ChevronRight,EyeOff,Flag,Heart,History,Info,Lock,LockOpen,MapPin,ShieldCheck,Undo2,Users,X} from 'lucide-react';
-import {Av,Bar,Btn,Empty,Seg,View,plate} from './ui';
+import {Av,Bar,Btn,Empty,Seg,View,plate,Layer,Skel} from './ui';
 import {useFe} from './session';
 import {PhotoBadge} from './photo-check';
 
@@ -49,7 +49,7 @@ export function Sheet({title,onClose,children,foot,full}:{title:string,onClose:(
   const key=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();onClose();}};
   document.addEventListener('keydown',key);
   return ()=>{document.removeEventListener('keydown',key);requestAnimationFrame(()=>opener?.focus?.({preventScroll:true}));};},[onClose]);
- return <div className="layer">
+ return <Layer>
   <div className="scrim on" onClick={onClose}/>
   <div ref={ref} className={'sheet on'+(full?' full':'')} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}>
    <div className="grab"/>
@@ -57,7 +57,7 @@ export function Sheet({title,onClose,children,foot,full}:{title:string,onClose:(
    <div className="sh-b">{children}</div>
    {foot&&<div className="sh-f">{foot}</div>}
   </div>
- </div>;
+ </Layer>;
 }
 
 /* ---------- the person card shared by PersonScreen and «Как видят» ---------- */
@@ -175,7 +175,7 @@ export function CompatScreen(){
   <Bar title={t('fe.px.cmp.title')} back/>
   <View>
    {error?<Empty icon={Lock} role="alert" title={t('fe.feed.unavailable')} text={pxError(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
-    :!c||!p?<p className="note" role="status">{t('fe.loading')}</p>
+    :!c||!p?<Skel kind="list"/>
     :<>
      <div className="cmp14"><Venn n={c.few?(c.topics.length||'?'):c.count}/><div className="cmp-head">
       <small>{fill(t('fe.px.cmp.you'),{name})}</small>
@@ -318,7 +318,7 @@ export function HistoryScreen(){
   <View>
    <Seg value={k} onChange={setK} options={(['all','pass','like'] as const).map(id=>({id,label:t('fe.px.h.'+id)}))}/>
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={pxError(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
-    :!r?<p className="note" role="status">{t('fe.loading')}</p>
+    :!r?<Skel kind="list"/>
     :!r.items.length?<Empty icon={History} title={t('fe.px.h.empty')} text={t('fe.px.h.emptyText')}/>
     :<div className="hist">{r.items.map(h=>{const p=h.profile;const name=personName(p)||'?';const ph=mediaSrc(p.avatar);const done=back.has(p.id);
      return <div key={p.id} className="hwrap">
@@ -391,7 +391,7 @@ export function MePreviewScreen(){
   <View>
    <Seg value={lv} onChange={setLv} label={t('fe.px.pv.title')} options={(['all','granted','card'] as const).map(id=>({id,label:t('fe.ln.pv.'+id)}))}/>
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={pxError(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
-    :!p?<p className="note" role="status">{t('fe.loading')}</p>
+    :!p?<Skel kind="list"/>
     :lv==='card'?<>
      <div className="mt12"><div className="card18">
       {ph?<><img className="mbg" src={ph} alt="" aria-hidden="true" draggable={false}/><img src={ph} alt={personName(p)} draggable={false}/></>:<div className="plate" style={plate(p.id)}/>}

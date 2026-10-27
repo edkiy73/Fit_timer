@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {CircleAlert,Clock,Image as ImageIcon,Lock,MapPin,RefreshCw,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Av,Bar,Btn,Empty,View} from './ui';
+import {Av,Bar,Btn,Empty,View,Skel} from './ui';
 import {useFe} from './session';
 
 /** V21 C08 «Новое сообщество» with the prototype's markup (field(), chipGroup(), selectRow(), the cover picker);
@@ -152,7 +152,7 @@ export function EditCommunityScreen(){
  return <>
   <Bar title={t('fe.ece.c.title')} back small/>
   <View className="nodock">{error?<Empty icon={CircleAlert} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={reload}>{t('fe.retry')}</Btn></Empty>
-   :c?<Empty icon={Lock} title={t('fe.ece.c.onlyOwner')} text={t('fe.ece.c.onlyOwnerText')}/>:<p className="note" role="status">{t('fe.loading')}</p>}</View>
+   :c?<Empty icon={Lock} title={t('fe.ece.c.onlyOwner')} text={t('fe.ece.c.onlyOwnerText')}/>:<Skel kind="list"/>}</View>
  </>;
 }
 

@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Ban,ChevronLeft,ChevronRight,Ellipsis,Eye,Heart,History,Info,Lock,MapPin,Search as SearchIcon,SlidersHorizontal,Undo2,Users,X} from 'lucide-react';
-import {Av,Bar,Btn,Empty,Seg,View} from './ui';
+import {Av,Bar,Btn,Empty,Seg,View,Layer,Skel} from './ui';
 import {useFe} from './session';
 import {PhotoBadge} from './photo-check';
 import {PrivateOf} from './private';
@@ -122,7 +122,7 @@ function DiscoverFilter({initial,onClose,onApplied}:{initial:Filter,onClose:()=>
    {head(t('fe.df.row.'+sub),true)}
    {total>10&&<div className="sh-search"><div className="inwrap"><SearchIcon/><input className="inp" type="search" value={q} onChange={e=>setQ(e.target.value)} placeholder={t('fe.df.find')} aria-label={t('fe.df.find')} enterKeyHint="search"/></div></div>}
    <div className="sh-b" ref={body}>
-    {!cat?<p className="note" role="status">{t('fe.loading')}</p>
+    {!cat?<Skel kind="list"/>
      :shown.map((g,i)=><section key={g.title||i} className="fsec">{g.title&&<div className="sec">{g.title}</div>}<div className="chips">
       {g.list.map(([id,l])=><button key={id} type="button" className={'chip'+(f[sub].includes(id)?' on':'')} aria-pressed={f[sub].includes(id)} onClick={()=>toggle(sub,id)}>{l}</button>)}
      </div></section>)}
@@ -160,10 +160,10 @@ function DiscoverFilter({initial,onClose,onApplied}:{initial:Filter,onClose:()=>
    </div>
   </>;
  }
- return <div className="layer">
+ return <Layer>
   <div className="scrim on" onClick={()=>sub?back():onClose()}/>
   <div ref={sheet} className="sheet full on" role="dialog" aria-modal="true" aria-label={sub?t('fe.df.row.'+sub):t('fe.df.title')} tabIndex={-1}>{content}</div>
- </div>;
+ </Layer>;
 }
 
 function Discover({reloadKey,onOff}:{reloadKey:number,onOff:(off:boolean)=>void}){
@@ -191,7 +191,7 @@ function Discover({reloadKey,onOff}:{reloadKey:number,onOff:(off:boolean)=>void}
  if(match)return box(<Empty icon={Heart} title={t('fe.people.match')} text={t('fe.people.matchText').replace('{name}',match.card.name||'@'+match.card.handle)}>
   <Btn onClick={()=>navigate(match.conversationId?'/n/chats/'+match.conversationId:'/n/chats')}>{t('fe.people.write')}</Btn><Btn kind="text" onClick={()=>setMatch(null)}>{t('fe.people.later')}</Btn></Empty>);
  if(error&&!cards)return box(<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>);
- if(cards===null)return box(<p className="note" role="status">{t('fe.loading')}</p>);
+ if(cards===null)return box(<Skel kind="list"/>);
  if(off)return box(<Empty icon={Eye} title={t('fe.people.off')} text={t('fe.people.offText')}><Btn kind="soft" onClick={()=>navigate('/n/me')}>{t('fe.people.openMe')}</Btn></Empty>);
  const [c,next]=cards;
  if(!c)return box(<Empty icon={Users} title={t('fe.people.empty')} text={t('fe.people.emptyText')}><Btn kind="soft" onClick={load}>{t('fe.people.refresh')}</Btn><Btn kind="text" icon={Undo2} onClick={undo} disabled={busy}>{t('fe.people.undo')}</Btn></Empty>);
@@ -230,7 +230,7 @@ function Likes(){
  const load=useCallback(()=>{setError(null);call('likes.incoming',{},incoming).then(r=>setItems(r.items.map(i=>i.profile))).catch(setError);},[call]);
  useEffect(()=>{load();},[load]);
  if(error)return <Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>;
- if(items===null)return <p className="note" role="status">{t('fe.loading')}</p>;
+ if(items===null)return <Skel kind="list"/>;
  if(!items.length)return <Empty icon={Heart} title={t('fe.people.noLikes')} text={t('fe.people.noLikesText')}/>;
  return <div className="card list">{items.map(c=><Row key={c.id} c={c} locale={locale}/>)}</div>;
 }
@@ -272,7 +272,7 @@ export function PersonScreen(){
   <View>
    {blocked?<Empty icon={Ban} title={t('fe.px.bl.stateTitle')} text={t('fe.px.bl.stateText')}><Btn kind="soft" onClick={()=>setMenu('menu')}>{t('fe.px.menu.unblock')}</Btn></Empty>
     :error?<Empty icon={Lock} title={t('fe.feed.unavailable')} text={pxError(error,t)}/>
-    :!p?<p className="note" role="status">{t('fe.loading')}</p>
+    :!p?<Skel kind="list"/>
     :<>
      <PersonHero p={p}/>
      <div className="p-acts">

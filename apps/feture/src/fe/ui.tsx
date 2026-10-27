@@ -1,4 +1,5 @@
-import type {ButtonHTMLAttributes,CSSProperties,ReactNode} from 'react';
+import {useLayoutEffect,useState,type ButtonHTMLAttributes,type CSSProperties,type ReactNode} from 'react';
+import {createPortal} from 'react-dom';
 import {useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {ChevronLeft,type LucideIcon} from 'lucide-react';
@@ -36,8 +37,9 @@ export function Bar({title,back,small,children}:{title:string,back?:string|true,
 
 type BtnProps=ButtonHTMLAttributes<HTMLButtonElement>&{kind?:'primary'|'soft'|'text'|'danger',size?:''|'md'|'sm',auto?:boolean,icon?:LucideIcon};
 /** `.btn` — 48 / md 44 / sm 36; one main button per group. */
-export function Btn({kind='primary',size='',auto,icon:Icon,className,children,type='button',...rest}:BtnProps){
- return <button type={type} className={['btn',kind,size,auto?'auto':'',className].filter(Boolean).join(' ')} {...rest}>{Icon&&<Icon/>}{children}</button>;
+export function Btn({kind='primary',size='',auto,icon:Icon,className,children,type='button',busy,...rest}:BtnProps&{busy?:boolean}){
+ // `busy` is the prototype's `.btn.busy`: the label stays, a spinner follows it, so the button never changes width.
+ return <button type={type} className={['btn',kind,size,auto?'auto':'',busy?'busy':'',className].filter(Boolean).join(' ')} aria-busy={busy||undefined} {...rest}>{Icon&&<Icon/>}{children}</button>;
 }
 
 /** `empty()` — one look for empty, error and unavailable states. */
@@ -57,4 +59,23 @@ export function Seg<T extends string>({value,options,onChange,label,small=true}:
 /** View body: `.view > .wrap`. */
 export function View({children,className}:{children:ReactNode,className?:string}){
  return <div className={'view'+(className?' '+className:'')}><div className="wrap">{children}</div></div>;
+}
+
+/** The prototype's `#layer` is a child of `.root`, so sheets and dialogs sit on the app frame's bottom edge above the
+ * dock. A sheet rendered inside a card or a scrolling view would be positioned against that box instead. */
+export function Layer({children}:{children:ReactNode}){
+ const [host,setHost]=useState<Element|null>(null);
+ useLayoutEffect(()=>{setHost(document.querySelector('.fe-v21 .root'));},[]);
+ return host?createPortal(<div className="layer">{children}</div>,host):null;
+}
+
+/** Loading placeholder shaped like the content it stands for (list rows, posts, a card), so nothing jumps when the
+ * data arrives. Replaces a «Загружаем…» line. */
+export function Skel({kind='list',rows=3}:{kind?:'list'|'post'|'card'|'tiles',rows?:number}){
+ const {t}=useI18n();
+ const row=(i:number)=>kind==='post'?<div key={i} className="sk-post"><div className="sk-head"><i className="sk sk-av"/><span><i className="sk sk-l w40"/><i className="sk sk-l w25"/></span></div><i className="sk sk-l w90"/><i className="sk sk-l w70"/><i className="sk sk-media"/></div>
+  :kind==='card'?<div key={i} className="sk-card"><i className="sk sk-l w50"/><i className="sk sk-l w90"/><i className="sk sk-l w70"/></div>
+  :kind==='tiles'?<i key={i} className="sk sk-tile"/>
+  :<div key={i} className="sk-li"><i className="sk sk-av"/><span><i className="sk sk-l w50"/><i className="sk sk-l w30"/></span></div>;
+ return <div className={'skel skel-'+kind} role="status" aria-busy="true" aria-label={t('fe.loading')}>{Array.from({length:rows},(_,i)=>row(i))}</div>;
 }

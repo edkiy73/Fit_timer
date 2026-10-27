@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {ChevronRight,CircleAlert,Info,Link2,Pencil,Trash2,User,Users,X} from 'lucide-react';
 import {newOpId} from '../feture/fe-api';
-import {Av,Bar,Btn,Empty,View} from './ui';
+import {Av,Bar,Btn,Empty,View,Skel} from './ui';
 import {useFe} from './session';
 import {SelectRow} from './create-community';
 import {KINDS,SIDES,Sheet,linkLabel,linksMineRes,mediaSrc,personName,personProfileRes,pxError,useToast,type Kind,type LinkView,type LinksMine,type PersonProfile} from './profile-extras';
@@ -66,7 +66,7 @@ export function LinksScreen(){
   <Bar title={couple?t('fe.ln.titleCouple'):t('fe.ln.title')} back/>
   <View className="nodock">
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={pxError(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
-    :!r?<p className="note" role="status">{t('fe.loading')}</p>
+    :!r?<Skel kind="list"/>
     :<>
      {waiting.length>0&&<>
       <div className="sec" style={{marginTop:6}}>{t('fe.ln.waiting')}</div>
@@ -165,7 +165,7 @@ export function LinkEditScreen(){
   <Bar title={conf?t('fe.ln.p22.edit'):t('fe.ln.p22.new')} back/>
   <div className="view nodock cta1"><div className="wrap">
    {error?<Empty icon={Users} role="alert" title={t('fe.feed.unavailable')} text={pxError(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
-    :!p||!mine?<p className="note" role="status">{t('fe.loading')}</p>
+    :!p||!mine?<Skel kind="list"/>
     :<>
      <div className="card list mt12"><button type="button" className="li" onClick={()=>navigate('/n/people/'+id)}>
       <Av name={name} seed={p.id} src={mediaSrc(p.avatar)}/><span className="tx"><b>{name}{p.age?', '+p.age:''}</b>{city&&<small>{city}</small>}</span><ChevronRight/>
