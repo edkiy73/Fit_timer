@@ -6,6 +6,7 @@ import { enqueue } from '../outbox.mjs';
 import { needsPartner, narrowCouple, registerApprovalKind, requestApproval } from '../approvals.mjs';
 import { mediaDto } from '../media/assets.mjs';
 import { availableScopes, grantedScopes, LIMITS, lockOwner, memberAccounts, related } from '../access.mjs';
+import { withFaces } from './faces.mjs';
 
 /** Slice C2: private part and access (S1 §6). Narrowing (decline, narrow, revoke, switch off) applies at once;
  * opening the private part of a couple to someone always needs both partners (V21 «только вдвоём»).
@@ -296,8 +297,9 @@ const run = {
     return closeAll(q, acting.profileId, 'revoked');
   },
 
-  async 'access.lists'(q, { acting: a, input }) {
+  async 'access.lists'(q, { acting: a, input, cfg }) {
     const acting = need(a);
+    const faces = (/** @type {any[]} */ items) => withFaces(q, cfg.media, acting, items, r => r.profile);
     // Other profiles that are no longer active (paused, suspended, deleted) are not named.
     const who = `(select json_build_object('id', p.id, 'kind', p.kind, 'handle', p.handle, 'name', p.name) from feture.profile p where p.id = %s and p.state = 'active')`;
     if (input.tab === 'out') {
@@ -306,25 +308,25 @@ const run = {
            case when r.state = 'declined' then r.decided_at + make_interval(days => $2) end reask_at
          from feture.access_request r where r.requester_profile_id = $1 order by r.created_at desc limit 30`,
         [acting.profileId, LIMITS.reaskDays]);
-      return { items, quotaLeft: await quotaLeft(q, acting) };
+      return { items: await faces(items), quotaLeft: await quotaLeft(q, acting) };
     }
     if (input.tab === 'incoming') {
-      return { items: await q.query(
+      return { items: await faces(await q.query(
         `select r.id, r.scopes, r.created_at, ${who.replace('%s', 'r.requester_profile_id')} profile
          from feture.access_request r where r.owner_profile_id = $1 and r.state = 'pending' order by r.created_at desc limit 30`,
-        [acting.profileId]) };
+        [acting.profileId])) };
     }
     if (input.tab === 'byme') {
-      return { items: await q.query(
+      return { items: await faces(await q.query(
         `select g.scopes, g.until, g.granted_at, ${who.replace('%s', 'g.viewer_profile_id')} profile
          from feture.access_grant g where g.owner_profile_id = $1 and g.revoked_at is null and (g.until is null or g.until > now())
-         order by g.granted_at desc limit 30`, [acting.profileId]) };
+         order by g.granted_at desc limit 30`, [acting.profileId])) };
     }
-    return { items: await q.query(
+    return { items: await faces(await q.query(
       `select g.scopes, g.until, g.granted_at, ${who.replace('%s', 'g.owner_profile_id')} profile
        from feture.access_grant g join feture.profile_settings s on s.profile_id = g.owner_profile_id
        where g.viewer_profile_id = $1 and $2 = any(g.viewer_account_ids) and g.revoked_at is null and (g.until is null or g.until > now()) and s.private_on
-       order by g.granted_at desc limit 30`, [acting.profileId, acting.accountId]) };
+       order by g.granted_at desc limit 30`, [acting.profileId, acting.accountId])) };
   },
 };
 

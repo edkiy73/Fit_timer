@@ -201,3 +201,43 @@ test('review fixes: refs on update, wider privacy keeps old discussions for memb
     assert.equal((await call('ub', pair, { action: 'community.discussions', communityId: club })).locked, false);
   } finally { await pg.close(); }
 });
+
+test('catalog cards: description, cover, «обсуждали…» only where the viewer may read; members and requests carry faces', async () => {
+  const { pg, db, call, a, b, c, make } = await world();
+  try {
+    const open = await make('ua', a, { name: 'Открытый клуб', privacy: 'open' });
+    const closed = await make('ua', a, { name: 'Закрытый клуб', privacy: 'closed', joinQuestion: 'Почему вам интересно?' });
+    for (const communityId of [open, closed]) {
+      const d = await call('ua', a, { action: 'post.saveDraft', opId: op(), post: draft('Первое обсуждение клуба', { communityId }) });
+      assert.equal((await call('ua', a, { action: 'post.publish', opId: op(), postId: d.id })).status, 200);
+    }
+    // An approved cover is shown as a public place shows it.
+    const [{ account_id }] = await db.query('select account_id from feture.profile_member where profile_id = $1 limit 1', [a]);
+    const [cov] = await db.query(
+      `insert into feture.media_asset (owner_profile_id, uploaded_by, kind, purpose, storage_key, mime, declared_bytes, state, explicitness, copies_at)
+       values ($1, $2, 'image', 'community', 'u/' || gen_random_uuid(), 'image/jpeg', 10, 'approved', 'safe', now()) returning id`, [a, account_id]);
+    await db.query('update feture.community set cover_asset_id = $1 where id = $2', [cov.id, open]);
+    const items = (await call('ub', b, { action: 'community.catalog' })).items;
+    const o = items.find((/** @type {any} */ x) => x.id === open), cl = items.find((/** @type {any} */ x) => x.id === closed);
+    assert.equal(o.description, base.description);
+    assert.ok(o.cover?.src?.thumb, 'cover url');
+    assert.equal(cl.cover, null);
+    assert.ok(o.lastTalkAt && !Number.isNaN(Date.parse(o.lastTalkAt)));
+    assert.equal(cl.lastTalkAt, null); // a closed club's discussions are for members only
+    assert.equal(o.nextEventAt, null);
+    const got = (await call('ub', b, { action: 'community.get', communityId: open })).community;
+    assert.ok(got.cover?.src && got.lastTalkAt);
+    assert.deepEqual([got.hosts[0].id, got.hosts[0].premium, got.hosts[0].photoVerified], [a, false, false]);
+
+    // Faces: the age only when the person shows it, the Premium badge is public.
+    await db.query(`update feture.profile_details set show_age = true where profile_id = $1`, [b]);
+    await db.query(`update feture.profile_details set show_age = false where profile_id = $1`, [c]);
+    await db.query(`update feture.account set premium_until = now() + interval '1 month' where person_profile_id = $1`, [b]);
+    await call('ub', b, { action: 'community.join', opId: op(), communityId: open, rulesAccepted: true });
+    await call('uc', c, { action: 'community.join', opId: op(), communityId: closed, rulesAccepted: true, answer: 'Хочу научиться безопасно' });
+    const kira = (await call('ua', a, { action: 'community.members', communityId: open })).items.find((/** @type {any} */ m) => m.id === b);
+    assert.deepEqual([typeof kira.age, kira.premium, kira.photoVerified, kira.avatar], ['number', true, false, null]);
+    const req = (await call('ua', a, { action: 'community.requests', communityId: closed })).items[0];
+    assert.deepEqual([req.profile.id, req.profile.age, req.profile.premium], [c, null, false]);
+  } finally { await pg.close(); }
+});

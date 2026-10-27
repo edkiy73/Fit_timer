@@ -11,18 +11,22 @@ import {BellButton} from './inbox';
 import {useToast} from './toast';
 import {placeName,useCatalog} from './create-community';
 import {Ask,CSheet,CommPlate,LinkRow,NamedPlate,ReportSheet,TabStrip,appUrl,copyLink,fill,okRes,pl} from './comm-kit';
+import {faceFields} from './faces';
 import {CommunityHostEntry,DiscussionHostSheet,EventApplicationLines,JoinSheet,MembersList,isCommunityHost} from './host';
 
 /** «Сообщества» (V21 C01 catalogue with interests and filters, C03 community page with discussions, events, members
  * and rules, E03 event page) with the prototype's markup. Everything shown comes from the server; details the server
  * does not give (photos of communities, activity lines) are left out rather than made up. */
 
-const card=z.object({id:z.uuid(),name:z.string(),topics:z.array(z.string()),privacy:z.string(),members:z.number(),joined:z.boolean(),plate:z.string().nullable().optional(),place_id:z.string().nullable().optional()});
+const media=z.object({src:z.object({thumb:z.string().optional(),card:z.string().optional(),full:z.string().optional()}).passthrough().nullable()}).passthrough();
+/** The cover photo URL of a community (signed, public place), or null: then the named plate stands in. */
+const coverSrc=(m:z.infer<typeof media>|null|undefined,size:'card'|'full'='card')=>m?.src?(size==='full'?m.src.full??m.src.card:m.src.card??m.src.full)??m.src.thumb??null:null;
+const card=z.object({id:z.uuid(),name:z.string(),description:z.string().optional(),cover:media.nullable().optional(),lastTalkAt:z.string().nullable().optional(),nextEventAt:z.string().nullable().optional(),topics:z.array(z.string()),privacy:z.string(),members:z.number(),joined:z.boolean(),plate:z.string().nullable().optional(),place_id:z.string().nullable().optional()});
 type Card=z.infer<typeof card>;
 const catalog=z.object({ok:z.literal(true),items:z.array(card),next:z.string().nullable()});
-const prof=z.object({id:z.uuid(),kind:z.string(),handle:z.string().nullable(),name:z.string().nullable()}).passthrough();
+const prof=z.object({id:z.uuid(),kind:z.string(),handle:z.string().nullable(),name:z.string().nullable(),...faceFields}).passthrough();
 const community=z.object({id:z.uuid(),name:z.string(),description:z.string(),topics:z.array(z.string()),privacy:z.string(),rules:z.array(z.string()),members:z.number(),
- plate:z.string().nullable().optional(),placeId:z.string().nullable().optional(),hosts:z.array(prof.extend({role:z.string()})).optional(),
+ plate:z.string().nullable().optional(),cover:media.nullable().optional(),placeId:z.string().nullable().optional(),hosts:z.array(prof.extend({role:z.string()})).optional(),
  me:z.object({role:z.string(),state:z.string(),muted:z.boolean().optional(),readOnly:z.boolean().optional()}).passthrough().nullable(),request:z.object({id:z.uuid()}).nullable(),joinQuestion:z.string().nullable(),
  pendingRequests:z.number().optional(),state:z.string().optional()}).passthrough();
 export type Community=z.infer<typeof community>;
@@ -137,16 +141,38 @@ function Catalog(){
  </>;
 }
 
+/** The community picture: its cover photo, or the plate with the group icon (V21 commAv / evCover). */
+function CommCover({cover,k,size,hero}:{cover?:z.infer<typeof media>|null|undefined,k:string|null|undefined,size?:'card'|'full',hero?:boolean}){
+ const src=coverSrc(cover,size);
+ return src?<img className="evimg" src={src} alt="" draggable={false}/>:hero?<NamedPlate k={k}/>:<CommPlate k={k}/>;
+}
+/** Markdown marks off, for one-line previews (V21 mdPlain). */
+const plainText=(s:string)=>s.replace(/[*_~`#>]+/g,'').replace(/\s+/g,' ').trim();
+/** V21 F.rel: «только что», «5 мин назад», «вчера», «3 дня назад», then the date. */
+function relDay(iso:string,locale:string){
+ const d=(Date.now()-Date.parse(iso))/1000;const en=locale==='en';
+ if(d<60)return en?'just now':'только что';
+ if(d<3600){const m=Math.round(d/60);return en?`${m} min ago`:`${m} мин назад`;}
+ if(d<86400){const h=Math.round(d/3600);return en?`${h} h ago`:`${h} ч назад`;}
+ const days=Math.round(d/86400);if(days===1)return en?'yesterday':'вчера';
+ if(days<7)return en?`${days} days ago`:`${pl(days,'день|дня|дней',locale)} назад`;
+ return shortDate(iso,locale);
+}
+const shortDate=(iso:string,locale:string)=>new Intl.DateTimeFormat(locale==='en'?'en':'ru',{day:'numeric',month:'short'}).format(new Date(iso)).replace('.','');
+
 function CommCard({c,i,tname,place,mine}:{c:Card,i:number,tname:(id:string)=>string,place:string,mine:ReturnType<typeof useMyCommunities>}){
  const {t,locale}=useI18n();const navigate=useNavigate();const {acting}=useFe();const couple=acting?.kind==='couple';
  const state=mine.hosting.has(c.id)?<span className="pill ok"><Settings/>{t(couple?'fe.cm.youHostCouple':'fe.cm.youHost')}</span>
   :c.joined||mine.member.has(c.id)?<span className="pill ok"><Check/>{t(couple?'fe.cm.memberCouple':'fe.comm.member')}</span>
   :mine.pending.has(c.id)?<span className="pill wait">{t('fe.cm.underReview')}</span>
   :c.privacy!=='open'?<span className="pill"><Lock/>{t('fe.cm.byRequest')}</span>:null;
+ // V21 commPulse: when people last talked (only where the viewer may read) and the next meeting.
+ const pulse=[c.lastTalkAt?fill(t('fe.cm.lastTalk'),{when:relDay(c.lastTalkAt,locale)}):'',c.nextEventAt?fill(t('fe.cm.nextMeet'),{date:shortDate(c.nextEventAt,locale)}):''].filter(Boolean);
  return <button type="button" className="cmc" style={{animationDelay:`${i*40}ms`}} onClick={()=>navigate('/n/communities/'+c.id)}>
-  <div className="cv" style={{position:'relative'}}><CommPlate k={c.plate}/></div>
-  <div className="tx"><b>{c.name}</b><small>{c.topics.map(x=>'#'+tname(x)).join(' ')}</small>
+  <div className="cv" style={{position:'relative'}}><CommCover cover={c.cover} k={c.plate}/></div>
+  <div className="tx"><b>{c.name}</b><small>{c.description?plainText(c.description):c.topics.map(x=>'#'+tname(x)).join(' ')}</small>
    <div className="meta"><span>{pl(c.members,t('fe.cm.members'),locale)}</span><span>·</span><span>{place||t('fe.cm.online')}</span>{state&&<> {state}</>}</div>
+   {pulse.length>0&&<div className="pulse"><Clock/><span>{pulse.join(' · ')}</span></div>}
   </div>
  </button>;
 }
@@ -297,8 +323,8 @@ export function CommunityScreen(){
    {error?<Empty icon={Lock} title={t('fe.cm.unavailable')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :!c?<><div className="cm-hero"><i className="sk" style={{position:'absolute',inset:0}}/></div><div className="cm-head"><div className="cv"><i className="sk" style={{position:'absolute',inset:0}}/></div><i className="sk sk-l w70" style={{display:'block',height:28,margin:'8px 0'}}/><i className="sk sk-l w50" style={{display:'block'}}/></div><Skel kind="list"/></>
     :<>
-     <div className="cm-hero"><NamedPlate k={c.plate}/></div>
-     <div className="cm-head"><div className="cv" style={{position:'relative'}}><CommPlate k={c.plate}/></div><h2 tabIndex={-1}>{c.name}</h2>
+     <div className="cm-hero"><CommCover cover={c.cover} k={c.plate} size="full" hero/></div>
+     <div className="cm-head"><div className="cv" style={{position:'relative'}}><CommCover cover={c.cover} k={c.plate}/></div><h2 tabIndex={-1}>{c.name}</h2>
       <div className="cm-meta"><span><Users/><b>{pl(c.members,t('fe.cm.members'),locale)}</b></span>
        <span>{c.privacy==='open'?<Globe/>:<Lock/>}{t('fe.cm.privacyMeta.'+c.privacy)}</span>
        <span>{place?<MapPin/>:<Video/>}{place||t('fe.cm.online')}</span>
@@ -329,7 +355,7 @@ export function CommunityScreen(){
         return <div key={d.id} style={{position:'relative'}}><button type="button" className="disc" onClick={()=>navigate('/n/feed/post/'+d.id)} style={host?{paddingRight:48}:undefined}>
          {d.pinned&&<span className="pill v" style={{marginBottom:6}}>{t('fe.comm.pinned')}</span>}
          {d.title&&<b>{d.title}</b>}<p>{d.excerpt}</p>
-         <span className="meta">{a&&<><Av name={pname(a)} seed={a.id} size="xs"/><span>{pname(a)}</span><span>·</span></>}<span>{when(d.published_at,locale)}</span><span><MessageCircle/>{d.replies}</span></span>
+         <span className="meta">{a&&<><Av name={pname(a)} seed={a.id} size="xs" src={a.avatar}/><span>{pname(a)}</span><span>·</span></>}<span>{when(d.published_at,locale)}</span><span><MessageCircle/>{d.replies}</span></span>
         </button>{host&&<button type="button" className="ibtn ghost sm" style={{position:'absolute',top:10,right:8}} aria-label={t('fe.cm.hostTools')} onClick={()=>setHostTools(d)}><Ellipsis/></button>}</div>;})}</div>}
      </>)
      :tab==='events'?(evs.length?<div className="evgrid">{sorted.map((e,i)=><EventCard key={e.id} e={e} i={i}/>)}</div>
@@ -369,7 +395,7 @@ function downloadIcs(e:EventFull){
 export function EventScreen(){
  const {id=''}=useParams();const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
  const [e,setE]=useState<EventFull|null>(null);const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);
- const [comm,setComm]=useState<{id:string,name:string,plate?:string|null|undefined}|null>(null);const [saved,setSaved]=useState(false);const [faces,setFaces]=useState<z.infer<typeof prof>[]>([]);
+ const [comm,setComm]=useState<{id:string,name:string,plate?:string|null|undefined,cover?:z.infer<typeof media>|null|undefined}|null>(null);const [saved,setSaved]=useState(false);const [faces,setFaces]=useState<z.infer<typeof prof>[]>([]);
  const [layer,setLayer]=useState<''|'menu'|'venue'|'report'|'withdraw'>('');
  const op=useRef(newOpId());
  const load=useCallback(()=>{setError(null);call('event.get',{eventId:id},evRes).then(r=>{setE(r.event);
@@ -437,8 +463,8 @@ export function EventScreen(){
       :e.state==='in_review'?<div className="alert warn mt16"><Clock/><span><b>{t('fe.cm.inReview')}</b>{t(couple?'fe.cm.evReviewTextCouple':'fe.cm.evReviewText')}</span></div>
       :e.state==='rejected'?<div className="alert err mt16"><Ban/><span><b>{t('fe.cm.rejected')}</b>{String((e as {rejectReason?:unknown}).rejectReason??'')}</span></div>:null}
      <div className="card list mt16">
-      {e.organizer&&<button type="button" className="li" onClick={()=>navigate(orgMe?'/n/me':'/n/people/'+e.organizer!.id)}><Av name={pname(e.organizer)} seed={e.organizer.id} size="sm"/><span className="tx"><b>{pname(e.organizer)}</b><small>{t('fe.ev.organizer')}</small></span><ChevronRight/></button>}
-      {comm&&<button type="button" className="li" onClick={()=>navigate('/n/communities/'+comm.id)}><span className="av sm" style={{position:'relative'}}><NamedPlate k={comm.plate}/></span><span className="tx"><b>{comm.name}</b><small>{t('fe.cm.community')}</small></span><ChevronRight/></button>}
+      {e.organizer&&<button type="button" className="li" onClick={()=>navigate(orgMe?'/n/me':'/n/people/'+e.organizer!.id)}><Av name={pname(e.organizer)} seed={e.organizer.id} size="sm" src={e.organizer.avatar}/><span className="tx"><b>{pname(e.organizer)}</b><small>{t('fe.ev.organizer')}</small></span><ChevronRight/></button>}
+      {comm&&<button type="button" className="li" onClick={()=>navigate('/n/communities/'+comm.id)}><span className="av sm" style={{position:'relative'}}>{coverSrc(comm.cover)?<img src={coverSrc(comm.cover)!} alt="" draggable={false}/>:<NamedPlate k={comm.plate}/>}</span><span className="tx"><b>{comm.name}</b><small>{t('fe.cm.community')}</small></span><ChevronRight/></button>}
      </div>
      {showRsvp&&<section className="rsvp-box"><div className="rsvp-h"><b>{t(couple?'fe.cm.rsvpQCouple':'fe.ev.question')}</b>
        {waiting?<span className="pill wait"><Clock/>{t('fe.cm.st.waiting')}</span>:st?<Btn kind="text" auto onClick={()=>void rsvp(null)} disabled={busy}>{t('fe.cm.clearAnswer')}</Btn>:<span className="note">{t('fe.cm.noAnswer')}</span>}</div>
@@ -459,7 +485,7 @@ export function EventScreen(){
      {e.requirements&&<><div className="sec">{t('fe.ev.requirements')}</div><div className="card">{e.requirements.split('\n').filter(Boolean).map((r,i)=><div key={i} className="fact"><i className="v"><Check/></i><span>{r}</span></div>)}<p className="note mt8">{t('fe.cm.reqNote')}</p></div></>}
      {going+interested===0?(orgMe&&!cancelled&&!e.past&&<><div className="sec">{t('fe.cm.crowd')}</div><p className="note">{t('fe.cm.nobodyYet')}</p></>)
       :<><div className="sec">{e.past?t('fe.cm.whoWas'):t('fe.cm.crowd')}</div><div className="card list">
-       <LinkRow av={faces.length?<span className="av-stack">{faces.map(f=><Av key={f.id} name={pname(f)} seed={f.id} size="sm"/>)}</span>:undefined}
+       <LinkRow av={faces.length?<span className="av-stack">{faces.map(f=><Av key={f.id} name={pname(f)} seed={f.id} size="sm" src={f.avatar}/>)}</span>:undefined}
         title={fill(t(e.past?'fe.cm.attendedN':'fe.cm.goingN'),{n:going})} sub={e.past?undefined:fill(t('fe.cm.interestedN'),{n:interested})} onClick={()=>navigate(`/n/events/${id}/attendees`)}/></div></>}
      {!orgMe&&open&&(st==='going'||st==='interested')&&<><div className="sec">{t('fe.cm.visibility')}</div><div className="card list">
       <button type="button" className="li" role="switch" aria-checked={!!e.me.rsvp?.showInList} disabled={busy} onClick={()=>void rsvp(st as 'going'|'interested',!e.me.rsvp?.showInList)}>

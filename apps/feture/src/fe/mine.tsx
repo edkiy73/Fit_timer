@@ -11,6 +11,7 @@ import {EventRow,type Ev} from './browse';
 import {mdPlain} from './post-parts';
 import {useToast} from './toast';
 import {PairEntry} from './pair';
+import {faceFields,NameBadges} from './faces';
 
 /** V21 X01 «Моё» (`meMineLayer()`): only lists — posts (drafts on the second line), events, followers, saved and what
  * others shared with me; each row opens its own screen (F10, E10, P10, G04, P07) with the counts from the server. */
@@ -19,7 +20,7 @@ const ev=z.object({id:z.uuid(),title:z.string(),format:z.string(),starts_at:z.st
 const evs=z.object({ok:z.literal(true),going:z.array(ev),interested:z.array(ev),organizing:z.array(ev),applications:z.array(ev)}).passthrough();
 const saved=z.object({ok:z.literal(true),items:z.array(z.object({kind:z.string(),target_id:z.string(),created_at:z.string()}))});
 const followers=z.object({ok:z.literal(true),items:z.array(z.unknown())}).passthrough();
-const who=z.object({id:z.uuid(),kind:z.string().optional(),handle:z.string().nullable(),name:z.string().nullable()}).nullable();
+const who=z.object({id:z.uuid(),kind:z.string().optional(),handle:z.string().nullable(),name:z.string().nullable(),...faceFields}).nullable();
 const withMe=z.object({ok:z.literal(true),items:z.array(z.object({scopes:z.array(z.string()),until:z.string().nullable(),profile:who}).passthrough())});
 const outReqs=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),scopes:z.array(z.string()),state:z.string(),created_at:z.string(),profile:who}).passthrough())});
 const nameOf=(p:z.infer<typeof who>)=>p?(p.name||(p.handle?'@'+p.handle:'?')):'—';
@@ -76,11 +77,11 @@ function Shared(){
  if(!a.items.length&&!pending.length)return <Empty icon={LockOpen} title={t('fe.mx.mine.sharedEmpty')} text={t('fe.mx.mine.sharedEmptyText')}/>;
  return <>
   {a.items.length>0&&<section className="grp"><div className="grp-t"><span>{t('fe.mx.mine.sharedOpen')} · {a.items.length}</span></div><div className="card list">
-   {a.items.map((g,i)=><button key={i} type="button" className="li" onClick={()=>g.profile&&navigate('/n/people/'+g.profile.id)}><Av name={nameOf(g.profile)} seed={g.profile?.id??String(i)} size="sm"/>
-    <span className="tx"><b>{nameOf(g.profile)}</b><small>{g.scopes.map(s=>t('fe.priv.scope.'+s)).join(', ')} · {date(g.until)}</small></span><ChevronRight/></button>)}</div></section>}
+   {a.items.map((g,i)=><button key={i} type="button" className="li" onClick={()=>g.profile&&navigate('/n/people/'+g.profile.id)}><Av name={nameOf(g.profile)} seed={g.profile?.id??String(i)} size="sm" src={g.profile?.avatar}/>
+    <span className="tx"><b>{nameOf(g.profile)}<NameBadges p={g.profile}/></b><small>{g.scopes.map(s=>t('fe.priv.scope.'+s)).join(', ')} · {date(g.until)}</small></span><ChevronRight/></button>)}</div></section>}
   {pending.length>0&&<section className="grp"><div className="grp-t"><span>{t('fe.mx.mine.sharedPending')} · {pending.length}</span></div><div className="card list">
-   {pending.map(r=><button key={r.id} type="button" className="li" onClick={()=>r.profile&&navigate('/n/people/'+r.profile.id)}><Av name={nameOf(r.profile)} seed={r.profile?.id??r.id} size="sm"/>
-    <span className="tx"><b>{nameOf(r.profile)}</b><small>{r.scopes.map(s=>t('fe.priv.scope.'+s)).join(', ')} · {t('fe.mx.mine.awaiting')}</small></span><ChevronRight/></button>)}</div></section>}
+   {pending.map(r=><button key={r.id} type="button" className="li" onClick={()=>r.profile&&navigate('/n/people/'+r.profile.id)}><Av name={nameOf(r.profile)} seed={r.profile?.id??r.id} size="sm" src={r.profile?.avatar}/>
+    <span className="tx"><b>{nameOf(r.profile)}<NameBadges p={r.profile}/></b><small>{r.scopes.map(s=>t('fe.priv.scope.'+s)).join(', ')} · {t('fe.mx.mine.awaiting')}</small></span><ChevronRight/></button>)}</div></section>}
  </>;
 }
 

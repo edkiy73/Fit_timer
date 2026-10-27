@@ -5,6 +5,7 @@ import { enqueue } from '../outbox.mjs';
 import { needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
 import { cards } from './discover.mjs';
 import { requireUnrestricted } from '../profiles.mjs';
+import { withFaces } from './faces.mjs';
 
 /** Slice F2: people search, links between profiles, «Что у вас общего» (S1 §11, extract/people-discover-chats.md).
  * Search matches the start of a nickname or name, from two characters, never anyone hidden by a block (Q8). A link is
@@ -230,7 +231,7 @@ const run = {
     return { removed: true };
   },
 
-  async 'links.ofProfile'(q, { acting: a, input }) {
+  async 'links.ofProfile'(q, { acting: a, input, cfg }) {
     // Confirmed links only, as far as the more private choice of the two endpoints allows.
     const viewer = need(a);
     if (input.profileId !== viewer.profileId) await otherProfile(q, viewer, input.profileId);
@@ -253,10 +254,10 @@ const run = {
         shown.push({ id: r.id, kind: r.kind, side: r.side, other: { id: r.other_id, kind: r.other_kind, handle: r.other_handle, name: r.other_name || r.other_handle } });
       }
     }
-    return { items: shown };
+    return { items: await withFaces(q, cfg.media, viewer, shown, r => r.other) };
   },
 
-  async 'links.mine'(q, { acting: a }) {
+  async 'links.mine'(q, { acting: a, cfg }) {
     const viewer = need(a);
     const rows = await q.query(
       `select l.id, l.kind, l.state, l.change, l.a_profile_id = $1 proposed_by_me, case when l.a_profile_id = $1 then l.a_side else l.b_side end side,
@@ -265,6 +266,7 @@ const run = {
        from feture.profile_link l join feture.profile o on o.id = case when l.a_profile_id = $1 then l.b_profile_id else l.a_profile_id end
        where $1 in (l.a_profile_id, l.b_profile_id) and o.state = 'active' and not feture.blocked($1, o.id)
        order by l.updated_at desc`, [viewer.profileId]);
+    await withFaces(q, cfg.media, viewer, rows, r => r.other);
     const view = (/** @type {any} */ r) => ({ id: r.id, kind: r.kind, side: r.side, vis: r.vis, other: r.other, change: r.change ? { kind: r.change.kind, mine: r.change.by === viewer.profileId } : null });
     return {
       incoming: rows.filter(r => r.state === 'pending' && !r.proposed_by_me).map(view),

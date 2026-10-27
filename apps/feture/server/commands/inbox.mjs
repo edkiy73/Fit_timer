@@ -2,6 +2,7 @@
 import { inboxCommands } from '../../contracts/inbox.mjs';
 import { fail } from '../errors.mjs';
 import { sha256 } from '../hash.mjs';
+import { withFaces } from './faces.mjs';
 
 /** Slice G2: the inbox of an account (S1 §13). Notifications are stored per account; «Нужно решить» is computed from its
  * source rows every time (couple invitations, access requests, partner approvals waiting or returned, community join
@@ -60,7 +61,7 @@ async function decisions(q, accountId) {
 
 /** @type {Record<keyof typeof inboxCommands, Command['run']>} */
 const run = {
-  async 'notifications.list'(q, { account, input }) {
+  async 'notifications.list'(q, { account, input, cfg }) {
     let cur = null;
     if (input.cursor) {
       try { cur = JSON.parse(Buffer.from(input.cursor, 'base64url').toString('utf8')); } catch { /* checked below */ }
@@ -77,6 +78,7 @@ const run = {
        order by n.created_at desc, n.id desc limit 51`, [account.id, cur?.[0] ?? null, cur?.[1] ?? null]);
     const page = rows.slice(0, 50);
     const last = page[page.length - 1];
+    await withFaces(q, cfg.media, { profileId: account.person_profile_id, accountId: account.id }, page, r => r.actor);
     return {
       // «Тебе» / «Паре» by the profile it is addressed to.
       items: page.map(({ addressee_kind, addressee_profile_id, object_type, object_id, created_at, read_at, cursor_at: _, ...r }) => ({
@@ -99,8 +101,9 @@ const run = {
     return { read: rows.length };
   },
 
-  async 'decide.list'(q, { account }) {
+  async 'decide.list'(q, { account, cfg }) {
     const rows = await decisions(q, account.id);
+    await withFaces(q, cfg.media, { profileId: account.person_profile_id, accountId: account.id }, rows, r => r.actor);
     const kinds = Object.fromEntries((await q.query(`select id, kind from feture.profile where id = any($1)`, [rows.map(r => r.addressee).filter(Boolean)])).map(r => [r.id, r.kind]));
     return {
       items: rows.map(r => ({ kind: r.kind, id: r.id, objectId: r.object_id, actor: r.actor, at: r.at, label: kinds[r.addressee] === 'couple' ? 'couple' : 'me', addressee: r.addressee })),

@@ -5,6 +5,7 @@ import { hmac } from '../hash.mjs';
 import { mediaDto } from '../media/assets.mjs';
 import { photosFor } from './photos.mjs';
 import { photoVerifiedOf } from './verification.mjs';
+import { PREMIUM_SQL } from './faces.mjs';
 import { grantedScopes } from '../access.mjs';
 import { enqueue } from '../outbox.mjs';
 import { narrowCouple, needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
@@ -93,7 +94,7 @@ async function profileView(q, viewer, profileId, media) {
     `select p.id, p.kind, p.handle, p.name, p.state, p.rev, p.avatar_asset_id,
        d.bio, d.show_age, d.details_vis, d.genders, d.orients, d.roles, d.formats, d.seeks, d.status,
        pl.id city_id, pl.name_ru city_ru, pl.name_en city_en, pl.state city_state,
-       a.birth_date,
+       a.birth_date, ${PREMIUM_SQL} premium,
        exists (select 1 from feture.profile_member m where m.profile_id = p.id and m.account_id = $2 and m.state = 'active') own
      from feture.profile p
      left join feture.profile_details d on d.profile_id = p.id
@@ -130,6 +131,8 @@ async function profileView(q, viewer, profileId, media) {
     avatar,
     photos: await photosFor(q, p.id, viewer.profileId, media),
     photoVerified: (await photoVerifiedOf(q, [p.id])).get(p.id) ?? false, // only the yes/no, never the check itself (V01)
+    premium: !!p.premium, // the public gold badge (V10 «Значки»), never the end date
+
     ...(own ? { rev: p.rev, showAge: !!p.show_age, detailsVis: p.details_vis ?? null, state: p.state } : {}),
   };
 }

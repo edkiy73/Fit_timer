@@ -106,3 +106,42 @@ test('review fix: each endpoint’s «followers» choice holds on both pages', a
     assert.equal((await call('uc', c, { action: 'links.ofProfile', profileId: b })).items.length, 1);
   } finally { await pg.close(); }
 });
+
+test('faces in lists: photo, age only when shown (own always), badges; nothing for blocked or inactive profiles', async () => {
+  const { pg, call, person, coupleOf, db } = await setup();
+  try {
+    const a = await person('ua', 'Alex'), b = await person('ub', 'Kira'), c = await person('uc', 'Noa'), d = await person('ud', 'Dan');
+    const acc = async (/** @type {string} */ p) => (await db.query('select id from feture.account where person_profile_id = $1', [p]))[0].id;
+    const [accA, accB, accC] = [await acc(a), await acc(b), await acc(c)];
+    const [av] = await db.query(
+      `insert into feture.media_asset (owner_profile_id, uploaded_by, kind, purpose, storage_key, mime, declared_bytes, state, explicitness, copies_at)
+       values ($1, $2, 'image', 'avatar', 'u/' || gen_random_uuid(), 'image/jpeg', 10, 'approved', 'safe', now()) returning id`, [b, accB]);
+    await db.query('update feture.profile set avatar_asset_id = $1 where id = $2', [av.id, b]);
+    await db.query(`update feture.profile_details set show_age = true where profile_id = $1`, [b]);
+    await db.query(`update feture.profile_details set show_age = false where profile_id = $1`, [c]);
+    await db.query(`update feture.account set premium_until = now() + interval '1 month' where person_profile_id = $1`, [c]);
+    for (const [u, p] of [['ub', b], ['uc', c], ['ud', d]]) await call(u, p, { action: 'follow.set', opId: op(), profileId: a, on: true });
+    const list = async () => Object.fromEntries((await call('ua', a, { action: 'profile.followers', profileId: a })).items.map((/** @type {any} */ x) => [x.handle, x]));
+    const f = await list();
+    assert.ok(typeof f.Kira.avatar === 'string' && f.Kira.avatar.startsWith('https://media.test'));
+    assert.equal(typeof f.Kira.age, 'number');
+    assert.deepEqual([f.Noa.age, f.Noa.premium, f.Noa.avatar, f.Kira.premium], [null, true, null, false]);
+    // The same as profile.get shows the same viewer.
+    const kira = (await call('ua', a, { action: 'profile.get', profileId: b })).profile, noa = (await call('ua', a, { action: 'profile.get', profileId: c })).profile;
+    assert.deepEqual([kira.age, kira.premium, noa.age, noa.premium], [f.Kira.age, false, null, true]);
+
+    // Own profile: the age even when hidden. A couple: no age, Premium when a partner has it.
+    const { facesOf } = await import('../server/commands/faces.mjs');
+    const media = { storage: null, delivery: null };
+    assert.equal(typeof (await facesOf(db, media, { profileId: c, accountId: accC }, [c])).get(c)?.age, 'number');
+    const pair = await coupleOf([c, d]);
+    assert.deepEqual((await facesOf(db, media, { profileId: a, accountId: accA }, [pair])).get(pair), { avatar: null, age: null, photoVerified: false, premium: true });
+
+    // Blocked either way, or not active: nothing at all.
+    await call('ub', b, { action: 'block.set', opId: op(), profileId: a, on: true });
+    assert.equal((await facesOf(db, media, { profileId: a, accountId: accA }, [b])).get(b), undefined);
+    await db.query(`update feture.profile set state = 'paused', restore_until = now() + interval '30 days' where id = $1`, [c]);
+    assert.equal((await facesOf(db, media, { profileId: a, accountId: accA }, [c])).get(c), undefined);
+    assert.deepEqual(Object.keys(await list()), ['Dan']);
+  } finally { await pg.close(); }
+});

@@ -6,7 +6,7 @@ import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Ban,Check,ChevronDown,ChevronLeft,ChevronRight,EyeOff,Heart,Ellipsis,History,Info,Lock,MapPin,MessageCircle,Search as SearchIcon,SlidersHorizontal,Sparkles,Undo2,Users,X} from 'lucide-react';
 import {Av,Bar,Btn,Empty,View,Layer,Skel,plate} from './ui';
 import {useFe} from './session';
-import {PhotoBadge} from './photo-check';
+import {NameBadges} from './faces';
 import {BellButton} from './inbox';
 import {when} from './feed';
 import {CompatSummary,FollowCounts,MatchOverlay,PersonBio,PersonMenu,PhotoViewer,ProfileBody,ProfilePage,personName,personProfileRes,pxError,useRelation,useToast,
@@ -17,7 +17,7 @@ import {CompatSummary,FollowCounts,MatchOverlay,PersonBio,PersonMenu,PhotoViewer
  * only what the server returned: no invented matches, counters or scores. People search lives in the global search. */
 const media=z.object({src:z.record(z.string(),z.string()).nullable(),pending:z.boolean().optional()}).passthrough();
 const card=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),ages:z.array(z.number()),
- city:z.object({ru:z.string().nullable(),en:z.string().nullable()}).nullable(),avatar:media.nullable(),likedMe:z.boolean(),shared:z.number(),photoVerified:z.boolean().optional()});
+ city:z.object({ru:z.string().nullable(),en:z.string().nullable()}).nullable(),avatar:media.nullable(),likedMe:z.boolean(),shared:z.number(),photoVerified:z.boolean().optional(),premium:z.boolean().optional()});
 type Card=z.infer<typeof card>;
 const deck=z.object({ok:z.literal(true),off:z.boolean(),items:z.array(card)});
 const decided=z.object({ok:z.literal(true),decision:z.enum(['like','pass']),state:z.string().optional(),conversationId:z.uuid().optional()}).passthrough();
@@ -274,7 +274,7 @@ function NextCard({c,cardRef}:{c:Card,cardRef:React.RefObject<HTMLElement|null>}
  const {locale}=useI18n();const city=c.city?(locale==='en'?c.city.en||c.city.ru:c.city.ru||c.city.en):null;
  return <article ref={cardRef as React.RefObject<HTMLElement>} className="pc next" inert aria-hidden="true">
   <div className="pc-ph"><CardPhoto c={c} src={photo(c)}/><CardTags c={c}/>
-   <div className="pc-info"><h2 className="pc-name"><span className="pcn">{cname(c)}</span>{c.ages.length>0&&<span>{c.ages.join(' · ')}</span>}{c.photoVerified&&<PhotoBadge/>}</h2>
+   <div className="pc-info"><h2 className="pc-name"><span className="pcn">{cname(c)}</span>{c.ages.length>0&&<span>{c.ages.join(' · ')}</span>}<NameBadges p={c}/></h2>
     {city&&<div className="pc-who"><span className="pl"><MapPin/>{city}</span></div>}</div>
   </div>
  </article>;
@@ -325,7 +325,7 @@ function TopCard({c,cardRef,nextRef,actsRef,onDecide,toast}:{c:Card,cardRef:Reac
    <div className="pc-zone c" aria-hidden="true" onClick={()=>list.length?setView(i):undefined}/>
    <CardTags c={c}/>
    <div className="stamp l">{t('fe.px.deck.stampLike')}</div><div className="stamp n">{t('fe.px.deck.stampPass')}</div>
-   <div className="pc-info"><h2 className="pc-name"><span className="pcn">{name}</span>{c.ages.length>0&&<span>{c.ages.join(' · ')}</span>}{c.photoVerified&&<PhotoBadge/>}</h2>
+   <div className="pc-info"><h2 className="pc-name"><span className="pcn">{name}</span>{c.ages.length>0&&<span>{c.ages.join(' · ')}</span>}<NameBadges p={c}/></h2>
     {city&&<div className="pc-who"><span className="pl"><MapPin/>{city}</span></div>}
     <FollowCounts id={c.id} rel={rel}/>
     <div className="pc-hint"><ChevronDown/>{t('fe.px.card.hint')}</div>
@@ -422,7 +422,7 @@ function Likes({onCount,toDiscover}:{onCount:(n:number)=>void,toDiscover:()=>voi
  else if(!inc||!out)body=k==='in'?<div className="likes">{[0,1,2,3].map(i=><div key={i} className="lk"><i className="sk sk-media"/></div>)}</div>:<Skel kind="list"/>;
  else if(k==='out')body=out.length?<div className="card list">{out.map(l=>{const c=l.profile;
   return <div key={c.id} className="li"><Av name={cname(c)} seed={c.id} src={c.avatar?.src?.thumb}/>
-   <button type="button" className="tx" style={{textAlign:'left'}} onClick={()=>navigate('/n/people/'+c.id)}><b>{cname(c)}</b>
+   <button type="button" className="tx" style={{textAlign:'left'}} onClick={()=>navigate('/n/people/'+c.id)}><b>{cname(c)}<NameBadges p={c}/></b>
     <small>{[t(l.source==='profile'?'fe.px.lk.fromProfile':l.source==='likes'?'fe.px.lk.fromLikes':'fe.px.lk.fromDiscover'),l.at?when(l.at,locale):null,us&&l.initiator?'@'+l.initiator:null].filter(Boolean).join(' · ')}</small></button>
    <span className="pill wait">{t('fe.px.lk.pendingPill')}</span>
    <button type="button" className="ibtn ghost sm" aria-label={t('fe.px.lk.unlike')} disabled={busy===c.id} onClick={()=>unlike(c)}><X/></button></div>;})}</div>

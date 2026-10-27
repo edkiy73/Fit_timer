@@ -9,6 +9,7 @@ import {useFe} from './session';
 import {PostCard,postSchema,type Post} from './feed';
 import {InterestSheet,Jars,useInterests} from './interests';
 import {Viewer} from './post-parts';
+import {faceFields,NameBadges} from './faces';
 
 /** Discovery screens with the prototype's markup: V21 F04 (an interest's page), G01 (global search), P10 (followers /
  * following) and P20 (gallery). Everything shown comes from the server; the client only narrows what the server already
@@ -30,7 +31,7 @@ const personCard=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z
  city:z.object({ru:z.string().nullable(),en:z.string().nullable()}).nullable(),avatar:media.nullable()}).passthrough();
 const peopleRes=z.object({ok:z.literal(true),items:z.array(personCard)});
 type Person=z.infer<typeof personCard>;
-const follower=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable()}).passthrough();
+const follower=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),...faceFields}).passthrough();
 const followersRes=z.object({ok:z.literal(true),items:z.array(follower)});
 type Follower=z.infer<typeof follower>;
 const profileRes=z.object({ok:z.literal(true),profile:z.object({id:z.uuid(),handle:z.string().nullable(),name:z.string().nullable(),own:z.boolean().optional(),
@@ -255,7 +256,7 @@ export function FollowsScreen(){
     :<div className="card list mt12">{list.map(k=>{const self=own.has(k.id);const fol=myFollows.has(k.id);
      return <div key={k.id} className="li frow">
       <button type="button" className="frow-go" onClick={()=>navigate(self?'/n/me':'/n/people/'+k.id)}>
-       <Av name={nameOf(k)} seed={k.id}/><span className="tx"><b><span className="fnm">{nameOf(k)}</span></b><small>{k.handle?'@'+k.handle:''}</small></span>
+       <Av name={nameOf(k)} seed={k.id} src={k.avatar}/><span className="tx"><b><span className="fnm">{nameOf(k)}</span><NameBadges p={k}/></b><small>{k.handle?'@'+k.handle:''}</small></span>
       </button>
       {self?<span className="note">{k.id===acting?.id?(asUs?t('fe.br.youUs'):t('fe.br.you')):k.kind==='person'?t('fe.br.yourOwn'):t('fe.br.yourCouple')}</span>
        :<button type="button" className={'btn sm '+(fol?'soft':'primary')} aria-pressed={fol} disabled={busy===k.id} onClick={()=>toggle(k)}>
