@@ -151,7 +151,7 @@ export function InterestSheet({topicId,topics,cats,current,onClose,onDone}:{topi
      {v==null&&<p className="note jar-need">{t('fe.int.ed.need')}</p>}
      <div className="row g8">
       {current&&<button type="button" className="btn secondary icon" aria-label={t('fe.int.ed.remove')} onClick={()=>setAsking(true)} disabled={busy}><Trash2/></button>}
-      <button type="button" className={'btn primary'+(v==null?' off':'')} onClick={save} disabled={v==null||busy} aria-disabled={v==null||undefined}>{busy?t('fe.loading'):current?t('fe.int.ed.save'):t('fe.int.ed.addOne')}</button>
+      <button type="button" className={'btn primary'+(v==null?' off':'')+(busy?' busy':'')} onClick={save} disabled={v==null||busy} aria-disabled={v==null||undefined} aria-busy={busy||undefined}>{current?t('fe.int.ed.save'):t('fe.int.ed.addOne')}</button>
      </div>
     </>}
    </div>
@@ -187,7 +187,7 @@ export function InterestsScreen(){
      {all.length>0&&<JarLegend couple={couple} extra={t('fe.int.hardNote')}/>}
      <div ref={addRef}>
       <section className="grp"><div className="grp-t"><span>{t('fe.int.addTitle')}</span></div>
-       <p className="note">{sections.length?t('fe.int.addHint'):cats.length?t('fe.int.allAdded'):t('fe.loading')}</p></section>
+       {sections.length||cats.length?<p className="note">{sections.length?t('fe.int.addHint'):t('fe.int.allAdded')}</p>:<Skel kind="list" rows={2}/>}</section>
       {sections.map(({c,ts})=><section key={c.id} className="fsec"><div className="sec">{locale==='en'?c.en:c.ru}</div>
        <div className="chips">{ts.map(x=><button key={x.id} type="button" className="chip" aria-pressed={false} onClick={()=>setOpen(x.id)}>{locale==='en'?x.en:x.ru}</button>)}</div></section>)}
      </div>
@@ -229,7 +229,7 @@ export function InterestsHistoryScreen(){
        :<div className="li static"><span className="tx"><small>{t('fe.int.hist.empty')}</small></span></div>}
      </div><p className="grp-n">{t(couple?'fe.int.hist.footCouple':'fe.int.hist.foot')}</p>
      {error?<div className="alert err" role="alert"><span>{feErrorMessage(error,t)}</span></div>:null}
-     {next&&<Btn kind="text" auto className="jar-more" disabled={more} onClick={()=>load(next)}>{more?t('fe.loading'):t('fe.int.hist.more')}</Btn>}
+     {next&&<Btn kind="text" auto className="jar-more" disabled={more} busy={more} onClick={()=>load(next)}>{t('fe.int.hist.more')}</Btn>}
     </section>}
   </View>
  </>;

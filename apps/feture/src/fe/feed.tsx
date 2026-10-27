@@ -173,7 +173,7 @@ export function FilterSheet({title,topics,cats,popular,value,onClose,onApply}:{t
 
 const AUD_ICON:Record<string,LucideIcon>={followers:Users,granted:KeyRound,only:EyeOff};
 export function PostCard({post,onChange,onRemove,onExpired,full=false,onReply,preview=false}:{post:Post,onChange:(p:Post)=>void,onRemove:(r:Removal)=>void,onExpired?:(()=>void)|undefined,full?:boolean,onReply?:()=>void,preview?:boolean}){
- const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();const {name:tname}=useTopics();
+ const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();const {name:tname,ready:tready}=useTopics();
  const [busy,setBusy]=useState(false);
  const [menu,setMenu]=useState(false);const more=useRef<HTMLButtonElement>(null);
  // Esc / scrim / ✕ return focus to «⋯» (prototype closeSheet → sheetOpener).
@@ -224,7 +224,7 @@ export function PostCard({post,onChange,onRemove,onExpired,full=false,onReply,pr
    {post.interests&&post.interests.length>0&&<PostInterests list={post.interests} preview={preview}/>}
   </div>
   {okTags.length>0&&<div className="tagged"><Users/><span>{t('fe.fd.inPhoto')} {okTags.map((x,i)=><span key={x.id}>{i>0&&', '}<button type="button" disabled={preview} onClick={()=>navigate(x.id===acting?.id?'/n/me':'/n/people/'+x.id)}>{x.id===acting?.id?t('fe.fd.you'):nameOf(x)}</button></span>)}</span></div>}
-  {post.topics&&post.topics.length>0&&<div className="tags">{post.topics.map(x=><button key={x} type="button" disabled={preview} onClick={()=>navigate('/n/topics/'+x)}>#{tname(x)}</button>)}</div>}
+  {post.topics&&post.topics.length>0&&<div className="tags" style={tready?undefined:{visibility:'hidden'}}>{post.topics.map(x=><button key={x} type="button" disabled={preview} onClick={()=>navigate('/n/topics/'+x)}>#{tname(x)}</button>)}</div>}
   <div className="post-a">
    <button type="button" className={post.liked?'on':''} disabled={preview} aria-pressed={post.liked} aria-label={t('fe.fd.likePost')} onClick={()=>toggle('liked')}><Heart fill={post.liked?'currentColor':'none'}/><span>{post.likes}</span></button>
    <button type="button" disabled={preview} aria-label={t('fe.feed.replies')} onClick={full?onReply:open}><MessageCircle/><span>{post.replies}</span></button>
@@ -519,7 +519,7 @@ export function ComposeScreen({edit}:{edit?:Post}={}){
      <p className="grp-n">{audience==='granted'?t('fe.fd.mediaGranted'):t('fe.fd.mediaFoot')}</p></section></div>}
     <input ref={file} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={e=>{if(e.target.files?.length)void addMedia(e.target.files);}}/>
     <div className="attach v14">
-     {!hasMedia&&<button type="button" disabled={uploading} onClick={()=>file.current?.click()}><ImageIcon/><span>{uploading?t('fe.loading'):t('fe.feed.media')}</span></button>}
+     {!hasMedia&&<button type="button" disabled={uploading} onClick={()=>file.current?.click()}><ImageIcon/><span>{t('fe.feed.media')}</span></button>}
      {!poll&&<button type="button" onClick={()=>setPoll({question:'',options:['','']})}><ChartColumn/><span>{t('fe.feed.poll')}</span></button>}
      {!communityId&&!note&&<button type="button" onClick={()=>setNote(true)}><FileText/><span>{t('fe.fd.article')}</span></button>}
      <button type="button" onClick={insertAt}><AtSign/><span>{t('fe.fd.mention')}</span></button>
