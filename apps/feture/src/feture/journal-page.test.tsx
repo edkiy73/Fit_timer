@@ -40,7 +40,7 @@ it.each(['journal.delete','history.clear'])('retains an exact %s retry and block
   expect(commands[1]).toBe(commands[0]);
   expect(commands[0]).toEqual(action==='history.clear'?{action,operationId:expect.any(String)}:{action,id,expectedRevision:1,operationId:expect.any(String)});
   await waitFor(()=>expect(screen.getByRole('button',{name:'Обновить список'}).matches(':disabled')).toBe(false));
-  await user.click(screen.getByRole('link',{name:'← Мой мир'}));await waitFor(()=>expect(router.state.location.pathname).toBe('/'));
+  await user.click(screen.getByRole('link',{name:'← Мой мир'}));await waitFor(()=>expect(router.state.location.pathname).toBe('/world'));
  }finally{confirm.mockRestore();}
 });
 

@@ -8,6 +8,7 @@ import {Av,Btn,Empty,Seg} from './ui';
 import {useFe} from './session';
 import {PrivateLayer} from './private';
 import {BellButton} from './inbox';
+import {PairEntry} from './pair';
 
 /** Slice C (V21 X01, P02, P03) with the prototype's markup: own profile, photos (others see approved ones;
  * «на проверке» only the owner), basics, details, Discover and who sees the answers. */
@@ -60,6 +61,7 @@ export function MeTab(){
      :layer==='profile'?<>
       {notice&&<div className="alert ok" role="status"><span>{notice}</span></div>}
       <Photos p={p} onChanged={load}/>
+      {acting.kind==='person'&&<PairEntry/>}
       <section className="grp"><div className="grp-t"><span>{t('fe.me.basics')}</span><span className="aud">{t('fe.me.seenByAll')}</span></div>
        {editing?<EditBasics p={p} onDone={msg=>{setEditing(false);setNotice(msg);load();}} onCancel={()=>setEditing(false)}/>
         :<button type="button" className="card blk-btn" aria-label={t('fe.me.editBasics')} onClick={()=>setEditing(true)}>

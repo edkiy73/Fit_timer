@@ -18,6 +18,7 @@ import { FetureExperience } from './feture/experience';
 import { FeRoot } from './fe/shell';
 import { CommunitiesTab, CommunityScreen, EventScreen } from './fe/communities';
 import { InboxScreen } from './fe/inbox';
+import { PairScreen } from './fe/pair';
 import { ChatsTab, ChatScreen } from './fe/chats';
 import { PeopleTab, PersonScreen } from './fe/people';
 import { MeTab } from './fe/me';
@@ -154,7 +155,8 @@ function Home(){
   const location=useLocation();
   if(location.pathname==='/'&&auth.loading)return <main className="ft-welcome-loading" role="status">{t('account.appLoading')}</main>;
   if(location.pathname==='/'&&!auth.session)return <WelcomePage/>;
-  if(location.pathname==='/')return <Navigate to="/world" replace/>;
+  // The V21 screens on /api/fe are the app now; the earlier ones stay reachable by their own paths.
+  if(location.pathname==='/')return <Navigate to="/n/feed" replace/>;
   return <FetureExperience/>;
 }
 
@@ -268,6 +270,7 @@ export const routes: RouteObject[] = [
         {path:'chats', element:<ChatsTab />},
         {path:'chats/:id', element:<ChatScreen />},
         {path:'me', element:<MeTab />},
+        {path:'me/pair', element:<PairScreen />},
         {path:'*', element:<Navigate to="/n/feed" replace/>}
       ]
     },{

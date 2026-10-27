@@ -18,7 +18,7 @@ export function plate(seed:string):CSSProperties{
 const initial=(name:string)=>[...(name.trim()||'?')][0]!.toUpperCase();
 
 /** `av()` — photo, or initials on a plate; a couple without a photo is one circle with two halves. */
-export function Av({name,src,size='',seed,couple}:{name:string,src?:string|null|undefined,size?:''|'xs'|'sm'|'lg'|'xl',seed?:string,couple?:[string,string]|undefined}){
+export function Av({name,src,size='',seed,couple}:{name:string,src?:string|null|undefined,size?:''|'xs'|'sm'|'lg'|'xl',seed?:string|undefined,couple?:[string,string]|undefined}){
  if(!src&&couple)return <span className={`av split ${size}`}>{couple.map((n,i)=><span key={i} className="avs ini"><div className="plate" style={plate((seed??n)+i)}/><b>{initial(n)}</b></span>)}</span>;
  if(src)return <span className={`av ${size}`}><img src={src} alt="" loading="lazy" draggable={false}/></span>;
  return <span className={`av ini ${size}`}><div className="plate" style={plate(seed??name)}/><b style={{position:'relative'}}>{initial(name)}</b></span>;

@@ -48,7 +48,8 @@ describe('FetUre starter', () => {
   it('opens World without a duplicate Home and adds Dating only after opting in', async () => {
     signIn();
     const user=userEvent.setup();
-    const router=renderApp('/');
+    // «/» opens the V21 app now; the earlier World keeps its own path.
+    const router=renderApp('/world');
     expect(await screen.findByRole('heading',{name:/Твой мир/i,level:1})).toBeTruthy();
     const dock=()=>screen.getByRole('navigation',{name:'Основная навигация FetUre'});
     expect(dock().querySelectorAll('a')).toHaveLength(4);
