@@ -5,6 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Archive,ArchiveRestore,Ban,Camera,Check,CheckCheck,ChevronLeft,Clock,Ellipsis,Eye,Flag,Image as ImageIcon,Info,MessageCircle,Plus,SendHorizontal,User,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Av,Bar,Btn,Empty,Seg,View} from './ui';
+import {AgeCheckLink} from './age-check';
 import {useFe} from './session';
 
 /** Slice G (V21 H01, H02, H05) with the prototype's markup. A conversation exists only after a mutual like (server).
@@ -212,7 +213,7 @@ export function ChatScreen(){
  const time=(iso:string)=>new Date(iso).toLocaleTimeString(locale==='en'?'en':'ru',{hour:'2-digit',minute:'2-digit'});
  const fill=(s:string)=>s.replace('{name}',meta?nameOf(meta.other):'');
  if(error)return <><Bar title={t('fe.nav.chats')} back="/n/chats"/><View><Empty icon={X} title={t('fe.feed.unavailable')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>navigate('/n/chats')}>{t('fe.chats.back')}</Btn></Empty></View></>;
- const sheetAlert=sheetErr?<div className="alert err mt12" role="alert"><span>{sheetErr}</span></div>:null;
+ const sheetAlert=sheetErr?<div className="alert err mt12" role="alert"><span>{sheetErr}{sheetErr===t('fe.chx.ageRequired')&&<><br/><AgeCheckLink/></>}</span></div>:null;
  return <>
   <header className="bar solid">
    <button type="button" className="ibtn ghost" aria-label={t('fe.back')} onClick={()=>navigate(meta?.archived?'/n/chats?archived=1':'/n/chats')}><ChevronLeft/></button>

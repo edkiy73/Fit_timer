@@ -43,7 +43,7 @@ export function SettingsScreen(){
     <div className="sec" style={{marginTop:4}}>{t('fe.set.account')}</div>
     <div className="card list">
      <Row icon={ShieldCheck} title={t('fe.set.signIn')} note={email} onClick={()=>navigate('/n/settings/security')}/>
-     <Row icon={ShieldCheck} title={t('fe.set.age')} note={t('fe.set.ageNote')} value={age===null?undefined:age?t('fe.set.ageOk'):t('fe.set.ageNo')} onClick={()=>navigate('/n/me?layer=vis')}/>
+     <Row icon={ShieldCheck} title={t('fe.set.age')} note={t('fe.set.ageNote')} value={age===null?undefined:age?t('fe.set.ageOk'):t('fe.set.ageNo')} onClick={()=>navigate('/n/settings/age')}/>
      <Row icon={Eye} title={t('fe.set.privacy')} note={t('fe.set.privacyNote')} onClick={()=>navigate('/n/me?layer=vis')}/>
      <Row icon={Crown} title={t('fe.ax.prem.entry')} note={t('fe.ax.prem.entryNote')} value={premium?.premium?t('fe.ax.prem.entryOn'):undefined} onClick={()=>navigate('/n/premium')}/>
      <Row icon={Heart} title={t('fe.pair.section')} note={couple?(couple.name||t('fe.pair.ourProfile')):t('fe.pair.entryOff')} onClick={()=>navigate('/n/me/pair')}/>
