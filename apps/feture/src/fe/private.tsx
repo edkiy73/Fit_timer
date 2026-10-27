@@ -4,12 +4,10 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {ChevronRight,Lock,LockOpen,Plus,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Av,Btn,Empty,Skel} from './ui';
+import {Alert,Av,Btn,Card,Chip,ChoiceChips,Empty,Group,Note,Pill,Row,SectionLabel,SelectRow,Sheet,Skel,Stack,ToggleRow} from './kit';
 import {AgeCheckLink} from './age-check';
 import {useFe} from './session';
 import {when} from './feed';
-import {SelectRow} from './create-community';
-import {Sheet} from './profile-extras';
 import {useToast} from './toast';
 import {Ask,AudTag} from './me';
 import {faceFields,NameBadges,withAge} from './faces';
@@ -48,50 +46,48 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged}:{profileId:st
  const offAsk=asking==='off'&&<Ask icon={Lock} danger title={t('fe.mx.pr.offTitle')} busy={busy}
   text={[given.length||reqs.length?t('fe.mx.pr.offWhat',{g:given.length,q:reqs.length}):t('fe.mx.pr.offAll'),t('fe.mx.pr.offRest')].join(' ')} ok={t('fe.mx.pr.offOk')}
   onCancel={()=>setAsking(null)} onOk={async()=>{if(await act(()=>call('private.setOn',{opId:newOpId(),on:false,confirm:true},ok),t('fe.mx.pr.offDone')))setAsking(null);}}/>;
- if(!on)return <section className="grp"><div className="grp-t"><span>{t('fe.priv.title')}</span><span className="aud">{t('fe.mx.pr.offTag')}</span></div>
+ if(!on)return <Group title={t('fe.priv.title')} action={<span className="aud">{t('fe.mx.pr.offTag')}</span>}>
   <div className="vault off"><div className="vault-b"><p className="vault-lead">{cp?t('fe.mx.pr.leadUs'):t('fe.mx.pr.lead')}</p>
-   <Btn icon={LockOpen} disabled={busy} busy={busy} onClick={enable}>{t('fe.mx.pr.enable')}</Btn></div></div></section>;
+   <Btn icon={LockOpen} disabled={busy} busy={busy} onClick={enable}>{t('fe.mx.pr.enable')}</Btn></div></div></Group>;
  const media=Array.isArray(mine.media)?mine.media.length:0;const txt=mine.text??'';
  const bits=[txt?t('fe.mx.pr.bit.text'):'',media?t('fe.mx.pr.bit.media',{n:media}):'',jarsG?t('fe.mx.pr.bit.jars',{n:jarsG}):''].filter(Boolean);
  const shown=allGiven?given:given.slice(0,3);
  return <>
-  {reqs.length>0&&<section className="grp"><div className="grp-t"><span>{t('fe.priv.requests')} · {reqs.length}</span></div>
-   {reqs.map(r=><div key={r.id} className="card rqcard" style={{marginBottom:10}}>
+  {reqs.length>0&&<Group title={<>{t('fe.priv.requests')} · {reqs.length}</>}><Stack gap={2}>
+   {reqs.map(r=><Card key={r.id} className="rqcard">
     <div className="row">
      <button type="button" className="rq-av" aria-label={nameOf(r.profile)} onClick={()=>r.profile&&navigate('/n/people/'+r.profile.id)}><Av name={nameOf(r.profile)} seed={r.profile?.id??r.id} src={r.profile?.avatar}/></button>
      <button type="button" className="grow" style={{textAlign:'left'}} onClick={()=>r.profile&&navigate('/n/people/'+r.profile.id)}>
       <b style={{fontSize:16}}>{withAge(nameOf(r.profile),r.profile)}<NameBadges p={r.profile}/></b><div className="note">{cp?t('fe.mx.pr.asksUs'):t('fe.priv.asks')} · {when(r.created_at,locale)}</div>
      </button>
     </div>
-    <div className="chips mt12">{r.scopes.map(s=><span key={s} className="pill">{scopeLabel(s)}</span>)}</div>
+    <div className="chips mt12">{r.scopes.map(s=><Pill key={s}>{scopeLabel(s)}</Pill>)}</div>
     <div className="row g8 mt12">
      <Btn size="md" onClick={()=>setGrantFor(r)} disabled={busy}>{t('fe.priv.grant')}</Btn>
      <Btn size="md" kind="soft" onClick={()=>void act(()=>call('access.decline',{opId:newOpId(),requestId:r.id},ok),t('fe.mx.pr.declined'))} disabled={busy}>{t('fe.priv.decline')}</Btn>
     </div>
-   </div>)}
-  </section>}
-  <section className="grp"><div className="grp-t"><span>{t('fe.mx.pr.opens')}</span><AudTag k="granted"/></div>
+   </Card>)}
+  </Stack></Group>}
+  <Group title={t('fe.mx.pr.opens')} action={<AudTag k="granted"/>}>
    {bits.length?<button type="button" className="card blk-btn vault" style={{display:'block'}} onClick={editor}>
      <span className="vault-h" style={{padding:'0 0 8px'}}><span className="vi"><Lock/></span><b>{bits.join(' · ')}</b></span>
      {txt&&<span className="blk-bio">{txt.slice(0,160)}</span>}<span className="chv"><ChevronRight/></span></button>
-    :<div className="card"><button type="button" className="ph-empty" onClick={editor}><span className="pe-ic"><Lock/></span>
-     <span className="tx"><b>{t('fe.mx.pr.add')}</b><small>{cp?t('fe.mx.pr.addSubUs'):t('fe.mx.pr.addSub')}</small></span><Plus/></button></div>}
-  </section>
-  <section className="grp"><div className="grp-t"><span>{t('fe.mx.pr.who')}{given.length?' · '+given.length:''}</span>
-   {given.length>3?<button type="button" onClick={()=>setAllGiven(v=>!v)}>{allGiven?t('fe.mx.pr.less'):t('fe.mx.pr.all',{n:given.length})}</button>
-    :given.length?<button type="button" className="danger" onClick={()=>setAsking('revokeAll')}>{t('fe.mx.pr.revokeAll')}</button>:null}</div>
-   {given.length===0?<p className="note">{t('fe.mx.pr.none')}</p>:<div className="card list">{shown.map((g,i)=><div key={i} className="li">
-    <Av name={nameOf(g.profile)} seed={g.profile?.id??String(i)} size="sm" src={g.profile?.avatar}/>
-    <button type="button" className="tx" style={{textAlign:'left'}} onClick={()=>g.profile&&navigate('/n/people/'+g.profile.id)}><b>{nameOf(g.profile)}<NameBadges p={g.profile}/></b><small>{g.scopes.map(scopeLabel).join(', ')} · {until(g.until)}</small></button>
-    {g.profile&&<Btn size="sm" kind="text" auto className="danger" onClick={()=>void act(()=>call('access.revoke',{opId:newOpId(),profileId:g.profile!.id},ok),t('fe.mx.pr.revoked'))} disabled={busy}>{t('fe.mx.pr.revoke')}</Btn>}
-   </div>)}</div>}
-  </section>
-  <section className="grp"><div className="grp-t"><span>{t('fe.mx.pr.settings')}</span></div><div className="card list">
-   <button type="button" className="li" role="switch" aria-checked={on} disabled={busy} onClick={()=>setAsking('off')}>
-    <span className="tx"><b>{t('fe.priv.on')}</b><small>{t('fe.mx.pr.onSub')}</small></span><span className="sw on" aria-hidden="true"/></button>
-   <div className="li"><SelectRow label={t('fe.mx.pr.reqFrom')} value={requestsFrom} items={(['all','matches','none'] as const).map(v=>[v,t('fe.mx.pr.from.'+v)] as ['all'|'matches'|'none',string])}
+    :<Card><button type="button" className="ph-empty" onClick={editor}><span className="pe-ic"><Lock/></span>
+     <span className="tx"><b>{t('fe.mx.pr.add')}</b><small>{cp?t('fe.mx.pr.addSubUs'):t('fe.mx.pr.addSub')}</small></span><Plus/></button></Card>}
+  </Group>
+  <Group title={<>{t('fe.mx.pr.who')}{given.length?' · '+given.length:''}</>}
+   action={given.length>3?<button type="button" onClick={()=>setAllGiven(v=>!v)}>{allGiven?t('fe.mx.pr.less'):t('fe.mx.pr.all',{n:given.length})}</button>
+    :given.length?<button type="button" className="danger" onClick={()=>setAsking('revokeAll')}>{t('fe.mx.pr.revokeAll')}</button>:null}>
+   {given.length===0?<Note>{t('fe.mx.pr.none')}</Note>:<Card list>{shown.map((g,i)=><Row key={i} noChev onClick={()=>g.profile&&navigate('/n/people/'+g.profile.id)}
+    av={<Av name={nameOf(g.profile)} seed={g.profile?.id??String(i)} size="sm" src={g.profile?.avatar}/>}
+    title={<>{nameOf(g.profile)}<NameBadges p={g.profile}/></>} sub={<>{g.scopes.map(scopeLabel).join(', ')} · {until(g.until)}</>}
+    end={g.profile&&<Btn size="sm" kind="text" auto className="danger" onClick={()=>void act(()=>call('access.revoke',{opId:newOpId(),profileId:g.profile!.id},ok),t('fe.mx.pr.revoked'))} disabled={busy}>{t('fe.mx.pr.revoke')}</Btn>}/>)}</Card>}
+  </Group>
+  <Group title={t('fe.mx.pr.settings')}><Card list>
+   <ToggleRow title={t('fe.priv.on')} sub={t('fe.mx.pr.onSub')} on={on} disabled={busy} onClick={()=>setAsking('off')}/>
+   <div className="li"><SelectRow label={t('fe.mx.pr.reqFrom')} value={requestsFrom} options={(['all','matches','none'] as const).map(v=>[v,t('fe.mx.pr.from.'+v)] as const)}
     onChange={v=>void act(()=>call('profile.setVisibility',{opId:newOpId(),setting:'requestsFrom',value:v},ok),t('fe.mx.saved'))}/></div>
-  </div></section>
+  </Card></Group>
   {offAsk}
   {asking==='revokeAll'&&<Ask icon={Lock} danger title={t('fe.mx.pr.revokeAllTitle')} text={t('fe.mx.pr.revokeAllText',{n:given.length})} ok={t('fe.mx.pr.revokeAll')} busy={busy}
    onCancel={()=>setAsking(null)} onOk={async()=>{if(await act(()=>call('access.revokeAll',{opId:newOpId(),confirm:true},ok),t('fe.mx.pr.revokedAll')))setAsking(null);}}/>}
@@ -110,12 +106,12 @@ function GrantSheet({r,onClose,onDone}:{r:z.infer<typeof incoming>['items'][numb
  return <Sheet title={t('fe.mx.pr.grantTitle',{name:nameOf(r.profile)})} onClose={onClose} foot={<>
   <Btn icon={LockOpen} disabled={!sel.length||busy} busy={busy} onClick={()=>run(true)}>{t('fe.mx.pr.grantOk.'+term)}</Btn>
   <Btn kind="soft" disabled={busy} onClick={()=>run(false)}>{t('fe.priv.decline')}</Btn></>}>
-  <p className="note">{t('fe.mx.pr.asksFor')} {r.scopes.map(s=>t('fe.priv.scope.'+s).toLowerCase()).join(', ')}</p>
-  <div className="chips mt12" role="group" aria-label={t('fe.mx.pr.what')}>{(['info','photos','video'] as const).filter(s=>r.scopes.includes(s)).map(s=><button key={s} type="button" className={'chip'+(sel.includes(s)?' on':'')} aria-pressed={sel.includes(s)}
-   onClick={()=>setSel(v=>v.includes(s)?v.filter(x=>x!==s):[...v,s])}>{t('fe.priv.scope.'+s)}</button>)}</div>
-  <div className="sec">{t('fe.priv.term')}</div>
-  <div className="chips" role="radiogroup" aria-label={t('fe.priv.term')}>{(['1d','7d','none'] as const).map(v=><button key={v} type="button" role="radio" aria-checked={term===v} className={'chip'+(term===v?' on':'')} onClick={()=>setTerm(v)}>{t('fe.mx.pr.term.'+v)}</button>)}</div>
-  {failure&&<div className="alert err mt12" role="alert"><span>{failure}</span></div>}
+  <Note>{t('fe.mx.pr.asksFor')} {r.scopes.map(s=>t('fe.priv.scope.'+s).toLowerCase()).join(', ')}</Note>
+  <div className="chips mt12" role="group" aria-label={t('fe.mx.pr.what')}>{(['info','photos','video'] as const).filter(s=>r.scopes.includes(s)).map(s=><Chip key={s} on={sel.includes(s)}
+   onClick={()=>setSel(v=>v.includes(s)?v.filter(x=>x!==s):[...v,s])}>{t('fe.priv.scope.'+s)}</Chip>)}</div>
+  <SectionLabel>{t('fe.priv.term')}</SectionLabel>
+  <ChoiceChips label={t('fe.priv.term')} value={term} onChange={setTerm} options={(['1d','7d','none'] as const).map(v=>[v,t('fe.mx.pr.term.'+v)] as const)}/>
+  {failure&&<Alert kind="err" noIcon className="mt12">{failure}</Alert>}
  </Sheet>;
 }
 
@@ -128,11 +124,11 @@ export function PrivateOf({profileId}:{profileId:string}){
  if(!p||!p.exists)return null;
  const request=async()=>{setBusy(true);setNote('');try{await call('access.request',{opId:op.current,profileId,scopes:p.available??['info']},ok);setNote(t('fe.priv.requested'));load();}catch(e){setNote(feErrorMessage(e,t));op.current=newOpId();}finally{setBusy(false);}};
  const open=(p.scopes??[]).length>0;
- return <section className="grp"><div className="grp-t"><span>{t('fe.priv.title')}</span>{open&&p.until&&<span className="aud">{t('fe.priv.until').replace('{date}',new Date(p.until).toLocaleDateString(locale==='en'?'en':'ru',{day:'numeric',month:'short'}))}</span>}</div>
-  {open?<div className="card">{p.text?<div className="md bio"><p>{p.text}</p></div>:<p className="note">{t('fe.priv.emptyText')}</p>}</div>
-   :<div className="card"><div className="fact"><i className="v"><Lock/></i><span>{t('fe.priv.closed').replace('{scopes}',(p.available??[]).map(s=>t('fe.priv.scope.'+s)).join(', '))}</span></div>
-    {p.canRequest?<Btn kind="soft" size="md" icon={LockOpen} onClick={request} disabled={busy} className="mt12">{t('fe.priv.ask')}</Btn>:p.reason&&<p className="note mt8">{t('fe.priv.reason.'+p.reason)}</p>}
-   </div>}
-  {note&&<div className="alert ok mt8" role="status"><span>{note}{note===t('fe.rule.age_check_required')&&<><br/><AgeCheckLink/></>}</span></div>}
- </section>;
+ return <Group title={t('fe.priv.title')} action={open&&p.until&&<span className="aud">{t('fe.priv.until').replace('{date}',new Date(p.until).toLocaleDateString(locale==='en'?'en':'ru',{day:'numeric',month:'short'}))}</span>}>
+  {open?<Card>{p.text?<div className="md bio"><p>{p.text}</p></div>:<Note>{t('fe.priv.emptyText')}</Note>}</Card>
+   :<Card><div className="fact"><i className="v"><Lock/></i><span>{t('fe.priv.closed').replace('{scopes}',(p.available??[]).map(s=>t('fe.priv.scope.'+s)).join(', '))}</span></div>
+    {p.canRequest?<Btn kind="soft" size="md" icon={LockOpen} onClick={request} disabled={busy} className="mt12">{t('fe.priv.ask')}</Btn>:p.reason&&<Note className="mt8">{t('fe.priv.reason.'+p.reason)}</Note>}
+   </Card>}
+  {note&&<Alert kind="ok" noIcon className="mt8">{note}{note===t('fe.rule.age_check_required')&&<><br/><AgeCheckLink/></>}</Alert>}
+ </Group>;
 }
