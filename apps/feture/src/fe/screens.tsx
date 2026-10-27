@@ -1,5 +1,5 @@
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Globe,MessageCircle,type LucideIcon} from 'lucide-react';
+import {Globe,type LucideIcon} from 'lucide-react';
 import {Bar,Empty,View} from './ui';
 
 /** Tab roots whose slice has not landed yet: an honest «скоро» state in the V21 look. */
@@ -8,4 +8,3 @@ function Soon({tab,icon}:{tab:string,icon:LucideIcon}){
  return <><Bar title={t('fe.nav.'+tab)}/><View><Empty icon={icon} title={t('fe.soon.'+tab+'.title')} text={t('fe.soon.'+tab+'.text')}/></View></>;
 }
 export const CommunitiesTab=()=> <Soon tab="communities" icon={Globe}/>;
-export const ChatsTab=()=> <Soon tab="chats" icon={MessageCircle}/>;
