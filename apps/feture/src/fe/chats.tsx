@@ -6,10 +6,10 @@ import {Archive,ArchiveRestore,Ban,Camera,Check,CheckCheck,ChevronLeft,Clock,Ell
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Av,Bar,Btn,Empty,Seg,View} from './ui';
 import {AgeCheckLink} from './age-check';
-import {useFe} from './session';
+import {useFe,useRealtime} from './session';
 
 /** Slice G (V21 H01, H02, H05) with the prototype's markup. A conversation exists only after a mutual like (server).
- * Until realtime signals land, an open chat asks for new messages every few seconds. */
+ * New messages and receipts arrive on a realtime «chat» signal (S2 §8); a slow poll stays as the fallback. */
 const media=z.object({src:z.record(z.string(),z.string()).nullable()}).passthrough();
 const chat=z.object({id:z.uuid(),state:z.string(),side:z.object({id:z.uuid(),kind:z.enum(['person','couple'])}),newMatch:z.boolean(),
  other:z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),avatar:media.nullable()}),
@@ -35,7 +35,8 @@ export function ChatsTab(){
  const [filter,setFilter]=useState<'all'|'me'|'couple'>('all');const [items,setItems]=useState<Chat[]|null>(null);const [error,setError]=useState<unknown>(null);
  const load=useCallback(()=>{setError(null);call('chats.list',{filter,archived},list,{asAccount:true}).then(r=>setItems(r.items)).catch(setError);},[call,filter,archived]);
  useEffect(()=>{setItems(null);},[archived]);
- useEffect(()=>{load();const id=setInterval(load,15000);return ()=>clearInterval(id);},[load]);
+ useEffect(()=>{load();const id=setInterval(load,30000);return ()=>clearInterval(id);},[load]);
+ useRealtime('chat',load);
  const fresh=archived?[]:(items??[]).filter(c=>c.newMatch);const rows=(items??[]).filter(c=>archived||!c.newMatch);
  const preview=(c:Chat)=>!c.last?t('fe.chats.say'):c.last.media?(c.last.mode!=='normal'?t('fe.chats.ephemeral'):t('fe.chats.photo')):(c.last.mine?t('fe.chats.you')+': ':'')+c.last.body;
  return <>
@@ -122,7 +123,9 @@ export function ChatScreen(){
    call('chat.read',{conversationId:id,upToSeq:last.current},ok,{profileId:meta.side.id}).catch(()=>{});
   }
  },[call,id,meta]);
- useEffect(()=>{if(!meta)return;pull(true).catch(setError);const tick=setInterval(()=>{pull(false).catch(()=>{});},4000);return ()=>clearInterval(tick);},[meta,pull]);
+ useEffect(()=>{if(!meta)return;pull(true).catch(setError);const tick=setInterval(()=>{pull(false).catch(()=>{});},30000);return ()=>clearInterval(tick);},[meta,pull]);
+ // The signal names no conversation (S2 §8): any «chat» signal asks this one for what is new after the last seq.
+ useRealtime('chat',()=>{pull(false).catch(()=>{});});
  useEffect(()=>{bottom.current?.scrollIntoView({block:'end'});},[items.length]);
  useEffect(()=>()=>{if(outRef.current)URL.revokeObjectURL(outRef.current.preview);},[]);
  const send=async()=>{

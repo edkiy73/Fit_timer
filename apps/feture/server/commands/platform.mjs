@@ -8,10 +8,16 @@ import { myProfiles } from '../profiles.mjs';
 
 /** @type {Record<keyof typeof platformCommands, Command['run']>} */
 const run = {
-  'session.bootstrap': async (q, { account, cfg }) => ({
-    account: { id: account.id, locale: account.locale, onboarded: !!account.person_profile_id },
-    profiles: await cardsWithAvatars(q, cfg, await myProfiles(q, account.id)),
-  }),
+  'session.bootstrap': async (q, { account, cfg, channels }) => {
+    const rows = await myProfiles(q, account.id);
+    // Realtime (S2 §8): the public socket address and, per profile, the opaque channel only its members get.
+    const topics = cfg.realtime ? await channels(q, rows.map(p => p.id)) : {};
+    return {
+      account: { id: account.id, locale: account.locale, onboarded: !!account.person_profile_id },
+      profiles: await cardsWithAvatars(q, cfg, rows),
+      realtime: cfg.realtime && Object.keys(topics).length ? { url: cfg.realtime.url, key: cfg.realtime.key, channels: topics } : null,
+    };
+  },
   'profile.mine': async (q, { account, cfg }) => ({ profiles: await cardsWithAvatars(q, cfg, await myProfiles(q, account.id)) }),
   'media.uploadIntent': (q, { acting, cfg, input }) => uploadIntent(q, need(acting), cfg.media, input),
   'media.commit': (q, { acting, cfg, input }) => commitUpload(q, need(acting), cfg.media, input.assetId),

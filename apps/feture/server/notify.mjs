@@ -6,6 +6,7 @@
  * applications, photo marks, couple invitations) and chat messages make no inbox row, so each counts once; push
  * delivery comes with a provider.
  * @typedef {import('./db.mjs').Db} Db @typedef {import('./db.mjs').Q} Q @typedef {import('./outbox.mjs').OutboxItem} OutboxItem
+ * @typedef {import('./realtime.mjs').Signal} Signal
  */
 
 import { pushKind, queuePush } from './push.mjs';
@@ -67,8 +68,8 @@ const pick = payload => Object.fromEntries(KEEP.filter(k => payload[k] !== undef
 
 /** Writes one notification per recipient account. @param {Q} q @param {OutboxItem} item
  * @param {{type: string, actor?: string | null, objectType?: string | null, objectId?: string | null, data?: object}} n
- * @param {{account: string, profile: string | null}[]} recipients */
-async function write(q, item, n, recipients) {
+ * @param {{account: string, profile: string | null}[]} recipients @param {Signal[]} out realtime signals, sent after commit */
+async function write(q, item, n, recipients, out) {
   const by = /** @type {any} */ (item.payload).by;
   // Nothing about someone who is gone or no longer active: nobody would see it.
   if (n.actor && !(await q.query(`select 1 from feture.profile where id = $1 and state = 'active'`, [n.actor]))[0]) return;
@@ -90,7 +91,10 @@ async function write(q, item, n, recipients) {
       `insert into feture.notification (recipient_account_id, addressee_profile_id, type, actor_profile_id, object_type, object_id, data, source)
        values ($1, $2, $3, $4, $5, $6, $7, $8) on conflict (source, recipient_account_id) do nothing returning id`,
       [r.account, r.profile, n.type, n.actor ?? null, n.objectType ?? null, n.objectId ?? null, JSON.stringify(n.data ?? {}), item.id]);
-    if (added[0]) await queuePush(q, item, r, pushKind(n.type), added[0].id);
+    if (added[0]) {
+      await queuePush(q, item, r, pushKind(n.type), added[0].id);
+      out.push({ profile: r.profile ?? '', kind: 'notify' });
+    }
   }
 }
 
@@ -122,19 +126,27 @@ async function eventFollowers(q, eventId, admittedOnly) {
   return rows.map(r => ({ account: r.account_id, profile: r.profile_id }));
 }
 
-/** @param {Db} db */
-export function notifyHandlers(db) {
+/** @param {Db} db @param {(s: Signal) => void} [emit] realtime signals of committed items (S2 §8), sent by the worker */
+export function notifyHandlers(db, emit = () => {}) {
+  /** A transaction whose realtime signals are emitted only once it committed.
+   * @param {(q: Q, out: Signal[]) => Promise<void>} fn */
+  const tx = async fn => {
+    /** @type {Signal[]} */
+    const out = [];
+    await db.tx(q => fn(q, out));
+    for (const x of out) if (x.profile) emit(x);
+  };
   /** @type {Record<string, (item: OutboxItem) => Promise<void>>} */
   const handlers = {};
   for (const [topic, def] of Object.entries(TYPES)) {
     handlers[topic] = async item => {
       const p = /** @type {any} */ (item.payload);
-      await db.tx(async q => {
+      await tx(async (q, out) => {
         const recipients = await recipientsOf(q, item.profile_id, p);
         await write(q, item, {
           type: def.type, actor: def.actor ? p[def.actor] ?? null : null,
           objectType: def.object?.[0] ?? null, objectId: def.object ? p[def.object[1]] ?? null : null, data: pick(p),
-        }, recipients);
+        }, recipients, out);
       });
     };
   }
@@ -149,27 +161,27 @@ export function notifyHandlers(db) {
         if (!e) return;
       }
       // An event cancelled because its organizer deleted the account names nobody.
-      await db.tx(async q => write(q, item, { type, actor: p.organizerGone ? null : item.profile_id, objectType: 'event', objectId: p.eventId, data: pick(p) }, await eventFollowers(q, p.eventId, admittedOnly)));
+      await tx(async (q, out) => write(q, item, { type, actor: p.organizerGone ? null : item.profile_id, objectType: 'event', objectId: p.eventId, data: pick(p) }, await eventFollowers(q, p.eventId, admittedOnly), out));
     };
   }
   // A community closed because its owner deleted the account: members are told, nobody is named.
   handlers['community.closed'] = async item => {
     const p = /** @type {any} */ (item.payload);
-    await db.tx(async q => {
+    await tx(async (q, out) => {
       const rows = await q.query(
         `select pm.account_id, cm.profile_id from feture.community_member cm join feture.profile_member pm on pm.profile_id = cm.profile_id and pm.state = 'active'
          where cm.community_id = $1 and cm.state = 'active' and cm.profile_id <> $2`, [p.communityId, item.profile_id]);
-      await write(q, item, { type: 'communityClosed', actor: null, objectType: 'community', objectId: p.communityId }, rows.map(r => ({ account: r.account_id, profile: r.profile_id })));
+      await write(q, item, { type: 'communityClosed', actor: null, objectType: 'community', objectId: p.communityId }, rows.map(r => ({ account: r.account_id, profile: r.profile_id })), out);
     });
   };
   // A new article goes to the author's subscribers.
   handlers['note.published'] = async item => {
     const p = /** @type {any} */ (item.payload);
-    await db.tx(async q => {
+    await tx(async (q, out) => {
       const rows = await q.query(
         `select pm.account_id, s.subscriber_profile_id from feture.note_subscription s join feture.profile_member pm on pm.profile_id = s.subscriber_profile_id and pm.state = 'active'
          where s.author_profile_id = $1`, [item.profile_id]);
-      await write(q, item, { type: 'notePublished', actor: item.profile_id, objectType: 'post', objectId: p.postId }, rows.map(r => ({ account: r.account_id, profile: r.subscriber_profile_id })));
+      await write(q, item, { type: 'notePublished', actor: item.profile_id, objectType: 'post', objectId: p.postId }, rows.map(r => ({ account: r.account_id, profile: r.subscriber_profile_id })), out);
     });
   };
   // Chat messages make no inbox row, only a push to the members who did not mute the conversation.
@@ -181,11 +193,12 @@ export function notifyHandlers(db) {
   // Things to decide are in «Нужно решить», not in the inbox; the recipients get a push.
   for (const topic of ['decide.created', 'access.requested', 'community.requested', 'event.applied', 'couple.invited', 'tag.requested']) {
     handlers[topic] = async item => {
-      await db.tx(async q => {
+      await tx(async (q, out) => {
         for (const r of await recipientsOf(q, item.profile_id, item.payload)) {
           const by = /** @type {any} */ (item.payload).from;
           if (by && (await q.query(`select feture.blocked($1, $2) b`, [r.profile ?? by, by]))[0].b) continue;
           await queuePush(q, item, r, 'decide');
+          out.push({ profile: r.profile ?? '', kind: 'decide' });
         }
       });
     };
@@ -203,9 +216,10 @@ export function notifyHandlers(db) {
   // A withdrawn like takes its notification back (V21: «они не узнают»).
   handlers['like.withdrawn'] = async item => {
     const p = /** @type {any} */ (item.payload);
-    await db.query(
-      `update feture.notification set retracted_at = now() where type = 'like' and addressee_profile_id = $1 and actor_profile_id = $2 and retracted_at is null`,
+    const gone = await db.query(
+      `update feture.notification set retracted_at = now() where type = 'like' and addressee_profile_id = $1 and actor_profile_id = $2 and retracted_at is null returning id`,
       [item.profile_id, p.from]);
+    if (gone.length && item.profile_id) emit({ profile: item.profile_id, kind: 'notify' });
   };
   return handlers;
 }

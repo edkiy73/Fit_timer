@@ -1,11 +1,11 @@
-import {useCallback,useEffect,useState} from 'react';
+import {useCallback,useEffect,useRef,useState} from 'react';
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Bell,Inbox,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {Av,Bar,Btn,Empty,Seg,View} from './ui';
-import {useFe} from './session';
+import {useFe,useRealtime} from './session';
 import {when} from './feed';
 
 /** Slice G2 (V21 N01): «Нужно решить» computed by the server from its source rows, and notifications addressed
@@ -22,8 +22,11 @@ const nameOf=(a:z.infer<typeof actor>)=>a?(a.name||(a.handle?'@'+a.handle:'?')):
 /** Bell with the shared count, for screen headers. */
 export function BellButton(){
  const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const [n,setN]=useState(0);
- useEffect(()=>{let live=true;const pull=()=>call('inbox.counts',{},countsRes,{asAccount:true}).then(r=>{if(live)setN(r.bell);}).catch(()=>{});
-  pull();const id=setInterval(pull,30000);return ()=>{live=false;clearInterval(id);};},[call]);
+ const live=useRef(true);
+ const pull=useCallback(()=>{call('inbox.counts',{},countsRes,{asAccount:true}).then(r=>{if(live.current)setN(r.bell);}).catch(()=>{});},[call]);
+ // Realtime signals refresh the count at once; the 30 s poll stays as the fallback.
+ useEffect(()=>{live.current=true;pull();const id=setInterval(pull,30000);return ()=>{live.current=false;clearInterval(id);};},[pull]);
+ useRealtime(['notify','decide','chat'],pull);
  return <button type="button" className="ibtn" aria-label={n?t('fe.inbox.bellN').replace('{n}',String(n)):t('fe.inbox.title')} onClick={()=>navigate('/n/inbox')}><Bell/>{n>0&&<sup>{n>99?'99+':n}</sup>}</button>;
 }
 
@@ -34,6 +37,7 @@ export function InboxScreen(){
  const load=useCallback(()=>{setError(null);Promise.all([call('decide.list',{},decideRes,{asAccount:true}),call('notifications.list',{},notesRes,{asAccount:true})])
   .then(([a,b])=>{setDecide(a.items);setNotes(b.items);}).catch(setError);},[call]);
  useEffect(()=>{load();},[load]);
+ useRealtime(['notify','decide'],load);
  const act=async(fn:()=>Promise<unknown>)=>{setBusy(true);setFailure('');try{await fn();load();}catch(e){setFailure(feErrorMessage(e,t));}finally{setBusy(false);}};
  const open=(n:z.infer<typeof note>)=>{
   if(!n.read)call('notifications.read',{id:n.id},ok,{asAccount:true}).catch(()=>{});

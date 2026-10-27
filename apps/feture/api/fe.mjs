@@ -31,6 +31,7 @@ import { createR2Storage } from '../server/media/r2.mjs';
 import { createSupabaseStorage } from '../server/media/supabase-storage.mjs';
 import { signedStorageDelivery, tokenDelivery } from '../server/media/delivery.mjs';
 import { createSharpRenderer } from '../server/media/render.mjs';
+import { broadcastSender, createSignals } from '../server/realtime.mjs';
 
 const require = createRequire(import.meta.url);
 const { store } = require('../../../packages/core/server/store');
@@ -77,10 +78,21 @@ export function cors(/** @type {any} */ req, /** @type {any} */ res) {
 }
 
 const db = sql ? fromPostgres(sql, POOL) : null;
+
+/** Realtime «something new» signals (S2 §8): public Broadcast channels named by an opaque per-profile token, so no
+ * JWT secret is needed. The URL and publishable key are public (they go to the client); the secret key only sends. */
+const supabaseUrl = String(env.SUPABASE_URL || '').trim().replace(/\/$/, '');
+const realtimeOn = /^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(supabaseUrl) && !!env.SUPABASE_PUBLISHABLE_KEY && !!env.SUPABASE_SECRET_KEY;
+const signals = db && realtimeOn ? createSignals({
+  db, pepper: env.FETURE_ID_PEPPER ?? '',
+  sender: broadcastSender({ url: supabaseUrl, secret: String(env.SUPABASE_SECRET_KEY) }),
+  onError: code => console.warn('feture_fe_realtime', code),
+}) : null;
 const handler = db && createFeHandler({
   db,
   pepper: env.FETURE_ID_PEPPER ?? '',
-  cfg: { media: { storage: media.storage, delivery: media.delivery } },
+  cfg: { media: { storage: media.storage, delivery: media.delivery }, realtime: signals ? { url: supabaseUrl, key: String(env.SUPABASE_PUBLISHABLE_KEY) } : null },
+  signals,
   commands: { ...platform, ...me, ...access, ...couples, ...staff, ...social, ...posts, ...moderation, ...communities, ...events, ...photos, ...discover, ...chats, ...inbox, ...people, ...premium, ...accounts, ...dsa },
   authenticate: req => authenticate(req, store),
   quota: async (req, coreKey) => { // coreKey: Core account hash, only for the ephemeral rate-limit key
@@ -123,7 +135,7 @@ export default async function fe(/** @type {any} */ req, /** @type {any} */ res)
       // Only a real sending domain: Resend's test domain delivers to its owner alone.
       const mailInfo = CoreMail.mailInfo();
       const mail = mailInfo.ready && !mailInfo.testDomain ? (/** @type {{to: string, subject: string, text: string}} */ m) => CoreMail.sendMail(m) : null;
-      return json(res, 200, { ok: true, ...(await runJobs(db, { scan, push, mail })) });
+      return json(res, 200, { ok: true, ...(await runJobs(db, { scan, push, mail, signals })) });
     } catch {
       return json(res, 503, { ok: false, error: 'unavailable' });
     }

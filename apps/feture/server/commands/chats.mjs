@@ -82,6 +82,14 @@ async function append(q, c, acting, m) {
   return { id: msg.id, seq: Number(msg.seq), at: msg.created_at, recipients: others.map(o => o.account_id) };
 }
 
+/** «Something new in chats» to the other side and to the sender's own profile (a couple partner sees it too).
+ * Only the kind travels (S2 §8): never the conversation id, which an ex-member holding an old token could link.
+ * @param {(profile: string | null | undefined, kind: 'chat') => void} signal @param {any} c @param {Acting} acting */
+function chatSignal(signal, c, acting) {
+  signal(c.other, 'chat');
+  if (acting.kind === 'couple') signal(acting.profileId, 'chat');
+}
+
 /** Viewer-side state of an ephemeral media message. @param {any} m @param {any} view */
 function ephemeralState(m, view) {
   if (!view) return 'none';
@@ -194,16 +202,17 @@ const run = {
     return { state: c.state, endedReason: c.ended_reason, items, otherRead: Number(read), lastSeq: Number(c.last_seq) };
   },
 
-  async 'chat.send'(q, { acting: a, input }) {
+  async 'chat.send'(q, { acting: a, input, signal }) {
     const acting = need(a);
     await requireUnrestricted(q, acting);
     const c = await memberOf(q, input.conversationId, acting, { lock: true });
     await requireOpen(q, c);
     const out = await append(q, c, acting, { body: input.body, replyTo: input.replyTo });
+    chatSignal(signal, c, acting);
     return { id: out.id, seq: out.seq };
   },
 
-  async 'chat.sendMedia'(q, { acting: a, input }) {
+  async 'chat.sendMedia'(q, { acting: a, input, signal }) {
     const acting = need(a);
     await requireUnrestricted(q, acting);
     const c = await memberOf(q, input.conversationId, acting, { lock: true });
@@ -229,6 +238,7 @@ const run = {
     if (input.mode !== 'normal') {
       await q.query(`insert into feture.message_media_view (message_id, viewer_account_id) select $1, unnest($2::uuid[])`, [out.id, out.recipients]);
     }
+    chatSignal(signal, c, acting);
     return { id: out.id, seq: out.seq };
   },
 
@@ -276,13 +286,15 @@ const run = {
     return { media, until, gone: false };
   },
 
-  async 'chat.read'(q, { acting: a, input }) {
+  async 'chat.read'(q, { acting: a, input, signal }) {
     // Forward only; never past the last message.
     const acting = need(a);
     const c = await memberOf(q, input.conversationId, acting);
     const [r] = await q.query(
       `update feture.conversation_member set last_read_seq = greatest(last_read_seq, least($3::bigint, $4::bigint))
        where conversation_id = $1 and account_id = $2 returning last_read_seq`, [c.id, acting.accountId, input.upToSeq, c.last_seq]);
+    // A read receipt moved: the other side's ticks update (only when it really moved forward).
+    if (Number(r.last_read_seq) > Number(c.last_read_seq)) signal(c.other, 'chat');
     return { readSeq: Number(r.last_read_seq) };
   },
 
