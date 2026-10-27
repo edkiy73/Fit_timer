@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {AtSign,Bell,Calendar,Check,CircleCheck,Clock,EyeOff,FileText,Filter,Heart,LockOpen,MessageCircle,Pencil,Shield,ShieldCheck,Trash2,Users,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Av,Bar,Btn,Empty,Seg,Skel,plate} from './ui';
+import {Av,Bar,Btn,Card,Chip,Chips,Empty,IconBtn,Note,Row,SectionLabel,Seg,Skel,Text,View,plate} from './kit';
 import {useFe,useRealtime} from './session';
 import {useToast} from './toast';
 import {when} from './feed';
@@ -36,7 +36,7 @@ export function BellButton(){
  // Realtime signals refresh the count at once; the 30 s poll stays as the fallback.
  useEffect(()=>{live.current=true;pull();const id=setInterval(pull,30000);return ()=>{live.current=false;clearInterval(id);};},[pull]);
  useRealtime(['notify','decide','chat'],pull);
- return <button type="button" className="ibtn" aria-label={n?t('fe.inbox.bellN').replace('{n}',String(n)):t('fe.inbox.title')} onClick={()=>navigate('/n/inbox')}><Bell/>{n>0&&<sup>{n>99?'99+':n}</sup>}</button>;
+ return <IconBtn icon={Bell} label={n?t('fe.inbox.bellN').replace('{n}',String(n)):t('fe.inbox.title')} badge={n>0?n:undefined} onClick={()=>navigate('/n/inbox')}/>;
 }
 
 /* ---- kinds (filters) and icons, as the prototype's inboxKind / NICO ---- */
@@ -129,20 +129,20 @@ export function InboxScreen(){
  const whomTag=(label:string)=>couple?<span className={'whom'+(label==='couple'?' us':'')}>{label==='couple'?t('fe.ibx.tagCouple'):t('fe.ibx.tagMe')}</span>:null;
  const row=(n:Note)=>{const [Icon,tone]=noteIcon(n);
   return <button key={n.id} type="button" className={'nt'+(n.read?'':' unread')} onClick={()=>open(n)}>
-   <span className="ntw">{n.actor?<Av name={nameOf(n.actor)} seed={n.actor.id} src={n.actor.avatar}/>:<span className="av" style={{position:'relative'}}><div className="plate" style={plate(n.object?.id??n.type)}/></span>}<span className={'ico'+(tone?' '+tone:'')}><Icon/></span></span>
+   <span className="ntw">{n.actor?<Av name={nameOf(n.actor)} seed={n.actor.id} src={n.actor.avatar}/>:<span className="av k-anchor"><div className="plate" style={plate(n.object?.id??n.type)}/></span>}<span className={'ico'+(tone?' '+tone:'')}><Icon/></span></span>
    <span className="tx">{noteText(n)}<time>{whomTag(n.label)}{whomTag(n.label)?' ':''}{when(n.at,locale)}</time></span>
    {!n.read&&<span className="dotu" aria-label={t('fe.inbox.new')}/>}
   </button>;};
 
  /* ---- decisions (todoGroupHTML) ---- */
- const card=(d:Decision,text:string,buttons:ReactNode,thumb?:ReactNode)=><div key={d.kind+d.id} className="card rqcard" style={{marginBottom:10}}>
+ const card=(d:Decision,text:string,buttons:ReactNode,thumb?:ReactNode)=><Card key={d.kind+d.id} className="rqcard">
   <div className="row">
    <button type="button" className="rq-av" aria-label={nameOf(d.actor)} onClick={()=>d.actor&&navigate('/n/people/'+d.actor.id)}><Av name={nameOf(d.actor)} seed={d.actor?.id??d.id} src={d.actor?.avatar}/></button>
-   <button type="button" className="grow" style={{textAlign:'left'}} onClick={()=>d.actor&&navigate('/n/people/'+d.actor.id)}><b style={{fontSize:16}}>{d.kind==='tag'?nameOf(d.actor):withAge(nameOf(d.actor),d.actor)}<NameBadges p={d.actor}/></b><div className="note">{text} · {when(d.at,locale)}</div></button>
+   <button type="button" className="grow" onClick={()=>d.actor&&navigate('/n/people/'+d.actor.id)}><Text as="b" size="strong">{d.kind==='tag'?nameOf(d.actor):withAge(nameOf(d.actor),d.actor)}<NameBadges p={d.actor}/></Text><Note>{text} · {when(d.at,locale)}</Note></button>
    {thumb}
   </div>
   <div className="row g8 mt12">{buttons}</div>
- </div>;
+ </Card>;
  const two=(d:Decision,yes:{label:string,fn:()=>void},no?:{label:string,fn:()=>void})=><>
   <Btn size="md" busy={busy===d.id+'y'} disabled={!!busy} onClick={yes.fn}>{yes.label}</Btn>
   {no&&<Btn size="md" kind="soft" busy={busy===d.id+'n'} disabled={!!busy} onClick={no.fn}>{no.label}</Btn>}
@@ -168,16 +168,14 @@ export function InboxScreen(){
    default:return null;
   }
  };
- const jointRow=(d:Decision)=><button key={d.kind+d.id} type="button" className="li" onClick={()=>{asAddressee(d.addressee);navigate('/n/me');}}>
-  <span className="ico">{d.kind==='jointReturned'?<Pencil/>:<Clock/>}</span>
-  <span className="tx"><b>{t('fe.ibx.k.'+d.kind)}</b><small>{t('fe.ibx.k.jointSub')} · {when(d.at,locale)}</small></span>
- </button>;
+ const jointRow=(d:Decision)=><Row key={d.kind+d.id} icon={d.kind==='jointReturned'?Pencil:Clock} noChev title={t('fe.ibx.k.'+d.kind)} sub={<>{t('fe.ibx.k.jointSub')} · {when(d.at,locale)}</>}
+  onClick={()=>{asAddressee(d.addressee);navigate('/n/me');}}/>;
  const group=(items:Decision[])=>{
   const rest=items.filter(d=>d.kind==='joint'||d.kind==='jointReturned');
   const order=['pinv','link','linkChange','tag'];
   const first=items.filter(d=>order.includes(d.kind)).sort((a,b)=>order.indexOf(a.kind)-order.indexOf(b.kind));
   const last=items.filter(d=>!order.includes(d.kind)&&!rest.includes(d));
-  return <>{first.map(decisionCard)}{rest.length>0&&<div className="card list" style={{marginBottom:10}}>{rest.map(jointRow)}</div>}{last.map(decisionCard)}</>;
+  return <>{first.map(decisionCard)}{rest.length>0&&<Card list>{rest.map(jointRow)}</Card>}{last.map(decisionCard)}</>;
  };
  const whomHead=(w:'me'|'couple',n:number)=><div className={'sec whom-sec'+(w==='couple'?' us':'')}>
   {w==='couple'?<Av name={couple?.name??'?'} seed={couple?.id} size="xs" src={couple?.avatar}/>:<Av name={person?.name??'?'} seed={person?.id} size="xs" src={person?.avatar}/>}
@@ -196,20 +194,21 @@ export function InboxScreen(){
   const all=notes??[];const list=all.filter(n=>filter==='all'||noteKind(n)===filter);
   if(!list.length)return all.length?filteredEmpty:<Empty icon={Bell} title={t('fe.ibx.none')} text={t('fe.ibx.noneText')}/>;
   const neu=list.filter(n=>!n.read),old=list.filter(n=>n.read);
-  return <>{neu.length>0&&<><div className="sec" style={{marginTop:4}}>{t('fe.ibx.new')}</div>{neu.map(row)}</>}{old.length>0&&<><div className="sec">{t('fe.ibx.earlier')}</div>{old.map(row)}</>}</>;
+  // «Новые» opens its own block, so its label takes the kit's first-label spacing (`.sec:first-child`).
+  return <>{neu.length>0&&<div><SectionLabel>{t('fe.ibx.new')}</SectionLabel>{neu.map(row)}</div>}{old.length>0&&<><SectionLabel>{t('fe.ibx.earlier')}</SectionLabel>{old.map(row)}</>}</>;
  };
  const kinds=new Set<Kind>(k==='todo'?(decide??[]).map(decideKind):(notes??[]).map(noteKind));
  const loading=decide===null||notes===null;
  return <>
   <Bar title={t('fe.inbox.title')} back/>
-  <div className="view nodock"><div className="wrap">
+  <View className="nodock">
    <SegN small value={k} onChange={pickTab} options={[{id:'todo',label:t('fe.inbox.todo'),n:decide?.length??0},{id:'all',label:t('fe.inbox.all'),n:unread}]}/>
    {k==='all'&&unread>0&&<button type="button" className="inbox-read-all" disabled={readAllBusy} onClick={()=>void readAll()}><Check/>{t('fe.ibx.readAll')}</button>}
-   {!loading&&!error&&<div className="chips scroll inbox-filters">{FILTERS.filter(v=>v==='all'||v===filter||kinds.has(v)).map(v=>
-    <button key={v} type="button" className={'chip'+(filter===v?' on':'')} aria-pressed={filter===v} onClick={()=>setFilter(v)}>{t('fe.ibx.f.'+v)}</button>)}</div>}
+   {!loading&&!error&&<Chips scroll className="inbox-filters">{FILTERS.filter(v=>v==='all'||v===filter||kinds.has(v)).map(v=>
+    <Chip key={v} on={filter===v} onClick={()=>setFilter(v)}>{t('fe.ibx.f.'+v)}</Chip>)}</Chips>}
    {error&&loading?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :loading?<Skel kind="list" rows={5}/>
     :k==='todo'?todo():everything()}
-  </div></div>
+  </View>
  </>;
 }

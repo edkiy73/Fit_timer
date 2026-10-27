@@ -7,6 +7,8 @@ import type {LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,Av,Bar,Btn,Card,Chip,Chips,Counter,Empty,Field,FilePick,Group,H,IconBtn,Input,Layer,Note,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,TextArea,ToggleRow,View} from './kit';
 import {useFe} from './session';
+import {Uploader} from './kit/Uploader';
+import {useSendPhoto} from './media-upload';
 import {BellButton} from './inbox';
 import {PostMenu,ReplyMenu,type Removal} from './post-menu';
 import {restoreInto,useToast} from './toast';
@@ -431,22 +433,9 @@ function ComposeForm({edit}:{edit?:Post|undefined}){
  useEffect(()=>{if(x==='media'&&!edit)setTimeout(()=>file.current?.click(),250);},[x,edit]);
  // Interests a post may carry: the author's own public ones with a level, never limits (server rule).
  const eligible=(myJars??[]).filter(j=>j.vis==='public'&&j.value!=null&&!j.mark&&catalog.find(c=>c.id===j.topicId)?.categoryId!=='limits');
- const addMedia=async(files:FileList)=>{
-  setFailure('');
-  for(const f of [...files].slice(0,MEDIA_MAX-media.length)){
-   if(!['image/jpeg','image/png','image/webp'].includes(f.type)){setFailure(t('fe.me.photoType'));continue;}
-   if(f.size>20*1024*1024){setFailure(t('fe.me.photoSize'));continue;}
-   setUploading(true);
-   try{
-    const i=await call('media.uploadIntent',{opId:newOpId(),purpose:'post',kind:'image',mime:f.type,bytes:f.size},uploadIntent);
-    const put=await fetch(i.upload.url,{method:i.upload.method,headers:i.upload.headers,body:f});
-    if(!put.ok)throw new Error('upload');
-    await call('media.commit',{assetId:i.assetId},okOnly);
-    setMedia(m=>[...m,{id:i.assetId,preview:URL.createObjectURL(f)}]);setErrs(e=>{const {media:_m,...rest}=e;return rest;});
-   }catch(e){setFailure(feErrorMessage(e,t));}finally{setUploading(false);}
-  }
-  if(file.current)file.current.value='';
- };
+ // Picked photos go through the kit uploader: format 4:5 / 1:1 / as is, crop, compression without metadata, progress.
+ const [picked,setPicked]=useState<File[]|null>(null);const sendPhoto=useSendPhoto('post');
+ const addMedia=(files:FileList)=>{setFailure('');setPicked([...files]);};
  const max=note?NOTE_MAX:1000;
  const fields=()=>({type:note?'note' as const:'post' as const,...(note&&title.trim()?{title:title.trim()}:{}),body:body.trim(),audience,inFeed,topics,mediaIds:media.map(m=>m.id),
   ...(poll?{poll:{question:poll.question.trim(),options:poll.options.map(o=>o.trim())}}:{}),interests:interests??[],tags:audience==='all'&&media.length?people.map(p=>p.id):[],...(communityId?{communityId}:{})});
@@ -584,7 +573,7 @@ function ComposeForm({edit}:{edit?:Post|undefined}){
        sub={people.length?people.map(p=>p.name+(edit?.tags?.find(x=>x.id===p.id)?.state==='no'?` (${t('fe.fd.declinedShort')})`:edit?.tags?.find(x=>x.id===p.id)?.state==='ok'?'':` (${t('fe.fd.waitingShort')})`)).join(', '):t('fe.fd.peopleInPhotoSub')}/></Card>}
      </Card>
      </Group></div>}
-    <FilePick ref={file} accept="image/jpeg,image/png,image/webp" multiple onFiles={f=>{void addMedia(f);}}/>
+    <FilePick ref={file} accept="image/*" multiple onFiles={addMedia}/>
     <div className="attach v14">
      {!hasMedia&&<button type="button" disabled={uploading} onClick={()=>file.current?.click()}><ImageIcon/><span>{t('fe.feed.media')}</span></button>}
      {!poll&&<button type="button" onClick={()=>setPoll({question:'',options:['','']})}><ChartColumn/><span>{t('fe.feed.poll')}</span></button>}
@@ -630,6 +619,8 @@ function ComposeForm({edit}:{edit?:Post|undefined}){
   {sheet==='topics'&&<FilterSheet title={t('fe.fd.topicsTitle')} max={3} topics={catalog} cats={cats} popular={topics} value={topics} onClose={()=>setSheet(null)}
    onApply={v=>{if(v.length>3){toast(t('fe.fd.max3'),{type:'warn'});return;}setTopics(v);setSheet(null);}}/>}
   {sheet==='people'&&<PeopleSheet value={people} onClose={()=>setSheet(null)} onApply={v=>{setPeople(v);setSheet(null);}} locked={(edit?.tags??[]).filter(x=>x.state==='no').map(x=>x.id)}/>}
+  {picked&&<Uploader files={picked} aspects={['4:5','1:1','orig']} max={MEDIA_MAX-media.length} send={sendPhoto} onClose={()=>setPicked(null)}
+   onDone={got=>{setPicked(null);setMedia(m=>[...m,...got.map(g=>({id:g.id,preview:g.url}))]);setErrs(e=>{const {media:_m,...rest}=e;return rest;});}}/>}
   {viewer!==null&&<Viewer srcs={media.map(m=>m.preview)} index={viewer} onClose={()=>setViewer(null)}/>}
   {ask&&<LeaveAsk live={live} busy={!!busy} onCancel={()=>setAsk(false)} onDiscard={()=>{setAsk(false);back();}}
    onSave={async()=>{if(live){setAsk(false);await publish();return;}const ok=await saveDraft();setAsk(false);if(ok)back();}}/>}

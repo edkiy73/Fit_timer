@@ -28,3 +28,4 @@ export const СДействиемСправа:S={name:'С действием с�
  <Row icon={Users} title="шибари" onClick={()=>{}} end={<IconBtn icon={X} kind="ghost" size="sm" label="Убрать"/>}/></>};
 export const ВыборСИконкой:StoryObj<typeof SelectRow>={name:'Строка выбора с иконкой',render:a=>{const [v,setV]=useState('all');return <SelectRow {...a} icon={Eye} value={v} onChange={setV}/>;},
  args:{label:'Кто видит',options:[['all','Все'],['fol','Подписчики']],value:'all',onChange:()=>{}}};
+export const ТолькоПоказ:S={name:'Только показ (без нажатия)',render:()=><><Row icon={KeyRound} title="ср, 28 октября" sub="19:00–21:00 местное время"/><Row icon={Users} title="https://очень-длинная-ссылка.example/путь/к/странице" wrap/></>};

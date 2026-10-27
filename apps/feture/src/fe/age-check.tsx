@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Camera,ChevronRight,Clock,Hand,ImagePlus,Info,Lock,RefreshCw,ScanFace,ShieldCheck,UserCheck,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Bar,Btn,Empty,View,Skel} from './ui';
+import {Alert,Bar,Btn,Card,Empty,FilePick,Skel,Text,View} from './kit';
 import {useFe} from './session';
 
 /** V21 A07 «Проверка возраста» on /api/fe (server/commands/premium.mjs): the server picks a gesture
@@ -51,7 +51,7 @@ export function AgeCheckScreen(){
   finally{setBusy(false);}
  };
  const pick=async(file:File|undefined)=>{
-  if(input.current)input.current.value='';if(!file)return;setFailure('');
+  if(!file)return;setFailure('');
   try{const blob=await toJpeg(file);setShot({blob,url:URL.createObjectURL(blob)});}catch{setFailure(t('fe.age.photoType'));}
  };
  const send=async()=>{
@@ -70,7 +70,7 @@ export function AgeCheckScreen(){
   }finally{setBusy(false);}
  };
 
- const alertErr=failure?<div className="alert err mt12" role="alert"><X/><span>{failure}</span></div>:null;
+ const alertErr=failure?<Alert kind="err" icon={X} className="mt12">{failure}</Alert>:null;
  if(error)return <><Bar title={t('fe.age.title')} back="/n/settings"/><View className="nodock"><Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty></View></>;
  if(!s)return <><Bar title={t('fe.age.title')} back="/n/settings"/><View className="nodock"><Skel kind="list"/></View></>;
 
@@ -97,7 +97,7 @@ export function AgeCheckScreen(){
      :<><div style={{width:'62%',aspectRatio:'3/4',borderRadius:'50%',border:'3px dashed rgba(255,255,255,.6)'}}/>
       <div style={{position:'absolute',bottom:16,left:0,right:0,textAlign:'center',color:'#fff',fontSize:14,fontWeight:600}}>{t('fe.age.frame')}</div></>}
    </div>
-   <input ref={input} type="file" accept="image/*" capture="user" hidden onChange={e=>void pick(e.target.files?.[0])}/>
+   <FilePick ref={input} accept="image/*" capture="user" onFiles={f=>void pick(f[0])}/>
    {shot?<><Btn className="mt16" onClick={send} busy={busy} disabled={busy||!person}>{t('fe.age.send')}</Btn>
      <Btn kind="soft" className="mt8" icon={Camera} onClick={()=>input.current?.click()} disabled={busy}>{t('fe.age.retake')}</Btn></>
     :<Btn className="mt16" icon={Camera} onClick={()=>input.current?.click()}>{t('fe.age.shoot')}</Btn>}
@@ -110,17 +110,17 @@ export function AgeCheckScreen(){
  return <><Bar title={t('fe.age.title')} back="/n/settings"/><View className="nodock">
   <p className="lead">{t('fe.age.lead')}</p>
   {c?.state==='rejected'&&<div className="alert err mt12" role="status"><X/><span><b>{t('fe.age.rejected')}</b>{reason?reason+' ':''}{t('fe.age.rejectedText')}</span></div>}
-  {c?.state==='approved'&&<div className="alert warn mt12" role="status"><Clock/><span><b>{t('fe.age.expiredProof')}</b>{t('fe.age.expiredProofText')}</span></div>}
-  {c?.state==='expired'&&<div className="alert warn mt12" role="status"><Clock/><span><b>{t('fe.age.expiredTry')}</b>{t('fe.age.expiredTryText')}</span></div>}
+  {c?.state==='approved'&&<Alert kind="warn" icon={Clock} className="mt12"><b>{t('fe.age.expiredProof')}</b>{t('fe.age.expiredProofText')}</Alert>}
+  {c?.state==='expired'&&<Alert kind="warn" icon={Clock} className="mt12"><b>{t('fe.age.expiredTry')}</b>{t('fe.age.expiredTryText')}</Alert>}
   <div className="radio on mt16"><i/><span className="tx"><b>{t('fe.age.method')}</b><small>{t('fe.age.methodSub')}</small></span></div>
   <div className="alert mt16"><Lock/><span>{t('fe.age.camNoteShort')}</span></div>
   <details className="pv-about mt16"><summary><Info/><span>{t('fe.age.how')}</span><ChevronRight/></summary>
-   <div className="card list">
-    <div className="li static"><span className="ico v"><Hand/></span><span className="tx"><small style={{color:'var(--ink)',fontSize:14}}>{t('fe.age.step1')}</small></span></div>
-    <div className="li static"><span className="ico v"><ScanFace/></span><span className="tx"><small style={{color:'var(--ink)',fontSize:14}}>{t('fe.age.step2')}</small></span></div>
-    <div className="li static"><span className="ico v"><UserCheck/></span><span className="tx"><small style={{color:'var(--ink)',fontSize:14}}>{t('fe.age.step3')}</small></span></div>
+   <Card list>
+    <div className="li static"><span className="ico v"><Hand/></span><span className="tx"><Text as="span" size="sm">{t('fe.age.step1')}</Text></span></div>
+    <div className="li static"><span className="ico v"><ScanFace/></span><span className="tx"><Text as="span" size="sm">{t('fe.age.step2')}</Text></span></div>
+    <div className="li static"><span className="ico v"><UserCheck/></span><span className="tx"><Text as="span" size="sm">{t('fe.age.step3')}</Text></span></div>
     <div className="li static"><span className="ico"><Lock/></span><span className="tx"><b>{t('fe.age.stored')}</b><small>{t('fe.age.storedText')}</small></span></div>
-   </div></details>
+   </Card></details>
   {needPhoto?<div className="alert warn mt16" role="alert"><ImagePlus/><span>{t('fe.age.needPhoto')}<Btn kind="soft" size="sm" auto icon={ImagePlus} onClick={()=>navigate('/n/me')}>{t('fe.age.addPhoto')}</Btn></span></div>
    :<Btn className="mt24" icon={Camera} onClick={start} busy={busy} disabled={busy}>{t('fe.age.start')}</Btn>}
   {alertErr}

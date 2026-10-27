@@ -1,10 +1,11 @@
 import {Fragment,useCallback,useEffect,useRef,useState,type ReactNode} from 'react';
+import type {LucideIcon} from 'lucide-react';
 import {useNavigate,useParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Ban,Check,ChevronDown,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,Flag,Heart,History,Info,Link as LinkIcon,Lock,LockOpen,MapPin,MessageCircle,ShieldCheck,Undo2,Users,X} from 'lucide-react';
-import {Av,Bar,Btn,Empty,Seg,View,plate,Layer,Skel} from './ui';
+import {Alert,Av,Bar,Btn,Card,Empty,Group,H,IconBtn,Layer,Note,Pill,Row,Seg,Skel,TextArea,ToggleRow,View,plate} from './kit';
 import {useFe} from './session';
 import {PhotoBadge} from './photo-check';
 import {faceFields,NameBadges} from './faces';
@@ -103,8 +104,8 @@ export function MatchOverlay({other,conversationId,onClose}:{other:{id:string,na
  const me=acting?.name||acting?.handle||'?';
  return <Layer><div className="match" role="dialog" aria-modal="true" aria-label={t('fe.px.m.title')}>
   <div className="pair"><Av name={me} seed={acting?.id} src={acting?.avatar??null}/><span className="heart"><Heart fill="currentColor"/></span><Av name={other.name} seed={other.id} src={other.src}/></div>
-  <h2>{t('fe.px.m.title')}</h2><p>{fill(t('fe.px.m.text'),{name:other.name})}</p>
-  <button ref={first} type="button" className="btn primary" onClick={()=>{onClose();navigate(conversationId?'/n/chats/'+conversationId:'/n/chats');}}><MessageCircle/>{t('fe.px.m.write')}</button>
+  <H level={2}>{t('fe.px.m.title')}</H><p>{fill(t('fe.px.m.text'),{name:other.name})}</p>
+  <Btn ref={first} icon={MessageCircle} onClick={()=>{onClose();navigate(conversationId?'/n/chats/'+conversationId:'/n/chats');}}>{t('fe.px.m.write')}</Btn>
   <Btn kind="soft" onClick={onClose}>{t('fe.px.m.later')}</Btn>
  </div></Layer>;
 }
@@ -130,12 +131,12 @@ export function PersonActions({p,rel,setRel,toast,inert}:{p:PersonProfile,rel:Re
   catch(e){toast(pxError(e,t),true);}finally{setBusy('');}};
  const likeBtn=rel?.mutual?<Btn icon={MessageCircle} onClick={inert?undefined:write} disabled={inert}>{t('fe.px.act.write')}</Btn>
   :rel?.liked?<button type="button" className="btn on" aria-pressed="true" title={t('fe.px.act.unlikeHint')} onClick={inert?undefined:unlike} disabled={inert||busy==='like'}><Heart fill="currentColor"/>{t('fe.px.act.sent')}</button>
-  :why?null:<button type="button" className={'btn primary'+(busy==='like'?' busy':'')} onClick={inert?undefined:like} disabled={inert||busy==='like'}><Heart fill="currentColor"/>{asUs&&!inert?t('fe.px.act.likeUs'):t('fe.people.like')}</button>;
+  :why?null:<Btn busy={busy==='like'} onClick={inert?undefined:like} disabled={inert||busy==='like'}><Heart fill="currentColor"/>{asUs&&!inert?t('fe.px.act.likeUs'):t('fe.people.like')}</Btn>;
  const iF=!!rel?.iFollow;
  return <>
   <div className="p-acts" inert={inert||undefined}>{likeBtn}
-   <button type="button" className={'btn soft'+(busy==='follow'?' busy':'')} aria-pressed={iF} title={iF?t('fe.px.act.unfollowHint'):undefined} onClick={inert?undefined:follow} disabled={inert||!rel}>
-    {iF?<><Check/>{t('fe.px.act.following')}</>:asUs&&!inert?t('fe.px.act.followUs'):t('fe.people.follow')}</button>
+   <Btn kind="soft" busy={busy==='follow'} aria-pressed={iF} title={iF?t('fe.px.act.unfollowHint'):undefined} onClick={inert?undefined:follow} disabled={inert||!rel}>
+    {iF?<><Check/>{t('fe.px.act.following')}</>:asUs&&!inert?t('fe.px.act.followUs'):t('fe.people.follow')}</Btn>
   </div>
   {why&&<p className="profile-like-note"><Heart/><span>{why==='couples_via_discover_only'?<>{t('fe.px.act.coupleVia')} <button type="button" className="linkbtn" onClick={()=>navigate('/n/me?layer=vis')}>{t('fe.px.act.turnOn')}</button></>
    :why==='own_discover_off'?<>{t('fe.px.act.ownOff')} <button type="button" className="linkbtn" onClick={()=>navigate('/n/me?layer=vis')}>{t('fe.px.act.turnOn')}</button></>:t('fe.px.act.likesOff')}</span></p>}
@@ -169,7 +170,7 @@ export function PhotoViewer({srcs,index,onClose}:{srcs:string[],index:number,onC
  return <Layer><div className={'viewer'+(on?' on':'')} role="dialog" aria-modal="true" aria-label={t('fe.px.ph.viewer')}
   onPointerDown={e=>{sx.current=e.clientX;}} onPointerUp={e=>{if(sx.current==null)return;const dx=e.clientX-sx.current;sx.current=null;if(Math.abs(dx)>50)step(dx<0?1:-1);}}>
   <div className="vw-track" style={{transform:`translateX(${-i*100}%)`}}>{srcs.map((s,k)=><figure key={k}><img src={s} alt="" draggable={false}/></figure>)}</div>
-  <div className="vw-top"><span className="vw-n">{i+1} / {srcs.length}</span><button ref={closeBtn} type="button" className="ibtn glass" aria-label={t('fe.px.close')} onClick={onClose}><X/></button></div>
+  <div className="vw-top"><span className="vw-n">{i+1} / {srcs.length}</span><IconBtn ref={closeBtn} icon={X} kind="glass" label={t('fe.px.close')} onClick={onClose}/></div>
   {srcs.length>1&&<>
    <button type="button" className="vw-nav l" aria-label={t('fe.px.ph.prev')} disabled={i===0} onClick={()=>step(-1)}><ChevronLeft/></button>
    <button type="button" className="vw-nav r" aria-label={t('fe.px.ph.next')} disabled={i===srcs.length-1} onClick={()=>step(1)}><ChevronRight/></button>
@@ -199,8 +200,8 @@ export function DetailsGroup({p}:{p:PersonProfile}){
  const rows=DETAILS.filter(([f])=>p.kind==='person'||COUPLE_DETAILS.has(f)).map(([f,kind])=>{const v=p.details[f];const codes=Array.isArray(v)?v as string[]:typeof v==='string'?[v]:[];
   return codes.length?[t('fe.px.f.'+kind),codes.map(c=>label(kind,c)).join(', ')] as const:null;}).filter(x=>!!x);
  if(!rows.length)return null;
- return <section className="grp"><div className="grp-t"><span>{t(p.kind==='couple'?'fe.px.f.titleCouple':'fe.px.f.title')}</span></div>
-  <div className="card"><dl className="kv">{rows.map(([k,v])=><Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>)}</dl></div></section>;
+ return <Group title={t(p.kind==='couple'?'fe.px.f.titleCouple':'fe.px.f.title')}>
+  <Card><dl className="kv">{rows.map(([k,v])=><Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>)}</dl></Card></Group>;
 }
 
 const jarItem=z.object({topicId:z.string(),value:z.number().nullable().optional(),mark:z.string().nullable().optional(),dir:z.array(z.string()).nullable().optional()}).passthrough();
@@ -251,23 +252,23 @@ export function PrivateVault({profileId,name,preview}:{profileId:string,name:str
  const head=(open:boolean,badge?:ReactNode)=><div className="vault-h"><span className="vi">{open?<LockOpen/>:<Lock/>}</span><div><b>{t('fe.px.pr.title')}</b></div>{badge&&<span className="vst">{badge}</span>}</div>;
  if(scopes.length){
   const photos=(p.media??[]).filter(m=>m.kind!=='video'&&mediaSrc(m)&&(preview||scopes.includes('photos')));
-  const until=!preview&&p.until?<span className="pill v">{fill(t('fe.px.pr.until'),{date:new Date(p.until).toLocaleDateString(locale==='en'?'en':'ru',{day:'numeric',month:'short'})})}</span>:undefined;
-  const desc=scopes.includes('info')&&p.text?<section className="grp"><div className="grp-t"><span>{t('fe.px.pr.desc')}</span></div><div className="card"><div className="md bio">{p.text.split(/\n{2,}/).map((x,i)=><p key={i}>{x}</p>)}</div></div></section>:null;
+  const until=!preview&&p.until?<Pill tone="v">{fill(t('fe.px.pr.until'),{date:new Date(p.until).toLocaleDateString(locale==='en'?'en':'ru',{day:'numeric',month:'short'})})}</Pill>:undefined;
+  const desc=scopes.includes('info')&&p.text?<Group title={t('fe.px.pr.desc')}><Card><div className="md bio">{p.text.split(/\n{2,}/).map((x,i)=><p key={i}>{x}</p>)}</div></Card></Group>:null;
   return <section className="vault open" id="priv">{head(true,until)}<div className="vault-b">
    {desc}
-   {photos.length>0&&<section className="grp bare"><div className="grp-t"><span>{t('fe.px.pr.photos')} · {photos.length}</span></div>
+   {photos.length>0&&<Group bare title={<>{t('fe.px.pr.photos')} · {photos.length}</>} foot={preview?t('fe.px.pr.wmPreview'):t('fe.px.pr.wm')}>
     <div className="ggrid">{photos.map((m,i)=><button key={i} type="button" className="gtile" onClick={preview?undefined:()=>setView(i)} disabled={!!preview}><img src={mediaSrc(m)!} alt="" loading="lazy" draggable={false}/></button>)}</div>
-    <p className="grp-n">{preview?t('fe.px.pr.wmPreview'):t('fe.px.pr.wm')}</p></section>}
-   {!desc&&!photos.length&&<p className="note">{t('fe.px.pr.nothing')}</p>}
+   </Group>}
+   {!desc&&!photos.length&&<Note>{t('fe.px.pr.nothing')}</Note>}
   </div>
   {view!==null&&<PhotoViewer srcs={photos.map(m=>m.src?.full??mediaSrc(m)!)} index={view} onClose={()=>setView(null)}/>}</section>;
  }
  const reason=preview?null:p.reason??null;
  const action=preview?<button type="button" className="btn dark" disabled aria-disabled="true">{t('fe.px.pr.ask')}</button>
-  :reason==='pending'?<><span className="pill wait"><Clock/>{t('fe.px.pr.pending')}</span><Btn kind="soft" size="sm" onClick={cancel} busy={busy}>{t('fe.px.pr.cancel')}</Btn></>
-  :reason==='not_accepting'?<span className="pill"><Lock/>{t('fe.px.pr.notAccepting')}</span>
-  :reason==='cooldown'?<span className="pill"><Clock/>{t('fe.px.pr.cooldown')}</span>
-  :reason?<span className="pill"><Lock/>{t('fe.px.pr.r.'+reason)}</span>
+  :reason==='pending'?<><Pill tone="wait" icon={Clock}>{t('fe.px.pr.pending')}</Pill><Btn kind="soft" size="sm" onClick={cancel} busy={busy}>{t('fe.px.pr.cancel')}</Btn></>
+  :reason==='not_accepting'?<Pill icon={Lock}>{t('fe.px.pr.notAccepting')}</Pill>
+  :reason==='cooldown'?<Pill icon={Clock}>{t('fe.px.pr.cooldown')}</Pill>
+  :reason?<Pill icon={Lock}>{t('fe.px.pr.r.'+reason)}</Pill>
   :p.canRequest?<button type="button" className={'btn dark'+(busy?' busy':'')} onClick={ask} disabled={busy}>{t('fe.px.pr.ask')}</button>:null;
  return <section className="vault closed" id="priv">{head(false)}<div className="vault-b"><div className="veil">
   <div className="veil-content" aria-hidden="true"><div className="bar-sk" style={{width:'72%'}}/><div className="bar-sk"/><div className="bar-sk" style={{width:'46%'}}/><div className="vt"><i/><i/><i/></div></div>
@@ -286,19 +287,19 @@ function Activity({profileId,inert}:{profileId:string,inert?:boolean|undefined})
  if(!on.length)return null;
  const cur=on.find(x=>x[0]===tab)??on[0]!;
  const change=(p:Post)=>setItems(l=>l&&l.map(x=>x.id===p.id?p:x));const remove=(r:Removal)=>setItems(l=>l&&l.filter(x=>x.id!==r.postId&&x.author.id!==r.authorId));
- return <section className="grp activity">
-  {on.length>1?<Seg value={cur[0]} onChange={v=>setTab(v)} options={on.map(x=>({id:x[0],label:x[1]}))}/>:<div className="grp-t"><span>{cur[1]}</span></div>}
+ return <Group className="activity" title={on.length>1?undefined:cur[1]}>
+  {on.length>1&&<Seg value={cur[0]} onChange={v=>setTab(v)} options={on.map(x=>({id:x[0],label:x[1]}))}/>}
   <div className="posts" inert={inert||undefined}>{cur[2].slice(0,3).map(x=><PostCard key={x.id} post={x} onChange={change} onRemove={remove}/>)}</div>
- </section>;
+ </Group>;
 }
 
 /** Gallery (galleryBlock): the profile photos the viewer may see; «Все · N» opens P20. */
 function GalleryGroup({p,onOpen,inert}:{p:PersonProfile,onOpen:(i:number)=>void,inert?:boolean|undefined}){
  const {t}=useI18n();const navigate=useNavigate();const list=photosOf(p);
  if(!list.length)return null;
- return <section className="grp bare"><div className="grp-t"><span>{t('fe.px.gal.title')}</span>{!inert&&<button type="button" onClick={()=>navigate('/n/people/'+p.id+'/gallery')}>{t('fe.px.all')} · {list.length}</button>}</div>
-  <div className="card"><div className="ggrid">{list.slice(0,12).map((m,i)=><button key={i} type="button" className="gtile" disabled={inert} onClick={()=>onOpen(i)}><img src={mediaSrc(m)!} alt="" loading="lazy" draggable={false}/></button>)}</div>
-   {list.length>12&&!inert&&<Btn kind="soft" className="mt12" onClick={()=>navigate('/n/people/'+p.id+'/gallery')}>{fill(t('fe.px.gal.all'),{n:list.length})}</Btn>}</div></section>;
+ return <Group bare title={t('fe.px.gal.title')} action={!inert&&<button type="button" onClick={()=>navigate('/n/people/'+p.id+'/gallery')}>{t('fe.px.all')} · {list.length}</button>}>
+  <Card><div className="ggrid">{list.slice(0,12).map((m,i)=><button key={i} type="button" className="gtile" disabled={inert} onClick={()=>onOpen(i)}><img src={mediaSrc(m)!} alt="" loading="lazy" draggable={false}/></button>)}</div>
+   {list.length>12&&!inert&&<Btn kind="soft" className="mt12" onClick={()=>navigate('/n/people/'+p.id+'/gallery')}>{fill(t('fe.px.gal.all'),{n:list.length})}</Btn>}</Card></Group>;
 }
 
 /** Interests group of another profile (pubJars → jarShelf, six then «Ещё N»). */
@@ -306,8 +307,8 @@ function InterestsGroup({profileId,inert}:{profileId:string,inert?:boolean|undef
  const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const topic=useTopics();const [items,setItems]=useState<Jar[]>([]);
  useEffect(()=>{setItems([]);call('interests.list',{profileId},jarsRes).then(r=>setItems(r.items)).catch(()=>{});},[call,profileId]);
  if(!items.length)return null;
- return <section className="grp"><div className="grp-t"><span>{t('fe.px.int.title')}</span></div>
-  <div className="card"><Jars items={items} topic={topic} max={6} {...(inert?{}:{onTopic:(id:string)=>navigate('/n/topics/'+id)})}/></div></section>;
+ return <Group title={t('fe.px.int.title')}>
+  <Card><Jars items={items} topic={topic} max={6} {...(inert?{}:{onTopic:(id:string)=>navigate('/n/topics/'+id)})}/></Card></Group>;
 }
 
 /** Everything under the photo and the buttons — the same body on the profile page and under a Discover card. */
@@ -332,12 +333,12 @@ export function ProfilePage({p,preview,seg,onMore,menu,toast,children}:{p:Person
  const onScroll=(e:React.UIEvent<HTMLDivElement>)=>{const h=e.currentTarget.querySelector('.hero');const b=bar.current;if(h&&b)b.classList.toggle('solid',h.getBoundingClientRect().bottom<b.getBoundingClientRect().bottom+8);};
  return <>
   <header ref={bar} className="bar overlay pbar">
-   <button type="button" className="ibtn glass" aria-label={t('fe.back')} onClick={()=>navigate(-1)}><ChevronLeft/></button>
+   <IconBtn icon={ChevronLeft} kind="glass" label={t('fe.back')} onClick={()=>navigate(-1)}/>
    <span className="pbar-t" aria-hidden="true"><Av name={name} seed={p.id} src={mediaSrc(p.avatar)} size="sm"/><b>{name}</b></span>
-   {onMore&&<button type="button" className="ibtn glass" aria-haspopup="dialog" aria-label={t('fe.px.menu.more')} onClick={onMore}><Ellipsis/></button>}
+   {onMore&&<IconBtn icon={Ellipsis} kind="glass" aria-haspopup="dialog" label={t('fe.px.menu.more')} onClick={onMore}/>}
   </header>
   <div className="view nodock top0 profile-page" onScroll={onScroll}>{seg}<div className="wrap">
-   <h1 className="sr-only" tabIndex={-1}>{name}</h1>
+   <H level={1} className="sr-only" tabIndex={-1}>{name}</H>
    {children}
    <ProfileHero p={p} rel={rel} inert={inert} onOpen={setView}/>
    <PersonBio p={p}/>
@@ -488,14 +489,14 @@ export function LinksSection({profileId,inert}:{profileId:string,inert?:boolean|
  if(!items.length)return null;
  const own=new Set(state.status==='ready'?state.boot.profiles.map(p=>p.id):[]);
  const shown=all?items:items.slice(0,4);
- return <section className="grp"><div className="grp-t"><span>{t('fe.px.lk.title')}</span>{items.length>4&&!all&&<button type="button" onClick={()=>setAll(true)}>{t('fe.px.all')} · {items.length}</button>}</div>
-  <div className="card list">{shown.map(l=>{const name=l.other.name||(l.other.handle?'@'+l.other.handle:'?');
+ return <Group title={t('fe.px.lk.title')} action={items.length>4&&!all&&<button type="button" onClick={()=>setAll(true)}>{t('fe.px.all')} · {items.length}</button>}>
+  <Card list>{shown.map(l=>{const name=l.other.name||(l.other.handle?'@'+l.other.handle:'?');
    // `side` is this profile's side; the row names the other one's, as in the prototype's linkLabel.
    const label=linkLabel(t,l.kind,l.side);const mine=own.has(l.other.id);
-   return <button key={l.id} type="button" className="li" disabled={inert} onClick={()=>navigate(mine?(l.other.id===acting?.id?'/n/me/preview':'/n/me'):'/n/people/'+l.other.id)}>
-    <Av name={name} seed={l.other.id} size="sm" src={l.other.avatar}/><span className="tx"><b>{name}<NameBadges p={l.other}/>{mine?' · '+t(acting?.kind==='couple'?'fe.px.lk.you2':'fe.px.lk.you'):''}</b><small>{label}</small></span><ChevronRight/>
-   </button>;})}</div>
- </section>;
+   return <Row key={l.id} disabled={!!inert} av={<Av name={name} seed={l.other.id} size="sm" src={l.other.avatar}/>}
+    title={<>{name}<NameBadges p={l.other}/>{mine?' · '+t(acting?.kind==='couple'?'fe.px.lk.you2':'fe.px.lk.you'):''}</>} sub={label}
+    onClick={()=>navigate(mine?(l.other.id===acting?.id?'/n/me/preview':'/n/me'):'/n/people/'+l.other.id)}/>;})}</Card>
+ </Group>;
 }
 
 /* ---------- the person menu (S02) ---------- */
@@ -514,10 +515,9 @@ function Report({profileId,onClose,onDone}:{profileId:string,onClose:()=>void,on
  };
  return <Sheet title={t('fe.px.rp.title')} onClose={onClose} foot={<Btn kind="danger" onClick={send} disabled={busy}>{t('fe.px.rp.send')}</Btn>}>
   <div role="radiogroup" aria-label={t('fe.px.rp.reason')}>{REASONS.map(k=><button key={k} type="button" className={'radio'+(why===k?' on':'')} role="radio" aria-checked={why===k} onClick={()=>{setWhy(k);setErr('');}}><i/><span className="tx">{t('fe.px.rp.'+k)}</span></button>)}</div>
-  <label className="field mt16"><span>{t('fe.px.rp.details')}<i>{t('fe.px.rp.optional')}</i></span><textarea className="inp" rows={3} maxLength={500} value={details} onChange={e=>setDetails(e.target.value)}/></label>
-  <div className="card list"><button type="button" className="li" role="switch" aria-checked={alsoBlock} onClick={()=>setAlso(v=>!v)}>
-   <span className="tx"><b>{t('fe.px.rp.alsoBlock')}</b><small>{t('fe.px.rp.alsoBlockSub')}</small></span><span className={'sw'+(alsoBlock?' on':'')} aria-hidden="true"/></button></div>
-  {err&&<div className="alert err mt12" role="alert"><span>{err}</span></div>}
+  <label className="field mt16"><span>{t('fe.px.rp.details')}<i>{t('fe.px.rp.optional')}</i></span><TextArea rows={3} maxLength={500} value={details} onChange={e=>setDetails(e.target.value)}/></label>
+  <Card list><ToggleRow title={t('fe.px.rp.alsoBlock')} sub={t('fe.px.rp.alsoBlockSub')} on={alsoBlock} onClick={()=>setAlso(v=>!v)}/></Card>
+  {err&&<Alert kind="err" noIcon className="mt12">{err}</Alert>}
  </Sheet>;
 }
 
@@ -531,9 +531,9 @@ function Block({profileId,name,onClose,onDone}:{profileId:string,name:string,onC
   catch(e){setErr(pxError(e,t));}finally{setBusy(false);}};
  return <Sheet title={fill(t('fe.px.bl.title'),{name})} onClose={onClose} foot={<><Btn kind="danger" onClick={go} disabled={busy}>{t('fe.px.bl.ok')}</Btn><Btn kind="text" onClick={onClose}>{t('fe.px.cancel')}</Btn></>}>
   <p className="lead">{t('fe.px.bl.text')}</p>
-  {alsoFor&&<div className="card list mt12"><button type="button" className="li" role="switch" aria-checked={also} onClick={()=>setAlso(v=>!v)}>
-   <span className="tx"><b>{t(alsoFor==='partner'?'fe.px.bl.alsoPartner':'fe.px.bl.alsoMe')}</b><small>{t(alsoFor==='partner'?'fe.px.bl.alsoPartnerSub':'fe.px.bl.alsoMeSub')}</small></span><span className={'sw'+(also?' on':'')} aria-hidden="true"/></button></div>}
-  {err&&<div className="alert err mt12" role="alert"><span>{err}</span></div>}
+  {alsoFor&&<Card list className="mt12"><ToggleRow title={t(alsoFor==='partner'?'fe.px.bl.alsoPartner':'fe.px.bl.alsoMe')} sub={t(alsoFor==='partner'?'fe.px.bl.alsoPartnerSub':'fe.px.bl.alsoMeSub')}
+   on={also} onClick={()=>setAlso(v=>!v)}/></Card>}
+  {err&&<Alert kind="err" noIcon className="mt12">{err}</Alert>}
  </Sheet>;
 }
 
@@ -547,11 +547,10 @@ function EndConnection({profileId,name,mutual,onClose,onDone}:{profileId:string,
  const fact=(ok:boolean,text:string)=><div className="fact"><i className={ok?'g':'v'}>{ok?<Check/>:<Info/>}</i><span>{text}</span></div>;
  return <Sheet title={t('fe.px.ec.title')} onClose={onClose} foot={<><Btn kind="danger" onClick={go} busy={busy}>{t('fe.px.ec.ok')}</Btn><Btn kind="soft" onClick={onClose}>{t('fe.px.cancel')}</Btn></>}>
   <p className="lead">{fill(t('fe.px.ec.lead'),{name})}</p>
-  <div className="card flat">{mutual&&fact(true,t('fe.px.ec.chat'))}{fact(true,t(mutual?'fe.px.ec.likeMatch':'fe.px.ec.like'))}{mutual&&fact(true,t('fe.px.ec.history'))}{fact(false,t('fe.px.ec.notBlock'))}</div>
-  {mutual&&<div className="card list mt12"><button type="button" className="li" role="switch" aria-checked={revoke} onClick={()=>setRevoke(v=>!v)}>
-   <span className="tx"><b>{t('fe.px.ec.revoke')}</b><small>{t('fe.px.ec.revokeSub')}</small></span><span className={'sw'+(revoke?' on':'')} aria-hidden="true"/></button></div>}
-  <p className="note mt12">{t('fe.px.ec.block')}</p>
-  {err&&<div className="alert err mt12" role="alert"><span>{err}</span></div>}
+  <Card className="flat">{mutual&&fact(true,t('fe.px.ec.chat'))}{fact(true,t(mutual?'fe.px.ec.likeMatch':'fe.px.ec.like'))}{mutual&&fact(true,t('fe.px.ec.history'))}{fact(false,t('fe.px.ec.notBlock'))}</Card>
+  {mutual&&<Card list className="mt12"><ToggleRow title={t('fe.px.ec.revoke')} sub={t('fe.px.ec.revokeSub')} on={revoke} onClick={()=>setRevoke(v=>!v)}/></Card>}
+  <Note className="mt12">{t('fe.px.ec.block')}</Note>
+  {err&&<Alert kind="err" noIcon className="mt12">{err}</Alert>}
  </Sheet>;
 }
 
@@ -573,20 +572,19 @@ export function PersonMenu({profileId,name,step,setStep,blocked,setBlocked,toast
   try{await call('block.set',{opId:newOpId(),profileId,on:false},ok);setBlocked(false);close();toast(t('fe.px.bl.undone'));}
   catch(e){toast(pxError(e,t),true);}finally{setBusy(false);}};
  const copy=async()=>{close();try{await navigator.clipboard.writeText(location.origin+location.pathname+'#/n/people/'+profileId);toast(t('fe.px.menu.copied'));}catch{toast(t('fe.px.menu.copyFail'),true);}};
- const row=(icon:React.ReactNode,title:string,onClick:()=>void,sub?:string,danger?:boolean)=><button type="button" className={'li'+(danger?' danger':'')} onClick={onClick} disabled={busy}>
-  <span className="ico">{icon}</span><span className="tx"><b>{title}</b>{sub&&<small>{sub}</small>}</span></button>;
- if(step==='menu')return <Sheet title={name} onClose={close}><div className="card list">
-  {blocked?row(<Ban/>,t('fe.px.menu.unblock'),unblock):<>
-   {row(<LinkIcon/>,t('fe.px.menu.copy'),copy)}
-   {link?.state==='ok'?row(<Users/>,t('fe.px.menu.linkIs')+linkLabel(t,link.view.kind,link.view.side),()=>{close();navigate('/n/people/'+profileId+'/link');},t('fe.px.menu.linkIsSub'))
-    :link?row(<Users/>,t(link.state==='sent'?'fe.px.menu.linkSent':'fe.px.menu.linkIn'),()=>{close();navigate('/n/me/links');},link.state==='sent'?t('fe.px.menu.linkSentSub'):linkLabel(t,link.view.kind,link.view.side))
-    :row(<Users/>,t('fe.px.menu.link'),()=>{close();navigate('/n/people/'+profileId+'/link');},t('fe.px.menu.linkSub'))}
-   {hidden!==null&&(hidden?row(<Eye/>,t('fe.px.menu.unhide'),hide):row(<EyeOff/>,t('fe.px.menu.hide'),hide,t('fe.px.menu.hideSub')))}
-   {(rel?.liked||rel?.mutual)&&row(<X/>,t('fe.px.menu.end'),()=>setStep('end'),t(rel.mutual?'fe.px.menu.endMatch':'fe.px.menu.endLike'))}
-   {row(<Flag/>,t('fe.px.menu.report'),()=>setStep('report'),undefined,true)}
-   {row(<Ban/>,t('fe.px.menu.block'),()=>setStep('block'),t('fe.px.menu.blockSub'),true)}
+ const row=(icon:LucideIcon,title:string,onClick:()=>void,sub?:string,danger?:boolean)=><Row noChev icon={icon} title={title} sub={sub} danger={!!danger} onClick={onClick} disabled={busy}/>;
+ if(step==='menu')return <Sheet title={name} onClose={close}><Card list>
+  {blocked?row(Ban,t('fe.px.menu.unblock'),unblock):<>
+   {row(LinkIcon,t('fe.px.menu.copy'),copy)}
+   {link?.state==='ok'?row(Users,t('fe.px.menu.linkIs')+linkLabel(t,link.view.kind,link.view.side),()=>{close();navigate('/n/people/'+profileId+'/link');},t('fe.px.menu.linkIsSub'))
+    :link?row(Users,t(link.state==='sent'?'fe.px.menu.linkSent':'fe.px.menu.linkIn'),()=>{close();navigate('/n/me/links');},link.state==='sent'?t('fe.px.menu.linkSentSub'):linkLabel(t,link.view.kind,link.view.side))
+    :row(Users,t('fe.px.menu.link'),()=>{close();navigate('/n/people/'+profileId+'/link');},t('fe.px.menu.linkSub'))}
+   {hidden!==null&&(hidden?row(Eye,t('fe.px.menu.unhide'),hide):row(EyeOff,t('fe.px.menu.hide'),hide,t('fe.px.menu.hideSub')))}
+   {(rel?.liked||rel?.mutual)&&row(X,t('fe.px.menu.end'),()=>setStep('end'),t(rel.mutual?'fe.px.menu.endMatch':'fe.px.menu.endLike'))}
+   {row(Flag,t('fe.px.menu.report'),()=>setStep('report'),undefined,true)}
+   {row(Ban,t('fe.px.menu.block'),()=>setStep('block'),t('fe.px.menu.blockSub'),true)}
   </>}
- </div></Sheet>;
+ </Card></Sheet>;
  if(step==='end')return <EndConnection profileId={profileId} name={name} mutual={!!rel?.mutual} onClose={close} onDone={msg=>{close();toast(msg);onRel?.();}}/>;
  if(step==='report')return <Report profileId={profileId} onClose={close} onDone={(msg,b)=>{close();if(b)setBlocked(true);toast(msg);}}/>;
  if(step==='block')return <Block profileId={profileId} name={name} onClose={close} onDone={msg=>{close();setBlocked(true);toast(msg);}}/>;
@@ -634,7 +632,7 @@ export function HistoryScreen(){
 /* ---------- «Как видят» (P03) ---------- */
 type Lv='all'|'granted'|'card';
 const ownSettingsRes=z.object({ok:z.literal(true),settings:z.object({discoverMode:z.string()}).passthrough()});
-function BackBtn(){const {t}=useI18n();const navigate=useNavigate();return <button type="button" className="ibtn ghost" aria-label={t('fe.back')} onClick={()=>navigate(-1)}><ChevronLeft/></button>;}
+function BackBtn(){const {t}=useI18n();const navigate=useNavigate();return <IconBtn icon={ChevronLeft} kind="ghost" label={t('fe.back')} onClick={()=>navigate(-1)}/>;}
 
 /** `/n/me/preview`: the own profile as others see it, with the prototype's audience switch «Все / С доступом /
  * Знакомства». «Все» and «С доступом» are the profile page itself drawn as a viewer sees it (the server's own data,
@@ -657,8 +655,8 @@ export function MePreviewScreen(){
  const ph=p?mediaSrc(p.avatar):null;const city=p?cityOf(p,locale):null;
  const note=mode!=='visible'?t('fe.px.pv.cardOff'):!ph?t('fe.px.pv.cardNoPhoto'):t(acting?.kind==='couple'?'fe.px.pv.cardOnUs':'fe.px.pv.cardOn');
  return <>
-  <header className="bar"><BackBtn/><div className="bar-seg">{seg}</div><h1 className="sm" tabIndex={-1}><span className="sr-only">{t('fe.px.pv.title')}</span></h1></header>
-  <div className="view nodock"><div className="wrap">
+  <header className="bar"><BackBtn/><div className="bar-seg">{seg}</div><H level={1} className="sm" tabIndex={-1}><span className="sr-only">{t('fe.px.pv.title')}</span></H></header>
+  <View className="nodock">
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={pxError(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :!p?<div className="mt12"><Skel kind="card" rows={1}/></div>
     :<>
@@ -669,10 +667,10 @@ export function MePreviewScreen(){
        <FollowCounts id={p.id} rel={rel} inert/>
        <div className="pc-hint"><ChevronDown/>{t('fe.px.card.hint')}</div></div>
      </div></div>
-     <p className="note center mt12">{note}</p>
+     <Note className="center mt12">{note}</Note>
      <div className="pc-body pc-full p3-card21"><PersonBio p={p}/><ProfileBody p={p} inert preview="all" onOpen={()=>{}}/></div>
     </>}
-  </div></div>
+  </View>
   {toastNode}
  </>;
 }

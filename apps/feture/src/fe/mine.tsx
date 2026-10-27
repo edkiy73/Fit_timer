@@ -2,9 +2,9 @@ import {useCallback,useEffect,useState} from 'react';
 import {useLocation,useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Bookmark,Calendar,ChevronRight,Clock,LockOpen,MessageCircle,Newspaper,Pencil,Plus,TriangleAlert,Users,X} from 'lucide-react';
+import {Bookmark,Calendar,Clock,LockOpen,MessageCircle,Newspaper,Pencil,Plus,TriangleAlert,Users,X} from 'lucide-react';
 import {feErrorMessage} from '../feture/fe-api';
-import {Av,Bar,Btn,Empty,Skel,View} from './ui';
+import {Alert,Av,Bar,Btn,Card,Empty,Group,IconBtn,Note,Row,Skel,Stack,View} from './kit';
 import {useFe} from './session';
 import {PostCard,postSchema,when,type Post} from './feed';
 import {EventRow,type Ev} from './browse';
@@ -42,18 +42,17 @@ export function MineLayer(){
  },[call,acting]);
  if(!acting)return null;
  const cp=acting.kind==='couple';
- const row=(icon:typeof Users,title:string,to:string,val:string|null,sub?:string)=>{const Icon=icon;
-  return <button type="button" className="li" onClick={()=>navigate(to)}><span className="ico"><Icon/></span><span className="tx"><b>{title}</b>{sub&&<small>{sub}</small>}</span>{val!=null&&<span className="val">{val}</span>}<ChevronRight/></button>;};
+ const row=(icon:typeof Users,title:string,to:string,val:string|null,sub?:string)=><Row icon={icon} title={title} sub={sub||undefined} val={val} onClick={()=>navigate(to)}/>;
  return <>
-  {typeof notice==='string'&&notice&&<div className="alert ok mb12" role="status"><span>{notice}</span></div>}
+  {typeof notice==='string'&&notice&&<Alert kind="ok" noIcon className="mb12">{notice}</Alert>}
   {!cp&&<PairEntry/>}
-  {!c?<Skel kind="list" rows={5}/>:<section className="grp"><div className="card list">
+  {!c?<Skel kind="list" rows={5}/>:<Group><Card list>
    {row(Newspaper,cp?t('fe.mx.mine.postsUs'):t('fe.mx.mine.posts'),'/n/me/posts',String(c.posts),c.drafts?t('fe.mx.mine.drafts',{n:c.drafts}):'')}
    {row(Calendar,cp?t('fe.mx.mine.eventsUs'):t('fe.mx.mine.events'),'/n/me/events',String(c.events))}
    {row(Users,t('fe.mx.mine.follows'),'/n/me/follows?tab=followers',`${c.followers} · ${c.following}`)}
    {row(Bookmark,t('fe.mx.mine.saved'),'/n/me/saved',String(c.saved),cp?t('fe.mx.mine.savedSubUs'):'')}
    {row(LockOpen,cp?t('fe.mx.mine.sharedUs'):t('fe.mx.mine.shared'),'/n/me/shared',String(c.withMe),c.out?t(cp?'fe.mx.mine.outUs':'fe.mx.mine.out',{n:c.out}):t(cp?'fe.mx.mine.sharedSubUs':'fe.mx.mine.sharedSub'))}
-  </div></section>}
+  </Card></Group>}
  </>;
 }
 
@@ -76,12 +75,12 @@ function Shared(){
  const date=(u:string|null)=>u?t('fe.priv.until').replace('{date}',new Date(u).toLocaleDateString(locale==='en'?'en':'ru',{day:'numeric',month:'short'})):t('fe.priv.noTerm');
  if(!a.items.length&&!pending.length)return <Empty icon={LockOpen} title={t('fe.mx.mine.sharedEmpty')} text={t('fe.mx.mine.sharedEmptyText')}/>;
  return <>
-  {a.items.length>0&&<section className="grp"><div className="grp-t"><span>{t('fe.mx.mine.sharedOpen')} · {a.items.length}</span></div><div className="card list">
-   {a.items.map((g,i)=><button key={i} type="button" className="li" onClick={()=>g.profile&&navigate('/n/people/'+g.profile.id)}><Av name={nameOf(g.profile)} seed={g.profile?.id??String(i)} size="sm" src={g.profile?.avatar}/>
-    <span className="tx"><b>{nameOf(g.profile)}<NameBadges p={g.profile}/></b><small>{g.scopes.map(s=>t('fe.priv.scope.'+s)).join(', ')} · {date(g.until)}</small></span><ChevronRight/></button>)}</div></section>}
-  {pending.length>0&&<section className="grp"><div className="grp-t"><span>{t('fe.mx.mine.sharedPending')} · {pending.length}</span></div><div className="card list">
-   {pending.map(r=><button key={r.id} type="button" className="li" onClick={()=>r.profile&&navigate('/n/people/'+r.profile.id)}><Av name={nameOf(r.profile)} seed={r.profile?.id??r.id} size="sm" src={r.profile?.avatar}/>
-    <span className="tx"><b>{nameOf(r.profile)}<NameBadges p={r.profile}/></b><small>{r.scopes.map(s=>t('fe.priv.scope.'+s)).join(', ')} · {t('fe.mx.mine.awaiting')}</small></span><ChevronRight/></button>)}</div></section>}
+  {a.items.length>0&&<Group title={<>{t('fe.mx.mine.sharedOpen')} · {a.items.length}</>}><Card list>
+   {a.items.map((g,i)=><Row key={i} onClick={()=>g.profile&&navigate('/n/people/'+g.profile.id)} av={<Av name={nameOf(g.profile)} seed={g.profile?.id??String(i)} size="sm" src={g.profile?.avatar}/>}
+    title={<>{nameOf(g.profile)}<NameBadges p={g.profile}/></>} sub={<>{g.scopes.map(s=>t('fe.priv.scope.'+s)).join(', ')} · {date(g.until)}</>}/>)}</Card></Group>}
+  {pending.length>0&&<Group title={<>{t('fe.mx.mine.sharedPending')} · {pending.length}</>}><Card list>
+   {pending.map(r=><Row key={r.id} onClick={()=>r.profile&&navigate('/n/people/'+r.profile.id)} av={<Av name={nameOf(r.profile)} seed={r.profile?.id??r.id} size="sm" src={r.profile?.avatar}/>}
+    title={<>{nameOf(r.profile)}<NameBadges p={r.profile}/></>} sub={<>{r.scopes.map(s=>t('fe.priv.scope.'+s)).join(', ')} · {t('fe.mx.mine.awaiting')}</>}/>)}</Card></Group>}
  </>;
 }
 
@@ -110,10 +109,9 @@ function MyEvents(){
  if(!data)return <Skel kind="post"/>;
  const groups:[string,z.infer<typeof ev>[]][]=[['going',data.going],['applications',data.applications],['interested',data.interested],['organizing',data.organizing]];
  if(groups.every(([,l])=>!l.length))return <Empty icon={Calendar} title={t('fe.mine.noEvents')} text={t('fe.mine.noEventsText')}/>;
- return <>{groups.filter(([,l])=>l.length).map(([k,l])=><section key={k} className="grp"><div className="grp-t"><span>{t('fe.mine.ev.'+k)}</span></div><div className="card list">
-  {l.map(e=><button key={e.id} type="button" className="li" onClick={()=>navigate('/n/events/'+e.id)}>
-   <span className="tx"><b>{e.title}</b><small>{new Date(e.starts_at).toLocaleString(locale==='en'?'en':'ru',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}{e.state!=='published'?' · '+t('fe.mine.state.'+e.state):''}</small></span>
-  </button>)}</div></section>)}</>;
+ return <>{groups.filter(([,l])=>l.length).map(([k,l])=><Group key={k} title={t('fe.mine.ev.'+k)}><Card list>
+  {l.map(e=><Row key={e.id} noChev onClick={()=>navigate('/n/events/'+e.id)} title={e.title}
+   sub={new Date(e.starts_at).toLocaleString(locale==='en'?'en':'ru',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+(e.state!=='published'?' · '+t('fe.mine.state.'+e.state):'')}/>)}</Card></Group>)}</>;
 }
 
 function Saved(){
@@ -122,9 +120,8 @@ function Saved(){
  if(error)return <Failed error={error} retry={load}/>;
  if(!data)return <Skel kind="post"/>;
  if(!data.items.length)return <Empty icon={Bookmark} title={t('fe.mine.noSaved')} text={t('fe.mine.noSavedText')}/>;
- return <div className="card list">{data.items.map(s=><button key={s.kind+s.target_id} type="button" className="li" onClick={()=>navigate(s.kind==='event'?'/n/events/'+s.target_id:'/n/feed/post/'+s.target_id)}>
-  <span className="ico"><Bookmark/></span><span className="tx"><b>{t('fe.mine.savedKind.'+s.kind)}</b><small>{new Date(s.created_at).toLocaleDateString()}</small></span>
- </button>)}</div>;
+ return <Card list>{data.items.map(s=><Row key={s.kind+s.target_id} icon={Bookmark} noChev onClick={()=>navigate(s.kind==='event'?'/n/events/'+s.target_id:'/n/feed/post/'+s.target_id)}
+  title={t('fe.mine.savedKind.'+s.kind)} sub={new Date(s.created_at).toLocaleDateString()}/>)}</Card>;
 }
 
 // F10 / G04 (screens behind «Мои публикации» and «Сохранённое»).
@@ -142,8 +139,7 @@ export function MyPostsScreen(){
  const replace=(np:Post)=>setData(d=>d?{...d,items:d.items.map(x=>x.id===np.id?np:x)}:d);
  const card=(p:Post)=><PostCard key={p.id} post={p} onChange={replace} onExpired={()=>{call('post.get',{postId:p.id},onePost).then(r=>replace(r.post)).catch(()=>{});}}
   onRemove={r=>{setData(d=>d?{...d,items:d.items.filter(x=>x.id!==r.postId)}:d);toast(r.notice,{type:'ok'});}}/>;
- const row=(p:Post,icon:typeof Pencil,sub:string)=>{const I=icon;return <button key={p.id} type="button" className="li" onClick={()=>navigate('/n/feed/post/'+p.id+'/edit')}>
-  <span className="ico"><I/></span><span className="tx"><b>{mdPlain(p.title||p.body).slice(0,60)||t('fe.fd.mine.noText')}</b><small>{sub}</small></span><ChevronRight/></button>;};
+ const row=(p:Post,icon:typeof Pencil,sub:string)=><Row key={p.id} icon={icon} title={mdPlain(p.title||p.body).slice(0,60)||t('fe.fd.mine.noText')} sub={sub} onClick={()=>navigate('/n/feed/post/'+p.id+'/edit')}/>;
  let body;
  if(error)body=<Failed error={error} retry={load}/>;
  else if(!data)body=<Skel kind="post" rows={2}/>;
@@ -154,16 +150,16 @@ export function MyPostsScreen(){
   body=!data.items.length?<Empty icon={Newspaper} title={couple?t('fe.fd.mine.emptyUs'):t('fe.fd.mine.empty')} text={couple?t('fe.fd.mine.emptyTextUs'):t('fe.fd.mine.emptyText')}>
     <Btn onClick={()=>navigate('/n/feed/new')}>{couple?t('fe.fd.mine.createUs'):t('fe.fd.mine.create')}</Btn></Empty>
    :<>
-    {returned.length>0&&<section className="grp"><div className="grp-t"><span>{t('fe.fd.mine.returned',{n:returned.length})}</span></div><div className="card list">{returned.map(p=>row(p,TriangleAlert,t('fe.fd.mine.returnedSub')))}</div></section>}
-    {drafts.length>0&&<section className="grp"><div className="grp-t"><span>{t('fe.fd.mine.drafts',{n:drafts.length})}</span></div><div className="card list">{drafts.map(p=>row(p,Pencil,t('fe.fd.mine.editedAt',{when:when(p.editedAt??p.publishedAt,locale)||'—'})))}</div></section>}
-    {revs.length>0&&<section className="grp"><div className="grp-t"><span>{t('fe.fd.mine.revisions',{n:revs.length})}</span></div><div className="card list">{revs.map(p=><button key={p.id} type="button" className="li" onClick={()=>navigate('/n/feed/post/'+p.id)}>
-     <span className="ico"><Clock/></span><span className="tx"><b>{mdPlain(p.title||p.body).slice(0,60)||t('fe.fd.mine.noText')}</b><small>{t('fe.fd.mine.revisionsSub')}</small></span><ChevronRight/></button>)}</div></section>}
-    {review.length>0&&<section className="grp"><div className="grp-t"><span>{t('fe.fd.mine.review',{n:review.length})}</span></div><div className="posts">{review.map(card)}</div></section>}
-    {pub.length>0&&<section className="grp"><div className="grp-t"><span>{t('fe.fd.mine.published',{n:pub.length})}</span></div><div className="posts">{pub.map(card)}</div></section>}
+    {returned.length>0&&<Group title={t('fe.fd.mine.returned',{n:returned.length})}><Card list>{returned.map(p=>row(p,TriangleAlert,t('fe.fd.mine.returnedSub')))}</Card></Group>}
+    {drafts.length>0&&<Group title={t('fe.fd.mine.drafts',{n:drafts.length})}><Card list>{drafts.map(p=>row(p,Pencil,t('fe.fd.mine.editedAt',{when:when(p.editedAt??p.publishedAt,locale)||'—'})))}</Card></Group>}
+    {revs.length>0&&<Group title={t('fe.fd.mine.revisions',{n:revs.length})}><Card list>{revs.map(p=><Row key={p.id} icon={Clock} title={mdPlain(p.title||p.body).slice(0,60)||t('fe.fd.mine.noText')} sub={t('fe.fd.mine.revisionsSub')}
+     onClick={()=>navigate('/n/feed/post/'+p.id)}/>)}</Card></Group>}
+    {review.length>0&&<Group title={t('fe.fd.mine.review',{n:review.length})}><div className="posts">{review.map(card)}</div></Group>}
+    {pub.length>0&&<Group title={t('fe.fd.mine.published',{n:pub.length})}><div className="posts">{pub.map(card)}</div></Group>}
    </>;
  }
  return <>
-  <Bar title={couple?t('fe.fd.mine.titleUs'):t('fe.fd.mine.title')} back small><button type="button" className="ibtn" aria-label={t('fe.create')} onClick={()=>navigate('/n/feed/new')}><Plus/></button></Bar>
+  <Bar title={couple?t('fe.fd.mine.titleUs'):t('fe.fd.mine.title')} back small><IconBtn icon={Plus} label={t('fe.create')} onClick={()=>navigate('/n/feed/new')}/></Bar>
   <View className="nodock">{body}</View>
  </>;
 }
@@ -200,13 +196,12 @@ export function SavedScreen(){
  else if(!list)body=<Skel kind="post" rows={2}/>;
  else if(!list.posts.length&&!list.events.length&&!list.discussions.length)body=<Empty icon={Bookmark} title={t('fe.fd.sv.empty')} text={t('fe.fd.sv.emptyText')}/>;
  else body=<>
-  {list.events.length>0&&<div className="grp"><div className="grp-t"><span>{t('fe.fd.sv.events',{n:list.events.length})}</span></div>{list.events.map((e,i)=><div key={e.id} style={i?{marginTop:8}:undefined}><EventRow e={e}/></div>)}</div>}
-  {list.posts.length>0&&<div className="grp"><div className="grp-t"><span>{t('fe.fd.sv.posts',{n:list.posts.length})}</span></div><div className="posts">{list.posts.map(p=><PostCard key={p.id} post={p} onChange={replace}
-   onRemove={r=>setList(l=>l&&{...l,posts:l.posts.filter(x=>x.id!==r.postId&&x.author.id!==r.authorId)})}/>)}</div></div>}
-  {list.discussions.length>0&&<div className="grp"><div className="grp-t"><span>{t('fe.fd.sv.discussions',{n:list.discussions.length})}</span></div><div className="card list">
-   {list.discussions.map(d=><button key={d.id} type="button" className="li" onClick={()=>navigate('/n/feed/post/'+d.id)}><span className="ico"><MessageCircle/></span>
-    <span className="tx"><b>{d.title||mdPlain(d.body).slice(0,60)}</b></span><ChevronRight/></button>)}</div></div>}
-  {list.gone>0&&<p className="note mt12">{t('fe.fd.sv.gone',{n:list.gone})}</p>}
+  {list.events.length>0&&<Group title={t('fe.fd.sv.events',{n:list.events.length})}><Stack gap={2}>{list.events.map(e=><div key={e.id}><EventRow e={e}/></div>)}</Stack></Group>}
+  {list.posts.length>0&&<Group title={t('fe.fd.sv.posts',{n:list.posts.length})}><div className="posts">{list.posts.map(p=><PostCard key={p.id} post={p} onChange={replace}
+   onRemove={r=>setList(l=>l&&{...l,posts:l.posts.filter(x=>x.id!==r.postId&&x.author.id!==r.authorId)})}/>)}</div></Group>}
+  {list.discussions.length>0&&<Group title={t('fe.fd.sv.discussions',{n:list.discussions.length})}><Card list>
+   {list.discussions.map(d=><Row key={d.id} icon={MessageCircle} title={d.title||mdPlain(d.body).slice(0,60)} onClick={()=>navigate('/n/feed/post/'+d.id)}/>)}</Card></Group>}
+  {list.gone>0&&<Note className="mt12">{t('fe.fd.sv.gone',{n:list.gone})}</Note>}
  </>;
  return <>
   <Bar title={t('fe.fd.sv.title')} back small/>

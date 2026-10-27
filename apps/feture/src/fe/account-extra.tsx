@@ -3,9 +3,9 @@ import {useNavigate,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
-import {Book,Calendar,Check,ChevronRight,Crown,Globe,Heart,History,Lock,Mail,ShieldCheck,Smartphone,TriangleAlert,Undo2,X,type LucideIcon} from 'lucide-react';
+import {Book,Calendar,Check,Crown,Globe,Heart,History,Lock,Mail,ShieldCheck,Smartphone,Undo2,X,type LucideIcon} from 'lucide-react';
 import {feErrorMessage} from '../feture/fe-api';
-import {Bar,Btn,Empty,View,Skel} from './ui';
+import {Alert,Bar,Btn,Card,Empty,Note,Pill,Row,SectionLabel,Skel,View} from './kit';
 import {useToast} from './toast';
 import {useFe} from './session';
 import {Sheet} from './profile-extras';
@@ -41,21 +41,21 @@ export function PremiumScreen(){
    <div className="pw-hero"><span className="pw-crown"><Crown/></span><b>FetUre Premium</b><p>{t('fe.ax.prem.lead')}</p><i/><i/></div>
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :!status?<Skel kind="list"/>:<>
-    {premium&&<div className="alert ok mt12" role="status"><Check/><span>{status.viaPartner
+    {premium&&<Alert kind="ok" icon={Check} className="mt12">{status.viaPartner
      ?<><b>{t('fe.ax.prem.viaPartner')}</b>{t('fe.ax.prem.viaPartnerText')}</>
-     :<><b>{t('fe.ax.prem.active')}</b>{status.until?t('fe.ax.prem.until',{date:date(status.until)}):''}</>}</span></div>}
+     :<><b>{t('fe.ax.prem.active')}</b>{status.until?t('fe.ax.prem.until',{date:date(status.until)}):''}</>}</Alert>}
     <div className="free14"><Check/><span><b>{t('fe.ax.prem.freeTitle')}</b>{t('fe.ax.prem.freeText')}</span></div>
-    <div className="sec">{t('fe.ax.prem.what')}</div>
+    <SectionLabel>{t('fe.ax.prem.what')}</SectionLabel>
     <div className="pw-feats">{FEATS.map(([k,Icon])=><div key={k} className={'pw-f'+(k===kind?' on':'')}><span className={'ico'+(k===kind?' l':'')}><Icon/></span>
-     <span className="tx"><b>{t('fe.ax.prem.f.'+k)}</b><small>{t('fe.ax.prem.f.'+k+'Text')}</small></span>{k===kind&&!premium&&<span className="pill hot">{t('fe.ax.prem.needed')}</span>}</div>)}</div>
+     <span className="tx"><b>{t('fe.ax.prem.f.'+k)}</b><small>{t('fe.ax.prem.f.'+k+'Text')}</small></span>{k===kind&&!premium&&<Pill tone="hot">{t('fe.ax.prem.needed')}</Pill>}</div>)}</div>
     {!premium&&<>
-     <div className="sec">{t('fe.ax.prem.plan')}</div>
+     <SectionLabel>{t('fe.ax.prem.plan')}</SectionLabel>
      <div className="pw-plans">{(['year','month'] as const).map(k=><button key={k} type="button" className={'pw-plan'+(plan===k?' on':'')} aria-pressed={plan===k} onClick={()=>setPlan(k)}>
       {k==='year'&&<em>{t('fe.ax.prem.yearBadge')}</em>}<b>{t('fe.ax.prem.'+k)}</b><span className="pr">{t('fe.ax.prem.'+k+'Price')}</span><small>{t('fe.ax.prem.'+k+'Note')}</small></button>)}</div>
-     <p className="note mt12" id="fe-ax-soon"><b>{t('fe.ax.prem.soon')}.</b> {t('fe.ax.prem.soonText')}</p>
+     <div id="fe-ax-soon"><Note className="mt12"><b>{t('fe.ax.prem.soon')}.</b> {t('fe.ax.prem.soonText')}</Note></div>
     </>}
-    <div className="sec">{t('fe.ax.prem.honest')}</div>
-    <div className="card">{(['h1','h2','h3'] as const).map(k=><div key={k} className="fact"><i className="g"><Check/></i><span>{t('fe.ax.prem.'+k)}</span></div>)}</div>
+    <SectionLabel>{t('fe.ax.prem.honest')}</SectionLabel>
+    <Card>{(['h1','h2','h3'] as const).map(k=><div key={k} className="fact"><i className="g"><Check/></i><span>{t('fe.ax.prem.'+k)}</span></div>)}</Card>
    </>}
   </View>
   {status&&!premium&&<div className="ctabar"><div className="wrap"><Btn aria-describedby="fe-ax-soon" onClick={()=>toast(t('fe.ax.prem.soon')+'. '+t('fe.ax.prem.soonText'),{type:'info'})}>{t('fe.ax.prem.buy',{price:t('fe.ax.prem.'+plan+'Price')})}</Btn></div></div>}
@@ -80,16 +80,16 @@ export function SecurityScreen(){
  return <>
   <Bar title={t('fe.ax.sec.title')} back="/n/settings"/>
   <View className="nodock compact">
-   <div className="sec" style={{marginTop:4}}>{t('fe.ax.sec.methods')}</div>
-   <div className="card list">
-    <div className="li"><span className="ico"><Mail/></span><span className="tx"><b>{t('fe.ax.sec.email')} <span className="pill ok">{t('fe.ax.sec.primary')}</span></b><small className="one">{email||'—'}</small></span></div>
-   </div>
-   <p className="note mt8">{t('fe.ax.sec.methodsNote')}</p>
-   <div className="sec">{t('fe.ax.sec.sessions')}</div>
-   <div className="card list">
+   <SectionLabel>{t('fe.ax.sec.methods')}</SectionLabel>
+   <Card list>
+    <div className="li"><span className="ico"><Mail/></span><span className="tx"><b>{t('fe.ax.sec.email')} <Pill tone="ok">{t('fe.ax.sec.primary')}</Pill></b><small className="one">{email||'—'}</small></span></div>
+   </Card>
+   <Note className="mt8">{t('fe.ax.sec.methodsNote')}</Note>
+   <SectionLabel>{t('fe.ax.sec.sessions')}</SectionLabel>
+   <Card list>
     <div className="li"><span className="ico g">{dev.mobile?<Smartphone/>:<Globe/>}</span><span className="tx"><b>{t('fe.ax.sec.thisDevice')}</b>
      <small>{dev.name} · {t('fe.ax.sec.now')}{expires?' · '+t('fe.ax.sec.expires',{date:date(expires)}):''}</small></span></div>
-   </div>
+   </Card>
   </View>
  </>;
 }
@@ -100,14 +100,14 @@ const HELP_ICON:Record<HelpKey,LucideIcon>={rules:Book,report:ShieldCheck,shield
 
 export function HelpScreen(){
  const {t}=useI18n();const navigate=useNavigate();const [open,setOpen]=useState<HelpKey|null>(null);const close=useCallback(()=>setOpen(null),[]);
- const row=(k:HelpKey)=>{const Icon=HELP_ICON[k];return <button key={k} type="button" className="li" onClick={()=>setOpen(k)}><span className="ico v"><Icon/></span><span className="tx"><b>{t('fe.ax.help.'+k)}</b></span><ChevronRight/></button>;};
+ const row=(k:HelpKey)=><Row key={k} icon={HELP_ICON[k]} tone="v" title={t('fe.ax.help.'+k)} onClick={()=>setOpen(k)}/>;
  return <>
   <Bar title={t('fe.ax.help.title')} back/>
   <View className="nodock compact">
-   <div className="card list">{(['rules','report'] as const).map(row)}</div>
-   <div className="sec">{t('fe.ax.help.faq')}</div>
-   <div className="card list">{(['shield','lock','heart','cal','crown'] as const).map(row)}</div>
-   <div className="alert warn mt16"><TriangleAlert/><span><b>{t('fe.ax.help.threatTitle')}</b>{t('fe.ax.help.threatText')}</span></div>
+   <Card list>{(['rules','report'] as const).map(row)}</Card>
+   <SectionLabel>{t('fe.ax.help.faq')}</SectionLabel>
+   <Card list>{(['shield','lock','heart','cal','crown'] as const).map(row)}</Card>
+   <Alert kind="warn" className="mt16"><b>{t('fe.ax.help.threatTitle')}</b>{t('fe.ax.help.threatText')}</Alert>
   </View>
   {open&&<Sheet title={t('fe.ax.help.'+open)} onClose={close}
    foot={open==='crown'?<Btn kind="soft" onClick={()=>navigate('/n/premium')}>{t('fe.ax.help.morePremium')}</Btn>:undefined}>

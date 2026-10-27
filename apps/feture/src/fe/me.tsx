@@ -1,10 +1,10 @@
-import {Fragment,useCallback,useEffect,useState,type ReactNode} from 'react';
+import {Fragment,useCallback,useEffect,useState,type CSSProperties,type ComponentProps,type ReactNode} from 'react';
 import {useLocation,useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Camera,Check,ChevronDown,ChevronRight,Clock,Eye,EyeOff,Users,Image as ImageIcon,KeyRound,Plus,Settings,Star,Trash2,X,type LucideIcon} from 'lucide-react';
+import {Camera,Check,ChevronDown,ChevronRight,Clock,Eye,EyeOff,Users,Image as ImageIcon,KeyRound,Plus,Settings,Star,Trash2,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Av,Btn,Empty,Layer,Seg,Skel} from './ui';
+import {Alert,Ask as KitAsk,Av,Btn,Card,Empty,Group,H,IconBtn,Note,Row,Seg,SelectRow,Sheet,Skel,ToggleRow} from './kit';
 import {AgeCheckLink} from './age-check';
 import {dropReadCache,useFe,useRealtime} from './session';
 import {PrivateLayer} from './private';
@@ -14,8 +14,7 @@ import {MeJars} from './interests';
 import {StaffEntry} from './staff';
 import {LinksBlock,waitingCount} from './links';
 import {CoupleMembers,CouplePending,CoupleVisGroup} from './couple';
-import {SelectRow} from './create-community';
-import {Sheet,linksMineRes} from './profile-extras';
+import {linksMineRes} from './profile-extras';
 import {useToast} from './toast';
 import {useDragOrder} from './reorder';
 import './css/me.css';
@@ -53,17 +52,9 @@ export function AudTag({k}:{k:'all'|'granted'|'only'|string|null|undefined}){
  return <span className={'aud'+(key==='granted'?' k':key==='only'?' w':'')}>{key==='granted'?<KeyRound/>:key==='only'?<EyeOff/>:null}{t('fe.mx.aud.'+key)}</span>;
 }
 
-/** `ask()` — the confirmation dialog in the app layer. */
-export function Ask({icon:Icon,title,text,ok:okLabel,danger,busy,onOk,onCancel}:{icon:LucideIcon,title:string,text:string,ok:string,danger?:boolean,busy?:boolean,onOk:()=>void,onCancel:()=>void}){
- const {t}=useI18n();
- useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();onCancel();}};document.addEventListener('keydown',k);return ()=>document.removeEventListener('keydown',k);},[onCancel]);
- return <Layer>
-  <div className="scrim on" onClick={onCancel}/>
-  <div className="dialog on" role="alertdialog" aria-modal="true" aria-label={title}>
-   <div className={'ico '+(danger?'l':'')}><Icon/></div><h2>{title}</h2><p>{text}</p>
-   <div className="btns"><Btn kind={danger?'danger':'primary'} onClick={onOk} disabled={busy} busy={!!busy}>{okLabel}</Btn><Btn kind="soft" onClick={onCancel} autoFocus>{t('fe.cancel')}</Btn></div>
-  </div>
- </Layer>;
+/** `ask()` — the kit's confirmation dialog; «Я» keeps the accent icon on a destructive question (`.ico.l`). */
+export function Ask(props:ComponentProps<typeof KitAsk>){
+ return <KitAsk {...props} tone={props.tone??(props.danger?'l':undefined)}/>;
 }
 
 /** The «Я» layers on the one tab control, with their red dots. */
@@ -110,7 +101,7 @@ export function MeTab(){
  const privOn=settings?.privateOn!==false;
  const layerDots:Record<Layer,string>={profile:dots.links?t('fe.mx.dot.links'):'',priv:privOn&&dots.reqs?t('fe.mx.dot.reqs'):'',vis:dots.vis?t('fe.mx.dot.vis'):'',mine:''};
  return <>
-  <h1 className="sr-only" tabIndex={-1}>{t('fe.nav.me')}</h1>
+  <H level={1} className="sr-only" tabIndex={-1}>{t('fe.nav.me')}</H>
   <div className="view me18 me-x01">
    <header className="me18-h wrap">
     <span className="av-wrap"><Av name={name} seed={acting.id} src={avatarSrc}/></span>
@@ -119,8 +110,8 @@ export function MeTab(){
      :<div className="me18-who"><b><span>{name}</span></b><small>{t('fe.me.personalProfile')}</small></div>}
     <StaffEntry/>
     <BellButton/>
-    <button type="button" className="ibtn" aria-label={t('fe.mx.howSeen')} title={t('fe.mx.howSeen')} onClick={()=>navigate('/n/me/preview')}><Eye/></button>
-    <button type="button" className="ibtn" aria-label={t('fe.me.settings')} onClick={()=>navigate('/n/settings')}><Settings/></button>
+    <IconBtn icon={Eye} label={t('fe.mx.howSeen')} title={t('fe.mx.howSeen')} onClick={()=>navigate('/n/me/preview')}/>
+    <IconBtn icon={Settings} label={t('fe.me.settings')} onClick={()=>navigate('/n/settings')}/>
    </header>
    <div className="wrap">
     {todo>0&&<button type="button" className="me-todo" onClick={()=>navigate('/n/inbox')}><i/><span>{t('fe.mx.todo')}</span><b>{todo}</b><ChevronRight/></button>}
@@ -130,15 +121,15 @@ export function MeTab(){
     {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
      :!p||!settings?<MeSkel/>
      :layer==='profile'?<>
-      {notice&&<div className="alert ok" role="status"><span>{notice}</span></div>}
+      {notice&&<Alert kind="ok" noIcon>{notice}</Alert>}
       {acting.kind==='couple'&&<><CouplePending base={p} tick={tick} onDecided={msg=>{setNotice(msg);load();}}/><CoupleMembers/></>}
       <PhotosBlock p={p} settings={settings} onChanged={load}/>
-      <section className="grp"><div className="grp-t"><span>{t('fe.me.basics')}</span><AudTag k="all"/></div>
+      <Group title={t('fe.me.basics')} action={<AudTag k="all"/>}>
        <button type="button" className="card blk-btn" aria-label={t('fe.me.editBasics')} onClick={()=>navigate('/n/me/edit?only=basics')}>
         <span className="blk-name">{name}{p.age&&p.showAge!==false?', '+p.age:''}{p.city&&(locale==='en'?p.city.en:p.city.ru)?' · '+(locale==='en'?p.city.en:p.city.ru):''}</span>
         <span className="blk-bio">{p.bio?p.bio.replace(/[*_~`>#[\]()]/g,'').slice(0,240):t('fe.mx.noBio')}</span><span className="chv"><ChevronRight/></span>
        </button>
-      </section>
+      </Group>
       <DetailsBlock p={p} label={label}/>
       {acting.kind==='person'&&couple&&<StatusHint p={p} coupleId={couple.id} onDone={msg=>{setNotice(msg);load();}}/>}
       <MeJars key={p.id}/>
@@ -151,15 +142,14 @@ export function MeTab(){
    </div>
   </div>
   {switching&&<Sheet title={t('fe.mx.whose')} onClose={()=>setSwitching(false)}>
-   <div className="card list">
+   <Card list>
     {[person,couple].filter(Boolean).map(x=>{const on=x!.id===acting.id;
-     return <button key={x!.id} type="button" className="li" aria-pressed={on} onClick={()=>{setSwitching(false);if(!on)setActing(x!.id);}}>
-      <Av name={x!.name||x!.handle||'?'} seed={x!.id} src={x!.avatar} size="sm"/>
-      <span className="tx"><b>{x!.name||x!.handle}</b><small>{x!.kind==='couple'?t('fe.me.coupleProfile'):t('fe.me.personalProfile')}</small></span>
-      {on&&<span className="ico g"><Check/></span>}
-     </button>;})}
-   </div>
-   <p className="note mt12">{t('fe.mx.whoseNote')}</p>
+     return <Row key={x!.id} pressed={on} noChev onClick={()=>{setSwitching(false);if(!on)setActing(x!.id);}}
+      av={<Av name={x!.name||x!.handle||'?'} seed={x!.id} src={x!.avatar} size="sm"/>}
+      title={x!.name||x!.handle} sub={x!.kind==='couple'?t('fe.me.coupleProfile'):t('fe.me.personalProfile')}
+      val={on?<span className="ico g"><Check/></span>:undefined}/>;})}
+   </Card>
+   <Note className="mt12">{t('fe.mx.whoseNote')}</Note>
   </Sheet>}
  </>;
 }
@@ -175,13 +165,13 @@ function DetailsBlock({p,label}:{p:Profile,label:(kind:string,code:string)=>stri
  const rows=DETAIL_ROWS.filter(([f])=>!cp||COUPLE_ROWS.includes(f)).map(([field,kind])=>{const v=p.details[field];const codes=Array.isArray(v)?v as string[]:typeof v==='string'?[v]:[];
   return codes.length?[field,t(kind==='status'?'fe.mx.f.status':'fe.reg.kind.'+kind),codes.map(c=>label(kind,c)).join(', ')]:null;}).filter((x):x is string[]=>!!x);
  const title=cp?t('fe.mx.detailsCouple'):t('fe.me.details');
- return <section className="grp"><div className="grp-t"><span>{title}</span><AudTag k={p.detailsVis??'all'}/></div>
+ return <Group title={title} action={<AudTag k={p.detailsVis??'all'}/>}>
   <button type="button" className="card blk-btn" aria-label={t('fe.mx.editOf',{title})} onClick={()=>navigate('/n/me/edit?only=details')}>
    {rows.length?<dl className="kv">{rows.map(([f,k,v])=><Fragment key={f}><dt>{k}</dt><dd>{v}</dd></Fragment>)}</dl>
     :<p className="blk-empty">{cp?t('fe.mx.detailsEmptyCouple'):t('fe.mx.detailsEmpty')}</p>}
    <span className="chv"><ChevronRight/></span>
   </button>
- </section>;
+ </Group>;
 }
 
 /** V21.1 ME-047: a person in a couple whose status says «single» or nothing gets one sentence and one tap to fix it. */
@@ -221,11 +211,10 @@ function PhotosBlock({p,settings,onChanged}:{p:Profile,settings:Settings,onChang
   poll();return ()=>{live=false;window.clearTimeout(id);};
  },[waiting,p.id,call,onChanged]);
  const edit=()=>navigate('/n/me/edit?only=media');
- const head=(more?:ReactNode)=><div className="grp-t"><span>{t('fe.me.photos')}</span><AudTag k="all"/>{more}</div>;
- if(!items.length)return <section className="grp ph20" id="mePh">{head()}
+ if(!items.length)return <Group className="ph20" id="mePh" title={t('fe.me.photos')} action={<AudTag k="all"/>}>
   <button type="button" className="ph-empty" onClick={edit}><span className="pe-ic"><Camera/></span>
    <span className="tx"><b>{cp?t('fe.mx.ph.addCouple'):t('fe.me.photoAdd')}</b><small>{settings.discoverMode==='visible'?(cp?t('fe.mx.ph.needCouple'):t('fe.mx.ph.need')):t('fe.mx.ph.mainHint')}</small></span><Plus/></button>
- </section>;
+ </Group>;
  const write=async(ids:string[],msg:string,prev?:string[])=>{
   setBusy(true);
   try{const r=await call('profile.photosSet',{opId:newOpId(),assetIds:ids},ok);onChanged();
@@ -235,7 +224,8 @@ function PhotosBlock({p,settings,onChanged}:{p:Profile,settings:Settings,onChang
  const ids=items.map(x=>x.id);
  const nCells=items.length===1?2:Math.min(MAX_PHOTOS,Math.max(items.length+1,3));
  // The small thumb paints first, so the slot never sits empty while the card-size picture loads.
- const slots:ReactNode[]=items.map((ph,i)=><div key={ph.id} data-id={ph.id} className={'mi'+(i===0?' big':'')+(drag.preview?.drag===ph.id?' mi-ph':'')+(ph.src?'':' nosrc')} onPointerDown={busy?undefined:e=>drag.down(e,'ph',ids,ph.id)} style={ph.src?.thumb?{backgroundImage:`url("${ph.src.thumb}")`,backgroundSize:'cover',backgroundPosition:'center'}:undefined}>
+ const slots:ReactNode[]=items.map((ph,i)=><div key={ph.id} data-id={ph.id} className={'mi'+(i===0?' big':'')+(drag.preview?.drag===ph.id?' mi-ph':'')+(ph.src?'':' nosrc')+(ph.src?.thumb?' has-thumb':'')} onPointerDown={busy?undefined:e=>drag.down(e,'ph',ids,ph.id)}
+  style={ph.src?.thumb?{'--thumb':`url("${ph.src.thumb}")`} as CSSProperties:undefined}>
   {photoSrc(ph)&&<img src={photoSrc(ph)!} alt="" draggable={false}/>}
   {i===0&&<span className="mainph">{t('fe.me.mainPhoto')}</span>}
   {ph.pending&&<span className="ph-rev"><Clock/><span>{t('fe.mx.ph.review')}</span></span>}
@@ -245,20 +235,18 @@ function PhotosBlock({p,settings,onChanged}:{p:Profile,settings:Settings,onChang
   ?<button key="add" type="button" className={'ph-add'+(items.length===1?' tall':'')} onClick={edit} aria-label={t('fe.mx.ph.addAria')}><Plus/>{items.length===1&&<small>{t('fe.me.morePhotos')}</small>}</button>
   :<span key={'g'+i} className="ph-add ghost" aria-hidden="true"/>);
  const x=open!==null?items[open]:undefined;
- return <section className="grp ph20" id="mePh">
-  {head(<button type="button" onClick={edit}>{t('fe.mx.edit')}</button>)}
+ return <Group className="ph20" id="mePh" title={t('fe.me.photos')} action={<><AudTag k="all"/><button type="button" onClick={edit}>{t('fe.mx.edit')}</button></>}>
   <div className="ph-slots">{slots}</div>
   {x&&open!==null&&<Sheet title={open===0?t('fe.mx.ph.main'):t('fe.mx.ph.nOf',{n:open+1,total:items.length})} onClose={()=>setOpen(null)}>
    <div className="ph-sheet-prev">{photoSrc(x)&&<img src={photoSrc(x)!} alt="" draggable={false}/>}{x.pending&&<span className="ph-rev"><Clock/><span>{t('fe.mx.ph.review')}</span></span>}</div>
-   <div className="card list">
-    <button type="button" className="li" onClick={()=>{setOpen(null);navigate(`/n/people/${acting?.id??p.id}/gallery`);}}><span className="ico"><Eye/></span><span className="tx"><b>{t('fe.mx.ph.view')}</b></span></button>
-    {open>0&&!x.pending&&<button type="button" className="li" disabled={busy} onClick={()=>{const i=open;setOpen(null);void write([ids[i]!,...ids.filter((_,k)=>k!==i)],t('fe.mx.ph.mainDone'),ids);}}>
-     <span className="ico"><Star/></span><span className="tx"><b>{t('fe.mx.ph.makeMain')}</b><small>{t('fe.mx.ph.makeMainSub')}</small></span></button>}
-    <button type="button" className="li danger" disabled={busy} onClick={()=>{const i=open;setOpen(null);void write(ids.filter((_,k)=>k!==i),t('fe.mx.ph.removed'),ids);}}>
-     <span className="ico"><Trash2/></span><span className="tx"><b>{t('fe.mx.ph.remove')}</b></span></button>
-   </div>
+   <Card list>
+    <Row icon={Eye} title={t('fe.mx.ph.view')} noChev onClick={()=>{setOpen(null);navigate(`/n/people/${acting?.id??p.id}/gallery`);}}/>
+    {open>0&&!x.pending&&<Row icon={Star} title={t('fe.mx.ph.makeMain')} sub={t('fe.mx.ph.makeMainSub')} noChev disabled={busy}
+     onClick={()=>{const i=open;setOpen(null);void write([ids[i]!,...ids.filter((_,k)=>k!==i)],t('fe.mx.ph.mainDone'),ids);}}/>}
+    <Row icon={Trash2} title={t('fe.mx.ph.remove')} danger disabled={busy} onClick={()=>{const i=open;setOpen(null);void write(ids.filter((_,k)=>k!==i),t('fe.mx.ph.removed'),ids);}}/>
+   </Card>
   </Sheet>}
- </section>;
+ </Group>;
 }
 
 /** `galleryOwn20()` — the server has no albums yet: one «Все» card with the photos the profile shows. */
@@ -266,12 +254,12 @@ function GalleryBlock({p}:{p:Profile}){
  const {t}=useI18n();const navigate=useNavigate();
  const list=p.photos.filter(x=>photoSrc(x));
  const upload=()=>navigate('/n/feed/new');
- if(!list.length)return <section className="grp gal20" id="meGal"><div className="grp-t"><span>{t('fe.mx.gal')}</span></div>
-  <button type="button" className="ph-empty" onClick={upload}><span className="pe-ic"><ImageIcon/></span><span className="tx"><b>{t('fe.mx.gal.first')}</b><small>{p.kind==='couple'?t('fe.mx.gal.firstSubCouple'):t('fe.mx.gal.firstSub')}</small></span><Plus/></button></section>;
- return <section className="grp gal20" id="meGal"><div className="grp-t"><span>{t('fe.mx.gal')}</span><button type="button" onClick={upload}><Plus/>{t('fe.mx.gal.upload')}</button></div>
+ if(!list.length)return <Group className="gal20" id="meGal" title={t('fe.mx.gal')}>
+  <button type="button" className="ph-empty" onClick={upload}><span className="pe-ic"><ImageIcon/></span><span className="tx"><b>{t('fe.mx.gal.first')}</b><small>{p.kind==='couple'?t('fe.mx.gal.firstSubCouple'):t('fe.mx.gal.firstSub')}</small></span><Plus/></button></Group>;
+ return <Group className="gal20" id="meGal" title={t('fe.mx.gal')} action={<button type="button" onClick={upload}><Plus/>{t('fe.mx.gal.upload')}</button>}>
   <div className="alb-row alb20"><button type="button" className="alb" aria-pressed={false} onClick={()=>navigate(`/n/people/${p.id}/gallery`)}>
    <span className="alb-c">{list.length===1?<img src={photoSrc(list[0]!,'thumb')!} alt="" loading="lazy"/>:<ImageIcon/>}</span><b>{t('fe.mx.gal.all')}</b><small>{list.length}</small></button></div>
- </section>;
+ </Group>;
 }
 
 /** `meVisLayer()` — Discover, the profile card, likes, activity, mentions; the couple's own group comes after. */
@@ -287,26 +275,25 @@ function Visibility({p,settings,onChanged}:{p:Profile,settings:Settings,onChange
  };
  const hasPhoto=p.photos.some(x=>!x.pending);
  const mode=settings.discoverMode;
- const toggle=(k:string,title:string,sub:string,on:boolean)=><button type="button" className="li" role="switch" aria-checked={on} disabled={busy} onClick={()=>set(k,!on)}>
-  <span className="tx"><b>{title}</b><small>{sub}</small></span><span className={'sw'+(on?' on':'')} aria-hidden="true"/></button>;
+ const toggle=(k:string,title:string,sub:string,on:boolean)=><ToggleRow title={title} sub={sub} on={on} disabled={busy} onClick={()=>void set(k,!on)}/>;
  const modeSub=mode==='visible'&&!hasPhoto?(cp?t('fe.mx.v.noPhotoCouple'):t('fe.mx.v.noPhoto')):mode==='off'&&cp?t('fe.mx.v.offCouple'):cp?t('fe.mx.v.offNow'):t('fe.mx.v.modeSub');
  return <>
-  <section className="grp"><div className="grp-t"><span>{t('fe.reg.discover.title')}</span></div><div className="card list">
+  <Group title={t('fe.reg.discover.title')}><Card list>
    <div className="li"><SelectRow label={t('fe.mx.v.mode')} sub={modeSub} value={mode} onChange={v=>void set('discoverMode',v)}
-    items={(['visible','hidden','off'] as const).map(v=>[v,t('fe.mx.v.mode.'+v+(cp?'Us':''))] as ['visible'|'hidden'|'off',string])}/></div>
-   {mode==='visible'&&!hasPhoto&&<button type="button" className="li" onClick={()=>navigate('/n/me/edit?only=media')}><span className="ico"><Camera/></span><span className="tx"><b>{t('fe.me.photoAdd')}</b><small>{t('fe.mx.v.addPhotoSub')}</small></span><ChevronRight/></button>}
-   <button type="button" className="li" onClick={()=>navigate('/n/me/preview')}><span className="tx"><b>{cp?t('fe.mx.v.cardUs'):t('fe.mx.v.card')}</b><small>{cp?t('fe.mx.v.cardSubUs'):t('fe.mx.v.cardSub')}</small></span><ChevronRight/></button>
+    options={(['visible','hidden','off'] as const).map(v=>[v,t('fe.mx.v.mode.'+v+(cp?'Us':''))] as const)}/></div>
+   {mode==='visible'&&!hasPhoto&&<Row icon={Camera} title={t('fe.me.photoAdd')} sub={t('fe.mx.v.addPhotoSub')} onClick={()=>navigate('/n/me/edit?only=media')}/>}
+   <Row title={cp?t('fe.mx.v.cardUs'):t('fe.mx.v.card')} sub={cp?t('fe.mx.v.cardSubUs'):t('fe.mx.v.cardSub')} onClick={()=>navigate('/n/me/preview')}/>
    {toggle('acceptProfileLikes',t('fe.mx.v.likes'),cp?t('fe.mx.v.likesSubUs'):t('fe.mx.v.likesSub'),settings.acceptProfileLikes!==false)}
-  </div></section>
-  <section className="grp"><div className="grp-t"><span>{t('fe.me.layer.profile')}</span></div><div className="card list">
+  </Card></Group>
+  <Group title={t('fe.me.layer.profile')} foot={cp?t('fe.mx.v.footUs'):undefined}><Card list>
    <div className="li"><SelectRow label={t('fe.mx.v.activity')} sub={t('fe.mx.v.activitySub')} value={settings.activityVis??'all'} onChange={v=>void set('activityVis',v)}
-    items={(['all','followers','off'] as const).map(v=>[v,t('fe.mx.v.act.'+v)] as ['all'|'followers'|'off',string])}/></div>
+    options={(['all','followers','off'] as const).map(v=>[v,t('fe.mx.v.act.'+v)] as const)}/></div>
    <div className="li"><SelectRow label={cp?t('fe.mx.v.mentionUs'):t('fe.mx.v.mention')} sub={t('fe.mx.v.mentionSub')} value={settings.mentionsFrom??'all'} onChange={v=>void set('mentionsFrom',v)}
-    items={(['all','follow','none'] as const).map(v=>[v,t('fe.mx.v.from.'+v+(v==='follow'&&cp?'Us':''))] as ['all'|'follow'|'none',string])}/></div>
+    options={(['all','follow','none'] as const).map(v=>[v,t('fe.mx.v.from.'+v+(v==='follow'&&cp?'Us':''))] as const)}/></div>
    {!cp&&<div className="li"><SelectRow label={t('fe.mx.v.details')} sub={t('fe.mx.v.detailsSub')} value={(p.detailsVis??'all') as 'all'|'granted'|'only'} onChange={v=>void set('detailsVis',v)}
-    items={(['all','granted','only'] as const).map(v=>[v,t('fe.reg.vis.'+v)] as ['all'|'granted'|'only',string])}/></div>}
+    options={(['all','granted','only'] as const).map(v=>[v,t('fe.reg.vis.'+v)] as const)}/></div>}
    {toggle('showLikes',cp?t('fe.mx.v.showLikesUs'):t('fe.mx.v.showLikes'),cp?t('fe.mx.v.showLikesSubUs'):t('fe.mx.v.showLikesSub'),settings.showLikes!==false)}
-  </div>{cp&&<p className="grp-n">{t('fe.mx.v.footUs')}</p>}</section>
-  {failure&&<div className="alert err" role="alert"><span>{failure}{failure===t('fe.age.couple')&&<><br/><AgeCheckLink/></>}</span></div>}
+  </Card></Group>
+  {failure&&<Alert kind="err" noIcon>{failure}{failure===t('fe.age.couple')&&<><br/><AgeCheckLink/></>}</Alert>}
  </>;
 }

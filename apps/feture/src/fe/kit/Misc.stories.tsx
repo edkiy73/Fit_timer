@@ -1,5 +1,5 @@
 import type {Meta,StoryObj} from '@storybook/react-vite';
-import {Av,Btn,Card,Divider,Group,H,Note,Pill,Progress,SectionLabel,Stack,Steps,Text} from './index';
+import {Av,Btn,Card,Divider,Group,H,LinkBtn,Note,Pill,Progress,SectionLabel,Skel,Stack,Steps,Text} from './index';
 
 const meta={title:'Прочее/Метка',component:Pill,tags:['autodocs'],
  parameters:{docs:{description:{component:'Короткий статус рядом с текстом: `ok` одобрено, `wait` ждёт, `v` по доступу, `bad` отклонено, `hot` акцент.'}}},
@@ -15,3 +15,7 @@ export const Аватары:S={name:'Все аватары',render:()=><Stack ro
 export const Раскладка:S={name:'Группа, карточка, разделитель',render:()=><Stack gap={4}>
  <Group title="Раздел" action={<Btn kind="text" size="sm" auto>Все</Btn>} foot="Сноска под группой."><Card><Stack gap={2}><H level={4}>Карточка</H><Text size="sm" tone="mute">Поверхность блока.</Text></Stack></Card></Group>
  <Divider/><SectionLabel action={<Btn kind="text" size="sm" auto>Все</Btn>}>Подпись раздела</SectionLabel><Note>Тихая подсказка под блоком.</Note></Stack>};
+export const МеткаКнопка:S={name:'Метка-кнопка и «стекло»',render:()=><Stack row gap={2}><Pill tone="v" onClick={()=>{}}>Открыть доступ</Pill><span className="k-demo-dark"><Pill tone="glass">Онлайн</Pill></span></Stack>};
+export const КнопкаСсылка:S={name:'Кнопка-ссылка',render:()=><LinkBtn href="https://example.com">Билет у организатора</LinkBtn>};
+export const Заголовки:S={name:'Крупный заголовок и текст 16',render:()=><Stack gap={2}><H level={0}>Вечер шибари для начинающих</H><Text size="md" tone="ink">Текст 16 — вводный абзац.</Text></Stack>};
+export const Скелетоны:S={name:'Скелетоны: обложка, баннер, сетка, строка',render:()=><Stack gap={3}><Skel kind="hero" rows={1}/><Skel kind="cover" rows={1}/><Skel kind="grid" rows={6}/><Skel kind="line" rows={2}/></Stack>};

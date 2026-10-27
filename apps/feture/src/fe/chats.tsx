@@ -1,10 +1,10 @@
-import {useCallback,useEffect,useLayoutEffect,useRef,useState,type ReactNode} from 'react';
+import {Fragment,useCallback,useEffect,useLayoutEffect,useRef,useState,type CSSProperties,type ReactNode} from 'react';
 import {useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Archive,ArchiveRestore,Ban,Camera,Check,ChevronDown,ChevronLeft,ChevronRight,CircleAlert,Clock,Copy,Ellipsis,Eye,EyeOff,Flag,Image as ImageIcon,Info,Lock,LockOpen,MessageCircle,Plus,Search,SendHorizontal,Sparkles,Undo2,User,Users,X,type LucideIcon} from 'lucide-react';
+import {Archive,ArchiveRestore,Ban,Camera,Check,ChevronDown,ChevronLeft,CircleAlert,Clock,Copy,Ellipsis,Eye,EyeOff,Flag,Image as ImageIcon,Info,Lock,LockOpen,MessageCircle,Plus,Search,SendHorizontal,Sparkles,Undo2,User,Users,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Av,Bar,Btn,Empty,Layer,Skel} from './ui';
+import {Alert,Av,Bar,Btn,Card,Check as CheckBox,Chip,Chips,Empty,Field,FilePick,Group,IconBtn,Layer,Note,RadioList,Row,SearchInput,SectionLabel,Sheet,Skel,Stack,Text,TextArea,ToggleRow,View} from './kit';
 import {AgeCheckLink} from './age-check';
 import {useFe,useRealtime} from './session';
 import {useToast} from './toast';
@@ -78,28 +78,27 @@ export function ChatsTab(){
 
  if(archived)return <>
   <Bar title={t('fe.chx.archiveTitle')} back="/n/chats" small/>
-  <div className="view nodock"><div className="wrap">
+  <View className="nodock">
    {error&&!items?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :items===null?<Skel kind="list"/>
     :rows.length?rows.map(row):<Empty icon={Archive} title={t('fe.chx.archiveEmpty')}/>}
-  </div></div>
+  </View>
  </>;
  return <>
   <Bar title={t('fe.nav.chats')}>
-   <button type="button" className="ibtn" aria-label={t('fe.chx.search')} aria-pressed={searching} onClick={toggleSearch}><Search/></button>
-   <button type="button" className="ibtn" aria-label={t('fe.chx.archiveTitle')} onClick={()=>navigate('/n/chats?archived=1')}><Archive/></button>
+   <IconBtn icon={Search} label={t('fe.chx.search')} aria-pressed={searching} onClick={toggleSearch}/>
+   <IconBtn icon={Archive} label={t('fe.chx.archiveTitle')} onClick={()=>navigate('/n/chats?archived=1')}/>
    <BellButton/>
   </Bar>
   <View>
    {couple&&<SegN value={kind} onChange={setKind} options={[{id:'all',label:t('fe.chats.all')},{id:'me',label:t('fe.chats.personal'),n:unreadFor('me')},{id:'couple',label:t('fe.chats.couple'),n:unreadFor('couple')}]}/>}
-   {couple&&kind==='couple'&&<p className="note mt8">{t('fe.chx.coupleNote',{name:couple.name})}</p>}
-   {searching&&<div className="inwrap mt12 chat-q"><Search/>
-    <input ref={qRef} className="inp" type="search" placeholder={t('fe.chx.searchPh')} aria-label={t('fe.chx.search')} value={q} onChange={e=>setQ(e.target.value)}/>
-    <button type="button" className="ibtn ghost sm" aria-label={t('fe.chx.searchClose')} onClick={toggleSearch}><X/></button></div>}
+   {couple&&kind==='couple'&&<Note className="mt8">{t('fe.chx.coupleNote',{name:couple.name})}</Note>}
+   {searching&&<div className="chat-q mt12"><SearchInput ref={qRef} label={t('fe.chx.search')} placeholder={t('fe.chx.searchPh')} value={q} onChange={e=>setQ(e.target.value)}/>
+    <IconBtn icon={X} kind="ghost" size="sm" label={t('fe.chx.searchClose')} onClick={toggleSearch}/></div>}
    {error&&!items?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :items===null?<Skel kind="list" rows={4}/>
     :<>
-     {fresh.length>0&&<><div className="sec">{t('fe.chats.newMatches')}</div>
+     {fresh.length>0&&<><SectionLabel>{t('fe.chats.newMatches')}</SectionLabel>
       <div className="matches">{fresh.map(c=><button key={c.id} type="button" onClick={()=>navigate('/n/chats/'+c.id)}>
        <span className="ring2"><Av name={nameOf(c.other)} seed={c.other.id} src={c.other.avatar?.src?.thumb}/>{c.side.kind==='couple'&&<i className="m-us" aria-hidden="true"><Users/></i>}</span>
        <span className="mn">{nameOf(c.other)}</span>{c.side.kind==='couple'&&<span className="sr-only">{t('fe.chx.coupleChatSr')}</span>}
@@ -111,32 +110,8 @@ export function ChatsTab(){
   </View>
  </>;
 }
-function View({children}:{children:ReactNode}){return <div className="view"><div className="wrap">{children}</div></div>;}
 
 /* ================= shared sheet bits ================= */
-/** The prototype's sheet (`#scrim` + `#sheet`) in the app layer: Esc and the scrim close it. */
-function Sheet({title,lead,onClose,foot,children}:{title:string,lead?:ReactNode,onClose:()=>void,foot?:ReactNode,children:ReactNode}){
- const {t}=useI18n();const ref=useRef<HTMLDivElement>(null);
- useEffect(()=>{const opener=document.activeElement as HTMLElement|null;ref.current?.focus({preventScroll:true});return ()=>{opener?.focus?.({preventScroll:true});};},[]);
- useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();onClose();}};addEventListener('keydown',k);return ()=>removeEventListener('keydown',k);},[onClose]);
- return <Layer>
-  <div className="scrim on" onClick={onClose}/>
-  <div ref={ref} className="sheet on" role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}>
-   <div className="grab"/>
-   <div className="sh-h">{lead}<div className="sh-ht"><h2>{title}</h2></div><button type="button" className="ibtn ghost sm" aria-label={t('fe.chx.close')} onClick={onClose}><X/></button></div>
-   <div className="sh-b">{children}</div>
-   {foot&&<div className="sh-f">{foot}</div>}
-  </div>
- </Layer>;
-}
-/** `linkRow()` — with a chevron unless `noChev`. */
-function Li({icon:Icon,tone,danger,title,sub,onClick,chev}:{icon:LucideIcon,tone?:string,danger?:boolean,title:string,sub?:string,onClick:()=>void,chev?:boolean}){
- return <button type="button" className={'li'+(danger?' danger':'')} onClick={onClick}><span className={'ico'+(tone?' '+tone:'')}><Icon/></span><span className="tx"><b>{title}</b>{sub&&<small>{sub}</small>}</span>{chev&&<ChevronRight/>}</button>;
-}
-/** `toggleRow()` */
-function Toggle({title,sub,on,onClick}:{title:string,sub?:string,on:boolean,onClick:()=>void}){
- return <button type="button" className="li" role="switch" aria-checked={on} onClick={onClick}><span className="tx"><b>{title}</b>{sub&&<small>{sub}</small>}</span><span className={'sw'+(on?' on':'')} aria-hidden="true"/></button>;
-}
 /** `openViewer()` for one chat photo: optional label («Один просмотр…») and the viewer's handle as a watermark. */
 function Viewer({src,label,wm,onClose}:{src:string,label?:string|undefined,wm?:string|undefined,onClose:()=>void}){
  const {t}=useI18n();const [on,setOn]=useState(false);const close=useRef<HTMLButtonElement>(null);
@@ -144,7 +119,7 @@ function Viewer({src,label,wm,onClose}:{src:string,label?:string|undefined,wm?:s
  useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();onClose();}};addEventListener('keydown',k);return ()=>removeEventListener('keydown',k);},[onClose]);
  return <Layer><div className={'viewer'+(on?' on':'')} role="dialog" aria-modal="true" aria-label={t('fe.chx.viewer')}>
   <div className="vw-track"><figure><img src={src} alt="" draggable={false}/>{wm&&<div className="vw-wm" aria-hidden="true">{Array.from({length:18},(_,i)=><span key={i}>{wm}</span>)}</div>}</figure></div>
-  <div className="vw-top"><span className="vw-n"/>{label&&<span className="vw-label">{label}</span>}<button ref={close} type="button" className="ibtn glass" aria-label={t('fe.chx.close')} onClick={onClose}><X/></button></div>
+  <div className="vw-top"><span className="vw-n"/>{label&&<span className="vw-label">{label}</span>}<IconBtn ref={close} icon={X} kind="glass" label={t('fe.chx.close')} onClick={onClose}/></div>
  </div></Layer>;
 }
 /** `matchSVG()` — the ring burns down with the time left. */
@@ -164,6 +139,8 @@ type Outgoing={file:File,preview:string,mode:Mode,assetId?:string,assetMode?:Mod
 type Pend={key:string,body:string,replyTo?:string,opId:string,at:string,status:'sending'|'failed'};
 type SheetKind='attach'|'send'|'menu'|'end'|'report'|'block'|'msg'|'readers'|'copy';
 const PHOTO_TYPES=['image/jpeg','image/png','image/webp'];
+/** The message box stops growing at this height (px) and scrolls. */
+const GROW=120;
 
 /* ================= H02 conversation ================= */
 export function ChatScreen(){
@@ -252,7 +229,8 @@ export function ChatScreen(){
   if(input.current)input.current.style.height='';
   void deliverText(p);
  };
- const grow=(el:HTMLTextAreaElement)=>{el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';};
+ // The message box grows with its text (TextArea `grow`); a starter put in by a tap is measured the same way.
+ const grow=(el:HTMLTextAreaElement)=>{el.style.height='auto';const h=el.scrollHeight+2;el.style.height=Math.min(GROW,h)+'px';el.style.overflowY=h>GROW?'auto':'hidden';};
  const coarse=typeof matchMedia==='function'&&matchMedia('(pointer:coarse)').matches;
 
  /* ---- media ---- */
@@ -284,7 +262,7 @@ export function ChatScreen(){
    if(!src)return photoNote(m,md.gone?'gone':'review');
    return <><button type="button" className={'mtile'+(hidden?' blur':'')} aria-label={hidden?t('fe.chx.hiddenAria'):t('fe.chx.openAria')}
     onClick={()=>{if(hidden)void openMedia(m);else setViewer({src:revealed??md.src?.full??src});}}>
-    <img src={src} alt="" draggable={false} style={md.w&&md.h?{aspectRatio:`${md.w}/${md.h}`}:undefined}/>{hidden&&<span className="mcover"><EyeOff/><b>{t('fe.chx.tapView')}</b></span>}
+    <img src={src} alt="" draggable={false} style={md.w&&md.h?{'--ar':`${md.w}/${md.h}`} as CSSProperties:undefined}/>{hidden&&<span className="mcover"><EyeOff/><b>{t('fe.chx.tapView')}</b></span>}
    </button>{m.mine&&md.pending&&<small className="mpend"><Clock/>{t('fe.chx.photoReviewMine')}</small>}</>;
   }
   const mode=md.mode??'once';const once=mode==='once';const local=eph[m.id];
@@ -405,11 +383,11 @@ export function ChatScreen(){
  const time=(iso:string)=>new Date(iso).toLocaleTimeString(locale==='en'?'en':'ru',{hour:'2-digit',minute:'2-digit'});
  const fill=(s:string)=>s.replace('{name}',meta?nameOf(meta.other):'');
  const back=()=>navigate(meta?.archived?'/n/chats?archived=1':'/n/chats');
- if(error)return <><Bar title={t('fe.nav.chats')} back="/n/chats"/><div className="view nodock"><div className="wrap"><Empty icon={X} title={t('fe.feed.unavailable')} text={feErrorMessage(error,t)}>
+ if(error)return <><Bar title={t('fe.nav.chats')} back="/n/chats"/><View className="nodock"><Empty icon={X} title={t('fe.feed.unavailable')} text={feErrorMessage(error,t)}>
   {!(error instanceof FeError&&error.code==='not_found')&&<Btn onClick={()=>{setError(null);if(meta)pull(true).catch(setError);else setTries(n=>n+1);}}>{t('fe.retry')}</Btn>}
-  <Btn kind="soft" onClick={()=>navigate('/n/chats')}>{t('fe.chats.back')}</Btn></Empty></div></div></>;
+  <Btn kind="soft" onClick={()=>navigate('/n/chats')}>{t('fe.chats.back')}</Btn></Empty></View></>;
  const ended=state!=='active';
- const sheetAlert=sheetErr?<div className="alert err mt12" role="alert"><span>{sheetErr}{sheetErr===t('fe.chx.ageRequired')&&<><br/><AgeCheckLink/></>}</span></div>:null;
+ const sheetAlert=sheetErr?<Alert kind="err" noIcon className="mt12">{sheetErr}{sheetErr===t('fe.chx.ageRequired')&&<><br/><AgeCheckLink/></>}</Alert>:null;
  const all=items??[];
  // Read receipts: the other side's avatar under the last own message they have read.
  const lastRead=[...all].reverse().find(m=>m.mine&&m.seq<=otherRead)?.id;
@@ -422,13 +400,13 @@ export function ChatScreen(){
  const sep=(iso:string)=>{const d=day(iso);if(d===lastDay)return null;lastDay=d;return <div className="daysep">{d}</div>;};
  return <>
   <header className="bar solid">
-   <button type="button" className="ibtn ghost" aria-label={t('fe.back')} onClick={back}><ChevronLeft/></button>
-   {meta?<button type="button" className="row grow" style={{gap:10,textAlign:'left',minWidth:0}} onClick={()=>navigate('/n/people/'+meta.other.id)}>
+   <IconBtn icon={ChevronLeft} kind="ghost" label={t('fe.back')} onClick={back}/>
+   {meta?<button type="button" className="row grow chat-who" onClick={()=>navigate('/n/people/'+meta.other.id)}>
     <Av name={otherName} seed={meta.other.id} size="sm" src={meta.other.avatar?.src?.thumb}/>
-    <span style={{display:'grid',minWidth:0}}><b style={{fontSize:16,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{otherName}</b>
-     {couple&&<small style={{fontSize:12,color:'var(--mute)'}}><span className="ct-us"><Users/>{t('fe.chx.coupleChat')}</span> · {t('fe.chx.coupleSees')}</small>}</span>
-   </button>:<span className="row grow" style={{gap:10,minWidth:0}}><i className="sk sk-av" style={{width:36,height:36}}/><i className="sk sk-l w40"/></span>}
-   <button type="button" className="ibtn ghost" aria-label={t('fe.chx.menu')} disabled={!meta} onClick={()=>{setSheetErr('');setSheet('menu');}}><Ellipsis/></button>
+    <span className="cw-tx"><Text as="b" size="strong" className="one">{otherName}</Text>
+     {couple&&<Text as="small" size="cap" tone="mute"><span className="ct-us"><Users/>{t('fe.chx.coupleChat')}</span> · {t('fe.chx.coupleSees')}</Text>}</span>
+   </button>:<span className="row grow chat-who"><i className="sk sk-av"/><i className="sk sk-l w40"/></span>}
+   <IconBtn icon={Ellipsis} kind="ghost" label={t('fe.chx.menu')} disabled={!meta} onClick={()=>{setSheetErr('');setSheet('menu');}}/>
   </header>
   <div ref={viewRef} className={'view nodock'+(ended?'':' cta1')} onScroll={onScroll}><div className="wrap">
    {meta&&state==='active'&&(grants.byMe||grants.withMe)&&<div className="chat-ctx">
@@ -440,7 +418,7 @@ export function ChatScreen(){
     <div className="msgs" id="msgs">
      <div className="msg sys">{t('fe.chx.matchSys')}</div>
      {all.map(m=>{
-      return <div key={m.id} style={{display:'contents'}}>
+      return <Fragment key={m.id}>
        {sep(m.at)}
        <div {...bubbleProps(m)} className={'msg'+(m.mine?' me':'')+(m.media?' has-media':'')}>
         {quote(m.replyTo)}
@@ -450,113 +428,112 @@ export function ChatScreen(){
        </div>
        {m.id===lastRead&&meta&&<button type="button" className="msg-readers" aria-label={t('fe.chx.readByAria',{names:otherName})} onClick={()=>setSheet('readers')}>
         <span title={otherName}><Av name={otherName} seed={meta.other.id} size="sm" src={meta.other.avatar?.src?.thumb}/></span></button>}
-      </div>;})}
-     {pend.map(p=><div key={p.key} style={{display:'contents'}}>
+      </Fragment>;})}
+     {pend.map(p=><Fragment key={p.key}>
       {sep(p.at)}
       <div className={'msg me '+p.status}>{quote(p.replyTo)}<span className="mtx">{p.body}</span>
        <div className="st">{time(p.at)}<span aria-label={p.status==='sending'?t('fe.chx.stSending'):t('fe.chx.stFailed')}>{p.status==='sending'?<Clock/>:<CircleAlert/>}</span></div></div>
       {p.status==='failed'&&!ended&&<button type="button" className="msg-retry" onClick={()=>void deliverText(p)}><Undo2/>{t('fe.chx.retryMsg')}</button>}
-     </div>)}
+     </Fragment>)}
      {out?.pending&&<div className="msg me has-media sending"><span className="mtile"><img src={out.preview} alt="" draggable={false}/></span></div>}
     </div>
-    {!ended&&all.length===0&&pend.length===0&&<><div className="sec">{t('fe.chx.starters')}</div><div className="chips">
-     {[t('fe.chx.ice1'),t('fe.chx.ice2')].map(s=><button key={s} type="button" className="chip wrap" onClick={()=>{setText(s);requestAnimationFrame(()=>{if(input.current){grow(input.current);input.current.focus();}});}}>{s}</button>)}
-    </div></>}
-    {ended&&<div className="alert mt16"><Ban/><span><b>{t('fe.chx.endedTitle')}</b>{t('fe.chx.endedText')}</span></div>}
-    {out?.pending&&<div className="alert info" role="status"><Clock/><div><b>{t('fe.chx.pending')}</b>
-     <div className="row" style={{gap:8,flexWrap:'wrap'}}><Btn kind="soft" size="sm" auto busy={busy} disabled={busy} onClick={()=>void retryPending(false)}>{t('fe.chx.retry')}</Btn><Btn kind="text" size="sm" auto onClick={()=>dropOut(out)}>{t('fe.chx.drop')}</Btn></div></div></div>}
-    {failure&&<div className="alert err" role="alert"><span>{failure}</span></div>}
+    {!ended&&all.length===0&&pend.length===0&&<><SectionLabel>{t('fe.chx.starters')}</SectionLabel><Chips className="ice">
+     {[t('fe.chx.ice1'),t('fe.chx.ice2')].map(s=><Chip key={s} onClick={()=>{setText(s);requestAnimationFrame(()=>{if(input.current){grow(input.current);input.current.focus();}});}}>{s}</Chip>)}
+    </Chips></>}
+    {ended&&<Alert kind="info" icon={Ban} className="mt16"><b>{t('fe.chx.endedTitle')}</b>{t('fe.chx.endedText')}</Alert>}
+    {out?.pending&&<Alert kind="info" icon={Clock}><b>{t('fe.chx.pending')}</b>
+     <Stack row gap={2}><Btn kind="soft" size="sm" auto busy={busy} disabled={busy} onClick={()=>void retryPending(false)}>{t('fe.chx.retry')}</Btn><Btn kind="text" size="sm" auto onClick={()=>dropOut(out)}>{t('fe.chx.drop')}</Btn></Stack></Alert>}
+    {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
    </>}
   </div></div>
   <button type="button" className={'chat-down'+(ended?' low':'')+(!near?' on':'')} aria-label={t('fe.chx.toLatest')} onClick={toBottom}><ChevronDown/>{fresh>0&&<em>{fresh>99?'99+':fresh}</em>}</button>
   {!ended&&<div className="inputbar" ref={bar}>
-   {replyTo&&quoteOf(replyTo)&&<div className="reply-target chat-reply">{quote(replyTo,true)}<button type="button" className="ibtn sm" aria-label={t('fe.chx.cancelReply')} onClick={()=>{setReplyTo(null);input.current?.focus({preventScroll:true});}}><X/></button></div>}
-   <button type="button" className="ibtn ghost" aria-label={t('fe.chx.attach')} disabled={!meta||!!out?.pending} onClick={()=>{setSheetErr('');setSheet('attach');}}><Plus/></button>
-   <textarea ref={input} rows={1} maxLength={2000} value={text} onChange={e=>{setText(e.target.value);grow(e.target);}}
+   {replyTo&&quoteOf(replyTo)&&<div className="reply-target chat-reply">{quote(replyTo,true)}<IconBtn icon={X} size="sm" label={t('fe.chx.cancelReply')} onClick={()=>{setReplyTo(null);input.current?.focus({preventScroll:true});}}/></div>}
+   <IconBtn icon={Plus} kind="ghost" label={t('fe.chx.attach')} disabled={!meta||!!out?.pending} onClick={()=>{setSheetErr('');setSheet('attach');}}/>
+   <TextArea ref={input} bare grow={GROW} rows={1} maxLength={2000} value={text} onChange={e=>setText(e.target.value)}
     placeholder={couple?t('fe.chx.messagePhCouple'):t('fe.chx.messagePh')} aria-label={t('fe.chx.message')} title={t('fe.chx.enterHint')} enterKeyHint="enter"
     onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!coarse&&!e.nativeEvent.isComposing){e.preventDefault();send();}}}/>
-   <button type="button" className="ibtn send" onClick={send} disabled={!meta||!text.trim()} aria-label={t('fe.feed.send')}><SendHorizontal/></button>
+   <IconBtn icon={SendHorizontal} kind="send" onClick={send} disabled={!meta||!text.trim()} label={t('fe.feed.send')}/>
   </div>}
-  <input ref={gallery} type="file" accept={PHOTO_TYPES.join(',')} hidden onChange={e=>pick(e.target.files?.[0])}/>
-  <input ref={camera} type="file" accept="image/*" capture="environment" hidden onChange={e=>pick(e.target.files?.[0])}/>
+  <FilePick ref={gallery} accept={PHOTO_TYPES.join(',')} onFiles={f=>pick(f[0])}/>
+  <FilePick ref={camera} accept="image/*" capture="environment" onFiles={f=>pick(f[0])}/>
   {viewer&&<Viewer src={viewer.src} label={viewer.label} wm={viewer.wm} onClose={()=>{setViewer(null);pull(true).catch(()=>{});}}/>}
 
   {sheet==='msg'&&msgFor&&<Sheet title={t('fe.chx.msgTitle')} onClose={closeSheet}>
-   <div className="card list">
-    {!ended&&<Li icon={Undo2} title={t('fe.chx.reply')} onClick={()=>{setReplyTo(msgFor.id);setSheet(null);requestAnimationFrame(()=>input.current?.focus({preventScroll:true}));}}/>}
-    {msgFor.mine&&msgFor.body&&<Li icon={Copy} title={t('fe.chx.copy')} onClick={()=>void copyMsg()}/>}
-   </div>
+   <Card list>
+    {!ended&&<Row noChev icon={Undo2} title={t('fe.chx.reply')} onClick={()=>{setReplyTo(msgFor.id);setSheet(null);requestAnimationFrame(()=>input.current?.focus({preventScroll:true}));}}/>}
+    {msgFor.mine&&msgFor.body&&<Row noChev icon={Copy} title={t('fe.chx.copy')} onClick={()=>void copyMsg()}/>}
+   </Card>
   </Sheet>}
-  {sheet==='copy'&&msgFor&&<Sheet title={t('fe.chx.copyTitle')} onClose={closeSheet}><textarea className="inp" readOnly aria-label={t('fe.chx.msgText')} value={msgFor.body}/></Sheet>}
+  {sheet==='copy'&&msgFor&&<Sheet title={t('fe.chx.copyTitle')} onClose={closeSheet}><TextArea readOnly aria-label={t('fe.chx.msgText')} value={msgFor.body}/></Sheet>}
   {sheet==='readers'&&meta&&<Sheet title={t('fe.chx.readBy')} onClose={closeSheet}>
-   <div className="card list"><div className="li"><Av name={otherName} seed={meta.other.id} size="sm" src={meta.other.avatar?.src?.thumb}/><span className="tx"><b>{otherName}</b><small>{t('fe.chx.readState')}</small></span></div></div>
+   <Card list><div className="li"><Av name={otherName} seed={meta.other.id} size="sm" src={meta.other.avatar?.src?.thumb}/><span className="tx"><b>{otherName}</b><small>{t('fe.chx.readState')}</small></span></div></Card>
   </Sheet>}
 
   {sheet==='attach'&&<Sheet title={t('fe.chx.attachTitle')} onClose={closeSheet}>
-   <div className="card list">
-    <Li icon={ImageIcon} tone="v" title={t('fe.chx.gallery')} sub={t('fe.chx.gallerySub')} onClick={()=>gallery.current?.click()}/>
-    <Li icon={Camera} title={t('fe.chx.camera')} onClick={()=>camera.current?.click()}/>
-   </div>
+   <Card list>
+    <Row noChev icon={ImageIcon} tone="v" title={t('fe.chx.gallery')} sub={t('fe.chx.gallerySub')} onClick={()=>gallery.current?.click()}/>
+    <Row noChev icon={Camera} title={t('fe.chx.camera')} onClick={()=>camera.current?.click()}/>
+   </Card>
   </Sheet>}
 
   {sheet==='send'&&out&&<Sheet title={t('fe.chx.sendTitle')} onClose={()=>{if(sheetBusy)return;dropOut(out);closeSheet();}}
    foot={<Btn icon={SendHorizontal} onClick={sendPhoto} busy={sheetBusy} disabled={sheetBusy}>{t('fe.chx.send')}</Btn>}>
    <div className="cm-prev"><img src={out.preview} alt=""/></div>
-   <section className="grp"><div className="grp-t"><span>{t('fe.chx.howView')}</span></div><div className="card">
+   <Group title={t('fe.chx.howView')} foot={<>{t('fe.chx.modeSub.'+(out.mode==='normal'||out.mode==='once'?out.mode:'timer'))}{out.mode!=='normal'?' · '+t('fe.chx.ephNote'):''}</>}><Card>
     <label className="selrow solo"><span className="selv" aria-hidden="true">{t('fe.chx.mode.'+out.mode)}</span>
      <select value={out.mode} disabled={sheetBusy} aria-label={t('fe.chx.howView')} onChange={e=>{setSheetErr('');setOut({...out,mode:e.target.value as Mode});}}>
       {MODES.map(m=><option key={m} value={m}>{t('fe.chx.mode.'+m)}</option>)}
      </select></label>
-   </div><p className="grp-n">{t('fe.chx.modeSub.'+(out.mode==='normal'||out.mode==='once'?out.mode:'timer'))}{out.mode!=='normal'?' · '+t('fe.chx.ephNote'):''}</p></section>
-   <p className="note">{t('fe.chx.shotNote')}</p>
+   </Card></Group>
+   <Note>{t('fe.chx.shotNote')}</Note>
    {sheetAlert}
   </Sheet>}
 
   {sheet==='menu'&&meta&&<Sheet title={otherName} lead={<Av name={otherName} seed={meta.other.id} size="sm" src={meta.other.avatar?.src?.thumb}/>} onClose={closeSheet}>
-   <div className="card list">
-    <Li icon={User} title={t('fe.chx.profile')} chev onClick={()=>navigate('/n/people/'+meta.other.id)}/>
-    <Li icon={Sparkles} tone="l" title={t('fe.chx.shared')} chev onClick={()=>navigate('/n/people/'+meta.other.id+'/compat')}/>
-    {grants.byMe&&<Li icon={Lock} tone="v" title={t('fe.chx.revoke')} sub={t('fe.chx.revokeSub')} onClick={()=>{if(!sheetBusy)void revoke();}}/>}
-   </div>
-   <div className="card list mt12">
-    <Toggle title={t('fe.chx.mute')} sub={t('fe.chx.muteSub')} on={meta.muted} onClick={()=>{if(!sheetBusy)void toggleMute();}}/>
-    <Li icon={meta.archived?ArchiveRestore:Archive} title={meta.archived?t('fe.chx.unarchive'):t('fe.chx.archive')} sub={t('fe.chx.archiveSub')} onClick={()=>{if(!sheetBusy)void toggleArchive();}}/>
-   </div>
-   <div className="card list mt12">
-    {!ended&&<Li icon={X} danger title={t('fe.chx.end')} sub={t('fe.chx.endSub')} onClick={()=>{setSheetErr('');setSheet('end');}}/>}
-    <Li icon={Flag} danger title={t('fe.chx.report')} onClick={openReport}/>
-    <Li icon={Ban} danger title={t('fe.chx.block')} onClick={()=>{setSheetErr('');setSheet('block');}}/>
-   </div>
+   <Card list>
+    <Row icon={User} title={t('fe.chx.profile')} onClick={()=>navigate('/n/people/'+meta.other.id)}/>
+    <Row icon={Sparkles} tone="l" title={t('fe.chx.shared')} onClick={()=>navigate('/n/people/'+meta.other.id+'/compat')}/>
+    {grants.byMe&&<Row noChev icon={Lock} tone="v" title={t('fe.chx.revoke')} sub={t('fe.chx.revokeSub')} onClick={()=>{if(!sheetBusy)void revoke();}}/>}
+   </Card>
+   <Card list className="mt12">
+    <ToggleRow title={t('fe.chx.mute')} sub={t('fe.chx.muteSub')} on={meta.muted} onClick={()=>{if(!sheetBusy)void toggleMute();}}/>
+    <Row noChev icon={meta.archived?ArchiveRestore:Archive} title={meta.archived?t('fe.chx.unarchive'):t('fe.chx.archive')} sub={t('fe.chx.archiveSub')} onClick={()=>{if(!sheetBusy)void toggleArchive();}}/>
+   </Card>
+   <Card list className="mt12">
+    {!ended&&<Row noChev icon={X} danger title={t('fe.chx.end')} sub={t('fe.chx.endSub')} onClick={()=>{setSheetErr('');setSheet('end');}}/>}
+    <Row noChev icon={Flag} danger title={t('fe.chx.report')} onClick={openReport}/>
+    <Row noChev icon={Ban} danger title={t('fe.chx.block')} onClick={()=>{setSheetErr('');setSheet('block');}}/>
+   </Card>
    {sheetAlert}
   </Sheet>}
 
   {sheet==='end'&&meta&&<Sheet title={t('fe.chx.endTitle')} lead={<span className="ico l"><X/></span>} onClose={closeSheet}
    foot={<><Btn kind="danger" onClick={()=>void endConn()} busy={sheetBusy} disabled={sheetBusy}>{t('fe.chx.end')}</Btn><Btn kind="soft" onClick={closeSheet}>{t('fe.chx.cancel')}</Btn></>}>
    <p className="lead">{fill(t('fe.chx.endLead'))}</p>
-   <div className="card flat">
+   <Card className="flat">
     {(['endFact1','endFact2','endFact3'] as const).map(k=><div key={k} className="fact"><i className="g"><Check/></i><span>{t('fe.chx.'+k)}</span></div>)}
     <div className="fact"><i className="v"><Info/></i><span>{t('fe.chx.endFact4')}</span></div>
-   </div>
-   {grants.byMe&&<div className="card list mt12"><Toggle title={t('fe.chx.ecRevoke')} sub={t('fe.chx.ecRevokeSub')} on={ecRevoke} onClick={()=>setEcRevoke(v=>!v)}/></div>}
-   <p className="note mt12">{t('fe.chx.endNote')}</p>
+   </Card>
+   {grants.byMe&&<Card list className="mt12"><ToggleRow title={t('fe.chx.ecRevoke')} sub={t('fe.chx.ecRevokeSub')} on={ecRevoke} onClick={()=>setEcRevoke(v=>!v)}/></Card>}
+   <Note className="mt12">{t('fe.chx.endNote')}</Note>
    {sheetAlert}
   </Sheet>}
 
   {sheet==='report'&&meta&&<Sheet title={t('fe.chx.report')} onClose={closeSheet}
    foot={<Btn kind="danger" onClick={sendReport} busy={sheetBusy} disabled={sheetBusy}>{t('fe.chx.reportSend')}</Btn>}>
-   {theirs.length?<section className="grp bare"><div className="grp-t"><span>{t('fe.chx.reportPick')}</span></div><div className="card">
+   {theirs.length?<Group bare title={t('fe.chx.reportPick')} foot={t('fe.chx.reportPickNote')}><Card>
     {theirs.map(m=>{const on=rp.sel.includes(m.id);
-     return <button key={m.id} type="button" className={'check'+(on?' on':'')} role="checkbox" aria-checked={on}
-      onClick={()=>setRp(r=>({...r,sel:on?r.sel.filter(x=>x!==m.id):r.sel.length>=20?r.sel:[...r.sel,m.id]}))}>
-      <i><Check/></i><span>{m.body||(m.media?t('fe.chats.photo'):'')}<small style={{display:'block',color:'var(--mute)'}}>{day(m.at)} · {time(m.at)}</small></span></button>;})}
-   </div><p className="grp-n">{t('fe.chx.reportPickNote')}</p></section>
-   :<p className="note">{t('fe.chx.reportNoMsgs')}</p>}
-   <section className="grp bare" role="radiogroup" aria-label={t('fe.chx.reason')}><div className="grp-t"><span>{t('fe.chx.reason')}</span></div>
-    {REASONS.map(k=><button key={k} type="button" className={'radio'+(rp.why===k?' on':'')} role="radio" aria-checked={rp.why===k} onClick={()=>setRp(r=>({...r,why:k}))}><i/><span className="tx">{t('fe.chx.reason.'+k)}</span></button>)}
-   </section>
-   <label className="field mt16"><span>{t('fe.chx.details')}<i>{t('fe.chx.optional')}</i></span>
-    <textarea className="inp" rows={3} maxLength={500} value={rp.details} onChange={e=>setRp(r=>({...r,details:e.target.value}))}/></label>
-   <div className="card list"><Toggle title={t('fe.chx.alsoBlock')} sub={t('fe.chx.alsoBlockSub')} on={rp.block} onClick={()=>setRp(r=>({...r,block:!r.block}))}/></div>
+     return <CheckBox key={m.id} on={on} onChange={()=>setRp(r=>({...r,sel:on?r.sel.filter(x=>x!==m.id):r.sel.length>=20?r.sel:[...r.sel,m.id]}))}>
+      {m.body||(m.media?t('fe.chats.photo'):'')}<Text as="div" size="cap" tone="mute">{day(m.at)} · {time(m.at)}</Text></CheckBox>;})}
+   </Card></Group>
+   :<Note>{t('fe.chx.reportNoMsgs')}</Note>}
+   <Group bare title={t('fe.chx.reason')}>
+    <RadioList label={t('fe.chx.reason')} value={rp.why} onChange={k=>setRp(r=>({...r,why:k}))} options={REASONS.map(k=>[k,t('fe.chx.reason.'+k)] as const)}/>
+   </Group>
+   <div className="mt16"><Field id="chat-report-details" label={<>{t('fe.chx.details')}<i>{t('fe.chx.optional')}</i></>}>
+    <TextArea id="chat-report-details" rows={3} maxLength={500} value={rp.details} onChange={e=>setRp(r=>({...r,details:e.target.value}))}/></Field></div>
+   <Card list><ToggleRow title={t('fe.chx.alsoBlock')} sub={t('fe.chx.alsoBlockSub')} on={rp.block} onClick={()=>setRp(r=>({...r,block:!r.block}))}/></Card>
    {sheetAlert}
   </Sheet>}
 

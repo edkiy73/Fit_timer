@@ -7,6 +7,7 @@ import '../src/styles.css';
 import '../src/fe/kit/base.css';
 import '../src/fe/kit/tokens.css';
 import '../src/fe/kit/kit.css';
+import '../src/fe/kit/loading.css';
 import '../src/fe/shell.css';
 
 // Every story renders inside the app's own frame: V21 scope, the `.root` that sheets and dialogs portal into,

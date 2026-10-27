@@ -4,37 +4,6 @@
 .fe-v21 .fe-center{display:grid;place-items:center;align-content:center;min-height:70dvh}
 .fe-v21 .fe-pc-ini{position:absolute;inset:0;display:grid;place-items:center;background:var(--raise)}
 
-/* Skel(): shimmer placeholders in the prototype's tokens. */
-.fe-v21 .skel{display:grid;gap:12px;padding-top:4px}
-.fe-v21 .skel-tiles{grid-template-columns:repeat(2,1fr)}
-.fe-v21 .sk{display:block;border-radius:var(--r-s);background:var(--raise);animation:fe-blink 1.4s ease-in-out infinite}
-.fe-v21 .sk-li{display:flex;align-items:center;gap:12px;min-height:54px}
-.fe-v21 .sk-li>span,.fe-v21 .sk-head>span{flex:1;display:grid;gap:7px}
-.fe-v21 .sk-av{width:40px;height:40px;border-radius:50%;flex:none}
-.fe-v21 .sk-l{height:11px}
-.fe-v21 .w25{width:25%}.fe-v21 .w30{width:30%}.fe-v21 .w40{width:40%}.fe-v21 .w50{width:50%}.fe-v21 .w70{width:70%}.fe-v21 .w90{width:90%}
-.fe-v21 .sk-post{display:grid;gap:9px;padding:16px 0;border-top:1px solid var(--line)}
-.fe-v21 .sk-head{display:flex;align-items:center;gap:10px;margin-bottom:4px}
-.fe-v21 .sk-media{height:220px;border-radius:var(--r-l);margin-top:4px}
-.fe-v21 .sk-card{display:grid;gap:9px;padding:16px;border:1px solid var(--line);border-radius:var(--r-l);background:var(--surf)}
-.fe-v21 .sk-tile{aspect-ratio:3/4;border-radius:var(--r-l)}
-@keyframes fe-blink{0%,100%{opacity:1}50%{opacity:.55}}
-/* Owner, 27.10.2026: loading is a light blink in place — never a spinner next to the text that widens a button. */
-.fe-v21 .btn.busy::after{content:none;display:none}
-/* AppBase's global button[aria-busy]::before spinner too — every busy control here only blinks. */
-.fe-v21 [aria-busy="true"]::before{content:none!important;display:none!important;animation:none!important}
-.fe-v21 .btn.busy,.fe-v21 [aria-busy="true"]:not(.skel){animation:fe-blink 1.2s ease-in-out infinite}
-/* A photo that is still loading is a calm blinking disc, not an empty hole. */
-.fe-v21 .av:has(>img){background:var(--raise)}
-.fe-v21 .av>img{background:var(--raise)}
-@media (prefers-reduced-motion:reduce){.fe-v21 .sk,.fe-v21 .btn.busy,.fe-v21 [aria-busy="true"]{animation:none}}
-
-/* Pictures: transparent until loaded (shell.tsx useImageFade), then a short fade; the box blinks meanwhile. */
-.fe-v21 img{transition:opacity .28s ease}
-.fe-v21 img:not(.ld){opacity:0}
-.fe-v21 .mcell .mbg.ld{opacity:1}
-.fe-v21 :is(.av,.mcell,.gtile,.dock-av,.pc-photo,.hero,.ph,.cover):has(img:not(.ld)){background:var(--raise);animation:fe-blink 1.4s ease-in-out infinite}
-@media (prefers-reduced-motion:reduce){.fe-v21 img{transition:none}.fe-v21 :is(.av,.mcell,.gtile,.dock-av,.pc-photo,.hero,.ph,.cover):has(img:not(.ld)){animation:none}}
 /* X02 batch add: step counter and progress bar inside a shared Sheet (the prototype styles them under #sheet) */
 .fe-v21 .sheet .qprog{flex:none;margin:0 0 14px}
 .fe-v21 .sheet .int-step{margin:0 0 8px}
@@ -46,3 +15,8 @@
 .fe-v21 .cmp-ints .testcard{margin:0 0 14px}
 .fe-v21 .cmp-ints .testcard .jars{grid-template-columns:minmax(0,1fr);gap:8px}
 .fe-v21 .cmp-ints .chips.mt12{margin-top:0}
+/* Shell skeleton and sidebar glue (the frame itself, not a screen): the title placeholder, the dock avatar
+ * placeholder and the sidebar tab's «new» dot — values that were inline in shell.tsx. */
+.fe-v21 .bar .sk.fe-sk-title{width:120px;height:16px}
+.fe-v21 .dock-av .sk.fe-sk-av{width:100%;height:100%;border-radius:50%}
+.fe-v21 .side .navb em.dot{min-width:9px;width:9px;height:9px;padding:0}

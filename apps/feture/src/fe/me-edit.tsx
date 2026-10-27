@@ -1,12 +1,13 @@
-import {useCallback,useEffect,useRef,useState,type ReactNode} from 'react';
+import {useCallback,useEffect,useId,useRef,useState,type ReactNode} from 'react';
 import {useNavigate,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {AtSign,Check,ChevronDown,ChevronRight,Clock,Lock,MapPin,Plus,Sparkles,Star,Trash2,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Bar,Btn,Empty,Skel} from './ui';
+import {Alert,Bar,Btn,Card,Chip,Counter,Empty,Field,FilePick,Group,Input,Note,Row,Sheet,Skel,TextArea,ToggleRow} from './kit';
 import {useFe} from './session';
-import {Sheet} from './profile-extras';
+import {Uploader} from './kit/Uploader';
+import {useSendPhoto} from './media-upload';
 import {useToast} from './toast';
 import {useDragOrder} from './reorder';
 import {Ask,AudTag,COUPLE_ROWS,DETAIL_ROWS,MAX_PHOTOS,catalogRes,ok,photoSrc,profileRes,type Profile} from './me';
@@ -36,7 +37,7 @@ export function MeEditScreen(){
  const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
  const [whoOpen,setWhoOpen]=useState<boolean|null>(null);const [city,setCity]=useState(false);const [phSheet,setPhSheet]=useState<{k:'photos'|'privMedia',i:number}|null>(null);
  const [askOff,setAskOff]=useState(false);const [uploading,setUploading]=useState<'photos'|'privMedia'|null>(null);
- const file=useRef<HTMLInputElement>(null);const fileKind=useRef<'photos'|'privMedia'>('photos');
+ const file=useRef<HTMLInputElement>(null);const fileKind=useRef<'photos'|'privMedia'>('photos');const fid=useId();
  // Press and drag to change the order in the draft; «Сохранить» writes it.
  const drag=useDragOrder<'photos'|'privMedia'>((k,ids)=>setD(x=>{if(!x)return x;const by=new Map(x[k].map(p=>[p.id,p]));const next=ids.map(i=>by.get(i)).filter((p):p is Ph=>!!p);return next.length===x[k].length?{...x,[k]:next}:x;}));
  const cp=acting?.kind==='couple';
@@ -64,20 +65,10 @@ export function MeEditScreen(){
  const fields=DETAIL_ROWS.filter(([f])=>!cp||COUPLE_ROWS.includes(f));
  const title=only==='media'?t('fe.me.photos'):only==='basics'?t('fe.me.basics'):only==='details'?(cp?t('fe.mx.detailsCouple'):t('fe.me.details')):only==='priv'?t('fe.priv.title'):(cp?t('fe.me.coupleProfile'):t('fe.mx.ed.myProfile'));
 
- const upload=async(f:File,k:'photos'|'privMedia')=>{
-  setFailure('');
-  if(!MIME.includes(f.type)){setFailure(t('fe.me.photoType'));return;}
-  if(f.size>20*1024*1024){setFailure(t('fe.me.photoSize'));return;}
-  setUploading(k);
-  try{
-   const i=await call('media.uploadIntent',{opId:newOpId(),purpose:k==='photos'?'avatar':'private',kind:'image',mime:f.type,bytes:f.size},intent);
-   const put=await fetch(i.upload.url,{method:i.upload.method,headers:i.upload.headers,body:f});
-   if(!put.ok)throw new FeError('unavailable');
-   await call('media.commit',{assetId:i.assetId},ok);
-   const ph:Ph={id:i.assetId,src:URL.createObjectURL(f),pending:true};
-   setD(v=>v?{...v,[k]:[...v[k],ph]}:v);
-  }catch(e){setFailure(feErrorMessage(e,t));}finally{setUploading(null);if(file.current)file.current.value='';}
- };
+ // Profile photos are 4:5 (the profile's frame); private ones may keep their shape. Kit uploader: crop, compress, no metadata.
+ const [picked,setPicked]=useState<{k:'photos'|'privMedia',files:File[]}|null>(null);
+ const sendAvatar=useSendPhoto('avatar');const sendPrivate=useSendPhoto('private');
+ const upload=(files:File[],k:'photos'|'privMedia')=>{setFailure('');setPicked({k,files});};
  const pick=(k:'photos'|'privMedia')=>{fileKind.current=k;file.current?.click();};
 
  const save=async()=>{
@@ -125,10 +116,10 @@ export function MeEditScreen(){
  const chips=(f:string,kind:string)=>{if(!d)return null;const v=d.details[f];const multi=f!=='status';const sel=multi?(Array.isArray(v)?v:[]):(typeof v==='string'?[v]:[]);
   const opts=cat?.options.filter(x=>x.kind===kind)??[];
   return <div className="chips" role="group" aria-label={t(kind==='status'?'fe.mx.f.status':'fe.reg.kind.'+kind)}>{opts.map(x=>{const on=sel.includes(x.code);
-   return <button key={x.code} type="button" className={'chip'+(on?' on':'')} aria-pressed={on} onClick={()=>{
+   return <Chip key={x.code} on={on} onClick={()=>{
     if(!multi){set({details:{...d.details,[f]:on?null:x.code}});return;}
     if(!on&&sel.length>=(MULTI_MAX[f]??5)){toast(t('fe.mx.ed.max5'),{type:'info'});return;}
-    set({details:{...d.details,[f]:on?sel.filter(c=>c!==x.code):[...sel,x.code]}});}}>{locale==='en'?x.en:x.ru}</button>;})}</div>;};
+    set({details:{...d.details,[f]:on?sel.filter(c=>c!==x.code):[...sel,x.code]}});}}>{locale==='en'?x.en:x.ru}</Chip>;})}</div>;};
  const anyDetails=!!d&&fields.some(([f])=>{const v=d.details[f];return Array.isArray(v)?v.length>0:!!v;});
  const who=only==='details'||(whoOpen??!anyDetails);
  return <>
@@ -137,14 +128,14 @@ export function MeEditScreen(){
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :!d||!p?<Skel kind="card" rows={3}/>
     :<>
-     {show('media')&&<section className="grp ph20" id="peMedia">{!only&&<div className="grp-t"><span>{t('fe.me.photos')}</span><AudTag k="all"/></div>}
-      {slots('photos',d.photos,MAX_PHOTOS)}<p className="grp-n">{t('fe.mx.ed.photoHint')}</p></section>}
-     {(show('basics')||show('details'))&&<section className="grp"><div className="card form-card pe-form">
+     {show('media')&&<Group className="ph20" id="peMedia" title={only?undefined:t('fe.me.photos')} action={only?undefined:<AudTag k="all"/>} foot={t('fe.mx.ed.photoHint')}>
+      {slots('photos',d.photos,MAX_PHOTOS)}</Group>}
+     {(show('basics')||show('details'))&&<Group><Card form className="pe-form">
       {show('basics')&&<>
-       <label className="field"><span>{cp?t('fe.mx.ed.coupleName'):t('fe.me.name')}</span><input className="inp" value={d.name} maxLength={60} onChange={e=>set({name:e.target.value})}/></label>
-       {!cp&&<label className="field"><span>{t('fe.mx.ed.nick')}</span><div className="inwrap"><AtSign/><input className="inp" value={d.handle} maxLength={20} autoCapitalize="off" spellCheck={false} onChange={e=>set({handle:e.target.value.replace(/^@/,'')})}/></div></label>}
-       {!cp&&<button type="button" className="li" role="switch" aria-checked={d.showAge} onClick={()=>set({showAge:!d.showAge})}><span className="tx"><b>{t('fe.mx.ed.showAge')}</b></span><span className={'sw'+(d.showAge?' on':'')} aria-hidden="true"/></button>}
-       <label className="field"><span>{t('fe.mx.ed.about')}</span><textarea className="inp" rows={4} maxLength={500} value={d.bio} placeholder={t('fe.mx.ed.aboutPh')} onChange={e=>set({bio:e.target.value})}/><div className="counter">{d.bio.length} / 500</div></label>
+       <Field id={fid+'n'} label={cp?t('fe.mx.ed.coupleName'):t('fe.me.name')}><Input id={fid+'n'} value={d.name} maxLength={60} onChange={e=>set({name:e.target.value})}/></Field>
+       {!cp&&<Field id={fid+'h'} label={t('fe.mx.ed.nick')}><div className="inwrap"><AtSign/><Input id={fid+'h'} value={d.handle} maxLength={20} autoCapitalize="off" spellCheck={false} onChange={e=>set({handle:e.target.value.replace(/^@/,'')})}/></div></Field>}
+       {!cp&&<ToggleRow title={t('fe.mx.ed.showAge')} on={d.showAge} onClick={()=>set({showAge:!d.showAge})}/>}
+       <Field id={fid+'b'} label={t('fe.mx.ed.about')}><TextArea id={fid+'b'} rows={4} maxLength={500} value={d.bio} placeholder={t('fe.mx.ed.aboutPh')} onChange={e=>set({bio:e.target.value})}/><Counter n={d.bio.length} max={500}/></Field>
        <div className="field"><span>{t('fe.mx.ed.city')}</span><button type="button" className="inp sel-btn" aria-haspopup="dialog" onClick={()=>setCity(true)}><MapPin/><span className={d.cityId?'':'sel-ph'}>{placeName(d.cityId)??t('fe.mx.ed.noCity')}</span><ChevronDown/></button></div>
       </>}
       {show('details')&&<div className="pe-who" id="peWho">
@@ -153,39 +144,42 @@ export function MeEditScreen(){
         <span className={'chv'+(who?' open':'')}><ChevronDown/></span></button>}
        {who&&fields.map(([f,kind])=><div key={f} className="field"><span className="flabel">{t(kind==='status'?'fe.mx.f.status':'fe.reg.kind.'+kind)}</span>{chips(f,kind)}</div>)}
       </div>}
-     </div></section>}
-     {!only&&<section className="grp" id="peJars"><div className="grp-t"><span>{cp?t('fe.int.titleCouple'):t('fe.int.title')}</span></div><div className="card list">
-      <button type="button" className="li" onClick={()=>navigate('/n/me/interests')}><span className="ico"><Sparkles/></span><span className="tx"><b>{t('fe.int.all')}</b><small>{t('fe.mx.ed.jarsSub')}</small></span><span className="val">{jars.all}</span><ChevronRight/></button>
-     </div></section>}
+     </Card></Group>}
+     {!only&&<Group id="peJars" title={cp?t('fe.int.titleCouple'):t('fe.int.title')}><Card list>
+      <Row icon={Sparkles} title={t('fe.int.all')} sub={t('fe.mx.ed.jarsSub')} val={jars.all} onClick={()=>navigate('/n/me/interests')}/>
+     </Card></Group>}
      {show('priv')&&<section className={'vault'+(d.privOn?'':' off')} id="privEdit">
       <div className="vault-h"><span className="vi"><Lock/></span><div><b>{t('fe.priv.title')}</b></div>
        <button type="button" className="vsw" role="switch" aria-checked={d.privOn} aria-label={t('fe.priv.title')} onClick={()=>d.privOn&&base?.privOn?setAskOff(true):set({privOn:!d.privOn})}><span className={'sw'+(d.privOn?' on':'')} aria-hidden="true"/></button></div>
       {d.privOn&&<div className="vault-b">
-       {!cp&&<section className="grp"><div className="grp-t"><span>{t('fe.mx.ed.privText')}</span></div><div className="card form-card">
-        <label className="field"><textarea className="inp" rows={5} maxLength={1000} value={d.privText} placeholder={t('fe.mx.ed.privPh')} aria-label={t('fe.mx.ed.privText')} onChange={e=>set({privText:e.target.value})}/><div className="counter">{d.privText.length} / 1000</div></label>
-       </div></section>}
-       <section className="grp"><div className="grp-t"><span>{t('fe.mx.ed.privJars')}{jars.granted?' · '+jars.granted:''}</span>{jars.granted>0&&<button type="button" onClick={()=>navigate('/n/me/interests?add=1&vis=granted')}><Plus/>{t('fe.mx.ed.add')}</button>}</div>
-        {jars.granted===0&&<Btn kind="soft" icon={Plus} onClick={()=>navigate('/n/me/interests?add=1&vis=granted')}>{t('fe.int.add')}</Btn>}
-        <p className="grp-n">{t('fe.mx.ed.privJarsFoot')}</p></section>
-       {!cp&&<section className="grp"><div className="grp-t"><span>{t('fe.mx.ed.privMedia')}</span><span className="note">{d.privMedia.length}/{PRIV_MAX}</span></div>
-        {d.privMedia.length?slots('privMedia',d.privMedia,PRIV_MAX):<Btn kind="soft" icon={Plus} disabled={!!uploading} busy={uploading==='privMedia'} onClick={()=>pick('privMedia')}>{t('fe.mx.ed.privUpload')}</Btn>}</section>}
+       {!cp&&<Group title={t('fe.mx.ed.privText')}><Card form>
+        <Field><TextArea rows={5} maxLength={1000} value={d.privText} placeholder={t('fe.mx.ed.privPh')} aria-label={t('fe.mx.ed.privText')} onChange={e=>set({privText:e.target.value})}/><Counter n={d.privText.length} max={1000}/></Field>
+       </Card></Group>}
+       <Group title={<>{t('fe.mx.ed.privJars')}{jars.granted?' · '+jars.granted:''}</>} foot={t('fe.mx.ed.privJarsFoot')}
+        action={jars.granted>0&&<button type="button" onClick={()=>navigate('/n/me/interests?add=1&vis=granted')}><Plus/>{t('fe.mx.ed.add')}</button>}>
+        {jars.granted===0&&<Btn kind="soft" icon={Plus} onClick={()=>navigate('/n/me/interests?add=1&vis=granted')}>{t('fe.int.add')}</Btn>}</Group>
+       {!cp&&<Group title={t('fe.mx.ed.privMedia')} action={<span className="note">{d.privMedia.length}/{PRIV_MAX}</span>}>
+        {d.privMedia.length?slots('privMedia',d.privMedia,PRIV_MAX):<Btn kind="soft" icon={Plus} disabled={!!uploading} busy={uploading==='privMedia'} onClick={()=>pick('privMedia')}>{t('fe.mx.ed.privUpload')}</Btn>}</Group>}
       </div>}
      </section>}
-     {failure&&<div className="alert err mt12" role="alert"><span>{failure}</span></div>}
+     {failure&&<Alert kind="err" noIcon className="mt12">{failure}</Alert>}
     </>}
   </div></div>
   {d&&<div className="ctabar"><div className="wrap"><Btn onClick={save} disabled={!dirty||busy} busy={busy}>{t('fe.me.save')}</Btn></div></div>}
-  <input ref={file} type="file" accept={MIME.join(',')} hidden onChange={e=>{const f=e.target.files?.[0];if(f)void upload(f,fileKind.current);}}/>
-  {city&&d&&<Sheet title={t('fe.mx.ed.city')} onClose={()=>setCity(false)}><div className="card list">
-   {[null,...(cat?.places??[]).map(x=>x.id)].map(id=><button key={id??'none'} type="button" className="li" aria-pressed={d.cityId===id} onClick={()=>{set({cityId:id});setCity(false);}}>
-    <span className="ico"><MapPin/></span><span className="tx"><b>{placeName(id)??t('fe.mx.ed.noCity')}</b></span>{d.cityId===id&&<span className="ico g"><Check/></span>}</button>)}
-  </div><p className="note mt12">{t('fe.mx.ed.cityNote')}</p></Sheet>}
+  <FilePick ref={file} accept="image/*" multiple onFiles={f=>upload([...f],fileKind.current)}/>
+  {picked&&d&&<Uploader files={picked.files} aspects={picked.k==='photos'?['4:5']:['orig','4:5','1:1']} max={(picked.k==='photos'?MAX_PHOTOS:PRIV_MAX)-d[picked.k].length}
+   send={picked.k==='photos'?sendAvatar:sendPrivate} onClose={()=>setPicked(null)}
+   onDone={got=>{const k=picked.k;setPicked(null);setD(v=>v?{...v,[k]:[...v[k],...got.map(g=>({id:g.id,src:g.url,pending:true}))]}:v);}}/>}
+  {city&&d&&<Sheet title={t('fe.mx.ed.city')} onClose={()=>setCity(false)}><Card list>
+   {[null,...(cat?.places??[]).map(x=>x.id)].map(id=><Row key={id??'none'} icon={MapPin} title={placeName(id)??t('fe.mx.ed.noCity')} pressed={d.cityId===id} noChev
+    val={d.cityId===id?<span className="ico g"><Check/></span>:undefined} onClick={()=>{set({cityId:id});setCity(false);}}/>)}
+  </Card><Note className="mt12">{t('fe.mx.ed.cityNote')}</Note></Sheet>}
   {phSheet&&sheetPh&&<Sheet title={phSheet.k==='photos'&&phSheet.i===0?t('fe.mx.ph.main'):t('fe.mx.ph.nOf',{n:phSheet.i+1,total:sheetList.length})} onClose={()=>setPhSheet(null)}>
    <div className="ph-sheet-prev">{sheetPh.src&&<img src={sheetPh.src} alt="" draggable={false}/>}</div>
-   <div className="card list">
-    {phSheet.k==='photos'&&phSheet.i>0&&<button type="button" className="li" onClick={()=>move(phSheet.k,phSheet.i,'main')}><span className="ico"><Star/></span><span className="tx"><b>{t('fe.mx.ph.makeMain')}</b><small>{t('fe.mx.ph.makeMainSub')}</small></span></button>}
-    <button type="button" className="li danger" onClick={()=>move(phSheet.k,phSheet.i,'remove')}><span className="ico"><Trash2/></span><span className="tx"><b>{t('fe.mx.ph.remove')}</b><small>{t('fe.mx.ed.onSave')}</small></span></button>
-   </div>
+   <Card list>
+    {phSheet.k==='photos'&&phSheet.i>0&&<Row icon={Star} title={t('fe.mx.ph.makeMain')} sub={t('fe.mx.ph.makeMainSub')} noChev onClick={()=>move(phSheet.k,phSheet.i,'main')}/>}
+    <Row icon={Trash2} title={t('fe.mx.ph.remove')} sub={t('fe.mx.ed.onSave')} danger onClick={()=>move(phSheet.k,phSheet.i,'remove')}/>
+   </Card>
   </Sheet>}
   {askOff&&<Ask icon={Lock} danger title={t('fe.mx.pr.offTitle')} text={[grants?t('fe.mx.pr.offWhat',{g:grants,q:0}):t('fe.mx.pr.offAll'),t('fe.mx.pr.offRest'),t('fe.mx.ed.onSave')].join(' ')} ok={t('fe.mx.pr.offOk')}
    onCancel={()=>setAskOff(false)} onOk={()=>{set({privOn:false});setAskOff(false);}}/>}
