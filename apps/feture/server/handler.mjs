@@ -41,6 +41,9 @@ export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota
   return async function handler(req, res) {
     const requestId = randomUUID();
     let action = 'unknown';
+    // Stage timings (ms) for the access log and Server-Timing: where a slow request spends its time.
+    const t0 = Date.now(); let tPrev = t0; /** @type {[string, number][]} */ const stages = [];
+    const mark = (/** @type {string} */ name) => { const now = Date.now(); stages.push([name, now - tPrev]); tPrev = now; };
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -48,7 +51,10 @@ export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota
     if (cors(req, res)) return;
     /** @param {number} status @param {Record<string, unknown>} body @param {string} outcome */
     const send = (status, body, outcome) => {
-      try { log({ requestId, action, outcome }); } catch { /* logging never breaks the response */ }
+      mark('cmd');
+      const ms = Date.now() - t0;
+      try { log({ requestId, action, outcome, ms, stages: Object.fromEntries(stages) }); } catch { /* logging never breaks the response */ }
+      try { res.setHeader('Server-Timing', stages.map(([n, d]) => `${n};dur=${d}`).concat(`total;dur=${ms}`).join(', ')); } catch { /* headers already sent */ }
       res.statusCode = status;
       res.end(JSON.stringify({ ...body, requestId }));
     };
@@ -58,12 +64,13 @@ export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota
         return send(405, { ok: false, error: 'method_not_allowed' }, 'method_not_allowed');
       }
       let core;
-      try { core = await authenticate(req); } catch (error) {
+      try { core = await authenticate(req); mark('auth'); } catch (error) {
         // Only the identity check may answer 401; a 401 from storage or another backend is an outage.
         const status = /** @type {{status?: unknown}} */ (error)?.status;
         fail(status === 401 ? 401 : 503, status === 401 ? 'auth_required' : 'unavailable');
       }
-      if (!(await quota(req, core.accountHash))) {
+      const allowed = await quota(req, core.accountHash); mark('quota');
+      if (!allowed) {
         res.setHeader('Retry-After', '60');
         fail(429, 'rate_limited');
       }
@@ -75,15 +82,17 @@ export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota
       const parsed = cmd.input.safeParse(rest);
       if (!parsed.success) fail(400, 'invalid_input', { fields: [...new Set(parsed.error.issues.map(i => i.path.join('.') || '(root)'))] });
       const input = parsed.data;
-      const account = await resolveAccount(db, pepper, core);
+      const account = await resolveAccount(db, pepper, core); mark('account');
       const profileId = header(req, 'x-fe-profile');
       // Per-account limits are committed on their own, before the command: a failed attempt (not found, rule) still counts.
       const rate = cmd.rate;
       const replay = rate && typeof input.opId === 'string'
         && (await db.query('select 1 from feture.op_ledger where account_id = $1 and op_id = $2', [account.id, input.opId])).length > 0;
       if (rate && !replay) await db.tx(q => limit(q, account.id, rate.kind, rate.max, rate.window));
+      mark('rate');
       // Membership is checked before a stored result can be replayed: a former member gets 403, not old results.
       if (cmd.profile) await actingProfile(db, account.id, profileId, { write: cmd.write, allowPaused: cmd.allowPaused });
+      mark('acting');
       // Realtime signals a command asks for go out only after its transaction committed (S2 §8).
       /** @type {import('./realtime.mjs').Signal[]} */
       let pending = [];
