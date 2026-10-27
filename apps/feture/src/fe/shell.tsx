@@ -1,49 +1,62 @@
 import type {CSSProperties} from 'react';
-import {NavLink,Outlet,useLocation,useNavigate} from 'react-router';
+import {Outlet,useLocation,useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Icon,type IconName} from '../feture/components/Icon';
+import {Globe,Image as FeedIcon,Lock,MessageCircle,Plus,User,Users,X,type LucideIcon} from 'lucide-react';
 import {feErrorMessage} from '../feture/fe-api';
-import {ActionButton,Avatar,StateCard} from './components';
+import {Av,Btn,Empty} from './ui';
 import {FeSessionProvider,useFe} from './session';
 import {Register} from './register';
-import './tokens.css';
+import './v21.css';
 import './shell.css';
 
-/** V21 shell: five tabs — dock on phones, rail at 768–1099, sidebar from 1100 (V21-INTEGRATION-GUIDE §4 A3). */
-export const FE_TABS:{id:string,icon:IconName}[]=[
- {id:'feed',icon:'feed'},{id:'people',icon:'users'},{id:'communities',icon:'world'},{id:'chats',icon:'message'},{id:'me',icon:'user'},
+/** V21 shell with the prototype's markup: `.stage > .root > aside.side + main.main(.bar, .view, nav.dock)`.
+ * Dock on phones, rail and sidebar on wider screens — all from v21.css. */
+export const FE_TABS:{id:string,icon:LucideIcon}[]=[
+ {id:'feed',icon:FeedIcon},{id:'people',icon:Users},{id:'communities',icon:Globe},{id:'chats',icon:MessageCircle},{id:'me',icon:User},
 ];
 
 export function FeRoot(){
- return <FeSessionProvider><FeGate/></FeSessionProvider>;
+ return <FeSessionProvider><div className="v21 fe-v21"><FeGate/></div></FeSessionProvider>;
+}
+
+function Center({children}:{children:React.ReactNode}){
+ return <div className="stage"><div className="root"><main className="main"><div className="view"><div className="wrap fe-center">{children}</div></div></main></div></div>;
 }
 
 function FeGate(){
  const {state,reload}=useFe();const {t}=useI18n();const navigate=useNavigate();const {pathname}=useLocation();
- if(state.status==='loading')return <main className="fe-app fe-center" role="status"><span className="fe-spinner" aria-hidden="true"/>{t('fe.loading')}</main>;
- if(state.status==='signedOut')return <main className="fe-app fe-center">
-  <StateCard icon="lock" title={t('fe.signIn.title')} text={t('fe.signIn.text')}
-   action={<ActionButton onClick={()=>navigate('/account?returnTo='+encodeURIComponent(pathname))}>{t('fe.signIn.action')}</ActionButton>}/>
- </main>;
- if(state.status==='error')return <main className="fe-app fe-center">
-  <StateCard icon="close" role="alert" title={t('fe.error.title')} text={feErrorMessage(state.error,t)} action={<ActionButton variant="soft" onClick={reload}>{t('fe.retry')}</ActionButton>}/>
- </main>;
- if(!state.boot.account.onboarded)return <main className="fe-app"><Register/></main>;
+ if(state.status==='loading')return <Center><p className="note" role="status">{t('fe.loading')}</p></Center>;
+ if(state.status==='signedOut')return <Center><Empty icon={Lock} title={t('fe.signIn.title')} text={t('fe.signIn.text')}>
+  <Btn onClick={()=>navigate('/account?returnTo='+encodeURIComponent(pathname))}>{t('fe.signIn.action')}</Btn></Empty></Center>;
+ if(state.status==='error')return <Center><Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(state.error,t)}>
+  <Btn kind="soft" onClick={reload}>{t('fe.retry')}</Btn></Empty></Center>;
+ if(!state.boot.account.onboarded)return <Center><Register/></Center>;
  return <FeLayout/>;
 }
 
 function FeLayout(){
- const {state,acting}=useFe();const {t}=useI18n();
- if(state.status!=='ready')return null;
- return <div className="fe-app fe-layout">
-  <aside className="fe-side" aria-label={t('fe.nav.aria')}>
-   <div className="fe-wordmark">Fet<span>Ure</span></div>
-   <nav>{FE_TABS.map(tab=><NavLink key={tab.id} to={'/n/'+tab.id} className="fe-side-link"><Icon name={tab.icon} size={22}/><span>{t('fe.nav.'+tab.id)}</span></NavLink>)}</nav>
-   {acting&&<NavLink to="/n/me" className="fe-side-me"><Avatar name={acting.name||acting.handle||'?'} size="s" couple={acting.kind==='couple'}/><span>{acting.name||'@'+acting.handle}</span></NavLink>}
+ const {acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const {pathname}=useLocation();
+ const name=acting?.name||acting?.handle||'?';
+ const current=pathname.split('/')[2]||'feed';
+ // A second tap on the active tab returns to its root (V21 A4).
+ const go=(id:string)=>navigate('/n/'+id);
+ return <div className="stage"><div className="root">
+  <aside className="side">
+   <div className="brand"><b>Fet<i>Ure</i></b></div>
+   <nav aria-label={t('fe.nav.aria')}>{FE_TABS.map(({id,icon:Icon})=><button key={id} type="button" className={'navb'+(current===id?' on':'')} aria-current={current===id?'page':undefined} onClick={()=>go(id)}><Icon/><span>{t('fe.nav.'+id)}</span></button>)}</nav>
+   <Btn className="create" icon={Plus} onClick={()=>navigate('/n/feed/new')} aria-label={t('fe.create')}><span>{t('fe.create')}</span></Btn>
+   <div className="sp"/>
+   {acting&&<button type="button" className="mebtn" onClick={()=>navigate('/n/me')}>
+    <Av name={name} seed={acting.id}/><span>{name}<small>{acting.kind==='couple'?t('fe.me.coupleProfile'):t('fe.me.personalProfile')}</small></span>
+   </button>}
   </aside>
-  <main className="fe-main"><Outlet/></main>
-  <nav className="fe-dock" aria-label={t('fe.nav.aria')} style={{'--fe-tabs':FE_TABS.length} as CSSProperties}>
-   {FE_TABS.map(tab=><NavLink key={tab.id} to={'/n/'+tab.id} className="fe-dock-link"><Icon name={tab.icon} size={23}/><span>{t('fe.nav.'+tab.id)}</span></NavLink>)}
-  </nav>
- </div>;
+  <main className="main has-dock hasbar">
+   <Outlet/>
+   <nav className="dock" style={{gridTemplateColumns:`repeat(${FE_TABS.length},1fr)`} as CSSProperties} aria-label={t('fe.nav.aria')}>
+    {FE_TABS.map(({id,icon:Icon})=><button key={id} type="button" className={(current===id?'on':'')+(id==='me'?' me-tab':'')} aria-label={t('fe.nav.'+id)} aria-current={current===id?'page':undefined} onClick={()=>go(id)}>
+     {id==='me'&&acting?<span className="dock-av"><Av name={name} seed={acting.id}/></span>:<Icon/>}<span>{t('fe.nav.'+id)}</span>
+    </button>)}
+   </nav>
+  </main>
+ </div></div>;
 }

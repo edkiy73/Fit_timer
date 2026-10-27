@@ -5,7 +5,8 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {apiUrl} from '../api-url';
 import {documentsResponse} from '../feture/document-model';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {ActionButton,StateCard} from './components';
+import {AtSign,CircleAlert,CircleCheck,Check,ShieldAlert} from 'lucide-react';
+import {Btn,Empty} from './ui';
 import {useFe} from './session';
 
 /** V21 A04 (nickname, date of birth, consent) → A04X (under 18) → A05 «Tell us about you» (sensitive answers,
@@ -26,7 +27,7 @@ export function Register(){
 }
 
 function Steps({at}:{at:number}){
- return <div className="fe-steps" aria-hidden="true">{[1,2,3].map(i=><i key={i} className={i<=at?'on':''}/>)}</div>;
+ return <div className="steps" aria-hidden="true">{[1,2,3].map(i=><i key={i} className={i<=at?'on':''}/>)}</div>;
 }
 
 function Account({onCreated,onUnder18}:{onCreated:(profileId:string)=>void,onUnder18:()=>void}){
@@ -74,37 +75,33 @@ function Account({onCreated,onUnder18}:{onCreated:(profileId:string)=>void,onUnd
    opId.current=newOpId();
   }finally{setBusy(false);}
  };
- return <div className="fe-auth">
+ const err=(m:string)=><div className="ferr"><CircleAlert/>{m}</div>;
+ return <div className="auth-wrap">
   <Steps at={1}/>
-  <h1>{t('fe.reg.title')}</h1>
-  <label className={'fe-field'+(errors.nick?' err':'')}>
-   <span className="fe-flabel">{t('fe.reg.nick')}</span>
-   <input className="fe-inp" value={nick} onChange={e=>{setNick(e.target.value);setErrors(x=>({...x,nick:''}));}} placeholder="alex_b" autoComplete="username" autoCapitalize="off" spellCheck={false} maxLength={20}/>
-   {errors.nick?<span className="fe-ferr" role="alert">{errors.nick}</span>
-    :nickState==='ok'?<span className="fe-fok">{t('fe.reg.nickOk')}</span>
-    :nickState!=='idle'?<span className="fe-ferr">{t('fe.reg.nick.'+nickState)}</span>
-    :<span className="fe-fhint">{t('fe.reg.nickHint')}</span>}
+  <h2 className="t">{t('fe.reg.title')}</h2>
+  <label className={'field'+(errors.nick||(nickState!=='idle'&&nickState!=='ok')?' err':'')} data-field="nick">
+   <span>{t('fe.reg.nick')}</span>
+   <div className="inwrap"><AtSign/><input className="inp" value={nick} onChange={e=>{setNick(e.target.value);setErrors(x=>({...x,nick:''}));}} placeholder="alex_b" autoComplete="username" autoCapitalize="off" spellCheck={false} maxLength={20} aria-invalid={!!errors.nick}/></div>
+   {errors.nick?err(errors.nick):nickState==='ok'?<div className="fok"><CircleCheck/>{t('fe.reg.nickOk')}</div>:nickState!=='idle'?err(t('fe.reg.nick.'+nickState)):<div className="fhint">{t('fe.reg.nickHint')}</div>}
   </label>
-  <div className={'fe-field'+(errors.dob?' err':'')}>
-   <span className="fe-flabel" id="fe-dob">{t('fe.reg.dob')}</span>
-   <div className="fe-dob" role="group" aria-labelledby="fe-dob">
-    <select className="fe-inp" value={+dd>dMax?'':dd} onChange={e=>{setDd(e.target.value);setErrors(x=>({...x,dob:''}));}} aria-label={t('fe.reg.day')}><option value="">{t('fe.reg.day')}</option>{Array.from({length:dMax},(_,i)=><option key={i} value={String(i+1)}>{i+1}</option>)}</select>
-    <select className="fe-inp" value={mm} onChange={e=>{setMm(e.target.value);setErrors(x=>({...x,dob:''}));}} aria-label={t('fe.reg.month')}><option value="">{t('fe.reg.month')}</option>{months.map((m,i)=><option key={i} value={String(i+1)}>{m}</option>)}</select>
-    <select className="fe-inp" value={yy} onChange={e=>{setYy(e.target.value);setErrors(x=>({...x,dob:''}));}} aria-label={t('fe.reg.year')}><option value="">{t('fe.reg.year')}</option>{Array.from({length:88},(_,i)=>yNow-13-i).map(y=><option key={y} value={String(y)}>{y}</option>)}</select>
+  <div className={'field'+(errors.dob?' err':'')} data-field="dob"><span className="flabel" id="fe-dob">{t('fe.reg.dob')}</span>
+   <div className="dob" role="group" aria-labelledby="fe-dob">
+    <select className="inp" value={+dd>dMax?'':dd} onChange={e=>{setDd(e.target.value);setErrors(x=>({...x,dob:''}));}} aria-label={t('fe.reg.day')}><option value="">{t('fe.reg.day')}</option>{Array.from({length:dMax},(_,i)=><option key={i} value={String(i+1)}>{i+1}</option>)}</select>
+    <select className="inp" value={mm} onChange={e=>{setMm(e.target.value);setErrors(x=>({...x,dob:''}));}} aria-label={t('fe.reg.month')}><option value="">{t('fe.reg.month')}</option>{months.map((m,i)=><option key={i} value={String(i+1)}>{m}</option>)}</select>
+    <select className="inp" value={yy} onChange={e=>{setYy(e.target.value);setErrors(x=>({...x,dob:''}));}} aria-label={t('fe.reg.year')}><option value="">{t('fe.reg.year')}</option>{Array.from({length:88},(_,i)=>yNow-13-i).map(y=><option key={y} value={String(y)}>{y}</option>)}</select>
    </div>
-   {errors.dob?<span className="fe-ferr" role="alert">{errors.dob}</span>
-    :<span className="fe-fhint">{age!==null&&age>=18&&<b className="fe-okt">{t('fe.reg.age').replace('{age}',String(age))} </b>}{t('fe.reg.dobHint')}</span>}
+   {errors.dob?err(errors.dob):<div className="fhint">{age!==null&&age>=18&&<span style={{color:'var(--mint)',fontWeight:600}}>{t('fe.reg.age').replace('{age}',String(age))} </span>}{t('fe.reg.dobHint')}</div>}
   </div>
-  <hr className="fe-hr"/>
-  <button type="button" role="checkbox" aria-checked={terms} className={'fe-check'+(terms?' on':'')+(errors.terms?' err':'')} onClick={()=>{setTerms(v=>!v);setErrors(x=>({...x,terms:''}));}}>
-   <i aria-hidden="true"/><span>{t('fe.reg.terms')}{errors.terms&&<span className="fe-ferr">{errors.terms}</span>}</span>
+  <div className="hr"/>
+  <button type="button" role="checkbox" aria-checked={terms} className={'check'+(terms?' on':'')+(errors.terms?' err':'')} data-field="terms" onClick={()=>{setTerms(v=>!v);setErrors(x=>({...x,terms:''}));}}>
+   <i><Check/></i><span>{t('fe.reg.terms')}{errors.terms&&<span className="ferr" style={{marginTop:4}}><CircleAlert/>{errors.terms}</span>}</span>
   </button>
-  <Link className="fe-link" to="/documents">{t('fe.reg.readTerms')}</Link>
-  <button type="button" role="checkbox" aria-checked={news} className={'fe-check'+(news?' on':'')} onClick={()=>setNews(v=>!v)}>
-   <i aria-hidden="true"/><span>{t('fe.reg.news')} <span className="fe-mute">· {t('fe.reg.optional')}</span></span>
+  <a className="btn text auto terms-read" href="#/documents">{t('fe.reg.readTerms')}</a>
+  <button type="button" role="checkbox" aria-checked={news} className={'check'+(news?' on':'')} onClick={()=>setNews(v=>!v)}>
+   <i><Check/></i><span>{t('fe.reg.news')} <span className="note">· {t('fe.reg.optional')}</span></span>
   </button>
-  {failure&&<p className="fe-alert" role="alert">{failure}</p>}
-  <div className="fe-cta"><ActionButton onClick={submit} disabled={busy}>{busy?t('fe.loading'):t('fe.reg.continue')}</ActionButton></div>
+  {failure&&<div className="alert err" role="alert"><CircleAlert/><span>{failure}</span></div>}
+  <div className="ctabar"><div className="wrap"><Btn onClick={submit} disabled={busy}>{busy?t('fe.loading'):t('fe.reg.continue')}</Btn></div></div>
  </div>;
 }
 
@@ -112,8 +109,7 @@ function ageOn(y:number,m:number,d:number){const now=new Date();let a=now.getFul
 
 function Under18({onFix}:{onFix:()=>void}){
  const {t}=useI18n();
- return <div className="fe-auth"><StateCard icon="shield" title={t('fe.reg.u18.title')} text={t('fe.reg.u18.text')}
-  action={<ActionButton variant="soft" onClick={onFix}>{t('fe.reg.u18.fix')}</ActionButton>}/></div>;
+ return <div className="auth-wrap"><Empty icon={ShieldAlert} title={t('fe.reg.u18.title')} text={t('fe.reg.u18.text')}><Btn kind="soft" onClick={onFix}>{t('fe.reg.u18.fix')}</Btn></Empty></div>;
 }
 
 const KINDS=['gender','orient','role','status','format','seek'] as const;
@@ -140,29 +136,23 @@ function AboutYou({profileId}:{profileId:string}){
   finally{setBusy(false);}
  };
  const label=(o:z.infer<typeof option>)=>locale==='en'?o.en:o.ru;
- return <div className="fe-auth">
+ const chips=(items:[string,string][],sel:(v:string)=>boolean,pick:(v:string)=>void,radio=false)=><div className="chips" role={radio?'radiogroup':undefined}>
+  {items.map(([id,l])=><button key={id} type="button" className={'chip'+(sel(id)?' on':'')} role={radio?'radio':undefined} aria-checked={radio?sel(id):undefined} aria-pressed={radio?undefined:sel(id)} onClick={()=>pick(id)}>{l}</button>)}</div>;
+ return <div className="auth-wrap identity-onboarding">
   <Steps at={2}/>
-  <h1>{t('fe.reg.about.title')}</h1>
-  <section className="fe-section">
-   <h3>{t('fe.reg.discover.title')}</h3>
-   <div className="fe-chips">{(['visible','off'] as const).map(v=><button key={v} type="button" className={'fe-chip'+(discover===v?' on':'')} aria-pressed={discover===v} onClick={()=>setDiscover(v)}>{t('fe.reg.discover.'+v)}</button>)}</div>
-   <p className="fe-fhint">{t('fe.reg.discover.note.'+discover)}</p>
-  </section>
-  <section className="fe-section">
-   <h3>{t('fe.reg.vis.title')}</h3>
-   <div className="fe-chips">{(['only','granted','all'] as const).map(v=><button key={v} type="button" className={'fe-chip'+(vis===v?' on':'')} aria-pressed={vis===v} onClick={()=>setVis(v)}>{t('fe.reg.vis.'+v)}</button>)}</div>
-   <p className="fe-fhint">{t('fe.reg.vis.note.'+vis)}</p>
-  </section>
-  {options===null?<p role="status" className="fe-mute">{t('fe.loading')}</p>:KINDS.map(kind=>{
+  <h2 className="t">{t('fe.reg.about.title')}</h2>
+  <section className="fin"><div className="fin-t"><b>{t('fe.reg.discover.title')}</b></div>
+   {chips((['visible','off'] as const).map(v=>[v,t('fe.reg.discover.'+v)]),v=>v===discover,v=>setDiscover(v as typeof discover),true)}
+   <p className="fhint mt8">{t('fe.reg.discover.note.'+discover)}</p></section>
+  <section className="fin"><div className="fin-t"><b>{t('fe.reg.vis.title')}</b></div>
+   {chips((['only','granted','all'] as const).map(v=>[v,t('fe.reg.vis.'+v)]),v=>v===vis,v=>setVis(v as typeof vis),true)}
+   <p className="fhint mt8">{t('fe.reg.vis.note.'+vis)}</p></section>
+  {options===null?<p className="note" role="status">{t('fe.loading')}</p>:KINDS.map(kind=>{
    const list=options.filter(o=>o.kind===kind);if(!list.length)return null;
-   return <section key={kind} className="fe-section"><h3>{t('fe.reg.kind.'+kind)}</h3>
-    <div className="fe-chips">{list.map(o=><button key={o.code} type="button" className={'fe-chip'+(picked[kind].includes(o.code)?' on':'')} aria-pressed={picked[kind].includes(o.code)} onClick={()=>toggle(kind,o.code)}>{label(o)}</button>)}</div>
-   </section>;
+   return <section key={kind} className="fin"><div className="fin-t"><b>{t('fe.reg.kind.'+kind)}</b>{LIMIT[kind]>1&&<span>{t('fe.reg.pickAny')}</span>}</div>
+    {chips(list.map(o=>[o.code,label(o)]),c=>picked[kind].includes(c),c=>toggle(kind,c))}</section>;
   })}
-  {failure&&<p className="fe-alert" role="alert">{failure}</p>}
-  <div className="fe-cta fe-cta2">
-   <ActionButton onClick={finish} disabled={busy}>{busy?t('fe.loading'):t('fe.reg.done')}</ActionButton>
-   <ActionButton variant="text" onClick={reload} disabled={busy}>{t('fe.reg.skip')}</ActionButton>
-  </div>
+  {failure&&<div className="alert err" role="alert"><CircleAlert/><span>{failure}</span></div>}
+  <div className="ctabar"><div className="wrap"><Btn onClick={finish} disabled={busy}>{busy?t('fe.loading'):t('fe.reg.done')}</Btn><Btn kind="text" onClick={reload} disabled={busy}>{t('fe.reg.skip')}</Btn></div></div>
  </div>;
 }

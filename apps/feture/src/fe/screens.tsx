@@ -1,15 +1,11 @@
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {ScreenHeader,StateCard} from './components';
-import type {IconName} from '../feture/components/Icon';
+import {Globe,MessageCircle,type LucideIcon} from 'lucide-react';
+import {Bar,Empty,View} from './ui';
 
-/** Tab roots. Each slice (B…H) replaces its «скоро» card with the real screen. */
-function Soon({tab,icon}:{tab:string,icon:IconName}){
+/** Tab roots whose slice has not landed yet: an honest «скоро» state in the V21 look. */
+function Soon({tab,icon}:{tab:string,icon:LucideIcon}){
  const {t}=useI18n();
- return <>
-  <ScreenHeader title={t('fe.nav.'+tab)}/>
-  <div className="fe-body"><StateCard icon={icon} title={t('fe.soon.'+tab+'.title')} text={t('fe.soon.'+tab+'.text')}/></div>
- </>;
+ return <><Bar title={t('fe.nav.'+tab)}/><View><Empty icon={icon} title={t('fe.soon.'+tab+'.title')} text={t('fe.soon.'+tab+'.text')}/></View></>;
 }
-export const PeopleTab=()=> <Soon tab="people" icon="users"/>;
-export const CommunitiesTab=()=> <Soon tab="communities" icon="world"/>;
-export const ChatsTab=()=> <Soon tab="chats" icon="message"/>;
+export const CommunitiesTab=()=> <Soon tab="communities" icon={Globe}/>;
+export const ChatsTab=()=> <Soon tab="chats" icon={MessageCircle}/>;
