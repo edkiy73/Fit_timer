@@ -50,7 +50,7 @@ export function MeTab(){
     <span className="av-wrap"><Av name={name} seed={acting.id} src={p?.avatar?.src?.thumb??p?.avatar?.src?.card}/></span>
     <div className="me18-who"><b><span>{name}</span></b><small>{acting.kind==='couple'?t('fe.me.weCouple'):t('fe.me.iPersonal')}</small></div>
     <BellButton/>
-    <button type="button" className="ibtn" aria-label={t('fe.me.settings')} onClick={()=>navigate('/account')}><Settings/></button>
+    <button type="button" className="ibtn" aria-label={t('fe.me.settings')} onClick={()=>navigate('/n/settings')}><Settings/></button>
    </header>
    <div className="wrap">
     {profiles.length>1&&<div className="mb12"><Seg value={acting.id} onChange={setActing} label={t('fe.me.actAs')} options={profiles.map(x=>({id:x.id,label:x.kind==='couple'?t('fe.me.we'):t('fe.me.i')}))}/></div>}
