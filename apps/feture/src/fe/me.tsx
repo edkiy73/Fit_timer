@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Camera,Check,ChevronDown,ChevronRight,Clock,Eye,EyeOff,Users,Image as ImageIcon,KeyRound,Plus,Settings,Star,Trash2,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,Ask as KitAsk,Av,Btn,Card,Empty,Group,H,IconBtn,Note,Row,Seg,SelectRow,Sheet,Skel,ToggleRow} from './kit';
-import {AgeCheckLink} from './age-check';
+import {AgeCheckLink,useAgeResume} from './age-check';
 import {dropReadCache,useFe,useRealtime} from './session';
 import {PrivateLayer} from './private';
 import {BellButton,countsRes} from './inbox';
@@ -265,14 +265,19 @@ function GalleryBlock({p}:{p:Profile}){
 /** `meVisLayer()` — Discover, the profile card, likes, activity, mentions; the couple's own group comes after. */
 function Visibility({p,settings,onChanged}:{p:Profile,settings:Settings,onChanged:()=>void}){
  const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();
- const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [ageIntent,setAgeIntent]=useState('');
  const cp=p.kind==='couple';
  const set=async(setting:string,value:string|boolean)=>{
   if(busy)return;setBusy(true);setFailure('');
   try{const r=await call(setting==='detailsVis'?'profile.update':'profile.setVisibility',setting==='detailsVis'?{opId:newOpId(),rev:p.rev,detailsVis:value}:{opId:newOpId(),setting,value},ok);
    toast(r.pending?t('fe.cw.waitPartner'):t('fe.mx.saved'),{type:'ok'});onChanged();}
-  catch(e){setFailure(e instanceof FeError&&e.rule==='age_not_verified'?t('fe.age.couple'):feErrorMessage(e,t));}finally{setBusy(false);}
+  catch(e){
+   const age=e instanceof FeError&&e.rule==='age_not_verified';
+   // The age check this sends to comes back here and applies the same change (`vis:<setting>:<value>`).
+   setAgeIntent(age?`vis:${setting}:${String(value)}`:'');
+   setFailure(age?t('fe.age.couple'):feErrorMessage(e,t));}finally{setBusy(false);}
  };
+ useAgeResume(v=>/^vis:[a-zA-Z]+:[a-z]+$/.test(v),v=>{const [,k,raw]=v.split(':') as [string,string,string];void set(k,raw==='true'?true:raw==='false'?false:raw);});
  const hasPhoto=p.photos.some(x=>!x.pending);
  const mode=settings.discoverMode;
  const toggle=(k:string,title:string,sub:string,on:boolean)=><ToggleRow title={title} sub={sub} on={on} disabled={busy} onClick={()=>void set(k,!on)}/>;
@@ -294,6 +299,6 @@ function Visibility({p,settings,onChanged}:{p:Profile,settings:Settings,onChange
     options={(['all','granted','only'] as const).map(v=>[v,t('fe.reg.vis.'+v)] as const)}/></div>}
    {toggle('showLikes',cp?t('fe.mx.v.showLikesUs'):t('fe.mx.v.showLikes'),cp?t('fe.mx.v.showLikesSubUs'):t('fe.mx.v.showLikesSub'),settings.showLikes!==false)}
   </Card></Group>
-  {failure&&<Alert kind="err" noIcon>{failure}{failure===t('fe.age.couple')&&<><br/><AgeCheckLink/></>}</Alert>}
+  {failure&&<Alert kind="err" noIcon>{failure}{failure===t('fe.age.couple')&&<><br/><AgeCheckLink intent={ageIntent||undefined}/></>}</Alert>}
  </>;
 }

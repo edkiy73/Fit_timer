@@ -1,6 +1,6 @@
 import type {Meta,StoryObj} from '@storybook/react-vite';
 import {useEffect,useState} from 'react';
-import {Btn} from './index';
+import {Btn,CaptureFrame} from './index';
 import {Uploader,type SendPhoto} from './Uploader';
 import {CropSheet} from './Crop';
 
@@ -33,3 +33,12 @@ export const СОшибкой:S={name:'Ошибка отправки и «Пов
 
 export const Кадрирование:StoryObj<typeof CropSheet>={name:'Кадрирование',render:a=>{const [src,setSrc]=useState('');useEffect(()=>{void sample('Кадр').then(f=>setSrc(URL.createObjectURL(f)));},[]);
  return src?<CropSheet {...a} src={src}/>:<span/>;},args:{aspect:'4:5',onApply:()=>{},onClose:()=>{}},argTypes:{aspect:{control:'inline-radio',options:['4:5','1:1','16:9']}}};
+
+/** CaptureFrame: the viewfinder of a verification shot — face oval (selfie with a gesture) or document frame; with `src`
+ * the taken shot, shown whole (documents are never cropped). */
+type CF=StoryObj<typeof CaptureFrame>;
+const cfArgs={argTypes:{shape:{control:'inline-radio' as const,options:['face','document']},src:{control:false as const}}};
+export const КадрСелфи:CF={name:'Кадр: селфи',...cfArgs,args:{shape:'face',hint:'Лицо и жест в кадре'},render:a=><CaptureFrame {...a}/>};
+export const КадрДокумент:CF={name:'Кадр: документ',...cfArgs,args:{shape:'document',hint:'Помести разворот паспорта или права в рамку'},render:a=><CaptureFrame {...a}/>};
+export const КадрСнимок:CF={name:'Кадр: снятый документ',...cfArgs,args:{shape:'document',alt:'Снимок документа'},render:a=>{const [src,setSrc]=useState('');
+ useEffect(()=>{void sample('Документ',1400,1000).then(f=>setSrc(URL.createObjectURL(f)));},[]);return <CaptureFrame {...a} src={src||null}/>;}};
