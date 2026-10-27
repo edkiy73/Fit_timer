@@ -7,6 +7,7 @@ import { needsPartner, narrowCouple, registerApprovalKind, requestApproval } fro
 import { mediaDto } from '../media/assets.mjs';
 import { availableScopes, grantedScopes, LIMITS, lockOwner, memberAccounts, related } from '../access.mjs';
 import { withFaces } from './faces.mjs';
+import { keysetPage, readKeyset } from '../cursor.mjs';
 
 /** Slice C2: private part and access (S1 §6). Narrowing (decline, narrow, revoke, switch off) applies at once;
  * opening the private part of a couple to someone always needs both partners (V21 «только вдвоём»).
@@ -15,6 +16,12 @@ import { withFaces } from './faces.mjs';
  */
 
 const TERM = { none: null, '1d': '1 day', '7d': '7 days', '30d': '30 days' };
+const PAGE = 30;
+
+/** SQL: a decline still inside its undo window. Until it ends the requester is shown the request as waiting
+ * («решили не открывать» must never flash and then disappear), so an undo is never noticed.
+ * @param {string} [r] table alias with the dot */
+const held = (r = '') => `(${r}state = 'declined' and ${r}decided_at > now() - make_interval(secs => ${Number(LIMITS.declineUndoSeconds)}))`;
 
 /** @param {Acting | null} acting @returns {Acting} */
 const need = acting => { if (!acting) throw new Error('acting profile missing'); return acting; };
@@ -43,23 +50,36 @@ async function requestBlocker(q, viewer, ownerId) {
   if (o.requests_from !== 'all') return 'not_accepting';
   const [r] = await q.query(
     `select
-       exists (select 1 from feture.access_request where requester_profile_id = $1 and owner_profile_id = $2 and state = 'pending') pending,
+       exists (select 1 from feture.access_request where requester_profile_id = $1 and owner_profile_id = $2 and (state = 'pending' or ${held()})) pending,
        (select decided_at + make_interval(days => $3) from feture.access_request
-         where requester_profile_id = $1 and owner_profile_id = $2 and state = 'declined' order by decided_at desc limit 1) reask_at`,
+         where requester_profile_id = $1 and owner_profile_id = $2 and state = 'declined' and not ${held()} order by decided_at desc limit 1) reask_at`,
     [viewer.profileId, ownerId, LIMITS.reaskDays]);
   if (r.pending) return 'pending';
   if (r.reask_at && new Date(r.reask_at) > new Date()) return 'cooldown';
   return null;
 }
 
-/** Requests sent from any of the account's profiles in the last 24 h count against one daily limit. @param {Q} q @param {Acting} acting */
-async function quotaLeft(q, acting) {
-  const [{ n }] = await q.query(
-    `select count(*)::int n from feture.access_request r
+/** Requests sent from any of the account's profiles in the last 24 h count against one daily limit; cancelled ones
+ * too («попытка не возвращается»). `resetsAt`: when the next attempt comes back (null while nothing is used).
+ * @param {Q} q @param {Acting} acting @returns {Promise<{left: number, max: number, resetsAt: string | null}>} */
+async function quota(q, acting) {
+  const rows = await q.query(
+    `select r.created_at + interval '1 day' frees_at from feture.access_request r
      where r.created_at > now() - interval '1 day'
-       and r.requester_profile_id in (select profile_id from feture.profile_member where account_id = $1)`,
+       and r.requester_profile_id in (select profile_id from feture.profile_member where account_id = $1)
+     order by r.created_at`,
     [acting.accountId]);
-  return Math.max(0, LIMITS.requestsPerDay - n);
+  const max = LIMITS.requestsPerDay;
+  const next = rows[Math.max(0, rows.length - max)];
+  return { left: Math.max(0, max - rows.length), max, resetsAt: next ? new Date(next.frees_at).toISOString() : null };
+}
+
+/** The owner's undecided decline notice of a request (delayed by the undo window), locked. @param {Q} q @param {string} requesterId @param {string} requestId */
+async function declineNotice(q, requesterId, requestId) {
+  const [o] = await q.query(
+    `select id, done_at, locked_until from feture.outbox where topic = 'access.declined' and profile_id = $1 and payload->>'requestId' = $2 for update`,
+    [requesterId, requestId]);
+  return o ?? null;
 }
 
 /** Issues (or replaces) the grant for a pending request; shared by the direct path and the couple approval.
@@ -78,15 +98,17 @@ async function applyGrant(q, { requestId, ownerId, scopes, term, by }) {
   await q.query(`update feture.access_grant set revoked_at = now() where owner_profile_id = $1 and viewer_profile_id = $2 and revoked_at is null`,
     [ownerId, r.requester_profile_id]);
   const interval = TERM[term];
-  await q.query(
+  // The owner may open parts that were not asked for too (V21 grantSheet «не запрошено»); a repeat request replaces
+  // what was open before (the sheet shows it as alreadyOpen).
+  const [g] = await q.query(
     `insert into feture.access_grant (owner_profile_id, viewer_profile_id, viewer_account_ids, scopes, until, request_id, granted_by)
-     values ($1, $2, $3, $4, case when $5::text is null then null else now() + $5::interval end, $6, $7)`,
+     values ($1, $2, $3, $4, case when $5::text is null then null else now() + $5::interval end, $6, $7) returning until`,
     [ownerId, r.requester_profile_id, r.viewer_account_ids, scopes, interval, requestId, by]);
   const partial = r.scopes.some((/** @type {string} */ s) => !scopes.includes(/** @type {Scope} */ (s)));
   await q.query(`update feture.access_request set state = $2, decided_at = now(), decided_by = $3 where id = $1`,
     [requestId, partial ? 'partial' : 'granted', by]);
   await enqueue(q, 'access.granted', r.requester_profile_id, { requestId, owner: ownerId });
-  return { state: partial ? 'partial' : 'granted' };
+  return { state: partial ? 'partial' : 'granted', scopes, until: g.until };
 }
 
 // Opening a couple's private part to someone is always decided by both partners.
@@ -139,8 +161,13 @@ const run = {
     if (!own && !scopes.length) {
       // Before access nothing real is sent: only whether there is a private part and what can be asked for.
       const blocker = await requestBlocker(q, viewer, input.profileId);
-      return { exists: available.length > 0, available, canRequest: blocker === null && available.length > 0, reason: blocker };
+      return { exists: available.length > 0, available, canRequest: blocker === null && available.length > 0, reason: blocker, quota: await quota(q, viewer) };
     }
+    // Every private photo or video someone else opens carries the viewing person's own handle (V21 privPeek: «с твоим
+    // водяным знаком»): the account's personal handle, also when acting as a couple, so a leak points at a person.
+    const [wm] = own ? [] : await q.query(
+      `select p.handle from feture.account a join feture.profile p on p.id = a.person_profile_id where a.id = $1`, [account.id]);
+    const watermark = wm?.handle ? '@' + wm.handle : null;
     const [acc] = await q.query('select show_explicit from feture.account where id = $1', [account.id]);
     const media = await q.query(
       `select m.* from feture.media_attachment a join feture.media_asset m on m.id = a.asset_id
@@ -149,7 +176,7 @@ const run = {
     for (const m of media) {
       if (!own && !scopes.includes(m.kind === 'video' ? 'video' : 'photos')) continue;
       const dto = await mediaDto(cfg.media, m, { viewerProfileId: viewer.profileId, place: own ? 'own' : 'private', showExplicit: !!acc.show_explicit });
-      if (dto) shown.push(dto);
+      if (dto) shown.push(own ? dto : { ...dto, watermark });
     }
     const [g] = own ? [] : await q.query(
       `select until from feture.access_grant where owner_profile_id = $1 and viewer_profile_id = $2 and revoked_at is null`, [input.profileId, viewer.profileId]);
@@ -157,7 +184,11 @@ const run = {
       exists: true, own, on: o.private_on, scopes, until: g?.until ?? null,
       text: own || scopes.includes('info') ? (o.text ?? '') : null,
       media: shown,
-      ...(own ? { available, counts: await openCounts(q, input.profileId) } : {}),
+      ...(own ? { available, counts: await openCounts(q, input.profileId) } : await (async () => {
+        // Asking again for more (or for a longer term) works like the first request.
+        const blocker = await requestBlocker(q, viewer, input.profileId);
+        return { available, canRequest: blocker === null, reason: blocker, quota: await quota(q, viewer) };
+      })()),
     };
   },
 
@@ -223,7 +254,8 @@ const run = {
     const blocker = await requestBlocker(q, acting, input.profileId);
     if (blocker === 'unavailable') fail(404, 'not_found');
     if (blocker) fail(422, 'rule_violation', { rule: blocker });
-    if (await quotaLeft(q, acting) <= 0) fail(429, 'rate_limited', { rule: 'request_quota' });
+    const before = await quota(q, acting);
+    if (before.left <= 0) fail(429, 'rate_limited', { rule: 'request_quota', resetsAt: before.resetsAt });
     const available = await availableScopes(q, input.profileId);
     if (!input.scopes.every((/** @type {Scope} */ s) => available.includes(s))) fail(422, 'rule_violation', { rule: 'scope_not_available' });
     const [r] = await q.query(
@@ -231,16 +263,24 @@ const run = {
        values ($1, $2, $3, $4, $5) returning id`, [acting.profileId, input.profileId, viewers, input.scopes, acting.accountId]);
     // A request opens no chat and sends no like; the owner decides in «Нужно решить».
     await enqueue(q, 'access.requested', input.profileId, { requestId: r.id, from: acting.profileId });
-    return { id: r.id, quotaLeft: await quotaLeft(q, acting) };
+    const left = await quota(q, acting);
+    return { id: r.id, scopes: input.scopes, state: 'pending', quotaLeft: left.left, quota: left };
   },
 
   async 'access.cancel'(q, { acting: a, input }) {
     const acting = need(a);
-    const rows = await q.query(
-      `update feture.access_request set state = 'cancelled', decided_at = now(), decided_by = $3
-       where id = $1 and requester_profile_id = $2 and state = 'pending' returning id`, [input.requestId, acting.profileId, acting.accountId]);
-    if (!rows[0]) fail(404, 'not_found');
-    return { state: 'cancelled' }; // the daily budget is not refunded
+    // A decline still in its undo window looks waiting to the requester, so it can be cancelled like one; the
+    // decline then never reaches them and the owner can no longer undo it.
+    const [r] = await q.query(
+      `select id, state, ${held()} held from feture.access_request where id = $1 and requester_profile_id = $2 for update`,
+      [input.requestId, acting.profileId]);
+    if (!r || !(r.state === 'pending' || r.held)) fail(404, 'not_found');
+    await q.query(`update feture.access_request set state = 'cancelled', decided_at = now(), decided_by = $2 where id = $1`, [r.id, acting.accountId]);
+    if (r.held) {
+      const notice = await declineNotice(q, acting.profileId, r.id);
+      if (notice && !notice.done_at && !notice.locked_until) await q.query(`delete from feture.outbox where id = $1`, [notice.id]);
+    }
+    return { state: 'cancelled', quota: await quota(q, acting) }; // the daily budget is not refunded
   },
 
   async 'access.grant'(q, { acting: a, input }) {
@@ -263,20 +303,52 @@ const run = {
     const acting = need(a);
     const rows = await q.query(
       `update feture.access_request set state = 'declined', decided_at = now(), decided_by = $3
-       where id = $1 and owner_profile_id = $2 and state = 'pending' returning requester_profile_id`, [input.requestId, acting.profileId, acting.accountId]);
+       where id = $1 and owner_profile_id = $2 and state = 'pending'
+       returning requester_profile_id, decided_at + make_interval(secs => $4) undo_until`,
+      [input.requestId, acting.profileId, acting.accountId, LIMITS.declineUndoSeconds]);
     if (!rows[0]) fail(404, 'not_found');
-    await enqueue(q, 'access.declined', rows[0].requester_profile_id, { requestId: input.requestId, silent: true });
-    return { state: 'declined', reaskDays: LIMITS.reaskDays };
+    // The notice waits out the undo window; the requester's views treat the request as waiting until then (held()).
+    await enqueue(q, 'access.declined', rows[0].requester_profile_id, { requestId: input.requestId, silent: true },
+      { delaySeconds: LIMITS.declineUndoSeconds });
+    return { state: 'declined', reaskDays: LIMITS.reaskDays, undoUntil: rows[0].undo_until };
+  },
+
+  async 'access.undoDecline'(q, { acting: a, input }) {
+    const acting = need(a);
+    // Same lock as grant / switch off / close all: an undo cannot revive a request after everything was closed.
+    await lockOwner(q, acting.profileId);
+    const [r] = await q.query(
+      `select r.id, r.state, r.decided_by, r.requester_profile_id, ${held('r.')} held from feture.access_request r
+       where r.id = $1 and r.owner_profile_id = $2 for update`, [input.requestId, acting.profileId]);
+    if (!r) fail(404, 'not_found');
+    // Only the one who declined takes it back (a couple partner declines and undoes their own).
+    if (r.state !== 'declined' || r.decided_by !== acting.accountId) fail(409, 'conflict', { state: r.state === 'declined' ? 'decided_by_partner' : r.state });
+    if (!r.held) fail(409, 'conflict', { rule: 'undo_expired' });
+    // The decline must not have reached the requester in any form.
+    const notice = await declineNotice(q, r.requester_profile_id, r.id);
+    if (notice && (notice.done_at || notice.locked_until)) fail(409, 'conflict', { rule: 'undo_expired' });
+    // The request must still be one the owner could receive now (nothing closed it in between).
+    const [ok] = await q.query(
+      `select p.state = 'active' and s.private_on and s.requests_from = 'all' and not feture.blocked($1, $2)
+         and exists (select 1 from feture.profile v where v.id = $2 and v.state = 'active') ok
+       from feture.profile p join feture.profile_settings s on s.profile_id = p.id where p.id = $1`,
+      [acting.profileId, r.requester_profile_id]);
+    if (!ok?.ok) fail(409, 'conflict', { rule: 'request_closed' });
+    await q.query(`update feture.access_request set state = 'pending', decided_at = null, decided_by = null where id = $1`, [r.id]);
+    if (notice) await q.query(`delete from feture.outbox where id = $1`, [notice.id]);
+    return { state: 'pending' };
   },
 
   async 'access.narrow'(q, { acting: a, input }) {
     const acting = need(a);
     const [g] = await q.query(
-      `select id, scopes from feture.access_grant where owner_profile_id = $1 and viewer_profile_id = $2 and revoked_at is null for update`,
+      `select id, scopes from feture.access_grant where owner_profile_id = $1 and viewer_profile_id = $2 and revoked_at is null
+         and (until is null or until > now()) for update`,
       [acting.profileId, input.profileId]);
     if (!g) fail(404, 'not_found');
     if (!input.scopes.every((/** @type {string} */ s) => g.scopes.includes(s))) fail(422, 'rule_violation', { rule: 'widen_needs_request' });
     if (!input.scopes.length) {
+      // Nothing left selected is a revoke (V21 nwOk → revoke), with the same notice.
       await q.query(`update feture.access_grant set revoked_at = now() where id = $1`, [g.id]);
       await enqueue(q, 'access.revoked', input.profileId, { owner: acting.profileId });
       return { scopes: [] };
@@ -309,34 +381,87 @@ const run = {
 
   async 'access.lists'(q, { acting: a, input, cfg }) {
     const acting = need(a);
-    const faces = (/** @type {any[]} */ items) => withFaces(q, cfg.media, acting, items, r => r.profile);
-    // Other profiles that are no longer active (paused, suspended, deleted) are not named.
-    const who = `(select json_build_object('id', p.id, 'kind', p.kind, 'handle', p.handle, 'name', p.name) from feture.profile p where p.id = %s and p.state = 'active')`;
+    if (input.filter && input.tab !== 'out' && input.tab !== 'incoming') fail(400, 'invalid_input', { fields: ['filter'] });
+    const cur = readKeyset(input.cursor);
+    const page = async (/** @type {any[]} */ rows) => {
+      const { items, next } = keysetPage(rows, PAGE);
+      return { items: await withFaces(q, cfg.media, acting, items, r => r.profile), next };
+    };
+    // Only active profiles not hidden by a block either way are listed; a paused or blocked side is not named.
+    const who = (/** @type {string} */ col) =>
+      `(select json_build_object('id', p.id, 'kind', p.kind, 'handle', p.handle, 'name', p.name) from feture.profile p where p.id = ${col})`;
+    const live = (/** @type {string} */ col) =>
+      `exists (select 1 from feture.profile p where p.id = ${col} and p.state = 'active') and not feture.blocked($1, ${col})`;
+    const after = (/** @type {string} */ at, /** @type {string} */ id) => `($2::text is null or (${at}, ${id}) < ($2::timestamptz, $3::uuid))`;
+
     if (input.tab === 'out') {
-      const items = await q.query(
-        `select r.id, r.scopes, r.state, r.created_at, r.decided_at, ${who.replace('%s', 'r.owner_profile_id')} profile,
-           case when r.state = 'declined' then r.decided_at + make_interval(days => $2) end reask_at
-         from feture.access_request r where r.requester_profile_id = $1 order by r.created_at desc limit 30`,
-        [acting.profileId, LIMITS.reaskDays]);
-      return { items: await faces(items), quotaLeft: await quotaLeft(q, acting) };
+      // «Мои запросы»: what I asked for, its state as I may know it, and what is open now. A decline inside its undo
+      // window reads as waiting (held()); an open grant that ended reads as expired or revoked.
+      const rows = await q.query(
+        `select * from (
+           select r.id, r.scopes, r.scopes requested, r.created_at, r.created_at::text cursor_at, r.id cursor_id,
+             case when ${held('r.')} then 'pending'
+                  when r.state not in ('granted', 'partial') then r.state
+                  when g.revoked_at is null and (g.until is null or g.until > now()) then r.state
+                  when g.revoked_at is null then 'expired'
+                  -- a later answer to a repeat request took its place
+                  when exists (select 1 from feture.access_grant n where n.owner_profile_id = r.owner_profile_id
+                                 and n.viewer_profile_id = r.requester_profile_id and n.granted_at >= g.revoked_at and n.request_id <> r.id) then 'replaced'
+                  else 'revoked' end state,
+             case when ${held('r.')} then null else r.decided_at end decided_at,
+             case when r.state = 'declined' and not ${held('r.')} then r.decided_at + make_interval(days => $5) end reask_at,
+             case when r.state in ('granted', 'partial') and g.revoked_at is null and (g.until is null or g.until > now())
+                  then json_build_object('scopes', g.scopes, 'until', g.until) end granted,
+             ${who('r.owner_profile_id')} profile
+           from feture.access_request r
+           left join lateral (select x.scopes, x.until, x.revoked_at from feture.access_grant x where x.request_id = r.id
+                              order by x.granted_at desc limit 1) g on true
+           where r.requester_profile_id = $1 and ${live('r.owner_profile_id')}) o
+         where ($4::text is null or o.state = 'pending') and ${after('o.created_at', 'o.id')}
+         order by o.created_at desc, o.id desc limit $6`,
+        [acting.profileId, cur.at, cur.id, input.filter ?? null, LIMITS.reaskDays, PAGE + 1]);
+      const result = await page(rows);
+      const left = await quota(q, acting);
+      return { ...result, items: result.items.map(({ reask_at, decided_at, ...r }) => ({ ...r, reaskAt: reask_at, decidedAt: decided_at })),
+        quotaLeft: left.left, quota: left };
     }
     if (input.tab === 'incoming') {
-      return { items: await faces(await q.query(
-        `select r.id, r.scopes, r.created_at, ${who.replace('%s', 'r.requester_profile_id')} profile
-         from feture.access_request r where r.owner_profile_id = $1 and r.state = 'pending' order by r.created_at desc limit 30`,
-        [acting.profileId])) };
+      // For the decision sheet: what was asked for, what is already open to them (a repeat request replaces it) and,
+      // once per page, every part the owner has — parts that were not asked for can be opened too.
+      const rows = await q.query(
+        `select r.id, r.scopes, r.scopes requested, r.created_at, r.created_at::text cursor_at, r.id cursor_id,
+           (select json_build_object('scopes', g.scopes, 'until', g.until) from feture.access_grant g
+             where g.owner_profile_id = r.owner_profile_id and g.viewer_profile_id = r.requester_profile_id
+               and g.revoked_at is null and (g.until is null or g.until > now())) already_open,
+           ${who('r.requester_profile_id')} profile
+         from feture.access_request r
+         where r.owner_profile_id = $1 and r.state = 'pending' and ${live('r.requester_profile_id')} and ${after('r.created_at', 'r.id')}
+         order by r.created_at desc, r.id desc limit $4`,
+        [acting.profileId, cur.at, cur.id, PAGE + 1]);
+      const result = await page(rows);
+      return { ...result, items: result.items.map(({ already_open, ...r }) => ({ ...r, alreadyOpen: already_open })),
+        available: await availableScopes(q, acting.profileId) };
     }
     if (input.tab === 'byme') {
-      return { items: await faces(await q.query(
-        `select g.scopes, g.until, g.granted_at, ${who.replace('%s', 'g.viewer_profile_id')} profile
-         from feture.access_grant g where g.owner_profile_id = $1 and g.revoked_at is null and (g.until is null or g.until > now())
-         order by g.granted_at desc limit 30`, [acting.profileId])) };
+      // «Открыто мной»: who sees which parts of my private part, until when.
+      return page(await q.query(
+        `select g.scopes, g.until, g.granted_at, g.granted_at::text cursor_at, g.id cursor_id, ${who('g.viewer_profile_id')} profile
+         from feture.access_grant g
+         where g.owner_profile_id = $1 and g.revoked_at is null and (g.until is null or g.until > now())
+           and ${live('g.viewer_profile_id')} and ${after('g.granted_at', 'g.id')}
+         order by g.granted_at desc, g.id desc limit $4`, [acting.profileId, cur.at, cur.id, PAGE + 1]));
     }
-    return { items: await faces(await q.query(
-      `select g.scopes, g.until, g.granted_at, ${who.replace('%s', 'g.owner_profile_id')} profile
+    // «Мне открыли»: grants to the profile I act as, for my account, while the owner's private part is on.
+    return page(await q.query(
+      `select g.scopes, g.until, g.granted_at, g.granted_at::text cursor_at, g.id cursor_id, ${who('g.owner_profile_id')} profile
        from feture.access_grant g join feture.profile_settings s on s.profile_id = g.owner_profile_id
-       where g.viewer_profile_id = $1 and $2 = any(g.viewer_account_ids) and g.revoked_at is null and (g.until is null or g.until > now()) and s.private_on
-       order by g.granted_at desc limit 30`, [acting.profileId, acting.accountId])) };
+       where g.viewer_profile_id = $1 and $4 = any(g.viewer_account_ids) and g.revoked_at is null and (g.until is null or g.until > now()) and s.private_on
+         and ${live('g.owner_profile_id')} and ${after('g.granted_at', 'g.id')}
+       order by g.granted_at desc, g.id desc limit $5`, [acting.profileId, cur.at, cur.id, acting.accountId, PAGE + 1]));
+  },
+
+  async 'access.quota'(q, { acting: a }) {
+    return quota(q, need(a));
   },
 };
 
