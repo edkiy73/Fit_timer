@@ -1,7 +1,7 @@
 import React,{forwardRef,useEffect,useRef,type ButtonHTMLAttributes,type ReactNode} from 'react';
 import {useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {ChevronLeft,ChevronRight,CircleAlert,CircleCheck,Info,Search,TriangleAlert,X,type LucideIcon} from 'lucide-react';
+import {Check as Check2,ChevronLeft,ChevronRight,CircleAlert,CircleCheck,Info,Search,TriangleAlert,X,type LucideIcon} from 'lucide-react';
 import {Btn,Layer} from '../ui';
 import './tokens.css';
 import './kit.css';
@@ -186,3 +186,43 @@ export function Pill({tone,icon:Icon,children}:{tone?:'ok'|'wait'|'v'|'hot'|'bad
 }
 /** A hairline between blocks that are not rows of one list. */
 export function Divider(){return <hr className="k-hr"/>;}
+
+/** Single choice as a list (`.radio` rows: report reasons, kinds). */
+export function RadioList<T extends string>({value,options,onChange,label}:{value:T|null|undefined,options:readonly (readonly [T,ReactNode,ReactNode?])[],onChange:(v:T)=>void,label:string}){
+ return <div className="card list" role="radiogroup" aria-label={label}>{options.map(([k,title,sub])=><button key={k} type="button" className={'radio'+(value===k?' on':'')} role="radio" aria-checked={value===k} onClick={()=>onChange(k)}>
+  <i/><span className="tx">{title}{sub&&<small>{sub}</small>}</span></button>)}</div>;
+}
+/** Single choice as chips (filters, «кто видит»). Multi-choice chips are Chip with `on`. */
+export function ChoiceChips<T extends string>({value,options,onChange,label,scroll}:{value:T|null|undefined,options:readonly (readonly [T,ReactNode])[],onChange:(v:T)=>void,label:string,scroll?:boolean}){
+ return <div className={'chips'+(scroll?' scroll':'')} role="radiogroup" aria-label={label}>{options.map(([k,l])=><button key={k} type="button" className={'chip'+(value===k?' on':'')} role="radio" aria-checked={value===k} onClick={()=>onChange(k)}>{l}</button>)}</div>;
+}
+/** `.check` — a checkbox with its text (consents, «Также заблокировать» in forms). */
+export function Check({on,onChange,children,error}:{on:boolean,onChange:(v:boolean)=>void,children:ReactNode,error?:boolean}){
+ return <button type="button" role="checkbox" aria-checked={on} className={'check'+(on?' on':'')+(error?' err':'')} onClick={()=>onChange(!on)}><i><Check2/></i><span>{children}</span></button>;
+}
+/** `.sw` — a bare switch, for a row the kit's ToggleRow does not fit. */
+export function Switch({on,onChange,label,disabled}:{on:boolean,onChange:(v:boolean)=>void,label:string,disabled?:boolean}){
+ return <button type="button" role="switch" aria-checked={on} aria-label={label} disabled={disabled} className="k-sw" onClick={()=>onChange(!on)}><span className={'sw'+(on?' on':'')} aria-hidden="true"/></button>;
+}
+/** A slider (age, distance). */
+export function Range({value,min,max,step=1,onChange,label}:{value:number,min:number,max:number,step?:number,onChange:(v:number)=>void,label:string}){
+ return <input type="range" className="k-range" min={min} max={max} step={step} value={value} aria-label={label} onChange={e=>onChange(+e.target.value)}/>;
+}
+/** `.qprog` — a progress bar (0…1). */
+export function Progress({value,label}:{value:number,label?:string}){
+ return <div className="qprog" role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(value*100)}><i style={{width:`${Math.max(0,Math.min(1,value))*100}%`}}/></div>;
+}
+/** A wizard's «2/4 · Где и когда» with its progress bar. */
+export function Steps({step,total,name}:{step:number,total:number,name:string}){
+ return <div className="stepper"><span>{step}/{total} · {name}</span><Progress value={step/total}/></div>;
+}
+/** A count on an icon or a tab (`em`); 99+ above 99. */
+export function Badge({n,dot,label}:{n?:number|undefined,dot?:boolean,label?:string}){
+ if(dot)return <em className="dot" role="img" aria-label={label}/>;
+ return n?<em aria-label={label}>{n>99?'99+':n}</em>:null;
+}
+/** `.note` — a quiet hint line; `.sec` — a section label above a block. */
+export function Note({children,className}:{children:ReactNode,className?:string}){return <p className={'note'+(className?' '+className:'')}>{children}</p>;}
+export function SectionLabel({children,action}:{children:ReactNode,action?:ReactNode}){return <div className="sec"><span>{children}</span>{action}</div>;}
+/** «12 / 1000» under a text field. */
+export function Counter({n,max}:{n:number,max:number}){return <div className={'counter'+(n>max?' over':'')} aria-live="polite">{n} / {max}</div>;}

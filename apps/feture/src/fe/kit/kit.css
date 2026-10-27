@@ -26,3 +26,6 @@
 /* Invalid — the same red edge on every field (Field puts the message under it). */
 .v21 .inp[aria-invalid="true"]{border-color:var(--danger);box-shadow:0 0 0 1px var(--danger)}
 .v21 .k-hr{border:0;border-top:1px solid var(--line);margin:var(--s-3) 0}
+.v21 .k-sw{display:inline-flex;align-items:center;min-height:var(--h-md);padding:0 var(--s-1)}
+.v21 .k-range{width:100%;accent-color:var(--accent);min-height:var(--h-md)}
+.v21 .counter.over{color:var(--danger)}

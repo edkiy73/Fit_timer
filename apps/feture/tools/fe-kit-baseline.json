@@ -4,7 +4,9 @@
   "notice": 2,
   "inline style": 1,
   "card": 5,
-  "pill": 2
+  "pill": 2,
+  "note": 2,
+  "section label": 6
  },
  "src/fe/age-check.tsx": {
   "list row": 4,
@@ -23,7 +25,9 @@
   "inline style": 2,
   "heading": 1,
   "card": 5,
-  "pill": 2
+  "pill": 2,
+  "note": 3,
+  "section label": 3
  },
  "src/fe/chats.tsx": {
   "sheet": 1,
@@ -38,11 +42,16 @@
   "inline style": 10,
   "heading": 1,
   "card": 11,
-  "pill": 3
+  "pill": 3,
+  "radio": 1,
+  "checkbox": 1,
+  "note": 4,
+  "section label": 2
  },
  "src/fe/comm-kit.tsx": {
   "notice": 1,
-  "textarea": 1
+  "textarea": 1,
+  "radio": 1
  },
  "src/fe/communities.tsx": {
   "switch": 1,
@@ -54,7 +63,10 @@
   "inline style": 31,
   "heading": 2,
   "card": 11,
-  "pill": 23
+  "pill": 23,
+  "radio": 5,
+  "note": 7,
+  "section label": 9
  },
  "src/fe/couple.tsx": {
   "sheet": 1,
@@ -62,7 +74,8 @@
   "notice": 2,
   "round button": 1,
   "heading": 1,
-  "card": 2
+  "card": 2,
+  "note": 1
  },
  "src/fe/create-community.tsx": {
   "list row": 2,
@@ -73,7 +86,8 @@
   "textarea": 1,
   "select": 1,
   "inline style": 7,
-  "card": 3
+  "card": 3,
+  "note": 1
  },
  "src/fe/create-event.tsx": {
   "switch": 1,
@@ -85,7 +99,10 @@
   "select": 2,
   "inline style": 8,
   "heading": 1,
-  "card": 5
+  "card": 5,
+  "note": 2,
+  "section label": 3,
+  "progress": 1
  },
  "src/fe/css/chats.css": {
   "stylesheet": 1,
@@ -108,7 +125,9 @@
   "select": 2,
   "inline style": 5,
   "heading": 6,
-  "card": 11
+  "card": 11,
+  "note": 10,
+  "section label": 2
  },
  "src/fe/host.tsx": {
   "list row": 4,
@@ -118,14 +137,18 @@
   "textarea": 1,
   "inline style": 15,
   "card": 13,
-  "pill": 5
+  "pill": 5,
+  "note": 10,
+  "section label": 6
  },
  "src/fe/inbox.tsx": {
   "list row": 1,
   "chip": 1,
   "round button": 1,
   "inline style": 6,
-  "card": 2
+  "card": 2,
+  "note": 1,
+  "section label": 2
  },
  "src/fe/interests.tsx": {
   "sheet": 1,
@@ -137,14 +160,21 @@
   "input": 1,
   "inline style": 3,
   "heading": 1,
-  "card": 7
+  "card": 7,
+  "radio": 1,
+  "note": 7,
+  "section label": 1,
+  "progress": 1
  },
  "src/fe/links.tsx": {
   "list row": 9,
   "chip": 1,
   "notice": 4,
   "inline style": 7,
-  "card": 13
+  "card": 13,
+  "radio": 1,
+  "note": 5,
+  "section label": 1
  },
  "src/fe/me-edit.tsx": {
   "sheet": 1,
@@ -155,7 +185,8 @@
   "button": 1,
   "input": 3,
   "textarea": 2,
-  "card": 5
+  "card": 5,
+  "note": 2
  },
  "src/fe/me.tsx": {
   "sheet": 1,
@@ -167,13 +198,15 @@
   "button": 2,
   "inline style": 2,
   "heading": 2,
-  "card": 6
+  "card": 6,
+  "note": 2
  },
  "src/fe/mine.tsx": {
   "list row": 8,
   "notice": 1,
   "round button": 1,
-  "card": 9
+  "card": 9,
+  "note": 1
  },
  "src/fe/pair.tsx": {
   "switch": 1,
@@ -183,7 +216,8 @@
   "inline style": 2,
   "heading": 3,
   "card": 6,
-  "pill": 1
+  "pill": 1,
+  "note": 6
  },
  "src/fe/people.tsx": {
   "sheet": 1,
@@ -196,14 +230,18 @@
   "inline style": 13,
   "heading": 5,
   "card": 4,
-  "pill": 2
+  "pill": 2,
+  "radio": 2,
+  "note": 1,
+  "section label": 2
  },
  "src/fe/photo-check.tsx": {
   "list row": 2,
   "notice": 4,
   "input": 1,
   "inline style": 2,
-  "card": 3
+  "card": 3,
+  "note": 1
  },
  "src/fe/post-menu.tsx": {
   "sheet": 1,
@@ -214,13 +252,15 @@
   "round button": 1,
   "textarea": 1,
   "heading": 2,
-  "card": 3
+  "card": 3,
+  "radio": 1
  },
  "src/fe/post-parts.tsx": {
   "dialog": 1,
   "round button": 1,
   "inline style": 3,
-  "heading": 2
+  "heading": 2,
+  "note": 1
  },
  "src/fe/private.tsx": {
   "switch": 1,
@@ -230,7 +270,10 @@
   "button": 1,
   "inline style": 6,
   "card": 7,
-  "pill": 1
+  "pill": 1,
+  "radio": 1,
+  "note": 5,
+  "section label": 1
  },
  "src/fe/profile-extras.tsx": {
   "switch": 3,
@@ -242,7 +285,9 @@
   "inline style": 5,
   "heading": 5,
   "card": 10,
-  "pill": 5
+  "pill": 5,
+  "radio": 1,
+  "note": 4
  },
  "src/fe/register.tsx": {
   "sheet": 1,
@@ -255,12 +300,18 @@
   "select": 3,
   "inline style": 3,
   "heading": 4,
-  "pill": 1
+  "pill": 1,
+  "radio": 1,
+  "checkbox": 2,
+  "note": 2,
+  "section label": 1
  },
  "src/fe/settings-lists.tsx": {
   "list row": 2,
   "inline style": 6,
-  "card": 2
+  "card": 2,
+  "note": 3,
+  "section label": 1
  },
  "src/fe/settings.tsx": {
   "list row": 6,
@@ -268,7 +319,9 @@
   "input": 1,
   "inline style": 7,
   "heading": 2,
-  "card": 10
+  "card": 10,
+  "note": 5,
+  "section label": 10
  },
  "src/fe/shell.css": {
   "stylesheet": 1
@@ -292,7 +345,10 @@
   "inline style": 2,
   "heading": 1,
   "card": 6,
-  "pill": 4
+  "pill": 4,
+  "radio": 1,
+  "note": 21,
+  "section label": 1
  },
  "src/fe/start.tsx": {
   "round button": 1,
@@ -306,7 +362,8 @@
   "round button": 1,
   "inline style": 2,
   "heading": 2,
-  "card": 1
+  "card": 1,
+  "note": 2
  },
  "src/fe/welcome.tsx": {
   "round button": 2,

@@ -28,6 +28,11 @@ const TSX = [
   ['card', /className=(?:"|\{['`])[^"'`}]*\bcard\b/g],
   ['pill', /className=(?:"|\{['`])[^"'`}]*\bpill\b/g],
   ['divider', /<hr\b/g],
+  ['radio', /role="radio"/g],
+  ['checkbox', /role="checkbox"/g],
+  ['note', /className=(?:"|\{['`])note\b/g],
+  ['section label', /className="sec"/g],
+  ['progress', /className="qprog"/g],
 ];
 const CSS = [
   ['stylesheet', /^/],  // a screen stylesheet at all: new styles go into the kit (kit.css / tokens.css)
