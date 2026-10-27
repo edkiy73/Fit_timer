@@ -57,7 +57,10 @@ export function FeSessionProvider({children}:{children:ReactNode}){
   let cached:Bootstrap|null=null;
   try{const raw=localStorage.getItem(BOOT_KEY+session.email);if(raw){const r=bootstrapSchema.safeParse(JSON.parse(raw));if(r.success)cached=r.data;}}catch{/* no storage */}
   setState(cached?{status:'ready',session,boot:cached}:{status:'loading'});
-  feRequest(session,'session.bootstrap',{},bootstrapSchema,{signal:ctl.signal})
+  // «Too many at once» (429) is asked again after a pause before the whole app shows an error.
+  const ask=()=>feRequest(session,'session.bootstrap',{},bootstrapSchema,{signal:ctl.signal});
+  const later=(ms:number)=>(e:unknown)=>e instanceof FeError&&e.code==='rate_limited'&&!ctl.signal.aborted?wait(ms).then(ask):Promise.reject(e);
+  ask().catch(later(2500)).catch(later(6000))
    .then(boot=>{try{localStorage.setItem(BOOT_KEY+session.email,JSON.stringify(boot));}catch{/* no storage */}
     setState(cur=>cur.status==='ready'&&JSON.stringify(cur.boot)===JSON.stringify(boot)?cur:{status:'ready',session,boot});})
    .catch(error=>{if(!ctl.signal.aborted)setState(cached&&!(error instanceof FeError&&error.code==='auth_required')?(cur=>cur):error instanceof FeError&&error.code==='auth_required'?{status:'signedOut'}:{status:'error',error});});
