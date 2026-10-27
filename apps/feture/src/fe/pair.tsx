@@ -2,7 +2,7 @@ import {useCallback,useEffect,useRef,useState} from 'react';
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {AtSign,Heart,ShieldCheck,TriangleAlert,X} from 'lucide-react';
+import {AtSign,Check,Heart,ShieldCheck,TriangleAlert,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Av,Bar,Btn,View,Skel} from './ui';
 import {useFe} from './session';
@@ -17,6 +17,24 @@ const coupleRes=z.object({ok:z.literal(true),couple:z.object({id:z.uuid(),name:z
  members:z.array(z.object({me:z.boolean(),profileId:z.uuid(),handle:z.string().nullable(),name:z.string().nullable(),approvesPartner:z.boolean(),restoreAgreed:z.boolean()}))})});
 const ok=z.object({ok:z.literal(true)}).passthrough();
 const nameOf=(p:{name?:string|null,handle?:string|null}|null|undefined)=>p?(p.name||(p.handle?'@'+p.handle:'?')):'?';
+const found=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),kind:z.string(),handle:z.string().nullable(),name:z.string().nullable(),avatar:z.object({pending:z.boolean().optional(),src:z.record(z.string(),z.string()).nullable().optional()}).passthrough().nullable().optional()}).passthrough())});
+// people.search sends the avatar as a media object; the small variant is enough here.
+const thumb=(f:{avatar?:{pending?:boolean|undefined,src?:Record<string,string>|null|undefined}|null|undefined})=>f.avatar&&!f.avatar.pending?f.avatar.src?.thumb??f.avatar.src?.card??null:null;
+type Found=z.infer<typeof found>['items'][number];
+const NICK=/^[a-z0-9_.]{3,20}$/i;
+
+/** V21 Q01 live preview under the nickname field: «найден» with the photo, or the one reason it can't be invited. */
+function usePartnerLookup(nick:string,personId:string|undefined,ownHandle:string|null|undefined){
+ const {call}=useFe();const [hit,setHit]=useState<Found|null|'none'>(null);
+ const n=nick.trim().replace(/^@/,'').toLowerCase();
+ useEffect(()=>{setHit(null);if(!personId||!NICK.test(n)||n===ownHandle?.toLowerCase())return;
+  const ctl=new AbortController();
+  const timer=setTimeout(()=>{call('people.search',{q:n},found,{profileId:personId,signal:ctl.signal})
+   .then(r=>setHit(r.items.find(x=>x.kind==='person'&&x.handle?.toLowerCase()===n)??'none')).catch(()=>{});},350);
+  return ()=>{clearTimeout(timer);ctl.abort();};},[n,personId,ownHandle,call]);
+ const issue=!n?'':n===ownHandle?.toLowerCase()?'own':!NICK.test(n)?(n.length>=3?'format':''):hit==='none'?'none':'';
+ return {hit:hit&&hit!=='none'?hit:null,issue};
+}
 
 export function PairScreen(){
  const {state,call,reload,setActing}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();
@@ -25,6 +43,7 @@ export function PairScreen(){
  const [inv,setInv]=useState<z.infer<typeof invitesRes>|null>(null);const [c,setC]=useState<z.infer<typeof coupleRes>['couple']|null>(null);
  const [nick,setNick]=useState('');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [confirmStop,setConfirmStop]=useState(()=>new URLSearchParams(location.hash.split('?')[1]??'').get('stop')==='1');
  const op=useRef(newOpId());
+ const lookup=usePartnerLookup(nick,person?.id,person?.handle);
  const load=useCallback(()=>{
   setFailure('');
   if(couple)call('couple.get',{},coupleRes,{profileId:couple.id}).then(r=>setC(r.couple)).catch(e=>setFailure(feErrorMessage(e,t)));
@@ -65,8 +84,8 @@ export function PairScreen(){
  return <>
   <Bar title={t('fe.pair.title')} back="/n/me"/>
   <View><div className="pair-wrap">
-   <div className={'pair-scene'+(out?' on':'')}><span className="ps-av me"><Av name={meName} seed={person?.id}/></span><span className="ps-link"><i/><i/><i/><b><Heart/></b></span>
-    <span className="ps-av ot">{out?.profile?<Av name={nameOf(out.profile)} seed={out.profile.id}/>:<span className="av ini"><b style={{position:'relative'}}>?</b></span>}</span></div>
+   <div className={'pair-scene'+(out?' on':lookup.hit?' ready':'')}><span className="ps-av me"><Av name={meName} seed={person?.id} src={person?.avatar}/></span><span className="ps-link"><i/><i/><i/><b><Heart/></b></span>
+    <span className="ps-av ot">{out?.profile?<Av name={nameOf(out.profile)} seed={out.profile.id}/>:lookup.hit?<Av name={nameOf(lookup.hit)} seed={lookup.hit.id} src={thumb(lookup.hit)}/>:<span className="av ini"><b style={{position:'relative'}}>?</b></span>}</span></div>
    <h2 className="t center">{out?t('fe.pair.waiting').replace('{name}',nameOf(out.profile)):t('fe.pair.inviteTitle')}</h2>
    <p className="note center">{t('fe.pair.inviteText')}</p>
    {inv===null?<Skel kind="list"/>:<>
@@ -77,7 +96,9 @@ export function PairScreen(){
     {out?<div className="btns mt16"><Btn kind="soft" disabled={busy} onClick={()=>act(()=>call('couple.inviteWithdraw',{opId:newOpId(),inviteId:out.id},ok,{asAccount:true}))}>{t('fe.pair.withdraw')}</Btn></div>
      :<div className="card form-card mt16">
       <label className="field"><span>{t('fe.pair.partnerNick')}</span><div className="inwrap"><AtSign/><input className="inp" value={nick} onChange={e=>setNick(e.target.value.replace(/^@/,''))} placeholder="nickname" autoCapitalize="off" spellCheck={false} maxLength={20}/></div><div className="fhint">{t('fe.pair.nickHint')}</div></label>
-      <Btn disabled={busy||nick.trim().length<3} onClick={()=>act(async()=>{await call('couple.invite',{opId:op.current,handle:nick.trim()},ok,{asAccount:true});op.current=newOpId();setNick('');})}>{t('fe.pair.invite')}</Btn>
+      {lookup.hit?<div className="li static"><Av name={nameOf(lookup.hit)} seed={lookup.hit.id} src={thumb(lookup.hit)} size="sm"/><span className="tx"><b>{nameOf(lookup.hit)}</b><small>@{lookup.hit.handle}</small></span><span className="pill ok"><Check/>{t('fe.pq.found')}</span></div>
+       :lookup.issue?<p className="note">{t('fe.pq.issue.'+lookup.issue)}</p>:null}
+      <Btn disabled={busy||!lookup.hit} onClick={()=>act(async()=>{await call('couple.invite',{opId:op.current,handle:nick.trim()},ok,{asAccount:true});op.current=newOpId();setNick('');})}>{t('fe.pair.invite')}</Btn>
      </div>}
    </>}
    {failure&&<div className="alert err mt12" role="alert"><span>{failure}</span></div>}
