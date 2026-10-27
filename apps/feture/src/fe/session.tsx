@@ -4,12 +4,15 @@ import type {AuthSession} from '@appbase/core/auth.js';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import {feRequest,FeError} from '../feture/fe-api';
 import {connectRealtime,type RtKind,type RtListener} from './realtime';
+import {forgetWebPush,noteAction} from './push-web';
 
 /** What `session.bootstrap` returns: the FetUre account and the profiles this account may act as. */
 const profileCard=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string(),state:z.string(),avatarAssetId:z.uuid().nullable(),avatar:z.string().nullable().optional()});
 /** realtime: the public socket address and the opaque per-profile channels (S2 §8); null when the server has none. */
 const realtimeCfg=z.object({url:z.url(),key:z.string().min(1),channels:z.record(z.uuid(),z.string().regex(/^fe:[A-Za-z0-9_-]{22,}$/))});
-export const bootstrapSchema=z.object({ok:z.literal(true),account:z.object({id:z.uuid(),locale:z.string(),onboarded:z.boolean()}),profiles:z.array(profileCard),realtime:realtimeCfg.nullable().optional()});
+export const bootstrapSchema=z.object({ok:z.literal(true),account:z.object({id:z.uuid(),locale:z.string(),onboarded:z.boolean()}),profiles:z.array(profileCard),realtime:realtimeCfg.nullable().optional(),
+ /** Web push: the server's public VAPID key; null while the server sends none. */
+ push:z.object({webKey:z.string().regex(/^[A-Za-z0-9_-]{80,100}$/)}).nullable().optional()});
 export type ProfileCard=z.infer<typeof profileCard>;
 export type Bootstrap=z.infer<typeof bootstrapSchema>;
 
@@ -49,6 +52,9 @@ export function FeSessionProvider({children}:{children:ReactNode}){
  const [state,setState]=useState<State>({status:'loading'});
  const [nonce,setNonce]=useState(0);
  const [actingId,setActingId]=useState<string|null>(()=>{try{return sessionStorage.getItem(ACTING_KEY);}catch{return null;}});
+ // Signed out after being signed in: this browser stops getting the account's pushes.
+ const had=useRef(false);
+ useEffect(()=>{if(auth.session)had.current=true;else if(!auth.loading&&had.current){had.current=false;void forgetWebPush();}},[auth.loading,auth.session]);
  useEffect(()=>{
   if(auth.loading){setState({status:'loading'});return;}
   if(!auth.session){readCache.clear();try{for(const k of Object.keys(localStorage))if(k.startsWith(BOOT_KEY))localStorage.removeItem(k);}catch{/* no storage */}setState({status:'signedOut'});return;}
@@ -75,7 +81,7 @@ export function FeSessionProvider({children}:{children:ReactNode}){
   const profileId=opts.asAccount?undefined:opts.profileId??acting?.id;
   if('opId' in input||WRITES_WITHOUT_OPID.has(action)){ // a write: whatever was read before may have changed
    readCache.clear();
-   return feRequest(state.session,action,input,schema,{signal:opts.signal,profileId}).finally(()=>readCache.clear());
+   return feRequest(state.session,action,input,schema,{signal:opts.signal,profileId}).then(r=>{noteAction(action);return r;}).finally(()=>readCache.clear());
   }
   let sid=schemaIds.get(schema);if(sid==null){sid=++schemaSeq;schemaIds.set(schema,sid);}
   const key=JSON.stringify([state.session.email,profileId??'',action,input,sid]);

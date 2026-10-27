@@ -119,7 +119,10 @@ test('notifications.read marks one own item; push.unregister removes only one’
 
     const devices = async (/** @type {string} */ p) => (await db.query(`select count(*)::int n from feture.push_device d join feture.account x on x.id = d.account_id where x.person_profile_id = $1`, [p]))[0].n;
     await call('ub', null, { action: 'push.register', opId: op(), platform: 'android', token: 'kira-device-token' });
-    await call('ub', null, { action: 'push.register', opId: op(), platform: 'web', token: 'kira-browser-token' });
+    // A browser subscription (a made-up web token is refused: the server only posts to known push services).
+    const sub = JSON.stringify({ endpoint: 'https://fcm.googleapis.com/fcm/send/kira', keys: { p256dh: Buffer.concat([Buffer.from([4]), Buffer.alloc(64, 7)]).toString('base64url'), auth: Buffer.alloc(16, 1).toString('base64url') } });
+    assert.equal((await call('ub', null, { action: 'push.register', opId: op(), platform: 'web', token: 'kira-browser-token' })).status, 400);
+    await call('ub', null, { action: 'push.register', opId: op(), platform: 'web', token: sub });
     // Another account cannot switch off Kira's device by knowing its token.
     assert.equal((await call('ua', null, { action: 'push.unregister', opId: op(), token: 'kira-device-token' })).registered, false);
     assert.equal(await devices(b), 2);
