@@ -46,22 +46,8 @@ export function useToast(){
 }
 
 /** `div.layer > div.scrim.on + div.sheet.on` — the prototype's sheet; Esc, ✕ and the scrim close it. */
-export function Sheet({title,onClose,children,foot,full}:{title:string,onClose:()=>void,children:ReactNode,foot?:ReactNode,full?:boolean}){
- const {t}=useI18n();const ref=useRef<HTMLDivElement>(null);
- useEffect(()=>{const opener=document.activeElement as HTMLElement|null;ref.current?.focus({preventScroll:true});
-  const key=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();onClose();}};
-  document.addEventListener('keydown',key);
-  return ()=>{document.removeEventListener('keydown',key);requestAnimationFrame(()=>opener?.focus?.({preventScroll:true}));};},[onClose]);
- return <Layer>
-  <div className="scrim on" onClick={onClose}/>
-  <div ref={ref} className={'sheet on'+(full?' full':'')} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}>
-   <div className="grab"/>
-   <div className="sh-h"><div className="sh-ht"><h2>{title}</h2></div><button type="button" className="ibtn ghost sm" aria-label={t('fe.px.close')} onClick={onClose}><X/></button></div>
-   <div className="sh-b">{children}</div>
-   {foot&&<div className="sh-f">{foot}</div>}
-  </div>
- </Layer>;
-}
+import {Sheet} from './kit';
+export {Sheet};
 
 /* ---------- the person card shared by PersonScreen and «Как видят» ---------- */
 const media=z.object({src:z.record(z.string(),z.string()).nullable(),pending:z.boolean().optional()}).passthrough();

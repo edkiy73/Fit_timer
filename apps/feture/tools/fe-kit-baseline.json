@@ -1,0 +1,252 @@
+{
+ "src/fe/account-extra.tsx": {
+  "list row": 3,
+  "notice": 2,
+  "inline style": 1
+ },
+ "src/fe/age-check.tsx": {
+  "list row": 4,
+  "notice": 7,
+  "input": 1,
+  "inline style": 7
+ },
+ "src/fe/browse.tsx": {
+  "list row": 5,
+  "chip": 1,
+  "notice": 4,
+  "round button": 3,
+  "button": 2,
+  "input": 1,
+  "inline style": 2
+ },
+ "src/fe/chats.tsx": {
+  "sheet": 1,
+  "switch": 1,
+  "list row": 3,
+  "chip": 1,
+  "notice": 4,
+  "round button": 10,
+  "input": 3,
+  "textarea": 3,
+  "select": 1,
+  "inline style": 10
+ },
+ "src/fe/comm-kit.tsx": {
+  "notice": 1,
+  "textarea": 1
+ },
+ "src/fe/communities.tsx": {
+  "switch": 1,
+  "list row": 7,
+  "chip": 12,
+  "notice": 6,
+  "round button": 12,
+  "button": 5,
+  "inline style": 31
+ },
+ "src/fe/couple.tsx": {
+  "sheet": 1,
+  "list row": 3,
+  "notice": 2,
+  "round button": 1
+ },
+ "src/fe/create-community.tsx": {
+  "list row": 2,
+  "chip": 2,
+  "notice": 3,
+  "button": 2,
+  "input": 2,
+  "textarea": 1,
+  "select": 1,
+  "inline style": 7
+ },
+ "src/fe/create-event.tsx": {
+  "switch": 1,
+  "list row": 4,
+  "chip": 1,
+  "notice": 5,
+  "round button": 1,
+  "button": 3,
+  "select": 2,
+  "inline style": 8
+ },
+ "src/fe/css/chats.css": {
+  "font size": 1
+ },
+ "src/fe/feed.tsx": {
+  "sheet": 3,
+  "dialog": 1,
+  "switch": 1,
+  "list row": 4,
+  "chip": 9,
+  "notice": 4,
+  "round button": 13,
+  "button": 9,
+  "input": 6,
+  "textarea": 2,
+  "select": 2,
+  "inline style": 6
+ },
+ "src/fe/host.tsx": {
+  "list row": 4,
+  "notice": 6,
+  "round button": 1,
+  "button": 3,
+  "textarea": 1,
+  "inline style": 15
+ },
+ "src/fe/inbox.tsx": {
+  "list row": 1,
+  "chip": 1,
+  "round button": 1,
+  "inline style": 6
+ },
+ "src/fe/interests.tsx": {
+  "sheet": 1,
+  "list row": 2,
+  "chip": 4,
+  "notice": 5,
+  "round button": 3,
+  "button": 8,
+  "input": 1,
+  "inline style": 3
+ },
+ "src/fe/links.tsx": {
+  "list row": 9,
+  "chip": 1,
+  "notice": 4,
+  "inline style": 7
+ },
+ "src/fe/me-edit.tsx": {
+  "sheet": 1,
+  "switch": 2,
+  "list row": 6,
+  "chip": 1,
+  "notice": 1,
+  "button": 1,
+  "input": 3,
+  "textarea": 2
+ },
+ "src/fe/me.tsx": {
+  "sheet": 1,
+  "dialog": 1,
+  "switch": 1,
+  "list row": 11,
+  "notice": 3,
+  "round button": 2,
+  "button": 2,
+  "inline style": 2
+ },
+ "src/fe/mine.tsx": {
+  "list row": 8,
+  "notice": 1,
+  "round button": 1
+ },
+ "src/fe/pair.tsx": {
+  "switch": 1,
+  "list row": 4,
+  "notice": 4,
+  "input": 1,
+  "inline style": 2
+ },
+ "src/fe/people.tsx": {
+  "sheet": 1,
+  "list row": 6,
+  "chip": 3,
+  "notice": 3,
+  "round button": 6,
+  "button": 3,
+  "input": 3,
+  "inline style": 13
+ },
+ "src/fe/photo-check.tsx": {
+  "list row": 2,
+  "notice": 4,
+  "input": 1,
+  "inline style": 2
+ },
+ "src/fe/post-menu.tsx": {
+  "sheet": 1,
+  "dialog": 1,
+  "switch": 1,
+  "list row": 2,
+  "notice": 4,
+  "round button": 1,
+  "textarea": 1
+ },
+ "src/fe/post-parts.tsx": {
+  "dialog": 1,
+  "round button": 1,
+  "inline style": 3
+ },
+ "src/fe/private.tsx": {
+  "switch": 1,
+  "list row": 3,
+  "chip": 2,
+  "notice": 2,
+  "button": 1,
+  "inline style": 6
+ },
+ "src/fe/profile-extras.tsx": {
+  "switch": 3,
+  "list row": 5,
+  "notice": 5,
+  "round button": 4,
+  "button": 7,
+  "textarea": 1,
+  "inline style": 5
+ },
+ "src/fe/register.tsx": {
+  "sheet": 1,
+  "dialog": 1,
+  "chip": 4,
+  "notice": 3,
+  "round button": 1,
+  "button": 2,
+  "input": 2,
+  "select": 3,
+  "inline style": 3
+ },
+ "src/fe/settings-lists.tsx": {
+  "list row": 2,
+  "inline style": 6
+ },
+ "src/fe/settings.tsx": {
+  "list row": 6,
+  "notice": 1,
+  "input": 1,
+  "inline style": 7
+ },
+ "src/fe/shell.tsx": {
+  "inline style": 5
+ },
+ "src/fe/staff.css": {
+  "font size": 5,
+  "font family": 1
+ },
+ "src/fe/staff.tsx": {
+  "list row": 1,
+  "chip": 1,
+  "notice": 11,
+  "round button": 3,
+  "input": 6,
+  "textarea": 1,
+  "inline style": 2
+ },
+ "src/fe/start.tsx": {
+  "round button": 1,
+  "input": 2
+ },
+ "src/fe/terms-sheet.tsx": {
+  "sheet": 1,
+  "list row": 1,
+  "notice": 1,
+  "round button": 1,
+  "inline style": 2
+ },
+ "src/fe/welcome.tsx": {
+  "round button": 2,
+  "button": 2,
+  "inline style": 3
+ }
+}
