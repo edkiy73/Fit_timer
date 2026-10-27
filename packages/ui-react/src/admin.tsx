@@ -163,8 +163,11 @@ function AccessForm({client, adminKey, copy, locale, onChanged, email, setEmail,
     setMessageAt('code');
     setMessage('');
     try{
+      // A code for an address that has never signed in needs the account first (as granting access does).
+      await client.action(adminKey, 'user_create', {email});
       const result = await client.action(adminKey, 'user_test_code', {email});
       setMessage(copy.loginCodeDone + ' ' + String(result.email || email) + ': ' + String(result.code || '') + ' — ' + copy.loginCodeHint);
+      onChanged();
     }catch(e){
       setMessage(String((e as {code?: string})?.code || copy.requestFailed));
     }finally{
