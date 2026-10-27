@@ -35,7 +35,13 @@ export const platformCommands = {
   'decide.approvals': { profile: true, write: false, input: z.strictObject({}) },
   'decide.approval': {
     profile: true, write: true,
-    input: z.strictObject({ opId, approvalId: id, choice: z.enum(['approve', 'return']) }),
+    // «Вернуть на доработку» may carry a note (≤300, V21 returnSend); approving never does. Same rules as me.mjs `text`
+    // (not imported: me.mjs imports this file).
+    input: z.strictObject({
+      opId, approvalId: id, choice: z.enum(['approve', 'return']),
+      comment: z.string().max(600).transform(v => v.normalize('NFC').trim()).refine(v => v.length <= 300, { message: 'too_long' })
+        .refine(v => !/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u202A-\u202E\u2066-\u2069\u200B-\u200F\uFEFF]/.test(v), { message: 'bad_characters' }).optional(),
+    }).refine(v => v.choice === 'return' || v.comment === undefined, { message: 'comment_only_when_returning', path: ['comment'] }),
   },
   'decide.cancel': { profile: true, write: true, input: z.strictObject({ opId, approvalId: id }) },
 };

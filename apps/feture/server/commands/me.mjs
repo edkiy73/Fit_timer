@@ -225,6 +225,30 @@ async function doInterestSet(q, profileId, accountId, input) {
   return { topicId: input.topicId, ...next };
 }
 
+/** One visibility setting as the acting profile: a person's applies at once; a couple's narrowing applies at once (hiding
+ * from Discover voids pending widenings), a widening waits for the partner when they ask to approve. Shared by
+ * profile.setVisibility and couple.setup. @param {Q} q @param {Acting} acting @param {keyof typeof PROFILE_SETTINGS} setting @param {any} value */
+export async function setVisibilityAs(q, acting, setting, value) {
+  if (acting.kind === 'couple') {
+    const [cur] = await q.query(`select ${SETTING_COLUMN[setting]} v from feture.profile_settings where profile_id = $1`, [acting.profileId]);
+    const order = OPENNESS[setting];
+    const widening = order.indexOf(value) > order.indexOf(cur.v);
+    if (!widening) {
+      if (setting === 'discoverMode') await narrowCouple(q, acting, 'discover_narrowed');
+      const out = await doSetVisibility(q, acting.profileId, setting, value);
+      await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: setting });
+      return out;
+    }
+    if (needsPartner(acting, 'profile.setVisibility')) {
+      return { pending: await requestApproval(q, acting, { kind: 'profile.setVisibility', targetType: 'setting:' + setting, targetId: null, change: { setting, value }, summary: [setting] }) };
+    }
+    const out = await doSetVisibility(q, acting.profileId, setting, value);
+    await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: setting });
+    return out;
+  }
+  return doSetVisibility(q, acting.profileId, setting, value);
+}
+
 // Couple changes waiting for the partner are applied by the same code, as the partner who asked.
 registerApprovalKind('profile.update', { apply: async (q, row) => { await doProfileUpdate(q, row.profile_id, row.requested_by, row.change); } });
 registerApprovalKind('profile.setVisibility', {
@@ -349,27 +373,7 @@ const run = {
   },
 
   async 'profile.setVisibility'(q, { acting: a, input }) {
-    const acting = need(a);
-    const setting = /** @type {keyof typeof PROFILE_SETTINGS} */ (input.setting);
-    if (acting.kind === 'couple') {
-      const [cur] = await q.query(`select ${SETTING_COLUMN[setting]} v from feture.profile_settings where profile_id = $1`, [acting.profileId]);
-      const order = OPENNESS[setting];
-      const widening = order.indexOf(input.value) > order.indexOf(cur.v);
-      if (!widening) {
-        // Narrowing is immediate; hiding from Discover is a safety action that voids pending widenings.
-        if (setting === 'discoverMode') await narrowCouple(q, acting, 'discover_narrowed');
-        const out = await doSetVisibility(q, acting.profileId, setting, input.value);
-        await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: setting });
-        return out;
-      }
-      if (needsPartner(acting, 'profile.setVisibility')) {
-        return { pending: await requestApproval(q, acting, { kind: 'profile.setVisibility', targetType: 'setting:' + setting, targetId: null, change: { setting, value: input.value }, summary: [setting] }) };
-      }
-      const out = await doSetVisibility(q, acting.profileId, setting, input.value);
-      await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: setting });
-      return out;
-    }
-    return doSetVisibility(q, acting.profileId, setting, input.value);
+    return setVisibilityAs(q, need(a), /** @type {keyof typeof PROFILE_SETTINGS} */ (input.setting), input.value);
   },
 
   async 'settings.get'(q, { account }) {

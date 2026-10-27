@@ -75,11 +75,20 @@ async function append(q, c, acting, m) {
      values ($1, $2, $3, $4, $5, $6, $7, $8) returning id, seq, created_at`,
     [c.id, seq, acting.profileId, acting.accountId, m.body, m.replyTo ?? null, m.assetId ?? null, m.mode ?? 'normal']);
   // The sender has read up to here; a new message brings the conversation back from the recipients' archive.
+  const [before] = await q.query(`select last_read_seq from feture.conversation_member where conversation_id = $1 and account_id = $2`, [c.id, acting.accountId]);
   await q.query(`update feture.conversation_member set last_read_seq = $2 where conversation_id = $1 and account_id = $3`, [c.id, seq, acting.accountId]);
+  // Answering reads what came before: the other side's messages up to here get a read time (only if any were unread).
+  if (before && Number(seq) - 1 > Number(before.last_read_seq)) await markRead(q, c.id, acting.accountId, Number(seq) - 1);
   const others = await q.query(
     `update feture.conversation_member set archived = false where conversation_id = $1 and profile_id <> $2 returning account_id, muted`, [c.id, acting.profileId]);
   await enqueue(q, 'message.created', c.other, { conversationId: c.id, seq: Number(seq), for: others.filter(o => !o.muted).map(o => o.account_id) });
   return { id: msg.id, seq: Number(msg.seq), at: msg.created_at, recipients: others.map(o => o.account_id) };
+}
+
+/** Remembers when a member's read mark moved forward (V21 chatReadInfo). @param {Q} q @param {string} conversationId
+ * @param {string} accountId @param {number} upTo */
+async function markRead(q, conversationId, accountId, upTo) {
+  await q.query(`insert into feture.conversation_read (conversation_id, account_id, up_to_seq) values ($1, $2, $3) on conflict do nothing`, [conversationId, accountId, upTo]);
 }
 
 /** «Something new in chats» to the other side and to the sender's own profile (a couple partner sees it too).
@@ -181,6 +190,28 @@ const run = {
       [c.id, viewer.accountId, input.beforeSeq ?? null, input.afterSeq ?? null, input.limit]);
     const [prefs] = await q.query('select chat_blur, show_explicit from feture.account where id = $1', [account.id]);
     const assets = await q.query('select * from feture.media_asset where id = any($1)', [rows.map(r => r.media_asset_id).filter(Boolean)]);
+    // Only for the sender's own messages: when each member of the other side read it (V21 chatReadInfo; a couple has
+    // two readers) and how each recipient handled a disappearing photo (V21 chatMedia). No reader is named: the list
+    // follows a fixed order of the other side's members.
+    const mineSeqs = rows.filter(m => m.author_profile_id === viewer.profileId).map(m => Number(m.seq));
+    const readers = mineSeqs.length ? await q.query(
+      `select cm.account_id, cm.last_read_seq, coalesce(array_agg(json_build_object('seq', r.up_to_seq, 'readAt', r.read_at) order by r.up_to_seq) filter (where r.up_to_seq is not null), '{}') marks
+       from feture.conversation_member cm left join feture.conversation_read r on r.conversation_id = cm.conversation_id and r.account_id = cm.account_id and r.up_to_seq >= $3
+       where cm.conversation_id = $1 and cm.profile_id <> $2 group by cm.account_id, cm.last_read_seq order by cm.account_id`,
+      [c.id, viewer.profileId, Math.min(...mineSeqs)]) : [];
+    const ephemeralMine = rows.filter(m => m.author_profile_id === viewer.profileId && m.media_mode !== 'normal').map(m => m.id);
+    const views = ephemeralMine.length ? await q.query(
+      `select message_id, viewer_account_id, opened_at, done from feture.message_media_view where message_id = any($1) order by viewer_account_id`, [ephemeralMine]) : [];
+    /** @param {any} m */
+    const readBy = m => readers.map(r => {
+      const mark = r.marks.find((/** @type {any} */ x) => Number(x.seq) >= Number(m.seq));
+      return { read: Number(r.last_read_seq) >= Number(m.seq), readAt: mark ? mark.readAt : null };
+    });
+    /** @param {any} m */
+    const viewsOf = m => views.filter(v => v.message_id === m.id).map(v => {
+      const st = ephemeralState(m, v);
+      return { state: st === 'unopened' ? 'unopened' : st === 'open' ? 'open' : v.opened_at ? 'opened' : 'expired', openedAt: v.opened_at };
+    });
     const items = [];
     for (const m of rows.sort((x, y) => Number(x.seq) - Number(y.seq))) {
       const mine = m.author_profile_id === viewer.profileId;
@@ -188,7 +219,9 @@ const run = {
       const asset = assets.find(x => x.id === m.media_asset_id);
       if (m.media_mode !== 'normal') {
         // Ephemeral: never a link here; recipients open it with chat.openMedia.
-        media = { ephemeral: true, mode: m.media_mode, state: mine ? (asset && asset.state !== 'removed' ? 'sent' : 'done') : ephemeralState(m, { opened_at: m.opened_at, done: m.done }) };
+        media = mine
+          ? { ephemeral: true, mode: m.media_mode, state: asset && asset.state !== 'removed' ? 'sent' : 'done', views: viewsOf(m) }
+          : { ephemeral: true, mode: m.media_mode, state: ephemeralState(m, { opened_at: m.opened_at, done: m.done }) };
       } else if (m.media_asset_id) {
         media = asset ? await mediaDto(cfg.media, asset, {
           viewerProfileId: viewer.profileId, place: 'chat', showExplicit: prefs.show_explicit && !prefs.chat_blur, blurAll: prefs.chat_blur, staff: false,
@@ -197,7 +230,7 @@ const run = {
         // never an empty bubble, never a link.
         if (!media) media = ['uploaded', 'scanning', 'needs_review'].includes(asset?.state) ? { pending: true, src: null } : { gone: true, src: null };
       }
-      items.push({ id: m.id, seq: Number(m.seq), mine, author: m.author_profile_id, body: m.body, replyTo: m.reply_to, media, at: m.created_at });
+      items.push({ id: m.id, seq: Number(m.seq), mine, author: m.author_profile_id, body: m.body, replyTo: m.reply_to, media, at: m.created_at, ...(mine ? { readBy: readBy(m) } : {}) });
     }
     // Receipts: how far the other side has read (the furthest of its members).
     const [{ read }] = await q.query(
@@ -297,8 +330,27 @@ const run = {
       `update feture.conversation_member set last_read_seq = greatest(last_read_seq, least($3::bigint, $4::bigint))
        where conversation_id = $1 and account_id = $2 returning last_read_seq`, [c.id, acting.accountId, input.upToSeq, c.last_seq]);
     // A read receipt moved: the other side's ticks update (only when it really moved forward).
-    if (Number(r.last_read_seq) > Number(c.last_read_seq)) signal(c.other, 'chat');
+    if (Number(r.last_read_seq) > Number(c.last_read_seq)) {
+      await markRead(q, c.id, acting.accountId, Number(r.last_read_seq));
+      signal(c.other, 'chat');
+    }
     return { readSeq: Number(r.last_read_seq) };
+  },
+
+  async 'chat.starters'(q, { acting: a, input }) {
+    const acting = need(a);
+    const c = await memberOf(q, input.conversationId, acting);
+    if (!c.other) return { topics: [] };
+    // Topic ids only, and only interests BOTH profiles show to everyone (never granted/only ones, never hard limits);
+    // the ones marked «обсудить» and rated higher come first.
+    const rows = await q.query(
+      `select i.topic_id from feture.interest i join feture.interest j on j.topic_id = i.topic_id and j.profile_id = $2 and j.vis = 'public'
+       join feture.topic t on t.id = i.topic_id and not t.hidden
+       where i.profile_id = $1 and i.vis = 'public' and coalesce(i.mark, '') <> 'hard'
+         and exists (select 1 from feture.profile o where o.id = $2 and o.state = 'active') and coalesce(j.mark, '') <> 'hard'
+       order by (i.mark = 'discuss' or j.mark = 'discuss') desc nulls last, coalesce(i.value, 0) + coalesce(j.value, 0) desc, i.topic_id limit 5`,
+      [acting.profileId, c.other]);
+    return { topics: rows.map(r => r.topic_id) };
   },
 
   async 'chat.mute'(q, { acting: a, input }) {

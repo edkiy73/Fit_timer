@@ -36,13 +36,14 @@ async function clearPerson(q, pp) {
   // Access both ways and requests.
   await q.query(`update feture.access_grant set revoked_at = now() where (owner_profile_id = $1 or viewer_profile_id = $1) and revoked_at is null`, [pp]);
   await q.query(`update feture.access_request set state = 'closed', closed_reason = 'revoked', decided_at = now() where (owner_profile_id = $1 or requester_profile_id = $1) and state = 'pending'`, [pp]);
-  for (const t of ['interest', 'interest_history', 'private_part', 'discover_decision', 'discover_filter', 'saved_item', 'feed_hide']) {
+  for (const t of ['interest', 'interest_history', 'private_part', 'discover_decision', 'discover_filter', 'saved_item', 'feed_hide', 'profile_location']) {
     await q.query(`delete from feture.${t} where profile_id = $1`, [pp]);
   }
   await q.query(`update feture.profile_details set bio = '', city_id = null, genders = '{}', orients = '{}', roles = '{}', formats = '{}', seeks = '{}', status = null where profile_id = $1`, [pp]);
   await q.query(`update feture.profile_settings set discover_mode = 'off', updated_at = now() where profile_id = $1`, [pp]);
   // Social graph.
   await q.query(`delete from feture.follow where follower_profile_id = $1 or target_profile_id = $1`, [pp]);
+  await q.query(`delete from feture.follow_removed where follower_profile_id = $1 or target_profile_id = $1`, [pp]);
   await q.query(`delete from feture.note_subscription where subscriber_profile_id = $1 or author_profile_id = $1`, [pp]);
   await q.query(`delete from feture.block where blocker_profile_id = $1`, [pp]);
   await q.query(`delete from feture.profile_link where a_profile_id = $1 or b_profile_id = $1`, [pp]);
@@ -107,6 +108,8 @@ const run = {
     await q.query(`update feture.profile set state = 'deleted', handle = null, name = '', avatar_asset_id = null, updated_at = now() where id = $1`, [a.person_profile_id]);
     await q.query(`update feture.profile_member set state = 'left', left_at = now() where account_id = $1 and state = 'active'`, [a.id]);
     await q.query(`update feture.account set state = 'deleted', birth_date = null, news_opt_in = false, updated_at = now() where id = $1`, [a.id]);
+    await q.query(`update feture.couple_link set revoked_at = now() where from_account = $1 and used_at is null and revoked_at is null`, [a.id]);
+    await q.query(`delete from feture.launch_wish where account_id = $1`, [a.id]);
     await q.query(`delete from feture.account_link where account_id = $1`, [a.id]);
     return { deleted: true };
   },

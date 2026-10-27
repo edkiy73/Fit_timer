@@ -9,6 +9,7 @@ import { isPremium } from './premium.mjs';
 import { photoVerifiedOf } from './verification.mjs';
 import { endConversations, openConversation } from './chats.mjs';
 import { PREMIUM_SQL } from './faces.mjs';
+import { needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
 
 /** Slice F: Discover, likes and matches (S1 §11, extract/people-discover-chats.md).
  * The pool: visible profiles with an approved safe avatar, active and unrestricted, no block either way, not related
@@ -22,14 +23,14 @@ import { PREMIUM_SQL } from './faces.mjs';
 
 /** @param {Acting | null} acting @returns {Acting} */
 const need = acting => { if (!acting) throw new Error('acting profile missing'); return acting; };
-const DEFAULT_FILTER = { show: 'all', ageMin: 18, ageMax: 99, cityId: null, genders: [], orients: [], formats: [], seeks: [], roles: [], topics: [] };
+const DEFAULT_FILTER = { show: 'all', ageMin: 18, ageMax: 99, cityId: null, placeMode: 'city', radiusKm: 25, genders: [], orients: [], formats: [], seeks: [], roles: [], topics: [] };
 
 /** Pool predicate for viewer $1 (no filter): who may appear in the viewer's Discover at all. */
 const POOL = `p.id <> $1 and p.state = 'active'
   and exists (select 1 from feture.profile_settings s where s.profile_id = p.id and s.discover_mode = 'visible') and feture.discoverable(p.id) and not feture.blocked($1, p.id) and not feture.related($1, p.id)
   and not exists (select 1 from feture.discover_decision x where x.profile_id = $1 and x.target_profile_id = p.id)
   and not exists (select 1 from feture.profile_match m where m.ended_at is null and m.profile_a = least($1, p.id) and m.profile_b = greatest($1, p.id))`;
-/** Filter predicate over parameters $2–$11 (see filterParams). It matches only what the profile shows everyone, so
+/** Filter predicate over parameters $2–$15 (see filterParams). It matches only what the profile shows everyone, so
  * neither the deck nor the count can reveal hidden details or a hidden age: details of a person only with
  * details_vis 'all' (a couple's role, format and seek are always public); a narrowed age range only over shown ages,
  * every member of a couple in range; gender/orientation when at least one member of a couple matches (V21 pool). */
@@ -40,14 +41,45 @@ const FILTER = `($2 = 'all' or $2 = 'people' and p.kind = 'person' or $2 = 'pair
         select count(*) > 0 and coalesce(bool_and(coalesce(pd.show_age, false) and extract(year from age(current_date, a.birth_date)) between $3 and $4), false)
         from feture.profile_member m join feture.account a on a.id = m.account_id left join feture.profile_details pd on pd.profile_id = a.person_profile_id
         where m.profile_id = p.id and m.state = 'active'))
-  and ($5::uuid is null or d.city_id = $5)
+  and ($12 = 'nearby' or $5::uuid is null or d.city_id = $5)
+  and ($12 = 'city' or exists (select 1 from feture.profile_location l where l.profile_id = p.id
+       and feture.km($14::float8, $15::float8, l.lat, l.lon) <= $13))
   and (cardinality($6::text[]) = 0 or exists (select 1 from (${PUBLIC_PEOPLE}) x where x.genders && $6))
   and (cardinality($7::text[]) = 0 or exists (select 1 from (${PUBLIC_PEOPLE}) x where x.orients && $7))
   and (cardinality($8::text[]) = 0 or ${OWN_PUBLIC} and d.formats && $8) and (cardinality($9::text[]) = 0 or ${OWN_PUBLIC} and d.seeks && $9)
   and (cardinality($10::text[]) = 0 or ${OWN_PUBLIC} and d.roles && $10)
   and (cardinality($11::text[]) = 0 or exists (select 1 from feture.interest i where i.profile_id = p.id and i.vis = 'public' and i.value is not null and i.topic_id = any($11)))`;
-/** @param {any} f */
-const filterParams = f => [f.show, f.ageMin, f.ageMax, f.cityId, f.genders, f.orients, f.formats, f.seeks, f.roles, f.topics];
+/** «Рядом» compares shared, already rounded locations only: the viewer's own (null when not shared) and the other side's.
+ * @param {any} f @param {{lat: number, lon: number} | null} [loc] */
+const filterParams = (f, loc = null) => [f.show, f.ageMin, f.ageMax, f.cityId, f.genders, f.orients, f.formats, f.seeks, f.roles, f.topics,
+  f.placeMode ?? 'city', f.radiusKm ?? 25, loc?.lat ?? null, loc?.lon ?? null];
+
+/** The acting profile's shared (rounded) location, if any. @param {Q} q @param {string} profileId */
+async function locationOf(q, profileId) {
+  const [l] = await q.query('select lat, lon from feture.profile_location where profile_id = $1', [profileId]);
+  return l ? { lat: Number(l.lat), lon: Number(l.lon) } : null;
+}
+
+/** Is dating open (not switched off by staff)? @param {Q} q */
+async function datingOpen(q) {
+  const [s] = await q.query(`select is_on from feture.platform_switch where key = 'dating'`);
+  return s?.is_on !== false;
+}
+
+/** Stores a shared location rounded to the 0.05° grid (~5 km); the exact one is never kept.
+ * @param {Q} q @param {string} profileId @param {string} accountId @param {number} lat @param {number} lon */
+async function writeLocation(q, profileId, accountId, lat, lon) {
+  const [l] = await q.query(
+    `insert into feture.profile_location (profile_id, lat, lon, shared_by) values ($1, (round($2::numeric * 20) / 20)::float8, (round($3::numeric * 20) / 20)::float8, $4)
+     on conflict (profile_id) do update set lat = excluded.lat, lon = excluded.lon, shared_by = excluded.shared_by, shared_at = now()
+     returning lat, lon`, [profileId, lat, lon, accountId]);
+  return { lat: Number(l.lat), lon: Number(l.lon) };
+}
+
+// Sharing a couple's location is a widening: it waits for the partner who asks to approve changes.
+registerApprovalKind('location.set', {
+  apply: async (q, row) => { const c = /** @type {any} */ (row.change); await writeLocation(q, row.profile_id, row.requested_by, c.lat, c.lon); },
+});
 
 /** Serializes everything that changes likes or the match between two profiles (two likes at the same moment must
  * still make a match). @param {Q} q @param {string} a @param {string} b */
@@ -61,7 +93,7 @@ export async function lockPair(q, a, b) {
 async function filterOf(q, profileId) {
   const [f] = await q.query('select * from feture.discover_filter where profile_id = $1', [profileId]);
   if (!f) return DEFAULT_FILTER;
-  return { show: f.show, ageMin: f.age_min, ageMax: f.age_max, cityId: f.city_id, genders: f.genders, orients: f.orients, formats: f.formats, seeks: f.seeks, roles: f.roles, topics: f.topics };
+  return { show: f.show, ageMin: f.age_min, ageMax: f.age_max, cityId: f.city_id, placeMode: f.place_mode, radiusKm: f.radius_km, genders: f.genders, orients: f.orients, formats: f.formats, seeks: f.seeks, roles: f.roles, topics: f.topics };
 }
 
 /** Option codes, a known city and topics that may be filtered on (limits, experienced-only and safety are not
@@ -96,7 +128,10 @@ export async function cards(q, viewer, ids, media) {
        exists (select 1 from feture.profile_like l where l.from_profile_id = p.id and l.to_profile_id = $2 and l.state = 'active') liked_me,
        (select count(*)::int from feture.interest i join feture.interest j on j.topic_id = i.topic_id and j.profile_id = $2 and j.vis = 'public' and j.value is not null
           where i.profile_id = p.id and i.vis = 'public' and i.value is not null) shared,
-       ${PREMIUM_SQL} premium
+       ${PREMIUM_SQL} premium,
+       -- Distance only between two shared (rounded) locations, in 5 km steps and never under 5 km.
+       (select greatest(5, ceil(feture.km(me.lat, me.lon, l.lat, l.lon) / 5) * 5)::int from feture.profile_location me, feture.profile_location l
+          where me.profile_id = $2 and l.profile_id = p.id) distance_km
      from feture.profile p
      left join feture.profile_details d on d.profile_id = p.id
      left join feture.place pl on pl.id = d.city_id and pl.state = 'approved'
@@ -110,7 +145,7 @@ export async function cards(q, viewer, ids, media) {
     byId.set(r.id, {
       id: r.id, kind: r.kind, handle: r.handle, name: r.name || r.handle, ages: r.ages,
       city: r.city_ru ? { ru: r.city_ru, en: r.city_en } : null, avatar, likedMe: r.liked_me, shared: r.shared, photoVerified: verified.get(r.id) ?? false,
-      premium: !!r.premium,
+      premium: !!r.premium, distanceKm: r.distance_km ?? null,
     });
   }
   return ids.map(i => byId.get(i)).filter(Boolean);
@@ -212,41 +247,50 @@ const run = {
     const acting = need(a);
     const f = input.filter;
     await checkFilter(q, f);
+    if (f.placeMode === 'nearby' && !(await locationOf(q, acting.profileId))) fail(422, 'rule_violation', { rule: 'location_required' });
     await q.query(
-      `insert into feture.discover_filter (profile_id, show, age_min, age_max, city_id, genders, orients, formats, seeks, roles, topics)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      `insert into feture.discover_filter (profile_id, show, age_min, age_max, city_id, genders, orients, formats, seeks, roles, topics, place_mode, radius_km)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        on conflict (profile_id) do update set show = $2, age_min = $3, age_max = $4, city_id = $5, genders = $6, orients = $7, formats = $8,
-         seeks = $9, roles = $10, topics = $11, updated_at = now()`, [acting.profileId, ...filterParams(f)]);
+         seeks = $9, roles = $10, topics = $11, place_mode = $12, radius_km = $13, updated_at = now()`, [acting.profileId, ...filterParams(f).slice(0, 12)]);
     return { filter: f };
   },
 
   async 'discover.count'(q, { acting: a, input }) {
     // «Показать · N» for a filter draft; capped so it cannot be used to measure the whole membership.
     const viewer = need(a);
+    if (!(await datingOpen(q))) fail(422, 'rule_violation', { rule: 'dating_closed' });
     if ((await modeOf(q, viewer.profileId)).discover_mode === 'off') fail(422, 'rule_violation', { rule: 'own_discover_off' });
     await checkFilter(q, input.filter);
+    const loc = await locationOf(q, viewer.profileId);
+    if (input.filter.placeMode === 'nearby' && !loc) fail(422, 'rule_violation', { rule: 'location_required' });
     const [{ n }] = await q.query(
       `select count(*)::int n from (select 1 from feture.profile p left join feture.profile_details d on d.profile_id = p.id
-       where ${POOL} and ${FILTER} limit 100) x`, [viewer.profileId, ...filterParams(input.filter)]);
+       where ${POOL} and ${FILTER} limit 100) x`, [viewer.profileId, ...filterParams(input.filter, loc)]);
     return { count: n, capped: n >= 100 };
   },
 
   async 'discover.deck'(q, { acting: a, input, cfg }) {
     const viewer = need(a);
+    if (!(await datingOpen(q))) return { off: true, closed: true, items: [] };
     if ((await modeOf(q, viewer.profileId)).discover_mode === 'off') return { off: true, items: [] };
     const f = await filterOf(q, viewer.profileId);
+    const loc = await locationOf(q, viewer.profileId);
+    // «Рядом» saved, location cleared since: nobody until it is shared again or the filter goes back to a city.
+    if (f.placeMode === 'nearby' && !loc) return { off: false, needsLocation: true, items: [] };
     // Q7: public interests in common first, then newer profiles. Nothing private, no score.
     const rows = await q.query(
       `select p.id from feture.profile p left join feture.profile_details d on d.profile_id = p.id
        where ${POOL} and ${FILTER}
        order by (select count(*) from feture.interest i join feture.interest j on j.topic_id = i.topic_id and j.profile_id = $1 and j.vis = 'public' and j.value is not null
                  where i.profile_id = p.id and i.vis = 'public' and i.value is not null) desc, p.created_at desc, p.id
-       limit $12`, [viewer.profileId, ...filterParams(f), input.limit]);
+       limit $16`, [viewer.profileId, ...filterParams(f, loc), input.limit]);
     return { off: false, items: await cards(q, viewer, rows.map(r => r.id), cfg.media) };
   },
 
   async 'discover.decide'(q, { acting: a, input }) {
     const acting = need(a);
+    if (!(await datingOpen(q))) fail(422, 'rule_violation', { rule: 'dating_closed' });
     if ((await modeOf(q, acting.profileId)).discover_mode === 'off') fail(422, 'rule_violation', { rule: 'own_discover_off' });
     const [inPool] = await q.query(`select 1 from feture.profile p where p.id = $2 and ${POOL}`, [acting.profileId, input.profileId]);
     if (!inPool) {
@@ -364,6 +408,43 @@ const run = {
        order by m.created_at desc limit 500`, [viewer.profileId]);
     const people = await cards(q, viewer, rows.map(r => r.id), cfg.media);
     return { items: people.map(p => { const r = rows.find(x => x.id === p.id); return { matchId: r?.match_id, at: r?.created_at, profile: p }; }) };
+  },
+
+  async 'location.set'(q, { acting: a, input }) {
+    const acting = need(a);
+    if (needsPartner(acting, 'location.set')) {
+      return { pending: await requestApproval(q, acting, { kind: 'location.set', targetType: 'location', targetId: null, change: { lat: Math.round(input.lat * 20) / 20, lon: Math.round(input.lon * 20) / 20 }, summary: ['location'] }) };
+    }
+    const loc = await writeLocation(q, acting.profileId, acting.accountId, input.lat, input.lon);
+    if (acting.kind === 'couple') await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: 'location' });
+    return { location: loc };
+  },
+
+  async 'location.clear'(q, { acting: a }) {
+    // Narrowing: immediate for either partner.
+    const acting = need(a);
+    const rows = await q.query('delete from feture.profile_location where profile_id = $1 returning 1', [acting.profileId]);
+    if (rows.length && acting.kind === 'couple') await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: 'location' });
+    return { location: null };
+  },
+
+  async 'location.get'(q, { acting }) {
+    return { location: await locationOf(q, need(acting).profileId) };
+  },
+
+  async 'dating.status'(q, { account }) {
+    const [w] = await q.query(`select 1 from feture.launch_wish where account_id = $1 and feature = 'dating'`, [account.id]);
+    return { open: await datingOpen(q), notify: !!w };
+  },
+
+  async 'dating.notify'(q, { account, input }) {
+    if (!input.on) {
+      await q.query(`delete from feture.launch_wish where account_id = $1 and feature = 'dating'`, [account.id]);
+      return { notify: false };
+    }
+    if (await datingOpen(q)) fail(422, 'rule_violation', { rule: 'dating_open' });
+    await q.query(`insert into feture.launch_wish (account_id, feature) values ($1, 'dating') on conflict do nothing`, [account.id]);
+    return { notify: true };
   },
 
   async 'match.end'(q, { acting: a, input }) {

@@ -61,6 +61,7 @@ const TYPES = /** @type {Record<string, {type: string, actor?: string, object?: 
   'link.declined': { type: 'linkDeclined', actor: 'from' },
   'link.changed': { type: 'linkChanged', actor: 'from' },
   'link.removed': { type: 'linkRemoved', actor: 'from' },
+  'dating.launched': { type: 'datingLaunched' },
 });
 /** Payload fields kept in `data` (codes and ids only, never free text). */
 const KEEP = ['what', 'change', 'reason', 'state', 'kind', 'resolution', 'rule', 'targetType', 'targetId', 'answer', 'outcome', 'changes', 'approves'];
