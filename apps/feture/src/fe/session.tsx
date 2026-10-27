@@ -36,6 +36,7 @@ const BOOT_KEY='feture.fe.boot:';
 /** Reads (no opId) are kept for a short while so returning to a tab is instant; any write or realtime signal drops
  * them all, so nothing stale outlives a change. The server stays the source of truth. */
 const READ_TTL=30000;
+const wait=(ms:number)=>new Promise<void>(r=>setTimeout(r,ms));
 const readCache=new Map<string,{at:number,value:Promise<unknown>}>();
 /** Writes whose input carries no opId (contracts with `ledger: false`): never served from the cache, and they drop it.
  * Without this a second «Без звука» / «В архив» within 30 s was answered from memory and never reached the server. */
@@ -78,7 +79,11 @@ export function FeSessionProvider({children}:{children:ReactNode}){
   const hit=readCache.get(key);
   if(hit&&Date.now()-hit.at<READ_TTL)return hit.value as Promise<T>;
   // Not bound to the caller's AbortSignal: a screen that unmounts must not cancel a read another screen will reuse.
-  const value=feRequest(state.session,action,input,schema,{profileId});
+  // A read refused for «too many at once» (429) is asked again after a short pause instead of failing the screen;
+  // writes never retry on their own.
+  const once=()=>feRequest(state.session,action,input,schema,{profileId});
+  const value=once().catch(e=>e instanceof FeError&&e.code==='rate_limited'?wait(2500).then(once):Promise.reject(e))
+   .catch(e=>e instanceof FeError&&e.code==='rate_limited'?wait(6000).then(once):Promise.reject(e));
   readCache.set(key,{at:Date.now(),value});
   value.catch(()=>{if(readCache.get(key)?.value===value)readCache.delete(key);});
   if(opts.signal){const sig=opts.signal;return new Promise<T>((res,rej)=>{sig.addEventListener('abort',()=>rej(new DOMException('Aborted','AbortError')),{once:true});value.then(res,rej);});}
