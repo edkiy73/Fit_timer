@@ -1,12 +1,12 @@
-import {useState,type CSSProperties} from 'react';
+import {type CSSProperties} from 'react';
 import {Outlet,useLocation,useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Globe,Image as FeedIcon,Lock,MessageCircle,Plus,User,Users,X,type LucideIcon} from 'lucide-react';
+import {Globe,Image as FeedIcon,MessageCircle,Plus,User,Users,X,type LucideIcon} from 'lucide-react';
 import {feErrorMessage} from '../feture/fe-api';
 import {Av,Btn,Empty,Skel} from './ui';
 import {FeSessionProvider,useFe} from './session';
 import {Register} from './register';
-import {Welcome,welcomeSeen} from './welcome';
+import {SignedOut} from './start';
 import {ToastProvider} from './toast';
 import './v21.css';
 import './shell.css';
@@ -26,15 +26,14 @@ function Center({children}:{children:React.ReactNode}){
 }
 
 function FeGate(){
- const {state,reload}=useFe();const {t}=useI18n();const navigate=useNavigate();const {pathname}=useLocation();const [welcomed,setWelcomed]=useState(welcomeSeen);
+ const {state,reload}=useFe();const {t}=useI18n();
  if(state.status==='loading')return <Center><Skel kind="list"/></Center>;
- // V21 A01: a signed-out visitor sees the welcome slides once, then the existing sign-in.
- if(state.status==='signedOut'&&!welcomed)return <Welcome onStart={()=>{setWelcomed(true);navigate('/account?returnTo='+encodeURIComponent(pathname));}}/>;
- if(state.status==='signedOut')return <Center><Empty icon={Lock} title={t('fe.signIn.title')} text={t('fe.signIn.text')}>
-  <Btn onClick={()=>navigate('/account?returnTo='+encodeURIComponent(pathname))}>{t('fe.signIn.action')}</Btn></Empty></Center>;
+ // V21 A01 → A02 → A03: a signed-out visitor sees the welcome slides, then sign-up / sign-in by an email code.
+ if(state.status==='signedOut')return <SignedOut/>;
  if(state.status==='error')return <Center><Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(state.error,t)}>
   <Btn kind="soft" onClick={reload}>{t('fe.retry')}</Btn></Empty></Center>;
- if(!state.boot.account.onboarded)return <Center><Register/></Center>;
+ // V21 A04 → A04X → A05 in the auth frame (header bar, view, bottom-pinned buttons).
+ if(!state.boot.account.onboarded)return <Register/>;
  return <FeLayout/>;
 }
 
