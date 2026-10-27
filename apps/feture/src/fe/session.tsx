@@ -37,6 +37,9 @@ const BOOT_KEY='feture.fe.boot:';
  * them all, so nothing stale outlives a change. The server stays the source of truth. */
 const READ_TTL=30000;
 const readCache=new Map<string,{at:number,value:Promise<unknown>}>();
+/** Writes whose input carries no opId (contracts with `ledger: false`): never served from the cache, and they drop it.
+ * Without this a second «Без звука» / «В архив» within 30 s was answered from memory and never reached the server. */
+const WRITES_WITHOUT_OPID=new Set(['chat.read','chat.mute','chat.archive','notifications.read','notifications.readAll','media.commit','staff.mediaView','profile.setVisibility']);
 const schemaIds=new WeakMap<object,number>();let schemaSeq=0;
 export function dropReadCache(){readCache.clear();}
 
@@ -66,7 +69,7 @@ export function FeSessionProvider({children}:{children:ReactNode}){
  const call=useCallback(<T,>(action:string,input:Record<string,unknown>,schema:z.ZodType<T>,opts:{asAccount?:boolean,profileId?:string,signal?:AbortSignal}={})=>{
   if(state.status!=='ready')return Promise.reject(new FeError('auth_required'));
   const profileId=opts.asAccount?undefined:opts.profileId??acting?.id;
-  if('opId' in input){ // a write: whatever was read before may have changed
+  if('opId' in input||WRITES_WITHOUT_OPID.has(action)){ // a write: whatever was read before may have changed
    readCache.clear();
    return feRequest(state.session,action,input,schema,{signal:opts.signal,profileId}).finally(()=>readCache.clear());
   }

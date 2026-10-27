@@ -3,7 +3,7 @@ import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {AtSign,Bell,Calendar,Check,CircleCheck,Clock,EyeOff,FileText,Filter,Heart,LockOpen,MessageCircle,Pencil,Shield,ShieldCheck,Trash2,Users,X,type LucideIcon} from 'lucide-react';
-import {feErrorMessage,newOpId} from '../feture/fe-api';
+import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Av,Bar,Btn,Empty,Skel,plate} from './ui';
 import {useFe,useRealtime} from './session';
 import {useToast} from './toast';
@@ -72,7 +72,7 @@ function rich(text:string,name:string):ReactNode{
 }
 
 export function InboxScreen(){
- const {call,state,acting,setActing}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
+ const {call,state,acting,setActing,reload}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
  const [tab,setTab]=useState<'todo'|'all'|null>(null);const [filter,setFilter]=useState<'all'|Kind>('all');
  const [decide,setDecide]=useState<Decision[]|null>(null);const [notes,setNotes]=useState<Note[]|null>(null);
  const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState('');const [readAllBusy,setReadAllBusy]=useState(false);
@@ -92,15 +92,16 @@ export function InboxScreen(){
  /** One decision at a time: the card's buttons show the spinner, the list reloads after. */
  const act=async(key:string,fn:()=>Promise<unknown>,done?:string)=>{
   if(busy)return;setBusy(key);
-  try{await fn();if(done)toast(done,{type:'ok'});load();}catch(e){toast(feErrorMessage(e,t),{type:'err'});}finally{setBusy('');}
+  // A failure reloads too: the item may have been answered elsewhere (another device, the partner).
+  try{await fn();if(done)toast(done,{type:'ok'});load();}catch(e){toast(feErrorMessage(e,t),{type:'err'});load();}finally{setBusy('');}
  };
  const asProfile=(d:Decision)=>d.addressee?{profileId:d.addressee}:{};
  const decideApp=(d:Decision,approve:boolean)=>act(d.id+(approve?'y':'n'),async()=>{
-  if(!d.objectId)return;
+  if(!d.objectId)throw new FeError('not_found',404);
   // The decision needs the request's revision, which the inbox row does not carry.
-  if(d.kind==='capp'){const r=await call('community.requests',{communityId:d.objectId},revList,asProfile(d));const x=r.items.find(i=>i.id===d.id);if(!x)return;
+  if(d.kind==='capp'){const r=await call('community.requests',{communityId:d.objectId},revList,asProfile(d));const x=r.items.find(i=>i.id===d.id);if(!x)throw new FeError('not_found',404);
    await call('community.requestDecide',{opId:newOpId(),requestId:d.id,rev:x.rev,approve},ok,asProfile(d));}
-  else{const r=await call('event.applications',{eventId:d.objectId},revList,asProfile(d));const x=r.items.find(i=>i.id===d.id);if(!x)return;
+  else{const r=await call('event.applications',{eventId:d.objectId},revList,asProfile(d));const x=r.items.find(i=>i.id===d.id);if(!x)throw new FeError('not_found',404);
    await call('event.applicationDecide',{opId:newOpId(),applicationId:d.id,rev:x.rev,approve},ok,asProfile(d));}
  },approve?t('fe.ibx.approved'):t('fe.ibx.declined'));
  /** Links and couple approvals are per profile: answer as the profile the item is addressed to (person or couple). */
@@ -155,7 +156,7 @@ export function InboxScreen(){
  const decisionCard=(d:Decision)=>{
   switch(d.kind){
    case 'pinv':return card(d,t('fe.ibx.k.pinv'),two(d,
-    {label:t('fe.ibx.accept'),fn:()=>void act(d.id+'y',()=>call('couple.inviteAnswer',{opId:newOpId(),inviteId:d.id,accept:true},ok,{asAccount:true}))},
+    {label:t('fe.ibx.accept'),fn:()=>void act(d.id+'y',async()=>{await call('couple.inviteAnswer',{opId:newOpId(),inviteId:d.id,accept:true},ok,{asAccount:true});reload();},t('fe.ibx.done'))},
     {label:t('fe.ibx.decline'),fn:()=>void act(d.id+'n',()=>call('couple.inviteAnswer',{opId:newOpId(),inviteId:d.id,accept:false},ok,{asAccount:true}),t('fe.ibx.declined'))}));
    case 'req':return card(d,d.label==='couple'?t('fe.ibx.k.reqCouple'):t('fe.ibx.k.req'),two(d,
     {label:t('fe.ibx.review'),fn:()=>{asAddressee(d.addressee);navigate('/n/me?layer=priv');}},

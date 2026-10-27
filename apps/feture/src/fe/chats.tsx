@@ -20,7 +20,7 @@ const chat=z.object({id:z.uuid(),state:z.string(),side:z.object({id:z.uuid(),kin
 type Chat=z.infer<typeof chat>;
 const list=z.object({ok:z.literal(true),items:z.array(chat)});
 const msg=z.object({id:z.uuid(),seq:z.number(),mine:z.boolean(),body:z.string(),at:z.string(),replyTo:z.uuid().nullable().optional(),
- media:z.object({ephemeral:z.boolean().optional(),mode:z.string().optional(),state:z.string().optional(),blurred:z.boolean().optional(),pending:z.boolean().optional(),w:z.number().nullable().optional(),h:z.number().nullable().optional(),src:z.record(z.string(),z.string()).nullable().optional()}).passthrough().nullable().optional()});
+ media:z.object({ephemeral:z.boolean().optional(),mode:z.string().optional(),state:z.string().optional(),blurred:z.boolean().optional(),pending:z.boolean().optional(),gone:z.boolean().optional(),w:z.number().nullable().optional(),h:z.number().nullable().optional(),src:z.record(z.string(),z.string()).nullable().optional()}).passthrough().nullable().optional()});
 type Msg=z.infer<typeof msg>;
 const msgs=z.object({ok:z.literal(true),state:z.string(),items:z.array(msg),otherRead:z.number(),lastSeq:z.number()});
 const ok=z.object({ok:z.literal(true)}).passthrough();
@@ -45,6 +45,7 @@ function useCouple(){
 }
 
 /* ================= H01 chats / H05 archive ================= */
+const RELOAD='fe:chats-reload';
 export function ChatsTab(){
  const {call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const couple=useCouple();
  const [params]=useSearchParams();const archived=params.get('archived')==='1';
@@ -56,6 +57,8 @@ export function ChatsTab(){
  useEffect(()=>{setItems(null);},[archived]);
  useEffect(()=>{load();const id=setInterval(load,30000);return ()=>clearInterval(id);},[load]);
  useRealtime('chat',load);
+ // «Отменить» on the archive toast runs after the chat closed: the list asks again.
+ useEffect(()=>{addEventListener(RELOAD,load);return ()=>removeEventListener(RELOAD,load);},[load]);
  useEffect(()=>{if(searching)qRef.current?.focus();},[searching]);
  const f=couple&&!archived?kind:'all';
  const side=(c:Chat)=>c.side.kind==='couple'?'couple':'me';
@@ -168,7 +171,7 @@ export function ChatScreen(){
  useScreenTag('H02');
  const [meta,setMeta]=useState<Chat|null>(null);const [items,setItems]=useState<Msg[]|null>(null);const [state,setState]=useState('active');const [otherRead,setOtherRead]=useState(0);
  const [error,setError]=useState<unknown>(null);const [text,setText]=useState('');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
- const [pend,setPend]=useState<Pend[]>([]);const [replyTo,setReplyTo]=useState<string|null>(null);
+ const [pend,setPend]=useState<Pend[]>([]);const [tries,setTries]=useState(0);const [replyTo,setReplyTo]=useState<string|null>(null);
  const [open,setOpen]=useState<Record<string,string>>({});
  const [eph,setEph]=useState<Record<string,{state:'open'|'done',until?:number}>>({});
  const [viewer,setViewer]=useState<{src:string,label?:string|undefined,wm?:string|undefined}|null>(null);
@@ -185,8 +188,8 @@ export function ChatScreen(){
  useEffect(()=>{
   // An archived conversation is opened from «Архив» too, so both lists are asked.
   Promise.all([call('chats.list',{filter:'all'},list,{asAccount:true}),call('chats.list',{filter:'all',archived:true},list,{asAccount:true})])
-   .then(([a,b])=>{const c=[...a.items,...b.items].find(x=>x.id===id);if(c){setMeta(c);setState(c.state);}else setError(new Error('not_found'));}).catch(setError);
- },[call,id]);
+   .then(([a,b])=>{const c=[...a.items,...b.items].find(x=>x.id===id);if(c){setMeta(c);setState(c.state);}else setError(new FeError('not_found',404));}).catch(setError);
+ },[call,id,tries]);
  const pull=useCallback(async(initial:boolean)=>{
   if(!meta)return;
   const r=await call('chat.messages',initial?{conversationId:id}:{conversationId:id,afterSeq:last.current},msgs,{profileId:meta.side.id});
@@ -265,16 +268,19 @@ export function ChatScreen(){
  const left=(until:number)=>{const min=Math.max(1,Math.ceil((until-Date.now())/60e3));const h=Math.floor(min/60),r=min%60;
   return min>=60?(r?t('fe.chx.hm',{h:String(h),m:String(r)}):t('fe.chx.hours',{h:String(h)})):t('fe.chx.min',{n:String(min)});};
  const modeLabel=(mode:string)=>t('fe.chx.eph.'+(['once','t15','t120','t1440'].includes(mode)?mode:'once'));
+ /** A photo with nothing to show: still being checked (the recipient waits for the moderator) or removed. */
+ const photoNote=(m:Msg,why:'review'|'gone')=><div className="eph-gone" role="note"><span className="eg-ic">{why==='gone'?<EyeOff/>:<Clock/>}</span>
+  <span className="eg-tx"><b>{why==='gone'?t('fe.chx.photoGone'):t('fe.chx.photoReview')}</b><small>{why==='gone'?t('fe.chx.photoGoneSub'):m.mine?t('fe.chx.photoReviewMine'):t('fe.chx.photoReviewSub')}</small></span></div>;
  const mediaTile=(m:Msg):ReactNode=>{
   const md=m.media!;const kind=t('fe.chats.photo');
   if(!md.ephemeral){
    const revealed=open[m.id];const hidden=!!md.blurred&&!revealed;
    const src=revealed??(hidden?md.src?.blur:md.src?.card??md.src?.full);
-   if(!src)return <div className="eph-gone" role="note"><span className="eg-ic"><Clock/></span><span className="eg-tx"><b>{kind}</b><small>{t('fe.chx.photoReview')}</small></span></div>;
-   return <button type="button" className={'mtile'+(hidden?' blur':'')} aria-label={hidden?t('fe.chx.hiddenAria'):t('fe.chx.openAria')}
+   if(!src)return photoNote(m,md.gone?'gone':'review');
+   return <><button type="button" className={'mtile'+(hidden?' blur':'')} aria-label={hidden?t('fe.chx.hiddenAria'):t('fe.chx.openAria')}
     onClick={()=>{if(hidden)void openMedia(m);else setViewer({src:revealed??md.src?.full??src});}}>
     <img src={src} alt="" draggable={false} style={md.w&&md.h?{aspectRatio:`${md.w}/${md.h}`}:undefined}/>{hidden&&<span className="mcover"><EyeOff/><b>{t('fe.chx.tapView')}</b></span>}
-   </button>;
+   </button>{m.mine&&md.pending&&<small className="mpend"><Clock/>{t('fe.chx.photoReviewMine')}</small>}</>;
   }
   const mode=md.mode??'once';const once=mode==='once';const local=eph[m.id];
   const st=local?.state==='done'||md.state==='done'?'expired':local?.state==='open'||md.state==='open'?'counting':'unopened';
@@ -308,6 +314,8 @@ export function ChatScreen(){
  /** One attempt; resolves to 'sent' or 'pending', throws other errors. */
  const deliver=useCallback(async(o:Outgoing):Promise<'sent'|'pending'>=>{
   if(!profileId)throw new FeError('unavailable');
+  // «Не отправлять» may be tapped while an attempt is on its way: its answer must not bring the photo back.
+  const live=()=>outRef.current?.preview===o.preview;
   let cur=o;
   if(!cur.assetId||cur.assetMode!==cur.mode){
    // The view rule is fixed at upload: a new mode means a new upload.
@@ -317,11 +325,12 @@ export function ChatScreen(){
    const put=await fetch(i.upload.url,{method:i.upload.method,headers:i.upload.headers,body:cur.file}).catch(()=>null);
    if(!put?.ok)throw new Error('upload');
    await call('media.commit',{assetId:i.assetId},ok,{profileId});
+   if(!live()){call('media.remove',{opId:newOpId(),assetId:i.assetId},ok,{profileId}).catch(()=>{});return 'pending';}
    cur={...cur,assetId:i.assetId,assetMode:cur.mode,opId:newOpId()};setOut(cur);
   }
   try{await call('chat.sendMedia',{opId:cur.opId,conversationId:id,assetId:cur.assetId,mode:cur.mode},ok,{profileId});}
-  catch(e){if(e instanceof FeError&&e.code==='conflict'&&e.rule==='pending'){setOut({...cur,pending:true});return 'pending';}throw e;}
-  URL.revokeObjectURL(cur.preview);setOut(null);
+  catch(e){if(e instanceof FeError&&e.code==='conflict'&&e.rule==='pending'){if(live())setOut({...cur,pending:true});return 'pending';}throw e;}
+  if(live()){URL.revokeObjectURL(cur.preview);setOut(null);}
   return 'sent';
  },[call,id,profileId]);
  const photoError=(e:unknown)=>e instanceof FeError?(e.code==='rule_violation'&&e.rule==='age_required'?t('fe.chx.ageRequired'):feErrorMessage(e,t)):e instanceof Error&&e.message==='upload'?t('fe.chx.uploadFailed'):feErrorMessage(e,t);
@@ -333,7 +342,7 @@ export function ChatScreen(){
  const retryPending=async(silent:boolean)=>{
   const o=outRef.current;if(!o||busy)return;if(!silent){setBusy(true);setFailure('');}
   try{if(await deliver(o)==='sent')await pull(false);}
-  catch(e){if(!silent)setFailure(photoError(e));}finally{if(!silent)setBusy(false);}
+  catch(e){if(!silent&&outRef.current?.preview===o.preview)setFailure(photoError(e));}finally{if(!silent)setBusy(false);}
  };
  // «отправится, когда модератор посмотрит»: while the chat is open, try again now and then.
  const pendingNow=!!out?.pending;
@@ -365,7 +374,7 @@ export function ChatScreen(){
  const toggleMute=()=>meta&&run(async()=>{const on=!meta.muted;await call('chat.mute',{conversationId:id,on},ok,{profileId:meta.side.id});setMeta({...meta,muted:on});toast(on?t('fe.chx.muted'):t('fe.chx.unmuted'));});
  const setArchive=(on:boolean)=>meta?call('chat.archive',{conversationId:id,on},ok,{profileId:meta.side.id}):Promise.resolve(null);
  const toggleArchive=()=>meta&&run(async()=>{const on=!meta.archived;await setArchive(on);setSheet(null);
-  if(on){toast(t('fe.chx.archived'),{type:'ok',action:{label:t('fe.chx.undo'),fn:()=>{void setArchive(false);}}});navigate('/n/chats');}
+  if(on){toast(t('fe.chx.archived'),{type:'ok',action:{label:t('fe.chx.undo'),fn:()=>{void setArchive(false).then(()=>dispatchEvent(new Event(RELOAD)),()=>{});}}});navigate('/n/chats');}
   else{setMeta({...meta,archived:false});toast(t('fe.chx.restored'),{type:'ok',action:{label:t('fe.chx.undo'),fn:()=>{void setArchive(true).then(()=>setMeta(m=>m&&{...m,archived:true}));}}});}});
  const revoke=()=>meta&&run(async()=>{await call('access.revoke',{opId:newOpId(),profileId:meta.other.id},ok,{profileId:meta.side.id});setGrants(g=>({...g,byMe:false}));setSheet(null);toast(t('fe.chx.revoked'),{type:'ok'});});
  const endConn=()=>meta&&run(async()=>{await call('match.end',{opId:newOpId(),profileId:meta.other.id},ok,{profileId:meta.side.id});
@@ -391,7 +400,9 @@ export function ChatScreen(){
  const time=(iso:string)=>new Date(iso).toLocaleTimeString(locale==='en'?'en':'ru',{hour:'2-digit',minute:'2-digit'});
  const fill=(s:string)=>s.replace('{name}',meta?nameOf(meta.other):'');
  const back=()=>navigate(meta?.archived?'/n/chats?archived=1':'/n/chats');
- if(error)return <><Bar title={t('fe.nav.chats')} back="/n/chats"/><div className="view nodock"><div className="wrap"><Empty icon={X} title={t('fe.feed.unavailable')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>navigate('/n/chats')}>{t('fe.chats.back')}</Btn></Empty></div></div></>;
+ if(error)return <><Bar title={t('fe.nav.chats')} back="/n/chats"/><div className="view nodock"><div className="wrap"><Empty icon={X} title={t('fe.feed.unavailable')} text={feErrorMessage(error,t)}>
+  {!(error instanceof FeError&&error.code==='not_found')&&<Btn onClick={()=>{setError(null);if(meta)pull(true).catch(setError);else setTries(n=>n+1);}}>{t('fe.retry')}</Btn>}
+  <Btn kind="soft" onClick={()=>navigate('/n/chats')}>{t('fe.chats.back')}</Btn></Empty></div></div></>;
  const ended=state!=='active';
  const sheetAlert=sheetErr?<div className="alert err mt12" role="alert"><span>{sheetErr}{sheetErr===t('fe.chx.ageRequired')&&<><br/><AgeCheckLink/></>}</span></div>:null;
  const all=items??[];
@@ -428,7 +439,7 @@ export function ChatScreen(){
        {sep(m.at)}
        <div {...bubbleProps(m)} className={'msg'+(m.mine?' me':'')+(m.media?' has-media':'')}>
         {quote(m.replyTo)}
-        {m.media&&mediaTile(m)}
+        {m.media?mediaTile(m):!m.body&&photoNote(m,'review')}
         {m.body&&<span className="mtx">{m.body}</span>}
         {m.mine&&<div className="st">{time(m.at)}<span aria-label={t('fe.chx.stDelivered')}><Check/></span></div>}
        </div>

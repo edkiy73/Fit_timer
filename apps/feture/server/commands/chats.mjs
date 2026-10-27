@@ -189,10 +189,13 @@ const run = {
       if (m.media_mode !== 'normal') {
         // Ephemeral: never a link here; recipients open it with chat.openMedia.
         media = { ephemeral: true, mode: m.media_mode, state: mine ? (asset && asset.state !== 'removed' ? 'sent' : 'done') : ephemeralState(m, { opened_at: m.opened_at, done: m.done }) };
-      } else if (asset) {
-        media = await mediaDto(cfg.media, asset, {
+      } else if (m.media_asset_id) {
+        media = asset ? await mediaDto(cfg.media, asset, {
           viewerProfileId: viewer.profileId, place: 'chat', showExplicit: prefs.show_explicit && !prefs.chat_blur, blurAll: prefs.chat_blur, staff: false,
-        }).catch(() => null);
+        }).catch(() => null) : null;
+        // A photo the viewer may not see yet (still being checked) or any more (removed) is still a photo message:
+        // never an empty bubble, never a link.
+        if (!media) media = ['uploaded', 'scanning', 'needs_review'].includes(asset?.state) ? { pending: true, src: null } : { gone: true, src: null };
       }
       items.push({ id: m.id, seq: Number(m.seq), mine, author: m.author_profile_id, body: m.body, replyTo: m.reply_to, media, at: m.created_at });
     }
