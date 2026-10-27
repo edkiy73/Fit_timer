@@ -32,6 +32,13 @@ const Ctx=createContext<FeSession|null>(null);
 /** Realtime listeners live in their own context: a signal never re-renders the session consumers. */
 const RtCtx=createContext<((l:RtListener)=>()=>void)|null>(null);
 const ACTING_KEY='feture.fe.acting';
+const BOOT_KEY='feture.fe.boot:';
+/** Reads (no opId) are kept for a short while so returning to a tab is instant; any write or realtime signal drops
+ * them all, so nothing stale outlives a change. The server stays the source of truth. */
+const READ_TTL=30000;
+const readCache=new Map<string,{at:number,value:Promise<unknown>}>();
+const schemaIds=new WeakMap<object,number>();let schemaSeq=0;
+export function dropReadCache(){readCache.clear();}
 
 export function FeSessionProvider({children}:{children:ReactNode}){
  const auth=useOptionalAuth();
@@ -40,12 +47,16 @@ export function FeSessionProvider({children}:{children:ReactNode}){
  const [actingId,setActingId]=useState<string|null>(()=>{try{return sessionStorage.getItem(ACTING_KEY);}catch{return null;}});
  useEffect(()=>{
   if(auth.loading){setState({status:'loading'});return;}
-  if(!auth.session){setState({status:'signedOut'});return;}
+  if(!auth.session){readCache.clear();try{for(const k of Object.keys(localStorage))if(k.startsWith(BOOT_KEY))localStorage.removeItem(k);}catch{/* no storage */}setState({status:'signedOut'});return;}
   const session=auth.session;const ctl=new AbortController();
-  setState({status:'loading'});
+  // The last bootstrap of this account paints the app at once; the fresh one replaces it in the background.
+  let cached:Bootstrap|null=null;
+  try{const raw=localStorage.getItem(BOOT_KEY+session.email);if(raw){const r=bootstrapSchema.safeParse(JSON.parse(raw));if(r.success)cached=r.data;}}catch{/* no storage */}
+  setState(cached?{status:'ready',session,boot:cached}:{status:'loading'});
   feRequest(session,'session.bootstrap',{},bootstrapSchema,{signal:ctl.signal})
-   .then(boot=>setState({status:'ready',session,boot}))
-   .catch(error=>{if(!ctl.signal.aborted)setState(error instanceof FeError&&error.code==='auth_required'?{status:'signedOut'}:{status:'error',error});});
+   .then(boot=>{try{localStorage.setItem(BOOT_KEY+session.email,JSON.stringify(boot));}catch{/* no storage */}
+    setState(cur=>cur.status==='ready'&&JSON.stringify(cur.boot)===JSON.stringify(boot)?cur:{status:'ready',session,boot});})
+   .catch(error=>{if(!ctl.signal.aborted)setState(cached&&!(error instanceof FeError&&error.code==='auth_required')?(cur=>cur):error instanceof FeError&&error.code==='auth_required'?{status:'signedOut'}:{status:'error',error});});
   return ()=>ctl.abort();
  },[auth.loading,auth.session,nonce]);
  const profiles=state.status==='ready'?state.boot.profiles.filter(p=>p.state!=='deleted'):[];
@@ -54,7 +65,21 @@ export function FeSessionProvider({children}:{children:ReactNode}){
  const reload=useCallback(()=>setNonce(n=>n+1),[]);
  const call=useCallback(<T,>(action:string,input:Record<string,unknown>,schema:z.ZodType<T>,opts:{asAccount?:boolean,profileId?:string,signal?:AbortSignal}={})=>{
   if(state.status!=='ready')return Promise.reject(new FeError('auth_required'));
-  return feRequest(state.session,action,input,schema,{signal:opts.signal,profileId:opts.asAccount?undefined:opts.profileId??acting?.id});
+  const profileId=opts.asAccount?undefined:opts.profileId??acting?.id;
+  if('opId' in input){ // a write: whatever was read before may have changed
+   readCache.clear();
+   return feRequest(state.session,action,input,schema,{signal:opts.signal,profileId}).finally(()=>readCache.clear());
+  }
+  let sid=schemaIds.get(schema);if(sid==null){sid=++schemaSeq;schemaIds.set(schema,sid);}
+  const key=JSON.stringify([state.session.email,profileId??'',action,input,sid]);
+  const hit=readCache.get(key);
+  if(hit&&Date.now()-hit.at<READ_TTL)return hit.value as Promise<T>;
+  // Not bound to the caller's AbortSignal: a screen that unmounts must not cancel a read another screen will reuse.
+  const value=feRequest(state.session,action,input,schema,{profileId});
+  readCache.set(key,{at:Date.now(),value});
+  value.catch(()=>{if(readCache.get(key)?.value===value)readCache.delete(key);});
+  if(opts.signal){const sig=opts.signal;return new Promise<T>((res,rej)=>{sig.addEventListener('abort',()=>rej(new DOMException('Aborted','AbortError')),{once:true});value.then(res,rej);});}
+  return value;
  },[state,acting?.id]);
  const value=useMemo(()=>({state,acting,setActing,reload,call}),[state,acting,setActing,reload,call]);
  // One socket per signed-in session, joined to the channels of every profile this account may act as.
@@ -63,7 +88,7 @@ export function FeSessionProvider({children}:{children:ReactNode}){
  const rtKey=rt?JSON.stringify(rt):'';
  useEffect(()=>{
   if(!rt)return;
-  const conn=connectRealtime(rt,(kind,profile)=>{for(const l of [...listeners.current]){try{l(kind,profile);}catch{/* one screen never breaks another */}}});
+  const conn=connectRealtime(rt,(kind,profile)=>{readCache.clear();for(const l of [...listeners.current]){try{l(kind,profile);}catch{/* one screen never breaks another */}}});
   return ()=>conn.close();
  },[rtKey]);
  const subscribe=useCallback((l:RtListener)=>{listeners.current.add(l);return ()=>{listeners.current.delete(l);};},[]);
