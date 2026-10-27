@@ -1,7 +1,7 @@
 import {useEffect,useRef,useState,type CSSProperties,type ReactNode} from 'react';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Check,ChevronLeft,ChevronRight,EyeOff,Globe,Heart,KeyRound,LockOpen,MapPin,MessageCircle} from 'lucide-react';
-import {plate} from './ui';
+import {Btn,H,IconBtn,plate} from './kit';
 import {TermsSheet} from './terms-sheet';
 
 /** V21 A01 «Приветствие» with the prototype's markup (`.welcome.wv`): the hero, six slides that cross-fade as the
@@ -24,7 +24,7 @@ const PHOTO:Record<string,number>={Sofi:1,Leon:2,Mia:3,Kai:4,Maya:5,Ari:6,Kira:7
 function Ava({name,cls}:{name:string,cls:string}){
  const n=PHOTO[name];
  if(n)return <span className={'av '+cls}><img src={import.meta.env.BASE_URL+'images/profile-'+n+'-45.webp'} alt="" loading="lazy"/></span>;
- return <span className={'av ini '+cls}><div className="plate" style={plate(name)}/><b style={{position:'relative'}}>{name[0]}</b></span>;
+ return <span className={'av ini '+cls}><div className="plate" style={plate(name)}/><b className="k-anchor">{name[0]}</b></span>;
 }
 
 export function Welcome({onStart}:{onStart:(mode:'up'|'in')=>void}){
@@ -72,15 +72,15 @@ export function Welcome({onStart}:{onStart:(mode:'up'|'in')=>void}){
       onPointerUp={e=>{const s=x0.current;x0.current=null;if(!s)return;const dx=e.clientX-s.x,dy=e.clientY-s.y;if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy))show(cur+(dx<0?1:-1));}}>
       {visuals.map((v,n)=><article key={n} className={'w-slide'+(n===cur?' on':'')} aria-hidden={n!==cur}>
        <div className="w-vis" aria-hidden="true">{v}</div>
-       <div className="w-txt"><span className="w-k">{nn(n)} · {k(n)}</span><h2>{t(`fe.cw.w.s${n}.h`)}</h2><p>{t(`fe.cw.w.s${n}.p`)}</p></div>
+       <div className="w-txt"><span className="w-k">{nn(n)} · {k(n)}</span><H level={2}>{t(`fe.cw.w.s${n}.h`)}</H><p>{t(`fe.cw.w.s${n}.p`)}</p></div>
       </article>)}
      </div>
      <div className="w-ctrl"><span className="w-count"><b>{nn(cur)}</b> / {nn(N-1)}</span><span className="w-arrows">
-      <button type="button" className="ibtn" aria-label={t('fe.cw.w.prev')} onClick={()=>show(cur-1)}><ChevronLeft/></button>
-      <button type="button" className="ibtn" aria-label={t('fe.cw.w.next')} onClick={()=>show(cur+1)}><ChevronRight/></button></span></div>
+      <IconBtn icon={ChevronLeft} label={t('fe.cw.w.prev')} onClick={()=>show(cur-1)}/>
+      <IconBtn icon={ChevronRight} label={t('fe.cw.w.next')} onClick={()=>show(cur+1)}/></span></div>
     </section>
     <div className="w-act">
-     <div className="w-cta"><button type="button" className="btn primary" onClick={()=>start('up')}>{t('fe.cw.w.create')}</button><button type="button" className="btn soft" onClick={()=>start('in')}>{t('fe.cw.w.haveAccount')}</button></div>
+     <div className="w-cta"><Btn onClick={()=>start('up')}>{t('fe.cw.w.create')}</Btn><Btn kind="soft" onClick={()=>start('in')}>{t('fe.cw.w.haveAccount')}</Btn></div>
      <div className="w-age">{t('fe.cw.w.age')} <a href="#" onClick={e=>{e.preventDefault();setTerms(true);}}>{t('fe.cw.w.terms')}</a>.</div>
     </div>
    </div>

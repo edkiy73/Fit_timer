@@ -6,13 +6,13 @@ import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import {Ban,Bell,Calendar,Camera,CircleHelp,Crown,Download,Eye,EyeOff,Globe,Heart,Image,KeyRound,LogOut,Mail,MessageCircle,Moon,ShieldCheck,Smartphone,Sparkles,Trash2,Users,X,type LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {getThemePreference,setThemePreference,type ThemePreference} from '../theme';
-import {Bar,Btn,Empty,View,Skel} from './ui';
+import {Alert,Bar,Btn,Card,Empty,Field,H,Input,Note,SectionLabel,SelectRow,Skel,ToggleRow,View} from './kit';
 import {useFe} from './session';
 import {useToast} from './toast';
 import {usePremiumStatus} from './account-extra';
 import {Sheet} from './profile-extras';
 import {HiddenFeedSheet} from './settings-lists';
-import {Ask,LinkRow,SelectRow,ToggleRow} from './settings-ui';
+import {Ask,LinkRow} from './settings-ui';
 
 /** V21 K01 (settings), K05 (notifications), K07 (my data and deletion) on /api/fe. */
 const settingsRes=z.object({ok:z.literal(true),settings:z.object({locale:z.string(),chatBlur:z.boolean(),newsOptIn:z.boolean(),showExplicit:z.boolean()})});
@@ -55,8 +55,8 @@ export function SettingsScreen(){
   <Bar title={t('fe.set.title')} back="/n/me"/>
   <View className="nodock compact">
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>:<>
-    <div className="sec" style={{marginTop:4}}>{t('fe.set.account')}</div>
-    <div className="card list">
+    <SectionLabel>{t('fe.set.account')}</SectionLabel>
+    <Card list>
      <LinkRow icon={KeyRound} title={t('fe.set.signIn')} sub={email||t('fe.set.noEmail')} onClick={()=>navigate('/n/settings/security')}/>
      <LinkRow icon={ShieldCheck} tone={age==='ok'?'g':''} title={t('fe.set.age')} sub={t('fe.set.ageNote')} val={ageVal} onClick={()=>navigate('/n/settings/age')}/>
      <LinkRow icon={Camera} tone="v" title={t('fe.pc.row')} sub={t('fe.set.pcSub')} val={photoVal} onClick={()=>navigate('/n/settings/photo-check')}/>
@@ -64,35 +64,33 @@ export function SettingsScreen(){
      <LinkRow icon={Eye} title={t('fe.set.privacy')} sub={t('fe.set.privacyNote')} onClick={()=>navigate('/n/me?layer=vis')}/>
      {couple?<LinkRow icon={Users} tone="v" title={t('fe.set.pair')} sub={t('fe.set.pairSub',{name:couple.name||couple.handle||''})} onClick={()=>navigate('/n/me/pair')}/>
       :<LinkRow icon={Users} tone="v" title={t('fe.set.pairNew')} sub={t('fe.set.pairNewSub')} onClick={()=>navigate('/n/me/pair')}/>}
-    </div>
-    <div className="sec">{t('fe.set.app')}</div>
-    <div className="card list">
-     {canSwitch&&<div className="li"><span className="ico"><Globe/></span>
-      <SelectRow label={t('fe.set.lang')} sub={t('fe.set.langNote')} value={preference} options={(['system','ru','en'] as const).map(v=>[v,t('fe.set.lang.'+v)] as const)}
-       onChange={v=>{setPreference(v);toast(t('fe.set.langDone.'+(v==='system'?'system':v)),{type:'ok'});void update({locale:v});}}/></div>}
-     <div className="li"><span className="ico"><Moon/></span>
-      <SelectRow label={t('fe.set.theme')} sub={t('fe.set.themeNote')} value={theme} options={(['light','dark','system'] as const).map(v=>[v,t('fe.set.theme.'+v)] as const)}
-       onChange={v=>{setTheme(v);setThemePreference(v);}}/></div>
+    </Card>
+    <SectionLabel>{t('fe.set.app')}</SectionLabel>
+    <Card list>
+     {canSwitch&&<SelectRow icon={Globe} label={t('fe.set.lang')} sub={t('fe.set.langNote')} value={preference} options={(['system','ru','en'] as const).map(v=>[v,t('fe.set.lang.'+v)] as const)}
+      onChange={v=>{setPreference(v);toast(t('fe.set.langDone.'+(v==='system'?'system':v)),{type:'ok'});void update({locale:v});}}/>}
+     <SelectRow icon={Moon} label={t('fe.set.theme')} sub={t('fe.set.themeNote')} value={theme} options={(['light','dark','system'] as const).map(v=>[v,t('fe.set.theme.'+v)] as const)}
+      onChange={v=>{setTheme(v);setThemePreference(v);}}/>
      <LinkRow icon={Bell} title={t('fe.set.notifications')} sub={t('fe.set.notificationsNote')} onClick={()=>navigate('/n/settings/notifications')}/>
-    </div>
-    <div className="sec">{t('fe.nav.chats')}</div>
-    <div className="card list">
+    </Card>
+    <SectionLabel>{t('fe.nav.chats')}</SectionLabel>
+    <Card list>
      <ToggleRow icon={EyeOff} title={t('fe.set.blur')} sub={t('fe.set.blurNote')} on={!!s?.chatBlur} disabled={!s}
       onClick={()=>s&&void update({chatBlur:!s.chatBlur},t(s.chatBlur?'fe.set.blurOff':'fe.set.blurOn'))}/>
-    </div>
-    <div className="sec">{t('fe.set.data')}</div>
-    <div className="card list">
+    </Card>
+    <SectionLabel>{t('fe.set.data')}</SectionLabel>
+    <Card list>
      <LinkRow icon={EyeOff} title={t('fe.tl.set.hidden')} sub={t('fe.tl.set.hiddenNote')} onClick={()=>setLayer('hidden')}/>
      <LinkRow icon={Ban} title={t('fe.tl.set.blocked')} sub={acting?.kind==='couple'?t('fe.tl.set.blockedNoteCouple').replace('{name}',acting.name||acting.handle||''):t('fe.tl.set.blockedNote')}
       val={blocked===null?undefined:String(blocked)} onClick={()=>navigate('/n/settings/blocked')}/>
      <LinkRow icon={Download} title={t('fe.set.myData')} sub={t('fe.set.myDataNote')} onClick={()=>navigate('/n/settings/data')}/>
-    </div>
-    <div className="sec">{t('fe.set.support')}</div>
-    <div className="card list">
+    </Card>
+    <SectionLabel>{t('fe.set.support')}</SectionLabel>
+    <Card list>
      <LinkRow icon={CircleHelp} title={t('fe.ax.help.entry')} sub={t('fe.ax.help.entryNote')} onClick={()=>navigate('/n/help')}/>
      <LinkRow icon={LogOut} danger title={t('fe.set.logout')} onClick={()=>setLayer('logout')}/>
-    </div>
-    <p className="note center mt24">FetUre · V21</p>
+    </Card>
+    <Note className="center mt24">FetUre · V21</Note>
    </>}
   </View>
   {layer==='hidden'&&<HiddenFeedSheet onClose={closeLayer}/>}
@@ -120,37 +118,37 @@ export function NotificationSettingsScreen(){
   <Bar title={t('fe.set.notifications')} back="/n/settings"/>
   <View className="nodock compact">
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
-    :!n?<><div className="sec" style={{marginTop:4}}>{t('fe.set.n.lock')}</div><Skel kind="card" rows={2}/><Skel kind="list" rows={4}/></>:<>
-    <div className="sec" style={{marginTop:4}}>{t('fe.set.n.lock')}</div>
+    :!n?<><SectionLabel>{t('fe.set.n.lock')}</SectionLabel><Skel kind="card" rows={2}/><Skel kind="list" rows={4}/></>:<>
+    <SectionLabel>{t('fe.set.n.lock')}</SectionLabel>
     <div className="nmode">{(['safe','normal'] as const).map(k=><button key={k} type="button" className={'nm'+(n.mode===k?' on':'')} aria-pressed={n.mode===k}
      onClick={()=>n.mode!==k&&void save({...n,mode:k},t('fe.set.n.modeDone.'+k))}>
      <span className="rd"/><b>{t('fe.set.n.mode.'+k)}{k==='safe'&&<em>{t('fe.set.n.default')}</em>}</b><small>{t('fe.set.n.modeNote.'+k)}</small></button>)}</div>
     <div className="lockscreen" aria-hidden="true"><span className="ls-app"><img src="/icon.svg" alt=""/>FetUre</span>
      <b>{safe?t('fe.set.n.lsSafeT'):t('fe.set.n.lsNormalT')}</b><span>{safe?t('fe.set.n.lsSafeB'):t('fe.set.n.lsNormalB')}</span><small>{t('fe.ax.sec.now')}</small></div>
-    <p className="note mt8">{t('fe.set.n.lockNote')}</p>
-    <div className="sec">{t('fe.set.n.channels')}</div>
-    <div className="card list">
+    <Note className="mt8">{t('fe.set.n.lockNote')}</Note>
+    <SectionLabel>{t('fe.set.n.channels')}</SectionLabel>
+    <Card list>
      <ToggleRow title={t('fe.set.n.push')} sub={t('fe.set.n.pushSub')} on={n.push} onClick={()=>void save({...n,push:!n.push})}/>
      <ToggleRow title={t('fe.set.n.email')} sub={email||t('fe.set.noEmail')} on={n.email} onClick={()=>void save({...n,email:!n.email})}/>
      {n.email&&<div className="li"><SelectRow label={t('fe.set.n.digest')} sub={t('fe.set.n.digestSub')} value={n.digest}
       options={(['instant','daily','weekly'] as const).map(v=>[v,t('fe.set.n.digest.'+v)] as const)} onChange={v=>void save({...n,digest:v})}/></div>}
-    </div>
-    <div className="sec">{t('fe.set.n.what')}<span className="nhead"><span>{t('fe.set.n.colPush')}</span><span>{t('fe.set.n.colEmail')}</span></span></div>
-    <div className="card list ncats">{CATS.map(([k,Icon])=>{const c=n.categories[k];const title=t('fe.set.n.cat.'+k);
+    </Card>
+    <SectionLabel action={<span className="nhead"><span>{t('fe.set.n.colPush')}</span><span>{t('fe.set.n.colEmail')}</span></span>}>{t('fe.set.n.what')}</SectionLabel>
+    <Card list className="ncats">{CATS.map(([k,Icon])=>{const c=n.categories[k];const title=t('fe.set.n.cat.'+k);
      const flip=(ch:'push'|'email')=>void save({...n,categories:{...n.categories,[k]:{...c,[ch]:!c[ch]}}});
      return <div key={k} className="li"><span className="ico"><Icon/></span><span className="tx"><b>{title}</b><small>{t('fe.set.n.catSub.'+k)}</small></span>
       <button type="button" className={'nt-t'+(c.push&&n.push?' on':'')} disabled={!n.push} aria-pressed={c.push} aria-label={t('fe.set.n.colPush')+': '+title} onClick={()=>flip('push')}><Smartphone/></button>
       <button type="button" className={'nt-t'+(c.email&&n.email?' on':'')} disabled={!n.email} aria-pressed={c.email} aria-label={t('fe.set.n.colEmail')+': '+title} onClick={()=>flip('email')}><Mail/></button>
-     </div>;})}</div>
-    <div className="sec">{t('fe.set.n.quiet')}</div>
-    <div className="card list">
+     </div>;})}</Card>
+    <SectionLabel>{t('fe.set.n.quiet')}</SectionLabel>
+    <Card list>
      <ToggleRow title={t('fe.set.n.quietOn',{from:n.quiet.from,to:n.quiet.to})} sub={t('fe.set.n.quietNote')} on={n.quiet.on} onClick={()=>void save({...n,quiet:{...n.quiet,on:!n.quiet.on}})}/>
      {n.quiet.on&&<>
       <div className="li"><SelectRow label={t('fe.set.n.from')} value={n.quiet.from} options={HALF_HOURS.map(v=>[v,v] as const)} onChange={v=>void save({...n,quiet:{...n.quiet,from:v}})}/></div>
       <div className="li"><SelectRow label={t('fe.set.n.to')} value={n.quiet.to} options={HALF_HOURS.map(v=>[v,v] as const)} onChange={v=>void save({...n,quiet:{...n.quiet,to:v}})}/></div>
      </>}
-    </div>
-    <p className="note mt12">{t('fe.set.n.security')}</p>
+    </Card>
+    <Note className="mt12">{t('fe.set.n.security')}</Note>
    </>}
   </View>
  </>;
@@ -177,19 +175,20 @@ export function DataScreen(){
  return <>
   <Bar title={t('fe.set.myData')} back="/n/settings"/>
   <View className="nodock compact">
-   <div className="card"><h3 className="t">{t('fe.set.exportTitle')}</h3><p className="note" style={{marginBottom:12}}>{t('fe.set.exportText')}</p>
-    <Btn kind="soft" size="md" icon={Download} onClick={exportData} busy={exporting} disabled={exporting}>{t('fe.set.exportTitle')}</Btn></div>
-   <div className="card" style={{borderColor:'var(--danger-soft)'}}><h3 className="t" style={{color:'var(--danger)'}}>{t('fe.set.delete')}</h3>
-    <p className="note" style={{marginBottom:12}}>{couple?t('fe.set.deleteTextCouple',{name:couple.name||couple.handle||''}):t('fe.set.deleteText')}</p>
+   <Card><H level={4} as="h3" className="t">{t('fe.set.exportTitle')}</H><Note className="mb12">{t('fe.set.exportText')}</Note>
+    <Btn kind="soft" size="md" icon={Download} onClick={exportData} busy={exporting} disabled={exporting}>{t('fe.set.exportTitle')}</Btn></Card>
+   {/* The danger card's edge stays inline: the kit Card has no danger tone yet. */}
+   <div className="card" style={{borderColor:'var(--danger-soft)'}}><H level={4} as="h3" className="t k-danger">{t('fe.set.delete')}</H>
+    <Note className="mb12">{couple?t('fe.set.deleteTextCouple',{name:couple.name||couple.handle||''}):t('fe.set.deleteText')}</Note>
     <Btn kind="danger" size="md" icon={Trash2} onClick={()=>setAsk(true)}>{t('fe.set.deleteBtn')}</Btn></div>
   </View>
   {ask&&<Sheet title={t('fe.set.deleteTitle')} onClose={close} foot={<>
    <Btn kind="danger" onClick={()=>void remove()} busy={busy} disabled={busy||!confirm.trim()}>{t('fe.set.deleteFinal')}</Btn>
    <Btn kind="soft" onClick={close} disabled={busy}>{t('fe.set.deleteKeep')}</Btn></>}>
    <p className="lead">{t('fe.set.deleteConfirm')} <b>{handle}</b></p>
-   <label className={'field'+(failure?' err':'')+(shake?' shake':'')}><input className="inp" value={confirm} placeholder={handle} aria-label={t('fe.set.deleteConfirm')}
-    onChange={e=>{setConfirm(e.target.value);setFailure('');}} onKeyDown={e=>{if(e.key==='Enter')void remove();}} autoCapitalize="off" autoComplete="off" spellCheck={false} autoFocus/></label>
-   {failure&&<div className="alert err mt12" role="alert"><span>{failure}</span></div>}
+   <div className={shake?'shake':undefined}><Field><Input value={confirm} placeholder={handle} aria-label={t('fe.set.deleteConfirm')} invalid={!!failure}
+    onChange={e=>{setConfirm(e.target.value);setFailure('');}} onKeyDown={e=>{if(e.key==='Enter')void remove();}} autoCapitalize="off" autoComplete="off" spellCheck={false} autoFocus/></Field></div>
+   {failure&&<Alert kind="err" noIcon className="mt12">{failure}</Alert>}
   </Sheet>}
  </>;
 }

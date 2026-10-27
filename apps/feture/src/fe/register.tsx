@@ -1,11 +1,11 @@
-import {useEffect,useMemo,useRef,useState} from 'react';
+import {useEffect,useId,useMemo,useRef,useState} from 'react';
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {AtSign,CircleAlert,CircleCheck,Check,Search,ShieldCheck,X} from 'lucide-react';
-import {Btn,Empty,Layer,Skel} from './ui';
+import {AtSign,CircleCheck,Search,ShieldCheck} from 'lucide-react';
+import {Alert,Ask,Btn,Check,Chip,Chips,ChoiceChips,Empty,Field,H,Input,Note,Pill,SearchInput,SectionLabel,Select,Sheet,Skel,Text} from './kit';
 import {useFe} from './session';
 import {useToast} from './toast';
 import {AuthBar,AuthFrame,AuthLogo} from './start';
@@ -100,47 +100,42 @@ function Account({form,setForm,onBack,onCreated,onUnder18}:{form:Form,setForm:Re
    opId.current=newOpId();
   }finally{setBusy(false);}
  };
- const err=(m:string)=><div className="ferr"><CircleAlert/>{m}</div>;
  const dob=(p:Partial<Form>)=>{set(p);setErrors(x=>({...x,dob:''}));};
+ const nickId=useId();
+ const nickError=errors.nick||(nickState!=='idle'&&nickState!=='ok'?t('fe.reg.nick.'+nickState):'');
+ const days=useMemo(()=>[['',t('fe.reg.day')] as const,...Array.from({length:dMax},(_,i)=>[String(i+1),String(i+1)] as const)],[dMax,t]);
+ const monthOpts=useMemo(()=>[['',t('fe.reg.month')] as const,...months.map((m,i)=>[String(i+1),m] as const)],[months,t]);
+ const years=useMemo(()=>[['',t('fe.reg.year')] as const,...Array.from({length:88},(_,i)=>String(yNow-13-i)).map(y=>[y,y] as const)],[yNow,t]);
  return <>
   <AuthBar onBack={onBack}/>
   <div className="view nodock cta1"><div ref={wrap} className="auth-wrap">
    <AuthLogo/>
    <Steps at={1}/>
-   <h2 className="t">{t('fe.reg.title')}</h2>
-   <label className={'field'+(errors.nick||(nickState!=='idle'&&nickState!=='ok')?' err':'')} data-field="nick">
-    <span>{t('fe.reg.nick')}</span>
-    <div className="inwrap"><AtSign/><input className="inp" value={nick} onChange={e=>{set({nick:e.target.value});setErrors(x=>({...x,nick:''}));}} placeholder="alex_b" autoComplete="username" autoCapitalize="off" spellCheck={false} maxLength={20} aria-invalid={!!errors.nick}/></div>
-    {errors.nick?err(errors.nick):nickState==='ok'?<div className="fok"><CircleCheck/>{t('fe.reg.nickOk')}</div>:nickState!=='idle'?err(t('fe.reg.nick.'+nickState)):<div className="fhint">{t('fe.reg.nickHint')}</div>}
-   </label>
-   <div className={'field'+(errors.dob?' err':'')} data-field="dob"><span className="flabel" id="fe-dob">{t('fe.reg.dob')}</span>
+   <H level={2} className="t">{t('fe.reg.title')}</H>
+   <div data-field="nick"><Field id={nickId} label={t('fe.reg.nick')} error={nickError||undefined}>
+    <div className="inwrap"><AtSign/><Input id={nickId} value={nick} onChange={e=>{set({nick:e.target.value});setErrors(x=>({...x,nick:''}));}} placeholder="alex_b" autoComplete="username" autoCapitalize="off" spellCheck={false} maxLength={20} invalid={!!errors.nick}/></div>
+    {nickError?null:nickState==='ok'?<div className="fok"><CircleCheck/>{t('fe.reg.nickOk')}</div>:<div className="fhint">{t('fe.reg.nickHint')}</div>}
+   </Field></div>
+   <div data-field="dob"><Field error={errors.dob||undefined}><span className="flabel" id="fe-dob">{t('fe.reg.dob')}</span>
     <div className="dob" role="group" aria-labelledby="fe-dob">
-     <select className="inp" value={+dd>dMax?'':dd} onChange={e=>dob({dd:e.target.value})} aria-label={t('fe.reg.day')}><option value="">{t('fe.reg.day')}</option>{Array.from({length:dMax},(_,i)=><option key={i} value={String(i+1)}>{i+1}</option>)}</select>
-     <select className="inp" value={mm} onChange={e=>dob({mm:e.target.value})} aria-label={t('fe.reg.month')}><option value="">{t('fe.reg.month')}</option>{months.map((m,i)=><option key={i} value={String(i+1)}>{m}</option>)}</select>
-     <select className="inp" value={yy} onChange={e=>dob({yy:e.target.value})} aria-label={t('fe.reg.year')}><option value="">{t('fe.reg.year')}</option>{Array.from({length:88},(_,i)=>yNow-13-i).map(y=><option key={y} value={String(y)}>{y}</option>)}</select>
+     <Select value={+dd>dMax?'':dd} onChange={v=>dob({dd:v})} label={t('fe.reg.day')} options={days}/>
+     <Select value={mm} onChange={v=>dob({mm:v})} label={t('fe.reg.month')} options={monthOpts}/>
+     <Select value={yy} onChange={v=>dob({yy:v})} label={t('fe.reg.year')} options={years}/>
     </div>
-    {errors.dob?err(errors.dob):<div className="fhint">{age!==null&&age>=18&&<span style={{color:'var(--mint)',fontWeight:600}}>{t('fe.reg.age').replace('{age}',String(age))} </span>}{t('fe.reg.dobHint')}</div>}
-   </div>
+    {!errors.dob&&<div className="fhint">{age!==null&&age>=18&&<b className="k-ok">{t('fe.reg.age').replace('{age}',String(age))} </b>}{t('fe.reg.dobHint')}</div>}
+   </Field></div>
    <div className="hr"/>
-   <button type="button" role="checkbox" aria-checked={terms} className={'check'+(terms?' on':'')+(errors.terms?' err':'')} data-field="terms" onClick={()=>{set({terms:!terms});setErrors(x=>({...x,terms:''}));}}>
-    <i><Check/></i><span>{t('fe.reg.terms')}{errors.terms&&<span className="ferr" style={{marginTop:4}}><CircleAlert/>{errors.terms}</span>}</span>
-   </button>
-   <button type="button" className="btn text auto terms-read" aria-haspopup="dialog" onClick={()=>setSheet(true)}>{t('fe.reg.readTerms')}</button>
-   <button type="button" role="checkbox" aria-checked={news} className={'check'+(news?' on':'')} onClick={()=>set({news:!news})}>
-    <i><Check/></i><span>{t('fe.reg.news')} <span className="note">· {t('fe.reg.optional')}</span></span>
-   </button>
-   {failure&&<div className="alert err mt16" role="alert"><CircleAlert/><span>{failure}</span></div>}
+   <div data-field="terms"><Check on={terms} error={!!errors.terms} onChange={v=>{set({terms:v});setErrors(x=>({...x,terms:''}));}}>
+    {t('fe.reg.terms')}{errors.terms&&<span className="ferr">{errors.terms}</span>}
+   </Check></div>
+   <Btn kind="text" auto className="terms-read" aria-haspopup="dialog" onClick={()=>setSheet(true)}>{t('fe.reg.readTerms')}</Btn>
+   <Check on={news} onChange={v=>set({news:v})}>{t('fe.reg.news')} <Text as="span" size="xs" tone="mute">· {t('fe.reg.optional')}</Text></Check>
+   {failure&&<Alert kind="err" className="mt16">{failure}</Alert>}
   </div></div>
   <div className="ctabar"><div className="wrap"><Btn onClick={()=>submit()} disabled={busy} busy={busy}>{t('fe.reg.continue')}</Btn></div></div>
   {sheet&&<TermsSheet onClose={()=>setSheet(false)}/>}
-  {confirm&&<Layer>
-   <div className="scrim on" onClick={()=>setConfirm(false)}/>
-   <div className="dialog on" role="alertdialog" aria-modal="true" aria-label={t('fe.onb.u18c.title')} tabIndex={-1}>
-    <div className="ico l a"><ShieldCheck/></div><h2>{t('fe.onb.u18c.title')}</h2>
-    <p>{t('fe.onb.u18c.text').replace('{date}',`${dd}.${mm.padStart(2,'0')}.${yy}`)}</p>
-    <div className="btns"><Btn onClick={()=>submit(true)}>{t('fe.onb.u18c.ok')}</Btn><Btn kind="soft" onClick={()=>setConfirm(false)}>{t('fe.onb.u18c.change')}</Btn></div>
-   </div>
-  </Layer>}
+  {confirm&&<Ask icon={ShieldCheck} tone="l a" title={t('fe.onb.u18c.title')} text={t('fe.onb.u18c.text').replace('{date}',`${dd}.${mm.padStart(2,'0')}.${yy}`)}
+   ok={t('fe.onb.u18c.ok')} cancel={t('fe.onb.u18c.change')} onOk={()=>void submit(true)} onCancel={()=>setConfirm(false)}/>}
  </>;
 }
 
@@ -203,8 +198,7 @@ function AboutYou({profileId}:{profileId:string}){
   }catch(error){setFailure(feErrorMessage(error,t));opId.current=newOpId();}
   finally{setBusy('');}
  };
- const radio=<T extends string>(items:[T,string][],sel:T|'',pick:(v:T)=>void,aria:string)=><div className="chips" role="radiogroup" aria-label={aria}>
-  {items.map(([id,l])=><button key={id} type="button" className={'chip'+(sel===id?' on':'')} role="radio" aria-checked={sel===id} onClick={()=>pick(id)}>{l}</button>)}</div>;
+ const radio=<T extends string>(items:[T,string][],sel:T|'',pick:(v:T)=>void,aria:string)=><ChoiceChips label={aria} value={sel||null} options={items} onChange={pick}/>;
  const group=(kind:Kind)=>{
   const list=listOf(kind);if(!list.length)return null;
   const sel=picked[kind];
@@ -215,7 +209,7 @@ function AboutYou({profileId}:{profileId:string}){
   }
   const title=t('fe.onb.kind.'+kind);
   return <section key={kind} className="fin"><div className="fin-t"><b>{title}</b>{MULTI.includes(kind)&&<span>{t('fe.reg.pickAny')}</span>}</div>
-   <div className="chips" role="group" aria-label={title}>{chips.map(o=><button key={o.code} type="button" className={'chip'+(sel.includes(o.code)?' on':'')} aria-pressed={sel.includes(o.code)} onClick={()=>toggle(kind,o.code)}>{label(o)}</button>)}
+   <div className="chips" role="group" aria-label={title}>{chips.map(o=><Chip key={o.code} on={sel.includes(o.code)} onClick={()=>toggle(kind,o.code)}>{label(o)}</Chip>)}
     {more&&<button type="button" className="chip more" aria-haspopup="dialog" onClick={()=>setPicker(kind)}><Search size={14}/>{t('fe.onb.all').replace('{n}',String(list.length))}</button>}</div>
   </section>;
  };
@@ -225,7 +219,7 @@ function AboutYou({profileId}:{profileId:string}){
   <div className="view nodock cta2"><div className="auth-wrap identity-onboarding">
    <AuthLogo/>
    <Steps at={2}/>
-   <h2 className="t">{t('fe.reg.about.title')}</h2>
+   <H level={2} className="t">{t('fe.reg.about.title')}</H>
    <section className="fin"><div className="fin-t"><b>{t('fe.reg.discover.title')}</b></div>
     {radio([['visible',t('fe.onb.discover.on')],['off',t('fe.onb.discover.off')]],discover,setDiscover,t('fe.reg.discover.title'))}
     <p className="fhint mt8">{discover==='visible'?t('fe.onb.discover.noteOn'):t('fe.onb.discover.noteOff')}</p>
@@ -239,9 +233,9 @@ function AboutYou({profileId}:{profileId:string}){
     {radio([['only',t('fe.reg.vis.only')],['granted',t('fe.reg.vis.granted')],['all',t('fe.reg.vis.all')]],vis,setVis,t('fe.reg.vis.title'))}
     <p className="fhint mt8">{t('fe.reg.vis.note.'+vis)}</p>
    </section>
-   {loadFailed?<div className="alert err mt16" role="alert"><CircleAlert/><span>{t('fe.onb.optionsFailed')}</span><button type="button" className="btn text auto" onClick={load}>{t('fe.retry')}</button></div>
+   {loadFailed?<Alert kind="err" className="mt16">{t('fe.onb.optionsFailed')} <Btn kind="text" auto onClick={load}>{t('fe.retry')}</Btn></Alert>
     :options===null?<div className="mt16"><Skel kind="card" rows={3}/></div>:KINDS.map(group)}
-   {failure&&<div className="alert err mt16" role="alert"><CircleAlert/><span>{failure}</span></div>}
+   {failure&&<Alert kind="err" className="mt16">{failure}</Alert>}
   </div></div>
   <div className="ctabar"><div className="wrap">
    <Btn onClick={()=>finish(false)} disabled={!!busy} busy={busy==='save'}>{t('fe.onb.saveNext')}</Btn>
@@ -256,29 +250,19 @@ function AboutYou({profileId}:{profileId:string}){
  * count of chosen (n/max), «Сбросить» and «Готово · n». */
 function Picker({title,items,base,label,sel,max,onToggle,onClear,onClose}:{title:string,items:Opt[],base:number,label:(o:Opt)=>string,sel:string[],max:number,onToggle:(c:string)=>void,onClear:()=>void,onClose:()=>void}){
  const {t}=useI18n();const [q,setQ]=useState('');
- useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape')onClose();};addEventListener('keydown',k);return ()=>removeEventListener('keydown',k);},[onClose]);
  const query=q.trim().toLowerCase();
  const hit=(o:Opt)=>!query||`${o.ru} ${o.en} ${o.code}`.toLowerCase().includes(query);
  const groups:[string,Opt[]][]=[[t('fe.onb.popular'),items.slice(0,base)],[t('fe.onb.moreOptions'),items.slice(base)]];
  const total=items.filter(hit).length;
- return <Layer>
-  <div className="scrim on" onClick={onClose}/>
-  <div className="sheet full on" role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}>
-   <div className="grab"/>
-   <div className="sh-h"><div className="sh-ht"><h2>{title}</h2></div>
-    <span className={'pill'+(sel.length?' v':'')}>{max?`${sel.length}/${max}`:sel.length}</span>
-    <button type="button" className="ibtn ghost sm" aria-label={t('fe.onb.close')} onClick={onClose}><X/></button></div>
-   <div className="sh-search"><div className="inwrap"><Search/><input className="inp" type="search" value={q} onChange={e=>setQ(e.target.value)} placeholder={t('fe.onb.find')} aria-label={t('fe.onb.find')} enterKeyHint="search"/></div></div>
-   <div className="sh-b">
-    {groups.map(([g,list])=>{const vis=list.filter(hit);if(!list.length||query&&!vis.length)return null;
-     return <section key={g} className={'fsec'+(query?' searching':'')}><div className="sec">{g}</div>
-      <div className="chips">{vis.map(o=><button key={o.code} type="button" className={'chip'+(sel.includes(o.code)?' on':'')} aria-pressed={sel.includes(o.code)} onClick={()=>onToggle(o.code)}>{label(o)}</button>)}</div></section>;})}
-    {query&&!total&&<p className="note sh-empty">{t('fe.onb.findNone')}</p>}
-   </div>
-   <div className="sh-f"><div className="row g8">
-    {sel.length>0&&<Btn kind="soft" style={{flex:'0 0 auto',width:'auto'}} onClick={onClear}>{t('fe.onb.clear')}</Btn>}
-    <Btn onClick={onClose}>{sel.length?t('fe.onb.doneN').replace('{n}',String(sel.length)):t('fe.reg.done')}</Btn>
-   </div></div>
-  </div>
- </Layer>;
+ return <Sheet full title={title} onClose={onClose} head={<Pill tone={sel.length?'v':undefined}>{max?`${sel.length}/${max}`:sel.length}</Pill>}
+  search={<SearchInput label={t('fe.onb.find')} value={q} onChange={e=>setQ(e.target.value)}/>}
+  foot={<div className="row g8">
+   {sel.length>0&&<Btn kind="soft" fit onClick={onClear}>{t('fe.onb.clear')}</Btn>}
+   <Btn onClick={onClose}>{sel.length?t('fe.onb.doneN').replace('{n}',String(sel.length)):t('fe.reg.done')}</Btn>
+  </div>}>
+  {groups.map(([g,list])=>{const vis=list.filter(hit);if(!list.length||query&&!vis.length)return null;
+   return <section key={g} className={'fsec'+(query?' searching':'')}><SectionLabel>{g}</SectionLabel>
+    <Chips>{vis.map(o=><Chip key={o.code} on={sel.includes(o.code)} onClick={()=>onToggle(o.code)}>{label(o)}</Chip>)}</Chips></section>;})}
+  {query&&!total&&<Note className="sh-empty">{t('fe.onb.findNone')}</Note>}
+ </Sheet>;
 }

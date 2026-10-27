@@ -3,7 +3,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,Calendar,Eye,FileText,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Av,Bar,Btn,Empty,View,Skel} from './ui';
+import {Av,Bar,Btn,Card,Empty,Note,SectionLabel,Skel,View} from './kit';
 import {useFe} from './session';
 import {useToast} from './toast';
 import {when} from './feed';
@@ -63,7 +63,7 @@ function HiddenList({h}:{h:ReturnType<typeof useHidden>}){
  if(!items.length)return <Empty icon={Eye} title={t('fe.tl.h.empty')} text={t('fe.tl.h.emptyText')}/>;
  return <>
   {GROUPS.map(([kind,label])=>{const list=items.filter(x=>x.kind===kind);return list.length?<div key={kind}>
-   <div className="sec">{t('fe.tl.h.'+label)} · {list.length}</div><div className="card list">{list.map(row)}</div>
+   <SectionLabel>{t('fe.tl.h.'+label)} · {list.length}</SectionLabel><Card list>{list.map(row)}</Card>
   </div>:null;})}
   <p className="grp-n">{t('fe.tl.h.note')}</p>
  </>;
@@ -74,7 +74,7 @@ export function HiddenFeedSheet({onClose}:{onClose:()=>void}){
  const {t}=useI18n();const {acting,state}=useFe();const h=useHidden();
  const hasCouple=state.status==='ready'&&state.boot.profiles.some(p=>p.kind==='couple'&&p.state!=='deleted');
  return <Sheet title={t('fe.tl.h.title')} onClose={onClose}>
-  {hasCouple&&<p className="note" style={{margin:'0 0 8px'}}>{acting?.kind==='couple'?t('fe.tl.h.feedCouple'):t('fe.tl.h.feedMine')}</p>}
+  {hasCouple&&<Note className="mb8">{acting?.kind==='couple'?t('fe.tl.h.feedCouple'):t('fe.tl.h.feedMine')}</Note>}
   <HiddenList h={h}/>
  </Sheet>;
 }
@@ -84,7 +84,7 @@ export function HiddenFeedScreen(){
  return <>
   <Bar title={t('fe.tl.h.title')} back="/n/settings"/>
   <View className="nodock compact">
-   {acting?.kind==='couple'&&<p className="note" style={{margin:'0 0 12px'}}>{t('fe.tl.h.couple')}</p>}
+   {acting?.kind==='couple'&&<Note className="mb12">{t('fe.tl.h.couple')}</Note>}
    <HiddenList h={h}/>
   </View>
  </>;
@@ -122,17 +122,17 @@ export function BlockedScreen(){
  return <>
   <Bar title={t('fe.tl.b.title')} back="/n/settings"/>
   <View className="nodock compact">
-   <p className="note" style={{margin:'0 0 12px'}}>{other?(couple?t('fe.tl.b.noteCouple').replace('{name}',nameOf(acting)):t('fe.tl.b.noteMine')):t('fe.tl.b.note')}</p>
+   <Note className="mb12">{other?(couple?t('fe.tl.b.noteCouple').replace('{name}',nameOf(acting)):t('fe.tl.b.noteMine')):t('fe.tl.b.note')}</Note>
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :items===null?<Skel kind="list"/>
     :items.length===0?<Empty icon={Ban} title={t('fe.tl.b.empty')} text={t('fe.tl.b.emptyText')}/>
-    :<div className="card list">{items.map(b=>{const name=nameOf(b)||'?';const forBoth=otherIds.has(b.id);
+    :<Card list>{items.map(b=>{const name=nameOf(b)||'?';const forBoth=otherIds.has(b.id);
      return <div key={b.id} className="li">
       <Av name={name} seed={b.id}/>
-      <span className="tx" style={{flex:'1 1 auto',minWidth:0}}><b>{name}</b><small>{(forBoth?t('fe.tl.b.both'):t('fe.tl.b.blocked'))+' '+when(b.created_at,locale)}</small>
-       {other&&!forBoth&&<span style={{display:'block',marginTop:4}}><Btn kind="text" size="sm" auto onClick={()=>void both(b)} busy={busy==='b:'+b.id} disabled={!!busy}>{couple?t('fe.tl.b.forMe'):t('fe.tl.b.forCouple')}</Btn></span>}</span>
-      <span style={{flex:'none'}}><Btn kind="soft" size="sm" onClick={()=>{setAsk(b);setFailure('');}} disabled={!!busy}>{t('fe.tl.b.unblock')}</Btn></span>
-     </div>;})}</div>}
+      <div className="tx"><b>{name}</b><small>{(forBoth?t('fe.tl.b.both'):t('fe.tl.b.blocked'))+' '+when(b.created_at,locale)}</small>
+       {other&&!forBoth&&<div className="mt8"><Btn kind="text" size="sm" auto onClick={()=>void both(b)} busy={busy==='b:'+b.id} disabled={!!busy}>{couple?t('fe.tl.b.forMe'):t('fe.tl.b.forCouple')}</Btn></div>}</div>
+      <Btn kind="soft" size="sm" fit onClick={()=>{setAsk(b);setFailure('');}} disabled={!!busy}>{t('fe.tl.b.unblock')}</Btn>
+     </div>;})}</Card>}
   </View>
   {ask&&<Ask icon={Ban} title={t('fe.tl.b.askTitle').replace('{name}',askName)}
    text={couple?t('fe.tl.b.askTextCouple').replace('{name}',askName).replace('{pair}',nameOf(acting)):t('fe.tl.b.askText')}

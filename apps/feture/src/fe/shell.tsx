@@ -1,9 +1,9 @@
-import {useCallback,useEffect,useRef,useState,type CSSProperties} from 'react';
+import {useCallback,useEffect,useRef,useState} from 'react';
 import {Outlet,useLocation,useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Globe,Image as FeedIcon,MessageCircle,Plus,User,Users,X,type LucideIcon} from 'lucide-react';
 import {feErrorMessage} from '../feture/fe-api';
-import {Av,Btn,Empty,Skel} from './ui';
+import {Av,Btn,Empty,H,Skel} from './kit';
 import {FeSessionProvider,useFe,useRealtime} from './session';
 import {countsRes} from './inbox';
 import {Register} from './register';
@@ -56,10 +56,10 @@ function ShellSkeleton(){
   <aside className="side"><div className="brand"><img src={import.meta.env.BASE_URL+'fe-logo.svg'} alt=""/><b>Fet<i>Ure</i></b></div>
    <nav aria-hidden="true">{FE_TABS.map(({id,icon:Icon})=><button key={id} type="button" tabIndex={-1} className={'navb'+(tab===id?' on':'')}><Icon/><span>{t('fe.nav.'+id)}</span></button>)}</nav></aside>
   <main className="main has-dock hasbar">
-   <header className="bar">{nested?<i className="sk sk-av"/>:null}<h1 className={nested?'sm':''}>{nested?<i className="sk sk-l" style={{width:120,height:16}}/>:t('fe.nav.'+tab)}</h1></header>
+   <header className="bar">{nested?<i className="sk sk-av"/>:null}<H level={1} {...(nested?{className:'sm'}:{})}>{nested?<i className="sk sk-l fe-sk-title"/>:t('fe.nav.'+tab)}</H></header>
    <div className="view"><div className="wrap"><Skel kind={tab==='feed'?'post':tab==='people'?'tiles':'list'} rows={tab==='people'?2:4}/></div></div>
-   <nav className="dock" style={{gridTemplateColumns:`repeat(${FE_TABS.length},1fr)`} as CSSProperties} aria-hidden="true">
-    {FE_TABS.map(({id,icon:Icon})=><button key={id} type="button" tabIndex={-1} className={(tab===id?'on':'')+(id==='me'?' me-tab':'')}>{id==='me'?<span className="dock-av"><span className="av"><i className="sk" style={{width:'100%',height:'100%',borderRadius:'50%'}}/></span></span>:<Icon/>}<span>{t('fe.nav.'+id)}</span></button>)}
+   <nav className="dock" aria-hidden="true">
+    {FE_TABS.map(({id,icon:Icon})=><button key={id} type="button" tabIndex={-1} className={(tab===id?'on':'')+(id==='me'?' me-tab':'')}>{id==='me'?<span className="dock-av"><span className="av"><i className="sk fe-sk-av"/></span></span>:<Icon/>}<span>{t('fe.nav.'+id)}</span></button>)}
    </nav>
   </main>
  </div></div>;
@@ -123,7 +123,7 @@ function FeLayout(){
  return <div className="stage"><div className="root">
   <aside className="side">
    <div className="brand"><img src={import.meta.env.BASE_URL+'fe-logo.svg'} alt=""/><b>Fet<i>Ure</i></b></div>
-   <nav aria-label={t('fe.nav.aria')}>{FE_TABS.map(({id,icon:Icon})=><button key={id} type="button" className={'navb'+(current===id?' on':'')} aria-current={current===id?'page':undefined} onClick={()=>go(id)}><Icon/><span>{t('fe.nav.'+id)}</span>{badge(id)==='dot'?<em style={{minWidth:9,width:9,height:9,padding:0}}/>:badge(id)?<em>{badge(id)}</em>:null}</button>)}</nav>
+   <nav aria-label={t('fe.nav.aria')}>{FE_TABS.map(({id,icon:Icon})=><button key={id} type="button" className={'navb'+(current===id?' on':'')} aria-current={current===id?'page':undefined} onClick={()=>go(id)}><Icon/><span>{t('fe.nav.'+id)}</span>{badge(id)==='dot'?<em className="dot"/>:badge(id)?<em>{badge(id)}</em>:null}</button>)}</nav>
    <Btn className="create" icon={Plus} onClick={()=>navigate('/n/feed/new')} aria-label={t('fe.create')}><span>{t('fe.create')}</span></Btn>
    <div className="sp"/>
    {acting&&<button type="button" className="mebtn" onClick={()=>navigate('/n/me')}>
@@ -133,7 +133,8 @@ function FeLayout(){
   <main ref={main} className={(nodock?'main':'main has-dock')+(sbar?'':' hasbar')+(cta?' hascta':'')}>
    <ToastProvider nodock={nodock}>
    <Outlet/>
-   {!nodock&&<nav className="dock" style={{gridTemplateColumns:`repeat(${FE_TABS.length},1fr)`} as CSSProperties} aria-label={t('fe.nav.aria')}>
+   {/* The dock's five columns come from base.css (.dock: repeat(5,1fr)) — FE_TABS has five tabs. */}
+   {!nodock&&<nav className="dock" aria-label={t('fe.nav.aria')}>
     {FE_TABS.map(({id,icon:Icon})=><button key={id} type="button" className={(current===id?'on':'')+(id==='me'?' me-tab':'')} aria-label={label(id)} aria-current={current===id?'page':undefined} onClick={()=>go(id)}>
      {id==='me'&&acting?<span className="dock-av"><Av name={name} seed={acting.id} src={acting.avatar}/></span>:<Icon/>}<span>{t('fe.nav.'+id)}</span>{em(badge(id))}
     </button>)}

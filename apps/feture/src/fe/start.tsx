@@ -2,8 +2,8 @@ import {useEffect,useRef,useState,type ReactNode} from 'react';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import type {AuthResponseError} from '@appbase/core/auth.js';
-import {ChevronLeft,CircleAlert,Mail} from 'lucide-react';
-import {Btn,Seg} from './ui';
+import {CircleAlert,Mail} from 'lucide-react';
+import {Bar,Btn,Field,H,Input,Seg} from './kit';
 import {ToastProvider} from './toast';
 import {Welcome} from './welcome';
 
@@ -15,12 +15,10 @@ export function AuthFrame({screen,children}:{screen:string,children:ReactNode}){
 
 /** `bar('',{back:1,actions})` of the auth screens: only «‹» and, where the prototype has it, the language switch. */
 export function AuthBar({onBack,lang}:{onBack?:()=>void,lang?:boolean}){
- const {t,locale,canSwitch,setPreference}=useI18n();
- return <header className="bar">
-  {onBack&&<button type="button" className="ibtn ghost" aria-label={t('fe.back')} onClick={onBack}><ChevronLeft/></button>}
-  <h1 tabIndex={-1}/>
+ const {locale,canSwitch,setPreference}=useI18n();
+ return <Bar title="" {...(onBack?{onBack}:{})}>
   {lang&&canSwitch&&<div className="langsw" role="group" aria-label="Language">{(['ru','en'] as const).map(l=><button key={l} type="button" className={locale===l?'on':''} aria-pressed={locale===l} onClick={()=>setPreference(l)}>{l.toUpperCase()}</button>)}</div>}
- </header>;
+ </Bar>;
 }
 
 /** V21 AUTH-021: the logo on the sign-up forms (shown as the card header on a computer, hidden on a phone). */
@@ -49,7 +47,7 @@ let lastEmail='';
 function EmailStep({mode,onBack,onMode,onCode}:{mode:Mode,onBack:()=>void,onMode:(m:Mode)=>void,onCode:(email:string,sent:boolean)=>void}){
  const {client}=useOptionalAuth();const {t,locale}=useI18n();
  const [email,setEmail]=useState(lastEmail);const [error,setError]=useState('');const [busy,setBusy]=useState(false);const [noMail,setNoMail]=useState(false);
- const field=useRef<HTMLLabelElement>(null);
+ const field=useRef<HTMLDivElement>(null);
  const fail=(m:string)=>{setError(m);const f=field.current;if(f){f.classList.remove('shake');void f.offsetWidth;f.classList.add('shake');}};
  const send=async()=>{
   const v=email.trim().toLowerCase();
@@ -67,12 +65,12 @@ function EmailStep({mode,onBack,onMode,onCode}:{mode:Mode,onBack:()=>void,onMode
   <div className="view nodock"><div className="auth-wrap">
    <AuthLogo/>
    <Seg small={false} value={mode} onChange={onMode} options={[{id:'up',label:t('fe.onb.up')},{id:'in',label:t('fe.onb.in')}]}/>
-   <h2 className="t">{mode==='up'?t('fe.onb.upTitle'):t('fe.onb.inTitle')}</h2>
-   <label ref={field} className={'field'+(error?' err':'')} data-field="email"><span>{t('fe.onb.email')}</span>
-    <div className="inwrap"><Mail/><input className="inp" name="email" type="email" value={email} placeholder="name@mail.com" autoComplete="email" inputMode="email" aria-invalid={!!error}
+   <H level={2} className="t">{mode==='up'?t('fe.onb.upTitle'):t('fe.onb.inTitle')}</H>
+   <div ref={field} data-field="email"><Field id="fe-email" label={t('fe.onb.email')} error={error||undefined}>
+    <div className="inwrap"><Mail/><Input id="fe-email" name="email" type="email" value={email} placeholder="name@mail.com" autoComplete="email" inputMode="email" invalid={!!error}
      onChange={e=>{setEmail(e.target.value);setError('');setNoMail(false);}} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();void send();}}}/></div>
-    {error?<div className="ferr"><CircleAlert/>{error}</div>:<div className="fhint">{t('fe.onb.email.hint')}</div>}
-   </label>
+    {!error&&<div className="fhint">{t('fe.onb.email.hint')}</div>}
+   </Field></div>
    <Btn onClick={send} disabled={busy} busy={busy}>{t('fe.onb.getCode')}</Btn>
    {noMail&&<Btn kind="text" className="mt8" onClick={()=>{const v=email.trim().toLowerCase();lastEmail=v;onCode(v,false);}}>{t('fe.onb.haveCode')}</Btn>}
   </div></div>
@@ -122,7 +120,7 @@ function CodeStep({email,sent,onBack}:{email:string,sent:boolean,onBack:()=>void
   <AuthBar onBack={onBack}/>
   <div className="view nodock"><div className="auth-wrap">
    <AuthLogo/>
-   <h2 className="t">{t('fe.onb.code.title')}</h2>
+   <H level={2} className="t">{t('fe.onb.code.title')}</H>
    <p className="lead">{sent?t('fe.onb.code.sent'):t('fe.onb.code.enterFor')} <b>{masked}</b>. {t('fe.onb.code.valid')}</p>
    <div ref={box} className={'code'+(error?' err':'')} data-field="code">{digits.map((d,i)=><input key={i} ref={el=>{inputs.current[i]=el;}} inputMode="numeric" autoComplete="one-time-code" aria-label={`${t('fe.onb.code.digit')} ${i+1}`}
     value={d} disabled={locked} onChange={e=>type(i,e.target.value)} onKeyDown={e=>{if(e.key==='Backspace'&&!digits[i]&&i>0)inputs.current[i-1]?.focus();if(e.key==='Enter')void check(digits.join(''));}}/>)}</div>
