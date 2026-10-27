@@ -117,7 +117,7 @@ export function TopicScreen(){
      :posts===null?<Skel kind="list"/>
      :posts.length===0?<><p className="note">{t('fe.br.topic.noPosts')}</p><Btn kind="soft" className="mt12" icon={Pencil} onClick={()=>navigate('/n/feed/new')}>{t('fe.br.topic.write',{name})}</Btn></>
      :<><PostList items={posts} setItems={f=>setPosts(list=>list?f(list):list)}/>
-      {next&&<Btn kind="soft" onClick={()=>load(next)} disabled={more}>{more?t('fe.loading'):t('fe.feed.more')}</Btn>}</>}
+      {next&&<Btn kind="soft" onClick={()=>load(next)} disabled={more} busy={more}>{t('fe.feed.more')}</Btn>}</>}
    </>}
   </View>
   {sheet&&tp&&<InterestSheet topicId={id} topics={topics} cats={cats} current={current} onClose={close} onDone={msg=>{close();setNotice(msg);reloadMine();}}/>}

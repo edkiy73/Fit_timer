@@ -234,7 +234,7 @@ function MediaCard({item,onDone}:{item:MediaItem,onDone:()=>void}){
   </div>
   <Kv rows={[[t('fe.staff.media.authorLabel'),item.authorLabel],[t('fe.staff.media.scanner'),item.reason]]}/>
   {src===undefined?<div className="st-block">
-    <Btn kind="soft" size="md" icon={Eye} disabled={viewing} onClick={open}>{viewing?t('fe.loading'):t('fe.staff.media.open')}</Btn>
+    <Btn kind="soft" size="md" icon={Eye} disabled={viewing} busy={viewing} onClick={open}>{t('fe.staff.media.open')}</Btn>
     <p className="note mt8">{t('fe.staff.media.openNote')}</p></div>
    :src===null?<p className="note st-block">{t('fe.staff.media.noCopies')}</p>:null}
   {src!==undefined&&!ask&&<>
