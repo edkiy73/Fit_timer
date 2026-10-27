@@ -247,41 +247,71 @@ registerApprovalKind('post.edit', {
 
 /** Post DTO for one viewer. @param {Q} q @param {any} p @param {Acting} viewer @param {import('../media/assets.mjs').MediaConfig} media @param {boolean} showExplicit */
 async function postDto(q, p, viewer, media, showExplicit) {
+  return (await postDtos(q, [p], viewer, media, showExplicit))[0];
+}
+
+/** Post DTOs for a page: one query per kind of data for all posts (not per post), then media URLs signed together.
+ * @param {Q} q @param {any[]} rows @param {Acting} viewer @param {import('../media/assets.mjs').MediaConfig} media @param {boolean} showExplicit */
+async function postDtos(q, rows, viewer, media, showExplicit) {
+  if (!rows.length) return [];
   const pv = await hasPhotoCheck(q);
-  // Independent reads go out together (the pool gate caps concurrency).
-  const [[row], assets, [poll], [mine], [c], tags] = await Promise.all([
+  const ids = rows.map(p => p.id);
+  const owners = [...new Set(rows.map(p => p.owner_profile_id))];
+  const ownIds = rows.filter(p => p.own).map(p => p.id);
+  const [authors, assets, polls, mine, counts, tags] = await Promise.all([
     // The name badges (V21 nameBadges): «Фото подтверждено» and the public Premium crown.
     q.query(`select p.id, p.kind, p.handle, p.name, p.avatar_asset_id, ${pv ? 'feture.photo_verified(p.id)' : 'false'} "photoVerified", ${PREMIUM_SQL} premium
-             from feture.profile p where p.id = $1`, [p.owner_profile_id]),
-    q.query(`select m.* from feture.media_attachment a join feture.media_asset m on m.id = a.asset_id where a.target_type = 'post' and a.target_id = $1 order by a.position`, [p.id]),
-    q.query('select question, options from feture.poll where post_id = $1', [p.id]),
-    q.query('select option from feture.poll_vote where post_id = $1 and profile_id = $2', [p.id, viewer.profileId]),
+             from feture.profile p where p.id = any($1::uuid[])`, [owners]),
+    q.query(`select a.target_id post_id, m.* from feture.media_attachment a join feture.media_asset m on m.id = a.asset_id
+             where a.target_type = 'post' and a.target_id = any($1::uuid[]) order by a.target_id, a.position`, [ids]),
+    q.query('select post_id, question, options from feture.poll where post_id = any($1::uuid[])', [ids]),
+    q.query('select post_id, option from feture.poll_vote where post_id = any($1::uuid[]) and profile_id = $2', [ids, viewer.profileId]),
     q.query(
-      `select (select count(*)::int from feture.reaction where target_type = 'post' and target_id = $1) likes,
-              exists (select 1 from feture.reaction where target_type = 'post' and target_id = $1 and profile_id = $2) liked,
-              (select count(*)::int from feture.reply r where r.post_id = $1 and r.state = 'published' and not feture.blocked($2, r.author_profile_id)) replies,
-              exists (select 1 from feture.saved_item where profile_id = $2 and kind = 'post' and target_id = $1::text) saved`, [p.id, viewer.profileId]),
+      `select pid id,
+              (select count(*)::int from feture.reaction where target_type = 'post' and target_id = pid) likes,
+              exists (select 1 from feture.reaction where target_type = 'post' and target_id = pid and profile_id = $2) liked,
+              (select count(*)::int from feture.reply r where r.post_id = pid and r.state = 'published' and not feture.blocked($2, r.author_profile_id)) replies,
+              exists (select 1 from feture.saved_item where profile_id = $2 and kind = 'post' and target_id = pid::text) saved
+       from unnest($1::uuid[]) pid`, [ids, viewer.profileId]),
     q.query(
-      `select p.id, p.handle, p.name, t.state from feture.photo_tag t join feture.profile p on p.id = t.profile_id
-       where t.post_id = $1 and ($2 or t.state = 'ok' or t.profile_id = $3) and not feture.blocked($3, p.id)`, [p.id, p.own, viewer.profileId]),
+      `select t.post_id, p.id, p.handle, p.name, t.state from feture.photo_tag t join feture.profile p on p.id = t.profile_id
+       where t.post_id = any($1::uuid[]) and (t.post_id = any($2::uuid[]) or t.state = 'ok' or t.profile_id = $3) and not feture.blocked($3, p.id)`,
+      [ids, ownIds, viewer.profileId]),
   ]);
-  const { avatar_asset_id: authorAvatar, ...author } = row;
-  const place = p.own ? 'own' : PUBLIC_AUD.has(p.audience) ? 'public' : 'private';
-  const [avatar, mediaOut, counts] = await Promise.all([
-    avatarSrc(q, media, authorAvatar, viewer.profileId),
-    Promise.all(assets.map(m => mediaDto(media, m, { viewerProfileId: viewer.profileId, place, showExplicit }))).then(l => l.filter(Boolean)),
-    // Results only after one's own vote (V21 pollHTML).
-    poll && (mine || p.own) ? q.query('select option, count(*)::int n from feture.poll_vote where post_id = $1 group by option', [p.id]) : null,
+  // Results only after one's own vote (V21 pollHTML), or for the author.
+  const showResults = polls.map(pl => pl.post_id).filter(id => ownIds.includes(id) || mine.some(m => m.post_id === id));
+  const authorAvatars = [...new Set(authors.map(a => a.avatar_asset_id).filter(Boolean))];
+  const [results, avatarRows] = await Promise.all([
+    showResults.length ? q.query('select post_id, option, count(*)::int n from feture.poll_vote where post_id = any($1::uuid[]) group by post_id, option', [showResults]) : [],
+    authorAvatars.length ? q.query('select * from feture.media_asset where id = any($1::uuid[])', [authorAvatars]) : [],
   ]);
-  author.avatar = avatar;
-  const pollOut = poll ? { question: poll.question, options: poll.options, myVote: mine?.option ?? null, results: counts && poll.options.map((/** @type {string} */ _, /** @type {number} */ i) => counts.find(x => x.option === i)?.n ?? 0) } : null;
-  return {
-    id: p.id, type: p.type, title: p.title, body: p.body, audience: p.own ? p.audience : (p.audience === 'all' ? undefined : p.audience),
-    topics: p.topics, interests: p.interests, author, media: mediaOut, poll: pollOut, tags,
-    likes: c.likes, liked: c.liked, replies: c.replies, saved: c.saved,
-    publishedAt: p.published_at, editedAt: p.edited_at,
-    ...(p.own ? { state: p.state, rev: p.rev, inFeed: p.in_feed, returned: p.removed_reason } : {}),
-  };
+  // Every picture of the page is signed in the same tick (the delivery coalesces them into one storage call).
+  const avatarOf = new Map(await Promise.all(avatarRows.map(async a => {
+    const d = await mediaDto(media, a, { viewerProfileId: viewer.profileId, place: 'public', showExplicit: false }).catch(() => null);
+    return /** @type {[string, string | null]} */ ([a.id, d && !d.blurred && d.src ? (d.src.thumb ?? d.src.card ?? null) : null]);
+  })));
+  const mediaOf = await Promise.all(rows.map(p => {
+    const place = p.own ? 'own' : PUBLIC_AUD.has(p.audience) ? 'public' : 'private';
+    return Promise.all(assets.filter(m => m.post_id === p.id).map(({ post_id: _, ...m }) => mediaDto(media, m, { viewerProfileId: viewer.profileId, place, showExplicit }))).then(l => l.filter(Boolean));
+  }));
+  return rows.map((p, k) => {
+    const row = authors.find(a => a.id === p.owner_profile_id);
+    const { avatar_asset_id: authorAvatar, ...author } = row;
+    author.avatar = authorAvatar ? avatarOf.get(authorAvatar) ?? null : null;
+    const poll = polls.find(pl => pl.post_id === p.id);
+    const my = mine.find(m => m.post_id === p.id);
+    const res = showResults.includes(p.id) ? results.filter(r => r.post_id === p.id) : null;
+    const pollOut = poll ? { question: poll.question, options: poll.options, myVote: my?.option ?? null, results: res && poll.options.map((/** @type {string} */ _, /** @type {number} */ i) => res.find(x => x.option === i)?.n ?? 0) } : null;
+    const c = counts.find(x => x.id === p.id);
+    return {
+      id: p.id, type: p.type, title: p.title, body: p.body, audience: p.own ? p.audience : (p.audience === 'all' ? undefined : p.audience),
+      topics: p.topics, interests: p.interests, author, media: mediaOf[k], poll: pollOut,
+      tags: tags.filter(t => t.post_id === p.id).map(({ post_id: _, ...t }) => t),
+      likes: c.likes, liked: c.liked, replies: c.replies, saved: c.saved,
+      publishedAt: p.published_at, editedAt: p.edited_at,
+      ...(p.own ? { state: p.state, rev: p.rev, inFeed: p.in_feed, returned: p.removed_reason } : {}),
+    };
+  });
 }
 
 /** Opaque keyset cursor over (published_at, id). @param {string | undefined} c */
@@ -399,7 +429,7 @@ const run = {
     const [acc] = await q.query('select show_explicit from feture.account where id = $1', [account.id]);
     const page = rows.slice(0, input.limit);
     // Posts are built side by side: the pool gate caps database concurrency, media URL signing overlaps.
-    const items = await Promise.all(page.map(p => postDto(q, { ...p, own: p.owner_profile_id === viewer.profileId }, viewer, cfg.media, !!acc.show_explicit)));
+    const items = await postDtos(q, page.map(p => ({ ...p, own: p.owner_profile_id === viewer.profileId })), viewer, cfg.media, !!acc.show_explicit);
     const last = page[page.length - 1];
     // «Популярное» (V21 F01) is one page of the last two weeks by likes; the keyset cursor follows time, so no next page.
     return { items, next: input.tab !== 'popular' && rows.length > input.limit ? Buffer.from(JSON.stringify([new Date(last.published_at).toISOString(), last.id])).toString('base64url') : null };
@@ -417,7 +447,7 @@ const run = {
       [viewer.profileId, viewer.accountId, input.profileId, cur?.at ?? null, cur?.id ?? null]);
     const [acc] = await q.query('select show_explicit from feture.account where id = $1', [account.id]);
     const page = rows.slice(0, 20);
-    const items = await Promise.all(page.map(p => postDto(q, p, viewer, cfg.media, !!acc.show_explicit)));
+    const items = await postDtos(q, page, viewer, cfg.media, !!acc.show_explicit);
     const last = page[page.length - 1];
     return { items, next: rows.length > 20 ? Buffer.from(JSON.stringify([new Date(last.published_at).toISOString(), last.id])).toString('base64url') : null };
   },
@@ -432,7 +462,7 @@ const run = {
       `select r.id, r.post_id, r.created_at from feture.post_revision r join feture.post p on p.id = r.post_id where p.owner_profile_id = $1 and r.state = 'review'`, [viewer.profileId]);
     const [acc] = await q.query('select show_explicit from feture.account where id = $1', [account.id]);
     const items = [];
-    items.push(...await Promise.all(rows.map(p => postDto(q, p, viewer, cfg.media, !!acc.show_explicit))));
+    items.push(...await postDtos(q, rows, viewer, cfg.media, !!acc.show_explicit));
     return { items, revisions };
   },
 

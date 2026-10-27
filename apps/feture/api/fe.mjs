@@ -46,7 +46,7 @@ const env = process.env;
 const configured = !!(env.FETURE_DATABASE_URL && env.FETURE_ID_PEPPER);
 
 // One small pool per warm instance; Supavisor transaction mode needs prepare:false.
-const POOL = 3;
+const POOL = 5;
 const sql = configured
   ? postgres(env.FETURE_DATABASE_URL, { prepare: false, max: POOL, idle_timeout: 20, connect_timeout: 8, types: POSTGRES_TYPES })
   : null;
@@ -89,18 +89,36 @@ const signals = db && realtimeOn ? createSignals({
   sender: broadcastSender({ url: supabaseUrl, secret: String(env.SUPABASE_SECRET_KEY) }),
   onError: code => console.warn('feture_fe_realtime', code),
 }) : null;
+/** A verified Core session is reused for 30 s per warm instance (keyed by a hash of the identity headers), so most
+ * requests skip one store round trip. A sign-out reaches every instance within 30 s. */
+const AUTH_TTL = 30000;
+/** @type {Map<string, {at: number, core: any}>} */
+const authCache = new Map();
+/** @param {any} req */
+async function cachedAuth(req) {
+  const h = (/** @type {string} */ n) => String(req.headers?.[n] ?? '');
+  const key = createHash('sha256').update([h('x-fit-email'), h('x-fit-device'), h('x-fit-token')].join('\n')).digest('base64url');
+  const hit = authCache.get(key);
+  if (hit && Date.now() - hit.at < AUTH_TTL) return hit.core;
+  const core = await authenticate(req, store);
+  if (authCache.size > 5000) authCache.clear();
+  authCache.set(key, { at: Date.now(), core });
+  return core;
+}
+
 const handler = db && createFeHandler({
   db,
   pepper: env.FETURE_ID_PEPPER ?? '',
   cfg: { media: { storage: media.storage, delivery: media.delivery }, realtime: signals ? { url: supabaseUrl, key: String(env.SUPABASE_PUBLISHABLE_KEY) } : null },
   signals,
   commands: { ...platform, ...me, ...access, ...couples, ...staff, ...social, ...posts, ...moderation, ...communities, ...events, ...photos, ...discover, ...chats, ...inbox, ...people, ...premium, ...verification, ...accounts, ...dsa },
-  authenticate: req => authenticate(req, store),
+  authenticate: req => cachedAuth(req),
   quota: async (req, coreKey) => { // coreKey: Core account hash, only for the ephemeral rate-limit key
     // Same budget as /api/domain: per account across devices and IPs, plus a per-IP cap.
     const window = Math.floor(Date.now() / 60000);
-    const count = await store.incr(`rl:feture-fe-account:${coreKey}:${window}`, 65);
-    return count <= 120 && await rateOkScoped(req, 'feture-fe-ip', 240, '', 60, true);
+    // Both counters at once: they are independent store round trips.
+    const [count, ipOk] = await Promise.all([store.incr(`rl:feture-fe-account:${coreKey}:${window}`, 65), rateOkScoped(req, 'feture-fe-ip', 240, '', 60, true)]);
+    return count <= 120 && ipOk;
   },
   cors,
   log: event => console.info('feture_fe_access', JSON.stringify(event)),
