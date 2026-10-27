@@ -25,7 +25,7 @@ import { PeopleTab, PersonScreen } from './fe/people';
 import { MeTab } from './fe/me';
 import { InterestsScreen, InterestsHistoryScreen } from './fe/interests';
 import { StaffScreen } from './fe/staff';
-import { FeedTab, PostScreen, ComposeScreen } from './fe/feed';
+import { FeedTab, PostScreen, ComposeScreen, EditPostScreen } from './fe/feed';
 import { CreateCommunityScreen } from './fe/create-community';
 import { CreateEventScreen } from './fe/create-event';
 const ProductDesign = lazy(async()=>({default:(await import('./feture/design/product-design')).ProductDesign}));
@@ -266,6 +266,7 @@ export const routes: RouteObject[] = [
         {path:'feed', element:<FeedTab />},
         {path:'feed/new', element:<ComposeScreen />},
         {path:'feed/post/:id', element:<PostScreen />},
+        {path:'feed/post/:id/edit', element:<EditPostScreen />},
         {path:'people', element:<PeopleTab />},
         {path:'people/:id', element:<PersonScreen />},
         {path:'communities', element:<CommunitiesTab />},

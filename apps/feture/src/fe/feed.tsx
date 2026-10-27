@@ -1,5 +1,5 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {useNavigate,useParams,useSearchParams} from 'react-router';
+import {useLocation,useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Bookmark,ChartColumn,Ellipsis,Heart,Image as ImageIcon,Lock,MessageCircle,Newspaper,Plus,SendHorizontal,Share2,Trash2,X} from 'lucide-react';
@@ -7,13 +7,18 @@ import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {Av,Bar,Btn,Empty,Seg,View} from './ui';
 import {useFe} from './session';
 import {BellButton} from './inbox';
+import {PostMenu,type Removal} from './post-menu';
 
 /** Slice B (V21 F01, F05, F07) with the prototype's markup: feed tabs, composer row, posts, replies, new post.
  * Visibility and counts are the server's; the client never filters or invents them. */
 const author=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string(),avatar:z.string().nullable().optional()});
 const media=z.object({id:z.uuid(),kind:z.string(),w:z.number().nullable(),h:z.number().nullable(),pending:z.boolean(),blurred:z.boolean(),src:z.record(z.string(),z.string()).nullable()});
 export const postSchema=z.object({id:z.uuid(),type:z.enum(['post','note']),title:z.string().nullable(),body:z.string(),author,media:z.array(media),
- topics:z.array(z.string()).optional(),likes:z.number(),liked:z.boolean(),replies:z.number(),saved:z.boolean(),publishedAt:z.string().nullable(),state:z.string().optional()});
+ topics:z.array(z.string()).optional(),likes:z.number(),liked:z.boolean(),replies:z.number(),saved:z.boolean(),publishedAt:z.string().nullable(),state:z.string().optional(),
+ // Own posts only: what the edit screen starts from.
+ rev:z.number().int().optional(),audience:z.string().optional(),inFeed:z.boolean().optional(),
+ poll:z.object({question:z.string(),options:z.array(z.string())}).nullable().optional(),
+ interests:z.array(z.object({topicId:z.string()}).passthrough()).nullable().optional(),tags:z.array(z.object({id:z.uuid()}).passthrough()).optional()});
 export type Post=z.infer<typeof postSchema>;
 const page=z.object({ok:z.literal(true),items:z.array(postSchema),next:z.string().nullable()});
 const okOnly=z.object({ok:z.literal(true)}).passthrough();
@@ -32,8 +37,10 @@ export function when(iso:string|null|undefined,locale:string){
 const nameOf=(a:{name?:string|null,handle?:string|null}|null|undefined)=>a?.name||(a?.handle?'@'+a.handle:'?');
 
 export function FeedTab(){
- const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();
+ const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const location=useLocation();
  const [tab,setTab]=useState<'forYou'|'following'>('forYou');
+ // A post screen that lost its post (deleted, hidden, blocked) comes back with `state.notice`.
+ const [notice,setNotice]=useState(()=>{const n=(location.state as {notice?:unknown}|null)?.notice;return typeof n==='string'?n:'';});
  const [items,setItems]=useState<Post[]|null>(null);const [next,setNext]=useState<string|null>(null);const [error,setError]=useState<unknown>(null);const [more,setMore]=useState(false);
  const load=useCallback((cursor?:string)=>{
   setError(null);if(!cursor)setItems(null);else setMore(true);
@@ -45,7 +52,8 @@ export function FeedTab(){
  return <>
   <Bar title={t('fe.nav.feed')}><BellButton/></Bar>
   <View>
-   <div className="mb12"><Seg value={tab} onChange={setTab} options={[{id:'forYou',label:t('fe.feed.tab.forYou')},{id:'following',label:t('fe.feed.tab.following')}]}/></div>
+   <div className="mb12"><Seg value={tab} onChange={v=>{setNotice('');setTab(v);}} options={[{id:'forYou',label:t('fe.feed.tab.forYou')},{id:'following',label:t('fe.feed.tab.following')}]}/></div>
+   {notice&&<div className="alert ok mb12" role="status"><span>{notice}</span></div>}
    <div className="composer">
     <button type="button" className="cmp-main" onClick={()=>navigate('/n/feed/new')}>{acting&&<Av name={me} seed={acting.id} size="sm" src={acting.avatar}/>}<span>{t('fe.feed.whatsNew')}</span></button>
     <button type="button" className="ibtn add" aria-label={t('fe.create')} onClick={()=>navigate('/n/feed/new')}><Plus/></button>
@@ -53,15 +61,19 @@ export function FeedTab(){
    {error&&!items?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>load()}>{t('fe.retry')}</Btn></Empty>
     :items===null?<p className="note" role="status">{t('fe.loading')}</p>
     :items.length===0?<Empty icon={Newspaper} title={t('fe.feed.empty.'+tab)} text={t('fe.feed.emptyText.'+tab)}><Btn kind="soft" onClick={()=>navigate('/n/feed/new')}>{t('fe.feed.new')}</Btn></Empty>
-    :<>{items.map(p=><PostCard key={p.id} post={p} onChange={np=>setItems(list=>list?.map(x=>x.id===np.id?np:x)??null)}/>)}
+    :<>{items.map(p=><PostCard key={p.id} post={p} onChange={np=>setItems(list=>list?.map(x=>x.id===np.id?np:x)??null)}
+     onRemove={r=>{setItems(list=>list?.filter(x=>!(x.id===r.postId||x.author.id===r.authorId))??null);setNotice(r.notice);}}/>)}
      {next&&<Btn kind="soft" onClick={()=>load(next)} disabled={more}>{more?t('fe.loading'):t('fe.feed.more')}</Btn>}
     </>}
   </View>
  </>;
 }
 
-export function PostCard({post,onChange,full=false,onReply}:{post:Post,onChange:(p:Post)=>void,full?:boolean,onReply?:()=>void}){
+export function PostCard({post,onChange,onRemove,full=false,onReply}:{post:Post,onChange:(p:Post)=>void,onRemove:(r:Removal)=>void,full?:boolean,onReply?:()=>void}){
  const {call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const [busy,setBusy]=useState(false);
+ const [menu,setMenu]=useState(false);const more=useRef<HTMLButtonElement>(null);
+ // Esc / scrim / ✕ return focus to «⋯» (prototype closeSheet → sheetOpener).
+ const closeMenu=useCallback(()=>{setMenu(false);requestAnimationFrame(()=>more.current?.focus({preventScroll:true}));},[]);
  const toggle=async(field:'liked'|'saved')=>{
   if(busy)return;setBusy(true);const on=!post[field];
   onChange(field==='liked'?{...post,liked:on,likes:post.likes+(on?1:-1)}:{...post,saved:on});
@@ -80,7 +92,7 @@ export function PostCard({post,onChange,full=false,onReply}:{post:Post,onChange:
     <Av name={nameOf(post.author)} seed={post.author.id} size="sm" couple={couple} src={post.author.avatar}/>
     <span className="tx"><b><span className="nmt">{nameOf(post.author)}</span></b><small>{when(post.publishedAt,locale)}{post.state&&post.state!=='published'?' · '+t('fe.feed.state.'+post.state):''}</small></span>
    </button>
-   <button type="button" className="ibtn ghost sm" aria-label={t('fe.more')}><Ellipsis/></button>
+   <button ref={more} type="button" className="ibtn ghost sm" aria-label={t('fe.more')} aria-haspopup="dialog" aria-expanded={menu} onClick={()=>setMenu(true)}><Ellipsis/></button>
   </div>
   <div className="body" onClick={open} role={full?undefined:'link'} tabIndex={full?undefined:0} onKeyDown={e=>{if(e.key==='Enter')open();}}>
    {post.title&&<h3 className="post-title">{post.title}</h3>}
@@ -97,11 +109,14 @@ export function PostCard({post,onChange,full=false,onReply}:{post:Post,onChange:
    <button type="button" className={'sp'+(post.saved?' saved':'')} aria-pressed={post.saved} aria-label={t('fe.feed.save')} onClick={()=>toggle('saved')}><Bookmark/></button>
    <button type="button" aria-label={t('fe.feed.share')} onClick={share}><Share2/></button>
   </div>
+  {menu&&<PostMenu post={post} onClose={closeMenu} onRemove={r=>{setMenu(false);onRemove(r);}}/>}
  </article>;
 }
 
 export function PostScreen(){
- const {id=''}=useParams();const {call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();
+ const {id=''}=useParams();const {call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const location=useLocation();
+ // The edit screen passes what happened to the edit as `state.notice`.
+ const notice=(location.state as {notice?:unknown}|null)?.notice;
  const [post,setPost]=useState<Post|null>(null);const [list,setList]=useState<z.infer<typeof reply>[]>([]);const [error,setError]=useState<unknown>(null);
  const [text,setText]=useState('');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const opId=useRef(newOpId());const box=useRef<HTMLTextAreaElement>(null);
  const load=useCallback(()=>{
@@ -121,7 +136,8 @@ export function PostScreen(){
    {error?<Empty icon={Lock} title={t('fe.feed.unavailable')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>navigate('/n/feed')}>{t('fe.feed.toFeed')}</Btn></Empty>
     :!post?<p className="note" role="status">{t('fe.loading')}</p>
     :<>
-     <PostCard post={post} onChange={setPost} full onReply={()=>box.current?.focus()}/>
+     {typeof notice==='string'&&notice&&<div className="alert ok mb12" role="status"><span>{notice}</span></div>}
+     <PostCard post={post} onChange={setPost} full onReply={()=>box.current?.focus()} onRemove={r=>navigate('/n/feed',{replace:true,state:{notice:r.notice}})}/>
      <div className="sec" id="replies">{t('fe.feed.repliesCount').replace('{n}',String(list.filter(r=>!r.deleted).length))}</div>
      {list.length===0?<button type="button" className="note-empty" onClick={()=>box.current?.focus()}>{t('fe.feed.noReplies')}</button>
       :list.map(r=>{const hidden=r.deleted||r.hidden;return <article key={r.id} className={'cm'+(hidden?' removed':'')}>
@@ -145,12 +161,27 @@ export function PostScreen(){
 const saved=z.object({ok:z.literal(true),id:z.uuid()}).passthrough();
 const published=z.object({ok:z.literal(true),state:z.string().optional()}).passthrough();
 const uploadIntent=z.object({ok:z.literal(true),assetId:z.uuid(),upload:z.object({url:z.string(),method:z.string(),headers:z.record(z.string(),z.string())})});
-export function ComposeScreen(){
- const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const [params]=useSearchParams();const communityId=params.get('community');
- const [body,setBody]=useState('');const [audience,setAudience]=useState<'all'|'followers'|'only'>('all');const [inFeed,setInFeed]=useState(true);
+const edited=z.object({ok:z.literal(true),state:z.string().optional(),rev:z.number().optional(),review:z.boolean().optional(),pending:z.unknown().optional()}).passthrough();
+type Audience='all'|'followers'|'granted'|'only';
+const AUDIENCES:Audience[]=['all','followers','granted','only'];
+
+/** V21 F07 in edit mode: the composer over an own post; the server decides whether the edit is live, goes to review or waits for the partner. */
+export function EditPostScreen(){
+ const {id=''}=useParams();const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();
+ const [post,setPost]=useState<Post|null>(null);const [error,setError]=useState<unknown>(null);
+ useEffect(()=>{setError(null);call('post.get',{postId:id},onePost).then(r=>setPost(r.post)).catch(setError);},[call,id]);
+ if(error||(post&&post.rev==null))return <><Bar title={t('fe.pm.ed.title')} back/><View>
+  <Empty icon={Lock} title={t('fe.feed.unavailable')} {...(error?{text:feErrorMessage(error,t)}:{})}><Btn kind="soft" onClick={()=>navigate('/n/feed')}>{t('fe.feed.toFeed')}</Btn></Empty></View></>;
+ if(!post)return <><Bar title={t('fe.pm.ed.title')} back/><View><p className="note" role="status">{t('fe.loading')}</p></View></>;
+ return <ComposeScreen edit={post}/>;
+}
+
+export function ComposeScreen({edit}:{edit?:Post}={}){
+ const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const [params]=useSearchParams();const communityId=edit?null:params.get('community');
+ const [body,setBody]=useState(edit?.body??'');const [audience,setAudience]=useState<Audience>(()=>AUDIENCES.includes(edit?.audience as Audience)?edit!.audience as Audience:'all');const [inFeed,setInFeed]=useState(edit?.inFeed??true);
  const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
- const [media,setMedia]=useState<{id:string,preview:string}[]>([]);const [uploading,setUploading]=useState(false);const file=useRef<HTMLInputElement>(null);
- const ops=useRef({draft:newOpId(),publish:newOpId()});
+ const [media,setMedia]=useState<{id:string,preview:string}[]>(()=>edit?edit.media.map(m=>({id:m.id,preview:m.src?.card??m.src?.full??m.src?.blur??''})):[]);const [uploading,setUploading]=useState(false);const file=useRef<HTMLInputElement>(null);
+ const ops=useRef({draft:newOpId(),publish:newOpId(),edit:newOpId()});
  const addMedia=async(f:File)=>{
   setFailure('');
   if(!['image/jpeg','image/png','image/webp'].includes(f.type)){setFailure(t('fe.me.photoType'));return;}
@@ -170,17 +201,29 @@ export function ComposeScreen(){
    const d=await call('post.saveDraft',{opId:ops.current.draft,post:{body:body.trim(),audience,inFeed,mediaIds:media.map(m=>m.id),...(communityId?{communityId}:{})}},saved);
    const r=await call('post.publish',{opId:ops.current.publish,postId:d.id},published);
    navigate(r.state==='review'?'/n/me?layer=mine':communityId?'/n/communities/'+communityId:'/n/feed',{replace:true});
-  }catch(e){setFailure(feErrorMessage(e,t));ops.current={draft:newOpId(),publish:newOpId()};}
+  }catch(e){setFailure(feErrorMessage(e,t));ops.current={draft:newOpId(),publish:newOpId(),edit:newOpId()};}
+  finally{setBusy(false);}
+ };
+ const save=async()=>{
+  if(!edit||edit.rev==null||(!body.trim()&&!media.length)||busy||uploading)return;setBusy(true);setFailure('');
+  try{
+   // Everything the composer does not show is sent back as it was, so an edit never drops a poll, interests or marks.
+   const post={type:edit.type,...(edit.title?{title:edit.title}:{}),body:body.trim(),audience,inFeed,topics:edit.topics??[],mediaIds:media.map(m=>m.id),
+    ...(edit.poll?{poll:{question:edit.poll.question,options:edit.poll.options}}:{}),interests:(edit.interests??[]).map(i=>i.topicId),tags:(edit.tags??[]).map(x=>x.id)};
+   const r=await call('post.edit',{opId:ops.current.edit,postId:edit.id,rev:edit.rev,post},edited);
+   const notice=r.pending!=null?t('fe.pm.ed.pending'):r.review?t('fe.pm.ed.review'):t('fe.pm.ed.saved');
+   navigate('/n/feed/post/'+edit.id,{replace:true,state:{notice}});
+  }catch(e){setFailure(feErrorMessage(e,t));ops.current.edit=newOpId();}
   finally{setBusy(false);}
  };
  return <>
-  <Bar title={communityId?t('fe.comm.newTopic'):t('fe.feed.new')} back/>
+  <Bar title={edit?t('fe.pm.ed.title'):communityId?t('fe.comm.newTopic'):t('fe.feed.new')} back/>
   <View className="cta1">
    <section className="grp"><div className="card compose v14">
     <div className="cmp-ctx"><div className="cmp-aud">
-     <label className="selrow solo"><span className="selv" aria-hidden="true">{t('fe.feed.aud.'+audience)}</span>
+     <label className="selrow solo"><span className="selv" aria-hidden="true">{audience==='granted'?t('fe.pm.ed.granted'):t('fe.feed.aud.'+audience)}</span>
       <select value={audience} onChange={e=>setAudience(e.target.value as typeof audience)} aria-label={t('fe.feed.audience')}>
-       {(['all','followers','only'] as const).map(a=><option key={a} value={a}>{t('fe.feed.aud.'+a)}</option>)}
+       {AUDIENCES.filter(a=>a!=='granted'||edit?.audience==='granted').map(a=><option key={a} value={a}>{a==='granted'?t('fe.pm.ed.granted'):t('fe.feed.aud.'+a)}</option>)}
       </select></label>
     </div></div>
     <p className="cmp-who">{acting?.kind==='couple'?t('fe.feed.asCouple'):t('fe.feed.asMe')}</p>
@@ -205,6 +248,6 @@ export function ComposeScreen(){
    </div></section>
    {failure&&<p className="alert err" role="alert">{failure}</p>}
   </View>
-  <div className="ctabar"><div className="wrap"><Btn onClick={publish} disabled={busy||uploading||(!body.trim()&&!media.length)}>{busy?t('fe.loading'):t('fe.feed.publish')}</Btn></div></div>
+  <div className="ctabar"><div className="wrap"><Btn onClick={edit?save:publish} disabled={busy||uploading||(!body.trim()&&!media.length)}>{busy?t('fe.loading'):edit?t('fe.pm.ed.save'):t('fe.feed.publish')}</Btn></div></div>
  </>;
 }
