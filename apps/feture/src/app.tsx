@@ -16,7 +16,8 @@ import { sameSession } from './feture/interest-api';
 import { InterestLifecycle, interestQueue } from './feture/use-interest-map';
 import { FetureExperience } from './feture/experience';
 import { FeRoot } from './fe/shell';
-import { FeedTab, PeopleTab, CommunitiesTab, ChatsTab, MeTab } from './fe/screens';
+import { PeopleTab, CommunitiesTab, ChatsTab, MeTab } from './fe/screens';
+import { FeedTab, PostScreen, ComposeScreen } from './fe/feed';
 const ProductDesign = lazy(async()=>({default:(await import('./feture/design/product-design')).ProductDesign}));
 import { WelcomePage } from './feture/welcome';
 import { FirstStepsPage } from './feture/first-steps';
@@ -246,6 +247,8 @@ export const routes: RouteObject[] = [
       children:[
         {index:true, element:<Navigate to="/n/feed" replace/>},
         {path:'feed', element:<FeedTab />},
+        {path:'feed/new', element:<ComposeScreen />},
+        {path:'feed/post/:id', element:<PostScreen />},
         {path:'people', element:<PeopleTab />},
         {path:'communities', element:<CommunitiesTab />},
         {path:'chats', element:<ChatsTab />},

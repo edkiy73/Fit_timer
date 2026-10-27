@@ -11,7 +11,6 @@ function Soon({tab,icon}:{tab:string,icon:IconName}){
   <div className="fe-body"><StateCard icon={icon} title={t('fe.soon.'+tab+'.title')} text={t('fe.soon.'+tab+'.text')}/></div>
  </>;
 }
-export const FeedTab=()=> <Soon tab="feed" icon="feed"/>;
 export const PeopleTab=()=> <Soon tab="people" icon="users"/>;
 export const CommunitiesTab=()=> <Soon tab="communities" icon="world"/>;
 export const ChatsTab=()=> <Soon tab="chats" icon="message"/>;
