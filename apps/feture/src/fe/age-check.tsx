@@ -2,7 +2,7 @@ import {useCallback,useEffect,useRef,useState} from 'react';
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Camera,Clock,Hand,ImagePlus,Lock,RefreshCw,ScanFace,Send,ShieldCheck,UserCheck,X} from 'lucide-react';
+import {Camera,ChevronRight,Clock,Hand,ImagePlus,Info,Lock,RefreshCw,ScanFace,ShieldCheck,UserCheck,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Bar,Btn,Empty,View,Skel} from './ui';
 import {useFe} from './session';
@@ -91,14 +91,14 @@ export function AgeCheckScreen(){
  if(c?.state==='started'&&c.gesture){
   const g=(GESTURES as readonly string[]).includes(c.gesture)?t('fe.age.gesture.'+c.gesture):c.gesture;
   return <><Bar title={t('fe.age.selfieTitle')} back="/n/settings"/><View className="nodock">
-   <div className="alert info"><Hand/><span><b>{t('fe.age.gestureLabel')}</b>{g}</span></div>
+   <div className="pv-pose"><span className="ico v" aria-hidden="true"><Hand/></span><span><small>{t('fe.age.gestureLabel')}</small><b>{g}</b></span></div>
    <div className="mt12" style={{position:'relative',aspectRatio:'3/4',borderRadius:30,overflow:'hidden',background:'#140B11',display:'grid',placeItems:'center'}}>
     {shot?<img src={shot.url} alt={t('fe.age.shotAlt')} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}} draggable={false}/>
      :<><div style={{width:'62%',aspectRatio:'3/4',borderRadius:'50%',border:'3px dashed rgba(255,255,255,.6)'}}/>
       <div style={{position:'absolute',bottom:16,left:0,right:0,textAlign:'center',color:'#fff',fontSize:14,fontWeight:600}}>{t('fe.age.frame')}</div></>}
    </div>
    <input ref={input} type="file" accept="image/*" capture="user" hidden onChange={e=>void pick(e.target.files?.[0])}/>
-   {shot?<><Btn className="mt16" icon={Send} onClick={send} disabled={busy||!person}>{busy?t('fe.age.sending'):t('fe.age.send')}</Btn>
+   {shot?<><Btn className="mt16" onClick={send} busy={busy} disabled={busy||!person}>{t('fe.age.send')}</Btn>
      <Btn kind="soft" className="mt8" icon={Camera} onClick={()=>input.current?.click()} disabled={busy}>{t('fe.age.retake')}</Btn></>
     :<Btn className="mt16" icon={Camera} onClick={()=>input.current?.click()}>{t('fe.age.shoot')}</Btn>}
    {alertErr}
@@ -112,16 +112,17 @@ export function AgeCheckScreen(){
   {c?.state==='rejected'&&<div className="alert err mt12" role="status"><X/><span><b>{t('fe.age.rejected')}</b>{reason?reason+' ':''}{t('fe.age.rejectedText')}</span></div>}
   {c?.state==='approved'&&<div className="alert warn mt12" role="status"><Clock/><span><b>{t('fe.age.expiredProof')}</b>{t('fe.age.expiredProofText')}</span></div>}
   {c?.state==='expired'&&<div className="alert warn mt12" role="status"><Clock/><span><b>{t('fe.age.expiredTry')}</b>{t('fe.age.expiredTryText')}</span></div>}
-  <div className="sec">{t('fe.age.how')}</div>
-  <div className="card">
-   <div className="fact"><i className="v"><Hand/></i><span>{t('fe.age.step1')}</span></div>
-   <div className="fact"><i className="v"><ScanFace/></i><span>{t('fe.age.step2')}</span></div>
-   <div className="fact"><i className="v"><UserCheck/></i><span>{t('fe.age.step3')}</span></div>
-  </div>
-  <div className="sec">{t('fe.age.stored')}</div>
-  <div className="alert"><Lock/><span>{t('fe.age.storedText')}</span></div>
+  <div className="radio on mt16"><i/><span className="tx"><b>{t('fe.age.method')}</b><small>{t('fe.age.methodSub')}</small></span></div>
+  <div className="alert mt16"><Lock/><span>{t('fe.age.camNoteShort')}</span></div>
+  <details className="pv-about mt16"><summary><Info/><span>{t('fe.age.how')}</span><ChevronRight/></summary>
+   <div className="card list">
+    <div className="li static"><span className="ico v"><Hand/></span><span className="tx"><small style={{color:'var(--ink)',fontSize:14}}>{t('fe.age.step1')}</small></span></div>
+    <div className="li static"><span className="ico v"><ScanFace/></span><span className="tx"><small style={{color:'var(--ink)',fontSize:14}}>{t('fe.age.step2')}</small></span></div>
+    <div className="li static"><span className="ico v"><UserCheck/></span><span className="tx"><small style={{color:'var(--ink)',fontSize:14}}>{t('fe.age.step3')}</small></span></div>
+    <div className="li static"><span className="ico"><Lock/></span><span className="tx"><b>{t('fe.age.stored')}</b><small>{t('fe.age.storedText')}</small></span></div>
+   </div></details>
   {needPhoto?<div className="alert warn mt16" role="alert"><ImagePlus/><span>{t('fe.age.needPhoto')}<Btn kind="soft" size="sm" auto icon={ImagePlus} onClick={()=>navigate('/n/me')}>{t('fe.age.addPhoto')}</Btn></span></div>
-   :<Btn className="mt24" icon={Camera} onClick={start} disabled={busy}>{t('fe.age.start')}</Btn>}
+   :<Btn className="mt24" icon={Camera} onClick={start} busy={busy} disabled={busy}>{t('fe.age.start')}</Btn>}
   {alertErr}
  </View></>;
 }

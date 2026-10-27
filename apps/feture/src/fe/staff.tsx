@@ -2,9 +2,9 @@ import {useCallback,useEffect,useState,type ReactNode} from 'react';
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {BadgeCheck,Ban,Check,ChevronRight,Eye,Inbox,Lock,RefreshCw,ShieldAlert,ShieldCheck,TriangleAlert,X} from 'lucide-react';
+import {BadgeCheck,Ban,Check,ChevronLeft,ChevronRight,Eye,Image,Inbox,Lock,RefreshCw,ShieldAlert,ShieldCheck,TriangleAlert,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Bar,Btn,Empty,Seg,View,Skel} from './ui';
+import {Btn,Empty,Seg,View,Skel} from './ui';
 import {useFe} from './session';
 import './staff.css';
 
@@ -33,20 +33,25 @@ const appealItem=z.object({id:z.uuid(),target_type:z.string(),target_id:z.string
 const noticeItem=z.object({id:z.uuid(),target_url:opt(z.string()),reason:z.string(),explanation:opt(z.string()),created_at:ts,answerable:opt(z.boolean())});
 const placeItem=z.object({id:z.uuid(),country:opt(z.string()),name_ru:opt(z.string()),name_en:opt(z.string()),created_at:ts,used:opt(z.number())});
 const journalItem=z.object({id:z.union([z.string(),z.number()]),staff_account_id:z.string(),action:z.string(),target_type:opt(z.string()),target_id:opt(z.string()),detail:z.unknown().optional(),created_at:ts});
+const disputeItem=z.object({id:z.uuid(),disputed_at:ts,excerpt:opt(z.string()),media:opt(z.number())});
+const revisionItem=z.object({id:z.uuid(),postId:z.uuid(),createdAt:ts,live:opt(z.string()),proposed:z.unknown().optional()});
 const grantRes=z.object({ok:z.literal(true),id:z.string(),until:z.string()});
 
 type MediaItem=z.infer<typeof mediaItem>;type CommItem=z.infer<typeof commItem>;type EventItem=z.infer<typeof eventItem>;type AgeItem=z.infer<typeof ageItem>;type PhotoItem=z.infer<typeof photoItem>;
-type ReportItem=z.infer<typeof reportItem>;type AppealItem=z.infer<typeof appealItem>;type NoticeItem=z.infer<typeof noticeItem>;type PlaceItem=z.infer<typeof placeItem>;
-type Items={media:MediaItem[],community:CommItem[],event:EventItem[],age:AgeItem[],photo:PhotoItem[],report:ReportItem[],appeal:AppealItem[],notice:NoticeItem[],place:PlaceItem[]};
+type DisputeItem=z.infer<typeof disputeItem>;type RevisionItem=z.infer<typeof revisionItem>;type ReportItem=z.infer<typeof reportItem>;type AppealItem=z.infer<typeof appealItem>;type NoticeItem=z.infer<typeof noticeItem>;type PlaceItem=z.infer<typeof placeItem>;
+type Items={dispute:DisputeItem[],report:ReportItem[],revision:RevisionItem[],media:MediaItem[],community:CommItem[],event:EventItem[],age:AgeItem[],photo:PhotoItem[],appeal:AppealItem[],notice:NoticeItem[],place:PlaceItem[]};
 type QueueId=keyof Items;
 const list=<T extends z.ZodType>(item:T)=>z.object({ok:z.literal(true),items:z.array(item)});
 const QUEUES:{[K in QueueId]:{action:string,schema:z.ZodType<{items:Items[K]}>,key:(x:Items[K][number])=>string}}={
+ // V21 M01 puts «это я на фото» disputes and post reports first.
+ dispute:{action:'staff.disputeQueue',schema:list(disputeItem),key:x=>x.id},
+ report:{action:'staff.reportQueue',schema:list(reportItem),key:x=>x.targetType+':'+x.targetId+':'+(x.author?.id??'')},
+ revision:{action:'staff.revisionQueue',schema:list(revisionItem),key:x=>x.id},
  media:{action:'staff.mediaQueue',schema:list(mediaItem),key:x=>x.id},
  community:{action:'staff.communityQueue',schema:list(commItem),key:x=>x.id},
  event:{action:'staff.eventQueue',schema:list(eventItem),key:x=>x.id},
  age:{action:'staff.ageCheckQueue',schema:list(ageItem),key:x=>x.id},
  photo:{action:'staff.photoCheckQueue',schema:list(photoItem),key:x=>x.id},
- report:{action:'staff.reportQueue',schema:list(reportItem),key:x=>x.targetType+':'+x.targetId+':'+(x.author?.id??'')},
  appeal:{action:'staff.appealQueue',schema:list(appealItem),key:x=>x.id},
  notice:{action:'staff.noticeQueue',schema:list(noticeItem),key:x=>x.id},
  place:{action:'staff.placeQueue',schema:list(placeItem),key:x=>x.id},
@@ -73,11 +78,12 @@ export function StaffEntry(){
 }
 
 export function StaffScreen(){
- const {t}=useI18n();const roles=useStaffRoles();
+ const {t}=useI18n();const roles=useStaffRoles();const navigate=useNavigate();
  const [section,setSection]=useState<'queues'|'premium'|'journal'>('queues');
  return <>
-  <Bar title={t('fe.staff.title')} back="/n/me"/>
-  <View className="st">
+  <header className="bar"><button type="button" className="ibtn ghost" aria-label={t('fe.back')} onClick={()=>navigate('/n/me')}><ChevronLeft/></button>
+   <h1 className="sm" tabIndex={-1}>{t('fe.staff.title')}<span className="sub">{t('fe.staff.sub')}</span></h1></header>
+  <View className="st nodock">
    {roles===null?<Skel kind="list"/>
     :!roles.length?<Empty icon={Lock} title={t('fe.staff.unavailable')} text={t('fe.staff.unavailableText')}/>
     :<>
@@ -118,11 +124,12 @@ function Queues(){
    {avail.map(id=><button key={id} type="button" role="tab" aria-selected={tab===id} className={'chip filter'+(tab===id?' on':'')} onClick={()=>{setTab(id);setNotice('');}}>
     {id==='photo'?t('fe.pc.staff.tab'):t('fe.staff.q.'+id)} <b className="st-count">{count(id)}</b></button>)}
   </div></div>
+  {(tab==='dispute'||tab==='report')&&<div className="alert info mt12"><ShieldCheck/><span><b>{t('fe.staff.howTitle')}</b>{t('fe.staff.howText')}</span></div>}
   <div className="st-tools"><Btn kind="text" size="sm" auto icon={RefreshCw} onClick={load}>{t('fe.staff.refresh')}</Btn></div>
   {notice&&<div className="alert ok mb12" role="status"><Check/><span>{notice}</span></div>}
   {!current?null:'error' in current?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(current.error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
    :!current.items.length?<Empty icon={Inbox} title={t('fe.staff.qEmpty')} text={t('fe.staff.qEmptyText')}/>
-   :<QueueList id={tab} items={current.items} onDone={key=>done(tab,key)}/>}
+   :<><div className="sec">{t('fe.staff.inQueue',{n:count(tab)})}</div><QueueList id={tab} items={current.items} onDone={key=>done(tab,key)}/></>}
  </>;
 }
 
@@ -130,6 +137,8 @@ function QueueList({id,items,onDone}:{id:QueueId,items:unknown[],onDone:(key:str
  const keyOf=QUEUES[id].key as (x:unknown)=>string;
  return <div className="st-list">{items.map(x=>{const k=keyOf(x);const done=()=>onDone(k);
   switch(id){
+   case 'dispute':return <DisputeCard key={k} item={x as DisputeItem} onDone={done}/>;
+   case 'revision':return <RevisionCard key={k} item={x as RevisionItem} onDone={done}/>;
    case 'media':return <MediaCard key={k} item={x as MediaItem} onDone={done}/>;
    case 'community':return <CommunityCard key={k} item={x as CommItem} onDone={done}/>;
    case 'event':return <EventCard key={k} item={x as EventItem} onDone={done}/>;
@@ -338,6 +347,43 @@ function PhotoCard({item,onDone}:{item:PhotoItem,onDone:()=>void}){
     <Btn kind="soft" size="sm" auto icon={Ban} disabled={d.busy||!reason} onClick={()=>setAsk(true)}>{t('fe.staff.reject')}</Btn></div>}
   <Failure text={d.failure}/>
  </Card>;
+}
+
+// ——— «это я на фото» and post edits (V21 M01) ———
+
+/** The post's text opens the post; removing asks first; both sides are told the decision by the server. */
+function DisputeCard({item,onDone}:{item:DisputeItem,onDone:()=>void}){
+ const {t}=useI18n();const when=useWhen();const navigate=useNavigate();const d=useDecide(onDone);
+ const [note,setNote]=useState('');const [ask,setAsk]=useState(false);
+ const decide=(restore:boolean)=>d.run('staff.disputeDecide',{postId:item.id,restore,note:note.trim()});
+ return <article className="card rqcard mod-card">
+  <div className="row"><span className="rq-av"><span className="av ini"><ShieldAlert/></span></span><div className="grow"><b style={{fontSize:15}}>{t('fe.staff.dispute.title')}</b>
+   <div className="note">{when(item.disputed_at)}{item.media?' · '+t('fe.staff.dispute.media',{n:String(item.media)}):''}</div></div>
+   {!!item.media&&<span className="ico v" aria-hidden="true"><Image/></span>}</div>
+  {item.excerpt&&<button type="button" className="mod-x" onClick={()=>navigate('/n/feed/post/'+item.id)}>{item.excerpt.slice(0,160)}</button>}
+  <TextField label={t('fe.staff.note')} value={note} onChange={setNote} max={500}/>
+  {ask?<Confirm text={t('fe.staff.dispute.confirmRemove')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>decide(false)}/>
+   :<div className="row g8 mt12"><Btn kind="danger" size="md" disabled={d.busy} onClick={()=>setAsk(true)}>{t('fe.staff.dispute.remove')}</Btn>
+    <Btn kind="soft" size="md" disabled={d.busy} busy={d.busy} onClick={()=>decide(true)}>{t('fe.staff.dispute.restore')}</Btn></div>}
+  <Failure text={d.failure}/>
+ </article>;
+}
+
+function RevisionCard({item,onDone}:{item:RevisionItem,onDone:()=>void}){
+ const {t}=useI18n();const when=useWhen();const navigate=useNavigate();const d=useDecide(onDone);
+ const [rule,setRule]=useState<typeof RULES[number]|''>('');const [ask,setAsk]=useState(false);
+ const proposed=item.proposed&&typeof item.proposed==='object'?item.proposed as Record<string,unknown>:null;
+ const text=proposed?[proposed.title,proposed.body].filter(v=>typeof v==='string'&&v).join(': '):show(item.proposed);
+ return <article className="card rqcard mod-card">
+  <div className="row"><div className="grow"><b style={{fontSize:15}}>{t('fe.staff.revision.title')}</b><div className="note">{when(item.createdAt)}</div></div></div>
+  {item.live&&<button type="button" className="mod-x" onClick={()=>navigate('/n/feed/post/'+item.postId)}><span className="note">{t('fe.staff.revision.live')}: </span>{item.live.slice(0,160)}</button>}
+  {text&&<p className="mod-r">{text.slice(0,600)}</p>}
+  <Choice label={t('fe.staff.rule')} value={rule} onChange={setRule} disabled={d.busy} options={RULES.map(id=>({id,label:t('fe.staff.rule.'+id)}))}/>
+  {ask?<Confirm text={t('fe.staff.revision.confirmReject')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>d.run('staff.revisionDecide',{revisionId:item.id,decision:'reject',rule})}/>
+   :<div className="row g8 mt12"><Btn size="md" icon={Check} disabled={d.busy} busy={d.busy} onClick={()=>d.run('staff.revisionDecide',{revisionId:item.id,decision:'approve'})}>{t('fe.staff.approve')}</Btn>
+    <Btn kind="soft" size="md" icon={Ban} disabled={d.busy||!rule} onClick={()=>setAsk(true)}>{t('fe.staff.reject')}</Btn></div>}
+  <Failure text={d.failure}/>
+ </article>;
 }
 
 // ——— reports, appeals, DSA notices, cities ———

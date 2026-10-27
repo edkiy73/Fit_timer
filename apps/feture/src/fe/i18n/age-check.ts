@@ -50,6 +50,9 @@ export const ru = {
  'fe.age.continue': 'Продолжить',
  'fe.age.go': 'Пройти проверку возраста',
  'fe.age.couple': 'Пара появится в знакомствах, когда вы оба подтвердите возраст.',
+ 'fe.age.method': 'Селфи с жестом',
+ 'fe.age.methodSub': 'Человек из команды сравнит его с фото профиля',
+ 'fe.age.camNoteShort': 'Камера нужна только на время проверки. Снимок не попадёт в профиль, ленту или чаты.',
 } as const;
 
 export const en = {
@@ -103,4 +106,7 @@ export const en = {
  'fe.age.continue': 'Continue',
  'fe.age.go': 'Verify my age',
  'fe.age.couple': 'The couple appears in Discover once both of you have verified your age.',
+ 'fe.age.method': 'Selfie with a gesture',
+ 'fe.age.methodSub': 'A team member compares it with your profile photo',
+ 'fe.age.camNoteShort': 'The camera is used only during the check. The image never goes to your profile, feed or chats.',
 } as const;
