@@ -108,7 +108,7 @@ export function CoverField({purpose,plate,setPlate,cover,setCover}:{purpose:'com
   {err&&<FErr>{err}</FErr>}
   <div className="note" style={{marginBottom:8}}>{t('fe.cc.coverOr')}</div>
   <div className="chips">{PLATE_KEYS.map(k=><button key={k} type="button" aria-label={t('fe.cc.plate.'+k)} aria-pressed={!cover&&plate===k} onClick={()=>{setPlate(k);setCover(null);}}
-   style={{position:'relative',width:52,height:52,borderRadius:16,overflow:'hidden',outline:plate===k?'3px solid var(--ink)':'0',outlineOffset:2}}><div className="plate" style={namedPlate(k)}/></button>)}</div>
+   style={{position:'relative',width:52,height:52,borderRadius:16,overflow:'hidden',outline:!cover&&plate===k?'3px solid var(--ink)':'0',outlineOffset:2}}><div className="plate" style={namedPlate(k)}/></button>)}</div>
  </div>;
 }
 
@@ -131,6 +131,7 @@ const ruleLines=(s:string)=>s.split('\n').map(x=>x.trim()).filter(Boolean);
 const updated=z.object({ok:z.literal(true),rev:z.number(),review:z.array(z.string()).default([])}).passthrough();
 const editable=z.object({ok:z.literal(true),community:z.object({id:z.uuid(),name:z.string(),description:z.string(),topics:z.array(z.string()),
  privacy:z.enum(['open','closed','hidden']),joinQuestion:z.string().nullable(),rules:z.array(z.string()),placeId:z.uuid().nullable(),plate:z.string().nullable(),
+ cover:z.object({id:z.uuid(),src:z.record(z.string(),z.string()).nullable().optional()}).passthrough().nullable().optional(),
  me:z.object({role:z.string(),state:z.string()}).passthrough().nullable(),state:z.string().optional(),rev:z.number().optional(),pendingChange:z.unknown().optional()}).passthrough()});
 type EditableCommunity=z.infer<typeof editable>['community'];
 
@@ -156,11 +157,22 @@ export function EditCommunityScreen(){
  </>;
 }
 
+/** What the owner sent last and staff have not checked yet: the form shows it instead of the published value. */
+const pendingOf=(e:EditableCommunity|undefined)=>{
+ const p=e?.pendingChange;if(!p||typeof p!=='object')return {} as {name?:string,description?:string,privacy?:Privacy,joinQuestion?:string|null};
+ const o=p as Record<string,unknown>;const str=(v:unknown)=>typeof v==='string'?v:undefined;
+ const priv=(['open','closed','hidden'] as const).find(k=>k===o.privacy);
+ return {...(str(o.name)?{name:str(o.name)!}:{}),...(str(o.description)?{description:str(o.description)!}:{}),...(priv?{privacy:priv}:{}),
+  ...('joinQuestion' in o&&(o.joinQuestion===null||typeof o.joinQuestion==='string')?{joinQuestion:o.joinQuestion as string|null}:{})};
+};
+const coverOf=(e:EditableCommunity|undefined):Cover|null=>{const c=e?.cover;if(!c)return null;const s=c.src;return {id:c.id,preview:s?.card??s?.full??s?.thumb??''};};
+
 function CommunityForm({edit,reload}:{edit?:EditableCommunity&{rev:number},reload?:()=>void}){
  const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const catalog=useCatalog();const {opFor,done}=useOp();
- const [name,setName]=useState(edit?.name??'');const [desc,setDesc]=useState(edit?.description??'');const [topics,setTopics]=useState<string[]>(edit?.topics??[]);
- const [privacy,setPrivacy]=useState<Privacy>(edit?.privacy??'open');const [q0,setQ0]=useState(edit?.joinQuestion??'');const [where,setWhere]=useState(edit?(edit.placeId??'online'):'online');
- const [rules,setRules]=useState(edit?.rules.join('\n')??'');const [plate,setPlate]=useState<PlateKey>(()=>PLATE_KEYS.find(k=>k===edit?.plate)??'lilac');const [cover,setCover]=useState<Cover|null>(null);
+ const pend=pendingOf(edit);
+ const [name,setName]=useState(pend.name??edit?.name??'');const [desc,setDesc]=useState(pend.description??edit?.description??'');const [topics,setTopics]=useState<string[]>(edit?.topics??[]);
+ const [privacy,setPrivacy]=useState<Privacy>(pend.privacy??edit?.privacy??'open');const [q0,setQ0]=useState((pend.joinQuestion!==undefined?pend.joinQuestion:edit?.joinQuestion)??'');const [where,setWhere]=useState(edit?(edit.placeId??'online'):'online');
+ const [rules,setRules]=useState(edit?.rules.join('\n')??'');const [plate,setPlate]=useState<PlateKey>(()=>PLATE_KEYS.find(k=>k===edit?.plate)??'lilac');const [cover,setCover]=useState<Cover|null>(()=>coverOf(edit));
  const [err,setErr]=useState<Errors>({});const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [stale,setStale]=useState(false);const [topicsMax,setTopicsMax]=useState(false);
  const couple=acting?.kind==='couple';
  const clear=(k:keyof Errors)=>setErr(e=>{if(!e[k])return e;const n={...e};delete n[k];return n;});
@@ -186,8 +198,8 @@ function CommunityForm({edit,reload}:{edit?:EditableCommunity&{rev:number},reloa
   if(privacy!=='open')next.joinQuestion=q0.trim()||null;
   const was:Record<string,unknown>={name:e.name,description:e.description,topics:e.topics,privacy:e.privacy,rules:e.rules,placeId:e.placeId,plate:e.plate,joinQuestion:e.joinQuestion??null};
   const diff:Record<string,unknown>=Object.fromEntries(Object.entries(next).filter(([k,v])=>JSON.stringify(v)!==JSON.stringify(was[k])));
-  // The current cover is not sent back to the owner, so it changes only when a new photo is uploaded.
-  if(cover)diff.coverAssetId=cover.id;
+  // A new photo, or the photo taken off (✕ or a colour chosen instead): the plate shows only without a photo.
+  const was0=e.cover?.id??null;if((cover?.id??null)!==was0)diff.coverAssetId=cover?.id??null;
   return diff;
  };
  const fail=(e:unknown)=>{
@@ -249,7 +261,6 @@ function CommunityForm({edit,reload}:{edit?:EditableCommunity&{rev:number},reloa
      <SelectRow label={t('fe.cc.where')} value={where} onChange={v=>{setWhere(v);clear('where');}} items={places}/></div>{err.where&&<FErr>{err.where}</FErr>}</div>
     <Field name="rules" label={t('fe.cc.rules')} ph={t('fe.cc.rulesPh')} max={1000} textarea rows={4} value={rules} onChange={v=>{setRules(v);clear('rules');}} err={err.rules}/>
     <CoverField purpose="community" plate={plate} setPlate={setPlate} cover={cover} setCover={setCover}/>
-    {edit&&<div className="fhint">{t('fe.ece.c.coverKept')}</div>}
    </div></section>
    {failure&&<div className="alert err" role="alert"><span>{failure}{stale&&reload&&<button type="button" className="btn text auto" style={{display:'flex',marginTop:6}} onClick={reload}><RefreshCw/>{t('fe.ece.reload')}</button>}</span></div>}
   </div></div>

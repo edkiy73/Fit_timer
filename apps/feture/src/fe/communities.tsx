@@ -135,7 +135,7 @@ function Catalog(){
   </div><button type="button" className={'chip filter'+(badge?' on':'')} onClick={()=>setSheet(true)}><SlidersHorizontal/>{t('fe.cm.filters')}{badge?<em className="badge-abs">{badge}</em>:null}</button></div>
   {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>void load()}>{t('fe.retry')}</Btn></Empty>
    :all===null?<Skel kind="card" rows={4}/>
-   :!items.length?<Empty icon={Users} title={t('fe.cm.nothing')} text={t('fe.cm.nothingText')}>{f!==CF0&&<Btn kind="soft" onClick={()=>setF(CF0)}>{t('fe.cm.resetFilters')}</Btn>}</Empty>
+   :!items.length?<Empty icon={Users} title={t('fe.cm.nothing')} text={t('fe.cm.nothingText')}>{(f.topics.length>0||f.privacy!=='all'||f.online)&&<Btn kind="soft" onClick={()=>setF(CF0)}>{t('fe.cm.resetFilters')}</Btn>}</Empty>
    :items.map((c,i)=><CommCard key={c.id} c={c} i={i} tname={tname} place={c.place_id?placeName(cat?.places.find(p=>p.id===c.place_id)??{ru:null,en:null},locale):''} mine={mine}/>)}
   {sheet&&all&&<CommFilterSheet all={all} used={used} tname={tname} value={f} onApply={v=>{setF(v);setSheet(false);}} onClose={()=>setSheet(false)}/>}
  </>;
@@ -181,7 +181,7 @@ function CommCard({c,i,tname,place,mine}:{c:Card,i:number,tname:(id:string)=>str
 function CommFilterSheet({all,used,tname,value,onApply,onClose}:{all:Card[],used:string[],tname:(id:string)=>string,value:CommFilter,onApply:(f:CommFilter)=>void,onClose:()=>void}){
  const {t,locale}=useI18n();const [d,setD]=useState<CommFilter>({...value,topics:[...value.topics]});
  const n=all.filter(c=>passes(c,d)).length;
- const clr=(fn:()=>void)=><button type="button" className="fclr" onClick={fn}>{t('fe.cm.clear')}</button>;
+ const clr=(fn:()=>void)=><button type="button" className="fclr" aria-label={t('fe.cm.clear')} onClick={fn}><X/></button>;
  return <CSheet full title={t('fe.cm.filtersTitle')} onClose={onClose} head={<button type="button" className="btn text auto" onClick={()=>setD(CF0)}>{t('fe.cm.reset')}</button>}
   foot={n?<Btn onClick={()=>onApply(d)}>{fill(t('fe.cm.showN'),{n:pl(n,t('fe.cm.communities'),locale)})}</Btn>:<Btn kind="soft" disabled aria-disabled="true">{t('fe.cm.nothingMatches')}</Btn>}>
   <section className="fin"><div className="fin-t"><b>{t('fe.cm.interests')}</b><span>{t('fe.cm.pickAny')}</span>{d.topics.length>0&&clr(()=>setD(x=>({...x,topics:[]})))}</div>
@@ -271,7 +271,7 @@ function EventList(){
 function EvFilterSheet({value,onApply,onClose}:{value:EvFilter,onApply:(f:EvFilter)=>void,onClose:()=>void}){
  const {call}=useFe();const {t,locale}=useI18n();const [d,setD]=useState<EvFilter>({...value,kinds:[...value.kinds]});const [n,setN]=useState<{n:number,more:boolean}|null>(null);
  useEffect(()=>{let live=true;setN(null);const tm=setTimeout(()=>{call('event.catalog',evInput(d),evList).then(r=>{if(live)setN({n:r.items.length,more:!!r.next});}).catch(()=>{});},250);return ()=>{live=false;clearTimeout(tm);};},[call,d]);
- const clr=(fn:()=>void)=><button type="button" className="fclr" onClick={fn}>{t('fe.cm.clear')}</button>;
+ const clr=(fn:()=>void)=><button type="button" className="fclr" aria-label={t('fe.cm.clear')} onClick={fn}><X/></button>;
  const one=<K extends 'format'|'when'|'price'>(k:K,opts:readonly EvFilter[K][],label:string,lk:string,extra?:ReactNode)=><section className="fin"><div className="fin-t"><b>{label}</b>{d[k]!==opts[0]&&clr(()=>setD(x=>({...x,[k]:opts[0]})))}</div>
   <div className="fin-b"><div className="chips" role="radiogroup">{opts.map(o=><button key={o} type="button" className={'chip'+(d[k]===o?' on':'')} role="radio" aria-checked={d[k]===o} onClick={()=>setD(x=>({...x,[k]:o}))}>{t(lk+o)}</button>)}</div>{extra}</div></section>;
  return <CSheet full title={t('fe.cm.evFiltersTitle')} onClose={onClose} head={<button type="button" className="btn text auto" onClick={()=>setD(EF0)}>{t('fe.cm.reset')}</button>}
@@ -406,7 +406,9 @@ export function EventScreen(){
  useEffect(()=>{load();call('saved.list',{kind:'event'},savedRes).then(r=>setSaved(r.items.some(x=>x.target_id===id))).catch(()=>{});},[load,call,id]);
  const couple=acting?.kind==='couple';
  const orgMe=!!e&&e.organizer?.id===acting?.id;
- const st=e?.me.rsvp?.status??null;const app=e?.me.application??null;const waiting=!!e?.me.waiting;
+ const st=e?.me.rsvp?.status??null;
+ // A withdrawn (or closed) application is history: the person may apply again.
+ const rawApp=e?.me.application??null;const app=rawApp&&['pending','approved','declined'].includes(rawApp.state)?rawApp:null;const waiting=!!e?.me.waiting;
  const rsvp=async(status:'interested'|'going'|'not_going'|null,showInList?:boolean)=>{
   if(!e)return;setBusy(true);
   try{const r=await call('event.rsvp',{opId:op.current,eventId:id,status,...(showInList!==undefined?{showInList}:{})},rsvpRes);op.current=newOpId();

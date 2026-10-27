@@ -85,7 +85,7 @@ export function Ask({icon:Icon=TriangleAlert,tone,title,text,ok,cancel,danger,bu
   document.addEventListener('keydown',key);return ()=>document.removeEventListener('keydown',key);},[]);
  return <Layer>
   <div className="scrim on" style={{zIndex:3}} onClick={busy?undefined:onCancel}/>
-  <div ref={ref} className="dialog on" role="alertdialog" aria-modal="true" aria-label={title} style={{display:'block'}}>
+  <div ref={ref} className="dialog on" role="alertdialog" aria-modal="true" aria-label={title} style={{display:'block',zIndex:4}}>
    <div className={'ico '+(tone??(danger?'a':''))}><Icon/></div><h2>{title}</h2>{text&&<p>{text}</p>}{children}
    <div className="btns"><Btn kind={danger?'danger':'primary'} onClick={onOk} busy={!!busy} disabled={!!busy} data-r="1">{ok}</Btn><Btn kind="soft" onClick={onCancel} disabled={!!busy} data-r="0">{cancel??t('fe.cancel')}</Btn></div>
   </div>
