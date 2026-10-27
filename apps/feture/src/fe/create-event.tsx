@@ -5,6 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Calendar,Check,ChevronLeft,CircleAlert,Clock,EyeOff,Link as LinkIcon,Lock,MapPin,RefreshCw,Ticket,Unlock,Video} from 'lucide-react';
 import {FeError,feErrorMessage} from '../feture/fe-api';
 import {Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,Group,Note,Seg,SectionLabel,Select,Skel,Steps,ToggleRow,View} from './kit';
+import {PickField,PlacePicker} from './kit/Place';
 import {useFe} from './session';
 import {ChipGroup,CoverField,FErr,Field,PLATE_KEYS,SelectRow,namedPlate,placeName,reviewNotice,shakeFirstErr,useCatalog,useOp,type Cover,type PlateKey} from './create-community';
 
@@ -160,7 +161,7 @@ export function EditEventScreen(){
 function EventEditor({edit,reload}:{edit?:Edit,reload?:()=>void}){
  const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const catalog=useCatalog();
  const draftOp=useOp(),submitOp=useOp(),deleteOp=useOp(),updateOp=useOp();
- const [f,setF]=useState<Form>(()=>edit?.form??fresh());const [stale,setStale]=useState(false);const [step,setStep]=useState(1);const [err,setErr]=useState<Errors>({});
+ const [f,setF]=useState<Form>(()=>edit?.form??fresh());const [stale,setStale]=useState(false);const [step,setStep]=useState(1);const [cityOpen,setCityOpen]=useState(false);const [err,setErr]=useState<Errors>({});
  const [draftId,setDraftId]=useState<string|null>(null);const [busy,setBusy]=useState(false);
  const [notice,setNotice]=useState<{kind:'ok'|'warn'|'err',text:string}|null>(null);const [pv,setPv]=useState<'all'|'ok'>('all');const [asking,setAsking]=useState(false);
  const [hosting,setHosting]=useState<{id:string,name:string}[]>([]);
@@ -272,9 +273,8 @@ function EventEditor({edit,reload}:{edit?:Edit,reload?:()=>void}){
    <Select label={t('fe.ce.tz')} value={f.tz} onChange={v=>set('tz',v)} options={tzItems}/>
    {err.tz?<FErr>{err.tz}</FErr>:<div className="fhint">{t('fe.ce.tzHint')}</div>}</label>
   {f.format==='offline'?<>
-   <label className={'field'+(err.placeId?' err':'')} data-field="city"><span>{t('fe.ce.city')}</span>
-    <Select label={t('fe.ce.city')} value={f.placeId} onChange={v=>set('placeId',v)} options={[...(!f.placeId?[['','—'] as [string,string]]:[]),...places]}/>
-    {err.placeId&&<FErr>{err.placeId}</FErr>}</label>
+   <div data-field="city"><PickField label={t('fe.ce.city')} value={places.find(([id])=>id===f.placeId)?.[1]??null} placeholder="—" error={err.placeId} onClick={()=>setCityOpen(true)}/></div>
+   {cityOpen&&<PlacePicker places={catalog?.places??[]} current={f.placeId||null} onPick={x=>{if(x)set('placeId',x.id);setCityOpen(false);}} onClose={()=>setCityOpen(false)}/>}
    <Field name="area" label={t('fe.ce.area')} ph={t('fe.ce.areaPh')} value={f.area} onChange={v=>set('area',v)} err={err.area}/>
    <Field name="addr" label={t('fe.ce.addr')} icon={Lock} ph={t('fe.ce.addrPh')} value={f.exactAddress} onChange={v=>set('exactAddress',v)} err={err.exactAddress}/>
   </>:<Field name="link" label={t('fe.ce.link')} icon={LinkIcon} type="url" inputMode="url" ph="https://" value={f.joinUrl} onChange={v=>set('joinUrl',v)} err={err.joinUrl}/>}

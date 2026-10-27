@@ -247,7 +247,7 @@ const run = {
       q.query('select id, ru, en, plate from feture.topic_category where not hidden order by position'),
       q.query('select id, category_id "categoryId", ru, en, desc_ru "descRu", desc_en "descEn" from feture.topic where not hidden order by position'),
       q.query('select kind, code, ru, en from feture.profile_option where not hidden order by kind, position'),
-      q.query(`select id, country, name_ru ru, name_en en from feture.place where state = 'approved' order by coalesce(name_en, name_ru)`),
+      q.query(`select id, code, country, name_ru ru, name_en en from feture.place where state = 'approved' order by coalesce(name_en, name_ru)`),
     ]);
     return { categories, topics, options, places };
   },
