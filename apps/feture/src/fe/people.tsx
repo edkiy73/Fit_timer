@@ -3,14 +3,14 @@ import {useNavigate,useParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Ban,Check,ChevronDown,ChevronLeft,ChevronRight,EyeOff,Heart,Ellipsis,History,Info,Lock,MapPin,MessageCircle,Search as SearchIcon,SlidersHorizontal,Sparkles,Undo2,Users,X} from 'lucide-react';
+import {Ban,Check,ChevronDown,ChevronLeft,ChevronRight,EyeOff,Heart,Ellipsis,History,Info,KeyRound,Lock,MapPin,MessageCircle,Search as SearchIcon,SlidersHorizontal,Sparkles,Undo2,Users,X} from 'lucide-react';
 import {Av,Bar,Btn,Empty,View,Layer,Skel,plate} from './ui';
 import {useFe} from './session';
 import {NameBadges} from './faces';
 import {BellButton} from './inbox';
 import {when} from './feed';
-import {CompatSummary,FollowCounts,MatchOverlay,PersonBio,PersonMenu,PhotoViewer,ProfileBody,ProfilePage,personName,personProfileRes,pxError,useRelation,useToast,
- type MenuStep,type PersonProfile,type Relation} from './profile-extras';
+import {catalogRes,CompatSummary,FollowCounts,MatchOverlay,PersonBio,PersonMenu,PhotoViewer,ProfileBody,ProfilePage,personName,personProfileRes,pxError,usePrivate,useRelation,useToast,
+ type Catalog,type MenuStep,type PersonProfile,type Relation} from './profile-extras';
 
 /** Slice F (V21 D03–D10): Discover cards from the server's mutual pool with the whole profile under the photo, swipe
  * or buttons to like / pass, «Это взаимно» → chat, the likes grid and another person's profile (P01). The client shows
@@ -61,7 +61,7 @@ export function PeopleTab(){
    {deckOn&&<button type="button" className="ibtn" aria-label={t('fe.px.h.open')} title={t('fe.px.h.open')} onClick={()=>navigate('/n/people/history')}><History/></button>}
    {deckOn?<button ref={opener} type="button" className="ibtn" aria-haspopup="dialog" aria-label={on?t('fe.df.openOn').replace('{n}',String(on)):t('fe.df.open')} disabled={!filter} onClick={()=>setOpen(true)}><SlidersHorizontal/>{on>0&&<sup>{on}</sup>}</button>:<BellButton/>}
   </header>
-  {tab==='discover'?<Discover reloadKey={deckKey} onOff={setOff} filterOn={on} openFilter={()=>setOpen(true)} likesN={likesN} toLikes={()=>setTab('likes')}/>:<Likes onCount={setLikesN} toDiscover={()=>setTab('discover')}/>}
+  {tab==='discover'?<Discover reloadKey={deckKey} onOff={setOff} filterOn={on} openFilter={()=>setOpen(true)} likesN={likesN} toLikes={()=>setTab('likes')} onLikes={countLikes}/>:<Likes onCount={setLikesN} toDiscover={()=>setTab('discover')}/>}
   {open&&filter&&<DiscoverFilter initial={filter} onClose={close} onApplied={f=>{setFilter(f);setDeckKey(k=>k+1);close();}}/>}
  </>;
 }
@@ -74,12 +74,6 @@ const filterShape=z.object({show:z.enum(['all','people','pairs']),ageMin:z.numbe
 type Filter=z.infer<typeof filterShape>;
 const filterRes=z.object({ok:z.literal(true),filter:filterShape});
 const countRes=z.object({ok:z.literal(true),count:z.number(),capped:z.boolean()});
-const named={ru:z.string().nullable(),en:z.string().nullable()};
-const dfCatalog=z.object({ok:z.literal(true),options:z.array(z.object({kind:z.string(),code:z.string(),...named})),
- topics:z.array(z.object({id:z.string(),categoryId:z.string(),...named}).passthrough()),
- categories:z.array(z.object({id:z.string(),...named}).passthrough()),
- places:z.array(z.object({id:z.string(),...named}).passthrough())});
-type DfCatalog=z.infer<typeof dfCatalog>;
 const DF_ROWS=[['genders','gender'],['orients','orient'],['formats','format'],['seeks','seek'],['roles','role'],['topics','']] as const;
 type DfRow=typeof DF_ROWS[number][0];
 type DfSub=DfRow|'city';
@@ -91,11 +85,11 @@ const dfOn=(f:Filter)=>[f.show!=='all',f.ageMin!==18||f.ageMax!==99,!!f.cityId,.
 function DiscoverFilter({initial,onClose,onApplied}:{initial:Filter,onClose:()=>void,onApplied:(f:Filter)=>void}){
  const {call}=useFe();const {t,locale}=useI18n();
  const [f,setF]=useState<Filter>(initial);const [sub,setSub]=useState<DfSub|null>(null);const [q,setQ]=useState('');const [where,setWhere]=useState<'any'|'city'>(initial.cityId?'city':'any');
- const [cat,setCat]=useState<DfCatalog|null>(null);const [count,setCount]=useState<{count:number,capped:boolean}|null>(null);
+ const [cat,setCat]=useState<Catalog|null>(null);const [count,setCount]=useState<{count:number,capped:boolean}|null>(null);
  const [countError,setCountError]=useState<unknown>(null);const [busy,setBusy]=useState(false);const [error,setError]=useState<unknown>(null);
  const sheet=useRef<HTMLDivElement>(null);const body=useRef<HTMLDivElement>(null);
  const lab=(x:{ru:string|null,en:string|null})=>(locale==='en'?x.en||x.ru:x.ru||x.en)||'';
- useEffect(()=>{call('catalog.get',{},dfCatalog,{asAccount:true}).then(setCat).catch(()=>{});},[call]);
+ useEffect(()=>{call('catalog.get',{},catalogRes,{asAccount:true}).then(setCat).catch(()=>{});},[call]);
  useEffect(()=>{sheet.current?.focus({preventScroll:true});},[sub]);
  useEffect(()=>{
   setCount(null);setCountError(null);const ctl=new AbortController();
@@ -200,7 +194,7 @@ function DiscoverFilter({initial,onClose,onApplied}:{initial:Filter,onClose:()=>
 /* ---------- D03 deck ---------- */
 type Decision={id:string,dir:1|-1};
 
-function Discover({reloadKey,onOff,filterOn,openFilter,likesN,toLikes}:{reloadKey:number,onOff:(off:boolean)=>void,filterOn:number,openFilter:()=>void,likesN:number,toLikes:()=>void}){
+function Discover({reloadKey,onOff,filterOn,openFilter,likesN,toLikes,onLikes}:{reloadKey:number,onOff:(off:boolean)=>void,filterOn:number,openFilter:()=>void,likesN:number,toLikes:()=>void,onLikes:()=>void}){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();
  const [cards,setCards]=useState<Card[]|null>(null);const [off,setOff]=useState(false);const [error,setError]=useState<unknown>(null);
  const [match,setMatch]=useState<{card:Card,conversationId?:string}|null>(null);const [toastNode,toast]=useToast();
@@ -222,11 +216,14 @@ function Discover({reloadKey,onOff,filterOn,openFilter,likesN,toLikes}:{reloadKe
   const c=cards?.[0];if(!c||busy.current)return;busy.current=true;fly(dir);
   try{
    const [r]=await Promise.all([call('discover.decide',{opId:newOpId(),profileId:c.id,decision:dir>0?'like':'pass'},decided),new Promise(res=>setTimeout(res,290))]);
-   setCards(list=>list?.filter(x=>x.id!==c.id)??null);setMade(m=>[...m,{id:c.id,dir}]);
+   // The deck holds a page of ten: when it runs out, ask the server for the next ones instead of «nobody left».
+   const rest=(cards??[]).filter(x=>x.id!==c.id);if(rest.length)setCards(rest);else{setCards(null);load();}
+   setMade(m=>[...m,{id:c.id,dir}]);
+   if(c.likedMe||r.state==='matched')onLikes();
    if(r.state==='matched')setMatch({card:c,...(r.conversationId?{conversationId:r.conversationId}:{})});
    else if(dir>0)toast(fill(t('fe.px.lkd.sent'),{name:cname(c)}));
   }catch(e){reset();toast(pxError(e,t),true);}finally{busy.current=false;}
- },[cards,call,t,toast]);
+ },[cards,call,t,toast,load,onLikes]);
  // The server allows one free undo a day (shared with «Вернуть» in the history) and says so when it is spent.
  const undo=async()=>{
   if(busy.current)return;busy.current=true;
@@ -239,7 +236,7 @@ function Discover({reloadKey,onOff,filterOn,openFilter,likesN,toLikes}:{reloadKe
  const box=(node:ReactNode)=><><View>{node}</View>{toastNode}</>;
  const overlay=match&&<MatchOverlay other={{id:match.card.id,name:cname(match.card),src:photo(match.card)}} conversationId={match.conversationId} onClose={()=>setMatch(null)}/>;
  if(error&&!cards?.length)return box(<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>load()}>{t('fe.retry')}</Btn></Empty>);
- if(cards===null)return <div className="view deckmode"><div className="deck"><div className="pc top fe-pc-skel"><div className="pc-ph"><i className="sk sk-media"/></div></div></div></div>;
+ if(cards===null)return <div className="view deckmode"><div className="deck"><div className="pc top fe-pc-skel"><div className="pc-ph"><i className="sk sk-media"/></div></div></div>{toastNode}{overlay}</div>;
  if(off)return box(<DatingOff onChanged={()=>{setCards(null);load();}} toast={toast}/>);
  const [c,nx]=cards;
  if(!c)return <>{box(<DeckEmpty byFilter={filterOn?byFilter:null} filterOn={filterOn} openFilter={openFilter} likesN={likesN} toLikes={toLikes}/>)}{overlay}</>;
@@ -251,11 +248,22 @@ function Discover({reloadKey,onOff,filterOn,openFilter,likesN,toLikes}:{reloadKe
    <div className="acts onphoto" ref={acts}>
     <button type="button" className={'act undo'+(made.length?'':' off')} aria-label={t('fe.people.undo')} onClick={undo}><Undo2/></button>
     <button type="button" className="act pass" aria-label={t('fe.people.pass')} onClick={()=>void decide(-1)}><X/></button>
+    <KeyAct key={c.id} id={c.id} cardRef={top}/>
     <button type="button" className="act like" aria-label={t('fe.px.deck.like')} onClick={()=>void decide(1)}><HeartF/></button>
    </div>
   </div>
   {toastNode}{overlay}
  </div>;
+}
+
+/** The deck's key button (deckInner `act req`): only when the person has a private part; it scrolls the card to it,
+ * where «Попросить доступ» (or what is already open) lives. */
+function KeyAct({id,cardRef}:{id:string,cardRef:React.RefObject<HTMLElement|null>}){
+ const {t}=useI18n();const p=usePrivate(id);
+ if(!p?.exists)return null;const open=(p.scopes??[]).length>0;const label=t(open?'fe.px.deck.privOpen':'fe.px.deck.privAsk');
+ const go=()=>{const c=cardRef.current;const v=c?.querySelector('.vault');if(!c||!v)return;
+  c.scrollTo({top:c.scrollTop+v.getBoundingClientRect().top-c.getBoundingClientRect().top-12,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});};
+ return <button type="button" className="act req" aria-label={label} title={label} onClick={go}><KeyRound/></button>;
 }
 
 function CardPhoto({c,src}:{c:Card,src:string|null}){
