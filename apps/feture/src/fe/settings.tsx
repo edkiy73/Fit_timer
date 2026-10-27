@@ -3,12 +3,16 @@ import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
-import {BadgeCheck,Ban,Bell,ChevronRight,Crown,LifeBuoy,Download,Eye,EyeOff,Globe,Heart,LogOut,Moon,ShieldCheck,Trash2,X} from 'lucide-react';
+import {Ban,Bell,Calendar,Camera,CircleHelp,Crown,Download,Eye,EyeOff,Globe,Heart,Image,KeyRound,LogOut,Mail,MessageCircle,Moon,ShieldCheck,Smartphone,Sparkles,Trash2,Users,X,type LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {getThemePreference,setThemePreference,type ThemePreference} from '../theme';
 import {Bar,Btn,Empty,View,Skel} from './ui';
 import {useFe} from './session';
+import {useToast} from './toast';
 import {usePremiumStatus} from './account-extra';
+import {Sheet} from './profile-extras';
+import {HiddenFeedSheet} from './settings-lists';
+import {Ask,LinkRow,SelectRow,ToggleRow} from './settings-ui';
 
 /** V21 K01 (settings), K05 (notifications), K07 (my data and deletion) on /api/fe. */
 const settingsRes=z.object({ok:z.literal(true),settings:z.object({locale:z.string(),chatBlur:z.boolean(),newsOptIn:z.boolean(),showExplicit:z.boolean()})});
@@ -17,122 +21,175 @@ const notif=z.object({mode:z.enum(['safe','normal']),push:z.boolean(),email:z.bo
  categories:z.object({match:channel,likes:channel,req:channel,events:channel,replies:channel,follows:channel,groups:channel,news:channel})});
 type Notif=z.infer<typeof notif>;
 const notifRes=z.object({ok:z.literal(true),settings:notif});
-const ageRes=z.object({ok:z.literal(true),verified:z.boolean()}).passthrough();
+const ageRes=z.object({ok:z.literal(true),verified:z.boolean(),check:z.object({state:z.string()}).passthrough().nullable().optional()}).passthrough();
 const photoRes=z.object({ok:z.literal(true),state:z.enum(['none','pending','approved','rejected'])}).passthrough();
 const ok=z.object({ok:z.literal(true)}).passthrough();
 const blocksRes=z.object({ok:z.literal(true),items:z.array(z.unknown())}).passthrough();
 
-function Row({icon:Icon,title,note,value,onClick,danger}:{icon:typeof Bell,title:string,note?:string|undefined,value?:string|undefined,onClick:()=>void,danger?:boolean}){
- return <button type="button" className={'li'+(danger?' danger':'')} onClick={onClick}><span className="ico"><Icon/></span><span className="tx"><b>{title}</b>{note&&<small>{note}</small>}</span>{value&&<span className="val">{value}</span>}{!danger&&<ChevronRight/>}</button>;
-}
+type AgeState='ok'|'pending'|'none';
 
 export function SettingsScreen(){
- const {call,state,acting}=useFe();const {t,preference,setPreference,canSwitch}=useI18n();const [blocked,setBlocked]=useState<number|null>(null);const auth=useOptionalAuth();const navigate=useNavigate();
- const [s,setS]=useState<z.infer<typeof settingsRes>['settings']|null>(null);const [age,setAge]=useState<boolean|null>(null);const [photo,setPhoto]=useState<z.infer<typeof photoRes>['state']|null>(null);const [theme,setTheme]=useState<ThemePreference>(getThemePreference());
- const [error,setError]=useState<unknown>(null);const [failure,setFailure]=useState('');const premium=usePremiumStatus().status;
+ const {call,state,acting}=useFe();const {t,preference,setPreference,canSwitch}=useI18n();const auth=useOptionalAuth();const navigate=useNavigate();const toast=useToast();
+ const [blocked,setBlocked]=useState<number|null>(null);
+ const [s,setS]=useState<z.infer<typeof settingsRes>['settings']|null>(null);const [age,setAge]=useState<AgeState|null>(null);const [photo,setPhoto]=useState<z.infer<typeof photoRes>['state']|null>(null);
+ const [theme,setTheme]=useState<ThemePreference>(getThemePreference());
+ const [error,setError]=useState<unknown>(null);const premium=usePremiumStatus().status;
+ const [layer,setLayer]=useState<'hidden'|'logout'|null>(null);const [leaving,setLeaving]=useState(false);
  const load=useCallback(()=>{setError(null);call('settings.get',{},settingsRes,{asAccount:true}).then(r=>setS(r.settings)).catch(setError);
-  call('verification.ageStatus',{},ageRes,{asAccount:true}).then(r=>setAge(r.verified)).catch(()=>{});
+  call('verification.ageStatus',{},ageRes,{asAccount:true}).then(r=>setAge(r.verified?'ok':r.check?.state==='submitted'?'pending':'none')).catch(()=>{});
   call('verification.photoStatus',{},photoRes,{asAccount:true}).then(r=>setPhoto(r.state)).catch(()=>{});
   call('blocks.list',{},blocksRes).then(r=>setBlocked(r.items.length)).catch(()=>{});},[call]);
  useEffect(()=>{load();},[load]);
- const update=async(patch:Record<string,unknown>)=>{setFailure('');try{await call('settings.update',{opId:newOpId(),...patch},ok,{asAccount:true});load();}catch(e){setFailure(feErrorMessage(e,t));}};
- const couple=state.status==='ready'?state.boot.profiles.find(p=>p.kind==='couple'):undefined;
+ const update=async(patch:Record<string,unknown>,done?:string)=>{
+  // Optimistic: the switch moves at once and comes back if the server says no.
+  const before=s;if(s)setS({...s,...patch} as typeof s);
+  try{await call('settings.update',{opId:newOpId(),...patch},ok,{asAccount:true});if(done)toast(done,{type:'ok'});}
+  catch(e){setS(before);toast(feErrorMessage(e,t),{type:'err'});}};
+ const couple=state.status==='ready'?state.boot.profiles.find(p=>p.kind==='couple'&&p.state!=='deleted'):undefined;
  const email=state.status==='ready'?state.session.email:'';
+ const closeLayer=useCallback(()=>setLayer(null),[]);
+ const logout=async()=>{setLeaving(true);try{await auth.logout();navigate('/');}catch{setLeaving(false);setLayer(null);toast(t('fe.ax.sec.logoutFailed'),{type:'err'});}};
+ const ageVal=age&&t('fe.set.ageVal.'+age);
+ const photoVal=photo&&t('fe.set.pcVal.'+photo);
  return <>
   <Bar title={t('fe.set.title')} back="/n/me"/>
-  <View className="compact">
+  <View className="nodock compact">
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>:<>
     <div className="sec" style={{marginTop:4}}>{t('fe.set.account')}</div>
     <div className="card list">
-     <Row icon={ShieldCheck} title={t('fe.set.signIn')} note={email} onClick={()=>navigate('/n/settings/security')}/>
-     <Row icon={ShieldCheck} title={t('fe.set.age')} note={t('fe.set.ageNote')} value={age===null?undefined:age?t('fe.set.ageOk'):t('fe.set.ageNo')} onClick={()=>navigate('/n/settings/age')}/>
-     <Row icon={BadgeCheck} title={t('fe.pc.row')} note={t('fe.pc.rowNote')} value={photo===null?undefined:photo==='approved'?t('fe.pc.rowOk'):photo==='pending'?t('fe.pc.rowWait'):t('fe.pc.rowNo')} onClick={()=>navigate('/n/settings/photo-check')}/>
-     <Row icon={Eye} title={t('fe.set.privacy')} note={t('fe.set.privacyNote')} onClick={()=>navigate('/n/me?layer=vis')}/>
-     <Row icon={Crown} title={t('fe.ax.prem.entry')} note={t('fe.ax.prem.entryNote')} value={premium?.premium?t('fe.ax.prem.entryOn'):undefined} onClick={()=>navigate('/n/premium')}/>
-     <Row icon={Heart} title={t('fe.pair.section')} note={couple?(couple.name||t('fe.pair.ourProfile')):t('fe.pair.entryOff')} onClick={()=>navigate('/n/me/pair')}/>
+     <LinkRow icon={KeyRound} title={t('fe.set.signIn')} sub={email||t('fe.set.noEmail')} onClick={()=>navigate('/n/settings/security')}/>
+     <LinkRow icon={ShieldCheck} tone={age==='ok'?'g':''} title={t('fe.set.age')} sub={t('fe.set.ageNote')} val={ageVal} onClick={()=>navigate('/n/settings/age')}/>
+     <LinkRow icon={Camera} tone="v" title={t('fe.pc.row')} sub={t('fe.set.pcSub')} val={photoVal} onClick={()=>navigate('/n/settings/photo-check')}/>
+     <LinkRow icon={Crown} tone="l" title="Premium" sub={t('fe.set.premSub')} val={premium?t(premium.premium?'fe.set.premOn':'fe.set.premOff'):undefined} onClick={()=>navigate('/n/premium')}/>
+     <LinkRow icon={Eye} title={t('fe.set.privacy')} sub={t('fe.set.privacyNote')} onClick={()=>navigate('/n/me?layer=vis')}/>
+     {couple?<LinkRow icon={Users} tone="v" title={t('fe.set.pair')} sub={t('fe.set.pairSub',{name:couple.name||couple.handle||''})} onClick={()=>navigate('/n/me/pair')}/>
+      :<LinkRow icon={Users} tone="v" title={t('fe.set.pairNew')} sub={t('fe.set.pairNewSub')} onClick={()=>navigate('/n/me/pair')}/>}
     </div>
     <div className="sec">{t('fe.set.app')}</div>
     <div className="card list">
-     {canSwitch&&<div className="li"><span className="ico"><Globe/></span><label className="selrow"><span className="selt">{t('fe.set.lang')}<small>{t('fe.set.langNote')}</small></span>
-      <span className="selv" aria-hidden="true">{t('fe.set.lang.'+preference)}</span>
-      <select value={preference} onChange={e=>{setPreference(e.target.value);if(e.target.value!=='system')void update({locale:e.target.value});}} aria-label={t('fe.set.lang')}>
-       {(['system','ru','en'] as const).map(v=><option key={v} value={v}>{t('fe.set.lang.'+v)}</option>)}</select></label></div>}
-     <div className="li"><span className="ico"><Moon/></span><label className="selrow"><span className="selt">{t('fe.set.theme')}<small>{t('fe.set.themeNote')}</small></span>
-      <span className="selv" aria-hidden="true">{t('fe.set.theme.'+theme)}</span>
-      <select value={theme} onChange={e=>{const v=e.target.value as ThemePreference;setTheme(v);setThemePreference(v);}} aria-label={t('fe.set.theme')}>
-       {(['system','light','dark'] as const).map(v=><option key={v} value={v}>{t('fe.set.theme.'+v)}</option>)}</select></label></div>
-     <Row icon={Bell} title={t('fe.set.notifications')} note={t('fe.set.notificationsNote')} onClick={()=>navigate('/n/settings/notifications')}/>
+     {canSwitch&&<div className="li"><span className="ico"><Globe/></span>
+      <SelectRow label={t('fe.set.lang')} sub={t('fe.set.langNote')} value={preference} options={(['system','ru','en'] as const).map(v=>[v,t('fe.set.lang.'+v)] as const)}
+       onChange={v=>{setPreference(v);toast(t('fe.set.langDone.'+(v==='system'?'system':v)),{type:'ok'});if(v!=='system')void update({locale:v});}}/></div>}
+     <div className="li"><span className="ico"><Moon/></span>
+      <SelectRow label={t('fe.set.theme')} sub={t('fe.set.themeNote')} value={theme} options={(['light','dark','system'] as const).map(v=>[v,t('fe.set.theme.'+v)] as const)}
+       onChange={v=>{setTheme(v);setThemePreference(v);}}/></div>
+     <LinkRow icon={Bell} title={t('fe.set.notifications')} sub={t('fe.set.notificationsNote')} onClick={()=>navigate('/n/settings/notifications')}/>
     </div>
     <div className="sec">{t('fe.nav.chats')}</div>
     <div className="card list">
-     <button type="button" className="li" role="switch" aria-checked={!!s?.chatBlur} disabled={!s} onClick={()=>s&&update({chatBlur:!s.chatBlur})}>
-      <span className="ico"><Eye/></span><span className="tx"><b>{t('fe.set.blur')}</b><small>{t('fe.set.blurNote')}</small></span><span className={'sw'+(s?.chatBlur?' on':'')} aria-hidden="true"/>
-     </button>
+     <ToggleRow icon={EyeOff} title={t('fe.set.blur')} sub={t('fe.set.blurNote')} on={!!s?.chatBlur} disabled={!s}
+      onClick={()=>s&&void update({chatBlur:!s.chatBlur},t(s.chatBlur?'fe.set.blurOff':'fe.set.blurOn'))}/>
     </div>
     <div className="sec">{t('fe.set.data')}</div>
     <div className="card list">
-     <Row icon={EyeOff} title={t('fe.tl.set.hidden')} note={t('fe.tl.set.hiddenNote')} onClick={()=>navigate('/n/settings/hidden')}/>
-     <Row icon={Ban} title={t('fe.tl.set.blocked')} note={acting?.kind==='couple'?t('fe.tl.set.blockedNoteCouple').replace('{name}',acting.name||acting.handle||''):t('fe.tl.set.blockedNote')} value={blocked===null?undefined:String(blocked)} onClick={()=>navigate('/n/settings/blocked')}/>
-     <Row icon={Download} title={t('fe.set.myData')} note={t('fe.set.myDataNote')} onClick={()=>navigate('/n/settings/data')}/></div>
+     <LinkRow icon={EyeOff} title={t('fe.tl.set.hidden')} sub={t('fe.tl.set.hiddenNote')} onClick={()=>setLayer('hidden')}/>
+     <LinkRow icon={Ban} title={t('fe.tl.set.blocked')} sub={acting?.kind==='couple'?t('fe.tl.set.blockedNoteCouple').replace('{name}',acting.name||acting.handle||''):t('fe.tl.set.blockedNote')}
+      val={blocked===null?undefined:String(blocked)} onClick={()=>navigate('/n/settings/blocked')}/>
+     <LinkRow icon={Download} title={t('fe.set.myData')} sub={t('fe.set.myDataNote')} onClick={()=>navigate('/n/settings/data')}/>
+    </div>
     <div className="sec">{t('fe.set.support')}</div>
-    <div className="card list"><Row icon={LifeBuoy} title={t('fe.ax.help.entry')} note={t('fe.ax.help.entryNote')} onClick={()=>navigate('/n/help')}/><Row icon={LogOut} title={t('fe.set.logout')} danger onClick={()=>{void auth.logout().then(()=>navigate('/'));}}/></div>
-    {failure&&<div className="alert err" role="alert"><span>{failure}</span></div>}
+    <div className="card list">
+     <LinkRow icon={CircleHelp} title={t('fe.ax.help.entry')} sub={t('fe.ax.help.entryNote')} onClick={()=>navigate('/n/help')}/>
+     <LinkRow icon={LogOut} danger title={t('fe.set.logout')} onClick={()=>setLayer('logout')}/>
+    </div>
     <p className="note center mt24">FetUre · V21</p>
    </>}
   </View>
+  {layer==='hidden'&&<HiddenFeedSheet onClose={closeLayer}/>}
+  {layer==='logout'&&<Ask icon={LogOut} title={t('fe.set.logoutTitle')} text={t('fe.set.logoutText')} ok={t('fe.set.logout')} danger busy={leaving} onOk={()=>void logout()} onCancel={closeLayer}/>}
  </>;
 }
 
+/* ---------- K05 ---------- */
+const CATS:[keyof Notif['categories'],LucideIcon][]=[['match',MessageCircle],['likes',Heart],['req',KeyRound],['events',Calendar],['replies',Image],['follows',Users],['groups',Globe],['news',Sparkles]];
+const HALF_HOURS=Array.from({length:48},(_,i)=>`${String(i>>1).padStart(2,'0')}:${i%2?'30':'00'}`);
+
 export function NotificationSettingsScreen(){
- const {call}=useFe();const {t}=useI18n();
- const [n,setN]=useState<Notif|null>(null);const [error,setError]=useState<unknown>(null);const [failure,setFailure]=useState('');const [saved,setSaved]=useState(false);
+ const {call,state}=useFe();const {t}=useI18n();const toast=useToast();
+ const [n,setN]=useState<Notif|null>(null);const [error,setError]=useState<unknown>(null);
+ const email=state.status==='ready'?state.session.email:'';
  const load=useCallback(()=>{setError(null);call('notifications.settings.get',{},notifRes,{asAccount:true}).then(r=>setN(r.settings)).catch(setError);},[call]);
  useEffect(()=>{load();},[load]);
- const save=async(next:Notif)=>{setN(next);setFailure('');setSaved(false);try{await call('notifications.settings.update',{opId:newOpId(),settings:next},ok,{asAccount:true});setSaved(true);}catch(e){setFailure(feErrorMessage(e,t));load();}};
- const sw=(on:boolean,title:string,note:string|undefined,flip:()=>void)=><button type="button" className="li" role="switch" aria-checked={on} onClick={flip}><span className="tx"><b>{title}</b>{note&&<small>{note}</small>}</span><span className={'sw'+(on?' on':'')} aria-hidden="true"/></button>;
+ // Every change is saved at once; a refusal brings the screen back to what the server has.
+ const last=useRef(0);
+ const save=async(next:Notif,done?:string)=>{const before=n;setN(next);const mine=++last.current;
+  try{await call('notifications.settings.update',{opId:newOpId(),settings:next},ok,{asAccount:true});if(done)toast(done,{type:'ok'});}
+  catch(e){if(mine===last.current)setN(before);toast(feErrorMessage(e,t),{type:'err'});}};
+ const safe=n?.mode==='safe';
  return <>
   <Bar title={t('fe.set.notifications')} back="/n/settings"/>
-  <View className="compact">
+  <View className="nodock compact">
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
-    :!n?<Skel kind="list"/>:<>
-    <div className="sec" style={{marginTop:4}}>{t('fe.set.n.channels')}</div>
-    <div className="card list">{sw(n.push,t('fe.set.n.push'),undefined,()=>save({...n,push:!n.push}))}{sw(n.email,t('fe.set.n.email'),undefined,()=>save({...n,email:!n.email}))}</div>
-    <div className="sec">{t('fe.set.n.lock')}</div>
-    <div className="chips" role="radiogroup">{(['safe','normal'] as const).map(m=><button key={m} type="button" role="radio" aria-checked={n.mode===m} className={'chip'+(n.mode===m?' on':'')} onClick={()=>save({...n,mode:m})}>{t('fe.set.n.mode.'+m)}</button>)}</div>
-    <p className="note mt8">{t('fe.set.n.modeNote.'+n.mode)}</p>
+    :!n?<><div className="sec" style={{marginTop:4}}>{t('fe.set.n.lock')}</div><Skel kind="card" rows={2}/><Skel kind="list" rows={4}/></>:<>
+    <div className="sec" style={{marginTop:4}}>{t('fe.set.n.lock')}</div>
+    <div className="nmode">{(['safe','normal'] as const).map(k=><button key={k} type="button" className={'nm'+(n.mode===k?' on':'')} aria-pressed={n.mode===k}
+     onClick={()=>n.mode!==k&&void save({...n,mode:k},t('fe.set.n.modeDone.'+k))}>
+     <span className="rd"/><b>{t('fe.set.n.mode.'+k)}{k==='safe'&&<em>{t('fe.set.n.default')}</em>}</b><small>{t('fe.set.n.modeNote.'+k)}</small></button>)}</div>
+    <div className="lockscreen" aria-hidden="true"><span className="ls-app"><img src="/icon.svg" alt=""/>FetUre</span>
+     <b>{safe?t('fe.set.n.lsSafeT'):t('fe.set.n.lsNormalT')}</b><span>{safe?t('fe.set.n.lsSafeB'):t('fe.set.n.lsNormalB')}</span><small>{t('fe.ax.sec.now')}</small></div>
+    <p className="note mt8">{t('fe.set.n.lockNote')}</p>
+    <div className="sec">{t('fe.set.n.channels')}</div>
+    <div className="card list">
+     <ToggleRow title={t('fe.set.n.push')} sub={t('fe.set.n.pushSub')} on={n.push} onClick={()=>void save({...n,push:!n.push})}/>
+     <ToggleRow title={t('fe.set.n.email')} sub={email||t('fe.set.noEmail')} on={n.email} onClick={()=>void save({...n,email:!n.email})}/>
+     {n.email&&<div className="li"><SelectRow label={t('fe.set.n.digest')} sub={t('fe.set.n.digestSub')} value={n.digest}
+      options={(['instant','daily','weekly'] as const).map(v=>[v,t('fe.set.n.digest.'+v)] as const)} onChange={v=>void save({...n,digest:v})}/></div>}
+    </div>
+    <div className="sec">{t('fe.set.n.what')}<span className="nhead"><span>{t('fe.set.n.colPush')}</span><span>{t('fe.set.n.colEmail')}</span></span></div>
+    <div className="card list ncats">{CATS.map(([k,Icon])=>{const c=n.categories[k];const title=t('fe.set.n.cat.'+k);
+     const flip=(ch:'push'|'email')=>void save({...n,categories:{...n.categories,[k]:{...c,[ch]:!c[ch]}}});
+     return <div key={k} className="li"><span className="ico"><Icon/></span><span className="tx"><b>{title}</b><small>{t('fe.set.n.catSub.'+k)}</small></span>
+      <button type="button" className={'nt-t'+(c.push&&n.push?' on':'')} disabled={!n.push} aria-pressed={c.push} aria-label={t('fe.set.n.colPush')+': '+title} onClick={()=>flip('push')}><Smartphone/></button>
+      <button type="button" className={'nt-t'+(c.email&&n.email?' on':'')} disabled={!n.email} aria-pressed={c.email} aria-label={t('fe.set.n.colEmail')+': '+title} onClick={()=>flip('email')}><Mail/></button>
+     </div>;})}</div>
     <div className="sec">{t('fe.set.n.quiet')}</div>
-    <div className="card list">{sw(n.quiet.on,t('fe.set.n.quietOn'),t('fe.set.n.quietNote').replace('{from}',n.quiet.from).replace('{to}',n.quiet.to),()=>save({...n,quiet:{...n.quiet,on:!n.quiet.on}}))}</div>
-    <div className="sec">{t('fe.set.n.what')}</div>
-    <div className="card list">{(Object.keys(n.categories) as (keyof Notif['categories'])[]).map(k=>sw(n.categories[k].push,t('fe.set.n.cat.'+k),undefined,()=>save({...n,categories:{...n.categories,[k]:{...n.categories[k],push:!n.categories[k].push}}})))}</div>
-    {saved&&<p className="note mt8" role="status">{t('fe.me.saved')}</p>}
-    {failure&&<div className="alert err" role="alert"><span>{failure}</span></div>}
+    <div className="card list">
+     <ToggleRow title={t('fe.set.n.quietOn',{from:n.quiet.from,to:n.quiet.to})} sub={t('fe.set.n.quietNote')} on={n.quiet.on} onClick={()=>void save({...n,quiet:{...n.quiet,on:!n.quiet.on}})}/>
+     {n.quiet.on&&<>
+      <div className="li"><SelectRow label={t('fe.set.n.from')} value={n.quiet.from} options={HALF_HOURS.map(v=>[v,v] as const)} onChange={v=>void save({...n,quiet:{...n.quiet,from:v}})}/></div>
+      <div className="li"><SelectRow label={t('fe.set.n.to')} value={n.quiet.to} options={HALF_HOURS.map(v=>[v,v] as const)} onChange={v=>void save({...n,quiet:{...n.quiet,to:v}})}/></div>
+     </>}
+    </div>
+    <p className="note mt12">{t('fe.set.n.security')}</p>
    </>}
   </View>
  </>;
 }
 
+/* ---------- K07 ---------- */
 export function DataScreen(){
- const {call,state}=useFe();const {t}=useI18n();const auth=useOptionalAuth();const navigate=useNavigate();
- const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [confirm,setConfirm]=useState('');const [ask,setAsk]=useState(false);const op=useRef(newOpId());
- const handle=state.status==='ready'?state.boot.profiles.find(p=>p.kind==='person')?.handle??'':'';
- const exportData=async()=>{setBusy(true);setFailure('');try{const r=await call('account.export',{},z.object({ok:z.literal(true)}).passthrough(),{asAccount:true});
-  const blob=new Blob([JSON.stringify(r,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='feture-data.json';a.click();URL.revokeObjectURL(a.href);}
-  catch(e){setFailure(feErrorMessage(e,t));}finally{setBusy(false);}};
- const remove=async()=>{setBusy(true);setFailure('');try{await call('account.delete',{opId:op.current,confirmHandle:confirm.trim()},ok,{asAccount:true});await auth.logout();navigate('/');}
+ const {call,state}=useFe();const {t}=useI18n();const auth=useOptionalAuth();const navigate=useNavigate();const toast=useToast();
+ const [exporting,setExporting]=useState(false);const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [confirm,setConfirm]=useState('');const [ask,setAsk]=useState(false);
+ const [shake,setShake]=useState(false);const op=useRef(newOpId());
+ const profiles=state.status==='ready'?state.boot.profiles.filter(p=>p.state!=='deleted'):[];
+ const handle=profiles.find(p=>p.kind==='person')?.handle??'';
+ const couple=profiles.find(p=>p.kind==='couple');
+ const exportData=async()=>{setExporting(true);try{const r=await call('account.export',{},z.object({ok:z.literal(true)}).passthrough(),{asAccount:true});
+  const blob=new Blob([JSON.stringify(r,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='feture-data.json';a.click();URL.revokeObjectURL(a.href);
+  toast(t('fe.set.exportDone'),{type:'ok'});}
+  catch(e){toast(feErrorMessage(e,t),{type:'err'});}finally{setExporting(false);}};
+ const remove=async()=>{
+  if(confirm.trim().replace(/^@/,'').toLowerCase()!==handle.toLowerCase()){setFailure(t('fe.set.deleteMismatch'));setShake(true);setTimeout(()=>setShake(false),500);return;}
+  setBusy(true);setFailure('');
+  try{await call('account.delete',{opId:op.current,confirmHandle:confirm.trim().replace(/^@/,'')},ok,{asAccount:true});await auth.logout();navigate('/');}
   catch(e){setFailure(feErrorMessage(e,t));op.current=newOpId();}finally{setBusy(false);}};
+ const close=useCallback(()=>{if(!busy){setAsk(false);setConfirm('');setFailure('');}},[busy]);
  return <>
   <Bar title={t('fe.set.myData')} back="/n/settings"/>
-  <View>
-   <section className="grp"><div className="grp-t"><span>{t('fe.set.export')}</span></div>
-    <div className="card"><p>{t('fe.set.exportText')}</p><Btn kind="soft" icon={Download} className="mt12" onClick={exportData} disabled={busy}>{t('fe.set.exportBtn')}</Btn></div></section>
-   <section className="grp"><div className="grp-t"><span>{t('fe.set.delete')}</span></div>
-    <div className="card"><p>{t('fe.set.deleteText')}</p>
-     {!ask?<Btn kind="danger" icon={Trash2} className="mt12" onClick={()=>setAsk(true)}>{t('fe.set.deleteBtn')}</Btn>:<>
-      <label className="field mt12"><span>{t('fe.set.deleteConfirm').replace('{nick}',handle)}</span><input className="inp" value={confirm} onChange={e=>setConfirm(e.target.value)} autoCapitalize="off" spellCheck={false}/></label>
-      <div className="btns"><Btn kind="danger" onClick={remove} disabled={busy||confirm.trim().toLowerCase()!==handle.toLowerCase()}>{t('fe.set.deleteFinal')}</Btn><Btn kind="text" onClick={()=>{setAsk(false);setConfirm('');}}>{t('fe.cancel')}</Btn></div>
-     </>}
-    </div></section>
-   {failure&&<div className="alert err" role="alert"><span>{failure}</span></div>}
+  <View className="nodock compact">
+   <div className="card"><h3 className="t">{t('fe.set.exportTitle')}</h3><p className="note" style={{marginBottom:12}}>{t('fe.set.exportText')}</p>
+    <Btn kind="soft" size="md" icon={Download} onClick={exportData} busy={exporting} disabled={exporting}>{t('fe.set.exportTitle')}</Btn></div>
+   <div className="card" style={{borderColor:'var(--danger-soft)'}}><h3 className="t" style={{color:'var(--danger)'}}>{t('fe.set.delete')}</h3>
+    <p className="note" style={{marginBottom:12}}>{couple?t('fe.set.deleteTextCouple',{name:couple.name||couple.handle||''}):t('fe.set.deleteText')}</p>
+    <Btn kind="danger" size="md" icon={Trash2} onClick={()=>setAsk(true)}>{t('fe.set.deleteBtn')}</Btn></div>
   </View>
+  {ask&&<Sheet title={t('fe.set.deleteTitle')} onClose={close} foot={<>
+   <Btn kind="danger" onClick={()=>void remove()} busy={busy} disabled={busy||!confirm.trim()}>{t('fe.set.deleteFinal')}</Btn>
+   <Btn kind="soft" onClick={close} disabled={busy}>{t('fe.set.deleteKeep')}</Btn></>}>
+   <p className="lead">{t('fe.set.deleteConfirm')} <b>{handle}</b></p>
+   <label className={'field'+(failure?' err':'')+(shake?' shake':'')}><input className="inp" value={confirm} placeholder={handle} aria-label={t('fe.set.deleteConfirm')}
+    onChange={e=>{setConfirm(e.target.value);setFailure('');}} onKeyDown={e=>{if(e.key==='Enter')void remove();}} autoCapitalize="off" autoComplete="off" spellCheck={false} autoFocus/></label>
+   {failure&&<div className="alert err mt12" role="alert"><span>{failure}</span></div>}
+  </Sheet>}
  </>;
 }

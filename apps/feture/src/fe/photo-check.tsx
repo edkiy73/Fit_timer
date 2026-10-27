@@ -43,6 +43,9 @@ export function PhotoCheckScreen(){
  const load=useCallback(()=>{setError(null);call('verification.photoStatus',{},photoStatusRes,{asAccount:true}).then(setS).catch(setError);},[call]);
  useEffect(()=>{load();},[load]);
  useEffect(()=>()=>{if(shot)URL.revokeObjectURL(shot.url);},[shot]);
+ // V21 V01 shows the gesture as soon as the screen opens: the server picks it (`photoStart` reuses an open check).
+ const auto=useRef(false);
+ useEffect(()=>{if(!s||auto.current||s.state==='approved'||s.state==='pending'||s.check?.state==='started')return;auto.current=true;void start();},[s]);
 
  const start=async()=>{
   setBusy(true);setFailure('');setNeedPhoto(false);
@@ -93,14 +96,15 @@ export function PhotoCheckScreen(){
  const c=s.check?.state==='started'&&s.check.gesture?s.check:null;
  const gesture=c?.gesture?((GESTURES as readonly string[]).includes(c.gesture)?t('fe.age.gesture.'+c.gesture):c.gesture):'';
  const reason=s.state==='rejected'&&s.reason&&REASONS.includes(s.reason)?t('fe.pc.reason.'+s.reason)+' ':'';
- const cta=needPhoto?null:!c?<Btn icon={Camera} onClick={start} disabled={busy}>{t('fe.pc.start')}</Btn>
-  :shot?<Btn onClick={send} disabled={busy||!person}>{busy?t('fe.pc.sending'):t('fe.pc.send')}</Btn>
+ const cta=needPhoto?null:!c?<Btn icon={Camera} onClick={start} busy={busy} disabled={busy}>{t('fe.pc.shoot')}</Btn>
+  :shot?<Btn onClick={send} busy={busy} disabled={busy||!person}>{t('fe.pc.send')}</Btn>
   :<Btn icon={Camera} onClick={()=>input.current?.click()}>{t('fe.pc.shoot')}</Btn>;
  return <>{bar}<View className={'nodock'+(cta?' cta1':'')}>
   {s.state==='rejected'&&<div className="alert err" role="status"><TriangleAlert/><span><b>{t('fe.pc.rejected')}</b>{reason}{t('fe.pc.rejectedText')}</span></div>}
   {s.lapsed&&<div className="alert warn" role="status"><Clock/><span><b>{t('fe.pc.lapsed')}</b>{t('fe.pc.lapsedText')}</span></div>}
   <p className="lead">{t('fe.pc.lead')}</p>
-  {c&&<div className="pv-pose mt12"><span className="ico v" aria-hidden="true"><Camera/></span><span><small>{t('fe.pc.poseLabel')}</small><b>{gesture}</b></span></div>}
+  {!needPhoto&&<div className="pv-pose mt12"><span className="ico v" aria-hidden="true"><Camera/></span><span><small>{t('fe.pc.poseLabel')}</small>
+   {c?<b>{gesture}</b>:<b aria-busy="true"><i className="sk sk-l w70" style={{display:'block',height:16,marginTop:4}}/></b>}</span></div>}
   {c&&shot&&<section className="card pv-capture mt12"><div className="pv-preview"><img src={shot.url} alt={t('fe.pc.shotAlt')} draggable={false}/></div>
    <div className="pv-capture-info"><b>{t('fe.pc.ready')}</b><p className="note">{t('fe.pc.readyText')}</p>
     <Btn kind="soft" size="md" auto icon={Camera} onClick={()=>input.current?.click()} disabled={busy}>{t('fe.pc.retake')}</Btn></div></section>}
