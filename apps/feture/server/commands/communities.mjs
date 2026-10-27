@@ -1,4 +1,5 @@
 // @ts-check
+import { likePattern } from '../search.mjs';
 import { randomBytes } from 'node:crypto';
 import { requireUnrestricted } from '../profiles.mjs';
 import { communitiesCommands } from '../../contracts/communities.mjs';
@@ -259,8 +260,9 @@ const run = {
        where c.state = 'published' and c.privacy <> 'hidden' and feture.community_visible(c, $1, $2)
          and ($3::text[] is null or c.topics && $3) and ($4::text is null or c.privacy = $4)
          and ($5::timestamptz is null or (c.published_at, c.id) < ($5::timestamptz, $6::uuid))
+         and ($7::text is null or c.name ilike $7 or c.description ilike $7)
        order by c.published_at desc, c.id desc limit 21`,
-      [viewer.profileId, viewer.accountId, input.topics?.length ? input.topics : null, input.privacy ?? null, cur?.[0] ?? null, cur?.[1] ?? null]);
+      [viewer.profileId, viewer.accountId, input.topics?.length ? input.topics : null, input.privacy ?? null, cur?.[0] ?? null, cur?.[1] ?? null, likePattern(input.q)]);
     const page = rows.slice(0, 20);
     const last = page[page.length - 1];
     const items = await Promise.all(page.map(async ({ published_at: _, cover_asset, last_talk_at, next_event_at, ...r }) => ({

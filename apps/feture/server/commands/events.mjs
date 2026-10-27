@@ -1,4 +1,5 @@
 // @ts-check
+import { likePattern } from '../search.mjs';
 import { eventsCommands } from '../../contracts/events.mjs';
 import { requireUnrestricted } from '../profiles.mjs';
 import { fail, isUniqueViolation } from '../errors.mjs';
@@ -384,9 +385,11 @@ const run = {
          and ($6::text[] is null or e.kind = any($6)) and ($7 = 'any' or ($7 = 'free') = (e.price->>'kind' = 'free'))
          and (not $8 or not e.requires_application) and ($9::uuid is null or e.community_id = $9)
          and ($10::timestamptz is null or (e.starts_at, e.id) > ($10::timestamptz, $11::uuid))
+         and ($12::text is null or e.title ilike $12 or e.description ilike $12)
+         and ($13::timestamptz is null or e.starts_at >= $13) and ($14::timestamptz is null or e.starts_at < $14)
        order by e.starts_at, e.id limit 21`,
       [viewer.profileId, viewer.accountId, input.format, placeId, input.when, input.kinds?.length ? input.kinds : null, input.price, input.openOnly,
-        input.communityId ?? null, cur?.[0] ?? null, cur?.[1] ?? null]);
+        input.communityId ?? null, cur?.[0] ?? null, cur?.[1] ?? null, likePattern(input.q), input.from ?? null, input.to ?? null]);
     const page = rows.slice(0, 20);
     const last = page[page.length - 1];
     return {

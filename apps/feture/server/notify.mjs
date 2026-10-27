@@ -19,6 +19,7 @@ const TYPES = /** @type {Record<string, {type: string, actor?: string, object?: 
   'reply.created': { type: 'reply', actor: 'from', object: ['post', 'postId'] },
   'reaction.created': { type: 'postLike', actor: 'from', object: ['post', 'postId'] },
   'mention.created': { type: 'mention', actor: 'from', object: ['post', 'postId'] },
+  'mention.removed': { type: 'mentionRemoved', actor: 'from', object: ['post', 'postId'] },
   'tag.answered': { type: 'tagAnswered', object: ['post', 'postId'] },
   'post.disputed': { type: 'postDisputed', object: ['post', 'postId'] },
   'post.restored': { type: 'postRestored', object: ['post', 'postId'] },

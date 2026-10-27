@@ -35,7 +35,8 @@ export const communitiesCommands = {
   'community.get': { profile: true, write: false, input: z.strictObject({ communityId: id, invite: z.string().max(80).optional() }) },
   'community.catalog': {
     profile: true, write: false,
-    input: z.strictObject({ topics: z.array(code).max(10).optional(), privacy: z.enum(['open', 'closed']).optional(), cursor: z.string().max(200).optional() }),
+    // `q` (V21 gFilters): words in the name or description.
+    input: z.strictObject({ topics: z.array(code).max(10).optional(), privacy: z.enum(['open', 'closed']).optional(), q: z.string().trim().min(2).max(80).optional(), cursor: z.string().max(200).optional() }),
   },
   'community.mine': { profile: true, write: false, input: z.strictObject({}) },
   'community.join': {
