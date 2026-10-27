@@ -5,6 +5,7 @@ import {Icon,type IconName} from '../feture/components/Icon';
 import {feErrorMessage} from '../feture/fe-api';
 import {ActionButton,Avatar,StateCard} from './components';
 import {FeSessionProvider,useFe} from './session';
+import {Register} from './register';
 import './tokens.css';
 import './shell.css';
 
@@ -27,28 +28,22 @@ function FeGate(){
  if(state.status==='error')return <main className="fe-app fe-center">
   <StateCard icon="close" role="alert" title={t('fe.error.title')} text={feErrorMessage(state.error,t)} action={<ActionButton variant="soft" onClick={reload}>{t('fe.retry')}</ActionButton>}/>
  </main>;
+ if(!state.boot.account.onboarded)return <main className="fe-app"><Register/></main>;
  return <FeLayout/>;
 }
 
 function FeLayout(){
  const {state,acting}=useFe();const {t}=useI18n();
  if(state.status!=='ready')return null;
- const onboarded=state.boot.account.onboarded;
  return <div className="fe-app fe-layout">
   <aside className="fe-side" aria-label={t('fe.nav.aria')}>
    <div className="fe-wordmark">Fet<span>Ure</span></div>
    <nav>{FE_TABS.map(tab=><NavLink key={tab.id} to={'/n/'+tab.id} className="fe-side-link"><Icon name={tab.icon} size={22}/><span>{t('fe.nav.'+tab.id)}</span></NavLink>)}</nav>
    {acting&&<NavLink to="/n/me" className="fe-side-me"><Avatar name={acting.name||acting.handle||'?'} size="s" couple={acting.kind==='couple'}/><span>{acting.name||'@'+acting.handle}</span></NavLink>}
   </aside>
-  <main className="fe-main">{onboarded?<Outlet/>:<FeOnboardingNeeded/>}</main>
+  <main className="fe-main"><Outlet/></main>
   <nav className="fe-dock" aria-label={t('fe.nav.aria')} style={{'--fe-tabs':FE_TABS.length} as CSSProperties}>
    {FE_TABS.map(tab=><NavLink key={tab.id} to={'/n/'+tab.id} className="fe-dock-link"><Icon name={tab.icon} size={23}/><span>{t('fe.nav.'+tab.id)}</span></NavLink>)}
   </nav>
  </div>;
-}
-
-/** Registration lives in slice C; until then the shell says honestly what is missing. */
-function FeOnboardingNeeded(){
- const {t}=useI18n();
- return <div className="fe-center"><StateCard icon="user" title={t('fe.onboarding.title')} text={t('fe.onboarding.text')}/></div>;
 }

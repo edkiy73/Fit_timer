@@ -22,7 +22,7 @@ type FeSession={
  acting:ProfileCard|null;
  setActing:(profileId:string)=>void;
  reload:()=>void;
- call:<T>(action:string,input:Record<string,unknown>,schema:z.ZodType<T>,opts?:{asAccount?:boolean,signal?:AbortSignal})=>Promise<T>;
+ call:<T>(action:string,input:Record<string,unknown>,schema:z.ZodType<T>,opts?:{asAccount?:boolean,profileId?:string,signal?:AbortSignal})=>Promise<T>;
 };
 
 const Ctx=createContext<FeSession|null>(null);
@@ -47,9 +47,9 @@ export function FeSessionProvider({children}:{children:ReactNode}){
  const acting=profiles.find(p=>p.id===actingId)??profiles.find(p=>p.kind==='person')??null;
  const setActing=useCallback((id:string)=>{setActingId(id);try{sessionStorage.setItem(ACTING_KEY,id);}catch{/* this tab only */}},[]);
  const reload=useCallback(()=>setNonce(n=>n+1),[]);
- const call=useCallback(<T,>(action:string,input:Record<string,unknown>,schema:z.ZodType<T>,opts:{asAccount?:boolean,signal?:AbortSignal}={})=>{
+ const call=useCallback(<T,>(action:string,input:Record<string,unknown>,schema:z.ZodType<T>,opts:{asAccount?:boolean,profileId?:string,signal?:AbortSignal}={})=>{
   if(state.status!=='ready')return Promise.reject(new FeError('auth_required'));
-  return feRequest(state.session,action,input,schema,{signal:opts.signal,profileId:opts.asAccount?undefined:acting?.id});
+  return feRequest(state.session,action,input,schema,{signal:opts.signal,profileId:opts.asAccount?undefined:opts.profileId??acting?.id});
  },[state,acting?.id]);
  const value=useMemo(()=>({state,acting,setActing,reload,call}),[state,acting,setActing,reload,call]);
  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
