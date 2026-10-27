@@ -10,7 +10,7 @@ const meta={
  title:'Кнопки/Кнопка',component:Btn,tags:['autodocs'],
  parameters:{docs:{description:{component:'Главное действие экрана или группы. **Одна главная на группу**; вторая — `soft`, опасная — `danger`, лёгкая — `text`. Загрузка (`busy`) — мягкое мигание на месте, без спиннера и без изменения ширины. Не пиши свою кнопку через `<button className="btn">`.'}}},
  args:{children:'Опубликовать',kind:'primary',size:'',auto:false,disabled:false,busy:false,onClick:fn()},
- argTypes:{kind:{control:'inline-radio',options:['primary','soft','danger','text']},size:{control:'inline-radio',options:['','md','sm'],labels:{'':'48','md':'44','sm':'36'}},icon:iconArg},
+ argTypes:{kind:{control:'inline-radio',options:['primary','soft','danger','text','dark']},size:{control:'inline-radio',options:['','md','sm'],labels:{'':'48','md':'44','sm':'36'}},icon:iconArg},
 } satisfies Meta<typeof Btn>;
 export default meta;
 type S=StoryObj<typeof meta>;
@@ -34,3 +34,5 @@ export const КруглыеВсе:StoryObj<typeof IconBtn>={name:'Круглые
  <IconBtn icon={Bell} label="Обычная"/><IconBtn icon={Heart} kind="ghost" label="Прозрачная"/><IconBtn icon={Plus} kind="add" label="Акцент"/><IconBtn icon={Trash2} size="sm" label="Маленькая"/>
  <IconBtn icon={Bell} label="С бейджем" badge={4}/><IconBtn icon={Bell} label="Много" badge={120}/><IconBtn icon={Bell} label="Точка" badge="dot"/><IconBtn icon={Settings} label="Выключена" disabled/></Stack>};
 export const ВРяду:S={name:'В ряду: по ширине текста (fit)',render:()=><div className="row g8"><Btn kind="soft" fit>Изменить</Btn><Btn>Опубликовать</Btn></div>};
+export const Тёмная:S={name:'Тёмная (на светлой вуали)',args:{kind:'dark',children:'Попросить доступ'}};
+export const Квадратная:S={name:'Квадратная с иконкой (square)',render:a=><Stack row gap={2}><Btn kind="soft" square icon={Trash2} aria-label="Удалить"/><Btn {...a}/></Stack>,args:{children:'Сохранить'}};

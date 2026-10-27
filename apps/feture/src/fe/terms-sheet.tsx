@@ -32,7 +32,7 @@ export function TermsSheet({onClose}:{onClose:()=>void}){
  return <Sheet title={title} onClose={onClose}
   foot={open?<Btn kind="soft" icon={ChevronLeft} onClick={()=>setOpen(null)}>{t('fe.back')}</Btn>:<Btn onClick={onClose}>{t('fe.onb.terms.ok')}</Btn>}>
   {open?<div className="md">{open.blocks.map((b,i)=>b.type==='heading'?<H key={i} level={4} as="h3" className="t">{b.text}</H>
-    :b.type==='list'?<ul key={i} className="note">{b.items.map((x,j)=><li key={j}>{x}</li>)}</ul>
+    :b.type==='list'?<Note key={i} as="ul">{b.items.map((x,j)=><li key={j}>{x}</li>)}</Note>
     :<Note key={i}>{b.text}</Note>)}</div>
    :<>
     {facts.map(([Icon,k])=><div key={k} className="fact"><i className="v"><Icon/></i><span><b>{t(`fe.onb.terms.${k}`)}.</b> {t(`fe.onb.terms.${k}Text`)}</span></div>)}

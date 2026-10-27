@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Ban,Check,ChevronDown,ChevronLeft,ChevronRight,EyeOff,Heart,Ellipsis,History,Info,KeyRound,Lock,MapPin,MessageCircle,SlidersHorizontal,Sparkles,Undo2,Users,X} from 'lucide-react';
-import {Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,H,IconBtn,Note,Pill,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,View,plate} from './kit';
+import {Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,H,IconBtn,LikeTile,Note,PersonName,Pill,Radar,RangeDual,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,View,plate} from './kit';
 import {useFe} from './session';
 import {NameBadges} from './faces';
 import {BellButton} from './inbox';
@@ -136,7 +136,6 @@ function DiscoverFilter({initial,onClose,onApplied}:{initial:Filter,onClose:()=>
    </div>
   </Sheet>;
  }
- const lo=(f.ageMin-18)/81*100,hi=(f.ageMax-18)/81*100;
  return <Sheet full title={t('fe.df.title')} onClose={onClose}
   head={<Btn kind="text" auto className={on?undefined:'off'} aria-disabled={on?undefined:true} onClick={()=>{if(on){setF(DF_DEFAULT);setWhere('any');}}}>{t('fe.df.reset')}</Btn>}
   foot={<>
@@ -154,15 +153,13 @@ function DiscoverFilter({initial,onClose,onApplied}:{initial:Filter,onClose:()=>
      <ChoiceChips label={t('fe.df.show')} value={f.show} options={(['all','people','pairs'] as const).map(v=>[v,t('fe.df.show.'+v)] as const)} onChange={v=>setF(x=>({...x,show:v}))}/>
     </section>
     <section className="fin"><div className="fin-t"><b>{t('fe.df.age')}</b><b className="fin-v">{f.ageMin}–{f.ageMax}</b>{(f.ageMin!==18||f.ageMax!==99)&&clr(()=>setF(x=>({...x,ageMin:18,ageMax:99})))}</div>
-     <div className="age-filter"><div className="dual"><span className="trk"><i style={{left:lo+'%',right:(100-hi)+'%'}}/></span>
-      <input type="range" min={18} max={99} value={f.ageMin} onChange={e=>age(0,+e.target.value)} aria-label={t('fe.df.ageMin')}/>
-      <input type="range" min={18} max={99} value={f.ageMax} onChange={e=>age(1,+e.target.value)} aria-label={t('fe.df.ageMax')}/>
-     </div></div>
+     <div className="age-filter"><RangeDual min={18} max={99} lo={f.ageMin} hi={f.ageMax} label={t('fe.df.age')} labels={[t('fe.df.ageMin'),t('fe.df.ageMax')]}
+      onChange={(l,h)=>{if(l!==f.ageMin)age(0,l);else age(1,h);}}/></div>
     </section>
     <div className="df-more"><SectionLabel>{t('fe.df.more')}</SectionLabel><Card list>
      {DF_ROWS.map(([k])=>{const names=new Map(groups(k).flatMap(g=>g.list));const sel=f[k].map(v=>names.get(v)).filter((x):x is string=>!!x);
-      return <div key={k} className="df-row"><button type="button" className="li" onClick={()=>setSub(k)}><span className="tx"><b>{t('fe.df.row.'+k)}</b>
-       <small className={sel.length?'on':''}>{sel.length?sel.slice(0,2).join(', ')+(sel.length>2?fill(t('fe.df.andMore'),{n:sel.length-2}):''):t('fe.df.any')}</small></span><ChevronRight/></button>
+      return <div key={k} className="df-row"><Row title={t('fe.df.row.'+k)} onClick={()=>setSub(k)}
+       sub={<span className={sel.length?'on':''}>{sel.length?sel.slice(0,2).join(', ')+(sel.length>2?fill(t('fe.df.andMore'),{n:sel.length-2}):''):t('fe.df.any')}</span>}/>
        {f[k].length>0&&clr(()=>setF(x=>({...x,[k]:[]})))}</div>;})}
     </Card></div>
     {count&&count.count===0&&<Alert kind="warn" icon={Info} className="mt12"><b>{t('fe.df.nobody')}</b>{t('fe.df.nobodyText')}</Alert>}
@@ -263,7 +260,7 @@ function NextCard({c,cardRef}:{c:Card,cardRef:React.RefObject<HTMLElement|null>}
  const {locale}=useI18n();const city=c.city?(locale==='en'?c.city.en||c.city.ru:c.city.ru||c.city.en):null;
  return <article ref={cardRef as React.RefObject<HTMLElement>} className="pc next" inert aria-hidden="true">
   <div className="pc-ph"><CardPhoto c={c} src={photo(c)}/><CardTags c={c}/>
-   <div className="pc-info"><h2 className="pc-name"><span className="pcn">{cname(c)}</span>{c.ages.length>0&&<span>{c.ages.join(' · ')}</span>}<NameBadges p={c}/></h2>
+   <div className="pc-info"><PersonName name={cname(c)} age={c.ages.join(' · ')}><NameBadges p={c}/></PersonName>
     {city&&<div className="pc-who"><span className="pl"><MapPin/>{city}</span></div>}</div>
   </div>
  </article>;
@@ -314,7 +311,7 @@ function TopCard({c,cardRef,nextRef,actsRef,onDecide,toast}:{c:Card,cardRef:Reac
    <div className="pc-zone c" aria-hidden="true" onClick={()=>list.length?setView(i):undefined}/>
    <CardTags c={c}/>
    <div className="stamp l">{t('fe.px.deck.stampLike')}</div><div className="stamp n">{t('fe.px.deck.stampPass')}</div>
-   <div className="pc-info"><h2 className="pc-name"><span className="pcn">{name}</span>{c.ages.length>0&&<span>{c.ages.join(' · ')}</span>}<NameBadges p={c}/></h2>
+   <div className="pc-info"><PersonName name={name} age={c.ages.join(' · ')}><NameBadges p={c}/></PersonName>
     {city&&<div className="pc-who"><span className="pl"><MapPin/>{city}</span></div>}
     <FollowCounts id={c.id} rel={rel}/>
     <div className="pc-hint"><ChevronDown/>{t('fe.px.card.hint')}</div>
@@ -347,43 +344,32 @@ function DatingOff({onChanged,toast}:{onChanged:()=>void,toast:(m:string,err?:bo
    if(r.pending){toast(t('fe.px.off.wait'));return;}
    const hasPhoto=acting?.avatar!=null;toast(value==='hidden'?t('fe.px.off.peekDone'):hasPhoto?t('fe.px.off.onDone'):t('fe.px.off.onNoPhoto'));onChanged();}
   catch(e){toast(pxError(e,t),true);}finally{setBusy('');}};
- return <div className="empty" style={{paddingTop:8}}>
-  {couple?<span className="ico l"><Heart/></span>:<div className="pair-art" aria-hidden="true"><span className="pa-o pa-o1"/><span className="pa-o pa-o2"/><span className="pa-ring"/><span className="pa-heart"><HeartF/></span><i className="pa-d d1"/><i className="pa-d d2"/><i className="pa-d d3"/></div>}
-  <h3 style={couple?undefined:{fontSize:24}}>{t(couple?'fe.px.off.titleUs':'fe.px.off.title')}</h3>
-  <p style={{maxWidth:340}}>{t(couple?'fe.px.off.textUs':'fe.px.off.text')}</p>
-  <div className="dmode">
+ return <Empty top big={!couple} title={t(couple?'fe.px.off.titleUs':'fe.px.off.title')} text={t(couple?'fe.px.off.textUs':'fe.px.off.text')}
+  art={couple?<span className="ico l"><Heart/></span>:<div className="pair-art" aria-hidden="true"><span className="pa-o pa-o1"/><span className="pa-o pa-o2"/><span className="pa-ring"/><span className="pa-heart"><HeartF/></span><i className="pa-d d1"/><i className="pa-d d2"/><i className="pa-d d3"/></div>}
+  after={<><div className="dmode">
    <button type="button" className={'dm'+(busy==='hidden'?' busy':'')} onClick={()=>set('hidden')} disabled={!!busy}><span className="ico v"><EyeOff/></span><span className="tx"><b>{t('fe.px.off.peek')}</b></span><ChevronRight/></button>
    <button type="button" className={'dm'+(busy==='visible'?' busy':'')} onClick={()=>set('visible')} disabled={!!busy}><span className="ico l"><Heart/></span><span className="tx"><b>{t('fe.px.off.on')}</b>{couple&&<small>{t('fe.px.off.onUsSub')}</small>}</span><ChevronRight/></button>
   </div>
   {couple?<Btn kind="text" auto className="mt12" onClick={()=>navigate('/n/me?layer=vis')}>{t('fe.px.off.allVis')}</Btn>
-   :<div className="card list mt16" style={{textAlign:'left',width:'100%'}}>
-    <div className="li"><span className="ico g"><Check/></span><span className="tx"><b>{t('fe.px.off.stays')}</b><small>{t('fe.px.off.staysSub')}</small></span></div>
-    <div className="li"><span className="ico"><MessageCircle/></span><span className="tx"><b>{t('fe.px.off.chat')}</b><small>{t('fe.px.off.chatSub')}</small></span></div>
-   </div>}
- </div>;
+   :<Card list className="mt16">
+    <Row icon={Check} tone="g" title={t('fe.px.off.stays')} sub={t('fe.px.off.staysSub')}/>
+    <Row icon={MessageCircle} title={t('fe.px.off.chat')} sub={t('fe.px.off.chatSub')}/>
+   </Card>}</>}/>;
 }
 
 /** D10 — nobody left: the radar, why (filters or simply everyone seen), and where to go next. */
 function DeckEmpty({byFilter,filterOn,openFilter,likesN,toLikes}:{byFilter:number|null,filterOn:number,openFilter:()=>void,likesN:number,toLikes:()=>void}){
  const {acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const byF=!!byFilter&&byFilter>0;
- return <div className="empty" style={{paddingTop:4}}>
-  <div className="radar"><i/><i/><i/>
-   <span className="me">{acting?.avatar?<img src={acting.avatar} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<div className="plate" style={plate(acting?.id??'me')}/>}</span>
-   <span className="dot" style={{left:18,top:60,position:'absolute',overflow:'hidden'}}><div className="plate" style={plate('sea')}/></span>
-   <span className="dot" style={{right:24,top:150,width:22,height:22,position:'absolute',overflow:'hidden'}}><div className="plate" style={plate('amber')}/></span>
-  </div>
-  <H level={2} as="h3">{byF?t('fe.px.empty.byF'):t('fe.px.empty.title')}</H>
-  <p>{byF?fill(t('fe.px.empty.byFText'),{n:byFilter!>=100?'100+':byFilter!}):filterOn?t('fe.px.empty.withF'):t('fe.px.empty.text')}</p>
-  <div className="btns">
+ return <Empty top big title={byF?t('fe.px.empty.byF'):t('fe.px.empty.title')} art={<Radar src={acting?.avatar} seed={acting?.id??'me'}/>}
+  text={byF?fill(t('fe.px.empty.byFText'),{n:byFilter!>=100?'100+':byFilter!}):filterOn?t('fe.px.empty.withF'):t('fe.px.empty.text')}
+  after={<Card list className="mt16">
+   <Row icon={Users} tone="v" title={t('fe.px.empty.comm')} sub={t('fe.px.empty.commSub')} onClick={()=>navigate('/n/communities')}/>
+   <Row icon={Sparkles} tone="l" title={t('fe.px.empty.int')} sub={t('fe.px.empty.intSub')} onClick={()=>navigate('/n/me/interests')}/>
+  </Card>}>
    {filterOn>0&&<Btn onClick={openFilter}>{t('fe.px.empty.change')}</Btn>}
    <Btn kind="soft" onClick={toLikes}>{t('fe.px.empty.likes')}{likesN?` · ${likesN}`:''}</Btn>
    <Btn kind="text" onClick={()=>navigate('/n/people/history')}>{t('fe.px.empty.recent')}</Btn>
-  </div>
-  <div className="card list mt16" style={{textAlign:'left',width:'100%'}}>
-   <Row icon={Users} tone="v" title={t('fe.px.empty.comm')} sub={t('fe.px.empty.commSub')} onClick={()=>navigate('/n/communities')}/>
-   <Row icon={Sparkles} tone="l" title={t('fe.px.empty.int')} sub={t('fe.px.empty.intSub')} onClick={()=>navigate('/n/me/interests')}/>
-  </div>
- </div>;
+ </Empty>;
 }
 
 /* ---------- D06 likes ---------- */
@@ -415,13 +401,12 @@ function Likes({onCount,toDiscover}:{onCount:(n:number)=>void,toDiscover:()=>voi
    onClick={()=>navigate('/n/people/'+c.id)}
    end={<><Pill tone="wait">{t('fe.px.lk.pendingPill')}</Pill><IconBtn icon={X} kind="ghost" size="sm" label={t('fe.px.lk.unlike')} disabled={busy===c.id} onClick={()=>unlike(c)}/></>}/>;})}</Card>
   :<Empty icon={Heart} title={t('fe.px.lk.outEmpty')} text={t('fe.px.lk.outEmptyText')}><Btn kind="soft" onClick={toDiscover}>{t('fe.px.lk.toDiscover')}</Btn></Empty>;
- else body=inc.length?<div className="likes">{inc.map((l,i)=>{const c=l.profile;const src=photo(c);const age=c.ages.length?', '+c.ages.join(' · '):'';
-  return <div key={c.id} className="lk" style={{animationDelay:`${i*50}ms`}}>
-   <button type="button" style={{position:'absolute',inset:0}} aria-label={cname(c)} onClick={()=>navigate('/n/people/'+c.id)}>{src?<img src={src} alt="" draggable={false}/>:<div className="plate" style={plate(c.id)}/>}</button>
+ else body=inc.length?<div className="likes">{inc.map(l=>{const c=l.profile;const src=photo(c);const age=c.ages.length?', '+c.ages.join(' · '):'';
+  return <LikeTile key={c.id} src={src} seed={c.id} label={cname(c)} onOpen={()=>navigate('/n/people/'+c.id)}
+   name={<><b>{cname(c)}{age}</b>{c.kind==='couple'&&<Pill className="lk-pair">{t('fe.px.lk.couple')}</Pill>}</>}>
    <button type="button" className="lkx" aria-label={t('fe.px.lk.pass')} disabled={busy===c.id} onClick={()=>dismiss(c)}><X/></button>
-   <span className="inf"><b>{cname(c)}{age}</b>{c.kind==='couple'&&<small className="pill lk-pair">{t('fe.px.lk.couple')}</small>}</span>
    <button type="button" className="lkb" aria-label={t('fe.px.lk.back')} disabled={busy===c.id} onClick={()=>back(c)}><HeartF/></button>
-  </div>;})}</div>
+  </LikeTile>;})}</div>
   :<Empty icon={Heart} title={t('fe.px.lk.inEmpty')} text={t(us?'fe.px.lk.inEmptyUs':'fe.px.lk.inEmptyText')}><Btn kind="soft" onClick={()=>navigate('/n/me')}>{t(us?'fe.px.lk.improveUs':'fe.px.lk.improve')}</Btn></Empty>;
  return <>
   <View>{seg}{body}</View>
@@ -451,7 +436,7 @@ export function PersonScreen(){
   </Bar>
   {blocked?<View><Empty icon={Ban} title={t('fe.px.bl.stateTitle')} text={t('fe.px.bl.stateText')}><Btn kind="soft" onClick={()=>setMenu('menu')}>{t('fe.px.menu.unblock')}</Btn></Empty></View>
    :error?<View><Empty icon={Lock} title={t('fe.px.unavailable')} text={pxError(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty></View>
-   :<div className="view nodock top0 profile-page"><div className="wrap"><div className="hero"><i className="sk sk-media" style={{position:'absolute',inset:0}}/></div><Skel kind="card" rows={2}/></div></div>}
+   :<div className="view nodock top0 profile-page"><div className="wrap"><div className="hero"><Skel kind="fill" rows={1}/></div><Skel kind="card" rows={2}/></div></div>}
   {blocked&&<PersonMenu profileId={id} name={name} step={menu} setStep={setMenu} blocked setBlocked={setBlock} toast={toast}/>}
   {toastNode}
  </>;

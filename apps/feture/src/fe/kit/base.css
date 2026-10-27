@@ -1354,7 +1354,7 @@
 .v21 .fcounts button:hover{background:var(--raise);color:var(--ink)}
 .v21 .fcounts b{font-size:var(--fs-md);font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
 .v21 .frow{gap:8px}
-.v21 .frow-go{flex:1;min-width:0;display:flex;align-items:center;gap:12px;text-align:left}
+.v21 .frow-go,.v21 .frow>.k-li-main{flex:1;min-width:0;display:flex;align-items:center;gap:12px;text-align:left}
 .v21 .frow .btn.sm{width:auto;flex:none}
 /* names and avatars that open a profile without hijacking neighbouring buttons */
 .v21 .plink{flex:none;border-radius:50%;align-self:flex-start}
@@ -1797,7 +1797,7 @@
 .v21 .w-kick{display:inline-flex;align-items:center;gap:8px;justify-self:start;margin:0;padding:6px 12px 6px 10px;border-radius:var(--r-full);background:rgba(255,255,255,.07);box-shadow:inset 0 0 0 1px var(--line2);font-size:var(--fs-cap);font-weight:650;letter-spacing:.02em;color:var(--mute)}
 .v21 .w-kick i{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 0 rgba(255,61,97,.6);animation:wPulse 2.4s ease-out infinite}
 @keyframes wPulse{0%{box-shadow:0 0 0 0 rgba(255,61,97,.6)}70%,100%{box-shadow:0 0 0 9px rgba(255,61,97,0)}}
-.v21 .w-title{margin:0;font:800 clamp(38px,11vw,52px)/.98 var(--font);letter-spacing:-.05em;text-wrap:balance}
+.v21 h1.w-title{margin:0;font:800 clamp(38px,11vw,52px)/.98 var(--font);letter-spacing:-.05em;text-wrap:balance}
 .v21 .w-title em{font-style:normal;background:linear-gradient(100deg,#FF3D61 10%,#FF7A93 45%,#A797FF 90%);-webkit-background-clip:text;background-clip:text;color:transparent}
 .v21 .w-sub{margin:0;max-width:34ch;font-size:var(--fs-md);line-height:1.45;color:var(--mute)}
 /* the slider card: glass, one grid cell for all slides */
@@ -1886,7 +1886,7 @@
  .v21 .welcome.wv{padding:28px 40px 28px;justify-content:flex-start}
  .v21 .welcome.wv>*:not(.w-aura):not(.w-mark){width:100%;max-width:640px;margin-inline:auto}
  .v21 .w-grid{gap:22px;padding-top:28px}
- .v21 .w-title{font-size:60px}
+ .v21 h1.w-title{font-size:60px}
  .v21 .w-sub{font-size:var(--fs-h4)}
  .v21 .w-show{padding:18px 20px 14px;border-radius:32px}
  .v21 .w-vis{min-height:230px}
@@ -2878,7 +2878,7 @@
 .v21 .cmc>.cv,
 .v21 .evc.row>.cv,
 .v21 .chat-row>:first-child,
-.v21 .frow-go>:first-child,
+.v21 .frow-go>:first-child,.v21 .frow>.k-li-main>:first-child,
 .v21 .me-id>:first-child,
 .v21 .rqrow .top>:first-child,
 .v21 .plink.row>:first-child,
@@ -3080,7 +3080,7 @@
 .v21 .df-row{position:relative;display:flex;align-items:center}
 .v21 .df-row>.li{flex:1;min-width:0}
 .v21 .df-row .tx small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.v21 .df-row .tx small.on{color:var(--accent);font-weight:600}
+.v21 .df-row .tx small .on{color:var(--accent);font-weight:600}
 .v21 .df-row>.fclr{position:absolute;right:40px;top:50%;transform:translateY(-50%)}
 .v21 .df-row:has(>.fclr) .tx{padding-right:36px}
 .v21 .df-sum{margin:0 0 8px;font-size:var(--fs-xs);color:var(--mute);text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -3652,7 +3652,7 @@
 /* V21 (PPL-015): over a scrolled card the action buttons stand on a solid fade — text and tiles don't show between them */
 .v21 .acts:not(.onphoto){padding-top:34px;background:linear-gradient(to top,var(--surf) 64%,color-mix(in srgb,var(--surf) 0%,transparent))}
 /* V21 (PPL-014) */
-.v21 .lk .inf small.lk-pair{display:inline-block;margin-top:5px;padding:2px 8px;border-radius:var(--r-s);background:rgba(255,255,255,.22);color:#fff;font-size:var(--fs-micro);font-weight:600;opacity:1}
+.v21 .lk .inf .lk-pair{display:inline-block;margin-top:5px;padding:2px 8px;border-radius:var(--r-s);background:rgba(255,255,255,.22);color:#fff;font-size:var(--fs-micro);font-weight:600;opacity:1}
 /* V21 (PPL-010): history card + its own «Вернуть» */
 .v21 .hwrap{position:relative;min-width:0}.v21 .hwrap>.hcard{display:block;width:100%}
 .v21 .hrest{position:absolute;right:6px;top:6px;z-index:3;display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:rgba(10,6,10,.62);color:#fff;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}.v21 .hrest svg{width:16px;height:16px}.v21 .hrest[disabled]{opacity:1;color:#6BD3A4}
@@ -3726,7 +3726,7 @@
 /* V21 (ME-051) */
 .v21 .rte-tb button[disabled]{opacity:.35;pointer-events:none}
 /* V21 (ME-029): on very narrow phones the follower's buttons go under the name so the name stays readable */
-@container stage (max-width:360px){.v21 .frow{flex-wrap:wrap;row-gap:6px}.v21 .frow-go{flex:1 1 100%}.v21 .frow .btn.sm{margin-left:auto}}
+@container stage (max-width:360px){.v21 .frow{flex-wrap:wrap;row-gap:6px}.v21 .frow-go,.v21 .frow>.k-li-main{flex:1 1 100%}.v21 .frow .btn.sm{margin-left:auto}}
 /* ==== V21 · me · CSS end ==== */
 /* · */
 /* · */

@@ -35,6 +35,31 @@ A new component or variant ships with its story in the same PR.
 | Feedback | `Alert` (ok / err / warn / info in the flow), `useToast` (transient, with «Отменить»), `Empty`, `Skel` |
 | People | `Av` |
 | Verification shot | `CaptureFrame` (face oval / document frame, hint, the taken shot whole; tokens `--cam-*`) |
+| Spacing | `Stack` (gap, row, align, justify), `Spacer` (room between blocks outside a Stack), `Divider` |
+
+Round 4 variants: `Btn kind="dark"` (on a light veil) and `square` (icon-only, button height); `Row` `body` (a plain
+step line), `extra` (content under the title as is), `expanded` (chevron down for a row that opens a section), title
+optional; `Chip inactive` (looks normal, not reachable — its group is dimmed); `Alert` `action` (buttons under the
+text), `onClick` (the whole notice opens something), `role="alertdialog"` (an inline question); `Text bold` /
+`breakAll`; `Empty big` / `top` / `after`; `Skel kind="fill"` (fills a cover) / `"event"`; `CodeInput` `disabled`,
+`onComplete`, `onEnter`, `digitLabel` (the app's `.code` look); `RangeDual labels`; `Note as="ul"`.
+Token added: `--fs-xl` (24).
+
+## Domain components (`kit/domain.tsx`, Storybook «Домен»)
+
+Product pieces that repeat or carry their own look. Screens use these, never the markup.
+
+| Need | Use |
+|---|---|
+| Header over a cover / of a chat | `CoverBar` (glass buttons, title shows on scroll), `PersonBar` (‹, avatar + name + line, opens the profile) |
+| Event | `EventTile` (`eventCard()`: card / `row` / still preview), `EventHero` (cover, glass labels, title, status), `Rsvp` («Интересно / Иду / Не иду»), `Announcement` |
+| Community | `CommunityHead` (cover, picture, name, meta; loading shape), `Discussion` (row with pinned mark and host ⋯), `Veil` (closed content under glass) |
+| Create | `Swatches` (cover colour plates) |
+| Interests | `AnswerScale` (1–10 with «обсудить» / «граница» marks) |
+| People | `PersonName` (name on a photo card), `PersonLine` + `RequestCard` + `Answer` (requests and applications), `LikeTile`, `Radar` |
+| Photos and checks | `PhotoSlots` / `PhotoSlot` / `PhotoAdd` (profile photo grid, drag to reorder, `loading`), `PhotoTrack` (viewer strip), `Pose` (the gesture to show; the shot itself is `CaptureFrame`) |
+| Private layer | `VaultHead` (lock, title, switch) |
+| Staff review | `ReviewCard`, `KeyValues`, `ReviewMedia`, `ReviewPair` |
 
 Loading is a soft blink in place (`Skel`, `busy`), never a spinner. Icons come only from `lucide-react`.
 

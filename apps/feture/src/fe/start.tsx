@@ -3,7 +3,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import type {AuthResponseError} from '@appbase/core/auth.js';
 import {CircleAlert,Mail} from 'lucide-react';
-import {Bar,Btn,Field,H,Input,Seg} from './kit';
+import {Bar,Btn,CodeInput,Field,H,Input,Seg} from './kit';
 import {ToastProvider} from './toast';
 import {Welcome} from './welcome';
 
@@ -80,15 +80,16 @@ function EmailStep({mode,onBack,onMode,onCode}:{mode:Mode,onBack:()=>void,onMode
 const RESEND=30;
 function CodeStep({email,sent,onBack}:{email:string,sent:boolean,onBack:()=>void}){
  const {client,acceptSession}=useOptionalAuth();const {t,locale}=useI18n();
- const [digits,setDigits]=useState<string[]>(['','','','','','']);const [error,setError]=useState('');const [busy,setBusy]=useState(false);
+ const [code,setCode]=useState('');const [error,setError]=useState('');const [busy,setBusy]=useState(false);
  const [locked,setLocked]=useState(false);const [sentAt,setSentAt]=useState(()=>sent?Date.now():0);const [now,setNow]=useState(Date.now());
- const inputs=useRef<(HTMLInputElement|null)[]>([]);const box=useRef<HTMLDivElement>(null);
+ const box=useRef<HTMLDivElement>(null);
+ const first=()=>box.current?.querySelector<HTMLInputElement>('input')?.focus();
  const left=Math.max(0,RESEND-Math.round((now-sentAt)/1000));
  const ticking=left>0;
  useEffect(()=>{if(!ticking)return;const id=setInterval(()=>setNow(Date.now()),1000);return ()=>clearInterval(id);},[ticking]);
- useEffect(()=>{inputs.current[0]?.focus();},[]);
+ useEffect(()=>{first();},[]);
  const masked=email.replace(/^(.)(.*)(@.*)$/,(_x,a:string,b:string,c:string)=>a+'•'.repeat(Math.min(6,b.length))+c);
- const fail=(m:string)=>{setError(m);setDigits(['','','','','','']);inputs.current[0]?.focus();const b=box.current;if(b){b.classList.remove('shake');void b.offsetWidth;b.classList.add('shake');}};
+ const fail=(m:string)=>{setError(m);setCode('');first();const b=box.current;if(b){b.classList.remove('shake');void b.offsetWidth;b.classList.add('shake');}};
  const check=async(code:string)=>{
   if(code.length<6){setError(t('fe.onb.code.all'));return;}
   if(locked||busy)return;
@@ -102,17 +103,9 @@ function CodeStep({email,sent,onBack}:{email:string,sent:boolean,onBack:()=>void
    else fail(t('fe.onb.failed'));}
   finally{setBusy(false);}
  };
- const type=(i:number,raw:string)=>{
-  const v=raw.replace(/\D/g,'');const next=[...digits];
-  if(v.length>1)v.split('').slice(0,6-i).forEach((d,k)=>{next[i+k]=d;});else next[i]=v;
-  setDigits(next);setError('');
-  const code=next.join('');
-  if(v&&i<5)inputs.current[Math.min(5,i+v.length)]?.focus();
-  if(code.length===6)void check(code);
- };
  const resend=async()=>{
   setBusy(true);setError('');
-  try{await client.sendCode(email,locale==='en'?'en':'ru');setSentAt(Date.now());setNow(Date.now());setLocked(false);setDigits(['','','','','','']);inputs.current[0]?.focus();}
+  try{await client.sendCode(email,locale==='en'?'en':'ru');setSentAt(Date.now());setNow(Date.now());setLocked(false);setCode('');first();}
   catch(e){const c=codeOf(e);setError(t(c==='rate_limited'?'fe.onb.email.limit':c==='too_many_today'?'fe.onb.email.today':c==='mail_failed'||c==='no_mail'?'fe.onb.email.mailFailed':'fe.onb.failed'));}
   finally{setBusy(false);}
  };
@@ -122,10 +115,10 @@ function CodeStep({email,sent,onBack}:{email:string,sent:boolean,onBack:()=>void
    <AuthLogo/>
    <H level={2} className="t">{t('fe.onb.code.title')}</H>
    <p className="lead">{sent?t('fe.onb.code.sent'):t('fe.onb.code.enterFor')} <b>{masked}</b>. {t('fe.onb.code.valid')}</p>
-   <div ref={box} className={'code'+(error?' err':'')} data-field="code">{digits.map((d,i)=><input key={i} ref={el=>{inputs.current[i]=el;}} inputMode="numeric" autoComplete="one-time-code" aria-label={`${t('fe.onb.code.digit')} ${i+1}`}
-    value={d} disabled={locked} onChange={e=>type(i,e.target.value)} onKeyDown={e=>{if(e.key==='Backspace'&&!digits[i]&&i>0)inputs.current[i-1]?.focus();if(e.key==='Enter')void check(digits.join(''));}}/>)}</div>
+   <CodeInput ref={box} name="code" label={t('fe.onb.code.title')} digitLabel={t('fe.onb.code.digit')} value={code} invalid={!!error} disabled={locked}
+    onChange={v=>{setCode(v);setError('');}} onComplete={v=>void check(v)} onEnter={v=>void check(v)}/>
    {error&&<div className="ferr" role="alert"><CircleAlert/>{error}</div>}
-   <Btn className="mt24" onClick={()=>check(digits.join(''))} disabled={locked||busy} busy={busy}>{t('fe.onb.code.confirm')}</Btn>
+   <Btn className="mt24" onClick={()=>check(code)} disabled={locked||busy} busy={busy}>{t('fe.onb.code.confirm')}</Btn>
    <div className="authrow mt16">
     <Btn kind="text" auto onClick={onBack}>{t('fe.onb.code.change')}</Btn>
     <Btn kind="text" auto onClick={resend} disabled={!!left||busy}>{left?t('fe.onb.code.resendIn').replace('{n}',String(left)):t('fe.onb.code.resend')}</Btn>

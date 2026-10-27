@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Camera,Check,ChevronDown,ChevronRight,Clock,Eye,EyeOff,Users,Image as ImageIcon,KeyRound,Plus,Settings,Star,Trash2,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Ask as KitAsk,Av,Btn,Card,Empty,Group,H,IconBtn,Note,Row,Seg,SelectRow,Sheet,Skel,ToggleRow} from './kit';
+import {Alert,Ask as KitAsk,Av,Btn,Card,Empty,Group,H,IconBtn,Note,PhotoAdd,PhotoSlot,PhotoSlots,Row,Seg,SelectRow,Sheet,Skel,ToggleRow} from './kit';
 import {AgeCheckLink,useAgeResume} from './age-check';
 import {dropReadCache,useFe,useRealtime} from './session';
 import {PrivateLayer} from './private';
@@ -17,7 +17,6 @@ import {CoupleMembers,CouplePending,CoupleVisGroup} from './couple';
 import {linksMineRes} from './profile-extras';
 import {useToast} from './toast';
 import {useDragOrder} from './reorder';
-import './css/me.css';
 
 /** V21 X01 «Я» with the prototype's markup (`meHead18`, `meProfileLayer`, `meVisLayer`): the header with the avatar,
  * bell, «Как видят» and settings; «Нужно решить»; the four layers with their red dots; photos, basics, details,
@@ -125,10 +124,10 @@ export function MeTab(){
       {acting.kind==='couple'&&<><CouplePending base={p} tick={tick} onDecided={msg=>{setNotice(msg);load();}}/><CoupleMembers/></>}
       <PhotosBlock p={p} settings={settings} onChanged={load}/>
       <Group title={t('fe.me.basics')} action={<AudTag k="all"/>}>
-       <button type="button" className="card blk-btn" aria-label={t('fe.me.editBasics')} onClick={()=>navigate('/n/me/edit?only=basics')}>
+       <Card className="blk-btn" label={t('fe.me.editBasics')} onClick={()=>navigate('/n/me/edit?only=basics')}>
         <span className="blk-name">{name}{p.age&&p.showAge!==false?', '+p.age:''}{p.city&&(locale==='en'?p.city.en:p.city.ru)?' · '+(locale==='en'?p.city.en:p.city.ru):''}</span>
         <span className="blk-bio">{p.bio?p.bio.replace(/[*_~`>#[\]()]/g,'').slice(0,240):t('fe.mx.noBio')}</span><span className="chv"><ChevronRight/></span>
-       </button>
+       </Card>
       </Group>
       <DetailsBlock p={p} label={label}/>
       {acting.kind==='person'&&couple&&<StatusHint p={p} coupleId={couple.id} onDone={msg=>{setNotice(msg);load();}}/>}
@@ -156,7 +155,7 @@ export function MeTab(){
 
 /** The loading state shaped like the profile layer: the photo grid, then two cards. */
 function MeSkel(){
- return <div aria-busy="true"><section className="grp ph20"><div className="ph-slots"><i className="sk mi big" style={{display:'block',aspectRatio:'auto'}}/><i className="sk ph-add" style={{display:'block'}}/></div></section><Skel kind="card" rows={2}/></div>;
+ return <div aria-busy="true"><Group className="ph20"><PhotoSlots loading/></Group><Skel kind="card" rows={2}/></div>;
 }
 
 /** «Данные» — the filled rows only; the audience comes from the profile's `detailsVis`. */
@@ -166,11 +165,11 @@ function DetailsBlock({p,label}:{p:Profile,label:(kind:string,code:string)=>stri
   return codes.length?[field,t(kind==='status'?'fe.mx.f.status':'fe.reg.kind.'+kind),codes.map(c=>label(kind,c)).join(', ')]:null;}).filter((x):x is string[]=>!!x);
  const title=cp?t('fe.mx.detailsCouple'):t('fe.me.details');
  return <Group title={title} action={<AudTag k={p.detailsVis??'all'}/>}>
-  <button type="button" className="card blk-btn" aria-label={t('fe.mx.editOf',{title})} onClick={()=>navigate('/n/me/edit?only=details')}>
+  <Card className="blk-btn" label={t('fe.mx.editOf',{title})} onClick={()=>navigate('/n/me/edit?only=details')}>
    {rows.length?<dl className="kv">{rows.map(([f,k,v])=><Fragment key={f}><dt>{k}</dt><dd>{v}</dd></Fragment>)}</dl>
     :<p className="blk-empty">{cp?t('fe.mx.detailsEmptyCouple'):t('fe.mx.detailsEmpty')}</p>}
    <span className="chv"><ChevronRight/></span>
-  </button>
+  </Card>
  </Group>;
 }
 
@@ -185,9 +184,9 @@ function StatusHint({p,coupleId,onDone}:{p:Profile,coupleId:string,onDone:(msg:s
  if(!show)return null;
  const fix=async()=>{setBusy(true);setFailure('');try{await call('profile.update',{opId:newOpId(),rev:p.rev,status:'partnered'},ok);onDone(t('fe.me.saved'));}catch(e){setFailure(feErrorMessage(e,t));}finally{setBusy(false);}};
  const keep=()=>{try{localStorage.setItem(STAT_HINT_KEY,p.id);}catch{/* per-viewer convenience only */}setOff(true);};
- return <div className="alert info me-stat21"><Users/><span><b>{t(status?'fe.mx.stat.single':'fe.mx.stat.none',{name:partner||t('fe.mx.stat.partner')})}</b>
+ return <Alert kind="info" role="none" icon={Users} className="me-stat21"><b>{t(status?'fe.mx.stat.single':'fe.mx.stat.none',{name:partner||t('fe.mx.stat.partner')})}</b>
   <span className="me-stat21-a"><Btn size="sm" onClick={fix} disabled={busy} busy={busy}>{t('fe.mx.stat.fix')}</Btn><Btn size="sm" kind="soft" onClick={keep}>{t('fe.mx.stat.keep')}</Btn></span>
-  {failure&&<span className="note">{failure}</span>}</span></div>;
+  {failure&&<Note as="span">{failure}</Note>}</Alert>;
 }
 
 export const photoSrc=(m:{src:Record<string,string>|null},size:'card'|'thumb'|'full'='card')=>m.src?(m.src[size]??m.src.card??m.src.thumb??m.src.blur??null):null;
@@ -224,19 +223,15 @@ function PhotosBlock({p,settings,onChanged}:{p:Profile,settings:Settings,onChang
  const ids=items.map(x=>x.id);
  const nCells=items.length===1?2:Math.min(MAX_PHOTOS,Math.max(items.length+1,3));
  // The small thumb paints first, so the slot never sits empty while the card-size picture loads.
- const slots:ReactNode[]=items.map((ph,i)=><div key={ph.id} data-id={ph.id} className={'mi'+(i===0?' big':'')+(drag.preview?.drag===ph.id?' mi-ph':'')+(ph.src?'':' nosrc')+(ph.src?.thumb?' has-thumb':'')} onPointerDown={busy?undefined:e=>drag.down(e,'ph',ids,ph.id)}
-  style={ph.src?.thumb?{'--thumb':`url("${ph.src.thumb}")`} as CSSProperties:undefined}>
-  {photoSrc(ph)&&<img src={photoSrc(ph)!} alt="" draggable={false}/>}
-  {i===0&&<span className="mainph">{t('fe.me.mainPhoto')}</span>}
-  {ph.pending&&<span className="ph-rev"><Clock/><span>{t('fe.mx.ph.review')}</span></span>}
-  <button type="button" className="vw" aria-label={t('fe.mx.ph.nOf',{n:i+1,total:items.length})} onClick={()=>setOpen(i)}/>
- </div>);
+ const slots:ReactNode[]=items.map((ph,i)=><PhotoSlot key={ph.id} id={ph.id} big={i===0} dragging={drag.preview?.drag===ph.id} waiting={!ph.src} thumb={ph.src?.thumb} src={photoSrc(ph)}
+  main={i===0?t('fe.me.mainPhoto'):undefined} review={ph.pending?t('fe.mx.ph.review'):undefined} onPointerDown={busy?undefined:e=>drag.down(e,'ph',ids,ph.id)}
+  openLabel={t('fe.mx.ph.nOf',{n:i+1,total:items.length})} onOpen={()=>setOpen(i)}/>);
  for(let i=items.length;i<nCells;i++)slots.push(i===items.length
-  ?<button key="add" type="button" className={'ph-add'+(items.length===1?' tall':'')} onClick={edit} aria-label={t('fe.mx.ph.addAria')}><Plus/>{items.length===1&&<small>{t('fe.me.morePhotos')}</small>}</button>
-  :<span key={'g'+i} className="ph-add ghost" aria-hidden="true"/>);
+  ?<PhotoAdd key="add" tall={items.length===1} onClick={edit} label={t('fe.mx.ph.addAria')} hint={items.length===1?t('fe.me.morePhotos'):undefined}/>
+  :<PhotoAdd key={'g'+i} ghost/>);
  const x=open!==null?items[open]:undefined;
  return <Group className="ph20" id="mePh" title={t('fe.me.photos')} action={<><AudTag k="all"/><button type="button" onClick={edit}>{t('fe.mx.edit')}</button></>}>
-  <div className="ph-slots">{slots}</div>
+  <PhotoSlots>{slots}</PhotoSlots>
   {x&&open!==null&&<Sheet title={open===0?t('fe.mx.ph.main'):t('fe.mx.ph.nOf',{n:open+1,total:items.length})} onClose={()=>setOpen(null)}>
    <div className="ph-sheet-prev">{photoSrc(x)&&<img src={photoSrc(x)!} alt="" draggable={false}/>}{x.pending&&<span className="ph-rev"><Clock/><span>{t('fe.mx.ph.review')}</span></span>}</div>
    <Card list>
@@ -284,19 +279,19 @@ function Visibility({p,settings,onChanged}:{p:Profile,settings:Settings,onChange
  const modeSub=mode==='visible'&&!hasPhoto?(cp?t('fe.mx.v.noPhotoCouple'):t('fe.mx.v.noPhoto')):mode==='off'&&cp?t('fe.mx.v.offCouple'):cp?t('fe.mx.v.offNow'):t('fe.mx.v.modeSub');
  return <>
   <Group title={t('fe.reg.discover.title')}><Card list>
-   <div className="li"><SelectRow label={t('fe.mx.v.mode')} sub={modeSub} value={mode} onChange={v=>void set('discoverMode',v)}
-    options={(['visible','hidden','off'] as const).map(v=>[v,t('fe.mx.v.mode.'+v+(cp?'Us':''))] as const)}/></div>
+   <SelectRow row label={t('fe.mx.v.mode')} sub={modeSub} value={mode} onChange={v=>void set('discoverMode',v)}
+    options={(['visible','hidden','off'] as const).map(v=>[v,t('fe.mx.v.mode.'+v+(cp?'Us':''))] as const)}/>
    {mode==='visible'&&!hasPhoto&&<Row icon={Camera} title={t('fe.me.photoAdd')} sub={t('fe.mx.v.addPhotoSub')} onClick={()=>navigate('/n/me/edit?only=media')}/>}
    <Row title={cp?t('fe.mx.v.cardUs'):t('fe.mx.v.card')} sub={cp?t('fe.mx.v.cardSubUs'):t('fe.mx.v.cardSub')} onClick={()=>navigate('/n/me/preview')}/>
    {toggle('acceptProfileLikes',t('fe.mx.v.likes'),cp?t('fe.mx.v.likesSubUs'):t('fe.mx.v.likesSub'),settings.acceptProfileLikes!==false)}
   </Card></Group>
   <Group title={t('fe.me.layer.profile')} foot={cp?t('fe.mx.v.footUs'):undefined}><Card list>
-   <div className="li"><SelectRow label={t('fe.mx.v.activity')} sub={t('fe.mx.v.activitySub')} value={settings.activityVis??'all'} onChange={v=>void set('activityVis',v)}
-    options={(['all','followers','off'] as const).map(v=>[v,t('fe.mx.v.act.'+v)] as const)}/></div>
-   <div className="li"><SelectRow label={cp?t('fe.mx.v.mentionUs'):t('fe.mx.v.mention')} sub={t('fe.mx.v.mentionSub')} value={settings.mentionsFrom??'all'} onChange={v=>void set('mentionsFrom',v)}
-    options={(['all','follow','none'] as const).map(v=>[v,t('fe.mx.v.from.'+v+(v==='follow'&&cp?'Us':''))] as const)}/></div>
-   {!cp&&<div className="li"><SelectRow label={t('fe.mx.v.details')} sub={t('fe.mx.v.detailsSub')} value={(p.detailsVis??'all') as 'all'|'granted'|'only'} onChange={v=>void set('detailsVis',v)}
-    options={(['all','granted','only'] as const).map(v=>[v,t('fe.reg.vis.'+v)] as const)}/></div>}
+   <SelectRow row label={t('fe.mx.v.activity')} sub={t('fe.mx.v.activitySub')} value={settings.activityVis??'all'} onChange={v=>void set('activityVis',v)}
+    options={(['all','followers','off'] as const).map(v=>[v,t('fe.mx.v.act.'+v)] as const)}/>
+   <SelectRow row label={cp?t('fe.mx.v.mentionUs'):t('fe.mx.v.mention')} sub={t('fe.mx.v.mentionSub')} value={settings.mentionsFrom??'all'} onChange={v=>void set('mentionsFrom',v)}
+    options={(['all','follow','none'] as const).map(v=>[v,t('fe.mx.v.from.'+v+(v==='follow'&&cp?'Us':''))] as const)}/>
+   {!cp&&<SelectRow row label={t('fe.mx.v.details')} sub={t('fe.mx.v.detailsSub')} value={(p.detailsVis??'all') as 'all'|'granted'|'only'} onChange={v=>void set('detailsVis',v)}
+    options={(['all','granted','only'] as const).map(v=>[v,t('fe.reg.vis.'+v)] as const)}/>}
    {toggle('showLikes',cp?t('fe.mx.v.showLikesUs'):t('fe.mx.v.showLikes'),cp?t('fe.mx.v.showLikesSubUs'):t('fe.mx.v.showLikesSub'),settings.showLikes!==false)}
   </Card></Group>
   {failure&&<Alert kind="err" noIcon>{failure}{failure===t('fe.age.couple')&&<><br/><AgeCheckLink intent={ageIntent||undefined}/></>}</Alert>}
