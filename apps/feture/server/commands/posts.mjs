@@ -418,6 +418,7 @@ const run = {
        where p.state = 'published' and p.in_feed and p.community_id is null and feture.post_visible(p, $1, $2)
          and not exists (select 1 from feture.feed_hide h where h.profile_id = $1 and ((h.kind = 'post' and h.target_id = p.id) or (h.kind = 'author' and h.target_id = p.owner_profile_id)))
          and ($3::text[] is null or p.topics && $3)
+         and ($8::text is null or p.title ilike $8 or p.body ilike $8)
          and ($4 in ('forYou', 'popular') or p.owner_profile_id = $1
               or exists (select 1 from feture.follow f where f.follower_profile_id = $1 and f.target_profile_id = p.owner_profile_id)
               or (p.type = 'note' and exists (select 1 from feture.note_subscription n where n.subscriber_profile_id = $1 and n.author_profile_id = p.owner_profile_id)))
@@ -425,7 +426,9 @@ const run = {
          and ($4 <> 'popular' or p.published_at > now() - interval '14 days')
        order by case when $4 = 'popular' then (select count(*) from feture.reaction r where r.target_type = 'post' and r.target_id = p.id) end desc nulls last,
                 p.published_at desc, p.id desc limit $7`,
-      [viewer.profileId, viewer.accountId, input.topics?.length ? input.topics : null, input.tab, input.tab === 'popular' ? null : cur?.at ?? null, input.tab === 'popular' ? null : cur?.id ?? null, input.limit + 1]);
+      [viewer.profileId, viewer.accountId, input.topics?.length ? input.topics : null, input.tab, input.tab === 'popular' ? null : cur?.at ?? null, input.tab === 'popular' ? null : cur?.id ?? null, input.limit + 1,
+       // Search (I01): words in the title or text; % and _ typed by the person are literal.
+       input.q ? '%' + input.q.replace(/[\\%_]/g, (/** @type {string} */ m) => '\\' + m) + '%' : null]);
     const [acc] = await q.query('select show_explicit from feture.account where id = $1', [account.id]);
     const page = rows.slice(0, input.limit);
     // Posts are built side by side: the pool gate caps database concurrency, media URL signing overlaps.

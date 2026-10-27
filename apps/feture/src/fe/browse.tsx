@@ -149,13 +149,15 @@ export function SearchScreen(){
   const ctl=new AbortController();const low=term.toLowerCase();setBusy(true);
   const timer=setTimeout(()=>{
    const want=(k:Scope)=>scope==='all'||scope===k;
-   // Interests are found in the catalog; posts and communities by the interests that match, plus names in the catalogue's first page.
+   // Interests are found in the catalog; communities by the interests that match, plus names in the catalogue's first page.
    const matched=topics.filter(x=>x.ru.toLowerCase().includes(low)||x.en.toLowerCase().includes(low)||x.id.includes(low));
    const ids=matched.slice(0,10).map(x=>x.id);const opts={signal:ctl.signal};
    const none=Promise.resolve(null);
    Promise.allSettled([
     want('people')?call('people.search',{q:term},peopleRes,opts).then(r=>r.items):none,
-    want('posts')&&ids.length?call('feed.list',{tab:'forYou',topics:ids,limit:20},postPage,opts).then(r=>r.items):none,
+    // Posts: words in the title or text, then those under the matching interests.
+    want('posts')?Promise.all([call('feed.list',{tab:'forYou',q:term,limit:20},postPage,opts),ids.length?call('feed.list',{tab:'forYou',topics:ids,limit:20},postPage,opts):Promise.resolve({items:[] as Post[]})])
+     .then(([a,b])=>{const seen=new Set<string>();return [...a.items,...b.items].filter(x=>!seen.has(x.id)&&!!seen.add(x.id));}):none,
     want('communities')?Promise.all([call('community.catalog',{},commList,opts),ids.length?call('community.catalog',{topics:ids},commList,opts):Promise.resolve({items:[] as Comm[]})])
      .then(([a,b])=>{const seen=new Set<string>();return [...a.items.filter(c=>c.name.toLowerCase().includes(low)),...b.items].filter(c=>!seen.has(c.id)&&!!seen.add(c.id));}):none,
     want('events')?call('event.catalog',{},evList,opts).then(r=>r.items.filter(e=>e.title.toLowerCase().includes(low))):none,
