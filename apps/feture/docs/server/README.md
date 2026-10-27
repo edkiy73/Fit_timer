@@ -46,16 +46,18 @@
 
 ### Чтобы включить `/api/fe`
 
-1. Применить миграции `20261027120000_fe_platform.sql` и `20261027120100_fe_media_bucket.sql` (схема `feture` и бакет не трогают старые таблицы).
-2. Задать пароль роли `feture_api` (`alter role feture_api login password …`) и строку подключения через пулер Supabase (transaction mode, пользователь `feture_api.<project_ref>`) → `FETURE_DATABASE_URL`.
-3. Секреты: `FETURE_ID_PEPPER` (≥32 символа), `FETURE_JOBS_SECRET` (≥32).
-4. Медиа до запуска: `FETURE_MEDIA_BUCKET=feture-media` (используются уже заданные `SUPABASE_URL` и ключ сервера). После запуска — `R2_*`, `FETURE_MEDIA_TOKEN_SECRET`, `FETURE_MEDIA_ORIGIN` и Worker по `workers/media/wrangler.toml.example`.
-5. Очередь: pg_cron раз в минуту вызывает `POST /api/fe?jobs=1` с `Authorization: Bearer <FETURE_JOBS_SECRET>` (через pg_net; секрет — в Supabase Vault).
+Состояние на 27.10.2026:
+
+1. ✅ Миграции `20261027120000…290000` применены к общему проекту FitT; схема совпала с PGlite по отпечатку (колонки, ограничения, индексы, функции, политики, права, данные каталога).
+2. ✅ Роль `feture_api` входит (пароль задан хешем SCRAM, не больше 20 соединений) через пулер `aws-0-ap-northeast-1.pooler.supabase.com:6543`, пользователь `feture_api.anrhayozrhrmiwexmbhw`; старые `public.feture_*` ей закрыты.
+3. ⏳ Секреты в Vercel (Sensitive, Production): `FETURE_DATABASE_URL`, `FETURE_ID_PEPPER` (≥32), `FETURE_JOBS_SECRET` (≥32) — вставляет владелец, значения не проходят через агента.
+4. ✅ `FETURE_MEDIA_BUCKET=feture-media` (используются уже заданные `SUPABASE_URL` и `SUPABASE_SECRET_KEY`). После запуска — `R2_*`, `FETURE_MEDIA_TOKEN_SECRET`, `FETURE_MEDIA_ORIGIN` и Worker по `workers/media/wrangler.toml.example`.
+5. ⏳ Очередь: pg_cron `feture-jobs` раз в минуту вызывает `POST /api/fe?jobs=1` через pg_net (`20261027290000_fe_jobs_cron.sql`); адрес и секрет — в Supabase Vault (`feture_jobs_url`, `feture_jobs_secret`), без них ничего не вызывается. При переезде с Vercel меняется только `feture_jobs_url`.
 6. Провайдеры проверки (CSAM, классификатор) — без них всё медиа уходит на ручную проверку; другим людям ничего не показывается без проверки.
-7. Регион функций рядом с базой: сейчас база в Токио, функции в США — перед включением проверить регион Upstash (вход Core) и выбрать общий.
+7. ✅ Регион функций — `hnd1` (Токио), рядом с базой, хранилищем и входом Core (`APPBASE_STORE=supabase`).
 
 ## Следующие шаги
 
-1. Включить `/api/fe` по шагам выше; обработчик очереди (`server/jobs.mjs`) уже есть: проверка медиа, скрытие, удаление по сроку, закрытие просроченных загрузок, очистка журнала операций. Далее — push и Realtime-сигналы.
+1. Включить `/api/fe` (шаги 3 и 5 выше) и проверить на себе: регистрация, профиль, пара, лента, знакомства, беседы — двумя аккаунтами.
 2. Ключи FCM/APNs в окружении (`FIREBASE_SERVICE_ACCOUNT_JSON`, `APNS_*`) — тогда push пойдёт; сигналы Realtime (нужен короткий токен Core, S2 §3); затем оплата Premium и подарки (нужен провайдер оплаты) и проверка возраста у провайдера по документу.
 3. S4 до открытия публикаций с медиа: процедура CSAM с хранилищем улик и сообщением в органы (нужны юрлицо и провайдер сканера); страница формы уведомления на сайте и экраны админки (клиентская часть).
