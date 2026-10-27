@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {ArrowUpDown,AtSign,Bookmark,Check,Calendar,ChartColumn,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,FileText,Globe,Heart,Image as ImageIcon,KeyRound,Lock,MessageCircle,Newspaper,Pencil,Plus,Search,SendHorizontal,Share,SlidersHorizontal,Sparkles,Trash2,Users,X} from 'lucide-react';
 import type {LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Av,Bar,Btn,Card,Chip,Chips,Counter,Empty,Field,FilePick,Group,H,IconBtn,Input,Layer,Note,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,TextArea,ToggleRow,View} from './kit';
+import {Alert,Av,Bar,Btn,Card,Chip,Chips,Counter,Empty,Field,FilePick,Group,H,IconBtn,Input,Layer,Note,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,ToggleRow,View} from './kit';
 import {useFe} from './session';
 import {Uploader} from './kit/Uploader';
 import {useSendPhoto} from './media-upload';
@@ -60,7 +60,16 @@ export function FeedTab(){
  const {name:tname,topics:catalog,cats}=useTopics();
  const [tab,setTab]=useState<Tab>('forYou');
  // Topic filters per tab (F02): the server returns only posts with one of these topics.
- const [filters,setFilters]=useState<Record<Tab,string[]>>({forYou:[],following:[],popular:[]});const sel=filters[tab];
+ // Right after sign-up the feed opens on the topics chosen at step 2 (V21 AUTH-018); «Показать всё» clears them.
+ const arrived=location.state as {topics?:unknown,welcome?:unknown,hello?:unknown,warn?:unknown}|null;
+ const [filters,setFilters]=useState<Record<Tab,string[]>>(()=>({forYou:Array.isArray(arrived?.topics)?arrived.topics.filter((x):x is string=>typeof x==='string'):[],following:[],popular:[]}));const sel=filters[tab];
+ const [welcome,setWelcome]=useState(arrived?.welcome===true);
+ useEffect(()=>{const hello=arrived?.hello;if(typeof hello!=='string')return;
+  const had=Array.isArray(arrived?.topics)&&arrived.topics.length>0;
+  toast(hello,{type:arrived?.warn?'warn':'ok',...(had?{action:{label:t('fe.onb2.showAll'),fn:()=>setFilters(f=>({...f,forYou:[]}))}}:{})});
+  navigate('.',{replace:true,state:null}); // a reload or «Назад» doesn't greet again
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[]);
  // A post screen that lost its post (deleted, hidden, blocked) comes back with `state.notice`.
  const [notice,setNotice]=useState(()=>{const n=(location.state as {notice?:unknown}|null)?.notice;return typeof n==='string'?n:'';});
  const [items,setItems]=useState<Post[]|null>(null);const [next,setNext]=useState<string|null>(null);const [error,setError]=useState<unknown>(null);const [more,setMore]=useState(false);
@@ -112,6 +121,11 @@ export function FeedTab(){
   <View>
    <div className="mb12"><Seg value={tab} onChange={v=>{setNotice('');setTab(v);}} options={[{id:'forYou',label:t('fe.feed.tab.forYou')},{id:'following',label:t('fe.feed.tab.following')},{id:'popular',label:t('fe.fd.tab.popular')}]}/></div>
    {notice&&<Alert kind="ok" className="mb12">{notice}</Alert>}
+   {welcome&&!acting?.avatar&&<Card className="mb12"><Stack gap={3}>
+    <H level={4}>{t('fe.fd.welcome.title')}</H><Text size="sm" tone="mute">{t('fe.fd.welcome.text')}</Text>
+    <Stack row gap={2}><Btn size="sm" fit onClick={()=>navigate('/n/me/edit?only=media')}>{t('fe.fd.welcome.go')}</Btn>
+     <Btn kind="soft" size="sm" fit onClick={()=>setWelcome(false)}>{t('fe.fd.welcome.hide')}</Btn></Stack>
+   </Stack></Card>}
    <div className="composer">
     <button type="button" className="cmp-main" onClick={()=>navigate('/n/feed/new')}>{acting&&<Av name={me} seed={acting.id} size="sm" src={acting.avatar} couple={acting.kind==='couple'&&acting.name?coupleOf({kind:'couple',name:acting.name}):undefined}/>}<span>{t('fe.feed.whatsNew')}</span></button>
     <IconBtn icon={ImageIcon} kind="ghost" size="sm" label={t('fe.fd.photoOrVideo')} onClick={()=>navigate('/n/feed/new?x=media')}/>

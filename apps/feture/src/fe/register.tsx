@@ -5,7 +5,8 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {AtSign,CircleCheck,Search,ShieldCheck} from 'lucide-react';
-import {Alert,Ask,Btn,Check,Chip,Chips,ChoiceChips,Empty,Field,H,Input,Note,Pill,SearchInput,SectionLabel,Select,Sheet,Skel,Text} from './kit';
+import {Alert,Ask,Btn,Card,Check,Chip,Chips,ChoiceChips,Empty,Field,H,Input,Note,Pill,Row,SearchInput,SectionLabel,Select,Sheet,Skel,Stack,Text,TextArea} from './kit';
+import {useTopics} from './post-parts';
 import {useFe} from './session';
 import {useToast} from './toast';
 import {AuthBar,AuthFrame,AuthLogo} from './start';
@@ -23,7 +24,9 @@ const catalog=z.object({ok:z.literal(true),options:z.array(option)});
 const onboarded=z.object({ok:z.literal(true),discoverVisible:z.boolean(),photoNeeded:z.boolean()});
 
 type Form={nick:string,dd:string,mm:string,yy:string,terms:boolean,news:boolean,u18retry:boolean};
-type Step={id:'A04'}|{id:'A04X'}|{id:'A05',profileId:string};
+type Step={id:'A04'}|{id:'A04X'}|{id:'A05',profileId:string,about?:About}|{id:'A05B',profileId:string,about:About};
+/** The answers of «Расскажи о себе»; they are saved together with step 2 («Готово»), so «‹» from step 2 keeps them. */
+type About={pick:Record<Kind,string[]>,vis:'only'|'granted'|'all',discover:'visible'|'off',photo:'now'|'later',partner:''|'yes'|'no'};
 
 export function Register(){
  const {state}=useFe();
@@ -36,7 +39,8 @@ export function Register(){
  const leave=()=>{void logout();};
  return <AuthFrame screen={step.id}>
   {step.id==='A04X'?<Under18 onBack={()=>setStep({id:'A04'})} onFix={()=>{setForm(f=>({...f,dd:'',mm:'',yy:'',u18retry:true}));setStep({id:'A04'});}} onHome={leave}/>
-   :step.id==='A05'?<AboutYou profileId={step.profileId}/>
+   :step.id==='A05B'?<FirstSteps profileId={step.profileId} about={step.about} onBack={()=>setStep({id:'A05',profileId:step.profileId,about:step.about})}/>
+   :step.id==='A05'?<AboutYou initial={step.about} onNext={about=>setStep({id:'A05B',profileId:step.profileId,about})}/>
    :<Account form={form} setForm={setForm} onBack={leave} onCreated={profileId=>setStep({id:'A05',profileId})} onUnder18={()=>setStep({id:'A04X'})}/>}
  </AuthFrame>;
 }
@@ -162,17 +166,15 @@ const BASE:Partial<Record<Kind,number>>={gender:8,orient:8,format:6,role:5};
 const SHOWN=5;
 type Opt=z.infer<typeof option>;
 
-function AboutYou({profileId}:{profileId:string}){
- const {call,reload}=useFe();const {t,locale}=useI18n();const toast=useToast();const navigate=useNavigate();
+function AboutYou({onNext,initial}:{initial?:About|undefined,onNext:(a:About)=>void}){
+ const {call}=useFe();const {t,locale}=useI18n();const toast=useToast();
  const [options,setOptions]=useState<Opt[]|null>(null);const [loadFailed,setLoadFailed]=useState(false);
- const [picked,setPicked]=useState<Record<Kind,string[]>>({gender:[],orient:[],role:[],status:[],format:[],seek:[]});
- const [vis,setVis]=useState<'only'|'granted'|'all'>('all');
- const [discover,setDiscover]=useState<'visible'|'off'>('visible');
- const [photo,setPhoto]=useState<'now'|'later'>('now');
- const [partner,setPartner]=useState<''|'yes'|'no'>('');
+ const [picked,setPicked]=useState<Record<Kind,string[]>>(initial?.pick??{gender:[],orient:[],role:[],status:[],format:[],seek:[]});
+ const [vis,setVis]=useState<'only'|'granted'|'all'>(initial?.vis??'all');
+ const [discover,setDiscover]=useState<'visible'|'off'>(initial?.discover??'visible');
+ const [photo,setPhoto]=useState<'now'|'later'>(initial?.photo??'now');
+ const [partner,setPartner]=useState<''|'yes'|'no'>(initial?.partner??'');
  const [picker,setPicker]=useState<Kind|null>(null);
- const [busy,setBusy]=useState<''|'save'|'skip'>('');const [failure,setFailure]=useState('');
- const opId=useRef(newOpId());
  const load=()=>{setLoadFailed(false);setOptions(null);call('catalog.get',{},catalog,{asAccount:true}).then(r=>setOptions(r.options)).catch(()=>setLoadFailed(true));};
  useEffect(load,[call]);
  const label=(o:Opt)=>locale==='en'?o.en:o.ru;
@@ -187,17 +189,8 @@ function AboutYou({profileId}:{profileId:string}){
  });
  // The chips once on screen stay there: choosing in «Все · N» adds a chip, never moves the others.
  const shown=useRef<Record<string,Set<string>>>({});
- const finish=async(skip:boolean)=>{
-  setBusy(skip?'skip':'save');setFailure('');
-  const pick=skip?{gender:[],orient:[],role:[],status:[],format:[],seek:[]}:picked;
-  try{
-   const r=await call('onboarding.complete',{opId:opId.current,detailsVis:vis,genders:pick.gender,orients:pick.orient,roles:pick.role,formats:pick.format,seeks:pick.seek,status:pick.status[0]??null,discover},onboarded,{profileId});
-   // V21 AUTH-019: «Добавлю фото сейчас» opens the profile photos; «Да, вместе» — the pair invitation.
-   navigate(partner==='yes'?'/n/me/pair':discover==='visible'&&photo==='now'&&r.photoNeeded?'/n/me':'/n/feed',{replace:true});
-   reload();
-  }catch(error){setFailure(feErrorMessage(error,t));opId.current=newOpId();}
-  finally{setBusy('');}
- };
+ // V21 A05: «Дальше» / «Позже» go to step 2 (interests and communities); everything is saved there by «Готово».
+ const finish=(skip:boolean)=>onNext({pick:skip?{gender:[],orient:[],role:[],status:[],format:[],seek:[]}:picked,vis,discover,photo,partner});
  const radio=<T extends string>(items:[T,string][],sel:T|'',pick:(v:T)=>void,aria:string)=><ChoiceChips label={aria} value={sel||null} options={items} onChange={pick}/>;
  const group=(kind:Kind)=>{
   const list=listOf(kind);if(!list.length)return null;
@@ -235,11 +228,10 @@ function AboutYou({profileId}:{profileId:string}){
    </section>
    {loadFailed?<Alert kind="err" className="mt16">{t('fe.onb.optionsFailed')} <Btn kind="text" auto onClick={load}>{t('fe.retry')}</Btn></Alert>
     :options===null?<div className="mt16"><Skel kind="card" rows={3}/></div>:KINDS.map(group)}
-   {failure&&<Alert kind="err" className="mt16">{failure}</Alert>}
   </div></div>
   <div className="ctabar"><div className="wrap">
-   <Btn onClick={()=>finish(false)} disabled={!!busy} busy={busy==='save'}>{t('fe.onb.saveNext')}</Btn>
-   <Btn className="secondary" kind="soft" onClick={()=>finish(true)} disabled={!!busy} busy={busy==='skip'}>{t('fe.onb.later')}</Btn>
+   <Btn onClick={()=>finish(false)}>{t('fe.onb.next')}</Btn>
+   <Btn className="secondary" kind="soft" onClick={()=>finish(true)}>{t('fe.onb.later')}</Btn>
   </div></div>
   {picker&&<Picker title={t('fe.onb.kind.'+picker)} items={listOf(picker)} base={BASE[picker]??8} label={label} sel={picked[picker]} max={LIMIT[picker]>1&&LIMIT[picker]<9?LIMIT[picker]:0}
    onToggle={c=>toggle(picker,c)} onClear={()=>setPicked(p=>({...p,[picker]:[]}))} onClose={()=>setPicker(null)}/>}
@@ -264,5 +256,93 @@ function Picker({title,items,base,label,sel,max,onToggle,onClear,onClose}:{title
    return <section key={g} className={'fsec'+(query?' searching':'')}><SectionLabel>{g}</SectionLabel>
     <Chips>{vis.map(o=><Chip key={o.code} on={sel.includes(o.code)} onClick={()=>onToggle(o.code)}>{label(o)}</Chip>)}</Chips></section>;})}
   {query&&!total&&<Note className="sh-empty">{t('fe.onb.findNone')}</Note>}
+ </Sheet>;
+}
+
+/* ---------- A05 step 2 — «Что тебе интересно?» (V21 AUTH-017/018) ---------- */
+const POPULAR_TOPICS=['shibari','bondage','talk','aftercare','slow','latex','roleplay','sensory','intimacy','rituals','service','experiments'];
+const commCard=z.object({id:z.uuid(),name:z.string(),description:z.string().optional(),topics:z.array(z.string()),privacy:z.string(),members:z.number(),joined:z.boolean()}).passthrough();
+const commList=z.object({ok:z.literal(true),items:z.array(commCard)}).passthrough();
+const commFull=z.object({ok:z.literal(true),community:z.object({id:z.uuid(),name:z.string(),description:z.string(),topics:z.array(z.string()),privacy:z.string(),rules:z.array(z.string()),members:z.number(),joinQuestion:z.string().nullable()}).passthrough()});
+type Comm=z.infer<typeof commCard>;type CommFull=z.infer<typeof commFull>['community'];
+/** A join chosen during sign-up; it is sent after «Готово» (the rules were shown and accepted in the preview). */
+type Join={answer:string};
+
+/** Topics pick communities and the first feed; a community card opens a short preview with its rules, where the
+ * person joins (or asks to). Nothing is sent before «Готово»: then the answers of step 1 are saved, the joins go out,
+ * and the feed opens filtered by the chosen topics (the toast offers «Показать всё»). */
+function FirstSteps({profileId,about,onBack}:{profileId:string,about:About,onBack:()=>void}){
+ const {call,reload}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();
+ const {topics:all,name:tname,ready}=useTopics();
+ const [tp,setTp]=useState<string[]>([]);const [comms,setComms]=useState<Comm[]|null>(null);
+ const [joins,setJoins]=useState<Record<string,Join>>({});const [preview,setPreview]=useState<Comm|null>(null);
+ const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const opId=useRef(newOpId());
+ const pop=useMemo(()=>{const ids=new Set(all.map(x=>x.id));const p=POPULAR_TOPICS.filter(x=>ids.has(x));return p.length>=6?p:all.slice(0,12).map(x=>x.id);},[all]);
+ useEffect(()=>{const ctl=new AbortController();setComms(null);
+  call('community.catalog',tp.length?{topics:tp}:{},commList,{profileId,signal:ctl.signal}).then(r=>setComms(r.items.filter(c=>!c.joined).slice(0,4))).catch(()=>{if(!ctl.signal.aborted)setComms([]);});
+  return ()=>ctl.abort();},[call,profileId,tp]);
+ const toggle=(id:string)=>setTp(x=>x.includes(id)?x.filter(y=>y!==id):[...x,id]);
+ const done=async()=>{
+  setBusy(true);setFailure('');const p=about.pick;
+  try{
+   const r=await call('onboarding.complete',{opId:opId.current,detailsVis:about.vis,genders:p.gender,orients:p.orient,roles:p.role,formats:p.format,seeks:p.seek,status:p.status[0]??null,discover:about.discover},onboarded,{profileId});
+   let failed=0;
+   for(const [communityId,j] of Object.entries(joins)){
+    try{await call('community.join',{opId:newOpId(),communityId,rulesAccepted:true,answer:j.answer},z.object({ok:z.literal(true)}).passthrough(),{profileId});}catch{failed++;}
+   }
+   const names=tp.map(tname);
+   // V21 AUTH-019: «Да, вместе» — the pair invitation; «Добавлю фото сейчас» — the profile photos; otherwise the feed.
+   const to=about.partner==='yes'?'/n/me/pair':about.discover==='visible'&&about.photo==='now'&&r.photoNeeded?'/n/me':'/n/feed';
+   // The app frame (and its toasts) appears after reload(): the feed shows the message and keeps the filter.
+   const hello=failed?t('fe.onb2.joinFailed'):names.length&&to==='/n/feed'?t('fe.onb2.doneTopics',{list:names.join(', ')}):t('fe.onb2.done');
+   navigate(to,{replace:true,state:{welcome:true,hello,warn:failed>0,...(to==='/n/feed'?{topics:tp}:{})}});
+   reload();
+  }catch(e){setFailure(feErrorMessage(e,t));opId.current=newOpId();setBusy(false);}
+ };
+ return <>
+  <AuthBar onBack={onBack}/>
+  <div className="view nodock cta1"><div className="auth-wrap identity-onboarding">
+   <AuthLogo/>
+   <Steps at={3}/>
+   <H level={2} className="t">{t('fe.onb2.title')}</H>
+   <section className="fin"><div className="fin-t"><b>{t('fe.onb2.interests')}</b><span>{t('fe.reg.pickAny')}</span></div>
+    {ready?<Chips label={t('fe.onb2.interests')}>{pop.map(id=><Chip key={id} on={tp.includes(id)} onClick={()=>toggle(id)}>{tname(id)}</Chip>)}</Chips>:<Skel kind="line" rows={2}/>}
+    <p className="fhint mt8">{t('fe.onb2.interestsNote')}</p>
+   </section>
+   <section className="fin"><div className="fin-t"><b>{t('fe.onb2.comms')}</b></div>
+    {comms===null?<Skel kind="card" rows={2}/>:!comms.length?<Note>{t('fe.onb2.noComms')}</Note>
+     :<Card list>{comms.map(c=><Row key={c.id} title={c.name} sub={[c.privacy==='open'?t('fe.onb2.open'):t('fe.onb2.closed'),t('fe.onb2.members',{n:c.members})].join(' · ')}
+      onClick={()=>setPreview(c)} end={joins[c.id]
+       ?<Btn kind="soft" size="sm" fit onClick={()=>setJoins(({[c.id]:_,...rest})=>rest)}>{c.privacy==='open'?t('fe.onb2.unjoin'):t('fe.onb2.unrequest')}</Btn>
+       :<Btn size="sm" fit onClick={()=>setPreview(c)}>{c.privacy==='open'?t('fe.onb2.join'):t('fe.onb2.request')}</Btn>}/>)}</Card>}
+   </section>
+   {failure&&<Alert kind="err" className="mt16">{failure}</Alert>}
+  </div></div>
+  <div className="ctabar"><div className="wrap"><Btn onClick={done} busy={busy} disabled={busy}>{t('fe.onb2.finish')}</Btn></div></div>
+  {preview&&<CommPreview c={preview} profileId={profileId} chosen={joins[preview.id]} onClose={()=>setPreview(null)}
+   onJoin={j=>{setJoins(x=>({...x,[preview.id]:j}));setPreview(null);if(preview.privacy!=='open')toast(t('fe.onb2.requestLater'),{type:'ok'});}}/>}
+ </>;
+}
+
+/** The short preview of a community during sign-up (no app screens inside the sign-up — V21 AUTH-017): what it is,
+ * its rules, the join question of a closed one, «Принимаю правила». */
+function CommPreview({c,profileId,chosen,onClose,onJoin}:{c:Comm,profileId:string,chosen?:Join|undefined,onClose:()=>void,onJoin:(j:Join)=>void}){
+ const {call}=useFe();const {t}=useI18n();const {name:tname}=useTopics();const fid=useId();
+ const [full,setFull]=useState<CommFull|null>(null);const [failed,setFailed]=useState(false);
+ const [answer,setAnswer]=useState(chosen?.answer??'');const [ok,setOk]=useState(!!chosen);const [err,setErr]=useState<{answer?:string,ok?:string}>({});
+ useEffect(()=>{call('community.get',{communityId:c.id},commFull,{profileId}).then(r=>setFull(r.community)).catch(()=>setFailed(true));},[call,c.id,profileId]);
+ const closed=c.privacy!=='open';const q=closed?full?.joinQuestion??null:null;
+ const join=()=>{const e:{answer?:string,ok?:string}={};
+  if(q&&answer.trim().length<10)e.answer=t('fe.host.join.answerShort');if(!ok)e.ok=t('fe.host.join.acceptNeeded');
+  setErr(e);if(!Object.keys(e).length)onJoin({answer:closed?answer.trim():''});};
+ return <Sheet title={c.name} sub={[closed?t('fe.onb2.closed'):t('fe.onb2.open'),t('fe.onb2.members',{n:c.members})].join(' · ')} onClose={onClose}
+  foot={<Btn onClick={join} disabled={!full}>{closed?t('fe.onb2.request'):t('fe.onb2.join')}</Btn>}>
+  {failed?<Alert kind="err">{t('fe.onb2.previewFailed')}</Alert>:!full?<Skel kind="card" rows={2}/>:<Stack gap={4}>
+   {full.description&&<Text>{full.description}</Text>}
+   {full.topics.length>0&&<Chips>{full.topics.map(x=><Chip key={x}>{tname(x)}</Chip>)}</Chips>}
+   {full.rules.length>0&&<><SectionLabel>{t('fe.onb2.rules')}</SectionLabel><Card><ol className="rules">{full.rules.map((r,i)=><li key={i}>{r}</li>)}</ol></Card></>}
+   {q&&<Field id={fid} label={q} error={err.answer} hint={t('fe.host.join.answerHint')}><TextArea id={fid} rows={3} maxLength={300} value={answer} placeholder={t('fe.host.join.answerPh')} onChange={e=>setAnswer(e.target.value)}/></Field>}
+   <Field error={err.ok}><Check on={ok} error={!!err.ok} onChange={setOk}>{t('fe.host.join.accept')}</Check></Field>
+  </Stack>}
  </Sheet>;
 }
