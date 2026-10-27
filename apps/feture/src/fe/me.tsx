@@ -13,6 +13,8 @@ import {MineLayer} from './mine';
 import {MeJars} from './interests';
 import {StaffEntry} from './staff';
 import {LinksEntry} from './links';
+import {CoupleMembers,CouplePending,CoupleVisGroup} from './couple';
+import {ProfileLinks} from './browse';
 
 /** Slice C (V21 X01, P02, P03) with the prototype's markup: own profile, photos (others see approved ones;
  * «на проверке» only the owner), basics, details, Discover and who sees the answers. */
@@ -34,9 +36,9 @@ export function MeTab(){
  const {state,acting,setActing,call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();
  const [p,setP]=useState<Profile|null>(null);const [settings,setSettings]=useState<z.infer<typeof settingsRes>['settings']|null>(null);
  const [options,setOptions]=useState<z.infer<typeof option>[]>([]);
- const [error,setError]=useState<unknown>(null);const [layer,setLayer]=useState<Layer>(()=>{const l=new URLSearchParams(location.hash.split('?')[1]??'').get('layer');return l==='priv'||l==='mine'||l==='vis'?l:'profile';});const [editing,setEditing]=useState(false);const [notice,setNotice]=useState('');
+ const [error,setError]=useState<unknown>(null);const [layer,setLayer]=useState<Layer>(()=>{const l=new URLSearchParams(location.hash.split('?')[1]??'').get('layer');return l==='priv'||l==='mine'||l==='vis'?l:'profile';});const [editing,setEditing]=useState(false);const [notice,setNotice]=useState('');const [tick,setTick]=useState(0);
  const load=useCallback(()=>{
-  if(!acting)return;setError(null);
+  if(!acting)return;setError(null);setTick(n=>n+1);
   Promise.all([call('profile.get',{profileId:acting.id},profileRes),call('profile.settings',{},settingsRes)])
    .then(([a,b])=>{setP(a.profile);setSettings(b.settings);}).catch(setError);
  },[call,acting]);
@@ -66,7 +68,8 @@ export function MeTab(){
      :!p?<p className="note" role="status">{t('fe.loading')}</p>
      :layer==='profile'?<>
       {notice&&<div className="alert ok" role="status"><span>{notice}</span></div>}
-      <Photos p={p} onChanged={load}/>
+      {acting.kind==='couple'&&<><CouplePending base={p} tick={tick} onDecided={msg=>{setNotice(msg);load();}}/><CoupleMembers/></>}
+      <Photos p={p} onChanged={pending=>{setNotice(pending?t('fe.cw.waitPartner'):'');load();}}/>
       {acting.kind==='person'&&<PairEntry/>}
       <section className="grp"><div className="grp-t"><span>{t('fe.me.basics')}</span><span className="aud">{t('fe.me.seenByAll')}</span></div>
        {editing?<EditBasics p={p} onDone={msg=>{setEditing(false);setNotice(msg);load();}} onCancel={()=>setEditing(false)}/>
@@ -79,12 +82,13 @@ export function MeTab(){
        <div className="card blk-btn"><dl className="kv">{DETAIL_ROWS.map(([field,kind])=>{const v=p.details[field];const codes=Array.isArray(v)?v as string[]:typeof v==='string'?[v]:[];
         return <Fragment key={field}><dt>{t('fe.reg.kind.'+kind)}</dt><dd>{codes.length?codes.map(c=>label(kind,c)).join(', '):'—'}</dd></Fragment>;})}</dl></div>
       </section>}
+      <ProfileLinks key={'fl'+p.id} profileId={p.id} photos={p.photos.filter(ph=>ph.src).length} self/>
       <LinksEntry key={'links'+p.id}/>
       <MeJars key={p.id}/>
      </>
      :layer==='priv'?<PrivateLayer profileId={p.id}/>
      :layer==='mine'?<MineLayer/>
-     :layer==='vis'&&settings?<Visibility p={p} settings={settings} onChanged={load}/>
+     :layer==='vis'&&settings?<>{acting.kind==='couple'&&<CouplePending base={p} tick={tick} onDecided={load}/>}<Visibility p={p} settings={settings} onChanged={load}/>{acting.kind==='couple'&&<CoupleVisGroup/>}</>
      :<Empty icon={Lock} title={t('fe.me.soon.'+layer)} text={t('fe.me.soonText.'+layer)}/>}
    </div>
   </div>
@@ -109,7 +113,7 @@ function EditBasics({p,onDone,onCancel}:{p:Profile,onDone:(msg:string)=>void,onC
 }
 
 const MIME=['image/jpeg','image/png','image/webp'];
-function Photos({p,onChanged}:{p:Profile,onChanged:()=>void}){
+function Photos({p,onChanged}:{p:Profile,onChanged:(pending?:boolean)=>void}){
  const {call}=useFe();const {t}=useI18n();const input=useRef<HTMLInputElement>(null);
  const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
  const add=async(file:File)=>{
@@ -122,8 +126,8 @@ function Photos({p,onChanged}:{p:Profile,onChanged:()=>void}){
    const put=await fetch(i.upload.url,{method:i.upload.method,headers:i.upload.headers,body:file});
    if(!put.ok)throw new Error('upload');
    await call('media.commit',{assetId:i.assetId},ok);
-   await call('profile.photosSet',{opId:newOpId(),assetIds:[...p.photos.map(x=>x.id),i.assetId].slice(0,6)},ok);
-   onChanged();
+   const r=await call('profile.photosSet',{opId:newOpId(),assetIds:[...p.photos.map(x=>x.id),i.assetId].slice(0,6)},ok);
+   onChanged(!!r.pending);
   }catch(e){setFailure(feErrorMessage(e,t));}finally{setBusy(false);if(input.current)input.current.value='';}
  };
  const remove=async(id:string)=>{
@@ -151,10 +155,10 @@ function Photos({p,onChanged}:{p:Profile,onChanged:()=>void}){
 }
 
 function Visibility({p,settings,onChanged}:{p:Profile,settings:{discoverMode:string},onChanged:()=>void}){
- const {call}=useFe();const {t}=useI18n();const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const {call}=useFe();const {t}=useI18n();const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [wait,setWait]=useState('');
  const set=async(setting:string,value:string)=>{
-  setBusy(true);setFailure('');
-  try{await call(setting==='detailsVis'?'profile.update':'profile.setVisibility',setting==='detailsVis'?{opId:newOpId(),rev:p.rev,detailsVis:value}:{opId:newOpId(),setting,value},ok);onChanged();}
+  setBusy(true);setFailure('');setWait('');
+  try{const r=await call(setting==='detailsVis'?'profile.update':'profile.setVisibility',setting==='detailsVis'?{opId:newOpId(),rev:p.rev,detailsVis:value}:{opId:newOpId(),setting,value},ok);if(r.pending)setWait(t('fe.cw.waitPartner'));onChanged();}
   catch(e){setFailure(feErrorMessage(e,t));}finally{setBusy(false);}
  };
  const hasPhoto=p.photos.some(x=>!x.pending);
@@ -167,6 +171,7 @@ function Visibility({p,settings,onChanged}:{p:Profile,settings:{discoverMode:str
    <div className="chips">{(['only','granted','all'] as const).map(v=><button key={v} type="button" disabled={busy} className={'chip'+(p.detailsVis===v?' on':'')} aria-pressed={p.detailsVis===v} onClick={()=>set('detailsVis',v)}>{t('fe.reg.vis.'+v)}</button>)}</div>
    <p className="note mt8">{t('fe.reg.vis.note.'+(p.detailsVis??'only'))}</p>
   </section>}
+  {wait&&<div className="alert ok" role="status"><span>{wait}</span></div>}
   {failure&&<div className="alert err" role="alert"><span>{failure}</span></div>}
  </>;
 }

@@ -7,6 +7,7 @@ import {Ban,ChevronLeft,ChevronRight,Ellipsis,Eye,Heart,History,Info,Lock,MapPin
 import {Av,Bar,Btn,Empty,Seg,View} from './ui';
 import {useFe} from './session';
 import {PrivateOf} from './private';
+import {ProfileLinks} from './browse';
 import {CompatSummary,LinksSection,PersonBio,PersonHero,PersonMenu,PersonPhotos,personName,personProfileRes,pxError,useToast,type MenuStep,type PersonProfile} from './profile-extras';
 
 /** Slice F (V21 D03–D09) plus people search (F2): Discover cards from the server's mutual pool, like / pass,
@@ -283,6 +284,7 @@ export function PersonScreen(){
      <LinksSection profileId={p.id}/>
      <PrivateOf profileId={p.id}/>
      <PersonPhotos p={p}/>
+     <ProfileLinks profileId={p.id} photos={p.photos.filter(ph=>ph.src&&!ph.pending).length}/>
     </>}
   </View>
   {(p||blocked)&&<PersonMenu profileId={id} name={name} step={menu} setStep={setMenu} blocked={blocked} setBlocked={setBlock} toast={toast}/>}
