@@ -9,6 +9,7 @@ import {useFe} from './session';
 import {PrivateLayer} from './private';
 import {BellButton} from './inbox';
 import {PairEntry} from './pair';
+import {MineLayer} from './mine';
 
 /** Slice C (V21 X01, P02, P03) with the prototype's markup: own profile, photos (others see approved ones;
  * «на проверке» only the owner), basics, details, Discover and who sees the answers. */
@@ -75,6 +76,7 @@ export function MeTab(){
       </section>}
      </>
      :layer==='priv'?<PrivateLayer profileId={p.id}/>
+     :layer==='mine'?<MineLayer/>
      :layer==='vis'&&settings?<Visibility p={p} settings={settings} onChanged={load}/>
      :<Empty icon={Lock} title={t('fe.me.soon.'+layer)} text={t('fe.me.soonText.'+layer)}/>}
    </div>
