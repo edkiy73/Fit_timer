@@ -40,7 +40,8 @@ function FeLayout(){
  const name=acting?.name||acting?.handle||'?';
  const current=pathname.split('/')[2]||'feed';
  // Nested screens (a chat, a post, an editor) have no dock in V21; tab roots do.
- const nested=pathname.split('/').filter(Boolean).length>2;
+ // Premium and Help are standalone screens too (prototype B01/S01 `.view.nodock`).
+ const nested=pathname.split('/').filter(Boolean).length>2||current==='premium'||current==='help';
  // A second tap on the active tab returns to its root (V21 A4).
  const go=(id:string)=>navigate('/n/'+id);
  return <div className="stage"><div className="root">
