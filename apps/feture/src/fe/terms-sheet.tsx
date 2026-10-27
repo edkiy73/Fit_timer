@@ -1,9 +1,9 @@
 import {useEffect,useState} from 'react';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {ChevronLeft,ChevronRight,FileText,Heart,Lock,ShieldCheck,Trash2,Users,X,type LucideIcon} from 'lucide-react';
+import {ChevronLeft,FileText,Heart,Lock,ShieldCheck,Trash2,Users,type LucideIcon} from 'lucide-react';
 import {apiUrl} from '../api-url';
 import {documentsResponse,type PublishedDocument} from '../feture/document-model';
-import {Btn,Layer,Skel} from './ui';
+import {Alert,Btn,Card,H,Note,Row,Sheet,Skel} from './kit';
 
 /** V21 `ACT.terms` + `ACT.legalDoc`: «Условия и приватность» — four short facts and the documents a new account
  * accepts, each opening its published text (server: /api/catalog?resource=documents). Used by A01 and A04. */
@@ -25,31 +25,20 @@ export function TermsSheet({onClose}:{onClose:()=>void}){
  const [docs,setDocs]=useState<PublishedDocument[]|null>(null);const [failed,setFailed]=useState(false);
  const [open,setOpen]=useState<PublishedDocument|null>(null);
  useEffect(()=>{let live=true;setFailed(false);loadDocuments(loc).then(d=>{if(live)setDocs(d);}).catch(()=>{if(live)setFailed(true);});return ()=>{live=false;};},[loc]);
- useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape')onClose();};addEventListener('keydown',k);return ()=>removeEventListener('keydown',k);},[onClose]);
  const list=(docs??[]).filter(d=>d.requiresAccept).sort((a,b)=>rank(a.key)-rank(b.key));
  const title=open?open.title:t('fe.onb.terms.title');
  const facts:[LucideIcon,string][]=[[ShieldCheck,'adult'],[Lock,'private'],[Heart,'mutual'],[Trash2,'data']];
- return <Layer>
-  <div className="scrim on" onClick={onClose}/>
-  <div className="sheet on" role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}>
-   <div className="grab"/>
-   <div className="sh-h"><div className="sh-ht"><h2>{title}</h2></div>
-    <button type="button" className="ibtn ghost sm" aria-label={t('fe.onb.close')} onClick={onClose}><X/></button></div>
-   {open?<>
-    <div className="sh-b">{open.blocks.map((b,i)=>b.type==='heading'?<h3 key={i} className="t">{b.text}</h3>
-     :b.type==='list'?<ul key={i} className="note" style={{margin:'0 0 14px',paddingLeft:18}}>{b.items.map((x,j)=><li key={j}>{x}</li>)}</ul>
-     :<p key={i} className="note" style={{margin:'0 0 14px'}}>{b.text}</p>)}</div>
-    <div className="sh-f"><Btn kind="soft" icon={ChevronLeft} onClick={()=>setOpen(null)}>{t('fe.back')}</Btn></div>
-   </>:<>
-    <div className="sh-b">
-     {facts.map(([Icon,k])=><div key={k} className="fact"><i className="v"><Icon/></i><span><b>{t(`fe.onb.terms.${k}`)}.</b> {t(`fe.onb.terms.${k}Text`)}</span></div>)}
-     {failed?<div className="alert err mt16" role="alert"><span>{t('fe.onb.terms.failed')}</span></div>
-      :docs===null?<div className="mt16"><Skel kind="list" rows={2}/></div>
-      :<div className="card list mt16">{list.map(d=>{const Icon=ICON[d.key]??FileText;return <button key={d.id} type="button" className="li" onClick={()=>setOpen(d)}>
-        <span className="ico"><Icon/></span><span className="tx"><b>{d.title}</b></span><ChevronRight/></button>;})}</div>}
-    </div>
-    <div className="sh-f"><Btn onClick={onClose}>{t('fe.onb.terms.ok')}</Btn></div>
+ // One sheet for both views: the facts with the document list, or one document's text with «Назад».
+ return <Sheet title={title} onClose={onClose}
+  foot={open?<Btn kind="soft" icon={ChevronLeft} onClick={()=>setOpen(null)}>{t('fe.back')}</Btn>:<Btn onClick={onClose}>{t('fe.onb.terms.ok')}</Btn>}>
+  {open?<div className="md">{open.blocks.map((b,i)=>b.type==='heading'?<H key={i} level={4} as="h3" className="t">{b.text}</H>
+    :b.type==='list'?<ul key={i} className="note">{b.items.map((x,j)=><li key={j}>{x}</li>)}</ul>
+    :<Note key={i}>{b.text}</Note>)}</div>
+   :<>
+    {facts.map(([Icon,k])=><div key={k} className="fact"><i className="v"><Icon/></i><span><b>{t(`fe.onb.terms.${k}`)}.</b> {t(`fe.onb.terms.${k}Text`)}</span></div>)}
+    {failed?<Alert kind="err" noIcon className="mt16">{t('fe.onb.terms.failed')}</Alert>
+     :docs===null?<div className="mt16"><Skel kind="list" rows={2}/></div>
+     :<Card list className="mt16">{list.map(d=><Row key={d.id} icon={ICON[d.key]??FileText} title={d.title} onClick={()=>setOpen(d)}/>)}</Card>}
    </>}
-  </div>
- </Layer>;
+ </Sheet>;
 }

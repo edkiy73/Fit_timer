@@ -46,3 +46,8 @@
 .fe-v21 .cmp-ints .testcard{margin:0 0 14px}
 .fe-v21 .cmp-ints .testcard .jars{grid-template-columns:minmax(0,1fr);gap:8px}
 .fe-v21 .cmp-ints .chips.mt12{margin-top:0}
+/* Shell skeleton and sidebar glue (the frame itself, not a screen): the title placeholder, the dock avatar
+ * placeholder and the sidebar tab's «new» dot — values that were inline in shell.tsx. */
+.fe-v21 .bar .sk.fe-sk-title{width:120px;height:16px}
+.fe-v21 .dock-av .sk.fe-sk-av{width:100%;height:100%;border-radius:50%}
+.fe-v21 .side .navb em.dot{min-width:9px;width:9px;height:9px;padding:0}
