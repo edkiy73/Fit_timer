@@ -98,8 +98,9 @@ function FeLayout(){
  const go=(id:string)=>navigate('/n/'+id);
  // V21 `hascta`: a screen with a pinned action bar (save / publish / continue) lifts it above the phone dock;
  // without the class the dock covers the bar. Screens render the bar themselves, so the frame watches for it.
- const main=useRef<HTMLElement>(null);const [cta,setCta]=useState(false);
- useEffect(()=>{const m=main.current;if(!m)return;const sync=()=>setCta(!!m.querySelector(':scope>.ctabar'));sync();
+ // The search screen's `.sbar` sits in the flow, not over the view: no room is kept for a floating `.bar` there.
+ const main=useRef<HTMLElement>(null);const [cta,setCta]=useState(false);const [sbar,setSbar]=useState(false);
+ useEffect(()=>{const m=main.current;if(!m)return;const sync=()=>{setCta(!!m.querySelector(':scope>.ctabar'));setSbar(!!m.querySelector(':scope>.sbar'));};sync();
   const o=new MutationObserver(sync);o.observe(m,{childList:true});return ()=>o.disconnect();},[]);
  return <div className="stage"><div className="root">
   <aside className="side">
@@ -111,7 +112,7 @@ function FeLayout(){
     <Av name={name} seed={acting.id} src={acting.avatar}/><span>{name}<small>{acting.kind==='couple'?t('fe.me.coupleProfile'):t('fe.me.personalProfile')}</small></span>
    </button>}
   </aside>
-  <main ref={main} className={(nodock?'main hasbar':'main has-dock hasbar')+(cta?' hascta':'')}>
+  <main ref={main} className={(nodock?'main':'main has-dock')+(sbar?'':' hasbar')+(cta?' hascta':'')}>
    <ToastProvider nodock={nodock}>
    <Outlet/>
    {!nodock&&<nav className="dock" style={{gridTemplateColumns:`repeat(${FE_TABS.length},1fr)`} as CSSProperties} aria-label={t('fe.nav.aria')}>
