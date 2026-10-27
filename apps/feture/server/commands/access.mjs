@@ -96,6 +96,14 @@ registerApprovalKind('access.grant', {
     const c = /** @type {{requestId: string, scopes: Scope[], term: keyof typeof TERM}} */ (row.change);
     await applyGrant(q, { requestId: c.requestId, ownerId: row.profile_id, scopes: c.scopes, term: c.term, by: row.requested_by });
   },
+  // Who would get access (while still active and not blocked), what and for how long.
+  preview: async (q, row) => {
+    const c = /** @type {{requestId: string, scopes: Scope[], term: string}} */ (row.change);
+    const [p] = await q.query(
+      `select p.id, p.kind, p.handle, p.name from feture.access_request r join feture.profile p on p.id = r.requester_profile_id
+       where r.id = $1 and r.owner_profile_id = $2 and p.state = 'active' and not feture.blocked($2, p.id)`, [c.requestId, row.profile_id]);
+    return { profile: p ?? null, scopes: c.scopes, term: c.term };
+  },
 });
 registerApprovalKind('private.on', {
   apply: async (q, row) => {

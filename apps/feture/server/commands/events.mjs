@@ -206,6 +206,27 @@ async function doUpdate(q, acting, eventId, rev, f) {
   return { rev: e.rev + 1, review: Object.keys(later) };
 }
 
+/** The event card a partner decides on (V21 jointReview: «Открыть событие»); for an edit, the proposed fields over the
+ * stored ones. The couple's own event, or someone else's event it answers while it may still see it.
+ * @param {Q} q @param {import('../approvals.mjs').ApprovalRow} row */
+async function approvalEventCard(q, row) {
+  const [x] = await q.query(
+    `select e.id, e.title, e.kind, e.format, e.area, e.starts_at, e.ends_at, e.state, e.rev, pl.name_ru city_ru, pl.name_en city_en
+     from feture.event e left join feture.place pl on pl.id = e.place_id
+     where e.id = $1 and (e.organizer_profile_id = $2 or feture.event_visible(e, $2, $3))`, [row.target_id, row.profile_id, row.requested_by]);
+  if (!x) return null;
+  const c = /** @type {any} */ (row.change);
+  const f = row.kind === 'event.update' ? c.event : {};
+  return {
+    event: {
+      id: x.id, title: f.title ?? x.title, kind: f.kind ?? x.kind, format: f.format ?? x.format, area: f.area !== undefined ? f.area : x.area,
+      startsAt: f.startsAt ?? x.starts_at, endsAt: f.endsAt ?? x.ends_at, state: x.state, rev: row.kind === 'event.update' ? c.rev : x.rev,
+      city: x.city_ru ? { ru: x.city_ru, en: x.city_en } : null,
+    },
+    ...(row.kind === 'event.rsvp' ? { rsvp: c.status ?? null } : {}),
+  };
+}
+
 registerApprovalKind('event.submit', {
   apply: async (q, row) => {
     // The partner approved exactly this version: if it changed since, it waits for a new approval.
@@ -220,6 +241,7 @@ registerApprovalKind('event.submit', {
     }
     await toStaff(q, String(row.target_id), row.profile_id);
   },
+  preview: approvalEventCard,
 });
 registerApprovalKind('event.update', {
   apply: async (q, row) => {
@@ -227,6 +249,7 @@ registerApprovalKind('event.update', {
     const [p] = await q.query(`select kind from feture.profile where id = $1`, [row.profile_id]);
     await doUpdate(q, /** @type {Acting} */ ({ profileId: row.profile_id, accountId: row.requested_by, kind: p.kind }), String(row.target_id), c.rev, c.event);
   },
+  preview: approvalEventCard,
 });
 registerApprovalKind('event.rsvp', {
   apply: async (q, row) => {
@@ -235,6 +258,7 @@ registerApprovalKind('event.rsvp', {
     await checkRsvp(q, e, row.profile_id, c);
     await writeRsvp(q, e.id, row.profile_id, row.requested_by, c);
   },
+  preview: approvalEventCard,
 });
 registerApprovalKind('event.apply', {
   apply: async (q, row) => {
@@ -242,6 +266,7 @@ registerApprovalKind('event.apply', {
     checkApplication(e, row.change);
     await writeApplication(q, e, row.profile_id, row.requested_by, row.change);
   },
+  preview: approvalEventCard,
 });
 
 /** @type {Record<keyof typeof eventsCommands, Command['run']>} */

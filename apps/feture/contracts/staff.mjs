@@ -21,6 +21,8 @@ export const staffCommands = {
       reason: z.enum(['csam_suspected', 'minor', 'not_a_person', 'violence', 'private_material', 'spam', 'invalid', 'other']).optional(),
     }).refine(v => v.decision === 'reject' ? !!v.reason : v.explicit !== undefined, { message: 'approve needs a label, reject needs a reason' }),
   },
+  // Dating on/off for everyone (owner/lead); switching on tells those who asked «Сообщить о запуске».
+  'staff.datingSwitch': { profile: false, write: true, input: z.strictObject({ opId, on: z.boolean() }) },
   'staff.journal': {
     profile: false, write: false,
     input: z.strictObject({ targetId: id.optional(), limit: z.int().min(1).max(100).default(50) }),

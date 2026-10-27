@@ -169,7 +169,7 @@ test('discover.filter: defaults until saved, the saved one after, per profile; a
   const { pg, call, member, coupleOf } = await world();
   try {
     const a = await member('ua', 'Alex'), b = await member('ub', 'Kira'), c = await member('uc', 'Noa');
-    const defaults = { show: 'all', ageMin: 18, ageMax: 99, cityId: null, genders: [], orients: [], formats: [], seeks: [], roles: [], topics: [] };
+    const defaults = { show: 'all', ageMin: 18, ageMax: 99, cityId: null, placeMode: 'city', radiusKm: 25, genders: [], orients: [], formats: [], seeks: [], roles: [], topics: [] };
     assert.deepEqual((await call('ua', a, { action: 'discover.filter' })).filter, defaults);
     const filter = { ...defaults, show: 'people', ageMin: 25, ageMax: 40, topics: ['shibari'] };
     await call('ua', a, { action: 'discover.setFilter', opId: op(), filter });

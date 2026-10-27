@@ -238,11 +238,24 @@ registerApprovalKind('post.publish', {
     await requireCommunityWriter(q, d.community_id, /** @type {Acting} */ ({ profileId: row.profile_id, accountId: row.requested_by, kind: d.kind }));
     await doPublish(q, String(row.target_id), row.profile_id);
   },
+  // The draft as it is now; `changed` when it was edited after the request (approving would then fail).
+  preview: async (q, row) => {
+    const [p] = await q.query(
+      `select p.type, p.title, left(p.body, 300) body, p.audience, p.rev,
+         (select count(*)::int from feture.media_attachment ma where ma.target_type = 'post' and ma.target_id = p.id) media
+       from feture.post p where p.id = $1 and p.owner_profile_id = $2`, [row.target_id, row.profile_id]);
+    return p ? { post: { type: p.type, title: p.title, body: p.body, audience: p.audience, media: p.media, rev: p.rev, changed: p.rev !== /** @type {any} */ (row.change).rev } } : null;
+  },
 });
 registerApprovalKind('post.edit', {
   apply: async (q, row) => {
     const c = /** @type {any} */ (row.change);
     await doEdit(q, String(row.target_id), { profileId: row.profile_id, accountId: row.requested_by }, c.rev, c.post);
+  },
+  // The proposed version, not the live one.
+  preview: async (_q, row) => {
+    const c = /** @type {any} */ (row.change);
+    return { post: { type: c.post.type, title: c.post.title ?? null, body: String(c.post.body).slice(0, 300), audience: c.post.audience, media: c.post.mediaIds.length, rev: c.rev } };
   },
 });
 

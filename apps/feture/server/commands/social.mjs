@@ -16,6 +16,8 @@ import { withFaces } from './faces.mjs';
 
 /** @param {Acting | null} acting @returns {Acting} */
 const need = acting => { if (!acting) throw new Error('acting profile missing'); return acting; };
+/** «Вернуть» after removing a follower works this long. */
+const FOLLOWER_UNDO_MIN = 10;
 
 /** Target of a block, follow, subscription or hide: exists, is active and is not one of my own profiles (oneself and
  * one's own couple are refused by rule, not hidden). Unlike `otherProfile` (commands/access.mjs) a block does not hide
@@ -134,6 +136,38 @@ const run = {
       if (acting.kind === 'couple') await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: 'follow' });
     }
     return { following: true };
+  },
+
+  async 'follower.remove'(q, { acting: a, input }) {
+    const acting = need(a);
+    // Nothing is sent to the removed person; they can follow again (a block is what keeps someone away).
+    const [f] = await q.query(
+      `delete from feture.follow where follower_profile_id = $1 and target_profile_id = $2 returning created_at, acted_by`, [input.profileId, acting.profileId]);
+    if (!f) fail(404, 'not_found');
+    const [r] = await q.query(
+      `insert into feture.follow_removed (target_profile_id, follower_profile_id, followed_at, acted_by) values ($1, $2, $3, $4)
+       on conflict (target_profile_id, follower_profile_id) do update set followed_at = excluded.followed_at, acted_by = excluded.acted_by, removed_at = now()
+       returning removed_at + interval '${FOLLOWER_UNDO_MIN} minutes' undo_until`, [acting.profileId, input.profileId, f.created_at, f.acted_by]);
+    return { removed: true, undoUntil: r.undo_until };
+  },
+
+  async 'follower.restore'(q, { acting: a, input }) {
+    const acting = need(a);
+    // Only a follow this profile removed itself, within the window: «Вернуть» can never add a follower who never followed.
+    const [r] = await q.query(
+      `delete from feture.follow_removed where target_profile_id = $1 and follower_profile_id = $2 and removed_at > now() - interval '${FOLLOWER_UNDO_MIN} minutes'
+       returning followed_at, acted_by`, [acting.profileId, input.profileId]);
+    if (!r) fail(404, 'not_found');
+    // Not if they are gone, blocked either way meanwhile, or already following again.
+    const [ok] = await q.query(
+      `select 1 from feture.profile p where p.id = $1 and p.state = 'active' and not feture.blocked($2, p.id)
+         and exists (select 1 from feture.profile_member m where m.profile_id = p.id and m.account_id = $3 and m.state = 'active')`,
+      [input.profileId, acting.profileId, r.acted_by]);
+    if (!ok) return { restored: false };
+    const rows = await q.query(
+      `insert into feture.follow (follower_profile_id, target_profile_id, acted_by, created_at) values ($1, $2, $3, $4) on conflict do nothing returning 1`,
+      [input.profileId, acting.profileId, r.acted_by, r.followed_at]);
+    return { restored: rows.length > 0 };
   },
 
   async 'noteSub.set'(q, { acting: a, input }) {

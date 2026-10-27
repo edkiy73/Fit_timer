@@ -29,6 +29,8 @@ async function setup() {
   const pg = new PGlite();
   await pg.exec('create role anon; create role authenticated;');
   await pg.exec(MIGRATION);
+  // The partner approvals of approvals.mjs also store the note of a return (wave 6, 20261028180000_fe_waves67.sql).
+  await pg.exec(readFileSync(new URL('../supabase/migrations/20261028180000_fe_waves67.sql', import.meta.url), 'utf8').split('\n').find(l => l.startsWith('alter table feture.partner_approval')));
   await pg.exec('set role feture_api');
   return { pg, db: fromPglite(pg) };
 }

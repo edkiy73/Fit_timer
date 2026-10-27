@@ -55,7 +55,14 @@ export const communitiesCommands = {
     profile: true, write: true,
     input: z.strictObject({ opId, communityId: id, listed: z.boolean().optional(), muted: z.boolean().optional() }),
   },
-  'community.members': { profile: true, write: false, input: z.strictObject({ communityId: id }) },
+  // 20 a page (V21 cMoreMembers); `next` continues.
+  'community.members': { profile: true, write: false, input: z.strictObject({ communityId: id, cursor: z.string().max(200).optional() }) },
+  // «Популярное за неделю» (V21 popularDiscs): in one community, or across the communities the viewer reads (feed
+  // «Популярное»: «Обсуждают в сообществах»), optionally in one topic. Hosts can keep a discussion out (discussion.host).
+  'discussions.popular': {
+    profile: true, write: false,
+    input: z.strictObject({ communityId: id.optional(), topic: code.optional(), limit: z.int().min(1).max(20).default(3) }),
+  },
   'community.invite': { profile: true, write: true, input: z.strictObject({ opId, communityId: id, revokeAll: z.boolean().optional() }) },
   'community.discussions': { profile: true, write: false, input: z.strictObject({ communityId: id, cursor: z.string().max(200).optional() }) },
   'discussion.host': {
