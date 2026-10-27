@@ -67,6 +67,15 @@ const KEEP = ['what', 'change', 'reason', 'state', 'kind', 'resolution', 'rule',
 /** @param {any} payload */
 const pick = payload => Object.fromEntries(KEEP.filter(k => payload[k] !== undefined).map(k => [k, payload[k]]));
 
+/** The realtime channel for a recipient: its profile, or for an item addressed to the account (a couple invite) the
+ * account's own person profile — an empty profile reached nobody, so the screen kept its cached list.
+ * @param {Q} q @param {{account: string, profile: string | null}} r @returns {Promise<string | null>} */
+async function signalTo(q, r) {
+  if (r.profile) return r.profile;
+  const [a] = await q.query('select person_profile_id from feture.account where id = $1', [r.account]);
+  return a?.person_profile_id ?? null;
+}
+
 /** Writes one notification per recipient account. @param {Q} q @param {OutboxItem} item
  * @param {{type: string, actor?: string | null, objectType?: string | null, objectId?: string | null, data?: object}} n
  * @param {{account: string, profile: string | null}[]} recipients @param {Signal[]} out realtime signals, sent after commit */
@@ -94,7 +103,7 @@ async function write(q, item, n, recipients, out) {
       [r.account, r.profile, n.type, n.actor ?? null, n.objectType ?? null, n.objectId ?? null, JSON.stringify(n.data ?? {}), item.id]);
     if (added[0]) {
       await queuePush(q, item, r, pushKind(n.type), added[0].id);
-      out.push({ profile: r.profile ?? '', kind: 'notify' });
+      const to = await signalTo(q, r); if (to) out.push({ profile: to, kind: 'notify' });
     }
   }
 }
@@ -199,7 +208,7 @@ export function notifyHandlers(db, emit = () => {}) {
           const by = /** @type {any} */ (item.payload).from;
           if (by && (await q.query(`select feture.blocked($1, $2) b`, [r.profile ?? by, by]))[0].b) continue;
           await queuePush(q, item, r, 'decide');
-          out.push({ profile: r.profile ?? '', kind: 'decide' });
+          const to = await signalTo(q, r); if (to) out.push({ profile: to, kind: 'decide' });
         }
       });
     };

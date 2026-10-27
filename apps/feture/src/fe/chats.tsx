@@ -173,6 +173,11 @@ export function ChatScreen(){
  const [error,setError]=useState<unknown>(null);const [text,setText]=useState('');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
  const [pend,setPend]=useState<Pend[]>([]);const [tries,setTries]=useState(0);const [replyTo,setReplyTo]=useState<string|null>(null);
  const [open,setOpen]=useState<Record<string,string>>({});
+ // The «down» button sits above the input bar (`--ctah`); the bar grows with a reply quote or a long message.
+ const bar=useRef<HTMLDivElement>(null);
+ useLayoutEffect(()=>{const el=bar.current,m=document.querySelector<HTMLElement>('.fe-v21 main.main');if(!el||!m)return;
+  const ro=new ResizeObserver(()=>m.style.setProperty('--ctah',el.offsetHeight+'px'));ro.observe(el);
+  return ()=>{ro.disconnect();m.style.removeProperty('--ctah');};},[state,items===null]);
  const [eph,setEph]=useState<Record<string,{state:'open'|'done',until?:number}>>({});
  const [viewer,setViewer]=useState<{src:string,label?:string|undefined,wm?:string|undefined}|null>(null);
  const [sheet,setSheet]=useState<SheetKind|null>(null);const [sheetErr,setSheetErr]=useState('');const [sheetBusy,setSheetBusy]=useState(false);
@@ -464,7 +469,7 @@ export function ChatScreen(){
    </>}
   </div></div>
   <button type="button" className={'chat-down'+(ended?' low':'')+(!near?' on':'')} aria-label={t('fe.chx.toLatest')} onClick={toBottom}><ChevronDown/>{fresh>0&&<em>{fresh>99?'99+':fresh}</em>}</button>
-  {!ended&&<div className="inputbar">
+  {!ended&&<div className="inputbar" ref={bar}>
    {replyTo&&quoteOf(replyTo)&&<div className="reply-target chat-reply">{quote(replyTo,true)}<button type="button" className="ibtn sm" aria-label={t('fe.chx.cancelReply')} onClick={()=>{setReplyTo(null);input.current?.focus({preventScroll:true});}}><X/></button></div>}
    <button type="button" className="ibtn ghost" aria-label={t('fe.chx.attach')} disabled={!meta||!!out?.pending} onClick={()=>{setSheetErr('');setSheet('attach');}}><Plus/></button>
    <textarea ref={input} rows={1} maxLength={2000} value={text} onChange={e=>{setText(e.target.value);grow(e.target);}}

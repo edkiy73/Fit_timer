@@ -7,6 +7,7 @@ import { me } from '../server/commands/me.mjs';
 import { social } from '../server/commands/social.mjs';
 import { discover } from '../server/commands/discover.mjs';
 import { chats } from '../server/commands/chats.mjs';
+import { couples } from '../server/commands/couples.mjs';
 import { channelFor, createSignals, broadcastSender } from '../server/realtime.mjs';
 import { runJobs } from '../server/jobs.mjs';
 import { setup as baseSetup, op } from './fe-helpers.mjs';
@@ -20,7 +21,7 @@ async function world({ failing = false } = {}) {
   const sender = async (/** @type {any[]} */ messages) => { if (failing) throw new Error('realtime_http_500'); sent.push(messages); };
   let signals;
   const env = await baseSetup({
-    commands: { ...platform, ...me, ...social, ...discover, ...chats }, realtime: REALTIME,
+    commands: { ...platform, ...me, ...social, ...discover, ...chats, ...couples }, realtime: REALTIME,
     signals: db => (signals = createSignals({ db, pepper: PEPPER, sender })),
   });
   const { call, db } = env;
@@ -145,4 +146,16 @@ test('REST sender: Supabase batch broadcast shape, secret only in headers, short
   const slow = broadcastSender({ url: 'https://abc.supabase.co', secret: 's', timeoutMs: 20,
     fetch: /** @type {any} */ ((/** @type {string} */ _u, /** @type {any} */ init) => new Promise((_, reject) => init.signal.addEventListener('abort', () => reject(new Error('aborted'))))) });
   await assert.rejects(slow([]), /aborted/); // createSignals swallows it; the sender itself reports
+});
+
+test('a couple invite (addressed to the account) signals «decide» on the invitee’s own profile', async () => {
+  const { pg, db, call, person, sent, signals, accountOf } = await world();
+  try {
+    const a = await person('ua', 'alex'), b = await person('ub', 'kira');
+    assert.equal((await call('ua', a, { action: 'couple.invite', opId: op(), handle: 'kira' })).status, 200);
+    sent.length = 0;
+    await runJobs(db, { scan: null, signals });
+    const want = channelFor(PEPPER, b, [await accountOf(b)]);
+    assert.ok(sent.flat().some(m => m.topic === want && m.payload.k === 'decide'), JSON.stringify(sent));
+  } finally { await pg.close(); }
 });
