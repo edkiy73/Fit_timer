@@ -7,6 +7,8 @@ import { enqueue } from '../outbox.mjs';
 import { sha256 } from '../hash.mjs';
 import { needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
 import { journal, requireStaff } from './staff.mjs';
+import { mediaDto } from '../media/assets.mjs';
+import { withFaces } from './faces.mjs';
 
 /** Slice D1: communities and discussions (S1 §9, extract/communities-events.md).
  * A community is owned by a profile (a couple can run one) and goes to staff before it is published; major edits
@@ -20,6 +22,21 @@ import { journal, requireStaff } from './staff.mjs';
 const PRIVACY = ['hidden', 'closed', 'open'];
 const MAJOR = ['name', 'description', 'coverAssetId'];
 const COLS = { name: 'name', description: 'description', topics: 'topics', privacy: 'privacy', joinQuestion: 'join_question', rules: 'rules', placeId: 'place_id', coverAssetId: 'cover_asset_id', plate: 'plate' };
+
+/** Signs of life on a card (V21 commPulse): when the viewer could last read a discussion, the next upcoming event, the
+ * cover asset. Expects the community as `c` and the viewer in $1/$2. */
+const PULSE = `(select max(p.published_at) from feture.post p where p.community_id = c.id and p.state = 'published' and feture.post_visible(p, $1, $2)) last_talk_at,
+  (select min(e.starts_at) from feture.event e where e.community_id = c.id and e.state = 'published' and e.ends_at > now() and feture.event_visible(e, $1, $2)) next_event_at,
+  (select to_jsonb(m) from feture.media_asset m where m.id = c.cover_asset_id) cover_asset`;
+
+/** The cover photo as a public place shows it, or null. @param {import('../media/assets.mjs').MediaConfig} media @param {any} asset @param {string} viewerProfileId */
+async function coverOf(media, asset, viewerProfileId) {
+  if (!asset || !media?.delivery) return null;
+  const a = typeof asset === 'string' ? JSON.parse(asset) : asset;
+  return mediaDto(media, a, { viewerProfileId, place: 'public', showExplicit: false }).catch(() => null);
+}
+/** @param {any} v */
+const iso = v => (v ? new Date(v).toISOString() : null);
 
 /** @param {Acting | null} acting @returns {Acting} */
 const need = acting => { if (!acting) throw new Error('acting profile missing'); return acting; };
@@ -194,7 +211,7 @@ const run = {
     return { rev, review: Object.keys(later) };
   },
 
-  async 'community.get'(q, { acting: a, input }) {
+  async 'community.get'(q, { acting: a, input, cfg }) {
     const viewer = need(a);
     const c = await visible(q, input.communityId, viewer, input.invite);
     const m = await membership(q, c.id, viewer.profileId);
@@ -206,11 +223,17 @@ const run = {
     const hosts = await q.query(
       `select p.id, p.kind, p.handle, p.name, cm.role from feture.community_member cm join feture.profile p on p.id = cm.profile_id
        where cm.community_id = $1 and cm.state = 'active' and cm.role in ('owner', 'host') and p.state = 'active' and not feture.blocked($2, p.id)`, [c.id, viewer.profileId]);
+    const [[pulse]] = await Promise.all([
+      q.query(`select ${PULSE} from feture.community c where c.id = $3`, [viewer.profileId, viewer.accountId, c.id]),
+      withFaces(q, cfg.media, viewer, hosts, r => r),
+    ]);
+    const cover = await coverOf(cfg.media, pulse.cover_asset, viewer.profileId);
     const host = m?.state === 'active' && ['owner', 'host'].includes(m.role);
     return {
       community: {
         id: c.id, name: c.name, description: c.description, topics: c.topics, privacy: c.privacy, joinQuestion: c.privacy === 'open' ? null : c.join_question,
-        rules: c.rules, placeId: c.place_id, plate: c.plate, members: counts.members, hosts,
+        rules: c.rules, placeId: c.place_id, plate: c.plate, cover, members: counts.members, hosts,
+        lastTalkAt: iso(pulse.last_talk_at), nextEventAt: iso(pulse.next_event_at),
         me: m ? { role: m.role, state: m.state, listed: m.listed, readOnly: m.read_only, muted: m.muted } : null,
         request: req?.state === 'pending' ? { id: req.id } : null,
         ...(host ? { pendingRequests: counts.requests } : {}),
@@ -219,7 +242,7 @@ const run = {
     };
   },
 
-  async 'community.catalog'(q, { acting: a, input }) {
+  async 'community.catalog'(q, { acting: a, input, cfg }) {
     const viewer = need(a);
     let cur = null;
     if (input.cursor) {
@@ -229,7 +252,7 @@ const run = {
       }
     }
     const rows = await q.query(
-      `select c.id, c.name, c.topics, c.privacy, c.place_id, c.plate, c.published_at,
+      `select c.id, c.name, c.description, c.topics, c.privacy, c.place_id, c.plate, c.published_at, ${PULSE},
          (select count(*)::int from feture.community_member m where m.community_id = c.id and m.state = 'active') members,
          exists (select 1 from feture.community_member m where m.community_id = c.id and m.profile_id = $1 and m.state = 'active') joined
        from feture.community c
@@ -240,7 +263,10 @@ const run = {
       [viewer.profileId, viewer.accountId, input.topics?.length ? input.topics : null, input.privacy ?? null, cur?.[0] ?? null, cur?.[1] ?? null]);
     const page = rows.slice(0, 20);
     const last = page[page.length - 1];
-    return { items: page.map(({ published_at: _, ...r }) => r), next: rows.length > 20 ? Buffer.from(JSON.stringify([new Date(last.published_at).toISOString(), last.id])).toString('base64url') : null };
+    const items = await Promise.all(page.map(async ({ published_at: _, cover_asset, last_talk_at, next_event_at, ...r }) => ({
+      ...r, cover: await coverOf(cfg.media, cover_asset, viewer.profileId), lastTalkAt: iso(last_talk_at), nextEventAt: iso(next_event_at),
+    })));
+    return { items, next: rows.length > 20 ? Buffer.from(JSON.stringify([new Date(last.published_at).toISOString(), last.id])).toString('base64url') : null };
   },
 
   async 'community.mine'(q, { acting: a }) {
@@ -289,7 +315,7 @@ const run = {
     return { state: 'withdrawn' };
   },
 
-  async 'community.requests'(q, { acting: a, input }) {
+  async 'community.requests'(q, { acting: a, input, cfg }) {
     const acting = need(a);
     await requireHost(q, input.communityId, acting, 'host');
     const items = await q.query(
@@ -298,7 +324,7 @@ const run = {
        where r.community_id = $1 and ($2 = 'pending' and r.state = 'pending' or $2 = 'history' and r.state <> 'pending')
          and p.state = 'active' and not feture.blocked($3, p.id)
        order by r.created_at desc limit 50`, [input.communityId, input.tab, acting.profileId]);
-    return { items };
+    return { items: await withFaces(q, cfg.media, acting, items, r => r.profile) };
   },
 
   async 'community.requestDecide'(q, { acting: a, input }) {
@@ -357,7 +383,7 @@ const run = {
     return rows[0];
   },
 
-  async 'community.members'(q, { acting: a, input }) {
+  async 'community.members'(q, { acting: a, input, cfg }) {
     const viewer = need(a);
     const c = await visible(q, input.communityId, viewer);
     const reader = c.privacy === 'open' || c.own || await isReader(q, c.id, viewer.profileId);
@@ -371,7 +397,7 @@ const run = {
        where cm.community_id = $1 and cm.state = 'active' and p.state = 'active' and not feture.blocked($2, p.id)
          and ($3 or cm.role <> 'member' or cm.listed or cm.profile_id = $2)
        order by (cm.role = 'owner') desc, (cm.role = 'host') desc, cm.joined_at limit 200`, [c.id, viewer.profileId, host]);
-    return { count: n, items };
+    return { count: n, items: await withFaces(q, cfg.media, viewer, items, r => r) };
   },
 
   async 'community.invite'(q, { acting: a, input }) {

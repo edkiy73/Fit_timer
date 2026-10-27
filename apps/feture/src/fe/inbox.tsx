@@ -8,11 +8,12 @@ import {Av,Bar,Btn,Empty,Skel,plate} from './ui';
 import {useFe,useRealtime} from './session';
 import {useToast} from './toast';
 import {when} from './feed';
+import {faceFields,NameBadges,withAge} from './faces';
 
 /** Slice G2 (V21 N01) with the prototype's markup: «Нужно решить» (decision cards, grouped «Тебе» / «Паре» with an active
  * couple) and «Все уведомления» (rows `.nt`, «Новые» / «Ранее», filter chips, «Прочитать все»). One bell count
  * everywhere: unread notifications + things to decide. */
-const actor=z.object({id:z.uuid(),kind:z.enum(['person','couple']).optional(),handle:z.string().nullable().optional(),name:z.string().nullable().optional()}).passthrough().nullable();
+const actor=z.object({id:z.uuid(),kind:z.enum(['person','couple']).optional(),handle:z.string().nullable().optional(),name:z.string().nullable().optional(),...faceFields}).passthrough().nullable();
 const decision=z.object({kind:z.string(),id:z.uuid(),objectId:z.uuid().nullable(),actor,at:z.string(),label:z.string(),addressee:z.uuid().nullable().optional()});
 type Decision=z.infer<typeof decision>;
 const decideRes=z.object({ok:z.literal(true),items:z.array(decision)});
@@ -133,7 +134,7 @@ export function InboxScreen(){
  const whomTag=(label:string)=>couple?<span className={'whom'+(label==='couple'?' us':'')}>{label==='couple'?t('fe.ibx.tagCouple'):t('fe.ibx.tagMe')}</span>:null;
  const row=(n:Note)=>{const [Icon,tone]=noteIcon(n);
   return <button key={n.id} type="button" className={'nt'+(n.read?'':' unread')} onClick={()=>open(n)}>
-   <span className="ntw">{n.actor?<Av name={nameOf(n.actor)} seed={n.actor.id}/>:<span className="av" style={{position:'relative'}}><div className="plate" style={plate(n.object?.id??n.type)}/></span>}<span className={'ico'+(tone?' '+tone:'')}><Icon/></span></span>
+   <span className="ntw">{n.actor?<Av name={nameOf(n.actor)} seed={n.actor.id} src={n.actor.avatar}/>:<span className="av" style={{position:'relative'}}><div className="plate" style={plate(n.object?.id??n.type)}/></span>}<span className={'ico'+(tone?' '+tone:'')}><Icon/></span></span>
    <span className="tx">{noteText(n)}<time>{whomTag(n.label)}{whomTag(n.label)?' ':''}{when(n.at,locale)}</time></span>
    {!n.read&&<span className="dotu" aria-label={t('fe.inbox.new')}/>}
   </button>;};
@@ -141,8 +142,8 @@ export function InboxScreen(){
  /* ---- decisions (todoGroupHTML) ---- */
  const card=(d:Decision,text:string,buttons:ReactNode,thumb?:ReactNode)=><div key={d.kind+d.id} className="card rqcard" style={{marginBottom:10}}>
   <div className="row">
-   <button type="button" className="rq-av" aria-label={nameOf(d.actor)} onClick={()=>d.actor&&navigate('/n/people/'+d.actor.id)}><Av name={nameOf(d.actor)} seed={d.actor?.id??d.id}/></button>
-   <button type="button" className="grow" style={{textAlign:'left'}} onClick={()=>d.actor&&navigate('/n/people/'+d.actor.id)}><b style={{fontSize:16}}>{nameOf(d.actor)}</b><div className="note">{text} · {when(d.at,locale)}</div></button>
+   <button type="button" className="rq-av" aria-label={nameOf(d.actor)} onClick={()=>d.actor&&navigate('/n/people/'+d.actor.id)}><Av name={nameOf(d.actor)} seed={d.actor?.id??d.id} src={d.actor?.avatar}/></button>
+   <button type="button" className="grow" style={{textAlign:'left'}} onClick={()=>d.actor&&navigate('/n/people/'+d.actor.id)}><b style={{fontSize:16}}>{d.kind==='tag'?nameOf(d.actor):withAge(nameOf(d.actor),d.actor)}<NameBadges p={d.actor}/></b><div className="note">{text} · {when(d.at,locale)}</div></button>
    {thumb}
   </div>
   <div className="row g8 mt12">{buttons}</div>

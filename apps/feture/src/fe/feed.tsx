@@ -12,11 +12,12 @@ import {PostMenu,ReplyMenu,type Removal} from './post-menu';
 import {restoreInto,useToast} from './toast';
 import {MediaGrid,Poll,RichText,Viewer,mdPlain,mediaSrc,plural,useTopics,type CatTopic,type PollData} from './post-parts';
 import {Jars,useInterests,type Interest} from './interests';
+import {NameBadges} from './faces';
 
 /** Slice B (V21 F01, F05, F07, F09) with the prototype's markup: feed tabs, composer row, topic chips and filters,
  * posts (text, media, poll, interests, marks), replies in threads, the composer and its preview.
  * Visibility and counts are the server's; the client never filters or invents them. */
-const author=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string(),avatar:z.string().nullable().optional()});
+const author=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string(),avatar:z.string().nullable().optional(),photoVerified:z.boolean().optional(),premium:z.boolean().optional()});
 const media=z.object({id:z.uuid(),kind:z.string(),w:z.number().nullable(),h:z.number().nullable(),pending:z.boolean(),blurred:z.boolean(),src:z.record(z.string(),z.string()).nullable()});
 const tag=z.object({id:z.uuid(),handle:z.string().nullable().optional(),name:z.string().nullable().optional(),state:z.string().optional()}).passthrough();
 const interest=z.object({topicId:z.string(),value:z.number().nullable().optional(),dir:z.unknown().optional()}).passthrough();
@@ -201,7 +202,7 @@ export function PostCard({post,onChange,onRemove,onExpired,full=false,onReply,pr
   <div className="post-h">
    <button type="button" className="who" disabled={preview} onClick={()=>navigate('/n/people/'+post.author.id)}>
     <Av name={nameOf(post.author)} seed={post.author.id} size="sm" couple={coupleOf(post.author)} src={post.author.avatar}/>
-    <span className="tx"><b><span className="nmt">{nameOf(post.author)}</span></b><small>{preview?t('fe.fd.justNow'):when(post.publishedAt,locale)}
+    <span className="tx"><b><span className="nmt">{nameOf(post.author)}</span><NameBadges p={post.author}/></b><small>{preview?t('fe.fd.justNow'):when(post.publishedAt,locale)}
      {AudI&&<> · <span className="aud"><AudI/>{t('fe.fd.aud.'+post.audience)}</span></>}
      {mine&&post.inFeed===false&&<> · <span className="aud"><EyeOff/>{t('fe.fd.notInFeed')}</span></>}
      {post.state&&post.state!=='published'?' · '+t('fe.feed.state.'+post.state):''}{post.editedAt&&!preview?' · '+t('fe.fd.edited'):''}</small></span>

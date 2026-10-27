@@ -7,6 +7,7 @@ import { needsPartner, registerApprovalKind, requestApproval } from '../approval
 import { journal, requireStaff } from './staff.mjs';
 import { ageOn } from './me.mjs';
 import { mediaDto } from '../media/assets.mjs';
+import { withFaces } from './faces.mjs';
 
 /** Slice D2: events (S1 §10, extract/communities-events.md §1.8–1.12).
  * An event belongs to the organizing profile (a couple can organize) and goes to staff before it is published; a couple
@@ -329,7 +330,7 @@ const run = {
               (select json_build_object('kind', p.kind, 'change', p.change) from feture.partner_approval p where p.profile_id = $2 and p.target_id = $1 and p.state = 'pending' and p.kind in ('event.rsvp', 'event.apply') limit 1) waiting`,
       [e.id, viewer.profileId]);
     const counts = await crowd(q, e, viewer.profileId);
-    const org = await q.query(`select p.id, p.kind, p.handle, p.name from feture.profile p where p.id = $1`, [e.organizer_profile_id]);
+    const org = await withFaces(q, cfg.media, viewer, await q.query(`select p.id, p.kind, p.handle, p.name from feture.profile p where p.id = $1`, [e.organizer_profile_id]), r => r);
     // The organizer's words are for admitted people (they may name the place); people who are interested or still
     // waiting for an answer learn only that the time or place changed.
     const follows = ['going', 'interested'].includes(mine.rsvp?.status) || ['pending', 'approved'].includes(mine.application?.state);
@@ -463,7 +464,7 @@ const run = {
     return { state: 'withdrawn' };
   },
 
-  async 'event.applications'(q, { acting: a, input }) {
+  async 'event.applications'(q, { acting: a, input, cfg }) {
     const acting = need(a);
     const [e] = await q.query('select id from feture.event where id = $1 and organizer_profile_id = $2', [input.eventId, acting.profileId]);
     if (!e) fail(404, 'not_found');
@@ -478,10 +479,11 @@ const run = {
        from feture.profile_member pm join feture.account a on a.id = pm.account_id join feture.profile pp on pp.id = a.person_profile_id
        left join feture.profile_details d on d.profile_id = pp.id
        where pm.profile_id = any($1) and pm.state = 'active'`, [rows.map(r => r.profile_id)]) : [];
+    const items = await withFaces(q, cfg.media, acting, rows.map(({ profile_id, kind, handle, name, ...r }) => ({ ...r, profile: { id: profile_id, kind, handle, name } })), r => r.profile);
     return {
-      items: rows.map(({ profile_id, kind, handle, name, ...r }) => ({
-        ...r, profile: { id: profile_id, kind, handle, name },
-        people: people.filter(p => p.profile_id === profile_id).map(p => ({
+      items: items.map(({ ...r }) => ({
+        ...r,
+        people: people.filter(p => p.profile_id === r.profile.id).map(p => ({
           handle: p.handle, age: p.show_age && p.birth_date ? ageOn(String(p.birth_date instanceof Date ? p.birth_date.toISOString().slice(0, 10) : p.birth_date)) : null,
         })),
       })),
@@ -521,7 +523,7 @@ const run = {
     return { id: n.id };
   },
 
-  async 'event.attendees'(q, { acting: a, input }) {
+  async 'event.attendees'(q, { acting: a, input, cfg }) {
     const viewer = need(a);
     const e = await visibleEvent(q, input.eventId, viewer);
     // «Идут»: approved applications (events by application) or «иду»; a couple is one row counted as two (EVT-003).
@@ -534,6 +536,7 @@ const run = {
            where r.event_id = $1 and r.status = $3 and p.state = 'active' and not feture.blocked($2, p.id)`,
       input.kind === 'going' && e.requires_application ? [e.id, viewer.profileId] : [e.id, viewer.profileId, input.kind]);
     const people = (/** @type {any[]} */ list) => list.reduce((n, r) => n + (r.kind === 'couple' ? 2 : 1), 0);
+    await withFaces(q, cfg.media, viewer, e.own ? rows : rows.filter(r => r.shown), r => r);
     if (e.own) return { count: people(rows), hidden: 0, items: rows.map(({ shown: _, ...r }) => r) };
     const shown = rows.filter(r => r.shown);
     return { count: people(rows), hidden: people(rows) - people(shown), items: shown.map(({ shown: _, ...r }) => r) };

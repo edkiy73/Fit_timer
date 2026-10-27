@@ -6,6 +6,8 @@ import { needsPartner, registerApprovalKind, requestApproval } from '../approval
 import { avatarSrc, mediaDto } from '../media/assets.mjs';
 import { blockProfile } from './social.mjs';
 import { canWrite } from './communities.mjs';
+import { PREMIUM_SQL } from './faces.mjs';
+import { hasPhotoCheck } from './verification.mjs';
 
 /** Slice B: posts and what hangs on them (S1 §8, extract/feed-content.md).
  * Rules: text without media publishes at once (Q1); media waits until every file is checked; explicit media only in
@@ -245,9 +247,12 @@ registerApprovalKind('post.edit', {
 
 /** Post DTO for one viewer. @param {Q} q @param {any} p @param {Acting} viewer @param {import('../media/assets.mjs').MediaConfig} media @param {boolean} showExplicit */
 async function postDto(q, p, viewer, media, showExplicit) {
+  const pv = await hasPhotoCheck(q);
   // Independent reads go out together (the pool gate caps concurrency).
   const [[row], assets, [poll], [mine], [c], tags] = await Promise.all([
-    q.query(`select id, kind, handle, name, avatar_asset_id from feture.profile where id = $1`, [p.owner_profile_id]),
+    // The name badges (V21 nameBadges): «Фото подтверждено» and the public Premium crown.
+    q.query(`select p.id, p.kind, p.handle, p.name, p.avatar_asset_id, ${pv ? 'feture.photo_verified(p.id)' : 'false'} "photoVerified", ${PREMIUM_SQL} premium
+             from feture.profile p where p.id = $1`, [p.owner_profile_id]),
     q.query(`select m.* from feture.media_attachment a join feture.media_asset m on m.id = a.asset_id where a.target_type = 'post' and a.target_id = $1 order by a.position`, [p.id]),
     q.query('select question, options from feture.poll where post_id = $1', [p.id]),
     q.query('select option from feture.poll_vote where post_id = $1 and profile_id = $2', [p.id, viewer.profileId]),

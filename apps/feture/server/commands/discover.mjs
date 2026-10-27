@@ -8,6 +8,7 @@ import { requireUnrestricted } from '../profiles.mjs';
 import { isPremium } from './premium.mjs';
 import { photoVerifiedOf } from './verification.mjs';
 import { endConversations, openConversation } from './chats.mjs';
+import { PREMIUM_SQL } from './faces.mjs';
 
 /** Slice F: Discover, likes and matches (S1 §11, extract/people-discover-chats.md).
  * The pool: visible profiles with an approved safe avatar, active and unrestricted, no block either way, not related
@@ -94,7 +95,8 @@ export async function cards(q, viewer, ids, media) {
           where m.profile_id = p.id and m.state = 'active') ages,
        exists (select 1 from feture.profile_like l where l.from_profile_id = p.id and l.to_profile_id = $2 and l.state = 'active') liked_me,
        (select count(*)::int from feture.interest i join feture.interest j on j.topic_id = i.topic_id and j.profile_id = $2 and j.vis = 'public' and j.value is not null
-          where i.profile_id = p.id and i.vis = 'public' and i.value is not null) shared
+          where i.profile_id = p.id and i.vis = 'public' and i.value is not null) shared,
+       ${PREMIUM_SQL} premium
      from feture.profile p
      left join feture.profile_details d on d.profile_id = p.id
      left join feture.place pl on pl.id = d.city_id and pl.state = 'approved'
@@ -108,6 +110,7 @@ export async function cards(q, viewer, ids, media) {
     byId.set(r.id, {
       id: r.id, kind: r.kind, handle: r.handle, name: r.name || r.handle, ages: r.ages,
       city: r.city_ru ? { ru: r.city_ru, en: r.city_en } : null, avatar, likedMe: r.liked_me, shared: r.shared, photoVerified: verified.get(r.id) ?? false,
+      premium: !!r.premium,
     });
   }
   return ids.map(i => byId.get(i)).filter(Boolean);

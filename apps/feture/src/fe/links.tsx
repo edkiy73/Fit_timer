@@ -8,6 +8,7 @@ import {newOpId} from '../feture/fe-api';
 import {Av,Bar,Btn,Empty,View,Skel} from './ui';
 import {useFe} from './session';
 import {SelectRow} from './create-community';
+import {NameBadges,withAge} from './faces';
 import {KINDS,SIDES,Sheet,linkLabel,linksMineRes,mediaSrc,personName,personProfileRes,pxError,useToast,type Kind,type LinkView,type LinksMine,type PersonProfile} from './profile-extras';
 
 /** Links between profiles with the V21 prototype's markup: «Мои связи» (P21 — proposals waiting for an answer,
@@ -47,14 +48,14 @@ export function LinksBlock({onChanged}:{onChanged?:()=>void}){
   <div className="grp-t"><span>{title}</span>{(list.length||inc.length)?<button type="button" onClick={manage}>{t('fe.mx.lk.manage')}</button>:null}</div>
   {inc.length>0&&<div className="lk-inc">{inc.map(l=>{const name=nameOf(l);const go=()=>navigate('/n/people/'+l.other.id);
    return <div key={l.id} className="card rqcard lk-req" style={{marginBottom:10}}>
-    <div className="row"><button type="button" className="rq-av" aria-label={name} onClick={go}><Av name={name} seed={l.other.id} size="sm"/></button>
-     <button type="button" className="grow" style={{textAlign:'left'}} onClick={go}><b style={{fontSize:15}}>{name}</b>
+    <div className="row"><button type="button" className="rq-av" aria-label={name} onClick={go}><Av name={name} seed={l.other.id} size="sm" src={l.other.avatar}/></button>
+     <button type="button" className="grow" style={{textAlign:'left'}} onClick={go}><b style={{fontSize:15}}>{withAge(name,l.other)}<NameBadges p={l.other}/></b>
       <div className="note">{l.change?fill(t('fe.ln.proposesChange'),{from:linkLabel(t,l.kind,l.side),to:t('fe.px.lk.k.'+l.change.kind)}):fill(couple?t('fe.ln.proposesCouple'):t('fe.ln.proposes'),{label:linkLabel(t,l.kind,l.side)})}</div></button></div>
     <div className="row g8 mt12"><Btn size="md" disabled={busy} onClick={()=>answer(l,true)}>{t('fe.ln.confirm')}</Btn><Btn size="md" kind="soft" disabled={busy} onClick={()=>answer(l,false)}>{t('fe.ln.decline')}</Btn></div>
    </div>;})}</div>}
   {list.length?<div className="card list">{list.slice(0,4).map(l=>{const name=nameOf(l);const v=l.vis;
-   return <button key={l.id} type="button" className="li" onClick={()=>navigate('/n/people/'+l.other.id)}><Av name={name} seed={l.other.id} size="sm"/>
-    <span className="tx"><b>{name}</b><small>{linkLabel(t,l.kind,l.side)+(v!=='all'?' · '+(v==='us'?t('fe.mx.lk.visUs'):t('fe.mx.lk.visFollowers')):'')}</small></span><ChevronRight/></button>;})}</div>
+   return <button key={l.id} type="button" className="li" onClick={()=>navigate('/n/people/'+l.other.id)}><Av name={name} seed={l.other.id} size="sm" src={l.other.avatar}/>
+    <span className="tx"><b>{name}<NameBadges p={l.other}/></b><small>{linkLabel(t,l.kind,l.side)+(v!=='all'?' · '+(v==='us'?t('fe.mx.lk.visUs'):t('fe.mx.lk.visFollowers')):'')}</small></span><ChevronRight/></button>;})}</div>
    :<div className="card"><button type="button" className="ph-empty" onClick={manage}><span className="pe-ic"><Link2/></span>
     <span className="tx"><b>{t('fe.mx.lk.add')}</b><small>{couple?t('fe.mx.lk.addSubCouple'):t('fe.mx.lk.addSub')}</small></span><Plus/></button></div>}
  </section>;
@@ -79,8 +80,8 @@ export function LinksScreen(){
  const visWord=(v:Vis)=>v==='us'?t('fe.ln.visUs'):v==='followers'?t('fe.ln.visFollowers'):'';
  const row=(l:LinkView,pend:boolean,extra:string)=>{const name=nameOf(l);
   return <button key={l.id} type="button" className="li" onClick={()=>setMenu({l,pend})}>
-   <Av name={name} seed={l.other.id} size="sm"/>
-   <span className="tx"><b>{name}</b><small>{[linkLabel(t,l.kind,l.side),pend?'':visWord(l.vis),extra].filter(Boolean).join(' · ')}</small></span><ChevronRight/>
+   <Av name={name} seed={l.other.id} size="sm" src={l.other.avatar}/>
+   <span className="tx"><b>{name}<NameBadges p={l.other}/></b><small>{[linkLabel(t,l.kind,l.side),pend?'':visWord(l.vis),extra].filter(Boolean).join(' · ')}</small></span><ChevronRight/>
   </button>;};
  const m=menu?.l;
  return <>
@@ -94,8 +95,8 @@ export function LinksScreen(){
       {waiting.map(l=>{const name=nameOf(l);const go=()=>navigate('/n/people/'+l.other.id);
        return <div key={l.id} className="card rqcard" style={{marginBottom:10}}>
         <div className="row">
-         <button type="button" className="rq-av" aria-label={name} onClick={go}><Av name={name} seed={l.other.id}/></button>
-         <button type="button" className="grow" style={{textAlign:'left'}} onClick={go}><b style={{fontSize:16}}>{name}</b>
+         <button type="button" className="rq-av" aria-label={name} onClick={go}><Av name={name} seed={l.other.id} src={l.other.avatar}/></button>
+         <button type="button" className="grow" style={{textAlign:'left'}} onClick={go}><b style={{fontSize:16}}>{withAge(name,l.other)}<NameBadges p={l.other}/></b>
           <div className="note">{l.change?fill(t('fe.ln.proposesChange'),{from:linkLabel(t,l.kind,l.side),to:t('fe.px.lk.k.'+l.change.kind)})
            :fill(couple?t('fe.ln.proposesCouple'):t('fe.ln.proposes'),{label:linkLabel(t,l.kind,l.side)})}</div></button>
         </div>

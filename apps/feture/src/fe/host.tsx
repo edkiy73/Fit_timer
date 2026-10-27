@@ -11,12 +11,13 @@ import {when} from './feed';
 import {FErr,Field,SelectRow,shakeFirstErr} from './create-community';
 import {Ask,CSheet,LinkRow,SegN,SubBar,appUrl,copyLink,fill,okRes,pl,plWord} from './comm-kit';
 import {EventCard} from './communities';
+import {faceFields,NameBadges,withAge} from './faces';
 
 /** Tools for community hosts and event organisers (V21 C04/C05 join, C03 «Участники» / C09, C10 manage, C11 requests;
  * E03 «Участие», E06 apply, E15 organiser panel, E16 applications, E17/E18 attendees). The server decides who may do
  * what; the screens only offer what the role allows. Results are told in toasts, confirmations are ask() dialogs. */
 
-const prof=z.object({id:z.uuid(),kind:z.string(),handle:z.string().nullable(),name:z.string().nullable()}).passthrough();
+const prof=z.object({id:z.uuid(),kind:z.string(),handle:z.string().nullable(),name:z.string().nullable(),...faceFields}).passthrough();
 type Prof=z.infer<typeof prof>;
 const pname=(p:{name?:string|null,handle?:string|null})=>p.name||(p.handle?'@'+p.handle:'?');
 
@@ -64,8 +65,8 @@ function Loading({error,retry,kind='list'}:{error:unknown,retry:()=>void,kind?:'
 /** `personRow()` — avatar, name, a line under it and the chevron (opens the profile). */
 function PersonRow({p,sub,right,onClick}:{p:Prof,sub?:string|undefined,right?:ReactNode,onClick?:()=>void}){
  const navigate=useNavigate();const {acting}=useFe();
- return <button type="button" className="li" onClick={onClick??(()=>navigate(p.id===acting?.id?'/n/me':'/n/people/'+p.id))}><Av name={pname(p)} seed={p.id}/>
-  <span className="tx"><b>{pname(p)}</b>{sub?<small>{sub}</small>:p.handle&&p.name?<small>@{p.handle}</small>:null}</span>{right??<ChevronRight/>}</button>;
+ return <button type="button" className="li" onClick={onClick??(()=>navigate(p.id===acting?.id?'/n/me':'/n/people/'+p.id))}><Av name={pname(p)} seed={p.id} src={p.avatar}/>
+  <span className="tx"><b>{withAge(pname(p),p)}<NameBadges p={p}/></b>{sub?<small>{sub}</small>:p.handle&&p.name?<small>@{p.handle}</small>:null}</span>{right??<ChevronRight/>}</button>;
 }
 
 /* ---------------- Communities ---------------- */
@@ -420,8 +421,8 @@ export function EventApplicationsScreen(){
    {!items?<Loading error={error} retry={load} kind="card"/>
     :!items.length?<Empty icon={FileText} title={t('fe.host.apps.empty')} {...(k==='pending'?{text:t('fe.host.apps.emptyText')}:{})}/>
     :items.map(a=><div key={a.id} className="card application-card mt12">
-     <div className="row"><button type="button" className="plink row g12 grow" style={{textAlign:'left'}} onClick={()=>navigate('/n/people/'+a.profile.id)}><Av name={pname(a.profile)} seed={a.profile.id}/>
-      <span className="grow"><b style={{display:'block'}}>{pname(a.profile)}{a.people.length===1&&a.people[0]!.age?`, ${a.people[0]!.age}`:''}</b>
+     <div className="row"><button type="button" className="plink row g12 grow" style={{textAlign:'left'}} onClick={()=>navigate('/n/people/'+a.profile.id)}><Av name={pname(a.profile)} seed={a.profile.id} src={a.profile.avatar}/>
+      <span className="grow"><b style={{display:'block'}}>{pname(a.profile)}{a.people.length===1&&a.people[0]!.age?`, ${a.people[0]!.age}`:''}<NameBadges p={a.profile}/></b>
        <small className="note" style={{display:'block'}}>{a.people.length>1?a.people.map(p=>[p.handle?'@'+p.handle:'',p.age?String(p.age):''].filter(Boolean).join(', ')).join(' · ')+' · ':''}{when(a.created_at,locale)}</small></span></button></div>
      {a.answers.map((x,i)=><div key={i} className="application-answer">{qs[i]&&<div className="note">{qs[i]}</div>}<div style={{marginTop:4}}>{x}</div></div>)}
      {a.note&&<div className="application-answer"><div className="note">{t('fe.host.app.note')}</div><div style={{marginTop:4}}>{a.note}</div></div>}

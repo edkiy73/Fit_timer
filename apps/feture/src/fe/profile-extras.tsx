@@ -7,6 +7,7 @@ import {Ban,Check,ChevronDown,ChevronLeft,ChevronRight,Clock,Ellipsis,Flag,Heart
 import {Av,Bar,Btn,Empty,Seg,View,plate,Layer,Skel} from './ui';
 import {useFe} from './session';
 import {PhotoBadge} from './photo-check';
+import {faceFields,NameBadges} from './faces';
 import {PostCard,postSchema,type Post} from './feed';
 import type {Removal} from './post-menu';
 
@@ -65,7 +66,7 @@ export function Sheet({title,onClose,children,foot,full}:{title:string,onClose:(
 /* ---------- the person card shared by PersonScreen and «Как видят» ---------- */
 const media=z.object({src:z.record(z.string(),z.string()).nullable(),pending:z.boolean().optional()}).passthrough();
 export const personProfile=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),bio:z.string(),
- age:z.number().nullable(),city:z.object({ru:z.string().nullable(),en:z.string().nullable()}).nullable(),avatar:media.nullable(),photos:z.array(media),details:z.record(z.string(),z.unknown()),photoVerified:z.boolean().optional()}).passthrough();
+ age:z.number().nullable(),city:z.object({ru:z.string().nullable(),en:z.string().nullable()}).nullable(),avatar:media.nullable(),photos:z.array(media),details:z.record(z.string(),z.unknown()),photoVerified:z.boolean().optional(),premium:z.boolean().optional()}).passthrough();
 export const personProfileRes=z.object({ok:z.literal(true),profile:personProfile});
 export type PersonProfile=z.infer<typeof personProfile>;
 export const mediaSrc=(m:z.infer<typeof media>|null|undefined)=>m&&!m.pending?m.src?.card??m.src?.full??m.src?.thumb??null:null;
@@ -167,7 +168,7 @@ export function ProfileHero({p,rel,inert,onOpen}:{p:PersonProfile,rel:Relation|n
   {list.length>1&&<div className="pc-bars" aria-label={fill(t('fe.px.ph.n'),{i:i+1,n:list.length})}>{list.map((_,k)=><i key={k} className={k===i?'on':''}/>)}</div>}
   {list.length>1&&<><button type="button" className="pc-zone l" aria-label={t('fe.px.ph.prev')} onClick={()=>setIx(Math.max(0,i-1))}/><button type="button" className="pc-zone r" aria-label={t('fe.px.ph.next')} onClick={()=>setIx(Math.min(list.length-1,i+1))}/></>}
   {src&&onOpen&&<button type="button" className="pc-zone c" aria-label={t('fe.px.ph.full')} onClick={()=>onOpen(i)}/>}
-  <div className="pc-info"><h2 className="pc-name"><span className="pcn">{name}</span>{p.age?<span>{p.age}</span>:null}{p.photoVerified&&<PhotoBadge/>}</h2>
+  <div className="pc-info"><h2 className="pc-name"><span className="pcn">{name}</span>{p.age?<span>{p.age}</span>:null}<NameBadges p={p}/></h2>
    {city&&<div className="pc-who"><span className="pl"><MapPin/>{city}</span></div>}
    <FollowCounts id={p.id} rel={rel} inert={inert}/></div>
  </div>;
@@ -472,7 +473,7 @@ export const SIDES:Partial<Record<Kind,readonly ['dom','sub']|readonly ['mentor'
 export const OPPOSITE:Record<string,string>={dom:'sub',sub:'dom',mentor:'mentee',mentee:'mentor'};
 /** «Наставничество · учит» — the kind, plus the other side's role (`side` is the own side) when the kind has sides. */
 export const linkLabel=(t:T,kind:string,side?:string|null)=>{const theirs=side?OPPOSITE[side]:null;return t('fe.px.lk.k.'+kind)+(theirs?' · '+t('fe.px.lk.s.'+theirs).toLowerCase():'');};
-const linkOther=z.object({id:z.uuid(),kind:z.string(),handle:z.string().nullable(),name:z.string().nullable()});
+const linkOther=z.object({id:z.uuid(),kind:z.string(),handle:z.string().nullable(),name:z.string().nullable(),...faceFields});
 const linkView=z.object({id:z.uuid(),kind:z.string(),side:z.string().nullable(),vis:z.enum(['all','followers','us']),other:linkOther,
  change:z.object({kind:z.string(),mine:z.boolean()}).nullable()});
 export type LinkView=z.infer<typeof linkView>;
@@ -480,7 +481,7 @@ export type LinkView=z.infer<typeof linkView>;
 export const linksMineRes=z.object({ok:z.literal(true),incoming:z.array(linkView),sent:z.array(linkView),confirmed:z.array(linkView)});
 export type LinksMine=z.infer<typeof linksMineRes>;
 const linksRes=z.object({ok:z.literal(true),items:z.array(z.object({id:z.string(),kind:z.string(),side:z.string().nullable(),
- other:z.object({id:z.uuid(),kind:z.string(),handle:z.string().nullable(),name:z.string().nullable()})}).passthrough())});
+ other:linkOther}).passthrough())});
 
 /** Confirmed links of a profile as far as both endpoints' visibility allows (linksBlock as another person sees it). */
 export function LinksSection({profileId,inert}:{profileId:string,inert?:boolean|undefined}){
@@ -495,7 +496,7 @@ export function LinksSection({profileId,inert}:{profileId:string,inert?:boolean|
    // `side` is this profile's side; the row names the other one's, as in the prototype's linkLabel.
    const label=linkLabel(t,l.kind,l.side);const mine=own.has(l.other.id);
    return <button key={l.id} type="button" className="li" disabled={inert} onClick={()=>navigate(mine?(l.other.id===acting?.id?'/n/me/preview':'/n/me'):'/n/people/'+l.other.id)}>
-    <Av name={name} seed={l.other.id} size="sm"/><span className="tx"><b>{name}{mine?' · '+t(acting?.kind==='couple'?'fe.px.lk.you2':'fe.px.lk.you'):''}</b><small>{label}</small></span><ChevronRight/>
+    <Av name={name} seed={l.other.id} size="sm" src={l.other.avatar}/><span className="tx"><b>{name}<NameBadges p={l.other}/>{mine?' · '+t(acting?.kind==='couple'?'fe.px.lk.you2':'fe.px.lk.you'):''}</b><small>{label}</small></span><ChevronRight/>
    </button>;})}</div>
  </section>;
 }
@@ -659,7 +660,7 @@ export function MePreviewScreen(){
     :<>
      <div className="mt12"><div className="card18">
       {ph?<><img className="mbg" src={ph} alt="" aria-hidden="true" draggable={false}/><img src={ph} alt={personName(p)} draggable={false}/></>:<div className="plate" style={plate(p.id)}/>}
-      <div className="pc-info"><h2 className="pc-name"><span className="pcn">{personName(p)}</span>{p.age?<span>{p.age}</span>:null}{p.photoVerified&&<PhotoBadge/>}</h2>
+      <div className="pc-info"><h2 className="pc-name"><span className="pcn">{personName(p)}</span>{p.age?<span>{p.age}</span>:null}<NameBadges p={p}/></h2>
        {city&&<div className="pc-who"><span className="pl"><MapPin/>{city}</span></div>}
        <FollowCounts id={p.id} rel={rel} inert/>
        <div className="pc-hint"><ChevronDown/>{t('fe.px.card.hint')}</div></div>

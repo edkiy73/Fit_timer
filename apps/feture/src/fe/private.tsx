@@ -12,10 +12,11 @@ import {SelectRow} from './create-community';
 import {Sheet} from './profile-extras';
 import {useToast} from './toast';
 import {Ask,AudTag} from './me';
+import {faceFields,NameBadges,withAge} from './faces';
 
 /** Slice C (V21 X01 «Приватное», P07, P08). Before access the server sends nothing real — only whether a private
  * part exists and what can be asked for; access is per profile, per scope and for a term. */
-const who=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable()}).nullable();
+const who=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),...faceFields}).nullable();
 const incoming=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),scopes:z.array(z.string()),created_at:z.string(),profile:who}))});
 const grants=z.object({ok:z.literal(true),items:z.array(z.object({scopes:z.array(z.string()),until:z.string().nullable(),granted_at:z.string(),profile:who}))});
 const priv=z.object({ok:z.literal(true),exists:z.boolean(),own:z.boolean().optional(),on:z.boolean().optional(),scopes:z.array(z.string()).optional(),until:z.string().nullable().optional(),
@@ -57,9 +58,9 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged}:{profileId:st
   {reqs.length>0&&<section className="grp"><div className="grp-t"><span>{t('fe.priv.requests')} · {reqs.length}</span></div>
    {reqs.map(r=><div key={r.id} className="card rqcard" style={{marginBottom:10}}>
     <div className="row">
-     <button type="button" className="rq-av" aria-label={nameOf(r.profile)} onClick={()=>r.profile&&navigate('/n/people/'+r.profile.id)}><Av name={nameOf(r.profile)} seed={r.profile?.id??r.id}/></button>
+     <button type="button" className="rq-av" aria-label={nameOf(r.profile)} onClick={()=>r.profile&&navigate('/n/people/'+r.profile.id)}><Av name={nameOf(r.profile)} seed={r.profile?.id??r.id} src={r.profile?.avatar}/></button>
      <button type="button" className="grow" style={{textAlign:'left'}} onClick={()=>r.profile&&navigate('/n/people/'+r.profile.id)}>
-      <b style={{fontSize:16}}>{nameOf(r.profile)}</b><div className="note">{cp?t('fe.mx.pr.asksUs'):t('fe.priv.asks')} · {when(r.created_at,locale)}</div>
+      <b style={{fontSize:16}}>{withAge(nameOf(r.profile),r.profile)}<NameBadges p={r.profile}/></b><div className="note">{cp?t('fe.mx.pr.asksUs'):t('fe.priv.asks')} · {when(r.created_at,locale)}</div>
      </button>
     </div>
     <div className="chips mt12">{r.scopes.map(s=><span key={s} className="pill">{scopeLabel(s)}</span>)}</div>
@@ -80,8 +81,8 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged}:{profileId:st
    {given.length>3?<button type="button" onClick={()=>setAllGiven(v=>!v)}>{allGiven?t('fe.mx.pr.less'):t('fe.mx.pr.all',{n:given.length})}</button>
     :given.length?<button type="button" className="danger" onClick={()=>setAsking('revokeAll')}>{t('fe.mx.pr.revokeAll')}</button>:null}</div>
    {given.length===0?<p className="note">{t('fe.mx.pr.none')}</p>:<div className="card list">{shown.map((g,i)=><div key={i} className="li">
-    <Av name={nameOf(g.profile)} seed={g.profile?.id??String(i)} size="sm"/>
-    <button type="button" className="tx" style={{textAlign:'left'}} onClick={()=>g.profile&&navigate('/n/people/'+g.profile.id)}><b>{nameOf(g.profile)}</b><small>{g.scopes.map(scopeLabel).join(', ')} · {until(g.until)}</small></button>
+    <Av name={nameOf(g.profile)} seed={g.profile?.id??String(i)} size="sm" src={g.profile?.avatar}/>
+    <button type="button" className="tx" style={{textAlign:'left'}} onClick={()=>g.profile&&navigate('/n/people/'+g.profile.id)}><b>{nameOf(g.profile)}<NameBadges p={g.profile}/></b><small>{g.scopes.map(scopeLabel).join(', ')} · {until(g.until)}</small></button>
     {g.profile&&<Btn size="sm" kind="text" auto className="danger" onClick={()=>void act(()=>call('access.revoke',{opId:newOpId(),profileId:g.profile!.id},ok),t('fe.mx.pr.revoked'))} disabled={busy}>{t('fe.mx.pr.revoke')}</Btn>}
    </div>)}</div>}
   </section>
