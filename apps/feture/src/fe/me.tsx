@@ -11,6 +11,7 @@ import {BellButton} from './inbox';
 import {PairEntry} from './pair';
 import {MineLayer} from './mine';
 import {MeJars} from './interests';
+import {StaffEntry} from './staff';
 
 /** Slice C (V21 X01, P02, P03) with the prototype's markup: own profile, photos (others see approved ones;
  * «на проверке» only the owner), basics, details, Discover and who sees the answers. */
@@ -50,6 +51,7 @@ export function MeTab(){
    <header className="me18-h wrap">
     <span className="av-wrap"><Av name={name} seed={acting.id} src={p?.avatar?.src?.thumb??p?.avatar?.src?.card}/></span>
     <div className="me18-who"><b><span>{name}</span></b><small>{acting.kind==='couple'?t('fe.me.weCouple'):t('fe.me.iPersonal')}</small></div>
+    <StaffEntry/>
     <BellButton/>
     <button type="button" className="ibtn" aria-label={t('fe.me.settings')} onClick={()=>navigate('/n/settings')}><Settings/></button>
    </header>
