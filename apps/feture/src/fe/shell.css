@@ -33,3 +33,6 @@
 .fe-v21 .mcell .mbg.ld{opacity:1}
 .fe-v21 :is(.av,.mcell,.gtile,.dock-av,.pc-photo,.hero,.ph,.cover):has(img:not(.ld)){background:var(--raise);animation:fe-blink 1.4s ease-in-out infinite}
 @media (prefers-reduced-motion:reduce){.fe-v21 img{transition:none}.fe-v21 :is(.av,.mcell,.gtile,.dock-av,.pc-photo,.hero,.ph,.cover):has(img:not(.ld)){animation:none}}
+/* X02 batch add: step counter and progress bar inside a shared Sheet (the prototype styles them under #sheet) */
+.fe-v21 .sheet .qprog{flex:none;margin:0 0 14px}
+.fe-v21 .sheet .int-step{margin:0 0 8px}
