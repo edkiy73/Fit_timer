@@ -99,10 +99,6 @@ export function InterestSheet({topicId,topics,cats,current,defaultVis='public',o
  useEffect(()=>{setHost(document.querySelector('.fe-v21 .root')??document.body);},[]);
  useEffect(()=>{if(!host)return;const r=requestAnimationFrame(()=>{setOn(true);sheet.current?.focus({preventScroll:true});});return ()=>cancelAnimationFrame(r);},[host]);
  useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape')onClose();};addEventListener('keydown',k);return ()=>removeEventListener('keydown',k);},[onClose]);
- const mark=v==='discuss'||v==='hard';const n=typeof v==='number'?v:null;
- const allDir=dir.length===DIRS.length;
- const toggleDir=(k:'all'|Dir)=>{if(mark)return;
-  setDir(d=>{if(k==='all')return [...DIRS];if(d.length===DIRS.length)return [k];const next=d.includes(k)?d.filter(x=>x!==k):[...d,k];return next.length?DIRS.filter(x=>next.includes(x)):[...DIRS];});};
  const save=async()=>{
   if(v==null)return;setBusy(true);setFailure('');
   try{
@@ -124,6 +120,33 @@ export function InterestSheet({topicId,topics,cats,current,defaultVis='public',o
     <button type="button" className="ibtn ghost sm" aria-label={t('fe.int.ed.close')} onClick={onClose}><X/></button></div>
    <div className="sh-b">
     {desc&&<p className="topic-desc">{desc}</p>}
+    <InterestFields limit={limit} couple={couple} v={v} setV={setV} dir={dir} setDir={setDir} vis={vis} setVis={setVis}/>
+   </div>
+   <div className="sh-f">
+    {failure&&<div className="alert err" role="alert"><span>{failure}</span></div>}
+    {asking?<>
+     <p className="note"><b>{t('fe.int.ed.removeQ',{topic:name})}</b> {t('fe.int.ed.removeText')}</p>
+     <div className="row g8"><Btn kind="soft" onClick={()=>setAsking(false)} disabled={busy}>{t('fe.cancel')}</Btn><Btn kind="danger" onClick={remove} disabled={busy}>{t('fe.int.ed.remove')}</Btn></div>
+    </>:<>
+     {v==null&&<p className="note jar-need">{t('fe.int.ed.need')}</p>}
+     <div className="row g8">
+      {current&&<button type="button" className="btn secondary icon" aria-label={t('fe.int.ed.remove')} onClick={()=>setAsking(true)} disabled={busy}><Trash2/></button>}
+      <button type="button" className={'btn primary'+(v==null?' off':'')+(busy?' busy':'')} onClick={save} disabled={v==null||busy} aria-disabled={v==null||undefined} aria-busy={busy||undefined}>{current?t('fe.int.ed.save'):t('fe.int.ed.addOne')}</button>
+     </div>
+    </>}
+   </div>
+  </div>
+ </div>,host);
+}
+
+/** How you like it (not for limits), who sees, then the answer — the same fields when adding one or several. */
+function InterestFields({limit,couple,v,setV,dir,setDir,vis,setVis}:{limit:boolean,couple:boolean,v:Answer,setV:(v:Answer)=>void,dir:Dir[],setDir:(f:(d:Dir[])=>Dir[])=>void,vis:Vis,setVis:(v:Vis)=>void}){
+ const {t}=useI18n();
+ const mark=v==='discuss'||v==='hard';const n=typeof v==='number'?v:null;
+ const allDir=dir.length===DIRS.length;
+ const toggleDir=(k:'all'|Dir)=>{if(mark)return;
+  setDir(d=>{if(k==='all')return [...DIRS];if(d.length===DIRS.length)return [k];const next=d.includes(k)?d.filter(x=>x!==k):[...d,k];return next.length?DIRS.filter(x=>next.includes(x)):[...DIRS];});};
+ return <>
     {!limit&&<section className={'grp bare'+(mark?' dim':'')}><div className="grp-t"><span>{t('fe.int.ed.dir')}</span></div><div className="card"><div className="chips">
      {(['all',...DIRS] as const).map(k=>{const pressed=k==='all'?allDir:!allDir&&dir.includes(k);
       return <button key={k} type="button" className={'chip'+(pressed?' on':'')} aria-pressed={pressed} tabIndex={mark?-1:undefined} aria-disabled={mark||undefined} onClick={()=>toggleDir(k)}>{t('fe.int.ed.dir.'+k)}</button>;})}
@@ -142,22 +165,7 @@ export function InterestSheet({topicId,topics,cats,current,defaultVis='public',o
      </div>
      <p className="ans-word" aria-live="polite">{v==null?t('fe.int.ed.pick'):n?<><b>{t('fe.int.ed.level',{n})}</b><span>{t('fe.int.ed.levelText')}</span></>:t(v==='hard'?'fe.int.ed.hardText':'fe.int.ed.discussText')}</p>
     </div></div></section>
-   </div>
-   <div className="sh-f">
-    {failure&&<div className="alert err" role="alert"><span>{failure}</span></div>}
-    {asking?<>
-     <p className="note"><b>{t('fe.int.ed.removeQ',{topic:name})}</b> {t('fe.int.ed.removeText')}</p>
-     <div className="row g8"><Btn kind="soft" onClick={()=>setAsking(false)} disabled={busy}>{t('fe.cancel')}</Btn><Btn kind="danger" onClick={remove} disabled={busy}>{t('fe.int.ed.remove')}</Btn></div>
-    </>:<>
-     {v==null&&<p className="note jar-need">{t('fe.int.ed.need')}</p>}
-     <div className="row g8">
-      {current&&<button type="button" className="btn secondary icon" aria-label={t('fe.int.ed.remove')} onClick={()=>setAsking(true)} disabled={busy}><Trash2/></button>}
-      <button type="button" className={'btn primary'+(v==null?' off':'')+(busy?' busy':'')} onClick={save} disabled={v==null||busy} aria-disabled={v==null||undefined} aria-busy={busy||undefined}>{current?t('fe.int.ed.save'):t('fe.int.ed.addOne')}</button>
-     </div>
-    </>}
-   </div>
-  </div>
- </div>,host);
+ </>;
 }
 
 /** X02 — all interests grouped by answer; «+» (and the empty state's button) opens the topic picker, never both at
@@ -189,26 +197,68 @@ export function InterestsScreen(){
     </>
     :<Empty icon={Sparkles} title={t('fe.int.empty.title')} text={t(couple?'fe.int.empty.textCouple':'fe.int.empty.text')}><Btn onClick={toAdd}>{t('fe.int.add')}</Btn></Empty>}
   </View>
-  {picking&&items&&!open&&<TopicPicker cats={cats} topics={topics} have={have} onClose={()=>setPicking(false)} onPick={setOpen}/>}
+  {picking&&items&&!open&&<TopicPicker cats={cats} topics={topics} have={have} presetVis={presetVis} onClose={()=>setPicking(false)} onDone={msg=>{setPicking(false);setNotice(msg);load();}}/>}
   {open&&<InterestSheet key={open} topicId={open} topics={topics} cats={cats} current={items?.find(j=>j.topicId===open)} defaultVis={presetVis}
    onClose={()=>setOpen(null)} onDone={msg=>{setOpen(null);setPicking(false);setNotice(msg);load();}}/>}
  </>;
 }
 
-/** `topicPicker()` — the catalog's topics the profile has not marked yet, by category, with a search; a tap opens the
- * interest sheet for that topic (closing it comes back here). */
-function TopicPicker({cats,topics,have,onPick,onClose}:{cats:Category[],topics:Topic[],have:Set<string>,onPick:(id:string)=>void,onClose:()=>void}){
- const {t,locale}=useI18n();const [q,setQ]=useState('');
+/** `topicPicker()` — pick several topics the profile has not marked yet (by category, with a search), answer each in
+ * turn (progress bar; an answer moves on), check them as jars, then save all. A tap on a jar in the check goes back to
+ * that one. Each topic keeps its own opId, so a retry after a failure never saves twice. */
+type Draft={v:Answer,dir:Dir[],vis:Vis};
+function TopicPicker({cats,topics,have,presetVis,onClose,onDone}:{cats:Category[],topics:Topic[],have:Set<string>,presetVis:Vis,onClose:()=>void,onDone:(msg:string)=>void}){
+ const {call,acting}=useFe();const {t,locale}=useI18n();const [q,setQ]=useState('');
+ const [sel,setSel]=useState<string[]>([]);const [stage,setStage]=useState<'pick'|'answer'|'review'>('pick');const [step,setStep]=useState(0);
+ const [fromReview,setFromReview]=useState(false);const [drafts,setDrafts]=useState<Record<string,Draft>>({});
+ const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const ops=useRef<Record<string,string>>({});
+ const couple=acting?.kind==='couple';
  const nq=q.trim().toLowerCase();const label=(x:{ru:string,en:string})=>locale==='en'?x.en:x.ru;
  const left=topics.filter(x=>!have.has(x.id));
  const sections=cats.map(c=>({c,ts:left.filter(x=>x.categoryId===c.id&&(!nq||label(x).toLowerCase().includes(nq)))})).filter(s=>s.ts.length);
- return <Sheet title={t('fe.int.add')} onClose={onClose} full>
-  <p className="note">{t('fe.int.addHint')}</p>
+ const toggle=(id:string)=>setSel(l=>l.includes(id)?l.filter(x=>x!==id):[...l,id]);
+ const cur=sel[step];const d=cur?drafts[cur]??{v:null,dir:[...DIRS],vis:presetVis}:null;
+ const put=(f:(d:Draft)=>Draft)=>{if(!cur)return;setDrafts(all=>({...all,[cur]:f(all[cur]??{v:null,dir:[...DIRS],vis:presetVis})}));};
+ const next=()=>{if(fromReview){setFromReview(false);setStage('review');}else if(step<sel.length-1)setStep(step+1);else setStage('review');};
+ const back=()=>{if(stage==='review'){setStage('answer');setStep(sel.length-1);}else if(fromReview){setFromReview(false);setStage('review');}else if(step>0)setStep(step-1);else setStage('pick');};
+ const stepRef=useRef(step);stepRef.current=step;const stageRef=useRef(stage);stageRef.current=stage;const nextRef=useRef(next);nextRef.current=next;
+ // Answering moves on after a short pause, so the choice is visible.
+ const answer=(v:Answer)=>{put(x=>({...x,v}));const at=step;window.setTimeout(()=>{if(stepRef.current===at&&stageRef.current==='answer')nextRef.current();},260);};
+ const save=async()=>{
+  setBusy(true);setFailure('');let pending=0;
+  try{
+   for(const id of sel){const x=drafts[id];if(!x||x.v==null)continue;const limit=topics.find(tp=>tp.id===id)?.categoryId===LIMITS;
+    ops.current[id]??=newOpId();
+    const r=await call('interests.set',{opId:ops.current[id],topicId:id,vis:x.vis,...(typeof x.v==='number'?{value:x.v,...(limit?{}:{dir:x.dir})}:{mark:x.v})},setRes);
+    if(r.pending)pending++;}
+   onDone(pending?t('fe.int.pending'):t('fe.int.addedN',{n:sel.length}));
+  }catch(e){setFailure(feErrorMessage(e,t));}finally{setBusy(false);}
+ };
+ if(stage==='pick')return <Sheet title={t('fe.int.addMany')} onClose={onClose} full
+  foot={<button type="button" className={'btn primary'+(sel.length?'':' off')} disabled={!sel.length} onClick={()=>{setStep(0);setStage('answer');setQ('');}}>{t('fe.int.continue')}{sel.length?` · ${sel.length}`:''}</button>}>
+  <p className="note">{t('fe.int.addManyHint')}</p>
   {left.length>0&&<div className="inwrap mt12"><Search/><input className="inp" type="search" value={q} onChange={e=>setQ(e.target.value)} placeholder={t('fe.int.searchPh')} aria-label={t('fe.int.searchPh')}/></div>}
   {!topics.length?<Skel kind="list" rows={2}/>
    :sections.length?sections.map(({c,ts})=><section key={c.id} className="fsec"><div className="sec">{label(c)}</div>
-    <div className="chips">{ts.map(x=><button key={x.id} type="button" className="chip" onClick={()=>onPick(x.id)}>{label(x)}</button>)}</div></section>)
+    <div className="chips">{ts.map(x=>{const on=sel.includes(x.id);return <button key={x.id} type="button" className={'chip'+(on?' on':'')} aria-pressed={on} onClick={()=>toggle(x.id)}>{label(x)}</button>;})}</div></section>)
    :<p className="note mt12">{left.length?t('fe.int.notFound'):t('fe.int.allAdded')}</p>}
+ </Sheet>;
+ if(stage==='answer'&&cur&&d){const tp=topics.find(x=>x.id===cur);const desc=tp?(locale==='en'?tp.descEn:tp.descRu):null;
+  return <Sheet key={cur} title={tp?label(tp):cur} onClose={onClose} full
+   foot={fromReview?<button type="button" className="btn primary" onClick={next}>{t('fe.int.toReview')}</button>
+    :<div className="row g8"><button type="button" className="btn secondary" onClick={back}>{t('fe.back')}</button>
+     {d.v!=null&&<button type="button" className="btn primary" onClick={next}>{step===sel.length-1?t('fe.int.review'):t('fe.int.next')}</button>}</div>}>
+   <p className="note int-step">{t('fe.int.stepOf',{i:step+1,n:sel.length})}</p>
+   <div className="qprog"><i style={{width:`${(step+1)/sel.length*100}%`}}/></div>
+   {desc&&<p className="topic-desc">{desc}</p>}
+   <InterestFields limit={tp?.categoryId===LIMITS} couple={couple} v={d.v} setV={answer} dir={d.dir} setDir={f=>put(x=>({...x,dir:f(x.dir)}))} vis={d.vis} setVis={vis=>put(x=>({...x,vis}))}/>
+  </Sheet>;}
+ const list:Interest[]=sel.map(id=>{const x=drafts[id]!;return {topicId:id,vis:x.vis,...(typeof x.v==='number'?{value:x.v,dir:x.dir}:{mark:x.v as 'discuss'|'hard'})};});
+ return <Sheet title={t('fe.int.check')} onClose={onClose}
+  foot={<>{failure&&<div className="alert err" role="alert"><span>{failure}</span></div>}
+   <div className="row g8"><button type="button" className="btn secondary" onClick={back} disabled={busy}>{t('fe.back')}</button><Btn busy={busy} onClick={save}>{t('fe.int.saveAll')}</Btn></div></>}>
+  <p className="note">{t('fe.int.checkHint',{n:sel.length})}</p>
+  <div className="card mt12"><Jars list={sortJars(list)} topics={topics} onOpen={id=>{setStep(sel.indexOf(id));setFromReview(true);setStage('answer');}}/></div>
  </Sheet>;
 }
 
