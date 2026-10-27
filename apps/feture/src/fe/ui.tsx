@@ -10,7 +10,7 @@ import {ChevronLeft,type LucideIcon} from 'lucide-react';
 const PLATES=[['#7A1236','#FF5A7A','#B9A6FF','#2A0D1F'],['#3C1B5A','#FF9F7A','#7A1236','#170A14'],['#1F3A4A','#7FE0B9','#B9A6FF','#0E1A22'],
  ['#2A2A55','#7FB8FF','#1F3A4A','#0E0E1E'],['#4A2A12','#FFB25A','#FF5A7A','#1F120A'],['#3A1A10','#F6B49B','#7A1236','#140A06'],
  ['#5C47D6','#FF5A7A','#F6B49B','#1A0F3A'],['#25403A','#C6F27F','#2A2A55','#0D1714'],['#5A1240','#FFB199','#5C47D6','#1A0F16']] as const;
-function plate(seed:string):CSSProperties{
+export function plate(seed:string):CSSProperties{
  let h=0;for(const c of seed)h=(h*31+c.charCodeAt(0))>>>0;
  const p=PLATES[h%PLATES.length]!;
  return {'--p1':p[0],'--p2':p[1],'--p3':p[2],'--p4':p[3],position:'absolute',inset:0} as CSSProperties;

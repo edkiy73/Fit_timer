@@ -38,6 +38,8 @@ function FeLayout(){
  const {acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const {pathname}=useLocation();
  const name=acting?.name||acting?.handle||'?';
  const current=pathname.split('/')[2]||'feed';
+ // Nested screens (a chat, a post, an editor) have no dock in V21; tab roots do.
+ const nested=pathname.split('/').filter(Boolean).length>2;
  // A second tap on the active tab returns to its root (V21 A4).
  const go=(id:string)=>navigate('/n/'+id);
  return <div className="stage"><div className="root">
@@ -50,13 +52,13 @@ function FeLayout(){
     <Av name={name} seed={acting.id} src={acting.avatar}/><span>{name}<small>{acting.kind==='couple'?t('fe.me.coupleProfile'):t('fe.me.personalProfile')}</small></span>
    </button>}
   </aside>
-  <main className="main has-dock hasbar">
+  <main className={nested?'main hasbar':'main has-dock hasbar'}>
    <Outlet/>
-   <nav className="dock" style={{gridTemplateColumns:`repeat(${FE_TABS.length},1fr)`} as CSSProperties} aria-label={t('fe.nav.aria')}>
+   {!nested&&<nav className="dock" style={{gridTemplateColumns:`repeat(${FE_TABS.length},1fr)`} as CSSProperties} aria-label={t('fe.nav.aria')}>
     {FE_TABS.map(({id,icon:Icon})=><button key={id} type="button" className={(current===id?'on':'')+(id==='me'?' me-tab':'')} aria-label={t('fe.nav.'+id)} aria-current={current===id?'page':undefined} onClick={()=>go(id)}>
      {id==='me'&&acting?<span className="dock-av"><Av name={name} seed={acting.id} src={acting.avatar}/></span>:<Icon/>}<span>{t('fe.nav.'+id)}</span>
     </button>)}
-   </nav>
+   </nav>}
   </main>
  </div></div>;
 }

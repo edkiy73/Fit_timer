@@ -1,5 +1,5 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {useNavigate,useParams} from 'react-router';
+import {useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Bookmark,ChartColumn,Ellipsis,Heart,Image as ImageIcon,Lock,MessageCircle,Newspaper,Plus,SendHorizontal,Share2,Trash2,X} from 'lucide-react';
@@ -144,21 +144,21 @@ export function PostScreen(){
 const saved=z.object({ok:z.literal(true),id:z.uuid()}).passthrough();
 const published=z.object({ok:z.literal(true),state:z.string().optional()}).passthrough();
 export function ComposeScreen(){
- const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();
+ const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const [params]=useSearchParams();const communityId=params.get('community');
  const [body,setBody]=useState('');const [audience,setAudience]=useState<'all'|'followers'|'only'>('all');const [inFeed,setInFeed]=useState(true);
  const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
  const ops=useRef({draft:newOpId(),publish:newOpId()});
  const publish=async()=>{
   if(!body.trim()||busy)return;setBusy(true);setFailure('');
   try{
-   const d=await call('post.saveDraft',{opId:ops.current.draft,post:{body:body.trim(),audience,inFeed}},saved);
+   const d=await call('post.saveDraft',{opId:ops.current.draft,post:{body:body.trim(),audience,inFeed,...(communityId?{communityId}:{})}},saved);
    await call('post.publish',{opId:ops.current.publish,postId:d.id},published);
-   navigate('/n/feed',{replace:true});
+   navigate(communityId?'/n/communities/'+communityId:'/n/feed',{replace:true});
   }catch(e){setFailure(feErrorMessage(e,t));ops.current={draft:newOpId(),publish:newOpId()};}
   finally{setBusy(false);}
  };
  return <>
-  <Bar title={t('fe.feed.new')} back="/n/feed"/>
+  <Bar title={communityId?t('fe.comm.newTopic'):t('fe.feed.new')} back/>
   <View className="cta1">
    <section className="grp"><div className="card compose v14">
     <div className="cmp-ctx"><div className="cmp-aud">
