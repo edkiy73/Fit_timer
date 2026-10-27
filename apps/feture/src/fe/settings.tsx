@@ -3,11 +3,12 @@ import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
-import {Ban,Bell,ChevronRight,Download,Eye,EyeOff,Globe,Heart,LogOut,Moon,ShieldCheck,Trash2,X} from 'lucide-react';
+import {Ban,Bell,ChevronRight,Crown,LifeBuoy,Download,Eye,EyeOff,Globe,Heart,LogOut,Moon,ShieldCheck,Trash2,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {getThemePreference,setThemePreference,type ThemePreference} from '../theme';
 import {Bar,Btn,Empty,View} from './ui';
 import {useFe} from './session';
+import {usePremiumStatus} from './account-extra';
 
 /** V21 K01 (settings), K05 (notifications), K07 (my data and deletion) on /api/fe. */
 const settingsRes=z.object({ok:z.literal(true),settings:z.object({locale:z.string(),chatBlur:z.boolean(),newsOptIn:z.boolean(),showExplicit:z.boolean()})});
@@ -27,7 +28,7 @@ function Row({icon:Icon,title,note,value,onClick,danger}:{icon:typeof Bell,title
 export function SettingsScreen(){
  const {call,state,acting}=useFe();const {t,preference,setPreference,canSwitch}=useI18n();const [blocked,setBlocked]=useState<number|null>(null);const auth=useOptionalAuth();const navigate=useNavigate();
  const [s,setS]=useState<z.infer<typeof settingsRes>['settings']|null>(null);const [age,setAge]=useState<boolean|null>(null);const [theme,setTheme]=useState<ThemePreference>(getThemePreference());
- const [error,setError]=useState<unknown>(null);const [failure,setFailure]=useState('');
+ const [error,setError]=useState<unknown>(null);const [failure,setFailure]=useState('');const premium=usePremiumStatus().status;
  const load=useCallback(()=>{setError(null);call('settings.get',{},settingsRes,{asAccount:true}).then(r=>setS(r.settings)).catch(setError);
   call('verification.ageStatus',{},ageRes,{asAccount:true}).then(r=>setAge(r.verified)).catch(()=>{});
   call('blocks.list',{},blocksRes).then(r=>setBlocked(r.items.length)).catch(()=>{});},[call]);
@@ -41,9 +42,10 @@ export function SettingsScreen(){
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>:<>
     <div className="sec" style={{marginTop:4}}>{t('fe.set.account')}</div>
     <div className="card list">
-     <Row icon={ShieldCheck} title={t('fe.set.signIn')} note={email} onClick={()=>navigate('/account')}/>
+     <Row icon={ShieldCheck} title={t('fe.set.signIn')} note={email} onClick={()=>navigate('/n/settings/security')}/>
      <Row icon={ShieldCheck} title={t('fe.set.age')} note={t('fe.set.ageNote')} value={age===null?undefined:age?t('fe.set.ageOk'):t('fe.set.ageNo')} onClick={()=>navigate('/n/settings/age')}/>
      <Row icon={Eye} title={t('fe.set.privacy')} note={t('fe.set.privacyNote')} onClick={()=>navigate('/n/me?layer=vis')}/>
+     <Row icon={Crown} title={t('fe.ax.prem.entry')} note={t('fe.ax.prem.entryNote')} value={premium?.premium?t('fe.ax.prem.entryOn'):undefined} onClick={()=>navigate('/n/premium')}/>
      <Row icon={Heart} title={t('fe.pair.section')} note={couple?(couple.name||t('fe.pair.ourProfile')):t('fe.pair.entryOff')} onClick={()=>navigate('/n/me/pair')}/>
     </div>
     <div className="sec">{t('fe.set.app')}</div>
@@ -70,7 +72,7 @@ export function SettingsScreen(){
      <Row icon={Ban} title={t('fe.tl.set.blocked')} note={acting?.kind==='couple'?t('fe.tl.set.blockedNoteCouple').replace('{name}',acting.name||acting.handle||''):t('fe.tl.set.blockedNote')} value={blocked===null?undefined:String(blocked)} onClick={()=>navigate('/n/settings/blocked')}/>
      <Row icon={Download} title={t('fe.set.myData')} note={t('fe.set.myDataNote')} onClick={()=>navigate('/n/settings/data')}/></div>
     <div className="sec">{t('fe.set.support')}</div>
-    <div className="card list"><Row icon={LogOut} title={t('fe.set.logout')} danger onClick={()=>{void auth.logout().then(()=>navigate('/'));}}/></div>
+    <div className="card list"><Row icon={LifeBuoy} title={t('fe.ax.help.entry')} note={t('fe.ax.help.entryNote')} onClick={()=>navigate('/n/help')}/><Row icon={LogOut} title={t('fe.set.logout')} danger onClick={()=>{void auth.logout().then(()=>navigate('/'));}}/></div>
     {failure&&<div className="alert err" role="alert"><span>{failure}</span></div>}
     <p className="note center mt24">FetUre · V21</p>
    </>}

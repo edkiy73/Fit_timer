@@ -2,7 +2,7 @@ import {useCallback,useEffect,useRef,useState} from 'react';
 import {useNavigate,useParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {feErrorMessage,newOpId} from '../feture/fe-api';
+import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Ban,ChevronLeft,ChevronRight,Ellipsis,Eye,Heart,History,Info,Lock,MapPin,Search as SearchIcon,SlidersHorizontal,Undo2,Users,X} from 'lucide-react';
 import {Av,Bar,Btn,Empty,Seg,View} from './ui';
 import {useFe} from './session';
@@ -184,7 +184,7 @@ function Discover({reloadKey,onOff}:{reloadKey:number,onOff:(off:boolean)=>void}
  const undo=async()=>{
   if(busy)return;setBusy(true);
   try{await call('discover.undo',{opId:newOpId()},undone);toast(t('fe.px.undo.done'));load();}
-  catch(e){toast(pxError(e,t),true);}finally{setBusy(false);}
+  catch(e){if(e instanceof FeError&&e.code==='premium_required')navigate('/n/premium?for=undo');else toast(pxError(e,t),true);}finally{setBusy(false);}
  };
  const box=(node:React.ReactNode)=><><View>{node}</View>{toastNode}</>;
  if(match)return box(<Empty icon={Heart} title={t('fe.people.match')} text={t('fe.people.matchText').replace('{name}',match.card.name||'@'+match.card.handle)}>
