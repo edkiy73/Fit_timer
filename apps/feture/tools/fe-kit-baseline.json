@@ -22,25 +22,15 @@
   "select": 1,
   "pill": 3
  },
- "src/fe/comm-kit.tsx": {
-  "notice": 1,
-  "textarea": 1,
-  "radio": 1
- },
  "src/fe/communities.tsx": {
-  "switch": 1,
-  "list row": 7,
-  "chip": 12,
-  "notice": 6,
-  "round button": 12,
-  "button": 5,
-  "inline style": 31,
-  "heading": 2,
-  "card": 11,
-  "pill": 23,
-  "radio": 5,
-  "note": 7,
-  "section label": 9
+  "list row": 3,
+  "chip": 3,
+  "button": 2,
+  "inline style": 25,
+  "heading": 1,
+  "pill": 3,
+  "radio": 1,
+  "note": 2
  },
  "src/fe/couple.tsx": {
   "sheet": 1,
@@ -52,31 +42,14 @@
   "note": 1
  },
  "src/fe/create-community.tsx": {
-  "list row": 2,
-  "chip": 2,
-  "notice": 3,
-  "button": 2,
-  "input": 2,
-  "textarea": 1,
-  "select": 1,
-  "inline style": 7,
-  "card": 3,
+  "notice": 2,
+  "inline style": 6,
   "note": 1
  },
  "src/fe/create-event.tsx": {
-  "switch": 1,
-  "list row": 4,
-  "chip": 1,
-  "notice": 5,
-  "round button": 1,
-  "button": 3,
-  "select": 2,
-  "inline style": 8,
-  "heading": 1,
-  "card": 5,
-  "note": 2,
-  "section label": 3,
-  "progress": 1
+  "list row": 3,
+  "notice": 3,
+  "inline style": 6
  },
  "src/fe/css/chats.css": {
   "stylesheet": 1
@@ -96,16 +69,11 @@
   "section label": 1
  },
  "src/fe/host.tsx": {
-  "list row": 4,
-  "notice": 6,
-  "round button": 1,
-  "button": 3,
-  "textarea": 1,
+  "list row": 1,
   "inline style": 15,
-  "card": 13,
-  "pill": 5,
-  "note": 10,
-  "section label": 6
+  "card": 2,
+  "note": 2,
+  "section label": 1
  },
  "src/fe/interests.tsx": {
   "list row": 2,
