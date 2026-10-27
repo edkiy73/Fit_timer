@@ -272,3 +272,18 @@ test('saved list keeps only what the viewer may still open', async () => {
     assert.deepEqual(list.items.map(i => i.target_id), [keep.id]);
   } finally { await pg.close(); }
 });
+
+test('feed search finds words in the text, case-insensitive; % is literal', async () => {
+  const { pg, call, person } = await setup();
+  try {
+    const a = await person('ua', 'Alex'), b = await person('ub', 'Kira');
+    await publish(call, 'ua', a, draft('Вечер Шибари в субботу'));
+    await publish(call, 'ua', a, draft('Скидка 50% на всё'));
+    await publish(call, 'ua', a, draft('Просто пост'));
+    const find = async q => (await call('ub', b, { action: 'feed.list', tab: 'forYou', q })).items.map(i => i.body);
+    assert.deepEqual(await find('шибари'), ['Вечер Шибари в субботу']);
+    assert.deepEqual(await find('50%'), ['Скидка 50% на всё']);
+    assert.deepEqual(await find('%%'), []);
+    assert.equal((await call('ub', b, { action: 'feed.list', tab: 'forYou', q: 'x' })).status, 400);
+  } finally { await pg.close(); }
+});
