@@ -8,6 +8,7 @@ import { blockProfile } from './social.mjs';
 import { canWrite } from './communities.mjs';
 import { PREMIUM_SQL } from './faces.mjs';
 import { hasPhotoCheck } from './verification.mjs';
+import { dropHiddenPostPhotos, settleAvatar } from './photos.mjs';
 
 /** Slice B: posts and what hangs on them (S1 §8, extract/feed-content.md).
  * Rules: text without media publishes at once (Q1); media waits until every file is checked; explicit media only in
@@ -87,7 +88,8 @@ async function writeParts(q, postId, f, acting, { keepVotes = false } = {}) {
   }
   if (f.albumId) {
     const [al] = await q.query('select vis from feture.album where id = $1 and owner_profile_id = $2', [f.albumId, acting.profileId]);
-    if (!al || f.audience === 'granted' || f.audience === 'only') fail(400, 'invalid_input', { fields: ['albumId'] });
+    // Albums are the gallery's: own album, posts for everyone or followers, never a community discussion (V21 ME-044).
+    if (!al || f.audience === 'granted' || f.audience === 'only' || f.communityId) fail(400, 'invalid_input', { fields: ['albumId'] });
     if (al.vis === 'followers' && f.audience === 'all') f.audience = 'followers'; // a followers-only album narrows its posts
   }
   await q.query('update feture.post set interests = $2, audience = $3 where id = $1', [postId, JSON.stringify(interests), f.audience]);
@@ -181,7 +183,7 @@ async function doPublish(q, postId, ownerProfileId) {
 /** Minor edits apply at once; a major edit of a post with media (new media, wider audience, many new words) goes to
  * review while the live version stays visible (V21 editNeedsReview). @param {Q} q @param {string} postId
  * @param {{profileId: string, accountId: string}} actor @param {number} rev @param {any} f */
-async function doEdit(q, postId, actor, rev, f) {
+export async function doEdit(q, postId, actor, rev, f) {
   const [p] = await q.query('select * from feture.post where id = $1 and owner_profile_id = $2 for update', [postId, actor.profileId]);
   if (!p) fail(404, 'not_found');
   if (p.state === 'draft' && p.created_by !== actor.accountId) fail(404, 'not_found'); // a couple's draft is its writer's alone
@@ -224,7 +226,43 @@ export async function applyEdit(q, postId, actor, f, oldMedia) {
   await writeParts(q, postId, f, actor, { keepVotes: true });
   await writeMentions(q, 'post', postId, f.body, actor.profileId);
   await announce(q, postId);
+  await dropHiddenPostPhotos(q, actor.profileId); // a narrowed post takes its photos off the profile
   return { state: p.state, rev: p.rev };
+}
+
+/** A live post as the editor's fields (postFields), to change one thing through the usual edit path.
+ * @param {Q} q @param {string} postId */
+export async function postFieldsOf(q, postId) {
+  const [p] = await q.query('select type, title, body, audience, in_feed, topics, interests, album_id, community_id from feture.post where id = $1', [postId]);
+  const mediaIds = (await q.query(`select asset_id from feture.media_attachment where target_type = 'post' and target_id = $1 order by position`, [postId])).map(r => r.asset_id);
+  const [poll] = await q.query('select question, options from feture.poll where post_id = $1', [postId]);
+  const tags = (await q.query('select profile_id from feture.photo_tag where post_id = $1 order by profile_id', [postId])).map(r => r.profile_id);
+  return {
+    type: p.type, ...(p.title ? { title: p.title } : {}), body: p.body, audience: p.audience, inFeed: p.in_feed, topics: p.topics, mediaIds,
+    ...(poll ? { poll: { question: poll.question, options: poll.options } } : {}),
+    interests: p.interests.map((/** @type {any} */ i) => i.topicId), ...(p.album_id ? { albumId: p.album_id } : {}), tags,
+    ...(p.community_id ? { communityId: p.community_id } : {}),
+  };
+}
+
+/** Deletes an own post (post.delete and the gallery selection): a couple's post, a removed one or one under open
+ * reports is archived instead. @param {Q} q @param {Acting} acting @param {string} postId */
+export async function deletePost(q, acting, postId) {
+  const [p] = await q.query(`select state from feture.post where id = $1 and owner_profile_id = $2 for update`, [postId, acting.profileId]);
+  if (!p) fail(404, 'not_found');
+  await q.query(`update feture.partner_approval set state = 'cancelled', decided_at = now() where target_type = 'post' and target_id = $1 and state = 'pending'`, [postId]);
+  // A post removed by moderation or under open reports is only hidden, so the evidence stays for staff (S4 §3).
+  const [{ reported }] = await q.query(`select exists (select 1 from feture.report where target_type = 'post' and target_id = $1 and state = 'open') reported`, [postId]);
+  if (acting.kind === 'couple' || p.state === 'removed' || reported) {
+    // A couple's post is hidden into the couple's archive, not destroyed by one partner (V21 «Скрыть совместную»).
+    await q.query(`update feture.post set state = 'archived', updated_at = now() where id = $1`, [postId]);
+    return 'archived';
+  }
+  await q.query(`delete from feture.media_attachment where target_type = 'post' and target_id = $1`, [postId]);
+  await q.query(`delete from feture.reaction where target_type = 'reply' and target_id in (select id from feture.reply where post_id = $1)`, [postId]);
+  await q.query(`delete from feture.reaction where target_type = 'post' and target_id = $1`, [postId]);
+  await q.query(`delete from feture.post where id = $1`, [postId]);
+  return 'deleted';
 }
 
 registerApprovalKind('post.publish', {
@@ -315,7 +353,7 @@ async function postDtos(q, rows, viewer, media, showExplicit) {
 }
 
 /** Opaque keyset cursor over (published_at, id). @param {string | undefined} c */
-function readCursor(c) {
+export function readCursor(c) {
   if (!c) return null;
   try {
     const [at, id] = JSON.parse(Buffer.from(c, 'base64url').toString('utf8'));
@@ -385,22 +423,10 @@ const run = {
 
   async 'post.delete'(q, { acting: a, input }) {
     const acting = need(a);
-    const [p] = await q.query(`select state from feture.post where id = $1 and owner_profile_id = $2 for update`, [input.postId, acting.profileId]);
-    if (!p) fail(404, 'not_found');
-    await q.query(`update feture.partner_approval set state = 'cancelled', decided_at = now() where target_type = 'post' and target_id = $1 and state = 'pending'`, [input.postId]);
-    // A post removed by moderation or under open reports is only hidden, so the evidence stays for staff (S4 §3).
-    const [{ reported }] = await q.query(`select exists (select 1 from feture.report where target_type = 'post' and target_id = $1 and state = 'open') reported`, [input.postId]);
-    if (acting.kind === 'couple' || p.state === 'removed' || reported) {
-      // A couple's post is hidden into the couple's archive, not destroyed by one partner (V21 «Скрыть совместную»).
-      await q.query(`update feture.post set state = 'archived', updated_at = now() where id = $1`, [input.postId]);
-      if (acting.kind === 'couple') await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: 'post_archived' });
-      return { state: 'archived' };
-    }
-    await q.query(`delete from feture.media_attachment where target_type = 'post' and target_id = $1`, [input.postId]);
-    await q.query(`delete from feture.reaction where target_type = 'reply' and target_id in (select id from feture.reply where post_id = $1)`, [input.postId]);
-    await q.query(`delete from feture.reaction where target_type = 'post' and target_id = $1`, [input.postId]);
-    await q.query(`delete from feture.post where id = $1`, [input.postId]);
-    return { state: 'deleted' };
+    const state = await deletePost(q, acting, input.postId);
+    await dropHiddenPostPhotos(q, acting.profileId); // its photos leave the profile with it (V21 galSelDel)
+    if (acting.kind === 'couple') await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: 'post_archived' });
+    return { state };
   },
 
   async 'post.get'(q, { acting: a, input, cfg, account }) {
@@ -594,6 +620,7 @@ const run = {
     } else {
       await q.query(`update feture.photo_tag set state = $3, decided_at = now() where post_id = $1 and profile_id = $2`, [input.postId, viewer.profileId, input.answer]);
     }
+    await settleAvatar(q, t.owner_profile_id); // a post with an unconfirmed mark is not public: nor is its photo as an avatar
     await enqueue(q, 'tag.answered', t.owner_profile_id, { postId: input.postId, answer: input.answer });
     return { answer: input.answer };
   },
@@ -614,6 +641,7 @@ const run = {
       await enqueue(q, 'moderation.dispute', p.owner_profile_id, { postId: input.postId, by: viewer.profileId });
     }
     await enqueue(q, 'post.disputed', p.owner_profile_id, { postId: input.postId });
+    await settleAvatar(q, p.owner_profile_id);
     return { hidden: true };
   },
 

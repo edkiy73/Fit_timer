@@ -27,7 +27,9 @@ export const postFields = z.strictObject({
   communityId: id.optional(),   // a discussion in a community (slice D)
 }).refine(v => v.type === 'note' ? (v.title?.length ?? 0) >= 3 && v.body.length >= 20 : v.body.length <= 1000, { message: 'type_rules', path: ['body'] })
   .refine(v => v.body.length > 0 || v.mediaIds.length > 0 || !!v.poll || v.interests.length > 0, { message: 'empty_post', path: ['body'] })
-  .refine(v => !v.tags.length || v.mediaIds.length > 0, { message: 'tags_need_media', path: ['tags'] });
+  .refine(v => !v.tags.length || v.mediaIds.length > 0, { message: 'tags_need_media', path: ['tags'] })
+  // An album is a gallery album: it holds posts with photos (V21 setAlbum shows the row only with media).
+  .refine(v => !v.albumId || v.mediaIds.length > 0, { message: 'album_needs_media', path: ['albumId'] });
 
 export const postsCommands = {
   'post.saveDraft': { profile: true, write: true, input: z.strictObject({ opId, postId: id.optional(), post: postFields }) },
