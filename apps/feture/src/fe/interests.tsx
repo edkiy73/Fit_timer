@@ -1,13 +1,14 @@
 import {useCallback,useEffect,useRef,useState,type CSSProperties} from 'react';
 import {createPortal} from 'react-dom';
-import {useNavigate} from 'react-router';
+import {useNavigate,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Ban,EyeOff,History,KeyRound,MessageCircle,Pencil,Plus,Sparkles,Trash2,X} from 'lucide-react';
+import {Ban,EyeOff,History,KeyRound,MessageCircle,Pencil,Plus,Search,Sparkles,Trash2,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {Bar,Btn,Empty,View,Skel} from './ui';
 import {useFe} from './session';
 import {when} from './feed';
+import {Sheet} from './profile-extras';
 
 /** Interests (V21 X01 #meJars, X02, X04) with the prototype's markup: one capsule per interest — the fill is the
  * level 1–10; «обсудить» and «граница» are marks, never levels. Everything comes from the server. */
@@ -83,19 +84,19 @@ export function JarLegend({couple,extra}:{couple:boolean,extra?:string}){
 }
 
 /** `openJar()` — the interest sheet: what it is → how you like it → who sees → the answer. */
-export function InterestSheet({topicId,topics,cats,current,onClose,onDone}:{topicId:string,topics:Topic[],cats:Category[],current:Interest|undefined,onClose:()=>void,onDone:(msg:string)=>void}){
+export function InterestSheet({topicId,topics,cats,current,defaultVis='public',onClose,onDone}:{topicId:string,topics:Topic[],cats:Category[],current:Interest|undefined,defaultVis?:Vis,onClose:()=>void,onDone:(msg:string)=>void}){
  const {call,acting}=useFe();const {t,locale}=useI18n();
  const tp=topics.find(x=>x.id===topicId);const cat=cats.find(c=>c.id===tp?.categoryId);
  const limit=tp?.categoryId===LIMITS;const couple=acting?.kind==='couple';
  const name=tp?(locale==='en'?tp.en:tp.ru):topicId;const desc=tp?(locale==='en'?tp.descEn:tp.descRu):null;
  const [v,setV]=useState<Answer>(current?current.mark??current.value??null:null);
  const [dir,setDir]=useState<Dir[]>(()=>{const d=dirsOf(current?.dir);return d.length?d:[...DIRS];});
- const [vis,setVis]=useState<Vis>(current?visOf(current):'public');
+ const [vis,setVis]=useState<Vis>(current?visOf(current):defaultVis);
  const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [asking,setAsking]=useState(false);const [on,setOn]=useState(false);
  const opId=useRef(newOpId());const sheet=useRef<HTMLDivElement>(null);
- // Over the whole column like the prototype's #sheet, not inside the scrolling view.
+ // In the app layer like every sheet (ui Layer), above the phone dock — inside main.main the dock covered «Добавить».
  const [host,setHost]=useState<Element|null>(null);
- useEffect(()=>{setHost(document.querySelector('.fe-v21 main.main')??document.body);},[]);
+ useEffect(()=>{setHost(document.querySelector('.fe-v21 .root')??document.body);},[]);
  useEffect(()=>{if(!host)return;const r=requestAnimationFrame(()=>{setOn(true);sheet.current?.focus({preventScroll:true});});return ()=>cancelAnimationFrame(r);},[host]);
  useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape')onClose();};addEventListener('keydown',k);return ()=>removeEventListener('keydown',k);},[onClose]);
  const mark=v==='discuss'||v==='hard';const n=typeof v==='number'?v:null;
@@ -115,7 +116,7 @@ export function InterestSheet({topicId,topics,cats,current,onClose,onDone}:{topi
   catch(e){setFailure(feErrorMessage(e,t));setAsking(false);}finally{setBusy(false);}
  };
  if(!host)return null;
- return createPortal(<>
+ return createPortal(<div className="layer">
   <div id="scrim" className={'scrim'+(on?' on':'')} onClick={onClose}/>
   <div id="sheet" ref={sheet} className={'sheet'+(on?' on':'')} role="dialog" aria-modal="true" aria-label={name} tabIndex={-1}>
    <div className="grab"/>
@@ -156,21 +157,22 @@ export function InterestSheet({topicId,topics,cats,current,onClose,onDone}:{topi
     </>}
    </div>
   </div>
- </>,host);
+ </div>,host);
 }
 
-/** X02 — all interests grouped by answer, and the catalog's topics by category to add more. */
+/** X02 — all interests grouped by answer; «+» (and the empty state's button) opens the topic picker, never both at
+ * once. `?add=1` opens the picker on arrival, `&vis=granted` presets the audience (from the private part's editor). */
 export function InterestsScreen(){
- const {acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();
+ const {acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const [params,setParams]=useSearchParams();
  const {items,cats,topics,error,load}=useInterests();
  const [open,setOpen]=useState<string|null>(null);const [notice,setNotice]=useState('');
- const addRef=useRef<HTMLDivElement>(null);
+ const picking=params.get('add')==='1';const presetVis:Vis=params.get('vis')==='granted'?'granted':params.get('vis')==='only'?'only':'public';
+ const setPicking=(on:boolean)=>setParams(p=>{const n=new URLSearchParams(p);if(on)n.set('add','1');else{n.delete('add');n.delete('vis');}return n;},{replace:true});
  if(!acting)return null;
  const couple=acting.kind==='couple';
  const all=sortJars(items??[]);const have=new Set(all.map(j=>j.topicId));
  const groups=([['level',all.filter(j=>!j.mark)],['discuss',all.filter(j=>j.mark==='discuss')],['hard',all.filter(j=>j.mark==='hard')]] as const).filter(g=>g[1].length);
- const sections=cats.map(c=>({c,ts:topics.filter(x=>x.categoryId===c.id&&!have.has(x.id))})).filter(s=>s.ts.length);
- const toAdd=()=>addRef.current?.scrollIntoView({behavior:'smooth',block:'start'});
+ const toAdd=()=>{setNotice('');setPicking(true);};
  return <>
   <Bar title={t(couple?'fe.int.screenCouple':'fe.int.screen')} back="/n/me">
    <button type="button" className="ibtn" aria-label={t('fe.int.history')} onClick={()=>navigate('/n/me/interests/history')}><History/></button>
@@ -180,21 +182,34 @@ export function InterestsScreen(){
    {notice&&<div className="alert ok" role="status"><span>{notice}</span></div>}
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :!items?<Skel kind="list"/>
-    :<>
-     {all.length?groups.map(([g,l])=><section key={g} className="grp"><div className="grp-t"><span>{t('fe.int.group.'+g)} · {l.length}</span></div>
-      <div className="card"><Jars list={l} topics={topics} onOpen={setOpen}/></div></section>)
-      :<Empty icon={Sparkles} title={t('fe.int.empty.title')} text={t(couple?'fe.int.empty.textCouple':'fe.int.empty.text')}><Btn onClick={toAdd}>{t('fe.int.add')}</Btn></Empty>}
-     {all.length>0&&<JarLegend couple={couple} extra={t('fe.int.hardNote')}/>}
-     <div ref={addRef}>
-      <section className="grp"><div className="grp-t"><span>{t('fe.int.addTitle')}</span></div>
-       {sections.length||cats.length?<p className="note">{sections.length?t('fe.int.addHint'):t('fe.int.allAdded')}</p>:<Skel kind="list" rows={2}/>}</section>
-      {sections.map(({c,ts})=><section key={c.id} className="fsec"><div className="sec">{locale==='en'?c.en:c.ru}</div>
-       <div className="chips">{ts.map(x=><button key={x.id} type="button" className="chip" aria-pressed={false} onClick={()=>setOpen(x.id)}>{locale==='en'?x.en:x.ru}</button>)}</div></section>)}
-     </div>
-    </>}
+    :all.length?<>
+     {groups.map(([g,l])=><section key={g} className="grp"><div className="grp-t"><span>{t('fe.int.group.'+g)} · {l.length}</span></div>
+      <div className="card"><Jars list={l} topics={topics} onOpen={setOpen}/></div></section>)}
+     <JarLegend couple={couple} extra={t('fe.int.hardNote')}/>
+    </>
+    :<Empty icon={Sparkles} title={t('fe.int.empty.title')} text={t(couple?'fe.int.empty.textCouple':'fe.int.empty.text')}><Btn onClick={toAdd}>{t('fe.int.add')}</Btn></Empty>}
   </View>
-  {open&&<InterestSheet key={open} topicId={open} topics={topics} cats={cats} current={items?.find(j=>j.topicId===open)} onClose={()=>setOpen(null)} onDone={msg=>{setOpen(null);setNotice(msg);load();}}/>}
+  {picking&&items&&!open&&<TopicPicker cats={cats} topics={topics} have={have} onClose={()=>setPicking(false)} onPick={setOpen}/>}
+  {open&&<InterestSheet key={open} topicId={open} topics={topics} cats={cats} current={items?.find(j=>j.topicId===open)} defaultVis={presetVis}
+   onClose={()=>setOpen(null)} onDone={msg=>{setOpen(null);setPicking(false);setNotice(msg);load();}}/>}
  </>;
+}
+
+/** `topicPicker()` — the catalog's topics the profile has not marked yet, by category, with a search; a tap opens the
+ * interest sheet for that topic (closing it comes back here). */
+function TopicPicker({cats,topics,have,onPick,onClose}:{cats:Category[],topics:Topic[],have:Set<string>,onPick:(id:string)=>void,onClose:()=>void}){
+ const {t,locale}=useI18n();const [q,setQ]=useState('');
+ const nq=q.trim().toLowerCase();const label=(x:{ru:string,en:string})=>locale==='en'?x.en:x.ru;
+ const left=topics.filter(x=>!have.has(x.id));
+ const sections=cats.map(c=>({c,ts:left.filter(x=>x.categoryId===c.id&&(!nq||label(x).toLowerCase().includes(nq)))})).filter(s=>s.ts.length);
+ return <Sheet title={t('fe.int.add')} onClose={onClose} full>
+  <p className="note">{t('fe.int.addHint')}</p>
+  {left.length>0&&<div className="inwrap mt12"><Search/><input className="inp" type="search" value={q} onChange={e=>setQ(e.target.value)} placeholder={t('fe.int.searchPh')} aria-label={t('fe.int.searchPh')}/></div>}
+  {!topics.length?<Skel kind="list" rows={2}/>
+   :sections.length?sections.map(({c,ts})=><section key={c.id} className="fsec"><div className="sec">{label(c)}</div>
+    <div className="chips">{ts.map(x=><button key={x.id} type="button" className="chip" onClick={()=>onPick(x.id)}>{label(x)}</button>)}</div></section>)
+   :<p className="note mt12">{left.length?t('fe.int.notFound'):t('fe.int.allAdded')}</p>}
+ </Sheet>;
 }
 
 /** X04 — the interest history; only the profile's own members see it. */
@@ -243,7 +258,7 @@ export function MeJars(){
  if(!acting||!items)return null;
  const couple=acting.kind==='couple';
  const title=t(couple?'fe.int.titleCouple':'fe.int.title');
- const add=()=>navigate('/n/me/interests');
+ const add=()=>navigate('/n/me/interests?add=1');
  if(!items.length)return <section className="grp bare" id="meJars"><div className="grp-t"><span>{title}</span></div><div className="card">
   <button type="button" className="ph-empty" onClick={add}><span className="pe-ic"><Sparkles/></span><span className="tx"><b>{t('fe.int.add')}</b><small>{t(couple?'fe.int.emptySubCouple':'fe.int.emptySub')}</small></span><Plus/></button>
  </div></section>;

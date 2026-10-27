@@ -1,5 +1,5 @@
 import {Fragment,useCallback,useEffect,useState,type ReactNode} from 'react';
-import {useNavigate} from 'react-router';
+import {useLocation,useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Camera,Check,ChevronDown,ChevronRight,Clock,Eye,EyeOff,Users,Image as ImageIcon,KeyRound,Plus,Settings,Star,Trash2,X,type LucideIcon} from 'lucide-react';
@@ -84,6 +84,9 @@ export function MeTab(){
  const [layer,setLayerState]=useState<Layer>(()=>{const l=new URLSearchParams(location.hash.split('?')[1]??'').get('layer');return l==='priv'||l==='mine'||l==='vis'?l:'profile';});
  const [notice,setNotice]=useState('');const [tick,setTick]=useState(0);const [switching,setSwitching]=useState(false);
  const [todo,setTodo]=useState(0);const [dots,setDots]=useState<{links:number,reqs:number,vis:number}>({links:0,reqs:0,vis:0});
+ // A link to «Я» with `?layer=` while «Я» is already open (notifications, «Моё» redirects) switches the layer too.
+ const {search}=useLocation();
+ useEffect(()=>{const l=new URLSearchParams(search).get('layer');setLayerState(l==='priv'||l==='mine'||l==='vis'?l:'profile');},[search]);
  const setLayer=(l:Layer)=>{setLayerState(l);setNotice('');const base=location.hash.split('?')[0]||'#/n/me';history.replaceState(history.state,'',l==='profile'?base:base+'?layer='+l);document.querySelector('.me18')?.scrollTo({top:0});};
  const load=useCallback(()=>{
   if(!acting)return;setError(null);setTick(n=>n+1);
