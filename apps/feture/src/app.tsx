@@ -15,6 +15,8 @@ import { FetureCatalog } from './catalog';
 import { sameSession } from './feture/interest-api';
 import { InterestLifecycle, interestQueue } from './feture/use-interest-map';
 import { FetureExperience } from './feture/experience';
+import { FeRoot } from './fe/shell';
+import { FeedTab, PeopleTab, CommunitiesTab, ChatsTab, MeTab } from './fe/screens';
 const ProductDesign = lazy(async()=>({default:(await import('./feture/design/product-design')).ProductDesign}));
 import { WelcomePage } from './feture/welcome';
 import { FirstStepsPage } from './feture/first-steps';
@@ -239,6 +241,18 @@ export const routes: RouteObject[] = [
     element:<Root />,
     errorElement:<Localized><RouteErrorScreen /></Localized>,
     children:[{
+      // V21 screens on /api/fe, moved slice by slice (V21-INTEGRATION-GUIDE §4); the current ones stay until then.
+      path:'n', element:<FeRoot />,
+      children:[
+        {index:true, element:<Navigate to="/n/feed" replace/>},
+        {path:'feed', element:<FeedTab />},
+        {path:'people', element:<PeopleTab />},
+        {path:'communities', element:<CommunitiesTab />},
+        {path:'chats', element:<ChatsTab />},
+        {path:'me', element:<MeTab />},
+        {path:'*', element:<Navigate to="/n/feed" replace/>}
+      ]
+    },{
       element:<Shell />,
       children:[
         {index:true, element:<Home />},

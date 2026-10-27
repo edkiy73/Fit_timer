@@ -22,7 +22,7 @@ export function newOpId():string{
 const failure=z.object({error:z.string(),rule:z.string().optional(),fields:z.array(z.string()).optional(),state:z.string().optional()});
 
 export async function feRequest<T>(session:AuthSession,action:string,input:Record<string,unknown>,schema:z.ZodType<T>,
- opts:{profileId?:string,signal?:AbortSignal}={}):Promise<T>{
+ opts:{profileId?:string|undefined,signal?:AbortSignal|undefined}={}):Promise<T>{
  const {signal,profileId}=opts;
  await requireCurrentSession(session,signal);
  const headers:Record<string,string>={'Content-Type':'application/json','x-fit-email':session.email,'x-fit-device':session.deviceId,'x-fit-token':session.syncToken};
