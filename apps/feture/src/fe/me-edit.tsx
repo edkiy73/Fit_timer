@@ -8,6 +8,7 @@ import {Bar,Btn,Empty,Skel} from './ui';
 import {useFe} from './session';
 import {Sheet} from './profile-extras';
 import {useToast} from './toast';
+import {useDragOrder} from './reorder';
 import {Ask,AudTag,COUPLE_ROWS,DETAIL_ROWS,MAX_PHOTOS,catalogRes,ok,photoSrc,profileRes,type Profile} from './me';
 
 /** V21 P02 «Редактировать профиль» and P04 «Приватная часть» (`SC.P02` with `only`): one editor, opened at the block
@@ -36,6 +37,8 @@ export function MeEditScreen(){
  const [whoOpen,setWhoOpen]=useState<boolean|null>(null);const [city,setCity]=useState(false);const [phSheet,setPhSheet]=useState<{k:'photos'|'privMedia',i:number}|null>(null);
  const [askOff,setAskOff]=useState(false);const [uploading,setUploading]=useState<'photos'|'privMedia'|null>(null);
  const file=useRef<HTMLInputElement>(null);const fileKind=useRef<'photos'|'privMedia'>('photos');
+ // Press and drag to change the order in the draft; «Сохранить» writes it.
+ const drag=useDragOrder<'photos'|'privMedia'>((k,ids)=>setD(x=>{if(!x)return x;const by=new Map(x[k].map(p=>[p.id,p]));const next=ids.map(i=>by.get(i)).filter((p):p is Ph=>!!p);return next.length===x[k].length?{...x,[k]:next}:x;}));
  const cp=acting?.kind==='couple';
  const load=useCallback(()=>{
   if(!acting)return;setError(null);
@@ -101,8 +104,9 @@ export function MeEditScreen(){
 
  if(!acting)return null;
  const aud=only==='priv'?<AudTag k="granted"/>:only?<AudTag k={only==='details'?(p?.detailsVis??'all'):'all'}/>:null;
- const slots=(k:'photos'|'privMedia',list:Ph[],max:number)=>{
-  const cells:ReactNode[]=list.map((ph,i)=><div key={ph.id} className={'mi'+(k==='photos'&&i===0?' big':'')}>
+ const slots=(k:'photos'|'privMedia',base:Ph[],max:number)=>{
+  const list=drag.arrange(k,base);const ids=base.map(x=>x.id);
+  const cells:ReactNode[]=list.map((ph,i)=><div key={ph.id} data-id={ph.id} className={'mi'+(k==='photos'&&i===0?' big':'')+(drag.preview?.drag===ph.id?' mi-ph':'')} onPointerDown={e=>drag.down(e,k,ids,ph.id)}>
    {ph.src&&<img src={ph.src} alt="" draggable={false}/>}
    {k==='photos'&&i===0&&<span className="mainph">{t('fe.me.mainPhoto')}</span>}
    {ph.pending&&<span className="ph-rev"><Clock/><span>{t('fe.mx.ph.review')}</span></span>}

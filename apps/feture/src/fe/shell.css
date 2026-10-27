@@ -36,3 +36,6 @@
 /* X02 batch add: step counter and progress bar inside a shared Sheet (the prototype styles them under #sheet) */
 .fe-v21 .sheet .qprog{flex:none;margin:0 0 14px}
 .fe-v21 .sheet .int-step{margin:0 0 8px}
+/* a photo whose served copies are not ready yet blinks in place instead of sitting as an empty box */
+.fe-v21 .mi.nosrc{background:var(--raise);animation:fe-blink 1.4s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.fe-v21 .mi.nosrc{animation:none}}
