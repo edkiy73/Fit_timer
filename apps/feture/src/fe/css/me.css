@@ -5,3 +5,5 @@
 .v21 button.me18-who{font:inherit;color:inherit}
 /* Private media in the P04 editor: plain tiles, no big main slot. */
 .v21 .ph-slots.priv{grid-template-columns:repeat(3,minmax(0,1fr))}
+/* The small thumb paints under a profile photo slot while the card-size picture loads (the URL comes in --thumb). */
+.v21 .ph-slots .mi.has-thumb{background-image:var(--thumb);background-size:cover;background-position:center}

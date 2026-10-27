@@ -1,14 +1,12 @@
 import {useCallback,useEffect,useRef,useState,type CSSProperties} from 'react';
-import {createPortal} from 'react-dom';
 import {useNavigate,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Ban,EyeOff,History,KeyRound,MessageCircle,Pencil,Plus,Search,Sparkles,Trash2,X} from 'lucide-react';
+import {Ban,EyeOff,History,KeyRound,MessageCircle,Pencil,Plus,Sparkles,Trash2,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Bar,Btn,Empty,View,Skel} from './ui';
+import {Alert,Bar,Btn,Card,Chip,Empty,Group,IconBtn,Note,Progress,SearchInput,SectionLabel,Sheet,Skel,View} from './kit';
 import {useFe} from './session';
 import {when} from './feed';
-import {Sheet} from './profile-extras';
 
 /** Interests (V21 X01 #meJars, X02, X04) with the prototype's markup: one capsule per interest — the fill is the
  * level 1–10; «обсудить» and «граница» are marks, never levels. Everything comes from the server. */
@@ -92,13 +90,8 @@ export function InterestSheet({topicId,topics,cats,current,defaultVis='public',o
  const [v,setV]=useState<Answer>(current?current.mark??current.value??null:null);
  const [dir,setDir]=useState<Dir[]>(()=>{const d=dirsOf(current?.dir);return d.length?d:[...DIRS];});
  const [vis,setVis]=useState<Vis>(current?visOf(current):defaultVis);
- const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [asking,setAsking]=useState(false);const [on,setOn]=useState(false);
- const opId=useRef(newOpId());const sheet=useRef<HTMLDivElement>(null);
- // In the app layer like every sheet (ui Layer), above the phone dock — inside main.main the dock covered «Добавить».
- const [host,setHost]=useState<Element|null>(null);
- useEffect(()=>{setHost(document.querySelector('.fe-v21 .root')??document.body);},[]);
- useEffect(()=>{if(!host)return;const r=requestAnimationFrame(()=>{setOn(true);sheet.current?.focus({preventScroll:true});});return ()=>cancelAnimationFrame(r);},[host]);
- useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape')onClose();};addEventListener('keydown',k);return ()=>removeEventListener('keydown',k);},[onClose]);
+ const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [asking,setAsking]=useState(false);
+ const opId=useRef(newOpId());
  const save=async()=>{
   if(v==null)return;setBusy(true);setFailure('');
   try{
@@ -111,32 +104,23 @@ export function InterestSheet({topicId,topics,cats,current,defaultVis='public',o
   try{await call('interests.remove',{opId:newOpId(),topicId},ok);onDone(t('fe.int.removed'));}
   catch(e){setFailure(feErrorMessage(e,t));setAsking(false);}finally{setBusy(false);}
  };
- if(!host)return null;
- return createPortal(<div className="layer">
-  <div id="scrim" className={'scrim'+(on?' on':'')} onClick={onClose}/>
-  <div id="sheet" ref={sheet} className={'sheet'+(on?' on':'')} role="dialog" aria-modal="true" aria-label={name} tabIndex={-1}>
-   <div className="grab"/>
-   <div className="sh-h"><div className="sh-ht"><h2>{name}</h2>{cat&&<p>{locale==='en'?cat.en:cat.ru}</p>}</div>
-    <button type="button" className="ibtn ghost sm" aria-label={t('fe.int.ed.close')} onClick={onClose}><X/></button></div>
-   <div className="sh-b">
-    {desc&&<p className="topic-desc">{desc}</p>}
-    <InterestFields limit={limit} couple={couple} v={v} setV={setV} dir={dir} setDir={setDir} vis={vis} setVis={setVis}/>
+ // The kit sheet (in the app layer, above the phone dock); Escape, ✕ and the scrim close it.
+ return <Sheet title={name} sub={cat?(locale==='en'?cat.en:cat.ru):undefined} onClose={onClose} foot={<>
+  {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
+  {asking?<>
+   <Note><b>{t('fe.int.ed.removeQ',{topic:name})}</b> {t('fe.int.ed.removeText')}</Note>
+   <div className="row g8"><Btn kind="soft" onClick={()=>setAsking(false)} disabled={busy}>{t('fe.cancel')}</Btn><Btn kind="danger" onClick={remove} disabled={busy}>{t('fe.int.ed.remove')}</Btn></div>
+  </>:<>
+   {v==null&&<Note className="jar-need">{t('fe.int.ed.need')}</Note>}
+   <div className="row g8">
+    {current&&<button type="button" className="btn secondary icon" aria-label={t('fe.int.ed.remove')} onClick={()=>setAsking(true)} disabled={busy}><Trash2/></button>}
+    <Btn className={v==null?'off':undefined} busy={busy} onClick={save} disabled={v==null||busy} aria-disabled={v==null||undefined}>{current?t('fe.int.ed.save'):t('fe.int.ed.addOne')}</Btn>
    </div>
-   <div className="sh-f">
-    {failure&&<div className="alert err" role="alert"><span>{failure}</span></div>}
-    {asking?<>
-     <p className="note"><b>{t('fe.int.ed.removeQ',{topic:name})}</b> {t('fe.int.ed.removeText')}</p>
-     <div className="row g8"><Btn kind="soft" onClick={()=>setAsking(false)} disabled={busy}>{t('fe.cancel')}</Btn><Btn kind="danger" onClick={remove} disabled={busy}>{t('fe.int.ed.remove')}</Btn></div>
-    </>:<>
-     {v==null&&<p className="note jar-need">{t('fe.int.ed.need')}</p>}
-     <div className="row g8">
-      {current&&<button type="button" className="btn secondary icon" aria-label={t('fe.int.ed.remove')} onClick={()=>setAsking(true)} disabled={busy}><Trash2/></button>}
-      <button type="button" className={'btn primary'+(v==null?' off':'')+(busy?' busy':'')} onClick={save} disabled={v==null||busy} aria-disabled={v==null||undefined} aria-busy={busy||undefined}>{current?t('fe.int.ed.save'):t('fe.int.ed.addOne')}</button>
-     </div>
-    </>}
-   </div>
-  </div>
- </div>,host);
+  </>}
+ </>}>
+  {desc&&<p className="topic-desc">{desc}</p>}
+  <InterestFields limit={limit} couple={couple} v={v} setV={setV} dir={dir} setDir={setDir} vis={vis} setVis={setVis}/>
+ </Sheet>;
 }
 
 /** How you like it (not for limits), who sees, then the answer — the same fields when adding one or several. */
@@ -147,14 +131,14 @@ function InterestFields({limit,couple,v,setV,dir,setDir,vis,setVis}:{limit:boole
  const toggleDir=(k:'all'|Dir)=>{if(mark)return;
   setDir(d=>{if(k==='all')return [...DIRS];if(d.length===DIRS.length)return [k];const next=d.includes(k)?d.filter(x=>x!==k):[...d,k];return next.length?DIRS.filter(x=>next.includes(x)):[...DIRS];});};
  return <>
-    {!limit&&<section className={'grp bare'+(mark?' dim':'')}><div className="grp-t"><span>{t('fe.int.ed.dir')}</span></div><div className="card"><div className="chips">
+    {!limit&&<Group bare className={mark?'dim':''} title={t('fe.int.ed.dir')}><Card><div className="chips">
      {(['all',...DIRS] as const).map(k=>{const pressed=k==='all'?allDir:!allDir&&dir.includes(k);
       return <button key={k} type="button" className={'chip'+(pressed?' on':'')} aria-pressed={pressed} tabIndex={mark?-1:undefined} aria-disabled={mark||undefined} onClick={()=>toggleDir(k)}>{t('fe.int.ed.dir.'+k)}</button>;})}
-    </div></div></section>}
-    <section className="grp bare"><div className="grp-t"><span>{t('fe.int.ed.vis')}</span></div><div className="card"><div className="chips">
-     {VIS.map(k=><button key={k} type="button" className={'chip'+(vis===k?' on':'')} aria-pressed={vis===k} onClick={()=>setVis(k)}>{t('fe.int.ed.vis.'+(k==='only'&&couple?'onlyUs':k))}</button>)}
-    </div>{vis==='public'&&v==='hard'&&<p className="note" style={{marginTop:6}}>{t('fe.int.ed.hardPublic')}</p>}</div></section>
-    <section className="grp bare"><div className="grp-t"><span>{t(limit?'fe.int.ed.qLimit':'fe.int.ed.q')}</span></div><div className="card"><div className="ans">
+    </div></Card></Group>}
+    <Group bare title={t('fe.int.ed.vis')}><Card><div className="chips">
+     {VIS.map(k=><Chip key={k} on={vis===k} onClick={()=>setVis(k)}>{t('fe.int.ed.vis.'+(k==='only'&&couple?'onlyUs':k))}</Chip>)}
+    </div>{vis==='public'&&v==='hard'&&<Note className="mt8">{t('fe.int.ed.hardPublic')}</Note>}</Card></Group>
+    <Group bare title={t(limit?'fe.int.ed.qLimit':'fe.int.ed.q')}><Card><div className="ans">
      <div className="ans-scale" role="radiogroup" aria-label={t('fe.int.ed.scale')}>
       {[1,2,3,4,5,6,7,8,9,10].map(k=><button key={k} type="button" className={[n&&k<=n?'fill':'',n===k?'on':''].filter(Boolean).join(' ')} role="radio" aria-checked={n===k} onClick={()=>setV(k)}>{k}</button>)}
      </div>
@@ -164,7 +148,7 @@ function InterestFields({limit,couple,v,setV,dir,setDir,vis,setVis}:{limit:boole
       <button type="button" className={'ans-m taboo'+(v==='hard'?' on':'')} aria-pressed={v==='hard'} onClick={()=>setV('hard')}><Ban/><span>{t('fe.int.ed.hard')}</span></button>
      </div>
      <p className="ans-word" aria-live="polite">{v==null?t('fe.int.ed.pick'):n?<><b>{t('fe.int.ed.level',{n})}</b><span>{t('fe.int.ed.levelText')}</span></>:t(v==='hard'?'fe.int.ed.hardText':'fe.int.ed.discussText')}</p>
-    </div></div></section>
+    </div></Card></Group>
  </>;
 }
 
@@ -183,16 +167,16 @@ export function InterestsScreen(){
  const toAdd=()=>{setNotice('');setPicking(true);};
  return <>
   <Bar title={t(couple?'fe.int.screenCouple':'fe.int.screen')} back="/n/me">
-   <button type="button" className="ibtn" aria-label={t('fe.int.history')} onClick={()=>navigate('/n/me/interests/history')}><History/></button>
-   <button type="button" className="ibtn" aria-label={t('fe.int.add')} onClick={toAdd}><Plus/></button>
+   <IconBtn icon={History} label={t('fe.int.history')} onClick={()=>navigate('/n/me/interests/history')}/>
+   <IconBtn icon={Plus} label={t('fe.int.add')} onClick={toAdd}/>
   </Bar>
   <View className="nodock">
-   {notice&&<div className="alert ok" role="status"><span>{notice}</span></div>}
+   {notice&&<Alert kind="ok" noIcon>{notice}</Alert>}
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :!items?<Skel kind="list"/>
     :all.length?<>
-     {groups.map(([g,l])=><section key={g} className="grp"><div className="grp-t"><span>{t('fe.int.group.'+g)} · {l.length}</span></div>
-      <div className="card"><Jars list={l} topics={topics} onOpen={setOpen}/></div></section>)}
+     {groups.map(([g,l])=><Group key={g} title={<>{t('fe.int.group.'+g)} · {l.length}</>}>
+      <Card><Jars list={l} topics={topics} onOpen={setOpen}/></Card></Group>)}
      <JarLegend couple={couple} extra={t('fe.int.hardNote')}/>
     </>
     :<Empty icon={Sparkles} title={t('fe.int.empty.title')} text={t(couple?'fe.int.empty.textCouple':'fe.int.empty.text')}><Btn onClick={toAdd}>{t('fe.int.add')}</Btn></Empty>}
@@ -235,30 +219,30 @@ function TopicPicker({cats,topics,have,presetVis,onClose,onDone}:{cats:Category[
   }catch(e){setFailure(feErrorMessage(e,t));}finally{setBusy(false);}
  };
  if(stage==='pick')return <Sheet title={t('fe.int.addMany')} onClose={onClose} full
-  foot={<button type="button" className={'btn primary'+(sel.length?'':' off')} disabled={!sel.length} onClick={()=>{setStep(0);setStage('answer');setQ('');}}>{t('fe.int.continue')}{sel.length?` · ${sel.length}`:''}</button>}>
-  <p className="note">{t('fe.int.addManyHint')}</p>
-  {left.length>0&&<div className="inwrap mt12"><Search/><input className="inp" type="search" value={q} onChange={e=>setQ(e.target.value)} placeholder={t('fe.int.searchPh')} aria-label={t('fe.int.searchPh')}/></div>}
+  foot={<Btn className={sel.length?undefined:'off'} disabled={!sel.length} onClick={()=>{setStep(0);setStage('answer');setQ('');}}>{t('fe.int.continue')}{sel.length?` · ${sel.length}`:''}</Btn>}>
+  <Note>{t('fe.int.addManyHint')}</Note>
+  {left.length>0&&<div className="mt12"><SearchInput label={t('fe.int.searchPh')} value={q} onChange={e=>setQ(e.target.value)}/></div>}
   {!topics.length?<Skel kind="list" rows={2}/>
-   :sections.length?sections.map(({c,ts})=><section key={c.id} className="fsec"><div className="sec">{label(c)}</div>
-    <div className="chips">{ts.map(x=>{const on=sel.includes(x.id);return <button key={x.id} type="button" className={'chip'+(on?' on':'')} aria-pressed={on} onClick={()=>toggle(x.id)}>{label(x)}</button>;})}</div></section>)
-   :<p className="note mt12">{left.length?t('fe.int.notFound'):t('fe.int.allAdded')}</p>}
+   :sections.length?sections.map(({c,ts})=><section key={c.id} className="fsec"><SectionLabel>{label(c)}</SectionLabel>
+    <div className="chips">{ts.map(x=><Chip key={x.id} on={sel.includes(x.id)} onClick={()=>toggle(x.id)}>{label(x)}</Chip>)}</div></section>)
+   :<Note className="mt12">{left.length?t('fe.int.notFound'):t('fe.int.allAdded')}</Note>}
  </Sheet>;
  if(stage==='answer'&&cur&&d){const tp=topics.find(x=>x.id===cur);const desc=tp?(locale==='en'?tp.descEn:tp.descRu):null;
   return <Sheet key={cur} title={tp?label(tp):cur} onClose={onClose} full
-   foot={fromReview?<button type="button" className="btn primary" onClick={next}>{t('fe.int.toReview')}</button>
+   foot={fromReview?<Btn onClick={next}>{t('fe.int.toReview')}</Btn>
     :<div className="row g8"><button type="button" className="btn secondary" onClick={back}>{t('fe.back')}</button>
-     {d.v!=null&&<button type="button" className="btn primary" onClick={next}>{step===sel.length-1?t('fe.int.review'):t('fe.int.next')}</button>}</div>}>
-   <p className="note int-step">{t('fe.int.stepOf',{i:step+1,n:sel.length})}</p>
-   <div className="qprog"><i style={{width:`${(step+1)/sel.length*100}%`}}/></div>
+     {d.v!=null&&<Btn onClick={next}>{step===sel.length-1?t('fe.int.review'):t('fe.int.next')}</Btn>}</div>}>
+   <Note className="int-step">{t('fe.int.stepOf',{i:step+1,n:sel.length})}</Note>
+   <Progress value={(step+1)/sel.length}/>
    {desc&&<p className="topic-desc">{desc}</p>}
    <InterestFields limit={tp?.categoryId===LIMITS} couple={couple} v={d.v} setV={answer} dir={d.dir} setDir={f=>put(x=>({...x,dir:f(x.dir)}))} vis={d.vis} setVis={vis=>put(x=>({...x,vis}))}/>
   </Sheet>;}
  const list:Interest[]=sel.map(id=>{const x=drafts[id]!;return {topicId:id,vis:x.vis,...(typeof x.v==='number'?{value:x.v,dir:x.dir}:{mark:x.v as 'discuss'|'hard'})};});
  return <Sheet title={t('fe.int.check')} onClose={onClose}
-  foot={<>{failure&&<div className="alert err" role="alert"><span>{failure}</span></div>}
+  foot={<>{failure&&<Alert kind="err" noIcon>{failure}</Alert>}
    <div className="row g8"><button type="button" className="btn secondary" onClick={back} disabled={busy}>{t('fe.back')}</button><Btn busy={busy} onClick={save}>{t('fe.int.saveAll')}</Btn></div></>}>
-  <p className="note">{t('fe.int.checkHint',{n:sel.length})}</p>
-  <div className="card mt12"><Jars list={sortJars(list)} topics={topics} onOpen={id=>{setStep(sel.indexOf(id));setFromReview(true);setStage('answer');}}/></div>
+  <Note>{t('fe.int.checkHint',{n:sel.length})}</Note>
+  <Card className="mt12"><Jars list={sortJars(list)} topics={topics} onOpen={id=>{setStep(sel.indexOf(id));setFromReview(true);setStage('answer');}}/></Card>
  </Sheet>;
 }
 
@@ -288,14 +272,14 @@ export function InterestsHistoryScreen(){
   <View className="nodock">
    {error&&!items?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>load()}>{t('fe.retry')}</Btn></Empty>
     :!items?<Skel kind="list"/>
-    :<section className="grp"><div className="card list">
+    :<Group><Card list>
       {items.length?items.map(h=><div key={h.id} className="li static"><span className="ico">{h.archived?<Sparkles/>:<Pencil/>}</span>
        <span className="tx"><b>{name(h.topicId)}</b><small>{text(h)} · {t(h.archived?'fe.int.hist.archived':'fe.int.hist.manual')}</small></span><span className="val">{when(h.at,locale)}</span></div>)
        :<div className="li static"><span className="tx"><small>{t('fe.int.hist.empty')}</small></span></div>}
-     </div><p className="grp-n">{t(couple?'fe.int.hist.footCouple':'fe.int.hist.foot')}</p>
-     {error?<div className="alert err" role="alert"><span>{feErrorMessage(error,t)}</span></div>:null}
+     </Card><p className="grp-n">{t(couple?'fe.int.hist.footCouple':'fe.int.hist.foot')}</p>
+     {error?<Alert kind="err" noIcon>{feErrorMessage(error,t)}</Alert>:null}
      {next&&<Btn kind="text" auto className="jar-more" disabled={more} busy={more} onClick={()=>load(next)}>{t('fe.int.hist.more')}</Btn>}
-    </section>}
+    </Group>}
   </View>
  </>;
 }
@@ -309,23 +293,22 @@ export function MeJars(){
  const couple=acting.kind==='couple';
  const title=t(couple?'fe.int.titleCouple':'fe.int.title');
  const add=()=>navigate('/n/me/interests?add=1');
- if(!items.length)return <section className="grp bare" id="meJars"><div className="grp-t"><span>{title}</span></div><div className="card">
+ if(!items.length)return <Group bare id="meJars" title={title}><Card>
   <button type="button" className="ph-empty" onClick={add}><span className="pe-ic"><Sparkles/></span><span className="tx"><b>{t('fe.int.add')}</b><small>{t(couple?'fe.int.emptySubCouple':'fe.int.emptySub')}</small></span><Plus/></button>
- </div></section>;
+ </Card></Group>;
  const n=(k:Vis)=>items.filter(j=>visOf(j)===k).length;
  const kinds=VIS.filter(k=>n(k));const multi=kinds.length>1;
  const list=sortJars(f==='all'||!multi?items:items.filter(j=>visOf(j)===f));const shown=openAll?list:list.slice(0,8);
  const chips:[('all'|Vis),string][]=[['all',t('fe.int.filter.all',{n:items.length})],...kinds.map(k=>[k,t('fe.int.filter.'+(k==='only'&&couple?'onlyUs':k),{n:n(k)})] as [Vis,string])];
- return <section className="grp bare" id="meJars">
-  <div className="grp-t"><span>{title}{multi?'':` · ${items.length}`}</span><span className="jar-links21">
+ return <Group bare id="meJars" title={<>{title}{multi?'':` · ${items.length}`}</>} action={<span className="jar-links21">
    <button type="button" onClick={()=>navigate('/n/me/interests')}>{t('fe.int.all')}</button>
    {!couple&&<button type="button" onClick={()=>navigate('/n/me/interests/history')}>{t('fe.int.history')}</button>}
-  </span></div>
-  {notice&&<div className="alert ok" role="status"><span>{notice}</span></div>}
-  {multi&&<div className="jar-f"><div className="chips" role="group" aria-label={t('fe.int.filterAria')}>{chips.map(([id,l])=><button key={id} type="button" className={'chip'+(f===id?' on':'')} aria-pressed={f===id} onClick={()=>setF(id)}>{l}</button>)}</div></div>}
+  </span>}>
+  {notice&&<Alert kind="ok" noIcon>{notice}</Alert>}
+  {multi&&<div className="jar-f"><div className="chips" role="group" aria-label={t('fe.int.filterAria')}>{chips.map(([id,l])=><Chip key={id} on={f===id} onClick={()=>setF(id)}>{l}</Chip>)}</div></div>}
   <Jars list={shown} topics={topics} onOpen={setOpen} onAdd={add}/>
-  {list.length>8&&<button type="button" className="btn text auto jar-more" onClick={()=>setOpenAll(o=>!o)}>{openAll?t('fe.int.less'):t('fe.int.more',{n:list.length-8})}</button>}
+  {list.length>8&&<Btn kind="text" auto className="jar-more" onClick={()=>setOpenAll(o=>!o)}>{openAll?t('fe.int.less'):t('fe.int.more',{n:list.length-8})}</Btn>}
   {(n('granted')>0||n('only')>0)&&<JarLegend couple={couple}/>}
   {open&&<InterestSheet key={open} topicId={open} topics={topics} cats={cats} current={items.find(j=>j.topicId===open)} onClose={()=>setOpen(null)} onDone={msg=>{setOpen(null);setNotice(msg);load();}}/>}
- </section>;
+ </Group>;
 }
