@@ -245,33 +245,31 @@ registerApprovalKind('post.edit', {
 
 /** Post DTO for one viewer. @param {Q} q @param {any} p @param {Acting} viewer @param {import('../media/assets.mjs').MediaConfig} media @param {boolean} showExplicit */
 async function postDto(q, p, viewer, media, showExplicit) {
-  const [row] = await q.query(`select id, kind, handle, name, avatar_asset_id from feture.profile where id = $1`, [p.owner_profile_id]);
+  // Independent reads go out together (the pool gate caps concurrency).
+  const [[row], assets, [poll], [mine], [c], tags] = await Promise.all([
+    q.query(`select id, kind, handle, name, avatar_asset_id from feture.profile where id = $1`, [p.owner_profile_id]),
+    q.query(`select m.* from feture.media_attachment a join feture.media_asset m on m.id = a.asset_id where a.target_type = 'post' and a.target_id = $1 order by a.position`, [p.id]),
+    q.query('select question, options from feture.poll where post_id = $1', [p.id]),
+    q.query('select option from feture.poll_vote where post_id = $1 and profile_id = $2', [p.id, viewer.profileId]),
+    q.query(
+      `select (select count(*)::int from feture.reaction where target_type = 'post' and target_id = $1) likes,
+              exists (select 1 from feture.reaction where target_type = 'post' and target_id = $1 and profile_id = $2) liked,
+              (select count(*)::int from feture.reply r where r.post_id = $1 and r.state = 'published' and not feture.blocked($2, r.author_profile_id)) replies,
+              exists (select 1 from feture.saved_item where profile_id = $2 and kind = 'post' and target_id = $1::text) saved`, [p.id, viewer.profileId]),
+    q.query(
+      `select p.id, p.handle, p.name, t.state from feture.photo_tag t join feture.profile p on p.id = t.profile_id
+       where t.post_id = $1 and ($2 or t.state = 'ok' or t.profile_id = $3) and not feture.blocked($3, p.id)`, [p.id, p.own, viewer.profileId]),
+  ]);
   const { avatar_asset_id: authorAvatar, ...author } = row;
-  author.avatar = await avatarSrc(q, media, authorAvatar, viewer.profileId);
-  const assets = await q.query(
-    `select m.* from feture.media_attachment a join feture.media_asset m on m.id = a.asset_id where a.target_type = 'post' and a.target_id = $1 order by a.position`, [p.id]);
   const place = p.own ? 'own' : PUBLIC_AUD.has(p.audience) ? 'public' : 'private';
-  const mediaOut = [];
-  for (const m of assets) {
-    const d = await mediaDto(media, m, { viewerProfileId: viewer.profileId, place, showExplicit });
-    if (d) mediaOut.push(d);
-  }
-  const [poll] = await q.query('select question, options from feture.poll where post_id = $1', [p.id]);
-  let pollOut = null;
-  if (poll) {
-    const [mine] = await q.query('select option from feture.poll_vote where post_id = $1 and profile_id = $2', [p.id, viewer.profileId]);
+  const [avatar, mediaOut, counts] = await Promise.all([
+    avatarSrc(q, media, authorAvatar, viewer.profileId),
+    Promise.all(assets.map(m => mediaDto(media, m, { viewerProfileId: viewer.profileId, place, showExplicit }))).then(l => l.filter(Boolean)),
     // Results only after one's own vote (V21 pollHTML).
-    const counts = mine || p.own ? (await q.query('select option, count(*)::int n from feture.poll_vote where post_id = $1 group by option', [p.id])) : null;
-    pollOut = { question: poll.question, options: poll.options, myVote: mine?.option ?? null, results: counts && poll.options.map((/** @type {string} */ _, /** @type {number} */ i) => counts.find(c => c.option === i)?.n ?? 0) };
-  }
-  const [c] = await q.query(
-    `select (select count(*)::int from feture.reaction where target_type = 'post' and target_id = $1) likes,
-            exists (select 1 from feture.reaction where target_type = 'post' and target_id = $1 and profile_id = $2) liked,
-            (select count(*)::int from feture.reply r where r.post_id = $1 and r.state = 'published' and not feture.blocked($2, r.author_profile_id)) replies,
-            exists (select 1 from feture.saved_item where profile_id = $2 and kind = 'post' and target_id = $1::text) saved`, [p.id, viewer.profileId]);
-  const tags = await q.query(
-    `select p.id, p.handle, p.name, t.state from feture.photo_tag t join feture.profile p on p.id = t.profile_id
-     where t.post_id = $1 and ($2 or t.state = 'ok' or t.profile_id = $3) and not feture.blocked($3, p.id)`, [p.id, p.own, viewer.profileId]);
+    poll && (mine || p.own) ? q.query('select option, count(*)::int n from feture.poll_vote where post_id = $1 group by option', [p.id]) : null,
+  ]);
+  author.avatar = avatar;
+  const pollOut = poll ? { question: poll.question, options: poll.options, myVote: mine?.option ?? null, results: counts && poll.options.map((/** @type {string} */ _, /** @type {number} */ i) => counts.find(x => x.option === i)?.n ?? 0) } : null;
   return {
     id: p.id, type: p.type, title: p.title, body: p.body, audience: p.own ? p.audience : (p.audience === 'all' ? undefined : p.audience),
     topics: p.topics, interests: p.interests, author, media: mediaOut, poll: pollOut, tags,
@@ -385,18 +383,21 @@ const run = {
        where p.state = 'published' and p.in_feed and p.community_id is null and feture.post_visible(p, $1, $2)
          and not exists (select 1 from feture.feed_hide h where h.profile_id = $1 and ((h.kind = 'post' and h.target_id = p.id) or (h.kind = 'author' and h.target_id = p.owner_profile_id)))
          and ($3::text[] is null or p.topics && $3)
-         and ($4 = 'forYou' or p.owner_profile_id = $1
+         and ($4 in ('forYou', 'popular') or p.owner_profile_id = $1
               or exists (select 1 from feture.follow f where f.follower_profile_id = $1 and f.target_profile_id = p.owner_profile_id)
               or (p.type = 'note' and exists (select 1 from feture.note_subscription n where n.subscriber_profile_id = $1 and n.author_profile_id = p.owner_profile_id)))
          and ($5::timestamptz is null or (p.published_at, p.id) < ($5::timestamptz, $6::uuid))
-       order by p.published_at desc, p.id desc limit $7`,
-      [viewer.profileId, viewer.accountId, input.topics?.length ? input.topics : null, input.tab, cur?.at ?? null, cur?.id ?? null, input.limit + 1]);
+         and ($4 <> 'popular' or p.published_at > now() - interval '14 days')
+       order by case when $4 = 'popular' then (select count(*) from feture.reaction r where r.target_type = 'post' and r.target_id = p.id) end desc nulls last,
+                p.published_at desc, p.id desc limit $7`,
+      [viewer.profileId, viewer.accountId, input.topics?.length ? input.topics : null, input.tab, input.tab === 'popular' ? null : cur?.at ?? null, input.tab === 'popular' ? null : cur?.id ?? null, input.limit + 1]);
     const [acc] = await q.query('select show_explicit from feture.account where id = $1', [account.id]);
     const page = rows.slice(0, input.limit);
-    const items = [];
-    for (const p of page) items.push(await postDto(q, { ...p, own: p.owner_profile_id === viewer.profileId }, viewer, cfg.media, !!acc.show_explicit));
+    // Posts are built side by side: the pool gate caps database concurrency, media URL signing overlaps.
+    const items = await Promise.all(page.map(p => postDto(q, { ...p, own: p.owner_profile_id === viewer.profileId }, viewer, cfg.media, !!acc.show_explicit)));
     const last = page[page.length - 1];
-    return { items, next: rows.length > input.limit ? Buffer.from(JSON.stringify([new Date(last.published_at).toISOString(), last.id])).toString('base64url') : null };
+    // «Популярное» (V21 F01) is one page of the last two weeks by likes; the keyset cursor follows time, so no next page.
+    return { items, next: input.tab !== 'popular' && rows.length > input.limit ? Buffer.from(JSON.stringify([new Date(last.published_at).toISOString(), last.id])).toString('base64url') : null };
   },
 
   async 'profile.posts'(q, { acting: a, input, cfg, account }) {
@@ -411,8 +412,7 @@ const run = {
       [viewer.profileId, viewer.accountId, input.profileId, cur?.at ?? null, cur?.id ?? null]);
     const [acc] = await q.query('select show_explicit from feture.account where id = $1', [account.id]);
     const page = rows.slice(0, 20);
-    const items = [];
-    for (const p of page) items.push(await postDto(q, p, viewer, cfg.media, !!acc.show_explicit));
+    const items = await Promise.all(page.map(p => postDto(q, p, viewer, cfg.media, !!acc.show_explicit)));
     const last = page[page.length - 1];
     return { items, next: rows.length > 20 ? Buffer.from(JSON.stringify([new Date(last.published_at).toISOString(), last.id])).toString('base64url') : null };
   },
@@ -427,7 +427,7 @@ const run = {
       `select r.id, r.post_id, r.created_at from feture.post_revision r join feture.post p on p.id = r.post_id where p.owner_profile_id = $1 and r.state = 'review'`, [viewer.profileId]);
     const [acc] = await q.query('select show_explicit from feture.account where id = $1', [account.id]);
     const items = [];
-    for (const p of rows) items.push(await postDto(q, p, viewer, cfg.media, !!acc.show_explicit));
+    items.push(...await Promise.all(rows.map(p => postDto(q, p, viewer, cfg.media, !!acc.show_explicit))));
     return { items, revisions };
   },
 

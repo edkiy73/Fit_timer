@@ -51,19 +51,19 @@ const coupleOf=(a:{kind:string,name:string})=>a.kind==='couple'&&a.name.includes
 
 /* ---------- F01: the feed ---------- */
 
-type Tab='forYou'|'following';
+type Tab='forYou'|'following'|'popular';
 export function FeedTab(){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const location=useLocation();const toast=useToast();
  const {name:tname,topics:catalog,cats}=useTopics();
  const [tab,setTab]=useState<Tab>('forYou');
  // Topic filters per tab (F02): the server returns only posts with one of these topics.
- const [filters,setFilters]=useState<Record<Tab,string[]>>({forYou:[],following:[]});const sel=filters[tab];
+ const [filters,setFilters]=useState<Record<Tab,string[]>>({forYou:[],following:[],popular:[]});const sel=filters[tab];
  // A post screen that lost its post (deleted, hidden, blocked) comes back with `state.notice`.
  const [notice,setNotice]=useState(()=>{const n=(location.state as {notice?:unknown}|null)?.notice;return typeof n==='string'?n:'';});
  const [items,setItems]=useState<Post[]|null>(null);const [next,setNext]=useState<string|null>(null);const [error,setError]=useState<unknown>(null);const [more,setMore]=useState(false);
  const [hidden,setHidden]=useState(0);const [sheet,setSheet]=useState<'create'|'filters'|null>(null);
  // Quick topics come from the posts this tab really shows (most frequent first) and stay put while filtering.
- const [quick,setQuick]=useState<Record<Tab,string[]>>({forYou:[],following:[]});
+ const [quick,setQuick]=useState<Record<Tab,string[]>>({forYou:[],following:[],popular:[]});
  const load=useCallback((cursor?:string)=>{
   setError(null);if(!cursor)setItems(null);else setMore(true);
   call('feed.list',{tab,...(sel.length?{topics:sel}:{}),...(cursor?{cursor}:{})},page).then(r=>{
@@ -103,7 +103,7 @@ export function FeedTab(){
  return <>
   <Bar title={t('fe.nav.feed')}><button type="button" className="ibtn" aria-label={t('fe.br.search')} onClick={()=>navigate('/n/search?scope=posts')}><Search/></button><BellButton/></Bar>
   <View>
-   <div className="mb12"><Seg value={tab} onChange={v=>{setNotice('');setTab(v);}} options={[{id:'forYou',label:t('fe.feed.tab.forYou')},{id:'following',label:t('fe.feed.tab.following')}]}/></div>
+   <div className="mb12"><Seg value={tab} onChange={v=>{setNotice('');setTab(v);}} options={[{id:'forYou',label:t('fe.feed.tab.forYou')},{id:'following',label:t('fe.feed.tab.following')},{id:'popular',label:t('fe.fd.tab.popular')}]}/></div>
    {notice&&<div className="alert ok mb12" role="status"><span>{notice}</span></div>}
    <div className="composer">
     <button type="button" className="cmp-main" onClick={()=>navigate('/n/feed/new')}>{acting&&<Av name={me} seed={acting.id} size="sm" src={acting.avatar} couple={acting.kind==='couple'&&acting.name?coupleOf({kind:'couple',name:acting.name}):undefined}/>}<span>{t('fe.feed.whatsNew')}</span></button>

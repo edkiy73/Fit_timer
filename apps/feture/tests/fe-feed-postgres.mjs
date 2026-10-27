@@ -50,6 +50,11 @@ test('text publishes at once; feed tabs, topics, hides, pagination; blocks hide 
     const page1 = await call('uc', c, { action: 'feed.list', tab: 'forYou', limit: 3 });
     const page2 = await call('uc', c, { action: 'feed.list', tab: 'forYou', limit: 3, cursor: page1.next });
     assert.deepEqual([...page1.items, ...page2.items].map(i => i.body).filter(x => x.startsWith('Ещё')), ['Ещё 3', 'Ещё 2', 'Ещё 1', 'Ещё 0']);
+    // «Популярное»: most liked first within two weeks, one page.
+    const liked = page1.items.find(i => i.body === 'Ещё 1') ?? page2.items.find(i => i.body === 'Ещё 1');
+    await call('uc', c, { action: 'reaction.set', opId: op(), targetType: 'post', targetId: liked.id, on: true });
+    const pop = await call('uc', c, { action: 'feed.list', tab: 'popular' });
+    assert.deepEqual([pop.items[0].body, pop.next], ['Ещё 1', null]);
 
     // Kira blocks Alex: neither sees the other, Kira's follow ends, unblocking restores nothing.
     await call('ub', b, { action: 'block.set', opId: op(), profileId: a, on: true });
