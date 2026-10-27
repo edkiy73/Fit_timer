@@ -7,7 +7,7 @@ export class DomainClientError extends Error {constructor(public code:string){su
 // The owner can remain the same while the server-issued session expires.
 // Check both the captured and current Core session before sending and after
 // every async boundary so an expired session cannot publish a late private reply.
-async function requireCurrentSession(session:AuthSession,signal?:AbortSignal){
+export async function requireCurrentSession(session:AuthSession,signal?:AbortSignal){
  let current:AuthSession|null;
  try{current=await authClient.getSession();}
  catch{throw new DomainClientError('auth_required');}
