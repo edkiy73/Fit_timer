@@ -2,7 +2,7 @@ import {useCallback,useEffect,useRef,useState} from 'react';
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Clock,Heart,X} from 'lucide-react';
+import {Check,ChevronRight,Clock,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {Av,Btn,Layer} from './ui';
 import {useFe} from './session';
@@ -132,10 +132,12 @@ function Diff({a,base}:{a:Approval,base:CoupleBase}){
  return <dl className="diff">{rows.map(r=><div key={r.k}><dt>{r.label}</dt><dd>{r.was!==undefined&&<div className="was">{r.was}</div>}<div className="now">{r.now}</div></dd></div>)}</dl>;
 }
 
-/** The «Пара» group of the visibility layer: partner approval and unlinking live on the pair screen (Q01/Q06). */
+/** The «Пара» group of the visibility layer (prototype meVisLayer, owner 'couple'): partner approval and unlinking —
+ * both are decided on the pair screen (Q01/Q06), which shows the current setting and the confirmation. */
 export function CoupleVisGroup(){
  const {t}=useI18n();const navigate=useNavigate();
  return <section className="grp"><div className="grp-t"><span>{t('fe.cw.pair')}</span></div><div className="card list">
-  <button type="button" className="li" onClick={()=>navigate('/n/me/pair')}><span className="ico v"><Heart/></span><span className="tx"><b>{t('fe.cw.pairSettings')}</b><small>{t('fe.cw.pairSettingsSub')}</small></span></button>
- </div><p className="grp-n">{t('fe.cw.visFoot')}</p></section>;
+  <button type="button" className="li" onClick={()=>navigate('/n/me/pair')}><span className="ico"><Check/></span><span className="tx"><b>{t('fe.mx.cp.approval')}</b><small>{t('fe.mx.cp.approvalSub')}</small></span><ChevronRight/></button>
+  <button type="button" className="li danger" onClick={()=>navigate('/n/me/pair?stop=1')}><span className="ico"><X/></span><span className="tx"><b>{t('fe.mx.cp.unlink')}</b></span><ChevronRight/></button>
+ </div></section>;
 }
