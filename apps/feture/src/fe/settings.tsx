@@ -13,12 +13,14 @@ import {usePremiumStatus} from './account-extra';
 import {Sheet} from './profile-extras';
 import {HiddenFeedSheet} from './settings-lists';
 import {Ask,LinkRow} from './settings-ui';
+import {disableWebPush} from './push-web';
+import {PushSwitch} from './push';
 
 /** V21 K01 (settings), K05 (notifications), K07 (my data and deletion) on /api/fe. */
 const settingsRes=z.object({ok:z.literal(true),settings:z.object({locale:z.string(),chatBlur:z.boolean(),newsOptIn:z.boolean(),showExplicit:z.boolean()})});
 const channel=z.object({push:z.boolean(),email:z.boolean()});
 const notif=z.object({mode:z.enum(['safe','normal']),push:z.boolean(),email:z.boolean(),digest:z.enum(['instant','daily','weekly']),quiet:z.object({on:z.boolean(),from:z.string(),to:z.string()}),
- categories:z.object({match:channel,likes:channel,req:channel,events:channel,replies:channel,follows:channel,groups:channel,news:channel})});
+ categories:z.object({match:channel,likes:channel,req:channel,events:channel,replies:channel,follows:channel,groups:channel,news:channel}),offered:z.boolean().optional()});
 type Notif=z.infer<typeof notif>;
 const notifRes=z.object({ok:z.literal(true),settings:notif});
 const ageRes=z.object({ok:z.literal(true),verified:z.boolean(),check:z.object({state:z.string()}).passthrough().nullable().optional()}).passthrough();
@@ -48,7 +50,7 @@ export function SettingsScreen(){
  const couple=state.status==='ready'?state.boot.profiles.find(p=>p.kind==='couple'&&p.state!=='deleted'):undefined;
  const email=state.status==='ready'?state.session.email:'';
  const closeLayer=useCallback(()=>setLayer(null),[]);
- const logout=async()=>{setLeaving(true);try{await auth.logout();navigate('/n/feed',{replace:true});}catch{setLeaving(false);setLayer(null);toast(t('fe.ax.sec.logoutFailed'),{type:'err'});}};
+ const logout=async()=>{setLeaving(true);try{await disableWebPush(call);await auth.logout();navigate('/n/feed',{replace:true});}catch{setLeaving(false);setLayer(null);toast(t('fe.ax.sec.logoutFailed'),{type:'err'});}};
  const ageVal=age&&t('fe.set.ageVal.'+age);
  const photoVal=photo&&t('fe.set.pcVal.'+photo);
  return <>
@@ -133,6 +135,7 @@ export function NotificationSettingsScreen(){
      {n.email&&<div className="li"><SelectRow label={t('fe.set.n.digest')} sub={t('fe.set.n.digestSub')} value={n.digest}
       options={(['instant','daily','weekly'] as const).map(v=>[v,t('fe.set.n.digest.'+v)] as const)} onChange={v=>void save({...n,digest:v})}/></div>}
     </Card>
+    <PushSwitch/>
     <SectionLabel action={<span className="nhead"><span>{t('fe.set.n.colPush')}</span><span>{t('fe.set.n.colEmail')}</span></span>}>{t('fe.set.n.what')}</SectionLabel>
     <Card list className="ncats">{CATS.map(([k,Icon])=>{const c=n.categories[k];const title=t('fe.set.n.cat.'+k);
      const flip=(ch:'push'|'email')=>void save({...n,categories:{...n.categories,[k]:{...c,[ch]:!c[ch]}}});

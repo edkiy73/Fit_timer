@@ -9,6 +9,7 @@ import {countsRes} from './inbox';
 import {Register} from './register';
 import {SignedOut} from './start';
 import {ToastProvider,useToast} from './toast';
+import {PushOffer} from './push';
 import './kit/base.css';
 import './kit/tokens.css';
 import './kit/kit.css';
@@ -146,6 +147,7 @@ function FeLayout(){
   <main ref={main} className={(nodock?'main':'main has-dock')+(sbar?'':' hasbar')+(cta?' hascta':'')}>
    <ToastProvider nodock={nodock}>
    <Hello/>
+   <PushOffer/>
    <Outlet/>
    {/* The dock's five columns come from base.css (.dock: repeat(5,1fr)) — FE_TABS has five tabs. */}
    {!nodock&&<nav className="dock" aria-label={t('fe.nav.aria')}>

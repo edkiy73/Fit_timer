@@ -45,6 +45,8 @@ export const notificationSettings = z.strictObject({
   categories: z.strictObject({
     match: channel, likes: channel, req: channel, events: channel, replies: channel, follows: channel, groups: channel, news: channel,
   }),
+  // V21 N02: the one-time «Не пропустить ответ?» offer was shown (never twice, on any device).
+  offered: z.boolean().optional(),
 });
 /** V21 K05 defaults: discreet lock-screen text, quiet nights, likes grouped. */
 export const NOTIFICATION_DEFAULTS = Object.freeze({
