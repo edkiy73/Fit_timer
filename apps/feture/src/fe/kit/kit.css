@@ -25,3 +25,4 @@
 .v21 .selrow:has(select:disabled){opacity:.45}
 /* Invalid — the same red edge on every field (Field puts the message under it). */
 .v21 .inp[aria-invalid="true"]{border-color:var(--danger);box-shadow:0 0 0 1px var(--danger)}
+.v21 .k-hr{border:0;border-top:1px solid var(--line);margin:var(--s-3) 0}

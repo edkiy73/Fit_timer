@@ -174,3 +174,15 @@ export function Text({size='body',tone,as='p',children,className,center}:{size?:
 export function Stack({children,gap=3,row,className,grow}:{children:ReactNode,gap?:1|2|3|4|6,row?:boolean,className?:string,grow?:boolean}){
  return <div className={[row?'k-row':'k-stack','k-g'+gap,grow?'k-grow':'',className].filter(Boolean).join(' ')}>{children}</div>;
 }
+
+/** `.card` — the surface every block sits on. `list` holds Rows (dividers between them come with it); `form` holds
+ * fields. Radius, fill and shadow are tokens, so changing the card here changes every card. */
+export function Card({children,list,form,className,id}:{children:ReactNode,list?:boolean,form?:boolean,className?:string,id?:string}){
+ return <div id={id} className={['card',list?'list':'',form?'form-card':'',className].filter(Boolean).join(' ')}>{children}</div>;
+}
+/** `.pill` — a small status label (ok / waiting / violet / hot / plain). */
+export function Pill({tone,icon:Icon,children}:{tone?:'ok'|'wait'|'v'|'hot'|'bad'|undefined,icon?:LucideIcon,children:ReactNode}){
+ return <span className={'pill'+(tone?' '+tone:'')}>{Icon&&<Icon/>}{children}</span>;
+}
+/** A hairline between blocks that are not rows of one list. */
+export function Divider(){return <hr className="k-hr"/>;}

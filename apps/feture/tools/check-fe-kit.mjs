@@ -25,6 +25,9 @@ const TSX = [
   ['select', /<select\b/g],
   ['inline style', /style=\{\{/g],
   ['heading', /<h[1-5]\b/g],
+  ['card', /className=(?:"|\{['`])[^"'`}]*\bcard\b/g],
+  ['pill', /className=(?:"|\{['`])[^"'`}]*\bpill\b/g],
+  ['divider', /<hr\b/g],
 ];
 const CSS = [
   ['stylesheet', /^/],  // a screen stylesheet at all: new styles go into the kit (kit.css / tokens.css)
