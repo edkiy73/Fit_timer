@@ -38,6 +38,11 @@ export const ru = {
   'fe.df.sumMore1': 'ещё {n} фильтр',
   'fe.df.sumMore2': 'ещё {n} фильтра',
   'fe.df.sumMore5': 'ещё {n} фильтров',
+  'fe.df.where': "Где искать",
+  'fe.df.where.any': "Везде",
+  'fe.df.where.city': "Город",
+  'fe.df.city': "Город",
+  'fe.df.pickCity': "Выбери город",
 } as const;
 
 export const en = {
@@ -79,4 +84,9 @@ export const en = {
   'fe.df.sumMore1': '{n} more',
   'fe.df.sumMore2': '{n} more',
   'fe.df.sumMore5': '{n} more',
+  'fe.df.where': "Where",
+  'fe.df.where.any': "Anywhere",
+  'fe.df.where.city': "City",
+  'fe.df.city': "City",
+  'fe.df.pickCity': "Pick a city",
 } as const;
