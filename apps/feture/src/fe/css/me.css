@@ -1,7 +1,0 @@
-/* «Я» (V21 X01): the prototype's X01 has no `header.bar`, so its main is not `.hasbar` and the view starts at the top
-   without the fade mask. The React shell sets `.hasbar` on every tab root, which pushed the header ~58 px down. */
-.v21 .main.hasbar>.view.me18.me-x01,.v21 .main>.view.me18.me-x01{padding-top:4px;-webkit-mask-image:none;mask-image:none}
-/* The name opens «Чей профиль» when there is a couple (prototype V18 `.me18-who` as a button). */
-.v21 button.me18-who{font:inherit;color:inherit}
-/* Private media in the P04 editor: plain tiles, no big main slot. */
-.v21 .ph-slots.priv{grid-template-columns:repeat(3,minmax(0,1fr))}

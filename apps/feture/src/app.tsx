@@ -26,8 +26,6 @@ import { ChatsTab, ChatScreen } from './fe/chats';
 import { PeopleTab, PersonScreen } from './fe/people';
 import { CompatScreen, HistoryScreen, MePreviewScreen } from './fe/profile-extras';
 import { MeTab } from './fe/me';
-import { MeEditScreen } from './fe/me-edit';
-import { MinePartScreen } from './fe/mine';
 import { LinksScreen, LinkEditScreen } from './fe/links';
 import { FollowsScreen, GalleryScreen, SearchScreen, TopicScreen } from './fe/browse';
 import { InterestsScreen, InterestsHistoryScreen } from './fe/interests';
@@ -316,11 +314,6 @@ export const routes: RouteObject[] = [
         {path:'me', element:<MeTab />},
         {path:'me/preview', element:<MePreviewScreen />},
         {path:'me/links', element:<LinksScreen />},
-        {path:'me/edit', element:<MeEditScreen />},
-        {path:'me/posts', element:<MinePartScreen part="posts" />},
-        {path:'me/events', element:<MinePartScreen part="events" />},
-        {path:'me/saved', element:<MinePartScreen part="saved" />},
-        {path:'me/shared', element:<MinePartScreen part="shared" />},
         {path:'me/follows', element:<FollowsScreen />},
         {path:'me/pair', element:<PairScreen />},
         {path:'me/interests', element:<InterestsScreen />},
