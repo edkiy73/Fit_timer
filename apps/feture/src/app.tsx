@@ -22,6 +22,7 @@ import { PairScreen } from './fe/pair';
 import { SettingsScreen, NotificationSettingsScreen, DataScreen } from './fe/settings';
 import { ChatsTab, ChatScreen } from './fe/chats';
 import { PeopleTab, PersonScreen } from './fe/people';
+import { CompatScreen, HistoryScreen, MePreviewScreen } from './fe/profile-extras';
 import { MeTab } from './fe/me';
 import { InterestsScreen, InterestsHistoryScreen } from './fe/interests';
 import { StaffScreen } from './fe/staff';
@@ -267,7 +268,9 @@ export const routes: RouteObject[] = [
         {path:'feed/new', element:<ComposeScreen />},
         {path:'feed/post/:id', element:<PostScreen />},
         {path:'people', element:<PeopleTab />},
+        {path:'people/history', element:<HistoryScreen />},
         {path:'people/:id', element:<PersonScreen />},
+        {path:'people/:id/compat', element:<CompatScreen />},
         {path:'communities', element:<CommunitiesTab />},
         {path:'communities/new', element:<CreateCommunityScreen />},
         {path:'communities/:id', element:<CommunityScreen />},
@@ -280,6 +283,7 @@ export const routes: RouteObject[] = [
         {path:'chats', element:<ChatsTab />},
         {path:'chats/:id', element:<ChatScreen />},
         {path:'me', element:<MeTab />},
+        {path:'me/preview', element:<MePreviewScreen />},
         {path:'me/pair', element:<PairScreen />},
         {path:'me/interests', element:<InterestsScreen />},
         {path:'me/interests/history', element:<InterestsHistoryScreen />},

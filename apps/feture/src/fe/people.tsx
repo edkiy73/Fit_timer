@@ -3,10 +3,11 @@ import {useNavigate,useParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {ChevronLeft,ChevronRight,Eye,Heart,Info,Lock,MapPin,Search as SearchIcon,SlidersHorizontal,Undo2,Users,X} from 'lucide-react';
+import {Ban,ChevronLeft,ChevronRight,Ellipsis,Eye,Heart,History,Info,Lock,MapPin,Search as SearchIcon,SlidersHorizontal,Undo2,Users,X} from 'lucide-react';
 import {Av,Bar,Btn,Empty,Seg,View} from './ui';
 import {useFe} from './session';
 import {PrivateOf} from './private';
+import {CompatSummary,LinksSection,PersonBio,PersonHero,PersonMenu,PersonPhotos,personName,personProfileRes,pxError,useToast,type MenuStep,type PersonProfile} from './profile-extras';
 
 /** Slice F (V21 D03–D09) plus people search (F2): Discover cards from the server's mutual pool, like / pass,
  * «It's mutual» → chat, incoming likes, nickname search and another person's profile. The client shows only what
@@ -20,6 +21,7 @@ const decided=z.object({ok:z.literal(true),decision:z.enum(['like','pass']),stat
 const list=z.object({ok:z.literal(true),items:z.array(card)});
 const incoming=z.object({ok:z.literal(true),items:z.array(z.object({profile:card}).passthrough())}).passthrough();
 const ok=z.object({ok:z.literal(true)}).passthrough();
+const undone=z.object({ok:z.literal(true),profileId:z.uuid(),decision:z.enum(['like','pass'])}).passthrough();
 
 function photo(c:{avatar:z.infer<typeof media>|null}){return c.avatar?.src?.card??c.avatar?.src?.full??c.avatar?.src?.thumb??null;}
 function sub(c:Card,locale:string){return [c.ages.length?c.ages.join(' · '):null,c.city?(locale==='en'?c.city.en:c.city.ru):null].filter(Boolean).join(', ');}
@@ -27,7 +29,7 @@ function sub(c:Card,locale:string){return [c.ages.length?c.ages.join(' · '):nul
 export function PeopleTab(){
  const {t}=useI18n();const {call}=useFe();const [tab,setTab]=useState<'discover'|'likes'|'search'>('discover');
  const [off,setOff]=useState(false);const [filter,setFilter]=useState<Filter|null>(null);const [open,setOpen]=useState(false);const [deckKey,setDeckKey]=useState(0);
- const opener=useRef<HTMLButtonElement>(null);
+ const opener=useRef<HTMLButtonElement>(null);const navigate=useNavigate();
  useEffect(()=>{call('discover.filter',{},filterRes).then(r=>setFilter(r.filter)).catch(()=>{});},[call]);
  const close=useCallback(()=>{setOpen(false);requestAnimationFrame(()=>opener.current?.focus({preventScroll:true}));},[]);
  const on=filter?dfOn(filter):0;
@@ -35,6 +37,7 @@ export function PeopleTab(){
   <header className="bar dating-bar">
    <Seg small={false} value={tab} onChange={setTab} options={(['discover','likes','search'] as const).map(id=>({id,label:t('fe.people.tab.'+id)}))}/>
    {tab==='discover'&&!off&&filter&&<button ref={opener} type="button" className="ibtn" aria-haspopup="dialog" aria-label={on?t('fe.df.openOn').replace('{n}',String(on)):t('fe.df.open')} onClick={()=>setOpen(true)}><SlidersHorizontal/>{on>0&&<sup>{on}</sup>}</button>}
+   {tab==='discover'&&!off&&<button type="button" className="ibtn" aria-label={t('fe.px.h.open')} onClick={()=>navigate('/n/people/history')}><History/></button>}
   </header>
   {tab==='discover'?<Discover reloadKey={deckKey} onOff={setOff}/>:<View>{tab==='likes'?<Likes/>:<Search/>}</View>}
   {open&&filter&&<DiscoverFilter initial={filter} onClose={close} onApplied={f=>{setFilter(f);setDeckKey(k=>k+1);close();}}/>}
@@ -164,7 +167,7 @@ function DiscoverFilter({initial,onClose,onApplied}:{initial:Filter,onClose:()=>
 function Discover({reloadKey,onOff}:{reloadKey:number,onOff:(off:boolean)=>void}){
  const {call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();
  const [cards,setCards]=useState<Card[]|null>(null);const [off,setOff]=useState(false);const [error,setError]=useState<unknown>(null);
- const [match,setMatch]=useState<{card:Card,conversationId?:string}|null>(null);const [busy,setBusy]=useState(false);
+ const [match,setMatch]=useState<{card:Card,conversationId?:string}|null>(null);const [busy,setBusy]=useState(false);const [toastNode,toast]=useToast();
  const load=useCallback(()=>{setError(null);setCards(null);call('discover.deck',{limit:10},deck).then(r=>{setOff(r.off);onOff(r.off);setCards(r.items);}).catch(setError);},[call,onOff]);
  // A new filter (reloadKey) reloads the deck too.
  useEffect(()=>{load();},[load,reloadKey]);
@@ -176,14 +179,20 @@ function Discover({reloadKey,onOff}:{reloadKey:number,onOff:(off:boolean)=>void}
    if(r.state==='matched')setMatch({card:c,...(r.conversationId?{conversationId:r.conversationId}:{})});
   }catch(e){setError(e);}finally{setBusy(false);}
  };
- const box=(node:React.ReactNode)=><View>{node}</View>;
+ // The server allows one free undo a day (shared with «Вернуть» in the history) and says so when it is spent.
+ const undo=async()=>{
+  if(busy)return;setBusy(true);
+  try{await call('discover.undo',{opId:newOpId()},undone);toast(t('fe.px.undo.done'));load();}
+  catch(e){toast(pxError(e,t),true);}finally{setBusy(false);}
+ };
+ const box=(node:React.ReactNode)=><><View>{node}</View>{toastNode}</>;
  if(match)return box(<Empty icon={Heart} title={t('fe.people.match')} text={t('fe.people.matchText').replace('{name}',match.card.name||'@'+match.card.handle)}>
   <Btn onClick={()=>navigate(match.conversationId?'/n/chats/'+match.conversationId:'/n/chats')}>{t('fe.people.write')}</Btn><Btn kind="text" onClick={()=>setMatch(null)}>{t('fe.people.later')}</Btn></Empty>);
  if(error&&!cards)return box(<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>);
  if(cards===null)return box(<p className="note" role="status">{t('fe.loading')}</p>);
  if(off)return box(<Empty icon={Eye} title={t('fe.people.off')} text={t('fe.people.offText')}><Btn kind="soft" onClick={()=>navigate('/n/me')}>{t('fe.people.openMe')}</Btn></Empty>);
  const [c,next]=cards;
- if(!c)return box(<Empty icon={Users} title={t('fe.people.empty')} text={t('fe.people.emptyText')}><Btn kind="soft" onClick={load}>{t('fe.people.refresh')}</Btn></Empty>);
+ if(!c)return box(<Empty icon={Users} title={t('fe.people.empty')} text={t('fe.people.emptyText')}><Btn kind="soft" onClick={load}>{t('fe.people.refresh')}</Btn><Btn kind="text" icon={Undo2} onClick={undo} disabled={busy}>{t('fe.people.undo')}</Btn></Empty>);
  const card=(x:Card,top:boolean)=>{const src=photo(x);const name=x.name||'@'+x.handle;
   return <article key={x.id} className={'pc '+(top?'top':'next')} aria-label={top?name:undefined} aria-hidden={top?undefined:true} inert={top?undefined:true}>
    <div className="pc-ph" onClick={()=>top&&navigate('/n/people/'+x.id)}>
@@ -198,11 +207,11 @@ function Discover({reloadKey,onOff}:{reloadKey:number,onOff:(off:boolean)=>void}
  return <div className="view deckmode"><div className="deck">
   {next&&card(next,false)}{card(c,true)}
   <div className="acts onphoto">
-   <button type="button" className="act undo off" aria-label={t('fe.people.undo')} disabled><Undo2/></button>
+   <button type="button" className="act undo" aria-label={t('fe.people.undo')} onClick={undo} disabled={busy}><Undo2/></button>
    <button type="button" className="act pass" aria-label={t('fe.people.pass')} onClick={()=>decide(c,'pass')} disabled={busy}><X/></button>
    <button type="button" className="act like" aria-label={t('fe.people.like')} onClick={()=>decide(c,'like')} disabled={busy}><Heart/></button>
   </div>
- </div></div>;
+ </div>{toastNode}</div>;
 }
 
 function Row({c,locale}:{c:Card,locale:string}){
@@ -241,36 +250,42 @@ function Search(){
  </>;
 }
 
-const profileRes=z.object({ok:z.literal(true),profile:z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),bio:z.string(),
- age:z.number().nullable(),city:z.object({ru:z.string().nullable(),en:z.string().nullable()}).nullable(),avatar:media.nullable(),photos:z.array(media),details:z.record(z.string(),z.unknown())}).passthrough()});
 export function PersonScreen(){
- const {id=''}=useParams();const {call}=useFe();const {t,locale}=useI18n();
- const [p,setP]=useState<z.infer<typeof profileRes>['profile']|null>(null);const [error,setError]=useState<unknown>(null);
+ const {id=''}=useParams();const {call}=useFe();const {t}=useI18n();
+ const [p,setP]=useState<PersonProfile|null>(null);const [error,setError]=useState<unknown>(null);
  const [following,setFollowing]=useState(false);const [note,setNote]=useState('');const [busy,setBusy]=useState(false);
+ const [menu,setMenu]=useState<MenuStep>(null);const [blocked,setBlocked]=useState(false);const [toastNode,toast]=useToast();
  const op=useRef(newOpId());
- const load=useCallback(()=>{setError(null);call('profile.get',{profileId:id},profileRes).then(r=>setP(r.profile)).catch(setError);},[call,id]);
- useEffect(()=>{load();},[load]);
+ const load=useCallback(()=>{setError(null);call('profile.get',{profileId:id},personProfileRes).then(r=>setP(r.profile)).catch(setError);},[call,id]);
+ useEffect(()=>{setBlocked(false);setMenu(null);load();},[load]);
+ // After «Разблокировать» the profile is loaded again.
+ const setBlock=useCallback((b:boolean)=>{setBlocked(b);if(!b)load();},[load]);
  const follow=async()=>{setBusy(true);const on=!following;try{await call('follow.set',{opId:newOpId(),profileId:id,on},ok);setFollowing(on);}catch(e){setNote(feErrorMessage(e,t));}finally{setBusy(false);}};
  const like=async()=>{setBusy(true);setNote('');try{const r=await call('like.send',{opId:op.current,profileId:id,source:'profile'},ok);setNote(r.state==='matched'?t('fe.people.match'):t('fe.people.liked'));}catch(e){setNote(feErrorMessage(e,t));op.current=newOpId();}finally{setBusy(false);}};
- const name=p?.name||(p?.handle?'@'+p.handle:'');
+ const name=personName(p);
  return <>
-  <Bar title={name} back/>
+  <Bar title={blocked?t('fe.px.bl.stateTitle'):name} back>
+   {(p||blocked)&&<button type="button" className="ibtn ghost" aria-haspopup="dialog" aria-label={t('fe.px.menu.more')} onClick={()=>setMenu('menu')}><Ellipsis/></button>}
+  </Bar>
   <View>
-   {error?<Empty icon={Lock} title={t('fe.feed.unavailable')} text={feErrorMessage(error,t)}/>
+   {blocked?<Empty icon={Ban} title={t('fe.px.bl.stateTitle')} text={t('fe.px.bl.stateText')}><Btn kind="soft" onClick={()=>setMenu('menu')}>{t('fe.px.menu.unblock')}</Btn></Empty>
+    :error?<Empty icon={Lock} title={t('fe.feed.unavailable')} text={pxError(error,t)}/>
     :!p?<p className="note" role="status">{t('fe.loading')}</p>
     :<>
-     {photo(p)?<div className="hero"><img className="mbg" src={photo(p)!} alt="" aria-hidden="true" draggable={false}/><img src={photo(p)!} alt={name} draggable={false}/>
-      <div className="pc-info"><h2 className="pc-name" tabIndex={-1}><span className="pcn">{name}</span>{p.age?<span>{p.age}</span>:null}</h2>{p.city&&<div className="pc-who"><span className="pl"><MapPin/>{locale==='en'?p.city.en:p.city.ru}</span></div>}</div></div>
-      :<div className="empty"><Av name={name} seed={p.id} size="xl"/><h3>{name}{p.age?', '+p.age:''}</h3>{p.city&&<p>{locale==='en'?p.city.en:p.city.ru}</p>}</div>}
+     <PersonHero p={p}/>
      <div className="p-acts">
       <Btn kind={following?'soft':'primary'} onClick={follow} disabled={busy}>{following?t('fe.people.unfollow'):t('fe.people.follow')}</Btn>
       <Btn kind="soft" icon={Heart} onClick={like} disabled={busy}>{t('fe.people.like')}</Btn>
      </div>
      {note&&<div className="alert ok" role="status"><span>{note}</span></div>}
-     {p.bio&&<div className="p-bio"><div className="md bio"><p>{p.bio}</p></div></div>}
+     <CompatSummary profileId={p.id}/>
+     <PersonBio p={p}/>
+     <LinksSection profileId={p.id}/>
      <PrivateOf profileId={p.id}/>
-     {p.photos.length>1&&<section className="grp ph20"><div className="ph-slots">{p.photos.filter(ph=>ph.src).map((ph,i)=><div key={i} className={'mi'+(i===0?' big':'')}><img src={ph.src?.card??ph.src?.thumb} alt="" draggable={false}/></div>)}</div></section>}
+     <PersonPhotos p={p}/>
     </>}
   </View>
+  {(p||blocked)&&<PersonMenu profileId={id} name={name} step={menu} setStep={setMenu} blocked={blocked} setBlocked={setBlock} toast={toast}/>}
+  {toastNode}
  </>;
 }

@@ -2,7 +2,7 @@ import {Fragment,useCallback,useEffect,useRef,useState} from 'react';
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {ChevronRight,Lock,Plus,Settings,X} from 'lucide-react';
+import {ChevronRight,Eye,Lock,Plus,Settings,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {Av,Btn,Empty,Seg} from './ui';
 import {useFe} from './session';
@@ -52,6 +52,7 @@ export function MeTab(){
     <span className="av-wrap"><Av name={name} seed={acting.id} src={p?.avatar?.src?.thumb??p?.avatar?.src?.card}/></span>
     <div className="me18-who"><b><span>{name}</span></b><small>{acting.kind==='couple'?t('fe.me.weCouple'):t('fe.me.iPersonal')}</small></div>
     <StaffEntry/>
+    <button type="button" className="ibtn" aria-label={t('fe.px.pv.open')} onClick={()=>navigate('/n/me/preview')}><Eye/></button>
     <BellButton/>
     <button type="button" className="ibtn" aria-label={t('fe.me.settings')} onClick={()=>navigate('/n/settings')}><Settings/></button>
    </header>
