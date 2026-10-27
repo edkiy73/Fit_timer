@@ -16,18 +16,8 @@
   "card": 1
  },
  "src/fe/browse.tsx": {
-  "list row": 5,
-  "chip": 1,
-  "notice": 4,
-  "round button": 3,
-  "button": 2,
-  "input": 1,
-  "inline style": 2,
-  "heading": 1,
-  "card": 5,
-  "pill": 2,
-  "note": 3,
-  "section label": 3
+  "list row": 1,
+  "inline style": 1
  },
  "src/fe/chats.tsx": {
   "sheet": 1,
@@ -112,22 +102,15 @@
   "stylesheet": 1
  },
  "src/fe/feed.tsx": {
-  "sheet": 3,
+  "sheet": 2,
   "dialog": 1,
-  "switch": 1,
-  "list row": 4,
-  "chip": 9,
-  "notice": 4,
-  "round button": 13,
-  "button": 9,
-  "input": 6,
-  "textarea": 2,
-  "select": 2,
+  "list row": 1,
+  "chip": 1,
+  "notice": 1,
+  "textarea": 1,
   "inline style": 5,
-  "heading": 6,
-  "card": 11,
-  "note": 3,
-  "section label": 2
+  "card": 2,
+  "section label": 1
  },
  "src/fe/host.tsx": {
   "list row": 4,
@@ -243,24 +226,8 @@
   "card": 3,
   "note": 1
  },
- "src/fe/post-menu.tsx": {
-  "sheet": 1,
-  "dialog": 1,
-  "switch": 1,
-  "list row": 2,
-  "notice": 4,
-  "round button": 1,
-  "textarea": 1,
-  "heading": 2,
-  "card": 3,
-  "radio": 1
- },
  "src/fe/post-parts.tsx": {
-  "dialog": 1,
-  "round button": 1,
-  "inline style": 3,
-  "heading": 2,
-  "note": 1
+  "inline style": 3
  },
  "src/fe/private.tsx": {
   "switch": 1,
