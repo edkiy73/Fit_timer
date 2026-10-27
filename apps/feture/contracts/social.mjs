@@ -15,6 +15,8 @@ export const socialCommands = {
     profile: true, write: true,
     input: z.strictObject({ opId, kind: z.enum(['post', 'author', 'activity', 'event']), targetId: id, on: z.boolean() }),
   },
+  // «Не показывать активность» (V21): the person's likes, events, communities and follows leave my «Подписки».
+  'activity.mute': { profile: true, write: true, input: z.strictObject({ opId, profileId: id, on: z.boolean() }) },
   'feedHide.list': { profile: true, write: false, input: z.strictObject({}) },
   'saved.set': {
     profile: true, write: true,
