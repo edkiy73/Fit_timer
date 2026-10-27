@@ -10,10 +10,8 @@
  },
  "src/fe/age-check.tsx": {
   "list row": 4,
-  "notice": 7,
-  "input": 1,
-  "inline style": 7,
-  "card": 1
+  "notice": 4,
+  "inline style": 4
  },
  "src/fe/browse.tsx": {
   "list row": 1,
@@ -110,20 +108,10 @@
   "section label": 6
  },
  "src/fe/interests.tsx": {
-  "sheet": 1,
   "list row": 2,
-  "chip": 4,
-  "notice": 5,
-  "round button": 3,
-  "button": 8,
-  "input": 1,
-  "inline style": 2,
-  "heading": 1,
-  "card": 7,
-  "radio": 1,
-  "note": 7,
-  "section label": 1,
-  "progress": 1
+  "chip": 1,
+  "button": 3,
+  "radio": 1
  },
  "src/fe/links.tsx": {
   "list row": 9,
@@ -137,34 +125,18 @@
  },
  "src/fe/me-edit.tsx": {
   "sheet": 1,
-  "switch": 2,
-  "list row": 6,
-  "chip": 1,
-  "notice": 1,
+  "switch": 1,
+  "list row": 1,
   "button": 1,
-  "input": 3,
-  "textarea": 2,
-  "card": 5,
-  "note": 2
+  "note": 1
  },
  "src/fe/me.tsx": {
   "sheet": 1,
-  "dialog": 1,
-  "switch": 1,
-  "list row": 11,
-  "notice": 3,
-  "round button": 2,
+  "list row": 4,
+  "notice": 1,
   "button": 2,
   "inline style": 2,
-  "heading": 2,
-  "card": 6,
-  "note": 2
- },
- "src/fe/mine.tsx": {
-  "list row": 8,
-  "notice": 1,
-  "round button": 1,
-  "card": 9,
+  "card": 2,
   "note": 1
  },
  "src/fe/pair.tsx": {
@@ -196,27 +168,18 @@
  },
  "src/fe/photo-check.tsx": {
   "list row": 2,
-  "notice": 4,
-  "input": 1,
-  "inline style": 2,
-  "card": 3,
-  "note": 1
+  "notice": 2,
+  "inline style": 1
  },
  "src/fe/post-parts.tsx": {
   "inline style": 2
  },
  "src/fe/private.tsx": {
-  "switch": 1,
-  "list row": 3,
-  "chip": 2,
-  "notice": 2,
+  "list row": 1,
   "button": 1,
-  "inline style": 6,
-  "card": 7,
-  "pill": 1,
-  "radio": 1,
-  "note": 5,
-  "section label": 1
+  "inline style": 4,
+  "card": 1,
+  "note": 1
  },
  "src/fe/profile-extras.tsx": {
   "switch": 3,
