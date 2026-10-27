@@ -1,5 +1,5 @@
 import {useCallback,useEffect,useState} from 'react';
-import {useNavigate} from 'react-router';
+import {useLocation,useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Bookmark,Calendar,Globe,Newspaper,X} from 'lucide-react';
@@ -17,9 +17,14 @@ const evs=z.object({ok:z.literal(true),going:z.array(ev),interested:z.array(ev),
 const saved=z.object({ok:z.literal(true),items:z.array(z.object({kind:z.string(),target_id:z.string(),created_at:z.string()}))});
 
 type Part='posts'|'communities'|'events'|'saved';
+const PARTS:Part[]=['posts','communities','events','saved'];
 export function MineLayer(){
- const {t}=useI18n();const [part,setPart]=useState<Part>('posts');
+ const {t}=useI18n();const location=useLocation();
+ // `?part=` opens a section directly; a create screen passes what happened as `state.notice`.
+ const [part,setPart]=useState<Part>(()=>{const p=new URLSearchParams(location.search).get('part');return PARTS.includes(p as Part)?p as Part:'posts';});
+ const notice=(location.state as {notice?:unknown}|null)?.notice;
  return <>
+  {typeof notice==='string'&&notice&&<div className="alert ok mb12" role="status"><span>{notice}</span></div>}
   <div className="mb12"><Seg value={part} onChange={setPart} options={(['posts','communities','events','saved'] as const).map(id=>({id,label:t('fe.mine.'+id)}))}/></div>
   {part==='posts'?<MyPosts/>:part==='communities'?<MyCommunities/>:part==='events'?<MyEvents/>:<Saved/>}
  </>;
