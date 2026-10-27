@@ -2,6 +2,7 @@
 .fe-app{min-height:100dvh;background:var(--fe-bg);color:var(--fe-ink);font:15px/1.45 var(--fe-font);-webkit-font-smoothing:antialiased}
 .fe-app h1,.fe-app h2,.fe-app h3{font-family:var(--fe-font-head);text-wrap:balance;margin:0}
 .fe-center{display:grid;place-items:center;align-content:center;gap:12px;min-height:60dvh;padding:24px var(--fe-gut)}
+.fe-app.fe-center{min-height:100dvh}
 .fe-mute{color:var(--fe-mute);margin:2px 0 0}
 .fe-spinner{width:28px;height:28px;border-radius:50%;border:3px solid var(--fe-line);border-top-color:var(--fe-accent);animation:fe-spin .8s linear infinite}
 @keyframes fe-spin{to{transform:rotate(1turn)}}
