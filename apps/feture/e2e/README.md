@@ -12,8 +12,8 @@ one at a time (the production rate limit is shared).
     e2e/run-all.sh         runs every file in order and prints a summary
     e2e/fixtures/          photo.jpg, cover.png
     e2e/scenarios/helpers.mjs   shared helpers (until, pinned, toastSee, askAccess, uploaderDone, outOf, …)
-    e2e/scenarios/<area>/  feed, me, chats (with the inbox), communities (with events), people, account (with staff)
-    e2e/scenarios/*.mjs    cross-area flows (onboarding, age document)
+    e2e/scenarios/<area>/  feed, me, chats (with the inbox), communities (with events), people,
+                           account (start, sign-up, onboarding, settings, lists, age document, staff)
 
 ## Personas (owner rule, 28.10.2026)
 
