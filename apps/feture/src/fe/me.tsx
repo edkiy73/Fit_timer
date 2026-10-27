@@ -13,6 +13,7 @@ import {MineLayer} from './mine';
 import {MeJars} from './interests';
 import {StaffEntry} from './staff';
 import {LinksEntry} from './links';
+import {ProfileLinks} from './browse';
 
 /** Slice C (V21 X01, P02, P03) with the prototype's markup: own profile, photos (others see approved ones;
  * «на проверке» only the owner), basics, details, Discover and who sees the answers. */
@@ -79,6 +80,7 @@ export function MeTab(){
        <div className="card blk-btn"><dl className="kv">{DETAIL_ROWS.map(([field,kind])=>{const v=p.details[field];const codes=Array.isArray(v)?v as string[]:typeof v==='string'?[v]:[];
         return <Fragment key={field}><dt>{t('fe.reg.kind.'+kind)}</dt><dd>{codes.length?codes.map(c=>label(kind,c)).join(', '):'—'}</dd></Fragment>;})}</dl></div>
       </section>}
+      <ProfileLinks key={'fl'+p.id} profileId={p.id} photos={p.photos.filter(ph=>ph.src).length} self/>
       <LinksEntry key={'links'+p.id}/>
       <MeJars key={p.id}/>
      </>
