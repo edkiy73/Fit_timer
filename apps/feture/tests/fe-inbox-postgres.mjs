@@ -94,3 +94,39 @@ test('«Нужно решить»: couple invitation, partner approval for the p
     assert.equal(n, 1); // the device moved to whoever signed in on it last
   } finally { await pg.close(); }
 });
+
+test('notifications.read marks one own item; push.unregister removes only one’s own device', async () => {
+  const { pg, db, call, member, deliver } = await world();
+  try {
+    const a = await member('ua', 'Alex'), b = await member('ub', 'Kira');
+    await member('uc', 'Noa');
+    await call('ua', a, { action: 'like.send', opId: op(), profileId: b, source: 'profile' });
+    await call('ua', a, { action: 'follow.set', opId: op(), profileId: b, on: true });
+    await deliver();
+    const items = (await call('ub', null, { action: 'notifications.list' })).items;
+    assert.equal(items.length, 2);
+    assert.equal((await call('ub', null, { action: 'inbox.counts' })).notifications, 2);
+    // Someone else's notification: «not found», and it stays unread for its owner.
+    assert.equal((await call('uc', null, { action: 'notifications.read', id: items[0].id })).status, 404);
+    assert.equal((await call('ua', null, { action: 'notifications.read', id: items[0].id })).status, 404);
+    assert.equal((await call('ub', null, { action: 'notifications.read', id: '018f0000-0000-7000-8000-00000000dead' })).status, 404);
+    assert.equal((await call('ub', null, { action: 'inbox.counts' })).notifications, 2);
+    assert.equal((await call('ub', null, { action: 'notifications.read', id: items[0].id })).read, true);
+    assert.equal((await call('ub', null, { action: 'notifications.read', id: items[0].id })).read, true); // again: still read, no error
+    const after = (await call('ub', null, { action: 'notifications.list' })).items;
+    assert.deepEqual(after.map((/** @type {any} */ x) => [x.id, x.read]), [[items[0].id, true], [items[1].id, false]]);
+    assert.equal((await call('ub', null, { action: 'inbox.counts' })).notifications, 1);
+
+    const devices = async (/** @type {string} */ p) => (await db.query(`select count(*)::int n from feture.push_device d join feture.account x on x.id = d.account_id where x.person_profile_id = $1`, [p]))[0].n;
+    await call('ub', null, { action: 'push.register', opId: op(), platform: 'android', token: 'kira-device-token' });
+    await call('ub', null, { action: 'push.register', opId: op(), platform: 'web', token: 'kira-browser-token' });
+    // Another account cannot switch off Kira's device by knowing its token.
+    assert.equal((await call('ua', null, { action: 'push.unregister', opId: op(), token: 'kira-device-token' })).registered, false);
+    assert.equal(await devices(b), 2);
+    assert.equal((await call('ub', null, { action: 'push.unregister', opId: op(), token: 'kira-device-token' })).registered, false);
+    assert.equal(await devices(b), 1);
+    assert.equal((await call('ub', null, { action: 'push.unregister', opId: op(), token: 'kira-device-token' })).registered, false); // already gone
+    assert.equal((await call('ub', null, { action: 'push.unregister', opId: op(), token: 'short' })).status, 400);
+    assert.equal(await devices(b), 1);
+  } finally { await pg.close(); }
+});

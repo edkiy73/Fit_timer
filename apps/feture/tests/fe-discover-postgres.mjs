@@ -164,3 +164,23 @@ test('review fixes: couples need both ages confirmed, filters see only public de
     assert.equal((await call('ua', a, { action: 'like.send', opId: op(), profileId: b, source: 'likes' })).state, 'matched');
   } finally { await pg.close(); }
 });
+
+test('discover.filter: defaults until saved, the saved one after, per profile; a refused filter is not stored; nobody reads another’s', async () => {
+  const { pg, call, member, coupleOf } = await world();
+  try {
+    const a = await member('ua', 'Alex'), b = await member('ub', 'Kira'), c = await member('uc', 'Noa');
+    const defaults = { show: 'all', ageMin: 18, ageMax: 99, cityId: null, genders: [], orients: [], formats: [], seeks: [], roles: [], topics: [] };
+    assert.deepEqual((await call('ua', a, { action: 'discover.filter' })).filter, defaults);
+    const filter = { ...defaults, show: 'people', ageMin: 25, ageMax: 40, topics: ['shibari'] };
+    await call('ua', a, { action: 'discover.setFilter', opId: op(), filter });
+    assert.deepEqual((await call('ua', a, { action: 'discover.filter' })).filter, filter);
+    assert.deepEqual((await call('ua', a, { action: 'discover.setFilter', opId: op(), filter: { ...filter, ageMin: 30, topics: ['nolimit-xyz'] } })).fields, ['topics']);
+    assert.deepEqual((await call('ua', a, { action: 'discover.filter' })).filter, filter); // unchanged
+    // Kira's own filter is the default; asking with Alex's profile header is refused; Alex's couple has its own.
+    assert.deepEqual((await call('ub', b, { action: 'discover.filter' })).filter, defaults);
+    assert.equal((await call('ub', a, { action: 'discover.filter' })).status, 403);
+    assert.equal((await call('ub', null, { action: 'discover.filter' })).status, 400);
+    const pair = await coupleOf([a, c]);
+    assert.deepEqual((await call('ua', pair, { action: 'discover.filter' })).filter, defaults);
+  } finally { await pg.close(); }
+});

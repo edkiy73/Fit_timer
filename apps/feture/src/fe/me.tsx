@@ -24,7 +24,7 @@ import './css/me.css';
  * interests, gallery and links. The editors (P02/P04) live in me-edit.tsx. Everything comes from the server. */
 export const media=z.object({id:z.uuid(),pending:z.boolean(),blurred:z.boolean().optional(),src:z.record(z.string(),z.string()).nullable()});
 export const profile=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),own:z.boolean(),bio:z.string(),
- age:z.number().nullable(),city:z.object({ru:z.string().nullable(),en:z.string().nullable(),pending:z.boolean()}).nullable(),avatar:media.nullable(),photos:z.array(media),
+ age:z.number().nullable(),city:z.object({id:z.string().optional(),ru:z.string().nullable(),en:z.string().nullable(),pending:z.boolean()}).nullable(),avatar:media.nullable(),photos:z.array(media),
  details:z.record(z.string(),z.unknown()),rev:z.number().optional(),detailsVis:z.string().nullable().optional(),showAge:z.boolean().optional(),cityId:z.string().nullable().optional()}).passthrough();
 export const profileRes=z.object({ok:z.literal(true),profile});
 export const settingsShape=z.object({discoverMode:z.enum(['visible','hidden','off']),privateOn:z.boolean(),acceptProfileLikes:z.boolean().optional(),requestsFrom:z.enum(['all','matches','none']).optional(),

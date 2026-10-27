@@ -49,7 +49,8 @@ export function MeEditScreen(){
    .then(([a,b,c,e])=>{
     const pr=a.profile;const det:Draft['details']={};
     for(const [f] of DETAIL_ROWS){const v=pr.details[f];det[f]=f==='status'?(typeof v==='string'?v:null):Array.isArray(v)?v.filter((x):x is string=>typeof x==='string'):[];}
-    const draft:Draft={name:pr.name??'',handle:pr.handle??'',bio:pr.bio,cityId:typeof pr.cityId==='string'?pr.cityId:null,showAge:pr.showAge!==false,details:det,
+    const draft:Draft={name:pr.name??'',handle:pr.handle??'',bio:pr.bio,cityId:typeof pr.cityId==='string'?pr.cityId:pr.city?.id??null, // profile.get sends the city as {id, ru, en, pending}
+     showAge:pr.showAge!==false,details:det,
      photos:pr.photos.map(toPh),privOn:b.on!==false,privText:b.text??'',privMedia:(b.media??[]).map(toPh)};
     setP(pr);setBase(draft);setD(structuredClone(draft));setCat(c);setGrants(b.counts?.grants??0);
     setJars({all:e.items.length,granted:e.items.filter(j=>j.vis==='granted').length});

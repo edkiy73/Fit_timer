@@ -6,6 +6,7 @@ import { needsPartner, registerApprovalKind, requestApproval } from '../approval
 import { cards } from './discover.mjs';
 import { requireUnrestricted } from '../profiles.mjs';
 import { withFaces } from './faces.mjs';
+import { otherProfile } from './access.mjs';
 
 /** Slice F2: people search, links between profiles, «Что у вас общего» (S1 §11, extract/people-discover-chats.md).
  * Search matches the start of a nickname or name, from two characters, never anyone hidden by a block (Q8). A link is
@@ -22,14 +23,6 @@ const VIS = ['us', 'followers', 'all'];
 
 /** @param {Acting | null} acting @returns {Acting} */
 const need = acting => { if (!acting) throw new Error('acting profile missing'); return acting; };
-
-/** The other profile, if it exists for the viewer (blocked looks the same as missing). @param {Q} q @param {Acting} viewer @param {string} id */
-async function otherProfile(q, viewer, id) {
-  const [p] = await q.query(
-    `select p.id, p.kind, feture.related($1, p.id) related from feture.profile p where p.id = $2 and p.state = 'active' and not feture.blocked($1, p.id)`, [viewer.profileId, id]);
-  if (!p || p.id === viewer.profileId) fail(404, 'not_found');
-  return p;
-}
 
 /** The link if the acting profile is one of its endpoints; `me` says which. @param {Q} q @param {string} linkId @param {Acting} acting */
 async function endpoint(q, linkId, acting) {

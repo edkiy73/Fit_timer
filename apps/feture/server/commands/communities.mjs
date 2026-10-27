@@ -93,7 +93,7 @@ export async function canWrite(q, communityId, acting) {
 
 /** Topics, cover and place of a create or an edit: known topics, the owner's own community cover, an approved place
  * or one the author submitted. @param {Q} q @param {string} ownerProfileId @param {string} accountId @param {any} f */
-async function checkRefs(q, ownerProfileId, accountId, f) {
+async function checkCommunityRefs(q, ownerProfileId, accountId, f) {
   if (f.topics) {
     const [{ n }] = await q.query('select count(*)::int n from feture.topic where id = any($1) and not hidden', [f.topics]);
     if (n !== f.topics.length) fail(400, 'invalid_input', { fields: ['topics'] });
@@ -122,7 +122,7 @@ async function keptOut(q, c, profileId) {
 
 /** @param {Q} q @param {string} ownerProfileId @param {string} accountId @param {any} f */
 async function createCommunity(q, ownerProfileId, accountId, f) {
-  await checkRefs(q, ownerProfileId, accountId, f);
+  await checkCommunityRefs(q, ownerProfileId, accountId, f);
   let c;
   try {
     [c] = await q.query(
@@ -185,7 +185,7 @@ const run = {
     const [c] = await q.query(`select * from feture.community where id = $1 for update`, [input.communityId]);
     if (c.rev !== input.rev) fail(409, 'conflict', { rev: c.rev });
     const { opId: _, communityId: __, rev: ___, ...f } = input;
-    await checkRefs(q, c.owner_profile_id, acting.accountId, f);
+    await checkCommunityRefs(q, c.owner_profile_id, acting.accountId, f);
     if (f.privacy === 'open') f.joinQuestion = null; // an open community has no join question
     /** @type {Record<string, unknown>} */
     const now = /** @type {Record<string, unknown>} */ ({}), later = /** @type {Record<string, unknown>} */ ({});
