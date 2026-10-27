@@ -24,6 +24,7 @@ import { ChatsTab, ChatScreen } from './fe/chats';
 import { PeopleTab, PersonScreen } from './fe/people';
 import { MeTab } from './fe/me';
 import { InterestsScreen, InterestsHistoryScreen } from './fe/interests';
+import { StaffScreen } from './fe/staff';
 import { FeedTab, PostScreen, ComposeScreen } from './fe/feed';
 const ProductDesign = lazy(async()=>({default:(await import('./feture/design/product-design')).ProductDesign}));
 import { WelcomePage } from './feture/welcome';
@@ -278,6 +279,7 @@ export const routes: RouteObject[] = [
         {path:'me/pair', element:<PairScreen />},
         {path:'me/interests', element:<InterestsScreen />},
         {path:'me/interests/history', element:<InterestsHistoryScreen />},
+        {path:'staff', element:<StaffScreen />},
         {path:'*', element:<Navigate to="/n/feed" replace/>}
       ]
     },{
