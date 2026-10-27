@@ -5,6 +5,9 @@ import { fail, isUniqueViolation } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { narrowCouple } from '../approvals.mjs';
 import { closeAll } from './access.mjs';
+import { setVisibilityAs } from './me.mjs';
+import { randomBytes } from 'node:crypto';
+import { sha256 } from '../hash.mjs';
 
 /** Slice E: couples (S1 §5). An account is in at most one couple; the couple is its own profile that starts empty.
  * Either partner stops it at once; restoring needs both within 30 days, then it is deleted (jobs.sweepExpiredCouples).
@@ -25,6 +28,61 @@ async function currentCouple(q, accountId) {
   return r ?? null;
 }
 
+/** The registered, unrestricted account that invites or accepts, with its current couple.
+ * @param {Q} q @param {{id: string, person_profile_id?: string | null}} account */
+async function inviter(q, account) {
+  if (account.person_profile_id && (await q.query('select feture.restricted($1) r', [account.person_profile_id]))[0].r) fail(403, 'forbidden', { rule: 'restricted' });
+  const [me] = await q.query(
+    `select a.person_profile_id from feture.account a join feture.profile p on p.id = a.person_profile_id
+     where a.id = $1 and a.state = 'active' and p.state = 'active'`, [account.id]);
+  if (!me) fail(422, 'rule_violation', { rule: 'registration_required' });
+  return { profileId: /** @type {string} */ (me.person_profile_id), couple: await currentCouple(q, account.id) };
+}
+
+/** A link that still works for this account: unused, not revoked, not expired, not one's own, nobody blocked either way
+ * — all of these look the same (not found). @param {Q} q @param {string} token @param {string} accountId @param {boolean} lock */
+async function liveLink(q, token, accountId, lock) {
+  const [l] = await q.query(
+    `select l.id, l.from_account, l.expires_at,
+       feture.blocked((select person_profile_id from feture.account where id = $2), a.person_profile_id) blocked
+     from feture.couple_link l join feture.account a on a.id = l.from_account and a.state = 'active'
+     join feture.profile p on p.id = a.person_profile_id and p.state = 'active'
+     where l.token_hash = $1 and l.used_at is null and l.revoked_at is null and l.expires_at > now() ${lock ? 'for update of l' : ''}`,
+    [sha256(token), accountId]);
+  if (!l || l.blocked || l.from_account === accountId) fail(404, 'not_found');
+  return l;
+}
+
+/** Forms a couple of two accounts (an accepted invitation or link): both must still be free and active; the couple
+ * starts empty; other pending invitations of both are void. @param {Q} q @param {string} fromAccount @param {string} toAccount */
+async function formCouple(q, fromAccount, toAccount) {
+  // Both must still be free and active: either may have joined another couple or been suspended since.
+  if (await currentCouple(q, fromAccount) || await currentCouple(q, toAccount)) fail(409, 'conflict', { rule: 'already_in_couple' });
+  // Locked: an account being deleted right now finishes first, and is then seen as gone.
+  const [{ active }] = await q.query(
+    `select count(*)::int active from (select a.state, p.state pstate from feture.account a join feture.profile p on p.id = a.person_profile_id
+     where a.id = any($1) for share of a, p) x where x.state = 'active' and x.pstate = 'active'`, [[fromAccount, toAccount]]);
+  if (active !== 2) fail(409, 'conflict', { rule: 'unavailable' });
+  const names = await q.query(
+    `select coalesce(nullif(p.name, ''), p.handle) n from feture.account a join feture.profile p on p.id = a.person_profile_id where a.id = any($1)
+     order by array_position($1, a.id)`, [[fromAccount, toAccount]]);
+  const [couple] = await q.query(
+    `insert into feture.profile (kind, name) values ('couple', $1) returning id`, [names.map(r => r.n).join(' и ').slice(0, 60)]);
+  for (const acc of [fromAccount, toAccount]) {
+    await q.query(`insert into feture.profile_member (profile_id, profile_kind, account_id, joined_at) values ($1, 'couple', $2, now())`, [couple.id, acc]);
+  }
+  // A new couple starts empty, in Discover by default like everyone (AUTH-019), nobody's content copied (CPL-003).
+  await q.query(`insert into feture.profile_settings (profile_id) values ($1)`, [couple.id]);
+  await q.query(`insert into feture.profile_details (profile_id) values ($1)`, [couple.id]);
+  // Other pending invitations and live links of either partner are void now.
+  await q.query(
+    `update feture.couple_invite set state = 'withdrawn', answered_at = now() where state = 'pending' and (from_account = any($1) or to_account = any($1))`,
+    [[fromAccount, toAccount]]);
+  await q.query(`update feture.couple_link set revoked_at = now() where from_account = any($1) and used_at is null and revoked_at is null`, [[fromAccount, toAccount]]);
+  for (const acc of [fromAccount, toAccount]) await enqueue(q, 'couple.created', couple.id, { for: acc });
+  return /** @type {string} */ (couple.id);
+}
+
 /** Ends the couple's own outgoing side: its pending requests to others are cancelled and access others gave it is
  * revoked (it does not come back on restore). @param {Q} q @param {string} profileId */
 export async function closeOutgoing(q, profileId) {
@@ -40,7 +98,7 @@ export async function deleteCouple(q, profileId, reason) {
   await closeAll(q, profileId, 'couple_stopped');
   await closeOutgoing(q, profileId);
   await q.query(`update feture.partner_approval set state = 'cancelled', decided_at = now() where profile_id = $1 and state = 'pending'`, [profileId]);
-  for (const t of ['interest', 'interest_history', 'private_part']) await q.query(`delete from feture.${t} where profile_id = $1`, [profileId]);
+  for (const t of ['interest', 'interest_history', 'private_part', 'profile_location']) await q.query(`delete from feture.${t} where profile_id = $1`, [profileId]);
   await q.query(`update feture.profile_details set bio = '', city_id = null, roles = '{}', formats = '{}', seeks = '{}' where profile_id = $1`, [profileId]);
   const media = await q.query(
     `update feture.media_asset set state = 'removed', removed_at = now() where owner_profile_id = $1 and state not in ('removed', 'blocked') returning id`, [profileId]);
@@ -115,7 +173,8 @@ const run = {
       `select i.id, i.created_at, ${card('from_account')} profile from feture.couple_invite i
        where i.to_account = $1 and i.state = 'pending' order by i.created_at desc`, [account.id]);
     // The inviter sees a decline (CPL-013); the invitee only sees what is still waiting.
-    return { outgoing, incoming };
+    const [link] = await q.query(`select id, created_at, expires_at from feture.couple_link where from_account = $1 and used_at is null and revoked_at is null and expires_at > now()`, [account.id]);
+    return { outgoing, incoming, link: link ? { id: link.id, createdAt: link.created_at, expiresAt: link.expires_at } : null };
   },
 
   async 'couple.inviteWithdraw'(q, { account, input }) {
@@ -136,31 +195,61 @@ const run = {
       await enqueue(q, 'couple.declined', null, { inviteId: inv.id, for: inv.from_account });
       return { state: 'declined' };
     }
-    // Both must still be free and active: either may have joined another couple or been suspended since.
-    if (await currentCouple(q, inv.from_account) || await currentCouple(q, account.id)) fail(409, 'conflict', { rule: 'already_in_couple' });
-    // Locked: an account being deleted right now finishes first, and is then seen as gone.
-    const [{ active }] = await q.query(
-      `select count(*)::int active from (select a.state, p.state pstate from feture.account a join feture.profile p on p.id = a.person_profile_id
-       where a.id = any($1) for share of a, p) x where x.state = 'active' and x.pstate = 'active'`, [[inv.from_account, account.id]]);
-    if (active !== 2) fail(409, 'conflict', { rule: 'unavailable' });
-    const names = await q.query(
-      `select coalesce(nullif(p.name, ''), p.handle) n from feture.account a join feture.profile p on p.id = a.person_profile_id where a.id = any($1)
-       order by array_position($1, a.id)`, [[inv.from_account, account.id]]);
-    const [couple] = await q.query(
-      `insert into feture.profile (kind, name) values ('couple', $1) returning id`, [names.map(r => r.n).join(' и ').slice(0, 60)]);
-    for (const acc of [inv.from_account, account.id]) {
-      await q.query(`insert into feture.profile_member (profile_id, profile_kind, account_id, joined_at) values ($1, 'couple', $2, now())`, [couple.id, acc]);
-    }
-    // A new couple starts empty, in Discover by default like everyone (AUTH-019), nobody's content copied (CPL-003).
-    await q.query(`insert into feture.profile_settings (profile_id) values ($1)`, [couple.id]);
-    await q.query(`insert into feture.profile_details (profile_id) values ($1)`, [couple.id]);
-    await q.query(`update feture.couple_invite set state = 'accepted', answered_at = now(), couple_profile_id = $2 where id = $1`, [inv.id, couple.id]);
-    // Other pending invitations of either partner are void now.
+    const profileId = await formCouple(q, inv.from_account, account.id);
+    await q.query(`update feture.couple_invite set state = 'accepted', answered_at = now(), couple_profile_id = $2 where id = $1`, [inv.id, profileId]);
+    return { state: 'accepted', profileId };
+  },
+
+  async 'couple.linkCreate'(q, { account }) {
+    const me = await inviter(q, account);
+    if (me.couple?.state === 'active') fail(422, 'rule_violation', { rule: 'already_in_couple' });
+    // One live link: a new one replaces the old (the old stops working at once).
+    await q.query(`update feture.couple_link set revoked_at = now() where from_account = $1 and used_at is null and revoked_at is null`, [account.id]);
+    const token = randomBytes(32).toString('base64url');
+    const [l] = await q.query(`insert into feture.couple_link (from_account, token_hash) values ($1, $2) returning id, expires_at`, [account.id, sha256(token)]);
+    return { id: l.id, token, expiresAt: l.expires_at };
+  },
+
+  async 'couple.linkRevoke'(q, { account, input }) {
+    const rows = await q.query(
+      `update feture.couple_link set revoked_at = now() where id = $1 and from_account = $2 and used_at is null and revoked_at is null returning id`, [input.linkId, account.id]);
+    if (!rows[0]) fail(404, 'not_found');
+    return { state: 'revoked' };
+  },
+
+  async 'couple.linkPeek'(q, { account, input }) {
+    const l = await liveLink(q, input.token, account.id, false);
+    const [p] = await q.query(
+      `select p.id, p.handle, p.name from feture.account a join feture.profile p on p.id = a.person_profile_id where a.id = $1`, [l.from_account]);
+    return { from: { id: p.id, handle: p.handle, name: p.name }, expiresAt: l.expires_at };
+  },
+
+  async 'couple.linkAccept'(q, { account, input }) {
+    const me = await inviter(q, account);
+    const l = await liveLink(q, input.token, account.id, true);
+    if (me.couple) fail(422, 'rule_violation', { rule: me.couple.state === 'active' ? 'already_in_couple' : 'paused_couple_exists' });
+    // The same path as accepting an invitation: both free and active, other invitations of both void.
+    // Used first (a failure below rolls this back), so voiding the inviter's live links does not touch it.
+    await q.query(`update feture.couple_link set used_at = now(), used_by = $2 where id = $1`, [l.id, account.id]);
+    const profileId = await formCouple(q, l.from_account, account.id);
     await q.query(
-      `update feture.couple_invite set state = 'withdrawn', answered_at = now() where state = 'pending' and id <> $1
-       and (from_account = any($2) or to_account = any($2))`, [inv.id, [inv.from_account, account.id]]);
-    for (const acc of [inv.from_account, account.id]) await enqueue(q, 'couple.created', couple.id, { for: acc });
-    return { state: 'accepted', profileId: couple.id };
+      `insert into feture.couple_invite (from_account, to_account, state, answered_at, couple_profile_id) values ($1, $2, 'accepted', now(), $3)`,
+      [l.from_account, account.id, profileId]);
+    return { state: 'accepted', profileId };
+  },
+
+  async 'couple.setup'(q, { acting: a, input }) {
+    const acting = need(a);
+    coupleOnly(acting);
+    // My own mode (each partner chooses independently), then who may ask for access — a widening of that waits for the
+    // partner only when the partner asked to approve my changes.
+    const approves = input.mode === 'approve';
+    const [m] = await q.query(
+      `update feture.profile_member set approves_partner = $3 where profile_id = $1 and account_id = $2 and approves_partner <> $3 returning 1`,
+      [acting.profileId, acting.accountId, approves]);
+    if (m) await enqueue(q, 'couple.approvalChanged', acting.profileId, { for: acting.partnerAccountId, approves });
+    const requests = await setVisibilityAs(q, acting, 'requestsFrom', input.requestsFrom);
+    return { approvesPartner: approves, requestsFrom: 'pending' in requests ? null : input.requestsFrom, ...('pending' in requests ? { pending: requests.pending } : {}) };
   },
 
   async 'couple.get'(q, { acting: a }) {

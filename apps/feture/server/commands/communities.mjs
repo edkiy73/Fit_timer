@@ -394,12 +394,54 @@ const run = {
     // Hosts admitted every member and moderate them, so they see unlisted members too; everyone else sees listed ones.
     const m = await membership(q, c.id, viewer.profileId);
     const host = m?.state === 'active' && ['owner', 'host'].includes(m.role);
+    // Keyset over (rank, joined, id): owner, hosts, then members by joining time; 20 a page (V21 cMoreMembers).
+    let cur = null;
+    if (input.cursor) {
+      try { cur = JSON.parse(Buffer.from(input.cursor, 'base64url').toString('utf8')); } catch { /* checked below */ }
+      if (!Array.isArray(cur) || ![0, 1, 2].includes(cur[0]) || typeof cur[1] !== 'string' || Number.isNaN(Date.parse(cur[1])) || !/^[0-9a-f-]{36}$/.test(cur[2])) {
+        fail(400, 'invalid_input', { fields: ['cursor'] });
+      }
+    }
+    const rows = await q.query(
+      `select * from (
+         select p.id, p.kind, p.handle, p.name, cm.role, cm.read_only, cm.listed,
+           case cm.role when 'owner' then 0 when 'host' then 1 else 2 end rank, cm.joined_at, cm.joined_at::text joined_text
+         from feture.community_member cm join feture.profile p on p.id = cm.profile_id
+         where cm.community_id = $1 and cm.state = 'active' and p.state = 'active' and not feture.blocked($2, p.id)
+           and ($3 or cm.role <> 'member' or cm.listed or cm.profile_id = $2)) x
+       where $4::int is null or (x.rank, x.joined_at, x.id) > ($4::int, $5::timestamptz, $6::uuid)
+       order by x.rank, x.joined_at, x.id limit 21`, [c.id, viewer.profileId, host, cur?.[0] ?? null, cur?.[1] ?? null, cur?.[2] ?? null]);
+    const page = rows.slice(0, 20);
+    const last = page[page.length - 1];
+    const items = page.map(({ rank: _r, joined_at: _j, joined_text: _t, ...r }) => r);
+    return {
+      count: n, items: await withFaces(q, cfg.media, viewer, items, r => r),
+      next: rows.length > 20 ? Buffer.from(JSON.stringify([last.rank, last.joined_text, last.id])).toString('base64url') : null,
+    };
+  },
+
+  async 'discussions.popular'(q, { acting: a, input }) {
+    const viewer = need(a);
+    if (input.communityId) {
+      const c = await visible(q, input.communityId, viewer);
+      if (c.privacy !== 'open' && !c.own && !(await isReader(q, c.id, viewer.profileId))) return { items: [] };
+    }
+    // «Обсуждают, а не шумят» (V21 FEED-016): people who replied weigh most, then replies, likes a little. Last 7 days,
+    // only what the viewer may read, never what a host kept out, nothing from people blocked either way.
     const items = await q.query(
-      `select p.id, p.kind, p.handle, p.name, cm.role, cm.read_only, cm.listed from feture.community_member cm join feture.profile p on p.id = cm.profile_id
-       where cm.community_id = $1 and cm.state = 'active' and p.state = 'active' and not feture.blocked($2, p.id)
-         and ($3 or cm.role <> 'member' or cm.listed or cm.profile_id = $2)
-       order by (cm.role = 'owner') desc, (cm.role = 'host') desc, cm.joined_at limit 200`, [c.id, viewer.profileId, host]);
-    return { count: n, items: await withFaces(q, cfg.media, viewer, items, r => r) };
+      `select p.id, p.title, left(p.body, 300) excerpt, p.published_at, p.community_id, c.name community_name, s.replies, s.repliers, s.likes
+       from feture.post p join feture.community c on c.id = p.community_id
+       cross join lateral (
+         select count(r.*)::int replies, count(distinct r.author_profile_id)::int repliers,
+           (select count(*)::int from feture.reaction x where x.target_type = 'post' and x.target_id = p.id) likes
+         from feture.reply r where r.post_id = p.id and r.state = 'published' and not feture.blocked($1, r.author_profile_id)) s
+       where p.community_id is not null and p.state = 'published' and not p.popular_excluded and p.published_at > now() - interval '7 days'
+         and ($3::uuid is null or p.community_id = $3) and ($4::text is null or $4 = any(p.topics) or $4 = any(c.topics))
+         and feture.post_visible(p, $1, $2)
+         and not exists (select 1 from feture.feed_hide h where h.profile_id = $1 and ((h.kind = 'post' and h.target_id = p.id) or (h.kind = 'author' and h.target_id = p.owner_profile_id)))
+       order by 10 * s.repliers + 3 * s.replies + 0.2 * s.likes desc, p.published_at desc, p.id limit $5`,
+      [viewer.profileId, viewer.accountId, input.communityId ?? null, input.topic ?? null, input.limit]);
+    return { items: items.map(r => ({ id: r.id, title: r.title, excerpt: r.excerpt, at: r.published_at, community: { id: r.community_id, name: r.community_name }, replies: r.replies, likes: r.likes })) };
   },
 
   async 'community.invite'(q, { acting: a, input }) {
@@ -420,12 +462,15 @@ const run = {
     const viewer = need(a);
     const c = await visible(q, input.communityId, viewer);
     const rows = await q.query(
-      `select p.id, p.title, left(p.body, 300) excerpt, p.pinned, p.published_at, p.owner_profile_id,
+      `select p.id, p.title, left(p.body, 300) excerpt, p.pinned, p.published_at, p.owner_profile_id, p.popular_excluded,
          (select count(*)::int from feture.reply r where r.post_id = p.id and r.state = 'published') replies
        from feture.post p where p.community_id = $1 and p.state = 'published' and feture.post_visible(p, $2, $3)
        order by p.pinned desc, p.published_at desc limit 50`, [c.id, viewer.profileId, viewer.accountId]);
     const locked = c.privacy !== 'open' && !c.own && !(await isReader(q, c.id, viewer.profileId));
-    return { locked, items: locked ? [] : rows };
+    // Only hosts see which discussions they kept out of «Популярное» (V21 discPop).
+    const m = await membership(q, c.id, viewer.profileId);
+    const host = c.own || (m?.state === 'active' && ['owner', 'host'].includes(m.role));
+    return { locked, items: locked ? [] : rows.map(({ popular_excluded, ...r }) => (host ? { ...r, popularExcluded: popular_excluded } : r)) };
   },
 
   async 'discussion.host'(q, { acting: a, input }) {

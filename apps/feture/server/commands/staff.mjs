@@ -129,6 +129,21 @@ const run = {
     return { state: input.decision === 'approve' ? 'approved' : input.reason === 'csam_suspected' ? 'blocked' : 'rejected' };
   },
 
+  async 'staff.datingSwitch'(q, { account, input }) {
+    await requireStaff(q, account.id, ['owner', 'lead']);
+    const [s] = await q.query(`select is_on from feture.platform_switch where key = 'dating' for update`);
+    if (s?.is_on === input.on) return { on: input.on, notified: 0 };
+    await q.query(
+      `insert into feture.platform_switch (key, is_on, changed_by, changed_at) values ('dating', $1, $2, now())
+       on conflict (key) do update set is_on = $1, changed_by = $2, changed_at = now()`, [input.on, account.id]);
+    await journal(q, account.id, input.on ? 'dating.on' : 'dating.off', 'platform', null);
+    if (!input.on) return { on: false, notified: 0 };
+    // «Сообщить о запуске»: one notice per account that asked, then the wish is used up.
+    const wishes = await q.query(`delete from feture.launch_wish where feature = 'dating' returning account_id`);
+    for (const w of wishes) await enqueue(q, 'dating.launched', null, { for: w.account_id });
+    return { on: true, notified: wishes.length };
+  },
+
   async 'staff.journal'(q, { account, input }) {
     await requireStaff(q, account.id, ['owner', 'lead', 'auditor']);
     const rows = await q.query(

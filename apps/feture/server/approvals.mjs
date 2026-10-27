@@ -8,7 +8,9 @@ import { enqueue } from './outbox.mjs';
  * so a stale change (target deleted, already applied) fails the decision instead of half-applying.
  * `always`: the change needs both partners even when the partner does not ask to approve changes
  * (opening the couple's private part — V21 «Приватную часть пары открывают только вдвоём»).
- * @typedef {{apply: (q: Q, approval: ApprovalRow) => Promise<void>, always?: boolean}} ApprovalKind
+ * `preview`: what the deciding partner (and the author of a returned change) is shown besides the raw change — the post
+ * text, the event card, the person asking for access. It reads only the couple's own rows.
+ * @typedef {{apply: (q: Q, approval: ApprovalRow) => Promise<void>, always?: boolean, preview?: (q: Q, approval: ApprovalRow) => Promise<unknown>}} ApprovalKind
  * @typedef {{id: string, profile_id: string, kind: string, target_type: string, target_id: string | null,
  *   change: Record<string, unknown>, summary: unknown[], state: string, requested_by: string}} ApprovalRow
  */
@@ -48,6 +50,10 @@ export async function requestApproval(q, acting, req) {
      on conflict do nothing returning id`,
     [acting.profileId, req.kind, req.targetType, req.targetId, JSON.stringify(req.change), JSON.stringify(req.summary), acting.accountId]);
   if (!rows[0]) fail(409, 'approval_pending');
+  // A new version of a returned change replaces it: «на доработке» ends once the author sends the next one.
+  await q.query(
+    `update feture.partner_approval set state = 'cancelled' where profile_id = $1 and kind = $2 and target_type = $3
+       and target_id is not distinct from $4::uuid and state = 'returned'`, [acting.profileId, req.kind, req.targetType, req.targetId]);
   await enqueue(q, 'decide.created', acting.profileId, { approvalId: rows[0].id, kind: req.kind, for: acting.partnerAccountId });
   return { approvalId: /** @type {string} */ (rows[0].id) };
 }
@@ -55,8 +61,8 @@ export async function requestApproval(q, acting, req) {
 /** The partner (never the requester) approves or returns a pending change. An expired or stale change is
  * closed and reported as `{state}` without applying it (not thrown, so the closing write commits).
  * The profile row is locked too: a concurrent narrowing (narrowCouple) waits for this decision or vice versa.
- * @param {Q} q @param {Acting} acting @param {{approvalId: string, choice: 'approve' | 'return'}} input */
-export async function decideApproval(q, acting, { approvalId, choice }) {
+ * @param {Q} q @param {Acting} acting @param {{approvalId: string, choice: 'approve' | 'return', comment?: string}} input */
+export async function decideApproval(q, acting, { approvalId, choice, comment }) {
   const [row] = await q.query(
     `select a.id, a.profile_id, a.kind, a.target_type, a.target_id, a.change, a.summary, a.state, a.requested_by,
        a.expires_at <= now() expired, a.safety_epoch <> p.safety_epoch stale
@@ -90,40 +96,55 @@ export async function decideApproval(q, acting, { approvalId, choice }) {
     }
   }
   const state = choice === 'approve' ? 'approved' : 'returned';
-  await close(q, row.id, state, acting.accountId);
+  // «Вернуть на доработку» may carry a note for the author (V21 returnSend); approving never does.
+  await close(q, row.id, state, acting.accountId, choice === 'return' && comment ? comment : null);
   await enqueue(q, 'decide.resolved', acting.profileId, { approvalId: row.id, kind: row.kind, state, for: row.requested_by });
   return { state, applied: choice === 'approve' };
 }
 
-/** The requester withdraws their own pending change. @param {Q} q @param {Acting} acting @param {string} approvalId */
+/** The requester withdraws their own pending change, or drops one the partner returned (V21 jointCancel).
+ * @param {Q} q @param {Acting} acting @param {string} approvalId */
 export async function cancelApproval(q, acting, approvalId) {
   const rows = await q.query(
-    `update feture.partner_approval set state = 'cancelled', decided_at = now()
-     where id = $1 and profile_id = $2 and requested_by = $3 and state = 'pending' returning id`,
+    `update feture.partner_approval set state = 'cancelled', decided_at = coalesce(decided_at, now())
+     where id = $1 and profile_id = $2 and requested_by = $3 and state in ('pending', 'returned') returning id`,
     [approvalId, acting.profileId, acting.accountId]);
   if (!rows[0]) fail(404, 'not_found');
   await enqueue(q, 'decide.resolved', acting.profileId, { approvalId, state: 'cancelled', for: acting.partnerAccountId });
   return { state: 'cancelled' };
 }
 
-/** Pending changes of the couple, both directions: «Ждёт согласия партнёра» and «Одобрить / Вернуть».
+/** Changes of the couple, both directions: «Ждёт согласия партнёра», «Одобрить / Вернуть», and for 14 days the ones
+ * returned «на доработку» with the partner's note (V21 pairReturned / jointWorkHTML). `version` counts the proposals for
+ * the same target so far; `preview` is the kind's view of what would change (post text, event card, who asks).
  * @param {Q} q @param {Acting} acting */
 export async function listApprovals(q, acting) {
   const rows = await q.query(
-    `select id, kind, target_type, target_id, change, summary, requested_by, created_at, expires_at
-     from feture.partner_approval
-     where profile_id = $1 and state = 'pending' and expires_at > now() order by created_at`,
+    `select a.id, a.profile_id, a.kind, a.target_type, a.target_id, a.change, a.summary, a.state, a.requested_by, a.return_note,
+       a.created_at, a.expires_at, a.decided_at,
+       (select count(*)::int from feture.partner_approval v where v.profile_id = a.profile_id and v.kind = a.kind and v.target_type = a.target_type
+          and v.target_id is not distinct from a.target_id and v.id <= a.id) version
+     from feture.partner_approval a
+     where a.profile_id = $1 and (a.state = 'pending' and a.expires_at > now() or a.state = 'returned' and a.decided_at > now() - interval '14 days')
+     order by a.created_at`,
     [acting.profileId]);
-  return rows.map(r => ({
-    // Both partners see exactly what would change (values, not just field names) before deciding.
-    id: r.id, kind: r.kind, targetType: r.target_type, targetId: r.target_id, change: r.change, summary: r.summary,
-    mine: r.requested_by === acting.accountId, createdAt: r.created_at, expiresAt: r.expires_at,
-  }));
+  const out = [];
+  for (const r of rows) {
+    const def = KINDS.get(r.kind);
+    out.push({
+      // Both partners see exactly what would change (values, not just field names) before deciding.
+      id: r.id, kind: r.kind, targetType: r.target_type, targetId: r.target_id, change: r.change, summary: r.summary,
+      mine: r.requested_by === acting.accountId, state: r.state, comment: r.return_note ?? null, version: r.version,
+      preview: def?.preview ? await def.preview(q, r) : null,
+      createdAt: r.created_at, expiresAt: r.expires_at, returnedAt: r.state === 'returned' ? r.decided_at : null,
+    });
+  }
+  return out;
 }
 
-/** @param {Q} q @param {string} id @param {string} state @param {string | null} by */
-async function close(q, id, state, by) {
-  await q.query('update feture.partner_approval set state = $2, decided_by = $3, decided_at = now() where id = $1', [id, state, by]);
+/** @param {Q} q @param {string} id @param {string} state @param {string | null} by @param {string | null} [note] */
+async function close(q, id, state, by, note = null) {
+  await q.query('update feture.partner_approval set state = $2, decided_by = $3, decided_at = now(), return_note = $4 where id = $1', [id, state, by, note]);
 }
 
 /** Any member's immediate safety action on a couple (hide from Discover, close the private part, revoke all,
