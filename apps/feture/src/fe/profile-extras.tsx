@@ -6,6 +6,7 @@ import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Ban,Check,ChevronRight,EyeOff,Flag,Heart,History,Info,Lock,LockOpen,MapPin,ShieldCheck,Undo2,Users,X} from 'lucide-react';
 import {Av,Bar,Btn,Empty,Seg,View,plate} from './ui';
 import {useFe} from './session';
+import {PhotoBadge} from './photo-check';
 
 /** Profile extras with the V21 prototype's markup: «Что у вас общего» (P05), the person menu (report / block / hide
  * from feed, S02), confirmed links and «Предложить связь» (F2, P21/P22), «Просмотренные» (D09) and «Как видят» (P03).
@@ -62,7 +63,7 @@ export function Sheet({title,onClose,children,foot,full}:{title:string,onClose:(
 /* ---------- the person card shared by PersonScreen and «Как видят» ---------- */
 const media=z.object({src:z.record(z.string(),z.string()).nullable(),pending:z.boolean().optional()}).passthrough();
 export const personProfile=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),bio:z.string(),
- age:z.number().nullable(),city:z.object({ru:z.string().nullable(),en:z.string().nullable()}).nullable(),avatar:media.nullable(),photos:z.array(media),details:z.record(z.string(),z.unknown())}).passthrough();
+ age:z.number().nullable(),city:z.object({ru:z.string().nullable(),en:z.string().nullable()}).nullable(),avatar:media.nullable(),photos:z.array(media),details:z.record(z.string(),z.unknown()),photoVerified:z.boolean().optional()}).passthrough();
 export const personProfileRes=z.object({ok:z.literal(true),profile:personProfile});
 export type PersonProfile=z.infer<typeof personProfile>;
 export const mediaSrc=(m:z.infer<typeof media>|null|undefined)=>m&&!m.pending?m.src?.card??m.src?.full??m.src?.thumb??null:null;
@@ -72,7 +73,7 @@ export const personName=(p:{name:string|null,handle:string|null}|null)=>p?.name|
 export function PersonHero({p}:{p:PersonProfile}){
  const {locale}=useI18n();const name=personName(p);const ph=mediaSrc(p.avatar);const city=p.city?(locale==='en'?p.city.en:p.city.ru):null;
  return ph?<div className="hero"><img className="mbg" src={ph} alt="" aria-hidden="true" draggable={false}/><img src={ph} alt={name} draggable={false}/>
-   <div className="pc-info"><h2 className="pc-name" tabIndex={-1}><span className="pcn">{name}</span>{p.age?<span>{p.age}</span>:null}</h2>{city&&<div className="pc-who"><span className="pl"><MapPin/>{city}</span></div>}</div></div>
+   <div className="pc-info"><h2 className="pc-name" tabIndex={-1}><span className="pcn">{name}</span>{p.age?<span>{p.age}</span>:null}{p.photoVerified&&<PhotoBadge/>}</h2>{city&&<div className="pc-who"><span className="pl"><MapPin/>{city}</span></div>}</div></div>
   :<div className="empty"><Av name={name} seed={p.id} size="xl"/><h3>{name}{p.age?', '+p.age:''}</h3>{city&&<p>{city}</p>}</div>;
 }
 export function PersonBio({p}:{p:PersonProfile}){return p.bio?<div className="p-bio"><div className="md bio"><p>{p.bio}</p></div></div>:null;}
@@ -394,7 +395,7 @@ export function MePreviewScreen(){
     :lv==='card'?<>
      <div className="mt12"><div className="card18">
       {ph?<><img className="mbg" src={ph} alt="" aria-hidden="true" draggable={false}/><img src={ph} alt={personName(p)} draggable={false}/></>:<div className="plate" style={plate(p.id)}/>}
-      <div className="pc-info"><h2 className="pc-name"><span className="pcn">{personName(p)}</span>{p.age?<span>{p.age}</span>:null}</h2>
+      <div className="pc-info"><h2 className="pc-name"><span className="pcn">{personName(p)}</span>{p.age?<span>{p.age}</span>:null}{p.photoVerified&&<PhotoBadge/>}</h2>
        {city&&<div className="pc-who"><span className="pl"><MapPin/>{city}</span></div>}</div>
      </div></div>
      <p className="note center mt12">{d?.discover!=='visible'?t('fe.ln.pv.cardOff'):!ph?t('fe.ln.pv.cardNoPhoto'):t('fe.ln.pv.cardOn')}</p>

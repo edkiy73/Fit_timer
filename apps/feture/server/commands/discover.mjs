@@ -6,6 +6,7 @@ import { mediaDto } from '../media/assets.mjs';
 import { checkOptions } from './me.mjs';
 import { requireUnrestricted } from '../profiles.mjs';
 import { isPremium } from './premium.mjs';
+import { photoVerifiedOf } from './verification.mjs';
 import { endConversations, openConversation } from './chats.mjs';
 
 /** Slice F: Discover, likes and matches (S1 §11, extract/people-discover-chats.md).
@@ -99,13 +100,14 @@ export async function cards(q, viewer, ids, media) {
      left join feture.place pl on pl.id = d.city_id and pl.state = 'approved'
      where p.id = any($1)`, [ids, viewer.profileId]);
   const assets = await q.query('select * from feture.media_asset where id = any($1)', [rows.map(r => r.avatar_asset_id).filter(Boolean)]);
+  const verified = await photoVerifiedOf(q, rows.map(r => r.id));
   const byId = new Map();
   for (const r of rows) {
     const asset = assets.find(x => x.id === r.avatar_asset_id);
     const avatar = asset ? await mediaDto(media, asset, { viewerProfileId: viewer.profileId, place: 'public', showExplicit: false, staff: false }).catch(() => null) : null;
     byId.set(r.id, {
       id: r.id, kind: r.kind, handle: r.handle, name: r.name || r.handle, ages: r.ages,
-      city: r.city_ru ? { ru: r.city_ru, en: r.city_en } : null, avatar, likedMe: r.liked_me, shared: r.shared,
+      city: r.city_ru ? { ru: r.city_ru, en: r.city_en } : null, avatar, likedMe: r.liked_me, shared: r.shared, photoVerified: verified.get(r.id) ?? false,
     });
   }
   return ids.map(i => byId.get(i)).filter(Boolean);

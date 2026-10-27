@@ -43,6 +43,7 @@ export function InboxScreen(){
   if(!n.read)call('notifications.read',{id:n.id},ok,{asAccount:true}).catch(()=>{});
   if(n.type.startsWith('link')){navigate('/n/me/links');return;}
   if(n.type==='ageCheck'){navigate('/n/settings/age');return;}
+  if(n.type==='photoCheck'){navigate('/n/settings/photo-check');return;}
   const o=n.object;if(!o?.id){if(n.actor)navigate('/n/people/'+n.actor.id);return;}
   navigate(o.type==='post'||o.type==='reply'?'/n/feed/post/'+(n.data.postId as string|undefined??o.id):o.type==='community'?'/n/communities/'+o.id:o.type==='event'?'/n/events/'+o.id:o.type==='conversation'?'/n/chats/'+o.id:o.type==='profile'?'/n/people/'+o.id:'/n/me');
  };

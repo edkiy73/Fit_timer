@@ -21,7 +21,7 @@ const REASONS=['gesture_mismatch','face_hidden','not_same_person','looks_underag
 
 /** Re-encodes the shot as JPEG (the server takes JPEG/PNG/WebP; HEIC is converted on the device), at most 1600 px,
  * without the camera's metadata. */
-async function toJpeg(file:File):Promise<Blob>{
+export async function toJpeg(file:File):Promise<Blob>{
  try{
   const bmp=await createImageBitmap(file);const k=Math.min(1,1600/Math.max(bmp.width,bmp.height));
   const c=document.createElement('canvas');c.width=Math.round(bmp.width*k);c.height=Math.round(bmp.height*k);

@@ -52,6 +52,7 @@ const TYPES = /** @type {Record<string, {type: string, actor?: string, object?: 
   'couple.changed': { type: 'pair.acted' },
   'couple.approvalChanged': { type: 'pair.trust' },
   'verification.decided': { type: 'ageCheck' },
+  'verification.photoDecided': { type: 'photoCheck' },
   'profile.restricted': { type: 'profileRestricted' },
   'profile.unrestricted': { type: 'profileUnrestricted' },
   'appeal.decided': { type: 'appealDecided' },

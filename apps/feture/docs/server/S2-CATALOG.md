@@ -186,8 +186,8 @@
 | `premium.verifyPurchase` / `premium.restore` | W | чек магазина / процессора | права выдаёт сервер после проверки |
 | `gift.create` | W | точный ник, план, анонимно | паре — обоим; если Premium уже есть — в очередь |
 | `verification.ageStart` / `verification.ageStatus` | W/R | способ | провайдер возвращает ссылку; результат — вебхуком |
-| `verification.photoSubmit` | W | `assetId` (purpose `verification`), жест | только с одобренным фото профиля; селфи не публикуется |
+| `verification.photoStart` / `verification.photoSubmit` / `verification.photoStatus` | W/W/R | — / `checkId`, `assetId` (purpose `verification`) / — | **готово (срез H2)**: жест выбирает сервер (30 минут), только с одобренным главным фото; селфи не публикуется, удаляется через 30 дней после решения; статус `none/pending/approved/rejected` + причина; в профиле и карточках — только `photoVerified: boolean` |
 
 ## Сотрудники (S4)
 
-`staff.queue`, `staff.decide` (медиа, публикации, ревизии, сообщества, события, споры, жалобы), `staff.restrict`, `staff.appeal.decide`, `staff.place.decide`, `staff.photoCheck.decide`. Отдельный вход с ролями и 2FA, все решения — в журнал только на добавление.
+`staff.queue`, `staff.decide` (медиа, публикации, ревизии, сообщества, события, споры, жалобы), `staff.restrict`, `staff.appeal.decide`, `staff.place.decide`, `staff.photoCheck.decide` (сделано как `staff.photoCheckQueue` / `staff.photoCheckDecide`, срез H2). Отдельный вход с ролями и 2FA, все решения — в журнал только на добавление.
