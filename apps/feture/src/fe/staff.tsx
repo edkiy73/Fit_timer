@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {BadgeCheck,Ban,Check,ChevronRight,Eye,Inbox,Lock,RefreshCw,ShieldAlert,ShieldCheck,TriangleAlert,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Bar,Btn,Empty,Seg,View} from './ui';
+import {Bar,Btn,Empty,Seg,View,Skel} from './ui';
 import {useFe} from './session';
 import './staff.css';
 
@@ -78,7 +78,7 @@ export function StaffScreen(){
  return <>
   <Bar title={t('fe.staff.title')} back="/n/me"/>
   <View className="st">
-   {roles===null?<p className="note" role="status">{t('fe.loading')}</p>
+   {roles===null?<Skel kind="list"/>
     :!roles.length?<Empty icon={Lock} title={t('fe.staff.unavailable')} text={t('fe.staff.unavailableText')}/>
     :<>
      <p className="note mb12">{t('fe.staff.roles')}: {roles.map(r=>t('fe.staff.role.'+r)).join(', ')}</p>
@@ -102,7 +102,7 @@ function Queues(){
   });
  },[call]);
  useEffect(()=>{load();},[load]);
- if(!data)return <p className="note mt8" role="status">{t('fe.loading')}</p>;
+ if(!data)return <Skel kind="list"/>;
  const avail=QUEUE_IDS.filter(id=>data[id]);
  if(!avail.length||!tab)return <Empty icon={Inbox} title={t('fe.staff.noQueues')}/>;
  const count=(id:QueueId)=>{const v=data[id];return v&&'items' in v?(v.items.length>=LIMIT?LIMIT+'+':String(v.items.length)):'!';};
@@ -185,7 +185,7 @@ function Confirm({text,danger,busy,onYes,onNo}:{text:string,danger?:boolean,busy
  return <div className="st-confirm" role="alertdialog" aria-label={text}>
   <div className={'alert '+(danger?'err':'warn')}>{danger?<ShieldAlert/>:<TriangleAlert/>}<span>{text}</span></div>
   <div className="st-row">
-   <Btn kind="danger" size="sm" auto disabled={busy} onClick={onYes}>{busy?t('fe.loading'):t('fe.staff.confirm')}</Btn>
+   <Btn kind="danger" size="sm" auto disabled={busy} onClick={onYes} busy={busy}>{t('fe.staff.confirm')}</Btn>
    <Btn kind="text" size="sm" auto disabled={busy} onClick={onNo}>{t('fe.cancel')}</Btn>
   </div>
  </div>;
@@ -447,7 +447,7 @@ function Premium(){
      <label className="field st-days"><span>{t('fe.staff.premium.days')}</span><input className="inp" inputMode="numeric" value={days} maxLength={3} onChange={e=>setDays(e.target.value.replace(/\D/g,''))}/></label>
     </div>
     <TextField label={t('fe.staff.premium.reason')} value={reason} onChange={setReason} max={300}/>
-    <div className="st-row st-block"><Btn size="md" auto disabled={busy||!canGrant} onClick={grant}>{busy?t('fe.loading'):t('fe.staff.premium.grant')}</Btn></div>
+    <div className="st-row st-block"><Btn size="md" auto disabled={busy||!canGrant} onClick={grant} busy={busy}>{t('fe.staff.premium.grant')}</Btn></div>
     {granted&&<div className="alert ok st-block" role="status"><Check/><span>{t('fe.staff.premium.granted',{until:when(granted.until)})}<br/><code>{granted.id}</code></span></div>}
    </div>
   </section>
@@ -482,7 +482,7 @@ function Journal(){
   </div>
   {error?(forbidden(error)?<Empty icon={Lock} title={t('fe.staff.unavailable')} text={t('fe.staff.journal.forbidden')}/>
     :<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>)
-   :items===null?<p className="note mt8" role="status">{t('fe.loading')}</p>
+   :items===null?<Skel kind="list"/>
    :!items.length?<Empty icon={Inbox} title={t('fe.staff.journal.empty')}/>
    :<div className="card list mt8">{items.map(x=><div key={String(x.id)} className="li static">
      <div className="tx"><b>{x.action}{x.target_type?' · '+x.target_type:''}</b>

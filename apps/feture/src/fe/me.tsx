@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {ChevronRight,Eye,Lock,Plus,Settings,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Av,Btn,Empty,Seg} from './ui';
+import {Av,Btn,Empty,Seg,Skel} from './ui';
 import {AgeCheckLink} from './age-check';
 import {useFe} from './session';
 import {PrivateLayer} from './private';
@@ -66,7 +66,7 @@ export function MeTab(){
    </div>
    <div className="wrap">
     {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
-     :!p?<p className="note" role="status">{t('fe.loading')}</p>
+     :!p?<Skel kind="list"/>
      :layer==='profile'?<>
       {notice&&<div className="alert ok" role="status"><span>{notice}</span></div>}
       {acting.kind==='couple'&&<><CouplePending base={p} tick={tick} onDecided={msg=>{setNotice(msg);load();}}/><CoupleMembers/></>}
@@ -109,7 +109,7 @@ function EditBasics({p,onDone,onCancel}:{p:Profile,onDone:(msg:string)=>void,onC
   <label className="field"><span>{t('fe.me.name')}</span><input className="inp" value={name} maxLength={60} onChange={e=>setName(e.target.value)}/></label>
   <label className="field"><span>{t('fe.me.bio')}</span><textarea className="inp" rows={4} maxLength={500} value={bio} onChange={e=>setBio(e.target.value)}/><div className="counter">{bio.length} / 500</div></label>
   {failure&&<div className="alert err" role="alert"><span>{failure}</span></div>}
-  <div className="btns"><Btn onClick={save} disabled={busy}>{busy?t('fe.loading'):t('fe.me.save')}</Btn><Btn kind="text" onClick={onCancel}>{t('fe.cancel')}</Btn></div>
+  <div className="btns"><Btn onClick={save} disabled={busy} busy={busy}>{t('fe.me.save')}</Btn><Btn kind="text" onClick={onCancel}>{t('fe.cancel')}</Btn></div>
  </div>;
 }
 

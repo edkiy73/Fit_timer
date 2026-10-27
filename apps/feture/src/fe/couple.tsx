@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Clock,Heart,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Av,Btn} from './ui';
+import {Av,Btn,Layer} from './ui';
 import {useFe} from './session';
 
 /** V21 Q03 «Профиль пары» on the Me tab (prototype meProfileLayer/meVisLayer with owner 'couple'): the members,
@@ -86,7 +86,7 @@ function ApprovalSheet({a,base,partner,onClose,onDone}:{a:Approval,base:CoupleBa
   }catch(e){setFailure(feErrorMessage(e,t));op.current=newOpId();}finally{setBusy(false);}
  };
  const title=t('fe.cw.sheetTitle');
- return <div className="layer">
+ return <Layer>
   <div className="scrim on" onClick={onClose}/>
   <div ref={sheet} className="sheet on" role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}>
    <div className="grab"/>
@@ -102,7 +102,7 @@ function ApprovalSheet({a,base,partner,onClose,onDone}:{a:Approval,base:CoupleBa
     :<><Btn disabled={busy} onClick={()=>run('approve')}>{t('fe.cw.approve')}</Btn><Btn kind="soft" className="mt8" disabled={busy} onClick={()=>run('return')}>{t('fe.cw.return')}</Btn></>}
    </div>
   </div>
- </div>;
+ </Layer>;
 }
 
 /** `proposalDiff()` — field by field, the old value struck through where the screen knows it. */

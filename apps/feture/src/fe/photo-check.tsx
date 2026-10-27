@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {BadgeCheck,Camera,ChevronRight,Clock,ImagePlus,Info,Lock,RefreshCw,TriangleAlert,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Bar,Btn,Empty,View} from './ui';
+import {Bar,Btn,Empty,View,Skel} from './ui';
 import {useFe} from './session';
 import {toJpeg} from './age-check';
 
@@ -74,7 +74,7 @@ export function PhotoCheckScreen(){
 
  const bar=<Bar title={t('fe.pc.title')} back="/n/settings" small/>;
  if(error)return <>{bar}<View className="nodock"><Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty></View></>;
- if(!s)return <>{bar}<View className="nodock"><p className="note" role="status">{t('fe.loading')}</p></View></>;
+ if(!s)return <>{bar}<View className="nodock"><Skel kind="list"/></View></>;
 
  if(s.state==='approved'){
   const date=s.decidedAt?new Date(s.decidedAt).toLocaleDateString(locale==='en'?'en':'ru',{day:'numeric',month:'long',year:'numeric'}).replace(/\.$/,''):'';

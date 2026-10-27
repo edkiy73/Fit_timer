@@ -3,7 +3,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,Calendar,Eye,FileText,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Av,Bar,Btn,Empty,View} from './ui';
+import {Av,Bar,Btn,Empty,View,Skel} from './ui';
 import {useFe} from './session';
 import {useToast} from './toast';
 import {when} from './feed';
@@ -53,7 +53,7 @@ export function HiddenFeedScreen(){
   <View className="nodock compact">
    {acting?.kind==='couple'&&<p className="note" style={{margin:'0 0 12px'}}>{t('fe.tl.h.couple')}</p>}
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
-    :items===null?<p className="note" role="status">{t('fe.loading')}</p>
+    :items===null?<Skel kind="list"/>
     :items.length===0?<Empty icon={Eye} title={t('fe.tl.h.empty')} text={t('fe.tl.h.emptyText')}/>
     :<>
      {GROUPS.map(([kind,label])=>{const list=items.filter(h=>h.kind===kind);return list.length?<div key={kind}>
@@ -85,7 +85,7 @@ export function BlockedScreen(){
   <View className="nodock compact">
    <p className="note" style={{margin:'0 0 12px'}}>{couple?t('fe.tl.b.noteCouple').replace('{name}',nameOf(acting)):t('fe.tl.b.note')}</p>
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
-    :items===null?<p className="note" role="status">{t('fe.loading')}</p>
+    :items===null?<Skel kind="list"/>
     :items.length===0?<Empty icon={Ban} title={t('fe.tl.b.empty')} text={t('fe.tl.b.emptyText')}/>
     :<div className="card list">{items.map(b=>{const name=nameOf(b)||'?';return ask===b.id
      ?<div key={b.id} className="li" role="group" aria-label={t('fe.tl.b.askTitle').replace('{name}',name)} style={{flexWrap:'wrap'}}>

@@ -6,7 +6,7 @@ import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import {BadgeCheck,Ban,Bell,ChevronRight,Crown,LifeBuoy,Download,Eye,EyeOff,Globe,Heart,LogOut,Moon,ShieldCheck,Trash2,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {getThemePreference,setThemePreference,type ThemePreference} from '../theme';
-import {Bar,Btn,Empty,View} from './ui';
+import {Bar,Btn,Empty,View,Skel} from './ui';
 import {useFe} from './session';
 import {usePremiumStatus} from './account-extra';
 
@@ -94,7 +94,7 @@ export function NotificationSettingsScreen(){
   <Bar title={t('fe.set.notifications')} back="/n/settings"/>
   <View className="compact">
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
-    :!n?<p className="note" role="status">{t('fe.loading')}</p>:<>
+    :!n?<Skel kind="list"/>:<>
     <div className="sec" style={{marginTop:4}}>{t('fe.set.n.channels')}</div>
     <div className="card list">{sw(n.push,t('fe.set.n.push'),undefined,()=>save({...n,push:!n.push}))}{sw(n.email,t('fe.set.n.email'),undefined,()=>save({...n,email:!n.email}))}</div>
     <div className="sec">{t('fe.set.n.lock')}</div>

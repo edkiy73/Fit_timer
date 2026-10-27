@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Bookmark,ChartColumn,Ellipsis,Heart,Image as ImageIcon,Lock,MessageCircle,Newspaper,Plus,Search,SendHorizontal,Share2,Trash2,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Av,Bar,Btn,Empty,Seg,View} from './ui';
+import {Av,Bar,Btn,Empty,Seg,View,Skel} from './ui';
 import {useFe} from './session';
 import {BellButton} from './inbox';
 import {PostMenu,type Removal} from './post-menu';
@@ -60,7 +60,7 @@ export function FeedTab(){
     <button type="button" className="ibtn add" aria-label={t('fe.create')} onClick={()=>navigate('/n/feed/new')}><Plus/></button>
    </div>
    {error&&!items?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>load()}>{t('fe.retry')}</Btn></Empty>
-    :items===null?<p className="note" role="status">{t('fe.loading')}</p>
+    :items===null?<Skel kind="post"/>
     :items.length===0?<Empty icon={Newspaper} title={t('fe.feed.empty.'+tab)} text={t('fe.feed.emptyText.'+tab)}><Btn kind="soft" onClick={()=>navigate('/n/feed/new')}>{t('fe.feed.new')}</Btn></Empty>
     :<>{items.map(p=><PostCard key={p.id} post={p} onChange={np=>setItems(list=>list?.map(x=>x.id===np.id?np:x)??null)}
      onRemove={r=>{
@@ -140,7 +140,7 @@ export function PostScreen(){
   <Bar title={t('fe.feed.post')} back="/n/feed"/>
   <View>
    {error?<Empty icon={Lock} title={t('fe.feed.unavailable')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>navigate('/n/feed')}>{t('fe.feed.toFeed')}</Btn></Empty>
-    :!post?<p className="note" role="status">{t('fe.loading')}</p>
+    :!post?<Skel kind="post"/>
     :<>
      {typeof notice==='string'&&notice&&<div className="alert ok mb12" role="status"><span>{notice}</span></div>}
      <PostCard post={post} onChange={setPost} full onReply={()=>box.current?.focus()} onRemove={r=>{
@@ -181,7 +181,7 @@ export function EditPostScreen(){
  useEffect(()=>{setError(null);call('post.get',{postId:id},onePost).then(r=>setPost(r.post)).catch(setError);},[call,id]);
  if(error||(post&&post.rev==null))return <><Bar title={t('fe.pm.ed.title')} back/><View>
   <Empty icon={Lock} title={t('fe.feed.unavailable')} {...(error?{text:feErrorMessage(error,t)}:{})}><Btn kind="soft" onClick={()=>navigate('/n/feed')}>{t('fe.feed.toFeed')}</Btn></Empty></View></>;
- if(!post)return <><Bar title={t('fe.pm.ed.title')} back/><View><p className="note" role="status">{t('fe.loading')}</p></View></>;
+ if(!post)return <><Bar title={t('fe.pm.ed.title')} back/><View><Skel kind="post"/></View></>;
  return <ComposeScreen edit={post}/>;
 }
 
@@ -257,6 +257,6 @@ export function ComposeScreen({edit}:{edit?:Post}={}){
    </div></section>
    {failure&&<p className="alert err" role="alert">{failure}</p>}
   </View>
-  <div className="ctabar"><div className="wrap"><Btn onClick={edit?save:publish} disabled={busy||uploading||(!body.trim()&&!media.length)}>{busy?t('fe.loading'):edit?t('fe.pm.ed.save'):t('fe.feed.publish')}</Btn></div></div>
+  <div className="ctabar"><div className="wrap"><Btn onClick={edit?save:publish} disabled={busy||uploading||(!body.trim()&&!media.length)} busy={busy}>{edit?t('fe.pm.ed.save'):t('fe.feed.publish')}</Btn></div></div>
  </>;
 }

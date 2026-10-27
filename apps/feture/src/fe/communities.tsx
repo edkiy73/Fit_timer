@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Plus,Calendar,CircleCheck,Clock,Globe,Link as LinkIcon,Lock,MapPin,Ticket,Users,Video,X,ChevronLeft,Star,Check,Ban} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Av,Bar,Btn,Empty,Seg,View,plate} from './ui';
+import {Av,Bar,Btn,Empty,Seg,View,plate,Skel} from './ui';
 import {useFe} from './session';
 import {when} from './feed';
 import {CommunityHostEntry,CommunityJoin,DiscussionHostTools,EventAnnouncements,EventApplication,EventHostEntry,isCommunityHost} from './host';
@@ -74,7 +74,7 @@ function Catalog(){
    {topics.slice(0,12).map(x=><button key={x.id} type="button" className={'chip filter'+(topic===x.id?' on':'')} aria-pressed={topic===x.id} onClick={()=>setTopic(x.id)}>{locale==='en'?x.en:x.ru}</button>)}
   </div></div>
   {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
-   :items===null?<p className="note" role="status">{t('fe.loading')}</p>
+   :items===null?<Skel kind="list"/>
    :!items.length?<Empty icon={Globe} title={t('fe.comm.empty')} text={t('fe.comm.emptyText')}/>
    :items.map(c=><button key={c.id} type="button" className="cmc" onClick={()=>navigate('/n/communities/'+c.id)}>
     <div className="cv" style={{position:'relative'}}><div className="plate" style={plate(c.id)}/></div>
@@ -103,7 +103,7 @@ export function CommunityScreen(){
   </header>
   <div className="view top0"><div className="wrap">
    {error?<Empty icon={Lock} title={t('fe.feed.unavailable')} text={feErrorMessage(error,t)}/>
-    :!c?<p className="note" role="status">{t('fe.loading')}</p>
+    :!c?<Skel kind="list"/>
     :<>
      <div className="cm-hero"><div className="plate" style={plate(c.id)}/></div>
      <div className="cm-head"><div className="cv" style={{position:'relative'}}><div className="plate" style={plate(c.id+'x')}/></div><h2 tabIndex={-1}>{c.name}</h2>
@@ -151,7 +151,7 @@ function EventList({communityId}:{communityId?:string}){
   {!communityId&&<MyShortcut kind="events"/>}
   {!communityId&&<div className="filterline"><div className="chips scroll">{(['all','offline','online'] as const).map(f=><button key={f} type="button" className={'chip filter'+(format===f?' on':'')} aria-pressed={format===f} onClick={()=>setFormat(f)}>{t('fe.ev.format.'+f)}</button>)}</div></div>}
   {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
-   :items===null?<p className="note" role="status">{t('fe.loading')}</p>
+   :items===null?<Skel kind="list"/>
    :!items.length?<Empty icon={Calendar} title={t('fe.ev.empty')} text={t('fe.ev.emptyText')}/>
    :items.map(e=><EventCard key={e.id} e={e}/>)}
  </>;
@@ -173,7 +173,7 @@ export function EventScreen(){
   </header>
   <div className="view top0"><div className="wrap">
    {error?<Empty icon={Lock} title={t('fe.feed.unavailable')} text={feErrorMessage(error,t)}/>
-    :!e?<p className="note" role="status">{t('fe.loading')}</p>
+    :!e?<Skel kind="list"/>
     :<>
      <div className="ev-hero"><div className="plate" style={plate(e.id)}/><div className="pc-info">
       <div className="row g8" style={{marginBottom:10}}><span className="pill" style={{background:'rgba(255,255,255,.2)',color:'#fff'}}>{e.format==='online'?<Video/>:<MapPin/>}{e.format==='online'?t('fe.ev.online'):t('fe.ev.offline')}</span><span className="pill" style={{background:'rgba(255,255,255,.2)',color:'#fff'}}>{t('fe.ev.kind.'+e.kind)}</span></div>
