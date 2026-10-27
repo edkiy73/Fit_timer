@@ -35,6 +35,15 @@ export const ru = {
   'fe.tl.b.done': 'Разблокировано',
   'fe.tl.b.empty': 'Никого',
   'fe.tl.b.emptyText': 'Заблокировать можно из профиля, чата или публикации.',
+  'fe.tl.h.show': 'Показывать',
+  'fe.tl.h.feedCouple': 'Лента пары',
+  'fe.tl.h.feedMine': 'Твоя лента',
+  'fe.tl.b.noteMine': 'Твои личные блоки. Блоки пары — в режиме «Мы».',
+  'fe.tl.b.blocked': 'в блоке',
+  'fe.tl.b.both': 'заблокирован для вас обоих',
+  'fe.tl.b.forCouple': 'И для пары',
+  'fe.tl.b.forMe': 'И для меня',
+  'fe.tl.b.bothDone': 'Заблокирован для вас обоих',
 } as const;
 
 export const en = {
@@ -73,4 +82,13 @@ export const en = {
   'fe.tl.b.done': 'Unblocked',
   'fe.tl.b.empty': 'No one',
   'fe.tl.b.emptyText': 'You can block from a profile, chat or post.',
+  'fe.tl.h.show': 'Show',
+  'fe.tl.h.feedCouple': 'The couple’s feed',
+  'fe.tl.h.feedMine': 'Your own feed',
+  'fe.tl.b.noteMine': 'Your personal blocks. The couple’s blocks are in Us mode.',
+  'fe.tl.b.blocked': 'blocked',
+  'fe.tl.b.both': 'blocked for both of you',
+  'fe.tl.b.forCouple': 'For the couple too',
+  'fe.tl.b.forMe': 'For me too',
+  'fe.tl.b.bothDone': 'Blocked for both of you',
 } as const;

@@ -3,9 +3,10 @@ import {useNavigate,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
-import {BookOpen,CalendarDays,Check,ChevronRight,Crown,Globe,Heart,History,Lock,LogOut,Mail,Shield,Smartphone,TriangleAlert,Undo2,X,type LucideIcon} from 'lucide-react';
+import {Book,Calendar,Check,ChevronRight,Crown,Globe,Heart,History,Lock,Mail,ShieldCheck,Smartphone,TriangleAlert,Undo2,X,type LucideIcon} from 'lucide-react';
 import {feErrorMessage} from '../feture/fe-api';
 import {Bar,Btn,Empty,View,Skel} from './ui';
+import {useToast} from './toast';
 import {useFe} from './session';
 import {Sheet} from './profile-extras';
 
@@ -30,7 +31,7 @@ const FEATS:[Feat,LucideIcon][]=[['undo',Undo2],['history',History]];
 type Plan='year'|'month';
 
 export function PremiumScreen(){
- const {t}=useI18n();const date=useDate();const [params]=useSearchParams();
+ const {t}=useI18n();const date=useDate();const [params]=useSearchParams();const toast=useToast();
  const kind=params.get('for') as Feat|null;
  const {status,error,load}=usePremiumStatus();const [plan,setPlan]=useState<Plan>('year');
  const premium=!!status?.premium;
@@ -57,7 +58,7 @@ export function PremiumScreen(){
     <div className="card">{(['h1','h2','h3'] as const).map(k=><div key={k} className="fact"><i className="g"><Check/></i><span>{t('fe.ax.prem.'+k)}</span></div>)}</div>
    </>}
   </View>
-  {status&&!premium&&<div className="ctabar"><div className="wrap"><Btn disabled aria-describedby="fe-ax-soon">{t('fe.ax.prem.buy',{price:t('fe.ax.prem.'+plan+'Price')})}</Btn></div></div>}
+  {status&&!premium&&<div className="ctabar"><div className="wrap"><Btn aria-describedby="fe-ax-soon" onClick={()=>toast(t('fe.ax.prem.soon')+'. '+t('fe.ax.prem.soonText'),{type:'info'})}>{t('fe.ax.prem.buy',{price:t('fe.ax.prem.'+plan+'Price')})}</Btn></div></div>}
  </>;
 }
 
@@ -71,13 +72,11 @@ function thisDevice(t:(k:string)=>string){
 }
 
 export function SecurityScreen(){
- const {state}=useFe();const {t}=useI18n();const auth=useOptionalAuth();const navigate=useNavigate();const date=useDate();
- const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const {state}=useFe();const {t}=useI18n();const auth=useOptionalAuth();const date=useDate();
  const email=state.status==='ready'?state.session.email:'';
  const expires=auth.session?.expiresAt;
  const dev=thisDevice(t);
- // The auth server knows only the current device's session (Core auth `logout`); it has no list and no «everywhere».
- const logout=async()=>{setBusy(true);setFailure('');try{await auth.logout();navigate('/');}catch{setFailure(t('fe.ax.sec.logoutFailed'));}finally{setBusy(false);}};
+ // The auth server knows only this device's session and has no other sign-in methods yet: only what is real is shown.
  return <>
   <Bar title={t('fe.ax.sec.title')} back="/n/settings"/>
   <View className="nodock compact">
@@ -91,16 +90,13 @@ export function SecurityScreen(){
     <div className="li"><span className="ico g">{dev.mobile?<Smartphone/>:<Globe/>}</span><span className="tx"><b>{t('fe.ax.sec.thisDevice')}</b>
      <small>{dev.name} · {t('fe.ax.sec.now')}{expires?' · '+t('fe.ax.sec.expires',{date:date(expires)}):''}</small></span></div>
    </div>
-   <p className="note mt8">{t('fe.ax.sec.sessionsNote')}</p>
-   <Btn kind="soft" icon={LogOut} className="mt16" onClick={logout} disabled={busy}>{t('fe.ax.sec.logout')}</Btn>
-   {failure&&<div className="alert err" role="alert"><span>{failure}</span></div>}
   </View>
  </>;
 }
 
 /* ---------- S01 Помощь и безопасность ---------- */
 type HelpKey='rules'|'report'|'shield'|'lock'|'heart'|'cal'|'crown';
-const HELP_ICON:Record<HelpKey,LucideIcon>={rules:BookOpen,report:Shield,shield:Shield,lock:Lock,heart:Heart,cal:CalendarDays,crown:Crown};
+const HELP_ICON:Record<HelpKey,LucideIcon>={rules:Book,report:ShieldCheck,shield:ShieldCheck,lock:Lock,heart:Heart,cal:Calendar,crown:Crown};
 
 export function HelpScreen(){
  const {t}=useI18n();const navigate=useNavigate();const [open,setOpen]=useState<HelpKey|null>(null);const close=useCallback(()=>setOpen(null),[]);
