@@ -284,5 +284,21 @@ export const ru = {
   "fe.feed.state.review": "На проверке",
   "fe.feed.state.draft": "Черновик",
   "fe.feed.state.removed": "Скрыто модератором",
-  "fe.feed.state.archived": "В архиве"
+  "fe.feed.state.archived": "В архиве",
+  "fe.me.settings": "Настройки аккаунта",
+  "fe.me.age": "{age} лет",
+  "fe.me.noBio": "Расскажи о себе пару слов — так людям проще начать разговор.",
+  "fe.me.edit": "Изменить профиль",
+  "fe.me.name": "Имя",
+  "fe.me.bio": "О себе",
+  "fe.me.save": "Сохранить",
+  "fe.me.saved": "Профиль сохранён",
+  "fe.me.pending": "Изменение ждёт согласия партнёра",
+  "fe.me.photos": "Фото профиля",
+  "fe.me.photoAdd": "Добавить фото",
+  "fe.me.photoRemove": "Убрать фото",
+  "fe.me.photoHint": "До 6 фото. Другие увидят фото после проверки; первое станет аватаром.",
+  "fe.me.photoType": "Подходят JPEG, PNG или WebP.",
+  "fe.me.photoSize": "Файл больше 20 МБ. Выбери поменьше.",
+  "fe.me.needPhoto": "Добавь фото профиля — без него тебя не видно в подборке."
 } as const;
