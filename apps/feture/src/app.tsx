@@ -20,6 +20,7 @@ import { CommunitiesTab, CommunityScreen, EventScreen } from './fe/communities';
 import { InboxScreen } from './fe/inbox';
 import { PairScreen } from './fe/pair';
 import { SettingsScreen, NotificationSettingsScreen, DataScreen } from './fe/settings';
+import { HiddenFeedScreen, BlockedScreen } from './fe/settings-lists';
 import { ChatsTab, ChatScreen } from './fe/chats';
 import { PeopleTab, PersonScreen } from './fe/people';
 import { CompatScreen, HistoryScreen, MePreviewScreen } from './fe/profile-extras';
@@ -289,6 +290,8 @@ export const routes: RouteObject[] = [
         {path:'settings', element:<SettingsScreen />},
         {path:'settings/notifications', element:<NotificationSettingsScreen />},
         {path:'settings/data', element:<DataScreen />},
+        {path:'settings/hidden', element:<HiddenFeedScreen />},
+        {path:'settings/blocked', element:<BlockedScreen />},
         {path:'chats', element:<ChatsTab />},
         {path:'chats/:id', element:<ChatScreen />},
         {path:'me', element:<MeTab />},
