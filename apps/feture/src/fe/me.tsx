@@ -6,7 +6,7 @@ import {Camera,Check,ChevronDown,ChevronRight,Clock,Eye,EyeOff,Users,Image as Im
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Av,Btn,Empty,Layer,Skel} from './ui';
 import {AgeCheckLink} from './age-check';
-import {useFe,useRealtime} from './session';
+import {dropReadCache,useFe,useRealtime} from './session';
 import {PrivateLayer} from './private';
 import {BellButton,countsRes} from './inbox';
 import {MineLayer} from './mine';
@@ -216,6 +216,15 @@ function PhotosBlock({p,settings,onChanged}:{p:Profile,settings:Settings,onChang
  // Press and drag a photo to change the order; it is saved at once, with «Отменить».
  const drag=useDragOrder<'ph'>((_,ids)=>{void write(ids,t('fe.mx.ph.orderSaved'),p.photos.map(x=>x.id));});
  const items=drag.arrange('ph',p.photos);
+ // A fresh upload has no served copies for a few seconds (it is being checked): its slot blinks and the profile is
+ // asked again until the picture is there, instead of staying an empty grey box.
+ const waiting=p.photos.some(x=>!x.src);
+ useEffect(()=>{
+  if(!waiting)return;let n=0,id=0,live=true;
+  const poll=()=>{id=window.setTimeout(()=>{n++;dropReadCache();
+   call('profile.get',{profileId:p.id},profileRes).then(r=>{if(!live)return;if(r.profile.photos.every(x=>x.src))onChanged();else if(n<20)poll();}).catch(()=>{if(live&&n<20)poll();});},4000);};
+  poll();return ()=>{live=false;window.clearTimeout(id);};
+ },[waiting,p.id,call,onChanged]);
  const edit=()=>navigate('/n/me/edit?only=media');
  const head=(more?:ReactNode)=><div className="grp-t"><span>{t('fe.me.photos')}</span><AudTag k="all"/>{more}</div>;
  if(!items.length)return <section className="grp ph20" id="mePh">{head()}
@@ -231,7 +240,7 @@ function PhotosBlock({p,settings,onChanged}:{p:Profile,settings:Settings,onChang
  const ids=items.map(x=>x.id);
  const nCells=items.length===1?2:Math.min(MAX_PHOTOS,Math.max(items.length+1,3));
  // The small thumb paints first, so the slot never sits empty while the card-size picture loads.
- const slots:ReactNode[]=items.map((ph,i)=><div key={ph.id} data-id={ph.id} className={'mi'+(i===0?' big':'')+(drag.preview?.drag===ph.id?' mi-ph':'')} onPointerDown={busy?undefined:e=>drag.down(e,'ph',ids,ph.id)} style={ph.src?.thumb?{backgroundImage:`url("${ph.src.thumb}")`,backgroundSize:'cover',backgroundPosition:'center'}:undefined}>
+ const slots:ReactNode[]=items.map((ph,i)=><div key={ph.id} data-id={ph.id} className={'mi'+(i===0?' big':'')+(drag.preview?.drag===ph.id?' mi-ph':'')+(ph.src?'':' nosrc')} onPointerDown={busy?undefined:e=>drag.down(e,'ph',ids,ph.id)} style={ph.src?.thumb?{backgroundImage:`url("${ph.src.thumb}")`,backgroundSize:'cover',backgroundPosition:'center'}:undefined}>
   {photoSrc(ph)&&<img src={photoSrc(ph)!} alt="" draggable={false}/>}
   {i===0&&<span className="mainph">{t('fe.me.mainPhoto')}</span>}
   {ph.pending&&<span className="ph-rev"><Clock/><span>{t('fe.mx.ph.review')}</span></span>}
