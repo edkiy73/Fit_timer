@@ -9,7 +9,7 @@ import {useFe} from './session';
 
 /** Slice B (V21 F01, F05, F07) with the prototype's markup: feed tabs, composer row, posts, replies, new post.
  * Visibility and counts are the server's; the client never filters or invents them. */
-const author=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string()});
+const author=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string(),avatar:z.string().nullable().optional()});
 const media=z.object({id:z.uuid(),kind:z.string(),w:z.number().nullable(),h:z.number().nullable(),pending:z.boolean(),blurred:z.boolean(),src:z.record(z.string(),z.string()).nullable()});
 export const postSchema=z.object({id:z.uuid(),type:z.enum(['post','note']),title:z.string().nullable(),body:z.string(),author,media:z.array(media),
  topics:z.array(z.string()).optional(),likes:z.number(),liked:z.boolean(),replies:z.number(),saved:z.boolean(),publishedAt:z.string().nullable(),state:z.string().optional()});
@@ -46,7 +46,7 @@ export function FeedTab(){
   <View>
    <div className="mb12"><Seg value={tab} onChange={setTab} options={[{id:'forYou',label:t('fe.feed.tab.forYou')},{id:'following',label:t('fe.feed.tab.following')}]}/></div>
    <div className="composer">
-    <button type="button" className="cmp-main" onClick={()=>navigate('/n/feed/new')}>{acting&&<Av name={me} seed={acting.id} size="sm"/>}<span>{t('fe.feed.whatsNew')}</span></button>
+    <button type="button" className="cmp-main" onClick={()=>navigate('/n/feed/new')}>{acting&&<Av name={me} seed={acting.id} size="sm" src={acting.avatar}/>}<span>{t('fe.feed.whatsNew')}</span></button>
     <button type="button" className="ibtn add" aria-label={t('fe.create')} onClick={()=>navigate('/n/feed/new')}><Plus/></button>
    </div>
    {error&&!items?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>load()}>{t('fe.retry')}</Btn></Empty>
@@ -76,7 +76,7 @@ export function PostCard({post,onChange,full=false,onReply}:{post:Post,onChange:
  return <article className="post">
   <div className="post-h">
    <button type="button" className="who" onClick={()=>navigate('/n/people/'+post.author.id)}>
-    <Av name={nameOf(post.author)} seed={post.author.id} size="sm" couple={couple}/>
+    <Av name={nameOf(post.author)} seed={post.author.id} size="sm" couple={couple} src={post.author.avatar}/>
     <span className="tx"><b><span className="nmt">{nameOf(post.author)}</span></b><small>{when(post.publishedAt,locale)}{post.state&&post.state!=='published'?' · '+t('fe.feed.state.'+post.state):''}</small></span>
    </button>
    <button type="button" className="ibtn ghost sm" aria-label={t('fe.more')}><Ellipsis/></button>
@@ -124,7 +124,7 @@ export function PostScreen(){
      <div className="sec" id="replies">{t('fe.feed.repliesCount').replace('{n}',String(list.filter(r=>!r.deleted).length))}</div>
      {list.length===0?<button type="button" className="note-empty" onClick={()=>box.current?.focus()}>{t('fe.feed.noReplies')}</button>
       :list.map(r=>{const hidden=r.deleted||r.hidden;return <article key={r.id} className={'cm'+(hidden?' removed':'')}>
-       <div className="cm-l">{hidden?<span className="av cm-ghost" aria-hidden="true">{r.deleted?<Trash2/>:<Lock/>}</span>:<Av name={nameOf(r.author)} seed={r.author?.id??r.id} size="sm"/>}</div>
+       <div className="cm-l">{hidden?<span className="av cm-ghost" aria-hidden="true">{r.deleted?<Trash2/>:<Lock/>}</span>:<Av name={nameOf(r.author)} seed={r.author?.id??r.id} size="sm" src={r.author?.avatar}/>}</div>
        <div className="cm-b">{hidden?<p className="note">{r.deleted?t('fe.feed.replyDeleted'):t('fe.feed.replyHidden')}</p>:<>
         <div className="cm-h"><span className="plink pnm"><span className="nmt">{nameOf(r.author)}</span></span><time>{when(r.createdAt,locale)}</time></div>
         <p className="reply-text">{r.body}</p>

@@ -5,7 +5,7 @@ import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import {feRequest,FeError} from '../feture/fe-api';
 
 /** What `session.bootstrap` returns: the FetUre account and the profiles this account may act as. */
-const profileCard=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string(),state:z.string(),avatarAssetId:z.uuid().nullable()});
+const profileCard=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string(),state:z.string(),avatarAssetId:z.uuid().nullable(),avatar:z.string().nullable().optional()});
 export const bootstrapSchema=z.object({ok:z.literal(true),account:z.object({id:z.uuid(),locale:z.string(),onboarded:z.boolean()}),profiles:z.array(profileCard)});
 export type ProfileCard=z.infer<typeof profileCard>;
 export type Bootstrap=z.infer<typeof bootstrapSchema>;
