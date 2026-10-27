@@ -112,11 +112,12 @@ const mosaicBox=([x,y,w,h]:Cell,H:number):CSSProperties=>{const g=1.5,l=x>1e-3?g
 export const mediaSrc=(m:MediaItem,size:'card'|'full'='card')=>m.src?(size==='full'?m.src.full??m.src.card:m.src.card??m.src.full)??m.src.thumb??m.src.blur??null:null;
 
 /** Signed media links expire: a picture that fails to load asks the owner of the list for fresh links once. */
-function MfImg({src,onRatio,onFail}:{src:string,onRatio?:(r:number)=>void,onFail?:(()=>void)|undefined}){
+function MfImg({src,blur,onRatio,onFail}:{src:string,blur?:string|null|undefined,onRatio?:(r:number)=>void,onFail?:(()=>void)|undefined}){
  const failed=useRef(false);
  return <>
-  <img className="mbg" src={src} alt="" aria-hidden="true" draggable={false} loading="lazy"/>
-  <img className="mfg" src={src} alt="" draggable={false} loading="lazy"
+  {/* The tiny blurred copy from the server shows first; the full picture fades in over it when loaded. */}
+  <img className="mbg" src={blur||src} alt="" aria-hidden="true" draggable={false} loading="lazy" decoding="async"/>
+  <img className="mfg" src={src} alt="" draggable={false} loading="lazy" decoding="async"
    onLoad={e=>{const i=e.currentTarget;if(i.naturalWidth&&i.naturalHeight)onRatio?.(i.naturalWidth/i.naturalHeight);}}
    onError={()=>{if(failed.current)return;failed.current=true;onFail?.();}}/>
  </>;
@@ -135,10 +136,10 @@ export function MediaGrid({media,onExpired}:{media:MediaItem[],onExpired?:(()=>v
  let grid;
  if(n===1){const m=shown[0]!;const r=rs[0];
   grid=<div className="mgrid n1"><button type="button" className="mcell mf" style={r?{'--ar':fitAr(r,.8,1.91).toFixed(4)} as CSSProperties:undefined} aria-label={label} onClick={go(0)}>
-   <MfImg src={mediaSrc(m)!} onRatio={learn(m.id)} onFail={onExpired}/></button></div>;}
+   <MfImg src={mediaSrc(m)!} blur={m.src?.blur} onRatio={learn(m.id)} onFail={onExpired}/></button></div>;}
  else{const mo=mosaic(rs);
   grid=<div className="mgrid mos" style={{aspectRatio:(1/mo.H).toFixed(4)}}>{shown.map((m,i)=><button key={m.id} type="button" className="mcell mf" style={mosaicBox(mo.cells[i]!,mo.H)} aria-label={label} onClick={go(i)}>
-   <MfImg src={mediaSrc(m)!} onRatio={learn(m.id)} onFail={onExpired}/>{i===3&&n>4&&<span className="more">+{n-4}</span>}</button>)}</div>;}
+   <MfImg src={mediaSrc(m)!} blur={m.src?.blur} onRatio={learn(m.id)} onFail={onExpired}/>{i===3&&n>4&&<span className="more">+{n-4}</span>}</button>)}</div>;}
  return <>{grid}{open!==null&&<Viewer srcs={list.map(m=>mediaSrc(m,'full')!)} index={open} onClose={close}/>}</>;
 }
 

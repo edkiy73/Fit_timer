@@ -18,9 +18,27 @@ export const FE_TABS:{id:string,icon:LucideIcon}[]=[
  {id:'feed',icon:FeedIcon},{id:'people',icon:Users},{id:'communities',icon:Globe},{id:'chats',icon:MessageCircle},{id:'me',icon:User},
 ];
 
-export function FeRoot(){
- return <FeSessionProvider><div className="v21 fe-v21"><FeGate/></div></FeSessionProvider>;
+/** Pictures fade in when loaded instead of popping into an empty box (owner, 27.10.2026). Every <img> under .fe-v21
+ * gets `.ld` once loaded or failed; CSS keeps it transparent until then while its box blinks softly. */
+function useImageFade(){
+ useEffect(()=>{
+  const root=document.querySelector('.fe-v21');if(!root)return;
+  const mark=(i:HTMLImageElement)=>{if(!i.decoding||i.decoding==='auto')i.decoding='async';if(i.complete)i.classList.add('ld');};
+  const done=(e:Event)=>{const i=e.target;if(i instanceof HTMLImageElement)i.classList.add('ld');};
+  root.addEventListener('load',done,true);root.addEventListener('error',done,true);
+  root.querySelectorAll('img').forEach(mark);
+  const mo=new MutationObserver(list=>{for(const m of list){
+   if(m.type==='attributes'&&m.target instanceof HTMLImageElement){m.target.classList.remove('ld');mark(m.target);continue;}
+   m.addedNodes.forEach(n=>{if(n instanceof HTMLImageElement)mark(n);else if(n instanceof Element)n.querySelectorAll('img').forEach(mark);});}});
+  mo.observe(root,{childList:true,subtree:true,attributes:true,attributeFilter:['src']});
+  return ()=>{mo.disconnect();root.removeEventListener('load',done,true);root.removeEventListener('error',done,true);};
+ },[]);
 }
+
+export function FeRoot(){
+ return <FeSessionProvider><ImageFade/><div className="v21 fe-v21"><FeGate/></div></FeSessionProvider>;
+}
+function ImageFade(){useImageFade();return null;}
 
 function Center({children}:{children:React.ReactNode}){
  return <div className="stage"><div className="root"><main className="main"><div className="view"><div className="wrap fe-center">{children}</div></div></main></div></div>;
