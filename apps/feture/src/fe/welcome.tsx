@@ -1,15 +1,12 @@
 import {useEffect,useRef,useState,type CSSProperties,type ReactNode} from 'react';
-import {Link} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Check,ChevronLeft,ChevronRight,EyeOff,Globe,Heart,KeyRound,LockOpen,MapPin,MessageCircle} from 'lucide-react';
 import {plate} from './ui';
+import {TermsSheet} from './terms-sheet';
 
 /** V21 A01 «Приветствие» with the prototype's markup (`.welcome.wv`): the hero, six slides that cross-fade as the
  * active bar fills (CSS animation; hover/focus pauses it, reduced motion stops it), swipe and arrow keys, then
- * «Создать аккаунт» / «У меня уже есть аккаунт» → the existing sign-in. Shown once: the dismissal is remembered. */
-const SEEN_KEY='feture.fe.welcomed';
-export function welcomeSeen(){try{return localStorage.getItem(SEEN_KEY)==='1';}catch{return false;}}
-function markSeen(){try{localStorage.setItem(SEEN_KEY,'1');}catch{/* private mode: show it again next time */}}
+ * «Создать аккаунт» / «У меня уже есть аккаунт» → A02 in that mode; «условиями» opens the terms sheet. */
 
 const N=6;
 /** `wFit()` — each slide's picture as large as its space allows (up to 1.12 on a desktop), never cut. */
@@ -22,16 +19,21 @@ function fit(root:HTMLElement){
 }
 const nn=(n:number)=>String(n+1).padStart(2,'0');
 /** `av(id,cls)` without a photo: initials on a plate. */
+// The prototype's demo people (same photos as its PEOPLE seed).
+const PHOTO:Record<string,number>={Sofi:1,Leon:2,Mia:3,Kai:4,Maya:5,Ari:6,Kira:7,Mark:8,Lina:9};
 function Ava({name,cls}:{name:string,cls:string}){
+ const n=PHOTO[name];
+ if(n)return <span className={'av '+cls}><img src={import.meta.env.BASE_URL+'images/profile-'+n+'-45.webp'} alt="" loading="lazy"/></span>;
  return <span className={'av ini '+cls}><div className="plate" style={plate(name)}/><b style={{position:'relative'}}>{name[0]}</b></span>;
 }
 
-export function Welcome({onStart}:{onStart:()=>void}){
+export function Welcome({onStart}:{onStart:(mode:'up'|'in')=>void}){
  const {t,locale,canSwitch,setPreference}=useI18n();
  const [cur,setCur]=useState(0);const x0=useRef<{x:number,y:number}|null>(null);const box=useRef<HTMLDivElement>(null);
  useEffect(()=>{const el=box.current;if(!el)return;const go=()=>fit(el);go();addEventListener('resize',go);return ()=>removeEventListener('resize',go);},[locale]);
+ const [terms,setTerms]=useState(false);
  const show=(i:number)=>setCur(((i%N)+N)%N);
- const start=()=>{markSeen();onStart();};
+ const start=(mode:'up'|'in')=>onStart(mode);
  const role=(d:string[])=>d.length===3?t('fe.int.role.all'):d.map(x=>t('fe.int.role.'+x)).join(' · ');
  const jars:[string,number,string[]][]=[['shibari',10,['give']],['aftercare',8,['get']],['roleplay',6,['give','get','watch']],['latex',3,['watch']]];
  const visuals:ReactNode[]=[
@@ -52,7 +54,7 @@ export function Welcome({onStart}:{onStart:()=>void}){
  const k=(n:number)=>t(`fe.cw.w.s${n}.k`);
  return <div className="stage"><div className="root auth"><main className="main" data-screen="A01">
   <div ref={box} className="welcome wv"><div className="w-aura" aria-hidden="true"><i/><i/><i/></div><div className="w-mark" aria-hidden="true">FetUre</div>
-   <header className="w-top"><div className="w-brand"><img className="w-logo" src={import.meta.env.BASE_URL+'icon.svg'} alt=""/><b>Fet<i>Ure</i></b></div>
+   <header className="w-top"><div className="w-brand"><img className="w-logo" src={import.meta.env.BASE_URL+'fe-logo.svg'} alt=""/><b>Fet<i>Ure</i></b></div>
     {canSwitch&&<div className="langsw" role="group" aria-label="Language">{(['ru','en'] as const).map(l=><button key={l} type="button" className={locale===l?'on':''} aria-pressed={locale===l} onClick={()=>setPreference(l)}>{l.toUpperCase()}</button>)}</div>}
    </header>
    <div className="w-grid">
@@ -78,10 +80,11 @@ export function Welcome({onStart}:{onStart:()=>void}){
       <button type="button" className="ibtn" aria-label={t('fe.cw.w.next')} onClick={()=>show(cur+1)}><ChevronRight/></button></span></div>
     </section>
     <div className="w-act">
-     <div className="w-cta"><button type="button" className="btn primary" onClick={start}>{t('fe.cw.w.create')}</button><button type="button" className="btn soft" onClick={start}>{t('fe.cw.w.haveAccount')}</button></div>
-     <div className="w-age">{t('fe.cw.w.age')} <Link to="/documents">{t('fe.cw.w.terms')}</Link>.</div>
+     <div className="w-cta"><button type="button" className="btn primary" onClick={()=>start('up')}>{t('fe.cw.w.create')}</button><button type="button" className="btn soft" onClick={()=>start('in')}>{t('fe.cw.w.haveAccount')}</button></div>
+     <div className="w-age">{t('fe.cw.w.age')} <a href="#" onClick={e=>{e.preventDefault();setTerms(true);}}>{t('fe.cw.w.terms')}</a>.</div>
     </div>
    </div>
   </div>
+  {terms&&<TermsSheet onClose={()=>setTerms(false)}/>}
  </main></div></div>;
 }
