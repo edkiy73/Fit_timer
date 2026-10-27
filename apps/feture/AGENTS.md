@@ -25,6 +25,13 @@ copy). `npm run check:server` (inside `npm run check`) fails on a contract witho
 contract, a new action no test calls, or a helper defined in two command files (`tools/fe-server-baseline.json`
 holds today's gaps; it only shrinks).
 
+## Interaction scenarios and personas — owner rule, 2026-10-28
+
+Scenarios live in `e2e/scenarios/` and run with `e2e/run.mjs` (see `e2e/README.md`). Each scenario names a
+**persona** (`new`, `basic`, `full`, `pair`, …) and runs under your own lane (`E2E_LANE`), so agents never share
+accounts, sessions or daily limits, and every screen is checked in the account states that change it (empty / filled,
+alone / in a couple, hidden / visible). A missing state is added to `e2e/personas.mjs` built from app commands.
+
 ## Owner decision — 2026-10-27 (V21)
 
 New accounts and new couples start **in Discover (dating on, visible)**; without a profile photo nobody sees them there. Onboarding says so, offers to upload a photo right away and lets people switch Discover off; «Я → Видимость» repeats it. This replaces «dating off by default» below. Server-side reciprocal opt-in for candidate discovery, 18+ and consent rules stay. Details: `docs/design-reference/V21-INTEGRATION-GUIDE.md`.
