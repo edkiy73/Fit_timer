@@ -75,11 +75,15 @@ export function Layer({children}:{children:ReactNode}){
 
 /** Loading placeholder shaped like the content it stands for (list rows, posts, a card), so nothing jumps when the
  * data arrives. Replaces a «Загружаем…» line. */
-export function Skel({kind='list',rows=3}:{kind?:'list'|'post'|'card'|'tiles',rows?:number}){
+export function Skel({kind='list',rows=3}:{kind?:'list'|'post'|'card'|'tiles'|'hero'|'cover'|'line'|'grid',rows?:number}){
  const {t}=useI18n();
  const row=(i:number)=>kind==='post'?<div key={i} className="sk-post"><div className="sk-head"><i className="sk sk-av"/><span><i className="sk sk-l w40"/><i className="sk sk-l w25"/></span></div><i className="sk sk-l w90"/><i className="sk sk-l w70"/><i className="sk sk-media"/></div>
   :kind==='card'?<div key={i} className="sk-card"><i className="sk sk-l w50"/><i className="sk sk-l w90"/><i className="sk sk-l w70"/></div>
   :kind==='tiles'?<i key={i} className="sk sk-tile"/>
+  :kind==='hero'?<i key={i} className="sk k-sk-hero"/>
+  :kind==='cover'?<i key={i} className="sk k-sk-cover"/>
+  :kind==='line'?<i key={i} className="sk sk-l w70"/>
+  :kind==='grid'?<i key={i} className="sk k-sk-cell"/>
   :<div key={i} className="sk-li"><i className="sk sk-av"/><span><i className="sk sk-l w50"/><i className="sk sk-l w30"/></span></div>;
  return <div className={'skel skel-'+kind} role="status" aria-busy="true" aria-label={t('fe.loading')}>{Array.from({length:rows},(_,i)=>row(i))}</div>;
 }

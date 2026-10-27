@@ -12,3 +12,4 @@ export const Сообщение:S={};
 export const Все:S={render:()=><Stack gap={2}><Alert kind="ok">Сохранено</Alert><Alert kind="info">Подсказка по экрану</Alert><Alert kind="warn">Нужно внимание</Alert><Alert kind="err">Не получилось — попробуй ещё раз</Alert></Stack>};
 export const Пусто:StoryObj<typeof Empty>={name:'Пустое состояние',render:a=><Empty {...a}><Btn size="sm" auto>Перейти в ленту</Btn></Empty>,args:{icon:Heart,title:'Пока пусто',text:'Здесь появятся сохранённые публикации.'}};
 export const Загрузка:StoryObj<typeof Skel>={name:'Скелетон',render:a=><Skel {...a}/>,args:{kind:'list',rows:3},argTypes:{kind:{control:'inline-radio',options:['list','post','card','tiles']}}};
+export const Нейтральное:S={name:'Нейтральное (plain)',args:{kind:'plain',children:'Контакт завершён — переписка только для чтения'}};

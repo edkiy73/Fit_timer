@@ -65,13 +65,12 @@
   "notice": 1,
   "textarea": 1,
   "inline style": 4,
-  "card": 2,
+  "card": 1,
   "section label": 1
  },
  "src/fe/host.tsx": {
   "list row": 1,
   "inline style": 15,
-  "card": 2,
   "note": 2,
   "section label": 1
  },
@@ -92,17 +91,13 @@
   "section label": 1
  },
  "src/fe/me-edit.tsx": {
-  "sheet": 1,
   "switch": 1,
   "list row": 1,
-  "button": 1,
   "note": 1
  },
  "src/fe/me.tsx": {
-  "sheet": 1,
   "list row": 4,
   "notice": 1,
-  "button": 2,
   "inline style": 2,
   "card": 2,
   "note": 1
@@ -144,7 +139,6 @@
  },
  "src/fe/private.tsx": {
   "list row": 1,
-  "button": 1,
   "inline style": 4,
   "card": 1,
   "note": 1
