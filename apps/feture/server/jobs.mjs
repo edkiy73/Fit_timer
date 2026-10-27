@@ -165,7 +165,7 @@ export async function sweepExpiredCouples(db) {
 /** One worker tick. @param {Db} db @param {JobDeps} deps */
 export async function runJobs(db, deps) {
   // Media first with its own budget, so a burst of likes never delays scans and publication; then the inbox.
-  const media = await drain(db, { ...mediaHandlers(db, deps), ...verificationHandlers(db) }, { limit: deps.limit ?? 10, lockSeconds: 120 });
+  const media = await drain(db, { ...mediaHandlers(db, deps), ...verificationHandlers(db, deps) }, { limit: deps.limit ?? 10, lockSeconds: 120 });
   /** @type {import('./realtime.mjs').Signal[]} */
   const signals = [];
   const inbox = await drain(db, notifyHandlers(db, s => signals.push(s)), { limit: deps.notifyLimit ?? 200, lockSeconds: 120 });

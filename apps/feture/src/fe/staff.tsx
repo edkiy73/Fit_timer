@@ -2,7 +2,7 @@ import {useCallback,useEffect,useId,useState,type ReactNode} from 'react';
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {BadgeCheck,Ban,Check,ChevronRight,Eye,Image,Inbox,Lock,RefreshCw,ShieldAlert,ShieldCheck,X} from 'lucide-react';
+import {BadgeCheck,Ban,Check,ChevronRight,Eye,IdCard,Image,Inbox,Lock,RefreshCw,ShieldAlert,ShieldCheck,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,Btn,Card,ChoiceChips,Chips,Empty,Field,Group,IconBtn,Input,Note,Pill,SectionLabel,Seg,Skel,SubBar,Text,TextArea,View} from './kit';
 import {useFe} from './session';
@@ -23,8 +23,9 @@ const eventItem=z.object({id:z.uuid(),rev:z.number(),title:z.string(),kind:opt(z
  join_url:opt(z.string()),starts_at:ts,ends_at:ts,price:z.unknown().optional(),requirements:opt(z.string()),state:z.string(),pending_change:z.record(z.string(),z.unknown()).nullable().optional(),
  created_at:ts,organizer:opt(z.object({id:z.string(),kind:z.string().optional(),handle:z.string().nullable().optional()}).passthrough())}).passthrough();
 const mediaDto=z.object({src:z.record(z.string(),z.string()).nullable().optional()}).passthrough().nullable().optional();
-const ageItem=z.object({id:z.uuid(),gesture:z.string(),submittedAt:ts,profile:z.object({id:z.string(),handle:z.string().nullable()}),selfie:mediaDto,photo:mediaDto});
-const photoItem=ageItem.extend({photos:z.array(mediaDto).optional()});
+const checkItem=z.object({id:z.uuid(),gesture:z.string(),submittedAt:ts,profile:z.object({id:z.string(),handle:z.string().nullable()}),selfie:mediaDto,photo:mediaDto});
+const ageItem=checkItem.extend({method:z.enum(['selfie','document']).optional().default('selfie'),gesture:z.string().nullable(),document:mediaDto});
+const photoItem=checkItem.extend({photos:z.array(mediaDto).optional()});
 const reportItem=z.object({targetType:z.enum(['profile','post','reply','community','event','conversation']),targetId:z.uuid(),reports:z.number(),reasons:z.array(z.string()),
  details:opt(z.array(z.string())),firstAt:ts,lastAt:ts,reported:z.unknown().optional(),excerpt:opt(z.string()),state:opt(z.string()),media:opt(z.number()),
  author:opt(z.object({id:z.string(),kind:z.string().optional(),handle:z.string().nullable().optional(),name:z.string().nullable().optional()}).passthrough())});
@@ -306,15 +307,37 @@ function EventCard({item,onDone}:{item:EventItem,onDone:()=>void}){
 // ——— age checks ———
 
 const AGE_REASONS=['gesture_mismatch','face_hidden','not_same_person','looks_underage','bad_photo'] as const;
+// A document is about one thing — the birth date says 18+ — and the image is deleted right after the decision.
+const DOC_REASONS=['under_18','date_unreadable','not_a_document','bad_photo'] as const;
 function AgeCard({item,onDone}:{item:AgeItem,onDone:()=>void}){
+ if(item.method==='document')return <AgeDocCard item={item} onDone={onDone}/>;
+ return <AgeSelfieCard item={item} onDone={onDone}/>;
+}
+function AgeDocCard({item,onDone}:{item:AgeItem,onDone:()=>void}){
+ const {t}=useI18n();const when=useWhen();
+ const d=useDecide(onDone,e=>forbidden(e)?t('fe.staff.age.own'):null);
+ const [reason,setReason]=useState<typeof DOC_REASONS[number]|''>('');const [ask,setAsk]=useState(false);
+ const doc=item.document?.src?.full??item.document?.src?.card??null;
+ return <StCard title={item.profile.handle?'@'+item.profile.handle:item.profile.id} meta={when(item.submittedAt)}>
+  <Alert kind="info" icon={IdCard} className="st-block">{t('fe.staff.age.docTask')}</Alert>
+  <div className="st-media st-block">{doc?<img src={doc} alt="" draggable={false}/>:<div className="st-ph"><X/></div>}</div>
+  <Note>{doc?t('fe.staff.age.docPrivacy'):t('fe.staff.age.noDoc')}</Note>
+  <Choice label={t('fe.staff.reason')} value={reason} onChange={setReason} disabled={d.busy} options={DOC_REASONS.map(id=>({id,label:t('fe.staff.age.reason.'+id)}))}/>
+  {ask?<Confirm text={t('fe.staff.age.confirmRejectDoc')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>d.run('staff.ageCheckDecide',{checkId:item.id,approve:false,reason})}/>
+   :<div className="st-row st-block"><Btn size="sm" auto icon={Check} disabled={d.busy||!doc} onClick={()=>d.run('staff.ageCheckDecide',{checkId:item.id,approve:true})}>{t('fe.staff.age.approveDoc')}</Btn>
+    <Btn kind="soft" size="sm" auto icon={Ban} disabled={d.busy||!reason} onClick={()=>setAsk(true)}>{t('fe.staff.reject')}</Btn></div>}
+  <Failure text={d.failure}/>
+ </StCard>;
+}
+function AgeSelfieCard({item,onDone}:{item:AgeItem,onDone:()=>void}){
  const {t}=useI18n();const when=useWhen();
  // The server never lets staff decide their own check; its refusal is explained in plain words.
  const d=useDecide(onDone,e=>forbidden(e)?t('fe.staff.age.own'):null);
  const [reason,setReason]=useState<typeof AGE_REASONS[number]|''>('');const [ask,setAsk]=useState(false);
  const selfie=item.selfie?.src?.full??item.selfie?.src?.card??null;const photo=item.photo?.src?.card??item.photo?.src?.thumb??null;
- const gesture=t('fe.staff.age.gesture.'+item.gesture);
+ const g=item.gesture??'';const gesture=t('fe.staff.age.gesture.'+g);
  return <StCard title={item.profile.handle?'@'+item.profile.handle:item.profile.id} meta={when(item.submittedAt)}>
-  <Alert kind="info" icon={Eye} className="st-block">{t('fe.staff.age.gesture')}: <b>{gesture.startsWith('fe.')?item.gesture:gesture}</b></Alert>
+  <Alert kind="info" icon={Eye} className="st-block">{t('fe.staff.age.gesture')}: <b>{gesture.startsWith('fe.')?g:gesture}</b></Alert>
   <div className="st-pair st-block">
    <figure><div className="st-media">{selfie?<img src={selfie} alt="" draggable={false}/>:<div className="st-ph"><X/></div>}</div><figcaption><Note>{t('fe.staff.age.selfie')}</Note></figcaption></figure>
    <figure><div className="st-media">{photo?<img src={photo} alt="" draggable={false}/>:<div className="st-ph"><Eye/></div>}</div><figcaption><Note>{t('fe.staff.age.photo')}</Note></figcaption></figure>

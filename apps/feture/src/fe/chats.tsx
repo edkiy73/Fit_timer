@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Archive,ArchiveRestore,Ban,Camera,Check,ChevronDown,ChevronLeft,CircleAlert,Clock,Copy,Ellipsis,Eye,EyeOff,Flag,Image as ImageIcon,Info,Lock,LockOpen,MessageCircle,Plus,Search,SendHorizontal,Sparkles,Undo2,User,Users,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,Av,Bar,Btn,Card,Check as CheckBox,Chip,Chips,Empty,Field,FilePick,Group,IconBtn,Layer,Note,RadioList,Row,SearchInput,SectionLabel,Sheet,Skel,Stack,Text,TextArea,ToggleRow,View} from './kit';
-import {AgeCheckLink} from './age-check';
+import {AgeCheckLink,useAgeResume} from './age-check';
 import {useFe,useRealtime} from './session';
 import {useToast} from './toast';
 import {BellButton,SegN} from './inbox';
@@ -379,6 +379,8 @@ export function ChatScreen(){
   });
  };
 
+ // Back from the age check a photo sent us to: the attach sheet opens again (the photo itself is picked anew).
+ useAgeResume(v=>v==='attach:'+id,()=>{setSheetErr('');setSheet('attach');},!!meta&&state==='active');
  const day=(iso:string)=>{const d=new Date(iso),n=new Date();return d.toDateString()===n.toDateString()?t('fe.chats.today'):d.toLocaleDateString(locale==='en'?'en':'ru',{day:'numeric',month:'short'});};
  const time=(iso:string)=>new Date(iso).toLocaleTimeString(locale==='en'?'en':'ru',{hour:'2-digit',minute:'2-digit'});
  const fill=(s:string)=>s.replace('{name}',meta?nameOf(meta.other):'');
@@ -387,7 +389,7 @@ export function ChatScreen(){
   {!(error instanceof FeError&&error.code==='not_found')&&<Btn onClick={()=>{setError(null);if(meta)pull(true).catch(setError);else setTries(n=>n+1);}}>{t('fe.retry')}</Btn>}
   <Btn kind="soft" onClick={()=>navigate('/n/chats')}>{t('fe.chats.back')}</Btn></Empty></View></>;
  const ended=state!=='active';
- const sheetAlert=sheetErr?<Alert kind="err" noIcon className="mt12">{sheetErr}{sheetErr===t('fe.chx.ageRequired')&&<><br/><AgeCheckLink/></>}</Alert>:null;
+ const sheetAlert=sheetErr?<Alert kind="err" noIcon className="mt12">{sheetErr}{sheetErr===t('fe.chx.ageRequired')&&<><br/><AgeCheckLink intent={'attach:'+id}/></>}</Alert>:null;
  const all=items??[];
  // Read receipts: the other side's avatar under the last own message they have read.
  const lastRead=[...all].reverse().find(m=>m.mine&&m.seq<=otherRead)?.id;
