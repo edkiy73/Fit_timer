@@ -29,6 +29,7 @@ Read this before adding or changing a command. Design background: `docs/server/S
 | Notify / push / inbox | `enqueue(q, topic, profileId, payload)` (`outbox.mjs`); account-addressed items set `for` |
 | Live update of the other side | `signal(profileId, kind)` from the handler context (sent after commit) |
 | Idempotent writes | the handler pipeline stores `opId` results; never add a second ledger |
+| Typed words / keyset pages | `likePattern(q)` for ILIKE, `writeCursor(at, id)` (`search.mjs`) |
 
 ## Never
 

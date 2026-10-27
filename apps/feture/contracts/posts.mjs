@@ -29,6 +29,11 @@ export const postFields = z.strictObject({
   .refine(v => v.body.length > 0 || v.mediaIds.length > 0 || !!v.poll || v.interests.length > 0, { message: 'empty_post', path: ['body'] })
   .refine(v => !v.tags.length || v.mediaIds.length > 0, { message: 'tags_need_media', path: ['tags'] });
 
+/** Kinds of posts for the feed and search filters (V21 TYPES): articles, text only, with photos, with a poll, with interests. */
+export const POST_TYPES = /** @type {const} */ (['note', 'text', 'photo', 'poll', 'interests']);
+/** What the «Подписки» tab shows (V21 FEED_KINDS); an empty list means everything. */
+export const ACTIVITY_KINDS = /** @type {const} */ (['posts', 'likes', 'events', 'communities', 'follows']);
+
 export const postsCommands = {
   'post.saveDraft': { profile: true, write: true, input: z.strictObject({ opId, postId: id.optional(), post: postFields }) },
   'post.publish': { profile: true, write: true, rate: { kind: 'post.publish', max: 50, window: '1 day' }, input: z.strictObject({ opId, postId: id }) },
@@ -37,10 +42,39 @@ export const postsCommands = {
   'post.get': { profile: true, write: false, input: z.strictObject({ postId: id }) },
   'feed.list': {
     profile: true, write: false,
-    input: z.strictObject({ tab: z.enum(['forYou', 'following', 'popular']), topics: z.array(code).max(10).optional(), q: z.string().trim().min(2).max(80).optional(), cursor: z.string().max(200).optional(), limit: z.int().min(1).max(50).default(20) }),
+    input: z.strictObject({
+      tab: z.enum(['forYou', 'following', 'popular']),
+      topics: z.array(code).max(10).optional(),
+      // Wave 3 (V21 feedFilters/ffEx/ffType/ffKind/popTag), all optional: hide topics, keep only some kinds of posts,
+      // the «Подписки» activity stream, «Популярное» by the acting profile's own interests.
+      excludeTopics: z.array(code).max(20).optional(),
+      types: unique(z.array(z.enum(POST_TYPES)).max(POST_TYPES.length)).optional(),
+      activity: unique(z.array(z.enum(ACTIVITY_KINDS)).max(ACTIVITY_KINDS.length)).optional(),
+      myInterests: z.boolean().optional(),
+      q: z.string().trim().min(2).max(80).optional(),
+      cursor: z.string().max(200).optional(),
+      limit: z.int().min(1).max(50).default(20),
+    }).refine(v => !v.activity || v.tab === 'following', { message: 'following_only', path: ['activity'] })
+      .refine(v => !v.myInterests || v.tab === 'popular', { message: 'popular_only', path: ['myInterests'] }),
   },
   'profile.posts': { profile: true, write: false, input: z.strictObject({ profileId: id, cursor: z.string().max(200).optional() }) },
   'me.posts': { profile: true, write: false, input: z.strictObject({}) },
+  // Saved, not yet published edits of a published post (V21 saveDraft on a live post / discardPostEdits).
+  'post.saveEdits': { profile: true, write: true, input: z.strictObject({ opId, postId: id, rev: z.int().positive(), post: postFields }) },
+  'post.publishEdits': { profile: true, write: true, input: z.strictObject({ opId, postId: id }) },
+  'post.discardEdits': { profile: true, write: true, input: z.strictObject({ opId, postId: id }) },
+  // «Нравится» (V21 likers): who liked a post or a reply the viewer may see.
+  'post.likers': {
+    profile: true, write: false, rate: { kind: 'post.likers', max: 2000, window: '1 day' },
+    input: z.strictObject({ targetType: z.enum(['post', 'reply']).default('post'), targetId: id, cursor: z.string().max(200).optional() }),
+  },
+  // Who chose a poll option (V21 pollPeople): after one's own vote, or for the author.
+  'poll.voters': {
+    profile: true, write: false, rate: { kind: 'poll.voters', max: 2000, window: '1 day' },
+    input: z.strictObject({ postId: id, option: z.int().min(0).max(9), cursor: z.string().max(200).optional() }),
+  },
+  // «Убрать упоминание» (V21 unmentionMe): the name stays as plain text, it is no longer a link.
+  'post.unmentionMe': { profile: true, write: true, input: z.strictObject({ opId, postId: id, replyId: id.optional() }) },
   'reaction.set': {
     profile: true, write: true, rate: { kind: 'reaction.set', max: 1000, window: '1 day' },
     input: z.strictObject({ opId, targetType: z.enum(['post', 'reply']), targetId: id, on: z.boolean() }),

@@ -165,6 +165,18 @@ const run = {
     return { hidden: input.on }; // the author is never told
   },
 
+  async 'activity.mute'(q, { acting: a, input }) {
+    const acting = need(a);
+    // The same list as «Скрытое из ленты» (kind 'activity'); the person is never told.
+    if (input.on) {
+      await socialTarget(q, acting, input.profileId);
+      await q.query(`insert into feture.feed_hide (profile_id, kind, target_id) values ($1, 'activity', $2) on conflict do nothing`, [acting.profileId, input.profileId]);
+    } else {
+      await q.query(`delete from feture.feed_hide where profile_id = $1 and kind = 'activity' and target_id = $2`, [acting.profileId, input.profileId]);
+    }
+    return { muted: input.on };
+  },
+
   async 'feedHide.list'(q, { acting: a }) {
     const acting = need(a);
     const items = await q.query(

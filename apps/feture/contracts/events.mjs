@@ -76,8 +76,12 @@ export const eventsCommands = {
       openOnly: z.boolean().default(false),
       placeId: id.optional(),
       communityId: id.optional(),
+      // Search (V21 gFilters): words in the title or description, and a date range of the start.
+      q: z.string().trim().min(2).max(80).optional(),
+      from: z.iso.datetime({ offset: true }).optional(),
+      to: z.iso.datetime({ offset: true }).optional(),
       cursor: z.string().max(200).optional(),
-    }),
+    }).refine(v => !v.from || !v.to || Date.parse(v.from) < Date.parse(v.to), { message: 'from_after_to', path: ['to'] }),
   },
   'event.mine': { profile: true, write: false, input: z.strictObject({}) },
   'event.rsvp': {
