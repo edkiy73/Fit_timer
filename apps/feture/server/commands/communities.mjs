@@ -363,11 +363,14 @@ const run = {
     const reader = c.privacy === 'open' || c.own || await isReader(q, c.id, viewer.profileId);
     const [{ n }] = await q.query(`select count(*)::int n from feture.community_member where community_id = $1 and state = 'active'`, [c.id]);
     if (!reader) return { count: n, items: null }; // closed: the list opens after joining
+    // Hosts admitted every member and moderate them, so they see unlisted members too; everyone else sees listed ones.
+    const m = await membership(q, c.id, viewer.profileId);
+    const host = m?.state === 'active' && ['owner', 'host'].includes(m.role);
     const items = await q.query(
-      `select p.id, p.kind, p.handle, p.name, cm.role, cm.read_only from feture.community_member cm join feture.profile p on p.id = cm.profile_id
+      `select p.id, p.kind, p.handle, p.name, cm.role, cm.read_only, cm.listed from feture.community_member cm join feture.profile p on p.id = cm.profile_id
        where cm.community_id = $1 and cm.state = 'active' and p.state = 'active' and not feture.blocked($2, p.id)
-         and (cm.role <> 'member' or cm.listed or cm.profile_id = $2)
-       order by (cm.role = 'owner') desc, (cm.role = 'host') desc, cm.joined_at limit 200`, [c.id, viewer.profileId]);
+         and ($3 or cm.role <> 'member' or cm.listed or cm.profile_id = $2)
+       order by (cm.role = 'owner') desc, (cm.role = 'host') desc, cm.joined_at limit 200`, [c.id, viewer.profileId, host]);
     return { count: n, items };
   },
 
