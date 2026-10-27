@@ -17,6 +17,7 @@ import { InterestLifecycle, interestQueue } from './feture/use-interest-map';
 import { FetureExperience } from './feture/experience';
 import { FeRoot } from './fe/shell';
 import { CommunitiesTab, CommunityScreen, EventScreen } from './fe/communities';
+import { InboxScreen } from './fe/inbox';
 import { ChatsTab, ChatScreen } from './fe/chats';
 import { PeopleTab, PersonScreen } from './fe/people';
 import { MeTab } from './fe/me';
@@ -263,6 +264,7 @@ export const routes: RouteObject[] = [
         {path:'communities', element:<CommunitiesTab />},
         {path:'communities/:id', element:<CommunityScreen />},
         {path:'events/:id', element:<EventScreen />},
+        {path:'inbox', element:<InboxScreen />},
         {path:'chats', element:<ChatsTab />},
         {path:'chats/:id', element:<ChatScreen />},
         {path:'me', element:<MeTab />},
