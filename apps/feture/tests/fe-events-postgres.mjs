@@ -238,3 +238,35 @@ test('review fixes: announcements for admitted people, real zones only, admissio
     void decide;
   } finally { await pg.close(); }
 });
+
+test('event.applicationWithdraw: the applicant only, pending or approved; admission and the link go, applying again works', async () => {
+  const { pg, call, a, b, c, publish } = await world();
+  try {
+    const id = await publish('ua', a, { requiresApplication: true, questions: ['Был ли опыт?'], format: 'online', placeId: null, area: null, exactAddress: null, joinUrl: 'https://meet.example/x' });
+    const app = await call('ub', b, { action: 'event.apply', opId: op(), eventId: id, answers: ['Да, два раза'], requirementsAccepted: true });
+    // Not mine: the organizer, a stranger, an unknown id — all «not found».
+    assert.equal((await call('ua', a, { action: 'event.applicationWithdraw', opId: op(), applicationId: app.id })).status, 404);
+    assert.equal((await call('uc', c, { action: 'event.applicationWithdraw', opId: op(), applicationId: app.id })).status, 404);
+    assert.equal((await call('ub', b, { action: 'event.applicationWithdraw', opId: op(), applicationId: '018f0000-0000-7000-8000-00000000dead' })).status, 404);
+    // Pending: withdrawn, gone from the organizer's list, a second withdraw finds nothing.
+    assert.equal((await call('ub', b, { action: 'event.applicationWithdraw', opId: op(), applicationId: app.id })).state, 'withdrawn');
+    assert.equal((await call('ub', b, { action: 'event.applicationWithdraw', opId: op(), applicationId: app.id })).status, 404);
+    assert.ok(!(await call('ua', a, { action: 'event.applications', eventId: id })).items.some((/** @type {any} */ x) => x.id === app.id && x.state === 'pending'));
+    // Approved: leaving takes the admission and the join link away.
+    const app2 = await call('ub', b, { action: 'event.apply', opId: op(), eventId: id, answers: ['Да, снова'], requirementsAccepted: true });
+    assert.equal(app2.state, 'pending');
+    const item = (await call('ua', a, { action: 'event.applications', eventId: id })).items.find((/** @type {any} */ x) => x.id === app2.id);
+    await call('ua', a, { action: 'event.applicationDecide', opId: op(), applicationId: app2.id, rev: item.rev, approve: true });
+    let got = (await call('ub', b, { action: 'event.get', eventId: id })).event;
+    assert.deepEqual([got.going, got.joinUrl], [1, 'https://meet.example/x']);
+    assert.equal((await call('ub', b, { action: 'event.applicationWithdraw', opId: op(), applicationId: app2.id })).state, 'withdrawn');
+    got = (await call('ub', b, { action: 'event.get', eventId: id })).event;
+    assert.deepEqual([got.going, got.joinUrl], [0, null]);
+    assert.equal((await call('uc', c, { action: 'event.get', eventId: id })).event.going, 0); // a stranger's count drops too
+    // A declined application is the organizer's decision and stays.
+    const app3 = await call('ub', b, { action: 'event.apply', opId: op(), eventId: id, answers: ['Третий раз'], requirementsAccepted: true });
+    const it3 = (await call('ua', a, { action: 'event.applications', eventId: id })).items.find((/** @type {any} */ x) => x.id === app3.id);
+    await call('ua', a, { action: 'event.applicationDecide', opId: op(), applicationId: app3.id, rev: it3.rev, approve: false });
+    assert.equal((await call('ub', b, { action: 'event.applicationWithdraw', opId: op(), applicationId: app3.id })).status, 404);
+  } finally { await pg.close(); }
+});

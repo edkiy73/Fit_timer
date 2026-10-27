@@ -145,3 +145,42 @@ test('faces in lists: photo, age only when shown (own always), badges; nothing f
     assert.deepEqual(Object.keys(await list()), ['Dan']);
   } finally { await pg.close(); }
 });
+
+test('links.mine and link.remove: own links by direction, either side removes, only a confirmed link is announced, strangers get nothing', async () => {
+  const { pg, db, call, person } = await setup();
+  try {
+    const a = await person('ua', 'Alex'), b = await person('ub', 'Kira'), c = await person('uc', 'Noa'), d = await person('ud', 'Dan');
+    const ok = await call('ua', a, { action: 'link.propose', opId: op(), profileId: b, kind: 'ds', mySide: 'dom' });
+    await call('ub', b, { action: 'link.answer', opId: op(), linkId: ok.id, accept: true, vis: 'us' });
+    const sent = await call('ua', a, { action: 'link.propose', opId: op(), profileId: c, kind: 'friend' });
+    const incoming = await call('ud', d, { action: 'link.propose', opId: op(), profileId: a, kind: 'friend' });
+    const mine = await call('ua', a, { action: 'links.mine' });
+    assert.deepEqual([mine.confirmed.map(l => [l.id, l.other.handle, l.side, l.vis]), mine.sent.map(l => l.id), mine.incoming.map(l => [l.id, l.other.handle])],
+      [[[ok.id, 'Kira', 'dom', 'all']], [sent.id], [[incoming.id, 'Dan']]]);
+    // Each side keeps its own visibility choice. Kira sees the same link from her side; a stranger sees none of Alex's links in her own list.
+    const kira = await call('ub', b, { action: 'links.mine' });
+    assert.deepEqual([kira.confirmed.map(l => [l.id, l.other.handle, l.side, l.vis]), kira.sent, kira.incoming], [[[ok.id, 'Alex', 'sub', 'us']], [], []]);
+    assert.ok(!JSON.stringify(mine).includes('account'));
+
+    // Removing: never by a stranger; a cancelled proposal is not announced, a confirmed link going is.
+    assert.equal((await call('ud', d, { action: 'link.remove', opId: op(), linkId: ok.id })).status, 404);
+    assert.equal((await call('ua', a, { action: 'link.remove', opId: op(), linkId: sent.id })).removed, true);
+    assert.equal((await call('ua', a, { action: 'link.remove', opId: op(), linkId: sent.id })).status, 404);
+    assert.equal((await db.query(`select count(*)::int n from feture.outbox where topic = 'link.removed'`))[0].n, 0);
+    assert.equal((await call('ub', b, { action: 'link.remove', opId: op(), linkId: ok.id })).removed, true); // the other side may too
+    const told = await db.query(`select profile_id, payload from feture.outbox where topic = 'link.removed'`);
+    assert.deepEqual(told.map(t => [t.profile_id, t.payload.from]), [[a, b]]);
+    assert.deepEqual((await call('ua', a, { action: 'links.mine' })).confirmed, []);
+    assert.deepEqual((await call('uc', c, { action: 'links.mine' })).incoming, []);
+
+    // Blocked: the link is cut and does not come back; the blocked side cannot touch it either.
+    const l2 = await call('ua', a, { action: 'link.propose', opId: op(), profileId: c, kind: 'friend' });
+    await db.query(`update feture.profile set state = 'paused', restore_until = now() + interval '30 days' where id = $1`, [c]);
+    assert.deepEqual((await call('ua', a, { action: 'links.mine' })).sent, []); // the other side is not active: not listed
+    await db.query(`update feture.profile set state = 'active', restore_until = null where id = $1`, [c]);
+    await call('ud', d, { action: 'block.set', opId: op(), profileId: a, on: true });
+    assert.equal((await call('ua', a, { action: 'link.remove', opId: op(), linkId: incoming.id })).status, 404);
+    assert.deepEqual((await call('ua', a, { action: 'links.mine' })).incoming, []);
+    assert.equal((await call('uc', c, { action: 'link.remove', opId: op(), linkId: l2.id })).removed, true);
+  } finally { await pg.close(); }
+});

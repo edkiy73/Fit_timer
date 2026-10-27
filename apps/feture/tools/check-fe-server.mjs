@@ -11,6 +11,12 @@ const BASE = join(ROOT, 'tools/fe-server-baseline.json');
 const read = p => readFileSync(join(ROOT, p), 'utf8');
 const ls = (d, re) => readdirSync(join(ROOT, d)).filter(f => re.test(f)).map(f => join(d, f));
 
+// Outbox job handlers that live next to the commands of their area but are never client commands: they are run by
+// the job worker (server/jobs.mjs) from queued items, have no contract on purpose and must never get one.
+//   notice.decided      — dsa.mjs noticeHandlers: mails the outcome of a DSA notice to its sender
+//   verification.expire — premium.mjs verificationHandlers: deletes a decided age/photo-check selfie after 30 days
+const INTERNAL_JOBS = new Set(['notice.decided', 'verification.expire']);
+
 const actions = new Set();
 for (const f of ls('contracts', /\.mjs$/)) for (const m of read(f).matchAll(/^\s+'([a-z][A-Za-z]*\.[A-Za-z.]+)':\s*\{/gm)) actions.add(m[1]);
 const handled = new Set();const defs = {};
@@ -23,10 +29,14 @@ const tests = ls('tests', /\.mjs$/).map(read).join('\n');
 
 const now = {
   noHandler: [...actions].filter(a => !handled.has(a)).sort(),
-  noContract: [...handled].filter(a => !actions.has(a)).sort(),
+  noContract: [...handled].filter(a => !actions.has(a) && !INTERNAL_JOBS.has(a)).sort(),
+  // An internal job with a contract would be callable by any client.
+  exposedJob: [...INTERNAL_JOBS].filter(a => actions.has(a)).sort(),
   untested: [...actions].filter(a => !tests.includes(`'${a}'`)).sort(),
   duplicate: Object.entries(defs).filter(([, f]) => new Set(f).size > 1).map(([n]) => n).sort(),
 };
+if (now.exposedJob.length) { console.error(`Internal job handlers must not have a client contract: ${now.exposedJob.join(', ')}`); process.exit(1); }
+delete now.exposedJob;
 if (process.argv.includes('--update')) { writeFileSync(BASE, JSON.stringify(now, null, 1) + '\n'); console.log('fe-server baseline written'); process.exit(0); }
 const base = existsSync(BASE) ? JSON.parse(readFileSync(BASE, 'utf8')) : {};
 const msgs = { noHandler: 'contract action without a handler', noContract: 'handler without a contract', untested: 'action no test calls', duplicate: 'helper defined in two command files' };

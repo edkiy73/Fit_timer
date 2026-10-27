@@ -142,3 +142,54 @@ test('a couple opens its private part only with both partners; closing everythin
     assert.equal((await call('ue', e, { action: 'access.request', opId: op(), profileId: pair, scopes: ['info'] })).rule, 'not_accepting');
   } finally { await pg.close(); }
 });
+
+test('private.setMedia: own live private uploads only, in order, within limits; viewers see only the granted kinds', async () => {
+  const { pg, db, call, person, coupleOf } = await setup();
+  try {
+    const a = await person('ua', 'Alex'), b = await person('ub', 'Kira'), c = await person('uc', 'Noa');
+    /** A media asset of a profile, as the scan pipeline would leave it. */
+    const asset = async (/** @type {string} */ owner, { kind = 'image', purpose = 'private', state = 'approved' } = {}) => {
+      const [{ account_id }] = await db.query('select account_id from feture.profile_member where profile_id = $1 limit 1', [owner]);
+      const [m] = await db.query(
+        `insert into feture.media_asset (owner_profile_id, uploaded_by, kind, purpose, storage_key, mime, declared_bytes, state, explicitness, copies_at)
+         values ($1, $2, $3, $4, 'u/' || gen_random_uuid(), $5, 10, $6, $7, now()) returning id`,
+        [owner, account_id, kind, purpose, kind === 'image' ? 'image/jpeg' : 'video/mp4', state, state === 'approved' ? 'safe' : 'unknown']);
+      return m.id;
+    };
+    const set = (/** @type {string} */ u, /** @type {string} */ p, /** @type {string[]} */ assetIds) => call(u, p, { action: 'private.setMedia', opId: op(), assetIds });
+    const [p1, p2, v1] = [await asset(a), await asset(a), await asset(a, { kind: 'video' })];
+    assert.equal((await set('ua', a, [p2, v1, p1])).count, 3);
+    const own = await call('ua', a, { action: 'private.get', profileId: a });
+    assert.deepEqual([own.media.map((/** @type {any} */ m) => m.id), own.available], [[p2, v1, p1], ['photos', 'video']]);
+
+    // Refused, nothing changed: someone else's file, a file for another place, a removed one, duplicates, over the limit.
+    const fields = async (/** @type {string[]} */ ids) => (await set('ua', a, ids)).fields;
+    assert.deepEqual(await fields([p1, await asset(b)]), ['assetIds']);
+    assert.deepEqual(await fields([await asset(a, { purpose: 'post' })]), ['assetIds']);
+    assert.deepEqual(await fields([await asset(a, { state: 'removed' })]), ['assetIds']);
+    assert.deepEqual(await fields([p1, p1]), ['assetIds']);
+    const many = [];
+    for (let i = 0; i < 13; i++) many.push(await asset(a));
+    assert.equal((await set('ua', a, many)).rule, 'private_media_limit');
+    assert.equal((await call('ua', a, { action: 'private.get', profileId: a })).media.length, 3);
+    // Someone else cannot fill Alex's private part, even with Alex's files; a couple has no media of its own here.
+    assert.equal((await call('ub', a, { action: 'private.setMedia', opId: op(), assetIds: [p1] })).status, 403);
+    assert.deepEqual((await set('ub', b, [p1])).fields, ['assetIds']);
+    const pair = await coupleOf([b, c]);
+    assert.equal((await set('ub', pair, [])).rule, 'couple_changes_not_available');
+
+    // Before access a viewer gets no media at all; with «Фото» only the photos, never the video.
+    const veil = await call('ub', b, { action: 'private.get', profileId: a });
+    assert.deepEqual([veil.media, veil.available], [undefined, ['photos', 'video']]);
+    const r = await call('ub', b, { action: 'access.request', opId: op(), profileId: a, scopes: ['photos'] });
+    await call('ua', a, { action: 'access.grant', opId: op(), requestId: r.id, scopes: ['photos'], term: '1d' });
+    const seen = await call('ub', b, { action: 'private.get', profileId: a });
+    assert.deepEqual(seen.media.map((/** @type {any} */ m) => m.id), [p2, p1]);
+    assert.ok(!JSON.stringify(seen).includes('u/')); // no storage paths
+    assert.equal((await call('uc', c, { action: 'private.get', profileId: a })).media, undefined);
+    // Clearing: nothing left to show or ask for.
+    assert.equal((await set('ua', a, [])).count, 0);
+    assert.deepEqual((await call('ub', b, { action: 'private.get', profileId: a })).media, []);
+    assert.deepEqual((await call('ua', a, { action: 'private.get', profileId: a })).available, []);
+  } finally { await pg.close(); }
+});
