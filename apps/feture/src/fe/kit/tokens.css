@@ -21,10 +21,7 @@
  --fs-micro:11px; --fs-xl:24px; --fs-cap:12px; --fs-xs:13px; --fs-sm:14px; --fs-body:15px; --fs-md:16px; --fs-h4:17px; --fs-h3:19px; --fs-h2:22px; --fs-h1s:26px; --fs-h1:28px;
 
  /* Radii (base.css holds --r-s 10, --r 14, --r-l 18, --r-xl 24). */
- --r-2xs:4px; --r-xs:8px; --r-m:12px; --r-2xl:30px; --r-full:999px;
-
- /* Media: the camera box behind a selfie frame, and text / lines drawn over photos and covers. */
- --camera:#140B11; --on-media:#fff;
+ --r-2xs:4px; --r-xs:8px; --r-m:12px; --r-full:999px;
 
  /* Spacing: one 4-step scale (2 for hairline gaps). */
  --s-0:2px; --s-1:4px; --s-2:8px; --s-3:12px; --s-4:16px; --s-5:20px; --s-6:24px; --s-7:32px; --s-8:40px; --s-9:56px;

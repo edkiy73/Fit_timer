@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Calendar,Check,ChevronLeft,CircleAlert,Clock,EyeOff,Link as LinkIcon,Lock,MapPin,RefreshCw,Ticket,Unlock,Video} from 'lucide-react';
 import {FeError,feErrorMessage} from '../feture/fe-api';
-import {Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,Group,Note,Seg,SectionLabel,Select,Skel,Steps,ToggleRow,View} from './kit';
+import {Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,EventTile,Group,Note,Row,Seg,SectionLabel,Select,Skel,Spacer,Steps,ToggleRow,View} from './kit';
 import {PickField,PlacePicker} from './kit/Place';
 import {useFe} from './session';
 import {ChipGroup,CoverField,FErr,Field,PLATE_KEYS,SelectRow,namedPlate,placeName,reviewNotice,shakeFirstErr,useCatalog,useOp,type Cover,type PlateKey} from './create-community';
@@ -265,7 +265,7 @@ function EventEditor({edit,reload}:{edit?:Edit,reload?:()=>void}){
    {(['offline','online'] as const).map(k=>chip(f.format===k,t('fe.ce.'+k),()=>set('format',k),k))}</Chips></div>
   <Field name="date" label={t('fe.ce.date')} type="date" min={isoDay(Date.now())} value={f.date} onChange={v=>set('date',v)} err={err.date}/>
   <Field name="date2" label={t('fe.ce.date2')} type="date" opt min={f.date} value={f.date2} onChange={v=>{set('date2',v);setErr(e=>({...e,t2:''}));}}/>
-  <div className="row g8" style={{alignItems:'flex-start'}}>
+  <div className="row g8 k-al-start">
    <div className="grow"><Field name="t1" label={t('fe.ce.t1')} type="time" value={f.t1} onChange={v=>{set('t1',v);setErr(e=>({...e,t2:''}));}}/></div>
    <div className="grow"><Field name="t2" label={t('fe.ce.t2')} type="time" value={f.t2} onChange={v=>set('t2',v)} err={err.t2||undefined}/></div>
   </div>
@@ -282,16 +282,16 @@ function EventEditor({edit,reload}:{edit?:Edit,reload?:()=>void}){
  if(step===3)body=<>
   <Card list><ToggleRow title={t('fe.ce.approval')} sub={frozen?t('fe.ece.e.frozen'):t('fe.ce.approvalSub')} on={f.requiresApplication} disabled={frozen} onClick={()=>set('requiresApplication',!f.requiresApplication)}/></Card>
   {frozen&&f.requiresApplication&&f.question.trim()&&<div className="field mt12"><span className="flabel">{t('fe.ce.question')}</span><Note>{f.question.trim()}</Note></div>}
-  {!frozen&&f.requiresApplication&&<><div style={{height:12}}/><Field name="q0" label={t('fe.ce.question')} ph={t('fe.ce.questionPh')} max={120} value={f.question} onChange={v=>set('question',v)} err={err.question}/></>}
+  {!frozen&&f.requiresApplication&&<><Spacer size={3}/><Field name="q0" label={t('fe.ce.question')} ph={t('fe.ce.questionPh')} max={120} value={f.question} onChange={v=>set('question',v)} err={err.question}/></>}
   <div className="field mt12"><span className="flabel">{t('fe.ce.price')}</span><Chips>
    {(['free','door','ext'] as const).map(k=>chip(f.price===k,t('fe.ce.price.'+k),()=>set('price',k),k))}</Chips></div>
-  {f.price!=='free'&&<div className="row g8 ev-price" style={{alignItems:'flex-start'}}>
+  {f.price!=='free'&&<div className="row g8 ev-price k-al-start">
    <div className="grow"><Field name="amount" label={t('fe.ce.amount')} ph="15" inputMode="decimal" value={f.amount} onChange={v=>set('amount',v)} err={err.amount}/></div>
    <div className="ev-cur"><SelectRow aria={t('fe.ce.currency')} value={f.currency} onChange={v=>set('currency',v)} items={CURRENCIES.map(([s])=>[s,s])}/></div>
   </div>}
   {f.price==='ext'&&<Field name="ext" label={t('fe.ce.ticket')} icon={LinkIcon} ph="tickets.example.org" hint={t('fe.ce.ticketHint')} value={f.ticketUrl} onChange={v=>set('ticketUrl',v)} err={err.ticketUrl}/>}
   <Field name="reqs" label={t('fe.ce.reqs')} opt textarea rows={3} max={500} ph={t('fe.ce.reqsPh')} value={f.requirements} onChange={v=>set('requirements',v)} err={err.requirements}/>
-  <div className="alert mt8"><EyeOff/><span>{t('fe.ce.listsHidden')}</span></div>
+  <Alert icon={EyeOff} className="mt8">{t('fe.ce.listsHidden')}</Alert>
  </>;
  if(step===4){
   const {start,end}=times(f);const ok=Number.isFinite(start)&&Number.isFinite(end);
@@ -302,20 +302,16 @@ function EventEditor({edit,reload}:{edit?:Edit,reload?:()=>void}){
   const area=f.format==='online'?t('fe.ce.online'):f.area.trim()||(catalog?placeName(catalog.places.find(p=>p.id===f.placeId)??{ru:'',en:''},locale):'');
   body=<>
    <Seg value={pv} onChange={setPv} options={[{id:'all',label:t('fe.ce.pv.all')},{id:'ok',label:t('fe.ce.pv.ok')}]}/>
-   <div style={{pointerEvents:'none'}}><div className="evc" aria-hidden="true">
-    <div className="cv">{f.cover?<img className="evimg" src={f.cover.preview} alt="" draggable={false}/>:<div className="plate" style={namedPlate(f.plate)}><span className="pi"><Calendar/></span></div>}
-     {ok&&<div className="date"><b>{fmt(start,{day:'numeric'})}</b><small>{fmt(start,{month:'short'})}</small></div>}
-     <div className="fmt"><span>{f.format==='online'?<Video/>:<MapPin/>}{area}</span></div></div>
-    <div className="bd"><small>{f.kind?t('fe.ce.kind.'+f.kind):''}{acting?' · '+acting.name:''}</small><b>{f.title.trim()}</b>
-     <div className="meta"><span><Clock/>{ok?fmt(start,{hour:'2-digit',minute:'2-digit'}):''}</span><span><Ticket/>{priceText}</span></div></div>
-   </div></div>
-   <Card list className="mt12"><div className="li"><span className={'ico'+(pv==='ok'?' g':'')}>{pv==='ok'?<Unlock/>:<Lock/>}</span>
-    <span className="tx"><b>{f.format==='online'?t('fe.ce.pv.link'):t('fe.ce.pv.address')}</b><small>{pv==='ok'?(f.format==='online'?f.joinUrl.trim():f.exactAddress.trim()):t('fe.ce.pv.hidden')}</small></span></div></Card>
+   <EventTile cover={f.cover?<img className="evimg" src={f.cover.preview} alt="" draggable={false}/>:<div className="plate" style={namedPlate(f.plate)}><span className="pi"><Calendar/></span></div>}
+    {...(ok?{day:fmt(start,{day:'numeric'}),month:fmt(start,{month:'short'})}:{})} place={area} placeIcon={f.format==='online'?Video:MapPin}
+    kicker={<>{f.kind?t('fe.ce.kind.'+f.kind):''}{acting?' · '+acting.name:''}</>} title={f.title.trim()} time={ok?fmt(start,{hour:'2-digit',minute:'2-digit'}):''} price={priceText}/>
+   <Card list className="mt12"><Row icon={pv==='ok'?Unlock:Lock} tone={pv==='ok'?'g':undefined} title={f.format==='online'?t('fe.ce.pv.link'):t('fe.ce.pv.address')}
+    sub={pv==='ok'?(f.format==='online'?f.joinUrl.trim():f.exactAddress.trim()):t('fe.ce.pv.hidden')}/></Card>
    <Card list className="mt12">
-    <div className="li"><span className="ico l"><Calendar/></span><span className="tx"><b>{ok?fmt(start,{weekday:'short',day:'numeric',month:'long'}):''}</b>
-     <small>{ok?`${fmt(start,{hour:'2-digit',minute:'2-digit'})}–${fmt(end,{hour:'2-digit',minute:'2-digit'})}`:''} {f.format==='online'?t('fe.ce.pv.yourTime'):t('fe.ce.pv.localTime')}</small></span></div>
-    <div className="li"><span className="ico a"><Ticket/></span><span className="tx"><b>{priceText}</b>
-     <small>{f.price==='ext'?t('fe.ce.pv.ticketOn').replace('{site}',site):f.requiresApplication?t('fe.ce.pv.byApplication'):t('fe.ce.pv.justCome')}</small></span></div>
+    <Row icon={Calendar} tone="l" title={ok?fmt(start,{weekday:'short',day:'numeric',month:'long'}):''}
+     sub={<>{ok?`${fmt(start,{hour:'2-digit',minute:'2-digit'})}–${fmt(end,{hour:'2-digit',minute:'2-digit'})}`:''} {f.format==='online'?t('fe.ce.pv.yourTime'):t('fe.ce.pv.localTime')}</>}/>
+    <Row icon={Ticket} tone="a" title={priceText}
+     sub={f.price==='ext'?t('fe.ce.pv.ticketOn').replace('{site}',site):f.requiresApplication?t('fe.ce.pv.byApplication'):t('fe.ce.pv.justCome')}/>
    </Card>
    {f.description.trim()&&<><SectionLabel>{t('fe.ce.pv.about')}</SectionLabel><div className="md bio"><p>{f.description.trim()}</p></div></>}
    {f.requirements.trim()&&<><SectionLabel>{t('fe.ce.reqs')}</SectionLabel><Card><div className="fact"><i className="v"><Check/></i><span>{f.requirements.trim()}</span></div></Card></>}
@@ -330,11 +326,11 @@ function EventEditor({edit,reload}:{edit?:Edit,reload?:()=>void}){
   </Bar>
   <div className="view nodock cta1"><div className="wrap">
    <Steps step={step} total={4} name={names[step-1]!}/>
-   {edit&&edit.pendingChange!=null&&step===1&&<div className="alert warn" style={{marginBottom:12}}><Clock/><span>{t('fe.ece.e.pendingChange')}</span></div>}
+   {edit&&edit.pendingChange!=null&&step===1&&<Alert kind="warn" role="none" icon={Clock} className="mb12">{t('fe.ece.e.pendingChange')}</Alert>}
    {step<4?<Group><Card form>{body}</Card></Group>:body}
-   {notice&&<Alert ref={noticeRef} kind={notice.kind} noIcon className="mt12">{notice.text}{stale&&reload&&<Btn kind="text" auto icon={RefreshCw} style={{display:'flex',marginTop:6}} onClick={reload}>{t('fe.ece.reload')}</Btn>}</Alert>}
+   {notice&&<Alert ref={noticeRef} kind={notice.kind} noIcon className="mt12" action={stale&&reload?<Btn kind="text" auto icon={RefreshCw} onClick={reload}>{t('fe.ece.reload')}</Btn>:undefined}>{notice.text}</Alert>}
    {draftId&&(asking
-    ?<div className="alert warn mt12" role="alertdialog"><span>{t('fe.ce.draftDeleteAsk')}</span><div className="row g8 mt8"><Btn kind="danger" size="sm" auto onClick={removeDraft} disabled={busy}>{t('fe.ce.draftDeleteOk')}</Btn><Btn kind="text" size="sm" auto onClick={()=>setAsking(false)}>{t('fe.ce.cancel')}</Btn></div></div>
+    ?<Alert kind="warn" noIcon role="alertdialog" className="mt12" action={<><Btn kind="danger" size="sm" auto onClick={removeDraft} disabled={busy}>{t('fe.ce.draftDeleteOk')}</Btn><Btn kind="text" size="sm" auto onClick={()=>setAsking(false)}>{t('fe.ce.cancel')}</Btn></>}>{t('fe.ce.draftDeleteAsk')}</Alert>
     :<div className="row mt12"><Btn kind="text" size="sm" auto onClick={()=>setAsking(true)} disabled={busy}>{t('fe.ce.draftDelete')}</Btn></div>)}
   </div></div>
   <div className="ctabar"><div className="wrap"><div className="row g8">

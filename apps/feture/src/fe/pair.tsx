@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {AtSign,Check,Heart,ShieldCheck,Users,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Av,Bar,Btn,Card,Group,H,Input,Note,Pill,Row,Skel,ToggleRow,View} from './kit';
+import {Alert,Av,Bar,Btn,Card,Group,H,Input,Note,PersonLine,Pill,RequestCard,Row,Skel,ToggleRow,View} from './kit';
 import {useFe} from './session';
 import {Ask} from './me';
 import {useToast} from './toast';
@@ -121,14 +121,13 @@ export function PairScreen(){
    <H level={2} className="t center">{out?t('fe.pair.waiting').replace('{name}',nameOf(out.profile)):t('fe.pair.inviteTitle')}</H>
    <Note className="center">{t('fe.pair.inviteText')}</Note>
    {inv===null?<Skel kind="list"/>:<>
-    {inv.incoming.map(i=><Card key={i.id} className="rqcard mt12"><div className="row"><span className="rq-av"><Av name={nameOf(i.profile)} seed={i.profile?.id??i.id}/></span>
-     <div className="grow"><b style={{fontSize:16}}>{nameOf(i.profile)}</b><Note>{t('fe.inbox.kind.pinv')} · {when(i.created_at,locale)}</Note></div></div>
-     <div className="row g8 mt12"><Btn size="md" disabled={busy} onClick={()=>act(()=>call('couple.inviteAnswer',{opId:newOpId(),inviteId:i.id,accept:true},ok,{asAccount:true}),reload)}>{t('fe.inbox.accept')}</Btn>
-      <Btn size="md" kind="soft" disabled={busy} onClick={()=>act(()=>call('couple.inviteAnswer',{opId:newOpId(),inviteId:i.id,accept:false},ok,{asAccount:true}))}>{t('fe.priv.decline')}</Btn></div></Card>)}
+    {inv.incoming.map(i=><RequestCard key={i.id} className="mt12" person={<PersonLine av={<Av name={nameOf(i.profile)} seed={i.profile?.id??i.id}/>} name={nameOf(i.profile)} sub={<>{t('fe.inbox.kind.pinv')} · {when(i.created_at,locale)}</>}/>}
+     actions={<><Btn size="md" disabled={busy} onClick={()=>act(()=>call('couple.inviteAnswer',{opId:newOpId(),inviteId:i.id,accept:true},ok,{asAccount:true}),reload)}>{t('fe.inbox.accept')}</Btn>
+      <Btn size="md" kind="soft" disabled={busy} onClick={()=>act(()=>call('couple.inviteAnswer',{opId:newOpId(),inviteId:i.id,accept:false},ok,{asAccount:true}))}>{t('fe.priv.decline')}</Btn></>}/>)}
     {out?<div className="btns mt16"><Btn kind="soft" disabled={busy} onClick={()=>act(()=>call('couple.inviteWithdraw',{opId:newOpId(),inviteId:out.id},ok,{asAccount:true}))}>{t('fe.pair.withdraw')}</Btn></div>
      :<Card form className="mt16">
       <label className="field"><span>{t('fe.pair.partnerNick')}</span><div className="inwrap"><AtSign/><Input value={nick} onChange={e=>setNick(e.target.value.replace(/^@/,''))} placeholder="nickname" autoCapitalize="off" spellCheck={false} maxLength={20}/></div><div className="fhint">{t('fe.pair.nickHint')}</div></label>
-      {lookup.hit?<div className="li static"><Av name={nameOf(lookup.hit)} seed={lookup.hit.id} src={thumb(lookup.hit)} size="sm"/><span className="tx"><b>{nameOf(lookup.hit)}</b><small>@{lookup.hit.handle}</small></span><Pill tone="ok" icon={Check}>{t('fe.pq.found')}</Pill></div>
+      {lookup.hit?<Row av={<Av name={nameOf(lookup.hit)} seed={lookup.hit.id} src={thumb(lookup.hit)} size="sm"/>} title={nameOf(lookup.hit)} sub={'@'+lookup.hit.handle} end={<Pill tone="ok" icon={Check}>{t('fe.pq.found')}</Pill>}/>
        :lookup.issue?<Note>{t('fe.pq.issue.'+lookup.issue)}</Note>:null}
       <Btn disabled={busy||!lookup.hit} onClick={()=>act(async()=>{await call('couple.invite',{opId:op.current,handle:nick.trim(),...(couple&&fresh?{replacePaused:true}:{})},ok,{asAccount:true});op.current=newOpId();setNick('');if(couple&&fresh)reload();})}>{t('fe.pair.invite')}</Btn>
      </Card>}

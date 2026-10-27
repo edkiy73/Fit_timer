@@ -175,11 +175,6 @@ export function Radar({src,seed}:{src?:string|null|undefined,seed:string}){
 
 /* ---------------- Photos ---------------- */
 
-/** The selfie frame of a check: the camera picture, or a dashed oval with a hint until a photo is taken. */
-export function SelfieFrame({src,alt,hint}:{src?:string|null|undefined,alt:string,hint:string}){
- return <div className="k-selfie">{src?<img src={src} alt={alt} draggable={false}/>:<><div className="k-selfie-oval"/><div className="k-selfie-hint">{hint}</div></>}</div>;
-}
-
 /** What to show in the selfie (a gesture): icon, label, value; without `value` the value blinks while it loads. */
 export function Pose({icon:I,label,value,className}:{icon:LucideIcon,label:ReactNode,value?:ReactNode,className?:string|undefined}){
  return <div className={'pv-pose'+(className?' '+className:'')}><span className="ico v" aria-hidden="true"><I/></span><span><small>{label}</small>

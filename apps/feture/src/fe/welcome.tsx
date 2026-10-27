@@ -60,7 +60,7 @@ export function Welcome({onStart}:{onStart:(mode:'up'|'in')=>void}){
    <div className="w-grid">
     <div className="w-head">
      <p className="w-kick"><i/>{t('fe.cw.w.kick')}</p>
-     <h1 className="w-title">{t('fe.cw.w.title1')} <em>{t('fe.cw.w.titleEm')}</em> {t('fe.cw.w.title2')}</h1>
+     <H level={1} className="w-title">{t('fe.cw.w.title1')} <em>{t('fe.cw.w.titleEm')}</em> {t('fe.cw.w.title2')}</H>
      <p className="w-sub">{t('fe.cw.w.sub')}</p>
      <p className="w-sub-s">{t('fe.cw.w.subShort')}</p>
     </div>

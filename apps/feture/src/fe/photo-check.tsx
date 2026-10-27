@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {BadgeCheck,Camera,ChevronRight,Clock,ImagePlus,Info,Lock,RefreshCw,TriangleAlert,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Bar,Btn,Card,Empty,FilePick,Note,Skel,Text,View} from './kit';
+import {Alert,Bar,Btn,Card,Empty,FilePick,Note,Pose,Row,Skel,View} from './kit';
 import {useFe} from './session';
 import {toJpeg} from './age-check';
 
@@ -31,7 +31,7 @@ export function PhotoBadge(){
 function About(){
  const {t}=useI18n();
  return <Card list>{([[BadgeCheck,'g','fe.pc.about1'],[Info,'','fe.pc.about2'],[Lock,'v','fe.pc.about3']] as const).map(([Icon,tone,k])=>
-  <div key={k} className="li static"><span className={'ico'+(tone?' '+tone:'')}><Icon/></span><span className="tx"><b>{t(k)}</b><small>{t(k+'Text')}</small></span></div>)}</Card>;
+  <Row key={k} icon={Icon} tone={tone||undefined} title={t(k)} sub={t(k+'Text')}/>)}</Card>;
 }
 
 export function PhotoCheckScreen(){
@@ -100,19 +100,18 @@ export function PhotoCheckScreen(){
   :shot?<Btn onClick={send} busy={busy} disabled={busy||!person}>{t('fe.pc.send')}</Btn>
   :<Btn icon={Camera} onClick={()=>input.current?.click()}>{t('fe.pc.shoot')}</Btn>;
  return <>{bar}<View className={'nodock'+(cta?' cta1':'')}>
-  {s.state==='rejected'&&<div className="alert err" role="status"><TriangleAlert/><span><b>{t('fe.pc.rejected')}</b>{reason}{t('fe.pc.rejectedText')}</span></div>}
+  {s.state==='rejected'&&<Alert kind="err" role="status" icon={TriangleAlert}><b>{t('fe.pc.rejected')}</b>{reason}{t('fe.pc.rejectedText')}</Alert>}
   {s.lapsed&&<Alert kind="warn" icon={Clock}><b>{t('fe.pc.lapsed')}</b>{t('fe.pc.lapsedText')}</Alert>}
   <p className="lead">{t('fe.pc.lead')}</p>
-  {!needPhoto&&<div className="pv-pose mt12"><span className="ico v" aria-hidden="true"><Camera/></span><span><small>{t('fe.pc.poseLabel')}</small>
-   {c?<b>{gesture}</b>:<b aria-busy="true"><i className="sk sk-l w70" style={{display:'block',height:16,marginTop:4}}/></b>}</span></div>}
+  {!needPhoto&&<Pose className="mt12" icon={Camera} label={t('fe.pc.poseLabel')} value={c?gesture:undefined}/>}
   {c&&shot&&<Card className="pv-capture mt12"><div className="pv-preview"><img src={shot.url} alt={t('fe.pc.shotAlt')} draggable={false}/></div>
    <div className="pv-capture-info"><b>{t('fe.pc.ready')}</b><Note>{t('fe.pc.readyText')}</Note>
     <Btn kind="soft" size="md" auto icon={Camera} onClick={()=>input.current?.click()} disabled={busy}>{t('fe.pc.retake')}</Btn></div></Card>}
   <FilePick ref={input} accept="image/*" capture="user" onFiles={f=>void pick(f[0])}/>
   <Card list className="mt12">{(['fe.pc.req1','fe.pc.req2','fe.pc.req3'] as const).map(k=>
-   <div key={k} className="li static"><span className="ico"><Info/></span><span className="tx"><Text as="span" size="sm">{t(k)}</Text></span></div>)}</Card>
+   <Row key={k} icon={Info} body={t(k)}/>)}</Card>
   <details className="pv-about mt16"><summary><Info/><span>{t('fe.pc.how')}</span><ChevronRight/></summary><About/></details>
-  {needPhoto&&<div className="alert warn mt16" role="alert"><ImagePlus/><span>{t('fe.pc.needPhoto')}<Btn kind="soft" size="sm" auto icon={ImagePlus} onClick={()=>navigate('/n/me')}>{t('fe.pc.addPhoto')}</Btn></span></div>}
+  {needPhoto&&<Alert kind="warn" role="alert" icon={ImagePlus} className="mt16">{t('fe.pc.needPhoto')}<Btn kind="soft" size="sm" auto icon={ImagePlus} onClick={()=>navigate('/n/me')}>{t('fe.pc.addPhoto')}</Btn></Alert>}
   {failure&&<Alert kind="err" icon={X} className="mt12">{failure}</Alert>}
  </View>
  {cta&&<div className="ctabar"><div className="wrap">{cta}</div></div>}</>;

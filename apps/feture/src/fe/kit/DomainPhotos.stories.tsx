@@ -1,7 +1,7 @@
 import type {Meta,StoryObj} from '@storybook/react-vite';
 import {fn} from 'storybook/test';
 import {Camera,Eye,Hand,X} from 'lucide-react';
-import {Card,KeyValues,Note,PhotoAdd,PhotoSlot,PhotoSlots,PhotoTrack,Pose,ReviewCard,ReviewMedia,ReviewPair,SelfieFrame,VaultHead} from './index';
+import {Card,KeyValues,Note,PhotoAdd,PhotoSlot,PhotoSlots,PhotoTrack,Pose,ReviewCard,ReviewMedia,ReviewPair,VaultHead} from './index';
 
 // A tiny inline picture so the stories need no network.
 const PIC='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 5"><defs><linearGradient id="g" x2="1" y2="1"><stop offset="0" stop-color="#7A1236"/><stop offset="1" stop-color="#FF9F7A"/></linearGradient></defs><rect width="4" height="5" fill="url(#g)"/></svg>');
@@ -22,8 +22,6 @@ export const Пусто:S={name:'Пусто: главный слот',render:()=
 export const Приватные:S={args:{priv:true},render:a=><PhotoSlots {...a}><PhotoSlot id="1" src={PIC} openLabel="Фото 1" onOpen={fn()}/><PhotoSlot id="2" waiting openLabel="Фото 2" onOpen={fn()}/><PhotoAdd label="Добавить" busy/></PhotoSlots>};
 export const Загрузка:S={args:{loading:true}};
 
-export const Селфи:StoryObj<typeof SelfieFrame>={name:'Рамка селфи',render:a=><SelfieFrame {...a}/>,args:{alt:'Твоё селфи',hint:'Лицо в овале, жест рядом',src:undefined}};
-export const СелфиСнято:StoryObj<typeof SelfieFrame>={name:'Рамка селфи: снято',render:a=><SelfieFrame {...a}/>,args:{alt:'Твоё селфи',hint:'',src:PIC}};
 export const Жест:StoryObj<typeof Pose>={name:'Жест для селфи',render:a=><Pose {...a}/>,args:{icon:Hand,label:'Покажи жест',value:'Ладонь у щеки'},argTypes:{icon:{control:false}}};
 export const ЖестЗагрузка:StoryObj<typeof Pose>={name:'Жест: загрузка',render:a=><Pose {...a}/>,args:{icon:Camera,label:'Покажи жест'}};
 

@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {AtSign,ChevronDown,ChevronRight,Clock,Lock,Plus,Sparkles,Star,Trash2,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Bar,Btn,Card,Chip,Counter,Empty,Field,FilePick,Group,Input,Note,Row,Sheet,Skel,TextArea,ToggleRow} from './kit';
+import {Alert,Bar,Btn,Card,Chip,Counter,Empty,Field,FilePick,Group,Input,Note,PhotoAdd,PhotoSlot,PhotoSlots,Row,Sheet,Skel,TextArea,ToggleRow,VaultHead} from './kit';
 import {useFe} from './session';
 import {Uploader} from './kit/Uploader';
 import {PickField,PlacePicker,type Place} from './kit/Place';
@@ -110,18 +110,15 @@ export function MeEditScreen(){
  const aud=only==='priv'?<AudTag k="granted"/>:only?<AudTag k={only==='details'?(p?.detailsVis??'all'):'all'}/>:null;
  const slots=(k:'photos'|'privMedia',base:Ph[],max:number)=>{
   const list=drag.arrange(k,base);const ids=base.map(x=>x.id);
-  const cells:ReactNode[]=list.map((ph,i)=><div key={ph.id} data-id={ph.id} className={'mi'+(k==='photos'&&i===0?' big':'')+(drag.preview?.drag===ph.id?' mi-ph':'')} onPointerDown={e=>drag.down(e,k,ids,ph.id)}>
-   {ph.src&&<img src={ph.src} alt="" draggable={false}/>}
-   {k==='photos'&&i===0&&<span className="mainph">{t('fe.me.mainPhoto')}</span>}
-   {ph.pending&&<span className="ph-rev"><Clock/><span>{t('fe.mx.ph.review')}</span></span>}
-   <button type="button" className="vw" aria-label={t('fe.mx.ph.nOf',{n:i+1,total:list.length})} onClick={()=>setPhSheet({k,i})}/>
-  </div>);
+  const cells:ReactNode[]=list.map((ph,i)=><PhotoSlot key={ph.id} id={ph.id} big={k==='photos'&&i===0} dragging={drag.preview?.drag===ph.id} src={ph.src}
+   main={k==='photos'&&i===0?t('fe.me.mainPhoto'):undefined} review={ph.pending?t('fe.mx.ph.review'):undefined} onPointerDown={e=>drag.down(e,k,ids,ph.id)}
+   openLabel={t('fe.mx.ph.nOf',{n:i+1,total:list.length})} onOpen={()=>setPhSheet({k,i})}/>);
   const n=k==='photos'?(list.length===1?2:Math.min(max,Math.max(list.length+1,3))):list.length+(list.length<max?1:0);
   for(let i=list.length;i<n;i++)cells.push(i===list.length
-   ?<button key="add" type="button" className={'ph-add'+(k==='photos'&&i===0?' big':'')+(k==='photos'&&list.length===1?' tall':'')} disabled={!!uploading} aria-busy={uploading===k||undefined} onClick={()=>pick(k)} aria-label={t('fe.mx.ph.addAria')}>
-    <Plus/>{k==='photos'&&i===0?<small>{cp?t('fe.mx.ph.couplePhoto'):t('fe.mx.ph.mainSlot')}</small>:k==='photos'&&list.length===1?<small>{t('fe.me.morePhotos')}</small>:null}</button>
-   :<span key={'g'+i} className="ph-add ghost" aria-hidden="true"/>);
-  return <div className={k==='photos'?'ph-slots':'ph-slots priv'}>{cells}</div>;
+   ?<PhotoAdd key="add" big={k==='photos'&&i===0} tall={k==='photos'&&list.length===1} disabled={!!uploading} busy={uploading===k} onClick={()=>pick(k)} label={t('fe.mx.ph.addAria')}
+    hint={k==='photos'&&i===0?(cp?t('fe.mx.ph.couplePhoto'):t('fe.mx.ph.mainSlot')):k==='photos'&&list.length===1?t('fe.me.morePhotos'):undefined}/>
+   :<PhotoAdd key={'g'+i} ghost/>);
+  return <PhotoSlots priv={k!=='photos'}>{cells}</PhotoSlots>;
  };
  const sheetList=phSheet&&d?d[phSheet.k]:[];const sheetPh=phSheet?sheetList[phSheet.i]:undefined;
  // V21 phRemove: the last profile photo of a profile shown in Discover — it would drop out of Discover; ask first.
@@ -159,9 +156,9 @@ export function MeEditScreen(){
        <PickField label={t('fe.mx.ed.city')} value={placeName(d.cityId)} placeholder={t('fe.mx.ed.noCity')} onClick={()=>setCity(true)}/>
       </>}
       {show('details')&&<div className="pe-who" id="peWho">
-       {only!=='details'&&<button type="button" className="li" aria-expanded={who} onClick={()=>setWhoOpen(!who)}><span className="tx"><b>{cp?t('fe.mx.detailsCouple'):t('fe.mx.ed.yourDetails')}</b>
-        {!who&&(anyDetails?<span className="pe-sums">{fields.map(([f,kind])=>{const v=d.details[f];const codes=Array.isArray(v)?v:v?[v]:[];return codes.length?<span key={f} className="pe-sum"><b>{t(kind==='status'?'fe.mx.f.status':'fe.reg.kind.'+kind)}</b> {codes.map(c=>label(kind,c)).join(', ')}</span>:null;})}</span>:<small>{t('fe.mx.ed.nothing')}</small>)}</span>
-        <span className={'chv'+(who?' open':'')}><ChevronDown/></span></button>}
+       {only!=='details'&&<Row expanded={who} onClick={()=>setWhoOpen(!who)} title={cp?t('fe.mx.detailsCouple'):t('fe.mx.ed.yourDetails')}
+        sub={!who&&!anyDetails?t('fe.mx.ed.nothing'):undefined}
+        extra={!who&&anyDetails?<span className="pe-sums">{fields.map(([f,kind])=>{const v=d.details[f];const codes=Array.isArray(v)?v:v?[v]:[];return codes.length?<span key={f} className="pe-sum"><b>{t(kind==='status'?'fe.mx.f.status':'fe.reg.kind.'+kind)}</b> {codes.map(c=>label(kind,c)).join(', ')}</span>:null;})}</span>:undefined}/>}
        {who&&fields.map(([f,kind])=><div key={f} className="field"><span className="flabel">{t(kind==='status'?'fe.mx.f.status':'fe.reg.kind.'+kind)}</span>{chips(f,kind)}</div>)}
       </div>}
      </Card></Group>}
@@ -169,8 +166,7 @@ export function MeEditScreen(){
       <Row icon={Sparkles} title={t('fe.int.all')} sub={t('fe.mx.ed.jarsSub')} val={jars.all} onClick={()=>navigate('/n/me/interests')}/>
      </Card></Group>}
      {show('priv')&&<section className={'vault'+(d.privOn?'':' off')} id="privEdit">
-      <div className="vault-h"><span className="vi"><Lock/></span><div><b>{t('fe.priv.title')}</b></div>
-       <button type="button" className="vsw" role="switch" aria-checked={d.privOn} aria-label={t('fe.priv.title')} onClick={()=>d.privOn&&base?.privOn?setAskOff(true):set({privOn:!d.privOn})}><span className={'sw'+(d.privOn?' on':'')} aria-hidden="true"/></button></div>
+      <VaultHead title={t('fe.priv.title')} label={t('fe.priv.title')} on={d.privOn} onToggle={()=>d.privOn&&base?.privOn?setAskOff(true):set({privOn:!d.privOn})}/>
       {d.privOn&&<div className="vault-b">
        {!cp&&<Group title={t('fe.mx.ed.privText')}><Card form>
         <Field><TextArea rows={5} maxLength={1000} value={d.privText} placeholder={t('fe.mx.ed.privPh')} aria-label={t('fe.mx.ed.privText')} onChange={e=>set({privText:e.target.value})}/><Counter n={d.privText.length} max={1000}/></Field>
@@ -178,7 +174,7 @@ export function MeEditScreen(){
        <Group title={<>{t('fe.mx.ed.privJars')}{jars.granted?' · '+jars.granted:''}</>} foot={t('fe.mx.ed.privJarsFoot')}
         action={jars.granted>0&&<button type="button" onClick={()=>navigate('/n/me/interests?add=1&vis=granted')}><Plus/>{t('fe.mx.ed.add')}</button>}>
         {jars.granted===0&&<Btn kind="soft" icon={Plus} onClick={()=>navigate('/n/me/interests?add=1&vis=granted')}>{t('fe.int.add')}</Btn>}</Group>
-       {!cp&&<Group title={t('fe.mx.ed.privMedia')} action={<span className="note">{d.privMedia.length}/{PRIV_MAX}</span>}>
+       {!cp&&<Group title={t('fe.mx.ed.privMedia')} action={<Note as="span">{d.privMedia.length}/{PRIV_MAX}</Note>}>
         {d.privMedia.length?slots('privMedia',d.privMedia,PRIV_MAX):<Btn kind="soft" icon={Plus} disabled={!!uploading} busy={uploading==='privMedia'} onClick={()=>pick('privMedia')}>{t('fe.mx.ed.privUpload')}</Btn>}</Group>}
       </div>}
      </section>}

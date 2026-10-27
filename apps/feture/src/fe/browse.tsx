@@ -203,7 +203,7 @@ export function SearchScreen(){
    <Seg value={scope} onChange={setScope} label={t('fe.br.search')} options={SCOPES.map(k=>({id:k,label:k==='all'?t('fe.br.all'):names[k]}))}/>
    {term.length<2?<>
     {recent.length>0&&<><div className="res-h">{t('fe.br.recent')}<button type="button" onClick={()=>{setRecent([]);writeRecent([]);}}>{t('fe.br.clear')}</button></div>
-     <Card list>{recent.map(x=><div key={x} className="recent"><History/><button type="button" className="tx" style={{textAlign:'left'}} onClick={()=>use(x)}>{x}</button>
+     <Card list>{recent.map(x=><div key={x} className="recent"><History/><button type="button" className="tx" onClick={()=>use(x)}>{x}</button>
       <IconBtn icon={X} kind="ghost" size="sm" label={t('fe.br.remove')} onClick={()=>{const l=recent.filter(v=>v!==x);setRecent(l);writeRecent(l);}}/></div>)}</Card></>}
     {topics.length>0&&<><div className="res-h">{t('fe.br.popular')}</div>
      <Chips>{topics.slice(0,5).map(x=><Chip key={x.id} onClick={()=>use(locale==='en'?x.en:x.ru)}>#{locale==='en'?x.en:x.ru}</Chip>)}</Chips></>}
@@ -255,14 +255,11 @@ export function FollowsScreen(){
     :list===null?<Skel kind="list"/>
     :!list.length?<Empty icon={Users} title={tab==='following'?t('fe.br.noFollowing'):t('fe.br.noFollowers')}/>
     :<Card list className="mt12">{list.map(k=>{const self=own.has(k.id);const fol=myFollows.has(k.id);
-     return <div key={k.id} className="li frow">
-      <button type="button" className="frow-go" onClick={()=>navigate(self?'/n/me':'/n/people/'+k.id)}>
-       <Av name={nameOf(k)} seed={k.id} src={k.avatar}/><span className="tx"><b><span className="fnm">{nameOf(k)}</span><NameBadges p={k}/></b><small>{k.handle?'@'+k.handle:''}</small></span>
-      </button>
-      {self?<Note>{k.id===acting?.id?(asUs?t('fe.br.youUs'):t('fe.br.you')):k.kind==='person'?t('fe.br.yourOwn'):t('fe.br.yourCouple')}</Note>
+     return <Row key={k.id} className="frow" onClick={()=>navigate(self?'/n/me':'/n/people/'+k.id)} av={<Av name={nameOf(k)} seed={k.id} src={k.avatar}/>}
+      title={<><span className="fnm">{nameOf(k)}</span><NameBadges p={k}/></>} sub={k.handle?'@'+k.handle:''}
+      end={self?<Note>{k.id===acting?.id?(asUs?t('fe.br.youUs'):t('fe.br.you')):k.kind==='person'?t('fe.br.yourOwn'):t('fe.br.yourCouple')}</Note>
        :<Btn size="sm" kind={fol?'soft':'primary'} aria-pressed={fol} disabled={busy===k.id} onClick={()=>toggle(k)}>
-        {fol?(asUs?t('fe.br.unfollowUs'):t('fe.br.unfollow')):(asUs?t('fe.br.followUs'):mine&&tab==='followers'?t('fe.br.followBack'):t('fe.br.follow'))}</Btn>}
-     </div>;})}</Card>}
+        {fol?(asUs?t('fe.br.unfollowUs'):t('fe.br.unfollow')):(asUs?t('fe.br.followUs'):mine&&tab==='followers'?t('fe.br.followBack'):t('fe.br.follow'))}</Btn>}/>;})}</Card>}
    {lists&&list&&list.length>=FOLLOW_PAGE&&<Note className="mt12">{t('fe.br.firstN',{n:FOLLOW_PAGE})}</Note>}
   </View>
  </>;

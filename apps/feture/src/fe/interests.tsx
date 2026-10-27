@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,EyeOff,History,KeyRound,MessageCircle,Pencil,Plus,Sparkles,Trash2,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Bar,Btn,Card,Chip,Empty,Group,IconBtn,Note,Progress,SearchInput,SectionLabel,Sheet,Skel,View} from './kit';
+import {Alert,AnswerScale,Bar,Btn,Card,Chip,Chips,Empty,Group,IconBtn,Note,Progress,Row,SearchInput,SectionLabel,Sheet,Skel,View} from './kit';
 import {useFe} from './session';
 import {when} from './feed';
 
@@ -113,7 +113,7 @@ export function InterestSheet({topicId,topics,cats,current,defaultVis='public',o
   </>:<>
    {v==null&&<Note className="jar-need">{t('fe.int.ed.need')}</Note>}
    <div className="row g8">
-    {current&&<button type="button" className="btn secondary icon" aria-label={t('fe.int.ed.remove')} onClick={()=>setAsking(true)} disabled={busy}><Trash2/></button>}
+    {current&&<Btn kind="soft" square icon={Trash2} aria-label={t('fe.int.ed.remove')} onClick={()=>setAsking(true)} disabled={busy}/>}
     <Btn className={v==null?'off':undefined} busy={busy} onClick={save} disabled={v==null||busy} aria-disabled={v==null||undefined}>{current?t('fe.int.ed.save'):t('fe.int.ed.addOne')}</Btn>
    </div>
   </>}
@@ -131,22 +131,16 @@ function InterestFields({limit,couple,v,setV,dir,setDir,vis,setVis}:{limit:boole
  const toggleDir=(k:'all'|Dir)=>{if(mark)return;
   setDir(d=>{if(k==='all')return [...DIRS];if(d.length===DIRS.length)return [k];const next=d.includes(k)?d.filter(x=>x!==k):[...d,k];return next.length?DIRS.filter(x=>next.includes(x)):[...DIRS];});};
  return <>
-    {!limit&&<Group bare className={mark?'dim':''} title={t('fe.int.ed.dir')}><Card><div className="chips">
+    {!limit&&<Group bare className={mark?'dim':''} title={t('fe.int.ed.dir')}><Card><Chips>
      {(['all',...DIRS] as const).map(k=>{const pressed=k==='all'?allDir:!allDir&&dir.includes(k);
-      return <button key={k} type="button" className={'chip'+(pressed?' on':'')} aria-pressed={pressed} tabIndex={mark?-1:undefined} aria-disabled={mark||undefined} onClick={()=>toggleDir(k)}>{t('fe.int.ed.dir.'+k)}</button>;})}
-    </div></Card></Group>}
+      return <Chip key={k} on={pressed} inactive={mark} onClick={()=>toggleDir(k)}>{t('fe.int.ed.dir.'+k)}</Chip>;})}
+    </Chips></Card></Group>}
     <Group bare title={t('fe.int.ed.vis')}><Card><div className="chips">
      {VIS.map(k=><Chip key={k} on={vis===k} onClick={()=>setVis(k)}>{t('fe.int.ed.vis.'+(k==='only'&&couple?'onlyUs':k))}</Chip>)}
     </div>{vis==='public'&&v==='hard'&&<Note className="mt8">{t('fe.int.ed.hardPublic')}</Note>}</Card></Group>
     <Group bare title={t(limit?'fe.int.ed.qLimit':'fe.int.ed.q')}><Card><div className="ans">
-     <div className="ans-scale" role="radiogroup" aria-label={t('fe.int.ed.scale')}>
-      {[1,2,3,4,5,6,7,8,9,10].map(k=><button key={k} type="button" className={[n&&k<=n?'fill':'',n===k?'on':''].filter(Boolean).join(' ')} role="radio" aria-checked={n===k} onClick={()=>setV(k)}>{k}</button>)}
-     </div>
-     <div className="ans-l"><span>{t('fe.int.ed.low')}</span><span>{t('fe.int.ed.high')}</span></div>
-     <div className="ans-marks">
-      <button type="button" className={'ans-m'+(v==='discuss'?' on':'')} aria-pressed={v==='discuss'} onClick={()=>setV('discuss')}><MessageCircle/><span>{t('fe.int.ed.discuss')}</span></button>
-      <button type="button" className={'ans-m taboo'+(v==='hard'?' on':'')} aria-pressed={v==='hard'} onClick={()=>setV('hard')}><Ban/><span>{t('fe.int.ed.hard')}</span></button>
-     </div>
+     <AnswerScale value={v} onChange={setV} label={t('fe.int.ed.scale')} low={t('fe.int.ed.low')} high={t('fe.int.ed.high')}
+      marks={[{id:'discuss',label:t('fe.int.ed.discuss'),icon:MessageCircle},{id:'hard',label:t('fe.int.ed.hard'),icon:Ban,taboo:true}] as const}/>
      <p className="ans-word" aria-live="polite">{v==null?t('fe.int.ed.pick'):n?<><b>{t('fe.int.ed.level',{n})}</b><span>{t('fe.int.ed.levelText')}</span></>:t(v==='hard'?'fe.int.ed.hardText':'fe.int.ed.discussText')}</p>
     </div></Card></Group>
  </>;
@@ -230,7 +224,7 @@ function TopicPicker({cats,topics,have,presetVis,onClose,onDone}:{cats:Category[
  if(stage==='answer'&&cur&&d){const tp=topics.find(x=>x.id===cur);const desc=tp?(locale==='en'?tp.descEn:tp.descRu):null;
   return <Sheet key={cur} title={tp?label(tp):cur} onClose={onClose} full
    foot={fromReview?<Btn onClick={next}>{t('fe.int.toReview')}</Btn>
-    :<div className="row g8"><button type="button" className="btn secondary" onClick={back}>{t('fe.back')}</button>
+    :<div className="row g8"><Btn kind="soft" onClick={back}>{t('fe.back')}</Btn>
      {d.v!=null&&<Btn onClick={next}>{step===sel.length-1?t('fe.int.review'):t('fe.int.next')}</Btn>}</div>}>
    <Note className="int-step">{t('fe.int.stepOf',{i:step+1,n:sel.length})}</Note>
    <Progress value={(step+1)/sel.length}/>
@@ -240,7 +234,7 @@ function TopicPicker({cats,topics,have,presetVis,onClose,onDone}:{cats:Category[
  const list:Interest[]=sel.map(id=>{const x=drafts[id]!;return {topicId:id,vis:x.vis,...(typeof x.v==='number'?{value:x.v,dir:x.dir}:{mark:x.v as 'discuss'|'hard'})};});
  return <Sheet title={t('fe.int.check')} onClose={onClose}
   foot={<>{failure&&<Alert kind="err" noIcon>{failure}</Alert>}
-   <div className="row g8"><button type="button" className="btn secondary" onClick={back} disabled={busy}>{t('fe.back')}</button><Btn busy={busy} onClick={save}>{t('fe.int.saveAll')}</Btn></div></>}>
+   <div className="row g8"><Btn kind="soft" onClick={back} disabled={busy}>{t('fe.back')}</Btn><Btn busy={busy} onClick={save}>{t('fe.int.saveAll')}</Btn></div></>}>
   <Note>{t('fe.int.checkHint',{n:sel.length})}</Note>
   <Card className="mt12"><Jars list={sortJars(list)} topics={topics} onOpen={id=>{setStep(sel.indexOf(id));setFromReview(true);setStage('answer');}}/></Card>
  </Sheet>;
@@ -273,9 +267,8 @@ export function InterestsHistoryScreen(){
    {error&&!items?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>load()}>{t('fe.retry')}</Btn></Empty>
     :!items?<Skel kind="list"/>
     :<Group><Card list>
-      {items.length?items.map(h=><div key={h.id} className="li static"><span className="ico">{h.archived?<Sparkles/>:<Pencil/>}</span>
-       <span className="tx"><b>{name(h.topicId)}</b><small>{text(h)} · {t(h.archived?'fe.int.hist.archived':'fe.int.hist.manual')}</small></span><span className="val">{when(h.at,locale)}</span></div>)
-       :<div className="li static"><span className="tx"><small>{t('fe.int.hist.empty')}</small></span></div>}
+      {items.length?items.map(h=><Row key={h.id} icon={h.archived?Sparkles:Pencil} title={name(h.topicId)} sub={<>{text(h)} · {t(h.archived?'fe.int.hist.archived':'fe.int.hist.manual')}</>} val={when(h.at,locale)}/>)
+       :<Row sub={t('fe.int.hist.empty')}/>}
      </Card><p className="grp-n">{t(couple?'fe.int.hist.footCouple':'fe.int.hist.foot')}</p>
      {error?<Alert kind="err" noIcon>{feErrorMessage(error,t)}</Alert>:null}
      {next&&<Btn kind="text" auto className="jar-more" disabled={more} busy={more} onClick={()=>load(next)}>{t('fe.int.hist.more')}</Btn>}

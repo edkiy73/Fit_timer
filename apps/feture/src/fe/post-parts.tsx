@@ -5,7 +5,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Check,ChevronLeft,ChevronRight,Link as LinkIcon,Undo2,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Ask,H,IconBtn,Note} from './kit';
+import {Ask,H,IconBtn,Note,PhotoTrack} from './kit';
 import {useFe} from './session';
 import {useToast} from './toast';
 
@@ -135,7 +135,7 @@ export function MediaGrid({media,onExpired}:{media:MediaItem[],onExpired?:(()=>v
   grid=<div className="mgrid n1"><button type="button" className="mcell mf" style={r?{'--ar':fitAr(r,.8,1.91).toFixed(4)} as CSSProperties:undefined} aria-label={label} onClick={go(0)}>
    <MfImg src={mediaSrc(m)!} blur={m.src?.blur} onRatio={learn(m.id)} onFail={onExpired}/></button></div>;}
  else{const mo=mosaic(rs);
-  grid=<div className="mgrid mos" style={{aspectRatio:(1/mo.H).toFixed(4)}}>{shown.map((m,i)=><button key={m.id} type="button" className="mcell mf" style={mosaicBox(mo.cells[i]!,mo.H)} aria-label={label} onClick={go(i)}>
+  grid=<div className="mgrid mos" style={{'--mo-ar':(1/mo.H).toFixed(4)} as CSSProperties}>{shown.map((m,i)=><button key={m.id} type="button" className="mcell mf" style={mosaicBox(mo.cells[i]!,mo.H)} aria-label={label} onClick={go(i)}>
    <MfImg src={mediaSrc(m)!} blur={m.src?.blur} onRatio={learn(m.id)} onFail={onExpired}/>{i===3&&n>4&&<span className="more">+{n-4}</span>}</button>)}</div>;}
  return <>{grid}{open!==null&&<Viewer srcs={list.map(m=>mediaSrc(m,'full')!)} index={open} onClose={close}/>}</>;
 }
@@ -151,7 +151,7 @@ export function Viewer({srcs,index,onClose}:{srcs:string[],index:number,onClose:
  if(!host)return null;
  return createPortal(<div ref={box} className={'viewer'+(on?' on':'')} role="dialog" aria-modal="true" aria-label={t('fe.br.viewer')}
   onPointerDown={e=>{sx.current=e.clientX;}} onPointerUp={e=>{if(sx.current==null)return;const dx=e.clientX-sx.current;sx.current=null;if(Math.abs(dx)>50)step(dx<0?1:-1);}}>
-  <div className="vw-track" style={{transform:`translateX(${-i*100}%)`}}>{srcs.map((s,k)=><figure key={k}><img src={s} alt="" draggable={false}/></figure>)}</div>
+  <PhotoTrack srcs={srcs} index={i}/>
   <div className="vw-top"><span className="vw-n">{i+1} / {srcs.length}</span><IconBtn icon={X} kind="glass" label={t('fe.br.close')} onClick={onClose}/></div>
   {srcs.length>1&&<>
    <button type="button" className="vw-nav l" aria-label={t('fe.br.prev')} disabled={i===0} onClick={()=>step(-1)}><ChevronLeft/></button>

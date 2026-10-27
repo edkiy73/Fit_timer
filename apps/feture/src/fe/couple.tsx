@@ -43,7 +43,7 @@ export function CoupleMembers(){
  const {t}=useI18n();const members=useCoupleMembers();
  if(!members?.length)return null;
  return <Group title={t('fe.cw.members')}><Card list>
-  {members.map(m=><div key={m.profileId} className="li static"><Av name={nameOf(m)} seed={m.profileId} size="sm"/><span className="tx"><b>{nameOf(m)}</b>{m.handle&&m.name?<small>@{m.handle}</small>:null}</span></div>)}
+  {members.map(m=><Row key={m.profileId} av={<Av name={nameOf(m)} seed={m.profileId} size="sm"/>} title={nameOf(m)} sub={m.handle&&m.name?'@'+m.handle:undefined}/>)}
  </Card></Group>;
 }
 
@@ -59,9 +59,9 @@ export function CouplePending({base,tick,onDecided}:{base:CoupleBase,tick:number
  if(acting?.kind!=='couple'||!items.length)return null;
  const other=nameOf(members?.find(m=>!m.me));
  return <>
-  {items.map(a=><button key={a.id} type="button" className={'alert me18-ban'+(a.mine?'':' warn')} onClick={()=>setOpen(a)}>
-   <Clock/><span><b>{a.mine?t('fe.cw.mineTitle',{name:other}):t('fe.cw.theirsTitle',{name:other})}</b>{kindTitle(a,t)} · {a.mine?t('fe.cw.mineSub'):t('fe.cw.theirsSub')}</span>
-  </button>)}
+  {items.map(a=><Alert key={a.id} kind={a.mine?'plain':'warn'} icon={Clock} className="me18-ban" onClick={()=>setOpen(a)}>
+   <b>{a.mine?t('fe.cw.mineTitle',{name:other}):t('fe.cw.theirsTitle',{name:other})}</b>{kindTitle(a,t)} · {a.mine?t('fe.cw.mineSub'):t('fe.cw.theirsSub')}
+  </Alert>)}
   {open&&<ApprovalSheet a={open} base={base} partner={other} onClose={()=>setOpen(null)} onDone={msg=>{setOpen(null);load();onDecided(msg);}}/>}
  </>;
 }

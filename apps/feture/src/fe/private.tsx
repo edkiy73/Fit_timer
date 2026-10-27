@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {ChevronRight,Lock,LockOpen,Plus,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Av,Btn,Card,Chip,ChoiceChips,Empty,Group,Note,Pill,Row,SectionLabel,SelectRow,Sheet,Skel,Stack,ToggleRow} from './kit';
+import {Alert,Av,Btn,Card,Chip,Chips,ChoiceChips,Empty,Group,Note,PersonLine,Pill,RequestCard,Row,SectionLabel,SelectRow,Sheet,Skel,Stack,ToggleRow,VaultHead} from './kit';
 import {AgeCheckLink,useAgeResume} from './age-check';
 import {useFe} from './session';
 import {when} from './feed';
@@ -54,24 +54,18 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged}:{profileId:st
  const shown=allGiven?given:given.slice(0,3);
  return <>
   {reqs.length>0&&<Group title={<>{t('fe.priv.requests')} · {reqs.length}</>}><Stack gap={2}>
-   {reqs.map(r=><Card key={r.id} className="rqcard">
-    <div className="row">
-     <button type="button" className="rq-av" aria-label={nameOf(r.profile)} onClick={()=>r.profile&&navigate('/n/people/'+r.profile.id)}><Av name={nameOf(r.profile)} seed={r.profile?.id??r.id} src={r.profile?.avatar}/></button>
-     <button type="button" className="grow" style={{textAlign:'left'}} onClick={()=>r.profile&&navigate('/n/people/'+r.profile.id)}>
-      <b style={{fontSize:16}}>{withAge(nameOf(r.profile),r.profile)}<NameBadges p={r.profile}/></b><div className="note">{cp?t('fe.mx.pr.asksUs'):t('fe.priv.asks')} · {when(r.created_at,locale)}</div>
-     </button>
-    </div>
-    <div className="chips mt12">{r.scopes.map(s=><Pill key={s}>{scopeLabel(s)}</Pill>)}</div>
-    <div className="row g8 mt12">
-     <Btn size="md" onClick={()=>setGrantFor(r)} disabled={busy}>{t('fe.priv.grant')}</Btn>
-     <Btn size="md" kind="soft" onClick={()=>void act(()=>call('access.decline',{opId:newOpId(),requestId:r.id},ok),t('fe.mx.pr.declined'))} disabled={busy}>{t('fe.priv.decline')}</Btn>
-    </div>
-   </Card>)}
+   {reqs.map(r=><RequestCard key={r.id}
+    person={<PersonLine av={<Av name={nameOf(r.profile)} seed={r.profile?.id??r.id} src={r.profile?.avatar}/>} label={nameOf(r.profile)} onOpen={()=>r.profile&&navigate('/n/people/'+r.profile.id)}
+     name={<>{withAge(nameOf(r.profile),r.profile)}<NameBadges p={r.profile}/></>} sub={<>{cp?t('fe.mx.pr.asksUs'):t('fe.priv.asks')} · {when(r.created_at,locale)}</>}/>}
+    actions={<><Btn size="md" onClick={()=>setGrantFor(r)} disabled={busy}>{t('fe.priv.grant')}</Btn>
+     <Btn size="md" kind="soft" onClick={()=>void act(()=>call('access.decline',{opId:newOpId(),requestId:r.id},ok),t('fe.mx.pr.declined'))} disabled={busy}>{t('fe.priv.decline')}</Btn></>}>
+    <Chips className="mt12">{r.scopes.map(s=><Pill key={s}>{scopeLabel(s)}</Pill>)}</Chips>
+   </RequestCard>)}
   </Stack></Group>}
   <Group title={t('fe.mx.pr.opens')} action={<AudTag k="granted"/>}>
-   {bits.length?<button type="button" className="card blk-btn vault" style={{display:'block'}} onClick={editor}>
-     <span className="vault-h" style={{padding:'0 0 8px'}}><span className="vi"><Lock/></span><b>{bits.join(' · ')}</b></span>
-     {txt&&<span className="blk-bio">{txt.slice(0,160)}</span>}<span className="chv"><ChevronRight/></span></button>
+   {bits.length?<Card className="blk-btn vault" onClick={editor}>
+     <VaultHead inCard title={bits.join(' · ')}/>
+     {txt&&<span className="blk-bio">{txt.slice(0,160)}</span>}<span className="chv"><ChevronRight/></span></Card>
     :<Card><button type="button" className="ph-empty" onClick={editor}><span className="pe-ic"><Lock/></span>
      <span className="tx"><b>{t('fe.mx.pr.add')}</b><small>{cp?t('fe.mx.pr.addSubUs'):t('fe.mx.pr.addSub')}</small></span><Plus/></button></Card>}
   </Group>
@@ -85,8 +79,8 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged}:{profileId:st
   </Group>
   <Group title={t('fe.mx.pr.settings')}><Card list>
    <ToggleRow title={t('fe.priv.on')} sub={t('fe.mx.pr.onSub')} on={on} disabled={busy} onClick={()=>setAsking('off')}/>
-   <div className="li"><SelectRow label={t('fe.mx.pr.reqFrom')} value={requestsFrom} options={(['all','matches','none'] as const).map(v=>[v,t('fe.mx.pr.from.'+v)] as const)}
-    onChange={v=>void act(()=>call('profile.setVisibility',{opId:newOpId(),setting:'requestsFrom',value:v},ok),t('fe.mx.saved'))}/></div>
+   <SelectRow row label={t('fe.mx.pr.reqFrom')} value={requestsFrom} options={(['all','matches','none'] as const).map(v=>[v,t('fe.mx.pr.from.'+v)] as const)}
+    onChange={v=>void act(()=>call('profile.setVisibility',{opId:newOpId(),setting:'requestsFrom',value:v},ok),t('fe.mx.saved'))}/>
   </Card></Group>
   {offAsk}
   {asking==='revokeAll'&&<Ask icon={Lock} danger title={t('fe.mx.pr.revokeAllTitle')} text={t('fe.mx.pr.revokeAllText',{n:given.length})} ok={t('fe.mx.pr.revokeAll')} busy={busy}

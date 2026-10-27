@@ -1,22 +1,12 @@
-/* Shell-only glue on top of the kit base.css: the prototype's <body>
-   is the viewport, here .v21 is a box inside the React tree. */
+/* App frame glue only (the shell, not a screen; component styles live in the kit): the prototype's <body> is the
+   viewport, here .v21 is a box inside the React tree. */
 .fe-v21{position:fixed;inset:0;z-index:1}
 .fe-v21 .fe-center{display:grid;place-items:center;align-content:center;min-height:70dvh}
 .fe-v21 .fe-pc-ini{position:absolute;inset:0;display:grid;place-items:center;background:var(--raise)}
-
-/* X02 batch add: step counter and progress bar inside a shared Sheet (the prototype styles them under #sheet) */
-.fe-v21 .sheet .qprog{flex:none;margin:0 0 14px}
-.fe-v21 .sheet .int-step{margin:0 0 8px}
-/* a photo whose served copies are not ready yet blinks in place instead of sitting as an empty box */
-.fe-v21 .mi.nosrc{background:var(--raise);animation:fe-blink 1.4s ease-in-out infinite}
-@media (prefers-reduced-motion:reduce){.fe-v21 .mi.nosrc{animation:none}}
-/* Compose «Интересы»: one capsule per row, so adding or removing one never re-flows the others; air before the chips */
-.fe-v21 .cmp-ints .card{padding:14px}
-.fe-v21 .cmp-ints .testcard{margin:0 0 14px}
-.fe-v21 .cmp-ints .testcard .jars{grid-template-columns:minmax(0,1fr);gap:8px}
-.fe-v21 .cmp-ints .chips.mt12{margin-top:0}
-/* Shell skeleton and sidebar glue (the frame itself, not a screen): the title placeholder, the dock avatar
- * placeholder and the sidebar tab's «new» dot — values that were inline in shell.tsx. */
+/* Shell skeleton and sidebar: the title placeholder, the dock avatar placeholder and the sidebar tab's «new» dot. */
 .fe-v21 .bar .sk.fe-sk-title{width:120px;height:16px}
 .fe-v21 .dock-av .sk.fe-sk-av{width:100%;height:100%;border-radius:50%}
 .fe-v21 .side .navb em.dot{min-width:9px;width:9px;height:9px;padding:0}
+/* «Я» (V21 X01) has no `header.bar` in the prototype, so its main is not `.hasbar`; the shell sets `.hasbar` on every
+   tab root, which pushed the header ~58 px down. */
+.v21 .main.hasbar>.view.me18.me-x01,.v21 .main>.view.me18.me-x01{padding-top:4px;-webkit-mask-image:none;mask-image:none}

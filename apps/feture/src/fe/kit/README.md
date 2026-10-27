@@ -43,7 +43,7 @@ optional; `Chip inactive` (looks normal, not reachable — its group is dimmed);
 text), `onClick` (the whole notice opens something), `role="alertdialog"` (an inline question); `Text bold` /
 `breakAll`; `Empty big` / `top` / `after`; `Skel kind="fill"` (fills a cover) / `"event"`; `CodeInput` `disabled`,
 `onComplete`, `onEnter`, `digitLabel` (the app's `.code` look); `RangeDual labels`; `Note as="ul"`.
-Tokens added: `--fs-xl` (24), `--r-2xl` (30), `--camera` (the dark box behind a selfie), `--on-media` (text on photos).
+Token added: `--fs-xl` (24).
 
 ## Domain components (`kit/domain.tsx`, Storybook «Домен»)
 
@@ -57,7 +57,7 @@ Product pieces that repeat or carry their own look. Screens use these, never the
 | Create | `Swatches` (cover colour plates) |
 | Interests | `AnswerScale` (1–10 with «обсудить» / «граница» marks) |
 | People | `PersonName` (name on a photo card), `PersonLine` + `RequestCard` + `Answer` (requests and applications), `LikeTile`, `Radar` |
-| Photos and checks | `PhotoSlots` / `PhotoSlot` / `PhotoAdd` (profile photo grid, drag to reorder, `loading`), `PhotoTrack` (viewer strip), `SelfieFrame`, `Pose` |
+| Photos and checks | `PhotoSlots` / `PhotoSlot` / `PhotoAdd` (profile photo grid, drag to reorder, `loading`), `PhotoTrack` (viewer strip), `Pose` (the gesture to show; the shot itself is `CaptureFrame`) |
 | Private layer | `VaultHead` (lock, title, switch) |
 | Staff review | `ReviewCard`, `KeyValues`, `ReviewMedia`, `ReviewPair` |
 
