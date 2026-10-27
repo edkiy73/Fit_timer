@@ -177,6 +177,14 @@ export const FilePick=forwardRef<HTMLInputElement,{accept:string,multiple?:boole
  return <input ref={ref} type="file" accept={accept} multiple={multiple} capture={capture} hidden onChange={e=>{if(e.target.files?.length)onFiles(e.target.files);e.target.value='';}}/>;
 });
 
+/** The camera viewfinder of a verification shot (age check, photo check): `face` shows an oval, `document` a card
+ * frame; `hint` sits at the bottom. With `src` it shows the taken shot instead (whole, never cropped). */
+export function CaptureFrame({shape='face',hint,src,alt}:{shape?:'face'|'document',hint?:ReactNode,src?:string|null|undefined,alt?:string}){
+ return <div className={'k-cam'+(shape==='document'?' doc':'')}>
+  {src?<img src={src} alt={alt??''} draggable={false}/>:<><div className="k-cam-guide" aria-hidden="true"/>{hint&&<div className="k-cam-hint">{hint}</div>}</>}
+ </div>;
+}
+
 /** Headings h1–h5 on the type scale (tokens.css). `as` keeps the document outline right when the look and the level
  * differ (a sheet title looks like h2 but may be an h2 or h3). */
 export function H({level,as,children,className,id,tabIndex}:{/** 0 = display (event / community title on a cover). */ level:0|1|2|3|4|5,as?:'h1'|'h2'|'h3'|'h4'|'h5'|'p'|'span',children:ReactNode,className?:string,id?:string,tabIndex?:number}){

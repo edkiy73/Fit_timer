@@ -11,7 +11,9 @@ import {PickField,PlacePicker,type Place} from './kit/Place';
 import {useSendPhoto} from './media-upload';
 import {useToast} from './toast';
 import {useDragOrder} from './reorder';
-import {Ask,AudTag,COUPLE_ROWS,DETAIL_ROWS,MAX_PHOTOS,catalogRes,ok,photoSrc,profileRes,type Profile} from './me';
+import {Ask,AudTag,COUPLE_ROWS,DETAIL_ROWS,MAX_PHOTOS,catalogRes,ok,photoSrc,profileRes,settingsRes,type Profile} from './me';
+import {NICK,nickAnswer} from './register';
+import {shakeFirstErr} from './create-community';
 
 /** V21 P02 «Редактировать профиль» and P04 «Приватная часть» (`SC.P02` with `only`): one editor, opened at the block
  * that was tapped on «Я» — `media` (the photo slots), `basics` (name, nickname, age, about, city), `details` (the
@@ -37,7 +39,7 @@ export function MeEditScreen(){
  const [cat,setCat]=useState<z.infer<typeof catalogRes>|null>(null);const [jars,setJars]=useState({all:0,granted:0});const [grants,setGrants]=useState(0);
  const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
  const [whoOpen,setWhoOpen]=useState<boolean|null>(null);const [city,setCity]=useState(false);const [phSheet,setPhSheet]=useState<{k:'photos'|'privMedia',i:number}|null>(null);
- const [askOff,setAskOff]=useState(false);const [added,setAdded]=useState<Place|null>(null);const [uploading,setUploading]=useState<'photos'|'privMedia'|null>(null);
+ const [askOff,setAskOff]=useState(false);const [nickErr,setNickErr]=useState('');const [askLast,setAskLast]=useState<number|null>(null);const [discoverOn,setDiscoverOn]=useState(false);const [added,setAdded]=useState<Place|null>(null);const [uploading,setUploading]=useState<'photos'|'privMedia'|null>(null);
  const file=useRef<HTMLInputElement>(null);const fileKind=useRef<'photos'|'privMedia'>('photos');const fid=useId();
  // Press and drag to change the order in the draft; «Сохранить» writes it.
  const drag=useDragOrder<'photos'|'privMedia'>((k,ids)=>setD(x=>{if(!x)return x;const by=new Map(x[k].map(p=>[p.id,p]));const next=ids.map(i=>by.get(i)).filter((p):p is Ph=>!!p);return next.length===x[k].length?{...x,[k]:next}:x;}));
@@ -46,6 +48,7 @@ export function MeEditScreen(){
   if(!acting)return;setError(null);
   Promise.all([call('profile.get',{profileId:acting.id},profileRes),call('private.get',{profileId:acting.id},privRes),call('catalog.get',{},catalogRes,{asAccount:true}),
    call('interests.list',{profileId:acting.id},interestsRes).catch(()=>({ok:true as const,items:[]}))])
+   .then(r=>{call('profile.settings',{},settingsRes).then(x=>setDiscoverOn(x.settings.discoverMode==='visible')).catch(()=>{});return r;})
    .then(([a,b,c,e])=>{
     const pr=a.profile;const det:Draft['details']={};
     for(const [f] of DETAIL_ROWS){const v=pr.details[f];det[f]=f==='status'?(typeof v==='string'?v:null):Array.isArray(v)?v.filter((x):x is string=>typeof x==='string'):[];}
@@ -74,7 +77,15 @@ export function MeEditScreen(){
  const pick=(k:'photos'|'privMedia')=>{fileKind.current=k;file.current?.click();};
 
  const save=async()=>{
-  if(!d||!base||!p||busy)return;setBusy(true);setFailure('');
+  if(!d||!base||!p||busy)return;
+  // V21 P02: the nickname is checked in place — format first, then whether it is free (the server decides at save too).
+  const h=d.handle.trim();
+  if(!cp&&h!==base.handle){
+   if(!NICK.test(h)||/\.\./.test(h)||!/[A-Za-z]/.test(h)){setNickErr(t('fe.reg.nick.format'));setTimeout(shakeFirstErr);return;}
+   const r=await call('nick.check',{handle:h},nickAnswer,{asAccount:true}).catch(()=>null);
+   if(r&&!r.available){setNickErr(t('fe.reg.nick.'+(r.reason==='reserved'?'reserved':'taken')));setTimeout(shakeFirstErr);return;}
+  }
+  setBusy(true);setFailure('');
   try{
    let pending=false;
    const upd:Record<string,unknown>={};
@@ -92,7 +103,7 @@ export function MeEditScreen(){
    if(!cp&&d.privOn&&JSON.stringify(d.privMedia.map(x=>x.id))!==JSON.stringify(base.privMedia.map(x=>x.id)))await call('private.setMedia',{opId:newOpId(),assetIds:d.privMedia.map(x=>x.id)},ok);
    toast(pending?t('fe.me.pending'):only==='media'?t('fe.mx.ed.photosSaved'):t('fe.me.saved'),{type:'ok'});
    leave();
-  }catch(e){setFailure(feErrorMessage(e,t));}finally{setBusy(false);}
+  }catch(e){if(e instanceof FeError&&e.fields?.includes('handle')){setNickErr(t('fe.reg.nick.taken'));setTimeout(shakeFirstErr);}else setFailure(feErrorMessage(e,t));}finally{setBusy(false);}
  };
 
  if(!acting)return null;
@@ -113,6 +124,8 @@ export function MeEditScreen(){
   return <div className={k==='photos'?'ph-slots':'ph-slots priv'}>{cells}</div>;
  };
  const sheetList=phSheet&&d?d[phSheet.k]:[];const sheetPh=phSheet?sheetList[phSheet.i]:undefined;
+ // V21 phRemove: the last profile photo of a profile shown in Discover — it would drop out of Discover; ask first.
+ const remove=(k:'photos'|'privMedia',i:number)=>{if(d&&k==='photos'&&d.photos.length===1&&discoverOn){setPhSheet(null);setAskLast(i);return;}move(k,i,'remove');};
  const move=(k:'photos'|'privMedia',i:number,to:'main'|'remove')=>{if(!d)return;const list=[...d[k]];const [x]=list.splice(i,1);if(to==='main'&&x)list.unshift(x);set({[k]:list} as Partial<Draft>);setPhSheet(null);};
  // A city the person added is pending (not in the catalog yet): its name comes from the profile or the picker.
  const placeName=(id:string|null)=>{const x=id?cat?.places?.find(y=>y.id===id)??(added?.id===id?added:null):null;
@@ -140,7 +153,7 @@ export function MeEditScreen(){
      {(show('basics')||show('details'))&&<Group><Card form className="pe-form">
       {show('basics')&&<>
        <Field id={fid+'n'} label={cp?t('fe.mx.ed.coupleName'):t('fe.me.name')}><Input id={fid+'n'} value={d.name} maxLength={60} onChange={e=>set({name:e.target.value})}/></Field>
-       {!cp&&<Field id={fid+'h'} label={t('fe.mx.ed.nick')}><div className="inwrap"><AtSign/><Input id={fid+'h'} value={d.handle} maxLength={20} autoCapitalize="off" spellCheck={false} onChange={e=>set({handle:e.target.value.replace(/^@/,'')})}/></div></Field>}
+       {!cp&&<Field id={fid+'h'} name="handle" label={t('fe.mx.ed.nick')} error={nickErr||undefined}><div className="inwrap"><AtSign/><Input id={fid+'h'} value={d.handle} maxLength={20} autoCapitalize="off" spellCheck={false} invalid={!!nickErr} onChange={e=>{set({handle:e.target.value.replace(/^@/,'')});setNickErr('');}}/></div></Field>}
        {!cp&&<ToggleRow title={t('fe.mx.ed.showAge')} on={d.showAge} onClick={()=>set({showAge:!d.showAge})}/>}
        <Field id={fid+'b'} label={t('fe.mx.ed.about')}><TextArea id={fid+'b'} rows={4} maxLength={500} value={d.bio} placeholder={t('fe.mx.ed.aboutPh')} onChange={e=>set({bio:e.target.value})}/><Counter n={d.bio.length} max={500}/></Field>
        <PickField label={t('fe.mx.ed.city')} value={placeName(d.cityId)} placeholder={t('fe.mx.ed.noCity')} onClick={()=>setCity(true)}/>
@@ -183,9 +196,11 @@ export function MeEditScreen(){
    <div className="ph-sheet-prev">{sheetPh.src&&<img src={sheetPh.src} alt="" draggable={false}/>}</div>
    <Card list>
     {phSheet.k==='photos'&&phSheet.i>0&&<Row icon={Star} title={t('fe.mx.ph.makeMain')} sub={t('fe.mx.ph.makeMainSub')} noChev onClick={()=>move(phSheet.k,phSheet.i,'main')}/>}
-    <Row icon={Trash2} title={t('fe.mx.ph.remove')} sub={t('fe.mx.ed.onSave')} danger onClick={()=>move(phSheet.k,phSheet.i,'remove')}/>
+    <Row icon={Trash2} title={t('fe.mx.ph.remove')} sub={t('fe.mx.ed.onSave')} danger onClick={()=>remove(phSheet.k,phSheet.i)}/>
    </Card>
   </Sheet>}
+  {askLast!==null&&<Ask icon={Trash2} danger title={t('fe.mx.ph.lastTitle')} text={t('fe.mx.ph.lastText')} ok={t('fe.mx.ph.remove')}
+   onOk={()=>{move('photos',askLast,'remove');setAskLast(null);}} onCancel={()=>setAskLast(null)}/>}
   {askOff&&<Ask icon={Lock} danger title={t('fe.mx.pr.offTitle')} text={[grants?t('fe.mx.pr.offWhat',{g:grants,q:0}):t('fe.mx.pr.offAll'),t('fe.mx.pr.offRest'),t('fe.mx.ed.onSave')].join(' ')} ok={t('fe.mx.pr.offOk')}
    onCancel={()=>setAskOff(false)} onOk={()=>{set({privOn:false});setAskOff(false);}}/>}
  </>;

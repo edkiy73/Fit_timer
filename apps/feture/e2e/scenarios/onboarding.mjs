@@ -9,7 +9,7 @@ async function documents() {
   return r.documents.filter(d => d.requiresAccept).map(d => ({ id: d.id, contentHash: d.hash }));
 }
 
-export default [{ name: 'sign-up step 2: topics, community preview and join, feed on the topics', persona: 'new', run: async t => {
+const main = [{ name: 'sign-up step 2: topics, community preview and join, feed on the topics', persona: 'new', run: async t => {
   const handle = ('qa_' + t.me.email.split('@')[0].replace(/[^a-z0-9]/g, '')).slice(0, 20);
   const made = await t.api('account.create', { opId: uuid7(), handle, birthDate: '1993-03-03', locale: 'ru', documents: await documents(), newsOptIn: false });
   expect(made.ok, 'account.create ' + JSON.stringify(made).slice(0, 200));
@@ -58,3 +58,16 @@ export default [{ name: 'sign-up step 2: topics, community preview and join, fee
   await t.wait(1500); await t.go('/n/me'); await t.go('/n/me/edit?only=basics'); await t.see('.sel-btn:has-text("' + own + '")'); await t.shot('city-reopen'); await t.tap('.sel-btn'); await t.tap('.sheet.on .li:has-text("Не показывать")'); await t.tap('.ctabar .btn.primary');
   await until(async () => (await t.api('profile.get', { profileId: pid })).profile?.city === null, 'city cleared');
 }}];
+export const editor = [{ name: 'profile editor: nickname checked in place', persona: 'basic', route: '/n/me/edit?only=basics', run: async t => {
+  const nick = t.page.locator('[data-field="handle"] input'); await nick.waitFor();
+  const before = await nick.inputValue();
+  await nick.fill('a..b'); await t.tap('.ctabar .btn.primary'); await t.see('[data-field="handle"] .ferr');
+  await nick.fill('qa_mod1'); await t.tap('.ctabar .btn.primary'); await t.see('[data-field="handle"] .ferr:has-text("занят")');
+  await nick.fill(before); await t.notSee('[data-field="handle"] .ferr', 500);
+}}, { name: 'profile editor: last photo in Discover asks first', persona: 'full', route: '/n/me/edit?only=media', run: async t => {
+  // A full persona has exactly one approved photo and is visible in Discover.
+  await t.see('.mi img'); await t.page.locator('.mi').first().click(); await t.wait(600);
+  await t.tap('.sheet.on .li:has-text("Убрать из профиля")'); await t.see('Убрать последнее фото?');
+  await t.tap('[role="alertdialog"] button:has-text("Отмена"), .ask button:has-text("Отмена")'); await t.see('.mi img');
+}}];
+export default [...main, ...editor];

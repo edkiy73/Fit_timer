@@ -16,9 +16,9 @@ import {TermsSheet,loadDocuments} from './terms-sheet';
  * owner decision 27.10.2026; who sees the answers: «Все» by default — owner decision 27.10.2026). Each screen has the
  * prototype's frame: `header.bar` + `.view.nodock` + `div.ctabar` pinned to the bottom. Server rules decide; the
  * form only explains them early. */
-const NICK=/^[A-Za-z0-9](?:[A-Za-z0-9_.]{1,18})[A-Za-z0-9]$/;
+export const NICK=/^[A-Za-z0-9](?:[A-Za-z0-9_.]{1,18})[A-Za-z0-9]$/;
 const created=z.object({ok:z.boolean(),profileId:z.uuid().optional(),rule:z.string().optional()});
-const nickAnswer=z.object({ok:z.literal(true),available:z.boolean(),reason:z.string().optional()});
+export const nickAnswer=z.object({ok:z.literal(true),available:z.boolean(),reason:z.string().optional()});
 const option=z.object({kind:z.string(),code:z.string(),ru:z.string(),en:z.string()});
 const catalog=z.object({ok:z.literal(true),options:z.array(option)});
 const onboarded=z.object({ok:z.literal(true),discoverVisible:z.boolean(),photoNeeded:z.boolean()});

@@ -42,6 +42,9 @@
  /* Layers (inside .root). */
  --z-bar:2; --z-dock:3; --z-sheet:20; --z-dialog:30; --z-toast:60;
 
+ /* Camera frame (CaptureFrame): the same dark viewfinder in light and dark themes. */
+ --cam-bg:#140B11; --cam-ink:#fff; --cam-guide:rgba(255,255,255,.6);
+
  /* Focus ring — the same on every interactive control. */
  --focus:0 0 0 3px color-mix(in srgb,var(--accent) 35%,transparent);
 }
