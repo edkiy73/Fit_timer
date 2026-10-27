@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {ArrowUpDown,AtSign,Bookmark,Check,Calendar,ChartColumn,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,FileText,Globe,Heart,Image as ImageIcon,KeyRound,Lock,MessageCircle,Newspaper,Pencil,Plus,Search,SendHorizontal,Share,SlidersHorizontal,Sparkles,Trash2,Users,X} from 'lucide-react';
 import type {LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Av,Bar,Btn,Empty,Layer,Seg,View,Skel} from './ui';
+import {Alert,Av,Bar,Btn,Card,Chip,Chips,Counter,Empty,Field,FilePick,Group,H,IconBtn,Input,Layer,Note,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,TextArea,ToggleRow,View} from './kit';
 import {useFe} from './session';
 import {BellButton} from './inbox';
 import {PostMenu,ReplyMenu,type Removal} from './post-menu';
@@ -83,8 +83,8 @@ export function FeedTab(){
  const setSel=(list:string[])=>setFilters(f=>({...f,[tab]:list}));
  const toggleTopic=(id:string)=>setSel(sel.includes(id)?sel.filter(x=>x!==id):[...sel,id]);
  const me=nameOf(acting);
- const chips=sel.length?sel.map(x=><button key={x} type="button" className="chip filter on" onClick={()=>toggleTopic(x)}>#{tname(x)} <X/></button>)
-  :quick[tab].map(x=><button key={x} type="button" className="chip filter" onClick={()=>toggleTopic(x)}>#{tname(x)}</button>);
+ const chips=sel.length?sel.map(x=><Chip key={x} filter on onClick={()=>toggleTopic(x)}>#{tname(x)} <X/></Chip>)
+  :quick[tab].map(x=><Chip key={x} filter on={false} onClick={()=>toggleTopic(x)}>#{tname(x)}</Chip>);
  const replace=(np:Post)=>setItems(list=>list?.map(x=>x.id===np.id?np:x)??null);
  const refetch=(id:string)=>{call('post.get',{postId:id},onePost).then(r=>replace(r.post)).catch(()=>{});};
  let body:ReactNode;
@@ -106,18 +106,18 @@ export function FeedTab(){
   {hidden>0&&<button type="button" className="linkbtn feed-hid" onClick={()=>navigate('/n/settings/hidden')}><EyeOff/>{t('fe.fd.hiddenN',{n:hidden})}</button>}
  </>;
  return <>
-  <Bar title={t('fe.nav.feed')}><button type="button" className="ibtn" aria-label={t('fe.br.search')} onClick={()=>navigate('/n/search?scope=posts')}><Search/></button><BellButton/></Bar>
+  <Bar title={t('fe.nav.feed')}><IconBtn icon={Search} label={t('fe.br.search')} onClick={()=>navigate('/n/search?scope=posts')}/><BellButton/></Bar>
   <View>
    <div className="mb12"><Seg value={tab} onChange={v=>{setNotice('');setTab(v);}} options={[{id:'forYou',label:t('fe.feed.tab.forYou')},{id:'following',label:t('fe.feed.tab.following')},{id:'popular',label:t('fe.fd.tab.popular')}]}/></div>
-   {notice&&<div className="alert ok mb12" role="status"><span>{notice}</span></div>}
+   {notice&&<Alert kind="ok" className="mb12">{notice}</Alert>}
    <div className="composer">
     <button type="button" className="cmp-main" onClick={()=>navigate('/n/feed/new')}>{acting&&<Av name={me} seed={acting.id} size="sm" src={acting.avatar} couple={acting.kind==='couple'&&acting.name?coupleOf({kind:'couple',name:acting.name}):undefined}/>}<span>{t('fe.feed.whatsNew')}</span></button>
-    <button type="button" className="ibtn ghost sm" aria-label={t('fe.fd.photoOrVideo')} onClick={()=>navigate('/n/feed/new?x=media')}><ImageIcon/></button>
-    <button type="button" className="ibtn ghost sm" aria-label={t('fe.feed.poll')} onClick={()=>navigate('/n/feed/new?x=poll')}><ChartColumn/></button>
-    <button type="button" className="ibtn add" aria-label={t('fe.create')} onClick={()=>setSheet('create')}><Plus/></button>
+    <IconBtn icon={ImageIcon} kind="ghost" size="sm" label={t('fe.fd.photoOrVideo')} onClick={()=>navigate('/n/feed/new?x=media')}/>
+    <IconBtn icon={ChartColumn} kind="ghost" size="sm" label={t('fe.feed.poll')} onClick={()=>navigate('/n/feed/new?x=poll')}/>
+    <IconBtn icon={Plus} kind="add" label={t('fe.create')} onClick={()=>setSheet('create')}/>
    </div>
-   {(chips.length>0||sel.length>0||catalog.length>0)&&<div className="filterline"><div className="chips scroll">{chips}</div>
-    <button type="button" className={'chip filter'+(sel.length?' on':'')} aria-label={t('fe.fd.filters')} onClick={()=>setSheet('filters')}><SlidersHorizontal/>{t('fe.fd.filters')}{sel.length>0&&<em className="badge-abs">{sel.length}</em>}</button>
+   {(chips.length>0||sel.length>0||catalog.length>0)&&<div className="filterline"><Chips scroll>{chips}</Chips>
+    <Chip filter on={sel.length>0} icon={SlidersHorizontal} label={t('fe.fd.filters')} onClick={()=>setSheet('filters')}>{t('fe.fd.filters')}{sel.length>0&&<em className="badge-abs">{sel.length}</em>}</Chip>
    </div>}
    {body}
   </View>
@@ -129,19 +129,16 @@ export function FeedTab(){
 /** `ACT.create` — what to create: a post, an article or an event. */
 export function CreateSheet({onClose}:{onClose:()=>void}){
  const {t}=useI18n();const navigate=useNavigate();
- useEsc(onClose);
  const rows:[LucideIcon,string,string,string,string][]=[[Pencil,'l',t('fe.fd.cr.post'),t('fe.fd.cr.postSub'),'/n/feed/new'],[FileText,'v',t('fe.fd.cr.note'),t('fe.fd.cr.noteSub'),'/n/feed/new?x=note'],[Calendar,'g',t('fe.fd.cr.event'),t('fe.fd.cr.eventSub'),'/n/events/new']];
- return <Layer><div className="scrim on" onClick={onClose}/>
-  <div className="sheet on" role="dialog" aria-modal="true" aria-label={t('fe.create')} tabIndex={-1} ref={focusOnce}>
-   <div className="grab"/><SheetHead title={t('fe.create')} onClose={onClose}/>
-   <div className="sh-b"><div className="create3">{rows.map(([I,tone,b,s,to])=><button key={to} type="button" className="c3" onClick={()=>{onClose();navigate(to);}}>
-    <span className={'ico '+tone}><I/></span><span className="tx"><b>{b}</b><small>{s}</small></span><ChevronRight/></button>)}</div></div>
-  </div></Layer>;
+ return <Sheet title={t('fe.create')} onClose={onClose}>
+  <div className="create3">{rows.map(([I,tone,b,s,to])=><button key={to} type="button" className="c3" onClick={()=>{onClose();navigate(to);}}>
+   <span className={'ico '+tone}><I/></span><span className="tx"><b>{b}</b><small>{s}</small></span><ChevronRight/></button>)}</div>
+ </Sheet>;
 }
 
 export function SheetHead({title,onClose,lead,head}:{title:string,onClose:()=>void,lead?:ReactNode,head?:ReactNode}){
  const {t}=useI18n();
- return <div className="sh-h">{lead}<div className="sh-ht"><h2>{title}</h2></div>{head}<button type="button" className="ibtn ghost sm" aria-label={t('fe.pm.close')} onClick={onClose}><X/></button></div>;
+ return <div className="sh-h">{lead}<div className="sh-ht"><H level={2}>{title}</H></div>{head}<IconBtn icon={X} kind="ghost" size="sm" label={t('fe.pm.close')} onClick={onClose}/></div>;
 }
 /** Focuses a sheet once when it opens. A stable ref: an inline `el=>el.focus()` runs on every render and pulls the
  * focus out of the sheet's own search field after each typed letter. */
@@ -157,21 +154,21 @@ export function FilterSheet({title,topics,cats,popular,value,onClose,onApply,max
  useEsc(onClose);
  const nm=(x:CatTopic)=>locale==='en'?x.en:x.ru;
  const toggle=(id:string)=>{if(max&&!d.includes(id)&&d.length>=max){toast(t('fe.fd.max3'),{type:'warn'});return;}setD(v=>v.includes(id)?v.filter(x=>x!==id):[...v,id]);};
- const chip=(x:CatTopic)=><button key={x.id} type="button" className={'chip'+(d.includes(x.id)?' on':'')} aria-pressed={d.includes(x.id)} onClick={()=>toggle(x.id)}>{nm(x)}</button>;
+ const chip=(x:CatTopic)=><Chip key={x.id} on={d.includes(x.id)} onClick={()=>toggle(x.id)}>{nm(x)}</Chip>;
  const pop=[...new Set([...d,...popular,...topics.slice(0,6).map(x=>x.id)])].slice(0,Math.max(8,d.length)).map(id=>topics.find(x=>x.id===id)).filter((x):x is CatTopic=>!!x);
  const low=q.trim().toLowerCase();
  return <Layer><div className="scrim on" onClick={onClose}/>
   <div className="sheet full on" role="dialog" aria-modal="true" aria-label={title} tabIndex={-1} ref={focusOnce}>
    <div className="grab"/>
-   {all?<SheetHead title={t('fe.fd.showTopics')} onClose={onClose} lead={<button type="button" className="ibtn ghost sm" aria-label={t('fe.fd.backToFilters')} onClick={()=>{setAll(false);setQ('');}}><ChevronLeft/></button>}/>
-    :<SheetHead title={title} onClose={onClose} head={max?undefined:<button type="button" className="btn text auto" onClick={()=>setD([])}>{t('fe.fd.reset')}</button>}/>}
-   {all&&<div className="sh-search"><div className="inwrap"><Search/><input className="inp" type="search" value={q} onChange={e=>setQ(e.target.value)} placeholder={t('fe.fd.findOption')} aria-label={t('fe.fd.findOption')} enterKeyHint="search"/></div></div>}
+   {all?<SheetHead title={t('fe.fd.showTopics')} onClose={onClose} lead={<IconBtn icon={ChevronLeft} kind="ghost" size="sm" label={t('fe.fd.backToFilters')} onClick={()=>{setAll(false);setQ('');}}/>}/>
+    :<SheetHead title={title} onClose={onClose} head={max?undefined:<Btn kind="text" auto onClick={()=>setD([])}>{t('fe.fd.reset')}</Btn>}/>}
+   {all&&<div className="sh-search"><SearchInput value={q} onChange={e=>setQ(e.target.value)} label={t('fe.fd.findOption')}/></div>}
    <div className="sh-b">
     {all?<>{cats.map(c=>{const list=topics.filter(x=>x.categoryId===c.id&&(!low||nm(x).toLowerCase().includes(low)));if(!list.length)return null;
-      return <section key={c.id} className="fsec"><div className="sec">{locale==='en'?c.en:c.ru}</div><div className="chips">{list.map(chip)}</div></section>;})}
-     {low&&!topics.some(x=>nm(x).toLowerCase().includes(low))&&<p className="note sh-empty">{t('fe.br.nothing')}</p>}</>
+      return <section key={c.id} className="fsec"><SectionLabel>{locale==='en'?c.en:c.ru}</SectionLabel><Chips>{list.map(chip)}</Chips></section>;})}
+     {low&&!topics.some(x=>nm(x).toLowerCase().includes(low))&&<Note className="sh-empty">{t('fe.br.nothing')}</Note>}</>
     :<section className="fin"><div className="fin-t"><b>{max?t('fe.fd.topicsUpTo3'):t('fe.fd.showTopics')}</b><span>{max?t('fe.fd.topicsPicked',{n:d.length,max}):t('fe.fd.pickAny')}</span>{d.length>0&&<button type="button" className="fclr" onClick={()=>setD([])}>{t('fe.fd.clear')}</button>}</div>
-     <div className="chips">{pop.map(chip)}<button type="button" className="chip more" onClick={()=>setAll(true)}><Search/>{t('fe.br.seeAll')} · {topics.length}</button></div>
+     <Chips>{pop.map(chip)}<Chip more icon={Search} onClick={()=>setAll(true)}>{t('fe.br.seeAll')} · {topics.length}</Chip></Chips>
     </section>}
    </div>
    <div className="sh-f">{all?<Btn onClick={()=>{setAll(false);setQ('');}}>{t('fe.fd.done')}</Btn>:<Btn onClick={()=>onApply(d)}>{max?t('fe.fd.done'):t('fe.fd.applyFilters')}</Btn>}</div>
@@ -217,19 +214,19 @@ export function PostCard({post,onChange,onRemove,onExpired,full=false,onReply,pr
      {mine&&post.inFeed===false&&<> · <span className="aud"><EyeOff/>{t('fe.fd.notInFeed')}</span></>}
      {post.state&&post.state!=='published'?' · '+t('fe.feed.state.'+post.state):''}{post.editedAt&&!preview?' · '+t('fe.fd.edited'):''}</small></span>
    </button>
-   {!preview&&<button ref={more} type="button" className="ibtn ghost sm" aria-label={t('fe.more')} aria-haspopup="dialog" aria-expanded={menu} onClick={()=>setMenu(true)}><Ellipsis/></button>}
+   {!preview&&<IconBtn icon={Ellipsis} kind="ghost" size="sm" label={t('fe.more')} aria-haspopup="dialog" aria-expanded={menu} onClick={e=>{more.current=e.currentTarget;setMenu(true);}}/>}
   </div>
   {me&&me.state==='pending'&&!mine&&<div className="consent-note"><Users/><span><b>{t('fe.fd.tag.marksYou',{name:nameOf(post.author)})}</b>{t('fe.fd.tag.marksYouText')}</span>
-   <div className="row g8"><button type="button" className="btn sm primary" disabled={busy} onClick={()=>answer('ok')}>{t('fe.fd.tag.confirm')}</button><button type="button" className="btn sm soft" disabled={busy} onClick={()=>answer('no')}>{t('fe.fd.tag.decline')}</button></div></div>}
+   <div className="row g8"><Btn size="sm" disabled={busy} onClick={()=>answer('ok')}>{t('fe.fd.tag.confirm')}</Btn><Btn size="sm" kind="soft" disabled={busy} onClick={()=>answer('no')}>{t('fe.fd.tag.decline')}</Btn></div></div>}
   {me&&me.state==='no'&&!mine&&<div className="consent-note bad"><EyeOff/><span><b>{t('fe.fd.tag.youDeclined')}</b>{t('fe.fd.tag.youDeclinedText')}</span>
-   <div className="row g8"><button type="button" className="btn sm soft" disabled={busy} onClick={()=>answer('ok')}>{t('fe.fd.tag.changeMind')}</button></div></div>}
+   <div className="row g8"><Btn size="sm" kind="soft" disabled={busy} onClick={()=>answer('ok')}>{t('fe.fd.tag.changeMind')}</Btn></div></div>}
   {mine&&!preview&&(waiting.length>0||declined.length>0)&&<div className={'consent-note'+(declined.length?' bad':'')}>{declined.length?<EyeOff/>:<Clock/>}
    <span><b>{declined.length?t('fe.fd.tag.declinedBy',{names:declined.join(', ')}):t('fe.fd.tag.waiting',{names:waiting.join(', ')})}</b>{declined.length?t('fe.fd.tag.declinedText'):t('fe.fd.tag.waitingText')}</span>
-   {declined.length>0&&<div className="row g8"><button type="button" className="btn sm soft" onClick={()=>navigate('/n/feed/post/'+post.id+'/edit')}>{t('fe.fd.tag.replace')}</button></div>}</div>}
+   {declined.length>0&&<div className="row g8"><Btn size="sm" kind="soft" onClick={()=>navigate('/n/feed/post/'+post.id+'/edit')}>{t('fe.fd.tag.replace')}</Btn></div>}</div>}
   <div className="body" onClick={open} role={full||preview?undefined:'link'} tabIndex={full||preview?undefined:0} onKeyDown={e=>{if(e.key==='Enter'&&e.target===e.currentTarget)open();}}>
-   {post.type==='note'?<div className={'note-card'+(full?' full':'')}><span className="note-k"><FileText/>{t('fe.fd.article')} · {t('fe.fd.minRead',{n:words})}</span><h3 className="note-t">{post.title}</h3>
+   {post.type==='note'?<div className={'note-card'+(full?' full':'')}><span className="note-k"><FileText/>{t('fe.fd.article')} · {t('fe.fd.minRead',{n:words})}</span><H level={3} className="note-t">{post.title}</H>
      {full?<RichText text={post.body}/>:<><p className="note-x">{mdPlain(post.body).slice(0,220)}{post.body.length>220?'…':''}</p><span className="note-more">{t('fe.fd.readMore')} <ChevronRight/></span></>}</div>
-    :<>{post.title&&<h3 className="post-title">{post.title}</h3>}{post.body&&<RichText text={post.body}/>}</>}
+    :<>{post.title&&<H level={4} as="h3" className="post-title">{post.title}</H>}{post.body&&<RichText text={post.body}/>}</>}
    <MediaGrid media={post.media} onExpired={onExpired}/>
    {post.poll&&<Poll postId={post.id} poll={post.poll as PollData} preview={preview} onChange={np=>onChange({...post,poll:np})}/>}
    {post.interests&&post.interests.length>0&&<PostInterests list={post.interests} preview={preview}/>}
@@ -300,7 +297,7 @@ export function PostScreen(){
    {error?<Empty icon={Lock} title={t('fe.feed.unavailable')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>navigate('/n/feed')}>{t('fe.feed.toFeed')}</Btn></Empty>
     :!post||!list?<Skel kind="post" rows={1}/>
     :<>
-     {typeof notice==='string'&&notice&&<div className="alert ok mb12" role="status"><span>{notice}</span></div>}
+     {typeof notice==='string'&&notice&&<Alert kind="ok" className="mb12">{notice}</Alert>}
      <PostCard post={post} onChange={setPost} full onReply={focusBox} onExpired={()=>{call('post.get',{postId:id},onePost).then(r=>setPost(r.post)).catch(()=>{});}} onRemove={r=>{
       navigate('/n/feed',{replace:true});const undo=r.undo;
       toast(r.notice,{type:'ok',action:undo?{label:t('fe.tl.undo'),fn:()=>{undo().then(()=>navigate('/n/feed/post/'+id),e=>toast(feErrorMessage(e,t),{type:'err'}));}}:null});
@@ -312,11 +309,11 @@ export function PostScreen(){
     </>}
   </View>
   {post&&<div className="inputbar">
-   {target&&<div className="reply-target"><span>{t('fe.fd.replyTo')} <b>{nameOf(target.author)}</b></span><button type="button" className="ibtn sm" aria-label={t('fe.fd.cancelReply')} onClick={()=>setTarget(null)}><X/></button></div>}
-   {editing&&<div className="reply-target"><span>{t('fe.fd.editingReply')}</span><button type="button" className="ibtn sm" aria-label={t('fe.pm.cancel')} onClick={()=>{setEditing(null);setText('');}}><X/></button></div>}
+   {target&&<div className="reply-target"><span>{t('fe.fd.replyTo')} <b>{nameOf(target.author)}</b></span><IconBtn icon={X} size="sm" label={t('fe.fd.cancelReply')} onClick={()=>setTarget(null)}/></div>}
+   {editing&&<div className="reply-target"><span>{t('fe.fd.editingReply')}</span><IconBtn icon={X} size="sm" label={t('fe.pm.cancel')} onClick={()=>{setEditing(null);setText('');}}/></div>}
    <textarea ref={box} rows={1} maxLength={1000} value={text} onChange={e=>{setText(e.target.value);grow(e.target);}} placeholder={couple?t('fe.fd.replyPhCouple'):t('fe.fd.replyPh')} aria-label={couple?t('fe.fd.replyAsCouple'):t('fe.fd.reply')}
     onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();void send();}}}/>
-   <button type="button" className={'ibtn send'+(busy?' busy':'')} onClick={send} disabled={busy||!text.trim()} aria-label={t('fe.feed.send')}><SendHorizontal/></button>
+   <IconBtn icon={SendHorizontal} kind="send" className={busy?'busy':undefined} onClick={send} disabled={busy||!text.trim()} label={t('fe.feed.send')}/>
   </div>}
   {menu&&post&&<ReplyMenu reply={menu} onClose={()=>setMenu(null)} onEdit={r=>{setMenu(null);setTarget(null);setEditing(r);setText(r.body??'');requestAnimationFrame(()=>{grow(box.current);focusBox();});}}
    onDone={msg=>{setMenu(null);if(msg)toast(msg,{type:'ok'});loadReplies();call('post.get',{postId:id},onePost).then(r=>setPost(r.post)).catch(()=>{});}}/>}
@@ -345,7 +342,7 @@ function ReplyTree({list,sort,setSort,open,setOpen,liked,delta,onLike,onReply,on
   return <article key={c.id} className={'cm'+(child?' child':'')+(hidden?' removed':'')} id={'reply-'+c.id}>
    <div className="cm-l">{hidden?<span className="av cm-ghost" aria-hidden="true">{c.deleted?<Trash2/>:<Lock/>}</span>
     :<button type="button" className="plink" aria-label={t('fe.fd.profileOf',{name:nameOf(c.author)})} onClick={()=>go(c.author)}><Av name={nameOf(c.author)} seed={c.author?.id??c.id} size={child?'xs':'sm'} src={c.author?.avatar}/></button>}</div>
-   <div className="cm-b">{hidden?<p className="note">{c.deleted?t('fe.feed.replyDeleted'):t('fe.fd.replyBlocked')}</p>:<>
+   <div className="cm-b">{hidden?<Note>{c.deleted?t('fe.feed.replyDeleted'):t('fe.fd.replyBlocked')}</Note>:<>
     <div className="cm-h"><button type="button" className="plink pnm" onClick={()=>go(c.author)}><span className="nmt">{nameOf(c.author)}</span></button><time>{when(c.createdAt,locale)}{c.editedAt?' · '+t('fe.fd.edited'):''}</time></div>
     {to&&<small className="cm-to">{t('fe.fd.replyingTo')} <button type="button" className="plink" onClick={()=>go(parent!.author)}>{nameOf(parent!.author)}</button></small>}
     <p className="reply-text">{c.body}</p>
@@ -358,8 +355,7 @@ function ReplyTree({list,sort,setSort,open,setOpen,liked,delta,onLike,onReply,on
   </article>;};
  return <>
   {roots.length>1&&<div className="fl-row cm-sort"><span className="sortlab"><ArrowUpDown/>{t('fe.fd.sort')}</span>
-   <label className="selrow solo"><span className="selv" aria-hidden="true">{sort==='top'?t('fe.fd.sortTop'):t('fe.fd.sortNew')}</span>
-    <select value={sort} onChange={e=>setSort(e.target.value as 'top'|'new')} aria-label={t('fe.fd.sortAria')}><option value="top">{t('fe.fd.sortTop')}</option><option value="new">{t('fe.fd.sortNew')}</option></select></label></div>}
+   <SelectRow solo label={t('fe.fd.sortAria')} value={sort} onChange={setSort} options={[['top',t('fe.fd.sortTop')],['new',t('fe.fd.sortNew')]] as const}/></div>}
   {ordered.map(root=>{const all=flat(root);const isOpen=open.includes(root.id)||all.length<=3;const shown=isOpen?all:all.slice(0,2);const rest=all.length-shown.length;
    return <div key={root.id} className={'th'+(all.length?' has-kids':'')}>{one(root,root,false)}
     {all.length>0&&<div className="cm-kids">{shown.map(c=>one(c,root,true))}
@@ -503,8 +499,8 @@ function ComposeForm({edit}:{edit?:Post|undefined}){
  const aud=AUDS.find(a=>a[0]===audience)??AUDS[0]!;const AudIcon=aud[1];
  const who=[communityId||!inFeed?'':aud[3],couple?t('fe.fd.asCoupleLine'):'',hasMedia?(live?t('fe.fd.hintLive'):t('fe.fd.hintReview')):''].filter(Boolean).join('. ');
  const barTitle=communityId?t('fe.comm.newTopic'):draft?(note?t('fe.fd.noteDraft'):t('fe.fd.draft')):edit?(note?t('fe.fd.editNote'):t('fe.fd.editPost')):note?t('fe.fd.newNote'):t('fe.feed.new');
- const audSelect=(label?:string)=><label className={'selrow'+(label?'':' solo')}>{label&&<span className="selt">{label}</span>}<span className="selv" aria-hidden="true">{aud[2]}</span>
-  <select value={audience} onChange={e=>{const v=e.target.value as Audience;setAudience(v);if(v!=='all'&&people.length)toast(t('fe.fd.tagsNeedAll'),{type:'info'});}} aria-label={t('fe.feed.audience')}>{AUDS.map(a=><option key={a[0]} value={a[0]}>{a[2]}</option>)}</select></label>;
+ const audSelect=(solo:boolean)=><SelectRow solo={solo} label={t('fe.feed.audience')} value={audience} options={AUDS.map(a=>[a[0],a[2]] as const)}
+  onChange={v=>{setAudience(v);if(v!=='all'&&people.length)toast(t('fe.fd.tagsNeedAll'),{type:'info'});}}/>;
  const err=(k:string)=>errs[k]?<div className="ferr">{errs[k]}</div>:null;
  // «Мои интересы» tapped before the profile's interests arrived waits for them instead of saying there are none.
  const [wantInts,setWantInts]=useState(false);
@@ -545,12 +541,12 @@ function ComposeForm({edit}:{edit?:Post|undefined}){
    ...(audience!=='all'?{audience}:{}),poll:poll?{question:poll.question,options:poll.options,myVote:null,results:null}:null,interests:interests?.map(id=>{const j=eligible.find(e=>e.topicId===id);return {topicId:id,value:j?.value??null,dir:j?.dir};})??null,tags:[]};
   const steps=[people.length&&audience==='all'&&hasMedia?t('fe.fd.next.marks',{names:people.map(p=>p.name).join(', ')}):'',hasMedia?t('fe.fd.next.review'):'',hasMedia||people.length?(live?t('fe.fd.next.oldVersion'):t('fe.fd.next.onlyYou')):''].filter(Boolean);
   return <>
-   <header className="bar"><button type="button" className="ibtn ghost" aria-label={t('fe.back')} onClick={()=>setPreview(false)}><ChevronLeft/></button><h1 className="sm" tabIndex={-1}>{t('fe.fd.preview')}</h1></header>
+   <header className="bar"><IconBtn icon={ChevronLeft} kind="ghost" label={t('fe.back')} onClick={()=>setPreview(false)}/><H level={1} className="sm" tabIndex={-1}>{t('fe.fd.preview')}</H></header>
    <View className="nodock cta1">
     <div className="card preview-post" style={{padding:'0 16px',marginTop:10}}><PostCard post={fake} onChange={()=>{}} onRemove={()=>{}} full preview/></div>
-    {!communityId&&<div className="card list mt16"><div className="li"><span className="ico v"><Eye/></span>{audSelect(t('fe.feed.audience'))}</div></div>}
-    {steps.length>0&&<div className="card mt16 next-steps"><b>{t('fe.fd.next.title')}</b><ul>{steps.map(s=><li key={s}>{s}</li>)}</ul></div>}
-    {failure&&<p className="alert err mt12" role="alert">{failure}</p>}
+    {!communityId&&<Card list className="mt16"><div className="li"><span className="ico v"><Eye/></span>{audSelect(false)}</div></Card>}
+    {steps.length>0&&<Card className="mt16 next-steps"><b>{t('fe.fd.next.title')}</b><ul>{steps.map(s=><li key={s}>{s}</li>)}</ul></Card>}
+    {failure&&<Alert kind="err" className="mt12">{failure}</Alert>}
    </View>
    <div className="ctabar"><div className="wrap"><div className="row g8">
     <Btn kind="soft" style={{flex:'0 0 auto',width:'auto'}} onClick={()=>setPreview(false)}>{t('fe.fd.change')}</Btn>
@@ -560,35 +556,35 @@ function ComposeForm({edit}:{edit?:Post|undefined}){
  }
 
  return <>
-  <header className="bar"><button type="button" className="ibtn ghost" aria-label={t('fe.back')} onClick={leave}><ChevronLeft/></button><h1 className="sm" tabIndex={-1}>{barTitle}</h1>
-   {!communityId&&!live&&<button type="button" className={'btn text auto'+(busy==='draft'?' busy':'')} disabled={!!busy} onClick={saveDraft}>{t('fe.fd.toDraft')}</button>}</header>
+  <header className="bar"><IconBtn icon={ChevronLeft} kind="ghost" label={t('fe.back')} onClick={leave}/><H level={1} className="sm" tabIndex={-1}>{barTitle}</H>
+   {!communityId&&!live&&<Btn kind="text" auto busy={busy==='draft'} disabled={!!busy} onClick={saveDraft}>{t('fe.fd.toDraft')}</Btn>}</header>
   <View className="nodock cta1">
    {note&&<div className="note-mode"><span className="chip on"><FileText/>{t('fe.fd.article')}</span>
-    <button type="button" className="btn text auto" onClick={()=>{if(body.length>1000){toast(t('fe.fd.noteTooLong'),{type:'warn'});return;}setNote(false);}}>{t('fe.fd.makeRegular')}</button></div>}
-   <section className="grp"><div className="card compose v14">
-    {!communityId&&<div className="cmp-ctx"><div className="cmp-aud"><AudIcon/>{audSelect()}</div></div>}
+    <Btn kind="text" auto onClick={()=>{if(body.length>1000){toast(t('fe.fd.noteTooLong'),{type:'warn'});return;}setNote(false);}}>{t('fe.fd.makeRegular')}</Btn></div>}
+   <Group><Card className="compose v14">
+    {!communityId&&<div className="cmp-ctx"><div className="cmp-aud"><AudIcon/>{audSelect(true)}</div></div>}
     {who&&<p className="cmp-who">{who}</p>}
-    {note&&<div className={'field'+(errs.title?' err':'')}><label htmlFor="ntitle">{t('fe.fd.title')}</label><input id="ntitle" className="inp" value={title} maxLength={120} onChange={e=>setTitle(e.target.value)} placeholder={t('fe.fd.titlePh')}/>{err('title')}</div>}
-    <div className={'field'+(errs.body?' err':'')}>
+    {note&&<Field id="ntitle" label={t('fe.fd.title')} error={errs.title}><Input id="ntitle" invalid={!!errs.title} value={title} maxLength={120} onChange={e=>setTitle(e.target.value)} placeholder={t('fe.fd.titlePh')}/></Field>}
+    <Field error={errs.body}>
      <div className="mention-box" style={{position:'relative'}}>
-     <textarea ref={text} className="inp" rows={note?10:6} maxLength={max} value={body} onChange={e=>{setBody(e.target.value);caret(e.target);}} autoFocus={!x}
+     <TextArea ref={text} invalid={!!errs.body} rows={note?10:6} maxLength={max} value={body} onChange={e=>{setBody(e.target.value);caret(e.target);}} autoFocus={!x}
       onKeyUp={e=>{if(e.key==='Escape')setSug(null);else if(e.key.startsWith('Arrow'))caret(e.currentTarget);}} onClick={e=>caret(e.currentTarget)} onBlur={()=>setTimeout(()=>setSug(null),200)}
       placeholder={note?t('fe.fd.notePh'):poll?t('fe.fd.pollPh'):couple?t('fe.fd.composePhUs'):t('fe.fd.composePh')} aria-label={t('fe.fd.text')}/>
      {sug&&sugList.length>0&&<div className="mention-sug" role="listbox" aria-label={t('fe.fd.whoMention')}>{sugList.map(p=><button key={p.id} type="button" role="option" aria-selected={false}
       onMouseDown={e=>e.preventDefault()} onClick={()=>pickMention(p)}><Av name={p.name} seed={p.id} src={p.avatar} size="xs"/><span><b>{p.name}</b> <small>@{p.handle}</small></span></button>)}</div>}
      </div>
-     <div className="counter">{body.length} / {max}</div>{err('body')}
-    </div>
-    {hasMedia&&<div className="cmp-media" ref={mediaRef}><section className="grp"><div className="grp-t"><span>{t('fe.fd.mediaN',{n:media.length,max:MEDIA_MAX})}</span></div>
-     <div className="card"><div className="edit-ph">{media.map((m,i)=><div key={m.id}><img src={m.preview} alt=""/>
+     <Counter n={body.length} max={max}/>
+    </Field>
+    {hasMedia&&<div className="cmp-media" ref={mediaRef}><Group title={t('fe.fd.mediaN',{n:media.length,max:MEDIA_MAX})} foot={audience==='granted'?t('fe.fd.mediaGranted'):t('fe.fd.mediaFoot')}>
+     <Card><div className="edit-ph">{media.map((m,i)=><div key={m.id}><img src={m.preview} alt=""/>
       <button type="button" className="rm" aria-label={t('fe.fd.remove')} onClick={()=>setMedia(l=>l.filter(y=>y.id!==m.id))}><X/></button>
       <button type="button" className="vw" aria-label={t('fe.fd.view')} onClick={()=>setViewer(i)}/></div>)}
       {media.length<MEDIA_MAX&&<button type="button" aria-label={t('fe.fd.addMedia')} disabled={uploading} onClick={()=>file.current?.click()}><Plus/></button>}</div>
-      {audience==='all'&&<div className="card list mt8"><button type="button" className="li" onClick={()=>setSheet('people')}><span className="ico v"><Users/></span>
-       <span className="tx"><b>{t('fe.fd.peopleInPhoto')}</b><small>{people.length?people.map(p=>p.name+(edit?.tags?.find(x=>x.id===p.id)?.state==='no'?` (${t('fe.fd.declinedShort')})`:edit?.tags?.find(x=>x.id===p.id)?.state==='ok'?'':` (${t('fe.fd.waitingShort')})`)).join(', '):t('fe.fd.peopleInPhotoSub')}</small></span><ChevronRight/></button></div>}
-     </div>
-     <p className="grp-n">{audience==='granted'?t('fe.fd.mediaGranted'):t('fe.fd.mediaFoot')}</p></section></div>}
-    <input ref={file} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={e=>{if(e.target.files?.length)void addMedia(e.target.files);}}/>
+      {audience==='all'&&<Card list className="mt8"><Row icon={Users} tone="v" title={t('fe.fd.peopleInPhoto')} onClick={()=>setSheet('people')}
+       sub={people.length?people.map(p=>p.name+(edit?.tags?.find(x=>x.id===p.id)?.state==='no'?` (${t('fe.fd.declinedShort')})`:edit?.tags?.find(x=>x.id===p.id)?.state==='ok'?'':` (${t('fe.fd.waitingShort')})`)).join(', '):t('fe.fd.peopleInPhotoSub')}/></Card>}
+     </Card>
+     </Group></div>}
+    <FilePick ref={file} accept="image/jpeg,image/png,image/webp" multiple onFiles={f=>{void addMedia(f);}}/>
     <div className="attach v14">
      {!hasMedia&&<button type="button" disabled={uploading} onClick={()=>file.current?.click()}><ImageIcon/><span>{t('fe.feed.media')}</span></button>}
      {!poll&&<button type="button" onClick={()=>setPoll({question:'',options:['','']})}><ChartColumn/><span>{t('fe.feed.poll')}</span></button>}
@@ -596,42 +592,39 @@ function ComposeForm({edit}:{edit?:Post|undefined}){
      <button type="button" onClick={insertAt}><AtSign/><span>{t('fe.fd.mention')}</span></button>
      {interests===null&&!communityId&&<button type="button" title={t('fe.fd.myInterestsHint')} className={wantInts?'busy':undefined} aria-busy={wantInts||undefined} onClick={attachInterests}><Sparkles/><span>{t('fe.fd.myInterests')}</span></button>}
     </div>
-   </div>
-   {!communityId&&!(audience==='granted'&&!inFeed)&&<div className="card list cmp-feed">
-    <button type="button" className="li" role="switch" aria-checked={inFeed} onClick={()=>setInFeed(v=>!v)}>
-     <span className="tx"><b>{t('fe.feed.inFeed')}</b><small>{inFeed?t('fe.feed.inFeedOn'):hasMedia?t('fe.fd.onlyProfileGallery'):t('fe.fd.onlyProfile')}</small></span>
-     <span className={'sw'+(inFeed?' on':'')} aria-hidden="true"/>
-    </button>
-   </div>}
+   </Card>
+   {!communityId&&!(audience==='granted'&&!inFeed)&&<Card list className="cmp-feed">
+    <ToggleRow title={t('fe.feed.inFeed')} sub={inFeed?t('fe.feed.inFeedOn'):hasMedia?t('fe.fd.onlyProfileGallery'):t('fe.fd.onlyProfile')} on={inFeed} onClick={()=>setInFeed(v=>!v)}/>
+   </Card>}
    {err('media')}
-   </section>
+   </Group>
    {poll&&<section className="grp" ref={pollRef}><div className="grp-t"><span>{t('fe.fd.pollN',{n:poll.options.length,max:POLL_MAX})}</span><button type="button" onClick={()=>setPoll(null)}>{t('fe.fd.remove')}</button></div>
-    <div className="card">
-     <div className={'field'+(errs.pollQ?' err':'')}><label htmlFor="pollQ">{t('fe.fd.question')}</label><input id="pollQ" className="inp" value={poll.question} maxLength={200} placeholder={t('fe.fd.questionPh')} onChange={e=>setPoll({...poll,question:e.target.value})}/>{err('pollQ')}</div>
+    <Card>
+     <Field id="pollQ" label={t('fe.fd.question')} error={errs.pollQ}><Input id="pollQ" invalid={!!errs.pollQ} value={poll.question} maxLength={200} placeholder={t('fe.fd.questionPh')} onChange={e=>setPoll({...poll,question:e.target.value})}/></Field>
      {poll.options.map((o,i)=><div key={i} className={'field pollopt'+(errs['o'+i]?' err':'')}><div className="inwrap"><span className="n">{i+1}</span>
-      <input className="inp" value={o} maxLength={80} placeholder={t('fe.fd.option',{n:i+1})} aria-label={t('fe.fd.option',{n:i+1})} onChange={e=>setPoll({...poll,options:poll.options.map((v,k)=>k===i?e.target.value:v)})}/>
-      {poll.options.length>2&&<button type="button" className="ibtn ghost sm" aria-label={t('fe.fd.removeOption')} onClick={()=>setPoll({...poll,options:poll.options.filter((_,k)=>k!==i)})}><X/></button>}</div></div>)}
-     {poll.options.length<POLL_MAX&&<button type="button" className="btn text auto" onClick={()=>setPoll({...poll,options:[...poll.options,'']})}><Plus/>{t('fe.fd.addOption')}</button>}
+      <Input invalid={!!errs['o'+i]} value={o} maxLength={80} placeholder={t('fe.fd.option',{n:i+1})} aria-label={t('fe.fd.option',{n:i+1})} onChange={e=>setPoll({...poll,options:poll.options.map((v,k)=>k===i?e.target.value:v)})}/>
+      {poll.options.length>2&&<IconBtn icon={X} kind="ghost" size="sm" label={t('fe.fd.removeOption')} onClick={()=>setPoll({...poll,options:poll.options.filter((_,k)=>k!==i)})}/>}</div></div>)}
+     {poll.options.length<POLL_MAX&&<Btn kind="text" auto icon={Plus} onClick={()=>setPoll({...poll,options:[...poll.options,'']})}>{t('fe.fd.addOption')}</Btn>}
      {err('opts')}
-    </div>
+    </Card>
     <p className="grp-n">{t('fe.fd.pollFoot')}{edit?.poll?' '+t('fe.fd.pollReset'):''}</p></section>}
    {interests!==null&&<section className="grp cmp-ints" ref={intRef}><div className="grp-t"><span>{t('fe.fd.interests')}</span><button type="button" onClick={()=>setInterests(null)}>{t('fe.fd.remove')}</button></div>
-    <div className="card">
+    <Card>
      {interests.length>0&&<div className="testcard"><Jars list={eligible.filter(j=>interests.includes(j.topicId))} topics={jarTopics} onOpen={()=>{}}/></div>}
-     <div className="chips mt12">{eligible.map(j=>{const on=interests.includes(j.topicId);return <button key={j.topicId} type="button" className={'chip'+(on?' on':'')} aria-pressed={on}
-      onClick={()=>{if(!on&&interests.length>=4){toast(t('fe.fd.max4'),{type:'warn'});return;}setInterests(on?interests.filter(v=>v!==j.topicId):[...interests,j.topicId]);}}>{tname(j.topicId)}</button>;})}</div>
+     <Chips className="mt12">{eligible.map(j=>{const on=interests.includes(j.topicId);return <Chip key={j.topicId} on={on}
+      onClick={()=>{if(!on&&interests.length>=4){toast(t('fe.fd.max4'),{type:'warn'});return;}setInterests(on?interests.filter(v=>v!==j.topicId):[...interests,j.topicId]);}}>{tname(j.topicId)}</Chip>;})}</Chips>
      {err('interests')}
-    </div>
+    </Card>
     <p className="grp-n">{t('fe.fd.interestsFoot')}</p></section>}
-   <section className="grp"><div className="grp-t"><span>{t('fe.fd.topicsUpTo3')}</span></div>
-    <div className="chips">{[...new Set([...topics,...catalog.slice(0,4).map(c=>c.id)])].map(id=>{const on=topics.includes(id);return <button key={id} type="button" className={'chip'+(on?' on':'')} aria-pressed={on}
-     onClick={()=>{if(!on&&topics.length>=3){toast(t('fe.fd.max3'),{type:'warn'});return;}setTopics(on?topics.filter(v=>v!==id):[...topics,id]);}}>{tname(id)}</button>;})}
-     {catalog.length>0&&<button type="button" className="chip more" onClick={()=>setSheet('topics')}><Search/>{t('fe.br.seeAll')} · {catalog.length}</button>}</div>
-    <p className="grp-n">{couple?t('fe.fd.topicsFootUs'):t('fe.fd.topicsFoot')}</p></section>
+   <Group title={t('fe.fd.topicsUpTo3')} foot={couple?t('fe.fd.topicsFootUs'):t('fe.fd.topicsFoot')}>
+    <Chips>{[...new Set([...topics,...catalog.slice(0,4).map(c=>c.id)])].map(id=>{const on=topics.includes(id);return <Chip key={id} on={on}
+     onClick={()=>{if(!on&&topics.length>=3){toast(t('fe.fd.max3'),{type:'warn'});return;}setTopics(on?topics.filter(v=>v!==id):[...topics,id]);}}>{tname(id)}</Chip>;})}
+     {catalog.length>0&&<Chip more icon={Search} onClick={()=>setSheet('topics')}>{t('fe.br.seeAll')} · {catalog.length}</Chip>}</Chips>
+   </Group>
    {failure&&<p className="alert err" role="alert" ref={failRef}>{failure}</p>}
   </View>
   <div className="ctabar"><div className="wrap"><div className="row g8">
-   <button type="button" className="btn soft prevbtn" style={{flex:'0 0 auto',width:'auto'}} aria-label={t('fe.fd.preview')} onClick={()=>{if(validate())setPreview(true);}}><Eye/><span>{t('fe.fd.howSeen')}</span></button>
+   <Btn kind="soft" className="prevbtn" icon={Eye} style={{flex:'0 0 auto',width:'auto'}} aria-label={t('fe.fd.preview')} onClick={()=>{if(validate())setPreview(true);}}><span>{t('fe.fd.howSeen')}</span></Btn>
    <Btn onClick={publish} disabled={!!busy||uploading} busy={busy==='publish'}>{cta}</Btn>
   </div></div></div>
   {sheet==='topics'&&<FilterSheet title={t('fe.fd.topicsTitle')} max={3} topics={catalog} cats={cats} popular={topics} value={topics} onClose={()=>setSheet(null)}
@@ -647,7 +640,7 @@ function LeaveAsk({live,busy,onSave,onDiscard,onCancel}:{live:boolean,busy:boole
  const {t}=useI18n();useEsc(onCancel);
  return <Layer><div className="scrim on" onClick={onCancel}/>
   <div className="dialog on" role="alertdialog" aria-modal="true" aria-label={live?t('fe.fd.leave.editTitle'):t('fe.fd.leave.draftTitle')} tabIndex={-1} ref={focusOnce}>
-   <div className="ico v"><Pencil/></div><h2>{live?t('fe.fd.leave.editTitle'):t('fe.fd.leave.draftTitle')}</h2><p>{live?t('fe.fd.leave.editText'):t('fe.fd.leave.draftText')}</p>
+   <div className="ico v"><Pencil/></div><H level={2}>{live?t('fe.fd.leave.editTitle'):t('fe.fd.leave.draftTitle')}</H><p>{live?t('fe.fd.leave.editText'):t('fe.fd.leave.draftText')}</p>
    <div className="btns"><Btn onClick={onSave} disabled={busy} busy={busy}>{live?t('fe.fd.cta.saveChanges'):t('fe.fd.leave.saveDraft')}</Btn>
     <Btn kind="soft" className="danger" onClick={onDiscard} disabled={busy}>{t('fe.fd.leave.discard')}</Btn><Btn kind="soft" onClick={onCancel} disabled={busy}>{t('fe.pm.cancel')}</Btn></div>
   </div></Layer>;
@@ -665,11 +658,11 @@ function PeopleSheet({value,locked,onClose,onApply}:{value:Person[],locked:strin
  return <Layer><div className="scrim on" onClick={onClose}/>
   <div className="sheet full on" role="dialog" aria-modal="true" aria-label={t('fe.fd.peopleInPhoto')} tabIndex={-1} ref={focusOnce}>
    <div className="grab"/><SheetHead title={t('fe.fd.peopleInPhoto')} onClose={onClose}/>
-   <div className="sh-search"><div className="inwrap"><Search/><input className="inp" type="search" value={q} onChange={e=>setQ(e.target.value)} placeholder={t('fe.fd.findPerson')} aria-label={t('fe.fd.findPerson')}/></div></div>
-   <div className="sh-b">{list===null?<Skel kind="list"/>:!all.length?<p className="note">{t('fe.fd.noFollowingToMark')}</p>
-    :<div className="card list">{all.map(p=>{const on=sel.some(s=>s.id===p.id);const lock=locked.includes(p.id);
-     return <button key={p.id} type="button" className="li" aria-pressed={on} aria-disabled={lock} onClick={()=>{if(lock)return;setSel(s=>on?s.filter(x=>x.id!==p.id):[...s,p]);}}>
-      <Av name={p.name} seed={p.id} size="sm"/><span className="tx"><b>{p.name}</b>{lock&&<small>{t('fe.fd.lockedMark')}</small>}</span><span className={'ck'+(on?' on':'')}>{on&&<Check/>}</span></button>;})}</div>}
+   <div className="sh-search"><SearchInput value={q} onChange={e=>setQ(e.target.value)} label={t('fe.fd.findPerson')}/></div>
+   <div className="sh-b">{list===null?<Skel kind="list"/>:!all.length?<Note>{t('fe.fd.noFollowingToMark')}</Note>
+    :<Card list>{all.map(p=>{const on=sel.some(s=>s.id===p.id);const lock=locked.includes(p.id);
+     return <Row key={p.id} pressed={on} disabled={lock} noChev onClick={()=>setSel(s=>on?s.filter(x=>x.id!==p.id):[...s,p])}
+      av={<Av name={p.name} seed={p.id} size="sm"/>} title={p.name} sub={lock?t('fe.fd.lockedMark'):undefined} val={<span className={'ck'+(on?' on':'')}>{on&&<Check/>}</span>}/>;})}</Card>}
     <p className="grp-n">{t('fe.fd.marksFoot')}</p></div>
    <div className="sh-f"><Btn onClick={()=>onApply(sel)}>{t('fe.fd.done')}</Btn></div>
   </div></Layer>;

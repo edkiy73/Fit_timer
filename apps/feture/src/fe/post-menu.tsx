@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,BellOff,Check,EyeOff,Flag,Link as LinkIcon,Pencil,Trash2,User,X} from 'lucide-react';
 import type {LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Btn,Layer} from './ui';
+import {Alert,Ask as KitAsk,Btn,Card,RadioList,Row,Sheet,TextArea,ToggleRow} from './kit';
 import {useFe} from './session';
 import {useToast} from './toast';
 import type {Post,Reply} from './feed';
@@ -24,12 +24,6 @@ export type Removal={postId?:string,authorId?:string,notice:string,undo?:()=>Pro
 
 const nameOf=(a:{name?:string|null,handle?:string|null}|null|undefined)=>a?.name||(a?.handle?'@'+a.handle:'?');
 
-function Row({icon:Icon,title,sub,danger,onClick,disabled}:{icon:LucideIcon,title:string,sub?:string,danger?:boolean,onClick:()=>void,disabled?:boolean}){
- return <button type="button" className={'li'+(danger?' danger':'')} onClick={onClick} disabled={disabled}>
-  <span className="ico"><Icon/></span><span className="tx"><b>{title}</b>{sub&&<small>{sub}</small>}</span>
- </button>;
-}
-
 function useOps(){
  const ops=useRef<Record<string,string>>({});
  return {op:(k:string)=>ops.current[k]??=newOpId(),drop:(k:string)=>{delete ops.current[k];}};
@@ -39,29 +33,10 @@ function useEscape(fn:()=>void){
   document.addEventListener('keydown',key);return ()=>document.removeEventListener('keydown',key);},[fn]);
 }
 
-function Sheet({title,onClose,children,foot}:{title:string,onClose:()=>void,children:React.ReactNode,foot?:React.ReactNode}){
- const {t}=useI18n();const ref=useRef<HTMLDivElement>(null);
- useEffect(()=>{ref.current?.focus({preventScroll:true});},[title]);
- return <Layer>
-  <div className="scrim on" onClick={onClose}/>
-  <div ref={ref} className="sheet on" role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}>
-   <div className="grab"/>
-   <div className="sh-h"><div className="sh-ht"><h2>{title}</h2></div><button type="button" className="ibtn ghost sm" aria-label={t('fe.pm.close')} onClick={onClose}><X/></button></div>
-   <div className="sh-b">{children}</div>{foot&&<div className="sh-f">{foot}</div>}
-  </div>
- </Layer>;
-}
-
-function Ask({icon:Icon,title,text,ok,busy,failure,onOk,onCancel}:{icon:LucideIcon,title:string,text?:string,ok:string,busy:boolean,failure:string,onOk:()=>void,onCancel:()=>void}){
- const {t}=useI18n();const ref=useRef<HTMLDivElement>(null);
- useEffect(()=>{ref.current?.focus({preventScroll:true});},[]);
- return <Layer>
-  <div className="scrim on" onClick={onCancel}/>
-  <div ref={ref} className="dialog on" role="alertdialog" aria-modal="true" aria-label={title} tabIndex={-1}>
-   <div className="ico l"><Icon/></div><h2>{title}</h2>{text&&<p>{text}</p>}{failure&&<div className="alert err mb12" role="alert"><span>{failure}</span></div>}
-   <div className="btns"><Btn kind="danger" onClick={onOk} disabled={busy} busy={busy}>{ok}</Btn><Btn kind="soft" onClick={onCancel} disabled={busy}>{t('fe.pm.cancel')}</Btn></div>
-  </div>
- </Layer>;
+/** The prototype's `ask()` for a destructive step; a failure shows inside it. */
+function Ask({icon,title,text,ok,busy,failure,onOk,onCancel}:{icon:LucideIcon,title:string,text?:string,ok:string,busy:boolean,failure:string,onOk:()=>void,onCancel:()=>void}){
+ const {t}=useI18n();
+ return <KitAsk icon={icon} tone="l" title={title} text={text} ok={ok} cancel={t('fe.pm.cancel')} danger busy={busy} error={failure||undefined} onOk={onOk} onCancel={onCancel}/>;
 }
 
 /** The report sheet (`ACT.report`): a reason, optional details and «also block». */
@@ -77,17 +52,13 @@ export function ReportSheet({targetType,targetId,onClose,onDone}:{targetType:'po
   catch(e){setFailure(feErrorMessage(e,t));drop('report');}finally{setBusy(false);}
  };
  return <Sheet title={t('fe.pm.rp.title')} onClose={onClose} foot={<Btn kind="danger" onClick={send} disabled={busy} busy={busy}>{t('fe.pm.rp.send')}</Btn>}>
-  <div role="radiogroup" aria-label={t('fe.pm.rp.reason')} className={shake?'shake':undefined}>
-   {REASONS.map(k=><button key={k} type="button" className={'radio'+(reason===k?' on':'')} role="radio" aria-checked={reason===k} onClick={()=>{setReason(k);setFailure('');}}><i/><span className="tx">{t('fe.pm.rp.'+k)}</span></button>)}
+  <div className={shake?'shake':undefined}>
+   <RadioList label={t('fe.pm.rp.reason')} value={reason} options={REASONS.map(k=>[k,t('fe.pm.rp.'+k)] as const)} onChange={k=>{setReason(k);setFailure('');}}/>
   </div>
   <label className="field mt16"><span>{t('fe.pm.rp.details')}<i>{t('fe.pm.rp.optional')}</i></span>
-   <textarea className="inp" rows={3} maxLength={500} value={details} onChange={e=>setDetails(e.target.value)}/></label>
-  <div className="card list">
-   <button type="button" className="li" role="switch" aria-checked={alsoBlock} onClick={()=>setAlsoBlock(v=>!v)}>
-    <span className="tx"><b>{t('fe.pm.rp.alsoBlock')}</b><small>{t('fe.pm.rp.alsoBlockSub')}</small></span><span className={'sw'+(alsoBlock?' on':'')} aria-hidden="true"/>
-   </button>
-  </div>
-  {failure&&<div className="alert err mt12" role="alert"><span>{failure}</span></div>}
+   <TextArea rows={3} maxLength={500} value={details} onChange={e=>setDetails(e.target.value)}/></label>
+  <Card list><ToggleRow title={t('fe.pm.rp.alsoBlock')} sub={t('fe.pm.rp.alsoBlockSub')} on={alsoBlock} onClick={()=>setAlsoBlock(v=>!v)}/></Card>
+  {failure&&<Alert kind="err" className="mt12">{failure}</Alert>}
  </Sheet>;
 }
 
@@ -132,28 +103,28 @@ export function PostMenu({post,onClose,onChange,onRemove}:{post:Post,onClose:()=
   onDone={alsoBlock=>onRemove(alsoBlock?{authorId:post.author.id,notice:t('fe.pm.done.reported')}:{postId:post.id,notice:t('fe.pm.done.reported')})}/>;
  const published=!post.state||post.state==='published';
  return <Sheet title={t('fe.pm.title')} onClose={onClose}>
-  <div className="card list">
+  <Card list>
    {mine?<>
-    <Row icon={Pencil} title={t('fe.pm.editFull')} onClick={()=>{onClose();navigate('/n/feed/post/'+post.id+'/edit');}}/>
-    {published&&<Row icon={LinkIcon} title={t('fe.pm.copyLink')} onClick={copy}/>}
-    <Row icon={Trash2} title={t('fe.pm.delete')} danger onClick={()=>go('delete')}/>
+    <Row noChev icon={Pencil} title={t('fe.pm.editFull')} onClick={()=>{onClose();navigate('/n/feed/post/'+post.id+'/edit');}}/>
+    {published&&<Row noChev icon={LinkIcon} title={t('fe.pm.copyLink')} onClick={copy}/>}
+    <Row noChev icon={Trash2} title={t('fe.pm.delete')} danger onClick={()=>go('delete')}/>
    </>:<>
     {me?.state==='pending'&&<>
-     <Row icon={Check} title={t('fe.pm.tag.confirm')} onClick={()=>answer('ok')} disabled={busy}/>
-     <Row icon={EyeOff} title={t('fe.pm.tag.decline')} sub={t('fe.pm.tag.declineSub')} danger onClick={()=>answer('no')} disabled={busy}/>
+     <Row noChev icon={Check} title={t('fe.pm.tag.confirm')} onClick={()=>answer('ok')} disabled={busy}/>
+     <Row noChev icon={EyeOff} title={t('fe.pm.tag.decline')} sub={t('fe.pm.tag.declineSub')} danger onClick={()=>answer('no')} disabled={busy}/>
     </>}
     {me?.state==='ok'&&<>
-     <Row icon={X} title={t('fe.pm.tag.remove')} sub={t('fe.pm.tag.removeSub')} onClick={()=>answer('remove')} disabled={busy}/>
-     <Row icon={EyeOff} title={t('fe.pm.tag.object')} sub={t('fe.pm.tag.objectSub')} danger onClick={object} disabled={busy}/>
+     <Row noChev icon={X} title={t('fe.pm.tag.remove')} sub={t('fe.pm.tag.removeSub')} onClick={()=>answer('remove')} disabled={busy}/>
+     <Row noChev icon={EyeOff} title={t('fe.pm.tag.object')} sub={t('fe.pm.tag.objectSub')} danger onClick={object} disabled={busy}/>
     </>}
-    {!me&&hasMedia&&<Row icon={EyeOff} title={t('fe.pm.tag.thatsMe')} sub={t('fe.pm.tag.thatsMeSub')} onClick={object} disabled={busy}/>}
-    <Row icon={EyeOff} title={t('fe.pm.hidePost')} sub={t('fe.pm.hidePostSub')} onClick={()=>hide('post')} disabled={busy}/>
-    <Row icon={BellOff} title={t('fe.pm.mute',{name})} sub={t('fe.pm.muteSub')} onClick={()=>hide('author')} disabled={busy}/>
-    <Row icon={LinkIcon} title={t('fe.pm.copyLink')} onClick={copy}/>
-    <Row icon={Flag} title={t('fe.pm.report')} danger onClick={()=>go('report')}/>
+    {!me&&hasMedia&&<Row noChev icon={EyeOff} title={t('fe.pm.tag.thatsMe')} sub={t('fe.pm.tag.thatsMeSub')} onClick={object} disabled={busy}/>}
+    <Row noChev icon={EyeOff} title={t('fe.pm.hidePost')} sub={t('fe.pm.hidePostSub')} onClick={()=>hide('post')} disabled={busy}/>
+    <Row noChev icon={BellOff} title={t('fe.pm.mute',{name})} sub={t('fe.pm.muteSub')} onClick={()=>hide('author')} disabled={busy}/>
+    <Row noChev icon={LinkIcon} title={t('fe.pm.copyLink')} onClick={copy}/>
+    <Row noChev icon={Flag} title={t('fe.pm.report')} danger onClick={()=>go('report')}/>
    </>}
-  </div>
-  {failure&&<div className="alert err mt12" role="alert"><span>{failure}</span></div>}
+  </Card>
+  {failure&&<Alert kind="err" className="mt12">{failure}</Alert>}
  </Sheet>;
 }
 
@@ -173,16 +144,16 @@ export function ReplyMenu({reply,onClose,onEdit,onDone}:{reply:Reply,onClose:()=
   onOk={()=>run('block',async opId=>{await call('block.set',{opId,profileId:reply.author!.id,on:true},okOnly);return t('fe.pm.done.blocked');})}/>;
  if(view==='report')return <ReportSheet targetType="reply" targetId={reply.id} onClose={onClose} onDone={()=>onDone(t('fe.pm.done.reported'))}/>;
  return <Sheet title={t('fe.pm.r.title')} onClose={onClose}>
-  <div className="card list">
+  <Card list>
    {reply.mine?<>
-    <Row icon={Pencil} title={t('fe.pm.edit')} onClick={()=>onEdit(reply)}/>
-    <Row icon={Trash2} title={t('fe.pm.r.delete')} danger onClick={()=>setView('delete')}/>
+    <Row noChev icon={Pencil} title={t('fe.pm.edit')} onClick={()=>onEdit(reply)}/>
+    <Row noChev icon={Trash2} title={t('fe.pm.r.delete')} danger onClick={()=>setView('delete')}/>
    </>:<>
-    {reply.author&&<Row icon={User} title={t('fe.pm.r.profile',{name})} onClick={()=>{onClose();navigate('/n/people/'+reply.author!.id);}}/>}
-    <Row icon={Flag} title={t('fe.pm.report')} danger onClick={()=>setView('report')}/>
-    {reply.author&&<Row icon={Ban} title={t('fe.pm.r.block',{name})} sub={t('fe.pm.r.blockSub')} danger onClick={()=>setView('block')}/>}
+    {reply.author&&<Row noChev icon={User} title={t('fe.pm.r.profile',{name})} onClick={()=>{onClose();navigate('/n/people/'+reply.author!.id);}}/>}
+    <Row noChev icon={Flag} title={t('fe.pm.report')} danger onClick={()=>setView('report')}/>
+    {reply.author&&<Row noChev icon={Ban} title={t('fe.pm.r.block',{name})} sub={t('fe.pm.r.blockSub')} danger onClick={()=>setView('block')}/>}
    </>}
-  </div>
-  {failure&&<div className="alert err mt12" role="alert"><span>{failure}</span></div>}
+  </Card>
+  {failure&&<Alert kind="err" className="mt12">{failure}</Alert>}
  </Sheet>;
 }

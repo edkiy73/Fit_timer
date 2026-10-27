@@ -5,7 +5,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Check,ChevronLeft,ChevronRight,Link as LinkIcon,Undo2,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Btn,Layer} from './ui';
+import {Ask,H,IconBtn,Note} from './kit';
 import {useFe} from './session';
 import {useToast} from './toast';
 
@@ -73,18 +73,15 @@ export function RichText({text,className}:{text:string,className?:string}){
   flushL();
   if((m=l.match(/^>\s?(.*)/))){flushP();const q=[m[1]!];while(i+1<lines.length&&/^>/.test(lines[i+1]!))q.push(lines[++i]!.replace(/^>\s?/,''));
    blocks.push(<blockquote key={k++}>{q.map((x,j)=><Fragment key={j}>{j>0&&<br/>}{il(x)}</Fragment>)}</blockquote>);continue;}
-  if((m=l.match(/^#{1,3}\s+(.*)/))){flushP();blocks.push(<h4 key={k++}>{il(m[1]!)}</h4>);continue;}
+  if((m=l.match(/^#{1,3}\s+(.*)/))){flushP();blocks.push(<H key={k++} level={4}>{il(m[1]!)}</H>);continue;}
   para.push(l);
  }
  flushP();flushL();
  let host='';try{host=link?new URL(link).host:'';}catch{/* not a link */}
  return <>
   <div className={'md'+(className?' '+className:'')}>{blocks}</div>
-  {link&&<Layer><div className="scrim on" onClick={()=>setLink(null)}/>
-   <div className="dialog on" role="alertdialog" aria-modal="true" aria-label={t('fe.fd.linkTitle')}>
-    <div className="ico"><LinkIcon/></div><h2>{t('fe.fd.linkTitle')}</h2><p>{t('fe.fd.linkText',{host})}</p>
-    <div className="btns"><Btn onClick={()=>{window.open(link,'_blank','noopener,noreferrer');setLink(null);}}>{t('fe.fd.linkOpen')}</Btn><Btn kind="soft" onClick={()=>setLink(null)}>{t('fe.pm.cancel')}</Btn></div>
-   </div></Layer>}
+  {link&&<Ask icon={LinkIcon} title={t('fe.fd.linkTitle')} text={t('fe.fd.linkText',{host})} ok={t('fe.fd.linkOpen')} cancel={t('fe.pm.cancel')}
+   onOk={()=>{window.open(link,'_blank','noopener,noreferrer');setLink(null);}} onCancel={()=>setLink(null)}/>}
  </>;
 }
 /** Markdown → one plain line, for list rows. */
@@ -145,17 +142,17 @@ export function MediaGrid({media,onExpired}:{media:MediaItem[],onExpired?:(()=>v
 
 /** `openViewer()` — full-screen photos: ‹ ›, arrows, swipe, Esc. */
 export function Viewer({srcs,index,onClose}:{srcs:string[],index:number,onClose:()=>void}){
- const {t}=useI18n();const [i,setI]=useState(index);const [on,setOn]=useState(false);const closeBtn=useRef<HTMLButtonElement>(null);const sx=useRef<number|null>(null);
+ const {t}=useI18n();const [i,setI]=useState(index);const [on,setOn]=useState(false);const box=useRef<HTMLDivElement>(null);const sx=useRef<number|null>(null);
  const [host,setHost]=useState<Element|null>(null);
  useEffect(()=>{setHost(document.querySelector('.fe-v21 main.main')??document.body);},[]);
- useEffect(()=>{if(!host)return;const r=requestAnimationFrame(()=>{setOn(true);closeBtn.current?.focus({preventScroll:true});});return ()=>cancelAnimationFrame(r);},[host]);
+ useEffect(()=>{if(!host)return;const r=requestAnimationFrame(()=>{setOn(true);box.current?.querySelector<HTMLButtonElement>('.vw-top .ibtn')?.focus({preventScroll:true});});return ()=>cancelAnimationFrame(r);},[host]);
  const step=useCallback((d:number)=>setI(v=>Math.max(0,Math.min(srcs.length-1,v+d))),[srcs.length]);
  useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape')onClose();else if(e.key==='ArrowLeft')step(-1);else if(e.key==='ArrowRight')step(1);};addEventListener('keydown',k);return ()=>removeEventListener('keydown',k);},[onClose,step]);
  if(!host)return null;
- return createPortal(<div className={'viewer'+(on?' on':'')} role="dialog" aria-modal="true" aria-label={t('fe.br.viewer')}
+ return createPortal(<div ref={box} className={'viewer'+(on?' on':'')} role="dialog" aria-modal="true" aria-label={t('fe.br.viewer')}
   onPointerDown={e=>{sx.current=e.clientX;}} onPointerUp={e=>{if(sx.current==null)return;const dx=e.clientX-sx.current;sx.current=null;if(Math.abs(dx)>50)step(dx<0?1:-1);}}>
   <div className="vw-track" style={{transform:`translateX(${-i*100}%)`}}>{srcs.map((s,k)=><figure key={k}><img src={s} alt="" draggable={false}/></figure>)}</div>
-  <div className="vw-top"><span className="vw-n">{i+1} / {srcs.length}</span><button ref={closeBtn} type="button" className="ibtn glass" aria-label={t('fe.br.close')} onClick={onClose}><X/></button></div>
+  <div className="vw-top"><span className="vw-n">{i+1} / {srcs.length}</span><IconBtn icon={X} kind="glass" label={t('fe.br.close')} onClick={onClose}/></div>
   {srcs.length>1&&<>
    <button type="button" className="vw-nav l" aria-label={t('fe.br.prev')} disabled={i===0} onClick={()=>step(-1)}><ChevronLeft/></button>
    <button type="button" className="vw-nav r" aria-label={t('fe.br.next')} disabled={i===srcs.length-1} onClick={()=>step(1)}><ChevronRight/></button>
@@ -196,7 +193,7 @@ export function Poll({postId,poll,onChange,preview=false}:{postId:string,poll:Po
     </button>
     {isVoted&&<span className="poll-count" aria-label={t('fe.fd.poll.count',{n})}><span>{n}</span></span>}
    </div>;})}
-  <div className="poll-f"><span className="note">{plural(tot,['голос','голоса','голосов'],['vote','votes'],locale)}{!isVoted&&!preview?' · '+t('fe.fd.poll.pick'):''}</span>
+  <div className="poll-f"><Note>{plural(tot,['голос','голоса','голосов'],['vote','votes'],locale)}{!isVoted&&!preview?' · '+t('fe.fd.poll.pick'):''}</Note>
    {isVoted&&!preview&&<button type="button" className="poll-undo" disabled={busy} onClick={()=>vote(null)}><Undo2/><span>{t('fe.fd.poll.undo')}</span></button>}</div>
  </div>;
 }
