@@ -167,5 +167,21 @@ export const en: Record<keyof typeof ru, string> = {
   "catalog.count": "{count} topics in {categories} categories",
   "catalog.noResults": "Nothing found. Try a different term or clear your search.",
   "catalog.showAll": "Show all topics",
-  "catalog.questionnaires": "Self-discovery questionnaires →"
+  "catalog.questionnaires": "Self-discovery questionnaires →",
+  "fe.error.generic": "Something went wrong. Please try again.",
+  "fe.error.network": "No connection. Check your internet and try again.",
+  "fe.error.auth_required": "Sign in again to continue.",
+  "fe.error.rate_limited": "Too many actions in a row. Wait a minute.",
+  "fe.error.unavailable": "The service is temporarily unavailable. Try again shortly.",
+  "fe.error.forbidden": "This action isn’t available to you.",
+  "fe.error.not_found": "Not found. It may have been removed or hidden.",
+  "fe.error.conflict": "This has changed. Refresh the screen.",
+  "fe.error.op_conflict": "This action already ran with different data. Refresh the screen.",
+  "fe.error.invalid_input": "Check the fields you filled in.",
+  "fe.rule.under_18": "FetUre is for adults only.",
+  "fe.rule.age_required": "You both need to verify your age first.",
+  "fe.rule.age_check_required": "Verify your age first.",
+  "fe.rule.handle_change_cooldown": "You can change your nickname once every 30 days.",
+  "fe.rule.upload_mismatch": "The file didn’t upload completely. Try again.",
+  "fe.rule.explicit_not_allowed": "Explicit photos aren’t allowed here."
 };

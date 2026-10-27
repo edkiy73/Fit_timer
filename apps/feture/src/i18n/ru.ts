@@ -165,5 +165,21 @@ export const ru = {
   "catalog.count": "{count} тем в {categories} направлениях",
   "catalog.noResults": "Ничего не найдено. Попробуй другое слово или сбрось поиск.",
   "catalog.showAll": "Показать все темы",
-  "catalog.questionnaires": "Опросники для знакомства с собой →"
+  "catalog.questionnaires": "Опросники для знакомства с собой →",
+  "fe.error.generic": "Не получилось. Попробуй ещё раз.",
+  "fe.error.network": "Нет связи. Проверь интернет и попробуй ещё раз.",
+  "fe.error.auth_required": "Войди снова, чтобы продолжить.",
+  "fe.error.rate_limited": "Слишком много действий подряд. Подожди минуту.",
+  "fe.error.unavailable": "Сервис временно недоступен. Попробуй чуть позже.",
+  "fe.error.forbidden": "Это действие тебе недоступно.",
+  "fe.error.not_found": "Не нашли. Возможно, это уже удалили или скрыли.",
+  "fe.error.conflict": "Данные уже изменились. Обнови экран.",
+  "fe.error.op_conflict": "Это действие уже выполнялось с другими данными. Обнови экран.",
+  "fe.error.invalid_input": "Проверь заполненные поля.",
+  "fe.rule.under_18": "FetUre только для совершеннолетних.",
+  "fe.rule.age_required": "Сначала вам обоим нужно подтвердить возраст.",
+  "fe.rule.age_check_required": "Сначала подтверди возраст.",
+  "fe.rule.handle_change_cooldown": "Ник можно менять раз в 30 дней.",
+  "fe.rule.upload_mismatch": "Файл загрузился не полностью. Попробуй ещё раз.",
+  "fe.rule.explicit_not_allowed": "Здесь нельзя откровенное фото."
 } as const;
