@@ -107,6 +107,8 @@ test('hidden communities exist only for members and invitation holders; member l
     await call('uc', c, { action: 'community.join', opId: op(), communityId: open, rulesAccepted: true });
     const list = await call('ub', b, { action: 'community.members', communityId: open });
     assert.deepEqual([list.count, list.items.map(m => m.handle).sort()], [3, ['Alex', 'Kira']]); // hosts and oneself; Noa is unlisted
+    // The owner moderates every member, listed or not.
+    assert.deepEqual((await call('ua', a, { action: 'community.members', communityId: open })).items.map(m => m.handle).sort(), ['Alex', 'Kira', 'Noa']);
     await call('uc', c, { action: 'community.self', opId: op(), communityId: open, listed: true });
     assert.ok((await call('ub', b, { action: 'community.members', communityId: open })).items.some(m => m.handle === 'Noa'));
   } finally { await pg.close(); }
