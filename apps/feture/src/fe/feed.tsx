@@ -151,11 +151,12 @@ export function useEsc(fn:()=>void){
 }
 
 /** F02 — topic filters (`filterSheet`): popular chips, «Все · N» opens every topic by category with a search. */
-export function FilterSheet({title,topics,cats,popular,value,onClose,onApply}:{title:string,topics:CatTopic[],cats:{id:string,ru:string,en:string}[],popular:string[],value:string[],onClose:()=>void,onApply:(v:string[])=>void}){
- const {t,locale}=useI18n();const [d,setD]=useState(value);const [all,setAll]=useState(false);const [q,setQ]=useState('');
+/** The feed's topic filter; with `max` it is the post's topic picker (up to `max`, «Готово», no «Сбросить»). */
+export function FilterSheet({title,topics,cats,popular,value,onClose,onApply,max}:{title:string,topics:CatTopic[],cats:{id:string,ru:string,en:string}[],popular:string[],value:string[],onClose:()=>void,onApply:(v:string[])=>void,max?:number}){
+ const {t,locale}=useI18n();const toast=useToast();const [d,setD]=useState(value);const [all,setAll]=useState(false);const [q,setQ]=useState('');
  useEsc(onClose);
  const nm=(x:CatTopic)=>locale==='en'?x.en:x.ru;
- const toggle=(id:string)=>setD(v=>v.includes(id)?v.filter(x=>x!==id):[...v,id]);
+ const toggle=(id:string)=>{if(max&&!d.includes(id)&&d.length>=max){toast(t('fe.fd.max3'),{type:'warn'});return;}setD(v=>v.includes(id)?v.filter(x=>x!==id):[...v,id]);};
  const chip=(x:CatTopic)=><button key={x.id} type="button" className={'chip'+(d.includes(x.id)?' on':'')} aria-pressed={d.includes(x.id)} onClick={()=>toggle(x.id)}>{nm(x)}</button>;
  const pop=[...new Set([...d,...popular,...topics.slice(0,6).map(x=>x.id)])].slice(0,Math.max(8,d.length)).map(id=>topics.find(x=>x.id===id)).filter((x):x is CatTopic=>!!x);
  const low=q.trim().toLowerCase();
@@ -163,17 +164,17 @@ export function FilterSheet({title,topics,cats,popular,value,onClose,onApply}:{t
   <div className="sheet full on" role="dialog" aria-modal="true" aria-label={title} tabIndex={-1} ref={focusOnce}>
    <div className="grab"/>
    {all?<SheetHead title={t('fe.fd.showTopics')} onClose={onClose} lead={<button type="button" className="ibtn ghost sm" aria-label={t('fe.fd.backToFilters')} onClick={()=>{setAll(false);setQ('');}}><ChevronLeft/></button>}/>
-    :<SheetHead title={title} onClose={onClose} head={<button type="button" className="btn text auto" onClick={()=>setD([])}>{t('fe.fd.reset')}</button>}/>}
+    :<SheetHead title={title} onClose={onClose} head={max?undefined:<button type="button" className="btn text auto" onClick={()=>setD([])}>{t('fe.fd.reset')}</button>}/>}
    {all&&<div className="sh-search"><div className="inwrap"><Search/><input className="inp" type="search" value={q} onChange={e=>setQ(e.target.value)} placeholder={t('fe.fd.findOption')} aria-label={t('fe.fd.findOption')} enterKeyHint="search"/></div></div>}
    <div className="sh-b">
     {all?<>{cats.map(c=>{const list=topics.filter(x=>x.categoryId===c.id&&(!low||nm(x).toLowerCase().includes(low)));if(!list.length)return null;
       return <section key={c.id} className="fsec"><div className="sec">{locale==='en'?c.en:c.ru}</div><div className="chips">{list.map(chip)}</div></section>;})}
      {low&&!topics.some(x=>nm(x).toLowerCase().includes(low))&&<p className="note sh-empty">{t('fe.br.nothing')}</p>}</>
-    :<section className="fin"><div className="fin-t"><b>{t('fe.fd.showTopics')}</b><span>{t('fe.fd.pickAny')}</span>{d.length>0&&<button type="button" className="fclr" onClick={()=>setD([])}>{t('fe.fd.clear')}</button>}</div>
+    :<section className="fin"><div className="fin-t"><b>{max?t('fe.fd.topicsUpTo3'):t('fe.fd.showTopics')}</b><span>{max?t('fe.fd.topicsPicked',{n:d.length,max}):t('fe.fd.pickAny')}</span>{d.length>0&&<button type="button" className="fclr" onClick={()=>setD([])}>{t('fe.fd.clear')}</button>}</div>
      <div className="chips">{pop.map(chip)}<button type="button" className="chip more" onClick={()=>setAll(true)}><Search/>{t('fe.br.seeAll')} · {topics.length}</button></div>
     </section>}
    </div>
-   <div className="sh-f">{all?<Btn onClick={()=>{setAll(false);setQ('');}}>{t('fe.fd.done')}</Btn>:<Btn onClick={()=>onApply(d)}>{t('fe.fd.applyFilters')}</Btn>}</div>
+   <div className="sh-f">{all?<Btn onClick={()=>{setAll(false);setQ('');}}>{t('fe.fd.done')}</Btn>:<Btn onClick={()=>onApply(d)}>{max?t('fe.fd.done'):t('fe.fd.applyFilters')}</Btn>}</div>
   </div></Layer>;
 }
 
@@ -394,8 +395,13 @@ export function EditPostScreen(){
 
 type MediaDraft={id:string,preview:string};
 type Person={id:string,name:string};
+type Mention={id:string,handle:string,name:string,avatar:string|null};
+const mentionRes=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),avatar:z.unknown().optional()}).passthrough())});
+const thumbOf=(a:unknown):string|null=>{const src=(a as {src?:Record<string,string>|null}|null)?.src;return src?(src.thumb??src.card??null):null;};
 
-export function ComposeScreen({edit}:{edit?:Post}={}){
+/** A fresh form every time «Новая публикация» is opened (the same route again kept the old mode and text). */
+export function ComposeScreen({edit}:{edit?:Post}={}){const {key}=useLocation();return <ComposeForm key={edit?.id??key} edit={edit}/>;}
+function ComposeForm({edit}:{edit?:Post|undefined}){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const [params]=useSearchParams();const toast=useToast();
  const communityId=edit?null:params.get('community');const x=params.get('x');
  const {topics:catalog,cats,name:tname}=useTopics();const {items:myJars,topics:jarTopics}=useInterests();
@@ -416,6 +422,16 @@ export function ComposeScreen({edit}:{edit?:Post}={}){
  const [sheet,setSheet]=useState<'topics'|'people'|null>(null);const [preview,setPreview]=useState(false);const [viewer,setViewer]=useState<number|null>(null);
  const ops=useRef({draft:newOpId(),publish:newOpId(),edit:newOpId()});
  const couple=acting?.kind==='couple';
+ // What an attach button adds (a poll, interests, photos) appears below the text: bring it into view, or the tap
+ // looks like it did nothing on a phone.
+ const pollRef=useRef<HTMLElement>(null);const intRef=useRef<HTMLElement>(null);const mediaRef=useRef<HTMLDivElement>(null);
+ const reveal=(el:HTMLElement|null)=>requestAnimationFrame(()=>el?.scrollIntoView({block:'nearest',behavior:'smooth'}));
+ const hasPoll=!!poll,hasInts=interests!==null,nMedia=media.length;
+ const first=useRef(true);
+ useEffect(()=>{if(first.current)return;if(hasPoll)reveal(pollRef.current);},[hasPoll]);
+ useEffect(()=>{if(first.current)return;if(hasInts)reveal(intRef.current);},[hasInts]);
+ useEffect(()=>{if(first.current)return;if(nMedia)reveal(mediaRef.current);},[nMedia]);
+ useEffect(()=>{first.current=false;},[]);
  useEffect(()=>{if(x==='media'&&!edit)setTimeout(()=>file.current?.click(),250);},[x,edit]);
  // Interests a post may carry: the author's own public ones with a level, never limits (server rule).
  const eligible=(myJars??[]).filter(j=>j.vis==='public'&&j.value!=null&&!j.mark&&catalog.find(c=>c.id===j.topicId)?.categoryId!=='limits');
@@ -490,8 +506,38 @@ export function ComposeScreen({edit}:{edit?:Post}={}){
  const audSelect=(label?:string)=><label className={'selrow'+(label?'':' solo')}>{label&&<span className="selt">{label}</span>}<span className="selv" aria-hidden="true">{aud[2]}</span>
   <select value={audience} onChange={e=>{const v=e.target.value as Audience;setAudience(v);if(v!=='all'&&people.length)toast(t('fe.fd.tagsNeedAll'),{type:'info'});}} aria-label={t('fe.feed.audience')}>{AUDS.map(a=><option key={a[0]} value={a[0]}>{a[2]}</option>)}</select></label>;
  const err=(k:string)=>errs[k]?<div className="ferr">{errs[k]}</div>:null;
+ // «Мои интересы» tapped before the profile's interests arrived waits for them instead of saying there are none.
+ const [wantInts,setWantInts]=useState(false);
+ const attachInterests=()=>{
+  if(myJars===null){setWantInts(true);return;}setWantInts(false);
+  if(!eligible.length){toast(t('fe.fd.noPublicInterests'),{type:'info',action:{label:t('fe.fd.open'),fn:()=>navigate('/n/me')}});return;}
+  setInterests(eligible.slice(0,4).map(j=>j.topicId));};
+ useEffect(()=>{if(wantInts&&myJars!==null&&catalog.length)attachInterests();});
+ // A refusal (a limit, a server rule) is written under the form: bring it into view, never leave the tap silent.
+ const failRef=useRef<HTMLParagraphElement>(null);
+ useEffect(()=>{if(failure)requestAnimationFrame(()=>failRef.current?.scrollIntoView({block:'center',behavior:'smooth'}));},[failure]);
+ // V21 `mentionSuggest`: typing «@» (or the «Упомянуть» button) offers people — those the author follows, and from
+ // two letters on, nickname search — and a pick writes «@nick ».
+ const [sug,setSug]=useState<{start:number,end:number,q:string}|null>(null);
+ const [folks,setFolks]=useState<Mention[]|null>(null);const [found,setFound]=useState<Mention[]>([]);
+ const caret=(el:HTMLTextAreaElement)=>{
+  const at=el.selectionStart??0;const m=el.value.slice(0,at).match(/(^|[\s(])@([a-z0-9_.]{0,30})$/i);
+  if(!m||el.selectionStart!==el.selectionEnd){setSug(null);return;}
+  setSug({start:at-m[2]!.length-1,end:at,q:m[2]!.toLowerCase()});
+  if(folks===null&&acting){setFolks([]);call('profile.followers',{profileId:acting.id,following:true},followRes)
+   .then(r=>setFolks(r.items.filter(p=>p.kind==='person'&&p.handle).map(p=>({id:p.id,handle:p.handle!,name:nameOf(p),avatar:null})))).catch(()=>{});}
+ };
+ useEffect(()=>{
+  if(!sug||sug.q.length<2){setFound([]);return;}
+  const id=setTimeout(()=>{call('people.search',{q:sug.q},mentionRes).then(r=>setFound(r.items.filter(p=>p.kind==='person'&&p.handle).map(p=>({id:p.id,handle:p.handle!,name:nameOf(p),avatar:thumbOf(p.avatar)})))).catch(()=>setFound([]));},250);
+  return ()=>clearTimeout(id);
+ },[sug?.q,call]);
+ const sugList=sug?[...new Map([...(folks??[]),...found].map(p=>[p.id,p])).values()]
+  .filter(p=>!sug.q||p.handle.toLowerCase().startsWith(sug.q)||p.name.toLowerCase().startsWith(sug.q)).slice(0,5):[];
+ const pickMention=(p:Mention)=>{if(!sug)return;const add='@'+p.handle+' ';const next=body.slice(0,sug.start)+add+body.slice(sug.end);setBody(next);setSug(null);
+  const pos=sug.start+add.length;requestAnimationFrame(()=>{const el=text.current;el?.focus();el?.setSelectionRange(pos,pos);});};
  const insertAt=()=>{const el=text.current;const s=el?.selectionStart??body.length;const pre=body.slice(0,s);const add=(pre&&!/\s$/.test(pre)?' ':'')+'@';setBody(pre+add+body.slice(s));
-  requestAnimationFrame(()=>{el?.focus();const p=s+add.length;el?.setSelectionRange(p,p);});};
+  requestAnimationFrame(()=>{if(!el)return;el.focus();const p=s+add.length;el.setSelectionRange(p,p);caret(el);});};
 
  if(preview){
   const fake:Post={id:edit?.id??'00000000-0000-7000-8000-000000000000',type:note?'note':'post',title:note?title.trim():null,body:body.trim(),author:{id:acting?.id??'',kind:acting?.kind??'person',handle:acting?.handle??null,name:acting?.name??nameOf(acting),avatar:acting?.avatar??null},
@@ -524,11 +570,16 @@ export function ComposeScreen({edit}:{edit?:Post}={}){
     {who&&<p className="cmp-who">{who}</p>}
     {note&&<div className={'field'+(errs.title?' err':'')}><label htmlFor="ntitle">{t('fe.fd.title')}</label><input id="ntitle" className="inp" value={title} maxLength={120} onChange={e=>setTitle(e.target.value)} placeholder={t('fe.fd.titlePh')}/>{err('title')}</div>}
     <div className={'field'+(errs.body?' err':'')}>
-     <textarea ref={text} className="inp" rows={note?10:6} maxLength={max} value={body} onChange={e=>setBody(e.target.value)} autoFocus={!x}
+     <div className="mention-box" style={{position:'relative'}}>
+     <textarea ref={text} className="inp" rows={note?10:6} maxLength={max} value={body} onChange={e=>{setBody(e.target.value);caret(e.target);}} autoFocus={!x}
+      onKeyUp={e=>{if(e.key==='Escape')setSug(null);else if(e.key.startsWith('Arrow'))caret(e.currentTarget);}} onClick={e=>caret(e.currentTarget)} onBlur={()=>setTimeout(()=>setSug(null),200)}
       placeholder={note?t('fe.fd.notePh'):poll?t('fe.fd.pollPh'):couple?t('fe.fd.composePhUs'):t('fe.fd.composePh')} aria-label={t('fe.fd.text')}/>
+     {sug&&sugList.length>0&&<div className="mention-sug" role="listbox" aria-label={t('fe.fd.whoMention')}>{sugList.map(p=><button key={p.id} type="button" role="option" aria-selected={false}
+      onMouseDown={e=>e.preventDefault()} onClick={()=>pickMention(p)}><Av name={p.name} seed={p.id} src={p.avatar} size="xs"/><span><b>{p.name}</b> <small>@{p.handle}</small></span></button>)}</div>}
+     </div>
      <div className="counter">{body.length} / {max}</div>{err('body')}
     </div>
-    {hasMedia&&<div className="cmp-media"><section className="grp"><div className="grp-t"><span>{t('fe.fd.mediaN',{n:media.length,max:MEDIA_MAX})}</span></div>
+    {hasMedia&&<div className="cmp-media" ref={mediaRef}><section className="grp"><div className="grp-t"><span>{t('fe.fd.mediaN',{n:media.length,max:MEDIA_MAX})}</span></div>
      <div className="card"><div className="edit-ph">{media.map((m,i)=><div key={m.id}><img src={m.preview} alt=""/>
       <button type="button" className="rm" aria-label={t('fe.fd.remove')} onClick={()=>setMedia(l=>l.filter(y=>y.id!==m.id))}><X/></button>
       <button type="button" className="vw" aria-label={t('fe.fd.view')} onClick={()=>setViewer(i)}/></div>)}
@@ -543,7 +594,7 @@ export function ComposeScreen({edit}:{edit?:Post}={}){
      {!poll&&<button type="button" onClick={()=>setPoll({question:'',options:['','']})}><ChartColumn/><span>{t('fe.feed.poll')}</span></button>}
      {!communityId&&!note&&<button type="button" onClick={()=>setNote(true)}><FileText/><span>{t('fe.fd.article')}</span></button>}
      <button type="button" onClick={insertAt}><AtSign/><span>{t('fe.fd.mention')}</span></button>
-     {interests===null&&!communityId&&<button type="button" title={t('fe.fd.myInterestsHint')} onClick={()=>{if(!eligible.length){toast(t('fe.fd.noPublicInterests'),{type:'info',action:{label:t('fe.fd.open'),fn:()=>navigate('/n/me')}});return;}setInterests(eligible.slice(0,4).map(j=>j.topicId));}}><Sparkles/><span>{t('fe.fd.myInterests')}</span></button>}
+     {interests===null&&!communityId&&<button type="button" title={t('fe.fd.myInterestsHint')} className={wantInts?'busy':undefined} aria-busy={wantInts||undefined} onClick={attachInterests}><Sparkles/><span>{t('fe.fd.myInterests')}</span></button>}
     </div>
    </div>
    {!communityId&&!(audience==='granted'&&!inFeed)&&<div className="card list cmp-feed">
@@ -554,7 +605,7 @@ export function ComposeScreen({edit}:{edit?:Post}={}){
    </div>}
    {err('media')}
    </section>
-   {poll&&<section className="grp"><div className="grp-t"><span>{t('fe.fd.pollN',{n:poll.options.length,max:POLL_MAX})}</span><button type="button" onClick={()=>setPoll(null)}>{t('fe.fd.remove')}</button></div>
+   {poll&&<section className="grp" ref={pollRef}><div className="grp-t"><span>{t('fe.fd.pollN',{n:poll.options.length,max:POLL_MAX})}</span><button type="button" onClick={()=>setPoll(null)}>{t('fe.fd.remove')}</button></div>
     <div className="card">
      <div className={'field'+(errs.pollQ?' err':'')}><label htmlFor="pollQ">{t('fe.fd.question')}</label><input id="pollQ" className="inp" value={poll.question} maxLength={200} placeholder={t('fe.fd.questionPh')} onChange={e=>setPoll({...poll,question:e.target.value})}/>{err('pollQ')}</div>
      {poll.options.map((o,i)=><div key={i} className={'field pollopt'+(errs['o'+i]?' err':'')}><div className="inwrap"><span className="n">{i+1}</span>
@@ -564,7 +615,7 @@ export function ComposeScreen({edit}:{edit?:Post}={}){
      {err('opts')}
     </div>
     <p className="grp-n">{t('fe.fd.pollFoot')}{edit?.poll?' '+t('fe.fd.pollReset'):''}</p></section>}
-   {interests!==null&&<section className="grp"><div className="grp-t"><span>{t('fe.fd.interests')}</span><button type="button" onClick={()=>setInterests(null)}>{t('fe.fd.remove')}</button></div>
+   {interests!==null&&<section className="grp" ref={intRef}><div className="grp-t"><span>{t('fe.fd.interests')}</span><button type="button" onClick={()=>setInterests(null)}>{t('fe.fd.remove')}</button></div>
     <div className="card">
      {interests.length>0&&<div className="testcard" style={{'--n':Math.min(4,interests.length)} as React.CSSProperties}><Jars list={eligible.filter(j=>interests.includes(j.topicId))} topics={jarTopics} onOpen={()=>{}}/></div>}
      <div className="chips mt12">{eligible.map(j=>{const on=interests.includes(j.topicId);return <button key={j.topicId} type="button" className={'chip'+(on?' on':'')} aria-pressed={on}
@@ -577,13 +628,13 @@ export function ComposeScreen({edit}:{edit?:Post}={}){
      onClick={()=>{if(!on&&topics.length>=3){toast(t('fe.fd.max3'),{type:'warn'});return;}setTopics(on?topics.filter(v=>v!==id):[...topics,id]);}}>{tname(id)}</button>;})}
      {catalog.length>0&&<button type="button" className="chip more" onClick={()=>setSheet('topics')}><Search/>{t('fe.br.seeAll')} · {catalog.length}</button>}</div>
     <p className="grp-n">{couple?t('fe.fd.topicsFootUs'):t('fe.fd.topicsFoot')}</p></section>
-   {failure&&<p className="alert err" role="alert">{failure}</p>}
+   {failure&&<p className="alert err" role="alert" ref={failRef}>{failure}</p>}
   </View>
   <div className="ctabar"><div className="wrap"><div className="row g8">
    <button type="button" className="btn soft prevbtn" style={{flex:'0 0 auto',width:'auto'}} aria-label={t('fe.fd.preview')} onClick={()=>{if(validate())setPreview(true);}}><Eye/><span>{t('fe.fd.howSeen')}</span></button>
    <Btn onClick={publish} disabled={!!busy||uploading} busy={busy==='publish'}>{cta}</Btn>
   </div></div></div>
-  {sheet==='topics'&&<FilterSheet title={t('fe.fd.topicsTitle')} topics={catalog} cats={cats} popular={topics} value={topics} onClose={()=>setSheet(null)}
+  {sheet==='topics'&&<FilterSheet title={t('fe.fd.topicsTitle')} max={3} topics={catalog} cats={cats} popular={topics} value={topics} onClose={()=>setSheet(null)}
    onApply={v=>{if(v.length>3){toast(t('fe.fd.max3'),{type:'warn'});return;}setTopics(v);setSheet(null);}}/>}
   {sheet==='people'&&<PeopleSheet value={people} onClose={()=>setSheet(null)} onApply={v=>{setPeople(v);setSheet(null);}} locked={(edit?.tags??[]).filter(x=>x.state==='no').map(x=>x.id)}/>}
   {viewer!==null&&<Viewer srcs={media.map(m=>m.preview)} index={viewer} onClose={()=>setViewer(null)}/>}
