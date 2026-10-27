@@ -2,7 +2,7 @@ import {useCallback,useEffect,useRef,useState} from 'react';
 import {useNavigate,useParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Calendar,CircleCheck,Clock,Globe,Link as LinkIcon,Lock,MapPin,Ticket,Users,Video,X,ChevronLeft,Star,Check,Ban} from 'lucide-react';
+import {Plus,Calendar,CircleCheck,Clock,Globe,Link as LinkIcon,Lock,MapPin,Ticket,Users,Video,X,ChevronLeft,Star,Check,Ban} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {Av,Bar,Btn,Empty,Seg,View,plate} from './ui';
 import {useFe} from './session';
@@ -50,6 +50,16 @@ export function CommunitiesTab(){
  </>;
 }
 
+/** `collectionShortcut()` — «Мои сообщества» / «Мои события» and the «+» that creates one. */
+function MyShortcut({kind}:{kind:'communities'|'events'}){
+ const {t}=useI18n();const navigate=useNavigate();const {acting}=useFe();const couple=acting?.kind==='couple';
+ const k=kind==='communities'?'fe.cc':'fe.ce';const Icon=kind==='communities'?Users:Calendar;
+ return <div className="myev">
+  <button type="button" className="myev-main" onClick={()=>navigate('/n/me?layer=mine&part='+kind)}><span className="ico g"><Icon/></span><span className="tx"><b>{t(k+(couple?'.mineCouple':'.mine'))}</b></span></button>
+  <button type="button" className="ibtn add" aria-label={t(k+'.create')} onClick={()=>navigate(kind==='communities'?'/n/communities/new':'/n/events/new')}><Plus/></button>
+ </div>;
+}
+
 function Catalog(){
  const {call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const topics=useTopics();
  const [topic,setTopic]=useState('');const [items,setItems]=useState<z.infer<typeof card>[]|null>(null);const [error,setError]=useState<unknown>(null);
@@ -57,6 +67,7 @@ function Catalog(){
  useEffect(()=>{load();},[load]);
  const tname=(id:string)=>{const x=topics.find(v=>v.id===id);return x?(locale==='en'?x.en:x.ru):id;};
  return <>
+  <MyShortcut kind="communities"/>
   <div className="filterline"><div className="chips scroll">
    <button type="button" className={'chip filter'+(topic===''?' on':'')} aria-pressed={topic===''} onClick={()=>setTopic('')}>{t('fe.comm.allTopics')}</button>
    {topics.slice(0,12).map(x=><button key={x.id} type="button" className={'chip filter'+(topic===x.id?' on':'')} aria-pressed={topic===x.id} onClick={()=>setTopic(x.id)}>{locale==='en'?x.en:x.ru}</button>)}
@@ -142,6 +153,7 @@ function EventList({communityId}:{communityId?:string}){
  const load=useCallback(()=>{setError(null);setItems(null);call('event.catalog',{format,...(communityId?{communityId}:{})},evList).then(r=>setItems(r.items)).catch(setError);},[call,format,communityId]);
  useEffect(()=>{load();},[load]);
  return <>
+  {!communityId&&<MyShortcut kind="events"/>}
   {!communityId&&<div className="filterline"><div className="chips scroll">{(['all','offline','online'] as const).map(f=><button key={f} type="button" className={'chip filter'+(format===f?' on':'')} aria-pressed={format===f} onClick={()=>setFormat(f)}>{t('fe.ev.format.'+f)}</button>)}</div></div>}
   {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
    :items===null?<p className="note" role="status">{t('fe.loading')}</p>

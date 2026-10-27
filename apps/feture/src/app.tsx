@@ -26,6 +26,8 @@ import { MeTab } from './fe/me';
 import { InterestsScreen, InterestsHistoryScreen } from './fe/interests';
 import { StaffScreen } from './fe/staff';
 import { FeedTab, PostScreen, ComposeScreen } from './fe/feed';
+import { CreateCommunityScreen } from './fe/create-community';
+import { CreateEventScreen } from './fe/create-event';
 const ProductDesign = lazy(async()=>({default:(await import('./feture/design/product-design')).ProductDesign}));
 import { WelcomePage } from './feture/welcome';
 import { FirstStepsPage } from './feture/first-steps';
@@ -267,7 +269,9 @@ export const routes: RouteObject[] = [
         {path:'people', element:<PeopleTab />},
         {path:'people/:id', element:<PersonScreen />},
         {path:'communities', element:<CommunitiesTab />},
+        {path:'communities/new', element:<CreateCommunityScreen />},
         {path:'communities/:id', element:<CommunityScreen />},
+        {path:'events/new', element:<CreateEventScreen />},
         {path:'events/:id', element:<EventScreen />},
         {path:'inbox', element:<InboxScreen />},
         {path:'settings', element:<SettingsScreen />},
