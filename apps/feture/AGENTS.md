@@ -31,6 +31,8 @@ Scenarios live in `e2e/scenarios/` and run with `e2e/run.mjs` (see `e2e/README.m
 **persona** (`new`, `basic`, `full`, `pair`, …) and runs under your own lane (`E2E_LANE`), so agents never share
 accounts, sessions or daily limits, and every screen is checked in the account states that change it (empty / filled,
 alone / in a couple, hidden / visible). A missing state is added to `e2e/personas.mjs` built from app commands.
+Every other actor (who asks, invites, applies, reports) is a persona of the same lane too (`t.persona(kind)`); seed
+people and content may only be looked at. Scenarios clean up what they create; `e2e/run-all.sh` runs them all.
 
 ## Owner decision — 2026-10-27 (V21)
 
