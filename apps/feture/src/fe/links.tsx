@@ -2,8 +2,7 @@ import {useCallback,useEffect,useRef,useState} from 'react';
 import {useNavigate,useParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {ChevronRight,CircleAlert,Info,Link2,Pencil,Plus,Trash2,User,Users,X} from 'lucide-react';
-import {useToast as useToastV21} from './toast';
+import {ChevronRight,CircleAlert,Info,Link2,Pencil,Trash2,User,Users,X} from 'lucide-react';
 import {newOpId} from '../feture/fe-api';
 import {Av,Bar,Btn,Empty,View,Skel} from './ui';
 import {useFe} from './session';
@@ -26,38 +25,18 @@ const visItems=(t:T):[Vis,string][]=>VIS.map(v=>[v,t('fe.px.lk.vis.'+v)]);
 /** Proposals and kind changes that wait for the acting profile's answer. */
 export const waitingCount=(r:LinksMine)=>r.incoming.length+r.confirmed.filter(l=>l.change&&!l.change.mine).length;
 
-/** `linksBlock(owner,true)` on the Me profile layer: proposals waiting for an answer on top (compact cards with
- * «Подтвердить / Отклонить»), then up to four confirmed links and «Управлять»; empty — one «Добавить связь» row. */
-export function LinksBlock({onChanged}:{onChanged?:()=>void}){
- const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToastV21();
- const [r,setR]=useState<LinksMine|null>(null);const [busy,setBusy]=useState(false);
- const load=useCallback(()=>{call('links.mine',{},linksMineRes).then(setR).catch(()=>{});},[call]);
- useEffect(()=>{load();},[load]);
- if(!r)return null;
- const couple=acting?.kind==='couple';
- const inc=[...r.incoming,...r.confirmed.filter(l=>l.change&&!l.change.mine)];
- const list=r.confirmed;
- const manage=()=>navigate('/n/me/links');
- const answer=async(l:LinkView,accept:boolean)=>{setBusy(true);
-  try{await (l.change?call('link.answerChange',{opId:newOpId(),linkId:l.id,accept},ok):call('link.answer',{opId:newOpId(),linkId:l.id,accept,vis:'all'},ok));
-   toast(accept?(l.change?t('fe.ln.t.changeOk'):t('fe.ln.t.confirmed')):t('fe.ln.t.declined'),{type:'ok'});load();onChanged?.();}
-  catch(e){toast(pxError(e,t),{type:'err'});}finally{setBusy(false);}};
- const title=inc.length?fill(t(inc.length===1?'fe.mx.lk.titleNew1':'fe.mx.lk.titleNew'),{n:inc.length}):t('fe.mx.lk.title');
- return <section className={'grp'+(list.length?'':' bare')}>
-  <div className="grp-t"><span>{title}</span>{(list.length||inc.length)?<button type="button" onClick={manage}>{t('fe.mx.lk.manage')}</button>:null}</div>
-  {inc.length>0&&<div className="lk-inc">{inc.map(l=>{const name=nameOf(l);const go=()=>navigate('/n/people/'+l.other.id);
-   return <div key={l.id} className="card rqcard lk-req" style={{marginBottom:10}}>
-    <div className="row"><button type="button" className="rq-av" aria-label={name} onClick={go}><Av name={name} seed={l.other.id} size="sm"/></button>
-     <button type="button" className="grow" style={{textAlign:'left'}} onClick={go}><b style={{fontSize:15}}>{name}</b>
-      <div className="note">{l.change?fill(t('fe.ln.proposesChange'),{from:linkLabel(t,l.kind,l.side),to:t('fe.px.lk.k.'+l.change.kind)}):fill(couple?t('fe.ln.proposesCouple'):t('fe.ln.proposes'),{label:linkLabel(t,l.kind,l.side)})}</div></button></div>
-    <div className="row g8 mt12"><Btn size="md" disabled={busy} onClick={()=>answer(l,true)}>{t('fe.ln.confirm')}</Btn><Btn size="md" kind="soft" disabled={busy} onClick={()=>answer(l,false)}>{t('fe.ln.decline')}</Btn></div>
-   </div>;})}</div>}
-  {list.length?<div className="card list">{list.slice(0,4).map(l=>{const name=nameOf(l);const v=l.vis;
-   return <button key={l.id} type="button" className="li" onClick={()=>navigate('/n/people/'+l.other.id)}><Av name={name} seed={l.other.id} size="sm"/>
-    <span className="tx"><b>{name}</b><small>{linkLabel(t,l.kind,l.side)+(v!=='all'?' · '+(v==='us'?t('fe.mx.lk.visUs'):t('fe.mx.lk.visFollowers')):'')}</small></span><ChevronRight/></button>;})}</div>
-   :<div className="card"><button type="button" className="ph-empty" onClick={manage}><span className="pe-ic"><Link2/></span>
-    <span className="tx"><b>{t('fe.mx.lk.add')}</b><small>{couple?t('fe.mx.lk.addSubCouple'):t('fe.mx.lk.addSub')}</small></span><Plus/></button></div>}
- </section>;
+/** The `li` row on the Me profile layer: confirmed count, or the number of proposals waiting for an answer. */
+export function LinksEntry(){
+ const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const [r,setR]=useState<LinksMine|null>(null);
+ useEffect(()=>{call('links.mine',{},linksMineRes).then(setR).catch(()=>{});},[call]);
+ const n=r?waitingCount(r):0;
+ return <section className="grp"><div className="card list">
+  <button type="button" className="li" onClick={()=>navigate('/n/me/links')}>
+   <span className="ico"><Link2/></span>
+   <span className="tx"><b>{t('fe.ln.entry')}</b><small>{n?fill(t('fe.ln.entryNew'),{n}):r?.confirmed.length?fill(t('fe.ln.entryCount'),{n:r.confirmed.length}):t('fe.ln.entryNone')}</small></span>
+   {n>0&&<span className="pill hot">{n}</span>}<ChevronRight/>
+  </button>
+ </div></section>;
 }
 
 /** `/n/me/links` — SC.P21 for the own profile. */

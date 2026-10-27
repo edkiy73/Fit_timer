@@ -23,7 +23,7 @@ export function PairScreen(){
  const couple=state.status==='ready'?state.boot.profiles.find(p=>p.kind==='couple'):undefined;
  const person=state.status==='ready'?state.boot.profiles.find(p=>p.kind==='person'):undefined;
  const [inv,setInv]=useState<z.infer<typeof invitesRes>|null>(null);const [c,setC]=useState<z.infer<typeof coupleRes>['couple']|null>(null);
- const [nick,setNick]=useState('');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [confirmStop,setConfirmStop]=useState(()=>new URLSearchParams(location.hash.split('?')[1]??'').get('stop')==='1');
+ const [nick,setNick]=useState('');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [confirmStop,setConfirmStop]=useState(false);
  const op=useRef(newOpId());
  const load=useCallback(()=>{
   setFailure('');
