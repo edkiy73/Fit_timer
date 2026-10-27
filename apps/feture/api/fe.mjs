@@ -44,8 +44,9 @@ const env = process.env;
 const configured = !!(env.FETURE_DATABASE_URL && env.FETURE_ID_PEPPER);
 
 // One small pool per warm instance; Supavisor transaction mode needs prepare:false.
+const POOL = 3;
 const sql = configured
-  ? postgres(env.FETURE_DATABASE_URL, { prepare: false, max: 3, idle_timeout: 20, connect_timeout: 8 })
+  ? postgres(env.FETURE_DATABASE_URL, { prepare: false, max: POOL, idle_timeout: 20, connect_timeout: 8 })
   : null;
 
 /** Media backend: Cloudflare R2 + media domain when configured (after launch), otherwise the prelaunch
@@ -75,7 +76,7 @@ export function cors(/** @type {any} */ req, /** @type {any} */ res) {
   return false;
 }
 
-const db = sql ? fromPostgres(sql) : null;
+const db = sql ? fromPostgres(sql, POOL) : null;
 const handler = db && createFeHandler({
   db,
   pepper: env.FETURE_ID_PEPPER ?? '',
