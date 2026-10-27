@@ -21,6 +21,16 @@ const need = acting => { if (!acting) throw new Error('acting profile missing');
 /** @param {Acting} acting */
 const personOnly = acting => { if (acting.kind !== 'person') fail(422, 'rule_violation', { rule: 'couple_changes_not_available' }); };
 
+/** Someone else's profile, if it exists for the viewer: active, not the viewer, no block either way (a block looks the
+ * same as missing). `related` says whether it is one of the viewer's own people or couples (server/README.md).
+ * @param {Q} q @param {Acting} viewer @param {string} id @returns {Promise<{id: string, kind: string, related: boolean}>} */
+export async function otherProfile(q, viewer, id) {
+  const [p] = await q.query(
+    `select p.id, p.kind, feture.related($1, p.id) related from feture.profile p where p.id = $2 and p.state = 'active' and not feture.blocked($1, p.id)`, [viewer.profileId, id]);
+  if (!p || p.id === viewer.profileId) fail(404, 'not_found');
+  return p;
+}
+
 /** Why the viewer cannot ask for the owner's private part right now, or null. @param {Q} q @param {Acting} viewer @param {string} ownerId */
 async function requestBlocker(q, viewer, ownerId) {
   const [o] = await q.query(

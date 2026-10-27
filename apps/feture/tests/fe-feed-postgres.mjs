@@ -287,3 +287,88 @@ test('feed search finds words in the text, case-insensitive; % is literal', asyn
     assert.equal((await call('ub', b, { action: 'feed.list', tab: 'forYou', q: 'x' })).status, 400);
   } finally { await pg.close(); }
 });
+
+test('blocks.list: only the blocker’s own list, newest first, no account data; unblock empties it; couples keep their own', async () => {
+  const { pg, call, person, coupleOf } = await setup();
+  try {
+    const a = await person('ua', 'Alex'), b = await person('ub', 'Kira'), c = await person('uc', 'Noa'), d = await person('ud', 'Mia');
+    assert.deepEqual((await call('ua', a, { action: 'blocks.list' })).items, []);
+    await call('ua', a, { action: 'block.set', opId: op(), profileId: b, on: true });
+    await call('ua', a, { action: 'block.set', opId: op(), profileId: c, on: true });
+    const list = (await call('ua', a, { action: 'blocks.list' })).items;
+    assert.deepEqual(list.map(i => i.handle), ['Noa', 'Kira']);
+    assert.deepEqual(Object.keys(list[0]).sort(), ['created_at', 'handle', 'id', 'kind', 'name']); // no account ids, no emails
+    // The blocked side never learns it: their own list stays empty, and a stranger sees nothing either.
+    assert.deepEqual((await call('ub', b, { action: 'blocks.list' })).items, []);
+    assert.deepEqual((await call('ud', d, { action: 'blocks.list' })).items, []);
+    // Someone else's profile in the header is refused, not answered with its list.
+    assert.equal((await call('ud', a, { action: 'blocks.list' })).status, 403);
+    // A couple's list is the couple's; the person's own blocks are not in it unless blocked for both.
+    const pair = await coupleOf([a, d]);
+    assert.deepEqual((await call('ua', pair, { action: 'blocks.list' })).items, []);
+    await call('ud', d, { action: 'block.set', opId: op(), profileId: b, on: true, alsoFor: 'partner' });
+    assert.deepEqual((await call('ua', pair, { action: 'blocks.list' })).items.map(i => i.handle), ['Kira']);
+    await call('ua', a, { action: 'block.set', opId: op(), profileId: c, on: false });
+    assert.deepEqual((await call('ua', a, { action: 'blocks.list' })).items.map(i => i.handle), ['Kira']);
+  } finally { await pg.close(); }
+});
+
+test('noteSub.set: notes of the author in «Подписки», the author is not told, never oneself, own couple or blocked', async () => {
+  const { pg, db, call, person, coupleOf } = await setup();
+  try {
+    const a = await person('ua', 'Alex'), b = await person('ub', 'Kira'), c = await person('uc', 'Noa');
+    const note = draft('Длинная заметка о том, как прошёл вечер.', { type: 'note', title: 'Заметка' });
+    assert.equal((await publish(call, 'ua', a, note)).state, 'published');
+    await publish(call, 'ua', a, draft('Обычный пост'));
+    assert.deepEqual(await feed(call, 'ub', b, 'following'), []);
+    const queued = async () => (await db.query('select count(*)::int n from feture.outbox'))[0].n;
+    const before = await queued();
+    assert.equal((await call('ub', b, { action: 'noteSub.set', opId: op(), profileId: a, on: true })).subscribed, true);
+    assert.equal((await call('ub', b, { action: 'noteSub.set', opId: op(), profileId: a, on: true })).subscribed, true); // again: no error, one row
+    assert.equal(await queued(), before); // «Автор не узнает»: nothing is queued for anyone
+    assert.deepEqual(await feed(call, 'ub', b, 'following'), ['Длинная заметка о том, как прошёл вечер.']); // notes only, not posts
+    assert.equal((await db.query('select count(*)::int n from feture.note_subscription'))[0].n, 1);
+    // A stranger does not get Kira's subscription.
+    assert.deepEqual(await feed(call, 'uc', c, 'following'), []);
+
+    assert.equal((await call('ub', b, { action: 'noteSub.set', opId: op(), profileId: b, on: true })).rule, 'self');
+    const pair = await coupleOf([b, c]);
+    assert.equal((await call('ub', b, { action: 'noteSub.set', opId: op(), profileId: pair, on: true })).rule, 'own_profile');
+    assert.equal((await call('ub', b, { action: 'noteSub.set', opId: op(), profileId: '018f0000-0000-7000-8000-00000000dead', on: true })).status, 404);
+    // Blocked either way: refused, and a block ends an existing subscription; unblocking restores nothing.
+    await call('ua', a, { action: 'block.set', opId: op(), profileId: c, on: true });
+    assert.equal((await call('uc', c, { action: 'noteSub.set', opId: op(), profileId: a, on: true })).status, 404);
+    await call('ua', a, { action: 'block.set', opId: op(), profileId: b, on: true });
+    assert.equal((await db.query('select count(*)::int n from feture.note_subscription'))[0].n, 0);
+    await call('ua', a, { action: 'block.set', opId: op(), profileId: b, on: false });
+    assert.deepEqual(await feed(call, 'ub', b, 'following'), []);
+    await call('ub', b, { action: 'noteSub.set', opId: op(), profileId: a, on: true });
+    assert.equal((await call('ub', b, { action: 'noteSub.set', opId: op(), profileId: a, on: false })).subscribed, false);
+    assert.deepEqual(await feed(call, 'ub', b, 'following'), []);
+  } finally { await pg.close(); }
+});
+
+test('reply.edit: only the author, on the current rev, while published; others see the new text, the rev stays private', async () => {
+  const { pg, call, person } = await setup();
+  try {
+    const a = await person('ua', 'Alex'), b = await person('ub', 'Kira'), c = await person('uc', 'Noa');
+    const post = await publish(call, 'ua', a, draft('Обсудим?'));
+    const r = await call('ub', b, { action: 'reply.create', opId: op(), postId: post.id, body: 'Первый вариант' });
+    const mine = (await call('ub', b, { action: 'post.replies', postId: post.id })).items[0];
+    assert.equal((await call('uc', c, { action: 'post.replies', postId: post.id })).items[0].rev, undefined); // not the author
+    const ok = await call('ub', b, { action: 'reply.edit', opId: op(), replyId: r.id, rev: mine.rev, body: 'Исправленный вариант' });
+    assert.equal(ok.rev, mine.rev + 1);
+    const seen = (await call('uc', c, { action: 'post.replies', postId: post.id })).items[0];
+    assert.equal(seen.body, 'Исправленный вариант');
+    assert.ok(seen.editedAt);
+    // A stale rev, someone else (even the post's author), an empty text, a reply that is gone: refused, nothing changes.
+    assert.equal((await call('ub', b, { action: 'reply.edit', opId: op(), replyId: r.id, rev: mine.rev, body: 'Устаревшее' })).status, 409);
+    assert.equal((await call('ua', a, { action: 'reply.edit', opId: op(), replyId: r.id, rev: ok.rev, body: 'Чужая правка' })).status, 409);
+    assert.equal((await call('uc', c, { action: 'reply.edit', opId: op(), replyId: r.id, rev: ok.rev, body: 'Чужая правка' })).status, 409);
+    assert.equal((await call('ub', b, { action: 'reply.edit', opId: op(), replyId: r.id, rev: ok.rev, body: '' })).status, 400);
+    assert.equal((await call('uc', c, { action: 'post.replies', postId: post.id })).items[0].body, 'Исправленный вариант');
+    await call('ub', b, { action: 'reply.delete', opId: op(), replyId: r.id });
+    assert.equal((await call('ub', b, { action: 'reply.edit', opId: op(), replyId: r.id, rev: ok.rev, body: 'После удаления' })).status, 409);
+    assert.deepEqual((await call('uc', c, { action: 'post.replies', postId: post.id })).items, []);
+  } finally { await pg.close(); }
+});

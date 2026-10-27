@@ -5,9 +5,8 @@ import { fail, isUniqueViolation } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
 import { journal, requireStaff } from './staff.mjs';
-import { ageOn } from './me.mjs';
 import { mediaDto } from '../media/assets.mjs';
-import { withFaces } from './faces.mjs';
+import { ageOn, withFaces } from './faces.mjs';
 
 /** Slice D2: events (S1 §10, extract/communities-events.md §1.8–1.12).
  * An event belongs to the organizing profile (a couple can organize) and goes to staff before it is published; a couple
@@ -52,7 +51,7 @@ function formOf(e) {
 
 /** Place, cover and community of an event: an approved place or one the author submitted, the organizer's own event
  * cover, a published community the organizing profile owns or hosts (V21 EVT-038). @param {Q} q @param {Acting} acting @param {any} f */
-async function checkRefs(q, acting, f) {
+async function checkEventRefs(q, acting, f) {
   const [zone] = await q.query('select 1 from pg_timezone_names where name = $1', [f.tz]);
   if (!zone) fail(400, 'invalid_input', { fields: ['tz'] });
   if (f.placeId) {
@@ -170,7 +169,7 @@ async function doUpdate(q, acting, eventId, rev, f) {
   if (e.state === 'published' && (f.requiresApplication !== e.requires_application || !same(f.questions, e.questions))) {
     fail(422, 'rule_violation', { rule: 'admission_frozen' });
   }
-  await checkRefs(q, acting, { ...f, communityId: null });
+  await checkEventRefs(q, acting, { ...f, communityId: null });
   const timeChanged = Date.parse(f.startsAt) !== new Date(e.starts_at).getTime() || Date.parse(f.endsAt) !== new Date(e.ends_at).getTime();
   if (timeChanged && Date.parse(f.startsAt) <= Date.now()) fail(400, 'invalid_input', { fields: ['startsAt'] });
   const keys = Object.keys(COLS).filter(k => e.state !== 'published' || !MAJOR.includes(k));
@@ -272,7 +271,7 @@ const run = {
     const acting = need(a);
     const f = input.event;
     if (Date.parse(f.startsAt) <= Date.now()) fail(400, 'invalid_input', { fields: ['startsAt'] });
-    await checkRefs(q, acting, f);
+    await checkEventRefs(q, acting, f);
     const partner = needsPartner(acting, 'event.submit');
     const [e] = await q.query(
       `insert into feture.event (organizer_profile_id, created_by, community_id, state, ${Object.values(COLS).join(', ')})

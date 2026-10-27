@@ -17,8 +17,11 @@ import { withFaces } from './faces.mjs';
 /** @param {Acting | null} acting @returns {Acting} */
 const need = acting => { if (!acting) throw new Error('acting profile missing'); return acting; };
 
-/** The other side exists, is active and is not one of my own profiles. @param {Q} q @param {Acting} acting @param {string} target */
-async function otherProfile(q, acting, target) {
+/** Target of a block, follow, subscription or hide: exists, is active and is not one of my own profiles (oneself and
+ * one's own couple are refused by rule, not hidden). Unlike `otherProfile` (commands/access.mjs) a block does not hide
+ * the target here: blocking must work on someone who already blocked me without revealing that they did; follow and
+ * subscription check the block themselves. @param {Q} q @param {Acting} acting @param {string} target */
+async function socialTarget(q, acting, target) {
   if (target === acting.profileId) fail(422, 'rule_violation', { rule: 'self' });
   const [p] = await q.query(
     `select p.id, exists (select 1 from feture.profile_member m where m.profile_id = p.id and m.account_id = $2 and m.state = 'active') mine
@@ -68,7 +71,7 @@ async function cutPair(q, blocker, blocked) {
 /** Blocks `target` from the acting profile (and, explicitly, from the account's other profile).
  * @param {Q} q @param {Acting} acting @param {string} target @param {'partner' | 'me'} [alsoFor] */
 export async function blockProfile(q, acting, target, alsoFor) {
-  await otherProfile(q, acting, target);
+  await socialTarget(q, acting, target);
   const targets = [acting.profileId];
   if (alsoFor) {
     // «И для пары / И для меня»: the account's other profile, explicitly.
@@ -116,7 +119,7 @@ const run = {
       await q.query(`delete from feture.follow where follower_profile_id = $1 and target_profile_id = $2`, [acting.profileId, input.profileId]);
       return { following: false };
     }
-    await otherProfile(q, acting, input.profileId);
+    await socialTarget(q, acting, input.profileId);
     const [{ b }] = await q.query('select feture.blocked($1, $2) b', [acting.profileId, input.profileId]);
     if (b) fail(404, 'not_found');
     const rows = await q.query(
@@ -139,7 +142,7 @@ const run = {
       await q.query(`delete from feture.note_subscription where subscriber_profile_id = $1 and author_profile_id = $2`, [acting.profileId, input.profileId]);
       return { subscribed: false };
     }
-    await otherProfile(q, acting, input.profileId);
+    await socialTarget(q, acting, input.profileId);
     const [{ b }] = await q.query('select feture.blocked($1, $2) b', [acting.profileId, input.profileId]);
     if (b) fail(404, 'not_found');
     // The author is not told (V21: «автор не узнает»).
@@ -150,7 +153,7 @@ const run = {
   async 'feedHide.set'(q, { acting: a, input }) {
     const acting = need(a);
     if (input.on) {
-      if (input.kind === 'author' || input.kind === 'activity') await otherProfile(q, acting, input.targetId);
+      if (input.kind === 'author' || input.kind === 'activity') await socialTarget(q, acting, input.targetId);
       if (input.kind === 'post') {
         const [v] = await q.query(`select 1 from feture.post p where p.id = $1 and feture.post_visible(p, $2, $3)`, [input.targetId, acting.profileId, acting.accountId]);
         if (!v) fail(404, 'not_found');

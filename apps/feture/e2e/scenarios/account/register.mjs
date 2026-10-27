@@ -1,3 +1,4 @@
+import { dropsNew } from '../helpers.mjs';
 // A04 → A04X → A05 with fresh accounts (persona `new`: signed in, no FetUre account yet); each one that registers is
 // deleted at the end through K07, which also covers deletion and sign-out.
 const N = process.env.REG_N || String(Date.now() % 1e7);
@@ -110,9 +111,4 @@ const scenarios = [
 ];
 
 // A run that failed before K07 still leaves nothing: the fresh account is deleted through the API.
-export default scenarios.map(sc => ({ ...sc, run: async t => {
-  try { await sc.run(t); } finally {
-    const p = (await t.boot()).profiles?.find(x => x.kind === 'person' && x.state !== 'deleted');
-    if (p?.handle) await t.api('account.delete', { opId: t.uuid7(), confirmHandle: p.handle });
-  }
-} }));
+export default dropsNew(scenarios);

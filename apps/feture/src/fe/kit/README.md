@@ -34,6 +34,7 @@ A new component or variant ships with its story in the same PR.
 | Overlays | `Sheet` (bottom sheet), `Ask` (confirmation), `Layer` (portal for custom overlays inside the kit only) |
 | Feedback | `Alert` (ok / err / warn / info in the flow), `useToast` (transient, with «Отменить»), `Empty`, `Skel` |
 | People | `Av` |
+| Verification shot | `CaptureFrame` (face oval / document frame, hint, the taken shot whole; tokens `--cam-*`) |
 
 Loading is a soft blink in place (`Skel`, `busy`), never a spinner. Icons come only from `lucide-react`.
 

@@ -84,6 +84,8 @@ const run = {
   async 'staff.mediaView'(q, { account, input, cfg }) {
     await requireStaff(q, account.id, REVIEWERS);
     const a = await reviewable(q, account.id, input.assetId);
+    // Age/photo-check selfies and identity documents open only in their own check queue, never by id from here.
+    if (a.purpose === 'verification') fail(404, 'not_found');
     // Staff see content only for what is waiting for them (S4 §3): media on review, or media of a post under open
     // reports or a dispute; never blocked material or private media at large.
     const [{ inCase }] = await q.query(

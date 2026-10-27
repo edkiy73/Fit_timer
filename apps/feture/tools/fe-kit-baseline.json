@@ -2,11 +2,6 @@
  "src/fe/account-extra.tsx": {
   "list row": 2
  },
- "src/fe/age-check.tsx": {
-  "list row": 4,
-  "notice": 4,
-  "inline style": 4
- },
  "src/fe/browse.tsx": {
   "list row": 1,
   "inline style": 1

@@ -8,7 +8,8 @@ import {FeSessionProvider,useFe,useRealtime} from './session';
 import {countsRes} from './inbox';
 import {Register} from './register';
 import {SignedOut} from './start';
-import {ToastProvider} from './toast';
+import {ToastProvider,useToast} from './toast';
+import {PushOffer} from './push';
 import './kit/base.css';
 import './kit/tokens.css';
 import './kit/kit.css';
@@ -43,6 +44,17 @@ export function FeRoot(){
 }
 function ImageFade(){useImageFade();return null;}
 
+/** The greeting after sign-up (A05 «Готово») on the screen it opened — the profile photos or the pair invitation.
+ * The feed greets on its own: it also offers «Показать всё» for the topics chosen at step 2. */
+function Hello(){
+ const location=useLocation();const navigate=useNavigate();const toast=useToast();
+ useEffect(()=>{const st=location.state as {hello?:unknown,warn?:unknown}|null;
+  if(typeof st?.hello!=='string'||location.pathname==='/n/feed')return;
+  toast(st.hello,{type:st.warn?'warn':'ok'});navigate(location.pathname+location.search,{replace:true,state:null});
+ },[location,navigate,toast]);
+ return null;
+}
+
 function Center({children}:{children:React.ReactNode}){
  return <div className="stage"><div className="root"><main className="main"><div className="view"><div className="wrap fe-center">{children}</div></div></main></div></div>;
 }
@@ -74,7 +86,8 @@ function FeGate(){
  if(state.status==='error')return <Center><Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(state.error,t)}>
   <Btn kind="soft" onClick={reload}>{t('fe.retry')}</Btn></Empty></Center>;
  // V21 A04 → A04X → A05 in the auth frame (header bar, view, bottom-pinned buttons).
- if(!state.boot.account.onboarded)return <Register/>;
+ // The sign-up has its own toasts (limits, «Заявку отправим…») — no dock there.
+ if(!state.boot.account.onboarded)return <ToastProvider nodock><Register/></ToastProvider>;
  return <FeLayout/>;
 }
 
@@ -133,6 +146,8 @@ function FeLayout(){
   </aside>
   <main ref={main} className={(nodock?'main':'main has-dock')+(sbar?'':' hasbar')+(cta?' hascta':'')}>
    <ToastProvider nodock={nodock}>
+   <Hello/>
+   <PushOffer/>
    <Outlet/>
    {/* The dock's five columns come from base.css (.dock: repeat(5,1fr)) — FE_TABS has five tabs. */}
    {!nodock&&<nav className="dock" aria-label={t('fe.nav.aria')}>

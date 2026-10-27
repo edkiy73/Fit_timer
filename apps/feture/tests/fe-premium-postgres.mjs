@@ -1,14 +1,19 @@
-// Slice H1 on PGlite as feture_api: Premium entitlements (staff grants for dogfooding), Premium in a couple, the age check by selfie.
+// Slice H1 on PGlite as feture_api: Premium entitlements (staff grants for dogfooding), Premium in a couple, the age check by
+// selfie and by identity document (A07: who can reach the document, its deletion, the expiry sweep, the rate limit).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { platform } from '../server/commands/platform.mjs';
 import { me } from '../server/commands/me.mjs';
 import { staff } from '../server/commands/staff.mjs';
 import { discover } from '../server/commands/discover.mjs';
-import { premium } from '../server/commands/premium.mjs';
+import { premium, sweepSelfies, verificationHandlers } from '../server/commands/premium.mjs';
+import { photos } from '../server/commands/photos.mjs';
+import { mediaDto } from '../server/media/assets.mjs';
+import { tokenDelivery } from '../server/media/delivery.mjs';
+import { drain } from '../server/outbox.mjs';
 import { setup as baseSetup, op } from './fe-helpers.mjs';
 
-const setup = () => baseSetup({ commands: { ...platform, ...me, ...staff, ...discover, ...premium } });
+const setup = () => baseSetup({ commands: { ...platform, ...me, ...staff, ...discover, ...premium, ...photos } });
 
 /** An asset of `profileId` in a given state. */
 async function asset(db, profileId, purpose, state = 'approved') {
@@ -86,5 +91,127 @@ test('review fixes: a selfie is used once and must be fresh; never approved with
     await call('ua', null, { action: 'verification.ageSubmit', opId: op(), checkId: s.id, assetId: selfie });
     await db.query(`update feture.media_asset set state = 'removed' where id = $1`, [selfie]);
     assert.equal((await call('um', null, { action: 'staff.ageCheckDecide', opId: op(), checkId: s.id, approve: true })).rule, 'selfie_missing');
+  } finally { await pg.close(); }
+});
+
+// ——— A07: the age check by an identity document ———
+
+/** Storage that only records what was deleted. */
+const fakeStorage = () => { const removed = []; return { removed, async remove(key) { removed.push(key); } }; };
+
+test('age check by document: no profile photo needed, staff read it alone; nobody else can reach the image; it is deleted right after the decision', async () => {
+  const { pg, db, call, person, coupleOf } = await world();
+  try {
+    const a = await person('ua', 'Alex', { verified: false }), b = await person('ub', 'Kira'), stranger = await person('us', 'Sam');
+    const pair = await coupleOf([a, b]);
+    // No avatar: a selfie is refused, a document is not; the gesture is not shown for a document.
+    assert.equal((await call('ua', null, { action: 'verification.ageStart', opId: op() })).rule, 'photo_required');
+    const s = await call('ua', null, { action: 'verification.ageStart', opId: op(), method: 'document' });
+    assert.deepEqual([s.method, s.gesture, s.state], ['document', null, 'started']);
+    assert.equal((await call('ua', null, { action: 'verification.ageStart', opId: op(), method: 'document' })).id, s.id); // one open check
+    assert.equal((await call('ua', null, { action: 'verification.ageStart', opId: op(), method: 'nope' })).status, 400);
+    const doc = await asset(db, a, 'verification', 'needs_review');
+    await call('ua', null, { action: 'verification.ageSubmit', opId: op(), checkId: s.id, assetId: doc });
+    const st = await call('ua', null, { action: 'verification.ageStatus' });
+    assert.deepEqual([st.check.method, st.check.state, st.check.gesture], ['document', 'submitted', null]);
+
+    // Staff see the document, not a profile photo or a gesture; every look is journaled.
+    const [item] = (await call('um', null, { action: 'staff.ageCheckQueue' })).items;
+    assert.deepEqual([item.method, item.gesture, item.selfie, item.photo, !!item.document?.src], ['document', null, null, null, true]);
+    const [{ n: looks }] = await db.query(`select count(*)::int n from feture.staff_action where action = 'age.view' and detail->>'method' = 'document'`);
+    assert.equal(looks, 1);
+
+    // Nobody else: not the partner, the couple or a stranger — not through the queue, the media view or a profile.
+    for (const u of ['ua', 'ub', 'us']) assert.equal((await call(u, null, { action: 'staff.ageCheckQueue' })).status, 403);
+    assert.equal((await call('um', null, { action: 'staff.mediaView', assetId: doc })).status, 404); // only in its own queue
+    const [row] = await db.query('select * from feture.media_asset where id = $1', [doc]);
+    const cfg = { storage: null, delivery: tokenDelivery('s'.repeat(40), 'https://media.test') };
+    for (const viewer of [b, pair, stranger]) {
+      assert.equal(await mediaDto(cfg, row, { viewerProfileId: viewer, place: 'private', showExplicit: true }), null);
+      assert.equal(await mediaDto(cfg, row, { viewerProfileId: viewer, place: 'chat', showExplicit: true, opened: true }), null);
+    }
+    assert.deepEqual((await call('ub', b, { action: 'profile.photosSet', opId: op(), assetIds: [doc] })).fields, ['assetIds']);
+    assert.deepEqual((await call('ua', a, { action: 'profile.photosSet', opId: op(), assetIds: [doc] })).fields, ['assetIds']);
+    for (const [u, viewer] of [['ub', b], ['ub', pair], ['us', stranger]]) {
+      const seen = await call(u, viewer, { action: 'profile.get', profileId: a });
+      assert.ok(!JSON.stringify(seen).includes(doc), u + ' sees the document id');
+    }
+    assert.ok(!JSON.stringify(await call('ua', a, { action: 'profile.mine' })).includes(doc));
+
+    // The decision is «18+ by the birth date or not». Either way the image goes at once.
+    await call('um', null, { action: 'staff.ageCheckDecide', opId: op(), checkId: s.id, approve: true });
+    assert.equal((await call('ua', null, { action: 'verification.ageStatus' })).verified, true);
+    const [{ state }] = await db.query('select state from feture.media_asset where id = $1', [doc]);
+    assert.equal(state, 'removed'); // hidden from staff too, before the job runs
+    assert.equal(await mediaDto(cfg, { ...row, state: 'removed' }, { viewerProfileId: 'x', place: 'own', showExplicit: true, staff: true }), null);
+    const [{ n: selfieExpiry }] = await db.query(`select count(*)::int n from feture.outbox where topic = 'verification.expire'`);
+    assert.equal(selfieExpiry, 0); // no 30-day wait for a document
+    const storage = fakeStorage();
+    await drain(db, verificationHandlers(db, { scan: { storage } }), { limit: 10, lockSeconds: 60 });
+    assert.equal((await db.query('select 1 from feture.media_asset where id = $1', [doc])).length, 0);
+    assert.ok(storage.removed.includes(row.storage_key) && storage.removed.includes(`o/${doc}`));
+    const [c] = await db.query('select state, asset_id, method from feture.age_check where id = $1', [s.id]);
+    assert.deepEqual([c.state, c.asset_id, c.method], ['approved', null, 'document']); // only the outcome stays
+    const cols = (await db.query(`select column_name from information_schema.columns where table_schema = 'feture' and table_name = 'age_check'`)).map(r => r.column_name);
+    assert.ok(!cols.some(col => /birth|number|name|dob/.test(col)), 'nothing from the document is stored: ' + cols);
+  } finally { await pg.close(); }
+});
+
+test('age check by document: a rejection deletes it too; a document nobody decides, or never sends, goes by the sweep', async () => {
+  const { pg, db, call, person } = await world();
+  try {
+    const a = await person('ua', 'Alex', { verified: false }), c = await person('uc', 'Cleo', { verified: false });
+    const s = await call('ua', null, { action: 'verification.ageStart', opId: op(), method: 'document' });
+    const doc = await asset(db, a, 'verification', 'needs_review');
+    await call('ua', null, { action: 'verification.ageSubmit', opId: op(), checkId: s.id, assetId: doc });
+    await call('um', null, { action: 'staff.ageCheckDecide', opId: op(), checkId: s.id, approve: false, reason: 'looks_underage' });
+    const storage = fakeStorage();
+    const handlers = verificationHandlers(db, { scan: { storage } });
+    await drain(db, handlers, { limit: 10, lockSeconds: 60 });
+    assert.equal((await db.query('select 1 from feture.media_asset where id = $1', [doc])).length, 0);
+    assert.equal((await call('ua', null, { action: 'verification.ageStatus' })).check.reason, 'looks_underage');
+
+    // Submitted, never decided: after 7 days the check expires and the image is deleted.
+    const s2 = await call('ua', null, { action: 'verification.ageStart', opId: op(), method: 'document' });
+    const doc2 = await asset(db, a, 'verification', 'needs_review');
+    await call('ua', null, { action: 'verification.ageSubmit', opId: op(), checkId: s2.id, assetId: doc2 });
+    await db.query(`update feture.age_check set submitted_at = now() - interval '8 days' where id = $1`, [s2.id]);
+    // Uploaded during a document check but never sent: deleted (not only hidden) after six hours.
+    const s3 = await call('uc', null, { action: 'verification.ageStart', opId: op(), method: 'document' });
+    const loose = await asset(db, c, 'verification', 'needs_review');
+    await db.query(`update feture.age_check set created_at = now() - interval '7 hours' where id = $1`, [s3.id]);
+    await db.query(`update feture.media_asset set created_at = now() - interval '6 hours 50 minutes' where id = $1`, [loose]);
+    await sweepSelfies(db);
+    assert.equal((await call('ua', null, { action: 'verification.ageStatus' })).check.state, 'expired');
+    for (const id of [doc2, loose]) assert.equal((await db.query('select state from feture.media_asset where id = $1', [id]))[0].state, 'removed');
+    // Without storage the job fails and is retried; it never drops the row while the file may still be there.
+    await assert.rejects(verificationHandlers(db)['verification.dropDocument']({ payload: { assetId: doc2 } }), /media_unavailable/);
+    assert.equal((await db.query('select 1 from feture.media_asset where id = $1', [doc2])).length, 1);
+    await drain(db, handlers, { limit: 10, lockSeconds: 60 });
+    assert.equal((await db.query('select 1 from feture.media_asset where id = any($1::uuid[])', [[doc2, loose]])).length, 0);
+  } finally { await pg.close(); }
+});
+
+test('age check: the method can switch before sending; the selfie flow stays as it was; five starts a day across methods', async () => {
+  const { pg, db, call, person } = await world();
+  try {
+    const a = await person('ua', 'Alex', { verified: false });
+    await db.query('update feture.profile set avatar_asset_id = $1 where id = $2', [await asset(db, a, 'avatar'), a]);
+    const d = await call('ua', null, { action: 'verification.ageStart', opId: op(), method: 'document' });
+    const s = await call('ua', null, { action: 'verification.ageStart', opId: op() }); // old clients send no method: selfie
+    assert.deepEqual([s.id, s.method, !!s.gesture], [d.id, 'selfie', true]);
+    const selfie = await asset(db, a, 'verification', 'needs_review');
+    await call('ua', null, { action: 'verification.ageSubmit', opId: op(), checkId: s.id, assetId: selfie });
+    // Sent: the method no longer changes.
+    assert.equal((await call('ua', null, { action: 'verification.ageStart', opId: op(), method: 'document' })).method, 'selfie');
+    const [item] = (await call('um', null, { action: 'staff.ageCheckQueue' })).items;
+    assert.deepEqual([item.method, item.gesture, !!item.selfie, !!item.photo, item.document], ['selfie', s.gesture, true, true, null]);
+    await call('um', null, { action: 'staff.ageCheckDecide', opId: op(), checkId: s.id, approve: true });
+    assert.equal((await db.query('select state from feture.media_asset where id = $1', [selfie]))[0].state, 'needs_review'); // kept 30 days
+    assert.equal((await db.query(`select count(*)::int n from feture.outbox where topic = 'verification.dropDocument'`))[0].n, 0);
+    // The daily limit counts every start, whatever the method: 3 above + 2 here, then refused.
+    assert.equal((await call('ua', null, { action: 'verification.ageStart', opId: op(), method: 'document' })).status, 200);
+    assert.equal((await call('ua', null, { action: 'verification.ageStart', opId: op(), method: 'document' })).status, 200);
+    assert.equal((await call('ua', null, { action: 'verification.ageStart', opId: op(), method: 'document' })).status, 429);
   } finally { await pg.close(); }
 });

@@ -66,3 +66,10 @@ export async function uploaderDone(t) {
   await t.tap('.sheet.on .sh-f button:has-text("Готово")');
   await t.page.locator('.sheet.on .k-uprow').first().waitFor({ state: 'detached', timeout: 60000 });
 }
+/** For scenarios on a fresh `new` persona: whatever account it registered is deleted afterwards (reruns start clean). */
+export const dropsNew = list => list.map(sc => sc.persona !== 'new' ? sc : ({ ...sc, run: async t => {
+  try { await sc.run(t); } finally {
+    const p = (await t.boot()).profiles?.find(x => x.kind === 'person' && x.state !== 'deleted');
+    if (p?.handle) await t.api('account.delete', { opId: t.uuid7(), confirmHandle: p.handle });
+  }
+} }));

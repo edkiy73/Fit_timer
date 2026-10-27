@@ -18,12 +18,14 @@ function put(url:string,method:string,headers:Record<string,string>,body:Blob,on
   x.timeout=120000;x.send(body);
  });
 }
-export function useSendPhoto(purpose:Purpose,extra:Record<string,unknown>={}):SendPhoto{
+/** `profileId`: upload as this profile instead of the acting one (verification shots always belong to the person). */
+export function useSendPhoto(purpose:Purpose,extra:Record<string,unknown>={},profileId?:string):SendPhoto{
  const {call}=useFe();const key=JSON.stringify(extra);
  return useCallback(async(blob,onProgress)=>{
-  const i=await call('media.uploadIntent',{opId:newOpId(),purpose,kind:'image',mime:blob.type||'image/jpeg',bytes:blob.size,...JSON.parse(key)},intentRes);
+  const as=profileId?{profileId}:{};
+  const i=await call('media.uploadIntent',{opId:newOpId(),purpose,kind:'image',mime:blob.type||'image/jpeg',bytes:blob.size,...JSON.parse(key)},intentRes,as);
   await put(i.upload.url,i.upload.method,i.upload.headers,blob,onProgress);
-  await call('media.commit',{assetId:i.assetId},okRes);
+  await call('media.commit',{assetId:i.assetId},okRes,as);
   return i.assetId;
- },[call,purpose,key]);
+ },[call,purpose,key,profileId]);
 }

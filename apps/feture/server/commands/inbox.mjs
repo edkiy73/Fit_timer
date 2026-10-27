@@ -3,6 +3,7 @@ import { inboxCommands } from '../../contracts/inbox.mjs';
 import { fail } from '../errors.mjs';
 import { sha256 } from '../hash.mjs';
 import { withFaces } from './faces.mjs';
+import { canonicalToken, webSubscription } from '../webpush.mjs';
 
 /** Slice G2: the inbox of an account (S1 §13). Notifications are stored per account; «Нужно решить» is computed from its
  * source rows every time (couple invitations, access requests, partner approvals waiting or returned, community join
@@ -133,19 +134,30 @@ const run = {
   },
 
   async 'push.register'(q, { account, input }) {
+    // A browser subscription is checked (a known push service over https, real keys) and stored in one form, so the
+    // server never posts to an address a client made up and the same browser is always the same device row.
+    const token = input.platform === 'web' ? webToken(input.token) : input.token;
     // A device belongs to whoever signed in on it last.
     await q.query(
       `insert into feture.push_device (token_hash, account_id, platform, token, tz) values ($1, $2, $3, $4, coalesce($5, 'UTC'))
        on conflict (token_hash) do update set account_id = $2, platform = $3, tz = coalesce($5, push_device.tz), last_seen_at = now()`,
-      [sha256(input.token), account.id, input.platform, input.token, input.tz ?? null]);
+      [sha256(token), account.id, input.platform, token, input.tz ?? null]);
     return { registered: true };
   },
 
   async 'push.unregister'(q, { account, input }) {
-    await q.query('delete from feture.push_device where token_hash = $1 and account_id = $2', [sha256(input.token), account.id]);
+    const web = webSubscription(input.token);
+    await q.query('delete from feture.push_device where token_hash = $1 and account_id = $2', [sha256(web ? canonicalToken(web) : input.token), account.id]);
     return { registered: false };
   },
 };
+
+/** @param {string} token */
+function webToken(token) {
+  const s = webSubscription(token);
+  if (!s) fail(400, 'invalid_input', { fields: ['token'] });
+  return canonicalToken(s);
+}
 
 /** @type {Record<string, Command>} */
 export const inbox = Object.fromEntries(

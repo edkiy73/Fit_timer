@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {ChevronRight,Lock,LockOpen,Plus,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,Av,Btn,Card,Chip,ChoiceChips,Empty,Group,Note,Pill,Row,SectionLabel,SelectRow,Sheet,Skel,Stack,ToggleRow} from './kit';
-import {AgeCheckLink} from './age-check';
+import {AgeCheckLink,useAgeResume} from './age-check';
 import {useFe} from './session';
 import {when} from './feed';
 import {useToast} from './toast';
@@ -121,14 +121,16 @@ export function PrivateOf({profileId}:{profileId:string}){
  const [p,setP]=useState<z.infer<typeof priv>|null>(null);const [busy,setBusy]=useState(false);const [note,setNote]=useState('');const op=useRef(newOpId());
  const load=useCallback(()=>{call('private.get',{profileId},priv).then(setP).catch(()=>setP(null));},[call,profileId]);
  useEffect(()=>{load();},[load]);
+ const request=async()=>{if(!p)return;setBusy(true);setNote('');try{await call('access.request',{opId:op.current,profileId,scopes:p.available??['info']},ok);setNote(t('fe.priv.requested'));load();}catch(e){setNote(feErrorMessage(e,t));op.current=newOpId();}finally{setBusy(false);}};
+ // Back from the age check this request sent the person to: ask again.
+ useAgeResume(v=>v==='access:'+profileId,()=>void request(),!!p?.canRequest);
  if(!p||!p.exists)return null;
- const request=async()=>{setBusy(true);setNote('');try{await call('access.request',{opId:op.current,profileId,scopes:p.available??['info']},ok);setNote(t('fe.priv.requested'));load();}catch(e){setNote(feErrorMessage(e,t));op.current=newOpId();}finally{setBusy(false);}};
  const open=(p.scopes??[]).length>0;
  return <Group title={t('fe.priv.title')} action={open&&p.until&&<span className="aud">{t('fe.priv.until').replace('{date}',new Date(p.until).toLocaleDateString(locale==='en'?'en':'ru',{day:'numeric',month:'short'}))}</span>}>
   {open?<Card>{p.text?<div className="md bio"><p>{p.text}</p></div>:<Note>{t('fe.priv.emptyText')}</Note>}</Card>
    :<Card><div className="fact"><i className="v"><Lock/></i><span>{t('fe.priv.closed').replace('{scopes}',(p.available??[]).map(s=>t('fe.priv.scope.'+s)).join(', '))}</span></div>
     {p.canRequest?<Btn kind="soft" size="md" icon={LockOpen} onClick={request} disabled={busy} className="mt12">{t('fe.priv.ask')}</Btn>:p.reason&&<Note className="mt8">{t('fe.priv.reason.'+p.reason)}</Note>}
    </Card>}
-  {note&&<Alert kind="ok" noIcon className="mt8">{note}{note===t('fe.rule.age_check_required')&&<><br/><AgeCheckLink/></>}</Alert>}
+  {note&&<Alert kind="ok" noIcon className="mt8">{note}{note===t('fe.rule.age_check_required')&&<><br/><AgeCheckLink intent={'access:'+profileId}/></>}</Alert>}
  </Group>;
 }
