@@ -3,7 +3,7 @@ import {useLocation,useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Bookmark,Calendar,ChevronRight,Clock,LockOpen,MessageCircle,Newspaper,Pencil,Plus,TriangleAlert,Users,X} from 'lucide-react';
-import {feErrorMessage,newOpId} from '../feture/fe-api';
+import {feErrorMessage} from '../feture/fe-api';
 import {Av,Bar,Btn,Empty,Skel,View} from './ui';
 import {useFe} from './session';
 import {PostCard,postSchema,when,type Post} from './feed';
@@ -132,7 +132,6 @@ const postsRev=z.object({ok:z.literal(true),items:z.array(postSchema),revisions:
 const savedRes=saved;
 const onePost=z.object({ok:z.literal(true),post:postSchema});
 const oneEvent=z.object({ok:z.literal(true),event:z.object({id:z.uuid(),title:z.string(),kind:z.string(),format:z.enum(['online','offline']),area:z.string().nullable(),startsAt:z.string(),state:z.string()}).passthrough()});
-const okOnly=z.object({ok:z.literal(true)}).passthrough();
 
 /* ---------- F10 «Мои публикации» ---------- */
 
@@ -173,7 +172,7 @@ export function MyPostsScreen(){
 
 type SavedItem={kind:string,id:string};
 export function SavedScreen(){
- const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();
+ const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();
  const [list,setList]=useState<{posts:Post[],events:Ev[],discussions:Post[],gone:number}|null>(null);const [error,setError]=useState<unknown>(null);
  const load=useCallback(()=>{setError(null);
   call('saved.list',{},savedRes).then(async r=>{
@@ -191,12 +190,9 @@ export function SavedScreen(){
   }).catch(setError);},[call]);
  useEffect(()=>{load();},[load]);
  const replace=(np:Post)=>{
-  if(!np.saved){
-   // Unsaved here: the post leaves the list with «Вернуть».
-   setList(l=>l&&{...l,posts:l.posts.filter(x=>x.id!==np.id)});
-   toast(t('fe.fd.sv.removed'),{action:{label:t('fe.tl.undo'),fn:()=>{call('saved.set',{opId:newOpId(),kind:'post',targetId:np.id,on:true},okOnly).then(load,e=>toast(feErrorMessage(e,t),{type:'err'}));}}});
-   return;
-  }
+  // Unsaved here: the post leaves the list; the card's own toast offers «Вернуть», which saves it again and brings it back.
+  if(!np.saved){setList(l=>l&&{...l,posts:l.posts.filter(x=>x.id!==np.id)});return;}
+  if(!list?.posts.some(x=>x.id===np.id)){load();return;}
   setList(l=>l&&{...l,posts:l.posts.map(x=>x.id===np.id?np:x)});
  };
  let body;

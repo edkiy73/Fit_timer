@@ -1,4 +1,4 @@
-import {useCallback,useEffect,useState,type CSSProperties} from 'react';
+import {useCallback,useEffect,useRef,useState,type CSSProperties} from 'react';
 import {Outlet,useLocation,useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Globe,Image as FeedIcon,MessageCircle,Plus,User,Users,X,type LucideIcon} from 'lucide-react';
@@ -96,6 +96,11 @@ function FeLayout(){
  const label=(id:string)=>{const n=badge(id);return t('fe.nav.'+id)+(n&&n!=='dot'?', '+n:'');};
  // A second tap on the active tab returns to its root (V21 A4).
  const go=(id:string)=>navigate('/n/'+id);
+ // V21 `hascta`: a screen with a pinned action bar (save / publish / continue) lifts it above the phone dock;
+ // without the class the dock covers the bar. Screens render the bar themselves, so the frame watches for it.
+ const main=useRef<HTMLElement>(null);const [cta,setCta]=useState(false);
+ useEffect(()=>{const m=main.current;if(!m)return;const sync=()=>setCta(!!m.querySelector(':scope>.ctabar'));sync();
+  const o=new MutationObserver(sync);o.observe(m,{childList:true});return ()=>o.disconnect();},[]);
  return <div className="stage"><div className="root">
   <aside className="side">
    <div className="brand"><img src={import.meta.env.BASE_URL+'fe-logo.svg'} alt=""/><b>Fet<i>Ure</i></b></div>
@@ -106,7 +111,7 @@ function FeLayout(){
     <Av name={name} seed={acting.id} src={acting.avatar}/><span>{name}<small>{acting.kind==='couple'?t('fe.me.coupleProfile'):t('fe.me.personalProfile')}</small></span>
    </button>}
   </aside>
-  <main className={nodock?'main hasbar':'main has-dock hasbar'}>
+  <main ref={main} className={(nodock?'main hasbar':'main has-dock hasbar')+(cta?' hascta':'')}>
    <ToastProvider nodock={nodock}>
    <Outlet/>
    {!nodock&&<nav className="dock" style={{gridTemplateColumns:`repeat(${FE_TABS.length},1fr)`} as CSSProperties} aria-label={t('fe.nav.aria')}>

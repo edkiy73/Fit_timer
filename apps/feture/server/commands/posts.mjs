@@ -562,6 +562,7 @@ const run = {
          feture.blocked($2, r.author_profile_id) hidden,
          (select json_build_object('id', p.id, 'kind', p.kind, 'handle', p.handle, 'name', p.name, 'avatarAssetId', p.avatar_asset_id) from feture.profile p where p.id = r.author_profile_id and p.state = 'active') author,
          (select count(*)::int from feture.reaction x where x.target_type = 'reply' and x.target_id = r.id) likes,
+         exists (select 1 from feture.reaction x where x.target_type = 'reply' and x.target_id = r.id and x.profile_id = $2) liked,
          exists (select 1 from feture.reply c where c.parent_id = r.id and c.state = 'published') has_replies
        from feture.reply r where r.post_id = $1 and r.state <> 'removed' order by r.created_at`, [input.postId, viewer.profileId]);
     // Deleted without live replies disappear; with replies they stay as a stub; blocked authors show as hidden.
@@ -574,7 +575,7 @@ const run = {
       }
       items.push({
         id: r.id, parentId: r.parent_id, createdAt: r.created_at, editedAt: r.edited_at, likes: r.likes,
-        ...(r.state === 'deleted' ? { deleted: true } : r.hidden ? { hidden: true } : { body: r.body, author, mine: r.mine, rev: r.mine ? r.rev : undefined }),
+        ...(r.state === 'deleted' ? { deleted: true } : r.hidden ? { hidden: true } : { body: r.body, author, mine: r.mine, liked: r.liked, rev: r.mine ? r.rev : undefined }),
       });
     }
     return { items };
