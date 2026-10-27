@@ -44,7 +44,8 @@ function MyPosts(){
  if(error)return <Failed error={error} retry={load}/>;
  if(!data)return <p className="note" role="status">{t('fe.loading')}</p>;
  if(!data.items.length)return <Empty icon={Newspaper} title={t('fe.mine.noPosts')} text={t('fe.mine.noPostsText')}><Btn kind="soft" onClick={()=>navigate('/n/feed/new')}>{t('fe.feed.new')}</Btn></Empty>;
- return <>{data.items.map(p=><PostCard key={p.id} post={p} onChange={(np:Post)=>setData(d=>d?{...d,items:d.items.map(x=>x.id===np.id?np:x)}:d)}/>)}</>;
+ return <>{data.items.map(p=><PostCard key={p.id} post={p} onChange={(np:Post)=>setData(d=>d?{...d,items:d.items.map(x=>x.id===np.id?np:x)}:d)}
+  onRemove={r=>setData(d=>d?{...d,items:d.items.filter(x=>x.id!==r.postId)}:d)}/>)}</>;
 }
 
 function MyCommunities(){
