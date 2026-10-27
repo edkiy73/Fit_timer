@@ -1,6 +1,6 @@
 import type {Meta,StoryObj} from '@storybook/react-vite';
 import {useState} from 'react';
-import {Check,ChoiceChips,Chip,Chips,Field,RadioList,Range,Stack,Switch} from './index';
+import {Check,CheckList,ChoiceChips,Chip,Chips,Field,RadioList,Range,Stack,Switch} from './index';
 
 const meta={title:'Выбор/Чип',component:Chip,tags:['autodocs'],
  parameters:{docs:{description:{component:'Несколько значений из набора (темы, интересы) или фильтр. `more` — «Все · N», открывает полный список. Одно значение из набора — `ChoiceChips`.'}}},
@@ -14,6 +14,8 @@ export const Набор:S={name:'Несколько из набора',render:()
  return <Chips>{[['rope','Связывание'],['care','Забота после'],['role','Ролевые игры'],['sense','Сенсорные игры']].map(([id,l])=><Chip key={id} on={v.includes(id!)} onClick={()=>t(id!)}>{l}</Chip>)}</Chips>;}};
 export const ОдинИзНабора:S={name:'Один из набора (ChoiceChips)',render:()=>{const [v,setV]=useState('all');return <ChoiceChips label="Кто видит" value={v} onChange={setV} options={[['all','Все'],['fol','Подписчики'],['only','Только я']]}/>;}};
 export const Радиосписок:S={name:'Радиосписок',render:()=>{const [v,setV]=useState('spam');return <RadioList label="Причина" value={v} onChange={setV} options={[['spam','Спам или мошенничество'],['threat','Угрозы или шантаж','С подробностями'],['other','Другое']]}/>;}};
+export const НесколькоСтроками:S={name:'Несколько из списка строками (CheckList)',render:()=>{const [v,setV]=useState<('info'|'photos'|'video')[]>(['info','photos']);
+ return <CheckList label="Что открыть" value={v} onChange={setV} options={[['info','Описание','запрошено'],['photos','Фото','уже открыто'],['video','Видео','не запрошено']]}/>;}};
 export const Галочка:S={render:()=>{const [a,setA]=useState(false);return <Stack gap={2}><Check on={a} onChange={setA}>Принимаю условия и политику</Check><Check on={false} error onChange={()=>{}}>Ошибка — без отметки дальше нельзя</Check></Stack>;}};
 export const Переключатель:S={render:()=>{const [a,setA]=useState(true);return <Stack row gap={3}><Switch label="Включён" on={a} onChange={setA}/><Switch label="Выключен" on={false} disabled onChange={()=>{}}/></Stack>;}};
 export const Ползунок:S={render:()=>{const [v,setV]=useState(30);return <Field label={`Возраст до ${v}`}><Range label="Возраст" min={18} max={99} value={v} onChange={setV}/></Field>;}};
