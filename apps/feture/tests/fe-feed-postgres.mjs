@@ -150,10 +150,16 @@ test('photo marks and disputes; polls; replies; reactions', async () => {
 
     const text = await publish(call, 'ua', a, draft('Обсудим?'));
     const r1 = await call('ub', b, { action: 'reply.create', opId: op(), postId: text.id, body: 'Да, @Noa тоже' });
-    await call('uc', c, { action: 'reply.create', opId: op(), postId: text.id, parentId: r1.id, body: 'Я тут' });
+    const r2 = await call('uc', c, { action: 'reply.create', opId: op(), postId: text.id, parentId: r1.id, body: 'Я тут' });
     await call('ub', b, { action: 'reply.delete', opId: op(), replyId: r1.id });
     const replies = (await call('ua', a, { action: 'post.replies', postId: text.id })).items;
     assert.deepEqual(replies.map(r => r.deleted ? 'deleted' : r.body), ['deleted', 'Я тут']); // a deleted reply with answers stays as a stub
+    // A reply like is remembered for the one who liked it (the heart stays filled after a reload).
+    await call('ub', b, { action: 'reaction.set', opId: op(), targetType: 'reply', targetId: r2.id, on: true });
+    const seenBy = async (u, p) => (await call(u, p, { action: 'post.replies', postId: text.id })).items.find(r => r.id === r2.id);
+    assert.deepEqual([(await seenBy('ub', b)).liked, (await seenBy('ub', b)).likes, (await seenBy('ua', a)).liked], [true, 1, false]);
+    await call('ub', b, { action: 'reaction.set', opId: op(), targetType: 'reply', targetId: r2.id, on: false });
+    assert.deepEqual([(await seenBy('ub', b)).liked, (await seenBy('ub', b)).likes], [false, 0]);
     const topics = (await db.query(`select topic, profile_id from feture.outbox where topic in ('reply.created', 'mention.created') order by id`));
     assert.ok(topics.some(t => t.topic === 'mention.created' && t.profile_id === c));
     await call('ua', a, { action: 'block.set', opId: op(), profileId: c, on: true });
