@@ -8,6 +8,7 @@ import {Av,Bar,Btn,Empty,Seg,View} from './ui';
 import {useFe} from './session';
 import {BellButton} from './inbox';
 import {PostMenu,type Removal} from './post-menu';
+import {restoreInto,useToast} from './toast';
 
 /** Slice B (V21 F01, F05, F07) with the prototype's markup: feed tabs, composer row, posts, replies, new post.
  * Visibility and counts are the server's; the client never filters or invents them. */
@@ -37,7 +38,7 @@ export function when(iso:string|null|undefined,locale:string){
 const nameOf=(a:{name?:string|null,handle?:string|null}|null|undefined)=>a?.name||(a?.handle?'@'+a.handle:'?');
 
 export function FeedTab(){
- const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const location=useLocation();
+ const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const location=useLocation();const toast=useToast();
  const [tab,setTab]=useState<'forYou'|'following'>('forYou');
  // A post screen that lost its post (deleted, hidden, blocked) comes back with `state.notice`.
  const [notice,setNotice]=useState(()=>{const n=(location.state as {notice?:unknown}|null)?.notice;return typeof n==='string'?n:'';});
@@ -62,7 +63,12 @@ export function FeedTab(){
     :items===null?<p className="note" role="status">{t('fe.loading')}</p>
     :items.length===0?<Empty icon={Newspaper} title={t('fe.feed.empty.'+tab)} text={t('fe.feed.emptyText.'+tab)}><Btn kind="soft" onClick={()=>navigate('/n/feed/new')}>{t('fe.feed.new')}</Btn></Empty>
     :<>{items.map(p=><PostCard key={p.id} post={p} onChange={np=>setItems(list=>list?.map(x=>x.id===np.id?np:x)??null)}
-     onRemove={r=>{setItems(list=>list?.filter(x=>!(x.id===r.postId||x.author.id===r.authorId))??null);setNotice(r.notice);}}/>)}
+     onRemove={r=>{
+      const before=items;const gone=new Set(before.filter(x=>x.id===r.postId||x.author.id===r.authorId).map(x=>x.id));
+      setItems(list=>list?.filter(x=>!gone.has(x.id))??null);setNotice('');
+      const undo=r.undo;
+      toast(r.notice,{type:'ok',action:undo?{label:t('fe.tl.undo'),fn:()=>{undo().then(()=>{setItems(list=>restoreInto(before,list,gone));toast(t('fe.tl.restored'),{type:'ok'});},e=>toast(feErrorMessage(e,t),{type:'err'}));}}:null});
+     }}/>)}
      {next&&<Btn kind="soft" onClick={()=>load(next)} disabled={more}>{more?t('fe.loading'):t('fe.feed.more')}</Btn>}
     </>}
   </View>
@@ -114,7 +120,7 @@ export function PostCard({post,onChange,onRemove,full=false,onReply}:{post:Post,
 }
 
 export function PostScreen(){
- const {id=''}=useParams();const {call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const location=useLocation();
+ const {id=''}=useParams();const {call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const location=useLocation();const toast=useToast();
  // The edit screen passes what happened to the edit as `state.notice`.
  const notice=(location.state as {notice?:unknown}|null)?.notice;
  const [post,setPost]=useState<Post|null>(null);const [list,setList]=useState<z.infer<typeof reply>[]>([]);const [error,setError]=useState<unknown>(null);
@@ -137,7 +143,10 @@ export function PostScreen(){
     :!post?<p className="note" role="status">{t('fe.loading')}</p>
     :<>
      {typeof notice==='string'&&notice&&<div className="alert ok mb12" role="status"><span>{notice}</span></div>}
-     <PostCard post={post} onChange={setPost} full onReply={()=>box.current?.focus()} onRemove={r=>navigate('/n/feed',{replace:true,state:{notice:r.notice}})}/>
+     <PostCard post={post} onChange={setPost} full onReply={()=>box.current?.focus()} onRemove={r=>{
+      navigate('/n/feed',{replace:true});const undo=r.undo;
+      toast(r.notice,{type:'ok',action:undo?{label:t('fe.tl.undo'),fn:()=>{undo().then(()=>navigate('/n/feed/post/'+id),e=>toast(feErrorMessage(e,t),{type:'err'}));}}:null});
+     }}/>
      <div className="sec" id="replies">{t('fe.feed.repliesCount').replace('{n}',String(list.filter(r=>!r.deleted).length))}</div>
      {list.length===0?<button type="button" className="note-empty" onClick={()=>box.current?.focus()}>{t('fe.feed.noReplies')}</button>
       :list.map(r=>{const hidden=r.deleted||r.hidden;return <article key={r.id} className={'cm'+(hidden?' removed':'')}>

@@ -3,7 +3,7 @@ import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
-import {Bell,ChevronRight,Download,Eye,Globe,Heart,LogOut,Moon,ShieldCheck,Trash2,X} from 'lucide-react';
+import {Ban,Bell,ChevronRight,Download,Eye,EyeOff,Globe,Heart,LogOut,Moon,ShieldCheck,Trash2,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {getThemePreference,setThemePreference,type ThemePreference} from '../theme';
 import {Bar,Btn,Empty,View} from './ui';
@@ -18,17 +18,19 @@ type Notif=z.infer<typeof notif>;
 const notifRes=z.object({ok:z.literal(true),settings:notif});
 const ageRes=z.object({ok:z.literal(true),verified:z.boolean()}).passthrough();
 const ok=z.object({ok:z.literal(true)}).passthrough();
+const blocksRes=z.object({ok:z.literal(true),items:z.array(z.unknown())}).passthrough();
 
 function Row({icon:Icon,title,note,value,onClick,danger}:{icon:typeof Bell,title:string,note?:string|undefined,value?:string|undefined,onClick:()=>void,danger?:boolean}){
  return <button type="button" className={'li'+(danger?' danger':'')} onClick={onClick}><span className="ico"><Icon/></span><span className="tx"><b>{title}</b>{note&&<small>{note}</small>}</span>{value&&<span className="val">{value}</span>}{!danger&&<ChevronRight/>}</button>;
 }
 
 export function SettingsScreen(){
- const {call,state}=useFe();const {t,preference,setPreference,canSwitch}=useI18n();const auth=useOptionalAuth();const navigate=useNavigate();
+ const {call,state,acting}=useFe();const {t,preference,setPreference,canSwitch}=useI18n();const [blocked,setBlocked]=useState<number|null>(null);const auth=useOptionalAuth();const navigate=useNavigate();
  const [s,setS]=useState<z.infer<typeof settingsRes>['settings']|null>(null);const [age,setAge]=useState<boolean|null>(null);const [theme,setTheme]=useState<ThemePreference>(getThemePreference());
  const [error,setError]=useState<unknown>(null);const [failure,setFailure]=useState('');
  const load=useCallback(()=>{setError(null);call('settings.get',{},settingsRes,{asAccount:true}).then(r=>setS(r.settings)).catch(setError);
-  call('verification.ageStatus',{},ageRes,{asAccount:true}).then(r=>setAge(r.verified)).catch(()=>{});},[call]);
+  call('verification.ageStatus',{},ageRes,{asAccount:true}).then(r=>setAge(r.verified)).catch(()=>{});
+  call('blocks.list',{},blocksRes).then(r=>setBlocked(r.items.length)).catch(()=>{});},[call]);
  useEffect(()=>{load();},[load]);
  const update=async(patch:Record<string,unknown>)=>{setFailure('');try{await call('settings.update',{opId:newOpId(),...patch},ok,{asAccount:true});load();}catch(e){setFailure(feErrorMessage(e,t));}};
  const couple=state.status==='ready'?state.boot.profiles.find(p=>p.kind==='couple'):undefined;
@@ -63,7 +65,10 @@ export function SettingsScreen(){
      </button>
     </div>
     <div className="sec">{t('fe.set.data')}</div>
-    <div className="card list"><Row icon={Download} title={t('fe.set.myData')} note={t('fe.set.myDataNote')} onClick={()=>navigate('/n/settings/data')}/></div>
+    <div className="card list">
+     <Row icon={EyeOff} title={t('fe.tl.set.hidden')} note={t('fe.tl.set.hiddenNote')} onClick={()=>navigate('/n/settings/hidden')}/>
+     <Row icon={Ban} title={t('fe.tl.set.blocked')} note={acting?.kind==='couple'?t('fe.tl.set.blockedNoteCouple').replace('{name}',acting.name||acting.handle||''):t('fe.tl.set.blockedNote')} value={blocked===null?undefined:String(blocked)} onClick={()=>navigate('/n/settings/blocked')}/>
+     <Row icon={Download} title={t('fe.set.myData')} note={t('fe.set.myDataNote')} onClick={()=>navigate('/n/settings/data')}/></div>
     <div className="sec">{t('fe.set.support')}</div>
     <div className="card list"><Row icon={LogOut} title={t('fe.set.logout')} danger onClick={()=>{void auth.logout().then(()=>navigate('/'));}}/></div>
     {failure&&<div className="alert err" role="alert"><span>{failure}</span></div>}

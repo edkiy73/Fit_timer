@@ -6,6 +6,7 @@ import {feErrorMessage} from '../feture/fe-api';
 import {Av,Btn,Empty} from './ui';
 import {FeSessionProvider,useFe} from './session';
 import {Register} from './register';
+import {ToastProvider} from './toast';
 import './v21.css';
 import './shell.css';
 
@@ -53,12 +54,14 @@ function FeLayout(){
    </button>}
   </aside>
   <main className={nested?'main hasbar':'main has-dock hasbar'}>
+   <ToastProvider nodock={nested}>
    <Outlet/>
    {!nested&&<nav className="dock" style={{gridTemplateColumns:`repeat(${FE_TABS.length},1fr)`} as CSSProperties} aria-label={t('fe.nav.aria')}>
     {FE_TABS.map(({id,icon:Icon})=><button key={id} type="button" className={(current===id?'on':'')+(id==='me'?' me-tab':'')} aria-label={t('fe.nav.'+id)} aria-current={current===id?'page':undefined} onClick={()=>go(id)}>
      {id==='me'&&acting?<span className="dock-av"><Av name={name} seed={acting.id} src={acting.avatar}/></span>:<Icon/>}<span>{t('fe.nav.'+id)}</span>
     </button>)}
    </nav>}
+   </ToastProvider>
   </main>
  </div></div>;
 }

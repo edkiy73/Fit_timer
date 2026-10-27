@@ -7,6 +7,7 @@ import {feErrorMessage} from '../feture/fe-api';
 import {Btn,Empty,Seg,plate} from './ui';
 import {useFe} from './session';
 import {PostCard,postSchema,type Post} from './feed';
+import {useToast} from './toast';
 
 /** V21 X01 «Моё»: own posts (drafts and «in review» shown only here), communities, events, saved items. */
 const posts=z.object({ok:z.literal(true),items:z.array(postSchema)});
@@ -39,13 +40,13 @@ function useLoad<T>(fn:()=>Promise<T>){
 function Failed({error,retry}:{error:unknown,retry:()=>void}){const {t}=useI18n();return <Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={retry}>{t('fe.retry')}</Btn></Empty>;}
 
 function MyPosts(){
- const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();
+ const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();
  const {data,setData,error,load}=useLoad(useCallback(()=>call('me.posts',{},posts),[call]));
  if(error)return <Failed error={error} retry={load}/>;
  if(!data)return <p className="note" role="status">{t('fe.loading')}</p>;
  if(!data.items.length)return <Empty icon={Newspaper} title={t('fe.mine.noPosts')} text={t('fe.mine.noPostsText')}><Btn kind="soft" onClick={()=>navigate('/n/feed/new')}>{t('fe.feed.new')}</Btn></Empty>;
  return <>{data.items.map(p=><PostCard key={p.id} post={p} onChange={(np:Post)=>setData(d=>d?{...d,items:d.items.map(x=>x.id===np.id?np:x)}:d)}
-  onRemove={r=>setData(d=>d?{...d,items:d.items.filter(x=>x.id!==r.postId)}:d)}/>)}</>;
+  onRemove={r=>{setData(d=>d?{...d,items:d.items.filter(x=>x.id!==r.postId)}:d);toast(r.notice,{type:'ok'});}}/>)}</>;
 }
 
 function MyCommunities(){

@@ -16,8 +16,9 @@ const deleted=z.object({ok:z.literal(true),state:z.string().optional()}).passthr
 const REASONS=['threat','private','minor','spam','other'] as const;
 type Reason=typeof REASONS[number];
 type View='menu'|'delete'|'block'|'report';
-/** What the list should drop: one post, or every post of an author. */
-export type Removal={postId?:string,authorId?:string,notice:string};
+/** What the list should drop: one post, or every post of an author. `undo` (hiding only) reverses it on the server;
+ * the list then puts the posts back — FeedTab shows it as the «Вернуть» action of the toast. */
+export type Removal={postId?:string,authorId?:string,notice:string,undo?:()=>Promise<void>};
 
 const nameOf=(a:{name?:string|null,handle?:string|null})=>a.name||(a.handle?'@'+a.handle:'?');
 
@@ -45,8 +46,10 @@ export function PostMenu({post,onClose,onRemove}:{post:Post,onClose:()=>void,onR
   finally{setBusy(false);}
  };
  const hide=(kind:'post'|'author')=>run('hide.'+kind,async opId=>{
-  await call('feedHide.set',{opId,kind,targetId:kind==='post'?post.id:post.author.id,on:true},okOnly);
-  return kind==='post'?{postId:post.id,notice:t('fe.pm.done.hidden')}:{authorId:post.author.id,notice:t('fe.pm.done.authorHidden')};
+  const targetId=kind==='post'?post.id:post.author.id;
+  await call('feedHide.set',{opId,kind,targetId,on:true},okOnly);
+  const undo=async()=>{await call('feedHide.set',{opId:newOpId(),kind,targetId,on:false},okOnly);};
+  return kind==='post'?{postId:post.id,notice:t('fe.pm.done.hidden'),undo}:{authorId:post.author.id,notice:t('fe.pm.done.authorHidden'),undo};
  });
  const del=()=>run('delete',async opId=>{
   const r=await call('post.delete',{opId,postId:post.id},deleted);
