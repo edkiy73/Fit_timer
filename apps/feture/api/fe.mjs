@@ -5,7 +5,7 @@ import '../lib/product.js';
 import postgres from 'postgres';
 import { createRequire } from 'node:module';
 import { createHash, timingSafeEqual } from 'node:crypto';
-import { fromPostgres } from '../server/db.mjs';
+import { POSTGRES_TYPES, fromPostgres } from '../server/db.mjs';
 import { createFeHandler } from '../server/handler.mjs';
 import { platform } from '../server/commands/platform.mjs';
 import { me } from '../server/commands/me.mjs';
@@ -46,7 +46,7 @@ const configured = !!(env.FETURE_DATABASE_URL && env.FETURE_ID_PEPPER);
 // One small pool per warm instance; Supavisor transaction mode needs prepare:false.
 const POOL = 3;
 const sql = configured
-  ? postgres(env.FETURE_DATABASE_URL, { prepare: false, max: POOL, idle_timeout: 20, connect_timeout: 8 })
+  ? postgres(env.FETURE_DATABASE_URL, { prepare: false, max: POOL, idle_timeout: 20, connect_timeout: 8, types: POSTGRES_TYPES })
   : null;
 
 /** Media backend: Cloudflare R2 + media domain when configured (after launch), otherwise the prelaunch
