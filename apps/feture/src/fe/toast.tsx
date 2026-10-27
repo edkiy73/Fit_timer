@@ -4,10 +4,11 @@ import {CircleAlert,CircleCheck,Info,TriangleAlert,type LucideIcon} from 'lucide
 /** V21 `toast()` with the prototype's markup: `div.toasts[aria-live=polite] > div.toast.<type>(svg, span.tx, button.tb)`.
  * One toast at a time (a new one replaces the old), an optional action («Вернуть»), auto-hide after ~5 s with an
  * action (shorter without), paused while the pointer or focus is on it. While a sheet or dialog is open it shows at
- * the top (`.over-modal`), never over the sheet's buttons. */
+ * the top (`.over-modal`), never over the sheet's buttons; once that sheet closes it drops back to the bottom, so it
+ * never sits over a screen's header buttons. */
 export type ToastType='ok'|'err'|'warn'|'info';
 export type ToastOptions={type?:ToastType,action?:{label:string,fn:()=>void}|null,ms?:number};
-type Item={id:number,msg:string,type:ToastType|'',action:ToastOptions['action'],ms:number,overModal:boolean,out:boolean};
+type Item={id:number,msg:string,type:ToastType|'',action:ToastOptions['action'],ms:number,out:boolean};
 type ToastFn=(msg:string,o?:ToastOptions)=>void;
 
 const ICONS:Record<ToastType,LucideIcon>={ok:CircleCheck,err:CircleAlert,warn:TriangleAlert,info:Info};
@@ -18,20 +19,27 @@ const noop:ToastFn=()=>{};
 export function useToast():ToastFn{return useContext(Ctx)??noop;}
 
 export function ToastProvider({children,nodock=false}:{children:ReactNode,nodock?:boolean}){
- const [item,setItem]=useState<Item|null>(null);const seq=useRef(0);
+ const [item,setItem]=useState<Item|null>(null);const seq=useRef(0);const [overModal,setOverModal]=useState(false);
  const toast=useCallback<ToastFn>((msg,o={})=>{
   const type=o.type??'';
   const ms=o.ms??(type==='err'?5200:o.action?5000:3000);
-  const overModal=!!document.querySelector('.v21 .sheet.on, .v21 .dialog.on');
-  setItem({id:++seq.current,msg,type,action:o.action??null,ms,overModal,out:false});
+  setItem({id:++seq.current,msg,type,action:o.action??null,ms,out:false});
  },[]);
+ // Follows the sheets while a toast is up: a sheet that closes right after its action takes the toast back down.
+ useEffect(()=>{
+  if(!item)return;
+  const check=()=>setOverModal(!!document.querySelector('.v21 .sheet.on, .v21 .dialog.on'));
+  check();
+  const mo=new MutationObserver(check);mo.observe(document.body,{subtree:true,attributes:true,attributeFilter:['class'],childList:true});
+  return ()=>mo.disconnect();
+ },[item]);
  const dismiss=useCallback((id:number)=>{
   setItem(cur=>cur&&cur.id===id?{...cur,out:true}:cur);
   window.setTimeout(()=>setItem(cur=>cur&&cur.id===id?null:cur),260);
  },[]);
  return <Ctx.Provider value={toast}>
   {children}
-  <div className={'toasts'+(nodock?' nodock':'')+(item?.overModal?' over-modal':'')} id="toasts" aria-live="polite">
+  <div className={'toasts'+(nodock?' nodock':'')+(item&&overModal?' over-modal':'')} id="toasts" aria-live="polite">
    {item&&<Toast key={item.id} item={item} onDismiss={dismiss}/>}
   </div>
  </Ctx.Provider>;
