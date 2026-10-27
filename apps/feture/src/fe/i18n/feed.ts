@@ -1,6 +1,7 @@
 // V21 feed and content (src/fe/feed.tsx, post-parts.tsx, mine.tsx): F01 feed, F02 filters, F05 post and replies,
 // F07 composer, F09 preview, F10 my posts, G04 saved.
 export const ru = {
+  'fe.fd.tab.popular': 'Популярное',
   'fe.fd.photoOrVideo': 'Фото или видео',
   'fe.fd.filters': 'Фильтры',
   'fe.fd.feedFilters': 'Фильтры ленты',
@@ -226,6 +227,7 @@ export const ru = {
 } as const;
 
 export const en: Record<keyof typeof ru, string> = {
+  'fe.fd.tab.popular': 'Popular',
   'fe.fd.photoOrVideo': 'Photo or video',
   'fe.fd.filters': 'Filters',
   'fe.fd.feedFilters': 'Feed filters',

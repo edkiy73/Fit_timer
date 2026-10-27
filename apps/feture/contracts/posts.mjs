@@ -37,7 +37,7 @@ export const postsCommands = {
   'post.get': { profile: true, write: false, input: z.strictObject({ postId: id }) },
   'feed.list': {
     profile: true, write: false,
-    input: z.strictObject({ tab: z.enum(['forYou', 'following']), topics: z.array(code).max(10).optional(), cursor: z.string().max(200).optional(), limit: z.int().min(1).max(50).default(20) }),
+    input: z.strictObject({ tab: z.enum(['forYou', 'following', 'popular']), topics: z.array(code).max(10).optional(), cursor: z.string().max(200).optional(), limit: z.int().min(1).max(50).default(20) }),
   },
   'profile.posts': { profile: true, write: false, input: z.strictObject({ profileId: id, cursor: z.string().max(200).optional() }) },
   'me.posts': { profile: true, write: false, input: z.strictObject({}) },
