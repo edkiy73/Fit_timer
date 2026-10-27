@@ -18,6 +18,7 @@ import { moderation } from '../server/commands/moderation.mjs';
 import { communities } from '../server/commands/communities.mjs';
 import { events } from '../server/commands/events.mjs';
 import { photos } from '../server/commands/photos.mjs';
+import { gallery } from '../server/commands/gallery.mjs';
 import { discover } from '../server/commands/discover.mjs';
 import { chats } from '../server/commands/chats.mjs';
 import { inbox } from '../server/commands/inbox.mjs';
@@ -117,7 +118,7 @@ const handler = db && createFeHandler({
   cfg: { media: { storage: media.storage, delivery: media.delivery }, realtime: signals ? { url: supabaseUrl, key: String(env.SUPABASE_PUBLISHABLE_KEY) } : null,
     push: webPush ? { webKey: webPush.publicKey } : null },
   signals,
-  commands: { ...platform, ...me, ...access, ...couples, ...staff, ...social, ...posts, ...moderation, ...communities, ...events, ...photos, ...discover, ...chats, ...inbox, ...people, ...premium, ...verification, ...accounts, ...dsa },
+  commands: { ...platform, ...me, ...access, ...couples, ...staff, ...social, ...posts, ...moderation, ...communities, ...events, ...photos, ...gallery, ...discover, ...chats, ...inbox, ...people, ...premium, ...verification, ...accounts, ...dsa },
   authenticate: req => cachedAuth(req),
   quota: async (req, coreKey) => { // coreKey: Core account hash, only for the ephemeral rate-limit key
     // Same budget as /api/domain: per account across devices and IPs, plus a per-IP cap.

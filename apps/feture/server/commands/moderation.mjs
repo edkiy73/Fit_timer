@@ -6,6 +6,7 @@ import { journal, requireStaff } from './staff.mjs';
 import { applyEdit, settlePublication } from './posts.mjs';
 import { narrowCouple } from '../approvals.mjs';
 import { closeAll } from './access.mjs';
+import { settleAvatar } from './photos.mjs';
 
 /** S4 step 3 (docs/server/S4-MODERATION.md §2–4): reports grouped by target, decisions with a statement of reasons,
  * «это я на фото» disputes, profile sanctions. Staff never decide about their own profiles or couple; every decision
@@ -133,7 +134,10 @@ const run = {
       : input.targetType === 'community' ? ['published'] : input.targetType === 'event' ? ['published', 'cancelled'] : ['active'];
     if (input.decision === 'remove' && !live.includes(t.state)) fail(409, 'conflict', { state: t.state });
     if (input.decision === 'remove') {
-      if (input.targetType === 'post') await q.query(`update feture.post set state = 'removed', removed_reason = $2, updated_at = now() where id = $1`, [input.targetId, input.rule]);
+      if (input.targetType === 'post') {
+        await q.query(`update feture.post set state = 'removed', removed_reason = $2, updated_at = now() where id = $1`, [input.targetId, input.rule]);
+        await settleAvatar(q, t.owner); // a profile photo taken from the post goes with it (restored on appeal)
+      }
       if (input.targetType === 'reply') await q.query(`update feture.reply set state = 'removed' where id = $1`, [input.targetId]);
       if (input.targetType === 'community') await q.query(`update feture.community set state = 'hidden', reject_reason = $2, updated_at = now() where id = $1`, [input.targetId, input.rule]);
       if (input.targetType === 'event') {
@@ -173,10 +177,12 @@ const run = {
       // Restored only when the person is not recognisable or consent is confirmed (V21 M01).
       const [{ disputed_by: by }] = await q.query(`update feture.post set disputed_at = null where id = $1 returning (select disputed_by from feture.post where id = $1) disputed_by`, [input.postId]);
       await q.query(`update feture.post set disputed_by = null where id = $1`, [input.postId]);
+      await settleAvatar(q, t.owner);
       await enqueue(q, 'post.restored', t.owner, { postId: input.postId });
       if (by) await enqueue(q, 'dispute.resolved', by, { postId: input.postId, outcome: 'restored' });
     } else {
       await q.query(`update feture.post set state = 'removed', removed_reason = 'consent', updated_at = now() where id = $1`, [input.postId]);
+      await settleAvatar(q, t.owner);
       await enqueue(q, 'content.removed', t.owner, { targetType: 'post', targetId: input.postId, rule: 'consent' });
     }
     await journal(q, account.id, input.restore ? 'dispute.restore' : 'dispute.remove', 'post', input.postId, { from: t.state });
@@ -359,7 +365,9 @@ async function restoreTarget(q, type, id, from) {
       if (rows[0]) await settlePublication(q, id);
       return rows.length > 0;
     }
-    return (await q.query(`update feture.post set state = 'published', removed_reason = null, updated_at = now() where id = $1 and state = 'removed' returning id`, [id])).length > 0;
+    const rows = await q.query(`update feture.post set state = 'published', removed_reason = null, updated_at = now() where id = $1 and state = 'removed' returning owner_profile_id`, [id]);
+    if (rows[0]) await settleAvatar(q, rows[0].owner_profile_id); // its profile photo comes back with it
+    return rows.length > 0;
   }
   if (type === 'reply') return (await q.query(`update feture.reply set state = 'published' where id = $1 and state = 'removed' and body <> '' returning id`, [id])).length > 0;
   if (type === 'community') return (await q.query(`update feture.community set state = 'published', reject_reason = null, updated_at = now() where id = $1 and state = 'hidden' returning id`, [id])).length > 0;
