@@ -1,5 +1,4 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
-import {createPortal} from 'react-dom';
 import {useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
@@ -9,6 +8,7 @@ import {Av,Bar,Btn,Empty,Seg,View,plate,Skel} from './ui';
 import {useFe} from './session';
 import {PostCard,postSchema,type Post} from './feed';
 import {InterestSheet,Jars,useInterests} from './interests';
+import {Viewer} from './post-parts';
 
 /** Discovery screens with the prototype's markup: V21 F04 (an interest's page), G01 (global search), P10 (followers /
  * following) and P20 (gallery). Everything shown comes from the server; the client only narrows what the server already
@@ -24,7 +24,7 @@ const commList=z.object({ok:z.literal(true),items:z.array(commCard),next:z.strin
 type Comm=z.infer<typeof commCard>;
 const evRow=z.object({id:z.uuid(),title:z.string(),kind:z.string(),format:z.enum(['online','offline']),area:z.string().nullable(),starts_at:z.string(),state:z.string()}).passthrough();
 const evList=z.object({ok:z.literal(true),items:z.array(evRow),next:z.string().nullable()});
-type Ev=z.infer<typeof evRow>;
+export type Ev=z.infer<typeof evRow>;
 const media=z.object({src:z.record(z.string(),z.string()).nullable(),pending:z.boolean().optional()}).passthrough();
 const personCard=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),ages:z.array(z.number()),
  city:z.object({ru:z.string().nullable(),en:z.string().nullable()}).nullable(),avatar:media.nullable()}).passthrough();
@@ -64,7 +64,7 @@ function CommunityCard({c,tname}:{c:Comm,tname:(id:string)=>string}){
 }
 
 /** `eventCard(id,{row:1})` — an event as a row. */
-function EventRow({e}:{e:Ev}){
+export function EventRow({e}:{e:Ev}){
  const {t,locale}=useI18n();const navigate=useNavigate();const d=new Date(e.starts_at);const lc=locale==='en'?'en':'ru';
  return <button type="button" className="evc row" onClick={()=>navigate('/n/events/'+e.id)}>
   <div className="cv"><div className="plate" style={plate(e.id)}/><div className="date"><b>{d.getDate()}</b><small>{d.toLocaleDateString(lc,{month:'short'})}</small></div></div>
@@ -311,25 +311,4 @@ export function GalleryScreen(){
   </View>
   {open!==null&&<Viewer srcs={list.map(m=>mediaSrc(m,'full')!)} index={open} onClose={close}/>}
  </>;
-}
-
-/** `openViewer()` — full-screen photos: ‹ ›, arrows, swipe, Esc. */
-function Viewer({srcs,index,onClose}:{srcs:string[],index:number,onClose:()=>void}){
- const {t}=useI18n();const [i,setI]=useState(index);const [on,setOn]=useState(false);const closeBtn=useRef<HTMLButtonElement>(null);const sx=useRef<number|null>(null);
- const [host,setHost]=useState<Element|null>(null);
- useEffect(()=>{setHost(document.querySelector('.fe-v21 main.main')??document.body);},[]);
- useEffect(()=>{if(!host)return;const r=requestAnimationFrame(()=>{setOn(true);closeBtn.current?.focus({preventScroll:true});});return ()=>cancelAnimationFrame(r);},[host]);
- const step=useCallback((d:number)=>setI(v=>Math.max(0,Math.min(srcs.length-1,v+d))),[srcs.length]);
- useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape')onClose();else if(e.key==='ArrowLeft')step(-1);else if(e.key==='ArrowRight')step(1);};addEventListener('keydown',k);return ()=>removeEventListener('keydown',k);},[onClose,step]);
- if(!host)return null;
- return createPortal(<div className={'viewer'+(on?' on':'')} role="dialog" aria-modal="true" aria-label={t('fe.br.viewer')}
-  onPointerDown={e=>{sx.current=e.clientX;}} onPointerUp={e=>{if(sx.current==null)return;const dx=e.clientX-sx.current;sx.current=null;if(Math.abs(dx)>50)step(dx<0?1:-1);}}>
-  <div className="vw-track" style={{transform:`translateX(${-i*100}%)`}}>{srcs.map((s,k)=><figure key={k}><img src={s} alt="" draggable={false}/></figure>)}</div>
-  <div className="vw-top"><span className="vw-n">{i+1} / {srcs.length}</span><button ref={closeBtn} type="button" className="ibtn glass" aria-label={t('fe.br.close')} onClick={onClose}><X/></button></div>
-  {srcs.length>1&&<>
-   <button type="button" className="vw-nav l" aria-label={t('fe.br.prev')} disabled={i===0} onClick={()=>step(-1)}><ChevronLeft/></button>
-   <button type="button" className="vw-nav r" aria-label={t('fe.br.next')} disabled={i===srcs.length-1} onClick={()=>step(1)}><ChevronRight/></button>
-   <div className="vw-dots">{srcs.map((_,k)=><i key={k} className={k===i?'on':undefined}/>)}</div>
-  </>}
- </div>,host);
 }

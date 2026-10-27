@@ -2,11 +2,13 @@ import {useCallback,useEffect,useState} from 'react';
 import {useLocation,useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Bookmark,Calendar,ChevronRight,LockOpen,Newspaper,Users,X} from 'lucide-react';
-import {feErrorMessage} from '../feture/fe-api';
+import {Bookmark,Calendar,ChevronRight,Clock,LockOpen,MessageCircle,Newspaper,Pencil,Plus,TriangleAlert,Users,X} from 'lucide-react';
+import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {Av,Bar,Btn,Empty,Skel,View} from './ui';
 import {useFe} from './session';
-import {PostCard,postSchema,type Post} from './feed';
+import {PostCard,postSchema,when,type Post} from './feed';
+import {EventRow,type Ev} from './browse';
+import {mdPlain} from './post-parts';
 import {useToast} from './toast';
 import {PairEntry} from './pair';
 
@@ -122,4 +124,95 @@ function Saved(){
  return <div className="card list">{data.items.map(s=><button key={s.kind+s.target_id} type="button" className="li" onClick={()=>navigate(s.kind==='event'?'/n/events/'+s.target_id:'/n/feed/post/'+s.target_id)}>
   <span className="ico"><Bookmark/></span><span className="tx"><b>{t('fe.mine.savedKind.'+s.kind)}</b><small>{new Date(s.created_at).toLocaleDateString()}</small></span>
  </button>)}</div>;
+}
+
+// F10 / G04 (screens behind «Мои публикации» and «Сохранённое»).
+const postsRev=z.object({ok:z.literal(true),items:z.array(postSchema),revisions:z.array(z.object({id:z.uuid(),post_id:z.uuid(),created_at:z.string()}).passthrough()).optional()});
+const savedRes=saved;
+const onePost=z.object({ok:z.literal(true),post:postSchema});
+const oneEvent=z.object({ok:z.literal(true),event:z.object({id:z.uuid(),title:z.string(),kind:z.string(),format:z.enum(['online','offline']),area:z.string().nullable(),startsAt:z.string(),state:z.string()}).passthrough()});
+const okOnly=z.object({ok:z.literal(true)}).passthrough();
+
+/* ---------- F10 «Мои публикации» ---------- */
+
+export function MyPostsScreen(){
+ const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
+ const couple=acting?.kind==='couple';
+ const {data,setData,error,load}=useLoad(useCallback(()=>call('me.posts',{},postsRev),[call]));
+ const replace=(np:Post)=>setData(d=>d?{...d,items:d.items.map(x=>x.id===np.id?np:x)}:d);
+ const card=(p:Post)=><PostCard key={p.id} post={p} onChange={replace} onExpired={()=>{call('post.get',{postId:p.id},onePost).then(r=>replace(r.post)).catch(()=>{});}}
+  onRemove={r=>{setData(d=>d?{...d,items:d.items.filter(x=>x.id!==r.postId)}:d);toast(r.notice,{type:'ok'});}}/>;
+ const row=(p:Post,icon:typeof Pencil,sub:string)=>{const I=icon;return <button key={p.id} type="button" className="li" onClick={()=>navigate('/n/feed/post/'+p.id+'/edit')}>
+  <span className="ico"><I/></span><span className="tx"><b>{mdPlain(p.title||p.body).slice(0,60)||t('fe.fd.mine.noText')}</b><small>{sub}</small></span><ChevronRight/></button>;};
+ let body;
+ if(error)body=<Failed error={error} retry={load}/>;
+ else if(!data)body=<Skel kind="post" rows={2}/>;
+ else{
+  const drafts=data.items.filter(x=>x.state==='draft'&&!x.returned),returned=data.items.filter(x=>x.state==='draft'&&x.returned);
+  const review=data.items.filter(x=>x.state==='review'),pub=data.items.filter(x=>x.state==='published');
+  const revIds=new Set((data.revisions??[]).map(r=>r.post_id));const revs=pub.filter(x=>revIds.has(x.id));
+  body=!data.items.length?<Empty icon={Newspaper} title={couple?t('fe.fd.mine.emptyUs'):t('fe.fd.mine.empty')} text={couple?t('fe.fd.mine.emptyTextUs'):t('fe.fd.mine.emptyText')}>
+    <Btn onClick={()=>navigate('/n/feed/new')}>{couple?t('fe.fd.mine.createUs'):t('fe.fd.mine.create')}</Btn></Empty>
+   :<>
+    {returned.length>0&&<section className="grp"><div className="grp-t"><span>{t('fe.fd.mine.returned',{n:returned.length})}</span></div><div className="card list">{returned.map(p=>row(p,TriangleAlert,t('fe.fd.mine.returnedSub')))}</div></section>}
+    {drafts.length>0&&<section className="grp"><div className="grp-t"><span>{t('fe.fd.mine.drafts',{n:drafts.length})}</span></div><div className="card list">{drafts.map(p=>row(p,Pencil,t('fe.fd.mine.editedAt',{when:when(p.editedAt??p.publishedAt,locale)||'—'})))}</div></section>}
+    {revs.length>0&&<section className="grp"><div className="grp-t"><span>{t('fe.fd.mine.revisions',{n:revs.length})}</span></div><div className="card list">{revs.map(p=><button key={p.id} type="button" className="li" onClick={()=>navigate('/n/feed/post/'+p.id)}>
+     <span className="ico"><Clock/></span><span className="tx"><b>{mdPlain(p.title||p.body).slice(0,60)||t('fe.fd.mine.noText')}</b><small>{t('fe.fd.mine.revisionsSub')}</small></span><ChevronRight/></button>)}</div></section>}
+    {review.length>0&&<section className="grp"><div className="grp-t"><span>{t('fe.fd.mine.review',{n:review.length})}</span></div><div className="posts">{review.map(card)}</div></section>}
+    {pub.length>0&&<section className="grp"><div className="grp-t"><span>{t('fe.fd.mine.published',{n:pub.length})}</span></div><div className="posts">{pub.map(card)}</div></section>}
+   </>;
+ }
+ return <>
+  <Bar title={couple?t('fe.fd.mine.titleUs'):t('fe.fd.mine.title')} back small><button type="button" className="ibtn" aria-label={t('fe.create')} onClick={()=>navigate('/n/feed/new')}><Plus/></button></Bar>
+  <View className="nodock">{body}</View>
+ </>;
+}
+
+/* ---------- G04 «Сохранённое» ---------- */
+
+type SavedItem={kind:string,id:string};
+export function SavedScreen(){
+ const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();
+ const [list,setList]=useState<{posts:Post[],events:Ev[],discussions:Post[],gone:number}|null>(null);const [error,setError]=useState<unknown>(null);
+ const load=useCallback(()=>{setError(null);
+  call('saved.list',{},savedRes).then(async r=>{
+   const items:SavedItem[]=r.items.map(x=>({kind:x.kind,id:x.target_id}));
+   // Each saved thing is fetched as the viewer may see it now; what is gone (deleted, hidden, blocked) is counted, not shown.
+   const got=await Promise.all(items.map(async it=>{
+    try{
+     if(it.kind==='event'){const e=(await call('event.get',{eventId:it.id},oneEvent)).event;return {it,ev:{id:e.id,title:e.title,kind:e.kind,format:e.format,area:e.area,starts_at:e.startsAt,state:e.state} as Ev};}
+     if(it.kind==='post'||it.kind==='discussion')return {it,post:(await call('post.get',{postId:it.id},onePost)).post};
+    }catch{/* no longer visible */}
+    return {it};
+   }));
+   setList({posts:got.filter(g=>g.it.kind==='post'&&g.post).map(g=>g.post!),discussions:got.filter(g=>g.it.kind==='discussion'&&g.post).map(g=>g.post!),
+    events:got.filter(g=>g.ev).map(g=>g.ev!),gone:got.filter(g=>!g.ev&&!g.post&&g.it.kind!=='topic').length});
+  }).catch(setError);},[call]);
+ useEffect(()=>{load();},[load]);
+ const replace=(np:Post)=>{
+  if(!np.saved){
+   // Unsaved here: the post leaves the list with «Вернуть».
+   setList(l=>l&&{...l,posts:l.posts.filter(x=>x.id!==np.id)});
+   toast(t('fe.fd.sv.removed'),{action:{label:t('fe.tl.undo'),fn:()=>{call('saved.set',{opId:newOpId(),kind:'post',targetId:np.id,on:true},okOnly).then(load,e=>toast(feErrorMessage(e,t),{type:'err'}));}}});
+   return;
+  }
+  setList(l=>l&&{...l,posts:l.posts.map(x=>x.id===np.id?np:x)});
+ };
+ let body;
+ if(error)body=<Failed error={error} retry={load}/>;
+ else if(!list)body=<Skel kind="post" rows={2}/>;
+ else if(!list.posts.length&&!list.events.length&&!list.discussions.length)body=<Empty icon={Bookmark} title={t('fe.fd.sv.empty')} text={t('fe.fd.sv.emptyText')}/>;
+ else body=<>
+  {list.events.length>0&&<div className="grp"><div className="grp-t"><span>{t('fe.fd.sv.events',{n:list.events.length})}</span></div>{list.events.map((e,i)=><div key={e.id} style={i?{marginTop:8}:undefined}><EventRow e={e}/></div>)}</div>}
+  {list.posts.length>0&&<div className="grp"><div className="grp-t"><span>{t('fe.fd.sv.posts',{n:list.posts.length})}</span></div><div className="posts">{list.posts.map(p=><PostCard key={p.id} post={p} onChange={replace}
+   onRemove={r=>setList(l=>l&&{...l,posts:l.posts.filter(x=>x.id!==r.postId&&x.author.id!==r.authorId)})}/>)}</div></div>}
+  {list.discussions.length>0&&<div className="grp"><div className="grp-t"><span>{t('fe.fd.sv.discussions',{n:list.discussions.length})}</span></div><div className="card list">
+   {list.discussions.map(d=><button key={d.id} type="button" className="li" onClick={()=>navigate('/n/feed/post/'+d.id)}><span className="ico"><MessageCircle/></span>
+    <span className="tx"><b>{d.title||mdPlain(d.body).slice(0,60)}</b></span><ChevronRight/></button>)}</div></div>}
+  {list.gone>0&&<p className="note mt12">{t('fe.fd.sv.gone',{n:list.gone})}</p>}
+ </>;
+ return <>
+  <Bar title={t('fe.fd.sv.title')} back small/>
+  <View className="nodock">{body}</View>
+ </>;
 }
