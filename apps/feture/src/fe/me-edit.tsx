@@ -6,6 +6,8 @@ import {AtSign,Check,ChevronDown,ChevronRight,Clock,Lock,MapPin,Plus,Sparkles,St
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,Bar,Btn,Card,Chip,Counter,Empty,Field,FilePick,Group,Input,Note,Row,Sheet,Skel,TextArea,ToggleRow} from './kit';
 import {useFe} from './session';
+import {Uploader} from './kit/Uploader';
+import {useSendPhoto} from './media-upload';
 import {useToast} from './toast';
 import {useDragOrder} from './reorder';
 import {Ask,AudTag,COUPLE_ROWS,DETAIL_ROWS,MAX_PHOTOS,catalogRes,ok,photoSrc,profileRes,type Profile} from './me';
@@ -63,20 +65,10 @@ export function MeEditScreen(){
  const fields=DETAIL_ROWS.filter(([f])=>!cp||COUPLE_ROWS.includes(f));
  const title=only==='media'?t('fe.me.photos'):only==='basics'?t('fe.me.basics'):only==='details'?(cp?t('fe.mx.detailsCouple'):t('fe.me.details')):only==='priv'?t('fe.priv.title'):(cp?t('fe.me.coupleProfile'):t('fe.mx.ed.myProfile'));
 
- const upload=async(f:File,k:'photos'|'privMedia')=>{
-  setFailure('');
-  if(!MIME.includes(f.type)){setFailure(t('fe.me.photoType'));return;}
-  if(f.size>20*1024*1024){setFailure(t('fe.me.photoSize'));return;}
-  setUploading(k);
-  try{
-   const i=await call('media.uploadIntent',{opId:newOpId(),purpose:k==='photos'?'avatar':'private',kind:'image',mime:f.type,bytes:f.size},intent);
-   const put=await fetch(i.upload.url,{method:i.upload.method,headers:i.upload.headers,body:f});
-   if(!put.ok)throw new FeError('unavailable');
-   await call('media.commit',{assetId:i.assetId},ok);
-   const ph:Ph={id:i.assetId,src:URL.createObjectURL(f),pending:true};
-   setD(v=>v?{...v,[k]:[...v[k],ph]}:v);
-  }catch(e){setFailure(feErrorMessage(e,t));}finally{setUploading(null);}
- };
+ // Profile photos are 4:5 (the profile's frame); private ones may keep their shape. Kit uploader: crop, compress, no metadata.
+ const [picked,setPicked]=useState<{k:'photos'|'privMedia',files:File[]}|null>(null);
+ const sendAvatar=useSendPhoto('avatar');const sendPrivate=useSendPhoto('private');
+ const upload=(files:File[],k:'photos'|'privMedia')=>{setFailure('');setPicked({k,files});};
  const pick=(k:'photos'|'privMedia')=>{fileKind.current=k;file.current?.click();};
 
  const save=async()=>{
@@ -174,7 +166,10 @@ export function MeEditScreen(){
     </>}
   </div></div>
   {d&&<div className="ctabar"><div className="wrap"><Btn onClick={save} disabled={!dirty||busy} busy={busy}>{t('fe.me.save')}</Btn></div></div>}
-  <FilePick ref={file} accept={MIME.join(',')} onFiles={f=>{const x=f[0];if(x)void upload(x,fileKind.current);}}/>
+  <FilePick ref={file} accept="image/*" multiple onFiles={f=>upload([...f],fileKind.current)}/>
+  {picked&&d&&<Uploader files={picked.files} aspects={picked.k==='photos'?['4:5']:['orig','4:5','1:1']} max={(picked.k==='photos'?MAX_PHOTOS:PRIV_MAX)-d[picked.k].length}
+   send={picked.k==='photos'?sendAvatar:sendPrivate} onClose={()=>setPicked(null)}
+   onDone={got=>{const k=picked.k;setPicked(null);setD(v=>v?{...v,[k]:[...v[k],...got.map(g=>({id:g.id,src:g.url,pending:true}))]}:v);}}/>}
   {city&&d&&<Sheet title={t('fe.mx.ed.city')} onClose={()=>setCity(false)}><Card list>
    {[null,...(cat?.places??[]).map(x=>x.id)].map(id=><Row key={id??'none'} icon={MapPin} title={placeName(id)??t('fe.mx.ed.noCity')} pressed={d.cityId===id} noChev
     val={d.cityId===id?<span className="ico g"><Check/></span>:undefined} onClick={()=>{set({cityId:id});setCity(false);}}/>)}

@@ -6,6 +6,8 @@ import {CircleAlert,Clock,Image as ImageIcon,Lock,MapPin,RefreshCw,X,type Lucide
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,FilePick,Group,Input,SelectRow as KitSelectRow,Skel,TextArea,View} from './kit';
 import {useFe} from './session';
+import {Uploader} from './kit/Uploader';
+import {useSendPhoto} from './media-upload';
 
 /** V21 C08 «Новое сообщество» with the prototype's markup (field(), chipGroup(), selectRow(), the cover picker);
  * also the form pieces E11 «Новое событие» shares. The server decides; the client only checks the same limits. */
@@ -83,22 +85,14 @@ export type Cover={id:string,preview:string};
 export function CoverField({purpose,plate,setPlate,cover,setCover}:{purpose:'community'|'event',plate:string,setPlate:(k:PlateKey)=>void,cover:Cover|null,setCover:(c:Cover|null)=>void}){
  const {call}=useFe();const {t}=useI18n();const file=useRef<HTMLInputElement>(null);
  const [busy,setBusy]=useState(false);const [err,setErr]=useState('');
- const add=async(f:File)=>{
-  setErr('');
-  if(!['image/jpeg','image/png','image/webp'].includes(f.type)){setErr(t('fe.cc.coverType'));return;}
-  if(f.size>20*1024*1024){setErr(t('fe.cc.coverSize'));return;}
-  setBusy(true);
-  try{
-   const i=await call('media.uploadIntent',{opId:newOpId(),purpose,kind:'image',mime:f.type,bytes:f.size},uploadIntent);
-   const put=await fetch(i.upload.url,{method:i.upload.method,headers:i.upload.headers,body:f});
-   if(!put.ok)throw new FeError('unavailable');
-   await call('media.commit',{assetId:i.assetId},okOnly);
-   setCover({id:i.assetId,preview:URL.createObjectURL(f)});
-  }catch(e){setErr(feErrorMessage(e,t));}finally{setBusy(false);}
- };
+ // A cover is one 16:9 photo through the kit uploader (crop, compress, no metadata).
+ const [picked,setPicked]=useState<File[]|null>(null);const send=useSendPhoto(purpose);
+ const add=(f:File)=>{setErr('');setPicked([f]);};
  return <div className={'field'+(err?' err':'')} data-field="cover"><span className="flabel">{t('fe.cc.cover')}</span>
   {cover&&<div className="evcov"><img src={cover.preview} alt=""/><button type="button" className="rm" aria-label={t('fe.cc.coverRemove')} onClick={()=>setCover(null)}><X/></button></div>}
-  <FilePick ref={file} accept="image/jpeg,image/png,image/webp" onFiles={fs=>{const f=fs[0];if(f)void add(f);}}/>
+  <FilePick ref={file} accept="image/*" onFiles={fs=>{const f=fs[0];if(f)add(f);}}/>
+  {picked&&<Uploader files={picked} aspects={['16:9']} max={1} send={send} title={t('fe.cc.cover')} onClose={()=>setPicked(null)}
+   onDone={got=>{setPicked(null);const g=got[0];if(g)setCover({id:g.id,preview:g.url});}}/>}
   <Btn kind="soft" size="md" icon={ImageIcon} style={{marginBottom:10}} onClick={()=>file.current?.click()} disabled={busy}>{busy?t('fe.cc.coverUploading'):cover?t('fe.cc.coverReplace'):t('fe.cc.coverUpload')}</Btn>
   {err&&<FErr>{err}</FErr>}
   <div className="note" style={{marginBottom:8}}>{t('fe.cc.coverOr')}</div>
