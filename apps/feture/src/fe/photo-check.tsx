@@ -40,7 +40,7 @@ export function PhotoCheckScreen(){
  const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [needPhoto,setNeedPhoto]=useState(false);
  const [shot,setShot]=useState<{blob:Blob,url:string}|null>(null);const input=useRef<HTMLInputElement>(null);
  const person=state.status==='ready'?state.boot.profiles.find(p=>p.kind==='person'&&p.state!=='deleted'):undefined;
- const load=useCallback(()=>{setError(null);call('verification.photoStatus',{},photoStatusRes,{asAccount:true}).then(setS).catch(setError);},[call]);
+ const load=useCallback((fresh=false)=>{setError(null);call('verification.photoStatus',{},photoStatusRes,{asAccount:true,fresh}).then(setS).catch(setError);},[call]);
  useEffect(()=>{load();},[load]);
  useEffect(()=>()=>{if(shot)URL.revokeObjectURL(shot.url);},[shot]);
  // V21 V01 shows the gesture as soon as the screen opens: the server picks it (`photoStart` reuses an open check).
@@ -76,7 +76,7 @@ export function PhotoCheckScreen(){
  };
 
  const bar=<Bar title={t('fe.pc.title')} back="/n/settings" small/>;
- if(error)return <>{bar}<View className="nodock"><Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty></View></>;
+ if(error)return <>{bar}<View className="nodock"><Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>load(true)}>{t('fe.retry')}</Btn></Empty></View></>;
  if(!s)return <>{bar}<View className="nodock"><Skel kind="list"/></View></>;
 
  if(s.state==='approved'){
@@ -88,7 +88,7 @@ export function PhotoCheckScreen(){
  }
  if(s.state==='pending')return <>{bar}<View className="nodock">
   <div className="pv-state wait" role="status"><span className="ico a"><Clock/></span><b>{t('fe.pc.waitTitle')}</b><p>{t('fe.pc.waitText')}</p>
-   <Btn kind="soft" size="sm" auto icon={RefreshCw} onClick={load}>{t('fe.pc.refresh')}</Btn></div>
+   <Btn kind="soft" size="sm" auto icon={RefreshCw} onClick={()=>load(true)}>{t('fe.pc.refresh')}</Btn></div>
   <About/>
  </View></>;
 

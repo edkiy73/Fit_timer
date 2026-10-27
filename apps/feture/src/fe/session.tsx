@@ -4,12 +4,15 @@ import type {AuthSession} from '@appbase/core/auth.js';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import {feRequest,FeError} from '../feture/fe-api';
 import {connectRealtime,type RtKind,type RtListener} from './realtime';
+import {forgetWebPush,noteAction} from './push-web';
 
 /** What `session.bootstrap` returns: the FetUre account and the profiles this account may act as. */
 const profileCard=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string(),state:z.string(),avatarAssetId:z.uuid().nullable(),avatar:z.string().nullable().optional()});
 /** realtime: the public socket address and the opaque per-profile channels (S2 §8); null when the server has none. */
 const realtimeCfg=z.object({url:z.url(),key:z.string().min(1),channels:z.record(z.uuid(),z.string().regex(/^fe:[A-Za-z0-9_-]{22,}$/))});
-export const bootstrapSchema=z.object({ok:z.literal(true),account:z.object({id:z.uuid(),locale:z.string(),onboarded:z.boolean()}),profiles:z.array(profileCard),realtime:realtimeCfg.nullable().optional()});
+export const bootstrapSchema=z.object({ok:z.literal(true),account:z.object({id:z.uuid(),locale:z.string(),onboarded:z.boolean()}),profiles:z.array(profileCard),realtime:realtimeCfg.nullable().optional(),
+ /** Web push: the server's public VAPID key; null while the server sends none. */
+ push:z.object({webKey:z.string().regex(/^[A-Za-z0-9_-]{80,100}$/)}).nullable().optional()});
 export type ProfileCard=z.infer<typeof profileCard>;
 export type Bootstrap=z.infer<typeof bootstrapSchema>;
 
@@ -25,7 +28,7 @@ type FeSession={
  acting:ProfileCard|null;
  setActing:(profileId:string)=>void;
  reload:()=>void;
- call:<T>(action:string,input:Record<string,unknown>,schema:z.ZodType<T>,opts?:{asAccount?:boolean,profileId?:string,signal?:AbortSignal})=>Promise<T>;
+ call:<T>(action:string,input:Record<string,unknown>,schema:z.ZodType<T>,opts?:{asAccount?:boolean,profileId?:string,signal?:AbortSignal,fresh?:boolean})=>Promise<T>;
 };
 
 const Ctx=createContext<FeSession|null>(null);
@@ -49,6 +52,9 @@ export function FeSessionProvider({children}:{children:ReactNode}){
  const [state,setState]=useState<State>({status:'loading'});
  const [nonce,setNonce]=useState(0);
  const [actingId,setActingId]=useState<string|null>(()=>{try{return sessionStorage.getItem(ACTING_KEY);}catch{return null;}});
+ // Signed out after being signed in: this browser stops getting the account's pushes.
+ const had=useRef(false);
+ useEffect(()=>{if(auth.session)had.current=true;else if(!auth.loading&&had.current){had.current=false;void forgetWebPush();}},[auth.loading,auth.session]);
  useEffect(()=>{
   if(auth.loading){setState({status:'loading'});return;}
   if(!auth.session){readCache.clear();try{for(const k of Object.keys(localStorage))if(k.startsWith(BOOT_KEY))localStorage.removeItem(k);}catch{/* no storage */}setState({status:'signedOut'});return;}
@@ -70,17 +76,17 @@ export function FeSessionProvider({children}:{children:ReactNode}){
  const acting=profiles.find(p=>p.id===actingId)??profiles.find(p=>p.kind==='person')??null;
  const setActing=useCallback((id:string)=>{setActingId(id);try{sessionStorage.setItem(ACTING_KEY,id);}catch{/* this tab only */}},[]);
  const reload=useCallback(()=>setNonce(n=>n+1),[]);
- const call=useCallback(<T,>(action:string,input:Record<string,unknown>,schema:z.ZodType<T>,opts:{asAccount?:boolean,profileId?:string,signal?:AbortSignal}={})=>{
+ const call=useCallback(<T,>(action:string,input:Record<string,unknown>,schema:z.ZodType<T>,opts:{asAccount?:boolean,profileId?:string,signal?:AbortSignal,/** Skip the short read cache: «Обновить» and other explicit refreshes. */ fresh?:boolean}={})=>{
   if(state.status!=='ready')return Promise.reject(new FeError('auth_required'));
   const profileId=opts.asAccount?undefined:opts.profileId??acting?.id;
   if('opId' in input||WRITES_WITHOUT_OPID.has(action)){ // a write: whatever was read before may have changed
    readCache.clear();
-   return feRequest(state.session,action,input,schema,{signal:opts.signal,profileId}).finally(()=>readCache.clear());
+   return feRequest(state.session,action,input,schema,{signal:opts.signal,profileId}).then(r=>{noteAction(action);return r;}).finally(()=>readCache.clear());
   }
   let sid=schemaIds.get(schema);if(sid==null){sid=++schemaSeq;schemaIds.set(schema,sid);}
   const key=JSON.stringify([state.session.email,profileId??'',action,input,sid]);
   const hit=readCache.get(key);
-  if(hit&&Date.now()-hit.at<READ_TTL)return hit.value as Promise<T>;
+  if(hit&&!opts.fresh&&Date.now()-hit.at<READ_TTL)return hit.value as Promise<T>;
   // Not bound to the caller's AbortSignal: a screen that unmounts must not cancel a read another screen will reuse.
   // A read refused for «too many at once» (429) is asked again after a short pause instead of failing the screen;
   // writes never retry on their own.

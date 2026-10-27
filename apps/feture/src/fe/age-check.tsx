@@ -81,7 +81,7 @@ export function AgeCheckScreen(){
  const cam=useRef<HTMLInputElement>(null);const file=useRef<HTMLInputElement>(null);const docCam=useRef<HTMLInputElement>(null);
  const person=state.status==='ready'?state.boot.profiles.find(p=>p.kind==='person'&&p.state!=='deleted'):undefined;
  const sendPhoto=useSendPhoto('verification',{},person?.id);
- const load=useCallback(()=>{setError(null);call('verification.ageStatus',{},statusRes,{asAccount:true}).then(setS).catch(setError);},[call]);
+ const load=useCallback((fresh=false)=>{setError(null);call('verification.ageStatus',{},statusRes,{asAccount:true,fresh}).then(setS).catch(setError);},[call]);
  useEffect(()=>{load();},[load]);
  useEffect(()=>()=>{if(shot)URL.revokeObjectURL(shot.url);},[shot]);
 
@@ -139,7 +139,7 @@ export function AgeCheckScreen(){
  </>;
  const alertErr=failure?<Alert kind="err" icon={X} className="mt12">{failure}</Alert>:null;
  const back='/n/settings';
- if(error)return <><Bar title={t('fe.age.title')} back={back}/><View className="nodock"><Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty></View></>;
+ if(error)return <><Bar title={t('fe.age.title')} back={back}/><View className="nodock"><Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>load(true)}>{t('fe.retry')}</Btn></Empty></View></>;
  if(!s)return <><Bar title={t('fe.age.title')} back={back}/><View className="nodock"><Skel kind="list"/></View></>;
 
  // ageDone: 18+ confirmed and still valid.
@@ -152,7 +152,7 @@ export function AgeCheckScreen(){
  }
  // Sent, waiting for staff.
  if(c?.state==='submitted')return <><Bar title={t('fe.age.statusTitle')} back={back}/><View className="nodock">
-  <Empty icon={Clock} role="status" title={t('fe.age.waitTitle')} text={t(c.method==='document'?'fe.age.docWaitText':'fe.age.waitText')}><Btn kind="soft" icon={RefreshCw} onClick={load}>{t('fe.age.refresh')}</Btn></Empty>
+  <Empty icon={Clock} role="status" title={t('fe.age.waitTitle')} text={t(c.method==='document'?'fe.age.docWaitText':'fe.age.waitText')}><Btn kind="soft" icon={RefreshCw} onClick={()=>load(true)}>{t('fe.age.refresh')}</Btn></Empty>
  </View></>;
 
  // ageCam: the camera was refused or is missing.
