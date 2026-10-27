@@ -48,7 +48,7 @@ export function SettingsScreen(){
  const couple=state.status==='ready'?state.boot.profiles.find(p=>p.kind==='couple'&&p.state!=='deleted'):undefined;
  const email=state.status==='ready'?state.session.email:'';
  const closeLayer=useCallback(()=>setLayer(null),[]);
- const logout=async()=>{setLeaving(true);try{await auth.logout();navigate('/');}catch{setLeaving(false);setLayer(null);toast(t('fe.ax.sec.logoutFailed'),{type:'err'});}};
+ const logout=async()=>{setLeaving(true);try{await auth.logout();navigate('/n/feed',{replace:true});}catch{setLeaving(false);setLayer(null);toast(t('fe.ax.sec.logoutFailed'),{type:'err'});}};
  const ageVal=age&&t('fe.set.ageVal.'+age);
  const photoVal=photo&&t('fe.set.pcVal.'+photo);
  return <>
@@ -69,7 +69,7 @@ export function SettingsScreen(){
     <div className="card list">
      {canSwitch&&<div className="li"><span className="ico"><Globe/></span>
       <SelectRow label={t('fe.set.lang')} sub={t('fe.set.langNote')} value={preference} options={(['system','ru','en'] as const).map(v=>[v,t('fe.set.lang.'+v)] as const)}
-       onChange={v=>{setPreference(v);toast(t('fe.set.langDone.'+(v==='system'?'system':v)),{type:'ok'});if(v!=='system')void update({locale:v});}}/></div>}
+       onChange={v=>{setPreference(v);toast(t('fe.set.langDone.'+(v==='system'?'system':v)),{type:'ok'});void update({locale:v});}}/></div>}
      <div className="li"><span className="ico"><Moon/></span>
       <SelectRow label={t('fe.set.theme')} sub={t('fe.set.themeNote')} value={theme} options={(['light','dark','system'] as const).map(v=>[v,t('fe.set.theme.'+v)] as const)}
        onChange={v=>{setTheme(v);setThemePreference(v);}}/></div>
@@ -171,7 +171,7 @@ export function DataScreen(){
  const remove=async()=>{
   if(confirm.trim().replace(/^@/,'').toLowerCase()!==handle.toLowerCase()){setFailure(t('fe.set.deleteMismatch'));setShake(true);setTimeout(()=>setShake(false),500);return;}
   setBusy(true);setFailure('');
-  try{await call('account.delete',{opId:op.current,confirmHandle:confirm.trim().replace(/^@/,'')},ok,{asAccount:true});await auth.logout();navigate('/');}
+  try{await call('account.delete',{opId:op.current,confirmHandle:confirm.trim().replace(/^@/,'')},ok,{asAccount:true});await auth.logout();navigate('/n/feed',{replace:true});}
   catch(e){setFailure(feErrorMessage(e,t));op.current=newOpId();}finally{setBusy(false);}};
  const close=useCallback(()=>{if(!busy){setAsk(false);setConfirm('');setFailure('');}},[busy]);
  return <>
