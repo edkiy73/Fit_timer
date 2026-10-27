@@ -25,7 +25,7 @@ export function AuthBar({onBack,lang}:{onBack?:()=>void,lang?:boolean}){
 
 /** V21 AUTH-021: the logo on the sign-up forms (shown as the card header on a computer, hidden on a phone). */
 export function AuthLogo(){
- return <div className="auth-logo" aria-hidden="true"><img src={import.meta.env.BASE_URL+'icon.svg'} alt=""/><b>Fet<i>Ure</i></b></div>;
+ return <div className="auth-logo" aria-hidden="true"><img src={import.meta.env.BASE_URL+'fe-logo.svg'} alt=""/><b>Fet<i>Ure</i></b></div>;
 }
 
 type Mode='up'|'in';

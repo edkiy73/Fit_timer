@@ -19,7 +19,11 @@ function fit(root:HTMLElement){
 }
 const nn=(n:number)=>String(n+1).padStart(2,'0');
 /** `av(id,cls)` without a photo: initials on a plate. */
+// The prototype's demo people (same photos as its PEOPLE seed).
+const PHOTO:Record<string,number>={Sofi:1,Leon:2,Mia:3,Kai:4,Maya:5,Ari:6,Kira:7,Mark:8,Lina:9};
 function Ava({name,cls}:{name:string,cls:string}){
+ const n=PHOTO[name];
+ if(n)return <span className={'av '+cls}><img src={import.meta.env.BASE_URL+'images/profile-'+n+'-45.webp'} alt="" loading="lazy"/></span>;
  return <span className={'av ini '+cls}><div className="plate" style={plate(name)}/><b style={{position:'relative'}}>{name[0]}</b></span>;
 }
 
@@ -50,7 +54,7 @@ export function Welcome({onStart}:{onStart:(mode:'up'|'in')=>void}){
  const k=(n:number)=>t(`fe.cw.w.s${n}.k`);
  return <div className="stage"><div className="root auth"><main className="main" data-screen="A01">
   <div ref={box} className="welcome wv"><div className="w-aura" aria-hidden="true"><i/><i/><i/></div><div className="w-mark" aria-hidden="true">FetUre</div>
-   <header className="w-top"><div className="w-brand"><img className="w-logo" src={import.meta.env.BASE_URL+'icon.svg'} alt=""/><b>Fet<i>Ure</i></b></div>
+   <header className="w-top"><div className="w-brand"><img className="w-logo" src={import.meta.env.BASE_URL+'fe-logo.svg'} alt=""/><b>Fet<i>Ure</i></b></div>
     {canSwitch&&<div className="langsw" role="group" aria-label="Language">{(['ru','en'] as const).map(l=><button key={l} type="button" className={locale===l?'on':''} aria-pressed={locale===l} onClick={()=>setPreference(l)}>{l.toUpperCase()}</button>)}</div>}
    </header>
    <div className="w-grid">
