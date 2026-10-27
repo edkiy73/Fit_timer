@@ -87,6 +87,21 @@ function useTabBadges(){
  return (id:string):number|'dot'|0=>!c?0:id==='people'?c.likes:id==='chats'?(c.chats||(c.newMatches?'dot':0)):id==='me'?c.decide:0;
 }
 
+/** An app left open across a release keeps running the old build. On screen changes (at most once a minute) it reads
+ * the published page; once its script differs, the next screen change reloads into the new build — the person sees
+ * the fix without being told to reload. */
+let staleBuild=false,lastCheck=0;
+function useNewVersion(pathname:string){
+ useEffect(()=>{
+  if(staleBuild){location.reload();return;}
+  if(Date.now()-lastCheck<60000)return;lastCheck=Date.now();
+  const mine=document.querySelector<HTMLScriptElement>('script[type="module"][src*="assets/index-"]')?.src.split('/').pop();
+  if(!mine)return;
+  fetch(location.pathname+'?v='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(html=>{
+   const live=html.match(/assets\/(index-[^"']+\.js)/)?.[1];if(live&&live!==mine)staleBuild=true;}).catch(()=>{});
+ },[pathname]);
+}
+
 function FeLayout(){
  const {acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const {pathname}=useLocation();
  const name=acting?.name||acting?.handle||'?';
@@ -94,6 +109,7 @@ function FeLayout(){
  // V21 keeps the phone dock on every screen (chats, profiles, editors too); only moderation hides it (SC.M01 dock:false).
  const nodock=current==='staff';
  const badge=useTabBadges();
+ useNewVersion(pathname);
  const em=(n:number|'dot'|0)=>n==='dot'?<em className="dot"/>:n?<em>{n>99?'99+':n}</em>:null;
  const label=(id:string)=>{const n=badge(id);return t('fe.nav.'+id)+(n&&n!=='dot'?', '+n:'');};
  // A second tap on the active tab returns to its root (V21 A4).
