@@ -2,6 +2,20 @@
 
 **Scope:** `apps/feture/**`. These rules supplement the root `AGENTS.md` and take precedence for FetUre-specific UX and test policy. They apply to AI coding agents and human contributors.
 
+## Design system — owner rule, 2026-10-28 (overrides any screen-level habit)
+
+Every FetUre screen is built only from `src/fe/kit` (components) and its tokens (`src/fe/kit/tokens.css` + the
+generated `v21.css` colours/radii). Read `src/fe/kit/README.md` first; `/n/kit` shows every component in every state.
+- A screen never writes its own sheet, dialog, tabs, list row, chip, notice, button, icon button, input, textarea,
+  select, switch, heading, inline style or stylesheet, and never its own colour, font, size, spacing or radius.
+- Something the kit lacks is **added to the kit first** — component (or variant/state) + tokens + its section on
+  `/n/kit` + a line in the README — and only then used. Never a local copy "for now".
+- When the prototype disagrees with itself (several looks for one control, odd sizes), ask the owner which one the kit
+  keeps; do not copy the inconsistency.
+- `npm run check:kit` (inside `npm run check`, so CI) fails when any file hand-writes more than its baseline
+  (`tools/fe-kit-baseline.json`). Moving pieces onto the kit lowers it: `node tools/check-fe-kit.mjs --update`.
+- Reviews check reuse across the whole app, not only that one PR works.
+
 ## Owner decision — 2026-10-27 (V21)
 
 New accounts and new couples start **in Discover (dating on, visible)**; without a profile photo nobody sees them there. Onboarding says so, offers to upload a photo right away and lets people switch Discover off; «Я → Видимость» repeats it. This replaces «dating off by default» below. Server-side reciprocal opt-in for candidate discovery, 18+ and consent rules stay. Details: `docs/design-reference/V21-INTEGRATION-GUIDE.md`.

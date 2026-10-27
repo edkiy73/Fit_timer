@@ -3,6 +3,8 @@ import {useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {ChevronLeft,ChevronRight,CircleAlert,CircleCheck,Info,Search,TriangleAlert,X,type LucideIcon} from 'lucide-react';
 import {Btn,Layer} from '../ui';
+import './tokens.css';
+import './kit.css';
 
 /** FetUre kit (owner, 28.10.2026): every screen takes its controls from here — never its own sheet, dialog, list row,
  * tab bar, chip, switch, select, notice or round button. Colours, fonts, sizes, spacing and radii are the V21 tokens
@@ -155,3 +157,20 @@ export function Select<T extends string>({value,options,onChange,label,id}:{valu
 export const FilePick=forwardRef<HTMLInputElement,{accept:string,multiple?:boolean,onFiles:(f:FileList)=>void,capture?:'user'|'environment'}>(function FilePick({accept,multiple,onFiles,capture},ref){
  return <input ref={ref} type="file" accept={accept} multiple={multiple} capture={capture} hidden onChange={e=>{if(e.target.files?.length)onFiles(e.target.files);e.target.value='';}}/>;
 });
+
+/** Headings h1–h5 on the type scale (tokens.css). `as` keeps the document outline right when the look and the level
+ * differ (a sheet title looks like h2 but may be an h2 or h3). */
+export function H({level,as,children,className,id,tabIndex}:{level:1|2|3|4|5,as?:'h1'|'h2'|'h3'|'h4'|'h5'|'p'|'span',children:ReactNode,className?:string,id?:string,tabIndex?:number}){
+ const Tag=as??(`h${level}` as const);
+ return <Tag id={id} tabIndex={tabIndex} className={['k-h'+level,className].filter(Boolean).join(' ')}>{children}</Tag>;
+}
+/** Running text on the type scale; `tone` from the colour tokens. */
+export function Text({size='body',tone,as='p',children,className,center}:{size?:'body'|'strong'|'sm'|'xs'|'cap'|'label'|'micro',tone?:'mute'|'faint'|'accent'|'danger'|'ok',
+ as?:'p'|'span'|'div'|'small'|'b',children:ReactNode,className?:string,center?:boolean}){
+ const Tag=as;
+ return <Tag className={['k-'+size,tone?'k-'+tone:'',center?'k-center':'',className].filter(Boolean).join(' ')}>{children}</Tag>;
+}
+/** Vertical / horizontal stacks: spacing between blocks comes only from the scale (gap 1–6 = 4…24 px). */
+export function Stack({children,gap=3,row,className,grow}:{children:ReactNode,gap?:1|2|3|4|6,row?:boolean,className?:string,grow?:boolean}){
+ return <div className={[row?'k-row':'k-stack','k-g'+gap,grow?'k-grow':'',className].filter(Boolean).join(' ')}>{children}</div>;
+}

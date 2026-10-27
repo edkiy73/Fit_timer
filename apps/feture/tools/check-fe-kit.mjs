@@ -24,8 +24,10 @@ const TSX = [
   ['textarea', /<textarea\b/g],
   ['select', /<select\b/g],
   ['inline style', /style=\{\{/g],
+  ['heading', /<h[1-5]\b/g],
 ];
 const CSS = [
+  ['stylesheet', /^/],  // a screen stylesheet at all: new styles go into the kit (kit.css / tokens.css)
   ['colour', /#[0-9a-fA-F]{3,8}\b|rgba?\(/g],
   ['font size', /font-size\s*:\s*\d/g],
   ['font family', /font-family\s*:/g],
