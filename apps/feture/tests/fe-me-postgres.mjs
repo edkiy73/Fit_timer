@@ -91,10 +91,13 @@ test('onboarding and profile views: own vs others, details visibility, age, nick
   const { pg, call, person } = await setup();
   try {
     const a = await person('ua', 'Alex'), b = await person('ub', 'Kira');
+    // A05 not finished yet: the app keeps the person on «Расскажи о себе» after a reload.
+    assert.equal((await call('ua', null, { action: 'session.bootstrap' })).account.onboarded, false);
     const bad = await call('ua', a, { action: 'onboarding.complete', opId: op(), detailsVis: 'all', genders: ['robot'], orients: [], roles: [], formats: [], seeks: [], status: null, discover: 'visible' });
     assert.deepEqual([bad.status, bad.fields], [400, ['genders']]);
     const done = await call('ua', a, { action: 'onboarding.complete', opId: op(), detailsVis: 'only', genders: ['woman'], orients: ['bi'], roles: ['switch'], formats: ['open'], seeks: ['chat'], status: 'single', discover: 'visible' });
     assert.deepEqual([done.status, done.discoverVisible, done.photoNeeded], [200, false, true]);
+    assert.equal((await call('ua', null, { action: 'session.bootstrap' })).account.onboarded, true);
 
     const own = (await call('ua', a, { action: 'profile.get', profileId: a })).profile;
     assert.deepEqual([own.own, own.handle, own.details.genders, own.detailsVis], [true, 'Alex', ['woman'], 'only']);

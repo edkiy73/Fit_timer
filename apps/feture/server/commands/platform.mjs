@@ -9,11 +9,14 @@ import { myProfiles } from '../profiles.mjs';
 /** @type {Record<keyof typeof platformCommands, Command['run']>} */
 const run = {
   'session.bootstrap': async (q, { account, cfg, channels }) => {
+    // to_jsonb: the A05 mark comes with a later migration; stage-0 schemas simply have none.
+    const [mark] = await q.query(`select to_jsonb(a) ? 'onboarded_at' has, to_jsonb(a) ->> 'onboarded_at' stamp from feture.account a where a.id = $1`, [account.id]);
     const rows = await myProfiles(q, account.id);
     // Realtime (S2 §8): the public socket address and, per profile, the opaque channel only its members get.
     const topics = cfg.realtime ? await channels(q, rows.map(p => p.id)) : {};
     return {
-      account: { id: account.id, locale: account.locale, onboarded: !!account.person_profile_id },
+      // Registered = A04 made the profile AND A05 was finished or skipped (onboarding.complete); a reload on A05 returns to A05.
+      account: { id: account.id, locale: account.locale, onboarded: !!account.person_profile_id && (!mark?.has || mark.stamp != null) },
       profiles: await cardsWithAvatars(q, cfg, rows),
       realtime: cfg.realtime && Object.keys(topics).length ? { url: cfg.realtime.url, key: cfg.realtime.key, channels: topics } : null,
     };
