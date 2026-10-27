@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {CircleAlert,Clock,Image as ImageIcon,Lock,MapPin,RefreshCw,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Av,Bar,Btn,Empty,View,Skel} from './ui';
+import {Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,FilePick,Group,Input,SelectRow as KitSelectRow,Skel,TextArea,View} from './kit';
 import {useFe} from './session';
 
 /** V21 C08 «Новое сообщество» with the prototype's markup (field(), chipGroup(), selectRow(), the cover picker);
@@ -55,13 +55,13 @@ export function shakeFirstErr(){
 export const FErr=({children}:{children:ReactNode})=><div className="ferr"><CircleAlert/>{children}</div>;
 
 type FieldProps={name:string,label:string,value:string,onChange:(v:string)=>void,err?:string|undefined,opt?:boolean,hint?:string,max?:number,ph?:string,
- type?:string,textarea?:boolean,rows?:number,icon?:LucideIcon,inputMode?:'url'|'decimal'|'text',min?:string};
+ type?:'text'|'email'|'tel'|'url'|'number'|'password'|'date'|'time',textarea?:boolean,rows?:number,icon?:LucideIcon,inputMode?:'url'|'decimal'|'text',min?:string};
 /** `field()` — label, input or textarea, then the error (or hint) and the counter. */
 export function Field({name,label,value,onChange,err,opt,hint,max,ph,type='text',textarea,rows,icon:Icon,inputMode,min}:FieldProps){
  const {t}=useI18n();
  const input=textarea
-  ?<textarea className="inp" name={name} rows={rows} maxLength={max?max+50:undefined} placeholder={ph} value={value} onChange={e=>onChange(e.target.value)} aria-invalid={err?true:undefined}/>
-  :<input className="inp" name={name} type={type} value={value} placeholder={ph} inputMode={inputMode} min={min} maxLength={max?max+50:undefined} onChange={e=>onChange(e.target.value)} aria-invalid={err?true:undefined}/>;
+  ?<TextArea name={name} rows={rows} maxLength={max?max+50:undefined} placeholder={ph} value={value} onChange={e=>onChange(e.target.value)} invalid={!!err}/>
+  :<Input name={name} type={type} value={value} placeholder={ph} inputMode={inputMode} min={min} maxLength={max?max+50:undefined} onChange={e=>onChange(e.target.value)} invalid={!!err}/>;
  return <label className={'field'+(err?' err':'')} data-field={name}>
   <span>{label}{opt&&<i>{t('fe.cc.optional')}</i>}</span>
   {Icon?<div className="inwrap"><Icon/>{input}</div>:input}
@@ -70,14 +70,9 @@ export function Field({name,label,value,onChange,err,opt,hint,max,ph,type='text'
  </label>;
 }
 
-/** `selectRow()` — a native select showing its current text. */
-export function SelectRow<T extends string>({label,value,items,onChange,sub,aria}:{label?:string,value:T,items:[T,string][],onChange:(v:T)=>void,sub?:string,aria?:string}){
- const sel=items.find(([k])=>k===value);
- return <label className={'selrow'+(label?'':' solo')}>
-  {label&&<span className="selt">{label}{sub&&<small>{sub}</small>}</span>}
-  <span className="selv" aria-hidden="true">{sel?sel[1]:''}</span>
-  <select value={value} onChange={e=>onChange(e.target.value as T)} aria-label={label||aria}>{items.map(([k,l])=><option key={k} value={k}>{l}</option>)}</select>
- </label>;
+/** The kit's SelectRow under the item-list props other screens import from here (no label = the `solo` variant). */
+export function SelectRow<T extends string>({label,value,items,onChange,sub,aria,icon}:{label?:string,value:T,items:[T,string][],onChange:(v:T)=>void,sub?:string,aria?:string,icon?:LucideIcon}){
+ return <KitSelectRow {...(label||aria?{label:(label||aria)!}:{})} {...(icon?{icon}:{})} solo={!label} sub={sub} value={value} options={items} onChange={onChange}/>;
 }
 
 const uploadIntent=z.object({ok:z.literal(true),assetId:z.uuid(),upload:z.object({url:z.string(),method:z.string(),headers:z.record(z.string(),z.string())})});
@@ -99,16 +94,16 @@ export function CoverField({purpose,plate,setPlate,cover,setCover}:{purpose:'com
    if(!put.ok)throw new FeError('unavailable');
    await call('media.commit',{assetId:i.assetId},okOnly);
    setCover({id:i.assetId,preview:URL.createObjectURL(f)});
-  }catch(e){setErr(feErrorMessage(e,t));}finally{setBusy(false);if(file.current)file.current.value='';}
+  }catch(e){setErr(feErrorMessage(e,t));}finally{setBusy(false);}
  };
  return <div className={'field'+(err?' err':'')} data-field="cover"><span className="flabel">{t('fe.cc.cover')}</span>
   {cover&&<div className="evcov"><img src={cover.preview} alt=""/><button type="button" className="rm" aria-label={t('fe.cc.coverRemove')} onClick={()=>setCover(null)}><X/></button></div>}
-  <input ref={file} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={e=>{const f=e.target.files?.[0];if(f)void add(f);}}/>
-  <button type="button" className="btn soft md" style={{marginBottom:10}} onClick={()=>file.current?.click()} disabled={busy}><ImageIcon/>{busy?t('fe.cc.coverUploading'):cover?t('fe.cc.coverReplace'):t('fe.cc.coverUpload')}</button>
+  <FilePick ref={file} accept="image/jpeg,image/png,image/webp" onFiles={fs=>{const f=fs[0];if(f)void add(f);}}/>
+  <Btn kind="soft" size="md" icon={ImageIcon} style={{marginBottom:10}} onClick={()=>file.current?.click()} disabled={busy}>{busy?t('fe.cc.coverUploading'):cover?t('fe.cc.coverReplace'):t('fe.cc.coverUpload')}</Btn>
   {err&&<FErr>{err}</FErr>}
   <div className="note" style={{marginBottom:8}}>{t('fe.cc.coverOr')}</div>
-  <div className="chips">{PLATE_KEYS.map(k=><button key={k} type="button" aria-label={t('fe.cc.plate.'+k)} aria-pressed={!cover&&plate===k} onClick={()=>{setPlate(k);setCover(null);}}
-   style={{position:'relative',width:52,height:52,borderRadius:16,overflow:'hidden',outline:!cover&&plate===k?'3px solid var(--ink)':'0',outlineOffset:2}}><div className="plate" style={namedPlate(k)}/></button>)}</div>
+  <Chips>{PLATE_KEYS.map(k=><button key={k} type="button" aria-label={t('fe.cc.plate.'+k)} aria-pressed={!cover&&plate===k} onClick={()=>{setPlate(k);setCover(null);}}
+   style={{position:'relative',width:52,height:52,borderRadius:16,overflow:'hidden',outline:!cover&&plate===k?'3px solid var(--ink)':'0',outlineOffset:2}}><div className="plate" style={namedPlate(k)}/></button>)}</Chips>
  </div>;
 }
 
@@ -117,10 +112,10 @@ export function ChipGroup({items,selected,onToggle}:{items:[string,string][],sel
  const {t}=useI18n();const [all,setAll]=useState(false);
  const short=items.length>10&&!all;
  const shown=short?items.filter(([id],i)=>i<8||selected.includes(id)):items;
- return <div className="chips">
-  {shown.map(([id,l])=><button key={id} type="button" className={'chip'+(selected.includes(id)?' on':'')} aria-pressed={selected.includes(id)} onClick={()=>onToggle(id)}>{l}</button>)}
-  {items.length>10&&<button type="button" className="chip more" onClick={()=>setAll(v=>!v)}>{all?t('fe.cc.topicsLess'):t('fe.cc.topicsAll').replace('{n}',String(items.length))}</button>}
- </div>;
+ return <Chips>
+  {shown.map(([id,l])=><Chip key={id} on={selected.includes(id)} onClick={()=>onToggle(id)}>{l}</Chip>)}
+  {items.length>10&&<Chip more onClick={()=>setAll(v=>!v)}>{all?t('fe.cc.topicsLess'):t('fe.cc.topicsAll').replace('{n}',String(items.length))}</Chip>}
+ </Chips>;
 }
 
 type Privacy='open'|'closed'|'hidden';
@@ -247,22 +242,20 @@ function CommunityForm({edit,reload}:{edit?:EditableCommunity&{rev:number},reloa
    {!edit&&couple&&acting&&<p className="as-line full"><Av name={acting.name} seed={acting.id} size="xs" src={acting.avatar}/><span>{t('fe.cc.asCouple')} <b>{acting.name}</b></span></p>}
    {edit&&published&&<div className="alert" style={{marginBottom:12}}><Clock/><span>{t('fe.ece.c.reviewHint')}</span></div>}
    {edit&&edit.pendingChange!=null&&<div className="alert warn" style={{marginBottom:12}}><Clock/><span>{t('fe.ece.c.pendingChange')}</span></div>}
-   <section className="grp"><div className="card form-card">
+   <Group><Card form>
     <Field name="name" label={t('fe.cc.name')} ph={t('fe.cc.namePh')} max={50} value={name} onChange={v=>{setName(v);clear('name');}} err={err.name}/>
     <Field name="desc" label={t('fe.cc.desc')} ph={t('fe.cc.descPh')} max={500} textarea rows={5} value={desc} onChange={v=>{setDesc(v);clear('desc');}} err={err.desc}/>
-    <div className={'field'+(err.topics?' err':'')} data-field="topics"><span className="flabel">{t('fe.cc.topics')}<i style={{fontStyle:'normal',fontWeight:500,color:'var(--faint)'}}>{t('fe.cc.topicsRange')}</i></span>
+    <div className={'field'+(err.topics?' err':'')} data-field="topics"><span className="flabel">{t('fe.cc.topics')}<i>{t('fe.cc.topicsRange')}</i></span>
      <ChipGroup items={topicItems} selected={topics} onToggle={toggleTopic}/>
      {err.topics?<FErr>{err.topics}</FErr>:topicsMax?<div className="fhint" role="status">{t('fe.cc.topicsMax')}</div>:null}
     </div>
-    <div className="card list"><div className="li"><span className="ico"><Lock/></span>
-     <SelectRow label={t('fe.cc.privacy')} value={privacy} onChange={setPrivacy} items={(['open','closed','hidden'] as const).map(k=>[k,t('fe.cc.privacy.'+k)])}/></div></div>
+    <Card list><SelectRow icon={Lock} label={t('fe.cc.privacy')} value={privacy} onChange={setPrivacy} items={(['open','closed','hidden'] as const).map(k=>[k,t('fe.cc.privacy.'+k)])}/></Card>
     {privacy!=='open'&&<Field name="q0" label={t('fe.cc.question')} opt ph={t('fe.cc.questionPh')} max={120} value={q0} onChange={v=>{setQ0(v);clear('q0');}} err={err.q0}/>}
-    <div className={'card list'+(err.where?' field err':'')} data-field="where"><div className="li"><span className="ico"><MapPin/></span>
-     <SelectRow label={t('fe.cc.where')} value={where} onChange={v=>{setWhere(v);clear('where');}} items={places}/></div>{err.where&&<FErr>{err.where}</FErr>}</div>
+    <Card list {...(err.where?{className:'field err'}:{})}><SelectRow icon={MapPin} label={t('fe.cc.where')} value={where} onChange={v=>{setWhere(v);clear('where');}} items={places}/>{err.where&&<FErr>{err.where}</FErr>}</Card>
     <Field name="rules" label={t('fe.cc.rules')} ph={t('fe.cc.rulesPh')} max={1000} textarea rows={4} value={rules} onChange={v=>{setRules(v);clear('rules');}} err={err.rules}/>
     <CoverField purpose="community" plate={plate} setPlate={setPlate} cover={cover} setCover={setCover}/>
-   </div></section>
-   {failure&&<div className="alert err" role="alert"><span>{failure}{stale&&reload&&<button type="button" className="btn text auto" style={{display:'flex',marginTop:6}} onClick={reload}><RefreshCw/>{t('fe.ece.reload')}</button>}</span></div>}
+   </Card></Group>
+   {failure&&<Alert kind="err" noIcon>{failure}{stale&&reload&&<Btn kind="text" auto icon={RefreshCw} style={{display:'flex',marginTop:6}} onClick={reload}>{t('fe.ece.reload')}</Btn>}</Alert>}
   </div></div>
   <div className="ctabar"><div className="wrap"><Btn onClick={save} disabled={busy}>{busy?t('fe.cc.sending'):edit?t('fe.ece.save'):t('fe.cc.submit')}</Btn></div></div>
  </>;
