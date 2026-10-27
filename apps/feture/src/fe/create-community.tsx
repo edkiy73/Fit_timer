@@ -1,10 +1,10 @@
 import {useCallback,useEffect,useRef,useState,type CSSProperties,type ReactNode} from 'react';
-import {useNavigate} from 'react-router';
+import {useNavigate,useParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {CircleAlert,Image as ImageIcon,Lock,MapPin,X,type LucideIcon} from 'lucide-react';
+import {CircleAlert,Clock,Image as ImageIcon,Lock,MapPin,RefreshCw,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Av,Bar,Btn} from './ui';
+import {Av,Bar,Btn,Empty,View} from './ui';
 import {useFe} from './session';
 
 /** V21 C08 «Новое сообщество» with the prototype's markup (field(), chipGroup(), selectRow(), the cover picker);
@@ -128,12 +128,40 @@ type Errors=Partial<Record<'name'|'desc'|'topics'|'q0'|'rules'|'where',string>>;
 const created=z.object({ok:z.literal(true),id:z.uuid().optional(),state:z.string().optional(),pending:z.unknown().optional()}).passthrough();
 const ruleLines=(s:string)=>s.split('\n').map(x=>x.trim()).filter(Boolean);
 
-export function CreateCommunityScreen(){
+const updated=z.object({ok:z.literal(true),rev:z.number(),review:z.array(z.string()).default([])}).passthrough();
+const editable=z.object({ok:z.literal(true),community:z.object({id:z.uuid(),name:z.string(),description:z.string(),topics:z.array(z.string()),
+ privacy:z.enum(['open','closed','hidden']),joinQuestion:z.string().nullable(),rules:z.array(z.string()),placeId:z.uuid().nullable(),plate:z.string().nullable(),
+ me:z.object({role:z.string(),state:z.string()}).passthrough().nullable(),state:z.string().optional(),rev:z.number().optional(),pendingChange:z.unknown().optional()}).passthrough()});
+type EditableCommunity=z.infer<typeof editable>['community'];
+
+/** What `community.update` sent to staff, in words: «Название, описание ждут проверки…». */
+export function reviewNotice(review:string[],t:(k:string)=>string){
+ const names=review.filter(k=>k!=='joinQuestion').map(k=>t('fe.ece.field.'+k));
+ return names.length?t('fe.ece.c.review').replace('{fields}',names.join(', ')):t('fe.ece.c.saved');
+}
+
+export function CreateCommunityScreen(){return <CommunityForm/>;}
+
+/** C08 in edit mode: the community as `community.get` gives it to its owner; only what changed goes to `community.update`. */
+export function EditCommunityScreen(){
+ const {id=''}=useParams();const {call}=useFe();const {t}=useI18n();
+ const [c,setC]=useState<EditableCommunity|null>(null);const [error,setError]=useState<unknown>(null);const [nonce,setNonce]=useState(0);
+ useEffect(()=>{setC(null);setError(null);call('community.get',{communityId:id},editable).then(r=>setC(r.community)).catch(setError);},[call,id,nonce]);
+ const reload=()=>setNonce(n=>n+1);
+ if(c&&c.me?.role==='owner'&&c.me.state==='active'&&typeof c.rev==='number')return <CommunityForm key={`${c.id}:${c.rev}`} edit={{...c,rev:c.rev}} reload={reload}/>;
+ return <>
+  <Bar title={t('fe.ece.c.title')} back small/>
+  <View className="nodock">{error?<Empty icon={CircleAlert} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={reload}>{t('fe.retry')}</Btn></Empty>
+   :c?<Empty icon={Lock} title={t('fe.ece.c.onlyOwner')} text={t('fe.ece.c.onlyOwnerText')}/>:<p className="note" role="status">{t('fe.loading')}</p>}</View>
+ </>;
+}
+
+function CommunityForm({edit,reload}:{edit?:EditableCommunity&{rev:number},reload?:()=>void}){
  const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const catalog=useCatalog();const {opFor,done}=useOp();
- const [name,setName]=useState('');const [desc,setDesc]=useState('');const [topics,setTopics]=useState<string[]>([]);
- const [privacy,setPrivacy]=useState<Privacy>('open');const [q0,setQ0]=useState('');const [where,setWhere]=useState('online');
- const [rules,setRules]=useState('');const [plate,setPlate]=useState<PlateKey>('lilac');const [cover,setCover]=useState<Cover|null>(null);
- const [err,setErr]=useState<Errors>({});const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [topicsMax,setTopicsMax]=useState(false);
+ const [name,setName]=useState(edit?.name??'');const [desc,setDesc]=useState(edit?.description??'');const [topics,setTopics]=useState<string[]>(edit?.topics??[]);
+ const [privacy,setPrivacy]=useState<Privacy>(edit?.privacy??'open');const [q0,setQ0]=useState(edit?.joinQuestion??'');const [where,setWhere]=useState(edit?(edit.placeId??'online'):'online');
+ const [rules,setRules]=useState(edit?.rules.join('\n')??'');const [plate,setPlate]=useState<PlateKey>(()=>PLATE_KEYS.find(k=>k===edit?.plate)??'lilac');const [cover,setCover]=useState<Cover|null>(null);
+ const [err,setErr]=useState<Errors>({});const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [stale,setStale]=useState(false);const [topicsMax,setTopicsMax]=useState(false);
  const couple=acting?.kind==='couple';
  const clear=(k:keyof Errors)=>setErr(e=>{if(!e[k])return e;const n={...e};delete n[k];return n;});
 
@@ -152,9 +180,39 @@ export function CreateCommunityScreen(){
   else if(rl.some(r=>r.length>300))e.rules=t('fe.cc.err.ruleLong');else if(rl.join('').length>1000)e.rules=t('fe.cc.err.rulesLong');
   setErr(e);return !Object.keys(e).length;
  };
+ /** The edit as `community.update` takes it: only the fields that differ from what was loaded. */
+ const changes=(e:EditableCommunity)=>{
+  const next:Record<string,unknown>={name:name.trim(),description:desc.trim(),topics,privacy,rules:ruleLines(rules),placeId:where==='online'?null:where,plate};
+  if(privacy!=='open')next.joinQuestion=q0.trim()||null;
+  const was:Record<string,unknown>={name:e.name,description:e.description,topics:e.topics,privacy:e.privacy,rules:e.rules,placeId:e.placeId,plate:e.plate,joinQuestion:e.joinQuestion??null};
+  const diff:Record<string,unknown>=Object.fromEntries(Object.entries(next).filter(([k,v])=>JSON.stringify(v)!==JSON.stringify(was[k])));
+  // The current cover is not sent back to the owner, so it changes only when a new photo is uploaded.
+  if(cover)diff.coverAssetId=cover.id;
+  return diff;
+ };
+ const fail=(e:unknown)=>{
+  if(e instanceof FeError&&e.code==='conflict'&&!edit){setErr({name:t('fe.cc.err.nameTaken')});shakeFirstErr();}
+  else if(e instanceof FeError&&e.code==='conflict'){setStale(true);setFailure(feErrorMessage(e,t));}
+  else if(e instanceof FeError&&e.code==='invalid_input'&&e.fields?.length){
+   const map:Record<string,keyof Errors>={name:'name',description:'desc',topics:'topics',joinQuestion:'q0',rules:'rules',placeId:'where'};
+   const next:Errors={};for(const f of e.fields){const k=map[f.split('.')[0]!];if(k)next[k]=k==='where'?t('fe.cc.err.place'):t('fe.cc.err.fields');}
+   if(Object.keys(next).length){setErr(next);shakeFirstErr();}else setFailure(feErrorMessage(e,t));
+  }else setFailure(feErrorMessage(e,t));
+ };
  const save=async()=>{
-  if(busy)return;setFailure('');
+  if(busy)return;setFailure('');setStale(false);
   if(!validate()){shakeFirstErr();return;}
+  if(edit){
+   const diff=changes(edit);
+   if(!Object.keys(diff).length){navigate(`/n/communities/${edit.id}/manage`,{replace:true,state:{notice:t('fe.ece.c.nothing')}});return;}
+   const input={communityId:edit.id,rev:edit.rev,...diff};
+   setBusy(true);
+   try{
+    const r=await call('community.update',{opId:opFor(input),...input},updated);done();
+    navigate(`/n/communities/${edit.id}/manage`,{replace:true,state:{notice:reviewNotice(r.review,t)}});
+   }catch(e){fail(e);}finally{setBusy(false);}
+   return;
+  }
   const input={name:name.trim(),description:desc.trim(),topics,privacy,...(privacy!=='open'&&q0.trim()?{joinQuestion:q0.trim()}:{}),
    rules:ruleLines(rules),placeId:where==='online'?null:where,coverAssetId:cover?.id??null,plate};
   setBusy(true);
@@ -162,22 +220,21 @@ export function CreateCommunityScreen(){
    const r=await call('community.create',{opId:opFor(input),...input},created);done();
    const notice=r.pending?t('fe.cc.pending'):couple?t('fe.cc.doneCouple'):t('fe.cc.done');
    navigate('/n/me?layer=mine&part=communities',{replace:true,state:{notice}});
-  }catch(e){
-   if(e instanceof FeError&&e.code==='conflict'){setErr({name:t('fe.cc.err.nameTaken')});shakeFirstErr();}
-   else if(e instanceof FeError&&e.code==='invalid_input'&&e.fields?.length){
-    const map:Record<string,keyof Errors>={name:'name',description:'desc',topics:'topics',joinQuestion:'q0',rules:'rules',placeId:'where'};
-    const next:Errors={};for(const f of e.fields){const k=map[f.split('.')[0]!];if(k)next[k]=k==='where'?t('fe.cc.err.place'):t('fe.cc.err.fields');}
-    if(Object.keys(next).length){setErr(next);shakeFirstErr();}else setFailure(feErrorMessage(e,t));
-   }else setFailure(feErrorMessage(e,t));
-  }finally{setBusy(false);}
+  }catch(e){fail(e);}finally{setBusy(false);}
  };
 
  const topicItems:[string,string][]=(catalog?.topics??[]).map(x=>[x.id,locale==='en'?x.en:x.ru]);
- const places:[string,string][]=[...(catalog?.places??[]).map(p=>[p.id,placeName(p,locale)] as [string,string]),['online',t('fe.cc.online')]];
+ const known=(catalog?.places??[]).map(p=>[p.id,placeName(p,locale)] as [string,string]);
+ // A place that is not approved yet (the owner's own suggestion) is not in the catalog but stays selectable.
+ const extra:[string,string][]=where!=='online'&&catalog&&!known.some(([id])=>id===where)?[[where,t('fe.ece.c.placeCurrent')]]:[];
+ const places:[string,string][]=[...known,...extra,['online',t('fe.cc.online')]];
+ const published=edit?.state==='published';
  return <>
-  <Bar title={t('fe.cc.title')} back small/>
+  <Bar title={edit?t('fe.ece.c.title'):t('fe.cc.title')} back small/>
   <div className="view nodock cta1"><div className="wrap">
-   {couple&&acting&&<p className="as-line full"><Av name={acting.name} seed={acting.id} size="xs" src={acting.avatar}/><span>{t('fe.cc.asCouple')} <b>{acting.name}</b></span></p>}
+   {!edit&&couple&&acting&&<p className="as-line full"><Av name={acting.name} seed={acting.id} size="xs" src={acting.avatar}/><span>{t('fe.cc.asCouple')} <b>{acting.name}</b></span></p>}
+   {edit&&published&&<div className="alert" style={{marginBottom:12}}><Clock/><span>{t('fe.ece.c.reviewHint')}</span></div>}
+   {edit&&edit.pendingChange!=null&&<div className="alert warn" style={{marginBottom:12}}><Clock/><span>{t('fe.ece.c.pendingChange')}</span></div>}
    <section className="grp"><div className="card form-card">
     <Field name="name" label={t('fe.cc.name')} ph={t('fe.cc.namePh')} max={50} value={name} onChange={v=>{setName(v);clear('name');}} err={err.name}/>
     <Field name="desc" label={t('fe.cc.desc')} ph={t('fe.cc.descPh')} max={500} textarea rows={5} value={desc} onChange={v=>{setDesc(v);clear('desc');}} err={err.desc}/>
@@ -192,9 +249,10 @@ export function CreateCommunityScreen(){
      <SelectRow label={t('fe.cc.where')} value={where} onChange={v=>{setWhere(v);clear('where');}} items={places}/></div>{err.where&&<FErr>{err.where}</FErr>}</div>
     <Field name="rules" label={t('fe.cc.rules')} ph={t('fe.cc.rulesPh')} max={1000} textarea rows={4} value={rules} onChange={v=>{setRules(v);clear('rules');}} err={err.rules}/>
     <CoverField purpose="community" plate={plate} setPlate={setPlate} cover={cover} setCover={setCover}/>
+    {edit&&<div className="fhint">{t('fe.ece.c.coverKept')}</div>}
    </div></section>
-   {failure&&<div className="alert err" role="alert"><span>{failure}</span></div>}
+   {failure&&<div className="alert err" role="alert"><span>{failure}{stale&&reload&&<button type="button" className="btn text auto" style={{display:'flex',marginTop:6}} onClick={reload}><RefreshCw/>{t('fe.ece.reload')}</button>}</span></div>}
   </div></div>
-  <div className="ctabar"><div className="wrap"><Btn onClick={save} disabled={busy}>{busy?t('fe.cc.sending'):t('fe.cc.submit')}</Btn></div></div>
+  <div className="ctabar"><div className="wrap"><Btn onClick={save} disabled={busy}>{busy?t('fe.cc.sending'):edit?t('fe.ece.save'):t('fe.cc.submit')}</Btn></div></div>
  </>;
 }

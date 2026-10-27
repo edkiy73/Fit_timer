@@ -1,12 +1,12 @@
 import {useEffect,useState,type ReactNode} from 'react';
-import {useNavigate} from 'react-router';
+import {useNavigate,useParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Calendar,Check,ChevronLeft,Clock,EyeOff,Link as LinkIcon,Lock,MapPin,Ticket,Unlock,Video} from 'lucide-react';
+import {Calendar,Check,ChevronLeft,CircleAlert,Clock,EyeOff,Link as LinkIcon,Lock,MapPin,RefreshCw,Ticket,Unlock,Video} from 'lucide-react';
 import {FeError,feErrorMessage} from '../feture/fe-api';
-import {Av,Btn,Seg} from './ui';
+import {Av,Bar,Btn,Empty,Seg,View} from './ui';
 import {useFe} from './session';
-import {ChipGroup,CoverField,FErr,Field,SelectRow,namedPlate,placeName,shakeFirstErr,useCatalog,useOp,type Cover,type PlateKey} from './create-community';
+import {ChipGroup,CoverField,FErr,Field,PLATE_KEYS,SelectRow,namedPlate,placeName,reviewNotice,shakeFirstErr,useCatalog,useOp,type Cover,type PlateKey} from './create-community';
 
 /** V21 E11 «Новое событие»: four steps (basics, time and place, admission, review), the draft saved on the server at
  * every step and on «В черновик», then `event.submit` (staff review). The client checks the limits of `eventFields`;
@@ -48,7 +48,7 @@ const fresh=():Form=>({title:'',kind:'',description:'',communityId:'',plate:'ros
  tz:userTz(),placeId:'',area:'',exactAddress:'',joinUrl:'',requiresApplication:false,question:'',price:'free',amount:'',currency:'€',ticketUrl:'',requirements:''});
 
 /** `evfValidate()` for one step, with the server's limits. */
-function validate(f:Form,step:number,t:(k:string)=>string):Errors{
+function validate(f:Form,step:number,t:(k:string)=>string,orig?:{start:number,end:number}):Errors{
  const e:Errors={};
  if(step===1){
   const ti=f.title.trim(),d=f.description.trim();
@@ -58,7 +58,9 @@ function validate(f:Form,step:number,t:(k:string)=>string):Errors{
  }
  if(step===2){
   const {start,end}=times(f);
-  if(!f.date)e.date=t('fe.ce.err.date');else if(Number.isFinite(start)&&start<Date.now())e.date=t('fe.ce.err.past');
+  // An edit that keeps the time may go on after the start; a new time has to be in the future (as the server checks).
+  const kept=!!orig&&start===orig.start&&end===orig.end;
+  if(!f.date)e.date=t('fe.ce.err.date');else if(!kept&&Number.isFinite(start)&&start<Date.now())e.date=t('fe.ce.err.past');
   if(!knownZone(f.tz))e.tz=t('fe.ce.err.tz');
   if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start)e.t2=t('fe.ce.err.end');else if(end-start>14*DAY)e.t2=t('fe.ce.err.long');
   if(f.format==='offline'){
@@ -98,15 +100,74 @@ const submitted=z.object({ok:z.literal(true),id:z.uuid().optional(),state:z.stri
 const okRes=z.object({ok:z.literal(true)}).passthrough();
 const comms=z.object({ok:z.literal(true),hosting:z.array(z.object({id:z.uuid(),name:z.string(),state:z.string(),role:z.string()}).passthrough())}).passthrough();
 
-export function CreateEventScreen(){
+const updated=z.object({ok:z.literal(true),rev:z.number().optional(),review:z.array(z.string()).optional(),pending:z.unknown().optional()}).passthrough();
+const editable=z.object({ok:z.literal(true),event:z.object({id:z.uuid(),title:z.string(),kind:z.enum(['meetup','workshop','talk','party']),description:z.string(),
+ format:z.enum(['offline','online']),placeId:z.uuid().nullable(),area:z.string().nullable(),exactAddress:z.string().nullable(),joinUrl:z.string().nullable(),tz:z.string(),
+ startsAt:z.string(),endsAt:z.string(),price:z.object({kind:z.enum(['free','door','external']),amount:z.number().optional(),currency:z.string().optional(),ticketUrl:z.string().optional()}),
+ requiresApplication:z.boolean(),questions:z.array(z.string()).nullable(),requirements:z.string().nullable(),plate:z.string().nullable(),
+ cover:z.object({id:z.uuid(),src:z.record(z.string(),z.string()).nullable().optional()}).passthrough().nullable().optional(),
+ communityId:z.uuid().nullable(),state:z.string(),past:z.boolean(),organizer:z.object({id:z.uuid()}).passthrough().nullable().optional(),
+ rev:z.number().optional(),pendingChange:z.unknown().optional()}).passthrough()});
+type Loaded=z.infer<typeof editable>['event'];
+/** An event being edited: the form it opens with and what must go back unchanged. */
+type Edit={id:string,rev:number,state:string,form:Form,questions:string[],requiresApplication:boolean,communityId:string|null,orig:{start:number,end:number},pendingChange:unknown};
+/** States in which `event.update` takes an edit. */
+const EDITABLE=['pending_partner','in_review','rejected','published'];
+
+/** A wall-clock date and time of an instant in `tz` (the inverse of zonedTime). */
+function wall(iso:string,tz:string){
+ const ms=Date.parse(iso);
+ try{
+  const p=new Intl.DateTimeFormat('en-US',{timeZone:tz,hourCycle:'h23',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).formatToParts(new Date(ms));
+  const g=(k:string)=>p.find(x=>x.type===k)?.value??'';
+  return {date:`${g('year')}-${g('month')}-${g('day')}`,time:`${g('hour')}:${g('minute')}`};
+ }catch{const d=new Date(ms);return {date:isoDay(ms),time:`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`};}
+}
+/** The form of an event as `event.get` gives it to the organiser. */
+function fromEvent(e:Loaded):Form{
+ const s=wall(e.startsAt,e.tz),en=wall(e.endsAt,e.tz);const p=e.price;
+ const src=e.cover?.src;
+ return {title:e.title,kind:e.kind,description:e.description,communityId:e.communityId??'',plate:PLATE_KEYS.find(k=>k===e.plate)??'rose',
+  cover:e.cover?{id:e.cover.id,preview:src?.card??src?.full??src?.thumb??''}:null,
+  format:e.format,date:s.date,date2:en.date!==s.date?en.date:'',t1:s.time,t2:en.time,tz:e.tz,placeId:e.placeId??'',area:e.area??'',exactAddress:e.exactAddress??'',joinUrl:e.joinUrl??'',
+  requiresApplication:e.requiresApplication,question:e.questions?.[0]??'',price:p.kind==='free'?'free':p.kind==='door'?'door':'ext',amount:p.amount!=null?String(p.amount):'',
+  currency:CURRENCIES.find(([,c])=>c===p.currency)?.[0]??'€',ticketUrl:p.ticketUrl??'',requirements:e.requirements??''};
+}
+
+export function CreateEventScreen(){return <EventEditor/>;}
+
+/** E11 in edit mode (prototype `evEdit` → E11 with `edit`): the same four steps without drafts, saved with `event.update`. */
+export function EditEventScreen(){
+ const {id=''}=useParams();const {call,acting}=useFe();const {t}=useI18n();
+ const [e,setE]=useState<Loaded|null>(null);const [error,setError]=useState<unknown>(null);const [nonce,setNonce]=useState(0);
+ useEffect(()=>{setE(null);setError(null);call('event.get',{eventId:id},editable).then(r=>setE(r.event)).catch(setError);},[call,id,nonce]);
+ const reload=()=>setNonce(n=>n+1);
+ const mine=!!e&&typeof e.rev==='number'&&e.organizer?.id===acting?.id;
+ if(e&&mine&&EDITABLE.includes(e.state)&&!e.past){
+  const form=fromEvent(e);
+  const edit:Edit={id:e.id,rev:e.rev!,state:e.state,form,questions:e.questions??[],requiresApplication:e.requiresApplication,communityId:e.communityId,orig:times(form),pendingChange:e.pendingChange??null};
+  return <EventEditor key={`${e.id}:${e.rev}`} edit={edit} reload={reload}/>;
+ }
+ return <>
+  <Bar title={t('fe.ece.e.title')} back small/>
+  <View className="nodock">{error?<Empty icon={CircleAlert} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={reload}>{t('fe.retry')}</Btn></Empty>
+   :!e?<p className="note" role="status">{t('fe.loading')}</p>
+   :!mine?<Empty icon={Lock} title={t('fe.ece.e.onlyOrganiser')}/>
+   :<Empty icon={Lock} title={t('fe.ece.e.closed')} text={t('fe.ece.e.closedText')}/>}</View>
+ </>;
+}
+
+function EventEditor({edit,reload}:{edit?:Edit,reload?:()=>void}){
  const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const catalog=useCatalog();
- const draftOp=useOp(),submitOp=useOp(),deleteOp=useOp();
- const [f,setF]=useState<Form>(fresh);const [step,setStep]=useState(1);const [err,setErr]=useState<Errors>({});
+ const draftOp=useOp(),submitOp=useOp(),deleteOp=useOp(),updateOp=useOp();
+ const [f,setF]=useState<Form>(()=>edit?.form??fresh());const [stale,setStale]=useState(false);const [step,setStep]=useState(1);const [err,setErr]=useState<Errors>({});
  const [draftId,setDraftId]=useState<string|null>(null);const [busy,setBusy]=useState(false);
  const [notice,setNotice]=useState<{kind:'ok'|'warn'|'err',text:string}|null>(null);const [pv,setPv]=useState<'all'|'ok'>('all');const [asking,setAsking]=useState(false);
  const [hosting,setHosting]=useState<{id:string,name:string}[]>([]);
  const couple=acting?.kind==='couple';
- useEffect(()=>{call('community.mine',{},comms).then(r=>setHosting(r.hosting.filter(c=>c.state==='published'&&(c.role==='owner'||c.role==='host')))).catch(()=>{});},[call]);
+ useEffect(()=>{if(edit)return;call('community.mine',{},comms).then(r=>setHosting(r.hosting.filter(c=>c.state==='published'&&(c.role==='owner'||c.role==='host')))).catch(()=>{});},[call,edit]);
+ // After publication who is admitted stays as it is (the server answers admission_frozen otherwise).
+ const frozen=edit?.state==='published';
  // The first approved place is the default city, as the prototype starts with one.
  useEffect(()=>{const first=catalog?.places[0];if(first)setF(x=>x.placeId?x:{...x,placeId:first.id});},[catalog]);
  useEffect(()=>{document.querySelector('.v21 .view')?.scrollTo({top:0});},[step]);
@@ -127,8 +188,9 @@ export function CreateEventScreen(){
  };
  const next=async()=>{
   if(busy)return;setNotice(null);
-  const e=validate(f,step,t);setErr(e);
+  const e=validate(f,step,t,edit?.orig);setErr(e);
   if(Object.keys(e).length){shakeFirstErr();return;}
+  if(edit){setStep(step+1);return;}
   setBusy(true);
   // The draft follows every step; a failed save does not hold the person back, it only says so.
   try{await saveDraft(step+1);}catch(x){setNotice({kind:'warn',text:t('fe.ce.draftFailed').replace('{reason}',feErrorMessage(x,t))});}
@@ -138,17 +200,30 @@ export function CreateEventScreen(){
  const back=()=>{if(step>1){setErr({});setNotice(null);setStep(step-1);}else navigate(-1);};
  const submit=async()=>{
   if(busy)return;setNotice(null);
-  for(const s of [1,2,3]){const e=validate(f,s,t);if(Object.keys(e).length){setErr(e);setStep(s);shakeFirstErr();return;}}
-  const payload={...(draftId?{draftId}:{}),event:eventOf(f)};
+  setStale(false);
+  for(const s of [1,2,3]){const e=validate(f,s,t,edit?.orig);if(Object.keys(e).length){setErr(e);setStep(s);shakeFirstErr();return;}}
+  const payload=edit
+   // The community link and, once published, the admission rules and questions go back exactly as they were.
+   ?{eventId:edit.id,rev:edit.rev,event:{...eventOf(f),communityId:edit.communityId,
+     ...(frozen?{requiresApplication:edit.requiresApplication,questions:edit.questions}:{questions:f.requiresApplication&&f.question.trim()?[f.question.trim(),...edit.questions.slice(1)]:[]})}}
+   :{...(draftId?{draftId}:{}),event:eventOf(f)};
   setBusy(true);
   try{
+   if(edit){
+    const r=await call('event.update',{opId:updateOp.opFor(payload),...payload},updated);updateOp.done();
+    const notice=r.pending?t('fe.ece.e.pending'):edit.state!=='published'?t('fe.ece.e.savedReview')
+     :r.review?.length?reviewNotice(r.review,t):t('fe.ece.e.saved');
+    navigate(`/n/events/${edit.id}/manage`,{replace:true,state:{notice}});
+    return;
+   }
    const r=await call('event.submit',{opId:submitOp.opFor(payload),...payload},submitted);submitOp.done();
    navigate('/n/me?layer=mine&part=events',{replace:true,state:{notice:r.state==='pending_partner'?t('fe.ce.donePending'):t('fe.ce.done')}});
   }catch(x){
-   if(x instanceof FeError&&x.code==='invalid_input'&&x.fields?.length){
+   if(edit&&x instanceof FeError&&x.code==='conflict'){setStale(true);setNotice({kind:'err',text:feErrorMessage(x,t)});}
+   else if(x instanceof FeError&&x.code==='invalid_input'&&x.fields?.length){
     const map:Record<string,Key>={title:'title',kind:'kind',description:'description',communityId:'communityId',coverAssetId:'cover',startsAt:'date',endsAt:'t2',tz:'tz',placeId:'placeId',
      area:'area',exactAddress:'exactAddress',joinUrl:'joinUrl',price:'amount',questions:'question',requirements:'requirements',format:'t2'};
-    const e:Errors={};for(const fl of x.fields){const k=map[fl.split('.')[0]!];if(k)e[k]=k==='cover'?t('fe.ce.err.cover'):k==='date'?t('fe.ce.err.past'):k==='tz'?t('fe.ce.err.tz'):t('fe.ce.err.fields');}
+    const e:Errors={};for(const fl of x.fields){const k=map[fl.split('.')[0]!];if(k&&!(edit&&k==='communityId'))e[k]=k==='cover'?t('fe.ce.err.cover'):k==='date'?t('fe.ce.err.past'):k==='tz'?t('fe.ce.err.tz'):t('fe.ce.err.fields');}
     const steps=Object.keys(e).map(k=>STEP_OF[k as Key]??4);
     if(steps.length){setErr(e);setStep(Math.min(...steps));shakeFirstErr();}else setNotice({kind:'err',text:feErrorMessage(x,t)});
    }else setNotice({kind:'err',text:feErrorMessage(x,t)});
@@ -175,7 +250,7 @@ export function CreateEventScreen(){
    <ChipGroup items={KINDS.map(k=>[k,t('fe.ce.kind.'+k)])} selected={f.kind?[f.kind]:[]} onToggle={k=>set('kind',k as Kind)}/>
    {err.kind&&<FErr>{err.kind}</FErr>}</div>
   <Field name="desc" label={t('fe.ce.desc')} ph={t('fe.ce.descPh')} max={1500} textarea rows={6} value={f.description} onChange={v=>set('description',v)} err={err.description}/>
-  {(hosting.length>0||f.communityId)&&<div className={'field'+(err.communityId?' err':'')}>
+  {!edit&&(hosting.length>0||f.communityId)&&<div className={'field'+(err.communityId?' err':'')}>
    <SelectRow label={t('fe.ce.community')} sub={t('fe.ce.communitySub')} value={f.communityId} onChange={v=>set('communityId',v)} items={[['',t('fe.ce.communityNone')],...hosting.map(c=>[c.id,c.name] as [string,string])]}/>
    {err.communityId&&<FErr>{err.communityId}</FErr>}</div>}
   <CoverField purpose="event" plate={f.plate} setPlate={k=>set('plate',k)} cover={f.cover} setCover={c=>set('cover',c)}/>
@@ -202,9 +277,10 @@ export function CreateEventScreen(){
   </>:<Field name="link" label={t('fe.ce.link')} icon={LinkIcon} type="url" inputMode="url" ph="https://" value={f.joinUrl} onChange={v=>set('joinUrl',v)} err={err.joinUrl}/>}
  </>;
  if(step===3)body=<>
-  <div className="card list"><button type="button" className="li" role="switch" aria-checked={f.requiresApplication} onClick={()=>set('requiresApplication',!f.requiresApplication)}>
-   <span className="tx"><b>{t('fe.ce.approval')}</b><small>{t('fe.ce.approvalSub')}</small></span><span className={'sw'+(f.requiresApplication?' on':'')} aria-hidden="true"/></button></div>
-  {f.requiresApplication&&<><div style={{height:12}}/><Field name="q0" label={t('fe.ce.question')} ph={t('fe.ce.questionPh')} max={120} value={f.question} onChange={v=>set('question',v)} err={err.question}/></>}
+  <div className="card list"><button type="button" className="li" role="switch" aria-checked={f.requiresApplication} disabled={frozen} onClick={()=>set('requiresApplication',!f.requiresApplication)}>
+   <span className="tx"><b>{t('fe.ce.approval')}</b><small>{frozen?t('fe.ece.e.frozen'):t('fe.ce.approvalSub')}</small></span><span className={'sw'+(f.requiresApplication?' on':'')} aria-hidden="true"/></button></div>
+  {frozen&&f.requiresApplication&&f.question.trim()&&<div className="field mt12"><span className="flabel">{t('fe.ce.question')}</span><p className="note">{f.question.trim()}</p></div>}
+  {!frozen&&f.requiresApplication&&<><div style={{height:12}}/><Field name="q0" label={t('fe.ce.question')} ph={t('fe.ce.questionPh')} max={120} value={f.question} onChange={v=>set('question',v)} err={err.question}/></>}
   <div className="field mt12"><span className="flabel">{t('fe.ce.price')}</span><div className="chips">
    {(['free','door','ext'] as const).map(k=>chip(f.price===k,t('fe.ce.price.'+k),()=>set('price',k),k))}</div></div>
   {f.price!=='free'&&<div className="row g8 ev-price" style={{alignItems:'flex-start'}}>
@@ -242,27 +318,28 @@ export function CreateEventScreen(){
    {f.description.trim()&&<><div className="sec">{t('fe.ce.pv.about')}</div><div className="md bio"><p>{f.description.trim()}</p></div></>}
    {f.requirements.trim()&&<><div className="sec">{t('fe.ce.reqs')}</div><div className="card"><div className="fact"><i className="v"><Check/></i><span>{f.requirements.trim()}</span></div></div></>}
    {f.requiresApplication&&f.question.trim()&&<><div className="sec">{t('fe.ce.question')}</div><p className="note">{f.question.trim()}</p></>}
-   <div className="alert warn mt12"><Clock/><span>{couple?t('fe.ce.reviewCouple'):t('fe.ce.review')}</span></div>
+   <div className="alert warn mt12"><Clock/><span>{edit?(frozen?t('fe.ece.e.reviewPublished'):t('fe.ece.e.reviewBefore')):couple?t('fe.ce.reviewCouple'):t('fe.ce.review')}</span></div>
   </>;
  }
 
  return <>
   <header className="bar">
    <button type="button" className="ibtn ghost" aria-label={t('fe.back')} onClick={back}><ChevronLeft/></button>
-   <h1 className="sm" tabIndex={-1}>{draftId?t('fe.ce.titleDraft'):t('fe.ce.title')}</h1>
-   <button type="button" className="btn text auto" onClick={toDraft} disabled={busy}>{t('fe.ce.toDraft')}</button>
+   <h1 className="sm" tabIndex={-1}>{edit?t('fe.ece.e.title'):draftId?t('fe.ce.titleDraft'):t('fe.ce.title')}</h1>
+   {!edit&&<button type="button" className="btn text auto" onClick={toDraft} disabled={busy}>{t('fe.ce.toDraft')}</button>}
   </header>
   <div className="view nodock cta1"><div className="wrap">
    <div className="stepper"><span>{step}/4 · {names[step-1]}</span><div className="qprog"><i style={{width:`${step*25}%`}}/></div></div>
+   {edit&&edit.pendingChange!=null&&step===1&&<div className="alert warn" style={{marginBottom:12}}><Clock/><span>{t('fe.ece.e.pendingChange')}</span></div>}
    {step<4?<section className="grp"><div className="card form-card">{body}</div></section>:body}
-   {notice&&<div className={'alert mt12 '+notice.kind} role={notice.kind==='ok'?'status':'alert'}><span>{notice.text}</span></div>}
+   {notice&&<div className={'alert mt12 '+notice.kind} role={notice.kind==='ok'?'status':'alert'}><span>{notice.text}{stale&&reload&&<button type="button" className="btn text auto" style={{display:'flex',marginTop:6}} onClick={reload}><RefreshCw/>{t('fe.ece.reload')}</button>}</span></div>}
    {draftId&&(asking
     ?<div className="alert warn mt12" role="alertdialog"><span>{t('fe.ce.draftDeleteAsk')}</span><div className="row g8 mt8"><Btn kind="danger" size="sm" auto onClick={removeDraft} disabled={busy}>{t('fe.ce.draftDeleteOk')}</Btn><Btn kind="text" size="sm" auto onClick={()=>setAsking(false)}>{t('fe.ce.cancel')}</Btn></div></div>
     :<div className="row mt12"><Btn kind="text" size="sm" auto onClick={()=>setAsking(true)} disabled={busy}>{t('fe.ce.draftDelete')}</Btn></div>)}
   </div></div>
   <div className="ctabar"><div className="wrap"><div className="row g8">
    {step>1&&<button type="button" className="btn soft" style={{flex:'0 0 auto',width:'auto'}} onClick={back} disabled={busy}><ChevronLeft/>{t('fe.ce.back')}</button>}
-   <Btn onClick={step<4?next:submit} disabled={busy}>{busy?(step<4?t('fe.ce.saving'):t('fe.ce.sending')):step<4?t('fe.ce.next'):t('fe.ce.submit')}</Btn>
+   <Btn onClick={step<4?next:submit} disabled={busy}>{busy?(step<4?t('fe.ce.saving'):t('fe.ce.sending')):step<4?t('fe.ce.next'):edit?t('fe.ece.save'):t('fe.ce.submit')}</Btn>
   </div></div></div>
  </>;
 }

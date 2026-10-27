@@ -27,8 +27,8 @@ import { MeTab } from './fe/me';
 import { InterestsScreen, InterestsHistoryScreen } from './fe/interests';
 import { StaffScreen } from './fe/staff';
 import { FeedTab, PostScreen, ComposeScreen, EditPostScreen } from './fe/feed';
-import { CreateCommunityScreen } from './fe/create-community';
-import { CreateEventScreen } from './fe/create-event';
+import { CreateCommunityScreen, EditCommunityScreen } from './fe/create-community';
+import { CreateEventScreen, EditEventScreen } from './fe/create-event';
 import { CommunityManageScreen, CommunityRequestsScreen, CommunityMembersScreen, EventManageScreen, EventApplicationsScreen, EventAttendeesScreen, EventApplyScreen } from './fe/host';
 const ProductDesign = lazy(async()=>({default:(await import('./feture/design/product-design')).ProductDesign}));
 import { WelcomePage } from './feture/welcome';
@@ -277,11 +277,13 @@ export const routes: RouteObject[] = [
         {path:'communities/new', element:<CreateCommunityScreen />},
         {path:'communities/:id', element:<CommunityScreen />},
         {path:'communities/:id/manage', element:<CommunityManageScreen />},
+        {path:'communities/:id/edit', element:<EditCommunityScreen />},
         {path:'communities/:id/requests', element:<CommunityRequestsScreen />},
         {path:'communities/:id/members', element:<CommunityMembersScreen />},
         {path:'events/new', element:<CreateEventScreen />},
         {path:'events/:id', element:<EventScreen />},
         {path:'events/:id/manage', element:<EventManageScreen />},
+        {path:'events/:id/edit', element:<EditEventScreen />},
         {path:'events/:id/applications', element:<EventApplicationsScreen />},
         {path:'events/:id/attendees', element:<EventAttendeesScreen />},
         {path:'events/:id/apply', element:<EventApplyScreen />},
