@@ -4,7 +4,7 @@ import {useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {ChevronLeft,type LucideIcon} from 'lucide-react';
 
-/** V21 building blocks with the prototype's own markup and class names (styles: v21.css, generated from
+/** V21 building blocks with the prototype's own markup and class names (styles: kit/base.css, started from
  * public/prototype-v21.html). Icons come only from Lucide. */
 
 // V21 plates (prototype PL): the coloured disc behind initials.

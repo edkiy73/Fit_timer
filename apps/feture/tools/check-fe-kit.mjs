@@ -1,5 +1,5 @@
 // FetUre design system guard (owner, 28.10.2026): screens take controls only from src/fe/kit and values only from the
-// V21 tokens. This counts, per file, what a screen writes by hand instead; the count may only go down.
+// kit tokens. This counts, per file, what a screen writes by hand instead; the count may only go down.
 //   node tools/check-fe-kit.mjs           — fail if any file has more than its baseline (or a new file has any)
 //   node tools/check-fe-kit.mjs --update  — after removing hand-written pieces, lower the baseline
 import { readFileSync, readdirSync, writeFileSync, existsSync } from 'node:fs';
@@ -8,7 +8,7 @@ import { join, relative } from 'node:path';
 const ROOT = new URL('..', import.meta.url).pathname;
 const BASE = join(ROOT, 'tools/fe-kit-baseline.json');
 // The kit itself, and the generated prototype stylesheet, are where these things are allowed to live.
-const KIT = ['src/fe/kit/', 'src/fe/ui.tsx', 'src/fe/v21.css'];
+const KIT = ['src/fe/kit/', 'src/fe/ui.tsx'];
 
 const TSX = [
   ['sheet', /className=(?:"|\{['`])[^"'`}]*\bsheet\b/g],
@@ -30,7 +30,7 @@ const TSX = [
   ['divider', /<hr\b/g],
   ['radio', /role="radio"/g],
   ['checkbox', /role="checkbox"/g],
-  ['note', /className=(?:"|\{['`])note\b/g],
+  ['note', /className=(?:"|\{['`])note["' ]/g],
   ['section label', /className="sec"/g],
   ['progress', /className="qprog"/g],
 ];

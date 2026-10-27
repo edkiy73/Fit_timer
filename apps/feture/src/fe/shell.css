@@ -1,4 +1,4 @@
-/* Only what the generated v21.css (prototype stylesheet, scoped to .v21) cannot know: the prototype's <body>
+/* Shell-only glue on top of the kit base.css: the prototype's <body>
    is the viewport, here .v21 is a box inside the React tree. */
 .fe-v21{position:fixed;inset:0;z-index:1}
 .fe-v21 .fe-center{display:grid;place-items:center;align-content:center;min-height:70dvh}

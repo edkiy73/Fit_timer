@@ -126,7 +126,7 @@
   "inline style": 5,
   "heading": 6,
   "card": 11,
-  "note": 10,
+  "note": 3,
   "section label": 2
  },
  "src/fe/host.tsx": {

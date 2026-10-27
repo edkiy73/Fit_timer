@@ -36,7 +36,6 @@ import { StaffScreen } from './fe/staff';
 import { AgeCheckScreen } from './fe/age-check';
 import { PhotoCheckScreen } from './fe/photo-check';
 import { FeedTab, PostScreen, ComposeScreen, EditPostScreen } from './fe/feed';
-import { KitPage } from './fe/kit/page';
 import { CreateCommunityScreen, EditCommunityScreen } from './fe/create-community';
 import { CreateEventScreen, EditEventScreen } from './fe/create-event';
 import { CommunityManageScreen, CommunityRequestsScreen, CommunityMembersScreen, EventManageScreen, EventApplicationsScreen, EventAttendeesScreen, EventApplyScreen } from './fe/host';
@@ -275,7 +274,6 @@ export const routes: RouteObject[] = [
       path:'n', element:<FeRoot />,
       children:[
         {index:true, element:<Navigate to="/n/feed" replace/>},
-        {path:'kit', element:<KitPage />},
         {path:'feed', element:<FeedTab />},
         {path:'feed/new', element:<ComposeScreen />},
         {path:'feed/post/:id', element:<PostScreen />},

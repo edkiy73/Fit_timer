@@ -9,13 +9,13 @@ import {countsRes} from './inbox';
 import {Register} from './register';
 import {SignedOut} from './start';
 import {ToastProvider} from './toast';
-import './v21.css';
+import './kit/base.css';
 import './kit/tokens.css';
 import './kit/kit.css';
 import './shell.css';
 
 /** V21 shell with the prototype's markup: `.stage > .root > aside.side + main.main(.bar, .view, nav.dock)`.
- * Dock on phones, rail and sidebar on wider screens — all from v21.css. */
+ * Dock on phones, rail and sidebar on wider screens — all from the kit base.css. */
 export const FE_TABS:{id:string,icon:LucideIcon}[]=[
  {id:'feed',icon:FeedIcon},{id:'people',icon:Users},{id:'communities',icon:Globe},{id:'chats',icon:MessageCircle},{id:'me',icon:User},
 ];

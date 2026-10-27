@@ -1,4 +1,4 @@
-/* Chats (V21 H01/H02): prototype rules v21.css lost in generation (`.mtile>img`, `.mtile.blur>img`). */
+/* Chats (V21 H01/H02): rules the kit base.css lacks (`.mtile>img`, `.mtile.blur>img`). */
 .v21 .mtile>img{display:block;width:100%;max-height:320px;object-fit:cover}
 .v21 .mtile.blur>img{filter:blur(28px) saturate(1.2);transform:scale(1.15)}
 /* Own photo still in review: a quiet line under the tile (only the sender sees the photo meanwhile). */

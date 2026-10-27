@@ -4,12 +4,13 @@
 
 ## Design system — owner rule, 2026-10-28 (overrides any screen-level habit)
 
-Every FetUre screen is built only from `src/fe/kit` (components) and its tokens (`src/fe/kit/tokens.css` + the
-generated `v21.css` colours/radii). Read `src/fe/kit/README.md` first; `/n/kit` shows every component in every state.
+Every FetUre screen is built only from `src/fe/kit` (components) and its tokens (`src/fe/kit/base.css` top block +
+`tokens.css`). Read `src/fe/kit/README.md` first; Storybook (`npm run storybook`, published at /kit/) shows every
+component with its settings and states. The V21 prototype was only the starting point — it is not maintained or matched.
 - A screen never writes its own sheet, dialog, tabs, list row, chip, notice, button, icon button, input, textarea,
   select, switch, heading, inline style or stylesheet, and never its own colour, font, size, spacing or radius.
-- Something the kit lacks is **added to the kit first** — component (or variant/state) + tokens + its section on
-  `/n/kit` + a line in the README — and only then used. Never a local copy "for now".
+- Something the kit lacks is **added to the kit first** — component (or variant/state) + tokens + its story
+  (settings and states) + a line in the README — and only then used. Never a local copy "for now".
 - When the prototype disagrees with itself (several looks for one control, odd sizes), ask the owner which one the kit
   keeps; do not copy the inconsistency.
 - `npm run check:kit` (inside `npm run check`, so CI) fails when any file hand-writes more than its baseline

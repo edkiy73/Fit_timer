@@ -1,12 +1,18 @@
 # FetUre design system (kit)
 
-Owner rule, 28.10.2026: every screen is built **only** from this kit and the V21 tokens. No screen draws its own
+Owner rule, 28.10.2026: every screen is built **only** from this kit and its tokens. No screen draws its own
 sheet, dialog, tab bar, list row, chip, notice, button, input, select or switch, and no screen writes its own colour,
 font, size, spacing or radius. `npm run check:kit` (part of `npm run check`, so CI) enforces it: per file, the number
 of hand-written pieces may only go down (`tools/fe-kit-baseline.json`). After moving a screen onto the kit, run
 `node tools/check-fe-kit.mjs --update`.
 
-## Tokens (v21.css, generated from `public/prototype-v21.html` — never edit by hand)
+## Storybook
+
+Every kit component has a story (`src/fe/kit/*.stories.tsx`): description, Controls, all states, code; tokens
+under «Основа». Local: `npm run storybook`; published with the app at **/kit/** (https://feture-mvp.vercel.app/kit/).
+A new component or variant ships with its story in the same PR.
+
+## Tokens (`base.css` top block + `tokens.css` — ours; the V21 prototype was only the starting point)
 
 - Colour: `--bg --bg2 --surf --raise --ink --mute --faint --line --line2 --accent --accent-soft --accent-ink --ok
   --ok-soft --warn --warn-soft --danger --danger-soft --violet --mint --lilac --scrim --shadow --shadow-s`

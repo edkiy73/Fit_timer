@@ -7,10 +7,10 @@ import './tokens.css';
 import './kit.css';
 
 /** FetUre kit (owner, 28.10.2026): every screen takes its controls from here — never its own sheet, dialog, list row,
- * tab bar, chip, switch, select, notice or round button. Colours, fonts, sizes, spacing and radii are the V21 tokens
- * (`var(--…)` in v21.css, generated from the prototype); screens never write their own values.
+ * tab bar, chip, switch, select, notice or round button. Colours, fonts, sizes, spacing and radii are the kit tokens
+ * (`var(--…)` in base.css and tokens.css); screens never write their own values.
  * `npm run check:kit` (part of `npm run check`) fails when a screen hand-writes what the kit has.
- * Each piece keeps the prototype's markup and class names, so v21.css styles it. */
+ * Each piece keeps the prototype's markup and class names, so base.css styles it. */
 
 export {Av,Bar,Btn,Empty,Layer,Seg,Skel,View,plate} from '../ui';
 export type {SegOption} from '../ui';

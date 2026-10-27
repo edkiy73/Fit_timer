@@ -1,4 +1,4 @@
-/* Staff area (/n/staff): only layout glue on top of the generated v21.css classes. */
+/* Staff area (/n/staff): only layout glue on top of the kit base.css classes. */
 .v21 .st-tabs{margin-top:16px}
 .v21 .st-count{margin-left:6px;font-weight:700;opacity:.75}
 .v21 .st-tools{display:flex;justify-content:flex-end;margin:4px 0 8px}
