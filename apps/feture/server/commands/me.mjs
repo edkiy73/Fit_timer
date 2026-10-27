@@ -5,7 +5,7 @@ import { hmac } from '../hash.mjs';
 import { mediaDto } from '../media/assets.mjs';
 import { photosFor } from './photos.mjs';
 import { photoVerifiedOf } from './verification.mjs';
-import { PREMIUM_SQL } from './faces.mjs';
+import { PREMIUM_SQL, ageOn } from './faces.mjs';
 import { grantedScopes } from '../access.mjs';
 import { enqueue } from '../outbox.mjs';
 import { narrowCouple, needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
@@ -22,14 +22,6 @@ const SETTING_COLUMN = /** @type {Record<keyof typeof PROFILE_SETTINGS, string>}
   discoverMode: 'discover_mode', acceptProfileLikes: 'accept_profile_likes', requestsFrom: 'requests_from',
   linksFrom: 'links_from', mentionsFrom: 'mentions_from', activityVis: 'activity_vis', showLikes: 'show_likes',
 });
-
-/** Full years on the server's UTC date. @param {string} birthDate YYYY-MM-DD @param {Date} [now] */
-export function ageOn(birthDate, now = new Date()) {
-  const [y, m, d] = birthDate.split('-').map(Number);
-  let age = now.getUTCFullYear() - y;
-  if (now.getUTCMonth() + 1 < m || (now.getUTCMonth() + 1 === m && now.getUTCDate() < d)) age--;
-  return age;
-}
 
 /** Most generous reading of a birth date: the person counts as 18 if it is their 18th birthday anywhere on Earth
  * (UTC+14), so nobody is locked out on the morning of their birthday. @param {string} birthDate */

@@ -3,7 +3,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { platform } from '../server/commands/platform.mjs';
-import { me, ageOn } from '../server/commands/me.mjs';
+import { me } from '../server/commands/me.mjs';
+import { ageOn } from '../server/commands/faces.mjs';
 import { access } from '../server/commands/access.mjs';
 import { setup as baseSetup, ACCEPT, DOCS, op } from './fe-helpers.mjs';
 

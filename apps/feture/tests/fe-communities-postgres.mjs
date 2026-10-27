@@ -241,3 +241,46 @@ test('catalog cards: description, cover, «обсуждали…» only where th
     assert.deepEqual([req.profile.id, req.profile.age, req.profile.premium], [c, null, false]);
   } finally { await pg.close(); }
 });
+
+test('community.mine and requestWithdraw: own memberships and pending requests only; withdrawing is the requester’s, once', async () => {
+  const { pg, call, a, b, c, make } = await world();
+  try {
+    const open = await make('ua', a, { name: 'Открытое сообщество', privacy: 'open' });
+    const closed = await make('ua', a, { name: 'Закрытое сообщество', privacy: 'closed', joinQuestion: 'Почему вам интересно?' });
+    await make('ua', a, { name: 'Скрытое сообщество', privacy: 'hidden', joinQuestion: 'Кто вас пригласил?' });
+    const owner = await call('ua', a, { action: 'community.mine' });
+    assert.deepEqual([owner.hosting.map(x => x.name).sort(), owner.member, owner.requests], [['Закрытое сообщество', 'Открытое сообщество', 'Скрытое сообщество'], [], []]);
+    assert.deepEqual(owner.hosting.map(x => x.role), ['owner', 'owner', 'owner']);
+
+    await call('ub', b, { action: 'community.join', opId: op(), communityId: open, rulesAccepted: true });
+    const req = await call('ub', b, { action: 'community.join', opId: op(), communityId: closed, rulesAccepted: true, answer: 'Хочу научиться безопасно' });
+    let mine = await call('ub', b, { action: 'community.mine' });
+    assert.deepEqual([mine.hosting, mine.member.map(x => x.name), mine.requests.map(r => [r.id, r.name])], [[], ['Открытое сообщество'], [[req.id, 'Закрытое сообщество']]]);
+    // A stranger sees none of it, and nothing of the hidden community.
+    const stranger = await call('uc', c, { action: 'community.mine' });
+    assert.deepEqual([stranger.hosting, stranger.member, stranger.requests], [[], [], []]);
+    assert.ok(!JSON.stringify(mine).includes('Скрытое'));
+
+    // Only the requester withdraws, and only a pending request; the host and others get «not found».
+    assert.equal((await call('uc', c, { action: 'community.requestWithdraw', opId: op(), requestId: req.id })).status, 404);
+    assert.equal((await call('ua', a, { action: 'community.requestWithdraw', opId: op(), requestId: req.id })).status, 404);
+    assert.equal((await call('ub', b, { action: 'community.requestWithdraw', opId: op(), requestId: req.id })).state, 'withdrawn');
+    assert.equal((await call('ub', b, { action: 'community.requestWithdraw', opId: op(), requestId: req.id })).status, 404);
+    assert.deepEqual((await call('ub', b, { action: 'community.mine' })).requests, []);
+    assert.deepEqual((await call('ua', a, { action: 'community.requests', communityId: closed })).items, []); // gone from the hosts' list
+    const list = (await call('ua', a, { action: 'community.requests', communityId: closed, tab: 'history' })).items;
+    assert.deepEqual(list.map(r => r.state), ['withdrawn']);
+    assert.equal((await call('ua', a, { action: 'community.requestDecide', opId: op(), requestId: req.id, rev: list[0].rev, approve: true })).status, 409);
+    // A decided request cannot be withdrawn; asking again is possible after withdrawing.
+    const again = await call('ub', b, { action: 'community.join', opId: op(), communityId: closed, rulesAccepted: true, answer: 'Хочу научиться безопасно' });
+    assert.equal(again.state, 'requested');
+    const pending = (await call('ua', a, { action: 'community.requests', communityId: closed })).items;
+    await call('ua', a, { action: 'community.requestDecide', opId: op(), requestId: again.id, rev: pending[0].rev, approve: true });
+    assert.equal((await call('ub', b, { action: 'community.requestWithdraw', opId: op(), requestId: again.id })).status, 404);
+    mine = await call('ub', b, { action: 'community.mine' });
+    assert.deepEqual([mine.member.map(x => x.name).sort(), mine.requests], [['Закрытое сообщество', 'Открытое сообщество'], []]);
+    // Left communities are no longer listed.
+    await call('ub', b, { action: 'community.leave', opId: op(), communityId: open });
+    assert.deepEqual((await call('ub', b, { action: 'community.mine' })).member.map(x => x.name), ['Закрытое сообщество']);
+  } finally { await pg.close(); }
+});

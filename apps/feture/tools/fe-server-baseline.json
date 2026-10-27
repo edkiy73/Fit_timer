@@ -1,29 +1,6 @@
 {
  "noHandler": [],
- "noContract": [
-  "notice.decided",
-  "verification.expire"
- ],
- "untested": [
-  "blocks.list",
-  "community.mine",
-  "community.requestWithdraw",
-  "decide.cancel",
-  "discover.filter",
-  "event.applicationWithdraw",
-  "link.remove",
-  "links.mine",
-  "media.commit",
-  "media.remove",
-  "noteSub.set",
-  "notifications.read",
-  "private.setMedia",
-  "push.unregister",
-  "reply.edit"
- ],
- "duplicate": [
-  "ageOn",
-  "checkRefs",
-  "otherProfile"
- ]
+ "noContract": [],
+ "untested": [],
+ "duplicate": []
 }

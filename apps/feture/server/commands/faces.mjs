@@ -18,8 +18,9 @@ export const PREMIUM_SQL = `exists (select 1 from feture.account pa where pa.pre
 /** @type {Face} */
 export const NO_FACE = Object.freeze({ avatar: null, age: null, photoVerified: false, premium: false });
 
-/** Full years on the server's UTC date (same as me.mjs ageOn). @param {string} birthDate YYYY-MM-DD */
-function ageOn(birthDate, now = new Date()) {
+/** Full years on the server's UTC date — the one age rule for registration, profiles and lists.
+ * @param {string} birthDate YYYY-MM-DD @param {Date} [now] */
+export function ageOn(birthDate, now = new Date()) {
   const [y, m, d] = birthDate.split('-').map(Number);
   let age = now.getUTCFullYear() - y;
   if (now.getUTCMonth() + 1 < m || (now.getUTCMonth() + 1 === m && now.getUTCDate() < d)) age--;

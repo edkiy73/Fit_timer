@@ -154,6 +154,73 @@ test('idempotency: replay, conflicting reuse, the unique-violation retry path', 
   } finally { await pg.close(); }
 });
 
+test('/api/fe media.commit, media.remove and decide.cancel: the owner only, idempotent, a stranger learns nothing', async () => {
+  const { pg, db } = await setup();
+  try {
+    const storage = fakeStorage();
+    const handler = createFeHandler({
+      db, pepper: PEPPER, commands: platform,
+      cfg: { media: { storage, delivery: tokenDelivery(SECRET, 'https://media.test') } },
+      authenticate: async req => core(String(req.headers['x-test-user'])),
+      quota: async () => true, cors: () => false, log: () => {},
+    });
+    let n = 0;
+    const opId = () => `018f0000-0000-7000-8000-0000000c${String(++n).padStart(4, '0')}`;
+    /** @param {string} user @param {string | null} profile @param {Record<string, unknown>} body */
+    const call = async (user, profile, body) => {
+      const res = { statusCode: 0, setHeader() {}, end(s) { this.body = JSON.parse(s); } };
+      await handler({ method: 'POST', headers: { 'x-test-user': user, ...(profile ? { 'x-fe-profile': profile } : {}) }, body }, res);
+      return { status: res.statusCode, ...res.body };
+    };
+    const account = async (/** @type {string} */ u) => (await call(u, null, { action: 'session.bootstrap' })).account.id;
+    const [accA, accB, accC] = [await account('core-a'), await account('core-b'), await account('core-c')];
+    const pa = await person(db, accA, 'alex'), pb = await person(db, accB, 'kira');
+    await person(db, accC, 'noa');
+
+    // media.commit: only after the file is there, only by the owner, again returns the same state.
+    const up = await call('core-a', pa, { action: 'media.uploadIntent', opId: opId(), purpose: 'post', kind: 'image', mime: 'image/jpeg', bytes: JPEG.length });
+    assert.equal(up.status, 200);
+    const early = await call('core-a', pa, { action: 'media.commit', assetId: up.assetId });
+    assert.deepEqual([early.status, early.state], [409, 'not_uploaded']);
+    storage.objects.set(`u/${up.assetId}`, { bytes: JPEG, mime: 'image/jpeg' });
+    const stranger = await call('core-b', pb, { action: 'media.commit', assetId: up.assetId });
+    assert.deepEqual([stranger.status, stranger.error, stranger.state], [404, 'not_found', undefined]); // not even whether it exists
+    assert.equal((await call('core-b', pa, { action: 'media.commit', assetId: up.assetId })).status, 403); // someone else's profile header
+    assert.equal((await call('core-a', pa, { action: 'media.commit', assetId: up.assetId })).state, 'uploaded');
+    assert.equal((await call('core-a', pa, { action: 'media.commit', assetId: up.assetId })).state, 'uploaded');
+    assert.equal((await db.query(`select count(*)::int n from feture.outbox where topic = 'media.scan'`))[0].n, 1); // scanned once
+    // A file that is not what was declared is refused.
+    const bad = await call('core-a', pa, { action: 'media.uploadIntent', opId: opId(), purpose: 'post', kind: 'image', mime: 'image/jpeg', bytes: JPEG.length });
+    storage.objects.set(`u/${bad.assetId}`, { bytes: Uint8Array.of(1, 2), mime: 'image/jpeg' });
+    assert.equal((await call('core-a', pa, { action: 'media.commit', assetId: bad.assetId })).rule, 'upload_mismatch');
+
+    // media.remove: never by someone else; the owner's removal hides at once and purges later; a replay is a replay.
+    assert.equal((await call('core-b', pb, { action: 'media.remove', opId: opId(), assetId: up.assetId })).status, 404);
+    const removeOp = opId();
+    assert.equal((await call('core-a', pa, { action: 'media.remove', opId: removeOp, assetId: up.assetId })).state, 'removed');
+    assert.equal((await call('core-a', pa, { action: 'media.remove', opId: removeOp, assetId: up.assetId })).replayed, true);
+    assert.equal((await call('core-a', pa, { action: 'media.remove', opId: opId(), assetId: up.assetId })).state, 'removed');
+    const [{ state }] = await db.query('select state from feture.media_asset where id = $1', [up.assetId]);
+    assert.equal(state, 'removed');
+    assert.deepEqual((await db.query(`select topic from feture.outbox where topic in ('media.hide', 'media.purge') order by topic`)).map(r => r.topic), ['media.hide', 'media.purge']);
+
+    // decide.cancel: only the partner who asked, only while pending; the other partner hears it was cancelled.
+    registerApprovalKind('test.cancelViaApi', { apply: async () => {} });
+    const pc = await couple(db, accA, accB);
+    const asA = await actingProfile(db, accA, pc, { write: true });
+    const { approvalId } = await db.tx(q => requestApproval(q, asA, { kind: 'test.cancelViaApi', targetType: 'post', targetId: up.assetId, change: {}, summary: ['x'] }));
+    assert.equal((await call('core-c', pa, { action: 'decide.cancel', opId: opId(), approvalId })).status, 403);
+    assert.equal((await call('core-a', pa, { action: 'decide.cancel', opId: opId(), approvalId })).status, 404); // not this profile's
+    assert.equal((await call('core-b', pc, { action: 'decide.cancel', opId: opId(), approvalId })).status, 404); // the partner decides, not cancels
+    assert.equal((await call('core-a', pc, { action: 'decide.cancel', opId: opId(), approvalId })).state, 'cancelled');
+    assert.equal((await call('core-a', pc, { action: 'decide.cancel', opId: opId(), approvalId })).status, 404);
+    assert.equal((await call('core-b', pc, { action: 'decide.approval', opId: opId(), approvalId, choice: 'approve' })).status, 409);
+    assert.deepEqual((await call('core-b', pc, { action: 'decide.approvals' })).items, []);
+    const [told] = await db.query(`select payload from feture.outbox where topic = 'decide.resolved'`);
+    assert.deepEqual([told.payload.state, told.payload.for], ['cancelled', accB]);
+  } finally { await pg.close(); }
+});
+
 test('partner approvals: partner decides, stored states, stale and expired never apply nor block, narrowing voids', async () => {
   const { pg, db } = await setup();
   try {
