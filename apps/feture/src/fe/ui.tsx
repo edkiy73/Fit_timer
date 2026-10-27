@@ -19,9 +19,19 @@ export function plate(seed:string):CSSProperties{
 const initial=(name:string)=>[...(name.trim()||'?')][0]!.toUpperCase();
 
 /** `av()` — photo, or initials on a plate; a couple without a photo is one circle with two halves. */
+// The server signs photo URLs per response, so the same avatar comes back under a new URL after every refetch and
+// would load and fade in again (the dock's «Я» blinked on each tab switch). A photo already shown keeps its URL for a
+// while: the browser has it, it paints at once, nothing blinks. Ten minutes stays well inside the signature's life.
+const shown=new Map<string,{src:string,at:number}>();
+function steady(src:string){
+ const key=src.split('?')[0]!;const was=shown.get(key);
+ if(was&&Date.now()-was.at<600e3)return was.src;
+ shown.set(key,{src,at:Date.now()});return src;
+}
+
 export function Av({name,src,size='',seed,couple}:{name:string,src?:string|null|undefined,size?:''|'xs'|'sm'|'lg'|'xl',seed?:string|undefined,couple?:[string,string]|undefined}){
  if(!src&&couple)return <span className={`av split ${size}`}>{couple.map((n,i)=><span key={i} className="avs ini"><div className="plate" style={plate((seed??n)+i)}/><b>{initial(n)}</b></span>)}</span>;
- if(src)return <span className={`av ${size}`}><img src={src} alt="" loading="lazy" draggable={false}/></span>;
+ if(src)return <span className={`av ${size}`}><img src={steady(src)} alt="" loading="lazy" draggable={false}/></span>;
  return <span className={`av ini ${size}`}><div className="plate" style={plate(seed??name)}/><b style={{position:'relative'}}>{initial(name)}</b></span>;
 }
 

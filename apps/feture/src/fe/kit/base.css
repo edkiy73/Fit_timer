@@ -1277,7 +1277,7 @@
 .v21 .dock{left:10px;right:10px;bottom:calc(10px + var(--safe-b));height:var(--dock);padding:5px;border:1px solid var(--line);border-radius:var(--r-xl);box-shadow:var(--shadow)}
 .v21 .dock button{height:auto;border-radius:var(--r-l);font-size:clamp(9.5px,2.7vw,11px);letter-spacing:-.01em;font-weight:600;transition:color .2s}
 .v21 .dock button svg{width:23px;height:23px}
-.v21 .dock button.on::before{content:"";position:absolute;inset:0;border-radius:var(--r-l);background:var(--raise);z-index:-1;animation:pop .3s var(--ease)}
+.v21 .dock button.on::before{content:"";position:absolute;inset:0;border-radius:var(--r-l);background:var(--raise);z-index:-1}
 .v21 .dock button.on svg{color:var(--accent)}
 .v21 .dock em{top:4px;box-shadow:none}
 .v21 .dock em.dot{top:8px}

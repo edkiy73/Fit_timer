@@ -29,5 +29,10 @@
 .fe-v21 img{transition:opacity .28s ease}
 .fe-v21 img:not(.ld){opacity:0}
 .fe-v21 .mcell .mbg.ld{opacity:1}
-.fe-v21 :is(.av,.mcell,.gtile,.dock-av,.pc-photo,.hero,.ph,.cover):has(img:not(.ld)){background:var(--raise);animation:fe-blink 1.4s ease-in-out infinite}
-@media (prefers-reduced-motion:reduce){.fe-v21 img{transition:none}.fe-v21 :is(.av,.mcell,.gtile,.dock-av,.pc-photo,.hero,.ph,.cover):has(img:not(.ld)){animation:none}}
+.fe-v21 :is(.av,.mcell,.gtile,.pc-photo,.hero,.ph,.cover):has(img:not(.ld)){background:var(--raise);animation:fe-blink 1.4s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.fe-v21 img{transition:none}.fe-v21 :is(.av,.mcell,.gtile,.pc-photo,.hero,.ph,.cover):has(img:not(.ld)){animation:none}}
+
+/* Owner, 28.10.2026: the dock does not blink or pop when switching tabs — the avatar there is shown at once, and the
+ * active tab's plate simply moves (no pop-in). Navigation chrome stays still; only content may load. */
+.fe-v21 .dock img{transition:none;opacity:1}
+.fe-v21 .dock .av:has(img){animation:none}
