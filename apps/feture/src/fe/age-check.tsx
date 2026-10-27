@@ -79,7 +79,7 @@ export function AgeCheckScreen(){
  if(s.verified){
   const until=s.until?new Date(s.until).toLocaleDateString(locale==='en'?'en':'ru',{day:'numeric',month:'long',year:'numeric'}):'';
   return <><Bar title={t('fe.age.statusTitle')} back="/n/settings"/><View className="nodock">
-   <Empty icon={ShieldCheck} role="status" title={t('fe.age.okTitle')} text={t('fe.age.okText')+(until?' '+t('fe.age.okUntil').replace('{date}',until):'')}>
+   <Empty icon={ShieldCheck} role="status" title={t('fe.age.okTitle')} text={t('fe.age.okText')+(until?' '+t('fe.age.okUntil').replace('{date}',until.replace(/\.$/,'')):'')}>
     <Btn onClick={()=>navigate(-1)}>{t('fe.age.continue')}</Btn></Empty>
   </View></>;
  }
