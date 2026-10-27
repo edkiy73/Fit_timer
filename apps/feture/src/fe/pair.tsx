@@ -2,10 +2,12 @@ import {useCallback,useEffect,useRef,useState} from 'react';
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {AtSign,Check,Heart,ShieldCheck,TriangleAlert,X} from 'lucide-react';
+import {AtSign,Check,Heart,ShieldCheck,TriangleAlert,Users,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Av,Bar,Btn,View,Skel} from './ui';
 import {useFe} from './session';
+import {Ask} from './me';
+import {useToast} from './toast';
 import {when} from './feed';
 
 /** Slice E (V21 Q01, Q06): a couple starts by an invitation to an exact nickname; one pending invitation at a time;
@@ -37,23 +39,53 @@ function usePartnerLookup(nick:string,personId:string|undefined,ownHandle:string
 }
 
 export function PairScreen(){
- const {state,call,reload,setActing}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();
- const couple=state.status==='ready'?state.boot.profiles.find(p=>p.kind==='couple'):undefined;
+ const {state,acting,call,reload,setActing}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();
+ const toast=useToast();
+ const couple=state.status==='ready'?state.boot.profiles.find(p=>p.kind==='couple'&&p.state!=='deleted'):undefined;
  const person=state.status==='ready'?state.boot.profiles.find(p=>p.kind==='person'):undefined;
  const [inv,setInv]=useState<z.infer<typeof invitesRes>|null>(null);const [c,setC]=useState<z.infer<typeof coupleRes>['couple']|null>(null);
  const [nick,setNick]=useState('');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [confirmStop,setConfirmStop]=useState(()=>new URLSearchParams(location.hash.split('?')[1]??'').get('stop')==='1');
+ const [fresh,setFresh]=useState(false);const [askNew,setAskNew]=useState(false);
  const op=useRef(newOpId());
  const lookup=usePartnerLookup(nick,person?.id,person?.handle);
  const load=useCallback(()=>{
   setFailure('');
-  if(couple)call('couple.get',{},coupleRes,{profileId:couple.id}).then(r=>setC(r.couple)).catch(e=>setFailure(feErrorMessage(e,t)));
-  else call('couple.invites',{},invitesRes,{asAccount:true}).then(setInv).catch(e=>setFailure(feErrorMessage(e,t)));
- },[call,couple,t]);
+  // While a stopped couple is being replaced (fresh) its profile is gone after the invitation: don't read it.
+  if(couple&&!fresh)call('couple.get',{},coupleRes,{profileId:couple.id}).then(r=>setC(r.couple)).catch(e=>setFailure(feErrorMessage(e,t)));
+  else setC(null);
+  if(!couple||fresh)call('couple.invites',{},invitesRes,{asAccount:true}).then(setInv).catch(e=>setFailure(feErrorMessage(e,t)));
+ },[call,couple,fresh,t]);
  useEffect(()=>{load();},[load]);
  const act=async(fn:()=>Promise<unknown>,after?:()=>void)=>{setBusy(true);setFailure('');try{await fn();after?.();load();}catch(e){setFailure(e instanceof FeError&&e.rule?t('fe.pair.rule.'+e.rule):feErrorMessage(e,t));}finally{setBusy(false);}};
  const meName=nameOf(person);
  if(state.status!=='ready')return null;
- if(couple&&c){
+ if(couple&&!fresh&&!c&&!failure)return <><Bar title={t('fe.pair.title')} back="/n/me"/><View><Skel kind="list"/></View></>;
+ // V21 Q07: a stopped couple — agree to restore (both within 30 days), or start a new couple, which ends the old one.
+ if(couple&&c&&c.state==='paused'&&!fresh){
+  const [me,other]=[c.members.find(m=>m.me),c.members.find(m=>!m.me)];const agreed=c.members.filter(m=>m.restoreAgreed).length;
+  const until=c.restoreUntil?new Date(c.restoreUntil).toLocaleDateString(locale==='en'?'en':'ru',{day:'numeric',month:'long'}):'';
+  return <>
+   <Bar title={t('fe.pq.stopped')} back="/n/me"/>
+   <View className="nodock"><div className="pair-wrap">
+    <div className="pair-scene"><span className="ps-av me"><Av name={nameOf(me)} seed={me?.profileId}/></span><span className="ps-link"><i/><i/><i/><b><Heart/></b></span><span className="ps-av ot"><Av name={nameOf(other)} seed={other?.profileId}/></span></div>
+    <h2 className="t center">{t('fe.pq.stoppedTitle')}</h2>
+    <p className="lead center">{t('fe.pq.stoppedLead')}</p>
+    <p className="note center">{t('fe.pq.agreed',{n:agreed,date:until})}</p>
+    <div className="btns mt16">
+     {me?.restoreAgreed?<Btn icon={Check} disabled>{t('fe.pq.waitPartner',{name:nameOf(other)})}</Btn>
+      :<Btn disabled={busy} busy={busy} onClick={()=>act(async()=>{const r=await call('couple.restore',{opId:newOpId()},z.object({ok:z.literal(true),state:z.string().optional()}).passthrough(),{profileId:couple.id});
+        toast(r.state==='active'?t('fe.pq.restored'):t('fe.pq.waitPartner',{name:nameOf(other)}),{type:'ok'});if(r.state==='active')reload();})}>{t('fe.pq.restore')}</Btn>}
+     <Btn kind="soft" disabled={busy} onClick={()=>setAskNew(true)}>{t('fe.pq.new')}</Btn>
+     <p className="note center">{t('fe.pq.newNote')}</p>
+     {acting?.kind==='couple'&&person&&<Btn kind="text" onClick={()=>{setActing(person.id);navigate('/n/me');}}>{t('fe.pq.toPersonal')}</Btn>}
+    </div>
+    {failure&&<div className="alert err mt12" role="alert"><span>{failure}</span></div>}
+   </div></View>
+   {askNew&&<Ask icon={Users} danger title={t('fe.pq.newTitle')} text={t('fe.pq.newText',{name:c.name||`${nameOf(me)} ${t('fe.pair.and')} ${nameOf(other)}`})} ok={t('fe.pq.newOk')}
+    onCancel={()=>setAskNew(false)} onOk={()=>{setAskNew(false);if(acting?.kind==='couple'&&person)setActing(person.id);setFresh(true);}}/>}
+  </>;
+ }
+ if(couple&&c&&!fresh){
   const [me,other]=[c.members.find(m=>m.me),c.members.find(m=>!m.me)];
   return <>
    <Bar title={t('fe.pair.settings')} back="/n/me"/>
@@ -98,7 +130,7 @@ export function PairScreen(){
       <label className="field"><span>{t('fe.pair.partnerNick')}</span><div className="inwrap"><AtSign/><input className="inp" value={nick} onChange={e=>setNick(e.target.value.replace(/^@/,''))} placeholder="nickname" autoCapitalize="off" spellCheck={false} maxLength={20}/></div><div className="fhint">{t('fe.pair.nickHint')}</div></label>
       {lookup.hit?<div className="li static"><Av name={nameOf(lookup.hit)} seed={lookup.hit.id} src={thumb(lookup.hit)} size="sm"/><span className="tx"><b>{nameOf(lookup.hit)}</b><small>@{lookup.hit.handle}</small></span><span className="pill ok"><Check/>{t('fe.pq.found')}</span></div>
        :lookup.issue?<p className="note">{t('fe.pq.issue.'+lookup.issue)}</p>:null}
-      <Btn disabled={busy||!lookup.hit} onClick={()=>act(async()=>{await call('couple.invite',{opId:op.current,handle:nick.trim()},ok,{asAccount:true});op.current=newOpId();setNick('');})}>{t('fe.pair.invite')}</Btn>
+      <Btn disabled={busy||!lookup.hit} onClick={()=>act(async()=>{await call('couple.invite',{opId:op.current,handle:nick.trim(),...(couple&&fresh?{replacePaused:true}:{})},ok,{asAccount:true});op.current=newOpId();setNick('');if(couple&&fresh)reload();})}>{t('fe.pair.invite')}</Btn>
      </div>}
    </>}
    {failure&&<div className="alert err mt12" role="alert"><span>{failure}</span></div>}

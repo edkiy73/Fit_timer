@@ -55,6 +55,9 @@ export function MeEditScreen(){
  const dirty=!!d&&!!base&&JSON.stringify(d)!==JSON.stringify(base);
  const set=(patch:Partial<Draft>)=>setD(v=>v?{...v,...patch}:v);
  const show=(k:Exclude<Only,null>)=>!only||only===k;
+ // Opened by a link (no app history behind it), back and «Сохранить» return to «Я» instead of leaving the app.
+ const home='/n/me'+(only==='priv'?'?layer=priv':'');const canBack=((history.state as {idx?:number}|null)?.idx??0)>0;
+ const leave=()=>canBack?navigate(-1):navigate(home,{replace:true});
  const fields=DETAIL_ROWS.filter(([f])=>!cp||COUPLE_ROWS.includes(f));
  const title=only==='media'?t('fe.me.photos'):only==='basics'?t('fe.me.basics'):only==='details'?(cp?t('fe.mx.detailsCouple'):t('fe.me.details')):only==='priv'?t('fe.priv.title'):(cp?t('fe.me.coupleProfile'):t('fe.mx.ed.myProfile'));
 
@@ -89,10 +92,10 @@ export function MeEditScreen(){
    if(JSON.stringify(d.photos.map(x=>x.id))!==JSON.stringify(base.photos.map(x=>x.id))){const r=await call('profile.photosSet',{opId:newOpId(),assetIds:d.photos.map(x=>x.id)},ok);pending||=!!r.pending;}
    if(d.privOn!==base.privOn&&!d.privOn)await call('private.setOn',{opId:newOpId(),on:false,confirm:true},ok);
    if(d.privOn!==base.privOn&&d.privOn)await call('private.setOn',{opId:newOpId(),on:true},ok);
-   if(d.privOn&&d.privText.trim()!==base.privText)await call('private.setText',{opId:newOpId(),text:d.privText.trim()},ok);
-   if(d.privOn&&JSON.stringify(d.privMedia.map(x=>x.id))!==JSON.stringify(base.privMedia.map(x=>x.id)))await call('private.setMedia',{opId:newOpId(),assetIds:d.privMedia.map(x=>x.id)},ok);
+   if(!cp&&d.privOn&&d.privText.trim()!==base.privText)await call('private.setText',{opId:newOpId(),text:d.privText.trim()},ok);
+   if(!cp&&d.privOn&&JSON.stringify(d.privMedia.map(x=>x.id))!==JSON.stringify(base.privMedia.map(x=>x.id)))await call('private.setMedia',{opId:newOpId(),assetIds:d.privMedia.map(x=>x.id)},ok);
    toast(pending?t('fe.me.pending'):only==='media'?t('fe.mx.ed.photosSaved'):t('fe.me.saved'),{type:'ok'});
-   navigate(-1);
+   leave();
   }catch(e){setFailure(feErrorMessage(e,t));}finally{setBusy(false);}
  };
 
@@ -125,7 +128,7 @@ export function MeEditScreen(){
  const anyDetails=!!d&&fields.some(([f])=>{const v=d.details[f];return Array.isArray(v)?v.length>0:!!v;});
  const who=only==='details'||(whoOpen??!anyDetails);
  return <>
-  <Bar title={title} back>{aud}</Bar>
+  <Bar title={title} back={canBack||home}>{aud}</Bar>
   <div className="view nodock cta1"><div className="wrap">
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :!d||!p?<Skel kind="card" rows={3}/>
@@ -154,14 +157,14 @@ export function MeEditScreen(){
       <div className="vault-h"><span className="vi"><Lock/></span><div><b>{t('fe.priv.title')}</b></div>
        <button type="button" className="vsw" role="switch" aria-checked={d.privOn} aria-label={t('fe.priv.title')} onClick={()=>d.privOn&&base?.privOn?setAskOff(true):set({privOn:!d.privOn})}><span className={'sw'+(d.privOn?' on':'')} aria-hidden="true"/></button></div>
       {d.privOn&&<div className="vault-b">
-       <section className="grp"><div className="grp-t"><span>{t('fe.mx.ed.privText')}</span></div><div className="card form-card">
+       {!cp&&<section className="grp"><div className="grp-t"><span>{t('fe.mx.ed.privText')}</span></div><div className="card form-card">
         <label className="field"><textarea className="inp" rows={5} maxLength={1000} value={d.privText} placeholder={t('fe.mx.ed.privPh')} aria-label={t('fe.mx.ed.privText')} onChange={e=>set({privText:e.target.value})}/><div className="counter">{d.privText.length} / 1000</div></label>
-       </div></section>
-       <section className="grp"><div className="grp-t"><span>{t('fe.mx.ed.privJars')}{jars.granted?' · '+jars.granted:''}</span>{jars.granted>0&&<button type="button" onClick={()=>navigate('/n/me/interests')}><Plus/>{t('fe.mx.ed.add')}</button>}</div>
-        {jars.granted===0&&<Btn kind="soft" icon={Plus} onClick={()=>navigate('/n/me/interests')}>{t('fe.int.add')}</Btn>}
+       </div></section>}
+       <section className="grp"><div className="grp-t"><span>{t('fe.mx.ed.privJars')}{jars.granted?' · '+jars.granted:''}</span>{jars.granted>0&&<button type="button" onClick={()=>navigate('/n/me/interests?add=1&vis=granted')}><Plus/>{t('fe.mx.ed.add')}</button>}</div>
+        {jars.granted===0&&<Btn kind="soft" icon={Plus} onClick={()=>navigate('/n/me/interests?add=1&vis=granted')}>{t('fe.int.add')}</Btn>}
         <p className="grp-n">{t('fe.mx.ed.privJarsFoot')}</p></section>
-       <section className="grp"><div className="grp-t"><span>{t('fe.mx.ed.privMedia')}</span><span className="note">{d.privMedia.length}/{PRIV_MAX}</span></div>
-        {d.privMedia.length?slots('privMedia',d.privMedia,PRIV_MAX):<Btn kind="soft" icon={Plus} disabled={!!uploading} busy={uploading==='privMedia'} onClick={()=>pick('privMedia')}>{t('fe.mx.ed.privUpload')}</Btn>}</section>
+       {!cp&&<section className="grp"><div className="grp-t"><span>{t('fe.mx.ed.privMedia')}</span><span className="note">{d.privMedia.length}/{PRIV_MAX}</span></div>
+        {d.privMedia.length?slots('privMedia',d.privMedia,PRIV_MAX):<Btn kind="soft" icon={Plus} disabled={!!uploading} busy={uploading==='privMedia'} onClick={()=>pick('privMedia')}>{t('fe.mx.ed.privUpload')}</Btn>}</section>}
       </div>}
      </section>}
      {failure&&<div className="alert err mt12" role="alert"><span>{failure}</span></div>}
