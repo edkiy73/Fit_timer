@@ -3,7 +3,7 @@ import { postsCommands } from '../../contracts/posts.mjs';
 import { fail, isUniqueViolation } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
-import { mediaDto } from '../media/assets.mjs';
+import { avatarSrc, mediaDto } from '../media/assets.mjs';
 import { blockProfile } from './social.mjs';
 import { canWrite } from './communities.mjs';
 
@@ -245,7 +245,9 @@ registerApprovalKind('post.edit', {
 
 /** Post DTO for one viewer. @param {Q} q @param {any} p @param {Acting} viewer @param {import('../media/assets.mjs').MediaConfig} media @param {boolean} showExplicit */
 async function postDto(q, p, viewer, media, showExplicit) {
-  const [author] = await q.query(`select id, kind, handle, name from feture.profile where id = $1`, [p.owner_profile_id]);
+  const [row] = await q.query(`select id, kind, handle, name, avatar_asset_id from feture.profile where id = $1`, [p.owner_profile_id]);
+  const { avatar_asset_id: authorAvatar, ...author } = row;
+  author.avatar = await avatarSrc(q, media, authorAvatar, viewer.profileId);
   const assets = await q.query(
     `select m.* from feture.media_attachment a join feture.media_asset m on m.id = a.asset_id where a.target_type = 'post' and a.target_id = $1 order by a.position`, [p.id]);
   const place = p.own ? 'own' : PUBLIC_AUD.has(p.audience) ? 'public' : 'private';
@@ -517,21 +519,29 @@ const run = {
     return { state: 'deleted' };
   },
 
-  async 'post.replies'(q, { acting: a, input }) {
+  async 'post.replies'(q, { acting: a, input, cfg }) {
     const viewer = need(a);
     await visiblePost(q, input.postId, viewer);
     const rows = await q.query(
       `select r.id, r.parent_id, r.state, r.body, r.created_at, r.edited_at, r.rev, r.author_profile_id = $2 mine,
          feture.blocked($2, r.author_profile_id) hidden,
-         (select json_build_object('id', p.id, 'kind', p.kind, 'handle', p.handle, 'name', p.name) from feture.profile p where p.id = r.author_profile_id and p.state = 'active') author,
+         (select json_build_object('id', p.id, 'kind', p.kind, 'handle', p.handle, 'name', p.name, 'avatarAssetId', p.avatar_asset_id) from feture.profile p where p.id = r.author_profile_id and p.state = 'active') author,
          (select count(*)::int from feture.reaction x where x.target_type = 'reply' and x.target_id = r.id) likes,
          exists (select 1 from feture.reply c where c.parent_id = r.id and c.state = 'published') has_replies
        from feture.reply r where r.post_id = $1 and r.state <> 'removed' order by r.created_at`, [input.postId, viewer.profileId]);
     // Deleted without live replies disappear; with replies they stay as a stub; blocked authors show as hidden.
-    const items = rows.filter(r => r.state === 'published' || r.has_replies).map(r => ({
-      id: r.id, parentId: r.parent_id, createdAt: r.created_at, editedAt: r.edited_at, likes: r.likes,
-      ...(r.state === 'deleted' ? { deleted: true } : r.hidden ? { hidden: true } : { body: r.body, author: r.author, mine: r.mine, rev: r.mine ? r.rev : undefined }),
-    }));
+    const items = [];
+    for (const r of rows.filter(x => x.state === 'published' || x.has_replies)) {
+      let author = null;
+      if (r.author) {
+        const { avatarAssetId, ...rest } = r.author;
+        author = { ...rest, avatar: await avatarSrc(q, cfg.media, avatarAssetId, viewer.profileId) };
+      }
+      items.push({
+        id: r.id, parentId: r.parent_id, createdAt: r.created_at, editedAt: r.edited_at, likes: r.likes,
+        ...(r.state === 'deleted' ? { deleted: true } : r.hidden ? { hidden: true } : { body: r.body, author, mine: r.mine, rev: r.mine ? r.rev : undefined }),
+      });
+    }
     return { items };
   },
 

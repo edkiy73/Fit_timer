@@ -151,3 +151,14 @@ export async function mediaDto(cfg, asset, ctx) {
     src: Object.fromEntries(variants.map((v, i) => [v, urls[i]])),
   };
 }
+
+/** Small avatar URL for lists (feed authors, replies, the shell): the profile photo as a public place shows it,
+ * or null when there is none the viewer may see (not approved, not safe, not ready).
+ * @param {Q} q @param {MediaConfig} cfg @param {string | null | undefined} assetId @param {string} viewerProfileId */
+export async function avatarSrc(q, cfg, assetId, viewerProfileId) {
+  if (!assetId || !cfg?.delivery) return null;
+  const [asset] = await q.query('select * from feture.media_asset where id = $1', [assetId]);
+  if (!asset) return null;
+  const d = await mediaDto(cfg, asset, { viewerProfileId, place: 'public', showExplicit: false }).catch(() => null);
+  return d && !d.blurred && d.src ? (d.src.thumb ?? d.src.card ?? null) : null;
+}

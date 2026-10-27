@@ -1,18 +1,18 @@
 // @ts-check
 import { platformCommands } from '../../contracts/platform.mjs';
 import { cancelApproval, decideApproval, listApprovals } from '../approvals.mjs';
-import { commitUpload, removeAsset, uploadIntent } from '../media/assets.mjs';
+import { avatarSrc, commitUpload, removeAsset, uploadIntent } from '../media/assets.mjs';
 import { myProfiles } from '../profiles.mjs';
 
 /** @typedef {import('../handler.mjs').Command} Command */
 
 /** @type {Record<keyof typeof platformCommands, Command['run']>} */
 const run = {
-  'session.bootstrap': async (q, { account }) => ({
+  'session.bootstrap': async (q, { account, cfg }) => ({
     account: { id: account.id, locale: account.locale, onboarded: !!account.person_profile_id },
-    profiles: (await myProfiles(q, account.id)).map(profileCard),
+    profiles: await cardsWithAvatars(q, cfg, await myProfiles(q, account.id)),
   }),
-  'profile.mine': async (q, { account }) => ({ profiles: (await myProfiles(q, account.id)).map(profileCard) }),
+  'profile.mine': async (q, { account, cfg }) => ({ profiles: await cardsWithAvatars(q, cfg, await myProfiles(q, account.id)) }),
   'media.uploadIntent': (q, { acting, cfg, input }) => uploadIntent(q, need(acting), cfg.media, input),
   'media.commit': (q, { acting, cfg, input }) => commitUpload(q, need(acting), cfg.media, input.assetId),
   'media.remove': (q, { acting, input }) => removeAsset(q, need(acting), input.assetId),
@@ -24,6 +24,13 @@ const run = {
 /** @type {Record<string, Command>} */
 export const platform = Object.fromEntries(
   Object.entries(platformCommands).map(([action, def]) => [action, { ...def, run: run[/** @type {keyof typeof run} */ (action)] }]));
+
+/** Own profiles with their photo (the owner sees it while it is still being checked). @param {any} q @param {any} cfg @param {any[]} rows */
+async function cardsWithAvatars(q, cfg, rows) {
+  const out = [];
+  for (const p of rows) out.push({ ...profileCard(p), avatar: await avatarSrc(q, cfg.media, p.avatar_asset_id, p.id) });
+  return out;
+}
 
 /** @param {any} p */
 function profileCard(p) {
