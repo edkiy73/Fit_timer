@@ -1,4 +1,4 @@
-import {useEffect,useState,type ReactNode} from 'react';
+import {useEffect,useRef,useState,type ReactNode} from 'react';
 import {useNavigate,useParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
@@ -229,6 +229,9 @@ function EventEditor({edit,reload}:{edit?:Edit,reload?:()=>void}){
    }else setNotice({kind:'err',text:feErrorMessage(x,t)});
   }finally{setBusy(false);}
  };
+ // A refusal shows under the long step-4 preview: bring it into view, never leave it below the fold.
+ const noticeRef=useRef<HTMLDivElement>(null);
+ useEffect(()=>{if(notice?.kind==='err')noticeRef.current?.scrollIntoView({block:'center',behavior:'smooth'});},[notice]);
  const removeDraft=async()=>{
   if(!draftId||busy)return;setBusy(true);setNotice(null);
   const payload={draftId};
@@ -332,7 +335,7 @@ function EventEditor({edit,reload}:{edit?:Edit,reload?:()=>void}){
    <div className="stepper"><span>{step}/4 · {names[step-1]}</span><div className="qprog"><i style={{width:`${step*25}%`}}/></div></div>
    {edit&&edit.pendingChange!=null&&step===1&&<div className="alert warn" style={{marginBottom:12}}><Clock/><span>{t('fe.ece.e.pendingChange')}</span></div>}
    {step<4?<section className="grp"><div className="card form-card">{body}</div></section>:body}
-   {notice&&<div className={'alert mt12 '+notice.kind} role={notice.kind==='ok'?'status':'alert'}><span>{notice.text}{stale&&reload&&<button type="button" className="btn text auto" style={{display:'flex',marginTop:6}} onClick={reload}><RefreshCw/>{t('fe.ece.reload')}</button>}</span></div>}
+   {notice&&<div ref={noticeRef} className={'alert mt12 '+notice.kind} role={notice.kind==='ok'?'status':'alert'}><span>{notice.text}{stale&&reload&&<button type="button" className="btn text auto" style={{display:'flex',marginTop:6}} onClick={reload}><RefreshCw/>{t('fe.ece.reload')}</button>}</span></div>}
    {draftId&&(asking
     ?<div className="alert warn mt12" role="alertdialog"><span>{t('fe.ce.draftDeleteAsk')}</span><div className="row g8 mt8"><Btn kind="danger" size="sm" auto onClick={removeDraft} disabled={busy}>{t('fe.ce.draftDeleteOk')}</Btn><Btn kind="text" size="sm" auto onClick={()=>setAsking(false)}>{t('fe.ce.cancel')}</Btn></div></div>
     :<div className="row mt12"><Btn kind="text" size="sm" auto onClick={()=>setAsking(true)} disabled={busy}>{t('fe.ce.draftDelete')}</Btn></div>)}
