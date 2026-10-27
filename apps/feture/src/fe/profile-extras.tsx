@@ -1,9 +1,9 @@
-import {useCallback,useEffect,useRef,useState,type ReactNode} from 'react';
+import {Fragment,useCallback,useEffect,useRef,useState,type ReactNode} from 'react';
 import {useNavigate,useParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Ban,Check,ChevronRight,EyeOff,Flag,Heart,History,Info,Lock,MapPin,ShieldCheck,Undo2,Users,X} from 'lucide-react';
+import {Ban,Check,ChevronRight,EyeOff,Flag,Heart,History,Info,Lock,LockOpen,MapPin,ShieldCheck,Undo2,Users,X} from 'lucide-react';
 import {Av,Bar,Btn,Empty,Seg,View,plate} from './ui';
 import {useFe} from './session';
 
@@ -65,19 +65,19 @@ export const personProfile=z.object({id:z.uuid(),kind:z.enum(['person','couple']
  age:z.number().nullable(),city:z.object({ru:z.string().nullable(),en:z.string().nullable()}).nullable(),avatar:media.nullable(),photos:z.array(media),details:z.record(z.string(),z.unknown())}).passthrough();
 export const personProfileRes=z.object({ok:z.literal(true),profile:personProfile});
 export type PersonProfile=z.infer<typeof personProfile>;
-const src=(m:z.infer<typeof media>|null|undefined)=>m&&!m.pending?m.src?.card??m.src?.full??m.src?.thumb??null:null;
+export const mediaSrc=(m:z.infer<typeof media>|null|undefined)=>m&&!m.pending?m.src?.card??m.src?.full??m.src?.thumb??null:null;
 export const personName=(p:{name:string|null,handle:string|null}|null)=>p?.name||(p?.handle?'@'+p.handle:'');
 
 /** The hero (photo with name, age, city) or the initials block, as on another person's profile. */
 export function PersonHero({p}:{p:PersonProfile}){
- const {locale}=useI18n();const name=personName(p);const ph=src(p.avatar);const city=p.city?(locale==='en'?p.city.en:p.city.ru):null;
+ const {locale}=useI18n();const name=personName(p);const ph=mediaSrc(p.avatar);const city=p.city?(locale==='en'?p.city.en:p.city.ru):null;
  return ph?<div className="hero"><img className="mbg" src={ph} alt="" aria-hidden="true" draggable={false}/><img src={ph} alt={name} draggable={false}/>
    <div className="pc-info"><h2 className="pc-name" tabIndex={-1}><span className="pcn">{name}</span>{p.age?<span>{p.age}</span>:null}</h2>{city&&<div className="pc-who"><span className="pl"><MapPin/>{city}</span></div>}</div></div>
   :<div className="empty"><Av name={name} seed={p.id} size="xl"/><h3>{name}{p.age?', '+p.age:''}</h3>{city&&<p>{city}</p>}</div>;
 }
 export function PersonBio({p}:{p:PersonProfile}){return p.bio?<div className="p-bio"><div className="md bio"><p>{p.bio}</p></div></div>:null;}
 export function PersonPhotos({p}:{p:PersonProfile}){
- const list=p.photos.filter(ph=>src(ph));
+ const list=p.photos.filter(ph=>mediaSrc(ph));
  return list.length>1?<section className="grp ph20"><div className="ph-slots">{list.map((ph,i)=><div key={i} className={'mi'+(i===0?' big':'')}><img src={ph.src?.card??ph.src?.thumb} alt="" draggable={false}/></div>)}</div></section>:null;
 }
 
@@ -169,7 +169,7 @@ export function CompatScreen(){
  useEffect(()=>{load();},[load]);
  const name=personName(p);
  const me={name:acting?.name||acting?.handle||'?',id:acting?.id??'me',src:acting?.avatar??null};
- const them={name:name||'?',id,src:src(p?.avatar)};
+ const them={name:name||'?',id,src:mediaSrc(p?.avatar)};
  return <>
   <Bar title={t('fe.px.cmp.title')} back/>
   <View>
@@ -196,10 +196,19 @@ export function CompatScreen(){
 }
 
 /* ---------- links (F2) ---------- */
-const KINDS=['partner','play','ds','mentor','meta','friend'] as const;
-type Kind=typeof KINDS[number];
-const SIDES:Partial<Record<Kind,readonly ['dom','sub']|readonly ['mentor','mentee']>>={ds:['dom','sub'],mentor:['mentor','mentee']};
-const OPPOSITE:Record<string,string>={dom:'sub',sub:'dom',mentor:'mentee',mentee:'mentor'};
+export const KINDS=['partner','play','ds','mentor','meta','friend'] as const;
+export type Kind=typeof KINDS[number];
+export const SIDES:Partial<Record<Kind,readonly ['dom','sub']|readonly ['mentor','mentee']>>={ds:['dom','sub'],mentor:['mentor','mentee']};
+export const OPPOSITE:Record<string,string>={dom:'sub',sub:'dom',mentor:'mentee',mentee:'mentor'};
+/** «Наставничество · учит» — the kind, plus the other side's role (`side` is the own side) when the kind has sides. */
+export const linkLabel=(t:T,kind:string,side?:string|null)=>{const theirs=side?OPPOSITE[side]:null;return t('fe.px.lk.k.'+kind)+(theirs?' · '+t('fe.px.lk.s.'+theirs).toLowerCase():'');};
+const linkOther=z.object({id:z.uuid(),kind:z.string(),handle:z.string().nullable(),name:z.string().nullable()});
+const linkView=z.object({id:z.uuid(),kind:z.string(),side:z.string().nullable(),vis:z.enum(['all','followers','us']),other:linkOther,
+ change:z.object({kind:z.string(),mine:z.boolean()}).nullable()});
+export type LinkView=z.infer<typeof linkView>;
+/** `links.mine`: the acting profile's incoming proposals, sent ones and confirmed links (with its own visibility). */
+export const linksMineRes=z.object({ok:z.literal(true),incoming:z.array(linkView),sent:z.array(linkView),confirmed:z.array(linkView)});
+export type LinksMine=z.infer<typeof linksMineRes>;
 const linksRes=z.object({ok:z.literal(true),items:z.array(z.object({id:z.string(),kind:z.string(),side:z.string().nullable(),
  other:z.object({id:z.uuid(),kind:z.string(),handle:z.string().nullable(),name:z.string().nullable()})}).passthrough())});
 
@@ -212,42 +221,12 @@ export function LinksSection({profileId}:{profileId:string}){
  return <section className="grp"><div className="grp-t"><span>{t('fe.px.lk.title')}</span></div>
   <div className="card list">{items.map(l=>{const name=l.other.name||(l.other.handle?'@'+l.other.handle:'?');
    // `side` is this profile's side; the row names the other one's, as in the prototype's linkLabel.
-   const theirs=l.side?OPPOSITE[l.side]:null;const label=t('fe.px.lk.k.'+l.kind)+(theirs?' · '+t('fe.px.lk.s.'+theirs).toLowerCase():'');
+   const label=linkLabel(t,l.kind,l.side);
    return <button key={l.id} type="button" className="li" onClick={()=>navigate(l.other.id===acting?.id?'/n/me':'/n/people/'+l.other.id)}>
     <Av name={name} seed={l.other.id} size="sm"/><span className="tx"><b>{name}</b><small>{label}</small></span><ChevronRight/>
    </button>;})}</div>
   <p className="grp-n">{t('fe.px.lk.foot')}</p>
  </section>;
-}
-
-/** «Предложить связь» (P22 as a sheet): kind, own side for D/s and mentoring, own visibility. */
-function ProposeLink({profileId,name,onClose,onDone}:{profileId:string,name:string,onClose:()=>void,onDone:(msg:string)=>void}){
- const {call,acting}=useFe();const {t}=useI18n();
- const [kind,setKind]=useState<Kind>(acting?.kind==='couple'?'friend':'play');const [mySide,setSide]=useState<string|null>(null);
- const [vis,setVis]=useState<'all'|'followers'|'us'>('all');const [busy,setBusy]=useState(false);const [err,setErr]=useState('');
- const op=useRef(newOpId());const sides=SIDES[kind];const we=acting?.kind==='couple';
- const send=async()=>{
-  if(sides&&!mySide){setErr(t('fe.px.lk.pickSide'));return;}
-  setBusy(true);setErr('');
-  try{const r=await call('link.propose',{opId:op.current,profileId,kind,...(sides&&mySide?{mySide}:{}),vis},ok);
-   onDone(r.pending?t('fe.px.lk.pending'):fill(t('fe.px.lk.sent'),{name}));}
-  catch(e){setErr(pxError(e,t));op.current=newOpId();}finally{setBusy(false);}
- };
- return <Sheet full title={t('fe.px.lk.new')} onClose={onClose} foot={<Btn onClick={send} disabled={busy}>{t('fe.px.lk.send')}</Btn>}>
-  <section className="grp"><div className="grp-t"><span>{t('fe.px.lk.kind')}</span></div><div className="card list" role="radiogroup" aria-label={t('fe.px.lk.kind')}>
-   {KINDS.map(k=><button key={k} type="button" className={'radio'+(kind===k?' on':'')} role="radio" aria-checked={kind===k} onClick={()=>{setKind(k);setSide(null);setErr('');}}>
-    <i/><span className="tx">{t('fe.px.lk.k.'+k)}{SIDES[k]&&<small className="note">{SIDES[k]!.map(s=>t('fe.px.lk.s.'+s).toLowerCase()).join(' / ')}</small>}</span></button>)}
-  </div></section>
-  {sides&&<section className="grp"><div className="grp-t"><span>{we?t('fe.px.lk.sideWe'):t('fe.px.lk.side')}</span></div><div className="card">
-   <div className="chips">{sides.map(s=><button key={s} type="button" className={'chip'+(mySide===s?' on':'')} aria-pressed={mySide===s} onClick={()=>{setSide(s);setErr('');}}>
-    {(we?t('fe.px.lk.we'):t('fe.px.lk.i'))+' · '+t('fe.px.lk.s.'+s).toLowerCase()}</button>)}</div>
-  </div><p className="grp-n">{fill(t('fe.px.lk.opposite'),{name})}</p></section>}
-  <section className="grp"><div className="grp-t"><span>{t('fe.px.lk.vis')}</span></div><div className="card">
-   <div className="chips" role="radiogroup" aria-label={t('fe.px.lk.vis')}>{(['all','followers','us'] as const).map(v=><button key={v} type="button" className={'chip'+(vis===v?' on':'')} role="radio" aria-checked={vis===v} onClick={()=>setVis(v)}>{t('fe.px.lk.vis.'+v)}</button>)}</div>
-  </div><p className="grp-n">{t('fe.px.lk.visFoot')}</p></section>
-  <div className="alert info mt16"><Info/><span>{fill(t('fe.px.lk.info'),{name})}</span></div>
-  {err&&<div className="alert err mt12" role="alert"><span>{err}</span></div>}
- </Sheet>;
 }
 
 /* ---------- the person menu (S02) ---------- */
@@ -289,12 +268,12 @@ function Block({profileId,name,onClose,onDone}:{profileId:string,name:string,onC
  </Sheet>;
 }
 
-type MenuStep='menu'|'report'|'block'|'link'|null;
+type MenuStep='menu'|'report'|'block'|null;
 /** The ⋯ menu of another person's profile and its sheets. `blocked` is kept by the screen: a blocked profile no
  * longer loads, so the screen shows its own blocked state with «Разблокировать». */
 export function PersonMenu({profileId,name,step,setStep,blocked,setBlocked,toast}:{profileId:string,name:string,step:MenuStep,setStep:(s:MenuStep)=>void,
  blocked:boolean,setBlocked:(b:boolean)=>void,toast:(msg:string,err?:boolean)=>void}){
- const {call}=useFe();const {t}=useI18n();const [hidden,setHidden]=useState<boolean|null>(null);const [busy,setBusy]=useState(false);
+ const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const [hidden,setHidden]=useState<boolean|null>(null);const [busy,setBusy]=useState(false);
  useEffect(()=>{if(step!=='menu'||hidden!==null||blocked)return;call('feedHide.list',{},hideList).then(r=>setHidden(r.items.some(i=>i.kind==='author'&&i.target_id===profileId))).catch(()=>{});},[step,hidden,blocked,call,profileId]);
  const close=useCallback(()=>setStep(null),[setStep]);
  const hide=async()=>{setBusy(true);const on=!hidden;
@@ -307,7 +286,7 @@ export function PersonMenu({profileId,name,step,setStep,blocked,setBlocked,toast
   <span className="ico">{icon}</span><span className="tx"><b>{title}</b>{sub&&<small>{sub}</small>}</span></button>;
  if(step==='menu')return <Sheet title={name} onClose={close}><div className="card list">
   {blocked?row(<Ban/>,t('fe.px.menu.unblock'),unblock):<>
-   {row(<Users/>,t('fe.px.menu.link'),()=>setStep('link'),t('fe.px.menu.linkSub'))}
+   {row(<Users/>,t('fe.px.menu.link'),()=>{close();navigate('/n/people/'+profileId+'/link');},t('fe.px.menu.linkSub'))}
    {row(<EyeOff/>,hidden?t('fe.px.menu.unhide'):t('fe.px.menu.hide'),hide,hidden?undefined:t('fe.px.menu.hideSub'))}
    {row(<Flag/>,t('fe.px.menu.report'),()=>setStep('report'),undefined,true)}
    {row(<Ban/>,t('fe.px.menu.block'),()=>setStep('block'),t('fe.px.menu.blockSub'),true)}
@@ -315,7 +294,6 @@ export function PersonMenu({profileId,name,step,setStep,blocked,setBlocked,toast
  </div></Sheet>;
  if(step==='report')return <Report profileId={profileId} onClose={close} onDone={(msg,b)=>{close();if(b)setBlocked(true);toast(msg);}}/>;
  if(step==='block')return <Block profileId={profileId} name={name} onClose={close} onDone={msg=>{close();setBlocked(true);toast(msg);}}/>;
- if(step==='link')return <ProposeLink profileId={profileId} name={name} onClose={close} onDone={msg=>{close();toast(msg);}}/>;
  return null;
 }
 export type {MenuStep};
@@ -341,7 +319,7 @@ export function HistoryScreen(){
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={pxError(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :!r?<p className="note" role="status">{t('fe.loading')}</p>
     :!r.items.length?<Empty icon={History} title={t('fe.px.h.empty')} text={t('fe.px.h.emptyText')}/>
-    :<div className="hist">{r.items.map(h=>{const p=h.profile;const name=personName(p)||'?';const ph=src(p.avatar);const done=back.has(p.id);
+    :<div className="hist">{r.items.map(h=>{const p=h.profile;const name=personName(p)||'?';const ph=mediaSrc(p.avatar);const done=back.has(p.id);
      return <div key={p.id} className="hwrap">
       <button type="button" className="hcard" onClick={()=>navigate('/n/people/'+p.id)}>
        {ph?<img src={ph} alt="" draggable={false}/>:<div className="plate" style={plate(p.id)}/>}
@@ -358,27 +336,78 @@ export function HistoryScreen(){
 }
 
 /* ---------- «Как видят» (P03) ---------- */
-/** `/n/me/preview`: the own profile through `profile.get`, rendered as another person's profile; photos still under
- * review are left out, as others don't see them. The buttons are inert. */
+type Lv='all'|'granted'|'card';
+const previewProfileRes=z.object({ok:z.literal(true),profile:personProfile.extend({detailsVis:z.string().nullable().optional()})});
+const ownPrivRes=z.object({ok:z.literal(true),exists:z.boolean(),on:z.boolean().optional(),text:z.string().nullable().optional(),available:z.array(z.string()).optional()}).passthrough();
+const ownSettingsRes=z.object({ok:z.literal(true),settings:z.object({discoverMode:z.string()}).passthrough()});
+const optionsRes=z.object({ok:z.literal(true),options:z.array(z.object({kind:z.string(),code:z.string(),ru:z.string().nullable(),en:z.string().nullable()}))});
+const DETAIL_ROWS:[string,string][]=[['genders','gender'],['orients','orient'],['roles','role'],['status','status'],['formats','format'],['seeks','seek']];
+type Preview={p:z.infer<typeof previewProfileRes>['profile'],links:LinksMine|null,priv:z.infer<typeof ownPrivRes>|null,discover:string|null,options:z.infer<typeof optionsRes>['options']};
+
+/** `/n/me/preview`: the own profile as others see it, with the prototype's audience switch «Все / С доступом /
+ * Знакомства». Everything is the server's own data about this profile, filtered by the owner's settings: details by
+ * `detailsVis`, links by the own link visibility (the other side's choice may hide more), the private part from the
+ * own `private.get` — the server has no «as a person with access» view, so «С доступом» is marked as a preview.
+ * Photos still under review are left out; the buttons are inert. */
 export function MePreviewScreen(){
- const {call,acting}=useFe();const {t}=useI18n();
- const [p,setP]=useState<PersonProfile|null>(null);const [error,setError]=useState<unknown>(null);
- const load=useCallback(()=>{if(!acting)return;setError(null);call('profile.get',{profileId:acting.id},personProfileRes).then(r=>setP(r.profile)).catch(setError);},[call,acting]);
+ const {call,acting}=useFe();const {t,locale}=useI18n();
+ const [lv,setLv]=useState<Lv>('all');const [d,setD]=useState<Preview|null>(null);const [error,setError]=useState<unknown>(null);
+ const load=useCallback(()=>{if(!acting)return;setError(null);
+  Promise.all([call('profile.get',{profileId:acting.id},previewProfileRes),call('links.mine',{},linksMineRes).catch(()=>null),
+   call('private.get',{profileId:acting.id},ownPrivRes).catch(()=>null),call('profile.settings',{},ownSettingsRes).catch(()=>null),
+   call('catalog.get',{},optionsRes,{asAccount:true}).then(r=>r.options).catch(()=>[])])
+   .then(([a,links,priv,s,options])=>setD({p:a.profile,links,priv,discover:s?.settings.discoverMode??null,options})).catch(setError);},[call,acting]);
  useEffect(()=>{load();},[load]);
+ const label=(kind:string,code:string)=>{const o=d?.options.find(x=>x.kind===kind&&x.code===code);return o?((locale==='en'?o.en||o.ru:o.ru||o.en)??code):code;};
+ const body=(p:Preview['p'],aud:'all'|'granted')=>{
+  const dv=p.detailsVis??'only';const details=p.kind==='person'&&(dv==='all'||aud==='granted'&&dv==='granted');
+  const confirmed=d?.links?.confirmed??[];const shown=confirmed.filter(l=>l.vis==='all');const hidden=confirmed.length-shown.length;
+  const priv=d?.priv;const scopes=(priv?.available??[]).map(s=>t('fe.priv.scope.'+s)).join(', ');
+  return <>
+   <PersonBio p={p}/>
+   {details&&<section className="grp"><div className="grp-t"><span>{t('fe.me.details')}</span></div>
+    <div className="card"><dl className="kv">{DETAIL_ROWS.map(([field,kind])=>{const v=p.details[field];const codes=Array.isArray(v)?v as string[]:typeof v==='string'?[v]:[];
+     return codes.length?<Fragment key={field}><dt>{t('fe.reg.kind.'+kind)}</dt><dd>{codes.map(c=>label(kind,c)).join(', ')}</dd></Fragment>:null;})}</dl></div>
+   </section>}
+   {confirmed.length>0&&<section className="grp"><div className="grp-t"><span>{t('fe.px.lk.title')}</span></div>
+    {shown.length>0&&<div className="card list">{shown.map(l=>{const name=personName(l.other)||'?';
+     return <div key={l.id} className="li"><Av name={name} seed={l.other.id} size="sm"/><span className="tx"><b>{name}</b><small>{linkLabel(t,l.kind,l.side)}</small></span></div>;})}</div>}
+    <p className="grp-n">{[shown.length?t('fe.px.lk.foot'):'',hidden?fill(t('fe.ln.pv.linksHidden'),{n:hidden}):''].filter(Boolean).join(' ')}</p>
+   </section>}
+   {priv&&(priv.on?(aud==='granted'
+     ?<section className="grp"><div className="grp-t"><span>{t('fe.priv.title')}</span></div>
+      <div className="card">{priv.text?<div className="md bio"><p>{priv.text}</p></div>:<p className="note">{t('fe.priv.emptyText')}</p>}</div></section>
+     :(priv.available??[]).length>0&&<section className="grp"><div className="grp-t"><span>{t('fe.priv.title')}</span></div>
+      <div className="card"><div className="fact"><i className="v"><Lock/></i><span>{fill(t('fe.priv.closed'),{scopes})}</span></div>
+       <div inert><Btn kind="soft" size="md" icon={LockOpen} className="mt12" aria-disabled="true">{t('fe.priv.ask')}</Btn></div></div></section>)
+    :aud==='granted'&&<section className="grp"><div className="grp-t"><span>{t('fe.priv.title')}</span></div><p className="note">{t('fe.ln.pv.privOff')}</p></section>)}
+   <PersonPhotos p={p}/>
+  </>;
+ };
+ const p=d?.p;const ph=p?mediaSrc(p.avatar):null;const city=p?.city?(locale==='en'?p.city.en:p.city.ru):null;
  return <>
   <Bar title={t('fe.px.pv.title')} back/>
   <View>
-   <div className="alert info mt12"><Info/><span>{t('fe.px.pv.note')}</span></div>
+   <Seg value={lv} onChange={setLv} label={t('fe.px.pv.title')} options={(['all','granted','card'] as const).map(id=>({id,label:t('fe.ln.pv.'+id)}))}/>
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={pxError(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :!p?<p className="note" role="status">{t('fe.loading')}</p>
+    :lv==='card'?<>
+     <div className="mt12"><div className="card18">
+      {ph?<><img className="mbg" src={ph} alt="" aria-hidden="true" draggable={false}/><img src={ph} alt={personName(p)} draggable={false}/></>:<div className="plate" style={plate(p.id)}/>}
+      <div className="pc-info"><h2 className="pc-name"><span className="pcn">{personName(p)}</span>{p.age?<span>{p.age}</span>:null}</h2>
+       {city&&<div className="pc-who"><span className="pl"><MapPin/>{city}</span></div>}</div>
+     </div></div>
+     <p className="note center mt12">{d?.discover!=='visible'?t('fe.ln.pv.cardOff'):!ph?t('fe.ln.pv.cardNoPhoto'):t('fe.ln.pv.cardOn')}</p>
+     <div className="pc-body pc-full p3-card21">{body(p,'all')}</div>
+    </>
     :<>
+     <div className="alert info mt12"><Info/><span>{lv==='granted'?t('fe.ln.pv.noteGranted'):t('fe.ln.pv.noteAll')}</span></div>
      <PersonHero p={p}/>
      <div className="p-acts" inert>
       <Btn kind="primary" aria-disabled="true">{t('fe.people.follow')}</Btn>
       <Btn kind="soft" icon={Heart} aria-disabled="true">{t('fe.people.like')}</Btn>
      </div>
-     <PersonBio p={p}/>
-     <PersonPhotos p={p}/>
+     {body(p,lv)}
     </>}
   </View>
  </>;
