@@ -17,3 +17,4 @@ export const Радиосписок:S={name:'Радиосписок',render:()=>
 export const Галочка:S={render:()=>{const [a,setA]=useState(false);return <Stack gap={2}><Check on={a} onChange={setA}>Принимаю условия и политику</Check><Check on={false} error onChange={()=>{}}>Ошибка — без отметки дальше нельзя</Check></Stack>;}};
 export const Переключатель:S={render:()=>{const [a,setA]=useState(true);return <Stack row gap={3}><Switch label="Включён" on={a} onChange={setA}/><Switch label="Выключен" on={false} disabled onChange={()=>{}}/></Stack>;}};
 export const Ползунок:S={render:()=>{const [v,setV]=useState(30);return <Field label={`Возраст до ${v}`}><Range label="Возраст" min={18} max={99} value={v} onChange={setV}/></Field>;}};
+export const Метка:S={name:'Чип-метка (без нажатия)',render:()=><Chips><Chip>Статья</Chip><Chip on>Выбрано</Chip></Chips>};

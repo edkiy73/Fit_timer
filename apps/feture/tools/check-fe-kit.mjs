@@ -23,7 +23,8 @@ const TSX = [
   ['input', /<input\b/g],
   ['textarea', /<textarea\b/g],
   ['select', /<select\b/g],
-  ['inline style', /style=\{\{/g],
+  // A style object that only passes CSS variables (a value from data: a bar width, an aspect ratio) is allowed.
+  ['inline style', /style=\{\{(?!\s*['"]--)/g],
   ['heading', /<h[1-5]\b/g],
   ['card', /className=(?:"|\{['`])[^"'`}]*\bcard\b/g],
   ['pill', /className=(?:"|\{['`])[^"'`}]*\bpill\b/g],

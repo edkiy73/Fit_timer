@@ -33,3 +33,4 @@ export const Круглая:StoryObj<typeof IconBtn>={name:'Круглая кн�
 export const КруглыеВсе:StoryObj<typeof IconBtn>={name:'Круглые: все',render:()=><Stack row gap={3}>
  <IconBtn icon={Bell} label="Обычная"/><IconBtn icon={Heart} kind="ghost" label="Прозрачная"/><IconBtn icon={Plus} kind="add" label="Акцент"/><IconBtn icon={Trash2} size="sm" label="Маленькая"/>
  <IconBtn icon={Bell} label="С бейджем" badge={4}/><IconBtn icon={Bell} label="Много" badge={120}/><IconBtn icon={Bell} label="Точка" badge="dot"/><IconBtn icon={Settings} label="Выключена" disabled/></Stack>};
+export const ВРяду:S={name:'В ряду: по ширине текста (fit)',render:()=><div className="row g8"><Btn kind="soft" fit>Изменить</Btn><Btn>Опубликовать</Btn></div>};

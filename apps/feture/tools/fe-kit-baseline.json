@@ -108,7 +108,7 @@
   "chip": 1,
   "notice": 1,
   "textarea": 1,
-  "inline style": 5,
+  "inline style": 4,
   "card": 2,
   "section label": 1
  },
@@ -141,7 +141,7 @@
   "round button": 3,
   "button": 8,
   "input": 1,
-  "inline style": 3,
+  "inline style": 2,
   "heading": 1,
   "card": 7,
   "radio": 1,
@@ -227,7 +227,7 @@
   "note": 1
  },
  "src/fe/post-parts.tsx": {
-  "inline style": 3
+  "inline style": 2
  },
  "src/fe/private.tsx": {
   "switch": 1,
@@ -249,7 +249,7 @@
   "round button": 4,
   "button": 7,
   "textarea": 1,
-  "inline style": 5,
+  "inline style": 3,
   "heading": 5,
   "card": 10,
   "pill": 5,
@@ -335,7 +335,7 @@
  "src/fe/welcome.tsx": {
   "round button": 2,
   "button": 2,
-  "inline style": 3,
+  "inline style": 1,
   "heading": 2
  }
 }

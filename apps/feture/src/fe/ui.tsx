@@ -1,4 +1,4 @@
-import {useLayoutEffect,useState,type ButtonHTMLAttributes,type CSSProperties,type ReactNode} from 'react';
+import {forwardRef,useLayoutEffect,useState,type ButtonHTMLAttributes,type CSSProperties,type ReactNode} from 'react';
 import {createPortal} from 'react-dom';
 import {useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
@@ -26,21 +26,21 @@ export function Av({name,src,size='',seed,couple}:{name:string,src?:string|null|
 }
 
 /** `bar()` — the screen header; «‹» goes back within the tab's stack. */
-export function Bar({title,back,small,children}:{title:string,back?:string|true,small?:boolean,children?:ReactNode}){
+export function Bar({title,back,onBack,small,children}:{title:string,back?:string|true,onBack?:()=>void,small?:boolean,children?:ReactNode}){
  const navigate=useNavigate();const {t}=useI18n();
  return <header className="bar">
-  {back&&<button type="button" className="ibtn ghost" aria-label={t('fe.back')} onClick={()=>typeof back==='string'?navigate(back):navigate(-1)}><ChevronLeft/></button>}
-  <h1 className={small||back?'sm':''} tabIndex={-1}>{title}</h1>
+  {(back||onBack)&&<button type="button" className="ibtn ghost" aria-label={t('fe.back')} onClick={()=>onBack?onBack():typeof back==='string'?navigate(back):navigate(-1)}><ChevronLeft/></button>}
+  <h1 className={small||back||onBack?'sm':''} tabIndex={-1}>{title}</h1>
   {children}
  </header>;
 }
 
 type BtnProps=ButtonHTMLAttributes<HTMLButtonElement>&{kind?:'primary'|'soft'|'text'|'danger',size?:''|'md'|'sm',auto?:boolean,icon?:LucideIcon};
 /** `.btn` — 48 / md 44 / sm 36; one main button per group. */
-export function Btn({kind='primary',size='',auto,icon:Icon,className,children,type='button',busy,...rest}:BtnProps&{busy?:boolean}){
- // `busy` is the prototype's `.btn.busy`: the label stays, a spinner follows it, so the button never changes width.
- return <button type={type} className={['btn',kind,size,auto?'auto':'',busy?'busy':'',className].filter(Boolean).join(' ')} aria-busy={busy||undefined} {...rest}>{Icon&&<Icon/>}{children}</button>;
-}
+export const Btn=forwardRef<HTMLButtonElement,BtnProps&{busy?:boolean,fit?:boolean}>(function Btn({kind='primary',size='',auto,fit,icon:Icon,className,children,type='button',busy,...rest},ref){
+ // `busy` blinks in place (owner: never a spinner); `fit` keeps the button at its text width inside a row.
+ return <button ref={ref} type={type} className={['btn',kind,size,auto?'auto':'',fit?'k-fit':'',busy?'busy':'',className].filter(Boolean).join(' ')} aria-busy={busy||undefined} {...rest}>{Icon&&<Icon/>}{children}</button>;
+});
 
 /** `empty()` — one look for empty, error and unavailable states. */
 export function Empty({icon:Icon,title,text,children,role}:{icon:LucideIcon,title:string,text?:string,children?:ReactNode,role?:'status'|'alert'}){

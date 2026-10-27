@@ -1,8 +1,8 @@
 import type {Meta,StoryObj} from '@storybook/react-vite';
 import {useState} from 'react';
 import {fn} from 'storybook/test';
-import {Bell,KeyRound,Trash2,Users} from 'lucide-react';
-import {Av,Card,Row,SelectRow,ToggleRow} from './index';
+import {Bell,Eye,KeyRound,Trash2,Users,X} from 'lucide-react';
+import {Av,Btn,Card,IconBtn,Row,SelectRow,ToggleRow} from './index';
 
 const meta={title:'Списки/Строка',component:Row,tags:['autodocs'],
  parameters:{docs:{description:{component:'Пункт настроек, меню, списка людей — всегда внутри `<Card list>`. Слева иконка (`icon`, `tone`) или аватар (`av`), справа значение, бейдж и стрелка. Опасное действие — `danger` (без стрелки).'}}},
@@ -24,3 +24,7 @@ export const Переключатель:StoryObj<typeof ToggleRow>={name:'Стр
  args:{title:'Показать в ленте',sub:'Увидят в ленте и в профиле',on:true,disabled:false}};
 export const Выбор:StoryObj<typeof SelectRow>={name:'Строка выбора',render:a=>{const [v,setV]=useState('all');return <SelectRow {...a} value={v} onChange={setV}/>;},
  args:{label:'Кто может просить доступ',options:[['all','Все'],['fol','Подписчики'],['none','Никто']],value:'all',onChange:()=>{}}};
+export const СДействиемСправа:S={name:'С действием справа',render:()=><><Row av={<Av name="Kai" seed="kai" size="sm"/>} title="Kai" sub="@kai_slow" onClick={()=>{}} end={<Btn size="sm" fit>Подписаться</Btn>}/>
+ <Row icon={Users} title="шибари" onClick={()=>{}} end={<IconBtn icon={X} kind="ghost" size="sm" label="Убрать"/>}/></>};
+export const ВыборСИконкой:StoryObj<typeof SelectRow>={name:'Строка выбора с иконкой',render:a=>{const [v,setV]=useState('all');return <SelectRow {...a} icon={Eye} value={v} onChange={setV}/>;},
+ args:{label:'Кто видит',options:[['all','Все'],['fol','Подписчики']],value:'all',onChange:()=>{}}};

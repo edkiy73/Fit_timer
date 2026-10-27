@@ -1,6 +1,6 @@
 import type {Meta,StoryObj} from '@storybook/react-vite';
 import {useState} from 'react';
-import {Ask,Btn,Card,Row,Sheet} from './index';
+import {Ask,Btn,Card,Row,SearchInput,Sheet} from './index';
 import {useToast} from '../toast';
 
 const meta={title:'Окна/Лист',component:Sheet,tags:['autodocs'],
@@ -14,3 +14,7 @@ export const Лист:S={render:a=>{const [o,setO]=useState(true);return <>{!o&&
 export const Подтверждение:S={render:()=>{const [o,setO]=useState(true);return <>{!o&&<Btn kind="soft" onClick={()=>setO(true)}>Открыть подтверждение</Btn>}
  {o&&<Ask danger title="Удалить публикацию?" text="Её нельзя будет вернуть." ok="Удалить" onOk={()=>setO(false)} onCancel={()=>setO(false)}/>}</>;}};
 export const Уведомление:S={render:()=>{const toast=useToast();return <Btn kind="soft" onClick={()=>toast('Публикация скрыта',{type:'ok',action:{label:'Отменить',fn:()=>{}}})}>Показать уведомление</Btn>;}};
+export const ЛистСПоиском:S={name:'Лист с поиском',render:a=>{const [o,setO]=useState(true);return <>{!o&&<Btn kind="soft" onClick={()=>setO(true)}>Открыть</Btn>}
+ {o&&<Sheet {...a} title="Люди на фото" full search={<SearchInput label="Найти человека"/>} onClose={()=>setO(false)} foot={<Btn onClick={()=>setO(false)}>Готово</Btn>}><Card list><Row title="Mia" onClick={()=>{}}/><Row title="Kai" onClick={()=>{}}/></Card></Sheet>}</>;}};
+export const ТриОтвета:S={name:'Подтверждение с тремя ответами',render:()=>{const [o,setO]=useState(true);return <>{!o&&<Btn kind="soft" onClick={()=>setO(true)}>Открыть</Btn>}
+ {o&&<Ask title="Сохранить черновик?" text="Иначе текст пропадёт." ok="Сохранить черновик" alt={{label:'Не сохранять',onClick:()=>setO(false),danger:true}} onOk={()=>setO(false)} onCancel={()=>setO(false)}/>}</>;}};

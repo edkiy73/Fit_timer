@@ -18,3 +18,4 @@ export const Многострочное:S={render:()=>{const [t,setT]=useState('
 export const СоСчётчиком:S={name:'Со счётчиком',render:()=>{const [t,setT]=useState('Привет!');return <><TextArea id="f" rows={3} value={t} onChange={e=>setT(e.target.value)}/><Counter n={t.length} max={20}/></>;}};
 export const Поиск:S={render:()=><SearchInput label="Ник, интерес, событие…"/>,decorators:[S=><S/>]};
 export const ВыборИзСписка:S={name:'Выбор из списка',render:()=>{const [v,setV]=useState('ru');return <Select id="f" label="Язык" value={v} onChange={setV} options={[['ru','Русский'],['en','English']]}/>;}};
+export const Растущее:S={name:'Растёт с текстом',render:()=><TextArea id="f" rows={1} grow={120} placeholder="Напиши ответ…"/>};

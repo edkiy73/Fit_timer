@@ -96,3 +96,11 @@
 .v21 .k-ii[data-i="--i-md"]{width:var(--i-md);height:var(--i-md)}
 .v21 .k-ii[data-i="--i-sm"]{width:var(--i-sm);height:var(--i-sm)}
 .v21 .k-ii[data-i="--i-xs"]{width:var(--i-xs);height:var(--i-xs)}
+.v21 .btn.k-fit{flex:0 0 auto;width:auto}
+.v21 .k-anchor{position:relative}
+.v21 .k-wait{visibility:hidden}
+/* Row with an end control: the main part is one button, the end control sits beside it. */
+.v21 .li.k-li-end{display:flex;align-items:center;gap:var(--s-2)}
+.v21 .li.k-li-end>.k-li-main{display:flex;align-items:center;gap:inherit;flex:1;min-width:0;text-align:left;background:none;border:0;padding:0;color:inherit}
+.v21 .li.k-li-sel{display:flex;align-items:center;gap:var(--s-3)}
+.v21 .li.k-li-sel>.selrow{flex:1;min-width:0}
