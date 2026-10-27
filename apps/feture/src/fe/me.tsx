@@ -6,6 +6,7 @@ import {ChevronRight,Lock,Plus,Settings,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {Av,Btn,Empty,Seg} from './ui';
 import {useFe} from './session';
+import {PrivateLayer} from './private';
 
 /** Slice C (V21 X01, P02, P03) with the prototype's markup: own profile, photos (others see approved ones;
  * «на проверке» only the owner), basics, details, Discover and who sees the answers. */
@@ -69,6 +70,7 @@ export function MeTab(){
         return <Fragment key={field}><dt>{t('fe.reg.kind.'+kind)}</dt><dd>{codes.length?codes.map(c=>label(kind,c)).join(', '):'—'}</dd></Fragment>;})}</dl></div>
       </section>}
      </>
+     :layer==='priv'?<PrivateLayer profileId={p.id}/>
      :layer==='vis'&&settings?<Visibility p={p} settings={settings} onChanged={load}/>
      :<Empty icon={Lock} title={t('fe.me.soon.'+layer)} text={t('fe.me.soonText.'+layer)}/>}
    </div>

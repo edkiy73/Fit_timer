@@ -6,6 +6,7 @@ import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {Eye,Heart,Lock,MapPin,Search as SearchIcon,Undo2,Users,X} from 'lucide-react';
 import {Av,Bar,Btn,Empty,Seg,View} from './ui';
 import {useFe} from './session';
+import {PrivateOf} from './private';
 
 /** Slice F (V21 D03–D09) plus people search (F2): Discover cards from the server's mutual pool, like / pass,
  * «It's mutual» → chat, incoming likes, nickname search and another person's profile. The client shows only what
@@ -139,6 +140,7 @@ export function PersonScreen(){
      </div>
      {note&&<div className="alert ok" role="status"><span>{note}</span></div>}
      {p.bio&&<div className="p-bio"><div className="md bio"><p>{p.bio}</p></div></div>}
+     <PrivateOf profileId={p.id}/>
      {p.photos.length>1&&<section className="grp ph20"><div className="ph-slots">{p.photos.filter(ph=>ph.src).map((ph,i)=><div key={i} className={'mi'+(i===0?' big':'')}><img src={ph.src?.card??ph.src?.thumb} alt="" draggable={false}/></div>)}</div></section>}
     </>}
   </View>
