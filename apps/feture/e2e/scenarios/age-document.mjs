@@ -32,5 +32,5 @@ export default [{ name: 'age check by document: send, staff approves, image dele
   const after = await t.api('verification.ageStatus', {});
   expect(after.verified || after.ageVerified || after.check?.state === 'approved', 'verified: ' + JSON.stringify(after).slice(0, 200));
   if (assetId) { const v = await t.api('staff.mediaView', { assetId }, STAFF); expect(v.status === 404, 'document not viewable after decision: ' + v.status); }
-  await t.go('/n/settings/age'); await t.see('18+ подтверждено');
+  await t.tap('Обновить статус'); await t.see('18+ подтверждено');
 }}];

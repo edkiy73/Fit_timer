@@ -25,7 +25,7 @@ type FeSession={
  acting:ProfileCard|null;
  setActing:(profileId:string)=>void;
  reload:()=>void;
- call:<T>(action:string,input:Record<string,unknown>,schema:z.ZodType<T>,opts?:{asAccount?:boolean,profileId?:string,signal?:AbortSignal})=>Promise<T>;
+ call:<T>(action:string,input:Record<string,unknown>,schema:z.ZodType<T>,opts?:{asAccount?:boolean,profileId?:string,signal?:AbortSignal,fresh?:boolean})=>Promise<T>;
 };
 
 const Ctx=createContext<FeSession|null>(null);
@@ -70,7 +70,7 @@ export function FeSessionProvider({children}:{children:ReactNode}){
  const acting=profiles.find(p=>p.id===actingId)??profiles.find(p=>p.kind==='person')??null;
  const setActing=useCallback((id:string)=>{setActingId(id);try{sessionStorage.setItem(ACTING_KEY,id);}catch{/* this tab only */}},[]);
  const reload=useCallback(()=>setNonce(n=>n+1),[]);
- const call=useCallback(<T,>(action:string,input:Record<string,unknown>,schema:z.ZodType<T>,opts:{asAccount?:boolean,profileId?:string,signal?:AbortSignal}={})=>{
+ const call=useCallback(<T,>(action:string,input:Record<string,unknown>,schema:z.ZodType<T>,opts:{asAccount?:boolean,profileId?:string,signal?:AbortSignal,/** Skip the short read cache: «Обновить» and other explicit refreshes. */ fresh?:boolean}={})=>{
   if(state.status!=='ready')return Promise.reject(new FeError('auth_required'));
   const profileId=opts.asAccount?undefined:opts.profileId??acting?.id;
   if('opId' in input||WRITES_WITHOUT_OPID.has(action)){ // a write: whatever was read before may have changed
@@ -80,7 +80,7 @@ export function FeSessionProvider({children}:{children:ReactNode}){
   let sid=schemaIds.get(schema);if(sid==null){sid=++schemaSeq;schemaIds.set(schema,sid);}
   const key=JSON.stringify([state.session.email,profileId??'',action,input,sid]);
   const hit=readCache.get(key);
-  if(hit&&Date.now()-hit.at<READ_TTL)return hit.value as Promise<T>;
+  if(hit&&!opts.fresh&&Date.now()-hit.at<READ_TTL)return hit.value as Promise<T>;
   // Not bound to the caller's AbortSignal: a screen that unmounts must not cancel a read another screen will reuse.
   // A read refused for «too many at once» (429) is asked again after a short pause instead of failing the screen;
   // writes never retry on their own.
