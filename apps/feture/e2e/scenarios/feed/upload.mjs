@@ -1,5 +1,5 @@
 // Kit uploader in the post composer: pick → format → crop → «Готово» → photo attached → published; read back.
-import { expect, until, pngOf } from './helpers.mjs';
+import { expect, until, pngOf } from '../helpers.mjs';
 const mine = async t => (await t.api('me.posts', {})).items;
 export default [{ name: 'uploader: format, crop, ready, publish with a cropped 4:5 photo', persona: 'full', route: '/n/feed/new', run: async t => {
   let id;
