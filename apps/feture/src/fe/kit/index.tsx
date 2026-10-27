@@ -16,9 +16,10 @@ export {Av,Bar,Btn,Empty,Layer,Seg,Skel,View,plate} from '../ui';
 export type {SegOption} from '../ui';
 
 /** `.ibtn` — a round icon button; the label is required (it is the only text a screen reader gets). */
-export function IconBtn({icon:Icon,label,kind='',size='',className,type='button',...rest}:ButtonHTMLAttributes<HTMLButtonElement>&{icon:LucideIcon,label:string,
- kind?:''|'ghost'|'glass'|'add'|'send',size?:''|'sm'}){
- return <button type={type} className={['ibtn',kind,size,className].filter(Boolean).join(' ')} aria-label={label} {...rest}><Icon/></button>;
+export function IconBtn({icon:Icon,label,kind='',size='',className,type='button',badge,...rest}:ButtonHTMLAttributes<HTMLButtonElement>&{icon:LucideIcon,label:string,
+ kind?:''|'ghost'|'glass'|'add'|'send',size?:''|'sm',badge?:number|'dot'|undefined}){
+ return <button type={type} className={['ibtn',kind,size,className].filter(Boolean).join(' ')} aria-label={label} {...rest}><Icon/>
+  {badge==='dot'?<b className="k-badge dot" aria-hidden="true"/>:badge?<b className="k-badge" aria-hidden="true">{badge>99?'99+':badge}</b>:null}</button>;
 }
 
 /** A screen header with an optional second line (`SubBar` of the community screens). */
@@ -176,7 +177,7 @@ export function Stack({children,gap=3,row,className,grow}:{children:ReactNode,ga
 }
 
 /** `.card` — the surface every block sits on. `list` holds Rows (dividers between them come with it); `form` holds
- * fields. Radius, fill and shadow are tokens, so changing the card here changes every card. */
+ * fields and has no surface of its own in V21 (fields sit on the page, 16 apart). Radius, fill and shadow are tokens, so changing the card here changes every card. */
 export function Card({children,list,form,className,id}:{children:ReactNode,list?:boolean,form?:boolean,className?:string,id?:string}){
  return <div id={id} className={['card',list?'list':'',form?'form-card':'',className].filter(Boolean).join(' ')}>{children}</div>;
 }
@@ -216,10 +217,10 @@ export function Progress({value,label}:{value:number,label?:string}){
 export function Steps({step,total,name}:{step:number,total:number,name:string}){
  return <div className="stepper"><span>{step}/{total} · {name}</span><Progress value={step/total}/></div>;
 }
-/** A count on an icon or a tab (`em`); 99+ above 99. */
+/** A count bubble for custom spots (IconBtn has `badge`, Seg has `n`). */
 export function Badge({n,dot,label}:{n?:number|undefined,dot?:boolean,label?:string}){
- if(dot)return <em className="dot" role="img" aria-label={label}/>;
- return n?<em aria-label={label}>{n>99?'99+':n}</em>:null;
+ if(dot)return <b className="k-badge dot" role="img" aria-label={label}/>;
+ return n?<b className="k-badge" aria-label={label}>{n>99?'99+':n}</b>:null;
 }
 /** `.note` — a quiet hint line; `.sec` — a section label above a block. */
 export function Note({children,className}:{children:ReactNode,className?:string}){return <p className={'note'+(className?' '+className:'')}>{children}</p>;}

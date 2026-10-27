@@ -29,3 +29,8 @@
 .v21 .k-sw{display:inline-flex;align-items:center;min-height:var(--h-md);padding:0 var(--s-1)}
 .v21 .k-range{width:100%;accent-color:var(--accent);min-height:var(--h-md)}
 .v21 .counter.over{color:var(--danger)}
+/* Count bubble on an icon: top-right, accent, white digits, ring in the page colour. */
+.v21 .ibtn{position:relative}
+.v21 .k-badge{position:absolute;top:-2px;right:-4px;min-width:18px;height:18px;padding:0 5px;border-radius:var(--r-full);display:grid;place-items:center;
+ background:var(--accent);color:#fff;font:var(--t-micro);font-style:normal;box-shadow:0 0 0 2px var(--bg)}
+.v21 .k-badge.dot{min-width:10px;width:10px;height:10px;padding:0;top:2px;right:2px}

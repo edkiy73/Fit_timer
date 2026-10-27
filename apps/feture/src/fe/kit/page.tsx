@@ -1,7 +1,7 @@
 import {useState} from 'react';
 import {Bell,Camera,Heart,KeyRound,Plus,Settings,Trash2,Users} from 'lucide-react';
 import {useToast} from '../toast';
-import {Alert,Ask,Av,Badge,Bar,Btn,Card,Check,ChoiceChips,Chip,Chips,Counter,Divider,Empty,Field,Group,H,IconBtn,Input,Note,Pill,Progress,RadioList,Range,Row,SearchInput,SectionLabel,Steps,Switch,Seg,Select,SelectRow,Sheet,Skel,Stack,Text,TextArea,ToggleRow,View} from './index';
+import {Alert,Ask,Av,Bar,Btn,Card,Check,ChoiceChips,Chip,Chips,Counter,Divider,Empty,Field,Group,H,IconBtn,Input,Note,Pill,Progress,RadioList,Range,Row,SearchInput,SectionLabel,Steps,Switch,Seg,Select,SelectRow,Sheet,Skel,Stack,Text,TextArea,ToggleRow,View} from './index';
 
 /** /n/kit — the design system on one page: every token step and every kit component in every state. The reference
  * for the owner and for agents; a screen that needs something not shown here adds it to the kit first (README). */
@@ -104,7 +104,7 @@ export function KitPage(){
       <Steps step={2} total={4} name="Где и когда"/>
       <Progress value={.7} label="Загрузка"/>
       <Stack row gap={2}><Pill tone="ok">одобрено</Pill><Pill tone="wait">ждёт</Pill><Pill tone="v">по доступу</Pill><Pill tone="bad">отклонено</Pill><Pill tone="hot">3</Pill><Pill>просто</Pill></Stack>
-      <Stack row gap={4}><span className="ibtn" style={{position:'relative'}}><Bell/><Badge n={4}/></span><span className="ibtn" style={{position:'relative'}}><Bell/><Badge n={120}/></span></Stack>
+      <Stack row gap={4}><IconBtn icon={Bell} label="Уведомления, 4" badge={4}/><IconBtn icon={Bell} label="Уведомления, много" badge={120}/><IconBtn icon={Bell} label="Есть новое" badge="dot"/></Stack>
       <SectionLabel action={<Btn kind="text" size="sm" auto>Все</Btn>}>Подпись раздела</SectionLabel>
       <Note>Тихая подсказка под блоком.</Note>
      </Stack>
