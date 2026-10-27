@@ -20,23 +20,9 @@
   "inline style": 1
  },
  "src/fe/chats.tsx": {
-  "sheet": 1,
-  "switch": 1,
-  "list row": 3,
-  "chip": 1,
-  "notice": 4,
-  "round button": 10,
-  "input": 3,
-  "textarea": 3,
+  "list row": 1,
   "select": 1,
-  "inline style": 10,
-  "heading": 1,
-  "card": 11,
-  "pill": 3,
-  "radio": 1,
-  "checkbox": 1,
-  "note": 4,
-  "section label": 2
+  "pill": 3
  },
  "src/fe/comm-kit.tsx": {
   "notice": 1,
@@ -95,8 +81,7 @@
   "progress": 1
  },
  "src/fe/css/chats.css": {
-  "stylesheet": 1,
-  "font size": 1
+  "stylesheet": 1
  },
  "src/fe/css/me.css": {
   "stylesheet": 1
@@ -123,15 +108,6 @@
   "pill": 5,
   "note": 10,
   "section label": 6
- },
- "src/fe/inbox.tsx": {
-  "list row": 1,
-  "chip": 1,
-  "round button": 1,
-  "inline style": 6,
-  "card": 2,
-  "note": 1,
-  "section label": 2
  },
  "src/fe/interests.tsx": {
   "sheet": 1,
