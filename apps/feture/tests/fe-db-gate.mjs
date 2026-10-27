@@ -1,9 +1,10 @@
 // The production adapter never has more operations in flight than pooled connections (postgres pipelines
 // beyond that, and Supavisor in transaction mode stalls on a pipelined query), and a transaction's queries
-// run one after another.
+// run one after another. JSON text reaches json/jsonb as is, as with PGlite (no double encoding).
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { fromPostgres } from '../server/db.mjs';
+import postgres from 'postgres';
+import { POSTGRES_TYPES, fromPostgres } from '../server/db.mjs';
 
 function fakeSql() {
   const state = { inFlight: 0, peak: 0, txInFlight: 0, txPeak: 0 };
@@ -53,4 +54,19 @@ test('code holding a slot is not made to wait for another (no deadlock with one 
     new Promise(resolve => setTimeout(() => resolve('deadlock'), 500)),
   ]);
   assert.notEqual(r, 'deadlock');
+});
+
+test('json/jsonb parameters: text passes through, values are encoded once; bigint is a number', async () => {
+  const sql = postgres('postgres://u:p@127.0.0.1:1/db', { types: POSTGRES_TYPES });
+  for (const oid of [114, 3802]) {
+    const serialize = sql.options.serializers[oid];
+    assert.equal(serialize('["a",1]'), '["a",1]');
+    assert.equal(serialize('{"k":"v"}'), '{"k":"v"}');
+    assert.equal(serialize({ k: 'v' }), '{"k":"v"}');
+    assert.equal(serialize(['a']), '["a"]');
+  }
+  assert.deepEqual(sql.options.parsers[3802]('{"k":[1]}'), { k: [1] });
+  assert.equal(sql.options.parsers[20]('42'), 42); // bigint as a number, as PGlite returns it
+  assert.equal(sql.options.serializers[20](42), '42');
+  await sql.end({ timeout: 0 });
 });

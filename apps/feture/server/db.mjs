@@ -13,6 +13,16 @@ export function fromPglite(pg) {
   return { ...wrap(pg), tx: fn => pg.transaction(/** @param {{query: Function}} t */ t => fn(wrap(t))) };
 }
 
+/** `postgres` JSON.stringifies every json/jsonb parameter, but domain code passes JSON text it already encoded
+ * (as PGlite in tests expects): a string arrives encoded twice and is stored as a JSON string, which the
+ * schema's checks refuse (or, without a check, keep silently). Text is passed through, anything else
+ * encoded once — the same as PGlite. Use as `types` when creating the client. */
+export const POSTGRES_TYPES = Object.freeze({
+  // bigint (message seq, queue ids, unqualified count(*)) comes back as a number, as from PGlite; all ours fit.
+  bigint: { to: 20, from: [20], serialize: (/** @type {unknown} */ x) => String(x), parse: (/** @type {string} */ x) => Number(x) },
+  json: { to: 114, from: [114, 3802], serialize: (/** @type {unknown} */ x) => typeof x === 'string' ? x : JSON.stringify(x), parse: (/** @type {string} */ x) => JSON.parse(x) },
+});
+
 /** `postgres` pipelines a query onto a busy connection once every pooled one is taken, and Supavisor in
  * transaction mode stalls on a pipelined query until something else reaches that backend (minutes in
  * production). So no more operations are in flight than the pool has connections — across the concurrent
