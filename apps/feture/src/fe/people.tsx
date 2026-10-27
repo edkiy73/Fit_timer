@@ -3,8 +3,8 @@ import {useNavigate,useParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Ban,Check,ChevronDown,ChevronLeft,ChevronRight,EyeOff,Heart,Ellipsis,History,Info,KeyRound,Lock,MapPin,MessageCircle,Search as SearchIcon,SlidersHorizontal,Sparkles,Undo2,Users,X} from 'lucide-react';
-import {Av,Bar,Btn,Empty,View,Layer,Seg,Skel,plate} from './ui';
+import {Ban,Check,ChevronDown,ChevronLeft,ChevronRight,EyeOff,Heart,Ellipsis,History,Info,KeyRound,Lock,MapPin,MessageCircle,SlidersHorizontal,Sparkles,Undo2,Users,X} from 'lucide-react';
+import {Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,H,IconBtn,Note,Pill,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,View,plate} from './kit';
 import {useFe} from './session';
 import {NameBadges} from './faces';
 import {BellButton} from './inbox';
@@ -51,8 +51,8 @@ export function PeopleTab(){
   <header className="bar dating-bar">
    <CSeg big value={tab} onChange={v=>{setTab(v);history.replaceState(null,'','#/n/people'+(v==='likes'?'?sub=likes':''));}}
     options={[{id:'discover',label:t('fe.people.tab.discover')},{id:'likes',label:t('fe.people.tab.likes'),n:likesN}]}/>
-   {deckOn&&<button type="button" className="ibtn" aria-label={t('fe.px.h.open')} title={t('fe.px.h.open')} onClick={()=>navigate('/n/people/history')}><History/></button>}
-   {deckOn?<button ref={opener} type="button" className="ibtn" aria-haspopup="dialog" aria-label={on?t('fe.df.openOn').replace('{n}',String(on)):t('fe.df.open')} disabled={!filter} onClick={()=>setOpen(true)}><SlidersHorizontal/>{on>0&&<sup>{on}</sup>}</button>:<BellButton/>}
+   {deckOn&&<IconBtn icon={History} label={t('fe.px.h.open')} title={t('fe.px.h.open')} onClick={()=>navigate('/n/people/history')}/>}
+   {deckOn?<IconBtn ref={opener} icon={SlidersHorizontal} aria-haspopup="dialog" label={on?t('fe.df.openOn').replace('{n}',String(on)):t('fe.df.open')} badge={on||undefined} disabled={!filter} onClick={()=>setOpen(true)}/>:<BellButton/>}
   </header>
   {tab==='discover'?<Discover reloadKey={deckKey} onOff={setOff} filterOn={on} openFilter={()=>setOpen(true)} likesN={likesN} toLikes={()=>setTab('likes')} onLikes={countLikes}/>:<Likes onCount={setLikesN} toDiscover={()=>setTab('discover')}/>}
   {open&&filter&&<DiscoverFilter initial={filter} onClose={close} onApplied={f=>{setFilter(f);setDeckKey(k=>k+1);close();}}/>}
@@ -80,20 +80,19 @@ function DiscoverFilter({initial,onClose,onApplied}:{initial:Filter,onClose:()=>
  const [f,setF]=useState<Filter>(initial);const [sub,setSub]=useState<DfSub|null>(null);const [q,setQ]=useState('');const [where,setWhere]=useState<'any'|'city'>(initial.cityId?'city':'any');
  const [cat,setCat]=useState<Catalog|null>(null);const [count,setCount]=useState<{count:number,capped:boolean}|null>(null);
  const [countError,setCountError]=useState<unknown>(null);const [busy,setBusy]=useState(false);const [error,setError]=useState<unknown>(null);
- const sheet=useRef<HTMLDivElement>(null);const body=useRef<HTMLDivElement>(null);
+ // `body` sits inside the sheet's scrolling `.sh-b`: a nested list starts at the top and takes the focus.
+ const body=useRef<HTMLDivElement>(null);
  const lab=(x:{ru:string|null,en:string|null})=>(locale==='en'?x.en||x.ru:x.ru||x.en)||'';
  useEffect(()=>{call('catalog.get',{},catalogRes,{asAccount:true}).then(setCat).catch(()=>{});},[call]);
- useEffect(()=>{sheet.current?.focus({preventScroll:true});},[sub]);
+ useEffect(()=>{body.current?.closest<HTMLElement>('.sheet')?.focus({preventScroll:true});const b=body.current?.closest('.sh-b');if(b)b.scrollTop=0;},[sub]);
  useEffect(()=>{
   setCount(null);setCountError(null);const ctl=new AbortController();
   const timer=setTimeout(()=>call('discover.count',{filter:f},countRes,{signal:ctl.signal}).then(r=>setCount({count:r.count,capped:r.capped})).catch(e=>{if(!ctl.signal.aborted)setCountError(e);}),400);
   return ()=>{clearTimeout(timer);ctl.abort();};
  },[f,call]);
  const back=useCallback(()=>{setSub(null);setQ('');},[]);
- // Esc / ✕ / scrim inside a nested list go back to the filters and keep the draft (prototype PPL-004).
- useEffect(()=>{const key=(e:KeyboardEvent)=>{if(e.key!=='Escape')return;e.preventDefault();if(sub)back();else onClose();};
-  document.addEventListener('keydown',key);return ()=>document.removeEventListener('keydown',key);},[sub,back,onClose]);
- useEffect(()=>{if(body.current)body.current.scrollTop=0;},[sub]);
+ // Esc / ✕ / scrim inside a nested list go back to the filters and keep the draft (prototype PPL-004): the sheet's
+ // onClose is `back` there.
  const groups=(k:DfSub):{title:string,list:[string,string][]}[]=>{
   if(!cat)return [];
   if(k==='city')return [{title:'',list:cat.places.map(p=>[p.id,lab(p)] as [string,string]).sort((a,b)=>a[1].localeCompare(b[1]))}];
@@ -118,43 +117,41 @@ function DiscoverFilter({initial,onClose,onApplied}:{initial:Filter,onClose:()=>
   const s=parts.join(' · ');return s.charAt(0).toUpperCase()+s.slice(1);
  };
  const clr=(fn:()=>void)=><button type="button" className="fclr" aria-label={t('fe.df.clear')} onClick={fn}><X/></button>;
- const head=(title:string,nested:boolean,extra?:ReactNode)=><div className="sh-h">
-  {nested&&<button type="button" className="ibtn ghost sm" aria-label={t('fe.df.back')} onClick={back}><ChevronLeft/></button>}
-  <div className="sh-ht"><h2>{title}</h2></div>{extra}
-  <button type="button" className="ibtn ghost sm" aria-label={t('fe.df.close')} onClick={onClose}><X/></button>
- </div>;
- let content:ReactNode;
  if(sub){
   const all=groups(sub);const total=all.reduce((n,g)=>n+g.list.length,0);const needle=q.trim().toLowerCase();
   const shown=all.map(g=>({...g,list:needle?g.list.filter(([,l])=>l.toLowerCase().includes(needle)):g.list})).filter(g=>g.list.length);
   const isOn=(id:string)=>sub==='city'?f.cityId===id:f[sub].includes(id);
   const pick=(id:string)=>{if(sub==='city'){setF(x=>({...x,cityId:x.cityId===id?null:id}));setWhere('city');}else toggle(sub,id);};
   const n=sub==='city'?(f.cityId?1:0):f[sub].length;
-  content=<>
-   {head(sub==='city'?t('fe.df.city'):t('fe.df.row.'+sub),true)}
-   {total>10&&<div className="sh-search"><div className="inwrap"><SearchIcon/><input className="inp" type="search" value={q} onChange={e=>setQ(e.target.value)} placeholder={t('fe.df.find')} aria-label={t('fe.df.find')} enterKeyHint="search"/></div></div>}
-   <div className="sh-b" ref={body}>
+  return <Sheet full title={sub==='city'?t('fe.df.city'):t('fe.df.row.'+sub)} onClose={back}
+   lead={<IconBtn icon={ChevronLeft} kind="ghost" size="sm" label={t('fe.df.back')} onClick={back}/>}
+   search={total>10&&<SearchInput label={t('fe.df.find')} value={q} onChange={e=>setQ(e.target.value)}/>}
+   foot={<Btn onClick={back}>{n&&sub!=='city'?fill(t('fe.df.doneN'),{n}):t('fe.df.done')}</Btn>}>
+   <div ref={body}>
     {!cat?<Skel kind="list"/>
-     :shown.map((g,i)=><section key={g.title||i} className="fsec">{g.title&&<div className="sec">{g.title}</div>}<div className="chips">
-      {g.list.map(([id,l])=><button key={id} type="button" className={'chip'+(isOn(id)?' on':'')} aria-pressed={isOn(id)} onClick={()=>pick(id)}>{l}</button>)}
-     </div></section>)}
-    {cat&&!shown.length&&<p className="note sh-empty">{t('fe.df.nothing')}</p>}
+     :shown.map((g,i)=><section key={g.title||i} className="fsec">{g.title&&<SectionLabel>{g.title}</SectionLabel>}<Chips>
+      {g.list.map(([id,l])=><Chip key={id} on={isOn(id)} onClick={()=>pick(id)}>{l}</Chip>)}
+     </Chips></section>)}
+    {cat&&!shown.length&&<Note className="sh-empty">{t('fe.df.nothing')}</Note>}
    </div>
-   <div className="sh-f"><Btn onClick={back}>{n&&sub!=='city'?fill(t('fe.df.doneN'),{n}):t('fe.df.done')}</Btn></div>
-  </>;
- }else{
-  const lo=(f.ageMin-18)/81*100,hi=(f.ageMax-18)/81*100;
-  content=<>
-   {head(t('fe.df.title'),false,<button type="button" className={'btn text auto'+(on?'':' off')} aria-disabled={on?undefined:true} onClick={()=>{if(on){setF(DF_DEFAULT);setWhere('any');}}}>{t('fe.df.reset')}</button>)}
-   <div className="sh-b" ref={body}>
+  </Sheet>;
+ }
+ const lo=(f.ageMin-18)/81*100,hi=(f.ageMax-18)/81*100;
+ return <Sheet full title={t('fe.df.title')} onClose={onClose}
+  head={<Btn kind="text" auto className={on?undefined:'off'} aria-disabled={on?undefined:true} onClick={()=>{if(on){setF(DF_DEFAULT);setWhere('any');}}}>{t('fe.df.reset')}</Btn>}
+  foot={<>
+   {on>0&&<p className="df-sum">{summary()}</p>}
+   <Btn onClick={apply} busy={busy} disabled={busy}>{count?count.count?fill(t('fe.df.showN'),{n:count.capped?'100+':count.count}):t('fe.df.applyAnyway'):t('fe.df.showPlain')}</Btn>
+  </>}>
+   <div ref={body}>
     <section className="fin"><div className="fin-t"><b>{t('fe.df.where')}</b>{where!=='any'&&clr(()=>{setWhere('any');setF(x=>({...x,cityId:null}));})}</div>
-     <div className="chips" role="radiogroup" aria-label={t('fe.df.where')}>{(['any','city'] as const).map(v=><button key={v} type="button" className={'chip'+(where===v?' on':'')} role="radio" aria-checked={where===v}
-      onClick={()=>{if(v==='any'){setWhere('any');setF(x=>({...x,cityId:null}));}else{setWhere('city');if(!f.cityId)setSub('city');}}}>{t('fe.df.where.'+v)}</button>)}</div>
+     <ChoiceChips label={t('fe.df.where')} value={where} options={(['any','city'] as const).map(v=>[v,t('fe.df.where.'+v)] as const)}
+      onChange={v=>{if(v==='any'){setWhere('any');setF(x=>({...x,cityId:null}));}else{setWhere('city');if(!f.cityId)setSub('city');}}}/>
      {where==='city'&&<div className="fld"><button type="button" className="fld-main" onClick={()=>setSub('city')}><MapPin/><span>{place?lab(place):t('fe.df.pickCity')}</span></button>
       {f.cityId?clr(()=>setF(x=>({...x,cityId:null}))):<ChevronRight/>}</div>}
     </section>
     <section className="fin"><div className="fin-t"><b>{t('fe.df.show')}</b>{f.show!=='all'&&clr(()=>setF(x=>({...x,show:'all'})))}</div>
-     <div className="chips" role="radiogroup" aria-label={t('fe.df.show')}>{(['all','people','pairs'] as const).map(v=><button key={v} type="button" className={'chip'+(f.show===v?' on':'')} role="radio" aria-checked={f.show===v} onClick={()=>setF(x=>({...x,show:v}))}>{t('fe.df.show.'+v)}</button>)}</div>
+     <ChoiceChips label={t('fe.df.show')} value={f.show} options={(['all','people','pairs'] as const).map(v=>[v,t('fe.df.show.'+v)] as const)} onChange={v=>setF(x=>({...x,show:v}))}/>
     </section>
     <section className="fin"><div className="fin-t"><b>{t('fe.df.age')}</b><b className="fin-v">{f.ageMin}–{f.ageMax}</b>{(f.ageMin!==18||f.ageMax!==99)&&clr(()=>setF(x=>({...x,ageMin:18,ageMax:99})))}</div>
      <div className="age-filter"><div className="dual"><span className="trk"><i style={{left:lo+'%',right:(100-hi)+'%'}}/></span>
@@ -162,26 +159,17 @@ function DiscoverFilter({initial,onClose,onApplied}:{initial:Filter,onClose:()=>
       <input type="range" min={18} max={99} value={f.ageMax} onChange={e=>age(1,+e.target.value)} aria-label={t('fe.df.ageMax')}/>
      </div></div>
     </section>
-    <div className="df-more"><div className="sec">{t('fe.df.more')}</div><div className="card list">
+    <div className="df-more"><SectionLabel>{t('fe.df.more')}</SectionLabel><Card list>
      {DF_ROWS.map(([k])=>{const names=new Map(groups(k).flatMap(g=>g.list));const sel=f[k].map(v=>names.get(v)).filter((x):x is string=>!!x);
       return <div key={k} className="df-row"><button type="button" className="li" onClick={()=>setSub(k)}><span className="tx"><b>{t('fe.df.row.'+k)}</b>
        <small className={sel.length?'on':''}>{sel.length?sel.slice(0,2).join(', ')+(sel.length>2?fill(t('fe.df.andMore'),{n:sel.length-2}):''):t('fe.df.any')}</small></span><ChevronRight/></button>
        {f[k].length>0&&clr(()=>setF(x=>({...x,[k]:[]})))}</div>;})}
-    </div></div>
-    {count&&count.count===0&&<div className="alert warn mt12"><Info/><span><b>{t('fe.df.nobody')}</b>{t('fe.df.nobodyText')}</span></div>}
-    {countError!=null&&<div className="alert err mt12" role="alert"><span>{feErrorMessage(countError,t)}</span></div>}
-    {error!=null&&<div className="alert err mt12" role="alert"><span>{feErrorMessage(error,t)}</span></div>}
+    </Card></div>
+    {count&&count.count===0&&<Alert kind="warn" icon={Info} className="mt12"><b>{t('fe.df.nobody')}</b>{t('fe.df.nobodyText')}</Alert>}
+    {countError!=null&&<Alert kind="err" noIcon className="mt12">{feErrorMessage(countError,t)}</Alert>}
+    {error!=null&&<Alert kind="err" noIcon className="mt12">{feErrorMessage(error,t)}</Alert>}
    </div>
-   <div className="sh-f">
-    {on>0&&<p className="df-sum">{summary()}</p>}
-    <Btn onClick={apply} busy={busy} disabled={busy}>{count?count.count?fill(t('fe.df.showN'),{n:count.capped?'100+':count.count}):t('fe.df.applyAnyway'):t('fe.df.showPlain')}</Btn>
-   </div>
-  </>;
- }
- return <Layer>
-  <div className="scrim on" onClick={()=>sub?back():onClose()}/>
-  <div ref={sheet} className="sheet full on" role="dialog" aria-modal="true" aria-label={sub?(sub==='city'?t('fe.df.city'):t('fe.df.row.'+sub)):t('fe.df.title')} tabIndex={-1}>{content}</div>
- </Layer>;
+ </Sheet>;
 }
 
 /* ---------- D03 deck ---------- */
@@ -346,8 +334,8 @@ function FollowBtn({id,name,rel,setRel,toast}:{id:string,name:string,rel:Relatio
  const go=async()=>{if(!rel||busy)return;setBusy(true);
   try{await call('follow.set',{opId:newOpId(),profileId:id,on:!on},ok);setRel(x=>x&&{...x,iFollow:!on,followers:Math.max(0,x.followers+(on?-1:1))});toast(fill(t(on?'fe.px.fl.off':'fe.px.fl.on'),{name}));}
   catch(e){toast(pxError(e,t),true);}finally{setBusy(false);}};
- return <button type="button" className={'btn soft'+(busy?' busy':'')} aria-pressed={on} title={on?t('fe.px.act.unfollowHint'):undefined} onClick={go} disabled={!rel}>
-  {on?<><Check/>{t('fe.px.act.following')}</>:acting?.kind==='couple'?t('fe.px.act.followUs'):t('fe.people.follow')}</button>;
+ return <Btn kind="soft" busy={busy} aria-pressed={on} title={on?t('fe.px.act.unfollowHint'):undefined} onClick={go} disabled={!rel}>
+  {on?<><Check/>{t('fe.px.act.following')}</>:acting?.kind==='couple'?t('fe.px.act.followUs'):t('fe.people.follow')}</Btn>;
 }
 
 /** D01 — Discover is off for this profile: no candidates, two honest ways in (browse hidden / browse and be seen). */
@@ -367,7 +355,7 @@ function DatingOff({onChanged,toast}:{onChanged:()=>void,toast:(m:string,err?:bo
    <button type="button" className={'dm'+(busy==='hidden'?' busy':'')} onClick={()=>set('hidden')} disabled={!!busy}><span className="ico v"><EyeOff/></span><span className="tx"><b>{t('fe.px.off.peek')}</b></span><ChevronRight/></button>
    <button type="button" className={'dm'+(busy==='visible'?' busy':'')} onClick={()=>set('visible')} disabled={!!busy}><span className="ico l"><Heart/></span><span className="tx"><b>{t('fe.px.off.on')}</b>{couple&&<small>{t('fe.px.off.onUsSub')}</small>}</span><ChevronRight/></button>
   </div>
-  {couple?<button type="button" className="btn text auto mt12" onClick={()=>navigate('/n/me?layer=vis')}>{t('fe.px.off.allVis')}</button>
+  {couple?<Btn kind="text" auto className="mt12" onClick={()=>navigate('/n/me?layer=vis')}>{t('fe.px.off.allVis')}</Btn>
    :<div className="card list mt16" style={{textAlign:'left',width:'100%'}}>
     <div className="li"><span className="ico g"><Check/></span><span className="tx"><b>{t('fe.px.off.stays')}</b><small>{t('fe.px.off.staysSub')}</small></span></div>
     <div className="li"><span className="ico"><MessageCircle/></span><span className="tx"><b>{t('fe.px.off.chat')}</b><small>{t('fe.px.off.chatSub')}</small></span></div>
@@ -384,7 +372,7 @@ function DeckEmpty({byFilter,filterOn,openFilter,likesN,toLikes}:{byFilter:numbe
    <span className="dot" style={{left:18,top:60,position:'absolute',overflow:'hidden'}}><div className="plate" style={plate('sea')}/></span>
    <span className="dot" style={{right:24,top:150,width:22,height:22,position:'absolute',overflow:'hidden'}}><div className="plate" style={plate('amber')}/></span>
   </div>
-  <h3>{byF?t('fe.px.empty.byF'):t('fe.px.empty.title')}</h3>
+  <H level={2} as="h3">{byF?t('fe.px.empty.byF'):t('fe.px.empty.title')}</H>
   <p>{byF?fill(t('fe.px.empty.byFText'),{n:byFilter!>=100?'100+':byFilter!}):filterOn?t('fe.px.empty.withF'):t('fe.px.empty.text')}</p>
   <div className="btns">
    {filterOn>0&&<Btn onClick={openFilter}>{t('fe.px.empty.change')}</Btn>}
@@ -392,8 +380,8 @@ function DeckEmpty({byFilter,filterOn,openFilter,likesN,toLikes}:{byFilter:numbe
    <Btn kind="text" onClick={()=>navigate('/n/people/history')}>{t('fe.px.empty.recent')}</Btn>
   </div>
   <div className="card list mt16" style={{textAlign:'left',width:'100%'}}>
-   <button type="button" className="li" onClick={()=>navigate('/n/communities')}><span className="ico v"><Users/></span><span className="tx"><b>{t('fe.px.empty.comm')}</b><small>{t('fe.px.empty.commSub')}</small></span><ChevronRight/></button>
-   <button type="button" className="li" onClick={()=>navigate('/n/me/interests')}><span className="ico l"><Sparkles/></span><span className="tx"><b>{t('fe.px.empty.int')}</b><small>{t('fe.px.empty.intSub')}</small></span><ChevronRight/></button>
+   <Row icon={Users} tone="v" title={t('fe.px.empty.comm')} sub={t('fe.px.empty.commSub')} onClick={()=>navigate('/n/communities')}/>
+   <Row icon={Sparkles} tone="l" title={t('fe.px.empty.int')} sub={t('fe.px.empty.intSub')} onClick={()=>navigate('/n/me/interests')}/>
   </div>
  </div>;
 }
@@ -421,12 +409,11 @@ function Likes({onCount,toDiscover}:{onCount:(n:number)=>void,toDiscover:()=>voi
  let body:ReactNode;
  if(error)body=<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>;
  else if(!inc||!out)body=k==='in'?<div className="likes">{[0,1,2,3].map(i=><div key={i} className="lk"><i className="sk sk-media"/></div>)}</div>:<Skel kind="list"/>;
- else if(k==='out')body=out.length?<div className="card list">{out.map(l=>{const c=l.profile;
-  return <div key={c.id} className="li"><Av name={cname(c)} seed={c.id} src={c.avatar?.src?.thumb}/>
-   <button type="button" className="tx" style={{textAlign:'left'}} onClick={()=>navigate('/n/people/'+c.id)}><b>{cname(c)}<NameBadges p={c}/></b>
-    <small>{[t(l.source==='profile'?'fe.px.lk.fromProfile':l.source==='likes'?'fe.px.lk.fromLikes':'fe.px.lk.fromDiscover'),l.at?when(l.at,locale):null,us&&l.initiator?'@'+l.initiator:null].filter(Boolean).join(' · ')}</small></button>
-   <span className="pill wait">{t('fe.px.lk.pendingPill')}</span>
-   <button type="button" className="ibtn ghost sm" aria-label={t('fe.px.lk.unlike')} disabled={busy===c.id} onClick={()=>unlike(c)}><X/></button></div>;})}</div>
+ else if(k==='out')body=out.length?<Card list>{out.map(l=>{const c=l.profile;
+  return <Row key={c.id} av={<Av name={cname(c)} seed={c.id} src={c.avatar?.src?.thumb}/>} title={<>{cname(c)}<NameBadges p={c}/></>}
+   sub={[t(l.source==='profile'?'fe.px.lk.fromProfile':l.source==='likes'?'fe.px.lk.fromLikes':'fe.px.lk.fromDiscover'),l.at?when(l.at,locale):null,us&&l.initiator?'@'+l.initiator:null].filter(Boolean).join(' · ')}
+   onClick={()=>navigate('/n/people/'+c.id)}
+   end={<><Pill tone="wait">{t('fe.px.lk.pendingPill')}</Pill><IconBtn icon={X} kind="ghost" size="sm" label={t('fe.px.lk.unlike')} disabled={busy===c.id} onClick={()=>unlike(c)}/></>}/>;})}</Card>
   :<Empty icon={Heart} title={t('fe.px.lk.outEmpty')} text={t('fe.px.lk.outEmptyText')}><Btn kind="soft" onClick={toDiscover}>{t('fe.px.lk.toDiscover')}</Btn></Empty>;
  else body=inc.length?<div className="likes">{inc.map((l,i)=>{const c=l.profile;const src=photo(c);const age=c.ages.length?', '+c.ages.join(' · '):'';
   return <div key={c.id} className="lk" style={{animationDelay:`${i*50}ms`}}>
@@ -460,7 +447,7 @@ export function PersonScreen(){
  </>;
  return <>
   <Bar title={blocked?t('fe.px.bl.stateTitle'):error?t('fe.px.unavailable'):''} back>
-   {blocked&&<button type="button" className="ibtn ghost" aria-haspopup="dialog" aria-label={t('fe.px.menu.more')} onClick={()=>setMenu('menu')}><Ellipsis/></button>}
+   {blocked&&<IconBtn icon={Ellipsis} kind="ghost" aria-haspopup="dialog" label={t('fe.px.menu.more')} onClick={()=>setMenu('menu')}/>}
   </Bar>
   {blocked?<View><Empty icon={Ban} title={t('fe.px.bl.stateTitle')} text={t('fe.px.bl.stateText')}><Btn kind="soft" onClick={()=>setMenu('menu')}>{t('fe.px.menu.unblock')}</Btn></Empty></View>
    :error?<View><Empty icon={Lock} title={t('fe.px.unavailable')} text={pxError(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty></View>
