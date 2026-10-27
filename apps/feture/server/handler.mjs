@@ -12,11 +12,14 @@ import { limit } from './limits.mjs';
  * transaction, idempotency, error mapping and the access log.
  * @typedef {import('./db.mjs').Db} Db @typedef {import('./db.mjs').Q} Q
  * @typedef {import('./accounts.mjs').AccountRow} AccountRow @typedef {import('./profiles.mjs').Acting} Acting
- * @typedef {{media: import('./media/assets.mjs').MediaConfig, pepper?: string}} Cfg   pepper is filled in by the handler
+ * @typedef {{media: import('./media/assets.mjs').MediaConfig, pepper?: string, realtime?: {url: string, key: string} | null}} Cfg
+ *   pepper is filled in by the handler; realtime: the public Supabase URL and publishable key for the client socket
  * @typedef {{
  *   input: import('zod').ZodType, profile: boolean, write: boolean, ledger?: boolean, allowPaused?: boolean,
  *   rate?: {kind: string, max: number, window: string},
- *   run: (q: Q, ctx: {account: AccountRow, acting: Acting | null, input: any, cfg: Cfg, coreAccountHash: string}) => Promise<Record<string, unknown>>
+ *   run: (q: Q, ctx: {account: AccountRow, acting: Acting | null, input: any, cfg: Cfg, coreAccountHash: string,
+ *     signal: (profileId: string | null | undefined, kind: import('./realtime.mjs').Kind) => void,
+ *     channels: (q: Q, profileIds: string[]) => Promise<Record<string, string>>}) => Promise<Record<string, unknown>>
  * }} Command
  * @typedef {{headers: Record<string, string | string[] | undefined>, method?: string, body?: unknown,
  *   [Symbol.asyncIterator]?: () => AsyncIterator<Uint8Array>}} Req
@@ -30,9 +33,10 @@ export const MAX_BODY = 16 * 1024;
  *   authenticate: (req: Req) => Promise<{accountHash: string, accountGeneration?: string}>,
  *   quota: (req: Req, coreKey: string) => Promise<boolean>,
  *   cors: (req: Req, res: Res) => boolean,
- *   log: (event: {requestId: string, action: string, outcome: string}) => void}} deps
+ *   log: (event: {requestId: string, action: string, outcome: string}) => void,
+ *   signals?: import('./realtime.mjs').Signals | null}} deps
  */
-export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota, cors, log }) {
+export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota, cors, log, signals = null }) {
   /** @param {Req} req @param {Res} res */
   return async function handler(req, res) {
     const requestId = randomUUID();
@@ -80,17 +84,27 @@ export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota
       if (rate && !replay) await db.tx(q => limit(q, account.id, rate.kind, rate.max, rate.window));
       // Membership is checked before a stored result can be replayed: a former member gets 403, not old results.
       if (cmd.profile) await actingProfile(db, account.id, profileId, { write: cmd.write, allowPaused: cmd.allowPaused });
+      // Realtime signals a command asks for go out only after its transaction committed (S2 §8).
+      /** @type {import('./realtime.mjs').Signal[]} */
+      let pending = [];
+      /** @param {string | null | undefined} profile @param {import('./realtime.mjs').Kind} kind */
+      const signal = (profile, kind) => { if (profile) pending.push({ profile, kind }); };
+      const channels = signals ? signals.channels : async () => ({});
       /** @param {Q} q */
       const exec = async q => {
+        pending = []; // a retried transaction starts over
         const acting = cmd.profile ? await actingProfile(q, account.id, profileId, { write: cmd.write, allowPaused: cmd.allowPaused }) : null;
         // coreAccountHash is stable across Core re-registrations; only for markers that must survive them (under-18).
-        return cmd.run(q, { account, acting, input, cfg: { ...cfg, pepper }, coreAccountHash: core.accountHash });
+        return cmd.run(q, { account, acting, input, cfg: { ...cfg, pepper }, coreAccountHash: core.accountHash, signal, channels });
       };
       const result = !cmd.write ? await exec(db)
         // The acting profile is part of the request: the same opId under another profile is a conflict, not a replay.
         : typeof input.opId === 'string' && cmd.ledger !== false ? await once(db, account.id, { opId: input.opId, action, input: { profileId, input } }, exec)
         : await db.tx(exec);
       if ('requestId' in result) throw new Error('reserved_result_field'); // the HTTP request id owns this name
+      // Awaited (with the sender's short timeout) before answering: a serverless instance may freeze right after the
+      // response. It never throws, so the committed command always answers ok.
+      if (signals && pending.length) await signals.send(pending);
       return send(200, { ok: true, ...result }, 'ok');
     } catch (error) {
       if (error instanceof FeError) return send(error.status, { ok: false, error: error.code, ...error.extra }, error.code);
