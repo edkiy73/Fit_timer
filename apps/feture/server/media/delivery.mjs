@@ -13,16 +13,34 @@ import { VARIANT_KEY } from './supabase-storage.mjs';
 
 /** @param {{signUrls: (keys: string[], ttlSeconds: number) => Promise<string[]>}} storage @returns {Delivery} */
 export function signedStorageDelivery(storage) {
+  // Requests that arrive together (a feed page builds all its posts at once) are coalesced: one storage call per TTL
+  // per tick instead of one per picture. Keys are de-duplicated; batches stay under the API's size.
+  /** @type {Map<number, {key: string, resolve: (u: string) => void, reject: (e: unknown) => void}[]>} */
+  let queue = new Map();
+  let scheduled = false;
+  const flush = async () => {
+    const batch = queue; queue = new Map(); scheduled = false;
+    for (const [ttl, waiting] of batch) {
+      const keys = [...new Set(waiting.map(w => w.key))];
+      try {
+        const signed = new Map();
+        for (let i = 0; i < keys.length; i += 200) {
+          const part = keys.slice(i, i + 200);
+          const urls = await storage.signUrls(part, ttl);
+          part.forEach((k, n) => signed.set(k, urls[n]));
+        }
+        for (const w of waiting) w.resolve(signed.get(w.key));
+      } catch (e) { for (const w of waiting) w.reject(e); }
+    }
+  };
   return {
-    async urls(items) {
-      // One batch call per TTL (normal media vs view-once), in request order.
-      const out = new Array(items.length);
-      for (const ttl of new Set(items.map(i => i.ttlSeconds))) {
-        const idx = items.map((it, k) => [it, k]).filter(([it]) => /** @type {UrlRequest} */ (it).ttlSeconds === ttl);
-        const urls = await storage.signUrls(idx.map(([it]) => VARIANT_KEY(/** @type {UrlRequest} */ (it).assetId, /** @type {UrlRequest} */ (it).variant)), ttl);
-        idx.forEach(([, k], n) => { out[/** @type {number} */ (k)] = urls[n]; });
-      }
-      return out;
+    urls(items) {
+      return Promise.all(items.map(it => new Promise((resolve, reject) => {
+        const list = queue.get(it.ttlSeconds) ?? [];
+        list.push({ key: VARIANT_KEY(it.assetId, it.variant), resolve, reject });
+        queue.set(it.ttlSeconds, list);
+        if (!scheduled) { scheduled = true; setTimeout(flush, 0); }
+      })));
     },
   };
 }
