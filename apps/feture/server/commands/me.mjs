@@ -4,6 +4,7 @@ import { fail, isUniqueViolation } from '../errors.mjs';
 import { hmac } from '../hash.mjs';
 import { mediaDto } from '../media/assets.mjs';
 import { photosFor } from './photos.mjs';
+import { photoVerifiedOf } from './verification.mjs';
 import { grantedScopes } from '../access.mjs';
 import { enqueue } from '../outbox.mjs';
 import { narrowCouple, needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
@@ -128,6 +129,7 @@ async function profileView(q, viewer, profileId, media) {
     details,
     avatar,
     photos: await photosFor(q, p.id, viewer.profileId, media),
+    photoVerified: (await photoVerifiedOf(q, [p.id])).get(p.id) ?? false, // only the yes/no, never the check itself (V01)
     ...(own ? { rev: p.rev, showAge: !!p.show_age, detailsVis: p.details_vis ?? null, state: p.state } : {}),
   };
 }

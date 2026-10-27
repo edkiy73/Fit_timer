@@ -2,7 +2,7 @@ import {useCallback,useEffect,useState,type ReactNode} from 'react';
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Ban,Check,ChevronRight,Eye,Inbox,Lock,RefreshCw,ShieldAlert,ShieldCheck,TriangleAlert,X} from 'lucide-react';
+import {BadgeCheck,Ban,Check,ChevronRight,Eye,Inbox,Lock,RefreshCw,ShieldAlert,ShieldCheck,TriangleAlert,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Bar,Btn,Empty,Seg,View} from './ui';
 import {useFe} from './session';
@@ -24,6 +24,7 @@ const eventItem=z.object({id:z.uuid(),rev:z.number(),title:z.string(),kind:opt(z
  created_at:ts,organizer:opt(z.object({id:z.string(),kind:z.string().optional(),handle:z.string().nullable().optional()}).passthrough())}).passthrough();
 const mediaDto=z.object({src:z.record(z.string(),z.string()).nullable().optional()}).passthrough().nullable().optional();
 const ageItem=z.object({id:z.uuid(),gesture:z.string(),submittedAt:ts,profile:z.object({id:z.string(),handle:z.string().nullable()}),selfie:mediaDto,photo:mediaDto});
+const photoItem=ageItem.extend({photos:z.array(mediaDto).optional()});
 const reportItem=z.object({targetType:z.enum(['profile','post','reply','community','event','conversation']),targetId:z.uuid(),reports:z.number(),reasons:z.array(z.string()),
  details:opt(z.array(z.string())),firstAt:ts,lastAt:ts,reported:z.unknown().optional(),excerpt:opt(z.string()),state:opt(z.string()),media:opt(z.number()),
  author:opt(z.object({id:z.string(),kind:z.string().optional(),handle:z.string().nullable().optional(),name:z.string().nullable().optional()}).passthrough())});
@@ -34,9 +35,9 @@ const placeItem=z.object({id:z.uuid(),country:opt(z.string()),name_ru:opt(z.stri
 const journalItem=z.object({id:z.union([z.string(),z.number()]),staff_account_id:z.string(),action:z.string(),target_type:opt(z.string()),target_id:opt(z.string()),detail:z.unknown().optional(),created_at:ts});
 const grantRes=z.object({ok:z.literal(true),id:z.string(),until:z.string()});
 
-type MediaItem=z.infer<typeof mediaItem>;type CommItem=z.infer<typeof commItem>;type EventItem=z.infer<typeof eventItem>;type AgeItem=z.infer<typeof ageItem>;
+type MediaItem=z.infer<typeof mediaItem>;type CommItem=z.infer<typeof commItem>;type EventItem=z.infer<typeof eventItem>;type AgeItem=z.infer<typeof ageItem>;type PhotoItem=z.infer<typeof photoItem>;
 type ReportItem=z.infer<typeof reportItem>;type AppealItem=z.infer<typeof appealItem>;type NoticeItem=z.infer<typeof noticeItem>;type PlaceItem=z.infer<typeof placeItem>;
-type Items={media:MediaItem[],community:CommItem[],event:EventItem[],age:AgeItem[],report:ReportItem[],appeal:AppealItem[],notice:NoticeItem[],place:PlaceItem[]};
+type Items={media:MediaItem[],community:CommItem[],event:EventItem[],age:AgeItem[],photo:PhotoItem[],report:ReportItem[],appeal:AppealItem[],notice:NoticeItem[],place:PlaceItem[]};
 type QueueId=keyof Items;
 const list=<T extends z.ZodType>(item:T)=>z.object({ok:z.literal(true),items:z.array(item)});
 const QUEUES:{[K in QueueId]:{action:string,schema:z.ZodType<{items:Items[K]}>,key:(x:Items[K][number])=>string}}={
@@ -44,6 +45,7 @@ const QUEUES:{[K in QueueId]:{action:string,schema:z.ZodType<{items:Items[K]}>,k
  community:{action:'staff.communityQueue',schema:list(commItem),key:x=>x.id},
  event:{action:'staff.eventQueue',schema:list(eventItem),key:x=>x.id},
  age:{action:'staff.ageCheckQueue',schema:list(ageItem),key:x=>x.id},
+ photo:{action:'staff.photoCheckQueue',schema:list(photoItem),key:x=>x.id},
  report:{action:'staff.reportQueue',schema:list(reportItem),key:x=>x.targetType+':'+x.targetId+':'+(x.author?.id??'')},
  appeal:{action:'staff.appealQueue',schema:list(appealItem),key:x=>x.id},
  notice:{action:'staff.noticeQueue',schema:list(noticeItem),key:x=>x.id},
@@ -114,7 +116,7 @@ function Queues(){
   {/* The queue switch: more queues than a sliding segment fits on a phone, so a scrollable tab row with counts. */}
   <div className="filterline st-tabs"><div className="chips scroll" role="tablist" aria-label={t('fe.staff.queuesLabel')}>
    {avail.map(id=><button key={id} type="button" role="tab" aria-selected={tab===id} className={'chip filter'+(tab===id?' on':'')} onClick={()=>{setTab(id);setNotice('');}}>
-    {t('fe.staff.q.'+id)} <b className="st-count">{count(id)}</b></button>)}
+    {id==='photo'?t('fe.pc.staff.tab'):t('fe.staff.q.'+id)} <b className="st-count">{count(id)}</b></button>)}
   </div></div>
   <div className="st-tools"><Btn kind="text" size="sm" auto icon={RefreshCw} onClick={load}>{t('fe.staff.refresh')}</Btn></div>
   {notice&&<div className="alert ok mb12" role="status"><Check/><span>{notice}</span></div>}
@@ -132,6 +134,7 @@ function QueueList({id,items,onDone}:{id:QueueId,items:unknown[],onDone:(key:str
    case 'community':return <CommunityCard key={k} item={x as CommItem} onDone={done}/>;
    case 'event':return <EventCard key={k} item={x as EventItem} onDone={done}/>;
    case 'age':return <AgeCard key={k} item={x as AgeItem} onDone={done}/>;
+   case 'photo':return <PhotoCard key={k} item={x as PhotoItem} onDone={done}/>;
    case 'report':return <ReportCard key={k} item={x as ReportItem} onDone={done}/>;
    case 'appeal':return <AppealCard key={k} item={x as AppealItem} onDone={done}/>;
    case 'notice':return <NoticeCard key={k} item={x as NoticeItem} onDone={done}/>;
@@ -306,6 +309,32 @@ function AgeCard({item,onDone}:{item:AgeItem,onDone:()=>void}){
   <Choice label={t('fe.staff.reason')} value={reason} onChange={setReason} disabled={d.busy} options={AGE_REASONS.map(id=>({id,label:t('fe.staff.age.reason.'+id)}))}/>
   {ask?<Confirm text={t('fe.staff.age.confirmReject')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>d.run('staff.ageCheckDecide',{checkId:item.id,approve:false,reason})}/>
    :<div className="st-row st-block"><Btn size="sm" auto icon={Check} disabled={d.busy||!selfie} onClick={()=>d.run('staff.ageCheckDecide',{checkId:item.id,approve:true})}>{t('fe.staff.age.approve')}</Btn>
+    <Btn kind="soft" size="sm" auto icon={Ban} disabled={d.busy||!reason} onClick={()=>setAsk(true)}>{t('fe.staff.reject')}</Btn></div>}
+  <Failure text={d.failure}/>
+ </Card>;
+}
+
+// ——— photo checks (V01 «Фото подтверждено») ———
+
+const PHOTO_REASONS=['gesture_mismatch','face_hidden','not_same_person','bad_photo'] as const;
+function PhotoCard({item,onDone}:{item:PhotoItem,onDone:()=>void}){
+ const {t}=useI18n();const when=useWhen();
+ const d=useDecide(onDone,e=>forbidden(e)?t('fe.pc.staff.own'):null);
+ const [reason,setReason]=useState<typeof PHOTO_REASONS[number]|''>('');const [ask,setAsk]=useState(false);
+ const selfie=item.selfie?.src?.full??item.selfie?.src?.card??null;
+ const photos=(item.photos??[item.photo]).map(p=>p?.src?.card??p?.src?.thumb??null).filter((v):v is string=>!!v);
+ const gesture=t('fe.staff.age.gesture.'+item.gesture);
+ return <Card title={item.profile.handle?'@'+item.profile.handle:item.profile.id} meta={when(item.submittedAt)}>
+  <div className="alert info st-block"><Eye/><span>{t('fe.staff.age.gesture')}: <b>{gesture.startsWith('fe.')?item.gesture:gesture}</b></span></div>
+  <p className="note">{t('fe.pc.staff.compare')}</p>
+  <div className="st-pair st-block">
+   <figure><div className="st-media">{selfie?<img src={selfie} alt="" draggable={false}/>:<div className="st-ph"><X/></div>}</div><figcaption className="note">{t('fe.pc.staff.selfie')}</figcaption></figure>
+   {(photos.length?photos:[null]).map((src,i)=><figure key={i}><div className="st-media">{src?<img src={src} alt="" draggable={false}/>:<div className="st-ph"><Eye/></div>}</div><figcaption className="note">{t('fe.pc.staff.photo')}{photos.length>1?' '+(i+1):''}</figcaption></figure>)}
+  </div>
+  {!selfie&&<p className="note">{t('fe.staff.age.noSelfie')}</p>}
+  <Choice label={t('fe.staff.reason')} value={reason} onChange={setReason} disabled={d.busy} options={PHOTO_REASONS.map(id=>({id,label:t('fe.pc.reason.'+id)}))}/>
+  {ask?<Confirm text={t('fe.pc.staff.confirmReject')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>d.run('staff.photoCheckDecide',{checkId:item.id,approve:false,reason})}/>
+   :<div className="st-row st-block"><Btn size="sm" auto icon={BadgeCheck} disabled={d.busy||!selfie} onClick={()=>d.run('staff.photoCheckDecide',{checkId:item.id,approve:true})}>{t('fe.pc.staff.approve')}</Btn>
     <Btn kind="soft" size="sm" auto icon={Ban} disabled={d.busy||!reason} onClick={()=>setAsk(true)}>{t('fe.staff.reject')}</Btn></div>}
   <Failure text={d.failure}/>
  </Card>;

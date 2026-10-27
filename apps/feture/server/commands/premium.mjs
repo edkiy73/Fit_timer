@@ -15,7 +15,7 @@ import { journal, requireStaff } from './staff.mjs';
  * @typedef {import('../outbox.mjs').OutboxItem} OutboxItem
  */
 
-const GESTURES = ['thumb_up', 'peace', 'open_palm', 'three_fingers', 'ok_sign', 'hand_on_head'];
+export const GESTURES = ['thumb_up', 'peace', 'open_palm', 'three_fingers', 'ok_sign', 'hand_on_head'];
 const START_MINUTES = 30;
 const AGE_CHECK_YEARS = 1;
 const KEEP_DAYS = 30;
@@ -57,11 +57,15 @@ export function verificationHandlers(db) {
 export async function sweepSelfies(db) {
   if (!(await db.query(`select to_regclass('feture.age_check') is not null ok`))[0].ok) return 0;
   await db.query(`update feture.age_check set state = 'expired' where state = 'started' and created_at < now() - make_interval(mins => $1)`, [START_MINUTES]);
+  // The photo check (V01) keeps its selfies the same way; skipped until its migration is in.
+  const photo = (await db.query(`select to_regclass('feture.photo_check') is not null ok`))[0].ok;
+  if (photo) await db.query(`update feture.photo_check set state = 'expired' where state = 'started' and created_at < now() - make_interval(mins => $1)`, [START_MINUTES]);
   return db.tx(async q => {
     const rows = await q.query(
       `update feture.media_asset m set state = 'removed', removed_at = now()
        where m.id in (select id from feture.media_asset where purpose = 'verification' and state not in ('removed', 'blocked') and created_at < now() - interval '6 hours'
                         and not exists (select 1 from feture.age_check c where c.asset_id = media_asset.id and c.state in ('submitted', 'approved', 'rejected'))
+                        ${photo ? `and not exists (select 1 from feture.photo_check c where c.asset_id = media_asset.id and c.state in ('submitted', 'approved', 'rejected'))` : ''}
                       limit 200)
        returning m.id, m.owner_profile_id`);
     for (const r of rows) {
@@ -132,6 +136,9 @@ const run = {
       `select 1 from feture.media_asset m join feture.account a on a.person_profile_id = m.owner_profile_id
        where m.id = $1 and a.id = $2 and m.purpose = 'verification' and m.state in ('uploaded', 'scanning', 'needs_review', 'approved')
          and m.created_at >= $3 and not exists (select 1 from feture.age_check x where x.asset_id = m.id)`, [input.assetId, account.id, c.created_at]);
+    // Nor a selfie already sent for the photo check (V01).
+    if (m && (await q.query(`select to_regclass('feture.photo_check') is not null ok`))[0].ok
+      && (await q.query('select 1 from feture.photo_check where asset_id = $1', [input.assetId])).length) fail(400, 'invalid_input', { fields: ['assetId'] });
     if (!m) fail(400, 'invalid_input', { fields: ['assetId'] });
     await q.query(`update feture.age_check set state = 'submitted', asset_id = $2, submitted_at = now() where id = $1`, [c.id, input.assetId]);
     await enqueue(q, 'moderation.ageCheck', null, { checkId: c.id });

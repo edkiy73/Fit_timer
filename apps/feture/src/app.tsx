@@ -31,6 +31,7 @@ import { FollowsScreen, GalleryScreen, SearchScreen, TopicScreen } from './fe/br
 import { InterestsScreen, InterestsHistoryScreen } from './fe/interests';
 import { StaffScreen } from './fe/staff';
 import { AgeCheckScreen } from './fe/age-check';
+import { PhotoCheckScreen } from './fe/photo-check';
 import { FeedTab, PostScreen, ComposeScreen, EditPostScreen } from './fe/feed';
 import { CreateCommunityScreen, EditCommunityScreen } from './fe/create-community';
 import { CreateEventScreen, EditEventScreen } from './fe/create-event';
@@ -307,6 +308,7 @@ export const routes: RouteObject[] = [
         {path:'premium', element:<PremiumScreen />},
         {path:'help', element:<HelpScreen />},
         {path:'settings/age', element:<AgeCheckScreen />},
+        {path:'settings/photo-check', element:<PhotoCheckScreen />},
         {path:'chats', element:<ChatsTab />},
         {path:'chats/:id', element:<ChatScreen />},
         {path:'me', element:<MeTab />},

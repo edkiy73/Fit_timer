@@ -3,7 +3,7 @@ import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
-import {Ban,Bell,ChevronRight,Crown,LifeBuoy,Download,Eye,EyeOff,Globe,Heart,LogOut,Moon,ShieldCheck,Trash2,X} from 'lucide-react';
+import {BadgeCheck,Ban,Bell,ChevronRight,Crown,LifeBuoy,Download,Eye,EyeOff,Globe,Heart,LogOut,Moon,ShieldCheck,Trash2,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {getThemePreference,setThemePreference,type ThemePreference} from '../theme';
 import {Bar,Btn,Empty,View} from './ui';
@@ -18,6 +18,7 @@ const notif=z.object({mode:z.enum(['safe','normal']),push:z.boolean(),email:z.bo
 type Notif=z.infer<typeof notif>;
 const notifRes=z.object({ok:z.literal(true),settings:notif});
 const ageRes=z.object({ok:z.literal(true),verified:z.boolean()}).passthrough();
+const photoRes=z.object({ok:z.literal(true),state:z.enum(['none','pending','approved','rejected'])}).passthrough();
 const ok=z.object({ok:z.literal(true)}).passthrough();
 const blocksRes=z.object({ok:z.literal(true),items:z.array(z.unknown())}).passthrough();
 
@@ -27,10 +28,11 @@ function Row({icon:Icon,title,note,value,onClick,danger}:{icon:typeof Bell,title
 
 export function SettingsScreen(){
  const {call,state,acting}=useFe();const {t,preference,setPreference,canSwitch}=useI18n();const [blocked,setBlocked]=useState<number|null>(null);const auth=useOptionalAuth();const navigate=useNavigate();
- const [s,setS]=useState<z.infer<typeof settingsRes>['settings']|null>(null);const [age,setAge]=useState<boolean|null>(null);const [theme,setTheme]=useState<ThemePreference>(getThemePreference());
+ const [s,setS]=useState<z.infer<typeof settingsRes>['settings']|null>(null);const [age,setAge]=useState<boolean|null>(null);const [photo,setPhoto]=useState<z.infer<typeof photoRes>['state']|null>(null);const [theme,setTheme]=useState<ThemePreference>(getThemePreference());
  const [error,setError]=useState<unknown>(null);const [failure,setFailure]=useState('');const premium=usePremiumStatus().status;
  const load=useCallback(()=>{setError(null);call('settings.get',{},settingsRes,{asAccount:true}).then(r=>setS(r.settings)).catch(setError);
   call('verification.ageStatus',{},ageRes,{asAccount:true}).then(r=>setAge(r.verified)).catch(()=>{});
+  call('verification.photoStatus',{},photoRes,{asAccount:true}).then(r=>setPhoto(r.state)).catch(()=>{});
   call('blocks.list',{},blocksRes).then(r=>setBlocked(r.items.length)).catch(()=>{});},[call]);
  useEffect(()=>{load();},[load]);
  const update=async(patch:Record<string,unknown>)=>{setFailure('');try{await call('settings.update',{opId:newOpId(),...patch},ok,{asAccount:true});load();}catch(e){setFailure(feErrorMessage(e,t));}};
@@ -44,6 +46,7 @@ export function SettingsScreen(){
     <div className="card list">
      <Row icon={ShieldCheck} title={t('fe.set.signIn')} note={email} onClick={()=>navigate('/n/settings/security')}/>
      <Row icon={ShieldCheck} title={t('fe.set.age')} note={t('fe.set.ageNote')} value={age===null?undefined:age?t('fe.set.ageOk'):t('fe.set.ageNo')} onClick={()=>navigate('/n/settings/age')}/>
+     <Row icon={BadgeCheck} title={t('fe.pc.row')} note={t('fe.pc.rowNote')} value={photo===null?undefined:photo==='approved'?t('fe.pc.rowOk'):photo==='pending'?t('fe.pc.rowWait'):t('fe.pc.rowNo')} onClick={()=>navigate('/n/settings/photo-check')}/>
      <Row icon={Eye} title={t('fe.set.privacy')} note={t('fe.set.privacyNote')} onClick={()=>navigate('/n/me?layer=vis')}/>
      <Row icon={Crown} title={t('fe.ax.prem.entry')} note={t('fe.ax.prem.entryNote')} value={premium?.premium?t('fe.ax.prem.entryOn'):undefined} onClick={()=>navigate('/n/premium')}/>
      <Row icon={Heart} title={t('fe.pair.section')} note={couple?(couple.name||t('fe.pair.ourProfile')):t('fe.pair.entryOff')} onClick={()=>navigate('/n/me/pair')}/>

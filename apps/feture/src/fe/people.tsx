@@ -6,6 +6,7 @@ import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Ban,ChevronLeft,ChevronRight,Ellipsis,Eye,Heart,History,Info,Lock,MapPin,Search as SearchIcon,SlidersHorizontal,Undo2,Users,X} from 'lucide-react';
 import {Av,Bar,Btn,Empty,Seg,View} from './ui';
 import {useFe} from './session';
+import {PhotoBadge} from './photo-check';
 import {PrivateOf} from './private';
 import {ProfileLinks} from './browse';
 import {CompatSummary,LinksSection,PersonBio,PersonHero,PersonMenu,PersonPhotos,personName,personProfileRes,pxError,useToast,type MenuStep,type PersonProfile} from './profile-extras';
@@ -15,7 +16,7 @@ import {CompatSummary,LinksSection,PersonBio,PersonHero,PersonMenu,PersonPhotos,
  * the server returned: no invented matches, counters or scores. */
 const media=z.object({src:z.record(z.string(),z.string()).nullable(),pending:z.boolean().optional()}).passthrough();
 const card=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),ages:z.array(z.number()),
- city:z.object({ru:z.string().nullable(),en:z.string().nullable()}).nullable(),avatar:media.nullable(),likedMe:z.boolean(),shared:z.number()});
+ city:z.object({ru:z.string().nullable(),en:z.string().nullable()}).nullable(),avatar:media.nullable(),likedMe:z.boolean(),shared:z.number(),photoVerified:z.boolean().optional()});
 type Card=z.infer<typeof card>;
 const deck=z.object({ok:z.literal(true),off:z.boolean(),items:z.array(card)});
 const decided=z.object({ok:z.literal(true),decision:z.enum(['like','pass']),state:z.string().optional(),conversationId:z.uuid().optional()}).passthrough();
@@ -200,7 +201,7 @@ function Discover({reloadKey,onOff}:{reloadKey:number,onOff:(off:boolean)=>void}
     {src?<><img className="mbg" src={src} alt="" aria-hidden="true" draggable={false}/><img src={src} alt={name} draggable={false}/></>:<div className="fe-pc-ini"><Av name={name} seed={x.id} size="xl"/></div>}
     {(x.likedMe||x.shared>0)&&<div className="pc-tags">{x.likedMe&&<span className="pc-liked"><Heart/>{t('fe.people.likedMe')}</span>}{x.shared>0&&<span className="pc-score"><b>{x.shared}</b><small>{t('fe.people.sharedTopics')}</small></span>}</div>}
     <div className="pc-info">
-     <h2 className="pc-name"><span className="pcn">{name}</span>{x.ages.length>0&&<span>{x.ages.join(' · ')}</span>}</h2>
+     <h2 className="pc-name"><span className="pcn">{name}</span>{x.ages.length>0&&<span>{x.ages.join(' · ')}</span>}{x.photoVerified&&<PhotoBadge/>}</h2>
      {x.city&&<div className="pc-who"><span className="pl"><MapPin/>{locale==='en'?x.city.en:x.city.ru}</span></div>}
     </div>
    </div>
@@ -219,7 +220,7 @@ function Row({c,locale}:{c:Card,locale:string}){
  const navigate=useNavigate();
  return <button type="button" className="li" onClick={()=>navigate('/n/people/'+c.id)}>
   <Av name={c.name||c.handle||'?'} seed={c.id} src={c.avatar?.src?.thumb}/>
-  <span className="tx"><b>{c.name||'@'+c.handle}</b><small>{[c.handle&&'@'+c.handle,sub(c,locale)].filter(Boolean).join(' · ')}</small></span>
+  <span className="tx"><b>{c.name||'@'+c.handle}{c.photoVerified&&<PhotoBadge/>}</b><small>{[c.handle&&'@'+c.handle,sub(c,locale)].filter(Boolean).join(' · ')}</small></span>
  </button>;
 }
 
