@@ -3,6 +3,8 @@ import { dropsNew } from '../helpers.mjs';
 // deleted at the end through K07, which also covers deletion and sign-out.
 const N = process.env.REG_N || String(Date.now() % 1e7);
 const nick = k => `e2e${N}${k}`.slice(0, 20);
+/** Sign-up step 2 (topics and communities): «Готово» with nothing picked. */
+const step2 = async t => { await t.see('Что тебе интересно?', 20000); await t.tap('.ctabar >> text=Готово'); };
 const eq = (a, b, what) => { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${what}: expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`); };
 const dob = async (t, d, m, y) => { const s = t.page.locator('.dob select'); await s.nth(2).selectOption(String(y)); await s.nth(1).selectOption(String(m)); await s.nth(0).selectOption(String(d)); await t.wait(200); };
 const adultYear = new Date().getFullYear() - 30, kidYear = new Date().getFullYear() - 15;
@@ -38,7 +40,7 @@ const scenarios = [
    await dob(t, 15, 6, adultYear);
    await t.tap('role=checkbox[name=/Принимаю/]'); await t.tap('role=checkbox[name=/новости/]');
    await t.tap('.ctabar >> text=Дальше');
-   await t.see('Расскажи о себе', 20000); await t.see('.ctabar >> text=Сохранить и продолжить'); await t.see('.ctabar >> text=Заполнить позже');
+   await t.see('Расскажи о себе', 20000); await t.see('.ctabar >> text=Дальше'); await t.see('.ctabar >> text=Заполнить позже');
    await t.page.locator('.fin .chips[role=group] .chip').first().waitFor({ timeout: 15000 });
    await t.tap('role=radio[name="Не участвовать"]'); await t.notSee('role=radio[name="Добавлю фото сейчас"]', 300);
    await t.tap('role=radio[name="По доступу"]'); await t.see('Увидят только те, кому ты откроешь');
@@ -57,7 +59,7 @@ const scenarios = [
    }
    const st = t.page.locator('.chips[aria-label="Статус отношений"] .chip'); if (await st.count() > 1) { await st.nth(0).click(); await st.nth(1).click();
      eq(await t.page.locator('.chips[aria-label="Статус отношений"] .chip.on').count(), 1, 'status is single choice'); }
-   await t.tap('.ctabar >> text=Сохранить и продолжить');
+   await t.tap('.ctabar >> text=Дальше'); await step2(t);
    await t.see('nav.dock', 20000);
    const boot = await t.boot(); if (!boot.account.onboarded) throw new Error('not onboarded');
    const me = boot.profiles.find(p => p.kind === 'person');
@@ -74,7 +76,7 @@ const scenarios = [
    await toAboutYou(t, 'c', 3);
    // Known (server): session.bootstrap says onboarded as soon as the profile exists, so a reload on A05 opens the app
    // instead of A05 — not covered here until the owner decides on the onboarded_at backfill.
-   await t.tap('.ctabar >> text=Заполнить позже');
+   await t.tap('.ctabar >> text=Заполнить позже'); await step2(t);
    await t.see('nav.dock', 20000);
    const boot = await t.boot(); if (!boot.account.onboarded) throw new Error('not onboarded');
    await deleteViaUi(t, nick('c'));
@@ -94,12 +96,12 @@ const scenarios = [
    await t.tap('.ctabar >> text=Дальше'); await t.tap('.dialog >> text=Подтверждаю');
    // The under-18 date never reaches the server (nothing is kept); the confirmed adult date creates the account.
    await t.see('Расскажи о себе', 20000);
-   await t.tap('.ctabar >> text=Заполнить позже'); await t.see('nav.dock', 20000);
+   await t.tap('.ctabar >> text=Заполнить позже'); await step2(t); await t.see('nav.dock', 20000);
    await deleteViaUi(t, nick('e'));
  } },
  { name: 'K01 «Выйти» signs out to A01; signing back in with a code returns to the app; then delete', persona: 'new', route: '/n/feed', run: async t => {
    await toAboutYou(t, 'f', 4);
-   await t.tap('.ctabar >> text=Заполнить позже'); await t.see('nav.dock', 20000);
+   await t.tap('.ctabar >> text=Заполнить позже'); await step2(t); await t.see('nav.dock', 20000);
    await t.go('/n/settings'); await t.tap('.li.danger >> text=Выйти'); await t.tap('.dialog .btn >> text=Выйти');
    await t.see('Создать аккаунт', 15000); await t.see('У меня уже есть аккаунт');
    await t.page.route('**/api/auth', async r => { const b = JSON.parse(r.request().postData() || '{}'); if (b.action !== 'send') return r.fallback(); await r.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }); });

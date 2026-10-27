@@ -2,7 +2,7 @@
 // Persona `chats` (both sides age verified): text and photos go to its chat with `mate`, menu actions to its chat with
 // `asker`; actions that end a contact use a fresh match with `stranger` (ended, unblocked and archived again).
 import { STAFF } from '../../personas.mjs';
-import { FIXTURES } from '../helpers.mjs';
+import { FIXTURES, until } from '../helpers.mjs';
 let T2, KAI, KAIN, TEST2, NOA, MATE, STRANGER; // set per scenario from the personas of the lane (see `init`)
 const PHOTO = FIXTURES + 'photo.jpg';
 async function init(t) {
@@ -65,7 +65,7 @@ const scenarios = [
     await t.wait(800);
     if (await ta.inputValue()) throw new Error('Enter did not send');
     await t.page.locator('.msgs .msg.me:not(.sending)', { hasText: 'строка 2' }).last().waitFor({ timeout: 20000 });
-    if (!(await lastMsgs(t, TEST2)).some(m => m.body === body)) throw new Error('multi-line message not on server');
+    await until(async () => (await lastMsgs(t, TEST2)).some(m => m.body === body), 'multi-line message not on server: ' + JSON.stringify(body));
   } },
   { name: 'H02 realtime: a message from the other side appears without reload', persona: 'chats', route: '/n/chats/@T2', run: async t => {
     await ready(t); await t.wait(1500); // the socket joins

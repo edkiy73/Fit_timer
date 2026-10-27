@@ -43,6 +43,9 @@ commands; a second call only adds what is missing.
 Cooldowns decide which persona a scenario may use repeatedly: a revoked grant, a withdrawn request, a left community
 or a cancelled invite can be redone at once; a **declined** access request (30 days) or couple invitation (7 days)
 cannot, so those run on a fresh `owner` / `temp`.
+Daily limits still apply per persona: `me/pair.mjs` sends 3 couple invitations per run and an account may send 10 a
+day, so it runs about three times a day per lane (the next run starts by freeing `inviter` again). The free Discover
+undo is one a day; after it the deck scenario checks the Premium page instead.
 
 ### Adding a persona
 

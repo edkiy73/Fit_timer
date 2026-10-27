@@ -34,6 +34,8 @@ export default [
      const second = await p.locator('.deck .pc.top').getAttribute('aria-label').catch(() => null);
      expect(second !== first, 'pass moves the deck on');
      await t.tap('.acts .act.undo'); await t.wait(1500);
+     // One free undo a day (Q6): after it, «Вернуть» opens Premium with the undo feature marked — then back to the deck.
+     if (t.page.url().includes('/n/premium')) { await t.see('.pw-f.on'); await t.page.goBack(); await t.see('.bar .seg [role="tab"]'); }
    } else console.log('   (deck empty for this persona — only the empty state checked)');
    await t.tap('.bar [role="tab"]:has-text("Симпатии")'); await t.see('.view .seg [role="tab"]');
    await t.tap('.view .seg [role="tab"]:nth-of-type(2)'); await t.wait(1500);

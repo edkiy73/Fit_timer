@@ -51,7 +51,7 @@ export default [
  } },
  { name: 'P02 nickname: bad format refused', persona: 'full', route: '/n/me/edit?only=basics', allow4xx: true, run: async t => {
    await t.fill('.field:has-text("Ник") input', 'a!'); await t.tap('.ctabar button:has-text("Сохранить")'); await t.wait(1500);
-   await t.see('.alert.err'); expect(t.page.url().includes('/edit'), 'stays on editor');
+   await t.see('[data-field="handle"] .ferr, .alert.err'); expect(t.page.url().includes('/edit'), 'stays on editor'); // checked in place since #1374
  } },
  { name: 'P02 details: role chip → Сохранить → persisted', persona: 'full', route: '/n/me', run: async t => {
    const before = (await prof(t)).details;
