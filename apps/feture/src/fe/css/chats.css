@@ -1,0 +1,3 @@
+/* Chats (V21 H01/H02): prototype rules v21.css lost in generation (`.mtile>img`, `.mtile.blur>img`). */
+.v21 .mtile>img{display:block;width:100%;max-height:320px;object-fit:cover}
+.v21 .mtile.blur>img{filter:blur(28px) saturate(1.2);transform:scale(1.15)}
