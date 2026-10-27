@@ -286,5 +286,21 @@ export const en: Record<keyof typeof ru, string> = {
   "fe.feed.state.review": "In review",
   "fe.feed.state.draft": "Draft",
   "fe.feed.state.removed": "Hidden by a moderator",
-  "fe.feed.state.archived": "Archived"
+  "fe.feed.state.archived": "Archived",
+  "fe.me.settings": "Account settings",
+  "fe.me.age": "{age}",
+  "fe.me.noBio": "Say a few words about yourself — it helps people start a conversation.",
+  "fe.me.edit": "Edit profile",
+  "fe.me.name": "Name",
+  "fe.me.bio": "About",
+  "fe.me.save": "Save",
+  "fe.me.saved": "Profile saved",
+  "fe.me.pending": "The change is waiting for your partner",
+  "fe.me.photos": "Profile photos",
+  "fe.me.photoAdd": "Add a photo",
+  "fe.me.photoRemove": "Remove photo",
+  "fe.me.photoHint": "Up to 6 photos. Others see a photo after review; the first one is your avatar.",
+  "fe.me.photoType": "Use JPEG, PNG or WebP.",
+  "fe.me.photoSize": "The file is over 20 MB. Pick a smaller one.",
+  "fe.me.needPhoto": "Add a profile photo — without one nobody sees you in Discover."
 };

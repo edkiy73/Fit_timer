@@ -122,3 +122,14 @@
 .fe-reply p{margin:2px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
 .fe-composer{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}
 .fe-composer textarea,.fe-compose{resize:vertical;padding:12px 14px;min-height:48px;line-height:1.4}
+
+/* Me (V21 X01/P02) */
+.fe-card{padding:16px;border-radius:var(--fe-r-l);background:var(--fe-surf)}
+.fe-okbox{margin:0;padding:12px 14px;border-radius:var(--fe-r);background:var(--fe-ok-soft);color:var(--fe-ok)}
+.fe-photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.fe-photo{position:relative;margin:0;aspect-ratio:4/5;border-radius:var(--fe-r);overflow:hidden;background:var(--fe-raise);max-width:100%}
+.fe-photo img{width:100%;height:100%;object-fit:cover}
+.fe-photo .fe-pill{position:absolute;left:6px;bottom:6px;margin:0}
+.fe-photo-wait{display:grid;place-items:center;height:100%;color:var(--fe-mute)}
+.fe-photo-x{position:absolute;top:4px;right:4px;display:grid;place-items:center;width:28px;height:28px;border:0;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;cursor:pointer}
+.fe-photo-add{display:grid;place-items:center;border:2px dashed var(--fe-line2);color:var(--fe-mute);cursor:pointer}
