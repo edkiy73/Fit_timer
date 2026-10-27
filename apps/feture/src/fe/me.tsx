@@ -31,7 +31,7 @@ export function MeTab(){
  const {state,acting,setActing,call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();
  const [p,setP]=useState<Profile|null>(null);const [settings,setSettings]=useState<z.infer<typeof settingsRes>['settings']|null>(null);
  const [options,setOptions]=useState<z.infer<typeof option>[]>([]);
- const [error,setError]=useState<unknown>(null);const [layer,setLayer]=useState<Layer>(()=>new URLSearchParams(location.hash.split('?')[1]??'').get('layer')==='priv'?'priv':'profile');const [editing,setEditing]=useState(false);const [notice,setNotice]=useState('');
+ const [error,setError]=useState<unknown>(null);const [layer,setLayer]=useState<Layer>(()=>{const l=new URLSearchParams(location.hash.split('?')[1]??'').get('layer');return l==='priv'||l==='mine'||l==='vis'?l:'profile';});const [editing,setEditing]=useState(false);const [notice,setNotice]=useState('');
  const load=useCallback(()=>{
   if(!acting)return;setError(null);
   Promise.all([call('profile.get',{profileId:acting.id},profileRes),call('profile.settings',{},settingsRes)])

@@ -603,5 +603,6 @@ export const en: Record<keyof typeof ru, string> = {
   "fe.mine.savedKind.post": "Post",
   "fe.mine.savedKind.event": "Event",
   "fe.mine.savedKind.topic": "Topic",
-  "fe.mine.savedKind.discussion": "Discussion"
+  "fe.mine.savedKind.discussion": "Discussion",
+  "fe.feed.mediaReview": "A post with photos is visible after a moderator reviews it — usually quickly. Meanwhile it’s in Me → Mine."
 };

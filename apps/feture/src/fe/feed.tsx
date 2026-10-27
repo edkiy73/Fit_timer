@@ -144,17 +144,32 @@ export function PostScreen(){
 
 const saved=z.object({ok:z.literal(true),id:z.uuid()}).passthrough();
 const published=z.object({ok:z.literal(true),state:z.string().optional()}).passthrough();
+const uploadIntent=z.object({ok:z.literal(true),assetId:z.uuid(),upload:z.object({url:z.string(),method:z.string(),headers:z.record(z.string(),z.string())})});
 export function ComposeScreen(){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const [params]=useSearchParams();const communityId=params.get('community');
  const [body,setBody]=useState('');const [audience,setAudience]=useState<'all'|'followers'|'only'>('all');const [inFeed,setInFeed]=useState(true);
  const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const [media,setMedia]=useState<{id:string,preview:string}[]>([]);const [uploading,setUploading]=useState(false);const file=useRef<HTMLInputElement>(null);
  const ops=useRef({draft:newOpId(),publish:newOpId()});
- const publish=async()=>{
-  if(!body.trim()||busy)return;setBusy(true);setFailure('');
+ const addMedia=async(f:File)=>{
+  setFailure('');
+  if(!['image/jpeg','image/png','image/webp'].includes(f.type)){setFailure(t('fe.me.photoType'));return;}
+  if(f.size>20*1024*1024){setFailure(t('fe.me.photoSize'));return;}
+  setUploading(true);
   try{
-   const d=await call('post.saveDraft',{opId:ops.current.draft,post:{body:body.trim(),audience,inFeed,...(communityId?{communityId}:{})}},saved);
-   await call('post.publish',{opId:ops.current.publish,postId:d.id},published);
-   navigate(communityId?'/n/communities/'+communityId:'/n/feed',{replace:true});
+   const i=await call('media.uploadIntent',{opId:newOpId(),purpose:'post',kind:'image',mime:f.type,bytes:f.size},uploadIntent);
+   const put=await fetch(i.upload.url,{method:i.upload.method,headers:i.upload.headers,body:f});
+   if(!put.ok)throw new Error('upload');
+   await call('media.commit',{assetId:i.assetId},okOnly);
+   setMedia(m=>[...m,{id:i.assetId,preview:URL.createObjectURL(f)}]);
+  }catch(e){setFailure(feErrorMessage(e,t));}finally{setUploading(false);if(file.current)file.current.value='';}
+ };
+ const publish=async()=>{
+  if((!body.trim()&&!media.length)||busy||uploading)return;setBusy(true);setFailure('');
+  try{
+   const d=await call('post.saveDraft',{opId:ops.current.draft,post:{body:body.trim(),audience,inFeed,mediaIds:media.map(m=>m.id),...(communityId?{communityId}:{})}},saved);
+   const r=await call('post.publish',{opId:ops.current.publish,postId:d.id},published);
+   navigate(r.state==='review'?'/n/me?layer=mine':communityId?'/n/communities/'+communityId:'/n/feed',{replace:true});
   }catch(e){setFailure(feErrorMessage(e,t));ops.current={draft:newOpId(),publish:newOpId()};}
   finally{setBusy(false);}
  };
@@ -173,8 +188,12 @@ export function ComposeScreen(){
      <textarea className="inp" rows={6} maxLength={1000} value={body} onChange={e=>setBody(e.target.value)} placeholder={t('fe.feed.composePh')} aria-label={t('fe.feed.composePh')} autoFocus/>
      <div className="counter">{body.length} / 1000</div>
     </div>
+    {media.length>0&&<div className="cmp-media"><div className="grp"><div className="card"><div className="ph-slots">{media.map(m=><div key={m.id} className="mi">
+     <img src={m.preview} alt="" draggable={false}/><button type="button" className="vw" aria-label={t('fe.me.photoRemove')} onClick={()=>setMedia(list=>list.filter(x=>x.id!==m.id))}/></div>)}</div></div></div>
+     <p className="note">{t('fe.feed.mediaReview')}</p></div>}
+    <input ref={file} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={e=>{const f=e.target.files?.[0];if(f)void addMedia(f);}}/>
     <div className="attach v14">
-     <button type="button" disabled title={t('fe.soonShort')}><ImageIcon/><span>{t('fe.feed.media')}</span></button>
+     <button type="button" onClick={()=>file.current?.click()} disabled={uploading||media.length>=6}><ImageIcon/><span>{uploading?t('fe.loading'):t('fe.feed.media')}</span></button>
      <button type="button" disabled title={t('fe.soonShort')}><ChartColumn/><span>{t('fe.feed.poll')}</span></button>
     </div>
    </div>
@@ -186,6 +205,6 @@ export function ComposeScreen(){
    </div></section>
    {failure&&<p className="alert err" role="alert">{failure}</p>}
   </View>
-  <div className="ctabar"><div className="wrap"><Btn onClick={publish} disabled={busy||!body.trim()}>{busy?t('fe.loading'):t('fe.feed.publish')}</Btn></div></div>
+  <div className="ctabar"><div className="wrap"><Btn onClick={publish} disabled={busy||uploading||(!body.trim()&&!media.length)}>{busy?t('fe.loading'):t('fe.feed.publish')}</Btn></div></div>
  </>;
 }

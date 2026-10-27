@@ -601,5 +601,6 @@ export const ru = {
   "fe.mine.savedKind.post": "Публикация",
   "fe.mine.savedKind.event": "Событие",
   "fe.mine.savedKind.topic": "Тема",
-  "fe.mine.savedKind.discussion": "Обсуждение"
+  "fe.mine.savedKind.discussion": "Обсуждение",
+  "fe.feed.mediaReview": "Публикацию с фото увидят после проверки модератором — обычно это быстро. Пока она в «Я → Моё»."
 } as const;
