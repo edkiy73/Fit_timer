@@ -6,6 +6,7 @@ import {Bookmark,ChartColumn,Ellipsis,Heart,Image as ImageIcon,Lock,MessageCircl
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {Av,Bar,Btn,Empty,Seg,View} from './ui';
 import {useFe} from './session';
+import {BellButton} from './inbox';
 
 /** Slice B (V21 F01, F05, F07) with the prototype's markup: feed tabs, composer row, posts, replies, new post.
  * Visibility and counts are the server's; the client never filters or invents them. */
@@ -42,7 +43,7 @@ export function FeedTab(){
  useEffect(()=>{load();},[load]);
  const me=nameOf(acting);
  return <>
-  <Bar title={t('fe.nav.feed')}/>
+  <Bar title={t('fe.nav.feed')}><BellButton/></Bar>
   <View>
    <div className="mb12"><Seg value={tab} onChange={setTab} options={[{id:'forYou',label:t('fe.feed.tab.forYou')},{id:'following',label:t('fe.feed.tab.following')}]}/></div>
    <div className="composer">

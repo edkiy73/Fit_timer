@@ -7,6 +7,7 @@ import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {Av,Btn,Empty,Seg} from './ui';
 import {useFe} from './session';
 import {PrivateLayer} from './private';
+import {BellButton} from './inbox';
 
 /** Slice C (V21 X01, P02, P03) with the prototype's markup: own profile, photos (others see approved ones;
  * «на проверке» only the owner), basics, details, Discover and who sees the answers. */
@@ -28,7 +29,7 @@ export function MeTab(){
  const {state,acting,setActing,call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();
  const [p,setP]=useState<Profile|null>(null);const [settings,setSettings]=useState<z.infer<typeof settingsRes>['settings']|null>(null);
  const [options,setOptions]=useState<z.infer<typeof option>[]>([]);
- const [error,setError]=useState<unknown>(null);const [layer,setLayer]=useState<Layer>('profile');const [editing,setEditing]=useState(false);const [notice,setNotice]=useState('');
+ const [error,setError]=useState<unknown>(null);const [layer,setLayer]=useState<Layer>(()=>new URLSearchParams(location.hash.split('?')[1]??'').get('layer')==='priv'?'priv':'profile');const [editing,setEditing]=useState(false);const [notice,setNotice]=useState('');
  const load=useCallback(()=>{
   if(!acting)return;setError(null);
   Promise.all([call('profile.get',{profileId:acting.id},profileRes),call('profile.settings',{},settingsRes)])
@@ -46,6 +47,7 @@ export function MeTab(){
    <header className="me18-h wrap">
     <span className="av-wrap"><Av name={name} seed={acting.id} src={p?.avatar?.src?.thumb??p?.avatar?.src?.card}/></span>
     <div className="me18-who"><b><span>{name}</span></b><small>{acting.kind==='couple'?t('fe.me.weCouple'):t('fe.me.iPersonal')}</small></div>
+    <BellButton/>
     <button type="button" className="ibtn" aria-label={t('fe.me.settings')} onClick={()=>navigate('/account')}><Settings/></button>
    </header>
    <div className="wrap">
