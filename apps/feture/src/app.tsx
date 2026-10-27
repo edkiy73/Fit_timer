@@ -113,13 +113,19 @@ function SandboxAuthFence(){
  return null;
 }
 
+/** Background work of the current screens (settings sync, the interest queue on /api/domain). The V21 screens on
+ * /n use /api/fe only; running these there sent hundreds of failing legacy requests and slowed every screen. */
+function LegacyBackground(){
+  const {pathname}=useLocation();
+  if(pathname==='/n'||pathname.startsWith('/n/'))return null;
+  return <><SettingsSync /><SandboxAuthFence /><InterestLifecycle /></>;
+}
+
 function Root(){
   return (
     <Localized>
       <AuthProvider client={authClient}>
-        <SettingsSync />
-        <SandboxAuthFence />
-        <InterestLifecycle />
+        <LegacyBackground />
         <NativeNavigation />
         <DatingPresentationProvider><ProductLayout><Outlet /></ProductLayout></DatingPresentationProvider>
       </AuthProvider>
