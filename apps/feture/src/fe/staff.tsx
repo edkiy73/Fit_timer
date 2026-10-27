@@ -4,9 +4,8 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {BadgeCheck,Ban,Check,ChevronRight,Eye,IdCard,Image,Inbox,Lock,RefreshCw,ShieldAlert,ShieldCheck,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Btn,Card,ChoiceChips,Chips,Empty,Field,Group,IconBtn,Input,Note,Pill,SectionLabel,Seg,Skel,SubBar,Text,TextArea,View} from './kit';
+import {Alert,Btn,Card,ChoiceChips,Chips,Empty,Field,Group,IconBtn,Input,KeyValues,Note,Pill,ReviewCard,ReviewMedia,ReviewPair,Row,SectionLabel,Seg,Skel,SubBar,Text,TextArea,View} from './kit';
 import {useFe} from './session';
-import './staff.css';
 
 /** Staff area (/n/staff, S4 moderation): review queues with decisions, Premium for dogfooding, the journal.
  * Roles are enforced by the server only; a queue the server refuses (403) is simply not shown. */
@@ -163,18 +162,8 @@ function useDecide(onDone:()=>void,mapError?:(e:unknown)=>string|null){
 
 const useWhen=()=>{const {locale}=useI18n();return (v:string|null|undefined)=>v?new Date(v).toLocaleString(locale==='en'?'en-GB':'ru-RU',{dateStyle:'medium',timeStyle:'short'}):'—';};
 
-function StCard({title,meta,children,danger}:{title:ReactNode,meta?:ReactNode,children:ReactNode,danger?:boolean}){
- return <Card className={'st-card'+(danger?' st-danger':'')}>
-  <header className="st-head"><b>{title}</b>{meta&&<span className="st-meta">{meta}</span>}</header>
-  {children}
- </Card>;
-}
-
-function Kv({rows}:{rows:[string,ReactNode][]}){
- const shown=rows.filter(([,v])=>v!==null&&v!==undefined&&v!=='');
- if(!shown.length)return null;
- return <dl className="kv st-kv">{shown.map(([k,v])=><div key={k} className="st-kv-row"><dt>{k}</dt><dd>{v}</dd></div>)}</dl>;
-}
+const StCard=ReviewCard;
+const Kv=KeyValues;
 
 const show=(v:unknown):string=>v===null||v===undefined?'—':typeof v==='string'?v:Array.isArray(v)?v.map(show).join(', '):JSON.stringify(v);
 
@@ -234,10 +223,9 @@ function MediaCard({item,onDone}:{item:MediaItem,onDone:()=>void}){
   try{const r=await call('staff.mediaView',{assetId:item.id},viewRes,{asAccount:true});setSrc(r.src);}catch(e){d.setFailure(feErrorMessage(e,t));}finally{setViewing(false);}};
  const purpose=t('fe.staff.media.purpose.'+item.purpose);
  return <StCard title={purpose.startsWith('fe.')?item.purpose:purpose} meta={when(item.createdAt)}>
-  <div className="st-media">
-   {src?(item.kind==='video'?<video src={src.full} controls playsInline/>:<a href={src.full} target="_blank" rel="noreferrer noopener"><img src={src.card} alt="" draggable={false}/></a>)
-    :item.blur?<img className="st-blur" src={item.blur} alt="" draggable={false}/>:<div className="st-ph"><Eye/></div>}
-  </div>
+  <ReviewMedia blur={item.blur} icon={Eye}>
+   {src?(item.kind==='video'?<video src={src.full} controls playsInline/>:<a href={src.full} target="_blank" rel="noreferrer noopener"><img src={src.card} alt="" draggable={false}/></a>):undefined}
+  </ReviewMedia>
   <Kv rows={[[t('fe.staff.media.authorLabel'),item.authorLabel],[t('fe.staff.media.scanner'),item.reason]]}/>
   {src===undefined?<div className="st-block">
     <Btn kind="soft" size="md" icon={Eye} disabled={viewing} busy={viewing} onClick={open}>{t('fe.staff.media.open')}</Btn>
@@ -364,10 +352,10 @@ function PhotoCard({item,onDone}:{item:PhotoItem,onDone:()=>void}){
  return <StCard title={item.profile.handle?'@'+item.profile.handle:item.profile.id} meta={when(item.submittedAt)}>
   <Alert kind="info" icon={Eye} className="st-block">{t('fe.staff.age.gesture')}: <b>{gesture.startsWith('fe.')?item.gesture:gesture}</b></Alert>
   <Note>{t('fe.pc.staff.compare')}</Note>
-  <div className="st-pair st-block">
-   <figure><div className="st-media">{selfie?<img src={selfie} alt="" draggable={false}/>:<div className="st-ph"><X/></div>}</div><figcaption><Note>{t('fe.pc.staff.selfie')}</Note></figcaption></figure>
-   {(photos.length?photos:[null]).map((src,i)=><figure key={i}><div className="st-media">{src?<img src={src} alt="" draggable={false}/>:<div className="st-ph"><Eye/></div>}</div><figcaption><Note>{t('fe.pc.staff.photo')}{photos.length>1?' '+(i+1):''}</Note></figcaption></figure>)}
-  </div>
+  <ReviewPair>
+   <ReviewMedia icon={X} caption={<Note>{t('fe.pc.staff.selfie')}</Note>}>{selfie?<img src={selfie} alt="" draggable={false}/>:undefined}</ReviewMedia>
+   {(photos.length?photos:[null]).map((src,i)=><ReviewMedia key={i} icon={Eye} caption={<Note>{t('fe.pc.staff.photo')}{photos.length>1?' '+(i+1):''}</Note>}>{src?<img src={src} alt="" draggable={false}/>:undefined}</ReviewMedia>)}
+  </ReviewPair>
   {!selfie&&<Note>{t('fe.staff.age.noSelfie')}</Note>}
   <Choice label={t('fe.staff.reason')} value={reason} onChange={setReason} disabled={d.busy} options={PHOTO_REASONS.map(id=>({id,label:t('fe.pc.reason.'+id)}))}/>
   {ask?<Confirm text={t('fe.pc.staff.confirmReject')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>d.run('staff.photoCheckDecide',{checkId:item.id,approve:false,reason})}/>
@@ -558,11 +546,9 @@ function Journal(){
     :<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>)
    :items===null?<Skel kind="list"/>
    :!items.length?<Empty icon={Inbox} title={t('fe.staff.journal.empty')}/>
-   :<Card list className="mt8">{items.map(x=><div key={String(x.id)} className="li static">
-     <div className="tx"><b>{x.action}{x.target_type?' · '+x.target_type:''}</b>
-      <small>{when(x.created_at)}{x.target_id?' · '+x.target_id:''}</small>
-      {x.detail!==undefined&&x.detail!==null&&show(x.detail)!=='{}'&&<small className="st-detail"><code>{show(x.detail)}</code></small>}</div>
-     <IconBtn icon={ChevronRight} kind="ghost" label={t('fe.staff.journal.apply')} disabled={!x.target_id} onClick={()=>{if(x.target_id){setFilter(x.target_id);setApplied(x.target_id);}}}/>
-    </div>)}</Card>}
+   :<Card list className="mt8">{items.map(x=><Row key={String(x.id)} title={<>{x.action}{x.target_type?' · '+x.target_type:''}</>}
+     sub={<>{when(x.created_at)}{x.target_id?' · '+x.target_id:''}</>}
+     extra={x.detail!==undefined&&x.detail!==null&&show(x.detail)!=='{}'?<small className="st-detail"><code>{show(x.detail)}</code></small>:undefined}
+     end={<IconBtn icon={ChevronRight} kind="ghost" label={t('fe.staff.journal.apply')} disabled={!x.target_id} onClick={()=>{if(x.target_id){setFilter(x.target_id);setApplied(x.target_id);}}}/>}/>)}</Card>}
  </>;
 }

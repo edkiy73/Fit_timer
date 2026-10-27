@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,Bell,ChevronRight,CircleCheck,Clock,Copy,Ellipsis,FileText,Info,Link as LinkIcon,Lock,Pencil,Pin,PinOff,Send,Settings,Trash2,User,UserMinus,UserPlus,Users,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Ask,Av,Bar,Btn,Card,IconBtn,Check,Empty,Group,Note,Pill,Row,SectionLabel,Seg,Sheet,Skel,SubBar,TextArea} from './kit';
+import {Alert,Announcement,Answer,Ask,Av,Bar,Btn,Card,IconBtn,Check,Empty,Group,Note,PersonLine,Pill,RequestCard,Row,SectionLabel,Seg,Sheet,Skel,Stack,SubBar} from './kit';
 import {useFe} from './session';
 import {useToast} from './toast';
 import {when} from './feed';
@@ -78,7 +78,7 @@ export function CommunityHostEntry({c}:{c:{id:string,me?:{role:string,state:stri
  const n=typeof c.pendingRequests==='number'?c.pendingRequests:0;
  return <>
   <Btn kind="soft" size="md" className="manage-entry" icon={Settings} onClick={()=>navigate(`/n/communities/${c.id}/manage`)}>{t('fe.host.manage')}</Btn>
-  {n>0&&<Btn kind="text" auto style={{marginLeft:'auto',whiteSpace:'nowrap'}} onClick={()=>navigate(`/n/communities/${c.id}/requests`)}>{pl(n,t('fe.cm.newRequests'),locale)} <ChevronRight/></Btn>}
+  {n>0&&<Btn kind="text" auto className="k-push k-nowrap" onClick={()=>navigate(`/n/communities/${c.id}/requests`)}>{pl(n,t('fe.cm.newRequests'),locale)} <ChevronRight/></Btn>}
  </>;
 }
 
@@ -104,7 +104,7 @@ export function JoinSheet({c,invite,onClose,onDone}:{c:{id:string,name:string,pr
   <Card className="flat"><ol className="rules">{c.rules.map((r,i)=><li key={i}>{r}</li>)}</ol></Card>
   {q&&<div className="mt16"><Field name="answer" label={q} value={answer} onChange={v=>{setAnswer(v);if(err.answer)setErr({...err,answer:undefined});}} err={err.answer} textarea rows={3} max={300}
    ph={t('fe.host.join.answerPh')} hint={t('fe.host.join.answerHint')}/></div>}
-  <div className={'field'+(err.ok?' err':'')} style={{marginTop:16}}>
+  <div className={'field mt16'+(err.ok?' err':'')}>
    <Check on={accepted} error={!!err.ok} onChange={v=>{setAccepted(v);setErr({...err,ok:undefined});}}>{t('fe.host.join.accept')}{err.ok&&<FErr>{err.ok}</FErr>}</Check>
   </div>
   {failure&&<Alert kind="err" icon={Info} className="mt12">{failure}</Alert>}
@@ -142,9 +142,9 @@ export function MembersList({c,data,onChange}:{c:{id:string,me?:{role:string,sta
  const row=(m:Mem)=><PersonRow key={m.id} p={m} sub={sub(m)??(m.handle&&m.name?'@'+m.handle:t('fe.cm.memberSub'))} {...(canManage(m)?{onClick:()=>setOpen(m),end:<IconBtn icon={Ellipsis} kind="ghost" size="sm" label={t('fe.cm.more')} onClick={()=>setOpen(m)}/>}:{})}/>;
  const hosts=items?.filter(m=>m.role!=='member')??[];const members=items?.filter(m=>m.role==='member')??[];
  return <>
-  {host&&<p className="note" style={{margin:'4px 0 12px'}}>{t('fe.host.mem.hint')}</p>}
+  {host&&<Note className="k-mem-hint">{t('fe.host.mem.hint')}</Note>}
   {items===null?<><SectionLabel>{pl(data.count,t('fe.cm.members'),locale)}</SectionLabel><Note>{t('fe.host.mem.afterJoin')}</Note></>:<>
-   <div className="sec" style={{marginTop:4}}>{t('fe.host.mem.hosts')}</div>
+   <SectionLabel className="k-sec-first">{t('fe.host.mem.hosts')}</SectionLabel>
    <Card list>{hosts.map(row)}</Card>
    <SectionLabel>{pl(data.count,t('fe.cm.members'),locale)}</SectionLabel>
    {members.length?<Card list>{members.map(row)}</Card>:<Note>{t('fe.cm.noOtherMembers')}</Note>}
@@ -199,7 +199,7 @@ export function CommunityManageScreen(){
      {owner?<SelectRow icon={Lock} label={t('fe.cc.privacy')} value={c.privacy as 'open'|'closed'|'hidden'} onChange={v=>{void setPrivacy(v);}}
        sub={pendingPrivacy?t('fe.ece.priv.pending').replace('{p}',t('fe.cc.privacy.'+pendingPrivacy)):t('fe.ece.priv.sub.'+c.privacy)}
        items={(['open','closed','hidden'] as const).map(k=>[k,t('fe.cc.privacy.'+k)])}/>
-      :<div className="li"><span className="ico"><Lock/></span><span className="tx"><b>{t('fe.cc.privacy')}</b><small>{t('fe.ece.priv.sub.'+c.privacy)}</small></span><span className="val">{t('fe.cc.privacy.'+c.privacy)}</span></div>}
+      :<Row icon={Lock} title={t('fe.cc.privacy')} sub={t('fe.ece.priv.sub.'+c.privacy)} val={t('fe.cc.privacy.'+c.privacy)}/>}
      {c.privacy==='hidden'&&<InviteRows communityId={id}/>}
     </Card>
    </>}
@@ -225,7 +225,7 @@ function InviteRows({communityId}:{communityId:string}){
  };
  return <>
   <Row icon={LinkIcon} title={t('fe.host.invite.title')} sub={t('fe.cm.inviteSub')} noChev onClick={()=>void create()} disabled={busy}/>
-  {link&&<Row icon={Copy} noChev title={<span style={{wordBreak:'break-all'}}>{link}</span>} onClick={()=>void copy(link)}/>}
+  {link&&<Row icon={Copy} noChev wrap title={link} onClick={()=>void copy(link)}/>}
   <Row icon={Ban} danger title={t('fe.host.invite.revokeAll')} noChev onClick={()=>setConfirm(true)} disabled={busy}/>
   {confirm&&<Ask icon={Ban} danger title={t('fe.host.invite.revokeQ')} text={t('fe.host.invite.revokeText')} ok={t('fe.host.invite.revoke')} busy={busy} onOk={()=>void revoke()} onCancel={()=>setConfirm(false)}/>}
  </>;
@@ -366,11 +366,11 @@ export function EventManageScreen(){
   <div className="view nodock"><div className="wrap">
    {!e?<Loading error={error} retry={load} kind="card"/>:!mine?<Empty icon={Lock} title={t('fe.host.ev.onlyOrganizer')}/>:<>
     <EventCard e={asCard(e)} row org={e.organizer?pname(e.organizer as {name?:string|null,handle?:string|null}):undefined}/>
-    <div className="row mt12" style={{justifyContent:'space-between'}}>{st(e)}<Btn kind="text" auto onClick={()=>navigate(`/n/events/${id}`)}>{t('fe.host.ev.viewPage')} <ChevronRight/></Btn></div>
+    <Stack row gap={3} justify="between" className="mt12">{st(e)}<Btn kind="text" auto onClick={()=>navigate(`/n/events/${id}`)}>{t('fe.host.ev.viewPage')} <ChevronRight/></Btn></Stack>
     {cancelled&&e.cancelReason&&<Alert kind="err" icon={Ban} className="mt12">{e.cancelReason}</Alert>}
     {e.state==='pending_partner'&&<Alert kind="warn" icon={Clock} className="mt12"><b>{t('fe.cm.waitsPartnerT')}</b>{t('fe.cm.waitsPartnerText')}</Alert>}
-    {!cancelled&&pend>0&&<Alert kind="warn" icon={FileText} className="mt12"><b>{t('fe.host.ev.next')}</b>{fill(t('fe.cm.reviewN'),{n:pl(pend,t('fe.cm.applicationsAcc'),locale)})}
-     <Btn kind="text" auto style={{display:'flex',marginTop:6}} onClick={()=>navigate(`/n/events/${id}/applications`)}>{t('fe.host.ev.openApps')} <ChevronRight/></Btn></Alert>}
+    {!cancelled&&pend>0&&<Alert kind="warn" icon={FileText} className="mt12" action={<Btn kind="text" auto onClick={()=>navigate(`/n/events/${id}/applications`)}>{t('fe.host.ev.openApps')} <ChevronRight/></Btn>}>
+     <b>{t('fe.host.ev.next')}</b>{fill(t('fe.cm.reviewN'),{n:pl(pend,t('fe.cm.applicationsAcc'),locale)})}</Alert>}
     {!cancelled&&<div className={'stat3'+(e.requiresApplication?'':' two')}>{tiles.map(([n,l,go])=><button key={go} type="button" onClick={()=>navigate(go)}><b>{n}</b><small>{l}</small></button>)}</div>}
     <Card list>
      {e.requiresApplication&&!cancelled&&<Row icon={FileText} tone="v" title={t('fe.cm.appsAndAdmission')} badge={pend||undefined} onClick={()=>navigate(`/n/events/${id}/applications`)}/>}
@@ -378,8 +378,7 @@ export function EventManageScreen(){
      {!cancelled&&!e.past&&['pending_partner','in_review','rejected','published'].includes(e.state)&&<Row icon={Pencil} title={t('fe.ece.edit')} sub={t('fe.ece.e.editSub')} onClick={()=>navigate(`/n/events/${id}/edit`)}/>}
      {open&&<Row icon={Ban} danger title={t('fe.host.ev.cancel')} noChev onClick={()=>setMode('cancel')}/>}
     </Card>
-    {!!e.announcements?.length&&<><SectionLabel>{t('fe.host.ev.sent')}</SectionLabel>{e.announcements.map(a=><div key={a.id} className="upd"><span className="ico l"><Bell/></span><span className="tx">
-     <p style={{color:'var(--ink)',margin:0}}>{a.body}</p><small>{a.automatic?t('fe.cm.auto'):''}{when(a.created_at,locale)}</small></span></div>)}</>}
+    {!!e.announcements?.length&&<><SectionLabel>{t('fe.host.ev.sent')}</SectionLabel>{e.announcements.map(a=><Announcement key={a.id} icon={Bell} body={a.body} meta={<>{a.automatic?t('fe.cm.auto'):''}{when(a.created_at,locale)}</>}/>)}</>}
    </>}
   </div></div>
   {e&&mode==='announce'&&<Sheet title={t('fe.host.ev.announceTitle')} onClose={()=>setMode('')} foot={<Btn icon={Send} onClick={()=>void announce()} busy={busy} disabled={busy}>{t('fe.host.ev.send')}</Btn>}>
@@ -387,9 +386,8 @@ export function EventManageScreen(){
    <Field name="announce" label={t('fe.host.ev.announceLabel')} value={body} onChange={v=>{setBody(v);setErr('');}} err={err||undefined} textarea rows={4} max={500} ph={t('fe.host.ev.announcePh')}/>
   </Sheet>}
   {e&&mode==='cancel'&&<Ask icon={Ban} danger title={t('fe.host.ev.cancelQ')} text={t('fe.host.ev.cancelText')} ok={t('fe.host.ev.cancel')} busy={busy} onOk={()=>void cancel()} onCancel={()=>setMode('')}>
-   <label className="field" style={{display:'block',textAlign:'left'}}><span>{t('fe.host.ev.reason')}<i>{t('fe.host.optional')}</i></span>
-    <TextArea rows={3} maxLength={300} value={reason} onChange={x=>setReason(x.target.value)}/></label>
-   <p style={{marginTop:8}}>{t('fe.host.ev.refunds')}</p>
+   <Field name="reason" className="k-left" label={t('fe.host.ev.reason')} opt textarea rows={3} max={250} value={reason} onChange={setReason}/>
+   <p className="mt8">{t('fe.host.ev.refunds')}</p>
   </Ask>}
  </>;
 }
@@ -417,16 +415,16 @@ export function EventApplicationsScreen(){
     options={(['pending','approved','declined'] as const).map(s=>({id:s,label:t('fe.host.apps.tab.'+s),n:data?.lists[s].length}))}/>
    {!items?<Loading error={error} retry={load} kind="card"/>
     :!items.length?<Empty icon={FileText} title={t('fe.host.apps.empty')} {...(k==='pending'?{text:t('fe.host.apps.emptyText')}:{})}/>
-    :items.map(a=><Card key={a.id} className="application-card mt12">
-     <div className="row"><button type="button" className="plink row g12 grow" style={{textAlign:'left'}} onClick={()=>navigate('/n/people/'+a.profile.id)}><Av name={pname(a.profile)} seed={a.profile.id} src={a.profile.avatar}/>
-      <span className="grow"><b style={{display:'block'}}>{pname(a.profile)}{a.people.length===1&&a.people[0]!.age?`, ${a.people[0]!.age}`:''}<NameBadges p={a.profile}/></b>
-       <small className="note" style={{display:'block'}}>{a.people.length>1?a.people.map(p=>[p.handle?'@'+p.handle:'',p.age?String(p.age):''].filter(Boolean).join(', ')).join(' · ')+' · ':''}{when(a.created_at,locale)}</small></span></button></div>
-     {a.answers.map((x,i)=><div key={i} className="application-answer">{qs[i]&&<Note>{qs[i]}</Note>}<div style={{marginTop:4}}>{x}</div></div>)}
-     {a.note&&<div className="application-answer"><Note>{t('fe.host.app.note')}</Note><div style={{marginTop:4}}>{a.note}</div></div>}
-     {k==='pending'?<div className="row g8 mt12"><Btn size="md" onClick={()=>void decide(a,true)} disabled={!!busy} busy={busy===a.id}>{t('fe.host.approve')}</Btn><Btn kind="soft" size="md" onClick={()=>void decide(a,false)} disabled={!!busy}>{t('fe.host.decline')}</Btn></div>
-      :cancelled?null:k==='approved'?<div className="row g8 mt12"><Btn kind="soft" size="md" onClick={()=>setConfirm(a)} disabled={!!busy}>{t('fe.host.apps.revoke')}</Btn></div>
-      :<div className="row g8 mt12"><Btn kind="soft" size="md" onClick={()=>void decide(a,true)} disabled={!!busy} busy={busy===a.id}>{t('fe.host.apps.approveAfter')}</Btn></div>}
-    </Card>)}
+    :items.map(a=><RequestCard key={a.id} className="application-card mt12"
+     person={<PersonLine av={<Av name={pname(a.profile)} seed={a.profile.id} src={a.profile.avatar}/>} label={pname(a.profile)} onOpen={()=>navigate('/n/people/'+a.profile.id)}
+      name={<>{pname(a.profile)}{a.people.length===1&&a.people[0]!.age?`, ${a.people[0]!.age}`:''}<NameBadges p={a.profile}/></>}
+      sub={<>{a.people.length>1?a.people.map(p=>[p.handle?'@'+p.handle:'',p.age?String(p.age):''].filter(Boolean).join(', ')).join(' · ')+' · ':''}{when(a.created_at,locale)}</>}/>}
+     actions={k==='pending'?<><Btn size="md" onClick={()=>void decide(a,true)} disabled={!!busy} busy={busy===a.id}>{t('fe.host.approve')}</Btn><Btn kind="soft" size="md" onClick={()=>void decide(a,false)} disabled={!!busy}>{t('fe.host.decline')}</Btn></>
+      :cancelled?null:k==='approved'?<Btn kind="soft" size="md" onClick={()=>setConfirm(a)} disabled={!!busy}>{t('fe.host.apps.revoke')}</Btn>
+      :<Btn kind="soft" size="md" onClick={()=>void decide(a,true)} disabled={!!busy} busy={busy===a.id}>{t('fe.host.apps.approveAfter')}</Btn>}>
+     {a.answers.map((x,i)=><Answer key={i} q={qs[i]}>{x}</Answer>)}
+     {a.note&&<Answer q={t('fe.host.app.note')}>{a.note}</Answer>}
+    </RequestCard>)}
   </div></div>
   {confirm&&<Ask icon={X} danger title={t('fe.host.apps.revokeQ').replace('{name}',pname(confirm.profile))} text={t('fe.host.apps.revokeText')} ok={t('fe.host.apps.revokeOk')} busy={busy===confirm.id}
    onOk={()=>void decide(confirm,false)} onCancel={()=>setConfirm(null)}/>}

@@ -18,7 +18,7 @@ const preview:Preview={
     controls:{expanded:true,sort:'requiredFirst'},
     a11y:{test:'error'},
     backgrounds:{disable:true},
-    options:{storySort:{order:['Основа',['Введение','Цвета','Типографика','Отступы','Скругления и тени','Высоты и иконки'],'Кнопки','Навигация','Списки','Выбор','Поля','Окна','Сообщения','Прочее']}},
+    options:{storySort:{order:['Основа',['Введение','Цвета','Типографика','Отступы','Скругления и тени','Высоты и иконки'],'Кнопки','Навигация','Списки','Выбор','Поля','Окна','Сообщения','Прочее','Домен']}},
   },
   globalTypes:{theme:{description:'Тема',toolbar:{title:'Тема',icon:'mirror',items:[{value:'light',title:'Светлая'},{value:'dark',title:'Тёмная'}],dynamicTitle:true}}},
   initialGlobals:{theme:'light'},

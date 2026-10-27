@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,ChartColumn,Bell,BellOff,Bookmark,BookmarkCheck,Calendar,CalendarPlus,Check,ChevronLeft,Clock,Ellipsis,Eye,ExternalLink,FileText,Flag,Globe,Image as ImageIcon,Link as LinkIcon,Lock,Map as MapIcon,MapPin,MessageCircle,Plus,Search,Settings,Share,SlidersHorizontal,Ticket,TriangleAlert,Users,Video,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Ask,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,Group,H,IconBtn,Note,Pill,Row,SectionLabel,Seg,Sheet,Skel,ToggleRow} from './kit';
+import {Alert,Announcement,Ask,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,CommunityHead,CoverBar,Discussion,Empty,EventHero,EventTile,Group,IconBtn,LinkBtn,Note,Pill,Row,Rsvp,SectionLabel,Seg,Sheet,Skel,Spacer,Text,ToggleRow,Veil} from './kit';
 import {useFe} from './session';
 import {when} from './feed';
 import {BellButton} from './inbox';
@@ -132,11 +132,11 @@ function Catalog(){
   <div className="filterline"><Chips scroll>
    <Chip filter on={!f.topics.length} onClick={()=>toggle('')}>{t('fe.comm.allTopics')}</Chip>
    {used.map(x=><Chip key={x} filter on={f.topics.includes(x)} onClick={()=>toggle(x)}>{tname(x)}</Chip>)}
-  </Chips><button type="button" className={'chip filter'+(badge?' on':'')} onClick={()=>setSheet(true)}><SlidersHorizontal/>{t('fe.cm.filters')}{badge?<em className="badge-abs">{badge}</em>:null}</button></div>
+  </Chips><Chip filter lit={!!badge} badge={badge||undefined} popup icon={SlidersHorizontal} onClick={()=>setSheet(true)}>{t('fe.cm.filters')}</Chip></div>
   {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>void load()}>{t('fe.retry')}</Btn></Empty>
    :all===null?<Skel kind="card" rows={4}/>
    :!items.length?<Empty icon={Users} title={t('fe.cm.nothing')} text={t('fe.cm.nothingText')}>{(f.topics.length>0||f.privacy!=='all'||f.online)&&<Btn kind="soft" onClick={()=>setF(CF0)}>{t('fe.cm.resetFilters')}</Btn>}</Empty>
-   :items.map((c,i)=><CommCard key={c.id} c={c} i={i} tname={tname} place={c.place_id?placeName(cat?.places.find(p=>p.id===c.place_id)??{ru:null,en:null},locale):''} mine={mine}/>)}
+   :items.map(c=><CommCard key={c.id} c={c} tname={tname} place={c.place_id?placeName(cat?.places.find(p=>p.id===c.place_id)??{ru:null,en:null},locale):''} mine={mine}/>)}
   {sheet&&all&&<CommFilterSheet all={all} used={used} tname={tname} value={f} onApply={v=>{setF(v);setSheet(false);}} onClose={()=>setSheet(false)}/>}
  </>;
 }
@@ -160,7 +160,7 @@ function relDay(iso:string,locale:string){
 }
 const shortDate=(iso:string,locale:string)=>new Intl.DateTimeFormat(locale==='en'?'en':'ru',{day:'numeric',month:'short'}).format(new Date(iso)).replace('.','');
 
-function CommCard({c,i,tname,place,mine}:{c:Card,i:number,tname:(id:string)=>string,place:string,mine:ReturnType<typeof useMyCommunities>}){
+function CommCard({c,tname,place,mine}:{c:Card,tname:(id:string)=>string,place:string,mine:ReturnType<typeof useMyCommunities>}){
  const {t,locale}=useI18n();const navigate=useNavigate();const {acting}=useFe();const couple=acting?.kind==='couple';
  const state=mine.hosting.has(c.id)?<Pill tone="ok" icon={Settings}>{t(couple?'fe.cm.youHostCouple':'fe.cm.youHost')}</Pill>
   :c.joined||mine.member.has(c.id)?<Pill tone="ok" icon={Check}>{t(couple?'fe.cm.memberCouple':'fe.comm.member')}</Pill>
@@ -168,7 +168,7 @@ function CommCard({c,i,tname,place,mine}:{c:Card,i:number,tname:(id:string)=>str
   :c.privacy!=='open'?<Pill icon={Lock}>{t('fe.cm.byRequest')}</Pill>:null;
  // V21 commPulse: when people last talked (only where the viewer may read) and the next meeting.
  const pulse=[c.lastTalkAt?fill(t('fe.cm.lastTalk'),{when:relDay(c.lastTalkAt,locale)}):'',c.nextEventAt?fill(t('fe.cm.nextMeet'),{date:shortDate(c.nextEventAt,locale)}):''].filter(Boolean);
- return <button type="button" className="cmc" style={{animationDelay:`${i*40}ms`}} onClick={()=>navigate('/n/communities/'+c.id)}>
+ return <button type="button" className="cmc" onClick={()=>navigate('/n/communities/'+c.id)}>
   <div className="cv"><CommCover cover={c.cover} k={c.plate}/></div>
   <div className="tx"><b>{c.name}</b><small>{c.description?plainText(c.description):c.topics.map(x=>'#'+tname(x)).join(' ')}</small>
    <div className="meta"><span>{pl(c.members,t('fe.cm.members'),locale)}</span><span>·</span><span>{place||t('fe.cm.online')}</span>{state&&<> {state}</>}</div>
@@ -223,22 +223,15 @@ function StatusPill({s}:{s:MyStatus|undefined}){
 }
 
 /** `eventCard()` — the big card, or the row (`row`) used for «Ближайшая встреча» and cancelled events. */
-export function EventCard({e,i=0,row,status,org}:{e:Ev,i?:number,row?:boolean,status?:MyStatus|undefined,org?:string|undefined}){
+export function EventCard({e,row,status,org}:{e:Ev,row?:boolean,status?:MyStatus|undefined,org?:string|undefined}){
  const {t,locale}=useI18n();const navigate=useNavigate();const tz=evTz(e);
  const day=inTz(e.starts_at,tz,locale,{day:'numeric'});const mon=inTz(e.starts_at,tz,locale,{month:'short'}).replace('.','');
  const cancelled=e.state==='cancelled';
  const pill=cancelled?<Pill tone="bad">{t('fe.cm.st.cancelled')}</Pill>:<StatusPill s={status}/>;
- if(row)return <button type="button" className="evc row" onClick={()=>navigate('/n/events/'+e.id)}>
-  <div className="cv"><NamedPlate k={e.plate} icon={Calendar}/><div className="date"><b>{day}</b><small>{mon}</small></div></div>
-  <div className="bd"><small>{e.format==='online'?t('fe.ev.online'):e.area??t('fe.ev.offline')} · {timeOf(e.starts_at,tz,locale)}</small><b>{e.title}</b>{org&&<span className="note">{org}</span>}{pill}</div>
- </button>;
- return <button type="button" className="evc" style={{animationDelay:`${i*50}ms`}} onClick={()=>navigate('/n/events/'+e.id)}>
-  <div className="cv"><NamedPlate k={e.plate} icon={Calendar}/><div className="date"><b>{day}</b><small>{mon}</small></div>
-   <div className="fmt"><span>{e.format==='online'?<Video/>:<MapPin/>}{e.format==='online'?t('fe.ev.online'):e.area??t('fe.ev.offline')}</span></div>
-   {cancelled||status?<div className="my">{pill}</div>:null}</div>
-  <div className="bd"><small>{t('fe.ev.kind.'+e.kind)}</small><b>{e.title}</b>
-   <div className="meta"><span><Clock/>{timeOf(e.starts_at,tz,locale)}</span><span><Ticket/>{priceText(e.price,t,locale)}</span></div></div>
- </button>;
+ const place=e.format==='online'?t('fe.ev.online'):e.area??t('fe.ev.offline');
+ return <EventTile row={row} cover={<NamedPlate k={e.plate} icon={Calendar}/>} day={day} month={mon} place={place} placeIcon={e.format==='online'?Video:MapPin}
+  status={row?pill:cancelled||status?pill:undefined} kicker={t('fe.ev.kind.'+e.kind)} title={e.title} time={timeOf(e.starts_at,tz,locale)} {...(row?{org}:{price:priceText(e.price,t,locale)})}
+  onClick={()=>navigate('/n/events/'+e.id)}/>;
 }
 
 function EventList(){
@@ -254,13 +247,13 @@ function EventList(){
   <MyShortcut kind="events" count={mine.count}/>
   <div className="filterline"><Chips scroll>{(['all','offline','online'] as const).map(k=><Chip key={k} filter on={f.format===k} onClick={()=>setF(x=>({...x,format:k}))} {...(k==='online'?{icon:Video}:k==='offline'?{icon:MapPin}:{})}>
    {t('fe.ev.format.'+k)}</Chip>)}</Chips>
-   <button type="button" className={'chip filter'+(badge?' on':'')} onClick={()=>setSheet(true)}><SlidersHorizontal/>{t('fe.cm.filters')}{badge?<em className="badge-abs">{badge}</em>:null}</button></div>
+   <Chip filter lit={!!badge} badge={badge||undefined} popup icon={SlidersHorizontal} onClick={()=>setSheet(true)}>{t('fe.cm.filters')}</Chip></div>
   {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
-   :items===null?<div className="skel" role="status" aria-busy="true" aria-label={t('fe.loading')}><i className="sk" style={{display:'block',height:250,borderRadius:24,marginTop:20}}/><i className="sk" style={{display:'block',height:250,borderRadius:24,marginTop:12}}/></div>
+   :items===null?<Skel kind="event" rows={2}/>
    :!items.length?<Empty icon={Calendar} title={t('fe.cm.evNothing')} text={t('fe.cm.evNothingText')}>{(f.format!=='all'||badge>0)&&<Btn kind="soft" onClick={()=>setF(EF0)}>{t('fe.cm.resetFilters')}</Btn>}<Btn kind="text" onClick={()=>navigate('/n/events/new')}>{t('fe.ce.create')}</Btn></Empty>
    :<>
-    {soon.length>0&&<><SectionLabel>{t('fe.cm.next7')}</SectionLabel><div className="evgrid">{soon.map((e,i)=><EventCard key={e.id} e={e} i={i} status={mine.st.get(e.id)}/>)}</div></>}
-    {later.length>0&&<><SectionLabel>{t('fe.cm.later')}</SectionLabel><div className="evgrid">{later.map((e,i)=><EventCard key={e.id} e={e} i={i} status={mine.st.get(e.id)}/>)}</div></>}
+    {soon.length>0&&<><SectionLabel>{t('fe.cm.next7')}</SectionLabel><div className="evgrid">{soon.map(e=><EventCard key={e.id} e={e} status={mine.st.get(e.id)}/>)}</div></>}
+    {later.length>0&&<><SectionLabel>{t('fe.cm.later')}</SectionLabel><div className="evgrid">{later.map(e=><EventCard key={e.id} e={e} status={mine.st.get(e.id)}/>)}</div></>}
     {canc.length>0&&<><SectionLabel>{t('fe.cm.cancelledSec')}</SectionLabel>{canc.map(e=><EventCard key={e.id} e={e} row/>)}</>}
    </>}
   {sheet&&<EvFilterSheet value={f} onApply={v=>{setF(v);setSheet(false);}} onClose={()=>setSheet(false)}/>}
@@ -314,36 +307,32 @@ export function CommunityScreen(){
  const share=async()=>{setLayer('');const okc=await copyLink(appUrl('/n/communities/'+id));toast(t(okc?'fe.cm.linkCopied':'fe.cm.copyFailed'),{type:okc?'ok':'warn'});};
  const sorted=[...evs].sort((a,b)=>Date.parse(a.starts_at)-Date.parse(b.starts_at));const next=sorted[0];
  return <>
-  <header className="bar overlay ev-bar">
-   <IconBtn icon={ChevronLeft} kind="glass" label={t('fe.back')} onClick={()=>navigate(-1)}/>
-   <b className="ev-bar-t" aria-hidden="true">{c?.name}</b><span className="k-grow"/>
+  <CoverBar title={c?.name}>
    {c&&<IconBtn icon={Ellipsis} kind="glass" label={t('fe.cm.more')} onClick={()=>setLayer('menu')}/>}
-  </header>
+  </CoverBar>
   <div className="view nodock top0"><div className="wrap">
    {error?<Empty icon={Lock} title={t('fe.cm.unavailable')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
-    :!c?<><div className="cm-hero"><i className="sk" style={{position:'absolute',inset:0}}/></div><div className="cm-head"><div className="cv"><i className="sk" style={{position:'absolute',inset:0}}/></div><i className="sk sk-l w70" style={{display:'block',height:28,margin:'8px 0'}}/><i className="sk sk-l w50" style={{display:'block'}}/></div><Skel kind="list"/></>
+    :!c?<><CommunityHead/><Skel kind="list"/></>
     :<>
-     <div className="cm-hero"><CommCover cover={c.cover} k={c.plate} size="full" hero/></div>
-     <div className="cm-head"><div className="cv"><CommCover cover={c.cover} k={c.plate}/></div><H level={2} tabIndex={-1}>{c.name}</H>
-      <div className="cm-meta"><span><Users/><b>{pl(c.members,t('fe.cm.members'),locale)}</b></span>
+     <CommunityHead cover={<CommCover cover={c.cover} k={c.plate} size="full" hero/>} pic={<CommCover cover={c.cover} k={c.plate}/>} name={c.name}
+      meta={<><span><Users/><b>{pl(c.members,t('fe.cm.members'),locale)}</b></span>
        <span>{c.privacy==='open'?<Globe/>:<Lock/>}{t('fe.cm.privacyMeta.'+c.privacy)}</span>
        <span>{place?<MapPin/>:<Video/>}{place||t('fe.cm.online')}</span>
-       {c.me?.muted&&<span><BellOff/>{t('fe.cm.mutedMeta')}</span>}</div></div>
+       {c.me?.muted&&<span><BellOff/>{t('fe.cm.mutedMeta')}</span>}</>}/>
      {c.state==='in_review'&&<Alert kind="warn" icon={Clock} className="mt12"><b>{t('fe.cm.inReview')}</b>{t(couple?'fe.cm.inReviewTextCouple':'fe.cm.inReviewText')}</Alert>}
      {c.state==='rejected'&&<Alert kind="err" icon={Ban} className="mt12"><b>{t('fe.cm.rejected')}</b>{String((c as {rejectReason?:unknown}).rejectReason??'')}</Alert>}
      <div className="md bio cdesc"><p>{c.description}</p></div>
-     <div className="chips mt12">{c.topics.map(x=><button key={x} type="button" className="chip tag" onClick={()=>navigate('/n/topics/'+x)}>#{tname(x)}</button>)}</div>
+     <Chips className="mt12">{c.topics.map(x=><Chip key={x} className="tag" onClick={()=>navigate('/n/topics/'+x)}>#{tname(x)}</Chip>)}</Chips>
      <div className="row g8 mt16 cm-act">
       {host?<CommunityHostEntry c={c}/>
        :member?<Pill tone="ok" icon={Check}>{t(couple?'fe.cm.memberCouple':'fe.comm.member')}</Pill>
-       :c.request?<><Pill tone="wait" icon={Clock}>{t('fe.host.join.pending')}</Pill><Btn kind="soft" size="md" auto style={{flex:'0 0 auto',marginLeft:'auto'}} onClick={()=>setLayer('withdraw')}>{t('fe.host.join.withdraw')}</Btn></>
+       :c.request?<><Pill tone="wait" icon={Clock}>{t('fe.host.join.pending')}</Pill><Btn kind="soft" size="md" auto fit className="k-push" onClick={()=>setLayer('withdraw')}>{t('fe.host.join.withdraw')}</Btn></>
        :(!c.state||c.state==='published')?<Btn size="md" onClick={()=>setLayer('join')}>{c.privacy!=='open'?t(couple?'fe.host.join.requestCouple':'fe.host.join.request'):t(couple?'fe.host.join.joinCouple':'fe.host.join.join')}</Btn>:null}
      </div>
      {next&&tab!=='events'&&<Group className="cm-next" title={t('fe.cm.nextMeetup')} action={evs.length>1&&<button type="button" onClick={()=>setTab('events')}>{fill(t('fe.cm.allN'),{n:evs.length})}</button>}><EventCard e={next} row/></Group>}
-     <div style={{height:14}}/>
+     <Spacer size={3}/>
      <Seg value={tab} onChange={setTab} options={[{id:'disc',label:t('fe.comm.tab.disc')},{id:'events',label:t('fe.comm.tab.events'),n:evs.length},{id:'members',label:t('fe.cm.tab.members')},{id:'rules',label:t('fe.comm.tab.rules')}]}/>
-     {tab==='disc'?(discs?.locked?<div className="veil" style={{minHeight:200}}><div className="veil-content"><div className="bar-sk" style={{width:'70%'}}/><div className="bar-sk"/><div className="bar-sk" style={{width:'50%'}}/><div className="bar-sk"/></div>
-       <div className="veil-glass"><div className="lockdot"><Lock/></div><b>{t('fe.cm.discForMembers')}</b><p>{c.request?t('fe.cm.discPending'):t('fe.cm.discRequest')}</p></div></div>:<>
+     {tab==='disc'?(discs?.locked?<Veil tall title={t('fe.cm.discForMembers')} text={c.request?t('fe.cm.discPending'):t('fe.cm.discRequest')}/>:<>
       {member&&!c.me?.readOnly&&<div className="composer c-composer">
        <button type="button" className="cmp-main" onClick={()=>navigate('/n/feed/new?community='+c.id)}>{acting&&<Av name={pname(acting)} seed={acting.id} src={acting.avatar} size="sm"/>}<span>{t(couple?'fe.cm.topicCouple':'fe.comm.newTopic')}</span></button>
        <IconBtn icon={ImageIcon} kind="ghost" size="sm" label={t('fe.cm.media')} onClick={()=>navigate('/n/feed/new?community='+c.id+'&x=media')}/>
@@ -352,13 +341,11 @@ export function CommunityScreen(){
       </div>}
       {!discs?<Skel kind="list"/>:discs.items.length===0?<Empty icon={MessageCircle} title={t('fe.comm.noDisc')} text={member?t('fe.cm.noDiscMember'):t('fe.cm.noDiscGuest')}/>
        :<Card list>{discs.items.map(d=>{const a=d.owner_profile_id?names.get(d.owner_profile_id):undefined;
-        return <div key={d.id} className="k-anchor"><button type="button" className="disc" onClick={()=>navigate('/n/feed/post/'+d.id)} style={host?{paddingRight:48}:undefined}>
-         {d.pinned&&<span className="pill v" style={{marginBottom:6}}>{t('fe.comm.pinned')}</span>}
-         {d.title&&<b>{d.title}</b>}<p>{d.excerpt}</p>
-         <span className="meta">{a&&<><Av name={pname(a)} seed={a.id} size="xs" src={a.avatar}/><span>{pname(a)}</span><span>·</span></>}<span>{when(d.published_at,locale)}</span><span><MessageCircle/>{d.replies}</span></span>
-        </button>{host&&<IconBtn icon={Ellipsis} kind="ghost" size="sm" style={{position:'absolute',top:10,right:8}} label={t('fe.cm.hostTools')} onClick={()=>setHostTools(d)}/>}</div>;})}</Card>}
+        return <Discussion key={d.id} onClick={()=>navigate('/n/feed/post/'+d.id)} pinned={d.pinned?t('fe.comm.pinned'):undefined} title={d.title} excerpt={d.excerpt}
+         meta={<>{a&&<><Av name={pname(a)} seed={a.id} size="xs" src={a.avatar}/><span>{pname(a)}</span><span>·</span></>}<span>{when(d.published_at,locale)}</span><span><MessageCircle/>{d.replies}</span></>}
+         tools={host?<IconBtn icon={Ellipsis} kind="ghost" size="sm" label={t('fe.cm.hostTools')} onClick={()=>setHostTools(d)}/>:undefined}/>;})}</Card>}
      </>)
-     :tab==='events'?(evs.length?<div className="evgrid">{sorted.map((e,i)=><EventCard key={e.id} e={e} i={i}/>)}</div>
+     :tab==='events'?(evs.length?<div className="evgrid">{sorted.map(e=><EventCard key={e.id} e={e}/>)}</div>
       :<Empty icon={Calendar} title={t('fe.cm.noEvents')}>{host&&<Btn onClick={()=>navigate('/n/events/new?community='+c.id)}>{t('fe.ce.create')}</Btn>}</Empty>)
      :tab==='members'?<MembersList c={c} data={mem} onChange={load}/>
      :<Card><ol className="rules">{c.rules.map((r,i)=><li key={i}>{r}</li>)}</ol></Card>}
@@ -443,22 +430,17 @@ export function EventScreen(){
   :[e.price.kind==='door'?t('fe.cm.payDoor'):'',e.requiresApplication?t('fe.cm.byApp'):e.price.kind==='free'?t('fe.cm.justCome'):''].filter(Boolean).join(' · ').replace(/^./,x=>x.toUpperCase());
  const going=e?.going??0,interested=e?.interested??0;
  return <>
-  <header className="bar overlay ev-bar">
-   <IconBtn icon={ChevronLeft} kind="glass" label={t('fe.back')} onClick={()=>navigate(-1)}/>
-   <b className="ev-bar-t" aria-hidden="true">{e?.title}</b><span className="k-grow"/>
+  <CoverBar title={e?.title}>
    {e&&<><IconBtn icon={saved?BookmarkCheck:Bookmark} kind="glass" aria-pressed={saved} label={t(saved?'fe.cm.unsave':'fe.cm.save')} onClick={()=>void save()}/>
     <IconBtn icon={Share} kind="glass" label={t('fe.cm.share')} onClick={()=>void share()}/>
     <IconBtn icon={Ellipsis} kind="glass" label={t('fe.cm.more')} onClick={()=>setLayer('menu')}/></>}
-  </header>
+  </CoverBar>
   <div className={'view nodock top0'+(cta?' cta1':'')}><div className="wrap">
    {error?<Empty icon={Lock} title={t('fe.cm.evUnavailable')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
-    :!e?<><div className="ev-hero"><i className="sk" style={{position:'absolute',inset:0}}/></div><Skel kind="list" rows={4}/></>
+    :!e?<><EventHero/><Skel kind="list" rows={4}/></>
     :<>
-     <div className="ev-hero"><NamedPlate k={e.plate} icon={Calendar}/><div className="pc-info">
-      <div className="row g8" style={{marginBottom:10}}><span className="pill" style={{background:'rgba(255,255,255,.2)',color:'#fff'}}>{e.format==='online'?<Video/>:<MapPin/>}{e.format==='online'?t('fe.ev.online'):e.area??t('fe.ev.offline')}</span><span className="pill" style={{background:'rgba(255,255,255,.2)',color:'#fff'}}>{t('fe.ev.kind.'+e.kind)}</span></div>
-      <h2 className="ev-title" tabIndex={-1}>{e.title}</h2>
-      {statusPill&&<div className="ev-hero-st">{statusPill}</div>}
-     </div></div>
+     <EventHero cover={<NamedPlate k={e.plate} icon={Calendar}/>} title={e.title} status={statusPill}
+      tags={[<>{e.format==='online'?<Video/>:<MapPin/>}{e.format==='online'?t('fe.ev.online'):e.area??t('fe.ev.offline')}</>,t('fe.ev.kind.'+e.kind)]}/>
      {orgMe&&<div className="entity-manage"><Btn kind="soft" size="md" className="manage-entry" icon={Settings} onClick={()=>navigate(`/n/events/${e.id}/manage`)}>{t('fe.host.manage')}</Btn></div>}
      {cancelled&&<Alert kind="err" icon={TriangleAlert} className="mt16"><b>{t('fe.cm.evCancelled')}</b>{e.cancelReason??''}</Alert>}
      {e.state==='pending_partner'?<Alert kind="warn" icon={Clock} className="mt16"><b>{t('fe.cm.waitsPartnerT')}</b>{t('fe.cm.waitsPartnerText')}</Alert>
@@ -469,19 +451,17 @@ export function EventScreen(){
       {comm&&<Row av={<span className="av sm">{coverSrc(comm.cover)?<img src={coverSrc(comm.cover)!} alt="" draggable={false}/>:<NamedPlate k={comm.plate}/>}</span>} title={comm.name} sub={t('fe.cm.community')} onClick={()=>navigate('/n/communities/'+comm.id)}/>}
      </Card>
      {showRsvp&&<section className="rsvp-box"><div className="rsvp-h"><b>{t(couple?'fe.cm.rsvpQCouple':'fe.ev.question')}</b>
-       {waiting?<Pill tone="wait" icon={Clock}>{t('fe.cm.st.waiting')}</Pill>:st?<Btn kind="text" auto onClick={()=>void rsvp(null)} disabled={busy}>{t('fe.cm.clearAnswer')}</Btn>:<span className="note">{t('fe.cm.noAnswer')}</span>}</div>
-      <div className={'rsvp'+(st?' has':'')+(couple?' us':'')} role="radiogroup" aria-label={t('fe.cm.yourAnswer')}>
-       {([['interested','r-interested',Eye],['going','r-going',Check],['not_going','r-not',X]] as const).map(([v,cls,Ic])=>
-        <button key={v} type="button" className={cls+(st===v?' on':'')} role="radio" aria-checked={st===v} onClick={()=>void rsvp(st===v?null:v)} disabled={busy}><Ic/><span>{t((couple?'fe.cm.rsvpC.':'fe.cm.rsvp.')+v)}</span></button>)}
-      </div></section>}
+       {waiting?<Pill tone="wait" icon={Clock}>{t('fe.cm.st.waiting')}</Pill>:st?<Btn kind="text" auto onClick={()=>void rsvp(null)} disabled={busy}>{t('fe.cm.clearAnswer')}</Btn>:<Note as="span">{t('fe.cm.noAnswer')}</Note>}</div>
+      <Rsvp<'interested'|'going'|'not_going'> label={t('fe.cm.yourAnswer')} value={st as 'interested'|'going'|'not_going'|null} couple={couple} disabled={busy} onChange={v=>void rsvp(st===v?null:v)}
+       options={([['interested',Eye,'interested'],['going',Check,'going'],['not_going',X,'not']] as const).map(([v,Ic,tone])=>[v,t((couple?'fe.cm.rsvpC.':'fe.cm.rsvp.')+v),Ic,tone] as const)}/></section>}
      {!orgMe&&open&&<EventApplicationLines e={e}/>}
      <Card list className="mt12">
-      <div className="li"><span className="ico l"><Calendar/></span><span className="tx"><b>{inTz(e.startsAt,tz,locale,{weekday:'short',day:'numeric',month:'long'})}</b>
-       <small>{timeOf(e.startsAt,tz,locale)}–{timeOf(e.endsAt,tz,locale)} {t(e.format==='online'?'fe.ev.yourTime':'fe.cm.localTime')}{away&&<><br/>{t('fe.cm.forOrganizer')}: {timeOf(e.startsAt,e.tz,locale)}–{timeOf(e.endsAt,e.tz,locale)} {e.tz}</>}</small></span></div>
+      <Row icon={Calendar} tone="l" title={inTz(e.startsAt,tz,locale,{weekday:'short',day:'numeric',month:'long'})}
+       sub={<>{timeOf(e.startsAt,tz,locale)}–{timeOf(e.endsAt,tz,locale)} {t(e.format==='online'?'fe.ev.yourTime':'fe.cm.localTime')}{away&&<><br/>{t('fe.cm.forOrganizer')}: {timeOf(e.startsAt,e.tz,locale)}–{timeOf(e.endsAt,e.tz,locale)} {e.tz}</>}</>}/>
       {orgMe&&!cancelled&&(e.joinUrl||e.exactAddress)
-       ?<Row icon={e.format==='online'?Video:MapPin} tone="v" title={e.format==='online'?t('fe.ev.online'):e.area} sub={venueHint?<span style={{wordBreak:'break-all'}}>{venueHint}</span>:undefined} onClick={()=>setLayer('venue')}/>
-       :<div className="li"><span className="ico v">{e.format==='online'?<Video/>:<MapPin/>}</span><span className="tx"><b>{e.format==='online'?t('fe.ev.online'):e.area}</b>{venueHint&&<small>{venueHint}</small>}</span>{!admitted&&!cancelled&&!e.past&&<span className="lockpill"><Lock/></span>}</div>}
-      {!cancelled&&<div className="li"><span className="ico a"><Ticket/></span><span className="tx"><b>{priceText(e.price,t,locale)}</b>{priceSub&&<small>{priceSub}</small>}</span></div>}
+       ?<Row icon={e.format==='online'?Video:MapPin} tone="v" title={e.format==='online'?t('fe.ev.online'):e.area} sub={venueHint||undefined} wrap onClick={()=>setLayer('venue')}/>
+       :<Row icon={e.format==='online'?Video:MapPin} tone="v" title={e.format==='online'?t('fe.ev.online'):e.area} sub={venueHint||undefined} end={!admitted&&!cancelled&&!e.past&&<span className="lockpill"><Lock/></span>}/>}
+      {!cancelled&&<Row icon={Ticket} tone="a" title={priceText(e.price,t,locale)} sub={priceSub||undefined}/>}
      </Card>
      <SectionLabel>{t('fe.ev.about')}</SectionLabel><div className="md bio"><p>{e.description}</p></div>
      {e.requirements&&<><SectionLabel>{t('fe.ev.requirements')}</SectionLabel><Card>{e.requirements.split('\n').filter(Boolean).map((r,i)=><div key={i} className="fact"><i className="v"><Check/></i><span>{r}</span></div>)}<Note className="mt8">{t('fe.cm.reqNote')}</Note></Card></>}
@@ -491,8 +471,7 @@ export function EventScreen(){
         title={fill(t(e.past?'fe.cm.attendedN':'fe.cm.goingN'),{n:going})} sub={e.past?undefined:fill(t('fe.cm.interestedN'),{n:interested})} onClick={()=>navigate(`/n/events/${id}/attendees`)}/></Card></>}
      {!orgMe&&open&&(st==='going'||st==='interested')&&<><SectionLabel>{t('fe.cm.visibility')}</SectionLabel><Card list>
       <ToggleRow title={t(couple?'fe.cm.showOurs':'fe.cm.showMine')} sub={t(couple?'fe.cm.showOursSub':'fe.cm.showMineSub')} on={!!e.me.rsvp?.showInList} disabled={busy} onClick={()=>void rsvp(st as 'going'|'interested',!e.me.rsvp?.showInList)}/></Card></>}
-     {!!e.announcements?.length&&<><SectionLabel>{t('fe.cm.orgUpdates')}</SectionLabel>{e.announcements.map(a=><div key={a.id} className="upd"><span className="ico l"><Bell/></span><span className="tx">
-      <p style={{color:'var(--ink)',margin:0}}>{a.body}</p><small>{a.automatic?t('fe.cm.auto'):''}{when(a.created_at,locale)}</small></span></div>)}</>}
+     {!!e.announcements?.length&&<><SectionLabel>{t('fe.cm.orgUpdates')}</SectionLabel>{e.announcements.map(a=><Announcement key={a.id} icon={Bell} body={a.body} meta={<>{a.automatic?t('fe.cm.auto'):''}{when(a.created_at,locale)}</>}/>)}</>}
     </>}
   </div></div>
   {cta&&<div className="ctabar"><div className="wrap">{cta}</div></div>}
@@ -501,11 +480,11 @@ export function EventScreen(){
    {!orgMe&&<Row icon={Flag} danger title={t('fe.cm.report')} noChev onClick={()=>setLayer('report')}/>}
   </Card></Sheet>}
   {e&&layer==='venue'&&<Sheet title={t(e.format==='online'?'fe.cm.joinT':'fe.cm.addressT')} onClose={()=>setLayer('')}
-   foot={<>{e.format==='online'?(e.joinUrl&&<a className="btn primary" style={{textDecoration:'none'}} href={e.joinUrl} target="_blank" rel="noreferrer noopener"><ExternalLink/>{t('fe.cm.openLink')}</a>)
-    :(e.exactAddress&&<a className="btn primary" style={{textDecoration:'none'}} href={'https://www.openstreetmap.org/search?query='+encodeURIComponent(e.exactAddress)} target="_blank" rel="noreferrer noopener"><MapIcon/>{t('fe.cm.openMaps')}</a>)}
+   foot={<>{e.format==='online'?(e.joinUrl&&<LinkBtn kind="primary" icon={ExternalLink} href={e.joinUrl}>{t('fe.cm.openLink')}</LinkBtn>)
+    :(e.exactAddress&&<LinkBtn kind="primary" icon={MapIcon} href={'https://www.openstreetmap.org/search?query='+encodeURIComponent(e.exactAddress)}>{t('fe.cm.openMaps')}</LinkBtn>)}
     <Btn kind="soft" icon={CalendarPlus} onClick={()=>{downloadIcs(e);toast(t('fe.cm.calDone'),{type:'ok'});}}>{t('fe.cm.toCal')}</Btn></>}>
-   {e.format==='online'?<Card className="flat"><div className="flabel">{t('fe.cm.link')}</div><b style={{fontSize:16,wordBreak:'break-all'}}>{e.joinUrl}</b></Card>
-    :<><Card className="flat"><b style={{fontSize:16}}>{e.exactAddress}</b><Note className="mt8">{e.area} · {inTz(e.startsAt,tz,locale,{weekday:'short',day:'numeric',month:'long'})}, {timeOf(e.startsAt,tz,locale)}</Note></Card><Note className="mt12">{t('fe.cm.addrNote')}</Note></>}
+   {e.format==='online'?<Card className="flat"><div className="flabel">{t('fe.cm.link')}</div><Text as="b" size="md" bold breakAll>{e.joinUrl}</Text></Card>
+    :<><Card className="flat"><Text as="b" size="md" bold>{e.exactAddress}</Text><Note className="mt8">{e.area} · {inTz(e.startsAt,tz,locale,{weekday:'short',day:'numeric',month:'long'})}, {timeOf(e.startsAt,tz,locale)}</Note></Card><Note className="mt12">{t('fe.cm.addrNote')}</Note></>}
   </Sheet>}
   {e&&layer==='withdraw'&&<Ask icon={FileText} danger title={t('fe.host.app.withdrawQ')} text={t('fe.host.app.withdrawText')} ok={t('fe.host.app.withdrawOk')} busy={busy} onOk={()=>void withdraw()} onCancel={()=>setLayer('')}/>}
   {e&&layer==='report'&&<ReportSheet targetType="event" targetId={e.id} onClose={()=>setLayer('')} onDone={msg=>{setLayer('');toast(msg,{type:'ok'});}}/>}

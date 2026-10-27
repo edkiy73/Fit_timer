@@ -4,12 +4,11 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Archive,ArchiveRestore,Ban,Camera,Check,ChevronDown,ChevronLeft,CircleAlert,Clock,Copy,Ellipsis,Eye,EyeOff,Flag,Image as ImageIcon,Info,Lock,LockOpen,MessageCircle,Plus,Search,SendHorizontal,Sparkles,Undo2,User,Users,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Av,Bar,Btn,Card,Check as CheckBox,Chip,Chips,Empty,Field,FilePick,Group,IconBtn,Layer,Note,RadioList,Row,SearchInput,SectionLabel,Sheet,Skel,Stack,Text,TextArea,ToggleRow,View} from './kit';
+import {Alert,Av,Bar,Btn,Card,Check as CheckBox,Chip,Chips,Empty,Field,FilePick,Group,IconBtn,Layer,Note,PersonBar,Pill,RadioList,Row,SearchInput,SectionLabel,SelectRow,Sheet,Skel,Stack,Text,TextArea,ToggleRow,View} from './kit';
 import {AgeCheckLink,useAgeResume} from './age-check';
 import {useFe,useRealtime} from './session';
 import {useToast} from './toast';
 import {BellButton,SegN} from './inbox';
-import './css/chats.css';
 
 /** Slice G (V21 H01, H02, H05) with the prototype's markup. A conversation exists only after a mutual like (server).
  * New messages and receipts arrive on a realtime «chat» signal (S2 §8); a slow poll stays as the fallback. */
@@ -401,20 +400,15 @@ export function ChatScreen(){
  let lastDay='';
  const sep=(iso:string)=>{const d=day(iso);if(d===lastDay)return null;lastDay=d;return <div className="daysep">{d}</div>;};
  return <>
-  <header className="bar solid">
-   <IconBtn icon={ChevronLeft} kind="ghost" label={t('fe.back')} onClick={back}/>
-   {meta?<button type="button" className="row grow chat-who" onClick={()=>navigate('/n/people/'+meta.other.id)}>
-    <Av name={otherName} seed={meta.other.id} size="sm" src={meta.other.avatar?.src?.thumb}/>
-    <span className="cw-tx"><Text as="b" size="strong" className="one">{otherName}</Text>
-     {couple&&<Text as="small" size="cap" tone="mute"><span className="ct-us"><Users/>{t('fe.chx.coupleChat')}</span> · {t('fe.chx.coupleSees')}</Text>}</span>
-   </button>:<span className="row grow chat-who"><i className="sk sk-av"/><i className="sk sk-l w40"/></span>}
+  <PersonBar onBack={back} {...(meta?{name:otherName,onOpen:()=>navigate('/n/people/'+meta.other.id),av:<Av name={otherName} seed={meta.other.id} size="sm" src={meta.other.avatar?.src?.thumb}/>}:{})}
+   sub={couple?<><span className="ct-us"><Users/>{t('fe.chx.coupleChat')}</span> · {t('fe.chx.coupleSees')}</>:undefined}>
    <IconBtn icon={Ellipsis} kind="ghost" label={t('fe.chx.menu')} disabled={!meta} onClick={()=>{setSheetErr('');setSheet('menu');}}/>
-  </header>
+  </PersonBar>
   <div ref={viewRef} className={'view nodock'+(ended?'':' cta1')} onScroll={onScroll}><div className="wrap">
    {meta&&state==='active'&&(grants.byMe||grants.withMe)&&<div className="chat-ctx">
-    {grants.byMe&&grants.withMe?<button type="button" className="pill ok" onClick={()=>navigate('/n/people/'+meta.other.id)}><LockOpen/>{t('fe.chx.pillBoth')}</button>
-     :grants.withMe?<button type="button" className="pill ok" onClick={()=>navigate('/n/people/'+meta.other.id)}><LockOpen/>{t('fe.chx.pillTheirs')}</button>
-     :<button type="button" className="pill v" onClick={()=>navigate('/n/me?layer=priv')}><Eye/>{t('fe.chx.pillMine')}</button>}
+    {grants.byMe&&grants.withMe?<Pill tone="ok" icon={LockOpen} onClick={()=>navigate('/n/people/'+meta.other.id)}>{t('fe.chx.pillBoth')}</Pill>
+     :grants.withMe?<Pill tone="ok" icon={LockOpen} onClick={()=>navigate('/n/people/'+meta.other.id)}>{t('fe.chx.pillTheirs')}</Pill>
+     :<Pill tone="v" icon={Eye} onClick={()=>navigate('/n/me?layer=priv')}>{t('fe.chx.pillMine')}</Pill>}
    </div>}
    {items===null?<Skel kind="list" rows={4}/>:<>
     <div className="msgs" id="msgs">
@@ -469,7 +463,7 @@ export function ChatScreen(){
   </Sheet>}
   {sheet==='copy'&&msgFor&&<Sheet title={t('fe.chx.copyTitle')} onClose={closeSheet}><TextArea readOnly aria-label={t('fe.chx.msgText')} value={msgFor.body}/></Sheet>}
   {sheet==='readers'&&meta&&<Sheet title={t('fe.chx.readBy')} onClose={closeSheet}>
-   <Card list><div className="li"><Av name={otherName} seed={meta.other.id} size="sm" src={meta.other.avatar?.src?.thumb}/><span className="tx"><b>{otherName}</b><small>{t('fe.chx.readState')}</small></span></div></Card>
+   <Card list><Row av={<Av name={otherName} seed={meta.other.id} size="sm" src={meta.other.avatar?.src?.thumb}/>} title={otherName} sub={t('fe.chx.readState')}/></Card>
   </Sheet>}
 
   {sheet==='attach'&&<Sheet title={t('fe.chx.attachTitle')} onClose={closeSheet}>
@@ -483,10 +477,8 @@ export function ChatScreen(){
    foot={<Btn icon={SendHorizontal} onClick={sendPhoto} busy={sheetBusy} disabled={sheetBusy}>{t('fe.chx.send')}</Btn>}>
    <div className="cm-prev"><img src={out.preview} alt=""/></div>
    <Group title={t('fe.chx.howView')} foot={<>{t('fe.chx.modeSub.'+(out.mode==='normal'||out.mode==='once'?out.mode:'timer'))}{out.mode!=='normal'?' · '+t('fe.chx.ephNote'):''}</>}><Card>
-    <label className="selrow solo"><span className="selv" aria-hidden="true">{t('fe.chx.mode.'+out.mode)}</span>
-     <select value={out.mode} disabled={sheetBusy} aria-label={t('fe.chx.howView')} onChange={e=>{setSheetErr('');setOut({...out,mode:e.target.value as Mode});}}>
-      {MODES.map(m=><option key={m} value={m}>{t('fe.chx.mode.'+m)}</option>)}
-     </select></label>
+    <SelectRow<Mode> solo label={t('fe.chx.howView')} value={out.mode} disabled={sheetBusy} onChange={v=>{setSheetErr('');setOut({...out,mode:v});}}
+     options={MODES.map(m=>[m,t('fe.chx.mode.'+m)] as const)}/>
    </Card></Group>
    <Note>{t('fe.chx.shotNote')}</Note>
    {sheetAlert}

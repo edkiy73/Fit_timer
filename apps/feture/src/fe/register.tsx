@@ -202,8 +202,8 @@ function AboutYou({onNext,initial}:{initial?:About|undefined,onNext:(a:About)=>v
   }
   const title=t('fe.onb.kind.'+kind);
   return <section key={kind} className="fin"><div className="fin-t"><b>{title}</b>{MULTI.includes(kind)&&<span>{t('fe.reg.pickAny')}</span>}</div>
-   <div className="chips" role="group" aria-label={title}>{chips.map(o=><Chip key={o.code} on={sel.includes(o.code)} onClick={()=>toggle(kind,o.code)}>{label(o)}</Chip>)}
-    {more&&<button type="button" className="chip more" aria-haspopup="dialog" onClick={()=>setPicker(kind)}><Search size={14}/>{t('fe.onb.all').replace('{n}',String(list.length))}</button>}</div>
+   <Chips label={title}>{chips.map(o=><Chip key={o.code} on={sel.includes(o.code)} onClick={()=>toggle(kind,o.code)}>{label(o)}</Chip>)}
+    {more&&<Chip more popup icon={Search} onClick={()=>setPicker(kind)}>{t('fe.onb.all').replace('{n}',String(list.length))}</Chip>}</Chips>
   </section>;
  };
  return <>

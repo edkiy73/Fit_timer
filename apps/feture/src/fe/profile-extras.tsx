@@ -5,7 +5,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Ban,Check,ChevronDown,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,Flag,Heart,History,Info,Link as LinkIcon,Lock,LockOpen,MapPin,MessageCircle,ShieldCheck,Undo2,Users,X} from 'lucide-react';
-import {Alert,Av,Bar,Btn,Card,Empty,Group,H,IconBtn,Layer,Note,Pill,Row,Seg,Skel,TextArea,ToggleRow,View,plate} from './kit';
+import {Alert,Av,Bar,Btn,Card,Empty,Group,H,IconBtn,Layer,Note,PersonName,PhotoTrack,Pill,RadioList,Row,Seg,Skel,TextArea,ToggleRow,Veil,View,plate} from './kit';
 import {useFe} from './session';
 import {PhotoBadge} from './photo-check';
 import {faceFields,NameBadges} from './faces';
@@ -130,7 +130,7 @@ export function PersonActions({p,rel,setRel,toast,inert}:{p:PersonProfile,rel:Re
   try{await call('follow.set',{opId:newOpId(),profileId:p.id,on},ok);setRel(x=>x&&{...x,iFollow:on,followers:Math.max(0,x.followers+(on?1:-1))});toast(fill(t(on?'fe.px.fl.on':'fe.px.fl.off'),{name}));}
   catch(e){toast(pxError(e,t),true);}finally{setBusy('');}};
  const likeBtn=rel?.mutual?<Btn icon={MessageCircle} onClick={inert?undefined:write} disabled={inert}>{t('fe.px.act.write')}</Btn>
-  :rel?.liked?<button type="button" className="btn on" aria-pressed="true" title={t('fe.px.act.unlikeHint')} onClick={inert?undefined:unlike} disabled={inert||busy==='like'}><Heart fill="currentColor"/>{t('fe.px.act.sent')}</button>
+  :rel?.liked?<Btn pressed title={t('fe.px.act.unlikeHint')} onClick={inert?undefined:unlike} disabled={inert||busy==='like'}><Heart fill="currentColor"/>{t('fe.px.act.sent')}</Btn>
   :why?null:<Btn busy={busy==='like'} onClick={inert?undefined:like} disabled={inert||busy==='like'}><Heart fill="currentColor"/>{asUs&&!inert?t('fe.px.act.likeUs'):t('fe.people.like')}</Btn>;
  const iF=!!rel?.iFollow;
  return <>
@@ -155,7 +155,7 @@ export function ProfileHero({p,rel,inert,onOpen}:{p:PersonProfile,rel:Relation|n
   {list.length>1&&<div className="pc-bars" aria-label={fill(t('fe.px.ph.n'),{i:i+1,n:list.length})}>{list.map((_,k)=><i key={k} className={k===i?'on':''}/>)}</div>}
   {list.length>1&&<><button type="button" className="pc-zone l" aria-label={t('fe.px.ph.prev')} onClick={()=>setIx(Math.max(0,i-1))}/><button type="button" className="pc-zone r" aria-label={t('fe.px.ph.next')} onClick={()=>setIx(Math.min(list.length-1,i+1))}/></>}
   {src&&onOpen&&<button type="button" className="pc-zone c" aria-label={t('fe.px.ph.full')} onClick={()=>onOpen(i)}/>}
-  <div className="pc-info"><h2 className="pc-name"><span className="pcn">{name}</span>{p.age?<span>{p.age}</span>:null}<NameBadges p={p}/></h2>
+  <div className="pc-info"><PersonName name={name} age={p.age||undefined}><NameBadges p={p}/></PersonName>
    {city&&<div className="pc-who"><span className="pl"><MapPin/>{city}</span></div>}
    <FollowCounts id={p.id} rel={rel} inert={inert}/></div>
  </div>;
@@ -169,7 +169,7 @@ export function PhotoViewer({srcs,index,onClose}:{srcs:string[],index:number,onC
  useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape')onClose();else if(e.key==='ArrowLeft')step(-1);else if(e.key==='ArrowRight')step(1);};addEventListener('keydown',k);return ()=>removeEventListener('keydown',k);},[onClose,step]);
  return <Layer><div className={'viewer'+(on?' on':'')} role="dialog" aria-modal="true" aria-label={t('fe.px.ph.viewer')}
   onPointerDown={e=>{sx.current=e.clientX;}} onPointerUp={e=>{if(sx.current==null)return;const dx=e.clientX-sx.current;sx.current=null;if(Math.abs(dx)>50)step(dx<0?1:-1);}}>
-  <div className="vw-track" style={{transform:`translateX(${-i*100}%)`}}>{srcs.map((s,k)=><figure key={k}><img src={s} alt="" draggable={false}/></figure>)}</div>
+  <PhotoTrack srcs={srcs} index={i}/>
   <div className="vw-top"><span className="vw-n">{i+1} / {srcs.length}</span><IconBtn ref={closeBtn} icon={X} kind="glass" label={t('fe.px.close')} onClick={onClose}/></div>
   {srcs.length>1&&<>
    <button type="button" className="vw-nav l" aria-label={t('fe.px.ph.prev')} disabled={i===0} onClick={()=>step(-1)}><ChevronLeft/></button>
@@ -264,16 +264,15 @@ export function PrivateVault({profileId,name,preview}:{profileId:string,name:str
   {view!==null&&<PhotoViewer srcs={photos.map(m=>m.src?.full??mediaSrc(m)!)} index={view} onClose={()=>setView(null)}/>}</section>;
  }
  const reason=preview?null:p.reason??null;
- const action=preview?<button type="button" className="btn dark" disabled aria-disabled="true">{t('fe.px.pr.ask')}</button>
+ const action=preview?<Btn kind="dark" disabled aria-disabled="true">{t('fe.px.pr.ask')}</Btn>
   :reason==='pending'?<><Pill tone="wait" icon={Clock}>{t('fe.px.pr.pending')}</Pill><Btn kind="soft" size="sm" onClick={cancel} busy={busy}>{t('fe.px.pr.cancel')}</Btn></>
   :reason==='not_accepting'?<Pill icon={Lock}>{t('fe.px.pr.notAccepting')}</Pill>
   :reason==='cooldown'?<Pill icon={Clock}>{t('fe.px.pr.cooldown')}</Pill>
   :reason?<Pill icon={Lock}>{t('fe.px.pr.r.'+reason)}</Pill>
-  :p.canRequest?<button type="button" className={'btn dark'+(busy?' busy':'')} onClick={ask} disabled={busy}>{t('fe.px.pr.ask')}</button>:null;
- return <section className="vault closed" id="priv">{head(false)}<div className="vault-b"><div className="veil">
-  <div className="veil-content" aria-hidden="true"><div className="bar-sk" style={{width:'72%'}}/><div className="bar-sk"/><div className="bar-sk" style={{width:'46%'}}/><div className="vt"><i/><i/><i/></div></div>
-  <div className="veil-glass"><b>{fill(t('fe.px.pr.decides'),{name})}</b><p>{t('fe.px.pr.decidesText')}</p><div className="veil-act">{action}</div>{err&&<p className="note" role="alert">{err}</p>}</div>
- </div></div></section>;
+  :p.canRequest?<Btn kind="dark" busy={busy} onClick={ask} disabled={busy}>{t('fe.px.pr.ask')}</Btn>:null;
+ return <section className="vault closed" id="priv">{head(false)}<div className="vault-b">
+  <Veil lock={false} toggles title={fill(t('fe.px.pr.decides'),{name})} text={t('fe.px.pr.decidesText')} action={action} error={err||undefined}/>
+ </div></section>;
 }
 
 const postsRes=z.object({ok:z.literal(true),items:z.array(postSchema),next:z.string().nullable().optional()}).passthrough();
@@ -451,13 +450,13 @@ export function CompatScreen(){
       <span>{c.few?c.topics.map(topic).join(', '):compatWords(c,t,locale,false)}</span>
      </div></div>
      <p className="cmp-consent"><ShieldCheck/><span>{t('fe.px.cmp.consent')}</span></p>
-     {c.few&&<div className="alert mt12"><Info/><span><b>{t('fe.px.cmp.fewTitle')}</b>{t('fe.px.cmp.fewBody')}</span></div>}
+     {c.few&&<Alert icon={Info} className="mt12"><b>{t('fe.px.cmp.fewTitle')}</b>{t('fe.px.cmp.fewBody')}</Alert>}
      {!c.few&&<div className="cmp-groups">{(()=>{const g=byGroup(c);return GROUPS.filter(k=>g[k].length).map(k=><div key={k} className="cg">
       <div className={'cg-h '+CLS[k]}><i/><span>{t('fe.px.cmp.g.'+k)}</span><b>{g[k].length}</b></div>
       <p className="cg-d">{t('fe.px.cmp.d.'+k)}</p>
       <div className="cg-rows">{g[k].map(i=><CmpRow key={i.topicId} i={i} topic={topic(i.topicId)} me={me} them={them} t={t}/>)}</div>
      </div>);})()}</div>}
-     <div className="alert mt16"><Lock/><span>{t('fe.px.cmp.foot')}</span></div>
+     <Alert icon={Lock} className="mt16">{t('fe.px.cmp.foot')}</Alert>
      {c.few&&<Btn kind="soft" className="mt12" onClick={()=>navigate('/n/me/interests')}>{t('fe.px.cmp.moreInt')}</Btn>}
     </>}
   </View>
@@ -514,7 +513,7 @@ function Report({profileId,onClose,onDone}:{profileId:string,onClose:()=>void,on
   catch(e){setErr(pxError(e,t));op.current=newOpId();}finally{setBusy(false);}
  };
  return <Sheet title={t('fe.px.rp.title')} onClose={onClose} foot={<Btn kind="danger" onClick={send} disabled={busy}>{t('fe.px.rp.send')}</Btn>}>
-  <div role="radiogroup" aria-label={t('fe.px.rp.reason')}>{REASONS.map(k=><button key={k} type="button" className={'radio'+(why===k?' on':'')} role="radio" aria-checked={why===k} onClick={()=>{setWhy(k);setErr('');}}><i/><span className="tx">{t('fe.px.rp.'+k)}</span></button>)}</div>
+  <RadioList bare label={t('fe.px.rp.reason')} value={why} onChange={k=>{setWhy(k);setErr('');}} options={REASONS.map(k=>[k,t('fe.px.rp.'+k)] as const)}/>
   <label className="field mt16"><span>{t('fe.px.rp.details')}<i>{t('fe.px.rp.optional')}</i></span><TextArea rows={3} maxLength={500} value={details} onChange={e=>setDetails(e.target.value)}/></label>
   <Card list><ToggleRow title={t('fe.px.rp.alsoBlock')} sub={t('fe.px.rp.alsoBlockSub')} on={alsoBlock} onClick={()=>setAlso(v=>!v)}/></Card>
   {err&&<Alert kind="err" noIcon className="mt12">{err}</Alert>}
@@ -623,7 +622,7 @@ export function HistoryScreen(){
       {h.decision==='pass'&&<button type="button" className="hrest" disabled={done||busy} onClick={()=>restore(p.id,name)}
        aria-label={done?fill(t('fe.px.h.back'),{name}):fill(t('fe.px.h.restore'),{name})} title={done?fill(t('fe.px.h.back'),{name}):fill(t('fe.px.h.restore'),{name})}>{done?<Check/>:<Undo2/>}</button>}
      </div>;})}</div>}
-   {r&&!r.premium&&r.items.length>0&&<div className="paywall"><b>{t('fe.px.h.payTitle')}</b><p>{t('fe.px.h.payText')}</p><button type="button" className="btn" onClick={()=>navigate('/n/premium?for=history')}>{t('fe.ax.prem.open')}</button></div>}
+   {r&&!r.premium&&r.items.length>0&&<div className="paywall"><b>{t('fe.px.h.payTitle')}</b><p>{t('fe.px.h.payText')}</p><Btn onClick={()=>navigate('/n/premium?for=history')}>{t('fe.ax.prem.open')}</Btn></div>}
   </View>
   {toastNode}
  </>;
@@ -662,7 +661,7 @@ export function MePreviewScreen(){
     :<>
      <div className="mt12"><div className="card18">
       {ph?<><img className="mbg" src={ph} alt="" aria-hidden="true" draggable={false}/><img src={ph} alt={personName(p)} draggable={false}/></>:<div className="plate" style={plate(p.id)}/>}
-      <div className="pc-info"><h2 className="pc-name"><span className="pcn">{personName(p)}</span>{p.age?<span>{p.age}</span>:null}<NameBadges p={p}/></h2>
+      <div className="pc-info"><PersonName name={personName(p)} age={p.age||undefined}><NameBadges p={p}/></PersonName>
        {city&&<div className="pc-who"><span className="pl"><MapPin/>{city}</span></div>}
        <FollowCounts id={p.id} rel={rel} inert/>
        <div className="pc-hint"><ChevronDown/>{t('fe.px.card.hint')}</div></div>

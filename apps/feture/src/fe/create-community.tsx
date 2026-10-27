@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {CircleAlert,Clock,Image as ImageIcon,Lock,MapPin,RefreshCw,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,FilePick,Group,Input,SelectRow as KitSelectRow,Skel,TextArea,View} from './kit';
+import {Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,FilePick,Group,Input,Note,SelectRow as KitSelectRow,Skel,Swatches,TextArea,View} from './kit';
 import {useFe} from './session';
 import {Uploader} from './kit/Uploader';
 import {useSendPhoto} from './media-upload';
@@ -59,12 +59,12 @@ export const FErr=({children}:{children:ReactNode})=><div className="ferr"><Circ
 type FieldProps={name:string,label:string,value:string,onChange:(v:string)=>void,err?:string|undefined,opt?:boolean,hint?:string,max?:number,ph?:string,
  type?:'text'|'email'|'tel'|'url'|'number'|'password'|'date'|'time',textarea?:boolean,rows?:number,icon?:LucideIcon,inputMode?:'url'|'decimal'|'text',min?:string};
 /** `field()` — label, input or textarea, then the error (or hint) and the counter. */
-export function Field({name,label,value,onChange,err,opt,hint,max,ph,type='text',textarea,rows,icon:Icon,inputMode,min}:FieldProps){
+export function Field({name,label,value,onChange,err,opt,hint,max,ph,type='text',textarea,rows,icon:Icon,inputMode,min,className}:FieldProps&{className?:string}){
  const {t}=useI18n();
  const input=textarea
   ?<TextArea name={name} rows={rows} maxLength={max?max+50:undefined} placeholder={ph} value={value} onChange={e=>onChange(e.target.value)} invalid={!!err}/>
   :<Input name={name} type={type} value={value} placeholder={ph} inputMode={inputMode} min={min} maxLength={max?max+50:undefined} onChange={e=>onChange(e.target.value)} invalid={!!err}/>;
- return <label className={'field'+(err?' err':'')} data-field={name}>
+ return <label className={'field'+(err?' err':'')+(className?' '+className:'')} data-field={name}>
   <span>{label}{opt&&<i>{t('fe.cc.optional')}</i>}</span>
   {Icon?<div className="inwrap"><Icon/>{input}</div>:input}
   {err?<FErr>{err}</FErr>:hint?<div className="fhint">{hint}</div>:null}
@@ -93,11 +93,10 @@ export function CoverField({purpose,plate,setPlate,cover,setCover}:{purpose:'com
   <FilePick ref={file} accept="image/*" onFiles={fs=>{const f=fs[0];if(f)add(f);}}/>
   {picked&&<Uploader files={picked} aspects={['16:9']} max={1} send={send} title={t('fe.cc.cover')} onClose={()=>setPicked(null)}
    onDone={got=>{setPicked(null);const g=got[0];if(g)setCover({id:g.id,preview:g.url});}}/>}
-  <Btn kind="soft" size="md" icon={ImageIcon} style={{marginBottom:10}} onClick={()=>file.current?.click()} disabled={busy}>{busy?t('fe.cc.coverUploading'):cover?t('fe.cc.coverReplace'):t('fe.cc.coverUpload')}</Btn>
+  <Btn kind="soft" size="md" icon={ImageIcon} className="k-mb-cover" onClick={()=>file.current?.click()} disabled={busy}>{busy?t('fe.cc.coverUploading'):cover?t('fe.cc.coverReplace'):t('fe.cc.coverUpload')}</Btn>
   {err&&<FErr>{err}</FErr>}
-  <div className="note" style={{marginBottom:8}}>{t('fe.cc.coverOr')}</div>
-  <Chips>{PLATE_KEYS.map(k=><button key={k} type="button" aria-label={t('fe.cc.plate.'+k)} aria-pressed={!cover&&plate===k} onClick={()=>{setPlate(k);setCover(null);}}
-   style={{position:'relative',width:52,height:52,borderRadius:16,overflow:'hidden',outline:!cover&&plate===k?'3px solid var(--ink)':'0',outlineOffset:2}}><div className="plate" style={namedPlate(k)}/></button>)}</Chips>
+  <Note as="div" className="mb8">{t('fe.cc.coverOr')}</Note>
+  <Swatches label={t('fe.cc.coverOr')} value={cover?null:plate as PlateKey} onChange={k=>{setPlate(k);setCover(null);}} options={PLATE_KEYS.map(k=>[k,t('fe.cc.plate.'+k),namedPlate(k)] as const)}/>
  </div>;
 }
 
@@ -234,8 +233,8 @@ function CommunityForm({edit,reload}:{edit?:EditableCommunity&{rev:number},reloa
   <Bar title={edit?t('fe.ece.c.title'):t('fe.cc.title')} back small/>
   <div className="view nodock cta1"><div className="wrap">
    {!edit&&couple&&acting&&<p className="as-line full"><Av name={acting.name} seed={acting.id} size="xs" src={acting.avatar}/><span>{t('fe.cc.asCouple')} <b>{acting.name}</b></span></p>}
-   {edit&&published&&<div className="alert" style={{marginBottom:12}}><Clock/><span>{t('fe.ece.c.reviewHint')}</span></div>}
-   {edit&&edit.pendingChange!=null&&<div className="alert warn" style={{marginBottom:12}}><Clock/><span>{t('fe.ece.c.pendingChange')}</span></div>}
+   {edit&&published&&<Alert icon={Clock} className="mb12">{t('fe.ece.c.reviewHint')}</Alert>}
+   {edit&&edit.pendingChange!=null&&<Alert kind="warn" role="none" icon={Clock} className="mb12">{t('fe.ece.c.pendingChange')}</Alert>}
    <Group><Card form>
     <Field name="name" label={t('fe.cc.name')} ph={t('fe.cc.namePh')} max={50} value={name} onChange={v=>{setName(v);clear('name');}} err={err.name}/>
     <Field name="desc" label={t('fe.cc.desc')} ph={t('fe.cc.descPh')} max={500} textarea rows={5} value={desc} onChange={v=>{setDesc(v);clear('desc');}} err={err.desc}/>
@@ -249,7 +248,7 @@ function CommunityForm({edit,reload}:{edit?:EditableCommunity&{rev:number},reloa
     <Field name="rules" label={t('fe.cc.rules')} ph={t('fe.cc.rulesPh')} max={1000} textarea rows={4} value={rules} onChange={v=>{setRules(v);clear('rules');}} err={err.rules}/>
     <CoverField purpose="community" plate={plate} setPlate={setPlate} cover={cover} setCover={setCover}/>
    </Card></Group>
-   {failure&&<Alert kind="err" noIcon>{failure}{stale&&reload&&<Btn kind="text" auto icon={RefreshCw} style={{display:'flex',marginTop:6}} onClick={reload}>{t('fe.ece.reload')}</Btn>}</Alert>}
+   {failure&&<Alert kind="err" noIcon action={stale&&reload?<Btn kind="text" auto icon={RefreshCw} onClick={reload}>{t('fe.ece.reload')}</Btn>:undefined}>{failure}</Alert>}
   </div></div>
   <div className="ctabar"><div className="wrap"><Btn onClick={save} disabled={busy}>{busy?t('fe.cc.sending'):edit?t('fe.ece.save'):t('fe.cc.submit')}</Btn></div></div>
  </>;

@@ -6,7 +6,7 @@ import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import {Ban,Bell,Calendar,Camera,CircleHelp,Crown,Download,Eye,EyeOff,Globe,Heart,Image,KeyRound,LogOut,Mail,MessageCircle,Moon,ShieldCheck,Smartphone,Sparkles,Trash2,Users,X,type LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {getThemePreference,setThemePreference,type ThemePreference} from '../theme';
-import {Alert,Bar,Btn,Card,Empty,Field,H,Input,Note,SectionLabel,SelectRow,Skel,ToggleRow,View} from './kit';
+import {Alert,Bar,Btn,Card,Empty,Field,H,Input,Note,Row,SectionLabel,SelectRow,Skel,ToggleRow,View} from './kit';
 import {useFe} from './session';
 import {useToast} from './toast';
 import {usePremiumStatus} from './account-extra';
@@ -132,23 +132,22 @@ export function NotificationSettingsScreen(){
     <Card list>
      <ToggleRow title={t('fe.set.n.push')} sub={t('fe.set.n.pushSub')} on={n.push} onClick={()=>void save({...n,push:!n.push})}/>
      <ToggleRow title={t('fe.set.n.email')} sub={email||t('fe.set.noEmail')} on={n.email} onClick={()=>void save({...n,email:!n.email})}/>
-     {n.email&&<div className="li"><SelectRow label={t('fe.set.n.digest')} sub={t('fe.set.n.digestSub')} value={n.digest}
-      options={(['instant','daily','weekly'] as const).map(v=>[v,t('fe.set.n.digest.'+v)] as const)} onChange={v=>void save({...n,digest:v})}/></div>}
+     {n.email&&<SelectRow row label={t('fe.set.n.digest')} sub={t('fe.set.n.digestSub')} value={n.digest}
+      options={(['instant','daily','weekly'] as const).map(v=>[v,t('fe.set.n.digest.'+v)] as const)} onChange={v=>void save({...n,digest:v})}/>}
     </Card>
     <PushSwitch/>
     <SectionLabel action={<span className="nhead"><span>{t('fe.set.n.colPush')}</span><span>{t('fe.set.n.colEmail')}</span></span>}>{t('fe.set.n.what')}</SectionLabel>
     <Card list className="ncats">{CATS.map(([k,Icon])=>{const c=n.categories[k];const title=t('fe.set.n.cat.'+k);
      const flip=(ch:'push'|'email')=>void save({...n,categories:{...n.categories,[k]:{...c,[ch]:!c[ch]}}});
-     return <div key={k} className="li"><span className="ico"><Icon/></span><span className="tx"><b>{title}</b><small>{t('fe.set.n.catSub.'+k)}</small></span>
+     return <Row key={k} icon={Icon} title={title} sub={t('fe.set.n.catSub.'+k)} end={<>
       <button type="button" className={'nt-t'+(c.push&&n.push?' on':'')} disabled={!n.push} aria-pressed={c.push} aria-label={t('fe.set.n.colPush')+': '+title} onClick={()=>flip('push')}><Smartphone/></button>
-      <button type="button" className={'nt-t'+(c.email&&n.email?' on':'')} disabled={!n.email} aria-pressed={c.email} aria-label={t('fe.set.n.colEmail')+': '+title} onClick={()=>flip('email')}><Mail/></button>
-     </div>;})}</Card>
+      <button type="button" className={'nt-t'+(c.email&&n.email?' on':'')} disabled={!n.email} aria-pressed={c.email} aria-label={t('fe.set.n.colEmail')+': '+title} onClick={()=>flip('email')}><Mail/></button></>}/>;})}</Card>
     <SectionLabel>{t('fe.set.n.quiet')}</SectionLabel>
     <Card list>
      <ToggleRow title={t('fe.set.n.quietOn',{from:n.quiet.from,to:n.quiet.to})} sub={t('fe.set.n.quietNote')} on={n.quiet.on} onClick={()=>void save({...n,quiet:{...n.quiet,on:!n.quiet.on}})}/>
      {n.quiet.on&&<>
-      <div className="li"><SelectRow label={t('fe.set.n.from')} value={n.quiet.from} options={HALF_HOURS.map(v=>[v,v] as const)} onChange={v=>void save({...n,quiet:{...n.quiet,from:v}})}/></div>
-      <div className="li"><SelectRow label={t('fe.set.n.to')} value={n.quiet.to} options={HALF_HOURS.map(v=>[v,v] as const)} onChange={v=>void save({...n,quiet:{...n.quiet,to:v}})}/></div>
+      <SelectRow row label={t('fe.set.n.from')} value={n.quiet.from} options={HALF_HOURS.map(v=>[v,v] as const)} onChange={v=>void save({...n,quiet:{...n.quiet,from:v}})}/>
+      <SelectRow row label={t('fe.set.n.to')} value={n.quiet.to} options={HALF_HOURS.map(v=>[v,v] as const)} onChange={v=>void save({...n,quiet:{...n.quiet,to:v}})}/>
      </>}
     </Card>
     <Note className="mt12">{t('fe.set.n.security')}</Note>
@@ -180,10 +179,9 @@ export function DataScreen(){
   <View className="nodock compact">
    <Card><H level={4} as="h3" className="t">{t('fe.set.exportTitle')}</H><Note className="mb12">{t('fe.set.exportText')}</Note>
     <Btn kind="soft" size="md" icon={Download} onClick={exportData} busy={exporting} disabled={exporting}>{t('fe.set.exportTitle')}</Btn></Card>
-   {/* The danger card's edge stays inline: the kit Card has no danger tone yet. */}
-   <div className="card" style={{borderColor:'var(--danger-soft)'}}><H level={4} as="h3" className="t k-danger">{t('fe.set.delete')}</H>
+   <Card tone="danger"><H level={4} as="h3" className="t k-danger">{t('fe.set.delete')}</H>
     <Note className="mb12">{couple?t('fe.set.deleteTextCouple',{name:couple.name||couple.handle||''}):t('fe.set.deleteText')}</Note>
-    <Btn kind="danger" size="md" icon={Trash2} onClick={()=>setAsk(true)}>{t('fe.set.deleteBtn')}</Btn></div>
+    <Btn kind="danger" size="md" icon={Trash2} onClick={()=>setAsk(true)}>{t('fe.set.deleteBtn')}</Btn></Card>
   </View>
   {ask&&<Sheet title={t('fe.set.deleteTitle')} onClose={close} foot={<>
    <Btn kind="danger" onClick={()=>void remove()} busy={busy} disabled={busy||!confirm.trim()}>{t('fe.set.deleteFinal')}</Btn>

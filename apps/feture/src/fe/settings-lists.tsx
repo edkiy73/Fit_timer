@@ -3,7 +3,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,Calendar,Eye,FileText,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Av,Bar,Btn,Card,Empty,Note,SectionLabel,Skel,View} from './kit';
+import {Av,Bar,Btn,Card,Empty,Note,Row,SectionLabel,Skel,View} from './kit';
 import {useFe} from './session';
 import {useToast} from './toast';
 import {when} from './feed';
@@ -52,11 +52,9 @@ function HiddenList({h}:{h:ReturnType<typeof useHidden>}){
   const name=nameOf(x.target);
   const title=x.kind==='post'?(x.target?.excerpt?.trim()||t('fe.tl.h.post')):x.kind==='event'?t('fe.tl.h.event'):(name||t('fe.tl.h.unavailable'));
   const sub=x.kind==='post'?(x.target?'':t('fe.tl.h.unavailable')):x.kind==='author'?t('fe.tl.h.authorSub'):x.kind==='activity'?t('fe.tl.h.activitySub'):'';
-  return <div key={key(x)} className="li">
-   {(x.kind==='author'||x.kind==='activity')&&x.target?<Av name={name} seed={x.target.id} size="sm"/>:<span className="ico">{x.kind==='event'?<Calendar/>:<FileText/>}</span>}
-   <span className="tx"><b>{title}</b>{sub&&<small>{sub}</small>}</span>
-   <Btn kind="soft" size="sm" onClick={()=>void unhide(x)} busy={busy===key(x)} disabled={!!busy} aria-label={t('fe.tl.h.show')+': '+title}>{t('fe.tl.h.show')}</Btn>
-  </div>;
+  const person=(x.kind==='author'||x.kind==='activity')&&x.target;
+  return <Row key={key(x)} {...(person?{av:<Av name={name} seed={x.target!.id} size="sm"/>}:{icon:x.kind==='event'?Calendar:FileText})} title={title} sub={sub||undefined}
+   end={<Btn kind="soft" size="sm" onClick={()=>void unhide(x)} busy={busy===key(x)} disabled={!!busy} aria-label={t('fe.tl.h.show')+': '+title}>{t('fe.tl.h.show')}</Btn>}/>;
  };
  if(error)return <Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>;
  if(items===null)return <Skel kind="list"/>;
@@ -127,12 +125,9 @@ export function BlockedScreen(){
     :items===null?<Skel kind="list"/>
     :items.length===0?<Empty icon={Ban} title={t('fe.tl.b.empty')} text={t('fe.tl.b.emptyText')}/>
     :<Card list>{items.map(b=>{const name=nameOf(b)||'?';const forBoth=otherIds.has(b.id);
-     return <div key={b.id} className="li">
-      <Av name={name} seed={b.id}/>
-      <div className="tx"><b>{name}</b><small>{(forBoth?t('fe.tl.b.both'):t('fe.tl.b.blocked'))+' '+when(b.created_at,locale)}</small>
-       {other&&!forBoth&&<div className="mt8"><Btn kind="text" size="sm" auto onClick={()=>void both(b)} busy={busy==='b:'+b.id} disabled={!!busy}>{couple?t('fe.tl.b.forMe'):t('fe.tl.b.forCouple')}</Btn></div>}</div>
-      <Btn kind="soft" size="sm" fit onClick={()=>{setAsk(b);setFailure('');}} disabled={!!busy}>{t('fe.tl.b.unblock')}</Btn>
-     </div>;})}</Card>}
+     return <Row key={b.id} av={<Av name={name} seed={b.id}/>} title={name} sub={(forBoth?t('fe.tl.b.both'):t('fe.tl.b.blocked'))+' '+when(b.created_at,locale)}
+      extra={other&&!forBoth?<div className="mt8"><Btn kind="text" size="sm" auto onClick={()=>void both(b)} busy={busy==='b:'+b.id} disabled={!!busy}>{couple?t('fe.tl.b.forMe'):t('fe.tl.b.forCouple')}</Btn></div>:undefined}
+      end={<Btn kind="soft" size="sm" fit onClick={()=>{setAsk(b);setFailure('');}} disabled={!!busy}>{t('fe.tl.b.unblock')}</Btn>}/>;})}</Card>}
   </View>
   {ask&&<Ask icon={Ban} title={t('fe.tl.b.askTitle').replace('{name}',askName)}
    text={couple?t('fe.tl.b.askTextCouple').replace('{name}',askName).replace('{pair}',nameOf(acting)):t('fe.tl.b.askText')}

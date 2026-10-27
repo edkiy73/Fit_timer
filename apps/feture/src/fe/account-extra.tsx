@@ -82,13 +82,12 @@ export function SecurityScreen(){
   <View className="nodock compact">
    <SectionLabel>{t('fe.ax.sec.methods')}</SectionLabel>
    <Card list>
-    <div className="li"><span className="ico"><Mail/></span><span className="tx"><b>{t('fe.ax.sec.email')} <Pill tone="ok">{t('fe.ax.sec.primary')}</Pill></b><small className="one">{email||'—'}</small></span></div>
+    <Row icon={Mail} title={<>{t('fe.ax.sec.email')} <Pill tone="ok">{t('fe.ax.sec.primary')}</Pill></>} sub={<span className="one">{email||'—'}</span>}/>
    </Card>
    <Note className="mt8">{t('fe.ax.sec.methodsNote')}</Note>
    <SectionLabel>{t('fe.ax.sec.sessions')}</SectionLabel>
    <Card list>
-    <div className="li"><span className="ico g">{dev.mobile?<Smartphone/>:<Globe/>}</span><span className="tx"><b>{t('fe.ax.sec.thisDevice')}</b>
-     <small>{dev.name} · {t('fe.ax.sec.now')}{expires?' · '+t('fe.ax.sec.expires',{date:date(expires)}):''}</small></span></div>
+    <Row icon={dev.mobile?Smartphone:Globe} tone="g" title={t('fe.ax.sec.thisDevice')} sub={<>{dev.name} · {t('fe.ax.sec.now')}{expires?' · '+t('fe.ax.sec.expires',{date:date(expires)}):''}</>}/>
    </Card>
   </View>
  </>;

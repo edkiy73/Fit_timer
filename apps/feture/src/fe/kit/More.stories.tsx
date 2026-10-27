@@ -19,3 +19,8 @@ export const ПолеПолное:S={name:'Поле: необязательно,
 export const КарточкаОпасная:S={name:'Карточка «опасность»',render:()=><Card tone="danger"><Stack gap={2}><H level={4}>Удалить аккаунт</H><Text size="sm" tone="mute">Профиль, публикации и переписка исчезнут.</Text><Btn kind="danger" icon={Trash2} fit>Удалить</Btn></Stack></Card>};
 export const ПустоеСКартинкой:S={name:'Пустое: картинка и широкий блок',render:()=><Empty art={<div className="k-demo-dark" style={{width:96,height:96,borderRadius:48}}/>} title="Вы пока не пара" text="Пригласи партнёра по нику." wide><Card>Широкий блок на всю ширину</Card></Empty>};
 void Heart;
+export const КодСобытия:S={name:'Код: выключен, сам отправляет',render:a=>{const [v,setV]=useState('12');const [sent,setSent]=useState('');
+ return <Stack gap={2}><CodeInput {...a} value={v} onChange={setV} onComplete={setSent} onEnter={setSent}/><CodeInput {...a} value="123456" disabled onChange={()=>{}}/>{sent&&<Text size="sm">Отправлен: {sent}</Text>}</Stack>;},
+ args:{label:'Код из письма',digitLabel:'Цифра'}};
+export const ДиапазонПодписи:S={name:'Диапазон: свои подписи',render:()=>{const [lo,setLo]=useState(25);const [hi,setHi]=useState(40);
+ return <Field label={`Возраст ${lo}–${hi}`}><RangeDual label="Возраст" labels={['Возраст от','Возраст до']} min={18} max={99} lo={lo} hi={hi} onChange={(a,b)=>{setLo(a);setHi(b);}}/></Field>;}};

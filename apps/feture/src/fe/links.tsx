@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {CircleAlert,Link2,Pencil,Plus,Trash2,User,Users,X} from 'lucide-react';
 import {useToast as useToastV21} from './toast';
 import {newOpId} from '../feture/fe-api';
-import {Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,Group,Note,RadioList,Row,SectionLabel,SelectRow,Skel,View} from './kit';
+import {Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,Group,Note,PersonLine,RadioList,RequestCard,Row,SectionLabel,SelectRow,Skel,View} from './kit';
 import {useFe} from './session';
 import {NameBadges,withAge} from './faces';
 import {KINDS,SIDES,Sheet,linkLabel,linksMineRes,mediaSrc,personName,personProfileRes,pxError,useToast,type Kind,type LinkView,type LinksMine,type PersonProfile} from './profile-extras';
@@ -58,12 +58,9 @@ export function LinksBlock({onChanged}:{onChanged?:()=>void}){
 function LinkRequest({l,couple,small,busy,onAnswer}:{l:LinkView,couple:boolean,small?:boolean,busy:boolean,onAnswer:(accept:boolean)=>void}){
  const {t}=useI18n();const navigate=useNavigate();const name=nameOf(l);const go=()=>navigate('/n/people/'+l.other.id);
  const who=<>{withAge(name,l.other)}<NameBadges p={l.other}/></>;
- return <Card className="rqcard lk-req">
-  <div className="row"><button type="button" className="rq-av" aria-label={name} onClick={go}><Av name={name} seed={l.other.id} size={small?'sm':''} src={l.other.avatar}/></button>
-   <button type="button" className="grow" onClick={go}>{small?<b>{who}</b>:<b style={{fontSize:16}}>{who}</b>}
-    <Note>{l.change?fill(t('fe.ln.proposesChange'),{from:linkLabel(t,l.kind,l.side),to:t('fe.px.lk.k.'+l.change.kind)}):fill(couple?t('fe.ln.proposesCouple'):t('fe.ln.proposes'),{label:linkLabel(t,l.kind,l.side)})}</Note></button></div>
-  <div className="row g8 mt12"><Btn size="md" disabled={busy} onClick={()=>onAnswer(true)}>{t('fe.ln.confirm')}</Btn><Btn size="md" kind="soft" disabled={busy} onClick={()=>onAnswer(false)}>{t('fe.ln.decline')}</Btn></div>
- </Card>;
+ return <RequestCard className="lk-req" person={<PersonLine small={small} av={<Av name={name} seed={l.other.id} size={small?'sm':''} src={l.other.avatar}/>} label={name} onOpen={go} name={who}
+  sub={l.change?fill(t('fe.ln.proposesChange'),{from:linkLabel(t,l.kind,l.side),to:t('fe.px.lk.k.'+l.change.kind)}):fill(couple?t('fe.ln.proposesCouple'):t('fe.ln.proposes'),{label:linkLabel(t,l.kind,l.side)})}/>}
+  actions={<><Btn size="md" disabled={busy} onClick={()=>onAnswer(true)}>{t('fe.ln.confirm')}</Btn><Btn size="md" kind="soft" disabled={busy} onClick={()=>onAnswer(false)}>{t('fe.ln.decline')}</Btn></>}/>;
 }
 
 /** `/n/me/links` — SC.P21 for the own profile. */
@@ -105,8 +102,8 @@ export function LinksScreen(){
       <Card list>{r.sent.map(l=>row(l,true,t('fe.ln.awaiting')))}</Card>
      </Group>}
      {from&&<Group title={t('fe.ln.requests')} foot={t('fe.ln.fromFoot')}>
-      <Card list><div className="li"><SelectRow label={t('fe.ln.from')} value={from} options={(['all','follow','none'] as const).map(v=>[v,t('fe.ln.from.'+v)] as const)}
-       onChange={v=>{if(busy)return;setFrom(v);void act(()=>call('profile.setVisibility',{opId:newOpId(),setting:'linksFrom',value:v},ok),t('fe.ln.t.saved'));}}/></div></Card>
+      <Card list><SelectRow row label={t('fe.ln.from')} value={from} options={(['all','follow','none'] as const).map(v=>[v,t('fe.ln.from.'+v)] as const)}
+       onChange={v=>{if(busy)return;setFrom(v);void act(()=>call('profile.setVisibility',{opId:newOpId(),setting:'linksFrom',value:v},ok),t('fe.ln.t.saved'));}}/></Card>
      </Group>}
     </>}
   </View>
@@ -114,8 +111,8 @@ export function LinksScreen(){
    <Card list>
     <Row noChev icon={User} title={t('fe.ln.open')} sub={linkLabel(t,m.kind,m.side)} onClick={()=>{closeMenu();navigate('/n/people/'+m.other.id);}}/>
     {!menu.pend&&<Row noChev icon={Pencil} title={t('fe.ln.change')} sub={t('fe.ln.changeSub')} onClick={()=>{closeMenu();navigate('/n/people/'+m.other.id+'/link');}}/>}
-    {!menu.pend&&<div className="li"><SelectRow label={t('fe.px.lk.vis')} value={m.vis} options={visItems(t)}
-     onChange={v=>{if(busy)return;setMenu({l:{...m,vis:v},pend:false});void act(()=>call('link.setVisibility',{opId:newOpId(),linkId:m.id,vis:v},ok),t('fe.ln.t.saved'));}}/></div>}
+    {!menu.pend&&<SelectRow row label={t('fe.px.lk.vis')} value={m.vis} options={visItems(t)}
+     onChange={v=>{if(busy)return;setMenu({l:{...m,vis:v},pend:false});void act(()=>call('link.setVisibility',{opId:newOpId(),linkId:m.id,vis:v},ok),t('fe.ln.t.saved'));}}/>}
     <Row danger icon={menu.pend?X:Trash2} title={menu.pend?t('fe.ln.cancelReq'):t('fe.ln.remove')} sub={menu.pend?undefined:t('fe.ln.removeSub')} disabled={busy}
      onClick={()=>{if(menu.pend){closeMenu();void act(()=>call('link.remove',{opId:newOpId(),linkId:m.id},ok),t('fe.ln.t.cancelled'));}else{closeMenu();setRemoving(m);}}}/>
    </Card>
@@ -193,7 +190,7 @@ export function LinkEditScreen(){
          {sideErr&&<div className="ferr"><CircleAlert/>{t('fe.px.lk.pickSide')}</div>}
         </Card>
        </Group>}
-       <Group foot={t('fe.px.lk.visFoot')}><Card list><div className="li"><SelectRow label={t('fe.px.lk.vis')} value={vis} options={visItems(t)} onChange={setVis}/></div></Card></Group>
+       <Group foot={t('fe.px.lk.visFoot')}><Card list><SelectRow row label={t('fe.px.lk.vis')} value={vis} options={visItems(t)} onChange={setVis}/></Card></Group>
        <Alert kind="info" className="mt16">{conf?changed?fill(t('fe.ln.p22.infoChange'),{name}):t('fe.ln.p22.infoVis'):fill(t('fe.ln.p22.infoNew'),{name})}</Alert>
       </>}
      {err&&!sideErr&&<Alert kind="err" noIcon className="mt12">{err}</Alert>}
