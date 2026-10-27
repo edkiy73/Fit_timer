@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {ChevronLeft,ChevronRight,Flag,Info,TriangleAlert,Users,X,type LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Btn,Layer} from './ui';
+import {Btn,Layer,Seg} from './ui';
 import {useFe} from './session';
 import {namedPlate} from './create-community';
 
@@ -22,37 +22,16 @@ export function pl(n:number,forms:string,locale:string){
 export const plWord=(n:number,forms:string,locale:string)=>pl(n,forms,locale).replace(/^\d+ /,'');
 
 /** `bar(title,{back,sm,sub,actions})` — the screen header with the second line under the title. */
-export function SubBar({title,sub,back=true,children}:{title:string,sub?:string|null|undefined,back?:string|true|false,children?:ReactNode}){
- const navigate=useNavigate();const {t}=useI18n();
- return <header className="bar">
-  {back&&<button type="button" className="ibtn ghost" aria-label={t('fe.back')} onClick={()=>typeof back==='string'?navigate(back):navigate(-1)}><ChevronLeft/></button>}
-  <h1 className="sm" tabIndex={-1}>{title}{sub&&<span className="sub">{sub}</span>}</h1>
-  {children}
- </header>;
-}
-
-/** `seg(items)` with the counter bubble of the prototype (`<em>n</em>`). */
-export function SegN<T extends string>({value,options,onChange,label,small}:{value:T,options:{id:T,label:string,n?:number|undefined}[],onChange:(v:T)=>void,label?:string,small?:boolean}){
- const i=Math.max(0,options.findIndex(o=>o.id===value));
- return <div className={'seg'+(small?' sm':'')} role="tablist" aria-label={label}>
-  <span className="knob" style={{width:`calc((100% - 8px)/${options.length})`,transform:`translateX(${i*100}%)`}}/>
-  {options.map(o=><button key={o.id} type="button" role="tab" aria-selected={o.id===value} className={o.id===value?'on':''} onClick={()=>onChange(o.id)}><span>{o.label}</span>{o.n?<em>{o.n}</em>:null}</button>)}
- </div>;
-}
-
-/** `tabStrip()` — natural-width tabs with an optional counter. */
+/** Kit pieces under the names the community screens use. */
+import {SubBar,Row as LinkRow,Sheet as CSheet,Ask} from './kit';
+export {SubBar,LinkRow,CSheet,Ask};
+/** Older names of the one tab control (ui.tsx Seg). */
+export const SegN=Seg;
 export function TabStrip<T extends string>({value,items,onChange}:{value:T,items:[T,string,number?][],onChange:(v:T)=>void}){
- return <div className="tabs14" role="tablist">{items.map(([id,l,n])=><button key={id} type="button" role="tab" aria-selected={id===value} className={id===value?'on':''} onClick={()=>onChange(id)}>{l}{n?<em>{n}</em>:null}</button>)}</div>;
+ return <Seg value={value} onChange={onChange} options={items.map(([id,label,n])=>({id,label,n}))}/>;
 }
 
 /** `linkRow()` — icon, title, optional sub, value, badge and chevron. */
-export function LinkRow({icon:Icon,tone='',title,sub,val,badge,danger,noChev,onClick,disabled,av}:{icon?:LucideIcon,tone?:string,title:ReactNode,sub?:ReactNode,val?:string,badge?:string|number|undefined,danger?:boolean,noChev?:boolean,onClick:()=>void,disabled?:boolean,av?:ReactNode}){
- return <button type="button" className={'li'+(danger?' danger':'')} onClick={onClick} disabled={disabled}>
-  {Icon&&<span className={'ico '+tone}><Icon/></span>}{av}<span className="tx"><b>{title}</b>{sub?<small>{sub}</small>:null}</span>
-  {val&&<span className="val">{val}</span>}{badge?<span className="pill hot">{badge}</span>:null}{!noChev&&<ChevronRight/>}
- </button>;
-}
-
 /** The community / event picture when there is no photo: the named plate, with the group icon for communities. */
 export function NamedPlate({k,icon:Icon}:{k:string|null|undefined,icon?:LucideIcon|undefined}){
  return <div className="plate" style={namedPlate(k||'lilac')}>{Icon&&<span className="pi"><Icon/></span>}</div>;
@@ -60,37 +39,6 @@ export function NamedPlate({k,icon:Icon}:{k:string|null|undefined,icon?:LucideIc
 export const CommPlate=({k}:{k:string|null|undefined})=><NamedPlate k={k} icon={Users}/>;
 
 /** `sheet()` — `div.layer > div.scrim + div.sheet` with the grab handle, title, optional header action, body and foot. */
-export function CSheet({title,sub,lead,head,onClose,children,foot,full}:{title:string,sub?:string,lead?:ReactNode,head?:ReactNode,onClose:()=>void,children:ReactNode,foot?:ReactNode,full?:boolean}){
- const {t}=useI18n();const ref=useRef<HTMLDivElement>(null);const close=useRef(onClose);close.current=onClose;
- useEffect(()=>{const opener=document.activeElement as HTMLElement|null;ref.current?.focus({preventScroll:true});
-  const key=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();close.current();}};
-  document.addEventListener('keydown',key);
-  return ()=>{document.removeEventListener('keydown',key);requestAnimationFrame(()=>opener?.focus?.({preventScroll:true}));};},[]);
- return <Layer>
-  <div className="scrim on" onClick={onClose}/>
-  <div ref={ref} className={'sheet on'+(full?' full':'')} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}>
-   <div className="grab"/>
-   <div className="sh-h">{lead}<div className="sh-ht"><h2>{title}</h2>{sub&&<p>{sub}</p>}</div>{head}<button type="button" className="ibtn ghost sm" aria-label={t('fe.cm.close')} onClick={onClose}><X/></button></div>
-   <div className="sh-b">{children}</div>
-   {foot&&<div className="sh-f">{foot}</div>}
-  </div>
- </Layer>;
-}
-
-/** `ask()` — the confirmation dialog: icon, title, text, the main (or red) button and «Отмена». */
-export function Ask({icon:Icon=TriangleAlert,tone,title,text,ok,cancel,danger,busy,onOk,onCancel,children}:{icon?:LucideIcon,tone?:string,title:string,text?:string,ok:string,cancel?:string,danger?:boolean,busy?:boolean,onOk:()=>void,onCancel:()=>void,children?:ReactNode}){
- const {t}=useI18n();const ref=useRef<HTMLDivElement>(null);const close=useRef(onCancel);close.current=onCancel;
- useEffect(()=>{ref.current?.querySelector<HTMLElement>('[data-r="0"]')?.focus({preventScroll:true});
-  const key=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();close.current();}};
-  document.addEventListener('keydown',key);return ()=>document.removeEventListener('keydown',key);},[]);
- return <Layer>
-  <div className="scrim on" style={{zIndex:3}} onClick={busy?undefined:onCancel}/>
-  <div ref={ref} className="dialog on" role="alertdialog" aria-modal="true" aria-label={title} style={{display:'block',zIndex:4}}>
-   <div className={'ico '+(tone??(danger?'a':''))}><Icon/></div><h2>{title}</h2>{text&&<p>{text}</p>}{children}
-   <div className="btns"><Btn kind={danger?'danger':'primary'} onClick={onOk} busy={!!busy} disabled={!!busy} data-r="1">{ok}</Btn><Btn kind="soft" onClick={onCancel} disabled={!!busy} data-r="0">{cancel??t('fe.cancel')}</Btn></div>
-  </div>
- </Layer>;
-}
 
 const REASONS=['threat','private','minor','spam','other'] as const;
 /** «Пожаловаться» on a community or an event: the reason, details, and the report goes to moderators. */

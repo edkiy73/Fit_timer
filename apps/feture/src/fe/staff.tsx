@@ -119,11 +119,8 @@ function Queues(){
  };
  const current=data[tab];
  return <>
-  {/* The queue switch: more queues than a sliding segment fits on a phone, so a scrollable tab row with counts. */}
-  <div className="filterline st-tabs"><div className="chips scroll" role="tablist" aria-label={t('fe.staff.queuesLabel')}>
-   {avail.map(id=><button key={id} type="button" role="tab" aria-selected={tab===id} className={'chip filter'+(tab===id?' on':'')} onClick={()=>{setTab(id);setNotice('');}}>
-    {id==='photo'?t('fe.pc.staff.tab'):t('fe.staff.q.'+id)} <b className="st-count">{count(id)}</b></button>)}
-  </div></div>
+  {/* The queue switch on the one tab control: more than four queues scroll sideways, each with its count. */}
+  <Seg value={tab} onChange={id=>{setTab(id);setNotice('');}} label={t('fe.staff.queuesLabel')} options={avail.map(id=>({id,label:id==='photo'?t('fe.pc.staff.tab'):t('fe.staff.q.'+id),n:count(id)}))}/>
   {(tab==='dispute'||tab==='report')&&<div className="alert info mt12"><ShieldCheck/><span><b>{t('fe.staff.howTitle')}</b>{t('fe.staff.howText')}</span></div>}
   <div className="st-tools"><Btn kind="text" size="sm" auto icon={RefreshCw} onClick={load}>{t('fe.staff.refresh')}</Btn></div>
   {notice&&<div className="alert ok mb12" role="status"><Check/><span>{notice}</span></div>}

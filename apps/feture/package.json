@@ -7,7 +7,7 @@
     "check:catalog": "node tools/check-catalog-editorial.mjs",
     "check:auth-env": "node tools/check-auth-env.mjs",
     "dev": "vite",
-    "build": "npm run check:catalog && node tools/build-prototype-v10.mjs && node tools/build-prototype-v11.mjs && vite build",
+    "build": "npm run check:catalog && node tools/build-prototype-v10.mjs && node tools/build-prototype-v11.mjs && vite build && storybook build -o dist/kit --quiet",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.server.json",
     "test:smoke": "node tests/smoke.js && node --test tests/vercel-ignore.test.mjs && node --check tests/e2e.mjs",
@@ -15,13 +15,15 @@
     "test:prototype": "node tests/prototype-v10-community-contract.mjs && node tests/prototype-v10-discussion-contract.mjs && node tests/prototype-v10-host-contract.mjs && node tests/prototype-v10-profile-preview-contract.mjs && node tests/prototype-v10-followup-contract.mjs && node tests/prototype-v10-hostile-input-contract.mjs && node tests/prototype-v10-social-identity-contract.mjs && node tests/prototype-v11-community-contract.mjs && node tests/prototype-v11-discussion-contract.mjs && node tests/prototype-v11-host-contract.mjs && node tests/prototype-v11-profile-preview-contract.mjs && node tests/prototype-v11-followup-contract.mjs && node tests/prototype-v11-hostile-input-contract.mjs && node tests/prototype-v11-social-identity-contract.mjs && node tests/prototype-v11-ux-audit-contract.mjs && node tests/prototype-v12-pair-replacement-contract.mjs && node tests/prototype-v13-contract.mjs && node tests/prototype-v14-contract.mjs && node tests/prototype-v17-contract.mjs && node tests/prototype-v18-contract.mjs && node tests/prototype-v19-contract.mjs && node tests/prototype-v20-contract.mjs && node tests/prototype-v21-contract.mjs",
     "test:unit": "vitest run",
     "test:browser": "npm run build && node tests/e2e.mjs",
-    "check": "npm run check:catalog && npm run typecheck && npm run test:smoke && npm run test:prototype && npm run test:unit && npm run test:security && npm run test:seed && npm run test:interests && npm run build",
+    "check": "npm run check:kit && npm run check:catalog && npm run typecheck && npm run test:smoke && npm run test:prototype && npm run test:unit && npm run test:security && npm run test:seed && npm run test:interests && npm run build",
     "mobile:prepare:android": "node scripts/mobile.mjs android",
     "mobile:prepare:ios": "node scripts/mobile.mjs ios",
     "test:security": "node --test tests/domain-security.js tests/verification-engine.js tests/diagnostics-privacy.js tests/admin-observability-isolation.js tests/private-metrics.js tests/operators-security.js",
     "test:interests": "node --test tests/fe-db-gate.mjs tests/fe-platform-postgres.mjs tests/fe-me-postgres.mjs tests/fe-access-postgres.mjs tests/fe-couples-postgres.mjs tests/fe-staff-postgres.mjs tests/fe-feed-postgres.mjs tests/fe-moderation-postgres.mjs tests/fe-communities-postgres.mjs tests/fe-events-postgres.mjs tests/fe-photos-postgres.mjs tests/fe-discover-postgres.mjs tests/fe-chats-postgres.mjs tests/fe-realtime-postgres.mjs tests/fe-inbox-postgres.mjs tests/fe-people-postgres.mjs tests/fe-premium-postgres.mjs tests/fe-moderation-more-postgres.mjs tests/fe-account-postgres.mjs tests/fe-push-postgres.mjs tests/fe-dsa-postgres.mjs tests/fe-photo-verify-postgres.mjs tests/interest-transactions.mjs tests/verification-postgres.mjs tests/documents-postgres.mjs tests/profile-postgres.mjs tests/access-postgres.mjs tests/moderation-postgres.mjs tests/journal-postgres.mjs tests/questionnaires-postgres.mjs tests/test-map-postgres.mjs tests/catalog-drafts-postgres.mjs tests/catalog-publications-postgres.mjs tests/share-links-postgres.mjs tests/qa-adult-postgres.mjs tests/posts-postgres.mjs tests/post-reactions-postgres.mjs tests/post-comments-postgres.mjs tests/public-authors-postgres.mjs tests/author-relationships-postgres.mjs tests/muted-feed-postgres.mjs tests/groups-postgres.mjs tests/group-owner-postgres.mjs",
     "test:seed": "node --test tests/seed-postgres.mjs",
-    "test:visual": "npm run build && node tests/e2e.mjs --visual-qa"
+    "test:visual": "npm run build && node tests/e2e.mjs --visual-qa",
+    "check:kit": "node tools/check-fe-kit.mjs",
+    "storybook": "storybook dev -p 6006"
   },
   "dependencies": {
     "@capacitor/android": "8.5.2",
@@ -42,6 +44,9 @@
   "devDependencies": {
     "@capacitor/cli": "8.5.2",
     "@electric-sql/pglite": "0.5.8",
+    "@storybook/addon-a11y": "10.6.2",
+    "@storybook/addon-docs": "10.6.2",
+    "@storybook/react-vite": "10.6.2",
     "@testing-library/react": "16.3.3",
     "@testing-library/user-event": "14.6.7",
     "@types/node": "26.6.1",
@@ -51,6 +56,7 @@
     "fake-indexeddb": "6.2.5",
     "jsdom": "30.1.1",
     "playwright-core": "1.55.0",
+    "storybook": "10.6.2",
     "typescript": "6.0.3",
     "vite": "8.3.1",
     "vitest": "5.0.2"

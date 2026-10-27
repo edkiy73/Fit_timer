@@ -1,10 +1,10 @@
-import {useLayoutEffect,useState,type ButtonHTMLAttributes,type CSSProperties,type ReactNode} from 'react';
+import {forwardRef,useLayoutEffect,useState,type ButtonHTMLAttributes,type CSSProperties,type ReactNode} from 'react';
 import {createPortal} from 'react-dom';
 import {useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {ChevronLeft,type LucideIcon} from 'lucide-react';
 
-/** V21 building blocks with the prototype's own markup and class names (styles: v21.css, generated from
+/** V21 building blocks with the prototype's own markup and class names (styles: kit/base.css, started from
  * public/prototype-v21.html). Icons come only from Lucide. */
 
 // V21 plates (prototype PL): the coloured disc behind initials.
@@ -26,21 +26,21 @@ export function Av({name,src,size='',seed,couple}:{name:string,src?:string|null|
 }
 
 /** `bar()` — the screen header; «‹» goes back within the tab's stack. */
-export function Bar({title,back,small,children}:{title:string,back?:string|true,small?:boolean,children?:ReactNode}){
+export function Bar({title,back,onBack,small,children}:{title:string,back?:string|true,onBack?:()=>void,small?:boolean,children?:ReactNode}){
  const navigate=useNavigate();const {t}=useI18n();
  return <header className="bar">
-  {back&&<button type="button" className="ibtn ghost" aria-label={t('fe.back')} onClick={()=>typeof back==='string'?navigate(back):navigate(-1)}><ChevronLeft/></button>}
-  <h1 className={small||back?'sm':''} tabIndex={-1}>{title}</h1>
+  {(back||onBack)&&<button type="button" className="ibtn ghost" aria-label={t('fe.back')} onClick={()=>onBack?onBack():typeof back==='string'?navigate(back):navigate(-1)}><ChevronLeft/></button>}
+  <h1 className={small||back||onBack?'sm':''} tabIndex={-1}>{title}</h1>
   {children}
  </header>;
 }
 
 type BtnProps=ButtonHTMLAttributes<HTMLButtonElement>&{kind?:'primary'|'soft'|'text'|'danger',size?:''|'md'|'sm',auto?:boolean,icon?:LucideIcon};
 /** `.btn` — 48 / md 44 / sm 36; one main button per group. */
-export function Btn({kind='primary',size='',auto,icon:Icon,className,children,type='button',busy,...rest}:BtnProps&{busy?:boolean}){
- // `busy` is the prototype's `.btn.busy`: the label stays, a spinner follows it, so the button never changes width.
- return <button type={type} className={['btn',kind,size,auto?'auto':'',busy?'busy':'',className].filter(Boolean).join(' ')} aria-busy={busy||undefined} {...rest}>{Icon&&<Icon/>}{children}</button>;
-}
+export const Btn=forwardRef<HTMLButtonElement,BtnProps&{busy?:boolean,fit?:boolean}>(function Btn({kind='primary',size='',auto,fit,icon:Icon,className,children,type='button',busy,...rest},ref){
+ // `busy` blinks in place (owner: never a spinner); `fit` keeps the button at its text width inside a row.
+ return <button ref={ref} type={type} className={['btn',kind,size,auto?'auto':'',fit?'k-fit':'',busy?'busy':'',className].filter(Boolean).join(' ')} aria-busy={busy||undefined} {...rest}>{Icon&&<Icon/>}{children}</button>;
+});
 
 /** `empty()` — one look for empty, error and unavailable states. */
 export function Empty({icon:Icon,title,text,children,role}:{icon:LucideIcon,title:string,text?:string,children?:ReactNode,role?:'status'|'alert'}){
@@ -48,11 +48,15 @@ export function Empty({icon:Icon,title,text,children,role}:{icon:LucideIcon,titl
 }
 
 /** `seg()` — segmented tabs with the sliding knob. */
-export function Seg<T extends string>({value,options,onChange,label,small=true}:{value:T,options:{id:T,label:string}[],onChange:(v:T)=>void,label?:string,small?:boolean}){
- const i=Math.max(0,options.findIndex(o=>o.id===value));
- return <div className={'seg'+(small?' sm':'')} role="tablist" aria-label={label}>
-  <span className="knob" style={{width:`calc((100% - 8px)/${options.length})`,transform:`translateX(${i*100}%)`}}/>
-  {options.map(o=><button key={o.id} type="button" role="tab" aria-selected={o.id===value} className={o.id===value?'on':''} onClick={()=>onChange(o.id)}><span>{o.label}</span></button>)}
+/** The one tab control of the app (owner, 27.10.2026: one plaque everywhere, the feed's size). A count shows as
+ * `<em>n</em>`, a dot marks something waiting; five or more tabs scroll sideways instead of squeezing. */
+export type SegOption<T extends string>={id:T,label:string,n?:number|string|undefined,dot?:string|undefined};
+export function Seg<T extends string>({value,options,onChange,label}:{value:T,options:SegOption<T>[],onChange:(v:T)=>void,label?:string|undefined,small?:boolean,big?:boolean}){
+ const i=Math.max(0,options.findIndex(o=>o.id===value));const scroll=options.length>4;
+ return <div className={'seg sm'+(scroll?' scroll':'')} role="tablist" aria-label={label}>
+  {!scroll&&<span className="knob" style={{width:`calc((100% - 8px)/${options.length})`,transform:`translateX(${i*100}%)`}}/>}
+  {options.map(o=><button key={o.id} type="button" role="tab" aria-selected={o.id===value} className={o.id===value?'on':''} onClick={()=>onChange(o.id)}>
+   <span>{o.label}{o.dot&&<i className="tdot" role="img" aria-label={o.dot}/>}</span>{o.n?<em>{typeof o.n==='number'&&o.n>99?'99+':o.n}</em>:null}</button>)}
  </div>;
 }
 

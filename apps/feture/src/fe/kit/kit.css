@@ -1,0 +1,106 @@
+/* Kit styles that V21 did not have as a class: typography steps and the shared focus ring. Built only on tokens.css. */
+.v21 .k-h1{font:var(--t-h1);letter-spacing:var(--t-h1-tr);margin:0;text-wrap:balance}
+.v21 .k-h2{font:var(--t-h2);letter-spacing:var(--t-h2-tr);margin:0;text-wrap:balance}
+.v21 .k-h3{font:var(--t-h3);letter-spacing:var(--t-h3-tr);margin:0;text-wrap:balance}
+.v21 .k-h4{font:var(--t-h4);letter-spacing:var(--t-h4-tr);margin:0}
+.v21 .k-h5{font:var(--t-h5);margin:0}
+.v21 .k-body{font:var(--t-body);margin:0}
+.v21 .k-strong{font:var(--t-body-strong);margin:0}
+.v21 .k-sm{font:var(--t-sm);margin:0}
+.v21 .k-xs{font:var(--t-xs);margin:0}
+.v21 .k-cap{font:var(--t-cap);margin:0}
+.v21 .k-label{font:var(--t-label);letter-spacing:var(--t-label-tr);text-transform:uppercase;margin:0}
+.v21 .k-micro{font:var(--t-micro);margin:0}
+.v21 .k-mute{color:var(--mute)} .v21 .k-faint{color:var(--faint)} .v21 .k-accent{color:var(--accent)} .v21 .k-danger{color:var(--danger)} .v21 .k-ok{color:var(--ok)}
+.v21 .k-center{text-align:center}
+/* Stacks: the only way screens space blocks apart (gap from the spacing scale). */
+.v21 .k-stack{display:flex;flex-direction:column;gap:var(--k-gap,var(--s-3))}
+.v21 .k-row{display:flex;align-items:center;flex-wrap:wrap;gap:var(--k-gap,var(--s-2))}
+.v21 .k-g1{--k-gap:var(--s-1)} .v21 .k-g2{--k-gap:var(--s-2)} .v21 .k-g3{--k-gap:var(--s-3)} .v21 .k-g4{--k-gap:var(--s-4)} .v21 .k-g6{--k-gap:var(--s-6)}
+.v21 .k-grow{flex:1;min-width:0}
+/* One focus ring for every control. */
+.v21 :is(button,a,input,select,textarea,[tabindex]):focus-visible{outline:none;box-shadow:var(--focus)}
+/* Disabled — one look for every control: faded, no pointer. */
+.v21 :is(.inp,.chip,.li,.ibtn,.selrow select):disabled,.v21 .li[aria-disabled="true"]{opacity:.45;cursor:not-allowed}
+.v21 .selrow:has(select:disabled){opacity:.45}
+/* Invalid — the same red edge on every field (Field puts the message under it). */
+.v21 .inp[aria-invalid="true"]{border-color:var(--danger);box-shadow:0 0 0 1px var(--danger)}
+.v21 .k-hr{border:0;border-top:1px solid var(--line);margin:var(--s-3) 0}
+.v21 .k-sw{display:inline-flex;align-items:center;min-height:var(--h-md);padding:0 var(--s-1)}
+.v21 .k-range{width:100%;accent-color:var(--accent);min-height:var(--h-md)}
+.v21 .counter.over{color:var(--danger)}
+/* Count bubble on an icon: top-right, accent, white digits, ring in the page colour. */
+.v21 .ibtn{position:relative}
+.v21 .k-badge{position:absolute;top:-2px;right:-4px;min-width:18px;height:18px;padding:0 5px;border-radius:var(--r-full);display:grid;place-items:center;
+ background:var(--accent);color:#fff;font:var(--t-micro);font-style:normal;box-shadow:0 0 0 2px var(--bg)}
+.v21 .k-badge.dot{min-width:10px;width:10px;height:10px;padding:0;top:2px;right:2px}
+/* Token specimens (Storybook «Основа»): each demo draws itself from the variable named in its data attribute. */
+.v21 .k-tok{display:flex;align-items:center;gap:var(--s-4)}
+.v21 .k-tok-demo{flex:0 0 160px;min-width:0}
+.v21 .k-colors{display:grid;gap:var(--s-2)}
+.v21 .k-swatch{display:block;width:48px;height:32px;border-radius:var(--r-s);border:1px solid var(--line)}
+.v21 .k-bar{display:block;height:12px;border-radius:2px;background:var(--accent)}
+.v21 .k-rad{display:block;width:72px;height:48px;background:var(--raise);border:1px solid var(--line2)}
+.v21 .k-shd{display:block;width:72px;height:48px;background:var(--surf);border-radius:var(--r)}
+.v21 .k-hh{display:block;width:120px;background:var(--accent-soft);border-radius:var(--r-s)}
+.v21 .k-ii{display:block;background:var(--ink);border-radius:2px}
+.v21 .k-swatch[data-var="--bg"]{background:var(--bg)}
+.v21 .k-swatch[data-var="--bg2"]{background:var(--bg2)}
+.v21 .k-swatch[data-var="--surf"]{background:var(--surf)}
+.v21 .k-swatch[data-var="--raise"]{background:var(--raise)}
+.v21 .k-swatch[data-var="--ink"]{background:var(--ink)}
+.v21 .k-swatch[data-var="--mute"]{background:var(--mute)}
+.v21 .k-swatch[data-var="--faint"]{background:var(--faint)}
+.v21 .k-swatch[data-var="--line"]{background:var(--line)}
+.v21 .k-swatch[data-var="--line2"]{background:var(--line2)}
+.v21 .k-swatch[data-var="--accent"]{background:var(--accent)}
+.v21 .k-swatch[data-var="--accent-soft"]{background:var(--accent-soft)}
+.v21 .k-swatch[data-var="--accent-ink"]{background:var(--accent-ink)}
+.v21 .k-swatch[data-var="--ok"]{background:var(--ok)}
+.v21 .k-swatch[data-var="--ok-soft"]{background:var(--ok-soft)}
+.v21 .k-swatch[data-var="--warn"]{background:var(--warn)}
+.v21 .k-swatch[data-var="--warn-soft"]{background:var(--warn-soft)}
+.v21 .k-swatch[data-var="--danger"]{background:var(--danger)}
+.v21 .k-swatch[data-var="--danger-soft"]{background:var(--danger-soft)}
+.v21 .k-swatch[data-var="--violet"]{background:var(--violet)}
+.v21 .k-swatch[data-var="--violet-soft"]{background:var(--violet-soft)}
+.v21 .k-swatch[data-var="--mint"]{background:var(--mint)}
+.v21 .k-swatch[data-var="--lilac"]{background:var(--lilac)}
+.v21 .k-swatch[data-var="--scrim"]{background:var(--scrim)}
+.v21 .k-bar[data-s="0"]{width:var(--s-0)}
+.v21 .k-bar[data-s="1"]{width:var(--s-1)}
+.v21 .k-bar[data-s="2"]{width:var(--s-2)}
+.v21 .k-bar[data-s="3"]{width:var(--s-3)}
+.v21 .k-bar[data-s="4"]{width:var(--s-4)}
+.v21 .k-bar[data-s="5"]{width:var(--s-5)}
+.v21 .k-bar[data-s="6"]{width:var(--s-6)}
+.v21 .k-bar[data-s="7"]{width:var(--s-7)}
+.v21 .k-bar[data-s="8"]{width:var(--s-8)}
+.v21 .k-bar[data-s="9"]{width:var(--s-9)}
+.v21 .k-rad[data-r="--r-2xs"]{border-radius:var(--r-2xs)}
+.v21 .k-rad[data-r="--r-xs"]{border-radius:var(--r-xs)}
+.v21 .k-rad[data-r="--r-s"]{border-radius:var(--r-s)}
+.v21 .k-rad[data-r="--r-m"]{border-radius:var(--r-m)}
+.v21 .k-rad[data-r="--r"]{border-radius:var(--r)}
+.v21 .k-rad[data-r="--r-l"]{border-radius:var(--r-l)}
+.v21 .k-rad[data-r="--r-xl"]{border-radius:var(--r-xl)}
+.v21 .k-rad[data-r="--r-full"]{border-radius:var(--r-full)}
+.v21 .k-shd[data-sh="--shadow-s"]{box-shadow:var(--shadow-s)}
+.v21 .k-shd[data-sh="--shadow"]{box-shadow:var(--shadow)}
+.v21 .k-hh[data-h="--h-xl"]{height:var(--h-xl)}
+.v21 .k-hh[data-h="--h-lg"]{height:var(--h-lg)}
+.v21 .k-hh[data-h="--h-md"]{height:var(--h-md)}
+.v21 .k-hh[data-h="--h-sm"]{height:var(--h-sm)}
+.v21 .k-hh[data-h="--h-xs"]{height:var(--h-xs)}
+.v21 .k-ii[data-i="--i-lg"]{width:var(--i-lg);height:var(--i-lg)}
+.v21 .k-ii[data-i="--i-md"]{width:var(--i-md);height:var(--i-md)}
+.v21 .k-ii[data-i="--i-sm"]{width:var(--i-sm);height:var(--i-sm)}
+.v21 .k-ii[data-i="--i-xs"]{width:var(--i-xs);height:var(--i-xs)}
+.v21 .btn.k-fit{flex:0 0 auto;width:auto}
+.v21 .k-anchor{position:relative}
+.v21 .k-wait{visibility:hidden}
+/* Row with an end control: the main part is one button, the end control sits beside it. */
+.v21 .li.k-li-end{display:flex;align-items:center;gap:var(--s-2)}
+.v21 .li.k-li-end>.k-li-main{display:flex;align-items:center;gap:inherit;flex:1;min-width:0;text-align:left;background:none;border:0;padding:0;color:inherit}
+.v21 .li.k-li-sel{display:flex;align-items:center;gap:var(--s-3)}
+.v21 .li.k-li-sel>.selrow{flex:1;min-width:0}

@@ -1,0 +1,47 @@
+/* FetUre design tokens (kit). Colours, base radii, shadows and safe areas are defined at the top of base.css; this
+ * file holds the scales — type, spacing, control heights, icon sizes, motion and layers. Both are ours to change: a
+ * token change restyles every screen. A value that is not here is added here first (README). */
+.v21{
+ /* Type: Geologica for headings, Onest for text. Each step = size / line-height / weight / tracking. */
+ --font-head:"Geologica",var(--font);
+ --t-h1:700 var(--fs-h1)/1.15 var(--font-head);  --t-h1-tr:-.025em;   /* screen title on a large header, onboarding */
+ --t-h2:700 var(--fs-h2)/1.2 var(--font-head);   --t-h2-tr:-.02em;    /* bar title, sheet and dialog title */
+ --t-h3:700 var(--fs-h3)/1.25 var(--font-head);  --t-h3-tr:-.015em;   /* card and section headline */
+ --t-h4:650 var(--fs-h4)/1.3 var(--font);        --t-h4-tr:-.01em;    /* list title, post title */
+ --t-h5:650 var(--fs-body)/1.35 var(--font);       --t-h5-tr:0;         /* small headline, group header with weight */
+ --t-body:400 var(--fs-body)/1.5 var(--font);       /* running text, inputs */
+ --t-body-strong:600 var(--fs-body)/1.45 var(--font);
+ --t-sm:400 var(--fs-sm)/1.45 var(--font);        /* secondary text, list sub-lines, buttons md */
+ --t-xs:400 var(--fs-xs)/1.4 var(--font);         /* meta, hints, chips */
+ --t-cap:500 var(--fs-cap)/1.35 var(--font);       /* captions, timestamps, counters */
+ --t-label:600 var(--fs-cap)/1.3 var(--font); --t-label-tr:.04em; /* group titles in capitals, tags */
+ --t-micro:700 var(--fs-micro)/1.2 var(--font);      /* badges on icons */
+
+ /* Font sizes alone — base.css uses these, so one change here resizes every screen. */
+ --fs-micro:11px; --fs-cap:12px; --fs-xs:13px; --fs-sm:14px; --fs-body:15px; --fs-md:16px; --fs-h4:17px; --fs-h3:19px; --fs-h2:22px; --fs-h1s:26px; --fs-h1:28px;
+
+ /* Radii (base.css holds --r-s 10, --r 14, --r-l 18, --r-xl 24). */
+ --r-2xs:4px; --r-xs:8px; --r-m:12px; --r-full:999px;
+
+ /* Spacing: one 4-step scale (2 for hairline gaps). */
+ --s-0:2px; --s-1:4px; --s-2:8px; --s-3:12px; --s-4:16px; --s-5:20px; --s-6:24px; --s-7:32px; --s-8:40px; --s-9:56px;
+
+ /* Control heights (tap targets ≥ 44 where the finger is the pointer). */
+ --h-xl:52px;   /* main CTA in a pinned action bar */
+ --h-lg:48px;   /* Btn (default), inputs */
+ --h-md:44px;   /* Btn md, IconBtn, list row minimum, tabs on large layouts */
+ --h-sm:36px;   /* Btn sm, Seg, Chip on dense rows */
+ --h-xs:32px;   /* Chip, small IconBtn */
+
+ /* Icons. */
+ --i-lg:24px; --i-md:20px; --i-sm:18px; --i-xs:16px;
+
+ /* Motion. */
+ --d-fast:.15s; --d:.25s; --d-slow:.4s;
+
+ /* Layers (inside .root). */
+ --z-bar:2; --z-dock:3; --z-sheet:20; --z-dialog:30; --z-toast:60;
+
+ /* Focus ring — the same on every interactive control. */
+ --focus:0 0 0 3px color-mix(in srgb,var(--accent) 35%,transparent);
+}

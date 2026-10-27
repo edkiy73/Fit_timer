@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Camera,Check,ChevronDown,ChevronRight,Clock,Eye,EyeOff,Users,Image as ImageIcon,KeyRound,Plus,Settings,Star,Trash2,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Av,Btn,Empty,Layer,Skel} from './ui';
+import {Av,Btn,Empty,Layer,Seg,Skel} from './ui';
 import {AgeCheckLink} from './age-check';
 import {dropReadCache,useFe,useRealtime} from './session';
 import {PrivateLayer} from './private';
@@ -66,15 +66,10 @@ export function Ask({icon:Icon,title,text,ok:okLabel,danger,busy,onOk,onCancel}:
  </Layer>;
 }
 
-/** `seg()` with the «Я» layers' red dots (the shared Seg takes plain labels). */
+/** The «Я» layers on the one tab control, with their red dots. */
 function LayerSeg({value,onChange,dots}:{value:Layer,onChange:(v:Layer)=>void,dots:Record<Layer,string>}){
- const {t}=useI18n();const ids=['profile','priv','vis','mine'] as const;const i=ids.indexOf(value);
- return <div className="seg" role="tablist" aria-label={t('fe.nav.me')}>
-  <span className="knob" style={{width:`calc((100% - 8px)/${ids.length})`,transform:`translateX(${i*100}%)`}}/>
-  {ids.map(id=><button key={id} type="button" role="tab" aria-selected={id===value} className={id===value?'on':''} onClick={()=>onChange(id)}>
-   <span>{t('fe.me.layer.'+id)}{dots[id]&&<i className="tdot" role="img" aria-label={dots[id]}/>}</span>
-  </button>)}
- </div>;
+ const {t}=useI18n();
+ return <Seg value={value} onChange={onChange} label={t('fe.nav.me')} options={(['profile','priv','vis','mine'] as const).map(id=>({id,label:t('fe.me.layer.'+id),dot:dots[id]||undefined}))}/>;
 }
 
 export function MeTab(){

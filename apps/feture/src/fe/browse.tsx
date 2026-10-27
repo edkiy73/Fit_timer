@@ -2,9 +2,9 @@ import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {BookOpen,ChevronLeft,ChevronRight,CircleCheck,Clock,History,Image as ImageIcon,Info,Pencil,Plus,Search as SearchIcon,Users,X} from 'lucide-react';
+import {BookOpen,ChevronLeft,ChevronRight,CircleCheck,Clock,History,Image as ImageIcon,Pencil,Plus,Search as SearchIcon,Users,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Av,Bar,Btn,Empty,Seg,View,plate,Skel} from './ui';
+import {Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,H,IconBtn,Note,Pill,Row,SearchInput,SectionLabel,Seg,Skel,Stack,View,plate} from './kit';
 import {useFe} from './session';
 import {PostCard,postSchema,type Post} from './feed';
 import {InterestSheet,Jars,useInterests} from './interests';
@@ -56,10 +56,10 @@ function useCatalog(){
 function CommunityCard({c,tname}:{c:Comm,tname:(id:string)=>string}){
  const {t}=useI18n();const navigate=useNavigate();
  return <button type="button" className="cmc" onClick={()=>navigate('/n/communities/'+c.id)}>
-  <div className="cv" style={{position:'relative'}}><div className="plate" style={plate(c.id)}/></div>
+  <div className="cv"><div className="plate" style={plate(c.id)}/></div>
   <div className="tx"><b>{c.name}</b><small>{c.topics.map(tname).map(x=>'#'+x).join(' ')}</small>
    <div className="meta"><span>{t('fe.br.members',{n:c.members})}</span>{c.privacy!=='open'&&<><span>·</span><span>{t('fe.br.closed')}</span></>}
-    {c.joined&&<span className="pill ok"><CircleCheck/>{t('fe.br.member')}</span>}</div>
+    {c.joined&&<Pill tone="ok" icon={CircleCheck}>{t('fe.br.member')}</Pill>}</div>
   </div>
  </button>;
 }
@@ -70,7 +70,7 @@ export function EventRow({e}:{e:Ev}){
  return <button type="button" className="evc row" onClick={()=>navigate('/n/events/'+e.id)}>
   <div className="cv"><div className="plate" style={plate(e.id)}/><div className="date"><b>{d.getDate()}</b><small>{d.toLocaleDateString(lc,{month:'short'})}</small></div></div>
   <div className="bd"><small>{e.format==='online'?t('fe.ev.online'):e.area} · {d.toLocaleTimeString(lc,{hour:'2-digit',minute:'2-digit'})}</small><b>{e.title}</b>
-   {e.state==='cancelled'&&<span className="pill err">{t('fe.ev.cancelled')}</span>}</div>
+   {e.state==='cancelled'&&<Pill tone="bad">{t('fe.ev.cancelled')}</Pill>}</div>
  </button>;
 }
 
@@ -102,21 +102,21 @@ export function TopicScreen(){
  const unknown=topics.length>0&&!tp;
  return <>
   <Bar title={'#'+name} back>
-   <button type="button" className="ibtn" aria-label={t('fe.br.search')} onClick={()=>navigate('/n/search?'+new URLSearchParams({scope:'posts',q:name}))}><SearchIcon/></button>
+   <IconBtn icon={SearchIcon} label={t('fe.br.search')} onClick={()=>navigate('/n/search?'+new URLSearchParams({scope:'posts',q:name}))}/>
   </Bar>
   <View>
    {unknown?<Empty icon={BookOpen} title={t('fe.br.topic.unknown')} text={t('fe.br.topic.unknownText')}/>:<>
     <div className="interest-summary"><p>{desc||t('fe.br.topic.desc')}</p>
-     {current&&<div className="sec">{couple?t('fe.br.topic.ours'):t('fe.br.topic.mine')}</div>}
+     {current&&<SectionLabel>{couple?t('fe.br.topic.ours'):t('fe.br.topic.mine')}</SectionLabel>}
      {mine===null?null:current?<Jars list={[current]} topics={topics} onOpen={()=>setSheet(true)}/>
-      :tp&&<button ref={opener} type="button" className="btn soft" onClick={()=>setSheet(true)}><Plus/>{couple?t('fe.br.topic.addCouple'):t('fe.br.topic.add')}</button>}
+      :tp&&<Btn kind="soft" icon={Plus} onClick={e=>{opener.current=e.currentTarget;setSheet(true);}}>{couple?t('fe.br.topic.addCouple'):t('fe.br.topic.add')}</Btn>}
     </div>
-    {notice&&<div className="alert ok mb12" role="status"><span>{notice}</span></div>}
-    {comms.length>0&&<><div className="sec">{t('fe.br.communities')}</div>{comms.map(c=><CommunityCard key={c.id} c={c} tname={tname}/>)}</>}
-    <div className="sec">{t('fe.br.posts')}</div>
+    {notice&&<Alert kind="ok" className="mb12">{notice}</Alert>}
+    {comms.length>0&&<><SectionLabel>{t('fe.br.communities')}</SectionLabel>{comms.map(c=><CommunityCard key={c.id} c={c} tname={tname}/>)}</>}
+    <SectionLabel>{t('fe.br.posts')}</SectionLabel>
     {error&&!posts?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>load()}>{t('fe.retry')}</Btn></Empty>
      :posts===null?<Skel kind="list"/>
-     :posts.length===0?<><p className="note">{t('fe.br.topic.noPosts')}</p><Btn kind="soft" className="mt12" icon={Pencil} onClick={()=>navigate('/n/feed/new')}>{t('fe.br.topic.write',{name})}</Btn></>
+     :posts.length===0?<><Note>{t('fe.br.topic.noPosts')}</Note><Btn kind="soft" className="mt12" icon={Pencil} onClick={()=>navigate('/n/feed/new')}>{t('fe.br.topic.write',{name})}</Btn></>
      :<><PostList items={posts} setItems={f=>setPosts(list=>list?f(list):list)}/>
       {next&&<Btn kind="soft" onClick={()=>load(next)} disabled={more} busy={more}>{t('fe.feed.more')}</Btn>}</>}
    </>}
@@ -179,37 +179,36 @@ export function SearchScreen(){
  const order:Exclude<Scope,'all'>[]=scope==='all'?['people','communities','events','topics','posts']:[scope];
  const LIMIT=3;
  const render=(k:Exclude<Scope,'all'>,list:unknown[])=>{
-  if(k==='people')return <div className="card list">{(list as Person[]).map(p=><button key={p.id} type="button" className="li" onClick={()=>{commit();navigate('/n/people/'+p.id);}}>
-   <Av name={nameOf(p)} seed={p.id} src={mediaSrc(p.avatar)}/>
-   <span className="tx"><b>{nameOf(p)}{p.ages.length?', '+p.ages.join(' · '):''}</b><small>{[p.handle?'@'+p.handle:null,p.city?(locale==='en'?p.city.en:p.city.ru):null].filter(Boolean).join(' · ')}</small></span><ChevronRight/>
-  </button>)}</div>;
+  if(k==='people')return <Card list>{(list as Person[]).map(p=><Row key={p.id} onClick={()=>{commit();navigate('/n/people/'+p.id);}}
+   av={<Av name={nameOf(p)} seed={p.id} src={mediaSrc(p.avatar)}/>} title={nameOf(p)+(p.ages.length?', '+p.ages.join(' · '):'')}
+   sub={[p.handle?'@'+p.handle:null,p.city?(locale==='en'?p.city.en:p.city.ru):null].filter(Boolean).join(' · ')}/>)}</Card>;
   if(k==='posts')return <PostList items={list as Post[]} setItems={f=>setRes(r=>r&&{...r,posts:f(r.posts)})}/>;
   if(k==='communities')return <>{(list as Comm[]).map(c=><CommunityCard key={c.id} c={c} tname={tname}/>)}</>;
-  if(k==='events')return <>{(list as Ev[]).map((e,i)=><div key={e.id} style={i?{marginTop:8}:undefined}><EventRow e={e}/></div>)}</>;
+  if(k==='events')return <Stack gap={2}>{(list as Ev[]).map(e=><EventRow key={e.id} e={e}/>)}</Stack>;
   const cat=(id:string)=>{const c=catalog?.categories.find(x=>x.id===id);return c?(locale==='en'?c.en:c.ru):'';};
-  return <div className="card list">{(list as Topic[]).map(x=><button key={x.id} type="button" className="topic-row" onClick={()=>{commit();navigate('/n/topics/'+x.id);}}>
+  return <Card list>{(list as Topic[]).map(x=><button key={x.id} type="button" className="topic-row" onClick={()=>{commit();navigate('/n/topics/'+x.id);}}>
    <span className="ico v"><BookOpen/></span><span className="tx"><b>{locale==='en'?x.en:x.ru}</b><small>{cat(x.categoryId)}</small></span><ChevronRight/>
-  </button>)}</div>;
+  </button>)}</Card>;
  };
  const sections=res?order.map(k=>{const list=res[k] as unknown[];if(!list.length)return null;const shown=scope==='all'?list.slice(0,LIMIT):list;
   return <div key={k}><div className="res-h">{names[k]} · {list.length}{scope==='all'&&list.length>LIMIT&&<button type="button" onClick={()=>setScope(k)}>{t('fe.br.seeAll')}</button>}</div>{render(k,shown)}</div>;}).filter(Boolean):[];
  return <>
-  <h1 className="sr-only" tabIndex={-1}>{t('fe.br.search')}</h1>
+  <H level={1} className="sr-only" tabIndex={-1}>{t('fe.br.search')}</H>
   <div className="sbar">
-   <button type="button" className="ibtn ghost" aria-label={t('fe.back')} onClick={()=>navigate(-1)}><ChevronLeft/></button>
-   <div className="inwrap"><SearchIcon/><input ref={input} className="inp" type="search" value={q} enterKeyHint="search" placeholder={t('fe.br.searchPh')} aria-label={t('fe.br.searchPh')}
-    autoCapitalize="off" spellCheck={false} onChange={e=>setQ(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')commit();}}/></div>
+   <IconBtn icon={ChevronLeft} kind="ghost" label={t('fe.back')} onClick={()=>navigate(-1)}/>
+   <SearchInput ref={input} value={q} label={t('fe.br.searchPh')}
+    autoCapitalize="off" spellCheck={false} onChange={e=>setQ(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')commit();}}/>
   </div>
   <View>
-   <div className="chips scroll" role="tablist">{SCOPES.map(k=><button key={k} type="button" role="tab" aria-selected={k===scope} className={'chip'+(k===scope?' on':'')} onClick={()=>setScope(k)}>{k==='all'?t('fe.br.all'):names[k]}</button>)}</div>
+   <Seg value={scope} onChange={setScope} label={t('fe.br.search')} options={SCOPES.map(k=>({id:k,label:k==='all'?t('fe.br.all'):names[k]}))}/>
    {term.length<2?<>
     {recent.length>0&&<><div className="res-h">{t('fe.br.recent')}<button type="button" onClick={()=>{setRecent([]);writeRecent([]);}}>{t('fe.br.clear')}</button></div>
-     <div className="card list">{recent.map(x=><div key={x} className="recent"><History/><button type="button" className="tx" style={{textAlign:'left'}} onClick={()=>use(x)}>{x}</button>
-      <button type="button" className="ibtn ghost sm" aria-label={t('fe.br.remove')} onClick={()=>{const l=recent.filter(v=>v!==x);setRecent(l);writeRecent(l);}}><X/></button></div>)}</div></>}
+     <Card list>{recent.map(x=><div key={x} className="recent"><History/><button type="button" className="tx" style={{textAlign:'left'}} onClick={()=>use(x)}>{x}</button>
+      <IconBtn icon={X} kind="ghost" size="sm" label={t('fe.br.remove')} onClick={()=>{const l=recent.filter(v=>v!==x);setRecent(l);writeRecent(l);}}/></div>)}</Card></>}
     {topics.length>0&&<><div className="res-h">{t('fe.br.popular')}</div>
-     <div className="chips">{topics.slice(0,5).map(x=><button key={x.id} type="button" className="chip" onClick={()=>use(locale==='en'?x.en:x.ru)}>#{locale==='en'?x.en:x.ru}</button>)}</div></>}
-    {scope==='people'&&<div className="alert info mt16"><Info/><span>{t('fe.br.peopleHint')}</span></div>}
-    {(scope==='posts'||scope==='communities'||scope==='events')&&<div className="alert info mt16"><Info/><span>{t('fe.br.catalogHint')}</span></div>}
+     <Chips>{topics.slice(0,5).map(x=><Chip key={x.id} onClick={()=>use(locale==='en'?x.en:x.ru)}>#{locale==='en'?x.en:x.ru}</Chip>)}</Chips></>}
+    {scope==='people'&&<Alert kind="info" className="mt16">{t('fe.br.peopleHint')}</Alert>}
+    {(scope==='posts'||scope==='communities'||scope==='events')&&<Alert kind="info" className="mt16">{t('fe.br.catalogHint')}</Alert>}
    </>
    :error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}/>
    :!res||busy&&!sections.length?<Skel kind="list"/>
@@ -251,20 +250,20 @@ export function FollowsScreen(){
    <Seg value={tab} onChange={v=>setParams({tab:v},{replace:true})} options={[
     {id:'followers',label:t('fe.br.followers')+(lists?' · '+countLabel(lists.followers.length):'')},
     {id:'following',label:t('fe.br.following')+(lists?' · '+countLabel(lists.following.length):'')}]}/>
-   {failure&&<div className="alert err mt12" role="alert"><span>{failure}</span></div>}
+   {failure&&<Alert kind="err" className="mt12">{failure}</Alert>}
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :list===null?<Skel kind="list"/>
     :!list.length?<Empty icon={Users} title={tab==='following'?t('fe.br.noFollowing'):t('fe.br.noFollowers')}/>
-    :<div className="card list mt12">{list.map(k=>{const self=own.has(k.id);const fol=myFollows.has(k.id);
+    :<Card list className="mt12">{list.map(k=>{const self=own.has(k.id);const fol=myFollows.has(k.id);
      return <div key={k.id} className="li frow">
       <button type="button" className="frow-go" onClick={()=>navigate(self?'/n/me':'/n/people/'+k.id)}>
        <Av name={nameOf(k)} seed={k.id} src={k.avatar}/><span className="tx"><b><span className="fnm">{nameOf(k)}</span><NameBadges p={k}/></b><small>{k.handle?'@'+k.handle:''}</small></span>
       </button>
-      {self?<span className="note">{k.id===acting?.id?(asUs?t('fe.br.youUs'):t('fe.br.you')):k.kind==='person'?t('fe.br.yourOwn'):t('fe.br.yourCouple')}</span>
-       :<button type="button" className={'btn sm '+(fol?'soft':'primary')} aria-pressed={fol} disabled={busy===k.id} onClick={()=>toggle(k)}>
-        {fol?(asUs?t('fe.br.unfollowUs'):t('fe.br.unfollow')):(asUs?t('fe.br.followUs'):mine&&tab==='followers'?t('fe.br.followBack'):t('fe.br.follow'))}</button>}
-     </div>;})}</div>}
-   {lists&&list&&list.length>=FOLLOW_PAGE&&<p className="note mt12">{t('fe.br.firstN',{n:FOLLOW_PAGE})}</p>}
+      {self?<Note>{k.id===acting?.id?(asUs?t('fe.br.youUs'):t('fe.br.you')):k.kind==='person'?t('fe.br.yourOwn'):t('fe.br.yourCouple')}</Note>
+       :<Btn size="sm" kind={fol?'soft':'primary'} aria-pressed={fol} disabled={busy===k.id} onClick={()=>toggle(k)}>
+        {fol?(asUs?t('fe.br.unfollowUs'):t('fe.br.unfollow')):(asUs?t('fe.br.followUs'):mine&&tab==='followers'?t('fe.br.followBack'):t('fe.br.follow'))}</Btn>}
+     </div>;})}</Card>}
+   {lists&&list&&list.length>=FOLLOW_PAGE&&<Note className="mt12">{t('fe.br.firstN',{n:FOLLOW_PAGE})}</Note>}
   </View>
  </>;
 }
@@ -279,14 +278,11 @@ export function ProfileLinks({profileId,photos,self=false}:{profileId:string,pho
    .then(([a,b])=>setN({followers:a.items.length,following:b.items.length})).catch(()=>{});
  },[call,profileId]);
  const base=self?'/n/me/follows':`/n/people/${profileId}/follows`;
- return <div className="card list mt12">
-  <button type="button" className="li" onClick={()=>navigate(base+'?tab=followers')}><span className="ico v"><Users/></span>
-   <span className="tx"><b>{t('fe.br.followers')}{n?' · '+countLabel(n.followers):''}</b></span><ChevronRight/></button>
-  <button type="button" className="li" onClick={()=>navigate(base+'?tab=following')}><span className="ico v"><Users/></span>
-   <span className="tx"><b>{t('fe.br.following')}{n?' · '+countLabel(n.following):''}</b></span><ChevronRight/></button>
-  <button type="button" className="li" onClick={()=>navigate(`/n/people/${profileId}/gallery`)}><span className="ico g"><ImageIcon/></span>
-   <span className="tx"><b>{t('fe.br.gallery')}{photos!=null?' · '+photos:''}</b></span><ChevronRight/></button>
- </div>;
+ return <Card list className="mt12">
+  <Row icon={Users} tone="v" title={t('fe.br.followers')+(n?' · '+countLabel(n.followers):'')} onClick={()=>navigate(base+'?tab=followers')}/>
+  <Row icon={Users} tone="v" title={t('fe.br.following')+(n?' · '+countLabel(n.following):'')} onClick={()=>navigate(base+'?tab=following')}/>
+  <Row icon={ImageIcon} tone="g" title={t('fe.br.gallery')+(photos!=null?' · '+photos:'')} onClick={()=>navigate(`/n/people/${profileId}/gallery`)}/>
+ </Card>;
 }
 
 /* ---------- V21 P20: gallery ---------- */
