@@ -615,9 +615,9 @@ function ComposeForm({edit}:{edit?:Post|undefined}){
      {err('opts')}
     </div>
     <p className="grp-n">{t('fe.fd.pollFoot')}{edit?.poll?' '+t('fe.fd.pollReset'):''}</p></section>}
-   {interests!==null&&<section className="grp" ref={intRef}><div className="grp-t"><span>{t('fe.fd.interests')}</span><button type="button" onClick={()=>setInterests(null)}>{t('fe.fd.remove')}</button></div>
+   {interests!==null&&<section className="grp cmp-ints" ref={intRef}><div className="grp-t"><span>{t('fe.fd.interests')}</span><button type="button" onClick={()=>setInterests(null)}>{t('fe.fd.remove')}</button></div>
     <div className="card">
-     {interests.length>0&&<div className="testcard" style={{'--n':Math.min(4,interests.length)} as React.CSSProperties}><Jars list={eligible.filter(j=>interests.includes(j.topicId))} topics={jarTopics} onOpen={()=>{}}/></div>}
+     {interests.length>0&&<div className="testcard"><Jars list={eligible.filter(j=>interests.includes(j.topicId))} topics={jarTopics} onOpen={()=>{}}/></div>}
      <div className="chips mt12">{eligible.map(j=>{const on=interests.includes(j.topicId);return <button key={j.topicId} type="button" className={'chip'+(on?' on':'')} aria-pressed={on}
       onClick={()=>{if(!on&&interests.length>=4){toast(t('fe.fd.max4'),{type:'warn'});return;}setInterests(on?interests.filter(v=>v!==j.topicId):[...interests,j.topicId]);}}>{tname(j.topicId)}</button>;})}</div>
      {err('interests')}

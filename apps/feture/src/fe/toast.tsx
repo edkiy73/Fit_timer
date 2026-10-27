@@ -20,6 +20,8 @@ export function useToast():ToastFn{return useContext(Ctx)??noop;}
 
 export function ToastProvider({children,nodock=false}:{children:ReactNode,nodock?:boolean}){
  const [item,setItem]=useState<Item|null>(null);const seq=useRef(0);const [overModal,setOverModal]=useState(false);
+ // A screen with a pinned action bar (save / publish): the toast sits just above it, never hidden under it.
+ const [lift,setLift]=useState<number|null>(null);const box=useRef<HTMLDivElement>(null);
  const toast=useCallback<ToastFn>((msg,o={})=>{
   const type=o.type??'';
   const ms=o.ms??(type==='err'?5200:o.action?5000:3000);
@@ -28,7 +30,11 @@ export function ToastProvider({children,nodock=false}:{children:ReactNode,nodock
  // Follows the sheets while a toast is up: a sheet that closes right after its action takes the toast back down.
  useEffect(()=>{
   if(!item)return;
-  const check=()=>setOverModal(!!document.querySelector('.v21 .sheet.on, .v21 .dialog.on'));
+  const check=()=>{
+   setOverModal(!!document.querySelector('.v21 .sheet.on, .v21 .dialog.on'));
+   const host=box.current?.offsetParent as HTMLElement|null;const bar=host?.querySelector<HTMLElement>('.ctabar');
+   setLift(host&&bar?Math.round(host.getBoundingClientRect().bottom-bar.getBoundingClientRect().top+8):null);
+  };
   check();
   const mo=new MutationObserver(check);mo.observe(document.body,{subtree:true,attributes:true,attributeFilter:['class'],childList:true});
   return ()=>mo.disconnect();
@@ -39,7 +45,7 @@ export function ToastProvider({children,nodock=false}:{children:ReactNode,nodock
  },[]);
  return <Ctx.Provider value={toast}>
   {children}
-  <div className={'toasts'+(nodock?' nodock':'')+(item&&overModal?' over-modal':'')} id="toasts" aria-live="polite">
+  <div ref={box} className={'toasts'+(nodock?' nodock':'')+(item&&overModal?' over-modal':'')} id="toasts" aria-live="polite" style={item&&!overModal&&lift!=null?{bottom:lift}:undefined}>
    {item&&<Toast key={item.id} item={item} onDismiss={dismiss}/>}
   </div>
  </Ctx.Provider>;

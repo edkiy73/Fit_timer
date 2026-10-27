@@ -21,6 +21,8 @@
 @keyframes fe-blink{0%,100%{opacity:1}50%{opacity:.55}}
 /* Owner, 27.10.2026: loading is a light blink in place — never a spinner next to the text that widens a button. */
 .fe-v21 .btn.busy::after{content:none;display:none}
+/* AppBase's global button[aria-busy]::before spinner too — every busy control here only blinks. */
+.fe-v21 [aria-busy="true"]::before{content:none!important;display:none!important;animation:none!important}
 .fe-v21 .btn.busy,.fe-v21 [aria-busy="true"]:not(.skel){animation:fe-blink 1.2s ease-in-out infinite}
 /* A photo that is still loading is a calm blinking disc, not an empty hole. */
 .fe-v21 .av:has(>img){background:var(--raise)}
@@ -39,3 +41,8 @@
 /* a photo whose served copies are not ready yet blinks in place instead of sitting as an empty box */
 .fe-v21 .mi.nosrc{background:var(--raise);animation:fe-blink 1.4s ease-in-out infinite}
 @media (prefers-reduced-motion:reduce){.fe-v21 .mi.nosrc{animation:none}}
+/* Compose «Интересы»: one capsule per row, so adding or removing one never re-flows the others; air before the chips */
+.fe-v21 .cmp-ints .card{padding:14px}
+.fe-v21 .cmp-ints .testcard{margin:0 0 14px}
+.fe-v21 .cmp-ints .testcard .jars{grid-template-columns:minmax(0,1fr);gap:8px}
+.fe-v21 .cmp-ints .chips.mt12{margin-top:0}
