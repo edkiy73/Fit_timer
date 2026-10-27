@@ -1,0 +1,38 @@
+import type {Meta,StoryObj} from '@storybook/react-vite';
+import {fn} from 'storybook/test';
+import {Camera,Eye,Hand,X} from 'lucide-react';
+import {Card,KeyValues,Note,PhotoAdd,PhotoSlot,PhotoSlots,PhotoTrack,Pose,ReviewCard,ReviewMedia,ReviewPair,SelfieFrame,VaultHead} from './index';
+
+// A tiny inline picture so the stories need no network.
+const PIC='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 5"><defs><linearGradient id="g" x2="1" y2="1"><stop offset="0" stop-color="#7A1236"/><stop offset="1" stop-color="#FF9F7A"/></linearGradient></defs><rect width="4" height="5" fill="url(#g)"/></svg>');
+
+const meta={title:'Домен/Фото и проверки',component:PhotoSlots,tags:['autodocs'],
+ parameters:{docs:{description:{component:'Слоты фото профиля: первое большое («Главное»), остальные сеткой, «+» и пустые места. `priv` — ровная сетка приватных фото. `loading` — заглушка той же формы. Порядок меняется перетаскиванием (экран передаёт `onPointerDown`).'}}},
+ args:{priv:false,loading:false},
+} satisfies Meta<typeof PhotoSlots>;
+export default meta;
+type S=StoryObj<typeof meta>;
+export const Слоты:S={render:a=><PhotoSlots {...a}>
+ <PhotoSlot id="1" big src={PIC} main="Главное" openLabel="Фото 1 из 2" onOpen={fn()}/>
+ <PhotoSlot id="2" src={PIC} review="На проверке" openLabel="Фото 2 из 2" onOpen={fn()}/>
+ <PhotoAdd label="Добавить фото" onClick={fn()}/><PhotoAdd ghost/>
+</PhotoSlots>};
+export const ОдноФото:S={name:'Одно фото: «Ещё фото»',render:()=><PhotoSlots><PhotoSlot id="1" big src={PIC} main="Главное" openLabel="Фото 1" onOpen={fn()}/><PhotoAdd tall label="Добавить фото" hint="Ещё фото" onClick={fn()}/></PhotoSlots>};
+export const Пусто:S={name:'Пусто: главный слот',render:()=><PhotoSlots><PhotoAdd big label="Добавить фото" hint="Главное фото" onClick={fn()}/><PhotoAdd ghost/><PhotoAdd ghost/></PhotoSlots>};
+export const Приватные:S={args:{priv:true},render:a=><PhotoSlots {...a}><PhotoSlot id="1" src={PIC} openLabel="Фото 1" onOpen={fn()}/><PhotoSlot id="2" waiting openLabel="Фото 2" onOpen={fn()}/><PhotoAdd label="Добавить" busy/></PhotoSlots>};
+export const Загрузка:S={args:{loading:true}};
+
+export const Селфи:StoryObj<typeof SelfieFrame>={name:'Рамка селфи',render:a=><SelfieFrame {...a}/>,args:{alt:'Твоё селфи',hint:'Лицо в овале, жест рядом',src:undefined}};
+export const СелфиСнято:StoryObj<typeof SelfieFrame>={name:'Рамка селфи: снято',render:a=><SelfieFrame {...a}/>,args:{alt:'Твоё селфи',hint:'',src:PIC}};
+export const Жест:StoryObj<typeof Pose>={name:'Жест для селфи',render:a=><Pose {...a}/>,args:{icon:Hand,label:'Покажи жест',value:'Ладонь у щеки'},argTypes:{icon:{control:false}}};
+export const ЖестЗагрузка:StoryObj<typeof Pose>={name:'Жест: загрузка',render:a=><Pose {...a}/>,args:{icon:Camera,label:'Покажи жест'}};
+
+export const Лента:StoryObj<typeof PhotoTrack>={name:'Лента полноэкранного просмотра',render:a=><div className="viewer on k-demo-viewer"><PhotoTrack {...a}/></div>,args:{srcs:[PIC,PIC,PIC],index:1}};
+
+export const Приватное:StoryObj<typeof VaultHead>={name:'Шапка приватного слоя',render:a=><section className="vault"><VaultHead {...a}/></section>,args:{title:'Приватное',label:'Приватное',on:true,onToggle:fn()}};
+export const ПриватноеВКарточке:StoryObj<typeof VaultHead>={name:'Шапка приватного слоя в карточке',render:a=><Card className="vault"><VaultHead {...a}/></Card>,args:{title:'Текст · 3 фото',inCard:true}};
+
+export const Проверка:StoryObj<typeof ReviewCard>={name:'Карточка проверки (персонал)',render:a=><ReviewCard {...a}/>,
+ args:{title:'Фото профиля',meta:'28 окт, 12:40',danger:false,children:<><ReviewMedia blur={PIC}/><KeyValues rows={[['Автор','@mia'],['Сканер','ok'],['Пусто','']]}/></>},argTypes:{children:{control:false}}};
+export const ПроверкаПара:StoryObj<typeof ReviewCard>={name:'Проверка: селфи и фото рядом',render:a=><ReviewCard {...a}/>,
+ args:{title:'@mia',meta:'вчера',danger:true,children:<ReviewPair><ReviewMedia icon={X} caption={<Note>Селфи</Note>}/><ReviewMedia icon={Eye} caption={<Note>Фото профиля</Note>}><img src={PIC} alt=""/></ReviewMedia></ReviewPair>}};

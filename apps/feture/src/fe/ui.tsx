@@ -45,17 +45,20 @@ export function Bar({title,back,onBack,small,children}:{title:string,back?:strin
  </header>;
 }
 
-type BtnProps=ButtonHTMLAttributes<HTMLButtonElement>&{kind?:'primary'|'soft'|'text'|'danger',size?:''|'md'|'sm',auto?:boolean,icon?:LucideIcon};
+type BtnProps=ButtonHTMLAttributes<HTMLButtonElement>&{kind?:'primary'|'soft'|'text'|'danger'|'dark',size?:''|'md'|'sm',auto?:boolean,icon?:LucideIcon};
 /** `.btn` — 48 / md 44 / sm 36; one main button per group. */
-export const Btn=forwardRef<HTMLButtonElement,BtnProps&{busy?:boolean,fit?:boolean,pressed?:boolean}>(function Btn({kind='primary',size='',auto,fit,pressed,icon:Icon,className,children,type='button',busy,...rest},ref){
- // `busy` blinks in place (owner: never a spinner); `fit` keeps the button at its text width inside a row.
- return <button ref={ref} type={type} className={['btn',kind,size,auto?'auto':'',fit?'k-fit':'',busy?'busy':'',pressed?'on':'',className].filter(Boolean).join(' ')} aria-busy={busy||undefined} aria-pressed={pressed} {...rest}>{Icon&&<Icon/>}{children}</button>;
+export const Btn=forwardRef<HTMLButtonElement,BtnProps&{busy?:boolean,fit?:boolean,pressed?:boolean,square?:boolean}>(function Btn({kind='primary',size='',auto,fit,pressed,square,icon:Icon,className,children,type='button',busy,...rest},ref){
+ // `busy` blinks in place (owner: never a spinner); `fit` keeps the button at its text width inside a row;
+ // `square` is an icon-only button of the button height next to a full one (aria-label required); `dark` sits on a light veil.
+ return <button ref={ref} type={type} className={['btn',kind,size,auto?'auto':'',fit?'k-fit':'',square?'icon':'',busy?'busy':'',pressed?'on':'',className].filter(Boolean).join(' ')} aria-busy={busy||undefined} aria-pressed={pressed} {...rest}>{Icon&&<Icon/>}{children}</button>;
 });
 
 /** `empty()` — one look for empty, error and unavailable states. */
-export function Empty({icon:Icon,title,text,children,role,art,wide}:{icon?:LucideIcon,title:string,text?:string,children?:ReactNode,role?:'status'|'alert',
- /** A picture instead of the icon disc (pair art, radar). */ art?:ReactNode,/** Content (a card, a list) spans the width. */ wide?:boolean}){
- return <div className={'empty'+(wide?' k-empty-wide':'')} role={role}>{art??(Icon&&<div className="em-ic"><Icon/></div>)}<h3>{title}</h3>{text&&<p>{text}</p>}{children&&<div className="btns">{children}</div>}</div>;
+export function Empty({icon:Icon,title,text,children,role,art,wide,big,top,after}:{icon?:LucideIcon,title:string,text?:string,children?:ReactNode,role?:'status'|'alert',
+ /** A picture instead of the icon disc (pair art, radar). */ art?:ReactNode,/** Content (a card, a list) spans the width. */ wide?:boolean,
+ /** A larger title and a narrower text (a whole tab that is switched off). */ big?:boolean,/** Starts right under the header instead of mid-screen. */ top?:boolean,
+ /** Blocks after the buttons, full width and left-aligned (choices, «что останется»). */ after?:ReactNode}){
+ return <div className={['empty',wide?'k-empty-wide':'',big?'k-empty-big':'',top?'k-empty-top':''].filter(Boolean).join(' ')} role={role}>{art??(Icon&&<div className="em-ic"><Icon/></div>)}<h3>{title}</h3>{text&&<p>{text}</p>}{children&&<div className="btns">{children}</div>}{after&&<div className="k-empty-after">{after}</div>}</div>;
 }
 
 /** `seg()` — segmented tabs with the sliding knob. */
@@ -86,7 +89,7 @@ export function Layer({children}:{children:ReactNode}){
 
 /** Loading placeholder shaped like the content it stands for (list rows, posts, a card), so nothing jumps when the
  * data arrives. Replaces a «Загружаем…» line. */
-export function Skel({kind='list',rows=3}:{kind?:'list'|'post'|'card'|'tiles'|'hero'|'cover'|'line'|'grid',rows?:number}){
+export function Skel({kind='list',rows=3}:{kind?:'list'|'post'|'card'|'tiles'|'hero'|'cover'|'line'|'grid'|'fill'|'event',rows?:number}){
  const {t}=useI18n();
  const row=(i:number)=>kind==='post'?<div key={i} className="sk-post"><div className="sk-head"><i className="sk sk-av"/><span><i className="sk sk-l w40"/><i className="sk sk-l w25"/></span></div><i className="sk sk-l w90"/><i className="sk sk-l w70"/><i className="sk sk-media"/></div>
   :kind==='card'?<div key={i} className="sk-card"><i className="sk sk-l w50"/><i className="sk sk-l w90"/><i className="sk sk-l w70"/></div>
@@ -95,6 +98,8 @@ export function Skel({kind='list',rows=3}:{kind?:'list'|'post'|'card'|'tiles'|'h
   :kind==='cover'?<i key={i} className="sk k-sk-cover"/>
   :kind==='line'?<i key={i} className="sk sk-l w70"/>
   :kind==='grid'?<i key={i} className="sk k-sk-cell"/>
+  :kind==='fill'?<i key={i} className="sk k-sk-fill"/>
+  :kind==='event'?<i key={i} className="sk k-sk-event"/>
   :<div key={i} className="sk-li"><i className="sk sk-av"/><span><i className="sk sk-l w50"/><i className="sk sk-l w30"/></span></div>;
  return <div className={'skel skel-'+kind} role="status" aria-busy="true" aria-label={t('fe.loading')}>{Array.from({length:rows},(_,i)=>row(i))}</div>;
 }

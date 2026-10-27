@@ -152,9 +152,6 @@ button.pill{cursor:pointer}
 .v21 .fhint{margin:var(--s-1) 2px 0;font:var(--t-xs);color:var(--mute)}
 .v21 .ferr{display:flex;gap:var(--s-1);align-items:center}
 .v21 .ferr svg{width:var(--i-xs);height:var(--i-xs);flex:none}
-.v21 .k-code{display:grid;grid-template-columns:repeat(6,1fr);gap:var(--s-2)}
-.v21 .k-code-box{height:56px;text-align:center;font:600 var(--fs-h3)/1 var(--font);border-radius:var(--r);border:1px solid var(--line2);background:var(--raise);color:var(--ink)}
-.v21 .k-code-box[aria-invalid="true"]{border-color:var(--danger)}
 .v21 .k-dual{position:relative;height:var(--h-md)}
 .v21 .k-dual::before{content:"";position:absolute;left:0;right:0;top:50%;height:4px;margin-top:-2px;border-radius:2px;background:linear-gradient(90deg,var(--line) var(--lo),var(--accent) var(--lo),var(--accent) var(--hi),var(--line) var(--hi))}
 .v21 .k-dual input{position:absolute;inset:0;width:100%;background:none;pointer-events:none;-webkit-appearance:none;appearance:none}

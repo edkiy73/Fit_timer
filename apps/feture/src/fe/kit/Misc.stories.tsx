@@ -1,5 +1,5 @@
 import type {Meta,StoryObj} from '@storybook/react-vite';
-import {Av,Btn,Card,Divider,Group,H,LinkBtn,Note,Pill,Progress,SectionLabel,Skel,Stack,Steps,Text} from './index';
+import {Av,Btn,Card,Divider,Group,H,LinkBtn,Note,Pill,Progress,SectionLabel,Skel,Spacer,Stack,Steps,Text} from './index';
 
 const meta={title:'Прочее/Метка',component:Pill,tags:['autodocs'],
  parameters:{docs:{description:{component:'Короткий статус рядом с текстом: `ok` одобрено, `wait` ждёт, `v` по доступу, `bad` отклонено, `hot` акцент.'}}},
@@ -19,3 +19,5 @@ export const МеткаКнопка:S={name:'Метка-кнопка и «сте
 export const КнопкаСсылка:S={name:'Кнопка-ссылка',render:()=><LinkBtn href="https://example.com">Билет у организатора</LinkBtn>};
 export const Заголовки:S={name:'Крупный заголовок и текст 16',render:()=><Stack gap={2}><H level={0}>Вечер шибари для начинающих</H><Text size="md" tone="ink">Текст 16 — вводный абзац.</Text></Stack>};
 export const Скелетоны:S={name:'Скелетоны: обложка, баннер, сетка, строка',render:()=><Stack gap={3}><Skel kind="hero" rows={1}/><Skel kind="cover" rows={1}/><Skel kind="grid" rows={6}/><Skel kind="line" rows={2}/></Stack>};
+export const ТекстЖирныйПеренос:S={name:'Текст: жирный, перенос ссылок',render:()=><Card><Text as="b" size="md" bold breakAll>https://meet.example.org/очень-длинная-ссылка-на-встречу-123456</Text></Card>};
+export const Отступ:StoryObj<typeof Spacer>={name:'Отступ между блоками',render:a=><><Card>Блок</Card><Spacer {...a}/><Card>Блок</Card></>,args:{size:3},argTypes:{size:{control:'inline-radio',options:[1,2,3,4,6]}}};

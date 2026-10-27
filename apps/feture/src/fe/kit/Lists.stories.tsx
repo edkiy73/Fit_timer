@@ -1,7 +1,7 @@
 import type {Meta,StoryObj} from '@storybook/react-vite';
 import {useState} from 'react';
 import {fn} from 'storybook/test';
-import {Bell,Eye,KeyRound,Trash2,Users,X} from 'lucide-react';
+import {Bell,Eye,Hand,KeyRound,Lock,Trash2,Users,X} from 'lucide-react';
 import {Av,Btn,Card,IconBtn,Row,SelectRow,ToggleRow} from './index';
 
 const meta={title:'Списки/Строка',component:Row,tags:['autodocs'],
@@ -29,3 +29,5 @@ export const СДействиемСправа:S={name:'С действием с�
 export const ВыборСИконкой:StoryObj<typeof SelectRow>={name:'Строка выбора с иконкой',render:a=>{const [v,setV]=useState('all');return <SelectRow {...a} icon={Eye} value={v} onChange={setV}/>;},
  args:{label:'Кто видит',options:[['all','Все'],['fol','Подписчики']],value:'all',onChange:()=>{}}};
 export const ТолькоПоказ:S={name:'Только показ (без нажатия)',render:()=><><Row icon={KeyRound} title="ср, 28 октября" sub="19:00–21:00 местное время"/><Row icon={Users} title="https://очень-длинная-ссылка.example/путь/к/странице" wrap/></>};
+export const Текстом:S={name:'Шаг инструкции (body)',render:()=><><Row icon={Hand} tone="v" body="Покажи жест рядом с лицом"/><Row icon={Lock} title="Где хранится" sub="Удаляем после проверки"/><Row sub="Пока пусто"/></>};
+export const Раскрытие:S={name:'Раскрывающая строка (expanded, extra)',render:()=>{const [o,setO]=useState(false);return <Row title="Твои данные" expanded={o} onClick={()=>setO(!o)} extra={o?undefined:<span className="pe-sums"><span className="pe-sum"><b>Рост</b> 170</span></span>}/>;}};

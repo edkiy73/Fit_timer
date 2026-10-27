@@ -1,0 +1,140 @@
+/* Domain pieces of the kit (domain.tsx, Storybook «Домен») and what the screens' own stylesheets used to hold.
+ * Only tokens: colours, sizes and spacing come from base.css / tokens.css. */
+
+/* Cover header: the glass labels over the event cover. */
+.v21 .ev-hero .k-ev-tags{margin-bottom:var(--s-2)}
+/* Placeholder shapes inside covers and heads. */
+.v21 .skel-fill{position:absolute;inset:0}
+.v21 .k-sk-fill{position:absolute;inset:0;display:block;border-radius:0}
+.v21 .k-sk-event{display:block;height:250px;border-radius:var(--r-xl);margin-top:var(--s-3)}
+.v21 .skel-event{padding-top:var(--s-2)}
+.v21 .k-sk-title{display:block;height:28px;margin:var(--s-2) 0}
+.v21 .k-sk-block{display:block}
+.v21 .k-sk-line{display:block;height:16px;margin-top:var(--s-1)}
+.v21 .k-ar-auto{aspect-ratio:auto}
+/* A still picture of an event card (the wizard's preview): not pressable. */
+.v21 .evc.k-evc-still{pointer-events:none}
+/* Discussion row with the host's ⋯ on the right. */
+.v21 .k-disc-tools>.disc{padding-right:48px}
+.v21 .k-disc-tool{position:absolute;top:10px;right:var(--s-2)}
+.v21 .disc .k-disc-pin{margin-bottom:6px}
+.v21 .upd .k-upd-body{color:var(--ink);margin:0}
+/* Veil heights and placeholder line widths. */
+.v21 .veil.k-veil-tall{min-height:200px}
+.v21 .veil-content .bar-sk.k-w70{width:70%}
+.v21 .veil-content .bar-sk.k-w50{width:50%}
+/* Cover colour swatches. */
+.v21 .k-plate-sw{position:relative;width:52px;height:52px;border-radius:var(--r-l);overflow:hidden;outline:0;outline-offset:2px}
+.v21 .k-plate-sw.on{outline:3px solid var(--ink)}
+.v21 .k-plate-sw .plate{position:absolute;inset:0}
+/* Person line of request cards. */
+.v21 .k-pl-name{font-size:var(--fs-md)}
+.v21 .k-pl-go{text-align:left}
+.v21 .application-answer .k-answer{margin-top:var(--s-1)}
+/* Likes grid tile: the whole photo opens the profile. */
+.v21 .lk .k-lk-open{position:absolute;inset:0}
+/* Radar of the empty deck. */
+.v21 .radar .k-cover{width:100%;height:100%;object-fit:cover}
+.v21 .radar .dot.k-radar-d1,.v21 .radar .dot.k-radar-d2{position:absolute;overflow:hidden}
+.v21 .radar .dot.k-radar-d1{left:18px;top:60px}
+.v21 .radar .dot.k-radar-d2{right:24px;top:150px;width:22px;height:22px}
+/* The selfie frame of the age and photo checks: a dark camera box, a dashed oval, the hint at the bottom. */
+.v21 .k-selfie{position:relative;margin-top:var(--s-3);aspect-ratio:3/4;border-radius:var(--r-2xl);overflow:hidden;background:var(--camera);display:grid;place-items:center}
+.v21 .k-selfie>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.v21 .k-selfie-oval{width:62%;aspect-ratio:3/4;border-radius:50%;border:3px dashed color-mix(in srgb,var(--on-media) 60%,transparent)}
+.v21 .k-selfie-hint{position:absolute;bottom:var(--s-4);left:0;right:0;text-align:center;color:var(--on-media);font:600 var(--fs-sm)/1.4 var(--font)}
+/* Photo strip of the full-screen viewer: the index slides it. */
+.v21 .vw-track{transform:translateX(calc(var(--i,0) * -100%))}
+/* A post's photo mosaic keeps the proportions computed from the photos. */
+.v21 .mgrid.mos{aspect-ratio:var(--mo-ar,auto)}
+/* Private layer head inside the summary card. */
+.v21 .vault-h.k-vault-in{padding:0 0 var(--s-2)}
+.v21 .card.blk-btn.vault{display:block}
+
+/* ---- Chats (was css/chats.css) ---- */
+/* A photo keeps its own proportions: the screen passes them as `--ar` (from the message data). */
+.v21 .mtile>img{aspect-ratio:var(--ar,auto)}
+/* Own photo still in review: a quiet line under the tile (only the sender sees the photo meanwhile). */
+.v21 .msg .mpend{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:var(--fs-cap);line-height:1.3;opacity:.75}
+.v21 .msg .mpend svg{width:14px;height:14px;flex:none}
+/* PersonBar: the other side as the title (avatar, name, couple line). */
+.v21 .bar>.chat-who{gap:10px}
+.v21 .chat-who .cw-tx{display:grid;min-width:0}
+.v21 .chat-who .sk-av{width:36px;height:36px}
+/* Conversation starters are whole sentences: they wrap. */
+.v21 .chips.ice .chip{white-space:normal;text-align:left}
+
+/* ---- Profile (was css/me.css) ---- */
+/* The name opens «Чей профиль» when there is a couple (prototype V18 `.me18-who` as a button). */
+.v21 button.me18-who{font:inherit;color:inherit}
+/* Private media in the editor: plain tiles, no big main slot. */
+.v21 .ph-slots.priv{grid-template-columns:repeat(3,minmax(0,1fr))}
+/* The small thumb paints under a profile photo slot while the card-size picture loads (the URL comes in --thumb). */
+.v21 .ph-slots .mi.has-thumb{background-image:var(--thumb);background-size:cover;background-position:center}
+/* A photo whose served copies are not ready yet blinks in place instead of sitting as an empty box. */
+.v21 .mi.nosrc{background:var(--raise);animation:fe-blink 1.4s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.v21 .mi.nosrc{animation:none}}
+
+/* ---- Sheets with steps (was shell.css): the step counter and progress bar inside a shared Sheet ---- */
+.v21 .sheet .qprog{flex:none;margin:0 0 14px}
+.v21 .sheet .int-step{margin:0 0 var(--s-2)}
+/* Compose «Интересы»: one capsule per row, so adding or removing one never re-flows the others. */
+.v21 .cmp-ints .card{padding:14px}
+.v21 .cmp-ints .testcard{margin:0 0 14px}
+.v21 .cmp-ints .testcard .jars{grid-template-columns:minmax(0,1fr);gap:var(--s-2)}
+.v21 .cmp-ints .chips.mt12{margin-top:0}
+
+/* ---- Staff review (ReviewCard & co.; was staff.css) ---- */
+.v21 .st-tools{display:flex;justify-content:flex-end;margin:var(--s-1) 0 var(--s-2)}
+.v21 .st-list{display:grid;gap:var(--s-3);padding-bottom:var(--s-6)}
+.v21 .st-card.st-danger{border-color:var(--danger)}
+.v21 .st-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:var(--s-1) var(--s-3)}
+.v21 .st-head b{font-size:var(--fs-md)}
+.v21 .st-meta{font-size:var(--fs-cap);color:var(--mute);display:inline-flex;gap:6px;align-items:center}
+.v21 .st-block{margin-top:var(--s-3)}
+.v21 .st-text{margin:10px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:var(--fs-sm);line-height:1.5}
+.v21 .st-kv{margin-top:10px}
+.v21 .st-kv-row{display:contents}
+.v21 .st-kv dd{overflow-wrap:anywhere}
+.v21 .st-change{overflow-wrap:anywhere}
+.v21 .st-row{display:flex;flex-wrap:wrap;gap:var(--s-2);align-items:flex-end}
+.v21 .st-row>.field{flex:1 1 160px;min-width:0}
+.v21 .st-row>.st-days{flex:0 0 96px}
+.v21 .st-media{margin-top:var(--s-3);border-radius:var(--r);overflow:hidden;background:var(--raise);display:grid;place-items:center;min-height:120px}
+.v21 .st-media img,.v21 .st-media video{display:block;width:100%;max-height:60dvh;object-fit:contain}
+.v21 .st-media .st-blur{filter:blur(12px);transform:scale(1.05)}
+.v21 .st-ph{display:grid;place-items:center;height:160px;width:100%;color:var(--mute)}
+.v21 .st-pair{display:grid;grid-template-columns:1fr 1fr;gap:var(--s-2)}
+.v21 .st-pair figure{margin:0}
+.v21 .st-pair .st-media{margin-top:0}
+.v21 .st-pair figcaption{margin-top:var(--s-1)}
+.v21 .st-confirm{margin-top:var(--s-3);display:grid;gap:var(--s-2)}
+.v21 .st-csam{margin-top:var(--s-4);padding-top:var(--s-3);border-top:1px dashed var(--danger)}
+.v21 .st-detail{overflow-wrap:anywhere}
+.v21 .st .st-detail code{font-size:var(--fs-micro)}
+.v21 .st code{overflow-wrap:anywhere;font-size:var(--fs-cap)}
+.v21 .st-fs{border:0;padding:0;min-width:0;margin-inline:0;margin-bottom:0}
+.v21 .form-card>.st-field{margin-top:0}
+.v21 .form-card>.st-field>.field{margin:0}
+
+/* ---- Generic kit additions of round 4 ---- */
+.v21 .k-bold{font-weight:700}
+.v21 .k-break-all{word-break:break-all}
+.v21 .k-sp{flex:none}
+.v21 .k-sp-1{height:var(--s-1)}.v21 .k-sp-2{height:var(--s-2)}.v21 .k-sp-3{height:var(--s-3)}.v21 .k-sp-4{height:var(--s-4)}.v21 .k-sp-6{height:var(--s-6)}
+.v21 .k-alert-act{display:flex;flex-wrap:wrap;gap:var(--s-2);margin-top:6px}
+.v21 button.alert.k-alert-btn{width:100%;text-align:left;font:inherit;cursor:pointer}
+.v21 .empty.k-empty-top{padding-top:var(--s-2)}
+.v21 .empty.k-empty-big h3{font-size:var(--fs-xl)}
+.v21 .empty.k-empty-big p{max-width:340px}
+.v21 .k-empty-after{width:100%;display:contents}
+.v21 .k-empty-after>.card{text-align:left;width:100%}
+.v21 .field.k-left{display:block;text-align:left}
+.v21 .k-push{margin-left:auto}
+.v21 .k-nowrap{white-space:nowrap}
+.v21 .note.k-mem-hint{margin:var(--s-1) 0 var(--s-3)}
+.v21 .sec.k-sec-first{margin-top:var(--s-1)}
+.v21 .card.k-preview-post{padding:0 var(--s-4);margin-top:10px}
+.v21 .btn.k-mb-cover{margin-bottom:10px}
+.v21 .recent button.tx{text-align:left}
+.v21 .viewer.k-demo-viewer{position:relative;inset:auto;height:240px;opacity:1}
