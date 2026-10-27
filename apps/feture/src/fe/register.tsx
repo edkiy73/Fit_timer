@@ -11,6 +11,7 @@ import {useFe} from './session';
 import {useToast} from './toast';
 import {AuthBar,AuthFrame,AuthLogo} from './start';
 import {TermsSheet,loadDocuments} from './terms-sheet';
+import {pendingPairLink} from './pair';
 
 /** V21 A04 (nickname, date of birth, consent) → A04X (under 18) → A05 «Расскажи о себе» (Discover on by default —
  * owner decision 27.10.2026; who sees the answers: «Все» by default — owner decision 27.10.2026). Each screen has the
@@ -292,7 +293,7 @@ function FirstSteps({profileId,about,onBack}:{profileId:string,about:About,onBac
    }
    const names=tp.map(tname);
    // V21 AUTH-019: «Да, вместе» — the pair invitation; «Добавлю фото сейчас» — the profile photos; otherwise the feed.
-   const to=about.partner==='yes'?'/n/me/pair':about.discover==='visible'&&about.photo==='now'&&r.photoNeeded?'/n/me':'/n/feed';
+   const to=about.partner==='yes'||pendingPairLink()?'/n/me/pair':about.discover==='visible'&&about.photo==='now'&&r.photoNeeded?'/n/me':'/n/feed';
    // The app frame (and its toasts) appears after reload(): the feed shows the message and keeps the filter.
    const hello=failed?t('fe.onb2.joinFailed'):names.length&&to==='/n/feed'?t('fe.onb2.doneTopics',{list:names.join(', ')}):t('fe.onb2.done');
    navigate(to,{replace:true,state:{welcome:true,hello,warn:failed>0,...(to==='/n/feed'?{topics:tp}:{})}});

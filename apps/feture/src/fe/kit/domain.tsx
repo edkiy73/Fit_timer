@@ -1,7 +1,7 @@
 import React,{type CSSProperties,type ReactNode} from 'react';
 import {useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {ChevronLeft,Clock,Lock,Plus,Ticket,type LucideIcon} from 'lucide-react';
+import {Check,ChevronLeft,Clock,Lock,Plus,Ticket,UserRound,type LucideIcon} from 'lucide-react';
 import {Av,Card,IconBtn,Note,Skel,Switch,plate} from './index';
 import './domain.css';
 
@@ -240,3 +240,36 @@ export function ReviewMedia({children,blur,icon:I,caption}:{children?:ReactNode,
 }
 /** Two or more pictures side by side (a selfie and the profile photos). */
 export function ReviewPair({children}:{children:ReactNode}){return <div className="st-pair st-block">{children}</div>;}
+
+/* ---------------- Couple ---------------- */
+
+/** «Действовать как» (V21 dockMe): one card per profile the person may act as. The card itself chooses the profile
+ * (`onPick`); the end button opens that profile (`onOpen`). `dot` puts the accent dot before the line under the name
+ * (something waits there). Cards go inside `ActorCards`. */
+export function ActorCard({av,name,sub,dot,selected,onPick,onOpen,openLabel}:{av:ReactNode,name:ReactNode,sub?:ReactNode,dot?:boolean|undefined,selected?:boolean|undefined,
+ onPick:()=>void,onOpen:()=>void,openLabel:string}){
+ return <div className={'actor-card'+(selected?' selected':'')}>
+  <button type="button" className="actor-select" role="menuitemradio" aria-checked={!!selected} onClick={onPick}>{av}
+   <span className="tx"><b>{name}</b>{sub!=null&&<small>{dot&&<i className="ar-dot"/>}{sub}</small>}</span>
+   <span className="ar-ck" aria-hidden="true">{selected&&<Check/>}</span></button>
+  <button type="button" className="actor-open" role="menuitem" aria-label={openLabel} title={openLabel} onClick={onOpen}><UserRound/></button>
+ </div>;
+}
+/** The cards of «Действовать как» and the line under them. */
+export function ActorCards({children,foot,label}:{children:ReactNode,foot?:ReactNode,label:string}){
+ return <div role="menu" aria-label={label}><div className="actor-options">{children}</div>{foot&&<p className="actor-foot">{foot}</p>}</div>;
+}
+/** Who proposed a couple's change and which version of it this is (V21 jointReview / pairReview head). */
+export function ReviewMeta({by,version}:{by:ReactNode,version?:ReactNode}){
+ return <div className="pair-review-meta"><span>{by}</span>{version!=null&&<span className="pill">{version}</span>}</div>;
+}
+/** What a couple's change would publish, framed: a post (title, text), the access to open, an answer.
+ * `byline` is the author line on top; `meta` a quiet line under the text. */
+export function ReviewPost({byline,title,children,meta}:{byline?:ReactNode,title?:ReactNode,children?:ReactNode,meta?:ReactNode}){
+ return <div className="joint-review-post">{byline&&<div className="review-byline">{byline}</div>}
+  <div className="body">{title&&<p><b>{title}</b></p>}{children}</div>{meta&&<Note>{meta}</Note>}</div>;
+}
+/** The partner's note on a change sent back «на доработку» (V21 returnNoteHTML). */
+export function ReturnNote({children}:{children:ReactNode}){
+ return <blockquote className="ret-note">{children}</blockquote>;
+}
