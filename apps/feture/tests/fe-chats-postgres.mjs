@@ -150,3 +150,22 @@ test('review fixes: ex-partners keep nothing of a deleted couple’s chats; the 
     assert.ok(!rows.some(r => r.person_profile_id === b)); // Kira liked back: no «match» about her own action
   } finally { await pg.close(); }
 });
+
+test('a normal photo still in review is a «pending» photo for the recipient, never an empty message; a removed one is «gone»', async () => {
+  const { pg, db, call, member, matchUp } = await world();
+  try {
+    const a = await member('ua', 'Alex'), b = await member('ub', 'Kira');
+    const conv = await matchUp('ua', a, 'ub', b);
+    const id = await asset(db, a);
+    await db.query(`update feture.media_asset set state = 'needs_review', copies_at = null where id = $1`, [id]);
+    const sent = await call('ua', a, { action: 'chat.sendMedia', opId: op(), conversationId: conv, assetId: id });
+    assert.ok(sent.id, JSON.stringify(sent));
+    const theirs = (await call('ub', b, { action: 'chat.messages', conversationId: conv })).items.at(-1);
+    assert.deepEqual([theirs.body, theirs.media], ['', { pending: true, src: null }]);
+    const mine = (await call('ua', a, { action: 'chat.messages', conversationId: conv })).items.at(-1);
+    assert.deepEqual([mine.media.pending, mine.media.src], [true, null]);
+    await db.query(`update feture.media_asset set state = 'removed' where id = $1`, [id]);
+    const gone = (await call('ub', b, { action: 'chat.messages', conversationId: conv })).items.at(-1);
+    assert.deepEqual(gone.media, { gone: true, src: null });
+  } finally { await pg.close(); }
+});
