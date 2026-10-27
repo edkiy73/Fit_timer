@@ -107,25 +107,25 @@ export function ToggleRow({icon:Icon,title,sub,on,onClick,disabled}:{icon?:Lucid
 }
 
 /** `selectRow()` — a label with the chosen value; the native select opens over it. */
-export function SelectRow<T extends string>({label,sub,value,options,onChange,solo,icon:Icon,disabled}:{label?:string,sub?:string|undefined,value:T,options:readonly (readonly [T,string])[],
- onChange:(v:T)=>void,solo?:boolean,icon?:LucideIcon,disabled?:boolean}){
+export function SelectRow<T extends string>({label,sub,value,options,onChange,solo,icon:Icon,disabled,row:inList}:{label?:string,sub?:string|undefined,value:T,options:readonly (readonly [T,string])[],
+ onChange:(v:T)=>void,solo?:boolean,icon?:LucideIcon,disabled?:boolean,/** A row of a list card (keeps the divider) even without an icon. */ row?:boolean}){
  const cur=options.find(([k])=>k===value);
  const row=<label className={'selrow'+(solo?' solo':'')}>{label&&!solo&&<span className="selt">{label}{sub&&<small>{sub}</small>}</span>}
   <span className="selv" aria-hidden="true">{cur?cur[1]:''}</span>
   <select value={value} disabled={disabled} onChange={e=>onChange(e.target.value as T)} aria-label={label}>{options.map(([k,l])=><option key={k} value={k}>{l}</option>)}</select>
  </label>;
- return Icon?<div className="li k-li-sel"><span className="ico v"><Icon/></span>{row}</div>:row;
+ return Icon||inList?<div className="li k-li-sel">{Icon&&<span className="ico v"><Icon/></span>}{row}</div>:row;
 }
 
 /** `chip()` — a pill that is either a toggle (`on`) or an action; `more` is the dashed «Все · N» chip. */
-export function Chip({on,onClick,icon:Icon,children,more,filter,disabled,label,badge,className,lit}:{on?:boolean|undefined,onClick?:()=>void,icon?:LucideIcon,children:ReactNode,more?:boolean,filter?:boolean,
- disabled?:boolean,label?:string,/** A count on the chip (e.g. active filters). */ badge?:number|undefined,className?:string,/** Highlighted without being a toggle (an opener with filters set). */ lit?:boolean}){
+export function Chip({on,onClick,icon:Icon,children,more,filter,disabled,label,badge,className,lit,popup}:{on?:boolean|undefined,onClick?:()=>void,icon?:LucideIcon,children:ReactNode,more?:boolean,filter?:boolean,
+ disabled?:boolean,label?:string,/** Opens a sheet or list. */ popup?:boolean,/** A count on the chip (e.g. active filters). */ badge?:number|undefined,className?:string,/** Highlighted without being a toggle (an opener with filters set). */ lit?:boolean}){
  if(!onClick)return <span className={['chip',on?'on':'',className].filter(Boolean).join(' ')}>{Icon&&<Icon/>}{children}</span>; // a label, not a control
  return <button type="button" className={['chip',filter?'filter':'',more?'more':'',on||lit?'on':'',className].filter(Boolean).join(' ')} aria-pressed={on===undefined?undefined:on}
-  aria-label={label} disabled={disabled} onClick={onClick}>{Icon&&<Icon/>}{children}{badge?<em className="badge-abs">{badge}</em>:null}</button>;
+  aria-label={label} aria-haspopup={popup?'dialog':undefined} disabled={disabled} onClick={onClick}>{Icon&&<Icon/>}{children}{badge?<em className="badge-abs">{badge}</em>:null}</button>;
 }
-export function Chips({children,scroll,className}:{children:ReactNode,scroll?:boolean,className?:string}){
- return <div className={['chips',scroll?'scroll':'',className].filter(Boolean).join(' ')}>{children}</div>;
+export function Chips({children,scroll,className,label,role}:{children:ReactNode,scroll?:boolean,className?:string,label?:string,role?:'group'|'list'}){
+ return <div className={['chips',scroll?'scroll':'',className].filter(Boolean).join(' ')} role={role??(label?'group':undefined)} aria-label={label}>{children}</div>;
 }
 
 /** `.alert` — a notice in the flow: ok, err (announced), warn, info. */
@@ -146,8 +146,9 @@ export const Group=forwardRef<HTMLElement,{title?:ReactNode,action?:ReactNode,fo
 });
 
 /** `.field` — a labelled input or textarea with its error under it. */
-export function Field({id,label,error,children,hint}:{id?:string,label?:ReactNode,error?:string|undefined,children:ReactNode,hint?:ReactNode}){
- return <div className={'field'+(error?' err':'')}>{label&&<label className="flabel" htmlFor={id}>{label}</label>}{children}{hint&&<p className="note">{hint}</p>}{error&&<div className="ferr">{error}</div>}</div>;
+export function Field({id,label,error,children,hint,className,name,optional}:{id?:string,label?:ReactNode,error?:string|undefined,children:ReactNode,hint?:ReactNode,className?:string,
+ /** data-field: the screen finds the first wrong field by it (shake, scroll). */ name?:string,/** «необязательно» on the right of the label. */ optional?:ReactNode}){
+ return <div className={['field',error?'err':'',className].filter(Boolean).join(' ')} data-field={name}>{label&&<label className="flabel" htmlFor={id}>{label}{optional&&<i>{optional}</i>}</label>}{children}{hint&&<p className="fhint">{hint}</p>}{error&&<div className="ferr" role="alert"><CircleAlert/>{error}</div>}</div>;
 }
 
 /** `.inp` — the one text input. Every text field of the app is this (or TextArea / SearchInput): one height, one
@@ -195,9 +196,9 @@ export function Stack({children,gap=3,row,className,grow,align,justify}:{childre
 
 /** `.card` — the surface every block sits on. `list` holds Rows (dividers between them come with it); `form` holds
  * fields and has no surface of its own in V21 (fields sit on the page, 16 apart). Radius, fill and shadow are tokens, so changing the card here changes every card. */
-export function Card({children,list,form,className,id,onClick,label}:{children:ReactNode,list?:boolean,form?:boolean,className?:string,id?:string,/** A whole card that opens something. */ onClick?:()=>void,label?:string}){
+export function Card({children,list,form,className,id,onClick,label,tone}:{children:ReactNode,list?:boolean,form?:boolean,className?:string,id?:string,/** danger: the edge of something irreversible (delete account). */ tone?:'danger',/** A whole card that opens something. */ onClick?:()=>void,label?:string}){
  if(onClick)return <button type="button" id={id} aria-label={label} onClick={onClick} className={['card','k-card-btn',list?'list':'',className].filter(Boolean).join(' ')}>{children}</button>;
- return <div id={id} className={['card',list?'list':'',form?'form-card':'',className].filter(Boolean).join(' ')}>{children}</div>;
+ return <div id={id} className={['card',list?'list':'',form?'form-card':'',tone?'k-card-'+tone:'',className].filter(Boolean).join(' ')}>{children}</div>;
 }
 /** `.pill` — a small status label (ok / waiting / violet / hot / plain). */
 export function Pill({tone,icon:Icon,children,onClick,className,label}:{tone?:'ok'|'wait'|'v'|'hot'|'bad'|'glass'|undefined,icon?:LucideIcon,children:ReactNode,onClick?:()=>void,className?:string,label?:string}){
@@ -213,8 +214,8 @@ export function RadioList<T extends string>({value,options,onChange,label,bare}:
   <i/><span className="tx">{title}{sub&&<small>{sub}</small>}</span></button>)}</div>;
 }
 /** Single choice as chips (filters, «кто видит»). Multi-choice chips are Chip with `on`. */
-export function ChoiceChips<T extends string>({value,options,onChange,label,scroll}:{value:T|null|undefined,options:readonly (readonly [T,ReactNode])[],onChange:(v:T)=>void,label:string,scroll?:boolean}){
- return <div className={'chips'+(scroll?' scroll':'')} role="radiogroup" aria-label={label}>{options.map(([k,l])=><button key={k} type="button" className={'chip'+(value===k?' on':'')} role="radio" aria-checked={value===k} onClick={()=>onChange(k)}>{l}</button>)}</div>;
+export function ChoiceChips<T extends string>({value,options,onChange,label,scroll,disabled}:{value:T|null|undefined,options:readonly (readonly [T,ReactNode])[],onChange:(v:T)=>void,label:string,scroll?:boolean,disabled?:boolean}){
+ return <div className={'chips'+(scroll?' scroll':'')} role="radiogroup" aria-label={label} aria-disabled={disabled||undefined}>{options.map(([k,l])=><button key={k} type="button" disabled={disabled} className={'chip'+(value===k?' on':'')} role="radio" aria-checked={value===k} onClick={()=>onChange(k)}>{l}</button>)}</div>;
 }
 /** `.check` — a checkbox with its text (consents, «Также заблокировать» in forms). */
 export function Check({on,onChange,children,error}:{on:boolean,onChange:(v:boolean)=>void,children:ReactNode,error?:boolean}){
@@ -250,4 +251,22 @@ export function Counter({n,max}:{n:number,max:number}){return <div className={'c
 /** A button that is a link (open a site, a map, a ticket page): Btn look, a real <a>. */
 export function LinkBtn({href,children,kind='soft',size='',icon:Icon,external=true,fit}:{href:string,children:ReactNode,kind?:'primary'|'soft'|'text',size?:''|'md'|'sm',icon?:LucideIcon,external?:boolean,fit?:boolean}){
  return <a href={href} className={['btn',kind,size,fit?'k-fit':'','k-link'].filter(Boolean).join(' ')} {...(external?{target:'_blank',rel:'noopener noreferrer'}:{})}>{Icon&&<Icon/>}{children}</a>;
+}
+
+/** The six boxes of a sign-in code; paste or type fills them, one digit each. */
+export function CodeInput({value,onChange,length=6,label,invalid,autoFocus}:{value:string,onChange:(v:string)=>void,length?:number,label:string,invalid?:boolean,autoFocus?:boolean}){
+ const refs=useRef<(HTMLInputElement|null)[]>([]);
+ const set=(i:number,ch:string)=>{const d=ch.replace(/\D/g,'');if(!d){onChange(value.slice(0,i));return;}
+  const next=(value.slice(0,i)+d).slice(0,length);onChange(next);refs.current[Math.min(next.length,length-1)]?.focus();};
+ return <div className="k-code" role="group" aria-label={label}>{Array.from({length},(_,i)=><input key={i} ref={el=>{refs.current[i]=el;}} className="k-code-box" inputMode="numeric" autoComplete={i===0?'one-time-code':'off'}
+  aria-label={`${label} ${i+1}`} aria-invalid={invalid||undefined} maxLength={length} value={value[i]??''} autoFocus={autoFocus&&i===0}
+  onChange={e=>set(i,e.target.value)} onKeyDown={e=>{if(e.key==='Backspace'&&!value[i]&&i>0){onChange(value.slice(0,i-1));refs.current[i-1]?.focus();}}}/>)}</div>;
+}
+/** Two thumbs on one track (age from–to). */
+export function RangeDual({min,max,lo,hi,onChange,label}:{min:number,max:number,lo:number,hi:number,onChange:(lo:number,hi:number)=>void,label:string}){
+ const pct=(v:number)=>(v-min)/(max-min)*100;
+ return <div className="k-dual" style={{'--lo':pct(lo)+'%','--hi':pct(hi)+'%'} as React.CSSProperties}>
+  <input type="range" min={min} max={max} value={lo} aria-label={label+' от'} onChange={e=>onChange(Math.min(+e.target.value,hi),hi)}/>
+  <input type="range" min={min} max={max} value={hi} aria-label={label+' до'} onChange={e=>onChange(lo,Math.max(+e.target.value,lo))}/>
+ </div>;
 }

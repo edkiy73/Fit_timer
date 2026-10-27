@@ -12,6 +12,7 @@ import {ToastProvider} from './toast';
 import './kit/base.css';
 import './kit/tokens.css';
 import './kit/kit.css';
+import './kit/loading.css';
 import './shell.css';
 
 /** V21 shell with the prototype's markup: `.stage > .root > aside.side + main.main(.bar, .view, nav.dock)`.

@@ -37,14 +37,15 @@ export function Bar({title,back,onBack,small,children}:{title:string,back?:strin
 
 type BtnProps=ButtonHTMLAttributes<HTMLButtonElement>&{kind?:'primary'|'soft'|'text'|'danger',size?:''|'md'|'sm',auto?:boolean,icon?:LucideIcon};
 /** `.btn` — 48 / md 44 / sm 36; one main button per group. */
-export const Btn=forwardRef<HTMLButtonElement,BtnProps&{busy?:boolean,fit?:boolean}>(function Btn({kind='primary',size='',auto,fit,icon:Icon,className,children,type='button',busy,...rest},ref){
+export const Btn=forwardRef<HTMLButtonElement,BtnProps&{busy?:boolean,fit?:boolean,pressed?:boolean}>(function Btn({kind='primary',size='',auto,fit,pressed,icon:Icon,className,children,type='button',busy,...rest},ref){
  // `busy` blinks in place (owner: never a spinner); `fit` keeps the button at its text width inside a row.
- return <button ref={ref} type={type} className={['btn',kind,size,auto?'auto':'',fit?'k-fit':'',busy?'busy':'',className].filter(Boolean).join(' ')} aria-busy={busy||undefined} {...rest}>{Icon&&<Icon/>}{children}</button>;
+ return <button ref={ref} type={type} className={['btn',kind,size,auto?'auto':'',fit?'k-fit':'',busy?'busy':'',pressed?'on':'',className].filter(Boolean).join(' ')} aria-busy={busy||undefined} aria-pressed={pressed} {...rest}>{Icon&&<Icon/>}{children}</button>;
 });
 
 /** `empty()` — one look for empty, error and unavailable states. */
-export function Empty({icon:Icon,title,text,children,role}:{icon:LucideIcon,title:string,text?:string,children?:ReactNode,role?:'status'|'alert'}){
- return <div className="empty" role={role}><div className="em-ic"><Icon/></div><h3>{title}</h3>{text&&<p>{text}</p>}{children&&<div className="btns">{children}</div>}</div>;
+export function Empty({icon:Icon,title,text,children,role,art,wide}:{icon?:LucideIcon,title:string,text?:string,children?:ReactNode,role?:'status'|'alert',
+ /** A picture instead of the icon disc (pair art, radar). */ art?:ReactNode,/** Content (a card, a list) spans the width. */ wide?:boolean}){
+ return <div className={'empty'+(wide?' k-empty-wide':'')} role={role}>{art??(Icon&&<div className="em-ic"><Icon/></div>)}<h3>{title}</h3>{text&&<p>{text}</p>}{children&&<div className="btns">{children}</div>}</div>;
 }
 
 /** `seg()` — segmented tabs with the sliding knob. */
