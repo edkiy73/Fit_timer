@@ -48,11 +48,15 @@ export function Empty({icon:Icon,title,text,children,role}:{icon:LucideIcon,titl
 }
 
 /** `seg()` — segmented tabs with the sliding knob. */
-export function Seg<T extends string>({value,options,onChange,label,small=true}:{value:T,options:{id:T,label:string}[],onChange:(v:T)=>void,label?:string,small?:boolean}){
- const i=Math.max(0,options.findIndex(o=>o.id===value));
- return <div className={'seg'+(small?' sm':'')} role="tablist" aria-label={label}>
-  <span className="knob" style={{width:`calc((100% - 8px)/${options.length})`,transform:`translateX(${i*100}%)`}}/>
-  {options.map(o=><button key={o.id} type="button" role="tab" aria-selected={o.id===value} className={o.id===value?'on':''} onClick={()=>onChange(o.id)}><span>{o.label}</span></button>)}
+/** The one tab control of the app (owner, 27.10.2026: one plaque everywhere, the feed's size). A count shows as
+ * `<em>n</em>`, a dot marks something waiting; five or more tabs scroll sideways instead of squeezing. */
+export type SegOption<T extends string>={id:T,label:string,n?:number|string|undefined,dot?:string|undefined};
+export function Seg<T extends string>({value,options,onChange,label}:{value:T,options:SegOption<T>[],onChange:(v:T)=>void,label?:string|undefined,small?:boolean,big?:boolean}){
+ const i=Math.max(0,options.findIndex(o=>o.id===value));const scroll=options.length>4;
+ return <div className={'seg sm'+(scroll?' scroll':'')} role="tablist" aria-label={label}>
+  {!scroll&&<span className="knob" style={{width:`calc((100% - 8px)/${options.length})`,transform:`translateX(${i*100}%)`}}/>}
+  {options.map(o=><button key={o.id} type="button" role="tab" aria-selected={o.id===value} className={o.id===value?'on':''} onClick={()=>onChange(o.id)}>
+   <span>{o.label}{o.dot&&<i className="tdot" role="img" aria-label={o.dot}/>}</span>{o.n?<em>{typeof o.n==='number'&&o.n>99?'99+':o.n}</em>:null}</button>)}
  </div>;
 }
 

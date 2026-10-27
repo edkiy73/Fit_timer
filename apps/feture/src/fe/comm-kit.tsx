@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {ChevronLeft,ChevronRight,Flag,Info,TriangleAlert,Users,X,type LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Btn,Layer} from './ui';
+import {Btn,Layer,Seg} from './ui';
 import {useFe} from './session';
 import {namedPlate} from './create-community';
 
@@ -31,18 +31,10 @@ export function SubBar({title,sub,back=true,children}:{title:string,sub?:string|
  </header>;
 }
 
-/** `seg(items)` with the counter bubble of the prototype (`<em>n</em>`). */
-export function SegN<T extends string>({value,options,onChange,label,small}:{value:T,options:{id:T,label:string,n?:number|undefined}[],onChange:(v:T)=>void,label?:string,small?:boolean}){
- const i=Math.max(0,options.findIndex(o=>o.id===value));
- return <div className={'seg'+(small?' sm':'')} role="tablist" aria-label={label}>
-  <span className="knob" style={{width:`calc((100% - 8px)/${options.length})`,transform:`translateX(${i*100}%)`}}/>
-  {options.map(o=><button key={o.id} type="button" role="tab" aria-selected={o.id===value} className={o.id===value?'on':''} onClick={()=>onChange(o.id)}><span>{o.label}</span>{o.n?<em>{o.n}</em>:null}</button>)}
- </div>;
-}
-
-/** `tabStrip()` — natural-width tabs with an optional counter. */
+/** Older names of the one tab control (ui.tsx Seg). */
+export const SegN=Seg;
 export function TabStrip<T extends string>({value,items,onChange}:{value:T,items:[T,string,number?][],onChange:(v:T)=>void}){
- return <div className="tabs14" role="tablist">{items.map(([id,l,n])=><button key={id} type="button" role="tab" aria-selected={id===value} className={id===value?'on':''} onClick={()=>onChange(id)}>{l}{n?<em>{n}</em>:null}</button>)}</div>;
+ return <Seg value={value} onChange={onChange} options={items.map(([id,label,n])=>({id,label,n}))}/>;
 }
 
 /** `linkRow()` — icon, title, optional sub, value, badge and chevron. */

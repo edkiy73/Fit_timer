@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {AtSign,Bell,Calendar,Check,CircleCheck,Clock,EyeOff,FileText,Filter,Heart,LockOpen,MessageCircle,Pencil,Shield,ShieldCheck,Trash2,Users,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Av,Bar,Btn,Empty,Skel,plate} from './ui';
+import {Av,Bar,Btn,Empty,Seg,Skel,plate} from './ui';
 import {useFe,useRealtime} from './session';
 import {useToast} from './toast';
 import {when} from './feed';
@@ -25,14 +25,8 @@ const ok=z.object({ok:z.literal(true)}).passthrough();
 const revList=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),rev:z.number()}).passthrough())});
 const nameOf=(a:z.infer<typeof actor>)=>a?(a.name||(a.handle?'@'+a.handle:'?')):'FetUre';
 
-/** `seg()` with the prototype's counters (`<em>n</em>` after the label); ui.tsx's Seg has none. */
-export function SegN<T extends string>({value,options,onChange,small}:{value:T,options:{id:T,label:string,n?:number}[],onChange:(v:T)=>void,small?:boolean}){
- const i=Math.max(0,options.findIndex(o=>o.id===value));
- return <div className={'seg'+(small?' sm':'')} role="tablist">
-  <span className="knob" style={{width:`calc((100% - 8px)/${options.length})`,transform:`translateX(${i*100}%)`}}/>
-  {options.map(o=><button key={o.id} type="button" role="tab" aria-selected={o.id===value} className={o.id===value?'on':''} onClick={()=>onChange(o.id)}><span>{o.label}</span>{o.n?<em>{o.n>99?'99+':o.n}</em>:null}</button>)}
- </div>;
-}
+/** The one tab control under its older name here. */
+export const SegN=Seg;
 
 /** Bell with the shared count, for screen headers. */
 export function BellButton(){

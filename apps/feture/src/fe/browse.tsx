@@ -201,7 +201,7 @@ export function SearchScreen(){
     autoCapitalize="off" spellCheck={false} onChange={e=>setQ(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')commit();}}/></div>
   </div>
   <View>
-   <div className="chips scroll" role="tablist">{SCOPES.map(k=><button key={k} type="button" role="tab" aria-selected={k===scope} className={'chip'+(k===scope?' on':'')} onClick={()=>setScope(k)}>{k==='all'?t('fe.br.all'):names[k]}</button>)}</div>
+   <Seg value={scope} onChange={setScope} label={t('fe.br.search')} options={SCOPES.map(k=>({id:k,label:k==='all'?t('fe.br.all'):names[k]}))}/>
    {term.length<2?<>
     {recent.length>0&&<><div className="res-h">{t('fe.br.recent')}<button type="button" onClick={()=>{setRecent([]);writeRecent([]);}}>{t('fe.br.clear')}</button></div>
      <div className="card list">{recent.map(x=><div key={x} className="recent"><History/><button type="button" className="tx" style={{textAlign:'left'}} onClick={()=>use(x)}>{x}</button>

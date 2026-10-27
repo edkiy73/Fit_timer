@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Ban,Check,ChevronDown,ChevronLeft,ChevronRight,EyeOff,Heart,Ellipsis,History,Info,KeyRound,Lock,MapPin,MessageCircle,Search as SearchIcon,SlidersHorizontal,Sparkles,Undo2,Users,X} from 'lucide-react';
-import {Av,Bar,Btn,Empty,View,Layer,Skel,plate} from './ui';
+import {Av,Bar,Btn,Empty,View,Layer,Seg,Skel,plate} from './ui';
 import {useFe} from './session';
 import {NameBadges} from './faces';
 import {BellButton} from './inbox';
@@ -32,14 +32,7 @@ const photo=(c:{avatar:z.infer<typeof media>|null})=>c.avatar&&!c.avatar.pending
 const cname=(c:{name:string|null,handle:string|null})=>c.name||(c.handle?'@'+c.handle:'?');
 const fill=(s:string,vars:Record<string,string|number>)=>Object.entries(vars).reduce((a,[k,v])=>a.split('{'+k+'}').join(String(v)),s);
 const HeartF=(p:React.ComponentProps<typeof Heart>)=><Heart fill="currentColor" {...p}/>;
-/** The prototype's seg() with the optional counter (`<em>n</em>`); ui.tsx's Seg has no counter. */
-function CSeg<T extends string>({value,options,onChange,big}:{value:T,options:{id:T,label:string,n?:number}[],onChange:(v:T)=>void,big?:boolean}){
- const i=Math.max(0,options.findIndex(o=>o.id===value));
- return <div className={'seg'+(big?'':' sm')} role="tablist">
-  <span className="knob" style={{width:`calc((100% - 8px)/${options.length})`,transform:`translateX(${i*100}%)`}}/>
-  {options.map(o=><button key={o.id} type="button" role="tab" aria-selected={o.id===value} className={o.id===value?'on':''} onClick={()=>onChange(o.id)}><span>{o.label}</span>{o.n?<em>{o.n}</em>:null}</button>)}
- </div>;
-}
+const CSeg=Seg;
 // The swipe tip shows once per session, on touch devices only (prototype PPL-007).
 let deckCoachShown=false;
 
