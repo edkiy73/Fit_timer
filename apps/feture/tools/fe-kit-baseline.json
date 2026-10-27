@@ -33,13 +33,8 @@
   "note": 2
  },
  "src/fe/couple.tsx": {
-  "sheet": 1,
-  "list row": 3,
-  "notice": 2,
-  "round button": 1,
-  "heading": 1,
-  "card": 2,
-  "note": 1
+  "list row": 1,
+  "notice": 1
  },
  "src/fe/create-community.tsx": {
   "notice": 2,
@@ -81,14 +76,8 @@
   "radio": 1
  },
  "src/fe/links.tsx": {
-  "list row": 9,
-  "chip": 1,
-  "notice": 4,
-  "inline style": 7,
-  "card": 13,
-  "radio": 1,
-  "note": 5,
-  "section label": 1
+  "list row": 3,
+  "inline style": 1
  },
  "src/fe/me-edit.tsx": {
   "switch": 1,
@@ -103,31 +92,16 @@
   "note": 1
  },
  "src/fe/pair.tsx": {
-  "switch": 1,
-  "list row": 4,
-  "notice": 4,
-  "input": 1,
-  "inline style": 2,
-  "heading": 3,
-  "card": 6,
-  "pill": 1,
-  "note": 6
+  "list row": 1,
+  "inline style": 1
  },
  "src/fe/people.tsx": {
-  "sheet": 1,
-  "list row": 6,
-  "chip": 3,
-  "notice": 3,
-  "round button": 6,
-  "button": 3,
-  "input": 3,
-  "inline style": 13,
-  "heading": 5,
-  "card": 4,
-  "pill": 2,
-  "radio": 2,
-  "note": 1,
-  "section label": 2
+  "list row": 3,
+  "input": 2,
+  "inline style": 12,
+  "heading": 3,
+  "card": 2,
+  "pill": 1
  },
  "src/fe/photo-check.tsx": {
   "list row": 2,
@@ -144,18 +118,12 @@
   "note": 1
  },
  "src/fe/profile-extras.tsx": {
-  "switch": 3,
-  "list row": 5,
-  "notice": 5,
-  "round button": 4,
-  "button": 7,
-  "textarea": 1,
+  "notice": 2,
+  "button": 4,
   "inline style": 3,
-  "heading": 5,
-  "card": 10,
-  "pill": 5,
+  "heading": 2,
   "radio": 1,
-  "note": 4
+  "note": 1
  },
  "src/fe/register.tsx": {
   "sheet": 1,
