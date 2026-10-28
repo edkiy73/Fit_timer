@@ -1,5 +1,6 @@
 // @ts-check
 import { likePattern } from '../search.mjs';
+import { popularScore } from '../sql-rules.mjs';
 import { randomBytes } from 'node:crypto';
 import { requireUnrestricted } from '../profiles.mjs';
 import { communitiesCommands } from '../../contracts/communities.mjs';
@@ -426,7 +427,7 @@ const run = {
       const c = await visible(q, input.communityId, viewer);
       if (c.privacy !== 'open' && !c.own && !(await isReader(q, c.id, viewer.profileId))) return { items: [] };
     }
-    // «Обсуждают, а не шумят» (V21 FEED-016): people who replied weigh most, then replies, likes a little. Last 7 days,
+    // «Обсуждают, а не шумят» (V21 FEED-016): the feed's popularScore (repliers, replies, likes a little). Last 7 days,
     // only what the viewer may read, never what a host kept out, nothing from people blocked either way.
     const items = await q.query(
       `select p.id, p.title, left(p.body, 300) excerpt, p.published_at, p.community_id, c.name community_name, s.replies, s.repliers, s.likes
@@ -439,7 +440,7 @@ const run = {
          and ($3::uuid is null or p.community_id = $3) and ($4::text is null or $4 = any(p.topics) or $4 = any(c.topics))
          and feture.post_visible(p, $1, $2)
          and not exists (select 1 from feture.feed_hide h where h.profile_id = $1 and ((h.kind = 'post' and h.target_id = p.id) or (h.kind = 'author' and h.target_id = p.owner_profile_id)))
-       order by 10 * s.repliers + 3 * s.replies + 0.2 * s.likes desc, p.published_at desc, p.id limit $5`,
+       order by ${popularScore('p', '$1')} desc, p.published_at desc, p.id limit $5`,
       [viewer.profileId, viewer.accountId, input.communityId ?? null, input.topic ?? null, input.limit]);
     return { items: items.map(r => ({ id: r.id, title: r.title, excerpt: r.excerpt, at: r.published_at, community: { id: r.community_id, name: r.community_name }, replies: r.replies, likes: r.likes })) };
   },

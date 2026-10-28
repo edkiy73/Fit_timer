@@ -6,6 +6,7 @@ import { enqueue } from '../outbox.mjs';
 import { lockPair } from './discover.mjs';
 import { endConversations } from './chats.mjs';
 import { withFaces } from './faces.mjs';
+import { acceptsMention } from '../sql-rules.mjs';
 
 /** Slice B social graph: blocks, follows, article subscriptions, feed hides, saved items (S1 §7).
  * A block belongs to the profile that made it and ends that profile's ties with the other side; visibility is
@@ -252,7 +253,7 @@ const run = {
     if (!t || t.b) fail(404, 'not_found');
     const col = input.following ? ['follower_profile_id', 'target_profile_id'] : ['target_profile_id', 'follower_profile_id'];
     const items = await q.query(
-      `select p.id, p.kind, p.handle, p.name, f.created_at from feture.follow f join feture.profile p on p.id = f.${col[1]}
+      `select p.id, p.kind, p.handle, p.name, f.created_at, ${acceptsMention('p', '$2')} mentionable from feture.follow f join feture.profile p on p.id = f.${col[1]}
        where f.${col[0]} = $1 and p.state = 'active' and not feture.blocked($2, p.id) order by f.created_at desc limit 50`,
       [input.profileId, acting.profileId]);
     return { items: await withFaces(q, cfg.media, acting, items, r => r) };

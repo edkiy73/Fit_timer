@@ -127,8 +127,10 @@ function MyEvents(){
   <Btn onClick={()=>navigate('/n/communities?sub=events')}>{t('fe.w7.toEvents.btn')}</Btn></Empty>;
  return <>
   {drafts.length>0&&<Group title={t('fe.w7.e10.drafts',{n:drafts.length})} foot={t('fe.w7.e10.draftsFoot')}><Card list>
-   {drafts.map(d=><Row key={d.id} icon={Pencil} title={d.title||t('fe.w7.e10.untitled')} sub={[d.step?t('fe.w7.e10.step',{n:d.step}):'',t('fe.w7.e10.savedAt',{when:date(d.updated_at,false)})].filter(Boolean).join(' · ')}
-    end={<IconBtn icon={Trash2} kind="ghost" size="sm" label={t('fe.ce.draftDelete')} onClick={()=>{setFailure('');setAsking(d);}}/>}/>)}</Card></Group>}
+   {drafts.map(d=>{const open=()=>navigate('/n/events/new?draft='+d.id);
+    return <Row key={d.id} icon={Pencil} title={d.title||t('fe.w7.e10.untitled')} sub={[d.step?t('fe.w7.e10.step',{n:d.step}):'',t('fe.w7.e10.savedAt',{when:date(d.updated_at,false)})].filter(Boolean).join(' · ')}
+     onClick={open} end={<Stack row gap={1} align="center"><Btn kind="soft" size="sm" fit onClick={open}>{t('fe.lo.ev.continue')}</Btn>
+      <IconBtn icon={Trash2} kind="ghost" size="sm" label={t('fe.ce.draftDelete')} onClick={()=>{setFailure('');setAsking(d);}}/></Stack>}/>;})}</Card></Group>}
   {groups.filter(([,l])=>l.length).map(([k,l])=><Group key={k} title={t('fe.mine.ev.'+k)}><Card list>
    {l.map(e=><Row key={e.id} noChev onClick={()=>navigate('/n/events/'+e.id)} title={e.title}
     sub={date(e.starts_at)+(e.state!=='published'?' · '+t('fe.mine.state.'+e.state):'')}/>)}</Card></Group>)}

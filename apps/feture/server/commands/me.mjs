@@ -126,6 +126,9 @@ async function profileView(q, viewer, profileId, media) {
     premium: !!p.premium, // the public gold badge (V10 «Значки»), never the end date
 
     ...(own ? { rev: p.rev, showAge: !!p.show_age, detailsVis: p.details_vis ?? null, state: p.state } : {}),
+    // «Следить за статьями» (V21 noteSub): whether the acting profile follows this person's articles.
+    ...(own ? {} : { noteSub: (await q.query(
+      'select exists (select 1 from feture.note_subscription where subscriber_profile_id = $1 and author_profile_id = $2) sub', [viewer.profileId, p.id]))[0].sub }),
   };
 }
 
