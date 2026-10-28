@@ -1,2 +1,4 @@
 out/
 .sessions.json
+.world-cache/
+.world-state.json
