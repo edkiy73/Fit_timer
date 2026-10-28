@@ -1,6 +1,6 @@
 // Leftovers and owner decisions (28.10.2026): «Как подбираем» says what «Популярное» does, «Обсуждают в сообществах»
 // respects a host's «Не показывать в Популярном», an event draft is continued at its step, the mention picker marks
-// people who take no mention, «Следить за статьями» shows the real state, the gallery's selection mode hides the
+// people who take no mention, the gallery's selection mode hides the
 // dock, the link editor asks before leaving with unsaved changes. Lane `lo`. Everything made here is removed.
 // Server-dependent (need the deploy of this branch): event.draftGet, `mentionable`.
 import { expect, until, toastSee, sheet, dialog } from '../helpers.mjs';

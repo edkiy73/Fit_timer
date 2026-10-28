@@ -86,7 +86,7 @@ export default [
      // The card in a list: cover + title + excerpt («Мои публикации» shows own posts in any state).
      await t.go('/n/me/posts');
      const card = t.page.locator('.note-card', { hasText: 'Статья ' + mark }).first(); await card.waitFor({ timeout: 20000 });
-     expect(await card.locator('.note-cover').count() === 1, 'cover on the card');
+     await card.locator('.note-cover').waitFor({ timeout: 15000 }); expect(await card.locator('.note-cover').count() === 1, 'one cover on the card');
      expect((await card.locator('.note-x').innerText()).includes('Первый абзац'), 'excerpt on the card');
      expect(!(await card.locator('.md-img').count()), 'no photo of the text on the card');
    } finally { await drop(t, id); }

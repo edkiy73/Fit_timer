@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Archive,ArchiveRestore,Ban,Camera,Check,ChevronDown,ChevronLeft,CircleAlert,Clock,Copy,Ellipsis,Eye,EyeOff,Film,Flag,Image as ImageIcon,Info,Lock,LockOpen,MessageCircle,Plus,Search,SendHorizontal,Sparkles,Undo2,User,Users,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Av,Bar,Btn,Card,Check as CheckBox,Chip,Chips,Empty,Field,FilePick,Group,IconBtn,Layer,Note,PersonBar,Pill,RadioList,Row,SearchInput,SectionLabel,SelectRow,Sheet,Skel,Stack,Text,TextArea,ToggleRow,Typing,VideoBadge,VideoPlayer,View,VoiceBubble,VoiceRecorder,type Voice} from './kit';
+import {ActingAv,Alert,Av,Bar,Btn,Card,Check as CheckBox,Chip,Chips,Empty,Field,FilePick,Group,IconBtn,Layer,Note,PersonBar,Pill,RadioList,Row,SearchInput,SectionLabel,SelectRow,Sheet,Skel,Stack,Text,TextArea,ToggleRow,Typing,VideoBadge,VideoPlayer,View,VoiceBubble,VoiceRecorder,type Voice} from './kit';
 import {VIDEO_MAX_BYTES,VIDEO_MAX_MS,VIDEO_TYPES,isVideo,prepareVideo,type PreparedVideo} from './kit/media';
 import {useSendVideo,useSendVoice} from './media-upload';
 import {AgeCheckLink,useAgeResume} from './age-check';
@@ -536,11 +536,12 @@ export function ChatScreen(){
   {!ended&&<div className="inputbar" ref={bar}>
    {replyTo&&quoteOf(replyTo)&&<div className="reply-target chat-reply">{quote(replyTo,true)}<IconBtn icon={X} size="sm" label={t('fe.chx.cancelReply')} onClick={()=>{setReplyTo(null);input.current?.focus({preventScroll:true});}}/></div>}
    <IconBtn icon={Plus} kind="ghost" label={t('fe.chx.attach')} disabled={!meta||!!out?.pending} onClick={()=>{setSheetErr('');setSheet('attach');}}/>
+   {couple&&acting?.kind==='couple'&&<ActingAv p={acting} size="xs"/>}
    <TextArea ref={input} bare grow={GROW} rows={1} maxLength={2000} value={text} onChange={e=>{setText(e.target.value);if(e.target.value.trim())typed();}}
-    placeholder={couple?t('fe.chx.messagePhCouple'):t('fe.chx.messagePh')} aria-label={t('fe.chx.message')} title={t('fe.chx.enterHint')} enterKeyHint="enter"
+    placeholder={couple?t('fe.chx.messagePhCouple'):t('fe.chx.messagePh')} aria-label={couple?t('fe.chx.messagePhCouple'):t('fe.chx.message')} title={t('fe.chx.enterHint')} enterKeyHint="enter"
     onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!coarse&&!e.nativeEvent.isComposing){e.preventDefault();send();}}}/>
    {/* An empty box offers a voice message instead of «Отправить» (hold to record). */}
-   {text.trim()||!meta?<IconBtn icon={SendHorizontal} kind="send" onClick={send} disabled={!meta||!text.trim()} label={t('fe.feed.send')}/>
+   {text.trim()||!meta?<IconBtn icon={SendHorizontal} kind="send" onClick={send} disabled={!meta||!text.trim()} label={couple?t('fe.fd.sendUs'):t('fe.feed.send')}/>
     :<VoiceRecorder onSend={v=>void deliverVoice(v)} onError={voiceError} disabled={voiceOut?.status==='sending'}/>}
   </div>}
   <FilePick ref={gallery} accept={PHOTO_TYPES.join(',')} onFiles={f=>pick(f[0])}/>

@@ -239,3 +239,9 @@ button.pill{cursor:pointer}
 
 /* The photo viewer is a layer of its own above the bars, the dock, the bottom buttons and the toasts. */
 .v21 .layer:has(>.viewer){z-index:70}
+/* FeedEvents («Скоро» in the feed): one compact tile per event, its «Скрыть» under it on the right */
+.v21 .k-fev{display:flex;flex-direction:column;gap:var(--s-1)}
+.v21 .k-fev+.k-fev{margin-top:var(--s-3)}
+.v21 .k-fev .k-fev-hide{align-self:flex-end}
+/* ActingAv in an input bar: the acting profile before the field, centred on the one-line box */
+.v21 .inputbar>.av{flex:none;align-self:flex-end;margin-bottom:7px}

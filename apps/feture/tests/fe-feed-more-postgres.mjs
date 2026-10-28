@@ -287,6 +287,31 @@ test('«Подписки» activity: grouped cards from people I follow, their v
   } finally { await pg.close(); }
 });
 
+test('«Подписки» activity: a burst of likes carries up to 20 things with what each post is made of, the count says the rest', async () => {
+  const { pg, db, call, person } = await setup();
+  try {
+    const a = await person('ua', 'Alex'), b = await person('ub', 'Kira'), c = await person('uc', 'Noa');
+    await call('ub', b, { action: 'follow.set', opId: op(), profileId: a, on: true });
+    const ids = [];
+    for (let i = 0; i < 22; i++) ids.push(await publish(call, 'uc', c, draft(`Пост Ноа номер ${i + 1}`)));
+    ids.push(await publish(call, 'uc', c, draft('Опрос Ноа', { poll: { question: 'Чай или кофе?', options: ['Чай', 'Кофе'] } })));
+    for (const p of ids) await like(call, 'ua', a, p);
+    const group = await communityOf(db, c);
+    await db.query(`insert into feture.community_member (community_id, profile_id, listed) values ($1, $2, true)`, [group, a]);
+    const r = await call('ub', b, { action: 'feed.list', tab: 'following', activity: ['likes', 'communities'] });
+    assert.equal(r.status, 200, JSON.stringify(r));
+    const likes = r.items.find(i => i.activity === 'likes');
+    assert.equal(likes.count, 23);
+    assert.equal(likes.items.length, 20);
+    assert.equal(likes.items[0].id, ids[22]); // newest first
+    assert.deepEqual([likes.items[0].poll, likes.items[0].photos, likes.items[0].videos, likes.items[0].thumb], [true, 0, 0, null]);
+    assert.equal(likes.items[1].poll, false);
+    assert.ok(!('audience' in likes.items[0]) && !('first_asset' in likes.items[0]) && !('owner_profile_id' in likes.items[0]));
+    const comm = r.items.find(i => i.activity === 'communities');
+    assert.deepEqual([comm.items[0].id, comm.items[0].members, comm.items[0].cover], [group, 2, null]);
+  } finally { await pg.close(); }
+});
+
 test('search filters: events by words and dates, communities by words and joining', async () => {
   const { pg, db, call, person } = await setup();
   try {
