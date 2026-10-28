@@ -7,6 +7,7 @@ import { enqueue } from '../outbox.mjs';
 import { needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
 import { avatarSrc, mediaDto } from '../media/assets.mjs';
 import { blockProfile } from './social.mjs';
+import { markRequestReported } from './chats.mjs';
 import { canWrite, coverOf } from './communities.mjs';
 import { PREMIUM_SQL, withFaces } from './faces.mjs';
 import { hasPhotoCheck } from './verification.mjs';
@@ -1149,6 +1150,8 @@ const run = {
        returning id, (xmax = 0) inserted`,
       [viewer.profileId, account.id, input.targetType, input.targetId, rev, input.reason, input.details, input.messageIds ?? null, snapshot ? JSON.stringify(snapshot) : null, input.targetType === 'conversation' ? ownerProfile : null]);
     if (r.inserted) await enqueue(q, 'moderation.report', ownerProfile, { reportId: r.id, reason: input.reason });
+    // A reported message request is closed for its recipient and counts against its sender's daily requests.
+    if (input.targetType === 'conversation') await markRequestReported(q, input.targetId, viewer.profileId);
     // The reporter stops seeing what they reported (V21 rpSend); blocking is optional.
     if (input.targetType === 'post') await q.query(`insert into feture.feed_hide (profile_id, kind, target_id) values ($1, 'post', $2) on conflict do nothing`, [viewer.profileId, input.targetId]);
     if (input.alsoBlock && ownerProfile) await blockProfile(q, viewer, ownerProfile);

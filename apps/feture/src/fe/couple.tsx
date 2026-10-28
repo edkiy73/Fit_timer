@@ -23,6 +23,7 @@ const preview=z.object({
  post:z.object({title:z.string().nullable().optional(),body:z.string().nullable().optional(),media:z.number().optional(),changed:z.boolean().optional()}).passthrough().optional(),
  event:evCard.optional(),rsvp:z.string().nullable().optional(),
  profile:z.object({id:z.uuid(),handle:z.string().nullable(),name:z.string().nullable()}).passthrough().nullable().optional(),scopes:z.array(z.string()).optional(),
+ message:z.object({body:z.string(),photo:z.boolean()}).optional(),
 }).passthrough().nullable();
 const approval=z.object({id:z.uuid(),kind:z.string(),targetId:z.uuid().nullable().optional(),change:z.record(z.string(),z.unknown()).nullable(),summary:z.array(z.unknown()).nullable(),
  mine:z.boolean(),state:z.enum(['pending','returned']).catch('pending'),comment:z.string().nullable().optional(),version:z.number().optional(),preview:preview.optional().catch(null),
@@ -35,9 +36,9 @@ export type Approval=z.infer<typeof approval>;
 export type CoupleBase={name:string|null,bio:string,photos:{id:string}[]};
 
 const PROFILE_KINDS=['profile.update','profile.photos','profile.setVisibility','interests.set'];
-const KINDS=[...PROFILE_KINDS,'post.publish','post.edit','event.submit','event.update','event.rsvp','event.apply','access.grant','private.on','community.create','community.join','link.propose','link.accept','link.visibility','location.set'];
-const FIELDS=['name','bio','handle','cityId','showAge','detailsVis','photos','discoverMode','acceptProfileLikes','requestsFrom','linksFrom','mentionsFrom','activityVis','showLikes'];
-const VALUES=['visible','hidden','all','matches','follow','followers','none'];
+const KINDS=[...PROFILE_KINDS,'post.publish','post.edit','event.submit','event.update','event.rsvp','event.apply','access.grant','private.on','community.create','community.join','link.propose','link.accept','link.visibility','location.set','chat.request'];
+const FIELDS=['name','bio','handle','cityId','showAge','detailsVis','photos','discoverMode','acceptProfileLikes','requestsFrom','linksFrom','mentionsFrom','activityVis','showLikes','messagesFrom'];
+const VALUES=['visible','hidden','all','matches','follow','followers','none','known'];
 const nameOf=(m:{name?:string|null,handle?:string|null}|undefined|null)=>m?(m.name||(m.handle?'@'+m.handle:'?')):'?';
 const kindTitle=(a:Approval,t:(k:string)=>string)=>t('fe.cw.kind.'+(KINDS.includes(a.kind)?a.kind:'other'));
 
@@ -179,6 +180,9 @@ function Preview({a,base}:{a:Approval,base?:CoupleBase|undefined}){
     time={d?d.toLocaleTimeString(lc,{hour:'2-digit',minute:'2-digit'}):undefined} title={e.title??''}/>
    {a.kind==='event.rsvp'&&p.rsvp&&<Note className="mt8">{t('fe.c6.rsvp.'+(['going','interested','not_going'].includes(p.rsvp)?p.rsvp:'other'))}</Note>}
   </>;}
+ // A message request from the couple: to whom, and the first message as it will go.
+ if(a.kind==='chat.request'&&p)return <ReviewPost byline={p.profile?<><Av name={nameOf(p.profile)} seed={p.profile.id} size="sm"/><div><b>{nameOf(p.profile)}</b>{p.profile.handle&&<small>@{p.profile.handle}</small>}</div></>:undefined}
+  meta={p.message?.photo?t('fe.c6.media',{n:1}):undefined}>{p.message?.body?<p>{p.message.body}</p>:null}</ReviewPost>;
  if(a.kind==='access.grant'&&p)return <ReviewPost byline={p.profile?<><Av name={nameOf(p.profile)} seed={p.profile.id} size="sm"/><div><b>{nameOf(p.profile)}</b>{p.profile.handle&&<small>@{p.profile.handle}</small>}</div></>:undefined}
   meta={t('fe.c6.accessNote')}><p>{(p.scopes??[]).map(s=>t('fe.c6.scope.'+s)!=='fe.c6.scope.'+s?t('fe.c6.scope.'+s):s).join(', ')||t('fe.c6.accessAll')}</p></ReviewPost>;
  return <Diff a={a} base={base}/>;

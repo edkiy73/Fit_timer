@@ -49,3 +49,9 @@ export const cancelledFor = (e, viewer) => `(${e}.organizer_profile_id = ${viewe
  * it concerns (`cancelledFor`). Callers add `feture.event_visible`. @param {string} e event alias @param {string} viewer (`$n`) */
 export const listedEvent = (e, viewer) => `(${e}.state = 'published' and ${e}.ends_at > now()
   or ${e}.state = 'cancelled' and ${e}.starts_at > now() and ${cancelledFor(e, viewer)})`;
+
+/** Message requests (owner 29.10.2026): a conversation `c` is, for the member row `cm`, a request someone else sent
+ * that is not answered yet (waiting, hidden or reported). Such a row is not a chat of the recipient: it lives in
+ * «Запросы» while waiting and is gone once hidden or reported; it never counts as unread or as a new match.
+ * @param {string} c conversation alias @param {string} cm conversation_member alias */
+export const incomingRequest = (c, cm) => `(${c}.origin = 'request' and ${c}.request_state <> 'accepted' and ${cm}.profile_id is distinct from ${c}.request_from)`;

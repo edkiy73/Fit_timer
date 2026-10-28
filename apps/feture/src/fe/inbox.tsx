@@ -21,7 +21,7 @@ const decideRes=z.object({ok:z.literal(true),items:z.array(decision)});
 const note=z.object({id:z.uuid(),type:z.string(),actor,data:z.record(z.string(),z.unknown()),label:z.string(),addressee:z.uuid().nullable().optional(),object:z.object({type:z.string(),id:z.uuid().nullable()}).nullable(),at:z.string(),read:z.boolean()});
 type Note=z.infer<typeof note>;
 const notesRes=z.object({ok:z.literal(true),items:z.array(note),next:z.string().nullable()});
-export const countsRes=z.object({ok:z.literal(true),decide:z.number(),notifications:z.number(),bell:z.number(),chats:z.number(),newMatches:z.number(),likes:z.number()});
+export const countsRes=z.object({ok:z.literal(true),decide:z.number(),notifications:z.number(),bell:z.number(),chats:z.number(),newMatches:z.number(),requests:z.number().default(0),likes:z.number()});
 const ok=z.object({ok:z.literal(true)}).passthrough();
 const revList=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),rev:z.number()}).passthrough())});
 const nameOf=(a:z.infer<typeof actor>)=>a?(a.name||(a.handle?'@'+a.handle:'?')):'FetUre';
@@ -43,7 +43,7 @@ export function BellButton(){
 /* ---- kinds (filters) and icons, as the prototype's inboxKind / NICO ---- */
 type Kind='access'|'likes'|'matches'|'replies'|'events'|'groups'|'pair'|'follows'|'links'|'posts'|'other';
 const FILTERS:('all'|Kind)[]=['all','access','likes','matches','replies','events','groups','pair','follows','links','posts','other'];
-const NOTE_KIND:Record<string,Kind>={grant:'access',like:'likes',match:'matches',reply:'replies',mention:'replies',follow:'follows',
+const NOTE_KIND:Record<string,Kind>={grant:'access',like:'likes',match:'matches',chatRequest:'matches',reply:'replies',mention:'replies',follow:'follows',
  postLike:'posts',notePublished:'posts',tagAnswered:'posts',postDisputed:'posts',postRestored:'posts',disputeResolved:'posts',revisionApproved:'posts',revisionRejected:'posts',contentRemoved:'posts',reportResolved:'posts',
  communityApproved:'groups',communityDeclined:'groups',communityMember:'groups',communityPublished:'groups',communityRejected:'groups',communityClosed:'groups',discussionRemoved:'groups',
  eventPublished:'events',eventRejected:'events',eventHidden:'events',eventApplicationApproved:'events',eventApplicationDeclined:'events',
@@ -51,7 +51,7 @@ const NOTE_KIND:Record<string,Kind>={grant:'access',like:'likes',match:'matches'
 const noteKind=(n:Note):Kind=>n.type.startsWith('pair.')?'pair':NOTE_KIND[n.type]??'other';
 const DECIDE_KIND:Record<string,Kind>={pinv:'pair',req:'access',capp:'groups',eapp:'events',link:'links',linkChange:'links',tag:'posts',joint:'pair',jointReturned:'pair'};
 const decideKind=(d:Decision):Kind=>DECIDE_KIND[d.kind]??'other';
-const NICO:Record<string,[LucideIcon,string]>={like:[Heart,'l'],match:[Heart,'l'],postLike:[Heart,'l'],follow:[Users,'v'],reply:[MessageCircle,'g'],mention:[AtSign,'v'],notePublished:[FileText,'v'],
+const NICO:Record<string,[LucideIcon,string]>={like:[Heart,'l'],match:[Heart,'l'],chatRequest:[MessageCircle,'v'],postLike:[Heart,'l'],follow:[Users,'v'],reply:[MessageCircle,'g'],mention:[AtSign,'v'],notePublished:[FileText,'v'],
  grant:[LockOpen,'g'],postDisputed:[EyeOff,'l'],postRestored:[Check,'g'],disputeResolved:[Check,'g'],revisionApproved:[Check,'g'],revisionRejected:[Shield,'l'],contentRemoved:[Shield,'l'],reportResolved:[Shield,'g'],
  communityApproved:[Users,'g'],communityDeclined:[Users,''],communityMember:[Users,'v'],communityPublished:[Check,'g'],communityRejected:[Shield,'l'],communityClosed:[Users,''],discussionRemoved:[Trash2,'l'],
  eventPublished:[Check,'g'],eventRejected:[Shield,'l'],eventHidden:[EyeOff,'l'],eventApplicationApproved:[Check,'g'],eventApplicationDeclined:[Calendar,''],
