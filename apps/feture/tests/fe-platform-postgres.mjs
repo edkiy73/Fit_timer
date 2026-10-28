@@ -34,7 +34,7 @@ async function setup() {
   await pg.exec(readFileSync(new URL('../supabase/migrations/20261028180000_fe_waves67.sql', import.meta.url), 'utf8').split('\n').find(l => l.startsWith('alter table feture.partner_approval')));
   // Video and voice on media_asset (the media part of 20261028190000_fe_media_av.sql; the chat part needs the chat tables).
   await pg.exec(readFileSync(new URL('../supabase/migrations/20261028190000_fe_media_av.sql', import.meta.url), 'utf8').split('-- «Прослушано»')[0]);
-  await pg.exec(readFileSync(new URL('../supabase/migrations/20261028230000_fe_video_edit.sql', import.meta.url), 'utf8'));
+  await pg.exec(readFileSync(new URL('../supabase/migrations/20261028231000_fe_video_edit.sql', import.meta.url), 'utf8'));
   await pg.exec('set role feture_api');
   return { pg, db: fromPglite(pg) };
 }
