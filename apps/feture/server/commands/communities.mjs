@@ -32,7 +32,7 @@ const PULSE = `(select max(p.published_at) from feture.post p where p.community_
   (select to_jsonb(m) from feture.media_asset m where m.id = c.cover_asset_id) cover_asset`;
 
 /** The cover photo as a public place shows it, or null. @param {import('../media/assets.mjs').MediaConfig} media @param {any} asset @param {string} viewerProfileId */
-async function coverOf(media, asset, viewerProfileId) {
+export async function coverOf(media, asset, viewerProfileId) {
   if (!asset || !media?.delivery) return null;
   const a = typeof asset === 'string' ? JSON.parse(asset) : asset;
   return mediaDto(media, a, { viewerProfileId, place: 'public', showExplicit: false }).catch(() => null);
