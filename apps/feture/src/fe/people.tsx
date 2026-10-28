@@ -19,7 +19,10 @@ import {catalogRes,CompatSummary,FollowCounts,MatchOverlay,PersonBio,PersonMenu,
  * only what the server returned: no invented matches, counters or scores. People search lives in the global search. */
 const media=z.object({src:z.record(z.string(),z.string()).nullable(),pending:z.boolean().optional()}).passthrough();
 const card=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),ages:z.array(z.number()),
- city:z.object({ru:z.string().nullable(),en:z.string().nullable()}).nullable(),avatar:media.nullable(),likedMe:z.boolean(),shared:z.number(),photoVerified:z.boolean().optional(),premium:z.boolean().optional()});
+ city:z.object({ru:z.string().nullable(),en:z.string().nullable()}).nullable(),avatar:media.nullable(),likedMe:z.boolean(),shared:z.number(),photoVerified:z.boolean().optional(),premium:z.boolean().optional(),
+ // Discover only: what the top card shows before it is scrolled (photos, follower counts, follow, private part).
+ photos:z.array(media).optional(),followers:z.number().optional(),following:z.number().optional(),iFollow:z.boolean().optional(),
+ private:z.object({exists:z.boolean(),open:z.boolean()}).optional()});
 type Card=z.infer<typeof card>;
 const deck=z.object({ok:z.literal(true),off:z.boolean(),closed:z.boolean().optional(),needsLocation:z.boolean().optional(),items:z.array(card)});
 const datingStatusRes=z.object({ok:z.literal(true),open:z.boolean(),notify:z.boolean()});
@@ -37,8 +40,21 @@ const cname=(c:{name:string|null,handle:string|null})=>c.name||(c.handle?'@'+c.h
 const fill=(s:string,vars:Record<string,string|number>)=>Object.entries(vars).reduce((a,[k,v])=>a.split('{'+k+'}').join(String(v)),s);
 const HeartF=(p:React.ComponentProps<typeof Heart>)=><Heart fill="currentColor" {...p}/>;
 const CSeg=Seg;
-// The swipe tip shows once per session, on touch devices only (prototype PPL-007).
-let deckCoachShown=false;
+/** The card's photos: the deck's own list when the server sends it, else the avatar (the profile's list once read). */
+const cardPhotos=(c:Card)=>{const l=(c.photos??[]).filter(m=>!m.pending&&m.src).map(m=>({card:m.src?.card??m.src?.full??m.src?.thumb??'',full:m.src?.full??m.src?.card??''})).filter(x=>x.card);
+ if(l.length)return l;const a=photo(c);return a?[{card:a,full:c.avatar?.src?.full??a}]:[];};
+/** Photos already asked for: the next cards' first photos load while the person still looks at the current one. */
+const preloaded=new Set<string>();
+const preload=(src:string|undefined)=>{if(!src||preloaded.has(src))return;preloaded.add(src);if(preloaded.size>300)preloaded.clear();const i=new Image();i.decoding='async';i.src=src;};
+/** The swipe tip shows once per account (prototype PPL-007), as a toast, so nothing on the screen moves. */
+const TIP_KEY='fe.tip.deck:';
+const tipSeen=(account:string)=>{try{return localStorage.getItem(TIP_KEY+account)==='1';}catch{return false;}};
+const markTip=(account:string)=>{try{localStorage.setItem(TIP_KEY+account,'1');}catch{/* no storage: once per visit */}};
+const tipShown=new Set<string>();
+/** The deck asks for the most the server gives (20) and for more when it is down to REFILL_AT: a deck read takes a
+ * second or two, so even quick swipes never meet an empty deck. The decisions still on their way are in the answer
+ * and are left out here. */
+const QUEUE=20,REFILL_AT=8;
 
 export function PeopleTab(){
  const {t}=useI18n();const {call,acting}=useFe();
@@ -95,11 +111,13 @@ function DiscoverFilter({initial,onClose,onApplied}:{initial:Filter,onClose:()=>
  const [where,setWhere]=useState<Where>(initial.placeMode==='nearby'?'nearby':initial.cityId?'city':'any');
  // «Рядом»: is an approximate place shared already (location.get); null while unknown.
  const [loc,setLoc]=useState<boolean|null>(null);const [geo,setGeo]=useState<''|'busy'|'denied'|'wait'>('');
- useEffect(()=>{call('location.get',{},locationRes).then(r=>setLoc(!!r.location)).catch(()=>setLoc(false));},[call]);
+ // A slow first read must not undo a place shared meanwhile (it left «Рядом» without its radius: D04).
+ const shared=useRef(false);
+ useEffect(()=>{call('location.get',{},locationRes).then(r=>{if(!shared.current)setLoc(!!r.location);}).catch(()=>{if(!shared.current)setLoc(false);});},[call]);
  const noPlace=where==='nearby'&&loc!==true;
  const share=async()=>{if(geo==='busy')return;setGeo('busy');
   try{const c=await coarsePosition();const r=await call('location.set',{opId:newOpId(),lat:c.lat,lon:c.lon},locationRes);
-   if(r.pending){setGeo('wait');return;}setLoc(true);setGeo('');}
+   if(r.pending){setGeo('wait');return;}shared.current=true;setLoc(true);setGeo('');}
   catch(e){if(e instanceof FeError)setError(e);setGeo('denied');}};
  const setWhereTo=(v:Where)=>{setWhere(v);setF(x=>v==='nearby'?{...x,placeMode:'nearby',cityId:null}:v==='any'?{...x,placeMode:'city',cityId:null}:{...x,placeMode:'city'});};
  const [cat,setCat]=useState<Catalog|null>(null);const [count,setCount]=useState<{count:number,capped:boolean}|null>(null);
@@ -204,44 +222,73 @@ function DiscoverFilter({initial,onClose,onApplied}:{initial:Filter,onClose:()=>
 }
 
 /* ---------- D03 deck ---------- */
-type Decision={id:string,dir:1|-1};
+type Decision={card:Card,dir:1|-1};
 
+/** The deck is a local queue: a swipe takes the top card away at once and sends the decision in the background (one
+ * request per swipe, in order, so «Вернуть» always meets the server's last decision); the queue is refilled before it
+ * runs out and the next cards' photos are loaded ahead, so there is never a reload between two people. */
 function Discover({reloadKey,onOff,filterOn,openFilter,likesN,toLikes,onLikes}:{reloadKey:number,onOff:(off:boolean)=>void,filterOn:number,openFilter:()=>void,likesN:number,toLikes:()=>void,onLikes:()=>void}){
- const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();
+ const {call,acting,state}=useFe();const {t}=useI18n();
  const [cards,setCards]=useState<Card[]|null>(null);const [off,setOff]=useState(false);const [error,setError]=useState<unknown>(null);
  const [closed,setClosed]=useState(false);const [needsLoc,setNeedsLoc]=useState(false);
  const [match,setMatch]=useState<{card:Card,conversationId?:string}|null>(null);const [toastNode,toast]=useToast();
- const [made,setMade]=useState<Decision[]>([]);const [tip,setTip]=useState(false);const [byFilter,setByFilter]=useState<number|null>(null);
+ const [made,setMade]=useState<Decision[]>([]);const [byFilter,setByFilter]=useState<number|null>(null);
+ const [filling,setFilling]=useState(false);const [settled,setSettled]=useState(0);
  const busy=useRef(false);const top=useRef<HTMLElement|null>(null);const next=useRef<HTMLElement|null>(null);const acts=useRef<HTMLDivElement>(null);
  const undoRef=useRef<()=>void>(()=>{});
- const load=useCallback((first?:string)=>{setError(null);call('discover.deck',{limit:10},deck).then(r=>{setOff(r.off);onOff(r.off);setClosed(!!r.closed);setNeedsLoc(!!r.needsLocation);
-  setCards(first?[...r.items.filter(c=>c.id===first),...r.items.filter(c=>c.id!==first)]:r.items);}).catch(e=>{setError(e);setCards(c=>c??[]);});},[call,onOff]);
- // A new filter (reloadKey) or another acting profile reloads the deck.
- useEffect(()=>{setCards(null);load();},[load,reloadKey,acting?.id]);
+ // Decided here (sent or on the way): a refill that still has them (the server has not recorded it yet) leaves them out.
+ const gone=useRef(new Set<string>());const chain=useRef<Promise<unknown>>(Promise.resolve());
+ const gen=useRef(0);const exhausted=useRef(false);const filling$=useRef(false);const pendingN=useRef(0);
+ const accountId=state.status==='ready'?state.boot.account.id:'';
+ const apply=(r:z.infer<typeof deck>)=>{setOff(r.off);onOff(r.off);setClosed(!!r.closed);setNeedsLoc(!!r.needsLocation);};
+ const load=useCallback(()=>{const g=++gen.current;setError(null);exhausted.current=false;
+  call('discover.deck',{limit:QUEUE},deck,{fresh:true}).then(r=>{if(g!==gen.current)return;apply(r);setCards(r.items.filter(c=>!gone.current.has(c.id)));})
+   .catch(e=>{if(g!==gen.current)return;setError(e);setCards(c=>c??[]);});
+ },[call,onOff]);
+ const refill=useCallback(()=>{if(filling$.current||exhausted.current)return;const g=gen.current;filling$.current=true;setFilling(true);
+  call('discover.deck',{limit:QUEUE},deck,{fresh:true}).then(r=>{if(g!==gen.current)return;apply(r);
+   setCards(cur=>{const have=new Set((cur??[]).map(x=>x.id));const add=r.items.filter(x=>!have.has(x.id)&&!gone.current.has(x.id));if(!add.length)exhausted.current=true;return [...(cur??[]),...add];});})
+   .catch(()=>{exhausted.current=true;}).finally(()=>{filling$.current=false;setFilling(false);});
+ },[call,onOff]);
+ // A new filter (reloadKey) or another acting profile starts over.
+ useEffect(()=>{gone.current=new Set();setMade([]);setCards(null);load();},[load,reloadKey,acting?.id]);
+ // Down to the last few: ask for more. A decision that lands may free a place the last answer did not have.
+ useEffect(()=>{exhausted.current=false;},[settled]);
+ useEffect(()=>{if(cards&&cards.length<=REFILL_AT&&!off&&!closed)refill();},[cards,settled,refill,off,closed]);
+ // The next cards' photos load while the current one is looked at.
+ useEffect(()=>{for(const c of (cards??[]).slice(0,6))preload(cardPhotos(c)[0]?.card);},[cards]);
  // When the filters are what empties Discover, say so (PPL-013): the count without them.
- useEffect(()=>{if(!cards||cards.length||!filterOn){setByFilter(null);return;}
-  call('discover.count',{filter:DF_DEFAULT},countRes).then(r=>setByFilter(r.count)).catch(()=>setByFilter(null));},[cards,filterOn,call]);
- useEffect(()=>{if(!cards?.length||deckCoachShown||!matchMedia('(any-pointer:coarse)').matches)return;deckCoachShown=true;setTip(true);
-  const x=setTimeout(()=>setTip(false),2900);return ()=>clearTimeout(x);},[cards]);
+ const empty=!!cards&&!cards.length&&!filling&&!pendingN.current;
+ useEffect(()=>{if(!empty||!filterOn){setByFilter(null);return;}
+  call('discover.count',{filter:DF_DEFAULT},countRes).then(r=>setByFilter(r.count)).catch(()=>setByFilter(null));},[empty,filterOn,call]);
+ // The tip: once per account, as a toast over the screen.
+ const any=!!cards?.length;
+ useEffect(()=>{if(!any||!accountId||tipShown.has(accountId)||tipSeen(accountId))return;tipShown.add(accountId);markTip(accountId);
+  toast(t(acting?.kind==='couple'?'fe.px.deck.tipUs':'fe.px.deck.tip'));},[any,accountId,toast,t,acting?.kind]);
  const fly=(dir:number)=>{const c=top.current;if(!c)return;c.classList.add('fly');c.style.transform=`translateX(${dir*130}%) rotate(${dir*16}deg)`;c.style.setProperty(dir>0?'--l':'--n','1');
   const n=next.current;if(n){n.style.transform='';n.classList.add('promote');}};
- const reset=()=>{const c=top.current;if(!c)return;c.classList.remove('fly');c.style.transform='';c.style.setProperty('--l','0');c.style.setProperty('--n','0');next.current?.classList.remove('promote');};
  const decide=useCallback(async(dir:1|-1)=>{
-  const c=cards?.[0];if(!c||busy.current)return;busy.current=true;fly(dir);
-  try{
-   const [r]=await Promise.all([call('discover.decide',{opId:newOpId(),profileId:c.id,decision:dir>0?'like':'pass'},decided),new Promise(res=>setTimeout(res,290))]);
-   // The deck holds a page of ten: when it runs out, ask the server for the next ones instead of «nobody left».
-   const rest=(cards??[]).filter(x=>x.id!==c.id);if(rest.length)setCards(rest);else{setCards(null);load();}
-   setMade(m=>[...m,{id:c.id,dir}]);
+  const c=cards?.[0];if(!c||busy.current)return;busy.current=true;fly(dir);gone.current.add(c.id);
+  const g=gen.current;
+  const sent=chain.current.catch(()=>{}).then(()=>call('discover.decide',{opId:newOpId(),profileId:c.id,decision:dir>0?'like':'pass'},decided));
+  chain.current=sent;pendingN.current++;
+  await new Promise(res=>setTimeout(res,290));
+  setCards(cur=>(cur??[]).filter(x=>x.id!==c.id));setMade(m=>[...m,{card:c,dir}]);busy.current=false;
+  sent.then(r=>{pendingN.current--;if(g!==gen.current)return;setSettled(n=>n+1);
    if(c.likedMe||r.state==='matched')onLikes();
    if(r.state==='matched')setMatch({card:c,...(r.conversationId?{conversationId:r.conversationId}:{})});
    else if(dir>0)toast(fill(t(acting?.kind==='couple'?'fe.px.lkd.sentUs':'fe.px.lkd.sent'),{name:cname(c)}),false,{label:t('fe.mx.undo'),fn:()=>undoRef.current()});
-  }catch(e){reset();toast(pxError(e,t),true);}finally{busy.current=false;}
- },[cards,call,t,toast,load,onLikes,acting?.kind]);
+  },e=>{pendingN.current--;if(g!==gen.current)return;setSettled(n=>n+1);
+   // Already decided (another device, a retried request) or no longer in Discover: the card is gone either way.
+   if(e instanceof FeError&&(e.code==='conflict'||e.code==='not_found'))return;
+   gone.current.delete(c.id);setMade(m=>m.filter(x=>x.card.id!==c.id));setCards(cur=>[c,...(cur??[]).filter(x=>x.id!==c.id)]);toast(pxError(e,t),true);});
+ },[cards,call,t,toast,onLikes,acting?.kind]);
  // The server allows one free undo a day (shared with «Вернуть» in the history) and says so when it is spent.
  const undo=async()=>{
   if(busy.current)return;busy.current=true;
-  try{const r=await call('discover.undo',{opId:newOpId()},undone);setMade(m=>m.filter(x=>x.id!==r.profileId));toast(t('fe.px.undo.back'));load(r.profileId);}
+  try{await chain.current.catch(()=>{});const r=await call('discover.undo',{opId:newOpId()},undone);const back=made.find(x=>x.card.id===r.profileId)?.card;
+   setMade(m=>m.filter(x=>x.card.id!==r.profileId));gone.current.delete(r.profileId);toast(t('fe.px.undo.back'));
+   if(back)setCards(cur=>[back,...(cur??[]).filter(x=>x.id!==back.id)]);else load();}
   catch(e){if(e instanceof FeError&&e.code==='premium_required')openPaywall('undo');else toast(pxError(e,t),true);}finally{busy.current=false;}
  };
  undoRef.current=()=>void undo();
@@ -251,21 +298,23 @@ function Discover({reloadKey,onOff,filterOn,openFilter,likesN,toLikes,onLikes}:{
  const box=(node:ReactNode)=><><View>{node}</View>{toastNode}</>;
  const overlay=match&&<MatchOverlay other={{id:match.card.id,name:cname(match.card),src:photo(match.card)}} conversationId={match.conversationId} onClose={()=>setMatch(null)}/>;
  if(error&&!cards?.length)return box(<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>load()}>{t('fe.retry')}</Btn></Empty>);
- if(cards===null)return <div className="view deckmode"><div className="deck"><div className="pc top fe-pc-skel"><div className="pc-ph"><i className="sk sk-media"/></div></div></div>{toastNode}{overlay}</div>;
+ const skel=<div className="view deckmode"><div className="deck"><div className="pc top fe-pc-skel"><div className="pc-ph"><i className="sk sk-media"/></div></div></div>{toastNode}{overlay}</div>;
+ if(cards===null)return skel;
  if(closed)return box(<DatingSoon toast={toast}/>);
  if(off)return box(<DatingOff onChanged={()=>{setCards(null);load();}} toast={toast}/>);
  const [c,nx]=cards;
+ // The last decisions are still on their way: they may free more people, so no «nobody left» yet.
+ if(!c&&(filling||pendingN.current>0))return skel;
  if(!c&&needsLoc)return box(<Empty top icon={LocateFixed} title={t('fe.w7.df.locGone')} text={t('fe.w7.df.locGoneText')}><Btn onClick={openFilter}>{t('fe.px.empty.change')}</Btn></Empty>);
  if(!c)return <>{box(<DeckEmpty byFilter={filterOn?byFilter:null} filterOn={filterOn} openFilter={openFilter} likesN={likesN} toLikes={toLikes}/>)}{overlay}</>;
  return <div className="view deckmode">
-  {tip&&<p className="deck-tip" role="status"><Info/><span>{t(acting?.kind==='couple'?'fe.px.deck.tipUs':'fe.px.deck.tip')}</span></p>}
   <div className="deck">
    {nx&&<NextCard key={nx.id} c={nx} cardRef={next}/>}
    <TopCard key={c.id} c={c} cardRef={top} nextRef={next} actsRef={acts} onDecide={decide} toast={toast}/>
    <div className="acts onphoto" ref={acts}>
     <button type="button" className={'act undo'+(made.length?'':' off')} aria-label={t('fe.people.undo')} onClick={undo}><Undo2/></button>
     <button type="button" className="act pass" aria-label={t('fe.people.pass')} onClick={()=>void decide(-1)}><X/></button>
-    <KeyAct key={c.id} id={c.id} cardRef={top}/>
+    <KeyAct key={c.id} id={c.id} known={c.private} cardRef={top}/>
     <button type="button" className="act like" aria-label={t(acting?.kind==='couple'?'fe.px.deck.likeUs':'fe.px.deck.like')} onClick={()=>void decide(1)}><HeartF/></button>
    </div>
   </div>
@@ -275,9 +324,10 @@ function Discover({reloadKey,onOff,filterOn,openFilter,likesN,toLikes,onLikes}:{
 
 /** The deck's key button (deckInner `act req`): only when the person has a private part; it scrolls the card to it,
  * where «Попросить доступ» (or what is already open) lives. */
-function KeyAct({id,cardRef}:{id:string,cardRef:React.RefObject<HTMLElement|null>}){
- const {t}=useI18n();const p=usePrivate(id);
- if(!p?.exists)return null;const open=(p.scopes??[]).length>0;const label=t(open?'fe.px.deck.privOpen':'fe.px.deck.privAsk');
+function KeyAct({id,known,cardRef}:{id:string,known?:{exists:boolean,open:boolean}|undefined,cardRef:React.RefObject<HTMLElement|null>}){
+ const {t}=useI18n();const p=usePrivate(id,!!known);
+ const exists=known?known.exists:!!p?.exists;
+ if(!exists)return null;const open=known?known.open:(p?.scopes??[]).length>0;const label=t(open?'fe.px.deck.privOpen':'fe.px.deck.privAsk');
  const go=()=>{const c=cardRef.current;const v=c?.querySelector('.vault');if(!c||!v)return;
   c.scrollTo({top:c.scrollTop+v.getBoundingClientRect().top-c.getBoundingClientRect().top-12,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});};
  return <button type="button" className="act req" aria-label={label} title={label} onClick={go}><KeyRound/></button>;
@@ -298,7 +348,7 @@ function plural5(t:(k:string)=>string,locale:string,base:string,n:number){const 
 function NextCard({c,cardRef}:{c:Card,cardRef:React.RefObject<HTMLElement|null>}){
  const {locale}=useI18n();const city=c.city?(locale==='en'?c.city.en||c.city.ru:c.city.ru||c.city.en):null;
  return <article ref={cardRef as React.RefObject<HTMLElement>} className="pc next" inert aria-hidden="true">
-  <div className="pc-ph"><CardPhoto c={c} src={photo(c)}/><CardTags c={c}/>
+  <div className="pc-ph"><CardPhoto c={c} src={cardPhotos(c)[0]?.card??null}/><CardTags c={c}/>
    <div className="pc-info"><PersonName name={cname(c)} age={c.ages.join(' · ')}><NameBadges p={c}/></PersonName>
     {city&&<div className="pc-who"><span className="pl"><MapPin/>{city}</span></div>}</div>
   </div>
@@ -311,17 +361,22 @@ function TopCard({c,cardRef,nextRef,actsRef,onDecide,toast}:{c:Card,cardRef:Reac
  actsRef:React.RefObject<HTMLDivElement|null>,onDecide:(dir:1|-1)=>void,toast:PxToast}){
  const {call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();
  const [p,setP]=useState<PersonProfile|null>(null);const [ix,setIx]=useState(0);const [view,setView]=useState<number|null>(null);
- const [rel,setRel]=useRelation(c.id);
- useEffect(()=>{call('profile.get',{profileId:c.id},personProfileRes).then(r=>setP(r.profile)).catch(()=>{});},[call,c.id]);
- const photos=p?p.photos.filter(m=>!m.pending&&m.src).map(m=>({card:m.src?.card??m.src?.full??m.src?.thumb??'',full:m.src?.full??m.src?.card??''})):[];
- const list=photos.length?photos:photo(c)?[{card:photo(c)!,full:c.avatar?.src?.full??photo(c)!}]:[];
+ // What is under the photo (bio, compatibility, posts, the private part) is read only once the card is scrolled:
+ // a swipe costs the decision alone.
+ const [deep,setDeep]=useState(false);
+ const known=c.followers!=null?{followers:c.followers,following:c.following??0,iFollow:!!c.iFollow,liked:false,mutual:false}:null;
+ const [rel,setRel]=useRelation(c.id,{known,skip:!deep});
+ useEffect(()=>{if(!deep)return;call('profile.get',{profileId:c.id},personProfileRes).then(r=>setP(r.profile)).catch(()=>{});},[call,c.id,deep]);
+ const photos=!c.photos&&p?p.photos.filter(m=>!m.pending&&m.src).map(m=>({card:m.src?.card??m.src?.full??m.src?.thumb??'',full:m.src?.full??m.src?.card??''})):[];
+ const list=photos.length?photos:cardPhotos(c);
+ useEffect(()=>{for(const x of list.slice(1,3))preload(x.card);},[list.length>1?list[1]!.card:'']);
  const i=Math.min(ix,Math.max(0,list.length-1));const city=c.city?(locale==='en'?c.city.en||c.city.ru:c.city.ru||c.city.en):null;
  const nudge=useRef(0);
  const step=(d:number)=>{const n=i+d;const el=cardRef.current;if(n<0||n>=list.length){if(el){el.classList.remove('nudge-l','nudge-r');void el.offsetWidth;el.classList.add(d<0?'nudge-l':'nudge-r');}return;}setIx(n);};
  // initDeck: pointer drag on the card, the like/pass stamps follow the distance; a fast flick counts too.
  useEffect(()=>{const el=cardRef.current;if(!el)return;
   let sx=0,sy=0,t0=0,dx=0,mode:''|'x'|'y'='',pid:number|null=null;
-  const onScroll=()=>{actsRef.current?.classList.toggle('onphoto',el.scrollTop<el.clientHeight*.55);};
+  const onScroll=()=>{actsRef.current?.classList.toggle('onphoto',el.scrollTop<el.clientHeight*.55);if(el.scrollTop>24)setDeep(true);};
   const down=(e:PointerEvent)=>{if(e.button>0||(e.target as HTMLElement).closest('button,a,input,textarea,select'))return;sx=e.clientX;sy=e.clientY;t0=e.timeStamp;dx=0;mode='';pid=e.pointerId;};
   const move=(e:PointerEvent)=>{if(pid!==e.pointerId)return;const mx=e.clientX-sx,my=e.clientY-sy;const nx=nextRef.current;
    if(!mode){if(Math.abs(mx)>10&&Math.abs(mx)>Math.abs(my)*1.2){mode='x';el.setPointerCapture(pid);el.classList.add('drag');nx?.classList.add('drag');}else if(Math.abs(my)>10&&Math.abs(my)>Math.abs(mx)*1.2)mode='y';}
@@ -357,7 +412,7 @@ function TopCard({c,cardRef,nextRef,actsRef,onDecide,toast}:{c:Card,cardRef:Reac
    </div>
   </div>
   <div className="pc-body pc-full">
-   {p&&<><PersonBio p={p}/><div className="mt12"><CompatSummary profileId={c.id}/></div><ProfileBody p={p} onOpen={setView}/></>}
+   {deep&&p&&<><PersonBio p={p}/><div className="mt12"><CompatSummary profileId={c.id}/></div><ProfileBody p={p} onOpen={setView}/></>}
    <div className="pc-foot"><FollowBtn id={c.id} name={name} rel={rel} setRel={setRel} toast={toast}/><Btn kind="soft" onClick={()=>navigate('/n/people/'+c.id)}>{t('fe.px.deck.full')}</Btn></div>
   </div>
   {view!==null&&<PhotoViewer srcs={list.map(x=>x.full)} index={view} onClose={()=>setView(null)}/>}

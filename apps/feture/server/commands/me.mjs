@@ -275,7 +275,7 @@ const run = {
     return state === 'ok' ? { available: true } : { available: false, reason: state };
   },
 
-  async 'account.create'(q, { account, input, cfg, coreAccountHash }) {
+  async 'account.create'(q, { account, input, cfg, coreAccountHash, coreQa }) {
     const [acc] = await q.query(
       'select person_profile_id, coalesce(age_verified_until > now(), false) verified from feture.account where id = $1 for update', [account.id]);
     if (acc.person_profile_id) fail(409, 'conflict', { state: 'registered' });
@@ -312,8 +312,8 @@ const run = {
     // Owner 28.10.2026: a new account starts outside Discover; it is switched on with a photo (onboarding or «Видимость»).
     await q.query(`insert into feture.profile_settings (profile_id, discover_mode) values ($1, 'off')`, [profileId]);
     await q.query(
-      `update feture.account set person_profile_id = $2, birth_date = $3, news_opt_in = $4, updated_at = now() where id = $1`,
-      [account.id, profileId, input.birthDate, input.newsOptIn]);
+      `update feture.account set person_profile_id = $2, birth_date = $3, news_opt_in = $4, qa = $5, updated_at = now() where id = $1`,
+      [account.id, profileId, input.birthDate, input.newsOptIn, !!coreQa]);
     for (const d of docs) {
       await q.query(
         `insert into feture.consent (account_id, document_version_id, document_key, content_hash, locale) values ($1, $2, $3, $4, $5) on conflict do nothing`,

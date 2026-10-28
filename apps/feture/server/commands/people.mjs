@@ -5,7 +5,7 @@ import { enqueue } from '../outbox.mjs';
 import { needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
 import { cards } from './discover.mjs';
 import { acceptsMention } from '../sql-rules.mjs';
-import { requireUnrestricted } from '../profiles.mjs';
+import { qaProfile, requireUnrestricted } from '../profiles.mjs';
 import { withFaces } from './faces.mjs';
 import { otherProfile } from './access.mjs';
 
@@ -119,7 +119,7 @@ const run = {
       `select p.id, ${acceptsMention('p', '$1')} mentionable from feture.profile p
        where p.state = 'active' and p.id <> $1 and (lower(p.handle) like $2 || '%' or lower(p.name) like $2 || '%') and not feture.blocked($1, p.id)
          and not feture.restricted(p.id)
-       order by (lower(p.handle) = $3) desc, lower(p.handle) limit 20`, [viewer.profileId, prefix, input.q.toLowerCase()]);
+       order by (lower(p.handle) = $3) desc, (${qaProfile('p.id')} and not ${qaProfile('$1')}), lower(p.handle) limit 20`, [viewer.profileId, prefix, input.q.toLowerCase()]);
     // `mentionable`: whether an @mention by the acting profile reaches the person (their «Кто может упоминать»), so the
     // mention picker can say «без уведомления» before the post goes out.
     const can = new Map(rows.map(r => [r.id, !!r.mentionable]));

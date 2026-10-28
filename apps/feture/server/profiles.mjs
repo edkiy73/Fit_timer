@@ -54,3 +54,8 @@ export async function myProfiles(q, accountId) {
      order by (p.kind = 'person') desc, p.created_at`,
     [accountId]);
 }
+
+/** SQL: profile `expr` belongs to an e2e persona account (feture.account.qa, set at account.create from a
+ * qa-…@feture.test login). Discover keeps them away from everyone else; qa viewers still meet each other.
+ * @param {string} expr */
+export const qaProfile = expr => `exists (select 1 from feture.profile_member qm join feture.account qa on qa.id = qm.account_id where qm.profile_id = ${expr} and qa.qa)`;
