@@ -79,16 +79,19 @@ const likeRes=z.object({ok:z.literal(true),state:z.string().optional(),conversat
 export type Relation={followers:number,following:number,iFollow:boolean,liked:boolean,mutual:boolean};
 /** Counts are the length of the lists P10 opens (the server gives the newest 50; more shows as «50+»). */
 export const countWord=(n:number)=>n>=FOLLOW_PAGE?FOLLOW_PAGE+'+':String(n);
-export function useRelation(id:string){
- const {call,acting}=useFe();const [rel,setRel]=useState<Relation|null>(null);
- const load=useCallback(()=>{if(!acting||!id)return;
+/** `known`: the relation already in hand (a Discover card carries its counts), so nothing is read; `skip`: not yet
+ * (a deck card reads it only once someone scrolls into it). */
+export function useRelation(id:string,opts:{known?:Relation|null|undefined,skip?:boolean}={}){
+ const {call,acting}=useFe();const known=opts.known??null;const [rel,setRel]=useState<Relation|null>(known);
+ const knownRef=useRef(known);knownRef.current=known;const has=known!==null;const skip=!!opts.skip;
+ const load=useCallback(()=>{if(!acting||!id)return;if(knownRef.current){setRel(knownRef.current);return;}if(skip)return;
   Promise.all([call('profile.followers',{profileId:id},followersRes),call('profile.followers',{profileId:id,following:true},followersRes),
    call('profile.followers',{profileId:acting.id,following:true},followersRes).catch(()=>null),
    call('likes.outgoing',{},withProfile).catch(()=>null),call('matches.list',{},withProfile).catch(()=>null)])
    .then(([a,b,mine,out,m])=>setRel({followers:a.items.length,following:b.items.length,
     iFollow:!!mine?.items.some(x=>x.id===id)||a.items.some(x=>x.id===acting.id),
-    liked:!!out?.items.some(x=>x.profile.id===id),mutual:!!m?.items.some(x=>x.profile.id===id)})).catch(()=>{});},[call,acting,id]);
- useEffect(()=>{setRel(null);load();},[load]);
+    liked:!!out?.items.some(x=>x.profile.id===id),mutual:!!m?.items.some(x=>x.profile.id===id)})).catch(()=>{});},[call,acting,id,skip]);
+ useEffect(()=>{setRel(knownRef.current);load();},[load,has]);
  return [rel,setRel,load] as const;
 }
 
@@ -259,9 +262,9 @@ const privRes=z.object({ok:z.literal(true),exists:z.boolean(),own:z.boolean().op
  text:z.string().nullable().optional(),media:z.array(media.extend({kind:z.string().optional()})).optional(),available:z.array(z.string()).optional(),canRequest:z.boolean().optional(),reason:z.string().nullable().optional()}).passthrough();
 type Priv=z.infer<typeof privRes>;
 /** Whether a profile has a private part and what of it is open to the viewer; the same read as PrivateVault's. */
-export function usePrivate(profileId:string){
+export function usePrivate(profileId:string,skip=false){
  const {call}=useFe();const [p,setP]=useState<Priv|null>(null);
- useEffect(()=>{setP(null);call('private.get',{profileId},privRes).then(setP).catch(()=>{});},[call,profileId]);
+ useEffect(()=>{setP(null);if(skip)return;call('private.get',{profileId},privRes).then(setP).catch(()=>{});},[call,profileId,skip]);
  return p;
 }
 const postsRes=z.object({ok:z.literal(true),items:z.array(z.lazy(()=>postSchema)),next:z.string().nullable().optional()}).passthrough();

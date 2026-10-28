@@ -17,14 +17,19 @@ export const filterFields = z.strictObject({
   genders: codes, orients: codes, formats: codes, seeks: codes, roles: codes, topics: codes,
 }).refine(v => v.ageMin <= v.ageMax, { message: 'age_range', path: ['ageMin'] });
 const source = z.enum(['discover', 'profile', 'likes']);
+export const DECIDE_RATES = { like: { kind: 'discover.decide', max: 500, window: '1 day' }, pass: { kind: 'discover.pass', max: 5000, window: '1 day' } };
+/** @param {{decision: 'like' | 'pass'}} input */
+const decideRate = input => DECIDE_RATES[input.decision];
 
 export const discoverCommands = {
   'discover.filter': { profile: true, write: false, input: z.strictObject({}) },
   'discover.setFilter': { profile: true, write: true, input: z.strictObject({ opId, filter: filterFields }) },
   'discover.count': { profile: true, write: false, rate: { kind: 'discover.count', max: 300, window: '1 day' }, input: z.strictObject({ filter: filterFields }) },
   'discover.deck': { profile: true, write: false, input: z.strictObject({ limit: z.int().min(1).max(20).default(10) }) },
+  // Swiping at a browsing pace never meets a limit (owner 28.10.2026): a pass is cheap (5000 a day, abuse only), a like
+  // reaches someone, so 500 a day. Both are per day, never per-minute bursts (the account's 120 requests a minute stay).
   'discover.decide': {
-    profile: true, write: true, rate: { kind: 'discover.decide', max: 1000, window: '1 day' },
+    profile: true, write: true, rate: decideRate,
     input: z.strictObject({ opId, profileId: id, decision: z.enum(['like', 'pass']) }),
   },
   'discover.undo': { profile: true, write: true, input: z.strictObject({ opId }) },
