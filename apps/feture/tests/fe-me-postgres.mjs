@@ -68,7 +68,7 @@ test('registration: catalog, nickname rules, under-18 keeps only a marker, docum
     assert.deepEqual([taken.status, taken.field], [409, 'handle']);
 
     const [s] = await db.query('select * from feture.profile_settings where profile_id = $1', [ok.profileId]);
-    assert.deepEqual([s.discover_mode, s.private_on, s.requests_from], ['visible', true, 'all']); // AUTH-019 defaults
+    assert.deepEqual([s.discover_mode, s.private_on, s.requests_from], ['off', true, 'all']); // defaults; Discover off until switched on with a photo (owner 28.10.2026)
     const [d] = await db.query('select details_vis from feture.profile_details where profile_id = $1', [ok.profileId]);
     assert.equal(d.details_vis, 'only'); // AUTH-016: «О тебе» starts private
 
@@ -98,6 +98,11 @@ test('onboarding and profile views: own vs others, details visibility, age, nick
     assert.deepEqual([bad.status, bad.fields], [400, ['genders']]);
     const done = await call('ua', a, { action: 'onboarding.complete', opId: op(), detailsVis: 'only', genders: ['woman'], orients: ['bi'], roles: ['switch'], formats: ['open'], seeks: ['chat'], status: 'single', discover: 'visible' });
     assert.deepEqual([done.status, done.discoverVisible, done.photoNeeded], [200, false, true]);
+    // Owner 28.10.2026: Discover stays off when sign-up does not choose it (the field may be left out).
+    const c = await person('uc', 'Noa', { discover: null });
+    const quiet = await call('uc', c, { action: 'onboarding.complete', opId: op(), detailsVis: 'only', genders: [], orients: [], roles: [], formats: [], seeks: [], status: null });
+    assert.deepEqual([quiet.status, quiet.discoverVisible, quiet.photoNeeded], [200, false, false]);
+    assert.equal((await call('uc', c, { action: 'profile.settings' })).settings.discoverMode, 'off');
     assert.equal((await call('ua', null, { action: 'session.bootstrap' })).account.onboarded, true);
 
     const own = (await call('ua', a, { action: 'profile.get', profileId: a })).profile;

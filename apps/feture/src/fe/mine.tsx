@@ -15,7 +15,7 @@ import {faceFields,NameBadges} from './faces';
 
 /** V21 X01 «Моё» (`meMineLayer()`): only lists — posts (drafts on the second line), events, followers, saved and what
  * others shared with me; each row opens its own screen (F10, E10, P10, G04, P07) with the counts from the server. */
-const posts=z.object({ok:z.literal(true),items:z.array(postSchema)});
+const posts=z.object({ok:z.literal(true),items:z.array(z.lazy(()=>postSchema))});
 const ev=z.object({id:z.uuid(),title:z.string(),format:z.string(),starts_at:z.string(),state:z.string()}).passthrough();
 const evs=z.object({ok:z.literal(true),going:z.array(ev),interested:z.array(ev),organizing:z.array(ev),applications:z.array(ev)}).passthrough();
 const saved=z.object({ok:z.literal(true),items:z.array(z.object({kind:z.string(),target_id:z.string(),created_at:z.string()}))});
@@ -150,10 +150,10 @@ function Saved(){
 }
 
 // F10 / G04 (screens behind «Мои публикации» and «Сохранённое»).
-const postsRev=z.object({ok:z.literal(true),items:z.array(postSchema),revisions:z.array(z.object({id:z.uuid(),post_id:z.uuid(),created_at:z.string()}).passthrough()).optional(),
- pendingEdits:z.array(savedEdit).optional()});
+const postsRev=z.object({ok:z.literal(true),items:z.array(z.lazy(()=>postSchema)),revisions:z.array(z.object({id:z.uuid(),post_id:z.uuid(),created_at:z.string()}).passthrough()).optional(),
+ pendingEdits:z.array(z.lazy(()=>savedEdit)).optional()});
 const savedRes=saved;
-const onePost=z.object({ok:z.literal(true),post:postSchema});
+const onePost=z.object({ok:z.literal(true),post:z.lazy(()=>postSchema)});
 const oneEvent=z.object({ok:z.literal(true),event:z.object({id:z.uuid(),title:z.string(),kind:z.string(),format:z.enum(['online','offline']),area:z.string().nullable(),startsAt:z.string(),state:z.string()}).passthrough()});
 
 /* ---------- F10 «Мои публикации» ---------- */

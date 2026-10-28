@@ -1,11 +1,10 @@
 import {Fragment,useCallback,useEffect,useRef,useState,type CSSProperties,type ReactNode} from 'react';
-import {createPortal} from 'react-dom';
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Check,ChevronLeft,ChevronRight,Link as LinkIcon,Undo2,Users,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Ask,Av,Btn,Card,Empty,H,IconBtn,Note,PhotoTrack,Row,Sheet,Skel,VideoBadge,type Slide} from './kit';
+import {Ask,Av,Btn,Card,Empty,H,IconBtn,Layer,Note,PhotoTrack,Row,Sheet,Skel,VideoBadge,useBackClose,type Slide} from './kit';
 import {useFe} from './session';
 import {useToast} from './toast';
 
@@ -60,7 +59,9 @@ function Mention({handle,id}:{handle:string,id:string}){
  return <span className="mention" role="link" tabIndex={0} onClick={open} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();open(e);}}}>@{handle}</span>;
 }
 
-export function RichText({text,className,mentions}:{text:string,className?:string,mentions?:MentionRef[]|undefined}){
+/** `images`: an article's pictures (`![](media:<id>)` lines) — the caller draws the post's own media by id; a line
+ * whose picture is not there (hidden, still in review) shows nothing. */
+export function RichText({text,className,mentions,images}:{text:string,className?:string,mentions?:MentionRef[]|undefined,images?:((id:string)=>ReactNode)|undefined}){
  const {t}=useI18n();const [link,setLink]=useState<string|null>(null);
  const lines=text.split('\n');const blocks:ReactNode[]=[];let para:string[]=[];let list:{t:'ul'|'ol',items:string[]}|null=null;let k=0;
  const il=(s:string)=><Inline s={s} onLink={setLink} mentions={mentions}/>;
@@ -68,6 +69,7 @@ export function RichText({text,className,mentions}:{text:string,className?:strin
  const flushL=()=>{if(list){const l=list;const T=l.t;blocks.push(<T key={k++}>{l.items.map((x,i)=><li key={i}>{il(x)}</li>)}</T>);list=null;}};
  for(let i=0;i<lines.length;i++){const l=lines[i]!;let m:RegExpMatchArray|null;
   if(!l.trim()){flushP();flushL();continue;}
+  if((m=l.trim().match(/^!\[[^\]\n]{0,120}\]\(media:([0-9a-f-]{36})\)$/))){flushP();flushL();const img=images?.(m[1]!);if(img)blocks.push(<Fragment key={k++}>{img}</Fragment>);continue;}
   if(/^\\([-*]|\d+[.)]|>|#{1,3})\s/.test(l)){flushL();para.push(l.slice(1));continue;}
   if((m=l.match(/^\s*[-*]\s+(.*)/))||(m=l.match(/^\s*\d+[.)]\s+(.*)/))){const tp=/^\s*\d/.test(l)?'ol':'ul';flushP();if(list&&list.t!==tp)flushL();list??={t:tp,items:[]};list.items.push(m[1]!);continue;}
   flushL();
@@ -85,7 +87,7 @@ export function RichText({text,className,mentions}:{text:string,className?:strin
  </>;
 }
 /** Markdown → one plain line, for list rows. */
-export const mdPlain=(s:string)=>s.replace(/!?\[([^\]]*)\]\([^)]*\)/g,'$1').replace(/^\s*(#{1,3}|>|[-*]|\d+[.)])\s+/gm,'').replace(/(\*\*|__|~~|`)/g,'').replace(/\s*\n+\s*/g,' ').trim();
+export const mdPlain=(s:string)=>s.replace(/!\[[^\]\n]*\]\(media:[^)]*\)/g,' ').replace(/!?\[([^\]]*)\]\([^)]*\)/g,'$1').replace(/^\s*(#{1,3}|>|[-*]|\d+[.)])\s+/gm,'').replace(/(\*\*|__|~~|`)/g,'').replace(/\s*\n+\s*/g,' ').trim();
 
 /* ---------- mediaGrid() + mosaic ---------- */
 export type MediaItem={id:string,kind?:string|undefined,w:number|null,h:number|null,pending:boolean,blurred:boolean,src:Record<string,string>|null,durationMs?:number|null|undefined};
@@ -142,16 +144,16 @@ export function MediaGrid({media,onExpired}:{media:MediaItem[],onExpired?:(()=>v
  return <>{grid}{open!==null&&<Viewer srcs={list.map(slideOf)} index={open} onClose={close} onExpired={onExpired}/>}</>;
 }
 
-/** `openViewer()` — full-screen photos: ‹ ›, arrows, swipe, Esc. */
+/** `openViewer()` — full-screen photos: ‹ ›, arrows, swipe, Esc. It is a layer of its own above the bars, the dock,
+ * the bottom buttons and the toasts; the system «Назад» closes it instead of leaving the screen. */
 export function Viewer({srcs,index,onClose,onExpired}:{srcs:Slide[],index:number,onClose:()=>void,onExpired?:(()=>void)|undefined}){
  const {t}=useI18n();const [i,setI]=useState(index);const [on,setOn]=useState(false);const box=useRef<HTMLDivElement>(null);const sx=useRef<number|null>(null);
- const [host,setHost]=useState<Element|null>(null);
- useEffect(()=>{setHost(document.querySelector('.fe-v21 main.main')??document.body);},[]);
- useEffect(()=>{if(!host)return;const r=requestAnimationFrame(()=>{setOn(true);box.current?.querySelector<HTMLButtonElement>('.vw-top .ibtn')?.focus({preventScroll:true});});return ()=>cancelAnimationFrame(r);},[host]);
+ useBackClose(onClose);
+ useEffect(()=>{const r=requestAnimationFrame(()=>{setOn(true);box.current?.querySelector<HTMLButtonElement>('.vw-top .ibtn')?.focus({preventScroll:true});});return ()=>cancelAnimationFrame(r);},[]);
  const step=useCallback((d:number)=>setI(v=>Math.max(0,Math.min(srcs.length-1,v+d))),[srcs.length]);
- useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape')onClose();else if(e.key==='ArrowLeft')step(-1);else if(e.key==='ArrowRight')step(1);};addEventListener('keydown',k);return ()=>removeEventListener('keydown',k);},[onClose,step]);
- if(!host)return null;
- return createPortal(<div ref={box} className={'viewer'+(on?' on':'')} role="dialog" aria-modal="true" aria-label={t('fe.br.viewer')}
+ useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();onClose();}else if(e.key==='ArrowLeft')step(-1);else if(e.key==='ArrowRight')step(1);};
+  document.addEventListener('keydown',k,true);return ()=>document.removeEventListener('keydown',k,true);},[onClose,step]);
+ return <Layer><div ref={box} className={'viewer'+(on?' on':'')} role="dialog" aria-modal="true" aria-label={t('fe.br.viewer')}
   onPointerDown={e=>{sx.current=e.clientX;}} onPointerUp={e=>{if(sx.current==null)return;const dx=e.clientX-sx.current;sx.current=null;if(Math.abs(dx)>50)step(dx<0?1:-1);}}>
   <PhotoTrack srcs={srcs} index={i} onExpired={onExpired}/>
   <div className="vw-top"><span className="vw-n">{i+1} / {srcs.length}</span><IconBtn icon={X} kind="glass" label={t('fe.br.close')} onClick={onClose}/></div>
@@ -160,7 +162,7 @@ export function Viewer({srcs,index,onClose,onExpired}:{srcs:Slide[],index:number
    <button type="button" className="vw-nav r" aria-label={t('fe.br.next')} disabled={i===srcs.length-1} onClick={()=>step(1)}><ChevronRight/></button>
    <div className="vw-dots">{srcs.map((_,k)=><i key={k} className={k===i?'on':undefined}/>)}</div>
   </>}
- </div>,host);
+ </div></Layer>;
 }
 
 /* ---------- pollHTML() ---------- */

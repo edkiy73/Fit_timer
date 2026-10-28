@@ -3,7 +3,8 @@ import { expect, until, pngOf, toastSee, stamp } from '../helpers.mjs';
 const mine = async t => (await t.api('me.posts', {})).items;
 const newest = async (t, body) => until(async () => (await mine(t)).find(p => p.body === body && p.state !== 'draft'), 'post sent: ' + body);
 const cleanup = async (t, id) => { if (id) await t.api('post.delete', { opId: t.uuid7(), postId: id }); };
-const ta = '.compose textarea';
+const ta = '.compose .rte-ed';
+const text = async t => (await t.page.locator(ta).innerText()).replace(/\u00a0/g, ' ').trim();
 const inView = async (t, sel) => { await t.wait(700); const b = await t.page.locator(sel).first().boundingBox(); const vh = t.page.viewportSize().height;
   expect(b && b.y > 0 && b.y < vh - 140, `${sel} not in view (y=${b && Math.round(b.y)})`); };
 const publishBtn = '.ctabar .btn.primary';
@@ -12,23 +13,24 @@ const uploaded = async t => { await t.see('.sheet.on .k-uprow:has-text("без �
 
 export default [
  { name: 'opening «Новая публикация» again starts a fresh form', persona: 'full', route: '/n/feed/new', run: async t => {
-   await t.see(ta); await t.tap('.attach button:has-text("Статья")'); await t.see('#ntitle'); await t.fill(ta, 'черновой текст');
+   await t.see(ta); expect(!(await t.page.locator('.attach button:has-text("Статья")').count()), 'the post composer offers no «Статья»'); await t.fill(ta, 'черновой текст');
    await t.page.evaluate(() => { location.hash = '#/n/feed'; }); await t.wait(800);
    const ask = t.page.locator('.dialog.on .btn.danger'); if (await ask.count()) await ask.click();
    await t.go('/n/feed/new'); await t.see(ta);
-   expect(!(await t.page.locator('#ntitle').count()), 'article mode stuck'); expect((await t.page.locator(ta).inputValue()) === '', 'old text stuck');
+   expect((await text(t)) === '', 'old text stuck');
  } },
- { name: 'text: counter, audience «Подписчики», in-feed off → stored as typed', persona: 'full', route: '/n/feed/new', run: async t => {
+ { name: 'text: counter, «Кому видно» → «Подписчики», no in-feed switch → stored as typed', persona: 'full', route: '/n/feed/new', run: async t => {
    let id;
    try {
      const body = 'e2e текст ' + stamp();
      await t.see(ta); await t.fill(ta, body); await t.see(`.counter:has-text("${body.length} /")`);
-     await t.page.locator('.cmp-aud select').selectOption('followers'); await t.wait(300);
-     expect((await t.page.locator('.cmp-aud .selv').innerText()).includes('Подписчики'), 'audience label: ' + await t.page.locator('.cmp-aud .selv').innerText());
-     await t.tap('.cmp-feed [role="switch"]'); expect((await t.page.locator('.cmp-feed [role="switch"]').getAttribute('aria-checked')) === 'false', 'in-feed switch off');
+     const aud = '.selrow:has(.selt:text-is("Кому видно"))'; await t.see(aud);
+     await t.page.locator(aud + ' select').selectOption('followers'); await t.wait(300);
+     expect((await t.page.locator(aud + ' .selv').innerText()).includes('Подписчики'), 'audience label: ' + await t.page.locator(aud + ' .selv').innerText());
+     expect(!(await t.page.locator('[role="switch"]:near(:text("Показать в ленте"))').count()) && !(await t.page.locator('text=Показать в ленте').count()), 'no in-feed switch');
      await t.tap(publishBtn);
      const p = await newest(t, body); id = p.id;
-     expect(p.audience === 'followers', 'audience ' + p.audience); expect(p.inFeed === false, 'inFeed ' + p.inFeed); expect(p.state === 'published', 'state ' + p.state);
+     expect(p.audience === 'followers', 'audience ' + p.audience); expect(p.inFeed === true, 'inFeed ' + p.inFeed); expect(p.state === 'published', 'state ' + p.state);
    } finally { await cleanup(t, id); }
  } },
  { name: 'poll: add/remove options, validation, publish → stored poll', persona: 'full', route: '/n/feed/new', run: async t => {
@@ -48,12 +50,10 @@ export default [
      expect(p.poll?.question === 'Куда пойдём?' && JSON.stringify(p.poll.options) === '["Кино","Театр"]', 'poll ' + JSON.stringify(p.poll));
    } finally { await cleanup(t, id); }
  } },
- { name: 'article: title + 20 chars rule, «Сделать обычной» back, publish as note', persona: 'full', route: '/n/feed/new', run: async t => {
+ { name: 'article: its own editor, title + 20 chars rule, publish as note', persona: 'full', route: '/n/feed/new?x=note', run: async t => {
    let id;
    try {
-     await t.see(ta); await t.tap('.attach button:has-text("Статья")'); await t.see('#ntitle');
-     await t.tap('.note-mode button'); await t.notSee('#ntitle', 400);
-     await t.tap('.attach button:has-text("Статья")'); await t.see('#ntitle');
+     await t.see('#ntitle'); await t.see(ta);
      await t.fill('#ntitle', 'Ок'); await t.fill(ta, 'коротко'); await t.tap(publishBtn); expect((await t.page.locator('.ferr').count()) >= 2, 'title and body errors');
      const body = 'e2e статья ' + stamp() + ' — достаточно длинный текст статьи.';
      await t.fill('#ntitle', 'Заголовок статьи'); await t.fill(ta, body); await t.tap(publishBtn);
@@ -65,7 +65,7 @@ export default [
    let id;
    try {
      await t.see(ta); await t.fill(ta, 'привет');
-     await t.tap('.attach button:has-text("Упомянуть")'); expect((await t.page.locator(ta).inputValue()) === 'привет @', 'mention: ' + await t.page.locator(ta).inputValue());
+     await t.page.locator(ta).click(); await t.page.keyboard.press('End'); await t.page.keyboard.type(' @'); await t.wait(200); expect((await text(t)) === 'привет @', 'mention: ' + await text(t));
      const chips = t.page.locator('.grp:has-text("Темы") .chips .chip:not(.more)');
      for (let i = 0; i < 3; i++) await chips.nth(i).click();
      expect((await t.page.locator('.grp:has-text("Темы") .chip.on').count()) === 3, '3 topics on');
@@ -113,7 +113,7 @@ export default [
    try {
      const body = 'e2e черновик ' + stamp(); await t.see(ta); await t.fill(ta, body);
      await t.tap('.prevbtn'); await t.see(`.preview-post:has-text("${body}")`); await t.tap('.ctabar .btn.soft'); await t.see(ta);
-     expect((await t.page.locator(ta).inputValue()) === body, 'text kept after preview');
+     expect((await text(t)) === body, 'text kept after preview');
      await t.tap('.bar .btn.text'); await toastSee(t, 'ерновик');
      const p = await until(async () => (await mine(t)).find(x => x.body === body && x.state === 'draft'), 'draft stored'); id = p.id;
      await t.fill(ta, body + ' ещё'); await t.tap('.bar .ibtn'); await t.see('.dialog.on'); await t.tap('.dialog.on .btn.danger'); await t.wait(800);
@@ -135,7 +135,7 @@ export default [
      await t.see(ta); const tag = stamp(); await t.page.locator(ta).click(); await t.page.keyboard.type('e2e упоминание ' + tag + ' @ki');
      await t.see('.mention-sug button', 8000); const first = (await t.page.locator('.mention-sug button small').first().innerText()).trim();
      await t.tap('.mention-sug button >> nth=0'); await t.notSee('.mention-sug', 300);
-     const v = await t.page.locator(ta).inputValue(); expect(v.endsWith(first + ' '), 'picked into text: ' + v);
+     const v = (await t.page.locator(ta).innerText()).replace(/\u00a0/g, ' '); expect(v.trimEnd().endsWith(first), 'picked into text: ' + v);
      await t.page.keyboard.type('привет'); await t.tap(publishBtn);
      const p = await until(async () => (await mine(t)).find(x => x.body.includes(tag) && x.state !== 'draft'), 'stored'); id = p.id;
      expect(p.body.includes(first + ' привет'), 'body ' + p.body);

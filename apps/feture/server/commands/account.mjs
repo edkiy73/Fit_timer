@@ -44,7 +44,6 @@ async function clearPerson(q, pp) {
   // Social graph.
   await q.query(`delete from feture.follow where follower_profile_id = $1 or target_profile_id = $1`, [pp]);
   await q.query(`delete from feture.follow_removed where follower_profile_id = $1 or target_profile_id = $1`, [pp]);
-  await q.query(`delete from feture.note_subscription where subscriber_profile_id = $1 or author_profile_id = $1`, [pp]);
   await q.query(`delete from feture.block where blocker_profile_id = $1`, [pp]);
   await q.query(`delete from feture.profile_link where a_profile_id = $1 or b_profile_id = $1`, [pp]);
   // Dating and chats: nothing comes back; the other side keeps its history of the conversation.

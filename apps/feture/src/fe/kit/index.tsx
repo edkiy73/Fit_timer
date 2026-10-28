@@ -232,9 +232,10 @@ export function Divider(){return <hr className="k-hr"/>;}
 /** Empty room between blocks that are not in one Stack (a step of the spacing scale). */
 export function Spacer({size=3}:{size?:1|2|3|4|6}){return <div className={'k-sp k-sp-'+size} aria-hidden="true"/>;}
 
-/** Single choice as a list (`.radio` rows: report reasons, kinds). */
-export function RadioList<T extends string>({value,options,onChange,label,bare}:{value:T|null|undefined,options:readonly (readonly [T,ReactNode,ReactNode?])[],onChange:(v:T)=>void,label:string,/** Rows only, no card frame (inside a sheet). */ bare?:boolean}){
- return <div className={bare?'k-radios':'card list'} role="radiogroup" aria-label={label}>{options.map(([k,title,sub])=><button key={k} type="button" className={'radio'+(value===k?' on':'')} role="radio" aria-checked={value===k} onClick={()=>onChange(k)}>
+/** Single choice as a list (`.radio` rows: report reasons, kinds). The rows carry their own frame (one rounded block
+ * with dividers), so the list never sits in a Card — that drew a card inside a card (owner, 28.10.2026). */
+export function RadioList<T extends string>({value,options,onChange,label}:{value:T|null|undefined,options:readonly (readonly [T,ReactNode,ReactNode?])[],onChange:(v:T)=>void,label:string,/** Kept for old calls; the rows never have a second frame. */ bare?:boolean}){
+ return <div className="k-radios" role="radiogroup" aria-label={label}>{options.map(([k,title,sub])=><button key={k} type="button" className={'radio'+(value===k?' on':'')} role="radio" aria-checked={value===k} onClick={()=>onChange(k)}>
   <i/><span className="tx">{title}{sub&&<small>{sub}</small>}</span></button>)}</div>;
 }
 /** Single choice as chips (filters, «кто видит»). Multi-choice chips are Chip with `on`. */
@@ -243,9 +244,9 @@ export function ChoiceChips<T extends string>({value,options,onChange,label,scro
 }
 /** Several values from a list as rows with a box (what to open, what to keep). A row may say more under its title
  * («не запрошено», «уже открыто»); `value` keeps the order of `options`. */
-export function CheckList<T extends string>({value,options,onChange,label,bare}:{value:readonly T[],options:readonly (readonly [T,ReactNode,ReactNode?])[],onChange:(v:T[])=>void,label:string,/** Rows only, no card frame (inside a sheet). */ bare?:boolean}){
+export function CheckList<T extends string>({value,options,onChange,label}:{value:readonly T[],options:readonly (readonly [T,ReactNode,ReactNode?])[],onChange:(v:T[])=>void,label:string,/** Kept for old calls; the rows never have a second frame. */ bare?:boolean}){
  const flip=(k:T)=>onChange(options.map(o=>o[0]).filter(x=>x===k?!value.includes(k):value.includes(x)));
- return <div className={bare?'k-radios':'card list'} role="group" aria-label={label}>{options.map(([k,title,sub])=>{const on=value.includes(k);return <button key={k} type="button" className={'radio k-chk'+(on?' on':'')} role="checkbox" aria-checked={on} onClick={()=>flip(k)}>
+ return <div className="k-radios" role="group" aria-label={label}>{options.map(([k,title,sub])=>{const on=value.includes(k);return <button key={k} type="button" className={'radio k-chk'+(on?' on':'')} role="checkbox" aria-checked={on} onClick={()=>flip(k)}>
   <i><Check2/></i><span className="tx">{title}{sub&&<small>{sub}</small>}</span></button>;})}</div>;
 }
 /** `.check` — a checkbox with its text (consents, «Также заблокировать» in forms). */
@@ -303,6 +304,20 @@ export function RangeDual({min,max,lo,hi,onChange,label,labels}:{min:number,max:
   <input type="range" min={min} max={max} value={lo} aria-label={labels?.[0]??label+' от'} onChange={e=>onChange(Math.min(+e.target.value,hi),hi)}/>
   <input type="range" min={min} max={max} value={hi} aria-label={labels?.[1]??label+' до'} onChange={e=>onChange(lo,Math.max(+e.target.value,lo))}/>
  </div>;
+}
+
+/** A full-screen overlay (the photo viewer) that the system «Назад» closes: opening adds a history entry with the
+ * same address and state, «Назад» (browser, Android) takes it away and calls `onClose` instead of leaving the screen;
+ * closing by ✕ / Esc goes back over that entry so it never stays behind. */
+export function useBackClose(onClose:()=>void){
+ const cb=useRef(onClose);cb.current=onClose;
+ useEffect(()=>{
+  const token=Math.random().toString(36).slice(2);const st=window.history.state as Record<string,unknown>|null;
+  window.history.pushState({...(st??{}),feOverlay:token},'');
+  let popped=false;const pop=()=>{if((window.history.state as {feOverlay?:string}|null)?.feOverlay===token)return;popped=true;cb.current();};
+  window.addEventListener('popstate',pop);
+  return ()=>{window.removeEventListener('popstate',pop);if(!popped&&(window.history.state as {feOverlay?:string}|null)?.feOverlay===token)window.history.back();};
+ },[]);
 }
 
 export * from './domain';

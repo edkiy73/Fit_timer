@@ -53,7 +53,7 @@ export default [
    const mark = tag(); const id = await publish(t, t.me.email, { body: 'Оригинал ' + mark });
    try {
      await t.go('/n/feed/post/' + id + '/edit');
-     await t.see('textarea.rte-ed'); await t.fill('textarea.rte-ed', 'Правка ' + mark);
+     await t.see('.rte-ed'); await t.fill('.rte-ed', 'Правка ' + mark);
      await t.tap('.bar button:has-text("Сохранить правки")'); await toastSee(t, 'Правки сохранены');
      let m = await until(async () => { const r = await t.api('me.posts', {}); return r.pendingEdits?.find(e => e.postId === id) && r; }, 'saved edits on the server');
      expect(m.pendingEdits.find(e => e.postId === id).post.body === 'Правка ' + mark, 'saved body');
@@ -157,16 +157,6 @@ export default [
    } finally { await drop(t, B.email, id); }
  } },
 
- { name: '«Следить за статьями» under an article: the author\'s articles come to «Подписки»', persona: 'full', run: async t => {
-   const B = await t.persona('basic'); const mark = tag();
-   const id = await publish(t, B.email, { type: 'note', title: 'Статья ' + mark, body: 'Длинный текст статьи для проверки подписки ' + mark });
-   try {
-     await t.api('noteSub.set', { opId: t.uuid7(), profileId: B.personId, on: false });
-     await t.go('/n/feed/post/' + id); await t.tap('button:has-text("Следить за статьями")'); await toastSee(t, 'Новые статьи');
-     await until(async () => (await t.api('feed.list', { tab: 'following' })).items.some(x => x.id === id), 'the article in «Подписки»');
-   } finally { await t.api('noteSub.set', { opId: t.uuid7(), profileId: B.personId, on: false }); await drop(t, B.email, id); }
- } },
-
  { name: '«Скрыть публикацию» leaves a row with «Вернуть»; own name opens «Я»', persona: 'full', run: async t => {
    const B = await t.persona('basic'); const mark = tag();
    const id = await publish(t, B.email, { body: 'Скрыть ' + mark });
@@ -189,15 +179,15 @@ export default [
      await t.go('/n/feed'); await t.tap('.composer [aria-label="Создать"]'); await t.see(`${sheet}:has-text("Или сразу начать с")`);
      await t.tap(`${sheet} .create-q button:has-text("Опрос")`); await until(async () => t.page.url().includes('x=poll'), 'poll editor', 8000); await t.see('#pollQ');
      await t.go('/n/feed/new');
-     const ta = t.page.locator('textarea.rte-ed'); await ta.fill('жирный ' + mark);
-     await ta.evaluate(el => { el.focus(); el.setSelectionRange(0, 6); });
-     await t.tap('.rte-tb [aria-label="Жирный"]'); expect((await ta.inputValue()).startsWith('**жирный**'), 'bold marks: ' + await ta.inputValue());
-     await ta.evaluate(el => { const n = el.value.length; el.focus(); el.setSelectionRange(n, n); });
+     const ta = t.page.locator('.rte-ed'); await ta.click(); await t.page.keyboard.type('жирный ' + mark);
+     await ta.evaluate(el => { const n = el.querySelector('p')?.firstChild ?? el.firstChild; const r = document.createRange(); r.setStart(n, 0); r.setEnd(n, 6); const s = getSelection(); s.removeAllRanges(); s.addRange(r); });
+     await t.tap('.rte-tb [aria-label="Жирный"]'); expect((await ta.locator('b, strong').first().innerText()) === 'жирный', 'bold shows as bold');
+     await ta.evaluate(el => { el.focus(); const s = getSelection(); s.selectAllChildren(el); s.collapseToEnd(); });
      await t.tap('.rte-tb [aria-label="Ссылка"]'); await t.fill('#k-lnk-u', 'not a link'); await t.tap(`${sheet} .sh-f button:has-text("Вставить")`);
      await t.see(`${sheet} .ferr`); await t.fill('#k-lnk-t', 'пример'); await t.fill('#k-lnk-u', 'https://example.com'); await t.tap(`${sheet} .sh-f button:has-text("Вставить")`);
-     expect((await ta.inputValue()).includes('[пример](https://example.com)'), 'link inserted');
+     expect((await ta.locator('a[href="https://example.com"]').innerText()) === 'пример', 'link inserted');
      await t.tap('.attach button:has-text("Упомянуть")'); await t.fill(`${sheet} input[type="search"]`, B.handle);
-     await t.tap(`${sheet} .li:has-text("@${B.handle}")`); expect((await ta.inputValue()).includes('@' + B.handle), 'mention inserted');
+     await t.tap(`${sheet} .li:has-text("@${B.handle}")`); expect((await ta.innerText()).includes('@' + B.handle), 'mention inserted');
      await t.tap('.ctabar button:has-text("Опубликовать")'); await toastSee(t, 'Опубликовано');
      const mine = await until(async () => (await t.api('me.posts', {})).items.find(p => p.body.includes(mark)), 'post on the server');
      id = mine.id; expect(mine.body.includes('**жирный**') && (mine.mentions || []).some(m => m.id === B.personId), 'formatting and the mention: ' + JSON.stringify(mine.mentions));

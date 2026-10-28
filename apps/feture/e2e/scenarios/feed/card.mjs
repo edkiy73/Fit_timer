@@ -79,7 +79,9 @@ export default [
      await t.tap('.toast .tb'); await until(async () => (await t.api('feed.list', { tab: 'forYou', limit: 50 })).items.some(p => p.id === f.id), '«Вернуть» brings it back');
      await t.go('/n/feed/post/' + f.id); c = card(t, f.body); await c.waitFor();
      await c.locator('.post-h button[aria-label="Ещё"]').click(); await t.tap('.sheet.on .li:has-text("Пожаловаться")'); await t.see('.sheet.on');
-     await t.page.locator('.sheet.on [role="radio"], .sheet.on .chip, .sheet.on .li').first().click();
+     await t.page.locator('.sheet.on [role="radio"]').first().click();
+     await t.tap('.sheet.on .sh-f button:has-text("Отправить жалобу")'); await t.see('.sheet.on .ferr:has-text("Опиши, что случилось")'); // details are required
+     await t.fill('.sheet.on textarea', 'e2e: проверка жалобы, можно отклонить');
      await t.tap('.sheet.on .sh-f button:has-text("Отправить жалобу")'); await toastSee(t, '');
      await t.wait(1500); expect(!(await t.page.locator('.sheet.on').count()), 'report sheet closed');
    } finally { await drop(t, f.id); }
@@ -90,8 +92,8 @@ export default [
    let id = d.id;
    try {
      await t.go('/n/feed/post/' + id); const c = card(t, body); await c.waitFor();
-     await c.locator('.post-h button[aria-label="Ещё"]').click(); await t.tap('.sheet.on .li:has-text("Редактировать")'); await t.see('.compose textarea');
-     await t.fill('.compose textarea', body + ' исправлено'); await t.tap('.ctabar .btn.primary');
+     await c.locator('.post-h button[aria-label="Ещё"]').click(); await t.tap('.sheet.on .li:has-text("Редактировать")'); await t.see('.compose .rte-ed');
+     await t.fill('.compose .rte-ed', body + ' исправлено'); await t.tap('.ctabar .btn.primary');
      await until(async () => (await get(t, id)).body === body + ' исправлено', 'edit saved');
      await t.go('/n/feed/post/' + id); await card(t, body).waitFor();
      await card(t, body).locator('.post-h button[aria-label="Ещё"]').click(); await t.tap('.sheet.on .li:has-text("Удалить")');

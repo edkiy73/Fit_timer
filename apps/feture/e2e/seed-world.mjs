@@ -1065,7 +1065,7 @@ async function moderation() {
     await step('report reply', async () => {
       if (!spam) return;
       const r = must(await api(email('vlad'), 'reply.create', { opId: uuid7(), postId: spam.id, body: 'Пишите в телеграм, там дешевле!' }), 'reply');
-      must(await api(email('zhenya'), 'report.create', { opId: uuid7(), targetType: 'reply', targetId: r.id ?? r.replyId, reason: 'spam', details: '' }), 'report reply');
+      must(await api(email('zhenya'), 'report.create', { opId: uuid7(), targetType: 'reply', targetId: r.id ?? r.replyId, reason: 'spam', details: 'Ссылка на сторонний магазин в ответе.' }), 'report reply');
     });
     done.reports = true;
     fs.writeFileSync(DIR + '.world-state.json', JSON.stringify(done));

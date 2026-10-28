@@ -34,9 +34,15 @@ alone / in a couple, hidden / visible). A missing state is added to `e2e/persona
 Every other actor (who asks, invites, applies, reports) is a persona of the same lane too (`t.persona(kind)`); seed
 people and content may only be looked at. Scenarios clean up what they create; `e2e/run-all.sh` runs them all.
 
-## Owner decision — 2026-10-27 (V21)
+## Owner decision — 2026-10-28 (Discover starts off)
 
-New accounts and new couples start **in Discover (dating on, visible)**; without a profile photo nobody sees them there. Onboarding says so, offers to upload a photo right away and lets people switch Discover off; «Я → Видимость» repeats it. This replaces «dating off by default» below. Server-side reciprocal opt-in for candidate discovery, 18+ and consent rules stay. Details: `docs/design-reference/V21-INTEGRATION-GUIDE.md`.
+New accounts and new couples start **outside Discover** (`discover_mode = 'off'`, server: `account.create`, couple
+creation, `onboarding.complete` defaults to off). Switching Discover on («Показываться» at sign-up step «Знакомства»,
+«Показываюсь» in «Я → Видимость») without a profile photo first asks for one and opens the photo uploader; Discover
+turns on once the photo is added, and the text says the card appears there after the photo is approved (photos are
+reviewed; nobody without an approved photo is shown). There is no separate «Добавить фото» row in «Видимость». This
+replaces the 27.10.2026 decision «new accounts start in Discover visible». Server-side reciprocal opt-in for candidate
+discovery, 18+ and consent rules stay.
 
 ## Latest owner product priority — 2026-10-13 03:33
 

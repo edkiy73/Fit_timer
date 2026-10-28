@@ -161,7 +161,6 @@ async function announce(q, postId) {
   for (const m of mentions) await enqueue(q, 'mention.created', m.profile_id, { postId, from: p.owner_profile_id });
   const tags = await q.query(`update feture.photo_tag set asked_at = now() where post_id = $1 and state = 'pending' and asked_at is null returning profile_id`, [postId]);
   for (const t of tags) await enqueue(q, 'tag.requested', t.profile_id, { postId, from: p.owner_profile_id });
-  if (p.type === 'note') await enqueue(q, 'note.published', p.owner_profile_id, { postId });
 }
 
 /** Publishes now or puts the post on review until its media are checked. Shared by the direct path, the couple
@@ -659,8 +658,7 @@ const run = {
          and (not $11::boolean or (p.topics && coalesce((select array_agg(i.topic_id) from feture.interest i where i.profile_id = $1 and i.value is not null), '{}')
               and not p.topics && coalesce((select array_agg(i.topic_id) from feture.interest i where i.profile_id = $1 and i.mark = 'hard'), '{}')))
          and ($4 in ('forYou', 'popular') or p.owner_profile_id = $1
-              or exists (select 1 from feture.follow f where f.follower_profile_id = $1 and f.target_profile_id = p.owner_profile_id)
-              or (p.type = 'note' and exists (select 1 from feture.note_subscription n where n.subscriber_profile_id = $1 and n.author_profile_id = p.owner_profile_id)))
+              or exists (select 1 from feture.follow f where f.follower_profile_id = $1 and f.target_profile_id = p.owner_profile_id))
          and ($5::timestamptz is null or (p.published_at, p.id) < ($5::timestamptz, $6::uuid))
          and ($4 <> 'popular' or p.published_at > now() - interval '7 days')
        order by case when $4 = 'popular' then ${popularScore('p', '$1')} end desc nulls last,

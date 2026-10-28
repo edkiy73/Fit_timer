@@ -2,10 +2,10 @@
 /** Wave 8: «Написать в поддержку» (S01) with staff replies in the staff screen, and the maintenance switch (MAINT). */
 import * as z from 'zod';
 import { id, opId } from './platform.mjs';
-import { text } from './me.mjs';
+import { field } from './_text.mjs';
 
 /** A message to or from support: at least five characters (V21 supportSend), at most 2000. */
-const body = text(2000).refine(v => v.length >= 5, { message: 'too_short' });
+const body = field('support');
 export const SUPPORT_TOPICS = /** @type {const} */ (['account', 'safety', 'premium', 'bug', 'other']);
 
 export const supportCommands = {
@@ -31,6 +31,6 @@ export const supportCommands = {
   'platform.maintenance': { profile: false, write: false, input: z.strictObject({}) },
   'staff.maintenanceSet': {
     profile: false, write: true,
-    input: z.strictObject({ opId, active: z.boolean(), message: text(300).optional() }),
+    input: z.strictObject({ opId, active: z.boolean(), message: field('maintenance').optional() }),
   },
 };

@@ -8,6 +8,7 @@ import {ActorCard,ActorCards,Alert,Av,Btn,Card,Counter,EventTile,Field,Group,Not
 import {NamedPlate} from './comm-kit';
 import {useFe,useRealtime} from './session';
 import {useToast} from './toast';
+import {FIELD,textLength,useChecks} from './kit/validate';
 
 /** V21 couple approvals (Q03 profile of the couple, Q01 «Ждёт подтверждения», N01 joint items): everything a partner
  * proposed for the couple (`decide.approvals`) — profile changes, posts, events, private access — with what would
@@ -216,19 +217,20 @@ function ReturnSheet({a,coupleId,onClose,onDone}:{a:Approval,coupleId:string,onC
  const {call}=useFe();const {t}=useI18n();
  const [note,setNote]=useState('');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
  const op=useRef(newOpId());const rsvp=a.kind==='event.rsvp';
+ const checks=useChecks({note:'returnNote'},{note});
  const send=async()=>{
-  if(busy||note.trim().length>300)return;setBusy(true);setFailure('');
+  if(busy||!checks.submit())return;setBusy(true);setFailure('');
   try{const comment=note.trim();
    const r=await call('decide.approval',{opId:op.current,approvalId:a.id,choice:'return',...(comment?{comment}:{})},decided,{profileId:coupleId});
    const state=r.state??'returned';onDone(t('fe.cw.done.'+(['returned','expired','cancelled'].includes(state)?state:'returned')));}
-  catch(e){setFailure(feErrorMessage(e,t));op.current=newOpId();}finally{setBusy(false);}
+  catch(e){if(!checks.fromServer(e,{comment:'note'}))setFailure(feErrorMessage(e,t));op.current=newOpId();}finally{setBusy(false);}
  };
  return <Sheet title={rsvp?t('fe.c6.ret.titleRsvp'):t('fe.c6.ret.title')} sub={kindTitle(a,t)} onClose={onClose}
-  foot={<Btn disabled={busy||note.trim().length>300} busy={busy} onClick={()=>void send()}>{rsvp?t('fe.c6.ret.sendRsvp'):t('fe.c6.ret.send')}</Btn>}>
-  <Field id="fe-ret-note" label={rsvp?t('fe.c6.ret.labelRsvp'):t('fe.c6.ret.label')} optional={t('fe.c6.optional')}>
-   <TextArea id="fe-ret-note" name="returnNote" rows={3} maxLength={300} value={note} placeholder={rsvp?t('fe.c6.ret.phRsvp'):t('fe.c6.ret.ph')} onChange={e=>setNote(e.target.value)}/>
+  foot={<Btn disabled={busy} busy={busy} onClick={()=>void send()}>{rsvp?t('fe.c6.ret.sendRsvp'):t('fe.c6.ret.send')}</Btn>}>
+  <Field id="fe-ret-note" name="note" error={checks.error('note')} label={rsvp?t('fe.c6.ret.labelRsvp'):t('fe.c6.ret.label')} optional={t('fe.c6.optional')}>
+   <TextArea id="fe-ret-note" name="returnNote" rows={3} {...checks.input('note')} value={note} placeholder={rsvp?t('fe.c6.ret.phRsvp'):t('fe.c6.ret.ph')} onChange={e=>setNote(e.target.value)}/>
   </Field>
-  <Counter n={note.length} max={300}/>
+  <Counter n={textLength(note)} max={FIELD.returnNote.max}/>
   {failure&&<Alert kind="err" noIcon className="mt12">{failure}</Alert>}
  </Sheet>;
 }

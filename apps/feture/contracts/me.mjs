@@ -2,6 +2,7 @@
 /** Slice C «Я» commands of `POST /api/fe` (docs/server/S2-CATALOG.md «C»). Shared by server and client. */
 import * as z from 'zod';
 import { id, opId } from './platform.mjs';
+import { field } from './_text.mjs';
 
 /** Nickname: 3–20 of [A-Za-z0-9_.], starts and ends with a letter or digit, no '..', at least one letter (V21 AUTH-001). */
 export const handle = z.string().trim().min(3).max(20)
@@ -9,14 +10,6 @@ export const handle = z.string().trim().min(3).max(20)
   .refine(v => !v.includes('..') && /[A-Za-z]/.test(v), { message: 'handle_format' });
 const code = z.string().regex(/^[a-z][a-z0-9_-]{0,31}$/);
 const codes = (/** @type {number} */ max) => z.array(code).max(max).refine(v => new Set(v).size === v.length, { message: 'duplicates' });
-/** Plain text from people: NFC, no control or bidi-override characters (input-safety checklist). */
-export const text = (/** @type {number} */ max) => z.string().max(max * 2).transform(v => v.normalize('NFC').trim())
-  .refine(v => v.length <= max, { message: 'too_long' })
-  .refine(v => !/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F‪-‮⁦-⁩​-‏﻿]/.test(v), { message: 'bad_characters' });
-/** Single-line text for names: also no line breaks, tabs or invisible/blank-looking characters, and not blank. */
-export const line = (/** @type {number} */ max) => text(max)
-  .refine(v => !/[\t\n\r\u00AD\u034F\u061C\u115F\u1160\u180E\u2028\u2029\u2060-\u2064\u2800\u3164\uFE00-\uFE0F\uFFA0\u{E0000}-\u{E007F}]/u.test(v), { message: 'bad_characters' })
-  .refine(v => v.replace(/\s/g, '').length > 0, { message: 'blank' });
 const birthDate = z.iso.date();
 const detailsVis = z.enum(['only', 'granted', 'all']);
 const discoverMode = z.enum(['visible', 'hidden', 'off']);
@@ -81,7 +74,7 @@ export const meCommands = {
       detailsVis,
       genders: codes(5), orients: codes(5), roles: codes(5), formats: codes(5), seeks: codes(9),
       status: code.nullable(),
-      discover: z.enum(['visible', 'off']),
+      discover: z.enum(['visible', 'off']).default('off'),
     }),
   },
   'profile.get': { profile: true, write: false, input: z.strictObject({ profileId: id }) },
@@ -91,8 +84,8 @@ export const meCommands = {
       opId,
       rev: z.int().positive(),
       handle: handle.optional(),
-      name: line(60).optional(),
-      bio: text(500).optional(),
+      name: field('profileName').optional(),
+      bio: field('bio').optional(),
       cityId: id.nullable().optional(),
       showAge: z.boolean().optional(),
       detailsVis: detailsVis.optional(),
@@ -121,7 +114,7 @@ export const meCommands = {
   'notifications.settings.update': { profile: false, write: true, input: z.strictObject({ opId, settings: notificationSettings }) },
   'place.submit': {
     profile: false, write: true, rate: { kind: 'place.submit', max: 5, window: '1 day' },
-    input: z.strictObject({ opId, country: z.string().regex(/^[A-Z]{2}$/), name: line(80).refine(v => v.length >= 2, { message: 'too_short' }) }),
+    input: z.strictObject({ opId, country: z.string().regex(/^[A-Z]{2}$/), name: field('placeName') }),
   },
   'interests.list': { profile: true, write: false, input: z.strictObject({ profileId: id }) },
   'interests.set': {

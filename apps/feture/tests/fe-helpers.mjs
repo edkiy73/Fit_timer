@@ -9,7 +9,7 @@ import { createFeHandler } from '../server/handler.mjs';
 import { tokenDelivery } from '../server/media/delivery.mjs';
 
 export const MIGRATIONS = ['20261027120000_fe_platform.sql', '20261027120100_fe_media_bucket.sql', '20261027125900_fe_me.sql',
-  '20261027130000_fe_catalog.sql', '20261027140000_fe_access.sql', '20261027150000_fe_couples.sql', '20261027160000_fe_staff.sql', '20261027170000_fe_feed.sql', '20261027175000_fe_moderation.sql', '20261027180000_fe_communities.sql', '20261027190000_fe_events.sql', '20261027210000_fe_discover.sql', '20261027220000_fe_chats.sql', '20261027230000_fe_notifications.sql', '20261027240000_fe_people.sql', '20261027250000_fe_premium.sql', '20261027260000_fe_moderation_more.sql', '20261027270000_fe_push.sql', '20261027280000_fe_dsa.sql', '20261027300000_fe_photo_check.sql', '20261028120000_fe_places.sql', '20261028130000_fe_age_document.sql', '20261028150000_fe_wave3.sql', '20261028160000_fe_albums.sql', '20261028170000_fe_access_center.sql', '20261028180000_fe_waves67.sql', '20261028190000_fe_media_av.sql', '20261028200000_fe_account.sql', '20261028221500_fe_dispute_guard.sql'];
+  '20261027130000_fe_catalog.sql', '20261027140000_fe_access.sql', '20261027150000_fe_couples.sql', '20261027160000_fe_staff.sql', '20261027170000_fe_feed.sql', '20261027175000_fe_moderation.sql', '20261027180000_fe_communities.sql', '20261027190000_fe_events.sql', '20261027210000_fe_discover.sql', '20261027220000_fe_chats.sql', '20261027230000_fe_notifications.sql', '20261027240000_fe_people.sql', '20261027250000_fe_premium.sql', '20261027260000_fe_moderation_more.sql', '20261027270000_fe_push.sql', '20261027280000_fe_dsa.sql', '20261027300000_fe_photo_check.sql', '20261028120000_fe_places.sql', '20261028130000_fe_age_document.sql', '20261028150000_fe_wave3.sql', '20261028160000_fe_albums.sql', '20261028170000_fe_access_center.sql', '20261028180000_fe_waves67.sql', '20261028190000_fe_media_av.sql', '20261028200000_fe_account.sql', '20261028220000_fe_drop_notesub.sql', '20261028221500_fe_dispute_guard.sql'];
 const mig = name => readFileSync(new URL('../supabase/migrations/' + name, import.meta.url), 'utf8');
 
 export const DOCS = ['terms', 'privacy', 'community', 'adult-content', 'cookies'].map((key, i) => ({
@@ -50,11 +50,13 @@ export async function setup({ commands, migrations = MIGRATIONS, signals, realti
     await handler({ method: 'POST', headers: { 'x-test-user': user, ...(profile ? { 'x-fe-profile': profile } : {}), ...headers }, body }, res);
     return { status: res.statusCode, ...res.body };
   };
-  /** Registered person; age-verified unless told otherwise. */
-  const person = async (user, handle, { verified = true, birthDate = '1990-01-01' } = {}) => {
+  /** Registered person; age-verified unless told otherwise. New accounts start outside Discover (owner 28.10.2026); most
+   * tests need a person who is in it, so `discover` switches it on here — pass `discover: null` to keep the real default. */
+  const person = async (user, handle, { verified = true, birthDate = '1990-01-01', discover = /** @type {string | null} */ ('visible') } = {}) => {
     const r = await call(user, null, { action: 'account.create', opId: op(), handle, birthDate, locale: 'ru', documents: ACCEPT, newsOptIn: false });
     assert.equal(r.status, 200, JSON.stringify(r));
     if (verified) await db.query(`update feture.account set age_verified_until = now() + interval '1 year' where person_profile_id = $1`, [r.profileId]);
+    if (discover) await db.query('update feture.profile_settings set discover_mode = $2 where profile_id = $1', [r.profileId, discover]);
     return r.profileId;
   };
   /** Couple profile of existing person profiles (slice E will create couples through invitations). */

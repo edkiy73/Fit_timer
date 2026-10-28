@@ -67,9 +67,9 @@ test('reports: a chat with the selected messages, communities and events; remova
     const conv = (await call('ub', b, { action: 'like.send', opId: op(), profileId: a, source: 'likes' })).conversationId;
     const bad = await call('ub', b, { action: 'chat.send', opId: op(), conversationId: conv, body: 'Угроза' });
     const mine = await call('ua', a, { action: 'chat.send', opId: op(), conversationId: conv, body: 'Моё' });
-    assert.deepEqual((await call('ua', a, { action: 'report.create', opId: op(), targetType: 'conversation', targetId: conv, reason: 'threat' })).fields, ['messageIds']);
-    assert.deepEqual((await call('ua', a, { action: 'report.create', opId: op(), targetType: 'conversation', targetId: conv, messageIds: [mine.id], reason: 'threat' })).fields, ['messageIds']);
-    await call('ua', a, { action: 'report.create', opId: op(), targetType: 'conversation', targetId: conv, messageIds: [bad.id], reason: 'threat' });
+    assert.deepEqual((await call('ua', a, { action: 'report.create', opId: op(), targetType: 'conversation', targetId: conv, reason: 'threat', details: 'Подробности для модератора' })).fields, ['messageIds']);
+    assert.deepEqual((await call('ua', a, { action: 'report.create', opId: op(), targetType: 'conversation', targetId: conv, messageIds: [mine.id], reason: 'threat', details: 'Подробности для модератора' })).fields, ['messageIds']);
+    await call('ua', a, { action: 'report.create', opId: op(), targetType: 'conversation', targetId: conv, messageIds: [bad.id], reason: 'threat', details: 'Подробности для модератора' });
     const card = (await call('um', null, { action: 'staff.reportQueue' })).items.find((/** @type {any} */ i) => i.targetType === 'conversation');
     assert.deepEqual([card.author.handle, card.reported.messages[0].body], ['Kira', 'Угроза']);
     assert.equal((await call('um', null, { action: 'staff.reportDecide', opId: op(), targetType: 'conversation', targetId: conv, decision: 'remove', rule: 'threats' })).status, 400);
@@ -77,7 +77,7 @@ test('reports: a chat with the selected messages, communities and events; remova
     const cr = await call('ub', b, { action: 'community.create', opId: op(), name: 'Плохое сообщество', privacy: 'open', ...base });
     const qrev = (await call('um', null, { action: 'staff.communityQueue' })).items.find((/** @type {any} */ x) => x.id === cr.id).rev;
     await call('um', null, { action: 'staff.communityDecide', opId: op(), communityId: cr.id, rev: qrev, decision: 'approve' });
-    await call('ua', a, { action: 'report.create', opId: op(), targetType: 'community', targetId: cr.id, reason: 'spam' });
+    await call('ua', a, { action: 'report.create', opId: op(), targetType: 'community', targetId: cr.id, reason: 'spam', details: 'Подробности для модератора' });
     await call('um', null, { action: 'staff.reportDecide', opId: op(), targetType: 'community', targetId: cr.id, decision: 'remove', rule: 'spam' });
     assert.equal((await call('ua', a, { action: 'community.get', communityId: cr.id })).status, 404);
     const ap = await call('ub', b, { action: 'appeal.create', opId: op(), targetType: 'community', targetId: cr.id, body: 'Там нет спама, проверьте ещё раз' });
@@ -142,7 +142,7 @@ test('review fixes: no appeal against a host removal, restore returns the previo
 
     // The lead who restricted may not decide the appeal, even after someone else touched the profile.
     await call('ul', null, { action: 'staff.restrict', opId: op(), profileId: a, on: true, rule: 'spam' });
-    await call('ub', b, { action: 'report.create', opId: op(), targetType: 'profile', targetId: a, reason: 'spam' });
+    await call('ub', b, { action: 'report.create', opId: op(), targetType: 'profile', targetId: a, reason: 'spam', details: 'Подробности для модератора' });
     await call('um', null, { action: 'staff.reportDecide', opId: op(), targetType: 'profile', targetId: a, decision: 'keep' });
     const ap2 = await call('ua', a, { action: 'appeal.create', opId: op(), targetType: 'profile', targetId: a, body: 'Я ничего не рассылал, проверьте' });
     assert.equal((await call('ul', null, { action: 'staff.appealDecide', opId: op(), appealId: ap2.id, grant: true })).rule, 'same_staff');
