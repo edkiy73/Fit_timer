@@ -11,7 +11,7 @@ name: FetUre — APK для установки
 # versionName = <versionName из android-release.json>.<номер запуска>.
 #
 # Подпись — СОБСТВЕННЫЙ ключ FetUre из секретов FETURE_KEYSTORE_BASE64, FETURE_KEYSTORE_PASSWORD,
-# FETURE_KEY_ALIAS, FETURE_KEY_PASSWORD. Ключи FitTimer/UnMute (KEYSTORE_*) здесь не читаются и не используются.
+# FETURE_KEY_ALIAS, FETURE_KEY_PASSWORD; если их нет — общий ключ FitTimer/UnMute (KEYSTORE_*), решение владельца 28.10.2026.
 # Ключ подписи нельзя менять: телефон не поставит обновление с другой подписью.
 # - Секреты заданы → release: релиз feture-latest (FetUre-latest.apk + FetUre-release.json — постоянная ссылка),
 #   релиз feture-apk-archive (неизменяемые FetUre-<versionCode>.apk, последние 20; на них ссылается обновление
@@ -84,10 +84,10 @@ jobs:
       - name: Ключ подписи FetUre
         id: keystore
         env:
-          FETURE_KEYSTORE_BASE64: ${{ secrets.FETURE_KEYSTORE_BASE64 }}
-          FETURE_KEYSTORE_PASSWORD: ${{ secrets.FETURE_KEYSTORE_PASSWORD }}
-          FETURE_KEY_ALIAS: ${{ secrets.FETURE_KEY_ALIAS }}
-          FETURE_KEY_PASSWORD: ${{ secrets.FETURE_KEY_PASSWORD }}
+          FETURE_KEYSTORE_BASE64: ${{ secrets.FETURE_KEYSTORE_BASE64 || secrets.KEYSTORE_BASE64 }}
+          FETURE_KEYSTORE_PASSWORD: ${{ secrets.FETURE_KEYSTORE_PASSWORD || secrets.KEYSTORE_PASSWORD }}
+          FETURE_KEY_ALIAS: ${{ secrets.FETURE_KEY_ALIAS || secrets.KEY_ALIAS }}
+          FETURE_KEY_PASSWORD: ${{ secrets.FETURE_KEY_PASSWORD || secrets.KEY_PASSWORD }}
         run: |
           if [ -z "$FETURE_KEYSTORE_BASE64" ]; then
             echo "::warning::Секрет FETURE_KEYSTORE_BASE64 не задан — собираю ТЕСТОВЫЙ APK с debug-ключом (apps/feture/docs/android-release.md)."
@@ -123,9 +123,9 @@ jobs:
         if: steps.keystore.outputs.mode == 'release'
         env:
           KEYSTORE_FILE: ${{ steps.keystore.outputs.path }}
-          KEYSTORE_PASSWORD: ${{ secrets.FETURE_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.FETURE_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.FETURE_KEY_PASSWORD }}
+          KEYSTORE_PASSWORD: ${{ secrets.FETURE_KEYSTORE_PASSWORD || secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.FETURE_KEY_ALIAS || secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.FETURE_KEY_PASSWORD || secrets.KEY_PASSWORD }}
         run: gradle -p android :app:assembleDirectRelease :app:bundlePlayRelease --no-daemon
 
       - name: Тестовый debug APK
