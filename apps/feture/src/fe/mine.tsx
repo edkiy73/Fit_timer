@@ -6,7 +6,7 @@ import {Bookmark,Calendar,Clock,LockOpen,MessageCircle,Newspaper,Pencil,Plus,Tri
 import {feErrorMessage} from '../feture/fe-api';
 import {Alert,Av,Bar,Btn,Card,Empty,Group,IconBtn,Note,Row,Skel,Stack,View} from './kit';
 import {useFe} from './session';
-import {PostCard,postSchema,when,type Post} from './feed';
+import {PostCard,SavedEditSheet,postSchema,savedEdit,when,type Post,type SavedEdit} from './feed';
 import {EventRow,type Ev} from './browse';
 import {mdPlain} from './post-parts';
 import {useToast} from './toast';
@@ -125,7 +125,8 @@ function Saved(){
 }
 
 // F10 / G04 (screens behind «Мои публикации» and «Сохранённое»).
-const postsRev=z.object({ok:z.literal(true),items:z.array(postSchema),revisions:z.array(z.object({id:z.uuid(),post_id:z.uuid(),created_at:z.string()}).passthrough()).optional()});
+const postsRev=z.object({ok:z.literal(true),items:z.array(postSchema),revisions:z.array(z.object({id:z.uuid(),post_id:z.uuid(),created_at:z.string()}).passthrough()).optional(),
+ pendingEdits:z.array(savedEdit).optional()});
 const savedRes=saved;
 const onePost=z.object({ok:z.literal(true),post:postSchema});
 const oneEvent=z.object({ok:z.literal(true),event:z.object({id:z.uuid(),title:z.string(),kind:z.string(),format:z.enum(['online','offline']),area:z.string().nullable(),startsAt:z.string(),state:z.string()}).passthrough()});
@@ -136,6 +137,7 @@ export function MyPostsScreen(){
  const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
  const couple=acting?.kind==='couple';
  const {data,setData,error,load}=useLoad(useCallback(()=>call('me.posts',{},postsRev),[call]));
+ const [edits,setEdits]=useState<SavedEdit|null>(null);
  const replace=(np:Post)=>setData(d=>d?{...d,items:d.items.map(x=>x.id===np.id?np:x)}:d);
  const card=(p:Post)=><PostCard key={p.id} post={p} onChange={replace} onExpired={()=>{call('post.get',{postId:p.id},onePost).then(r=>replace(r.post)).catch(()=>{});}}
   onRemove={r=>{setData(d=>d?{...d,items:d.items.filter(x=>x.id!==r.postId)}:d);toast(r.notice,{type:'ok'});}}/>;
@@ -152,6 +154,8 @@ export function MyPostsScreen(){
    :<>
     {returned.length>0&&<Group title={t('fe.fd.mine.returned',{n:returned.length})}><Card list>{returned.map(p=>row(p,TriangleAlert,t('fe.fd.mine.returnedSub')))}</Card></Group>}
     {drafts.length>0&&<Group title={t('fe.fd.mine.drafts',{n:drafts.length})}><Card list>{drafts.map(p=>row(p,Pencil,t('fe.fd.mine.editedAt',{when:when(p.editedAt??p.publishedAt,locale)||'—'})))}</Card></Group>}
+    {(data.pendingEdits??[]).length>0&&<Group title={t('fe.w3.edits.group',{n:data.pendingEdits!.length})}><Card list>{data.pendingEdits!.map(e=><Row key={e.postId} icon={Pencil}
+     title={mdPlain(e.post.title||e.post.body||'').slice(0,60)||t('fe.fd.mine.noText')} sub={t('fe.w3.edits.sub',{when:when(e.savedAt,locale)})} onClick={()=>setEdits(e)}/>)}</Card></Group>}
     {revs.length>0&&<Group title={t('fe.fd.mine.revisions',{n:revs.length})}><Card list>{revs.map(p=><Row key={p.id} icon={Clock} title={mdPlain(p.title||p.body).slice(0,60)||t('fe.fd.mine.noText')} sub={t('fe.fd.mine.revisionsSub')}
      onClick={()=>navigate('/n/feed/post/'+p.id)}/>)}</Card></Group>}
     {review.length>0&&<Group title={t('fe.fd.mine.review',{n:review.length})}><div className="posts">{review.map(card)}</div></Group>}
@@ -161,6 +165,7 @@ export function MyPostsScreen(){
  return <>
   <Bar title={couple?t('fe.fd.mine.titleUs'):t('fe.fd.mine.title')} back small><IconBtn icon={Plus} label={t('fe.create')} onClick={()=>navigate('/n/feed/new')}/></Bar>
   <View className="nodock">{body}</View>
+  {edits&&<SavedEditSheet e={edits} onClose={()=>setEdits(null)} onDone={msg=>{setEdits(null);toast(msg,{type:'ok'});load();}}/>}
  </>;
 }
 

@@ -2,9 +2,9 @@ import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {BookOpen,ChevronLeft,ChevronRight,CircleCheck,Clock,History,Image as ImageIcon,Pencil,Plus,Search as SearchIcon,Users,X} from 'lucide-react';
+import {BookOpen,ChevronLeft,ChevronRight,CircleCheck,Clock,History,Image as ImageIcon,Pencil,Plus,Search as SearchIcon,SlidersHorizontal,Users,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,H,IconBtn,Note,Pill,Row,SearchInput,SectionLabel,Seg,Skel,Stack,View,plate} from './kit';
+import {Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,H,IconBtn,Note,Pill,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Stack,View,plate} from './kit';
 import {useFe} from './session';
 import {PostCard,postSchema,type Post} from './feed';
 import {InterestSheet,Jars,useInterests} from './interests';
@@ -133,6 +133,12 @@ const RECENT_KEY='feture.fe.searchRecent';
 const readRecent=():string[]=>{try{const v=JSON.parse(localStorage.getItem(RECENT_KEY)??'[]');return Array.isArray(v)?v.filter((x):x is string=>typeof x==='string').slice(0,6):[];}catch{return [];}};
 const writeRecent=(list:string[])=>{try{localStorage.setItem(RECENT_KEY,JSON.stringify(list));}catch{/* this device only */}};
 type Results={people:Person[],posts:Post[],communities:Comm[],events:Ev[],topics:Topic[]};
+/** V21 gFilters: what the server can narrow a search by, per kind of result. */
+type SearchFilters={posts:{types:string[],topics:string[]},events:{format:'all'|'offline'|'online',when:'any'|'week'|'weekend'|'month',price:'any'|'free'|'paid'},communities:{privacy:'any'|'open'|'closed'}};
+const NO_SF:SearchFilters={posts:{types:[],topics:[]},events:{format:'all',when:'any',price:'any'},communities:{privacy:'any'}};
+const sfCount=(f:SearchFilters,k:'posts'|'events'|'communities')=>k==='posts'?f.posts.types.length+f.posts.topics.length
+ :k==='events'?Number(f.events.format!=='all')+Number(f.events.when!=='any')+Number(f.events.price!=='any'):Number(f.communities.privacy!=='any');
+const POST_TYPES=['note','text','photo','poll','interests'] as const;
 
 export function SearchScreen(){
  const {call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const [params,setParams]=useSearchParams();
@@ -143,6 +149,8 @@ export function SearchScreen(){
  const [res,setRes]=useState<Results|null>(null);const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);
  const input=useRef<HTMLInputElement>(null);
  useEffect(()=>{input.current?.focus({preventScroll:true});},[]);
+ const [sf,setSf]=useState<SearchFilters>(NO_SF);const [fOpen,setFOpen]=useState(false);
+ const fk=scope==='posts'||scope==='events'||scope==='communities'?scope:null;const nF=fk?sfCount(sf,fk):0;
  const term=q.trim();
  useEffect(()=>{
   setError(null);if(term.length<2){setRes(null);setBusy(false);return;}
@@ -156,11 +164,14 @@ export function SearchScreen(){
    Promise.allSettled([
     want('people')?call('people.search',{q:term},peopleRes,opts).then(r=>r.items):none,
     // Posts: words in the title or text, then those under the matching interests.
-    want('posts')?Promise.all([call('feed.list',{tab:'forYou',q:term,limit:20},postPage,opts),ids.length?call('feed.list',{tab:'forYou',topics:ids,limit:20},postPage,opts):Promise.resolve({items:[] as Post[]})])
-     .then(([a,b])=>{const seen=new Set<string>();return [...a.items,...b.items].filter(x=>!seen.has(x.id)&&!!seen.add(x.id));}):none,
-    want('communities')?Promise.all([call('community.catalog',{},commList,opts),ids.length?call('community.catalog',{topics:ids},commList,opts):Promise.resolve({items:[] as Comm[]})])
-     .then(([a,b])=>{const seen=new Set<string>();return [...a.items.filter(c=>c.name.toLowerCase().includes(low)),...b.items].filter(c=>!seen.has(c.id)&&!!seen.add(c.id));}):none,
-    want('events')?call('event.catalog',{},evList,opts).then(r=>r.items.filter(e=>e.title.toLowerCase().includes(low))):none,
+    // Filters apply in their own tab only (V21 gFilters); without them, matching interests add their posts and communities.
+    want('posts')?(()=>{const pf=scope==='posts'?sf.posts:NO_SF.posts;const narrow={...(pf.types.length?{types:pf.types}:{}),...(pf.topics.length?{topics:pf.topics}:{})};const plain=!pf.types.length&&!pf.topics.length;
+     return Promise.all([call('feed.list',{tab:'forYou',q:term,limit:20,...narrow},postPage,opts),plain&&ids.length?call('feed.list',{tab:'forYou',topics:ids,limit:20},postPage,opts):Promise.resolve({items:[] as Post[]})])
+     .then(([a,b])=>{const seen=new Set<string>();return [...a.items,...b.items].filter(x=>!seen.has(x.id)&&!!seen.add(x.id));});})():none,
+    want('communities')?(()=>{const privacy=scope==='communities'&&sf.communities.privacy!=='any'?{privacy:sf.communities.privacy}:{};
+     return Promise.all([call('community.catalog',{q:term,...privacy},commList,opts),ids.length&&!('privacy' in privacy)?call('community.catalog',{topics:ids},commList,opts):Promise.resolve({items:[] as Comm[]})])
+     .then(([a,b])=>{const seen=new Set<string>();return [...a.items,...b.items].filter(c=>!seen.has(c.id)&&!!seen.add(c.id));});})():none,
+    want('events')?call('event.catalog',{q:term,...(scope==='events'?sf.events:{})},evList,opts).then(r=>r.items):none,
    ]).then(out=>{
     if(ctl.signal.aborted)return;
     const val=<T,>(r:PromiseSettledResult<T[]|null>)=>r.status==='fulfilled'?r.value??[]:[];
@@ -171,7 +182,7 @@ export function SearchScreen(){
    });
   },300);
   return ()=>{clearTimeout(timer);ctl.abort();};
- },[term,scope,topics,call]);
+ },[term,scope,topics,call,sf]);
  const setScope=(s:Scope)=>{commit();setParams(p=>{const n=new URLSearchParams(p);n.set('scope',s);return n;},{replace:true});};
  const commit=()=>{if(term.length<2||recent.includes(term))return;const list=[term,...recent].slice(0,6);setRecent(list);writeRecent(list);};
  const use=(v:string)=>{setQ(v);input.current?.focus({preventScroll:true});};
@@ -201,6 +212,7 @@ export function SearchScreen(){
   </div>
   <View>
    <Seg value={scope} onChange={setScope} label={t('fe.br.search')} options={SCOPES.map(k=>({id:k,label:k==='all'?t('fe.br.all'):names[k]}))}/>
+   {fk&&<Chips className="mt12"><Chip filter on={nF>0} icon={SlidersHorizontal} popup badge={nF||undefined} label={t('fe.w3.sf.open')} onClick={()=>setFOpen(true)}>{t('fe.fd.filters')}</Chip></Chips>}
    {term.length<2?<>
     {recent.length>0&&<><div className="res-h">{t('fe.br.recent')}<button type="button" onClick={()=>{setRecent([]);writeRecent([]);}}>{t('fe.br.clear')}</button></div>
      <Card list>{recent.map(x=><div key={x} className="recent"><History/><button type="button" className="tx" onClick={()=>use(x)}>{x}</button>
@@ -213,9 +225,36 @@ export function SearchScreen(){
    :error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}/>
    :!res||busy&&!sections.length?<Skel kind="list"/>
    :sections.length?<>{sections}</>
+   :nF>0?<Empty icon={SlidersHorizontal} title={t('fe.br.nothing')} text={t('fe.w3.sf.nothingText')}><Btn kind="soft" onClick={()=>setSf(NO_SF)}>{t('fe.fd.resetFilters')}</Btn></Empty>
    :<Empty icon={SearchIcon} title={t('fe.br.nothing')} text={t('fe.br.nothingText')}/>}
   </View>
+  {fOpen&&fk&&<SearchFilterSheet kind={fk} value={sf} topics={topics} onClose={()=>setFOpen(false)} onApply={v=>{setSf(v);setFOpen(false);}}/>}
  </>;
+}
+
+/** V21 gFilters — the search filters of one kind of result: kinds of posts and interests; an event's format, dates and
+ * price; whether a community is open. The server applies them. */
+function SearchFilterSheet({kind,value,topics,onClose,onApply}:{kind:'posts'|'events'|'communities',value:SearchFilters,topics:Topic[],onClose:()=>void,onApply:(v:SearchFilters)=>void}){
+ const {t,locale}=useI18n();const [d,setD]=useState(value);
+ const flip=(k:'types'|'topics',id:string)=>setD(v=>({...v,posts:{...v.posts,[k]:v.posts[k].includes(id)?v.posts[k].filter(x=>x!==id):[...v.posts[k],id].slice(0,10)}}));
+ const shownTopics=[...new Set([...d.posts.topics,...topics.slice(0,10).map(x=>x.id)])].map(id=>topics.find(x=>x.id===id)).filter((x):x is Topic=>!!x);
+ return <Sheet title={t('fe.w3.sf.title.'+kind)} onClose={onClose} head={<Btn kind="text" auto onClick={()=>setD({...d,[kind]:NO_SF[kind]})}>{t('fe.fd.reset')}</Btn>}
+  foot={<Btn onClick={()=>onApply(d)}>{t('fe.fd.applyFilters')}</Btn>}>
+  {kind==='posts'&&<>
+   <SectionLabel>{t('fe.w3.ff.types')}</SectionLabel><Chips>{POST_TYPES.map(k=><Chip key={k} on={d.posts.types.includes(k)} onClick={()=>flip('types',k)}>{t('fe.w3.type.'+k)}</Chip>)}</Chips>
+   <SectionLabel>{t('fe.fd.showTopics')}</SectionLabel><Chips>{shownTopics.map(x=><Chip key={x.id} on={d.posts.topics.includes(x.id)} onClick={()=>flip('topics',x.id)}>{locale==='en'?x.en:x.ru}</Chip>)}</Chips>
+  </>}
+  {kind==='events'&&<>
+   <SectionLabel>{t('fe.w3.sf.format')}</SectionLabel><ChoiceChips label={t('fe.w3.sf.format')} value={d.events.format} onChange={v=>setD({...d,events:{...d.events,format:v}})}
+    options={[['all',t('fe.w3.sf.any')],['offline',t('fe.w3.sf.offline')],['online',t('fe.w3.sf.online')]] as const}/>
+   <SectionLabel>{t('fe.w3.sf.when')}</SectionLabel><ChoiceChips label={t('fe.w3.sf.when')} value={d.events.when} onChange={v=>setD({...d,events:{...d.events,when:v}})}
+    options={[['any',t('fe.w3.sf.anyTime')],['week',t('fe.w3.sf.week')],['weekend',t('fe.w3.sf.weekend')],['month',t('fe.w3.sf.month')]] as const}/>
+   <SectionLabel>{t('fe.w3.sf.price')}</SectionLabel><ChoiceChips label={t('fe.w3.sf.price')} value={d.events.price} onChange={v=>setD({...d,events:{...d.events,price:v}})}
+    options={[['any',t('fe.w3.sf.any')],['free',t('fe.w3.sf.free')],['paid',t('fe.w3.sf.paid')]] as const}/>
+  </>}
+  {kind==='communities'&&<><SectionLabel>{t('fe.w3.sf.join')}</SectionLabel><ChoiceChips label={t('fe.w3.sf.join')} value={d.communities.privacy} onChange={v=>setD({...d,communities:{privacy:v}})}
+   options={[['any',t('fe.w3.sf.any')],['open',t('fe.w3.sf.open2')],['closed',t('fe.w3.sf.closed')]] as const}/></>}
+ </Sheet>;
 }
 
 /* ---------- V21 P10: followers / following ---------- */
