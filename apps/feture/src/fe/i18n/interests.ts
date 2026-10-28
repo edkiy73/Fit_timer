@@ -100,7 +100,6 @@ export const ru = {
   'fe.int.hist.dir.watch': 'смотреть',
   'fe.int.hist.archived': 'из теста (архив)',
   'fe.int.hist.manual': 'вручную',
-  'fe.int.hist.more': 'Показать ещё',
 } as const;
 
 export const en = {
@@ -204,5 +203,4 @@ export const en = {
   'fe.int.hist.dir.watch': 'watching',
   'fe.int.hist.archived': 'from a quiz (archived)',
   'fe.int.hist.manual': 'manual',
-  'fe.int.hist.more': 'Show more',
 } as const;

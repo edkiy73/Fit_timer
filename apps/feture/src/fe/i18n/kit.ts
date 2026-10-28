@@ -1,6 +1,9 @@
 // Design-system kit (src/fe/kit): the uploader and the crop sheet.
 export const ru = {
   'fe.kit.up.title': 'Загрузка',
+  'fe.kit.more.loading': 'Загружаем ещё',
+  'fe.kit.more.fail': 'Не загрузилось',
+  'fe.kit.more.retry': 'Повторить',
   'fe.kit.up.format': 'Формат',
   'fe.kit.up.orig': 'Как есть',
   'fe.kit.up.prep': 'Сжимаем и убираем метаданные…',
@@ -48,6 +51,9 @@ export const ru = {
   'fe.kit.sheet.dirtyStay': 'Остаться',
 };
 export const en: Record<keyof typeof ru, string> = {
+  'fe.kit.more.loading': 'Loading more',
+  'fe.kit.more.fail': 'Didn’t load',
+  'fe.kit.more.retry': 'Retry',
   'fe.kit.up.title': 'Upload',
   'fe.kit.up.format': 'Format',
   'fe.kit.up.orig': 'Original',

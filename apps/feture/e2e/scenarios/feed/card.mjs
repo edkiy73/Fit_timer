@@ -154,6 +154,20 @@ export default [
      const pull = async dy => { const x = box.x + box.width / 2, y = box.y + box.height / 2;
        await t.page.mouse.move(x, y); await t.page.mouse.down(); await t.page.mouse.move(x, y + dy / 2, { steps: 4 }); await t.page.mouse.move(x, y + dy, { steps: 4 }); await t.page.mouse.up(); await t.wait(500); };
      await pull(50);
+     // While dragging only the picture moves: the backdrop (the viewer box) stays put and fades, the buttons hide.
+     { const x = box.x + box.width / 2, y = box.y + box.height / 2;
+       await t.page.mouse.move(x, y); await t.page.mouse.down(); await t.page.mouse.move(x, y - 120, { steps: 6 }); await t.wait(450);
+       const s = await t.page.evaluate(() => { const v = document.querySelector('.viewer.on'), f = v.querySelector('.vw-track figure:not([hidden])');
+         const bg = getComputedStyle(v).backgroundColor, a = +(bg.match(/rgba?\(([^)]+)\)/)[1].split(',')[3] ?? 1);
+         return { vTop: v.getBoundingClientRect().top, fTop: [...v.querySelectorAll('.vw-track figure')].map(e => e.getBoundingClientRect().top), alpha: a,
+           top: +getComputedStyle(v.querySelector('.vw-top')).opacity }; });
+       await t.shot('viewer-dragging');
+       await t.page.mouse.up(); await t.wait(500);
+       expect(Math.abs(s.vTop) < 1, 'the backdrop moved: ' + s.vTop);
+       expect(s.fTop.some(v => v < -60), 'the picture did not follow the finger: ' + s.fTop);
+       expect(s.alpha < .9 && s.alpha > .2, 'the backdrop did not fade with the distance: ' + s.alpha);
+       expect(s.top < .5, 'the buttons stayed while dragging: ' + s.top); }
+     expect(await t.page.locator('.viewer.on').count() === 1, 'a 120 px pull up closed the viewer');
      expect(await t.page.locator('.viewer.on').count() === 1 && (await t.page.locator('.viewer.on .vw-n').innerText()).trim() === '1 / 2', 'a short pull stays, same photo');
      await pull(-260); await t.page.locator('.viewer').waitFor({ state: 'detached', timeout: 5000 });
      await c.locator('.mgrid .mcell').first().click(); await t.see('.viewer.on');
@@ -167,4 +181,15 @@ export default [
      expect(await t.page.locator('.viewer').count() === 0, 'back to the feed without the viewer');
    } finally { await drop(t, f.id); }
  } },
+ { name: 'a photo that does not load (link ran out, photo removed) shows initials (media: a calm placeholder), never a broken-image mark', persona: 'full', run: async t => {
+   // Every signed picture link fails, as an expired one does.
+   await t.page.route(/\/(storage\/v1\/object\/sign|v)\/[^?]+\?(token|t)=/, r => r.fulfill({ status: 400, body: 'expired' }));
+   await t.go('/n/feed'); await t.see('.posts article.post .av'); await t.wait(2500);
+   const s = await t.page.evaluate(() => ({ broken: [...document.querySelectorAll('.av>img, .mcell img')].filter(i => i.complete && !i.naturalWidth && i.getBoundingClientRect().width).map(i => (i.parentElement.className + '>' + i.className)),
+     ini: document.querySelectorAll('.av.ini').length }));
+   await t.shot('avatar-initials');
+   expect(!s.broken.length, 'broken images: ' + s.broken.join(', '));
+   expect(s.ini > 0, 'no initials shown');
+   await t.page.unroute(/\/(storage\/v1\/object\/sign|v)\/[^?]+\?(token|t)=/);
+ }, allow4xx: true },
 ];

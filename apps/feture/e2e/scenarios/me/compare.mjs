@@ -1,5 +1,6 @@
-// Someone else's interest (V21 «topic» sheet, openTopic): a tap on their capsule opens what it is, their answer, the
-// viewer's own and how they compare, with «Добавить себе» / «Изменить мой». Only what interests.list lets the viewer
+// Someone else's interest (V21 «topic» sheet, openTopic; owner 28.10.2026 compact): a tap on their capsule opens one
+// comparison bar (both avatars, both answers, the interest) with one verdict under it, «Добавить себе» / «Изменить мой»
+// and «Об этом интересе». No «Ответ X» / «Твой ответ» blocks or headings; my non-public answer is a key on my avatar. Only what interests.list lets the viewer
 // see is shown: an «only» interest never appears, a hard limit is a boundary without level and never a match.
 import { expect, until } from '../helpers.mjs';
 
@@ -40,12 +41,17 @@ export default [
      await t.tap(`.profile-page .sc:has-text("${limitName}")`);
      await t.see(`.sheet.on h2:has-text("${limitName}")`);
      const mateName = (await t.api('profile.get', { profileId: mate.personId })).profile?.name || mate.handle;
-     await t.see(`.sheet.on :text("Ответ ${mateName}")`);
-     await t.see('.sheet.on :text("Твой ответ")');
-     // Their limit: a word, no number; the verdict is «Границы», never «Совпадает».
-     const theirCap = t.page.locator('.sheet.on .jars').first();
-     expect(await theirCap.locator('.sc.hard').count() === 1 && !(await theirCap.locator('.sc-v').count()), 'their limit drawn as a level');
-     await t.see('.sheet.on .cmpx-verdict:has-text("Границы")');
+     expect(!(await t.page.locator(`.sheet.on :text("Ответ ${mateName}"), .sheet.on :text("Твой ответ"), .sheet.on .sec, .sheet.on .alert`).count()), 'old answer blocks / headings / boxes');
+     // One bar: my 6 with my roles on the left, their limit as a word (no number) on the right; a key on my avatar.
+     const bar = t.page.locator('.sheet.on .cmpx .cr');
+     expect(await bar.count() === 1, 'one comparison bar');
+     expect((await bar.locator('.cr-v').first().innerText()).includes(String(mineLevel.value)), 'my level in the bar');
+     const theirSide = bar.locator('.cr-v.r');
+     expect((await theirSide.innerText()).includes('табу') && !/\d/.test(await theirSide.innerText()), 'their limit drawn as a level');
+     expect(await bar.locator('.cr-av.me .cr-key').count() === 1, 'no key on my avatar for an «only» answer');
+     expect(await bar.locator('.cr-av.them .av').count() === 1, 'their avatar');
+     // The verdict is «Границы», never «Совпадает».
+     await t.see('.sheet.on .cmpx-verdict:has-text("Границы")'); await t.shot('me-compare-limit');
      await t.see(`.sheet.on .cmpx-verdict:has-text("Для ${mateName} это граница")`);
      expect(!(await t.page.locator('.sheet.on :text("Совпадает")').count()), 'a limit shown as a match');
      // «Изменить мой» opens my own interest sheet with my answer.
@@ -60,7 +66,8 @@ export default [
      if (theirsOnly) {
        const n = topic.get(theirsOnly.topicId);
        await t.tap(`.profile-page .sc:has-text("${n}")`); await t.see(`.sheet.on h2:has-text("${n}")`);
-       await t.see('.sheet.on :text("У тебя этого интереса пока нет")');
+       await t.see('.sheet.on .k-verdict:has-text("У тебя этого интереса пока нет")');
+       await t.see('.sheet.on .sh-f button:has-text("Об этом интересе")');
        await t.tap('.sheet.on .sh-f button:has-text("Добавить себе")');
        await t.tap('.sheet.on .ans-scale button:has-text("7")'); await t.tap('.sheet.on .sh-f .btn.primary');
        restore.push('mine:' + theirsOnly.topicId);

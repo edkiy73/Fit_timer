@@ -207,3 +207,26 @@ export function voiceMime():string|null{
 }
 /** The MIME the server stores: no codec parameters. */
 export const baseMime=(m:string)=>m.split(';')[0]!.trim();
+
+/* ---------- signed media links ---------- */
+const b64=(s:string)=>{try{return atob(s.replace(/-/g,'+').replace(/_/g,'/')+'==='.slice((s.length+3)%4));}catch{return '';}};
+/** When a media link from the server stops working (ms since epoch), or null for a link without a lifetime.
+ * Supabase signed links carry a JWT (`token=`, its `exp`), our media domain a `t=v1.<payload>.<sig>` token whose
+ * payload is `asset|variant|viewer|exp|nonce`. */
+export function linkExpiresAt(url:string|null|undefined):number|null{
+ if(!url)return null;
+ const m=/[?&](token|t)=([A-Za-z0-9._-]+)/.exec(url);if(!m)return null;
+ const parts=m[2]!.split('.');
+ if(m[1]==='t'&&parts[0]==='v1'&&parts[1]){const exp=Number(b64(parts[1]).split('|')[3]);return exp>0?exp*1000:null;}
+ if(m[1]==='token'&&parts.length===3){try{const exp=Number((JSON.parse(b64(parts[1]!)) as {exp?:unknown}).exp);return exp>0?exp*1000:null;}catch{return null;}}
+ return null;
+}
+/** The earliest moment any media link inside a server answer stops working, or null when it has none. A read cache
+ * never answers from a copy past this (owner 28.10.2026: avatars broke when a remembered answer outlived its links). */
+export function linksExpireAt(body:unknown):number|null{
+ let text:string;try{text=JSON.stringify(body)??'';}catch{return null;}
+ if(!text.includes('token=')&&!text.includes('t=v1.'))return null;
+ let min:number|null=null;
+ for(const m of text.matchAll(/https?:[^"\s]+?[?&](?:token|t)=[A-Za-z0-9._-]+/g)){const e=linkExpiresAt(m[0]);if(e!==null&&(min===null||e<min))min=e;}
+ return min;
+}
