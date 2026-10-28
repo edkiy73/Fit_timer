@@ -173,8 +173,8 @@ export function LikeTile({src,seed,name,label,onOpen,children}:{src?:string|null
 }
 
 /** «Никого рядом»: the radar with the viewer in the middle and two quiet dots. */
-export function Radar({src,seed}:{src?:string|null|undefined,seed:string}){
- return <div className="radar"><i/><i/><i/>
+export function Radar({src,seed,small}:{src?:string|null|undefined,seed:string,/** A compact one (an empty deck under a list of ways on). */ small?:boolean|undefined}){
+ return <div className={'radar'+(small?' k-radar-sm':'')}><i/><i/><i/>
   <span className="me">{src?<img className="k-cover" src={src} alt=""/>:<div className="plate" style={plate(seed)}/>}</span>
   <span className="dot k-radar-d1"><div className="plate" style={plate('sea')}/></span>
   <span className="dot k-radar-d2"><div className="plate" style={plate('amber')}/></span>

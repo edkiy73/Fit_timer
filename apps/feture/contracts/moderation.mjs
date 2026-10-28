@@ -60,7 +60,7 @@ export const moderationCommands = {
     input: z.strictObject({ opId, placeId: id, decision: z.enum(['approve', 'reject']), nameRu: field('placeName').optional(), nameEn: field('placeName').optional() }),
   },
   'appeal.create': {
-    profile: true, write: true, rate: { kind: 'appeal.create', max: 5, window: '1 day' },
+    profile: true, write: true, rate: { kind: 'appeal.create', max: 10, window: '1 day' },
     input: z.strictObject({ opId, targetType: z.enum(['post', 'reply', 'community', 'event', 'profile']), targetId: id, body: field('appeal') }),
   },
   'staff.appealQueue': { profile: false, write: false, input: z.strictObject({ limit: z.int().min(1).max(50).default(20) }) },

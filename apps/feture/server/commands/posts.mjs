@@ -27,6 +27,8 @@ const PUBLIC_AUD = new Set(['all', 'followers']);
 /** How many things one activity card carries (V21 actCard: the strip scrolls through them; the rest is «ещё N» from
  * `count`). */
 const ACT_ITEMS = 20;
+/** activity.items: things per page when a card is opened past its first ACT_ITEMS. */
+const ACT_PAGE = 60;
 
 const MENTION = /@([A-Za-z0-9_.]{3,20})/g;
 
@@ -382,9 +384,28 @@ async function markers(q, viewer, media, source, params, cursor) {
  * longer than 6 hours fold into one card. Keyset on (last action, card id), like posts.
  * @param {Q} q @param {Acting} viewer @param {string[]} kinds @param {{at: string, id: string} | null} cur @param {number} limit */
 async function activityBursts(q, viewer, kinds, cur, limit, of = null) {
-  // `of`: one person's own activity (their profile's «Активность»): «всем» — anyone, «подписчикам» — those who follow
-  // them, «никому» — only the person; the viewer's mutes do not apply on a profile opened on purpose.
-  const people = of
+  return q.query(
+    `with ${activityActs(!!of)}, marked as (
+       select *, case when t - lag(t) over w <= interval '6 hours' then 0 else 1 end brk from acts window w as (partition by actor, typ order by t, target)
+     ), numbered as (
+       select *, sum(brk) over (partition by actor, typ order by t, target rows unbounded preceding) burst from marked
+     ), bursts as (
+       select actor, typ, min(t) first_at, max(t) last_at, count(*)::int n, (array_agg(target order by t desc))[1:${ACT_ITEMS}] targets,
+              md5(actor::text || typ || min(t)::text)::uuid id
+       from numbered group by actor, typ, burst
+     )
+     select * from bursts where ($4::timestamptz is null or (last_at, id) < ($4::timestamptz, $5::uuid))
+     order by last_at desc, id desc limit $6`,
+    [viewer.profileId, viewer.accountId, kinds, cur?.at ?? null, cur?.id ?? null, limit, ...(of ? [of] : [])]);
+}
+
+/** The `people` and `acts` CTEs both activity reads share: $1 viewer, $2 viewer's account, $3 kinds; with `one`, the
+ * activity of profile $7 only (their profile's «Активность», or one card's things), else of everyone the viewer follows.
+ * @param {boolean} one */
+function activityActs(one) {
+  // `one`: one person's own activity: «всем» — anyone, «подписчикам» — those who follow them, «никому» — only the
+  // person; the viewer's mutes do not apply on a profile opened on purpose.
+  const people = one
     ? `select p.id from feture.profile p join feture.profile_settings s on s.profile_id = p.id
        where p.id = $7 and p.state = 'active' and not feture.blocked($1, p.id)
          and (p.id = $1 or s.activity_vis = 'all'
@@ -394,8 +415,7 @@ async function activityBursts(q, viewer, kinds, cur, limit, of = null) {
        join feture.profile_settings s on s.profile_id = p.id
        where f.follower_profile_id = $1 and p.id <> $1 and s.activity_vis <> 'off' and not feture.blocked($1, p.id)
          and not exists (select 1 from feture.feed_hide h where h.profile_id = $1 and h.kind in ('activity', 'author') and h.target_id = p.id)`;
-  return q.query(
-    `with people as (${people}), acts as (
+  return `people as (${people}), acts as (
        select r.profile_id actor, 'likes' typ, r.target_id target, r.created_at t
        from people join feture.reaction r on r.profile_id = people.id and r.target_type = 'post'
        join feture.profile_settings s on s.profile_id = people.id and s.show_likes
@@ -418,18 +438,7 @@ async function activityBursts(q, viewer, kinds, cur, limit, of = null) {
        from people join feture.follow f on f.follower_profile_id = people.id
        join feture.profile t on t.id = f.target_profile_id and t.state = 'active'
        where 'follows' = any($3) and f.created_at > now() - interval '30 days' and not feture.blocked($1, t.id) and not feture.restricted(t.id)
-     ), marked as (
-       select *, case when t - lag(t) over w <= interval '6 hours' then 0 else 1 end brk from acts window w as (partition by actor, typ order by t, target)
-     ), numbered as (
-       select *, sum(brk) over (partition by actor, typ order by t, target rows unbounded preceding) burst from marked
-     ), bursts as (
-       select actor, typ, max(t) last_at, count(*)::int n, (array_agg(target order by t desc))[1:${ACT_ITEMS}] targets,
-              md5(actor::text || typ || min(t)::text)::uuid id
-       from numbered group by actor, typ, burst
-     )
-     select * from bursts where ($4::timestamptz is null or (last_at, id) < ($4::timestamptz, $5::uuid))
-     order by last_at desc, id desc limit $6`,
-    [viewer.profileId, viewer.accountId, kinds, cur?.at ?? null, cur?.id ?? null, limit, ...(of ? [of] : [])]);
+     )`;
 }
 
 /** Activity cards for the screen: the person, how many, and up to ACT_ITEMS of the things — a liked post with its
@@ -488,6 +497,8 @@ async function activityDtos(q, viewer, media, bursts) {
   const pool = { likes: postOut, events: eventOut, communities: groupOut, follows: people };
   return bursts.map(b => ({
     kind: 'activity', id: b.id, activity: b.typ, actor: actors.find(x => x.id === b.actor), count: b.n, at: new Date(b.last_at).toISOString(),
+    // The card's first moment: with `at` it names the card for activity.items (the things past the first ACT_ITEMS).
+    ...(b.first_at ? { from: new Date(b.first_at).toISOString() } : {}),
     items: b.targets.map((/** @type {string} */ t) => pool[b.typ].find(x => x.id === t)).filter(Boolean),
   }));
 }
@@ -731,6 +742,27 @@ const run = {
     const items = await activityDtos(q, viewer, cfg.media, page);
     const last = page[page.length - 1];
     return { items, next: bursts.length > 20 ? writeCursor(new Date(last.last_at).toISOString(), last.id) : null };
+  },
+
+  async 'activity.items'(q, { acting: a, input, cfg }) {
+    // The things of one activity card past the ACT_ITEMS it carries: the same rules as the card (activityActs), one
+    // person, one kind, between the card's first and last moment (a card is a burst: its neighbours are 6 h+ away, so
+    // a millisecond of slack at the end only makes up for the ISO time's precision). Keyset on (time, thing).
+    const viewer = need(a);
+    const cur = readCursor(input.cursor);
+    const rows = await q.query(
+      `with ${activityActs(true)}
+       select target, t from acts
+       where t >= $6::timestamptz and t < $8::timestamptz + interval '1 millisecond'
+         and ($4::timestamptz is null or (date_trunc('milliseconds', t), target) < ($4::timestamptz, $5::uuid))
+       order by date_trunc('milliseconds', t) desc, target desc limit ${ACT_PAGE + 1}`,
+      [viewer.profileId, viewer.accountId, [input.activity], cur?.at ?? null, cur?.id ?? null, input.from, input.actorId, input.to]);
+    const page = rows.slice(0, ACT_PAGE);
+    if (!page.length) return { items: [], next: null };
+    const [card] = await activityDtos(q, viewer, cfg.media,
+      [{ actor: input.actorId, typ: input.activity, targets: page.map(r => r.target), n: page.length, last_at: page[0].t, id: input.actorId }]);
+    const last = page[page.length - 1];
+    return { items: card?.items ?? [], next: rows.length > ACT_PAGE ? writeCursor(last.t, last.target) : null };
   },
 
   async 'me.posts'(q, { acting: a, cfg, account }) {

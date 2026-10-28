@@ -31,6 +31,9 @@ type FeSession={
  setActing:(profileId:string)=>void;
  reload:()=>void;
  call:<T>(action:string,input:Record<string,unknown>,schema:z.ZodType<T>,opts?:{asAccount?:boolean,profileId?:string,signal?:AbortSignal,fresh?:boolean})=>Promise<T>;
+ /** The last answer this session got for a read, at once (null when never read): a screen draws it on its first frame
+  * and reads again behind it, so a revisit never flashes a skeleton. Writes and signals do not forget it. */
+ peek:<T>(action:string,input:Record<string,unknown>,schema:z.ZodType<T>,opts?:{asAccount?:boolean,profileId?:string})=>T|null;
 };
 
 const Ctx=createContext<FeSession|null>(null);
@@ -47,6 +50,8 @@ const BOOT_KEY='feture.fe.boot:';
 const READ_TTL=30000;
 const STALE_TTL=10*60000;
 const READ_MAX=400;
+/** Pauses before a read refused with 429 is asked again: together longer than the server's one-minute window. */
+const READ_BACKOFF=[2500,6000,15000,40000];
 const wait=(ms:number)=>new Promise<void>(r=>setTimeout(r,ms));
 type Entry={at:number,action:string,value:Promise<unknown>,settled:boolean,refreshing?:boolean,/** The first media link inside it stops working (ms). */ until?:number|null};
 /** An answer is never served from memory once a media link in it is about to run out (signed links live 5–10 min,
@@ -68,6 +73,11 @@ const dropReads=(action:string)=>{const only=NARROW_WRITES[action];if(!only){rea
  * Without this a second «Без звука» / «В архив» within 30 s was answered from memory and never reached the server. */
 const WRITES_WITHOUT_OPID=new Set(['chat.read','chat.mute','chat.archive','notifications.read','notifications.readAll','media.commit','staff.mediaView','profile.setVisibility']);
 export function dropReadCache(){readCache.clear();}
+/** The last answer per read key — what a screen shows first on a revisit (see `peek`); emptied only at sign-out. */
+const lastBody=new Map<string,unknown>();
+const remember=(key:string,body:unknown)=>{lastBody.delete(key);lastBody.set(key,body);if(lastBody.size>READ_MAX){const first=lastBody.keys().next().value;if(first!==undefined)lastBody.delete(first);}};
+/** What screens showed last, per account (`useShown`); emptied at sign-out. */
+const shownMemo=new Map<string,unknown>();
 
 export function FeSessionProvider({children}:{children:ReactNode}){
  const auth=useOptionalAuth();
@@ -83,7 +93,7 @@ export function FeSessionProvider({children}:{children:ReactNode}){
  useEffect(()=>{if(auth.session)had.current=true;else if(!auth.loading&&had.current){had.current=false;void forgetWebPush();void forgetNativePush();}},[auth.loading,auth.session]);
  useEffect(()=>{
   if(auth.loading){setState({status:'loading'});return;}
-  if(!sessionKey){readCache.clear();try{for(const k of Object.keys(localStorage))if(k.startsWith(BOOT_KEY))localStorage.removeItem(k);}catch{/* no storage */}setState({status:'signedOut'});return;}
+  if(!sessionKey){readCache.clear();lastBody.clear();shownMemo.clear();try{for(const k of Object.keys(localStorage))if(k.startsWith(BOOT_KEY))localStorage.removeItem(k);}catch{/* no storage */}setState({status:'signedOut'});return;}
   const session=latestSession.current!;const ctl=new AbortController();
   // The last bootstrap of this account paints the app at once; the fresh one replaces it in the background.
   let cached:Bootstrap|null=null;
@@ -120,14 +130,13 @@ export function FeSessionProvider({children}:{children:ReactNode}){
   }
   const key=JSON.stringify([session.email,profileId??'',action,input]);
   const cached=readCache.get(key);const hit=usable(cached)?cached:undefined;const age=hit?Date.now()-hit.at:Infinity;
-  // A read refused for «too many at once» (429) is asked again after a short pause instead of failing the screen;
-  // writes never retry on their own.
+  // A read refused for «too many at once» (429) is asked again, quietly, with growing pauses that outlast the
+  // per-minute window (owner 28.10.2026: a read never shows a rate-limit error); writes never retry on their own.
   const once=()=>feRequest(session,action,input,raw,{profileId});
-  const ask=()=>once().catch(e=>e instanceof FeError&&e.code==='rate_limited'?wait(2500).then(once):Promise.reject(e))
-   .catch(e=>e instanceof FeError&&e.code==='rate_limited'?wait(6000).then(once):Promise.reject(e));
+  const ask=()=>READ_BACKOFF.reduce<Promise<unknown>>((p,ms)=>p.catch(e=>e instanceof FeError&&e.code==='rate_limited'?wait(ms+Math.random()*1000).then(once):Promise.reject(e)),once());
   const store=(value:Promise<unknown>)=>{
    const entry:Entry={at:Date.now(),action,value,settled:false};readCache.set(key,entry);
-   value.then(body=>{entry.settled=true;entry.until=linksExpireAt(body);},()=>{if(readCache.get(key)===entry)readCache.delete(key);});
+   value.then(body=>{entry.settled=true;entry.until=linksExpireAt(body);remember(key,body);},()=>{if(readCache.get(key)===entry)readCache.delete(key);});
    if(readCache.size>READ_MAX){const first=readCache.keys().next().value;if(first!==undefined)readCache.delete(first);}
   };
   let value:Promise<unknown>;
@@ -139,7 +148,7 @@ export function FeSessionProvider({children}:{children:ReactNode}){
     // The new answer is kept for the next visit; an open screen is never torn down under the reader.
     ask().then(body=>{
      if(readCache.get(key)!==hit)return; // a write or a signal emptied the cache meanwhile
-     readCache.set(key,{at:Date.now(),action,value:Promise.resolve(body),settled:true,until:linksExpireAt(body)});
+     readCache.set(key,{at:Date.now(),action,value:Promise.resolve(body),settled:true,until:linksExpireAt(body)});remember(key,body);
     },()=>{hit.refreshing=false;});}
   }else{value=ask();store(value);}
   // Not bound to the caller's AbortSignal: a screen that unmounts must not cancel a read another screen will reuse.
@@ -148,7 +157,13 @@ export function FeSessionProvider({children}:{children:ReactNode}){
   return parsed;
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[ready,acting?.id,sessionKey]);
- const value=useMemo(()=>({state,acting,setActing,reload,call}),[state,acting,setActing,reload,call]);
+ const peek=useCallback(<T,>(action:string,input:Record<string,unknown>,schema:z.ZodType<T>,opts:{asAccount?:boolean,profileId?:string}={}):T|null=>{
+  const state=stateRef.current;if(state.status!=='ready')return null;
+  const profileId=opts.asAccount?undefined:opts.profileId??acting?.id;
+  const key=JSON.stringify([state.session.email,profileId??'',action,input]);
+  if(!lastBody.has(key))return null;const r=schema.safeParse(lastBody.get(key));return r.success?r.data:null;
+ },[acting?.id]);
+ const value=useMemo(()=>({state,acting,setActing,reload,call,peek}),[state,acting,setActing,reload,call,peek]);
  // One socket per signed-in session, joined to the channels of every profile this account may act as.
  const listeners=useRef(new Set<RtListener>());
  const rt=state.status==='ready'?state.boot.realtime??null:null;
@@ -191,6 +206,23 @@ export function useTypingSignal(tag:string|null|undefined,handler:()=>void){
   return subscribe((kind,_p,t)=>{if(kind==='typing'&&t===tag)latest.current();});
  },[subscribe,tag]);
 }
+
+/** Another `key` (another profile, list or screen subject) starts from empty: `reset` runs during that render (React's
+ * «state from the previous render» pattern, no effect, so no frame with the old one). Reading the same key again — a
+ * revisit, a realtime signal, a retry — keeps what is on screen until the new answer replaces it. */
+/** `useState` that remembers its value per account and `key` across visits: a screen opened again draws what it
+ * showed last (its own optimistic changes included) on the first frame, then its reads replace it. `initial` runs only
+ * when nothing is remembered — typically `peek` of the screen's read. */
+export function useShown<T>(key:string,initial:()=>T):[T,(v:T|((x:T)=>T))=>void]{
+ const {state,acting}=useFe();const full=(state.status==='ready'?state.session.email:'')+'\n'+(acting?.id??'')+'\n'+key;
+ const [v,setV]=useState<T>(()=>shownMemo.has(full)?shownMemo.get(full) as T:initial());
+ const fullRef=useRef(full);
+ useKeyChange(full,()=>{fullRef.current=full;setV(shownMemo.has(full)?shownMemo.get(full) as T:initial());});
+ const set=useCallback((next:T|((x:T)=>T))=>setV(cur=>{const n=typeof next==='function'?(next as (x:T)=>T)(cur):next;shownMemo.set(fullRef.current,n);return n;}),[]);
+ return [v,set];
+}
+
+export function useKeyChange(key:string,reset:()=>void){const [was,setWas]=useState(key);if(was!==key){setWas(key);reset();}}
 
 export function useFe(){
  const value=useContext(Ctx);

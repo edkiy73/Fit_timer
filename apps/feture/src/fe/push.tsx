@@ -85,13 +85,18 @@ export function PushOffer(){
 
 /** K05 «Push-уведомления»: this browser's subscription (this phone's FCM registration in the app) — reflects it and
  * changes it. */
+let lastPushState:WebPushState|null=null;
+/** Reads the switch's state ahead (settings opens), so «Уведомления» draws it at once. */
+export function warmPushState(){void (native?nativePushState:webPushState)().then(v=>{lastPushState=v;}).catch(()=>{});}
 export function PushSwitch(){
  const {state,call}=useFe();const {t}=useI18n();
  const webKey=state.status==='ready'?state.boot.push?.webKey:undefined;
- const [s,setS]=useState<WebPushState|null>(null);const [busy,setBusy]=useState(false);
+ // The state read last draws the switch on the first frame (it is asked again at once): no row popping in.
+ const [s,setS0]=useState<WebPushState|null>(lastPushState);const [busy,setBusy]=useState(false);
+ const setS=useCallback((v:WebPushState)=>{lastPushState=v;setS0(v);},[]);
  const turnOn=useTurnOn();
  const read=native?nativePushState:webPushState;
- useEffect(()=>{let live=true;void read().then(v=>{if(live)setS(v);});return ()=>{live=false;};},[read]);
+ useEffect(()=>{let live=true;void read().then(v=>{if(live)setS(v);});return ()=>{live=false;};},[read,setS]);
  if(!native&&!webPushSupported())return needsHomeScreen()?<Note className="mt8">{t('fe.push.homeScreen')}</Note>:null;
  if((!native&&!webKey)||!s||s==='unsupported')return null;
  const flip=()=>{

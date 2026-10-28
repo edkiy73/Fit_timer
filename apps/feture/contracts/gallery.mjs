@@ -14,7 +14,7 @@ export const MAX_ALBUMS = 50;
 
 export const galleryCommands = {
   'album.list': { profile: true, write: false, input: z.strictObject({ profileId: id }) },
-  'album.create': { profile: true, write: true, rate: { kind: 'album.create', max: 100, window: '1 day' }, input: z.strictObject({ opId, title }) },
+  'album.create': { profile: true, write: true, rate: { kind: 'album.create', max: 500, window: '1 day' }, input: z.strictObject({ opId, title }) },
   'album.rename': { profile: true, write: true, input: z.strictObject({ opId, albumId: id, title }) },
   'album.delete': { profile: true, write: true, input: z.strictObject({ opId, albumId: id }) },
   'album.update': {
@@ -38,7 +38,7 @@ export const galleryCommands = {
   'post.setAlbum': { profile: true, write: true, input: z.strictObject({ opId, postId: id, albumId: id.nullable(), confirm: z.boolean().default(false) }) },
   'gallery.list': { profile: true, write: false, input: z.strictObject({ profileId: id, albumId: id.optional(), cursor: z.string().max(200).optional() }) },
   'gallery.bulk': {
-    profile: true, write: true, rate: { kind: 'gallery.bulk', max: 300, window: '1 day' },
+    profile: true, write: true, rate: { kind: 'gallery.bulk', max: 1500, window: '1 day' },
     input: z.strictObject({
       opId,
       postIds: unique(z.array(id).min(1).max(50)),

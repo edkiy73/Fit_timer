@@ -4,7 +4,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,Calendar,Eye,FileText,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {Av,Bar,Btn,Card,Empty,Note,Row,SectionLabel,Skel,View} from './kit';
-import {useFe} from './session';
+import {useFe,useShown} from './session';
 import {useToast} from './toast';
 import {when} from './feed';
 import {Sheet} from './profile-extras';
@@ -27,8 +27,8 @@ const GROUPS=[['post','posts'],['author','authors'],['activity','activity'],['ev
 
 /** The hidden-from-feed list of the acting profile, grouped like the prototype's sheet. */
 function useHidden(){
- const {call}=useFe();const {t}=useI18n();const toast=useToast();
- const [items,setItems]=useState<Hidden[]|null>(null);const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState('');
+ const {call,peek}=useFe();const {t}=useI18n();const toast=useToast();
+ const [items,setItems]=useShown<Hidden[]|null>('set.hidden',()=>peek('feedHide.list',{},hiddenRes)?.items??null);const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState('');
  const load=useCallback(()=>{setError(null);call('feedHide.list',{},hiddenRes).then(r=>setItems(r.items)).catch(setError);},[call]);
  useEffect(()=>{load();},[load]);
  const key=(h:Hidden)=>h.kind+':'+h.target_id;
@@ -89,8 +89,8 @@ export function HiddenFeedScreen(){
 }
 
 export function BlockedScreen(){
- const {call,acting,state}=useFe();const {t,locale}=useI18n();const toast=useToast();
- const [items,setItems]=useState<Blocked[]|null>(null);const [error,setError]=useState<unknown>(null);
+ const {call,peek,acting,state}=useFe();const {t,locale}=useI18n();const toast=useToast();
+ const [items,setItems]=useShown<Blocked[]|null>('set.blocks',()=>peek('blocks.list',{},blockedRes)?.items??null);const [error,setError]=useState<unknown>(null);
  // The account's other profile (person ↔ couple): its blocks say who is «blocked for both of you».
  const other=state.status==='ready'?state.boot.profiles.find(p=>p.state!=='deleted'&&p.id!==acting?.id&&(p.kind==='couple')!==(acting?.kind==='couple')):undefined;
  const [otherIds,setOtherIds]=useState<Set<string>>(new Set());
@@ -121,7 +121,7 @@ export function BlockedScreen(){
   <Bar title={t('fe.tl.b.title')} back="/n/settings"/>
   <View className="nodock compact">
    <Note className="mb12">{other?(couple?t('fe.tl.b.noteCouple').replace('{name}',nameOf(acting)):t('fe.tl.b.noteMine')):t('fe.tl.b.note')}</Note>
-   {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
+   {error&&!items?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :items===null?<Skel kind="list"/>
     :items.length===0?<Empty icon={Ban} title={t('fe.tl.b.empty')} text={t('fe.tl.b.emptyText')}/>
     :<Card list>{items.map(b=>{const name=nameOf(b)||'?';const forBoth=otherIds.has(b.id);

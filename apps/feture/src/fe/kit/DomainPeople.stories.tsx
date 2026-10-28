@@ -28,6 +28,7 @@ export const Скоро:StoryObj<typeof Soon>={name:'Скоро (знакомс�
  args:{badge:'Скоро',title:'Готовим знакомства',text:'Подборка по тому, что откликается вам обоим.',points:[[Sparkles,'Совпадения по интересам и границам'],[KeyRound,'Приватное открываешь ты'],[MessageCircle,'Написать — только при взаимной симпатии']]},argTypes:{points:{control:false}}};
 export const Печатает:StoryObj<typeof Typing>={name:'«печатает…» в чате',render:a=><div className="msgs"><div className="msg">Привет!</div><Typing {...a}/></div>,args:{children:'Mia печатает…'}};
 export const Радар:StoryObj<typeof Radar>={name:'Радар (никого рядом)',render:a=><div className="empty"><Radar {...a}/></div>,args:{seed:'me'}};
+export const РадарМалый:StoryObj<typeof Radar>={name:'Радар компактный (пустая колода)',render:a=><div className="empty"><Radar {...a}/></div>,args:{seed:'me',small:true}};
 
 type Mark='discuss'|'hard';
 export const Шкала:StoryObj<typeof AnswerScale<Mark>>={name:'Шкала ответа 1–10',

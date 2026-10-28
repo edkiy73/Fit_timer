@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {BookOpen,ChevronLeft,ChevronRight,CircleCheck,Clock,Ellipsis,History,Image as ImageIcon,Pencil,Plus,Search as SearchIcon,SlidersHorizontal,User,UserMinus,Users,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,H,IconBtn,LoadMore,Note,Pill,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Stack,View,plate} from './kit';
-import {useFe} from './session';
+import {useFe,useKeyChange} from './session';
 import {PostCard,postSchema,type Post} from './feed';
 import {InterestSheet,Jars,useInterests} from './interests';
 import {faceFields,NameBadges} from './faces';
@@ -272,7 +272,8 @@ export function FollowsScreen(){
   Promise.all([call('profile.followers',{profileId:id},followersRes),call('profile.followers',{profileId:id,following:true},followersRes)])
    .then(([a,b])=>setLists({followers:a.items,following:b.items})).catch(setError);
  },[call,id]);
- useEffect(()=>{setLists(null);load();},[load]);
+ useKeyChange(id,()=>setLists(null));
+ useEffect(()=>{load();},[load]);
  // Whom the acting profile follows, for the buttons on each row.
  useEffect(()=>{if(!acting)return;call('profile.followers',{profileId:acting.id,following:true},followersRes).then(r=>setMyFollows(new Set(r.items.map(x=>x.id)))).catch(()=>{});},[call,acting]);
  useEffect(()=>{if(mine||!id){setWho('');return;}call('profile.get',{profileId:id},profileRes).then(r=>setWho(nameOf(r.profile))).catch(()=>{});},[call,id,mine]);

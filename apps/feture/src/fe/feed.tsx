@@ -401,9 +401,9 @@ export function PostCard({post,onChange,onRemove,onExpired,full=false,onReply,pr
  // Leaving for the post / the author drops the viewer's own history entry first, so «Назад» comes back here.
  const bar:ViewerBar|undefined=preview?undefined:(close,go)=>{const leave=(to:string)=>{if(full&&to==='/n/feed/post/'+post.id)close();else go(to);};
   return <ViewerPostBar author={{id:post.author.id,name:nameOf(post.author),avatar:post.author.avatar}}
-  text={[post.title,plain].filter(Boolean).join(' — ')} liked={post.liked} likes={post.likes} replies={post.replies} saved={post.saved}
-  labels={{like:t('fe.fd.likePost'+(acting?.kind==='couple'?'Us':'')),comment:t('fe.feed.replies'),save:t('fe.feed.save'+(acting?.kind==='couple'?'Us':'')),share:t('fe.feed.share'),open:t('fe.gal.openPost')}}
-  onLike={()=>void toggle('liked')} onSave={()=>void toggle('saved')} onShare={()=>void share()}
+  text={[post.title,plain].filter(Boolean).join(' — ')} liked={post.liked} likes={post.likes} replies={post.replies}
+  labels={{like:t('fe.fd.likePost'+(acting?.kind==='couple'?'Us':'')),comment:t('fe.feed.replies'),open:t('fe.gal.openPost')}}
+  onLike={()=>void toggle('liked')}
   onComment={()=>{if(full){close();onReply?.();}else leave('/n/feed/post/'+post.id);}} onOpen={()=>leave('/n/feed/post/'+post.id)}
   onAuthor={()=>leave(mine||post.author.id===acting?.id?'/n/me':'/n/people/'+post.author.id)}/>;};
  return <article className="post">

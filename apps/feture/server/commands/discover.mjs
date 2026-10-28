@@ -1,6 +1,10 @@
 // @ts-check
 import { discoverCommands } from '../../contracts/discover.mjs';
-import { fail } from '../errors.mjs';
+import { FeError, fail } from '../errors.mjs';
+import { me } from './me.mjs';
+import { people } from './people.mjs';
+import { access } from './access.mjs';
+import { posts } from './posts.mjs';
 import { enqueue } from '../outbox.mjs';
 import { mediaDto } from '../media/assets.mjs';
 import { checkOptions } from './me.mjs';
@@ -300,6 +304,25 @@ const run = {
       `select count(*)::int n from (select 1 from feture.profile p left join feture.profile_details d on d.profile_id = p.id
        where ${POOL} and ${FILTER} limit 100) x`, [viewer.profileId, ...filterParams(input.filter, loc)]);
     return { count: n, capped: n >= 100 };
+  },
+
+  async 'discover.card'(q, ctx) {
+    // Each part is the very command the profile page asks (same rules, same answer), run one after another in this
+    // request's transaction; a part refused for this viewer («not_found», «forbidden»…) is null, the profile itself
+    // must be there. Part names are the commands' own answers with `ok`, so the app checks them with the same schemas.
+    need(ctx.acting);
+    const input = { profileId: ctx.input.profileId };
+    /** @param {Record<string, Command>} area @param {string} action */
+    const part = async (area, action) => {
+      try { return { ok: true, ...await /** @type {Command} */ (area[action]).run(q, { ...ctx, input }) }; } catch (e) { if (e instanceof FeError) return null; throw e; }
+    };
+    const profile = await part(me, 'profile.get');
+    if (!profile) fail(404, 'not_found');
+    return {
+      profile, compat: await part(people, 'profile.compat'), links: await part(people, 'links.ofProfile'),
+      interests: await part(me, 'interests.list'), private: await part(access, 'private.get'),
+      posts: await part(posts, 'profile.posts'), activity: await part(posts, 'profile.activity'),
+    };
   },
 
   async 'discover.deck'(q, { acting: a, input, cfg }) {

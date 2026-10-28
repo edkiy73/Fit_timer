@@ -10,7 +10,7 @@ export const inboxCommands = {
   'decide.list': { profile: false, write: false, input: z.strictObject({}) },
   'inbox.counts': { profile: false, write: false, input: z.strictObject({}) },
   'push.register': {
-    profile: false, write: true, rate: { kind: 'push.register', max: 20, window: '1 day' },
+    profile: false, write: true, rate: { kind: 'push.register', max: 100, window: '1 day' },
     input: z.strictObject({
       opId, platform: z.enum(['ios', 'android', 'web']), token: z.string().min(8).max(4096),
       // Optional: a re-register without it keeps the zone already known.

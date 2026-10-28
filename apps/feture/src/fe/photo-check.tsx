@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {BadgeCheck,Camera,ChevronRight,Clock,ImagePlus,Info,Lock,RefreshCw,TriangleAlert,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,Bar,Btn,Card,Empty,FilePick,Note,Pose,Row,Skel,View} from './kit';
-import {useFe} from './session';
+import {useFe,useShown} from './session';
 import {toJpeg} from './age-check';
 
 /** V21 V01 «Фото-верификация» on /api/fe (server/commands/verification.mjs): the server picks a gesture
@@ -35,9 +35,12 @@ function About(){
 }
 
 export function PhotoCheckScreen(){
- const {call,state}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();
- const [s,setS]=useState<Status|null>(null);const [error,setError]=useState<unknown>(null);
- const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [needPhoto,setNeedPhoto]=useState(false);
+ const {call,peek,state}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();
+ const [s,setS]=useShown<Status|null>('set.photoCheck',()=>peek('verification.photoStatus',{},photoStatusRes,{asAccount:true}));const [error,setError]=useState<unknown>(null);
+ const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ // No profile photo yet: known from the session at once (the server says the same on «start»), so the screen is drawn
+ // in its final shape on the first frame.
+ const [needPhoto,setNeedPhoto]=useState(()=>state.status==='ready'&&state.boot.profiles.some(p=>p.kind==='person'&&p.state!=='deleted'&&p.avatar==null));
  const [shot,setShot]=useState<{blob:Blob,url:string}|null>(null);const input=useRef<HTMLInputElement>(null);
  const person=state.status==='ready'?state.boot.profiles.find(p=>p.kind==='person'&&p.state!=='deleted'):undefined;
  const load=useCallback((fresh=false)=>{setError(null);call('verification.photoStatus',{},photoStatusRes,{asAccount:true,fresh}).then(setS).catch(setError);},[call]);
@@ -48,8 +51,9 @@ export function PhotoCheckScreen(){
  useEffect(()=>{if(!s||auto.current||s.state==='approved'||s.state==='pending'||s.check?.state==='started')return;auto.current=true;void start();},[s]);
 
  const start=async()=>{
-  setBusy(true);setFailure('');setNeedPhoto(false);
-  try{const r=await call('verification.photoStart',{opId:newOpId()},startRes,{asAccount:true});
+  // `needPhoto` stays as it is until the answer: the pose block must not appear and vanish again under the reader.
+  setBusy(true);setFailure('');
+  try{const r=await call('verification.photoStart',{opId:newOpId()},startRes,{asAccount:true});setNeedPhoto(false);
    if(r.state==='submitted')load();else setS(cur=>cur&&{...cur,check:{id:r.id,state:'started',gesture:r.gesture}});}
   catch(e){if(e instanceof FeError&&e.code==='rule_violation'&&e.rule==='photo_required')setNeedPhoto(true);else setFailure(feErrorMessage(e,t));}
   finally{setBusy(false);}

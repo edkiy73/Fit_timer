@@ -15,11 +15,11 @@ export const chatsCommands = {
     input: z.strictObject({ conversationId: id, beforeSeq: seq.optional(), afterSeq: seq.optional(), limit: z.int().min(1).max(100).default(50) }),
   },
   'chat.send': {
-    profile: true, write: true, rate: { kind: 'chat.send', max: 2000, window: '1 day' },
+    profile: true, write: true, rate: { kind: 'chat.send', max: 10000, window: '1 day' },
     input: z.strictObject({ opId, conversationId: id, body: field('chatMessage'), replyTo: id.optional() }),
   },
   'chat.sendMedia': {
-    profile: true, write: true, rate: { kind: 'chat.media', max: 300, window: '1 day' },
+    profile: true, write: true, rate: { kind: 'chat.media', max: 1500, window: '1 day' },
     input: z.strictObject({
       opId, conversationId: id, assetId: id, mode: z.enum(['normal', 'once', 't15', 't120', 't1440']).default('normal'),
       body: field('caption').default(''), replyTo: id.optional(),
@@ -33,7 +33,7 @@ export const chatsCommands = {
   'chat.starters': { profile: true, write: false, input: z.strictObject({ conversationId: id }) },
   // «печатает…» (owner, 28.10): a short-lived realtime signal to the other side, nothing stored; the client sends it at
   // most every few seconds while typing.
-  'chat.typing': { profile: true, write: false, rate: { kind: 'chat.typing', max: 3000, window: '1 day' }, input: z.strictObject({ conversationId: id }) },
+  'chat.typing': { profile: true, write: false, rate: { kind: 'chat.typing', max: 30000, window: '1 day' }, input: z.strictObject({ conversationId: id }) },
   'chat.read': { profile: true, write: true, ledger: false, input: z.strictObject({ conversationId: id, upToSeq: seq }) },
   'chat.mute': { profile: true, write: true, ledger: false, input: z.strictObject({ conversationId: id, on: z.boolean() }) },
   'chat.archive': { profile: true, write: true, ledger: false, input: z.strictObject({ conversationId: id, on: z.boolean() }) },
