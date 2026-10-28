@@ -34,13 +34,14 @@ export function useSendPhoto(purpose:Purpose,extra:Record<string,unknown>={},pro
  },[call,purpose,key,profileId]);
 }
 
-/** A clip with its poster: the poster first (small), then the clip with progress; ten minutes for a slow connection. */
+/** A clip with its poster (and its trim / crop, `edit`): the poster first (small), then the clip with progress; ten
+ * minutes for a slow connection. */
 export function useSendVideo(purpose:Purpose,extra:Record<string,unknown>={},profileId?:string):SendVideo{
  const {call}=useFe();const key=JSON.stringify(extra);
  return useCallback(async(v,onProgress,more={})=>{
   const as=profileId?{profileId}:{};
   const i=await call('media.uploadIntent',{opId:newOpId(),purpose,kind:'video',mime:v.mime,bytes:v.size,durationMs:Math.max(1,v.durationMs),
-   poster:{mime:'image/jpeg',bytes:v.poster.size},...JSON.parse(key),...more},intentRes,as);
+   poster:{mime:'image/jpeg',bytes:v.poster.size},...(v.edit?{edit:v.edit}:{}),...JSON.parse(key),...more},intentRes,as);
   if(!i.posterUpload)throw new Error('upload');
   await put(i.posterUpload.url,i.posterUpload.method,i.posterUpload.headers,v.poster,()=>{});
   await put(i.upload.url,i.upload.method,i.upload.headers,v.file,onProgress,600000);

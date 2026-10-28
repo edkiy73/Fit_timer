@@ -4,7 +4,8 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Check,ChevronLeft,ChevronRight,Link as LinkIcon,Undo2,Users,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Ask,Av,Btn,Card,Empty,H,IconBtn,Layer,Note,PhotoTrack,Row,Sheet,Skel,VideoBadge,useBackClose,type Slide} from './kit';
+import {Ask,Av,Btn,Card,Empty,H,IconBtn,Layer,Note,PhotoTrack,Row,Sheet,Skel,VideoBadge,VideoPlayer,useBackClose,type Slide} from './kit';
+import type {Clip} from './kit/media';
 import {useFe} from './session';
 import {useToast} from './toast';
 
@@ -90,9 +91,10 @@ export function RichText({text,className,mentions,images}:{text:string,className
 export const mdPlain=(s:string)=>s.replace(/!\[[^\]\n]*\]\(media:[^)]*\)/g,' ').replace(/!?\[([^\]]*)\]\([^)]*\)/g,'$1').replace(/^\s*(#{1,3}|>|[-*]|\d+[.)])\s+/gm,'').replace(/(\*\*|__|~~|`)/g,'').replace(/\s*\n+\s*/g,' ').trim();
 
 /* ---------- mediaGrid() + mosaic ---------- */
-export type MediaItem={id:string,kind?:string|undefined,w:number|null,h:number|null,pending:boolean,blurred:boolean,src:Record<string,string>|null,durationMs?:number|null|undefined};
+export type MediaItem={id:string,kind?:string|undefined,w:number|null,h:number|null,pending:boolean,blurred:boolean,src:Record<string,string>|null,durationMs?:number|null|undefined,
+ /** A clip's trim and crop (media `clip`). */ clip?:Clip|null|undefined};
 /** What the viewer shows for an item: the picture, or a clip with its poster (a covered clip stays its picture). */
-export const slideOf=(m:MediaItem):Slide=>m.kind==='video'&&m.src?.file?{video:m.src.file,poster:mediaSrc(m,'full'),durationMs:m.durationMs}:mediaSrc(m,'full')!;
+export const slideOf=(m:MediaItem):Slide=>m.kind==='video'&&m.src?.file?{video:m.src.file,poster:mediaSrc(m,'full'),durationMs:m.durationMs,clip:m.clip}:mediaSrc(m,'full')!;
 const fitAr=(r:number,lo:number,hi:number)=>Math.max(lo,Math.min(hi,r));
 type Cell=[number,number,number,number];
 function mosaic(rs:(number|null)[]){
@@ -135,7 +137,11 @@ export function MediaGrid({media,onExpired}:{media:MediaItem[],onExpired?:(()=>v
  const go=(i:number)=>(e:React.MouseEvent<HTMLButtonElement>)=>{e.stopPropagation();opener.current=e.currentTarget;setOpen(i);};
  const label=t('fe.fd.openFull');
  let grid;
- if(n===1){const m=shown[0]!;const r=rs[0];
+ // One clip plays in place with its controls (owner, 28.10.2026); «На весь экран» opens the viewer.
+ if(n===1&&shown[0]!.kind==='video'&&shown[0]!.src?.file){const m=shown[0]!;const r=rs[0];
+  grid=<div className="mgrid n1"><div className="mcell mv" style={r?{'--ar':fitAr(r,.8,1.91).toFixed(4)} as CSSProperties:undefined}>
+   <VideoPlayer src={m.src!.file} poster={mediaSrc(m,'full')} w={m.w} h={m.h} durationMs={m.durationMs} clip={m.clip} fill onExpired={onExpired} onExpand={()=>{opener.current=null;setOpen(0);}}/></div></div>;}
+ else if(n===1){const m=shown[0]!;const r=rs[0];
   grid=<div className="mgrid n1"><button type="button" className="mcell mf" style={r?{'--ar':fitAr(r,.8,1.91).toFixed(4)} as CSSProperties:undefined} aria-label={m.kind==='video'?t('fe.kit.av.play'):label} onClick={go(0)}>
    <MfImg src={mediaSrc(m)!} blur={m.src?.blur} onRatio={learn(m.id)} onFail={onExpired}/>{m.kind==='video'&&<VideoBadge durationMs={m.durationMs}/>}</button></div>;}
  else{const mo=mosaic(rs);
@@ -151,11 +157,11 @@ export function Viewer({srcs,index,onClose,onExpired}:{srcs:Slide[],index:number
  useBackClose(onClose);
  useEffect(()=>{const r=requestAnimationFrame(()=>{setOn(true);box.current?.querySelector<HTMLButtonElement>('.vw-top .ibtn')?.focus({preventScroll:true});});return ()=>cancelAnimationFrame(r);},[]);
  const step=useCallback((d:number)=>setI(v=>Math.max(0,Math.min(srcs.length-1,v+d))),[srcs.length]);
- useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();onClose();}else if(e.key==='ArrowLeft')step(-1);else if(e.key==='ArrowRight')step(1);};
+ useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();onClose();}else if((e.target as HTMLElement|null)?.closest?.('input'))return;else if(e.key==='ArrowLeft')step(-1);else if(e.key==='ArrowRight')step(1);};
   document.addEventListener('keydown',k,true);return ()=>document.removeEventListener('keydown',k,true);},[onClose,step]);
  return <Layer><div ref={box} className={'viewer'+(on?' on':'')} role="dialog" aria-modal="true" aria-label={t('fe.br.viewer')}
   onPointerDown={e=>{sx.current=e.clientX;}} onPointerUp={e=>{if(sx.current==null)return;const dx=e.clientX-sx.current;sx.current=null;if(Math.abs(dx)>50)step(dx<0?1:-1);}}>
-  <PhotoTrack srcs={srcs} index={i} onExpired={onExpired}/>
+  <PhotoTrack srcs={srcs} index={i} onExpired={onExpired} onStep={step}/>
   <div className="vw-top"><span className="vw-n">{i+1} / {srcs.length}</span><IconBtn icon={X} kind="glass" label={t('fe.br.close')} onClick={onClose}/></div>
   {srcs.length>1&&<>
    <button type="button" className="vw-nav l" aria-label={t('fe.br.prev')} disabled={i===0} onClick={()=>step(-1)}><ChevronLeft/></button>

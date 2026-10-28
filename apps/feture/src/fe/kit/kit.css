@@ -105,17 +105,43 @@
 .v21 .li.k-li-sel{display:flex;align-items:center;gap:var(--s-3)}
 .v21 .li.k-li-sel>.selrow{flex:1;min-width:0}
 /* Uploader rows: thumb, name, state, progress, actions. */
-.v21 .k-uplist{display:grid;gap:var(--s-3);margin:var(--s-3) 0}
+.v21 .k-uplist{display:grid;gap:var(--s-4);margin:var(--s-3) 0}
+/* One row per file: the preview in the chosen format on the left; name, state and the actions (icon + word, one line,
+   on the text's left edge) on the right — the same for photos and clips. */
 .v21 .k-uprow{display:flex;gap:var(--s-3);align-items:flex-start}
-.v21 .k-upthumb{position:relative;flex:0 0 64px;width:64px;height:80px;border-radius:var(--r-s);overflow:hidden;background:var(--raise)}
+.v21 .k-upthumb{position:relative;flex:none;width:var(--tw,64px);height:var(--th,80px);border-radius:var(--r-s);overflow:hidden;background:var(--raise)}
+.v21 .k-upthumb-box{flex:none;width:80px;display:flex;justify-content:center}
 .v21 .k-upthumb img{width:100%;height:100%;object-fit:cover}
 .v21 .k-upthumb .sk{position:absolute;inset:0}
-.v21 .k-uptx{flex:1;min-width:0;display:grid;gap:var(--s-1)}
-.v21 .k-uptx b{font:var(--t-body-strong);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.v21 .k-uptx{flex:1;min-width:0;display:grid;gap:var(--s-1);align-content:start}
+.v21 .k-uphead{display:flex;align-items:flex-start;gap:var(--s-2);min-width:0}
+.v21 .k-uphead b{flex:1;min-width:0;font:var(--t-body-strong);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-top:var(--s-1)}
+.v21 .k-uphead .ibtn{flex:none;margin:calc(var(--s-1) * -1) calc(var(--s-1) * -1) 0 0;color:var(--mute)}
 .v21 .k-uptx small{font:var(--t-xs);color:var(--mute)}
 .v21 .k-uprow.error .k-uptx small{color:var(--danger)}
-.v21 .k-upacts{display:flex;flex-wrap:wrap;gap:var(--s-1) var(--s-3)}
-/* Crop: the frame (aspect from --k-ar), the photo placed by --k-w/--k-h/--k-tx/--k-ty, a thirds grid. */
+.v21 .k-upacts{display:flex;flex-wrap:wrap;align-items:center;gap:0 var(--s-4);margin-top:var(--s-0)}
+.v21 .k-upacts .btn,.v21 .k-upacts .btn.sm{min-height:var(--h-xs);width:auto;padding:0;gap:var(--s-1);font:var(--t-sm);font-weight:600;color:var(--accent);background:none;box-shadow:none;border-radius:var(--r-s)}
+.v21 .k-upacts .btn svg{width:var(--i-xs);height:var(--i-xs)}
+/* Trim sheet (Trim.tsx): preview, filmstrip with the chosen window, times. */
+.v21 .k-trim{display:grid;gap:var(--s-3)}
+.v21 .k-trim-prev{max-height:44dvh;border-radius:var(--r)}
+.v21 .k-trim-prev:not(.crop){width:auto;max-width:100%;height:44dvh;margin-inline:auto}
+.v21 .k-trim-strip{position:relative;height:56px;margin:0 var(--s-6);touch-action:none;user-select:none}
+.v21 .k-trim-frames{position:absolute;inset:0;display:flex;border-radius:var(--r-s);overflow:hidden;background:var(--raise)}
+.v21 .k-trim-frames>*{flex:1;min-width:0;height:100%;object-fit:cover}
+.v21 .k-trim-frames .sk{position:relative}
+.v21 .k-trim-dim{position:absolute;top:0;bottom:0;background:color-mix(in srgb,var(--cam-bg) 62%,transparent);pointer-events:none}
+.v21 .k-trim-dim.l{left:0;width:var(--a);border-radius:var(--r-s) 0 0 var(--r-s)}
+.v21 .k-trim-dim.r{left:var(--b);right:0;border-radius:0 var(--r-s) var(--r-s) 0}
+.v21 .k-trim-win{position:absolute;top:-3px;bottom:-3px;left:var(--a);width:calc(var(--b) - var(--a));border:3px solid var(--accent);border-radius:var(--r-s);cursor:grab;box-sizing:border-box}
+.v21 .k-trim-h{position:absolute;top:-3px;bottom:-3px;width:var(--s-6);display:grid;place-items:center;background:var(--accent);cursor:ew-resize;touch-action:none}
+.v21 .k-trim-h::after{content:"";width:3px;height:40%;border-radius:var(--r-full);background:var(--accent-ink)}
+.v21 .k-trim-h.l{left:calc(var(--s-6) * -1);border-radius:var(--r-s) 0 0 var(--r-s)}
+.v21 .k-trim-h.r{right:calc(var(--s-6) * -1);border-radius:0 var(--r-s) var(--r-s) 0}
+.v21 .k-trim-h:focus-visible{outline:none;box-shadow:var(--focus)}
+.v21 .k-trim-at{position:absolute;top:-6px;bottom:-6px;left:var(--at);width:2px;margin-left:-1px;background:var(--cam-ink);box-shadow:0 0 0 1px var(--cam-bg);pointer-events:none}
+.v21 .k-trim-meta{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s-2);margin:0 var(--s-6);font:var(--t-cap);color:var(--mute);font-variant-numeric:tabular-nums}
+.v21 .k-trim-meta b{font:var(--t-sm);font-weight:600;color:var(--ink)}
 .v21 .k-crop{position:relative;aspect-ratio:var(--k-ar);width:100%;max-width:100%;overflow:hidden;border-radius:var(--r);background:var(--ink);touch-action:none;cursor:grab}
 .v21 .k-crop img{position:absolute;left:0;top:0;max-width:none;width:var(--k-w);height:var(--k-h);transform:translate(var(--k-tx),var(--k-ty));user-select:none;-webkit-user-drag:none}
 .v21 .k-crop-grid{position:absolute;inset:0;pointer-events:none}
@@ -175,15 +201,41 @@ button.pill{cursor:pointer}
 .v21 .k-vbadge{position:absolute;left:var(--s-2);bottom:var(--s-2);z-index:1;display:inline-flex;align-items:center;gap:var(--s-1);padding:var(--s-0) var(--s-2);
  border-radius:var(--r-full);background:color-mix(in srgb,var(--cam-bg) 62%,transparent);color:var(--cam-ink);font:var(--t-micro);pointer-events:none}
 .v21 .k-vbadge svg{width:12px;height:12px;fill:currentColor}
-.v21 .k-video{position:relative;width:100%;aspect-ratio:var(--ar,16/9);max-height:70dvh;border-radius:inherit;overflow:hidden;background:var(--cam-bg);display:grid;place-items:center}
+.v21 .k-video{position:relative;width:100%;aspect-ratio:var(--ar,16/9);max-height:70dvh;border-radius:inherit;overflow:hidden;background:var(--cam-bg);display:grid;place-items:center;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.v21 .k-video:not([style*="--ar"]):not(.fill){aspect-ratio:16/9}
 .v21 .k-video.fill{aspect-ratio:auto;height:100%;max-height:none;background:transparent}
-.v21 .k-video>img,.v21 .k-video>video{width:100%;height:100%;object-fit:contain;display:block}
+/* A cropped clip in the viewer keeps its frame, as large as the slide allows (the slide is a size container). */
+.v21 .vw-track figure{container-type:size}
+.v21 .vw-track figure .k-video.fill.crop{aspect-ratio:var(--ar);height:auto;width:min(100cqw,calc(100cqh * var(--arn,1)));background:var(--cam-bg)}
+.v21 .k-video>video,.v21 .k-video>.k-vposter{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;max-width:none;max-height:none}
+.v21 .k-video.crop>.k-vposter{object-fit:cover}
+/* The crop: the clip covers the frame, scaled and shifted as the crop sheet placed it (kit/media.ts clipBox). */
+.v21 .k-video.crop>video{inset:auto;left:var(--vx,0);top:var(--vy,0);width:var(--vw,100%);height:var(--vh,100%);object-fit:fill}
+.v21 .k-video.crop:not([style*="--vw"])>video{object-fit:cover;inset:0;width:100%;height:100%}
 .v21 .k-video>video::-internal-media-controls-download-button{display:none}
 .v21 .k-vnone{position:absolute;inset:0;background:var(--cam-bg)}
-.v21 .k-vplay{position:absolute;left:50%;top:50%;width:var(--h-xl);height:var(--h-xl);margin:calc(var(--h-xl) / -2) 0 0 calc(var(--h-xl) / -2);border-radius:50%;
- display:grid;place-items:center;background:color-mix(in srgb,var(--cam-bg) 55%,transparent);color:var(--cam-ink);backdrop-filter:blur(6px)}
-.v21 .k-vplay svg{width:var(--i-lg);height:var(--i-lg);fill:currentColor;margin-left:3px}
+.v21 .k-vplay{position:absolute;left:50%;top:50%;z-index:1;width:var(--h-xl);height:var(--h-xl);margin:calc(var(--h-xl) / -2) 0 0 calc(var(--h-xl) / -2);border-radius:50%;
+ display:grid;place-items:center;background:color-mix(in srgb,var(--cam-bg) 55%,transparent);color:var(--cam-ink);backdrop-filter:blur(6px);transition:opacity var(--d-fast)}
+.v21 .k-vplay svg{width:var(--i-lg);height:var(--i-lg);fill:currentColor}
+.v21 .k-video:not(.playing) .k-vplay svg{margin-left:3px}
 .v21 .k-vdur{position:absolute;right:var(--s-2);bottom:var(--s-2);padding:var(--s-0) var(--s-2);border-radius:var(--r-full);background:color-mix(in srgb,var(--cam-bg) 62%,transparent);color:var(--cam-ink);font:var(--t-micro)}
+/* The control bar: play / pause, time, scrub line, sound, full screen — over a soft shade at the bottom. */
+.v21 .k-vbar{position:absolute;left:0;right:0;bottom:0;z-index:2;display:flex;align-items:center;gap:var(--s-2);padding:var(--s-6) var(--s-2) var(--s-2);
+ background:linear-gradient(transparent,color-mix(in srgb,var(--cam-bg) 70%,transparent));color:var(--cam-ink);cursor:default;transition:opacity var(--d-fast)}
+.v21 .viewer .k-video.fill:not(.crop) .k-vbar{padding-bottom:calc(var(--s-2) + var(--safe-b) + 28px)}
+.v21 .k-vbar .ibtn{flex:none;color:var(--cam-ink)}
+.v21 .k-vbar .ibtn svg{fill:none}
+.v21 .k-vbar .ibtn:first-child svg{fill:currentColor}
+.v21 .k-vtime{flex:none;font:var(--t-micro);font-variant-numeric:tabular-nums;white-space:nowrap}
+.v21 .k-vseek{flex:1;min-width:0;height:var(--h-sm);margin:0;background:transparent;appearance:none;-webkit-appearance:none;cursor:pointer;touch-action:none}
+.v21 .k-vseek::-webkit-slider-runnable-track{height:4px;border-radius:var(--r-full);background:linear-gradient(to right,var(--cam-ink) var(--p,0%),color-mix(in srgb,var(--cam-ink) 35%,transparent) var(--p,0%))}
+.v21 .k-vseek::-moz-range-track{height:4px;border-radius:var(--r-full);background:linear-gradient(to right,var(--cam-ink) var(--p,0%),color-mix(in srgb,var(--cam-ink) 35%,transparent) var(--p,0%))}
+.v21 .k-vseek::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;margin-top:-5px;border-radius:50%;background:var(--cam-ink);border:0}
+.v21 .k-vseek::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--cam-ink);border:0}
+.v21 .k-vseek:focus-visible{outline:2px solid var(--cam-ink);outline-offset:2px}
+.v21 .k-video.quiet:not(:focus-within) .k-vbar,
+.v21 .k-video.quiet:not(:focus-within) .k-vplay{opacity:0;pointer-events:none}
+.v21 .k-video.quiet{cursor:none}
 .v21 .k-voice{display:flex;align-items:center;gap:var(--s-2);min-width:min(240px,62vw);padding:var(--s-1) 0}
 .v21 .k-voice .ibtn.send{width:var(--h-sm);height:var(--h-sm);background:var(--accent);color:var(--accent-ink)}
 .v21 .k-voice .ibtn.send:disabled{background:var(--raise);color:var(--faint)}
@@ -247,3 +299,7 @@ button.pill{cursor:pointer}
 .v21 .k-fev>.k-fev-menu::after{content:'';position:absolute;inset:calc(-1 * var(--s-1))}
 /* ActingAv in an input bar: the acting profile before the field, centred on the one-line box */
 .v21 .inputbar>.av{flex:none;align-self:flex-end;margin-bottom:7px}
+/* A clip in a feed card plays in place (post-parts MediaGrid): the cell is its frame. */
+.v21 .mcell.mv{display:block}
+.v21 .mcell.mv>.k-video{position:absolute;inset:0;width:100%;height:100%;max-height:none;border-radius:0}
+.v21 .mcell.mv>.k-video.crop{aspect-ratio:auto}

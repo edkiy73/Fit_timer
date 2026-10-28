@@ -639,8 +639,8 @@
 .v21 .stat3 b{display:block;font:700 var(--fs-h3)/1 var(--font)}.v21 .stat3 small{font-size:var(--fs-cap);color:var(--mute)}
 .v21 .granted{display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:var(--r);background:var(--ok-soft)}
 .v21 .granted svg{width:20px;height:20px;color:var(--ok);flex:none}.v21 .granted b{display:block;font-size:var(--fs-body)}.v21 .granted span{font-size:var(--fs-cap);color:var(--mute)}
-.v21 .edit-ph{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.v21 .edit-ph>*{position:relative;aspect-ratio:4/5;border-radius:var(--r);overflow:hidden;border:1.5px dashed var(--line2);display:grid;place-items:center;align-content:center;gap:4px;color:var(--faint)}
+.v21 .edit-ph{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-items:start}
+.v21 .edit-ph>*{position:relative;aspect-ratio:var(--ar,4/5);border-radius:var(--r);overflow:hidden;border:1.5px dashed var(--line2);display:grid;place-items:center;align-content:center;gap:4px;color:var(--faint)}
 .v21 .edit-ph img,
 .v21 .edit-ph video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .v21 .edit-ph>button small{font-size:var(--fs-cap);font-weight:600}
@@ -2698,6 +2698,13 @@
 .v21 :where(.wrap,
 .v21 .auth-wrap,
 .v21 .sh-b)>.btn.text{margin-inline:auto}
+/* A notice never sits glued to the block above or below it (owner, 28.10.2026: «Добавить ещё» + the shield note).
+   In plain stacked content (screen body, sheet body, group, card) an Alert after anything gets the rhythm gap, and so
+   does the block after it — hidden pickers (FilePick) in between no longer break it as the «+» rules above did.
+   Zero specificity: a screen's .mt8 / .mb12 still wins; these containers are block flow, so the gap collapses with a
+   neighbour's own margin instead of doubling; Stack and other flex / grid boxes space by their gap and are left out. */
+.v21 :where(.wrap,.auth-wrap,.sh-b,.grp,.card)>:where(.alert):where(:not(:first-child)),
+.v21 :where(.wrap,.auth-wrap,.sh-b,.grp,.card)>:where(.alert)+:where(:not(.alert,input,[hidden])){margin-top:12px}
 .v21 :where(.wrap,
 .v21 .auth-wrap)>:where(.chips)+:where(.card,
 .v21 .empty,

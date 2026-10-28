@@ -16,6 +16,8 @@ export const LIMITS = Object.freeze({
   video: { maxBytes: 100 * 1024 * 1024, maxMs: 60_000, mime: ['video/mp4', 'video/quicktime', 'video/webm'] },
   audio: { maxBytes: 8 * 1024 * 1024, maxMs: 300_000, mime: ['audio/webm', 'audio/mp4', 'audio/ogg'] },
   poster: { maxBytes: 2 * 1024 * 1024 },
+  // A trimmed clip plays at least a second (and at most the clip limit above).
+  trim: { minMs: 1000 },
   perDay: 200,
   uploadTtlSeconds: 15 * 60,
   removeGraceSeconds: 24 * 3600,
@@ -41,7 +43,8 @@ export const POSTER_UPLOAD_KEY = (/** @type {string} */ id) => `u/${id}.poster`;
  * @param {Q} q @param {Acting} acting @param {MediaConfig} cfg
  * @param {{purpose: string, kind: 'image' | 'video' | 'audio', mime: string, bytes: number, explicit?: boolean,
  *   viewRule?: 'normal' | 'once' | 'timer', viewSeconds?: number, durationMs?: number,
- *   poster?: {mime: string, bytes: number}, peaks?: number[]}} input */
+ *   poster?: {mime: string, bytes: number}, peaks?: number[],
+ *   edit?: {trim?: {startMs: number, endMs: number}, crop?: {aspect: string, x: number, y: number, z: number}}}} input */
 export async function uploadIntent(q, acting, cfg, input) {
   if (!cfg.storage) fail(503, 'unavailable');
   if ((input.kind === 'audio') !== (input.purpose === 'voice')) fail(422, 'rule_violation', { rule: 'media_place' });
@@ -55,6 +58,15 @@ export async function uploadIntent(q, acting, cfg, input) {
     if (input.durationMs > maxMs + 1000) fail(422, 'rule_violation', { rule: 'too_long', maxMs });
   }
   if (input.kind === 'video' && (!input.poster || input.poster.bytes > LIMITS.poster.maxBytes)) fail(422, 'rule_violation', { rule: 'poster' });
+  const trim = input.edit?.trim;
+  if (input.edit && input.kind !== 'video') fail(422, 'rule_violation', { rule: 'edit_video_only' });
+  if (trim) {
+    const len = trim.endMs - trim.startMs;
+    if (trim.endMs > /** @type {number} */ (input.durationMs) + 500 || len < LIMITS.trim.minMs || len > LIMITS.video.maxMs) {
+      fail(422, 'rule_violation', { rule: 'trim', minMs: LIMITS.trim.minMs, maxMs: LIMITS.video.maxMs });
+    }
+  }
+  const crop = input.edit?.crop;
   const viewRule = input.viewRule ?? 'normal';
   if (viewRule !== 'normal' && input.purpose !== 'chat') fail(422, 'rule_violation', { rule: 'view_rule_chat_only' });
   if (input.explicit && PUBLIC_ONLY.has(input.purpose)) fail(422, 'rule_violation', { rule: 'explicit_not_allowed' });
@@ -68,14 +80,17 @@ export async function uploadIntent(q, acting, cfg, input) {
   const storageKey = UPLOAD_KEY(id);
   const [row] = await q.query(
     `insert into feture.media_asset (id, owner_profile_id, uploaded_by, kind, purpose, storage_key, mime, declared_bytes,
-       explicitness, explicitness_source, view_rule, view_seconds, duration_ms, poster_mime, poster_bytes, waveform)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+       explicitness, explicitness_source, view_rule, view_seconds, duration_ms, poster_mime, poster_bytes, waveform,
+       trim_start_ms, trim_end_ms, frame)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
      returning upload_expires_at`,
     [id, acting.profileId, acting.accountId, input.kind, input.purpose, storageKey, input.mime, input.bytes,
       input.explicit ? 'explicit' : 'unknown', input.explicit ? 'author' : null,
       viewRule, viewRule === 'timer' ? input.viewSeconds ?? null : null,
       input.kind === 'image' ? null : input.durationMs, input.poster?.mime ?? null, input.poster?.bytes ?? null,
-      input.kind === 'audio' && input.peaks?.length ? input.peaks : null]);
+      input.kind === 'audio' && input.peaks?.length ? input.peaks : null,
+      trim ? trim.startMs : null, trim ? Math.min(trim.endMs, /** @type {number} */ (input.durationMs)) : null,
+      crop ? JSON.stringify({ aspect: crop.aspect, x: crop.x, y: crop.y, z: crop.z }) : null]);
   return {
     assetId: /** @type {string} */ (id),
     upload: await cfg.storage.putUrl(storageKey, { mime: input.mime, bytes: input.bytes }, LIMITS.uploadTtlSeconds),
@@ -140,7 +155,7 @@ async function ownAsset(q, acting, assetId, { lock = false } = {}) {
  * @param {MediaConfig} cfg
  * @param {{id: string, owner_profile_id: string, kind: string, purpose: string, state: string, explicitness: string,
  *   width: number | null, height: number | null, view_rule: string, copies_at?: unknown, duration_ms?: number | null,
- *   waveform?: number[] | null}} asset
+ *   waveform?: number[] | null, trim_start_ms?: number | null, trim_end_ms?: number | null, frame?: unknown}} asset
  * @param {{viewerProfileId: string, place: Place, showExplicit: boolean, staff?: boolean, opened?: boolean, blurAll?: boolean}} ctx
  *   showExplicit: the viewer turned explicit content on — on the website, as Apple 1.2 requires —
  *   and has not asked to blur it (chatBlur). The same answer applies in the apps once set.
@@ -168,7 +183,7 @@ export async function mediaDto(cfg, asset, ctx) {
   // View-once/timer media always start covered; explicit starts covered unless the viewer turned it on.
   const blurred = !own && !ctx.staff && ((asset.view_rule !== 'normal' && !ctx.opened) || (explicit && !ctx.showExplicit) || (!!ctx.blurAll && !ctx.opened));
   // Until the served copies exist (upload still being checked) there is nothing to link to.
-  const dur = asset.kind === 'video' ? { durationMs: asset.duration_ms ?? null } : {};
+  const dur = asset.kind === 'video' ? videoTiming(asset) : {};
   if (!asset.copies_at) {
     return { id: asset.id, kind: asset.kind, w: asset.width, h: asset.height, pending: true, explicit, blurred, viewRule: asset.view_rule, src: null, ...dur };
   }
@@ -190,6 +205,23 @@ export async function mediaDto(cfg, asset, ctx) {
     viewRule: asset.view_rule,
     src: Object.fromEntries(variants.map((v, i) => [v, urls[i]])),
     ...dur,
+  };
+}
+
+/** A clip's length as shown and its edit: `durationMs` is the part that plays (badges and players need nothing else);
+ * `clip` carries the trim (clamped to the scanned length) and the crop for the players.
+ * @param {{duration_ms?: number | null, trim_start_ms?: number | null, trim_end_ms?: number | null, frame?: unknown}} asset */
+export function videoTiming(asset) {
+  const full = asset.duration_ms ?? null;
+  const frame = asset.frame && typeof asset.frame === 'object' ? /** @type {{aspect: string, x: number, y: number, z: number}} */ (asset.frame) : null;
+  if (asset.trim_start_ms == null && !frame) return { durationMs: full };
+  let startMs = asset.trim_start_ms ?? 0, endMs = asset.trim_end_ms ?? full ?? 0;
+  // The scan reads the real length; a trim declared past it ends at the real end.
+  if (full) { endMs = Math.min(endMs, full); startMs = Math.min(startMs, Math.max(0, endMs - 1000)); }
+  const trimmed = asset.trim_start_ms != null;
+  return {
+    durationMs: trimmed ? Math.max(0, endMs - startMs) : full,
+    clip: { ...(trimmed ? { startMs, endMs } : {}), ...(frame ? { crop: { aspect: frame.aspect, x: frame.x, y: frame.y, z: frame.z } } : {}) },
   };
 }
 
