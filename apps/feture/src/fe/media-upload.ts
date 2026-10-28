@@ -7,7 +7,7 @@ import type {Voice} from './kit/av';
 
 /** The one way a screen uploads media: upload intent → PUT straight to storage (with progress) → commit.
  * Photos: `useSendPhoto` (pass it to the kit Uploader as `send`). Clips: `useSendVideo` (the Uploader's `sendVideo`):
- * the poster frame cut on the device goes to its own upload URL next to the clip. Voice messages: `useSendVoice`.
+ * the clip made on the device (kit/video-edit.ts) and its poster frame, which goes to its own upload URL next to it. Voice messages: `useSendVoice`.
  * `extra` carries purpose-specific intent fields (explicit, viewRule…). */
 const target=z.object({url:z.string(),method:z.string(),headers:z.record(z.string(),z.string())});
 const intentRes=z.object({ok:z.literal(true),assetId:z.uuid(),upload:target,posterUpload:target.optional()});
@@ -34,14 +34,14 @@ export function useSendPhoto(purpose:Purpose,extra:Record<string,unknown>={},pro
  },[call,purpose,key,profileId]);
 }
 
-/** A clip with its poster (and its trim / crop, `edit`): the poster first (small), then the clip with progress; ten
- * minutes for a slow connection. */
+/** A made clip with its poster: the poster first (small), then the clip with progress; ten minutes for a slow
+ * connection. */
 export function useSendVideo(purpose:Purpose,extra:Record<string,unknown>={},profileId?:string):SendVideo{
  const {call}=useFe();const key=JSON.stringify(extra);
  return useCallback(async(v,onProgress,more={})=>{
   const as=profileId?{profileId}:{};
   const i=await call('media.uploadIntent',{opId:newOpId(),purpose,kind:'video',mime:v.mime,bytes:v.size,durationMs:Math.max(1,v.durationMs),
-   poster:{mime:'image/jpeg',bytes:v.poster.size},...(v.edit?{edit:v.edit}:{}),...JSON.parse(key),...more},intentRes,as);
+   poster:{mime:'image/jpeg',bytes:v.poster.size},...JSON.parse(key),...more},intentRes,as);
   if(!i.posterUpload)throw new Error('upload');
   await put(i.posterUpload.url,i.posterUpload.method,i.posterUpload.headers,v.poster,()=>{});
   await put(i.upload.url,i.upload.method,i.upload.headers,v.file,onProgress,600000);

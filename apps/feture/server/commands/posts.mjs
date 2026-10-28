@@ -5,7 +5,7 @@ import { acceptsMention, popularScore } from '../sql-rules.mjs';
 import { fail, isUniqueViolation } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
-import { avatarSrc, mediaDto, videoTiming } from '../media/assets.mjs';
+import { avatarSrc, mediaDto } from '../media/assets.mjs';
 import { blockProfile } from './social.mjs';
 import { canWrite, coverOf } from './communities.mjs';
 import { PREMIUM_SQL, withFaces } from './faces.mjs';
@@ -472,7 +472,7 @@ async function activityDtos(q, viewer, media, bursts) {
       const thumb = pic(d);
       // An article always has a cover (owner, 28.10.2026): without photos, its plate (contracts/_plates.mjs).
       const plate = x.article && !first_asset ? articlePlate(x.id) : undefined;
-      return { ...x, thumb, ...(plate ? { plate } : {}), video: first_asset?.kind === 'video', durationMs: first_asset?.kind === 'video' ? videoTiming(first_asset).durationMs : null };
+      return { ...x, thumb, ...(plate ? { plate } : {}), video: first_asset?.kind === 'video', durationMs: first_asset?.kind === 'video' ? first_asset.duration_ms ?? null : null };
     })),
     Promise.all(events.map(pubCover)),
     Promise.all(groups.map(pubCover)),

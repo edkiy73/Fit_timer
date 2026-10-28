@@ -2,7 +2,7 @@
 // Persona `chats` (both sides age verified): text and photos go to its chat with `mate`, menu actions to its chat with
 // `asker`; actions that end a contact use a fresh match with `stranger` (ended, unblocked and archived again).
 import { STAFF } from '../../personas.mjs';
-import { FIXTURES, until } from '../helpers.mjs';
+import { FIXTURES, expect, until } from '../helpers.mjs';
 let T2, KAI, KAIN, TEST2, NOA, MATE, STRANGER; // set per scenario from the personas of the lane (see `init`)
 const PHOTO = FIXTURES + 'photo.jpg';
 async function init(t) {
@@ -20,7 +20,8 @@ const pickPhoto = async t => {
   const chooser = t.page.waitForEvent('filechooser');
   await t.tap('.sheet .li:has-text("Из галереи")');
   await (await chooser).setFiles(PHOTO);
-  await t.see('.sheet.on:has-text("Отправить: фото")');
+  // The kit Uploader, as everywhere: preview, format and crop, compression on the device, then the view rule.
+  await t.see('.sheet.on:has-text("Фото или видео") .k-uprow:has-text("без геометки")', 15000);
 };
 
 /** A fresh match test1 ↔ noa; returns {me, noa, conv}. */
@@ -146,7 +147,7 @@ const scenarios = [
     await ready(t);
     const before = (await lastMsgs(t)).at(-1)?.seq ?? 0; // the API returns the last 50: compare seq, not count
     await pickPhoto(t);
-    await t.see('.sheet .cm-prev img');
+    await t.see('.sheet.on .k-upthumb img');
     await t.tap('.sheet .sh-f button:has-text("Отправить")');
     await t.page.locator('.sheet.on').waitFor({ state: 'detached', timeout: 45000 });
     await t.page.locator('.msgs .msg.me.has-media').last().waitFor({ timeout: 20000 });
@@ -196,11 +197,12 @@ const scenarios = [
     await pickPhoto(t);
     await t.page.locator('.sheet select').selectOption('t15');
     await t.tap('.sheet .sh-f button:has-text("Отправить")');
-    await t.see('.sheet .alert.err:has-text("подтвердили возраст")');
-    await t.see('.sheet .alert.err a, .sheet .alert.err button');
+    // The upload went through; posting it is refused → the chat says why, with the age-check link and «Не отправлять».
+    await t.see('.alert.err:has-text("подтвердили возраст")', 30000);
+    expect((await t.page.locator('.alert.err button').count()) >= 3, 'age link, retry and drop');
     await t.shot('h02-age-gate');
-    await t.page.keyboard.press('Escape');
-    await t.notSee('.sheet.on', 500);
+    await t.tap('.alert.err button:has-text("Не отправлять")');
+    await t.notSee('.msgs .msg.me.sending', 2000);
   } },
   { name: 'H02 viewing a «один просмотр» photo: opens once in the viewer, then «Уже просмотрено»', persona: 'chats', route: null, run: async t => {
     const id = await sendEphemeralFromTest2(t, 'once');
