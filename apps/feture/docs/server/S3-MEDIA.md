@@ -1,6 +1,6 @@
 # S3. Медиа: загрузка, проверка, хранение, показ
 
-27.10.2026. Часть серверной спецификации FetUre ([README](README.md)). Решения D4, D5, D8 из [V21-PLATFORM-DECISIONS](../design-reference/V21-PLATFORM-DECISIONS.md).
+27.10.2026. Часть серверной спецификации FetUre ([README](README.md)). Решения D4, D5, D8 из [V21-PLATFORM-DECISIONS](../v21/PLATFORM-DECISIONS.md).
 
 ## 1. Принципы
 

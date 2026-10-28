@@ -9,7 +9,7 @@
 //   age checks, community/event review) go through qa-staff@feture.test; nothing is written to the database directly;
 // - accounts live in their own namespace world-<key>@feture.test (the list is docs/test-world.md) — there is no seed
 //   marker in the schema, so that list is how they are found and removed later; the UI shows no «demo/test» badge;
-// - profile photos are the fictional people of the V21 prototype (public/prototype-v21.html FT_IMG, one face per
+// - profile photos are the fictional people of the V21 prototype (docs/v21/prototype-v21.html FT_IMG, one face per
 //   account); every other photo is a people-free CC0 / public-domain picture from Wikimedia Commons
 //   (e2e/world-media.json: source page + license), downloaded once into e2e/.world-cache and uploaded like the app does;
 // - idempotent: each step reads the current state first and only adds what is missing, so a rerun after a failure
@@ -102,7 +102,7 @@ const pid = async key => (await session(email(key))).personId;
 let FACES;
 function faces() {
   if (FACES) return FACES;
-  const html = fs.readFileSync(DIR + '../public/prototype-v21.html', 'utf8');
+  const html = fs.readFileSync(DIR + '../docs/v21/prototype-v21.html', 'utf8');
   const start = html.indexOf('{', html.indexOf('FT_IMG='));
   let depth = 0, j = start;
   for (; j < html.length; j++) { if (html[j] === '{') depth++; else if (html[j] === '}' && --depth === 0) break; }

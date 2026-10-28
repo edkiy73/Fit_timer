@@ -4,7 +4,7 @@ This file is the default entry point for AI coding agents working in this reposi
 Goal: make the smallest correct change with the least repository reading and the least rework.
 
 ## Product routing: FetUre tasks
-If task concerns `apps/feture/**`, **do not** use FitTimer's `apps/fittimer/.ai/project-map.md`, FitTimer `CLAUDE.md`, default FitTimer scripts or code router. Instead read `apps/feture/AGENTS.md`, then `apps/feture/docs/agent-team/START.md` and one specific GitHub Issue/MVP card. The same tiny handoff/roles are used by Claude Code and ChatGPT/Codex under existing subscriptions. No automatically recurring coding jobs, extra AI APIs or model-specific secret setup. UI work uses `apps/feture/docs/design-reference/README.md` — **not** the 220KB full prototype in every run.
+If task concerns `apps/feture/**`, **do not** use FitTimer's `apps/fittimer/.ai/project-map.md`, FitTimer `CLAUDE.md`, default FitTimer scripts or code router. Read `apps/feture/AGENTS.md` (rules, where things are) and follow it; infrastructure decisions are in `apps/feture/docs/infra/README.md`.
 
 ## Repository layout (monorepo)
 

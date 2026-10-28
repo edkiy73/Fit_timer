@@ -1,6 +1,6 @@
 # FetUre — серверная спецификация
 
-С чего начинать серверную работу. Решения по стеку — [V21-PLATFORM-DECISIONS](../design-reference/V21-PLATFORM-DECISIONS.md); перенос интерфейса — [V21-INTEGRATION-GUIDE](../design-reference/V21-INTEGRATION-GUIDE.md).
+С чего начинать серверную работу. Решения по стеку — [V21-PLATFORM-DECISIONS](../v21/PLATFORM-DECISIONS.md).
 
 | # | Документ | Статус |
 |---|---|---|

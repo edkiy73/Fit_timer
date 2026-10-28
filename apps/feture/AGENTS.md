@@ -1,147 +1,107 @@
-# FetUre — product and development rules (2026-10-10)
+# FetUre — rules for people and agents
 
-**Scope:** `apps/feture/**`. These rules supplement the root `AGENTS.md` and take precedence for FetUre-specific UX and test policy. They apply to AI coding agents and human contributors.
+**Scope:** `apps/feture/**`. These rules add to the root `AGENTS.md` and win for FetUre. They are owner decisions;
+change them only when the owner says so, and then edit this file in the same PR.
 
-## Design system — owner rule, 2026-10-28 (overrides any screen-level habit)
+FetUre is an 18+ community app: profiles, interests, posts with photo/video, communities, events, Discover, a private
+part opened by access, chats. Pre-launch: no real users yet.
 
-Every FetUre screen is built only from `src/fe/kit` (components) and its tokens (`src/fe/kit/base.css` top block +
-`tokens.css`). Read `src/fe/kit/README.md` first; Storybook (`npm run storybook`, published at /kit/) shows every
-component with its settings and states. The V21 prototype was only the starting point — it is not maintained or matched.
-- A screen never writes its own sheet, dialog, tabs, list row, chip, notice, button, icon button, input, textarea,
-  select, switch, heading, inline style or stylesheet, and never its own colour, font, size, spacing or radius.
-- Something the kit lacks is **added to the kit first** — component (or variant/state) + tokens + its story
-  (settings and states) + a line in the README — and only then used. Never a local copy "for now".
-- When the prototype disagrees with itself (several looks for one control, odd sizes), ask the owner which one the kit
-  keeps; do not copy the inconsistency.
-- `npm run check:kit` (inside `npm run check`, so CI) fails when any file hand-writes more than its baseline
-  (`tools/fe-kit-baseline.json`). Moving pieces onto the kit lowers it: `node tools/check-fe-kit.mjs --update`.
-- Reviews check reuse across the whole app, not only that one PR works.
+## Where things are
 
-## Server kit — owner rule, 2026-10-28
+| What | Where |
+|---|---|
+| The app (all user screens) | `src/fe/*` on route `/n/*`; components only from `src/fe/kit` (`src/fe/kit/README.md`, Storybook at `/kit/`) |
+| Staff | `/admin` (AppBase admin + FetUre sections in `src/feture/*-admin.tsx`), `/operator` (personal staff workspace), `/n/staff` |
+| Server | `api/fe.mjs` → `server/` (recipe: `server/README.md`), contracts in `contracts/`, SQL in `supabase/migrations/`; design notes `docs/server/` |
+| Earlier backend still used by admin sections | `api/domain.js`, `api/admin.js`, `lib/feture/*` |
+| Scenarios (e2e) | `e2e/` (`e2e/README.md`), test world: `docs/test-world.md` |
+| Android | `android/`, release: `docs/android-release.md` |
+| Infrastructure decisions (payments, 18+, moderation, stores, servers, law, security) | `docs/infra/README.md` |
+| Moderator test accounts | `docs/moderators.md` |
+| V21 prototype (frozen reference for comparison only) | `docs/v21/prototype-v21.html` (+ `CHANGELOG.md`, `PLATFORM-DECISIONS.md`) |
+| Open questions to the owner | `docs/QUESTIONS.md` (create when needed) |
 
-Server commands follow one recipe (`server/README.md`): contract in `contracts/<area>.mjs` → handler in
-`server/commands/<area>.mjs` → test in `tests/fe-<area>-postgres.mjs`, using the shared helpers listed there (never a
-copy). `npm run check:server` (inside `npm run check`) fails on a contract without a handler, a handler without a
-contract, a new action no test calls, or a helper defined in two command files (`tools/fe-server-baseline.json`
-holds today's gaps; it only shrinks).
+Old plans, audits and prototypes V5–V20 were removed on 29.10.2026; git history has them. Do not restore them.
 
-## Interaction scenarios and personas — owner rule, 2026-10-28
+## Интерфейс (owner, 28–29.10.2026)
 
-Scenarios live in `e2e/scenarios/` and run with `e2e/run.mjs` (see `e2e/README.md`). Each scenario names a
-**persona** (`new`, `basic`, `full`, `pair`, …) and runs under your own lane (`E2E_LANE`), so agents never share
-accounts, sessions or daily limits, and every screen is checked in the account states that change it (empty / filled,
-alone / in a couple, hidden / visible). A missing state is added to `e2e/personas.mjs` built from app commands.
-Every other actor (who asks, invites, applies, reports) is a persona of the same lane too (`t.persona(kind)`); seed
-people and content may only be looked at. Scenarios clean up what they create; `e2e/run-all.sh` runs them all.
+1. **Only the kit.** Every screen uses only `src/fe/kit` components, its tokens (`kit/base.css` top block +
+   `kit/tokens.css`) and the layout grid. A screen never writes its own sheet, dialog, tabs, row, chip, notice,
+   button, input, heading, inline style, stylesheet, colour, font, size, spacing or radius. A pattern the kit lacks is
+   **added to the kit first** — component (or variant/state) + tokens + Storybook story with its states + a line in
+   `kit/README.md` — and only then used. Never a local copy «for now». `npm run check:kit` ratchets hand-written
+   pieces per file (`tools/fe-kit-baseline.json`, only goes down; `node tools/check-fe-kit.mjs --update` after cuts).
+2. **Одно действие — один компонент.** UI with the same meaning is one shared component; a variant is a **prop**,
+   never a copy: composer row (`Composer`, `src/fe/create-entry.tsx`), «Создать» sheet (`CreateSheet`), editor
+   (`ComposeScreen`), report (`ReportSheet`), add card (`AddCard`), empty state (`Empty`), link copy (`useCopyLink`,
+   `src/fe/share.tsx`), follow (`FollowButton`, `src/fe/follow.tsx`), like, avatar (`Av`/`ActingAv`), media grid,
+   viewer, uploader, paging (`LoadMore`), pull-to-refresh, confirm (`Ask`), toasts (`useToast`), button rows
+   (`Actions`). Layout grid: `--gut`, `--page-max`, `--block-gap`. Look for the existing one before writing UI;
+   `check:kit` fails on known copies outside their home (`ONE` in `tools/check-fe-kit.mjs`).
+3. **Review gate.** Every UI change is checked by screenshots at phone 360–390, tablet 768 and desktop 1280+, in light
+   and dark, before merge. The PR lists the kit components used and added.
+4. **No legacy exceptions.** A screen that breaks these rules is fixed when found.
+5. **Copy:** plain human Russian, short. Hints at most two lines and only where needed. No «демо», «тестовые данные»,
+   «в разработке» in the UI.
+6. **No author picker.** Editors and reply boxes never get a «я / мы» picker. The acting profile changes only via
+   «Действовать как»; screens reflect it through the avatar, button text («Ответить от пары») and placeholders.
+7. Icons only from Lucide (`lucide-react`). Loading = skeletons or a soft blink in place, never a spinner next to text.
+8. When the V21 prototype disagrees with itself, ask the owner which look the kit keeps; don't copy inconsistencies.
 
-## Owner decision — 2026-10-28 (Discover starts off)
+## Server (owner, 28.10.2026)
 
-New accounts and new couples start **outside Discover** (`discover_mode = 'off'`, server: `account.create`, couple
-creation, `onboarding.complete` defaults to off). Switching Discover on («Показываться» at sign-up step «Знакомства»,
-«Показываюсь» in «Я → Видимость») without a profile photo first asks for one and opens the photo uploader; Discover
-turns on once the photo is added, and the text says the card appears there after the photo is approved (photos are
-reviewed; nobody without an approved photo is shown). There is no separate «Добавить фото» row in «Видимость». This
-replaces the 27.10.2026 decision «new accounts start in Discover visible». Server-side reciprocal opt-in for candidate
-discovery, 18+ and consent rules stay.
+Every command follows `server/README.md`: contract in `contracts/<area>.mjs` → handler in `server/commands/<area>.mjs`
+→ test in `tests/fe-<area>-postgres.mjs`, with the shared helpers listed there (never a copy).
+`npm run check:server` fails on a contract without a handler, a handler without a contract, an action no test calls
+or a helper defined twice (`tools/fe-server-baseline.json` only shrinks). Text input rules:
+`docs/input-safety-backend-checklist.md`.
 
-## Latest owner product priority — 2026-10-13 03:33
+## Product decisions in force
 
-Read [PRODUCT-SPEC-START](docs/design-reference/PRODUCT-SPEC-START.md) before selecting another FetUre product/design task. The owner now prioritizes a complete product/interface specification, all user journeys and screen designs before further internal feature expansion. [MASTER-PRODUCT-SPEC-V4](docs/design-reference/MASTER-PRODUCT-SPEC-V4.md) defines the target product; it is not a live acceptance report. Five permanent tabs are **Лента / Люди / Сообщества / Чаты / Я**, replacing both the 4+conditional-dating and the 02:53 map/topics/social/me/dating navigation below. Feed includes full Events (online/offline); Me contains map/explore/journal. RU/EN, notifications, search and Light/Dark/System are required. Social public profiles and exact-nickname search remain available outside dating. Social-profile likes may establish a mutual contact without enrolling in discovery; candidate discovery still requires reciprocal server-confirmed opt-in. Private sharing never enables chat: only mutual personal likes do. Do not treat likes on posts, group/event roles or Premium as a chat permission. Do not remove security gates or claim this target behavior is already implemented. Critical auth/data-loss/privacy fixes may continue; pause unrelated feature expansion and reconcile old Issues with this spec instead of deleting them wholesale. Latest explicit owner requirements supersede conflicting navigation/product queues below; existing server age/consent/ACL requirements remain.
+- **Discover starts off** (28.10.2026). New accounts and couples have `discover_mode = 'off'`. Turning Discover on
+  without a profile photo asks for one and opens the uploader; the card appears after the photo is approved. Discovery
+  stays reciprocal and server-enforced; 18+ and consent rules stay.
+- **Personas are hidden** (28.10.2026). Whatever a persona account (`qa-…` login) creates never reaches people who are
+  not personas (`feture.qa_hidden()`); personas see each other so scenarios keep working.
+- **APK updates are required before launch.** Every APK build is published in-app as a required update
+  (`POST /api/admin {action:'feture.update.publish', …, minimumCode = latestCode}`), otherwise phones never see it.
+  Before real users, switch to a soft banner except for breaking changes. Signing keys come only from the
+  `FETURE_KEYSTORE_*` secrets; agents never create or read keys.
+- Media is reviewed before it is shown: `uploaded → scanning → needs_review → approved / rejected / blocked`.
+  Staff roles: owner, lead, moderator, verifier, support, auditor — checked on the server only.
 
-## Current owner UX override — 2026-10-13 02:53
+## Privacy and security invariants
 
-See [USER-JOURNEYS-V3](docs/design-reference/USER-JOURNEYS-V3.md) before any visual/frontend task. Account required before entering the app; real Core registration/login, no guest/test consumer mode and no purpose-selection onboarding. User domain data/prefs/drafts live only on the server: remove local-first/guest import/durable offline domain queues in a scoped functional change, retaining server idempotency/CAS/ownership. Temporary form/request memory is not persistent storage; Core credential handling is separate. Five permanent tabs: Моя карта, Темы, Общение, Я, Знакомства. Dating participation remains voluntary and off by default; its tab is always visible. No dating candidate browsing until the viewer explicitly opens their own eligible dating profile with server-confirmed opt-in. Reciprocal discovery must be server enforced; no CSS-only gate. Registration/minimal non-sensitive account provisioning precedes adult proof; sensitive fields/content retain age/consent ACL. This overrides earlier guest/local-first, purpose question and conditional-dock guidance, not security requirements. The public welcome/registration URL stays reachable; this is product sign-in, not a global deployment allowlist.
+- Private by default; `private / granted / public` is enforced on the server. No CSS-only gates.
+- User text is hostile: React escaping only (never `innerHTML` / `dangerouslySetInnerHTML`), validate on the server.
+- No service-role key or admin key in the bundle. Secrets live in Vercel/GitHub settings; agents never print, store
+  or ask for them in chat (the admin key for scripts is read from `~/.config/feture/admin.env`, never shown).
+- Hard limits are boundaries, not percentages; never show someone's limits as attraction or leak private data.
+- Account switching and deletion never expose one person's data to another.
+- FetUre shares the FitT Supabase project (schema `feture`): never touch other products' data.
+- Until the owner declares a launch, FetUre test data and schemas may be reset; no compatibility shims for old
+  prototype data. After launch: versioned migrations, backups, retention and erasure guarantees.
 
-## 1. Product, NOT a dating clone
-FetUre is a product for learning about yourself, building a meaningful private/public profile, and participating in a community. Dating is **third**, optional, and disabled by default. The app must be useful without dating, a local user base, or a romantic partner.
-- "Мой мир": deep, evolving personal profile, interest map/jars, tests, history and privacy controls.
-- "Исследовать": large, editorially reviewed taxonomy, meaningful questions, interpretations and content, not arbitrary scores masquerading as science.
-- "Сообщество": discussions, groups and moderation. During pre-launch development, realistic seed content has provenance in database/admin only, without consumer demo badges; remove/exclude synthetic participants before serving real users.
-- "Знакомства": opt-in large photo cards, swipe, a **full profile scrolling inside the card**, profile-layer access requests and explainable compatibility. Never show someone's hard boundaries as high attraction or leak private data.
+## Checks and scenarios
 
-## 2. ALL four form factors are first-class (non-negotiable)
-FetUre is **one responsive website AND native Android + iOS applications from the same React/TypeScript/AppBase product**. Never treat desktop/tablet as a scaled-up phone mockup or native devices as separate codebases.
-- **Desktop** (about ≥ 1100px): full-width website, useful sidebar/nav, comfortable multi-column content and reading widths, sensible max-width, proper hover/keyboard.
-- **Tablet** (about 768–1099px): a deliberate tablet navigation/layout with appropriately sized cards and dialogs; both portrait and landscape.
-- **Phone** (320–767px): one-column reading, compact safe-area-aware bottom dock, usable swipe/profile scrolling, minimum 44px tap targets where practical.
-- Also handle high-DPI, 200% browser zoom, rotated devices, dynamic keyboard, tall/short screens, CSS safe areas, reduced motion and no horizontal overflow.
-- Only use responsive CSS and shared design components as needed; keep large desktop layouts independent of phone-only navigation. Avoid giant icons and fixed widths that overflow 320px.
-- Visual quality on PC, tablet, and phone matters equally; check representative widths 320, 390, 768, 1024, 1440 after **material layout changes**, but do not turn every UI change into a heavyweight automated test matrix.
+- `npm run check` (CI) = kit and server ratchets, catalogue, typecheck, smoke, unit, security, Postgres tests, build.
+- Every changed screen gets scripted scenarios (tap → choose → submit → read back via API) in `e2e/scenarios/`, run
+  with `e2e/run.mjs` on a local build. Each scenario names a **persona** (`new`, `basic`, `full`, `pair`, …) and runs
+  in its own lane (`E2E_LANE`), so agents never share accounts or limits. A missing account state is added to
+  `e2e/personas.mjs`; other actors are personas of the same lane (`t.persona(kind)`); seed people are read-only.
+  Scenarios clean up after themselves. Never run local scenarios while a prod suite runs (shared rate limits).
+- New automated tests are for logic that matters (auth, permissions, private data, deletion, billing, migrations), not
+  for pixels.
 
-## 3. Shared stack, platform packaging
-- UI: React + TypeScript + Vite; shared AppBase Core / Task Mini conventions; product-specific features remain within `apps/feture`.
-- Website: Vercel `feture-mvp`, progressive-web readiness where appropriate, public website and desktop layouts.
-- Android/iOS: **Capacitor**, aligned with the versions and native principles already used by UnMute and FitTimer. Native packaging hosts the same web distribution; platform-specific bridges are adapters, not parallel UIs.
-- Mobile shell config, sync and release artifacts are product-specific. Android builds may use CI. iOS compiles/signs on macOS/CI, not on Windows or Linux.
-- **Do not build/publish new APK/IPA on every UI commit**, and do not auto-trigger release jobs per push; assemble signed installables only at end-of-milestone or when explicitly requested. No App Store/Play release without readiness, security, content policy and moderation review.
-- Android release flow (owner 28.10.2026, same as UnMute/FitTimer): `docs/android-release.md` — manual run or the `android-release.json` marker, FetUre's own signing key from `FETURE_KEYSTORE_*` secrets (agents never create or read keys), in-app updates, App Links.
-- Do not create a second database, duplicated user management or an unapproved stack. FetUre data shares FitT PostgreSQL with `feture_*` tables for now; Core auth is canonical. No direct browser access to private data, no service-role key in bundles.
+## Workflow
 
-## 4. Privacy matters more than shortcuts
-FetUre may contain highly sensitive personal information.
-- Explicit consent and visibility, private by default. The classifications `private`, `granted`, `public` must be enforced server-side **before real sharing**.
-- Hard/soft limits are NOT percentages of desire. A boundary excludes unsafe compatibility rather than subtracting arbitrary points.
-- Anonymous public taxonomy is permitted, private profile/test/interest data is not. Validate authentication and record ownership on server. Seed profiles may support the pre-launch experience under section 6; never represent them as real participants after launch. Avoid sexualized images in common screens/marketing and plan moderation and 18+ handling.
-- Local data, account switching and deletion must not expose one person's private map to another. Preserve data on sync failure.
-- User text is hostile by default. Escape on output (`esc()` in the prototype, React's default escaping in the app — never `innerHTML`/`dangerouslySetInnerHTML`), and normalise/validate on the **server** at write time. Read [docs/input-safety-backend-checklist.md](docs/input-safety-backend-checklist.md) before moving any text field to the backend or the React app.
-
-## 5. RAPID MVP DEVELOPMENT: MINIMAL TESTING (explicit owner preference)
-There will be **hundreds of UX and product revisions**. Prioritize correct UX and shipping useful increments, not accumulating fragile tests.
-- Keep quick **TypeScript typecheck + production build** and a **small existing smoke/core contract check** as the usual automated gate; run those and any already-existing short tests that CI requires. Do NOT create exhaustive UI tests, snapshots, broad mocks or Playwright scenarios for every component, field, button, or pixel.
-- Write **new** automated tests only for genuinely high-risk stable logic: authentication/authorization, private data disclosure, irreversible deletion, schema migration, lost data, billing, complex merge, and severe regressions. One small focused test is better than a suite.
-- For rapidly changing UI: a quick manual responsive/interaction check is usually sufficient; no additional test file is expected. No "tests for coverage percentages" and no duplicated E2E/unit scenarios without reason.
-- Never disable existing security/auth protection to save a test. Fix actual compile/build failures. CI remains a guardrail, not the feature.
-- Owner override (2026-10-11): **continue the complete MVP plan at high effort without stopping to switch effort between cards**. Batch related tasks, verify and publish complete increments, then continue the next dependency-ordered task in the same session.
-- An unavailable external credential/vendor/legal/physical-device requirement blocks that acceptance criterion only; record it honestly and continue independent authorized implementation. Never fabricate production verification, delivery or device evidence to mark a blocked card complete.
-- Scope tasks into small/medium chunks; prioritize the next user-visible improvement and avoid large unrelated refactors.
-
-## 6. Public development URL, disposable data, no legacy compatibility
-- The FetUre website at `https://feture-mvp.vercel.app` intentionally stays accessible. **Do not add production access restrictions, password/SSO gates, or global allowlists without a separate explicit request.** Accessible by link does not mean the product has started serving real users.
-- Until the owner explicitly declares a launch with real users, **all FetUre development accounts, seed profiles, posts, media and schemas may be reset or replaced**. Do NOT add backward-compatibility shims, legacy profile readers, dual schema versions, long migration paths or dead code to preserve historic prototype/seed data. Prefer the correct current schema over a compatibility workaround.
-- This freedom is strictly limited to FetUre-owned data and resources; never drop shared AppBase infrastructure or other product data in the shared FitT Supabase database. Destructive schema/data edits should be deliberate, scoped and visibly documented.
-- Build a natural, well-populated UI without user-facing `demo`, `test data`, `under development` badges. Keep seed provenance in database/admin, not in the consumer UI. The site is publicly reachable: use licensed/generated media and **no real persons' sensitive data without permission**.
-- Public access to the landing page must not bypass identity/age verification for 18+ content or server-side privacy permissions. Admin and restricted media stay protected.
-- **When real users are explicitly supported**, switch to durability mode: versioned migrations, safe updates, retention/erasure policy, real backups and user-data guarantees. This pre-launch rule no longer applies to them.
-
-## 7. Workflow and status honesty
-- Preserve UI direction and useful behaviors from MVP 3.1, but production interface is React (`/concept.html` is reference only).
-- Distinguish fully working features from demo stubs and unpublished native shells. Do not claim "APK/iOS ready", "cloud saved", "moderated community" or "functional dating" until independently verified.
-- Limit Vercel deployment noise; prefer one merged chunk after checks rather than a chain of tiny main commits.
-- Keep the product README and this file current when architectural assumptions or releases change.
-
-## 8. Authoritative MVP execution plan — token-aware routing
-
-**DO NOT READ the original full plan by default.** The old path `docs/launch-mvp-plan-2026-10-10.md` is now a tiny redirect, not the original 97 KB document.
-
-1. Read [current status and next task](docs/mvp-plan/STATUS.md) (~a few KB) before choosing work; verify `main` HEAD and task dependencies.
-2. Use [task-card router](docs/mvp-plan/README.md) to read **only** the selected domain file (`cards/F.md`, `A.md`, `P.md`, `W.md`, `C.md`, `R.md`, `D.md`, `V-O.md`). Then read 2–5 relevant code/test files.
-3. The archived full plan (`docs/mvp-plan/archive/full-original-2026-10-11.md`) and historical execution journal (`docs/mvp-plan/history/2026-10-10-to-11.md`) are **opt-in historical references only**; search narrowly for a given decision/date. Never load them end-to-end for ordinary work.
-4. For each merged work increment, **update/replace** the relevant lines in `docs/mvp-plan/STATUS.md`, including next action and short handoff; do not append daily entries to the entrypoint, domain cards, or archived original. Record full milestone details in a separate, dated `history/` file only if they materially matter.
-5. The task cards remain requirements, not claims of live acceptance. Preserve all privacy/consent, age-gate and device checks. Code + CI does not prove production acceptance. Read specialist docs only for a task that needs them.
-
-Canonical Core auth and PostgreSQL-owned FetUre domain data remain the architecture; no second auth or client service-role secrets. No unrelated app changes.
-
-## 9. Manual-only shared AI team and MVP Issue queue (owner decision 2026-10-12)
-
-**Standing owner authorization, 2026-10-13:** The owner explicitly authorized publishing FetUre development commits to the public `edkiy73/Fit_timer` repository, creating PRs and independently merging verified changes during requested work. Do not ask for this same GitHub publication/PR/merge permission again. Run the existing checks and proportional independent review before a safe merge.
-- [Start here](docs/agent-team/START.md) → [GitHub Issue index](docs/agent-team/ISSUES.md) → [one MVP card](docs/mvp-plan/README.md) → [12-line handoff](docs/agent-team/HANDOFF.md).
-- Claude and ChatGPT/Codex are **equal manual executors**. Work can switch provider mid-Issue via GitHub branch/PR/handoff. Never depend on chat history or transfer whole repository context. Default one implementer, specialist agent only when useful.
-- Current visual north star: [owner-approved Claude HTML reference](docs/design-reference/README.md) + [responsive/quality acceptance](docs/ui-quality.md). Full original HTML is **opt-in only**, not default agent context; desktop requires independent full-width design.
-- The source of truth for requirements and live acceptance is still domain MVP cards + STATUS. Epics/Issues track work, **not alternative product specs**. Do not prematurely mark complete.
-- **No scheduled autonomous development, separately paid AI APIs, credits or model-invoking GitHub Actions.** The prior paid workflows were removed; the previous subscription-based routine guide is obsolete.
-- **Owner decision 2026-10-12: NO per-PR owner QA gate.** During an explicitly user-initiated coding session ("продолжай/го/делай"), the active Claude/ChatGPT/Codex agent is responsible for implementing, running focused automated + browser checks when feasible, fixing failures, obtaining an independent read-only review proportional to risk, and **merging a verified incremental PR itself**. Do not stop after each green PR asking the owner to click, test or approve. Update STATUS/handoff and proceed to the next ready slice. Merge only if current `main` and head are fresh, CI required by the repo passes, no unresolved blocking review issues/conflicts, and the change stays within its approved safety scope. Report which checks were *not* possible without implying they were performed.
-- **Three gates, do not conflate:** (1) `PR/CI+review passed → safe code merge to main` (agent-owned); (2) `milestone UX/device acceptance` (agent does available browser/device QA and asks owner to assess the assembled feature at milestones, **not each PR**); (3) `launch/live enablement` (explicit owner decision where required). Unavailable external device/provider/live multi-account checks stay open as milestone acceptance, not as a blanket blocker for merging reversible, safely gated pre-launch implementation.
-- **Risk escalation:** auth/permissions, private photos or data disclosure, adult proof, moderation, billing and irreversible operations need a focused independent security/privacy review plus existing tests. A staged private-media UI may merge after that review **only while publication and sharing remain server-denied until their separate consent, staff review and authorization gate**. Do not auto-approve or switch on public exposure. Stop and ask the owner for *actual product/policy choices*, launching real users, payments, final legal text, public release of sensitive media, shared-system destructive changes, production SQL/migrations without prior authorization, or app store publication. Shared Core changes also need cross-app CI and impact review, but not a routine owner visual sign-off.
-- **Manual session vs unattended automation:** an agent explicitly working in an active user chat may choose and execute a safe merge. No background bots, scheduled autonomous development, GitHub auto-merge without agent review, separately paid AI APIs, or model-driven Actions. The owner can still request review-only ("проверь") or explicitly hold a PR; honor those requests.
-
-## Одно действие — один компонент (owner rule, 2026-10-29)
-
-Things with the same meaning use **one shared component** everywhere: composer row (`Composer`, `src/fe/create-entry.tsx`),
-«Создать» sheet (`CreateSheet`), post/article editor (`ComposeScreen`; in a community only «Кто видит» becomes a fixed
-line and there is no album), report (`ReportSheet`), empty block add-card (`AddCard`), empty state (`Empty`), link copy
-(`useCopyLink`, `src/fe/share.tsx`), follow (`FollowButton`, `src/fe/follow.tsx`), like, avatar (`Av`/`ActingAv`), media
-grid, viewer, uploader, list paging (`LoadMore`), pull-to-refresh, confirmation (`Ask`), toasts (`useToast`), button rows
-(`Actions`). A variant is a **prop**, never a copy; a PR that adds a second version is wrong. Screens follow the kit
-layout grid (`--gut`, `--page-max`, `--block-gap`) and check them at 390, 768 and 1280 px. `npm run check:kit` fails
-on known copies outside their home (`ONE` in `tools/check-fe-kit.mjs`) and ratchets margin classes, «nothing here»
-notes and hand-made button rows.
+- The owner can't use a terminal and has authorised all FetUre work: agents create PRs and **merge them themselves**
+  after `check` and Vercel CI pass, then verify on prod. Review the diff first. The owner may say «только проверь» or
+  hold a PR — honour it.
+- Ask the owner only real product/policy/legal/payment choices. Batch questions into **one file
+  `docs/QUESTIONS.md`**; delete a question once it is answered (and record the decision here if it is a rule).
+- **Keep the repo small.** No per-iteration plans, audits, handoffs or status logs in the repo. A temporary file is
+  deleted when its work is done; finished things are not kept around. Decisions go into this file, infra into
+  `docs/infra/`.
+- One merged chunk after checks rather than a chain of tiny commits (fewer Vercel deploys).
+- Never claim something works (payments, moderation, APK, iOS) without checking it.

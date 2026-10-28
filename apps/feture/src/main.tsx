@@ -7,19 +7,12 @@ import { AppErrorBoundary } from '@appbase/ui-react/error-boundary.js';
 import { installBusyButtons } from '@appbase/core/busy-buttons.js';
 import { applyProductTheme } from './theme';
 import { captureFatal, installGlobalDiagnostics } from './observability';
-import { startAppSync } from './sync';
 import './styles.css';
-import './feture/experience.css';
-import './feture/account.css';
-import './feture/profile.css';
-import './feture/study.css';
-import './feture/v3-shell.css';
 
 applyProductTheme();
 // Every pressed button that waits for the server shows a spinner until the answer comes.
 installBusyButtons();
 installGlobalDiagnostics();
-startAppSync();
 
 const router = createHashRouter(routes);
 const queryClient = new QueryClient({defaultOptions:{queries:{staleTime:30_000,retry:1}}});

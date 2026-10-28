@@ -1,6 +1,6 @@
 # S1/S2 extract — IDENTITY, PROFILES, COUPLES, «Я», SETTINGS
 
-Source: `apps/feture/public/prototype-v21.html` (line numbers = prototype lines; V21 override blocks at 8923–9280 win over earlier code), `V21-INTEGRATION-GUIDE.md` §5/§11, `V21-PLATFORM-DECISIONS.md`, server `apps/feture/lib/feture/*`, migrations, docs.
+Source: `apps/feture/docs/v21/prototype-v21.html` (line numbers = prototype lines; V21 override blocks at 8923–9280 win over earlier code), `V21-INTEGRATION-GUIDE.md` §5/§11, `V21-PLATFORM-DECISIONS.md`, server `apps/feture/lib/feture/*`, migrations, docs.
 Legend for visibility: **O** = owner profile (for a couple: both members), **Pm** = the other couple member only, **F** = followers of the profile, **A** = any signed‑in adult, **M** = matched (mutual like) with the acting profile, **G** = holder of an active access grant with the scope, **St** = staff (role‑gated), **Sys** = server only (never projected).
 "implied" = V21 only suggests it; not a hard UI rule.
 
@@ -307,7 +307,7 @@ Addressee rule: events from other people to a couple reach **both** members; a m
 - **Text fields**: bio, private text, couple name, nick — auto checks (implied; prototype has none) for contacts/minors/abuse; nick reserved list `TAKEN` 4451 is staff‑configurable.
 - **Custom city** submissions → staff spelling check (5426).
 - **Photo verification** → staff or provider review queue with reason codes; badge removal on main‑photo change (implied re‑check trigger, 8376).
-- **Age check** → provider (Yoti) through existing engine; no admin toggle in production (age-assurance-decision.md).
+- **Age check** → provider (Yoti) through existing engine; no admin toggle in production (now: ../infra/age-and-verification.md).
 - **Reports on profile/couple** (other domain) must target `profile_id` (person or couple) — Platform decisions: add targets «профиль/пара».
 - **Under‑18 signals**: u18 attempts on an email/device (AUTH-023 path) — implied fraud signal for staff.
 - **Premium gifts**: payment fraud handled by store/processor (implied).

@@ -1,6 +1,6 @@
 # S1/S2 input — COMMUNITIES and EVENTS (from prototype V21)
 
-Source of truth: `apps/feture/public/prototype-v21.html` (line refs below are to that file, `L####`), V21 override block `evcomm` (L9093–9150), `V21-INTEGRATION-GUIDE.md` §4 stage D, §5, §11 (rows «События», «Сообщества»), audit IDs COMM-001…016, EVT-001…040.
+Source of truth: `apps/feture/docs/v21/prototype-v21.html` (line refs below are to that file, `L####`), V21 override block `evcomm` (L9093–9150), `V21-INTEGRATION-GUIDE.md` §4 stage D, §5, §11 (rows «События», «Сообщества»), audit IDs COMM-001…016, EVT-001…040.
 Conventions: every row carries `profile_id` (owner, person|couple) + `acted_by_account_id`; ids UUIDv7; «partner approval» = shared `partner_approvals` table (owned by the couple domain); «outbox» = transactional outbox event.
 Visibility codes: **O** owner profile (both partners when the owner is a couple), **H** community hosts (owner + moderators), **M** community members, **A** anyone eligible (18+, rules accepted, not blocked either way), **ADM** admitted event attendees, **ORG** event organizer profile, **S** staff.
 «implied» = V21 shows it only through copy/toasts/seed data, not through working logic.

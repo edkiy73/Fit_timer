@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {shouldDeployPath,shouldSkip} from '../scripts/vercel-ignore.mjs';
 
 test('O03 FetUre deploy classifier excludes docs, tests and other apps',()=>{
-  assert.equal(shouldSkip(['apps/feture/docs/agent-team/HANDOFF.md']),true);
+  assert.equal(shouldSkip(['apps/feture/docs/infra/README.md']),true);
   assert.equal(shouldSkip(['apps/unmute/src/app.tsx']),true);
   assert.equal(shouldSkip(['apps/feture/tests/post-security.test.ts']),true);
   assert.equal(shouldSkip(['apps/feture/src/feture/community.tsx']),false);
@@ -13,7 +13,7 @@ test('O03 FetUre deploy classifier excludes docs, tests and other apps',()=>{
 
 test('O03 interim and final Vercel commit subject overrides',()=>{
   const runtime=['apps/feture/src/feture/community.tsx'];
-  const docs=['apps/feture/docs/agent-team/HANDOFF.md'];
+  const docs=['apps/feture/docs/infra/README.md'];
   assert.equal(shouldSkip(runtime,'feat: intermediate [skip vercel]'),true);
   assert.equal(shouldSkip(runtime,'feat: [SKIP VERCEL] intermediate'),true);
   assert.equal(shouldSkip(docs,'docs: release checkpoint [deploy]'),false);

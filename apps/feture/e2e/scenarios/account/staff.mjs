@@ -5,7 +5,7 @@
 const needRole = async (t, roles) => { const me = await t.api('staff.me', {}); if (!me.roles?.some(r => roles.includes(r))) throw new Error(`qa-staff needs one of ${roles.join('/')} (has ${me.roles?.join(',') || 'none'}) — granted by the owner out of band`); };
 import fs from 'node:fs';
 const until = async (fn, ms = 30000) => { const end = Date.now() + ms; let last; while (Date.now() < end) { try { return await fn(); } catch (e) { last = e; await new Promise(r => setTimeout(r, 700)); } } throw last; };
-const IMG = new URL('../../../public/images/profile-3-45.webp', import.meta.url).pathname;
+const IMG = new URL('../../../docs/v21/images/profile-3-45.webp', import.meta.url).pathname;
 const drop = async (t, p) => { if (p) await t.api('account.delete', { opId: t.uuid7(), confirmHandle: p.handle }, p.email); };
 const tab = (t, re) => t.page.locator('.seg[aria-label="Очереди проверки"] [role=tab]').filter({ hasText: re }).first();
 
