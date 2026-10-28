@@ -308,6 +308,60 @@ test('«Скоро» in the feed: only events that concern the viewer, strongest
   } finally { await pg.close(); }
 });
 
+test('a cancelled event (owner 28.10.2026): only people it concerns see it in lists until its start, and they are notified', async () => {
+  const { pg, db, call, person, a, b, c, publish } = await world();
+  try {
+    const d = await person('ud', 'Dana'), e = await person('ue', 'Emil'), f = await person('uf', 'Fox');
+    const online = { format: 'online', placeId: null, area: null, exactAddress: null, joinUrl: 'https://meet.example/c' };
+    const id = await publish('ua', a, { ...online, title: 'Отменят', startsAt: at(3), endsAt: at(3, 2) });
+    const app = await publish('ua', a, { ...online, title: 'По заявке', requiresApplication: true, questions: ['Был ли опыт?'], startsAt: at(4), endsAt: at(4, 2) });
+    await call('ub', b, { action: 'event.rsvp', opId: op(), eventId: id, status: 'interested' });          // interested
+    await call('uc', c, { action: 'saved.set', opId: op(), kind: 'event', targetId: id, on: true });         // saved
+    await call('ud', d, { action: 'saved.set', opId: op(), kind: 'event', targetId: id, on: true });         // saved, then «Не иду»
+    await call('ud', d, { action: 'event.rsvp', opId: op(), eventId: id, status: 'not_going' });
+    assert.equal((await call('uf', f, { action: 'event.apply', opId: op(), eventId: app, answers: ['Да, было'], requirementsAccepted: true })).state, 'pending'); // applied
+    await call('ua', a, { action: 'event.cancel', opId: op(), eventId: id, reason: 'Ведущий заболел' });
+    await call('ua', a, { action: 'event.cancel', opId: op(), eventId: app, reason: '' });
+    const inCatalog = async (/** @type {string} */ u, /** @type {string} */ p, /** @type {string} */ ev) => (await call(u, p, { action: 'event.catalog' })).items.find((/** @type {any} */ x) => x.id === ev);
+    // Related: interested, saved, applied (closed by the cancel), the organizer — with «Отменено» and the reason.
+    for (const [u, p] of [['ub', b], ['uc', c], ['ua', a]]) {
+      const x = await inCatalog(u, p, id);
+      assert.deepEqual([x?.state, x?.cancel_reason], ['cancelled', 'Ведущий заболел'], u);
+    }
+    assert.equal((await inCatalog('uf', f, app))?.state, 'cancelled');
+    // «Не иду» and strangers: not in the catalogue, «Скоро» or «Мои события»; a direct link still opens the cancelled page.
+    for (const [u, p] of [['ud', d], ['ue', e]]) {
+      assert.equal(await inCatalog(u, p, id), undefined, u);
+      assert.ok(!(await call(u, p, { action: 'event.soon' })).items.some((/** @type {any} */ x) => x.id === id), u);
+      assert.deepEqual((await call(u, p, { action: 'event.mine' })).cancelled, [], u);
+      const got = (await call(u, p, { action: 'event.get', eventId: id })).event;
+      assert.deepEqual([got.state, got.cancelReason], ['cancelled', 'Ведущий заболел']);
+    }
+    assert.equal(await inCatalog('uf', f, id), undefined);
+    // «Скоро» and «Мои события» for the related ones (the organizer keeps it under «Организую»).
+    const soonB = (await call('ub', b, { action: 'event.soon' })).items.find((/** @type {any} */ x) => x.id === id);
+    assert.deepEqual([soonB?.why, soonB?.state, soonB?.cancel_reason], ['cancelled', 'cancelled', 'Ведущий заболел']);
+    assert.ok((await call('uc', c, { action: 'event.soon' })).items.some((/** @type {any} */ x) => x.id === id));
+    const mineB = await call('ub', b, { action: 'event.mine' });
+    assert.deepEqual([mineB.cancelled.map((/** @type {any} */ x) => x.id), mineB.interested], [[id], []]);
+    assert.deepEqual((await call('uf', f, { action: 'event.mine' })).cancelled.map((/** @type {any} */ x) => x.id), [app]);
+    assert.deepEqual((await call('ua', a, { action: 'event.mine' })).cancelled, []);
+    // Notified on cancel: interested, saved and applied — not «Не иду», not strangers.
+    const { notifyHandlers } = await import('../server/notify.mjs');
+    const { drain } = await import('../server/outbox.mjs');
+    while ((await drain(db, notifyHandlers(db), { limit: 50 })) > 0) { /* until empty */ }
+    const told = (await db.query(`select addressee_profile_id p, object_id o from feture.notification where type = 'eventCancelled'`))
+      .map((/** @type {any} */ r) => [r.p, r.o]);
+    for (const [p, ev] of [[b, id], [c, id], [f, app]]) assert.ok(told.some(([x, y]) => x === p && y === ev), String(p));
+    assert.ok(!told.some(([x]) => x === d || x === e || x === a));
+    // After its original start it is simply past: out of every list, even for those it concerned.
+    await db.query(`update feture.event set starts_at = now() - interval '1 hour', ends_at = now() + interval '1 hour' where id = $1`, [id]);
+    assert.equal(await inCatalog('ub', b, id), undefined);
+    assert.deepEqual((await call('ub', b, { action: 'event.mine' })).cancelled, []);
+    assert.ok(!(await call('ub', b, { action: 'event.soon' })).items.some((/** @type {any} */ x) => x.id === id));
+  } finally { await pg.close(); }
+});
+
 test('«Скоро» by interests and communities: a level on the community’s topic counts, a hard limit does not', async () => {
   const { pg, call, a, b, c, publish } = await world();
   try {

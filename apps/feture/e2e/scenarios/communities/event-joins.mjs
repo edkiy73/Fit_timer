@@ -105,6 +105,11 @@ export default [
    await t.see('.ctabar .btn:has-text("Похожие события")');
    const r = await t.api('event.rsvp', { opId: t.uuid7(), eventId: h.cancelledEventId, status: 'interested' });
    expect(r.status === 409, 'no answer to a cancelled event: ' + r.status);
+   // No relation to it: not in the catalogue, «Скоро» or «Мои события» (owner 28.10.2026); the link above still opened it.
+   const title = (await t.api('event.get', { eventId: h.cancelledEventId })).event.title;
+   expect(!((await t.api('event.catalog', { q: title })).items ?? []).some(x => x.id === h.cancelledEventId), 'a cancelled event in the catalogue of someone it does not concern');
+   expect(!((await t.api('event.soon', {})).items ?? []).some(x => x.id === h.cancelledEventId), 'a cancelled event in «Скоро»');
+   expect(!((await t.api('event.mine', {})).cancelled ?? []).some(x => x.id === h.cancelledEventId), 'a cancelled event in «Мои события»');
  } },
 
  { name: 'JN-E6 couple: «Нам интересно» at once; with approvals on «Идём вдвоём» waits for the partner', persona: 'pair', run: async t => {
@@ -137,7 +142,7 @@ export default [
      await t.go('/n/events/' + h.appEventId); await asCouple(t, cp);
      await t.see('.k-status:has-text("Ждёт согласия партнёра")');
      await t.tap('.k-status .btn:has-text("Отозвать")'); await t.page.locator(dialog + ' .btn.danger').click();
-     await toast(t, 'Заявка отозвана');
+     await toast(t, 'Заявка пары отозвана'); // acting as the couple (#1408)
      await until(async () => !(await get(t, h.appEventId, t.me.email, cp)).me.waiting, 'approval taken back');
      await t.see('.ctabar .btn:has-text("Подать заявку от пары")');
    } finally { await cancelMine(); await noApp(t, h.appEventId, t.me.email, cp); await t.api('couple.setApproval', { opId: t.uuid7(), approvesPartner: false }, B, cp); }

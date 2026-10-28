@@ -57,6 +57,24 @@ export default [
      if (made) await t.api('event.cancel', { opId: t.uuid7(), eventId: made.id, reason: 'Сценарий завершён' }, made.host.email);
    }
  } },
+ { name: 'cancelled (owner 28.10.2026): «Скоро» and «Мои события» keep it with «Отменено» and the reason for whoever was interested; not for others', persona: 'full', run: async t => {
+   let made = null; const other = await t.persona('basic');
+   try {
+     made = await hostOnline(t);
+     await t.api('event.rsvp', { opId: t.uuid7(), eventId: made.id, status: 'interested' });
+     const r = await t.api('event.cancel', { opId: t.uuid7(), eventId: made.id, reason: 'Ведущий заболел' }, made.host.email);
+     expect(r.state === 'cancelled', 'cancel: ' + JSON.stringify(r).slice(0, 200));
+     const mine = await until(async () => (await soon(t)).find(e => e.id === made.id), 'event.soon keeps the cancelled event');
+     expect(mine.state === 'cancelled' && mine.cancel_reason === 'Ведущий заболел', 'cancelled with the reason: ' + JSON.stringify(mine));
+     expect(!(await soon(t, other.email)).some(e => e.id === made.id), 'someone it does not concern sees it in «Скоро»');
+     await t.go('/n/feed');
+     const tile = `.feed-ev .k-fev:has(.evc:has-text("${mine.title}"))`;
+     await t.see(tile + ' .pill:has-text("Отменено")'); await t.see(tile + ':has-text("Ведущий заболел")');
+     await t.go('/n/me/events');
+     await t.see(`.grp:has-text("Отменены") .li:has-text("${mine.title}")`);
+     await t.shot('soon-cancelled');
+   } finally { /* already cancelled; it leaves every list at its start */ }
+ } },
  { name: '«Скоро» belongs to «Для тебя» only', persona: 'full', route: '/n/feed', run: async t => {
    await t.see('.posts article.post');
    await t.page.locator('.seg button', { hasText: 'Подписки' }).first().click(); await t.wait(2500);

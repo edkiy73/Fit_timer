@@ -10,6 +10,7 @@ import { blockProfile } from './social.mjs';
 import { canWrite, coverOf } from './communities.mjs';
 import { PREMIUM_SQL, withFaces } from './faces.mjs';
 import { hasPhotoCheck } from './verification.mjs';
+import { articlePlate } from '../../contracts/_plates.mjs';
 import { dropHiddenPostPhotos, settleAvatar } from './photos.mjs';
 
 /** Slice B: posts and what hangs on them (S1 §8, extract/feed-content.md).
@@ -468,7 +469,10 @@ async function activityDtos(q, viewer, media, bursts) {
     Promise.all(posts.map(async ({ first_asset, audience, owner_profile_id, ...x }) => {
       const place = owner_profile_id === viewer.profileId ? 'own' : PUBLIC_AUD.has(audience) ? 'public' : 'private';
       const d = first_asset && media?.delivery ? await mediaDto(media, first_asset, { viewerProfileId: viewer.profileId, place, showExplicit: false }).catch(() => null) : null;
-      return { ...x, thumb: pic(d), video: first_asset?.kind === 'video', durationMs: first_asset?.kind === 'video' ? first_asset.duration_ms ?? null : null };
+      const thumb = pic(d);
+      // An article always has a cover (owner, 28.10.2026): without photos, its plate (contracts/_plates.mjs).
+      const plate = x.article && !first_asset ? articlePlate(x.id) : undefined;
+      return { ...x, thumb, ...(plate ? { plate } : {}), video: first_asset?.kind === 'video', durationMs: first_asset?.kind === 'video' ? first_asset.duration_ms ?? null : null };
     })),
     Promise.all(events.map(pubCover)),
     Promise.all(groups.map(pubCover)),

@@ -1,4 +1,4 @@
-import {useCallback,useEffect,useRef,useState,type CSSProperties,type ReactNode} from 'react';
+import {useCallback,useEffect,useRef,useState,type ReactNode} from 'react';
 import {useNavigate,useParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
@@ -12,17 +12,9 @@ import {useSendPhoto} from './media-upload';
 /** V21 C08 «Новое сообщество» with the prototype's markup (field(), chipGroup(), selectRow(), the cover picker);
  * also the form pieces E11 «Новое событие» shares. The server decides; the client only checks the same limits. */
 
-// Prototype PL: the named cover plates a community or an event can have instead of a photo.
-const NAMED:Record<string,readonly [string,string,string,string]>={
- lilac:['#5C47D6','#FF5A7A','#F6B49B','#1A0F3A'],rose:['#7A1236','#FF5A7A','#B9A6FF','#2A0D1F'],sea:['#1F3A4A','#7FE0B9','#B9A6FF','#0E1A22'],
- amber:['#4A2A12','#FFB25A','#FF5A7A','#1F120A'],moss:['#25403A','#C6F27F','#2A2A55','#0D1714'],coal:['#2B2B2B','#FF6B3D','#6F6F6F','#0F0F0F'],
-};
-export const PLATE_KEYS=['lilac','rose','sea','amber','moss','coal'] as const;
-export type PlateKey=typeof PLATE_KEYS[number];
-export function namedPlate(k:string):CSSProperties{
- const p=NAMED[k]??NAMED.rose!;
- return {'--p1':p[0],'--p2':p[1],'--p3':p[2],'--p4':p[3],position:'absolute',inset:0} as CSSProperties;
-}
+// The named cover plates (prototype PL) live in the kit (ui.tsx namedPlate) and contracts/_plates.mjs.
+import {PLATE_KEYS,namedPlate,type PlateKey} from './ui';
+export {PLATE_KEYS,namedPlate,type PlateKey};
 
 const catalogRes=z.object({ok:z.literal(true),
  topics:z.array(z.object({id:z.string(),ru:z.string(),en:z.string()}).passthrough()),

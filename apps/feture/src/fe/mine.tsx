@@ -16,8 +16,8 @@ import {faceFields,NameBadges} from './faces';
 /** V21 X01 «Моё» (`meMineLayer()`): only lists — posts (drafts on the second line), events, followers, saved and what
  * others shared with me; each row opens its own screen (F10, E10, P10, G04, P07) with the counts from the server. */
 const posts=z.object({ok:z.literal(true),items:z.array(z.lazy(()=>postSchema))});
-const ev=z.object({id:z.uuid(),title:z.string(),format:z.string(),starts_at:z.string(),state:z.string()}).passthrough();
-const evs=z.object({ok:z.literal(true),going:z.array(ev),interested:z.array(ev),organizing:z.array(ev),applications:z.array(ev)}).passthrough();
+const ev=z.object({id:z.uuid(),title:z.string(),format:z.string(),starts_at:z.string(),state:z.string(),cancel_reason:z.string().nullable().optional()}).passthrough();
+const evs=z.object({ok:z.literal(true),going:z.array(ev),interested:z.array(ev),organizing:z.array(ev),applications:z.array(ev),cancelled:z.array(ev).optional()}).passthrough();
 const saved=z.object({ok:z.literal(true),items:z.array(z.object({kind:z.string(),target_id:z.string(),created_at:z.string()}))});
 const followers=z.object({ok:z.literal(true),items:z.array(z.unknown())}).passthrough();
 const who=z.object({id:z.uuid(),kind:z.string().optional(),handle:z.string().nullable(),name:z.string().nullable(),...faceFields}).nullable();
@@ -34,7 +34,7 @@ export function MineLayer(){
  useEffect(()=>{const part=new URLSearchParams(location.search).get('part');if(part==='events'||part==='posts'||part==='saved'||part==='communities')navigate('/n/me/'+part,{replace:true,state:location.state});},[location.search,location.state,navigate]);
  useEffect(()=>{if(!acting)return;const n=<T,>(p:Promise<T>,f:(r:T)=>number)=>p.then(f).catch(()=>0);
   Promise.all([call('me.posts',{},posts).then(r=>r.items).catch(()=>[] as Post[]),
-   n(call('event.mine',{},evs),r=>new Set([...r.going,...r.interested,...r.organizing,...r.applications].map(e=>e.id)).size),
+   n(call('event.mine',{},evs),r=>new Set([...r.going,...r.interested,...r.organizing,...r.applications,...r.cancelled??[]].map(e=>e.id)).size),
    n(call('profile.followers',{profileId:acting.id},followers),r=>r.items.length),n(call('profile.followers',{profileId:acting.id,following:true},followers),r=>r.items.length),
    n(call('saved.list',{},saved),r=>r.items.length),n(call('access.lists',{tab:'withme'},withMe),r=>r.items.length),
    n(call('access.lists',{tab:'out'},outReqs),r=>r.items.filter(x=>x.state==='pending').length)])
@@ -118,7 +118,8 @@ function MyEvents(){
  if(error)return <Failed error={error} retry={load}/>;
  if(!data)return <Skel kind="post"/>;
  const drafts=data.drafts??[];
- const groups:[string,z.infer<typeof ev>[]][]=[['going',data.going],['applications',data.applications],['interested',data.interested],['organizing',data.organizing]];
+ // Cancelled events the profile had a relation to stay here, with «Отменено», until their original start.
+ const groups:[string,z.infer<typeof ev>[]][]=[['going',data.going],['applications',data.applications],['interested',data.interested],['cancelled',data.cancelled??[]],['organizing',data.organizing]];
  const remove=async()=>{if(!asking)return;setBusy(true);setFailure('');
   try{await call('event.draftDelete',{opId:newOpId(),draftId:asking.id},okRes);setData(d=>d&&{...d,drafts:(d.drafts??[]).filter(x=>x.id!==asking.id)});setAsking(null);toast(t('fe.w7.e10.draftDeleted'),{type:'ok'});}
   catch(e){setFailure(feErrorMessage(e,t));}finally{setBusy(false);}};
@@ -133,7 +134,7 @@ function MyEvents(){
       <IconBtn icon={Trash2} kind="ghost" size="sm" label={t('fe.ce.draftDelete')} onClick={()=>{setFailure('');setAsking(d);}}/></Stack>}/>;})}</Card></Group>}
   {groups.filter(([,l])=>l.length).map(([k,l])=><Group key={k} title={t('fe.mine.ev.'+k)}><Card list>
    {l.map(e=><Row key={e.id} noChev onClick={()=>navigate('/n/events/'+e.id)} title={e.title}
-    sub={date(e.starts_at)+(e.state!=='published'?' · '+t('fe.mine.state.'+e.state):'')}/>)}</Card></Group>)}
+    sub={date(e.starts_at)+(e.state!=='published'?' · '+t('fe.mine.state.'+e.state):'')+(e.cancel_reason?' · '+e.cancel_reason:'')}/>)}</Card></Group>)}
   {asking&&<Ask icon={Trash2} danger title={t('fe.ce.draftDelete')+'?'} text={t('fe.ce.draftDeleteAsk')} ok={t('fe.ce.draftDeleteOk')} busy={busy} error={failure||undefined}
    onOk={()=>void remove()} onCancel={()=>setAsking(null)}/>}
  </>;

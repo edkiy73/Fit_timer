@@ -3,6 +3,7 @@
 import * as z from 'zod';
 import { id, opId } from './platform.mjs';
 import { checkText, field, lineRule } from './_text.mjs';
+import { PLATE_KEYS } from './_plates.mjs';
 
 const CURRENCY = z.enum(['EUR', 'USD', 'GBP', 'RUB', 'CHF']);
 // Absolute https only, printable ASCII (an IDN host goes as punycode), no user:password@ in front of the host.
@@ -14,7 +15,7 @@ const price = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('door'), amount, currency: CURRENCY }),
   z.strictObject({ kind: z.literal('external'), amount, currency: CURRENCY, ticketUrl: https }),
 ]);
-const plate = z.enum(['lilac', 'rose', 'sea', 'amber', 'moss', 'coal']);
+const plate = z.enum(PLATE_KEYS);
 // IANA region names only: offsets like «+01:00» mean something else to Postgres (the server checks pg_timezone_names too).
 const ZONES = new Set([...Intl.supportedValuesOf('timeZone'), 'UTC']);
 const tz = z.string().max(64).refine(v => ZONES.has(v), { message: 'unknown_zone' });

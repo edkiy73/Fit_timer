@@ -2,7 +2,7 @@ import type {Meta,StoryObj} from '@storybook/react-vite';
 import {useRef,useState} from 'react';
 import {fn} from 'storybook/test';
 import {AtSign,Calendar,ChartColumn,Image as ImageIcon,Sparkles} from 'lucide-react';
-import {ActionLine,ActivityCard,ActivityItem,ActivityTile,type ActThumb,ArticleCard,ArticleImage,Av,Card,EventTile,FeedEvents,IconBtn,LikesLine,plate,QuickStart,RichEditor,type RichEditorHandle} from './index';
+import {ActionLine,ActivityCard,ActivityItem,ActivityTile,type ActThumb,ArticleCard,ArticleImage,Av,Card,EventTile,FeedEvents,IconBtn,LikesLine,plate,PLATE_KEYS,articlePlate,QuickStart,RichEditor,type RichEditorHandle} from './index';
 
 /** A picture drawn in place (no network): a soft gradient with a word. */
 const pic=(word:string,w=1200,h=675)=>{const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d')!;
@@ -34,18 +34,28 @@ function ArticleEditor(){
 }
 export const Статья:S={name:'Статья: заголовки и фото в тексте',render:()=><ArticleEditor/>};
 
+const ARTICLE_STORY='Обложка есть всегда и всегда 16:9, как у события: первое фото статьи (обрезано по центру), а без фото — её табличка (`plate`, `articlePlate(id)`: одна и та же для статьи). '+
+ 'Заголовок крупно на обложке, до 3 строк, снизу тёмная подложка — читается на любом фото в обеих темах. Под обложкой — «Статья · N мин», в ленте начало текста и «Читать».';
 export const КарточкаСтатьи:StoryObj<typeof ArticleCard>={name:'Карточка статьи',render:a=><div className="post"><ArticleCard {...a}/></div>,
- args:{cover:pic('Обложка'),kicker:'Статья · 3 мин',title:'Как мы ходили на первую вечеринку',excerpt:'Первый абзац статьи без оформления — так он выглядит в ленте…',more:'Читать'},argTypes:{cover:{control:false}}};
+ parameters:{docs:{description:{story:ARTICLE_STORY}}},
+ args:{cover:pic('Обложка'),kicker:'Статья · 3 мин',title:'Как мы ходили на первую вечеринку',excerpt:'Первый абзац статьи без оформления — так он выглядит в ленте…',more:'Читать'},
+ argTypes:{cover:{control:false},plate:{control:'inline-radio',options:[...PLATE_KEYS]}}};
+export const КарточкаСтатьиБезФото:StoryObj<typeof ArticleCard>={name:'Карточка статьи без фото',render:a=><div className="post"><ArticleCard {...a}/></div>,
+ parameters:{docs:{description:{story:'Без фото обложка — табличка статьи с меткой статьи в углу; заголовок на ней так же.'}}},
+ args:{cover:null,plate:articlePlate('018f0000-0000-7000-8000-000000000001'),kicker:'Статья · 2 мин',title:'Что я поняла о границах за год',excerpt:'Первый абзац статьи без оформления — так он выглядит в ленте…',more:'Читать'},
+ argTypes:{cover:{control:false},plate:{control:'inline-radio',options:[...PLATE_KEYS]}}};
 export const СтатьяЦеликом:StoryObj<typeof ArticleCard>={name:'Статья целиком',render:a=><div className="post"><ArticleCard {...a}><div className="md"><p>Текст статьи.</p>
  <ArticleImage src={pic('Фото')} label="Открыть фото" onOpen={fn()}/><p>Текст после фото.</p></div></ArticleCard></div>,
- args:{cover:pic('Обложка'),kicker:'Статья · 3 мин',title:'Как мы ходили на первую вечеринку',full:true},argTypes:{cover:{control:false}}};
+ args:{cover:pic('Обложка'),kicker:'Статья · 3 мин',title:'Как мы ходили на первую вечеринку',full:true},argTypes:{cover:{control:false},plate:{control:'inline-radio',options:[...PLATE_KEYS]}}};
+export const СтатьяЦеликомБезФото:StoryObj<typeof ArticleCard>={name:'Статья целиком без фото',render:a=><div className="post"><ArticleCard {...a}><div className="md"><p>Текст статьи.</p></div></ArticleCard></div>,
+ args:{cover:null,plate:'sea',kicker:'Статья · 1 мин',title:'Что я поняла о границах за год',full:true},argTypes:{cover:{control:false},plate:{control:'inline-radio',options:[...PLATE_KEYS]}}};
 
 const people=[{id:'mia',name:'Mia'},{id:'alex',name:'Alex'},{id:'kim',name:'Kim'}];
 export const Нравится:StoryObj<typeof LikesLine>={name:'Строка «Нравится»',render:a=><LikesLine {...a}/>,args:{people,text:'Нравится: Mia, Alex, Kim и ещё 4',onClick:fn()},argTypes:{people:{control:false}}};
 
 const ph=(i:number)=>`data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="hsl(${i*37%360} 45% 55%)"/></svg>`)}`;
 /** Liked posts of every look: a photo, several photos, a video, a photo with a poll, a poll, interests, text only. */
-const liked:ActThumb[]=[{src:ph(1),photos:1},{src:ph(2),photos:3},{src:ph(3),video:true,videos:1,durationMs:6000},{src:ph(4),photos:1,poll:true},{poll:true},{interests:true},
+const liked:ActThumb[]=[{src:ph(1),photos:1},{src:ph(2),photos:3},{src:ph(3),video:true,videos:1,durationMs:6000},{src:ph(4),photos:1,poll:true},{src:ph(40),photos:1,article:true},{article:true,plate:'amber'},{poll:true},{interests:true},
  {text:'Сегодня про границы и то, как о них говорить'},...Array.from({length:9},(_,i)=>({src:ph(i+5),photos:1}))];
 const likedItems=liked.map((th,i)=><ActivityItem key={i} thumb={th} title={'Публикация '+(i+1)} sub="Alex · фото" onClick={fn()}/>);
 export const Активность:StoryObj<typeof ActivityCard>={name:'Активность: много лайков (лента)',render:a=><div className="posts"><ActivityCard {...a}/></div>,
@@ -68,8 +78,8 @@ export const АктивностьОдна:StoryObj<typeof ActivityCard>={name:'�
  args:{actor:{id:'lev',name:'Lev'},text:<><b>Lev</b>: нравится публикация</>,time:'только что',menuLabel:'Ещё',onMenu:fn(),more:'',less:'Свернуть',
   items:[<ActivityItem key="p" thumb={{src:ph(30),photos:2}} title="Вечер у воды" sub="Mira · 2 фото" onClick={fn()}/>]},argTypes:{items:{control:false},actor:{control:false}}};
 export const Миниатюры:StoryObj<typeof ActivityTile>={name:'Миниатюры активности',render:()=><div className="actc-row"><div className="actc-strip">
-  {liked.slice(0,7).map((th,i)=><ActivityTile key={i} thumb={th} label={'Публикация '+(i+1)} onClick={fn()}/>)}<ActivityTile thumb={{person:{id:'mia',name:'Mia'}}} label="Mia" onClick={fn()}/></div></div>,
- parameters:{docs:{description:{story:'Фото (капсула с числом фото/длиной видео), видео, фото с опросом (метка в углу), опрос, интересы, только текст, человек.'}}}};
+  {liked.slice(0,9).map((th,i)=><ActivityTile key={i} thumb={th} label={'Публикация '+(i+1)} onClick={fn()}/>)}<ActivityTile thumb={{person:{id:'mia',name:'Mia'}}} label="Mia" onClick={fn()}/></div></div>,
+ parameters:{docs:{description:{story:'Фото (капсула с числом фото/длиной видео), видео, фото с опросом (метка в углу), статья с фото и статья без фото (её табличка) — обе с меткой статьи, опрос, интересы, только текст, человек.'}}}};
 
 export const БыстрыйСтарт:StoryObj<typeof QuickStart>={name:'Быстрый старт',render:a=><QuickStart {...a}/>,
  args:{title:'Или сразу начать с',items:[[ImageIcon,'Фото и видео',fn()],[ChartColumn,'Опрос',fn()],[Sparkles,'Мои интересы',fn()]]},argTypes:{items:{control:false}}};

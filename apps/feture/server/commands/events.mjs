@@ -8,6 +8,7 @@ import { needsPartner, registerApprovalKind, requestApproval } from '../approval
 import { journal, requireStaff } from './staff.mjs';
 import { mediaDto } from '../media/assets.mjs';
 import { ageOn, withFaces } from './faces.mjs';
+import { cancelledFor, listedEvent } from '../sql-rules.mjs';
 
 /** Slice D2: events (S1 §10, extract/communities-events.md §1.8–1.12).
  * An event belongs to the organizing profile (a couple can organize) and goes to staff before it is published; a couple
@@ -423,9 +424,10 @@ const run = {
       placeId = d?.city_id ?? null;
     }
     const rows = await q.query(
-      `select e.id, e.title, e.kind, e.format, e.place_id, e.area, e.tz, e.starts_at, e.ends_at, e.price, e.requires_application, e.plate, e.state, e.community_id
+      `select e.id, e.title, e.kind, e.format, e.place_id, e.area, e.tz, e.starts_at, e.ends_at, e.price, e.requires_application, e.plate, e.state, e.community_id,
+              case when e.state = 'cancelled' then e.cancel_reason end cancel_reason
        from feture.event e
-       where e.state in ('published', 'cancelled') and e.ends_at > now() and feture.event_visible(e, $1, $2)
+       where ${listedEvent('e', '$1')} and feture.event_visible(e, $1, $2)
          and ($3 = 'all' or e.format = $3) and ($4::uuid is null or e.format = 'online' or e.place_id = $4)
          and ($5 = 'any' or $5 = 'week' and e.starts_at < now() + interval '7 days' or $5 = 'month' and e.starts_at < now() + interval '30 days'
               or $5 = 'weekend' and e.starts_at < now() + interval '7 days' and extract(isodow from e.starts_at at time zone e.tz) in (6, 7))
@@ -458,12 +460,18 @@ const run = {
     const waiting = await q.query(
       `select ${pick}, p.kind approval from feture.partner_approval p join feture.event e on e.id = p.target_id
        where p.profile_id = $1 and p.state = 'pending' and p.kind in ('event.rsvp', 'event.apply') and feture.event_visible(e, $1, $2)`, [viewer.profileId, viewer.accountId]);
+    // Cancelled events the viewer had a relation to, until their original start (then they are simply past).
+    const cancelled = await q.query(
+      `select ${pick}, e.cancel_reason from feture.event e
+       where e.state = 'cancelled' and e.starts_at > now() and e.organizer_profile_id <> $1 and ${cancelledFor('e', '$1')} and feture.event_visible(e, $1, $2)
+       order by e.starts_at limit 100`, [viewer.profileId, viewer.accountId]);
     const drafts = await q.query(`select id, form->>'title' title, step, updated_at from feture.event_draft where owner_profile_id = $1 order by updated_at desc`, [viewer.profileId]);
     const going = [...applications.filter(r => r.application_state === 'approved' && r.state === 'published'), ...answered.filter(r => r.status === 'going' && !r.past && r.state === 'published')];
     return {
       going: [...new Map(going.map(r => [r.id, r])).values()],
       waiting, applications: applications.filter(r => r.application_state === 'pending'),
-      interested: answered.filter(r => r.status === 'interested' && !r.past),
+      interested: answered.filter(r => r.status === 'interested' && !r.past && r.state === 'published'),
+      cancelled,
       past: answered.filter(r => r.past && r.status === 'going'),
       organizing, drafts,
     };
@@ -476,7 +484,9 @@ const run = {
     const rows = await q.query(
       `select * from (
          select e.id, e.title, e.kind, e.format, e.place_id, e.area, e.tz, e.starts_at, e.ends_at, e.price, e.requires_application, e.plate, e.state, e.community_id,
-           case when exists (select 1 from feture.event_rsvp r where r.event_id = e.id and r.profile_id = $1 and r.status in ('interested', 'going'))
+           case when e.state = 'cancelled' then e.cancel_reason end cancel_reason,
+           case when e.state = 'cancelled' then 'cancelled'
+                when exists (select 1 from feture.event_rsvp r where r.event_id = e.id and r.profile_id = $1 and r.status in ('interested', 'going'))
                   or exists (select 1 from feture.event_application x where x.event_id = e.id and x.profile_id = $1 and x.state in ('pending', 'approved')) then 'mine'
                 when exists (select 1 from feture.follow f where f.follower_profile_id = $1 and f.target_profile_id = e.organizer_profile_id) then 'follow'
                 when exists (select 1 from feture.community_member m where m.community_id = e.community_id and m.profile_id = $1 and m.state = 'active') then 'community'
@@ -486,12 +496,12 @@ const run = {
                 when e.place_id = (select d.city_id from feture.profile_details d where d.profile_id = $1) then 'city'
            end why
          from feture.event e
-         where e.state = 'published' and e.ends_at > now() and e.starts_at < now() + interval '14 days'
+         where ${listedEvent('e', '$1')} and e.starts_at < now() + interval '14 days'
            and e.organizer_profile_id <> $1 and feture.event_visible(e, $1, $2)
            and not exists (select 1 from feture.feed_hide h where h.profile_id = $1 and h.kind = 'event' and h.target_id = e.id)
            and not exists (select 1 from feture.event_rsvp r where r.event_id = e.id and r.profile_id = $1 and r.status = 'not_going')
        ) x where why is not null
-       order by case why when 'mine' then 0 when 'follow' then 1 when 'community' then 2 when 'interests' then 3 else 4 end, starts_at, id
+       order by case why when 'cancelled' then 0 when 'mine' then 0 when 'follow' then 1 when 'community' then 2 when 'interests' then 3 else 4 end, starts_at, id
        limit 3`,
       [viewer.profileId, viewer.accountId]);
     return { items: rows.map(r => ({ ...r, starts_at: iso(r.starts_at), ends_at: iso(r.ends_at) })) };

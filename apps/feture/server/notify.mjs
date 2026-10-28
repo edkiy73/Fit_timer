@@ -127,16 +127,22 @@ async function recipientsOf(q, profileId, payload) {
 }
 
 /** People following an event: «иду»/«интересно», and applications still open (or closed by the cancel itself).
- * `admittedOnly`: the organizer's own words go only to admitted people. @param {Q} q @param {string} eventId @param {boolean} admittedOnly */
-async function eventFollowers(q, eventId, admittedOnly) {
+ * `admittedOnly`: the organizer's own words go only to admitted people. `saved`: also those who saved it and did not
+ * answer «Не иду» — a cancel reaches everyone who still sees the cancelled event (sql-rules.mjs cancelledFor).
+ * @param {Q} q @param {string} eventId @param {boolean} admittedOnly @param {boolean} [saved] */
+async function eventFollowers(q, eventId, admittedOnly, saved = false) {
   const rows = await q.query(
     `select distinct pm.account_id, x.profile_id from (
        select r.profile_id from feture.event_rsvp r join feture.event e on e.id = r.event_id
        where r.event_id = $1 and (not $2 and r.status in ('going', 'interested') or $2 and r.status = 'going' and not e.requires_application)
        union
        select a.profile_id from feture.event_application a
-       where a.event_id = $1 and (not $2 and a.state in ('pending', 'approved', 'closed') or $2 and a.state = 'approved')) x
-     join feture.profile_member pm on pm.profile_id = x.profile_id and pm.state = 'active'`, [eventId, admittedOnly]);
+       where a.event_id = $1 and (not $2 and a.state in ('pending', 'approved', 'closed') or $2 and a.state = 'approved')
+       union
+       select s.profile_id from feture.saved_item s
+       where $3 and s.kind = 'event' and s.target_id = $1::text
+         and not exists (select 1 from feture.event_rsvp r where r.event_id = $1 and r.profile_id = s.profile_id and r.status = 'not_going')) x
+     join feture.profile_member pm on pm.profile_id = x.profile_id and pm.state = 'active'`, [eventId, admittedOnly, saved]);
   return rows.map(r => ({ account: r.account_id, profile: r.profile_id }));
 }
 
@@ -175,7 +181,7 @@ export function notifyHandlers(db, emit = () => {}) {
         if (!e) return;
       }
       // An event cancelled because its organizer deleted the account names nobody.
-      await tx(async (q, out) => write(q, item, { type, actor: p.organizerGone ? null : item.profile_id, objectType: 'event', objectId: p.eventId, data: pick(p) }, await eventFollowers(q, p.eventId, admittedOnly), out));
+      await tx(async (q, out) => write(q, item, { type, actor: p.organizerGone ? null : item.profile_id, objectType: 'event', objectId: p.eventId, data: pick(p) }, await eventFollowers(q, p.eventId, admittedOnly, topic === 'event.cancelled'), out));
     };
   }
   // A community closed because its owner deleted the account: members are told, nobody is named.
