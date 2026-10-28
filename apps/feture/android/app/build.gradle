@@ -51,5 +51,5 @@ try {
         apply plugin: 'com.google.gms.google-services'
     }
 } catch(Exception e) {
-    logger.info("google-services.json not found, google-services plugin not applied. Native push is not set up for FetUre yet")
+    logger.info("google-services.json not found, google-services plugin not applied. native push (FCM) will not work")
 }

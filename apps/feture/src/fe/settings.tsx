@@ -14,6 +14,7 @@ import {Sheet} from './profile-extras';
 import {HiddenFeedSheet} from './settings-lists';
 import {Ask,LinkRow} from './settings-ui';
 import {disableWebPush} from './push-web';
+import {disableNativePush} from './push-native';
 import {PushSwitch} from './push';
 
 /** V21 K01 (settings), K05 (notifications), K07 (my data and deletion) on /api/fe. */
@@ -50,7 +51,7 @@ export function SettingsScreen(){
  const couple=state.status==='ready'?state.boot.profiles.find(p=>p.kind==='couple'&&p.state!=='deleted'):undefined;
  const email=state.status==='ready'?state.session.email:'';
  const closeLayer=useCallback(()=>setLayer(null),[]);
- const logout=async()=>{setLeaving(true);try{await disableWebPush(call);await auth.logout();navigate('/n/feed',{replace:true});}catch{setLeaving(false);setLayer(null);toast(t('fe.ax.sec.logoutFailed'),{type:'err'});}};
+ const logout=async()=>{setLeaving(true);try{await disableWebPush(call);await disableNativePush(call);await auth.logout();navigate('/n/feed',{replace:true});}catch{setLeaving(false);setLayer(null);toast(t('fe.ax.sec.logoutFailed'),{type:'err'});}};
  const ageVal=age&&t('fe.set.ageVal.'+age);
  const photoVal=photo&&t('fe.set.pcVal.'+photo);
  return <>

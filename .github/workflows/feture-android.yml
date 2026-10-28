@@ -85,6 +85,8 @@ jobs:
           AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt | sort -Vr | head -1)
           "$AAPT" dump badging "$APK" | grep -E "^package:|^application-label:"
           "$AAPT" dump badging "$APK" | grep -q "package: name='ru.feture.app'"
+          # The google-services plugin turned the Firebase client config into resources, or native push stays silent.
+          "$AAPT" dump resources "$APK" | grep -q "string/google_app_id"
           cp "$APK" "FetUre-test-${VERSION_NAME}.apk"
           ls -la "FetUre-test-${VERSION_NAME}.apk"
 
@@ -108,7 +110,8 @@ jobs:
             echo "Если телефон пишет, что приложение не установлено или конфликтует, — удали прежнюю тестовую версию FetUre и поставь заново."
             echo
             echo "Работает с сайтом https://feture-mvp.vercel.app (те же аккаунты и данные). Вход — по коду из письма."
-            echo "Пока нет: уведомлений на телефон (нужен Firebase), открытия ссылок FetUre сразу в приложении."
+            echo "Уведомления на телефон: включаются в «Я → Настройки → Уведомления» (или по предложению после первого действия); приходят, когда на сервере задан ключ Firebase."
+            echo "Пока нет: открытия ссылок FetUre сразу в приложении (они открываются на сайте)."
             echo
             echo "Версия ${VERSION_NAME} (versionCode ${VERSION_CODE}), commit ${GITHUB_SHA}. Подпись: debug-ключ (тестовый)."
             if [ -n "$NOTES" ]; then echo; echo "Что проверить: $NOTES"; fi

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "131780535572",
+    "project_id": "feture-3f173",
+    "storage_bucket": "feture-3f173.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:131780535572:android:ea051ba1eb10070b070e01",
+        "android_client_info": {
+          "package_name": "ru.feture.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCSwp-lpzw6Yc3HEwF1e6QHQRY24Lvtzlk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

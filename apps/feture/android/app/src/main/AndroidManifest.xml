@@ -24,6 +24,10 @@
 
         </activity>
 
+        <!-- Push (FCM): status-bar icon and accent for notifications sent by the server. -->
+        <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_stat_feture" />
+        <meta-data android:name="com.google.firebase.messaging.default_notification_color" android:resource="@color/feture_accent" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -38,6 +42,8 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Android 13+: asked from the «Включить уведомления» tap (push-native.ts). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Photo and age checks (camera in the page and the «take a photo» picker); asked only when used. -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
