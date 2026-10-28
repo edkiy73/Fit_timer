@@ -17,7 +17,7 @@ const refused = (r, field, reason, what) => {
 
 export default [
  { name: 'profile edit: long word, bidi character, only spaces, too many lines — inline, nothing saved', persona: 'basic', route: '/n/me/edit?only=basics', run: async t => {
-   const before = (await t.api('profile.get', { profileId: t.pid })).profile;
+   const before = (await t.api('profile.get', { profileId: await t.pid() })).profile;
    const name = '[data-field="name"] input', bio = '[data-field="bio"] textarea';
    await t.see(name);
    await t.fill(name, 'x'.repeat(50)); await t.page.keyboard.press('Tab');
@@ -33,7 +33,7 @@ export default [
    await t.tap('.ctabar button:has-text("Сохранить")'); await t.wait(1500);
    expect(t.page.url().includes('/edit'), 'stays on the editor');
    expect(await t.page.locator('.field.err').count() >= 2, 'both fields marked');
-   const after = (await t.api('profile.get', { profileId: t.pid })).profile;
+   const after = (await t.api('profile.get', { profileId: await t.pid() })).profile;
    expect(after.name === before.name && after.bio === before.bio, 'nothing saved');
    // Fixing the value clears the error while typing.
    await t.fill(name, before.name || 'Alex'); await t.wait(300);
@@ -70,17 +70,24 @@ export default [
    await t.go(`/n/chats/${conv}`);
    const box = '.inputbar textarea';
    await t.see(box);
-   await t.fill(box, 'ab '.repeat(700)); await t.page.locator(box).press('Enter');
+   const sendBtn = '.inputbar button[aria-label="Отправить"]:not([disabled])';
+   await t.fill(box, 'ab '.repeat(700)); await t.see(sendBtn); await t.page.locator(sendBtn).click();
    await toastSee(t, 'Максимум 2000 символов');
-   await t.fill(box, 'смотри ' + 'x'.repeat(90)); await t.page.locator(box).press('Enter');
+   await t.fill(box, 'смотри ' + 'x'.repeat(90)); await t.see(sendBtn); await t.page.locator(sendBtn).click();
    await toastSee(t, 'без пробелов');
    await t.fill(box, '');
    const msgs = await t.api('chat.messages', { conversationId: conv, limit: 5 });
    expect(!(msgs.items || msgs.messages || []).some(m => (m.body || '').includes('x'.repeat(90))), 'nothing sent');
  } },
  { name: 'server refuses the same values with the field and the reason (after deploy)', persona: 'basic', route: '/n/me', allow4xx: true, run: async t => {
-   const p = (await t.api('profile.get', { profileId: t.pid })).profile;
+   // Old contracts refuse a line break in an album title too, but without `reasons`: stop before anything could be
+   // saved by a server that does not know the new rules yet.
+   const probe = await t.api('album.create', { opId: t.uuid7(), title: 'a\nb' });
+   if (!probe.reasons) throw new Error('the server does not send `reasons` yet — this step passes only after deploy');
+   refused(probe, 'title', 'line_break', 'album title with a line break');
+   const p = (await t.api('profile.get', { profileId: await t.pid() })).profile;
    const upd = x => t.api('profile.update', { opId: t.uuid7(), rev: p.rev, ...x });
+   try {
    refused(await upd({ name: 'x'.repeat(50) }), 'name', 'long_word', 'profile name without spaces');
    refused(await upd({ name: '<b>Alex</b>' }), 'name', 'markup', 'profile name with markup');
    refused(await upd({ name: 'Al' + RLO + 'ex' }), 'name', 'bad_characters', 'profile name with a bidi override');
@@ -88,14 +95,18 @@ export default [
    refused(await upd({ bio: Array(30).fill('a').join('\n') }), 'bio', 'too_many_lines', 'bio of 30 lines');
    refused(await upd({ bio: 'x'.repeat(600) }), 'bio', 'too_long', 'bio over 500');
    refused(await t.api('support.create', { opId: t.uuid7(), body: '        ' }), 'body', 'empty', 'support message of spaces');
-   refused(await t.api('album.create', { opId: t.uuid7(), title: 'a\nb' }), 'title', 'line_break', 'album title with a line break');
    refused(await t.api('community.create', { opId: t.uuid7(), name: '<b>Узлы</b>', description: 'Встречи и разговоры о верёвке для новичков', topics: ['shibari'], rules: ['Уважать границы'], privacy: 'open' }),
      'name', 'markup', 'community name with markup');
    const chats = await t.persona('chats');
    refused(await t.api('chat.send', { opId: t.uuid7(), conversationId: chats.with.basic.conversationId, body: 'a' + BEL + 'b' }, chats.email),
      'body', 'bad_characters', 'chat message with a control character');
    // Read back: nothing changed.
-   const after = (await t.api('profile.get', { profileId: t.pid })).profile;
+   const after = (await t.api('profile.get', { profileId: await t.pid() })).profile;
    expect(after.name === p.name && after.bio === p.bio && after.rev === p.rev, 'profile unchanged');
+   } finally {
+     // Should a value ever get through, put the profile back.
+     const now = (await t.api('profile.get', { profileId: await t.pid() })).profile;
+     if (now.rev !== p.rev) await t.api('profile.update', { opId: t.uuid7(), rev: now.rev, name: p.name, bio: p.bio ?? '' });
+   }
  } },
 ];
