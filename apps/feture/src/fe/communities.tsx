@@ -12,7 +12,7 @@ import {useToast} from './toast';
 import {placeName,useCatalog} from './create-community';
 import {CommPlate,NamedPlate,ReportSheet,appUrl,copyLink,fill,okRes,pl} from './comm-kit';
 import {faceFields} from './faces';
-import {CommunityHostEntry,DiscussionHostSheet,EventApplicationLines,JoinSheet,MembersList,isCommunityHost} from './host';
+import {CommunityHostEntry,type DiscussionChange,DiscussionHostSheet,EventApplicationLines,JoinSheet,MembersList,isCommunityHost} from './host';
 
 /** «Комьюнити» (V21 C01 catalogue with interests and filters, C03 community page with discussions, events, members
  * and rules, E03 event page) with the prototype's markup. Everything shown comes from the server; details the server
@@ -294,7 +294,7 @@ export function CommunityScreen(){
  const setTab=(v:CTab)=>{const n=new URLSearchParams(sp);if(v==='disc')n.delete('t');else n.set('t',v);setSp(n,{replace:true});};
  const [c,setC]=useState<Community|null>(null);const [discs,setDiscs]=useState<z.infer<typeof discRes>|null>(null);const [mem,setMem]=useState<z.infer<typeof memList>|null>(null);
  const [evs,setEvs]=useState<Ev[]>([]);const [error,setError]=useState<unknown>(null);
- const [layer,setLayer]=useState<''|'menu'|'join'|'leave'|'withdraw'|'unwait'|'report'>('');const [busy,setBusy]=useState(false);const [hostTools,setHostTools]=useState<z.infer<typeof disc>|null>(null);
+ const [layer,setLayer]=useState<''|'menu'|'join'|'leave'|'withdraw'|'unwait'|'report'>('');const [busy,setBusy]=useState(false);const [hostToolsId,setHostTools]=useState<string|null>(null);
  const [reportPost,setReportPost]=useState<string|null>(null);
  const load=useCallback(()=>{setError(null);
   // A hidden community seen through an invite link (or a pending request) shows only its card: its discussions,
@@ -314,8 +314,13 @@ export function CommunityScreen(){
  const member=c?.me?.state==='active';const host=isCommunityHost(c);const owner=member&&c?.me?.role==='owner';
  const place=c?.placeId?placeName(cat?.places.find(p=>p.id===c.placeId)??{ru:null,en:null},locale):'';
  const names=useMemo(()=>new Map((mem?.items??[]).map(m=>[m.id,m])),[mem]);
+ // The «⋯» sheet reads its discussion from the list as it is now, not as it was when opened: a second open right after
+ // «Не показывать в «Популярном»» offers «Вернуть», even before the list has been read again.
+ const hostTools=hostToolsId?discs?.items.find(d=>d.id===hostToolsId)??null:null;
+ const patchDisc=(id:string,change:DiscussionChange)=>setDiscs(v=>v&&{...v,items:change==='remove'?v.items.filter(d=>d.id!==id)
+  :v.items.map(d=>d.id!==id?d:change==='pin'||change==='unpin'?{...d,pinned:change==='pin'}:{...d,popularExcluded:change==='excludePopular'})});
  const act=async(fn:()=>Promise<unknown>,ok:string)=>{setBusy(true);try{await fn();setLayer('');toast(ok,{type:'ok'});load();}catch(e){toast(feErrorMessage(e,t),{type:'err'});}finally{setBusy(false);}};
- const mute=()=>{if(!c)return;const on=!c.me?.muted;void act(()=>call('community.self',{opId:newOpId(),communityId:c.id,muted:on},okRes),t(on?'fe.cm.muted':'fe.cm.unmuted'));};
+ const mute=()=>{if(!c)return;const on=!c.me?.muted;void act(async()=>{await call('community.self',{opId:newOpId(),communityId:c.id,muted:on},okRes);setC(v=>v?.me?{...v,me:{...v.me,muted:on}}:v);},t(on?'fe.cm.muted':'fe.cm.unmuted'));};
  const share=async()=>{setLayer('');const okc=await copyLink(appUrl('/n/communities/'+id));toast(t(okc?'fe.cm.linkCopied':'fe.cm.copyFailed'),{type:okc?'ok':'warn'});};
  const sorted=[...evs].sort((a,b)=>Date.parse(a.starts_at)-Date.parse(b.starts_at));const next=sorted[0];
  // Removed once (a ban): even an open community takes a request now (the server answers the same way).
@@ -366,7 +371,7 @@ export function CommunityScreen(){
        :<Card list>{discs.items.map(d=>{const a=d.owner_profile_id?names.get(d.owner_profile_id):undefined;
         return <Discussion key={d.id} onClick={()=>navigate('/n/feed/post/'+d.id)} pinned={d.pinned?t('fe.comm.pinned'):undefined} title={d.title} excerpt={d.excerpt}
          meta={<>{a&&<><Av name={pname(a)} seed={a.id} size="xs" src={a.avatar}/><span>{pname(a)}</span><span>·</span></>}<span>{when(d.published_at,locale)}</span><span><MessageCircle/>{d.replies}</span></>}
-         tools={<IconBtn icon={Ellipsis} kind="ghost" size="sm" aria-haspopup="dialog" label={t(host?'fe.cm.hostTools':'fe.cm.more')} onClick={()=>setHostTools(d)}/>}/>;})}</Card>}
+         tools={<IconBtn icon={Ellipsis} kind="ghost" size="sm" aria-haspopup="dialog" label={t(host?'fe.cm.hostTools':'fe.cm.more')} onClick={()=>setHostTools(d.id)}/>}/>;})}</Card>}
      </>)
      :tab==='events'?(evs.length?<div className="evgrid">{sorted.map(e=><EventCard key={e.id} e={e}/>)}</div>
       :<Empty icon={Calendar} title={t('fe.cm.noEvents')}>{host?<Btn onClick={()=>navigate('/n/events/new?community='+c.id)}>{t('fe.ce.create')}</Btn>
@@ -389,7 +394,7 @@ export function CommunityScreen(){
   {c&&layer==='unwait'&&c.waiting&&<Ask icon={FileText} danger title={t('fe.host.join.withdrawQ')} text={t('fe.cm.req.unwaitText')} ok={t('fe.host.join.withdraw')} busy={busy}
    onOk={()=>void act(()=>call('decide.cancel',{opId:newOpId(),approvalId:c.waiting!.id},okRes),t('fe.host.join.withdrawn'))} onCancel={()=>setLayer('')}/>}
   {c&&layer==='report'&&<ReportSheet targetType="community" targetId={c.id} onClose={()=>setLayer('')} onDone={msg=>{setLayer('');toast(msg,{type:'ok'});}}/>}
-  {hostTools&&<DiscussionHostSheet d={hostTools} host={host} onClose={()=>setHostTools(null)} onDone={msg=>{setHostTools(null);toast(msg,{type:'ok'});load();}}
+  {hostTools&&<DiscussionHostSheet d={hostTools} host={host} onClose={()=>setHostTools(null)} onDone={(msg,change)=>{patchDisc(hostTools.id,change);setHostTools(null);toast(msg,{type:'ok'});load();}}
    onReport={acting&&hostTools.owner_profile_id!==acting.id?()=>{setReportPost(hostTools.id);setHostTools(null);}:undefined}/>}
   {reportPost&&<ReportSheet targetType="post" targetId={reportPost} onClose={()=>setReportPost(null)} onDone={msg=>{setReportPost(null);toast(msg,{type:'ok'});}}/>}
  </>;

@@ -17,9 +17,13 @@ export default [
      await open.click(); await t.see(sheet + ' [role="radiogroup"]');
      await t.tap(sheet + ' [role="radio"]:has-text("Рядом")');
      await t.see(sheet + ':has-text("Только примерная область около 5 км")');
+     // Whether a place is shared already is read when the sheet opens: wait for that answer (the share button or the
+     // radius) instead of looking once — a look before it came skipped the click and the radius never showed.
      const share = t.page.locator(sheet + ' button:has-text("Определить примерное место")');
+     const radius = t.page.locator(sheet + ' input[type="range"][aria-label="Радиус"]');
+     await share.or(radius).first().waitFor({ timeout: 30000 });
      if (await share.count()) await share.click();
-     await t.see(sheet + ' input[type="range"][aria-label="Радиус"]');
+     await radius.waitFor({ timeout: 30000 });
      const loc = await until(async () => (await t.api('location.get', {})).location, 'location stored');
      expect(Math.abs(loc.lat - 52.5) < 1e-9 && Math.abs(loc.lon - 13.4) < 1e-9, 'rounded to the 0.05° grid: ' + JSON.stringify(loc));
      await t.page.locator(sheet + ' input[type="range"][aria-label="Радиус"]').fill('50'); await t.wait(300);
