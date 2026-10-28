@@ -55,7 +55,7 @@ const run = {
   },
 
   async 'staff.supportQueue'(q, { account, input }) {
-    await requireStaff(q, account.id, SUPPORT_ROLES);
+    await requireStaff(q, account, SUPPORT_ROLES);
     const rows = await q.query(
       `select t.*, p.handle from feture.support_ticket t join feture.account a on a.id = t.account_id
        left join feture.profile p on p.id = a.person_profile_id
@@ -66,7 +66,7 @@ const run = {
   },
 
   async 'staff.supportReply'(q, { account, input }) {
-    await requireStaff(q, account.id, SUPPORT_ROLES);
+    await requireStaff(q, account, SUPPORT_ROLES);
     const [t] = await q.query(`select t.*, a.person_profile_id from feture.support_ticket t join feture.account a on a.id = t.account_id where t.id = $1 for update of t`, [input.ticketId]);
     if (!t) fail(404, 'not_found');
     if (t.account_id === account.id) fail(403, 'forbidden'); // never one's own ticket
@@ -85,7 +85,7 @@ const run = {
   },
 
   async 'staff.maintenanceSet'(q, { account, input }) {
-    await requireStaff(q, account.id, ['owner', 'lead']);
+    await requireStaff(q, account, ['owner', 'lead']);
     await q.query(`update feture.maintenance set active = $1, message = $2, updated_by = $3, updated_at = now()`,
       [input.active, input.active ? input.message || null : null, account.id]);
     await journal(q, account.id, input.active ? 'maintenance.on' : 'maintenance.off', 'platform', null, { message: input.message ?? null });

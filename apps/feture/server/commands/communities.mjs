@@ -515,7 +515,7 @@ const run = {
   },
 
   async 'staff.communityQueue'(q, { account, input }) {
-    await requireStaff(q, account.id, ['owner', 'lead', 'moderator']);
+    await requireStaff(q, account, ['owner', 'lead', 'moderator']);
     const items = await q.query(
       `select c.id, c.rev, c.name, c.description, c.topics, c.privacy, c.join_question, c.rules, c.cover_asset_id, c.place_id, c.state, c.pending_change, c.created_at
        from feture.community c
@@ -526,7 +526,7 @@ const run = {
   },
 
   async 'staff.communityDecide'(q, { account, input }) {
-    await requireStaff(q, account.id, ['owner', 'lead', 'moderator']);
+    await requireStaff(q, account, ['owner', 'lead', 'moderator']);
     const [c] = await q.query(`select * from feture.community where id = $1 for update`, [input.communityId]);
     if (!c) fail(404, 'not_found');
     const [{ own }] = await q.query(`select exists (select 1 from feture.profile_member where profile_id = $1 and account_id = $2) own`, [c.owner_profile_id, account.id]);

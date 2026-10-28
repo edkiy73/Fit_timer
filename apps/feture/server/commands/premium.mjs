@@ -5,7 +5,7 @@ import { fail, isUniqueViolation } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { avatarSrc, mediaDto } from '../media/assets.mjs';
 import { servedKeys } from '../media/scan.mjs';
-import { journal, requireStaff } from './staff.mjs';
+import { journal, requireStaff, staffCheck } from './staff.mjs';
 
 /** Slice H1: Premium and the age check (S1 §15, S3 §8, V21 A07).
  * Premium belongs to an account; acting as a couple, the couple has it when at least one partner does (Q12). Premium
@@ -266,7 +266,7 @@ const run = {
 
   async 'staff.premiumGrant'(q, { account, input }) {
     // For trying the app on ourselves before payments exist; every grant is journaled.
-    await requireStaff(q, account.id, ['owner', 'lead']);
+    await requireStaff(q, account, ['owner', 'lead']);
     const [t] = await q.query(`select a.id from feture.account a join feture.profile p on p.id = a.person_profile_id where lower(p.handle) = lower($1) and a.state = 'active'`, [input.handle]);
     if (!t) fail(404, 'not_found');
     if (t.id === account.id) fail(403, 'forbidden'); // never to oneself
@@ -280,7 +280,7 @@ const run = {
   },
 
   async 'staff.premiumRevoke'(q, { account, input }) {
-    await requireStaff(q, account.id, ['owner', 'lead']);
+    await requireStaff(q, account, ['owner', 'lead']);
     const rows = await q.query(`update feture.entitlement set revoked_at = now() where id = $1 and revoked_at is null returning account_id`, [input.entitlementId]);
     if (!rows[0]) fail(404, 'not_found');
     await recompute(q, rows[0].account_id);
@@ -345,7 +345,10 @@ const run = {
   },
 
   async 'staff.ageCheckQueue'(q, { account, input, cfg }) {
-    await requireStaff(q, account.id, ['owner', 'lead', 'moderator', 'verifier']);
+    await requireStaff(q, account, ['owner', 'lead', 'moderator', 'verifier']);
+    // Documents and selfies open only with a code from the last 10 minutes; without one the queue still lists who is
+    // waiting (`locked`, no pictures, nothing journalled) and the screen asks for the code.
+    const locked = !(await staffCheck(q, account)).fresh;
     const rows = await q.query(
       `select c.id, c.method, c.gesture, c.submitted_at, c.asset_id, p.id profile_id, p.handle, p.avatar_asset_id avatar_id
        from feture.age_check c join feture.account a on a.id = c.account_id join feture.profile p on p.id = a.person_profile_id
@@ -358,19 +361,19 @@ const run = {
       const [avatar] = !doc && r.avatar_id ? await q.query('select * from feture.media_asset where id = $1', [r.avatar_id]) : [null];
       const ctx = { viewerProfileId: account.person_profile_id ?? account.id, place: /** @type {const} */ ('own'), showExplicit: true, staff: true };
       // Every look at a selfie or a document is journaled (S4 §3).
-      await journal(q, account.id, 'age.view', 'account', null, { checkId: r.id, method: r.method });
-      const image = shot ? await mediaDto(cfg.media, shot, ctx).catch(() => null) : null;
+      if (!locked) await journal(q, account.id, 'age.view', 'account', null, { checkId: r.id, method: r.method });
+      const image = shot && !locked ? await mediaDto(cfg.media, shot, ctx).catch(() => null) : null;
       items.push({
         id: r.id, method: r.method, gesture: doc ? null : r.gesture, submittedAt: r.submitted_at, profile: { id: r.profile_id, handle: r.handle },
         selfie: doc ? null : image, document: doc ? image : null,
-        photo: avatar ? await mediaDto(cfg.media, avatar, ctx).catch(() => null) : null,
+        photo: avatar && !locked ? await mediaDto(cfg.media, avatar, ctx).catch(() => null) : null,
       });
     }
-    return { items };
+    return { items, locked };
   },
 
   async 'staff.ageCheckDecide'(q, { account, input }) {
-    await requireStaff(q, account.id, ['owner', 'lead', 'moderator', 'verifier']);
+    await requireStaff(q, account, ['owner', 'lead', 'moderator', 'verifier']);
     const [c] = await q.query('select * from feture.age_check where id = $1 for update', [input.checkId]);
     if (!c) fail(404, 'not_found');
     if (c.account_id === account.id) fail(403, 'forbidden');

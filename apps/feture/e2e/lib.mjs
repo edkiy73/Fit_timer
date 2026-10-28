@@ -4,6 +4,7 @@
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
+import { totpCode } from '../server/second-factor.mjs';
 
 export const PROD = process.env.FE_API || 'https://feture-mvp.vercel.app';
 const DIR = new URL('.', import.meta.url).pathname;
@@ -19,6 +20,11 @@ function saveSessions() {
   for (const [k, v] of Object.entries(disk)) { if (!sessions[k]) sessions[k] = v; else if (v._at > sessions[k]._at) Object.assign(sessions[k], v); }
   fs.writeFileSync(SESS, JSON.stringify(sessions), { mode: 0o600 });
 }
+/** Staff second factor of persona accounts: the authenticator secret and recovery codes per API host and e-mail, next
+ * to the session cache (mode 600, never in the repo). Losing it means a lead resets the factor (staff.totpReset). */
+const FACTOR = SESS.replace(/\.json$/, '') + '.factor.json';
+const readFactor = () => { try { return JSON.parse(fs.readFileSync(FACTOR, 'utf8')); } catch { return {}; } };
+const saveFactor = (key, value) => { const all = readFactor(); all[key] = value; fs.writeFileSync(FACTOR, JSON.stringify(all), { mode: 0o600 }); };
 export const sleep = ms => new Promise(z => setTimeout(z, ms));
 
 export async function post(path, body, headers = {}) {
@@ -88,6 +94,12 @@ export async function api(email, action, input = {}, profile) {
   if (profile) h['x-fe-profile'] = profile;
   else if (s.personId) h['x-fe-profile'] = s.personId;
   let r = await post('/api/fe', { action, ...input }, h);
+  // A staff command refused for a code (no code in this sign-in, 12 h passed, or a dangerous action wants a fresh one):
+  // the helper enters one from the saved secret, as the person would, and asks again.
+  if (r.status === 403 && r.error === 'second_factor' && (r.rule === 'verify' || r.rule === 'fresh') && !api.inFactor) {
+    await staffFactor(email, { fresh: true });
+    r = await post('/api/fe', { action, ...input }, h);
+  }
   if (r.status === 401) { console.error(`   (401 on ${action} for ${email}: signing in again — an open browser page of this account is now signed out)`); await session(email, { fresh: true }); return api(email, action, input, profile); }
   // A session signed in again elsewhere may not know its person profile yet: bootstrap fills it in, then retry once.
   if (r.status === 400 && r.error === 'profile_required' && !profile && !s.personId && action !== 'session.bootstrap') {
@@ -115,4 +127,42 @@ export async function uploadFixture(email, purpose, file = DIR + 'fixtures/photo
   const c = await api(email, 'media.commit', { assetId: i.assetId });
   if (c.status !== 200) throw new Error('commit ' + JSON.stringify(c));
   return i.assetId;
+}
+
+/** A code call that waits for the next 30 s step when the code was just used (one code works once per account; lanes
+ * share the staff persona). */
+async function codeCall(email, action, secret) {
+  for (let i = 0; i < 4; i++) {
+    const r = await api(email, action, { code: totpCode(secret) });
+    if (r.verified) return r;
+    if (r.reason === 'used') { await sleep(30000 - (Date.now() % 30000) + 700); continue; }
+    throw new Error(`${action} for ${email}: ${JSON.stringify(r)}`);
+  }
+  throw new Error(`${action} for ${email}: codes keep being used`);
+}
+
+/** A staff persona's second factor (server/commands/staff.mjs): enrols the authenticator the first time (the secret
+ * and recovery codes are saved before the code is sent), otherwise enters a code when this sign-in has none or, with
+ * `fresh`, when the last code is older than ~6 minutes. Returns staff.me. */
+export async function staffFactor(email, { fresh = false } = {}) {
+  const key = PROD + ' ' + email;
+  api.inFactor = true;
+  try {
+    const me = await api(email, 'staff.me');
+    if (!me.roles?.length || !me.factor) return me;
+    if (!me.factor.enrolled) {
+      const s = await api(email, 'staff.totpStart');
+      if (!s.secret) throw new Error('staff.totpStart for ' + email + ': ' + JSON.stringify(s));
+      saveFactor(key, { secret: s.secret, at: Date.now() });
+      const c = await codeCall(email, 'staff.totpConfirm', s.secret);
+      saveFactor(key, { secret: s.secret, codes: c.codes, at: Date.now() });
+      return api(email, 'staff.me');
+    }
+    const enough = fresh ? me.factor.freshUntil && Date.parse(me.factor.freshUntil) - Date.now() > 4 * 60e3 : me.factor.verified;
+    if (enough) return me;
+    const saved = readFactor()[key];
+    if (!saved?.secret) throw new Error(`${email} has a second factor on ${PROD} but its secret is not in ${FACTOR}: a lead resets it (staff.totpReset)`);
+    await codeCall(email, 'staff.totpVerify', saved.secret);
+    return api(email, 'staff.me');
+  } finally { api.inFactor = false; }
 }

@@ -5,7 +5,7 @@ import { fail, isUniqueViolation } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { mediaDto } from '../media/assets.mjs';
 import { GESTURES } from './premium.mjs';
-import { journal, requireStaff } from './staff.mjs';
+import { journal, requireStaff, staffCheck } from './staff.mjs';
 
 /** V01 photo verification (S2-CATALOG «H» `verification.photoSubmit`, S3-MEDIA §8). The server picks a gesture, the
  * person sends a selfie making it, staff compare it with the profile photos. The result is the «Фото подтверждено»
@@ -97,7 +97,9 @@ const run = {
   },
 
   async 'staff.photoCheckQueue'(q, { account, input, cfg }) {
-    await requireStaff(q, account.id, STAFF);
+    await requireStaff(q, account, STAFF);
+    // Selfies open only with a code from the last 10 minutes (as in staff.ageCheckQueue): otherwise `locked`.
+    const locked = !(await staffCheck(q, account)).fresh;
     const rows = await q.query(
       `select c.id, c.gesture, c.submitted_at, c.asset_id, c.photo_asset_id, p.id profile_id, p.handle
        from feture.photo_check c join feture.profile p on p.id = c.profile_id
@@ -113,23 +115,23 @@ const run = {
          select m.* from (select a.asset_id, a.position from feture.media_attachment a where a.target_type = 'avatar' and a.target_id = $1 and a.asset_id is distinct from $2 order by a.position limit 5) x
          join feture.media_asset m on m.id = x.asset_id`, [r.profile_id, r.photo_asset_id]);
       // Every look at a selfie is journaled (S4 §3).
-      await journal(q, account.id, 'photo.view', 'profile', r.profile_id, { checkId: r.id });
+      if (!locked) await journal(q, account.id, 'photo.view', 'profile', r.profile_id, { checkId: r.id });
       const dtos = [];
-      for (const ph of photos) {
+      for (const ph of locked ? [] : photos) {
         const d = await mediaDto(cfg.media, ph, ctx).catch(() => null);
         if (d) dtos.push(d);
       }
       items.push({
         id: r.id, gesture: r.gesture, submittedAt: r.submitted_at, profile: { id: r.profile_id, handle: r.handle },
-        selfie: selfie ? await mediaDto(cfg.media, selfie, ctx).catch(() => null) : null,
+        selfie: selfie && !locked ? await mediaDto(cfg.media, selfie, ctx).catch(() => null) : null,
         photo: dtos[0] ?? null, photos: dtos,
       });
     }
-    return { items };
+    return { items, locked };
   },
 
   async 'staff.photoCheckDecide'(q, { account, input }) {
-    await requireStaff(q, account.id, STAFF);
+    await requireStaff(q, account, STAFF);
     const [c] = await q.query('select * from feture.photo_check where id = $1 for update', [input.checkId]);
     if (!c) fail(404, 'not_found');
     if (c.account_id === account.id) fail(403, 'forbidden');
