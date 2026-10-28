@@ -136,7 +136,10 @@ export function webPushFromEnv(env, warn = code => console.warn('feture_fe_webpu
   const sender = publicKey && privateKey && subject ? createWebPush({ publicKey, privateKey, subject, ...(fetch ? { fetch } : {}) }) : null;
   if (!sender && !warned) {
     warned = true;
-    warn(publicKey || privateKey || subject ? 'invalid_keys' : 'off_no_keys');
+    // What is wrong, without the values: decoded lengths and the subject's scheme (public 65 bytes starting 0x04,
+    // private 32 bytes, subject mailto:/https:). Enough to tell a swapped or truncated paste from a missing one.
+    const pub = unb64(publicKey), d = unb64(privateKey);
+    warn(publicKey || privateKey || subject ? `invalid_keys pub=${pub.length}/${pub[0] ?? '-'} priv=${d.length} subj=${/^(mailto:|https:)/.test(subject) ? 'ok' : 'bad'} raw=${publicKey.length}/${privateKey.length}` : 'off_no_keys');
   }
   return sender;
 }
