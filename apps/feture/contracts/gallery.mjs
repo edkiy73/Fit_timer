@@ -3,9 +3,9 @@
  * own published posts (for everyone or followers); albums group those posts. */
 import * as z from 'zod';
 import { id, opId } from './platform.mjs';
-import { line } from './me.mjs';
+import { field } from './_text.mjs';
 
-const title = line(40);
+const title = field('albumTitle');
 const visibility = z.enum(['all', 'followers']);
 const unique = (/** @type {z.ZodArray<any>} */ arr) => arr.refine(v => new Set(v).size === v.length, { message: 'duplicates' });
 

@@ -284,3 +284,40 @@ test('community.mine and requestWithdraw: own memberships and pending requests o
     assert.deepEqual((await call('ub', b, { action: 'community.mine' })).member.map(x => x.name), ['Закрытое сообщество']);
   } finally { await pg.close(); }
 });
+
+test('join flows (owner check 28.10.2026): a decline holds a new request for 7 days, a hidden community stays reachable while asked, the state shows on the page', async () => {
+  const { pg, db, call, a, b, c, make } = await world();
+  try {
+    const closed = await make('ua', a, { name: 'Клуб по заявке', privacy: 'closed', joinQuestion: 'Почему вам интересно?' });
+    const ask = () => call('ub', b, { action: 'community.join', opId: op(), communityId: closed, rulesAccepted: true, answer: 'Хочу прийти на встречу' });
+    const r1 = await ask();
+    let page = (await call('ub', b, { action: 'community.get', communityId: closed })).community;
+    assert.equal(page.request.id, r1.id); assert.ok(Date.parse(page.request.at) > 0); // «Заявка на рассмотрении» with when it was sent
+    assert.deepEqual([page.declined, page.waiting], [null, null]);
+    assert.deepEqual((await ask()).state, 'pending'); // a second request while one waits is a conflict
+    const [{ rev }] = (await call('ua', a, { action: 'community.requests', communityId: closed })).items;
+    await call('ua', a, { action: 'community.requestDecide', opId: op(), requestId: r1.id, rev, approve: false });
+    page = (await call('ub', b, { action: 'community.get', communityId: closed })).community;
+    assert.equal(page.request, null); assert.ok(Date.parse(page.declined.until) > Date.now() + 6 * 864e5);
+    const again = await ask();
+    assert.deepEqual([again.status, again.rule], [422, 'declined_recently']);
+    // A week later a new request may go out.
+    await db.query(`update feture.community_request set decided_at = now() - interval '8 days' where id = $1`, [r1.id]);
+    assert.equal((await call('ub', b, { action: 'community.get', communityId: closed })).community.declined, null);
+    const r2 = await ask();
+    assert.equal(r2.state, 'requested');
+    // Withdrawing has no wait.
+    await call('ub', b, { action: 'community.requestWithdraw', opId: op(), requestId: r2.id });
+    assert.equal((await ask()).state, 'requested');
+
+    // Hidden: asked through the link, the page (and «Отозвать») stays reachable without it; after withdrawing it is gone.
+    const hidden = await make('ua', a, { name: 'Скрытый клуб', privacy: 'hidden', joinQuestion: 'Кто вас пригласил?' });
+    const { token } = await call('ua', a, { action: 'community.invite', opId: op(), communityId: hidden });
+    const hr = await call('uc', c, { action: 'community.join', opId: op(), communityId: hidden, rulesAccepted: true, answer: 'Меня позвал Алекс', invite: token });
+    const seen = (await call('uc', c, { action: 'community.get', communityId: hidden })).community;
+    assert.equal(seen.request.id, hr.id);
+    assert.equal((await call('uc', c, { action: 'community.discussions', communityId: hidden })).locked, true);
+    await call('uc', c, { action: 'community.requestWithdraw', opId: op(), requestId: hr.id });
+    assert.equal((await call('uc', c, { action: 'community.get', communityId: hidden })).status, 404);
+  } finally { await pg.close(); }
+});

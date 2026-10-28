@@ -1,11 +1,8 @@
-import {useRef,useState} from 'react';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Flag,Info,Users,type LucideIcon} from 'lucide-react';
-import {feErrorMessage,newOpId} from '../feture/fe-api';
+import {Users,type LucideIcon} from 'lucide-react';
 import {publicOrigin} from '../api-url';
-import {Alert,Btn,RadioList,Sheet,TextArea} from './kit';
-import {useFe} from './session';
+import {ReportSheet as AppReportSheet} from './report';
 import {namedPlate} from './create-community';
 
 /** What only the «Сообщества» screens share, built from the kit (src/fe/kit): the named plates, the report sheet,
@@ -27,23 +24,10 @@ export function NamedPlate({k,icon:Icon}:{k:string|null|undefined,icon?:LucideIc
 }
 export const CommPlate=({k}:{k:string|null|undefined})=><NamedPlate k={k} icon={Users}/>;
 
-const REASONS=['threat','private','minor','spam','other'] as const;
-/** «Пожаловаться» on a community or an event: the reason, details, and the report goes to moderators. */
+/** «Пожаловаться» on a community, an event or a community post: the app's one report sheet (./report). */
 export function ReportSheet({targetType,targetId,onClose,onDone}:{targetType:'community'|'event'|'post',targetId:string,onClose:()=>void,onDone:(msg:string)=>void}){
- const {call}=useFe();const {t}=useI18n();
- const [reason,setReason]=useState<typeof REASONS[number]|''>('');const [details,setDetails]=useState('');const [busy,setBusy]=useState(false);const [err,setErr]=useState('');const op=useRef(newOpId());
- const send=async()=>{
-  if(!reason){setErr(t('fe.pm.rp.chooseReason'));return;}
-  setBusy(true);setErr('');
-  try{await call('report.create',{opId:op.current,targetType,targetId,reason,details:details.trim().slice(0,500)},okRes);onDone(t('fe.cm.reported'));}
-  catch(e){setErr(feErrorMessage(e,t));op.current=newOpId();}finally{setBusy(false);}
- };
- return <Sheet title={t('fe.pm.rp.title')} onClose={onClose} foot={<Btn kind="danger" onClick={send} busy={busy} disabled={busy} icon={Flag}>{t('fe.pm.rp.send')}</Btn>}>
-  <RadioList label={t('fe.pm.rp.reason')} value={reason||null} onChange={k=>{setReason(k);setErr('');}} options={REASONS.map(k=>[k,t('fe.pm.rp.'+k)] as const)}/>
-  <label className="field mt16"><span>{t('fe.pm.rp.details')}<i>{t('fe.pm.rp.optional')}</i></span>
-   <TextArea rows={3} maxLength={500} value={details} onChange={e=>setDetails(e.target.value)}/></label>
-  {err&&<Alert kind="err" icon={Info} className="mt12">{err}</Alert>}
- </Sheet>;
+ const {t}=useI18n();
+ return <AppReportSheet targetType={targetType} targetId={targetId} onClose={onClose} onDone={()=>onDone(t('fe.cm.reported'))}/>;
 }
 
 /** Copies a link; says so either way. */

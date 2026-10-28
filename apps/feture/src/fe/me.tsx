@@ -16,6 +16,7 @@ import {LinksBlock,waitingCount} from './links';
 import {ActAsSheet,CoupleMembers,CouplePending,CoupleVisGroup} from './couple';
 import {linksMineRes} from './profile-extras';
 import {useToast} from './toast';
+import {DiscoverPhotoAsk} from './discover-photo';
 import {useDragOrder} from './reorder';
 import {MeGallery} from './gallery';
 import {Viewer} from './post-parts';
@@ -259,10 +260,10 @@ function Visibility({p,settings,onChanged}:{p:Profile,settings:Settings,onChange
  const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();
  const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [ageIntent,setAgeIntent]=useState('');const [askOff,setAskOff]=useState(false);
  const cp=p.kind==='couple';
- const set=async(setting:string,value:string|boolean)=>{
+ const set=async(setting:string,value:string|boolean,done?:string)=>{
   if(busy)return;setBusy(true);setFailure('');
   try{const r=await call(setting==='detailsVis'?'profile.update':'profile.setVisibility',setting==='detailsVis'?{opId:newOpId(),rev:p.rev,detailsVis:value}:{opId:newOpId(),setting,value},ok);
-   toast(r.pending?t('fe.cw.waitPartner'):t('fe.mx.saved'),{type:'ok'});onChanged();}
+   toast(r.pending?t('fe.cw.waitPartner'):done??t('fe.mx.saved'),{type:'ok'});onChanged();}
   catch(e){
    const age=e instanceof FeError&&e.rule==='age_not_verified';
    // The age check this sends to comes back here and applies the same change (`vis:<setting>:<value>`).
@@ -271,14 +272,15 @@ function Visibility({p,settings,onChanged}:{p:Profile,settings:Settings,onChange
  };
  useAgeResume(v=>/^vis:[a-zA-Z]+:[a-z]+$/.test(v),v=>{const [,k,raw]=v.split(':') as [string,string,string];void set(k,raw==='true'?true:raw==='false'?false:raw);});
  const hasPhoto=p.photos.some(x=>!x.pending);
+ // Owner 28.10.2026: Discover is off for new accounts; «Показываюсь» without any photo asks for one first (DiscoverPhotoAsk).
+ const [askPhoto,setAskPhoto]=useState(false);
  const mode=settings.discoverMode;
  const toggle=(k:string,title:string,sub:string,on:boolean)=><ToggleRow title={title} sub={sub} on={on} disabled={busy} onClick={()=>void set(k,!on)}/>;
- const modeSub=mode==='visible'&&!hasPhoto?(cp?t('fe.mx.v.noPhotoCouple'):t('fe.mx.v.noPhoto')):mode==='off'&&cp?t('fe.mx.v.offCouple'):cp?t('fe.mx.v.offNow'):t('fe.mx.v.modeSub');
+ const modeSub=mode==='visible'&&!hasPhoto?(p.photos.length?t(cp?'fe.mx.v.photoReviewUs':'fe.mx.v.photoReview'):cp?t('fe.mx.v.noPhotoCouple'):t('fe.mx.v.noPhoto')):mode==='off'&&cp?t('fe.mx.v.offCouple'):cp?t('fe.mx.v.offNow'):t('fe.mx.v.modeSub');
  return <>
   <Group title={t('fe.reg.discover.title')}><Card list>
-   <SelectRow row label={t('fe.mx.v.mode')} sub={modeSub} value={mode} onChange={v=>{if(v==='off'&&mode!=='off')setAskOff(true);else void set('discoverMode',v);}}
+   <SelectRow row label={t('fe.mx.v.mode')} sub={modeSub} value={mode} onChange={v=>{if(v==='off'&&mode!=='off')setAskOff(true);else if(v==='visible'&&!p.photos.length)setAskPhoto(true);else void set('discoverMode',v);}}
     options={(['visible','hidden','off'] as const).map(v=>[v,t('fe.mx.v.mode.'+v+(cp?'Us':''))] as const)}/>
-   {mode==='visible'&&!hasPhoto&&<Row icon={Camera} title={t('fe.me.photoAdd')} sub={t('fe.mx.v.addPhotoSub')} onClick={()=>navigate('/n/me/edit?only=media')}/>}
    <Row title={cp?t('fe.mx.v.cardUs'):t('fe.mx.v.card')} sub={cp?t('fe.mx.v.cardSubUs'):t('fe.mx.v.cardSub')} onClick={()=>navigate('/n/me/preview')}/>
    {toggle('acceptProfileLikes',t('fe.mx.v.likes'),cp?t('fe.mx.v.likesSubUs'):t('fe.mx.v.likesSub'),settings.acceptProfileLikes!==false)}
   </Card></Group>
@@ -295,5 +297,7 @@ function Visibility({p,settings,onChanged}:{p:Profile,settings:Settings,onChange
   {/* V21 k4off: switching Discover off is asked first — matches, chats and access stay. */}
   {askOff&&<KitAsk icon={HeartOff} danger title={t(cp?'fe.w7.k4off.titleUs':'fe.w7.k4off.title')} text={t(cp?'fe.w7.k4off.textUs':'fe.w7.k4off.text')} ok={t('fe.w7.k4off.ok')} busy={busy}
    onOk={()=>{setAskOff(false);void set('discoverMode','off');}} onCancel={()=>setAskOff(false)}/>}
+  {askPhoto&&<DiscoverPhotoAsk existing={p.photos.map(x=>x.id)} couple={cp} onCancel={()=>setAskPhoto(false)}
+   onAdded={async()=>{setAskPhoto(false);await set('discoverMode','visible',t(cp?'fe.dph.onReviewUs':'fe.dph.onReview'));}}/>}
  </>;
 }

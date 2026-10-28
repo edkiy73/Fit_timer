@@ -50,11 +50,13 @@ export async function setup({ commands, migrations = MIGRATIONS, signals, realti
     await handler({ method: 'POST', headers: { 'x-test-user': user, ...(profile ? { 'x-fe-profile': profile } : {}), ...headers }, body }, res);
     return { status: res.statusCode, ...res.body };
   };
-  /** Registered person; age-verified unless told otherwise. */
-  const person = async (user, handle, { verified = true, birthDate = '1990-01-01' } = {}) => {
+  /** Registered person; age-verified unless told otherwise. New accounts start outside Discover (owner 28.10.2026); most
+   * tests need a person who is in it, so `discover` switches it on here — pass `discover: null` to keep the real default. */
+  const person = async (user, handle, { verified = true, birthDate = '1990-01-01', discover = /** @type {string | null} */ ('visible') } = {}) => {
     const r = await call(user, null, { action: 'account.create', opId: op(), handle, birthDate, locale: 'ru', documents: ACCEPT, newsOptIn: false });
     assert.equal(r.status, 200, JSON.stringify(r));
     if (verified) await db.query(`update feture.account set age_verified_until = now() + interval '1 year' where person_profile_id = $1`, [r.profileId]);
+    if (discover) await db.query('update feture.profile_settings set discover_mode = $2 where profile_id = $1', [r.profileId, discover]);
     return r.profileId;
   };
   /** Couple profile of existing person profiles (slice E will create couples through invitations). */

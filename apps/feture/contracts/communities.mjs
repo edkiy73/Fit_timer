@@ -2,17 +2,17 @@
 /** Slice D1: communities (S2-CATALOG «D. Сообщества», extract/communities-events.md). */
 import * as z from 'zod';
 import { id, opId } from './platform.mjs';
-import { line, text } from './me.mjs';
+import { field, textLength } from './_text.mjs';
 
 const code = z.string().regex(/^[a-z][a-z0-9_-]{0,31}$/);
 const fields = {
-  name: line(50).refine(v => v.length >= 3, { message: 'too_short' }),
-  description: text(500).refine(v => v.length >= 20, { message: 'too_short' }),
+  name: field('communityName'),
+  description: field('communityDescription'),
   topics: z.array(code).min(1).max(3).refine(v => new Set(v).size === v.length, { message: 'duplicates' }),
   privacy: z.enum(['open', 'closed', 'hidden']),
-  joinQuestion: text(120).nullable().optional(),
-  rules: z.array(text(300).refine(v => v.length > 0, { message: 'empty' })).min(1).max(20)
-    .refine(v => v.join('').length <= 1000, { message: 'too_long' }),
+  joinQuestion: field('joinQuestion').nullable().optional(),
+  rules: z.array(field('communityRule')).min(1).max(20)
+    .refine(v => textLength(v.join('')) <= 1000, { message: 'too_long' }),
   placeId: id.nullable().optional(),
   coverAssetId: id.nullable().optional(),
   plate: z.enum(['lilac', 'rose', 'sea', 'amber', 'moss', 'coal']).default('lilac'),
@@ -41,7 +41,7 @@ export const communitiesCommands = {
   'community.mine': { profile: true, write: false, input: z.strictObject({}) },
   'community.join': {
     profile: true, write: true, rate: { kind: 'community.join', max: 50, window: '1 day' },
-    input: z.strictObject({ opId, communityId: id, rulesAccepted: z.literal(true), answer: text(300).default(''), invite: z.string().max(80).optional() }),
+    input: z.strictObject({ opId, communityId: id, rulesAccepted: z.literal(true), answer: field('joinAnswer').default(''), invite: z.string().max(80).optional() }),
   },
   'community.requestWithdraw': { profile: true, write: true, input: z.strictObject({ opId, requestId: id }) },
   'community.requests': { profile: true, write: false, input: z.strictObject({ communityId: id, tab: z.enum(['pending', 'history']).default('pending') }) },
@@ -72,6 +72,6 @@ export const communitiesCommands = {
   'staff.communityQueue': { profile: false, write: false, input: z.strictObject({ limit: z.int().min(1).max(50).default(20) }) },
   'staff.communityDecide': {
     profile: false, write: true,
-    input: z.strictObject({ opId, communityId: id, rev: z.int().positive(), decision: z.enum(['approve', 'reject']), reason: text(300).default('') }),
+    input: z.strictObject({ opId, communityId: id, rev: z.int().positive(), decision: z.enum(['approve', 'reject']), reason: field('reason').default('') }),
   },
 };

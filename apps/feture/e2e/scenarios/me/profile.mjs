@@ -1,7 +1,7 @@
 // «Я» X01 + profile editor P02 + photos + visibility + «Моё». Run: FE_ADMIN_KEY=1234 APP=http://localhost:4233 node run.mjs profile.mjs
 // «Нужно решить» on «Я» shows while something waits: `asker` (a full person of the lane) asks for the private part,
 // and the request is cancelled at the end.
-import { pinned, expect, pngOf, toastSee, pick, until, uploaderDone, askAccess, cancelAsk } from '../helpers.mjs';
+import { pinned, expect, pngOf, toastSee, pick, until, uploaderDone, askAccess, cancelAsk, FIXTURES } from '../helpers.mjs';
 const prof = async t => (await t.api('profile.get', { profileId: await t.pid() })).profile;
 
 export default [
@@ -46,7 +46,8 @@ export default [
    await t.see('.field'); await t.fill('.field:has-text("Имя") input', '');
    await t.tap('.ctabar button:has-text("Сохранить")'); await t.wait(2000);
    if (!t.page.url().includes('/edit')) throw new Error('empty name was accepted');
-   const err = await t.page.locator('.alert.err').first().textContent({ timeout: 10000 });
+   // Kit validation layer: the error shows under the field (before #validation it came back from the server as an alert).
+   const err = await t.page.locator('.field.err .ferr, .alert.err').first().textContent({ timeout: 10000 });
    expect(!/invalid_input|undefined|\berror\b/i.test(err), 'plain words: ' + err);
  } },
  { name: 'P02 nickname: bad format refused', persona: 'full', route: '/n/me/edit?only=basics', allow4xx: true, run: async t => {
@@ -115,6 +116,29 @@ export default [
      await t.api('profile.update', { opId: t.uuid7(), rev: p.rev, detailsVis: 'all' });
      await t.api('profile.setVisibility', { opId: t.uuid7(), setting: 'discoverMode', value: 'visible' });
      await t.api('profile.setVisibility', { opId: t.uuid7(), setting: 'acceptProfileLikes', value: true });
+   }
+ } },
+ { name: 'Visibility (owner 28.10.2026): «Показываюсь» without a photo asks for one; the photo goes to review, then Discover is on', persona: 'basic', route: '/n/me?layer=vis', run: async t => {
+   const before = (await t.api('profile.settings', {})).settings.discoverMode;
+   const orig = (await prof(t)).photos.map(x => x.id);
+   try {
+     await t.see('select[aria-label="Режим"]');
+     await t.notSee('.li:has-text("С фото ты появишься")', 300); // the «Добавить фото» row is gone
+     await t.page.locator('select[aria-label="Режим"]').selectOption({ label: 'Показываюсь' });
+     await t.see('.dialog.on:has-text("Нужно фото")');
+     await t.tap('.dialog.on button:has-text("Не сейчас")'); await t.notSee('.dialog.on', 600);
+     expect((await t.api('profile.settings', {})).settings.discoverMode === before, 'not switched on without a photo');
+     await t.page.locator('select[aria-label="Режим"]').selectOption({ label: 'Показываюсь' });
+     const fc = t.page.waitForEvent('filechooser', { timeout: 8000 });
+     await t.tap('.dialog.on button:has-text("Загрузить фото")');
+     await (await fc).setFiles(FIXTURES + 'photo.jpg');
+     await uploaderDone(t);
+     await toastSee(t, 'Фото на проверке');
+     await until(async () => (await t.api('profile.settings', {})).settings.discoverMode === 'visible', 'discover on after the photo');
+     expect((await prof(t)).photos.length === orig.length + 1, 'photo added to the profile');
+   } finally {
+     await t.api('profile.photosSet', { opId: t.uuid7(), assetIds: orig });
+     await t.api('profile.setVisibility', { opId: t.uuid7(), setting: 'discoverMode', value: before });
    }
  } },
  { name: 'Моё: every row opens its screen', persona: 'full', route: '/n/me?layer=mine', allow4xx: true, run: async t => {

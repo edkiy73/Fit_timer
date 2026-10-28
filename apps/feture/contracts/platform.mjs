@@ -3,6 +3,7 @@
  * the client builds requests with these schemas, the server rejects anything they reject.
  * Inputs never carry an owner, role, age, email or account id; the acting profile comes from `X-Fe-Profile`. */
 import * as z from 'zod';
+import { field } from './_text.mjs';
 
 export const id = z.uuid();
 /** Client operation id: one per user intent, reused on retry. */
@@ -43,12 +44,10 @@ export const platformCommands = {
   'decide.approvals': { profile: true, write: false, input: z.strictObject({}) },
   'decide.approval': {
     profile: true, write: true,
-    // «Вернуть на доработку» may carry a note (≤300, V21 returnSend); approving never does. Same rules as me.mjs `text`
-    // (not imported: me.mjs imports this file).
+    // «Вернуть на доработку» may carry a note (≤300, V21 returnSend); approving never does.
     input: z.strictObject({
       opId, approvalId: id, choice: z.enum(['approve', 'return']),
-      comment: z.string().max(600).transform(v => v.normalize('NFC').trim()).refine(v => v.length <= 300, { message: 'too_long' })
-        .refine(v => !/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u202A-\u202E\u2066-\u2069\u200B-\u200F\uFEFF]/.test(v), { message: 'bad_characters' }).optional(),
+      comment: field('returnNote').optional(),
     }).refine(v => v.choice === 'return' || v.comment === undefined, { message: 'comment_only_when_returning', path: ['comment'] }),
   },
   'decide.cancel': { profile: true, write: true, input: z.strictObject({ opId, approvalId: id }) },

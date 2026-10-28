@@ -13,7 +13,7 @@ import {useToast} from './toast';
 import {useDragOrder} from './reorder';
 import {Ask,AudTag,COUPLE_ROWS,DETAIL_ROWS,MAX_PHOTOS,catalogRes,ok,photoSrc,profileRes,settingsRes,type Profile} from './me';
 import {NICK,nickAnswer} from './register';
-import {shakeFirstErr} from './create-community';
+import {FIELD,shakeFirstErr,textLength,useChecks} from './kit/validate';
 import {PostPhotoPicker} from './gallery';
 
 /** V21 P02 «Редактировать профиль» and P04 «Приватная часть» (`SC.P02` with `only`): one editor, opened at the block
@@ -65,6 +65,9 @@ export function MeEditScreen(){
  const dirty=!!d&&!!base&&JSON.stringify(d)!==JSON.stringify(base);
  const set=(patch:Partial<Draft>)=>setD(v=>v?{...v,...patch}:v);
  const show=(k:Exclude<Only,null>)=>!only||only===k;
+ // Kit validation layer: the fields on screen, by the server's rules (contracts/_text.mjs).
+ const checks=useChecks({...(show('basics')?{name:'profileName' as const,bio:'bio' as const}:{}),...(show('priv')&&!cp&&d?.privOn?{privText:'privateText' as const}:{})},
+  {name:d?.name??'',bio:d?.bio??'',privText:d?.privText??''});
  // Opened by a link (no app history behind it), back and «Сохранить» return to «Я» instead of leaving the app.
  const home='/n/me'+(only==='priv'?'?layer=priv':'');const canBack=((history.state as {idx?:number}|null)?.idx??0)>0;
  const leave=()=>canBack?navigate(-1):navigate(home,{replace:true});
@@ -79,6 +82,7 @@ export function MeEditScreen(){
 
  const save=async()=>{
   if(!d||!base||!p||busy)return;
+  if(!checks.submit())return;
   // V21 P02: the nickname is checked in place — format first, then whether it is free (the server decides at save too).
   const h=d.handle.trim();
   if(!cp&&h!==base.handle){
@@ -104,7 +108,7 @@ export function MeEditScreen(){
    if(!cp&&d.privOn&&JSON.stringify(d.privMedia.map(x=>x.id))!==JSON.stringify(base.privMedia.map(x=>x.id)))await call('private.setMedia',{opId:newOpId(),assetIds:d.privMedia.map(x=>x.id)},ok);
    toast(pending?t('fe.me.pending'):only==='media'?t('fe.mx.ed.photosSaved'):t('fe.me.saved'),{type:'ok'});
    leave();
-  }catch(e){if(e instanceof FeError&&e.fields?.includes('handle')){setNickErr(t('fe.reg.nick.taken'));setTimeout(shakeFirstErr);}else setFailure(feErrorMessage(e,t));}finally{setBusy(false);}
+  }catch(e){if(e instanceof FeError&&e.fields?.includes('handle')){setNickErr(t('fe.reg.nick.taken'));setTimeout(shakeFirstErr);}else if(!checks.fromServer(e,{text:'privText'}))setFailure(feErrorMessage(e,t));}finally{setBusy(false);}
  };
 
  if(!acting)return null;
@@ -155,10 +159,10 @@ export function MeEditScreen(){
       set({photos:[...d.photos,{id:m.id,src:m.src,pending:false}]});}}/>}
      {(show('basics')||show('details'))&&<Group><Card form className="pe-form">
       {show('basics')&&<>
-       <Field id={fid+'n'} label={cp?t('fe.mx.ed.coupleName'):t('fe.me.name')}><Input id={fid+'n'} value={d.name} maxLength={60} onChange={e=>set({name:e.target.value})}/></Field>
+       <Field id={fid+'n'} name="name" label={cp?t('fe.mx.ed.coupleName'):t('fe.me.name')} error={checks.error('name')}><Input id={fid+'n'} value={d.name} {...checks.input('name')} onChange={e=>set({name:e.target.value})}/>{checks.counter('name')}</Field>
        {!cp&&<Field id={fid+'h'} name="handle" label={t('fe.mx.ed.nick')} error={nickErr||undefined}><div className="inwrap"><AtSign/><Input id={fid+'h'} value={d.handle} maxLength={20} autoCapitalize="off" spellCheck={false} invalid={!!nickErr} onChange={e=>{set({handle:e.target.value.replace(/^@/,'')});setNickErr('');}}/></div></Field>}
        {!cp&&<ToggleRow title={t('fe.mx.ed.showAge')} on={d.showAge} onClick={()=>set({showAge:!d.showAge})}/>}
-       <Field id={fid+'b'} label={t('fe.mx.ed.about')}><TextArea id={fid+'b'} rows={4} maxLength={500} value={d.bio} placeholder={t('fe.mx.ed.aboutPh')} onChange={e=>set({bio:e.target.value})}/><Counter n={d.bio.length} max={500}/></Field>
+       <Field id={fid+'b'} name="bio" label={t('fe.mx.ed.about')} error={checks.error('bio')}><TextArea id={fid+'b'} rows={4} {...checks.input('bio')} value={d.bio} placeholder={t('fe.mx.ed.aboutPh')} onChange={e=>set({bio:e.target.value})}/><Counter n={textLength(d.bio)} max={FIELD.bio.max}/></Field>
        <PickField label={t('fe.mx.ed.city')} value={placeName(d.cityId)} placeholder={t('fe.mx.ed.noCity')} onClick={()=>setCity(true)}/>
       </>}
       {show('details')&&<div className="pe-who" id="peWho">
@@ -175,7 +179,7 @@ export function MeEditScreen(){
       <VaultHead title={t('fe.priv.title')} label={t('fe.priv.title')} on={d.privOn} onToggle={()=>d.privOn&&base?.privOn?setAskOff(true):set({privOn:!d.privOn})}/>
       {d.privOn&&<div className="vault-b">
        {!cp&&<Group title={t('fe.mx.ed.privText')}><Card form>
-        <Field><TextArea rows={5} maxLength={1000} value={d.privText} placeholder={t('fe.mx.ed.privPh')} aria-label={t('fe.mx.ed.privText')} onChange={e=>set({privText:e.target.value})}/><Counter n={d.privText.length} max={1000}/></Field>
+        <Field name="privText" error={checks.error('privText')}><TextArea rows={5} {...checks.input('privText')} value={d.privText} placeholder={t('fe.mx.ed.privPh')} aria-label={t('fe.mx.ed.privText')} onChange={e=>set({privText:e.target.value})}/><Counter n={textLength(d.privText)} max={FIELD.privateText.max}/></Field>
        </Card></Group>}
        <Group title={<>{t('fe.mx.ed.privJars')}{jars.granted?' · '+jars.granted:''}</>} foot={t('fe.mx.ed.privJarsFoot')}
         action={jars.granted>0&&<button type="button" onClick={()=>navigate('/n/me/interests?add=1&vis=granted')}><Plus/>{t('fe.mx.ed.add')}</button>}>

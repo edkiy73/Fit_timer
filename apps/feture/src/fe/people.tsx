@@ -7,6 +7,7 @@ import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Ban,Bell,CalendarDays,Check,ChevronDown,ChevronLeft,ChevronRight,EyeOff,Heart,Ellipsis,History,Info,KeyRound,LocateFixed,Lock,MapPin,MessageCircle,SlidersHorizontal,Sparkles,Undo2,Users,X} from 'lucide-react';
 import {Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,H,IconBtn,LikeTile,Note,PersonName,Pill,Radar,Range,RangeDual,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Soon,Stack,Text,View,plate} from './kit';
 import {useFe} from './session';
+import {DiscoverPhotoAsk} from './discover-photo';
 import {NameBadges} from './faces';
 import {BellButton} from './inbox';
 import {when} from './feed';
@@ -376,10 +377,20 @@ function FollowBtn({id,name,rel,setRel,toast}:{id:string,name:string,rel:Relatio
 }
 
 /** D01 — Discover is off for this profile: no candidates, two honest ways in (browse hidden / browse and be seen). */
+const photoIdsRes=z.object({ok:z.literal(true),profile:z.object({photos:z.array(z.object({id:z.string()}).passthrough())}).passthrough()});
 function DatingOff({onChanged,toast}:{onChanged:()=>void,toast:PxToast}){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const [busy,setBusy]=useState<''|'hidden'|'visible'>('');
  const couple=acting?.kind==='couple';
- const set=async(value:'hidden'|'visible')=>{if(busy)return;setBusy(value);
+ // Owner 28.10.2026: «Показываться» without any photo asks for one first (DiscoverPhotoAsk), then switches on.
+ const [askPhoto,setAskPhoto]=useState<string[]|null>(null);
+ const set=async(value:'hidden'|'visible',checked=false)=>{if(busy)return;
+  if(value==='visible'&&!checked&&acting&&acting.avatar==null){
+   setBusy(value);
+   const ids=await call('profile.get',{profileId:acting.id},photoIdsRes).then(r=>r.profile.photos.map(x=>x.id)).catch(()=>null);
+   setBusy('');
+   if(ids&&!ids.length){setAskPhoto(ids);return;}
+  }
+  setBusy(value);
   try{const r=await call('profile.setVisibility',{opId:newOpId(),setting:'discoverMode',value},ok);
    if(r.pending){toast(t('fe.px.off.wait'));return;}
    const hasPhoto=acting?.avatar!=null;toast(value==='hidden'?t('fe.px.off.peekDone'):hasPhoto?t('fe.px.off.onDone'):t('fe.px.off.onNoPhoto'));onChanged();}
@@ -394,7 +405,8 @@ function DatingOff({onChanged,toast}:{onChanged:()=>void,toast:PxToast}){
    :<Card list className="mt16">
     <Row icon={Check} tone="g" title={t('fe.px.off.stays')} sub={t('fe.px.off.staysSub')}/>
     <Row icon={MessageCircle} title={t('fe.px.off.chat')} sub={t('fe.px.off.chatSub')}/>
-   </Card>}</>}/>;
+   </Card>}
+   {askPhoto&&<DiscoverPhotoAsk existing={askPhoto} couple={couple} onCancel={()=>setAskPhoto(null)} onAdded={async()=>{setAskPhoto(null);await set('visible',true);}}/>}</>}/>;
 }
 
 /** D11 — dating switched off by the team (deck `closed`): a teaser, nothing about candidates, and «Сообщить о

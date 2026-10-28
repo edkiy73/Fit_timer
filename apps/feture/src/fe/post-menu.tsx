@@ -6,8 +6,10 @@ import {AtSign,Ban,BellOff,Check,EyeOff,Flag,Images,Link as LinkIcon,Pencil,Tras
 import type {LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicOrigin} from '../api-url';
-import {Alert,Ask as KitAsk,Btn,Card,RadioList,Row,Sheet,TextArea,ToggleRow} from './kit';
+import {Alert,Ask as KitAsk,Btn,Card,Field,Row,Sheet,TextArea} from './kit';
+import {useChecks} from './kit/validate';
 import {useFe} from './session';
+import {ReportSheet} from './report';
 import {useToast} from './toast';
 import type {Post,Reply} from './feed';
 import {PostAlbumSheet,inGallery} from './gallery';
@@ -20,8 +22,6 @@ const okOnly=z.object({ok:z.literal(true)}).passthrough();
 const objected=z.object({ok:z.literal(true),hidden:z.boolean()}).passthrough();
 const explained=z.object({ok:z.literal(true),note:z.string().nullable()}).passthrough();
 const deleted=z.object({ok:z.literal(true),state:z.string().optional()}).passthrough();
-const REASONS=['threat','private','minor','spam','other'] as const;
-type Reason=typeof REASONS[number];
 /** What the list should drop: one post, or every post of an author. `undo` (hiding only) reverses it on the server;
  * the list then puts the posts back — FeedTab shows it as the «Вернуть» action of the toast. */
 export type Removal={postId?:string,authorId?:string,notice:string,undo?:()=>Promise<void>,
@@ -42,29 +42,6 @@ function useEscape(fn:()=>void){
 function Ask({icon,title,text,ok,busy,failure,onOk,onCancel}:{icon:LucideIcon,title:string,text?:string,ok:string,busy:boolean,failure:string,onOk:()=>void,onCancel:()=>void}){
  const {t}=useI18n();
  return <KitAsk icon={icon} tone="l" title={title} text={text} ok={ok} cancel={t('fe.pm.cancel')} danger busy={busy} error={failure||undefined} onOk={onOk} onCancel={onCancel}/>;
-}
-
-/** The report sheet (`ACT.report`): a reason, optional details and «also block». */
-export function ReportSheet({targetType,targetId,onClose,onDone}:{targetType:'post'|'reply',targetId:string,onClose:()=>void,onDone:(alsoBlock:boolean)=>void}){
- const {call}=useFe();const {t}=useI18n();const {op,drop}=useOps();
- const [reason,setReason]=useState<Reason|null>(null);const [details,setDetails]=useState('');const [alsoBlock,setAlsoBlock]=useState(false);const [shake,setShake]=useState(false);
- const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
- useEscape(onClose);
- const send=async()=>{
-  if(!reason){setFailure(t('fe.pm.rp.chooseReason'));setShake(true);setTimeout(()=>setShake(false),500);return;}
-  if(busy)return;setBusy(true);setFailure('');
-  try{await call('report.create',{opId:op('report'),targetType,targetId,reason,details:details.trim().slice(0,500),alsoBlock},okOnly);onDone(alsoBlock);}
-  catch(e){setFailure(feErrorMessage(e,t));drop('report');}finally{setBusy(false);}
- };
- return <Sheet title={t('fe.pm.rp.title')} onClose={onClose} foot={<Btn kind="danger" onClick={send} disabled={busy} busy={busy}>{t('fe.pm.rp.send')}</Btn>}>
-  <div className={shake?'shake':undefined}>
-   <RadioList label={t('fe.pm.rp.reason')} value={reason} options={REASONS.map(k=>[k,t('fe.pm.rp.'+k)] as const)} onChange={k=>{setReason(k);setFailure('');}}/>
-  </div>
-  <label className="field mt16"><span>{t('fe.pm.rp.details')}<i>{t('fe.pm.rp.optional')}</i></span>
-   <TextArea rows={3} maxLength={500} value={details} onChange={e=>setDetails(e.target.value)}/></label>
-  <Card list><ToggleRow title={t('fe.pm.rp.alsoBlock')} sub={t('fe.pm.rp.alsoBlockSub')} on={alsoBlock} onClick={()=>setAlsoBlock(v=>!v)}/></Card>
-  {failure&&<Alert kind="err" className="mt12">{failure}</Alert>}
- </Sheet>;
 }
 
 export function PostMenu({post,onClose,onChange,onRemove}:{post:Post,onClose:()=>void,onChange?:(p:Post)=>void,onRemove:(r:Removal)=>void}){
@@ -113,7 +90,7 @@ export function PostMenu({post,onClose,onChange,onRemove}:{post:Post,onClose:()=
   busy={busy} failure={failure} onOk={del} onCancel={()=>go('menu')}/>;
  // «Это я — против» asks first (V21 tagObject): the post hides for everyone at once.
  if(view==='object')return <Ask icon={EyeOff} title={t('fe.w3.object.title')} text={t('fe.w3.object.text')} ok={t('fe.w3.object.ok')} busy={busy} failure={failure} onOk={object} onCancel={()=>go('menu')}/>;
- if(view==='report')return <ReportSheet targetType="post" targetId={post.id} onClose={onClose}
+ if(view==='report')return <ReportSheet targetType="post" targetId={post.id} block={false} onClose={onClose}
   onDone={alsoBlock=>onRemove(alsoBlock?{authorId:post.author.id,notice:t('fe.pm.done.reported')}:{postId:post.id,notice:t('fe.pm.done.reported')})}/>;
  if(view==='album')return <PostAlbumSheet post={post} onClose={onClose} onChange={onChange}/>;
  const published=!post.state||post.state==='published';
@@ -158,12 +135,16 @@ export function DisputeNotice({post,onChange}:{post:Post,onChange:(p:Post)=>void
 function DisputeExplainSheet({post,onClose,onDone}:{post:Post,onClose:()=>void,onDone:(note:string|null)=>void}){
  const {call}=useFe();const {t}=useI18n();const toast=useToast();const {op,drop}=useOps();
  const [text,setText]=useState(post.dispute?.note??'');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const checks=useChecks({note:'disputeNote'},{note:text});
  useEscape(onClose);
- const send=async()=>{if(busy)return;setBusy(true);setFailure('');
-  try{const r=await call('post.disputeExplain',{opId:op('explain'),postId:post.id,note:text.trim().slice(0,500)},explained);toast(t('fe.w3.dispute.sent'),{type:'ok'});onDone(r.note);}
-  catch(e){setFailure(feErrorMessage(e,t));drop('explain');}finally{setBusy(false);}};
+ const send=async()=>{if(busy||!checks.submit())return;setBusy(true);setFailure('');
+  try{const r=await call('post.disputeExplain',{opId:op('explain'),postId:post.id,note:text.trim()},explained);toast(t('fe.w3.dispute.sent'),{type:'ok'});onDone(r.note);}
+  catch(e){if(!checks.fromServer(e))setFailure(feErrorMessage(e,t));drop('explain');}finally{setBusy(false);}};
  return <Sheet title={t('fe.w3.dispute.sheetTitle')} sub={t('fe.w3.dispute.sheetSub')} onClose={onClose} foot={<Btn onClick={send} disabled={busy||!text.trim()} busy={busy}>{t('fe.w3.dispute.send')}</Btn>}>
-  <TextArea rows={4} maxLength={500} value={text} aria-label={t('fe.w3.dispute.sheetTitle')} onChange={e=>setText(e.target.value)}/>
+  <Field name="note" error={checks.error('note')}>
+   <TextArea rows={4} {...checks.input('note')} value={text} aria-label={t('fe.w3.dispute.sheetTitle')} onChange={e=>setText(e.target.value)}/>
+   {checks.counter('note')}
+  </Field>
   {failure&&<Alert kind="err" className="mt12">{failure}</Alert>}
  </Sheet>;
 }
@@ -182,7 +163,7 @@ export function ReplyMenu({reply,postId,onClose,onEdit,onDone}:{reply:Reply,post
   onOk={()=>run('delete',async opId=>{await call('reply.delete',{opId,replyId:reply.id},okOnly);return t('fe.feed.replyDeleted');})}/>;
  if(view==='block'&&reply.author)return <Ask icon={Ban} title={t('fe.pm.blockTitle',{name})} text={couple?t('fe.pm.blockTextCouple'):t('fe.pm.blockText')} ok={t('fe.pm.block')} busy={busy} failure={failure} onCancel={()=>setView('menu')}
   onOk={()=>run('block',async opId=>{await call('block.set',{opId,profileId:reply.author!.id,on:true},okOnly);return t('fe.pm.done.blocked');})}/>;
- if(view==='report')return <ReportSheet targetType="reply" targetId={reply.id} onClose={onClose} onDone={()=>onDone(t('fe.pm.done.reported'))}/>;
+ if(view==='report')return <ReportSheet targetType="reply" targetId={reply.id} block={false} onClose={onClose} onDone={()=>onDone(t('fe.pm.done.reported'))}/>;
  return <Sheet title={t('fe.pm.r.title')} onClose={onClose}>
   <Card list>
    {reply.mine?<>

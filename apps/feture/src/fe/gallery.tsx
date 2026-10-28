@@ -5,6 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Check,ChevronLeft,ChevronRight,Globe,Image as ImageIcon,Images,MoreHorizontal,Pencil,Plus,Trash2,Users,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {AlbumCard,AlbumMeta,AlbumRow,Ask,Btn,Card,Counter,Empty,Field,GalleryAdd,GalleryGrid,GalleryTile,Group,IconBtn,Input,Note,Row,SelectRow,SelectionBar,Sheet,Skel,SubBar,View} from './kit';
+import {FIELD,serverFields,softMax,textError,textErrorMessage,textLength} from './kit/validate';
 import {useFe} from './session';
 import {useToast} from './toast';
 import {useHideDock} from './dock';
@@ -63,17 +64,18 @@ function AlbumNameSheet({title,cta,initial='',albums,except,save,onClose}:{title
  const go=async()=>{
   const v=name.trim();if(busy)return;
   if(!v){setErr(t('fe.gal.nameEmpty'));return;}
+  const bad=textError(t,'albumTitle',v);if(bad){setErr(bad);return;}
   if(sameTitle(albums,v,except)){setErr(t('fe.gal.nameDup'));return;}
   setBusy(true);setErr('');
   try{await save(v);}
-  catch(e){setErr(e instanceof FeError&&e.rule==='duplicate'?t('fe.gal.nameDup'):e instanceof FeError&&e.rule==='album_limit'?t('fe.gal.limit'):feErrorMessage(e,t));}
+  catch(e){setErr(e instanceof FeError&&e.rule==='duplicate'?t('fe.gal.nameDup'):e instanceof FeError&&e.rule==='album_limit'?t('fe.gal.limit'):serverFields(e).some(f=>f.path==='title')?textErrorMessage(t,serverFields(e)[0]!.code,FIELD.albumTitle):feErrorMessage(e,t));}
   finally{setBusy(false);}
  };
  return <Sheet title={title} onClose={onClose} foot={<Btn onClick={go} busy={busy} disabled={busy}>{cta}</Btn>}>
   <Field id="albumName" name="albumName" label={t('fe.gal.name')} error={err||undefined}>
-   <Input id="albumName" value={name} maxLength={40} autoFocus autoComplete="off" invalid={!!err} placeholder={t('fe.gal.namePh')}
+   <Input id="albumName" value={name} maxLength={softMax('albumTitle')} onBlur={()=>{if(name.trim())setErr(textError(t,'albumTitle',name)??'');}} autoFocus autoComplete="off" invalid={!!err} placeholder={t('fe.gal.namePh')}
     onChange={e=>{setName(e.target.value);setErr('');}} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();void go();}}}/>
-   <Counter n={name.length} max={40}/>
+   <Counter n={textLength(name)} max={FIELD.albumTitle.max}/>
   </Field>
  </Sheet>;
 }

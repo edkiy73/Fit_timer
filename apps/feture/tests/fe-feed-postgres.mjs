@@ -186,7 +186,7 @@ test('edits: minor applies, major goes to review; reports hide and can block; co
     assert.equal(major.review, true);
     assert.equal((await call('ub', b, { action: 'post.get', postId: p.id })).post.media.length, 1); // the live version stays
 
-    const report = await call('ub', b, { action: 'report.create', opId: op(), targetType: 'post', targetId: p.id, reason: 'spam', alsoBlock: true });
+    const report = await call('ub', b, { action: 'report.create', opId: op(), targetType: 'post', targetId: p.id, reason: 'spam', details: 'Подробности для модератора', alsoBlock: true });
     assert.equal(report.reported, true);
     assert.equal((await call('ub', b, { action: 'post.get', postId: p.id })).status, 404);
     assert.equal((await db.query(`select count(*)::int n from feture.report where target_id = $1`, [p.id]))[0].n, 1);
@@ -252,7 +252,7 @@ test('review fixes: approval bound to the version, disputes need photos and surv
 
     // Deleting a reported post keeps it as evidence.
     const rep = await publish(call, 'ub', b, draft('Спорный'));
-    await call('ua', a, { action: 'report.create', opId: op(), targetType: 'post', targetId: rep.id, reason: 'spam' });
+    await call('ua', a, { action: 'report.create', opId: op(), targetType: 'post', targetId: rep.id, reason: 'spam', details: 'Подробности для модератора' });
     assert.equal((await call('ub', b, { action: 'post.delete', opId: op(), postId: rep.id })).state, 'archived');
 
     // A block on a person also ends follows of the couples they are in.

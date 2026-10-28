@@ -2,7 +2,7 @@
 /** S4 steps 5–6: notices of illegal content without an account (DSA art. 16) and transparency figures (art. 15). */
 import * as z from 'zod';
 import { id, opId } from './platform.mjs';
-import { line, text } from './me.mjs';
+import { field } from './_text.mjs';
 
 /** The public form (no account): `POST /api/fe?notice=1`. */
 export const noticeInput = z.strictObject({
@@ -10,9 +10,9 @@ export const noticeInput = z.strictObject({
   targetUrl: z.string().trim().min(8).max(500).regex(/^[\x21-\x7e]+$/)
     .refine(v => { try { return new URL(v).protocol === 'https:'; } catch { return false; } }, { message: 'https_only' }),
   reason: z.enum(['csam', 'minors', 'threats', 'private_material', 'illegal', 'ip', 'other']),
-  explanation: text(2000).refine(v => [...v].length >= 20, { message: 'too_short' }),
+  explanation: field('dsaExplanation'),
   // Name and address as art. 16(2)(c) asks; the address is used only to answer.
-  senderName: line(120).optional(),
+  senderName: field('dsaName').optional(),
   senderEmail: z.string().trim().max(254).regex(/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/).optional(),
   locale: z.enum(['ru', 'en']).default('en'),
   goodFaith: z.literal(true),
@@ -26,7 +26,7 @@ export const dsaCommands = {
     input: z.strictObject({
       opId, noticeId: id, outcome: z.enum(['removed', 'kept', 'not_actionable']),
       rule: z.enum(['minors', 'threats', 'private_material', 'spam', 'illegal', 'community_rules', 'ip']).optional(),
-      note: text(500).default(''),
+      note: field('staffNote').default(''),
     }).refine(v => v.outcome !== 'removed' || !!v.rule, { message: 'rule_required', path: ['rule'] }),
   },
   // At least four weeks, so the figures never describe a single day's decisions about a few people.
