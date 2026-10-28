@@ -109,7 +109,8 @@ export function VoiceRecorder({onSend,onError,disabled,maxMs=VOICE_MAX_MS}:{onSe
   catch{stream.getTracks().forEach(x=>x.stop());set('idle');onError('unsupported');return;}
   // Live level for the meter and the stored waveform (sampled ten times a second).
   let ctx:AudioContext|null=null;let an:AnalyserNode|null=null;
-  try{ctx=new AudioContext();an=ctx.createAnalyser();an.fftSize=512;ctx.createMediaStreamSource(stream).connect(an);}catch{ctx=null;an=null;}
+  // The context starts suspended when the press is no longer «fresh» after the permission prompt: resume it.
+  try{ctx=new AudioContext();an=ctx.createAnalyser();an.fftSize=512;ctx.createMediaStreamSource(stream).connect(an);void ctx.resume().catch(()=>{});}catch{ctx=null;an=null;}
   const buf=new Uint8Array(512);const levels:number[]=[];const t0=Date.now();
   const timer=setInterval(()=>{
    const el=Date.now()-t0;setMs(el);

@@ -1,7 +1,7 @@
 // Voice messages in H02 (owner, 28.10.2026): the mic replaces «Отправить» in an empty box; hold to record and release to
 // send, slide left to cancel, a short tap records hands-free with «Стоп» → listen → delete / send; a refused microphone
-// explains itself. Persona `chats` talks to `mate` (both sides read back through the API); `mic: true` grants the fake
-// microphone (run.mjs launches Chromium with --use-fake-device-for-media-stream).
+// explains itself. Persona `chats` talks to `mate` (both sides read back through the API); `mic: true` gives a fake,
+// allowed microphone, `mic: 'deny'` a refused one (run.mjs).
 import { expect, toastSee, until } from '../helpers.mjs';
 let CONV, MATE;
 async function init(t) { const c = t.me.kind === 'chats' ? t.me : await t.persona('chats'); CONV = c.with.mate.conversationId; MATE = c.with.mate.email; }
@@ -13,16 +13,16 @@ async function hold(t, ms, dx = 0) {
   const b = await t.page.locator(MIC).boundingBox(); if (!b) throw new Error('no mic button');
   const x = b.x + b.width / 2, y = b.y + b.height / 2;
   await t.page.mouse.move(x, y); await t.page.mouse.down();
-  await t.see('.k-rec', 8000); await t.wait(ms);
+  await t.see('.k-rec.hold', 8000); await t.wait(ms); // recording, not just asking
   if (dx) await t.page.mouse.move(x - dx, y, { steps: 8 });
   await t.page.mouse.up();
 }
 
 const scenarios = [
-  { name: 'voice: a refused microphone says what to do, nothing is sent', persona: 'chats', route: '/n/chats/@CONV', run: async t => {
+  { name: 'voice: a refused microphone says what to do, nothing is sent', persona: 'chats', mic: 'deny', route: '/n/chats/@CONV', run: async t => {
     await ready(t);
     const before = await count(t);
-    await t.tap(MIC); // short tap = hands-free; the (unanswered) prompt is refused in a headless browser without the grant
+    await t.tap(MIC); // the browser refuses the microphone (mic: 'deny')
     await toastSee(t, 'Нет доступа к микрофону', 10000);
     await t.notSee('.k-rec', 500);
     expect((await count(t)) === before, 'nothing sent');

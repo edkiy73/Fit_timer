@@ -65,9 +65,10 @@ communities, restore settings) in `finally`, so reruns pass. When IDs of the lan
 resolve them in the scenario (`await t.persona('host')`), not at module load.
 
 Microphone and camera: the runner starts Chromium with fake devices (`--use-fake-device-for-media-stream`, a beep and a
-test pattern). A scenario that records voice sets `mic: true` (the page is granted the microphone); without it the
-permission prompt is refused, as when a person says no (`chats/voice.mjs`, lane `av`). Clips are recorded from a canvas
-in the page (`feed/video.mjs`).
+test pattern). A scenario that records voice sets `mic: true` (it runs in a second browser with
+`--use-fake-ui-for-media-stream`: headless Chromium ignores a plain permission grant); `mic: 'deny'` makes
+`getUserMedia` refuse as when a person says no (`chats/voice.mjs`, lane `av`). Clips are recorded from a canvas in the
+page (`feed/video.mjs`).
 
 ## Run
 
