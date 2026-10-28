@@ -10,12 +10,15 @@ const {store}=require('../../../packages/core/server/store');
 const {createPrivateMetrics}=require('../lib/feture/private-metrics');
 const {createMetricsAdmin}=require('../lib/feture/private-metrics-admin');
 const {createOperatorEndpoint}=require('../lib/feture/operators');
+const {createUpdateAdmin,sendPublicUpdate}=require('../lib/app-update');
 const {cors,fail,rateOkScoped,readBody}=require('../../../packages/core/server/util');
 
-const coreAdmin = createAdminHandler({analyticsStats,handlers:[createCatalogAdmin(Supabase),createTestsAdmin(Supabase),createDocumentsAdmin(Supabase),createModerationAdmin(Supabase,store),createMetricsAdmin(createPrivateMetrics(store))]});
+const coreAdmin = createAdminHandler({analyticsStats,handlers:[createCatalogAdmin(Supabase),createTestsAdmin(Supabase),createDocumentsAdmin(Supabase),createModerationAdmin(Supabase,store),createMetricsAdmin(createPrivateMetrics(store)),createUpdateAdmin(store)]});
 
 const operators=createOperatorEndpoint({transport:Supabase,accounts:store,cors,quota:(req,owner)=>rateOkScoped(req,'feture-operators',120,owner,60,true)});
 module.exports=async(req,res)=>{
+ // /api/config (vercel.json rewrite): the published Android update, read by the installed app. Public, no secrets.
+ if(req.method==='GET'&&req.query&&req.query.public_config==='1'){if(cors(req,res))return;return sendPublicUpdate(store,res);}
  if(req.method==='OPTIONS')return coreAdmin(req,res);
  if(req.method!=='POST')return coreAdmin(req,res);
  // Parse once before dispatch; no staff route can fall through to Core by changing a field.

@@ -68,6 +68,7 @@ FetUre is **one responsive website AND native Android + iOS applications from th
 - Android/iOS: **Capacitor**, aligned with the versions and native principles already used by UnMute and FitTimer. Native packaging hosts the same web distribution; platform-specific bridges are adapters, not parallel UIs.
 - Mobile shell config, sync and release artifacts are product-specific. Android builds may use CI. iOS compiles/signs on macOS/CI, not on Windows or Linux.
 - **Do not build/publish new APK/IPA on every UI commit**, and do not auto-trigger release jobs per push; assemble signed installables only at end-of-milestone or when explicitly requested. No App Store/Play release without readiness, security, content policy and moderation review.
+- Android release flow (owner 28.10.2026, same as UnMute/FitTimer): `docs/android-release.md` — manual run or the `android-release.json` marker, FetUre's own signing key from `FETURE_KEYSTORE_*` secrets (agents never create or read keys), in-app updates, App Links.
 - Do not create a second database, duplicated user management or an unapproved stack. FetUre data shares FitT PostgreSQL with `feture_*` tables for now; Core auth is canonical. No direct browser access to private data, no service-role key in bundles.
 
 ## 4. Privacy matters more than shortcuts

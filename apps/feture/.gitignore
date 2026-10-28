@@ -1,2 +1,6 @@
 .artifacts/
 dist-native/
+# Release signing keys never go into Git (docs/android-release.md).
+*.jks
+*.keystore
+*.p12

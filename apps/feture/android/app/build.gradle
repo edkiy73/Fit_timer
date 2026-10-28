@@ -3,11 +3,27 @@ apply plugin: 'com.android.application'
 android {
     namespace = "ru.feture.app"
     compileSdk = rootProject.ext.compileSdkVersion
+    // As UnMute/FitTimer: direct — the APK from GitHub, updates itself inside the app; play — for stores, without the
+    // right to install APKs (no REQUEST_INSTALL_PACKAGES, the update opens the store page).
+    flavorDimensions += "distribution"
+    productFlavors {
+        direct {
+            dimension "distribution"
+            buildConfigField "boolean", "DIRECT_UPDATES", "true"
+        }
+        play {
+            dimension "distribution"
+            buildConfigField "boolean", "DIRECT_UPDATES", "false"
+        }
+    }
+    buildFeatures {
+        buildConfig true
+    }
     defaultConfig {
         applicationId "ru.feture.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        // CI (feture-android.yml) passes the run number; local builds stay 1 / 0.1.0.
+        // CI (feture-android.yml) passes 1000 + run number; local builds stay 1 / 0.1.0.
         versionCode = Integer.parseInt(System.getenv("VERSION_CODE") ?: "1")
         versionName = System.getenv("VERSION_NAME") ?: "0.1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -17,10 +33,28 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // FetUre's own release key. CI writes the FETURE_KEYSTORE_* GitHub secrets to a temp file and passes it here; never
+    // FitTimer's/UnMute's key, never a file in Git. Without it the release build is left unsigned and CI builds the
+    // debug-signed test APK instead (docs/android-release.md).
+    signingConfigs {
+        release {
+            def keystorePath = System.getenv("KEYSTORE_FILE")
+            if (keystorePath != null && new File(keystorePath).exists()) {
+                storeFile file(keystorePath)
+                storePassword System.getenv("KEYSTORE_PASSWORD")
+                keyAlias System.getenv("KEY_ALIAS")
+                keyPassword System.getenv("KEY_PASSWORD")
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            def keystorePath = System.getenv("KEYSTORE_FILE")
+            if (keystorePath != null && new File(keystorePath).exists()) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }
@@ -37,6 +71,8 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
+    // In-app update download in the background (UpdateDownloadWorker), same version as UnMute.
+    implementation 'androidx.work:work-runtime:2.10.1'
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

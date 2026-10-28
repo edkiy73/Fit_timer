@@ -1,5 +1,5 @@
 // Builds the web app, copies the part the app needs into dist-native/ (Capacitor webDir) and syncs the native shell.
-// No signed release is built here; the test APK is assembled by .github/workflows/feture-android.yml.
+// No APK is built here; release and test APKs are assembled by .github/workflows/feture-android.yml.
 import {cpSync,existsSync,rmSync} from 'node:fs';
 import {basename} from 'node:path';
 import {spawnSync} from 'node:child_process';
@@ -12,8 +12,9 @@ if(!skipBuild)run('npm',['run','build']);
 if(!existsSync('dist/index.html')){console.error('dist/index.html is missing: run npm run build first.');process.exit(1)}
 
 // The website also publishes Storybook (/kit), the design prototypes and the web-push service worker. None of them
-// belongs in the app (they would add ~80 MB to the APK, and the app never registers a service worker).
-const WEB_ONLY=name=>name==='kit'||name==='fe-sw.js'||name==='concept.html'||name==='design-handoff.html'||/^prototype-.*\.html$/.test(name);
+// belongs in the app (they would add ~80 MB to the APK, and the app never registers a service worker); neither does
+// .well-known/assetlinks.json (App Links proof for the website).
+const WEB_ONLY=name=>name==='kit'||name==='.well-known'||name==='fe-sw.js'||name==='concept.html'||name==='design-handoff.html'||/^prototype-.*\.html$/.test(name);
 rmSync('dist-native',{recursive:true,force:true});
 cpSync('dist','dist-native',{recursive:true,filter:src=>src==='dist'||!WEB_ONLY(basename(src))||!/^dist[\\/][^\\/]+$/.test(src)});
 

@@ -29,6 +29,18 @@ function fakeRes(){
   await admin({method:'POST',headers:{'x-admin-key':'wrong'},body:{action:'users_list'}},adminRes);
   ok('generic admin endpoint is mounted and protected', adminRes.statusCode === 403);
 
+  // In-app Android update: FetUre's own key (the store is shared with other apps), archive-only direct URLs.
+  const adminCall = async body => { const r = fakeRes(); await admin({method:'POST',headers:{'x-admin-key':'starter-admin-key'},body},r); return r; };
+  const publicConfig = async () => { const r = fakeRes(); await admin({method:'GET',headers:{},query:{public_config:'1'}},r); return JSON.parse(r.body || '{}'); };
+  ok('public config: no update published yet', (await publicConfig()).update.android.direct.latestCode === 0);
+  const wrongUrl = await adminCall({action:'feture.update.publish',channel:'direct',release:{latestCode:1005,latestName:'0.2.5',url:'https://github.com/edkiy73/Fit_timer/releases/download/feture-latest/FetUre-latest.apk'}});
+  ok('direct update refuses the moving latest APK', wrongUrl.statusCode === 422);
+  const published = await adminCall({action:'feture.update.publish',channel:'direct',release:{latestCode:1005,latestName:'0.2.5',minimumCode:9999,url:'https://github.com/edkiy73/Fit_timer/releases/download/feture-apk-archive/FetUre-1005.apk'}});
+  const direct = (await publicConfig()).update.android.direct;
+  ok('published direct update reaches /api/config', published.statusCode === 200 && direct.latestCode === 1005 && direct.minimumCode === 1005);
+  const { getSettings } = require('../../../packages/core/server/ai');
+  ok('FetUre update does not touch Core settings of other apps', !(await getSettings()).update.android.direct.latestCode);
+
   const billing = require('../api/billing');
   const billingRes = fakeRes();
   await billing({method:'POST',headers:{},body:{action:'providers'}},billingRes);

@@ -46,6 +46,7 @@ import { FirstStepsPage } from './feture/first-steps';
 import { ProductLayout } from './feture/primary-navigation';
 import { DatingPresentationProvider } from './feture/dating-presentation';
 import { NativeNavigation } from './feture/native-navigation';
+import { AppLinks } from './fe/app-links';
 import { isExperiencePath } from './feture/navigation';
 import { VerificationPage } from './feture/verification-page';
 import { ThemePicker } from './feture/components/ThemePicker';
@@ -63,6 +64,7 @@ import {CatalogAdmin} from './feture/catalog-admin';
 import {ModerationAdmin} from './feture/moderation-admin';
 import {OperatorsAdmin} from './feture/operators-admin';
 import {MetricsAdmin} from './feture/metrics-admin';
+import {UpdateAdmin} from './feture/update-admin';
 import {QaAdultAdmin} from './feture/qa-adult-admin';
 import {OperatorPage} from './feture/operator-page';
 import {ShareLinksPage,SharedCardPage} from './feture/share-links-page';
@@ -76,7 +78,8 @@ const productAdminSections:readonly AdminSection[]=[
   {id:'feture-catalog',label:'Темы каталога',group:'Редактура',render:context=><CatalogAdmin {...context}/>},
   {id:'feture-tests',label:'Опросники',group:'Редактура',render:context=><QuestionnairesAdmin {...context}/>},
   {id:'feture-documents',label:'Документы и согласия',group:'Редактура',render:context=><DocumentsAdmin {...context}/>},
-  {id:'feture-metrics',label:'Активность FetUre',group:'Наблюдение',render:context=><MetricsAdmin {...context}/>}
+  {id:'feture-metrics',label:'Активность FetUre',group:'Наблюдение',render:context=><MetricsAdmin {...context}/>},
+  {id:'feture-app-update',label:'Обновление приложения',group:'Приложение',render:context=><UpdateAdmin {...context}/>}
 ];
 
 const hiddenFetureCoreTabs = ['overview','errors'] as const;
@@ -146,6 +149,7 @@ function Root(){
       <AuthProvider client={authClient}>
         <LegacyBackground />
         <NativeNavigation />
+        <AppLinks />
         <DatingPresentationProvider><ProductLayout><Outlet /></ProductLayout></DatingPresentationProvider>
       </AuthProvider>
     </Localized>
