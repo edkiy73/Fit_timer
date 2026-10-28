@@ -73,10 +73,17 @@ export function prepareVideo(file:File):Promise<PreparedVideo>{
   const fail=()=>{if(over)return;over=true;URL.revokeObjectURL(src);rej(new Error('video'));};
   const timer=setTimeout(fail,20000);
   v.onerror=()=>{clearTimeout(timer);fail();};
-  // The frame at 0.1 s avoids a black fade-in; some files report no length until seeked.
-  v.onloadedmetadata=()=>{v.currentTime=Math.min(.1,(Number.isFinite(v.duration)?v.duration:1)/2);};
+  // The frame at 0.1 s avoids a black fade-in. Recorded WebM often reports no length until the end is sought: seek far
+  // first, read the real length, then come back for the frame.
+  let probing=false;let length=NaN;
+  v.onloadedmetadata=()=>{
+   if(Number.isFinite(v.duration)){length=v.duration;v.currentTime=Math.min(.1,length/2);}
+   else{probing=true;v.currentTime=1e7;}
+  };
   v.onseeked=()=>{
-   clearTimeout(timer);if(over)return;
+   if(over)return;
+   if(probing){probing=false;length=Number.isFinite(v.duration)?v.duration:v.currentTime;v.currentTime=Math.min(.1,length/2);return;}
+   clearTimeout(timer);
    const w0=v.videoWidth,h0=v.videoHeight;
    const k=Math.min(1,POSTER_SIDE/Math.max(w0||1,h0||1));const w=Math.round(w0*k),h=Math.round(h0*k);
    const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');
@@ -86,7 +93,7 @@ export function prepareVideo(file:File):Promise<PreparedVideo>{
     if(!b){fail();return;}
     over=true;URL.revokeObjectURL(src);
     const mime=VIDEO_TYPES.includes(file.type)?file.type:/\.mov$/i.test(file.name)?'video/quicktime':/\.webm$/i.test(file.name)?'video/webm':'video/mp4';
-    res({file,poster:b,url:URL.createObjectURL(b),w:w0,h:h0,durationMs:Math.round((Number.isFinite(v.duration)?v.duration:0)*1000),size:file.size,mime});
+    res({file,poster:b,url:URL.createObjectURL(b),w:w0,h:h0,durationMs:Math.round((Number.isFinite(length)?length:0)*1000),size:file.size,mime});
    },'image/jpeg',.82);
   };
  });

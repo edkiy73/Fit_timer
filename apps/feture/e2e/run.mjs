@@ -3,6 +3,7 @@
 // A scenario file exports `default [{name, persona:'full'|'basic'|'new'|'pair'|…, route:'/n/…', run: async t => {…}}]`.
 // `persona` signs the browser in as that persona of your lane (e2e/personas.mjs); `persona: null` opens the app signed
 // out. There is no default account: a scenario without `persona` fails.
+// `mic: true` grants the (fake) microphone to that scenario's page.
 // t: page (Playwright), go(route), tap(textOrSelector), fill(selectorOrLabel, value), see(text), notSee(text), wait(ms),
 //    api(action, input, asEmail?, profile?) — a direct API call for setup or to read the result back, me (the persona),
 //    persona(kind) — another persona of the same lane (an actor who asks, invites, applies…; built on first use),
@@ -19,7 +20,9 @@ const DIR = new URL('.', import.meta.url).pathname;
 const OUT = DIR + 'out/'; fs.mkdirSync(OUT, { recursive: true });
 const [, , file, filter] = process.argv;
 const scenarios = (await import(new URL(file, 'file://' + process.cwd() + '/').href)).default.filter(s => !filter || s.name.includes(filter));
-const browser = await chromium.launch({ headless: true });
+// Fake camera / microphone devices (a beep and a test pattern): a scenario that records voice grants the microphone with
+// `mic: true`; without it the permission prompt is refused, as when a person says no.
+const browser = await chromium.launch({ headless: true, args: ['--use-fake-device-for-media-stream'] });
 const results = [];
 for (const sc of scenarios) {
   if (sc.persona === undefined) { results.push({ name: sc.name, ok: false, err: 'no persona' }); console.log('FAIL ' + sc.name + '\n   ✗ every scenario names a persona (or persona: null for signed out)'); continue; }
@@ -38,6 +41,7 @@ for (const sc of scenarios) {
     } catch { /* context closed */ }
   });
   if (s) await ctx.addInitScript(x => { const { _at, personId, ...rest } = x; localStorage.setItem('feture.auth.session', JSON.stringify(rest)); localStorage.setItem('feture.auth.device', rest.deviceId); }, s);
+  if (sc.mic) await ctx.grantPermissions(['microphone'], { origin: APP });
   const page = await ctx.newPage();
   const problems = [];
   page.on('console', m => { if (m.type() === 'error' && !/favicon|Failed to load resource: the server responded with a status of 4/.test(m.text())) problems.push('console: ' + m.text().slice(0, 300)); });

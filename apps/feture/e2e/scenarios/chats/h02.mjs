@@ -45,7 +45,9 @@ async function tidy(t, m) {
 const scenarios = [
   { name: 'H02 send text: optimistic bubble → delivered, other side gets it via API', persona: 'chats', route: '/n/chats/@T2', run: async t => {
     await ready(t);
-    if (!(await t.page.locator('.inputbar .send').isDisabled())) throw new Error('send should be disabled when empty');
+    // An empty box offers a voice message (hold the mic) instead of an enabled «Отправить».
+    if (await t.page.locator('.inputbar button[aria-label="Отправить"]:enabled').count()) throw new Error('send should not be offered when empty');
+    await t.see('.inputbar button[aria-label^="Голосовое"]');
     const body = 'e2e привет ' + stamp();
     await t.fill('.inputbar textarea', body);
     await t.tap('.inputbar .send');
@@ -129,7 +131,7 @@ const scenarios = [
     const n = (await t.page.locator('.inputbar textarea').inputValue()).length;
     if (n !== 2000) throw new Error('maxLength not applied: ' + n);
     await t.fill('.inputbar textarea', '   ');
-    if (!(await t.page.locator('.inputbar .send').isDisabled())) throw new Error('spaces only should not be sendable');
+    if (await t.page.locator('.inputbar button[aria-label="Отправить"]:enabled').count()) throw new Error('spaces only should not be sendable');
   } },
   { name: 'H02 attach sheet: ✕, scrim and Esc close it', persona: 'chats', route: '/n/chats/@T2', run: async t => {
     await ready(t);
