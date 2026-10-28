@@ -57,6 +57,11 @@ const QUEUES:{[K in QueueId]:{action:string,schema:z.ZodType<{items:Items[K]}>,k
  place:{action:'staff.placeQueue',schema:list(placeItem),key:x=>x.id},
 };
 const QUEUE_IDS=Object.keys(QUEUES) as QueueId[];
+/** Who may open what (the server's requireStaff lists); the screen only asks for what the roles allow. Queues not
+ * listed are open to every staff role that has a queue. */
+const QUEUE_ROLES:Partial<Record<QueueId,string[]>>={appeal:['owner','lead']};
+const SECTION_ROLES={queues:['owner','lead','moderator','verifier'],premium:['owner','lead'],journal:['owner','lead','auditor']} as const;
+const can=(roles:readonly string[],need:readonly string[]|undefined)=>!need||roles.some(r=>need.includes(r));
 const LIMIT=50;
 type Loaded={[K in QueueId]?:{items:Items[K]}|{error:unknown}};
 const forbidden=(e:unknown)=>e instanceof FeError&&e.code==='forbidden';
@@ -87,26 +92,28 @@ export function StaffScreen(){
     :!roles.length?<Empty icon={Lock} title={t('fe.staff.unavailable')} text={t('fe.staff.unavailableText')}/>
     :<>
      <Note className="mb12">{t('fe.staff.roles')}: {roles.map(r=>t('fe.staff.role.'+r)).join(', ')}</Note>
-     <Seg small={false} value={section} onChange={setSection} options={(['queues','premium','journal'] as const).map(id=>({id,label:t('fe.staff.section.'+id)}))}/>
-     {section==='queues'?<Queues/>:section==='premium'?<Premium/>:<Journal/>}
+     {(['queues','premium','journal'] as const).filter(id=>can(roles,SECTION_ROLES[id])).length>1&&<Seg small={false} value={section} onChange={setSection} options={(['queues','premium','journal'] as const).filter(id=>can(roles,SECTION_ROLES[id])).map(id=>({id,label:t('fe.staff.section.'+id)}))}/>}
+     {(()=>{const ok=(['queues','premium','journal'] as const).filter(id=>can(roles,SECTION_ROLES[id]));const cur=ok.includes(section)?section:ok[0];
+      return cur==='queues'?<Queues/>:cur==='premium'?<Premium/>:cur==='journal'?<Journal/>:null;})()}
     </>}
   </View>
  </>;
 }
 
 function Queues(){
- const {call}=useFe();const {t}=useI18n();
+ const {call}=useFe();const {t}=useI18n();const roles=useStaffRoles();
  const [data,setData]=useState<Loaded|null>(null);const [tab,setTab]=useState<QueueId|null>(null);const [notice,setNotice]=useState('');
  const load=useCallback((fresh=false)=>{
   setData(null);setNotice('');
-  void Promise.allSettled(QUEUE_IDS.map(id=>call(QUEUES[id].action,{limit:LIMIT},QUEUES[id].schema as z.ZodType<{items:unknown[]}>,{asAccount:true,fresh}))).then(rs=>{
+  const ids=QUEUE_IDS.filter(id=>can(roles??[],QUEUE_ROLES[id]));
+  void Promise.allSettled(ids.map(id=>call(QUEUES[id].action,{limit:LIMIT},QUEUES[id].schema as z.ZodType<{items:unknown[]}>,{asAccount:true,fresh}))).then(rs=>{
    const next:Record<string,{items:unknown[]}|{error:unknown}>={};
-   rs.forEach((r,i)=>{const id=QUEUE_IDS[i]!;if(r.status==='fulfilled')next[id]={items:r.value.items};else if(!forbidden(r.reason))next[id]={error:r.reason};});
+   rs.forEach((r,i)=>{const id=ids[i]!;if(r.status==='fulfilled')next[id]={items:r.value.items};else if(!forbidden(r.reason))next[id]={error:r.reason};});
    setData(next as Loaded);
    setTab(cur=>cur&&next[cur]?cur:QUEUE_IDS.find(id=>{const v=next[id];return v&&'items' in v&&v.items.length;})??QUEUE_IDS.find(id=>next[id])??null);
   });
- },[call]);
- useEffect(()=>{load();},[load]);
+ },[call,roles]);
+ useEffect(()=>{if(roles)load();},[load,roles]);
  if(!data)return <Skel kind="list"/>;
  const avail=QUEUE_IDS.filter(id=>data[id]);
  if(!avail.length||!tab)return <Empty icon={Inbox} title={t('fe.staff.noQueues')}/>;

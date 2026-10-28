@@ -80,7 +80,8 @@ export function PairScreen(){
  // Already in a couple: a partner link cannot be used — say so once and forget it.
  const inCouple=couple?.state==='active';
  useEffect(()=>{if(token&&inCouple){dropLink();setToken(null);toast(t('fe.pair.rule.already_in_couple'),{type:'warn'});}},[token,inCouple,toast,t]);
- const act=async(fn:()=>Promise<unknown>,after?:()=>void)=>{setBusy(true);setFailure('');try{await fn();after?.();load();}catch(e){setFailure(e instanceof FeError&&e.rule?t('fe.pair.rule.'+e.rule):feErrorMessage(e,t));}finally{setBusy(false);}};
+ const pairError=(e:unknown)=>pairErrorText(e,t);
+ const act=async(fn:()=>Promise<unknown>,after?:()=>void)=>{setBusy(true);setFailure('');try{await fn();after?.();load();}catch(e){setFailure(pairError(e));}finally{setBusy(false);}};
  const toSetup=()=>{reload();navigate('/n/me/pair?setup=1',{replace:true});};
  const meName=nameOf(person);
  if(state.status!=='ready')return null;
@@ -183,6 +184,9 @@ export function PairScreen(){
 }
 
 /** The landing of a partner link (signed in, after the sign-up if needed): who invites, the couple's defaults, accept. */
+/** A pair-specific text when there is one; otherwise the common message (a 429 is «слишком много действий», not «нет связи»). */
+function pairErrorText(e:unknown,t:(k:string)=>string){if(e instanceof FeError&&e.rule&&e.code!=='rate_limited'){const k='fe.pair.rule.'+e.rule;const m=t(k);if(m!==k)return m;}return feErrorMessage(e,t);}
+
 function LinkLanding({token,me,auto,onClose,onAccepted}:{token:string,auto:boolean,me:{name:string,id?:string|undefined,src?:string|null|undefined},onClose:()=>void,onAccepted:()=>void}){
  const {call}=useFe();const {t}=useI18n();
  const [from,setFrom]=useState<z.infer<typeof peekRes>['from']|null>(null);const [dead,setDead]=useState('');
@@ -194,7 +198,7 @@ function LinkLanding({token,me,auto,onClose,onAccepted}:{token:string,auto:boole
  const started=useRef(false);
  const accept=async()=>{setBusy(true);setFailure('');
   try{await call('couple.linkAccept',{opId:op.current,token},acceptRes,{asAccount:true});onAccepted();}
-  catch(e){setFailure(e instanceof FeError&&e.rule?t('fe.pair.rule.'+e.rule):e instanceof FeError&&e.status===404?t('fe.c6.land.dead'):feErrorMessage(e,t));op.current=newOpId();}
+  catch(e){setFailure(e instanceof FeError&&e.status===404?t('fe.c6.land.dead'):pairErrorText(e,t));op.current=newOpId();}
   finally{setBusy(false);}};
  useEffect(()=>{if(auto&&from&&!started.current){started.current=true;void accept();}});
  return <>
