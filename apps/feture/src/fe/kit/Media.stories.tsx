@@ -1,7 +1,7 @@
 import type {Meta,StoryObj} from '@storybook/react-vite';
 import {useEffect,useState} from 'react';
-import {Btn,CaptureFrame} from './index';
-import {Uploader,type SendPhoto} from './Uploader';
+import {Btn,CaptureFrame,Card,Group,SelectRow} from './index';
+import {Uploader,type SendPhoto,type SendVideo} from './Uploader';
 import {CropSheet} from './Crop';
 import {TrimSheet} from './Trim';
 
@@ -17,7 +17,7 @@ const fakeSend=(fail:boolean):SendPhoto=>{let n=0;return (_b,on)=>new Promise((r
  const t=setInterval(()=>{p+=.2;on(Math.min(1,p));if(p>=1){clearInterval(t);bad?rej(new Error('Нет связи — файл не загружен')):res('asset-'+Math.random().toString(36).slice(2,8));}},200);});};
 
 const meta={title:'Медиа/Загрузка фото',component:Uploader,tags:['autodocs'],
- parameters:{docs:{description:{component:'Лист загрузки: формат (если месту разрешено несколько); строка на каждый файл — превью в выбранном формате (1:1 — квадрат, 4:5, «Как есть» — форма самого файла, не больше 80 px), имя и ✕ «Убрать» справа, состояние, прогресс и под текстом в одну строку от его левого края «Обрезать» (видео), «Кадрировать» (если формат не «Как есть»), «Повторить»; затем «Добавить ещё», заметка о приватности (всегда с отступом), «Готово · N». Видео (`sendVideo`) не пережимается: обрезка и кадр хранятся вместе с ним, плееры их применяют, обложка — кадр начала отрезка в выбранной рамке. Фото сжимаются и очищаются от метаданных прямо на устройстве; уходят на сервер по «Готово». Отправку делает экран — `useSendPhoto(purpose)`.\n\nФорматы по местам: пост — 4:5 / 1:1 / как есть; фото профиля — 4:5; обложка события и сообщества — 16:9; фото события — как есть / 4:5 / 1:1 / 16:9.'}}},
+ parameters:{docs:{description:{component:'Лист загрузки: формат (если месту разрешено несколько); строка на каждый файл — превью в выбранном формате (1:1 — квадрат, 4:5, «Как есть» — форма самого файла, не больше 80 px), имя и ✕ «Убрать» справа, состояние, прогресс и под текстом в одну строку от его левого края «Обрезать» (видео), «Кадрировать» (если формат не «Как есть»), «Повторить»; затем «Добавить ещё», что добавил экран (`children`: в чате — как смотреть), заметка о приватности (всегда с отступом), кнопка (`doneLabel`, по умолчанию «Готово · N»). Это единственный способ отправить фото или видео — посты, профиль, галерея, чаты. Видео (`sendVideo`) готовится на устройстве при отправке: только выбранный отрезок (до минуты; у длинного видео сначала — первая минута), обрезанный по кадру, не больше 1280 px, сжатый (H.264 ~2,5 Мбит/с + AAC, MP4) — «Готовим видео… 42%» с «Отменить»; обложка — первый кадр готового видео. Исходник — до 10 минут и 2 ГБ, лимиты сервера (минута, 100 МБ) — на готовый файл. Путь: WebCodecs в воркере, иначе запись с холста в реальном времени (MediaRecorder), иначе видео уходит как есть (до минуты и 100 МБ) без обрезки и кадра — с пояснением. Фото сжимаются и очищаются от метаданных прямо на устройстве; уходят на сервер по «Готово». Отправку делает экран — `useSendPhoto(purpose)`.\n\nФорматы по местам: пост — 4:5 / 1:1 / как есть; фото профиля — 4:5; обложка события и сообщества — 16:9; фото события — как есть / 4:5 / 1:1 / 16:9.'}}},
  args:{files:[],aspects:['4:5','1:1','orig'],max:6,send:fakeSend(false),onDone:()=>{},onClose:()=>{}},
  argTypes:{aspects:{control:'check',options:['4:5','1:1','16:9','orig']},files:{control:false},send:{control:false}},
 } satisfies Meta<typeof Uploader>;
@@ -53,5 +53,17 @@ async function sampleClip():Promise<File|null>{
  rec.start();await new Promise(r=>setTimeout(r,2400));rec.stop();clearInterval(iv);await new Promise(r=>{rec.onstop=r;});
  return new File(parts,'clip.webm',{type:'video/webm'});
 }
+/** Pretends to upload a made clip and shows what was made (size, length, shape) in the story's actions. */
+const fakeVideo:SendVideo=(v,on)=>new Promise(res=>{console.info('made',v.mime,v.size,v.durationMs,v.w+'×'+v.h);let p=0;const t=setInterval(()=>{p+=.25;on(Math.min(1,p));if(p>=1){clearInterval(t);res('asset-v');}},200);});
+const LiveClip=(a:S['args']&{chat?:boolean})=>{const [files,setFiles]=useState<File[]|null>(null);const [open,setOpen]=useState(true);const [mode,setMode]=useState('normal');
+ useEffect(()=>{void sampleClip().then(f=>setFiles(f?[f]:[]));},[]);
+ if(!files)return <span/>;if(!open)return <Btn kind="soft" onClick={()=>setOpen(true)}>Открыть снова</Btn>;
+ return <Uploader {...a!} max={a?.max??6} files={files} send={fakeSend(false)} sendVideo={fakeVideo} onDone={()=>setOpen(false)} onClose={()=>setOpen(false)}
+  {...(a?.chat?{doneLabel:'Отправить',title:'Фото или видео'}:{})}>
+  {a?.chat&&<Group title="Как смотреть"><Card><SelectRow solo label="Как смотреть" value={mode} onChange={setMode} options={[['normal','Обычно'],['once','Один просмотр']] as const}/></Card></Group>}
+ </Uploader>;};
+export const Видео:S={name:'Видео: обрезка, кадр, готовим на устройстве',render:a=><LiveClip {...a} aspects={['orig','4:5','1:1','16:9']}/>};
+export const Чат:S={name:'Чат: предпросмотр перед отправкой',render:a=><LiveClip {...a} chat max={1} aspects={['orig','4:5','1:1','16:9']}/>};
+
 export const Обрезка:StoryObj<typeof TrimSheet>={name:'Обрезка видео',render:a=>{const [file,setFile]=useState<File|null>(null);useEffect(()=>{void sampleClip().then(setFile);},[]);
  return file?<TrimSheet {...a} file={file} durationMs={2400}/>:<span/>;},args:{onApply:()=>{},onClose:()=>{}},argTypes:{file:{control:false}}};

@@ -41,7 +41,6 @@ import { CreateCommunityScreen, EditCommunityScreen } from './fe/create-communit
 import { CreateEventScreen, EditEventScreen } from './fe/create-event';
 import { CommunityManageScreen, CommunityRequestsScreen, CommunityMembersScreen, EventManageScreen, EventApplicationsScreen, EventAttendeesScreen, EventApplyScreen } from './fe/host';
 const ProductDesign = lazy(async()=>({default:(await import('./feture/design/product-design')).ProductDesign}));
-import { WelcomePage } from './feture/welcome';
 import { FirstStepsPage } from './feture/first-steps';
 import { ProductLayout } from './feture/primary-navigation';
 import { DatingPresentationProvider } from './feture/dating-presentation';
@@ -171,12 +170,8 @@ function Shell(){
 }
 
 function Home(){
-  const auth=useOptionalAuth();
-  const {t}=useI18n();
   const location=useLocation();
-  if(location.pathname==='/'&&auth.loading)return <main className="ft-welcome-loading" role="status">{t('account.appLoading')}</main>;
-  if(location.pathname==='/'&&!auth.session)return <WelcomePage/>;
-  // The V21 screens on /api/fe are the app now; the earlier ones stay reachable by their own paths.
+  // The V21 screens on /api/fe are the app now: signed out, /n shows their welcome slides (FeGate → SignedOut).
   if(location.pathname==='/')return <Navigate to="/n/feed" replace/>;
   return <FetureExperience/>;
 }

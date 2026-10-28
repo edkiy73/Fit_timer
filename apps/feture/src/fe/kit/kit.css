@@ -1,8 +1,8 @@
 /* Kit styles that V21 did not have as a class: typography steps and the shared focus ring. Built only on tokens.css. */
-.v21 .k-h1{font:var(--t-h1);letter-spacing:var(--t-h1-tr);margin:0;text-wrap:balance}
-.v21 .k-h2{font:var(--t-h2);letter-spacing:var(--t-h2-tr);margin:0;text-wrap:balance}
-.v21 .k-h3{font:var(--t-h3);letter-spacing:var(--t-h3-tr);margin:0;text-wrap:balance}
-.v21 .k-h4{font:var(--t-h4);letter-spacing:var(--t-h4-tr);margin:0}
+.v21 .k-h1{font:var(--t-h1);font-variation-settings:var(--font-head-axes);letter-spacing:var(--t-h1-tr);margin:0;text-wrap:balance}
+.v21 .k-h2{font:var(--t-h2);font-variation-settings:var(--font-head-axes);letter-spacing:var(--t-h2-tr);margin:0;text-wrap:balance}
+.v21 .k-h3{font:var(--t-h3);font-variation-settings:var(--font-head-axes);letter-spacing:var(--t-h3-tr);margin:0;text-wrap:balance}
+.v21 .k-h4{font:var(--t-h4);font-variation-settings:var(--font-head-axes);letter-spacing:var(--t-h4-tr);margin:0}
 .v21 .k-h5{font:var(--t-h5);margin:0}
 .v21 .k-body{font:var(--t-body);margin:0}
 .v21 .k-strong{font:var(--t-body-strong);margin:0}
@@ -156,7 +156,7 @@
 .v21 .k-crop-zoom svg{width:var(--i-sm);height:var(--i-sm)}
 /* Round 2 (what the screen moves needed). */
 .v21 .k-md{font:400 var(--fs-md)/1.45 var(--font);margin:0} .v21 .k-ink{color:var(--ink)}
-.v21 .k-h0{font:700 var(--fs-h1)/1.12 var(--font-head);letter-spacing:-.03em;margin:0;text-wrap:balance}
+.v21 .k-h0{font:700 var(--fs-h1)/1.12 var(--font-head);font-variation-settings:var(--font-head-axes);letter-spacing:-.03em;margin:0;text-wrap:balance}
 .v21 .k-al-start{align-items:flex-start}.v21 .k-al-center{align-items:center}.v21 .k-al-end{align-items:flex-end}.v21 .k-al-stretch{align-items:stretch}
 .v21 .k-js-start{justify-content:flex-start}.v21 .k-js-between{justify-content:space-between}.v21 .k-js-end{justify-content:flex-end}.v21 .k-js-center{justify-content:center}
 .v21 .k-g0{--k-gap:0}.v21 .k-g5{--k-gap:var(--s-5)}
@@ -206,14 +206,11 @@ button.pill{cursor:pointer}
 .v21 .k-video{position:relative;width:100%;aspect-ratio:var(--ar,16/9);max-height:70dvh;border-radius:inherit;overflow:hidden;background:var(--cam-bg);display:grid;place-items:center;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .v21 .k-video:not([style*="--ar"]):not(.fill){aspect-ratio:16/9}
 .v21 .k-video.fill{aspect-ratio:auto;height:100%;max-height:none;background:transparent}
-/* A cropped clip in the viewer keeps its frame, as large as the slide allows (the slide is a size container). */
-.v21 .vw-track figure{container-type:size}
-.v21 .vw-track figure .k-video.fill.crop{aspect-ratio:var(--ar);height:auto;width:min(100cqw,calc(100cqh * var(--arn,1)));background:var(--cam-bg)}
 .v21 .k-video>video,.v21 .k-video>.k-vposter{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;max-width:none;max-height:none}
-.v21 .k-video.crop>.k-vposter{object-fit:cover}
-/* The crop: the clip covers the frame, scaled and shifted as the crop sheet placed it (kit/media.ts clipBox). */
-.v21 .k-video.crop>video{inset:auto;left:var(--vx,0);top:var(--vy,0);width:var(--vw,100%);height:var(--vh,100%);object-fit:fill}
-.v21 .k-video.crop:not([style*="--vw"])>video{object-fit:cover;inset:0;width:100%;height:100%}
+/* The trim sheet's preview in the chosen frame: the clip covers it, scaled and shifted as the crop sheet placed it
+ * (kit/media.ts clipBox). Players need nothing like it: the sent file is already cut to the frame. */
+.v21 .k-trim-prev.crop>video{inset:auto;left:var(--vx,0);top:var(--vy,0);width:var(--vw,100%);height:var(--vh,100%);object-fit:fill}
+.v21 .k-trim-prev.crop:not([style*="--vw"])>video{object-fit:cover;inset:0;width:100%;height:100%}
 .v21 .k-video>video::-internal-media-controls-download-button{display:none}
 .v21 .k-vnone{position:absolute;inset:0;background:var(--cam-bg)}
 .v21 .k-vplay{position:absolute;left:50%;top:50%;z-index:1;width:var(--h-xl);height:var(--h-xl);margin:calc(var(--h-xl) / -2) 0 0 calc(var(--h-xl) / -2);border-radius:50%;
@@ -224,7 +221,7 @@ button.pill{cursor:pointer}
 /* The control bar: play / pause, time, scrub line, sound, full screen — over a soft shade at the bottom. */
 .v21 .k-vbar{position:absolute;left:0;right:0;bottom:0;z-index:2;display:flex;align-items:center;gap:var(--s-2);padding:var(--s-6) var(--s-2) var(--s-2);
  background:linear-gradient(transparent,color-mix(in srgb,var(--cam-bg) 70%,transparent));color:var(--cam-ink);cursor:default;transition:opacity var(--d-fast)}
-.v21 .viewer .k-video.fill:not(.crop) .k-vbar{padding-bottom:calc(var(--s-2) + var(--safe-b) + 28px)}
+.v21 .viewer .k-video.fill .k-vbar{padding-bottom:calc(var(--s-2) + var(--safe-b) + 28px)}
 .v21 .k-vbar .ibtn{flex:none;color:var(--cam-ink)}
 .v21 .k-vbar .ibtn svg{fill:none}
 .v21 .k-vbar .ibtn:first-child svg{fill:currentColor}
@@ -304,7 +301,6 @@ button.pill{cursor:pointer}
 /* A clip in a feed card plays in place (post-parts MediaGrid): the cell is its frame. */
 .v21 .mcell.mv{display:block}
 .v21 .mcell.mv>.k-video{position:absolute;inset:0;width:100%;height:100%;max-height:none;border-radius:0}
-.v21 .mcell.mv>.k-video.crop{aspect-ratio:auto}
 
 /* Profile header photo (owner 28.10.2026): no fade of the page top over it, a dark scrim in both themes so the story
    bars, ‹ and ⋯ read on any photo, and «2 / 6» under the bars. */
@@ -339,8 +335,8 @@ button.pill{cursor:pointer}
 .v21 .vw-cap .vw-who{display:flex;align-items:center;gap:var(--s-2);justify-self:start;padding:0;border:0;background:none;color:#fff;font:var(--t-sm);font-weight:700;cursor:pointer}
 .v21 .vw-cap .vw-txt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin:0;padding:0;border:0;background:none;color:rgba(255,255,255,.92);font:var(--t-sm);text-align:left;cursor:pointer;overflow-wrap:anywhere}
 .v21 .viewer:has(>.vw-cap) .vw-dots{bottom:calc(var(--s-2) + var(--safe-b))}
-/* A clip's bar sits above the caption (a cropped clip's bar is already inside its frame, higher up). */
-.v21 .viewer:has(>.vw-cap) .k-video.fill:not(.crop) .k-vbar{padding-bottom:calc(var(--s-9) * 2 + var(--safe-b))}
+/* A clip's bar sits above the caption. */
+.v21 .viewer:has(>.vw-cap) .k-video.fill .k-vbar{padding-bottom:calc(var(--s-9) * 2 + var(--safe-b))}
 
 /* Samsung Internet (owner 28.10.2026: icons over feed media that Chrome does not show). Its engine lags Chrome: it may
    report a fine pointer with hover on phones (so the viewer's ‹ › showed), ignores `scrollbar-width` (scrollbar

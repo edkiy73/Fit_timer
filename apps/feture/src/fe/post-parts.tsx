@@ -5,7 +5,6 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Check,ChevronLeft,ChevronRight,Link as LinkIcon,Undo2,Users,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {Ask,Av,Btn,Card,Empty,H,IconBtn,Layer,Note,PhotoTrack,Row,Sheet,Skel,VideoBadge,VideoPlayer,useBackClose,type Slide} from './kit';
-import type {Clip} from './kit/media';
 import {useFe} from './session';
 import {useToast} from './toast';
 
@@ -91,10 +90,9 @@ export function RichText({text,className,mentions,images}:{text:string,className
 export const mdPlain=(s:string)=>s.replace(/!\[[^\]\n]*\]\(media:[^)]*\)/g,' ').replace(/!?\[([^\]]*)\]\([^)]*\)/g,'$1').replace(/^\s*(#{1,3}|>|[-*]|\d+[.)])\s+/gm,'').replace(/(\*\*|__|~~|`)/g,'').replace(/\s*\n+\s*/g,' ').trim();
 
 /* ---------- mediaGrid() + mosaic ---------- */
-export type MediaItem={id:string,kind?:string|undefined,w:number|null,h:number|null,pending:boolean,blurred:boolean,src:Record<string,string>|null,durationMs?:number|null|undefined,
- /** A clip's trim and crop (media `clip`). */ clip?:Clip|null|undefined};
+export type MediaItem={id:string,kind?:string|undefined,w:number|null,h:number|null,pending:boolean,blurred:boolean,src:Record<string,string>|null,durationMs?:number|null|undefined};
 /** What the viewer shows for an item: the picture, or a clip with its poster (a covered clip stays its picture). */
-export const slideOf=(m:MediaItem):Slide=>m.kind==='video'&&m.src?.file?{video:m.src.file,poster:mediaSrc(m,'full'),durationMs:m.durationMs,clip:m.clip}:mediaSrc(m,'full')!;
+export const slideOf=(m:MediaItem):Slide=>m.kind==='video'&&m.src?.file?{video:m.src.file,poster:mediaSrc(m,'full'),durationMs:m.durationMs}:mediaSrc(m,'full')!;
 const fitAr=(r:number,lo:number,hi:number)=>Math.max(lo,Math.min(hi,r));
 type Cell=[number,number,number,number];
 function mosaic(rs:(number|null)[]){
@@ -140,7 +138,7 @@ export function MediaGrid({media,onExpired,bar}:{media:MediaItem[],onExpired?:((
  // One clip plays in place with its controls (owner, 28.10.2026); «На весь экран» opens the viewer.
  if(n===1&&shown[0]!.kind==='video'&&shown[0]!.src?.file){const m=shown[0]!;const r=rs[0];
   grid=<div className="mgrid n1"><div className="mcell mv" style={r?{'--ar':fitAr(r,.8,1.91).toFixed(4)} as CSSProperties:undefined}>
-   <VideoPlayer src={m.src!.file} poster={mediaSrc(m,'full')} w={m.w} h={m.h} durationMs={m.durationMs} clip={m.clip} fill onExpired={onExpired} onExpand={()=>{opener.current=null;setOpen(0);}}/></div></div>;}
+   <VideoPlayer src={m.src!.file} poster={mediaSrc(m,'full')} w={m.w} h={m.h} durationMs={m.durationMs} fill onExpired={onExpired} onExpand={()=>{opener.current=null;setOpen(0);}}/></div></div>;}
  else if(n===1){const m=shown[0]!;const r=rs[0];
   grid=<div className="mgrid n1"><button type="button" className="mcell mf" style={r?{'--ar':fitAr(r,.8,1.91).toFixed(4)} as CSSProperties:undefined} aria-label={m.kind==='video'?t('fe.kit.av.play'):label} onClick={go(0)}>
    <MfImg src={mediaSrc(m)!} blur={m.src?.blur} onRatio={learn(m.id)} onFail={onExpired}/>{m.kind==='video'&&<VideoBadge durationMs={m.durationMs}/>}</button></div>;}

@@ -4,6 +4,7 @@
 .v21{
  /* Type: Geologica for headings, Onest for text. Each step = size / line-height / weight / tracking. */
  --font-head:"Geologica",var(--font);
+ --font-head-axes:"SHRP" 100; /* Geologica's sharp spurs — the face's signature (owner 28.10.2026); Onest has no such axis and ignores it */
  --t-h1:700 var(--fs-h1)/1.15 var(--font-head);  --t-h1-tr:-.025em;   /* screen title on a large header, onboarding */
  --t-h2:700 var(--fs-h2)/1.2 var(--font-head);   --t-h2-tr:-.02em;    /* bar title, sheet and dialog title */
  --t-h3:700 var(--fs-h3)/1.25 var(--font-head);  --t-h3-tr:-.015em;   /* card and section headline */

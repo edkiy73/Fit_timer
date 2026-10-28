@@ -2,7 +2,7 @@ import {useCallback,useEffect,useRef,useState,type CSSProperties,type PointerEve
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {ChevronLeft,Lock,Maximize2,Mic,Pause,Play,SendHorizontal,Square,Trash2,Volume2,VolumeX} from 'lucide-react';
 import {IconBtn} from './index';
-import {ASPECTS,VOICE_MAX_MS,baseMime,clipBox,clipSpan,fmtDur,voiceMime,type Clip} from './media';
+import {VOICE_MAX_MS,baseMime,fmtDur,voiceMime} from './media';
 
 /** Video and voice (owner, 28.10.2026). Clips and voice notes come as short signed links (mediaDto `src.file`); the
  * players never offer a download, picture-in-picture or remote playback — no more than photos can be saved. */
@@ -20,38 +20,31 @@ let playingNow:HTMLVideoElement|null=null;
 /** A clip with our own controls (owner, 28.10.2026: the system ones did not show on phones). The poster with a round
  * play button and the length; a tap anywhere plays / pauses in place, and while it plays the bar under it shows
  * play / pause, the time, a scrub line and sound on / off (`onExpand` adds «На весь экран»). Nothing offers a
- * download, picture-in-picture or remote playback. `clip` is the author's trim and crop: it starts at the trim start,
- * stops at its end (back to the start), shows the trimmed length, and the crop places the video in a box of that
- * shape. `autoPlay` starts at once (the viewer; silently when the browser refuses sound without a tap). Without `src`
+ * download, picture-in-picture or remote playback. The file is already the author's part in the author's frame (made on
+ * the device before upload), so it plays as it is. `autoPlay` starts at once (the viewer; silently when the browser refuses sound without a tap). Without `src`
  * (still checked, covered) only the poster shows. `onExpired`: the signed link ran out — the screen asks for fresh
  * links. */
-export function VideoPlayer({src,poster,w,h,durationMs,autoPlay,fill,onExpired,label,clip,onExpand}:{src?:string|null|undefined,poster?:string|null|undefined,
+export function VideoPlayer({src,poster,w,h,durationMs,autoPlay,fill,onExpired,label,onExpand}:{src?:string|null|undefined,poster?:string|null|undefined,
  w?:number|null|undefined,h?:number|null|undefined,durationMs?:number|null|undefined,autoPlay?:boolean|undefined,
  /** Fill the parent (viewer slide) instead of keeping the clip's own shape. */ fill?:boolean|undefined,onExpired?:(()=>void)|undefined,label?:string|undefined,
- /** Trim and crop from the server (media `clip`). */ clip?:Clip|null|undefined,/** Opens the clip full screen (feed). */ onExpand?:(()=>void)|undefined}){
+ /** Opens the clip full screen (feed). */ onExpand?:(()=>void)|undefined}){
  const {t}=useI18n();const v=useRef<HTMLVideoElement>(null);
  const [started,setStarted]=useState(false);const [playing,setPlaying]=useState(false);const [ready,setReady]=useState(false);
- const [pos,setPos]=useState(0);const [muted,setMuted]=useState(false);const [nat,setNat]=useState<number|null>(null);const [bar,setBar]=useState(true);
- const span=useRef<[number,number]>(clipSpan(clip,(durationMs??0)/1000+(clip?.startMs??0)/1000));
- const [len,setLen]=useState(Math.max(0,span.current[1]-span.current[0]));
+ const [pos,setPos]=useState(0);const [muted,setMuted]=useState(false);const [bar,setBar]=useState(true);
+ const [len,setLen]=useState(Math.max(0,(durationMs??0)/1000));
  const failed=useRef(false);const raf=useRef(0);const hide=useRef<ReturnType<typeof setTimeout>|undefined>(undefined);
- const crop=clip?.crop;
  useEffect(()=>{failed.current=false;},[src]);
  const poke=useCallback((keep?:boolean)=>{setBar(true);clearTimeout(hide.current);if(!keep)hide.current=setTimeout(()=>setBar(false),2600);},[]);
  const measure=()=>{const el=v.current;if(!el)return;
-  const full=Number.isFinite(el.duration)&&el.duration>0?el.duration:(clip?.endMs!=null?clip.endMs/1000:(durationMs??0)/1000);
-  span.current=clipSpan(clip,full);setLen(Math.max(0,span.current[1]-span.current[0]));
-  if(el.videoWidth&&el.videoHeight)setNat(el.videoWidth/el.videoHeight);
-  if(el.currentTime<span.current[0]-.05||el.currentTime>span.current[1])el.currentTime=span.current[0];};
- const stop=()=>{const el=v.current;if(!el)return;el.pause();el.currentTime=span.current[0];setPos(0);poke(true);};
- const tick=()=>{const el=v.current;if(!el)return;const [a,b]=span.current;
-  if(el.currentTime>=b-.04&&b>a){stop();return;}
-  if(el.currentTime>=a-.05)setReady(true);
-  setPos(Math.max(0,el.currentTime-a));};
+  if(Number.isFinite(el.duration)&&el.duration>0)setLen(el.duration);};
+ const stop=()=>{const el=v.current;if(!el)return;el.pause();el.currentTime=0;setPos(0);poke(true);};
+ const tick=()=>{const el=v.current;if(!el)return;
+  if(el.currentTime>0||el.readyState>=2)setReady(true);
+  setPos(Math.max(0,el.currentTime));};
  const loop=()=>{tick();raf.current=requestAnimationFrame(loop);};
  useEffect(()=>()=>{cancelAnimationFrame(raf.current);clearTimeout(hide.current);if(playingNow===v.current)playingNow=null;v.current?.pause();},[]);
  const play=useCallback(async()=>{const el=v.current;if(!el||!src)return;setStarted(true);
-  if(el.readyState>=1&&(el.currentTime<span.current[0]-.05||el.currentTime>=span.current[1]-.04))el.currentTime=span.current[0];
+  if(el.ended)el.currentTime=0;
   try{await el.play();}
   catch(e){
    // No sound without a tap (autoplay in the viewer): play silently; the sound button turns it on.
@@ -59,13 +52,11 @@ export function VideoPlayer({src,poster,w,h,durationMs,autoPlay,fill,onExpired,l
   }},[src]);
  const toggle=()=>{const el=v.current;if(!el||!src)return;if(el.paused||!started)void play();else el.pause();poke();};
  useEffect(()=>{if(autoPlay&&src)void play();},[autoPlay,src,play]);
- const seek=(ms:number)=>{const el=v.current;if(!el)return;el.currentTime=span.current[0]+ms/1000;setPos(ms/1000);poke();};
- const box=crop&&nat?clipBox(nat,crop):null;
- const [aw,ah]=crop?ASPECTS[crop.aspect]:[w??0,h??0];
- const style={...(aw&&ah?{'--ar':`${aw}/${ah}`,'--arn':String(aw/ah)}:{}),...(box?{'--vw':box.w+'%','--vh':box.h+'%','--vx':box.x+'%','--vy':box.y+'%'}:{})} as CSSProperties;
+ const seek=(ms:number)=>{const el=v.current;if(!el)return;el.currentTime=ms/1000;setPos(ms/1000);poke();};
+ const style=(w&&h?{'--ar':`${w}/${h}`,'--arn':String(w/h)}:{}) as CSSProperties;
  const shown=!playing||bar;
  const name=label??t('fe.kit.av.video');
- return <div className={'k-video'+(fill?' fill':'')+(crop?' crop':'')+(started?' on':'')+(playing?' playing':'')+(shown?'':' quiet')} style={style}
+ return <div className={'k-video'+(fill?' fill':'')+(started?' on':'')+(playing?' playing':'')+(shown?'':' quiet')} style={style}
   onContextMenu={noMenu} onClick={src?e=>{e.stopPropagation();toggle();}:undefined} onPointerMove={playing?()=>poke():undefined}>
   {src&&<video ref={v} src={src} playsInline preload={autoPlay?'auto':'metadata'} muted={muted} disablePictureInPicture disableRemotePlayback
    controlsList="nodownload noremoteplayback noplaybackrate" aria-label={name} tabIndex={-1}

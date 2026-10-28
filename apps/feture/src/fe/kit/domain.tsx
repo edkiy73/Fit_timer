@@ -4,7 +4,6 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Check,ChevronLeft,Clock,Heart,Image as ImageIcon,Lock,Plus,Ticket,UserRound,Users,type LucideIcon} from 'lucide-react';
 import {Av,Btn,Card,IconBtn,Note,Row,Skel,Switch,plate} from './index';
 import {VideoPlayer} from './av';
-import type {Clip} from './media';
 import './domain.css';
 
 /** FetUre domain pieces (Storybook «Домен»): the parts of screens that are product-specific but repeat or carry their
@@ -233,9 +232,9 @@ export function PhotoAdd({label,hint,big,tall,ghost,disabled,busy,onClick}:{labe
 /** The full-screen photo strip: the current picture slides in (index in a CSS variable). With `onStep` a tap on the
  * left / right third pages back / forward (owner, 28.10.2026; swipes and arrows stay the viewer's); the middle is the
  * clip's own play / pause. A tap that ends a swipe is not a tap. */
-/** A viewer slide: a picture, or a clip (`video` = its link, `poster` its frame, `clip` its trim and crop) that plays
+/** A viewer slide: a picture, or a clip (`video` = its link, `poster` its frame) that plays
  * when it is the current one. */
-export type Slide=string|{video:string,poster?:string|null|undefined,durationMs?:number|null|undefined,clip?:Clip|null|undefined};
+export type Slide=string|{video:string,poster?:string|null|undefined,durationMs?:number|null|undefined};
 export function PhotoTrack({srcs,index,wm,onExpired,onStep,onClose}:{srcs:Slide[],index:number,/** Someone else's private photos: the viewer's own handle across each one. */ wm?:string|null|undefined,
  /** A clip's link ran out. */ onExpired?:(()=>void)|undefined,/** Tap paging: −1 / +1. */ onStep?:((d:-1|1)=>void)|undefined,
  /** A vertical swipe (up or down) closes the viewer: the picture follows the finger and the backdrop fades; a short one
@@ -274,7 +273,7 @@ export function PhotoTrack({srcs,index,wm,onExpired,onStep,onClose}:{srcs:Slide[
  };
  return <div ref={box} className="vw-track" style={{'--i':index} as CSSProperties} onPointerDownCapture={start} onPointerMove={move} onPointerUp={end} onPointerCancel={end} onClickCapture={tap}>{srcs.map((s,k)=><figure key={k}>
   {typeof s==='string'?<img src={s} alt="" draggable={false}/>
-   :k===index?<VideoPlayer src={s.video} poster={s.poster} durationMs={s.durationMs} clip={s.clip} fill autoPlay onExpired={onExpired}/>
+   :k===index?<VideoPlayer src={s.video} poster={s.poster} durationMs={s.durationMs} fill autoPlay onExpired={onExpired}/>
    :s.poster?<img src={s.poster} alt="" draggable={false}/>:null}
   {wm&&<Watermark text={wm}/>}</figure>)}</div>;
 }
