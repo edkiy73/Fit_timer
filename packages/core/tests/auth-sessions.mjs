@@ -148,3 +148,80 @@ const unconfirmed = createAuthClient({storage:{getItem:k=>unconfirmedLocal.get(k
 await assert.rejects(unconfirmed.logout(),/logout_unconfirmed/);
 assert.ok(await unconfirmed.getSession(),'empty successful HTTP response does not prove server logout');
 console.log('Core logout confirmation regression OK');
+
+// Sessions list, sign out one device, sign out everywhere but here; email change moves the whole account.
+{
+  const { createAuthHandler } = require('../server/auth-core');
+  const analytics = require('../template/lib/app-analytics');
+  const plain = auth;
+  const withChange = createAuthHandler({analytics, emailChange:true});
+  const mail = 'sessions-list@example.com', key = 'a:' + sha(mail).slice(0, 32);
+  async function enter(handler, address, deviceId, ua){
+    const sent = await call(handler,{action:'send',email:address});
+    const res = {statusCode:0,setHeader(){},end(raw){this.body=JSON.parse(raw);}};
+    await handler({method:'POST',headers:{'user-agent':ua},query:{},body:{action:'verify',email:address,code:sent.body.devCode,deviceId,platform:'web'}},res);
+    assert.equal(res.statusCode,200);
+    return {email:address,deviceId,syncToken:res.body.syncToken};
+  }
+  const mac = await enter(plain, mail, 'dev-mac', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 Chrome/130.0 Safari/537.36');
+  const phone = await enter(plain, mail, 'dev-phone', 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)');
+  const tablet = await enter(plain, mail, 'dev-tab', 'Mozilla/5.0 (Linux; Android 15) Firefox/131.0');
+  const listed = await call(plain,{action:'sessions',...mac});
+  assert.equal(listed.statusCode,200);
+  assert.equal(listed.body.sessions.length,3);
+  assert.equal(listed.body.sessions[0].current,true,'this device first');
+  assert.equal(listed.body.sessions[0].label,'Chrome · Mac');
+  assert.deepEqual(listed.body.sessions.slice(1).map(s=>s.label).sort(),['Android','iPhone']);
+  assert.ok(listed.body.sessions.every(s=>/^[0-9a-f]{16}$/.test(s.id)&&!JSON.stringify(s).includes('dev-')),'device ids never leave the server');
+  assert.equal((await call(plain,{action:'sessions',...mac,syncToken:'wrong'})).statusCode,403);
+  const phoneId = listed.body.sessions.find(s=>s.label==='iPhone').id;
+  assert.equal((await call(plain,{action:'session_revoke',...mac,target:listed.body.sessions[0].id})).statusCode,400,'own session ends with logout');
+  assert.equal((await call(plain,{action:'session_revoke',...mac,target:'0000000000000000'})).statusCode,404);
+  assert.equal((await call(plain,{action:'session_revoke',...mac,target:phoneId})).statusCode,200);
+  assert.equal((await call(plain,{action:'status',...phone})).statusCode,403,'revoked device is out');
+  assert.equal((await call(plain,{action:'status',...tablet})).statusCode,200);
+  const others = await call(plain,{action:'sessions_revoke_others',...mac});
+  assert.equal(others.body.revoked,1);
+  assert.equal((await call(plain,{action:'status',...tablet})).statusCode,403);
+  assert.equal((await call(plain,{action:'status',...mac})).statusCode,200,'this device stays');
+  assert.equal((await call(plain,{action:'sessions',...mac})).body.sessions.length,1);
+
+  // Email change: off unless the product opts in; the code goes to the new address; the account moves.
+  assert.equal((await call(plain,{action:'email_change_send',...mac,newEmail:'moved@example.com'})).statusCode,400);
+  const other = await enter(plain, 'taken@example.com', 'dev-x', '');
+  assert.equal((await call(withChange,{action:'email_change_send',...mac,newEmail:'taken@example.com'})).statusCode,409);
+  assert.equal((await call(withChange,{action:'email_change_send',...mac,newEmail:mail})).statusCode,400);
+  assert.equal((await call(withChange,{action:'email_change_send',...mac,newEmail:'x'})).statusCode,400);
+  assert.equal((await call(withChange,{action:'email_change_send',...mac,syncToken:'bad',newEmail:'moved@example.com'})).statusCode,403);
+  const acc0 = JSON.parse(await store.get(key));acc0.handle='@mover';await store.set(key,JSON.stringify(acc0));await store.set('h:@mover',sha(mail).slice(0,32));
+  const sent = await call(withChange,{action:'email_change_send',...mac,newEmail:'Moved@Example.com'});
+  assert.equal(sent.statusCode,200);
+  assert.equal((await call(withChange,{action:'email_change_verify',...mac,newEmail:'other@example.com',code:sent.body.devCode})).statusCode,410,'code is for that address only');
+  assert.equal((await call(withChange,{action:'email_change_verify',...mac,newEmail:'moved@example.com',code:'000000'})).statusCode,403);
+  assert.equal((await call(plain,{action:'status',...mac})).statusCode,200,'old address works until confirmed');
+  const done = await call(withChange,{action:'email_change_verify',...mac,newEmail:'moved@example.com',code:sent.body.devCode});
+  assert.equal(done.statusCode,200);
+  assert.equal(done.body.email,'moved@example.com');
+  assert.equal(await store.get(key),null,'old record gone');
+  const moved = JSON.parse(await store.get('a:' + sha('moved@example.com').slice(0, 32)));
+  assert.equal(moved.email,'moved@example.com');
+  assert.equal(moved.keyHash,sha(mail).slice(0,32),'first hash kept for product data');
+  assert.equal(await store.get('h:@mover'),sha('moved@example.com').slice(0,32));
+  assert.equal((await call(plain,{action:'status',...mac,email:'moved@example.com'})).statusCode,200,'same device session under the new address');
+  assert.notEqual((await call(plain,{action:'status',...mac})).statusCode,200,'old address no longer signs in');
+  assert.equal((await call(plain,{action:'status',...other})).statusCode,200);
+
+  // Client: the stored session follows the new address.
+  const local = new Map();
+  const c = createAuthClient({storage:{getItem:k=>local.get(k)??null,setItem:(k,v)=>{local.set(k,v);},removeItem:k=>{local.delete(k);}},createDeviceId:()=>'dev-client',fetch:async (_u,init)=>{
+    const r = await call(withChange,JSON.parse(init.body));return {ok:r.statusCode<400,status:r.statusCode,json:async()=>r.body};}});
+  const code1 = (await call(withChange,{action:'send',email:'client-move@example.com'})).body.devCode;
+  await c.verifyCode({email:'client-move@example.com',code:code1});
+  assert.equal((await c.sessions()).length,1);
+  const s1 = await c.changeEmailStart('client-new@example.com');
+  const after = await c.changeEmailConfirm('client-new@example.com',String(s1.devCode));
+  assert.equal(after.email,'client-new@example.com');
+  assert.equal((await c.getSession()).email,'client-new@example.com');
+  assert.equal(await c.revokeOtherSessions(),0);
+  console.log('Core sessions list / revoke / email change OK');
+}

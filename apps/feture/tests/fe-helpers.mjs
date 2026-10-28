@@ -9,7 +9,7 @@ import { createFeHandler } from '../server/handler.mjs';
 import { tokenDelivery } from '../server/media/delivery.mjs';
 
 export const MIGRATIONS = ['20261027120000_fe_platform.sql', '20261027120100_fe_media_bucket.sql', '20261027125900_fe_me.sql',
-  '20261027130000_fe_catalog.sql', '20261027140000_fe_access.sql', '20261027150000_fe_couples.sql', '20261027160000_fe_staff.sql', '20261027170000_fe_feed.sql', '20261027175000_fe_moderation.sql', '20261027180000_fe_communities.sql', '20261027190000_fe_events.sql', '20261027210000_fe_discover.sql', '20261027220000_fe_chats.sql', '20261027230000_fe_notifications.sql', '20261027240000_fe_people.sql', '20261027250000_fe_premium.sql', '20261027260000_fe_moderation_more.sql', '20261027270000_fe_push.sql', '20261027280000_fe_dsa.sql', '20261027300000_fe_photo_check.sql', '20261028120000_fe_places.sql', '20261028130000_fe_age_document.sql', '20261028150000_fe_wave3.sql', '20261028160000_fe_albums.sql', '20261028170000_fe_access_center.sql', '20261028180000_fe_waves67.sql'];
+  '20261027130000_fe_catalog.sql', '20261027140000_fe_access.sql', '20261027150000_fe_couples.sql', '20261027160000_fe_staff.sql', '20261027170000_fe_feed.sql', '20261027175000_fe_moderation.sql', '20261027180000_fe_communities.sql', '20261027190000_fe_events.sql', '20261027210000_fe_discover.sql', '20261027220000_fe_chats.sql', '20261027230000_fe_notifications.sql', '20261027240000_fe_people.sql', '20261027250000_fe_premium.sql', '20261027260000_fe_moderation_more.sql', '20261027270000_fe_push.sql', '20261027280000_fe_dsa.sql', '20261027300000_fe_photo_check.sql', '20261028120000_fe_places.sql', '20261028130000_fe_age_document.sql', '20261028150000_fe_wave3.sql', '20261028160000_fe_albums.sql', '20261028170000_fe_access_center.sql', '20261028180000_fe_waves67.sql', '20261028200000_fe_account.sql'];
 const mig = name => readFileSync(new URL('../supabase/migrations/' + name, import.meta.url), 'utf8');
 
 export const DOCS = ['terms', 'privacy', 'community', 'adult-content', 'cookies'].map((key, i) => ({
@@ -20,8 +20,8 @@ export const ACCEPT = DOCS.filter(d => d.required).map(d => ({ id: d.id, content
 let ops = 0;
 export const op = () => `018f0000-0000-7000-8000-${String(++ops).padStart(12, '0')}`;
 
-/** @param {{commands: Record<string, any>, migrations?: string[], signals?: (db: any) => any, realtime?: {url: string, key: string}, push?: {webKey: string}}} opts */
-export async function setup({ commands, migrations = MIGRATIONS, signals, realtime, push }) {
+/** @param {{commands: Record<string, any>, migrations?: string[], signals?: (db: any) => any, realtime?: {url: string, key: string}, push?: {webKey: string}, billing?: any}} opts */
+export async function setup({ commands, migrations = MIGRATIONS, signals, realtime, push, billing }) {
   const pg = new PGlite();
   await pg.exec('create role anon; create role authenticated;');
   await pg.exec(`
@@ -39,10 +39,10 @@ export async function setup({ commands, migrations = MIGRATIONS, signals, realti
   const db = fromPglite(pg);
   const handler = createFeHandler({
     db, pepper: 'p'.repeat(40), commands,
-    cfg: { media: { storage: null, delivery: tokenDelivery('s'.repeat(40), 'https://media.test') }, realtime: realtime ?? null, push: push ?? null },
+    cfg: { media: { storage: null, delivery: tokenDelivery('s'.repeat(40), 'https://media.test') }, realtime: realtime ?? null, push: push ?? null, ...(billing ? { billing } : {}) },
     signals: signals ? signals(db) : null,
     authenticate: async req => ({ accountHash: String(req.headers['x-test-user']), accountGeneration: String(req.headers['x-test-gen'] ?? 'g1') }),
-    quota: async () => true, cors: () => false, log: () => {},
+    quota: async () => true, cors: () => false, log: () => {}, maintenanceTtl: 0,
   });
   /** @param {string} user @param {string | null} profile @param {Record<string, unknown>} body @param {Record<string, string>} [headers] */
   const call = async (user, profile, body, headers = {}) => {

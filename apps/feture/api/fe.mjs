@@ -26,6 +26,7 @@ import { people } from '../server/commands/people.mjs';
 import { premium } from '../server/commands/premium.mjs';
 import { verification } from '../server/commands/verification.mjs';
 import { accounts } from '../server/commands/account.mjs';
+import { support } from '../server/commands/support.mjs';
 import { runJobs } from '../server/jobs.mjs';
 import { dsa, takeNotice } from '../server/commands/dsa.mjs';
 import { readJson } from '../server/handler.mjs';
@@ -116,9 +117,11 @@ const handler = db && createFeHandler({
   db,
   pepper: env.FETURE_ID_PEPPER ?? '',
   cfg: { media: { storage: media.storage, delivery: media.delivery }, realtime: signals ? { url: supabaseUrl, key: String(env.SUPABASE_PUBLISHABLE_KEY) } : null,
-    push: webPush ? { webKey: webPush.publicKey } : null },
+    push: webPush ? { webKey: webPush.publicKey } : null,
+    // Payment providers plug in here once their keys exist (server/commands/premium.mjs «Payments»); none yet.
+    billing: { providers: [] } },
   signals,
-  commands: { ...platform, ...me, ...access, ...couples, ...staff, ...social, ...posts, ...moderation, ...communities, ...events, ...photos, ...gallery, ...discover, ...chats, ...inbox, ...people, ...premium, ...verification, ...accounts, ...dsa },
+  commands: { ...platform, ...me, ...access, ...couples, ...staff, ...social, ...posts, ...moderation, ...communities, ...events, ...photos, ...gallery, ...discover, ...chats, ...inbox, ...people, ...premium, ...verification, ...accounts, ...dsa, ...support },
   authenticate: req => cachedAuth(req),
   quota: async (req, coreKey) => { // coreKey: Core account hash, only for the ephemeral rate-limit key
     // Same budget as /api/domain: per account across devices and IPs, plus a per-IP cap.

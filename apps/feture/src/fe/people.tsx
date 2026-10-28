@@ -1,4 +1,5 @@
 import {useCallback,useEffect,useRef,useState,type ReactNode} from 'react';
+import {openPaywall} from './premium';
 import {useNavigate,useParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
@@ -240,7 +241,7 @@ function Discover({reloadKey,onOff,filterOn,openFilter,likesN,toLikes,onLikes}:{
  const undo=async()=>{
   if(busy.current)return;busy.current=true;
   try{const r=await call('discover.undo',{opId:newOpId()},undone);setMade(m=>m.filter(x=>x.id!==r.profileId));toast(t('fe.px.undo.back'));load(r.profileId);}
-  catch(e){if(e instanceof FeError&&e.code==='premium_required')navigate('/n/premium?for=undo');else toast(pxError(e,t),true);}finally{busy.current=false;}
+  catch(e){if(e instanceof FeError&&e.code==='premium_required')openPaywall('undo');else toast(pxError(e,t),true);}finally{busy.current=false;}
  };
  undoRef.current=()=>void undo();
  useEffect(()=>{const key=(e:KeyboardEvent)=>{if(match||document.querySelector('.fe-v21 .layer .sheet')||/INPUT|TEXTAREA|SELECT/.test((e.target as HTMLElement).tagName))return;
@@ -439,7 +440,7 @@ function Likes({onCount,toDiscover}:{onCount:(n:number)=>void,toDiscover:()=>voi
  useEffect(()=>{load();},[load,acting?.id]);
  // «Отменить» after ✕: the dismissal is the last Discover decision, so one undo brings the like back (V21 likePass).
  const undoDismiss=async()=>{try{await call('discover.undo',{opId:newOpId()},undone);load();}
-  catch(e){if(e instanceof FeError&&e.code==='premium_required')navigate('/n/premium?for=undo');else toast(pxError(e,t),true);}};
+  catch(e){if(e instanceof FeError&&e.code==='premium_required')openPaywall('undo');else toast(pxError(e,t),true);}};
  const dismiss=async(c:Card)=>{if(busy)return;setBusy(c.id);
   try{await call('like.dismiss',{opId:newOpId(),profileId:c.id},ok);setInc(l=>{const n=l?.filter(x=>x.profile.id!==c.id)??null;onCount(n?.length??0);return n;});
    toast(fill(t('fe.px.lk.removed'),{name:cname(c)}),false,{label:t('fe.mx.undo'),fn:()=>void undoDismiss()});}
@@ -491,7 +492,7 @@ export function PersonScreen(){
  const name=personName(p);
  if(p&&!blocked)return <>
   <ProfilePage p={p} onMore={()=>setMenu('menu')} toast={toast}
-   menu={(rel,reload)=><PersonMenu profileId={id} name={name} step={menu} setStep={setMenu} blocked={blocked} setBlocked={setBlock} toast={toast} rel={rel} onRel={reload}/>}/>
+   menu={(rel,reload)=><PersonMenu profileId={id} name={name} handle={p.kind==='person'?p.handle:null} step={menu} setStep={setMenu} blocked={blocked} setBlocked={setBlock} toast={toast} rel={rel} onRel={reload}/>}/>
   {toastNode}
  </>;
  return <>

@@ -34,10 +34,12 @@ async function authenticate(req,store,qaResolver) {
   let valid=false;
   try {valid=await validSession(device,token,store);} catch {reject(503,'identity_unavailable');}
   if(!valid||typeof account.email!=='string'||account.email.trim().toLowerCase()!==email)reject(401,'auth_required');
+  // After an email change Core keeps the account's first hash (keyHash): FetUre data stays linked to the same person.
+  const keyHash=typeof account.keyHash==='string'&&/^[0-9a-f]{32}$/.test(account.keyHash)?account.keyHash:accountHash;
   // QA access is a server-only, live prelaunch entitlement, NOT proof of identity or age.
   // No client flag or self-declared DOB can ever grant it.
-  const qaUntil=qaResolver?await qaResolver(accountHash):null;
-  const actor=Object.freeze({accountHash,verifiedAdult:!!qaUntil,qaUntil,accountGeneration:typeof account.since==='string'&&Number.isFinite(Date.parse(account.since))?sha(accountHash+':'+account.since):undefined});
+  const qaUntil=qaResolver?await qaResolver(keyHash):null;
+  const actor=Object.freeze({accountHash:keyHash,verifiedAdult:!!qaUntil,qaUntil,accountGeneration:typeof account.since==='string'&&Number.isFinite(Date.parse(account.since))?sha(keyHash+':'+account.since):undefined});
   authenticatedActors.add(actor);
   return actor;
 }

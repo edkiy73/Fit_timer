@@ -29,6 +29,15 @@ export async function post(path, body, headers = {}) {
 }
 const admin = body => post('/api/admin', body, { 'x-admin-key': process.env.FE_ADMIN_KEY ?? '' });
 
+/** One more signed-in device of an existing account (sessions scenarios); never replaces the cached session. */
+export async function signInDevice(email, deviceId) {
+  const c = await admin({ action: 'user_test_code', email });
+  if (!c.code) throw new Error('test code for ' + email + ': ' + c.status);
+  const v = await post('/api/auth', { action: 'verify', email, code: c.code, deviceId });
+  if (!v.syncToken) throw new Error('verify ' + email + ': ' + v.status);
+  return { email, deviceId, syncToken: v.syncToken };
+}
+
 /** A signed-in session for this e-mail (the Core account is created on first use). */
 export async function session(email, { fresh = false } = {}) {
   let s = sessions[email];

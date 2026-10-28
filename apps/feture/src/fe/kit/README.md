@@ -63,6 +63,7 @@ Product pieces that repeat or carry their own look. Screens use these, never the
 | Private layer | `VaultHead` (lock, title, switch), `Quota` (requests left today as segments) |
 | Couple | `ActorCards` + `ActorCard` («Действовать как»: pick the profile, open it, a dot when something waits), `ReviewMeta` (who proposed, version), `ReviewPost` (what a joint change publishes), `ReturnNote` (the partner's «на доработку» comment) |
 | Staff review | `ReviewCard`, `KeyValues`, `ReviewMedia`, `ReviewPair` |
+| Account (`kit/account.tsx`, «Домен/Аккаунт») | `PremiumHero` (crown plate; `onClose` for the paywall sheet), `PremiumFeats` (what Premium gives, `current` marked), `PlanCards` (plans / gift terms, one chosen, corner badge), `Maintenance` (the whole «Технические работы» screen), `Thread` (a support conversation: mine right, support left) |
 | Feed (`kit/feed.tsx`, «Домен/Лента») | `RichArea` (text + formatting bar: bold, italic, list, quote, link with an address check; Markdown out), `LikesLine` («Нравится: …»), `ActivityCard` + `ActivityItem` («Подписки» activity, folds), `QuickStart` (create sheet tiles), `ActionLine` (quiet line + one action) |
 
 Loading is a soft blink in place (`Skel`, `busy`), never a spinner. Icons come only from `lucide-react`.

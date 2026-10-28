@@ -6,6 +6,8 @@ import {BadgeCheck,Ban,Check,ChevronRight,Eye,IdCard,Image,Inbox,Lock,RefreshCw,
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,Btn,Card,ChoiceChips,Chips,Empty,Field,Group,IconBtn,Input,KeyValues,Note,Pill,ReviewCard,ReviewMedia,ReviewPair,Row,SectionLabel,Seg,Skel,SubBar,Text,TextArea,View} from './kit';
 import {useFe} from './session';
+import {StaffSupport} from './support';
+import {StaffMaintenance} from './maintenance';
 
 /** Staff area (/n/staff, S4 moderation): review queues with decisions, Premium for dogfooding, the journal.
  * Roles are enforced by the server only; a queue the server refuses (403) is simply not shown. */
@@ -60,7 +62,9 @@ const QUEUE_IDS=Object.keys(QUEUES) as QueueId[];
 /** Who may open what (the server's requireStaff lists); the screen only asks for what the roles allow. Queues not
  * listed are open to every staff role that has a queue. */
 const QUEUE_ROLES:Partial<Record<QueueId,string[]>>={appeal:['owner','lead']};
-const SECTION_ROLES={queues:['owner','lead','moderator','verifier'],premium:['owner','lead'],journal:['owner','lead','auditor']} as const;
+const SECTION_ROLES={queues:['owner','lead','moderator','verifier'],support:['owner','lead','moderator','support'],premium:['owner','lead'],maintenance:['owner','lead'],journal:['owner','lead','auditor']} as const;
+const SECTIONS=['queues','support','premium','maintenance','journal'] as const;
+type Section=typeof SECTIONS[number];
 const can=(roles:readonly string[],need:readonly string[]|undefined)=>!need||roles.some(r=>need.includes(r));
 const LIMIT=50;
 type Loaded={[K in QueueId]?:{items:Items[K]}|{error:unknown}};
@@ -84,7 +88,7 @@ export function StaffEntry(){
 
 export function StaffScreen(){
  const {t}=useI18n();const roles=useStaffRoles();const navigate=useNavigate();
- const [section,setSection]=useState<'queues'|'premium'|'journal'>('queues');
+ const [section,setSection]=useState<Section>('queues');
  return <>
   <SubBar title={t('fe.staff.title')} sub={t('fe.staff.sub')} onBack={()=>navigate('/n/me')}/>
   <View className="st nodock">
@@ -92,9 +96,9 @@ export function StaffScreen(){
     :!roles.length?<Empty icon={Lock} title={t('fe.staff.unavailable')} text={t('fe.staff.unavailableText')}/>
     :<>
      <Note className="mb12">{t('fe.staff.roles')}: {roles.map(r=>t('fe.staff.role.'+r)).join(', ')}</Note>
-     {(['queues','premium','journal'] as const).filter(id=>can(roles,SECTION_ROLES[id])).length>1&&<Seg small={false} value={section} onChange={setSection} options={(['queues','premium','journal'] as const).filter(id=>can(roles,SECTION_ROLES[id])).map(id=>({id,label:t('fe.staff.section.'+id)}))}/>}
-     {(()=>{const ok=(['queues','premium','journal'] as const).filter(id=>can(roles,SECTION_ROLES[id]));const cur=ok.includes(section)?section:ok[0];
-      return cur==='queues'?<Queues/>:cur==='premium'?<Premium/>:cur==='journal'?<Journal/>:null;})()}
+     {SECTIONS.filter(id=>can(roles,SECTION_ROLES[id])).length>1&&<Seg small={false} value={section} onChange={setSection} options={SECTIONS.filter(id=>can(roles,SECTION_ROLES[id])).map(id=>({id,label:id==='support'?t('fe.w8.staff.support'):id==='maintenance'?t('fe.w8.staff.maint'):t('fe.staff.section.'+id)}))}/>}
+     {(()=>{const ok=SECTIONS.filter(id=>can(roles,SECTION_ROLES[id]));const cur=ok.includes(section)?section:ok[0];
+      return cur==='queues'?<Queues/>:cur==='support'?<StaffSupport/>:cur==='premium'?<Premium/>:cur==='maintenance'?<StaffMaintenance/>:cur==='journal'?<Journal/>:null;})()}
     </>}
   </View>
  </>;

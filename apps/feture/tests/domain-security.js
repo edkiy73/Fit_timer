@@ -47,6 +47,17 @@ test('guest and mismatched account/token never reach private transport',async()=
   }
   assert.equal(s.calls.length,0);
 });
+test('after an email change the actor keeps the first account hash (same FetUre account)',async()=>{
+  const moved={email:'moved@example.com',device:'m-device',token:'m-secret-device-token'};const first=sha('before@example.com').slice(0,32);
+  const since='2026-10-01T00:00:00Z';
+  await store.set('a:'+sha(moved.email).slice(0,32),JSON.stringify({email:moved.email,since,keyHash:first,syncDevices:{[moved.device]:{h:sha(moved.token),at:new Date().toISOString()}}}));
+  const actor=await authenticate(req(moved),store);
+  assert.equal(actor.accountHash,first);
+  assert.equal(actor.accountGeneration,sha(first+':'+since));
+  // A forged keyHash shape is ignored.
+  await store.set('a:'+sha(moved.email).slice(0,32),JSON.stringify({email:moved.email,since,keyHash:'../x',syncDevices:{[moved.device]:{h:sha(moved.token),at:new Date().toISOString()}}}));
+  assert.equal((await authenticate(req(moved),store)).accountHash,sha(moved.email).slice(0,32));
+});
 test('client owner/role/age/query claims are rejected, not trusted',async()=>{
   const s=await setup();
   for(const extra of [{accountHash:identities.bob.hash},{ownerHash:identities.bob.hash},{email:identities.bob.email},{verifiedAdult:true},{role:'admin'},{select:'*'},{table:'appbase_kv'}]) {
