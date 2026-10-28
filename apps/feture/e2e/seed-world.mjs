@@ -1,8 +1,9 @@
 // FetUre «test world» (owner, 28.10.2026): production filled with ~28 people, couples, communities, events, posts,
 // chats and requests in many different states, so the app can be looked at as if many people used it.
 //   FE_ADMIN_KEY=… node e2e/seed-world.mjs [phase…]      phases: accounts photos profile social couples communities
-//                                                        events posts variety following access moderation verify
-//                                                        (default: all, in order); verify-following reads back «Подписки» only
+//                                                        events events-more posts variety following video access moderation verify
+//                                                        (default: all, in order); verify-following reads back «Подписки»
+//                                                        only, verify-video the clip and photo + clip posts of the viewers
 // Rules (apps/feture/AGENTS.md §4, §6, e2e/README.md):
 // - every state is built only through app commands (/api/fe) exactly as a person would; staff steps (photo review,
 //   age checks, community/event review) go through qa-staff@feture.test; nothing is written to the database directly;
@@ -667,6 +668,144 @@ async function events() {
   });
 }
 
+// ---------------------------------------------------------------- phase: events-more (soon, later, past, cancelled)
+// Owner, 28.10.2026: events ~20 and ~50 days ahead (free, by application, ticket at the organizer, at the door, online
+// and offline in different cities, two by couples, covers from the stock pictures), several that already happened
+// (yesterday, a week ago, a month ago) with people who went or were interested, and two cancelled ones with a reason
+// that Mira, Lev and Kira had marked. Built through the app like the rest; only the past dates cannot be: the app takes
+// a start in the future only, so a «past» event is created ~15 minutes ahead, people answer, and then its dates are
+// moved back. That one step is a database update the script prints (`-- backdate` SQL, run it with the Supabase SQL
+// editor / MCP on project anrhayozrhrmiwexmbhw); a rerun prints it again only for events not moved yet.
+// `couple`: the host's couple profile (nord: Саша и Ника, both trust; tea: Глеб и Оля — Оля approves Глеб's event).
+const EVENTS_MORE = [
+  // ~20 days ahead
+  { key: 'techno-brunch', host: 'katya', title: 'Техно-бранч в Кройцберге', kind: 'party', format: 'offline', city: 'Берлин', area: 'Кройцберг', exactAddress: 'Skalitzer Str. 114, двор, вторая дверь',
+    start: at(20, 10), hours: 4, price: { kind: 'free' }, cover: 'concert', tz: 'Europe/Berlin', plate: 'rose',
+    description: 'Днём, при свете, без дресс-кода: диджей, кофе и вафли. Хороший способ познакомиться с берлинской тусовкой, если вечеринки ночью — не ваше.',
+    going: ['mira', 'liza', 'oleg'], interested: ['lev', 'kira', 'nastya'] },
+  { key: 'wine-yerevan', host: 'egor', title: 'Винный вечер в Ереване', kind: 'meetup', format: 'offline', city: 'Ереван', area: 'Кентрон', exactAddress: 'ул. Сарьяна, 12, винный бар в подвале',
+    start: at(21, 15), hours: 3, price: { kind: 'door', amount: 15, currency: 'USD' }, cover: 'wine', tz: 'Asia/Yerevan', plate: 'amber',
+    description: 'Пробуем шесть армянских вин с сомелье и просто разговариваем. Для тех, кто живёт в Ереване или будет проездом.',
+    going: ['vesta', 'oleg'], interested: ['mira', 'kira'] },
+  { key: 'north-light', host: 'sasha', couple: true, title: 'Вечеринка пар «Северный свет»', kind: 'party', format: 'offline', city: 'Гамбург', area: 'Санкт-Паули', exactAddress: 'Hein-Hoyer-Str. 50, клуб на втором этаже',
+    start: at(22, 19), hours: 5, price: { kind: 'external', amount: 30, currency: 'EUR', ticketUrl: 'https://tickets.example.org/nordlicht' }, cover: 'neon', tz: 'Europe/Berlin', plate: 'sea',
+    requiresApplication: true, questions: ['Придёте парой или одни?'], requirements: 'Дресс-код: чёрное и неон. Фото внутри не снимаем.',
+    description: 'Собираем пары и одиночек, которые давно хотели прийти на вечеринку с дресс-кодом, но не знали куда. Вход по заявкам, билеты — у нас на сайте.',
+    interested: ['kira', 'mira'], applications: { approved: ['katya'], pending: ['lev'] } },
+  { key: 'consent-cases', host: 'nastya', title: 'Психология согласия: разбор случаев', kind: 'talk', format: 'online', joinUrl: 'https://meet.jit.si/feture-soglasie-razbor',
+    start: at(19, 16), hours: 1.5, price: { kind: 'free' }, cover: 'books', tz: 'Europe/Moscow', plate: 'moss',
+    description: 'Разбираем три анонимные истории, присланные участниками: где было непонимание и как можно было договориться. Камеру можно не включать.',
+    going: ['kira', 'zhenya', 'yana'], interested: ['lev'] },
+  { key: 'coffee-ams', host: 'oleg', title: 'Утренний кофе для новичков', kind: 'meetup', format: 'offline', city: 'Амстердам', area: 'Йордан', exactAddress: 'Westerstraat 95, кафе у окна',
+    start: at(23, 8), hours: 1.5, price: { kind: 'free' }, cover: 'coffee', tz: 'Europe/Amsterdam',
+    description: 'Если вы только пришли в сообщество и хотите задать вопросы вживую — приходите. Без программы, просто кофе и знакомство.',
+    going: ['alisa'], interested: ['mira'] },
+  // ~50 days ahead
+  { key: 'forest-rope', host: 'lev', title: 'Выезд на природу: верёвка в лесу', kind: 'workshop', format: 'offline', city: 'Москва', area: 'Лосиный Остров', exactAddress: 'поляна у Яузы, точку пришлём за день',
+    start: at(50, 7), hours: 6, price: { kind: 'door', amount: 3000, currency: 'RUB' }, cover: 'forest', tz: 'Europe/Moscow', plate: 'moss',
+    description: 'Целый день на свежем воздухе: подвесы на деревьях для опытных, партер для новичков, костёр и чай. Возьмите тёплую одежду и коврик.',
+    going: ['kira', 'mira', 'liza'], interested: ['timur', 'stas'] },
+  { key: 'photo-walk', host: 'vesta', title: 'Фотопрогулка по старому Тбилиси', kind: 'meetup', format: 'offline', city: 'Тбилиси', area: 'Абанотубани', exactAddress: 'у входа в серные бани, площадь Горгасали',
+    start: at(48, 7), hours: 3, price: { kind: 'free' }, cover: 'autumn', tz: 'Asia/Tbilisi', plate: 'amber',
+    description: 'Гуляем по старому городу и снимаем на что угодно — от плёнки до телефона. Покажу любимые дворы и места со светом.',
+    going: ['mira'], interested: ['kira', 'lev', 'egor'] },
+  { key: 'tea-couples', host: 'gleb', couple: true, title: 'Чайная церемония для пар', kind: 'workshop', format: 'offline', city: 'Минск', area: 'Верхний город', exactAddress: 'ул. Кирилла и Мефодия, 8, чайная на втором этаже',
+    start: at(52, 13), hours: 2, price: { kind: 'door', amount: 20, currency: 'EUR' }, cover: 'tea', tz: 'Europe/Minsk', plate: 'lilac',
+    description: 'Учимся заваривать улун вдвоём и разговаривать без спешки. Для пар и тех, кто придёт с другом. Чай и посуда — наши.',
+    interested: ['lev', 'kira'] },
+  { key: 'new-year', host: 'mira', title: 'Новогодний вечер в Берлине', kind: 'party', format: 'offline', city: 'Берлин', area: 'Фридрихсхайн', exactAddress: 'Revaler Str. 99, зал «Бархат»',
+    start: at(55, 18), hours: 6, price: { kind: 'external', amount: 35, currency: 'EUR', ticketUrl: 'https://tickets.example.org/berlin-neujahr' }, cover: 'candles', tz: 'Europe/Berlin', plate: 'coal',
+    requiresApplication: true, questions: ['С кем придёшь?', 'Был(а) ли ты на наших вечерах?'],
+    description: 'Отмечаем Новый год заранее, своим кругом: ужин, музыка, свечи и тёмная комната для желающих. Вход по заявкам, билеты — у организатора.',
+    interested: ['katya', 'kira', 'lev'] },
+  { key: 'club-history', host: 'timur', title: 'Лекция: история клубной культуры', kind: 'talk', format: 'online', joinUrl: 'https://meet.jit.si/feture-club-history',
+    start: at(47, 16), hours: 1.5, price: { kind: 'external', amount: 8, currency: 'EUR', ticketUrl: 'https://tickets.example.org/club-history' }, cover: 'neon2', tz: 'Europe/Moscow', plate: 'rose',
+    description: 'От подпольных вечеринок девяностых до сегодняшних закрытых клубов: как менялись правила, дресс-коды и отношение к согласию.',
+    going: ['lev'], interested: ['mira', 'kira', 'daniel'], ticket: ['lev'] },
+  // already happened (dates moved back after the answers)
+  { key: 'tea-after', host: 'liza', title: 'Чаепитие после воркшопа', kind: 'meetup', format: 'offline', city: 'Москва', area: 'Китай-город', exactAddress: 'Подкопаевский пер., 4, чайная «Лист»',
+    backdate: 1, hours: 2, price: { kind: 'free' }, cover: 'tea', tz: 'Europe/Moscow', plate: 'moss',
+    description: 'Собрались после субботнего воркшопа: чай, пирог и разговоры о том, что получилось и что нет. Встреча уже прошла.',
+    going: ['mira', 'lev', 'kira', 'stas'], interested: ['nastya', 'zhenya'] },
+  { key: 'cuffs', host: 'daniel', title: 'Открытая мастерская: делаем манжеты', kind: 'workshop', format: 'offline', city: 'Белград', area: 'Дорћол', exactAddress: 'Cara Dušana 45, мастерская во дворе',
+    backdate: 7, hours: 3, price: { kind: 'door', amount: 20, currency: 'EUR' }, cover: 'leather', tz: 'Europe/Belgrade', plate: 'coal',
+    description: 'Каждый сделал себе пару манжет: раскрой, пробивка, прошивка, фурнитура. Материалы были мои. Мастерская уже прошла.',
+    going: ['kira', 'egor', 'vesta'], interested: ['mira', 'lev'] },
+  { key: 'book-night', host: 'kira', title: 'Книжный вечер на Петроградке', kind: 'meetup', format: 'offline', city: 'Санкт-Петербург', area: 'Петроградская сторона', exactAddress: 'Большой пр. П.С., 34, книжное кафе',
+    backdate: 30, hours: 2, price: { kind: 'free' }, cover: 'books', tz: 'Europe/Moscow', plate: 'lilac',
+    description: 'Обсуждали «Этичную шлюху» и спорили о ревности. Было восемь человек и очень много чая. Вечер уже прошёл.',
+    going: ['nastya', 'lev', 'mira'], interested: ['zhenya', 'yana'] },
+  // cancelled after people had answered
+  { key: 'screening', host: 'alisa', title: 'Закрытый кинопоказ в Амстердаме', kind: 'party', format: 'offline', city: 'Амстердам', area: 'Ауд-Вест', exactAddress: 'Overtoom 301, малый зал',
+    start: at(26, 19), hours: 3, price: { kind: 'external', amount: 20, currency: 'EUR', ticketUrl: 'https://tickets.example.org/screening' }, cover: 'velvet', tz: 'Europe/Amsterdam', plate: 'coal',
+    description: 'Смотрим авторское кино о близости и обсуждаем после. Только для своих, телефоны сдаём на входе.',
+    going: ['lev'], interested: ['mira', 'kira'], cancel: 'Площадка закрылась на ремонт. Деньги за билеты вернём в течение недели.' },
+  { key: 'hike', host: 'roman', title: 'Поход в горы над Алматы', kind: 'meetup', format: 'offline', city: 'Алматы', area: 'Медеу', exactAddress: 'парковка у катка Медеу',
+    start: at(30, 3), hours: 6, price: { kind: 'free' }, cover: 'mountains', tz: 'Asia/Almaty', plate: 'sea',
+    description: 'Лёгкий поход к Большому Алматинскому озеру для тех, кто любит горы и неспешные разговоры. Обувь — треккинговая.',
+    going: ['mira', 'kira'], interested: ['lev'], cancel: 'Синоптики обещают снегопад и лавинную опасность — переносим на весну.' },
+];
+
+async function eventsMore() {
+  const backdate = [];
+  for (const ev of EVENTS_MORE) await step('event ' + ev.key, async () => {
+    const e = email(ev.host);
+    const profile = ev.couple ? (await coupleOf(ev.host))?.id : undefined;
+    if (ev.couple && !profile) throw new Error('no couple for ' + ev.host);
+    const mine = (await api(e, 'event.mine', {}, profile)).organizing ?? [];
+    let got = mine.find(x => x.title === ev.title && x.state !== 'withdrawn');
+    if (!got) {
+      const cover = ev.cover ? await upload(ev.host, 'event', await stock(ev.cover), { profile }) : null;
+      const start = ev.backdate ? new Date(Date.now() + 15 * 60e3) : ev.start;
+      const end = new Date(+start + ev.hours * 3600e3);
+      const r = must(await api(e, 'event.submit', { opId: uuid7(), event: {
+        title: ev.title, kind: ev.kind, description: ev.description, format: ev.format,
+        placeId: ev.city ? await cityId(ev.city) : null, area: ev.area ?? null, exactAddress: ev.exactAddress ?? null, joinUrl: ev.joinUrl ?? null,
+        tz: ev.tz, startsAt: start.toISOString(), endsAt: end.toISOString(), price: ev.price,
+        requiresApplication: !!ev.requiresApplication, questions: ev.questions ?? [], requirements: ev.requirements ?? null,
+        coverAssetId: cover, plate: ev.plate ?? 'lilac', communityId: null } }, profile), 'event.submit');
+      got = { id: r.id };
+      // Оля approves Глеб's event for the couple (Саша и Ника trust each other: theirs goes straight to review).
+      if (r.pending?.approvalId) must(await api(email('olya'), 'decide.approval', { opId: uuid7(), approvalId: r.pending.approvalId, choice: 'approve' }, profile), 'partner approves');
+    }
+    let full = (await api(e, 'event.get', { eventId: got.id }, profile)).event;
+    if (full.state === 'pending_partner') {
+      const pend = await api(email('olya'), 'decide.approvals', {}, profile);
+      const a = [...(pend.items ?? []), ...(pend.pending ?? [])].find(x => x.targetId === got.id || x.kind === 'event.submit');
+      if (a) must(await api(email('olya'), 'decide.approval', { opId: uuid7(), approvalId: a.id ?? a.approvalId, choice: 'approve' }, profile), 'partner approves');
+      full = (await api(e, 'event.get', { eventId: got.id }, profile)).event;
+    }
+    if (full.state === 'in_review' || full.pendingChange) {
+      must(await api(STAFF, 'staff.eventDecide', { opId: uuid7(), eventId: got.id, rev: full.rev, decision: 'approve' }), 'staff.eventDecide');
+      full = (await api(e, 'event.get', { eventId: got.id }, profile)).event;
+    }
+    const moved = ev.backdate && Date.parse(full.startsAt) < Date.now() - 12 * 3600e3;
+    if (!full.past && full.state === 'published') {
+      for (const m of ev.going ?? []) await step(`rsvp ${m} going ${ev.key}`, async () => must(await api(email(m), 'event.rsvp', { opId: uuid7(), eventId: got.id, status: 'going', showInList: true, ...(ev.ticket?.includes(m) ? { ticketMarked: true } : {}) }), 'rsvp'));
+      for (const m of ev.interested ?? []) await step(`rsvp ${m} interested ${ev.key}`, async () => must(await api(email(m), 'event.rsvp', { opId: uuid7(), eventId: got.id, status: 'interested' }), 'rsvp'));
+      if (ev.applications) {
+        for (const m of [...ev.applications.approved, ...ev.applications.pending]) await step(`apply ${m} ${ev.key}`, async () => {
+          const r = await api(email(m), 'event.apply', { opId: uuid7(), eventId: got.id, answers: ev.questions.map((_, i) => ['Парой, вдвоём с партнёром.', 'Да, была на двух.'][i]), note: 'Очень хочу попасть!', requirementsAccepted: true });
+          if (r.status !== 409) must(r, 'apply');
+        });
+        const pend = (await api(e, 'event.applications', { eventId: got.id, state: 'pending' }, profile)).items ?? [];
+        for (const a of pend) {
+          const who = CAST.find(c => c.handle === (a.profile?.handle ?? a.handle))?.key;
+          if (ev.applications.approved.includes(who)) await step(`decide ${who} ${ev.key}`, async () => must(await api(e, 'event.applicationDecide', { opId: uuid7(), applicationId: a.id, rev: a.rev ?? 1, approve: true }, profile), 'applicationDecide'));
+        }
+      }
+      if (ev.cancel) must(await api(e, 'event.cancel', { opId: uuid7(), eventId: got.id, reason: ev.cancel }, profile), 'event.cancel');
+    }
+    if (ev.backdate && !moved) backdate.push([got.id, ev.backdate, ev.title]);
+  });
+  if (backdate.length) {
+    // Start + 15 min now → the same clock time N days ago; created / published / answers move with it.
+    const sql = backdate.map(([id, n]) => `update feture.event set starts_at = starts_at - interval '${n} days', ends_at = ends_at - interval '${n} days', created_at = created_at - interval '${n + 5} days', published_at = published_at - interval '${n + 4} days', updated_at = updated_at - interval '${n} days' where id = '${id}';\n`
+      + `update feture.event_rsvp set updated_at = updated_at - interval '${n + 2} days' where event_id = '${id}';`).join('\n');
+    console.log(`\n-- backdate (${backdate.map(b => b[2]).join(', ')}): run in the Supabase SQL editor, project anrhayozrhrmiwexmbhw\n${sql}\n`);
+  }
+}
+
 // ---------------------------------------------------------------- phase: posts
 async function posts() {
   // Mira: photo posts, a poll, an article, a followers-only post, a mention, photo tags, a draft, a gallery album.
@@ -951,8 +1090,8 @@ async function clip() {
   return { video: fs.readFileSync(vf), poster: fs.readFileSync(pf), durationMs: 6000 };
 }
 /** Uploads a clip as the composer does (intent with length and poster → two PUTs → commit); staff approves it. */
-async function uploadVideo(key, c) {
-  const i = await api(email(key), 'media.uploadIntent', { opId: uuid7(), purpose: 'post', kind: 'video', mime: 'video/webm', bytes: c.video.length, durationMs: c.durationMs,
+async function uploadVideo(key, c, { approve = true } = {}) {
+  const i = await api(email(key), 'media.uploadIntent', { opId: uuid7(), purpose: 'post', kind: 'video', mime: c.mime ?? 'video/webm', bytes: c.video.length, durationMs: c.durationMs,
     poster: { mime: 'image/jpeg', bytes: c.poster.length } });
   if (!i.assetId || !i.posterUpload) throw new Error('uploadIntent video ' + JSON.stringify(i).slice(0, 200));
   for (const [u, b] of [[i.upload, c.video], [i.posterUpload, c.poster]]) {
@@ -960,7 +1099,7 @@ async function uploadVideo(key, c) {
     if (!put.ok) throw new Error('upload PUT ' + put.status);
   }
   must(await api(email(key), 'media.commit', { assetId: i.assetId }), 'commit video');
-  await approveAsset(i.assetId);
+  if (approve) await approveAsset(i.assetId);
   return i.assetId;
 }
 const follow = async (a, b) => must(await api(email(a), 'follow.set', { opId: uuid7(), profileId: await pid(b), on: true }), `follow ${a}→${b}`);
@@ -1015,6 +1154,232 @@ async function followingVerify() {
     out[`«Подписки» of ${v}`] = { posts: items.length - acts.length, cards: acts.length, ...sizes, missing: missing.length ? missing : 'none',
       ...(sasha ? { 'sasha liked': sasha.items.map(kindsOf).join(', ') } : {}),
       ...(v === 'mira' ? { 'egor (muted)': `cards ${acts.filter(a => a.actor?.handle === P.egor.handle).length}, posts ${items.filter(x => x.kind === 'post' && x.author?.handle === P.egor.handle).length}` } : {}) };
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------- phase: video (clips and photo + video posts)
+// Owner, 28.10.2026: «Видео не хватает в тестовых данных везде. В подписках тоже. Нужны посты которые и с фото и с
+// видео». Sixteen people post short clips; nine posts mix photos and clips (2–5 files, a clip first in some, a photo
+// first in others), one has two clips. Every clip is made here from the same stock pictures the posts use (e2e/world-media.json): a
+// slow pan or zoom over one to three pictures, cuts or crossfades, a little hand shake and exposure drift as from a
+// phone. They are drawn on a canvas and recorded by Chrome's MediaRecorder as H.264 MP4 (WebM when only Playwright's
+// Chromium is there), with no sound; nothing is downloaded. Clips are cached in e2e/.world-cache/clips/. Vertical
+// 9:16 mostly, a few 16:9. The posts are found again by the start of the text, so a rerun only adds what is missing.
+// Likes come from people the three viewers follow (Liza, Daniel, Vesta, and Mira / Lev / Kira for each other), so
+// their «Подписки» get like cards with clip thumbnails; Timur, Gleb, Roman and Sasha do not like (their card sizes
+// stay as the following phase built them).
+const V = [540, 960], H = [960, 540];
+/** name → { size, shots: [pic, seconds, from [cx, cy, zoom], to [cx, cy, zoom]][], fade (s, 0 = cut) } */
+export const CLIPS = {
+  'mira-morning': { size: V, fade: 0.8, shots: [['coffee', 6, [0.35, 0.5, 1], [0.55, 0.5, 1.12]], ['flowers', 6, [0.5, 0.45, 1.15], [0.5, 0.5, 1]]] },
+  'mira-rain': { size: V, shots: [['rain', 9, [0.3, 0.5, 1], [0.7, 0.5, 1]]] },
+  'lev-jute': { size: V, shots: [['rope2', 7, [0.5, 0.5, 1], [0.45, 0.55, 1.35]], ['rope', 7, [0.4, 0.5, 1.25], [0.6, 0.5, 1.05]]] },
+  'lev-prep': { size: V, shots: [['candles', 8, [0.5, 0.5, 1], [0.5, 0.4, 1.2]]] },
+  'kira-walk': { size: V, fade: 0.7, shots: [['rain', 5, [0.6, 0.5, 1.1], [0.4, 0.5, 1]], ['citynight', 6, [0.3, 0.5, 1], [0.6, 0.5, 1.1]]] },
+  'kira-evening': { size: V, shots: [['neon', 7, [0.4, 0.5, 1], [0.6, 0.5, 1.15]]] },
+  'kira-candle': { size: V, shots: [['candles', 6, [0.5, 0.55, 1.3], [0.5, 0.5, 1.05]]] },
+  'timur-hall': { size: H, fade: 1, shots: [['books', 8, [0.35, 0.5, 1.25], [0.65, 0.45, 1.25]], ['wine', 7, [0.5, 0.5, 1], [0.5, 0.5, 1.2]]] },
+  'timur-neon': { size: V, shots: [['neon2', 8, [0.3, 0.5, 1], [0.7, 0.5, 1]]] },
+  'daniel-belt': { size: V, fade: 0.5, shots: [['workshop', 5, [0.3, 0.5, 1], [0.6, 0.5, 1.1]], ['leather', 5, [0.5, 0.5, 1.3], [0.5, 0.5, 1]], ['belt', 6, [0.6, 0.5, 1], [0.4, 0.5, 1]]] },
+  'daniel-shop': { size: V, shots: [['workshop', 9, [0.7, 0.5, 1], [0.4, 0.6, 1.3]]] },
+  'liza-tea': { size: V, fade: 0.6, shots: [['tea', 5, [0.5, 0.4, 1], [0.5, 0.55, 1.2]], ['candles', 4, [0.5, 0.5, 1.1], [0.5, 0.5, 1]]] },
+  'liza-tea2': { size: V, shots: [['tea', 7, [0.5, 0.6, 1.3], [0.5, 0.45, 1]]] },
+  'sasha-club': { size: V, shots: [['concert', 6, [0.2, 0.5, 1], [0.8, 0.5, 1]], ['neon2', 5, [0.5, 0.5, 1.2], [0.5, 0.5, 1]]] },
+  'sasha-club2': { size: V, shots: [['concert', 7, [0.6, 0.5, 1], [0.4, 0.5, 1.25]]] },
+  'roman-lake': { size: H, shots: [['mountains', 16, [0.35, 0.5, 1.3], [0.65, 0.5, 1.3]]] },
+  'gleb-oolong': { size: V, fade: 0.8, shots: [['tea', 5, [0.5, 0.5, 1], [0.5, 0.6, 1.25]], ['coffee', 5, [0.4, 0.5, 1], [0.6, 0.5, 1.05]]] },
+  'egor-areni': { size: H, fade: 1, shots: [['wine', 6, [0.4, 0.5, 1], [0.6, 0.5, 1.2]], ['autumn', 6, [0.5, 0.5, 1.2], [0.5, 0.5, 1]]] },
+  'egor-autumn': { size: V, shots: [['autumn', 9, [0.3, 0.5, 1], [0.7, 0.5, 1]]] },
+  'katya-night': { size: V, shots: [['neon2', 4.5, [0.6, 0.5, 1], [0.3, 0.5, 1.1]], ['concert', 4.5, [0.4, 0.5, 1], [0.6, 0.5, 1]]] },
+  'katya-club': { size: V, shots: [['concert', 6, [0.5, 0.5, 1.3], [0.5, 0.5, 1]]] },
+  'katya-neon': { size: V, shots: [['neon', 6, [0.7, 0.5, 1], [0.4, 0.5, 1]]] },
+  'nastya-study': { size: V, fade: 0.8, shots: [['books', 6, [0.3, 0.5, 1], [0.6, 0.5, 1.1]], ['coffee', 6, [0.6, 0.5, 1.15], [0.4, 0.5, 1]]] },
+  'oleg-canal': { size: H, fade: 1, shots: [['canal', 8, [0.5, 0.55, 1.3], [0.5, 0.5, 1]], ['citynight', 7, [0.4, 0.5, 1], [0.6, 0.5, 1.1]]] },
+  'yana-forest': { size: V, shots: [['forest', 10, [0.5, 0.6, 1], [0.5, 0.45, 1.2]]] },
+  'alisa-velvet': { size: V, fade: 0.8, shots: [['candles', 6, [0.5, 0.5, 1], [0.5, 0.45, 1.2]], ['leather', 6, [0.4, 0.5, 1], [0.6, 0.5, 1.1]]] },
+  'vesta-mountains': { size: H, fade: 1, shots: [['mountains', 9, [0.6, 0.5, 1.25], [0.4, 0.5, 1.05]], ['forest', 6, [0.5, 0.5, 1.2], [0.5, 0.5, 1]]] },
+  'vesta-fog': { size: V, shots: [['forest', 7, [0.4, 0.5, 1], [0.6, 0.5, 1.1]]] },
+};
+/** media: a stock picture key, or { clip } — in the order the post shows them. */
+const VIDEO_POSTS = [
+  // one clip
+  ['mira', 'Субботнее утро: кофе остывает, пионы пахнут на всю кухню. Никуда не тороплюсь.', [{ clip: 'mira-morning' }], ['slow']],
+  ['lev', 'Промасливаю новый джут: по метру, руками, без спешки. Двадцать минут медитации.', [{ clip: 'lev-jute' }], ['shibari']],
+  ['kira', 'После дождя: сначала вид из окна, потом прогулка по мокрым улицам до ночи.', [{ clip: 'kira-walk' }]],
+  ['timur', 'Нашли зал для клуба: библиотека, камин, кресла. Первый вечер — в пятницу.', [{ clip: 'timur-hall' }]],
+  ['daniel', 'Как рождается ремень: заготовка, кожа, прошивка. Снял на телефон между заказами.', [{ clip: 'daniel-belt' }], ['leather']],
+  ['sasha', 'Гамбург, пятница, свет в клубе. Звук не передать, поверьте на слово.', [{ clip: 'sasha-club' }]],
+  ['roman', 'Выбрались в горы на выходные. Озеро как стекло, телефон не ловит — идеально.', [{ clip: 'roman-lake' }]],
+  ['gleb', 'Новый улун. Заваривал пять минут, снимал полчаса.', [{ clip: 'gleb-oolong' }]],
+  ['egor', 'Арени: дегустация в старом подвале, потом прогулка по осеннему склону.', [{ clip: 'egor-areni' }]],
+  ['nastya', 'Сессия: библиотека, конспекты и третья чашка кофе за день.', [{ clip: 'nastya-study' }]],
+  ['oleg', 'Амстердам, вечер, снег на каналах. Будто городу выключили звук.', [{ clip: 'oleg-canal' }]],
+  ['yana', 'Утро в лесу перед йогой. Туман, тишина, дышится легко.', [{ clip: 'yana-forest' }]],
+  ['alisa', 'Готовим «Чёрный бархат»: свечи, кожа, приглушённый свет. Ждём вас в субботу.', [{ clip: 'alisa-velvet' }]],
+  ['katya', 'Берлин, без пятнадцати полночь, по дороге в клуб.', [{ clip: 'katya-night' }]],
+  ['liza', 'Свечи зажжены, чайник закипает — через час придут гости.', [{ clip: 'liza-tea' }]],
+  // photos and clips together
+  ['mira', 'Берлин в ноябре: дождь, огни и кофейня, где меня уже знают по имени.', ['citynight', { clip: 'mira-rain' }, 'coffee']],
+  ['vesta', 'Неделя в горах: пара видео и кадры на память. Возвращаться не хотелось.', [{ clip: 'vesta-mountains' }, 'autumn', 'forest', { clip: 'vesta-fog' }]],
+  ['daniel', 'Мастерская изнутри: верстак, обрезки кожи и готовый браслет.', [{ clip: 'daniel-shop' }, 'leather', 'leather2'], ['leather']],
+  ['lev', 'Готовим зал к вечеру для начинающих: верёвки разложены, свечи горят.', ['rope', { clip: 'lev-prep' }, 'rope2'], ['shibari']],
+  ['kira', 'Белые ночи закончились, начались тёмные вечера. Собрала любимое за неделю.', [{ clip: 'kira-evening' }, 'books', 'tea', { clip: 'kira-candle' }, 'flowers']],
+  ['timur', 'Пятничный вечер: сначала концерт, потом прогулка по ночному городу.', ['concert', { clip: 'timur-neon' }]],
+  ['liza', 'Утро после вечера: доедаем печенье и пьём остывший чай.', [{ clip: 'liza-tea2' }, 'coffee']],
+  ['egor', 'Осень в Армении: горы, листья и вино из Арени.', ['mountains', { clip: 'egor-autumn' }, 'wine']],
+  ['katya', 'Два видео из вчерашнего клуба — свет был нереальный.', [{ clip: 'katya-club' }, { clip: 'katya-neon' }]],
+  ['sasha', 'Гамбург ночью: улицы после дождя и немного клуба.', ['citynight', { clip: 'sasha-club2' }, 'neon2']],
+];
+/** Who likes the clip posts: people the viewers follow first (their like cards), then others for the counts. */
+const VIDEO_LIKERS = ['liza', 'kira', 'mira', 'vesta', 'daniel', 'lev', 'katya', 'nastya', 'egor', 'yana', 'zhenya', 'oleg', 'alisa', 'stas', 'olya'];
+const VIDEO_REPLIES = {
+  'Промасливаю новый джут': [['liza', 'Можно я приду посмотреть, как ты это делаешь?'], ['lev', 'Приходи в четверг, как раз будет новая партия.', 1]],
+  'Как рождается ремень': [['mira', 'Залипла на прошивку. Сколько уходит на один ремень?'], ['daniel', 'Часа три, если без украшений.', 1], ['vesta', 'Хочу такой же, только коричневый.']],
+  'Белые ночи закончились': [['mira', 'Свеча в конце — прямо моё настроение.'], ['nastya', 'А где этот бар с неоном?']],
+  'Неделя в горах': [['kira', 'Туман во втором видео — магия.'], ['vesta', 'Это было в семь утра, все ещё спали :)', 1]],
+  'После дождя': [['lev', 'Красиво. Ночью город совсем другой.']],
+};
+
+/** Records the missing clips in Chrome (H.264 MP4) — or Playwright's Chromium (WebM) — and caches them. */
+export async function makeClips(names) {
+  const dir = CACHE + 'clips/';
+  fs.mkdirSync(dir, { recursive: true });
+  const meta = n => dir + n + '.json';
+  const todo = names.filter(n => !fs.existsSync(meta(n)));
+  if (todo.length) {
+    const { chromium } = await import('playwright-core');
+    let browser, mime = 'video/mp4;codecs=avc1.640028';
+    try { browser = await chromium.launch({ headless: true, channel: 'chrome' }); } catch { browser = await chromium.launch({ headless: true }); }
+    try {
+      const probe = await browser.newPage();
+      if (!(await probe.evaluate(m => MediaRecorder.isTypeSupported(m), mime))) mime = 'video/webm';
+      await probe.close();
+      const queue = [...todo];
+      const worker = async () => {
+        for (let n; (n = queue.shift());) {
+          const spec = CLIPS[n];
+          const imgs = {};
+          for (const [pic] of spec.shots) imgs[pic] ??= 'data:image/jpeg;base64,' + (await stock(pic)).bytes.toString('base64');
+          const page = await browser.newPage();
+          try {
+            const [v, p, ms] = await page.evaluate(renderClip, { spec, imgs, mime, seed: n.length * 7 + n.charCodeAt(0) });
+            const ext = mime.startsWith('video/mp4') ? 'mp4' : 'webm';
+            fs.writeFileSync(dir + n + '.' + ext, Buffer.from(v, 'base64'));
+            fs.writeFileSync(dir + n + '.jpg', Buffer.from(p, 'base64'));
+            fs.writeFileSync(meta(n), JSON.stringify({ file: n + '.' + ext, mime: ext === 'mp4' ? 'video/mp4' : 'video/webm', durationMs: ms, size: spec.size }));
+            log('  clip', n, ext, Math.round(ms / 100) / 10 + ' s', Math.round(fs.statSync(dir + n + '.' + ext).size / 1024) + ' KB');
+          } finally { await page.close(); }
+        }
+      };
+      await Promise.all([worker(), worker(), worker(), worker()]);
+    } finally { await browser.close(); }
+  }
+  return Object.fromEntries(names.map(n => {
+    const m = JSON.parse(fs.readFileSync(meta(n), 'utf8'));
+    return [n, { video: fs.readFileSync(dir + m.file), poster: fs.readFileSync(dir + n + '.jpg'), durationMs: m.durationMs, mime: m.mime }];
+  }));
+}
+/** Runs in the page: draws the shots in real time on a canvas and records it; returns [clip, poster, ms] (base64). */
+async function renderClip({ spec, imgs, mime, seed }) {
+  const load = src => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = src; });
+  const pics = {}; for (const [k, src] of Object.entries(imgs)) pics[k] = await load(src);
+  const [w, h] = spec.size, fade = spec.fade ?? 0;
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
+  let acc = 0; const starts = spec.shots.map(s => { const a = acc; acc += s[1] - fade; return a; });
+  const total = acc + fade;
+  const ease = x => (x < 0 ? 0 : x > 1 ? 1 : x * x * (3 - 2 * x));
+  // hand shake: a few slow sines (a phone held in the hand), and exposure that breathes a little
+  const shake = t => ({ x: 4.5 * Math.sin(t * 1.1 + seed) + 2.2 * Math.sin(t * 2.7 + seed * 2) + 0.7 * Math.sin(t * 9.3 + seed * 3),
+    y: 3.5 * Math.sin(t * 0.9 + seed * 4) + 1.8 * Math.sin(t * 3.1 + seed) + 0.6 * Math.sin(t * 8.1),
+    r: 0.003 * Math.sin(t * 0.7 + seed) + 0.0012 * Math.sin(t * 2.3) });
+  const draw = t => {
+    g.fillStyle = '#000'; g.fillRect(0, 0, w, h);
+    const sh = shake(t);
+    const focus = t < 0.6 ? (1 - t / 0.6) * 3 : 0; // the phone finds focus at the start
+    g.filter = `brightness(${1 + 0.03 * Math.sin(t * 0.8 + seed)}) contrast(1.03) saturate(1.05)${focus ? ` blur(${focus.toFixed(2)}px)` : ''}`;
+    spec.shots.forEach(([pic, len, from, to], i) => {
+      const s0 = starts[i];
+      if (t < s0 || t > s0 + len) return;
+      const img = pics[pic], k = ease((t - s0) / len), lerp = (a, b) => a + (b - a) * k;
+      const cx = lerp(from[0], to[0]), cy = lerp(from[1], to[1]), z = lerp(from[2], to[2]) * 1.06;
+      const sc = Math.max(w / img.width, h / img.height) * z, dw = img.width * sc, dh = img.height * sc;
+      const x = Math.min(0, Math.max(w - dw, w / 2 - cx * dw)), y = Math.min(0, Math.max(h - dh, h / 2 - cy * dh));
+      g.save(); g.globalAlpha = fade && i > 0 ? Math.min(1, (t - s0) / fade) : 1;
+      g.translate(w / 2, h / 2); g.rotate(sh.r); g.translate(-w / 2 + sh.x, -h / 2 + sh.y);
+      g.drawImage(img, x, y, dw, dh); g.restore();
+    });
+    g.filter = 'none';
+    const vg = g.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.35, w / 2, h / 2, Math.max(w, h) * 0.75);
+    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.28)'); g.fillStyle = vg; g.fillRect(0, 0, w, h);
+  };
+  const b64 = async blob => { const buf = new Uint8Array(await blob.arrayBuffer()); let s = ''; for (let i = 0; i < buf.length; i += 0x8000) s += String.fromCharCode(...buf.subarray(i, i + 0x8000)); return btoa(s); };
+  draw(Math.min(1, total / 2)); const poster = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.88));
+  draw(0);
+  const rec = new MediaRecorder(c.captureStream(30), { mimeType: mime, videoBitsPerSecond: 2_800_000 }); const parts = [];
+  rec.ondataavailable = e => parts.push(e.data);
+  rec.start(1000);
+  const t0 = performance.now();
+  await new Promise(done => { const iv = setInterval(() => { const t = (performance.now() - t0) / 1000; if (t >= total) { clearInterval(iv); done(); } else draw(t); }, 1000 / 30); });
+  rec.stop(); await new Promise(r => { rec.onstop = r; });
+  return [await b64(new Blob(parts, { type: mime.split(';')[0] })), await b64(poster), Math.round(total * 1000)];
+}
+
+async function video() {
+  await staff();
+  const clips = await makeClips(Object.keys(CLIPS));
+  // Three posts at a time; each post's files are uploaded first and then wait for the scan and staff together.
+  const ids = [], queue = [...VIDEO_POSTS.entries()];
+  const worker = async () => { for (let q; (q = queue.shift());) { const [n, [key, body, media, topics = []]] = q;
+    ids[n] = await step(`video post ${key} «${body.slice(0, 24)}»`, async () => {
+      const have = (await postsOf(key)).find(x => (x.body ?? '').slice(0, 40) === body.slice(0, 40));
+      if (have) return have.id;
+      const mediaIds = [];
+      for (const m of media) mediaIds.push(typeof m === 'string' ? await upload(key, 'post', await stock(m), { approve: false }) : await uploadVideo(key, clips[m.clip], { approve: false }));
+      await Promise.all(mediaIds.map(approveAsset));
+      const d = must(await api(email(key), 'post.saveDraft', { opId: uuid7(), post: { type: 'post', audience: 'all', topics, body, mediaIds } }), 'saveDraft');
+      const id = d.id ?? d.postId;
+      must(await api(email(key), 'post.publish', { opId: uuid7(), postId: id }), 'publish');
+      (await postsOf(key)).push({ id, body });
+      log('  posted', key, media.map(m => (typeof m === 'string' ? 'photo' : 'video')).join('+'));
+      return id;
+    });
+  } };
+  await Promise.all([worker(), worker(), worker()]);
+  // 3–9 likes per post, rotating through the likers (never the author).
+  for (const [i, id] of ids.entries()) {
+    if (!id) continue;
+    const author = VIDEO_POSTS[i][0];
+    const who = [...VIDEO_LIKERS.slice(i % 5), ...VIDEO_LIKERS.slice(0, i % 5)].filter(k => k !== author).slice(0, 3 + (i * 5) % 7);
+    for (const w of who) await step(`like ${w} video ${i}`, () => like(w, id));
+  }
+  for (const [start, replies] of Object.entries(VIDEO_REPLIES)) {
+    const i = VIDEO_POSTS.findIndex(p => p[1].startsWith(start));
+    if (ids[i]) await step('video thread ' + start, () => thread(ids[i], replies));
+  }
+}
+
+/** Clip posts and photo + clip posts each viewer sees in «Подписки», «Для тебя» and «Популярное». */
+async function videoVerify() {
+  const out = {};
+  for (const v of SUBS_VIEWERS) {
+    for (const tab of ['following', 'forYou', 'popular']) {
+      const items = []; let cursor;
+      for (let i = 0; i < 8; i++) {
+        const r = await api(email(v), 'feed.list', { tab, ...(tab === 'following' ? { activity: [] } : {}), limit: 50, ...(cursor ? { cursor } : {}) });
+        items.push(...(r.items ?? [])); cursor = r.next; if (!cursor) break;
+      }
+      const posts = items.filter(x => x.kind !== 'activity' && x.media);
+      const vid = posts.filter(x => x.media.some(m => m?.kind === 'video'));
+      const mixed = vid.filter(x => x.media.some(m => m?.kind === 'image'));
+      const row = { 'video posts': vid.length, mixed: mixed.length, authors: [...new Set(vid.map(x => x.author?.handle))].length };
+      if (tab === 'following') {
+        const cards = items.filter(x => x.kind === 'activity' && (x.items ?? []).some(y => y.video || y.videos > 0));
+        row['like cards with a clip'] = cards.map(a => a.actor?.handle).join(', ') || 'none';
+        if (!vid.length || !mixed.length || !cards.length) problems.push(`video verify: ${v} «Подписки» has ${vid.length} video, ${mixed.length} mixed, ${cards.length} cards with a clip`);
+      } else if (tab === 'forYou' && (!vid.length || !mixed.length)) problems.push(`video verify: ${v} «Для тебя» has ${vid.length} video, ${mixed.length} mixed`);
+      out[`${v} ${tab}`] = row;
+    }
   }
   return out;
 }
@@ -1098,7 +1463,7 @@ async function verify() {
     for (const p of items) { inc('posts state ' + (p.state ?? '?')); if (p.type === 'note') inc('articles'); if (p.poll) inc('polls'); }
   }
   for (const k of COMMUNITIES) { const c = await communityByName(k.host, k.name); if (c) inc(`communities ${k.privacy}${k.review ? ' (in review)' : ''}`); }
-  for (const h of ['lev', 'kira', 'alisa', 'daniel', 'vesta', 'timur']) {
+  for (const h of ['lev', 'kira', 'alisa', 'daniel', 'vesta', 'timur', 'katya', 'egor', 'nastya', 'oleg', 'mira', 'liza', 'roman']) {
     const mine = await api(email(h), 'event.mine', {});
     inc('event drafts', (mine.drafts ?? []).length);
     for (const e of mine.organizing ?? []) {
@@ -1130,9 +1495,10 @@ async function verify() {
 const PHASES = { accounts: async () => { for (const c of CAST) await step('account ' + c.key, () => account(c)); },
   photos: async () => { await staff(); for (const c of CAST) if (c.face || c.tier === 'doc') await step('photo/age ' + c.key, () => photo(c)); },
   profile: async () => { for (const c of CAST) if (!['fresh', 'min'].includes(c.tier)) await step('profile ' + c.key, () => profileExtras(c)); },
-  social, couples, communities, events, posts, variety, following, access, moderation,
-  verify: async () => { const v = await verify(); console.log(JSON.stringify({ ...v, ...await varietyVerify(), ...await followingVerify() }, null, 1)); },
-  'verify-following': async () => console.log(JSON.stringify(await followingVerify(), null, 1)) };
+  social, couples, communities, events, 'events-more': eventsMore, posts, variety, following, video, access, moderation,
+  verify: async () => { const v = await verify(); console.log(JSON.stringify({ ...v, ...await varietyVerify(), ...await followingVerify(), ...await videoVerify() }, null, 1)); },
+  'verify-following': async () => console.log(JSON.stringify(await followingVerify(), null, 1)),
+  'verify-video': async () => console.log(JSON.stringify(await videoVerify(), null, 1)) };
 if (import.meta.url === `file://${process.argv[1]}`) {
   if (!process.env.FE_ADMIN_KEY) { console.error('FE_ADMIN_KEY is required'); process.exit(1); }
   const want = process.argv.slice(2).length ? process.argv.slice(2) : Object.keys(PHASES);

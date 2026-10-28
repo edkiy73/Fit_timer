@@ -7,6 +7,7 @@ import type {LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicOrigin} from '../api-url';
 import {articlePlate,ActingAv,ActionLine,ActivityCard,ActivityItem,Alert,ArticleCard,ArticleImage,Ask,Av,BAD_CHARS,Bar,Btn,Card,Chip,Chips,Counter,Empty,FeedEvents,Field,FilePick,Group,H,IconBtn,Input,LikesLine,Note,QuickStart,RichEditor,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,VideoBadge,View,hasLongWord,mdImages,type RichEditorHandle} from './kit';
+import {shakeFirstErr} from './kit/validate';
 import {useFe,usePartnerApproves} from './session';
 import {ActivityCardOf,activitySchema,type Act} from './feed-activity';
 import {Uploader} from './kit/Uploader';
@@ -720,7 +721,9 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
    poll.options.forEach((o,i)=>{if(!o.trim())e['o'+i]=t('fe.fd.err.option');});
    const low=poll.options.map(o=>o.trim().toLowerCase()).filter(Boolean);if(new Set(low).size!==low.length)e.opts=t('fe.fd.err.dupes');}
   if(interests&&!interests.length)e.interests=t('fe.fd.err.interests');
-  setErrs(e);if(Object.keys(e).length){setFailure(t('fe.fd.err.check'));return false;}setFailure('');return true;};
+  setErrs(e);setFailure('');
+  // The fields say what's wrong; the first one shakes and scrolls into view (no extra line at the bottom).
+  if(Object.keys(e).length){requestAnimationFrame(()=>{if(document.querySelector('.v21 .field.err'))shakeFirstErr();else document.querySelector('.v21 .ferr')?.scrollIntoView({block:'center',behavior:'smooth'});});return false;}return true;};
  const snap=JSON.stringify([title,fields()]);const clean=useRef(snap);const [ask,setAsk]=useState(false);
  const done=(state:string|undefined,unheard:string[]=[])=>{
   const msg0=state==='review'?t('fe.fd.sentReview'):state==='pending_partner'?t('fe.fd.sentPartner'):t('fe.fd.published');

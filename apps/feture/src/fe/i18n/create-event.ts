@@ -107,7 +107,6 @@ export const ru = {
   'fe.ce.err.questionLong': 'Максимум 120 символов',
   'fe.ce.err.reqsLong': 'Максимум 500 символов',
   'fe.ce.err.cover': 'Эту обложку сейчас нельзя использовать — выбери другую',
-  'fe.ce.err.fields': 'Проверь отмеченные поля',
 } as const;
 
 export const en = {
@@ -218,5 +217,4 @@ export const en = {
   'fe.ce.err.questionLong': 'At most 120 characters',
   'fe.ce.err.reqsLong': 'At most 500 characters',
   'fe.ce.err.cover': 'This cover can’t be used right now — pick another',
-  'fe.ce.err.fields': 'Check the marked fields',
 } as const;
