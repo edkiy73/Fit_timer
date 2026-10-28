@@ -13,6 +13,7 @@ import {BellButton} from './inbox';
 import {PostMenu,ReplyMenu,type Removal} from './post-menu';
 import {restoreInto,useToast} from './toast';
 import {MediaGrid,Poll,RichText,Viewer,mdPlain,mediaSrc,plural,useTopics,type CatTopic,type PollData} from './post-parts';
+import {AlbumField,albumOfPost} from './gallery';
 import {Jars,useInterests,type Interest} from './interests';
 import {NameBadges} from './faces';
 
@@ -28,7 +29,7 @@ export const postSchema=z.object({id:z.uuid(),type:z.enum(['post','note']),title
  // The audience is sent for own posts and for posts narrower than «all».
  audience:z.string().optional(),editedAt:z.string().nullable().optional(),
  // Own posts only: what the edit screen starts from.
- rev:z.number().int().optional(),inFeed:z.boolean().optional(),returned:z.string().nullable().optional(),
+ rev:z.number().int().optional(),inFeed:z.boolean().optional(),returned:z.string().nullable().optional(),albumId:z.uuid().nullable().optional(),
  poll:z.object({question:z.string(),options:z.array(z.string()),myVote:z.number().nullable().optional(),results:z.array(z.number()).nullable().optional()}).nullable().optional(),
  interests:z.array(interest).nullable().optional(),tags:z.array(tag).optional()});
 export type Post=z.infer<typeof postSchema>;
@@ -416,6 +417,9 @@ function ComposeForm({edit}:{edit?:Post|undefined}){
  const [interests,setInterests]=useState<string[]|null>(()=>edit?.interests?.length?edit.interests.map(i=>i.topicId):null);
  const [topics,setTopics]=useState<string[]>(edit?.topics??[]);
  const [people,setPeople]=useState<Person[]>(()=>(edit?.tags??[]).map(x=>({id:x.id,name:nameOf(x)})));
+ // Wave 5 setAlbum: the gallery album of a post with photos (from the post, or the gallery's «+ Добавить»).
+ const [album,setAlbum]=useState<string|null>(()=>edit?edit.albumId??null:params.get('album'));
+ useEffect(()=>{if(edit&&edit.albumId===undefined&&acting)albumOfPost(call,acting.id,edit.id).then(v=>{if(v)setAlbum(v);}).catch(()=>{});},[edit,acting,call]);
  const [postId,setPostId]=useState<string|undefined>(draft?edit?.id:undefined);
  const [busy,setBusy]=useState<''|'publish'|'draft'>('');const [failure,setFailure]=useState('');const [errs,setErrs]=useState<Record<string,string>>({});
  const [uploading,setUploading]=useState(false);const file=useRef<HTMLInputElement>(null);const text=useRef<HTMLTextAreaElement>(null);
@@ -440,7 +444,8 @@ function ComposeForm({edit}:{edit?:Post|undefined}){
  const addMedia=(files:FileList)=>{setFailure('');setPicked([...files]);};
  const max=note?NOTE_MAX:1000;
  const fields=()=>({type:note?'note' as const:'post' as const,...(note&&title.trim()?{title:title.trim()}:{}),body:body.trim(),audience,inFeed,topics,mediaIds:media.map(m=>m.id),
-  ...(poll?{poll:{question:poll.question.trim(),options:poll.options.map(o=>o.trim())}}:{}),interests:interests??[],tags:audience==='all'&&media.length?people.map(p=>p.id):[],...(communityId?{communityId}:{})});
+  ...(poll?{poll:{question:poll.question.trim(),options:poll.options.map(o=>o.trim())}}:{}),interests:interests??[],tags:audience==='all'&&media.length?people.map(p=>p.id):[],...(communityId?{communityId}:{}),
+  ...(album&&media.length&&!communityId&&(audience==='all'||audience==='followers')?{albumId:album}:{})});
  const validate=()=>{const e:Record<string,string>={};
   if(note&&title.trim().length<3)e.title=t('fe.fd.err.title');
   if(note&&body.trim().length<20)e.body=t('fe.fd.err.noteBody');
@@ -587,6 +592,7 @@ function ComposeForm({edit}:{edit?:Post|undefined}){
    {!communityId&&!(audience==='granted'&&!inFeed)&&<Card list className="cmp-feed">
     <ToggleRow title={t('fe.feed.inFeed')} sub={inFeed?t('fe.feed.inFeedOn'):hasMedia?t('fe.fd.onlyProfileGallery'):t('fe.fd.onlyProfile')} on={inFeed} onClick={()=>setInFeed(v=>!v)}/>
    </Card>}
+   {!communityId&&hasMedia&&(audience==='all'||audience==='followers')&&<AlbumField value={album} onChange={setAlbum} audience={audience} onNarrow={()=>setAudience('followers')}/>}
    {err('media')}
    </Group>
    {poll&&<section className="grp" ref={pollRef}><div className="grp-t"><span>{t('fe.fd.pollN',{n:poll.options.length,max:POLL_MAX})}</span><button type="button" onClick={()=>setPoll(null)}>{t('fe.fd.remove')}</button></div>

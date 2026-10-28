@@ -486,7 +486,8 @@ async function postDtos(q, rows, viewer, media, showExplicit) {
       mentions: mentions.filter(m => m.post_id === p.id).map(({ post_id: _, ...m }) => m),
       likes: c.likes, liked: c.liked, replies: c.replies, saved: c.saved,
       publishedAt: p.published_at, editedAt: p.edited_at,
-      ...(p.own ? { state: p.state, rev: p.rev, inFeed: p.in_feed, returned: p.removed_reason } : {}),
+      // The gallery album goes back to its owner only (the post menu and the editor keep it; V21 postAlbum / setAlbum).
+      ...(p.own ? { state: p.state, rev: p.rev, inFeed: p.in_feed, returned: p.removed_reason, ...('album_id' in p ? { albumId: p.album_id } : {}) } : {}),
     };
   });
 }
