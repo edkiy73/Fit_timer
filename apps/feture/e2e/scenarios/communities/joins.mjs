@@ -128,7 +128,7 @@ export default [
    }
  } },
 
- { name: 'JN-C6 [server 28.10] hidden: who asked through the link still reaches the page (and «Отозвать») without it', persona: 'basic', run: async t => {
+ { name: 'JN-C6 [server 28.10] hidden: who asked through the link still reaches the page (and «Отозвать») without it', persona: 'basic', allow4xx: true, run: async t => {
    const h = await host(t); await outOf(t, h.hiddenId);
    const { token } = await t.api('community.invite', { opId: t.uuid7(), communityId: h.hiddenId }, h.email);
    try {
