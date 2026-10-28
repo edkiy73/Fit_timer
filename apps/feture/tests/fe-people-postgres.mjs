@@ -87,8 +87,9 @@ test('every rate limit kind fits the rate_event column (a mismatch fails every c
     const mod = await import(new URL(f, dir).href);
     for (const set of Object.values(mod).filter(v => v && typeof v === 'object')) {
       for (const [action, def] of Object.entries(set)) {
-        const kind = /** @type {any} */ (def)?.rate?.kind;
-        if (kind) assert.match(kind, /^[a-z][a-z_.]{1,31}$/, `${f} ${action}`);
+        const rate = /** @type {any} */ (def)?.rate;
+        const kinds = typeof rate === 'function' ? [rate({ decision: 'like' })?.kind, rate({ decision: 'pass' })?.kind] : [rate?.kind];
+        for (const kind of kinds) if (kind) assert.match(kind, /^[a-z][a-z_.]{1,31}$/, `${f} ${action}`);
       }
     }
   }

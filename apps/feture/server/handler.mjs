@@ -20,7 +20,7 @@ import { limit } from './limits.mjs';
  *   503 «payments_unavailable»)
  * @typedef {{
  *   input: import('zod').ZodType, profile: boolean, write: boolean, ledger?: boolean, allowPaused?: boolean,
- *   rate?: {kind: string, max: number, window: string},
+ *   rate?: {kind: string, max: number, window: string} | ((input: any) => {kind: string, max: number, window: string} | null),
  *   run: (q: Q, ctx: {account: AccountRow, acting: Acting | null, input: any, cfg: Cfg, coreAccountHash: string,
  *     signal: (profileId: string | null | undefined, kind: import('./realtime.mjs').Kind, tag?: string) => void,
  *     channels: (q: Q, profileIds: string[]) => Promise<Record<string, string>>}) => Promise<Record<string, unknown>>
@@ -122,7 +122,7 @@ export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota
       }
       const profileId = header(req, 'x-fe-profile');
       // Per-account limits are committed on their own, before the command: a failed attempt (not found, rule) still counts.
-      const rate = cmd.rate;
+      const rate = typeof cmd.rate === 'function' ? cmd.rate(input) : cmd.rate;
       const replay = rate && typeof input.opId === 'string'
         && (await db.query('select 1 from feture.op_ledger where account_id = $1 and op_id = $2', [account.id, input.opId])).length > 0;
       if (rate && !replay) await db.tx(q => limit(q, account.id, rate.kind, rate.max, rate.window));

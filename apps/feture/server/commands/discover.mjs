@@ -10,6 +10,8 @@ import { photoVerifiedOf } from './verification.mjs';
 import { endConversations, openConversation } from './chats.mjs';
 import { PREMIUM_SQL } from './faces.mjs';
 import { needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
+import { photosFor } from './photos.mjs';
+import { availableScopes, grantedScopes } from '../access.mjs';
 
 /** Slice F: Discover, likes and matches (S1 §11, extract/people-discover-chats.md).
  * The pool: visible profiles with an approved safe avatar, active and unrestricted, no block either way, not related
@@ -151,6 +153,33 @@ export async function cards(q, viewer, ids, media) {
   return ids.map(i => byId.get(i)).filter(Boolean);
 }
 
+/** What the top card shows before anyone scrolls it, so a swipe needs no other read (owner 28.10.2026: one request
+ * per swipe, not a dozen): the profile photos, the follower counts as profile.followers counts them (capped at its page
+ * of 50), whether the viewer follows, and whether there is a private part (and anything of it open to the viewer).
+ * @param {Q} q @param {Acting} viewer @param {any[]} items @param {import('../media/assets.mjs').MediaConfig} media */
+async function deckExtras(q, viewer, items, media) {
+  if (!items.length) return items;
+  const rows = await q.query(
+    `select t.id,
+       (select count(*)::int from (select 1 from feture.follow f join feture.profile x on x.id = f.follower_profile_id
+          where f.target_profile_id = t.id and x.state = 'active' and not feture.blocked($2, x.id) limit 50) a) followers,
+       (select count(*)::int from (select 1 from feture.follow f join feture.profile x on x.id = f.target_profile_id
+          where f.follower_profile_id = t.id and x.state = 'active' and not feture.blocked($2, x.id) limit 50) b) following,
+       exists (select 1 from feture.follow f where f.follower_profile_id = $2 and f.target_profile_id = t.id) i_follow,
+       coalesce((select s.private_on from feture.profile_settings s where s.profile_id = t.id), false) private_on
+     from unnest($1::uuid[]) t(id)`, [items.map(c => c.id), viewer.profileId]);
+  const byId = new Map(rows.map(r => [r.id, r]));
+  const out = [];
+  for (const c of items) {
+    const r = byId.get(c.id);
+    const exists = !!r?.private_on && (await availableScopes(q, c.id)).length > 0;
+    const open = exists && (await grantedScopes(q, c.id, viewer)).length > 0;
+    out.push({ ...c, photos: await photosFor(q, c.id, viewer.profileId, media), followers: r?.followers ?? 0, following: r?.following ?? 0,
+      iFollow: !!r?.i_follow, private: { exists, open } });
+  }
+  return out;
+}
+
 /** Records (or replaces) the viewer's decision about a profile. @param {Q} q @param {Acting} acting @param {string} target
  * @param {'like' | 'pass'} decision @param {'discover' | 'profile' | 'likes'} source */
 async function decide(q, acting, target, decision, source) {
@@ -287,7 +316,8 @@ const run = {
        order by (select count(*) from feture.interest i join feture.interest j on j.topic_id = i.topic_id and j.profile_id = $1 and j.vis = 'public' and j.value is not null
                  where i.profile_id = p.id and i.vis = 'public' and i.value is not null) desc, p.created_at desc, p.id
        limit $16`, [viewer.profileId, ...filterParams(f, loc), input.limit]);
-    return { off: false, items: await cards(q, viewer, rows.map(r => r.id), cfg.media) };
+    const items = await cards(q, viewer, rows.map(r => r.id), cfg.media);
+    return { off: false, items: await deckExtras(q, viewer, items, cfg.media) };
   },
 
   async 'discover.decide'(q, { acting: a, input }) {

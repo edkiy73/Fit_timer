@@ -184,3 +184,29 @@ test('discover.filter: defaults until saved, the saved one after, per profile; a
     assert.deepEqual((await call('ua', pair, { action: 'discover.filter' })).filter, defaults);
   } finally { await pg.close(); }
 });
+
+test('deck cards carry what the top card shows (photos, follower counts, follow, private part); passes and likes have their own daily limits', async () => {
+  const { pg, db, call, member } = await world();
+  try {
+    const a = await member('ua', 'Alex'), b = await member('ub', 'Kira'), c = await member('uc', 'Noa');
+    await call('uc', c, { action: 'follow.set', opId: op(), profileId: b, on: true });
+    await call('ua', a, { action: 'follow.set', opId: op(), profileId: b, on: true });
+    const items = (await call('ua', a, { action: 'discover.deck' })).items;
+    const kira = items.find((/** @type {any} */ x) => x.id === b);
+    assert.equal(kira.photos.length, 1);
+    assert.equal(kira.followers, 2);
+    assert.equal(kira.following, 0);
+    assert.equal(kira.iFollow, true);
+    assert.deepEqual(kira.private, { exists: false, open: false });
+    const noa = items.find((/** @type {any} */ x) => x.id === c);
+    assert.equal(noa.following, 1);
+    assert.equal(noa.iFollow, false);
+    // A pass is counted apart from likes: a day of likes used up still lets the person skip.
+    const [acc] = await db.query('select account_id from feture.profile_member where profile_id = $1', [a]);
+    await db.query(`insert into feture.rate_event (account_id, kind) select $1, 'discover.decide' from generate_series(1, 500)`, [acc.account_id]);
+    assert.equal((await call('ua', a, { action: 'discover.decide', opId: op(), profileId: b, decision: 'like' })).error, 'rate_limited');
+    assert.equal((await call('ua', a, { action: 'discover.decide', opId: op(), profileId: b, decision: 'pass' })).decision, 'pass');
+    // A passed person does not come back in the deck.
+    assert.deepEqual((await call('ua', a, { action: 'discover.deck' })).items.map((/** @type {any} */ x) => x.id), [c]);
+  } finally { await pg.close(); }
+});
