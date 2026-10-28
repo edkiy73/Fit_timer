@@ -270,3 +270,21 @@ test('event.applicationWithdraw: the applicant only, pending or approved; admiss
     assert.equal((await call('ub', b, { action: 'event.applicationWithdraw', opId: op(), applicationId: app3.id })).status, 404);
   } finally { await pg.close(); }
 });
+
+test('applications (owner check 28.10.2026): a declined one cannot be sent again, the organizer may still approve it; a withdrawn one can', async () => {
+  const { pg, call, a, b, publish } = await world();
+  try {
+    const id = await publish('ua', a, { requiresApplication: true, questions: ['Был ли опыт?'] });
+    const apply = () => call('ub', b, { action: 'event.apply', opId: op(), eventId: id, answers: ['Да, был'], requirementsAccepted: true });
+    const app = await apply();
+    const [x] = (await call('ua', a, { action: 'event.applications', eventId: id, state: 'pending' })).items;
+    const no = await call('ua', a, { action: 'event.applicationDecide', opId: op(), applicationId: app.id, rev: x.rev, approve: false });
+    const again = await apply();
+    assert.deepEqual([again.status, again.rule], [422, 'application_declined']);
+    // «Всё-таки одобрить» still works on the same application (a second open row would have broken it).
+    assert.equal((await call('ua', a, { action: 'event.applicationDecide', opId: op(), applicationId: app.id, rev: no.rev, approve: true })).state, 'approved');
+    assert.ok((await call('ub', b, { action: 'event.get', eventId: id })).event.exactAddress);
+    await call('ub', b, { action: 'event.applicationWithdraw', opId: op(), applicationId: app.id });
+    assert.equal((await apply()).state, 'pending');
+  } finally { await pg.close(); }
+});

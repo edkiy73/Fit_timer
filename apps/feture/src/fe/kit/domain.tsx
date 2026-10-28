@@ -2,7 +2,7 @@ import React,{type CSSProperties,type ReactNode} from 'react';
 import {useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Check,ChevronLeft,Clock,Heart,Image as ImageIcon,Lock,Plus,Ticket,UserRound,Users,type LucideIcon} from 'lucide-react';
-import {Av,Btn,Card,IconBtn,Note,Skel,Switch,plate} from './index';
+import {Av,Btn,Card,IconBtn,Note,Row,Skel,Switch,plate} from './index';
 import {VideoPlayer} from './av';
 import './domain.css';
 
@@ -113,6 +113,13 @@ export function Veil({title,text,lock=true,action,error,tall,toggles}:{title:Rea
   <div className="veil-content" aria-hidden="true"><div className="bar-sk k-w70"/><div className="bar-sk"/><div className="bar-sk k-w50"/>{toggles?<div className="vt"><i/><i/><i/></div>:<div className="bar-sk"/>}</div>
   <div className="veil-glass">{lock&&<div className="lockdot"><Lock/></div>}<b>{title}</b>{text&&<p>{text}</p>}{action&&<div className="veil-act">{action}</div>}{error&&<p className="note" role="alert">{error}</p>}</div>
  </div>;
+}
+
+/** My request or application as one block (owner, 28.10.2026): the state icon, the state, a line under it (when it
+ * was sent, what happens next) and the action at the end («Отозвать»). The community join request and the event
+ * application use the same card. `tone`: wait (on review), ok (admitted), bad (declined), none (not sent). */
+export function StatusCard({tone,icon,title,sub,action}:{tone?:'wait'|'ok'|'bad'|undefined,icon:LucideIcon,title:ReactNode,sub?:ReactNode,action?:ReactNode}){
+ return <Card list className={'k-status'+(tone?' k-status-'+tone:'')}><Row icon={icon} title={title} sub={sub} end={action}/></Card>;
 }
 
 /* ---------------- Interests ---------------- */

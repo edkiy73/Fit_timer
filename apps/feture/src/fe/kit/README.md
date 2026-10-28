@@ -30,6 +30,7 @@ A new component or variant ships with its story in the same PR.
 | Tabs | `Seg` — the only tab control: counts, dots, scrolls at 5+ |
 | Lists | `Row` (icon/avatar, title, sub, value, badge, chevron), `ToggleRow`, `SelectRow` |
 | Choice pills | `Chip`, `Chips` |
+| One from a list as rows | `RadioList` (rows carry their own frame: never put it in a `Card`; a line under a row's title explains it) |
 | Several from a list as rows | `CheckList` (a box per row, a line under the title: «не запрошено», «уже открыто») |
 | Text fields | `Field` (label + error) around `Input`, `TextArea`, `SearchInput`, `Select`; files via `FilePick` |
 | Overlays | `Sheet` (bottom sheet; `dirty` — unsaved choices: ✕ / scrim / Esc ask «Закрыть без сохранения?»), `Ask` (confirmation), `Layer` (portal for custom overlays inside the kit only) |
@@ -56,7 +57,7 @@ Product pieces that repeat or carry their own look. Screens use these, never the
 |---|---|
 | Header over a cover / of a chat | `CoverBar` (glass buttons, title shows on scroll), `PersonBar` (‹, avatar + name + line, opens the profile) |
 | Event | `EventTile` (`eventCard()`: card / `row` / still preview), `EventHero` (cover, glass labels, title, status), `Rsvp` («Интересно / Иду / Не иду»), `Announcement` |
-| Community | `CommunityHead` (cover, picture, name, meta; loading shape), `Discussion` (row with pinned mark and host ⋯), `Veil` (closed content under glass) |
+| Community | `CommunityHead` (cover, picture, name, meta; loading shape), `Discussion` (row with pinned mark and host ⋯), `Veil` (closed content under glass), `StatusCard` (my join request / event application as one block: icon, state, line, «Отозвать» at the end; tones wait / ok / bad) |
 | Create | `Swatches` (cover colour plates) |
 | Interests | `AnswerScale` (1–10 with «обсудить» / «граница» marks) |
 | People | `PersonName` (name on a photo card), `PersonLine` + `RequestCard` + `Answer` (requests and applications), `LikeTile`, `Radar`, `Soon` («Скоро»: a feature not open yet — art, label, title, points, buttons), `Typing` («печатает…» under chat messages) |

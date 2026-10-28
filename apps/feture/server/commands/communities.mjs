@@ -52,12 +52,29 @@ async function visible(q, id, viewer, invite) {
      from feture.community c where c.id = $1`, [id, viewer.profileId, viewer.accountId]);
   if (!c) fail(404, 'not_found');
   if (c.can_see) return c;
-  if (invite && c.state === 'published' && c.privacy === 'hidden') {
-    const [inv] = await q.query(`select 1 from feture.community_invite where token_hash = $1 and community_id = $2 and revoked_at is null and expires_at > now()`, [sha256(invite), id]);
+  if (c.state === 'published' && c.privacy === 'hidden') {
     const [{ b }] = await q.query('select feture.blocked($1, $2) b', [viewer.profileId, c.owner_profile_id]);
-    if (inv && !b) return c;
+    if (b) fail(404, 'not_found');
+    if (invite) {
+      const [inv] = await q.query(`select 1 from feture.community_invite where token_hash = $1 and community_id = $2 and revoked_at is null and expires_at > now()`, [sha256(invite), id]);
+      if (inv) return c;
+    }
+    // Someone who asked to join through a link keeps seeing the page (the request and «Отозвать») without the link.
+    const [r] = await q.query(`select 1 from feture.community_request where community_id = $1 and profile_id = $2 and state = 'pending'`, [id, viewer.profileId]);
+    if (r) return c;
   }
   fail(404, 'not_found');
+}
+
+/** After a decline the same profile may ask again only after this many days (owner check of join flows, 28.10.2026). */
+const REASK_DAYS = 7;
+/** The latest decided request of a profile if it was declined less than REASK_DAYS ago: when a new one may be sent.
+ * @param {Q} q @param {string} communityId @param {string} profileId */
+async function declinedUntil(q, communityId, profileId) {
+  const [r] = await q.query(
+    `select state, decided_at + make_interval(days => $3) until from feture.community_request where community_id = $1 and profile_id = $2 and state <> 'pending'
+     order by created_at desc limit 1`, [communityId, profileId, REASK_DAYS]);
+  return r?.state === 'declined' && new Date(r.until).getTime() > Date.now() ? new Date(r.until).toISOString() : null;
 }
 
 /** @param {Q} q @param {string} communityId @param {string} profileId */
@@ -165,6 +182,7 @@ registerApprovalKind('community.join', {
     }
     const m = await membership(q, c.communityId, row.profile_id);
     if (m?.state === 'active') fail(409, 'conflict');
+    if (await declinedUntil(q, c.communityId, row.profile_id)) fail(409, 'conflict', { rule: 'declined_recently' });
     if (cm.privacy === 'open' && !banned) await joinNow(q, c.communityId, row.profile_id, row.requested_by);
     else await q.query(`insert into feture.community_request (community_id, profile_id, answer, acted_by) values ($1, $2, $3, $4)`, [c.communityId, row.profile_id, c.answer, row.requested_by]);
   },
@@ -221,7 +239,11 @@ const run = {
       `select count(*) filter (where state = 'active')::int members,
               (select count(*)::int from feture.community_request r where r.community_id = $1 and r.state = 'pending') requests
        from feture.community_member where community_id = $1`, [c.id]);
-    const [req] = await q.query(`select id, state from feture.community_request where community_id = $1 and profile_id = $2 order by created_at desc limit 1`, [c.id, viewer.profileId]);
+    const [req] = await q.query(`select id, state, created_at from feture.community_request where community_id = $1 and profile_id = $2 order by created_at desc limit 1`, [c.id, viewer.profileId]);
+    const declined = req?.state === 'declined' ? await declinedUntil(q, c.id, viewer.profileId) : null;
+    // A couple's join the partner still has to approve (it can be taken back with decide.cancel).
+    const [waiting] = m?.state === 'active' ? [] : await q.query(
+      `select id from feture.partner_approval where profile_id = $1 and kind = 'community.join' and target_id = $2 and state = 'pending' and expires_at > now() limit 1`, [viewer.profileId, c.id]);
     const hosts = await q.query(
       `select p.id, p.kind, p.handle, p.name, cm.role from feture.community_member cm join feture.profile p on p.id = cm.profile_id
        where cm.community_id = $1 and cm.state = 'active' and cm.role in ('owner', 'host') and p.state = 'active' and not feture.blocked($2, p.id)`, [c.id, viewer.profileId]);
@@ -237,7 +259,9 @@ const run = {
         rules: c.rules, placeId: c.place_id, plate: c.plate, cover, members: counts.members, hosts,
         lastTalkAt: iso(pulse.last_talk_at), nextEventAt: iso(pulse.next_event_at),
         me: m ? { role: m.role, state: m.state, listed: m.listed, readOnly: m.read_only, muted: m.muted } : null,
-        request: req?.state === 'pending' ? { id: req.id } : null,
+        request: req?.state === 'pending' ? { id: req.id, at: iso(req.created_at) } : null,
+        declined: declined ? { until: declined } : null,
+        waiting: waiting ? { id: waiting.id } : null,
         ...(host ? { pendingRequests: counts.requests } : {}),
         ...(c.own ? { state: c.state, rev: c.rev, pendingChange: c.pending_change, rejectReason: c.reject_reason } : {}),
       },
@@ -293,6 +317,8 @@ const run = {
     const { banned } = await keptOut(q, c, acting.profileId);
     const [{ pending }] = await q.query(`select exists (select 1 from feture.community_request where community_id = $1 and profile_id = $2 and state = 'pending') pending`, [c.id, acting.profileId]);
     if (pending) fail(409, 'conflict', { state: 'pending' });
+    const until = await declinedUntil(q, c.id, acting.profileId);
+    if (until) fail(422, 'rule_violation', { rule: 'declined_recently', until });
     if (c.privacy !== 'open' && c.join_question && input.answer.length < 10) fail(400, 'invalid_input', { fields: ['answer'] });
     // A couple joining shows the couple there: a widening the partner decides on when they asked to.
     if (needsPartner(acting, 'community.join')) {

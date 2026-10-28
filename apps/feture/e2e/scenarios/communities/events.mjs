@@ -102,7 +102,7 @@ export default [
    await t.tap('button.check'); await t.tap('.ctabar .btn');
    await toast(t, 'Заявка отправлена');
    if ((await get(t, id)).me.application?.state !== 'pending') throw new Error('application not pending');
-   await t.tap('.ctabar .btn:has-text("Отозвать заявку")');
+   await t.tap('.k-status .btn:has-text("Отозвать")');
    await t.see(dialog); await t.page.locator(dialog + ' .btn.danger').click({ timeout: 5000 });
    await toast(t, 'Заявка отозвана');
    // a withdrawn application is history: «Подать заявку» comes back
@@ -128,7 +128,7 @@ export default [
  { name: 'E03 approved guest: RSVP going/interested/not, visibility, address, save, share, calendar', persona: 'full', run: async t => {
    const id = evId();
    await t.go('/n/events/' + id);
-   await t.see('.statusline:has-text("одобрена")');
+   await t.see('.k-status:has-text("одобрена")');
    await t.tap('.rsvp .r-going'); await toast(t, 'Ты идёшь');
    if ((await get(t, id)).me.rsvp?.status !== 'going') throw new Error('rsvp going not saved');
    const was = (await get(t, id)).me.rsvp?.showInList;

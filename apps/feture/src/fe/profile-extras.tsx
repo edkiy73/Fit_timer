@@ -6,8 +6,9 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicBase} from '../api-url';
 import {Ban,Check,ChevronDown,Crown,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,Flag,Heart,History,Info,Link as LinkIcon,Lock,LockOpen,MapPin,MessageCircle,ShieldCheck,Undo2,Users,X} from 'lucide-react';
-import {Alert,Av,Bar,Btn,Card,Empty,Group,H,IconBtn,Layer,Note,PersonName,PhotoTrack,Pill,RadioList,Row,Seg,Skel,TextArea,ToggleRow,Veil,View,plate} from './kit';
+import {Alert,Av,Bar,Btn,Card,Empty,Group,H,IconBtn,Layer,Note,PersonName,PhotoTrack,Pill,Row,Seg,Skel,ToggleRow,Veil,View,plate} from './kit';
 import {useFe} from './session';
+import {ReportSheet} from './report';
 import {PhotoBadge} from './photo-check';
 import {faceFields,NameBadges} from './faces';
 import {PostCard,postSchema,type Post} from './feed';
@@ -487,24 +488,10 @@ export function LinksSection({profileId,inert}:{profileId:string,inert?:boolean|
 
 /* ---------- the person menu (S02) ---------- */
 const feedHiddenRes=z.object({ok:z.literal(true),items:z.array(z.object({kind:z.string(),target_id:z.string()}).passthrough())}).passthrough();
-const REASONS=['threat','private','minor','spam','other'] as const;
 
 function Report({profileId,onClose,onDone}:{profileId:string,onClose:()=>void,onDone:(msg:string,blocked:boolean)=>void}){
- const {call}=useFe();const {t}=useI18n();
- const [why,setWhy]=useState<typeof REASONS[number]|null>(null);const [details,setDetails]=useState('');const [alsoBlock,setAlso]=useState(true);
- const [busy,setBusy]=useState(false);const [err,setErr]=useState('');const op=useRef(newOpId());
- const send=async()=>{
-  if(!why){setErr(t('fe.px.rp.choose'));return;}
-  setBusy(true);setErr('');
-  try{await call('report.create',{opId:op.current,targetType:'profile',targetId:profileId,reason:why,details:details.trim().slice(0,500),alsoBlock},ok);onDone(t('fe.px.rp.sent'),alsoBlock);}
-  catch(e){setErr(pxError(e,t));op.current=newOpId();}finally{setBusy(false);}
- };
- return <Sheet title={t('fe.px.rp.title')} onClose={onClose} foot={<Btn kind="danger" onClick={send} disabled={busy}>{t('fe.px.rp.send')}</Btn>}>
-  <RadioList bare label={t('fe.px.rp.reason')} value={why} onChange={k=>{setWhy(k);setErr('');}} options={REASONS.map(k=>[k,t('fe.px.rp.'+k)] as const)}/>
-  <label className="field mt16"><span>{t('fe.px.rp.details')}<i>{t('fe.px.rp.optional')}</i></span><TextArea rows={3} maxLength={500} value={details} onChange={e=>setDetails(e.target.value)}/></label>
-  <Card list><ToggleRow title={t('fe.px.rp.alsoBlock')} sub={t('fe.px.rp.alsoBlockSub')} on={alsoBlock} onClick={()=>setAlso(v=>!v)}/></Card>
-  {err&&<Alert kind="err" noIcon className="mt12">{err}</Alert>}
- </Sheet>;
+ const {t}=useI18n();
+ return <ReportSheet targetType="profile" targetId={profileId} block onClose={onClose} onDone={b=>onDone(t('fe.px.rp.sent'),b)}/>;
 }
 
 function Block({profileId,name,onClose,onDone}:{profileId:string,name:string,onClose:()=>void,onDone:(msg:string)=>void}){
