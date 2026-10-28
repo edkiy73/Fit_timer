@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryRouter, RouterProvider } from 'react-router';
@@ -37,10 +37,9 @@ beforeEach(() => {
 });
 
 describe('FetUre starter', () => {
-  it('shows the public Welcome and keeps account accessible', async () => {
+  it('sends the root to the app (its own welcome when signed out) and keeps account accessible', async () => {
     const router=renderApp();
-    expect(await screen.findByRole('heading',{name:/Открывай себя/i})).toBeTruthy();
-    expect(screen.getByRole('link',{name:/Вход или регистрация/i}).getAttribute('href')).toBe('/design/A02');
+    await waitFor(()=>expect(router.state.location.pathname).toBe('/n/feed'));
     await router.navigate('/account');
     expect(await screen.findByRole('textbox',{name:'Email'})).toBeTruthy();
   });
@@ -109,10 +108,10 @@ describe('FetUre starter', () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ok:true}),{status:200,headers:{'Content-Type':'application/json'}}));
     signIn();
     const user = userEvent.setup();
-    renderApp('/account');
+    const router = renderApp('/account');
     expect(await screen.findByText(/demo@example\.com/)).toBeTruthy();
     await user.click(screen.getByRole('button', {name:t['account.signOut']}));
-    expect(await screen.findByRole('heading',{name:/Открывай себя/i})).toBeTruthy();
+    await waitFor(()=>expect(router.state.location.pathname).toBe('/n/feed'));
     vi.restoreAllMocks();
   });
 
@@ -121,7 +120,7 @@ describe('FetUre starter', () => {
     const router = renderApp('/does-not-exist');
     expect(await screen.findByRole('heading', {name:t['route.notFoundTitle']})).toBeTruthy();
     await user.click(screen.getByRole('button', {name:t['route.home']}));
-    expect(router.state.location.pathname).toBe('/');
+    await waitFor(()=>expect(router.state.location.pathname).toBe('/n/feed'));
   });
 
   it('recovers the email-code form after resend and lets the address be corrected', async () => {
