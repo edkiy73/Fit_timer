@@ -2,9 +2,13 @@ import {useCallback,useEffect,useRef,useState,type ReactNode} from 'react';
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {ChevronRight,Clock,Lock,LockOpen,Plus,Send,X} from 'lucide-react';
+import {Camera,ChevronRight,Clock,Eye,Lock,LockOpen,MoreHorizontal,PenLine,Pencil,Send,Sparkles,Trash2,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Av,Btn,Card,CheckList,Chips,ChoiceChips,Empty,Group,Note,PersonLine,Pill,Quota,RequestCard,Row,SectionLabel,SelectRow,Sheet,Skel,Stack,ToggleRow,VaultHead,Veil} from './kit';
+import {AddCard,Alert,Av,Btn,Card,CheckList,Chips,ChoiceChips,Counter,Empty,Field,FilePick,Group,IconBtn,Note,PersonLine,PhotoAdd,PhotoSlot,PhotoSlots,Pill,Quota,RequestCard,Row,SectionLabel,SelectRow,Sheet,Skel,Stack,TextArea,VaultHead,Veil} from './kit';
+import {Uploader} from './kit/Uploader';
+import {FIELD,textLength,useChecks} from './kit/validate';
+import {useSendPhoto} from './media-upload';
+import {InterestSheet,Jars,TopicPicker,sortJars,useInterests} from './interests';
 import {AgeCheckLink,useAgeResume} from './age-check';
 import {useFe} from './session';
 import {when} from './feed';
@@ -35,15 +39,15 @@ const outItem=z.object({id:z.uuid(),scopes,state:z.string(),created_at:z.string(
  granted:open.nullable().optional(),profile:who});
 export type OutItem=z.infer<typeof outItem>;
 export const outRes=z.object({ok:z.literal(true),items:z.array(outItem),next:z.string().nullable().optional(),quota:quotaShape.optional()});
-const privMedia=z.object({src:z.record(z.string(),z.string()).nullable(),pending:z.boolean().optional(),kind:z.string().optional(),watermark:z.string().nullable().optional()}).passthrough();
+const privMedia=z.object({id:z.uuid().optional(),src:z.record(z.string(),z.string()).nullable(),pending:z.boolean().optional(),kind:z.string().optional(),watermark:z.string().nullable().optional()}).passthrough();
 const priv=z.object({ok:z.literal(true),exists:z.boolean(),own:z.boolean().optional(),on:z.boolean().optional(),scopes:scopes.optional(),until:z.string().nullable().optional(),
- text:z.string().nullable().optional(),media:z.array(privMedia).optional(),available:scopes.optional(),canRequest:z.boolean().optional(),reason:z.string().nullable().optional()}).passthrough();
+ text:z.string().nullable().optional(),media:z.array(privMedia).optional(),
+ interests:z.array(z.object({topicId:z.string(),value:z.number().nullable().optional(),mark:z.enum(['discuss','hard']).nullable().optional(),dir:z.array(z.string()).nullable().optional(),vis:z.enum(['public','granted','only']).nullable().optional()})).optional(),available:scopes.optional(),canRequest:z.boolean().optional(),reason:z.string().nullable().optional()}).passthrough();
 type Priv=z.infer<typeof priv>;
 const ok=z.object({ok:z.literal(true)}).passthrough();
 const requestRes=z.object({ok:z.literal(true),quota:quotaShape}).passthrough();
 const declineRes=z.object({ok:z.literal(true),reaskDays:z.number(),undoUntil:z.string()}).passthrough();
 const grantRes=z.object({ok:z.literal(true),pending:z.unknown().optional()}).passthrough();
-const interestsRes=z.object({ok:z.literal(true),items:z.array(z.object({vis:z.string().nullable().optional()}).passthrough())});
 type CallOpts={profileId?:string,asAccount?:boolean};
 
 export const nameOf=(p:Who)=>p?(p.name||(p.handle?'@'+p.handle:'?')):'—';
@@ -227,37 +231,58 @@ export function GrantCard({g,onEdit,onRevoke}:{g:GrantItem,onEdit:()=>void,onRev
 
 /* ---------------- «Я → Приватное» (X01) ---------------- */
 
-/** `mePrivLayer()` — access requests (grant sheet, decline with undo), what access opens (→ P04), who has access (three,
- * «Все · N» → P07), and the settings: the private part switch and who may ask. */
+const PRIV_MAX=18;
+const ownSrc=(m:{src:Record<string,string>|null})=>m.src?(m.src.thumb??m.src.card??m.src.full??null):null;
+
+/** `mePrivLayer()` — the tab IS the private part (owner, 29.10.2026): its switch and «Кто может просить доступ» on top,
+ * then what it opens as it will be seen — «Описание», «Фото и видео», «Интересы» (each empty one is the kit's «add»
+ * card; an interest is added right here with «По доступу» preset) — then «Доступ»: who has it, «⋯» to change or revoke,
+ * and the access center. Requests waiting for an answer come first. A couple's part holds interests only. */
 export function PrivateLayer({profileId,on,requestsFrom,onChanged}:{profileId:string,on:boolean,requestsFrom:'all'|'matches'|'none',onChanged:()=>void}){
  const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();const w=useAccessWords();const decline=useDecline();
  const [mine,setMine]=useState<Priv|null>(null);const [reqs,setReqs]=useState<z.infer<typeof incoming>|null>(null);const [given,setGiven]=useState<GrantItem[]>([]);
- const [jarsG,setJarsG]=useState(0);
  const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);
- const [grantFor,setGrantFor]=useState<Incoming|null>(null);const [asking,setAsking]=useState<'off'|'revokeAll'|null>(null);
+ const [grantFor,setGrantFor]=useState<Incoming|null>(null);const [asking,setAsking]=useState<'off'|null>(null);
+ const [sheet,setSheet]=useState<{k:'desc'}|{k:'media',i:number}|{k:'grant',g:GrantItem}|{k:'jar',id:string}|{k:'pick'}|null>(null);
+ const [viewing,setViewing]=useState<number|null>(null);const [picked,setPicked]=useState<File[]|null>(null);
+ const file=useRef<HTMLInputElement>(null);const sendPrivate=useSendPhoto('private');
+ const jars=useInterests();
  const cp=acting?.kind==='couple';
- const load=useCallback(()=>{setError(null);Promise.all([call('private.get',{profileId},priv,{fresh:true}),call('access.lists',{tab:'incoming'},incoming,{fresh:true}),call('access.lists',{tab:'byme'},grantsRes,{fresh:true}),
-  call('interests.list',{profileId},interestsRes).then(r=>r.items.filter(j=>j.vis==='granted').length).catch(()=>0)])
-  .then(([a,b,c,d])=>{setMine(a);setReqs(b);setGiven(c.items);setJarsG(d);}).catch(setError);},[call,profileId]);
+ const load=useCallback(()=>{setError(null);Promise.all([call('private.get',{profileId},priv,{fresh:true}),call('access.lists',{tab:'incoming'},incoming,{fresh:true}),call('access.lists',{tab:'byme'},grantsRes,{fresh:true})])
+  .then(([a,b,c])=>{setMine(a);setReqs(b);setGiven(c.items);}).catch(setError);},[call,profileId]);
  useEffect(()=>{load();},[load]);
+ // A fresh upload has no served copy for a few seconds (it is being checked): ask again until the picture is there.
+ const waiting=!!mine?.media?.some(m=>!m.src);
+ useEffect(()=>{if(!waiting)return;let n=0,id=0,live=true;
+  const poll=()=>{id=window.setTimeout(()=>{n++;call('private.get',{profileId},priv,{fresh:true}).then(r=>{if(!live)return;setMine(r);if(r.media?.some(m=>!m.src)&&n<20)poll();}).catch(()=>{if(live&&n<20)poll();});},4000);};
+  poll();return ()=>{live=false;window.clearTimeout(id);};},[waiting,call,profileId]);
  const changed=()=>{load();onChanged();};
  const grants=useGrantActions(changed);
  // A widening change of the couple (switching the private part on, wider «who may ask») may wait for the partner.
  const act=async(fn:()=>Promise<Record<string,unknown>>,msg:string)=>{setBusy(true);try{const r=await fn();toast(r.pending?t('fe.ca.waitPartner'):msg,{type:'ok'});changed();return true;}catch(e){toast(w.err(e),{type:'err'});return false;}finally{setBusy(false);}};
  if(error)return <Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>;
  if(!mine||!reqs)return <Skel kind="card" rows={2}/>;
- const editor=()=>navigate('/n/me/edit?only=priv');
- const enable=()=>void act(()=>call('private.setOn',{opId:newOpId(),on:true},ok),t(cp?'fe.mx.pr.onDoneUs':'fe.mx.pr.onDone'));
- const offAsk=asking==='off'&&<Ask icon={Lock} danger title={t('fe.mx.pr.offTitle')} busy={busy}
-  text={[given.length||reqs.items.length?t('fe.mx.pr.offWhat',{g:given.length,q:reqs.items.length}):t('fe.mx.pr.offAll'),t('fe.mx.pr.offRest')].join(' ')} ok={t('fe.mx.pr.offOk')}
-  onCancel={()=>setAsking(null)} onOk={async()=>{if(await act(()=>call('private.setOn',{opId:newOpId(),on:false,confirm:true},ok),t(cp?'fe.mx.pr.offDoneUs':'fe.mx.pr.offDone')))setAsking(null);}}/>;
- if(!on)return <Group title={t('fe.priv.title')} action={<span className="aud">{t('fe.mx.pr.offTag')}</span>}>
-  <div className="vault off"><div className="vault-b"><p className="vault-lead">{cp?t('fe.mx.pr.leadUs'):t('fe.mx.pr.lead')}</p>
-   <Btn icon={LockOpen} disabled={busy} busy={busy} onClick={enable}>{t('fe.mx.pr.enable')}</Btn></div></div></Group>;
- const media=Array.isArray(mine.media)?mine.media.length:0;const txt=mine.text??'';
- const bits=[txt?t('fe.mx.pr.bit.text'):'',media?t('fe.mx.pr.bit.media',{n:media}):'',jarsG?t('fe.mx.pr.bit.jars',{n:jarsG}):''].filter(Boolean);
+ // `interests` is the private part's own list (private.get); the profile's «По доступу» ones while a server without it answers.
+ const media=mine.media??[];const txt=mine.text??'';const privJars=mine.interests??(jars.items??[]).filter(j=>j.vis==='granted');
+ const empty=!txt&&!media.length&&!privJars.length;
+ // Adding the first thing to a switched-off part switches it on: an empty part has nothing to switch.
+ const ensureOn=async()=>{if(on)return;try{await call('private.setOn',{opId:newOpId(),on:true},ok);}catch{/* the content is saved either way */}};
+ const saveMedia=async(ids:string[],msg:string)=>{setBusy(true);
+  try{await call('private.setMedia',{opId:newOpId(),assetIds:ids},ok);await ensureOn();toast(msg,{type:'ok'});changed();}
+  catch(e){toast(w.err(e),{type:'err'});}finally{setBusy(false);}};
+ const ids=media.map(m=>m.id).filter((x):x is string=>!!x);
+ const sub=empty?t(cp?'fe.mp.sub.emptyUs':'fe.mp.sub.empty'):on?t(cp?'fe.mp.sub.onUs':'fe.mp.sub.on'):t('fe.mp.sub.off');
+ const toggle=()=>{if(on)setAsking('off');else void act(()=>call('private.setOn',{opId:newOpId(),on:true},ok),t(cp?'fe.mx.pr.onDoneUs':'fe.mx.pr.onDone'));};
+ const name=(id:string)=>{const x=jars.topics.find(o=>o.id===id);return x?(locale==='en'?x.en:x.ru):id;};
+ const addJar=()=>setSheet({k:'pick'});
  const available=reqs.available??[];
+ const cur=sheet?.k==='media'?media[sheet.i]:undefined;
  return <>
+  <section className={'vault'+(on&&!empty?'':' off')} id="privHead">
+   <VaultHead title={t('fe.priv.title')} label={t('fe.priv.title')} sub={sub} on={on&&!empty} disabled={empty||busy} onToggle={toggle}/>
+   <Card list className="mt12"><SelectRow row label={t('fe.mx.pr.reqFrom')} value={requestsFrom} options={(['all','matches','none'] as const).map(v=>[v,t('fe.mx.pr.from.'+v)] as const)}
+    onChange={v=>void act(()=>call('profile.setVisibility',{opId:newOpId(),setting:'requestsFrom',value:v},ok),t('fe.mx.saved'))}/></Card>
+  </section>
   {reqs.items.length>0&&<Group title={<>{t('fe.priv.requests')} · {reqs.items.length}</>}><Stack gap={2}>
    {reqs.items.map(r=><RequestCard key={r.id}
     person={<PersonLine av={<Av name={nameOf(r.profile)} seed={r.profile?.id??r.id} src={r.profile?.avatar}/>} label={nameOf(r.profile)} onOpen={()=>r.profile&&navigate('/n/people/'+r.profile.id)}
@@ -267,31 +292,68 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged}:{profileId:st
     <Chips className="mt12">{r.scopes.map(s=><Pill key={s}>{t('fe.priv.scope.'+s)}{r.alreadyOpen?.scopes.includes(s)?' · '+t('fe.ac.gr.open'):''}</Pill>)}</Chips>
    </RequestCard>)}
   </Stack></Group>}
-  <Group title={t('fe.mx.pr.opens')} action={<AudTag k="granted"/>}>
-   {bits.length?<Card className="blk-btn vault" onClick={editor}>
-     <VaultHead inCard title={bits.join(' · ')}/>
-     {txt&&<span className="blk-bio">{txt.slice(0,160)}</span>}<span className="chv"><ChevronRight/></span></Card>
-    :<Card><button type="button" className="ph-empty" onClick={editor}><span className="pe-ic"><Lock/></span>
-     <span className="tx"><b>{t('fe.mx.pr.add')}</b><small>{cp?t('fe.mx.pr.addSubUs'):t('fe.mx.pr.addSub')}</small></span><Plus/></button></Card>}
+  {!cp&&<Group id="privDesc" title={t('fe.mp.desc')}>
+   {txt?<Card className="blk-btn" label={t('fe.mx.editOf',{title:t('fe.mp.desc')})} onClick={()=>setSheet({k:'desc'})}><span className="blk-bio">{txt}</span><span className="chv"><ChevronRight/></span></Card>
+    :<AddCard icon={PenLine} title={t('fe.mp.descAdd')} sub={t('fe.mp.descAddSub')} onClick={()=>setSheet({k:'desc'})}/>}
+  </Group>}
+  {!cp&&<Group id="privMedia" title={<>{t('fe.mp.media')}{media.length?' · '+media.length:''}</>}>
+   {media.length?<PhotoSlots priv>{[...media.map((m,i)=><PhotoSlot key={m.id??i} id={m.id??String(i)} src={ownSrc(m)} waiting={!m.src} review={m.pending?t('fe.mx.ph.review'):undefined}
+     openLabel={t('fe.mx.ph.nOf',{n:i+1,total:media.length})} onOpen={()=>setSheet({k:'media',i})}/>),
+     ...(media.length<PRIV_MAX?[<PhotoAdd key="add" disabled={busy} busy={busy} onClick={()=>file.current?.click()} label={t('fe.mp.mediaAdd')}/>]:[])]}</PhotoSlots>
+    :<AddCard icon={Camera} title={t('fe.mp.mediaAdd')} sub={t('fe.mp.mediaAddSub')} disabled={busy} busy={busy} onClick={()=>file.current?.click()}/>}
+  </Group>}
+  <Group id="privJars" title={<>{t('fe.mp.jars')}{privJars.length?' · '+privJars.length:''}</>} action={privJars.length?<button type="button" onClick={addJar}>{t('fe.mx.ed.add')}</button>:null}>
+   {privJars.length?<Jars list={sortJars(privJars)} topics={jars.topics} onOpen={id=>setSheet({k:'jar',id})}/>
+    :<AddCard icon={Sparkles} title={t('fe.mp.jarsAdd')} sub={t(cp?'fe.mp.jarsAddSubUs':'fe.mp.jarsAddSub')} disabled={!jars.items} onClick={addJar}/>}
   </Group>
-  <Group title={<>{t('fe.mx.pr.who')}{given.length?' · '+given.length:''}</>}
-   action={given.length>3?<button type="button" onClick={()=>navigate('/n/me/access?tab=byme')}>{t('fe.mx.pr.all',{n:given.length})}</button>
-    :given.length?<button type="button" className="danger" onClick={()=>setAsking('revokeAll')}>{t('fe.mx.pr.revokeAll')}</button>:null}>
-   {given.length===0?<Note>{t('fe.mx.pr.none')}</Note>:<Stack gap={2}>{given.slice(0,3).map((g,i)=><GrantCard key={g.profile?.id??i} g={g} onEdit={()=>grants.edit(g)} onRevoke={()=>grants.revoke(g)}/>)}</Stack>}
-   <Card list className="mt12"><Row icon={LockOpen} title={cp?t('fe.ac.centerUs'):t('fe.ac.center')} onClick={()=>navigate('/n/me/access')}/></Card>
+  <Group id="privWho" title={<>{t('fe.mp.access')}{given.length?' · '+given.length:''}</>}>
+   {given.length===0?<Note>{t('fe.mp.accessNone')}</Note>
+    :<Card list>{given.slice(0,5).map((g,i)=>{const n=nameOf(g.profile);
+     return <Row key={g.profile?.id??i} av={<Av name={n} seed={g.profile?.id??n} size="sm" src={g.profile?.avatar}/>} title={<>{n}<NameBadges p={g.profile}/></>} sub={w.what(g.scopes)+' · '+w.until(g.until)}
+      onClick={()=>g.profile&&navigate('/n/people/'+g.profile.id)} end={<IconBtn icon={MoreHorizontal} kind="ghost" size="sm" label={t('fe.mp.more',{name:n})} onClick={()=>setSheet({k:'grant',g})}/>}/>;})}</Card>}
+   <Card list className="mt12"><Row icon={LockOpen} title={t('fe.mp.accessAll')} val={given.length>5?given.length:undefined} onClick={()=>navigate('/n/me/access')}/></Card>
   </Group>
-  <Group title={t('fe.mx.pr.settings')}><Card list>
-   <ToggleRow title={t('fe.priv.on')} sub={t('fe.mx.pr.onSub')} on={on} disabled={busy} onClick={()=>setAsking('off')}/>
-   <SelectRow row label={t('fe.mx.pr.reqFrom')} value={requestsFrom} options={(['all','matches','none'] as const).map(v=>[v,t('fe.mx.pr.from.'+v)] as const)}
-    onChange={v=>void act(()=>call('profile.setVisibility',{opId:newOpId(),setting:'requestsFrom',value:v},ok),t('fe.mx.saved'))}/>
-  </Card></Group>
-  {offAsk}
-  {asking==='revokeAll'&&<Ask icon={Lock} danger title={t('fe.mx.pr.revokeAllTitle')} text={t('fe.mx.pr.revokeAllText',{n:given.length})} ok={t('fe.mx.pr.revokeAll')} busy={busy}
-   onCancel={()=>setAsking(null)} onOk={async()=>{if(await act(()=>call('access.revokeAll',{opId:newOpId(),confirm:true},ok),t(cp?'fe.mx.pr.revokedAllUs':'fe.mx.pr.revokedAll')))setAsking(null);}}/>}
+  {asking==='off'&&<Ask icon={Lock} danger title={t('fe.mx.pr.offTitle')} busy={busy}
+   text={[given.length||reqs.items.length?t('fe.mx.pr.offWhat',{g:given.length,q:reqs.items.length}):t('fe.mx.pr.offAll'),t('fe.mx.pr.offRest')].join(' ')} ok={t('fe.mx.pr.offOk')}
+   onCancel={()=>setAsking(null)} onOk={async()=>{if(await act(()=>call('private.setOn',{opId:newOpId(),on:false,confirm:true},ok),t(cp?'fe.mx.pr.offDoneUs':'fe.mx.pr.offDone')))setAsking(null);}}/>}
   {grantFor&&<GrantSheet r={grantFor} available={available} onClose={()=>setGrantFor(null)} onDone={()=>{setGrantFor(null);changed();}}
    onDecline={()=>{const r=grantFor;setGrantFor(null);void decline(r.id,nameOf(r.profile),changed);}}/>}
+  {sheet?.k==='grant'&&<Sheet title={nameOf(sheet.g.profile)} sub={w.what(sheet.g.scopes)+' · '+w.until(sheet.g.until)} onClose={()=>setSheet(null)}><Card list>
+   <Row icon={Pencil} title={t('fe.mp.edit')} noChev onClick={()=>{const g=sheet.g;setSheet(null);grants.edit(g);}}/>
+   <Row icon={Lock} title={t('fe.mx.pr.revoke')} danger onClick={()=>{const g=sheet.g;setSheet(null);grants.revoke(g);}}/>
+  </Card></Sheet>}
+  {sheet?.k==='desc'&&<DescSheet text={txt} onClose={()=>setSheet(null)} onSaved={async()=>{setSheet(null);await ensureOn();toast(t('fe.mp.descSaved'),{type:'ok'});changed();}}/>}
+  {sheet?.k==='media'&&cur&&<Sheet title={t('fe.mx.ph.nOf',{n:sheet.i+1,total:media.length})} onClose={()=>setSheet(null)}>
+   <div className="ph-sheet-prev">{ownSrc(cur)&&<img src={cur.src?.card??ownSrc(cur)!} alt="" draggable={false}/>}</div>
+   <Card list>
+    {!!cur.src&&<Row icon={Eye} title={t('fe.mx.ph.view')} noChev onClick={()=>{const i=sheet.i;setSheet(null);setViewing(i);}}/>}
+    <Row icon={Trash2} title={t('fe.mx.ph.remove')} danger disabled={busy} onClick={()=>{const id=cur.id;setSheet(null);void saveMedia(ids.filter(x=>x!==id),t('fe.mp.mediaRemoved'));}}/>
+   </Card>
+  </Sheet>}
+  {viewing!==null&&<PhotoViewer srcs={media.map(m=>m.src?.full??m.src?.card??ownSrc(m)).filter((x):x is string=>!!x)} index={viewing} onClose={()=>setViewing(null)}/>}
+  {sheet?.k==='pick'&&jars.items&&<TopicPicker cats={jars.cats} topics={jars.topics} have={new Set(jars.items.map(j=>j.topicId))} presetVis="granted"
+   onClose={()=>setSheet(null)} onDone={msg=>{setSheet(null);void ensureOn().then(()=>{toast(msg,{type:'ok'});jars.load();changed();});}}/>}
+  {sheet?.k==='jar'&&<InterestSheet key={sheet.id} topicId={sheet.id} topics={jars.topics} cats={jars.cats} current={jars.items?.find(j=>j.topicId===sheet.id)??privJars.find(j=>j.topicId===sheet.id)} defaultVis="granted"
+   onClose={()=>setSheet(null)} onDone={msg=>{setSheet(null);toast(msg,{type:'ok'});jars.load();changed();}}/>}
+  <FilePick ref={file} accept="image/*" multiple onFiles={f=>setPicked([...f])}/>
+  {picked&&<Uploader files={picked} aspects={['orig','4:5','1:1']} max={PRIV_MAX-media.length} send={sendPrivate} onClose={()=>setPicked(null)}
+   onDone={got=>{setPicked(null);if(got.length)void saveMedia([...ids,...got.map(g=>g.id)],t('fe.mp.mediaSaved'));}}/>}
   {grants.node}
  </>;
+}
+
+/** «Описание» of the private part, edited in place: the server's own text rules, saved on «Сохранить». */
+function DescSheet({text,onClose,onSaved}:{text:string,onClose:()=>void,onSaved:()=>void}){
+ const {call}=useFe();const {t}=useI18n();const [v,setV]=useState(text);const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const checks=useChecks({privText:'privateText'},{privText:v});
+ const save=async()=>{if(!checks.submit())return;setBusy(true);setFailure('');
+  try{await call('private.setText',{opId:newOpId(),text:v.trim()},ok);onSaved();}
+  catch(e){if(!checks.fromServer(e,{text:'privText'}))setFailure(feErrorMessage(e,t));}finally{setBusy(false);}};
+ return <Sheet title={t('fe.mp.desc')} onClose={onClose} dirty={!busy&&v!==text} foot={<Btn busy={busy} disabled={busy||v.trim()===text.trim()} onClick={()=>void save()}>{t('fe.me.save')}</Btn>}>
+  <Field name="privText" error={checks.error('privText')}><TextArea rows={6} {...checks.input('privText')} value={v} placeholder={t('fe.mx.ed.privPh')} aria-label={t('fe.mp.desc')} onChange={e=>setV(e.target.value)}/>
+   <Counter n={textLength(v)} max={FIELD.privateText.max}/></Field>
+  {failure&&<Alert kind="err" noIcon className="mt12">{failure}</Alert>}
+ </Sheet>;
 }
 
 /* ---------------- someone's private part from the outside (P01 vault, P08) ---------------- */

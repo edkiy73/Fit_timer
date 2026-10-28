@@ -2,9 +2,9 @@ import {useCallback,useEffect,useRef,useState,type CSSProperties} from 'react';
 import {useNavigate,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Ban,EyeOff,History,KeyRound,MessageCircle,Pencil,Plus,Sparkles,Trash2,X} from 'lucide-react';
+import {Ban,EyeOff,KeyRound,MessageCircle,Pencil,Plus,Sparkles,Trash2,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,AnswerScale,Bar,Btn,Card,Chip,Chips,Empty,Group,IconBtn,LoadMore,Note,Progress,Row,SearchInput,SectionLabel,Sheet,Skel,View} from './kit';
+import {AddCard,Alert,AnswerScale,Bar,Btn,Card,Chip,Chips,Empty,Group,IconBtn,Note,Progress,Row,SearchInput,SectionLabel,Sheet,Skel,View} from './kit';
 import {useFe,usePartnerApproves,useShown} from './session';
 import {when} from './feed';
 
@@ -25,9 +25,6 @@ const catalogRes=z.object({ok:z.literal(true),categories:z.array(category),topic
 type Topic=z.infer<typeof topic>;type Category=z.infer<typeof category>;
 const setRes=z.object({ok:z.literal(true),pending:z.unknown().optional()}).passthrough();
 const ok=z.object({ok:z.literal(true)}).passthrough();
-const state=z.record(z.string(),z.unknown()).nullable().optional();
-const histRes=z.object({ok:z.literal(true),items:z.array(z.object({id:z.string(),topicId:z.string(),kind:z.string(),from:state,to:state,archived:z.boolean().optional(),at:z.string()})),next:z.string().nullable()});
-type HistItem=z.infer<typeof histRes>['items'][number];
 
 const LIMITS='limits';
 const visOf=(j:Interest):Vis=>j.vis==='granted'||j.vis==='only'?j.vis:'public';
@@ -167,7 +164,6 @@ export function InterestsScreen(){
  const toAdd=()=>{setNotice('');setPicking(true);};
  return <>
   <Bar title={t(couple?'fe.int.screenCouple':'fe.int.screen')} back="/n/me">
-   <IconBtn icon={History} label={t('fe.int.history')} onClick={()=>navigate('/n/me/interests/history')}/>
    <IconBtn icon={Plus} label={t('fe.int.add')} onClick={toAdd}/>
   </Bar>
   <View className="nodock">
@@ -191,7 +187,7 @@ export function InterestsScreen(){
  * turn (progress bar; an answer moves on), check them as jars, then save all. A tap on a jar in the check goes back to
  * that one. Each topic keeps its own opId, so a retry after a failure never saves twice. */
 type Draft={v:Answer,dir:Dir[],vis:Vis};
-function TopicPicker({cats,topics,have,presetVis,onClose,onDone}:{cats:Category[],topics:Topic[],have:Set<string>,presetVis:Vis,onClose:()=>void,onDone:(msg:string)=>void}){
+export function TopicPicker({cats,topics,have,presetVis,onClose,onDone}:{cats:Category[],topics:Topic[],have:Set<string>,presetVis:Vis,onClose:()=>void,onDone:(msg:string)=>void}){
  const {call,acting}=useFe();const {t,locale}=useI18n();const [q,setQ]=useState('');
  const [sel,setSel]=useState<string[]>([]);const [stage,setStage]=useState<'pick'|'answer'|'review'>('pick');const [step,setStep]=useState(0);
  const [fromReview,setFromReview]=useState(false);const [drafts,setDrafts]=useState<Record<string,Draft>>({});
@@ -246,42 +242,6 @@ function TopicPicker({cats,topics,have,presetVis,onClose,onDone}:{cats:Category[
  </Sheet>;
 }
 
-/** X04 — the interest history; only the profile's own members see it. */
-export function InterestsHistoryScreen(){
- const {call,acting}=useFe();const {t,locale}=useI18n();
- const [items,setItems]=useState<HistItem[]|null>(null);const [next,setNext]=useState<string|null>(null);const [error,setError]=useState<unknown>(null);const [more,setMore]=useState(false);
- const [topics,setTopics]=useState<Topic[]>([]);const name=useTopicName(topics);
- const load=useCallback((cursor?:string)=>{
-  setError(null);if(cursor)setMore(true);else setItems(null);
-  call('interests.history',{limit:30,...(cursor?{cursor}:{})},histRes).then(r=>{setItems(prev=>cursor&&prev?[...prev,...r.items]:r.items);setNext(r.next);}).catch(setError).finally(()=>setMore(false));
- },[call]);
- useEffect(()=>{load();},[load,acting?.id]);
- useEffect(()=>{call('catalog.get',{},catalogRes,{asAccount:true}).then(r=>setTopics(r.topics)).catch(()=>{});},[call]);
- const couple=acting?.kind==='couple';
- const answer=(s:Record<string,unknown>|null|undefined)=>{
-  if(!s)return '—';
-  if(s.mark==='hard'||s.mark==='discuss')return t('fe.int.mark.'+s.mark);
-  const d=dirsOf(s.dir);const dt=d.length?', '+(d.length===DIRS.length?t('fe.int.hist.dir.all'):d.map(x=>t('fe.int.hist.dir.'+x)).join(', ')):'';
-  return typeof s.value==='number'?`${s.value}/10${dt}`:'—';
- };
- const visWord=(v:unknown)=>t('fe.int.hist.w.'+(v==='granted'?'granted':v==='only'?(couple?'onlyUs':'only'):'public'));
- const text=(h:HistItem)=>h.kind==='vis'?t('fe.int.hist.vis',{from:visWord(h.from?.vis),to:visWord(h.to?.vis)})
-  :!h.from?t('fe.int.hist.added',{v:answer(h.to)}):!h.to?t('fe.int.hist.removed',{v:answer(h.from)}):`${answer(h.from)} → ${answer(h.to)}`;
- return <>
-  <Bar title={t('fe.int.hist.title')} back="/n/me/interests"/>
-  <View className="nodock">
-   {error&&!items?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>load()}>{t('fe.retry')}</Btn></Empty>
-    :!items?<Skel kind="list"/>
-    :<Group><Card list>
-      {items.length?items.map(h=><Row key={h.id} icon={h.archived?Sparkles:Pencil} title={name(h.topicId)} sub={<>{text(h)} · {t(h.archived?'fe.int.hist.archived':'fe.int.hist.manual')}</>} val={when(h.at,locale)}/>)
-       :<Row sub={t('fe.int.hist.empty')}/>}
-     </Card><p className="grp-n">{t(couple?'fe.int.hist.footCouple':'fe.int.hist.foot')}</p>
-     <LoadMore more={!!next} busy={more} error={error} onMore={()=>{if(next)load(next);}}/>
-    </Group>}
-  </View>
- </>;
-}
-
 /** X01 `meJars18()` — the «Интересы» block in «Я»: up to 8 capsules, the «кто видит» filter when there are two kinds. */
 export function MeJars(){
  const {acting}=useFe();const {t}=useI18n();const navigate=useNavigate();
@@ -291,17 +251,13 @@ export function MeJars(){
  const couple=acting.kind==='couple';
  const title=t(couple?'fe.int.titleCouple':'fe.int.title');
  const add=()=>navigate('/n/me/interests?add=1');
- if(!items.length)return <Group bare id="meJars" title={title}><Card>
-  <button type="button" className="ph-empty" onClick={add}><span className="pe-ic"><Sparkles/></span><span className="tx"><b>{t('fe.int.add')}</b><small>{t(couple?'fe.int.emptySubCouple':'fe.int.emptySub')}</small></span><Plus/></button>
- </Card></Group>;
+ if(!items.length)return <Group id="meJars" title={title}>
+  <AddCard icon={Sparkles} title={t('fe.int.add')} sub={t(couple?'fe.int.emptySubCouple':'fe.int.emptySub')} onClick={add}/></Group>;
  const n=(k:Vis)=>items.filter(j=>visOf(j)===k).length;
  const kinds=VIS.filter(k=>n(k));const multi=kinds.length>1;
  const list=sortJars(f==='all'||!multi?items:items.filter(j=>visOf(j)===f));const shown=openAll?list:list.slice(0,8);
  const chips:[('all'|Vis),string][]=[['all',t('fe.int.filter.all',{n:items.length})],...kinds.map(k=>[k,t('fe.int.filter.'+(k==='only'&&couple?'onlyUs':k),{n:n(k)})] as [Vis,string])];
- return <Group bare id="meJars" title={<>{title}{multi?'':` · ${items.length}`}</>} action={<span className="jar-links21">
-   <button type="button" onClick={()=>navigate('/n/me/interests')}>{t('fe.int.all')}</button>
-   {!couple&&<button type="button" onClick={()=>navigate('/n/me/interests/history')}>{t('fe.int.history')}</button>}
-  </span>}>
+ return <Group bare id="meJars" title={<>{title}{multi?'':` · ${items.length}`}</>} action={<button type="button" onClick={()=>navigate('/n/me/interests')}>{t('fe.int.all')}</button>}>
   {notice&&<Alert kind="ok" noIcon>{notice}</Alert>}
   {multi&&<div className="jar-f"><div className="chips" role="group" aria-label={t('fe.int.filterAria')}>{chips.map(([id,l])=><Chip key={id} on={f===id} onClick={()=>setF(id)}>{l}</Chip>)}</div></div>}
   <Jars list={shown} topics={topics} onOpen={setOpen} onAdd={add}/>

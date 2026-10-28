@@ -152,12 +152,15 @@ export function FeedTab(){
   // place the reader scrolled to) until the new page arrives.
   const key=JSON.stringify(input);const same=shown.current===key;shown.current=key;
   setError(null);if(!cursor){if(!same)setItems(null);setGone({});}else setMore(true);
-  call('feed.list',{...input,...(cursor?{cursor}:{})},mixedPage).then(r=>{
+  const put=(r:z.infer<typeof mixedPage>)=>{
    if(n!==req.current)return;const got=feedItems(r.items);
    setItems(prev=>cursor&&prev?[...prev,...got]:got);setNext(r.next);
    if(!filtN(f)&&!cursor&&tab!=='popular'){const fq:Record<string,number>={};got.forEach(p=>{if(!isAct(p))(p.topics??[]).forEach(x=>{fq[x]=(fq[x]??0)+1;});});
     setQuick(q=>({...q,[tab]:Object.keys(fq).sort((a,b)=>fq[b]!-fq[a]!).slice(0,7)}));}
-  }).catch(e=>{if(n===req.current)setError(e);}).finally(()=>{if(n===req.current)setMore(false);});
+  };
+  // The first page from memory paints at once; the server is asked behind it and a changed page (a post published
+  // or removed meanwhile, here or elsewhere) replaces it without a blank frame.
+  call('feed.list',{...input,...(cursor?{cursor}:{})},mixedPage,cursor?{}:{onFresh:put}).then(put).catch(e=>{if(n===req.current)setError(e);}).finally(()=>{if(n===req.current)setMore(false);});
  },[call,input,f,tab]);
  useEffect(()=>{load();},[load]);
  const loadHidden=useCallback(()=>{call('feedHide.list',{},hiddenList).then(r=>setHidden(r.items.filter(x=>x.kind==='post'||x.kind==='author').length)).catch(()=>setHidden(h=>h??0));},[call]);

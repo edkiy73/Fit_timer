@@ -1,4 +1,4 @@
-// Interests X01 #meJars, X02 «Все интересы» (picker), interest sheet, X04 history.
+// Interests X01 #meJars, X02 «Все интересы» (picker), interest sheet, no history (removed 29.10).
 import { pinned, expect, until } from '../helpers.mjs';
 const list = async (t, as) => (await t.api('interests.list', { profileId: await t.pid(as) }, as)).items;
 const TOPIC = 'Шибари';
@@ -14,7 +14,7 @@ export default [
    const items = await list(t); expect(!items.length, 'basic must have no interests');
    await t.tap('#meJars .ph-empty'); await t.see('.sheet.on .chip'); expect(t.page.url().includes('/n/me/interests'), t.page.url());
  } },
- { name: 'X02 add two at once (search, step by step, edit from the check) → saved; edit to «граница» → remove; history', persona: 'full', route: '/n/me/interests', run: async t => {
+ { name: 'X02 add two at once (search, step by step, edit from the check) → saved; edit to «граница» → remove', persona: 'full', route: '/n/me/interests', run: async t => {
    let ids = [];
    try {
      await t.see('.jars'); expect(!(await t.page.locator('.view .fsec').count()), 'no inline catalog with items present');
@@ -43,13 +43,12 @@ export default [
      await until(async () => (await list(t)).find(x => x.topicId === it.topicId)?.mark === 'hard', 'edited to hard');
      await t.tap(`.sc:has-text("${TOPIC}")`); await t.tap('.sheet.on .sh-f .btn.icon'); await t.tap('.sheet.on .sh-f .btn.danger');
      await until(async () => !(await list(t)).some(x => x.topicId === it.topicId), 'removed'); ids = ids.filter(x => x !== it.topicId);
-     await t.go('/n/me/interests/history'); await t.see(`.li:has-text("${TOPIC}")`);
    } finally { for (const topicId of ids) await t.api('interests.remove', { opId: t.uuid7(), topicId }); }
  } },
- { name: 'X01 interests block: capsule sheet, «История» and «Все интересы» links', persona: 'full', route: '/n/me', run: async t => {
+ { name: 'X01 interests block: capsule sheet and «Все интересы» link', persona: 'full', route: '/n/me', run: async t => {
    await t.see('#meJars .sc'); await t.tap('#meJars .sc >> nth=0'); await t.see('.sheet.on'); await t.tap('.sheet.on .sh-h button'); await t.notSee('.sheet.on', 600);
-   await t.tap('#meJars button:has-text("История")'); await t.wait(800); expect(t.page.url().includes('/interests/history'), t.page.url());
-   await t.go('/n/me'); await t.tap('#meJars button:has-text("Все интересы")'); await t.wait(800); expect(t.page.url().endsWith('/n/me/interests'), t.page.url());
+   expect(!(await t.page.locator('#meJars button:has-text("История")').count()), 'no «История» link');
+   await t.tap('#meJars button:has-text("Все интересы")'); await t.wait(800); expect(t.page.url().endsWith('/n/me/interests'), t.page.url());
  } },
  { name: 'P04 «Добавить интерес» from the private editor presets «По доступу»', persona: 'full', route: '/n/me', run: async t => {
    await t.go('/n/me/edit?only=priv'); await t.see('#privEdit');

@@ -1,7 +1,7 @@
 import React,{forwardRef,useEffect,useRef,useState,type ButtonHTMLAttributes,type ReactNode} from 'react';
 import {useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Check as Check2,ChevronDown,ChevronLeft,ChevronRight,CircleAlert,CircleCheck,Info,Search,TriangleAlert,X,type LucideIcon} from 'lucide-react';
+import {Check as Check2,ChevronDown,ChevronLeft,ChevronRight,CircleAlert,CircleCheck,Info,Plus,Search,TriangleAlert,X,type LucideIcon} from 'lucide-react';
 import {Btn,Layer} from '../ui';
 import './tokens.css';
 import './kit.css';
@@ -159,6 +159,13 @@ export const Group=forwardRef<HTMLElement,{title?:ReactNode,action?:ReactNode,fo
  </section>;
 });
 
+/** `.ph-empty` — the one «add» card of an empty section (owner, 29.10.2026: one look for every empty block): the icon
+ * in a soft circle, the title, a short plain hint (up to two lines), «+». Put it straight into a `Group` — no Card around. */
+export function AddCard({icon:Icon,title,sub,onClick,disabled,busy,className}:{icon:LucideIcon,title:ReactNode,sub?:ReactNode,onClick:()=>void,disabled?:boolean|undefined,busy?:boolean|undefined,className?:string|undefined}){
+ return <button type="button" className={['ph-empty',className].filter(Boolean).join(' ')} onClick={onClick} disabled={disabled} aria-busy={busy||undefined}>
+  <span className="pe-ic"><Icon/></span><span className="tx"><b>{title}</b>{sub&&<small>{sub}</small>}</span><Plus/></button>;
+}
+
 /** `.field` — a labelled input or textarea with its error under it. */
 export function Field({id,label,error,children,hint,className,name,optional}:{id?:string,label?:ReactNode,error?:string|undefined,children:ReactNode,hint?:ReactNode,className?:string,
  /** data-field: the screen finds the first wrong field by it (shake, scroll). */ name?:string,/** «необязательно» on the right of the label. */ optional?:ReactNode}){
@@ -254,7 +261,7 @@ export function Check({on,onChange,children,error}:{on:boolean,onChange:(v:boole
  return <button type="button" role="checkbox" aria-checked={on} className={'check'+(on?' on':'')+(error?' err':'')} onClick={()=>onChange(!on)}><i><Check2/></i><span>{children}</span></button>;
 }
 /** `.sw` — a bare switch, for a row the kit's ToggleRow does not fit. */
-export function Switch({on,onChange,label,disabled,className}:{on:boolean,onChange:(v:boolean)=>void,label:string,disabled?:boolean,className?:string}){
+export function Switch({on,onChange,label,disabled,className}:{on:boolean,onChange:(v:boolean)=>void,label:string,disabled?:boolean|undefined,className?:string}){
  return <button type="button" role="switch" aria-checked={on} aria-label={label} disabled={disabled} className={'k-sw'+(className?' '+className:'')} onClick={()=>onChange(!on)}><span className={'sw'+(on?' on':'')} aria-hidden="true"/></button>;
 }
 /** A slider (age, distance). */

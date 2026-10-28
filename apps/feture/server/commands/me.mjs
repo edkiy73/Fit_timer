@@ -200,30 +200,17 @@ async function doSetVisibility(q, profileId, setting, value) {
   return { setting, value };
 }
 
-/** Interest upsert with history, shared by the direct path and an approved couple change.
- * @param {Q} q @param {string} profileId @param {string} accountId @param {Record<string, any>} input */
-async function doInterestSet(q, profileId, accountId, input) {
+/** Interest upsert, shared by the direct path and an approved couple change.
+ * @param {Q} q @param {string} profileId @param {string} _accountId @param {Record<string, any>} input */
+async function doInterestSet(q, profileId, _accountId, input) {
   const [t] = await q.query('select category_id from feture.topic where id = $1 and not hidden', [input.topicId]);
   if (!t) fail(400, 'invalid_input', { fields: ['topicId'] });
   if (input.dir?.length && t.category_id === 'limits') fail(400, 'invalid_input', { fields: ['dir'] });
-  const [prev] = await q.query(
-    'select value, mark, dir, vis from feture.interest where profile_id = $1 and topic_id = $2 for update', [profileId, input.topicId]);
   const next = { value: input.value ?? null, mark: input.mark ?? null, dir: input.mark ? [] : (input.dir ?? []), vis: input.vis };
   await q.query(
     `insert into feture.interest (profile_id, topic_id, value, mark, dir, vis) values ($1, $2, $3, $4, $5, $6)
      on conflict (profile_id, topic_id) do update set value = excluded.value, mark = excluded.mark, dir = excluded.dir, vis = excluded.vis, updated_at = now()`,
     [profileId, input.topicId, next.value, next.mark, next.dir, next.vis]);
-  const level = (/** @type {any} */ x) => x ? { value: x.value, mark: x.mark, dir: x.dir } : null;
-  if (JSON.stringify(level(prev)) !== JSON.stringify(level(next))) {
-    await q.query(
-      `insert into feture.interest_history (profile_id, topic_id, kind, from_state, to_state, acted_by) values ($1, $2, 'value', $3, $4, $5)`,
-      [profileId, input.topicId, JSON.stringify(level(prev)), JSON.stringify(level(next)), accountId]);
-  }
-  if (prev && prev.vis !== next.vis) {
-    await q.query(
-      `insert into feture.interest_history (profile_id, topic_id, kind, from_state, to_state, acted_by) values ($1, $2, 'vis', $3, $4, $5)`,
-      [profileId, input.topicId, JSON.stringify({ vis: prev.vis }), JSON.stringify({ vis: next.vis }), accountId]);
-  }
   return { topicId: input.topicId, ...next };
 }
 
@@ -463,35 +450,9 @@ const run = {
     const [prev] = await q.query(
       'delete from feture.interest where profile_id = $1 and topic_id = $2 returning value, mark, dir', [acting.profileId, input.topicId]);
     if (prev) {
-      await q.query(
-        `insert into feture.interest_history (profile_id, topic_id, kind, from_state, to_state, acted_by) values ($1, $2, 'value', $3, null, $4)`,
-        [acting.profileId, input.topicId, JSON.stringify(prev), acting.accountId]);
       if (acting.kind === 'couple') await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: 'interests' });
     }
     return { removed: !!prev };
-  },
-
-  async 'interests.history'(q, { acting, input }) {
-    // Opaque keyset cursor over (created_at, id) at full precision: rows written in one statement are never skipped.
-    let after = null;
-    if (input.cursor) {
-      try { after = JSON.parse(Buffer.from(input.cursor, 'base64url').toString('utf8')); } catch { /* invalid below */ }
-      if (!Array.isArray(after) || after.length !== 2 || typeof after[0] !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])[ T]([01]\d|2[0-3]):[0-5]\d:[0-5]\d(\.\d{1,6})?([+-]\d{2}(:?\d{2})?|Z)?$/.test(after[0])
-        || typeof after[1] !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(after[1])) {
-        fail(400, 'invalid_input', { fields: ['cursor'] });
-      }
-    }
-    const rows = await q.query(
-      `select id, topic_id, kind, from_state, to_state, source, created_at, created_at::text at_text from feture.interest_history
-       where profile_id = $1 and ($2::text is null or (created_at, id) < ($2::timestamptz, $3::uuid))
-       order by created_at desc, id desc limit $4`,
-      [need(acting).profileId, after?.[0] ?? null, after?.[1] ?? null, input.limit + 1]);
-    const page = rows.slice(0, input.limit);
-    const last = page[page.length - 1];
-    return {
-      items: page.map(r => ({ id: r.id, topicId: r.topic_id, kind: r.kind, from: r.from_state, to: r.to_state, archived: r.source === 'test_archived', at: r.created_at })),
-      next: rows.length > input.limit ? Buffer.from(JSON.stringify([last.at_text, last.id])).toString('base64url') : null,
-    };
   },
 };
 

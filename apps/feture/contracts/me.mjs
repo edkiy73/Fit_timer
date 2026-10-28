@@ -133,8 +133,4 @@ export const meCommands = {
       .refine(v => v.mark === undefined || !v.dir?.length, { message: 'dir_with_mark', path: ['dir'] }),
   },
   'interests.remove': { profile: true, write: true, input: z.strictObject({ opId, topicId: code }) },
-  'interests.history': {
-    profile: true, write: false,
-    input: z.strictObject({ limit: z.int().min(1).max(50).default(30), cursor: z.string().max(200).optional() }),
-  },
 };
