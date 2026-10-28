@@ -6,7 +6,7 @@ import {ArrowUpDown,AtSign,Bell,BellOff,Bookmark,Check,Calendar,ChartColumn,Chev
 import type {LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicOrigin} from '../api-url';
-import {articlePlate,ActingAv,ActionLine,ActivityCard,ActivityItem,Alert,ArticleCard,ArticleImage,Ask,Av,BAD_CHARS,Bar,Btn,Card,Chip,Chips,Counter,Empty,FeedEvents,Field,FilePick,Group,H,IconBtn,Input,LikesLine,Note,QuickStart,RichEditor,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,VideoBadge,View,hasLongWord,mdImages,type RichEditorHandle} from './kit';
+import {articlePlate,ActingAv,ActionLine,ActivityCard,ActivityItem,Alert,ArticleCard,ArticleImage,Ask,Av,BAD_CHARS,Bar,Btn,Card,Chip,Chips,Counter,Empty,FeedEvents,Field,FilePick,Group,H,IconBtn,Input,LikesLine,Note,QuickStart,RichEditor,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,VideoBadge,View,ViewerPostBar,hasLongWord,mdImages,type RichEditorHandle} from './kit';
 import {shakeFirstErr} from './kit/validate';
 import {useFe,usePartnerApproves} from './session';
 import {ActivityCardOf,activitySchema,type Act} from './feed-activity';
@@ -26,7 +26,8 @@ import {CompareSheet,asInterest} from './compare';
 /** Slice B (V21 F01, F05, F07, F09) with the prototype's markup: feed tabs, composer row, topic chips and filters,
  * posts (text, media, poll, interests, marks), replies in threads, the composer and its preview.
  * Visibility and counts are the server's; the client never filters or invents them. */
-const author=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string(),avatar:z.string().nullable().optional(),photoVerified:z.boolean().optional(),premium:z.boolean().optional()});
+const author=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string(),avatar:z.string().nullable().optional(),photoVerified:z.boolean().optional(),premium:z.boolean().optional(),
+ /** Whether the acting profile follows the author (someone else's posts): the ⋯ menu's «Подписаться / Отписаться». */ iFollow:z.boolean().optional()});
 const media=z.object({id:z.uuid(),kind:z.string(),w:z.number().nullable(),h:z.number().nullable(),pending:z.boolean(),blurred:z.boolean(),src:z.record(z.string(),z.string()).nullable(),durationMs:z.number().nullable().optional(),
  clip:z.object({startMs:z.number().optional(),endMs:z.number().optional(),crop:z.object({aspect:z.enum(['4:5','1:1','16:9']),x:z.number(),y:z.number(),z:z.number()}).optional()}).nullable().optional()});
 const tag=z.object({id:z.uuid(),handle:z.string().nullable().optional(),name:z.string().nullable().optional(),state:z.string().optional()}).passthrough();
@@ -389,6 +390,15 @@ export function PostCard({post,onChange,onRemove,onExpired,full=false,onReply,pr
   const c=coverM??ok[0];
   return {cover:c?mediaSrc(c,full?'full':'card'):null,shown,slides:shown.map(m=>({id:m.id})),rest:ok.filter(m=>m!==coverM&&!refs.includes(m.id))};},[post.type,post.body,post.media,full]);
  const plain=mdPlain(post.body);const [view,setView]=useState<number|null>(null);
+ // Over the full-screen media: the actions on the right, the author and the text at the bottom (owner, 28.10.2026).
+ // Leaving for the post / the author replaces the viewer's own history entry, so «Назад» comes back to the feed.
+ const leave=(to:string,close:()=>void)=>{if(full&&to==='/n/feed/post/'+post.id)close();else navigate(to,{replace:true});};
+ const bar=preview?undefined:(close:()=>void)=><ViewerPostBar author={{id:post.author.id,name:nameOf(post.author),avatar:post.author.avatar}}
+  text={[post.title,plain].filter(Boolean).join(' — ')} liked={post.liked} likes={post.likes} replies={post.replies} saved={post.saved}
+  labels={{like:t('fe.fd.likePost'+(acting?.kind==='couple'?'Us':'')),comment:t('fe.feed.replies'),save:t('fe.feed.save'+(acting?.kind==='couple'?'Us':'')),share:t('fe.feed.share'),open:t('fe.gal.openPost')}}
+  onLike={()=>void toggle('liked')} onSave={()=>void toggle('saved')} onShare={()=>void share()}
+  onComment={()=>{if(full){close();onReply?.();}else leave('/n/feed/post/'+post.id,close);}} onOpen={()=>leave('/n/feed/post/'+post.id,close)}
+  onAuthor={()=>leave(mine||post.author.id===acting?.id?'/n/me':'/n/people/'+post.author.id,close)}/>;
  return <article className="post">
   <div className="post-h">
    <button type="button" className="who" disabled={preview} onClick={()=>navigate(mine||post.author.id===acting?.id?'/n/me':'/n/people/'+post.author.id)}>
@@ -414,9 +424,9 @@ export function PostCard({post,onChange,onRemove,onExpired,full=false,onReply,pr
      excerpt={<>{plain.slice(0,220)}{plain.length>220?'…':''}</>} more={t('fe.fd.readMore')}>
      <RichText text={post.body} mentions={post.mentions??[]} images={id=>{const k=art.slides.findIndex(x=>x.id===id);const m=art.shown[k];
       return m?<ArticleImage src={mediaSrc(m,'full')!} label={t('fe.fd.openFull')} onOpen={()=>setView(k)}/>:null;}}/>
-     {art.rest.length>0&&<MediaGrid media={art.rest} onExpired={onExpired}/>}</ArticleCard>
+     {art.rest.length>0&&<MediaGrid media={art.rest} onExpired={onExpired} bar={bar}/>}</ArticleCard>
     :<>{post.title&&<H level={4} as="h3" className="post-title">{post.title}</H>}{post.body&&<RichText text={post.body} mentions={post.mentions??[]}/>}</>}
-   {!art&&<MediaGrid media={post.media} onExpired={onExpired}/>}
+   {!art&&<MediaGrid media={post.media} onExpired={onExpired} bar={bar}/>}
    {post.poll&&<Poll postId={post.id} poll={post.poll as PollData} preview={preview} mine={mine} onChange={np=>onChange({...post,poll:np})}/>}
    {post.interests&&post.interests.length>0&&<PostInterests list={post.interests} preview={preview} author={post.author}/>}
   </div>
@@ -428,7 +438,7 @@ export function PostCard({post,onChange,onRemove,onExpired,full=false,onReply,pr
    <button type="button" className={'sp'+(post.saved?' saved':'')} disabled={preview} aria-pressed={post.saved} aria-label={t('fe.feed.save'+(acting?.kind==='couple'?'Us':''))} onClick={()=>toggle('saved')}><Bookmark fill={post.saved?'currentColor':'none'}/></button>
    <button type="button" disabled={preview} aria-label={t('fe.feed.share')} onClick={share}><Share/></button>
   </div>
-  {view!==null&&art&&<Viewer srcs={art.shown.map(slideOf)} index={view} onClose={()=>setView(null)} onExpired={onExpired}/>}
+  {view!==null&&art&&<Viewer srcs={art.shown.map(slideOf)} index={view} onClose={()=>setView(null)} onExpired={onExpired} bar={bar}/>}
   {menu&&<PostMenu post={post} onClose={closeMenu} onChange={onChange} onRemove={r=>{setMenu(false);onRemove(r);}}/>}
   {review&&me&&<TagReviewSheet post={post} busy={busy} onClose={()=>setReview(false)} onAnswer={a=>{setReview(false);void answer(a);}}/>}
  </article>;

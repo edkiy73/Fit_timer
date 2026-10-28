@@ -236,9 +236,32 @@ export function PhotoAdd({label,hint,big,tall,ghost,disabled,busy,onClick}:{labe
 /** A viewer slide: a picture, or a clip (`video` = its link, `poster` its frame, `clip` its trim and crop) that plays
  * when it is the current one. */
 export type Slide=string|{video:string,poster?:string|null|undefined,durationMs?:number|null|undefined,clip?:Clip|null|undefined};
-export function PhotoTrack({srcs,index,wm,onExpired,onStep}:{srcs:Slide[],index:number,/** Someone else's private photos: the viewer's own handle across each one. */ wm?:string|null|undefined,
- /** A clip's link ran out. */ onExpired?:(()=>void)|undefined,/** Tap paging: −1 / +1. */ onStep?:((d:-1|1)=>void)|undefined}){
- const down=useRef<[number,number]|null>(null);
+export function PhotoTrack({srcs,index,wm,onExpired,onStep,onClose}:{srcs:Slide[],index:number,/** Someone else's private photos: the viewer's own handle across each one. */ wm?:string|null|undefined,
+ /** A clip's link ran out. */ onExpired?:(()=>void)|undefined,/** Tap paging: −1 / +1. */ onStep?:((d:-1|1)=>void)|undefined,
+ /** A vertical swipe (up or down) closes the viewer: the picture follows the finger and the backdrop fades; a short one
+  * springs back. Sideways swipes, taps and the clip's bar are left alone. */ onClose?:(()=>void)|undefined}){
+ const down=useRef<[number,number]|null>(null);const box=useRef<HTMLDivElement>(null);
+ // The pull: where it started, the time, and whether it is ours (decided on the first 10 px: more down than sideways).
+ const pull=useRef<{x:number,y:number,t:number,id:number,on:boolean|null}|null>(null);
+ const setPull=(dy:number)=>{const b=box.current;if(!b)return;b.style.setProperty('--dy',dy+'px');
+  b.parentElement?.style.setProperty('--pull',String(Math.min(.9,Math.abs(dy)/(b.clientHeight||600)*1.6)));};
+ const start=(e:React.PointerEvent<HTMLDivElement>)=>{down.current=[e.clientX,e.clientY];
+  if(!onClose||!e.isPrimary||(e.target as HTMLElement).closest('.k-vbar'))return;
+  pull.current={x:e.clientX,y:e.clientY,t:performance.now(),id:e.pointerId,on:null};};
+ const move=(e:React.PointerEvent<HTMLDivElement>)=>{const p=pull.current;if(!p||p.id!==e.pointerId)return;
+  const dx=e.clientX-p.x,dy=e.clientY-p.y;
+  if(p.on===null){if(Math.hypot(dx,dy)<10)return;p.on=Math.abs(dy)>Math.abs(dx)*1.2;
+   if(!p.on){pull.current=null;return;}
+   box.current?.classList.remove('back');box.current?.classList.add('pull');try{e.currentTarget.setPointerCapture(e.pointerId);}catch{/* gone */}}
+  setPull(dy);};
+ const end=(e:React.PointerEvent<HTMLDivElement>)=>{const p=pull.current;pull.current=null;const b=box.current;
+  if(!p?.on||!b)return;
+  // Ours: the viewer's own sideways swipe must not page as well.
+  e.stopPropagation();
+  const dy=e.clientY-p.y,v=Math.abs(dy)/Math.max(1,performance.now()-p.t);
+  b.classList.remove('pull');
+  if(e.type==='pointerup'&&(Math.abs(dy)>Math.min(140,b.clientHeight*.18)||(v>.6&&Math.abs(dy)>40))){onClose?.();return;}
+  b.classList.add('back');setPull(0);};
  const tap=(e:React.MouseEvent<HTMLDivElement>)=>{
   const d=down.current;down.current=null;
   if(d&&Math.hypot(e.clientX-d[0],e.clientY-d[1])>12){e.stopPropagation();e.preventDefault();return;}
@@ -249,11 +272,18 @@ export function PhotoTrack({srcs,index,wm,onExpired,onStep}:{srcs:Slide[],index:
   e.stopPropagation();e.preventDefault();
   const dir=f<=1/3?-1:1;if((dir<0&&index>0)||(dir>0&&index<srcs.length-1))onStep(dir);
  };
- return <div className="vw-track" style={{'--i':index} as CSSProperties} onPointerDownCapture={e=>{down.current=[e.clientX,e.clientY];}} onClickCapture={tap}>{srcs.map((s,k)=><figure key={k}>
+ return <div ref={box} className="vw-track" style={{'--i':index} as CSSProperties} onPointerDownCapture={start} onPointerMove={move} onPointerUp={end} onPointerCancel={end} onClickCapture={tap}>{srcs.map((s,k)=><figure key={k}>
   {typeof s==='string'?<img src={s} alt="" draggable={false}/>
    :k===index?<VideoPlayer src={s.video} poster={s.poster} durationMs={s.durationMs} clip={s.clip} fill autoPlay onExpired={onExpired}/>
    :s.poster?<img src={s.poster} alt="" draggable={false}/>:null}
   {wm&&<Watermark text={wm}/>}</figure>)}</div>;
+}
+/** Story bars over a profile photo (a person card, a profile header): one bar per photo, the shown one lit; `count`
+ * adds «2 / 6» under them so it is plain how many there are. Sits on a dark top scrim, so it reads in both themes. */
+export function PhotoBars({n,i,label,count}:{n:number,i:number,/** «Фото 2 из 6» for screen readers. */ label:string,count?:boolean|undefined}){
+ if(n<2)return null;
+ return <div className={'pc-bars'+(count?' counted':'')} role="img" aria-label={label}>{Array.from({length:n},(_,k)=><i key={k} className={k===i?'on':''}/>)}
+  {count&&<span className="pc-count" aria-hidden="true"><ImageIcon/>{i+1} / {n}</span>}</div>;
 }
 /** The viewing person's handle repeated across a private photo opened to them (V21 privPeek): a leak points at the
  * person who saw it. Sits inside a positioned frame (a viewer figure). */

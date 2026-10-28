@@ -5,7 +5,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Ban,Bell,CalendarDays,Check,ChevronDown,ChevronLeft,ChevronRight,EyeOff,Heart,Ellipsis,History,Info,KeyRound,LocateFixed,Lock,MapPin,MessageCircle,SlidersHorizontal,Sparkles,Undo2,Users,X} from 'lucide-react';
-import {Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,H,IconBtn,LikeTile,Note,PersonName,Pill,Radar,Range,RangeDual,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Soon,Stack,Text,View,plate} from './kit';
+import {Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,H,IconBtn,LikeTile,Note,PersonName,PhotoBars,Pill,Radar,Range,RangeDual,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Soon,Stack,Text,View,plate} from './kit';
 import {useFe} from './session';
 import {DiscoverPhotoAsk} from './discover-photo';
 import {NameBadges} from './faces';
@@ -69,7 +69,7 @@ export function PeopleTab(){
  const on=filter?dfOn(filter):0;const deckOn=tab==='discover'&&!off;
  return <>
   <header className="bar dating-bar">
-   <CSeg big value={tab} onChange={v=>{setTab(v);history.replaceState(null,'','#/n/people'+(v==='likes'?'?sub=likes':''));}}
+   <CSeg big value={tab} onChange={v=>{setTab(v);navigate({pathname:'/n/people',search:v==='likes'?'?sub=likes':''},{replace:true});}}
     options={[{id:'discover',label:t('fe.people.tab.discover')},{id:'likes',label:t('fe.people.tab.likes'),n:likesN}]}/>
    {deckOn&&<IconBtn icon={History} label={t('fe.px.h.open')} title={t('fe.px.h.open')} onClick={()=>navigate('/n/people/history')}/>}
    {deckOn?<IconBtn ref={opener} icon={SlidersHorizontal} aria-haspopup="dialog" label={on?t('fe.df.openOn').replace('{n}',String(on)):t('fe.df.open')} badge={on||undefined} disabled={!filter} onClick={()=>setOpen(true)}/>:<BellButton/>}
@@ -400,7 +400,7 @@ function TopCard({c,cardRef,nextRef,actsRef,onDecide,toast}:{c:Card,cardRef:Reac
  return <article ref={cardRef as React.RefObject<HTMLElement>} className="pc top" aria-label={name}>
   <div className="pc-ph">
    {list[i]?<><img className="mbg" src={list[i]!.card} alt="" aria-hidden="true" draggable={false}/><img src={list[i]!.card} alt={name} draggable={false}/></>:<div className="plate" style={plate(c.id)}/>}
-   {list.length>1&&<div className="pc-bars" aria-label={fill(t('fe.px.ph.n'),{i:i+1,n:list.length})}>{list.map((_,k)=><i key={k} className={k===i?'on':''}/>)}</div>}
+   <PhotoBars n={list.length} i={i} label={fill(t('fe.px.ph.n'),{i:i+1,n:list.length})}/>
    {list.length>1&&<><div className="pc-zone l" onClick={()=>step(-1)}/><div className="pc-zone r" onClick={()=>step(1)}/></>}
    <div className="pc-zone c" aria-hidden="true" onClick={()=>list.length?setView(i):undefined}/>
    <CardTags c={c}/>

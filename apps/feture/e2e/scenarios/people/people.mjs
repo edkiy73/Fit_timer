@@ -72,6 +72,37 @@ export default [
    } else console.log('   (the profile shows no private part)');
    const cmp = p.locator('.compat .cp-h'); if (await cmp.count()) { await cmp.click(); await t.see('.cmp14'); await t.page.goBack(); await t.see('.profile-page .hero'); }
  } },
+ { name: 'P01 back from a profile opened in «Люди» (deck, «Симпатии») returns there; a profile opened by link goes to «Люди»', persona: 'full', route: '/n/feed', allow4xx: true, run: async t => {
+   const p = t.page;
+   await t.go('/n/people');
+   const full = p.locator('.pc-foot .btn', { hasText: 'Полный профиль' }).first();
+   if (await full.count() || await full.waitFor({ timeout: 20000 }).then(() => true, () => false)) {
+     await full.click(); await t.see('.profile-page .hero');
+     await p.locator('.pbar .ibtn').first().click(); await p.waitForURL(/\/n\/people$/); await t.see('.bar .seg [role="tab"]');
+   } else console.log('   (deck is empty for this persona)');
+   // «Симпатии» keeps its place in the address (and the router's history), and back from a profile comes back to it.
+   await t.tap('.bar .seg [role="tab"]:has-text("Симпатии")'); await p.waitForURL(/sub=likes/);
+   expect(await p.evaluate(() => typeof history.state?.key === 'string'), 'the tab switch keeps the router entry: ' + JSON.stringify(await p.evaluate(() => history.state)));
+   await t.go('/n/people/' + (await t.persona('mate')).personId); await t.see('.profile-page .hero');
+   await p.locator('.pbar .ibtn').first().click(); await p.waitForURL(/sub=likes/);
+   await t.see('.bar .seg [role="tab"][aria-selected="true"]:has-text("Симпатии")');
+   // Opened straight by a link (nothing to go back to): «Назад» goes to «Люди», not out of the app.
+   await p.goto(p.url().split('#')[0] + '#/n/people/' + (await t.persona('mate')).personId); await p.reload(); await t.see('.profile-page .hero');
+   await p.evaluate(() => history.replaceState({ ...(history.state || {}), idx: 0 }, ''));
+   await p.locator('.pbar .ibtn').first().click(); await p.waitForURL(/\/n\/people$/);
+ } },
+ { name: 'P01 profile posts: no tab bar with one kind; «Активность» tab by «Кто видит мою активность»', persona: 'full', allow4xx: true, run: async t => {
+   const S = await t.persona('stranger'); const body = 'e2e вкладки ' + Date.now().toString(36);
+   const d = await t.api('post.saveDraft', { opId: t.uuid7(), post: { type: 'post', body, audience: 'all', inFeed: true, topics: [], mediaIds: [], interests: [], tags: [] } }, S.email);
+   await t.api('post.publish', { opId: t.uuid7(), postId: d.id }, S.email);
+   try {
+     await t.go('/n/people/' + S.personId); await t.see('.profile-page .activity article.post');
+     const acts = (await t.api('profile.activity', { profileId: S.personId }).catch(() => ({ items: [] }))).items ?? [];
+     const kinds = 1 + (acts.length ? 1 : 0);
+     expect((await t.page.locator('.profile-page .activity .seg').count()) === (kinds > 1 ? 1 : 0), `tab bar only with more than one kind (${kinds})`);
+     await t.shot('profile-tabs');
+   } finally { await t.api('post.delete', { opId: t.uuid7(), postId: d.id }, S.email); }
+ } },
  { name: 'D09 history: tabs and cards', persona: 'full', route: '/n/people/history', run: async t => {
    await t.see('.view .seg [role="tab"]');
    for (const n of [2, 3, 1]) { await t.tap(`.view .seg [role="tab"]:nth-of-type(${n})`); await t.wait(1200); }

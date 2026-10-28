@@ -44,7 +44,20 @@ export default [
      if (likes.items.some(x => x.poll === true)) expect(await lc.locator('.actc-th.kind').count() >= 1, 'the poll post is a poll tile');
      const more = lc.locator('.actc-more'); await more.waitFor(); await t.wait(800); await t.shot('ac-strip');
      expect(/^\+\d+$/.test((await more.innerText()).trim()), '«+N» on the right: ' + await more.innerText());
-     await lc.locator('.actc-strip').evaluate(el => { el.scrollLeft = el.scrollWidth; });
+     // Laid out like a post: the strip starts at the card's left edge, under the face (not right of it).
+     const [cardBox, stripBox] = [await lc.boundingBox(), await lc.locator('.actc-strip').boundingBox()];
+     expect(Math.abs(stripBox.x - cardBox.x) <= 1, `strip starts at the card edge: ${stripBox.x} vs ${cardBox.x}`);
+     // Scrolled step by step to the end: the last tile is reachable, «+N» keeps its width (the strip never jumps).
+     const walk = await lc.locator('.actc-strip').evaluate(async el => {
+       const btn = el.parentElement.querySelector('.actc-more'); const widths = new Set(); const clients = new Set();
+       for (let x = 0; x <= el.scrollWidth; x += 40) { el.scrollLeft = x; await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); widths.add(btn.getBoundingClientRect().width); clients.add(el.clientWidth); }
+       el.scrollLeft = el.scrollWidth; await new Promise(r => setTimeout(r, 300));
+       const last = el.lastElementChild.getBoundingClientRect(), box = el.getBoundingClientRect();
+       return { widths: [...widths], clients: [...clients], lastIn: last.right <= box.right + 1, atEnd: el.scrollLeft + el.clientWidth >= el.scrollWidth - 1, text: btn.textContent };
+     });
+     expect(walk.lastIn && walk.atEnd, 'the strip scrolls to its last tile ' + JSON.stringify(walk));
+     expect(walk.widths.length === 1 && walk.clients.length === 1, '«+N» and the strip keep their size while scrolling ' + JSON.stringify(walk));
+     await t.shot('ac-strip-end');
      await more.click();
      const rows = lc.locator('.actc-list .actc-p'); await rows.first().waitFor();
      expect(await rows.count() === likes.items.length, 'the open list has every item'); await t.shot('ac-open');

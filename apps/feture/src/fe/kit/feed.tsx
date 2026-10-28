@@ -1,6 +1,6 @@
 import React,{forwardRef,useCallback,useEffect,useImperativeHandle,useLayoutEffect,useRef,useState,type ReactNode} from 'react';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Bold,ChartColumn,ChevronDown,ChevronRight,Ellipsis,FileText,Heading,Image as ImageIcon,ImagePlus,Italic,Link as LinkIcon,List,ListOrdered,MessageSquareText,Quote,Sparkles,Strikethrough,Video,type LucideIcon} from 'lucide-react';
+import {Bold,Bookmark,ChartColumn,ChevronDown,ChevronRight,Ellipsis,FileText,Heading,Heart,Image as ImageIcon,ImagePlus,Italic,Link as LinkIcon,List,ListOrdered,MessageCircle,MessageSquareText,Quote,Share,Sparkles,Strikethrough,Video,type LucideIcon} from 'lucide-react';
 import {fmtDur} from './media';
 import {Av,Btn,Field,H,IconBtn,Input,Sheet,Text,namedPlate,type PlateKey} from './index';
 import {domToMd,imageBlock,linkOk,mdToDom} from './rich-md';
@@ -178,16 +178,22 @@ export function ActivityTile({thumb,label,onClick}:{thumb:ActThumb,label:string,
 }
 
 /** The strip: tiles scroll sideways under a fixed «+N» on the right (N = tiles not fully seen plus `rest` not loaded);
- * fades show on the side that has more. «+N» (or ⌄ at the end) opens the whole list. */
+ * fades show on the side that has more. «+N» (or ⌄ at the end) opens the whole list. The button keeps one width, so
+ * its text never resizes the strip (that fed back into the count and the strip jumped); scrolling only updates the
+ * count when it changes and sets the fades straight on the element (no re-render per scroll frame). */
 function ActStrip({tiles,rest,onOpen,label}:{tiles:ReactNode[],rest:number,onOpen:()=>void,label:string}){
- const ref=useRef<HTMLDivElement>(null);const [fit,setFit]=useState({over:false,hid:0,l:false,r:false});
- const measure=useCallback(()=>{const s=ref.current;if(!s)return;const over=s.scrollWidth>s.clientWidth+1;const edge=s.scrollLeft+s.clientWidth+1;
-  const hid=over?[...s.children].filter(c=>{const e=c as HTMLElement;return e.offsetLeft+e.offsetWidth>edge;}).length:0;
-  setFit(f=>{const n={over,hid,l:over&&s.scrollLeft>2,r:over&&s.scrollLeft+s.clientWidth<s.scrollWidth-2};return f.over===n.over&&f.hid===n.hid&&f.l===n.l&&f.r===n.r?f:n;});},[]);
- useEffect(()=>{measure();const s=ref.current;if(!s||typeof ResizeObserver!=='function')return;const o=new ResizeObserver(measure);o.observe(s);return ()=>o.disconnect();},[measure,tiles.length]);
+ const ref=useRef<HTMLDivElement>(null);const [fit,setFit]=useState({over:false,hid:0});
+ const measure=useCallback(()=>{const s=ref.current;if(!s)return;const over=s.scrollWidth>s.clientWidth+1;
+  const l=over&&s.scrollLeft>2,r=over&&s.scrollLeft+s.clientWidth<s.scrollWidth-2;
+  s.classList.toggle('fl',l);s.classList.toggle('fr',r);
+  // A tile counts as unseen while less than half of it shows.
+  const edge=s.scrollLeft+s.clientWidth;
+  const hid=over?[...s.children].filter(c=>{const e=c as HTMLElement;return e.offsetLeft+e.offsetWidth/2>edge;}).length:0;
+  setFit(f=>f.over===over&&f.hid===hid?f:{over,hid});},[]);
+ useEffect(()=>{measure();const s=ref.current;if(!s||typeof ResizeObserver!=='function')return;const o=new ResizeObserver(()=>measure());o.observe(s);return ()=>o.disconnect();},[measure,tiles.length]);
  const n=fit.hid+rest;const show=fit.over||rest>0;
  return <div className="actc-row">
-  <div ref={ref} className={'actc-strip'+(fit.l?' fl':'')+(fit.r?' fr':'')} onScroll={measure}>{tiles}</div>
+  <div ref={ref} className="actc-strip" onScroll={measure}>{tiles}</div>
   {show&&<button type="button" className="actc-more" aria-label={label} aria-expanded={false} onClick={onOpen}>{n?`+${n}`:<ChevronDown/>}</button>}
  </div>;
 }
@@ -197,7 +203,7 @@ function ActStrip({tiles,rest,onOpen,label}:{tiles:ReactNode[],rest:number,onOpe
  * with «Свернуть». Without tiles `items` show `fold` rows and «Ещё N». `total` — how many there are in all (the
  * server sends up to 20); those not sent are named at the end of the open list (`restText`). */
 export function ActivityCard({actor,text,time,menuLabel,onMenu,onActor,items,tiles,total,fold=2,more,less,restText}:{actor:{id:string,name:string,avatar?:string|null|undefined},text:ReactNode,time:ReactNode,
- menuLabel:string,onMenu:()=>void,onActor?:()=>void,items:ReactNode[],tiles?:ReactNode[]|undefined,total?:number|undefined,fold?:number,
+ /** Without `onMenu` (a profile's own «Активность») there is no ⋯. */ menuLabel:string,onMenu?:(()=>void)|undefined,onActor?:()=>void,items:ReactNode[],tiles?:ReactNode[]|undefined,total?:number|undefined,fold?:number,
  /** «Показать все» (strip) / «Ещё N» (rows). */ more:string,less:string,/** «И ещё N — в профиле». */ restText?:ReactNode}){
  const [open,setOpen]=useState(false);const all=Math.max(total??items.length,items.length);const rest=all-items.length;
  const av=<Av name={actor.name} seed={actor.id} src={actor.avatar} size="sm"/>;
@@ -207,12 +213,11 @@ export function ActivityCard({actor,text,time,menuLabel,onMenu,onActor,items,til
  else if(tiles?.length)body=<ActStrip tiles={tiles} rest={rest} label={more} onOpen={()=>setOpen(true)}/>;
  else if(items.length)body=<div className="actc-list">{items.slice(0,fold)}
   {all>fold&&<Btn kind="text" auto aria-expanded={false} onClick={()=>setOpen(true)}>{more}</Btn>}</div>;
+ // Laid out like a post: the face, the line and ⋯ on top, the things under them at the full width of the card.
  return <article className="actc">
-  <span className="actc-av">{onActor?<button type="button" className="plink" aria-label={actor.name} onClick={onActor}>{av}</button>:av}</span>
-  <div className="actc-b">
-   <div className="actc-hd"><p className="actc-t">{text}<small>{time}</small></p><IconBtn icon={Ellipsis} kind="ghost" size="sm" label={menuLabel} aria-haspopup="dialog" onClick={onMenu}/></div>
-   {body}
-  </div>
+  <div className="actc-hd"><span className="actc-av">{onActor?<button type="button" className="plink" aria-label={actor.name} onClick={onActor}>{av}</button>:av}</span>
+   <p className="actc-t">{text}<small>{time}</small></p>{onMenu&&<IconBtn icon={Ellipsis} kind="ghost" size="sm" label={menuLabel} aria-haspopup="dialog" onClick={onMenu}/>}</div>
+  {body}
  </article>;
 }
 /** A thing inside an activity card (a post, an event, a community, a person): its thumbnail (`thumb`, or `av` / `icon`),
@@ -221,6 +226,29 @@ export function ActivityItem({icon:I,av,thumb,title,sub,onClick}:{icon?:LucideIc
  const {t}=useI18n();const th=thumb?thumbParts(thumb,true,t):null;
  return <button type="button" className="actc-p" onClick={onClick}>{th?<span className={'actth '+th.cls}>{th.body}</span>:av??(I&&<span className="actth ic"><I/></span>)}
   <span className="tx"><b>{title}</b>{sub&&<small>{sub}</small>}</span></button>;
+}
+
+/* ---------------- Post viewer ---------------- */
+
+/** Over a post's full-screen media (owner 28.10.2026, TikTok-like): «Нравится» with the count, comments, «Сохранить»
+ * and «Поделиться» down the right side; the author and two lines of the text at the bottom over a scrim — a tap on the
+ * text opens the post. Goes inside the viewer next to its track (`Viewer` `bar`), so tap paging stays as it is. */
+export function ViewerPostBar({author,text,liked,likes,replies,saved,labels,onLike,onComment,onSave,onShare,onOpen,onAuthor}:{
+ author:{id:string,name:string,avatar?:string|null|undefined},text:string,liked:boolean,likes:number,replies:number,saved:boolean,
+ labels:{like:string,comment:string,save:string,share:string,open:string},onLike:()=>void,onComment:()=>void,onSave:()=>void,onShare:()=>void,
+ onOpen:()=>void,onAuthor:()=>void}){
+ return <>
+  <div className="vw-rail">
+   <button type="button" className={liked?'on':undefined} aria-pressed={liked} aria-label={labels.like} onClick={onLike}><Heart fill={liked?'currentColor':'none'}/><span>{likes}</span></button>
+   <button type="button" aria-label={labels.comment} onClick={onComment}><MessageCircle/><span>{replies}</span></button>
+   <button type="button" className={saved?'on':undefined} aria-pressed={saved} aria-label={labels.save} onClick={onSave}><Bookmark fill={saved?'currentColor':'none'}/></button>
+   <button type="button" aria-label={labels.share} onClick={onShare}><Share/></button>
+  </div>
+  <div className="vw-cap">
+   <button type="button" className="vw-who" onClick={onAuthor}><Av name={author.name} seed={author.id} src={author.avatar} size="xs"/>{author.name}</button>
+   {text&&<button type="button" className="vw-txt" title={labels.open} onClick={onOpen}>{text}</button>}
+  </div>
+ </>;
 }
 
 /* ---------------- Create ---------------- */

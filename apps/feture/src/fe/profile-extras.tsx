@@ -6,12 +6,13 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicBase} from '../api-url';
 import {Ban,Check,ChevronDown,Crown,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,Flag,Heart,History,Info,Link as LinkIcon,Lock,LockOpen,MapPin,MessageCircle,ShieldCheck,Undo2,Users,X} from 'lucide-react';
-import {ActingAv,Alert,Av,Bar,Btn,Card,Empty,Group,H,IconBtn,Layer,Note,PersonName,PhotoTrack,Pill,Row,Seg,Skel,ToggleRow,Veil,View,plate} from './kit';
+import {ActingAv,Alert,Av,Bar,Btn,Card,Empty,Group,H,IconBtn,Layer,Note,PersonName,PhotoBars,PhotoTrack,Pill,Row,Seg,Skel,Text,ToggleRow,Veil,View,plate} from './kit';
 import {useFe} from './session';
 import {ReportSheet} from './report';
 import {PhotoBadge} from './photo-check';
 import {faceFields,NameBadges} from './faces';
 import {PostCard,postSchema,type Post} from './feed';
+import {ActivityCardOf,activitySchema,type Act} from './feed-activity';
 import type {Removal} from './post-menu';
 import {useToast as useAppToast} from './toast';
 import {PrivateVault} from './private';
@@ -186,7 +187,7 @@ export function ProfileHero({p,rel,inert,onOpen}:{p:PersonProfile,rel:Relation|n
   {src?<><img className="mbg" src={src} alt="" aria-hidden="true" draggable={false}/><img src={src} alt={name} draggable={false}/></>
    :p.kind==='couple'?<><div className="plate" style={plate(p.id)}/><div className="hero-pairav"><Av name={name} seed={p.id} size="xl"/></div></>
    :<div className="plate" style={plate(p.id)}/>}
-  {list.length>1&&<div className="pc-bars" aria-label={fill(t('fe.px.ph.n'),{i:i+1,n:list.length})}>{list.map((_,k)=><i key={k} className={k===i?'on':''}/>)}</div>}
+  <PhotoBars n={list.length} i={i} label={fill(t('fe.px.ph.n'),{i:i+1,n:list.length})} count/>
   {list.length>1&&<><button type="button" className="pc-zone l" aria-label={t('fe.px.ph.prev')} onClick={()=>setIx(Math.max(0,i-1))}/><button type="button" className="pc-zone r" aria-label={t('fe.px.ph.next')} onClick={()=>setIx(Math.min(list.length-1,i+1))}/></>}
   {src&&onOpen&&<button type="button" className="pc-zone c" aria-label={t('fe.px.ph.full')} onClick={()=>onOpen(i)}/>}
   <div className="pc-info"><PersonName name={name} age={p.age||undefined}><NameBadges p={p}/></PersonName>
@@ -203,7 +204,7 @@ export function PhotoViewer({srcs,index,onClose,wm}:{srcs:string[],index:number,
  useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape')onClose();else if(e.key==='ArrowLeft')step(-1);else if(e.key==='ArrowRight')step(1);};addEventListener('keydown',k);return ()=>removeEventListener('keydown',k);},[onClose,step]);
  return <Layer><div className={'viewer'+(on?' on':'')} role="dialog" aria-modal="true" aria-label={t('fe.px.ph.viewer')}
   onPointerDown={e=>{sx.current=e.clientX;}} onPointerUp={e=>{if(sx.current==null)return;const dx=e.clientX-sx.current;sx.current=null;if(Math.abs(dx)>50)step(dx<0?1:-1);}}>
-  <PhotoTrack srcs={srcs} index={i} wm={wm} onStep={step}/>
+  <PhotoTrack srcs={srcs} index={i} wm={wm} onStep={step} onClose={onClose}/>
   <div className="vw-top"><span className="vw-n">{i+1} / {srcs.length}</span><IconBtn ref={closeBtn} icon={X} kind="glass" label={t('fe.px.close')} onClick={onClose}/></div>
   {srcs.length>1&&<>
    <button type="button" className="vw-nav l" aria-label={t('fe.px.ph.prev')} disabled={i===0} onClick={()=>step(-1)}><ChevronLeft/></button>
@@ -268,19 +269,32 @@ export function usePrivate(profileId:string,skip=false){
  return p;
 }
 const postsRes=z.object({ok:z.literal(true),items:z.array(z.lazy(()=>postSchema)),next:z.string().nullable().optional()}).passthrough();
-/** activityBlock: «Публикации / Статьи» as tabs with counts; the first three of each. */
-function Activity({profileId,inert}:{profileId:string,inert?:boolean|undefined}){
- const {call}=useFe();const {t}=useI18n();const [items,setItems]=useState<Post[]|null>(null);const [tab,setTab]=useState<'posts'|'notes'>('posts');
+const actRes=z.object({ok:z.literal(true),items:z.array(z.unknown()),next:z.string().nullable().optional()}).passthrough();
+const ownVis=z.object({ok:z.literal(true),settings:z.object({activityVis:z.enum(['all','followers','off']).optional()}).passthrough()});
+/** activityBlock: «Публикации / Статьи / Активность» — tabs only when there is more than one of them; the first three
+ * of each. «Активность» is the person's own activity cards (as «Подписки» shows them) by their «Кто видит мою
+ * активность» and the viewer's relation (the server decides); on one's own profile it says who else sees it. «Как
+ * видят» (`preview`) shows it only when everyone may. */
+function Activity({profileId,inert,preview}:{profileId:string,inert?:boolean|undefined,preview?:boolean|undefined}){
+ const {call,acting}=useFe();const {t}=useI18n();const [items,setItems]=useState<Post[]|null>(null);const [tab,setTab]=useState<'posts'|'notes'|'acts'>('posts');
+ const [acts,setActs]=useState<Act[]|null>(null);const own=profileId===acting?.id;const [vis,setVis]=useState<string|null>(null);
  useEffect(()=>{setItems(null);call('profile.posts',{profileId},postsRes).then(r=>setItems(r.items)).catch(()=>setItems([]));},[call,profileId]);
- if(!items)return null;
+ useEffect(()=>{setActs(null);call('profile.activity',{profileId},actRes).then(r=>setActs(r.items.flatMap(x=>{const a=activitySchema.safeParse(x);return a.success?[a.data]:[];}))).catch(()=>setActs([]));},[call,profileId]);
+ useEffect(()=>{if(!own){setVis(null);return;}call('profile.settings',{},ownVis).then(r=>setVis(r.settings.activityVis??'all')).catch(()=>setVis('all'));},[call,own]);
+ if(!items||!acts||(own&&!vis))return null;
+ const shownActs=preview&&vis!=='all'?[]:acts;
  const posts=items.filter(x=>x.type!=='note'),notes=items.filter(x=>x.type==='note');
- const on=([['posts',t('fe.px.act.posts'),posts],['notes',t('fe.px.act.notes'),notes]] as const).filter(x=>x[2].length);
+ const on=([['posts',t('fe.px.act.posts'),posts.length],['notes',t('fe.px.act.notes'),notes.length],['acts',t('fe.px.act.acts'),shownActs.length]] as const).filter(x=>x[2]>0);
  if(!on.length)return null;
  const cur=on.find(x=>x[0]===tab)??on[0]!;
  const change=(p:Post)=>setItems(l=>l&&l.map(x=>x.id===p.id?p:x));const remove=(r:Removal)=>setItems(l=>l&&l.filter(x=>x.id!==r.postId&&x.author.id!==r.authorId));
+ const list=cur[0]==='posts'?posts:notes;
  return <Group className="activity" title={on.length>1?undefined:cur[1]}>
   {on.length>1&&<Seg value={cur[0]} onChange={v=>setTab(v)} options={on.map(x=>({id:x[0],label:x[1]}))}/>}
-  <div className="posts" inert={inert||undefined}>{cur[2].slice(0,3).map(x=><PostCard key={x.id} post={x} onChange={change} onRemove={remove}/>)}</div>
+  {cur[0]==='acts'?<>
+    {own&&!preview&&<Text size="sm" tone="mute">{t('fe.px.act.actsSees.'+vis)}</Text>}
+    <div className="posts" inert={inert||undefined}>{shownActs.slice(0,3).map(a=><ActivityCardOf key={a.id} a={a}/>)}</div></>
+   :<div className="posts" inert={inert||undefined}>{list.slice(0,3).map(x=><PostCard key={x.id} post={x} onChange={change} onRemove={remove}/>)}</div>}
  </Group>;
 }
 
@@ -315,7 +329,7 @@ export function ProfileBody({p,inert,preview,onOpen}:{p:PersonProfile,inert?:boo
   <InterestsGroup profileId={p.id} name={personName(p)||'?'} inert={inert}/>
   <GalleryGroup p={p} onOpen={onOpen} inert={inert}/>
   <PrivateVault profileId={p.id} name={personName(p)} {...(preview?{preview}:{})}/>
-  <Activity profileId={p.id} inert={inert}/>
+  <Activity profileId={p.id} inert={inert} preview={!!preview}/>
  </>;
 }
 
@@ -329,7 +343,8 @@ export function ProfilePage({p,preview,seg,onMore,menu,toast,children}:{p:Person
  const onScroll=(e:React.UIEvent<HTMLDivElement>)=>{const h=e.currentTarget.querySelector('.hero');const b=bar.current;if(h&&b)b.classList.toggle('solid',h.getBoundingClientRect().bottom<b.getBoundingClientRect().bottom+8);};
  return <>
   <header ref={bar} className="bar overlay pbar">
-   <IconBtn icon={ChevronLeft} kind="glass" label={t('fe.back')} onClick={()=>navigate(-1)}/>
+   {/* Back to where the profile was opened (the deck, «Симпатии», a list, search); opened by a link, to «Люди». */}
+   <IconBtn icon={ChevronLeft} kind="glass" label={t('fe.back')} onClick={()=>{if(((window.history.state as {idx?:number}|null)?.idx??0)>0)navigate(-1);else navigate('/n/people',{replace:true});}}/>
    <span className="pbar-t" aria-hidden="true"><Av name={name} seed={p.id} src={mediaSrc(p.avatar)} size="sm"/><b>{name}</b></span>
    {onMore&&<IconBtn icon={Ellipsis} kind="glass" aria-haspopup="dialog" label={t('fe.px.menu.more')} onClick={onMore}/>}
   </header>

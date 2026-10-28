@@ -381,15 +381,21 @@ async function markers(q, viewer, media, source, params, cursor) {
  * ways, «Не показывать активность» and muted authors are respected. Actions of one kind by one person with no pause
  * longer than 6 hours fold into one card. Keyset on (last action, card id), like posts.
  * @param {Q} q @param {Acting} viewer @param {string[]} kinds @param {{at: string, id: string} | null} cur @param {number} limit */
-async function activityBursts(q, viewer, kinds, cur, limit) {
-  return q.query(
-    `with people as (
-       select p.id from feture.follow f
+async function activityBursts(q, viewer, kinds, cur, limit, of = null) {
+  // `of`: one person's own activity (their profile's «Активность»): «всем» — anyone, «подписчикам» — those who follow
+  // them, «никому» — only the person; the viewer's mutes do not apply on a profile opened on purpose.
+  const people = of
+    ? `select p.id from feture.profile p join feture.profile_settings s on s.profile_id = p.id
+       where p.id = $7 and p.state = 'active' and not feture.blocked($1, p.id)
+         and (p.id = $1 or s.activity_vis = 'all'
+              or s.activity_vis = 'followers' and exists (select 1 from feture.follow f where f.follower_profile_id = $1 and f.target_profile_id = p.id))`
+    : `select p.id from feture.follow f
        join feture.profile p on p.id = f.target_profile_id and p.state = 'active'
        join feture.profile_settings s on s.profile_id = p.id
-       where f.follower_profile_id = $1 and s.activity_vis <> 'off' and not feture.blocked($1, p.id)
-         and not exists (select 1 from feture.feed_hide h where h.profile_id = $1 and h.kind in ('activity', 'author') and h.target_id = p.id)
-     ), acts as (
+       where f.follower_profile_id = $1 and p.id <> $1 and s.activity_vis <> 'off' and not feture.blocked($1, p.id)
+         and not exists (select 1 from feture.feed_hide h where h.profile_id = $1 and h.kind in ('activity', 'author') and h.target_id = p.id)`;
+  return q.query(
+    `with people as (${people}), acts as (
        select r.profile_id actor, 'likes' typ, r.target_id target, r.created_at t
        from people join feture.reaction r on r.profile_id = people.id and r.target_type = 'post'
        join feture.profile_settings s on s.profile_id = people.id and s.show_likes
@@ -423,7 +429,7 @@ async function activityBursts(q, viewer, kinds, cur, limit) {
      )
      select * from bursts where ($4::timestamptz is null or (last_at, id) < ($4::timestamptz, $5::uuid))
      order by last_at desc, id desc limit $6`,
-    [viewer.profileId, viewer.accountId, kinds, cur?.at ?? null, cur?.id ?? null, limit]);
+    [viewer.profileId, viewer.accountId, kinds, cur?.at ?? null, cur?.id ?? null, limit, ...(of ? [of] : [])]);
 }
 
 /** Activity cards for the screen: the person, how many, and up to ACT_ITEMS of the things — a liked post with its
@@ -499,7 +505,7 @@ async function postDtos(q, rows, viewer, media, showExplicit) {
   const ids = rows.map(p => p.id);
   const owners = [...new Set(rows.map(p => p.owner_profile_id))];
   const ownIds = rows.filter(p => p.own).map(p => p.id);
-  const [authors, assets, polls, mine, counts, tags, mentions, disputes] = await Promise.all([
+  const [authors, assets, polls, mine, counts, tags, mentions, disputes, follows] = await Promise.all([
     // The name badges (V21 nameBadges): «Фото подтверждено» and the public Premium crown.
     q.query(`select p.id, p.kind, p.handle, p.name, p.avatar_asset_id, ${pv ? 'feture.photo_verified(p.id)' : 'false'} "photoVerified", ${PREMIUM_SQL} premium
              from feture.profile p where p.id = any($1::uuid[])`, [owners]),
@@ -525,6 +531,8 @@ async function postDtos(q, rows, viewer, media, showExplicit) {
       [ids, viewer.profileId]),
     // Own posts hidden by an open «это я на фото» claim: the author sees that, never the claimant.
     ownIds.length ? q.query(`select distinct d.post_id from feture.photo_dispute d where d.post_id = any($1::uuid[]) and d.state = 'open' and d.hid`, [ownIds]) : [],
+    // Whether the acting profile follows each author: the ⋯ menu shows «Подписаться / Отписаться» with the post.
+    q.query('select target_profile_id id from feture.follow where follower_profile_id = $1 and target_profile_id = any($2::uuid[])', [viewer.profileId, owners]),
   ]);
   // Results only after one's own vote (V21 pollHTML), or for the author.
   const showResults = polls.map(pl => pl.post_id).filter(id => ownIds.includes(id) || mine.some(m => m.post_id === id));
@@ -546,6 +554,7 @@ async function postDtos(q, rows, viewer, media, showExplicit) {
     const row = authors.find(a => a.id === p.owner_profile_id);
     const { avatar_asset_id: authorAvatar, ...author } = row;
     author.avatar = authorAvatar ? avatarOf.get(authorAvatar) ?? null : null;
+    if (!p.own && p.owner_profile_id !== viewer.profileId) author.iFollow = follows.some(f => f.id === p.owner_profile_id);
     const poll = polls.find(pl => pl.post_id === p.id);
     const my = mine.find(m => m.post_id === p.id);
     const res = showResults.includes(p.id) ? results.filter(r => r.post_id === p.id) : null;
@@ -662,8 +671,9 @@ const run = {
                  and not exists (select 1 from feture.poll pl where pl.post_id = p.id)))
          and (not $11::boolean or (p.topics && coalesce((select array_agg(i.topic_id) from feture.interest i where i.profile_id = $1 and i.value is not null), '{}')
               and not p.topics && coalesce((select array_agg(i.topic_id) from feture.interest i where i.profile_id = $1 and i.mark = 'hard'), '{}')))
-         and ($4 in ('forYou', 'popular') or p.owner_profile_id = $1
-              or exists (select 1 from feture.follow f where f.follower_profile_id = $1 and f.target_profile_id = p.owner_profile_id))
+         -- «Подписки» is what the people followed post: never the acting profile's own posts (a couple: the couple's).
+         and ($4 in ('forYou', 'popular') or p.owner_profile_id <> $1
+              and exists (select 1 from feture.follow f where f.follower_profile_id = $1 and f.target_profile_id = p.owner_profile_id))
          and ($5::timestamptz is null or (p.published_at, p.id) < ($5::timestamptz, $6::uuid))
          and ($4 <> 'popular' or p.published_at > now() - interval '7 days')
        order by case when $4 = 'popular' then ${popularScore('p', '$1')} end desc nulls last,
@@ -711,6 +721,16 @@ const run = {
     const items = await postDtos(q, page, viewer, cfg.media, !!acc.show_explicit);
     const last = page[page.length - 1];
     return { items, next: rows.length > 20 ? writeCursor(last.published_at, last.id) : null };
+  },
+
+  async 'profile.activity'(q, { acting: a, input, cfg }) {
+    const viewer = need(a);
+    const cur = readCursor(input.cursor);
+    const bursts = await activityBursts(q, viewer, [...ACTIVITY_KINDS].filter(k => k !== 'posts'), cur, 21, input.profileId);
+    const page = bursts.slice(0, 20);
+    const items = await activityDtos(q, viewer, cfg.media, page);
+    const last = page[page.length - 1];
+    return { items, next: bursts.length > 20 ? writeCursor(new Date(last.last_at).toISOString(), last.id) : null };
   },
 
   async 'me.posts'(q, { acting: a, cfg, account }) {

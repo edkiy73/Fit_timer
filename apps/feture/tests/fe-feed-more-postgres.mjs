@@ -288,6 +288,34 @@ test('«Подписки» activity: grouped cards from people I follow, their v
   } finally { await pg.close(); }
 });
 
+test('a profile\'s «Активность»: by «Кто видит мою активность» and the viewer\'s relation; the person always sees their own', async () => {
+  const { pg, db, call, person } = await setup();
+  try {
+    const a = await person('ua', 'Alex'), b = await person('ub', 'Kira'), c = await person('uc', 'Noa'), d = await person('ud', 'Dana');
+    const p1 = await publish(call, 'uc', c, draft('Пост Ноа для активности'));
+    await like(call, 'ua', a, p1);
+    await call('ua', a, { action: 'follow.set', opId: op(), profileId: c, on: true });
+    await call('ub', b, { action: 'follow.set', opId: op(), profileId: a, on: true });
+    const tab = async (user, profile) => {
+      const r = await call(user, profile, { action: 'profile.activity', profileId: a });
+      assert.equal(r.status, 200, JSON.stringify(r));
+      return r.items.map(i => i.activity).sort();
+    };
+    assert.deepEqual(await tab('ud', d), ['follows', 'likes']);                // «всем»: anyone
+    await setting(db, a, 'activity_vis', 'followers');
+    assert.deepEqual(await tab('ud', d), []);                                   // Dana does not follow Alex
+    assert.deepEqual(await tab('ub', b), ['follows', 'likes']);                 // Kira does
+    // A mute in the feed does not hide a profile opened on purpose.
+    await call('ub', b, { action: 'activity.mute', opId: op(), profileId: a, on: true });
+    assert.deepEqual(await tab('ub', b), ['follows', 'likes']);
+    await setting(db, a, 'activity_vis', 'off');
+    assert.deepEqual(await tab('ub', b), []);
+    assert.deepEqual(await tab('ua', a), ['follows', 'likes']);                 // own: always
+    await call('uc', c, { action: 'block.set', opId: op(), profileId: a, on: true });
+    assert.deepEqual(await tab('uc', c), []);
+  } finally { await pg.close(); }
+});
+
 test('«Подписки» activity: a burst of likes carries up to 20 things with what each post is made of, the count says the rest', async () => {
   const { pg, db, call, person } = await setup();
   try {

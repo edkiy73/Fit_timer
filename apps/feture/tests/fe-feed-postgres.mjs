@@ -40,11 +40,23 @@ test('text publishes at once; feed tabs, topics, hides, pagination; blocks hide 
     assert.deepEqual(await feed(call, 'ub', b), ['Пост Ноа', 'Привет от Алекса']);
     assert.deepEqual(await feed(call, 'ub', b, 'forYou', { topics: ['bondage'] }), ['Привет от Алекса']);
     assert.deepEqual(await feed(call, 'ub', b, 'following'), []);
+    // The post carries whether the acting profile follows its author (the ⋯ menu's «Подписаться / Отписаться»).
+    assert.equal((await call('ub', b, { action: 'feed.list', tab: 'forYou' })).items.find(i => i.body === 'Привет от Алекса').author.iFollow, false);
     await call('ub', b, { action: 'follow.set', opId: op(), profileId: a, on: true });
     assert.deepEqual(await feed(call, 'ub', b, 'following'), ['Привет от Алекса']);
+    const alexPost = (await call('ub', b, { action: 'feed.list', tab: 'following' })).items[0];
+    assert.equal(alexPost.author.iFollow, true);
+    assert.equal((await call('ub', b, { action: 'post.get', postId: alexPost.id })).post.author.iFollow, true);
+    assert.equal((await call('ub', b, { action: 'profile.posts', profileId: a })).items[0].author.iFollow, true);
     await call('ub', b, { action: 'feedHide.set', opId: op(), kind: 'author', targetId: c, on: true });
     assert.deepEqual(await feed(call, 'ub', b), ['Привет от Алекса']);
     assert.equal((await call('ub', b, { action: 'feedHide.list' })).count, 1);
+    // Own posts: in «Для тебя», never in «Подписки» (even following oneself would not bring them).
+    await publish(call, 'ub', b, draft('Свой пост'));
+    assert.ok((await feed(call, 'ub', b)).includes('Свой пост'));
+    assert.deepEqual(await feed(call, 'ub', b, 'following'), ['Привет от Алекса']);
+    assert.deepEqual((await call('ub', b, { action: 'feed.list', tab: 'following', activity: [] })).items.map(i => i.body), ['Привет от Алекса']);
+    assert.equal((await call('ub', b, { action: 'feed.list', tab: 'forYou' })).items.find(i => i.body === 'Свой пост').author.iFollow, undefined);
 
     for (let i = 0; i < 4; i++) await publish(call, 'ua', a, draft('Ещё ' + i));
     const page1 = await call('uc', c, { action: 'feed.list', tab: 'forYou', limit: 3 });
@@ -65,7 +77,8 @@ test('text publishes at once; feed tabs, topics, hides, pagination; blocks hide 
     assert.equal((await call('ub', b, { action: 'post.get', postId: anyAlexPost })).status, 404);
     assert.equal((await call('ua', a, { action: 'follow.set', opId: op(), profileId: b, on: true })).status, 404);
     await call('ub', b, { action: 'block.set', opId: op(), profileId: a, on: false });
-    assert.deepEqual(await feed(call, 'ub', b, 'following'), ['Пост Киры']); // own posts only: the follow did not come back
+    // Never one's own posts in «Подписки», and the follow did not come back.
+    assert.deepEqual(await feed(call, 'ub', b, 'following'), []);
     assert.equal((await call('ub', b, { action: 'block.set', opId: op(), profileId: b, on: true })).rule, 'self');
   } finally { await pg.close(); }
 });

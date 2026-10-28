@@ -2,7 +2,7 @@ import type {Meta,StoryObj} from '@storybook/react-vite';
 import {useRef,useState} from 'react';
 import {fn} from 'storybook/test';
 import {AtSign,Calendar,ChartColumn,Image as ImageIcon,Sparkles} from 'lucide-react';
-import {ActionLine,ActivityCard,ActivityItem,ActivityTile,type ActThumb,ArticleCard,ArticleImage,Av,Card,EventTile,FeedEvents,IconBtn,LikesLine,plate,PLATE_KEYS,articlePlate,QuickStart,RichEditor,type RichEditorHandle} from './index';
+import {ActionLine,ActivityCard,ActivityItem,ActivityTile,type ActThumb,ArticleCard,ArticleImage,Av,Card,EventTile,FeedEvents,IconBtn,LikesLine,plate,PLATE_KEYS,articlePlate,QuickStart,RichEditor,type RichEditorHandle,PhotoTrack,ViewerPostBar} from './index';
 
 /** A picture drawn in place (no network): a soft gradient with a word. */
 const pic=(word:string,w=1200,h=675)=>{const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d')!;
@@ -93,3 +93,9 @@ export const Скоро:StoryObj<typeof FeedEvents>={name:'«Скоро» в л�
   {key:'2',tile:<EventTile row cover={evCover('b')} day="2" month="нояб" place="Кройцберг" time="20:00" title="Вечер знакомств" org="Из твоего сообщества" onClick={fn()}/>,menuLabel:'Действия с событием «Вечер знакомств»',onMenu:fn()},
   {key:'3',tile:<EventTile row cover={evCover('c')} day="14" month="нояб" place="Нойкёльн" time="18:30" title="Мастерская по верёвке для начинающих и тех, кто давно не практиковал" org="По твоим интересам" onClick={fn()}/>,menuLabel:'Действия с событием «Мастерская по верёвке для начинающих…»',onMenu:fn()}]},
  argTypes:{items:{control:false}}};
+
+export const ПросмотрПоста:StoryObj<typeof ViewerPostBar>={name:'Просмотр медиа поста: действия справа, текст внизу',
+ render:a=><div className="viewer on k-demo-viewer" style={{height:520}}><PhotoTrack srcs={[pic('Фото',800,1000)]} index={0} onClose={fn()}/><ViewerPostBar {...a}/></div>,
+ args:{author:{id:'mia',name:'Mia'},text:'Вечер у озера — первая прогулка после долгой недели. Тишина, туман и ни одного человека вокруг, только утки и мы.',
+  liked:true,likes:12,replies:3,saved:false,labels:{like:'Нравится',comment:'Комментарии',save:'Сохранить',share:'Поделиться',open:'Открыть публикацию'},
+  onLike:fn(),onComment:fn(),onSave:fn(),onShare:fn(),onOpen:fn(),onAuthor:fn()}};
