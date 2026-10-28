@@ -1,5 +1,5 @@
 // Photos through the kit uploader everywhere: profile photos (4:5 only) and a community cover (16:9).
-import { expect, until, pngOf } from './helpers.mjs';
+import { expect, until, pngOf } from '../helpers.mjs';
 const photos = async t => (await t.api('profile.get', { profileId: t.me.personId })).profile.photos;
 export default [
  { name: 'profile photos: uploader offers only 4:5, «Готово», «Сохранить» → two more photos on the profile', persona: 'basic', route: '/n/me/edit?only=media', run: async t => {

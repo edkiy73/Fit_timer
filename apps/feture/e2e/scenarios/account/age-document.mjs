@@ -1,15 +1,15 @@
 // A07 by document (persona new → account made by API): choose «Документ» → «Загрузить файл документа» → send; staff
 // sees the check as a document and approves; the account is 18+ and the document image is gone (staff can't open it).
-import { expect, until, pngOf } from './helpers.mjs';
-import { PROD, uuid7 } from '../lib.mjs';
-import { staff, STAFF } from '../personas.mjs';
+import { expect, until, pngOf, dropsNew } from '../helpers.mjs';
+import { PROD, uuid7 } from '../../lib.mjs';
+import { staff, STAFF } from '../../personas.mjs';
 
 async function documents() {
   const r = await fetch(`${PROD}/api/catalog?resource=documents&locale=ru`, { cache: 'no-store' }).then(x => x.json());
   return r.documents.filter(d => d.requiresAccept).map(d => ({ id: d.id, contentHash: d.hash }));
 }
 
-export default [{ name: 'age check by document: send, staff approves, image deleted', persona: 'new', allow4xx: true, run: async t => {
+export default dropsNew([{ name: 'age check by document: send, staff approves, image deleted', persona: 'new', allow4xx: true, run: async t => {
   const handle = ('qa_' + t.me.email.split('@')[0].replace(/[^a-z0-9]/g, '')).slice(0, 20);
   const made = await t.api('account.create', { opId: uuid7(), handle, birthDate: '1990-01-01', locale: 'ru', documents: await documents(), newsOptIn: false });
   expect(made.ok, 'account');
@@ -33,4 +33,4 @@ export default [{ name: 'age check by document: send, staff approves, image dele
   expect(after.verified || after.ageVerified || after.check?.state === 'approved', 'verified: ' + JSON.stringify(after).slice(0, 200));
   if (assetId) { const v = await t.api('staff.mediaView', { assetId }, STAFF); expect(v.status === 404, 'document not viewable after decision: ' + v.status); }
   await t.tap('Обновить статус'); await t.see('18+ подтверждено');
-}}];
+}}]);
