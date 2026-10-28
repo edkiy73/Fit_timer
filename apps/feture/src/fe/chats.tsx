@@ -439,20 +439,20 @@ export function ChatScreen(){
 
  /* ---- the chat menu ---- */
  const run=async(fn:()=>Promise<void>)=>{setSheetBusy(true);setSheetErr('');try{await fn();}catch(e){setSheetErr(feErrorMessage(e,t));}finally{setSheetBusy(false);}};
- const toggleMute=()=>meta&&run(async()=>{const on=!meta.muted;await call('chat.mute',{conversationId:id,on},ok,{profileId:meta.side.id});setMeta({...meta,muted:on});toast(on?t('fe.chx.muted'):t('fe.chx.unmuted'));});
+ const toggleMute=()=>meta&&run(async()=>{const on=!meta.muted;await call('chat.mute',{conversationId:id,on},ok,{profileId:meta.side.id});setMeta({...meta,muted:on});toast(on?t(meta.side.kind==='couple'?'fe.chx.mutedUs':'fe.chx.muted'):t('fe.chx.unmuted'));});
  const setArchive=(on:boolean)=>meta?call('chat.archive',{conversationId:id,on},ok,{profileId:meta.side.id}):Promise.resolve(null);
  const toggleArchive=()=>meta&&run(async()=>{const on=!meta.archived;await setArchive(on);setSheet(null);
   if(on){toast(t('fe.chx.archived'),{type:'ok',action:{label:t('fe.chx.undo'),fn:()=>{void setArchive(false).then(()=>dispatchEvent(new Event(RELOAD)),()=>{});}}});navigate('/n/chats');}
   else{setMeta({...meta,archived:false});toast(t('fe.chx.restored'),{type:'ok',action:{label:t('fe.chx.undo'),fn:()=>{void setArchive(true).then(()=>setMeta(m=>m&&{...m,archived:true}));}}});}});
- const revoke=()=>meta&&run(async()=>{await call('access.revoke',{opId:newOpId(),profileId:meta.other.id},ok,{profileId:meta.side.id});setGrants(g=>({...g,byMe:false}));setSheet(null);toast(t('fe.chx.revoked'),{type:'ok'});});
+ const revoke=()=>meta&&run(async()=>{await call('access.revoke',{opId:newOpId(),profileId:meta.other.id},ok,{profileId:meta.side.id});setGrants(g=>({...g,byMe:false}));setSheet(null);toast(t(meta.side.kind==='couple'?'fe.chx.revokedUs':'fe.chx.revoked'),{type:'ok'});});
  const endConn=()=>meta&&run(async()=>{await call('match.end',{opId:newOpId(),profileId:meta.other.id},ok,{profileId:meta.side.id});
   if(grants.byMe&&ecRevoke){await call('access.revoke',{opId:newOpId(),profileId:meta.other.id},ok,{profileId:meta.side.id}).catch(()=>{});setGrants(g=>({...g,byMe:false}));}
-  setState('ended');setSheet(null);toast(t('fe.chx.endDone'),{type:'ok'});dropOut(outRef.current);});
+  setState('ended');setSheet(null);toast(t(meta.side.kind==='couple'?'fe.chx.endDoneUs':'fe.chx.endDone'),{type:'ok'});dropOut(outRef.current);});
  const block=()=>meta&&run(async()=>{await call('block.set',{opId:newOpId(),profileId:meta.other.id,on:true},ok,{profileId:meta.side.id});navigate('/n/chats');});
  const theirs=(items??[]).filter(m=>!m.mine).slice(-20).reverse();
  const openReport=()=>{setRpSel([]);setSheetErr('');setSheet('report');};
  // A chat is reported as its conversation with the selected messages; with nothing of theirs to show, the profile is.
- const reportDone=(blocked:boolean)=>{if(blocked)navigate('/n/chats');else{setSheet(null);toast(t('fe.chx.reportDone'),{type:'ok'});}};
+ const reportDone=(blocked:boolean)=>{if(blocked)navigate('/n/chats');else{setSheet(null);toast(t(meta?.side.kind==='couple'?'fe.ca.reported':'fe.chx.reportDone'),{type:'ok'});}};
 
  // Back from the age check a photo sent us to: the attach sheet opens again (the photo itself is picked anew).
  useAgeResume(v=>v==='attach:'+id,()=>{setSheetErr('');setSheet('attach');},!!meta&&state==='active');
@@ -517,7 +517,7 @@ export function ChatScreen(){
     {!ended&&all.length===0&&pend.length===0&&<><SectionLabel>{t('fe.chx.starters')}</SectionLabel><Chips className="ice">
      {[...starters.slice(0,2).map(n=>t('fe.w7.ice.topic',{topic:n})),t('fe.chx.ice1'),t('fe.chx.ice2')].map(s=><Chip key={s} onClick={()=>{setText(s);requestAnimationFrame(()=>{if(input.current){grow(input.current);input.current.focus();}});}}>{s}</Chip>)}
     </Chips></>}
-    {ended&&<Alert kind="info" icon={Ban} className="mt16"><b>{t('fe.chx.endedTitle')}</b>{t('fe.chx.endedText')}</Alert>}
+    {ended&&<Alert kind="info" icon={Ban} className="mt16"><b>{t('fe.chx.endedTitle')}</b>{t(couple?'fe.chx.endedTextUs':'fe.chx.endedText')}</Alert>}
     {out?.pending&&<Alert kind="info" icon={Clock}><b>{out.video?t('fe.av.videoPending'):t('fe.chx.pending')}</b>
      <Stack row gap={2}><Btn kind="soft" size="sm" auto busy={busy} disabled={busy} onClick={()=>void retryPending(false)}>{t('fe.chx.retry')}</Btn><Btn kind="text" size="sm" auto onClick={()=>dropOut(out)}>{t('fe.chx.drop')}</Btn></Stack></Alert>}
     {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
@@ -579,7 +579,7 @@ export function ChatScreen(){
    <Card list>
     <Row icon={User} title={t('fe.chx.profile')} onClick={()=>navigate('/n/people/'+meta.other.id)}/>
     <Row icon={Sparkles} tone="l" title={t('fe.chx.shared')} onClick={()=>navigate('/n/people/'+meta.other.id+'/compat')}/>
-    {grants.byMe&&<Row noChev icon={Lock} tone="v" title={t('fe.chx.revoke')} sub={t('fe.chx.revokeSub')} onClick={()=>{if(!sheetBusy)void revoke();}}/>}
+    {grants.byMe&&<Row noChev icon={Lock} tone="v" title={t(couple?'fe.chx.revokeUs':'fe.chx.revoke')} sub={t('fe.chx.revokeSub')} onClick={()=>{if(!sheetBusy)void revoke();}}/>}
    </Card>
    <Card list className="mt12">
     <ToggleRow title={t('fe.chx.mute')} sub={t('fe.chx.muteSub')} on={meta.muted} onClick={()=>{if(!sheetBusy)void toggleMute();}}/>
@@ -595,13 +595,13 @@ export function ChatScreen(){
 
   {sheet==='end'&&meta&&<Sheet title={t('fe.chx.endTitle')} lead={<span className="ico l"><X/></span>} onClose={closeSheet}
    foot={<><Btn kind="danger" onClick={()=>void endConn()} busy={sheetBusy} disabled={sheetBusy}>{t('fe.chx.end')}</Btn><Btn kind="soft" onClick={closeSheet}>{t('fe.chx.cancel')}</Btn></>}>
-   <p className="lead">{fill(t('fe.chx.endLead'))}</p>
+   <p className="lead">{fill(t(couple?'fe.chx.endLeadUs':'fe.chx.endLead'))}</p>
    <Card className="flat">
-    {(['endFact1','endFact2','endFact3'] as const).map(k=><div key={k} className="fact"><i className="g"><Check/></i><span>{t('fe.chx.'+k)}</span></div>)}
+    {(['endFact1','endFact2','endFact3'] as const).map(k=><div key={k} className="fact"><i className="g"><Check/></i><span>{t('fe.chx.'+k+(couple&&k==='endFact2'?'Us':''))}</span></div>)}
     <div className="fact"><i className="v"><Info/></i><span>{t('fe.chx.endFact4')}</span></div>
    </Card>
-   {grants.byMe&&<Card list className="mt12"><ToggleRow title={t('fe.chx.ecRevoke')} sub={t('fe.chx.ecRevokeSub')} on={ecRevoke} onClick={()=>setEcRevoke(v=>!v)}/></Card>}
-   <Note className="mt12">{t('fe.chx.endNote')}</Note>
+   {grants.byMe&&<Card list className="mt12"><ToggleRow title={t(couple?'fe.chx.ecRevokeUs':'fe.chx.ecRevoke')} sub={t('fe.chx.ecRevokeSub')} on={ecRevoke} onClick={()=>setEcRevoke(v=>!v)}/></Card>}
+   <Note className="mt12">{t(couple?'fe.chx.endNoteUs':'fe.chx.endNote')}</Note>
    {sheetAlert}
   </Sheet>}
 
@@ -615,8 +615,8 @@ export function ChatScreen(){
    </Card></Group>:<Note>{t('fe.chx.reportNoMsgs')}</Note>}/>}
 
   {sheet==='block'&&meta&&<Sheet title={fill(t('fe.chx.blockTitle'))} lead={<span className="ico l"><Ban/></span>} onClose={closeSheet}
-   foot={<><Btn kind="danger" onClick={()=>void block()} busy={sheetBusy} disabled={sheetBusy}>{t('fe.chx.block')}</Btn><Btn kind="soft" onClick={closeSheet}>{t('fe.chx.cancel')}</Btn></>}>
-   <p className="lead">{t('fe.chx.blockText')}</p>
+   foot={<><Btn kind="danger" onClick={()=>void block()} busy={sheetBusy} disabled={sheetBusy}>{t(couple?'fe.ca.block':'fe.chx.block')}</Btn><Btn kind="soft" onClick={closeSheet}>{t('fe.chx.cancel')}</Btn></>}>
+   <p className="lead">{t(couple?'fe.ca.blockText':'fe.chx.blockText')}</p>
    {sheetAlert}
   </Sheet>}
  </>;

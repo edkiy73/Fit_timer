@@ -7,7 +7,7 @@ import type {LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicOrigin} from '../api-url';
 import {ActingAv,ActionLine,ActivityCard,ActivityItem,Alert,ArticleCard,ArticleImage,Ask,Av,BAD_CHARS,Bar,Btn,Card,Chip,Chips,Counter,Empty,FeedEvents,Field,FilePick,Group,H,IconBtn,Input,LikesLine,Note,QuickStart,RichEditor,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,VideoBadge,View,hasLongWord,mdImages,type RichEditorHandle} from './kit';
-import {useFe} from './session';
+import {useFe,usePartnerApproves} from './session';
 import {ActivityCardOf,activitySchema,type Act} from './feed-activity';
 import {Uploader} from './kit/Uploader';
 import {useSendPhoto,useSendVideo} from './media-upload';
@@ -180,7 +180,7 @@ export function FeedTab(){
  };
  const muteAuthor=async(g:Gone)=>{
   try{await call('feedHide.set',{opId:newOpId(),kind:'author',targetId:g.authorId,on:true},okOnly);
-   removeWith({authorId:g.authorId,notice:t('fe.pm.done.authorHiddenName',{name:g.name}),undo:async()=>{await call('feedHide.set',{opId:newOpId(),kind:'author',targetId:g.authorId,on:false},okOnly);}});}
+   removeWith({authorId:g.authorId,notice:t('fe.pm.done.authorHiddenName'+(acting?.kind==='couple'?'Us':''),{name:g.name}),undo:async()=>{await call('feedHide.set',{opId:newOpId(),kind:'author',targetId:g.authorId,on:false},okOnly);}});}
   catch(e){toast(feErrorMessage(e,t),{type:'err'});}
  };
  const restore=(id:string,g:Gone)=>{g.undo().then(()=>{setGone(x=>{const {[id]:_,...rest}=x;return rest;});loadHidden();},e=>toast(feErrorMessage(e,t),{type:'err'}));};
@@ -191,7 +191,7 @@ export function FeedTab(){
  else if(error&&!items)body=<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>load()}>{t('fe.retry')}</Btn></Empty>;
  else if(items===null)body=<Skel kind="post"/>;
  else if(!items.length)body=filtN(f)?<Empty icon={SlidersHorizontal} title={t('fe.fd.nothing')} text={tab==='following'?t('fe.fd.nothingFollowing'):t('fe.fd.nothingText')}><Btn kind="soft" onClick={()=>setF(NO_FILTERS)}>{t('fe.fd.resetFilters')}</Btn></Empty>
-  :tab==='popular'?<Empty icon={Sparkles} title={t('fe.w3.pop.empty')} text={t('fe.w3.pop.emptyText')}/>
+  :tab==='popular'?<Empty icon={Sparkles} title={t('fe.w3.pop.empty')} text={t(acting?.kind==='couple'?'fe.w3.pop.emptyTextUs':'fe.w3.pop.emptyText')}/>
   :hidden?<Empty icon={EyeOff} title={t('fe.fd.allHidden')} text={t('fe.fd.allHiddenText')}><Btn kind="soft" onClick={()=>navigate('/n/settings/hidden')}>{t('fe.fd.showHidden')}</Btn></Empty>
   :tab==='following'?<Empty icon={Users} title={t('fe.fd.noFollows')} text={t('fe.fd.noFollowsText')}><Btn onClick={()=>navigate('/n/search?scope=people')}>{t('fe.fd.findPeople')}</Btn></Empty>
   :<Empty icon={Newspaper} title={t('fe.fd.noPosts')} text={t('fe.fd.noPostsText')}><Btn onClick={()=>navigate('/n/search?scope=people')}>{t('fe.fd.findPeople')}</Btn></Empty>;
@@ -246,7 +246,7 @@ export function FeedTab(){
     const who=actMenu.actor;setActMenu(null);
     try{await call('activity.mute',{opId:newOpId(),profileId:who.id,on:true},okOnly);
      const before=items;setItems(list=>list?.filter(x=>!isAct(x)||x.actor.id!==who.id)??null);
-     toast(t('fe.w3.act.muted',{name:nameOf(who)}),{type:'ok',action:{label:t('fe.tl.undo'),fn:()=>{call('activity.mute',{opId:newOpId(),profileId:who.id,on:false},okOnly)
+     toast(t('fe.w3.act.muted'+(acting?.kind==='couple'?'Us':''),{name:nameOf(who)}),{type:'ok',action:{label:t('fe.tl.undo'),fn:()=>{call('activity.mute',{opId:newOpId(),profileId:who.id,on:false},okOnly)
       .then(()=>{setItems(before);toast(t('fe.tl.restored'),{type:'ok'});},e=>toast(feErrorMessage(e,t),{type:'err'}));}}});}
     catch(e){toast(feErrorMessage(e,t),{type:'err'});}}}/>
   </Card></Sheet>}
@@ -366,7 +366,7 @@ export function PostCard({post,onChange,onRemove,onExpired,full=false,onReply,pr
    else{await call('saved.set',{opId:newOpId(),kind:'post',targetId:post.id,on},okOnly);
     // Unsaving offers «Вернуть» everywhere (in «Сохранённое» the card leaves the list at once).
     const resave=()=>{call('saved.set',{opId:newOpId(),kind:'post',targetId:post.id,on:true},okOnly).then(()=>onChange({...post,saved:true}),e=>toast(feErrorMessage(e,t),{type:'err'}));};
-    toast(on?(acting?.kind==='couple'?t('fe.fd.savedUs'):t('fe.fd.savedMe')):t('fe.fd.unsaved'),on?{type:'ok',action:{label:t('fe.fd.open'),fn:()=>navigate('/n/me/saved')}}:{action:{label:t('fe.tl.undo'),fn:resave}});}
+    toast(on?(acting?.kind==='couple'?t('fe.fd.savedUs'):t('fe.fd.savedMe')):t('fe.fd.unsaved'+(acting?.kind==='couple'?'Us':'')),on?{type:'ok',action:{label:t('fe.fd.open'),fn:()=>navigate('/n/me/saved')}}:{action:{label:t('fe.tl.undo'),fn:resave}});}
   }catch(e){onChange(post);toast(feErrorMessage(e,t),{type:'err'});}finally{setBusy(false);}
  };
  const share=async()=>{const url=`${publicOrigin()}/#/n/feed/post/${post.id}`;try{await navigator.clipboard.writeText(url);toast(t('fe.fd.linkCopied'),{type:'ok'});}catch{toast(url,{type:'info'});}};
@@ -419,9 +419,9 @@ export function PostCard({post,onChange,onRemove,onExpired,full=false,onReply,pr
   {okTags.length>0&&<div className="tagged"><Users/><span>{t('fe.fd.inPhoto')} {okTags.map((x,i)=><span key={x.id}>{i>0&&', '}<button type="button" disabled={preview} onClick={()=>navigate(x.id===acting?.id?'/n/me':'/n/people/'+x.id)}>{x.id===acting?.id?t('fe.fd.you'):nameOf(x)}</button></span>)}</span></div>}
   {post.topics&&post.topics.length>0&&<div className="tags" style={tready?undefined:{visibility:'hidden'}}>{post.topics.map(x=><button key={x} type="button" disabled={preview} onClick={()=>navigate('/n/topics/'+x)}>#{tname(x)}</button>)}</div>}
   <div className="post-a">
-   <button type="button" className={post.liked?'on':''} disabled={preview} aria-pressed={post.liked} aria-label={t('fe.fd.likePost')} onClick={()=>toggle('liked')}><Heart fill={post.liked?'currentColor':'none'}/><span>{post.likes}</span></button>
+   <button type="button" className={post.liked?'on':''} disabled={preview} aria-pressed={post.liked} aria-label={t('fe.fd.likePost'+(acting?.kind==='couple'?'Us':''))} onClick={()=>toggle('liked')}><Heart fill={post.liked?'currentColor':'none'}/><span>{post.likes}</span></button>
    <button type="button" disabled={preview} aria-label={t('fe.feed.replies')} onClick={full?onReply:open}><MessageCircle/><span>{post.replies}</span></button>
-   <button type="button" className={'sp'+(post.saved?' saved':'')} disabled={preview} aria-pressed={post.saved} aria-label={t('fe.feed.save')} onClick={()=>toggle('saved')}><Bookmark fill={post.saved?'currentColor':'none'}/></button>
+   <button type="button" className={'sp'+(post.saved?' saved':'')} disabled={preview} aria-pressed={post.saved} aria-label={t('fe.feed.save'+(acting?.kind==='couple'?'Us':''))} onClick={()=>toggle('saved')}><Bookmark fill={post.saved?'currentColor':'none'}/></button>
    <button type="button" disabled={preview} aria-label={t('fe.feed.share')} onClick={share}><Share/></button>
   </div>
   {view!==null&&art&&<Viewer srcs={art.shown.map(slideOf)} index={view} onClose={()=>setView(null)} onExpired={onExpired}/>}
@@ -583,7 +583,7 @@ function ReplyTree({list,sort,setSort,open,setOpen,liked,delta,onLike,onReply,on
     {to&&<small className="cm-to">{t('fe.fd.replyingTo')} <button type="button" className="plink" onClick={()=>go(parent!.author)}>{nameOf(parent!.author)}</button></small>}
     <p className="reply-text">{c.body}</p>
     <div className="r-acts">
-     <button type="button" className={on?'on':''} aria-pressed={on} aria-label={t('fe.fd.likeReply')} onClick={()=>onLike(c)}><Heart fill={on?'currentColor':'none'}/>{lk(c)>0&&<span>{lk(c)}</span>}</button>
+     <button type="button" className={on?'on':''} aria-pressed={on} aria-label={t('fe.fd.likeReply'+(acting?.kind==='couple'?'Us':''))} onClick={()=>onLike(c)}><Heart fill={on?'currentColor':'none'}/>{lk(c)>0&&<span>{lk(c)}</span>}</button>
      <button type="button" aria-label={t('fe.fd.replyToName',{name:nameOf(c.author)})} onClick={()=>onReply(c)}><MessageCircle/></button>
      <button type="button" aria-label={t('fe.more')} onClick={()=>onMore(c)}><Ellipsis/></button>
     </div>
@@ -679,7 +679,7 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
  const [uploading,setUploading]=useState(false);const file=useRef<HTMLInputElement>(null);const text=useRef<RichEditorHandle>(null);
  const [sheet,setSheet]=useState<'topics'|'people'|'mention'|null>(null);const [preview,setPreview]=useState(false);const [viewer,setViewer]=useState<number|null>(null);
  const ops=useRef({draft:newOpId(),publish:newOpId(),edit:newOpId()});
- const couple=acting?.kind==='couple';
+ const couple=acting?.kind==='couple';const toPartner=usePartnerApproves();
  // What an attach button adds (a poll, interests, photos) appears below the text: bring it into view, or the tap
  // looks like it did nothing on a phone.
  const pollRef=useRef<HTMLElement>(null);const intRef=useRef<HTMLElement>(null);const mediaRef=useRef<HTMLDivElement>(null);
@@ -767,7 +767,8 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
  const back=()=>{if(((window.history.state as {idx?:number}|null)?.idx??0)>0)navigate(-1);else navigate(communityId?'/n/communities/'+communityId:'/n/feed',{replace:true});};
  const leave=()=>{if(!communityId&&snap!==clean.current){setAsk(true);return;}back();};
  const hasMedia=note?noteMedia.length>0:media.length>0;
- const cta=live?(hasMedia?t('fe.fd.cta.changesReview'):t('fe.fd.cta.saveChanges')):couple?(hasMedia?t('fe.fd.cta.reviewUs'):t('fe.fd.cta.publishUs')):hasMedia?t('fe.fd.cta.review'):t('fe.feed.publish');
+ // The partner approves the couple's posts and edits: the button says where it goes (the server answers `pending`).
+ const cta=couple&&toPartner?t('fe.ca.toPartner'):live?(hasMedia?t('fe.fd.cta.changesReview'):t('fe.fd.cta.saveChanges')):couple?(hasMedia?t('fe.fd.cta.reviewUs'):t('fe.fd.cta.publishUs')):hasMedia?t('fe.fd.cta.review'):t('fe.feed.publish');
  const AUDS:[Audience,LucideIcon,string,string][]=[['all',Globe,t('fe.fd.aud2.all'),couple?t('fe.fd.aud2.allSubUs'):t('fe.fd.aud2.allSub')],['followers',Users,t('fe.fd.aud2.followers'),couple?t('fe.fd.aud2.followersSubUs'):t('fe.fd.aud2.followersSub')],
   ['granted',KeyRound,t('fe.fd.aud2.granted'),couple?t('fe.fd.aud2.grantedSubUs'):t('fe.fd.aud2.grantedSub')],...(edit?.audience==='only'?[['only',EyeOff,t('fe.fd.aud2.only'),t('fe.fd.aud2.onlySub')] as [Audience,LucideIcon,string,string]]:[])];
  const aud=AUDS.find(a=>a[0]===audience)??AUDS[0]!;const AudIcon=aud[1];

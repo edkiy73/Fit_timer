@@ -282,14 +282,14 @@ export function FollowsScreen(){
  const setFollow=async(k:Follower,on:boolean,undo:boolean)=>{
   setBusy(k.id);setFailure('');
   try{await call('follow.set',{opId:newOpId(),profileId:k.id,on},ok);setMyFollows(s=>{const n=new Set(s);if(on)n.add(k.id);else n.delete(k.id);return n;});if(mine)load();
-   if(!undo)toast(t(on?'fe.px.fl.on':'fe.px.fl.off').replace('{name}',nameOf(k)),{type:'ok',action:{label:t('fe.mx.undo'),fn:()=>void setFollow(k,!on,true)}});}
+   if(!undo)toast(t((on?'fe.px.fl.on':'fe.px.fl.off')+(asUs?'Us':'')).replace('{name}',nameOf(k)),{type:'ok',action:{label:t('fe.mx.undo'),fn:()=>void setFollow(k,!on,true)}});}
   catch(e){setFailure(feErrorMessage(e,t));}finally{setBusy('');}
  };
  const toggle=(k:Follower)=>{if(!busy)void setFollow(k,!myFollows.has(k.id),false);};
  // «Убрать из подписчиков» (V21 flwRemove21): the person is not told; «Вернуть» works for ten minutes.
  const removeFollower=async(k:Follower)=>{setMenu(null);setBusy(k.id);setFailure('');
   try{await call('follower.remove',{opId:newOpId(),profileId:k.id},ok);setLists(l=>l&&{...l,followers:l.followers.filter(x=>x.id!==k.id)});
-   toast(t('fe.w7.flw.removed').replace('{name}',nameOf(k)),{type:'ok',action:{label:t('fe.tl.undo'),fn:()=>void(async()=>{
+   toast(t(asUs?'fe.w7.flw.removedUs':'fe.w7.flw.removed').replace('{name}',nameOf(k)),{type:'ok',action:{label:t('fe.tl.undo'),fn:()=>void(async()=>{
     try{const r=await call('follower.restore',{opId:newOpId(),profileId:k.id},restoreRes);toast(t(r.restored?'fe.w7.flw.restored':'fe.w7.flw.notRestored'),{type:r.restored?'ok':'warn'});load();}
     catch(e){toast(feErrorMessage(e,t),{type:'err'});}})()}});}
   catch(e){setFailure(feErrorMessage(e,t));}finally{setBusy('');}};

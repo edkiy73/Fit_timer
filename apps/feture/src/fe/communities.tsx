@@ -323,7 +323,7 @@ export function CommunityScreen(){
  const status=!c||host||member?null
   :c.request?<StatusCard tone="wait" icon={Clock} title={t('fe.host.join.pending')}
    sub={[c.request.at?fill(t('fe.cm.req.sent'),{date:day(c.request.at)}):'',t('fe.cm.req.next')].filter(Boolean).join(' · ')}
-   action={<Btn kind="soft" size="sm" auto fit onClick={()=>setLayer('withdraw')}>{t('fe.host.join.withdraw')}</Btn>}/>
+   action={<Btn kind="soft" size="sm" auto fit onClick={()=>setLayer('withdraw')}>{t(couple?'fe.host.join.withdrawUs':'fe.host.join.withdraw')}</Btn>}/>
   :c.waiting?<StatusCard tone="wait" icon={Users} title={t('fe.host.app.st.waiting')} sub={t('fe.cm.req.partnerSub')}
    action={<Btn kind="soft" size="sm" auto fit onClick={()=>setLayer('unwait')}>{t('fe.host.join.withdraw')}</Btn>}/>
   :c.declined?<StatusCard tone="bad" icon={X} title={t('fe.cm.req.declined')} sub={fill(t('fe.cm.req.declinedSub'),{date:day(c.declined.until)})}/>
@@ -380,8 +380,8 @@ export function CommunityScreen(){
    {!owner&&<Row icon={Flag} danger title={t('fe.cm.report')} noChev onClick={()=>setLayer('report')}/>}
   </Card></Sheet>}
   {c&&layer==='join'&&<JoinSheet c={banned&&c.privacy==='open'?{...c,privacy:'closed',joinQuestion:null}:c} invite={invite} onClose={()=>setLayer('')} onDone={msg=>{setLayer('');toast(msg,{type:'ok'});load();}}/>}
-  {c&&layer==='leave'&&<Ask icon={Users} danger title={fill(t('fe.cm.leaveQ'),{name:c.name})} text={t(c.privacy==='open'?'fe.cm.leaveTextOpen':'fe.cm.leaveTextClosed')} ok={t('fe.comm.leave')} busy={busy}
-   onOk={()=>void act(()=>call('community.leave',{opId:newOpId(),communityId:c.id},okRes),t('fe.cm.left'))} onCancel={()=>setLayer('')}/>}
+  {c&&layer==='leave'&&<Ask icon={Users} danger title={fill(t(couple?'fe.cm.leaveQUs':'fe.cm.leaveQ'),{name:c.name})} text={t(c.privacy==='open'?'fe.cm.leaveTextOpen':'fe.cm.leaveTextClosed')} ok={t(couple?'fe.cm.leaveUs':'fe.comm.leave')} busy={busy}
+   onOk={()=>void act(()=>call('community.leave',{opId:newOpId(),communityId:c.id},okRes),t(couple?'fe.cm.leftUs':'fe.cm.left'))} onCancel={()=>setLayer('')}/>}
   {c&&layer==='withdraw'&&<Ask icon={FileText} danger title={t('fe.host.join.withdrawQ')} ok={t('fe.host.join.withdraw')} busy={busy}
    onOk={()=>void act(()=>call('community.requestWithdraw',{opId:newOpId(),requestId:c.request!.id},okRes),t('fe.host.join.withdrawn'))} onCancel={()=>setLayer('')}/>}
   {c&&layer==='unwait'&&c.waiting&&<Ask icon={FileText} danger title={t('fe.host.join.withdrawQ')} text={t('fe.cm.req.unwaitText')} ok={t('fe.host.join.withdraw')} busy={busy}
@@ -441,13 +441,13 @@ export function EventScreen(){
  // E09 «Билет у организатора»: the ticket is bought on the organizer's site; «Билет уже куплен» answers «Иду» with
  // the mark, «Снять отметку» takes the mark off (with «Отменить»).
  const ticketed=!!e?.me.rsvp?.ticketMarked;
- const markTicket=async()=>{if(await send({status:'going',ticketMarked:true},t('fe.w7.tk.marked')))setLayer('');};
+ const markTicket=async()=>{if(await send({status:'going',ticketMarked:true},t(couple?'fe.w7.tk.markedUs':'fe.w7.tk.marked')))setLayer('');};
  const unmarkTicket=async()=>{if(await send({status:(st as Status|null)??'going',ticketMarked:false},t('fe.w7.tk.unmarked'),()=>void send({status:'going',ticketMarked:true},t('fe.w7.tk.marked'))))setLayer('');};
- const save=async()=>{const on=!saved;setSaved(on);try{await call('saved.set',{opId:newOpId(),kind:'event',targetId:id,on},okRes);toast(t(on?'fe.cm.saved':'fe.cm.unsaved'),on?{type:'ok'}:{});}catch(x){setSaved(!on);toast(feErrorMessage(x,t),{type:'err'});}};
+ const save=async()=>{const on=!saved;setSaved(on);try{await call('saved.set',{opId:newOpId(),kind:'event',targetId:id,on},okRes);toast(t((on?'fe.cm.saved':'fe.cm.unsaved')+(couple?'Us':'')),on?{type:'ok'}:{});}catch(x){setSaved(!on);toast(feErrorMessage(x,t),{type:'err'});}};
  const share=async()=>{setLayer('');const okc=await copyLink(appUrl('/n/events/'+id));toast(t(okc?'fe.cm.evLinkCopied':'fe.cm.copyFailed'),{type:okc?'ok':'warn'});};
- const withdraw=async()=>{if(!app)return;setBusy(true);try{await call('event.applicationWithdraw',{opId:newOpId(),applicationId:app.id},okRes);setLayer('');toast(t('fe.cm.appWithdrawn'),{type:'ok'});load();}catch(x){toast(feErrorMessage(x,t),{type:'err'});}finally{setBusy(false);}};
+ const withdraw=async()=>{if(!app)return;setBusy(true);try{await call('event.applicationWithdraw',{opId:newOpId(),applicationId:app.id},okRes);setLayer('');toast(t(couple?'fe.cm.appWithdrawnUs':'fe.cm.appWithdrawn'),{type:'ok'});load();}catch(x){toast(feErrorMessage(x,t),{type:'err'});}finally{setBusy(false);}};
  // A couple's application the partner has not approved yet is taken back as that approval (decide.cancel).
- const unwait=async()=>{const w=e?.me.waiting;if(!w)return;setBusy(true);try{await call('decide.cancel',{opId:newOpId(),approvalId:w.id},okRes);setLayer('');toast(t('fe.cm.appWithdrawn'),{type:'ok'});load();}catch(x){toast(feErrorMessage(x,t),{type:'err'});}finally{setBusy(false);}};
+ const unwait=async()=>{const w=e?.me.waiting;if(!w)return;setBusy(true);try{await call('decide.cancel',{opId:newOpId(),approvalId:w.id},okRes);setLayer('');toast(t(couple?'fe.cm.appWithdrawnUs':'fe.cm.appWithdrawn'),{type:'ok'});load();}catch(x){toast(feErrorMessage(x,t),{type:'err'});}finally{setBusy(false);}};
  const tz=e?evTz(e):USER_TZ;const away=!!e&&e.format==='online'&&e.tz!==USER_TZ;
  const open=!!e&&e.state==='published'&&!e.past;const cancelled=e?.state==='cancelled';
  const admitted=!!e&&(orgMe||(!!e.joinUrl||!!e.exactAddress));
@@ -536,7 +536,7 @@ export function EventScreen(){
   {e&&layer==='ticket'&&ticketUrl&&<Sheet title={t('fe.w7.tk.title')} sub={site} onClose={()=>setLayer('')}
    foot={<>{<LinkBtn kind="primary" icon={ExternalLink} href={ticketUrl}>{t('fe.w7.tk.go')}</LinkBtn>}
     {ticketed?<Btn kind="soft" busy={busy} disabled={busy} onClick={()=>void unmarkTicket()}>{t('fe.w7.tk.unmark')}</Btn>
-     :<Btn kind="soft" icon={Check} busy={busy} disabled={busy} onClick={()=>void markTicket()}>{t('fe.w7.tk.bought')}</Btn>}</>}>
+     :<Btn kind="soft" icon={Check} busy={busy} disabled={busy} onClick={()=>void markTicket()}>{t(couple?'fe.w7.tk.boughtUs':'fe.w7.tk.bought')}</Btn>}</>}>
    <Card list>
     {e.organizer&&<Row av={<Av name={pname(e.organizer)} seed={e.organizer.id} size="sm" src={e.organizer.avatar}/>} title={pname(e.organizer)} sub={t('fe.ev.organizer')}/>}
     <Row icon={Globe} tone="v" title={site||ticketUrl} sub={t('fe.w7.tk.site')} wrap/>

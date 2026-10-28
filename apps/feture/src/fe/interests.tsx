@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,EyeOff,History,KeyRound,MessageCircle,Pencil,Plus,Sparkles,Trash2,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,AnswerScale,Bar,Btn,Card,Chip,Chips,Empty,Group,IconBtn,Note,Progress,Row,SearchInput,SectionLabel,Sheet,Skel,View} from './kit';
-import {useFe} from './session';
+import {useFe,usePartnerApproves} from './session';
 import {when} from './feed';
 
 /** Interests (V21 X01 #meJars, X02, X04) with the prototype's markup: one capsule per interest — the fill is the
@@ -85,7 +85,7 @@ export function JarLegend({couple,extra}:{couple:boolean,extra?:string}){
 export function InterestSheet({topicId,topics,cats,current,defaultVis='public',onClose,onDone}:{topicId:string,topics:Topic[],cats:Category[],current:Interest|undefined,defaultVis?:Vis,onClose:()=>void,onDone:(msg:string)=>void}){
  const {call,acting}=useFe();const {t,locale}=useI18n();
  const tp=topics.find(x=>x.id===topicId);const cat=cats.find(c=>c.id===tp?.categoryId);
- const limit=tp?.categoryId===LIMITS;const couple=acting?.kind==='couple';
+ const limit=tp?.categoryId===LIMITS;const couple=acting?.kind==='couple';const toPartner=usePartnerApproves();
  const name=tp?(locale==='en'?tp.en:tp.ru):topicId;const desc=tp?(locale==='en'?tp.descEn:tp.descRu):null;
  const [v,setV]=useState<Answer>(current?current.mark??current.value??null:null);
  const [dir,setDir]=useState<Dir[]>(()=>{const d=dirsOf(current?.dir);return d.length?d:[...DIRS];});
@@ -96,7 +96,7 @@ export function InterestSheet({topicId,topics,cats,current,defaultVis='public',o
   if(v==null)return;setBusy(true);setFailure('');
   try{
    const input:Record<string,unknown>={opId:opId.current,topicId,vis,...(typeof v==='number'?{value:v,...(limit?{}:{dir})}:{mark:v})};
-   const r=await call('interests.set',input,setRes);onDone(r.pending?t('fe.int.pending'):t('fe.int.saved'));
+   const r=await call('interests.set',input,setRes);onDone(r.pending?t('fe.int.pending'):t(couple?'fe.int.savedUs':'fe.int.saved'));
   }catch(e){setFailure(feErrorMessage(e,t));opId.current=newOpId();}finally{setBusy(false);}
  };
  const remove=async()=>{
@@ -117,7 +117,7 @@ export function InterestSheet({topicId,topics,cats,current,defaultVis='public',o
    {v==null&&<Note className="jar-need">{t('fe.int.ed.need')}</Note>}
    <div className="row g8">
     {current&&<Btn kind="soft" square icon={Trash2} aria-label={t('fe.int.ed.remove')} onClick={()=>setAsking(true)} disabled={busy}/>}
-    <Btn className={v==null?'off':undefined} busy={busy} onClick={save} disabled={v==null||busy} aria-disabled={v==null||undefined}>{current?t('fe.int.ed.save'):t('fe.int.ed.addOne')}</Btn>
+    <Btn className={v==null?'off':undefined} busy={busy} onClick={save} disabled={v==null||busy} aria-disabled={v==null||undefined}>{toPartner?t('fe.ca.toPartner'):current?t('fe.int.ed.save'):t('fe.int.ed.addOne')}</Btn>
    </div>
   </>}
  </>}>
@@ -193,7 +193,7 @@ function TopicPicker({cats,topics,have,presetVis,onClose,onDone}:{cats:Category[
  const [sel,setSel]=useState<string[]>([]);const [stage,setStage]=useState<'pick'|'answer'|'review'>('pick');const [step,setStep]=useState(0);
  const [fromReview,setFromReview]=useState(false);const [drafts,setDrafts]=useState<Record<string,Draft>>({});
  const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const ops=useRef<Record<string,string>>({});
- const couple=acting?.kind==='couple';
+ const couple=acting?.kind==='couple';const toPartner=usePartnerApproves();
  const nq=q.trim().toLowerCase();const label=(x:{ru:string,en:string})=>locale==='en'?x.en:x.ru;
  const left=topics.filter(x=>!have.has(x.id));
  const sections=cats.map(c=>({c,ts:left.filter(x=>x.categoryId===c.id&&(!nq||label(x).toLowerCase().includes(nq)))})).filter(s=>s.ts.length);
@@ -237,7 +237,7 @@ function TopicPicker({cats,topics,have,presetVis,onClose,onDone}:{cats:Category[
  const list:Interest[]=sel.map(id=>{const x=drafts[id]!;return {topicId:id,vis:x.vis,...(typeof x.v==='number'?{value:x.v,dir:x.dir}:{mark:x.v as 'discuss'|'hard'})};});
  return <Sheet title={t('fe.int.check')} onClose={onClose} dirty={!busy}
   foot={<>{failure&&<Alert kind="err" noIcon>{failure}</Alert>}
-   <div className="row g8"><Btn kind="soft" onClick={back} disabled={busy}>{t('fe.back')}</Btn><Btn busy={busy} onClick={save}>{t('fe.int.saveAll')}</Btn></div></>}>
+   <div className="row g8"><Btn kind="soft" onClick={back} disabled={busy}>{t('fe.back')}</Btn><Btn busy={busy} onClick={save}>{toPartner?t('fe.ca.toPartner'):t('fe.int.saveAll')}</Btn></div></>}>
   <Note>{t('fe.int.checkHint',{n:sel.length})}</Note>
   <Card className="mt12"><Jars list={sortJars(list)} topics={topics} onOpen={id=>{setStep(sel.indexOf(id));setFromReview(true);setStage('answer');}}/></Card>
  </Sheet>;

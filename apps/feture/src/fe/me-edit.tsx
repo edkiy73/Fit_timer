@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {AtSign,ChevronDown,ChevronRight,Clock,Lock,Plus,Sparkles,Star,Trash2,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,Bar,Btn,Card,Chip,Counter,Empty,Field,FilePick,Group,Input,Note,PhotoAdd,PhotoSlot,PhotoSlots,Row,Sheet,Skel,TextArea,ToggleRow,VaultHead} from './kit';
-import {useFe} from './session';
+import {useFe,usePartnerApproves} from './session';
 import {Uploader} from './kit/Uploader';
 import {PickField,PlacePicker,type Place} from './kit/Place';
 import {useSendPhoto} from './media-upload';
@@ -44,7 +44,7 @@ export function MeEditScreen(){
  const file=useRef<HTMLInputElement>(null);const fileKind=useRef<'photos'|'privMedia'>('photos');const fid=useId();
  // Press and drag to change the order in the draft; «Сохранить» writes it.
  const drag=useDragOrder<'photos'|'privMedia'>((k,ids)=>setD(x=>{if(!x)return x;const by=new Map(x[k].map(p=>[p.id,p]));const next=ids.map(i=>by.get(i)).filter((p):p is Ph=>!!p);return next.length===x[k].length?{...x,[k]:next}:x;}));
- const cp=acting?.kind==='couple';
+ const cp=acting?.kind==='couple';const toPartner=usePartnerApproves();
  const load=useCallback(()=>{
   if(!acting)return;setError(null);
   Promise.all([call('profile.get',{profileId:acting.id},profileRes),call('private.get',{profileId:acting.id},privRes),call('catalog.get',{},catalogRes,{asAccount:true}),
@@ -103,10 +103,10 @@ export function MeEditScreen(){
    if(Object.keys(upd).length){const r=await call('profile.update',{opId:newOpId(),rev:p.rev,...upd},ok);pending||=!!r.pending;}
    if(JSON.stringify(d.photos.map(x=>x.id))!==JSON.stringify(base.photos.map(x=>x.id))){const r=await call('profile.photosSet',{opId:newOpId(),assetIds:d.photos.map(x=>x.id)},ok);pending||=!!r.pending;}
    if(d.privOn!==base.privOn&&!d.privOn)await call('private.setOn',{opId:newOpId(),on:false,confirm:true},ok);
-   if(d.privOn!==base.privOn&&d.privOn)await call('private.setOn',{opId:newOpId(),on:true},ok);
+   if(d.privOn!==base.privOn&&d.privOn){const r=await call('private.setOn',{opId:newOpId(),on:true},ok);pending||=!!r.pending;}
    if(!cp&&d.privOn&&d.privText.trim()!==base.privText)await call('private.setText',{opId:newOpId(),text:d.privText.trim()},ok);
    if(!cp&&d.privOn&&JSON.stringify(d.privMedia.map(x=>x.id))!==JSON.stringify(base.privMedia.map(x=>x.id)))await call('private.setMedia',{opId:newOpId(),assetIds:d.privMedia.map(x=>x.id)},ok);
-   toast(pending?t('fe.me.pending'):only==='media'?t('fe.mx.ed.photosSaved'):t('fe.me.saved'),{type:'ok'});
+   toast(pending?t('fe.me.pending'):only==='media'?t('fe.mx.ed.photosSaved'):t(cp?'fe.me.savedUs':'fe.me.saved'),{type:'ok'});
    leave();
   }catch(e){if(e instanceof FeError&&e.fields?.includes('handle')){setNickErr(t('fe.reg.nick.taken'));setTimeout(shakeFirstErr);}else if(!checks.fromServer(e,{text:'privText'}))setFailure(feErrorMessage(e,t));}finally{setBusy(false);}
  };
@@ -191,7 +191,7 @@ export function MeEditScreen(){
      {failure&&<Alert kind="err" noIcon className="mt12">{failure}</Alert>}
     </>}
   </div></div>
-  {d&&<div className="ctabar"><div className="wrap"><Btn onClick={save} disabled={!dirty||busy} busy={busy}>{t('fe.me.save')}</Btn></div></div>}
+  {d&&<div className="ctabar"><div className="wrap"><Btn onClick={save} disabled={!dirty||busy} busy={busy}>{toPartner?t('fe.me.saveToPartner'):t('fe.me.save')}</Btn></div></div>}
   <FilePick ref={file} accept="image/*" multiple onFiles={f=>upload([...f],fileKind.current)}/>
   {picked&&d&&<Uploader files={picked.files} aspects={picked.k==='photos'?['4:5']:['orig','4:5','1:1']} max={(picked.k==='photos'?MAX_PHOTOS:PRIV_MAX)-d[picked.k].length}
    send={picked.k==='photos'?sendAvatar:sendPrivate} onClose={()=>setPicked(null)}

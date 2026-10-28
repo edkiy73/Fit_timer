@@ -176,7 +176,7 @@ export {plural};
  * text and «Отменить голос» withdraws it. Results come from the server only after one's own vote. `preview` is inert. */
 export function Poll({postId,poll,onChange,preview=false,mine=false}:{postId:string,poll:PollData,onChange?:(p:PollData)=>void,preview?:boolean,
  /** The author sees who chose what without voting (poll.voters). */ mine?:boolean}){
- const {call}=useFe();const {t,locale}=useI18n();const toast=useToast();const [busy,setBusy]=useState(false);const [anim,setAnim]=useState(false);
+ const {call,acting}=useFe();const us=acting?.kind==='couple';const {t,locale}=useI18n();const toast=useToast();const [busy,setBusy]=useState(false);const [anim,setAnim]=useState(false);
  const [voters,setVoters]=useState<number|null>(null);
  const mv=poll.myVote??null;const isVoted=mv!=null;const res=poll.results??null;
  const tot=res?res.reduce((a,b)=>a+b,0):0;const max=res?Math.max(1,...res):1;
@@ -186,7 +186,8 @@ export function Poll({postId,poll,onChange,preview=false,mine=false}:{postId:str
    // The counts are the server's: a fresh post brings them; until then the bar shows the vote locally.
    const results=res?res.map((n,i)=>n+(i===r.myVote?1:0)-(i===mv?1:0)):r.myVote!=null?poll.options.map((_,i)=>i===r.myVote?1:0):null;
    onChange?.({...poll,myVote:r.myVote,results:r.myVote==null&&!res?null:results});setAnim(true);setTimeout(()=>setAnim(false),1500);
-   if(option==null)toast(t('fe.fd.poll.withdrawn'),{type:'ok'});
+   // As the couple the vote is the couple's: the toast says so (as oneself the bar is enough).
+   if(option==null)toast(t(us?'fe.fd.poll.withdrawnUs':'fe.fd.poll.withdrawn'),{type:'ok'});else if(us)toast(t('fe.fd.poll.votedUs'),{type:'ok'});
   }catch(e){toast(feErrorMessage(e,t),{type:'err'});}finally{setBusy(false);}
  };
  return <div className={'poll'+(isVoted?' voted':'')+(anim?' anim':'')} role="group" aria-label={poll.question||t('fe.feed.poll')} onClick={e=>e.stopPropagation()}>

@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,Bell,ChevronRight,CircleCheck,Clock,Copy,Ellipsis,FileText,Flag,Info,Link as LinkIcon,Lock,Pencil,Pin,PinOff,Send,Settings,ShieldAlert,Trash2,TrendingDown,TrendingUp,User,UserMinus,UserPlus,Users,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,Announcement,Answer,Ask,Av,Bar,Btn,Card,IconBtn,Check,Empty,Group,Note,PersonLine,Pill,RequestCard,Row,SectionLabel,Seg,Sheet,Skel,Stack,StatusCard,SubBar} from './kit';
-import {useFe} from './session';
+import {useFe,usePartnerApproves} from './session';
 import {useToast} from './toast';
 import {when} from './feed';
 import {FErr,Field,SelectRow,shakeFirstErr} from './create-community';
@@ -101,7 +101,7 @@ export function JoinSheet({c,invite,onClose,onDone}:{c:{id:string,name:string,pr
  const {call,acting}=useFe();const {t}=useI18n();
  const [answer,setAnswer]=useState('');const [accepted,setAccepted]=useState(false);
  const [err,setErr]=useState<{answer?:string|undefined,ok?:string|undefined}>({});const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
- const couple=acting?.kind==='couple';const closed=c.privacy!=='open';const q=closed?c.joinQuestion??null:null;
+ const couple=acting?.kind==='couple';const closed=c.privacy!=='open';const q=closed?c.joinQuestion??null:null;const toPartner=usePartnerApproves();
  const send=async()=>{
   const e:{answer?:string|undefined,ok?:string|undefined}={};
   const ea=q?textError(t,'joinAnswer',answer):undefined;
@@ -115,7 +115,7 @@ export function JoinSheet({c,invite,onClose,onDone}:{c:{id:string,name:string,pr
   }catch(x){const f=serverFields(x).find(f=>f.path==='answer');if(f){setErr({answer:textErrorMessage(t,f.code,FIELD.joinAnswer)});shakeFirstErr();}else setFailure(feErrorMessage(x,t));}finally{setBusy(false);}
  };
  return <Sheet title={closed?t('fe.host.join.requestTitle'):t('fe.host.join.rulesTitle')} onClose={onClose}
-  foot={<Btn onClick={send} busy={busy} disabled={busy}>{closed?t('fe.host.join.send'):t('fe.host.join.join')}</Btn>}>
+  foot={<Btn onClick={send} busy={busy} disabled={busy}>{toPartner?t('fe.ca.toPartner'):closed?t(couple?'fe.host.join.sendCouple':'fe.host.join.send'):t(couple?'fe.host.join.joinCouple':'fe.host.join.join')}</Btn>}>
   <Card className="flat"><ol className="rules">{c.rules.map((r,i)=><li key={i}>{r}</li>)}</ol></Card>
   {q&&<div className="mt16"><Field name="answer" label={q} value={answer} onChange={v=>{setAnswer(v);if(err.answer)setErr({...err,answer:undefined});}} err={err.answer} textarea rows={3} check="joinAnswer"
    ph={t('fe.host.join.answerPh')} hint={t('fe.host.join.answerHint')}/></div>}
@@ -323,7 +323,7 @@ export function CommunityMembersScreen(){
  * partner of a couple). */
 export function EventApplicationLines({e,busy,onWithdraw,onCancelWait}:{e:{requiresApplication:boolean,me:Record<string,unknown>},busy?:boolean,
  /** Withdraw a pending application (asks first). */ onWithdraw?:()=>void,/** Take back a couple's application the partner has not approved yet. */ onCancelWait?:()=>void}){
- const {t}=useI18n();
+ const {t}=useI18n();const {acting}=useFe();
  if(!e.requiresApplication)return null;
  const parsed=application.nullable().optional().safeParse(e.me.application);const app=parsed.success?parsed.data??null:null;
  // Only a waiting application counts here: a couple's «идём» waiting for the partner is the RSVP's business.
@@ -334,7 +334,7 @@ export function EventApplicationLines({e,busy,onWithdraw,onCancelWait}:{e:{requi
  const act=st==='pending'?onWithdraw:st==='waiting'?onCancelWait:undefined;
  return <><SectionLabel>{t('fe.host.ev.attendance')}</SectionLabel>
   <StatusCard tone={tone} icon={Icon} title={t('fe.host.app.st.'+st)} sub={t('fe.host.app.stText.'+st)}
-   action={act&&<Btn kind="soft" size="sm" auto fit disabled={busy} onClick={act}>{t('fe.host.join.withdraw')}</Btn>}/></>;
+   action={act&&<Btn kind="soft" size="sm" auto fit disabled={busy} onClick={act}>{t(acting?.kind==='couple'?'fe.host.app.withdrawUs':'fe.host.join.withdraw')}</Btn>}/></>;
 }
 
 /** E06 — the application: answers to the organiser's questions, a note and the requirements. */
@@ -344,7 +344,7 @@ export function EventApplyScreen(){
  const {data:e,error,load}=useLoad(fetch);
  const [answers,setAnswers]=useState<string[]>([]);const [note,setNote]=useState('');const [accepted,setAccepted]=useState(false);
  const [err,setErr]=useState<Record<string,string>>({});const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
- const couple=acting?.kind==='couple';const qs=e?.questions?.length?e.questions:[];
+ const couple=acting?.kind==='couple';const qs=e?.questions?.length?e.questions:[];const toPartner=usePartnerApproves();
  const open=!!e&&e.requiresApplication&&e.state==='published'&&!e.past;
  const send=async()=>{
   if(!e)return;const x:Record<string,string>={};
@@ -381,7 +381,7 @@ export function EventApplyScreen(){
      {failure&&<Alert kind="err" icon={X} className="mt12">{failure}</Alert>}
     </>}
   </div></div>
-  {open&&<div className="ctabar"><div className="wrap"><Btn onClick={()=>void send()} busy={busy} disabled={busy}>{couple?t('fe.host.app.sendCouple'):t('fe.host.app.send')}</Btn></div></div>}
+  {open&&<div className="ctabar"><div className="wrap"><Btn onClick={()=>void send()} busy={busy} disabled={busy}>{toPartner?t('fe.ca.toPartner'):couple?t('fe.host.app.sendCouple'):t('fe.host.app.send')}</Btn></div></div>}
  </>;
 }
 

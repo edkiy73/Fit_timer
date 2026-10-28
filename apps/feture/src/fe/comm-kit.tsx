@@ -2,6 +2,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Users,type LucideIcon} from 'lucide-react';
 import {publicOrigin} from '../api-url';
+import {useFe} from './session';
 import {ReportSheet as AppReportSheet} from './report';
 import {namedPlate} from './create-community';
 
@@ -26,8 +27,8 @@ export const CommPlate=({k}:{k:string|null|undefined})=><NamedPlate k={k} icon={
 
 /** «Пожаловаться» on a community, an event or a community post: the app's one report sheet (./report). */
 export function ReportSheet({targetType,targetId,onClose,onDone}:{targetType:'community'|'event'|'post',targetId:string,onClose:()=>void,onDone:(msg:string)=>void}){
- const {t}=useI18n();
- return <AppReportSheet targetType={targetType} targetId={targetId} onClose={onClose} onDone={()=>onDone(t('fe.cm.reported'))}/>;
+ const {t}=useI18n();const {acting}=useFe();
+ return <AppReportSheet targetType={targetType} targetId={targetId} onClose={onClose} onDone={()=>onDone(t(acting?.kind==='couple'?'fe.ca.reported':'fe.cm.reported'))}/>;
 }
 
 /** Copies a link; says so either way. */

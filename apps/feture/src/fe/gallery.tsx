@@ -148,13 +148,13 @@ export function GalleryScreen(){
  const setVisibility=(v:'all'|'followers',withPosts:boolean)=>run(async()=>{
   if(!cur)return;
   const r=await albumUpdate({visibility:v,...(v==='followers'?{confirm:true}:{})});
-  let review=0;
+  let review=0,waits=0;
   if(v==='all'&&withPosts){
    const closed=(await galleryAll(call,id,cur.id)).filter(x=>x.audience==='followers').map(x=>x.postId);
-   for(let i=0;i<closed.length;i+=50){const b=await call('gallery.bulk',{opId:newOpId(),postIds:closed.slice(i,i+50),change:'audience',audience:'all'},bulkRes);review+=b.review??0;}
+   for(let i=0;i<closed.length;i+=50){const b=await call('gallery.bulk',{opId:newOpId(),postIds:closed.slice(i,i+50),change:'audience',audience:'all'},bulkRes);review+=b.review??0;waits+=b.pending?.length??0;}
   }
   setAsk(null);reload();
-  toast((v==='followers'?t('fe.gal.visFollowersDone'):t('fe.gal.visAllDone'))+(r.narrowed?'. '+t('fe.gal.narrowedN',{n:r.narrowed}):'')+(review?'. '+t('fe.gal.reviewN',{n:review}):''),{type:'ok'});
+  toast((v==='followers'?t('fe.gal.visFollowersDone'):t('fe.gal.visAllDone'))+(r.narrowed?'. '+t('fe.gal.narrowedN',{n:r.narrowed}):'')+(review?'. '+t('fe.gal.reviewN',{n:review}):'')+(waits?'. '+t('fe.gal.pendingPartner'):''),{type:'ok'});
  });
  const removeAlbum=()=>run(async()=>{
   if(!cur)return;
