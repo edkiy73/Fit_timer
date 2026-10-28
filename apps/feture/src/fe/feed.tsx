@@ -905,7 +905,8 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
    {failure&&<Alert kind="err" noIcon ref={failRef}>{failure}</Alert>}
   </View>
   <div className="ctabar"><div className="wrap"><div className="row g8">
-   <Btn kind="soft" className="prevbtn" icon={Eye} fit aria-label={t('fe.fd.preview')} onClick={()=>{if(validate())setPreview(true);}}><span>{t('fe.fd.howSeen')}</span></Btn>
+   {/* Acting as the couple the longer «…от пары» button takes the row: «Как увидят» is the kit's icon-only button. */}
+   <Btn kind="soft" className="prevbtn" icon={Eye} fit square={couple} aria-label={t('fe.fd.preview')} onClick={()=>{if(validate())setPreview(true);}}>{couple?null:<span>{t('fe.fd.howSeen')}</span>}</Btn>
    <Btn onClick={publish} disabled={!!busy||uploading} busy={busy==='publish'}>{cta}</Btn>
   </div></div></div>
   {sheet==='topics'&&<FilterSheet title={t('fe.fd.topicsTitle')} max={3} topics={catalog} cats={cats} popular={topics} value={topics} onClose={()=>setSheet(null)}
