@@ -80,6 +80,9 @@ export function InboxScreen(){
  const couple=profiles.find(p=>p.kind==='couple'&&p.state==='active')??null;
  const person=profiles.find(p=>p.kind==='person')??null;
  // V21 `inboxTab`: opens on «Нужно решить» when something waits, else on all notifications.
+ // Chosen once, on the first read: deciding the last card keeps «Нужно решить» (its result and its own empty state)
+ // instead of jumping to «Все уведомления».
+ useEffect(()=>{if(tab===null&&decide!==null)setTab(decide.length?'todo':'all');},[tab,decide]);
  const k=tab??(decide&&decide.length===0?'all':'todo');
  const unread=(notes??[]).filter(n=>!n.read).length;
  const pickTab=(v:'todo'|'all')=>{setTab(v);setFilter('all');};

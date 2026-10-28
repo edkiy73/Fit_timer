@@ -105,7 +105,7 @@ const scenarios = [
       await t.tap(`.rqcard:has-text("${a.name}") button:has-text("Открыть доступ")`);
       await t.see(`.sheet.on:has-text("${a.name} просит доступ")`);
       await t.tap('.sheet .sh-f button:has-text("Открыть на 7 дней")');
-      await t.see('Доступ открыт');
+      await t.see('.toast:has-text("Открыто для")'); // «Открыто для {name}» (the grant sheet's result)
       const byme = await t.api('access.lists', { tab: 'byme' });
       if (!(byme.items ?? []).some(x => x.profile?.id === a.id)) throw new Error('grant not on server');
       if ((await decisions(t)).some(d => d.kind === 'req' && d.actor?.id === a.id)) throw new Error('decision still listed');
@@ -115,7 +115,10 @@ const scenarios = [
     const a = await ensureAccessRequest(t);
     await openTodo(t);
     await cardOf(t, a.name, 'Просит открыть').locator('button:has-text("Отклонить")').click();
-    await t.see('Отклонено');
+    await t.see('.toast:has-text("Отказано")'); // «Отказано. {name} увидит …» with «Отменить»
+    // The last card decided: «Нужно решить» stays, with its own empty state (no jump to «Все уведомления»).
+    await t.see('Всё решено');
+    await t.see('[role=tab][aria-selected="true"]:has-text("Нужно решить")', 3000);
     if ((await decisions(t)).some(d => d.kind === 'req' && d.actor?.id === a.id)) throw new Error('still pending on server');
   } },
   { name: 'N01 link proposal: «Подтвердить» confirms it', persona: 'host', route: null, run: async t => {
