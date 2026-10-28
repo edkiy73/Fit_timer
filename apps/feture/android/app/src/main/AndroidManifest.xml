@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <application
         android:allowBackup="false"
@@ -22,7 +23,24 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Android App Links: FetUre links (https://feture-mvp.vercel.app/#/n/...) open in the app. The route is in the
+                 #fragment, which intent filters do not see, so the filter takes the site root only, never /api, /kit or
+                 the prototypes. Verified by /.well-known/assetlinks.json (public/.well-known, release key fingerprint);
+                 src/fe/app-links.ts turns the URL into the hash route. Keep the host in sync with config/product.json. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="feture-mvp.vercel.app" android:path="/" />
+                <data android:scheme="https" android:host="feture-mvp.vercel.app" android:path="/index.html" />
+            </intent-filter>
         </activity>
+
+        <!-- The update download runs in the background with a notification (WorkManager, FetUreUpdatePlugin). -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
 
         <!-- Push (FCM): status-bar icon and accent for notifications sent by the server. -->
         <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_stat_feture" />
@@ -49,4 +67,8 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <!-- «Люди рядом» uses a rounded position only, so only approximate location is requested (Android 12+). -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Update download in the background with a progress notification (FetUreUpdatePlugin, WorkManager).
+         REQUEST_INSTALL_PACKAGES is only in src/direct: the store build never installs APKs. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 </manifest>

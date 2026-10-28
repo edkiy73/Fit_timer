@@ -10,64 +10,14 @@ import { Icon } from './icons';
    - store: the button opens the Google Play (or other store) page.
    Below minimumCode the app shows a screen that cannot be skipped. */
 
-export interface UpdateChannel {
-  latestCode?: number;
-  minimumCode?: number;
-  latestName?: string;
-  url?: string;
-  messageRu?: string;
-  messageEn?: string;
-}
+import { androidUpdatePlugin, decideUpdate, type UpdateChannel, type UpdateOffer } from '@appbase/core/app-update.js';
 
-export interface UpdateOffer {
-  level: 'optional' | 'required';
-  channel: 'direct' | 'store';
-  versionCode: number;
-  versionName: string;
-  url: string;
-  message: string;
-}
+export { decideUpdate };
+export type { UpdateChannel, UpdateOffer };
 
 type DownloadStatus = 'idle' | 'downloading' | 'ready' | 'installing' | 'permission' | 'error';
 
-interface UpdatePlugin {
-  getDistribution(): Promise<{channel: 'direct' | 'store'; versionCode: number; versionName: string}>;
-  openExternal(options: {url: string}): Promise<void>;
-  downloadUpdate(options: {url: string; expectedVersionCode: number}): Promise<{status: string; error?: string}>;
-  getUpdateState(): Promise<{status: string; progress?: number; running?: boolean; error?: string}>;
-  installUpdate(options: {expectedVersionCode: number}): Promise<{status: string; error?: string}>;
-  cancelUpdate(): Promise<void>;
-}
-
-function plugin(): UpdatePlugin | null {
-  const cap = (globalThis as unknown as {Capacitor?: {isNativePlatform?(): boolean; getPlatform?(): string; Plugins?: {UnMuteUpdate?: UpdatePlugin}}}).Capacitor;
-  if(!cap?.isNativePlatform?.() || cap.getPlatform?.() !== 'android') return null;
-  return cap.Plugins?.UnMuteUpdate ?? null;
-}
-
-/** What to offer for this build, or null when it is current. Pure: tested without a phone. */
-export function decideUpdate(
-  channels: {direct?: UpdateChannel; store?: UpdateChannel} | undefined,
-  channel: 'direct' | 'store',
-  currentCode: number,
-  locale: string
-): UpdateOffer | null {
-  const state = channels?.[channel];
-  const latest = Math.max(0, Math.round(Number(state?.latestCode) || 0));
-  const url = String(state?.url || '');
-  const safeUrl = channel === 'store' ? /^(https:\/\/|market:\/\/)/i : /^https:\/\//i;
-  if(!latest || latest <= currentCode || !safeUrl.test(url)) return null;
-  const minimum = Math.min(latest, Math.max(0, Math.round(Number(state?.minimumCode) || 0)));
-  const message = String((locale.startsWith('ru') ? state?.messageRu : state?.messageEn) || '').trim();
-  return {
-    level: minimum > currentCode ? 'required' : 'optional',
-    channel,
-    versionCode: latest,
-    versionName: String(state?.latestName || ''),
-    url,
-    message
-  };
-}
+const plugin = () => androidUpdatePlugin('UnMuteUpdate');
 
 const DISMISS_KEY = 'unmute.update.dismissed';
 export const START_GRACE_MS = 6000;

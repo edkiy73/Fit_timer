@@ -1,31 +1,40 @@
-name: FetUre — тестовый APK
+name: FetUre — APK для установки
 
-# ТЕСТОВАЯ сборка FetUre для Android: только ручной запуск (Actions → «FetUre — тестовый APK» → Run workflow).
-# Никогда не запускается на push — владелец: APK не собирается на каждый коммит (apps/feture/AGENTS.md §3).
+# APK FetUre для Android — так же, как у UnMute (unmute-android-release.yml) и FitTimer (android.yml).
+# Подробно и по шагам для владельца: apps/feture/docs/android-release.md.
 #
-# Что получается:
-# - GitHub Release «feture-apk-test-<дата>-<номер запуска>» (prerelease) с файлом FetUre-test-<версия>.apk —
-#   прямая ссылка для скачивания на телефон;
-# - тот же APK как artifact запуска.
+# Когда запускается (как у FitTimer — явным действием, не на каждый коммит: apps/feture/AGENTS.md §3):
+# - вручную: Actions → «FetUre — APK для установки» → Run workflow;
+# - на push в main, который меняет apps/feture/android-release.json (версия и «что нового»).
 #
-# Подпись — ТОЛЬКО debug-ключ Android, который создаёт сам Gradle на раннере. Это не ключ для магазина и не
-# секреты KEYSTORE_* (FitTimer/UnMute) — они здесь не читаются. Debug-ключ хранится в кэше Actions, чтобы
-# следующая тестовая сборка ставилась поверх предыдущей; если кэш истёк (7 дней без запусков), ключ будет новым и
-# телефон попросит удалить старую тестовую версию перед установкой.
-# Приложение работает с боевым API https://feture-mvp.vercel.app (src/api-url.ts).
+# Версия: versionCode = 1000 + номер запуска (растёт сам, APK ставится поверх предыдущего),
+# versionName = <versionName из android-release.json>.<номер запуска>.
+#
+# Подпись — СОБСТВЕННЫЙ ключ FetUre из секретов FETURE_KEYSTORE_BASE64, FETURE_KEYSTORE_PASSWORD,
+# FETURE_KEY_ALIAS, FETURE_KEY_PASSWORD. Ключи FitTimer/UnMute (KEYSTORE_*) здесь не читаются и не используются.
+# Ключ подписи нельзя менять: телефон не поставит обновление с другой подписью.
+# - Секреты заданы → release: релиз feture-latest (FetUre-latest.apk + FetUre-release.json — постоянная ссылка),
+#   релиз feture-apk-archive (неизменяемые FetUre-<versionCode>.apk, последние 20; на них ссылается обновление
+#   внутри приложения), AAB для Google Play как artifact, SHA-256 сертификата в итогах запуска (для App Links).
+# - Секретов нет → ТЕСТОВАЯ сборка с debug-ключом: prerelease feture-apk-test-<дата>-<номер> с FetUre-test-*.apk,
+#   feture-latest и архив не трогаются. Debug-ключ лежит в кэше Actions, чтобы тестовые сборки ставились друг на друга.
 on:
   workflow_dispatch:
     inputs:
       notes:
-        description: "Что проверить в этой сборке (попадёт в описание релиза)"
+        description: "Что нового / что проверить (попадёт в описание релиза)"
         required: false
         default: ""
+  push:
+    branches: [main]
+    paths:
+      - 'apps/feture/android-release.json'
 
 permissions:
   contents: write
 
 concurrency:
-  group: feture-android-test
+  group: feture-android-release
   cancel-in-progress: false
 
 jobs:
@@ -39,10 +48,20 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Версия сборки
+        env:
+          INPUT_NOTES: ${{ inputs.notes }}
         run: |
-          echo "VERSION_CODE=$((100 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
-          echo "VERSION_NAME=0.1.${GITHUB_RUN_NUMBER}-test" >> "$GITHUB_ENV"
-          echo "TAG=feture-apk-test-$(date -u +%Y-%m-%d)-${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+          node <<'NODE' >> "$GITHUB_ENV"
+          const fs = require('fs');
+          const marker = JSON.parse(fs.readFileSync('android-release.json', 'utf8'));
+          const base = String(marker.versionName || '');
+          if(!/^\d+\.\d+$/.test(base)) throw new Error('android-release.json: versionName must look like 0.2');
+          const run = Number(process.env.GITHUB_RUN_NUMBER);
+          console.log('VERSION_CODE=' + (1000 + run));
+          console.log('VERSION_NAME=' + base + '.' + run);
+          const notes = String(process.env.INPUT_NOTES || marker.notes || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 500);
+          console.log('RELEASE_NOTES=' + notes);
+          NODE
 
       - name: Node.js 22
         uses: actions/setup-node@v7
@@ -62,7 +81,34 @@ jobs:
         with:
           gradle-version: '8.14.3'
 
+      - name: Ключ подписи FetUre
+        id: keystore
+        env:
+          FETURE_KEYSTORE_BASE64: ${{ secrets.FETURE_KEYSTORE_BASE64 }}
+          FETURE_KEYSTORE_PASSWORD: ${{ secrets.FETURE_KEYSTORE_PASSWORD }}
+          FETURE_KEY_ALIAS: ${{ secrets.FETURE_KEY_ALIAS }}
+          FETURE_KEY_PASSWORD: ${{ secrets.FETURE_KEY_PASSWORD }}
+        run: |
+          if [ -z "$FETURE_KEYSTORE_BASE64" ]; then
+            echo "::warning::Секрет FETURE_KEYSTORE_BASE64 не задан — собираю ТЕСТОВЫЙ APK с debug-ключом (apps/feture/docs/android-release.md)."
+            echo "mode=debug" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          missing=""
+          [ -n "$FETURE_KEYSTORE_PASSWORD" ] || missing="$missing FETURE_KEYSTORE_PASSWORD"
+          [ -n "$FETURE_KEY_ALIAS" ] || missing="$missing FETURE_KEY_ALIAS"
+          [ -n "$FETURE_KEY_PASSWORD" ] || missing="$missing FETURE_KEY_PASSWORD"
+          if [ -n "$missing" ]; then
+            echo "::error::FETURE_KEYSTORE_BASE64 задан, но не хватает секретов:$missing" >&2
+            exit 1
+          fi
+          echo "$FETURE_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/feture-release.keystore"
+          test -s "$RUNNER_TEMP/feture-release.keystore"
+          echo "mode=release" >> "$GITHUB_OUTPUT"
+          echo "path=$RUNNER_TEMP/feture-release.keystore" >> "$GITHUB_OUTPUT"
+
       - name: Тестовый debug-ключ (кэш, не секрет)
+        if: steps.keystore.outputs.mode == 'debug'
         uses: actions/cache@v5
         with:
           path: ~/.android/debug.keystore
@@ -73,48 +119,151 @@ jobs:
           npm ci --no-audit --no-fund
           npm run mobile:sync
 
-      - name: Debug APK
-        run: gradle -p android :app:assembleDebug --no-daemon
+      - name: Release APK и AAB
+        if: steps.keystore.outputs.mode == 'release'
+        env:
+          KEYSTORE_FILE: ${{ steps.keystore.outputs.path }}
+          KEYSTORE_PASSWORD: ${{ secrets.FETURE_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.FETURE_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.FETURE_KEY_PASSWORD }}
+        run: gradle -p android :app:assembleDirectRelease :app:bundlePlayRelease --no-daemon
 
-      - name: Проверить APK
+      - name: Тестовый debug APK
+        if: steps.keystore.outputs.mode == 'debug'
+        run: gradle -p android :app:assembleDirectDebug --no-daemon
+
+      - name: Проверить APK и подпись
+        env:
+          MODE: ${{ steps.keystore.outputs.mode }}
         run: |
-          APK=$(find android/app/build/outputs/apk/debug -name '*.apk' | head -1)
+          if [ "$MODE" = "release" ]; then
+            APK=$(find android/app/build/outputs/apk/direct/release -name '*.apk' | head -1)
+          else
+            APK=$(find android/app/build/outputs/apk/direct/debug -name '*.apk' | head -1)
+          fi
           test -n "$APK"
           APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -Vr | head -1)
-          "$APKSIGNER" verify --print-certs "$APK" | grep -i "Android Debug"
           AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt | sort -Vr | head -1)
+          "$APKSIGNER" verify --verbose --print-certs "$APK" | tee "$RUNNER_TEMP/certs.txt"
+          if [ "$MODE" = "release" ]; then
+            # A release must never go out with the debug key (Android would not update it with the real key later).
+            if grep -qi "CN=Android Debug" "$RUNNER_TEMP/certs.txt"; then echo "::error::Release APK подписан debug-ключом" >&2; exit 1; fi
+          else
+            grep -qi "CN=Android Debug" "$RUNNER_TEMP/certs.txt"
+          fi
           "$AAPT" dump badging "$APK" | grep -E "^package:|^application-label:"
-          "$AAPT" dump badging "$APK" | grep -q "package: name='ru.feture.app'"
+          "$AAPT" dump badging "$APK" | grep -q "package: name='ru.feture.app' versionCode='${VERSION_CODE}'"
+          # The direct APK may install its own updates; the store build (AAB) never asks for that.
+          "$AAPT" dump badging "$APK" | grep -q "uses-permission: name='android.permission.REQUEST_INSTALL_PACKAGES'"
           # The google-services plugin turned the Firebase client config into resources, or native push stays silent.
           "$AAPT" dump resources "$APK" | grep -q "string/google_app_id"
-          cp "$APK" "FetUre-test-${VERSION_NAME}.apk"
-          ls -la "FetUre-test-${VERSION_NAME}.apk"
+          # SHA-256 of the signing certificate: public, goes into public/.well-known/assetlinks.json for App Links.
+          HEX=$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$RUNNER_TEMP/certs.txt" | head -1)
+          test -n "$HEX"
+          echo "CERT_SHA256=$(echo "$HEX" | tr 'a-f' 'A-F' | sed 's/../&:/g; s/:$//')" >> "$GITHUB_ENV"
+          if [ "$MODE" = "release" ]; then
+            cp "$APK" FetUre-latest.apk
+            cp "$APK" "FetUre-${VERSION_CODE}.apk"
+            node <<'NODE'
+          const fs = require('fs');
+          const versionCode = Number(process.env.VERSION_CODE);
+          const versionName = String(process.env.VERSION_NAME || '');
+          if(!Number.isInteger(versionCode) || versionCode < 1 || !versionName) throw new Error('bad_version');
+          const repo = process.env.GITHUB_REPOSITORY;
+          fs.writeFileSync('FetUre-release.json', JSON.stringify({
+            versionCode,
+            versionName,
+            apkUrl: `https://github.com/${repo}/releases/download/feture-apk-archive/FetUre-${versionCode}.apk`,
+            commit: process.env.GITHUB_SHA || '',
+            builtAt: new Date().toISOString()
+          }, null, 2) + '\n');
+          NODE
+          else
+            cp "$APK" "FetUre-test-${VERSION_NAME}.apk"
+          fi
 
-      - name: Artifact
+      - name: Файл для Google Play (AAB)
+        if: steps.keystore.outputs.mode == 'release'
         uses: actions/upload-artifact@v7
         with:
-          name: FetUre-test-${{ env.VERSION_NAME }}
-          path: apps/feture/FetUre-test-${{ env.VERSION_NAME }}.apk
+          name: feture-play-${{ env.VERSION_NAME }}
+          path: apps/feture/android/app/build/outputs/bundle/playRelease/*.aab
           if-no-files-found: error
-          retention-days: 30
 
-      - name: Релиз со ссылкой для скачивания
+      - name: Архив версий feture-apk-archive
+        if: steps.keystore.outputs.mode == 'release'
         env:
           GH_TOKEN: ${{ github.token }}
-          NOTES: ${{ inputs.notes }}
+        run: |
+          gh release view feture-apk-archive >/dev/null 2>&1 || gh release create feture-apk-archive \
+            --target "$GITHUB_SHA" \
+            --title "FetUre — архив APK" \
+            --notes "Неизменяемые APK FetUre по номеру версии (versionCode). Обновление внутри приложения скачивает отсюда ровно ту версию, которую выпустили в админке. Для установки вручную бери «FetUre — последний APK»." \
+            --latest=false
+          gh release upload feture-apk-archive "FetUre-${VERSION_CODE}.apk" --clobber
+          gh release view feture-apk-archive --json assets --jq '.assets[].name' \
+            | grep -E '^FetUre-[0-9]+\.apk$' | sort -t- -k2 -n | head -n -20 \
+            | while read -r name; do gh release delete-asset feture-apk-archive "$name" -y; done
+
+      - name: Постоянная ссылка feture-latest
+        if: steps.keystore.outputs.mode == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           {
-            echo "**ТЕСТОВАЯ сборка FetUre для Android — не для магазина.**"
+            echo "**FetUre для Android — последняя версия.**"
             echo
-            echo "Скачай на телефоне файл FetUre-test-${VERSION_NAME}.apk ниже и открой его. Android попросит разрешить установку из этого источника (браузера или «Файлов») — разреши."
-            echo "Если телефон пишет, что приложение не установлено или конфликтует, — удали прежнюю тестовую версию FetUre и поставь заново."
+            echo "Скачай на телефоне файл **FetUre-latest.apk** ниже и открой его. Android попросит разрешить установку из этого источника (браузера или «Файлов») — разреши."
+            echo "Если раньше стояла ТЕСТОВАЯ сборка FetUre (debug-ключ), один раз удали её: телефон не ставит версию с другой подписью поверх."
+            echo "Дальше приложение обновляется само: когда в админке выпустят новую версию, FetUre предложит обновиться."
+            echo
+            echo "Ссылки на FetUre (https://feture-mvp.vercel.app/#/n/...) открываются сразу в приложении."
+            if [ -n "$RELEASE_NOTES" ]; then echo; echo "Что нового: $RELEASE_NOTES"; fi
+            echo
+            echo "Версия ${VERSION_NAME} (versionCode ${VERSION_CODE}), commit ${GITHUB_SHA}."
+          } > release-notes.md
+          # Как у UnMute: удаляем все старые записи с этим tag (включая зависшие draft), затем
+          # draft → загрузить файлы → опубликовать и проверить, что релиз не остался черновиком.
+          gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --paginate \
+            --jq '.[] | select(.tag_name=="feture-latest") | .id' \
+            | while read -r id; do
+                [ -z "$id" ] || gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/$id"
+              done
+          git push origin :refs/tags/feture-latest >/dev/null 2>&1 || true
+
+          gh release create feture-latest \
+            --target "$GITHUB_SHA" \
+            --title "FetUre — последний APK" \
+            --notes-file release-notes.md \
+            --draft \
+            --latest=false
+          gh release upload feture-latest FetUre-latest.apk FetUre-release.json --clobber
+          gh release edit feture-latest --draft=false --latest=false
+
+          RELEASE_JSON="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/feture-latest")"
+          test "$(printf '%s' "$RELEASE_JSON" | jq -r '.draft')" = "false"
+          test "$(printf '%s' "$RELEASE_JSON" | jq -r '.target_commitish')" = "$GITHUB_SHA"
+          printf '%s' "$RELEASE_JSON" | jq -e '.assets | map(.name) | sort == ["FetUre-latest.apk","FetUre-release.json"]' >/dev/null
+
+      - name: Тестовый релиз (debug-ключ)
+        if: steps.keystore.outputs.mode == 'debug'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="feture-apk-test-$(date -u +%Y-%m-%d)-${GITHUB_RUN_NUMBER}"
+          echo "TEST_TAG=$TAG" >> "$GITHUB_ENV"
+          {
+            echo "**ТЕСТОВАЯ сборка FetUre для Android (debug-ключ) — не для магазина и не для людей.**"
+            echo
+            echo "Скачай на телефоне файл FetUre-test-${VERSION_NAME}.apk ниже и открой его. Android попросит разрешить установку из этого источника — разреши."
+            echo "Если телефон пишет, что приложение не установлено или конфликтует, — удали прежнюю версию FetUre и поставь заново."
+            echo "Обновление внутри приложения в тестовой сборке не работает: оно ставит только версии с постоянным ключом FetUre."
+            echo "Постоянной подписи пока нет: владелец ещё не добавил секреты FETURE_KEYSTORE_* (apps/feture/docs/android-release.md)."
             echo
             echo "Работает с сайтом https://feture-mvp.vercel.app (те же аккаунты и данные). Вход — по коду из письма."
-            echo "Уведомления на телефон: включаются в «Я → Настройки → Уведомления» (или по предложению после первого действия); приходят, когда на сервере задан ключ Firebase."
-            echo "Пока нет: открытия ссылок FetUre сразу в приложении (они открываются на сайте)."
+            if [ -n "$RELEASE_NOTES" ]; then echo; echo "Что проверить: $RELEASE_NOTES"; fi
             echo
             echo "Версия ${VERSION_NAME} (versionCode ${VERSION_CODE}), commit ${GITHUB_SHA}. Подпись: debug-ключ (тестовый)."
-            if [ -n "$NOTES" ]; then echo; echo "Что проверить: $NOTES"; fi
           } > release-notes.md
           gh release create "$TAG" "FetUre-test-${VERSION_NAME}.apk" \
             --target "$GITHUB_SHA" \
@@ -122,11 +271,34 @@ jobs:
             --notes-file release-notes.md \
             --prerelease \
             --latest=false
-          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/FetUre-test-${VERSION_NAME}.apk"
+
+      - name: Итоги запуска
+        env:
+          MODE: ${{ steps.keystore.outputs.mode }}
+        run: |
+          LIVE=$(curl -fsSL https://feture-mvp.vercel.app/.well-known/assetlinks.json 2>/dev/null || true)
           {
-            echo "### FetUre — тестовый APK ${VERSION_NAME}"
-            echo
-            echo "Скачать: ${URL}"
-            echo
-            echo "Релиз: https://github.com/${GITHUB_REPOSITORY}/releases/tag/${TAG}"
+            if [ "$MODE" = "release" ]; then
+              echo "### FetUre ${VERSION_NAME} (versionCode ${VERSION_CODE}) — подписан ключом FetUre"
+              echo
+              echo "- Скачать: https://github.com/${GITHUB_REPOSITORY}/releases/download/feture-latest/FetUre-latest.apk"
+              echo "- Выпустить обновление для установленных: сайт → Админка → «Обновление приложения» → «Выпустить последнюю сборку»."
+              echo
+              echo "#### Отпечаток сертификата подписи (SHA-256, публичный)"
+              echo
+              echo '```'
+              echo "$CERT_SHA256"
+              echo '```'
+              if printf '%s' "$LIVE" | grep -q "$CERT_SHA256"; then
+                echo "App Links: этот отпечаток уже стоит в https://feture-mvp.vercel.app/.well-known/assetlinks.json — ссылки открываются в приложении."
+              else
+                echo "App Links: отпечатка ещё нет на сайте. Вставь строку выше в \`apps/feture/public/.well-known/assetlinks.json\` → \`sha256_cert_fingerprints\` (в кавычках) и выкати сайт — см. apps/feture/docs/android-release.md, шаг 4."
+              fi
+            else
+              echo "### FetUre — ТЕСТОВЫЙ APK ${VERSION_NAME} (debug-ключ)"
+              echo
+              echo "- Скачать: https://github.com/${GITHUB_REPOSITORY}/releases/download/${TEST_TAG}/FetUre-test-${VERSION_NAME}.apk"
+              echo "- Постоянная подпись выключена: нет секретов FETURE_KEYSTORE_* (apps/feture/docs/android-release.md)."
+              echo "- Отпечаток debug-ключа (только для тестов, в assetlinks.json его не ставить): \`$CERT_SHA256\`"
+            fi
           } >> "$GITHUB_STEP_SUMMARY"

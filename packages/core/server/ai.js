@@ -506,4 +506,4 @@ function billingProviderStatus(){
   };
 }
 
-module.exports = { DEFAULTS, DEFAULT_PRICES, sanitizeSettings, getSettings, providerStatus, billingProviderStatus, generate, generateGeminiVideo, registerTestResponder, schemaOption };
+module.exports = { DEFAULTS, DEFAULT_PRICES, sanitizeSettings, sanitizeAndroidRelease, getSettings, providerStatus, billingProviderStatus, generate, generateGeminiVideo, registerTestResponder, schemaOption };

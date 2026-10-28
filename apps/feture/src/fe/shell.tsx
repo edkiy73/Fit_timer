@@ -11,6 +11,7 @@ import {SignedOut} from './start';
 import {ToastProvider,useToast} from './toast';
 import {PushOffer} from './push';
 import {ActAsSheet} from './couple';
+import {AppUpdateProvider,UpdateRequired,UpdateSheet,useUpdateRequired} from './app-update';
 import './kit/base.css';
 import './kit/tokens.css';
 import './kit/kit.css';
@@ -41,7 +42,7 @@ function useImageFade(){
 }
 
 export function FeRoot(){
- return <FeSessionProvider><ImageFade/><div className="v21 fe-v21"><FeGate/></div></FeSessionProvider>;
+ return <FeSessionProvider><AppUpdateProvider><ImageFade/><div className="v21 fe-v21"><FeGate/></div></AppUpdateProvider></FeSessionProvider>;
 }
 function ImageFade(){useImageFade();return null;}
 
@@ -81,6 +82,8 @@ function ShellSkeleton(){
 
 function FeGate(){
  const {state,reload}=useFe();const {t}=useI18n();
+ // Android app below the published minimum version: nothing but the update (app-update.tsx).
+ if(useUpdateRequired())return <Center><UpdateRequired/></Center>;
  if(state.status==='loading')return <ShellSkeleton/>;
  // V21 A01 → A02 → A03: a signed-out visitor sees the welcome slides, then sign-up / sign-in by an email code.
  if(state.status==='signedOut')return <SignedOut/>;
@@ -151,6 +154,7 @@ function FeLayout(){
    <ToastProvider nodock={nodock}>
    <Hello/>
    <PushOffer/>
+   <UpdateSheet/>
    <Outlet/>
    {/* The dock's five columns come from base.css (.dock: repeat(5,1fr)) — FE_TABS has five tabs. */}
    {!nodock&&<nav className="dock" aria-label={t('fe.nav.aria')}>
