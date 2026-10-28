@@ -37,7 +37,8 @@ export default [
      // «Скрыть» → the tile leaves at once, the toast offers «Вернуть», which brings it back.
      await t.tap(`.feed-ev button[aria-label="Скрыть событие «${first.title}»"]`); hid.add(first.id);
      await toastSee(t, 'Событие скрыто');
-     expect(!(await t.page.locator(`.feed-ev .evc:has-text("${first.title}")`).count()), 'hidden tile still shown');
+     // Titles can repeat in the test world: count the tiles instead of matching the hidden one by name.
+    await until(async () => (await t.page.locator('.feed-ev .k-fev .evc').count()) === items.length - 1, 'the hidden tile leaves at once');
      await t.tap('.toast button:has-text("Вернуть")');
      await t.see(`.feed-ev .evc:has-text("${first.title}")`);
      await until(async () => !(await hiddenEvents(t)).includes(first.id), '«Вернуть» unhid it');
@@ -46,7 +47,7 @@ export default [
      await until(async () => (await hiddenEvents(t)).includes(first.id), 'feedHide.list has the event');
      expect(!(await soon(t)).some(e => e.id === first.id), 'event.soon still offers the hidden event');
      await t.go('/n/feed'); await t.see('.posts article.post'); await t.see('.feed-ev.k-fev-block, .posts');
-     await t.notSee(`.feed-ev .evc:has-text("${first.title}")`, 2500);
+     await t.wait(2500); expect((await t.page.locator('.feed-ev .k-fev .evc').count()) === items.length - 1, 'still hidden after reload');
      // The tile opens the event.
      if (items.length > 1) { await t.tap(`.feed-ev .evc:has-text("${items[1].title}")`); await t.page.waitForURL(new RegExp('/n/events/' + items[1].id), { timeout: 15000 }); }
      await t.shot('feed-soon');
