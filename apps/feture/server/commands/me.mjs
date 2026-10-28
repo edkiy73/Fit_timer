@@ -21,6 +21,7 @@ const COUPLE_DETAILS = new Set(['roles', 'formats', 'seeks']);
 const SETTING_COLUMN = /** @type {Record<keyof typeof PROFILE_SETTINGS, string>} */ ({
   discoverMode: 'discover_mode', acceptProfileLikes: 'accept_profile_likes', requestsFrom: 'requests_from',
   linksFrom: 'links_from', mentionsFrom: 'mentions_from', activityVis: 'activity_vis', showLikes: 'show_likes',
+  messagesFrom: 'messages_from',
 });
 
 /** Most generous reading of a birth date: the person counts as 18 if it is their 18th birthday anywhere on Earth
@@ -182,6 +183,7 @@ async function doProfileUpdate(q, profileId, accountId, input) {
 const OPENNESS = /** @type {Record<string, unknown[]>} */ ({
   discoverMode: ['off', 'hidden', 'visible'], acceptProfileLikes: [false, true], requestsFrom: ['none', 'matches', 'all'],
   linksFrom: ['none', 'follow', 'all'], mentionsFrom: ['none', 'follow', 'all'], activityVis: ['off', 'followers', 'all'], showLikes: [false, true],
+  messagesFrom: ['none', 'known', 'all'],
 });
 
 /** @param {Q} q @param {string} profileId @param {keyof typeof PROFILE_SETTINGS} setting @param {unknown} value */
@@ -369,6 +371,7 @@ const run = {
       settings: {
         discoverMode: s.discover_mode, acceptProfileLikes: s.accept_profile_likes, requestsFrom: s.requests_from,
         linksFrom: s.links_from, mentionsFrom: s.mentions_from, activityVis: s.activity_vis, showLikes: s.show_likes, privateOn: s.private_on,
+        messagesFrom: s.messages_from,
       },
     };
   },

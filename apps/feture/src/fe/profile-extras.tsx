@@ -18,6 +18,7 @@ import {useToast as useAppToast} from './toast';
 import {PrivateVault} from './private';
 import {GiftSheet,openPaywall} from './premium';
 import {CompareSheet,asInterest} from './compare';
+import {useWriteTo} from './write-to';
 
 /** Profile extras with the V21 prototype's markup: «Что у вас общего» (P05), the person menu (report / block / hide
  * from feed, S02), confirmed links and «Предложить связь» (F2, P21/P22), «Просмотренные» (D09) and «Как видят» (P03).
@@ -75,7 +76,6 @@ const followRow=z.object({id:z.uuid(),kind:z.string(),handle:z.string().nullable
 const followersRes=z.object({ok:z.literal(true),items:z.array(followRow)});
 const FOLLOW_PAGE=50;
 const withProfile=z.object({ok:z.literal(true),items:z.array(z.object({profile:z.object({id:z.uuid()}).passthrough()}).passthrough())});
-const chatsRes=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),other:z.object({id:z.uuid()}).passthrough()}).passthrough())});
 const likeRes=z.object({ok:z.literal(true),state:z.string().optional(),conversationId:z.uuid().optional()}).passthrough();
 export type Relation={followers:number,following:number,iFollow:boolean,liked:boolean,mutual:boolean};
 /** Counts are the length of the lists P10 opens (the server gives the newest 50; more shows as «50+»). */
@@ -148,7 +148,8 @@ export function PersonActions({p,rel,setRel,toast,inert}:{p:PersonProfile,rel:Re
   if(r.state==='matched'){setRel(x=>x&&{...x,mutual:true});setMatch(r.conversationId?{conversationId:r.conversationId}:{});}else setRel(x=>x&&{...x,liked:true});}catch(e){toast(pxError(e,t),true);}};
  const unlike=async()=>{if(busy)return;setBusy('like');
   try{await call('like.withdraw',{opId:newOpId(),profileId:p.id},ok);setRel(x=>x&&{...x,liked:false});toast(t(asUs?'fe.px.lkd.withdrawnUs':'fe.px.lkd.withdrawn'),false,{label:t('fe.mx.undo'),fn:()=>void relike()});}catch(e){toast(pxError(e,t),true);}finally{setBusy('');}};
- const write=async()=>{try{const r=await call('chats.list',{filter:'all'},chatsRes,{asAccount:true});const c=r.items.find(x=>x.other.id===p.id);navigate(c?'/n/chats/'+c.id:'/n/chats');}catch{navigate('/n/chats');}};
+ // «Написать» (owner 29.10.2026): their chat, or the chat composer as a message request — with or without a mutual like.
+ const writeTo=useWriteTo();const write=()=>void writeTo.open(p.id);
  const setFollow=async(on:boolean,undo:boolean)=>{
   try{await call('follow.set',{opId:newOpId(),profileId:p.id,on},ok);setRel(x=>x&&{...x,iFollow:on,followers:Math.max(0,x.followers+(on?1:-1))});
    if(!undo)toast(fill(t(on?(asUs?'fe.px.fl.onUs':'fe.px.fl.on'):(asUs?'fe.px.fl.offUs':'fe.px.fl.off')),{name}),false,{label:t('fe.mx.undo'),fn:()=>void setFollow(!on,true)});}
@@ -162,6 +163,8 @@ export function PersonActions({p,rel,setRel,toast,inert}:{p:PersonProfile,rel:Re
   <div className="p-acts" inert={inert||undefined}>{likeBtn}
    <Btn kind="soft" busy={busy==='follow'} aria-pressed={iF} title={iF?t(asUs?'fe.px.act.unfollowHintUs':'fe.px.act.unfollowHint'):undefined} onClick={inert?undefined:follow} disabled={inert||!rel}>
     {iF?<><Check/>{t(asUs&&!inert?'fe.px.act.followingUs':'fe.px.act.following')}</>:asUs&&!inert?t('fe.px.act.followUs'):t('fe.people.follow')}</Btn>
+   {!rel?.mutual&&<Btn kind="soft" square icon={MessageCircle} aria-label={t(asUs&&!inert?'fe.px.act.writeUs':'fe.px.act.write')} title={t(asUs&&!inert?'fe.px.act.writeUs':'fe.px.act.write')}
+    busy={writeTo.busy===p.id} onClick={inert?undefined:write} disabled={inert}/>}
   </div>
   {why&&<p className="profile-like-note"><Heart/><span>{why==='couples_via_discover_only'?<>{t('fe.px.act.coupleVia')} <button type="button" className="linkbtn" onClick={()=>navigate('/n/me?layer=vis')}>{t('fe.px.act.turnOn')}</button></>
    :why==='own_discover_off'?<>{t('fe.px.act.ownOff')} <button type="button" className="linkbtn" onClick={()=>navigate('/n/me?layer=vis')}>{t('fe.px.act.turnOn')}</button></>:t('fe.px.act.likesOff')}</span></p>}

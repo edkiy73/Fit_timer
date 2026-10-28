@@ -22,6 +22,9 @@ export const PROFILE_SETTINGS = /** @type {const} */ ({
   mentionsFrom: z.enum(['all', 'follow', 'none']),
   activityVis: z.enum(['all', 'followers', 'off']),
   showLikes: z.boolean(),
+  // «Кто может мне писать» (owner 29.10.2026): message requests from everyone / followers and people of my communities
+  // and events / nobody (then only a mutual like opens a chat).
+  messagesFrom: z.enum(['all', 'known', 'none']),
 });
 
 const channel = z.strictObject({ push: z.boolean(), email: z.boolean() });

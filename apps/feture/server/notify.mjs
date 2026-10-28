@@ -15,6 +15,8 @@ import { pushKind, queuePush } from './push.mjs';
 const TYPES = /** @type {Record<string, {type: string, actor?: string, object?: [string, string]}>} */ ({
   'like.received': { type: 'like', actor: 'from' },
   'match.created': { type: 'match', actor: 'with', object: ['conversation', 'conversationId'] },
+  // A message request (owner 29.10.2026): an inbox row and a push; a hide takes it back (chat.requestAnswer).
+  'chat.requested': { type: 'chatRequest', actor: 'from', object: ['conversation', 'conversationId'] },
   'follow.created': { type: 'follow', actor: 'from' },
   'reply.created': { type: 'reply', actor: 'from', object: ['post', 'postId'] },
   'reaction.created': { type: 'postLike', actor: 'from', object: ['post', 'postId'] },
