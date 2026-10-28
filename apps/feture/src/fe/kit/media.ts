@@ -61,30 +61,51 @@ export const fmtDurFine=(ms:number)=>{const d=Math.max(0,Math.round(ms/100));con
 /** «0:07», «1:00», «4:59». */
 export const fmtDur=(ms:number|null|undefined)=>{const s=Math.max(0,Math.round((ms??0)/1000));return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;};
 
-/** A clip's trim and crop as the server stores them (media `clip`): the part that plays and the frame. The file is
- * never cut — every player honours this (owner, 28.10.2026). */
+/** A clip is made on the device before it is sent (owner, 28.10.2026, «Зачем грузить огромные файлы ради кусочка?»):
+ * only the chosen part (≤ 60 s), cut to the chosen frame, ≤ 1280 px, compressed (kit/video-edit.ts). So the source may
+ * be much longer and larger than what the server takes; the server limits apply to the result. */
+export const VIDEO_SOURCE_MAX_BYTES=2*1024*1024*1024;
+export const VIDEO_SOURCE_MAX_MS=600_000;
+/** The frame of a clip as the crop sheet returns it. */
 export type ClipCrop={aspect:Exclude<Aspect,'orig'>}&Crop;
-export type Clip={startMs?:number|undefined,endMs?:number|undefined,crop?:ClipCrop|undefined};
-/** What the uploader sends with a clip (media.uploadIntent `edit`). */
+/** The author's choice for a clip: the part to keep and the frame. Applied on the device; nothing of it goes to the server. */
 export type VideoEdit={trim?:{startMs:number,endMs:number}|undefined,crop?:ClipCrop|undefined};
 export const TRIM_MIN_MS=1000;
-/** A picked clip, ready to send: its length, its size and a poster frame (JPEG, from the first moment) cut on the
- * device. The clip itself is sent as picked; the poster is what lists and covers show. With `edit` the poster is the
- * cropped frame at the trim start, and `durationMs` stays the whole clip's (the server checks the trim against it). */
-export type PreparedVideo={file:File,poster:Blob,url:string,w:number,h:number,durationMs:number,size:number,mime:string,edit?:VideoEdit|undefined};
+/** A clip, ready to send: the file that goes (after `makeVideo`: the made one), its length, size, MIME and a poster frame
+ * (JPEG, from its first moment, cut on the device). Before it is made it describes the picked source. */
+export type PreparedVideo={file:File,poster:Blob,url:string,w:number,h:number,durationMs:number,size:number,mime:string};
 
-/** Where the video sits in its box for a crop: size and offset in % of the box (the crop sheet's maths with the clip
- * covering the frame). `r` = the clip's own width / height. */
+/** Where the video sits in its box for a crop preview (trim sheet): size and offset in % of the box (the crop sheet's
+ * maths with the clip covering the frame). `r` = the clip's own width / height. */
 export function clipBox(r:number,crop:ClipCrop):{w:number,h:number,x:number,y:number}{
  const [aw,ah]=ASPECTS[crop.aspect];const a=aw/ah;
  let w=100,h=100;if(r>a)w=r/a*100;else h=a/r*100;
  w*=crop.z;h*=crop.z;
  return {w,h,x:(100-w)/2+crop.x*w,y:(100-h)/2+crop.y*h};
 }
-/** The part of a clip that plays, in seconds: [start, end]. */
-export function clipSpan(clip:Clip|null|undefined,durationS:number):[number,number]{
- const end=clip?.endMs!=null?Math.min(durationS||Infinity,clip.endMs/1000):durationS;
- return [Math.max(0,(clip?.startMs??0)/1000),Number.isFinite(end)?end:durationS];
+
+/** The recorder fallback's format: MP4 (H.264 + AAC) where offered — Safari, Chrome 126+ —, WebM (VP8/VP9 + Opus)
+ * otherwise (never MP4 with other codecs: Safari would not play it); null without MediaRecorder or canvas capture. */
+export function recorderMime():string|null{
+ if(typeof MediaRecorder==='undefined'||typeof HTMLCanvasElement==='undefined'||!('captureStream' in HTMLCanvasElement.prototype))return null;
+ for(const m of ['video/mp4;codecs=avc1.42E01F,mp4a.40.2','video/mp4;codecs=avc1,mp4a.40.2','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'])
+  if(MediaRecorder.isTypeSupported?.(m))return m;
+ return null;
+}
+let editPath:Promise<'webcodecs'|'recorder'|null>|null=null;
+/** How this device makes clips: WebCodecs with an H.264 encoder (Chrome / Edge / Android WebView, Safari and iOS
+ * WKWebView 16.4+, Firefox 130+ desktop), else the real-time recorder, else none — then a clip goes as picked (≤ 60 s,
+ * ≤ 100 MB) and the uploader offers no trim or crop. */
+export function videoEditPath():Promise<'webcodecs'|'recorder'|null>{
+ return editPath??=(async()=>{
+  try{
+   if(typeof VideoEncoder!=='undefined'&&typeof VideoDecoder!=='undefined'&&typeof Worker!=='undefined'){
+    const s=await VideoEncoder.isConfigSupported({codec:'avc1.42001f',width:1280,height:720,bitrate:2_500_000,framerate:30});
+    if(s.supported)return 'webcodecs';
+   }
+  }catch{/* fall through */}
+  return recorderMime()?'recorder':null;
+ })();
 }
 
 /** Opens a clip in a hidden video element and reads its real length (recorded WebM reports none until the end is

@@ -1,5 +1,6 @@
 // Kit uploader in the post composer: pick → format → crop → «Готово» → photo attached → published; read back.
-import { expect, until, pngOf } from '../helpers.mjs';
+// A clip longer than a minute (made on the device, owner 28.10.2026): taken, starts as its first minute, the note says so.
+import { expect, until, pngOf, sourceClip } from '../helpers.mjs';
 const mine = async t => (await t.api('me.posts', {})).items;
 export default [{ name: 'uploader: format, crop, ready, publish with a cropped 4:5 photo', persona: 'full', route: '/n/feed/new', run: async t => {
   let id;
@@ -30,4 +31,23 @@ export default [{ name: 'uploader: format, crop, ready, publish with a cropped 4
     expect(p.media.length === 1, 'media ' + p.media.length);
     const m = p.media[0]; if (m.w && m.h) expect(Math.abs(m.w / m.h - .8) < .02, 'stored photo is 4:5: ' + m.w + 'x' + m.h);
   } finally { if (id) await t.api('post.delete', { opId: t.uuid7(), postId: id }); }
+}},
+{ name: 'uploader: a 62 s clip is taken (sources up to 10 min) — it starts as its first minute, the note and the trim sheet say so', persona: 'full', route: '/n/feed/new', run: async t => {
+  await t.see('.compose .rte-ed');
+  // A small, long clip recorded in real time (a minute and two seconds).
+  const src = await sourceClip(t, { w: 160, h: 90, seconds: 62, bitrate: 2e5, noise: false });
+  const [ch] = await Promise.all([t.page.waitForEvent('filechooser'), t.page.locator('.attach button').first().click()]);
+  await ch.setFiles([src]);
+  await t.see('.sheet.on .k-uprow:has-text("Видео · 1:00 из 1:02")', 30000);
+  await t.see('.sheet.on .k-uprow .k-vbadge:has-text("1:00")');
+  await t.see('.sheet.on .alert:has-text("до 10 минут")'); await t.see('.sheet.on .alert:has-text("до минуты")');
+  await t.shot('up-long-clip');
+  await t.tap('.sheet.on .k-upacts button:has-text("Обрезать")'); await t.see('.sheet.on .k-trim-strip');
+  await t.see('.sheet.on .k-trim-meta:has-text("Длина 1:00.0")');
+  // The part never grows past a minute: the end handle cannot go further while the start stays at 0.
+  await t.page.locator('.k-trim-h.r').focus(); await t.page.keyboard.press('Shift+ArrowRight');
+  await t.see('.sheet.on .k-trim-meta:has-text("Длина 1:00.0")');
+  await t.see('.sheet.on .sh-f button:has-text("Первая минута")');
+  await t.shot('up-long-trim');
+  await t.page.keyboard.press('Escape');
 }}];

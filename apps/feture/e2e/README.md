@@ -77,7 +77,9 @@ Microphone and camera: the runner starts Chromium with fake devices (`--use-fake
 test pattern). A scenario that records voice sets `mic: true` (it runs in a second browser with
 `--use-fake-ui-for-media-stream`: headless Chromium ignores a plain permission grant); `mic: 'deny'` makes
 `getUserMedia` refuse as when a person says no (`chats/voice.mjs`, lane `av`). Clips are recorded from a canvas in the
-page (`feed/video.mjs`).
+page (`sourceClip` in helpers.mjs; `watchVideoUpload` reads what was uploaded). Playwright's Chromium has no H.264 / AAC
+encoders, so the uploader makes clips with the recorder fallback (WebM); `E2E_CHANNEL=chrome` runs the installed Google
+Chrome, which takes the WebCodecs path (MP4) — run video scenarios both ways (`feed/video.mjs`, `feed/upload.mjs`).
 
 ## Run
 
