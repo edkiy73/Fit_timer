@@ -103,7 +103,7 @@ export default [
    const r = ok(await t.api('premium.restore', { opId: t.uuid7() }), 'restore');
    if (r.restored !== 0) throw new Error('restored ' + r.restored);
  } },
- { name: 'B01 gift: find by exact nick, change, term, anonymous, confirm shows «оплата позже», back (after deploy)', persona: 'basic', route: '/n/premium', run: async t => {
+ { name: 'B01 gift: find by exact nick, change, term, anonymous, confirm shows «оплата позже», back (after deploy)', persona: 'basic', route: '/n/premium', allow4xx: true /* «нет такого ника» and «себе нельзя» are expected refusals */, run: async t => {
    const other = await t.persona('stranger');
    await t.tap('text=Подарить Premium другому'); await t.see(sheet + ' >> text=Ник получателя');
    await t.fill('#fe-gift-nick', 'zz' + Date.now().toString(36)); await t.tap(sheet + ' >> text=Найти'); await t.see('Такого ника нет');
