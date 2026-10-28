@@ -31,10 +31,13 @@ Old plans, audits and prototypes V5–V20 were removed on 29.10.2026; git histor
    **added to the kit first** — component (or variant/state) + tokens + Storybook story with its states + a line in
    `kit/README.md` — and only then used. Never a local copy «for now». `npm run check:kit` ratchets hand-written
    pieces per file (`tools/fe-kit-baseline.json`, only goes down; `node tools/check-fe-kit.mjs --update` after cuts).
-2. **Одно действие — один компонент.** UI with the same meaning is one shared component; differences are props:
-   composer row, «Создать» sheet, editor, report, empty states / add cards, follow / like / share, avatar, media
-   grid, viewer, uploader, LoadMore, pull-to-refresh, confirms, undo toasts. Before writing UI, look for the existing
-   one; reviews check reuse across the whole app, not only that the PR works.
+2. **Одно действие — один компонент.** UI with the same meaning is one shared component; a variant is a **prop**,
+   never a copy: composer row (`Composer`, `src/fe/create-entry.tsx`), «Создать» sheet (`CreateSheet`), editor
+   (`ComposeScreen`), report (`ReportSheet`), add card (`AddCard`), empty state (`Empty`), link copy (`useCopyLink`,
+   `src/fe/share.tsx`), follow (`FollowButton`, `src/fe/follow.tsx`), like, avatar (`Av`/`ActingAv`), media grid,
+   viewer, uploader, paging (`LoadMore`), pull-to-refresh, confirm (`Ask`), toasts (`useToast`), button rows
+   (`Actions`). Layout grid: `--gut`, `--page-max`, `--block-gap`. Look for the existing one before writing UI;
+   `check:kit` fails on known copies outside their home (`ONE` in `tools/check-fe-kit.mjs`).
 3. **Review gate.** Every UI change is checked by screenshots at phone 360–390, tablet 768 and desktop 1280+, in light
    and dark, before merge. The PR lists the kit components used and added.
 4. **No legacy exceptions.** A screen that breaks these rules is fixed when found.

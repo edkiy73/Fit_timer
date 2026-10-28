@@ -5,6 +5,9 @@ import { id, opId } from './platform.mjs';
 import { field } from './_text.mjs';
 
 const seq = z.int().min(0);
+/** Message requests (owner 29.10.2026): new requests a profile may send a day — fewer after several of its requests were
+ * hidden or reported lately; a hidden (or unanswered) request may be sent again after `reaskDays`. */
+export const REQUEST_LIMITS = Object.freeze({ perDay: 10, perDayLow: 3, lowAfter: 3, lowWindowDays: 14, reaskDays: 30 });
 export const chatsCommands = {
   'chats.list': {
     profile: false, write: false,
@@ -37,4 +40,17 @@ export const chatsCommands = {
   'chat.read': { profile: true, write: true, ledger: false, input: z.strictObject({ conversationId: id, upToSeq: seq }) },
   'chat.mute': { profile: true, write: true, ledger: false, input: z.strictObject({ conversationId: id, on: z.boolean() }) },
   'chat.archive': { profile: true, write: true, ledger: false, input: z.strictObject({ conversationId: id, on: z.boolean() }) },
+  // Message requests (owner 29.10.2026). «Написать» on someone's profile, in member and attendee lists: the open
+  // conversation with them, or whether a request may go out (it names their «Кто может мне писать» only as a rule).
+  'chat.with': { profile: true, write: false, rate: { kind: 'chat.with', max: 3000, window: '1 day' }, input: z.strictObject({ profileId: id }) },
+  // The first message of a request: text and/or one photo uploaded for chats. The daily limit (10, or 3 after many
+  // hidden or reported requests) is the handler's own; this outer limit only stops probing.
+  'chat.request': {
+    profile: true, write: true, rate: { kind: 'chat.request.calls', max: 300, window: '1 day' },
+    input: z.strictObject({ opId, profileId: id, body: field('caption').default(''), assetId: id.optional() })
+      .refine(v => v.body.trim() !== '' || !!v.assetId, { message: 'empty', path: ['body'] }),
+  },
+  // The recipient answers («Ответить»: it becomes a normal chat) or hides it (the sender is not told). «Пожаловаться и
+  // заблокировать» is report.create on the conversation with alsoBlock.
+  'chat.requestAnswer': { profile: true, write: true, input: z.strictObject({ opId, conversationId: id, answer: z.enum(['accept', 'hide']) }) },
 };

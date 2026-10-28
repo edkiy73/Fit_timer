@@ -34,6 +34,25 @@ const TSX = [
   ['note', /className=(?:"|\{['`])note["' ]/g],
   ['section label', /className="sec"/g],
   ['progress', /className="qprog"/g],
+  // Layout grid (owner 29.10.2026): screens do not space or size blocks themselves — the kit's rhythm (--block-gap),
+  // Stack / Actions gaps and the page column do. mt* / mb* classes and inline widths are what is left to move.
+  ['margin class', /className=(?:"|\{['`])[^"'`}]*(?<![\w-])(?:mt|mb)\d+(?![\w-])/g],
+  // An empty state is the kit's Empty (compact inside a screen part or sheet), never a Note saying «nothing here».
+  ['empty note', /<Note[^>]*>\{t\('[^']*(?:\.no[A-Z]|[nN]othing|[eE]mpty|[nN]one\b|None')[^']*'[^}]*\}<\/Note>/g],
+  // A row of buttons is the kit's Actions, not a Stack row / .row of Btns.
+  ['button row', /<Stack row[^>]*>\s*<Btn\b|className="row g\d+"[^>]*>\s*<Btn\b/g],
+];
+// «Одно действие — один компонент» (owner 29.10.2026): one shared component per meaning. These may appear only in
+// their one home (outside it the count must be 0, no baseline): a second composer row, create sheet, report flow,
+// clipboard link, follow call or browser confirm is a copy, and a copy is wrong. See AGENTS.md and src/fe/kit/README.md.
+const ONE = [
+  ['composer row (use Composer from create-entry.tsx)', /className=(?:"|\{['`])[^"'`}]*(?<![\w-])(?:composer|cmp-main)(?![\w-])/g, []],
+  ['«Создать» sheet (use CreateSheet from create-entry.tsx)', /<Sheet[^>]*title=\{t\('fe\.create'\)\}/g, ['src/fe/create-entry.tsx']],
+  ['report call (use ReportSheet from report.tsx)', /call\('report\.create'/g, ['src/fe/report.tsx']],
+  ['clipboard (use useCopyLink / copyLink from share.tsx)', /navigator\.clipboard/g, ['src/fe/share.tsx', 'src/fe/chats.tsx']],
+  ['follow call (use FollowButton from follow.tsx)', /call\('follow\.set'/g, ['src/fe/follow.tsx', 'src/fe/post-menu.tsx']],
+  ['browser confirm (use Ask)', /window\.confirm\(/g, []],
+  ['«Принимаю правила» box (the join button accepts the rules)', /fe\.host\.join\.accept'/g, []],
 ];
 const CSS = [
   ['stylesheet', /^/],  // a screen stylesheet at all: new styles go into the kit (kit.css / tokens.css)
@@ -52,14 +71,24 @@ function files(dir, ext) {
   return out;
 }
 const counts = {};
+const copies = [];
 for (const f of files(join(ROOT, 'src/fe'), ['.tsx', '.ts', '.css'])) {
   const rel = relative(ROOT, f);
   if (KIT.some(k => rel.startsWith(k)) || rel.includes('/i18n/')) continue;
   const src = readFileSync(f, 'utf8');
+  if (!rel.endsWith('.css')) for (const [name, re, home] of ONE) {
+    const n = (src.match(re) || []).length;
+    if (n && !home.includes(rel)) copies.push(`${rel}: ${name} ×${n}`);
+  }
   for (const [name, re] of rel.endsWith('.css') ? CSS : TSX) {
     const n = (src.match(re) || []).length;
     if (n) (counts[rel] ??= {})[name] = n;
   }
+}
+if (copies.length) {
+  console.error('«Одно действие — один компонент»: a second version of a shared component. Use the shared one:');
+  for (const c of copies) console.error('  ' + c);
+  process.exit(1);
 }
 if (process.argv.includes('--update')) {
   writeFileSync(BASE, JSON.stringify(counts, null, 1) + '\n');

@@ -18,7 +18,7 @@ const communities=()=>import('./fe/communities'),inbox=()=>import('./fe/inbox'),
  links=()=>import('./fe/links'),browse=()=>import('./fe/browse'),interests=()=>import('./fe/interests'),staff=()=>import('./fe/staff'),ageCheck=()=>import('./fe/age-check'),
  photoCheck=()=>import('./fe/photo-check'),feed=()=>import('./fe/feed'),createCommunity=()=>import('./fe/create-community'),createEvent=()=>import('./fe/create-event'),host=()=>import('./fe/host');
 const CommunitiesTab=screen(communities,'CommunitiesTab'),CommunityScreen=screen(communities,'CommunityScreen'),EventScreen=screen(communities,'EventScreen');
-const ChatsTab=screen(chats,'ChatsTab'),ChatScreen=screen(chats,'ChatScreen'),PeopleTab=screen(people,'PeopleTab'),PersonScreen=screen(people,'PersonScreen');
+const ChatsTab=screen(chats,'ChatsTab'),ChatScreen=screen(chats,'ChatScreen'),RequestsScreen=screen(chats,'RequestsScreen'),PeopleTab=screen(people,'PeopleTab'),PersonScreen=screen(people,'PersonScreen');
 const MeTab=screen(meTab,'MeTab'),MeEditScreen=screen(meEdit,'MeEditScreen'),MinePartScreen=screen(mine,'MinePartScreen'),MyPostsScreen=screen(mine,'MyPostsScreen'),SavedScreen=screen(mine,'SavedScreen');
 const InboxScreen=screen(inbox,'InboxScreen'),PairScreen=screen(pair,'PairScreen');
 const SettingsScreen=screen(settings,'SettingsScreen'),NotificationSettingsScreen=screen(settings,'NotificationSettingsScreen'),DataScreen=screen(settings,'DataScreen');
@@ -146,6 +146,8 @@ export const routes: RouteObject[] = [
         {path:'settings/age', element:<AgeCheckScreen />},
         {path:'settings/photo-check', element:<PhotoCheckScreen />},
         {path:'chats', element:<ChatsTab />},
+        {path:'chats/requests', element:<RequestsScreen />},
+        {path:'chats/new/:to', element:<ChatScreen />},
         {path:'chats/:id', element:<ChatScreen />},
         {path:'me', element:<MeTab />},
         {path:'me/preview', element:<MePreviewScreen />},

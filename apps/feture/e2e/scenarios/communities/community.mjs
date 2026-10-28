@@ -26,10 +26,9 @@ const scenarios = [
    await t.see(`.cm-head h2:has-text("${OPEN_NAME}")`);
    await t.tap('.cm-act .btn:has-text("Вступить")');
    await t.see(sheet); await t.see('Правила сообщества');
-   await t.page.locator(sheet + ' .sh-f .btn').click();
-   await t.see('Нужно принять правила');
-   await t.tap(sheet + ' button.check');
-   await t.page.locator(sheet + ' .sh-f .btn').click();
+   // The button accepts the rules (owner 29.10.2026): no separate box to tick.
+   if (await t.page.locator(sheet + ' button.check').count()) throw new Error('a «Принимаю правила» box is back');
+   await t.page.locator(sheet + ' .sh-f .btn:has-text("Принять правила и вступить")').click();
    await toast(t, OPEN_NAME);
    await t.see('.cm-act .pill.ok');
    if ((await me(t, OPEN)).me?.state !== 'active') throw new Error('not a member after join');
@@ -63,11 +62,11 @@ const scenarios = [
    const c = await me(t, CLOSED);
    if (c.joinQuestion) {
      await t.page.locator(sheet + ' textarea').fill('коротко');
-     await t.tap(sheet + ' button.check');
      await t.page.locator(sheet + ' .sh-f .btn').click();
      await t.see('Ответь хотя бы парой предложений');
      await t.page.locator(sheet + ' textarea').fill('Мне интересна тема, хочу общаться и учиться у опытных людей.');
-   } else await t.tap(sheet + ' button.check');
+   }
+   await t.see(sheet + ' .sh-f .btn:has-text("Принять правила и отправить заявку")');
    await t.page.locator(sheet + ' .sh-f .btn').click();
    await toast(t, 'Заявка отправлена ведущим');
    await t.see('.k-status:has-text("Заявка на рассмотрении"):has-text("Отправлена")'); // one block: state, when, «Отозвать»
@@ -105,12 +104,12 @@ const scenarios = [
    await t.tap('.seg button:has-text("Правила")'); await t.see('ol.rules li');
    await t.tap('.seg button:has-text("Участники")'); await t.see('Ведущие');
    await t.tap('.seg button:has-text("События")'); await t.wait(500);
-   await t.tap('.seg button:has-text("Обсуждения")'); await t.see('.c-composer');
+   await t.tap('.seg button:has-text("Обсуждения")'); await t.see('.view .composer');
  } },
  { name: 'C03 new discussion with a poll lands in the community; reply; cleanup', persona: 'host', route: '/n/communities/@MINE', run: async t => {
    const stamp = 'E2E опрос ' + Date.now().toString(36);
-   await t.see('.c-composer');
-   await t.tap('.c-composer button[aria-label="Опрос"]');
+   await t.see('.view .composer');
+   await t.tap('.view .composer button[aria-label="Опрос"]');
    await t.see('#pollQ');
    await t.page.locator('.compose .rte-ed').first().fill(stamp + ': как вам формат?');
    await t.page.locator('#pollQ').fill('Какой формат удобнее?');
@@ -133,9 +132,9 @@ const scenarios = [
  } },
  { name: 'C03 new discussion with a photo (file chooser opens), published; cleanup', persona: 'host', route: '/n/communities/@MINE', run: async t => {
    const stamp = 'E2E фото ' + Date.now().toString(36);
-   await t.see('.c-composer');
+   await t.see('.view .composer');
    const fc = t.page.waitForEvent('filechooser', { timeout: 8000 });
-   await t.tap('.c-composer .ibtn.ghost >> nth=0');
+   await t.tap('.view .composer .ibtn.ghost >> nth=0');
    const chooser = await fc;
    await chooser.setFiles({ name: 'p.png', mimeType: 'image/png', buffer: PNG });
    await uploaderDone(t);
@@ -149,6 +148,56 @@ const scenarios = [
    const id = d?.id ?? (await t.api('me.posts', {})).items.find(x => (x.body ?? '').includes(stamp))?.id; // a photo post may wait for review
    if (!id) throw new Error('photo discussion not stored');
    await t.api('post.delete', { opId: t.uuid7(), postId: id });
+ } },
+
+ // One composer everywhere (owner 29.10.2026): the community's row is the feed's, its «+» is the same «Создать».
+ { name: 'ONE «+» as host: «Создать» offers «Событие», made in this community', persona: 'host', route: '/n/communities/@MINE', run: async t => {
+   await t.see('.view .composer .cmp-main:has-text("Новая тема")');
+   await t.tap('.view .composer .ibtn.add'); await t.see(sheet + ':has-text("Создать")');
+   await t.see(sheet + ' .li:has-text("Публикация")'); await t.see(sheet + ' .li:has-text("Статья")');
+   await t.tap(sheet + ' .li:has-text("Событие")');
+   await t.wait(800);
+   if (!t.page.url().includes('/n/events/new?community=' + MINE)) throw new Error('event editor not for the community: ' + t.page.url());
+   await t.see(CLOSED_NAME); // the event starts linked to the community
+ } },
+ { name: 'ONE «+» as member: «Публикация» and «Статья», no «Событие»', persona: 'full', run: async t => {
+   await t.api('community.join', { opId: t.uuid7(), communityId: OPEN, rulesAccepted: true });
+   await t.go('/n/communities/' + OPEN);
+   await t.see('.view .composer'); await t.tap('.view .composer .ibtn.add');
+   await t.see(sheet + ' .li:has-text("Публикация")'); await t.see(sheet + ' .li:has-text("Статья")');
+   if (await t.page.locator(sheet + ' .li:has-text("Событие")').count()) throw new Error('a member is offered «Событие»');
+   await t.shot('community-create-member');
+ } },
+ { name: 'ONE editor in a community: an article and «Мои интересы» are published there', persona: 'full', run: async t => {
+   await t.api('community.join', { opId: t.uuid7(), communityId: OPEN, rulesAccepted: true });
+   const stamp = 'E2E статья ' + Date.now().toString(36);
+   const made = [];
+   try {
+     await t.go('/n/communities/' + OPEN);
+     await t.tap('.view .composer .ibtn.add'); await t.tap(sheet + ' .li:has-text("Статья")');
+     await t.see('#ntitle');
+     await t.see('.view .li:has-text("Видят все")'); // who sees it is the community's, not a choice
+     if (await t.page.locator('.view .selrow').count()) throw new Error('an audience selector in a community');
+     await t.see('css=header .btn:has-text("В черновик")');
+     await t.page.locator('#ntitle').fill(stamp);
+     await t.page.locator('.compose .rte-ed').first().fill('Текст статьи внутри сообщества, длиннее двадцати знаков.');
+     await t.tap('.ctabar .btn:not(.soft)');
+     await until(() => t.page.url().includes('/n/communities/' + OPEN), 'back on the community', 15000);
+     const a = (await t.api('community.discussions', { communityId: OPEN })).items.find(x => x.title === stamp);
+     if (!a) throw new Error('article not in the community'); made.push(a.id);
+     const art = (await t.api('post.get', { postId: a.id })).post;
+     if (art.type !== 'note' || art.inFeed !== false) throw new Error('article: ' + art.type + ', in feed ' + art.inFeed);
+
+     const ints = 'E2E интересы ' + Date.now().toString(36);
+     await t.tap('.view .composer .ibtn.add'); await t.tap(sheet + ' .create-q button:has-text("Мои интересы")');
+     await t.see('.cmp-ints', 15000);
+     await t.page.locator('.compose .rte-ed').first().fill(ints);
+     await t.tap('.ctabar .btn:not(.soft)');
+     await until(() => t.page.url().includes('/n/communities/' + OPEN), 'back on the community', 15000);
+     const p = (await t.api('community.discussions', { communityId: OPEN })).items.find(x => x.excerpt.includes(ints));
+     if (!p) throw new Error('«Мои интересы» not in the community'); made.push(p.id);
+     if (!(await t.api('post.get', { postId: p.id })).post.interests?.length) throw new Error('interests not on the post');
+   } finally { for (const id of made) await t.api('post.delete', { opId: t.uuid7(), postId: id }); }
  } },
 ];
 

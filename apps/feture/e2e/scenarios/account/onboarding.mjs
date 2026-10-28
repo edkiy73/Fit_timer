@@ -25,9 +25,7 @@ const main = [{ name: 'sign-up step 2: topics, community preview and join, feed 
   if (!(await t.page.locator('.li', { hasText: open.name }).count())) { await chip.click(); await t.wait(1500); }
   if (await t.page.locator('.li', { hasText: open.name }).count()) {
     await t.page.locator('.li', { hasText: open.name }).first().locator('button:has-text("Вступить")').click(); await t.wait(800);
-    await t.see('.sheet.on'); await t.tap('.sheet.on .sh-f button:has-text("Вступить")'); // without the rules ticked → error
-    await t.see('.sheet.on .ferr');
-    await t.tap('.sheet.on button[role="checkbox"]'); await t.tap('.sheet.on .sh-f button:has-text("Вступить")');
+    await t.see('.sheet.on'); await t.tap('.sheet.on .sh-f button:has-text("Принять правила и вступить")'); // the button accepts the rules
     await t.notSee('.sheet.on', 800); await t.see('.li button:has-text("Не вступать")');
   }
   const joining = await t.page.locator('.li button:has-text("Не вступать")').count();

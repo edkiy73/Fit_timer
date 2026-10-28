@@ -1,7 +1,7 @@
 import type {Meta,StoryObj} from '@storybook/react-vite';
 import {fn} from 'storybook/test';
 import {Bell,Heart,Plus,Settings,Share,Trash2} from 'lucide-react';
-import {Btn,IconBtn,Stack} from './index';
+import {Actions,Btn,IconBtn,Stack} from './index';
 
 const icons={none:undefined,Plus,Heart,Share,Trash2,Bell,Settings};
 const iconArg={options:Object.keys(icons),mapping:icons,control:{type:'select' as const}};
@@ -36,3 +36,6 @@ export const КруглыеВсе:StoryObj<typeof IconBtn>={name:'Круглые
 export const ВРяду:S={name:'В ряду: по ширине текста (fit)',render:()=><div className="row g8"><Btn kind="soft" fit>Изменить</Btn><Btn>Опубликовать</Btn></div>};
 export const Тёмная:S={name:'Тёмная (на светлой вуали)',args:{kind:'dark',children:'Попросить доступ'}};
 export const Квадратная:S={name:'Квадратная с иконкой (square)',render:a=><Stack row gap={2}><Btn kind="soft" square icon={Trash2} aria-label="Удалить"/><Btn {...a}/></Stack>,args:{children:'Сохранить'}};
+export const РядДействий:StoryObj<typeof Actions>={name:'Ряд кнопок (Actions)',render:a=><Actions {...a}><Btn kind="soft" icon={Heart}>Симпатии</Btn><Btn kind="soft" icon={Bell}>Недавние</Btn></Actions>,
+ args:{stack:false},parameters:{docs:{description:{story:'Единственный ряд кнопок приложения: равные ширины на всю колонку, один отступ; `stack` — одна под другой. Экран не выстраивает кнопки своим Stack, отступами или шириной.'}}}};
+export const РядДействийСтолбиком:StoryObj<typeof Actions>={...РядДействий,name:'Ряд кнопок столбиком',args:{stack:true}};

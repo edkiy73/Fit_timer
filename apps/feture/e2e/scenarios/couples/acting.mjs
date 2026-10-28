@@ -48,7 +48,7 @@ export default [
    // A community the couple belongs to, if any: its «Новая тема» entry.
    const cm = await t.api('community.mine', {}, undefined, couple.id).catch(() => ({}));
    const c = [...(cm.hosting ?? []), ...(cm.member ?? [])].find(x => (x.state ?? 'published') === 'published');
-   if (c) { await t.go('/n/communities/' + c.id); await t.see('.c-composer .cmp-main:has-text("Тема от пары")'); await t.see('.c-composer .cmp-main .av'); }
+   if (c) { await t.go('/n/communities/' + c.id); await t.see('.view .composer .cmp-main:has-text("Тема от пары")'); await t.see('.view .composer .cmp-main .av'); }
    else console.log('   the couple is in no community — community composer not checked');
    const chats = ((await t.api('chats.list', { filter: 'couple' }).catch(() => ({}))).items ?? []).filter(x => x.side?.id === couple.id && x.state !== 'ended');
    if (chats[0]?.id) { await t.go('/n/chats/' + chats[0].id); await t.see('.inputbar textarea[placeholder="Сообщение от пары"]'); await t.see('.inputbar > .av'); }

@@ -386,3 +386,34 @@ button.pill{cursor:pointer}
 .v21 .ph-empty .tx small{display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.35}
 .v21 .ph-empty:disabled{opacity:.55}
 .v21 .grp>*+.ph-empty{margin-top:var(--s-2)}
+
+/* Page layout grid (owner 29.10.2026, tokens --gut / --page-max / --block-gap): blocks of a screen column follow one
+   rhythm — --block-gap between neighbours — with zero specificity, so a kit component's own spacing still wins and a
+   screen never adds margins of its own (check:kit counts mt-N / mb-N classes in screens; the count only goes down). */
+.v21 :where(.view>.wrap)>:where(:not(:first-child,.ctabar,[hidden])){margin-top:var(--block-gap)}
+/* Actions — the one row of buttons: equal widths, the full column, the same gap everywhere (Empty, sheets, cards). */
+.v21 .k-actions{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:var(--s-2);width:100%}
+.v21 .k-actions.k-actions-stack{grid-auto-flow:row}
+/* Empty: fixed inner spacing — icon 14, title 6 to its line, 18 to the actions with or without the line; actions
+   take the column of the block under them (`after`) so both line up. */
+.v21 .empty>h3+.btns{margin-top:12px}
+.v21 .empty:has(>.k-empty-after)>.btns{max-width:none}
+.v21 .empty>.btns+.k-empty-after>:first-child{margin-top:var(--s-4)}
+/* Empty compact: a part of a screen or a sheet — less room, a smaller icon, the same order and gaps. */
+.v21 .empty.k-empty-compact{padding:16px 12px}
+.v21 .empty.k-empty-compact .em-ic{width:40px;height:40px;margin-bottom:10px}
+.v21 .empty.k-empty-compact .em-ic svg{width:20px;height:20px}
+.v21 .empty.k-empty-compact h3{font-size:var(--fs-body)}
+/* Rsvp (owner 29.10.2026): labels never wrap at any width, solo or couple — the two answers that say yes
+   («Интересно», «Иду» / «Нам интересно», «Идём вдвоём») are two equal buttons on one line, «Не иду / Не идём» is a quiet
+   text answer under them across the row. Overrides the older three-tile rules in base.css (loaded after kit.css, hence .rsvp.rsvp). */
+.v21 .rsvp.rsvp{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s-2)}
+.v21 .rsvp.rsvp button,.v21 .rsvp.rsvp.us button{flex-direction:row;gap:6px;min-height:var(--h-md);padding:0 var(--s-2);font-size:var(--fs-sm);line-height:1.2}
+.v21 .rsvp.rsvp button span,.v21 .rsvp.rsvp.us button>span{display:block;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal}
+.v21 .rsvp.rsvp button.r-not{grid-column:1/-1;min-height:var(--h-sm);background:none;box-shadow:none;font-weight:500;color:var(--mute)}
+.v21 .rsvp.rsvp button.r-not svg{width:16px;height:16px}
+.v21 .rsvp.rsvp button.r-not.on{background:var(--raise);color:var(--ink);box-shadow:none}
+/* A pill that starts a row sits on the page gutter like everything else (no indent of its own). */
+.v21 .row>.pill:first-child{margin-left:0}
+/* An Empty with a block after it (a list card) sits on the page gutter, so its actions and the card line up with the header. */
+.v21 .empty:has(>.k-empty-after){padding-inline:0}

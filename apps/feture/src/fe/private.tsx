@@ -2,7 +2,7 @@ import {useCallback,useEffect,useRef,useState,type ReactNode} from 'react';
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Camera,ChevronRight,Clock,Eye,Lock,LockOpen,MoreHorizontal,PenLine,Pencil,Send,Sparkles,Trash2,X} from 'lucide-react';
+import {KeyRound,Camera,ChevronRight,Clock,Eye,Lock,LockOpen,MoreHorizontal,PenLine,Pencil,Send,Sparkles,Trash2,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {AddCard,Alert,Av,Btn,Card,CheckList,Chips,ChoiceChips,Counter,Empty,Field,FilePick,Group,IconBtn,Note,PersonLine,PhotoAdd,PhotoSlot,PhotoSlots,Pill,Quota,RequestCard,Row,SectionLabel,SelectRow,Sheet,Skel,Stack,TextArea,VaultHead,Veil} from './kit';
 import {Uploader} from './kit/Uploader';
@@ -307,7 +307,7 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged}:{profileId:st
     :<AddCard icon={Sparkles} title={t('fe.mp.jarsAdd')} sub={t(cp?'fe.mp.jarsAddSubUs':'fe.mp.jarsAddSub')} disabled={!jars.items} onClick={addJar}/>}
   </Group>
   <Group id="privWho" title={<>{t('fe.mp.access')}{given.length?' · '+given.length:''}</>}>
-   {given.length===0?<Note>{t('fe.mp.accessNone')}</Note>
+   {given.length===0?<Empty compact icon={KeyRound} title={t('fe.mp.accessNone')}/>
     :<Card list>{given.slice(0,5).map((g,i)=>{const n=nameOf(g.profile);
      return <Row key={g.profile?.id??i} av={<Av name={n} seed={g.profile?.id??n} size="sm" src={g.profile?.avatar}/>} title={<>{n}<NameBadges p={g.profile}/></>} sub={w.what(g.scopes)+' · '+w.until(g.until)}
       onClick={()=>g.profile&&navigate('/n/people/'+g.profile.id)} end={<IconBtn icon={MoreHorizontal} kind="ghost" size="sm" label={t('fe.mp.more',{name:n})} onClick={()=>setSheet({k:'grant',g})}/>}/>;})}</Card>}

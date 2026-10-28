@@ -16,15 +16,15 @@ import { enqueue } from './outbox.mjs';
 const TEXT = {
   ru: {
     title: 'FetUre', safe: 'Новое уведомление', messages: 'Новое сообщение', likes: 'Новая симпатия', match: 'Новое совпадение',
-    decide: 'Есть, что решить', events: 'Новости события', replies: 'Новый ответ', follows: 'Новый подписчик', groups: 'Новое в сообществе', other: 'Новое уведомление',
+    decide: 'Есть, что решить', requests: 'Новый запрос на переписку', events: 'Новости события', replies: 'Новый ответ', follows: 'Новый подписчик', groups: 'Новое в сообществе', other: 'Новое уведомление',
   },
   en: {
     title: 'FetUre', safe: 'New notification', messages: 'New message', likes: 'New like', match: 'New match',
-    decide: 'Something to decide', events: 'Event update', replies: 'New reply', follows: 'New follower', groups: 'New in a community', other: 'New notification',
+    decide: 'Something to decide', requests: 'New message request', events: 'Event update', replies: 'New reply', follows: 'New follower', groups: 'New in a community', other: 'New notification',
   },
 };
 /** Settings category of each push kind (V21 K05); kinds without one follow only the global switch. */
-const CATEGORY = { likes: 'likes', match: 'match', decide: 'req', events: 'events', replies: 'replies', follows: 'follows', groups: 'groups' };
+const CATEGORY = { likes: 'likes', match: 'match', decide: 'req', requests: 'req', events: 'events', replies: 'replies', follows: 'follows', groups: 'groups' };
 
 const SEND_TIMEOUT_MS = 10_000;
 
@@ -38,7 +38,7 @@ export async function queuePush(q, item, r, kind, notificationId) {
 }
 
 /** Where a tap on the push opens the app (hash routes of the /n screens). Fixed addresses only: never an id. */
-const OPENS = { messages: '/#/n/chats', match: '/#/n/chats', decide: '/#/n/inbox' };
+const OPENS = { messages: '/#/n/chats', match: '/#/n/chats', requests: '/#/n/chats/requests', decide: '/#/n/inbox' };
 
 /** One transport for every device kind: the web sender (webpush.mjs, our own VAPID keys) and the native one (Core's
  * FCM/APNs) side by side. null when neither is configured. A new native sender is one more entry here.
@@ -78,6 +78,7 @@ export async function sweepPushSent(db) {
 export function pushKind(type) {
   if (type === 'like') return 'likes';
   if (type === 'match') return 'match';
+  if (type === 'chatRequest') return 'requests';
   if (type === 'follow') return 'follows';
   if (['reply', 'mention', 'postLike', 'notePublished'].includes(type)) return 'replies';
   if (type.startsWith('event')) return 'events';
@@ -137,7 +138,7 @@ export function pushHandlers(db, transport) {
         if (!first[0]) continue;
         try {
           await withTimeout(transport.send(d.platform, d.token, { title: t.title, body, data: {
-            t: p.kind === 'messages' ? 'chat' : p.kind === 'decide' ? 'decide' : 'notif',
+            t: p.kind === 'messages' || p.kind === 'requests' ? 'chat' : p.kind === 'decide' ? 'decide' : 'notif',
             url: OPENS[/** @type {keyof typeof OPENS} */ (p.kind)] ?? '/#/n/inbox',
           } }));
           sent++;
