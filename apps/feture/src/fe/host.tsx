@@ -323,7 +323,7 @@ export function CommunityMembersScreen(){
  * partner of a couple). */
 export function EventApplicationLines({e,busy,onWithdraw,onCancelWait}:{e:{requiresApplication:boolean,me:Record<string,unknown>},busy?:boolean,
  /** Withdraw a pending application (asks first). */ onWithdraw?:()=>void,/** Take back a couple's application the partner has not approved yet. */ onCancelWait?:()=>void}){
- const {t}=useI18n();
+ const {t}=useI18n();const {acting}=useFe();
  if(!e.requiresApplication)return null;
  const parsed=application.nullable().optional().safeParse(e.me.application);const app=parsed.success?parsed.data??null:null;
  // Only a waiting application counts here: a couple's «идём» waiting for the partner is the RSVP's business.
@@ -334,7 +334,7 @@ export function EventApplicationLines({e,busy,onWithdraw,onCancelWait}:{e:{requi
  const act=st==='pending'?onWithdraw:st==='waiting'?onCancelWait:undefined;
  return <><SectionLabel>{t('fe.host.ev.attendance')}</SectionLabel>
   <StatusCard tone={tone} icon={Icon} title={t('fe.host.app.st.'+st)} sub={t('fe.host.app.stText.'+st)}
-   action={act&&<Btn kind="soft" size="sm" auto fit disabled={busy} onClick={act}>{t('fe.host.join.withdraw')}</Btn>}/></>;
+   action={act&&<Btn kind="soft" size="sm" auto fit disabled={busy} onClick={act}>{t(acting?.kind==='couple'?'fe.host.app.withdrawUs':'fe.host.join.withdraw')}</Btn>}/></>;
 }
 
 /** E06 — the application: answers to the organiser's questions, a note and the requirements. */

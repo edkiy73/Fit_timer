@@ -7,7 +7,7 @@ import type {LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicOrigin} from '../api-url';
 import {ActingAv,ActionLine,ActivityCard,ActivityItem,Alert,ArticleCard,ArticleImage,Ask,Av,BAD_CHARS,Bar,Btn,Card,Chip,Chips,Counter,Empty,FeedEvents,Field,FilePick,Group,H,IconBtn,Input,LikesLine,Note,QuickStart,RichEditor,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,VideoBadge,View,hasLongWord,mdImages,type RichEditorHandle} from './kit';
-import {useFe} from './session';
+import {useFe,usePartnerApproves} from './session';
 import {ActivityCardOf,activitySchema,type Act} from './feed-activity';
 import {Uploader} from './kit/Uploader';
 import {useSendPhoto,useSendVideo} from './media-upload';
@@ -678,7 +678,7 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
  const [uploading,setUploading]=useState(false);const file=useRef<HTMLInputElement>(null);const text=useRef<RichEditorHandle>(null);
  const [sheet,setSheet]=useState<'topics'|'people'|'mention'|null>(null);const [preview,setPreview]=useState(false);const [viewer,setViewer]=useState<number|null>(null);
  const ops=useRef({draft:newOpId(),publish:newOpId(),edit:newOpId()});
- const couple=acting?.kind==='couple';
+ const couple=acting?.kind==='couple';const toPartner=usePartnerApproves();
  // What an attach button adds (a poll, interests, photos) appears below the text: bring it into view, or the tap
  // looks like it did nothing on a phone.
  const pollRef=useRef<HTMLElement>(null);const intRef=useRef<HTMLElement>(null);const mediaRef=useRef<HTMLDivElement>(null);
@@ -766,7 +766,8 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
  const back=()=>{if(((window.history.state as {idx?:number}|null)?.idx??0)>0)navigate(-1);else navigate(communityId?'/n/communities/'+communityId:'/n/feed',{replace:true});};
  const leave=()=>{if(!communityId&&snap!==clean.current){setAsk(true);return;}back();};
  const hasMedia=note?noteMedia.length>0:media.length>0;
- const cta=live?(hasMedia?t('fe.fd.cta.changesReview'):t('fe.fd.cta.saveChanges')):couple?(hasMedia?t('fe.fd.cta.reviewUs'):t('fe.fd.cta.publishUs')):hasMedia?t('fe.fd.cta.review'):t('fe.feed.publish');
+ // The partner approves the couple's posts and edits: the button says where it goes (the server answers `pending`).
+ const cta=couple&&toPartner?t('fe.ca.toPartner'):live?(hasMedia?t('fe.fd.cta.changesReview'):t('fe.fd.cta.saveChanges')):couple?(hasMedia?t('fe.fd.cta.reviewUs'):t('fe.fd.cta.publishUs')):hasMedia?t('fe.fd.cta.review'):t('fe.feed.publish');
  const AUDS:[Audience,LucideIcon,string,string][]=[['all',Globe,t('fe.fd.aud2.all'),couple?t('fe.fd.aud2.allSubUs'):t('fe.fd.aud2.allSub')],['followers',Users,t('fe.fd.aud2.followers'),couple?t('fe.fd.aud2.followersSubUs'):t('fe.fd.aud2.followersSub')],
   ['granted',KeyRound,t('fe.fd.aud2.granted'),couple?t('fe.fd.aud2.grantedSubUs'):t('fe.fd.aud2.grantedSub')],...(edit?.audience==='only'?[['only',EyeOff,t('fe.fd.aud2.only'),t('fe.fd.aud2.onlySub')] as [Audience,LucideIcon,string,string]]:[])];
  const aud=AUDS.find(a=>a[0]===audience)??AUDS[0]!;const AudIcon=aud[1];
