@@ -1,4 +1,6 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
+import {MaintenanceGate} from './maintenance';
+import {PaywallHost} from './premium';
 import {Outlet,useLocation,useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Globe,Image as FeedIcon,MessageCircle,Plus,User,Users,X,type LucideIcon} from 'lucide-react';
@@ -43,7 +45,7 @@ function useImageFade(){
 }
 
 export function FeRoot(){
- return <FeSessionProvider><AppUpdateProvider><ImageFade/><div className="v21 fe-v21"><FeGate/></div></AppUpdateProvider></FeSessionProvider>;
+ return <FeSessionProvider><AppUpdateProvider><ImageFade/><div className="v21 fe-v21"><MaintenanceGate><FeGate/></MaintenanceGate></div></AppUpdateProvider></FeSessionProvider>;
 }
 function ImageFade(){useImageFade();return null;}
 
@@ -159,6 +161,7 @@ function FeLayout(){
    <Hello/>
    <PushOffer/>
    <UpdateSheet/>
+   <PaywallHost/>
    <Outlet/>
    {/* The dock's five columns come from base.css (.dock: repeat(5,1fr)) — FE_TABS has five tabs. */}
    {!nodock&&<nav className="dock" aria-label={t('fe.nav.aria')}>

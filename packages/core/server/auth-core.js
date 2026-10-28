@@ -13,6 +13,11 @@
      {action:'set_locale', email, deviceId, syncToken, locale}
      {action:'status' | 'push_device' | 'notification_event' | 'analytics' | 'client_error', ...}
      {action:'forget', email, deviceId, syncToken, handle, scope, ...product fields}
+     {action:'sessions' | 'sessions_revoke_others', email, deviceId, syncToken}
+     {action:'session_revoke', email, deviceId, syncToken, target}
+     {action:'email_change_send' | 'email_change_verify', email, deviceId, syncToken, newEmail, code?}
+       — only when the product opts in (createAuthHandler({emailChange:true})): the account moves to the new
+         address after a code sent TO the new address; sessions, handle and purchases move with it.
 
    Удаление живёт здесь же: завести себя и стереть себя — про одну и ту же запись,
    а каждая функция Vercel на счету.
@@ -21,7 +26,7 @@
    расширению аккаунта продукта (хуки передаются в createAuthHandler). */
 
 const { store } = require('./store');
-const { SESSION_TTL, sessionExpiresAt, revokeSession, validSession, send, fail, readBody, rateOk, rateOkScoped, rndId, sameSecret, cors } = require('./util');
+const { SESSION_TTL, sessionExpiresAt, revokeSession, validSession, activeSession, send, fail, readBody, rateOk, rateOkScoped, rndId, sameSecret, cors } = require('./util');
 const { sendMail } = require('./mail');
 const { recordClientError } = require('./diagnostics');
 const SyncShadow = require('./sync-shadow');
@@ -51,6 +56,22 @@ const digits = n => {
   return out;
 };
 
+/* A coarse, human label of the device a session was opened on («Chrome · Mac», «iPhone»): the sessions list shows
+   it so a person can tell their devices apart. Only the browser/OS family is kept — never the raw User-Agent. */
+function deviceLabel(ua, platform){
+  const u = String(ua || '').slice(0, 400);
+  if(/iPhone/.test(u)) return 'iPhone';
+  if(/iPad/.test(u)) return 'iPad';
+  if(/Android/.test(u)) return 'Android';
+  const browser = /Edg\//.test(u) ? 'Edge' : /Firefox\//.test(u) ? 'Firefox' : /Chrome\//.test(u) ? 'Chrome' : /Safari\//.test(u) ? 'Safari' : '';
+  const os = /Mac OS X|Macintosh/.test(u) ? 'Mac' : /Windows/.test(u) ? 'Windows' : /Linux/.test(u) ? 'Linux' : '';
+  if(browser || os) return [browser, os].filter(Boolean).join(' · ');
+  const p = String(platform || '').replace(/[^a-z]/gi, '').slice(0, 12).toLowerCase();
+  return p === 'ios' ? 'iPhone' : p === 'android' ? 'Android' : '';
+}
+// A session is named by an opaque id in lists: the device id itself is never sent back.
+const sessionId = deviceId => sha('session:' + deviceId).slice(0, 16);
+
 /* Product composition supplies account-extension hooks (the no-op NO_ACCOUNT_EXTENSION below
    documents the contract) and the analytics engine bound to its event taxonomy. */
 const NO_ACCOUNT_EXTENSION = Object.freeze({
@@ -61,7 +82,7 @@ const NO_ACCOUNT_EXTENSION = Object.freeze({
   async onVerify(){ return {fields:{}}; }
 });
 
-function createAuthHandler({accountExtension = NO_ACCOUNT_EXTENSION, analytics, sanitizeClientDiagnostic} = {}){
+function createAuthHandler({accountExtension = NO_ACCOUNT_EXTENSION, analytics, sanitizeClientDiagnostic, emailChange = false} = {}){
   if(!analytics || typeof analytics.recordAnalytics !== 'function' || typeof analytics.removeAnalyticsDevice !== 'function'){
     throw new Error('analytics_required');
   }
@@ -246,6 +267,127 @@ function createAuthHandler({accountExtension = NO_ACCOUNT_EXTENSION, analytics, 
       return send(res,200,{ok:true, expiresAt:new Date(sessionExpiresAt(device)).toISOString(), ...entitlementsOf(acc)});
     }
 
+    /* ---- сессии: список устройств, выйти на одном, выйти везде кроме этого ---- */
+    if(act === 'sessions' || act === 'session_revoke' || act === 'sessions_revoke_others'){
+      const deviceId = String((body && body.deviceId) || '').trim().slice(0, 80);
+      const token = String((body && body.syncToken) || '');
+      let acc = null;
+      try{ acc = JSON.parse(await store.get(`a:${mh}`)); }catch(e){return fail(res,503,'identity_unavailable');}
+      const devices = acc && acc.syncDevices && typeof acc.syncDevices === 'object' ? acc.syncDevices : null;
+      const device = devices && Object.hasOwn(devices, deviceId) ? devices[deviceId] : null;
+      if(!(await validSession(device, token))) return fail(res, 403, 'bad_sync_token');
+      if(act === 'sessions'){
+        const sessions = [];
+        for(const [id, d] of Object.entries(devices)){
+          if(!(await activeSession(d))) continue;
+          sessions.push({id:sessionId(id), current:id === deviceId, label:typeof d.label === 'string' ? d.label : '',
+            platform:typeof d.platform === 'string' ? d.platform : '', at:d.at || null, expiresAt:new Date(sessionExpiresAt(d)).toISOString()});
+        }
+        sessions.sort((a, b) => (Number(b.current) - Number(a.current)) || String(b.at || '').localeCompare(String(a.at || '')));
+        return send(res, 200, {ok:true, sessions});
+      }
+      const target = String((body && body.target) || '');
+      const targets = act === 'sessions_revoke_others'
+        ? Object.keys(devices).filter(id => id !== deviceId)
+        : Object.keys(devices).filter(id => sessionId(id) === target);
+      if(act === 'session_revoke'){
+        if(!targets.length) return fail(res, 404, 'not_found');
+        // This device signs out with logout: the list never ends its own session by accident.
+        if(targets[0] === deviceId) return fail(res, 400, 'current_session');
+      }
+      for(const id of targets){
+        // The tombstone keeps the token dead even if a concurrent writer saves an older account copy.
+        if(sessionExpiresAt(devices[id]) > Date.now()) await revokeSession(devices[id]);
+        delete devices[id];
+        if(acc.pushDevices && typeof acc.pushDevices === 'object') delete acc.pushDevices[id];
+      }
+      await store.set(`a:${mh}`, JSON.stringify(acc));
+      return send(res, 200, {ok:true, revoked:targets.length});
+    }
+
+    /* ---- сменить почту: код уходит на НОВЫЙ адрес, аккаунт переезжает целиком ----
+       Включает продукт (emailChange). Ключ записи — хеш адреса, поэтому запись переносится под новый хеш вместе
+       с устройствами, ником, покупками и индексами; keyHash хранит первый хеш аккаунта, чтобы данные продукта,
+       привязанные к нему, не потерялись. До подтверждения кода вход остаётся по старой почте. */
+    if(act === 'email_change_send' || act === 'email_change_verify'){
+      if(!emailChange) return fail(res, 400, 'unknown_action');
+      const deviceId = String((body && body.deviceId) || '').trim().slice(0, 80);
+      const token = String((body && body.syncToken) || '');
+      let acc = null;
+      try{ acc = JSON.parse(await store.get(`a:${mh}`)); }catch(e){return fail(res,503,'identity_unavailable');}
+      const device = acc && acc.syncDevices && Object.hasOwn(acc.syncDevices, deviceId) ? acc.syncDevices[deviceId] : null;
+      if(!(await validSession(device, token))) return fail(res, 403, 'bad_sync_token');
+      const next = normMail(body && body.newEmail);
+      if(!EMAIL.test(next)) return fail(res, 400, 'bad_email');
+      if(next === email) return fail(res, 400, 'same_email');
+      const nmh = sha(next).slice(0, 32);
+      if(await store.get(`a:${nmh}`)) return fail(res, 409, 'email_taken');
+
+      if(act === 'email_change_send'){
+        if(!(await rateOkScoped(req, 'auth-chg-ip', 20, '', 3600, true))
+          || !(await rateOkScoped(req, 'auth-chg-acct', 5, mh, 3600, true))) return fail(res, 429, 'rate_limited');
+        // Counted by the NEW address too: a stranger's mailbox is never flooded through this path.
+        const day = new Date().toISOString().slice(0, 10);
+        if(await store.incr(`mailday:${nmh}:${day}`, 2 * 24 * 3600) > PER_DAY) return fail(res, 429, 'too_many_today');
+        const code = digits(6);
+        await store.set(`mailchg:${mh}`, JSON.stringify({h: sha(code), to: next, tries: 0, at: Date.now()}), CODE_TTL);
+        const locale = (body && body.locale) === 'en' ? 'en' : 'ru';
+        const appName = productIdentity().name;
+        const text = locale === 'en'
+          ? `Your ${appName} code to confirm this address: ${code}\n\nThe code is valid for 15 minutes. Until you enter it, you keep signing in with your old address.\n\nIf you didn’t request this, ignore this email.`
+          : `Код для подтверждения нового адреса в ${appName}: ${code}\n\nКод действует 15 минут. Пока ты его не введёшь, вход остаётся по старой почте.\n\nЕсли ты этого не просил — просто удали письмо.`;
+        const html = `<div style="font:16px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;color:#1B1630"><p>${locale === 'en' ? 'Code to confirm your new address:' : 'Код для подтверждения нового адреса:'}</p><p style="font:600 30px/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.14em;margin:18px 0">${code}</p><p style="color:#6C6785;font-size:14px">${locale === 'en' ? 'Valid for 15 minutes. If you didn’t request this, ignore this email.' : 'Код действует 15 минут. Если ты этого не просил — просто удали письмо.'}</p></div>`;
+        const local = process.env.ALLOW_MEMORY_STORE === '1';
+        try{
+          await sendMail({to: next, subject: locale === 'en' ? `${appName} code: ${code}` : `Код ${code} — ${appName}`, text, html});
+        }catch(e){
+          if(e.code === 'no_mail_key'){ if(!local) return fail(res, 503, 'no_mail'); }
+          else return fail(res, 502, 'mail_failed', {detail: e.detail || '', testDomain: !!e.testDomain});
+        }
+        return send(res, 200, Object.assign({ok: true, sent: true}, local ? {devCode: code} : {}));
+      }
+
+      if(!(await rateOkScoped(req, 'auth-verify-ip', 120, '', 15 * 60, true))
+        || !(await rateOkScoped(req, 'auth-verify-mail', 20, mh, 15 * 60, true))) return fail(res, 429, 'rate_limited');
+      let rec = null;
+      try{ rec = JSON.parse(await store.get(`mailchg:${mh}`) || 'null'); }catch(e){ rec = null; }
+      if(!rec || rec.to !== next) return fail(res, 410, 'code_expired');
+      rec.tries = (rec.tries || 0) + 1;
+      if(rec.tries > TRIES){ await store.del(`mailchg:${mh}`); return fail(res, 429, 'too_many_tries'); }
+      await store.set(`mailchg:${mh}`, JSON.stringify(rec), CODE_TTL);
+      const code = String((body && body.code) || '').replace(/\D/g, '');
+      if(!sameSecret(sha(code), rec.h)) return fail(res, 403, 'bad_code', {left: TRIES - rec.tries});
+      await store.del(`mailchg:${mh}`);
+
+      const moved = await store.withLock(`lock:email:${mh}`, async () => {
+        let cur = null;
+        try{ cur = JSON.parse(await store.get(`a:${mh}`)); }catch(e){ return 'identity_unavailable'; }
+        if(!cur) return 'identity_unavailable';
+        if(await store.get(`a:${nmh}`)) return 'email_taken';
+        cur.keyHash = typeof cur.keyHash === 'string' && /^[0-9a-f]{32}$/.test(cur.keyHash) ? cur.keyHash : mh;
+        cur.email = next;
+        cur.emailChangedAt = new Date().toISOString();
+        await store.set(`a:${nmh}`, JSON.stringify(cur));
+        if(cur.handle) await store.set(`h:${cur.handle}`, nmh);
+        const bid = cur.billingIdentity && typeof cur.billingIdentity === 'object' ? cur.billingIdentity : null;
+        if(bid && bid.appleAppAccountToken) await store.set(`billid:apple:${sha(String(bid.appleAppAccountToken)).slice(0,40)}`, nmh);
+        if(bid && bid.googleObfuscatedAccountId) await store.set(`billid:google:${sha(String(bid.googleObfuscatedAccountId)).slice(0,40)}`, nmh);
+        const manifest = await store.get(`s:${mh}`);
+        if(manifest){ await store.set(`s:${nmh}`, manifest); await store.del(`s:${mh}`); }
+        if(await store.get(`a:indexed:${mh}`)){
+          await store.del(`a:indexed:${mh}`);
+          await store.removeFromList('a:all', mh);
+          await store.set(`a:indexed:${nmh}`, '1');
+          await store.push('a:all', nmh);
+        }
+        await store.del(`a:${mh}`);
+        await store.del(`mail:${mh}`);
+        return '';
+      }, {ttl:8, retries:60, delay:50});
+      if(moved) return fail(res, moved === 'email_taken' ? 409 : 503, moved);
+      return send(res, 200, {ok:true, email:next});
+    }
+
     if(act === 'set_locale'){
       const deviceId = String((body && body.deviceId) || '').trim().slice(0, 80);
       const token = String((body && body.syncToken) || '');
@@ -383,7 +525,9 @@ function createAuthHandler({accountExtension = NO_ACCOUNT_EXTENSION, analytics, 
       const syncToken = rndId(32);
       if(!acc.syncDevices || typeof acc.syncDevices !== 'object') acc.syncDevices = {};
       if(deviceId){
-        acc.syncDevices[deviceId] = {h: sha(syncToken), at: now, expiresAt: new Date(Date.parse(now) + SESSION_TTL * 1000).toISOString()};
+        acc.syncDevices[deviceId] = {h: sha(syncToken), at: now, expiresAt: new Date(Date.parse(now) + SESSION_TTL * 1000).toISOString(),
+          label: deviceLabel(req.headers && req.headers['user-agent'], body && body.platform),
+          platform: String((body && body.platform) || 'web').replace(/[^a-z]/gi, '').slice(0, 12).toLowerCase()};
         const old = Object.entries(acc.syncDevices)
           .sort((a, b) => String(b[1].at || '').localeCompare(String(a[1].at || '')))
           .slice(8);

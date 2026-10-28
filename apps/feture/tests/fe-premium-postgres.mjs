@@ -215,3 +215,96 @@ test('age check: the method can switch before sending; the selfie flow stays as 
     assert.equal((await call('ua', null, { action: 'verification.ageStart', opId: op(), method: 'document' })).status, 429);
   } finally { await pg.close(); }
 });
+
+// Wave 8: the provider-agnostic payment road. Without a provider nothing is written; with one (a fake standing in
+// for a real provider) a purchase grants Premium once, restore applies known purchases, renewal goes through the
+// provider, and a gift reaches the recipient (after their current period) with or without the giver's name.
+test('payments: unavailable without a provider; purchase, restore, renewal and gifts through one', async () => {
+  const plain = await baseSetup({ commands: { ...platform, ...me, ...premium } });
+  try {
+    const a = await plain.person('ua', 'Alex');
+    await plain.person('ub', 'Kira');
+    const st = await plain.call('ua', a, { action: 'premium.status' });
+    assert.equal(st.payments, false);
+    assert.deepEqual(st.plans, { month: 30, year: 365 });
+    assert.equal((await plain.call('ua', null, { action: 'premium.purchase', opId: op(), plan: 'year' })).error, 'payments_unavailable');
+    assert.equal((await plain.call('ua', null, { action: 'premium.gift', opId: op(), handle: 'Kira', plan: 'm1' })).error, 'payments_unavailable');
+    assert.equal((await plain.db.query('select count(*)::int n from feture.purchase'))[0].n, 0, 'nothing written without a provider');
+    const r = await plain.call('ua', null, { action: 'premium.restore', opId: op() });
+    assert.equal(r.restored, 0);
+    assert.equal(r.providers, 0);
+    assert.equal((await plain.call('ua', null, { action: 'premium.setRenewal', opId: op(), autoRenew: false })).status, 404);
+    // The gift form still finds the recipient (exact nick), refuses oneself and unknown nicks.
+    const found = await plain.call('ua', null, { action: 'premium.giftCheck', handle: 'kira' });
+    assert.equal(found.recipient?.handle, 'Kira', JSON.stringify(found));
+    assert.equal(found.queued, false);
+    assert.equal((await plain.call('ua', null, { action: 'premium.giftCheck', handle: 'Alex' })).rule, 'gift_self');
+    assert.equal((await plain.call('ua', null, { action: 'premium.giftCheck', handle: 'Kir' })).status, 404);
+  } finally { await plain.pg.close(); }
+
+  const calls = [];
+  let pay = 'instant';
+  const known = [];
+  const fake = {
+    id: 'fakepay', store: 'web',
+    async checkout({ purchase }) { calls.push(['checkout', purchase.kind, purchase.plan, purchase.days]); return pay === 'instant' ? { paid: { storeRef: 'tx-' + purchase.id } } : { url: 'https://pay.example/checkout/' + purchase.id }; },
+    async restore() { calls.push(['restore']); return known; },
+    async setRenewal({ autoRenew }) { calls.push(['renewal', autoRenew]); },
+  };
+  const env = await baseSetup({ commands: { ...platform, ...me, ...premium }, billing: { providers: [fake] } });
+  const { db, call, person } = env;
+  try {
+    const a = await person('ua', 'Alex');
+    const b = await person('ub', 'Kira');
+    const c = await person('uc', 'Cleo');
+    assert.equal((await call('ua', a, { action: 'premium.status' })).payments, true);
+    const bought = await call('ua', null, { action: 'premium.purchase', opId: op(), plan: 'month' });
+    assert.equal(bought.state, 'paid', JSON.stringify(bought));
+    const st = await call('ua', a, { action: 'premium.status' });
+    assert.equal(st.premium, true);
+    assert.equal(st.source, 'purchase');
+    assert.deepEqual([st.subscription.plan, st.subscription.autoRenew], ['month', true]);
+
+    // Renewal off and back on goes through the provider.
+    assert.equal((await call('ua', null, { action: 'premium.setRenewal', opId: op(), autoRenew: false })).autoRenew, false);
+    assert.equal((await call('ua', a, { action: 'premium.status' })).subscription.autoRenew, false);
+    assert.equal((await call('ua', null, { action: 'premium.setRenewal', opId: op(), autoRenew: true })).autoRenew, true);
+    assert.deepEqual(calls.filter(c => c[0] === 'renewal'), [['renewal', false], ['renewal', true]]);
+
+    // A pending checkout (pay on the provider's page) grants nothing until confirmed.
+    pay = 'redirect';
+    const pending = await call('ub', null, { action: 'premium.purchase', opId: op(), plan: 'year' });
+    assert.equal(pending.state, 'pending');
+    assert.match(pending.url, /^https:\/\/pay\.example\//);
+    assert.equal((await call('ub', b, { action: 'premium.status' })).premium, false);
+
+    // Restore: a purchase the provider knows is applied once, not twice.
+    known.push({ storeRef: 'store-xyz', plan: 'year' });
+    assert.equal((await call('ub', null, { action: 'premium.restore', opId: op() })).restored, 1);
+    assert.equal((await call('ub', null, { action: 'premium.restore', opId: op() })).restored, 0);
+    assert.equal((await call('ub', b, { action: 'premium.status' })).premium, true);
+
+    // A gift to Kira (who has Premium) starts after her period; anonymous gifts do not name the giver.
+    pay = 'instant';
+    const check = await call('uc', null, { action: 'premium.giftCheck', handle: 'Kira' });
+    assert.equal(check.queued, true);
+    const [{ premium_until: before }] = await db.query('select premium_until from feture.account where person_profile_id = $1', [b]);
+    const g = await call('uc', null, { action: 'premium.gift', opId: op(), handle: 'Kira', plan: 'm3', anonymous: true });
+    assert.equal(g.state, 'paid');
+    const [{ premium_until: after }] = await db.query('select premium_until from feture.account where person_profile_id = $1', [b]);
+    assert.ok(Math.abs(new Date(after).getTime() - new Date(before).getTime() - 90 * 86400000) < 5000, 'queued after the current period');
+    const [item] = await db.query(`select payload from feture.outbox where topic = 'premium.gifted' order by created_at desc limit 1`);
+    assert.equal(item.payload.from, undefined, 'anonymous');
+    await call('ua', null, { action: 'premium.gift', opId: op(), handle: 'Cleo', plan: 'm1' });
+    const [named] = await db.query(`select payload from feture.outbox where topic = 'premium.gifted' order by created_at desc limit 1`);
+    assert.equal(named.payload.from, a);
+    const sent = (await call('uc', c, { action: 'premium.status' })).giftsSent;
+    assert.equal(sent[0].handle, 'Kira');
+    assert.equal(sent[0].days, 90);
+
+    // Someone who blocked the giver cannot be found by them.
+    const [{ id: kiraAcc }] = await db.query('select id from feture.account where person_profile_id = $1', [b]);
+    await db.query(`insert into feture.block (blocker_profile_id, blocked_profile_id, acted_by) values ($1, $2, $3)`, [b, a, kiraAcc]);
+    assert.equal((await call('ua', null, { action: 'premium.giftCheck', handle: 'Kira' })).status, 404);
+  } finally { await env.pg.close(); }
+});

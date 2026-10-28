@@ -2,7 +2,7 @@ import {Fragment,useCallback,useEffect,useRef,useState,type ReactNode} from 'rea
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {AtSign,Bell,Calendar,Check,CircleCheck,Clock,EyeOff,FileText,Filter,Heart,LockOpen,MessageCircle,Pencil,Shield,ShieldCheck,Trash2,Users,X,type LucideIcon} from 'lucide-react';
+import {AtSign,Bell,Calendar,Check,CircleCheck,Clock,Crown,EyeOff,FileText,Filter,Heart,LifeBuoy,LockOpen,MessageCircle,Pencil,Shield,ShieldCheck,Trash2,Users,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Av,Bar,Btn,Card,Chip,Chips,Empty,IconBtn,Note,Row,SectionLabel,Seg,Skel,Text,View,plate} from './kit';
 import {useFe,useRealtime} from './session';
@@ -56,7 +56,7 @@ const NICO:Record<string,[LucideIcon,string]>={like:[Heart,'l'],match:[Heart,'l'
  communityApproved:[Users,'g'],communityDeclined:[Users,''],communityMember:[Users,'v'],communityPublished:[Check,'g'],communityRejected:[Shield,'l'],communityClosed:[Users,''],discussionRemoved:[Trash2,'l'],
  eventPublished:[Check,'g'],eventRejected:[Shield,'l'],eventHidden:[EyeOff,'l'],eventApplicationApproved:[Check,'g'],eventApplicationDeclined:[Calendar,''],
  linkAccepted:[Users,'g'],linkDeclined:[Users,''],linkChanged:[Users,'v'],linkRemoved:[Users,''],ageCheck:[ShieldCheck,'g'],photoCheck:[ShieldCheck,'g'],
- profileSuspended:[Shield,'l'],profileRestricted:[Shield,'l'],profileRestored:[Check,'g'],profileUnrestricted:[Check,'g'],appealDecided:[Shield,'']};
+ profileSuspended:[Shield,'l'],profileRestricted:[Shield,'l'],profileRestored:[Check,'g'],profileUnrestricted:[Check,'g'],appealDecided:[Shield,''],supportReply:[LifeBuoy,'v'],premiumGift:[Crown,'l']};
 const noteIcon=(n:Note):[LucideIcon,string]=>n.type==='tagAnswered'?(n.data.answer==='ok'?[Check,'g']:[EyeOff,'l'])
  :(n.type==='ageCheck'||n.type==='photoCheck')&&n.data.state!=='approved'?[Shield,'l']:n.type.startsWith('pair.')?[Users,'v']:NICO[n.type]??[Bell,''];
 
@@ -108,6 +108,8 @@ export function InboxScreen(){
   if(n.type.startsWith('link')){asAddressee(n.addressee);navigate('/n/me/links');return;}
   if(n.type==='ageCheck'){navigate('/n/settings/age');return;}
   if(n.type==='photoCheck'){navigate('/n/settings/photo-check');return;}
+  if(n.type==='supportReply'){navigate('/n/help'+(typeof n.data.ticketId==='string'?'?ticket='+encodeURIComponent(n.data.ticketId):''));return;}
+  if(n.type==='premiumGift'){navigate('/n/premium');return;}
   if(n.type.startsWith('pair.')){if(couple)setActing(couple.id);navigate('/n/me');return;}
   const o=n.object;if(!o?.id){if(n.actor)navigate('/n/people/'+n.actor.id);return;}
   navigate(o.type==='post'||o.type==='reply'?'/n/feed/post/'+(n.data.postId as string|undefined??o.id):o.type==='community'?'/n/communities/'+o.id:o.type==='event'?'/n/events/'+o.id:o.type==='conversation'?'/n/chats/'+o.id:o.type==='profile'?'/n/people/'+o.id:'/n/me');
@@ -122,6 +124,7 @@ export function InboxScreen(){
   const who=nameOf(n.actor);
   if(n.type==='tagAnswered')return t('fe.ibx.t.tagAnswered.'+(['ok','no','remove'].includes(String(n.data.answer))?String(n.data.answer):'ok'));
   if(n.type==='ageCheck'||n.type==='photoCheck')return t(`fe.ibx.t.${n.type}.${n.data.state==='approved'?'approved':'other'}`);
+  if(n.type==='premiumGift')return n.actor?rich(t('fe.ibx.t.premiumGiftFrom'),who):t('fe.ibx.t.premiumGift');
   if(n.type.startsWith('pair.'))return <><b>{couple?.name||t('fe.inbox.whom.couple')}</b> · {t('fe.inbox.type.'+n.type)!=='fe.inbox.type.'+n.type?t('fe.inbox.type.'+n.type):t('fe.inbox.type.other')}</>;
   const key='fe.ibx.t.'+n.type;const s=t(key);
   if(s!==key)return rich(s,who);

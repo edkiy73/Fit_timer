@@ -62,9 +62,11 @@ const TYPES = /** @type {Record<string, {type: string, actor?: string, object?: 
   'link.changed': { type: 'linkChanged', actor: 'from' },
   'link.removed': { type: 'linkRemoved', actor: 'from' },
   'dating.launched': { type: 'datingLaunched' },
+  'support.replied': { type: 'supportReply' },
+  'premium.gifted': { type: 'premiumGift', actor: 'from' },
 });
 /** Payload fields kept in `data` (codes and ids only, never free text). */
-const KEEP = ['what', 'change', 'reason', 'state', 'kind', 'resolution', 'rule', 'targetType', 'targetId', 'answer', 'outcome', 'changes', 'approves'];
+const KEEP = ['what', 'change', 'reason', 'state', 'kind', 'resolution', 'rule', 'targetType', 'targetId', 'answer', 'outcome', 'changes', 'approves', 'ticketId', 'days'];
 
 /** @param {any} payload */
 const pick = payload => Object.fromEntries(KEEP.filter(k => payload[k] !== undefined).map(k => [k, payload[k]]));

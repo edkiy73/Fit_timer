@@ -155,6 +155,13 @@ const run = {
         accessGiven: await many(`select g.owner_profile_id, v.handle viewer, g.scopes, g.until, g.revoked_at from feture.access_grant g join feture.profile v on v.id = g.viewer_profile_id where g.owner_profile_id in (${mine})`),
         media: await many(`select id, purpose, kind, state, created_at from feture.media_asset where uploaded_by = $1 order by created_at limit 5000`),
         reportsSent: await many(`select target_type, reason, state, resolution, created_at from feture.report where reporter_account = $1`),
+        // Wave 8 tables (empty lists until their migration is applied).
+        ...((await one(`select to_regclass('feture.support_ticket') is not null ok`, []))?.ok ? {
+          support: await many(
+            `select t.id, t.topic, t.state, t.created_at, (select jsonb_agg(jsonb_build_object('fromStaff', m.from_staff, 'body', m.body, 'at', m.created_at) order by m.created_at)
+               from feture.support_message m where m.ticket_id = t.id) messages from feture.support_ticket t where t.account_id = $1 order by t.created_at`),
+          purchases: await many(`select kind, plan, days, provider, state, anonymous, created_at, paid_at from feture.purchase where account_id = $1 order by created_at`),
+        } : { support: [], purchases: [] }),
       },
     };
   },
