@@ -89,7 +89,7 @@ export function ChatsTab(){
 
  if(archived)return <>
   <Bar title={t('fe.chx.archiveTitle')} back="/n/chats" small/>
-  <View className="nodock">
+  <View className="nodock" refresh={load}>
    {error&&!items?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :items===null?<Skel kind="list"/>
     :rows.length?rows.map(row):<Empty icon={Archive} title={t('fe.chx.archiveEmpty')}/>}
@@ -101,7 +101,7 @@ export function ChatsTab(){
    <IconBtn icon={Archive} label={t('fe.chx.archiveTitle')} onClick={()=>navigate('/n/chats?archived=1')}/>
    <BellButton/>
   </Bar>
-  <View>
+  <View refresh={load}>
    {couple&&<SegN value={kind} onChange={setKind} options={[{id:'all',label:t('fe.chats.all')},{id:'me',label:t('fe.chats.personal'),n:unreadFor('me')},{id:'couple',label:t('fe.chats.couple'),n:unreadFor('couple')}]}/>}
    {couple&&kind==='couple'&&<Note className="mt8">{t('fe.chx.coupleNote',{name:couple.name})}</Note>}
    {searching&&<div className="chat-q mt12"><SearchInput ref={qRef} label={t('fe.chx.search')} placeholder={t('fe.chx.searchPh')} value={q} onChange={e=>setQ(e.target.value)}/>

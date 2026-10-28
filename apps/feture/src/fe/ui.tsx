@@ -1,10 +1,11 @@
-import {forwardRef,useLayoutEffect,useState,type ButtonHTMLAttributes,type CSSProperties,type ReactNode} from 'react';
+import {forwardRef,useLayoutEffect,useRef,useState,type ButtonHTMLAttributes,type CSSProperties,type ReactNode} from 'react';
 import {createPortal} from 'react-dom';
 import {useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {ChevronLeft,type LucideIcon} from 'lucide-react';
 import {PLATE_KEYS,articlePlate,type PlateKey} from '../../contracts/_plates.mjs';
 import {linkExpiresAt} from './kit/media';
+import {PullRefresh} from './kit/pull';
 
 /** V21 building blocks with the prototype's own markup and class names (styles: kit/base.css, started from
  * public/prototype-v21.html). Icons come only from Lucide. */
@@ -90,9 +91,12 @@ export function Seg<T extends string>({value,options,onChange,label}:{value:T,op
  </div>;
 }
 
-/** View body: `.view > .wrap`. */
-export function View({children,className}:{children:ReactNode,className?:string}){
- return <div className={'view'+(className?' '+className:'')}><div className="wrap">{children}</div></div>;
+/** View body: `.view > .wrap`. `refresh` — pull-to-refresh on touch screens (kit/pull.tsx): a function runs on
+ * release, and so does every `useRefreshable` inside; `true` when only those blocks read. */
+export function View({children,className,refresh}:{children:ReactNode,className?:string|undefined,refresh?:true|(()=>unknown)|undefined}){
+ const ref=useRef<HTMLDivElement>(null);
+ const body=<div className="wrap">{children}</div>;
+ return <div ref={ref} className={'view'+(className?' '+className:'')}>{refresh?<PullRefresh target={ref} onRefresh={refresh===true?undefined:refresh}>{body}</PullRefresh>:body}</div>;
 }
 
 /** The prototype's `#layer` is a child of `.root`, so sheets and dialogs sit on the app frame's bottom edge above the

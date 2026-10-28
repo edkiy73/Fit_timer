@@ -212,7 +212,7 @@ export function InboxScreen(){
  const loading=decide===null||notes===null;
  return <>
   <Bar title={t('fe.inbox.title')} back/>
-  <View className="nodock">
+  <View className="nodock" refresh={load}>
    <SegN small value={k} onChange={pickTab} options={[{id:'todo',label:t('fe.inbox.todo'),n:decide?.length??0},{id:'all',label:t('fe.inbox.all'),n:unread}]}/>
    {k==='all'&&unread>0&&<button type="button" className="inbox-read-all" disabled={readAllBusy} onClick={()=>void readAll()}><Check/>{t('fe.ibx.readAll')}</button>}
    {!loading&&!error&&<Chips scroll className="inbox-filters">{FILTERS.filter(v=>v==='all'||v===filter||kinds.has(v)).map(v=>

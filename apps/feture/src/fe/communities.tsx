@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,ChartColumn,Bell,BellOff,Bookmark,BookmarkCheck,Calendar,CalendarPlus,Check,ChevronLeft,Clock,Ellipsis,Eye,ExternalLink,FileText,Flag,Globe,Image as ImageIcon,Link as LinkIcon,Lock,Map as MapIcon,MapPin,MessageCircle,Plus,Search,Settings,Share,SlidersHorizontal,Ticket,TriangleAlert,Users,Video,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {ActingAv,Alert,Announcement,Ask,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,CommunityHead,CoverBar,Discussion,Empty,EventHero,EventTile,Group,IconBtn,LinkBtn,Note,Pill,Row,Rsvp,SectionLabel,Seg,Sheet,Skel,Spacer,StatusCard,Text,ToggleRow,Veil} from './kit';
+import {ActingAv,Alert,Announcement,Ask,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,CommunityHead,CoverBar,Discussion,Empty,EventHero,EventTile,Group,IconBtn,LinkBtn,Note,Pill,Row,Rsvp,SectionLabel,Seg,Sheet,Skel,Spacer,StatusCard,Text,ToggleRow,Veil,View,useRefreshable} from './kit';
 import {useFe,useKeyChange} from './session';
 import {when} from './feed';
 import {BellButton} from './inbox';
@@ -84,10 +84,10 @@ export function CommunitiesTab(){
   <Bar title={t('fe.nav.communities')}>
    <IconBtn icon={Search} label={t('fe.cm.search')} onClick={()=>navigate('/n/search'+(tab==='events'?'?scope=events':'?scope=groups'))}/><BellButton/>
   </Bar>
-  <div className="view"><div className="wrap">
+  <View refresh>
    <Seg small={false} value={tab} onChange={v=>setSp(v==='events'?{sub:'events'}:{},{replace:true})} options={[{id:'discover',label:t('fe.comm.catalog')},{id:'events',label:t('fe.comm.events')}]}/>
    {tab==='discover'?<Catalog/>:<EventList/>}
-  </div></div>
+  </View>
  </>;
 }
 
@@ -105,7 +105,8 @@ function MyShortcut({kind,count}:{kind:'communities'|'events',count:number}){
 function useMyCommunities(){
  const {call,acting}=useFe();const [m,setM]=useState<z.infer<typeof mineComm>|null>(null);
  useKeyChange(acting?.id??'',()=>setM(null));
- useEffect(()=>{call('community.mine',{},mineComm).then(setM).catch(()=>{});},[call,acting?.id]);
+ const read=useCallback(()=>{call('community.mine',{},mineComm).then(setM).catch(()=>{});},[call]);
+ useEffect(()=>{read();},[read,acting?.id]);useRefreshable(read);
  return useMemo(()=>{
   const hosting=new Set(m?.hosting.map(x=>x.id)??[]);const member=new Set(m?.member.map(x=>x.id)??[]);const pending=new Set(m?.requests.map(x=>x.community_id)??[]);
   return {hosting,member,pending,count:new Set([...hosting,...member,...pending]).size};
@@ -121,12 +122,12 @@ function Catalog(){
  const [all,setAll]=useState<Card[]|null>(null);const [error,setError]=useState<unknown>(null);
  const [f,setF]=useState<CommFilter>(CF0);const [sheet,setSheet]=useState(false);
  // The whole catalogue (it is small) so that the interest chips, the filter counts and the list agree.
- const load=useCallback(async()=>{
-  setError(null);setAll(null);
+ const load=useCallback(async(keep=false)=>{
+  setError(null);if(!keep)setAll(null);
   try{const out:Card[]=[];let cursor:string|null=null;for(let i=0;i<10;i++){const r:z.infer<typeof catalog>=await call('community.catalog',cursor?{cursor}:{},catalog);out.push(...r.items);cursor=r.next;if(!cursor)break;}setAll(out);}
   catch(e){setError(e);}
  },[call]);
- useEffect(()=>{void load();},[load]);
+ useEffect(()=>{void load();},[load]);useRefreshable(()=>load(true));
  const tname=(id:string)=>{const x=cat?.topics.find(v=>v.id===id);return x?(locale==='en'?x.en:x.ru):id;};
  const used=useMemo(()=>[...new Set((all??[]).flatMap(c=>c.topics))],[all]);
  const items=(all??[]).filter(c=>passes(c,f));
@@ -211,7 +212,8 @@ type MyStatus='organizer'|'going'|'pending'|'interested'|'waiting';
 function useMyEvents(){
  const {call,acting}=useFe();const [m,setM]=useState<z.infer<typeof mineEv>|null>(null);
  useKeyChange(acting?.id??'',()=>setM(null));
- useEffect(()=>{call('event.mine',{},mineEv).then(setM).catch(()=>{});},[call,acting?.id]);
+ const read=useCallback(()=>{call('event.mine',{},mineEv).then(setM).catch(()=>{});},[call]);
+ useEffect(()=>{read();},[read,acting?.id]);useRefreshable(read);
  return useMemo(()=>{
   const st=new Map<string,MyStatus>();const now=Date.now();const up=(r:{ends_at:string})=>Date.parse(r.ends_at)>now;
   m?.interested.forEach(r=>st.set(r.id,'interested'));m?.waiting.forEach(r=>st.set(r.id,'waiting'));m?.applications.forEach(r=>st.set(r.id,'pending'));
@@ -245,8 +247,8 @@ function EventList(){
  const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const mine=useMyEvents();
  const [f,setF]=useState<EvFilter>(EF0);const [sheet,setSheet]=useState(false);
  const [items,setItems]=useState<Ev[]|null>(null);const [error,setError]=useState<unknown>(null);
- const load=useCallback(()=>{setError(null);setItems(null);call('event.catalog',evInput(f),evList).then(r=>setItems(r.items)).catch(setError);},[call,f]);
- useEffect(()=>{load();},[load]);
+ const load=useCallback((keep=false)=>{setError(null);if(!keep)setItems(null);call('event.catalog',evInput(f),evList).then(r=>setItems(r.items)).catch(setError);},[call,f]);
+ useEffect(()=>{load();},[load]);useRefreshable(()=>load(true));
  const badge=(f.when!=='any'?1:0)+(f.kinds.length?1:0)+(f.price!=='any'?1:0)+(f.openOnly?1:0);
  const week=Date.now()+7*864e5;const live=(items??[]).filter(e=>e.state!=='cancelled');
  const soon=live.filter(e=>Date.parse(e.starts_at)<week),later=live.filter(e=>Date.parse(e.starts_at)>=week),canc=(items??[]).filter(e=>e.state==='cancelled');
@@ -255,7 +257,7 @@ function EventList(){
   <div className="filterline"><Chips scroll>{(['all','offline','online'] as const).map(k=><Chip key={k} filter on={f.format===k} onClick={()=>setF(x=>({...x,format:k}))} {...(k==='online'?{icon:Video}:k==='offline'?{icon:MapPin}:{})}>
    {t('fe.ev.format.'+k)}</Chip>)}</Chips>
    <Chip filter lit={!!badge} badge={badge||undefined} popup icon={SlidersHorizontal} onClick={()=>setSheet(true)}>{t('fe.cm.filters')}</Chip></div>
-  {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
+  {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>load()}>{t('fe.retry')}</Btn></Empty>
    :items===null?<Skel kind="event" rows={2}/>
    :!items.length?<Empty icon={Calendar} title={t('fe.cm.evNothing')} text={t('fe.cm.evNothingText')}>{(f.format!=='all'||badge>0)&&<Btn kind="soft" onClick={()=>setF(EF0)}>{t('fe.cm.resetFilters')}</Btn>}<Btn kind="text" onClick={()=>navigate('/n/events/new')}>{t('fe.ce.create')}</Btn></Empty>
    :<>
@@ -341,7 +343,7 @@ export function CommunityScreen(){
   <CoverBar title={c?.name}>
    {c&&<IconBtn icon={Ellipsis} kind="glass" label={t('fe.cm.more')} onClick={()=>setLayer('menu')}/>}
   </CoverBar>
-  <div className="view nodock top0"><div className="wrap">
+  <View className="nodock top0" refresh={load}>
    {error?<Empty icon={Lock} title={t('fe.cm.unavailable')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :!c?<><CommunityHead/><Skel kind="list"/></>
     :<>
@@ -381,7 +383,7 @@ export function CommunityScreen(){
      :tab==='members'?<MembersList c={c} data={mem} onChange={load}/>
      :<Card><ol className="rules">{c.rules.map((r,i)=><li key={i}>{r}</li>)}</ol></Card>}
     </>}
-  </div></div>
+  </View>
   {c&&layer==='menu'&&<Sheet title={c.name} onClose={()=>setLayer('')}><Card list>
    <Row icon={LinkIcon} title={t('fe.cm.copyLink')} noChev onClick={()=>void share()}/>
    {member&&<Row icon={c.me?.muted?Bell:BellOff} title={t(c.me?.muted?'fe.cm.unmute':'fe.cm.mute')} noChev disabled={busy} onClick={mute}/>}
@@ -490,7 +492,7 @@ export function EventScreen(){
     <IconBtn icon={Share} kind="glass" label={t('fe.cm.share')} onClick={()=>void share()}/>
     <IconBtn icon={Ellipsis} kind="glass" label={t('fe.cm.more')} onClick={()=>setLayer('menu')}/></>}
   </CoverBar>
-  <div className={'view nodock top0'+(cta?' cta1':'')}><div className="wrap">
+  <View className={'nodock top0'+(cta?' cta1':'')} refresh={load}>
    {error?<Empty icon={Lock} title={t('fe.cm.evUnavailable')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :!e?<><EventHero/><Skel kind="list" rows={4}/></>
     :<>
@@ -529,7 +531,7 @@ export function EventScreen(){
       <ToggleRow title={t(couple?'fe.cm.showOurs':'fe.cm.showMine')} sub={t(couple?'fe.cm.showOursSub':'fe.cm.showMineSub')} on={!!e.me.rsvp?.showInList} disabled={busy} onClick={()=>void rsvp(st as 'going'|'interested',!e.me.rsvp?.showInList)}/></Card></>}
      {!!e.announcements?.length&&<><SectionLabel>{t('fe.cm.orgUpdates')}</SectionLabel>{e.announcements.map(a=><Announcement key={a.id} icon={Bell} body={a.body} meta={<>{a.automatic?t('fe.cm.auto'):''}{when(a.created_at,locale)}</>}/>)}</>}
     </>}
-  </div></div>
+  </View>
   {cta&&<div className="ctabar"><div className="wrap">{cta}</div></div>}
   {e&&layer==='menu'&&<Sheet title={t('fe.cm.event')} onClose={()=>setLayer('')}><Card list>
    <Row icon={CalendarPlus} title={t('fe.cm.addCal')} noChev onClick={()=>{setLayer('');downloadIcs(e);toast(t('fe.cm.calDone'),{type:'ok'});}}/>

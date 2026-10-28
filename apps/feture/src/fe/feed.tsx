@@ -6,9 +6,10 @@ import {ArrowUpDown,AtSign,Bell,BellOff,Bookmark,Check,Calendar,ChartColumn,Chev
 import type {LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicOrigin} from '../api-url';
-import {articlePlate,ActingAv,ActionLine,ActivityCard,ActivityItem,Alert,ArticleCard,ArticleImage,Ask,Av,BAD_CHARS,Bar,Btn,Card,Chip,Chips,Counter,Empty,FeedEvents,Field,FilePick,Group,H,IconBtn,LoadMore,Input,LikesLine,Note,QuickStart,RichEditor,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,VideoBadge,View,ViewerPostBar,hasLongWord,mdImages,type RichEditorHandle} from './kit';
+import {articlePlate,ActingAv,ActionLine,ActivityCard,ActivityItem,Alert,ArticleCard,ArticleImage,Ask,Av,BAD_CHARS,NewPill,Bar,Btn,Card,Chip,Chips,Counter,Empty,FeedEvents,Field,FilePick,Group,H,IconBtn,LoadMore,Input,LikesLine,Note,QuickStart,RichEditor,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,VideoBadge,View,ViewerPostBar,hasLongWord,mdImages,type RichEditorHandle} from './kit';
 import {shakeFirstErr} from './kit/validate';
-import {useFe,usePartnerApproves} from './session';
+import {refreshReads,useFe,usePartnerApproves} from './session';
+import {useNewerPosts} from './feed-newer';
 import {ActivityCardOf,activitySchema,type Act} from './feed-activity';
 import {Uploader} from './kit/Uploader';
 import {useSendPhoto,useSendVideo} from './media-upload';
@@ -102,7 +103,7 @@ function useSoon(){
     call('feedHide.set',{opId:newOpId(),kind:'event',targetId:e.id,on:false},okOnly).then(()=>{setItems(was);load();},err=>toast(feErrorMessage(err,t),{type:'err'}));}}});
   }catch(err){setItems(was);toast(feErrorMessage(err,t),{type:'err'});}
  };
- return {items,hide,loaded};
+ return {items,hide,loaded,load};
 }
 function SoonBlock({s}:{s:ReturnType<typeof useSoon>}){
  const {t}=useI18n();const {acting}=useFe();const us=acting?.kind==='couple';
@@ -163,6 +164,8 @@ export function FeedTab(){
  const loadHidden=useCallback(()=>{call('feedHide.list',{},hiddenList).then(r=>setHidden(r.items.filter(x=>x.kind==='post'||x.kind==='author').length)).catch(()=>setHidden(h=>h??0));},[call]);
  useEffect(()=>{loadHidden();},[loadHidden]);
  const soon=useSoon();
+ const [newer,seen]=useNewerPosts(input,items&&items.filter((x):x is Post=>!isAct(x)),tab!=='popular');
+ const refresh=()=>{seen();load();loadHidden();if(tab==='forYou')soon.load();};
  const setF=(next:Filters)=>setFilters(x=>({...x,[tab]:next}));
  const toggleTopic=(id:string)=>setF({...f,topics:sel.includes(id)?sel.filter(x=>x!==id):[...sel,id]});
  const me=nameOf(acting);
@@ -206,6 +209,7 @@ export function FeedTab(){
   :tab==='following'?<Empty icon={Users} title={t('fe.fd.noFollows')} text={t('fe.fd.noFollowsText')}><Btn onClick={()=>navigate('/n/search?scope=people')}>{t('fe.fd.findPeople')}</Btn></Empty>
   :<Empty icon={Newspaper} title={t('fe.fd.noPosts')} text={t('fe.fd.noPostsText')}><Btn onClick={()=>navigate('/n/search?scope=people')}>{t('fe.fd.findPeople')}</Btn></Empty>;
  else body=<>
+  {newer&&<NewPill label={t('fe.kit.newPosts')} onClick={()=>{seen();void refreshReads(()=>load());}}/>}
   <div className="posts">{items.flatMap((p,i)=>[isAct(p)?<ActivityCardOf key={p.id} a={p} onMenu={()=>setActMenu(p)}/>
    :gone[p.id]?<Alert key={p.id} kind="info" icon={EyeOff} className="mb12" action={<Stack row gap={2}><Btn size="sm" kind="soft" fit onClick={()=>restore(p.id,gone[p.id]!)}>{t('fe.tl.undo')}</Btn>
      <Btn size="sm" kind="text" fit onClick={()=>muteAuthor(gone[p.id]!)}>{t('fe.w3.hide.author',{name:gone[p.id]!.name})}</Btn></Stack>}>{t('fe.w3.hide.row')}</Alert>
@@ -222,7 +226,7 @@ export function FeedTab(){
  </>;
  return <>
   <Bar title={t('fe.nav.feed')}><IconBtn icon={Plus} label={t('fe.fd.createPub')} aria-haspopup="dialog" onClick={()=>setSheet('create')}/><IconBtn icon={Search} label={t('fe.br.search')} onClick={()=>navigate('/n/search?scope=posts')}/><BellButton/></Bar>
-  <View>
+  <View refresh={refresh}>
    <div className="mb12"><Seg value={tab} onChange={v=>{setNotice('');setTab(v);}} options={[{id:'forYou',label:t('fe.feed.tab.forYou')},{id:'following',label:t('fe.feed.tab.following')},{id:'popular',label:t('fe.fd.tab.popular')}]}/></div>
    {notice&&<Alert kind="ok" className="mb12">{notice}</Alert>}
    {welcome&&!acting?.avatar&&<Card className="mb12"><Stack gap={3}>

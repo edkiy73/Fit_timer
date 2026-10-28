@@ -380,3 +380,24 @@ button.pill{cursor:pointer}
 .v21 .cr-key>svg{width:10px;height:10px}
 /* The interest sheet: the description, then the bar with room above it. */
 .v21 .topic-desc+.cmpx{margin-top:var(--s-4)}
+/* Pull-to-refresh (kit/pull.tsx, owner 29.10.2026): the browser's own pull-to-reload and bounce never fire inside the
+ * app — the app's mark does it instead. A round mark slides from under the header; the ring fills with the pull; past
+ * the threshold the arrow turns; while reading it blinks (never spins). The content does not move. */
+html:has(.fe-v21),html:has(.fe-v21) body{overscroll-behavior-y:none}
+.v21 .k-pull{position:absolute;left:50%;top:var(--pr-top,0px);z-index:25;width:40px;height:40px;margin-left:-20px;border-radius:var(--r-full);
+ display:grid;place-items:center;background:var(--surf);color:var(--accent);border:1px solid var(--line);box-shadow:var(--shadow-s);pointer-events:none;
+ opacity:calc(.35 + .65 * var(--pr-p,0));transform:translateY(calc(var(--pr-d,0px) - 48px));transition:transform .28s var(--ease),opacity .2s}
+.v21 .k-pull.drag{transition:none}
+.v21 .k-pull>svg:not(.k-pull-ring){width:18px;height:18px;transition:transform .18s var(--ease)}
+.v21 .k-pull.ready>svg:not(.k-pull-ring){transform:rotate(180deg)}
+.v21 .k-pull-ring{position:absolute;inset:1px;width:36px;height:36px;transform:rotate(-90deg)}
+.v21 .k-pull-ring circle{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:calc(1 - var(--pr-p,0))}
+.v21 .k-pull.busy .k-pull-ring circle{stroke-dashoffset:0;opacity:.35}
+.v21 .k-pull-dot{width:10px;height:10px;border-radius:var(--r-full);background:var(--accent);animation:fe-blink 1s ease-in-out infinite}
+/* «Новые публикации ↑»: sticks under the header (the view's top padding is the header's room), takes no room in the list. */
+.v21 .k-newpill{position:sticky;top:var(--s-2);z-index:6;height:0;display:flex;justify-content:center;pointer-events:none}
+.v21 .k-newpill>button{pointer-events:auto;display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:var(--r-full);
+ background:var(--accent);color:var(--accent-ink);font:var(--t-sm);font-weight:600;box-shadow:var(--shadow);animation:k-newpill-in .26s var(--ease)}
+.v21 .k-newpill>button svg{width:16px;height:16px}
+@keyframes k-newpill-in{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.v21 .k-pull,.v21 .k-pull>svg{transition:none!important}.v21 .k-pull-dot,.v21 .k-newpill>button{animation:none}}

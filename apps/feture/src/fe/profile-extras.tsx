@@ -6,7 +6,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicBase} from '../api-url';
 import {Ban,Check,ChevronDown,Crown,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,Flag,Heart,History,Info,KeyRound,Link as LinkIcon,Lock,LockOpen,MapPin,MessageCircle,ShieldCheck,Undo2,Users,X} from 'lucide-react';
-import {ActingAv,Alert,Av,Bar,Btn,Card,Empty,Group,H,IconBtn,Layer,Note,PersonName,PhotoBars,PhotoTrack,Pill,Row,Seg,Skel,Text,ToggleRow,Veil,View,plate} from './kit';
+import {ActingAv,Alert,Av,Bar,Btn,Card,Empty,Group,H,IconBtn,Layer,Note,PersonName,PhotoBars,PhotoTrack,Pill,PullRefresh,Row,Seg,Skel,Text,ToggleRow,Veil,View,plate} from './kit';
 import {useFe,useKeyChange} from './session';
 import {ReportSheet} from './report';
 import {PhotoBadge} from './photo-check';
@@ -384,10 +384,10 @@ export function cardRead(actingId:string,profileId:string){const hit=cardMemo.ge
 /** SC.P01 profileView: the floating ‹ and ⋯ sit on the photo and turn into a solid bar with the name past it
  * (PRF-007); hero, description, buttons, «что общего», then the body. `preview` is «Как видят» — everything drawn,
  * nothing pressable. */
-export function ProfilePage({p,preview,seg,onMore,menu,toast,children}:{p:PersonProfile,preview?:'all'|'granted'|undefined,seg?:ReactNode,onMore?:(()=>void)|undefined,
- menu?:((rel:Relation|null,reload:()=>void)=>ReactNode)|undefined,toast:PxToast,children?:ReactNode}){
+export function ProfilePage({p,preview,seg,onMore,menu,toast,onRefresh,children}:{p:PersonProfile,preview?:'all'|'granted'|undefined,seg?:ReactNode,onMore?:(()=>void)|undefined,
+ menu?:((rel:Relation|null,reload:()=>void)=>ReactNode)|undefined,toast:PxToast,/** Pull-to-refresh: reads the profile again. */ onRefresh?:(()=>unknown)|undefined,children?:ReactNode}){
  const {t}=useI18n();const navigate=useNavigate();const [rel,setRel,reloadRel]=useRelation(p.id);const [view,setView]=useState<number|null>(null);
- const bar=useRef<HTMLElement>(null);const name=personName(p);const inert=!!preview;const list=photosOf(p);
+ const bar=useRef<HTMLElement>(null);const scroller=useRef<HTMLDivElement>(null);const name=personName(p);const inert=!!preview;const list=photosOf(p);
  const onScroll=(e:React.UIEvent<HTMLDivElement>)=>{const h=e.currentTarget.querySelector('.hero');const b=bar.current;if(h&&b)b.classList.toggle('solid',h.getBoundingClientRect().bottom<b.getBoundingClientRect().bottom+8);};
  return <>
   <header ref={bar} className="bar overlay pbar">
@@ -396,7 +396,7 @@ export function ProfilePage({p,preview,seg,onMore,menu,toast,children}:{p:Person
    <span className="pbar-t" aria-hidden="true"><Av name={name} seed={p.id} src={mediaSrc(p.avatar)} size="sm"/><b>{name}</b></span>
    {onMore&&<IconBtn icon={Ellipsis} kind="glass" aria-haspopup="dialog" label={t('fe.px.menu.more')} onClick={onMore}/>}
   </header>
-  <div className="view nodock top0 profile-page" onScroll={onScroll}>{seg}<div className="wrap">
+  <div ref={scroller} className="view nodock top0 profile-page" onScroll={onScroll}><PullRefresh target={scroller} onRefresh={onRefresh&&(()=>{reloadRel();return onRefresh();})}>{seg}<div className="wrap">
    <H level={1} className="sr-only" tabIndex={-1}>{name}</H>
    {children}
    <ProfileHero p={p} rel={rel} inert={inert} onOpen={setView}/>
@@ -404,7 +404,7 @@ export function ProfilePage({p,preview,seg,onMore,menu,toast,children}:{p:Person
    <PersonActions p={p} rel={rel} setRel={setRel} toast={toast} inert={inert}/>
    {!preview&&<CompatSummary profileId={p.id}/>}
    <ProfileBody p={p} inert={inert} preview={preview} onOpen={setView}/>
-  </div></div>
+  </div></PullRefresh></div>
   {view!==null&&<PhotoViewer srcs={list.map(m=>m.src?.full??mediaSrc(m)!)} index={view} onClose={()=>setView(null)}/>}
   {menu?.(rel,reloadRel)}
  </>;

@@ -3,6 +3,7 @@
 // A scenario file exports `default [{name, persona:'full'|'basic'|'new'|'pair'|…, route:'/n/…', run: async t => {…}}]`.
 // `persona` signs the browser in as that persona of your lane (e2e/personas.mjs); `persona: null` opens the app signed
 // out. There is no default account: a scenario without `persona` fails.
+// `touch: true` makes it a phone with a touch screen (pull gestures: `pullDown` in scenarios/helpers.mjs).
 // `mic: true` gives that scenario's page a fake microphone (a beep), already allowed; `mic: 'deny'` makes the browser refuse it.
 // t: page (Playwright), go(route), tap(textOrSelector), fill(selectorOrLabel, value), see(text), notSee(text), wait(ms),
 //    api(action, input, asEmail?, profile?) — a direct API call for setup or to read the result back, me (the persona),
@@ -36,7 +37,7 @@ for (const sc of scenarios) {
   const email = me.email;
   const s = email ? await session(email) : null; if (email) await boot(email);
   if (sc.mic === true) micBrowser ??= await chromium.launch({ ...CHANNEL, headless: true, args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] });
-  const ctx = await (sc.mic === true ? micBrowser : browser).newContext({ viewport: sc.viewport || { width: 390, height: 844 }, locale: 'ru-RU', timezoneId: 'Europe/Berlin' });
+  const ctx = await (sc.mic === true ? micBrowser : browser).newContext({ viewport: sc.viewport || { width: 390, height: 844 }, locale: 'ru-RU', timezoneId: 'Europe/Berlin', ...(sc.touch ? { hasTouch: true, isMobile: true } : {}) });
   if (APP !== PROD) await ctx.route(APP + '/api/**', async r => {
     try {
       let res;
