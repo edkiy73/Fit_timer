@@ -139,8 +139,11 @@ async function approveCommunity(id) {
 async function hostSetup(lane, email) {
   const plain = { name: `QA ${lane} открытое`, privacy: 'open', joinQuestion: null };
   const closed = { name: `QA ${lane} клуб`, privacy: 'closed', joinQuestion: 'Почему хочешь вступить?' };
+  // For the join scenarios (communities/joins.mjs): closed without a question, and hidden (reached by an invite link).
+  const noQ = { name: `QA ${lane} без вопроса`, privacy: 'closed', joinQuestion: null };
+  const hidden = { name: `QA ${lane} скрытое`, privacy: 'hidden', joinQuestion: 'Кто тебя пригласил?' };
   const out = {};
-  for (const [key, want] of [['openId', plain], ['closedId', closed]]) {
+  for (const [key, want] of [['openId', plain], ['closedId', closed], ['closedNoQId', noQ], ['hiddenId', hidden]]) {
     const mine = (await api(email, 'community.mine', {})).hosting ?? [];
     let c = mine.find(x => x.name === want.name && x.role === 'owner');
     if (!c) {
@@ -153,7 +156,7 @@ async function hostSetup(lane, email) {
     const full = (await api(email, 'community.get', { communityId: c.id })).community;
     if (full.state !== 'published' || full.pendingChange) await approveCommunity(c.id);
     if (full.privacy !== want.privacy) {
-      must(await api(email, 'community.update', { opId: uuid7(), communityId: c.id, rev: full.rev, privacy: want.privacy, ...(want.privacy === 'open' ? {} : { joinQuestion: want.joinQuestion }) }), 'privacy back');
+      must(await api(email, 'community.update', { opId: uuid7(), communityId: c.id, rev: full.rev, privacy: want.privacy, ...(want.privacy === 'open' || !want.joinQuestion ? {} : { joinQuestion: want.joinQuestion }) }), 'privacy back');
       await approveCommunity(c.id);
     }
     out[key] = c.id;
@@ -162,10 +165,25 @@ async function hostSetup(lane, email) {
   // past one is replaced.
   out.eventId = await hostEvent(email, `QA ${lane} встреча`, { kind: 'free' });
   out.ticketEventId = await hostEvent(email, `QA ${lane} билеты`, { kind: 'external', amount: 25, currency: 'EUR', ticketUrl: 'https://example.org/tickets' });
+  // An online event by application (approval opens the join link) and one cancelled event (the cancelled page).
+  out.appEventId = await hostEvent(email, `QA ${lane} по заявке`, { kind: 'free' }, {
+    format: 'online', placeId: null, area: null, exactAddress: null, joinUrl: 'https://meet.example.org/qa', tz: 'Europe/Berlin',
+    requiresApplication: true, questions: ['Был ли опыт таких встреч?'] });
+  out.cancelledEventId = await cancelledEvent(email, `QA ${lane} отменена`);
   return out;
 }
 
-async function hostEvent(email, title, price) {
+/** One cancelled event of the host (made, approved and cancelled once; later runs reuse it). */
+async function cancelledEvent(email, title) {
+  const ev = (await api(email, 'event.mine', {})).organizing ?? [];
+  const done = ev.find(x => x.title === title && x.state === 'cancelled');
+  if (done) return done.id;
+  const id = await hostEvent(email, title, { kind: 'free' });
+  must(await api(email, 'event.cancel', { opId: uuid7(), eventId: id, reason: 'Ведущий заболел' }), 'event.cancel');
+  return id;
+}
+
+async function hostEvent(email, title, price, extra = {}) {
   const ev = (await api(email, 'event.mine', {})).organizing ?? [];
   let e = ev.find(x => x.title === title && ['published', 'in_review'].includes(x.state) && (!x.startsAt || Date.parse(x.startsAt) > Date.now() + 7 * 864e5));
   if (!e) {
@@ -174,7 +192,7 @@ async function hostEvent(email, title, price) {
     const r = must(await api(email, 'event.submit', { opId: uuid7(), event: {
       title, kind: 'meetup', description: 'Открытая встреча для сценариев: отметки «иду», адрес, сохранение.', format: 'offline',
       placeId: places[0]?.id ?? null, area: 'Митте', exactAddress: 'Тестовая улица 1, вход со двора', tz: 'Europe/Berlin',
-      startsAt: start.toISOString(), endsAt: new Date(+start + 2 * 3600e3).toISOString(), price, plate: 'sea' } }), 'event.submit');
+      startsAt: start.toISOString(), endsAt: new Date(+start + 2 * 3600e3).toISOString(), price, plate: 'sea', ...extra } }), 'event.submit');
     e = { id: r.id };
   }
   const got = (await api(email, 'event.get', { eventId: e.id })).event;

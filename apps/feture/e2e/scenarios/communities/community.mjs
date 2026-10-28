@@ -70,9 +70,9 @@ const scenarios = [
    } else await t.tap(sheet + ' button.check');
    await t.page.locator(sheet + ' .sh-f .btn').click();
    await toast(t, 'Заявка отправлена ведущим');
-   await t.see('.cm-act .pill:has-text("Заявка на рассмотрении")');
+   await t.see('.k-status:has-text("Заявка на рассмотрении"):has-text("Отправлена")'); // one block: state, when, «Отозвать»
    if (!(await me(t, CLOSED)).request) throw new Error('request not stored');
-   await t.tap('.cm-act .btn:has-text("Отозвать")');
+   await t.tap('.k-status .btn:has-text("Отозвать")');
    await t.page.locator(dialog + ' .btn.danger').click({ timeout: 5000 });
    await toast(t, 'Заявка отозвана');
    if ((await me(t, CLOSED)).request) throw new Error('request still pending');
@@ -94,7 +94,7 @@ const scenarios = [
    await t.tap(sheet + ' .li:has-text("Пожаловаться")');
    await t.see('.sheet.on [role="radiogroup"]');
    await t.page.locator(sheet + ' .sh-f .btn').click();
-   await t.see(sheet + ' .alert.err');
+   await t.see(sheet + ' .ferr:has-text("Выбери причину")'); await t.see(sheet + ' .ferr:has-text("Опиши, что случилось")');
    await t.page.locator(sheet + ' .radio').last().click();
    await t.page.locator(sheet + ' textarea').fill('e2e: проверка жалобы, можно отклонить');
    await t.page.locator(sheet + ' .sh-f .btn').click();

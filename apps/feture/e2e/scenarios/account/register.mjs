@@ -42,7 +42,10 @@ const scenarios = [
    await t.tap('.ctabar >> text=Дальше');
    await t.see('Расскажи о себе', 20000); await t.see('.ctabar >> text=Дальше'); await t.see('.ctabar >> text=Заполнить позже');
    await t.page.locator('.fin .chips[role=group] .chip').first().waitFor({ timeout: 15000 });
-   await t.tap('role=radio[name="Не участвовать"]'); await t.notSee('role=radio[name="Добавлю фото сейчас"]', 300);
+   // Owner 28.10.2026: Discover starts off; «Показываться» asks for a photo first, «Не сейчас» keeps it off.
+   await t.see('role=radio[name="Не участвовать"][aria-checked=true]');
+   await t.tap('role=radio[name="Показываться"]'); await t.see('.dialog.on >> text=Нужно фото');
+   await t.tap('.dialog.on >> text=Не сейчас'); await t.see('role=radio[name="Не участвовать"][aria-checked=true]');
    await t.tap('role=radio[name="По доступу"]'); await t.see('Увидят только те, кому ты откроешь');
    await t.tap('role=radio[name="Да, вместе"]'); await t.see('пригласишь партнёра'); await t.tap('role=radio[name="Да, вместе"]'); await t.notSee('пригласишь партнёра', 300);
    const g = t.page.locator('.chips[aria-label="Гендер"] .chip:not(.more)').first(); const gName = (await g.innerText()).trim(); await g.click();

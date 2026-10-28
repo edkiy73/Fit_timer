@@ -312,7 +312,8 @@ const run = {
     }
     await q.query(`insert into feture.profile_member (profile_id, profile_kind, account_id, joined_at) values ($1, 'person', $2, now())`, [profileId, account.id]);
     await q.query(`insert into feture.profile_details (profile_id, show_age, details_vis) values ($1, true, 'only')`, [profileId]);
-    await q.query('insert into feture.profile_settings (profile_id) values ($1)', [profileId]);
+    // Owner 28.10.2026: a new account starts outside Discover; it is switched on with a photo (onboarding or «Видимость»).
+    await q.query(`insert into feture.profile_settings (profile_id, discover_mode) values ($1, 'off')`, [profileId]);
     await q.query(
       `update feture.account set person_profile_id = $2, birth_date = $3, news_opt_in = $4, updated_at = now() where id = $1`,
       [account.id, profileId, input.birthDate, input.newsOptIn]);
@@ -337,7 +338,7 @@ const run = {
     const [{ photo }] = await q.query(
       `select exists (select 1 from feture.profile p join feture.media_asset m on m.id = p.avatar_asset_id where p.id = $1 and m.state = 'approved') photo`,
       [acting.profileId]);
-    // AUTH-019: in Discover by default, but nobody sees a profile without an approved photo.
+    // Off unless chosen (owner 28.10.2026); nobody sees a profile without an approved photo, so a pending one waits for review.
     return { discoverVisible: input.discover === 'visible' && photo, photoNeeded: input.discover === 'visible' && !photo };
   },
 

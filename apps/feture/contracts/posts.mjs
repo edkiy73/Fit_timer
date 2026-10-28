@@ -123,7 +123,8 @@ export const postsCommands = {
       targetId: id,
       messageIds: z.array(id).min(1).max(20).transform(v => [...new Set(v)]).optional(),
       reason: z.enum(['threat', 'private', 'minor', 'spam', 'other']),
-      details: text(500).default(''),
+      // Owner 28.10.2026: details are required — at least 10 characters after trimming (the sheet checks the same).
+      details: text(500).refine(v => [...v].length >= 10, { message: 'too_short' }),
       alsoBlock: z.boolean().default(false),
     }).refine(v => (v.targetType === 'conversation') === !!v.messageIds, { message: 'messages_for_chats_only', path: ['messageIds'] }),
   },

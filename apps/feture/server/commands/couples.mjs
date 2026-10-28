@@ -71,8 +71,8 @@ async function formCouple(q, fromAccount, toAccount) {
   for (const acc of [fromAccount, toAccount]) {
     await q.query(`insert into feture.profile_member (profile_id, profile_kind, account_id, joined_at) values ($1, 'couple', $2, now())`, [couple.id, acc]);
   }
-  // A new couple starts empty, in Discover by default like everyone (AUTH-019), nobody's content copied (CPL-003).
-  await q.query(`insert into feture.profile_settings (profile_id) values ($1)`, [couple.id]);
+  // A new couple starts empty and outside Discover (owner 28.10.2026: switched on with a photo), nobody's content copied (CPL-003).
+  await q.query(`insert into feture.profile_settings (profile_id, discover_mode) values ($1, 'off')`, [couple.id]);
   await q.query(`insert into feture.profile_details (profile_id) values ($1)`, [couple.id]);
   // Other pending invitations and live links of either partner are void now.
   await q.query(
