@@ -16,7 +16,7 @@ import {VIDEO_TYPES} from './kit/media';
 import {BellButton} from './inbox';
 import {DisputeNotice,PostMenu,ReplyMenu,type Removal} from './post-menu';
 import {restoreInto,useToast} from './toast';
-import {MarksSheet,MediaGrid,Poll,RichText,Viewer,marksPage,mdPlain,mediaSrc,personName,plural,slideOf,useTopics,type CatTopic,type MarksPage,type PollData} from './post-parts';
+import {MarksSheet,MediaGrid,Poll,RichText,Viewer,marksPage,mdPlain,mediaSrc,personName,plural,slideOf,useTopics,type CatTopic,type MarksPage,type PollData,type ViewerBar} from './post-parts';
 import {AlbumField,albumOfPost} from './gallery';
 import {Jars,useInterests,type Interest} from './interests';
 import {NameBadges} from './faces';
@@ -390,14 +390,14 @@ export function PostCard({post,onChange,onRemove,onExpired,full=false,onReply,pr
   return {cover:c?mediaSrc(c,full?'full':'card'):null,shown,slides:shown.map(m=>({id:m.id})),rest:ok.filter(m=>m!==coverM&&!refs.includes(m.id))};},[post.type,post.body,post.media,full]);
  const plain=mdPlain(post.body);const [view,setView]=useState<number|null>(null);
  // Over the full-screen media: the actions on the right, the author and the text at the bottom (owner, 28.10.2026).
- // Leaving for the post / the author replaces the viewer's own history entry, so «Назад» comes back to the feed.
- const leave=(to:string,close:()=>void)=>{if(full&&to==='/n/feed/post/'+post.id)close();else navigate(to,{replace:true});};
- const bar=preview?undefined:(close:()=>void)=><ViewerPostBar author={{id:post.author.id,name:nameOf(post.author),avatar:post.author.avatar}}
+ // Leaving for the post / the author drops the viewer's own history entry first, so «Назад» comes back here.
+ const bar:ViewerBar|undefined=preview?undefined:(close,go)=>{const leave=(to:string)=>{if(full&&to==='/n/feed/post/'+post.id)close();else go(to);};
+  return <ViewerPostBar author={{id:post.author.id,name:nameOf(post.author),avatar:post.author.avatar}}
   text={[post.title,plain].filter(Boolean).join(' — ')} liked={post.liked} likes={post.likes} replies={post.replies} saved={post.saved}
   labels={{like:t('fe.fd.likePost'+(acting?.kind==='couple'?'Us':'')),comment:t('fe.feed.replies'),save:t('fe.feed.save'+(acting?.kind==='couple'?'Us':'')),share:t('fe.feed.share'),open:t('fe.gal.openPost')}}
   onLike={()=>void toggle('liked')} onSave={()=>void toggle('saved')} onShare={()=>void share()}
-  onComment={()=>{if(full){close();onReply?.();}else leave('/n/feed/post/'+post.id,close);}} onOpen={()=>leave('/n/feed/post/'+post.id,close)}
-  onAuthor={()=>leave(mine||post.author.id===acting?.id?'/n/me':'/n/people/'+post.author.id,close)}/>;
+  onComment={()=>{if(full){close();onReply?.();}else leave('/n/feed/post/'+post.id);}} onOpen={()=>leave('/n/feed/post/'+post.id)}
+  onAuthor={()=>leave(mine||post.author.id===acting?.id?'/n/me':'/n/people/'+post.author.id)}/>;};
  return <article className="post">
   <div className="post-h">
    <button type="button" className="who" disabled={preview} onClick={()=>navigate(mine||post.author.id===acting?.id?'/n/me':'/n/people/'+post.author.id)}>

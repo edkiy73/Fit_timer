@@ -124,7 +124,7 @@ function MfImg({src,blur,onRatio,onFail}:{src:string,blur?:string|null|undefined
  </>;
 }
 
-export function MediaGrid({media,onExpired,bar}:{media:MediaItem[],onExpired?:(()=>void)|undefined,/** The post over the viewer (`ViewerPostBar`). */ bar?:((close:()=>void)=>ReactNode)|undefined}){
+export function MediaGrid({media,onExpired,bar}:{media:MediaItem[],onExpired?:(()=>void)|undefined,/** The post over the viewer (`ViewerPostBar`). */ bar?:ViewerBar|undefined}){
  const {t}=useI18n();const [open,setOpen]=useState<number|null>(null);const opener=useRef<HTMLElement|null>(null);
  const list=media.filter(m=>mediaSrc(m));
  const [seen,setSeen]=useState<Record<string,number>>({});
@@ -151,9 +151,12 @@ export function MediaGrid({media,onExpired,bar}:{media:MediaItem[],onExpired?:((
 
 /** `openViewer()` — full-screen photos: ‹ ›, arrows, swipe, Esc. It is a layer of its own above the bars, the dock,
  * the bottom buttons and the toasts; the system «Назад» closes it instead of leaving the screen. */
-export function Viewer({srcs,index,onClose,onExpired,bar}:{srcs:Slide[],index:number,onClose:()=>void,onExpired?:(()=>void)|undefined,
- /** A post's actions and text over the media (`ViewerPostBar`); gets the close. */ bar?:((close:()=>void)=>ReactNode)|undefined}){
- const {t}=useI18n();const [i,setI]=useState(index);const [on,setOn]=useState(false);const box=useRef<HTMLDivElement>(null);const sx=useRef<number|null>(null);
+/** A post's actions and text over the media (`ViewerPostBar`): `close` shuts the viewer; `leave` shuts it and then
+ * opens another screen, so its own history entry is gone first and «Назад» comes back to where the viewer was opened. */
+export type ViewerBar=(close:()=>void,leave:(to:string)=>void)=>ReactNode;
+export function Viewer({srcs,index,onClose,onExpired,bar}:{srcs:Slide[],index:number,onClose:()=>void,onExpired?:(()=>void)|undefined,bar?:ViewerBar|undefined}){
+ const {t}=useI18n();const navigate=useNavigate();
+ const leave=useCallback((to:string)=>{window.addEventListener('popstate',()=>setTimeout(()=>navigate(to),0),{once:true});window.history.back();},[navigate]);const [i,setI]=useState(index);const [on,setOn]=useState(false);const box=useRef<HTMLDivElement>(null);const sx=useRef<number|null>(null);
  useBackClose(onClose);
  useEffect(()=>{const r=requestAnimationFrame(()=>{setOn(true);box.current?.querySelector<HTMLButtonElement>('.vw-top .ibtn')?.focus({preventScroll:true});});return ()=>cancelAnimationFrame(r);},[]);
  const step=useCallback((d:number)=>setI(v=>Math.max(0,Math.min(srcs.length-1,v+d))),[srcs.length]);
@@ -162,7 +165,7 @@ export function Viewer({srcs,index,onClose,onExpired,bar}:{srcs:Slide[],index:nu
  return <Layer><div ref={box} className={'viewer'+(on?' on':'')} role="dialog" aria-modal="true" aria-label={t('fe.br.viewer')}
   onPointerDown={e=>{sx.current=e.clientX;}} onPointerUp={e=>{if(sx.current==null)return;const dx=e.clientX-sx.current;sx.current=null;if(Math.abs(dx)>50)step(dx<0?1:-1);}}>
   <PhotoTrack srcs={srcs} index={i} onExpired={onExpired} onStep={step} onClose={onClose}/>
-  {bar?.(onClose)}
+  {bar?.(onClose,leave)}
   <div className="vw-top"><span className="vw-n">{i+1} / {srcs.length}</span><IconBtn icon={X} kind="glass" label={t('fe.br.close')} onClick={onClose}/></div>
   {srcs.length>1&&<>
    <button type="button" className="vw-nav l" aria-label={t('fe.br.prev')} disabled={i===0} onClick={()=>step(-1)}><ChevronLeft/></button>
