@@ -31,6 +31,8 @@ async function setup() {
   await pg.exec(MIGRATION);
   // The partner approvals of approvals.mjs also store the note of a return (wave 6, 20261028180000_fe_waves67.sql).
   await pg.exec(readFileSync(new URL('../supabase/migrations/20261028180000_fe_waves67.sql', import.meta.url), 'utf8').split('\n').find(l => l.startsWith('alter table feture.partner_approval')));
+  // Video and voice on media_asset (the media part of 20261028190000_fe_media_av.sql; the chat part needs the chat tables).
+  await pg.exec(readFileSync(new URL('../supabase/migrations/20261028190000_fe_media_av.sql', import.meta.url), 'utf8').split('-- «Прослушано»')[0]);
   await pg.exec('set role feture_api');
   return { pg, db: fromPglite(pg) };
 }
@@ -326,7 +328,7 @@ test('media: intent limits, quarantine upload, commit, scan decisions, swap afte
     await reject(intent({ purpose: 'post', bytes: 21 * 1024 * 1024 }), 'too_large');
     await reject(intent({ purpose: 'avatar', explicit: true }), 'rule_violation');
     await reject(intent({ purpose: 'post', viewRule: 'once' }), 'rule_violation');
-    await reject(intent({ purpose: 'post', kind: 'video', mime: 'video/mp4' }), 'rule_violation');
+    await reject(intent({ purpose: 'post', kind: 'video', mime: 'video/mp4' }), 'invalid_input'); // no length
 
     const up = await intent({ purpose: 'post' });
     assert.match(up.upload.url, new RegExp(`/u/${up.assetId}$`)); // clients only ever get the quarantine key
@@ -484,6 +486,121 @@ test('sigv4: AWS presign test vector; a presigned upload is bound to its key, ty
   assert.notEqual(base, sig('u/2', { 'content-type': 'image/jpeg', 'content-length': '10' }));
   assert.notEqual(base, sig('u/1', { 'content-type': 'image/png', 'content-length': '10' }));
   assert.notEqual(base, sig('u/1', { 'content-type': 'image/jpeg', 'content-length': '11' }));
+});
+
+/** A minimal MP4: ftyp + a movie header saying `ms` long (timescale 1000). */
+const mp4 = (/** @type {number} */ ms, brand = 'isom') => {
+  const b = new Uint8Array(16 + 108);
+  const dv = new DataView(b.buffer);
+  dv.setUint32(0, 16); b.set([...'ftyp', ...brand].map(c => c.charCodeAt(0)), 4);
+  dv.setUint32(16, 108); b.set([...'mvhd'].map(c => c.charCodeAt(0)), 20);
+  dv.setUint32(16 + 20, 1000); dv.setUint32(16 + 24, ms); // version 0: ctime, mtime, timescale, duration
+  return b;
+};
+const EBML = [0x1a, 0x45, 0xdf, 0xa3];
+const webmSound = Uint8Array.from([...EBML, 0x83, 0x81, 0x02, 0x1f, 0x43, 0xb6, 0x75, 0x83, 0x81, 0x01, 9, 9]); // audio track; the pattern after Cluster is data
+const webmVideo = Uint8Array.from([...EBML, 0x83, 0x81, 0x01, 0x1f, 0x43, 0xb6, 0x75, 9, 9]);
+
+test('media av: video and voice limits, poster upload, scan (length, sound only, staff for clips), DTO links', async () => {
+  const { pg, db } = await setup();
+  try {
+    const storage = fakeStorage();
+    const cfg = { storage, delivery: tokenDelivery(SECRET, 'https://media.test') };
+    const [a, b] = await Promise.all(['a', 'b'].map(h => resolveAccount(db, PEPPER, core(h))));
+    const pa = await person(db, a.id, 'alex'), pb = await person(db, b.id, 'bobby');
+    const asA = await actingProfile(db, a.id, pa, { write: true });
+    const deps = (scanner) => ({ storage, scanner, classifier: null, renderer: fakeRenderer });
+    const pass = { name: 'fake-csam', check: async () => ({ result: /** @type {const} */ ('pass') }) };
+    const row = async id => (await db.query('select * from feture.media_asset where id = $1', [id]))[0];
+    const poster = { mime: 'image/jpeg', bytes: JPEG.length };
+    const video = input => db.tx(q => uploadIntent(q, asA, cfg, { purpose: 'post', kind: 'video', mime: 'video/mp4', bytes: 1000, durationMs: 20000, poster, ...input }));
+    const voice = input => db.tx(q => uploadIntent(q, asA, cfg, { purpose: 'voice', kind: 'audio', mime: 'audio/webm', bytes: webmSound.length, durationMs: 4000, ...input }));
+
+    // Places, types, sizes and lengths.
+    await reject(video({ purpose: 'community' }), 'rule_violation');
+    await reject(video({ purpose: 'voice' }), 'rule_violation');
+    await reject(voice({ purpose: 'chat' }), 'rule_violation');
+    await reject(db.tx(q => uploadIntent(q, asA, cfg, { purpose: 'voice', kind: 'image', mime: 'image/jpeg', bytes: 10 })), 'rule_violation');
+    await reject(video({ bytes: 101 * 1024 * 1024 }), 'too_large');
+    await reject(video({ durationMs: 62000 }), 'rule_violation');
+    await reject(video({ poster: undefined }), 'rule_violation');
+    await reject(video({ poster: { mime: 'image/jpeg', bytes: 3 * 1024 * 1024 } }), 'rule_violation');
+    await reject(voice({ durationMs: 302000 }), 'rule_violation');
+    await reject(voice({ mime: 'audio/mpeg' }), 'rule_violation');
+    await reject(voice({ bytes: 9 * 1024 * 1024 }), 'too_large');
+    await reject(voice({ viewRule: 'once' }), 'rule_violation'); // view rules are for chat photos and clips only
+
+    // A clip: the poster goes to its own quarantine key and must be there, with the declared size, before commit.
+    const clip = mp4(20000);
+    const v = await video({ bytes: clip.length });
+    assert.match(v.posterUpload.url, new RegExp(`/u/${v.assetId}\\.poster$`));
+    storage.objects.set(`u/${v.assetId}`, { bytes: clip, mime: 'video/mp4' });
+    await reject(db.tx(q => commitUpload(q, asA, cfg, v.assetId)), 'conflict');
+    storage.objects.set(`u/${v.assetId}.poster`, { bytes: PNG, mime: 'image/png' });
+    await reject(db.tx(q => commitUpload(q, asA, cfg, v.assetId)), 'rule_violation');
+    storage.objects.set(`u/${v.assetId}.poster`, { bytes: JPEG, mime: 'image/jpeg' });
+    assert.deepEqual(await db.tx(q => commitUpload(q, asA, cfg, v.assetId)), { state: 'uploaded' });
+    // Even with a scanner that passes it, a clip waits for staff; the poster becomes the picture variants.
+    assert.equal(await scanAsset(db, deps(pass), v.assetId), 'needs_review');
+    const vr = await row(v.assetId);
+    assert.deepEqual([vr.reject_reason, vr.duration_ms, vr.width], ['video', 20000, 800]);
+    assert.ok(storage.objects.has(ORIGINAL_KEY(v.assetId)) && storage.objects.has(VARIANT_KEY(v.assetId, 'card')));
+    // Nobody else sees it before staff; the author does, with the clip link.
+    assert.equal(await mediaDto(cfg, vr, { viewerProfileId: pb, place: 'chat', showExplicit: true }), null);
+    const own = await mediaDto(cfg, vr, { viewerProfileId: pa, place: 'own', showExplicit: false });
+    assert.deepEqual([own.kind, own.durationMs, !!own.src.file, !!own.src.card], ['video', 20000, true, true]);
+    await db.query(`update feture.media_asset set state = 'approved', explicitness = 'explicit' where id = $1`, [v.assetId]);
+    const approved = await row(v.assetId);
+    assert.equal(await mediaDto(cfg, approved, { viewerProfileId: pb, place: 'public', showExplicit: true }), null); // explicit: never public
+    const covered = await mediaDto(cfg, approved, { viewerProfileId: pb, place: 'chat', showExplicit: false });
+    assert.deepEqual([covered.blurred, Object.keys(covered.src)], [true, ['blur']]); // covered: no clip link at all
+    const shown = await mediaDto(cfg, approved, { viewerProfileId: pb, place: 'chat', showExplicit: true });
+    const tok = new URL(shown.src.file).searchParams.get('t');
+    assert.ok(await verifyMediaToken(SECRET, tok, { assetId: v.assetId, variant: 'file' }));
+
+    // A clip longer than its declared minute (read from the MP4 header) is refused and never published.
+    const long = mp4(90000);
+    const l = await video({ bytes: long.length });
+    storage.objects.set(`u/${l.assetId}`, { bytes: long, mime: 'video/mp4' });
+    storage.objects.set(`u/${l.assetId}.poster`, { bytes: JPEG, mime: 'image/jpeg' });
+    await db.tx(q => commitUpload(q, asA, cfg, l.assetId));
+    assert.equal(await scanAsset(db, deps(pass), l.assetId), 'rejected');
+    assert.equal((await row(l.assetId)).reject_reason, 'too_long');
+    assert.equal(storage.objects.has(ORIGINAL_KEY(l.assetId)), false);
+    // The removal job also deletes the poster upload.
+    const purge = mediaHandlers(db, { scan: deps(pass) })['media.purge'];
+    await purge({ payload: { assetId: l.assetId }, profile_id: pa });
+    assert.equal(storage.objects.has(`u/${l.assetId}.poster`), false);
+
+    // Voice: sound only → approved without an image scanner (nothing visual to check), with its length and waveform.
+    const s = await voice({ peaks: [1, 5, 31, 0] });
+    storage.objects.set(`u/${s.assetId}`, { bytes: webmSound, mime: 'audio/webm' });
+    await db.tx(q => commitUpload(q, asA, cfg, s.assetId));
+    assert.equal(await scanAsset(db, deps(null), s.assetId), 'approved');
+    const sr = await row(s.assetId);
+    assert.ok(sr.csam_checked_at);
+    const heard = await mediaDto(cfg, sr, { viewerProfileId: pb, place: 'chat', showExplicit: false, blurAll: true });
+    assert.deepEqual([heard.kind, heard.durationMs, heard.peaks, heard.blurred, Object.keys(heard.src)], ['audio', 4000, [1, 5, 31, 0], false, ['file']]);
+    // A «voice» file with a picture track is not a voice message.
+    const pic = await voice({ bytes: webmVideo.length });
+    storage.objects.set(`u/${pic.assetId}`, { bytes: webmVideo, mime: 'audio/webm' });
+    await db.tx(q => commitUpload(q, asA, cfg, pic.assetId));
+    assert.equal(await scanAsset(db, deps(null), pic.assetId), 'rejected');
+    assert.equal(storage.objects.has(ORIGINAL_KEY(pic.assetId)), false);
+    // Ogg/Opus and Safari's MP4/AAC are sound too; a JPEG claiming to be sound is not.
+    assert.equal(sniff(Uint8Array.from([...'OggS'].map(c => c.charCodeAt(0)))), 'audio/ogg');
+    const aac = mp4(4000, 'M4A ');
+    const m = await voice({ mime: 'audio/mp4', bytes: aac.length });
+    storage.objects.set(`u/${m.assetId}`, { bytes: aac, mime: 'audio/mp4' });
+    await db.tx(q => commitUpload(q, asA, cfg, m.assetId));
+    assert.equal(await scanAsset(db, deps(null), m.assetId), 'approved');
+    const fake = await voice({ bytes: JPEG.length });
+    storage.objects.set(`u/${fake.assetId}`, { bytes: JPEG, mime: 'audio/webm' });
+    await db.tx(q => commitUpload(q, asA, cfg, fake.assetId));
+    assert.equal(await scanAsset(db, deps(null), fake.assetId), 'rejected');
+    // The schema keeps sound in voice messages only.
+    await assert.rejects(db.query(`update feture.media_asset set purpose = 'chat' where id = $1`, [s.assetId]), /media_asset_audio_voice/);
+  } finally { await pg.close(); }
 });
 
 test('/api/fe handler: auth, schema, acting profile, idempotent writes bound to the profile, no internal errors leak', async () => {

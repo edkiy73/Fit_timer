@@ -156,7 +156,8 @@ const run = {
       `select c.id, c.state, c.last_seq, c.last_message_at, c.created_at, cm.profile_id side, sp.kind side_kind, cm.muted, cm.archived,
          o.id other_id, o.kind other_kind, o.handle other_handle, o.name other_name, o.avatar_asset_id,
          (select count(*)::int from feture.message m where m.conversation_id = c.id and m.seq > cm.last_read_seq and m.sender_account_id is distinct from $1) unread,
-         (select json_build_object('body', left(m.body, 80), 'media', m.media_asset_id is not null, 'mode', m.media_mode, 'mine', m.sender_account_id = $1)
+         (select json_build_object('body', left(m.body, 80), 'media', m.media_asset_id is not null, 'mode', m.media_mode, 'mine', m.sender_account_id = $1,
+            'kind', (select a.kind from feture.media_asset a where a.id = m.media_asset_id))
             from feture.message m where m.conversation_id = c.id order by m.seq desc limit 1) last
        from feture.conversation_member cm join feture.conversation c on c.id = cm.conversation_id
        join feture.profile sp on sp.id = cm.profile_id
@@ -192,6 +193,8 @@ const run = {
       [c.id, viewer.accountId, input.beforeSeq ?? null, input.afterSeq ?? null, input.limit]);
     const [prefs] = await q.query('select chat_blur, show_explicit from feture.account where id = $1', [account.id]);
     const assets = await q.query('select * from feture.media_asset where id = any($1)', [rows.map(r => r.media_asset_id).filter(Boolean)]);
+    const voiceIds = rows.filter(m => assets.find(x => x.id === m.media_asset_id)?.kind === 'audio').map(m => m.id);
+    const listens = voiceIds.length ? await q.query('select message_id, account_id from feture.message_listen where message_id = any($1)', [voiceIds]) : [];
     // Only for the sender's own messages: when each member of the other side read it (V21 chatReadInfo; a couple has
     // two readers) and how each recipient handled a disappearing photo (V21 chatMedia). Each reader comes with their
     // person profile (owner, 28.10: a couple chat shows WHICH partner read) — only to a member of this conversation,
@@ -229,9 +232,10 @@ const run = {
       const asset = assets.find(x => x.id === m.media_asset_id);
       if (m.media_mode !== 'normal') {
         // Ephemeral: never a link here; recipients open it with chat.openMedia.
+        const kind = asset?.kind === 'video' ? 'video' : 'image';
         media = mine
-          ? { ephemeral: true, mode: m.media_mode, state: asset && asset.state !== 'removed' ? 'sent' : 'done', views: viewsOf(m) }
-          : { ephemeral: true, mode: m.media_mode, state: ephemeralState(m, { opened_at: m.opened_at, done: m.done }) };
+          ? { ephemeral: true, kind, mode: m.media_mode, state: asset && asset.state !== 'removed' ? 'sent' : 'done', views: viewsOf(m) }
+          : { ephemeral: true, kind, mode: m.media_mode, state: ephemeralState(m, { opened_at: m.opened_at, done: m.done }) };
       } else if (m.media_asset_id) {
         media = asset ? await mediaDto(cfg.media, asset, {
           viewerProfileId: viewer.profileId, place: 'chat', showExplicit: prefs.show_explicit && !prefs.chat_blur, blurAll: prefs.chat_blur, staff: false,
@@ -239,6 +243,10 @@ const run = {
         // A photo the viewer may not see yet (still being checked) or any more (removed) is still a photo message:
         // never an empty bubble, never a link.
         if (!media) media = ['uploaded', 'scanning', 'needs_review'].includes(asset?.state) ? { pending: true, src: null } : { gone: true, src: null };
+        // «Прослушано»: a recipient sees whether they played it; the sender whether the other side did.
+        if (asset?.kind === 'audio') {
+          media = { ...media, kind: 'audio', listened: listens.some(l => l.message_id === m.id && (mine || l.account_id === viewer.accountId)) };
+        } else if (asset?.kind === 'video' && !media.kind) media = { ...media, kind: 'video' };
       }
       items.push({ id: m.id, seq: Number(m.seq), mine, author: m.author_profile_id, body: m.body, replyTo: m.reply_to, media, at: m.created_at, ...(mine ? { readBy: readBy(m) } : {}) });
     }
@@ -263,10 +271,12 @@ const run = {
     await requireUnrestricted(q, acting);
     const c = await memberOf(q, input.conversationId, acting, { lock: true });
     await requireOpen(q, c);
+    // A photo or clip uploaded for chats, or a voice message (its own purpose, always «normal»).
     const [asset] = await q.query(
-      `select id, state, view_rule from feture.media_asset where id = $1 and owner_profile_id = $2 and purpose = 'chat' and state in ('uploaded', 'scanning', 'needs_review', 'approved')`,
+      `select id, state, view_rule, purpose from feture.media_asset where id = $1 and owner_profile_id = $2 and purpose in ('chat', 'voice') and state in ('uploaded', 'scanning', 'needs_review', 'approved')`,
       [input.assetId, acting.profileId]);
     if (!asset) fail(400, 'invalid_input', { fields: ['assetId'] });
+    if (asset.purpose === 'voice' && (input.mode !== 'normal' || input.body)) fail(400, 'invalid_input', { fields: ['mode'] });
     // The mode was chosen at upload (view rule); an ephemeral file goes out only once it passed its checks.
     if ((input.mode === 'normal') !== (asset.view_rule === 'normal')) fail(400, 'invalid_input', { fields: ['mode'] });
     if (input.mode !== 'normal' && asset.state !== 'approved') fail(409, 'conflict', { rule: 'pending' });
@@ -330,6 +340,20 @@ const run = {
     if (m.media_mode === 'once') await burnIfDone(q, m.id);
     const until = m.media_mode === 'once' ? null : new Date((view?.opened_at ? new Date(view.opened_at).getTime() : Date.now()) + TTL_MIN[/** @type {keyof typeof TTL_MIN} */ (m.media_mode)] * 6e4);
     return { media, until, gone: false };
+  },
+
+  async 'chat.listened'(q, { acting: a, input, signal }) {
+    // A recipient played a voice message: remembered once per account; the sender's bubble turns «прослушано».
+    const acting = need(a);
+    const [m] = await q.query(
+      `select m.id, m.conversation_id, m.author_profile_id from feture.message m join feture.media_asset x on x.id = m.media_asset_id and x.kind = 'audio'
+       where m.id = $1`, [input.messageId]);
+    if (!m) fail(404, 'not_found');
+    const c = await memberOf(q, m.conversation_id, acting); // a block or a lost membership hides it like any message
+    if (m.author_profile_id === acting.profileId) return { listened: false };
+    const rows = await q.query(`insert into feture.message_listen (message_id, account_id) values ($1, $2) on conflict do nothing returning 1`, [m.id, acting.accountId]);
+    if (rows[0]) signal(c.other, 'chat');
+    return { listened: true };
   },
 
   async 'chat.typing'(q, { acting: a, input, signal, cfg }) {

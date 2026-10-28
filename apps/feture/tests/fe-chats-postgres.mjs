@@ -169,3 +169,72 @@ test('a normal photo still in review is a «pending» photo for the recipient, n
     assert.deepEqual(gone.media, { gone: true, src: null });
   } finally { await pg.close(); }
 });
+
+/** A video (chat) or voice message of `profileId`, approved, with served copies. */
+async function avAsset(db, profileId, kind = 'audio', viewRule = 'normal') {
+  const [{ account_id }] = await db.query('select account_id from feture.profile_member where profile_id = $1 limit 1', [profileId]);
+  const video = kind === 'video';
+  const [a] = await db.query(
+    `insert into feture.media_asset (owner_profile_id, uploaded_by, kind, purpose, storage_key, mime, declared_bytes, state, explicitness, copies_at, view_rule,
+       duration_ms, poster_mime, poster_bytes, waveform, width, height)
+     values ($1, $2, $3, $4, 'u/' || gen_random_uuid(), $5, 10, 'approved', $6, now(), $7, $8, $9, $10, $11, $12, $13) returning id`,
+    [profileId, account_id, kind, video ? 'chat' : 'voice', video ? 'video/mp4' : 'audio/webm', video ? 'safe' : 'explicit', viewRule,
+      video ? 12000 : 3500, video ? 'image/jpeg' : null, video ? 100 : null, video ? null : [3, 9, 20], video ? 720 : null, video ? 1280 : null]);
+  return a.id;
+}
+
+test('voice and video in chats: members only, «прослушано», voice always normal, clips follow the photo rules, blocks hide all', async () => {
+  const { pg, db, call, member, matchUp } = await world();
+  try {
+    const a = await member('ua', 'Alex'), b = await member('ub', 'Kira'), c = await member('uc', 'Noa');
+    const conv = await matchUp('ua', a, 'ub', b);
+    // A voice message goes out as is: no view rule, no caption, only one's own, once.
+    const vid = await avAsset(db, a);
+    assert.deepEqual((await call('ua', a, { action: 'chat.sendMedia', opId: op(), conversationId: conv, assetId: vid, mode: 'once' })).fields, ['mode']);
+    assert.deepEqual((await call('ua', a, { action: 'chat.sendMedia', opId: op(), conversationId: conv, assetId: vid, body: 'подпись' })).fields, ['mode']);
+    assert.deepEqual((await call('ub', b, { action: 'chat.sendMedia', opId: op(), conversationId: conv, assetId: vid })).fields, ['assetId']);
+    const sent = await call('ua', a, { action: 'chat.sendMedia', opId: op(), conversationId: conv, assetId: vid });
+    assert.ok(sent.id, JSON.stringify(sent));
+    assert.equal((await call('ua', a, { action: 'chat.sendMedia', opId: op(), conversationId: conv, assetId: vid })).rule, 'already_sent');
+
+    // The recipient hears it (never blurred, even with «blur all»); the list says what it is.
+    await db.query(`update feture.account set chat_blur = true where person_profile_id = $1`, [b]);
+    const theirs = (await call('ub', b, { action: 'chat.messages', conversationId: conv })).items.at(-1).media;
+    assert.deepEqual([theirs.kind, theirs.durationMs, theirs.peaks, theirs.blurred, !!theirs.src.file, theirs.listened], ['audio', 3500, [3, 9, 20], false, true, false]);
+    assert.equal((await call('ub', b, { action: 'chats.list' })).items[0].last.kind, 'audio');
+    // «Прослушано»: only the other side marks it, once; the sender then sees it.
+    assert.equal((await call('ua', a, { action: 'chat.listened', messageId: sent.id })).listened, false);
+    assert.equal((await call('ua', a, { action: 'chat.messages', conversationId: conv })).items.at(-1).media.listened, false);
+    assert.equal((await call('ub', b, { action: 'chat.listened', messageId: sent.id })).listened, true);
+    assert.equal((await call('ub', b, { action: 'chat.listened', messageId: sent.id })).listened, true);
+    assert.equal((await db.query('select count(*)::int n from feture.message_listen'))[0].n, 1);
+    assert.equal((await call('ua', a, { action: 'chat.messages', conversationId: conv })).items.at(-1).media.listened, true);
+    assert.equal((await call('ub', b, { action: 'chat.messages', conversationId: conv })).items.at(-1).media.listened, true);
+    // Someone outside the conversation neither hears nor marks it; a text message is not a voice message.
+    assert.equal((await call('uc', c, { action: 'chat.listened', messageId: sent.id })).status, 404);
+    assert.equal((await call('uc', c, { action: 'chat.messages', conversationId: conv })).status, 404);
+    const text = await call('ua', a, { action: 'chat.send', opId: op(), conversationId: conv, body: 'Привет' });
+    assert.equal((await call('ub', b, { action: 'chat.listened', messageId: text.id })).status, 404);
+
+    // A clip: blurred by default like a photo (poster blur only, no clip link) until a tap; then the clip and its length.
+    const clip = await avAsset(db, a, 'video');
+    await call('ua', a, { action: 'chat.sendMedia', opId: op(), conversationId: conv, assetId: clip });
+    const last = (await call('ub', b, { action: 'chat.messages', conversationId: conv })).items.at(-1);
+    assert.deepEqual([last.media.kind, last.media.blurred, Object.keys(last.media.src)], ['video', true, ['blur']]);
+    const open = await call('ub', b, { action: 'chat.openMedia', opId: op(), messageId: last.id });
+    assert.deepEqual([open.media.kind, open.media.durationMs, !!open.media.src.file, !!open.media.src.card], ['video', 12000, true, true]);
+    // A disappearing clip: no link before the conscious open, gone after «once».
+    const onceClip = await avAsset(db, a, 'video', 'once');
+    const oc = await call('ua', a, { action: 'chat.sendMedia', opId: op(), conversationId: conv, assetId: onceClip, mode: 'once' });
+    const listed = (await call('ub', b, { action: 'chat.messages', conversationId: conv })).items.at(-1).media;
+    assert.deepEqual([listed.ephemeral, listed.kind, listed.src], [true, 'video', undefined]);
+    assert.ok((await call('ub', b, { action: 'chat.openMedia', opId: op(), messageId: oc.id })).media.src.file);
+    assert.equal((await call('ub', b, { action: 'chat.openMedia', opId: op(), messageId: oc.id })).gone, true);
+
+    // A block hides the conversation, its voice messages and the «прослушано» mark either way.
+    await call('ub', b, { action: 'block.set', opId: op(), profileId: a, on: true });
+    assert.equal((await call('ua', a, { action: 'chat.messages', conversationId: conv })).status, 404);
+    assert.equal((await call('ub', b, { action: 'chat.listened', messageId: sent.id })).status, 404);
+    assert.equal((await call('ua', a, { action: 'chat.sendMedia', opId: op(), conversationId: conv, assetId: await avAsset(db, a) })).status, 404);
+  } finally { await pg.close(); }
+});

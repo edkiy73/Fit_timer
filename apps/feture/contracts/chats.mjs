@@ -27,6 +27,8 @@ export const chatsCommands = {
   },
   // The view row makes opening idempotent; a replay must never hand out a link again.
   'chat.openMedia': { profile: true, write: true, ledger: false, input: z.strictObject({ opId, messageId: id }) },
+  // «Прослушано» (voice messages, owner 28.10): the first play by a recipient; idempotent by the stored row.
+  'chat.listened': { profile: true, write: true, ledger: false, input: z.strictObject({ messageId: id }) },
   // «С чего начать» (V21 ice): topics both sides show publicly.
   'chat.starters': { profile: true, write: false, input: z.strictObject({ conversationId: id }) },
   // «печатает…» (owner, 28.10): a short-lived realtime signal to the other side, nothing stored; the client sends it at

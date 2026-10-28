@@ -7,7 +7,7 @@
  * match the URL path, so a token for a thumbnail never opens the full image.
  */
 
-export const VARIANTS = /** @type {const} */ (['thumb', 'card', 'full', 'blur', 'video']);
+export const VARIANTS = /** @type {const} */ (['thumb', 'card', 'full', 'blur', 'video', 'file']);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const enc = new TextEncoder();
 

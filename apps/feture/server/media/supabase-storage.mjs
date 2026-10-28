@@ -7,7 +7,9 @@
  * @typedef {{configured: () => boolean, request: (path: string, options?: {method?: string, headers?: Record<string, string>, body?: any, timeoutMs?: number}) => Promise<Response>}} Transport
  */
 
-export const VARIANT_KEY = (/** @type {string} */ assetId, /** @type {string} */ variant) => `v/${assetId}/${variant}.webp`;
+/** `file` is a video or voice note served as scanned (the `o/<id>` copy the scanner wrote); the rest are pictures. */
+export const VARIANT_KEY = (/** @type {string} */ assetId, /** @type {string} */ variant) =>
+  variant === 'file' ? `o/${assetId}` : `v/${assetId}/${variant}.webp`;
 
 /** @param {Transport} transport Core `server/supabase.js` (service key, server only) @param {{bucket: string, baseUrl: string}} cfg */
 export function createSupabaseStorage(transport, { bucket, baseUrl }) {
