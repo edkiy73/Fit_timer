@@ -100,26 +100,38 @@ export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota
         const status = /** @type {{status?: unknown}} */ (error)?.status;
         fail(status === 401 ? 401 : 503, status === 401 ? 'auth_required' : 'unavailable');
       }
-      const allowed = await quota(req, core.accountHash); mark('quota');
-      if (!allowed) {
-        res.setHeader('Retry-After', '60');
-        fail(429, 'rate_limited');
-      }
-      const body = await readJson(req);
+      // The quota counters live in another store (a network round trip): they are counted while this request reads its
+      // body, finds the account and checks maintenance, and awaited before anything else (rate, acting, command) runs.
+      const quotaP = quota(req, core.accountHash);
+      quotaP.catch(() => {}); // awaited below; never an unhandled rejection meanwhile
+      const admitted = async () => {
+        const allowed = await quotaP; mark('quota');
+        if (!allowed) {
+          res.setHeader('Retry-After', '60');
+          fail(429, 'rate_limited');
+        }
+      };
+      let body;
+      try { body = await readJson(req); } catch (error) { await admitted(); throw error; }
       action = typeof body.action === 'string' && Object.hasOwn(commands, body.action) ? body.action : 'unknown';
       const cmd = commands[action];
       if (!cmd) fail(400, 'invalid_input', { fields: ['action'] });
       const { action: _, ...rest } = body;
       const parsed = cmd.input.safeParse(rest);
-      if (!parsed.success) fail(400, 'invalid_input', inputIssues(parsed.error.issues));
+      if (!parsed.success) { await admitted(); fail(400, 'invalid_input', inputIssues(parsed.error.issues)); }
       const input = parsed.data;
-      const account = await resolveAccount(db, pepper, core); mark('account');
-      if (action !== 'platform.maintenance') {
-        const m = await maintenance();
-        if (m.active && !(await db.query('select 1 from feture.staff_role where account_id = $1 and revoked_at is null limit 1', [account.id])).length) {
-          fail(503, 'maintenance', { message: m.message });
+      /** @type {AccountRow} */
+      let account;
+      try {
+        account = await resolveAccount(db, pepper, core); mark('account');
+        if (action !== 'platform.maintenance') {
+          const m = await maintenance();
+          if (m.active && !(await db.query('select 1 from feture.staff_role where account_id = $1 and revoked_at is null limit 1', [account.id])).length) {
+            fail(503, 'maintenance', { message: m.message });
+          }
         }
-      }
+      } catch (error) { await admitted(); throw error; }
+      await admitted();
       const profileId = header(req, 'x-fe-profile');
       // Per-account limits are committed on their own, before the command: a failed attempt (not found, rule) still counts.
       const rate = typeof cmd.rate === 'function' ? cmd.rate(input) : cmd.rate;
@@ -128,7 +140,8 @@ export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota
       if (rate && !replay) await db.tx(q => limit(q, account.id, rate.kind, rate.max, rate.window));
       mark('rate');
       // Membership is checked before a stored result can be replayed: a former member gets 403, not old results.
-      if (cmd.profile) await actingProfile(db, account.id, profileId, { write: cmd.write, allowPaused: cmd.allowPaused });
+      // A read has no stored result: its command checks the acting profile itself (exec below), once.
+      if (cmd.profile && cmd.write) await actingProfile(db, account.id, profileId, { write: cmd.write, allowPaused: cmd.allowPaused });
       mark('acting');
       // Realtime signals a command asks for go out only after its transaction committed (S2 §8).
       /** @type {import('./realtime.mjs').Signal[]} */

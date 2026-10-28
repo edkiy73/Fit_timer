@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, Outlet, useNavigate, useLocation, type RouteObject, Navigate } from 'react-router';
 import { AuthProvider, SignInForm, useOptionalAuth } from '@appbase/ui-react/auth.js';
-import { AdminPanel } from '@appbase/ui-react/admin.js';
 import { I18nProvider, LanguagePicker, sharedUiLocale, useI18n } from '@appbase/ui-react/i18n.js';
 import product from '../config/product.json';
 import { authClient } from './auth';
@@ -11,64 +10,67 @@ import { adminClient } from './admin';
 import { appDocs, SETTINGS_DOC, syncNow } from './sync';
 import { dictionaries, i18nConfig, LOCALE_KEY } from './i18n';
 import { NotFoundScreen, RouteErrorScreen } from './route-fallback';
-import { FetureCatalog } from './catalog';
 import { sameSession } from './feture/interest-api';
 import { InterestLifecycle, interestQueue } from './feture/use-interest-map';
-import { FetureExperience } from './feture/experience';
 import { FeRoot } from './fe/shell';
-import { CommunitiesTab, CommunityScreen, EventScreen } from './fe/communities';
-import { InboxScreen } from './fe/inbox';
-import { PairScreen } from './fe/pair';
-import { SettingsScreen, NotificationSettingsScreen, DataScreen } from './fe/settings';
-import { HiddenFeedScreen, BlockedScreen } from './fe/settings-lists';
-import { PremiumScreen, SecurityScreen, HelpScreen } from './fe/account-extra';
-import { ChatsTab, ChatScreen } from './fe/chats';
-import { PeopleTab, PersonScreen } from './fe/people';
-import { CompatScreen, HistoryScreen, MePreviewScreen } from './fe/profile-extras';
-import { MeTab } from './fe/me';
-import { MeEditScreen } from './fe/me-edit';
-import { MinePartScreen } from './fe/mine';
-import { AccessScreen } from './fe/access';
-import { LinksScreen, LinkEditScreen } from './fe/links';
-import { FollowsScreen, GalleryScreen, SearchScreen, TopicScreen } from './fe/browse';
-import { MyPostsScreen, SavedScreen } from './fe/mine';
-import { InterestsScreen, InterestsHistoryScreen } from './fe/interests';
-import { StaffScreen } from './fe/staff';
-import { AgeCheckScreen } from './fe/age-check';
-import { PhotoCheckScreen } from './fe/photo-check';
-import { FeedTab, PostScreen, ComposeScreen, EditPostScreen } from './fe/feed';
-import { CreateCommunityScreen, EditCommunityScreen } from './fe/create-community';
-import { CreateEventScreen, EditEventScreen } from './fe/create-event';
-import { CommunityManageScreen, CommunityRequestsScreen, CommunityMembersScreen, EventManageScreen, EventApplicationsScreen, EventAttendeesScreen, EventApplyScreen } from './fe/host';
+import { FeedTab } from './fe/feed';
+import { page, screen } from './lazy-screens';
+// Every /n screen but the feed (the first one) is its own chunk: the first screen ships less script, and the rest is
+// fetched in the background once it shows (lazy-screens.ts → prefetchScreens), so a tap later never waits for it.
+const communities=()=>import('./fe/communities'),inbox=()=>import('./fe/inbox'),pair=()=>import('./fe/pair'),settings=()=>import('./fe/settings'),
+ settingsLists=()=>import('./fe/settings-lists'),accountExtra=()=>import('./fe/account-extra'),chats=()=>import('./fe/chats'),people=()=>import('./fe/people'),
+ profileExtras=()=>import('./fe/profile-extras'),meTab=()=>import('./fe/me'),meEdit=()=>import('./fe/me-edit'),mine=()=>import('./fe/mine'),access=()=>import('./fe/access'),
+ links=()=>import('./fe/links'),browse=()=>import('./fe/browse'),interests=()=>import('./fe/interests'),staff=()=>import('./fe/staff'),ageCheck=()=>import('./fe/age-check'),
+ photoCheck=()=>import('./fe/photo-check'),feed=()=>import('./fe/feed'),createCommunity=()=>import('./fe/create-community'),createEvent=()=>import('./fe/create-event'),host=()=>import('./fe/host');
+const CommunitiesTab=screen(communities,'CommunitiesTab'),CommunityScreen=screen(communities,'CommunityScreen'),EventScreen=screen(communities,'EventScreen');
+const ChatsTab=screen(chats,'ChatsTab'),ChatScreen=screen(chats,'ChatScreen'),PeopleTab=screen(people,'PeopleTab'),PersonScreen=screen(people,'PersonScreen');
+const MeTab=screen(meTab,'MeTab'),MeEditScreen=screen(meEdit,'MeEditScreen'),MinePartScreen=screen(mine,'MinePartScreen'),MyPostsScreen=screen(mine,'MyPostsScreen'),SavedScreen=screen(mine,'SavedScreen');
+const InboxScreen=screen(inbox,'InboxScreen'),PairScreen=screen(pair,'PairScreen');
+const SettingsScreen=screen(settings,'SettingsScreen'),NotificationSettingsScreen=screen(settings,'NotificationSettingsScreen'),DataScreen=screen(settings,'DataScreen');
+const HiddenFeedScreen=screen(settingsLists,'HiddenFeedScreen'),BlockedScreen=screen(settingsLists,'BlockedScreen');
+const PremiumScreen=screen(accountExtra,'PremiumScreen'),SecurityScreen=screen(accountExtra,'SecurityScreen'),HelpScreen=screen(accountExtra,'HelpScreen');
+const CompatScreen=screen(profileExtras,'CompatScreen'),HistoryScreen=screen(profileExtras,'HistoryScreen'),MePreviewScreen=screen(profileExtras,'MePreviewScreen');
+const AccessScreen=screen(access,'AccessScreen'),LinksScreen=screen(links,'LinksScreen'),LinkEditScreen=screen(links,'LinkEditScreen');
+const FollowsScreen=screen(browse,'FollowsScreen'),GalleryScreen=screen(browse,'GalleryScreen'),SearchScreen=screen(browse,'SearchScreen'),TopicScreen=screen(browse,'TopicScreen');
+const InterestsScreen=screen(interests,'InterestsScreen'),InterestsHistoryScreen=screen(interests,'InterestsHistoryScreen'),StaffScreen=screen(staff,'StaffScreen');
+const AgeCheckScreen=screen(ageCheck,'AgeCheckScreen'),PhotoCheckScreen=screen(photoCheck,'PhotoCheckScreen');
+const PostScreen=screen(feed,'PostScreen'),ComposeScreen=screen(feed,'ComposeScreen'),EditPostScreen=screen(feed,'EditPostScreen');
+const CreateCommunityScreen=screen(createCommunity,'CreateCommunityScreen'),EditCommunityScreen=screen(createCommunity,'EditCommunityScreen');
+const CreateEventScreen=screen(createEvent,'CreateEventScreen'),EditEventScreen=screen(createEvent,'EditEventScreen');
+const CommunityManageScreen=screen(host,'CommunityManageScreen'),CommunityRequestsScreen=screen(host,'CommunityRequestsScreen'),CommunityMembersScreen=screen(host,'CommunityMembersScreen'),
+ EventManageScreen=screen(host,'EventManageScreen'),EventApplicationsScreen=screen(host,'EventApplicationsScreen'),EventAttendeesScreen=screen(host,'EventAttendeesScreen'),EventApplyScreen=screen(host,'EventApplyScreen');
 const ProductDesign = lazy(async()=>({default:(await import('./feture/design/product-design')).ProductDesign}));
-import { FirstStepsPage } from './feture/first-steps';
 import { ProductLayout } from './feture/primary-navigation';
 import { DatingPresentationProvider } from './feture/dating-presentation';
 import { NativeNavigation } from './feture/native-navigation';
 import { AppLinks } from './fe/app-links';
 import { isExperiencePath } from './feture/navigation';
-import { VerificationPage } from './feture/verification-page';
 import { ThemePicker } from './feture/components/ThemePicker';
 import { safeSignInReturnTo } from './feture/sign-in-return';
 import { Icon, type IconName } from './feture/components/Icon';
-import {DocumentsPage} from './feture/documents-page';
-import {DocumentsAdmin} from './feture/documents-admin';
-import {ProfilePage} from './feture/profile-page';
-import {AccessPage,PeerProfilePage} from './feture/access-page';
-import {JournalPage} from './feture/journal-page';
-import {ModerationPage} from './feture/moderation-page';
-import {QuestionnairesPage} from './feture/questionnaire-page';
-import {QuestionnairesAdmin} from './feture/questionnaire-admin';
-import {CatalogAdmin} from './feture/catalog-admin';
-import {ModerationAdmin} from './feture/moderation-admin';
-import {OperatorsAdmin} from './feture/operators-admin';
-import {MetricsAdmin} from './feture/metrics-admin';
-import {UpdateAdmin} from './feture/update-admin';
-import {QaAdultAdmin} from './feture/qa-adult-admin';
-import {OperatorPage} from './feture/operator-page';
-import {ShareLinksPage,SharedCardPage} from './feture/share-links-page';
-import {ComparisonPage} from './feture/comparison-page';
 import type {AdminSection} from '@appbase/ui-react/admin.js';
+const AdminPanel=page(()=>import('@appbase/ui-react/admin.js'),'AdminPanel');
+const FetureCatalog=page(()=>import('./catalog'),'FetureCatalog');
+const FetureExperience=page(()=>import('./feture/experience'),'FetureExperience');
+const FirstStepsPage=page(()=>import('./feture/first-steps'),'FirstStepsPage');
+const VerificationPage=page(()=>import('./feture/verification-page'),'VerificationPage');
+const DocumentsPage=page(()=>import('./feture/documents-page'),'DocumentsPage');
+const DocumentsAdmin=page(()=>import('./feture/documents-admin'),'DocumentsAdmin');
+const ProfilePage=page(()=>import('./feture/profile-page'),'ProfilePage');
+const accessPage=()=>import('./feture/access-page');const AccessPage=page(accessPage,'AccessPage'),PeerProfilePage=page(accessPage,'PeerProfilePage');
+const JournalPage=page(()=>import('./feture/journal-page'),'JournalPage');
+const ModerationPage=page(()=>import('./feture/moderation-page'),'ModerationPage');
+const QuestionnairesPage=page(()=>import('./feture/questionnaire-page'),'QuestionnairesPage');
+const QuestionnairesAdmin=page(()=>import('./feture/questionnaire-admin'),'QuestionnairesAdmin');
+const CatalogAdmin=page(()=>import('./feture/catalog-admin'),'CatalogAdmin');
+const ModerationAdmin=page(()=>import('./feture/moderation-admin'),'ModerationAdmin');
+const OperatorsAdmin=page(()=>import('./feture/operators-admin'),'OperatorsAdmin');
+const MetricsAdmin=page(()=>import('./feture/metrics-admin'),'MetricsAdmin');
+const UpdateAdmin=page(()=>import('./feture/update-admin'),'UpdateAdmin');
+const QaAdultAdmin=page(()=>import('./feture/qa-adult-admin'),'QaAdultAdmin');
+const OperatorPage=page(()=>import('./feture/operator-page'),'OperatorPage');
+const shareLinks=()=>import('./feture/share-links-page');const ShareLinksPage=page(shareLinks,'ShareLinksPage'),SharedCardPage=page(shareLinks,'SharedCardPage');
+const ComparisonPage=page(()=>import('./feture/comparison-page'),'ComparisonPage');
 const productAdminSections:readonly AdminSection[]=[
   // Keep IDs stable: AppBase persists the last selected tab in sessionStorage.
   {id:'feture-moderation',label:'Модерация публикаций',group:'Проверка и доступ',render:context=><ModerationAdmin {...context}/>},
@@ -155,18 +157,24 @@ function Root(){
   );
 }
 
+/** While the code of an earlier page (outside /n) or the admin loads. */
+function PageLoading(){
+  const {t}=useI18n();
+  return <div className="ft-welcome-loading" role="status">{t('account.appLoading')}</div>;
+}
+
 function Shell(){
   const auth=useOptionalAuth(); const {t}=useI18n(); const location=useLocation();
   if(!auth.loading&&!auth.session&&sandboxActive()){
    const destination=sandboxTarget(location.pathname);
    if(destination)return <Navigate to={destination} replace/>;
   }
-  if(isExperiencePath(location.pathname)||location.pathname==='/start'||location.pathname.startsWith('/design/')) return <Outlet />;
+  if(isExperiencePath(location.pathname)||location.pathname==='/start'||location.pathname.startsWith('/design/')) return <Suspense fallback={<PageLoading/>}><Outlet /></Suspense>;
   const study=location.pathname==='/tests'||location.pathname.startsWith('/tests/');
   return <main className={study?'app ft-study-shell':(location.pathname==='/account'||location.pathname==='/profile')?'app ft-account-shell':'app'}><header className="app-header">
     <div><div className="eyebrow">{t('app.eyebrow')}</div><h1>{PRODUCT_NAME}</h1></div>
     {!auth.loading && <Link className="link-button" to="/account">{auth.session?t('nav.account'):t('nav.signIn')}</Link>}
-  </header><Outlet /></main>;
+  </header><Suspense fallback={<PageLoading/>}><Outlet /></Suspense></main>;
 }
 
 function Home(){
@@ -261,7 +269,7 @@ function Account(){
 
 function Admin(){
   const {locale} = useI18n();
-  return <AdminPanel client={adminClient} locale={sharedUiLocale(locale)} productName={PRODUCT_NAME} extraSections={productAdminSections} hiddenCoreTabs={hiddenFetureCoreTabs} />;
+  return <Suspense fallback={<PageLoading/>}><AdminPanel client={adminClient} locale={sharedUiLocale(locale)} productName={PRODUCT_NAME} extraSections={productAdminSections} hiddenCoreTabs={hiddenFetureCoreTabs} /></Suspense>;
 }
 
 export const routes: RouteObject[] = [

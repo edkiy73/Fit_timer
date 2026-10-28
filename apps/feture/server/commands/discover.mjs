@@ -304,10 +304,10 @@ const run = {
 
   async 'discover.deck'(q, { acting: a, input, cfg }) {
     const viewer = need(a);
-    if (!(await datingOpen(q))) return { off: true, closed: true, items: [] };
-    if ((await modeOf(q, viewer.profileId)).discover_mode === 'off') return { off: true, items: [] };
-    const f = await filterOf(q, viewer.profileId);
-    const loc = await locationOf(q, viewer.profileId);
+    // Four independent reads, asked side by side instead of one after another.
+    const [open, mode, f, loc] = await Promise.all([datingOpen(q), modeOf(q, viewer.profileId), filterOf(q, viewer.profileId), locationOf(q, viewer.profileId)]);
+    if (!open) return { off: true, closed: true, items: [] };
+    if (mode.discover_mode === 'off') return { off: true, items: [] };
     // «Рядом» saved, location cleared since: nobody until it is shared again or the filter goes back to a city.
     if (f.placeMode === 'nearby' && !loc) return { off: false, needsLocation: true, items: [] };
     // Q7: public interests in common first, then newer profiles. Nothing private, no score.

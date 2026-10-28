@@ -112,8 +112,8 @@ const run = {
   },
 
   async 'inbox.counts'(q, { account }) {
-    const decide = (await decisions(q, account.id)).length;
-    const [c] = await q.query(
+    // The decisions and the counters are independent reads: asked side by side, the slower one sets the time.
+    const [list, [c]] = await Promise.all([decisions(q, account.id), q.query(
       `select
          (select count(*)::int from feture.notification n left join feture.profile ap on ap.id = n.actor_profile_id
           where n.recipient_account_id = $1 and n.read_at is null and n.retracted_at is null
@@ -128,7 +128,8 @@ const run = {
           where cm.account_id = $1 and c.state = 'active' and c.last_seq = 0 and not cm.archived and not feture.blocked(cm.profile_id, o.id) and ${CHAT_MEMBER}) new_matches,
          (select count(*)::int from feture.profile_like l join feture.profile_member m on m.profile_id = l.to_profile_id and m.account_id = $1 and m.state = 'active'
             join feture.profile ap on ap.id = l.from_profile_id
-          where l.state = 'active' and ap.state = 'active' and not feture.blocked(l.to_profile_id, ap.id)) likes`, [account.id]);
+          where l.state = 'active' and ap.state = 'active' and not feture.blocked(l.to_profile_id, ap.id)) likes`, [account.id])]);
+    const decide = list.length;
     // The bell shows unread news plus everything to decide; «Нужно решить» is the same number everywhere.
     return { decide, notifications: c.notifications, bell: c.notifications + decide, chats: c.chats, newMatches: c.new_matches, likes: c.likes };
   },

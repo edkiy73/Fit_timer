@@ -10,6 +10,8 @@ one at a time (the production rate limit is shared).
     e2e/personas.mjs       account states, built through app commands
     e2e/run.mjs            runs one scenario file
     e2e/run-all.sh         runs every file in order and prints a summary
+    e2e/perf.mjs           load timings on an emulated phone (CPU ×4, fast 4G): cold start, reload, tab switches,
+                           a post, a profile — content / settled times, late changes, /api/fe calls with server time
     e2e/fixtures/          photo.jpg, cover.png
     e2e/seed-world.mjs     the owner's «test world» on production (world-*@feture.test, docs/test-world.md) —
                            look-only content like seed people: scenarios never use these accounts as actors

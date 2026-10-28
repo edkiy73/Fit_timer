@@ -1,4 +1,4 @@
-import {useCallback,useEffect,useRef,useState} from 'react';
+import {Suspense,useCallback,useEffect,useRef,useState} from 'react';
 import {MaintenanceGate} from './maintenance';
 import {PaywallHost} from './premium';
 import {Outlet,useLocation,useNavigate} from 'react-router';
@@ -15,6 +15,7 @@ import {PushOffer} from './push';
 import {ActAsSheet} from './couple';
 import {AppUpdateProvider,UpdateRequired,UpdateSheet,useUpdateRequired} from './app-update';
 import {DockHide} from './dock';
+import {prefetchScreens} from '../lazy-screens';
 import './kit/base.css';
 import './kit/tokens.css';
 import './kit/kit.css';
@@ -64,18 +65,28 @@ function Center({children}:{children:React.ReactNode}){
  return <div className="stage"><div className="root"><main className="main"><div className="view"><div className="wrap fe-center">{children}</div></div></main></div></div>;
 }
 
+/** The screen part of the first frame: the header with the tab's name (or a placeholder title on a nested screen) and
+ * shaped placeholders. Also what a screen whose code is still loading shows (deep link straight into it). */
+function ScreenSkeleton(){
+ const {t}=useI18n();const {pathname}=useLocation();
+ const current=pathname.split('/')[2]||'feed';const tab=FE_TABS.some(x=>x.id===current)?current:'feed';
+ const nested=pathname.split('/').filter(Boolean).length>2;
+ return <>
+  <header className="bar">{nested?<i className="sk sk-av"/>:null}<H level={1} {...(nested?{className:'sm'}:{})}>{nested?<i className="sk sk-l fe-sk-title"/>:t('fe.nav.'+tab)}</H></header>
+  <div className="view"><div className="wrap"><Skel kind={tab==='feed'?'post':tab==='people'?'tiles':'list'} rows={tab==='people'?2:4}/></div></div>
+ </>;
+}
+
 /** First frame while the session loads: the real frame (sidebar, header, dock with its icons) with shaped placeholders
  * inside, so nothing jumps when the screen arrives. */
 function ShellSkeleton(){
  const {t}=useI18n();const {pathname}=useLocation();
  const current=pathname.split('/')[2]||'feed';const tab=FE_TABS.some(x=>x.id===current)?current:'feed';
- const nested=pathname.split('/').filter(Boolean).length>2;
  return <div className="stage"><div className="root">
   <aside className="side"><div className="brand"><img src={import.meta.env.BASE_URL+'fe-logo.svg'} alt=""/><b>Fet<i>Ure</i></b></div>
    <nav aria-hidden="true">{FE_TABS.map(({id,icon:Icon})=><button key={id} type="button" tabIndex={-1} className={'navb'+(tab===id?' on':'')}><Icon/><span>{t('fe.nav.'+id)}</span></button>)}</nav></aside>
   <main className="main has-dock hasbar">
-   <header className="bar">{nested?<i className="sk sk-av"/>:null}<H level={1} {...(nested?{className:'sm'}:{})}>{nested?<i className="sk sk-l fe-sk-title"/>:t('fe.nav.'+tab)}</H></header>
-   <div className="view"><div className="wrap"><Skel kind={tab==='feed'?'post':tab==='people'?'tiles':'list'} rows={tab==='people'?2:4}/></div></div>
+   <ScreenSkeleton/>
    <nav className="dock" aria-hidden="true">
     {FE_TABS.map(({id,icon:Icon})=><button key={id} type="button" tabIndex={-1} className={(tab===id?'on':'')+(id==='me'?' me-tab':'')}>{id==='me'?<span className="dock-av"><span className="av"><i className="sk fe-sk-av"/></span></span>:<Icon/>}<span>{t('fe.nav.'+id)}</span></button>)}
    </nav>
@@ -136,6 +147,8 @@ function FeLayout(){
  const nodock=current==='staff'||hiders>0;
  const badge=useTabBadges();
  useNewVersion(pathname);
+ // The other screens' code comes in the background once this one is up (lazy-screens.ts).
+ useEffect(()=>{const id=setTimeout(prefetchScreens,1500);return ()=>clearTimeout(id);},[]);
  const em=(n:number|'dot'|0)=>n==='dot'?<em className="dot"/>:n?<em>{n>99?'99+':n}</em>:null;
  const label=(id:string)=>{const n=badge(id);return t('fe.nav.'+id)+(n&&n!=='dot'?', '+n:'');};
  // A second tap on the active tab returns to its root (V21 A4).
@@ -170,7 +183,7 @@ function FeLayout(){
    <PushOffer/>
    <UpdateSheet/>
    <PaywallHost/>
-   <Outlet/>
+   <Suspense fallback={<ScreenSkeleton/>}><Outlet/></Suspense>
    {/* The dock's five columns come from base.css (.dock: repeat(5,1fr)) — FE_TABS has five tabs. */}
    {!nodock&&<nav className="dock" aria-label={t('fe.nav.aria')}>
     {FE_TABS.map(({id,icon:Icon})=><button key={id} type="button" className={(current===id?'on':'')+(id==='me'?' me-tab':'')} aria-label={label(id)} aria-current={current===id?'page':undefined} aria-haspopup={id==='me'&&pair?'dialog':undefined} onClick={()=>id==='me'&&pair?setActAs(true):go(id)}>

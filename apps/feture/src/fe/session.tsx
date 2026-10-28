@@ -37,11 +37,23 @@ const Ctx=createContext<FeSession|null>(null);
 const RtCtx=createContext<((l:RtListener)=>()=>void)|null>(null);
 const ACTING_KEY='feture.fe.acting';
 const BOOT_KEY='feture.fe.boot:';
-/** Reads (no opId) are kept for a short while so returning to a tab is instant; any write or realtime signal drops
- * them all, so nothing stale outlives a change. The server stays the source of truth. */
+/** Reads (no opId) are kept so returning to a screen is instant; any write or realtime signal drops them all, so
+ * nothing stale outlives a change. The server stays the source of truth. A read younger than READ_TTL is answered
+ * from memory; an older one (up to STALE_TTL) is answered from memory too — the screen appears at once, whole — while
+ * it is asked again in the background; if the answer changed, the screens read again and show the new one.
+ * The cache holds the server's raw answer per (account, profile, command, input): two screens that read the same
+ * command with different schemas share one request. */
 const READ_TTL=30000;
+const STALE_TTL=10*60000;
+const READ_MAX=400;
 const wait=(ms:number)=>new Promise<void>(r=>setTimeout(r,ms));
-const readCache=new Map<string,{at:number,action:string,value:Promise<unknown>}>();
+type Entry={at:number,action:string,value:Promise<unknown>,settled:boolean,refreshing?:boolean};
+const readCache=new Map<string,Entry>();
+const raw=z.unknown();
+/** The schema check a screen asks for, on a shared raw answer: a mismatch is the same «unavailable» feRequest gives. */
+function parse<T>(value:Promise<unknown>,schema:z.ZodType<T>):Promise<T>{
+ return value.then(body=>{const r=schema.safeParse(body);if(!r.success)throw new FeError('unavailable',200);return r.data;});
+}
 /** Writes that change only a known corner: they drop the reads of that corner, not the whole cache. A Discover swipe
  * changes the deck, likes and matches — never the catalog, one's own follows or other screens — so a swipe costs one
  * request instead of every open screen reading again (owner 28.10.2026: the rate limit after a few swipes). */
@@ -50,12 +62,19 @@ const dropReads=(action:string)=>{const only=NARROW_WRITES[action];if(!only){rea
 /** Writes whose input carries no opId (contracts with `ledger: false`): never served from the cache, and they drop it.
  * Without this a second «Без звука» / «В архив» within 30 s was answered from memory and never reached the server. */
 const WRITES_WITHOUT_OPID=new Set(['chat.read','chat.mute','chat.archive','notifications.read','notifications.readAll','media.commit','staff.mediaView','profile.setVisibility']);
-const schemaIds=new WeakMap<object,number>();let schemaSeq=0;
 export function dropReadCache(){readCache.clear();}
+/** Screens read again (through a new `call`) when a background refresh brought a different answer. */
+const staleListeners=new Set<()=>void>();
 
 export function FeSessionProvider({children}:{children:ReactNode}){
  const auth=useOptionalAuth();
+ // Core refreshes the session object in the background (rights, handle): only a different login or token is a new
+ // session here, so the refresh does not start bootstrap and every screen's reads over again.
+ const sessionKey=auth.session?[auth.session.email,auth.session.deviceId,auth.session.syncToken].join('\n'):'';
+ const latestSession=useRef(auth.session);latestSession.current=auth.session;
  const [state,setState]=useState<State>({status:'loading'});
+ const [rev,setRev]=useState(0);
+ useEffect(()=>{const bump=()=>setRev(n=>n+1);staleListeners.add(bump);return ()=>{staleListeners.delete(bump);};},[]);
  const [nonce,setNonce]=useState(0);
  const [actingId,setActingId]=useState<string|null>(()=>{try{return sessionStorage.getItem(ACTING_KEY);}catch{return null;}});
  // Signed out after being signed in: this browser stops getting the account's pushes.
@@ -63,8 +82,8 @@ export function FeSessionProvider({children}:{children:ReactNode}){
  useEffect(()=>{if(auth.session)had.current=true;else if(!auth.loading&&had.current){had.current=false;void forgetWebPush();void forgetNativePush();}},[auth.loading,auth.session]);
  useEffect(()=>{
   if(auth.loading){setState({status:'loading'});return;}
-  if(!auth.session){readCache.clear();try{for(const k of Object.keys(localStorage))if(k.startsWith(BOOT_KEY))localStorage.removeItem(k);}catch{/* no storage */}setState({status:'signedOut'});return;}
-  const session=auth.session;const ctl=new AbortController();
+  if(!sessionKey){readCache.clear();try{for(const k of Object.keys(localStorage))if(k.startsWith(BOOT_KEY))localStorage.removeItem(k);}catch{/* no storage */}setState({status:'signedOut'});return;}
+  const session=latestSession.current!;const ctl=new AbortController();
   // The last bootstrap of this account paints the app at once; the fresh one replaces it in the background.
   let cached:Bootstrap|null=null;
   try{const raw=localStorage.getItem(BOOT_KEY+session.email);if(raw){const r=bootstrapSchema.safeParse(JSON.parse(raw));if(r.success)cached=r.data;}}catch{/* no storage */}
@@ -77,7 +96,7 @@ export function FeSessionProvider({children}:{children:ReactNode}){
     setState(cur=>cur.status==='ready'&&JSON.stringify(cur.boot)===JSON.stringify(boot)?cur:{status:'ready',session,boot});})
    .catch(error=>{if(!ctl.signal.aborted)setState(cached&&!(error instanceof FeError&&error.code==='auth_required')?(cur=>cur):error instanceof FeError&&error.code==='auth_required'?{status:'signedOut'}:{status:'error',error});});
   return ()=>ctl.abort();
- },[auth.loading,auth.session,nonce]);
+ },[auth.loading,sessionKey,nonce]);
  const profiles=state.status==='ready'?state.boot.profiles.filter(p=>p.state!=='deleted'):[];
  const acting=profiles.find(p=>p.id===actingId)??profiles.find(p=>p.kind==='person')??null;
  const setActing=useCallback((id:string)=>{setActingId(id);try{sessionStorage.setItem(ACTING_KEY,id);}catch{/* this tab only */}},[]);
@@ -85,25 +104,44 @@ export function FeSessionProvider({children}:{children:ReactNode}){
  const call=useCallback(<T,>(action:string,input:Record<string,unknown>,schema:z.ZodType<T>,opts:{asAccount?:boolean,profileId?:string,signal?:AbortSignal,/** Skip the short read cache: «Обновить» and other explicit refreshes. */ fresh?:boolean}={})=>{
   if(state.status!=='ready')return Promise.reject(new FeError('auth_required'));
   const profileId=opts.asAccount?undefined:opts.profileId??acting?.id;
+  // The newest session object (same login and token): its expiry may have been extended by Core's refresh.
+  const cur=latestSession.current;
+  const session=cur&&[cur.email,cur.deviceId,cur.syncToken].join('\n')===sessionKey?cur:state.session;
   if('opId' in input||WRITES_WITHOUT_OPID.has(action)){ // a write: whatever was read before may have changed
    dropReads(action);
-   return feRequest(state.session,action,input,schema,{signal:opts.signal,profileId}).then(r=>{noteAction(action);return r;}).finally(()=>dropReads(action));
+   return feRequest(session,action,input,schema,{signal:opts.signal,profileId}).then(r=>{noteAction(action);return r;}).finally(()=>dropReads(action));
   }
-  let sid=schemaIds.get(schema);if(sid==null){sid=++schemaSeq;schemaIds.set(schema,sid);}
-  const key=JSON.stringify([state.session.email,profileId??'',action,input,sid]);
-  const hit=readCache.get(key);
-  if(hit&&!opts.fresh&&Date.now()-hit.at<READ_TTL)return hit.value as Promise<T>;
-  // Not bound to the caller's AbortSignal: a screen that unmounts must not cancel a read another screen will reuse.
+  const key=JSON.stringify([session.email,profileId??'',action,input]);
+  const hit=readCache.get(key);const age=hit?Date.now()-hit.at:Infinity;
   // A read refused for «too many at once» (429) is asked again after a short pause instead of failing the screen;
   // writes never retry on their own.
-  const once=()=>feRequest(state.session,action,input,schema,{profileId});
-  const value=once().catch(e=>e instanceof FeError&&e.code==='rate_limited'?wait(2500).then(once):Promise.reject(e))
+  const once=()=>feRequest(session,action,input,raw,{profileId});
+  const ask=()=>once().catch(e=>e instanceof FeError&&e.code==='rate_limited'?wait(2500).then(once):Promise.reject(e))
    .catch(e=>e instanceof FeError&&e.code==='rate_limited'?wait(6000).then(once):Promise.reject(e));
-  readCache.set(key,{at:Date.now(),action,value});
-  value.catch(()=>{if(readCache.get(key)?.value===value)readCache.delete(key);});
-  if(opts.signal){const sig=opts.signal;return new Promise<T>((res,rej)=>{sig.addEventListener('abort',()=>rej(new DOMException('Aborted','AbortError')),{once:true});value.then(res,rej);});}
-  return value;
- },[state,acting?.id]);
+  const store=(value:Promise<unknown>)=>{
+   const entry:Entry={at:Date.now(),action,value,settled:false};readCache.set(key,entry);
+   value.then(()=>{entry.settled=true;},()=>{if(readCache.get(key)===entry)readCache.delete(key);});
+   if(readCache.size>READ_MAX){const first=readCache.keys().next().value;if(first!==undefined)readCache.delete(first);}
+  };
+  let value:Promise<unknown>;
+  if(hit&&!opts.fresh&&age<READ_TTL)value=hit.value;
+  else if(hit&&!opts.fresh&&age<STALE_TTL&&hit.settled){
+   // Stale: answer from memory now, ask the server in the background.
+   value=hit.value;
+   if(!hit.refreshing){hit.refreshing=true;
+    ask().then(async body=>{
+     const before=JSON.stringify(await hit.value);
+     if(readCache.get(key)!==hit)return; // a write or a signal emptied the cache meanwhile
+     const entry:Entry={at:Date.now(),action,value:Promise.resolve(body),settled:true};readCache.set(key,entry);
+     if(JSON.stringify(body)!==before)for(const l of [...staleListeners])l();
+    },()=>{hit.refreshing=false;});}
+  }else{value=ask();store(value);}
+  // Not bound to the caller's AbortSignal: a screen that unmounts must not cancel a read another screen will reuse.
+  const parsed=parse(value,schema);
+  if(opts.signal){const sig=opts.signal;return new Promise<T>((res,rej)=>{sig.addEventListener('abort',()=>rej(new DOMException('Aborted','AbortError')),{once:true});parsed.then(res,rej);});}
+  return parsed;
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[state,acting?.id,rev,sessionKey]);
  const value=useMemo(()=>({state,acting,setActing,reload,call}),[state,acting,setActing,reload,call]);
  // One socket per signed-in session, joined to the channels of every profile this account may act as.
  const listeners=useRef(new Set<RtListener>());
