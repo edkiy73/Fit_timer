@@ -174,6 +174,7 @@ test('without keys nothing is sent and it is said once; phones still go through 
   // Keys pasted with the key file's quotes and commas still work.
   const pasted = webPushFromEnv({ FE_VAPID_PUBLIC_KEY: ` "${KEYS.publicKey}",`, FE_VAPID_PRIVATE_KEY: `"${KEYS.privateKey}",`, FE_VAPID_SUBJECT: `'${KEYS.subject}'` }, () => {});
   assert.equal(pasted?.publicKey, createWebPush(KEYS)?.publicKey);
+  assert.ok(webPushFromEnv({ FE_VAPID_PUBLIC_KEY: KEYS.publicKey, FE_VAPID_PRIVATE_KEY: KEYS.privateKey, FE_VAPID_SUBJECT: 'owner@example.com' }, () => {}), 'a bare e-mail is a fine contact');
 
   const { pg, db, call, posts, native, deliver, member } = await world();
   try {
