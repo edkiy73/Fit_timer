@@ -137,7 +137,7 @@ export function LinksScreen(){
      </>}
      <Group title={fill(t('fe.ln.confirmed'),{n:r.confirmed.length})}>
       {r.confirmed.length?<Card list>{r.confirmed.map(l=>row(l,false,l.change?.mine?t('fe.ln.changePending'):''))}</Card>
-       :<Card><div className="lk-empty"><Note>{t('fe.ln.emptyText')}</Note><Note>{t('fe.ln.emptyHow')}</Note></div></Card>}
+       :<Empty compact icon={Link2} title={t('fe.ln.emptyText')} text={t('fe.ln.emptyHow')}/>}
      </Group>
      {r.sent.length>0&&<Group title={fill(t('fe.ln.sent'),{n:r.sent.length})}>
       <Card list>{r.sent.map(l=>row(l,true,t('fe.ln.awaiting')))}</Card>

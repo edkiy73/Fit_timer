@@ -114,7 +114,7 @@
   .v21 .dock{display:none!important}
   .v21 .main>.bar,
 .v21 .main>.view>.wrap,
-.v21 .main>.ctabar>.wrap{max-width:680px;margin-inline:auto;width:100%}
+.v21 .main>.ctabar>.wrap{max-width:var(--page-max);margin-inline:auto;width:100%}
   .v21 .auth-wrap{max-width:460px;margin:0 auto;width:100%}
 }
 @container stage (min-width:1100px){
@@ -709,7 +709,6 @@
 .v21 .composer>span:not(.ibtn):not(.av){flex:1;color:var(--faint);font-size:var(--fs-body)}
 .v21 .composer .ibtn{width:38px;height:38px}
 .v21 .composer .ibtn.add{background:var(--accent);color:#fff;border-radius:var(--r-m)}
-.v21 .c-composer{margin-bottom:12px}
 .v21 .disc-a{margin-top:12px}
 .v21 .mention-sug{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:7;display:grid;padding:6px;border-radius:var(--r);background:var(--surf);border:1px solid var(--line);box-shadow:var(--shadow,0 8px 24px rgba(0,0,0,.25))}
 .v21 .mention-sug button{display:flex;align-items:center;gap:10px;min-height:40px;padding:0 8px;border-radius:var(--r-s);text-align:left;color:var(--ink)}
@@ -737,7 +736,6 @@
 .v21 .pop-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:2px 0 10px;font-size:var(--fs-xs);color:var(--mute)}
 .v21 .pop-head .linkbtn{flex:none;font-weight:600;color:var(--accent)}
 .v21 .pop-d{display:flex;align-items:center}.v21 .pop-d .li{flex:1;min-width:0}.v21 .pop-d small svg{width:13px;height:13px;vertical-align:-2px}
-.v21 .lk-empty{display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:14px}
 .v21 .gtile .gt-w{position:absolute;left:6px;top:6px;width:22px;height:22px;border-radius:var(--r-xs);display:grid;place-items:center;background:rgba(0,0,0,.6);color:#fff}.v21 .gtile .gt-w svg{width:13px;height:13px}
 .v21 .li .ck{width:24px;height:24px;border-radius:var(--r-xs);border:1.5px solid var(--line2);display:grid;place-items:center;flex:none}.v21 .li .ck.on{background:var(--accent);border-color:var(--accent);color:#fff}.v21 .li .ck svg{width:15px;height:15px}
 .v21 .li[aria-disabled="true"]{opacity:.6}
@@ -1026,7 +1024,7 @@
 
 /* ============ DECK (dating) ============ */
 .v21 .view.deckmode{display:flex;flex-direction:column;overflow:hidden;padding:0 10px calc(var(--dock) + 16px + var(--safe-b))}
-.v21 .deck{position:relative;flex:1;min-height:0;width:100%;max-width:680px;margin:0 auto}
+.v21 .deck{position:relative;flex:1;min-height:0;width:100%;max-width:var(--page-max);margin:0 auto}
 .v21 .pc{position:absolute;inset:0;border-radius:var(--r-xl);background:var(--surf);border:1px solid var(--line);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;touch-action:pan-y;scrollbar-width:none;box-shadow:var(--shadow);transition:transform .32s var(--ease);will-change:transform;user-select:none;-webkit-user-select:none;--l:0;--n:0;isolation:isolate;contain:layout paint}
 .v21 .pc::-webkit-scrollbar{display:none}
 .v21 .pc.drag{transition:none}.v21 .pc.fly{transition:transform .28s ease-in}
@@ -1243,8 +1241,8 @@
 @container stage (min-width:768px){
   /* the bar has its own gutter, the view's wrap does not: widen the bar by the gutter so both align */
   .v21 .main>.bar,
-.v21 .main>.ctabar>.wrap{max-width:calc(680px + 2 * var(--gut))}
-  .v21 .main>.ctabar>.wrap{max-width:680px}
+.v21 .main>.ctabar>.wrap{max-width:calc(var(--page-max) + 2 * var(--gut))}
+  .v21 .main>.ctabar>.wrap{max-width:var(--page-max)}
   .v21 .view .hero,
 .v21 .view .ev-hero,
 .v21 .view .cm-hero{margin:8px 0 0;border-radius:var(--r-xl)}
@@ -1655,12 +1653,12 @@
 /* -- sign-up and onboarding: the same column as the app's content (680px) on every step, header and bottom buttons included;
       the welcome screen too (round 5: 460px read as a phone on a desktop) -- */
 @container stage (min-width:768px){
-  .v21 .root.auth .auth-wrap{max-width:680px}
-  .v21 .root.auth .main>.bar{max-width:calc(680px + 2 * var(--gut))}
-  .v21 .root.auth .main>.ctabar>.wrap{max-width:680px}
-  .v21 .welcome>*:not(.w-bg){width:100%;max-width:680px;margin-inline:auto}
+  .v21 .root.auth .auth-wrap{max-width:var(--page-max)}
+  .v21 .root.auth .main>.bar{max-width:calc(var(--page-max) + 2 * var(--gut))}
+  .v21 .root.auth .main>.ctabar>.wrap{max-width:var(--page-max)}
+  .v21 .welcome>*:not(.w-bg){width:100%;max-width:var(--page-max);margin-inline:auto}
   .v21 .welcome .w-cta,
-.v21 .welcome .w-age{max-width:680px}
+.v21 .welcome .w-age{max-width:var(--page-max)}
 }
 .v21 .pc-who:empty{display:none}
 .v21 .hcard .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1695,7 +1693,7 @@
 .v21 .pc-ph>.mbg{display:none}
 @container stage (min-width:481px){
   .v21 .view.deckmode{justify-content:stretch;padding-bottom:16px}
-  .v21 .deck{flex:1 1 auto;width:100%;max-width:680px;height:auto;max-height:none;aspect-ratio:auto;margin:0 auto}
+  .v21 .deck{flex:1 1 auto;width:100%;max-width:var(--page-max);height:auto;max-height:none;aspect-ratio:auto;margin:0 auto}
   .v21 .pc-ph{isolation:isolate}
   .v21 .pc-ph>.mbg{display:block;position:absolute;inset:-12%;width:124%;height:124%;max-width:none;object-fit:cover;filter:blur(26px) saturate(1.1) brightness(.85);z-index:-1}
   .v21 .pc-ph>img:not(.mbg){object-fit:contain;object-position:50% 50%}
@@ -1709,7 +1707,7 @@
 .v21 .poll-option{position:relative;display:flex;align-items:stretch;border-radius:var(--r-m);background:var(--surf)}.v21 .poll-option .poll-choice{flex:1;min-width:0;padding-right:60px}.v21 .poll.voted .poll-option button{border:0;box-shadow:none}.v21 .poll-option .poll-count{position:absolute;right:2px;top:2px;bottom:2px;min-width:48px;justify-content:center;padding:0 8px;background:transparent;font-variant-numeric:tabular-nums;color:var(--lil)}.v21 .poll .poll-undo{display:inline;min-height:32px;padding:2px 0;box-shadow:none;border:0;border-radius:0;color:var(--lil);font-size:var(--fs-xs);background:transparent;text-decoration:underline;white-space:nowrap}.v21 .poll-option .poll-choice[aria-disabled=true]{cursor:default}
 
 .v21 .maintenance #side,
-.v21 .maintenance #ctx{display:none!important}.v21 .maintenance .root{grid-template-columns:minmax(0,680px);justify-content:center}.v21 .maintenance-screen{min-height:80dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:16px}.v21 .maintenance-screen h1{font-size:clamp(28px,5vw,42px);margin:0}.v21 .maintenance-screen>.ico{width:72px;height:72px;border-radius:var(--r-xl)}.v21 .maintenance-screen .lead{max-width:440px}
+.v21 .maintenance #ctx{display:none!important}.v21 .maintenance .root{grid-template-columns:minmax(0,var(--page-max));justify-content:center}.v21 .maintenance-screen{min-height:80dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:16px}.v21 .maintenance-screen h1{font-size:clamp(28px,5vw,42px);margin:0}.v21 .maintenance-screen>.ico{width:72px;height:72px;border-radius:var(--r-xl)}.v21 .maintenance-screen .lead{max-width:440px}
 
 .v21 .maintenance #layer{display:none!important}
 /* Keep prototype controls in the sidebar area, clear of tablet message/submit buttons. */

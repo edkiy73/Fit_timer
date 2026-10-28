@@ -5,6 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {AtSign,Check,Copy,EyeOff,Heart,Link as LinkIcon,Lock,ShieldCheck,Users,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicBase} from '../api-url';
+import {copyLink} from './share';
 import {Alert,Av,Bar,Btn,Card,Field,Group,H,Input,Note,PersonLine,Pill,RadioList,RequestCard,Row,SelectRow,Sheet,Skel,View} from './kit';
 import {useFe} from './session';
 import {Ask} from './me';
@@ -147,7 +148,7 @@ export function PairScreen(){
  const makeLink=()=>act(async()=>{
   const r=await call('couple.linkCreate',{opId:newOpId()},linkRes,{asAccount:true});const url=linkUrl(r.token);
   setLink({url,expiresAt:r.expiresAt});
-  try{await navigator.clipboard.writeText(url);toast(t('fe.c6.link.copied'),{type:'ok'});}catch{/* the sheet shows it to copy by hand */}
+  if(await copyLink(url))toast(t('fe.c6.link.copied'),{type:'ok'}); // else the sheet shows it to copy by hand
  });
  return <>
   <Bar title={t('fe.pair.title')} back="/n/me"/>
@@ -175,7 +176,7 @@ export function PairScreen(){
    </>}
    {failure&&<Alert kind="err" noIcon className="mt12">{failure}</Alert>}
   </div></View>
-  {link&&<Sheet title={t('fe.c6.link.sheet')} onClose={()=>setLink(null)} foot={<Btn icon={Copy} onClick={()=>{navigator.clipboard?.writeText(link.url).then(()=>toast(t('fe.c6.link.copied'),{type:'ok'}),()=>toast(t('fe.c6.link.copyHand'),{type:'info'}));}}>{t('fe.c6.link.copyBtn')}</Btn>}>
+  {link&&<Sheet title={t('fe.c6.link.sheet')} onClose={()=>setLink(null)} foot={<Btn icon={Copy} onClick={()=>{void copyLink(link.url).then(ok=>toast(t(ok?'fe.c6.link.copied':'fe.c6.link.copyHand'),{type:ok?'ok':'info'}));}}>{t('fe.c6.link.copyBtn')}</Btn>}>
    <p className="lead">{t('fe.c6.link.lead')}</p>
    <Field id="fe-pair-link" label={t('fe.c6.link.label')}><Input id="fe-pair-link" name="pairLink" readOnly value={link.url} onFocus={e=>e.currentTarget.select()}/></Field>
    <Alert kind="info" className="mt12">{t('fe.c6.link.atOnce')}</Alert>

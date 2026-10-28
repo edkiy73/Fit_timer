@@ -14,6 +14,7 @@ import {SignedOut} from './start';
 import {ToastProvider,useToast} from './toast';
 import {PushOffer} from './push';
 import {ActAsSheet} from './couple';
+import {CreateSheet} from './create-entry';
 import {AppUpdateProvider,UpdateRequired,UpdateSheet,useUpdateRequired} from './app-update';
 import {DockHide} from './dock';
 import {prefetchScreens} from '../lazy-screens';
@@ -157,6 +158,7 @@ function FeLayout(){
  // V21 `hascta`: a screen with a pinned action bar (save / publish / continue) lifts it above the phone dock;
  // without the class the dock covers the bar. Screens render the bar themselves, so the frame watches for it.
  // The search screen's `.sbar` sits in the flow, not over the view: no room is kept for a floating `.bar` there.
+ const [create,setCreate]=useState(false);
  const main=useRef<HTMLElement>(null);const [cta,setCta]=useState(false);const [sbar,setSbar]=useState(false);
  // Applied before the next paint (flushSync in the observer's microtask): a frame without the class moved the bar
  // up under the reader on every screen with one (owner 28.10.2026: «все прыгает при переходах»).
@@ -175,7 +177,7 @@ function FeLayout(){
   <aside className="side">
    <div className="brand"><img src={import.meta.env.BASE_URL+'fe-logo.svg'} alt=""/><b>Fet<i>Ure</i></b></div>
    <nav aria-label={t('fe.nav.aria')}>{FE_TABS.map(({id,icon:Icon})=><button key={id} type="button" className={'navb'+(current===id?' on':'')} aria-current={current===id?'page':undefined} onClick={()=>go(id)}><Icon/><span>{t('fe.nav.'+id)}</span>{badge(id)==='dot'?<em className="dot"/>:badge(id)?<em>{badge(id)}</em>:null}</button>)}</nav>
-   <Btn className="create" icon={Plus} onClick={()=>navigate('/n/feed/new')} aria-label={t('fe.create')}><span>{t('fe.create')}</span></Btn>
+   <Btn className="create" icon={Plus} aria-haspopup="dialog" onClick={()=>setCreate(true)} aria-label={t('fe.create')}><span>{t('fe.create')}</span></Btn>
    <div className="sp"/>
    {acting&&<button type="button" className="mebtn" aria-haspopup={pair?'dialog':undefined} onClick={()=>pair?setActAs(true):navigate('/n/me')}>
     <Av name={name} seed={acting.id} src={acting.avatar}/><span>{name}<small>{acting.kind==='couple'?t('fe.me.coupleProfile'):t('fe.me.personalProfile')}</small></span>
@@ -195,6 +197,7 @@ function FeLayout(){
     </button>)}
    </nav>}
    {actAs&&<ActAsSheet onClose={()=>setActAs(false)}/>}
+   {create&&<CreateSheet onClose={()=>setCreate(false)}/>}
    </ToastProvider></DockHide.Provider>
   </main>
  </div></div>;

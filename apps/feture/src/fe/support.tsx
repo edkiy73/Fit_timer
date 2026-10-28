@@ -83,7 +83,7 @@ export function SupportBlock(){
   <Group title={t('fe.w8.sup.mine')}>
    {error?<Alert kind="err" action={<Btn kind="soft" size="sm" auto icon={RefreshCw} onClick={load}>{t('fe.retry')}</Btn>}>{feErrorMessage(error,t)}</Alert>
     :!list?<Skel kind="list" rows={2}/>
-    :!list.length?<Note>{t('fe.w8.sup.empty')}</Note>
+    :!list.length?<Empty compact icon={MessageCircle} title={t('fe.w8.sup.empty')}/>
     :<Card list>{list.map(x=>{const last=x.messages[x.messages.length-1];
      return <Row key={x.id} icon={x.state==='answered'?Check:MessageCircle} tone={x.state==='answered'?'g':undefined} title={t('fe.w8.sup.t.'+x.topic)}
       sub={t('fe.w8.sup.s.'+x.state)+' · '+when(x.updatedAt)+(last?' · '+last.body.slice(0,60):'')} onClick={()=>setOpen(x.id)}/>;})}</Card>}

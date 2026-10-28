@@ -5,8 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {ArrowUpDown,AtSign,Bell,BellOff,Bookmark,Check,Calendar,ChartColumn,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,FileText,Globe,Heart,Image as ImageIcon,KeyRound,Lock,MessageCircle,MessageSquareText,Newspaper,Pencil,Plus,Search,SendHorizontal,Share,SlidersHorizontal,Sparkles,Trash2,User,Users,X} from 'lucide-react';
 import type {LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {publicOrigin} from '../api-url';
-import {articlePlate,ActingAv,ActionLine,ActivityCard,ActivityItem,Alert,ArticleCard,ArticleImage,Ask,Av,BAD_CHARS,Bar,Btn,Card,Chip,Chips,Counter,Empty,FeedEvents,Field,FilePick,Group,H,IconBtn,LoadMore,Input,LikesLine,Note,QuickStart,RichEditor,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,VideoBadge,View,ViewerPostBar,hasLongWord,mdImages,type RichEditorHandle} from './kit';
+import {Actions,articlePlate,ActingAv,ActionLine,ActivityCard,ActivityItem,Alert,ArticleCard,ArticleImage,Ask,Av,BAD_CHARS,Bar,Btn,Card,Chip,Chips,Counter,Empty,FeedEvents,Field,FilePick,Group,H,IconBtn,LoadMore,Input,LikesLine,Note,QuickStart,RichEditor,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,VideoBadge,View,ViewerPostBar,hasLongWord,mdImages,type RichEditorHandle} from './kit';
 import {shakeFirstErr} from './kit/validate';
 import {useFe,usePartnerApproves} from './session';
 import {ActivityCardOf,activitySchema,type Act} from './feed-activity';
@@ -21,6 +20,8 @@ import {AlbumField,albumOfPost} from './gallery';
 import {Jars,useInterests,type Interest} from './interests';
 import {NameBadges} from './faces';
 import {EventCard,eventRow} from './communities';
+import {Composer,CreateSheet} from './create-entry';
+import {useCopyLink} from './share';
 import {CompareSheet,asInterest} from './compare';
 
 /** Slice B (V21 F01, F05, F07, F09) with the prototype's markup: feed tabs, composer row, topic chips and filters,
@@ -37,6 +38,8 @@ export const postSchema=z.object({id:z.uuid(),type:z.enum(['post','note']),title
  audience:z.string().optional(),editedAt:z.string().nullable().optional(),
  // Own posts only: what the edit screen starts from.
  rev:z.number().int().optional(),inFeed:z.boolean().optional(),returned:z.string().nullable().optional(),albumId:z.uuid().nullable().optional(),
+ // A discussion: its community (the editor keeps it there and shows who sees it).
+ communityId:z.uuid().optional(),
  // Own posts hidden by «это я на фото — против»: only the author's explanation, never who objected.
  dispute:z.object({note:z.string().nullable()}).optional(),
  poll:z.object({question:z.string(),options:z.array(z.string()),myVote:z.number().nullable().optional(),results:z.array(z.number()).nullable().optional()}).nullable().optional(),
@@ -51,6 +54,7 @@ const reply=z.object({id:z.uuid(),parentId:z.uuid().nullable().optional(),delete
  mentions:z.array(z.object({id:z.uuid(),handle:z.string().nullable()})).optional()});
 export type Reply=z.infer<typeof reply>;
 const replies=z.object({ok:z.literal(true),items:z.array(reply)});
+const commPriv=z.object({ok:z.literal(true),community:z.object({privacy:z.string()}).passthrough()});
 const onePost=z.object({ok:z.literal(true),post:postSchema});
 const hiddenList=z.object({ok:z.literal(true),items:z.array(z.object({kind:z.string()}).passthrough())});
 
@@ -210,8 +214,8 @@ export function FeedTab(){
   :<Empty icon={Newspaper} title={t('fe.fd.noPosts')} text={t('fe.fd.noPostsText')}><Btn onClick={()=>navigate('/n/search?scope=people')}>{t('fe.fd.findPeople')}</Btn></Empty>;
  else body=<>
   <div className="posts">{items.flatMap((p,i)=>[isAct(p)?<ActivityCardOf key={p.id} a={p} onMenu={()=>setActMenu(p)}/>
-   :gone[p.id]?<Alert key={p.id} kind="info" icon={EyeOff} className="mb12" action={<Stack row gap={2}><Btn size="sm" kind="soft" fit onClick={()=>restore(p.id,gone[p.id]!)}>{t('fe.tl.undo')}</Btn>
-     <Btn size="sm" kind="text" fit onClick={()=>muteAuthor(gone[p.id]!)}>{t('fe.w3.hide.author',{name:gone[p.id]!.name})}</Btn></Stack>}>{t('fe.w3.hide.row')}</Alert>
+   :gone[p.id]?<Alert key={p.id} kind="info" icon={EyeOff} className="mb12" action={<Actions><Btn size="sm" kind="soft" fit onClick={()=>restore(p.id,gone[p.id]!)}>{t('fe.tl.undo')}</Btn>
+     <Btn size="sm" kind="text" fit onClick={()=>muteAuthor(gone[p.id]!)}>{t('fe.w3.hide.author',{name:gone[p.id]!.name})}</Btn></Actions>}>{t('fe.w3.hide.row')}</Alert>
    :<PostCard key={p.id} post={p} onChange={replace} onExpired={()=>refetch(p.id)}
    onRemove={r=>{
     // «Скрыть публикацию» leaves a row in its place (V21 FEED-011) until the feed reloads.
@@ -226,22 +230,17 @@ export function FeedTab(){
  return <>
   <Bar title={t('fe.nav.feed')}><IconBtn icon={Plus} label={t('fe.fd.createPub')} aria-haspopup="dialog" onClick={()=>setSheet('create')}/><IconBtn icon={Search} label={t('fe.br.search')} onClick={()=>navigate('/n/search?scope=posts')}/><BellButton/></Bar>
   <View>
-   <div className="mb12"><Seg value={tab} onChange={v=>{setNotice('');setTab(v);}} options={[{id:'forYou',label:t('fe.feed.tab.forYou')},{id:'following',label:t('fe.feed.tab.following')},{id:'popular',label:t('fe.fd.tab.popular')}]}/></div>
-   {notice&&<Alert kind="ok" className="mb12">{notice}</Alert>}
-   {welcome&&!acting?.avatar&&<Card className="mb12"><Stack gap={3}>
+   <div><Seg value={tab} onChange={v=>{setNotice('');setTab(v);}} options={[{id:'forYou',label:t('fe.feed.tab.forYou')},{id:'following',label:t('fe.feed.tab.following')},{id:'popular',label:t('fe.fd.tab.popular')}]}/></div>
+   {notice&&<Alert kind="ok">{notice}</Alert>}
+   {welcome&&!acting?.avatar&&<Card><Stack gap={3}>
     <H level={4}>{t('fe.fd.welcome.title')}</H><Text size="sm" tone="mute">{t('fe.fd.welcome.text')}</Text>
-    <Stack row gap={2}><Btn size="sm" fit onClick={()=>navigate('/n/me/edit?only=media')}>{t('fe.fd.welcome.go')}</Btn>
-     <Btn kind="soft" size="sm" fit onClick={()=>setWelcome(false)}>{t('fe.fd.welcome.hide')}</Btn></Stack>
+    <Actions><Btn size="sm" fit onClick={()=>navigate('/n/me/edit?only=media')}>{t('fe.fd.welcome.go')}</Btn>
+     <Btn kind="soft" size="sm" fit onClick={()=>setWelcome(false)}>{t('fe.fd.welcome.hide')}</Btn></Actions>
    </Stack></Card>}
-   <div className="composer">
-    <button type="button" className="cmp-main" onClick={()=>navigate('/n/feed/new')}>{acting&&<ActingAv p={acting}/>}<span>{t(acting?.kind==='couple'?'fe.feed.whatsNewUs':'fe.feed.whatsNew')}</span></button>
-    <IconBtn icon={ImageIcon} kind="ghost" size="sm" label={t('fe.fd.photoOrVideo')} onClick={()=>navigate('/n/feed/new?x=media')}/>
-    <IconBtn icon={ChartColumn} kind="ghost" size="sm" label={t('fe.feed.poll')} onClick={()=>navigate('/n/feed/new?x=poll')}/>
-    <IconBtn icon={Plus} kind="add" label={t('fe.create')} onClick={()=>setSheet('create')}/>
-   </div>
+   <Composer/>
    {tab==='popular'?(myTopics.length>0&&<>
      <ActionLine text={t('fe.w3.pop.head')} action={t('fe.w3.pop.how')} onAction={()=>setSheet('popInfo')}/>
-     <Chips scroll className="mb12" label={t('fe.w3.pop.chips')}><Chip filter on={!popTag} onClick={()=>setPopTag('')}>{t('fe.w3.pop.all')}</Chip>
+     <Chips scroll label={t('fe.w3.pop.chips')}><Chip filter on={!popTag} onClick={()=>setPopTag('')}>{t('fe.w3.pop.all')}</Chip>
       {myTopics.map(x=><Chip key={x} filter on={popTag===x} onClick={()=>setPopTag(popTag===x?'':x)}>#{tname(x)}</Chip>)}</Chips>
      <PopularDiscussions topic={popTag}/></>)
     :ready&&(chips.length>0||catalog.length>0)&&<div className="filterline"><Chips scroll>{chips}</Chips>
@@ -287,17 +286,6 @@ function PopInfoSheet({onClose}:{onClose:()=>void}){
  return <Sheet title={t('fe.w3.pop.howTitle')} onClose={onClose}><Card list>{rows.map(([I,ti,s])=><Row key={ti} icon={I} title={ti} sub={s}/>)}</Card></Sheet>;
 }
 
-/** `ACT.create` — what to create: a post, an article or an event; or straight to photos, a poll, my interests. */
-export function CreateSheet({onClose}:{onClose:()=>void}){
- const {t}=useI18n();const navigate=useNavigate();
- const rows:[LucideIcon,string,string,string,string][]=[[MessageSquareText,'l',t('fe.fd.cr.post'),t('fe.fd.cr.postSub'),'/n/feed/new'],[FileText,'v',t('fe.fd.cr.note'),t('fe.fd.cr.noteSub'),'/n/feed/new?x=note'],[Calendar,'g',t('fe.fd.cr.event'),t('fe.fd.cr.eventSub'),'/n/events/new']];
- const go=(to:string)=>()=>{onClose();navigate(to);};
- return <Sheet title={t('fe.create')} onClose={onClose}>
-  <Card list>{rows.map(([I,tone,b,s,to])=><Row key={to} icon={I} tone={tone} title={b} sub={s} onClick={go(to)}/>)}</Card>
-  <QuickStart title={t('fe.w3.cr.quick')} items={[[ImageIcon,t('fe.w3.cr.media'),go('/n/feed/new?x=media')],[ChartColumn,t('fe.feed.poll'),go('/n/feed/new?x=poll')],[Sparkles,t('fe.fd.myInterests'),go('/n/feed/new?x=interests')]]}/>
- </Sheet>;
-}
-
 /** F02 — the feed's filters (V21 feedFilters): what «Подписки» shows, topics to show and to hide, what is in the post.
  * The button says how many the server would show («Показать N»); with none it is the inactive «Нет подходящих». */
 function FeedFilterSheet({tab,topics,cats,popular,value,locale,onClose,onApply}:{tab:Tab,topics:CatTopic[],cats:{id:string,ru:string,en:string}[],popular:string[],value:Filters,locale:string,onClose:()=>void,onApply:(v:Filters)=>void}){
@@ -321,7 +309,7 @@ function FeedFilterSheet({tab,topics,cats,popular,value,locale,onClose,onApply}:
   foot={<Btn onClick={()=>{setSub(null);setQ('');}}>{t('fe.fd.done')}</Btn>}>
   {cats.map(c=>{const list=topics.filter(x=>x.categoryId===c.id&&(!low||nm(x).toLowerCase().includes(low)));if(!list.length)return null;
    return <section key={c.id} className="fsec"><SectionLabel>{locale==='en'?c.en:c.ru}</SectionLabel><Chips>{list.map(x=><Chip key={x.id} on={d[sub].includes(x.id)} onClick={()=>flip(sub,x.id)}>{nm(x)}</Chip>)}</Chips></section>;})}
-  {low&&!topics.some(x=>nm(x).toLowerCase().includes(low))&&<Note className="sh-empty">{t('fe.br.nothing')}</Note>}
+  {low&&!topics.some(x=>nm(x).toLowerCase().includes(low))&&<Empty compact icon={Search} title={t('fe.br.nothing')}/>}
  </Sheet>;
  return <Sheet full title={t('fe.fd.feedFilters')} onClose={onClose} head={<Btn kind="text" auto onClick={()=>setD(NO_FILTERS)}>{t('fe.fd.reset')}</Btn>}
   foot={<Btn onClick={()=>onApply(d)} disabled={n===0} busy={count===null}>{label}</Btn>}>
@@ -355,7 +343,7 @@ export function FilterSheet({title,topics,cats,popular,value,onClose,onApply,max
   foot={all?<Btn onClick={()=>{setAll(false);setQ('');}}>{t('fe.fd.done')}</Btn>:<Btn onClick={()=>onApply(d)}>{max?t('fe.fd.done'):t('fe.fd.applyFilters')}</Btn>}>
     {all?<>{cats.map(c=>{const list=topics.filter(x=>x.categoryId===c.id&&(!low||nm(x).toLowerCase().includes(low)));if(!list.length)return null;
       return <section key={c.id} className="fsec"><SectionLabel>{locale==='en'?c.en:c.ru}</SectionLabel><Chips>{list.map(chip)}</Chips></section>;})}
-     {low&&!topics.some(x=>nm(x).toLowerCase().includes(low))&&<Note className="sh-empty">{t('fe.br.nothing')}</Note>}</>
+     {low&&!topics.some(x=>nm(x).toLowerCase().includes(low))&&<Empty compact icon={Search} title={t('fe.br.nothing')}/>}</>
     :<section className="fin"><div className="fin-t"><b>{max?t('fe.fd.topicsUpTo3'):t('fe.fd.showTopics')}</b><span>{max?t('fe.fd.topicsPicked',{n:d.length,max}):t('fe.fd.pickAny')}</span>{d.length>0&&<button type="button" className="fclr" onClick={()=>setD([])}>{t('fe.fd.clear')}</button>}</div>
      <Chips>{pop.map(chip)}<Chip more icon={Search} onClick={()=>setAll(true)}>{t('fe.br.seeAll')} · {topics.length}</Chip></Chips>
     </section>}
@@ -382,7 +370,7 @@ export function PostCard({post,onChange,onRemove,onExpired,full=false,onReply,pr
     toast(on?(acting?.kind==='couple'?t('fe.fd.savedUs'):t('fe.fd.savedMe')):t('fe.fd.unsaved'+(acting?.kind==='couple'?'Us':'')),on?{type:'ok',action:{label:t('fe.fd.open'),fn:()=>navigate('/n/me/saved')}}:{action:{label:t('fe.tl.undo'),fn:resave}});}
   }catch(e){onChange(post);toast(feErrorMessage(e,t),{type:'err'});}finally{setBusy(false);}
  };
- const share=async()=>{const url=`${publicOrigin()}/#/n/feed/post/${post.id}`;try{await navigator.clipboard.writeText(url);toast(t('fe.fd.linkCopied'),{type:'ok'});}catch{toast(url,{type:'info'});}};
+ const copyLink=useCopyLink();const share=()=>void copyLink('/n/feed/post/'+post.id);
  const open=()=>{if(!full&&!preview)navigate('/n/feed/post/'+post.id);};
  const mine=post.rev!=null;
  const me=post.tags?.find(x=>x.id===acting?.id);
@@ -460,7 +448,7 @@ function TagReviewSheet({post,busy,onClose,onAnswer}:{post:Post,busy:boolean,onC
  const others=(post.tags??[]).filter(x=>x.id!==acting?.id&&x.state!=='ok').length;
  const aud=t('fe.w3.tag.aud.'+(post.audience??'all'));
  return <Sheet title={t('fe.w3.tag.title')} sub={t('fe.w3.tag.sub',{name:nameOf(post.author)})} onClose={onClose}
-  foot={<Stack row gap={2}><Btn kind="soft" disabled={busy} onClick={()=>onAnswer('no')}>{t('fe.w3.tag.no')}</Btn><Btn disabled={busy} onClick={()=>onAnswer('ok')}>{t('fe.w3.tag.yes')}</Btn></Stack>}>
+  foot={<Actions><Btn kind="soft" disabled={busy} onClick={()=>onAnswer('no')}>{t('fe.w3.tag.no')}</Btn><Btn disabled={busy} onClick={()=>onAnswer('ok')}>{t('fe.w3.tag.yes')}</Btn></Actions>}>
   <Stack gap={3}>
    <MediaGrid media={post.media}/>
    {(post.title||post.body)&&<Text size="sm" tone="mute">{mdPlain(post.title||post.body).slice(0,160)}</Text>}
@@ -680,7 +668,11 @@ const thumbOf=(a:unknown):string|null=>{const src=(a as {src?:Record<string,stri
 export function ComposeScreen({edit,fromSaved}:{edit?:Post,fromSaved?:boolean}={}){const {key}=useLocation();return <ComposeForm key={edit?.id??key} edit={edit} fromSaved={!!fromSaved}/>;}
 function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boolean}){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const [params]=useSearchParams();const toast=useToast();
- const communityId=edit?null:params.get('community');const x=params.get('x');
+ // One editor everywhere (owner 29.10.2026): in a community only «Кто видит» (a fixed line by its privacy) and the
+ // gallery album differ; drafts, articles, «Мои интересы», mentions and topics work as anywhere.
+ const communityId=edit?edit.communityId??null:params.get('community');const x=params.get('x');
+ const [commPrivacy,setCommPrivacy]=useState<string|null>(null);
+ useEffect(()=>{if(communityId)call('community.get',{communityId},commPriv).then(r=>setCommPrivacy(r.community.privacy)).catch(()=>{});},[call,communityId]);
  const {topics:catalog,cats,name:tname}=useTopics();const {items:myJars,topics:jarTopics}=useInterests();
  const draft=edit?.state==='draft';const live=!!edit&&!draft;
  // A post and an article are two editors (owner 28.10.2026): the post composer offers no «статья».
@@ -729,9 +721,9 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
  const noteMedia=note?[...(coverId?[coverId]:[]),...refs.filter(id=>id!==coverId&&media.some(m=>m.id===id))]:[];
  const shownMedia=note?media.filter(m=>m.id===coverId):media;
  const max=note?NOTE_MAX:1000;
- const fields=()=>note?{type:'note' as const,...(title.trim()?{title:title.trim()}:{}),body:body.trim(),audience,inFeed,topics,mediaIds:noteMedia,interests:[],tags:[]}
+ const fields=()=>note?{type:'note' as const,...(title.trim()?{title:title.trim()}:{}),body:body.trim(),audience,inFeed,topics,mediaIds:noteMedia,interests:[],tags:[],...(communityId&&!edit?{communityId}:{})}
   :{type:'post' as const,body:body.trim(),audience,inFeed,topics,mediaIds:media.map(m=>m.id),
-  ...(poll?{poll:{question:poll.question.trim(),options:poll.options.map(o=>o.trim())}}:{}),interests:interests??[],tags:audience==='all'&&media.length?people.map(p=>p.id):[],...(communityId?{communityId}:{}),
+  ...(poll?{poll:{question:poll.question.trim(),options:poll.options.map(o=>o.trim())}}:{}),interests:interests??[],tags:audience==='all'&&media.length?people.map(p=>p.id):[],...(communityId&&!edit?{communityId}:{}),
   ...(album&&media.length&&!communityId&&(audience==='all'||audience==='followers')?{albumId:album}:{})};
  const validate=()=>{const e:Record<string,string>={};
   if(note&&title.trim().length<3)e.title=t('fe.fd.err.title');
@@ -795,7 +787,7 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
  // V21 FEED-018: leaving with unsent changes offers to keep them (a draft, or the edit of a live post) instead of losing them.
  // Opened by a link (no app history): back goes to the feed instead of leaving the app.
  const back=()=>{if(((window.history.state as {idx?:number}|null)?.idx??0)>0)navigate(-1);else navigate(communityId?'/n/communities/'+communityId:'/n/feed',{replace:true});};
- const leave=()=>{if(!communityId&&snap!==clean.current){setAsk(true);return;}back();};
+ const leave=()=>{if(snap!==clean.current){setAsk(true);return;}back();};
  const hasMedia=note?noteMedia.length>0:media.length>0;
  // The partner approves the couple's posts and edits: the button says where it goes (the server answers `pending`).
  const cta=couple&&toPartner?t('fe.ca.toPartner'):live?(hasMedia?t('fe.fd.cta.changesReview'):t('fe.fd.cta.saveChanges')):couple?(hasMedia?t('fe.fd.cta.reviewUs'):t('fe.fd.cta.publishUs')):hasMedia?t('fe.fd.cta.review'):t('fe.feed.publish');
@@ -803,10 +795,12 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
   ['granted',KeyRound,t('fe.fd.aud2.granted'),couple?t('fe.fd.aud2.grantedSubUs'):t('fe.fd.aud2.grantedSub')],...(edit?.audience==='only'?[['only',EyeOff,t('fe.fd.aud2.only'),t('fe.fd.aud2.onlySub')] as [Audience,LucideIcon,string,string]]:[])];
  const aud=AUDS.find(a=>a[0]===audience)??AUDS[0]!;const AudIcon=aud[1];
  const who=[communityId?'':aud[3],couple?t('fe.fd.asCoupleLine'):'',hasMedia?(live?t('fe.fd.hintLive'):t('fe.fd.hintReview')):''].filter(Boolean).join('. ');
- const barTitle=communityId?t(couple?'fe.cm.topicCouple':'fe.comm.newTopic'):draft?(note?t('fe.fd.noteDraft'):t('fe.fd.draft')):edit?(note?t('fe.fd.editNote'):t('fe.fd.editPost')):note?t('fe.fd.newNote'):t('fe.feed.new');
+ const barTitle=communityId&&!edit&&!note?t(couple?'fe.cm.topicCouple':'fe.comm.newTopic'):draft?(note?t('fe.fd.noteDraft'):t('fe.fd.draft')):edit?(note?t('fe.fd.editNote'):t('fe.fd.editPost')):note?t('fe.fd.newNote'):t('fe.feed.new');
  // «Кому видно» on the left, the choice on the right (owner 28.10.2026), the same row in every composer.
  const audSelect=()=><SelectRow icon={AudIcon} label={t('fe.fd.audLabel')} value={audience} options={AUDS.map(a=>[a[0],a[2]] as const)}
   onChange={v=>{setAudience(v);if(v!=='all'&&people.length)toast(t('fe.fd.tagsNeedAll'),{type:'info'});}}/>;
+ // In a community who sees it is the community's (not a choice): «Видят все» in an open one, members in a closed one.
+ const audRow=()=>communityId?<Row noChev icon={commPrivacy==='open'?Globe:Users} title={commPrivacy==='open'?t('fe.fd.seenAll'):t('fe.fd.seenMembers')}/>:audSelect();
  const err=(k:string)=>errs[k]?<div className="ferr">{errs[k]}</div>:null;
  // «Мои интересы» tapped before the profile's interests arrived waits for them instead of saying there are none.
  // The create sheet's «Мои интересы» (x=interests) opens the editor with them already attached.
@@ -854,7 +848,7 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
    <header className="bar"><IconBtn icon={ChevronLeft} kind="ghost" label={t('fe.back')} onClick={()=>setPreview(false)}/><H level={1} className="sm" tabIndex={-1}>{t('fe.fd.preview')}</H></header>
    <View className="nodock cta1">
     <Card className="preview-post k-preview-post"><PostCard post={fake} onChange={()=>{}} onRemove={()=>{}} full preview/></Card>
-    {!communityId&&<Card list className="mt16">{audSelect()}</Card>}
+    <Card list className="mt16">{audRow()}</Card>
     {steps.length>0&&<Card className="mt16 next-steps"><b>{t('fe.fd.next.title')}</b><ul>{steps.map(s=><li key={s}>{s}</li>)}</ul></Card>}
     {failure&&<Alert kind="err" className="mt12">{failure}</Alert>}
    </View>
@@ -867,11 +861,11 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
 
  return <>
   <header className="bar"><IconBtn icon={ChevronLeft} kind="ghost" label={t('fe.back')} onClick={leave}/><H level={1} className="sm" tabIndex={-1}>{barTitle}</H>
-   {!communityId&&!live&&<Btn kind="text" auto busy={busy==='draft'} disabled={!!busy} onClick={saveDraft}>{t('fe.fd.toDraft')}</Btn>}
-   {!communityId&&live&&<Btn kind="text" auto busy={busy==='draft'} disabled={!!busy} onClick={()=>void saveEdits()}>{t('fe.w3.edits.save')}</Btn>}</header>
+   {!live&&<Btn kind="text" auto busy={busy==='draft'} disabled={!!busy} onClick={saveDraft}>{t('fe.fd.toDraft')}</Btn>}
+   {live&&<Btn kind="text" auto busy={busy==='draft'} disabled={!!busy} onClick={()=>void saveEdits()}>{t('fe.w3.edits.save')}</Btn>}</header>
   <View className="nodock cta1">
    <Group>
-   {!communityId&&<Card list className="mb12">{audSelect()}</Card>}
+   <Card list className="mb12">{audRow()}</Card>
    <Card className="compose v14">
     {who&&<p className="cmp-who">{who}</p>}
     {note&&<Field id="ntitle" label={t('fe.fd.title')} error={errs.title}><Input id="ntitle" invalid={!!errs.title} value={title} maxLength={120} onChange={e=>setTitle(e.target.value)} placeholder={t('fe.fd.titlePh')}/></Field>}
@@ -900,7 +894,7 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
      {!hasMedia&&!note&&<button type="button" disabled={uploading} onClick={()=>pick('media')}><ImageIcon/><span>{t('fe.feed.media')}</span></button>}
      {!poll&&!note&&<button type="button" onClick={()=>setPoll({question:'',options:['','']})}><ChartColumn/><span>{t('fe.feed.poll')}</span></button>}
      <button type="button" onClick={openMention}><AtSign/><span>{t('fe.fd.mention')}</span></button>
-     {interests===null&&!communityId&&!note&&<button type="button" title={t('fe.fd.myInterestsHint')} className={wantInts?'busy':undefined} aria-busy={wantInts||undefined} onClick={attachInterests}><Sparkles/><span>{t('fe.fd.myInterests')}</span></button>}
+     {interests===null&&!note&&<button type="button" title={t('fe.fd.myInterestsHint')} className={wantInts?'busy':undefined} aria-busy={wantInts||undefined} onClick={attachInterests}><Sparkles/><span>{t('fe.fd.myInterests')}</span></button>}
     </div>
    </Card>
    {!communityId&&!note&&hasMedia&&(audience==='all'||audience==='followers')&&<AlbumField value={album} onChange={setAlbum} audience={audience} onNarrow={()=>setAudience('followers')}/>}
@@ -969,7 +963,7 @@ function PeopleSheet({value,locked,onClose,onApply}:{value:Person[],locked:strin
  const low=q.trim().toLowerCase();const all=[...new Map([...value,...(list??[])].map(p=>[p.id,p])).values()].filter(p=>!low||p.name.toLowerCase().includes(low));
  return <Sheet full title={t('fe.fd.peopleInPhoto')} onClose={onClose} search={<SearchInput value={q} onChange={e=>setQ(e.target.value)} label={t('fe.fd.findPerson')}/>}
   foot={<Btn onClick={()=>onApply(sel)}>{sel.length?t('fe.w3.tag.doneN',{n:sel.length}):t('fe.fd.done')}</Btn>}>
-   {list===null?<Skel kind="list"/>:!all.length?<Note>{t('fe.fd.noFollowingToMark')}</Note>
+   {list===null?<Skel kind="list"/>:!all.length?<Empty compact icon={Users} title={t('fe.fd.noFollowingToMark')}/>
     :<Card list>{all.map(p=>{const on=sel.some(s=>s.id===p.id);const lock=locked.includes(p.id);
      return <Row key={p.id} pressed={on} noChev onClick={()=>{
       // V21 tagToggle: a person who declined stays marked while the photos are the same; ten people at most.
@@ -1006,7 +1000,7 @@ function MentionSheet({onClose,onPick}:{onClose:()=>void,onPick:(handle:string,m
   {near===null?<Skel kind="list"/>:<>
    {mine.length>0&&<Group title={t('fe.w3.mention.known')}><Card list>{mine.map(row)}</Card></Group>}
    {rest.length>0&&<Group title={t('fe.w3.mention.all')}><Card list>{rest.map(row)}</Card></Group>}
-   {!mine.length&&!rest.length&&<Note className="sh-empty">{low.length<2?t('fe.w3.mention.type'):t('fe.br.nothing')}</Note>}</>}
+   {!mine.length&&!rest.length&&<Empty compact icon={Search} title={low.length<2?t('fe.w3.mention.type'):t('fe.br.nothing')}/>}</>}
  </Sheet>;
 }
 

@@ -2,7 +2,7 @@ import type {Meta,StoryObj} from '@storybook/react-vite';
 import {useRef,useState} from 'react';
 import {fn} from 'storybook/test';
 import {AtSign,Calendar,ChartColumn,Image as ImageIcon,Sparkles} from 'lucide-react';
-import {ActionLine,ActivityCard,ActivityItem,ActivityTile,type ActThumb,ArticleCard,ArticleImage,Av,Card,EventTile,FeedEvents,IconBtn,LikesLine,plate,PLATE_KEYS,articlePlate,QuickStart,RichEditor,type RichEditorHandle,PhotoTrack,ViewerPostBar} from './index';
+import {ActionLine,ActivityCard,ActivityItem,ActivityTile,type ActThumb,ArticleCard,ArticleImage,Av,Card,ComposerRow,EventTile,FeedEvents,IconBtn,LikesLine,plate,PLATE_KEYS,articlePlate,QuickStart,RichEditor,type RichEditorHandle,PhotoTrack,ViewerPostBar} from './index';
 
 /** A picture drawn in place (no network): a soft gradient with a word. */
 const pic=(word:string,w=1200,h=675)=>{const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d')!;
@@ -83,6 +83,11 @@ export const Миниатюры:StoryObj<typeof ActivityTile>={name:'Миниа�
 
 export const БыстрыйСтарт:StoryObj<typeof QuickStart>={name:'Быстрый старт',render:a=><QuickStart {...a}/>,
  args:{title:'Или сразу начать с',items:[[ImageIcon,'Фото и видео',fn()],[ChartColumn,'Опрос',fn()],[Sparkles,'Мои интересы',fn()]]},argTypes:{items:{control:false}}};
+export const Композер:StoryObj<typeof ComposerRow>={name:'Строка «написать» (одна везде)',render:a=><div className="posts"><ComposerRow {...a}/></div>,
+ args:{av:<Av name="Mia" seed="mia" size="sm"/>,placeholder:'Что нового?',onOpen:fn(),media:{label:'Фото или видео',onClick:fn()},poll:{label:'Опрос',onClick:fn()},create:{label:'Создать',onClick:fn()}},
+ argTypes:{av:{control:false}},
+ parameters:{docs:{description:{story:'Одна строка «написать» для ленты, обсуждений сообщества и любого другого места (решение владельца 29.10.2026): аватар того, от чьего имени пишешь, подсказка, фото, опрос и «+» — лист «Создать» (Публикация, Статья; Событие — где можно). Место меняет только подсказку («Что нового?» / «Новая тема») и куда ведут кнопки. В приложении её собирает `Composer` (src/fe/create-entry.tsx) — экраны не пишут строку сами.'}}}};
+export const КомпозерСообщество:StoryObj<typeof ComposerRow>={...Композер,name:'Строка «написать» в сообществе',args:{...Композер.args,placeholder:'Новая тема'}};
 export const СтрокаДействия:StoryObj<typeof ActionLine>={name:'Подсказка со ссылкой',render:a=><ActionLine {...a}/>,
  args:{text:'Топ недели по твоим интересам',action:'Как подбираем',onAction:fn()}};
 const evCover=(k:string)=><div className="plate" style={plate(k)}><span className="pi"><Calendar/></span></div>;

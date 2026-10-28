@@ -100,7 +100,8 @@ export function Announcement({icon:I,body,meta}:{icon:LucideIcon,body:ReactNode,
 /** «Интересно / Иду / Не иду» — the answer to an event: three radio buttons; the chosen one is filled. */
 export function Rsvp<T extends string>({value,options,onChange,label,disabled,couple}:{value:T|null|undefined,
  /** value, label, icon, tone of the chosen button: interested (violet), going (green), not (quiet). */ options:readonly (readonly [T,string,LucideIcon,'interested'|'going'|'not'])[],onChange:(v:T)=>void,label:string,disabled?:boolean|undefined,
- /** The couple's wording is longer; the buttons wrap it. */ couple?:boolean|undefined}){
+ /** The couple's wording («Нам интересно», «Идём вдвоём», «Не идём»); labels never wrap: the two yes answers share a
+  * line, the «not» answer is a quiet line under them (owner 29.10.2026). */ couple?:boolean|undefined}){
  return <div className={'rsvp'+(value?' has':'')+(couple?' us':'')} role="radiogroup" aria-label={label}>
   {options.map(([v,l,I,tone])=><button key={v} type="button" className={'r-'+tone+(value===v?' on':'')} role="radio" aria-checked={value===v} onClick={()=>onChange(v)} disabled={disabled}><I/><span>{l}</span></button>)}
  </div>;

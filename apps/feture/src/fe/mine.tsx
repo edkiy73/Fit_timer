@@ -8,6 +8,7 @@ import {Alert,Ask,Av,Bar,Btn,Card,Empty,Group,IconBtn,Note,Row,Skel,Stack,View} 
 import {useFe} from './session';
 import {PostCard,SavedEditSheet,postSchema,savedEdit,when,type Post,type SavedEdit} from './feed';
 import {EventRow,type Ev} from './browse';
+import {CreateSheet} from './create-entry';
 import {mdPlain} from './post-parts';
 import {useToast} from './toast';
 import {PairEntry} from './pair';
@@ -163,6 +164,7 @@ export function MyPostsScreen(){
  const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
  const couple=acting?.kind==='couple';
  const {data,setData,error,load}=useLoad(useCallback(()=>call('me.posts',{},postsRev),[call]));
+ const [create,setCreate]=useState(false);
  const [edits,setEdits]=useState<SavedEdit|null>(null);
  const replace=(np:Post)=>setData(d=>d?{...d,items:d.items.map(x=>x.id===np.id?np:x)}:d);
  const card=(p:Post)=><PostCard key={p.id} post={p} onChange={replace} onExpired={()=>{call('post.get',{postId:p.id},onePost,{fresh:true}).then(r=>replace(r.post)).catch(()=>{});}}
@@ -189,8 +191,9 @@ export function MyPostsScreen(){
    </>;
  }
  return <>
-  <Bar title={couple?t('fe.fd.mine.titleUs'):t('fe.fd.mine.title')} back small><IconBtn icon={Plus} label={t('fe.create')} onClick={()=>navigate('/n/feed/new')}/></Bar>
+  <Bar title={couple?t('fe.fd.mine.titleUs'):t('fe.fd.mine.title')} back small><IconBtn icon={Plus} label={t('fe.create')} aria-haspopup="dialog" onClick={()=>setCreate(true)}/></Bar>
   <View className="nodock">{body}</View>
+  {create&&<CreateSheet onClose={()=>setCreate(false)}/>}
   {edits&&<SavedEditSheet e={edits} onClose={()=>setEdits(null)} onDone={msg=>{setEdits(null);toast(msg,{type:'ok'});load();}}/>}
  </>;
 }

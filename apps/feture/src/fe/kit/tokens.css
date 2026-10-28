@@ -24,6 +24,11 @@
  /* Radii (base.css holds --r-s 10, --r 14, --r-l 18, --r-xl 24). */
  --r-2xs:4px; --r-xs:8px; --r-m:12px; --r-full:999px;
 
+ /* Page layout grid (owner 29.10.2026): one column, one gutter, one rhythm on every screen and width.
+    --gut (base.css, 16px) is the page gutter on the left and right; --page-max is the content column (centred on
+    tablets and desktop); --block-gap is the room between blocks of a screen (applied by kit.css, never by a screen). */
+ --page-max:680px; --block-gap:12px;
+
  /* Spacing: one 4-step scale (2 for hairline gaps). */
  --s-0:2px; --s-1:4px; --s-2:8px; --s-3:12px; --s-4:16px; --s-5:20px; --s-6:24px; --s-7:32px; --s-8:40px; --s-9:56px;
 

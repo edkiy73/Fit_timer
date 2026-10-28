@@ -5,7 +5,6 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {AtSign,Ban,BellOff,Check,EyeOff,Flag,Images,Link as LinkIcon,Pencil,Trash2,User,UserCheck,UserPlus,X} from 'lucide-react';
 import type {LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {publicOrigin} from '../api-url';
 import {Alert,Ask as KitAsk,Btn,Card,Field,Row,Sheet,TextArea} from './kit';
 import {useChecks} from './kit/validate';
 import {useFe} from './session';
@@ -13,6 +12,7 @@ import {ReportSheet} from './report';
 import {useToast} from './toast';
 import type {Post,Reply} from './feed';
 import {PostAlbumSheet,inGallery} from './gallery';
+import {useCopyLink} from './share';
 
 /** V21 `ACT.postMenu` / `ACT.rMore` with the prototype's markup (`div.layer > div.scrim.on + div.sheet.on`).
  * Own post — edit / copy link / delete; someone else's — answers about a photo mark, hide the post, mute the author,
@@ -84,7 +84,7 @@ export function PostMenu({post,onClose,onChange,onRemove}:{post:Post,onClose:()=
   const r=await call('post.delete',{opId,postId:post.id},deleted);
   return {postId:post.id,notice:r.state==='archived'?t('fe.pm.done.archived'):t('fe.pm.done.deleted')};
  });
- const copy=async()=>{onClose();const url=`${publicOrigin()}/#/n/feed/post/${post.id}`;try{await navigator.clipboard.writeText(url);toast(t('fe.fd.linkCopied'),{type:'ok'});}catch{toast(url,{type:'info'});}};
+ const copyLink=useCopyLink();const copy=()=>{onClose();void copyLink('/n/feed/post/'+post.id);};
  // A photo mark of the acting profile on someone else's post.
  const me=post.tags?.find(x=>x.id===acting?.id);const hasMedia=post.media.length>0;
  const answer=(a:'ok'|'no'|'remove')=>run('tag.'+a,async opId=>{

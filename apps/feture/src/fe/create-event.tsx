@@ -171,7 +171,8 @@ export function CreateEventScreen(){
  const [resume,setResume]=useState<Resume|null>(null);const [error,setError]=useState<unknown>(null);
  useEffect(()=>{if(!draft)return;setResume(null);setError(null);
   call('event.draftGet',{draftId:draft},draftRes).then(r=>setResume({id:r.draft.id,form:fromDraft(r.draft.form,r.draft.cover??null),step:Math.min(4,Math.max(1,r.draft.step??1))})).catch(setError);},[call,draft]);
- if(!draft)return <EventEditor/>;
+ // «Событие» from a community's «Создать» (its owner or a host): the event starts linked to that community.
+ if(!draft)return <EventEditor community={params.get('community')}/>;
  if(resume)return <EventEditor key={resume.id} resume={resume}/>;
  return <>
   <Bar title={t('fe.ce.titleDraft')} back small/>
@@ -201,10 +202,10 @@ export function EditEventScreen(){
  </>;
 }
 
-function EventEditor({edit,reload,resume}:{edit?:Edit,reload?:()=>void,resume?:Resume}){
+function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void,resume?:Resume,community?:string|null}){
  const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const catalog=useCatalog();
  const draftOp=useOp(),submitOp=useOp(),deleteOp=useOp(),updateOp=useOp();
- const [f,setF]=useState<Form>(()=>edit?.form??resume?.form??fresh());const [stale,setStale]=useState(false);const [step,setStep]=useState(resume?.step??1);const [cityOpen,setCityOpen]=useState(false);const [err,setErr]=useState<Errors>({});
+ const [f,setF]=useState<Form>(()=>edit?.form??resume?.form??{...fresh(),communityId:community??''});const [stale,setStale]=useState(false);const [step,setStep]=useState(resume?.step??1);const [cityOpen,setCityOpen]=useState(false);const [err,setErr]=useState<Errors>({});
  const [draftId,setDraftId]=useState<string|null>(resume?.id??null);const [busy,setBusy]=useState(false);
  const [notice,setNotice]=useState<{kind:'ok'|'warn'|'err',text:string}|null>(null);const [pv,setPv]=useState<'all'|'ok'>('all');const [asking,setAsking]=useState(false);
  const [hosting,setHosting]=useState<{id:string,name:string}[]>([]);

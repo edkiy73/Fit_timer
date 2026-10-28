@@ -24,7 +24,8 @@ async function decide(t, h, communityId, profileId, approve) {
 async function sendJoin(t, { answer } = {}) {
   await t.see(sheet);
   if (answer) await t.page.locator(sheet + ' textarea').fill(answer);
-  await t.tap(sheet + ' button.check');
+  // One button accepts the rules and joins / sends the request (owner 29.10.2026: no «Принимаю правила» box).
+  await t.see(sheet + ' .sh-f .btn:has-text("Принять правила")');
   await t.page.locator(sheet + ' .sh-f .btn').click();
 }
 const asCouple = async (t, coupleId) => { await t.page.evaluate(id => sessionStorage.setItem('feture.fe.acting', id), coupleId); await t.page.reload(); await t.wait(1500); };
@@ -36,7 +37,7 @@ export default [
      await t.go('/n/communities/' + h.openId);
      await t.tap('.cm-act .btn:has-text("Вступить")');
      await t.see(sheet + ':has-text("Правила сообщества")');
-     await t.page.locator(sheet + ' .sh-f .btn').click(); await t.see('Нужно принять правила'); // rules first
+     if (await t.page.locator(sheet + ' button.check').count()) throw new Error('a «Принимаю правила» box is back'); // the button accepts the rules
      await sendJoin(t);
      await t.see('.toast:has-text("Ты в «")');
      expect((await get(t, h.openId)).me?.state === 'active', 'member on the server');
