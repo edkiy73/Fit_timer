@@ -11,6 +11,7 @@ import {PhotoBadge} from './photo-check';
 import {faceFields,NameBadges} from './faces';
 import {PostCard,postSchema,type Post} from './feed';
 import type {Removal} from './post-menu';
+import {PrivateVault} from './private';
 
 /** Profile extras with the V21 prototype's markup: «Что у вас общего» (P05), the person menu (report / block / hide
  * from feed, S02), confirmed links and «Предложить связь» (F2, P21/P22), «Просмотренные» (D09) and «Как видят» (P03).
@@ -162,14 +163,14 @@ export function ProfileHero({p,rel,inert,onOpen}:{p:PersonProfile,rel:Relation|n
 }
 
 /** `openViewer()` — full-screen photos: ‹ ›, arrows, swipe, Esc. */
-export function PhotoViewer({srcs,index,onClose}:{srcs:string[],index:number,onClose:()=>void}){
+export function PhotoViewer({srcs,index,onClose,wm}:{srcs:string[],index:number,onClose:()=>void,/** Someone else's private photos: the viewer's handle. */ wm?:string|null|undefined}){
  const {t}=useI18n();const [i,setI]=useState(index);const [on,setOn]=useState(false);const closeBtn=useRef<HTMLButtonElement>(null);const sx=useRef<number|null>(null);
  const step=useCallback((d:number)=>setI(v=>Math.max(0,Math.min(srcs.length-1,v+d))),[srcs.length]);
  useEffect(()=>{const r=requestAnimationFrame(()=>{setOn(true);closeBtn.current?.focus({preventScroll:true});});return ()=>cancelAnimationFrame(r);},[]);
  useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape')onClose();else if(e.key==='ArrowLeft')step(-1);else if(e.key==='ArrowRight')step(1);};addEventListener('keydown',k);return ()=>removeEventListener('keydown',k);},[onClose,step]);
  return <Layer><div className={'viewer'+(on?' on':'')} role="dialog" aria-modal="true" aria-label={t('fe.px.ph.viewer')}
   onPointerDown={e=>{sx.current=e.clientX;}} onPointerUp={e=>{if(sx.current==null)return;const dx=e.clientX-sx.current;sx.current=null;if(Math.abs(dx)>50)step(dx<0?1:-1);}}>
-  <PhotoTrack srcs={srcs} index={i}/>
+  <PhotoTrack srcs={srcs} index={i} wm={wm}/>
   <div className="vw-top"><span className="vw-n">{i+1} / {srcs.length}</span><IconBtn ref={closeBtn} icon={X} kind="glass" label={t('fe.px.close')} onClick={onClose}/></div>
   {srcs.length>1&&<>
    <button type="button" className="vw-nav l" aria-label={t('fe.px.ph.prev')} disabled={i===0} onClick={()=>step(-1)}><ChevronLeft/></button>
@@ -227,54 +228,12 @@ export function Jars({items,topic,max,onTopic}:{items:Jar[],topic:(id:string)=>s
 const privRes=z.object({ok:z.literal(true),exists:z.boolean(),own:z.boolean().optional(),on:z.boolean().optional(),scopes:z.array(z.string()).optional(),until:z.string().nullable().optional(),
  text:z.string().nullable().optional(),media:z.array(media.extend({kind:z.string().optional()})).optional(),available:z.array(z.string()).optional(),canRequest:z.boolean().optional(),reason:z.string().nullable().optional()}).passthrough();
 type Priv=z.infer<typeof privRes>;
-const outReqRes=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),state:z.string(),profile:z.object({id:z.uuid()}).passthrough().nullable()}).passthrough())}).passthrough();
-const accessReq=z.object({ok:z.literal(true)}).passthrough();
 /** Whether a profile has a private part and what of it is open to the viewer; the same read as PrivateVault's. */
 export function usePrivate(profileId:string){
  const {call}=useFe();const [p,setP]=useState<Priv|null>(null);
  useEffect(()=>{setP(null);call('private.get',{profileId},privRes).then(setP).catch(()=>{});},[call,profileId]);
  return p;
 }
-/** vaultHTML + veilBlock / privOpenHTML: the private part from the outside. Before access nothing real is sent — the
- * veil hides placeholders only. `preview` draws it as a viewer would see it, with inert buttons. */
-export function PrivateVault({profileId,name,preview}:{profileId:string,name:string,preview?:'all'|'granted'|undefined}){
- const {call}=useFe();const {t,locale}=useI18n();const [p,setP]=useState<Priv|null>(null);const [busy,setBusy]=useState(false);const [err,setErr]=useState('');
- const [view,setView]=useState<number|null>(null);const op=useRef(newOpId());
- const load=useCallback(()=>{call('private.get',{profileId},privRes).then(setP).catch(()=>setP(null));},[call,profileId]);
- useEffect(()=>{load();},[load]);
- if(!p||!p.exists)return null;
- if(preview&&(!p.on||!(p.available??[]).length))return null;
- const ask=async()=>{setBusy(true);setErr('');try{await call('access.request',{opId:op.current,profileId,scopes:p.available??['info']},accessReq);op.current=newOpId();load();}
-  catch(e){setErr(pxError(e,t));op.current=newOpId();}finally{setBusy(false);}};
- const cancel=async()=>{setBusy(true);setErr('');try{const r=await call('access.lists',{tab:'out'},outReqRes);const q=r.items.find(x=>x.state==='pending'&&x.profile?.id===profileId);
-  if(q)await call('access.cancel',{opId:newOpId(),requestId:q.id},accessReq);load();}catch(e){setErr(pxError(e,t));}finally{setBusy(false);}};
- const scopes=preview==='granted'?(p.available??[]):preview?[]:(p.scopes??[]);
- const head=(open:boolean,badge?:ReactNode)=><div className="vault-h"><span className="vi">{open?<LockOpen/>:<Lock/>}</span><div><b>{t('fe.px.pr.title')}</b></div>{badge&&<span className="vst">{badge}</span>}</div>;
- if(scopes.length){
-  const photos=(p.media??[]).filter(m=>m.kind!=='video'&&mediaSrc(m)&&(preview||scopes.includes('photos')));
-  const until=!preview&&p.until?<Pill tone="v">{fill(t('fe.px.pr.until'),{date:new Date(p.until).toLocaleDateString(locale==='en'?'en':'ru',{day:'numeric',month:'short'})})}</Pill>:undefined;
-  const desc=scopes.includes('info')&&p.text?<Group title={t('fe.px.pr.desc')}><Card><div className="md bio">{p.text.split(/\n{2,}/).map((x,i)=><p key={i}>{x}</p>)}</div></Card></Group>:null;
-  return <section className="vault open" id="priv">{head(true,until)}<div className="vault-b">
-   {desc}
-   {photos.length>0&&<Group bare title={<>{t('fe.px.pr.photos')} · {photos.length}</>} foot={preview?t('fe.px.pr.wmPreview'):t('fe.px.pr.wm')}>
-    <div className="ggrid">{photos.map((m,i)=><button key={i} type="button" className="gtile" onClick={preview?undefined:()=>setView(i)} disabled={!!preview}><img src={mediaSrc(m)!} alt="" loading="lazy" draggable={false}/></button>)}</div>
-   </Group>}
-   {!desc&&!photos.length&&<Note>{t('fe.px.pr.nothing')}</Note>}
-  </div>
-  {view!==null&&<PhotoViewer srcs={photos.map(m=>m.src?.full??mediaSrc(m)!)} index={view} onClose={()=>setView(null)}/>}</section>;
- }
- const reason=preview?null:p.reason??null;
- const action=preview?<Btn kind="dark" disabled aria-disabled="true">{t('fe.px.pr.ask')}</Btn>
-  :reason==='pending'?<><Pill tone="wait" icon={Clock}>{t('fe.px.pr.pending')}</Pill><Btn kind="soft" size="sm" onClick={cancel} busy={busy}>{t('fe.px.pr.cancel')}</Btn></>
-  :reason==='not_accepting'?<Pill icon={Lock}>{t('fe.px.pr.notAccepting')}</Pill>
-  :reason==='cooldown'?<Pill icon={Clock}>{t('fe.px.pr.cooldown')}</Pill>
-  :reason?<Pill icon={Lock}>{t('fe.px.pr.r.'+reason)}</Pill>
-  :p.canRequest?<Btn kind="dark" busy={busy} onClick={ask} disabled={busy}>{t('fe.px.pr.ask')}</Btn>:null;
- return <section className="vault closed" id="priv">{head(false)}<div className="vault-b">
-  <Veil lock={false} toggles title={fill(t('fe.px.pr.decides'),{name})} text={t('fe.px.pr.decidesText')} action={action} error={err||undefined}/>
- </div></section>;
-}
-
 const postsRes=z.object({ok:z.literal(true),items:z.array(postSchema),next:z.string().nullable().optional()}).passthrough();
 /** activityBlock: «Публикации / Статьи» as tabs with counts; the first three of each. */
 function Activity({profileId,inert}:{profileId:string,inert?:boolean|undefined}){

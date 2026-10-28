@@ -1,7 +1,7 @@
 // Backlog wave 6 «Пара»: approvals with a «на доработку» note both ways, Q01 (work list, Discover row, «Моё
 // подтверждение», safety rows), Q09 set-up, «Действовать как» from the dock, the partner link (create / peek / revoke)
 // and its landing. Every step reads the result back through the API.
-import { expect, until } from './helpers.mjs';
+import { expect, until } from '../helpers.mjs';
 
 const NOTE = 'Давай другое описание ' + (Date.now() % 1000);
 const BIO = 'e2e w6 bio ' + (Date.now() % 100000);

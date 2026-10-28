@@ -9,6 +9,7 @@ import {useFe,useRealtime} from './session';
 import {useToast} from './toast';
 import {when} from './feed';
 import {faceFields,NameBadges,withAge} from './faces';
+import {useDecline} from './private';
 
 /** Slice G2 (V21 N01) with the prototype's markup: «Нужно решить» (decision cards, grouped «Тебе» / «Паре» with an active
  * couple) and «Все уведомления» (rows `.nt`, «Новые» / «Ранее», filter chips, «Прочитать все»). One bell count
@@ -90,6 +91,7 @@ export function InboxScreen(){
   try{await fn();if(done)toast(done,{type:'ok'});load();}catch(e){toast(feErrorMessage(e,t),{type:'err'});load();}finally{setBusy('');}
  };
  const asProfile=(d:Decision)=>d.addressee?{profileId:d.addressee}:{};
+ const declineAccess=useDecline();
  const decideApp=(d:Decision,approve:boolean)=>act(d.id+(approve?'y':'n'),async()=>{
   if(!d.objectId)throw new FeError('not_found',404);
   // The decision needs the request's revision, which the inbox row does not carry.
@@ -154,7 +156,8 @@ export function InboxScreen(){
     {label:t('fe.ibx.decline'),fn:()=>void act(d.id+'n',()=>call('couple.inviteAnswer',{opId:newOpId(),inviteId:d.id,accept:false},ok,{asAccount:true}),t('fe.ibx.declined'))}));
    case 'req':return card(d,d.label==='couple'?t('fe.ibx.k.reqCouple'):t('fe.ibx.k.req'),two(d,
     {label:t('fe.ibx.review'),fn:()=>{asAddressee(d.addressee);navigate('/n/me?layer=priv');}},
-    {label:t('fe.ibx.decline'),fn:()=>void act(d.id+'n',()=>call('access.decline',{opId:newOpId(),requestId:d.id},ok,asProfile(d)),t('fe.ibx.declined'))}));
+    // Declining says what the person will see and offers «Отменить» while the server still allows it.
+    {label:t('fe.ibx.decline'),fn:()=>{if(busy)return;setBusy(d.id+'n');void declineAccess(d.id,nameOf(d.actor),load,asProfile(d)).finally(()=>setBusy(''));}}));
    case 'capp':case 'eapp':return card(d,d.kind==='capp'?t('fe.ibx.k.capp'):t('fe.ibx.k.eapp'),<>
     {two(d,{label:t('fe.ibx.approve'),fn:()=>void decideApp(d,true)},{label:t('fe.ibx.decline'),fn:()=>void decideApp(d,false)})}
    </>);

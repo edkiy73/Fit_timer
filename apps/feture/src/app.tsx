@@ -28,6 +28,7 @@ import { CompatScreen, HistoryScreen, MePreviewScreen } from './fe/profile-extra
 import { MeTab } from './fe/me';
 import { MeEditScreen } from './fe/me-edit';
 import { MinePartScreen } from './fe/mine';
+import { AccessScreen } from './fe/access';
 import { LinksScreen, LinkEditScreen } from './fe/links';
 import { FollowsScreen, GalleryScreen, SearchScreen, TopicScreen } from './fe/browse';
 import { MyPostsScreen, SavedScreen } from './fe/mine';
@@ -319,7 +320,8 @@ export const routes: RouteObject[] = [
         {path:'me/links', element:<LinksScreen />},
         {path:'me/edit', element:<MeEditScreen />},
         {path:'me/events', element:<MinePartScreen part="events" />},
-        {path:'me/shared', element:<MinePartScreen part="shared" />},
+        {path:'me/shared', element:<AccessScreen mine />},
+        {path:'me/access', element:<AccessScreen />},
         {path:'me/follows', element:<FollowsScreen />},
         {path:'me/posts', element:<MyPostsScreen />},
         {path:'me/saved', element:<SavedScreen />},

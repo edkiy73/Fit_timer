@@ -10,6 +10,7 @@ import {Ask} from './me';
 import {useToast} from './toast';
 import {when} from './feed';
 import {CoupleWork} from './couple';
+import {PAIR_TOKEN as TOKEN,dropPairLink as dropLink,pendingPairLink} from './pair-link';
 
 /** Slice E (V21 Q01, Q06, Q07, Q09): a couple starts by an invitation to an exact nickname, or by a single-use link for
  * a partner without an account (the link survives the sign-up in this tab); both partners must be free. Right after
@@ -35,17 +36,6 @@ type Found=z.infer<typeof found>['items'][number];
 type Couple=z.infer<typeof coupleRes>['couple'];
 const NICK=/^[a-z0-9_.]{3,20}$/i;
 
-/* ---- the partner link: kept for this tab while the partner signs up (temporary request memory, not domain data) ---- */
-const LINK_KEY='feture.fe.pairLink';
-const TOKEN=/^[A-Za-z0-9_-]{43}$/;
-/** A link opened signed out lands on the welcome screen: remember its token before anything else reads the address. */
-function captureLink(){
- try{const v=new URLSearchParams(location.hash.split('?')[1]??'').get('link');if(v&&TOKEN.test(v))sessionStorage.setItem(LINK_KEY,v);}catch{/* no storage: the link still works while signed in */}
-}
-captureLink();
-/** A partner link waiting in this tab (the sign-up sends the person to the pair screen instead of the feed). */
-export function pendingPairLink():string|null{try{const v=sessionStorage.getItem(LINK_KEY);return v&&TOKEN.test(v)?v:null;}catch{return null;}}
-const dropLink=()=>{try{sessionStorage.removeItem(LINK_KEY);}catch{/* nothing kept */}};
 const linkUrl=(token:string)=>`${location.origin}${location.pathname}#/n/me/pair?link=${token}`;
 
 /** V21 Q01 live preview under the nickname field: «найден» with the photo, or the one reason it can't be invited. */
@@ -96,10 +86,10 @@ export function PairScreen(){
  if(state.status!=='ready')return null;
  // A partner link: who invites, then accept (the couple forms at once) → Q09.
  if(token&&!inCouple)return <LinkLanding token={token} me={{name:meName,id:person?.id,src:person?.avatar}}
-  onClose={()=>{dropLink();setToken(null);navigate('/n/me/pair',{replace:true});}} onAccepted={()=>{dropLink();setToken(null);toSetup();}}/>;
+  auto={q.get('auto')==='1'} onClose={()=>{dropLink();setToken(null);navigate('/n/me/pair',{replace:true});}} onAccepted={()=>{dropLink();setToken(null);toSetup();}}/>;
  if(q.get('setup')==='1'){
   if(!couple||couple.state!=='active'||!c)return <><Bar title={t('fe.c6.q9.title')} back="/n/me"/><View><Skel kind="list"/></View></>;
-  return <SetupView c={c} coupleId={couple.id} onDone={()=>navigate('/n/me/pair',{replace:true})}/>;
+  return <SetupView c={c} coupleId={couple.id} onDone={()=>{load();navigate('/n/me/pair',{replace:true});}}/>;
  }
  if(couple&&!fresh&&!c&&!failure)return <><Bar title={t('fe.pair.title')} back="/n/me"/><View><Skel kind="list"/></View></>;
  // V21 Q07: a stopped couple — agree to restore (both within 30 days), or start a new couple, which ends the old one.
@@ -186,23 +176,27 @@ export function PairScreen(){
   {link&&<Sheet title={t('fe.c6.link.sheet')} onClose={()=>setLink(null)} foot={<Btn icon={Copy} onClick={()=>{navigator.clipboard?.writeText(link.url).then(()=>toast(t('fe.c6.link.copied'),{type:'ok'}),()=>toast(t('fe.c6.link.copyHand'),{type:'info'}));}}>{t('fe.c6.link.copyBtn')}</Btn>}>
    <p className="lead">{t('fe.c6.link.lead')}</p>
    <Field id="fe-pair-link" label={t('fe.c6.link.label')}><Input id="fe-pair-link" name="pairLink" readOnly value={link.url} onFocus={e=>e.currentTarget.select()}/></Field>
+   <Alert kind="info" className="mt12">{t('fe.c6.link.atOnce')}</Alert>
    <Note>{t('fe.c6.link.until',{date:new Date(link.expiresAt).toLocaleDateString(locale==='en'?'en':'ru',{day:'numeric',month:'long'})})} · {t('fe.c6.link.once')}</Note>
   </Sheet>}
  </>;
 }
 
 /** The landing of a partner link (signed in, after the sign-up if needed): who invites, the couple's defaults, accept. */
-function LinkLanding({token,me,onClose,onAccepted}:{token:string,me:{name:string,id?:string|undefined,src?:string|null|undefined},onClose:()=>void,onAccepted:()=>void}){
+function LinkLanding({token,me,auto,onClose,onAccepted}:{token:string,auto:boolean,me:{name:string,id?:string|undefined,src?:string|null|undefined},onClose:()=>void,onAccepted:()=>void}){
  const {call}=useFe();const {t}=useI18n();
  const [from,setFrom]=useState<z.infer<typeof peekRes>['from']|null>(null);const [dead,setDead]=useState('');
  const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
  const op=useRef(newOpId());
  useEffect(()=>{call('couple.linkPeek',{token},peekRes,{asAccount:true}).then(r=>setFrom(r.from))
   .catch(e=>setDead(e instanceof FeError&&e.status===404?t('fe.c6.land.dead'):feErrorMessage(e,t)));},[call,token,t]);
+ // Owner, 28.10.2026: signing up through the link is the consent — the couple forms right away, no second tap.
+ const started=useRef(false);
  const accept=async()=>{setBusy(true);setFailure('');
   try{await call('couple.linkAccept',{opId:op.current,token},acceptRes,{asAccount:true});onAccepted();}
   catch(e){setFailure(e instanceof FeError&&e.rule?t('fe.pair.rule.'+e.rule):e instanceof FeError&&e.status===404?t('fe.c6.land.dead'):feErrorMessage(e,t));op.current=newOpId();}
   finally{setBusy(false);}};
+ useEffect(()=>{if(auto&&from&&!started.current){started.current=true;void accept();}});
  return <>
   <Bar title={t('fe.pair.title')} onBack={onClose}/>
   <View className="nodock"><div className="pair-wrap">
@@ -213,13 +207,14 @@ function LinkLanding({token,me,onClose,onAccepted}:{token:string,me:{name:string
     :<>
      <H level={2} className="t center">{t('fe.c6.land.title',{name:nameOf(from)})}</H>
      <p className="lead center">{t('fe.c6.land.lead')}</p>
+     <Alert kind="info" className="mt12">{auto?t('fe.c6.land.forming'):t('fe.c6.land.atOnce')}</Alert>
      <Card list className="mt12">
       <Row icon={Heart} title={t('fe.c6.land.d1')} sub={t('fe.c6.land.d1s')}/>
       <Row icon={Users} title={t('fe.c6.land.d2')} sub={t('fe.c6.land.d2s')}/>
       <Row icon={ShieldCheck} title={t('fe.c6.land.d3')} sub={t('fe.c6.land.d3s')}/>
      </Card>
-     <div className="btns mt16"><Btn disabled={busy} busy={busy} onClick={()=>void accept()}>{t('fe.c6.land.accept')}</Btn>
-      <Btn kind="soft" disabled={busy} onClick={onClose}>{t('fe.c6.land.decline')}</Btn></div>
+     {!auto||failure?<div className="btns mt16"><Btn disabled={busy} busy={busy} onClick={()=>void accept()}>{t('fe.c6.land.accept')}</Btn>
+      <Btn kind="soft" disabled={busy} onClick={onClose}>{t('fe.c6.land.decline')}</Btn></div>:null}
     </>}
    {failure&&<Alert kind="err" noIcon className="mt12">{failure}</Alert>}
   </div></View>

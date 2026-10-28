@@ -3,7 +3,8 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import type {AuthResponseError} from '@appbase/core/auth.js';
 import {CircleAlert,Mail} from 'lucide-react';
-import {Bar,Btn,CodeInput,Field,H,Input,Seg} from './kit';
+import {Alert,Bar,Btn,CodeInput,Field,H,Input,Seg} from './kit';
+import {pendingPairLink} from './pair-link';
 import {ToastProvider} from './toast';
 import {Welcome} from './welcome';
 
@@ -66,6 +67,8 @@ function EmailStep({mode,onBack,onMode,onCode}:{mode:Mode,onBack:()=>void,onMode
    <AuthLogo/>
    <Seg small={false} value={mode} onChange={onMode} options={[{id:'up',label:t('fe.onb.up')},{id:'in',label:t('fe.onb.in')}]}/>
    <H level={2} className="t">{mode==='up'?t('fe.onb.upTitle'):t('fe.onb.inTitle')}</H>
+   {/* A partner link (V21 pairShareLink): the couple forms right after the sign-up — said before, not after (owner). */}
+   {pendingPairLink()&&<Alert kind="info">{t('fe.c6.land.signup')}</Alert>}
    <div ref={field} data-field="email"><Field id="fe-email" label={t('fe.onb.email')} error={error||undefined}>
     <div className="inwrap"><Mail/><Input id="fe-email" name="email" type="email" value={email} placeholder="name@mail.com" autoComplete="email" inputMode="email" invalid={!!error}
      onChange={e=>{setEmail(e.target.value);setError('');setNoMail(false);}} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();void send();}}}/></div>

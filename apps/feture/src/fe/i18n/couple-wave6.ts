@@ -128,7 +128,7 @@ export const ru = {
   'fe.c6.safe.askOk': 'Закрыть',
 
   'fe.c6.link.group': 'Если у партнёра нет аккаунта',
-  'fe.c6.link.foot': 'По ссылке партнёр зарегистрируется и сразу войдёт в пару. Ссылка одноразовая; новая заменяет старую.',
+  'fe.c6.link.foot': 'Партнёр зарегистрируется по ссылке — и пара создастся сразу, без второго подтверждения. Ссылка одноразовая; новая заменяет старую.',
   'fe.c6.link.copy': 'Скопировать ссылку для партнёра',
   'fe.c6.link.new': 'Новая ссылка',
   'fe.c6.link.live': 'Ссылка для партнёра действует',
@@ -147,7 +147,7 @@ export const ru = {
   'fe.c6.land.d1': 'Пара видна в знакомствах',
   'fe.c6.land.d1s': 'Когда добавите фото пары. Выключить можно в любой момент.',
   'fe.c6.land.d2': 'Менять профиль может каждый',
-  'fe.c6.land.d2s': 'Подтверждение партнёром каждый включает себе сам — сразу после принятия.',
+  'fe.c6.land.d2s': 'Подтверждение партнёром каждый выбирает для себя — сразу после создания пары.',
   'fe.c6.land.d3': 'Приватное — только вдвоём',
   'fe.c6.land.d3s': 'Открыть приватную часть пары можно только с согласия обоих.',
   'fe.c6.land.accept': 'Принять и создать пару',
@@ -155,6 +155,10 @@ export const ru = {
   'fe.c6.land.deadTitle': 'Ссылка не работает',
   'fe.c6.land.dead': 'Эту ссылку отозвали, она уже использована или устарела. Попроси прислать новую.',
   'fe.c6.land.toPair': 'К настройкам пары',
+  'fe.c6.land.signup': 'Тебя пригласили в пару по ссылке. Сразу после регистрации пара создастся — второго подтверждения не будет.',
+  'fe.c6.land.forming': 'Регистрация по ссылке — пара создаётся сразу, без второго подтверждения.',
+  'fe.c6.land.atOnce': 'Пара создастся сразу после нажатия — второго подтверждения не будет.',
+  'fe.c6.link.atOnce': 'Как только партнёр зарегистрируется по этой ссылке, пара создастся сразу — без второго подтверждения.',
 };
 
 export const en: typeof ru = {
@@ -284,7 +288,7 @@ export const en: typeof ru = {
   'fe.c6.safe.askOk': 'Close',
 
   'fe.c6.link.group': 'If your partner has no account',
-  'fe.c6.link.foot': 'Your partner signs up through the link and joins the couple right away. The link works once; a new one replaces the old.',
+  'fe.c6.link.foot': 'Your partner signs up through the link and the couple forms right away, with no second confirmation. The link works once; a new one replaces the old.',
   'fe.c6.link.copy': 'Copy a link for your partner',
   'fe.c6.link.new': 'New link',
   'fe.c6.link.live': 'Your partner link is active',
@@ -303,7 +307,7 @@ export const en: typeof ru = {
   'fe.c6.land.d1': 'The couple is shown in Discover',
   'fe.c6.land.d1s': 'Once you add a couple photo. You can turn it off any time.',
   'fe.c6.land.d2': 'Either of you can edit the profile',
-  'fe.c6.land.d2s': 'Each of you turns partner approval on for yourself — right after accepting.',
+  'fe.c6.land.d2s': 'Each of you chooses partner approval for yourself — right after the couple forms.',
   'fe.c6.land.d3': 'Private only together',
   'fe.c6.land.d3s': 'The couple’s private part opens only if both agree.',
   'fe.c6.land.accept': 'Accept and create the couple',
@@ -311,4 +315,8 @@ export const en: typeof ru = {
   'fe.c6.land.deadTitle': 'The link doesn’t work',
   'fe.c6.land.dead': 'This link was revoked, already used or has expired. Ask for a new one.',
   'fe.c6.land.toPair': 'To couple settings',
+  'fe.c6.land.signup': 'You were invited to be a couple by a link. The couple forms right after you sign up — there is no second confirmation.',
+  'fe.c6.land.forming': 'You signed up through the link — the couple forms right away, with no second confirmation.',
+  'fe.c6.land.atOnce': 'The couple forms as soon as you tap — there is no second confirmation.',
+  'fe.c6.link.atOnce': 'As soon as your partner signs up through this link, the couple forms right away — with no second confirmation.',
 };
