@@ -10,6 +10,7 @@ import {Register} from './register';
 import {SignedOut} from './start';
 import {ToastProvider,useToast} from './toast';
 import {PushOffer} from './push';
+import {ActAsSheet} from './couple';
 import './kit/base.css';
 import './kit/tokens.css';
 import './kit/kit.css';
@@ -117,8 +118,10 @@ function useNewVersion(pathname:string){
 }
 
 function FeLayout(){
- const {acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const {pathname}=useLocation();
+ const {acting,state}=useFe();const {t}=useI18n();const navigate=useNavigate();const {pathname}=useLocation();
  const name=acting?.name||acting?.handle||'?';
+ // V21 dockMe: with an active couple «Я» opens «Действовать как» (the person and the couple, what waits on each).
+ const pair=state.status==='ready'&&state.boot.profiles.some(p=>p.kind==='couple'&&p.state==='active');const [actAs,setActAs]=useState(false);
  const current=pathname.split('/')[2]||'feed';
  // V21 keeps the phone dock on every screen (chats, profiles, editors too); only moderation hides it (SC.M01 dock:false).
  const nodock=current==='staff';
@@ -140,7 +143,7 @@ function FeLayout(){
    <nav aria-label={t('fe.nav.aria')}>{FE_TABS.map(({id,icon:Icon})=><button key={id} type="button" className={'navb'+(current===id?' on':'')} aria-current={current===id?'page':undefined} onClick={()=>go(id)}><Icon/><span>{t('fe.nav.'+id)}</span>{badge(id)==='dot'?<em className="dot"/>:badge(id)?<em>{badge(id)}</em>:null}</button>)}</nav>
    <Btn className="create" icon={Plus} onClick={()=>navigate('/n/feed/new')} aria-label={t('fe.create')}><span>{t('fe.create')}</span></Btn>
    <div className="sp"/>
-   {acting&&<button type="button" className="mebtn" onClick={()=>navigate('/n/me')}>
+   {acting&&<button type="button" className="mebtn" aria-haspopup={pair?'dialog':undefined} onClick={()=>pair?setActAs(true):navigate('/n/me')}>
     <Av name={name} seed={acting.id} src={acting.avatar}/><span>{name}<small>{acting.kind==='couple'?t('fe.me.coupleProfile'):t('fe.me.personalProfile')}</small></span>
    </button>}
   </aside>
@@ -151,10 +154,11 @@ function FeLayout(){
    <Outlet/>
    {/* The dock's five columns come from base.css (.dock: repeat(5,1fr)) — FE_TABS has five tabs. */}
    {!nodock&&<nav className="dock" aria-label={t('fe.nav.aria')}>
-    {FE_TABS.map(({id,icon:Icon})=><button key={id} type="button" className={(current===id?'on':'')+(id==='me'?' me-tab':'')} aria-label={label(id)} aria-current={current===id?'page':undefined} onClick={()=>go(id)}>
+    {FE_TABS.map(({id,icon:Icon})=><button key={id} type="button" className={(current===id?'on':'')+(id==='me'?' me-tab':'')} aria-label={label(id)} aria-current={current===id?'page':undefined} aria-haspopup={id==='me'&&pair?'dialog':undefined} onClick={()=>id==='me'&&pair?setActAs(true):go(id)}>
      {id==='me'&&acting?<span className="dock-av"><Av name={name} seed={acting.id} src={acting.avatar}/></span>:<Icon/>}<span>{t('fe.nav.'+id)}</span>{em(badge(id))}
     </button>)}
    </nav>}
+   {actAs&&<ActAsSheet onClose={()=>setActAs(false)}/>}
    </ToastProvider>
   </main>
  </div></div>;

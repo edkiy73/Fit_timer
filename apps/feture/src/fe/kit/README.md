@@ -58,9 +58,12 @@ Product pieces that repeat or carry their own look. Screens use these, never the
 | Create | `Swatches` (cover colour plates) |
 | Interests | `AnswerScale` (1–10 with «обсудить» / «граница» marks) |
 | People | `PersonName` (name on a photo card), `PersonLine` + `RequestCard` + `Answer` (requests and applications), `LikeTile`, `Radar` |
+| Gallery | `AlbumRow` + `AlbumCard` (cover / mosaic / icon, open, followers lock), `AlbumMeta`, `GalleryGrid` + `GalleryTile` (count, followers, review; selection `selected`, cover `picked`) + `GalleryAdd`, `SelectionBar` (pinned count + actions) |
 | Photos and checks | `PhotoSlots` / `PhotoSlot` / `PhotoAdd` (profile photo grid, drag to reorder, `loading`), `PhotoTrack` (viewer strip; `wm` puts the viewer's handle on someone else's private photos), `Watermark`, `Pose` (the gesture to show; the shot itself is `CaptureFrame`) |
 | Private layer | `VaultHead` (lock, title, switch), `Quota` (requests left today as segments) |
+| Couple | `ActorCards` + `ActorCard` («Действовать как»: pick the profile, open it, a dot when something waits), `ReviewMeta` (who proposed, version), `ReviewPost` (what a joint change publishes), `ReturnNote` (the partner's «на доработку» comment) |
 | Staff review | `ReviewCard`, `KeyValues`, `ReviewMedia`, `ReviewPair` |
+| Feed (`kit/feed.tsx`, «Домен/Лента») | `RichArea` (text + formatting bar: bold, italic, list, quote, link with an address check; Markdown out), `LikesLine` («Нравится: …»), `ActivityCard` + `ActivityItem` («Подписки» activity, folds), `QuickStart` (create sheet tiles), `ActionLine` (quiet line + one action) |
 
 Loading is a soft blink in place (`Skel`, `busy`), never a spinner. Icons come only from `lucide-react`.
 

@@ -2,13 +2,14 @@ import {useEffect,useRef,useState} from 'react';
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Ban,BellOff,Check,EyeOff,Flag,Link as LinkIcon,Pencil,Trash2,User,X} from 'lucide-react';
+import {AtSign,Ban,BellOff,Check,EyeOff,Flag,Images,Link as LinkIcon,Pencil,Trash2,User,X} from 'lucide-react';
 import type {LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,Ask as KitAsk,Btn,Card,RadioList,Row,Sheet,TextArea,ToggleRow} from './kit';
 import {useFe} from './session';
 import {useToast} from './toast';
 import type {Post,Reply} from './feed';
+import {PostAlbumSheet,inGallery} from './gallery';
 
 /** V21 `ACT.postMenu` / `ACT.rMore` with the prototype's markup (`div.layer > div.scrim.on + div.sheet.on`).
  * Own post — edit / copy link / delete; someone else's — answers about a photo mark, hide the post, mute the author,
@@ -20,7 +21,8 @@ const REASONS=['threat','private','minor','spam','other'] as const;
 type Reason=typeof REASONS[number];
 /** What the list should drop: one post, or every post of an author. `undo` (hiding only) reverses it on the server;
  * the list then puts the posts back — FeedTab shows it as the «Вернуть» action of the toast. */
-export type Removal={postId?:string,authorId?:string,notice:string,undo?:()=>Promise<void>};
+export type Removal={postId?:string,authorId?:string,notice:string,undo?:()=>Promise<void>,
+ /** «Скрыть публикацию»: the feed leaves a row in its place (V21 FEED-011) with «Вернуть» and «Не показывать автора». */ hidden?:{authorId:string,authorName:string}};
 
 const nameOf=(a:{name?:string|null,handle?:string|null}|null|undefined)=>a?.name||(a?.handle?'@'+a.handle:'?');
 
@@ -65,7 +67,7 @@ export function ReportSheet({targetType,targetId,onClose,onDone}:{targetType:'po
 export function PostMenu({post,onClose,onChange,onRemove}:{post:Post,onClose:()=>void,onChange?:(p:Post)=>void,onRemove:(r:Removal)=>void}){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();const {op,drop}=useOps();
  const mine=post.rev!=null;const couple=acting?.kind==='couple';const name=nameOf(post.author);
- const [view,setView]=useState<'menu'|'delete'|'report'>('menu');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const [view,setView]=useState<'menu'|'delete'|'report'|'album'|'object'>('menu');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
  useEscape(onClose);
  const go=(v:typeof view)=>{setFailure('');setView(v);};
  const run=async(key:string,fn:(opId:string)=>Promise<Removal|void>)=>{
@@ -78,7 +80,7 @@ export function PostMenu({post,onClose,onChange,onRemove}:{post:Post,onClose:()=
   const targetId=kind==='post'?post.id:post.author.id;
   await call('feedHide.set',{opId,kind,targetId,on:true},okOnly);
   const undo=async()=>{await call('feedHide.set',{opId:newOpId(),kind,targetId,on:false},okOnly);};
-  return kind==='post'?{postId:post.id,notice:t('fe.pm.done.hidden'),undo}:{authorId:post.author.id,notice:t('fe.pm.done.authorHiddenName',{name}),undo};
+  return kind==='post'?{postId:post.id,notice:t('fe.pm.done.hidden'),undo,hidden:{authorId:post.author.id,authorName:name}}:{authorId:post.author.id,notice:t('fe.pm.done.authorHiddenName',{name}),undo};
  });
  const del=()=>run('delete',async opId=>{
   const r=await call('post.delete',{opId,postId:post.id},deleted);
@@ -94,18 +96,28 @@ export function PostMenu({post,onClose,onChange,onRemove}:{post:Post,onClose:()=
  });
  const object=()=>run('tag.object',async opId=>{
   await call('tag.object',{opId,postId:post.id},okOnly);
-  return {postId:post.id,notice:t('fe.pm.tag.objected')};
+  return {postId:post.id,notice:t('fe.w3.object.done')};
+ });
+ // «Убрать упоминание меня» (V21 unmentionMe): only when the server lists the acting profile as a linked mention.
+ const mentioned=!mine&&!!acting&&(post.mentions??[]).some(m=>m.id===acting.id);
+ const unmention=()=>run('unmention',async opId=>{
+  await call('post.unmentionMe',{opId,postId:post.id},okOnly);
+  onChange?.({...post,mentions:(post.mentions??[]).filter(m=>m.id!==acting?.id)});onClose();toast(t('fe.w3.unmention.done'),{type:'ok'});
  });
 
  if(view==='delete')return <Ask icon={Trash2} title={couple?t('fe.pm.delTitleCouple'):t('fe.pm.delTitle')} text={couple?t('fe.pm.delTextCouple'):t('fe.pm.delText')} ok={couple?t('fe.pm.hideOk'):t('fe.pm.delete')}
   busy={busy} failure={failure} onOk={del} onCancel={()=>go('menu')}/>;
+ // «Это я — против» asks first (V21 tagObject): the post hides for everyone at once.
+ if(view==='object')return <Ask icon={EyeOff} title={t('fe.w3.object.title')} text={t('fe.w3.object.text')} ok={t('fe.w3.object.ok')} busy={busy} failure={failure} onOk={object} onCancel={()=>go('menu')}/>;
  if(view==='report')return <ReportSheet targetType="post" targetId={post.id} onClose={onClose}
   onDone={alsoBlock=>onRemove(alsoBlock?{authorId:post.author.id,notice:t('fe.pm.done.reported')}:{postId:post.id,notice:t('fe.pm.done.reported')})}/>;
+ if(view==='album')return <PostAlbumSheet post={post} onClose={onClose} onChange={onChange}/>;
  const published=!post.state||post.state==='published';
  return <Sheet title={t('fe.pm.title')} onClose={onClose}>
   <Card list>
    {mine?<>
     <Row noChev icon={Pencil} title={t('fe.pm.editFull')} onClick={()=>{onClose();navigate('/n/feed/post/'+post.id+'/edit');}}/>
+    {inGallery(post)&&<Row noChev icon={Images} title={t('fe.gal.postAlbum')} sub={t('fe.gal.postAlbumMenuSub')} onClick={()=>go('album')}/>}
     {published&&<Row noChev icon={LinkIcon} title={t('fe.pm.copyLink')} onClick={copy}/>}
     <Row noChev icon={Trash2} title={t('fe.pm.delete')} danger onClick={()=>go('delete')}/>
    </>:<>
@@ -115,9 +127,10 @@ export function PostMenu({post,onClose,onChange,onRemove}:{post:Post,onClose:()=
     </>}
     {me?.state==='ok'&&<>
      <Row noChev icon={X} title={t('fe.pm.tag.remove')} sub={t('fe.pm.tag.removeSub')} onClick={()=>answer('remove')} disabled={busy}/>
-     <Row noChev icon={EyeOff} title={t('fe.pm.tag.object')} sub={t('fe.pm.tag.objectSub')} danger onClick={object} disabled={busy}/>
+     <Row noChev icon={EyeOff} title={t('fe.pm.tag.object')} sub={t('fe.pm.tag.objectSub')} danger onClick={()=>go('object')} disabled={busy}/>
     </>}
-    {!me&&hasMedia&&<Row noChev icon={EyeOff} title={t('fe.pm.tag.thatsMe')} sub={t('fe.pm.tag.thatsMeSub')} onClick={object} disabled={busy}/>}
+    {mentioned&&<Row noChev icon={AtSign} title={t('fe.w3.unmention')} sub={t('fe.w3.unmentionSub')} onClick={unmention} disabled={busy}/>}
+    {!me&&hasMedia&&<Row noChev icon={EyeOff} title={t('fe.pm.tag.thatsMe')} sub={t('fe.pm.tag.thatsMeSub')} onClick={()=>go('object')} disabled={busy}/>}
     <Row noChev icon={EyeOff} title={t('fe.pm.hidePost')} sub={t('fe.pm.hidePostSub')} onClick={()=>hide('post')} disabled={busy}/>
     <Row noChev icon={BellOff} title={t('fe.pm.mute',{name})} sub={t('fe.pm.muteSub')} onClick={()=>hide('author')} disabled={busy}/>
     <Row noChev icon={LinkIcon} title={t('fe.pm.copyLink')} onClick={copy}/>
@@ -129,7 +142,7 @@ export function PostMenu({post,onClose,onChange,onRemove}:{post:Post,onClose:()=
 }
 
 /** `ACT.rMore` — the «⋯» of a reply. */
-export function ReplyMenu({reply,onClose,onEdit,onDone}:{reply:Reply,onClose:()=>void,onEdit:(r:Reply)=>void,onDone:(notice:string)=>void}){
+export function ReplyMenu({reply,postId,onClose,onEdit,onDone}:{reply:Reply,postId:string,onClose:()=>void,onEdit:(r:Reply)=>void,onDone:(notice:string)=>void}){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const {op,drop}=useOps();
  const [view,setView]=useState<'menu'|'delete'|'block'|'report'>('menu');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
  useEscape(onClose);
@@ -150,6 +163,8 @@ export function ReplyMenu({reply,onClose,onEdit,onDone}:{reply:Reply,onClose:()=
     <Row noChev icon={Trash2} title={t('fe.pm.r.delete')} danger onClick={()=>setView('delete')}/>
    </>:<>
     {reply.author&&<Row noChev icon={User} title={t('fe.pm.r.profile',{name})} onClick={()=>{onClose();navigate('/n/people/'+reply.author!.id);}}/>}
+    {!!acting&&(reply.mentions??[]).some(m=>m.id===acting.id)&&<Row noChev icon={AtSign} title={t('fe.w3.unmention')} sub={t('fe.w3.unmentionSub')} disabled={busy}
+     onClick={()=>run('unmention',async opId=>{await call('post.unmentionMe',{opId,postId,replyId:reply.id},okOnly);return t('fe.w3.unmention.done');})}/>}
     <Row noChev icon={Flag} title={t('fe.pm.report')} danger onClick={()=>setView('report')}/>
     {reply.author&&<Row noChev icon={Ban} title={t('fe.pm.r.block',{name})} sub={t('fe.pm.r.blockSub')} danger onClick={()=>setView('block')}/>}
    </>}

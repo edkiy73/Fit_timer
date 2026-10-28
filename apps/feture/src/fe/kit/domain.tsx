@@ -1,8 +1,8 @@
 import React,{type CSSProperties,type ReactNode} from 'react';
 import {useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {ChevronLeft,Clock,Lock,Plus,Ticket,type LucideIcon} from 'lucide-react';
-import {Av,Card,IconBtn,Note,Skel,Switch,plate} from './index';
+import {Check,ChevronLeft,Clock,Image as ImageIcon,Lock,Plus,Ticket,UserRound,Users,type LucideIcon} from 'lucide-react';
+import {Av,Btn,Card,IconBtn,Note,Skel,Switch,plate} from './index';
 import './domain.css';
 
 /** FetUre domain pieces (Storybook «Домен»): the parts of screens that are product-specific but repeat or carry their
@@ -215,6 +215,55 @@ export function Watermark({text}:{text:string}){
  return <div className="vw-wm" aria-hidden="true">{Array.from({length:18},(_,i)=><span key={i}>{text}</span>)}</div>;
 }
 
+/* ---------------- Gallery ---------------- */
+
+/** The row of album cards: scrolls sideways (gallery screen) or wraps four to a line (`wrap`, «Я»). */
+export function AlbumRow({children,wrap,label}:{children:ReactNode,wrap?:boolean|undefined,label?:string|undefined}){
+ return <div className={'alb-row'+(wrap?' alb20':'')} role="group" aria-label={label}>{children}</div>;
+}
+/** One album card: cover (one picture, a mosaic of up to four, or an icon), the name, the count; `on` is the open
+ * album; `locked` marks an album only followers see. */
+export function AlbumCard({title,count,cover,mosaic,icon:I,on,locked,label,onClick}:{title:ReactNode,count?:ReactNode,cover?:string|null|undefined,
+ mosaic?:string[]|undefined,icon?:LucideIcon|undefined,on?:boolean|undefined,/** Who sees it, for the lock mark. */ locked?:string|undefined,label?:string|undefined,onClick:()=>void}){
+ const pics=(mosaic??[]).slice(0,4);const Icon=I??ImageIcon;
+ return <button type="button" className={'alb'+(on?' on':'')} aria-pressed={on===undefined?undefined:on} aria-label={label} onClick={onClick}>
+  {pics.length>1?<span className={'alb-c mos4 n'+pics.length}>{pics.map((s,k)=><img key={k} src={s} alt="" loading="lazy"/>)}</span>
+   :<span className="alb-c">{cover||pics[0]?<img src={(cover||pics[0])!} alt="" loading="lazy"/>:<Icon/>}{locked&&<i className="alb-l" title={locked}><Users/></i>}</span>}
+  <b>{title}</b><small>{count}</small>
+ </button>;
+}
+/** The line under the album row naming the open album: name, who sees it, the order. */
+export function AlbumMeta({title,followers,order}:{title:ReactNode,followers?:ReactNode,order?:ReactNode}){
+ return <p className="alb-meta"><b>{title}</b>{followers&&<> · <Users/>{followers}</>}{order&&<> · {order}</>}</p>;
+}
+/** The gallery grid: three square tiles to a line. */
+export function GalleryGrid({children,label}:{children:ReactNode,label?:string|undefined}){
+ return <div className="ggrid" role="group" aria-label={label}>{children}</div>;
+}
+/** One gallery tile (a post): its first photo, «N фото», «только подписчики», «на проверке». In selection mode
+ * (`selected` true/false) a tap picks it and a round check shows; `picked` frames the chosen one (a cover). */
+export function GalleryTile({src,label,count,followers,review,selected,picked,onClick}:{src?:string|null|undefined,label:string,count?:number|undefined,
+ followers?:string|undefined,review?:string|undefined,selected?:boolean|undefined,picked?:boolean|undefined,onClick:()=>void}){
+ const sel=selected!==undefined;
+ return <button type="button" className={'gtile'+(sel?' sel-tile'+(selected?' on':''):'')+(picked?' pick':'')} aria-label={label}
+  aria-pressed={sel?selected:picked===undefined?undefined:picked} onClick={onClick}>
+  {src&&<img src={src} alt="" loading="lazy" draggable={false}/>}
+  {sel?<span className="sel-ck">{selected&&<Check/>}</span>:picked?<span className="gt-k"><Check/></span>:count&&count>1?<span className="gt-n"><ImageIcon/>{count}</span>:null}
+  {followers&&<span className="gt-a" title={followers}><Users/></span>}
+  {review&&!sel&&<span className="gt-w" title={review}><Clock/></span>}
+ </button>;
+}
+/** The dashed «+ Добавить» tile at the start of an own gallery. */
+export function GalleryAdd({label,onClick}:{label:string,onClick:()=>void}){
+ return <button type="button" className="gtile add" onClick={onClick}><Plus/><small>{label}</small></button>;
+}
+/** The selection bar pinned under a gallery in selection mode: how many are picked (or the hint) and the actions. */
+export function SelectionBar({status,actions}:{status:ReactNode,actions:{icon:LucideIcon,label:string,onClick:()=>void,danger?:boolean,disabled?:boolean}[]}){
+ return <div className="ctabar"><div className="wrap"><p className="sel-count" aria-live="polite">{status}</p>
+  <div className="sel-bar">{actions.map(a=><Btn key={a.label} kind="soft" className={a.danger?'danger':undefined} disabled={a.disabled} onClick={a.onClick}><a.icon/>{a.label}</Btn>)}</div>
+ </div></div>;
+}
+
 /* ---------------- Private layer ---------------- */
 
 /** The day's request budget («Осталось N из M»): one segment per request (at most 15), lit while it is left. */
@@ -251,3 +300,36 @@ export function ReviewMedia({children,blur,icon:I,caption}:{children?:ReactNode,
 }
 /** Two or more pictures side by side (a selfie and the profile photos). */
 export function ReviewPair({children}:{children:ReactNode}){return <div className="st-pair st-block">{children}</div>;}
+
+/* ---------------- Couple ---------------- */
+
+/** «Действовать как» (V21 dockMe): one card per profile the person may act as. The card itself chooses the profile
+ * (`onPick`); the end button opens that profile (`onOpen`). `dot` puts the accent dot before the line under the name
+ * (something waits there). Cards go inside `ActorCards`. */
+export function ActorCard({av,name,sub,dot,selected,onPick,onOpen,openLabel}:{av:ReactNode,name:ReactNode,sub?:ReactNode,dot?:boolean|undefined,selected?:boolean|undefined,
+ onPick:()=>void,onOpen:()=>void,openLabel:string}){
+ return <div className={'actor-card'+(selected?' selected':'')}>
+  <button type="button" className="actor-select" role="menuitemradio" aria-checked={!!selected} onClick={onPick}>{av}
+   <span className="tx"><b>{name}</b>{sub!=null&&<small>{dot&&<i className="ar-dot"/>}{sub}</small>}</span>
+   <span className="ar-ck" aria-hidden="true">{selected&&<Check/>}</span></button>
+  <button type="button" className="actor-open" role="menuitem" aria-label={openLabel} title={openLabel} onClick={onOpen}><UserRound/></button>
+ </div>;
+}
+/** The cards of «Действовать как» and the line under them. */
+export function ActorCards({children,foot,label}:{children:ReactNode,foot?:ReactNode,label:string}){
+ return <div role="menu" aria-label={label}><div className="actor-options">{children}</div>{foot&&<p className="actor-foot">{foot}</p>}</div>;
+}
+/** Who proposed a couple's change and which version of it this is (V21 jointReview / pairReview head). */
+export function ReviewMeta({by,version}:{by:ReactNode,version?:ReactNode}){
+ return <div className="pair-review-meta"><span>{by}</span>{version!=null&&<span className="pill">{version}</span>}</div>;
+}
+/** What a couple's change would publish, framed: a post (title, text), the access to open, an answer.
+ * `byline` is the author line on top; `meta` a quiet line under the text. */
+export function ReviewPost({byline,title,children,meta}:{byline?:ReactNode,title?:ReactNode,children?:ReactNode,meta?:ReactNode}){
+ return <div className="joint-review-post">{byline&&<div className="review-byline">{byline}</div>}
+  <div className="body">{title&&<p><b>{title}</b></p>}{children}</div>{meta&&<Note>{meta}</Note>}</div>;
+}
+/** The partner's note on a change sent back «на доработку» (V21 returnNoteHTML). */
+export function ReturnNote({children}:{children:ReactNode}){
+ return <blockquote className="ret-note">{children}</blockquote>;
+}

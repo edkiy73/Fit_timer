@@ -14,6 +14,7 @@ import {useDragOrder} from './reorder';
 import {Ask,AudTag,COUPLE_ROWS,DETAIL_ROWS,MAX_PHOTOS,catalogRes,ok,photoSrc,profileRes,settingsRes,type Profile} from './me';
 import {NICK,nickAnswer} from './register';
 import {shakeFirstErr} from './create-community';
+import {PostPhotoPicker} from './gallery';
 
 /** V21 P02 «Редактировать профиль» and P04 «Приватная часть» (`SC.P02` with `only`): one editor, opened at the block
  * that was tapped on «Я» — `media` (the photo slots), `basics` (name, nickname, age, about, city), `details` (the
@@ -147,6 +148,11 @@ export function MeEditScreen(){
     :<>
      {show('media')&&<Group className="ph20" id="peMedia" title={only?undefined:t('fe.me.photos')} action={only?undefined:<AudTag k="all"/>} foot={t('fe.mx.ed.photoHint')}>
       {slots('photos',d.photos,MAX_PHOTOS)}</Group>}
+     {show('media')&&<PostPhotoPicker profileId={acting.id} chosen={d.photos.map(x=>x.id)} onToggle={m=>{
+      // V21 phToggle: a photo of an own post goes on the profile or comes off it (up to six); «Сохранить» writes it.
+      if(d.photos.some(x=>x.id===m.id)){set({photos:d.photos.filter(x=>x.id!==m.id)});return;}
+      if(d.photos.length>=MAX_PHOTOS){toast(t('fe.gal.profileMax'),{type:'warn'});return;}
+      set({photos:[...d.photos,{id:m.id,src:m.src,pending:false}]});}}/>}
      {(show('basics')||show('details'))&&<Group><Card form className="pe-form">
       {show('basics')&&<>
        <Field id={fid+'n'} label={cp?t('fe.mx.ed.coupleName'):t('fe.me.name')}><Input id={fid+'n'} value={d.name} maxLength={60} onChange={e=>set({name:e.target.value})}/></Field>
