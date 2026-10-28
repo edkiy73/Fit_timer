@@ -53,7 +53,8 @@ export async function session(email, { fresh = false } = {}) {
     const deviceId = 'e2e-' + email.split('@')[0];
     const v = await post('/api/auth', { action: 'verify', email, code: c.code, deviceId });
     if (v.syncToken) {
-      sessions[email] = { email, deviceId, syncToken: v.syncToken, handle: v.handle ?? null, locale: 'ru', sub: null, premium: false, owned: [], fresh: false, expiresAt: v.expiresAt ?? null, _at: Date.now() };
+      // the person profile stays known across a fresh sign-in (calls after a 401 still act as that person)
+      sessions[email] = { email, deviceId, syncToken: v.syncToken, handle: v.handle ?? null, locale: 'ru', sub: null, premium: false, owned: [], fresh: false, expiresAt: v.expiresAt ?? null, _at: Date.now(), ...(s?.personId ? { personId: s.personId } : {}) };
       saveSessions();
       return sessions[email];
     }
@@ -73,6 +74,11 @@ export async function api(email, action, input = {}, profile) {
   else if (s.personId) h['x-fe-profile'] = s.personId;
   let r = await post('/api/fe', { action, ...input }, h);
   if (r.status === 401) { console.error(`   (401 on ${action} for ${email}: signing in again — an open browser page of this account is now signed out)`); await session(email, { fresh: true }); return api(email, action, input, profile); }
+  // A session signed in again elsewhere may not know its person profile yet: bootstrap fills it in, then retry once.
+  if (r.status === 400 && r.error === 'profile_required' && !profile && !s.personId && action !== 'session.bootstrap') {
+    await boot(email);
+    if ((await session(email)).personId) return api(email, action, input, profile);
+  }
   return r;
 }
 export async function boot(email) {

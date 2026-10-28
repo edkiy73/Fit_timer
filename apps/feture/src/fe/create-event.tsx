@@ -270,7 +270,7 @@ function EventEditor({edit,reload,resume}:{edit?:Edit,reload?:()=>void,resume?:R
      area:'area',exactAddress:'exactAddress',joinUrl:'joinUrl',price:'amount',questions:'question',requirements:'requirements',format:'t2'};
     const rule:Partial<Record<Key,FieldName>>={title:'eventTitle',description:'eventDescription',area:'eventArea',exactAddress:'eventAddress',question:'eventQuestion',requirements:'eventRequirements'};
     const e:Errors={};for(const {path,code} of serverFields(x)){const k=map[path.split('.')[0]!];if(!k||e[k]||(edit&&k==='communityId'))continue;
-     const r=rule[k];e[k]=k==='cover'?t('fe.ce.err.cover'):k==='date'?t('fe.ce.err.past'):k==='tz'?t('fe.ce.err.tz'):r&&code!=='invalid'?textErrorMessage(t,code,FIELD[r]):t('fe.ce.err.fields');}
+     const r=rule[k];e[k]=k==='cover'?t('fe.ce.err.cover'):k==='date'?t('fe.ce.err.past'):k==='tz'?t('fe.ce.err.tz'):r&&code!=='invalid'?textErrorMessage(t,code,FIELD[r]):t('fe.val.invalid');}
     const steps=Object.keys(e).map(k=>STEP_OF[k as Key]??4);
     if(steps.length){setErr(e);setStep(Math.min(...steps));shakeFirstErr();}else setNotice({kind:'err',text:feErrorMessage(x,t)});
    }else setNotice({kind:'err',text:feErrorMessage(x,t)});
