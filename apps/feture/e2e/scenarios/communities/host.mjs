@@ -1,17 +1,18 @@
 // C10 manage, C11 requests, C09 members, C08 edit, discussion host tools — on the closed community of persona `host`.
-// Join requests come from `stranger` («ari» below: approved) and `basic` («lina»: declined); every scenario leaves the
-// community without members or pending requests.
+// Join requests come from `stranger` («ari» below: approved) and a fresh `temp` person each run («lina»: declined — a
+// decline holds that person's next request for a week, so a fixed persona could ask only once); every scenario leaves
+// the community without members or pending requests.
 import fs from 'node:fs';
 import { STAFF } from '../../personas.mjs';
-import { FIXTURES, outOf , uploaderDone } from '../helpers.mjs';
+import { FIXTURES, outOf, until, uploaderDone } from '../helpers.mjs';
 let MINE, ARI, LINA; // set from the lane's personas (see the export at the end)
 const sheet = '.sheet.on', dialog = '.dialog.on';
 const toast = (t, s) => t.see('.toast:has-text("' + s + '")');
 const get = async t => (await t.api('community.get', { communityId: MINE })).community;
 const PNG = fs.readFileSync(FIXTURES + 'cover.png');
-/** Back to two pending requests from «ari» and «lina» (what the scenarios decide on). */
-async function restoreRequests(t) {
-  for (const who of [ARI.email, LINA.email]) {
+/** Back to pending requests from these people (default «ari»; C11 adds «lina»). */
+async function restoreRequests(t, people = [ARI]) {
+  for (const who of people.map(p => p.email)) {
     const c = (await t.api('community.get', { communityId: MINE }, who)).community;
     if (c?.me?.state === 'active') await t.api('community.leave', { opId: t.uuid7(), communityId: MINE }, who);
     const c2 = (await t.api('community.get', { communityId: MINE }, who)).community;
@@ -34,11 +35,16 @@ const scenarios = [
    await t.see('Ведущие');
  } },
  { name: 'C11 requests: approve ari, decline lina, history', persona: 'host', run: async t => {
-   await restoreRequests(t); await t.go('/n/communities/' + MINE + '/requests');
+   LINA = await t.persona('temp');
+   await restoreRequests(t, [ARI, LINA]); await t.go('/n/communities/' + MINE + '/requests');
    await t.see('.application-card');
    const n0 = await t.page.locator('.application-card').count();
    if (n0 < 2) throw new Error('expected 2 pending, got ' + n0);
    await t.see('.application-answer');
+   // The requests decided here (by id): other scenarios of the lane (wave7 C11, chats N01) use the same people on the
+   // same community, so «the latest request of ari / lina» in the history may be someone else's by the time it is read.
+   const pend = (await t.api('community.requests', { communityId: MINE, tab: 'pending' })).items;
+   const [ra, rl] = [pend.find(x => x.profile.handle === ARI.handle)?.id, pend.find(x => x.profile.handle === LINA.handle)?.id];
    await t.page.locator('.application-card').filter({ hasText: ARI.handle }).first().locator('.btn:has-text("Одобрить")').click();
    await toast(t, 'Участие одобрено');
    await t.page.locator('.application-card').filter({ hasText: LINA.handle }).first().locator('.btn:has-text("Отклонить")').click();
@@ -46,10 +52,15 @@ const scenarios = [
    await t.wait(800);
    if (await t.page.locator('.application-card .btn:has-text("Одобрить")').count() !== n0 - 2) throw new Error('decided cards still pending');
    await t.tap('.seg button:has-text("Решения")');
-   await t.see('.application-card:has-text("Одобрено")'); await t.see('.application-card:has-text("Отклонено")');
-   const h = await t.api('community.requests', { communityId: MINE, tab: 'history' });
-   const [a, l] = [h.items.find(x => x.profile.handle === ARI.handle), h.items.find(x => x.profile.handle === LINA.handle)];
-   if (a?.state !== 'approved' || l?.state !== 'declined') throw new Error('history: ' + JSON.stringify(h.items.slice(0, 3).map(x => [x.profile.handle, x.state])));
+   // A decision goes out once its «Отменить» toast is gone (5 s); the open «Решения» tab reads the list again then.
+   let h, a, l;
+   await until(async () => {
+     h = await t.api('community.requests', { communityId: MINE, tab: 'history' });
+     [a, l] = [h.items.find(x => x.id === ra), h.items.find(x => x.id === rl)];
+     return a && l;
+   }, 'decisions sent', 20000).catch(() => {});
+   await t.see('.application-card:has-text("' + ARI.handle + '"):has-text("Одобрено")'); await t.see('.application-card:has-text("' + LINA.handle + '"):has-text("Отклонено")');
+   if (a?.state !== 'approved' || l?.state !== 'declined') throw new Error('history: ari ' + a?.state + ', lina ' + l?.state + ' · ' + JSON.stringify(h.items.slice(0, 3).map(x => [x.profile.handle, x.state])));
  } },
  { name: 'C09 members: make host, unhost, read-only, can write, remove; restore requests', persona: 'host', run: async t => {
    const ariId = ARI.personId;
@@ -154,7 +165,7 @@ const scenarios = [
 ];
 
 export default scenarios.map(sc => ({ ...sc, route: null, run: async t => {
-  MINE = t.me.closedId; ARI = await t.persona('stranger'); LINA = await t.persona('basic');
+  MINE = t.me.closedId; ARI = await t.persona('stranger'); LINA = null;
   if (sc.route) await t.go(sc.route.replace('@MINE', MINE));
-  try { await sc.run(t); } finally { for (const p of [ARI, LINA]) await outOf(t, MINE, p.email); }
+  try { await sc.run(t); } finally { for (const p of [ARI, LINA].filter(Boolean)) await outOf(t, MINE, p.email); }
 } }));

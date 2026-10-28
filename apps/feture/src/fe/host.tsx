@@ -128,12 +128,13 @@ export function JoinSheet({c,invite,onClose,onDone}:{c:{id:string,name:string,pr
 
 /** «⋯» of one discussion (V21 discMenu): the link for everyone; for hosts pin / unpin, keep out of «Популярное» or let
  * it back (discPop; the discussion stays in the list), and remove (with an ask() confirmation); others can report it. */
+export type DiscussionChange='pin'|'unpin'|'remove'|'excludePopular'|'includePopular';
 export function DiscussionHostSheet({d,host=true,onClose,onDone,onReport}:{d:{id:string,title:string|null,pinned?:boolean|undefined,popularExcluded?:boolean|undefined},host?:boolean,
- onClose:()=>void,onDone:(msg:string)=>void,onReport?:(()=>void)|undefined}){
+ onClose:()=>void,onDone:(msg:string,change:DiscussionChange)=>void,onReport?:(()=>void)|undefined}){
  const {call}=useFe();const {t}=useI18n();const toast=useToast();const [busy,setBusy]=useState(false);const [confirm,setConfirm]=useState(false);
- const act=async(change:'pin'|'unpin'|'remove'|'excludePopular'|'includePopular')=>{
+ const act=async(change:DiscussionChange)=>{
   setBusy(true);
-  try{await call('discussion.host',{opId:newOpId(),postId:d.id,change},okRes);onDone(change==='excludePopular'||change==='includePopular'?t('fe.w7.disc.'+change):t('fe.cm.disc.'+change));}
+  try{await call('discussion.host',{opId:newOpId(),postId:d.id,change},okRes);onDone(change==='excludePopular'||change==='includePopular'?t('fe.w7.disc.'+change):t('fe.cm.disc.'+change),change);}
   catch(x){toast(feErrorMessage(x,t),{type:'err'});}finally{setBusy(false);}
  };
  const copy=async()=>{const okc=await copyLink(appUrl('/n/feed/post/'+d.id));onClose();toast(t(okc?'fe.w7.disc.copied':'fe.cm.copyFailed'),{type:okc?'ok':'warn'});};
@@ -151,25 +152,30 @@ export function DiscussionHostSheet({d,host=true,onClose,onDone,onReport}:{d:{id
 /** C03 «Участники» (and C09): hosts, then members; a host taps a person to make them a host, stop them posting or remove them. */
 export function MembersList({c,data,onChange}:{c:{id:string,me?:{role:string,state:string}|null,members:number},data:z.infer<typeof memList>|null,onChange:()=>void}){
  const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
- const [open,setOpen]=useState<Mem|null>(null);const [confirm,setConfirm]=useState(false);const [busy,setBusy]=useState(false);
+ const [openId,setOpen]=useState<string|null>(null);const [confirm,setConfirm]=useState(false);const [busy,setBusy]=useState(false);
+ // What a change did, shown at once until the list is read again: the next tap on the person offers the next step.
+ const [done,setDone]=useState<Record<string,Partial<Mem>>>({});
  const host=isHost(c);const owner=host&&c.me?.role==='owner';
  const change=async(m:Mem,ch:'host'|'unhost'|'readOnly'|'canWrite'|'remove')=>{
   setBusy(true);
-  try{await call('community.member',{opId:newOpId(),communityId:c.id,profileId:m.id,change:ch},okRes);toast(t('fe.host.mem.done.'+ch).replace('{name}',pname(m)),{type:'ok'});setOpen(null);setConfirm(false);onChange();}
+  try{await call('community.member',{opId:newOpId(),communityId:c.id,profileId:m.id,change:ch},okRes);setDone(d=>({...d,[m.id]:ch==='host'||ch==='unhost'?{role:ch==='host'?'host':'member'}:ch==='readOnly'||ch==='canWrite'?{read_only:ch==='readOnly'}:{}}));
+  toast(t('fe.host.mem.done.'+ch).replace('{name}',pname(m)),{type:'ok'});setOpen(null);setConfirm(false);onChange();}
   catch(x){toast(feErrorMessage(x,t),{type:'err'});}finally{setBusy(false);}
  };
  // «Показать ещё» (V21 cMoreMembers): the server gives 20 a page; further pages are added under the first one.
  const [more,setMore]=useState<{items:Mem[],next:string|null}|null>(null);const [loadingMore,setLoadingMore]=useState(false);
- useEffect(()=>{setMore(null);},[data]);
+ useEffect(()=>{setMore(null);setDone({});},[data]);
  const next=more?more.next:data?.next??null;
  const showMore=async()=>{if(!next||loadingMore)return;setLoadingMore(true);
   try{const r=await call('community.members',{communityId:c.id,cursor:next},memList);setMore(m=>({items:[...(m?.items??[]),...(r.items??[])],next:r.next??null}));}
   catch(x){toast(feErrorMessage(x,t),{type:'err'});}finally{setLoadingMore(false);}};
  if(!data)return <Skel kind="list"/>;
- const items=data.items===null?null:[...data.items,...(more?.items??[]).filter(m=>!data.items!.some(x=>x.id===m.id))];
+ const items=data.items===null?null:[...data.items,...(more?.items??[]).filter(m=>!data.items!.some(x=>x.id===m.id))].map(m=>done[m.id]?{...m,...done[m.id]}:m);
+ // The sheet reads the person from the list as it is now (not as it was when tapped).
+ const open=openId?items?.find(m=>m.id===openId)??null:null;
  const sub=(m:Mem)=>m.id===acting?.id?(m.role==='owner'?t('fe.cm.youOwner'):t('fe.host.mem.you')):m.role==='owner'?t('fe.cm.owner'):m.role==='host'?t('fe.cm.hostSub'):m.read_only?t('fe.cm.cantPost'):undefined;
  const canManage=(m:Mem)=>host&&m.id!==acting?.id&&m.role!=='owner'&&(m.role!=='host'||owner);
- const row=(m:Mem)=><PersonRow key={m.id} p={m} sub={sub(m)??(m.handle&&m.name?'@'+m.handle:t('fe.cm.memberSub'))} {...(canManage(m)?{onClick:()=>setOpen(m),end:<IconBtn icon={Ellipsis} kind="ghost" size="sm" label={t('fe.cm.more')} onClick={()=>setOpen(m)}/>}:{})}/>;
+ const row=(m:Mem)=><PersonRow key={m.id} p={m} sub={sub(m)??(m.handle&&m.name?'@'+m.handle:t('fe.cm.memberSub'))} {...(canManage(m)?{onClick:()=>setOpen(m.id),end:<IconBtn icon={Ellipsis} kind="ghost" size="sm" label={t('fe.cm.more')} onClick={()=>setOpen(m.id)}/>}:{})}/>;
  const hosts=items?.filter(m=>m.role!=='member')??[];const members=items?.filter(m=>m.role==='member')??[];
  return <>
   {host&&<Note className="k-mem-hint">{t('fe.host.mem.hint')}</Note>}
@@ -275,6 +281,8 @@ export function CommunityRequestsScreen(){
  useEffect(()=>{loadC();},[loadC]);
  const fetch=useCallback(()=>call('community.requests',{communityId:id,tab},reqList).then(r=>r.items),[call,id,tab]);
  const {data:items,error,load}=useLoad(fetch);
+ // A decision goes out 5 s later: by then the host may be on «Решения», so the list read again is the one shown now.
+ const reload=useRef(load);reload.current=load;
  const [busy,setBusy]=useState('');
  // Decided cards leave the list at once; the decision is sent once «Отменить» is gone (V21 cRequestDecision).
  const [held,setHeld]=useState<Set<string>>(new Set());const {later,cancel}=useLater();
@@ -283,7 +291,7 @@ export function CommunityRequestsScreen(){
   setHeld(s=>new Set(s).add(r.id));
   later('req'+r.id,async()=>{setBusy(r.id);
    try{await call('community.requestDecide',{opId:newOpId(),requestId:r.id,rev:r.rev,approve},okRes);}
-   catch(x){toast(feErrorMessage(x,t),{type:'err'});}finally{setBusy('');unhold(r.id);load();loadC();}});
+   catch(x){toast(feErrorMessage(x,t),{type:'err'});}finally{setBusy('');unhold(r.id);reload.current();loadC();}});
   toast(approve?t('fe.cm.req.approved'):t('fe.host.req.declined'),{type:'ok',ms:UNDO_MS,action:{label:t('fe.mx.undo'),fn:()=>{if(cancel('req'+r.id))unhold(r.id);else toast(t('fe.w7.undo.late'),{type:'warn'});}}});
  };
  return <>

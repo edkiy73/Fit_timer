@@ -50,7 +50,10 @@ export async function session(email, { fresh = false } = {}) {
     let c = await admin({ action: 'user_test_code', email });
     if (c.status === 404) { await admin({ action: 'user_create', email }); c = await admin({ action: 'user_test_code', email }); }
     if (!c.code) throw new Error('test code for ' + email + ': ' + c.status + ' ' + c.error);
-    const deviceId = 'e2e-' + email.split('@')[0];
+    // The shared staff account signs in from every lane and worktree: a device per lane, so one lane's sign-in does
+    // not replace another's token (each replacement was a 401 and one more sign-in against the 20 per 15 min).
+    const lane = email === 'qa-staff@feture.test' && /^[a-z0-9]{1,8}$/.test(process.env.E2E_LANE ?? '') ? '-' + process.env.E2E_LANE : '';
+    const deviceId = 'e2e-' + email.split('@')[0] + lane;
     const v = await post('/api/auth', { action: 'verify', email, code: c.code, deviceId });
     if (v.syncToken) {
       // the person profile stays known across a fresh sign-in (calls after a 401 still act as that person)
@@ -59,7 +62,15 @@ export async function session(email, { fresh = false } = {}) {
       return sessions[email];
     }
     if (v.status === 429) { await sleep(60000); continue; }
-    throw new Error('verify ' + email + ': ' + v.status);
+    // 403 bad_code: another runner (another lane or worktree) asked a code for the same account — the shared staff
+    // persona — after us, which replaced ours. Wait a little, take its session if it got one, else ask again.
+    if (v.status === 403 && i < 9) {
+      await sleep(1500 + Math.random() * 3500);
+      let d; try { d = JSON.parse(fs.readFileSync(SESS, 'utf8'))[email]; } catch {}
+      if (d?.syncToken && d.syncToken !== s?.syncToken && Date.now() - d._at < 6 * 3600e3) { sessions[email] = s ? Object.assign(s, d) : d; return sessions[email]; }
+      continue;
+    }
+    throw new Error('verify ' + email + ': ' + v.status + ' ' + (v.error ?? ''));
   }
   throw new Error('sign-in for ' + email + ' stays rate limited');
 }

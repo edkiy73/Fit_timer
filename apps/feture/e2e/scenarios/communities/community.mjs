@@ -112,7 +112,7 @@ const scenarios = [
    await t.see('.c-composer');
    await t.tap('.c-composer button[aria-label="Опрос"]');
    await t.see('#pollQ');
-   await t.page.locator('textarea.inp').first().fill(stamp + ': как вам формат?');
+   await t.page.locator('.compose .rte-ed').first().fill(stamp + ': как вам формат?');
    await t.page.locator('#pollQ').fill('Какой формат удобнее?');
    const opts = t.page.locator('.pollopt input');
    await opts.nth(0).fill('Онлайн'); await opts.nth(1).fill('Офлайн');
@@ -140,7 +140,7 @@ const scenarios = [
    await chooser.setFiles({ name: 'p.png', mimeType: 'image/png', buffer: PNG });
    await uploaderDone(t);
    await t.see('.cmp-media img', 20000);
-   await t.page.locator('textarea.inp').first().fill(stamp);
+   await t.page.locator('.compose .rte-ed').first().fill(stamp);
    await t.tap('.ctabar .btn:not(.soft)');
    await t.see('.toast');
    await t.wait(1500);
