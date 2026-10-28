@@ -34,7 +34,7 @@ async function newPage() {
       const mo = new MutationObserver(list => {
         for (const m of list) {
           const el = m.target instanceof Element ? m.target : m.target.parentElement;
-          if (el?.closest('.toasts,.toast')) continue;
+          if (!el || el.closest('head,.toasts,.toast')) continue;
           if (m.type === 'childList' && (m.addedNodes.length || m.removedNodes.length)) { window.__muts.push(performance.now()); break; }
           if (m.type === 'characterData') { window.__muts.push(performance.now()); break; }
         }
