@@ -6,8 +6,9 @@ import {ArrowUpDown,AtSign,Bell,BellOff,Bookmark,Check,Calendar,ChartColumn,Chev
 import type {LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicOrigin} from '../api-url';
-import {ActionLine,ActivityCard,ActivityItem,Alert,Ask,Av,Bar,Btn,Card,Chip,Chips,Counter,Empty,Field,FilePick,Group,H,IconBtn,Input,LikesLine,Note,QuickStart,RichArea,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,ToggleRow,VideoBadge,View,type RichAreaHandle} from './kit';
+import {ActionLine,Alert,Ask,Av,Bar,Btn,Card,Chip,Chips,Counter,Empty,Field,FilePick,Group,H,IconBtn,Input,LikesLine,Note,QuickStart,RichArea,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,ToggleRow,VideoBadge,View,type RichAreaHandle} from './kit';
 import {useFe} from './session';
+import {ActivityCardOf,activitySchema,type Act} from './feed-activity';
 import {Uploader} from './kit/Uploader';
 import {useSendPhoto,useSendVideo} from './media-upload';
 import {VIDEO_TYPES} from './kit/media';
@@ -71,10 +72,6 @@ const filtN=(f:Filters)=>f.topics.length+f.ex.length+f.types.length+f.kinds.leng
  * is by the acting profile's own interests, one of them when a chip is picked. */
 const feedInput=(tab:Tab,f:Filters,popTag:string)=>tab==='popular'?{tab,myInterests:true,...(popTag?{topics:[popTag]}:{})}
  :{tab,...(f.topics.length?{topics:f.topics}:{}),...(f.ex.length?{excludeTopics:f.ex}:{}),...(f.types.length?{types:f.types}:{}),...(tab==='following'?{activity:f.kinds}:{})};
-const actPerson=z.object({id:z.uuid(),kind:z.string(),handle:z.string().nullable(),name:z.string().nullable(),avatar:z.string().nullable().optional()}).passthrough();
-const activitySchema=z.object({kind:z.literal('activity'),id:z.string(),activity:z.enum(['likes','events','communities','follows']),actor:actPerson,count:z.number(),at:z.string(),
- items:z.array(z.object({id:z.string()}).passthrough())});
-type Act=z.infer<typeof activitySchema>;
 type FeedItem=Post|Act;
 const isAct=(x:FeedItem):x is Act=>(x as Act).kind==='activity';
 const mixedPage=z.object({ok:z.literal(true),items:z.array(z.unknown()),next:z.string().nullable()});
@@ -212,27 +209,6 @@ export function FeedTab(){
     catch(e){toast(feErrorMessage(e,t),{type:'err'});}}}/>
   </Card></Sheet>}
  </>;
-}
-
-/** One «Подписки» activity card (V21 actCard): «Mia: нравится 3 публикации», the things, ⋯. */
-function ActivityCardOf({a,onMenu}:{a:Act,onMenu:()=>void}){
- const {t,locale}=useI18n();const navigate=useNavigate();
- const who=nameOf(a.actor);const n=a.count;
- const text=a.activity==='likes'?t('fe.w3.act.likes',{name:who,n:plural(n,['публикация','публикации','публикаций'],['post','posts'],locale)})
-  :a.activity==='events'?t('fe.w3.act.events',{name:who,n:plural(n,['событие','события','событий'],['event','events'],locale)})
-  :a.activity==='communities'?t('fe.w3.act.communities',{name:who,n:plural(n,['сообщество','сообщества','сообществ'],['community','communities'],locale)})
-  :t('fe.w3.act.follows',{name:who,n:plural(n,['человек','человека','человек'],['person','people'],locale)});
- const s=(v:unknown)=>typeof v==='string'?v:'';
- const items=a.items.map(x=>{
-  if(a.activity==='likes'){const au=x.author as {name?:string|null,handle?:string|null}|undefined;
-   return <ActivityItem key={x.id} icon={Heart} title={s(x.title)||mdPlain(s(x.excerpt)).slice(0,80)||t('fe.feed.post')} sub={nameOf(au)} onClick={()=>navigate('/n/feed/post/'+x.id)}/>;}
-  if(a.activity==='events')return <ActivityItem key={x.id} icon={Calendar} title={s(x.title)} sub={x.startsAt?new Date(s(x.startsAt)).toLocaleString(locale==='en'?'en':'ru',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):undefined} onClick={()=>navigate('/n/events/'+x.id)}/>;
-  if(a.activity==='communities')return <ActivityItem key={x.id} icon={Users} title={s(x.name)} onClick={()=>navigate('/n/communities/'+x.id)}/>;
-  const p={name:s(x.name)||null,handle:s(x.handle)||null};
-  return <ActivityItem key={x.id} av={<Av name={nameOf(p)} seed={x.id} src={s(x.avatar)||null} size="sm"/>} title={nameOf(p)} sub={p.handle?'@'+p.handle:undefined} onClick={()=>navigate('/n/people/'+x.id)}/>;
- });
- return <ActivityCard actor={{id:a.actor.id,name:who,avatar:a.actor.avatar??null}} text={text} time={when(a.at,locale)} menuLabel={t('fe.more')} onMenu={onMenu}
-  onActor={()=>navigate('/n/people/'+a.actor.id)} items={items} more={t('fe.w3.act.more',{n:items.length})} less={t('fe.fd.collapse')}/>;
 }
 
 /** «Обсуждают в сообществах» (V21 popularFeed → popularDiscs): the three most discussed community threads of the week

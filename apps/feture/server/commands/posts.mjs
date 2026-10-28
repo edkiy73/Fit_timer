@@ -7,7 +7,7 @@ import { enqueue } from '../outbox.mjs';
 import { needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
 import { avatarSrc, mediaDto } from '../media/assets.mjs';
 import { blockProfile } from './social.mjs';
-import { canWrite } from './communities.mjs';
+import { canWrite, coverOf } from './communities.mjs';
 import { PREMIUM_SQL, withFaces } from './faces.mjs';
 import { hasPhotoCheck } from './verification.mjs';
 import { dropHiddenPostPhotos, settleAvatar } from './photos.mjs';
@@ -23,6 +23,10 @@ import { dropHiddenPostPhotos, settleAvatar } from './photos.mjs';
 
 const AUD = ['only', 'granted', 'followers', 'all'];
 const PUBLIC_AUD = new Set(['all', 'followers']);
+/** How many things one activity card carries (V21 actCard: the strip scrolls through them; the rest is «ещё N» from
+ * `count`). */
+const ACT_ITEMS = 20;
+
 const MENTION = /@([A-Za-z0-9_.]{3,20})/g;
 
 /** @param {Acting | null} acting @returns {Acting} */
@@ -395,7 +399,7 @@ async function activityBursts(q, viewer, kinds, cur, limit) {
      ), numbered as (
        select *, sum(brk) over (partition by actor, typ order by t, target rows unbounded preceding) burst from marked
      ), bursts as (
-       select actor, typ, max(t) last_at, count(*)::int n, (array_agg(target order by t desc))[1:6] targets,
+       select actor, typ, max(t) last_at, count(*)::int n, (array_agg(target order by t desc))[1:${ACT_ITEMS}] targets,
               md5(actor::text || typ || min(t)::text)::uuid id
        from numbered group by actor, typ, burst
      )
@@ -404,25 +408,57 @@ async function activityBursts(q, viewer, kinds, cur, limit) {
     [viewer.profileId, viewer.accountId, kinds, cur?.at ?? null, cur?.id ?? null, limit]);
 }
 
-/** Activity cards for the screen: the person, how many, and up to six of the things (posts, events, communities,
- * people). @param {Q} q @param {Acting} viewer @param {import('../media/assets.mjs').MediaConfig} media @param {any[]} bursts */
+/** Activity cards for the screen: the person, how many, and up to ACT_ITEMS of the things — a liked post with its
+ * first picture and what it is made of (V21 likeThumb), an event or a community with its cover, a person with their
+ * face. @param {Q} q @param {Acting} viewer @param {import('../media/assets.mjs').MediaConfig} media @param {any[]} bursts */
 async function activityDtos(q, viewer, media, bursts) {
   if (!bursts.length) return [];
   const ids = (/** @type {string} */ typ) => [...new Set(bursts.filter(b => b.typ === typ).flatMap(b => b.targets))];
-  const posts = ids('likes').length ? await q.query(
-    `select x.id, x.title, left(x.body, 140) excerpt, json_build_object('id', o.id, 'kind', o.kind, 'handle', o.handle, 'name', o.name) author
-     from feture.post x join feture.profile o on o.id = x.owner_profile_id where x.id = any($1::uuid[])`, [ids('likes')]) : [];
-  const events = ids('events').length ? await q.query(
-    `select e.id, e.title, e.format, e.starts_at "startsAt", e.state from feture.event e where e.id = any($1::uuid[])`, [ids('events')]) : [];
-  const groups = ids('communities').length ? await q.query(
-    `select c.id, c.name, c.privacy, c.plate from feture.community c where c.id = any($1::uuid[])`, [ids('communities')]) : [];
-  const people = ids('follows').length ? await q.query(
-    `select p.id, p.kind, p.handle, p.name from feture.profile p where p.id = any($1::uuid[])`, [ids('follows')]) : [];
-  await withFaces(q, media, viewer, people, r => r);
-  const actors = await q.query(`select p.id, p.kind, p.handle, p.name from feture.profile p where p.id = any($1::uuid[])`, [[...new Set(bursts.map(b => b.actor))]]);
+  const [posts, events, groups, people] = await Promise.all([
+    ids('likes').length ? q.query(
+      `select x.id, x.title, left(x.body, 140) excerpt, x.audience, x.owner_profile_id,
+              json_build_object('id', o.id, 'kind', o.kind, 'handle', o.handle, 'name', o.name) author,
+              exists (select 1 from feture.poll pl where pl.post_id = x.id) poll, jsonb_array_length(x.interests) > 0 interests,
+              (select count(*)::int from feture.media_attachment a join feture.media_asset m on m.id = a.asset_id
+                where a.target_type = 'post' and a.target_id = x.id and m.kind <> 'video') photos,
+              (select count(*)::int from feture.media_attachment a join feture.media_asset m on m.id = a.asset_id
+                where a.target_type = 'post' and a.target_id = x.id and m.kind = 'video') videos,
+              (select to_jsonb(m) from feture.media_attachment a join feture.media_asset m on m.id = a.asset_id
+                where a.target_type = 'post' and a.target_id = x.id order by a.position limit 1) first_asset
+       from feture.post x join feture.profile o on o.id = x.owner_profile_id where x.id = any($1::uuid[])`, [ids('likes')]) : [],
+    ids('events').length ? q.query(
+      `select e.id, e.title, e.format, e.starts_at "startsAt", e.state, e.plate,
+              (select to_jsonb(m) from feture.media_asset m where m.id = e.cover_asset_id) cover_asset
+       from feture.event e where e.id = any($1::uuid[])`, [ids('events')]) : [],
+    ids('communities').length ? q.query(
+      `select c.id, c.name, c.privacy, c.plate,
+              (select count(*)::int from feture.community_member m where m.community_id = c.id and m.state = 'active') members,
+              (select to_jsonb(m) from feture.media_asset m where m.id = c.cover_asset_id) cover_asset
+       from feture.community c where c.id = any($1::uuid[])`, [ids('communities')]) : [],
+    ids('follows').length ? q.query(
+      `select p.id, p.kind, p.handle, p.name from feture.profile p where p.id = any($1::uuid[])`, [ids('follows')]) : [],
+  ]);
+  const [actors] = await Promise.all([
+    q.query(`select p.id, p.kind, p.handle, p.name from feture.profile p where p.id = any($1::uuid[])`, [[...new Set(bursts.map(b => b.actor))]]),
+    withFaces(q, media, viewer, people, r => r),
+  ]);
   await withFaces(q, media, viewer, actors, r => r);
+  // Pictures are signed in the same tick (the delivery coalesces them). A liked post's picture follows the post's own
+  // audience (explicit stays covered — the viewer opens the post to choose); a cover is what a public place shows.
+  /** @param {any} d */
+  const pic = d => (d?.src ? d.src.thumb ?? d.src.blur ?? null : null);
+  const pubCover = async (/** @type {any} */ x) => { const { cover_asset, ...r } = x; return { ...r, cover: pic(await coverOf(media, cover_asset, viewer.profileId)) }; };
+  const [postOut, eventOut, groupOut] = await Promise.all([
+    Promise.all(posts.map(async ({ first_asset, audience, owner_profile_id, ...x }) => {
+      const place = owner_profile_id === viewer.profileId ? 'own' : PUBLIC_AUD.has(audience) ? 'public' : 'private';
+      const d = first_asset && media?.delivery ? await mediaDto(media, first_asset, { viewerProfileId: viewer.profileId, place, showExplicit: false }).catch(() => null) : null;
+      return { ...x, thumb: pic(d), video: first_asset?.kind === 'video', durationMs: first_asset?.kind === 'video' ? first_asset.duration_ms ?? null : null };
+    })),
+    Promise.all(events.map(pubCover)),
+    Promise.all(groups.map(pubCover)),
+  ]);
   /** @type {Record<string, any[]>} */
-  const pool = { likes: posts, events, communities: groups, follows: people };
+  const pool = { likes: postOut, events: eventOut, communities: groupOut, follows: people };
   return bursts.map(b => ({
     kind: 'activity', id: b.id, activity: b.typ, actor: actors.find(x => x.id === b.actor), count: b.n, at: new Date(b.last_at).toISOString(),
     items: b.targets.map((/** @type {string} */ t) => pool[b.typ].find(x => x.id === t)).filter(Boolean),
