@@ -7,7 +7,7 @@ import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicBase} from '../api-url';
 import {Ban,Check,ChevronDown,Crown,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,Flag,Heart,History,Info,KeyRound,Link as LinkIcon,Lock,LockOpen,MapPin,MessageCircle,ShieldCheck,Undo2,Users,X} from 'lucide-react';
 import {ActingAv,Alert,Av,Bar,Btn,Card,Empty,Group,H,IconBtn,Layer,Note,PersonName,PhotoBars,PhotoTrack,Pill,Row,Seg,Skel,Text,ToggleRow,Veil,View,plate} from './kit';
-import {useFe,useKeyChange} from './session';
+import {onReadsDropped,useFe,useKeyChange} from './session';
 import {ReportSheet} from './report';
 import {PhotoBadge} from './photo-check';
 import {faceFields,NameBadges} from './faces';
@@ -285,7 +285,7 @@ function Activity({profileId,inert,preview,pre}:{profileId:string,inert?:boolean
  const [acts,setActs]=useState<Act[]|null>(()=>pre?pre.activity?actsOf(pre.activity):[]:null);const own=profileId===acting?.id;const [vis,setVis]=useState<string|null>(null);
  const given=!!pre;
  // Another profile starts empty; reading the same one again keeps what is shown until the answer comes.
- useEffect(()=>{if(given)return;call('profile.posts',{profileId},postsRes).then(r=>setItems(r.items)).catch(()=>setItems(l=>l??[]));},[call,profileId,given]);
+ useEffect(()=>{if(given)return;const put=(r:z.infer<typeof postsRes>)=>setItems(r.items);call('profile.posts',{profileId},postsRes,{onFresh:put}).then(put).catch(()=>setItems(l=>l??[]));},[call,profileId,given]);
  useEffect(()=>{if(given)return;call('profile.activity',{profileId},actRes).then(r=>setActs(actsOf(r))).catch(()=>setActs(l=>l??[]));},[call,profileId,given]);
  useKeyChange(profileId,()=>{setItems(null);setActs(null);});
  useEffect(()=>{if(!own){setVis(null);return;}call('profile.settings',{},ownVis).then(r=>setVis(r.settings.activityVis??'all')).catch(()=>setVis('all'));},[call,own]);
@@ -358,6 +358,8 @@ export type CardPre={profile:PersonProfile,compat:Compat|null,links:z.infer<type
 const safe=<S extends z.ZodType>(schema:S,v:unknown):z.infer<S>|null=>{if(v==null)return null;const r=schema.safeParse(v);return r.success?r.data:null;};
 /** Cards read (or being read) for the acting profile, newest last; a card read once is not asked again for a while. */
 const cardMemo=new Map<string,{at:number,value:Promise<CardPre>,done?:CardPre}>();
+// A write (an own post published, edited or deleted; a follow) makes a prefetched card stale like any read.
+onReadsDropped(()=>cardMemo.clear());
 const CARD_TTL=5*60000;
 /** Whether the server has `discover.card` (null: not known yet). Without it a card costs seven reads, so the deck then
  * reads only the card someone stays on (`cardOneRead() === false`), never the next one ahead. */
