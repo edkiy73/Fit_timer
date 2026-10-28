@@ -175,7 +175,9 @@ async function sendLike(q, acting, target, source) {
   const mine = await modeOf(q, acting.profileId), theirs = await modeOf(q, target);
   const [back] = await q.query(`select id from feture.profile_like where from_profile_id = $1 and to_profile_id = $2 and state = 'active'`, [target, acting.profileId]);
   if (!back) {
-    if (mine.discover_mode === 'off' && (source === 'discover' || acting.kind === 'couple' || t.kind === 'couple' || !mine.accept_profile_likes)) {
+    // Owner R04 (28.10): with my dating off, a like from someone's profile page is still allowed (the app explains
+    // first that my profile stays out of Discover); Discover itself and other routes keep the old rule.
+    if (mine.discover_mode === 'off' && source !== 'profile' && (source === 'discover' || acting.kind === 'couple' || t.kind === 'couple' || !mine.accept_profile_likes)) {
       fail(422, 'rule_violation', { rule: 'own_discover_off' });
     }
     if (source !== 'discover') {

@@ -20,7 +20,7 @@ import { limit } from './limits.mjs';
  *   input: import('zod').ZodType, profile: boolean, write: boolean, ledger?: boolean, allowPaused?: boolean,
  *   rate?: {kind: string, max: number, window: string},
  *   run: (q: Q, ctx: {account: AccountRow, acting: Acting | null, input: any, cfg: Cfg, coreAccountHash: string,
- *     signal: (profileId: string | null | undefined, kind: import('./realtime.mjs').Kind) => void,
+ *     signal: (profileId: string | null | undefined, kind: import('./realtime.mjs').Kind, tag?: string) => void,
  *     channels: (q: Q, profileIds: string[]) => Promise<Record<string, string>>}) => Promise<Record<string, unknown>>
  * }} Command
  * @typedef {{headers: Record<string, string | string[] | undefined>, method?: string, body?: unknown,
@@ -100,8 +100,8 @@ export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota
       // Realtime signals a command asks for go out only after its transaction committed (S2 §8).
       /** @type {import('./realtime.mjs').Signal[]} */
       let pending = [];
-      /** @param {string | null | undefined} profile @param {import('./realtime.mjs').Kind} kind */
-      const signal = (profile, kind) => { if (profile) pending.push({ profile, kind }); };
+      /** @param {string | null | undefined} profile @param {import('./realtime.mjs').Kind} kind @param {string} [tag] */
+      const signal = (profile, kind, tag) => { if (profile) pending.push(tag ? { profile, kind, tag } : { profile, kind }); };
       const channels = signals ? signals.channels : async () => ({});
       /** @param {Q} q */
       const exec = async q => {

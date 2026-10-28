@@ -4,9 +4,9 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Archive,ArchiveRestore,Ban,Camera,Check,ChevronDown,ChevronLeft,CircleAlert,Clock,Copy,Ellipsis,Eye,EyeOff,Flag,Image as ImageIcon,Info,Lock,LockOpen,MessageCircle,Plus,Search,SendHorizontal,Sparkles,Undo2,User,Users,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Av,Bar,Btn,Card,Check as CheckBox,Chip,Chips,Empty,Field,FilePick,Group,IconBtn,Layer,Note,PersonBar,Pill,RadioList,Row,SearchInput,SectionLabel,SelectRow,Sheet,Skel,Stack,Text,TextArea,ToggleRow,View} from './kit';
+import {Alert,Av,Bar,Btn,Card,Check as CheckBox,Chip,Chips,Empty,Field,FilePick,Group,IconBtn,Layer,Note,PersonBar,Pill,RadioList,Row,SearchInput,SectionLabel,SelectRow,Sheet,Skel,Stack,Text,TextArea,ToggleRow,Typing,View} from './kit';
 import {AgeCheckLink,useAgeResume} from './age-check';
-import {useFe,useRealtime} from './session';
+import {useFe,useRealtime,useTypingSignal} from './session';
 import {useToast} from './toast';
 import {BellButton,SegN} from './inbox';
 
@@ -18,10 +18,16 @@ const chat=z.object({id:z.uuid(),state:z.string(),side:z.object({id:z.uuid(),kin
  unread:z.number(),muted:z.boolean(),archived:z.boolean().optional(),last:z.object({body:z.string(),media:z.boolean(),mode:z.string(),mine:z.boolean()}).nullable(),at:z.string()});
 type Chat=z.infer<typeof chat>;
 const list=z.object({ok:z.literal(true),items:z.array(chat)});
+// Own messages carry when each member of the other side read them (`readBy`, a couple has two) and, for a
+// disappearing photo, how each of them handled it (`views`); never whose account it was (V21 chatReadInfo / chatMedia).
 const msg=z.object({id:z.uuid(),seq:z.number(),mine:z.boolean(),body:z.string(),at:z.string(),replyTo:z.uuid().nullable().optional(),
- media:z.object({ephemeral:z.boolean().optional(),mode:z.string().optional(),state:z.string().optional(),blurred:z.boolean().optional(),pending:z.boolean().optional(),gone:z.boolean().optional(),w:z.number().nullable().optional(),h:z.number().nullable().optional(),src:z.record(z.string(),z.string()).nullable().optional()}).passthrough().nullable().optional()});
+ readBy:z.array(z.object({read:z.boolean(),readAt:z.string().nullable(),reader:z.object({id:z.uuid(),handle:z.string().nullable(),name:z.string().nullable(),avatar:z.string().nullable().optional()}).nullable().optional()})).optional(),
+ media:z.object({ephemeral:z.boolean().optional(),mode:z.string().optional(),state:z.string().optional(),blurred:z.boolean().optional(),pending:z.boolean().optional(),gone:z.boolean().optional(),w:z.number().nullable().optional(),h:z.number().nullable().optional(),src:z.record(z.string(),z.string()).nullable().optional(),
+  views:z.array(z.object({state:z.string(),openedAt:z.string().nullable()})).optional()}).passthrough().nullable().optional()});
+const startersRes=z.object({ok:z.literal(true),topics:z.array(z.string())});
+const topicsRes=z.object({ok:z.literal(true),topics:z.array(z.object({id:z.string(),ru:z.string().nullable(),en:z.string().nullable()}).passthrough())}).passthrough();
 type Msg=z.infer<typeof msg>;
-const msgs=z.object({ok:z.literal(true),state:z.string(),items:z.array(msg),otherRead:z.number(),lastSeq:z.number()});
+const msgs=z.object({ok:z.literal(true),state:z.string(),items:z.array(msg),otherRead:z.number(),lastSeq:z.number(),typingTag:z.string().optional()});
 const ok=z.object({ok:z.literal(true)}).passthrough();
 const opened=z.object({ok:z.literal(true),media:z.object({src:z.record(z.string(),z.string()).nullable()}).passthrough().nullable(),until:z.string().nullable().optional(),gone:z.boolean().optional()}).passthrough();
 const grantList=z.object({ok:z.literal(true),items:z.array(z.object({profile:z.object({id:z.uuid()}).passthrough()}).passthrough())});
@@ -145,7 +151,7 @@ const GROW=120;
 export function ChatScreen(){
  const {id=''}=useParams();const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
  useScreenTag('H02');
- const [meta,setMeta]=useState<Chat|null>(null);const [items,setItems]=useState<Msg[]|null>(null);const [state,setState]=useState('active');const [otherRead,setOtherRead]=useState(0);
+ const [meta,setMeta]=useState<Chat|null>(null);const [items,setItems]=useState<Msg[]|null>(null);const [state,setState]=useState('active');const [otherRead,setOtherRead]=useState(0);const [tag,setTag]=useState<string|null>(null);
  const [error,setError]=useState<unknown>(null);const [text,setText]=useState('');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
  const [pend,setPend]=useState<Pend[]>([]);const [tries,setTries]=useState(0);const [replyTo,setReplyTo]=useState<string|null>(null);
  const [open,setOpen]=useState<Record<string,string>>({});
@@ -174,7 +180,7 @@ export function ChatScreen(){
  const pull=useCallback(async(initial:boolean)=>{
   if(!meta)return;
   const r=await call('chat.messages',initial?{conversationId:id}:{conversationId:id,afterSeq:last.current},msgs,{profileId:meta.side.id});
-  setState(r.state);setOtherRead(r.otherRead);
+  setState(r.state);setOtherRead(r.otherRead);if(r.typingTag)setTag(r.typingTag);
   // A refresh after an ephemeral view also needs the states of older messages: the initial pull replaces the list.
   if(initial)setItems(r.items);
   else if(r.items.length)setItems(prev=>{const p=prev??[];const seenIds=new Set(p.map(m=>m.id));return [...p,...r.items.filter(m=>!seenIds.has(m.id))].sort((a,b)=>a.seq-b.seq);});
@@ -186,7 +192,14 @@ export function ChatScreen(){
  },[call,id,meta]);
  useEffect(()=>{if(!meta)return;pull(true).catch(setError);const iv=setInterval(()=>{pull(false).catch(()=>{});},30000);return ()=>clearInterval(iv);},[meta,pull]);
  // The signal names no conversation (S2 §8): any «chat» signal asks this one for what is new after the last seq.
- useRealtime('chat',()=>{pull(false).catch(()=>{});});
+ useRealtime('chat',()=>{pull(false).catch(()=>{});setTyping(false);});
+ // «печатает…» (owner, 28.10): the other side's typing signal shows a line under the messages for ~5 s; mine goes out
+ // at most every 4 s while I type. Nothing is stored anywhere.
+ const [typing,setTyping]=useState(false);const typingTimer=useRef<ReturnType<typeof setTimeout>|undefined>(undefined);const lastTyping=useRef(0);
+ useTypingSignal(tag,()=>{setTyping(true);clearTimeout(typingTimer.current);typingTimer.current=setTimeout(()=>setTyping(false),5000);});
+ useEffect(()=>()=>clearTimeout(typingTimer.current),[]);
+ const typed=()=>{if(!meta||state!=='active'||Date.now()-lastTyping.current<4000)return;lastTyping.current=Date.now();
+  call('chat.typing',{conversationId:id},ok,{profileId:meta.side.id}).catch(()=>{});};
  // Private access between the two sides: the pills above the chat and «Отозвать мой доступ» in the menu (V11 UX-16).
  const loadGrants=useCallback(()=>{
   if(!meta)return;const other=meta.other.id;const opts={profileId:meta.side.id};
@@ -194,6 +207,13 @@ export function ChatScreen(){
    .then(([a,b])=>setGrants({byMe:a.items.some(x=>x.profile.id===other),withMe:b.items.some(x=>x.profile.id===other)})).catch(()=>{});
  },[call,meta]);
  useEffect(()=>{loadGrants();},[loadGrants]);
+ // «С чего начать» (V21 ice): questions about interests both sides show publicly, before the two general ones.
+ const [starters,setStarters]=useState<string[]>([]);
+ const empty=items!==null&&items.length===0&&state==='active';
+ useEffect(()=>{if(!meta||!empty)return;let live=true;
+  Promise.all([call('chat.starters',{conversationId:id},startersRes,{profileId:meta.side.id}),call('catalog.get',{},topicsRes,{asAccount:true})])
+   .then(([s,c])=>{if(!live)return;const name=new Map(c.topics.map(x=>[x.id,(locale==='en'?x.en||x.ru:x.ru||x.en)??'']));setStarters(s.topics.map(id=>name.get(id)??'').filter(Boolean));}).catch(()=>{});
+  return ()=>{live=false;};},[call,id,meta,empty,locale]);
  // Timers on opened media: redraw now and then so «осталось …» stays true.
  useEffect(()=>{if(!Object.values(eph).some(v=>v.until))return;const iv=setInterval(()=>tick(n=>n+1),20000);return ()=>clearInterval(iv);},[eph]);
 
@@ -249,6 +269,12 @@ export function ChatScreen(){
  };
  const left=(until:number)=>{const min=Math.max(1,Math.ceil((until-Date.now())/60e3));const h=Math.floor(min/60),r=min%60;
   return min>=60?(r?t('fe.chx.hm',{h:String(h),m:String(r)}):t('fe.chx.hours',{h:String(h)})):t('fe.chx.min',{n:String(min)});};
+ /** What the sender sees on their own disappearing photo: not opened yet, being looked at now, or opened (and when). */
+ const ownEph=(views:{state:string,openedAt:string|null}[]|undefined)=>{
+  const v=views??[];const open=v.find(x=>x.state==='open');const seen=v.filter(x=>x.openedAt).sort((a,b)=>Date.parse(b.openedAt!)-Date.parse(a.openedAt!))[0];
+  if(open)return t('fe.w7.eph.openNow');
+  if(seen)return t('fe.w7.eph.seen',{time:time(seen.openedAt!)})+(v.length>1&&v.some(x=>x.state==='unopened')?' · '+t('fe.w7.eph.oneLeft'):'');
+  return `${t('fe.chx.ephSent')} · ${t('fe.w7.eph.notYet')}`;};
  const modeLabel=(mode:string)=>t('fe.chx.eph.'+(['once','t15','t120','t1440'].includes(mode)?mode:'once'));
  /** A photo with nothing to show: still being checked (the recipient waits for the moderator) or removed. */
  const photoNote=(m:Msg,why:'review'|'gone')=><div className="eph-gone" role="note"><span className="eg-ic">{why==='gone'?<EyeOff/>:<Clock/>}</span>
@@ -269,7 +295,7 @@ export function ChatScreen(){
   if(st==='expired')return <div className="eph-gone" role="note"><span className="eg-ic"><EyeOff/></span><span className="eg-tx"><b>{kind} · {once?t('fe.chx.ephGoneOnce'):t('fe.chx.ephGoneTimer')}</b><small>{once?t('fe.chx.ephViewed'):t('fe.chx.ephTimeUp')}</small></span></div>;
   const line=`${kind} · ${modeLabel(mode)}`;
   const until=local?.until;
-  const sub=m.mine?`${t('fe.chx.ephSent')} · ${t('fe.chx.ephCheck')}`
+  const sub=m.mine?ownEph(md.views)
    :st==='unopened'?(once?t('fe.chx.ephOpenOnce'):t('fe.chx.ephOpenTimer'))
    :until?t('fe.chx.ephAgainLeft',{left:left(until)}):t('fe.chx.ephAgain');
   const frac=st==='counting'&&until&&TTL[mode]?Math.max(.08,(until-Date.now())/TTL[mode]!):1;
@@ -422,7 +448,7 @@ export function ChatScreen(){
         {m.body&&<span className="mtx">{m.body}</span>}
         {m.mine&&<div className="st">{time(m.at)}<span aria-label={t('fe.chx.stDelivered')}><Check/></span></div>}
        </div>
-       {m.id===lastRead&&meta&&<button type="button" className="msg-readers" aria-label={t('fe.chx.readByAria',{names:otherName})} onClick={()=>setSheet('readers')}>
+       {m.id===lastRead&&meta&&<button type="button" className="msg-readers" aria-label={t('fe.chx.readByAria',{names:otherName})} onClick={()=>{setMsgFor(m);setSheet('readers');}}>
         <span title={otherName}><Av name={otherName} seed={meta.other.id} size="sm" src={meta.other.avatar?.src?.thumb}/></span></button>}
       </Fragment>;})}
      {pend.map(p=><Fragment key={p.key}>
@@ -432,9 +458,10 @@ export function ChatScreen(){
       {p.status==='failed'&&!ended&&<button type="button" className="msg-retry" onClick={()=>void deliverText(p)}><Undo2/>{t('fe.chx.retryMsg')}</button>}
      </Fragment>)}
      {out?.pending&&<div className="msg me has-media sending"><span className="mtile"><img src={out.preview} alt="" draggable={false}/></span></div>}
+     {typing&&!ended&&<Typing>{t('fe.w7.typing',{name:otherName})}</Typing>}
     </div>
     {!ended&&all.length===0&&pend.length===0&&<><SectionLabel>{t('fe.chx.starters')}</SectionLabel><Chips className="ice">
-     {[t('fe.chx.ice1'),t('fe.chx.ice2')].map(s=><Chip key={s} onClick={()=>{setText(s);requestAnimationFrame(()=>{if(input.current){grow(input.current);input.current.focus();}});}}>{s}</Chip>)}
+     {[...starters.slice(0,2).map(n=>t('fe.w7.ice.topic',{topic:n})),t('fe.chx.ice1'),t('fe.chx.ice2')].map(s=><Chip key={s} onClick={()=>{setText(s);requestAnimationFrame(()=>{if(input.current){grow(input.current);input.current.focus();}});}}>{s}</Chip>)}
     </Chips></>}
     {ended&&<Alert kind="info" icon={Ban} className="mt16"><b>{t('fe.chx.endedTitle')}</b>{t('fe.chx.endedText')}</Alert>}
     {out?.pending&&<Alert kind="info" icon={Clock}><b>{t('fe.chx.pending')}</b>
@@ -446,7 +473,7 @@ export function ChatScreen(){
   {!ended&&<div className="inputbar" ref={bar}>
    {replyTo&&quoteOf(replyTo)&&<div className="reply-target chat-reply">{quote(replyTo,true)}<IconBtn icon={X} size="sm" label={t('fe.chx.cancelReply')} onClick={()=>{setReplyTo(null);input.current?.focus({preventScroll:true});}}/></div>}
    <IconBtn icon={Plus} kind="ghost" label={t('fe.chx.attach')} disabled={!meta||!!out?.pending} onClick={()=>{setSheetErr('');setSheet('attach');}}/>
-   <TextArea ref={input} bare grow={GROW} rows={1} maxLength={2000} value={text} onChange={e=>setText(e.target.value)}
+   <TextArea ref={input} bare grow={GROW} rows={1} maxLength={2000} value={text} onChange={e=>{setText(e.target.value);if(e.target.value.trim())typed();}}
     placeholder={couple?t('fe.chx.messagePhCouple'):t('fe.chx.messagePh')} aria-label={t('fe.chx.message')} title={t('fe.chx.enterHint')} enterKeyHint="enter"
     onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!coarse&&!e.nativeEvent.isComposing){e.preventDefault();send();}}}/>
    <IconBtn icon={SendHorizontal} kind="send" onClick={send} disabled={!meta||!text.trim()} label={t('fe.feed.send')}/>
@@ -459,11 +486,16 @@ export function ChatScreen(){
    <Card list>
     {!ended&&<Row noChev icon={Undo2} title={t('fe.chx.reply')} onClick={()=>{setReplyTo(msgFor.id);setSheet(null);requestAnimationFrame(()=>input.current?.focus({preventScroll:true}));}}/>}
     {msgFor.mine&&msgFor.body&&<Row noChev icon={Copy} title={t('fe.chx.copy')} onClick={()=>void copyMsg()}/>}
+    {msgFor.mine&&<Row noChev icon={Eye} title={t('fe.chx.readBy')} sub={msgFor.readBy?.some(r=>r.read)?undefined:t('fe.w7.read.notYet')} onClick={()=>setSheet('readers')}/>}
    </Card>
   </Sheet>}
   {sheet==='copy'&&msgFor&&<Sheet title={t('fe.chx.copyTitle')} onClose={closeSheet}><TextArea readOnly aria-label={t('fe.chx.msgText')} value={msgFor.body}/></Sheet>}
-  {sheet==='readers'&&meta&&<Sheet title={t('fe.chx.readBy')} onClose={closeSheet}>
-   <Card list><Row av={<Av name={otherName} seed={meta.other.id} size="sm" src={meta.other.avatar?.src?.thumb}/>} title={otherName} sub={t('fe.chx.readState')}/></Card>
+  {sheet==='readers'&&meta&&<Sheet title={t('fe.chx.readBy')} sub={msgFor?t('fe.w7.read.sentAt',{time:time(msgFor.at)}):undefined} onClose={closeSheet}>
+   {/* Who read it and when (V21 chatReadInfo): one line per member of the other side — a couple has two, never named. */}
+   <Card list>{(msgFor?.readBy?.length?msgFor.readBy:[{read:true,readAt:null,reader:null}]).map((r,i,l)=>{const who=r.reader?nameOf(r.reader):l.length>1?t('fe.w7.read.member',{name:otherName,n:String(i+1)}):otherName;
+    return <Row key={i} av={r.reader?<Av name={who} seed={r.reader.id} size="sm" src={r.reader.avatar}/>:<Av name={otherName} seed={meta.other.id} size="sm" src={meta.other.avatar?.src?.thumb}/>}
+    title={who}
+    sub={r.read?(r.readAt?t('fe.w7.read.at',{when:day(r.readAt)+', '+time(r.readAt)}):t('fe.chx.readState')):t('fe.w7.read.notYet')}/>;})}</Card>
   </Sheet>}
 
   {sheet==='attach'&&<Sheet title={t('fe.chx.attachTitle')} onClose={closeSheet}>

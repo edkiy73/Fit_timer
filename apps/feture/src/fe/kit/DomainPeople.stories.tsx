@@ -1,8 +1,8 @@
 import type {Meta,StoryObj} from '@storybook/react-vite';
 import {useState} from 'react';
 import {fn} from 'storybook/test';
-import {Ban,Ellipsis,Heart,MessageCircle,Users,X} from 'lucide-react';
-import {Answer,AnswerScale,Av,Btn,Chip,Chips,IconBtn,LikeTile,PersonBar,PersonLine,PersonName,Pill,Radar,RequestCard} from './index';
+import {Ban,Bell,Ellipsis,Heart,KeyRound,MessageCircle,Sparkles,Users,X} from 'lucide-react';
+import {Answer,AnswerScale,Av,Btn,Chip,Chips,IconBtn,LikeTile,PersonBar,PersonLine,PersonName,Pill,Radar,RequestCard,Soon,Typing} from './index';
 
 const meta={title:'Домен/Люди',component:RequestCard,tags:['autodocs'],
  parameters:{docs:{description:{component:'Запрос, на который нужно ответить (доступ к приватному, связь, приглашение в пару, заявка на событие): кто просит (`PersonLine`), подробности, ответы. Ответ на вопрос заявки — `Answer`.'}}},
@@ -24,6 +24,9 @@ export const ШапкаЧатаЗагрузка:StoryObj<typeof PersonBar>={name
 export const Лайк:StoryObj<typeof LikeTile>={name:'Плитка «лайкнули вас»',render:a=><div className="likes"><LikeTile {...a}>
  <button type="button" className="lkx" aria-label="Пропустить"><X/></button><button type="button" className="lkb" aria-label="Ответить взаимностью"><Heart/></button></LikeTile></div>,
  args:{seed:'mia',label:'Mia',name:<><b>Mia, 29</b><Pill className="lk-pair">пара</Pill></>,onOpen:fn()}};
+export const Скоро:StoryObj<typeof Soon>={name:'Скоро (знакомства выключены)',render:a=><Soon {...a}><Btn icon={Bell}>Сообщить о запуске</Btn><Btn kind="text">Пока — добавить интересы</Btn></Soon>,
+ args:{badge:'Скоро',title:'Готовим знакомства',text:'Подборка по тому, что откликается вам обоим.',points:[[Sparkles,'Совпадения по интересам и границам'],[KeyRound,'Приватное открываешь ты'],[MessageCircle,'Написать — только при взаимной симпатии']]},argTypes:{points:{control:false}}};
+export const Печатает:StoryObj<typeof Typing>={name:'«печатает…» в чате',render:a=><div className="msgs"><div className="msg">Привет!</div><Typing {...a}/></div>,args:{children:'Mia печатает…'}};
 export const Радар:StoryObj<typeof Radar>={name:'Радар (никого рядом)',render:a=><div className="empty"><Radar {...a}/></div>,args:{seed:'me'}};
 
 type Mark='discuss'|'hard';

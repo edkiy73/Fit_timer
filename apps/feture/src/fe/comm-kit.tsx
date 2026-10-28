@@ -28,7 +28,7 @@ export const CommPlate=({k}:{k:string|null|undefined})=><NamedPlate k={k} icon={
 
 const REASONS=['threat','private','minor','spam','other'] as const;
 /** «Пожаловаться» on a community or an event: the reason, details, and the report goes to moderators. */
-export function ReportSheet({targetType,targetId,onClose,onDone}:{targetType:'community'|'event',targetId:string,onClose:()=>void,onDone:(msg:string)=>void}){
+export function ReportSheet({targetType,targetId,onClose,onDone}:{targetType:'community'|'event'|'post',targetId:string,onClose:()=>void,onDone:(msg:string)=>void}){
  const {call}=useFe();const {t}=useI18n();
  const [reason,setReason]=useState<typeof REASONS[number]|''>('');const [details,setDetails]=useState('');const [busy,setBusy]=useState(false);const [err,setErr]=useState('');const op=useRef(newOpId());
  const send=async()=>{

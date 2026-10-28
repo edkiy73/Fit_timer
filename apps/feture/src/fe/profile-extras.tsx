@@ -11,6 +11,7 @@ import {PhotoBadge} from './photo-check';
 import {faceFields,NameBadges} from './faces';
 import {PostCard,postSchema,type Post} from './feed';
 import type {Removal} from './post-menu';
+import {useToast as useAppToast} from './toast';
 import {PrivateVault} from './private';
 
 /** Profile extras with the V21 prototype's markup: «Что у вас общего» (P05), the person menu (report / block / hide
@@ -37,14 +38,14 @@ export function pxError(e:unknown,t:T){
  return feErrorMessage(e,t);
 }
 
-/** The prototype's toast (`.toasts > .toast`), gone after a few seconds. */
+/** A toast with an optional «Отменить» (undo) action. */
+export type PxToast=(m:string,err?:boolean,action?:{label:string,fn:()=>void})=>void;
+/** The app's toast (toast.tsx: one at a time, «Отменить» / «Вернуть», above sheets) in the shape these screens use:
+ * `[node, toast(text, err?, action?)]`; the node is kept for the callers' layout and is always empty. */
 export function useToast(){
- const [msg,setMsg]=useState<{text:string,err:boolean}|null>(null);
- const timer=useRef<ReturnType<typeof setTimeout>|undefined>(undefined);
- const show=useCallback((text:string,err=false)=>{setMsg({text,err});clearTimeout(timer.current);timer.current=setTimeout(()=>setMsg(null),3600);},[]);
- useEffect(()=>()=>clearTimeout(timer.current),[]);
- const node=msg?<div className="toasts nodock"><div className={'toast'+(msg.err?' err':'')} role={msg.err?'alert':'status'}>{msg.text}</div></div>:null;
- return [node,show] as const;
+ const app=useAppToast();
+ const show=useCallback<PxToast>((text,err=false,action)=>app(text,{...(err?{type:'err' as const}:{}),...(action?{action}:{})}),[app]);
+ return [null as ReactNode,show] as const;
 }
 
 /** `div.layer > div.scrim.on + div.sheet.on` — the prototype's sheet; Esc, ✕ and the scrim close it. */
@@ -112,10 +113,20 @@ export function MatchOverlay({other,conversationId,onClose}:{other:{id:string,na
 }
 
 /** `.p-acts` of another profile: «Нравится / Отправлено / Написать» and «Подписаться / В подписках». */
-export function PersonActions({p,rel,setRel,toast,inert}:{p:PersonProfile,rel:Relation|null,setRel:(f:(r:Relation|null)=>Relation|null)=>void,toast:(m:string,err?:boolean)=>void,inert?:boolean|undefined}){
+export function PersonActions({p,rel,setRel,toast,inert}:{p:PersonProfile,rel:Relation|null,setRel:(f:(r:Relation|null)=>Relation|null)=>void,toast:PxToast,inert?:boolean|undefined}){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();
  const [busy,setBusy]=useState<''|'like'|'follow'>('');const [why,setWhy]=useState<string|null>(null);const [match,setMatch]=useState<{conversationId?:string}|null>(null);
  const op=useRef(newOpId());const name=personName(p);const asUs=acting?.kind==='couple';
+ // Owner R04 (28.10): with my own dating off a like from a profile still goes out — but the first time, a sheet says
+ // what it means. Sending from it is remembered on this device only (a convenience, not a setting).
+ const [ownOff,setOwnOff]=useState<boolean|null>(null);const [explain,setExplain]=useState(false);
+ useEffect(()=>{if(inert||!acting)return;call('profile.settings',{},ownSettingsRes).then(r=>setOwnOff(r.settings.discoverMode==='off')).catch(()=>{});},[call,acting,inert]);
+ const seenKey='feture.fe.offLikeSeen.'+(acting?.id??'');
+ const seen=()=>{try{return localStorage.getItem(seenKey)==='1';}catch{return false;}};
+ // A tap before my own settings arrived asks for them first, so the explanation is never skipped.
+ const tapLike=async()=>{let off=ownOff;if(off===null){off=await call('profile.settings',{},ownSettingsRes).then(r=>r.settings.discoverMode==='off').catch(()=>false);setOwnOff(off);}
+  if(off&&!seen()){setExplain(true);return;}void like();};
+ const confirmLike=()=>{try{localStorage.setItem(seenKey,'1');}catch{/* per-viewer convenience only */}setExplain(false);void like();};
  const like=async()=>{if(busy)return;setBusy('like');
   try{const r=await call('like.send',{opId:op.current,profileId:p.id,source:'profile'},likeRes);op.current=newOpId();
    if(r.state==='matched'){setRel(x=>x&&{...x,mutual:true});setMatch(r.conversationId?{conversationId:r.conversationId}:{});}
@@ -124,15 +135,20 @@ export function PersonActions({p,rel,setRel,toast,inert}:{p:PersonProfile,rel:Re
    if(rule==='likes_not_accepted'||rule==='couples_via_discover_only'||rule==='own_discover_off')setWhy(rule);
    else if(rule==='already_matched')setRel(x=>x&&{...x,mutual:true});else toast(pxError(e,t),true);}
   finally{setBusy('');}};
+ // «Отправлено» tapped again takes the like back; «Отменить» in the toast sends it again (V21 unlikeP).
+ const relike=async()=>{try{const r=await call('like.send',{opId:newOpId(),profileId:p.id,source:'profile'},likeRes);
+  if(r.state==='matched'){setRel(x=>x&&{...x,mutual:true});setMatch(r.conversationId?{conversationId:r.conversationId}:{});}else setRel(x=>x&&{...x,liked:true});}catch(e){toast(pxError(e,t),true);}};
  const unlike=async()=>{if(busy)return;setBusy('like');
-  try{await call('like.withdraw',{opId:newOpId(),profileId:p.id},ok);setRel(x=>x&&{...x,liked:false});toast(t('fe.px.lkd.withdrawn'));}catch(e){toast(pxError(e,t),true);}finally{setBusy('');}};
+  try{await call('like.withdraw',{opId:newOpId(),profileId:p.id},ok);setRel(x=>x&&{...x,liked:false});toast(t('fe.px.lkd.withdrawn'),false,{label:t('fe.mx.undo'),fn:()=>void relike()});}catch(e){toast(pxError(e,t),true);}finally{setBusy('');}};
  const write=async()=>{try{const r=await call('chats.list',{filter:'all'},chatsRes,{asAccount:true});const c=r.items.find(x=>x.other.id===p.id);navigate(c?'/n/chats/'+c.id:'/n/chats');}catch{navigate('/n/chats');}};
- const follow=async()=>{if(busy||!rel)return;setBusy('follow');const on=!rel.iFollow;
-  try{await call('follow.set',{opId:newOpId(),profileId:p.id,on},ok);setRel(x=>x&&{...x,iFollow:on,followers:Math.max(0,x.followers+(on?1:-1))});toast(fill(t(on?'fe.px.fl.on':'fe.px.fl.off'),{name}));}
-  catch(e){toast(pxError(e,t),true);}finally{setBusy('');}};
+ const setFollow=async(on:boolean,undo:boolean)=>{
+  try{await call('follow.set',{opId:newOpId(),profileId:p.id,on},ok);setRel(x=>x&&{...x,iFollow:on,followers:Math.max(0,x.followers+(on?1:-1))});
+   if(!undo)toast(fill(t(on?'fe.px.fl.on':'fe.px.fl.off'),{name}),false,{label:t('fe.mx.undo'),fn:()=>void setFollow(!on,true)});}
+  catch(e){toast(pxError(e,t),true);}};
+ const follow=async()=>{if(busy||!rel)return;setBusy('follow');try{await setFollow(!rel.iFollow,false);}finally{setBusy('');}};
  const likeBtn=rel?.mutual?<Btn icon={MessageCircle} onClick={inert?undefined:write} disabled={inert}>{t('fe.px.act.write')}</Btn>
   :rel?.liked?<Btn pressed title={t('fe.px.act.unlikeHint')} onClick={inert?undefined:unlike} disabled={inert||busy==='like'}><Heart fill="currentColor"/>{t('fe.px.act.sent')}</Btn>
-  :why?null:<Btn busy={busy==='like'} onClick={inert?undefined:like} disabled={inert||busy==='like'}><Heart fill="currentColor"/>{asUs&&!inert?t('fe.px.act.likeUs'):t('fe.people.like')}</Btn>;
+  :why?null:<Btn busy={busy==='like'} onClick={inert?undefined:tapLike} disabled={inert||busy==='like'}><Heart fill="currentColor"/>{asUs&&!inert?t('fe.px.act.likeUs'):t('fe.people.like')}</Btn>;
  const iF=!!rel?.iFollow;
  return <>
   <div className="p-acts" inert={inert||undefined}>{likeBtn}
@@ -142,6 +158,16 @@ export function PersonActions({p,rel,setRel,toast,inert}:{p:PersonProfile,rel:Re
   {why&&<p className="profile-like-note"><Heart/><span>{why==='couples_via_discover_only'?<>{t('fe.px.act.coupleVia')} <button type="button" className="linkbtn" onClick={()=>navigate('/n/me?layer=vis')}>{t('fe.px.act.turnOn')}</button></>
    :why==='own_discover_off'?<>{t('fe.px.act.ownOff')} <button type="button" className="linkbtn" onClick={()=>navigate('/n/me?layer=vis')}>{t('fe.px.act.turnOn')}</button></>:t('fe.px.act.likesOff')}</span></p>}
   {match&&<MatchOverlay other={{id:p.id,name,src:mediaSrc(p.avatar)}} conversationId={match.conversationId} onClose={()=>setMatch(null)}/>}
+  {explain&&<Sheet title={t('fe.w7.offLike.title')} onClose={()=>setExplain(false)}
+   foot={<><Btn icon={Heart} busy={busy==='like'} disabled={busy==='like'} onClick={confirmLike}>{t('fe.w7.offLike.send')}</Btn>
+    <Btn kind="text" onClick={()=>{setExplain(false);navigate('/n/me?layer=vis');}}>{t('fe.w7.offLike.turnOn')}</Btn></>}>
+   <Card list>
+    <Row icon={MessageCircle} tone="l" title={t('fe.w7.offLike.chat')} sub={fill(t('fe.w7.offLike.chatSub'),{name})}/>
+    <Row icon={EyeOff} title={t('fe.w7.offLike.hidden')} sub={t(asUs?'fe.w7.offLike.hiddenSubUs':'fe.w7.offLike.hiddenSub')}/>
+    <Row icon={Heart} title={t('fe.w7.offLike.back')} sub={fill(t('fe.w7.offLike.backSub'),{name})}/>
+    <Row icon={Undo2} tone="g" title={t('fe.w7.offLike.undo')} sub={fill(t('fe.w7.offLike.undoSub'),{name})}/>
+   </Card>
+  </Sheet>}
  </>;
 }
 
@@ -285,7 +311,7 @@ export function ProfileBody({p,inert,preview,onOpen}:{p:PersonProfile,inert?:boo
  * (PRF-007); hero, description, buttons, «что общего», then the body. `preview` is «Как видят» — everything drawn,
  * nothing pressable. */
 export function ProfilePage({p,preview,seg,onMore,menu,toast,children}:{p:PersonProfile,preview?:'all'|'granted'|undefined,seg?:ReactNode,onMore?:(()=>void)|undefined,
- menu?:((rel:Relation|null,reload:()=>void)=>ReactNode)|undefined,toast:(m:string,err?:boolean)=>void,children?:ReactNode}){
+ menu?:((rel:Relation|null,reload:()=>void)=>ReactNode)|undefined,toast:PxToast,children?:ReactNode}){
  const {t}=useI18n();const navigate=useNavigate();const [rel,setRel,reloadRel]=useRelation(p.id);const [view,setView]=useState<number|null>(null);
  const bar=useRef<HTMLElement>(null);const name=personName(p);const inert=!!preview;const list=photosOf(p);
  const onScroll=(e:React.UIEvent<HTMLDivElement>)=>{const h=e.currentTarget.querySelector('.hero');const b=bar.current;if(h&&b)b.classList.toggle('solid',h.getBoundingClientRect().bottom<b.getBoundingClientRect().bottom+8);};
