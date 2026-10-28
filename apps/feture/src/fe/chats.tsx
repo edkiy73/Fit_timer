@@ -5,8 +5,9 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Archive,ArchiveRestore,Ban,Camera,Check,ChevronDown,ChevronLeft,CircleAlert,Clock,Copy,Ellipsis,Eye,EyeOff,Film,Flag,Image as ImageIcon,Info,Lock,LockOpen,MessageCircle,Plus,Search,SendHorizontal,Sparkles,Undo2,User,Users,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {ActingAv,Alert,Av,Bar,Btn,Card,Check as CheckBox,Chip,Chips,Empty,Field,FilePick,Group,IconBtn,Layer,Note,PersonBar,Pill,RadioList,Row,SearchInput,SectionLabel,SelectRow,Sheet,Skel,Stack,Text,TextArea,ToggleRow,Typing,VideoBadge,VideoPlayer,View,type Voice,VoiceBubble,VoiceRecorder} from './kit';
-import {VIDEO_MAX_BYTES,VIDEO_MAX_MS,VIDEO_TYPES,isVideo,prepareVideo,type PreparedVideo} from './kit/media';
-import {useSendVideo,useSendVoice} from './media-upload';
+import {VIDEO_TYPES} from './kit/media';
+import {Uploader,type SendPhoto,type SendVideo,type Uploaded} from './kit/Uploader';
+import {useSendPhoto,useSendVideo,useSendVoice} from './media-upload';
 import {AgeCheckLink,useAgeResume} from './age-check';
 import {useFe,useRealtime,useTypingSignal} from './session';
 import {ReportSheet} from './report';
@@ -37,7 +38,6 @@ const msgs=z.object({ok:z.literal(true),state:z.string(),items:z.array(msg),othe
 const ok=z.object({ok:z.literal(true)}).passthrough();
 const opened=z.object({ok:z.literal(true),media:z.object({src:z.record(z.string(),z.string()).nullable()}).passthrough().nullable(),until:z.string().nullable().optional(),gone:z.boolean().optional()}).passthrough();
 const grantList=z.object({ok:z.literal(true),items:z.array(z.object({profile:z.object({id:z.uuid()}).passthrough()}).passthrough())});
-const uploadIntent=z.object({ok:z.literal(true),assetId:z.uuid(),upload:z.object({url:z.string(),method:z.string(),headers:z.record(z.string(),z.string())})});
 
 const nameOf=(o:{name?:string|null,handle?:string|null})=>o.name||(o.handle?'@'+o.handle:'?');
 function ago(iso:string,locale:string){const s=(Date.now()-Date.parse(iso))/1000;const ru=locale!=='en';
@@ -142,12 +142,12 @@ function MatchRing({frac,lit}:{frac:number,lit:boolean}){
 type Mode='normal'|'once'|'t15'|'t120'|'t1440';
 const MODES:Mode[]=['normal','once','t15','t120','t1440'];
 const TTL:Record<string,number>={t15:15*60e3,t120:2*3600e3,t1440:24*3600e3};
-/** A photo on its way: the asset is kept between attempts, so a retry after review only sends the message. */
-type Outgoing={file:File,preview:string,mode:Mode,assetId?:string,assetMode?:Mode,opId:string,pending?:boolean,/** A clip (preview = its poster). */ video?:PreparedVideo};
+/** A photo or clip on its way: uploaded by the kit Uploader (prepared on the device), so a retry after review only sends
+ * the message. `preview` is the photo / the clip's poster; `durationMs` marks a clip. */
+type Outgoing={preview:string,mode:Mode,assetId:string,opId:string,pending?:boolean,video?:{durationMs:number}|undefined};
 /** A text on its way (the prototype's optimistic bubble with «Отправляется» / «Не отправлено · Повторить»). */
 type Pend={key:string,body:string,replyTo?:string,opId:string,at:string,status:'sending'|'failed'};
-type SheetKind='attach'|'send'|'menu'|'end'|'report'|'block'|'msg'|'readers'|'copy';
-const PHOTO_TYPES=['image/jpeg','image/png','image/webp'];
+type SheetKind='attach'|'menu'|'end'|'report'|'block'|'msg'|'readers'|'copy';
 /** The message box stops growing at this height (px) and scrolls. */
 const GROW=120;
 
@@ -181,7 +181,11 @@ export function ChatScreen(){
  const gallery=useRef<HTMLInputElement>(null);const camera=useRef<HTMLInputElement>(null);
  const stick=useRef(true);const nearRef=useRef(true);const seen=useRef(0);
  const profileId=meta?.side.id;
- const sendClip=useSendVideo('chat',{},profileId);const sendVoice=useSendVoice(profileId);
+ // Media goes through the kit Uploader (owner, 28.10.2026: the same preview, crop, trim and compression as everywhere):
+ // the view rule is chosen in it before anything is sent (it is fixed at upload).
+ const [picked,setPicked]=useState<File[]|null>(null);const [mode,setMode]=useState<Mode>('normal');
+ const rule=mode==='normal'?{}:mode==='once'?{viewRule:'once'}:{viewRule:'timer',viewSeconds:60};
+ const sendChatPhoto=useSendPhoto('chat',rule,profileId);const sendChatVideo=useSendVideo('chat',rule,profileId);const sendVoice=useSendVoice(profileId);
  useEffect(()=>{
   // An archived conversation is opened from «Архив» too, so both lists are asked.
   Promise.all([call('chats.list',{filter:'all'},list,{asAccount:true}),call('chats.list',{filter:'all',archived:true},list,{asAccount:true})])
@@ -338,61 +342,39 @@ export function ChatScreen(){
  };
  const closeSheet=useCallback(()=>{setSheet(null);setSheetErr('');},[]);
 
- /* ---- photos: uploadIntent → PUT → commit → chat.sendMedia ---- */
- /** A clip: up to a minute and 100 MB; its poster frame is cut here and shown while it goes (no crop). */
- const pickVideo=async(f:File|undefined)=>{
-  if(videoPick.current)videoPick.current.value='';
-  if(!f)return;setSheetErr('');
-  if(!isVideo(f)){toast(t('fe.kit.up.videoRead',{name:f.name}),{type:'err'});setSheet(null);return;}
-  if(f.size>VIDEO_MAX_BYTES){toast(t('fe.kit.up.videoBig'),{type:'err'});setSheet(null);return;}
-  let video:PreparedVideo;
-  try{video=await prepareVideo(f);}catch{toast(t('fe.kit.up.videoRead',{name:f.name}),{type:'err'});setSheet(null);return;}
-  if(video.durationMs>VIDEO_MAX_MS+500){URL.revokeObjectURL(video.url);toast(t('fe.kit.up.videoLong'),{type:'err'});setSheet(null);return;}
-  if(outRef.current)URL.revokeObjectURL(outRef.current.preview);
-  setFailure('');setOut({file:f,preview:video.url,mode:'normal',opId:newOpId(),video});setSheet('send');
+ /* ---- photos and clips: kit Uploader (prepare on the device → upload) → chat.sendMedia ---- */
+ const pick=(files:File[])=>{
+  if(gallery.current)gallery.current.value='';if(camera.current)camera.current.value='';if(videoPick.current)videoPick.current.value='';
+  if(!files.length)return;setSheetErr('');setSheet(null);setMode('normal');setPicked(files.slice(0,1));
  };
- const pick=(f:File|undefined)=>{
-  if(gallery.current)gallery.current.value='';if(camera.current)camera.current.value='';
-  if(!f)return;setSheetErr('');
-  if(isVideo(f)){void pickVideo(f);return;}
-  if(!PHOTO_TYPES.includes(f.type)){toast(t('fe.chx.photoType'),{type:'err'});setSheet(null);return;}
-  if(f.size>20*1024*1024){toast(t('fe.chx.photoSize'),{type:'err'});setSheet(null);return;}
-  if(outRef.current)URL.revokeObjectURL(outRef.current.preview);
-  setFailure('');setOut({file:f,preview:URL.createObjectURL(f),mode:'normal',opId:newOpId()});setSheet('send');
- };
+ const photoError=(e:unknown)=>e instanceof FeError?(e.code==='rule_violation'&&e.rule==='age_required'?t('fe.chx.ageRequired'):feErrorMessage(e,t)):e instanceof Error&&e.message==='upload'?(outRef.current?.video?t('fe.av.videoFailed'):t('fe.chx.uploadFailed')):feErrorMessage(e,t);
+ // The Uploader shows an error's message on the row: a readable one (and the age link under the list).
+ const readable=async<T,>(f:()=>Promise<T>)=>{try{setSheetErr('');return await f();}catch(e){if(e instanceof Error&&e.message==='upload')throw e;const m=photoError(e);setSheetErr(m);throw new Error(m);}};
+ const sendPhotoUp:SendPhoto=(blob,on)=>readable(()=>sendChatPhoto(blob,on));
+ const sendVideoUp:SendVideo=(v,on)=>readable(()=>sendChatVideo(v,on));
  const dropOut=(o:Outgoing|null)=>{
   if(!o)return;URL.revokeObjectURL(o.preview);setOut(null);
   // The uploaded file is not needed any more; best effort.
-  if(o.assetId&&profileId)call('media.remove',{opId:newOpId(),assetId:o.assetId},ok,{profileId}).catch(()=>{});
+  if(profileId)call('media.remove',{opId:newOpId(),assetId:o.assetId},ok,{profileId}).catch(()=>{});
  };
- /** One attempt; resolves to 'sent' or 'pending', throws other errors. */
+ /** One attempt to post the uploaded media; resolves to 'sent' or 'pending' (waits for review), throws other errors. */
  const deliver=useCallback(async(o:Outgoing):Promise<'sent'|'pending'>=>{
   if(!profileId)throw new FeError('unavailable');
   // «Не отправлять» may be tapped while an attempt is on its way: its answer must not bring the photo back.
   const live=()=>outRef.current?.preview===o.preview;
-  let cur=o;
-  if(!cur.assetId||cur.assetMode!==cur.mode){
-   // The view rule is fixed at upload: a new mode means a new upload.
-   if(cur.assetId)call('media.remove',{opId:newOpId(),assetId:cur.assetId},ok,{profileId}).catch(()=>{});
-   const rule=cur.mode==='normal'?{}:cur.mode==='once'?{viewRule:'once'}:{viewRule:'timer',viewSeconds:60};
-   let assetId:string;
-   if(cur.video)assetId=await sendClip(cur.video,()=>{},rule);
-   else{
-    const i=await call('media.uploadIntent',{opId:newOpId(),purpose:'chat',kind:'image',mime:cur.file.type,bytes:cur.file.size,...rule},uploadIntent,{profileId});
-    const put=await fetch(i.upload.url,{method:i.upload.method,headers:i.upload.headers,body:cur.file}).catch(()=>null);
-    if(!put?.ok)throw new Error('upload');
-    await call('media.commit',{assetId:i.assetId},ok,{profileId});
-    assetId=i.assetId;
-   }
-   if(!live()){call('media.remove',{opId:newOpId(),assetId},ok,{profileId}).catch(()=>{});return 'pending';}
-   cur={...cur,assetId,assetMode:cur.mode,opId:newOpId()};setOut(cur);
-  }
-  try{await call('chat.sendMedia',{opId:cur.opId,conversationId:id,assetId:cur.assetId,mode:cur.mode},ok,{profileId});}
-  catch(e){if(e instanceof FeError&&e.code==='conflict'&&e.rule==='pending'){if(live())setOut({...cur,pending:true});return 'pending';}throw e;}
-  if(live()){URL.revokeObjectURL(cur.preview);setOut(null);}
+  try{await call('chat.sendMedia',{opId:o.opId,conversationId:id,assetId:o.assetId,mode:o.mode},ok,{profileId});}
+  catch(e){if(e instanceof FeError&&e.code==='conflict'&&e.rule==='pending'){if(live())setOut({...o,pending:true});return 'pending';}throw e;}
+  if(live()){URL.revokeObjectURL(o.preview);setOut(null);}
   return 'sent';
- },[call,id,profileId,sendClip]);
- const photoError=(e:unknown)=>e instanceof FeError?(e.code==='rule_violation'&&e.rule==='age_required'?t('fe.chx.ageRequired'):feErrorMessage(e,t)):e instanceof Error&&e.message==='upload'?(outRef.current?.video?t('fe.av.videoFailed'):t('fe.chx.uploadFailed')):feErrorMessage(e,t);
+ },[call,id,profileId]);
+ const uploaded=async(got:Uploaded[])=>{
+  const g=got[0];setPicked(null);if(!g)return;
+  const o:Outgoing={preview:g.url,mode,assetId:g.id,opId:newOpId(),...(g.kind==='video'?{video:{durationMs:g.durationMs??0}}:{})};
+  if(g.file)URL.revokeObjectURL(g.file);
+  setOut(o);outRef.current=o;setFailure('');stick.current=true;
+  try{if(await deliver(o)==='sent')await pull(false);}
+  catch(e){setFailure(photoError(e));}
+ };
  /* ---- voice messages: record → upload (purpose voice) → chat.sendMedia; an optimistic bubble meanwhile ---- */
  const deliverVoice=async(v:Voice)=>{
   if(!profileId)return;setVoiceOut({v,status:'sending'});stick.current=true;
@@ -401,11 +383,6 @@ export function ChatScreen(){
   catch(e){setVoiceOut({v,status:'failed'});toast(e instanceof FeError?feErrorMessage(e,t):t('fe.av.voiceNotSent'),{type:'err'});}
  };
  const voiceError=(why:'denied'|'unsupported'|'short'|'failed')=>toast(t(why==='denied'?'fe.av.voiceDenied':why==='unsupported'?'fe.av.voiceUnsupported':why==='short'?'fe.av.voiceShort':'fe.av.voiceFailed'),{type:why==='short'?'warn':'err'});
- const sendPhoto=async()=>{
-  const o=outRef.current;if(!o||sheetBusy)return;setSheetBusy(true);setSheetErr('');
-  try{const r=await deliver(o);setSheet(null);stick.current=true;if(r==='sent')await pull(false);}
-  catch(e){setSheetErr(photoError(e));}finally{setSheetBusy(false);}
- };
  const retryPending=async(silent:boolean)=>{
   const o=outRef.current;if(!o||busy)return;if(!silent){setBusy(true);setFailure('');}
   try{if(await deliver(o)==='sent')await pull(false);}
@@ -507,7 +484,7 @@ export function ChatScreen(){
        <div className="st">{time(p.at)}<span aria-label={p.status==='sending'?t('fe.chx.stSending'):t('fe.chx.stFailed')}>{p.status==='sending'?<Clock/>:<CircleAlert/>}</span></div></div>
       {p.status==='failed'&&!ended&&<button type="button" className="msg-retry" onClick={()=>void deliverText(p)}><Undo2/>{t('fe.chx.retryMsg')}</button>}
      </Fragment>)}
-     {out?.pending&&<div className="msg me has-media sending"><span className="mtile"><img src={out.preview} alt="" draggable={false}/>{out.video&&<VideoBadge durationMs={out.video.durationMs}/>}</span></div>}
+     {out&&<div className="msg me has-media sending"><span className="mtile"><img src={out.preview} alt="" draggable={false}/>{out.video&&<VideoBadge durationMs={out.video.durationMs}/>}</span></div>}
      {voiceOut&&<><div className={'msg me has-media '+voiceOut.status}><VoiceBubble durationMs={voiceOut.v.durationMs} peaks={voiceOut.v.peaks} mine/>
       <div className="st"><span aria-label={voiceOut.status==='sending'?t('fe.chx.stSending'):t('fe.chx.stFailed')}>{voiceOut.status==='sending'?<Clock/>:<CircleAlert/>}</span></div></div>
       {voiceOut.status==='failed'&&!ended&&<Stack row gap={2}><Btn kind="text" size="sm" auto icon={Undo2} onClick={()=>void deliverVoice(voiceOut.v)}>{t('fe.chx.retryMsg')}</Btn>
@@ -520,7 +497,8 @@ export function ChatScreen(){
     {ended&&<Alert kind="info" icon={Ban} className="mt16"><b>{t('fe.chx.endedTitle')}</b>{t(couple?'fe.chx.endedTextUs':'fe.chx.endedText')}</Alert>}
     {out?.pending&&<Alert kind="info" icon={Clock}><b>{out.video?t('fe.av.videoPending'):t('fe.chx.pending')}</b>
      <Stack row gap={2}><Btn kind="soft" size="sm" auto busy={busy} disabled={busy} onClick={()=>void retryPending(false)}>{t('fe.chx.retry')}</Btn><Btn kind="text" size="sm" auto onClick={()=>dropOut(out)}>{t('fe.chx.drop')}</Btn></Stack></Alert>}
-    {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
+    {failure&&<Alert kind="err" noIcon>{failure}{failure===t('fe.chx.ageRequired')&&<><br/><AgeCheckLink intent={'attach:'+id}/></>}{out&&!out.pending&&<Stack row gap={2}><Btn kind="soft" size="sm" auto busy={busy} disabled={busy} onClick={()=>void retryPending(false)}>{t('fe.chx.retry')}</Btn>
+     <Btn kind="text" size="sm" auto onClick={()=>{dropOut(out);setFailure('');}}>{t('fe.chx.drop')}</Btn></Stack>}</Alert>}
    </>}
   </div></div>
   <button type="button" className={'chat-down'+(ended?' low':'')+(!near?' on':'')} aria-label={t('fe.chx.toLatest')} onClick={toBottom}><ChevronDown/>{fresh>0&&<em>{fresh>99?'99+':fresh}</em>}</button>
@@ -535,9 +513,9 @@ export function ChatScreen(){
    {text.trim()||!meta?<IconBtn icon={SendHorizontal} kind="send" onClick={send} disabled={!meta||!text.trim()} label={couple?t('fe.fd.sendUs'):t('fe.feed.send')}/>
     :<VoiceRecorder onSend={v=>void deliverVoice(v)} onError={voiceError} disabled={voiceOut?.status==='sending'}/>}
   </div>}
-  <FilePick ref={gallery} accept={PHOTO_TYPES.join(',')} onFiles={f=>pick(f[0])}/>
-  <FilePick ref={camera} accept="image/*" capture="environment" onFiles={f=>pick(f[0])}/>
-  <FilePick ref={videoPick} accept={VIDEO_TYPES.join(',')} onFiles={f=>void pickVideo(f[0])}/>
+  <FilePick ref={gallery} accept={'image/*,'+VIDEO_TYPES.join(',')} onFiles={f=>pick([...f])}/>
+  <FilePick ref={camera} accept="image/*" capture="environment" onFiles={f=>pick([...f])}/>
+  <FilePick ref={videoPick} accept={VIDEO_TYPES.join(',')} onFiles={f=>pick([...f])}/>
   {viewer&&<Viewer src={viewer.src} label={viewer.label} wm={viewer.wm} onClose={()=>{setViewer(null);pull(true).catch(()=>{});}}/>}
 
   {sheet==='msg'&&msgFor&&<Sheet title={t('fe.chx.msgTitle')} onClose={closeSheet}>
@@ -564,16 +542,16 @@ export function ChatScreen(){
    </Card>
   </Sheet>}
 
-  {sheet==='send'&&out&&<Sheet title={out.video?t('fe.av.sendVideo'):t('fe.chx.sendTitle')} onClose={()=>{if(sheetBusy)return;dropOut(out);closeSheet();}}
-   foot={<Btn icon={SendHorizontal} onClick={sendPhoto} busy={sheetBusy} disabled={sheetBusy}>{t('fe.chx.send')}</Btn>}>
-   <div className="cm-prev"><img src={out.preview} alt=""/>{out.video&&<VideoBadge durationMs={out.video.durationMs}/>}</div>
-   <Group title={t('fe.chx.howView')} foot={<>{t('fe.chx.modeSub.'+(out.mode==='normal'||out.mode==='once'?out.mode:'timer'))}{out.mode!=='normal'?' · '+t('fe.chx.ephNote'):''}</>}><Card>
-    <SelectRow<Mode> solo label={t('fe.chx.howView')} value={out.mode} disabled={sheetBusy} onChange={v=>{setSheetErr('');setOut({...out,mode:v});}}
-     options={MODES.map(m=>[m,t('fe.chx.mode.'+m)] as const)}/>
+  {/* Preview before sending (owner, 28.10.2026): format and crop for photos, trim + frame for clips, compression on
+     the device, the view rule — the kit Uploader, as everywhere; «Отправить» uploads and posts it. */}
+  {picked&&<Uploader files={picked} max={1} aspects={['orig','4:5','1:1','16:9']} send={sendPhotoUp} sendVideo={sendVideoUp} title={t('fe.av.attachTitle')}
+   doneLabel={t('fe.chx.send')} onDone={got=>void uploaded(got)} onClose={()=>{setPicked(null);setSheetErr('');}}>
+   <Group title={t('fe.chx.howView')} foot={<>{t('fe.chx.modeSub.'+(mode==='normal'||mode==='once'?mode:'timer'))}{mode!=='normal'?' · '+t('fe.chx.ephNote'):''}</>}><Card>
+    <SelectRow<Mode> solo label={t('fe.chx.howView')} value={mode} onChange={v=>setMode(v)} options={MODES.map(m=>[m,t('fe.chx.mode.'+m)] as const)}/>
    </Card></Group>
    <Note>{t('fe.chx.shotNote')}</Note>
    {sheetAlert}
-  </Sheet>}
+  </Uploader>}
 
   {sheet==='menu'&&meta&&<Sheet title={otherName} lead={<Av name={otherName} seed={meta.other.id} size="sm" src={meta.other.avatar?.src?.thumb}/>} onClose={closeSheet}>
    <Card list>

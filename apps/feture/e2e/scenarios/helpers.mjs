@@ -73,3 +73,42 @@ export const dropsNew = list => list.map(sc => sc.persona !== 'new' ? sc : ({ ..
     if (p?.handle) await t.api('account.delete', { opId: t.uuid7(), confirmHandle: p.handle });
   }
 } }));
+
+/** A source clip recorded in the page (MediaRecorder from a canvas full of noise + a tone, so it is big and has sound):
+ * `w`×`h`, `seconds` long, at a high bitrate — what a phone camera hands over. Returns {name, mimeType, buffer, size}. */
+export async function sourceClip(t, { w = 1280, h = 720, seconds = 4, bitrate = 8e6, noise = true } = {}) {
+  const b64 = await t.page.evaluate(async ({ w, h, seconds, bitrate, noise }) => {
+    const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
+    const ac = new AudioContext(); const osc = ac.createOscillator(); const dst = ac.createMediaStreamDestination(); osc.connect(dst); osc.start();
+    const st = c.captureStream(30); dst.stream.getAudioTracks().forEach(tr => st.addTrack(tr));
+    const rec = new MediaRecorder(st, { mimeType: 'video/webm', videoBitsPerSecond: bitrate }); const parts = [];
+    rec.ondataavailable = e => parts.push(e.data);
+    let f = 0; const draw = () => {
+      if (noise) { const im = g.createImageData(w, h); const d = im.data; for (let i = 0; i < d.length; i += 4) { const v = (Math.random() * 255) | 0; d[i] = v; d[i + 1] = (f * 7) & 255; d[i + 2] = 255 - v; d[i + 3] = 255; } g.putImageData(im, 0, 0); }
+      else { g.fillStyle = `hsl(${f * 9},70%,50%)`; g.fillRect(0, 0, w, h); }
+      g.fillStyle = '#fff'; g.font = `700 ${Math.round(h / 8)}px sans-serif`; g.fillText('e2e ' + f++, w / 20, h / 6);
+    };
+    const iv = setInterval(draw, 33); draw();
+    rec.start(500); await new Promise(r => setTimeout(r, seconds * 1000 + 150)); rec.stop(); clearInterval(iv); await new Promise(r => { rec.onstop = r; }); osc.stop(); void ac.close();
+    const buf = new Uint8Array(await new Blob(parts, { type: 'video/webm' }).arrayBuffer());
+    let s = ''; for (let i = 0; i < buf.length; i += 0x8000) s += String.fromCharCode(...buf.subarray(i, i + 0x8000)); return btoa(s);
+  }, { w, h, seconds, bitrate, noise });
+  const buffer = Buffer.from(b64, 'base64');
+  return { name: 'source.webm', mimeType: 'video/webm', buffer, size: buffer.length };
+}
+/** Records what the uploader sends for a clip: the upload intent (bytes, durationMs, mime) and the uploaded file's
+ * container (MP4 with H.264 + AAC, or WebM with Opus). */
+export function watchVideoUpload(t) {
+  const got = { intent: null, put: null };
+  t.page.on('request', r => {
+    try {
+      if (r.method() === 'POST' && r.url().includes('/api/fe')) { const b = JSON.parse(r.postData() || '{}'); if (b.action === 'media.uploadIntent' && b.kind === 'video') got.intent = b; }
+      if (r.method() === 'PUT' && !/\.poster/.test(r.url())) {
+        const buf = r.postDataBuffer(); if (!buf || buf.length < 1000) return;
+        const head = buf.toString('latin1');
+        got.put = { size: buf.length, mp4: head.slice(4, 8) === 'ftyp', avc: head.includes('avc1'), aac: head.includes('mp4a'), webm: head.startsWith('\x1a\x45\xdf\xa3'), opus: head.includes('A_OPUS') || head.includes('Opus') };
+      }
+    } catch { /* not ours */ }
+  });
+  return got;
+}

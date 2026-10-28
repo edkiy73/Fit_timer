@@ -12,7 +12,7 @@ import {useFe,usePartnerApproves} from './session';
 import {ActivityCardOf,activitySchema,type Act} from './feed-activity';
 import {Uploader} from './kit/Uploader';
 import {useSendPhoto,useSendVideo} from './media-upload';
-import {VIDEO_TYPES,type Clip} from './kit/media';
+import {VIDEO_TYPES} from './kit/media';
 import {BellButton} from './inbox';
 import {DisputeNotice,PostMenu,ReplyMenu,type Removal} from './post-menu';
 import {restoreInto,useToast} from './toast';
@@ -27,8 +27,7 @@ import {CompareSheet,asInterest} from './compare';
  * posts (text, media, poll, interests, marks), replies in threads, the composer and its preview.
  * Visibility and counts are the server's; the client never filters or invents them. */
 const author=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string(),avatar:z.string().nullable().optional(),photoVerified:z.boolean().optional(),premium:z.boolean().optional()});
-const media=z.object({id:z.uuid(),kind:z.string(),w:z.number().nullable(),h:z.number().nullable(),pending:z.boolean(),blurred:z.boolean(),src:z.record(z.string(),z.string()).nullable(),durationMs:z.number().nullable().optional(),
- clip:z.object({startMs:z.number().optional(),endMs:z.number().optional(),crop:z.object({aspect:z.enum(['4:5','1:1','16:9']),x:z.number(),y:z.number(),z:z.number()}).optional()}).nullable().optional()});
+const media=z.object({id:z.uuid(),kind:z.string(),w:z.number().nullable(),h:z.number().nullable(),pending:z.boolean(),blurred:z.boolean(),src:z.record(z.string(),z.string()).nullable(),durationMs:z.number().nullable().optional()});
 const tag=z.object({id:z.uuid(),handle:z.string().nullable().optional(),name:z.string().nullable().optional(),state:z.string().optional()}).passthrough();
 const interest=z.object({topicId:z.string(),value:z.number().nullable().optional(),dir:z.unknown().optional()}).passthrough();
 export const postSchema=z.object({id:z.uuid(),type:z.enum(['post','note']),title:z.string().nullable(),body:z.string(),author,media:z.array(media),
@@ -649,8 +648,8 @@ const withSavedEdits=(p:Post,e:SavedEdit):Post=>({...p,type:e.post.type??p.type,
  interests:(e.post.interests??[]).map(topicId=>({topicId})),tags:(e.post.tags??[]).map(id=>p.tags?.find(x=>x.id===id)??{id}),rev:e.baseRev});
 
 /** An attached photo or clip: its preview, its shape (tiles follow the chosen format) and, for a clip picked now, the
- * local file and its trim / crop so the preview plays what the post will. */
-type MediaDraft={id:string,preview:string,kind?:string|undefined,durationMs?:number|null|undefined,w?:number|null|undefined,h?:number|null|undefined,file?:string|undefined,clip?:Clip|null|undefined};
+ * local made file so the preview plays what the post will. */
+type MediaDraft={id:string,preview:string,kind?:string|undefined,durationMs?:number|null|undefined,w?:number|null|undefined,h?:number|null|undefined,file?:string|undefined};
 const tileAr=(m:MediaDraft|undefined)=>m?.w&&m.h?{'--ar':Math.max(.5,Math.min(2,m.w/m.h)).toFixed(4)} as CSSProperties:undefined;
 type Person={id:string,name:string};
 /** `mentionable`: the server says whether a mention by the acting profile reaches the person (their «Кто может
@@ -673,7 +672,7 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
  const [audience,setAudience]=useState<Audience>(()=>(['all','followers','granted','only'] as const).includes(edit?.audience as Audience)?edit!.audience as Audience:'all');
  // «Показать в ленте» is gone (owner 28.10.2026): new posts are in the feed; an edit keeps what the post had.
  const inFeed=edit?.inFeed??true;
- const [media,setMedia]=useState<MediaDraft[]>(()=>edit?edit.media.map(m=>({id:m.id,preview:mediaSrc(m)??'',kind:m.kind,durationMs:m.durationMs,w:m.w,h:m.h,file:m.src?.file,clip:m.clip})):[]);
+ const [media,setMedia]=useState<MediaDraft[]>(()=>edit?edit.media.map(m=>({id:m.id,preview:mediaSrc(m)??'',kind:m.kind,durationMs:m.durationMs,w:m.w,h:m.h,file:m.src?.file})):[]);
  // An article's cover: its first photo that is not placed in the text; the others are `![](media:id)` in the text.
  const [coverId,setCoverId]=useState<string|null>(()=>note&&edit?edit.media.find(m=>!mdImages(edit.body).includes(m.id))?.id??null:null);
  const [pickFor,setPickFor]=useState<'media'|'cover'|'inline'>('media');
@@ -830,7 +829,7 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
 
  if(preview){
   const fake:Post={id:edit?.id??'00000000-0000-7000-8000-000000000000',type:note?'note':'post',title:note?title.trim():null,body:body.trim(),author:{id:acting?.id??'',kind:acting?.kind??'person',handle:acting?.handle??null,name:acting?.name??nameOf(acting),avatar:acting?.avatar??null},
-   media:(note?noteMedia.map(id=>media.find(m=>m.id===id)!).filter(Boolean):media).map(m=>({id:m.id,kind:m.kind??'image',w:m.w??null,h:m.h??null,pending:false,blurred:false,src:{card:m.preview,full:m.preview,...(m.file?{file:m.file}:{})},durationMs:m.durationMs??null,clip:m.clip??null})),topics,likes:0,liked:false,replies:0,saved:false,publishedAt:null,
+   media:(note?noteMedia.map(id=>media.find(m=>m.id===id)!).filter(Boolean):media).map(m=>({id:m.id,kind:m.kind??'image',w:m.w??null,h:m.h??null,pending:false,blurred:false,src:{card:m.preview,full:m.preview,...(m.file?{file:m.file}:{})},durationMs:m.durationMs??null})),topics,likes:0,liked:false,replies:0,saved:false,publishedAt:null,
    ...(audience!=='all'?{audience}:{}),poll:poll?{question:poll.question,options:poll.options,myVote:null,results:null}:null,interests:interests?.map(id=>{const j=eligible.find(e=>e.topicId===id);return {topicId:id,value:j?.value??null,dir:j?.dir};})??null,tags:[]};
   const steps=[people.length&&audience==='all'&&hasMedia?t('fe.fd.next.marks',{names:people.map(p=>p.name).join(', ')}):'',hasMedia?t('fe.fd.next.review'):'',hasMedia||people.length?(live?t('fe.fd.next.oldVersion'):t('fe.fd.next.onlyYou')):''].filter(Boolean);
   return <>
@@ -924,7 +923,7 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
   {sheet==='mention'&&<MentionSheet onClose={()=>setSheet(null)} onPick={insertMention}/>}
   {sheet==='people'&&<PeopleSheet value={people} onClose={()=>setSheet(null)} onApply={v=>{setPeople(v);setSheet(null);}} locked={(edit?.tags??[]).filter(x=>x.state==='no').map(x=>x.id)}/>}
   {picked&&(pickFor==='media'?<Uploader files={picked} aspects={['4:5','1:1','orig']} max={MEDIA_MAX-media.length} send={sendPhoto} sendVideo={sendVideo} onClose={()=>setPicked(null)}
-   onDone={got=>{setPicked(null);setMedia(m=>[...m,...got.map(g=>({id:g.id,preview:g.url,kind:g.kind,durationMs:g.durationMs,w:g.w,h:g.h,file:g.file,clip:g.clip}))]);setErrs(e=>{const {media:_m,...rest}=e;return rest;});}}/>
+   onDone={got=>{setPicked(null);setMedia(m=>[...m,...got.map(g=>({id:g.id,preview:g.url,kind:g.kind,durationMs:g.durationMs,w:g.w,h:g.h,file:g.file}))]);setErrs(e=>{const {media:_m,...rest}=e;return rest;});}}/>
    // An article: the cover (16:9 or as is) or one photo into the text where the caret was; photos only.
    :<Uploader files={picked.slice(0,1)} aspects={pickFor==='cover'?['16:9']:['orig','4:5','1:1']} max={1} send={sendPhoto} onClose={()=>setPicked(null)}
     onDone={got=>{setPicked(null);const g=got[0];if(!g)return;setMedia(m=>[...m,{id:g.id,preview:g.url,kind:g.kind,w:g.w,h:g.h}]);

@@ -7,12 +7,13 @@ import {ASPECTS,TRIM_MIN_MS,VIDEO_MAX_MS,clipBox,filmstrip,fmtDurFine,type ClipC
 const FRAMES=8;
 /** The trim sheet (owner, 28.10.2026): the clip on top (in its crop when there is one) playing the chosen part in a
  * loop, a filmstrip under it with two handles — drag an edge, or the window between them to move it; arrows move a
- * focused handle by 0.1 s (with Shift by 1 s). The part is 1 s … 1 min. «Всё видео» resets, «Применить» returns it
- * (null = the whole clip). Nothing is cut from the file: players honour the trim (kit/media.ts Clip). */
+ * focused handle by 0.1 s (with Shift by 1 s). The part is 1 s … 1 min, so a longer clip (up to 10 min) always keeps
+ * at most a minute. «Всё видео» («Первая минута» for a longer clip) resets, «Применить» returns it (null = the whole
+ * clip). Only this part is sent: the uploader cuts and compresses it on the device (kit/video-edit.ts). */
 export function TrimSheet({file,durationMs,initial,crop,onApply,onClose}:{file:File,durationMs:number,initial?:{startMs:number,endMs:number}|undefined,
  crop?:ClipCrop|undefined,onApply:(t:{startMs:number,endMs:number}|null)=>void,onClose:()=>void}){
  const {t}=useI18n();const D=Math.max(TRIM_MIN_MS,durationMs);const MAX=Math.min(D,VIDEO_MAX_MS);
- const [a,setA]=useState(initial?.startMs??0);const [b,setB]=useState(Math.min(initial?.endMs??D,D));
+ const [a,setA]=useState(initial?.startMs??0);const [b,setB]=useState(Math.min(initial?.endMs??MAX,D));
  const [frames,setFrames]=useState<string[]>([]);const [src,setSrc]=useState('');const [nat,setNat]=useState<number|null>(null);
  const [playing,setPlaying]=useState(false);const [at,setAt]=useState(a);
  const v=useRef<HTMLVideoElement>(null);const strip=useRef<HTMLDivElement>(null);const span=useRef<[number,number]>([a,b]);span.current=[a,b];
@@ -49,9 +50,9 @@ export function TrimSheet({file,durationMs,initial,crop,onApply,onClose}:{file:F
  const pc=(ms:number)=>`${(ms/D*100).toFixed(3)}%`;
  const box=crop&&nat?clipBox(nat,crop):null;const [aw,ah]=crop?ASPECTS[crop.aspect]:[0,0];
  const prev={...(crop?{'--ar':`${aw}/${ah}`}:nat?{'--ar':nat.toFixed(4)}:{}),...(box?{'--vw':box.w+'%','--vh':box.h+'%','--vx':box.x+'%','--vy':box.y+'%'}:{})} as CSSProperties;
- const whole=a===0&&b>=D;
+ const long=D>MAX;const whole=a===0&&b>=Math.min(D,MAX);
  return <Sheet title={t('fe.kit.trim.title')} sub={t('fe.kit.trim.hint')} full onClose={onClose}
-  foot={<div className="row g8"><Btn kind="soft" fit disabled={whole} onClick={()=>{setA(0);setB(Math.min(D,MAX));show(0);}}>{t('fe.kit.trim.reset')}</Btn>
+  foot={<div className="row g8"><Btn kind="soft" fit disabled={whole} onClick={()=>{setA(0);setB(Math.min(D,MAX));show(0);}}>{t(long?'fe.kit.trim.resetLong':'fe.kit.trim.reset')}</Btn>
    <Btn onClick={()=>onApply(a<=0&&b>=D?null:{startMs:a,endMs:b})}>{t('fe.kit.trim.apply')}</Btn></div>}>
   <div className="k-trim">
    <div className={'k-video k-trim-prev'+(crop?' crop':'')+(playing?' playing on':' on')} style={prev} onClick={toggle}>

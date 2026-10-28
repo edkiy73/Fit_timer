@@ -22,7 +22,10 @@ const [, , file, filter] = process.argv;
 const scenarios = (await import(new URL(file, 'file://' + process.cwd() + '/').href)).default.filter(s => !filter || s.name.includes(filter));
 // Fake media (a beep and a test pattern). Headless Chromium honours a microphone grant only with the fake-UI switch, so
 // `mic: true` scenarios run in a second browser that has it; `mic: 'deny'` refuses getUserMedia as a person saying no does.
-const browser = await chromium.launch({ headless: true, args: ['--use-fake-device-for-media-stream'] });
+// `E2E_CHANNEL=chrome` runs the installed Google Chrome instead of Playwright's Chromium: it has the H.264 / AAC
+// encoders the on-device video path (WebCodecs) needs; Chromium has none and takes the recorder fallback.
+const CHANNEL = process.env.E2E_CHANNEL ? { channel: process.env.E2E_CHANNEL } : {};
+const browser = await chromium.launch({ ...CHANNEL, headless: true, args: ['--use-fake-device-for-media-stream'] });
 let micBrowser = null;
 const results = [];
 for (const sc of scenarios) {
@@ -32,7 +35,7 @@ for (const sc of scenarios) {
   catch (e) { results.push({ name: sc.name, ok: false, err: 'persona: ' + e.message }); console.log('FAIL ' + sc.name + '\n   ✗ persona ' + sc.persona + ': ' + e.message); continue; }
   const email = me.email;
   const s = email ? await session(email) : null; if (email) await boot(email);
-  if (sc.mic === true) micBrowser ??= await chromium.launch({ headless: true, args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] });
+  if (sc.mic === true) micBrowser ??= await chromium.launch({ ...CHANNEL, headless: true, args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] });
   const ctx = await (sc.mic === true ? micBrowser : browser).newContext({ viewport: sc.viewport || { width: 390, height: 844 }, locale: 'ru-RU', timezoneId: 'Europe/Berlin' });
   if (APP !== PROD) await ctx.route(APP + '/api/**', async r => {
     try {
