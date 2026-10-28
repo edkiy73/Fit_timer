@@ -3,9 +3,9 @@ import {createPortal} from 'react-dom';
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Check,ChevronLeft,ChevronRight,Link as LinkIcon,Undo2,X} from 'lucide-react';
+import {Check,ChevronLeft,ChevronRight,Link as LinkIcon,Undo2,Users,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Ask,H,IconBtn,Note,PhotoTrack} from './kit';
+import {Ask,Av,Btn,Card,Empty,H,IconBtn,Note,PhotoTrack,Row,Sheet,Skel} from './kit';
 import {useFe} from './session';
 import {useToast} from './toast';
 
@@ -34,13 +34,15 @@ export function useTopics(){
 /* ---------- md(): safe Markdown, FetLife-like ---------- */
 const INLINE=/(`[^`\n]+`)|(!?\[[^\]\n]{1,120}\]\(https?:\/\/[^\s()<>"']{1,400}\))|((?:^|(?<=[\s(]))@[a-z0-9_.]{2,30})|(\*\*[^*\n]+\*\*|__[^_\n]+__)|(~~[^~\n]+~~)|((?:^|(?<=[\s(]))[*_][^*_\n]+[*_](?=$|[\s).,!?:;]))/gi;
 
-function Inline({s,onLink}:{s:string,onLink:(u:string)=>void}){
+/** A mention that is a link: the server lists them per post / reply (V21 unmentionMe — a removed one stays text). */
+export type MentionRef={id:string,handle:string|null};
+function Inline({s,onLink,mentions}:{s:string,onLink:(u:string)=>void,mentions:MentionRef[]|undefined}){
  const out:ReactNode[]=[];let last=0;let k=0;
  for(const m of s.matchAll(INLINE)){
   const i=m.index??0;if(i>last)out.push(s.slice(last,i));const v=m[0];
   if(m[1])out.push(<code key={k++}>{v.slice(1,-1)}</code>);
   else if(m[2]){const mm=/\[([^\]]+)\]\(([^)]+)\)/.exec(v)!;const u=mm[2]!;out.push(<a key={k++} href={u} rel="noopener noreferrer nofollow" onClick={e=>{e.preventDefault();e.stopPropagation();onLink(u);}}>{mm[1]}</a>);}
-  else if(m[3])out.push(<Mention key={k++} handle={v.slice(1)}/>);
+  else if(m[3]){const h=v.slice(1).toLowerCase();const ref=mentions?.find(x=>x.handle?.toLowerCase()===h);out.push(ref?<Mention key={k++} handle={v.slice(1)} id={ref.id}/>:v);}
   else if(m[4])out.push(<b key={k++}>{v.slice(2,-2)}</b>);
   else if(m[5])out.push(<s key={k++}>{v.slice(2,-2)}</s>);
   else if(m[6])out.push(<i key={k++}>{v.slice(1,-1)}</i>);
@@ -50,20 +52,18 @@ function Inline({s,onLink}:{s:string,onLink:(u:string)=>void}){
  return <>{out}</>;
 }
 
-/** `@handle` → the person's profile. The server keeps a mention only for people who allow it; the link finds the
- * profile by its exact nickname and stays plain text when there is none. */
-function Mention({handle}:{handle:string}){
- const {call}=useFe();const navigate=useNavigate();
- const open=(e:{stopPropagation:()=>void})=>{e.stopPropagation();
-  call('people.search',{q:handle},z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),handle:z.string().nullable()}).passthrough())}))
-   .then(r=>{const p=r.items.find(x=>x.handle?.toLowerCase()===handle.toLowerCase());if(p)navigate('/n/people/'+p.id);}).catch(()=>{});};
+/** `@handle` → the person's profile. Only the mentions the server lists for this text are links (people who allow
+ * mentions, not blocked, not removed by themselves); any other `@word` stays plain text. Your own name opens «Я». */
+function Mention({handle,id}:{handle:string,id:string}){
+ const {acting}=useFe();const navigate=useNavigate();
+ const open=(e:{stopPropagation:()=>void})=>{e.stopPropagation();navigate(id===acting?.id?'/n/me':'/n/people/'+id);};
  return <span className="mention" role="link" tabIndex={0} onClick={open} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();open(e);}}}>@{handle}</span>;
 }
 
-export function RichText({text,className}:{text:string,className?:string}){
+export function RichText({text,className,mentions}:{text:string,className?:string,mentions?:MentionRef[]|undefined}){
  const {t}=useI18n();const [link,setLink]=useState<string|null>(null);
  const lines=text.split('\n');const blocks:ReactNode[]=[];let para:string[]=[];let list:{t:'ul'|'ol',items:string[]}|null=null;let k=0;
- const il=(s:string)=><Inline s={s} onLink={setLink}/>;
+ const il=(s:string)=><Inline s={s} onLink={setLink} mentions={mentions}/>;
  const flushP=()=>{if(para.length){const p=para;blocks.push(<p key={k++}>{p.map((x,i)=><Fragment key={i}>{i>0&&<br/>}{il(x)}</Fragment>)}</p>);para=[];}};
  const flushL=()=>{if(list){const l=list;const T=l.t;blocks.push(<T key={k++}>{l.items.map((x,i)=><li key={i}>{il(x)}</li>)}</T>);list=null;}};
  for(let i=0;i<lines.length;i++){const l=lines[i]!;let m:RegExpMatchArray|null;
@@ -170,8 +170,10 @@ export {plural};
 
 /** Before the vote every option is a button with an empty circle; after it the bars fill, your mark sits after the
  * text and «Отменить голос» withdraws it. Results come from the server only after one's own vote. `preview` is inert. */
-export function Poll({postId,poll,onChange,preview=false}:{postId:string,poll:PollData,onChange?:(p:PollData)=>void,preview?:boolean}){
+export function Poll({postId,poll,onChange,preview=false,mine=false}:{postId:string,poll:PollData,onChange?:(p:PollData)=>void,preview?:boolean,
+ /** The author sees who chose what without voting (poll.voters). */ mine?:boolean}){
  const {call}=useFe();const {t,locale}=useI18n();const toast=useToast();const [busy,setBusy]=useState(false);const [anim,setAnim]=useState(false);
+ const [voters,setVoters]=useState<number|null>(null);
  const mv=poll.myVote??null;const isVoted=mv!=null;const res=poll.results??null;
  const tot=res?res.reduce((a,b)=>a+b,0):0;const max=res?Math.max(1,...res):1;
  const vote=async(option:number|null)=>{
@@ -191,9 +193,42 @@ export function Poll({postId,poll,onChange,preview=false}:{postId:string,poll:Po
      {isVoted?<i className="pfill" style={{'--pc':pc+'%'} as CSSProperties}>{mine&&<b className="pbub"/>}</i>:<span className="pradio" aria-hidden="true"/>}
      <span className="po"><span className="pot">{o}</span>{mine&&<span className="pmine" aria-label={t('fe.fd.poll.yours')}><Check/></span>}</span>
     </button>
-    {isVoted&&<span className="poll-count" aria-label={t('fe.fd.poll.count',{n})}><span>{n}</span></span>}
+    {(isVoted||mine&&res)&&!preview?<button type="button" className="poll-count" aria-label={t('fe.w3.voters.open',{n})} onClick={()=>setVoters(i)}><span>{n}</span><ChevronRight/></button>
+     :isVoted&&<span className="poll-count" aria-label={t('fe.fd.poll.count',{n})}><span>{n}</span></span>}
    </div>;})}
   <div className="poll-f"><Note>{plural(tot,['голос','голоса','голосов'],['vote','votes'],locale)}{!isVoted&&!preview?' · '+t('fe.fd.poll.pick'):''}</Note>
    {isVoted&&!preview&&<button type="button" className="poll-undo" disabled={busy} onClick={()=>vote(null)}><Undo2/><span>{t('fe.fd.poll.undo')}</span></button>}</div>
+  {voters!==null&&<MarksSheet title={poll.options[voters]??''} empty={t('fe.w3.voters.none')}
+   load={cursor=>call('poll.voters',{postId,option:voters,...(cursor?{cursor}:{})},marksPage)} onClose={()=>setVoters(null)}/>}
  </div>;
+}
+
+/* ---------- people behind likes and votes (V21 likers / pollPeople) ---------- */
+const markPerson=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),mine:z.boolean().optional(),
+ avatar:z.string().nullable().optional()}).passthrough();
+export const marksPage=z.object({ok:z.literal(true),total:z.number(),hidden:z.number(),items:z.array(markPerson),next:z.string().nullable()});
+export type MarksPage=z.infer<typeof marksPage>;
+export type MarkPerson=z.infer<typeof markPerson>;
+const personName=(p:{name?:string|null,handle?:string|null})=>p.name||(p.handle?'@'+p.handle:'?');
+export {personName};
+
+/** A sheet with the people behind likes or a poll option: 30 a page, own profiles first as «Ты»; people who keep their
+ * marks private are only counted («И ещё N…»). A row opens the profile («Я» for one's own). */
+export function MarksSheet({title,empty,load,onClose,first}:{title:string,empty:string,load:(cursor?:string)=>Promise<MarksPage>,onClose:()=>void,first?:MarksPage|null}){
+ const {t,locale}=useI18n();const navigate=useNavigate();const {acting}=useFe();
+ const [data,setData]=useState<MarksPage|null>(first??null);const [error,setError]=useState<unknown>(null);const [more,setMore]=useState(false);
+ const get=useRef(load);get.current=load;
+ useEffect(()=>{if(first)return;get.current().then(setData,setError);},[first]);
+ const next=()=>{if(!data?.next||more)return;setMore(true);get.current(data.next).then(r=>setData(d=>d&&{...r,items:[...d.items,...r.items]}),setError).finally(()=>setMore(false));};
+ const items=data?[...data.items].sort((a,b)=>Number(!!b.mine)-Number(!!a.mine)):[];
+ return <Sheet title={title} sub={data?plural(data.total,['отметка','отметки','отметок'],['mark','marks'],locale):undefined} onClose={onClose}>
+  {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}/>
+   :!data?<Skel kind="list"/>
+   :!items.length&&!data.hidden?<Empty icon={Users} title={empty}/>
+   :<>{items.length>0&&<Card list>{items.map(p=><Row key={p.id} av={<Av name={personName(p)} seed={p.id} src={p.avatar} size="sm"/>}
+     title={p.id===acting?.id?t('fe.w3.you'):personName(p)} sub={p.handle?'@'+p.handle:undefined}
+     onClick={()=>{onClose();navigate(p.mine?'/n/me':'/n/people/'+p.id);}}/>)}</Card>}
+    {data.next&&<Btn kind="soft" className="mt12" busy={more} disabled={more} onClick={next}>{t('fe.feed.more')}</Btn>}
+    {data.hidden>0&&<p className="grp-n">{t('fe.w3.likers.hidden',{n:data.hidden})}</p>}</>}
+ </Sheet>;
 }
