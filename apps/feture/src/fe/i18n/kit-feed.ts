@@ -11,6 +11,11 @@ export const ru = {
   'fe.kit.fmt.linkUrl': 'Адрес',
   'fe.kit.fmt.linkHint': 'Перед переходом спросим, точно ли открыть сайт.',
   'fe.kit.fmt.badUrl': 'Проверь адрес: он начинается с https:// и содержит домен, например example.com',
+  'fe.kit.fmt.strike': 'Зачёркнутый',
+  'fe.kit.fmt.heading': 'Заголовок',
+  'fe.kit.fmt.olist': 'Нумерованный список',
+  'fe.kit.fmt.photo': 'Фото в текст',
+  'fe.kit.fmt.photoRm': 'Убрать фото из текста',
   'fe.kit.fmt.insert': 'Вставить',
 } as const;
 
@@ -26,5 +31,10 @@ export const en = {
   'fe.kit.fmt.linkUrl': 'Address',
   'fe.kit.fmt.linkHint': 'People are asked before a site opens.',
   'fe.kit.fmt.badUrl': 'Check the address: it starts with https:// and has a domain, like example.com',
+  'fe.kit.fmt.strike': 'Strikethrough',
+  'fe.kit.fmt.heading': 'Heading',
+  'fe.kit.fmt.olist': 'Numbered list',
+  'fe.kit.fmt.photo': 'Photo in the text',
+  'fe.kit.fmt.photoRm': 'Remove the photo from the text',
   'fe.kit.fmt.insert': 'Insert',
 } as const;

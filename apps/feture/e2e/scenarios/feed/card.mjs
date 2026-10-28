@@ -90,8 +90,8 @@ export default [
    let id = d.id;
    try {
      await t.go('/n/feed/post/' + id); const c = card(t, body); await c.waitFor();
-     await c.locator('.post-h button[aria-label="Ещё"]').click(); await t.tap('.sheet.on .li:has-text("Редактировать")'); await t.see('.compose textarea');
-     await t.fill('.compose textarea', body + ' исправлено'); await t.tap('.ctabar .btn.primary');
+     await c.locator('.post-h button[aria-label="Ещё"]').click(); await t.tap('.sheet.on .li:has-text("Редактировать")'); await t.see('.compose .rte-ed');
+     await t.fill('.compose .rte-ed', body + ' исправлено'); await t.tap('.ctabar .btn.primary');
      await until(async () => (await get(t, id)).body === body + ' исправлено', 'edit saved');
      await t.go('/n/feed/post/' + id); await card(t, body).waitFor();
      await card(t, body).locator('.post-h button[aria-label="Ещё"]').click(); await t.tap('.sheet.on .li:has-text("Удалить")');

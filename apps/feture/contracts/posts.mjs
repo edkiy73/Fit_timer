@@ -7,6 +7,19 @@ import { text } from './me.mjs';
 const code = z.string().regex(/^[a-z][a-z0-9_-]{0,31}$/);
 const unique = (/** @type {z.ZodArray<any>} */ arr) => arr.refine(v => new Set(v).size === v.length, { message: 'duplicates' });
 
+/** A picture inside an article's text: `![](media:<id>)` on its own line, the id one of the post's own `mediaIds`
+ * (owner 28.10.2026: the first photo is the cover, the others sit in the text). No other image source is allowed. */
+export const MEDIA_REF = /!\[[^\]\n]{0,120}\]\(media:([0-9a-f-]{36})\)/g;
+/** Ids of the pictures an article's text shows, in order. @param {string} body */
+export const mediaRefs = body => [...body.matchAll(MEDIA_REF)].map(m => /** @type {string} */ (m[1]));
+/** Any image mark in the text (`![…](…)`), to refuse those that are not own media. @param {string} body */
+const imageMarks = body => (body.match(/!\[[^\]\n]{0,120}\]\([^)\n]*\)/g) ?? []).length;
+/** A «word» longer than this (no space or line break) breaks every layout; links and pictures are not counted. */
+export const LONG_WORD = 120;
+/** True when the text has an unbroken run longer than LONG_WORD outside links and picture marks. @param {string} v */
+export const hasLongWord = v => v.replace(/!?\[[^\]\n]{0,120}\]\([^)\s]{1,420}\)/g, ' ').replace(/https?:\/\/\S+/g, ' ')
+  .split(/\s+/).some(w => [...w].length > LONG_WORD);
+
 /** What a post is made of; the same shape for drafts, publishing and edits. */
 export const postFields = z.strictObject({
   type: z.enum(['post', 'note']).default('post'),
@@ -28,6 +41,10 @@ export const postFields = z.strictObject({
 }).refine(v => v.type === 'note' ? (v.title?.length ?? 0) >= 3 && v.body.length >= 20 : v.body.length <= 1000, { message: 'type_rules', path: ['body'] })
   .refine(v => v.body.length > 0 || v.mediaIds.length > 0 || !!v.poll || v.interests.length > 0, { message: 'empty_post', path: ['body'] })
   .refine(v => !v.tags.length || v.mediaIds.length > 0, { message: 'tags_need_media', path: ['tags'] })
+  // Pictures in the text: only in an article, only the post's own media, each once; no outside image addresses.
+  .refine(v => { const refs = mediaRefs(v.body); return refs.length === imageMarks(v.body) && (!refs.length || v.type === 'note')
+    && new Set(refs).size === refs.length && refs.every(r => v.mediaIds.includes(r)); }, { message: 'bad_image', path: ['body'] })
+  .refine(v => !hasLongWord(v.body), { message: 'long_word', path: ['body'] })
   // An album is a gallery album: it holds posts with photos (V21 setAlbum shows the row only with media).
   .refine(v => !v.albumId || v.mediaIds.length > 0, { message: 'album_needs_media', path: ['albumId'] });
 

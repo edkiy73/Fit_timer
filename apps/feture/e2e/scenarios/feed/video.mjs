@@ -24,7 +24,7 @@ export default [
   { name: 'video post: pick a clip → uploader row with length, no crop → publish → kind video; staff approves → ▶ on the card, the viewer plays', persona: 'full', route: '/n/feed/new', run: async t => {
     let id;
     try {
-      await t.see('.compose textarea');
+      await t.see('.compose .rte-ed');
       const bytes = await clip(t);
       const [ch] = await Promise.all([t.page.waitForEvent('filechooser'), t.page.locator('.attach button').first().click()]);
       await ch.setFiles([{ name: 'clip.webm', mimeType: 'video/webm', buffer: bytes }]);
@@ -34,7 +34,7 @@ export default [
       await t.shot('video-uploader');
       await t.tap('.sheet.on .sh-f button:has-text("Готово")');
       await t.see('.edit-ph .k-vbadge', 60000);
-      const body = 'e2e видео ' + Math.random().toString(36).slice(2, 7); await t.fill('.compose textarea', body); await t.tap('.ctabar .btn.primary');
+      const body = 'e2e видео ' + Math.random().toString(36).slice(2, 7); await t.fill('.compose .rte-ed', body); await t.tap('.ctabar .btn.primary');
       const p = await until(async () => (await mine(t)).find(x => x.body === body), 'post saved', 30000); id = p.id;
       expect(p.media.length === 1 && p.media[0].kind === 'video', 'kind ' + p.media[0]?.kind);
       expect(p.media[0].durationMs >= 1500 && p.media[0].durationMs <= 4000, 'length ' + p.media[0].durationMs);

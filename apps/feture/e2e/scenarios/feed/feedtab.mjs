@@ -37,12 +37,12 @@ export default [
    expect(new Set(ids).size === ids.length, 'duplicates after «Ещё»');
  } },
  { name: 'composer row: text → editor, photo → file picker, poll → poll ready, «+» → post / article / event', persona: 'full', route: '/n/feed', run: async t => {
-   await t.see('.composer'); await t.tap('.composer .cmp-main'); await t.see('.compose textarea'); await t.go('/n/feed');
+   await t.see('.composer'); await t.tap('.composer .cmp-main'); await t.see('.compose .rte-ed'); await t.go('/n/feed');
    const [ch] = await Promise.all([t.page.waitForEvent('filechooser', { timeout: 8000 }), t.tap('.composer button[aria-label="Фото или видео"]')]);
    expect(!!ch, 'file chooser'); await t.go('/n/feed');
    await t.tap('.composer button[aria-label="Опрос"]'); await t.see('#pollQ'); await t.go('/n/feed');
-   for (const [row, sel] of [['Публикация', '.compose textarea'], ['Статья', '#ntitle'], ['Событие', '.stepper']]) {
-     await t.tap('.composer .ibtn.add'); await t.see('.sheet.on .c3'); await t.tap(`.sheet.on .c3:has-text("${row}")`); await t.see(sel); await t.go('/n/feed');
+   for (const [row, sel] of [['Публикация', '.compose .rte-ed'], ['Статья', '#ntitle'], ['Событие', '.stepper']]) {
+     await t.tap('.composer .ibtn.add'); await t.see(".sheet.on .li"); await t.tap(`.sheet.on .li:has-text("${row}")`); await t.see(sel); await t.go('/n/feed');
    }
  } },
  { name: 'bar: search opens posts search, bell opens notifications', persona: 'full', route: '/n/feed', run: async t => {

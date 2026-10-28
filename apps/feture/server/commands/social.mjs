@@ -49,7 +49,6 @@ async function cutTies(q, blocker, blocked) {
 /** @param {Q} q @param {string} blocker @param {string} blocked */
 async function cutPair(q, blocker, blocked) {
   await q.query(`delete from feture.follow where (follower_profile_id = $1 and target_profile_id = $2) or (follower_profile_id = $2 and target_profile_id = $1)`, [blocker, blocked]);
-  await q.query(`delete from feture.note_subscription where (subscriber_profile_id = $1 and author_profile_id = $2) or (subscriber_profile_id = $2 and author_profile_id = $1)`, [blocker, blocked]);
   await q.query(
     `update feture.access_grant set revoked_at = now() where revoked_at is null
      and ((owner_profile_id = $1 and viewer_profile_id = $2) or (owner_profile_id = $2 and viewer_profile_id = $1))`, [blocker, blocked]);
@@ -169,20 +168,6 @@ const run = {
       `insert into feture.follow (follower_profile_id, target_profile_id, acted_by, created_at) values ($1, $2, $3, $4) on conflict do nothing returning 1`,
       [input.profileId, acting.profileId, r.acted_by, r.followed_at]);
     return { restored: rows.length > 0 };
-  },
-
-  async 'noteSub.set'(q, { acting: a, input }) {
-    const acting = need(a);
-    if (!input.on) {
-      await q.query(`delete from feture.note_subscription where subscriber_profile_id = $1 and author_profile_id = $2`, [acting.profileId, input.profileId]);
-      return { subscribed: false };
-    }
-    await socialTarget(q, acting, input.profileId);
-    const [{ b }] = await q.query('select feture.blocked($1, $2) b', [acting.profileId, input.profileId]);
-    if (b) fail(404, 'not_found');
-    // The author is not told (V21: «автор не узнает»).
-    await q.query(`insert into feture.note_subscription (subscriber_profile_id, author_profile_id) values ($1, $2) on conflict do nothing`, [acting.profileId, input.profileId]);
-    return { subscribed: true };
   },
 
   async 'feedHide.set'(q, { acting: a, input }) {
