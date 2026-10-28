@@ -158,8 +158,14 @@ async function hostSetup(lane, email) {
     }
     out[key] = c.id;
   }
-  // One published open offline event far enough ahead; a cancelled or past one is replaced.
-  const title = `QA ${lane} встреча`;
+  // One published open offline event far enough ahead (and one with tickets on the organizer's site); a cancelled or
+  // past one is replaced.
+  out.eventId = await hostEvent(email, `QA ${lane} встреча`, { kind: 'free' });
+  out.ticketEventId = await hostEvent(email, `QA ${lane} билеты`, { kind: 'external', amount: 25, currency: 'EUR', ticketUrl: 'https://example.org/tickets' });
+  return out;
+}
+
+async function hostEvent(email, title, price) {
   const ev = (await api(email, 'event.mine', {})).organizing ?? [];
   let e = ev.find(x => x.title === title && ['published', 'in_review'].includes(x.state) && (!x.startsAt || Date.parse(x.startsAt) > Date.now() + 7 * 864e5));
   if (!e) {
@@ -168,7 +174,7 @@ async function hostSetup(lane, email) {
     const r = must(await api(email, 'event.submit', { opId: uuid7(), event: {
       title, kind: 'meetup', description: 'Открытая встреча для сценариев: отметки «иду», адрес, сохранение.', format: 'offline',
       placeId: places[0]?.id ?? null, area: 'Митте', exactAddress: 'Тестовая улица 1, вход со двора', tz: 'Europe/Berlin',
-      startsAt: start.toISOString(), endsAt: new Date(+start + 2 * 3600e3).toISOString(), price: { kind: 'free' }, plate: 'sea' } }), 'event.submit');
+      startsAt: start.toISOString(), endsAt: new Date(+start + 2 * 3600e3).toISOString(), price, plate: 'sea' } }), 'event.submit');
     e = { id: r.id };
   }
   const got = (await api(email, 'event.get', { eventId: e.id })).event;
@@ -176,8 +182,7 @@ async function hostSetup(lane, email) {
     await staff();
     must(await api(STAFF, 'staff.eventDecide', { opId: uuid7(), eventId: e.id, rev: got.rev, decision: 'approve' }), 'staff.eventDecide');
   }
-  out.eventId = e.id;
-  return out;
+  return e.id;
 }
 
 /** The staff account exists and holds a role (the role itself is granted once, out of band). */

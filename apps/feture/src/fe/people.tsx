@@ -3,13 +3,13 @@ import {useNavigate,useParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Ban,Check,ChevronDown,ChevronLeft,ChevronRight,EyeOff,Heart,Ellipsis,History,Info,KeyRound,Lock,MapPin,MessageCircle,SlidersHorizontal,Sparkles,Undo2,Users,X} from 'lucide-react';
-import {Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,H,IconBtn,LikeTile,Note,PersonName,Pill,Radar,RangeDual,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,View,plate} from './kit';
+import {Ban,Bell,CalendarDays,Check,ChevronDown,ChevronLeft,ChevronRight,EyeOff,Heart,Ellipsis,History,Info,KeyRound,LocateFixed,Lock,MapPin,MessageCircle,SlidersHorizontal,Sparkles,Undo2,Users,X} from 'lucide-react';
+import {Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,H,IconBtn,LikeTile,Note,PersonName,Pill,Radar,Range,RangeDual,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Soon,Stack,Text,View,plate} from './kit';
 import {useFe} from './session';
 import {NameBadges} from './faces';
 import {BellButton} from './inbox';
 import {when} from './feed';
-import {catalogRes,CompatSummary,FollowCounts,MatchOverlay,PersonBio,PersonMenu,PhotoViewer,ProfileBody,ProfilePage,personName,personProfileRes,pxError,usePrivate,useRelation,useToast,
+import {catalogRes,CompatSummary,FollowCounts,MatchOverlay,PersonBio,PersonMenu,PhotoViewer,ProfileBody,ProfilePage,personName,personProfileRes,pxError,usePrivate,useRelation,useToast,type PxToast,
  type Catalog,type MenuStep,type PersonProfile,type Relation} from './profile-extras';
 
 /** Slice F (V21 D03–D10): Discover cards from the server's mutual pool with the whole profile under the photo, swipe
@@ -19,7 +19,9 @@ const media=z.object({src:z.record(z.string(),z.string()).nullable(),pending:z.b
 const card=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),ages:z.array(z.number()),
  city:z.object({ru:z.string().nullable(),en:z.string().nullable()}).nullable(),avatar:media.nullable(),likedMe:z.boolean(),shared:z.number(),photoVerified:z.boolean().optional(),premium:z.boolean().optional()});
 type Card=z.infer<typeof card>;
-const deck=z.object({ok:z.literal(true),off:z.boolean(),items:z.array(card)});
+const deck=z.object({ok:z.literal(true),off:z.boolean(),closed:z.boolean().optional(),needsLocation:z.boolean().optional(),items:z.array(card)});
+const datingStatusRes=z.object({ok:z.literal(true),open:z.boolean(),notify:z.boolean()});
+const notifyRes=z.object({ok:z.literal(true),notify:z.boolean()});
 const decided=z.object({ok:z.literal(true),decision:z.enum(['like','pass']),state:z.string().optional(),conversationId:z.uuid().optional()}).passthrough();
 const incoming=z.object({ok:z.literal(true),items:z.array(z.object({profile:card,at:z.string().nullable().optional()}).passthrough())}).passthrough();
 const outgoing=z.object({ok:z.literal(true),items:z.array(z.object({profile:card,at:z.string().nullable().optional(),source:z.string().nullable().optional(),initiator:z.string().nullable().optional()}).passthrough())}).passthrough();
@@ -61,23 +63,43 @@ export function PeopleTab(){
 
 /* V21 D04 «Фильтры знакомств» (prototype dfSheet): the draft lives in the sheet until «Показать · N»; N is the server's
  * capped count (discover.count), «Показать» saves with discover.setFilter and reloads the deck. «Где искать» offers
- * «Везде» and a city from the catalogue; «Рядом» needs a location and comes later. */
+ * «Везде», a city from the catalogue, or «Рядом»: within a radius of the approximate place the person shares on tap
+ * (location.set; rounded to ~5 km here and on the server, never shown to anyone). */
 const filterShape=z.object({show:z.enum(['all','people','pairs']),ageMin:z.number(),ageMax:z.number(),cityId:z.string().nullable(),
+ placeMode:z.enum(['city','nearby']).default('city'),radiusKm:z.number().default(25),
  genders:z.array(z.string()),orients:z.array(z.string()),formats:z.array(z.string()),seeks:z.array(z.string()),roles:z.array(z.string()),topics:z.array(z.string())});
+const locationRes=z.object({ok:z.literal(true),location:z.object({lat:z.number(),lon:z.number()}).nullable().optional(),pending:z.unknown().optional()}).passthrough();
+/** The browser's position, only when the person taps «Определить примерное место»; rounded to the 0.05° grid (~5 km)
+ * before it leaves the device. */
+function coarsePosition():Promise<{lat:number,lon:number}>{
+ return new Promise((res,rej)=>{if(!('geolocation' in navigator)){rej(new Error('unsupported'));return;}
+  navigator.geolocation.getCurrentPosition(p=>res({lat:Math.round(p.coords.latitude*20)/20,lon:Math.round(p.coords.longitude*20)/20}),rej,{enableHighAccuracy:false,maximumAge:600000,timeout:15000});});
+}
 type Filter=z.infer<typeof filterShape>;
 const filterRes=z.object({ok:z.literal(true),filter:filterShape});
 const countRes=z.object({ok:z.literal(true),count:z.number(),capped:z.boolean()});
 const DF_ROWS=[['genders','gender'],['orients','orient'],['formats','format'],['seeks','seek'],['roles','role'],['topics','']] as const;
 type DfRow=typeof DF_ROWS[number][0];
 type DfSub=DfRow|'city';
-const DF_DEFAULT:Filter={show:'all',ageMin:18,ageMax:99,cityId:null,genders:[],orients:[],formats:[],seeks:[],roles:[],topics:[]};
+const DF_DEFAULT:Filter={show:'all',ageMin:18,ageMax:99,cityId:null,placeMode:'city',radiusKm:25,genders:[],orients:[],formats:[],seeks:[],roles:[],topics:[]};
 // Topics people are not searched by (prototype dfRows); the server refuses them as well.
 const DF_HIDDEN=new Set(['limits','edge','safety']);
-const dfOn=(f:Filter)=>[f.show!=='all',f.ageMin!==18||f.ageMax!==99,!!f.cityId,...DF_ROWS.map(([k])=>f[k].length>0)].filter(Boolean).length;
+const dfOn=(f:Filter)=>[f.show!=='all',f.ageMin!==18||f.ageMax!==99,!!f.cityId||f.placeMode==='nearby',...DF_ROWS.map(([k])=>f[k].length>0)].filter(Boolean).length;
+type Where='any'|'city'|'nearby';
 
 function DiscoverFilter({initial,onClose,onApplied}:{initial:Filter,onClose:()=>void,onApplied:(f:Filter)=>void}){
  const {call}=useFe();const {t,locale}=useI18n();
- const [f,setF]=useState<Filter>(initial);const [sub,setSub]=useState<DfSub|null>(null);const [q,setQ]=useState('');const [where,setWhere]=useState<'any'|'city'>(initial.cityId?'city':'any');
+ const [f,setF]=useState<Filter>(initial);const [sub,setSub]=useState<DfSub|null>(null);const [q,setQ]=useState('');
+ const [where,setWhere]=useState<Where>(initial.placeMode==='nearby'?'nearby':initial.cityId?'city':'any');
+ // «Рядом»: is an approximate place shared already (location.get); null while unknown.
+ const [loc,setLoc]=useState<boolean|null>(null);const [geo,setGeo]=useState<''|'busy'|'denied'|'wait'>('');
+ useEffect(()=>{call('location.get',{},locationRes).then(r=>setLoc(!!r.location)).catch(()=>setLoc(false));},[call]);
+ const noPlace=where==='nearby'&&loc!==true;
+ const share=async()=>{if(geo==='busy')return;setGeo('busy');
+  try{const c=await coarsePosition();const r=await call('location.set',{opId:newOpId(),lat:c.lat,lon:c.lon},locationRes);
+   if(r.pending){setGeo('wait');return;}setLoc(true);setGeo('');}
+  catch(e){if(e instanceof FeError)setError(e);setGeo('denied');}};
+ const setWhereTo=(v:Where)=>{setWhere(v);setF(x=>v==='nearby'?{...x,placeMode:'nearby',cityId:null}:v==='any'?{...x,placeMode:'city',cityId:null}:{...x,placeMode:'city'});};
  const [cat,setCat]=useState<Catalog|null>(null);const [count,setCount]=useState<{count:number,capped:boolean}|null>(null);
  const [countError,setCountError]=useState<unknown>(null);const [busy,setBusy]=useState(false);const [error,setError]=useState<unknown>(null);
  // `body` sits inside the sheet's scrolling `.sh-b`: a nested list starts at the top and takes the focus.
@@ -87,9 +109,10 @@ function DiscoverFilter({initial,onClose,onApplied}:{initial:Filter,onClose:()=>
  useEffect(()=>{body.current?.closest<HTMLElement>('.sheet')?.focus({preventScroll:true});const b=body.current?.closest('.sh-b');if(b)b.scrollTop=0;},[sub]);
  useEffect(()=>{
   setCount(null);setCountError(null);const ctl=new AbortController();
+  if(f.placeMode==='nearby'&&loc!==true)return;
   const timer=setTimeout(()=>call('discover.count',{filter:f},countRes,{signal:ctl.signal}).then(r=>setCount({count:r.count,capped:r.capped})).catch(e=>{if(!ctl.signal.aborted)setCountError(e);}),400);
   return ()=>{clearTimeout(timer);ctl.abort();};
- },[f,call]);
+ },[f,call,loc]);
  const back=useCallback(()=>{setSub(null);setQ('');},[]);
  // Esc / ✕ / scrim inside a nested list go back to the filters and keep the draft (prototype PPL-004): the sheet's
  // onClose is `back` there.
@@ -109,7 +132,7 @@ function DiscoverFilter({initial,onClose,onApplied}:{initial:Filter,onClose:()=>
  const place=f.cityId?cat?.places.find(p=>p.id===f.cityId):null;
  const summary=()=>{
   const parts:string[]=[];
-  if(!f.cityId)parts.push(t('fe.df.sumAnywhere'));else if(place)parts.push(lab(place));
+  if(f.placeMode==='nearby')parts.push(fill(t('fe.w7.df.sumNear'),{n:f.radiusKm}));else if(!f.cityId)parts.push(t('fe.df.sumAnywhere'));else if(place)parts.push(lab(place));
   if(f.show!=='all')parts.push(t(f.show==='pairs'?'fe.df.sumPairs':'fe.df.sumPeople'));
   if(f.ageMin!==18||f.ageMax!==99)parts.push(`${f.ageMin}–${f.ageMax}`);
   const more=DF_ROWS.filter(([k])=>f[k].length).length;
@@ -121,7 +144,7 @@ function DiscoverFilter({initial,onClose,onApplied}:{initial:Filter,onClose:()=>
   const all=groups(sub);const total=all.reduce((n,g)=>n+g.list.length,0);const needle=q.trim().toLowerCase();
   const shown=all.map(g=>({...g,list:needle?g.list.filter(([,l])=>l.toLowerCase().includes(needle)):g.list})).filter(g=>g.list.length);
   const isOn=(id:string)=>sub==='city'?f.cityId===id:f[sub].includes(id);
-  const pick=(id:string)=>{if(sub==='city'){setF(x=>({...x,cityId:x.cityId===id?null:id}));setWhere('city');}else toggle(sub,id);};
+  const pick=(id:string)=>{if(sub==='city'){setF(x=>({...x,placeMode:'city',cityId:x.cityId===id?null:id}));setWhere('city');}else toggle(sub,id);};
   const n=sub==='city'?(f.cityId?1:0):f[sub].length;
   return <Sheet full title={sub==='city'?t('fe.df.city'):t('fe.df.row.'+sub)} onClose={back}
    lead={<IconBtn icon={ChevronLeft} kind="ghost" size="sm" label={t('fe.df.back')} onClick={back}/>}
@@ -136,18 +159,27 @@ function DiscoverFilter({initial,onClose,onApplied}:{initial:Filter,onClose:()=>
    </div>
   </Sheet>;
  }
- return <Sheet full title={t('fe.df.title')} onClose={onClose}
+ const dirty=JSON.stringify(f)!==JSON.stringify(initial);
+ return <Sheet full title={t('fe.df.title')} onClose={onClose} dirty={dirty}
   head={<Btn kind="text" auto className={on?undefined:'off'} aria-disabled={on?undefined:true} onClick={()=>{if(on){setF(DF_DEFAULT);setWhere('any');}}}>{t('fe.df.reset')}</Btn>}
   foot={<>
    {on>0&&<p className="df-sum">{summary()}</p>}
-   <Btn onClick={apply} busy={busy} disabled={busy}>{count?count.count?fill(t('fe.df.showN'),{n:count.capped?'100+':count.count}):t('fe.df.applyAnyway'):t('fe.df.showPlain')}</Btn>
+   <Btn onClick={apply} busy={busy} disabled={busy||noPlace}>{noPlace?t('fe.w7.df.needPlace'):count?count.count?fill(t('fe.df.showN'),{n:count.capped?'100+':count.count}):t('fe.df.applyAnyway'):t('fe.df.showPlain')}</Btn>
   </>}>
    <div ref={body}>
-    <section className="fin"><div className="fin-t"><b>{t('fe.df.where')}</b>{where!=='any'&&clr(()=>{setWhere('any');setF(x=>({...x,cityId:null}));})}</div>
-     <ChoiceChips label={t('fe.df.where')} value={where} options={(['any','city'] as const).map(v=>[v,t('fe.df.where.'+v)] as const)}
-      onChange={v=>{if(v==='any'){setWhere('any');setF(x=>({...x,cityId:null}));}else{setWhere('city');if(!f.cityId)setSub('city');}}}/>
+    <section className="fin"><div className="fin-t"><b>{t('fe.df.where')}</b>{where!=='any'&&clr(()=>setWhereTo('any'))}</div>
+     <ChoiceChips label={t('fe.df.where')} value={where} options={(['any','city','nearby'] as const).map(v=>[v,v==='nearby'?t('fe.w7.df.nearby'):t('fe.df.where.'+v)] as const)}
+      onChange={v=>{setWhereTo(v);if(v==='city'&&!f.cityId)setSub('city');}}/>
      {where==='city'&&<div className="fld"><button type="button" className="fld-main" onClick={()=>setSub('city')}><MapPin/><span>{place?lab(place):t('fe.df.pickCity')}</span></button>
       {f.cityId?clr(()=>setF(x=>({...x,cityId:null}))):<ChevronRight/>}</div>}
+     {noPlace&&loc===false&&<><div className="fld"><button type="button" className="fld-main" onClick={()=>void share()} disabled={geo==='busy'||geo==='wait'} aria-busy={geo==='busy'||undefined}>
+       <LocateFixed/><span>{t('fe.w7.df.share')}</span></button><ChevronRight/></div>
+      {geo==='denied'&&<Alert kind="warn" className="mt8">{t('fe.w7.df.denied')}</Alert>}
+      {geo==='wait'&&<Alert kind="info" className="mt8">{t('fe.w7.df.wait')}</Alert>}</>}
+     {where==='nearby'&&loc===null&&<Skel kind="list" rows={1}/>}
+     {where==='nearby'&&loc===true&&<><Stack row justify="between" className="mt8"><Text size="sm" tone="mute" as="span">{t('fe.w7.df.radius')}</Text><Text bold as="span">{fill(t('fe.w7.df.upTo'),{n:f.radiusKm})}</Text></Stack>
+      <Range min={5} max={100} step={5} value={Math.min(100,f.radiusKm)} label={t('fe.w7.df.radius')} onChange={v=>setF(x=>({...x,radiusKm:v}))}/></>}
+     {where==='nearby'&&<Note className="mt8">{t('fe.w7.df.coarse')}</Note>}
     </section>
     <section className="fin"><div className="fin-t"><b>{t('fe.df.show')}</b>{f.show!=='all'&&clr(()=>setF(x=>({...x,show:'all'})))}</div>
      <ChoiceChips label={t('fe.df.show')} value={f.show} options={(['all','people','pairs'] as const).map(v=>[v,t('fe.df.show.'+v)] as const)} onChange={v=>setF(x=>({...x,show:v}))}/>
@@ -175,10 +207,12 @@ type Decision={id:string,dir:1|-1};
 function Discover({reloadKey,onOff,filterOn,openFilter,likesN,toLikes,onLikes}:{reloadKey:number,onOff:(off:boolean)=>void,filterOn:number,openFilter:()=>void,likesN:number,toLikes:()=>void,onLikes:()=>void}){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();
  const [cards,setCards]=useState<Card[]|null>(null);const [off,setOff]=useState(false);const [error,setError]=useState<unknown>(null);
+ const [closed,setClosed]=useState(false);const [needsLoc,setNeedsLoc]=useState(false);
  const [match,setMatch]=useState<{card:Card,conversationId?:string}|null>(null);const [toastNode,toast]=useToast();
  const [made,setMade]=useState<Decision[]>([]);const [tip,setTip]=useState(false);const [byFilter,setByFilter]=useState<number|null>(null);
  const busy=useRef(false);const top=useRef<HTMLElement|null>(null);const next=useRef<HTMLElement|null>(null);const acts=useRef<HTMLDivElement>(null);
- const load=useCallback((first?:string)=>{setError(null);call('discover.deck',{limit:10},deck).then(r=>{setOff(r.off);onOff(r.off);
+ const undoRef=useRef<()=>void>(()=>{});
+ const load=useCallback((first?:string)=>{setError(null);call('discover.deck',{limit:10},deck).then(r=>{setOff(r.off);onOff(r.off);setClosed(!!r.closed);setNeedsLoc(!!r.needsLocation);
   setCards(first?[...r.items.filter(c=>c.id===first),...r.items.filter(c=>c.id!==first)]:r.items);}).catch(e=>{setError(e);setCards(c=>c??[]);});},[call,onOff]);
  // A new filter (reloadKey) or another acting profile reloads the deck.
  useEffect(()=>{setCards(null);load();},[load,reloadKey,acting?.id]);
@@ -199,7 +233,7 @@ function Discover({reloadKey,onOff,filterOn,openFilter,likesN,toLikes,onLikes}:{
    setMade(m=>[...m,{id:c.id,dir}]);
    if(c.likedMe||r.state==='matched')onLikes();
    if(r.state==='matched')setMatch({card:c,...(r.conversationId?{conversationId:r.conversationId}:{})});
-   else if(dir>0)toast(fill(t('fe.px.lkd.sent'),{name:cname(c)}));
+   else if(dir>0)toast(fill(t('fe.px.lkd.sent'),{name:cname(c)}),false,{label:t('fe.mx.undo'),fn:()=>undoRef.current()});
   }catch(e){reset();toast(pxError(e,t),true);}finally{busy.current=false;}
  },[cards,call,t,toast,load,onLikes]);
  // The server allows one free undo a day (shared with «Вернуть» in the history) and says so when it is spent.
@@ -208,6 +242,7 @@ function Discover({reloadKey,onOff,filterOn,openFilter,likesN,toLikes,onLikes}:{
   try{const r=await call('discover.undo',{opId:newOpId()},undone);setMade(m=>m.filter(x=>x.id!==r.profileId));toast(t('fe.px.undo.back'));load(r.profileId);}
   catch(e){if(e instanceof FeError&&e.code==='premium_required')navigate('/n/premium?for=undo');else toast(pxError(e,t),true);}finally{busy.current=false;}
  };
+ undoRef.current=()=>void undo();
  useEffect(()=>{const key=(e:KeyboardEvent)=>{if(match||document.querySelector('.fe-v21 .layer .sheet')||/INPUT|TEXTAREA|SELECT/.test((e.target as HTMLElement).tagName))return;
   if(e.key==='ArrowRight')void decide(1);if(e.key==='ArrowLeft')void decide(-1);};
   document.addEventListener('keydown',key);return ()=>document.removeEventListener('keydown',key);},[decide,match]);
@@ -215,8 +250,10 @@ function Discover({reloadKey,onOff,filterOn,openFilter,likesN,toLikes,onLikes}:{
  const overlay=match&&<MatchOverlay other={{id:match.card.id,name:cname(match.card),src:photo(match.card)}} conversationId={match.conversationId} onClose={()=>setMatch(null)}/>;
  if(error&&!cards?.length)return box(<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>load()}>{t('fe.retry')}</Btn></Empty>);
  if(cards===null)return <div className="view deckmode"><div className="deck"><div className="pc top fe-pc-skel"><div className="pc-ph"><i className="sk sk-media"/></div></div></div>{toastNode}{overlay}</div>;
+ if(closed)return box(<DatingSoon toast={toast}/>);
  if(off)return box(<DatingOff onChanged={()=>{setCards(null);load();}} toast={toast}/>);
  const [c,nx]=cards;
+ if(!c&&needsLoc)return box(<Empty top icon={LocateFixed} title={t('fe.w7.df.locGone')} text={t('fe.w7.df.locGoneText')}><Btn onClick={openFilter}>{t('fe.px.empty.change')}</Btn></Empty>);
  if(!c)return <>{box(<DeckEmpty byFilter={filterOn?byFilter:null} filterOn={filterOn} openFilter={openFilter} likesN={likesN} toLikes={toLikes}/>)}{overlay}</>;
  return <div className="view deckmode">
   {tip&&<p className="deck-tip" role="status"><Info/><span>{t('fe.px.deck.tip')}</span></p>}
@@ -269,7 +306,7 @@ function NextCard({c,cardRef}:{c:Card,cardRef:React.RefObject<HTMLElement|null>}
 /** The top card (deckInner/card): photo with bars and zones, tags, stamps, the info block and — scrolled — the whole
  * profile in its own layout with «Подписаться» and «Полный профиль». Horizontal drag decides, vertical scrolls. */
 function TopCard({c,cardRef,nextRef,actsRef,onDecide,toast}:{c:Card,cardRef:React.RefObject<HTMLElement|null>,nextRef:React.RefObject<HTMLElement|null>,
- actsRef:React.RefObject<HTMLDivElement|null>,onDecide:(dir:1|-1)=>void,toast:(m:string,err?:boolean)=>void}){
+ actsRef:React.RefObject<HTMLDivElement|null>,onDecide:(dir:1|-1)=>void,toast:PxToast}){
  const {call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();
  const [p,setP]=useState<PersonProfile|null>(null);const [ix,setIx]=useState(0);const [view,setView]=useState<number|null>(null);
  const [rel,setRel]=useRelation(c.id);
@@ -326,17 +363,19 @@ function TopCard({c,cardRef,nextRef,actsRef,onDecide,toast}:{c:Card,cardRef:Reac
 }
 
 /** followBtnHTML: one «Подписаться» for the profile page and the Discover card; as the couple it says so. */
-function FollowBtn({id,name,rel,setRel,toast}:{id:string,name:string,rel:Relation|null,setRel:(f:(r:Relation|null)=>Relation|null)=>void,toast:(m:string,err?:boolean)=>void}){
+function FollowBtn({id,name,rel,setRel,toast}:{id:string,name:string,rel:Relation|null,setRel:(f:(r:Relation|null)=>Relation|null)=>void,toast:PxToast}){
  const {call,acting}=useFe();const {t}=useI18n();const [busy,setBusy]=useState(false);const on=!!rel?.iFollow;
- const go=async()=>{if(!rel||busy)return;setBusy(true);
-  try{await call('follow.set',{opId:newOpId(),profileId:id,on:!on},ok);setRel(x=>x&&{...x,iFollow:!on,followers:Math.max(0,x.followers+(on?-1:1))});toast(fill(t(on?'fe.px.fl.off':'fe.px.fl.on'),{name}));}
-  catch(e){toast(pxError(e,t),true);}finally{setBusy(false);}};
+ const set=async(next:boolean,undo:boolean)=>{
+  try{await call('follow.set',{opId:newOpId(),profileId:id,on:next},ok);setRel(x=>x&&{...x,iFollow:next,followers:Math.max(0,x.followers+(next?1:-1))});
+   if(!undo)toast(fill(t(next?'fe.px.fl.on':'fe.px.fl.off'),{name}),false,{label:t('fe.mx.undo'),fn:()=>void set(!next,true)});}
+  catch(e){toast(pxError(e,t),true);}};
+ const go=async()=>{if(!rel||busy)return;setBusy(true);try{await set(!on,false);}finally{setBusy(false);}};
  return <Btn kind="soft" busy={busy} aria-pressed={on} title={on?t('fe.px.act.unfollowHint'):undefined} onClick={go} disabled={!rel}>
   {on?<><Check/>{t('fe.px.act.following')}</>:acting?.kind==='couple'?t('fe.px.act.followUs'):t('fe.people.follow')}</Btn>;
 }
 
 /** D01 — Discover is off for this profile: no candidates, two honest ways in (browse hidden / browse and be seen). */
-function DatingOff({onChanged,toast}:{onChanged:()=>void,toast:(m:string,err?:boolean)=>void}){
+function DatingOff({onChanged,toast}:{onChanged:()=>void,toast:PxToast}){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const [busy,setBusy]=useState<''|'hidden'|'visible'>('');
  const couple=acting?.kind==='couple';
  const set=async(value:'hidden'|'visible')=>{if(busy)return;setBusy(value);
@@ -357,12 +396,29 @@ function DatingOff({onChanged,toast}:{onChanged:()=>void,toast:(m:string,err?:bo
    </Card>}</>}/>;
 }
 
+/** D11 — dating switched off by the team (deck `closed`): a teaser, nothing about candidates, and «Сообщить о
+ * запуске» (dating.notify; a notification comes when it opens). */
+function DatingSoon({toast}:{toast:PxToast}){
+ const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();
+ const [on,setOn]=useState<boolean|null>(null);const [busy,setBusy]=useState(false);
+ useEffect(()=>{call('dating.status',{},datingStatusRes,{asAccount:true}).then(r=>setOn(r.notify)).catch(()=>setOn(false));},[call]);
+ const flip=async()=>{if(busy||on===null)return;setBusy(true);
+  try{const r=await call('dating.notify',{opId:newOpId(),on:!on},notifyRes,{asAccount:true});setOn(r.notify);toast(t(r.notify?'fe.w7.soon.on':'fe.w7.soon.off'));}
+  catch(e){toast(pxError(e,t),true);}finally{setBusy(false);}};
+ return <Soon badge={t('fe.w7.soon.badge')} title={t('fe.w7.soon.title')} text={t('fe.w7.soon.text')}
+  points={[[Sparkles,t('fe.w7.soon.p1')],[KeyRound,t('fe.w7.soon.p2')],[MessageCircle,t('fe.w7.soon.p3')]]}>
+  <Btn kind={on?'soft':'primary'} icon={on?Check:Bell} busy={busy||on===null} disabled={busy||on===null} pressed={!!on} onClick={()=>void flip()}>{t(on?'fe.w7.soon.notifyOn':'fe.w7.soon.notify')}</Btn>
+  <Btn kind="text" onClick={()=>navigate('/n/me/interests')}>{t('fe.w7.soon.interests')}</Btn>
+ </Soon>;
+}
+
 /** D10 — nobody left: the radar, why (filters or simply everyone seen), and where to go next. */
 function DeckEmpty({byFilter,filterOn,openFilter,likesN,toLikes}:{byFilter:number|null,filterOn:number,openFilter:()=>void,likesN:number,toLikes:()=>void}){
  const {acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const byF=!!byFilter&&byFilter>0;
  return <Empty top big title={byF?t('fe.px.empty.byF'):t('fe.px.empty.title')} art={<Radar src={acting?.avatar} seed={acting?.id??'me'}/>}
   text={byF?fill(t('fe.px.empty.byFText'),{n:byFilter!>=100?'100+':byFilter!}):filterOn?t('fe.px.empty.withF'):t('fe.px.empty.text')}
   after={<Card list className="mt16">
+   <Row icon={CalendarDays} tone="l" title={t('fe.w7.toEvents.near')} sub={t('fe.w7.toEvents.nearSub')} onClick={()=>navigate('/n/communities?sub=events')}/>
    <Row icon={Users} tone="v" title={t('fe.px.empty.comm')} sub={t('fe.px.empty.commSub')} onClick={()=>navigate('/n/communities')}/>
    <Row icon={Sparkles} tone="l" title={t('fe.px.empty.int')} sub={t('fe.px.empty.intSub')} onClick={()=>navigate('/n/me/interests')}/>
   </Card>}>
@@ -381,15 +437,23 @@ function Likes({onCount,toDiscover}:{onCount:(n:number)=>void,toDiscover:()=>voi
  const load=useCallback(()=>{setError(null);
   Promise.all([call('likes.incoming',{},incoming),call('likes.outgoing',{},outgoing)]).then(([a,b])=>{setInc(a.items);setOut(b.items);onCount(a.items.length);}).catch(setError);},[call,onCount]);
  useEffect(()=>{load();},[load,acting?.id]);
+ // «Отменить» after ✕: the dismissal is the last Discover decision, so one undo brings the like back (V21 likePass).
+ const undoDismiss=async()=>{try{await call('discover.undo',{opId:newOpId()},undone);load();}
+  catch(e){if(e instanceof FeError&&e.code==='premium_required')navigate('/n/premium?for=undo');else toast(pxError(e,t),true);}};
  const dismiss=async(c:Card)=>{if(busy)return;setBusy(c.id);
-  try{await call('like.dismiss',{opId:newOpId(),profileId:c.id},ok);setInc(l=>{const n=l?.filter(x=>x.profile.id!==c.id)??null;onCount(n?.length??0);return n;});toast(fill(t('fe.px.lk.removed'),{name:cname(c)}));}
+  try{await call('like.dismiss',{opId:newOpId(),profileId:c.id},ok);setInc(l=>{const n=l?.filter(x=>x.profile.id!==c.id)??null;onCount(n?.length??0);return n;});
+   toast(fill(t('fe.px.lk.removed'),{name:cname(c)}),false,{label:t('fe.mx.undo'),fn:()=>void undoDismiss()});}
   catch(e){toast(pxError(e,t),true);}finally{setBusy('');}};
+ // «Отменить» after taking a like back sends it again from where it came (never 'discover': like.send refuses it).
+ const resend=async(c:Card,source:string|null|undefined)=>{
+  try{await call('like.send',{opId:newOpId(),profileId:c.id,source:source==='profile'?'profile':'likes'},likeRes);load();}catch(e){toast(pxError(e,t),true);}};
  const back=async(c:Card)=>{if(busy)return;setBusy(c.id);
   try{const r=await call('like.send',{opId:newOpId(),profileId:c.id,source:'likes'},likeRes);setInc(l=>{const n=l?.filter(x=>x.profile.id!==c.id)??null;onCount(n?.length??0);return n;});
    if(r.state==='matched')setMatch({card:c,...(r.conversationId?{conversationId:r.conversationId}:{})});else toast(fill(t('fe.px.lkd.sent'),{name:cname(c)}));}
   catch(e){toast(pxError(e,t),true);}finally{setBusy('');}};
- const unlike=async(c:Card)=>{if(busy)return;setBusy(c.id);
-  try{await call('like.withdraw',{opId:newOpId(),profileId:c.id},ok);setOut(l=>l?.filter(x=>x.profile.id!==c.id)??null);toast(t('fe.px.lkd.withdrawn'));}
+ const unlike=async(c:Card,source?:string|null)=>{if(busy)return;setBusy(c.id);
+  try{await call('like.withdraw',{opId:newOpId(),profileId:c.id},ok);setOut(l=>l?.filter(x=>x.profile.id!==c.id)??null);
+   toast(t('fe.px.lkd.withdrawn'),false,{label:t('fe.mx.undo'),fn:()=>void resend(c,source)});}
   catch(e){toast(pxError(e,t),true);}finally{setBusy('');}};
  const seg=<CSeg value={k} onChange={setK} options={[{id:'in',label:t(us?'fe.px.lk.inUs':'fe.px.lk.in'),n:inc?.length??0},{id:'out',label:t(us?'fe.px.lk.outUs':'fe.px.lk.out')}]}/>;
  let body:ReactNode;
@@ -399,7 +463,7 @@ function Likes({onCount,toDiscover}:{onCount:(n:number)=>void,toDiscover:()=>voi
   return <Row key={c.id} av={<Av name={cname(c)} seed={c.id} src={c.avatar?.src?.thumb}/>} title={<>{cname(c)}<NameBadges p={c}/></>}
    sub={[t(l.source==='profile'?'fe.px.lk.fromProfile':l.source==='likes'?'fe.px.lk.fromLikes':'fe.px.lk.fromDiscover'),l.at?when(l.at,locale):null,us&&l.initiator?'@'+l.initiator:null].filter(Boolean).join(' · ')}
    onClick={()=>navigate('/n/people/'+c.id)}
-   end={<><Pill tone="wait">{t('fe.px.lk.pendingPill')}</Pill><IconBtn icon={X} kind="ghost" size="sm" label={t('fe.px.lk.unlike')} disabled={busy===c.id} onClick={()=>unlike(c)}/></>}/>;})}</Card>
+   end={<><Pill tone="wait">{t('fe.px.lk.pendingPill')}</Pill><IconBtn icon={X} kind="ghost" size="sm" label={t('fe.px.lk.unlike')} disabled={busy===c.id} onClick={()=>unlike(c,l.source)}/></>}/>;})}</Card>
   :<Empty icon={Heart} title={t('fe.px.lk.outEmpty')} text={t('fe.px.lk.outEmptyText')}><Btn kind="soft" onClick={toDiscover}>{t('fe.px.lk.toDiscover')}</Btn></Empty>;
  else body=inc.length?<div className="likes">{inc.map(l=>{const c=l.profile;const src=photo(c);const age=c.ages.length?', '+c.ages.join(' · '):'';
   return <LikeTile key={c.id} src={src} seed={c.id} label={cname(c)} onOpen={()=>navigate('/n/people/'+c.id)}

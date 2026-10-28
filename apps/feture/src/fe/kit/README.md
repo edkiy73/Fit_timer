@@ -32,7 +32,7 @@ A new component or variant ships with its story in the same PR.
 | Choice pills | `Chip`, `Chips` |
 | Several from a list as rows | `CheckList` (a box per row, a line under the title: «не запрошено», «уже открыто») |
 | Text fields | `Field` (label + error) around `Input`, `TextArea`, `SearchInput`, `Select`; files via `FilePick` |
-| Overlays | `Sheet` (bottom sheet), `Ask` (confirmation), `Layer` (portal for custom overlays inside the kit only) |
+| Overlays | `Sheet` (bottom sheet; `dirty` — unsaved choices: ✕ / scrim / Esc ask «Закрыть без сохранения?»), `Ask` (confirmation), `Layer` (portal for custom overlays inside the kit only) |
 | Feedback | `Alert` (ok / err / warn / info in the flow), `useToast` (transient, with «Отменить»), `Empty`, `Skel` |
 | People | `Av` |
 | Verification shot | `CaptureFrame` (face oval / document frame, hint, the taken shot whole; tokens `--cam-*`) |
@@ -57,7 +57,7 @@ Product pieces that repeat or carry their own look. Screens use these, never the
 | Community | `CommunityHead` (cover, picture, name, meta; loading shape), `Discussion` (row with pinned mark and host ⋯), `Veil` (closed content under glass) |
 | Create | `Swatches` (cover colour plates) |
 | Interests | `AnswerScale` (1–10 with «обсудить» / «граница» marks) |
-| People | `PersonName` (name on a photo card), `PersonLine` + `RequestCard` + `Answer` (requests and applications), `LikeTile`, `Radar` |
+| People | `PersonName` (name on a photo card), `PersonLine` + `RequestCard` + `Answer` (requests and applications), `LikeTile`, `Radar`, `Soon` («Скоро»: a feature not open yet — art, label, title, points, buttons), `Typing` («печатает…» under chat messages) |
 | Gallery | `AlbumRow` + `AlbumCard` (cover / mosaic / icon, open, followers lock), `AlbumMeta`, `GalleryGrid` + `GalleryTile` (count, followers, review; selection `selected`, cover `picked`) + `GalleryAdd`, `SelectionBar` (pinned count + actions) |
 | Photos and checks | `PhotoSlots` / `PhotoSlot` / `PhotoAdd` (profile photo grid, drag to reorder, `loading`), `PhotoTrack` (viewer strip; `wm` puts the viewer's handle on someone else's private photos), `Watermark`, `Pose` (the gesture to show; the shot itself is `CaptureFrame`) |
 | Private layer | `VaultHead` (lock, title, switch), `Quota` (requests left today as segments) |

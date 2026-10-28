@@ -1,4 +1,4 @@
-import React,{forwardRef,useEffect,useRef,type ButtonHTMLAttributes,type ReactNode} from 'react';
+import React,{forwardRef,useEffect,useRef,useState,type ButtonHTMLAttributes,type ReactNode} from 'react';
 import {useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Check as Check2,ChevronDown,ChevronLeft,ChevronRight,CircleAlert,CircleCheck,Info,Search,TriangleAlert,X,type LucideIcon} from 'lucide-react';
@@ -43,19 +43,25 @@ function useModal(ref:React.RefObject<HTMLElement|null>,onClose:()=>void,first?:
 }
 
 /** `sheet()` — the bottom sheet: grab, title (+ a line under it), optional lead/head controls, ✕, body, footer.
- * Escape, ✕ and the scrim close it. `full` is the tall variant. */
-export function Sheet({title,sub,lead,head,search,onClose,children,foot,full,className}:{title:string,sub?:ReactNode,lead?:ReactNode,head?:ReactNode,search?:ReactNode,onClose:()=>void,children:ReactNode,
- foot?:ReactNode,full?:boolean,className?:string}){
- const {t}=useI18n();const ref=useRef<HTMLDivElement>(null);useModal(ref,onClose);
+ * Escape, ✕ and the scrim close it. `full` is the tall variant. `dirty`: something is picked or typed and not saved
+ * yet — ✕, the scrim and Escape first ask «Закрыть без сохранения?» (the sheet's own «Готово» / «Сохранить» buttons
+ * close it as usual). */
+export function Sheet({title,sub,lead,head,search,onClose,children,foot,full,className,dirty}:{title:string,sub?:ReactNode,lead?:ReactNode,head?:ReactNode,search?:ReactNode,onClose:()=>void,children:ReactNode,
+ foot?:ReactNode,full?:boolean,className?:string,/** Unsaved choices: ✕, the scrim and Escape ask before closing. */ dirty?:boolean}){
+ const {t}=useI18n();const ref=useRef<HTMLDivElement>(null);const [asking,setAsking]=useState(false);
+ const tryClose=()=>{if(dirty)setAsking(true);else onClose();};
+ useModal(ref,asking?()=>{}:tryClose);
  return <Layer>
-  <div className="scrim on" onClick={onClose}/>
+  <div className="scrim on" onClick={tryClose}/>
   <div ref={ref} className={['sheet on',full?'full':'',className].filter(Boolean).join(' ')} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}>
    <div className="grab"/>
-   <div className="sh-h">{lead}<div className="sh-ht"><h2>{title}</h2>{sub&&<p>{sub}</p>}</div>{head}<IconBtn icon={X} kind="ghost" size="sm" label={t('fe.px.close')} onClick={onClose}/></div>
+   <div className="sh-h">{lead}<div className="sh-ht"><h2>{title}</h2>{sub&&<p>{sub}</p>}</div>{head}<IconBtn icon={X} kind="ghost" size="sm" label={t('fe.px.close')} onClick={tryClose}/></div>
    {search&&<div className="sh-search">{search}</div>}
    <div className="sh-b">{children}</div>
    {foot&&<div className="sh-f">{foot}</div>}
   </div>
+  {asking&&<Ask tone="a" title={t('fe.kit.sheet.dirtyTitle')} text={t('fe.kit.sheet.dirtyText')} ok={t('fe.kit.sheet.dirtyOk')} cancel={t('fe.kit.sheet.dirtyStay')} danger
+   onOk={()=>{setAsking(false);onClose();}} onCancel={()=>setAsking(false)}/>}
  </Layer>;
 }
 

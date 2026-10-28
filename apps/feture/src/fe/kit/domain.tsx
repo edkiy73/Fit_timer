@@ -1,7 +1,7 @@
 import React,{type CSSProperties,type ReactNode} from 'react';
 import {useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Check,ChevronLeft,Clock,Image as ImageIcon,Lock,Plus,Ticket,UserRound,Users,type LucideIcon} from 'lucide-react';
+import {Check,ChevronLeft,Clock,Heart,Image as ImageIcon,Lock,Plus,Ticket,UserRound,Users,type LucideIcon} from 'lucide-react';
 import {Av,Btn,Card,IconBtn,Note,Skel,Switch,plate} from './index';
 import './domain.css';
 
@@ -171,6 +171,22 @@ export function Radar({src,seed}:{src?:string|null|undefined,seed:string}){
   <span className="dot k-radar-d1"><div className="plate" style={plate('sea')}/></span>
   <span className="dot k-radar-d2"><div className="plate" style={plate('amber')}/></span>
  </div>;
+}
+
+/** «Скоро» — a feature that is not open yet (dating switched off by the team, V21 D11): two circles with a heart, the
+ * «Скоро» label, a title, a line, what it will be (icon + text each) and the screen's buttons in `children`. */
+export function Soon({badge,title,text,points,children}:{badge:ReactNode,title:ReactNode,text?:ReactNode,points?:[LucideIcon,ReactNode][],children?:ReactNode}){
+ return <div className="soon">
+  <div className="soon-art" aria-hidden="true"><span className="s1"/><span className="s2"/><span className="sh"><Heart fill="currentColor"/></span></div>
+  <span className="pill hot">{badge}</span><h3>{title}</h3>{text&&<p>{text}</p>}
+  {points&&points.length>0&&<div className="soon-list">{points.map(([I,x],i)=><div key={i}><I aria-hidden="true"/><span>{x}</span></div>)}</div>}
+  {children}
+ </div>;
+}
+
+/** «печатает…» under the messages of a chat: three soft dots and who is typing; announced politely. */
+export function Typing({children}:{children:ReactNode}){
+ return <div className="k-typing" role="status" aria-live="polite"><span className="k-typing-dots" aria-hidden="true"><i/><i/><i/></span><span>{children}</span></div>;
 }
 
 /* ---------------- Photos ---------------- */

@@ -133,3 +133,10 @@
 .v21 .btn.k-mb-cover{margin-bottom:10px}
 .v21 .recent button.tx{text-align:left}
 .v21 .viewer.k-demo-viewer{position:relative;inset:auto;height:240px;opacity:1}
+/* «печатает…» under the messages of a chat: three soft dots and a short line. */
+.v21 .k-typing{display:flex;align-items:center;gap:var(--s-2);padding:var(--s-1) var(--s-1) var(--s-2);font-size:var(--fs-xs);color:var(--mute)}
+.v21 .k-typing-dots{display:inline-flex;gap:3px}
+.v21 .k-typing-dots i{width:6px;height:6px;border-radius:50%;background:var(--faint);animation:k-typing 1.2s infinite ease-in-out}
+.v21 .k-typing-dots i:nth-child(2){animation-delay:.15s}.v21 .k-typing-dots i:nth-child(3){animation-delay:.3s}
+@keyframes k-typing{0%,80%,100%{opacity:.35;transform:translateY(0)}40%{opacity:1;transform:translateY(-2px)}}
+@media (prefers-reduced-motion:reduce){.v21 .k-typing-dots i{animation:none}}

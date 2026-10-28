@@ -36,7 +36,7 @@ commands; a second call only adds what is missing.
 | `asker` (`asker2`, `asker3`) | a `full` person | asks others for their private part (10 a day; the next one takes over) |
 | `mate` | a `full` person | talks with `chats` (both age verified: timer / once photos), proposes links, follows |
 | `chats` | a `full` person with conversations with `mate`, `asker`, `basic` (messages both ways); `.with.<kind>.conversationId` | chat list and conversation |
-| `host` | a `full` person owning a published open community (`openId`), a published closed one with a join question (`closedId`) and a published open offline event (`eventId`) — approved by STAFF | community owner screens, the inbox with decisions |
+| `host` | a `full` person owning a published open community (`openId`), a published closed one with a join question (`closedId`), a published open offline event (`eventId`) and one with tickets on the organizer’s site (`ticketEventId`) — approved by STAFF | community owner screens, the inbox with decisions |
 | `pair` | two `full` people (`pa`, `pb`) in an active couple (`partner`, `coupleId`) | couple screens |
 | `staff` | the shared qa moderator (`qa-staff@feture.test`) | staff screens and review steps only |
 

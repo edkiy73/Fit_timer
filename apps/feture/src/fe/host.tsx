@@ -2,7 +2,7 @@ import {useCallback,useEffect,useRef,useState,type ReactNode} from 'react';
 import {useLocation,useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Ban,Bell,ChevronRight,CircleCheck,Clock,Copy,Ellipsis,FileText,Info,Link as LinkIcon,Lock,Pencil,Pin,PinOff,Send,Settings,Trash2,User,UserMinus,UserPlus,Users,X,type LucideIcon} from 'lucide-react';
+import {Ban,Bell,ChevronRight,CircleCheck,Clock,Copy,Ellipsis,FileText,Flag,Info,Link as LinkIcon,Lock,Pencil,Pin,PinOff,Send,Settings,ShieldAlert,Trash2,TrendingDown,TrendingUp,User,UserMinus,UserPlus,Users,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,Announcement,Answer,Ask,Av,Bar,Btn,Card,IconBtn,Check,Empty,Group,Note,PersonLine,Pill,RequestCard,Row,SectionLabel,Seg,Sheet,Skel,Stack,SubBar} from './kit';
 import {useFe} from './session';
@@ -32,7 +32,7 @@ const reqItem=z.object({id:z.uuid(),state:z.string(),answer:z.string().nullable(
 const reqList=z.object({ok:z.literal(true),items:z.array(reqItem)});
 const memItem=prof.extend({role:z.string(),read_only:z.boolean()});
 type Mem=z.infer<typeof memItem>;
-const memList=z.object({ok:z.literal(true),count:z.number(),items:z.array(memItem).nullable()});
+const memList=z.object({ok:z.literal(true),count:z.number(),items:z.array(memItem).nullable(),next:z.string().nullable().optional()});
 const discRes=z.object({ok:z.literal(true),locked:z.boolean(),items:z.array(z.object({id:z.uuid()}).passthrough())});
 const inviteRes=z.object({ok:z.literal(true),token:z.string().optional(),expiresAt:z.string().optional(),revoked:z.boolean().optional()});
 const joinRes=z.object({ok:z.literal(true),state:z.string().optional(),pending:z.unknown().optional()}).passthrough();
@@ -62,6 +62,19 @@ function Loading({error,retry,kind='list'}:{error:unknown,retry:()=>void,kind?:'
  return error?<Empty icon={Lock} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={retry}>{t('fe.retry')}</Btn></Empty>
   :<Skel kind={kind}/>;
 }
+/** «Отменить» for a decision the server cannot take back (a join request, an application — the person is told at
+ * once): the call waits while the toast with «Отменить» is up and goes out after it; leaving the screen sends what
+ * is waiting right away. */
+const UNDO_MS=5000;
+function useLater(){
+ const jobs=useRef(new Map<string,{timer:number,run:()=>Promise<void>}>());
+ useEffect(()=>{const all=jobs.current;return ()=>{for(const j of all.values()){clearTimeout(j.timer);void j.run();}all.clear();};},[]);
+ const later=useCallback((key:string,run:()=>Promise<void>)=>{
+  const timer=window.setTimeout(()=>{jobs.current.delete(key);void run();},UNDO_MS+400);jobs.current.set(key,{timer,run});},[]);
+ const cancel=useCallback((key:string)=>{const j=jobs.current.get(key);if(!j)return false;clearTimeout(j.timer);jobs.current.delete(key);return true;},[]);
+ return {later,cancel};
+}
+
 /** `personRow()` — avatar, name, a line under it and the chevron (opens the profile). */
 function PersonRow({p,sub,end,onClick}:{p:Prof,sub?:string|undefined,end?:ReactNode,onClick?:()=>void}){
  const navigate=useNavigate();const {acting}=useFe();
@@ -111,17 +124,25 @@ export function JoinSheet({c,invite,onClose,onDone}:{c:{id:string,name:string,pr
  </Sheet>;
 }
 
-/** Host tools for one discussion: pin / unpin and remove (with an ask() confirmation). */
-export function DiscussionHostSheet({d,onClose,onDone}:{d:{id:string,title:string|null,pinned:boolean},onClose:()=>void,onDone:(msg:string)=>void}){
+/** «⋯» of one discussion (V21 discMenu): the link for everyone; for hosts pin / unpin, keep out of «Популярное» or let
+ * it back (discPop; the discussion stays in the list), and remove (with an ask() confirmation); others can report it. */
+export function DiscussionHostSheet({d,host=true,onClose,onDone,onReport}:{d:{id:string,title:string|null,pinned?:boolean|undefined,popularExcluded?:boolean|undefined},host?:boolean,
+ onClose:()=>void,onDone:(msg:string)=>void,onReport?:(()=>void)|undefined}){
  const {call}=useFe();const {t}=useI18n();const toast=useToast();const [busy,setBusy]=useState(false);const [confirm,setConfirm]=useState(false);
- const act=async(change:'pin'|'unpin'|'remove')=>{
+ const act=async(change:'pin'|'unpin'|'remove'|'excludePopular'|'includePopular')=>{
   setBusy(true);
-  try{await call('discussion.host',{opId:newOpId(),postId:d.id,change},okRes);onDone(t('fe.cm.disc.'+change));}catch(x){toast(feErrorMessage(x,t),{type:'err'});}finally{setBusy(false);}
+  try{await call('discussion.host',{opId:newOpId(),postId:d.id,change},okRes);onDone(change==='excludePopular'||change==='includePopular'?t('fe.w7.disc.'+change):t('fe.cm.disc.'+change));}
+  catch(x){toast(feErrorMessage(x,t),{type:'err'});}finally{setBusy(false);}
  };
+ const copy=async()=>{const okc=await copyLink(appUrl('/n/feed/post/'+d.id));onClose();toast(t(okc?'fe.w7.disc.copied':'fe.cm.copyFailed'),{type:okc?'ok':'warn'});};
  if(confirm)return <Ask icon={Trash2} danger title={t('fe.host.disc.removeQ')} text={t('fe.host.disc.removeText')} ok={t('fe.host.disc.remove')} busy={busy} onOk={()=>void act('remove')} onCancel={()=>setConfirm(false)}/>;
- return <Sheet title={d.title||t('fe.cm.discussion')} onClose={onClose}><Card list>
-  <Row icon={d.pinned?PinOff:Pin} tone="v" title={d.pinned?t('fe.host.disc.unpin'):t('fe.host.disc.pin')} noChev disabled={busy} onClick={()=>void act(d.pinned?'unpin':'pin')}/>
-  <Row icon={Trash2} danger title={t('fe.host.disc.remove')} noChev disabled={busy} onClick={()=>setConfirm(true)}/>
+ return <Sheet title={t('fe.cm.discussion')} sub={d.title||undefined} onClose={onClose}><Card list>
+  {host&&<Row icon={d.pinned?PinOff:Pin} tone="v" title={d.pinned?t('fe.host.disc.unpin'):t('fe.host.disc.pin')} noChev disabled={busy} onClick={()=>void act(d.pinned?'unpin':'pin')}/>}
+  {host&&<Row icon={d.popularExcluded?TrendingUp:TrendingDown} title={d.popularExcluded?t('fe.w7.disc.includePopularRow'):t('fe.w7.disc.excludePopularRow')}
+   sub={d.popularExcluded?undefined:t('fe.w7.disc.excludeSub')} noChev disabled={busy} onClick={()=>void act(d.popularExcluded?'includePopular':'excludePopular')}/>}
+  <Row icon={LinkIcon} title={t('fe.cm.copyLink')} noChev onClick={()=>void copy()}/>
+  {host&&<Row icon={Trash2} danger title={t('fe.host.disc.remove')} noChev disabled={busy} onClick={()=>setConfirm(true)}/>}
+  {!host&&onReport&&<Row icon={Flag} danger title={t('fe.cm.report')} noChev onClick={onReport}/>}
  </Card></Sheet>;
 }
 
@@ -135,8 +156,15 @@ export function MembersList({c,data,onChange}:{c:{id:string,me?:{role:string,sta
   try{await call('community.member',{opId:newOpId(),communityId:c.id,profileId:m.id,change:ch},okRes);toast(t('fe.host.mem.done.'+ch).replace('{name}',pname(m)),{type:'ok'});setOpen(null);setConfirm(false);onChange();}
   catch(x){toast(feErrorMessage(x,t),{type:'err'});}finally{setBusy(false);}
  };
+ // «Показать ещё» (V21 cMoreMembers): the server gives 20 a page; further pages are added under the first one.
+ const [more,setMore]=useState<{items:Mem[],next:string|null}|null>(null);const [loadingMore,setLoadingMore]=useState(false);
+ useEffect(()=>{setMore(null);},[data]);
+ const next=more?more.next:data?.next??null;
+ const showMore=async()=>{if(!next||loadingMore)return;setLoadingMore(true);
+  try{const r=await call('community.members',{communityId:c.id,cursor:next},memList);setMore(m=>({items:[...(m?.items??[]),...(r.items??[])],next:r.next??null}));}
+  catch(x){toast(feErrorMessage(x,t),{type:'err'});}finally{setLoadingMore(false);}};
  if(!data)return <Skel kind="list"/>;
- const items=data.items;
+ const items=data.items===null?null:[...data.items,...(more?.items??[]).filter(m=>!data.items!.some(x=>x.id===m.id))];
  const sub=(m:Mem)=>m.id===acting?.id?(m.role==='owner'?t('fe.cm.youOwner'):t('fe.host.mem.you')):m.role==='owner'?t('fe.cm.owner'):m.role==='host'?t('fe.cm.hostSub'):m.read_only?t('fe.cm.cantPost'):undefined;
  const canManage=(m:Mem)=>host&&m.id!==acting?.id&&m.role!=='owner'&&(m.role!=='host'||owner);
  const row=(m:Mem)=><PersonRow key={m.id} p={m} sub={sub(m)??(m.handle&&m.name?'@'+m.handle:t('fe.cm.memberSub'))} {...(canManage(m)?{onClick:()=>setOpen(m),end:<IconBtn icon={Ellipsis} kind="ghost" size="sm" label={t('fe.cm.more')} onClick={()=>setOpen(m)}/>}:{})}/>;
@@ -148,6 +176,7 @@ export function MembersList({c,data,onChange}:{c:{id:string,me?:{role:string,sta
    <Card list>{hosts.map(row)}</Card>
    <SectionLabel>{pl(data.count,t('fe.cm.members'),locale)}</SectionLabel>
    {members.length?<Card list>{members.map(row)}</Card>:<Note>{t('fe.cm.noOtherMembers')}</Note>}
+   {next&&<Btn kind="soft" className="mt12" busy={loadingMore} disabled={loadingMore} onClick={()=>void showMore()}>{t('fe.w7.mem.more')}</Btn>}
   </>}
   {open&&!confirm&&<Sheet title={pname(open)} onClose={()=>setOpen(null)}><Card list>
    <Row icon={User} title={t('fe.host.mem.profile')} onClick={()=>navigate('/n/people/'+open.id)}/>
@@ -170,7 +199,7 @@ export function CommunityManageScreen(){
  // The edit screen comes back with what happened to the edit (saved, or waiting for staff).
  const notice=useRef((location.state as {notice?:unknown}|null)?.notice);
  useEffect(()=>{if(typeof notice.current==='string'){toast(notice.current,{type:'ok'});notice.current=undefined;}},[toast]);
- const [busy,setBusy]=useState(false);
+ const [busy,setBusy]=useState(false);const [reports,setReports]=useState(false);
  const owner=!!c&&c.me?.role==='owner'&&c.me.state==='active'&&typeof c.rev==='number';
  const pendingPrivacy=(()=>{const p=c?.pendingChange;return p&&typeof p==='object'&&'privacy' in p&&typeof (p as {privacy?:unknown}).privacy==='string'?(p as {privacy:string}).privacy:'';})();
  const setPrivacy=async(privacy:'open'|'closed'|'hidden')=>{
@@ -192,8 +221,12 @@ export function CommunityManageScreen(){
     <Card list>
      <Row icon={FileText} tone="v" title={t('fe.host.requests')} badge={n||undefined} onClick={()=>navigate(`/n/communities/${id}/requests`)}/>
      <Row icon={Users} title={t('fe.host.membersTitle')} sub={t('fe.host.membersSub')} onClick={()=>navigate(`/n/communities/${id}?t=members`)}/>
+     <Row icon={ShieldAlert} title={t('fe.w7.c10.reports')} sub={t('fe.w7.c10.reportsSub')} onClick={()=>setReports(true)}/>
      {owner&&<Row icon={Pencil} title={t('fe.cm.descRules')} onClick={()=>navigate(`/n/communities/${id}/edit`)}/>}
     </Card>
+    {reports&&<Sheet title={t('fe.w7.c10.reports')} sub={c.name} onClose={()=>setReports(false)}>
+     <Empty icon={ShieldAlert} title={t('fe.w7.c10.none')} text={t('fe.w7.c10.noneText')}/>
+    </Sheet>}
     <SectionLabel>{t('fe.host.access')}</SectionLabel>
     <Card list>
      {owner?<SelectRow icon={Lock} label={t('fe.cc.privacy')} value={c.privacy as 'open'|'closed'|'hidden'} onChange={v=>{void setPrivacy(v);}}
@@ -241,10 +274,15 @@ export function CommunityRequestsScreen(){
  const fetch=useCallback(()=>call('community.requests',{communityId:id,tab},reqList).then(r=>r.items),[call,id,tab]);
  const {data:items,error,load}=useLoad(fetch);
  const [busy,setBusy]=useState('');
- const decide=async(r:z.infer<typeof reqItem>,approve:boolean)=>{
-  setBusy(r.id);
-  try{await call('community.requestDecide',{opId:newOpId(),requestId:r.id,rev:r.rev,approve},okRes);toast(approve?t('fe.cm.req.approved'):t('fe.host.req.declined'),{type:'ok'});load();loadC();}
-  catch(x){toast(feErrorMessage(x,t),{type:'err'});load();}finally{setBusy('');}
+ // Decided cards leave the list at once; the decision is sent once «Отменить» is gone (V21 cRequestDecision).
+ const [held,setHeld]=useState<Set<string>>(new Set());const {later,cancel}=useLater();
+ const unhold=(id:string)=>setHeld(s=>{const n=new Set(s);n.delete(id);return n;});
+ const decide=(r:z.infer<typeof reqItem>,approve:boolean)=>{
+  setHeld(s=>new Set(s).add(r.id));
+  later('req'+r.id,async()=>{setBusy(r.id);
+   try{await call('community.requestDecide',{opId:newOpId(),requestId:r.id,rev:r.rev,approve},okRes);}
+   catch(x){toast(feErrorMessage(x,t),{type:'err'});}finally{setBusy('');unhold(r.id);load();loadC();}});
+  toast(approve?t('fe.cm.req.approved'):t('fe.host.req.declined'),{type:'ok',ms:UNDO_MS,action:{label:t('fe.mx.undo'),fn:()=>{if(cancel('req'+r.id))unhold(r.id);else toast(t('fe.w7.undo.late'),{type:'warn'});}}});
  };
  return <>
   <SubBar title={t('fe.cm.reqTitle')} sub={c?.name} back={`/n/communities/${id}`}/>
@@ -252,8 +290,8 @@ export function CommunityRequestsScreen(){
    <Seg value={tab} onChange={v=>setSp(v==='history'?{t:'history'}:{},{replace:true})} label={t('fe.cm.reqTitle')}
     options={[{id:'pending',label:t('fe.host.req.tabNew'),n:c?.pendingRequests},{id:'history',label:t('fe.host.req.tabHistory')}]}/>
    {!items?<Loading error={error} retry={load} kind="card"/>
-    :!items.length?<Empty icon={FileText} title={tab==='history'?t('fe.host.req.noHistory'):t('fe.host.req.none')} text={t('fe.host.req.privacy')}/>
-    :items.map(r=><Card key={r.id} className="application-card mt12">
+    :!items.filter(r=>!held.has(r.id)).length?<Empty icon={FileText} title={tab==='history'?t('fe.host.req.noHistory'):t('fe.host.req.none')} text={t('fe.host.req.privacy')}/>
+    :items.filter(r=>!held.has(r.id)).map(r=><Card key={r.id} className="application-card mt12">
      <PersonRow p={r.profile}/>
      <Note>{when(r.decided_at??r.created_at,locale)}{r.state!=='pending'?' · '+t('fe.host.req.state.'+r.state):''}</Note>
      {r.answer&&<p className="application-answer">{r.answer}</p>}
@@ -401,13 +439,18 @@ export function EventApplicationsScreen(){
   .then(([e,p,a,d])=>({e:e as Ev,lists:{pending:p as z.infer<typeof appItem>[],approved:a as z.infer<typeof appItem>[],declined:d as z.infer<typeof appItem>[]}})),[call,id]);
  const {data,error,load}=useLoad(fetch);
  const [busy,setBusy]=useState('');const [confirm,setConfirm]=useState<z.infer<typeof appItem>|null>(null);
- const decide=async(a:z.infer<typeof appItem>,approve:boolean)=>{
-  setBusy(a.id);
-  try{await call('event.applicationDecide',{opId:newOpId(),applicationId:a.id,rev:a.rev,approve},okRes);setConfirm(null);
-   toast(approve?t('fe.host.apps.approved').replace('{name}',pname(a.profile)):a.state==='approved'?t('fe.host.apps.revoked').replace('{name}',pname(a.profile)):t('fe.host.apps.declined'),{type:'ok'});load();}
-  catch(x){toast(feErrorMessage(x,t),{type:'err'});load();}finally{setBusy('');}
+ // The card leaves its tab at once and its buttons stay locked; the decision goes out once «Отменить» is gone (V21 appDecide).
+ const [held,setHeld]=useState<Set<string>>(new Set());const {later,cancel}=useLater();
+ const unhold=(id:string)=>setHeld(s=>{const n=new Set(s);n.delete(id);return n;});
+ const decide=(a:z.infer<typeof appItem>,approve:boolean)=>{
+  setConfirm(null);setHeld(s=>new Set(s).add(a.id));
+  later('app'+a.id,async()=>{setBusy(a.id);
+   try{await call('event.applicationDecide',{opId:newOpId(),applicationId:a.id,rev:a.rev,approve},okRes);}
+   catch(x){toast(feErrorMessage(x,t),{type:'err'});}finally{setBusy('');unhold(a.id);load();}});
+  toast(approve?t('fe.host.apps.approved').replace('{name}',pname(a.profile)):a.state==='approved'?t('fe.host.apps.revoked').replace('{name}',pname(a.profile)):t('fe.host.apps.declined'),
+   {type:'ok',ms:UNDO_MS,action:{label:t('fe.mx.undo'),fn:()=>{if(cancel('app'+a.id))unhold(a.id);else toast(t('fe.w7.undo.late'),{type:'warn'});}}});
  };
- const items=data?.lists[k];const qs=data?.e.questions??[];const cancelled=data?.e.state==='cancelled';
+ const items=data?.lists[k].filter(a=>!held.has(a.id));const qs=data?.e.questions??[];const cancelled=data?.e.state==='cancelled';
  return <>
   <SubBar title={t('fe.cm.appsTitle')} sub={data?.e.title} back={`/n/events/${id}/manage`}/>
   <div className="view nodock"><div className="wrap">

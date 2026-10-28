@@ -41,7 +41,7 @@ export default [
    await t.page.locator(sheet + ' .sh-f .btn').click(); await t.wait(400);
    if (await cards(t) !== all) throw new Error('reset did not restore');
  } },
- { name: 'C01 filter sheet closes by ✕ and Esc without applying', persona: 'full', route: '/n/communities', run: async t => {
+ { name: 'C01 filter sheet closes by ✕ and Esc without applying (after «Закрыть без сохранения?»)', persona: 'full', route: '/n/communities', run: async t => {
    await t.page.locator('.cmc').first().waitFor({ timeout: 15000 });
    const all = await cards(t);
    for (const how of ['x', 'esc']) {
@@ -49,6 +49,12 @@ export default [
      await t.page.locator(sheet).getByRole('radio', { name: 'Открытые' }).click();
      if (how === 'x') await t.page.locator(sheet + ' .sh-h button[aria-label="Закрыть"]').click();
      else await t.page.keyboard.press('Escape');
+     // A choice was made: the kit sheet asks first; «Остаться» keeps it, then «Закрыть» drops the choice.
+     await t.see('.dialog.on:has-text("Закрыть без сохранения?")');
+     await t.tap('.dialog.on button:has-text("Остаться")'); await t.wait(300);
+     if (!(await t.page.locator(sheet).count())) throw new Error('«Остаться» closed the sheet');
+     if (how === 'x') await t.page.locator(sheet + ' .sh-h button[aria-label="Закрыть"]').click(); else await t.page.keyboard.press('Escape');
+     await t.tap('.dialog.on button:has-text("Закрыть")');
      await t.wait(400);
      if (await t.page.locator(sheet).count()) throw new Error('sheet not closed by ' + how);
      if (await cards(t) !== all) throw new Error('closing applied the filter: ' + how);

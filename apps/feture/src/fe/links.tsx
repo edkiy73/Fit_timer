@@ -5,9 +5,9 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {CircleAlert,Link2,Pencil,Plus,Trash2,User,Users,X} from 'lucide-react';
 import {useToast as useToastV21} from './toast';
 import {newOpId} from '../feture/fe-api';
-import {Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,Group,Note,PersonLine,RadioList,RequestCard,Row,SectionLabel,SelectRow,Skel,View} from './kit';
+import {Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,Group,IconBtn,Note,PersonLine,RadioList,RequestCard,Row,SearchInput,SectionLabel,Seg,SelectRow,Skel,Spacer,View} from './kit';
 import {useFe} from './session';
-import {NameBadges,withAge} from './faces';
+import {NameBadges,faceFields,withAge} from './faces';
 import {KINDS,SIDES,Sheet,linkLabel,linksMineRes,mediaSrc,personName,personProfileRes,pxError,useToast,type Kind,type LinkView,type LinksMine,type PersonProfile} from './profile-extras';
 
 /** Links between profiles with the V21 prototype's markup: «Мои связи» (P21 — proposals waiting for an answer,
@@ -63,11 +63,49 @@ function LinkRequest({l,couple,small,busy,onAnswer}:{l:LinkView,couple:boolean,s
   actions={<><Btn size="md" disabled={busy} onClick={()=>onAnswer(true)}>{t('fe.ln.confirm')}</Btn><Btn size="md" kind="soft" disabled={busy} onClick={()=>onAnswer(false)}>{t('fe.ln.decline')}</Btn></>}/>;
 }
 
+/** «+» in «Мои связи» (V21 linkAdd / linkPick): whom to propose a link to — people the profile knows (follows or is
+ * followed by) or anyone found by name / nickname. Someone already linked (or with a request either way) shows why
+ * and cannot be picked; the rest open the link editor (P22). */
+const knownRes=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),kind:z.string(),handle:z.string().nullable(),name:z.string().nullable(),...faceFields}).passthrough())});
+const searchRes=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),kind:z.string(),handle:z.string().nullable(),name:z.string().nullable(),
+ avatar:z.object({pending:z.boolean().optional(),src:z.record(z.string(),z.string()).nullable().optional()}).passthrough().nullable().optional()}).passthrough())});
+type Pickable={id:string,kind:string,handle:string|null,name:string|null,src:string|null};
+function LinkPicker({mine,onClose}:{mine:LinksMine,onClose:()=>void}){
+ const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();
+ const [tab,setTab]=useState<'known'|'all'>('known');const [q,setQ]=useState('');
+ const [known,setKnown]=useState<Pickable[]|null>(null);const [found,setFound]=useState<Pickable[]|null>(null);
+ useEffect(()=>{if(!acting)return;
+  Promise.all([call('profile.followers',{profileId:acting.id,following:true},knownRes),call('profile.followers',{profileId:acting.id},knownRes)])
+   .then(([a,b])=>{const seen=new Set<string>();setKnown([...a.items,...b.items].filter(x=>!seen.has(x.id)&&seen.add(x.id)).map(x=>({id:x.id,kind:x.kind,handle:x.handle,name:x.name,src:x.avatar??null})));})
+   .catch(()=>setKnown([]));},[call,acting]);
+ const term=q.trim();
+ useEffect(()=>{setFound(null);if(tab!=='all'||term.length<2)return;const ctl=new AbortController();
+  const timer=setTimeout(()=>call('people.search',{q:term},searchRes,{signal:ctl.signal})
+   .then(r=>setFound(r.items.filter(x=>x.id!==acting?.id).map(x=>({id:x.id,kind:x.kind,handle:x.handle,name:x.name,src:mediaSrc(x.avatar?{src:x.avatar.src??null,...(x.avatar.pending!==undefined?{pending:x.avatar.pending}:{})}:null)})))).catch(()=>{if(!ctl.signal.aborted)setFound([]);}),350);
+  return ()=>{clearTimeout(timer);ctl.abort();};},[tab,term,call,acting?.id]);
+ const why=(id:string)=>mine.confirmed.some(l=>l.other.id===id)?t('fe.w7.lp.linked'):mine.sent.some(l=>l.other.id===id)?t('fe.w7.lp.sent')
+  :mine.incoming.some(l=>l.other.id===id)?t('fe.w7.lp.incoming'):'';
+ const needle=term.toLowerCase();
+ const list=tab==='known'?known?.filter(p=>!needle||(p.name??'').toLowerCase().includes(needle)||(p.handle??'').toLowerCase().includes(needle))??null:found;
+ return <Sheet full title={t('fe.w7.lp.title')} onClose={onClose}
+  search={<SearchInput label={t(tab==='known'?'fe.w7.lp.findKnown':'fe.w7.lp.findAll')} value={q} onChange={e=>setQ(e.target.value)}/>}>
+  <Seg value={tab} onChange={setTab} options={[{id:'known',label:t('fe.w7.lp.known')},{id:'all',label:t('fe.w7.lp.all')}]}/>
+  <Spacer size={3}/>
+  {tab==='all'&&term.length<2?<Note>{t('fe.w7.lp.typeHint')}</Note>
+   :list===null?<Skel kind="list" rows={3}/>
+   :!list.length?<Note>{tab==='known'&&!needle?t('fe.w7.lp.noKnown'):t('fe.w7.lp.none')}</Note>
+   :<Card list>{list.map(p=>{const name=personName(p)||'?';const w=why(p.id);
+    return <Row key={p.id} av={<Av name={name} seed={p.id} size="sm" src={p.src}/>} title={name} sub={w||(p.handle?'@'+p.handle:undefined)} disabled={!!w}
+     onClick={()=>{onClose();navigate('/n/people/'+p.id+'/link');}}/>;})}</Card>}
+ </Sheet>;
+}
+
 /** `/n/me/links` — SC.P21 for the own profile. */
 export function LinksScreen(){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const [toastNode,toast]=useToast();
  const [r,setR]=useState<LinksMine|null>(null);const [from,setFrom]=useState<LinksFrom|null>(null);const [error,setError]=useState<unknown>(null);
  const [busy,setBusy]=useState(false);const [menu,setMenu]=useState<{l:LinkView,pend:boolean}|null>(null);const [removing,setRemoving]=useState<LinkView|null>(null);
+ const [picking,setPicking]=useState(false);
  const load=useCallback(()=>{setError(null);Promise.all([call('links.mine',{},linksMineRes),call('profile.settings',{},settingsRes).catch(()=>null)])
   .then(([a,b])=>{setR(a);setFrom(b?.settings.linksFrom??null);}).catch(setError);},[call]);
  useEffect(()=>{setR(null);load();},[load]);
@@ -85,7 +123,10 @@ export function LinksScreen(){
    sub={[linkLabel(t,l.kind,l.side),pend?'':visWord(l.vis),extra].filter(Boolean).join(' · ')} onClick={()=>setMenu({l,pend})}/>;};
  const m=menu?.l;
  return <>
-  <Bar title={couple?t('fe.ln.titleCouple'):t('fe.ln.title')} back/>
+  <Bar title={couple?t('fe.ln.titleCouple'):t('fe.ln.title')} back>
+   <IconBtn icon={Plus} kind="ghost" aria-haspopup="dialog" label={t('fe.w7.lp.add')} disabled={!r} onClick={()=>setPicking(true)}/>
+  </Bar>
+  {picking&&r&&<LinkPicker mine={r} onClose={()=>setPicking(false)}/>}
   <View className="nodock">
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={pxError(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :!r?<Skel kind="list"/>
@@ -141,7 +182,7 @@ export function LinkEditScreen(){
  const ex:{l:LinkView,st:'ok'|'sent'|'in'}|undefined=mine?([...mine.confirmed.map(l=>({l,st:'ok' as const})),...mine.sent.map(l=>({l,st:'sent' as const})),...mine.incoming.map(l=>({l,st:'in' as const}))]
   .find(x=>x.l.other.id===id)):undefined;
  useEffect(()=>{if(!p||!mine||init.current)return;init.current=true;
-  const cur=ex?.st==='ok'?ex.l:null;
+  const cur=ex&&ex.st!=='in'?ex.l:null;
   setKind(cur&&(KINDS as readonly string[]).includes(cur.kind)?cur.kind as Kind:acting?.kind==='couple'||p.kind==='couple'?'friend':'play');
   setSide(cur?.side??null);setVis(cur?.vis??'all');},[p,mine,ex,acting?.kind]);
  const name=personName(p)||'?';const sides=SIDES[kind];const we=acting?.kind==='couple';
@@ -162,23 +203,38 @@ export function LinkEditScreen(){
    }
   }catch(e){setErr(pxError(e,t));op.current=newOpId();}finally{setBusy(false);}
  };
+ // «Обновить запрос» (V21 linkSend) for a request still waiting: the old one is taken back and the new one sent; if
+ // sending fails, the old request is sent again so nothing is lost.
+ const sentL=ex?.st==='sent'?ex.l:null;
+ const sentChanged=!!sentL&&(kind!==sentL.kind||(!!sides&&mySide!==sentL.side)||vis!==sentL.vis);
+ const update=async()=>{if(!sentL)return;
+  if(sides&&!mySide){setSideErr(true);setErr(t('fe.px.lk.pickSide'));return;}
+  setBusy(true);setErr('');
+  try{await call('link.remove',{opId:newOpId(),linkId:sentL.id},ok);
+   try{const r=await call('link.propose',{opId:op.current,profileId:id,kind,...(sides&&mySide?{mySide}:{}),vis},ok);setDone(r.pending?t('fe.px.lk.pending'):fill(t('fe.w7.ln.updated'),{name}));}
+   catch(e){op.current=newOpId();
+    await call('link.propose',{opId:newOpId(),profileId:id,kind:sentL.kind,...(sentL.side?{mySide:sentL.side}:{}),vis:sentL.vis},ok).catch(()=>{});
+    throw e;}}
+  catch(e){setErr(pxError(e,t));init.current=false;load();}finally{setBusy(false);}};
  const cancel=async()=>{if(!ex)return;setBusy(true);setErr('');
   try{await call('link.remove',{opId:newOpId(),linkId:ex.l.id},ok);setDone(t('fe.ln.t.cancelled'));}catch(e){setErr(pxError(e,t));}finally{setBusy(false);}};
  const city=p?.city?(locale==='en'?p.city.en:p.city.ru):null;
  const cta=done?<Btn onClick={()=>navigate(-1)}>{t('fe.ln.p22.done')}</Btn>
   :ex?.st==='in'?<Btn onClick={()=>navigate('/n/me/links')}>{t('fe.ln.p22.toLinks')}</Btn>
-  :ex?.st==='sent'?<Btn kind="danger" onClick={cancel} disabled={busy}>{t('fe.ln.cancelReq')}</Btn>
+  :ex?.st==='sent'?<div className="row g8"><Btn kind="soft" className="danger" onClick={cancel} disabled={busy}>{t('fe.ln.cancelReq')}</Btn>
+   <Btn onClick={update} busy={busy} disabled={busy||!sentChanged}>{t('fe.w7.ln.update')}</Btn></div>
   :<Btn onClick={send} disabled={busy}>{conf?changed?t('fe.ln.p22.proposeChange'):t('fe.ln.p22.save'):t('fe.ln.p22.send')}</Btn>;
  return <>
-  <Bar title={conf?t('fe.ln.p22.edit'):t('fe.ln.p22.new')} back/>
+  <Bar title={conf||ex?.st==='sent'?t('fe.ln.p22.edit'):t('fe.ln.p22.new')} back/>
   <View className="nodock cta1">
    {error?<Empty icon={Users} role="alert" title={t('fe.feed.unavailable')} text={pxError(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :!p||!mine?<Skel kind="list"/>
     :<>
      <Card list className="mt12"><Row av={<Av name={name} seed={p.id} src={mediaSrc(p.avatar)}/>} title={<>{name}{p.age?', '+p.age:''}</>} sub={city} onClick={()=>navigate('/n/people/'+id)}/></Card>
      {done?<Alert kind="ok" noIcon className="mt16">{done}</Alert>
-      :ex&&ex.st!=='ok'?<Alert kind="info" className="mt16">{fill(ex.st==='in'?t('fe.ln.p22.incoming'):t('fe.ln.p22.sentAlready'),{name})}</Alert>
+      :ex&&ex.st==='in'?<Alert kind="info" className="mt16">{fill(t('fe.ln.p22.incoming'),{name})}</Alert>
       :<>
+       {ex?.st==='sent'&&<Alert kind="info" className="mt16">{fill(t('fe.w7.ln.sentEdit'),{name})}</Alert>}
        <Group className="p22-kinds21" title={t('fe.px.lk.kind')}>
         <RadioList label={t('fe.px.lk.kind')} value={kind} options={KINDS.map(k=>[k,t('fe.px.lk.k.'+k),SIDES[k]?.map(s=>t('fe.px.lk.s.'+s).toLowerCase()).join(' / ')] as const)}
          onChange={k=>{setKind(k);setSide(conf&&k===conf.kind?conf.side:null);setSideErr(false);setErr('');}}/>

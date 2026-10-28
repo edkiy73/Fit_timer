@@ -42,6 +42,10 @@ export const ru = {
   'fe.kit.place.none': 'Ничего не нашли',
   'fe.kit.place.addFail': 'Не получилось добавить город. Попробуй ещё раз',
   'fe.kit.place.added': 'Добавили «{name}». Проверим написание — людям рядом город покажется так же',
+  'fe.kit.sheet.dirtyTitle': 'Закрыть без сохранения?',
+  'fe.kit.sheet.dirtyText': 'Выбранное здесь пропадёт.',
+  'fe.kit.sheet.dirtyOk': 'Закрыть',
+  'fe.kit.sheet.dirtyStay': 'Остаться',
 };
 export const en: Record<keyof typeof ru, string> = {
   'fe.kit.up.title': 'Upload',
@@ -86,4 +90,8 @@ export const en: Record<keyof typeof ru, string> = {
   'fe.kit.place.none': 'Nothing found',
   'fe.kit.place.addFail': 'Couldn’t add the city. Try again',
   'fe.kit.place.added': 'Added “{name}”. We’ll check the spelling so people nearby see it the same way',
+  'fe.kit.sheet.dirtyTitle': 'Close without saving?',
+  'fe.kit.sheet.dirtyText': 'What you picked here will be lost.',
+  'fe.kit.sheet.dirtyOk': 'Close',
+  'fe.kit.sheet.dirtyStay': 'Stay',
 };

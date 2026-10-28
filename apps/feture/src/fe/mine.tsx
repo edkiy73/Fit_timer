@@ -2,9 +2,9 @@ import {useCallback,useEffect,useState} from 'react';
 import {useLocation,useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Bookmark,Calendar,Clock,LockOpen,MessageCircle,Newspaper,Pencil,Plus,TriangleAlert,Users,X} from 'lucide-react';
-import {feErrorMessage} from '../feture/fe-api';
-import {Alert,Av,Bar,Btn,Card,Empty,Group,IconBtn,Note,Row,Skel,Stack,View} from './kit';
+import {Bookmark,Calendar,Clock,LockOpen,MessageCircle,Newspaper,Pencil,Plus,Trash2,TriangleAlert,Users,X} from 'lucide-react';
+import {feErrorMessage,newOpId} from '../feture/fe-api';
+import {Alert,Ask,Av,Bar,Btn,Card,Empty,Group,IconBtn,Note,Row,Skel,Stack,View} from './kit';
 import {useFe} from './session';
 import {PostCard,SavedEditSheet,postSchema,savedEdit,when,type Post,type SavedEdit} from './feed';
 import {EventRow,type Ev} from './browse';
@@ -31,7 +31,7 @@ export function MineLayer(){
  const [c,setC]=useState<Counts|null>(null);
  const notice=(location.state as {notice?:unknown}|null)?.notice;
  // Old links `?layer=mine&part=…` (after creating an event or a post) open the matching list screen.
- useEffect(()=>{const part=new URLSearchParams(location.search).get('part');if(part==='events'||part==='posts'||part==='saved')navigate('/n/me/'+part,{replace:true,state:location.state});},[location.search,location.state,navigate]);
+ useEffect(()=>{const part=new URLSearchParams(location.search).get('part');if(part==='events'||part==='posts'||part==='saved'||part==='communities')navigate('/n/me/'+part,{replace:true,state:location.state});},[location.search,location.state,navigate]);
  useEffect(()=>{if(!acting)return;const n=<T,>(p:Promise<T>,f:(r:T)=>number)=>p.then(f).catch(()=>0);
   Promise.all([call('me.posts',{},posts).then(r=>r.items).catch(()=>[] as Post[]),
    n(call('event.mine',{},evs),r=>new Set([...r.going,...r.interested,...r.organizing,...r.applications].map(e=>e.id)).size),
@@ -56,13 +56,35 @@ export function MineLayer(){
  </>;
 }
 
-/** The screens behind the «Моё» rows: F10 posts, E10 events, G04 saved («Мне открыли» is the access centre, access.tsx). */
-export function MinePartScreen({part}:{part:'posts'|'events'|'saved'}){
- const {acting}=useFe();const {t}=useI18n();const cp=acting?.kind==='couple';
- const title=part==='posts'?(cp?t('fe.mx.mine.postsUs'):t('fe.mx.mine.posts')):part==='events'?(cp?t('fe.mx.mine.eventsUs'):t('fe.mx.mine.events')):t('fe.mx.mine.saved');
+/** The screens behind the «Моё» rows: F10 posts, E10 events, G04 saved, C02 communities («Мне открыли» is the access centre, access.tsx). */
+export function MinePartScreen({part}:{part:'posts'|'events'|'saved'|'communities'}){
+ const {acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const cp=acting?.kind==='couple';
+ const title=part==='posts'?(cp?t('fe.mx.mine.postsUs'):t('fe.mx.mine.posts')):part==='events'?(cp?t('fe.mx.mine.eventsUs'):t('fe.mx.mine.events')):part==='saved'?t('fe.mx.mine.saved')
+  :t(cp?'fe.cc.mineCouple':'fe.cc.mine');
+ const create=part==='events'?'/n/events/new':part==='communities'?'/n/communities/new':null;
  return <>
-  <Bar title={title} back/>
-  <View className="nodock">{part==='posts'?<MyPosts/>:part==='events'?<MyEvents/>:<Saved/>}</View>
+  <Bar title={title} back>{create&&<IconBtn icon={Plus} kind="ghost" label={t(part==='events'?'fe.ce.create':'fe.cc.create')} onClick={()=>navigate(create)}/>}</Bar>
+  <View className="nodock">{part==='posts'?<MyPosts/>:part==='events'?<MyEvents/>:part==='saved'?<Saved/>:<MyCommunities/>}</View>
+ </>;
+}
+
+/** C02 «Мои сообщества»: hosted, joined and waiting for an answer; empty — «Найти сообщества» opens the catalogue. */
+const mineComm=z.object({ok:z.literal(true),hosting:z.array(z.object({id:z.uuid(),name:z.string(),state:z.string(),privacy:z.string(),role:z.string()}).passthrough()),
+ member:z.array(z.object({id:z.uuid(),name:z.string(),state:z.string(),privacy:z.string()}).passthrough()),requests:z.array(z.object({id:z.uuid(),community_id:z.uuid(),name:z.string()}).passthrough())});
+function MyCommunities(){
+ const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const cp=acting?.kind==='couple';
+ const {data,error,load}=useLoad(useCallback(()=>call('community.mine',{},mineComm),[call]));
+ if(error)return <Failed error={error} retry={load}/>;
+ if(!data)return <Skel kind="list"/>;
+ if(!data.hosting.length&&!data.member.length&&!data.requests.length)return <Empty icon={Users} title={t(cp?'fe.w7.c02.emptyUs':'fe.w7.c02.empty')} text={t('fe.w7.c02.emptyText')}>
+  <Btn onClick={()=>navigate('/n/communities')}>{t('fe.w7.c02.find')}</Btn><Btn kind="text" onClick={()=>navigate('/n/communities/new')}>{t('fe.cc.create')}</Btn></Empty>;
+ const state=(s:string)=>s==='published'?'':t('fe.mine.state.'+s);
+ const go=(id:string)=>()=>navigate('/n/communities/'+id);
+ return <>
+  {data.hosting.length>0&&<Group title={t('fe.w7.c02.hosting',{n:data.hosting.length})}><Card list>{data.hosting.map(c=><Row key={c.id} icon={Users} tone="v" title={c.name}
+   sub={[t(c.role==='owner'?'fe.w7.c02.owner':'fe.w7.c02.host'),state(c.state)].filter(Boolean).join(' · ')} onClick={go(c.id)}/>)}</Card></Group>}
+  {data.member.length>0&&<Group title={t('fe.w7.c02.member',{n:data.member.length})}><Card list>{data.member.map(c=><Row key={c.id} icon={Users} title={c.name} sub={state(c.state)||undefined} onClick={go(c.id)}/>)}</Card></Group>}
+  {data.requests.length>0&&<Group title={t('fe.w7.c02.requests',{n:data.requests.length})}><Card list>{data.requests.map(r=><Row key={r.id} icon={Clock} tone="a" title={r.name} sub={t('fe.host.join.pending')} onClick={go(r.community_id)}/>)}</Card></Group>}
  </>;
 }
 
@@ -84,16 +106,35 @@ function MyPosts(){
   onRemove={r=>{setData(d=>d?{...d,items:d.items.filter(x=>x.id!==r.postId)}:d);toast(r.notice,{type:'ok'});}}/>)}</>;
 }
 
+/** E10 «Мои события»: drafts first (only the author — or the couple — sees them; each can be deleted after asking),
+ * then going / applications / interested / organizing; empty — «Смотреть события» opens the events tab. */
+const draftRow=z.object({id:z.uuid(),title:z.string().nullable(),step:z.number().nullable().optional(),updated_at:z.string()}).passthrough();
+const evsWithDrafts=evs.extend({drafts:z.array(draftRow).optional()});
+const okRes=z.object({ok:z.literal(true)}).passthrough();
 function MyEvents(){
- const {call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();
- const {data,error,load}=useLoad(useCallback(()=>call('event.mine',{},evs),[call]));
+ const {call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
+ const {data,setData,error,load}=useLoad(useCallback(()=>call('event.mine',{},evsWithDrafts),[call]));
+ const [asking,setAsking]=useState<z.infer<typeof draftRow>|null>(null);const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
  if(error)return <Failed error={error} retry={load}/>;
  if(!data)return <Skel kind="post"/>;
+ const drafts=data.drafts??[];
  const groups:[string,z.infer<typeof ev>[]][]=[['going',data.going],['applications',data.applications],['interested',data.interested],['organizing',data.organizing]];
- if(groups.every(([,l])=>!l.length))return <Empty icon={Calendar} title={t('fe.mine.noEvents')} text={t('fe.mine.noEventsText')}/>;
- return <>{groups.filter(([,l])=>l.length).map(([k,l])=><Group key={k} title={t('fe.mine.ev.'+k)}><Card list>
-  {l.map(e=><Row key={e.id} noChev onClick={()=>navigate('/n/events/'+e.id)} title={e.title}
-   sub={new Date(e.starts_at).toLocaleString(locale==='en'?'en':'ru',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+(e.state!=='published'?' · '+t('fe.mine.state.'+e.state):'')}/>)}</Card></Group>)}</>;
+ const remove=async()=>{if(!asking)return;setBusy(true);setFailure('');
+  try{await call('event.draftDelete',{opId:newOpId(),draftId:asking.id},okRes);setData(d=>d&&{...d,drafts:(d.drafts??[]).filter(x=>x.id!==asking.id)});setAsking(null);toast(t('fe.w7.e10.draftDeleted'),{type:'ok'});}
+  catch(e){setFailure(feErrorMessage(e,t));}finally{setBusy(false);}};
+ const date=(iso:string,time=true)=>new Date(iso).toLocaleString(locale==='en'?'en':'ru',{day:'numeric',month:'short',...(time?{hour:'2-digit',minute:'2-digit'}:{})});
+ if(!drafts.length&&groups.every(([,l])=>!l.length))return <Empty icon={Calendar} title={t('fe.mine.noEvents')} text={t('fe.mine.noEventsText')}>
+  <Btn onClick={()=>navigate('/n/communities?sub=events')}>{t('fe.w7.toEvents.btn')}</Btn></Empty>;
+ return <>
+  {drafts.length>0&&<Group title={t('fe.w7.e10.drafts',{n:drafts.length})} foot={t('fe.w7.e10.draftsFoot')}><Card list>
+   {drafts.map(d=><Row key={d.id} icon={Pencil} title={d.title||t('fe.w7.e10.untitled')} sub={[d.step?t('fe.w7.e10.step',{n:d.step}):'',t('fe.w7.e10.savedAt',{when:date(d.updated_at,false)})].filter(Boolean).join(' · ')}
+    end={<IconBtn icon={Trash2} kind="ghost" size="sm" label={t('fe.ce.draftDelete')} onClick={()=>{setFailure('');setAsking(d);}}/>}/>)}</Card></Group>}
+  {groups.filter(([,l])=>l.length).map(([k,l])=><Group key={k} title={t('fe.mine.ev.'+k)}><Card list>
+   {l.map(e=><Row key={e.id} noChev onClick={()=>navigate('/n/events/'+e.id)} title={e.title}
+    sub={date(e.starts_at)+(e.state!=='published'?' · '+t('fe.mine.state.'+e.state):'')}/>)}</Card></Group>)}
+  {asking&&<Ask icon={Trash2} danger title={t('fe.ce.draftDelete')+'?'} text={t('fe.ce.draftDeleteAsk')} ok={t('fe.ce.draftDeleteOk')} busy={busy} error={failure||undefined}
+   onOk={()=>void remove()} onCancel={()=>setAsking(null)}/>}
+ </>;
 }
 
 function Saved(){

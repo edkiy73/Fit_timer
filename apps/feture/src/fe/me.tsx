@@ -2,7 +2,7 @@ import {Fragment,useCallback,useEffect,useState,type CSSProperties,type Componen
 import {useLocation,useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Camera,Check,ChevronDown,ChevronRight,Clock,Eye,EyeOff,Users,Image as ImageIcon,KeyRound,Newspaper,Plus,Settings,Star,Trash2,X} from 'lucide-react';
+import {Camera,Check,ChevronDown,ChevronRight,Clock,Eye,EyeOff,HeartOff,Users,Image as ImageIcon,KeyRound,Newspaper,Plus,Settings,Star,Trash2,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,Ask as KitAsk,Av,Btn,Card,Empty,Group,H,IconBtn,Note,PhotoAdd,PhotoSlot,PhotoSlots,Row,Seg,SelectRow,Sheet,Skel,ToggleRow} from './kit';
 import {AgeCheckLink,useAgeResume} from './age-check';
@@ -133,7 +133,7 @@ export function MeTab(){
        </Card>
       </Group>
       <DetailsBlock p={p} label={label}/>
-      {acting.kind==='person'&&couple&&<StatusHint p={p} coupleId={couple.id} onDone={msg=>{setNotice(msg);load();}}/>}
+      {acting.kind==='person'&&couple&&<StatusHint p={p} coupleId={couple.id} onDone={load}/>}
       <MeJars key={p.id}/>
       <GalleryBlock p={p}/>
       <LinksBlock key={'links'+p.id} onChanged={pullCounts}/>
@@ -168,15 +168,21 @@ function DetailsBlock({p,label}:{p:Profile,label:(kind:string,code:string)=>stri
 }
 
 /** V21.1 ME-047: a person in a couple whose status says «single» or nothing gets one sentence and one tap to fix it. */
-function StatusHint({p,coupleId,onDone}:{p:Profile,coupleId:string,onDone:(msg:string)=>void}){
- const {call}=useFe();const {t}=useI18n();
+function StatusHint({p,coupleId,onDone}:{p:Profile,coupleId:string,onDone:()=>void}){
+ const {call}=useFe();const {t}=useI18n();const toast=useToast();
  const [off,setOff]=useState(()=>{try{return localStorage.getItem(STAT_HINT_KEY)===p.id;}catch{return false;}});
  const [partner,setPartner]=useState('');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
  const status=typeof p.details.status==='string'?p.details.status:null;
  const show=!off&&(!status||status==='single');
  useEffect(()=>{if(!show)return;call('couple.get',{},coupleRes,{profileId:coupleId}).then(r=>{const o=r.couple.members.find(m=>!m.me);setPartner(o?(o.name||(o.handle?'@'+o.handle:'')):'');}).catch(()=>{});},[call,coupleId,show]);
  if(!show)return null;
- const fix=async()=>{setBusy(true);setFailure('');try{await call('profile.update',{opId:newOpId(),rev:p.rev,status:'partnered'},ok);onDone(t('fe.me.saved'));}catch(e){setFailure(feErrorMessage(e,t));}finally{setBusy(false);}};
+ // «Отменить» in the toast puts the old status back (V21 meStatFix21); the profile's new rev comes from the server.
+ const fix=async()=>{setBusy(true);setFailure('');
+  try{await call('profile.update',{opId:newOpId(),rev:p.rev,status:'partnered'},ok);onDone();
+   toast(t('fe.w7.stat.done'),{type:'ok',action:{label:t('fe.mx.undo'),fn:()=>void(async()=>{
+    try{const cur=await call('profile.get',{profileId:p.id},profileRes);await call('profile.update',{opId:newOpId(),rev:cur.profile.rev,status},ok);toast(t('fe.w7.stat.undone'),{type:'ok'});onDone();}
+    catch(e){toast(feErrorMessage(e,t),{type:'err'});}})()}});}
+  catch(e){setFailure(feErrorMessage(e,t));}finally{setBusy(false);}};
  const keep=()=>{try{localStorage.setItem(STAT_HINT_KEY,p.id);}catch{/* per-viewer convenience only */}setOff(true);};
  return <Alert kind="info" role="none" icon={Users} className="me-stat21"><b>{t(status?'fe.mx.stat.single':'fe.mx.stat.none',{name:partner||t('fe.mx.stat.partner')})}</b>
   <span className="me-stat21-a"><Btn size="sm" onClick={fix} disabled={busy} busy={busy}>{t('fe.mx.stat.fix')}</Btn><Btn size="sm" kind="soft" onClick={keep}>{t('fe.mx.stat.keep')}</Btn></span>
@@ -251,7 +257,7 @@ function GalleryBlock({p}:{p:Profile}){
 /** `meVisLayer()` — Discover, the profile card, likes, activity, mentions; the couple's own group comes after. */
 function Visibility({p,settings,onChanged}:{p:Profile,settings:Settings,onChanged:()=>void}){
  const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();
- const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [ageIntent,setAgeIntent]=useState('');
+ const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [ageIntent,setAgeIntent]=useState('');const [askOff,setAskOff]=useState(false);
  const cp=p.kind==='couple';
  const set=async(setting:string,value:string|boolean)=>{
   if(busy)return;setBusy(true);setFailure('');
@@ -270,7 +276,7 @@ function Visibility({p,settings,onChanged}:{p:Profile,settings:Settings,onChange
  const modeSub=mode==='visible'&&!hasPhoto?(cp?t('fe.mx.v.noPhotoCouple'):t('fe.mx.v.noPhoto')):mode==='off'&&cp?t('fe.mx.v.offCouple'):cp?t('fe.mx.v.offNow'):t('fe.mx.v.modeSub');
  return <>
   <Group title={t('fe.reg.discover.title')}><Card list>
-   <SelectRow row label={t('fe.mx.v.mode')} sub={modeSub} value={mode} onChange={v=>void set('discoverMode',v)}
+   <SelectRow row label={t('fe.mx.v.mode')} sub={modeSub} value={mode} onChange={v=>{if(v==='off'&&mode!=='off')setAskOff(true);else void set('discoverMode',v);}}
     options={(['visible','hidden','off'] as const).map(v=>[v,t('fe.mx.v.mode.'+v+(cp?'Us':''))] as const)}/>
    {mode==='visible'&&!hasPhoto&&<Row icon={Camera} title={t('fe.me.photoAdd')} sub={t('fe.mx.v.addPhotoSub')} onClick={()=>navigate('/n/me/edit?only=media')}/>}
    <Row title={cp?t('fe.mx.v.cardUs'):t('fe.mx.v.card')} sub={cp?t('fe.mx.v.cardSubUs'):t('fe.mx.v.cardSub')} onClick={()=>navigate('/n/me/preview')}/>
@@ -286,5 +292,8 @@ function Visibility({p,settings,onChanged}:{p:Profile,settings:Settings,onChange
    {toggle('showLikes',cp?t('fe.mx.v.showLikesUs'):t('fe.mx.v.showLikes'),cp?t('fe.mx.v.showLikesSubUs'):t('fe.mx.v.showLikesSub'),settings.showLikes!==false)}
   </Card></Group>
   {failure&&<Alert kind="err" noIcon>{failure}{failure===t('fe.age.couple')&&<><br/><AgeCheckLink intent={ageIntent||undefined}/></>}</Alert>}
+  {/* V21 k4off: switching Discover off is asked first — matches, chats and access stay. */}
+  {askOff&&<KitAsk icon={HeartOff} danger title={t(cp?'fe.w7.k4off.titleUs':'fe.w7.k4off.title')} text={t(cp?'fe.w7.k4off.textUs':'fe.w7.k4off.text')} ok={t('fe.w7.k4off.ok')} busy={busy}
+   onOk={()=>{setAskOff(false);void set('discoverMode','off');}} onCancel={()=>setAskOff(false)}/>}
  </>;
 }
