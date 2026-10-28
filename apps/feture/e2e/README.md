@@ -49,7 +49,8 @@ commands; a second call only adds what is missing.
 | `chats` | a `full` person with conversations with `mate`, `asker`, `basic` (messages both ways); `.with.<kind>.conversationId` | chat list and conversation |
 | `host` | a `full` person owning a published open community (`openId`), a published closed one with a join question (`closedId`), a closed one without a question (`closedNoQId`), a hidden one (`hiddenId`, reached by an invite link), a published open offline event (`eventId`), one with tickets on the organizer’s site (`ticketEventId`), an online event by application (`appEventId`) and a cancelled one (`cancelledEventId`) — approved by STAFF | community owner screens, the inbox with decisions, every way of joining (`communities/joins.mjs`, `event-joins.mjs`, lane `jn`) |
 | `pair` | two `full` people (`pa`, `pb`) in an active couple (`partner`, `coupleId`) | couple screens |
-| `staff` | the shared qa moderator (`qa-staff@feture.test`) | staff screens and review steps only |
+| `staff` | the shared qa moderator (`qa-staff@feture.test`); its second factor is enrolled on first use and codes are entered by `lib.mjs` (`staffFactor`, the secret in `<E2E_SESSIONS>.factor.json`, never in the repo) | staff screens and review steps only |
+| `staff2` | a second staff account (`qa-staff2@feture.test`, moderator, granted out of band) | the 2FA enrolment screen (the lead resets its factor first) |
 
 Cooldowns decide which persona a scenario may use repeatedly: a revoked grant, a withdrawn request, a left community
 or a cancelled invite can be redone at once; a **declined** access request (30 days) or couple invitation (7 days)

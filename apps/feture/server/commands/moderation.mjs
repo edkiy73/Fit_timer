@@ -83,7 +83,7 @@ async function checkRank(q, roles, profileId) {
 /** @type {Record<keyof typeof moderationCommands, Command['run']>} */
 const run = {
   async 'staff.reportQueue'(q, { account, input }) {
-    await requireStaff(q, account.id, MODERATORS);
+    await requireStaff(q, account, MODERATORS);
     const groups = await q.query(
       `select r.target_type, r.target_id, count(*)::int reports, min(r.created_at) first_at, max(r.created_at) last_at,
          array_agg(distinct r.reason) reasons, min(${PRIORITY.replace(/reason/g, 'r.reason')}) priority,
@@ -124,7 +124,7 @@ const run = {
   },
 
   async 'staff.reportDecide'(q, { account, input }) {
-    await requireStaff(q, account.id, MODERATORS);
+    await requireStaff(q, account, MODERATORS);
     const t = await targetOwner(q, account.id, input.targetType, input.targetId);
     // A decision answers open reports, once, on live content.
     const side = input.targetType === 'conversation' ? input.reportedProfileId ?? null : null;
@@ -158,7 +158,7 @@ const run = {
   },
 
   async 'staff.disputeQueue'(q, { account, input }) {
-    await requireStaff(q, account.id, MODERATORS);
+    await requireStaff(q, account, MODERATORS);
     // Posts with open «это я на фото» claims (owner decision 28.10.2026): claims that could not hide the post (it is
     // still visible) come first as urgent, then by age. Claimants are never named; staff see whether each was marked
     // on the photo, their trust level and strikes, a possible attack on the author and the author's explanation.
@@ -193,7 +193,7 @@ const run = {
   },
 
   async 'staff.disputeDecide'(q, { account, input }) {
-    await requireStaff(q, account.id, MODERATORS);
+    await requireStaff(q, account, MODERATORS);
     const t = await targetOwner(q, account.id, 'post', input.postId);
     const [p] = await q.query('select disputed_at from feture.post where id = $1', [input.postId]);
     const claims = await q.query(`select id, claimant_profile_id, claimant_account, tagged from feture.photo_dispute where post_id = $1 and state = 'open' for update`, [input.postId]);
@@ -227,7 +227,7 @@ const run = {
   },
 
   async 'staff.disputeClaimantReviewed'(q, { account, input }) {
-    await requireStaff(q, account.id, MODERATORS);
+    await requireStaff(q, account, MODERATORS);
     await targetOwner(q, account.id, 'profile', input.profileId);
     const rows = await q.query(
       `update feture.account set dispute_reviewed_at = now() where person_profile_id = $1 and dispute_flagged_at is not null returning id`, [input.profileId]);
@@ -237,7 +237,7 @@ const run = {
   },
 
   async 'staff.revisionQueue'(q, { account, input }) {
-    await requireStaff(q, account.id, MODERATORS);
+    await requireStaff(q, account, MODERATORS);
     const items = await q.query(
       `select r.id, r.post_id, r.created_at, r.payload, left(coalesce(p.title || ': ', '') || p.body, 300) live
        from feture.post_revision r join feture.post p on p.id = r.post_id
@@ -247,7 +247,7 @@ const run = {
   },
 
   async 'staff.revisionDecide'(q, { account, input }) {
-    await requireStaff(q, account.id, MODERATORS);
+    await requireStaff(q, account, MODERATORS);
     const [r] = await q.query(
       `select r.*, p.owner_profile_id, p.state post_state from feture.post_revision r join feture.post p on p.id = r.post_id where r.id = $1 for update of r, p`,
       [input.revisionId]);
@@ -275,7 +275,8 @@ const run = {
   },
 
   async 'staff.sanction'(q, { account, input }) {
-    const roles = await requireStaff(q, account.id, ['owner', 'lead']);
+    // A suspension (ban) is a dangerous action: a code from the last 10 minutes (staff.mjs FRESH_WINDOW).
+    const roles = await requireStaff(q, account, ['owner', 'lead'], { fresh: input.decision === 'suspend' });
     await targetOwner(q, account.id, 'profile', input.profileId);
     await checkRank(q, roles, input.profileId);
     if (input.decision === 'lift') {
@@ -292,7 +293,7 @@ const run = {
   async 'staff.restrict'(q, { account, input }) {
     // Restriction (S4 §4): out of Discover and search, no new likes, access requests, messages or links; the access
     // it was given is revoked. Lighter than a suspension, so moderators may apply it.
-    const roles = await requireStaff(q, account.id, MODERATORS);
+    const roles = await requireStaff(q, account, MODERATORS);
     await targetOwner(q, account.id, 'profile', input.profileId);
     await checkRank(q, roles, input.profileId);
     if (input.on && input.rule === 'appeal_granted') fail(400, 'invalid_input', { fields: ['rule'] });
@@ -318,7 +319,7 @@ const run = {
   },
 
   async 'staff.placeQueue'(q, { account, input }) {
-    await requireStaff(q, account.id, [...MODERATORS, 'verifier']);
+    await requireStaff(q, account, [...MODERATORS, 'verifier']);
     const items = await q.query(
       `select pl.id, pl.country, pl.name_ru, pl.name_en, pl.created_at,
          (select count(*)::int from feture.profile_details d where d.city_id = pl.id) used
@@ -327,7 +328,7 @@ const run = {
   },
 
   async 'staff.placeDecide'(q, { account, input }) {
-    await requireStaff(q, account.id, [...MODERATORS, 'verifier']);
+    await requireStaff(q, account, [...MODERATORS, 'verifier']);
     const rows = await q.query(
       `update feture.place set state = $2, name_ru = coalesce($3, name_ru), name_en = coalesce($4, name_en) where id = $1 and state = 'pending' returning id`,
       [input.placeId, input.decision === 'approve' ? 'approved' : 'rejected', input.nameRu ?? null, input.nameEn ?? null]);
@@ -366,7 +367,7 @@ const run = {
   },
 
   async 'staff.appealQueue'(q, { account, input }) {
-    await requireStaff(q, account.id, ['owner', 'lead']);
+    await requireStaff(q, account, ['owner', 'lead']);
     const items = await q.query(
       `select ap.id, ap.target_type, ap.target_id, ap.body, ap.created_at, p.handle,
          (select json_build_object('action', s.action, 'detail', s.detail, 'at', s.created_at, 'mine', s.staff_account_id = $1) from feture.staff_action s
@@ -378,7 +379,7 @@ const run = {
   },
 
   async 'staff.appealDecide'(q, { account, input }) {
-    await requireStaff(q, account.id, ['owner', 'lead']);
+    await requireStaff(q, account, ['owner', 'lead']);
     const [ap] = await q.query('select * from feture.appeal where id = $1 for update', [input.appealId]);
     if (!ap) fail(404, 'not_found');
     if (ap.state !== 'open') fail(409, 'conflict', { state: ap.state });

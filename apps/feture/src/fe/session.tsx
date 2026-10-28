@@ -75,7 +75,7 @@ const dropListeners=new Set<()=>void>();
 export function onReadsDropped(f:()=>void){dropListeners.add(f);return ()=>{dropListeners.delete(f);};}
 /** Writes whose input carries no opId (contracts with `ledger: false`): never served from the cache, and they drop it.
  * Without this a second «Без звука» / «В архив» within 30 s was answered from memory and never reached the server. */
-const WRITES_WITHOUT_OPID=new Set(['chat.read','chat.mute','chat.archive','notifications.read','notifications.readAll','media.commit','staff.mediaView','profile.setVisibility']);
+const WRITES_WITHOUT_OPID=new Set(['staff.totpStart','staff.totpConfirm','staff.totpVerify','chat.read','chat.mute','chat.archive','notifications.read','notifications.readAll','media.commit','staff.mediaView','profile.setVisibility']);
 /** Two answers that differ only in the request id or in the signatures of media links are the same for a screen. */
 const sameAnswer=(a:unknown,b:unknown)=>{const k=(_:string,v:unknown)=>_==='requestId'?undefined:typeof v==='string'&&/^https?:\/\//.test(v)?v.split('?')[0]:v;
  return JSON.stringify(a,k)===JSON.stringify(b,k);};
@@ -98,6 +98,21 @@ const lastBody=new Map<string,unknown>();
 const remember=(key:string,body:unknown)=>{lastBody.delete(key);lastBody.set(key,body);if(lastBody.size>READ_MAX){const first=lastBody.keys().next().value;if(first!==undefined)lastBody.delete(first);}};
 /** What screens showed last, per account (`useShown`); emptied at sign-out. */
 const shownMemo=new Map<string,unknown>();
+
+/** Staff second factor (server: 403 `second_factor` with rule `verify` or `fresh`, server/commands/staff.mjs). The staff
+ * area registers the code prompt (`setFactorPrompt`); concurrent refusals share one prompt. `enrol` (the factor was
+ * reset meanwhile) never retries: the prompt switches the area to enrolment and answers false. */
+type FactorNeed='verify'|'fresh'|'enrol';
+let factorPrompt:((need:FactorNeed)=>Promise<boolean>)|null=null;
+let asking:Promise<boolean>|null=null;
+export function setFactorPrompt(p:((need:FactorNeed)=>Promise<boolean>)|null){factorPrompt=p;}
+/** Opens the code prompt (or joins the open one); true after a right code. */
+export function askFactor(need:FactorNeed):Promise<boolean>{
+ if(!factorPrompt)return Promise.resolve(false);
+ asking??=factorPrompt(need).finally(()=>{asking=null;});
+ return asking;
+}
+const factorNeed=(e:unknown):FactorNeed|null=>e instanceof FeError&&e.code==='second_factor'&&(e.rule==='verify'||e.rule==='fresh'||e.rule==='enrol')?e.rule:null;
 
 export function FeSessionProvider({children}:{children:ReactNode}){
  const auth=useOptionalAuth();
@@ -137,7 +152,7 @@ export function FeSessionProvider({children}:{children:ReactNode}){
  // 28.10.2026: «моргает при скролле и вылетает в новую загрузку»).
  const stateRef=useRef(state);stateRef.current=state;
  const ready=state.status==='ready';
- const call=useCallback(<T,>(action:string,input:Record<string,unknown>,schema:z.ZodType<T>,opts:{asAccount?:boolean,profileId?:string,signal?:AbortSignal,/** Skip the short read cache: «Обновить» and other explicit refreshes. */ fresh?:boolean,
+ const callOnce=useCallback(<T,>(action:string,input:Record<string,unknown>,schema:z.ZodType<T>,opts:{asAccount?:boolean,profileId?:string,signal?:AbortSignal,/** Skip the short read cache: «Обновить» and other explicit refreshes. */ fresh?:boolean,
   /** Answered from memory: the screen draws that at once, the server is asked behind it, and a different answer comes
    * here — a list that must show what changed elsewhere (a post published from another screen or device) on return. */
   onFresh?:(v:T)=>void}={})=>{
@@ -185,6 +200,12 @@ export function FeSessionProvider({children}:{children:ReactNode}){
   return parsed;
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[ready,acting?.id,sessionKey]);
+ // Staff second factor: a call refused for a code (403 second_factor verify / fresh) asks the staff area's prompt once
+ // and, after a right code, goes again (a write with the same opId — the refusal stored nothing).
+ const call=useCallback(<T,>(action:string,input:Record<string,unknown>,schema:z.ZodType<T>,opts:{asAccount?:boolean,profileId?:string,signal?:AbortSignal,fresh?:boolean,onFresh?:(v:T)=>void}={})=>{
+  const go=()=>callOnce(action,input,schema,opts);
+  return go().catch((e:unknown)=>{const need=factorNeed(e);return need&&factorPrompt?askFactor(need).then(ok=>ok?go():Promise.reject(e)):Promise.reject(e);});
+ },[callOnce]);
  const peek=useCallback(<T,>(action:string,input:Record<string,unknown>,schema:z.ZodType<T>,opts:{asAccount?:boolean,profileId?:string}={}):T|null=>{
   const state=stateRef.current;if(state.status!=='ready')return null;
   const profileId=opts.asAccount?undefined:opts.profileId??acting?.id;

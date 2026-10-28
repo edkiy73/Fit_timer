@@ -33,6 +33,7 @@ Read this before adding or changing a command. Design background: `docs/server/S
 | Live update of the other side | `signal(profileId, kind)` from the handler context (sent after commit) |
 | Idempotent writes | the handler pipeline stores `opId` results; never add a second ledger |
 | Text from people in a contract | `field('<name>')` from `contracts/_text.mjs` (rules in `FIELD`, shared with the app's forms); `text(max)` / `line(max)` only for a one-off. Never `z.string()` for something people type and others see |
+| Second factor (TOTP + recovery codes; staff now, everyone later) | `startEnrol`, `confirmEnrol`, `checkCode`, `removeFactor` (`second-factor.mjs`); staff gate `requireStaff(q, account, roles, {fresh})` |
 | Typed words / keyset pages | `likePattern(q)` for ILIKE, `writeCursor(at, id)` (`search.mjs`) |
 | «Популярное» order / who takes a mention | `popularScore(p, viewer)`, `acceptsMention(target, author)` (`sql-rules.mjs`) — SQL pieces, never a second copy of the rule |
 | A path that changes a post outside the edit (album, narrowing) | `rebaseRevisions(q, postIds)` (`commands/posts.mjs`) keeps a waiting staff review current |
@@ -96,5 +97,7 @@ a rate-limit error for a read. Old → new (28.10.2026):
 | message requests (`REQUEST_LIMITS`, owner 29.10.2026): new requests per profile | — | 10 / day; 3 / day after 3+ of its requests were hidden or reported in 14 days |
 | `chat.with` («Написать»: names the target's rule) | — | 3000 / day |
 | `chat.request` calls (outer bound, refusals included) | — | 300 / day |
+| `staff.totpVerify`, `staff.totpConfirm` (calls; wrong codes lock after 5 in 15 min, `server/second-factor.mjs`) | — | 60 / hour |
+| `staff.totpStart` | — | 20 / hour |
 | DSA notices without an account (`api/fe.mjs` notice) | 5 / hour per IP | unchanged (anonymous, abuse only) |
 

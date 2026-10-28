@@ -3,7 +3,8 @@ import { fail, isUniqueViolation } from './errors.mjs';
 import { hmac } from './hash.mjs';
 
 /** @typedef {import('./db.mjs').Db} Db */
-/** @typedef {{id: string, state: string, locale: string, person_profile_id: string | null}} AccountRow */
+/** @typedef {{id: string, state: string, locale: string, person_profile_id: string | null,
+ *   session?: string | null}} AccountRow  session: this sign-in, as a keyed hash (filled in by the handler; staff checks) */
 
 const SELECT = `select a.id, a.state, a.locale, a.person_profile_id
   from feture.account_link l join feture.account a on a.id = l.account_id
