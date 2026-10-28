@@ -13,8 +13,8 @@ export const DISPUTE_LIMITS = Object.freeze({
   untaggedPerMonth: 10,
   monthWindow: '30 days',
   trustedAccountAge: '7 days', // trusted: photo verified + account at least this old + strikes ≤ trustMaxStrikes
-  trustMaxStrikes: 0,          // «no confirmed false claims»
-  strikesNoInstant: 2,         // from here a claim never hides at once (already implied by trustMaxStrikes = 0)
+  trustMaxStrikes: 1,          // owner 28.10: the first confirmed false claim is a warning; the second takes instant hide away
+  strikesNoInstant: 2,         // from here a claim never hides at once (the same line as trustMaxStrikes = 1)
   strikesRestricted: 3,        // from here untagged claims are refused and staff review the account
   attackClaims: 3,             // this many suspicious untagged claims against one author…
   attackWindow: '24 hours',    // …within this window suspend instant hiding of that author's posts

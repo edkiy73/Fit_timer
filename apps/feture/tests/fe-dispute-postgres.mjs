@@ -138,12 +138,13 @@ test('limits per account (couple partners separately), strikes escalation, resto
     assert.equal((await call('uw', w, { action: 'post.get', postId: s[0] })).status, 200);
     assert.ok((await db.query(`select 1 from feture.outbox where topic = 'post.restored' and profile_id = $1`, [b])).length);
     assert.equal(await strikes(), 1);
-    // A strike loses instant hiding: the next claim only queues.
-    assert.equal((await object(call, 'uv', v, s[1])).hidden, false);
-    assert.equal((await queue(call)).items.find(i => i.id === s[1]).claims[0].trust, 'struck');
+    // Owner 28.10: the first false claim is a warning — the next claim still hides at once.
+    assert.equal((await object(call, 'uv', v, s[1])).hidden, true);
     await call('uo', null, { action: 'staff.disputeDecide', opId: op(), postId: s[1], restore: true });
     assert.equal(await strikes(), 2);
+    // The second strike loses instant hiding: the next claim only queues.
     assert.equal((await object(call, 'uv', v, s[2])).hidden, false);
+    assert.equal((await queue(call)).items.find(i => i.id === s[2]).claims[0].trust, 'struck');
     assert.equal((await queue(call)).flagged.length, 0);
     await call('uo', null, { action: 'staff.disputeDecide', opId: op(), postId: s[2], restore: true });
     assert.equal(await strikes(), 3);
