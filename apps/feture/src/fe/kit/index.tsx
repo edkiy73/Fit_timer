@@ -306,6 +306,20 @@ export function RangeDual({min,max,lo,hi,onChange,label,labels}:{min:number,max:
  </div>;
 }
 
+/** A full-screen overlay (the photo viewer) that the system «Назад» closes: opening adds a history entry with the
+ * same address and state, «Назад» (browser, Android) takes it away and calls `onClose` instead of leaving the screen;
+ * closing by ✕ / Esc goes back over that entry so it never stays behind. */
+export function useBackClose(onClose:()=>void){
+ const cb=useRef(onClose);cb.current=onClose;
+ useEffect(()=>{
+  const token=Math.random().toString(36).slice(2);const st=window.history.state as Record<string,unknown>|null;
+  window.history.pushState({...(st??{}),feOverlay:token},'');
+  let popped=false;const pop=()=>{if((window.history.state as {feOverlay?:string}|null)?.feOverlay===token)return;popped=true;cb.current();};
+  window.addEventListener('popstate',pop);
+  return ()=>{window.removeEventListener('popstate',pop);if(!popped&&(window.history.state as {feOverlay?:string}|null)?.feOverlay===token)window.history.back();};
+ },[]);
+}
+
 export * from './domain';
 export * from './feed';
 export * from './account';

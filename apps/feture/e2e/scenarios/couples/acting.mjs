@@ -22,7 +22,7 @@ export default [
    expect(await av.count() && (couple.avatar ? await av.locator('img').count() : await av.evaluate(el => el.classList.contains('split'))), 'composer avatar is not the couple');
    await noPicker(t);
    // The editor.
-   await t.tap('.composer .cmp-main'); await t.see('.compose textarea[placeholder="О чём хотите рассказать?"]');
+   await t.tap('.composer .cmp-main'); await t.see('.compose .rte-ed[data-ph="О чём хотите рассказать?"]');
    await t.see('.cmp-who:has-text("От пары")'); await t.see('.ctabar button:has-text("Опубликовать от пары"), .compose ~ * button:has-text("Опубликовать от пары"), button:has-text("Опубликовать от пары")');
    await noPicker(t);
    // A reply box under a post the couple can see.

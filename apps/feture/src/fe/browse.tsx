@@ -19,7 +19,7 @@ const named={ru:z.string(),en:z.string()};
 const topicShape=z.object({id:z.string(),categoryId:z.string(),...named,descRu:z.string().nullable().optional(),descEn:z.string().nullable().optional()});
 const catalogRes=z.object({ok:z.literal(true),categories:z.array(z.object({id:z.string(),...named}).passthrough()),topics:z.array(topicShape)});
 type Topic=z.infer<typeof topicShape>;
-const postPage=z.object({ok:z.literal(true),items:z.array(postSchema),next:z.string().nullable()});
+const postPage=z.object({ok:z.literal(true),items:z.array(z.lazy(()=>postSchema)),next:z.string().nullable()});
 const commCard=z.object({id:z.uuid(),name:z.string(),topics:z.array(z.string()),privacy:z.string(),members:z.number(),joined:z.boolean()}).passthrough();
 const commList=z.object({ok:z.literal(true),items:z.array(commCard),next:z.string().nullable()});
 type Comm=z.infer<typeof commCard>;

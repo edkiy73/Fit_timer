@@ -253,17 +253,11 @@ test('mentions: people.search and follower lists say who takes a mention from th
   } finally { await pg.close(); }
 });
 
-test('profile.get: noteSub follows «Следить за статьями» for the viewer, never on the own profile', async () => {
+test('profile.get: no article-only subscription (owner 28.10.2026), the noteSub command is gone', async () => {
   const { pg, call, person } = await world();
   try {
     const a = await person('ua', 'Alex'), b = await person('ub', 'Kira');
-    const sub = async () => (await call('ub', b, { action: 'profile.get', profileId: a })).profile.noteSub;
-    assert.equal(await sub(), false);
-    await call('ub', b, { action: 'noteSub.set', opId: op(), profileId: a, on: true });
-    assert.equal(await sub(), true);
-    assert.equal((await call('ua', a, { action: 'profile.get', profileId: b })).profile.noteSub, false);
-    assert.equal((await call('ua', a, { action: 'profile.get', profileId: a })).profile.noteSub, undefined);
-    await call('ub', b, { action: 'noteSub.set', opId: op(), profileId: a, on: false });
-    assert.equal(await sub(), false);
+    assert.equal('noteSub' in (await call('ub', b, { action: 'profile.get', profileId: a })).profile, false);
+    assert.notEqual((await call('ub', b, { action: 'noteSub.set', opId: op(), profileId: a, on: true })).ok, true);
   } finally { await pg.close(); }
 });

@@ -1,71 +1,134 @@
-import React,{forwardRef,useCallback,useEffect,useImperativeHandle,useRef,useState,type ReactNode} from 'react';
+import React,{forwardRef,useCallback,useEffect,useImperativeHandle,useLayoutEffect,useRef,useState,type ReactNode} from 'react';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Bold,ChartColumn,ChevronDown,Ellipsis,Image as ImageIcon,Italic,Link as LinkIcon,List,Pencil,Quote,Sparkles,Video,type LucideIcon} from 'lucide-react';
+import {Bold,ChartColumn,ChevronDown,ChevronRight,Ellipsis,FileText,Heading,Image as ImageIcon,ImagePlus,Italic,Link as LinkIcon,List,ListOrdered,Pencil,Quote,Sparkles,Strikethrough,Video,type LucideIcon} from 'lucide-react';
 import {fmtDur} from './media';
-import {Av,Btn,Field,IconBtn,Input,Sheet,Text} from './index';
+import {Av,Btn,Field,H,IconBtn,Input,Sheet,Text} from './index';
+import {domToMd,imageBlock,linkOk,mdToDom} from './rich-md';
 
-/* ---------------- Text formatting (V21 rte) ---------------- */
+export {linkOk,BAD_CHARS,hasLongWord,mdImages} from './rich-md';
 
-type Sel={start:number,end:number};
-/** What a toolbar button does to the text: Markdown that RichText shows (bold, italic, list, quote, link). */
-export function formatText(value:string,sel:Sel,kind:'bold'|'italic'|'list'|'quote'):{value:string,sel:Sel}{
- const {start,end}=sel;
- if(kind==='bold'||kind==='italic'){
-  const mark=kind==='bold'?'**':'*';const inner=value.slice(start,end)||'';
-  // Already wrapped: unwrap (the button toggles).
-  if(value.slice(start-mark.length,start)===mark&&value.slice(end,end+mark.length)===mark&&(kind==='bold'||value.slice(start-2,start)!=='**'))
-   return {value:value.slice(0,start-mark.length)+inner+value.slice(end+mark.length),sel:{start:start-mark.length,end:end-mark.length}};
-  return {value:value.slice(0,start)+mark+inner+mark+value.slice(end),sel:{start:start+mark.length,end:end+mark.length}};
- }
- // Lines: every line the selection touches gets (or loses) the prefix.
- const prefix=kind==='list'?'- ':'> ';
- const a=value.lastIndexOf('\n',start-1)+1;const bEnd=value.indexOf('\n',end);const b=bEnd<0?value.length:bEnd;
- const lines=value.slice(a,b).split('\n');const all=lines.every(l=>l.startsWith(prefix));
- const out=lines.map(l=>all?l.slice(prefix.length):prefix+l).join('\n');
- const next=value.slice(0,a)+out+value.slice(b);
- return {value:next,sel:{start:a,end:a+out.length}};
-}
-/** A link a post may carry: http(s) with a real host (the same rule RichText follows when it shows one). */
-export function linkOk(url:string){
- if(!/^https?:\/\/[^\s()<>"']{1,400}$/i.test(url))return false;
- try{const u=new URL(url);return /\.[a-z]{2,}$/i.test(u.hostname)||u.hostname==='localhost';}catch{return false;}
-}
+/* ---------------- Text editor (V21 rteField: formatting shows while typing) ---------------- */
 
-export type RichAreaHandle={focus:()=>void,el:HTMLTextAreaElement|null};
-type AreaProps=Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>,'className'|'value'|'onChange'>&{invalid?:boolean};
-/** `.rte` — a text field with the formatting bar (bold, italic, list, quote, link with an address check). The text is
- * Markdown, as RichText shows it; the bar only writes the marks. Every multi-line text that may be formatted (a post,
- * an article, a discussion) uses this instead of a bare TextArea. `onValue` gets the new text. */
-export const RichArea=forwardRef<RichAreaHandle,AreaProps&{value:string,onValue:(v:string,el:HTMLTextAreaElement)=>void,
- /** Extra buttons at the end of the bar (mention…). */ extra?:ReactNode}>(function RichArea({value,onValue,invalid,extra,...rest},ref){
- const {t}=useI18n();const area=useRef<HTMLTextAreaElement>(null);const [link,setLink]=useState<{sel:Sel,text:string}|null>(null);
- useImperativeHandle(ref,()=>({focus:()=>area.current?.focus(),get el(){return area.current;}}),[]);
- const put=(next:string,sel:Sel)=>{const el=area.current;if(!el)return;onValue(next,el);
-  requestAnimationFrame(()=>{el.focus();el.setSelectionRange(sel.start,sel.end);});};
- const apply=(kind:'bold'|'italic'|'list'|'quote')=>{const el=area.current;if(!el)return;const r=formatText(value,{start:el.selectionStart,end:el.selectionEnd},kind);put(r.value,r.sel);};
- const B=(icon:LucideIcon,label:string,fn:()=>void)=><button type="button" aria-label={label} title={label} onMouseDown={e=>e.preventDefault()} onClick={fn}>{React.createElement(icon)}</button>;
- return <div className="rte used">
+export type RichEditorHandle={
+ focus:()=>void,
+ /** Types text where the caret was last (a mention picked in a sheet). */ insertText:(text:string)=>void,
+ /** Puts a picture block of the post's own media after the caret's block (articles). */ insertImage:(id:string,src:string)=>void,
+ /** «@na» right before the caret, for the mention suggestions; null when the caret is not right after one. */ mention:()=>{q:string}|null,
+ /** Replaces that «@na» with the picked text. */ replaceMention:(text:string)=>void,
+};
+type Cmd='bold'|'italic'|'strikeThrough'|'h4'|'insertUnorderedList'|'insertOrderedList'|'blockquote';
+const AUTO:[RegExp,Cmd][]=[[/^[-*]$/,'insertUnorderedList'],[/^1[.)]$/,'insertOrderedList'],[/^>$/,'blockquote']];
+const exec=(c:string,v?:string)=>{try{return document.execCommand(c,false,v);}catch{return false;}};
+const block=()=>{try{return String(document.queryCommandValue('formatBlock')||'').toLowerCase();}catch{return '';}};
+
+/** `.rte` — the text editor of posts, articles and discussions (V21 rteField). Formatting shows while typing: bold,
+ * italic, strikethrough, link (the address is checked), lists, quote, headings in articles and pictures of the post's own
+ * media in articles. The value in and out is the safe Markdown RichText shows; the editor never stores HTML, pastes
+ * plain text only and keeps links to http(s) with a real domain. «- », «1. » and «> » at a line start make a list or a
+ * quote (Backspace right after gives the marks back). */
+export const RichEditor=forwardRef<RichEditorHandle,{value:string,onValue:(md:string)=>void,label:string,placeholder?:string|undefined,invalid?:boolean,
+ /** Articles: the heading button. */ headings?:boolean,
+ /** Articles: pictures in the text. `src` gives the address of an own media id; `onAdd` opens the picker (the caller then calls `insertImage`). */
+ images?:{src:(id:string)=>string|null|undefined,onAdd:()=>void,disabled?:boolean}|undefined,
+ /** Extra buttons at the end of the bar (mention…). */ extra?:ReactNode,
+ /** The caret moved or the text changed (mention suggestions). */ onCaret?:(()=>void)|undefined,onBlur?:(()=>void)|undefined,autoFocus?:boolean,
+ /** A taller field (articles). */ long?:boolean,id?:string}>(
+ function RichEditor({value,onValue,label,placeholder,invalid,headings,images,extra,onCaret,onBlur,autoFocus,long,id},ref){
+ const {t}=useI18n();const ed=useRef<HTMLDivElement>(null);const last=useRef<string|null>(null);const at=useRef<Range|null>(null);
+ const auto=useRef<{cmd:Cmd,text:string}|null>(null);const [state,setState]=useState<Record<string,boolean>>({});const [empty,setEmpty]=useState(!value);
+ const [link,setLink]=useState<{range:Range|null,text:string}|null>(null);
+ const srcRef=useRef(images?.src);srcRef.current=images?.src;
+ const cb=useRef({onValue,onCaret});cb.current={onValue,onCaret};
+ const rmLabel=t('fe.kit.fmt.photoRm');
+ // Text from outside (the first render, a reset, a loaded draft) is drawn again; the editor's own edits are not.
+ useLayoutEffect(()=>{const el=ed.current;if(!el||value===last.current)return;mdToDom(el,value,{src:x=>srcRef.current?.(x),removeLabel:rmLabel});last.current=value;setEmpty(!value.trim());},[value,rmLabel]);
+ useEffect(()=>{if(autoFocus)ed.current?.focus();},[autoFocus]);
+ const inside=(n:Node|null|undefined)=>!!n&&!!ed.current&&ed.current.contains(n);
+ const sync=useCallback(()=>{const el=ed.current;if(!el)return;const md=domToMd(el);last.current=md;setEmpty(!el.textContent?.trim()&&!el.querySelector('li,figure'));
+  cb.current.onValue(md);cb.current.onCaret?.();},[]);
+ // The bar's state and the last caret, so a sheet (link, mention, photo picker) comes back to it.
+ useEffect(()=>{const f=()=>{const s=getSelection();if(!s?.rangeCount||!inside(s.anchorNode))return;at.current=s.getRangeAt(0).cloneRange();
+  const q=(c:string)=>{try{return document.queryCommandState(c);}catch{return false;}};const blk=block();
+  setState({bold:q('bold'),italic:q('italic'),strikeThrough:q('strikeThrough'),insertUnorderedList:q('insertUnorderedList'),insertOrderedList:q('insertOrderedList'),h4:blk==='h4',blockquote:blk==='blockquote'});};
+  document.addEventListener('selectionchange',f);return ()=>document.removeEventListener('selectionchange',f);},[]);
+ const restore=()=>{const el=ed.current;if(!el)return;el.focus();const s=getSelection();const r=at.current;
+  if(r&&inside(r.startContainer)){s?.removeAllRanges();s?.addRange(r);}else{s?.selectAllChildren(el);s?.collapseToEnd();}};
+ const apply=(c:Cmd)=>{if(document.activeElement!==ed.current)restore();
+  if(c==='h4'||c==='blockquote')exec('formatBlock',block()===c?'p':c);else exec(c);sync();};
+ useImperativeHandle(ref,()=>({
+  focus:()=>restore(),
+  insertText:text=>{restore();if(!exec('insertText',text)){const s=getSelection();const r=s?.rangeCount?s.getRangeAt(0):null;if(r){r.deleteContents();r.insertNode(document.createTextNode(text));r.collapse(false);}}sync();},
+  insertImage:(mid,src)=>{const el=ed.current;if(!el)return;const r=at.current&&inside(at.current.startContainer)?at.current:null;
+   let blk:Node|null=r?r.startContainer:null;while(blk&&blk.parentNode!==el)blk=blk.parentNode;
+   const fig=imageBlock(document,mid,src,rmLabel);
+   if(blk)el.insertBefore(fig,blk.nextSibling);else el.appendChild(fig);
+   // Room to go on typing under the picture.
+   const nx=fig.nextSibling as HTMLElement|null;
+   if(!nx||nx.tagName==='FIGURE'){const p=document.createElement('p');p.appendChild(document.createElement('br'));el.insertBefore(p,nx);}
+   el.focus();const s=getSelection();const nr=document.createRange();nr.setStart(fig.nextSibling!,0);nr.collapse(true);s?.removeAllRanges();s?.addRange(nr);at.current=nr.cloneRange();sync();},
+  mention:()=>{const s=getSelection();if(!s?.rangeCount||!s.isCollapsed)return null;const n=s.anchorNode;if(!n||n.nodeType!==3||!inside(n))return null;
+   const m=(n.nodeValue??'').slice(0,s.anchorOffset).match(/(^|[\s( ])@([a-z0-9_.]{0,30})$/i);return m?{q:m[2]!.toLowerCase()}:null;},
+  replaceMention:text=>{const s=getSelection();if(!s?.rangeCount)return;const n=s.anchorNode;if(!n||n.nodeType!==3||!inside(n))return;const off=s.anchorOffset;
+   const m=(n.nodeValue??'').slice(0,off).match(/@([a-z0-9_.]{0,30})$/i);if(!m)return;const r=document.createRange();r.setStart(n,off-m[0].length);r.setEnd(n,off);s.removeAllRanges();s.addRange(r);
+   if(!exec('insertText',text)){r.deleteContents();r.insertNode(document.createTextNode(text));}sync();},
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ }),[sync,rmLabel]);
+ const onInput=(e:React.FormEvent<HTMLDivElement>)=>{const ne=e.nativeEvent as InputEvent;
+  if(ne.inputType==='insertText'&&ne.data===' '){const sel=getSelection();const n=sel?.anchorNode;
+   if(sel?.isCollapsed&&n&&n.nodeType===3&&inside(n)&&!(n.previousSibling&&n.previousSibling.nodeName!=='BR')&&!n.parentElement?.closest('li,blockquote,h4')){
+    const typed=(n.nodeValue??'').slice(0,sel.anchorOffset);const mk=typed.replace(/[\s ]$/,'');const rule=AUTO.find(([re])=>re.test(mk));
+    if(rule&&typed!==mk){const r=document.createRange();r.setStart(n,0);r.setEnd(n,sel.anchorOffset);sel.removeAllRanges();sel.addRange(r);exec('delete');
+     if(rule[1]==='blockquote')exec('formatBlock','blockquote');else exec(rule[1]);auto.current={cmd:rule[1],text:mk+' '};}}}
+  sync();};
+ const onKeyDown=(e:React.KeyboardEvent<HTMLDivElement>)=>{const a=auto.current;
+  if(a&&e.key==='Backspace'){const n=getSelection()?.anchorNode;const blk=n&&(n.nodeType===1?n as Element:n.parentElement)?.closest('li,blockquote');
+   if(blk&&!blk.textContent?.trim()){e.preventDefault();if(a.cmd==='blockquote')exec('formatBlock','p');else exec(a.cmd);exec('insertText',a.text);auto.current=null;sync();return;}}
+  // Enter on an empty quote or heading line leaves it for a plain paragraph (lists do so by themselves).
+  if(e.key==='Enter'&&!e.shiftKey){const n=getSelection()?.anchorNode;const blk=n&&(n.nodeType===1?n as Element:n.parentElement)?.closest('blockquote,h4');
+   if(blk&&inside(blk)&&!blk.textContent?.trim()){e.preventDefault();exec('formatBlock','p');auto.current=null;sync();return;}}
+  if(e.key.length===1||e.key==='Enter'||e.key==='Backspace')auto.current=null;
+  if((e.metaKey||e.ctrlKey)&&!e.shiftKey&&!e.altKey&&(e.key==='b'||e.key==='i')){e.preventDefault();apply(e.key==='b'?'bold':'italic');}};
+ // Pasting keeps the words only; a dropped file or markup never lands in the text.
+ const onPaste=(e:React.ClipboardEvent<HTMLDivElement>)=>{e.preventDefault();const s=e.clipboardData.getData('text/plain').replace(/\r\n?/g,'\n');if(s){exec('insertText',s);sync();}};
+ const onClick=(e:React.MouseEvent<HTMLDivElement>)=>{const rm=(e.target as Element).closest?.('[data-rm]');if(rm){e.preventDefault();rm.closest('figure')?.remove();sync();return;}onCaret?.();};
+ const B=(icon:LucideIcon,label:string,fn:()=>void,on?:boolean,disabled?:boolean)=><button type="button" aria-label={label} title={label} aria-pressed={on===undefined?undefined:on}
+  disabled={disabled} onMouseDown={e=>e.preventDefault()} onClick={fn}>{React.createElement(icon)}</button>;
+ const openLink=()=>{const s=getSelection();const r=s?.rangeCount&&inside(s.anchorNode)?s.getRangeAt(0).cloneRange():at.current;setLink({range:r,text:r?.toString().trim()??''});};
+ const putLink=(text:string,url:string)=>{const r=link?.range??null;const same=text===link?.text;setLink(null);const el=ed.current;if(!el)return;el.focus();const s=getSelection();
+  if(r&&inside(r.startContainer)){s?.removeAllRanges();s?.addRange(r);}else restore();
+  const cur=s?.rangeCount?s.getRangeAt(0):null;if(!cur)return;
+  if(!cur.collapsed&&same&&cur.toString().trim())exec('createLink',url);
+  else{cur.deleteContents();const a=document.createElement('a');a.setAttribute('href',url);a.textContent=text;cur.insertNode(a);const sp=document.createTextNode(' ');a.after(sp);
+   const nr=document.createRange();nr.setStartAfter(sp);nr.collapse(true);s?.removeAllRanges();s?.addRange(nr);}
+  sync();};
+ return <div className={'rte used'+(long?' long':'')}>
   <div className="rte-box">
    <div className="rte-tb" role="toolbar" aria-label={t('fe.kit.fmt.bar')}>
-    {B(Bold,t('fe.kit.fmt.bold'),()=>apply('bold'))}{B(Italic,t('fe.kit.fmt.italic'),()=>apply('italic'))}<i/>
-    {B(List,t('fe.kit.fmt.list'),()=>apply('list'))}{B(Quote,t('fe.kit.fmt.quote'),()=>apply('quote'))}
-    {B(LinkIcon,t('fe.kit.fmt.link'),()=>{const el=area.current;if(!el)return;const sel={start:el.selectionStart,end:el.selectionEnd};setLink({sel,text:value.slice(sel.start,sel.end)});})}
+    {B(Bold,t('fe.kit.fmt.bold'),()=>apply('bold'),!!state.bold)}{B(Italic,t('fe.kit.fmt.italic'),()=>apply('italic'),!!state.italic)}
+    {B(Strikethrough,t('fe.kit.fmt.strike'),()=>apply('strikeThrough'),!!state.strikeThrough)}{B(LinkIcon,t('fe.kit.fmt.link'),openLink)}
+    {headings&&B(Heading,t('fe.kit.fmt.heading'),()=>apply('h4'),!!state.h4)}<i/>
+    {B(List,t('fe.kit.fmt.list'),()=>apply('insertUnorderedList'),!!state.insertUnorderedList)}{B(ListOrdered,t('fe.kit.fmt.olist'),()=>apply('insertOrderedList'),!!state.insertOrderedList)}
+    {B(Quote,t('fe.kit.fmt.quote'),()=>apply('blockquote'),!!state.blockquote)}
+    {images&&<><i/>{B(ImagePlus,t('fe.kit.fmt.photo'),()=>{const s=getSelection();if(s?.rangeCount&&inside(s.anchorNode))at.current=s.getRangeAt(0).cloneRange();images.onAdd();},undefined,images.disabled)}</>}
     {extra}
    </div>
-   <textarea ref={area} className="inp rte-ed" aria-invalid={invalid||undefined} value={value} onChange={e=>onValue(e.target.value,e.target)} {...rest}/>
+   <div ref={ed} id={id} className={'inp rte-ed'+(empty?' is-empty':'')} contentEditable suppressContentEditableWarning role="textbox" aria-multiline="true" aria-label={label}
+    aria-invalid={invalid||undefined} data-ph={placeholder} onInput={onInput} onKeyDown={onKeyDown} onKeyUp={()=>onCaret?.()} onClick={onClick} onPaste={onPaste}
+    onDrop={e=>e.preventDefault()} onFocus={()=>{exec('defaultParagraphSeparator','p');exec('styleWithCSS','false');}} onBlur={()=>onBlur?.()}/>
   </div>
-  {link&&<LinkSheet text={link.text} onClose={()=>setLink(null)} onDone={(text,url)=>{const s=link.sel;const md=`[${text.replace(/[[\]\n]/g,' ').trim()}](${url})`;
-   setLink(null);put(value.slice(0,s.start)+md+value.slice(s.end),{start:s.start+md.length,end:s.start+md.length});}}/>}
+  {link&&<LinkSheet text={link.text} onClose={()=>{setLink(null);restore();}} onDone={putLink}/>}
  </div>;
 });
 
-/** «Ссылка» of the formatting bar: the words and the address; a wrong address says so under the field. */
+/** «Ссылка» of the formatting bar: the words and the address (a bare «example.com» gets https://); a wrong address
+ * says so under the field. */
 function LinkSheet({text,onClose,onDone}:{text:string,onClose:()=>void,onDone:(text:string,url:string)=>void}){
  const {t}=useI18n();const [words,setWords]=useState(text);const [url,setUrl]=useState('https://');const [err,setErr]=useState('');
- const ok=()=>{const u=url.trim();if(!linkOk(u)){setErr(t('fe.kit.fmt.badUrl'));return;}onDone(words.trim()||new URL(u).hostname,u);};
+ const ok=()=>{const raw=url.trim();const u=/^[a-z][a-z0-9+.-]*:/i.test(raw)?raw:'https://'+raw.replace(/^\/+/,'');
+  if(!linkOk(u)){setErr(t('fe.kit.fmt.badUrl'));return;}onDone(words.replace(/[[\]\n]/g,' ').trim()||new URL(u).hostname,u);};
  return <Sheet title={t('fe.kit.fmt.linkTitle')} onClose={onClose} foot={<Btn onClick={ok}>{t('fe.kit.fmt.insert')}</Btn>}>
   <Field id="k-lnk-t" label={t('fe.kit.fmt.linkText')}><Input id="k-lnk-t" value={words} maxLength={120} onChange={e=>setWords(e.target.value)}/></Field>
-  <Field id="k-lnk-u" label={t('fe.kit.fmt.linkUrl')} error={err||undefined} hint={t('fe.kit.fmt.linkHint')}><Input id="k-lnk-u" type="url" invalid={!!err} value={url} maxLength={400}
+  <Field id="k-lnk-u" label={t('fe.kit.fmt.linkUrl')} error={err||undefined} hint={t('fe.kit.fmt.linkHint')}><Input id="k-lnk-u" type="url" inputMode="url" invalid={!!err} value={url} maxLength={400}
    onChange={e=>{setUrl(e.target.value);setErr('');}} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();ok();}}}/></Field>
  </Sheet>;
 }
@@ -173,7 +236,25 @@ export function FeedEvents({title,items}:{title:ReactNode,items:{key:string,tile
  </section>;
 }
 
-/** A quiet line with one action on the right (under an article: «Только статьи — без остальных публикаций · Следить»). */
-export function ActionLine({text,children}:{text:ReactNode,children:ReactNode}){
- return <div className="note-sub"><span>{text}</span>{children}</div>;
+/** A quiet hint line with one action at its end, both in the hint's font (the action only in the accent colour), on
+ * one line («Популярное»: «Топ недели по твоим интересам · Как подбираем»); a hint too long for the width is cut with «…». */
+export function ActionLine({text,action,onAction}:{text:ReactNode,action:string,onAction:()=>void}){
+ return <p className="act-line"><span>{text}</span><button type="button" onClick={onAction}>{action}</button></p>;
+}
+
+/* ---------------- Articles ---------------- */
+
+/** An article: the cover (its first photo), the «Статья · N мин» line, the title, and in a list the first words and
+ * «Читать». On the article's own screen (`full`) the text itself goes in `children` instead of the excerpt. */
+export function ArticleCard({cover,kicker,title,excerpt,more,full,children}:{cover?:string|null|undefined,kicker:ReactNode,title:ReactNode,excerpt?:ReactNode,more?:ReactNode,full?:boolean,children?:ReactNode}){
+ return <div className={'note-card'+(full?' full':'')}>
+  {cover&&<img className="note-cover" src={cover} alt="" loading="lazy" decoding="async" draggable={false}/>}
+  <span className="note-k"><FileText/>{kicker}</span><H level={3} className="note-t">{title}</H>
+  {full?children:<>{excerpt&&<p className="note-x">{excerpt}</p>}{more&&<span className="note-more">{more} <ChevronRight/></span>}</>}
+ </div>;
+}
+
+/** A picture inside an article's text (`![](media:<id>)`): the whole width, tap opens the viewer. */
+export function ArticleImage({src,label,onOpen}:{src:string,label:string,onOpen:()=>void}){
+ return <figure className="md-img"><button type="button" aria-label={label} onClick={e=>{e.stopPropagation();onOpen();}}><img src={src} alt="" loading="lazy" decoding="async" draggable={false}/></button></figure>;
 }

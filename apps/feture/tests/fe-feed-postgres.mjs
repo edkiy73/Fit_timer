@@ -316,38 +316,26 @@ test('blocks.list: only the blocker’s own list, newest first, no account data;
   } finally { await pg.close(); }
 });
 
-test('noteSub.set: notes of the author in «Подписки», the author is not told, never oneself, own couple or blocked', async () => {
-  const { pg, db, call, person, coupleOf } = await setup();
+test('articles: cover + pictures in the text are own media refs only; no outside images, no endless words', async () => {
+  const { pg, db, call, person } = await setup();
   try {
-    const a = await person('ua', 'Alex'), b = await person('ub', 'Kira'), c = await person('uc', 'Noa');
-    const note = draft('Длинная заметка о том, как прошёл вечер.', { type: 'note', title: 'Заметка' });
-    assert.equal((await publish(call, 'ua', a, note)).state, 'published');
-    await publish(call, 'ua', a, draft('Обычный пост'));
-    assert.deepEqual(await feed(call, 'ub', b, 'following'), []);
-    const queued = async () => (await db.query('select count(*)::int n from feture.outbox'))[0].n;
-    const before = await queued();
-    assert.equal((await call('ub', b, { action: 'noteSub.set', opId: op(), profileId: a, on: true })).subscribed, true);
-    assert.equal((await call('ub', b, { action: 'noteSub.set', opId: op(), profileId: a, on: true })).subscribed, true); // again: no error, one row
-    assert.equal(await queued(), before); // «Автор не узнает»: nothing is queued for anyone
-    assert.deepEqual(await feed(call, 'ub', b, 'following'), ['Длинная заметка о том, как прошёл вечер.']); // notes only, not posts
-    assert.equal((await db.query('select count(*)::int n from feture.note_subscription'))[0].n, 1);
-    // A stranger does not get Kira's subscription.
-    assert.deepEqual(await feed(call, 'uc', c, 'following'), []);
-
-    assert.equal((await call('ub', b, { action: 'noteSub.set', opId: op(), profileId: b, on: true })).rule, 'self');
-    const pair = await coupleOf([b, c]);
-    assert.equal((await call('ub', b, { action: 'noteSub.set', opId: op(), profileId: pair, on: true })).rule, 'own_profile');
-    assert.equal((await call('ub', b, { action: 'noteSub.set', opId: op(), profileId: '018f0000-0000-7000-8000-00000000dead', on: true })).status, 404);
-    // Blocked either way: refused, and a block ends an existing subscription; unblocking restores nothing.
-    await call('ua', a, { action: 'block.set', opId: op(), profileId: c, on: true });
-    assert.equal((await call('uc', c, { action: 'noteSub.set', opId: op(), profileId: a, on: true })).status, 404);
-    await call('ua', a, { action: 'block.set', opId: op(), profileId: b, on: true });
-    assert.equal((await db.query('select count(*)::int n from feture.note_subscription'))[0].n, 0);
-    await call('ua', a, { action: 'block.set', opId: op(), profileId: b, on: false });
-    assert.deepEqual(await feed(call, 'ub', b, 'following'), []);
-    await call('ub', b, { action: 'noteSub.set', opId: op(), profileId: a, on: true });
-    assert.equal((await call('ub', b, { action: 'noteSub.set', opId: op(), profileId: a, on: false })).subscribed, false);
-    assert.deepEqual(await feed(call, 'ub', b, 'following'), []);
+    const a = await person('ua', 'Alex'), b = await person('ub', 'Kira');
+    const cover = await asset(db, a), inl = await asset(db, a), other = await asset(db, b);
+    const body = `Первый абзац статьи, **важное** слово.\n\n![](media:${inl})\n\nВторой абзац после фото.`;
+    const p = await publish(call, 'ua', a, draft(body, { type: 'note', title: 'Вечер', mediaIds: [cover, inl] }));
+    const got = (await call('ub', b, { action: 'post.get', postId: p.id })).post;
+    assert.equal(got.body, body);
+    assert.deepEqual(got.media.map(m => m.id), [cover, inl]); // the first is the cover
+    const refused = async (post) => (await call('ua', a, { action: 'post.saveDraft', opId: op(), post })).status;
+    // A picture that is not in the post, someone else's, an outside address, twice, or in a plain post.
+    assert.equal(await refused(draft(body, { type: 'note', title: 'Вечер', mediaIds: [cover] })), 400);
+    assert.notEqual(await refused(draft(body.replace(inl, other), { type: 'note', title: 'Вечер', mediaIds: [cover, other] })), 200);
+    assert.equal(await refused(draft('Текст статьи достаточно длинный ![](https://evil.example/x.png)', { type: 'note', title: 'Вечер' })), 400);
+    assert.equal(await refused(draft(body + `\n\n![](media:${inl})`, { type: 'note', title: 'Вечер', mediaIds: [cover, inl] })), 400);
+    assert.equal(await refused(draft(`Пост ![](media:${inl})`, { mediaIds: [inl] })), 400);
+    // An unbroken 200-letter run is refused in a post; a long link is fine.
+    assert.equal(await refused(draft('a'.repeat(200))), 400);
+    assert.equal(await refused(draft('см. https://example.com/' + 'a'.repeat(300))), 200);
   } finally { await pg.close(); }
 });
 

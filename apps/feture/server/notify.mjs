@@ -188,16 +188,6 @@ export function notifyHandlers(db, emit = () => {}) {
       await write(q, item, { type: 'communityClosed', actor: null, objectType: 'community', objectId: p.communityId }, rows.map(r => ({ account: r.account_id, profile: r.profile_id })), out);
     });
   };
-  // A new article goes to the author's subscribers.
-  handlers['note.published'] = async item => {
-    const p = /** @type {any} */ (item.payload);
-    await tx(async (q, out) => {
-      const rows = await q.query(
-        `select pm.account_id, s.subscriber_profile_id from feture.note_subscription s join feture.profile_member pm on pm.profile_id = s.subscriber_profile_id and pm.state = 'active'
-         where s.author_profile_id = $1`, [item.profile_id]);
-      await write(q, item, { type: 'notePublished', actor: item.profile_id, objectType: 'post', objectId: p.postId }, rows.map(r => ({ account: r.account_id, profile: r.subscriber_profile_id })), out);
-    });
-  };
   // Chat messages make no inbox row, only a push to the members who did not mute the conversation.
   handlers['message.created'] = async item => {
     await db.tx(async q => {

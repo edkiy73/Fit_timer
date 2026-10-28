@@ -264,7 +264,7 @@ export function usePrivate(profileId:string){
  useEffect(()=>{setP(null);call('private.get',{profileId},privRes).then(setP).catch(()=>{});},[call,profileId]);
  return p;
 }
-const postsRes=z.object({ok:z.literal(true),items:z.array(postSchema),next:z.string().nullable().optional()}).passthrough();
+const postsRes=z.object({ok:z.literal(true),items:z.array(z.lazy(()=>postSchema)),next:z.string().nullable().optional()}).passthrough();
 /** activityBlock: «Публикации / Статьи» as tabs with counts; the first three of each. */
 function Activity({profileId,inert}:{profileId:string,inert?:boolean|undefined}){
  const {call}=useFe();const {t}=useI18n();const [items,setItems]=useState<Post[]|null>(null);const [tab,setTab]=useState<'posts'|'notes'>('posts');

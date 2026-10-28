@@ -1,8 +1,8 @@
 // Leftovers and owner decisions (28.10.2026): «Как подбираем» says what «Популярное» does, «Обсуждают в сообществах»
 // respects a host's «Не показывать в Популярном», an event draft is continued at its step, the mention picker marks
-// people who take no mention, «Следить за статьями» shows the real state, the gallery's selection mode hides the
+// people who take no mention, the gallery's selection mode hides the
 // dock, the link editor asks before leaving with unsaved changes. Lane `lo`. Everything made here is removed.
-// Server-dependent (need the deploy of this branch): event.draftGet, `mentionable`, profile.get `noteSub`.
+// Server-dependent (need the deploy of this branch): event.draftGet, `mentionable`.
 import { expect, until, toastSee, sheet, dialog } from '../helpers.mjs';
 import { STAFF, staff } from '../../personas.mjs';
 import { uploadFixture } from '../../lib.mjs';
@@ -71,24 +71,6 @@ export default [
      await t.tap(`${sheet} .li:has-text("@${B.handle}")`);
      await toastSee(t, 'имя останется текстом');
    } finally { await t.api('profile.setVisibility', { opId: t.uuid7(), setting: 'mentionsFrom', value: 'all' }, B.email).catch(() => {}); }
- } },
-
- { name: '«Следить за статьями» starts in the real state [needs deploy: profile.get noteSub]', persona: 'full', run: async t => {
-   const B = await t.persona('basic'); const mark = tag();
-   const d = ok(await t.api('post.saveDraft', { opId: t.uuid7(), post: { type: 'note', title: 'Статья ' + mark, body: 'Текст статьи для проверки подписки на статьи.' } }, B.email), 'note');
-   ok(await t.api('post.publish', { opId: t.uuid7(), postId: d.id }, B.email), 'publish');
-   try {
-     ok(await t.api('noteSub.set', { opId: t.uuid7(), profileId: B.personId, on: true }), 'noteSub on');
-     await t.go('/n/feed/post/' + d.id);
-     await t.see('button[aria-pressed="true"]:has-text("Слежу")');
-     await t.tap('button:has-text("Слежу")'); await toastSee(t, 'Больше не следишь');
-     const p = await until(async () => { const r = await t.api('profile.get', { profileId: B.personId }); return r.profile?.noteSub === false && r; }, 'noteSub off on the server');
-     expect(p.profile.noteSub === false, 'off');
-     await t.page.reload(); await t.see('button:has-text("Следить за статьями")');
-   } finally {
-     await t.api('noteSub.set', { opId: t.uuid7(), profileId: B.personId, on: false }).catch(() => {});
-     await t.api('post.delete', { opId: t.uuid7(), postId: d.id }, B.email).catch(() => {});
-   }
  } },
 
  { name: 'gallery: the selection mode hides the dock, «Готово» brings it back', persona: 'full', run: async t => {

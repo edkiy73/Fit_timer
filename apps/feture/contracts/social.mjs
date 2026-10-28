@@ -13,7 +13,6 @@ export const socialCommands = {
   // «Удалить из подписчиков» (V21 flwRemove21): the removed person is not told; «Вернуть» within 10 minutes.
   'follower.remove': { profile: true, write: true, rate: { kind: 'follower.remove', max: 200, window: '1 day' }, input: z.strictObject({ opId, profileId: id }) },
   'follower.restore': { profile: true, write: true, input: z.strictObject({ opId, profileId: id }) },
-  'noteSub.set': { profile: true, write: true, input: z.strictObject({ opId, profileId: id, on: z.boolean() }) },
   'feedHide.set': {
     profile: true, write: true,
     input: z.strictObject({ opId, kind: z.enum(['post', 'author', 'activity', 'event']), targetId: id, on: z.boolean() }),

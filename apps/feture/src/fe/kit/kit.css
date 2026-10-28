@@ -210,6 +210,35 @@ button.pill{cursor:pointer}
 .v21 .k-rlock svg{width:var(--i-sm);height:var(--i-sm)}
 .v21 .k-rec .k-voice{flex:1}
 @media (prefers-reduced-motion:reduce){.v21 .k-rdot,.v21 .k-rhint,.v21 .k-rlock{transition:none;transform:none}}
+
+/* RichEditor (kit/feed.tsx): the bar scrolls sideways instead of hiding buttons; pictures of the post's own media sit
+   in the text as blocks with a ✕; a taller field for articles. */
+.v21 .rte,
+.v21 .rte-box,
+.v21 .rte-ed{min-width:0;max-width:100%}
+.v21 .rte-tb{overflow-x:auto;scrollbar-width:none;overscroll-behavior-x:contain;min-width:0;max-width:100%;contain:inline-size}
+.v21 .rte-tb::-webkit-scrollbar{display:none}
+.v21 .rte-tb button:disabled{opacity:.35}
+.v21 .rte.long .rte-ed,
+.v21 .compose.v14 .rte.long .rte-ed{min-height:240px;max-height:none}
+.v21 .rte-ed s{color:var(--mute)}
+.v21 .rte-img,
+.v21 .md-img{position:relative;margin:0 0 var(--s-2);border-radius:var(--r);overflow:hidden;background:var(--raise)}
+.v21 .rte-img img,
+.v21 .md-img img{display:block;width:100%;max-height:70dvh;object-fit:contain}
+.v21 .rte-img-rm{position:absolute;right:var(--s-2);top:var(--s-2);width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--scrim);color:#fff;cursor:pointer}
+.v21 .rte-img-rm svg{width:var(--i-sm);height:var(--i-sm);pointer-events:none}
+.v21 .md-img>button{display:block;width:100%;padding:0;border:0;background:none;cursor:zoom-in}
+
+/* ActionLine: hint + action on one line in the same font; the hint is cut with «…» before the action wraps. */
+.v21 .act-line{display:flex;align-items:baseline;gap:var(--s-1);margin:var(--s-1) 0 var(--s-2);font:var(--t-xs);color:var(--mute);white-space:nowrap;min-width:0}
+.v21 .act-line>span{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.v21 .act-line>span::after{content:" ·"}
+.v21 .act-line>button{flex:none;padding:0;border:0;background:none;font:inherit;color:var(--accent);cursor:pointer}
+.v21 .act-line>button:hover{text-decoration:underline}
+
+/* The photo viewer is a layer of its own above the bars, the dock, the bottom buttons and the toasts. */
+.v21 .layer:has(>.viewer){z-index:70}
 /* FeedEvents («Скоро» in the feed): one compact tile per event, its «Скрыть» under it on the right */
 .v21 .k-fev{display:flex;flex-direction:column;gap:var(--s-1)}
 .v21 .k-fev+.k-fev{margin-top:var(--s-3)}

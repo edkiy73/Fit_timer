@@ -6,7 +6,7 @@ import {ArrowUpDown,AtSign,Bell,BellOff,Bookmark,Check,Calendar,ChartColumn,Chev
 import type {LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicOrigin} from '../api-url';
-import {ActingAv,ActionLine,ActivityCard,ActivityItem,Alert,Ask,Av,Bar,Btn,Card,Chip,Chips,Counter,Empty,FeedEvents,Field,FilePick,Group,H,IconBtn,Input,LikesLine,Note,QuickStart,RichArea,type RichAreaHandle,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,ToggleRow,VideoBadge,View} from './kit';
+import {ActingAv,ActionLine,ActivityCard,ActivityItem,Alert,ArticleCard,ArticleImage,Ask,Av,BAD_CHARS,Bar,Btn,Card,Chip,Chips,Counter,Empty,FeedEvents,Field,FilePick,Group,H,IconBtn,Input,LikesLine,Note,QuickStart,RichEditor,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,VideoBadge,View,hasLongWord,mdImages,type RichEditorHandle} from './kit';
 import {useFe} from './session';
 import {ActivityCardOf,activitySchema,type Act} from './feed-activity';
 import {Uploader} from './kit/Uploader';
@@ -15,7 +15,7 @@ import {VIDEO_TYPES} from './kit/media';
 import {BellButton} from './inbox';
 import {DisputeNotice,PostMenu,ReplyMenu,type Removal} from './post-menu';
 import {restoreInto,useToast} from './toast';
-import {MarksSheet,MediaGrid,Poll,RichText,Viewer,marksPage,mdPlain,mediaSrc,personName,plural,useTopics,type CatTopic,type MarksPage,type PollData} from './post-parts';
+import {MarksSheet,MediaGrid,Poll,RichText,Viewer,marksPage,mdPlain,mediaSrc,personName,plural,slideOf,useTopics,type CatTopic,type MarksPage,type PollData} from './post-parts';
 import {AlbumField,albumOfPost} from './gallery';
 import {Jars,useInterests,type Interest} from './interests';
 import {NameBadges} from './faces';
@@ -203,7 +203,7 @@ export function FeedTab(){
   {hidden>0&&<button type="button" className="linkbtn feed-hid" onClick={()=>navigate('/n/settings/hidden')}><EyeOff/>{t('fe.fd.hiddenN',{n:hidden})}</button>}
  </>;
  return <>
-  <Bar title={t('fe.nav.feed')}><IconBtn icon={Search} label={t('fe.br.search')} onClick={()=>navigate('/n/search?scope=posts')}/><BellButton/></Bar>
+  <Bar title={t('fe.nav.feed')}><IconBtn icon={Plus} label={t('fe.fd.createPub')} aria-haspopup="dialog" onClick={()=>setSheet('create')}/><IconBtn icon={Search} label={t('fe.br.search')} onClick={()=>navigate('/n/search?scope=posts')}/><BellButton/></Bar>
   <View>
    <div className="mb12"><Seg value={tab} onChange={v=>{setNotice('');setTab(v);}} options={[{id:'forYou',label:t('fe.feed.tab.forYou')},{id:'following',label:t('fe.feed.tab.following')},{id:'popular',label:t('fe.fd.tab.popular')}]}/></div>
    {notice&&<Alert kind="ok" className="mb12">{notice}</Alert>}
@@ -219,7 +219,7 @@ export function FeedTab(){
     <IconBtn icon={Plus} kind="add" label={t('fe.create')} onClick={()=>setSheet('create')}/>
    </div>
    {tab==='popular'?(myTopics.length>0&&<>
-     <ActionLine text={t('fe.w3.pop.head')}><Btn kind="text" auto onClick={()=>setSheet('popInfo')}>{t('fe.w3.pop.how')}</Btn></ActionLine>
+     <ActionLine text={t('fe.w3.pop.head')} action={t('fe.w3.pop.how')} onAction={()=>setSheet('popInfo')}/>
      <Chips scroll className="mb12" label={t('fe.w3.pop.chips')}><Chip filter on={!popTag} onClick={()=>setPopTag('')}>{t('fe.w3.pop.all')}</Chip>
       {myTopics.map(x=><Chip key={x} filter on={popTag===x} onClick={()=>setPopTag(popTag===x?'':x)}>#{tname(x)}</Chip>)}</Chips>
      <PopularDiscussions topic={popTag}/></>)
@@ -371,6 +371,12 @@ export function PostCard({post,onChange,onRemove,onExpired,full=false,onReply,pr
  const answer=async(a:'ok'|'no')=>{if(busy)return;setBusy(true);try{await call('tag.answer',{opId:newOpId(),postId:post.id,answer:a},okOnly);onChange({...post,tags:(post.tags??[]).map(x=>x.id===me?.id?{...x,state:a}:x)});toast(a==='ok'?t('fe.fd.tag.confirmed'):t('fe.fd.tag.declined'),{type:'ok'});}
   catch(e){toast(feErrorMessage(e,t),{type:'err'});}finally{setBusy(false);}};
  const words=Math.max(1,Math.round(post.body.split(/\s+/).length/180));
+ // An article (owner 28.10.2026): the first photo not placed in the text is the cover; the photos in the text show
+ // where they stand; any other photo goes under the text.
+ const art=useMemo(()=>{if(post.type!=='note')return null;const refs=mdImages(post.body);const ok=post.media.filter(m=>mediaSrc(m));
+  const coverM=ok.find(m=>!refs.includes(m.id))??null;const shown=refs.map(id=>ok.find(m=>m.id===id)).filter((m):m is typeof ok[number]=>!!m);
+  return {cover:coverM?mediaSrc(coverM,full?'full':'card'):ok[0]&&!full?mediaSrc(ok[0]):null,shown,slides:shown.map(m=>({id:m.id})),rest:ok.filter(m=>m!==coverM&&!refs.includes(m.id))};},[post.type,post.body,post.media,full]);
+ const plain=mdPlain(post.body);const [view,setView]=useState<number|null>(null);
  return <article className="post">
   <div className="post-h">
    <button type="button" className="who" disabled={preview} onClick={()=>navigate(mine||post.author.id===acting?.id?'/n/me':'/n/people/'+post.author.id)}>
@@ -392,10 +398,13 @@ export function PostCard({post,onChange,onRemove,onExpired,full=false,onReply,pr
    {declined.length>0&&<div className="row g8"><Btn size="sm" kind="soft" onClick={()=>navigate('/n/feed/post/'+post.id+'/edit')}>{t('fe.fd.tag.replace')}</Btn></div>}</div>}
   {mine&&!preview&&post.dispute&&<DisputeNotice post={post} onChange={onChange}/>}
   <div className="body" onClick={open} role={full||preview?undefined:'link'} tabIndex={full||preview?undefined:0} onKeyDown={e=>{if(e.key==='Enter'&&e.target===e.currentTarget)open();}}>
-   {post.type==='note'?<div className={'note-card'+(full?' full':'')}><span className="note-k"><FileText/>{t('fe.fd.article')} · {t('fe.fd.minRead',{n:words})}</span><H level={3} className="note-t">{post.title}</H>
-     {full?<RichText text={post.body} mentions={post.mentions??[]}/>:<><p className="note-x">{mdPlain(post.body).slice(0,220)}{post.body.length>220?'…':''}</p><span className="note-more">{t('fe.fd.readMore')} <ChevronRight/></span></>}</div>
+   {art?<ArticleCard cover={art.cover} kicker={<>{t('fe.fd.article')} · {t('fe.fd.minRead',{n:words})}</>} title={post.title} full={full}
+     excerpt={<>{plain.slice(0,220)}{plain.length>220?'…':''}</>} more={t('fe.fd.readMore')}>
+     <RichText text={post.body} mentions={post.mentions??[]} images={id=>{const k=art.slides.findIndex(x=>x.id===id);const m=art.shown[k];
+      return m?<ArticleImage src={mediaSrc(m,'full')!} label={t('fe.fd.openFull')} onOpen={()=>setView(k)}/>:null;}}/>
+     {art.rest.length>0&&<MediaGrid media={art.rest} onExpired={onExpired}/>}</ArticleCard>
     :<>{post.title&&<H level={4} as="h3" className="post-title">{post.title}</H>}{post.body&&<RichText text={post.body} mentions={post.mentions??[]}/>}</>}
-   <MediaGrid media={post.media} onExpired={onExpired}/>
+   {!art&&<MediaGrid media={post.media} onExpired={onExpired}/>}
    {post.poll&&<Poll postId={post.id} poll={post.poll as PollData} preview={preview} mine={mine} onChange={np=>onChange({...post,poll:np})}/>}
    {post.interests&&post.interests.length>0&&<PostInterests list={post.interests} preview={preview} author={post.author}/>}
   </div>
@@ -407,6 +416,7 @@ export function PostCard({post,onChange,onRemove,onExpired,full=false,onReply,pr
    <button type="button" className={'sp'+(post.saved?' saved':'')} disabled={preview} aria-pressed={post.saved} aria-label={t('fe.feed.save')} onClick={()=>toggle('saved')}><Bookmark fill={post.saved?'currentColor':'none'}/></button>
    <button type="button" disabled={preview} aria-label={t('fe.feed.share')} onClick={share}><Share/></button>
   </div>
+  {view!==null&&art&&<Viewer srcs={art.shown.map(slideOf)} index={view} onClose={()=>setView(null)} onExpired={onExpired}/>}
   {menu&&<PostMenu post={post} onClose={closeMenu} onChange={onChange} onRemove={r=>{setMenu(false);onRemove(r);}}/>}
   {review&&me&&<TagReviewSheet post={post} busy={busy} onClose={()=>setReview(false)} onAnswer={a=>{setReview(false);void answer(a);}}/>}
  </article>;
@@ -455,7 +465,7 @@ export function PostScreen(){
  const [failed,setFailed]=useState<{opId:string,body:string,parentId?:string|undefined}[]>([]);
  // Top-level replies come in pages (V21 thPage): «Показать ещё N из M».
  const [limit,setLimit]=useState(REPLY_PAGE);
- const [likers,setLikers]=useState<MarksPage|null>(null);const [likersOpen,setLikersOpen]=useState(false);const [noteSub,setNoteSub]=useState(false);
+ const [likers,setLikers]=useState<MarksPage|null>(null);const [likersOpen,setLikersOpen]=useState(false);
  // The server says which replies the acting profile likes, so the heart survives a reload.
  const [delta,setDelta]=useState<Record<string,number>>({});
  const take=useCallback((items:Reply[])=>{setList(items);setDelta({});if(items.some(r=>r.liked!==undefined))setLiked(new Set(items.filter(r=>r.liked).map(r=>r.id)));},[]);
@@ -494,13 +504,6 @@ export function PostScreen(){
   const names=shown.map(p=>p.id===acting?.id?t('fe.w3.likes.you'):personName(p)).join(', ');
   return <LikesLine people={shown.map(p=>({id:p.id,name:personName(p),avatar:p.avatar??null}))} onClick={()=>setLikersOpen(true)}
    text={names?t('fe.w3.likes.line',{names})+(rest?t('fe.w3.likes.more',{n:rest}):''):t('fe.w3.likes.count',{n:likers.total})}/>;};
- // «Следить за статьями» under someone's article (V21 noteSub): the real state comes from profile.get (`noteSub`).
- const noteAuthor=post?.type==='note'&&post.rev==null&&post.author.kind==='person'&&post.author.id!==acting?.id?post.author.id:null;
- useEffect(()=>{if(!noteAuthor)return;let live=true;
-  call('profile.get',{profileId:noteAuthor},noteSubRes).then(r=>{if(live)setNoteSub(!!r.profile.noteSub);}).catch(()=>{});return ()=>{live=false;};},[call,noteAuthor]);
- const subNotes=async()=>{if(!post)return;const on=!noteSub;
-  try{await call('noteSub.set',{opId:newOpId(),profileId:post.author.id,on},okOnly);setNoteSub(on);toast(on?t('fe.w3.noteSub.on',{name:nameOf(post.author)}):t('fe.w3.noteSub.off'),{type:on?'ok':'info'});}
-  catch(e){toast(feErrorMessage(e,t),{type:'err'});}};
  // The heart and the count change at once; the server's numbers replace them when the replies reload.
  const likeReply=async(r:Reply)=>{const on=!liked.has(r.id);const d=on?1:-1;
   setLiked(s=>{const n=new Set(s);if(on)n.add(r.id);else n.delete(r.id);return n;});setDelta(x=>({...x,[r.id]:(x[r.id]??0)+d}));
@@ -519,8 +522,6 @@ export function PostScreen(){
       toast(r.notice,{type:'ok',action:undo?{label:t('fe.tl.undo'),fn:()=>{undo().then(()=>navigate('/n/feed/post/'+id),e=>toast(feErrorMessage(e,t),{type:'err'}));}}:null});
      }}/>
      {likesLine()}
-     {noteAuthor&&<ActionLine text={noteSub?t('fe.w3.noteSub.yes'):t('fe.w3.noteSub.text')}>
-      <Btn size="sm" fit kind={noteSub?'soft':'primary'} pressed={noteSub} icon={noteSub?Check:Bell} onClick={subNotes}>{noteSub?t('fe.w3.noteSub.following'):t('fe.w3.noteSub.follow')}</Btn></ActionLine>}
      <SectionLabel id="replies">{plural(post.replies,['ответ','ответа','ответов'],['reply','replies'],locale)}</SectionLabel>
      {list.some(r=>!r.deleted)?<ReplyTree list={list} sort={sort} setSort={s=>{setSort(s);setLimit(REPLY_PAGE);}} open={open} setOpen={setOpen} liked={liked} delta={delta}
        onLike={likeReply} onReply={r=>{setEditing(null);setTarget(r);focusBox();}} onMore={setMenu} limit={limit} onPage={()=>setLimit(n=>n+REPLY_PAGE)}/>
@@ -602,7 +603,6 @@ const saved=z.object({ok:z.literal(true),id:z.uuid()}).passthrough();
 const published=z.object({ok:z.literal(true),state:z.string().optional()}).passthrough();
 const uploadIntent=z.object({ok:z.literal(true),assetId:z.uuid(),upload:z.object({url:z.string(),method:z.string(),headers:z.record(z.string(),z.string())})});
 const edited=z.object({ok:z.literal(true),state:z.string().optional(),rev:z.number().optional(),review:z.boolean().optional(),pending:z.unknown().optional()}).passthrough();
-const noteSubRes=z.object({ok:z.literal(true),profile:z.object({noteSub:z.boolean().optional()}).passthrough()});
 const followRes=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable()}).passthrough())});
 type Audience='all'|'followers'|'granted'|'only';
 const POLL_MAX=10,MEDIA_MAX=6,NOTE_MAX=10000;
@@ -648,12 +648,17 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
  const communityId=edit?null:params.get('community');const x=params.get('x');
  const {topics:catalog,cats,name:tname}=useTopics();const {items:myJars,topics:jarTopics}=useInterests();
  const draft=edit?.state==='draft';const live=!!edit&&!draft;
- const [note,setNote]=useState(edit?edit.type==='note':x==='note');
+ // A post and an article are two editors (owner 28.10.2026): the post composer offers no «статья».
+ const note=edit?edit.type==='note':x==='note';
  const [title,setTitle]=useState(edit?.title??'');
  const [body,setBody]=useState(edit?.body??'');
  const [audience,setAudience]=useState<Audience>(()=>(['all','followers','granted','only'] as const).includes(edit?.audience as Audience)?edit!.audience as Audience:'all');
- const [inFeed,setInFeed]=useState(edit?.inFeed??true);
+ // «Показать в ленте» is gone (owner 28.10.2026): new posts are in the feed; an edit keeps what the post had.
+ const inFeed=edit?.inFeed??true;
  const [media,setMedia]=useState<MediaDraft[]>(()=>edit?edit.media.map(m=>({id:m.id,preview:mediaSrc(m)??'',kind:m.kind,durationMs:m.durationMs})):[]);
+ // An article's cover: its first photo that is not placed in the text; the others are `![](media:id)` in the text.
+ const [coverId,setCoverId]=useState<string|null>(()=>note&&edit?edit.media.find(m=>!mdImages(edit.body).includes(m.id))?.id??null:null);
+ const [pickFor,setPickFor]=useState<'media'|'cover'|'inline'>('media');
  const [poll,setPoll]=useState<{question:string,options:string[]}|null>(()=>edit?.poll?{question:edit.poll.question,options:[...edit.poll.options]}:x==='poll'?{question:'',options:['','']}:null);
  const [interests,setInterests]=useState<string[]|null>(()=>edit?.interests?.length?edit.interests.map(i=>i.topicId):null);
  const [topics,setTopics]=useState<string[]>(edit?.topics??[]);
@@ -663,7 +668,7 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
  useEffect(()=>{if(edit&&edit.albumId===undefined&&acting)albumOfPost(call,acting.id,edit.id).then(v=>{if(v)setAlbum(v);}).catch(()=>{});},[edit,acting,call]);
  const [postId,setPostId]=useState<string|undefined>(draft?edit?.id:undefined);
  const [busy,setBusy]=useState<''|'publish'|'draft'>('');const [failure,setFailure]=useState('');const [errs,setErrs]=useState<Record<string,string>>({});
- const [uploading,setUploading]=useState(false);const file=useRef<HTMLInputElement>(null);const text=useRef<RichAreaHandle>(null);
+ const [uploading,setUploading]=useState(false);const file=useRef<HTMLInputElement>(null);const text=useRef<RichEditorHandle>(null);
  const [sheet,setSheet]=useState<'topics'|'people'|'mention'|null>(null);const [preview,setPreview]=useState(false);const [viewer,setViewer]=useState<number|null>(null);
  const ops=useRef({draft:newOpId(),publish:newOpId(),edit:newOpId()});
  const couple=acting?.kind==='couple';
@@ -683,23 +688,31 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
  // Picked photos go through the kit uploader: format 4:5 / 1:1 / as is, crop, compression without metadata, progress.
  const [picked,setPicked]=useState<File[]|null>(null);const sendPhoto=useSendPhoto('post');const sendVideo=useSendVideo('post');
  const addMedia=(files:FileList)=>{setFailure('');setPicked([...files]);};
+ const pick=(f:'media'|'cover'|'inline')=>{setPickFor(f);file.current?.click();};
+ const refs=note?mdImages(body):[];
+ const noteMedia=note?[...(coverId?[coverId]:[]),...refs.filter(id=>id!==coverId&&media.some(m=>m.id===id))]:[];
+ const shownMedia=note?media.filter(m=>m.id===coverId):media;
  const max=note?NOTE_MAX:1000;
- const fields=()=>({type:note?'note' as const:'post' as const,...(note&&title.trim()?{title:title.trim()}:{}),body:body.trim(),audience,inFeed,topics,mediaIds:media.map(m=>m.id),
+ const fields=()=>note?{type:'note' as const,...(title.trim()?{title:title.trim()}:{}),body:body.trim(),audience,inFeed,topics,mediaIds:noteMedia,interests:[],tags:[]}
+  :{type:'post' as const,body:body.trim(),audience,inFeed,topics,mediaIds:media.map(m=>m.id),
   ...(poll?{poll:{question:poll.question.trim(),options:poll.options.map(o=>o.trim())}}:{}),interests:interests??[],tags:audience==='all'&&media.length?people.map(p=>p.id):[],...(communityId?{communityId}:{}),
-  ...(album&&media.length&&!communityId&&(audience==='all'||audience==='followers')?{albumId:album}:{})});
+  ...(album&&media.length&&!communityId&&(audience==='all'||audience==='followers')?{albumId:album}:{})};
  const validate=()=>{const e:Record<string,string>={};
   if(note&&title.trim().length<3)e.title=t('fe.fd.err.title');
+  if(note&&BAD_CHARS.test(title))e.title=t('fe.fd.err.chars');
   if(note&&body.trim().length<20)e.body=t('fe.fd.err.noteBody');
   if(!note&&!body.trim()&&!media.length&&!poll&&!(interests?.length))e.body=t('fe.fd.err.empty');
   if(body.length>max)e.body=t('fe.fd.err.long',{n:max});
-  if(poll){if(!poll.question.trim())e.pollQ=t('fe.fd.err.pollQ');
+  else if(BAD_CHARS.test(body))e.body=t('fe.fd.err.chars');
+  else if(hasLongWord(body))e.body=t('fe.fd.err.longWord');
+  if(poll&&!note){if(!poll.question.trim())e.pollQ=t('fe.fd.err.pollQ');
    poll.options.forEach((o,i)=>{if(!o.trim())e['o'+i]=t('fe.fd.err.option');});
    const low=poll.options.map(o=>o.trim().toLowerCase()).filter(Boolean);if(new Set(low).size!==low.length)e.opts=t('fe.fd.err.dupes');}
   if(interests&&!interests.length)e.interests=t('fe.fd.err.interests');
   setErrs(e);if(Object.keys(e).length){setFailure(t('fe.fd.err.check'));return false;}setFailure('');return true;};
  const snap=JSON.stringify([title,fields()]);const clean=useRef(snap);const [ask,setAsk]=useState(false);
  const done=(state:string|undefined,unheard:string[]=[])=>{
-  const msg0=state==='review'?t('fe.fd.sentReview'):state==='pending_partner'?t('fe.fd.sentPartner'):!inFeed?t('fe.fd.publishedProfile'):t('fe.fd.published');
+  const msg0=state==='review'?t('fe.fd.sentReview'):state==='pending_partner'?t('fe.fd.sentPartner'):t('fe.fd.published');
   const msg=unheard.length?msg0+' '+t('fe.w3.mention.unheard',{names:unheard.map(h=>'@'+h).join(', ')}):msg0;
   toast(msg,{type:unheard.length?'warn':'ok',action:{label:t('fe.fd.myPosts'),fn:()=>navigate('/n/me/posts')}});
   navigate(communityId?'/n/communities/'+communityId:state==='review'||state==='pending_partner'?'/n/me/posts':'/n/feed',{replace:true});
@@ -728,7 +741,7 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
  };
  const saveDraft=async():Promise<boolean>=>{
   if(busy||uploading)return false;
-  if(!body.trim()&&!media.length&&!poll){setErrs({body:t('fe.fd.err.emptyDraft')});return false;}
+  if(!body.trim()&&!media.length&&!poll&&!title.trim()){setErrs({body:t('fe.fd.err.emptyDraft')});return false;}
   setBusy('draft');setFailure('');
   try{const d=await call('post.saveDraft',{opId:ops.current.draft,...(postId?{postId}:{}),post:fields()},saved);setPostId(d.id);ops.current.draft=newOpId();clean.current=snap;
    toast(couple?t('fe.fd.draftSavedUs'):t('fe.fd.draftSavedMe'),{type:'ok',action:{label:t('fe.fd.open'),fn:()=>navigate('/n/me/posts')}});return true;}
@@ -745,14 +758,15 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
  // Opened by a link (no app history): back goes to the feed instead of leaving the app.
  const back=()=>{if(((window.history.state as {idx?:number}|null)?.idx??0)>0)navigate(-1);else navigate(communityId?'/n/communities/'+communityId:'/n/feed',{replace:true});};
  const leave=()=>{if(!communityId&&snap!==clean.current){setAsk(true);return;}back();};
- const hasMedia=media.length>0;
+ const hasMedia=note?noteMedia.length>0:media.length>0;
  const cta=live?(hasMedia?t('fe.fd.cta.changesReview'):t('fe.fd.cta.saveChanges')):couple?(hasMedia?t('fe.fd.cta.reviewUs'):t('fe.fd.cta.publishUs')):hasMedia?t('fe.fd.cta.review'):t('fe.feed.publish');
  const AUDS:[Audience,LucideIcon,string,string][]=[['all',Globe,t('fe.fd.aud2.all'),couple?t('fe.fd.aud2.allSubUs'):t('fe.fd.aud2.allSub')],['followers',Users,t('fe.fd.aud2.followers'),couple?t('fe.fd.aud2.followersSubUs'):t('fe.fd.aud2.followersSub')],
   ['granted',KeyRound,t('fe.fd.aud2.granted'),couple?t('fe.fd.aud2.grantedSubUs'):t('fe.fd.aud2.grantedSub')],...(edit?.audience==='only'?[['only',EyeOff,t('fe.fd.aud2.only'),t('fe.fd.aud2.onlySub')] as [Audience,LucideIcon,string,string]]:[])];
  const aud=AUDS.find(a=>a[0]===audience)??AUDS[0]!;const AudIcon=aud[1];
- const who=[communityId||!inFeed?'':aud[3],couple?t('fe.fd.asCoupleLine'):'',hasMedia?(live?t('fe.fd.hintLive'):t('fe.fd.hintReview')):''].filter(Boolean).join('. ');
+ const who=[communityId?'':aud[3],couple?t('fe.fd.asCoupleLine'):'',hasMedia?(live?t('fe.fd.hintLive'):t('fe.fd.hintReview')):''].filter(Boolean).join('. ');
  const barTitle=communityId?t(couple?'fe.cm.topicCouple':'fe.comm.newTopic'):draft?(note?t('fe.fd.noteDraft'):t('fe.fd.draft')):edit?(note?t('fe.fd.editNote'):t('fe.fd.editPost')):note?t('fe.fd.newNote'):t('fe.feed.new');
- const audSelect=(solo:boolean,icon?:LucideIcon)=><SelectRow solo={solo} {...(icon?{icon}:{})} label={t('fe.feed.audience')} value={audience} options={AUDS.map(a=>[a[0],a[2]] as const)}
+ // «Кому видно» on the left, the choice on the right (owner 28.10.2026), the same row in every composer.
+ const audSelect=()=><SelectRow icon={AudIcon} label={t('fe.fd.audLabel')} value={audience} options={AUDS.map(a=>[a[0],a[2]] as const)}
   onChange={v=>{setAudience(v);if(v!=='all'&&people.length)toast(t('fe.fd.tagsNeedAll'),{type:'info'});}}/>;
  const err=(k:string)=>errs[k]?<div className="ferr">{errs[k]}</div>:null;
  // «Мои интересы» tapped before the profile's interests arrived waits for them instead of saying there are none.
@@ -768,12 +782,11 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
  useEffect(()=>{if(failure)requestAnimationFrame(()=>failRef.current?.scrollIntoView({block:'center',behavior:'smooth'}));},[failure]);
  // V21 `mentionSuggest`: typing «@» (or the «Упомянуть» button) offers people — those the author follows, and from
  // two letters on, nickname search — and a pick writes «@nick ».
- const [sug,setSug]=useState<{start:number,end:number,q:string}|null>(null);
+ const [sug,setSug]=useState<{q:string}|null>(null);
  const [folks,setFolks]=useState<Mention[]|null>(null);const [found,setFound]=useState<Mention[]>([]);
- const caret=(el:HTMLTextAreaElement)=>{
-  const at=el.selectionStart??0;const m=el.value.slice(0,at).match(/(^|[\s(])@([a-z0-9_.]{0,30})$/i);
-  if(!m||el.selectionStart!==el.selectionEnd){setSug(null);return;}
-  setSug({start:at-m[2]!.length-1,end:at,q:m[2]!.toLowerCase()});
+ const caret=()=>{
+  const m=text.current?.mention();if(!m){setSug(null);return;}
+  setSug({q:m.q});
   if(folks===null&&acting){setFolks([]);call('profile.followers',{profileId:acting.id,following:true},mentionRes)
    .then(r=>setFolks(r.items.filter(p=>p.kind==='person'&&p.handle).map(p=>({id:p.id,handle:p.handle!,name:nameOf(p),avatar:null,mentionable:p.mentionable})))).catch(()=>{});}
  };
@@ -788,24 +801,21 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
  const known=useRef(new Map<string,boolean>());
  const remember=(handle:string,mentionable:boolean|undefined)=>{if(mentionable===undefined)return;known.current.set(handle.toLowerCase(),mentionable);
   if(!mentionable)toast(t('fe.lo.mention.silentToast',{handle}),{type:'info'});};
- const pickMention=(p:Mention)=>{if(!sug)return;remember(p.handle,p.mentionable);const add='@'+p.handle+' ';const next=body.slice(0,sug.start)+add+body.slice(sug.end);setBody(next);setSug(null);
-  const pos=sug.start+add.length;requestAnimationFrame(()=>{const el=text.current?.el;el?.focus();el?.setSelectionRange(pos,pos);});};
+ const pickMention=(p:Mention)=>{if(!sug)return;remember(p.handle,p.mentionable);text.current?.replaceMention('@'+p.handle+' ');setSug(null);};
  // «Упомянуть» (V21 mentionPick): the sheet with people; a pick writes «@nick » where the caret was.
- const mentionAt=useRef<number|null>(null);
- const openMention=()=>{mentionAt.current=text.current?.el?.selectionStart??body.length;setSheet('mention');};
- const insertMention=(handle:string,mentionable?:boolean)=>{remember(handle,mentionable);const s=Math.min(mentionAt.current??body.length,body.length);const pre=body.slice(0,s);const add=(pre&&!/\s$/.test(pre)?' ':'')+'@'+handle+' ';
-  setBody(pre+add+body.slice(s));setSheet(null);requestAnimationFrame(()=>{const el=text.current?.el;if(!el)return;el.focus();const p=s+add.length;el.setSelectionRange(p,p);});};
+ const openMention=()=>setSheet('mention');
+ const insertMention=(handle:string,mentionable?:boolean)=>{remember(handle,mentionable);setSheet(null);requestAnimationFrame(()=>text.current?.insertText('@'+handle+' '));};
 
  if(preview){
   const fake:Post={id:edit?.id??'00000000-0000-7000-8000-000000000000',type:note?'note':'post',title:note?title.trim():null,body:body.trim(),author:{id:acting?.id??'',kind:acting?.kind??'person',handle:acting?.handle??null,name:acting?.name??nameOf(acting),avatar:acting?.avatar??null},
-   media:media.map(m=>({id:m.id,kind:m.kind??'image',w:null,h:null,pending:false,blurred:false,src:{card:m.preview,full:m.preview},durationMs:m.durationMs??null})),topics,likes:0,liked:false,replies:0,saved:false,publishedAt:null,
+   media:(note?noteMedia.map(id=>media.find(m=>m.id===id)!).filter(Boolean):media).map(m=>({id:m.id,kind:m.kind??'image',w:null,h:null,pending:false,blurred:false,src:{card:m.preview,full:m.preview},durationMs:m.durationMs??null})),topics,likes:0,liked:false,replies:0,saved:false,publishedAt:null,
    ...(audience!=='all'?{audience}:{}),poll:poll?{question:poll.question,options:poll.options,myVote:null,results:null}:null,interests:interests?.map(id=>{const j=eligible.find(e=>e.topicId===id);return {topicId:id,value:j?.value??null,dir:j?.dir};})??null,tags:[]};
   const steps=[people.length&&audience==='all'&&hasMedia?t('fe.fd.next.marks',{names:people.map(p=>p.name).join(', ')}):'',hasMedia?t('fe.fd.next.review'):'',hasMedia||people.length?(live?t('fe.fd.next.oldVersion'):t('fe.fd.next.onlyYou')):''].filter(Boolean);
   return <>
    <header className="bar"><IconBtn icon={ChevronLeft} kind="ghost" label={t('fe.back')} onClick={()=>setPreview(false)}/><H level={1} className="sm" tabIndex={-1}>{t('fe.fd.preview')}</H></header>
    <View className="nodock cta1">
     <Card className="preview-post k-preview-post"><PostCard post={fake} onChange={()=>{}} onRemove={()=>{}} full preview/></Card>
-    {!communityId&&<Card list className="mt16">{audSelect(false,Eye)}</Card>}
+    {!communityId&&<Card list className="mt16">{audSelect()}</Card>}
     {steps.length>0&&<Card className="mt16 next-steps"><b>{t('fe.fd.next.title')}</b><ul>{steps.map(s=><li key={s}>{s}</li>)}</ul></Card>}
     {failure&&<Alert kind="err" className="mt12">{failure}</Alert>}
    </View>
@@ -821,47 +831,43 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
    {!communityId&&!live&&<Btn kind="text" auto busy={busy==='draft'} disabled={!!busy} onClick={saveDraft}>{t('fe.fd.toDraft')}</Btn>}
    {!communityId&&live&&<Btn kind="text" auto busy={busy==='draft'} disabled={!!busy} onClick={()=>void saveEdits()}>{t('fe.w3.edits.save')}</Btn>}</header>
   <View className="nodock cta1">
-   {note&&<div className="note-mode"><Chip on icon={FileText}>{t('fe.fd.article')}</Chip>
-    <Btn kind="text" auto onClick={()=>{if(body.length>1000){toast(t('fe.fd.noteTooLong'),{type:'warn'});return;}setNote(false);}}>{t('fe.fd.makeRegular')}</Btn></div>}
-   <Group><Card className="compose v14">
-    {!communityId&&<div className="cmp-ctx"><div className="cmp-aud"><AudIcon/>{audSelect(true)}</div></div>}
+   <Group>
+   {!communityId&&<Card list className="mb12">{audSelect()}</Card>}
+   <Card className="compose v14">
     {who&&<p className="cmp-who">{who}</p>}
     {note&&<Field id="ntitle" label={t('fe.fd.title')} error={errs.title}><Input id="ntitle" invalid={!!errs.title} value={title} maxLength={120} onChange={e=>setTitle(e.target.value)} placeholder={t('fe.fd.titlePh')}/></Field>}
     <Field error={errs.body}>
      <div className="mention-box k-anchor">
-     <RichArea ref={text} invalid={!!errs.body} rows={note?10:6} maxLength={max} value={body} onValue={(v,el)=>{setBody(v);caret(el);}} autoFocus={!x}
-      onKeyUp={e=>{if(e.key==='Escape')setSug(null);else if(e.key.startsWith('Arrow'))caret(e.currentTarget);}} onClick={e=>caret(e.currentTarget)} onBlur={()=>setTimeout(()=>setSug(null),200)}
-      placeholder={note?(couple?t('fe.fd.notePhUs'):t('fe.fd.notePh')):poll?(couple?t('fe.fd.pollPhUs'):t('fe.fd.pollPh')):couple?t('fe.fd.composePhUs'):t('fe.fd.composePh')} aria-label={t('fe.fd.text')}/>
+     <RichEditor ref={text} invalid={!!errs.body} value={body} onValue={v=>{setBody(v);setErrs(e=>{const {body:_b,...rest}=e;return rest;});}} autoFocus={!x||x==='note'} onCaret={caret}
+      onBlur={()=>setTimeout(()=>setSug(null),200)} headings={note} long={note}
+      images={note?{src:id=>media.find(m=>m.id===id)?.preview,onAdd:()=>pick('inline'),disabled:uploading||noteMedia.length>=MEDIA_MAX}:undefined}
+      placeholder={note?(couple?t('fe.fd.notePhUs'):t('fe.fd.notePh')):poll?(couple?t('fe.fd.pollPhUs'):t('fe.fd.pollPh')):couple?t('fe.fd.composePhUs'):t('fe.fd.composePh')} label={t('fe.fd.text')}/>
      {sug&&sugList.length>0&&<div className="mention-sug" role="listbox" aria-label={t('fe.fd.whoMention')}>{sugList.map(p=><button key={p.id} type="button" role="option" aria-selected={false}
       onMouseDown={e=>e.preventDefault()} onClick={()=>pickMention(p)}><Av name={p.name} seed={p.id} src={p.avatar} size="xs"/><span><b>{p.name}</b> <small>@{p.handle}{p.mentionable===false?' · '+t('fe.lo.mention.silent'):''}</small></span></button>)}</div>}
      </div>
      <Counter n={body.length} max={max}/>
     </Field>
-    {hasMedia&&<div className="cmp-media" ref={mediaRef}><Group title={t('fe.fd.mediaN',{n:media.length,max:MEDIA_MAX})} foot={audience==='granted'?t('fe.fd.mediaGranted'):t('fe.fd.mediaFoot')}>
-     <Card><div className="edit-ph">{media.map((m,i)=><div key={m.id}><img src={m.preview} alt=""/>{m.kind==='video'&&<VideoBadge durationMs={m.durationMs}/>}
-      <button type="button" className="rm" aria-label={t('fe.fd.remove')} onClick={()=>setMedia(l=>l.filter(y=>y.id!==m.id))}><X/></button>
+    {(note||hasMedia)&&<div className="cmp-media" ref={mediaRef}><Group title={note?t('fe.fd.cover'):t('fe.fd.mediaN',{n:media.length,max:MEDIA_MAX})} foot={note?t('fe.fd.coverFoot'):audience==='granted'?t('fe.fd.mediaGranted'):t('fe.fd.mediaFoot')}>
+     <Card><div className="edit-ph">{shownMedia.map((m,i)=><div key={m.id}><img src={m.preview} alt=""/>{m.kind==='video'&&<VideoBadge durationMs={m.durationMs}/>}
+      <button type="button" className="rm" aria-label={t('fe.fd.remove')} onClick={()=>{if(m.id===coverId)setCoverId(null);setMedia(l=>l.filter(y=>y.id!==m.id));}}><X/></button>
       <button type="button" className="vw" aria-label={t('fe.fd.view')} onClick={()=>setViewer(i)}/></div>)}
-      {media.length<MEDIA_MAX&&<button type="button" aria-label={t('fe.fd.addMedia')} disabled={uploading} onClick={()=>file.current?.click()}><Plus/></button>}</div>
-      {audience==='all'&&<Card list className="mt8"><Row icon={Users} tone="v" title={t('fe.fd.peopleInPhoto')} onClick={()=>setSheet('people')}
+      {(note?!coverId:media.length<MEDIA_MAX)&&<button type="button" aria-label={note?t('fe.fd.addCover'):t('fe.fd.addMedia')} disabled={uploading||(note&&noteMedia.length>=MEDIA_MAX)} onClick={()=>pick(note?'cover':'media')}><Plus/></button>}</div>
+      {!note&&audience==='all'&&<Card list className="mt8"><Row icon={Users} tone="v" title={t('fe.fd.peopleInPhoto')} onClick={()=>setSheet('people')}
        sub={people.length?people.map(p=>p.name+(edit?.tags?.find(x=>x.id===p.id)?.state==='no'?` (${t('fe.fd.declinedShort')})`:edit?.tags?.find(x=>x.id===p.id)?.state==='ok'?'':` (${t('fe.fd.waitingShort')})`)).join(', '):t('fe.fd.peopleInPhotoSub')}/></Card>}
      </Card>
      </Group></div>}
-    <FilePick ref={file} accept={'image/*,'+VIDEO_TYPES.join(',')} multiple onFiles={addMedia}/>
+    <FilePick ref={file} accept={note?'image/*':'image/*,'+VIDEO_TYPES.join(',')} multiple={!note} onFiles={addMedia}/>
     <div className="attach v14">
-     {!hasMedia&&<button type="button" disabled={uploading} onClick={()=>file.current?.click()}><ImageIcon/><span>{t('fe.feed.media')}</span></button>}
-     {!poll&&<button type="button" onClick={()=>setPoll({question:'',options:['','']})}><ChartColumn/><span>{t('fe.feed.poll')}</span></button>}
-     {!communityId&&!note&&<button type="button" onClick={()=>setNote(true)}><FileText/><span>{t('fe.fd.article')}</span></button>}
+     {!hasMedia&&!note&&<button type="button" disabled={uploading} onClick={()=>pick('media')}><ImageIcon/><span>{t('fe.feed.media')}</span></button>}
+     {!poll&&!note&&<button type="button" onClick={()=>setPoll({question:'',options:['','']})}><ChartColumn/><span>{t('fe.feed.poll')}</span></button>}
      <button type="button" onClick={openMention}><AtSign/><span>{t('fe.fd.mention')}</span></button>
-     {interests===null&&!communityId&&<button type="button" title={t('fe.fd.myInterestsHint')} className={wantInts?'busy':undefined} aria-busy={wantInts||undefined} onClick={attachInterests}><Sparkles/><span>{t('fe.fd.myInterests')}</span></button>}
+     {interests===null&&!communityId&&!note&&<button type="button" title={t('fe.fd.myInterestsHint')} className={wantInts?'busy':undefined} aria-busy={wantInts||undefined} onClick={attachInterests}><Sparkles/><span>{t('fe.fd.myInterests')}</span></button>}
     </div>
    </Card>
-   {!communityId&&!(audience==='granted'&&!inFeed)&&<Card list className="cmp-feed">
-    <ToggleRow title={t('fe.feed.inFeed')} sub={inFeed?t('fe.feed.inFeedOn'):hasMedia?t('fe.fd.onlyProfileGallery'):t('fe.fd.onlyProfile')} on={inFeed} onClick={()=>setInFeed(v=>!v)}/>
-   </Card>}
-   {!communityId&&hasMedia&&(audience==='all'||audience==='followers')&&<AlbumField value={album} onChange={setAlbum} audience={audience} onNarrow={()=>setAudience('followers')}/>}
+   {!communityId&&!note&&hasMedia&&(audience==='all'||audience==='followers')&&<AlbumField value={album} onChange={setAlbum} audience={audience} onNarrow={()=>setAudience('followers')}/>}
    {err('media')}
    </Group>
-   {poll&&<section className="grp" ref={pollRef}><div className="grp-t"><span>{t('fe.fd.pollN',{n:poll.options.length,max:POLL_MAX})}</span><button type="button" onClick={()=>setPoll(null)}>{t('fe.fd.remove')}</button></div>
+   {poll&&!note&&<section className="grp" ref={pollRef}><div className="grp-t"><span>{t('fe.fd.pollN',{n:poll.options.length,max:POLL_MAX})}</span><button type="button" onClick={()=>setPoll(null)}>{t('fe.fd.remove')}</button></div>
     <Card>
      <Field id="pollQ" label={t('fe.fd.question')} error={errs.pollQ}><Input id="pollQ" invalid={!!errs.pollQ} value={poll.question} maxLength={200} placeholder={t('fe.fd.questionPh')} onChange={e=>setPoll({...poll,question:e.target.value})}/></Field>
      {poll.options.map((o,i)=><div key={i} className={'field pollopt'+(errs['o'+i]?' err':'')}><div className="inwrap"><span className="n">{i+1}</span>
@@ -871,7 +877,7 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
      {err('opts')}
     </Card>
     <p className="grp-n">{t('fe.fd.pollFoot')}{edit?.poll?' '+t('fe.fd.pollReset'):''}</p></section>}
-   {interests!==null&&<section className="grp cmp-ints" ref={intRef}><div className="grp-t"><span>{t('fe.fd.interests')}</span><button type="button" onClick={()=>setInterests(null)}>{t('fe.fd.remove')}</button></div>
+   {interests!==null&&!note&&<section className="grp cmp-ints" ref={intRef}><div className="grp-t"><span>{t('fe.fd.interests')}</span><button type="button" onClick={()=>setInterests(null)}>{t('fe.fd.remove')}</button></div>
     <Card>
      {interests.length>0&&<div className="testcard"><Jars list={eligible.filter(j=>interests.includes(j.topicId))} topics={jarTopics} onOpen={()=>{}}/></div>}
      <Chips className="mt12">{eligible.map(j=>{const on=interests.includes(j.topicId);return <Chip key={j.topicId} on={on}
@@ -894,9 +900,13 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
    onApply={v=>{if(v.length>3){toast(t('fe.fd.max3'),{type:'warn'});return;}setTopics(v);setSheet(null);}}/>}
   {sheet==='mention'&&<MentionSheet onClose={()=>setSheet(null)} onPick={insertMention}/>}
   {sheet==='people'&&<PeopleSheet value={people} onClose={()=>setSheet(null)} onApply={v=>{setPeople(v);setSheet(null);}} locked={(edit?.tags??[]).filter(x=>x.state==='no').map(x=>x.id)}/>}
-  {picked&&<Uploader files={picked} aspects={['4:5','1:1','orig']} max={MEDIA_MAX-media.length} send={sendPhoto} sendVideo={sendVideo} onClose={()=>setPicked(null)}
-   onDone={got=>{setPicked(null);setMedia(m=>[...m,...got.map(g=>({id:g.id,preview:g.url,kind:g.kind,durationMs:g.durationMs}))]);setErrs(e=>{const {media:_m,...rest}=e;return rest;});}}/>}
-  {viewer!==null&&<Viewer srcs={media.map(m=>m.preview)} index={viewer} onClose={()=>setViewer(null)}/>}
+  {picked&&(pickFor==='media'?<Uploader files={picked} aspects={['4:5','1:1','orig']} max={MEDIA_MAX-media.length} send={sendPhoto} sendVideo={sendVideo} onClose={()=>setPicked(null)}
+   onDone={got=>{setPicked(null);setMedia(m=>[...m,...got.map(g=>({id:g.id,preview:g.url,kind:g.kind,durationMs:g.durationMs}))]);setErrs(e=>{const {media:_m,...rest}=e;return rest;});}}/>
+   // An article: the cover (16:9 or as is) or one photo into the text where the caret was; photos only.
+   :<Uploader files={picked.slice(0,1)} aspects={pickFor==='cover'?['16:9','orig']:['orig','4:5','1:1']} max={1} send={sendPhoto} onClose={()=>setPicked(null)}
+    onDone={got=>{setPicked(null);const g=got[0];if(!g)return;setMedia(m=>[...m,{id:g.id,preview:g.url,kind:g.kind}]);
+     if(pickFor==='cover')setCoverId(g.id);else requestAnimationFrame(()=>text.current?.insertImage(g.id,g.url));}}/>)}
+  {viewer!==null&&<Viewer srcs={shownMedia.map(m=>m.preview)} index={viewer} onClose={()=>setViewer(null)}/>}
   {ask&&<LeaveAsk live={live} busy={!!busy} onCancel={()=>setAsk(false)} onDiscard={()=>{setAsk(false);back();}}
    onSave={async()=>{const ok=live?await saveEdits():await saveDraft();setAsk(false);if(ok)back();}}/>}
  </>;
