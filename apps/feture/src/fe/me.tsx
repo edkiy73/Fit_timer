@@ -1,8 +1,8 @@
-import {Fragment,useCallback,useEffect,useState,type CSSProperties,type ComponentProps,type ReactNode} from 'react';
+import {Fragment,useCallback,useEffect,useState,type CSSProperties,type ReactNode} from 'react';
 import {useLocation,useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Camera,Check,ChevronDown,ChevronRight,Clock,Eye,EyeOff,HeartOff,Users,Image as ImageIcon,KeyRound,Newspaper,Plus,Settings,Star,Trash2,X} from 'lucide-react';
+import {Camera,Check,ChevronDown,ChevronRight,Clock,Eye,HeartOff,Users,Image as ImageIcon,Newspaper,Plus,Settings,Star,Trash2,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,Ask as KitAsk,Av,Btn,Card,Empty,Group,H,IconBtn,Note,PhotoAdd,PhotoSlot,PhotoSlots,Row,Seg,SelectRow,Sheet,Skel,ToggleRow} from './kit';
 import {AgeCheckLink,useAgeResume} from './age-check';
@@ -49,16 +49,9 @@ export const COUPLE_ROWS=['roles','formats','seeks'];
 export const MAX_PHOTOS=6;
 const STAT_HINT_KEY='feture.fe.statHintOff';
 
-/** `audTag()` — who sees a block. */
-export function AudTag({k}:{k:'all'|'granted'|'only'|string|null|undefined}){
- const {t}=useI18n();const key=k==='granted'||k==='only'?k:'all';
- return <span className={'aud'+(key==='granted'?' k':key==='only'?' w':'')}>{key==='granted'?<KeyRound/>:key==='only'?<EyeOff/>:null}{t('fe.mx.aud.'+key)}</span>;
-}
-
-/** `ask()` — the kit's confirmation dialog; «Я» keeps the accent icon on a destructive question (`.ico.l`). */
-export function Ask(props:ComponentProps<typeof KitAsk>){
- return <KitAsk {...props} tone={props.tone??(props.danger?'l':undefined)}/>;
-}
+// AudTag and Ask live in me-parts.tsx: screens that only need them do not pull the whole «Я» tab into the first load.
+import {Ask,AudTag} from './me-parts';
+export {Ask,AudTag};
 
 /** The «Я» layers on the one tab control, with their red dots. */
 function LayerSeg({value,onChange,dots}:{value:Layer,onChange:(v:Layer)=>void,dots:Record<Layer,string>}){
@@ -80,7 +73,13 @@ export function MeTab(){
  const setLayer=(l:Layer)=>{setLayerState(l);setNotice('');const base=location.hash.split('?')[0]||'#/n/me';history.replaceState(history.state,'',l==='profile'?base:base+'?layer='+l);document.querySelector('.me18')?.scrollTo({top:0});};
  const load=useCallback(()=>{
   if(!acting)return;setError(null);setTick(n=>n+1);
-  Promise.all([call('profile.get',{profileId:acting.id},profileRes),call('profile.settings',{},settingsRes)])
+  // Everything the first layer shows is asked in one wave and the layer appears whole (owner 28.10.2026: no rows
+  // popping in later): the blocks below (interests, gallery, links, the staff button, «Нужно решить») read the same
+  // commands and get these answers from the session's read cache at once. Their failures stay theirs.
+  const id=acting.id;const any=z.unknown();
+  const parts=[call('interests.list',{profileId:id},any),call('album.list',{profileId:id},any),call('gallery.list',{profileId:id},any),
+   call('links.mine',{},any),call('staff.me',{},any,{asAccount:true}),call('inbox.counts',{},any,{asAccount:true}),call('catalog.get',{},any,{asAccount:true})];
+  Promise.all([call('profile.get',{profileId:id},profileRes),call('profile.settings',{},settingsRes),Promise.allSettled(parts)])
    .then(([a,b])=>{setP(a.profile);setSettings(b.settings);}).catch(setError);
  },[call,acting]);
  useEffect(()=>{setP(null);load();},[load]);

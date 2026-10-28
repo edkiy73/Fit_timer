@@ -90,9 +90,9 @@ type SoonEv=z.infer<typeof soonRes>['items'][number];
 /** What `event.soon` offers the acting profile, and «Скрыть» (feed_hide kind 'event') with «Вернуть» in the toast. */
 function useSoon(){
  const {call,acting}=useFe();const {t}=useI18n();const toast=useToast();
- const [items,setItems]=useState<SoonEv[]>([]);
- const load=useCallback(()=>{call('event.soon',{},soonRes).then(r=>setItems(r.items)).catch(()=>setItems([]));},[call]);
- useEffect(()=>{setItems([]);load();},[load,acting?.id]);
+ const [items,setItems]=useState<SoonEv[]>([]);const [loaded,setLoaded]=useState(false);
+ const load=useCallback(()=>{call('event.soon',{},soonRes).then(r=>setItems(r.items)).catch(()=>setItems([])).finally(()=>setLoaded(true));},[call]);
+ useEffect(()=>{setItems([]);setLoaded(false);load();},[load,acting?.id]);
  const hide=async(e:SoonEv)=>{
   const was=items;setItems(l=>l.filter(x=>x.id!==e.id));
   try{
@@ -101,7 +101,7 @@ function useSoon(){
     call('feedHide.set',{opId:newOpId(),kind:'event',targetId:e.id,on:false},okOnly).then(()=>{setItems(was);load();},err=>toast(feErrorMessage(err,t),{type:'err'}));}}});
   }catch(err){setItems(was);toast(feErrorMessage(err,t),{type:'err'});}
  };
- return {items,hide};
+ return {items,hide,loaded};
 }
 function SoonBlock({s}:{s:ReturnType<typeof useSoon>}){
  const {t}=useI18n();const {acting}=useFe();const us=acting?.kind==='couple';
@@ -120,7 +120,7 @@ function SoonBlock({s}:{s:ReturnType<typeof useSoon>}){
 
 export function FeedTab(){
  const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const location=useLocation();const toast=useToast();
- const {name:tname,topics:catalog,cats}=useTopics();const {items:jars}=useInterests();
+ const {name:tname,topics:catalog,cats,ready:topicsReady}=useTopics();const {items:jars}=useInterests();
  const [tab,setTab]=useState<Tab>('forYou');
  // Filters per tab (F02). Right after sign-up the feed opens on the topics chosen at step 2 (V21 AUTH-018); «Показать всё» clears them.
  const arrived=location.state as {topics?:unknown,welcome?:unknown,hello?:unknown,warn?:unknown}|null;
@@ -137,7 +137,7 @@ export function FeedTab(){
  // A post screen that lost its post (deleted, hidden, blocked) comes back with `state.notice`.
  const [notice,setNotice]=useState(()=>{const n=(location.state as {notice?:unknown}|null)?.notice;return typeof n==='string'?n:'';});
  const [items,setItems]=useState<FeedItem[]|null>(null);const [next,setNext]=useState<string|null>(null);const [error,setError]=useState<unknown>(null);const [more,setMore]=useState(false);
- const [hidden,setHidden]=useState(0);const [sheet,setSheet]=useState<'create'|'filters'|'popInfo'|null>(null);
+ const [hidden,setHidden]=useState<number|null>(null);const [sheet,setSheet]=useState<'create'|'filters'|'popInfo'|null>(null);
  const [gone,setGone]=useState<Record<string,Gone>>({});const [actMenu,setActMenu]=useState<Act|null>(null);
  // Quick topics come from the posts this tab really shows (most frequent first) and stay put while filtering.
  const [quick,setQuick]=useState<Record<Tab,string[]>>({forYou:[],following:[],popular:[]});
@@ -155,7 +155,7 @@ export function FeedTab(){
   }).catch(e=>{if(n===req.current)setError(e);}).finally(()=>{if(n===req.current)setMore(false);});
  },[call,input,f,tab]);
  useEffect(()=>{load();},[load]);
- const loadHidden=useCallback(()=>{call('feedHide.list',{},hiddenList).then(r=>setHidden(r.items.filter(x=>x.kind==='post'||x.kind==='author').length)).catch(()=>{});},[call]);
+ const loadHidden=useCallback(()=>{call('feedHide.list',{},hiddenList).then(r=>setHidden(r.items.filter(x=>x.kind==='post'||x.kind==='author').length)).catch(()=>setHidden(h=>h??0));},[call]);
  useEffect(()=>{loadHidden();},[loadHidden]);
  const soon=useSoon();
  const setF=(next:Filters)=>setFilters(x=>({...x,[tab]:next}));
@@ -187,10 +187,13 @@ export function FeedTab(){
  const restore=(id:string,g:Gone)=>{g.undo().then(()=>{setGone(x=>{const {[id]:_,...rest}=x;return rest;});loadHidden();},e=>toast(feErrorMessage(e,t),{type:'err'}));};
  // «Популярное» is picked by the acting profile's interests (never its hard limits).
  const myTopics=(jars??[]).filter(j=>j.value!=null&&j.mark!=='hard').map(j=>j.topicId);
+ // The screen appears whole (owner 28.10.2026: no rows popping in later): the posts, the topic line, «Скоро» and the
+ // hidden-posts line wait for each other — they are asked at once, so this costs the slowest of them, not the sum.
+ const ready=items!==null&&topicsReady&&hidden!==null&&(tab!=='forYou'||soon.loaded);
  let body:ReactNode;
  if(tab==='popular'&&jars!==null&&!myTopics.length)body=<Empty icon={Sparkles} title={t('fe.w3.pop.noInterests')} text={t('fe.w3.pop.noInterestsText')}><Btn onClick={()=>navigate('/n/me/interests')}>{t('fe.w3.pop.addInterests')}</Btn></Empty>;
  else if(error&&!items)body=<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>load()}>{t('fe.retry')}</Btn></Empty>;
- else if(items===null)body=<Skel kind="post"/>;
+ else if(!ready||items===null)body=<Skel kind="post"/>;
  else if(!items.length)body=filtN(f)?<Empty icon={SlidersHorizontal} title={t('fe.fd.nothing')} text={tab==='following'?t('fe.fd.nothingFollowing'):t('fe.fd.nothingText')}><Btn kind="soft" onClick={()=>setF(NO_FILTERS)}>{t('fe.fd.resetFilters')}</Btn></Empty>
   :tab==='popular'?<Empty icon={Sparkles} title={t('fe.w3.pop.empty')} text={t(acting?.kind==='couple'?'fe.w3.pop.emptyTextUs':'fe.w3.pop.emptyText')}/>
   :hidden?<Empty icon={EyeOff} title={t('fe.fd.allHidden')} text={t('fe.fd.allHiddenText')}><Btn kind="soft" onClick={()=>navigate('/n/settings/hidden')}>{t('fe.fd.showHidden')}</Btn></Empty>
@@ -209,7 +212,7 @@ export function FeedTab(){
    // «Скоро» (V21 feedEvLess) sits after the third item of «Для тебя» (or after the last one of a short feed).
    ...(tab==='forYou'&&i===Math.min(2,items.length-1)?[<SoonBlock key="soon" s={soon}/>]:[])])}</div>
   {next&&<Btn kind="soft" className="mt12" onClick={()=>load(next)} busy={more} disabled={more}>{t('fe.feed.more')}</Btn>}
-  {hidden>0&&<button type="button" className="linkbtn feed-hid" onClick={()=>navigate('/n/settings/hidden')}><EyeOff/>{t('fe.fd.hiddenN',{n:hidden})}</button>}
+  {!!hidden&&<button type="button" className="linkbtn feed-hid" onClick={()=>navigate('/n/settings/hidden')}><EyeOff/>{t('fe.fd.hiddenN',{n:hidden})}</button>}
  </>;
  return <>
   <Bar title={t('fe.nav.feed')}><IconBtn icon={Plus} label={t('fe.fd.createPub')} aria-haspopup="dialog" onClick={()=>setSheet('create')}/><IconBtn icon={Search} label={t('fe.br.search')} onClick={()=>navigate('/n/search?scope=posts')}/><BellButton/></Bar>
@@ -232,7 +235,7 @@ export function FeedTab(){
      <Chips scroll className="mb12" label={t('fe.w3.pop.chips')}><Chip filter on={!popTag} onClick={()=>setPopTag('')}>{t('fe.w3.pop.all')}</Chip>
       {myTopics.map(x=><Chip key={x} filter on={popTag===x} onClick={()=>setPopTag(popTag===x?'':x)}>#{tname(x)}</Chip>)}</Chips>
      <PopularDiscussions topic={popTag}/></>)
-    :(chips.length>0||catalog.length>0)&&<div className="filterline"><Chips scroll>{chips}</Chips>
+    :ready&&(chips.length>0||catalog.length>0)&&<div className="filterline"><Chips scroll>{chips}</Chips>
      <Chip filter on={filtN(f)>0} icon={SlidersHorizontal} label={t('fe.fd.filters')} popup onClick={()=>setSheet('filters')}>{t('fe.fd.filters')}{filtN(f)>0&&<em className="badge-abs">{filtN(f)}</em>}</Chip>
     </div>}
    {body}

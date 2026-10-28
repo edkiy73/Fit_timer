@@ -9,7 +9,7 @@ import {AgeCheckLink,useAgeResume} from './age-check';
 import {useFe} from './session';
 import {when} from './feed';
 import {useToast} from './toast';
-import {Ask,AudTag} from './me';
+import {Ask,AudTag} from './me-parts';
 import {faceFields,NameBadges,withAge} from './faces';
 import {PhotoViewer,mediaSrc} from './profile-extras';
 

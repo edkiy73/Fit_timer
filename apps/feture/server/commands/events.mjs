@@ -51,11 +51,19 @@ function formOf(e) {
   };
 }
 
+/** Time zones already confirmed by the database (see checkEventRefs). @type {Set<string>} */
+const knownZones = new Set();
+
 /** Place, cover and community of an event: an approved place or one the author submitted, the organizer's own event
  * cover, a published community the organizing profile owns or hosts (V21 EVT-038). @param {Q} q @param {Acting} acting @param {any} f */
 async function checkEventRefs(q, acting, f) {
-  const [zone] = await q.query('select 1 from pg_timezone_names where name = $1', [f.tz]);
-  if (!zone) fail(400, 'invalid_input', { fields: ['tz'] });
+  if (!knownZones.has(f.tz)) {
+    // pg_timezone_names reads the zone files on every query (≈0.45 s in pg_stat_statements): a zone found once is
+    // remembered by this instance.
+    const [zone] = await q.query('select 1 from pg_timezone_names where name = $1', [f.tz]);
+    if (!zone) fail(400, 'invalid_input', { fields: ['tz'] });
+    if (knownZones.size < 1000) knownZones.add(f.tz);
+  }
   if (f.placeId) {
     const [pl] = await q.query(`select 1 from feture.place where id = $1 and (state = 'approved' or state = 'pending' and submitted_by = $2)`, [f.placeId, acting.accountId]);
     if (!pl) fail(400, 'invalid_input', { fields: ['placeId'] });

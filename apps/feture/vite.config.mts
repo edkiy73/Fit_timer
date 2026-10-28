@@ -10,6 +10,7 @@ export default defineConfig({
   plugins: [react()],
   define: {'__APP_BUILD_ID__': JSON.stringify(buildId)},
   base: './',
+  build: {cssCodeSplit: false},
   resolve: {
     dedupe:['react','react-dom'],
     alias: {
