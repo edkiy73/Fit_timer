@@ -40,11 +40,11 @@ export function ActivityCardOf({a,onMenu}:{a:Act,onMenu:()=>void}){
  const parts:{key:string,thumb:ActThumb,title:string,sub:string,label:string,go:string}[]=a.items.map(x=>{
   if(a.activity==='likes'){
    const au=x.author as {name?:string|null,handle?:string|null}|undefined;const text=mdPlain(s(x.excerpt));const title=s(x.title)||text.slice(0,80)||t('fe.feed.post');
-   const what=[num(x.videos)?plural(num(x.videos),['видео','видео','видео'],['video','videos'],locale):'',num(x.photos)?plural(num(x.photos),['фото','фото','фото'],['photo','photos'],locale):'',
+   const what=[x.article?t('fe.kit.act.article').toLowerCase():'',num(x.videos)?plural(num(x.videos),['видео','видео','видео'],['video','videos'],locale):'',num(x.photos)?plural(num(x.photos),['фото','фото','фото'],['photo','photos'],locale):'',
     x.poll?t('fe.kit.act.poll').toLowerCase():'',x.interests?t('fe.kit.act.interests').toLowerCase():''].filter(Boolean).join(' · ');
    const author=au?personName({name:au.name??null,handle:au.handle??null}):'';
    return {key:x.id,title,sub:[author,what].filter(Boolean).join(' · '),label:author?`${title} — ${author}`:title,go:'/n/feed/post/'+x.id,
-    thumb:{src:s(x.thumb)||null,video:x.video===true,photos:num(x.photos),videos:num(x.videos),durationMs:typeof x.durationMs==='number'?x.durationMs:null,poll:x.poll===true,interests:x.interests===true,text}};
+    thumb:{src:s(x.thumb)||null,video:x.video===true,photos:num(x.photos),videos:num(x.videos),durationMs:typeof x.durationMs==='number'?x.durationMs:null,article:x.article===true,poll:x.poll===true,interests:x.interests===true,text}};
   }
   if(a.activity==='events')return {key:x.id,title:s(x.title),sub:[date(x.startsAt),x.format==='online'?t('fe.w3.act.online'):''].filter(Boolean).join(' · '),label:s(x.title),go:'/n/events/'+x.id,
    thumb:{src:s(x.cover)||null,icon:Calendar}};

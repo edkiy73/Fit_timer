@@ -1,6 +1,6 @@
 import React,{forwardRef,useCallback,useEffect,useImperativeHandle,useLayoutEffect,useRef,useState,type ReactNode} from 'react';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Bold,ChartColumn,ChevronDown,ChevronRight,Ellipsis,FileText,Heading,Image as ImageIcon,ImagePlus,Italic,Link as LinkIcon,List,ListOrdered,Pencil,Quote,Sparkles,Strikethrough,Video,type LucideIcon} from 'lucide-react';
+import {Bold,ChartColumn,ChevronDown,ChevronRight,Ellipsis,FileText,Heading,Image as ImageIcon,ImagePlus,Italic,Link as LinkIcon,List,ListOrdered,MessageSquareText,Quote,Sparkles,Strikethrough,Video,type LucideIcon} from 'lucide-react';
 import {fmtDur} from './media';
 import {Av,Btn,Field,H,IconBtn,Input,Sheet,Text} from './index';
 import {domToMd,imageBlock,linkOk,mdToDom} from './rich-md';
@@ -144,7 +144,7 @@ export function LikesLine({people,text,onClick}:{people:{id:string,name:string,a
  * capsule and poll / interests marks, otherwise a poll, interests or text tile; a person — their face; an event or a
  * community — its cover (or `icon`). */
 export type ActThumb={src?:string|null|undefined,video?:boolean|undefined,photos?:number|undefined,videos?:number|undefined,
- durationMs?:number|null|undefined,poll?:boolean|undefined,interests?:boolean|undefined,text?:string|undefined,
+ durationMs?:number|null|undefined,article?:boolean|undefined,poll?:boolean|undefined,interests?:boolean|undefined,text?:string|undefined,
  person?:{id:string,name:string,avatar?:string|null|undefined}|undefined,icon?:LucideIcon|undefined};
 
 /** The media capsule (▣ 3 · 🎥 0:06 · ▣ 3 🎥 1), as in the feed. */
@@ -159,14 +159,15 @@ function thumbParts(x:ActThumb,row:boolean,t:(k:string)=>string):{cls:string,bod
  if(x.person)return {cls:'round',body:<Av name={x.person.name} seed={x.person.id} src={x.person.avatar}/>};
  const media=(x.photos??0)+(x.videos??0);
  if(x.src||x.video||media){
-  const marks=!row&&(x.poll||x.interests)?<span className="actc-xs" aria-hidden="true">{x.poll&&<i><ChartColumn/></i>}{x.interests&&<i><Sparkles/></i>}</span>:null;
+  const marks=!row&&(x.article||x.poll||x.interests)?<span className="actc-xs" aria-hidden="true">{x.article&&<i><FileText/></i>}{x.poll&&<i><ChartColumn/></i>}{x.interests&&<i><Sparkles/></i>}</span>:null;
   return {cls:media>1?'multi':'',body:<>{x.src?<img src={x.src} alt="" loading="lazy" draggable={false}/>:<span className="actc-vid"><Video/></span>}
    <MediaMark photos={x.photos} videos={x.videos} durationMs={x.durationMs}/>{marks}</>};
  }
  if(x.icon)return {cls:row?'ic':'kind',body:React.createElement(x.icon)};
+ if(x.article)return {cls:row?'ic':'kind',body:<><FileText/>{!row&&<small>{t('fe.kit.act.article')}</small>}</>};
  if(x.poll)return {cls:row?'ic':'kind',body:<><ChartColumn/>{!row&&<small>{t('fe.kit.act.poll')}</small>}</>};
  if(x.interests)return {cls:row?'ic':'kind',body:<><Sparkles/>{!row&&<small>{t('fe.kit.act.interests')}</small>}</>};
- return row?{cls:'ic',body:<Pencil/>}:{cls:'txt',body:<span>{(x.text??'').slice(0,40)}</span>};
+ return row?{cls:'ic',body:<MessageSquareText/>}:{cls:'txt',body:<span>{(x.text??'').slice(0,40)}</span>};
 }
 /** One tile of an activity strip: a tap opens the thing (`label` names it for screen readers). */
 export function ActivityTile({thumb,label,onClick}:{thumb:ActThumb,label:string,onClick:()=>void}){

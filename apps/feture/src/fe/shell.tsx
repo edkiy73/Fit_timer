@@ -146,6 +146,14 @@ function FeLayout(){
  const main=useRef<HTMLElement>(null);const [cta,setCta]=useState(false);const [sbar,setSbar]=useState(false);
  useEffect(()=>{const m=main.current;if(!m)return;const sync=()=>{setCta(!!m.querySelector(':scope>.ctabar'));setSbar(!!m.querySelector(':scope>.sbar'));};sync();
   const o=new MutationObserver(sync);o.observe(m,{childList:true});return ()=>o.disconnect();},[]);
+ // The floating header's title fades as the screen's view scrolls (--sc 0→1 over the first 48px), so it never sits on
+ // top of the posts; a new screen starts at the top again.
+ useEffect(()=>{const m=main.current;if(!m)return;
+  const set=(top:number)=>{const sc=Math.min(1,Math.max(0,top/48));m.style.setProperty('--sc',sc.toFixed(3));m.classList.toggle('scrolled',top>0);};
+  const on=(e:Event)=>{const v=e.target as HTMLElement;if(v?.classList?.contains('view')&&v.parentElement===m)set(v.scrollTop);};
+  const reset=()=>{const v=m.querySelector<HTMLElement>(':scope>.view');set(v?v.scrollTop:0);};
+  m.addEventListener('scroll',on,{capture:true,passive:true});const o=new MutationObserver(reset);o.observe(m,{childList:true});reset();
+  return ()=>{m.removeEventListener('scroll',on,{capture:true});o.disconnect();};},[]);
  return <div className="stage"><div className="root">
   <aside className="side">
    <div className="brand"><img src={import.meta.env.BASE_URL+'fe-logo.svg'} alt=""/><b>Fet<i>Ure</i></b></div>
