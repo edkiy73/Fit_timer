@@ -2,10 +2,11 @@ import {useCallback,useEffect,useRef,useState,type ReactNode} from 'react';
 import {useLocation,useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Ban,Bell,ChevronRight,CircleCheck,Clock,Copy,Ellipsis,FileText,Flag,Info,Link as LinkIcon,Lock,Pencil,Pin,PinOff,Send,Settings,ShieldAlert,Trash2,TrendingDown,TrendingUp,User,UserMinus,UserPlus,Users,X,type LucideIcon} from 'lucide-react';
+import {Ban,Bell,ChevronRight,CircleCheck,Clock,Copy,Ellipsis,FileText,Flag,Info,Link as LinkIcon,Lock,MessageCircle,Pencil,Pin,PinOff,Send,Settings,ShieldAlert,Trash2,TrendingDown,TrendingUp,User,UserMinus,UserPlus,Users,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,Announcement,Answer,Ask,Av,Bar,Btn,Card,IconBtn,Check,Empty,Group,LoadMore,Note,PersonLine,Pill,RequestCard,Row,SectionLabel,Seg,Sheet,Skel,Stack,StatusCard,SubBar} from './kit';
 import {useFe,usePartnerApproves} from './session';
+import {WriteBtn,useWriteTo} from './write-to';
 import {useToast} from './toast';
 import {when} from './feed';
 import {FErr,Field,SelectRow,shakeFirstErr} from './create-community';
@@ -155,7 +156,7 @@ export function MembersList({c,data,onChange}:{c:{id:string,me?:{role:string,sta
  const [openId,setOpen]=useState<string|null>(null);const [confirm,setConfirm]=useState(false);const [busy,setBusy]=useState(false);
  // What a change did, shown at once until the list is read again: the next tap on the person offers the next step.
  const [done,setDone]=useState<Record<string,Partial<Mem>>>({});
- const host=isHost(c);const owner=host&&c.me?.role==='owner';
+ const host=isHost(c);const owner=host&&c.me?.role==='owner';const writeTo=useWriteTo();
  const change=async(m:Mem,ch:'host'|'unhost'|'readOnly'|'canWrite'|'remove')=>{
   setBusy(true);
   try{await call('community.member',{opId:newOpId(),communityId:c.id,profileId:m.id,change:ch},okRes);setDone(d=>({...d,[m.id]:ch==='host'||ch==='unhost'?{role:ch==='host'?'host':'member'}:ch==='readOnly'||ch==='canWrite'?{read_only:ch==='readOnly'}:{}}));
@@ -175,7 +176,9 @@ export function MembersList({c,data,onChange}:{c:{id:string,me?:{role:string,sta
  const open=openId?items?.find(m=>m.id===openId)??null:null;
  const sub=(m:Mem)=>m.id===acting?.id?(m.role==='owner'?t('fe.cm.youOwner'):t('fe.host.mem.you')):m.role==='owner'?t('fe.cm.owner'):m.role==='host'?t('fe.cm.hostSub'):m.read_only?t('fe.cm.cantPost'):undefined;
  const canManage=(m:Mem)=>host&&m.id!==acting?.id&&m.role!=='owner'&&(m.role!=='host'||owner);
- const row=(m:Mem)=><PersonRow key={m.id} p={m} sub={sub(m)??(m.handle&&m.name?'@'+m.handle:t('fe.cm.memberSub'))} {...(canManage(m)?{onClick:()=>setOpen(m.id),end:<IconBtn icon={Ellipsis} kind="ghost" size="sm" label={t('fe.cm.more')} onClick={()=>setOpen(m.id)}/>}:{})}/>;
+ // «Написать» someone of the community (owner 29.10.2026: a message request when there is no chat); hosts find it in ⋯.
+ const row=(m:Mem)=><PersonRow key={m.id} p={m} sub={sub(m)??(m.handle&&m.name?'@'+m.handle:t('fe.cm.memberSub'))} {...(canManage(m)?{onClick:()=>setOpen(m.id),end:<IconBtn icon={Ellipsis} kind="ghost" size="sm" label={t('fe.cm.more')} onClick={()=>setOpen(m.id)}/>}
+  :m.id!==acting?.id?{end:<WriteBtn id={m.id} name={pname(m)}/>}:{})}/>;
  const hosts=items?.filter(m=>m.role!=='member')??[];const members=items?.filter(m=>m.role==='member')??[];
  return <>
   {host&&<Note className="k-mem-hint">{t('fe.host.mem.hint')}</Note>}
@@ -188,6 +191,7 @@ export function MembersList({c,data,onChange}:{c:{id:string,me?:{role:string,sta
   </>}
   {open&&!confirm&&<Sheet title={pname(open)} onClose={()=>setOpen(null)}><Card list>
    <Row icon={User} title={t('fe.host.mem.profile')} onClick={()=>navigate('/n/people/'+open.id)}/>
+   <Row icon={MessageCircle} title={t('fe.rq.write')} onClick={()=>void writeTo.open(open.id)}/>
    {owner&&<Row icon={open.role==='host'?UserMinus:UserPlus} tone="v" noChev disabled={busy} title={open.role==='host'?t('fe.host.mem.unhost'):t('fe.host.mem.makeHost')}
     sub={open.role==='host'?t('fe.host.mem.unhostSub'):t('fe.host.mem.makeHostSub')} onClick={()=>void change(open,open.role==='host'?'unhost':'host')}/>}
    {open.role==='member'&&<Row icon={Lock} noChev disabled={busy} title={open.read_only?t('fe.host.mem.canWrite'):t('fe.host.mem.makeReadOnly')} sub={open.read_only?undefined:t('fe.host.mem.readOnlySub')}
@@ -513,7 +517,8 @@ export function EventAttendeesScreen(){
   <div className="view nodock"><div className="wrap">
    <Seg small value={k} onChange={v=>setSp({k:v},{replace:true})} label={t('fe.cm.crowdTitle')} options={[{id:'going',label:data?.e.past?t('fe.cm.attended'):t('fe.host.att.going')},{id:'interested',label:t('fe.host.att.interested')}]}/>
    {!data?<Loading error={error} retry={load}/>:<>
-    {data.l.items.length?<Card list>{data.l.items.map(p=><PersonRow key={p.id} p={p} sub={p.id===acting?.id?t(p.kind==='couple'?'fe.cm.thatsYouTwo':'fe.cm.thatsYou'):p.kind==='couple'?t('fe.host.att.couple'):undefined}/>)}</Card>
+    {data.l.items.length?<Card list>{data.l.items.map(p=><PersonRow key={p.id} p={p} sub={p.id===acting?.id?t(p.kind==='couple'?'fe.cm.thatsYouTwo':'fe.cm.thatsYou'):p.kind==='couple'?t('fe.host.att.couple'):undefined}
+     end={p.id!==acting?.id?<WriteBtn id={p.id} name={pname(p)}/>:undefined}/>)}</Card>
      :<Note>{t('fe.cm.nobody')}</Note>}
     {k==='going'&&data.l.items.some(p=>p.kind==='couple')&&<Note className="mt12">{t('fe.cm.coupleTwo')}</Note>}
     {k==='going'&&!org&&data.l.hidden>0&&<Note className="mt12">{fill(t('fe.cm.hiddenN'),{n:data.l.hidden})}</Note>}

@@ -3,6 +3,7 @@ import { inboxCommands } from '../../contracts/inbox.mjs';
 import { fail } from '../errors.mjs';
 import { sha256 } from '../hash.mjs';
 import { withFaces } from './faces.mjs';
+import { incomingRequest } from '../sql-rules.mjs';
 import { canonicalToken, webSubscription } from '../webpush.mjs';
 
 /** Slice G2: the inbox of an account (S1 §13). Notifications are stored per account; «Нужно решить» is computed from its
@@ -121,17 +122,21 @@ const run = {
             and ${STILL_MEMBER}) notifications,
          (select count(*)::int from feture.conversation_member cm join feture.conversation c on c.id = cm.conversation_id
             join feture.profile o on o.id = case when c.profile_a = cm.profile_id then c.profile_b else c.profile_a end
-          where cm.account_id = $1 and not cm.archived and not feture.blocked(cm.profile_id, o.id) and ${CHAT_MEMBER}
+          where cm.account_id = $1 and not cm.archived and not feture.blocked(cm.profile_id, o.id) and ${CHAT_MEMBER} and not ${incomingRequest('c', 'cm')}
             and exists (select 1 from feture.message m where m.conversation_id = c.id and m.seq > cm.last_read_seq and m.sender_account_id is distinct from $1)) chats,
          (select count(*)::int from feture.conversation_member cm join feture.conversation c on c.id = cm.conversation_id
             join feture.profile o on o.id = case when c.profile_a = cm.profile_id then c.profile_b else c.profile_a end
           where cm.account_id = $1 and c.state = 'active' and c.last_seq = 0 and not cm.archived and not feture.blocked(cm.profile_id, o.id) and ${CHAT_MEMBER}) new_matches,
+         (select count(*)::int from feture.conversation_member cm join feture.conversation c on c.id = cm.conversation_id
+            join feture.profile o on o.id = case when c.profile_a = cm.profile_id then c.profile_b else c.profile_a end
+          where cm.account_id = $1 and c.state = 'active' and c.request_state = 'pending' and ${incomingRequest('c', 'cm')}
+            and not feture.blocked(cm.profile_id, o.id) and ${CHAT_MEMBER}) requests,
          (select count(*)::int from feture.profile_like l join feture.profile_member m on m.profile_id = l.to_profile_id and m.account_id = $1 and m.state = 'active'
             join feture.profile ap on ap.id = l.from_profile_id
           where l.state = 'active' and ap.state = 'active' and not feture.blocked(l.to_profile_id, ap.id)) likes`, [account.id])]);
     const decide = list.length;
     // The bell shows unread news plus everything to decide; «Нужно решить» is the same number everywhere.
-    return { decide, notifications: c.notifications, bell: c.notifications + decide, chats: c.chats, newMatches: c.new_matches, likes: c.likes };
+    return { decide, notifications: c.notifications, bell: c.notifications + decide, chats: c.chats, newMatches: c.new_matches, requests: c.requests, likes: c.likes };
   },
 
   async 'push.register'(q, { account, input }) {

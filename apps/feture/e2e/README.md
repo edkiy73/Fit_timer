@@ -90,6 +90,18 @@ Chrome, which takes the WebCodecs path (MP4) — run video scenarios both ways (
     FE_ADMIN_KEY=… E2E_LANE=feed APP=http://localhost:4250 e2e/run-all.sh [area]     # every file, then a summary
     node e2e/personas.mjs <lane> <persona>     # build one and print it (a `full` one takes ~3 min the first time)
 
+Server code that is not deployed yet (a new command, a changed rule) runs on a **local API** instead of production:
+`e2e/local-api.mjs` serves the real `/api/fe` handler with every command on PGlite (all migrations, the `feture_api`
+role), sign-in with a test code, the legal documents, media in memory with the real scan and variants, the job queue
+every second and the staff persona's roles. Personas are built there through the same app commands:
+
+    node e2e/local-api.mjs 4290 &
+    FE_API=http://localhost:4290 E2E_SESSIONS=/tmp/local-sessions.json FE_ADMIN_KEY=x E2E_LANE=mr APP=http://localhost:4250 \
+      node e2e/run.mjs e2e/scenarios/chats/requests.mjs
+
+Its database lives as long as the process (no realtime: screens update on their poll). Use a separate `E2E_SESSIONS`
+file, so production sessions are never replaced.
+
 The first run of a lane builds its personas (photo and age checks wait for background jobs: ~15–20 min for all).
 `STAFF` is one account for all lanes: a parallel run elsewhere may sign its browser page out (the runner logs a 401
 and signs in again).

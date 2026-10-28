@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Camera,ChevronDown,ChevronRight,ClipboardList,Clock,Eye,HeartOff,PenLine,Users,Newspaper,Settings,Star,Trash2,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {AddCard,Alert,Ask as KitAsk,Av,Btn,Card,Empty,Group,H,IconBtn,Note,PhotoAdd,PhotoSlot,PhotoSlots,Row,Seg,SelectRow,Sheet,Skel,ToggleRow} from './kit';
+import {AddCard,Alert,Ask as KitAsk,Av,Btn,Card,Empty,Group,H,IconBtn,Note,PhotoAdd,PhotoSlot,PhotoSlots,RadioList,Row,Seg,SelectRow,Sheet,Skel,ToggleRow} from './kit';
 import {AgeCheckLink,useAgeResume} from './age-check';
 import {dropReadCache,useFe,useRealtime,useShown} from './session';
 import {PrivateLayer} from './private';
@@ -31,7 +31,8 @@ export const profile=z.object({id:z.uuid(),kind:z.enum(['person','couple']),hand
  details:z.record(z.string(),z.unknown()),rev:z.number().optional(),detailsVis:z.string().nullable().optional(),showAge:z.boolean().optional(),cityId:z.string().nullable().optional()}).passthrough();
 export const profileRes=z.object({ok:z.literal(true),profile});
 export const settingsShape=z.object({discoverMode:z.enum(['visible','hidden','off']),privateOn:z.boolean(),acceptProfileLikes:z.boolean().optional(),requestsFrom:z.enum(['all','matches','none']).optional(),
- linksFrom:z.string().optional(),mentionsFrom:z.enum(['all','follow','none']).optional(),activityVis:z.enum(['all','followers','off']).optional(),showLikes:z.boolean().optional()}).passthrough();
+ linksFrom:z.string().optional(),mentionsFrom:z.enum(['all','follow','none']).optional(),activityVis:z.enum(['all','followers','off']).optional(),showLikes:z.boolean().optional(),
+ messagesFrom:z.enum(['all','known','none']).optional()}).passthrough();
 export const settingsRes=z.object({ok:z.literal(true),settings:settingsShape});
 export const option=z.object({kind:z.string(),code:z.string(),ru:z.string(),en:z.string()});
 export const place=z.object({id:z.string(),code:z.string().nullable().optional(),country:z.string().optional(),ru:z.string(),en:z.string()});
@@ -296,6 +297,11 @@ function Visibility({p,settings,onChanged}:{p:Profile,settings:Settings,onChange
     options={(['all','granted','only'] as const).map(v=>[v,t('fe.reg.vis.'+v)] as const)}/>}
    {toggle('showLikes',cp?t('fe.mx.v.showLikesUs'):t('fe.mx.v.showLikes'),cp?t('fe.mx.v.showLikesSubUs'):t('fe.mx.v.showLikesSub'),settings.showLikes!==false)}
   </Card></Group>
+  {/* «Кто может мне писать» (owner 29.10.2026, message requests); the server enforces it. */}
+  <Group title={cp?t('fe.rq.set.titleUs'):t('fe.rq.set.title')} foot={t('fe.rq.set.sub')}>
+   <RadioList label={cp?t('fe.rq.set.titleUs'):t('fe.rq.set.title')} value={settings.messagesFrom??'known'} onChange={v=>{if(v!==(settings.messagesFrom??'known'))void set('messagesFrom',v);}}
+    options={(['all','known','none'] as const).map(v=>[v,t('fe.rq.set.'+v+(v==='known'&&cp?'Us':'')),v==='none'?t('fe.rq.set.noneSub'):undefined] as const)}/>
+  </Group>
   {failure&&<Alert kind="err" noIcon>{failure}{failure===t('fe.age.couple')&&<><br/><AgeCheckLink intent={ageIntent||undefined}/></>}</Alert>}
   {/* V21 k4off: switching Discover off is asked first — matches, chats and access stay. */}
   {askOff&&<KitAsk icon={HeartOff} danger title={t(cp?'fe.w7.k4off.titleUs':'fe.w7.k4off.title')} text={t(cp?'fe.w7.k4off.textUs':'fe.w7.k4off.text')} ok={t('fe.w7.k4off.ok')} busy={busy}
