@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Check,ChevronLeft,ChevronRight,Link as LinkIcon,Undo2,Users,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Ask,Av,Btn,Card,Empty,H,IconBtn,Layer,Note,PhotoTrack,Row,Sheet,Skel,VideoBadge,VideoPlayer,useBackClose,type Slide} from './kit';
+import {Ask,Av,Btn,Card,Empty,H,IconBtn,Layer,LoadMore,Note,PhotoTrack,Row,Sheet,Skel,VideoBadge,VideoPlayer,useBackClose,type Slide} from './kit';
 import {useFe} from './session';
 import {useToast} from './toast';
 
@@ -235,10 +235,10 @@ export {personName};
  * marks private are only counted («И ещё N…»). A row opens the profile («Я» for one's own). */
 export function MarksSheet({title,empty,load,onClose,first}:{title:string,empty:string,load:(cursor?:string)=>Promise<MarksPage>,onClose:()=>void,first?:MarksPage|null}){
  const {t,locale}=useI18n();const navigate=useNavigate();const {acting}=useFe();
- const [data,setData]=useState<MarksPage|null>(first??null);const [error,setError]=useState<unknown>(null);const [more,setMore]=useState(false);
+ const [data,setData]=useState<MarksPage|null>(first??null);const [error,setError]=useState<unknown>(null);const [more,setMore]=useState(false);const [moreErr,setMoreErr]=useState<unknown>(null);
  const get=useRef(load);get.current=load;
  useEffect(()=>{if(first)return;get.current().then(setData,setError);},[first]);
- const next=()=>{if(!data?.next||more)return;setMore(true);get.current(data.next).then(r=>setData(d=>d&&{...r,items:[...d.items,...r.items]}),setError).finally(()=>setMore(false));};
+ const next=()=>{if(!data?.next||more)return;setMore(true);setMoreErr(null);get.current(data.next).then(r=>setData(d=>d&&{...r,items:[...d.items,...r.items]}),setMoreErr).finally(()=>setMore(false));};
  const items=data?[...data.items].sort((a,b)=>Number(!!b.mine)-Number(!!a.mine)):[];
  return <Sheet title={title} sub={data?plural(data.total,['отметка','отметки','отметок'],['mark','marks'],locale):undefined} onClose={onClose}>
   {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}/>
@@ -247,7 +247,7 @@ export function MarksSheet({title,empty,load,onClose,first}:{title:string,empty:
    :<>{items.length>0&&<Card list>{items.map(p=><Row key={p.id} av={<Av name={personName(p)} seed={p.id} src={p.avatar} size="sm"/>}
      title={p.id===acting?.id?t('fe.w3.you'):personName(p)} sub={p.handle?'@'+p.handle:undefined}
      onClick={()=>{onClose();navigate(p.mine?'/n/me':'/n/people/'+p.id);}}/>)}</Card>}
-    {data.next&&<Btn kind="soft" className="mt12" busy={more} disabled={more} onClick={next}>{t('fe.feed.more')}</Btn>}
+    <LoadMore more={!!data.next} busy={more} error={moreErr} onMore={next}/>
     {data.hidden>0&&<p className="grp-n">{t('fe.w3.likers.hidden',{n:data.hidden})}</p>}</>}
  </Sheet>;
 }

@@ -5,7 +5,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicBase} from '../api-url';
-import {Ban,Check,ChevronDown,Crown,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,Flag,Heart,History,Info,Link as LinkIcon,Lock,LockOpen,MapPin,MessageCircle,ShieldCheck,Undo2,Users,X} from 'lucide-react';
+import {Ban,Check,ChevronDown,Crown,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,Flag,Heart,History,Info,KeyRound,Link as LinkIcon,Lock,LockOpen,MapPin,MessageCircle,ShieldCheck,Undo2,Users,X} from 'lucide-react';
 import {ActingAv,Alert,Av,Bar,Btn,Card,Empty,Group,H,IconBtn,Layer,Note,PersonName,PhotoBars,PhotoTrack,Pill,Row,Seg,Skel,Text,ToggleRow,Veil,View,plate} from './kit';
 import {useFe} from './session';
 import {ReportSheet} from './report';
@@ -308,7 +308,7 @@ function GalleryGroup({p,onOpen,inert}:{p:PersonProfile,onOpen:(i:number)=>void,
 }
 
 /** Interests group of another profile (pubJars → jarShelf, six then «Ещё N»). */
-function InterestsGroup({profileId,name,inert}:{profileId:string,name:string,inert?:boolean|undefined}){
+function InterestsGroup({profileId,name,avatar,inert}:{profileId:string,name:string,avatar?:string|null|undefined,inert?:boolean|undefined}){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const topic=useTopics();const [items,setItems]=useState<Jar[]>([]);
  const [open,setOpen]=useState<string|null>(null);
  useEffect(()=>{setItems([]);call('interests.list',{profileId},jarsRes).then(r=>setItems(r.items)).catch(()=>{});},[call,profileId]);
@@ -318,7 +318,7 @@ function InterestsGroup({profileId,name,inert}:{profileId:string,name:string,ine
  const theirs=(id:string)=>{const j=items.find(x=>x.topicId===id);return j?asInterest(j):undefined;};
  return <Group title={t('fe.px.int.title')}>
   <Card><Jars items={items} topic={topic} max={6} {...(inert?{}:{onTopic:(id:string)=>own?navigate('/n/topics/'+id):setOpen(id)})}/></Card>
-  {open&&<CompareSheet key={open} topicId={open} name={name} theirs={theirs(open)} onClose={()=>setOpen(null)}/>}</Group>;
+  {open&&<CompareSheet key={open} topicId={open} name={name} avatar={avatar} personId={profileId} theirs={theirs(open)} onClose={()=>setOpen(null)}/>}</Group>;
 }
 
 /** Everything under the photo and the buttons — the same body on the profile page and under a Discover card. */
@@ -326,7 +326,7 @@ export function ProfileBody({p,inert,preview,onOpen}:{p:PersonProfile,inert?:boo
  return <>
   <DetailsGroup p={p}/>
   <LinksSection profileId={p.id} inert={inert}/>
-  <InterestsGroup profileId={p.id} name={personName(p)||'?'} inert={inert}/>
+  <InterestsGroup profileId={p.id} name={personName(p)||'?'} avatar={mediaSrc(p.avatar)} inert={inert}/>
   <GalleryGroup p={p} onOpen={onOpen} inert={inert}/>
   <PrivateVault profileId={p.id} name={personName(p)} {...(preview?{preview}:{})}/>
   <Activity profileId={p.id} inert={inert} preview={!!preview}/>
@@ -418,7 +418,7 @@ export function CompatSummary({profileId}:{profileId:string}){
 }
 
 function roleWord(s:z.infer<typeof side>,t:T){if(s.mark)return '';if(!s.dir||s.dir.length===3)return t('fe.px.cmp.role.all');return s.dir.map(d=>t('fe.px.cmp.role.'+d)).join(' · ');}
-function explain(i:CompatItem,t:T,name:string){
+export function explain(i:CompatItem,t:T,name:string){
  const a=i.mine,b=i.theirs,has=(s:typeof a,x:string)=>!s.dir||s.dir.includes(x);
  switch(i.group){
   case 'complement':return has(a,'give')&&has(b,'get')&&!(has(a,'get')&&has(b,'give'))?fill(t('fe.px.cmp.w.give'),{name})
@@ -432,16 +432,17 @@ function explain(i:CompatItem,t:T,name:string){
 }
 
 /** cmpRow: my fill with the topic inside, both values at the ends; a limit is a word, never a number. */
-export function CmpRow({i,topic,me,them,t}:{i:CompatItem,topic:string,me:{name:string,id:string,src?:string|null},them:{name:string,id:string,src?:string|null},t:T}){
+export function CmpRow({i,topic,me,them,t,why:showWhy=true,lock}:{i:CompatItem,topic:string,me:{name:string,id:string,src?:string|null},them:{name:string,id:string,src?:string|null},t:T,
+ /** false: no line under the bar (the interest sheet says it in its verdict). */ why?:boolean,/** My answer is not public: a key on my avatar (its label says who sees it). */ lock?:string|undefined}){
  const lim=i.group==='bound'||!!i.mine.mark;const lv=lim?0:(i.mine.value??0);
  const val=(s:z.infer<typeof side>)=>s.mark==='hard'?<small className="lim t">{t('fe.px.cmp.taboo')}</small>:s.mark==='discuss'?<small className="lim s">{t('fe.px.cmp.negot')}</small>:<b>{s.value??'—'}</b>;
- const why=explain(i,t,them.name);const ra=roleWord(i.mine,t),rb=roleWord(i.theirs,t);
+ const why=showWhy?explain(i,t,them.name):'';const ra=roleWord(i.mine,t),rb=roleWord(i.theirs,t);
  const hard=i.mine.mark==='hard'||i.theirs.mark==='hard',soft=i.mine.mark==='discuss'||i.theirs.mark==='discuss';
  return <div className="cr-item">
   <span className={['cr',hard?'hard':'',soft?'soft':''].filter(Boolean).join(' ')} style={{'--v':lv,'--lv':lv} as React.CSSProperties}>
    {lv?<span className="cr-f"/>:null}
    <div className="cr-l">
-    <i className="cr-av me"><Av name={me.name} seed={me.id} src={me.src}/></i>
+    <i className="cr-av me"><Av name={me.name} seed={me.id} src={me.src}/>{lock&&<span className="cr-key" role="img" aria-label={lock}><KeyRound/></span>}</i>
     <span className="cr-v">{val(i.mine)}{ra&&<em>{ra}</em>}</span>
     <span className="cr-n">{topic}</span>
     <span className="cr-v r">{val(i.theirs)}{rb&&<em>{rb}</em>}</span>

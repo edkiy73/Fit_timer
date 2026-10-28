@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Check,ChevronLeft,ChevronRight,Globe,Image as ImageIcon,Images,MoreHorizontal,Pencil,Plus,Trash2,Users,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {AlbumCard,AlbumMeta,AlbumRow,Ask,Btn,Card,Counter,Empty,Field,GalleryAdd,GalleryGrid,GalleryTile,Group,IconBtn,Input,Note,Row,SelectRow,SelectionBar,Sheet,Skel,SubBar,View} from './kit';
+import {AlbumCard,AlbumMeta,AlbumRow,Ask,Btn,Card,Counter,Empty,Field,GalleryAdd,GalleryGrid,GalleryTile,Group,IconBtn,Input,LoadMore,Note,Row,SelectRow,SelectionBar,Sheet,Skel,SubBar,View} from './kit';
 import {FIELD,serverFields,softMax,textError,textErrorMessage,textLength} from './kit/validate';
 import {useFe} from './session';
 import {useToast} from './toast';
@@ -114,7 +114,7 @@ export function GalleryScreen(){
  const [error,setError]=useState<unknown>(null);const [tick,setTick]=useState(0);
  const [sel,setSel]=useState<Set<string>|null>(null);const [sheet,setSheet]=useState<SheetKind>(null);const [ask,setAsk]=useState<AskKind>(null);
  useHideDock(sel!==null); // the selection mode keeps its own bar at the bottom: no dock under it (V21 SC.P20 dock:false)
- const [busy,setBusy]=useState(false);const [more,setMore]=useState(false);
+ const [busy,setBusy]=useState(false);const [more,setMore]=useState(false);const [moreErr,setMoreErr]=useState<unknown>(null);
  const reload=useCallback(()=>setTick(n=>n+1),[]);
  useEffect(()=>{
   let live=true;setError(null);
@@ -133,10 +133,10 @@ export function GalleryScreen(){
  const own=!!albums?.own;
  const view=a?inAlbum:all;const items=view?.items??[];
  const loadMore=async()=>{
-  if(!view?.next||more)return;setMore(true);
+  if(!view?.next||more)return;setMore(true);setMoreErr(null);
   try{const r=await call('gallery.list',{profileId:id,...(a?{albumId:a}:{}),cursor:view.next},galleryRes);
    (a?setInAlbum:setAll)(v=>v?{ok:true,items:[...v.items,...r.items],next:r.next}:r);}
-  catch(e){toast(feErrorMessage(e,t),{type:'err'});}finally{setMore(false);}
+  catch(e){setMoreErr(e);}finally{setMore(false);}
  };
  const fail=(e:unknown)=>toast(feErrorMessage(e,t),{type:'err'});
  const run=async(fn:()=>Promise<void>)=>{if(busy)return;setBusy(true);try{await fn();}catch(e){fail(e);}finally{setBusy(false);}};
@@ -245,7 +245,7 @@ export function GalleryScreen(){
       </GalleryGrid>
       :<Empty icon={ImageIcon} title={t('fe.gal.empty')}/>}
      {own&&a&&inAlbum&&!items.length&&<Note className="mt12">{t('fe.gal.emptyAlbumHint')}</Note>}
-     {view?.next&&<Btn kind="soft" className="mt12" busy={more} disabled={more} onClick={()=>void loadMore()}>{t('fe.gal.more')}</Btn>}
+     <LoadMore more={!!view?.next} busy={more} error={moreErr} onMore={()=>void loadMore()}/>
     </>}
   </View>
   {sel&&<SelectionBar status={picked.length?t('fe.gal.selectedN',{n:picked.length}):t('fe.gal.tapToSelect')} actions={[

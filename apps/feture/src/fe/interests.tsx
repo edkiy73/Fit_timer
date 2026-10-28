@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,EyeOff,History,KeyRound,MessageCircle,Pencil,Plus,Sparkles,Trash2,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,AnswerScale,Bar,Btn,Card,Chip,Chips,Empty,Group,IconBtn,Note,Progress,Row,SearchInput,SectionLabel,Sheet,Skel,View} from './kit';
+import {Alert,AnswerScale,Bar,Btn,Card,Chip,Chips,Empty,Group,IconBtn,LoadMore,Note,Progress,Row,SearchInput,SectionLabel,Sheet,Skel,View} from './kit';
 import {useFe,usePartnerApproves} from './session';
 import {when} from './feed';
 
@@ -273,8 +273,7 @@ export function InterestsHistoryScreen(){
       {items.length?items.map(h=><Row key={h.id} icon={h.archived?Sparkles:Pencil} title={name(h.topicId)} sub={<>{text(h)} · {t(h.archived?'fe.int.hist.archived':'fe.int.hist.manual')}</>} val={when(h.at,locale)}/>)
        :<Row sub={t('fe.int.hist.empty')}/>}
      </Card><p className="grp-n">{t(couple?'fe.int.hist.footCouple':'fe.int.hist.foot')}</p>
-     {error?<Alert kind="err" noIcon>{feErrorMessage(error,t)}</Alert>:null}
-     {next&&<Btn kind="text" auto className="jar-more" disabled={more} busy={more} onClick={()=>load(next)}>{t('fe.int.hist.more')}</Btn>}
+     <LoadMore more={!!next} busy={more} error={error} onMore={()=>{if(next)load(next);}}/>
     </Group>}
   </View>
  </>;

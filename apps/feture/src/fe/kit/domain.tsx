@@ -237,13 +237,16 @@ export function PhotoAdd({label,hint,big,tall,ghost,disabled,busy,onClick}:{labe
 export type Slide=string|{video:string,poster?:string|null|undefined,durationMs?:number|null|undefined};
 export function PhotoTrack({srcs,index,wm,onExpired,onStep,onClose}:{srcs:Slide[],index:number,/** Someone else's private photos: the viewer's own handle across each one. */ wm?:string|null|undefined,
  /** A clip's link ran out. */ onExpired?:(()=>void)|undefined,/** Tap paging: −1 / +1. */ onStep?:((d:-1|1)=>void)|undefined,
- /** A vertical swipe (up or down) closes the viewer: the picture follows the finger and the backdrop fades; a short one
-  * springs back. Sideways swipes, taps and the clip's bar are left alone. */ onClose?:(()=>void)|undefined}){
+ /** A vertical swipe (up or down) closes the viewer, Instagram / Telegram-like: only the picture follows the finger
+  * (a little smaller as it goes), the dark backdrop stays where it is and fades with the distance, the clip's bar and
+  * the viewer's own buttons hide while dragging; let go far or fast enough and the picture slides away as everything
+  * fades, else it springs back. Sideways swipes, taps and the clip's bar are left alone. */ onClose?:(()=>void)|undefined}){
  const down=useRef<[number,number]|null>(null);const box=useRef<HTMLDivElement>(null);
  // The pull: where it started, the time, and whether it is ours (decided on the first 10 px: more down than sideways).
  const pull=useRef<{x:number,y:number,t:number,id:number,on:boolean|null}|null>(null);
- const setPull=(dy:number)=>{const b=box.current;if(!b)return;b.style.setProperty('--dy',dy+'px');
-  b.parentElement?.style.setProperty('--pull',String(Math.min(.9,Math.abs(dy)/(b.clientHeight||600)*1.6)));};
+ const setPull=(dy:number)=>{const b=box.current;if(!b)return;const f=Math.min(1,Math.abs(dy)/((b.clientHeight||600)*.5));
+  b.style.setProperty('--dy',dy+'px');b.style.setProperty('--sc',String(1-f*.12));
+  b.parentElement?.style.setProperty('--pull',String(f*.88));};
  const start=(e:React.PointerEvent<HTMLDivElement>)=>{down.current=[e.clientX,e.clientY];
   if(!onClose||!e.isPrimary||(e.target as HTMLElement).closest('.k-vbar'))return;
   pull.current={x:e.clientX,y:e.clientY,t:performance.now(),id:e.pointerId,on:null};};
@@ -259,7 +262,12 @@ export function PhotoTrack({srcs,index,wm,onExpired,onStep,onClose}:{srcs:Slide[
   e.stopPropagation();
   const dy=e.clientY-p.y,v=Math.abs(dy)/Math.max(1,performance.now()-p.t);
   b.classList.remove('pull');
-  if(e.type==='pointerup'&&(Math.abs(dy)>Math.min(140,b.clientHeight*.18)||(v>.6&&Math.abs(dy)>40))){onClose?.();return;}
+  if(e.type==='pointerup'&&(Math.abs(dy)>Math.min(140,b.clientHeight*.18)||(v>.6&&Math.abs(dy)>40))){
+   // Away in the direction it was going, everything fading; then the viewer is gone.
+   const h=b.clientHeight||600;b.classList.add('out');b.style.setProperty('--dy',(dy<0?-1:1)*h*.6+'px');b.style.setProperty('--sc','.8');
+   b.parentElement?.style.setProperty('--pull','1');
+   const reduce=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+   window.setTimeout(()=>onClose?.(),reduce?0:180);return;}
   b.classList.add('back');setPull(0);};
  const tap=(e:React.MouseEvent<HTMLDivElement>)=>{
   const d=down.current;down.current=null;
@@ -418,4 +426,13 @@ export function ReviewPost({byline,title,children,meta}:{byline?:ReactNode,title
 /** The partner's note on a change sent back «на доработку» (V21 returnNoteHTML). */
 export function ReturnNote({children}:{children:ReactNode}){
  return <blockquote className="ret-note">{children}</blockquote>;
+}
+
+/** One short verdict under a comparison (an interest compared with someone's): a small icon in the verdict's tone,
+ * the verdict in bold and at most one quiet line under it. Centred; never a card or a notice box. */
+export function Verdict({icon:Icon,tone,title,sub,className}:{icon?:LucideIcon|undefined,/** ok — fits; try; warn — to talk over; bad — a limit. */ tone?:'ok'|'try'|'warn'|'bad'|undefined,
+ title:ReactNode,sub?:ReactNode,className?:string|undefined}){
+ return <div className={['k-verdict',tone??'',className??''].filter(Boolean).join(' ')} role="status">
+  <b>{Icon&&<Icon aria-hidden="true"/>}{title}</b>{sub&&<span>{sub}</span>}
+ </div>;
 }

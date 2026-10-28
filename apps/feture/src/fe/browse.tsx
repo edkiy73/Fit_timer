@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {BookOpen,ChevronLeft,ChevronRight,CircleCheck,Clock,Ellipsis,History,Image as ImageIcon,Pencil,Plus,Search as SearchIcon,SlidersHorizontal,User,UserMinus,Users,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,H,IconBtn,Note,Pill,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Stack,View,plate} from './kit';
+import {Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,H,IconBtn,LoadMore,Note,Pill,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Stack,View,plate} from './kit';
 import {useFe} from './session';
 import {PostCard,postSchema,type Post} from './feed';
 import {InterestSheet,Jars,useInterests} from './interests';
@@ -119,7 +119,7 @@ export function TopicScreen(){
      :posts===null?<Skel kind="list"/>
      :posts.length===0?<><Note>{t('fe.br.topic.noPosts')}</Note><Btn kind="soft" className="mt12" icon={Pencil} onClick={()=>navigate('/n/feed/new')}>{t('fe.br.topic.write',{name})}</Btn></>
      :<><PostList items={posts} setItems={f=>setPosts(list=>list?f(list):list)}/>
-      {next&&<Btn kind="soft" onClick={()=>load(next)} disabled={more} busy={more}>{t('fe.feed.more')}</Btn>}</>}
+      <LoadMore more={!!next} busy={more} error={error} onMore={()=>{if(next)load(next);}}/></>}
    </>}
   </View>
   {sheet&&tp&&<InterestSheet topicId={id} topics={topics} cats={cats} current={current} onClose={close} onDone={msg=>{close();setNotice(msg);reloadMine();}}/>}

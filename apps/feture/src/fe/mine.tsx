@@ -165,7 +165,7 @@ export function MyPostsScreen(){
  const {data,setData,error,load}=useLoad(useCallback(()=>call('me.posts',{},postsRev),[call]));
  const [edits,setEdits]=useState<SavedEdit|null>(null);
  const replace=(np:Post)=>setData(d=>d?{...d,items:d.items.map(x=>x.id===np.id?np:x)}:d);
- const card=(p:Post)=><PostCard key={p.id} post={p} onChange={replace} onExpired={()=>{call('post.get',{postId:p.id},onePost).then(r=>replace(r.post)).catch(()=>{});}}
+ const card=(p:Post)=><PostCard key={p.id} post={p} onChange={replace} onExpired={()=>{call('post.get',{postId:p.id},onePost,{fresh:true}).then(r=>replace(r.post)).catch(()=>{});}}
   onRemove={r=>{setData(d=>d?{...d,items:d.items.filter(x=>x.id!==r.postId)}:d);toast(r.notice,{type:'ok'});}}/>;
  const row=(p:Post,icon:typeof Pencil,sub:string)=><Row key={p.id} icon={icon} title={mdPlain(p.title||p.body).slice(0,60)||t('fe.fd.mine.noText')} sub={sub} onClick={()=>navigate('/n/feed/post/'+p.id+'/edit')}/>;
  let body;

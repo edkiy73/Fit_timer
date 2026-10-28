@@ -2,7 +2,7 @@ import type {Meta,StoryObj} from '@storybook/react-vite';
 import {useState} from 'react';
 import {fn} from 'storybook/test';
 import {Bell,Eye,Hand,KeyRound,Lock,Trash2,Users,X} from 'lucide-react';
-import {Av,Btn,Card,IconBtn,Row,SelectRow,ToggleRow} from './index';
+import {Av,Btn,Card,IconBtn,LoadMore,Row,SelectRow,ToggleRow} from './index';
 
 const meta={title:'Списки/Строка',component:Row,tags:['autodocs'],
  parameters:{docs:{description:{component:'Пункт настроек, меню, списка людей — всегда внутри `<Card list>`. Слева иконка (`icon`, `tone`) или аватар (`av`), справа значение, бейдж и стрелка. Опасное действие — `danger` (без стрелки).'}}},
@@ -31,3 +31,11 @@ export const ВыборСИконкой:StoryObj<typeof SelectRow>={name:'Стр
 export const ТолькоПоказ:S={name:'Только показ (без нажатия)',render:()=><><Row icon={KeyRound} title="ср, 28 октября" sub="19:00–21:00 местное время"/><Row icon={Users} title="https://очень-длинная-ссылка.example/путь/к/странице" wrap/></>};
 export const Текстом:S={name:'Шаг инструкции (body)',render:()=><><Row icon={Hand} tone="v" body="Покажи жест рядом с лицом"/><Row icon={Lock} title="Где хранится" sub="Удаляем после проверки"/><Row sub="Пока пусто"/></>};
 export const Раскрытие:S={name:'Раскрывающая строка (expanded, extra)',render:()=>{const [o,setO]=useState(false);return <Row title="Твои данные" expanded={o} onClick={()=>setO(!o)} extra={o?undefined:<span className="pe-sums"><span className="pe-sum"><b>Рост</b> 170</span></span>}/>;}};
+
+export const БесконечнаяЛента:StoryObj<typeof LoadMore>={name:'Подгрузка при прокрутке (LoadMore)',decorators:[S=><S/>],
+ parameters:{docs:{description:{story:'После постраничного списка вместо «Показать ещё»: следующая страница запрашивается сама примерно за экран до конца. Пока грузится — три мигающие точки в блоке постоянной высоты; при ошибке — одна строка «Не загрузилось · Повторить»; когда страниц больше нет — ничего.'}}},
+ render:a=>{const [n,setN]=useState(8);const [busy,setBusy]=useState(false);
+  return <div style={{height:320,overflow:'auto'}}><Card list>{Array.from({length:n},(_,i)=><Row key={i} title={'Строка '+(i+1)}/>)}</Card>
+   <LoadMore {...a} more={a.more&&n<40} busy={busy||a.busy} onMore={()=>{setBusy(true);setTimeout(()=>{setN(x=>x+8);setBusy(false);},700);}}/></div>;},
+ args:{more:true,busy:false,error:null,onMore:fn()}};
+export const ПодгрузкаОшибка:StoryObj<typeof LoadMore>={name:'Подгрузка: ошибка',render:a=><LoadMore {...a}/>,args:{more:true,busy:false,error:new Error('x'),onMore:fn()}};

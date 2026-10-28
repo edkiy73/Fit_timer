@@ -6,6 +6,7 @@ import {feRequest,FeError} from '../feture/fe-api';
 import {connectRealtime,type RtKind,type RtListener} from './realtime';
 import {forgetWebPush,noteAction} from './push-web';
 import {forgetNativePush} from './push-native';
+import {linksExpireAt} from './kit/media';
 
 /** What `session.bootstrap` returns: the FetUre account and the profiles this account may act as. */
 const profileCard=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string(),state:z.string(),avatarAssetId:z.uuid().nullable(),avatar:z.string().nullable().optional()});
@@ -47,7 +48,11 @@ const READ_TTL=30000;
 const STALE_TTL=10*60000;
 const READ_MAX=400;
 const wait=(ms:number)=>new Promise<void>(r=>setTimeout(r,ms));
-type Entry={at:number,action:string,value:Promise<unknown>,settled:boolean,refreshing?:boolean};
+type Entry={at:number,action:string,value:Promise<unknown>,settled:boolean,refreshing?:boolean,/** The first media link inside it stops working (ms). */ until?:number|null};
+/** An answer is never served from memory once a media link in it is about to run out (signed links live 5–10 min,
+ * shorter than STALE_TTL): avatars and pictures came back broken. A minute to spare for the picture to load. */
+const LINK_SPARE=60000;
+const usable=(e:Entry|undefined):e is Entry=>!!e&&(e.until==null||Date.now()<e.until-LINK_SPARE);
 const readCache=new Map<string,Entry>();
 const raw=z.unknown();
 /** The schema check a screen asks for, on a shared raw answer: a mismatch is the same «unavailable» feRequest gives. */
@@ -114,7 +119,7 @@ export function FeSessionProvider({children}:{children:ReactNode}){
    return feRequest(session,action,input,schema,{signal:opts.signal,profileId}).then(r=>{noteAction(action);return r;}).finally(()=>dropReads(action));
   }
   const key=JSON.stringify([session.email,profileId??'',action,input]);
-  const hit=readCache.get(key);const age=hit?Date.now()-hit.at:Infinity;
+  const cached=readCache.get(key);const hit=usable(cached)?cached:undefined;const age=hit?Date.now()-hit.at:Infinity;
   // A read refused for «too many at once» (429) is asked again after a short pause instead of failing the screen;
   // writes never retry on their own.
   const once=()=>feRequest(session,action,input,raw,{profileId});
@@ -122,7 +127,7 @@ export function FeSessionProvider({children}:{children:ReactNode}){
    .catch(e=>e instanceof FeError&&e.code==='rate_limited'?wait(6000).then(once):Promise.reject(e));
   const store=(value:Promise<unknown>)=>{
    const entry:Entry={at:Date.now(),action,value,settled:false};readCache.set(key,entry);
-   value.then(()=>{entry.settled=true;},()=>{if(readCache.get(key)===entry)readCache.delete(key);});
+   value.then(body=>{entry.settled=true;entry.until=linksExpireAt(body);},()=>{if(readCache.get(key)===entry)readCache.delete(key);});
    if(readCache.size>READ_MAX){const first=readCache.keys().next().value;if(first!==undefined)readCache.delete(first);}
   };
   let value:Promise<unknown>;
@@ -134,7 +139,7 @@ export function FeSessionProvider({children}:{children:ReactNode}){
     // The new answer is kept for the next visit; an open screen is never torn down under the reader.
     ask().then(body=>{
      if(readCache.get(key)!==hit)return; // a write or a signal emptied the cache meanwhile
-     readCache.set(key,{at:Date.now(),action,value:Promise.resolve(body),settled:true});
+     readCache.set(key,{at:Date.now(),action,value:Promise.resolve(body),settled:true,until:linksExpireAt(body)});
     },()=>{hit.refreshing=false;});}
   }else{value=ask();store(value);}
   // Not bound to the caller's AbortSignal: a screen that unmounts must not cancel a read another screen will reuse.
