@@ -5,6 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {AtSign,Ban,BellOff,Check,EyeOff,Flag,Images,Link as LinkIcon,Pencil,Trash2,User,X} from 'lucide-react';
 import type {LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
+import {publicOrigin} from '../api-url';
 import {Alert,Ask as KitAsk,Btn,Card,RadioList,Row,Sheet,TextArea,ToggleRow} from './kit';
 import {useFe} from './session';
 import {useToast} from './toast';
@@ -86,7 +87,7 @@ export function PostMenu({post,onClose,onChange,onRemove}:{post:Post,onClose:()=
   const r=await call('post.delete',{opId,postId:post.id},deleted);
   return {postId:post.id,notice:r.state==='archived'?t('fe.pm.done.archived'):t('fe.pm.done.deleted')};
  });
- const copy=async()=>{onClose();const url=`${location.origin}/#/n/feed/post/${post.id}`;try{await navigator.clipboard.writeText(url);toast(t('fe.fd.linkCopied'),{type:'ok'});}catch{toast(url,{type:'info'});}};
+ const copy=async()=>{onClose();const url=`${publicOrigin()}/#/n/feed/post/${post.id}`;try{await navigator.clipboard.writeText(url);toast(t('fe.fd.linkCopied'),{type:'ok'});}catch{toast(url,{type:'info'});}};
  // A photo mark of the acting profile on someone else's post.
  const me=post.tags?.find(x=>x.id===acting?.id);const hasMedia=post.media.length>0;
  const answer=(a:'ok'|'no'|'remove')=>run('tag.'+a,async opId=>{

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- FetUre mark from public/fe-logo.svg (two linked rings), drawn as a vector so no raster icons are checked in.
+     The 120-unit logo is scaled to 72 units and centred in the 108dp adaptive-icon canvas (inside the 66dp safe zone). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group android:translateX="18" android:translateY="18" android:scaleX="0.6" android:scaleY="0.6">
+        <path android:pathData="M24,60a23,23 0 1,0 46,0a23,23 0 1,0 -46,0" android:strokeWidth="12" android:fillColor="#00000000">
+            <aapt:attr name="android:strokeColor">
+                <gradient android:type="linear" android:startX="24" android:startY="37" android:endX="70" android:endY="83">
+                    <item android:offset="0" android:color="#FFFF4F6D" />
+                    <item android:offset="1" android:color="#FFC2134A" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <path android:pathData="M50,60a23,23 0 1,0 46,0a23,23 0 1,0 -46,0" android:strokeWidth="12" android:fillColor="#00000000">
+            <aapt:attr name="android:strokeColor">
+                <gradient android:type="linear" android:startX="50" android:startY="83" android:endX="96" android:endY="37">
+                    <item android:offset="0" android:color="#FF6A52F0" />
+                    <item android:offset="1" android:color="#FFC3B3FF" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <path android:pathData="M51,37.4A23,23 0 0,1 65.6,45.2" android:strokeWidth="17" android:strokeColor="@color/feture_icon_background" android:fillColor="#00000000" />
+        <path android:pathData="M51,37.4A23,23 0 0,1 65.6,45.2" android:strokeWidth="12" android:fillColor="#00000000">
+            <aapt:attr name="android:strokeColor">
+                <gradient android:type="linear" android:startX="51" android:startY="37.4" android:endX="65.6" android:endY="45.2">
+                    <item android:offset="0" android:color="#FFFF4F6D" />
+                    <item android:offset="1" android:color="#FFC2134A" />
+                </gradient>
+            </aapt:attr>
+        </path>
+    </group>
+</vector>

@@ -1,5 +1,5 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {useLocation} from 'react-router';
+import {useLocation,useNavigate} from 'react-router';
 import {z} from 'zod';
 import {Bell} from 'lucide-react';
 import {useI18n} from '@appbase/ui-react/i18n.js';
@@ -8,6 +8,7 @@ import {Alert,Btn,Card,Note,Row,Sheet,ToggleRow} from './kit';
 import {useFe} from './session';
 import {useToast} from './toast';
 import {disableWebPush,enableWebPush,needsHomeScreen,onUseful,refreshWebPush,webPushState,webPushSupported,type WebPushState} from './push-web';
+import {disableNativePush,enableNativePush,nativePushOfferable,nativePushState,nativePushSupported,onNativePushTap,refreshNativePush} from './push-native';
 
 /** The notification settings as stored (passthrough: an update sends back exactly what the server has, plus a change). */
 const settingsRes=z.object({ok:z.literal(true),settings:z.object({push:z.boolean(),offered:z.boolean().optional()}).passthrough()});
@@ -17,18 +18,22 @@ const ok=z.object({ok:z.literal(true)}).passthrough();
 let asked=false;
 const wait=(ms:number)=>new Promise<void>(r=>setTimeout(r,ms));
 
-/** Turns push on for this browser and, if the account had push off, for the account too. */
+/** In the Android/iOS app push goes through FCM (push-native.ts), on the website through web push (push-web.ts). */
+const native=nativePushSupported();
+
+/** Turns push on for this browser (or this phone, in the app) and, if the account had push off, for the account too. */
 function useTurnOn(){
  const {state,call}=useFe();const {t}=useI18n();const toast=useToast();
  const webKey=state.status==='ready'?state.boot.push?.webKey:undefined;
  return useCallback(async()=>{
-  if(!webKey)return 'error' as const;
-  const r=await enableWebPush(call,webKey); // first: the browser's question must come from this tap
+  if(!native&&!webKey)return 'error' as const;
+  // first: the browser's / phone's question must come from this tap
+  const r=native?await enableNativePush(call):await enableWebPush(call,webKey!);
   if(r==='on'){
    const s=await call('notifications.settings.get',{},settingsRes,{asAccount:true}).catch(()=>null);
    if(s&&!s.settings.push)await call('notifications.settings.update',{opId:newOpId(),settings:{...s.settings,push:true}},ok,{asAccount:true}).catch(()=>{});
    toast(t('fe.push.on'),{type:'ok'});
-  }else if(r==='denied')toast(t('fe.push.deniedToast'),{type:'warn'});
+  }else if(r==='denied')toast(t(native?'fe.push.app.deniedToast':'fe.push.deniedToast'),{type:'warn'});
   else if(r==='error')toast(t('fe.push.failed'),{type:'err'});
   return r;
  },[webKey,call,t,toast]);
@@ -37,21 +42,25 @@ function useTurnOn(){
 /** V21 N02 `maybePush`: after the first useful action (never on start, never twice) — in a chat a quiet toast with
  * «Включить», elsewhere a small sheet. Also keeps an already subscribed browser registered. */
 export function PushOffer(){
- const {state,call}=useFe();const {t}=useI18n();const toast=useToast();const {pathname}=useLocation();
+ const {state,call}=useFe();const {t}=useI18n();const toast=useToast();const {pathname}=useLocation();const navigate=useNavigate();
  const webKey=state.status==='ready'?state.boot.push?.webKey:undefined;
+ const ready=state.status==='ready';
  const [sheet,setSheet]=useState(false);
  const where=useRef(pathname);where.current=pathname;
  const callRef=useRef(call);callRef.current=call;
  const turnOn=useTurnOn();const turnOnRef=useRef(turnOn);turnOnRef.current=turnOn;
- useEffect(()=>{if(webKey)void refreshWebPush((...a)=>callRef.current(...a),webKey);},[webKey]);
+ useEffect(()=>{if(!native&&webKey)void refreshWebPush((...a)=>callRef.current(...a),webKey);},[webKey]);
+ useEffect(()=>{if(native&&ready)void refreshNativePush((...a)=>callRef.current(...a));},[ready]);
+ // In the app a tap on a notification opens its screen (only /#/n/... routes, see pushRoute).
+ useEffect(()=>native?onNativePushTap(route=>navigate(route)):undefined,[navigate]);
  useEffect(()=>{
-  if(!webKey)return;
+  if(native?!ready:!webKey)return;
   return onUseful(()=>{
-   if(asked||!webPushSupported()||Notification.permission!=='default')return;
+   if(asked||(!native&&(!webPushSupported()||Notification.permission!=='default')))return;
    asked=true;
    void (async()=>{
     try{
-     if(await webPushState()==='on')return;
+     if(native?!(await nativePushOfferable()):await webPushState()==='on')return;
      const s:Settings=(await callRef.current('notifications.settings.get',{},settingsRes,{asAccount:true})).settings;
      if(s.offered)return;
      const route=where.current;
@@ -64,7 +73,7 @@ export function PushOffer(){
     }catch{asked=false;}
    })();
   });
- },[webKey,t,toast]);
+ },[webKey,ready,t,toast]);
  if(!sheet)return null;
  const close=()=>setSheet(false);
  return <Sheet title={t('fe.push.offerTitle')} lead={<span className="ico l"><Bell/></span>} onClose={close}
@@ -74,23 +83,26 @@ export function PushOffer(){
  </Sheet>;
 }
 
-/** K05 «Push-уведомления»: this browser's subscription — reflects it and changes it. */
+/** K05 «Push-уведомления»: this browser's subscription (this phone's FCM registration in the app) — reflects it and
+ * changes it. */
 export function PushSwitch(){
  const {state,call}=useFe();const {t}=useI18n();
  const webKey=state.status==='ready'?state.boot.push?.webKey:undefined;
  const [s,setS]=useState<WebPushState|null>(null);const [busy,setBusy]=useState(false);
  const turnOn=useTurnOn();
- useEffect(()=>{let live=true;void webPushState().then(v=>{if(live)setS(v);});return ()=>{live=false;};},[]);
- if(!webPushSupported())return needsHomeScreen()?<Note className="mt8">{t('fe.push.homeScreen')}</Note>:null;
- if(!webKey||!s)return null;
+ const read=native?nativePushState:webPushState;
+ useEffect(()=>{let live=true;void read().then(v=>{if(live)setS(v);});return ()=>{live=false;};},[read]);
+ if(!native&&!webPushSupported())return needsHomeScreen()?<Note className="mt8">{t('fe.push.homeScreen')}</Note>:null;
+ if((!native&&!webKey)||!s||s==='unsupported')return null;
  const flip=()=>{
   if(busy)return;setBusy(true);
-  const done=(p:Promise<unknown>)=>void p.finally(()=>webPushState().then(setS).finally(()=>setBusy(false)));
-  if(s==='on')done(disableWebPush(call));
-  else done(turnOn()); // asks the browser right away, inside this tap
+  const done=(p:Promise<unknown>)=>void p.finally(()=>read().then(setS).finally(()=>setBusy(false)));
+  if(s==='on')done(native?disableNativePush(call):disableWebPush(call));
+  else done(turnOn()); // asks the browser / phone right away, inside this tap
  };
+ const k=native?'fe.push.app.':'fe.push.';
  return <>
-  <Card list className="mt8"><ToggleRow title={t('fe.push.switch')} sub={s==='on'?t('fe.push.switchOn'):s==='denied'?t('fe.push.switchDenied'):t('fe.push.switchOff')} on={s==='on'} disabled={busy} onClick={flip}/></Card>
-  {s==='denied'&&<Alert kind="warn" className="mt8">{t('fe.push.denied')}</Alert>}
+  <Card list className="mt8"><ToggleRow title={t('fe.push.switch')} sub={s==='on'?t(k+'switchOn'):s==='denied'?t(k+'switchDenied'):t(k+'switchOff')} on={s==='on'} disabled={busy} onClick={flip}/></Card>
+  {s==='denied'&&<Alert kind="warn" className="mt8">{t(k+'denied')}</Alert>}
  </>;
 }

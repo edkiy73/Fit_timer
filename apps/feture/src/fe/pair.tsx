@@ -4,6 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {AtSign,Check,Copy,EyeOff,Heart,Link as LinkIcon,Lock,ShieldCheck,Users,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
+import {publicBase} from '../api-url';
 import {Alert,Av,Bar,Btn,Card,Field,Group,H,Input,Note,PersonLine,Pill,RadioList,RequestCard,Row,SelectRow,Sheet,Skel,View} from './kit';
 import {useFe} from './session';
 import {Ask} from './me';
@@ -36,7 +37,7 @@ type Found=z.infer<typeof found>['items'][number];
 type Couple=z.infer<typeof coupleRes>['couple'];
 const NICK=/^[a-z0-9_.]{3,20}$/i;
 
-const linkUrl=(token:string)=>`${location.origin}${location.pathname}#/n/me/pair?link=${token}`;
+const linkUrl=(token:string)=>`${publicBase()}#/n/me/pair?link=${token}`;
 
 /** V21 Q01 live preview under the nickname field: «найден» with the photo, or the one reason it can't be invited. */
 function usePartnerLookup(nick:string,personId:string|undefined,ownHandle:string|null|undefined){

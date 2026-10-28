@@ -4,6 +4,7 @@ import {useLocation,useNavigate,useParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
+import {publicBase} from '../api-url';
 import {Ban,Check,ChevronDown,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,Flag,Heart,History,Info,Link as LinkIcon,Lock,LockOpen,MapPin,MessageCircle,ShieldCheck,Undo2,Users,X} from 'lucide-react';
 import {Alert,Av,Bar,Btn,Card,Empty,Group,H,IconBtn,Layer,Note,PersonName,PhotoTrack,Pill,RadioList,Row,Seg,Skel,TextArea,ToggleRow,Veil,View,plate} from './kit';
 import {useFe} from './session';
@@ -555,7 +556,7 @@ export function PersonMenu({profileId,name,step,setStep,blocked,setBlocked,toast
  const unblock=async()=>{setBusy(true);
   try{await call('block.set',{opId:newOpId(),profileId,on:false},ok);setBlocked(false);close();toast(t('fe.px.bl.undone'));}
   catch(e){toast(pxError(e,t),true);}finally{setBusy(false);}};
- const copy=async()=>{close();try{await navigator.clipboard.writeText(location.origin+location.pathname+'#/n/people/'+profileId);toast(t('fe.px.menu.copied'));}catch{toast(t('fe.px.menu.copyFail'),true);}};
+ const copy=async()=>{close();try{await navigator.clipboard.writeText(publicBase()+'#/n/people/'+profileId);toast(t('fe.px.menu.copied'));}catch{toast(t('fe.px.menu.copyFail'),true);}};
  const row=(icon:LucideIcon,title:string,onClick:()=>void,sub?:string,danger?:boolean)=><Row noChev icon={icon} title={title} sub={sub} danger={!!danger} onClick={onClick} disabled={busy}/>;
  if(step==='menu')return <Sheet title={name} onClose={close}><Card list>
   {blocked?row(Ban,t('fe.px.menu.unblock'),unblock):<>

@@ -3,6 +3,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Flag,Info,Users,type LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
+import {publicOrigin} from '../api-url';
 import {Alert,Btn,RadioList,Sheet,TextArea} from './kit';
 import {useFe} from './session';
 import {namedPlate} from './create-community';
@@ -49,4 +50,4 @@ export function ReportSheet({targetType,targetId,onClose,onDone}:{targetType:'co
 export async function copyLink(url:string){
  try{await navigator.clipboard.writeText(url);return true;}catch{return false;}
 }
-export const appUrl=(path:string)=>`${location.origin}/#${path}`;
+export const appUrl=(path:string)=>`${publicOrigin()}/#${path}`;
