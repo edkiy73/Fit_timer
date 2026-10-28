@@ -7,6 +7,7 @@ import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {AlbumCard,AlbumMeta,AlbumRow,Ask,Btn,Card,Counter,Empty,Field,GalleryAdd,GalleryGrid,GalleryTile,Group,IconBtn,Input,Note,Row,SelectRow,SelectionBar,Sheet,Skel,SubBar,View} from './kit';
 import {useFe} from './session';
 import {useToast} from './toast';
+import {useHideDock} from './dock';
 import type {Post} from './feed';
 
 /** V21 P20 «Галерея» and the album pieces used around it (wave 5): album cards filter the grid; an own gallery adds
@@ -110,6 +111,7 @@ export function GalleryScreen(){
  const [inAlbum,setInAlbum]=useState<z.infer<typeof galleryRes>|null>(null);
  const [error,setError]=useState<unknown>(null);const [tick,setTick]=useState(0);
  const [sel,setSel]=useState<Set<string>|null>(null);const [sheet,setSheet]=useState<SheetKind>(null);const [ask,setAsk]=useState<AskKind>(null);
+ useHideDock(sel!==null); // the selection mode keeps its own bar at the bottom: no dock under it (V21 SC.P20 dock:false)
  const [busy,setBusy]=useState(false);const [more,setMore]=useState(false);
  const reload=useCallback(()=>setTick(n=>n+1),[]);
  useEffect(()=>{

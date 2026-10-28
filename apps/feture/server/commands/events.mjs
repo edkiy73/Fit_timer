@@ -286,6 +286,20 @@ const run = {
     return { id: d.id };
   },
 
+  async 'event.draftGet'(q, { acting: a, input, cfg }) {
+    const acting = need(a);
+    const [d] = await q.query('select id, form, step, updated_at from feture.event_draft where id = $1 and owner_profile_id = $2', [input.draftId, acting.profileId]);
+    if (!d) fail(404, 'not_found');
+    // The cover as a picture only while it is still the profile's own event cover (the editor shows it again).
+    let cover = null;
+    const coverId = typeof d.form?.coverAssetId === 'string' ? d.form.coverAssetId : null;
+    if (coverId) {
+      const [asset] = await q.query(`select * from feture.media_asset where id = $1 and owner_profile_id = $2 and purpose = 'event' and ${LIVE}`, [coverId, acting.profileId]);
+      if (asset) cover = await mediaDto(cfg.media, asset, { viewerProfileId: acting.profileId, place: 'public', showExplicit: false, staff: false }).catch(() => null);
+    }
+    return { draft: { id: d.id, form: d.form, step: d.step, updatedAt: d.updated_at, cover } };
+  },
+
   async 'event.draftDelete'(q, { acting: a, input }) {
     const acting = need(a);
     const rows = await q.query('delete from feture.event_draft where id = $1 and owner_profile_id = $2 returning id', [input.draftId, acting.profileId]);

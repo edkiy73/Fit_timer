@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {CircleAlert,Link2,Pencil,Plus,Trash2,User,Users,X} from 'lucide-react';
 import {useToast as useToastV21} from './toast';
 import {newOpId} from '../feture/fe-api';
-import {Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,Group,IconBtn,Note,PersonLine,RadioList,RequestCard,Row,SearchInput,SectionLabel,Seg,SelectRow,Skel,Spacer,View} from './kit';
+import {Alert,Ask,Av,Bar,Btn,Card,Chip,Chips,Empty,Group,IconBtn,Note,PersonLine,RadioList,RequestCard,Row,SearchInput,SectionLabel,Seg,SelectRow,Skel,Spacer,View} from './kit';
 import {useFe} from './session';
 import {NameBadges,faceFields,withAge} from './faces';
 import {KINDS,SIDES,Sheet,linkLabel,linksMineRes,mediaSrc,personName,personProfileRes,pxError,useToast,type Kind,type LinkView,type LinksMine,type PersonProfile} from './profile-extras';
@@ -176,6 +176,8 @@ export function LinkEditScreen(){
  const [kind,setKind]=useState<Kind>('play');const [mySide,setSide]=useState<string|null>(null);const [vis,setVis]=useState<Vis>('all');
  const [busy,setBusy]=useState(false);const [err,setErr]=useState('');const [sideErr,setSideErr]=useState(false);const [done,setDone]=useState('');
  const op=useRef(newOpId());const init=useRef(false);
+ // What the form opened with: leaving with anything else asks «Выйти без сохранения?» (the kit Sheet's `dirty` Ask).
+ const start=useRef<{kind:Kind,side:string|null,vis:Vis}|null>(null);const [leaving,setLeaving]=useState(false);
  const load=useCallback(()=>{setError(null);Promise.all([call('profile.get',{profileId:id},personProfileRes),call('links.mine',{},linksMineRes)])
   .then(([a,b])=>{setP(a.profile);setMine(b);}).catch(setError);},[call,id]);
  useEffect(()=>{init.current=false;setDone('');load();},[load]);
@@ -183,8 +185,8 @@ export function LinkEditScreen(){
   .find(x=>x.l.other.id===id)):undefined;
  useEffect(()=>{if(!p||!mine||init.current)return;init.current=true;
   const cur=ex&&ex.st!=='in'?ex.l:null;
-  setKind(cur&&(KINDS as readonly string[]).includes(cur.kind)?cur.kind as Kind:acting?.kind==='couple'||p.kind==='couple'?'friend':'play');
-  setSide(cur?.side??null);setVis(cur?.vis??'all');},[p,mine,ex,acting?.kind]);
+  const k0:Kind=cur&&(KINDS as readonly string[]).includes(cur.kind)?cur.kind as Kind:acting?.kind==='couple'||p.kind==='couple'?'friend':'play';
+  setKind(k0);setSide(cur?.side??null);setVis(cur?.vis??'all');start.current={kind:k0,side:cur?.side??null,vis:cur?.vis??'all'};},[p,mine,ex,acting?.kind]);
  const name=personName(p)||'?';const sides=SIDES[kind];const we=acting?.kind==='couple';
  const conf=ex?.st==='ok'?ex.l:null;
  const changed=!!conf&&(kind!==conf.kind||!!sides&&mySide!==conf.side);
@@ -219,13 +221,14 @@ export function LinkEditScreen(){
  const cancel=async()=>{if(!ex)return;setBusy(true);setErr('');
   try{await call('link.remove',{opId:newOpId(),linkId:ex.l.id},ok);setDone(t('fe.ln.t.cancelled'));}catch(e){setErr(pxError(e,t));}finally{setBusy(false);}};
  const city=p?.city?(locale==='en'?p.city.en:p.city.ru):null;
+ const dirty=!done&&ex?.st!=='in'&&!!start.current&&(kind!==start.current.kind||mySide!==start.current.side||vis!==start.current.vis);
  const cta=done?<Btn onClick={()=>navigate(-1)}>{t('fe.ln.p22.done')}</Btn>
   :ex?.st==='in'?<Btn onClick={()=>navigate('/n/me/links')}>{t('fe.ln.p22.toLinks')}</Btn>
   :ex?.st==='sent'?<div className="row g8"><Btn kind="soft" className="danger" onClick={cancel} disabled={busy}>{t('fe.ln.cancelReq')}</Btn>
    <Btn onClick={update} busy={busy} disabled={busy||!sentChanged}>{t('fe.w7.ln.update')}</Btn></div>
   :<Btn onClick={send} disabled={busy}>{conf?changed?t('fe.ln.p22.proposeChange'):t('fe.ln.p22.save'):t('fe.ln.p22.send')}</Btn>;
  return <>
-  <Bar title={conf||ex?.st==='sent'?t('fe.ln.p22.edit'):t('fe.ln.p22.new')} back/>
+  <Bar title={conf||ex?.st==='sent'?t('fe.ln.p22.edit'):t('fe.ln.p22.new')} onBack={()=>{if(dirty)setLeaving(true);else navigate(-1);}}/>
   <View className="nodock cta1">
    {error?<Empty icon={Users} role="alert" title={t('fe.feed.unavailable')} text={pxError(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :!p||!mine?<Skel kind="list"/>
@@ -253,5 +256,7 @@ export function LinkEditScreen(){
     </>}
   </View>
   {p&&mine&&<div className="ctabar"><div className="wrap">{cta}</div></div>}
+  {leaving&&<Ask tone="a" title={t('fe.lo.leave.title')} text={t('fe.lo.leave.text')} ok={t('fe.lo.leave.ok')} cancel={t('fe.lo.leave.stay')} danger
+   onOk={()=>{setLeaving(false);navigate(-1);}} onCancel={()=>setLeaving(false)}/>}
  </>;
 }

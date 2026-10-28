@@ -189,7 +189,8 @@ export function FeedTab(){
    {tab==='popular'?(myTopics.length>0&&<>
      <ActionLine text={t('fe.w3.pop.head')}><Btn kind="text" auto onClick={()=>setSheet('popInfo')}>{t('fe.w3.pop.how')}</Btn></ActionLine>
      <Chips scroll className="mb12" label={t('fe.w3.pop.chips')}><Chip filter on={!popTag} onClick={()=>setPopTag('')}>{t('fe.w3.pop.all')}</Chip>
-      {myTopics.map(x=><Chip key={x} filter on={popTag===x} onClick={()=>setPopTag(popTag===x?'':x)}>#{tname(x)}</Chip>)}</Chips></>)
+      {myTopics.map(x=><Chip key={x} filter on={popTag===x} onClick={()=>setPopTag(popTag===x?'':x)}>#{tname(x)}</Chip>)}</Chips>
+     <PopularDiscussions topic={popTag}/></>)
     :(chips.length>0||catalog.length>0)&&<div className="filterline"><Chips scroll>{chips}</Chips>
      <Chip filter on={filtN(f)>0} icon={SlidersHorizontal} label={t('fe.fd.filters')} popup onClick={()=>setSheet('filters')}>{t('fe.fd.filters')}{filtN(f)>0&&<em className="badge-abs">{filtN(f)}</em>}</Chip>
     </div>}
@@ -233,10 +234,24 @@ function ActivityCardOf({a,onMenu}:{a:Act,onMenu:()=>void}){
   onActor={()=>navigate('/n/people/'+a.actor.id)} items={items} more={t('fe.w3.act.more',{n:items.length})} less={t('fe.fd.collapse')}/>;
 }
 
+/** «Обсуждают в сообществах» (V21 popularFeed → popularDiscs): the three most discussed community threads of the week
+ * the viewer may read (in the picked interest), by the same score as the feed; a host's «Не показывать в Популярном»
+ * keeps a thread out on the server. Nothing to show — no block. */
+const popDiscs=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),title:z.string().nullable(),excerpt:z.string(),replies:z.number(),
+ community:z.object({id:z.uuid(),name:z.string()})}).passthrough())});
+function PopularDiscussions({topic}:{topic:string}){
+ const {call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();
+ const [items,setItems]=useState<z.infer<typeof popDiscs>['items']>([]);
+ useEffect(()=>{let live=true;call('discussions.popular',{limit:3,...(topic?{topic}:{})},popDiscs).then(r=>{if(live)setItems(r.items);}).catch(()=>{if(live)setItems([]);});return ()=>{live=false;};},[call,topic]);
+ if(!items.length)return null;
+ return <Group title={t('fe.lo.pop.discs')}><Card list>{items.map(d=><Row key={d.id} icon={MessageCircle} title={d.title||mdPlain(d.excerpt).slice(0,80)}
+  sub={d.community.name+' · '+plural(d.replies,['ответ','ответа','ответов'],['reply','replies'],locale)} onClick={()=>navigate('/n/feed/post/'+d.id)}/>)}</Card></Group>;
+}
+
 /** «Как подбираем» (V21 popInfo): the rules «Популярное» really follows on the server. */
 function PopInfoSheet({onClose}:{onClose:()=>void}){
  const {t}=useI18n();
- const rows:[LucideIcon,string,string][]=[[Sparkles,t('fe.w3.pop.r1'),t('fe.w3.pop.r1s')],[Heart,t('fe.w3.pop.r2'),t('fe.w3.pop.r2s')],[Lock,t('fe.w3.pop.r3'),t('fe.w3.pop.r3s')],[Users,t('fe.w3.pop.r4'),t('fe.w3.pop.r4s')]];
+ const rows:[LucideIcon,string,string][]=[[Sparkles,t('fe.w3.pop.r1'),t('fe.w3.pop.r1s')],[MessageCircle,t('fe.w3.pop.r2'),t('fe.w3.pop.r2s')],[Lock,t('fe.w3.pop.r3'),t('fe.w3.pop.r3s')],[Users,t('fe.lo.pop.r5'),t('fe.lo.pop.r5s')],[Heart,t('fe.w3.pop.r4'),t('fe.w3.pop.r4s')]];
  return <Sheet title={t('fe.w3.pop.howTitle')} onClose={onClose}><Card list>{rows.map(([I,ti,s])=><Row key={ti} icon={I} title={ti} sub={s}/>)}</Card></Sheet>;
 }
 
@@ -464,7 +479,10 @@ export function PostScreen(){
   const names=shown.map(p=>p.id===acting?.id?t('fe.w3.likes.you'):personName(p)).join(', ');
   return <LikesLine people={shown.map(p=>({id:p.id,name:personName(p),avatar:p.avatar??null}))} onClick={()=>setLikersOpen(true)}
    text={names?t('fe.w3.likes.line',{names})+(rest?t('fe.w3.likes.more',{n:rest}):''):t('fe.w3.likes.count',{n:likers.total})}/>;};
- // «Следить за статьями» under someone's article (V21 noteSub); the server keeps no answer to read it back, so it starts off.
+ // «Следить за статьями» under someone's article (V21 noteSub): the real state comes from profile.get (`noteSub`).
+ const noteAuthor=post?.type==='note'&&post.rev==null&&post.author.kind==='person'&&post.author.id!==acting?.id?post.author.id:null;
+ useEffect(()=>{if(!noteAuthor)return;let live=true;
+  call('profile.get',{profileId:noteAuthor},noteSubRes).then(r=>{if(live)setNoteSub(!!r.profile.noteSub);}).catch(()=>{});return ()=>{live=false;};},[call,noteAuthor]);
  const subNotes=async()=>{if(!post)return;const on=!noteSub;
   try{await call('noteSub.set',{opId:newOpId(),profileId:post.author.id,on},okOnly);setNoteSub(on);toast(on?t('fe.w3.noteSub.on',{name:nameOf(post.author)}):t('fe.w3.noteSub.off'),{type:on?'ok':'info'});}
   catch(e){toast(feErrorMessage(e,t),{type:'err'});}};
@@ -486,7 +504,7 @@ export function PostScreen(){
       toast(r.notice,{type:'ok',action:undo?{label:t('fe.tl.undo'),fn:()=>{undo().then(()=>navigate('/n/feed/post/'+id),e=>toast(feErrorMessage(e,t),{type:'err'}));}}:null});
      }}/>
      {likesLine()}
-     {post.type==='note'&&post.rev==null&&post.author.kind==='person'&&post.author.id!==acting?.id&&<ActionLine text={noteSub?t('fe.w3.noteSub.yes'):t('fe.w3.noteSub.text')}>
+     {noteAuthor&&<ActionLine text={noteSub?t('fe.w3.noteSub.yes'):t('fe.w3.noteSub.text')}>
       <Btn size="sm" fit kind={noteSub?'soft':'primary'} pressed={noteSub} icon={noteSub?Check:Bell} onClick={subNotes}>{noteSub?t('fe.w3.noteSub.following'):t('fe.w3.noteSub.follow')}</Btn></ActionLine>}
      <SectionLabel id="replies">{plural(post.replies,['ответ','ответа','ответов'],['reply','replies'],locale)}</SectionLabel>
      {list.some(r=>!r.deleted)?<ReplyTree list={list} sort={sort} setSort={s=>{setSort(s);setLimit(REPLY_PAGE);}} open={open} setOpen={setOpen} liked={liked} delta={delta}
@@ -568,6 +586,7 @@ const saved=z.object({ok:z.literal(true),id:z.uuid()}).passthrough();
 const published=z.object({ok:z.literal(true),state:z.string().optional()}).passthrough();
 const uploadIntent=z.object({ok:z.literal(true),assetId:z.uuid(),upload:z.object({url:z.string(),method:z.string(),headers:z.record(z.string(),z.string())})});
 const edited=z.object({ok:z.literal(true),state:z.string().optional(),rev:z.number().optional(),review:z.boolean().optional(),pending:z.unknown().optional()}).passthrough();
+const noteSubRes=z.object({ok:z.literal(true),profile:z.object({noteSub:z.boolean().optional()}).passthrough()});
 const followRes=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable()}).passthrough())});
 type Audience='all'|'followers'|'granted'|'only';
 const POLL_MAX=10,MEDIA_MAX=6,NOTE_MAX=10000;
@@ -600,8 +619,10 @@ const withSavedEdits=(p:Post,e:SavedEdit):Post=>({...p,type:e.post.type??p.type,
 
 type MediaDraft={id:string,preview:string};
 type Person={id:string,name:string};
-type Mention={id:string,handle:string,name:string,avatar:string|null};
-const mentionRes=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),avatar:z.unknown().optional()}).passthrough())});
+/** `mentionable`: the server says whether a mention by the acting profile reaches the person (their «Кто может
+ * упоминать»); false — the name stays text and nobody is notified. */
+type Mention={id:string,handle:string,name:string,avatar:string|null,mentionable?:boolean|undefined};
+const mentionRes=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),avatar:z.unknown().optional(),mentionable:z.boolean().optional()}).passthrough())});
 const thumbOf=(a:unknown):string|null=>{const src=(a as {src?:Record<string,string>|null}|null)?.src;return src?(src.thumb??src.card??null):null;};
 
 /** A fresh form every time «Новая публикация» is opened (the same route again kept the old mode and text). */
@@ -676,12 +697,15 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
     const notice=r.pending!=null?t('fe.pm.ed.pending'):r.review?t('fe.pm.ed.review'):t('fe.pm.ed.saved');
     navigate('/n/feed/post/'+edit!.id,{replace:true,state:{notice}});return;
    }
+   // V21 publishNow: people who limit mentions stay plain text and get no notification — say so. The server tells
+   // whether each person takes a mention (`mentionable` in the picker and people lists); a nickname typed by hand is
+   // looked up the same way before publishing.
+   const asked=[...new Set([...body.matchAll(/(?:^|[\s(])@([a-z0-9_.]{2,30})/gi)].map(m=>m[1]!.toLowerCase()))].filter(h=>h!==acting?.handle?.toLowerCase());
+   await Promise.all(asked.filter(h=>!known.current.has(h)).slice(0,5).map(h=>call('people.search',{q:h},mentionRes).then(r=>{
+    const p=r.items.find(x=>x.handle?.toLowerCase()===h);if(p)known.current.set(h,p.kind==='person'&&p.mentionable!==false);}).catch(()=>{})));
+   const unheard=asked.filter(h=>known.current.get(h)===false);
    const d=await call('post.saveDraft',{opId:ops.current.draft,...(postId?{postId}:{}),post:fields()},saved);setPostId(d.id);
    const r=await call('post.publish',{opId:ops.current.publish,postId:d.id},published);
-   // V21 publishNow: people who limit mentions stay plain text and get no notification — say so.
-   const asked=[...new Set([...body.matchAll(/(?:^|[\s(])@([a-z0-9_.]{2,30})/gi)].map(m=>m[1]!.toLowerCase()))].filter(h=>h!==acting?.handle?.toLowerCase());
-   let unheard:string[]=[];
-   if(asked.length){const g=await call('post.get',{postId:d.id},onePost).catch(()=>null);if(g){const linked=new Set((g.post.mentions??[]).map(m=>m.handle?.toLowerCase()));unheard=asked.filter(h=>!linked.has(h));}}
    done(r.state,unheard);
   }catch(e){setFailure(feErrorMessage(e,t));ops.current={draft:newOpId(),publish:newOpId(),edit:newOpId()};}
   finally{setBusy('');}
@@ -734,22 +758,26 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
   const at=el.selectionStart??0;const m=el.value.slice(0,at).match(/(^|[\s(])@([a-z0-9_.]{0,30})$/i);
   if(!m||el.selectionStart!==el.selectionEnd){setSug(null);return;}
   setSug({start:at-m[2]!.length-1,end:at,q:m[2]!.toLowerCase()});
-  if(folks===null&&acting){setFolks([]);call('profile.followers',{profileId:acting.id,following:true},followRes)
-   .then(r=>setFolks(r.items.filter(p=>p.kind==='person'&&p.handle).map(p=>({id:p.id,handle:p.handle!,name:nameOf(p),avatar:null})))).catch(()=>{});}
+  if(folks===null&&acting){setFolks([]);call('profile.followers',{profileId:acting.id,following:true},mentionRes)
+   .then(r=>setFolks(r.items.filter(p=>p.kind==='person'&&p.handle).map(p=>({id:p.id,handle:p.handle!,name:nameOf(p),avatar:null,mentionable:p.mentionable})))).catch(()=>{});}
  };
  useEffect(()=>{
   if(!sug||sug.q.length<2){setFound([]);return;}
-  const id=setTimeout(()=>{call('people.search',{q:sug.q},mentionRes).then(r=>setFound(r.items.filter(p=>p.kind==='person'&&p.handle).map(p=>({id:p.id,handle:p.handle!,name:nameOf(p),avatar:thumbOf(p.avatar)})))).catch(()=>setFound([]));},250);
+  const id=setTimeout(()=>{call('people.search',{q:sug.q},mentionRes).then(r=>setFound(r.items.filter(p=>p.kind==='person'&&p.handle).map(p=>({id:p.id,handle:p.handle!,name:nameOf(p),avatar:thumbOf(p.avatar),mentionable:p.mentionable})))).catch(()=>setFound([]));},250);
   return ()=>clearTimeout(id);
  },[sug?.q,call]);
  const sugList=sug?[...new Map([...(folks??[]),...found].map(p=>[p.id,p])).values()]
   .filter(p=>!sug.q||p.handle.toLowerCase().startsWith(sug.q)||p.name.toLowerCase().startsWith(sug.q)).slice(0,5):[];
- const pickMention=(p:Mention)=>{if(!sug)return;const add='@'+p.handle+' ';const next=body.slice(0,sug.start)+add+body.slice(sug.end);setBody(next);setSug(null);
+ // What the server said about each picked nickname (handle → takes a mention from the acting profile).
+ const known=useRef(new Map<string,boolean>());
+ const remember=(handle:string,mentionable:boolean|undefined)=>{if(mentionable===undefined)return;known.current.set(handle.toLowerCase(),mentionable);
+  if(!mentionable)toast(t('fe.lo.mention.silentToast',{handle}),{type:'info'});};
+ const pickMention=(p:Mention)=>{if(!sug)return;remember(p.handle,p.mentionable);const add='@'+p.handle+' ';const next=body.slice(0,sug.start)+add+body.slice(sug.end);setBody(next);setSug(null);
   const pos=sug.start+add.length;requestAnimationFrame(()=>{const el=text.current?.el;el?.focus();el?.setSelectionRange(pos,pos);});};
  // «Упомянуть» (V21 mentionPick): the sheet with people; a pick writes «@nick » where the caret was.
  const mentionAt=useRef<number|null>(null);
  const openMention=()=>{mentionAt.current=text.current?.el?.selectionStart??body.length;setSheet('mention');};
- const insertMention=(handle:string)=>{const s=Math.min(mentionAt.current??body.length,body.length);const pre=body.slice(0,s);const add=(pre&&!/\s$/.test(pre)?' ':'')+'@'+handle+' ';
+ const insertMention=(handle:string,mentionable?:boolean)=>{remember(handle,mentionable);const s=Math.min(mentionAt.current??body.length,body.length);const pre=body.slice(0,s);const add=(pre&&!/\s$/.test(pre)?' ':'')+'@'+handle+' ';
   setBody(pre+add+body.slice(s));setSheet(null);requestAnimationFrame(()=>{const el=text.current?.el;if(!el)return;el.focus();const p=s+add.length;el.setSelectionRange(p,p);});};
 
  if(preview){
@@ -789,7 +817,7 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
       onKeyUp={e=>{if(e.key==='Escape')setSug(null);else if(e.key.startsWith('Arrow'))caret(e.currentTarget);}} onClick={e=>caret(e.currentTarget)} onBlur={()=>setTimeout(()=>setSug(null),200)}
       placeholder={note?t('fe.fd.notePh'):poll?t('fe.fd.pollPh'):couple?t('fe.fd.composePhUs'):t('fe.fd.composePh')} aria-label={t('fe.fd.text')}/>
      {sug&&sugList.length>0&&<div className="mention-sug" role="listbox" aria-label={t('fe.fd.whoMention')}>{sugList.map(p=><button key={p.id} type="button" role="option" aria-selected={false}
-      onMouseDown={e=>e.preventDefault()} onClick={()=>pickMention(p)}><Av name={p.name} seed={p.id} src={p.avatar} size="xs"/><span><b>{p.name}</b> <small>@{p.handle}</small></span></button>)}</div>}
+      onMouseDown={e=>e.preventDefault()} onClick={()=>pickMention(p)}><Av name={p.name} seed={p.id} src={p.avatar} size="xs"/><span><b>{p.name}</b> <small>@{p.handle}{p.mentionable===false?' · '+t('fe.lo.mention.silent'):''}</small></span></button>)}</div>}
      </div>
      <Counter n={body.length} max={max}/>
     </Field>
@@ -888,25 +916,26 @@ function PeopleSheet({value,locked,onClose,onApply}:{value:Person[],locked:strin
 }
 
 /** V21 mentionPick — «Упомянуть»: people the author knows (follows or is followed by) and, from two letters, everyone
- * by name or nickname. Only people can be mentioned: a couple or a profile without a nickname says why. Whether a person
- * accepts mentions from the author is decided by the server when the post goes out (it then says who was not told). */
-function MentionSheet({onClose,onPick}:{onClose:()=>void,onPick:(handle:string)=>void}){
+ * by name or nickname. Only people can be mentioned: a couple or a profile without a nickname says why. Someone who does
+ * not take mentions from the author (server `mentionable`) is marked «без уведомления»: the name stays text. */
+function MentionSheet({onClose,onPick}:{onClose:()=>void,onPick:(handle:string,mentionable?:boolean)=>void}){
  const {call,acting}=useFe();const {t}=useI18n();const toast=useToast();
  const [near,setNear]=useState<Mention[]|null>(null);const [found,setFound]=useState<(Mention&{kind:string})[]>([]);const [q,setQ]=useState('');
  const folk=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),avatar:z.unknown().optional()}).passthrough())});
  useEffect(()=>{if(!acting)return;
   Promise.all([call('profile.followers',{profileId:acting.id,following:true},folk),call('profile.followers',{profileId:acting.id},folk)]).then(([a,b])=>
-   setNear([...new Map([...a.items,...b.items].map(p=>[p.id,{id:p.id,handle:p.handle??'',name:nameOf(p),avatar:typeof p.avatar==='string'?p.avatar:thumbOf(p.avatar),kind:p.kind}])).values()] as (Mention&{kind:string})[])).catch(()=>setNear([]));
+   setNear([...new Map([...a.items,...b.items].map(p=>[p.id,{id:p.id,handle:p.handle??'',name:nameOf(p),avatar:typeof p.avatar==='string'?p.avatar:thumbOf(p.avatar),kind:p.kind,mentionable:typeof p.mentionable==='boolean'?p.mentionable:undefined}])).values()] as (Mention&{kind:string})[])).catch(()=>setNear([]));
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[call,acting]);
  const low=q.trim().toLowerCase().replace(/^@/,'');
- useEffect(()=>{if(low.length<2){setFound([]);return;}const id=setTimeout(()=>{call('people.search',{q:low},mentionRes).then(r=>setFound(r.items.map(p=>({id:p.id,handle:p.handle??'',name:nameOf(p),avatar:thumbOf(p.avatar),kind:p.kind})))).catch(()=>setFound([]));},250);
+ useEffect(()=>{if(low.length<2){setFound([]);return;}const id=setTimeout(()=>{call('people.search',{q:low},mentionRes).then(r=>setFound(r.items.map(p=>({id:p.id,handle:p.handle??'',name:nameOf(p),avatar:thumbOf(p.avatar),kind:p.kind,mentionable:p.mentionable})))).catch(()=>setFound([]));},250);
   return ()=>clearTimeout(id);},[low,call]);
  const match=(p:Mention)=>!low||p.handle.toLowerCase().startsWith(low)||p.name.toLowerCase().includes(low);
  const mine=(near??[]).filter(match) as (Mention&{kind:string})[];const known=new Set(mine.map(p=>p.id));const rest=found.filter(p=>!known.has(p.id));
  const issue=(p:Mention&{kind:string})=>p.kind==='couple'?t('fe.w3.mention.couple'):!p.handle?t('fe.w3.mention.noNick'):'';
- const row=(p:Mention&{kind:string})=>{const why=issue(p);return <Row key={p.id} noChev av={<Av name={p.name} seed={p.id} src={p.avatar} size="sm"/>} title={p.name} sub={why||'@'+p.handle}
-  onClick={()=>{if(why){toast(why,{type:'info'});return;}onPick(p.handle);}}/>;};
+ const row=(p:Mention&{kind:string})=>{const why=issue(p);return <Row key={p.id} noChev av={<Av name={p.name} seed={p.id} src={p.avatar} size="sm"/>} title={p.name}
+  sub={why||'@'+p.handle+(p.mentionable===false?' · '+t('fe.lo.mention.silent'):'')}
+  onClick={()=>{if(why){toast(why,{type:'info'});return;}onPick(p.handle,p.mentionable);}}/>;};
  return <Sheet full title={t('fe.fd.mention')} sub={t('fe.w3.mention.sub')} onClose={onClose} search={<SearchInput value={q} onChange={e=>setQ(e.target.value)} label={t('fe.w3.mention.find')}/>}>
   {near===null?<Skel kind="list"/>:<>
    {mine.length>0&&<Group title={t('fe.w3.mention.known')}><Card list>{mine.map(row)}</Card></Group>}

@@ -4,6 +4,7 @@ import { fail, isUniqueViolation } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
 import { cards } from './discover.mjs';
+import { acceptsMention } from '../sql-rules.mjs';
 import { requireUnrestricted } from '../profiles.mjs';
 import { withFaces } from './faces.mjs';
 import { otherProfile } from './access.mjs';
@@ -115,11 +116,14 @@ const run = {
     const viewer = need(a);
     const prefix = input.q.toLowerCase().replace(/[\\%_]/g, (/** @type {string} */ m) => '\\' + m);
     const rows = await q.query(
-      `select p.id from feture.profile p
+      `select p.id, ${acceptsMention('p', '$1')} mentionable from feture.profile p
        where p.state = 'active' and p.id <> $1 and (lower(p.handle) like $2 || '%' or lower(p.name) like $2 || '%') and not feture.blocked($1, p.id)
          and not feture.restricted(p.id)
        order by (lower(p.handle) = $3) desc, lower(p.handle) limit 20`, [viewer.profileId, prefix, input.q.toLowerCase()]);
-    return { items: await cards(q, viewer, rows.map(r => r.id), cfg.media) };
+    // `mentionable`: whether an @mention by the acting profile reaches the person (their «Кто может упоминать»), so the
+    // mention picker can say «без уведомления» before the post goes out.
+    const can = new Map(rows.map(r => [r.id, !!r.mentionable]));
+    return { items: (await cards(q, viewer, rows.map(r => r.id), cfg.media)).map((/** @type {any} */ c) => ({ ...c, mentionable: can.get(c.id) ?? false })) };
   },
 
   async 'people.byNick'(q, { acting: a, input }) {
