@@ -71,4 +71,8 @@
          REQUEST_INSTALL_PACKAGES is only in src/direct: the store build never installs APKs. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- Voice messages in chats (MediaRecorder in the WebView; Capacitor's WebChromeClient asks at the first hold). -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
 </manifest>

@@ -2,9 +2,11 @@ import {Fragment,useCallback,useEffect,useLayoutEffect,useRef,useState,type CSSP
 import {useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Archive,ArchiveRestore,Ban,Camera,Check,ChevronDown,ChevronLeft,CircleAlert,Clock,Copy,Ellipsis,Eye,EyeOff,Flag,Image as ImageIcon,Info,Lock,LockOpen,MessageCircle,Plus,Search,SendHorizontal,Sparkles,Undo2,User,Users,X} from 'lucide-react';
+import {Archive,ArchiveRestore,Ban,Camera,Check,ChevronDown,ChevronLeft,CircleAlert,Clock,Copy,Ellipsis,Eye,EyeOff,Film,Flag,Image as ImageIcon,Info,Lock,LockOpen,MessageCircle,Plus,Search,SendHorizontal,Sparkles,Undo2,User,Users,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Av,Bar,Btn,Card,Check as CheckBox,Chip,Chips,Empty,Field,FilePick,Group,IconBtn,Layer,Note,PersonBar,Pill,RadioList,Row,SearchInput,SectionLabel,SelectRow,Sheet,Skel,Stack,Text,TextArea,ToggleRow,Typing,View} from './kit';
+import {Alert,Av,Bar,Btn,Card,Check as CheckBox,Chip,Chips,Empty,Field,FilePick,Group,IconBtn,Layer,Note,PersonBar,Pill,RadioList,Row,SearchInput,SectionLabel,SelectRow,Sheet,Skel,Stack,Text,TextArea,ToggleRow,Typing,VideoBadge,VideoPlayer,View,VoiceBubble,VoiceRecorder,type Voice} from './kit';
+import {VIDEO_MAX_BYTES,VIDEO_MAX_MS,VIDEO_TYPES,isVideo,prepareVideo,type PreparedVideo} from './kit/media';
+import {useSendVideo,useSendVoice} from './media-upload';
 import {AgeCheckLink,useAgeResume} from './age-check';
 import {useFe,useRealtime,useTypingSignal} from './session';
 import {useToast} from './toast';
@@ -15,7 +17,7 @@ import {BellButton,SegN} from './inbox';
 const media=z.object({src:z.record(z.string(),z.string()).nullable()}).passthrough();
 const chat=z.object({id:z.uuid(),state:z.string(),side:z.object({id:z.uuid(),kind:z.enum(['person','couple'])}),newMatch:z.boolean(),
  other:z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),avatar:media.nullable()}),
- unread:z.number(),muted:z.boolean(),archived:z.boolean().optional(),last:z.object({body:z.string(),media:z.boolean(),mode:z.string(),mine:z.boolean()}).nullable(),at:z.string()});
+ unread:z.number(),muted:z.boolean(),archived:z.boolean().optional(),last:z.object({body:z.string(),media:z.boolean(),mode:z.string(),mine:z.boolean(),kind:z.string().nullable().optional()}).nullable(),at:z.string()});
 type Chat=z.infer<typeof chat>;
 const list=z.object({ok:z.literal(true),items:z.array(chat)});
 // Own messages carry when each member of the other side read them (`readBy`, a couple has two) and, for a
@@ -23,7 +25,9 @@ const list=z.object({ok:z.literal(true),items:z.array(chat)});
 const msg=z.object({id:z.uuid(),seq:z.number(),mine:z.boolean(),body:z.string(),at:z.string(),replyTo:z.uuid().nullable().optional(),
  readBy:z.array(z.object({read:z.boolean(),readAt:z.string().nullable(),reader:z.object({id:z.uuid(),handle:z.string().nullable(),name:z.string().nullable(),avatar:z.string().nullable().optional()}).nullable().optional()})).optional(),
  media:z.object({ephemeral:z.boolean().optional(),mode:z.string().optional(),state:z.string().optional(),blurred:z.boolean().optional(),pending:z.boolean().optional(),gone:z.boolean().optional(),w:z.number().nullable().optional(),h:z.number().nullable().optional(),src:z.record(z.string(),z.string()).nullable().optional(),
-  views:z.array(z.object({state:z.string(),openedAt:z.string().nullable()})).optional()}).passthrough().nullable().optional()});
+  views:z.array(z.object({state:z.string(),openedAt:z.string().nullable()})).optional(),
+  // Video and voice: the kind, the length, a voice note's waveform and whether it was played («прослушано»).
+  kind:z.string().optional(),durationMs:z.number().nullable().optional(),peaks:z.array(z.number()).nullable().optional(),listened:z.boolean().optional()}).passthrough().nullable().optional()});
 const startersRes=z.object({ok:z.literal(true),topics:z.array(z.string())});
 const topicsRes=z.object({ok:z.literal(true),topics:z.array(z.object({id:z.string(),ru:z.string().nullable(),en:z.string().nullable()}).passthrough())}).passthrough();
 type Msg=z.infer<typeof msg>;
@@ -73,7 +77,7 @@ export function ChatsTab(){
  // A contact without messages lives only in «Новые совпадения»; an ended chat without messages leaves the list (server).
  const fresh=archived?[]:mine.filter(c=>c.newMatch&&c.state==='active');const rows=mine.filter(c=>!fresh.includes(c));
  const unreadFor=(s:'me'|'couple')=>(items??[]).filter(c=>side(c)===s&&c.unread>0).length;
- const preview=(c:Chat)=>c.state==='ended'?t('fe.chx.endedRow'):!c.last?t('fe.chx.sayFirst'):c.last.media&&!c.last.body?(c.last.mode!=='normal'?t('fe.chats.ephemeral'):t('fe.chats.photo')):c.last.body;
+ const preview=(c:Chat)=>c.state==='ended'?t('fe.chx.endedRow'):!c.last?t('fe.chx.sayFirst'):c.last.media&&!c.last.body?(c.last.mode!=='normal'?t('fe.chats.ephemeral'):c.last.kind==='audio'?t('fe.av.voice'):c.last.kind==='video'?t('fe.av.video'):t('fe.chats.photo')):c.last.body;
  const row=(c:Chat)=><button key={c.id} type="button" className={'chat-row'+(c.unread?' unread':'')+(c.state==='ended'?' ended':'')} onClick={()=>navigate('/n/chats/'+c.id)}>
   <Av name={nameOf(c.other)} seed={c.other.id} size="lg" src={c.other.avatar?.src?.thumb}/>
   <span className="tx"><b>{nameOf(c.other)}</b><small>{c.side.kind==='couple'&&<span className="ct-us"><Users/>{t('fe.chx.coupleChat')}</span>}{preview(c)}</small></span>
@@ -118,12 +122,12 @@ export function ChatsTab(){
 
 /* ================= shared sheet bits ================= */
 /** `openViewer()` for one chat photo: optional label («Один просмотр…») and the viewer's handle as a watermark. */
-function Viewer({src,label,wm,onClose}:{src:string,label?:string|undefined,wm?:string|undefined,onClose:()=>void}){
+function Viewer({src,video,label,wm,onClose}:{src:string,/** A clip: it plays over its poster `src`. */ video?:string|undefined,label?:string|undefined,wm?:string|undefined,onClose:()=>void}){
  const {t}=useI18n();const [on,setOn]=useState(false);const close=useRef<HTMLButtonElement>(null);
  useEffect(()=>{const r=requestAnimationFrame(()=>{setOn(true);close.current?.focus({preventScroll:true});});return ()=>cancelAnimationFrame(r);},[]);
  useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();onClose();}};addEventListener('keydown',k);return ()=>removeEventListener('keydown',k);},[onClose]);
  return <Layer><div className={'viewer'+(on?' on':'')} role="dialog" aria-modal="true" aria-label={t('fe.chx.viewer')}>
-  <div className="vw-track"><figure><img src={src} alt="" draggable={false}/>{wm&&<div className="vw-wm" aria-hidden="true">{Array.from({length:18},(_,i)=><span key={i}>{wm}</span>)}</div>}</figure></div>
+  <div className="vw-track"><figure>{video?<VideoPlayer src={video} poster={src} fill autoPlay/>:<img src={src} alt="" draggable={false}/>}{wm&&<div className="vw-wm" aria-hidden="true">{Array.from({length:18},(_,i)=><span key={i}>{wm}</span>)}</div>}</figure></div>
   <div className="vw-top"><span className="vw-n"/>{label&&<span className="vw-label">{label}</span>}<IconBtn ref={close} icon={X} kind="glass" label={t('fe.chx.close')} onClick={onClose}/></div>
  </div></Layer>;
 }
@@ -139,7 +143,7 @@ const TTL:Record<string,number>={t15:15*60e3,t120:2*3600e3,t1440:24*3600e3};
 const REASONS=['threat','private','minor','spam','other'] as const;
 type Reason=typeof REASONS[number];
 /** A photo on its way: the asset is kept between attempts, so a retry after review only sends the message. */
-type Outgoing={file:File,preview:string,mode:Mode,assetId?:string,assetMode?:Mode,opId:string,pending?:boolean};
+type Outgoing={file:File,preview:string,mode:Mode,assetId?:string,assetMode?:Mode,opId:string,pending?:boolean,/** A clip (preview = its poster). */ video?:PreparedVideo};
 /** A text on its way (the prototype's optimistic bubble with «Отправляется» / «Не отправлено · Повторить»). */
 type Pend={key:string,body:string,replyTo?:string,opId:string,at:string,status:'sending'|'failed'};
 type SheetKind='attach'|'send'|'menu'|'end'|'report'|'block'|'msg'|'readers'|'copy';
@@ -161,7 +165,12 @@ export function ChatScreen(){
   const ro=new ResizeObserver(()=>m.style.setProperty('--ctah',el.offsetHeight+'px'));ro.observe(el);
   return ()=>{ro.disconnect();m.style.removeProperty('--ctah');};},[state,items===null]);
  const [eph,setEph]=useState<Record<string,{state:'open'|'done',until?:number}>>({});
- const [viewer,setViewer]=useState<{src:string,label?:string|undefined,wm?:string|undefined}|null>(null);
+ const [viewer,setViewer]=useState<{src:string,video?:string|undefined,label?:string|undefined,wm?:string|undefined}|null>(null);
+ // A covered clip opened by a tap plays in its bubble (the photo goes to the viewer).
+ const [openVid,setOpenVid]=useState<Record<string,{file:string,poster?:string|undefined}>>({});
+ // A voice message on its way (an optimistic bubble), and the ones this account has just played.
+ const [voiceOut,setVoiceOut]=useState<{v:Voice,status:'sending'|'failed'}|null>(null);const [heard,setHeard]=useState<Record<string,true>>({});
+ const videoPick=useRef<HTMLInputElement>(null);
  const [sheet,setSheet]=useState<SheetKind|null>(null);const [sheetErr,setSheetErr]=useState('');const [sheetBusy,setSheetBusy]=useState(false);
  const [msgFor,setMsgFor]=useState<Msg|null>(null);
  const [out,setOut]=useState<Outgoing|null>(null);const outRef=useRef<Outgoing|null>(null);outRef.current=out;
@@ -172,6 +181,7 @@ export function ChatScreen(){
  const gallery=useRef<HTMLInputElement>(null);const camera=useRef<HTMLInputElement>(null);
  const stick=useRef(true);const nearRef=useRef(true);const seen=useRef(0);
  const profileId=meta?.side.id;
+ const sendClip=useSendVideo('chat',{},profileId);const sendVoice=useSendVoice(profileId);
  useEffect(()=>{
   // An archived conversation is opened from «Архив» too, so both lists are asked.
   Promise.all([call('chats.list',{filter:'all'},list,{asAccount:true}),call('chats.list',{filter:'all',archived:true},list,{asAccount:true})])
@@ -258,13 +268,15 @@ export function ChatScreen(){
   const md=m.media;if(!md)return;
   try{
    const r=await call('chat.openMedia',{opId:newOpId(),messageId:m.id},opened,{profileId:meta.side.id});
-   const src=r.media?.src?.full??r.media?.src?.card;
-   if(!md.ephemeral){if(src)setOpen(o=>({...o,[m.id]:src}));if(src&&!md.blurred)setViewer({src});return;}
+   const src=r.media?.src?.full??r.media?.src?.card;const video=r.media?.src?.file;
+   if(!md.ephemeral){
+    if(video){setOpenVid(o=>({...o,[m.id]:{file:video,poster:src}}));return;}
+    if(src)setOpen(o=>({...o,[m.id]:src}));if(src&&!md.blurred)setViewer({src});return;}
    if(r.gone||!src){setEph(e=>({...e,[m.id]:{state:'done'}}));return;}
-   if(m.mine){setViewer({src});return;}
+   if(m.mine){setViewer({src,video});return;}
    const once=md.mode==='once';const until=r.until?Date.parse(r.until):undefined;
    setEph(e=>({...e,[m.id]:once?{state:'done'}:{state:'open',...(until?{until}:{})}}));
-   setViewer({src,label:once?t('fe.chx.viewerOnce'):until?t('fe.chx.viewerLeft',{left:left(until)}):undefined,wm:acting?.handle?'@'+acting.handle:undefined});
+   setViewer({src,video,label:once?t('fe.chx.viewerOnce'):until?t('fe.chx.viewerLeft',{left:left(until)}):undefined,wm:acting?.handle?'@'+acting.handle:undefined});
   }catch(e){toast(feErrorMessage(e,t),{type:'err'});}
  };
  const left=(until:number)=>{const min=Math.max(1,Math.ceil((until-Date.now())/60e3));const h=Math.floor(min/60),r=min%60;
@@ -277,17 +289,37 @@ export function ChatScreen(){
   return `${t('fe.chx.ephSent')} · ${t('fe.w7.eph.notYet')}`;};
  const modeLabel=(mode:string)=>t('fe.chx.eph.'+(['once','t15','t120','t1440'].includes(mode)?mode:'once'));
  /** A photo with nothing to show: still being checked (the recipient waits for the moderator) or removed. */
- const photoNote=(m:Msg,why:'review'|'gone')=><div className="eph-gone" role="note"><span className="eg-ic">{why==='gone'?<EyeOff/>:<Clock/>}</span>
-  <span className="eg-tx"><b>{why==='gone'?t('fe.chx.photoGone'):t('fe.chx.photoReview')}</b><small>{why==='gone'?t('fe.chx.photoGoneSub'):m.mine?t('fe.chx.photoReviewMine'):t('fe.chx.photoReviewSub')}</small></span></div>;
+ const photoNote=(m:Msg,why:'review'|'gone')=>{const k=m.media?.kind;
+  const title=k==='audio'?(why==='gone'?t('fe.av.voiceGone'):t('fe.av.voiceReview')):k==='video'?(why==='gone'?t('fe.av.videoGone'):t('fe.av.videoReview')):why==='gone'?t('fe.chx.photoGone'):t('fe.chx.photoReview');
+  return <div className="eph-gone" role="note"><span className="eg-ic">{why==='gone'?<EyeOff/>:<Clock/>}</span>
+  <span className="eg-tx"><b>{title}</b><small>{why==='gone'?t('fe.chx.photoGoneSub'):m.mine?(k==='video'?t('fe.av.videoReviewMine'):t('fe.chx.photoReviewMine')):t('fe.chx.photoReviewSub')}</small></span></div>;};
+ /** «Прослушано»: told once per voice message, the first time this account plays most of it. */
+ const markHeard=(m:Msg)=>{if(m.mine||m.media?.listened||heard[m.id]||!meta)return;setHeard(h=>({...h,[m.id]:true}));
+  call('chat.listened',{messageId:m.id},ok,{profileId:meta.side.id}).catch(()=>{});};
  const mediaTile=(m:Msg):ReactNode=>{
-  const md=m.media!;const kind=t('fe.chats.photo');
+  const md=m.media!;const vid=md.kind==='video';const kind=vid?t('fe.av.video'):t('fe.chats.photo');
+  if(md.kind==='audio'){
+   if(md.gone)return photoNote(m,'gone');
+   return <VoiceBubble src={md.src?.file} durationMs={md.durationMs} peaks={md.peaks} mine={m.mine} listened={!!md.listened||!!heard[m.id]}
+    onPlayed={()=>markHeard(m)} onExpired={()=>{pull(true).catch(()=>{});}}/>;
+  }
+  if(!md.ephemeral&&vid){
+   const opened=openVid[m.id];
+   if(opened)return <div className="mtile"><VideoPlayer src={opened.file} poster={opened.poster} w={md.w} h={md.h} durationMs={md.durationMs} autoPlay/></div>;
+   if(!md.blurred){
+    if(!md.src?.file)return photoNote(m,md.gone?'gone':'review');
+    return <><div className="mtile"><VideoPlayer src={md.src.file} poster={md.src.card??md.src.full} w={md.w} h={md.h} durationMs={md.durationMs} onExpired={()=>{pull(true).catch(()=>{});}}/></div>
+     {m.mine&&md.pending&&<small className="mpend"><Clock/>{t('fe.av.videoReviewMine')}</small>}</>;
+   }
+  }
   if(!md.ephemeral){
    const revealed=open[m.id];const hidden=!!md.blurred&&!revealed;
    const src=revealed??(hidden?md.src?.blur:md.src?.card??md.src?.full);
    if(!src)return photoNote(m,md.gone?'gone':'review');
-   return <><button type="button" className={'mtile'+(hidden?' blur':'')} aria-label={hidden?t('fe.chx.hiddenAria'):t('fe.chx.openAria')}
+   return <><button type="button" className={'mtile'+(hidden?' blur':'')} aria-label={hidden?(vid?t('fe.av.videoHidden'):t('fe.chx.hiddenAria')):t('fe.chx.openAria')}
     onClick={()=>{if(hidden)void openMedia(m);else setViewer({src:revealed??md.src?.full??src});}}>
     <img src={src} alt="" draggable={false} style={md.w&&md.h?{'--ar':`${md.w}/${md.h}`} as CSSProperties:undefined}/>{hidden&&<span className="mcover"><EyeOff/><b>{t('fe.chx.tapView')}</b></span>}
+    {vid&&<VideoBadge durationMs={md.durationMs}/>}
    </button>{m.mine&&md.pending&&<small className="mpend"><Clock/>{t('fe.chx.photoReviewMine')}</small>}</>;
   }
   const mode=md.mode??'once';const once=mode==='once';const local=eph[m.id];
@@ -306,9 +338,22 @@ export function ChatScreen(){
  const closeSheet=useCallback(()=>{setSheet(null);setSheetErr('');},[]);
 
  /* ---- photos: uploadIntent → PUT → commit → chat.sendMedia ---- */
+ /** A clip: up to a minute and 100 MB; its poster frame is cut here and shown while it goes (no crop). */
+ const pickVideo=async(f:File|undefined)=>{
+  if(videoPick.current)videoPick.current.value='';
+  if(!f)return;setSheetErr('');
+  if(!isVideo(f)){toast(t('fe.kit.up.videoRead',{name:f.name}),{type:'err'});setSheet(null);return;}
+  if(f.size>VIDEO_MAX_BYTES){toast(t('fe.kit.up.videoBig'),{type:'err'});setSheet(null);return;}
+  let video:PreparedVideo;
+  try{video=await prepareVideo(f);}catch{toast(t('fe.kit.up.videoRead',{name:f.name}),{type:'err'});setSheet(null);return;}
+  if(video.durationMs>VIDEO_MAX_MS+500){URL.revokeObjectURL(video.url);toast(t('fe.kit.up.videoLong'),{type:'err'});setSheet(null);return;}
+  if(outRef.current)URL.revokeObjectURL(outRef.current.preview);
+  setFailure('');setOut({file:f,preview:video.url,mode:'normal',opId:newOpId(),video});setSheet('send');
+ };
  const pick=(f:File|undefined)=>{
   if(gallery.current)gallery.current.value='';if(camera.current)camera.current.value='';
   if(!f)return;setSheetErr('');
+  if(isVideo(f)){void pickVideo(f);return;}
   if(!PHOTO_TYPES.includes(f.type)){toast(t('fe.chx.photoType'),{type:'err'});setSheet(null);return;}
   if(f.size>20*1024*1024){toast(t('fe.chx.photoSize'),{type:'err'});setSheet(null);return;}
   if(outRef.current)URL.revokeObjectURL(outRef.current.preview);
@@ -329,19 +374,32 @@ export function ChatScreen(){
    // The view rule is fixed at upload: a new mode means a new upload.
    if(cur.assetId)call('media.remove',{opId:newOpId(),assetId:cur.assetId},ok,{profileId}).catch(()=>{});
    const rule=cur.mode==='normal'?{}:cur.mode==='once'?{viewRule:'once'}:{viewRule:'timer',viewSeconds:60};
-   const i=await call('media.uploadIntent',{opId:newOpId(),purpose:'chat',kind:'image',mime:cur.file.type,bytes:cur.file.size,...rule},uploadIntent,{profileId});
-   const put=await fetch(i.upload.url,{method:i.upload.method,headers:i.upload.headers,body:cur.file}).catch(()=>null);
-   if(!put?.ok)throw new Error('upload');
-   await call('media.commit',{assetId:i.assetId},ok,{profileId});
-   if(!live()){call('media.remove',{opId:newOpId(),assetId:i.assetId},ok,{profileId}).catch(()=>{});return 'pending';}
-   cur={...cur,assetId:i.assetId,assetMode:cur.mode,opId:newOpId()};setOut(cur);
+   let assetId:string;
+   if(cur.video)assetId=await sendClip(cur.video,()=>{},rule);
+   else{
+    const i=await call('media.uploadIntent',{opId:newOpId(),purpose:'chat',kind:'image',mime:cur.file.type,bytes:cur.file.size,...rule},uploadIntent,{profileId});
+    const put=await fetch(i.upload.url,{method:i.upload.method,headers:i.upload.headers,body:cur.file}).catch(()=>null);
+    if(!put?.ok)throw new Error('upload');
+    await call('media.commit',{assetId:i.assetId},ok,{profileId});
+    assetId=i.assetId;
+   }
+   if(!live()){call('media.remove',{opId:newOpId(),assetId},ok,{profileId}).catch(()=>{});return 'pending';}
+   cur={...cur,assetId,assetMode:cur.mode,opId:newOpId()};setOut(cur);
   }
   try{await call('chat.sendMedia',{opId:cur.opId,conversationId:id,assetId:cur.assetId,mode:cur.mode},ok,{profileId});}
   catch(e){if(e instanceof FeError&&e.code==='conflict'&&e.rule==='pending'){if(live())setOut({...cur,pending:true});return 'pending';}throw e;}
   if(live()){URL.revokeObjectURL(cur.preview);setOut(null);}
   return 'sent';
- },[call,id,profileId]);
- const photoError=(e:unknown)=>e instanceof FeError?(e.code==='rule_violation'&&e.rule==='age_required'?t('fe.chx.ageRequired'):feErrorMessage(e,t)):e instanceof Error&&e.message==='upload'?t('fe.chx.uploadFailed'):feErrorMessage(e,t);
+ },[call,id,profileId,sendClip]);
+ const photoError=(e:unknown)=>e instanceof FeError?(e.code==='rule_violation'&&e.rule==='age_required'?t('fe.chx.ageRequired'):feErrorMessage(e,t)):e instanceof Error&&e.message==='upload'?(outRef.current?.video?t('fe.av.videoFailed'):t('fe.chx.uploadFailed')):feErrorMessage(e,t);
+ /* ---- voice messages: record → upload (purpose voice) → chat.sendMedia; an optimistic bubble meanwhile ---- */
+ const deliverVoice=async(v:Voice)=>{
+  if(!profileId)return;setVoiceOut({v,status:'sending'});stick.current=true;
+  try{const assetId=await sendVoice(v);await call('chat.sendMedia',{opId:newOpId(),conversationId:id,assetId,mode:'normal'},ok,{profileId});
+   await pull(false).catch(()=>{});setVoiceOut(null);}
+  catch(e){setVoiceOut({v,status:'failed'});toast(e instanceof FeError?feErrorMessage(e,t):t('fe.av.voiceNotSent'),{type:'err'});}
+ };
+ const voiceError=(why:'denied'|'unsupported'|'short'|'failed')=>toast(t(why==='denied'?'fe.av.voiceDenied':why==='unsupported'?'fe.av.voiceUnsupported':why==='short'?'fe.av.voiceShort':'fe.av.voiceFailed'),{type:why==='short'?'warn':'err'});
  const sendPhoto=async()=>{
   const o=outRef.current;if(!o||sheetBusy)return;setSheetBusy(true);setSheetErr('');
   try{const r=await deliver(o);setSheet(null);stick.current=true;if(r==='sent')await pull(false);}
@@ -373,8 +431,9 @@ export function ChatScreen(){
  });
  const copyMsg=async()=>{const m=msgFor;if(!m?.body)return;
   try{await navigator.clipboard.writeText(m.body);setSheet(null);toast(t('fe.chx.copied'),{type:'ok'});}catch{setSheet('copy');}};
+ const mediaWord=(m:Msg)=>m.media?.kind==='audio'?t('fe.av.voice'):m.media?.kind==='video'?t('fe.av.video'):t('fe.chats.photo');
  const quoteOf=(rid:string)=>{const q=(items??[]).find(x=>x.id===rid);if(!q||!meta)return null;
-  return {who:q.mine?(acting?nameOf(acting):t('fe.chats.you')):nameOf(meta.other),text:q.body||(q.media?t('fe.chats.photo'):t('fe.chx.message'))};};
+  return {who:q.mine?(acting?nameOf(acting):t('fe.chats.you')):nameOf(meta.other),text:q.body||(q.media?mediaWord(q):t('fe.chx.message'))};};
  const jump=(rid:string)=>{document.querySelector(`[data-msg-id="${rid}"]`)?.scrollIntoView({block:'center',behavior:'smooth'});};
 
  /* ---- the chat menu ---- */
@@ -457,14 +516,18 @@ export function ChatScreen(){
        <div className="st">{time(p.at)}<span aria-label={p.status==='sending'?t('fe.chx.stSending'):t('fe.chx.stFailed')}>{p.status==='sending'?<Clock/>:<CircleAlert/>}</span></div></div>
       {p.status==='failed'&&!ended&&<button type="button" className="msg-retry" onClick={()=>void deliverText(p)}><Undo2/>{t('fe.chx.retryMsg')}</button>}
      </Fragment>)}
-     {out?.pending&&<div className="msg me has-media sending"><span className="mtile"><img src={out.preview} alt="" draggable={false}/></span></div>}
+     {out?.pending&&<div className="msg me has-media sending"><span className="mtile"><img src={out.preview} alt="" draggable={false}/>{out.video&&<VideoBadge durationMs={out.video.durationMs}/>}</span></div>}
+     {voiceOut&&<><div className={'msg me has-media '+voiceOut.status}><VoiceBubble durationMs={voiceOut.v.durationMs} peaks={voiceOut.v.peaks} mine/>
+      <div className="st"><span aria-label={voiceOut.status==='sending'?t('fe.chx.stSending'):t('fe.chx.stFailed')}>{voiceOut.status==='sending'?<Clock/>:<CircleAlert/>}</span></div></div>
+      {voiceOut.status==='failed'&&!ended&&<Stack row gap={2}><Btn kind="text" size="sm" auto icon={Undo2} onClick={()=>void deliverVoice(voiceOut.v)}>{t('fe.chx.retryMsg')}</Btn>
+       <Btn kind="text" size="sm" auto icon={X} onClick={()=>setVoiceOut(null)}>{t('fe.chx.drop')}</Btn></Stack>}</>}
      {typing&&!ended&&<Typing>{t('fe.w7.typing',{name:otherName})}</Typing>}
     </div>
     {!ended&&all.length===0&&pend.length===0&&<><SectionLabel>{t('fe.chx.starters')}</SectionLabel><Chips className="ice">
      {[...starters.slice(0,2).map(n=>t('fe.w7.ice.topic',{topic:n})),t('fe.chx.ice1'),t('fe.chx.ice2')].map(s=><Chip key={s} onClick={()=>{setText(s);requestAnimationFrame(()=>{if(input.current){grow(input.current);input.current.focus();}});}}>{s}</Chip>)}
     </Chips></>}
     {ended&&<Alert kind="info" icon={Ban} className="mt16"><b>{t('fe.chx.endedTitle')}</b>{t('fe.chx.endedText')}</Alert>}
-    {out?.pending&&<Alert kind="info" icon={Clock}><b>{t('fe.chx.pending')}</b>
+    {out?.pending&&<Alert kind="info" icon={Clock}><b>{out.video?t('fe.av.videoPending'):t('fe.chx.pending')}</b>
      <Stack row gap={2}><Btn kind="soft" size="sm" auto busy={busy} disabled={busy} onClick={()=>void retryPending(false)}>{t('fe.chx.retry')}</Btn><Btn kind="text" size="sm" auto onClick={()=>dropOut(out)}>{t('fe.chx.drop')}</Btn></Stack></Alert>}
     {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
    </>}
@@ -476,10 +539,13 @@ export function ChatScreen(){
    <TextArea ref={input} bare grow={GROW} rows={1} maxLength={2000} value={text} onChange={e=>{setText(e.target.value);if(e.target.value.trim())typed();}}
     placeholder={couple?t('fe.chx.messagePhCouple'):t('fe.chx.messagePh')} aria-label={t('fe.chx.message')} title={t('fe.chx.enterHint')} enterKeyHint="enter"
     onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!coarse&&!e.nativeEvent.isComposing){e.preventDefault();send();}}}/>
-   <IconBtn icon={SendHorizontal} kind="send" onClick={send} disabled={!meta||!text.trim()} label={t('fe.feed.send')}/>
+   {/* An empty box offers a voice message instead of «Отправить» (hold to record). */}
+   {text.trim()||!meta?<IconBtn icon={SendHorizontal} kind="send" onClick={send} disabled={!meta||!text.trim()} label={t('fe.feed.send')}/>
+    :<VoiceRecorder onSend={v=>void deliverVoice(v)} onError={voiceError} disabled={voiceOut?.status==='sending'}/>}
   </div>}
   <FilePick ref={gallery} accept={PHOTO_TYPES.join(',')} onFiles={f=>pick(f[0])}/>
   <FilePick ref={camera} accept="image/*" capture="environment" onFiles={f=>pick(f[0])}/>
+  <FilePick ref={videoPick} accept={VIDEO_TYPES.join(',')} onFiles={f=>void pickVideo(f[0])}/>
   {viewer&&<Viewer src={viewer.src} label={viewer.label} wm={viewer.wm} onClose={()=>{setViewer(null);pull(true).catch(()=>{});}}/>}
 
   {sheet==='msg'&&msgFor&&<Sheet title={t('fe.chx.msgTitle')} onClose={closeSheet}>
@@ -498,16 +564,17 @@ export function ChatScreen(){
     sub={r.read?(r.readAt?t('fe.w7.read.at',{when:day(r.readAt)+', '+time(r.readAt)}):t('fe.chx.readState')):t('fe.w7.read.notYet')}/>;})}</Card>
   </Sheet>}
 
-  {sheet==='attach'&&<Sheet title={t('fe.chx.attachTitle')} onClose={closeSheet}>
+  {sheet==='attach'&&<Sheet title={t('fe.av.attachTitle')} onClose={closeSheet}>
    <Card list>
     <Row noChev icon={ImageIcon} tone="v" title={t('fe.chx.gallery')} sub={t('fe.chx.gallerySub')} onClick={()=>gallery.current?.click()}/>
+    <Row noChev icon={Film} title={t('fe.av.video')} sub={t('fe.av.videoSub')} onClick={()=>videoPick.current?.click()}/>
     <Row noChev icon={Camera} title={t('fe.chx.camera')} onClick={()=>camera.current?.click()}/>
    </Card>
   </Sheet>}
 
-  {sheet==='send'&&out&&<Sheet title={t('fe.chx.sendTitle')} onClose={()=>{if(sheetBusy)return;dropOut(out);closeSheet();}}
+  {sheet==='send'&&out&&<Sheet title={out.video?t('fe.av.sendVideo'):t('fe.chx.sendTitle')} onClose={()=>{if(sheetBusy)return;dropOut(out);closeSheet();}}
    foot={<Btn icon={SendHorizontal} onClick={sendPhoto} busy={sheetBusy} disabled={sheetBusy}>{t('fe.chx.send')}</Btn>}>
-   <div className="cm-prev"><img src={out.preview} alt=""/></div>
+   <div className="cm-prev"><img src={out.preview} alt=""/>{out.video&&<VideoBadge durationMs={out.video.durationMs}/>}</div>
    <Group title={t('fe.chx.howView')} foot={<>{t('fe.chx.modeSub.'+(out.mode==='normal'||out.mode==='once'?out.mode:'timer'))}{out.mode!=='normal'?' · '+t('fe.chx.ephNote'):''}</>}><Card>
     <SelectRow<Mode> solo label={t('fe.chx.howView')} value={out.mode} disabled={sheetBusy} onChange={v=>{setSheetErr('');setOut({...out,mode:v});}}
      options={MODES.map(m=>[m,t('fe.chx.mode.'+m)] as const)}/>
@@ -551,7 +618,7 @@ export function ChatScreen(){
    {theirs.length?<Group bare title={t('fe.chx.reportPick')} foot={t('fe.chx.reportPickNote')}><Card>
     {theirs.map(m=>{const on=rp.sel.includes(m.id);
      return <CheckBox key={m.id} on={on} onChange={()=>setRp(r=>({...r,sel:on?r.sel.filter(x=>x!==m.id):r.sel.length>=20?r.sel:[...r.sel,m.id]}))}>
-      {m.body||(m.media?t('fe.chats.photo'):'')}<Text as="div" size="cap" tone="mute">{day(m.at)} · {time(m.at)}</Text></CheckBox>;})}
+      {m.body||(m.media?mediaWord(m):'')}<Text as="div" size="cap" tone="mute">{day(m.at)} · {time(m.at)}</Text></CheckBox>;})}
    </Card></Group>
    :<Note>{t('fe.chx.reportNoMsgs')}</Note>}
    <Group bare title={t('fe.chx.reason')}>

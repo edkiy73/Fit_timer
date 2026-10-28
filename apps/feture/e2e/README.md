@@ -67,6 +67,12 @@ space (`header .btn`) needs `css=`. Clean up what the scenario creates (delete p
 communities, restore settings) in `finally`, so reruns pass. When IDs of the lane's personas are needed in a route,
 resolve them in the scenario (`await t.persona('host')`), not at module load.
 
+Microphone and camera: the runner starts Chromium with fake devices (`--use-fake-device-for-media-stream`, a beep and a
+test pattern). A scenario that records voice sets `mic: true` (it runs in a second browser with
+`--use-fake-ui-for-media-stream`: headless Chromium ignores a plain permission grant); `mic: 'deny'` makes
+`getUserMedia` refuse as when a person says no (`chats/voice.mjs`, lane `av`). Clips are recorded from a canvas in the
+page (`feed/video.mjs`).
+
 ## Run
 
     cd apps/feture && npm run build && npx vite preview --port 4250 --strictPort &

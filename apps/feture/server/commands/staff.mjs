@@ -69,14 +69,15 @@ const run = {
          and not exists (select 1 from feture.profile_member pm where pm.profile_id = m.owner_profile_id and pm.account_id = $1)
        order by m.created_at limit $2`, [account.id, input.limit]);
     // The queue shows blurred previews; the full picture opens through staff.mediaView, which is journalled.
-    const blur = cfg.media.delivery && rows.some(r => r.copies_at)
-      ? await cfg.media.delivery.urls(rows.filter(r => r.copies_at).map(r => ({ assetId: r.id, variant: /** @type {const} */ ('blur'), viewerProfileId: staffProfile(account), ttlSeconds: 300 })))
+    const covered = (/** @type {any} */ r) => r.copies_at && r.kind !== 'audio'; // sound has no picture to blur
+    const blur = cfg.media.delivery && rows.some(covered)
+      ? await cfg.media.delivery.urls(rows.filter(covered).map(r => ({ assetId: r.id, variant: /** @type {const} */ ('blur'), viewerProfileId: staffProfile(account), ttlSeconds: 300 })))
       : [];
     let i = 0;
     return {
       items: rows.map(r => ({
         id: r.id, purpose: r.purpose, kind: r.kind, authorLabel: r.explicitness, reason: r.reason, createdAt: r.created_at, w: r.width, h: r.height,
-        blur: r.copies_at ? blur[i++] : null,
+        blur: covered(r) ? blur[i++] : null,
       })),
     };
   },
@@ -95,9 +96,11 @@ const run = {
     if (a.state === 'blocked' || (a.state !== 'needs_review' && !inCase)) fail(409, 'conflict', { state: a.state });
     await journal(q, account.id, 'media.view', 'media', a.id);
     if (!a.copies_at || !cfg.media.delivery) return { src: null };
-    const variants = /** @type {const} */ (['card', 'full']);
-    const urls = await cfg.media.delivery.urls(variants.map(variant => ({ assetId: a.id, variant, viewerProfileId: staffProfile(account), ttlSeconds: 120 })));
-    return { src: { card: urls[0], full: urls[1] } };
+    // A clip: its poster frame plus the clip itself (`file`, long enough to play a minute through); sound: the file only.
+    /** @type {import('../media/delivery.mjs').Variant[]} */
+    const variants = a.kind === 'audio' ? ['file'] : a.kind === 'video' ? ['card', 'full', 'file'] : ['card', 'full'];
+    const urls = await cfg.media.delivery.urls(variants.map(variant => ({ assetId: a.id, variant, viewerProfileId: staffProfile(account), ttlSeconds: variant === 'file' ? 300 : 120 })));
+    return { src: Object.fromEntries(variants.map((v, i) => [v, urls[i]])) };
   },
 
   async 'staff.mediaDecide'(q, { account, input }) {

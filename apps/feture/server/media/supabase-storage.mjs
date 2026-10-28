@@ -7,8 +7,11 @@
  * @typedef {{configured: () => boolean, request: (path: string, options?: {method?: string, headers?: Record<string, string>, body?: any, timeoutMs?: number}) => Promise<Response>}} Transport
  */
 
-export const VARIANT_KEY = (/** @type {string} */ assetId, /** @type {string} */ variant) => `v/${assetId}/${variant}.webp`;
+/** `file` is a video or voice note served as scanned (the `o/<id>` copy the scanner wrote); the rest are pictures. */
+export const VARIANT_KEY = (/** @type {string} */ assetId, /** @type {string} */ variant) =>
+  variant === 'file' ? `o/${assetId}` : `v/${assetId}/${variant}.webp`;
 
+// Reads and writes of a clip (up to 100 MB) get 90 s; pictures finish far sooner.
 /** @param {Transport} transport Core `server/supabase.js` (service key, server only) @param {{bucket: string, baseUrl: string}} cfg */
 export function createSupabaseStorage(transport, { bucket, baseUrl }) {
   const enc = (/** @type {string} */ key) => key.split('/').map(encodeURIComponent).join('/');
@@ -33,14 +36,14 @@ export function createSupabaseStorage(transport, { bucket, baseUrl }) {
       }
     },
     async get(key, maxBytes) {
-      const res = await transport.request(`/storage/v1/object/authenticated/${bucket}/${enc(key)}`, { timeoutMs: 20000 });
+      const res = await transport.request(`/storage/v1/object/authenticated/${bucket}/${enc(key)}`, { timeoutMs: 90000 });
       const buf = new Uint8Array(await res.arrayBuffer());
       if (buf.byteLength > maxBytes) throw new Error('storage_object_too_large');
       return buf;
     },
     async put(key, bytes, mime) {
       await transport.request(`/storage/v1/object/${bucket}/${enc(key)}`, {
-        method: 'POST', headers: { 'content-type': mime, 'x-upsert': 'true' }, body: bytes, timeoutMs: 20000,
+        method: 'POST', headers: { 'content-type': mime, 'x-upsert': 'true' }, body: bytes, timeoutMs: 90000,
       });
     },
     async remove(key) {

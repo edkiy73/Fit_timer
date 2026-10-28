@@ -3,6 +3,7 @@
 // A scenario file exports `default [{name, persona:'full'|'basic'|'new'|'pair'|…, route:'/n/…', run: async t => {…}}]`.
 // `persona` signs the browser in as that persona of your lane (e2e/personas.mjs); `persona: null` opens the app signed
 // out. There is no default account: a scenario without `persona` fails.
+// `mic: true` gives that scenario's page a fake microphone (a beep), already allowed; `mic: 'deny'` makes the browser refuse it.
 // t: page (Playwright), go(route), tap(textOrSelector), fill(selectorOrLabel, value), see(text), notSee(text), wait(ms),
 //    api(action, input, asEmail?, profile?) — a direct API call for setup or to read the result back, me (the persona),
 //    persona(kind) — another persona of the same lane (an actor who asks, invites, applies…; built on first use),
@@ -19,7 +20,10 @@ const DIR = new URL('.', import.meta.url).pathname;
 const OUT = DIR + 'out/'; fs.mkdirSync(OUT, { recursive: true });
 const [, , file, filter] = process.argv;
 const scenarios = (await import(new URL(file, 'file://' + process.cwd() + '/').href)).default.filter(s => !filter || s.name.includes(filter));
-const browser = await chromium.launch({ headless: true });
+// Fake media (a beep and a test pattern). Headless Chromium honours a microphone grant only with the fake-UI switch, so
+// `mic: true` scenarios run in a second browser that has it; `mic: 'deny'` refuses getUserMedia as a person saying no does.
+const browser = await chromium.launch({ headless: true, args: ['--use-fake-device-for-media-stream'] });
+let micBrowser = null;
 const results = [];
 for (const sc of scenarios) {
   if (sc.persona === undefined) { results.push({ name: sc.name, ok: false, err: 'no persona' }); console.log('FAIL ' + sc.name + '\n   ✗ every scenario names a persona (or persona: null for signed out)'); continue; }
@@ -28,7 +32,8 @@ for (const sc of scenarios) {
   catch (e) { results.push({ name: sc.name, ok: false, err: 'persona: ' + e.message }); console.log('FAIL ' + sc.name + '\n   ✗ persona ' + sc.persona + ': ' + e.message); continue; }
   const email = me.email;
   const s = email ? await session(email) : null; if (email) await boot(email);
-  const ctx = await browser.newContext({ viewport: sc.viewport || { width: 390, height: 844 }, locale: 'ru-RU', timezoneId: 'Europe/Berlin' });
+  if (sc.mic === true) micBrowser ??= await chromium.launch({ headless: true, args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] });
+  const ctx = await (sc.mic === true ? micBrowser : browser).newContext({ viewport: sc.viewport || { width: 390, height: 844 }, locale: 'ru-RU', timezoneId: 'Europe/Berlin' });
   if (APP !== PROD) await ctx.route(APP + '/api/**', async r => {
     try {
       let res;
@@ -38,6 +43,7 @@ for (const sc of scenarios) {
     } catch { /* context closed */ }
   });
   if (s) await ctx.addInitScript(x => { const { _at, personId, ...rest } = x; localStorage.setItem('feture.auth.session', JSON.stringify(rest)); localStorage.setItem('feture.auth.device', rest.deviceId); }, s);
+  if (sc.mic === 'deny') await ctx.addInitScript(() => { if (navigator.mediaDevices) navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException('Permission denied', 'NotAllowedError')); });
   const page = await ctx.newPage();
   const problems = [];
   page.on('console', m => { if (m.type() === 'error' && !/favicon|Failed to load resource: the server responded with a status of 4/.test(m.text())) problems.push('console: ' + m.text().slice(0, 300)); });
@@ -68,6 +74,6 @@ for (const sc of scenarios) {
   await ctx.close();
   await sleep(Number(process.env.PAUSE ?? 4000)); // spare the shared quota
 }
-await browser.close();
+await browser.close(); await micBrowser?.close();
 fs.writeFileSync(OUT + 'last-' + (file.split('/').pop()) + '.json', JSON.stringify(results, null, 1));
 const f = results.filter(r => !r.ok).length; console.log(`\n${results.length - f}/${results.length} passed`); process.exit(f ? 1 : 0);

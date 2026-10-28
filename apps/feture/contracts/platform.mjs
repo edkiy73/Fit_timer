@@ -9,8 +9,8 @@ export const id = z.uuid();
 export const opId = z.uuid();
 
 const media = {
-  purpose: z.enum(['post', 'avatar', 'private', 'chat', 'gallery', 'community', 'event', 'verification']),
-  kind: z.enum(['image', 'video']),
+  purpose: z.enum(['post', 'avatar', 'private', 'chat', 'gallery', 'community', 'event', 'verification', 'voice']),
+  kind: z.enum(['image', 'video', 'audio']),
 };
 
 /** action → {input, profile: whether X-Fe-Profile is required, write: whether the profile must be writable} */
@@ -28,7 +28,15 @@ export const platformCommands = {
       explicit: z.boolean().optional(),
       viewRule: z.enum(['normal', 'once', 'timer']).optional(),
       viewSeconds: z.int().min(1).max(60).optional(),
-    }).refine(v => (v.viewRule === 'timer') === (v.viewSeconds !== undefined), { message: 'viewSeconds only with timer', path: ['viewSeconds'] }),
+      // Video and voice: the length the device measured (limits in server/media/assets.mjs); a video also brings the
+      // poster frame the device cut from it; a voice message a coarse waveform for its bubble.
+      durationMs: z.int().positive().max(600000).optional(),
+      poster: z.strictObject({ mime: z.enum(['image/jpeg', 'image/webp']), bytes: z.int().positive() }).optional(),
+      peaks: z.array(z.int().min(0).max(31)).max(64).optional(),
+    }).refine(v => (v.viewRule === 'timer') === (v.viewSeconds !== undefined), { message: 'viewSeconds only with timer', path: ['viewSeconds'] })
+      .refine(v => (v.kind === 'image') === (v.durationMs === undefined), { message: 'durationMs only for video and audio', path: ['durationMs'] })
+      .refine(v => (v.kind === 'video') === (v.poster !== undefined), { message: 'poster only and always for video', path: ['poster'] })
+      .refine(v => v.kind === 'audio' || v.peaks === undefined, { message: 'peaks only for audio', path: ['peaks'] }),
   },
   'media.commit': { profile: true, write: true, input: z.strictObject({ assetId: id }) },
   'media.remove': { profile: true, write: true, input: z.strictObject({ opId, assetId: id }) },
