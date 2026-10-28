@@ -145,6 +145,8 @@ export function FeedTab(){
  const [quick,setQuick]=useState<Record<Tab,string[]>>({forYou:[],following:[],popular:[]});
  // Only the latest request may fill the list: a slow answer for the tab or filter left behind never overwrites the current one.
  const req=useRef(0);
+ const shownItems=useRef(items);shownItems.current=items;
+ const lightRef=useRef<()=>void>(()=>{});const light=()=>lightRef.current();
  const input=useMemo(()=>feedInput(tab,f,popTag),[tab,f,popTag]);
  const shown=useRef('');
  const load=useCallback((cursor?:string)=>{
@@ -153,18 +155,30 @@ export function FeedTab(){
   // place the reader scrolled to) until the new page arrives.
   const key=JSON.stringify(input);const same=shown.current===key;shown.current=key;
   setError(null);if(!cursor){if(!same)setItems(null);setGone({});}else setMore(true);
-  call('feed.list',{...input,...(cursor?{cursor}:{})},mixedPage).then(r=>{
+  const put=(r:z.infer<typeof mixedPage>)=>{
    if(n!==req.current)return;const got=feedItems(r.items);
    setItems(prev=>cursor&&prev?[...prev,...got]:got);setNext(r.next);
    if(!filtN(f)&&!cursor&&tab!=='popular'){const fq:Record<string,number>={};got.forEach(p=>{if(!isAct(p))(p.topics??[]).forEach(x=>{fq[x]=(fq[x]??0)+1;});});
     setQuick(q=>({...q,[tab]:Object.keys(fq).sort((a,b)=>fq[b]!-fq[a]!).slice(0,7)}));}
-  }).catch(e=>{if(n===req.current)setError(e);}).finally(()=>{if(n===req.current)setMore(false);});
- },[call,input,f,tab]);
+  };
+  // The first page from memory paints at once; the server is asked behind it and a changed page (a post removed or
+  // edited, my own post published elsewhere) replaces it without a blank frame. Others' posts newer than the newest
+  // shown are never put above the reader: they light «Новые публикации ↑» (owner 29.10.2026).
+  const later=(r:z.infer<typeof mixedPage>)=>{
+   if(n!==req.current)return;if(tab==='popular'){put(r);return;}
+   const cur=shownItems.current??[];const ids=new Set(cur.map(x=>x.id));
+   const topAt=cur.reduce((m,x)=>!isAct(x)&&x.publishedAt&&x.publishedAt>m?x.publishedAt:m,'');
+   const held=(x:unknown)=>{const p=postSchema.safeParse(x);return p.success&&!ids.has(p.data.id)&&!!p.data.publishedAt&&p.data.publishedAt>topAt&&p.data.author.id!==acting?.id;};
+   if(r.items.some(held))light();put({...r,items:r.items.filter(x=>!held(x))});
+  };
+  call('feed.list',{...input,...(cursor?{cursor}:{})},mixedPage,cursor?{}:{onFresh:later}).then(put).catch(e=>{if(n===req.current)setError(e);}).finally(()=>{if(n===req.current)setMore(false);});
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[call,input,f,tab,acting?.id]);
  useEffect(()=>{load();},[load]);
  const loadHidden=useCallback(()=>{call('feedHide.list',{},hiddenList).then(r=>setHidden(r.items.filter(x=>x.kind==='post'||x.kind==='author').length)).catch(()=>setHidden(h=>h??0));},[call]);
  useEffect(()=>{loadHidden();},[loadHidden]);
  const soon=useSoon();
- const [newer,seen]=useNewerPosts(input,items&&items.filter((x):x is Post=>!isAct(x)),tab!=='popular');
+ const [newer,seen,lightUp]=useNewerPosts(input,items&&items.filter((x):x is Post=>!isAct(x)),tab!=='popular');lightRef.current=lightUp;
  const refresh=()=>{seen();load();loadHidden();if(tab==='forYou')soon.load();};
  const setF=(next:Filters)=>setFilters(x=>({...x,[tab]:next}));
  const toggleTopic=(id:string)=>setF({...f,topics:sel.includes(id)?sel.filter(x=>x!==id):[...sel,id]});

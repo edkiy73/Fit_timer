@@ -76,7 +76,7 @@ flowchart LR
 
 **Справочники (система, админка):** `topic` (темы/интересы, категории, скрытые админом), `place` (города; пользователь может добавить город — сразу используется, сотрудник проверяет написание), справочник ролей/форматов/ориентаций.
 
-**Интересы** `interest(profile_id, topic_id)`: `value 1..10` или отметка `discuss` / `hard` (табу), `dir ⊆ {give, get, watch}` (пусто = «всё»; не для категории «границы»), `vis public|granted|only`. История `interest_history` видна только владельцу; старые записи тестов помечаются «из теста (архив)». Интересы пары отдельные, не копируются.
+**Интересы** `interest(profile_id, topic_id)`: `value 1..10` или отметка `discuss` / `hard` (табу), `dir ⊆ {give, get, watch}` (пусто = «всё»; не для категории «границы»), `vis public|granted|only`. Истории интересов нет (владелец, 29.10.2026: экран и таблица `interest_history` удалены). Интересы пары отдельные, не копируются.
 
 **Связи** `profile_link`: вид `partner|play|ds|mentor|meta|friend`, роли сторон (ds, mentor), `pending → ok`, ожидающее изменение, видимость каждой стороны `all|followers|us` (действует самая закрытая), ≤30 на профиль, правило `links_from`, не со своим партнёром/своей парой, не при блоке. Связь на профиле пары — расширение → согласие партнёра (Q16).
 
@@ -187,7 +187,7 @@ flowchart LR
 | Старое | Новое |
 |---|---|
 | `feture_profiles`, `feture_profile_details` | `profile` + детали (типизированные поля вместо свободного текста) |
-| `feture_interest_states`, история | `interest` (1–10 + отметки + направление + видимость), `interest_history` |
+| `feture_interest_states`, история | `interest` (1–10 + отметки + направление + видимость); истории нет (29.10.2026) |
 | `feture_access_requests`, `feture_scoped_grants` | `access_request`, `access_grant` (профили, 3 области, без `can_message`) |
 | `feture_blocks` | `block` (профили) |
 | `feture_posts` + комментарии, реакции, закладки, жалобы | `post`, `reply`, `reaction`, `saved_item`, `report` |

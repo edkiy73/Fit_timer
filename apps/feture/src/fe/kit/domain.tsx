@@ -356,9 +356,10 @@ export function Quota({left,max,label}:{left:number,max:number,label:string}){
 }
 
 /** The head of the private layer: lock, title, and the switch that opens or closes it. */
-export function VaultHead({title,on,onToggle,label,inCard}:{title:ReactNode,on?:boolean|undefined,onToggle?:(()=>void)|undefined,label?:string|undefined,/** Inside a summary card: tighter. */ inCard?:boolean|undefined}){
- return <span className={'vault-h'+(inCard?' k-vault-in':'')}><span className="vi"><Lock/></span>{onToggle?<div><b>{title}</b></div>:<b>{title}</b>}
-  {onToggle&&<Switch className="vsw" on={!!on} label={label??''} onChange={onToggle}/>}</span>;
+export function VaultHead({title,sub,on,onToggle,disabled,label,inCard}:{title:ReactNode,/** A short state line under the title («Видят те, кому откроешь доступ»). */ sub?:ReactNode,
+ on?:boolean|undefined,onToggle?:(()=>void)|undefined,/** The switch can't be used yet (nothing to open); `sub` says why. */ disabled?:boolean|undefined,label?:string|undefined,/** Inside a summary card: tighter. */ inCard?:boolean|undefined}){
+ return <span className={'vault-h'+(inCard?' k-vault-in':'')}><span className="vi"><Lock/></span>{onToggle||sub?<div><b>{title}</b>{sub&&<small>{sub}</small>}</div>:<b>{title}</b>}
+  {onToggle&&<Switch className="vsw" on={!!on} label={label??''} disabled={disabled} onChange={onToggle}/>}</span>;
 }
 
 /* ---------------- Staff review ---------------- */

@@ -380,6 +380,12 @@ button.pill{cursor:pointer}
 .v21 .cr-key>svg{width:10px;height:10px}
 /* The interest sheet: the description, then the bar with room above it. */
 .v21 .topic-desc+.cmpx{margin-top:var(--s-4)}
+
+/* AddCard (owner, 29.10.2026): one «add» card for every empty block — the hint wraps to two lines at most, and
+   a card under another block in the same group keeps the rhythm gap. */
+.v21 .ph-empty .tx small{display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.35}
+.v21 .ph-empty:disabled{opacity:.55}
+.v21 .grp>*+.ph-empty{margin-top:var(--s-2)}
 /* Pull-to-refresh (kit/pull.tsx, owner 29.10.2026): the browser's own pull-to-reload and bounce never fire inside the
  * app — the app's mark does it instead. A round mark slides from under the header; the ring fills with the pull; past
  * the threshold the arrow turns; while reading it blinks (never spins). The content does not move. */

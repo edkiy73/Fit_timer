@@ -21,7 +21,7 @@ test('requests and grants: age check, available scopes, nothing before access, �
     await call('ua', a, { action: 'profile.update', opId: op(), rev: 1, detailsVis: 'granted', genders: ['woman'] });
 
     const veil = await call('ub', b, { action: 'private.get', profileId: a });
-    assert.deepEqual([veil.exists, veil.available, veil.canRequest, veil.text], [true, ['info'], true, undefined]); // no real data before access
+    assert.deepEqual([veil.exists, veil.available, veil.canRequest, veil.text, veil.interests], [true, ['info'], true, undefined, undefined]); // no real data before access
     assert.equal((await call('ub', b, { action: 'access.request', opId: op(), profileId: a, scopes: ['photos'] })).rule, 'scope_not_available');
     const req = await call('ub', b, { action: 'access.request', opId: op(), profileId: a, scopes: ['info'] });
     assert.equal(req.status, 200);
@@ -38,6 +38,9 @@ test('requests and grants: age check, available scopes, nothing before access, �
     assert.deepEqual([open.text, open.scopes], ['Перед встречей — звонок.', ['info']]);
     assert.ok(new Date(open.until) > new Date());
     assert.deepEqual((await call('ub', b, { action: 'interests.list', profileId: a })).items.map(i => i.topicId), ['bondage']);
+    assert.deepEqual(open.interests.map(i => [i.topicId, i.value]), [['bondage', 8]]); // the private part lists its interests
+    const mine = await call('ua', a, { action: 'private.get', profileId: a });
+    assert.deepEqual([mine.text, mine.interests.map(i => [i.topicId, i.vis])], ['Перед встречей — звонок.', [['bondage', 'granted']]]);
     assert.deepEqual((await call('ub', b, { action: 'profile.get', profileId: a })).profile.details.genders, ['woman']);
     // Expired: nothing is open any more.
     await db.query(`update feture.access_grant set until = now() - interval '1 second'`);

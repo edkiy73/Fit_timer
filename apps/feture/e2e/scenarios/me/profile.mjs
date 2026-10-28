@@ -18,7 +18,7 @@ export default [
    }
  } },
  { name: 'X01 tabs switch, keep ?layer, and a ?layer link while «Я» is open', persona: 'full', route: '/n/me', run: async t => {
-   for (const [tab, layer, sel] of [['Приватное', 'priv', '.grp-t:has-text("Настройки")'], ['Видимость', 'vis', 'select[aria-label="Режим"]'], ['Моё', 'mine', '.li:has-text("Сохранённое")'], ['Профиль', null, '#mePh']]) {
+   for (const [tab, layer, sel] of [['Приватное', 'priv', '#privHead'], ['Видимость', 'vis', 'select[aria-label="Режим"]'], ['Моё', 'mine', '.li:has-text("Сохранённое")'], ['Профиль', null, '#mePh']]) {
      await t.tap(`.me18-seg button:has-text("${tab}")`); await t.see(sel);
      expect(layer ? t.page.url().includes('layer=' + layer) : !t.page.url().includes('layer='), 'url for ' + tab + ': ' + t.page.url());
    }
@@ -27,7 +27,7 @@ export default [
  { name: 'P02 basics: bio, show age, city → Сохранить pinned → persisted', persona: 'full', route: '/n/me', run: async t => {
    const bio = 'e2e bio ' + Date.now().toString(36);
    try {
-     await t.see('#mePh'); await t.page.locator('button.blk-btn').first().click(); await t.see('textarea.inp');
+     await t.see('#mePh'); await t.page.locator('#meBasics button.blk-btn').click(); await t.see('textarea.inp');
      await pinned(t, 'Сохранить');
      expect(await t.page.locator('.ctabar button:has-text("Сохранить")').isDisabled(), 'save disabled while clean');
      await t.fill('textarea.inp', bio);
@@ -57,7 +57,7 @@ export default [
  { name: 'P02 details: role chip → Сохранить → persisted', persona: 'full', route: '/n/me', run: async t => {
    const before = (await prof(t)).details;
    try {
-     await t.see('#mePh'); await t.page.locator('button.blk-btn').nth(1).click(); await t.see('.chips[aria-label="Роль"]');
+     await t.see('#mePh'); await t.page.locator('#meDet button.blk-btn, #meDet .ph-empty').first().click(); await t.see('.chips[aria-label="Роль"]');
      await pinned(t, 'Сохранить');
      const chip = t.page.locator('.chips[aria-label="Роль"] .chip:not(.on)').first(); const label = (await chip.textContent()).trim(); await chip.click(); await t.wait(200);
      await t.tap('.ctabar button:has-text("Сохранить")'); await t.see('#mePh'); await t.see(label);
@@ -69,7 +69,7 @@ export default [
  } },
  { name: 'P02 cancel: back without saving changes nothing', persona: 'full', route: '/n/me', run: async t => {
    const p0 = await prof(t);
-   await t.see('#mePh'); await t.page.locator('button.blk-btn').first().click(); await t.see('textarea.inp');
+   await t.see('#mePh'); await t.page.locator('#meBasics button.blk-btn').click(); await t.see('textarea.inp');
    await t.fill('textarea.inp', 'should not be saved'); await t.tap('.bar button[aria-label="Назад"]'); await t.see('#mePh');
    expect((await prof(t)).bio === p0.bio, 'bio unchanged');
  } },
