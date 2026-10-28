@@ -1,7 +1,7 @@
 import type {Meta,StoryObj} from '@storybook/react-vite';
 import {fn} from 'storybook/test';
-import {Camera,Eye,Hand,X} from 'lucide-react';
-import {Card,KeyValues,Note,PhotoAdd,PhotoSlot,PhotoSlots,PhotoTrack,Pose,ReviewCard,ReviewMedia,ReviewPair,VaultHead} from './index';
+import {Camera,Eye,Hand,Image as ImageIcon,Plus,Trash2,Users,X} from 'lucide-react';
+import {AlbumCard,AlbumMeta,AlbumRow,Card,GalleryAdd,GalleryGrid,GalleryTile,KeyValues,SelectionBar,Note,PhotoAdd,PhotoSlot,PhotoSlots,PhotoTrack,Pose,ReviewCard,ReviewMedia,ReviewPair,VaultHead} from './index';
 
 // A tiny inline picture so the stories need no network.
 const PIC='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 5"><defs><linearGradient id="g" x2="1" y2="1"><stop offset="0" stop-color="#7A1236"/><stop offset="1" stop-color="#FF9F7A"/></linearGradient></defs><rect width="4" height="5" fill="url(#g)"/></svg>');
@@ -34,3 +34,18 @@ export const Проверка:StoryObj<typeof ReviewCard>={name:'Карточк�
  args:{title:'Фото профиля',meta:'28 окт, 12:40',danger:false,children:<><ReviewMedia blur={PIC}/><KeyValues rows={[['Автор','@mia'],['Сканер','ok'],['Пусто','']]}/></>},argTypes:{children:{control:false}}};
 export const ПроверкаПара:StoryObj<typeof ReviewCard>={name:'Проверка: селфи и фото рядом',render:a=><ReviewCard {...a}/>,
  args:{title:'@mia',meta:'вчера',danger:true,children:<ReviewPair><ReviewMedia icon={X} caption={<Note>Селфи</Note>}/><ReviewMedia icon={Eye} caption={<Note>Фото профиля</Note>}><img src={PIC} alt=""/></ReviewMedia></ReviewPair>}};
+
+export const Альбомы:StoryObj<typeof AlbumCard>={name:'Галерея: альбомы',render:a=><><AlbumRow label="Альбомы">
+ <AlbumCard title="Все" count={12} mosaic={[PIC,PIC,PIC,PIC]} on onClick={fn()}/><AlbumCard {...a}/>
+ <AlbumCard title="Вечера" count={3} cover={PIC} locked="Видят только подписчики" onClick={fn()}/><AlbumCard title="Альбом" icon={Plus} label="Новый альбом" onClick={fn()}/>
+</AlbumRow><AlbumMeta title="Мастерские" followers="видят только подписчики" order="сначала новые"/></>,
+ args:{title:'Мастерские',count:5,cover:PIC,on:false,onClick:fn()},
+ parameters:{docs:{description:{story:'`AlbumRow` листается вбок; `wrap` — по четыре в строку (в «Я»). `AlbumCard`: обложка, мозаика до 4 фото или иконка, `on` — открытый альбом, `locked` — только подписчики. `AlbumMeta` — строка об открытом альбоме.'}}}};
+export const Сетка:StoryObj<typeof GalleryTile>={name:'Галерея: сетка и выбор',render:a=><GalleryGrid label="Публикации">
+ <GalleryAdd label="Добавить" onClick={fn()}/><GalleryTile {...a}/><GalleryTile src={PIC} label="Пост 2" count={3} followers="Только подписчики" onClick={fn()}/>
+ <GalleryTile src={PIC} label="Пост 3" review="На проверке" onClick={fn()}/><GalleryTile src={PIC} label="Выбрано" selected onClick={fn()}/><GalleryTile src={PIC} label="Не выбрано" selected={false} onClick={fn()}/>
+ <GalleryTile src={PIC} label="Обложка" picked onClick={fn()}/></GalleryGrid>,
+ args:{src:PIC,label:'Публикация',count:2,onClick:fn()},
+ parameters:{docs:{description:{story:'Плитка — публикация: первое фото, «N фото», значок «только подписчики», «на проверке». `selected` true/false — режим выбора; `picked` — выбранная обложка.'}}}};
+export const ПанельВыбора:StoryObj<typeof SelectionBar>={name:'Галерея: панель выбора',render:a=><SelectionBar {...a}/>,
+ args:{status:'Выбрано: 2',actions:[{icon:ImageIcon,label:'В альбом',onClick:fn()},{icon:Users,label:'Кто видит',onClick:fn()},{icon:Eye,label:'В профиль',onClick:fn()},{icon:Trash2,label:'Удалить',danger:true,onClick:fn()}]},argTypes:{actions:{control:false}}};

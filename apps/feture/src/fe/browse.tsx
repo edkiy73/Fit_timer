@@ -2,13 +2,12 @@ import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {BookOpen,ChevronLeft,ChevronRight,CircleCheck,Clock,History,Image as ImageIcon,Pencil,Plus,Search as SearchIcon,Users,X} from 'lucide-react';
+import {BookOpen,ChevronLeft,ChevronRight,CircleCheck,History,Image as ImageIcon,Pencil,Plus,Search as SearchIcon,Users,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,H,IconBtn,Note,Pill,Row,SearchInput,SectionLabel,Seg,Skel,Stack,View,plate} from './kit';
 import {useFe} from './session';
 import {PostCard,postSchema,type Post} from './feed';
 import {InterestSheet,Jars,useInterests} from './interests';
-import {Viewer} from './post-parts';
 import {faceFields,NameBadges} from './faces';
 
 /** Discovery screens with the prototype's markup: V21 F04 (an interest's page), G01 (global search), P10 (followers /
@@ -282,29 +281,5 @@ export function ProfileLinks({profileId,photos,self=false}:{profileId:string,pho
  </Card>;
 }
 
-/* ---------- V21 P20: gallery ---------- */
-
-/** The server has no albums yet: the gallery is the profile photos the viewer may see (own pending ones marked). */
-export function GalleryScreen(){
- const {id=''}=useParams();const {call}=useFe();const {t}=useI18n();
- const [p,setP]=useState<z.infer<typeof profileRes>['profile']|null>(null);const [error,setError]=useState<unknown>(null);const [open,setOpen]=useState<number|null>(null);
- const load=useCallback(()=>{setError(null);call('profile.get',{profileId:id},profileRes).then(r=>setP(r.profile)).catch(setError);},[call,id]);
- useEffect(()=>{setP(null);load();},[load]);
- const list=(p?.photos??[]).filter(m=>mediaSrc(m));
- const opener=useRef<HTMLElement|null>(null);
- const close=useCallback(()=>{setOpen(null);requestAnimationFrame(()=>opener.current?.focus({preventScroll:true}));},[]);
- return <>
-  <Bar title={t('fe.br.gallery')+(p?' · '+nameOf(p):'')} back/>
-  <View>
-   {error?<Empty icon={X} role="alert" title={t('fe.feed.unavailable')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
-    :!p?<Skel kind="list"/>
-    :!list.length?<Empty icon={ImageIcon} title={t('fe.br.galleryEmpty')}/>
-    :<div className="ggrid">{list.map((m,i)=><button key={i} type="button" className="gtile" aria-label={t('fe.br.photoN',{n:i+1,total:list.length})}
-     onClick={e=>{opener.current=e.currentTarget;setOpen(i);}}>
-     <img src={mediaSrc(m)!} alt="" loading="lazy" draggable={false}/>
-     {m.pending&&<span className="gt-w" title={t('fe.br.inReview')}><Clock/></span>}
-    </button>)}</div>}
-  </View>
-  {open!==null&&<Viewer srcs={list.map(m=>mediaSrc(m,'full')!)} index={open} onClose={close}/>}
- </>;
-}
+/* ---------- V21 P20: gallery — src/fe/gallery.tsx ---------- */
+export {GalleryScreen} from './gallery';

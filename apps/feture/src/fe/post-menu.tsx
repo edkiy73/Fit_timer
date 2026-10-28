@@ -2,13 +2,14 @@ import {useEffect,useRef,useState} from 'react';
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Ban,BellOff,Check,EyeOff,Flag,Link as LinkIcon,Pencil,Trash2,User,X} from 'lucide-react';
+import {Ban,BellOff,Check,EyeOff,Flag,Images,Link as LinkIcon,Pencil,Trash2,User,X} from 'lucide-react';
 import type {LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,Ask as KitAsk,Btn,Card,RadioList,Row,Sheet,TextArea,ToggleRow} from './kit';
 import {useFe} from './session';
 import {useToast} from './toast';
 import type {Post,Reply} from './feed';
+import {PostAlbumSheet,inGallery} from './gallery';
 
 /** V21 `ACT.postMenu` / `ACT.rMore` with the prototype's markup (`div.layer > div.scrim.on + div.sheet.on`).
  * Own post — edit / copy link / delete; someone else's — answers about a photo mark, hide the post, mute the author,
@@ -65,7 +66,7 @@ export function ReportSheet({targetType,targetId,onClose,onDone}:{targetType:'po
 export function PostMenu({post,onClose,onChange,onRemove}:{post:Post,onClose:()=>void,onChange?:(p:Post)=>void,onRemove:(r:Removal)=>void}){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();const {op,drop}=useOps();
  const mine=post.rev!=null;const couple=acting?.kind==='couple';const name=nameOf(post.author);
- const [view,setView]=useState<'menu'|'delete'|'report'>('menu');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const [view,setView]=useState<'menu'|'delete'|'report'|'album'>('menu');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
  useEscape(onClose);
  const go=(v:typeof view)=>{setFailure('');setView(v);};
  const run=async(key:string,fn:(opId:string)=>Promise<Removal|void>)=>{
@@ -101,11 +102,13 @@ export function PostMenu({post,onClose,onChange,onRemove}:{post:Post,onClose:()=
   busy={busy} failure={failure} onOk={del} onCancel={()=>go('menu')}/>;
  if(view==='report')return <ReportSheet targetType="post" targetId={post.id} onClose={onClose}
   onDone={alsoBlock=>onRemove(alsoBlock?{authorId:post.author.id,notice:t('fe.pm.done.reported')}:{postId:post.id,notice:t('fe.pm.done.reported')})}/>;
+ if(view==='album')return <PostAlbumSheet post={post} onClose={onClose} onChange={onChange}/>;
  const published=!post.state||post.state==='published';
  return <Sheet title={t('fe.pm.title')} onClose={onClose}>
   <Card list>
    {mine?<>
     <Row noChev icon={Pencil} title={t('fe.pm.editFull')} onClick={()=>{onClose();navigate('/n/feed/post/'+post.id+'/edit');}}/>
+    {inGallery(post)&&<Row noChev icon={Images} title={t('fe.gal.postAlbum')} sub={t('fe.gal.postAlbumMenuSub')} onClick={()=>go('album')}/>}
     {published&&<Row noChev icon={LinkIcon} title={t('fe.pm.copyLink')} onClick={copy}/>}
     <Row noChev icon={Trash2} title={t('fe.pm.delete')} danger onClick={()=>go('delete')}/>
    </>:<>

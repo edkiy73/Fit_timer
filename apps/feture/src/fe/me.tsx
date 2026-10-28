@@ -2,7 +2,7 @@ import {Fragment,useCallback,useEffect,useState,type CSSProperties,type Componen
 import {useLocation,useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Camera,Check,ChevronDown,ChevronRight,Clock,Eye,EyeOff,Users,Image as ImageIcon,KeyRound,Plus,Settings,Star,Trash2,X} from 'lucide-react';
+import {Camera,Check,ChevronDown,ChevronRight,Clock,Eye,EyeOff,Users,Image as ImageIcon,KeyRound,Newspaper,Plus,Settings,Star,Trash2,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,Ask as KitAsk,Av,Btn,Card,Empty,Group,H,IconBtn,Note,PhotoAdd,PhotoSlot,PhotoSlots,Row,Seg,SelectRow,Sheet,Skel,ToggleRow} from './kit';
 import {AgeCheckLink,useAgeResume} from './age-check';
@@ -17,11 +17,14 @@ import {CoupleMembers,CouplePending,CoupleVisGroup} from './couple';
 import {linksMineRes} from './profile-extras';
 import {useToast} from './toast';
 import {useDragOrder} from './reorder';
+import {MeGallery} from './gallery';
+import {Viewer} from './post-parts';
 
 /** V21 X01 «Я» with the prototype's markup (`meHead18`, `meProfileLayer`, `meVisLayer`): the header with the avatar,
  * bell, «Как видят» and settings; «Нужно решить»; the four layers with their red dots; photos, basics, details,
  * interests, gallery and links. The editors (P02/P04) live in me-edit.tsx. Everything comes from the server. */
-export const media=z.object({id:z.uuid(),pending:z.boolean(),blurred:z.boolean().optional(),src:z.record(z.string(),z.string()).nullable()});
+export const media=z.object({id:z.uuid(),pending:z.boolean(),blurred:z.boolean().optional(),src:z.record(z.string(),z.string()).nullable(),
+ /** A photo taken from one of the profile's own posts (wave 5): «Открыть публикацию». */ postId:z.uuid().optional()});
 export const profile=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),own:z.boolean(),bio:z.string(),
  age:z.number().nullable(),city:z.object({id:z.string().optional(),ru:z.string().nullable(),en:z.string().nullable(),pending:z.boolean()}).nullable(),avatar:media.nullable(),photos:z.array(media),
  details:z.record(z.string(),z.unknown()),rev:z.number().optional(),detailsVis:z.string().nullable().optional(),showAge:z.boolean().optional(),cityId:z.string().nullable().optional()}).passthrough();
@@ -195,7 +198,7 @@ export const photoSrc=(m:{src:Record<string,string>|null},size:'card'|'thumb'|'f
  * with that photo; «Изменить» opens the photo editor (P02 `only:'media'`). */
 function PhotosBlock({p,settings,onChanged}:{p:Profile,settings:Settings,onChanged:()=>void}){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();
- const [open,setOpen]=useState<number|null>(null);const [busy,setBusy]=useState(false);
+ const [open,setOpen]=useState<number|null>(null);const [busy,setBusy]=useState(false);const [viewing,setViewing]=useState<number|null>(null);
  const cp=p.kind==='couple';
  // Press and drag a photo to change the order; it is saved at once, with «Отменить».
  const drag=useDragOrder<'ph'>((_,ids)=>{void write(ids,t('fe.mx.ph.orderSaved'),p.photos.map(x=>x.id));});
@@ -235,25 +238,22 @@ function PhotosBlock({p,settings,onChanged}:{p:Profile,settings:Settings,onChang
   {x&&open!==null&&<Sheet title={open===0?t('fe.mx.ph.main'):t('fe.mx.ph.nOf',{n:open+1,total:items.length})} onClose={()=>setOpen(null)}>
    <div className="ph-sheet-prev">{photoSrc(x)&&<img src={photoSrc(x)!} alt="" draggable={false}/>}{x.pending&&<span className="ph-rev"><Clock/><span>{t('fe.mx.ph.review')}</span></span>}</div>
    <Card list>
-    <Row icon={Eye} title={t('fe.mx.ph.view')} noChev onClick={()=>{setOpen(null);navigate(`/n/people/${acting?.id??p.id}/gallery`);}}/>
+    <Row icon={Eye} title={t('fe.mx.ph.view')} noChev onClick={()=>{const i=open;setOpen(null);setViewing(i);}}/>
     {open>0&&!x.pending&&<Row icon={Star} title={t('fe.mx.ph.makeMain')} sub={t('fe.mx.ph.makeMainSub')} noChev disabled={busy}
      onClick={()=>{const i=open;setOpen(null);void write([ids[i]!,...ids.filter((_,k)=>k!==i)],t('fe.mx.ph.mainDone'),ids);}}/>}
-    <Row icon={Trash2} title={t('fe.mx.ph.remove')} danger disabled={busy} onClick={()=>{const i=open;setOpen(null);void write(ids.filter((_,k)=>k!==i),t('fe.mx.ph.removed'),ids);}}/>
+    {x.postId&&<Row icon={Newspaper} title={t('fe.gal.openPost')} sub={t('fe.gal.openPostSub')} noChev onClick={()=>{setOpen(null);navigate('/n/feed/post/'+x.postId);}}/>}
+    <Row icon={Trash2} title={t('fe.mx.ph.remove')} sub={x.postId?t('fe.gal.postStays'):undefined} danger disabled={busy} onClick={()=>{const i=open;setOpen(null);void write(ids.filter((_,k)=>k!==i),t('fe.mx.ph.removed'),ids);}}/>
    </Card>
   </Sheet>}
+  {viewing!==null&&<Viewer srcs={items.map(ph=>photoSrc(ph,'full')).filter((s):s is string=>!!s)} index={viewing} onClose={()=>setViewing(null)}/>}
  </Group>;
 }
 
-/** `galleryOwn20()` — the server has no albums yet: one «Все» card with the photos the profile shows. */
+/** `galleryOwn20()` — «Все» and the albums (wave 5, src/fe/gallery.tsx), «Загрузить» to the composer with photos. */
 function GalleryBlock({p}:{p:Profile}){
  const {t}=useI18n();const navigate=useNavigate();
- const list=p.photos.filter(x=>photoSrc(x));
- const upload=()=>navigate('/n/feed/new');
- if(!list.length)return <Group className="gal20" id="meGal" title={t('fe.mx.gal')}>
-  <button type="button" className="ph-empty" onClick={upload}><span className="pe-ic"><ImageIcon/></span><span className="tx"><b>{t('fe.mx.gal.first')}</b><small>{p.kind==='couple'?t('fe.mx.gal.firstSubCouple'):t('fe.mx.gal.firstSub')}</small></span><Plus/></button></Group>;
- return <Group className="gal20" id="meGal" title={t('fe.mx.gal')} action={<button type="button" onClick={upload}><Plus/>{t('fe.mx.gal.upload')}</button>}>
-  <div className="alb-row alb20"><button type="button" className="alb" aria-pressed={false} onClick={()=>navigate(`/n/people/${p.id}/gallery`)}>
-   <span className="alb-c">{list.length===1?<img src={photoSrc(list[0]!,'thumb')!} alt="" loading="lazy"/>:<ImageIcon/>}</span><b>{t('fe.mx.gal.all')}</b><small>{list.length}</small></button></div>
+ return <Group className="gal20" id="meGal" title={t('fe.mx.gal')} action={<button type="button" onClick={()=>navigate('/n/feed/new?x=media')}><Plus/>{t('fe.mx.gal.upload')}</button>}>
+  <MeGallery profileId={p.id} couple={p.kind==='couple'}/>
  </Group>;
 }
 

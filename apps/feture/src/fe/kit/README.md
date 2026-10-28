@@ -57,6 +57,7 @@ Product pieces that repeat or carry their own look. Screens use these, never the
 | Create | `Swatches` (cover colour plates) |
 | Interests | `AnswerScale` (1–10 with «обсудить» / «граница» marks) |
 | People | `PersonName` (name on a photo card), `PersonLine` + `RequestCard` + `Answer` (requests and applications), `LikeTile`, `Radar` |
+| Gallery | `AlbumRow` + `AlbumCard` (cover / mosaic / icon, open, followers lock), `AlbumMeta`, `GalleryGrid` + `GalleryTile` (count, followers, review; selection `selected`, cover `picked`) + `GalleryAdd`, `SelectionBar` (pinned count + actions) |
 | Photos and checks | `PhotoSlots` / `PhotoSlot` / `PhotoAdd` (profile photo grid, drag to reorder, `loading`), `PhotoTrack` (viewer strip), `Pose` (the gesture to show; the shot itself is `CaptureFrame`) |
 | Private layer | `VaultHead` (lock, title, switch) |
 | Staff review | `ReviewCard`, `KeyValues`, `ReviewMedia`, `ReviewPair` |
