@@ -39,6 +39,8 @@ function squeeze(levels:number[],n=BARS):number[]{
  if(!levels.length)return [];
  const out:number[]=[];for(let i=0;i<n;i++){const a=Math.floor(i*levels.length/n),b=Math.max(a+1,Math.floor((i+1)*levels.length/n));
   let m=0;for(let k=a;k<b&&k<levels.length;k++)m=Math.max(m,levels[k]!);out.push(m);}
+ // No level at all (no analyser, a silent or suspended input): no waveform rather than a flat line.
+ if(!out.some(Boolean))return [];
  const top=Math.max(1,...out);return out.map(v=>Math.round(v/top*31));
 }
 function Wave({peaks,frac,onSeek}:{peaks:number[],frac:number,onSeek?:((f:number)=>void)|undefined}){
