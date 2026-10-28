@@ -291,7 +291,7 @@ export function FollowsScreen(){
  const title=(tab==='following'?t('fe.br.following'):t('fe.br.followers'))+(who?' · '+who:'');
  return <>
   <Bar title={title} back/>
-  <View>
+  <View refresh={load}>
    <Seg value={tab} onChange={v=>setParams({tab:v},{replace:true})} options={[
     {id:'followers',label:t('fe.br.followers')+(lists?' · '+countLabel(lists.followers.length):'')},
     {id:'following',label:t('fe.br.following')+(lists?' · '+countLabel(lists.following.length):'')}]}/>

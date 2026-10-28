@@ -112,3 +112,14 @@ export function watchVideoUpload(t) {
   });
   return got;
 }
+
+/** A finger drag down from (x, from) to (x, to) as real touch events (needs `touch: true`); `mid` runs before the
+ * finger lifts (a screenshot of the pull). */
+export async function pullDown(t, { x = 195, from = 300, to = 560, steps = 16, mid } = {}) {
+  const c = await t.page.context().newCDPSession(t.page);
+  await c.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y: from }] });
+  for (let i = 1; i <= steps; i++) { await c.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: from + (to - from) * i / steps }] }); await t.wait(16); }
+  if (mid) await mid();
+  await c.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await c.detach();
+}

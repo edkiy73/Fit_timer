@@ -7,6 +7,7 @@ import {connectRealtime,type RtKind,type RtListener} from './realtime';
 import {forgetWebPush,noteAction} from './push-web';
 import {forgetNativePush} from './push-native';
 import {linksExpireAt} from './kit/media';
+import {PullRefreshRunner} from './kit/pull';
 
 /** What `session.bootstrap` returns: the FetUre account and the profiles this account may act as. */
 const profileCard=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string(),state:z.string(),avatarAssetId:z.uuid().nullable(),avatar:z.string().nullable().optional()});
@@ -79,6 +80,19 @@ const WRITES_WITHOUT_OPID=new Set(['chat.read','chat.mute','chat.archive','notif
 const sameAnswer=(a:unknown,b:unknown)=>{const k=(_:string,v:unknown)=>_==='requestId'?undefined:typeof v==='string'&&/^https?:\/\//.test(v)?v.split('?')[0]:v;
  return JSON.stringify(a,k)===JSON.stringify(b,k);};
 export function dropReadCache(){readCache.clear();for(const f of dropListeners)f();}
+/** Reads that go to the server while a refresh runs (`refreshReads`): it waits for them. */
+let capture:Set<Promise<unknown>>|null=null;
+/** Pull-to-refresh (kit `PullRefreshRunner`): every read `work` starts — and the reads its state changes start right
+ * after — skips the read cache and goes to the server; resolves when they have all answered. */
+export async function refreshReads(work:()=>unknown){
+ dropReadCache();const got=new Set<Promise<unknown>>();capture=got;
+ try{
+  await Promise.allSettled([work()]);
+  // Loaders that only change state read in the effects of the next render.
+  await wait(80);
+  for(let seen=-1;got.size!==seen;){seen=got.size;await Promise.allSettled([...got]);await wait(40);}
+ }finally{if(capture===got)capture=null;}
+}
 /** The last answer per read key — what a screen shows first on a revisit (see `peek`); emptied only at sign-out. */
 const lastBody=new Map<string,unknown>();
 const remember=(key:string,body:unknown)=>{lastBody.delete(key);lastBody.set(key,body);if(lastBody.size>READ_MAX){const first=lastBody.keys().next().value;if(first!==undefined)lastBody.delete(first);}};
@@ -164,7 +178,7 @@ export function FeSessionProvider({children}:{children:ReactNode}){
      if(readCache.get(key)!==hit)return; // a write or a signal emptied the cache meanwhile
      readCache.set(key,{at:Date.now(),action,value:Promise.resolve(body),settled:true,until:linksExpireAt(body)});remember(key,body);
     },()=>{hit.refreshing=false;});}
-  }else{value=ask();store(value);}
+  }else{value=ask();store(value);capture?.add(value);}
   // Not bound to the caller's AbortSignal: a screen that unmounts must not cancel a read another screen will reuse.
   const parsed=parse(value,schema);
   if(opts.signal){const sig=opts.signal;return new Promise<T>((res,rej)=>{sig.addEventListener('abort',()=>rej(new DOMException('Aborted','AbortError')),{once:true});parsed.then(res,rej);});}
@@ -189,7 +203,7 @@ export function FeSessionProvider({children}:{children:ReactNode}){
   return ()=>conn.close();
  },[rtKey]);
  const subscribe=useCallback((l:RtListener)=>{listeners.current.add(l);return ()=>{listeners.current.delete(l);};},[]);
- return <Ctx.Provider value={value}><RtCtx.Provider value={subscribe}>{children}</RtCtx.Provider></Ctx.Provider>;
+ return <Ctx.Provider value={value}><RtCtx.Provider value={subscribe}><PullRefreshRunner value={refreshReads}>{children}</PullRefreshRunner></RtCtx.Provider></Ctx.Provider>;
 }
 
 /** Calls `handler` when a realtime signal of one of `kinds` arrives (any own profile), and once after a reconnect
