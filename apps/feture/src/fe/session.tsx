@@ -148,3 +148,19 @@ export function useFe(){
  if(!value)throw new Error('useFe outside FeSessionProvider');
  return value;
 }
+
+const approvalRes=z.object({ok:z.literal(true),couple:z.object({members:z.array(z.object({me:z.boolean(),approvesPartner:z.boolean().optional()}).passthrough())}).passthrough()});
+/** Acting as the couple: true when the partner approves the couple's changes (their `approvesPartner`), so a button
+ * says it goes to the partner before it is pressed. False as a person or while unknown — the server's `pending`
+ * answer still decides the toast. */
+export function usePartnerApproves(){
+ const {call,acting}=useFe();const [on,setOn]=useState(false);
+ const id=acting?.kind==='couple'?acting.id:null;
+ const read=useCallback((fresh:boolean)=>{if(!id)return ()=>{};let live=true;
+  call('couple.get',{},approvalRes,{profileId:id,fresh}).then(r=>{if(live)setOn(!!r.couple.members.find(m=>!m.me)?.approvesPartner);}).catch(()=>{});
+  return ()=>{live=false;};},[call,id]);
+ useEffect(()=>{setOn(false);return read(false);},[read]);
+ // A partner switching approval on or off reaches the couple as a notification.
+ useRealtime(['decide','notify'],()=>{read(true);});
+ return on;
+}

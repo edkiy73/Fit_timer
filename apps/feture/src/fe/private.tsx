@@ -87,7 +87,7 @@ export function RequestSheet({profileId,available,onClose,onSent}:{profileId:str
  const loadQuota=useCallback(()=>{call('access.quota',{},quotaRes,{fresh:true}).then(setQ).catch(()=>{});},[call]);
  useEffect(()=>{loadQuota();},[loadQuota]);
  const send=async()=>{setBusy(true);setError(null);
-  try{const r=await call('access.request',{opId:op.current,profileId,scopes:sel},requestRes);toast(t('fe.ac.rq.sent',{left:r.quota.left,max:r.quota.max}),{type:'ok'});onSent();}
+  try{const r=await call('access.request',{opId:op.current,profileId,scopes:sel},requestRes);toast(t('fe.ac.rq.sent'+(acting?.kind==='couple'?'Us':''),{left:r.quota.left,max:r.quota.max}),{type:'ok'});onSent();}
   catch(e){setError(e);op.current=newOpId();if(e instanceof FeError&&e.code==='rate_limited')loadQuota();}finally{setBusy(false);}};
  if(q&&q.left<=0)return <Sheet title={t('fe.ac.lim.title')} onClose={onClose} foot={<Btn onClick={onClose}>{t('fe.ac.ok')}</Btn>}>
   <Note>{t('fe.ac.lim.text',{max:q.max,at:q.resetsAt?w.at(q.resetsAt):'—'})}</Note>
@@ -95,7 +95,7 @@ export function RequestSheet({profileId,available,onClose,onSent}:{profileId:str
   <Note className="mt8">{t('fe.ac.lim.wait')}</Note>
  </Sheet>;
  const age=error instanceof FeError&&error.rule==='age_check_required';
- return <Sheet title={t('fe.ac.rq.title')} onClose={onClose} foot={<Btn icon={Send} disabled={!sel.length||busy} busy={busy} onClick={()=>void send()}>{t('fe.ac.rq.send')}</Btn>}>
+ return <Sheet title={t('fe.ac.rq.title')} onClose={onClose} foot={<Btn icon={Send} disabled={!sel.length||busy} busy={busy} onClick={()=>void send()}>{t('fe.ac.rq.send'+(acting?.kind==='couple'?'Us':''))}</Btn>}>
   {acting?.kind==='couple'&&<Note>{t('fe.ac.rq.forUs')}</Note>}
   <CheckList bare label={t('fe.ac.rq.what')} value={sel} onChange={setSel} options={available.map(s=>[s,t('fe.priv.scope.'+s)] as const)}/>
   <SectionLabel action={q&&<b>{t('fe.ac.rq.leftN',{left:q.left,max:q.max})}</b>}>{t('fe.ac.rq.left')}</SectionLabel>
@@ -107,9 +107,9 @@ export function RequestSheet({profileId,available,onClose,onSent}:{profileId:str
 
 /** Cancels my waiting request; the day's attempt is not given back. */
 export function useCancelRequest(){
- const {call}=useFe();const {t}=useI18n();const toast=useToast();const w=useAccessWords();
+ const {call,acting}=useFe();const {t}=useI18n();const toast=useToast();const w=useAccessWords();
  return async(requestId:string)=>{
-  try{await call('access.cancel',{opId:newOpId(),requestId},ok);toast(t('fe.ac.cancelled'),{type:'ok'});return true;}
+  try{await call('access.cancel',{opId:newOpId(),requestId},ok);toast(t('fe.ac.cancelled'+(acting?.kind==='couple'?'Us':'')),{type:'ok'});return true;}
   catch(e){toast(w.err(e),{type:'err'});return false;}
  };
 }
@@ -132,12 +132,14 @@ export function PendingSheet({profileId,name,onClose,onCancelled}:{profileId:str
 
 /** Declines a request with a toast that says what the person will see and offers «Отменить» for the server's window. */
 export function useDecline(){
- const {call}=useFe();const {t}=useI18n();const toast=useToast();const w=useAccessWords();
+ const {call,acting,state}=useFe();const {t}=useI18n();const toast=useToast();const w=useAccessWords();
  return async(requestId:string,name:string,after:()=>void,opts?:CallOpts)=>{
   try{
    const r=await call('access.decline',{opId:newOpId(),requestId},declineRes,opts);after();
    const ms=Math.max(1500,new Date(r.undoUntil).getTime()-Date.now()-800);
-   toast(t('fe.ac.dec.done',{name,d:r.reaskDays}),{type:'ok',ms,action:{label:t('fe.ac.undo'),fn:()=>{
+   // From the inbox the decision may be the couple's while acting as oneself: the addressee decides the words.
+   const who=opts?.profileId&&state.status==='ready'?state.boot.profiles.find(p=>p.id===opts.profileId):acting;
+   toast(t(who?.kind==='couple'?'fe.ac.dec.doneUs':'fe.ac.dec.done',{name,d:r.reaskDays}),{type:'ok',ms,action:{label:t('fe.ac.undo'),fn:()=>{
     call('access.undoDecline',{opId:newOpId(),requestId},ok,opts).then(()=>{toast(t('fe.ac.dec.undone'),{type:'ok'});after();}).catch(e=>toast(w.err(e),{type:'err'}));}}});
    return true;
   }catch(e){toast(w.err(e),{type:'err'});return false;}
@@ -154,11 +156,11 @@ function GrantSheet({r,available,onClose,onDone,onDecline}:{r:Incoming,available
  const op=useRef(newOpId());const couple=acting?.kind==='couple';
  const grant=async()=>{setBusy(true);setFailure('');
   try{const res=await call('access.grant',{opId:op.current,requestId:r.id,scopes:sel,term},grantRes);
-   toast(res.pending?t('fe.ac.gr.partner'):t('fe.ac.gr.done',{name}),{type:'ok'});onDone();}
+   toast(res.pending?t('fe.ac.gr.partner'):t(couple?'fe.ac.gr.doneUs':'fe.ac.gr.done',{name}),{type:'ok'});onDone();}
   catch(e){setFailure(w.err(e));op.current=newOpId();}finally{setBusy(false);}};
  return <Sheet title={t('fe.mx.pr.grantTitle',{name})} sub={t('fe.ac.gr.asks',{what:w.what(r.scopes).toLowerCase()})} onClose={onClose} foot={<>
-  <Btn icon={LockOpen} disabled={!sel.length||busy} busy={busy} onClick={()=>void grant()}>{t('fe.mx.pr.grantOk.'+term)}</Btn>
-  <Btn kind="soft" disabled={busy} onClick={onDecline}>{t('fe.priv.decline')}</Btn></>}>
+  <Btn icon={LockOpen} disabled={!sel.length||busy} busy={busy} onClick={()=>void grant()}>{couple?t('fe.ca.toPartner'):t('fe.mx.pr.grantOk.'+term)}</Btn>
+  <Btn kind="soft" disabled={busy} onClick={onDecline}>{t(couple?'fe.priv.declineUs':'fe.priv.decline')}</Btn></>}>
   {had&&<Note>{t('fe.ac.gr.had',{what:w.what(had.scopes),until:w.until(had.until)})}</Note>}
   <CheckList bare label={t('fe.mx.pr.what')} value={sel} onChange={setSel}
    options={all.map(s=>[s,t('fe.priv.scope.'+s),had?.scopes.includes(s)?t('fe.ac.gr.open'):!r.scopes.includes(s)?t('fe.ac.gr.notAsked'):undefined] as const)}/>
@@ -174,21 +176,21 @@ function GrantSheet({r,available,onClose,onDone,onDecline}:{r:Incoming,available
 /** «Отозвать доступ у X?» — new views stop now; what was seen cannot be recalled. `narrow` revokes by an empty
  * narrowing (the sheet's «пусто → отзыв»). */
 function RevokeAsk({g,narrow,onCancel,onDone}:{g:GrantItem,narrow:boolean,onCancel:()=>void,onDone:()=>void}){
- const {call}=useFe();const {t}=useI18n();const toast=useToast();const w=useAccessWords();
+ const {call,acting}=useFe();const {t}=useI18n();const toast=useToast();const w=useAccessWords();
  const [busy,setBusy]=useState(false);const [error,setError]=useState('');const id=g.profile?.id;
  const run=async()=>{if(!id)return;setBusy(true);setError('');
   try{if(narrow)await call('access.narrow',{opId:newOpId(),profileId:id,scopes:[]},ok);else await call('access.revoke',{opId:newOpId(),profileId:id},ok);
-   toast(t('fe.mx.pr.revoked'),{type:'ok'});onDone();}catch(e){setError(w.err(e));}finally{setBusy(false);}};
- return <Ask icon={Lock} danger title={t('fe.ac.rv.title',{name:nameOf(g.profile)})} text={t('fe.ac.rv.text')} ok={t('fe.ac.rv.ok')} busy={busy} error={error||undefined}
+   toast(t('fe.mx.pr.revoked'+(acting?.kind==='couple'?'Us':'')),{type:'ok'});onDone();}catch(e){setError(w.err(e));}finally{setBusy(false);}};
+ return <Ask icon={Lock} danger title={t('fe.ac.rv.title',{name:nameOf(g.profile)})} text={t('fe.ac.rv.text')} ok={t('fe.ac.rv.ok'+(acting?.kind==='couple'?'Us':''))} busy={busy} error={error||undefined}
   onCancel={onCancel} onOk={()=>void run()}/>;
 }
 
 /** «Изменить» — uncheck parts; nothing left is a revoke; «Отозвать доступ полностью» from here too. Only narrowing. */
 function NarrowSheet({g,onClose,onRevoke,onDone}:{g:GrantItem,onClose:()=>void,onRevoke:(viaNarrow:boolean)=>void,onDone:()=>void}){
- const {call}=useFe();const {t}=useI18n();const toast=useToast();const w=useAccessWords();
+ const {call,acting}=useFe();const {t}=useI18n();const toast=useToast();const w=useAccessWords();
  const [sel,setSel]=useState<Scope[]>(g.scopes);const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
  const save=async()=>{if(!sel.length){onRevoke(true);return;}if(!g.profile)return;setBusy(true);setFailure('');
-  try{await call('access.narrow',{opId:newOpId(),profileId:g.profile.id,scopes:sel},ok);toast(t('fe.ac.nw.done'),{type:'ok'});onDone();}
+  try{await call('access.narrow',{opId:newOpId(),profileId:g.profile.id,scopes:sel},ok);toast(t('fe.ac.nw.done'+(acting?.kind==='couple'?'Us':'')),{type:'ok'});onDone();}
   catch(e){setFailure(w.err(e));}finally{setBusy(false);}};
  const same=sel.length===g.scopes.length;
  return <Sheet title={t('fe.ac.nw.title',{name:nameOf(g.profile)})} onClose={onClose} foot={
@@ -240,14 +242,15 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged}:{profileId:st
  useEffect(()=>{load();},[load]);
  const changed=()=>{load();onChanged();};
  const grants=useGrantActions(changed);
- const act=async(fn:()=>Promise<unknown>,msg:string)=>{setBusy(true);try{await fn();toast(msg,{type:'ok'});changed();return true;}catch(e){toast(w.err(e),{type:'err'});return false;}finally{setBusy(false);}};
+ // A widening change of the couple (switching the private part on, wider «who may ask») may wait for the partner.
+ const act=async(fn:()=>Promise<Record<string,unknown>>,msg:string)=>{setBusy(true);try{const r=await fn();toast(r.pending?t('fe.ca.waitPartner'):msg,{type:'ok'});changed();return true;}catch(e){toast(w.err(e),{type:'err'});return false;}finally{setBusy(false);}};
  if(error)return <Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>;
  if(!mine||!reqs)return <Skel kind="card" rows={2}/>;
  const editor=()=>navigate('/n/me/edit?only=priv');
- const enable=()=>void act(()=>call('private.setOn',{opId:newOpId(),on:true},ok),t('fe.mx.pr.onDone'));
+ const enable=()=>void act(()=>call('private.setOn',{opId:newOpId(),on:true},ok),t(cp?'fe.mx.pr.onDoneUs':'fe.mx.pr.onDone'));
  const offAsk=asking==='off'&&<Ask icon={Lock} danger title={t('fe.mx.pr.offTitle')} busy={busy}
   text={[given.length||reqs.items.length?t('fe.mx.pr.offWhat',{g:given.length,q:reqs.items.length}):t('fe.mx.pr.offAll'),t('fe.mx.pr.offRest')].join(' ')} ok={t('fe.mx.pr.offOk')}
-  onCancel={()=>setAsking(null)} onOk={async()=>{if(await act(()=>call('private.setOn',{opId:newOpId(),on:false,confirm:true},ok),t('fe.mx.pr.offDone')))setAsking(null);}}/>;
+  onCancel={()=>setAsking(null)} onOk={async()=>{if(await act(()=>call('private.setOn',{opId:newOpId(),on:false,confirm:true},ok),t(cp?'fe.mx.pr.offDoneUs':'fe.mx.pr.offDone')))setAsking(null);}}/>;
  if(!on)return <Group title={t('fe.priv.title')} action={<span className="aud">{t('fe.mx.pr.offTag')}</span>}>
   <div className="vault off"><div className="vault-b"><p className="vault-lead">{cp?t('fe.mx.pr.leadUs'):t('fe.mx.pr.lead')}</p>
    <Btn icon={LockOpen} disabled={busy} busy={busy} onClick={enable}>{t('fe.mx.pr.enable')}</Btn></div></div></Group>;
@@ -259,8 +262,8 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged}:{profileId:st
    {reqs.items.map(r=><RequestCard key={r.id}
     person={<PersonLine av={<Av name={nameOf(r.profile)} seed={r.profile?.id??r.id} src={r.profile?.avatar}/>} label={nameOf(r.profile)} onOpen={()=>r.profile&&navigate('/n/people/'+r.profile.id)}
      name={<>{withAge(nameOf(r.profile),r.profile)}<NameBadges p={r.profile}/></>} sub={<>{cp?t('fe.mx.pr.asksUs'):t('fe.priv.asks')} · {when(r.created_at,locale)}</>}/>}
-    actions={<><Btn size="md" onClick={()=>setGrantFor(r)} disabled={busy}>{t('fe.priv.grant')}</Btn>
-     <Btn size="md" kind="soft" onClick={()=>void decline(r.id,nameOf(r.profile),changed)} disabled={busy}>{t('fe.priv.decline')}</Btn></>}>
+    actions={<><Btn size="md" onClick={()=>setGrantFor(r)} disabled={busy}>{t(cp?'fe.priv.grantUs':'fe.priv.grant')}</Btn>
+     <Btn size="md" kind="soft" onClick={()=>void decline(r.id,nameOf(r.profile),changed)} disabled={busy}>{t(cp?'fe.priv.declineUs':'fe.priv.decline')}</Btn></>}>
     <Chips className="mt12">{r.scopes.map(s=><Pill key={s}>{t('fe.priv.scope.'+s)}{r.alreadyOpen?.scopes.includes(s)?' · '+t('fe.ac.gr.open'):''}</Pill>)}</Chips>
    </RequestCard>)}
   </Stack></Group>}
@@ -284,7 +287,7 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged}:{profileId:st
   </Card></Group>
   {offAsk}
   {asking==='revokeAll'&&<Ask icon={Lock} danger title={t('fe.mx.pr.revokeAllTitle')} text={t('fe.mx.pr.revokeAllText',{n:given.length})} ok={t('fe.mx.pr.revokeAll')} busy={busy}
-   onCancel={()=>setAsking(null)} onOk={async()=>{if(await act(()=>call('access.revokeAll',{opId:newOpId(),confirm:true},ok),t('fe.mx.pr.revokedAll')))setAsking(null);}}/>}
+   onCancel={()=>setAsking(null)} onOk={async()=>{if(await act(()=>call('access.revokeAll',{opId:newOpId(),confirm:true},ok),t(cp?'fe.mx.pr.revokedAllUs':'fe.mx.pr.revokedAll')))setAsking(null);}}/>}
   {grantFor&&<GrantSheet r={grantFor} available={available} onClose={()=>setGrantFor(null)} onDone={()=>{setGrantFor(null);changed();}}
    onDecline={()=>{const r=grantFor;setGrantFor(null);void decline(r.id,nameOf(r.profile),changed);}}/>}
   {grants.node}
@@ -297,7 +300,7 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged}:{profileId:st
  * opened to me carry my own handle (the server's `watermark`). `preview` («Как видят») draws it as a viewer would see
  * it: buttons inert, but my own photos still open in the viewer. */
 export function PrivateVault({profileId,name,preview}:{profileId:string,name:string,preview?:'all'|'granted'|undefined}){
- const {call}=useFe();const {t}=useI18n();const w=useAccessWords();
+ const {call,acting}=useFe();const us=acting?.kind==='couple'&&!preview;const {t}=useI18n();const w=useAccessWords();
  const [p,setP]=useState<Priv|null>(null);const [view,setView]=useState<number|null>(null);
  const [sheet,setSheet]=useState<'request'|'pending'|null>(null);const [reaskAt,setReaskAt]=useState<string|null>(null);
  const load=useCallback(()=>{call('private.get',{profileId},priv,{fresh:true}).then(setP).catch(()=>setP(null));},[call,profileId]);
@@ -321,8 +324,8 @@ export function PrivateVault({profileId,name,preview}:{profileId:string,name:str
   const wm=preview||p.own?null:photos.find(m=>m.watermark)?.watermark??null;
   const until=!preview&&p.until?<Pill tone="v">{w.until(p.until)}</Pill>:undefined;
   const desc=scopesOpen.includes('info')&&p.text?<Group title={t('fe.px.pr.desc')}><Card><div className="md bio">{p.text.split(/\n{2,}/).map((x,i)=><p key={i}>{x}</p>)}</div></Card></Group>:null;
-  const more=!preview&&(reason==='pending'?<Btn kind="text" auto icon={Clock} onClick={()=>setSheet('pending')}>{t('fe.ac.rq.waiting')}</Btn>
-   :p.canRequest&&available.some(s=>!scopesOpen.includes(s))?<Btn kind="soft" size="sm" auto icon={LockOpen} onClick={()=>setSheet('request')}>{t('fe.ac.rq.askMore')}</Btn>:null);
+  const more=!preview&&(reason==='pending'?<Btn kind="text" auto icon={Clock} onClick={()=>setSheet('pending')}>{t(us?'fe.ac.rq.waitingUs':'fe.ac.rq.waiting')}</Btn>
+   :p.canRequest&&available.some(s=>!scopesOpen.includes(s))?<Btn kind="soft" size="sm" auto icon={LockOpen} onClick={()=>setSheet('request')}>{t(us?'fe.ac.rq.askMoreUs':'fe.ac.rq.askMore')}</Btn>:null);
   return <section className="vault open" id="priv">{head(true,until)}<div className="vault-b">
    {desc}
    {photos.length>0&&<Group bare title={<>{t('fe.px.pr.photos')} · {photos.length}</>} foot={preview?t('fe.px.pr.wmPreview'):t('fe.px.pr.wm')}>
@@ -335,11 +338,11 @@ export function PrivateVault({profileId,name,preview}:{profileId:string,name:str
   {sheets}</section>;
  }
  const action=preview?<Btn kind="dark" disabled aria-disabled="true">{t('fe.px.pr.ask')}</Btn>
-  :reason==='pending'?<Btn kind="dark" icon={Clock} onClick={()=>setSheet('pending')}>{t('fe.ac.rq.waiting')}</Btn>
+  :reason==='pending'?<Btn kind="dark" icon={Clock} onClick={()=>setSheet('pending')}>{t(us?'fe.ac.rq.waitingUs':'fe.ac.rq.waiting')}</Btn>
   :reason==='not_accepting'?<Pill icon={Lock}>{t('fe.px.pr.notAccepting')}</Pill>
   :reason==='cooldown'?<Pill icon={Clock}>{reaskAt?t('fe.ac.rq.again',{n:w.days(reaskAt)}):t('fe.px.pr.cooldown')}</Pill>
   :reason?<Pill icon={Lock}>{t('fe.px.pr.r.'+reason)}</Pill>
-  :p.canRequest?<Btn kind="dark" icon={LockOpen} onClick={()=>setSheet('request')}>{t('fe.px.pr.ask')}</Btn>:null;
+  :p.canRequest?<Btn kind="dark" icon={LockOpen} onClick={()=>setSheet('request')}>{t(us?'fe.px.pr.askUs':'fe.px.pr.ask')}</Btn>:null;
  return <section className="vault closed" id="priv">{head(false)}<div className="vault-b">
   <Veil lock={false} toggles title={t('fe.px.pr.decides').replace('{name}',name)} text={t('fe.px.pr.decidesText')} action={action}/>
  </div>{sheets}</section>;

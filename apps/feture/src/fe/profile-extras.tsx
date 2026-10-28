@@ -6,7 +6,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicBase} from '../api-url';
 import {Ban,Check,ChevronDown,Crown,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,Flag,Heart,History,Info,Link as LinkIcon,Lock,LockOpen,MapPin,MessageCircle,ShieldCheck,Undo2,Users,X} from 'lucide-react';
-import {Alert,Av,Bar,Btn,Card,Empty,Group,H,IconBtn,Layer,Note,PersonName,PhotoTrack,Pill,Row,Seg,Skel,ToggleRow,Veil,View,plate} from './kit';
+import {ActingAv,Alert,Av,Bar,Btn,Card,Empty,Group,H,IconBtn,Layer,Note,PersonName,PhotoTrack,Pill,Row,Seg,Skel,ToggleRow,Veil,View,plate} from './kit';
 import {useFe} from './session';
 import {ReportSheet} from './report';
 import {PhotoBadge} from './photo-check';
@@ -109,9 +109,9 @@ export function MatchOverlay({other,conversationId,onClose}:{other:{id:string,na
  useEffect(()=>{first.current?.focus({preventScroll:true});const k=(e:KeyboardEvent)=>{if(e.key==='Escape')onClose();};addEventListener('keydown',k);return ()=>removeEventListener('keydown',k);},[onClose]);
  const me=acting?.name||acting?.handle||'?';
  return <Layer><div className="match" role="dialog" aria-modal="true" aria-label={t('fe.px.m.title')}>
-  <div className="pair"><Av name={me} seed={acting?.id} src={acting?.avatar??null}/><span className="heart"><Heart fill="currentColor"/></span><Av name={other.name} seed={other.id} src={other.src}/></div>
-  <H level={2}>{t('fe.px.m.title')}</H><p>{fill(t('fe.px.m.text'),{name:other.name})}</p>
-  <Btn ref={first} icon={MessageCircle} onClick={()=>{onClose();navigate(conversationId?'/n/chats/'+conversationId:'/n/chats');}}>{t('fe.px.m.write')}</Btn>
+  <div className="pair"><ActingAv p={acting??{id:'me',kind:'person',name:me}}/><span className="heart"><Heart fill="currentColor"/></span><Av name={other.name} seed={other.id} src={other.src}/></div>
+  <H level={2}>{t('fe.px.m.title')}</H><p>{fill(t(acting?.kind==='couple'?'fe.px.m.textUs':'fe.px.m.text'),{name:other.name})}</p>
+  <Btn ref={first} icon={MessageCircle} onClick={()=>{onClose();navigate(conversationId?'/n/chats/'+conversationId:'/n/chats');}}>{t(acting?.kind==='couple'?'fe.px.m.writeUs':'fe.px.m.write')}</Btn>
   <Btn kind="soft" onClick={onClose}>{t('fe.px.m.later')}</Btn>
  </div></Layer>;
 }
@@ -134,7 +134,7 @@ export function PersonActions({p,rel,setRel,toast,inert}:{p:PersonProfile,rel:Re
  const like=async()=>{if(busy)return;setBusy('like');
   try{const r=await call('like.send',{opId:op.current,profileId:p.id,source:'profile'},likeRes);op.current=newOpId();
    if(r.state==='matched'){setRel(x=>x&&{...x,mutual:true});setMatch(r.conversationId?{conversationId:r.conversationId}:{});}
-   else{setRel(x=>x&&{...x,liked:true});toast(fill(t('fe.px.lkd.sent'),{name}));}}
+   else{setRel(x=>x&&{...x,liked:true});toast(fill(t(asUs?'fe.px.lkd.sentUs':'fe.px.lkd.sent'),{name}));}}
   catch(e){op.current=newOpId();const rule=e instanceof FeError?e.rule:undefined;
    if(rule==='likes_not_accepted'||rule==='couples_via_discover_only'||rule==='own_discover_off')setWhy(rule);
    else if(rule==='already_matched')setRel(x=>x&&{...x,mutual:true});else toast(pxError(e,t),true);}
@@ -143,21 +143,21 @@ export function PersonActions({p,rel,setRel,toast,inert}:{p:PersonProfile,rel:Re
  const relike=async()=>{try{const r=await call('like.send',{opId:newOpId(),profileId:p.id,source:'profile'},likeRes);
   if(r.state==='matched'){setRel(x=>x&&{...x,mutual:true});setMatch(r.conversationId?{conversationId:r.conversationId}:{});}else setRel(x=>x&&{...x,liked:true});}catch(e){toast(pxError(e,t),true);}};
  const unlike=async()=>{if(busy)return;setBusy('like');
-  try{await call('like.withdraw',{opId:newOpId(),profileId:p.id},ok);setRel(x=>x&&{...x,liked:false});toast(t('fe.px.lkd.withdrawn'),false,{label:t('fe.mx.undo'),fn:()=>void relike()});}catch(e){toast(pxError(e,t),true);}finally{setBusy('');}};
+  try{await call('like.withdraw',{opId:newOpId(),profileId:p.id},ok);setRel(x=>x&&{...x,liked:false});toast(t(asUs?'fe.px.lkd.withdrawnUs':'fe.px.lkd.withdrawn'),false,{label:t('fe.mx.undo'),fn:()=>void relike()});}catch(e){toast(pxError(e,t),true);}finally{setBusy('');}};
  const write=async()=>{try{const r=await call('chats.list',{filter:'all'},chatsRes,{asAccount:true});const c=r.items.find(x=>x.other.id===p.id);navigate(c?'/n/chats/'+c.id:'/n/chats');}catch{navigate('/n/chats');}};
  const setFollow=async(on:boolean,undo:boolean)=>{
   try{await call('follow.set',{opId:newOpId(),profileId:p.id,on},ok);setRel(x=>x&&{...x,iFollow:on,followers:Math.max(0,x.followers+(on?1:-1))});
-   if(!undo)toast(fill(t(on?'fe.px.fl.on':'fe.px.fl.off'),{name}),false,{label:t('fe.mx.undo'),fn:()=>void setFollow(!on,true)});}
+   if(!undo)toast(fill(t(on?(asUs?'fe.px.fl.onUs':'fe.px.fl.on'):(asUs?'fe.px.fl.offUs':'fe.px.fl.off')),{name}),false,{label:t('fe.mx.undo'),fn:()=>void setFollow(!on,true)});}
   catch(e){toast(pxError(e,t),true);}};
  const follow=async()=>{if(busy||!rel)return;setBusy('follow');try{await setFollow(!rel.iFollow,false);}finally{setBusy('');}};
- const likeBtn=rel?.mutual?<Btn icon={MessageCircle} onClick={inert?undefined:write} disabled={inert}>{t('fe.px.act.write')}</Btn>
-  :rel?.liked?<Btn pressed title={t('fe.px.act.unlikeHint')} onClick={inert?undefined:unlike} disabled={inert||busy==='like'}><Heart fill="currentColor"/>{t('fe.px.act.sent')}</Btn>
+ const likeBtn=rel?.mutual?<Btn icon={MessageCircle} onClick={inert?undefined:write} disabled={inert}>{t(asUs&&!inert?'fe.px.act.writeUs':'fe.px.act.write')}</Btn>
+  :rel?.liked?<Btn pressed title={t(asUs?'fe.px.act.unlikeHintUs':'fe.px.act.unlikeHint')} onClick={inert?undefined:unlike} disabled={inert||busy==='like'}><Heart fill="currentColor"/>{t(asUs&&!inert?'fe.px.act.sentUs':'fe.px.act.sent')}</Btn>
   :why?null:<Btn busy={busy==='like'} onClick={inert?undefined:tapLike} disabled={inert||busy==='like'}><Heart fill="currentColor"/>{asUs&&!inert?t('fe.px.act.likeUs'):t('fe.people.like')}</Btn>;
  const iF=!!rel?.iFollow;
  return <>
   <div className="p-acts" inert={inert||undefined}>{likeBtn}
-   <Btn kind="soft" busy={busy==='follow'} aria-pressed={iF} title={iF?t('fe.px.act.unfollowHint'):undefined} onClick={inert?undefined:follow} disabled={inert||!rel}>
-    {iF?<><Check/>{t('fe.px.act.following')}</>:asUs&&!inert?t('fe.px.act.followUs'):t('fe.people.follow')}</Btn>
+   <Btn kind="soft" busy={busy==='follow'} aria-pressed={iF} title={iF?t(asUs?'fe.px.act.unfollowHintUs':'fe.px.act.unfollowHint'):undefined} onClick={inert?undefined:follow} disabled={inert||!rel}>
+    {iF?<><Check/>{t(asUs&&!inert?'fe.px.act.followingUs':'fe.px.act.following')}</>:asUs&&!inert?t('fe.px.act.followUs'):t('fe.people.follow')}</Btn>
   </div>
   {why&&<p className="profile-like-note"><Heart/><span>{why==='couples_via_discover_only'?<>{t('fe.px.act.coupleVia')} <button type="button" className="linkbtn" onClick={()=>navigate('/n/me?layer=vis')}>{t('fe.px.act.turnOn')}</button></>
    :why==='own_discover_off'?<>{t('fe.px.act.ownOff')} <button type="button" className="linkbtn" onClick={()=>navigate('/n/me?layer=vis')}>{t('fe.px.act.turnOn')}</button></>:t('fe.px.act.likesOff')}</span></p>}
@@ -508,8 +508,8 @@ export function LinksSection({profileId,inert}:{profileId:string,inert?:boolean|
 const feedHiddenRes=z.object({ok:z.literal(true),items:z.array(z.object({kind:z.string(),target_id:z.string()}).passthrough())}).passthrough();
 
 function Report({profileId,onClose,onDone}:{profileId:string,onClose:()=>void,onDone:(msg:string,blocked:boolean)=>void}){
- const {t}=useI18n();
- return <ReportSheet targetType="profile" targetId={profileId} block onClose={onClose} onDone={b=>onDone(t('fe.px.rp.sent'),b)}/>;
+ const {t}=useI18n();const {acting}=useFe();
+ return <ReportSheet targetType="profile" targetId={profileId} block onClose={onClose} onDone={b=>onDone(t(acting?.kind==='couple'?'fe.ca.reported':'fe.px.rp.sent'),b)}/>;
 }
 
 function Block({profileId,name,onClose,onDone}:{profileId:string,name:string,onClose:()=>void,onDone:(msg:string)=>void}){
@@ -518,10 +518,10 @@ function Block({profileId,name,onClose,onDone}:{profileId:string,name:string,onC
  const alsoFor:'partner'|'me'|null=acting?.kind==='person'&&others.some(p=>p.kind==='couple')?'partner':acting?.kind==='couple'&&others.some(p=>p.kind==='person')?'me':null;
  const [also,setAlso]=useState(false);const [busy,setBusy]=useState(false);const [err,setErr]=useState('');
  const go=async()=>{setBusy(true);setErr('');
-  try{await call('block.set',{opId:newOpId(),profileId,on:true,...(also&&alsoFor?{alsoFor}:{})},ok);onDone(t('fe.px.bl.done'));}
+  try{await call('block.set',{opId:newOpId(),profileId,on:true,...(also&&alsoFor?{alsoFor}:{})},ok);onDone(t(acting?.kind==='couple'?'fe.ca.blocked':'fe.px.bl.done'));}
   catch(e){setErr(pxError(e,t));}finally{setBusy(false);}};
- return <Sheet title={fill(t('fe.px.bl.title'),{name})} onClose={onClose} foot={<><Btn kind="danger" onClick={go} disabled={busy}>{t('fe.px.bl.ok')}</Btn><Btn kind="text" onClick={onClose}>{t('fe.px.cancel')}</Btn></>}>
-  <p className="lead">{t('fe.px.bl.text')}</p>
+ return <Sheet title={fill(t('fe.px.bl.title'),{name})} onClose={onClose} foot={<><Btn kind="danger" onClick={go} disabled={busy}>{t(acting?.kind==='couple'?'fe.ca.block':'fe.px.bl.ok')}</Btn><Btn kind="text" onClick={onClose}>{t('fe.px.cancel')}</Btn></>}>
+  <p className="lead">{t(acting?.kind==='couple'?'fe.ca.blockText':'fe.px.bl.text')}</p>
   {alsoFor&&<Card list className="mt12"><ToggleRow title={t(alsoFor==='partner'?'fe.px.bl.alsoPartner':'fe.px.bl.alsoMe')} sub={t(alsoFor==='partner'?'fe.px.bl.alsoPartnerSub':'fe.px.bl.alsoMeSub')}
    on={also} onClick={()=>setAlso(v=>!v)}/></Card>}
   {err&&<Alert kind="err" noIcon className="mt12">{err}</Alert>}
@@ -531,16 +531,16 @@ function Block({profileId,name,onClose,onDone}:{profileId:string,name:string,onC
 type MenuStep='menu'|'report'|'block'|'end'|'gift'|null;
 /** End a connection (ACT.endConn): withdraws the like; for a match the chat closes too (`match.end`). */
 function EndConnection({profileId,name,mutual,onClose,onDone}:{profileId:string,name:string,mutual:boolean,onClose:()=>void,onDone:(msg:string)=>void}){
- const {call}=useFe();const {t}=useI18n();const [revoke,setRevoke]=useState(true);const [busy,setBusy]=useState(false);const [err,setErr]=useState('');
+ const {call,acting}=useFe();const {t}=useI18n();const us=acting?.kind==='couple';const u=(k:string)=>t(us?k+'Us':k);const [revoke,setRevoke]=useState(true);const [busy,setBusy]=useState(false);const [err,setErr]=useState('');
  const go=async()=>{setBusy(true);setErr('');
-  try{if(mutual)await call('match.end',{opId:newOpId(),profileId,revokeMyGrant:revoke},ok);else await call('like.withdraw',{opId:newOpId(),profileId},ok);onDone(t('fe.px.ec.done'));}
+  try{if(mutual)await call('match.end',{opId:newOpId(),profileId,revokeMyGrant:revoke},ok);else await call('like.withdraw',{opId:newOpId(),profileId},ok);onDone(u('fe.px.ec.done'));}
   catch(e){setErr(pxError(e,t));}finally{setBusy(false);}};
  const fact=(ok:boolean,text:string)=><div className="fact"><i className={ok?'g':'v'}>{ok?<Check/>:<Info/>}</i><span>{text}</span></div>;
  return <Sheet title={t('fe.px.ec.title')} onClose={onClose} foot={<><Btn kind="danger" onClick={go} busy={busy}>{t('fe.px.ec.ok')}</Btn><Btn kind="soft" onClick={onClose}>{t('fe.px.cancel')}</Btn></>}>
-  <p className="lead">{fill(t('fe.px.ec.lead'),{name})}</p>
-  <Card className="flat">{mutual&&fact(true,t('fe.px.ec.chat'))}{fact(true,t(mutual?'fe.px.ec.likeMatch':'fe.px.ec.like'))}{mutual&&fact(true,t('fe.px.ec.history'))}{fact(false,t('fe.px.ec.notBlock'))}</Card>
-  {mutual&&<Card list className="mt12"><ToggleRow title={t('fe.px.ec.revoke')} sub={t('fe.px.ec.revokeSub')} on={revoke} onClick={()=>setRevoke(v=>!v)}/></Card>}
-  <Note className="mt12">{t('fe.px.ec.block')}</Note>
+  <p className="lead">{fill(u('fe.px.ec.lead'),{name})}</p>
+  <Card className="flat">{mutual&&fact(true,t('fe.px.ec.chat'))}{fact(true,u(mutual?'fe.px.ec.likeMatch':'fe.px.ec.like'))}{mutual&&fact(true,t('fe.px.ec.history'))}{fact(false,t('fe.px.ec.notBlock'))}</Card>
+  {mutual&&<Card list className="mt12"><ToggleRow title={u('fe.px.ec.revoke')} sub={t('fe.px.ec.revokeSub')} on={revoke} onClick={()=>setRevoke(v=>!v)}/></Card>}
+  <Note className="mt12">{u('fe.px.ec.block')}</Note>
   {err&&<Alert kind="err" noIcon className="mt12">{err}</Alert>}
  </Sheet>;
 }
@@ -549,7 +549,7 @@ function EndConnection({profileId,name,mutual,onClose,onDone}:{profileId:string,
  * blocked profile no longer loads, so the screen shows its own blocked state with «Разблокировать». */
 export function PersonMenu({profileId,name,handle,step,setStep,blocked,setBlocked,toast,rel,onRel}:{profileId:string,name:string,/** A person's nick: «Подарить Premium» (couples have none to gift to). */ handle?:string|null|undefined,step:MenuStep,setStep:(s:MenuStep)=>void,
  blocked:boolean,setBlocked:(b:boolean)=>void,toast:(msg:string,err?:boolean)=>void,rel?:Relation|null|undefined,onRel?:(()=>void)|undefined}){
- const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const [busy,setBusy]=useState(false);
+ const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const [busy,setBusy]=useState(false);
  const [link,setLink]=useState<{state:'ok'|'sent'|'in',view:LinkView}|null>(null);const [hidden,setHidden]=useState<boolean|null>(null);
  useEffect(()=>{if(step!=='menu'||blocked)return;call('links.mine',{},linksMineRes).then(r=>{const f=(l:LinkView[])=>l.find(x=>x.other.id===profileId);
   const c=f(r.confirmed),s=f(r.sent),i=f(r.incoming);setLink(c?{state:'ok',view:c}:s?{state:'sent',view:s}:i?{state:'in',view:i}:null);}).catch(()=>{});
@@ -557,7 +557,7 @@ export function PersonMenu({profileId,name,handle,step,setStep,blocked,setBlocke
  const close=useCallback(()=>setStep(null),[setStep]);
  // «Скрыть из ленты» (the post menu's «Не показывать»): posts and activity leave the feed; the person is not told.
  const hide=async()=>{const on=!hidden;setBusy(true);
-  try{await call('feedHide.set',{opId:newOpId(),kind:'author',targetId:profileId,on},ok);setHidden(on);close();toast(fill(t(on?'fe.px.menu.hidden':'fe.px.menu.unhidden'),{name}));}
+  try{await call('feedHide.set',{opId:newOpId(),kind:'author',targetId:profileId,on},ok);setHidden(on);close();toast(fill(t((on?'fe.px.menu.hidden':'fe.px.menu.unhidden')+(acting?.kind==='couple'?'Us':'')),{name}));}
   catch(e){toast(pxError(e,t),true);}finally{setBusy(false);}};
  const unblock=async()=>{setBusy(true);
   try{await call('block.set',{opId:newOpId(),profileId,on:false},ok);setBlocked(false);close();toast(t('fe.px.bl.undone'));}

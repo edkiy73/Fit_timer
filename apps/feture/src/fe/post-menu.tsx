@@ -60,7 +60,7 @@ export function PostMenu({post,onClose,onChange,onRemove}:{post:Post,onClose:()=
   const targetId=kind==='post'?post.id:post.author.id;
   await call('feedHide.set',{opId,kind,targetId,on:true},okOnly);
   const undo=async()=>{await call('feedHide.set',{opId:newOpId(),kind,targetId,on:false},okOnly);};
-  return kind==='post'?{postId:post.id,notice:t('fe.pm.done.hidden'),undo,hidden:{authorId:post.author.id,authorName:name}}:{authorId:post.author.id,notice:t('fe.pm.done.authorHiddenName',{name}),undo};
+  return kind==='post'?{postId:post.id,notice:t(couple?'fe.pm.done.hiddenUs':'fe.pm.done.hidden'),undo,hidden:{authorId:post.author.id,authorName:name}}:{authorId:post.author.id,notice:t(couple?'fe.pm.done.authorHiddenNameUs':'fe.pm.done.authorHiddenName',{name}),undo};
  });
  const del=()=>run('delete',async opId=>{
   const r=await call('post.delete',{opId,postId:post.id},deleted);
@@ -91,7 +91,7 @@ export function PostMenu({post,onClose,onChange,onRemove}:{post:Post,onClose:()=
  // «Это я — против» asks first (V21 tagObject): the post hides for everyone at once.
  if(view==='object')return <Ask icon={EyeOff} title={t('fe.w3.object.title')} text={t('fe.w3.object.text')} ok={t('fe.w3.object.ok')} busy={busy} failure={failure} onOk={object} onCancel={()=>go('menu')}/>;
  if(view==='report')return <ReportSheet targetType="post" targetId={post.id} block={false} onClose={onClose}
-  onDone={alsoBlock=>onRemove(alsoBlock?{authorId:post.author.id,notice:t('fe.pm.done.reported')}:{postId:post.id,notice:t('fe.pm.done.reported')})}/>;
+  onDone={alsoBlock=>{const notice=t(couple?'fe.ca.reported':'fe.pm.done.reported');onRemove(alsoBlock?{authorId:post.author.id,notice}:{postId:post.id,notice});}}/>;
  if(view==='album')return <PostAlbumSheet post={post} onClose={onClose} onChange={onChange}/>;
  const published=!post.state||post.state==='published';
  return <Sheet title={t('fe.pm.title')} onClose={onClose}>
@@ -161,9 +161,9 @@ export function ReplyMenu({reply,postId,onClose,onEdit,onDone}:{reply:Reply,post
  };
  if(view==='delete')return <Ask icon={Trash2} title={t('fe.pm.r.delTitle')} ok={t('fe.pm.delete')} busy={busy} failure={failure} onCancel={()=>setView('menu')}
   onOk={()=>run('delete',async opId=>{await call('reply.delete',{opId,replyId:reply.id},okOnly);return t('fe.feed.replyDeleted');})}/>;
- if(view==='block'&&reply.author)return <Ask icon={Ban} title={t('fe.pm.blockTitle',{name})} text={couple?t('fe.pm.blockTextCouple'):t('fe.pm.blockText')} ok={t('fe.pm.block')} busy={busy} failure={failure} onCancel={()=>setView('menu')}
-  onOk={()=>run('block',async opId=>{await call('block.set',{opId,profileId:reply.author!.id,on:true},okOnly);return t('fe.pm.done.blocked');})}/>;
- if(view==='report')return <ReportSheet targetType="reply" targetId={reply.id} block={false} onClose={onClose} onDone={()=>onDone(t('fe.pm.done.reported'))}/>;
+ if(view==='block'&&reply.author)return <Ask icon={Ban} title={t('fe.pm.blockTitle',{name})} text={couple?t('fe.pm.blockTextCouple'):t('fe.pm.blockText')} ok={t(couple?'fe.ca.block':'fe.pm.block')} busy={busy} failure={failure} onCancel={()=>setView('menu')}
+  onOk={()=>run('block',async opId=>{await call('block.set',{opId,profileId:reply.author!.id,on:true},okOnly);return t(couple?'fe.ca.blocked':'fe.pm.done.blocked');})}/>;
+ if(view==='report')return <ReportSheet targetType="reply" targetId={reply.id} block={false} onClose={onClose} onDone={()=>onDone(t(couple?'fe.ca.reported':'fe.pm.done.reported'))}/>;
  return <Sheet title={t('fe.pm.r.title')} onClose={onClose}>
   <Card list>
    {reply.mine?<>

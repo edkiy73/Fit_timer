@@ -24,7 +24,9 @@ export function ReportSheet({targetType,targetId,block,before,check,extra,profil
  /** More input for report.create (the chat's messageIds). */ extra?:Record<string,unknown>|undefined,
  /** The profile acting (the chat's side). */ profileId?:string,
  onClose:()=>void,onDone:(alsoBlock:boolean)=>void}){
- const {call}=useFe();const {t}=useI18n();
+ const {call,acting,state}=useFe();const {t}=useI18n();
+ // Sent as the couple (the acting profile, or the chat's side): the button says so.
+ const side=profileId&&state.status==='ready'?state.boot.profiles.find(p=>p.id===profileId):acting;const us=side?.kind==='couple';
  const [reason,setReason]=useState<ReportReason|null>(null);const [details,setDetails]=useState('');const [alsoBlock,setAlsoBlock]=useState(!!block);
  const [reasonErr,setReasonErr]=useState('');const [detailsErr,setDetailsErr]=useState('');const [failure,setFailure]=useState('');const [busy,setBusy]=useState(false);
  const op=useRef(newOpId());
@@ -48,7 +50,7 @@ export function ReportSheet({targetType,targetId,block,before,check,extra,profil
   }finally{setBusy(false);}
  };
  return <Sheet title={t('fe.pm.rp.title')} onClose={onClose} dirty={!!reason||!!details.trim()}
-  foot={<Btn kind="danger" icon={Flag} onClick={()=>void send()} busy={busy} disabled={busy}>{t('fe.pm.rp.send')}</Btn>}>
+  foot={<Btn kind="danger" icon={Flag} onClick={()=>void send()} busy={busy} disabled={busy}>{t(us?'fe.ca.reportSend':'fe.pm.rp.send')}</Btn>}>
   <Stack gap={4}>
    {before}
    <Field name="reason" label={t('fe.pm.rp.reason')} error={reasonErr||undefined}>

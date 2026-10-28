@@ -39,8 +39,8 @@ export function LinksBlock({onChanged}:{onChanged?:()=>void}){
  const list=r.confirmed;
  const manage=()=>navigate('/n/me/links');
  const answer=async(l:LinkView,accept:boolean)=>{setBusy(true);
-  try{await (l.change?call('link.answerChange',{opId:newOpId(),linkId:l.id,accept},ok):call('link.answer',{opId:newOpId(),linkId:l.id,accept,vis:'all'},ok));
-   toast(accept?(l.change?t('fe.ln.t.changeOk'):t('fe.ln.t.confirmed')):t('fe.ln.t.declined'),{type:'ok'});load();onChanged?.();}
+  try{const res=await (l.change?call('link.answerChange',{opId:newOpId(),linkId:l.id,accept},ok):call('link.answer',{opId:newOpId(),linkId:l.id,accept,vis:'all'},ok));
+   toast(res.pending?t('fe.ln.t.pending'):accept?(l.change?t('fe.ln.t.changeOk'):t('fe.ln.t.confirmed')):t('fe.ln.t.declined'),{type:'ok'});load();onChanged?.();}
   catch(e){toast(pxError(e,t),{type:'err'});}finally{setBusy(false);}};
  const title=inc.length?fill(t(inc.length===1?'fe.mx.lk.titleNew1':'fe.mx.lk.titleNew'),{n:inc.length}):t('fe.mx.lk.title');
  return <Group bare={!list.length} title={title} action={(list.length||inc.length)?<button type="button" onClick={manage}>{t('fe.mx.lk.manage')}</button>:null}>
@@ -60,7 +60,7 @@ function LinkRequest({l,couple,small,busy,onAnswer}:{l:LinkView,couple:boolean,s
  const who=<>{withAge(name,l.other)}<NameBadges p={l.other}/></>;
  return <RequestCard className="lk-req" person={<PersonLine small={small} av={<Av name={name} seed={l.other.id} size={small?'sm':''} src={l.other.avatar}/>} label={name} onOpen={go} name={who}
   sub={l.change?fill(t('fe.ln.proposesChange'),{from:linkLabel(t,l.kind,l.side),to:t('fe.px.lk.k.'+l.change.kind)}):fill(couple?t('fe.ln.proposesCouple'):t('fe.ln.proposes'),{label:linkLabel(t,l.kind,l.side)})}/>}
-  actions={<><Btn size="md" disabled={busy} onClick={()=>onAnswer(true)}>{t('fe.ln.confirm')}</Btn><Btn size="md" kind="soft" disabled={busy} onClick={()=>onAnswer(false)}>{t('fe.ln.decline')}</Btn></>}/>;
+  actions={<><Btn size="md" disabled={busy} onClick={()=>onAnswer(true)}>{t(couple?'fe.ca.confirm':'fe.ln.confirm')}</Btn><Btn size="md" kind="soft" disabled={busy} onClick={()=>onAnswer(false)}>{t(couple?'fe.ca.decline':'fe.ln.decline')}</Btn></>}/>;
 }
 
 /** «+» in «Мои связи» (V21 linkAdd / linkPick): whom to propose a link to — people the profile knows (follows or is

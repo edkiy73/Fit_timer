@@ -235,9 +235,9 @@ function Discover({reloadKey,onOff,filterOn,openFilter,likesN,toLikes,onLikes}:{
    setMade(m=>[...m,{id:c.id,dir}]);
    if(c.likedMe||r.state==='matched')onLikes();
    if(r.state==='matched')setMatch({card:c,...(r.conversationId?{conversationId:r.conversationId}:{})});
-   else if(dir>0)toast(fill(t('fe.px.lkd.sent'),{name:cname(c)}),false,{label:t('fe.mx.undo'),fn:()=>undoRef.current()});
+   else if(dir>0)toast(fill(t(acting?.kind==='couple'?'fe.px.lkd.sentUs':'fe.px.lkd.sent'),{name:cname(c)}),false,{label:t('fe.mx.undo'),fn:()=>undoRef.current()});
   }catch(e){reset();toast(pxError(e,t),true);}finally{busy.current=false;}
- },[cards,call,t,toast,load,onLikes]);
+ },[cards,call,t,toast,load,onLikes,acting?.kind]);
  // The server allows one free undo a day (shared with «Вернуть» in the history) and says so when it is spent.
  const undo=async()=>{
   if(busy.current)return;busy.current=true;
@@ -258,7 +258,7 @@ function Discover({reloadKey,onOff,filterOn,openFilter,likesN,toLikes,onLikes}:{
  if(!c&&needsLoc)return box(<Empty top icon={LocateFixed} title={t('fe.w7.df.locGone')} text={t('fe.w7.df.locGoneText')}><Btn onClick={openFilter}>{t('fe.px.empty.change')}</Btn></Empty>);
  if(!c)return <>{box(<DeckEmpty byFilter={filterOn?byFilter:null} filterOn={filterOn} openFilter={openFilter} likesN={likesN} toLikes={toLikes}/>)}{overlay}</>;
  return <div className="view deckmode">
-  {tip&&<p className="deck-tip" role="status"><Info/><span>{t('fe.px.deck.tip')}</span></p>}
+  {tip&&<p className="deck-tip" role="status"><Info/><span>{t(acting?.kind==='couple'?'fe.px.deck.tipUs':'fe.px.deck.tip')}</span></p>}
   <div className="deck">
    {nx&&<NextCard key={nx.id} c={nx} cardRef={next}/>}
    <TopCard key={c.id} c={c} cardRef={top} nextRef={next} actsRef={acts} onDecide={decide} toast={toast}/>
@@ -266,7 +266,7 @@ function Discover({reloadKey,onOff,filterOn,openFilter,likesN,toLikes,onLikes}:{
     <button type="button" className={'act undo'+(made.length?'':' off')} aria-label={t('fe.people.undo')} onClick={undo}><Undo2/></button>
     <button type="button" className="act pass" aria-label={t('fe.people.pass')} onClick={()=>void decide(-1)}><X/></button>
     <KeyAct key={c.id} id={c.id} cardRef={top}/>
-    <button type="button" className="act like" aria-label={t('fe.px.deck.like')} onClick={()=>void decide(1)}><HeartF/></button>
+    <button type="button" className="act like" aria-label={t(acting?.kind==='couple'?'fe.px.deck.likeUs':'fe.px.deck.like')} onClick={()=>void decide(1)}><HeartF/></button>
    </div>
   </div>
   {toastNode}{overlay}
@@ -288,9 +288,9 @@ function CardPhoto({c,src}:{c:Card,src:string|null}){
  return src?<><img className="mbg" src={src} alt="" aria-hidden="true" draggable={false}/><img src={src} alt={name} draggable={false}/></>:<div className="plate" style={plate(c.id)}/>;
 }
 function CardTags({c}:{c:Card}){
- const {t,locale}=useI18n();
+ const {t,locale}=useI18n();const {acting}=useFe();
  if(!c.likedMe&&!c.shared)return null;
- return <div className="pc-tags">{c.likedMe&&<span className="pc-liked"><HeartF/>{t('fe.px.deck.likesYou')}</span>}
+ return <div className="pc-tags">{c.likedMe&&<span className="pc-liked"><HeartF/>{t(acting?.kind==='couple'?'fe.px.deck.likesYouUs':'fe.px.deck.likesYou')}</span>}
   {c.shared>0&&<span className="pc-score"><b>{c.shared}</b><small>{plural5(t,locale,'fe.px.deck.topic',c.shared)}</small></span>}</div>;
 }
 function plural5(t:(k:string)=>string,locale:string,base:string,n:number){const m10=n%10,m100=n%100;return t(base+(locale==='en'?(n===1?'1':'5'):m10===1&&m100!==11?'1':m10>=2&&m10<=4&&(m100<12||m100>14)?'2':'5'));}
@@ -369,11 +369,11 @@ function FollowBtn({id,name,rel,setRel,toast}:{id:string,name:string,rel:Relatio
  const {call,acting}=useFe();const {t}=useI18n();const [busy,setBusy]=useState(false);const on=!!rel?.iFollow;
  const set=async(next:boolean,undo:boolean)=>{
   try{await call('follow.set',{opId:newOpId(),profileId:id,on:next},ok);setRel(x=>x&&{...x,iFollow:next,followers:Math.max(0,x.followers+(next?1:-1))});
-   if(!undo)toast(fill(t(next?'fe.px.fl.on':'fe.px.fl.off'),{name}),false,{label:t('fe.mx.undo'),fn:()=>void set(!next,true)});}
+   if(!undo)toast(fill(t((next?'fe.px.fl.on':'fe.px.fl.off')+(acting?.kind==='couple'?'Us':'')),{name}),false,{label:t('fe.mx.undo'),fn:()=>void set(!next,true)});}
   catch(e){toast(pxError(e,t),true);}};
  const go=async()=>{if(!rel||busy)return;setBusy(true);try{await set(!on,false);}finally{setBusy(false);}};
- return <Btn kind="soft" busy={busy} aria-pressed={on} title={on?t('fe.px.act.unfollowHint'):undefined} onClick={go} disabled={!rel}>
-  {on?<><Check/>{t('fe.px.act.following')}</>:acting?.kind==='couple'?t('fe.px.act.followUs'):t('fe.people.follow')}</Btn>;
+ return <Btn kind="soft" busy={busy} aria-pressed={on} title={on?t(acting?.kind==='couple'?'fe.px.act.unfollowHintUs':'fe.px.act.unfollowHint'):undefined} onClick={go} disabled={!rel}>
+  {on?<><Check/>{t(acting?.kind==='couple'?'fe.px.act.followingUs':'fe.px.act.following')}</>:acting?.kind==='couple'?t('fe.px.act.followUs'):t('fe.people.follow')}</Btn>;
 }
 
 /** D01 — Discover is off for this profile: no candidates, two honest ways in (browse hidden / browse and be seen). */
@@ -462,11 +462,11 @@ function Likes({onCount,toDiscover}:{onCount:(n:number)=>void,toDiscover:()=>voi
   try{await call('like.send',{opId:newOpId(),profileId:c.id,source:source==='profile'?'profile':'likes'},likeRes);load();}catch(e){toast(pxError(e,t),true);}};
  const back=async(c:Card)=>{if(busy)return;setBusy(c.id);
   try{const r=await call('like.send',{opId:newOpId(),profileId:c.id,source:'likes'},likeRes);setInc(l=>{const n=l?.filter(x=>x.profile.id!==c.id)??null;onCount(n?.length??0);return n;});
-   if(r.state==='matched')setMatch({card:c,...(r.conversationId?{conversationId:r.conversationId}:{})});else toast(fill(t('fe.px.lkd.sent'),{name:cname(c)}));}
+   if(r.state==='matched')setMatch({card:c,...(r.conversationId?{conversationId:r.conversationId}:{})});else toast(fill(t(us?'fe.px.lkd.sentUs':'fe.px.lkd.sent'),{name:cname(c)}));}
   catch(e){toast(pxError(e,t),true);}finally{setBusy('');}};
  const unlike=async(c:Card,source?:string|null)=>{if(busy)return;setBusy(c.id);
   try{await call('like.withdraw',{opId:newOpId(),profileId:c.id},ok);setOut(l=>l?.filter(x=>x.profile.id!==c.id)??null);
-   toast(t('fe.px.lkd.withdrawn'),false,{label:t('fe.mx.undo'),fn:()=>void resend(c,source)});}
+   toast(t(us?'fe.px.lkd.withdrawnUs':'fe.px.lkd.withdrawn'),false,{label:t('fe.mx.undo'),fn:()=>void resend(c,source)});}
   catch(e){toast(pxError(e,t),true);}finally{setBusy('');}};
  const seg=<CSeg value={k} onChange={setK} options={[{id:'in',label:t(us?'fe.px.lk.inUs':'fe.px.lk.in'),n:inc?.length??0},{id:'out',label:t(us?'fe.px.lk.outUs':'fe.px.lk.out')}]}/>;
  let body:ReactNode;
@@ -476,13 +476,13 @@ function Likes({onCount,toDiscover}:{onCount:(n:number)=>void,toDiscover:()=>voi
   return <Row key={c.id} av={<Av name={cname(c)} seed={c.id} src={c.avatar?.src?.thumb}/>} title={<>{cname(c)}<NameBadges p={c}/></>}
    sub={[t(l.source==='profile'?'fe.px.lk.fromProfile':l.source==='likes'?'fe.px.lk.fromLikes':'fe.px.lk.fromDiscover'),l.at?when(l.at,locale):null,us&&l.initiator?'@'+l.initiator:null].filter(Boolean).join(' · ')}
    onClick={()=>navigate('/n/people/'+c.id)}
-   end={<><Pill tone="wait">{t('fe.px.lk.pendingPill')}</Pill><IconBtn icon={X} kind="ghost" size="sm" label={t('fe.px.lk.unlike')} disabled={busy===c.id} onClick={()=>unlike(c,l.source)}/></>}/>;})}</Card>
-  :<Empty icon={Heart} title={t('fe.px.lk.outEmpty')} text={t('fe.px.lk.outEmptyText')}><Btn kind="soft" onClick={toDiscover}>{t('fe.px.lk.toDiscover')}</Btn></Empty>;
+   end={<><Pill tone="wait">{t('fe.px.lk.pendingPill')}</Pill><IconBtn icon={X} kind="ghost" size="sm" label={t(us?'fe.px.lk.unlikeUs':'fe.px.lk.unlike')} disabled={busy===c.id} onClick={()=>unlike(c,l.source)}/></>}/>;})}</Card>
+  :<Empty icon={Heart} title={t('fe.px.lk.outEmpty')} text={t(us?'fe.px.lk.outEmptyTextUs':'fe.px.lk.outEmptyText')}><Btn kind="soft" onClick={toDiscover}>{t('fe.px.lk.toDiscover')}</Btn></Empty>;
  else body=inc.length?<div className="likes">{inc.map(l=>{const c=l.profile;const src=photo(c);const age=c.ages.length?', '+c.ages.join(' · '):'';
   return <LikeTile key={c.id} src={src} seed={c.id} label={cname(c)} onOpen={()=>navigate('/n/people/'+c.id)}
    name={<><b>{cname(c)}{age}</b>{c.kind==='couple'&&<Pill className="lk-pair">{t('fe.px.lk.couple')}</Pill>}</>}>
    <button type="button" className="lkx" aria-label={t('fe.px.lk.pass')} disabled={busy===c.id} onClick={()=>dismiss(c)}><X/></button>
-   <button type="button" className="lkb" aria-label={t('fe.px.lk.back')} disabled={busy===c.id} onClick={()=>back(c)}><HeartF/></button>
+   <button type="button" className="lkb" aria-label={t(us?'fe.px.lk.backUs':'fe.px.lk.back')} disabled={busy===c.id} onClick={()=>back(c)}><HeartF/></button>
   </LikeTile>;})}</div>
   :<Empty icon={Heart} title={t('fe.px.lk.inEmpty')} text={t(us?'fe.px.lk.inEmptyUs':'fe.px.lk.inEmptyText')}><Btn kind="soft" onClick={()=>navigate('/n/me')}>{t(us?'fe.px.lk.improveUs':'fe.px.lk.improve')}</Btn></Empty>;
  return <>

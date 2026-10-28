@@ -79,12 +79,12 @@ function OutTab({pendingOnly,onFilter}:{pendingOnly:boolean,onFilter:(on:boolean
 
 /** «Мне открыли»: whose private parts I see, what and until when; a row opens that profile. */
 function WithMeTab(){
- const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const w=useAccessWords();
+ const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const w=useAccessWords();
  const fetch=useCallback((cursor?:string)=>call('access.lists',{tab:'withme',...(cursor?{cursor}:{})},grantsRes,{fresh:true}),[call]);
  const pg=usePaged<GrantItem,Awaited<ReturnType<typeof fetch>>>(fetch);
  if(pg.failed)return pg.failed;
  if(!pg.items)return <Skel kind="list"/>;
- if(!pg.items.length)return <Empty icon={LockOpen} title={t('fe.ac.wm.empty')} text={t('fe.ac.wm.emptyText')}/>;
+ if(!pg.items.length)return <Empty icon={LockOpen} title={t('fe.ac.wm.empty')} text={t(acting?.kind==='couple'?'fe.ac.wm.emptyTextUs':'fe.ac.wm.emptyText')}/>;
  return <><Card list>{pg.items.map((g,i)=><Row key={g.profile?.id??i} onClick={()=>g.profile&&navigate('/n/people/'+g.profile.id)}
   av={<Av name={nameOf(g.profile)} seed={g.profile?.id??String(i)} size="sm" src={g.profile?.avatar}/>}
   title={<>{nameOf(g.profile)}<NameBadges p={g.profile}/></>} sub={`${w.what(g.scopes)} · ${w.until(g.until)}`}/>)}</Card>{pg.moreBtn}</>;
