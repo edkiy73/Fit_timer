@@ -119,7 +119,7 @@ export const ru = {
   'fe.w3.act.muted': 'Активность {name} скрыта из твоей ленты',
   // hidden post row
   'fe.w3.hide.row': 'Публикация скрыта',
-  'fe.w3.hide.author': 'Не показывать {name}',
+  'fe.w3.hide.author': 'Скрыть автора: {name}',
   // «Популярное»
   'fe.w3.pop.head': 'Топ недели по твоим интересам',
   'fe.w3.pop.how': 'Как подбираем',
@@ -285,7 +285,7 @@ export const en = {
   'fe.w3.act.muteSub': 'Their posts stay in your feed. They are not told',
   'fe.w3.act.muted': '{name}’s activity is hidden from your feed',
   'fe.w3.hide.row': 'Post hidden',
-  'fe.w3.hide.author': 'Hide {name}',
+  'fe.w3.hide.author': 'Hide the author: {name}',
   'fe.w3.pop.head': 'Top of the week in your interests',
   'fe.w3.pop.how': 'How it works',
   'fe.w3.pop.chips': 'My interests',

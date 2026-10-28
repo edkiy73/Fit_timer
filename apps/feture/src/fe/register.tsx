@@ -86,7 +86,6 @@ function Account({form,setForm,onBack,onCreated,onUnder18}:{form:Form,setForm:Re
   if(!terms)e.terms=t('fe.reg.termsMissing');
   setErrors(e);setFailure('');
   if(Object.keys(e).length){
-   toast(t('fe.onb.checkFields'),{type:'err'});
    shake(wrap.current?.querySelector(`[data-field="${Object.keys(e)[0]}"]`)??null);return;
   }
   if(age!==null&&age<18){onUnder18();return;}

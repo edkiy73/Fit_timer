@@ -2,7 +2,7 @@ import {useEffect,useRef,useState} from 'react';
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {AtSign,Ban,BellOff,Check,EyeOff,Flag,Images,Link as LinkIcon,Pencil,Trash2,User,X} from 'lucide-react';
+import {AtSign,Ban,BellOff,Check,EyeOff,Flag,Images,Link as LinkIcon,Pencil,Trash2,User,UserCheck,UserPlus,X} from 'lucide-react';
 import type {LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicOrigin} from '../api-url';
@@ -28,6 +28,17 @@ export type Removal={postId?:string,authorId?:string,notice:string,undo?:()=>Pro
  /** «Скрыть публикацию»: the feed leaves a row in its place (V21 FEED-011) with «Вернуть» and «Не показывать автора». */ hidden?:{authorId:string,authorName:string}};
 
 const nameOf=(a:{name?:string|null,handle?:string|null}|null|undefined)=>a?.name||(a?.handle?'@'+a.handle:'?');
+const idList=z.object({ok:z.literal(true),items:z.array(z.object({id:z.string()}).passthrough())});
+
+/** Whether the acting profile follows `id` (null while it loads): its own «following» list, or `id`'s followers. */
+function useFollows(id:string|null){
+ const {call,acting}=useFe();const [on,setOn]=useState<boolean|null>(null);
+ useEffect(()=>{if(!id||!acting)return;let live=true;
+  Promise.all([call('profile.followers',{profileId:acting.id,following:true},idList).catch(()=>null),call('profile.followers',{profileId:id},idList).catch(()=>null)])
+   .then(([mine,theirs])=>{if(live)setOn(!!mine?.items.some(x=>x.id===id)||!!theirs?.items.some(x=>x.id===acting.id));});
+  return ()=>{live=false;};},[call,acting,id]);
+ return [on,setOn] as const;
+}
 
 function useOps(){
  const ops=useRef<Record<string,string>>({});
@@ -47,6 +58,12 @@ function Ask({icon,title,text,ok,busy,failure,onOk,onCancel}:{icon:LucideIcon,ti
 export function PostMenu({post,onClose,onChange,onRemove}:{post:Post,onClose:()=>void,onChange?:(p:Post)=>void,onRemove:(r:Removal)=>void}){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();const {op,drop}=useOps();
  const mine=post.rev!=null;const couple=acting?.kind==='couple';const name=nameOf(post.author);
+ // «Подписаться» right here (owner 28.10.2026), so one doesn't have to open the profile for it.
+ const [follows,setFollows]=useFollows(mine||post.author.id===acting?.id?null:post.author.id);
+ const follow=(next:boolean)=>run('follow',async opId=>{
+  await call('follow.set',{opId,profileId:post.author.id,on:next},okOnly);setFollows(next);onClose();
+  toast(t((next?'fe.px.fl.on':'fe.px.fl.off')+(couple?'Us':''),{name}),{type:'ok'});
+ });
  const [view,setView]=useState<'menu'|'delete'|'report'|'album'|'object'>('menu');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
  useEscape(onClose);
  const go=(v:typeof view)=>{setFailure('');setView(v);};
@@ -112,8 +129,11 @@ export function PostMenu({post,onClose,onChange,onRemove}:{post:Post,onClose:()=
     </>}
     {mentioned&&<Row noChev icon={AtSign} title={t('fe.w3.unmention')} sub={t('fe.w3.unmentionSub')} onClick={unmention} disabled={busy}/>}
     {!me&&hasMedia&&<Row noChev icon={EyeOff} title={t('fe.pm.tag.thatsMe')} sub={t('fe.pm.tag.thatsMeSub')} onClick={()=>go('object')} disabled={busy}/>}
+    {follows!==null&&(follows
+     ?<Row noChev icon={UserCheck} title={t(couple?'fe.pm.unfollowUs':'fe.pm.unfollow')} sub={name} onClick={()=>follow(false)} disabled={busy}/>
+     :<Row noChev icon={UserPlus} title={t(couple?'fe.pm.followUs':'fe.pm.follow')} sub={name} onClick={()=>follow(true)} disabled={busy}/>)}
     <Row noChev icon={EyeOff} title={t('fe.pm.hidePost')} sub={t('fe.pm.hidePostSub')} onClick={()=>hide('post')} disabled={busy}/>
-    <Row noChev icon={BellOff} title={t('fe.pm.mute',{name})} sub={t('fe.pm.muteSub')} onClick={()=>hide('author')} disabled={busy}/>
+    <Row noChev icon={BellOff} title={t('fe.pm.mute')} sub={t('fe.pm.muteSub',{name})} onClick={()=>hide('author')} disabled={busy}/>
     <Row noChev icon={LinkIcon} title={t('fe.pm.copyLink')} onClick={copy}/>
     <Row noChev icon={Flag} title={t('fe.pm.report')} danger onClick={()=>go('report')}/>
    </>}
