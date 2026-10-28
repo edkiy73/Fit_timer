@@ -171,3 +171,42 @@ button.pill{cursor:pointer}
 .v21 .radio.k-chk i svg{width:14px;height:14px;opacity:0;color:var(--accent-ink)}
 .v21 .radio.k-chk.on i{border:2px solid var(--accent);background:var(--accent)}
 .v21 .radio.k-chk.on i svg{opacity:1}
+/* Video and voice (av.tsx). Dark film behind clips in both themes (the camera tokens); controls on --accent. */
+.v21 .k-vbadge{position:absolute;left:var(--s-2);bottom:var(--s-2);z-index:1;display:inline-flex;align-items:center;gap:var(--s-1);padding:var(--s-0) var(--s-2);
+ border-radius:var(--r-full);background:color-mix(in srgb,var(--cam-bg) 62%,transparent);color:var(--cam-ink);font:var(--t-micro);pointer-events:none}
+.v21 .k-vbadge svg{width:12px;height:12px;fill:currentColor}
+.v21 .k-video{position:relative;width:100%;aspect-ratio:var(--ar,16/9);max-height:70dvh;border-radius:inherit;overflow:hidden;background:var(--cam-bg);display:grid;place-items:center}
+.v21 .k-video.fill{aspect-ratio:auto;height:100%;max-height:none;background:transparent}
+.v21 .k-video>img,.v21 .k-video>video{width:100%;height:100%;object-fit:contain;display:block}
+.v21 .k-video>video::-internal-media-controls-download-button{display:none}
+.v21 .k-vnone{position:absolute;inset:0;background:var(--cam-bg)}
+.v21 .k-vplay{position:absolute;left:50%;top:50%;width:var(--h-xl);height:var(--h-xl);margin:calc(var(--h-xl) / -2) 0 0 calc(var(--h-xl) / -2);border-radius:50%;
+ display:grid;place-items:center;background:color-mix(in srgb,var(--cam-bg) 55%,transparent);color:var(--cam-ink);backdrop-filter:blur(6px)}
+.v21 .k-vplay svg{width:var(--i-lg);height:var(--i-lg);fill:currentColor;margin-left:3px}
+.v21 .k-vdur{position:absolute;right:var(--s-2);bottom:var(--s-2);padding:var(--s-0) var(--s-2);border-radius:var(--r-full);background:color-mix(in srgb,var(--cam-bg) 62%,transparent);color:var(--cam-ink);font:var(--t-micro)}
+.v21 .k-voice{display:flex;align-items:center;gap:var(--s-2);min-width:min(240px,62vw);padding:var(--s-1) 0}
+.v21 .k-voice .ibtn.send{width:var(--h-sm);height:var(--h-sm);background:var(--accent);color:var(--accent-ink)}
+.v21 .k-voice .ibtn.send:disabled{background:var(--raise);color:var(--faint)}
+.v21 .k-voice .ibtn.send svg{width:var(--i-xs);height:var(--i-xs);fill:currentColor}
+.v21 .k-vbody{flex:1;min-width:0;display:flex;flex-direction:column;gap:var(--s-0)}
+.v21 .k-wave{display:flex;align-items:center;gap:2px;height:28px}
+.v21 .k-wave.seek{cursor:pointer}
+.v21 .k-wave i{flex:1;min-width:2px;height:calc(var(--h) * 100%);border-radius:var(--r-full);background:var(--line2);transition:background var(--d-fast)}
+.v21 .k-wave i.on{background:var(--accent)}
+.v21 .k-vmeta{display:flex;align-items:center;gap:var(--s-2);font:var(--t-cap);color:var(--mute)}
+.v21 .k-vheard{color:var(--ok)}
+.v21 .k-vdot{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.v21 .k-voice.wait{opacity:.7}
+.v21 .k-recw{display:contents}
+.v21 .ibtn.k-recon{transform:scale(1.25);box-shadow:0 0 0 6px var(--accent-soft)}
+.v21 .k-rec{position:absolute;inset:0;z-index:2;display:flex;align-items:center;gap:var(--s-2);padding:var(--s-2) var(--s-3) calc(var(--s-2) + var(--safe-b));background:var(--bg)}
+.v21 .k-rec.hold,.v21 .k-rec.asking{right:64px}
+.v21 .k-rdot{flex:none;width:12px;height:12px;border-radius:50%;background:var(--danger);transform:scale(calc(.8 + var(--lv,0) * 1.6));transition:transform .1s}
+.v21 .k-rtime{flex:none;font:var(--t-body-strong);font-variant-numeric:tabular-nums;min-width:3.2em}
+.v21 .k-rhint{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:var(--s-1);font:var(--t-sm);color:var(--mute);transform:translateX(var(--dx,0));white-space:nowrap;overflow:hidden}
+.v21 .k-rhint svg{width:var(--i-xs);height:var(--i-xs)}
+.v21 .k-rlock{position:absolute;right:-50px;bottom:calc(100% + var(--s-2));width:40px;height:56px;border-radius:var(--r-full);display:grid;place-items:center;
+ background:var(--surf);box-shadow:var(--shadow-s);color:var(--mute);transform:translateY(var(--dy,0))}
+.v21 .k-rlock svg{width:var(--i-sm);height:var(--i-sm)}
+.v21 .k-rec .k-voice{flex:1}
+@media (prefers-reduced-motion:reduce){.v21 .k-rdot,.v21 .k-rhint,.v21 .k-rlock{transition:none;transform:none}}

@@ -6,7 +6,7 @@ import { VARIANT_KEY } from './supabase-storage.mjs';
  * - `signedStorageDelivery`: prelaunch, Supabase signed URLs of pre-rendered variants. Not bound to the viewer —
  *   anyone holding the URL can open it until it expires, so TTLs stay short.
  * - `tokenDelivery`: the Cloudflare media domain; tokens bound to asset + variant + viewer.
- * @typedef {'thumb' | 'card' | 'full' | 'blur'} Variant
+ * @typedef {'thumb' | 'card' | 'full' | 'blur' | 'file'} Variant  file: a video or voice note as scanned (o/<id>)
  * @typedef {{assetId: string, variant: Variant, viewerProfileId: string, ttlSeconds: number}} UrlRequest
  * @typedef {{urls: (items: UrlRequest[]) => Promise<string[]>}} Delivery
  */

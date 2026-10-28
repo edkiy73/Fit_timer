@@ -1481,7 +1481,7 @@
 .v21 .mtile.eph small{display:block;font-size:var(--fs-cap);opacity:.75;line-height:1.35;margin-top:2px}
 .v21 .mtile.eph.expired{background:var(--raise);color:var(--mute)}.v21 .mtile.eph.expired .ico{background:var(--line2)}
 .v21 .msg.me .mtile.eph.expired{background:color-mix(in srgb,var(--surf) 10%,transparent)}
-.v21 .cm-prev{border-radius:var(--r-l);overflow:hidden;background:var(--raise);margin-bottom:12px}
+.v21 .cm-prev{position:relative;border-radius:var(--r-l);overflow:hidden;background:var(--raise);margin-bottom:12px}
 .v21 .cm-prev img,
 .v21 .cm-prev video{display:block;width:100%;max-height:260px;object-fit:contain}
 .v21 .vw-label{margin-right:auto;margin-left:10px;padding:4px 10px;border-radius:var(--r-full);background:rgba(255,255,255,.16);color:#fff;font-size:var(--fs-cap);font-weight:600}

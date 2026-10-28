@@ -1,6 +1,7 @@
 // @ts-check
 import { drain, enqueue } from './outbox.mjs';
 import { scanAsset, servedKeys } from './media/scan.mjs';
+import { POSTER_UPLOAD_KEY } from './media/assets.mjs';
 import { deleteCouple } from './commands/couples.mjs';
 import { settlePublication } from './commands/posts.mjs';
 import { settleAvatarsOf } from './commands/photos.mjs';
@@ -92,7 +93,7 @@ export function mediaHandlers(db, deps) {
         });
         return;
       }
-      for (const key of [row.storage_key, ...servedKeys(id(item))]) await storage().remove(key);
+      for (const key of [row.storage_key, POSTER_UPLOAD_KEY(id(item)), ...servedKeys(id(item))]) await storage().remove(key);
     },
   };
 }

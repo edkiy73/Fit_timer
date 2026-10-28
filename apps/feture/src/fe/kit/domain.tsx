@@ -3,6 +3,7 @@ import {useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Check,ChevronLeft,Clock,Heart,Image as ImageIcon,Lock,Plus,Ticket,UserRound,Users,type LucideIcon} from 'lucide-react';
 import {Av,Btn,Card,IconBtn,Note,Skel,Switch,plate} from './index';
+import {VideoPlayer} from './av';
 import './domain.css';
 
 /** FetUre domain pieces (Storybook «Домен»): the parts of screens that are product-specific but repeat or carry their
@@ -222,8 +223,15 @@ export function PhotoAdd({label,hint,big,tall,ghost,disabled,busy,onClick}:{labe
 }
 
 /** The full-screen photo strip: the current picture slides in (index in a CSS variable). */
-export function PhotoTrack({srcs,index,wm}:{srcs:string[],index:number,/** Someone else's private photos: the viewer's own handle across each one. */ wm?:string|null|undefined}){
- return <div className="vw-track" style={{'--i':index} as CSSProperties}>{srcs.map((s,k)=><figure key={k}><img src={s} alt="" draggable={false}/>{wm&&<Watermark text={wm}/>}</figure>)}</div>;
+/** A viewer slide: a picture, or a clip (`video` = its link, `poster` its frame) that plays when it is the current one. */
+export type Slide=string|{video:string,poster?:string|null|undefined,durationMs?:number|null|undefined};
+export function PhotoTrack({srcs,index,wm,onExpired}:{srcs:Slide[],index:number,/** Someone else's private photos: the viewer's own handle across each one. */ wm?:string|null|undefined,
+ /** A clip's link ran out. */ onExpired?:(()=>void)|undefined}){
+ return <div className="vw-track" style={{'--i':index} as CSSProperties}>{srcs.map((s,k)=><figure key={k}>
+  {typeof s==='string'?<img src={s} alt="" draggable={false}/>
+   :k===index?<VideoPlayer src={s.video} poster={s.poster} durationMs={s.durationMs} fill autoPlay onExpired={onExpired}/>
+   :s.poster?<img src={s.poster} alt="" draggable={false}/>:null}
+  {wm&&<Watermark text={wm}/>}</figure>)}</div>;
 }
 /** The viewing person's handle repeated across a private photo opened to them (V21 privPeek): a leak points at the
  * person who saw it. Sits inside a positioned frame (a viewer figure). */
