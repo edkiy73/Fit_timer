@@ -46,7 +46,8 @@ export default [
    await t.see('.field'); await t.fill('.field:has-text("Имя") input', '');
    await t.tap('.ctabar button:has-text("Сохранить")'); await t.wait(2000);
    if (!t.page.url().includes('/edit')) throw new Error('empty name was accepted');
-   const err = await t.page.locator('.alert.err').first().textContent({ timeout: 10000 });
+   // Kit validation layer: the error shows under the field (before #validation it came back from the server as an alert).
+   const err = await t.page.locator('.field.err .ferr, .alert.err').first().textContent({ timeout: 10000 });
    expect(!/invalid_input|undefined|\berror\b/i.test(err), 'plain words: ' + err);
  } },
  { name: 'P02 nickname: bad format refused', persona: 'full', route: '/n/me/edit?only=basics', allow4xx: true, run: async t => {

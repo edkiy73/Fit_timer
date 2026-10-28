@@ -29,6 +29,7 @@ Read this before adding or changing a command. Design background: `docs/server/S
 | Notify / push / inbox | `enqueue(q, topic, profileId, payload)` (`outbox.mjs`); account-addressed items set `for` |
 | Live update of the other side | `signal(profileId, kind)` from the handler context (sent after commit) |
 | Idempotent writes | the handler pipeline stores `opId` results; never add a second ledger |
+| Text from people in a contract | `field('<name>')` from `contracts/_text.mjs` (rules in `FIELD`, shared with the app's forms); `text(max)` / `line(max)` only for a one-off. Never `z.string()` for something people type and others see |
 | Typed words / keyset pages | `likePattern(q)` for ILIKE, `writeCursor(at, id)` (`search.mjs`) |
 | «Популярное» order / who takes a mention | `popularScore(p, viewer)`, `acceptsMention(target, author)` (`sql-rules.mjs`) — SQL pieces, never a second copy of the rule |
 | A path that changes a post outside the edit (album, narrowing) | `rebaseRevisions(q, postIds)` (`commands/posts.mjs`) keeps a waiting staff review current |

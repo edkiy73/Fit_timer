@@ -6,7 +6,8 @@ import {AtSign,Ban,BellOff,Check,EyeOff,Flag,Images,Link as LinkIcon,Pencil,Tras
 import type {LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicOrigin} from '../api-url';
-import {Alert,Ask as KitAsk,Btn,Card,Row,Sheet,TextArea} from './kit';
+import {Alert,Ask as KitAsk,Btn,Card,Field,Row,Sheet,TextArea} from './kit';
+import {useChecks} from './kit/validate';
 import {useFe} from './session';
 import {ReportSheet} from './report';
 import {useToast} from './toast';
@@ -134,12 +135,16 @@ export function DisputeNotice({post,onChange}:{post:Post,onChange:(p:Post)=>void
 function DisputeExplainSheet({post,onClose,onDone}:{post:Post,onClose:()=>void,onDone:(note:string|null)=>void}){
  const {call}=useFe();const {t}=useI18n();const toast=useToast();const {op,drop}=useOps();
  const [text,setText]=useState(post.dispute?.note??'');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const checks=useChecks({note:'disputeNote'},{note:text});
  useEscape(onClose);
- const send=async()=>{if(busy)return;setBusy(true);setFailure('');
-  try{const r=await call('post.disputeExplain',{opId:op('explain'),postId:post.id,note:text.trim().slice(0,500)},explained);toast(t('fe.w3.dispute.sent'),{type:'ok'});onDone(r.note);}
-  catch(e){setFailure(feErrorMessage(e,t));drop('explain');}finally{setBusy(false);}};
+ const send=async()=>{if(busy||!checks.submit())return;setBusy(true);setFailure('');
+  try{const r=await call('post.disputeExplain',{opId:op('explain'),postId:post.id,note:text.trim()},explained);toast(t('fe.w3.dispute.sent'),{type:'ok'});onDone(r.note);}
+  catch(e){if(!checks.fromServer(e))setFailure(feErrorMessage(e,t));drop('explain');}finally{setBusy(false);}};
  return <Sheet title={t('fe.w3.dispute.sheetTitle')} sub={t('fe.w3.dispute.sheetSub')} onClose={onClose} foot={<Btn onClick={send} disabled={busy||!text.trim()} busy={busy}>{t('fe.w3.dispute.send')}</Btn>}>
-  <TextArea rows={4} maxLength={500} value={text} aria-label={t('fe.w3.dispute.sheetTitle')} onChange={e=>setText(e.target.value)}/>
+  <Field name="note" error={checks.error('note')}>
+   <TextArea rows={4} {...checks.input('note')} value={text} aria-label={t('fe.w3.dispute.sheetTitle')} onChange={e=>setText(e.target.value)}/>
+   {checks.counter('note')}
+  </Field>
   {failure&&<Alert kind="err" className="mt12">{failure}</Alert>}
  </Sheet>;
 }

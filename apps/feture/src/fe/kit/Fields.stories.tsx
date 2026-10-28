@@ -1,6 +1,7 @@
 import type {Meta,StoryObj} from '@storybook/react-vite';
 import {useState} from 'react';
-import {Counter,Field,Input,SearchInput,Select,Stack,TextArea} from './index';
+import {Btn,Counter,Field,Input,SearchInput,Select,Stack,TextArea} from './index';
+import {useChecks} from './validate';
 
 const meta={title:'Поля/Поле ввода',component:Input,tags:['autodocs'],
  parameters:{docs:{description:{component:'Любой однострочный текст. **Всегда внутри `Field`**: подпись, подсказка под полем, ошибка. Ошибка — `invalid` у поля и `error` у `Field`.'}}},
@@ -19,3 +20,14 @@ export const СоСчётчиком:S={name:'Со счётчиком',render:()=
 export const Поиск:S={render:()=><SearchInput label="Ник, интерес, событие…"/>,decorators:[S=><S/>]};
 export const ВыборИзСписка:S={name:'Выбор из списка',render:()=>{const [v,setV]=useState('ru');return <Select id="f" label="Язык" value={v} onChange={setV} options={[['ru','Русский'],['en','English']]}/>;}};
 export const Растущее:S={name:'Растёт с текстом',render:()=><TextArea id="f" rows={1} grow={120} placeholder="Напиши ответ…"/>};
+/** Kit validation layer (`useChecks` from kit/validate): the server's rules for the field (contracts/_text.mjs) — the
+ * error appears on blur and on «Сохранить», the counter near the limit, the first wrong field shakes. Try a long word
+ * without spaces, `<b>`, a line break in the name or only spaces. */
+export const СПроверкой:S={name:'С проверкой (правила сервера)',render:()=>{
+ const [name,setName]=useState('');const [bio,setBio]=useState('');
+ const v=useChecks({name:'profileName',bio:'bio'},{name,bio});
+ return <Stack gap={3}>
+  <Field id="vn" name="name" label="Имя" error={v.error('name')}><Input id="vn" value={name} {...v.input('name')} onChange={e=>setName(e.target.value)}/>{v.counter('name')}</Field>
+  <Field id="vb" name="bio" label="О себе" error={v.error('bio')}><TextArea id="vb" rows={3} value={bio} {...v.input('bio')} onChange={e=>setBio(e.target.value)}/>{v.counter('bio')}</Field>
+  <Btn onClick={()=>v.submit()}>Сохранить</Btn>
+ </Stack>;},decorators:[S=><S/>]};

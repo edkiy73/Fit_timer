@@ -32,6 +32,19 @@ import { limit } from './limits.mjs';
 
 export const MAX_BODY = 16 * 1024;
 
+/** A refused input: the wrong paths (`fields`) and, per path, why (`reasons`: the contract's code such as `too_long`,
+ * `long_word`, `bad_characters` — contracts/_text.mjs — or zod's own issue code), so a form marks the right field.
+ * @param {ReadonlyArray<{path: PropertyKey[], message: string, code: string}>} issues */
+export function inputIssues(issues) {
+  /** @type {Record<string, string>} */
+  const reasons = {};
+  for (const i of issues) {
+    const key = i.path.map(String).join('.') || '(root)';
+    reasons[key] ??= /^[a-z_]{2,40}$/.test(i.message) ? i.message : i.code;
+  }
+  return { fields: Object.keys(reasons), reasons };
+}
+
 /**
  * @param {{db: Db, pepper: string, cfg: Cfg, commands: Record<string, Command>,
  *   authenticate: (req: Req) => Promise<{accountHash: string, accountGeneration?: string}>,
@@ -98,7 +111,7 @@ export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota
       if (!cmd) fail(400, 'invalid_input', { fields: ['action'] });
       const { action: _, ...rest } = body;
       const parsed = cmd.input.safeParse(rest);
-      if (!parsed.success) fail(400, 'invalid_input', { fields: [...new Set(parsed.error.issues.map(i => i.path.join('.') || '(root)'))] });
+      if (!parsed.success) fail(400, 'invalid_input', inputIssues(parsed.error.issues));
       const input = parsed.data;
       const account = await resolveAccount(db, pepper, core); mark('account');
       if (action !== 'platform.maintenance') {

@@ -11,6 +11,7 @@ import {AgeCheckLink,useAgeResume} from './age-check';
 import {useFe,useRealtime,useTypingSignal} from './session';
 import {ReportSheet} from './report';
 import {useToast} from './toast';
+import {softMax,textError} from './kit/validate';
 import {BellButton,SegN} from './inbox';
 
 /** Slice G (V21 H01, H02, H05) with the prototype's markup. A conversation exists only after a mutual like (server).
@@ -251,7 +252,8 @@ export function ChatScreen(){
  };
  const send=()=>{
   const body=text.trim();if(!body||!meta)return;
-  if(body.length>2000){toast(t('fe.chx.tooLong'),{type:'err'});return;}
+  // Kit validation layer: the server's rule for a message (length, characters, lines, long runs) before it leaves.
+  const bad=textError(t,'chatMessage',body);if(bad){toast(bad,{type:'err'});return;}
   const p:Pend={key:newOpId(),body,opId:newOpId(),at:new Date().toISOString(),status:'sending',...(replyTo?{replyTo}:{})};
   setPend(list=>[...list,p]);setText('');setReplyTo(null);stick.current=true;
   if(input.current)input.current.style.height='';
@@ -526,7 +528,7 @@ export function ChatScreen(){
    {replyTo&&quoteOf(replyTo)&&<div className="reply-target chat-reply">{quote(replyTo,true)}<IconBtn icon={X} size="sm" label={t('fe.chx.cancelReply')} onClick={()=>{setReplyTo(null);input.current?.focus({preventScroll:true});}}/></div>}
    <IconBtn icon={Plus} kind="ghost" label={t('fe.chx.attach')} disabled={!meta||!!out?.pending} onClick={()=>{setSheetErr('');setSheet('attach');}}/>
    {couple&&acting?.kind==='couple'&&<ActingAv p={acting} size="xs"/>}
-   <TextArea ref={input} bare grow={GROW} rows={1} maxLength={2000} value={text} onChange={e=>{setText(e.target.value);if(e.target.value.trim())typed();}}
+   <TextArea ref={input} bare grow={GROW} rows={1} maxLength={softMax('chatMessage')} value={text} onChange={e=>{setText(e.target.value);if(e.target.value.trim())typed();}}
     placeholder={couple?t('fe.chx.messagePhCouple'):t('fe.chx.messagePh')} aria-label={couple?t('fe.chx.messagePhCouple'):t('fe.chx.message')} title={t('fe.chx.enterHint')} enterKeyHint="enter"
     onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!coarse&&!e.nativeEvent.isComposing){e.preventDefault();send();}}}/>
    {/* An empty box offers a voice message instead of «Отправить» (hold to record). */}

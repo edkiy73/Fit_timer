@@ -3,6 +3,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {ChevronDown,ChevronLeft,Globe,MapPin,Plus,EyeOff,Check,X} from 'lucide-react';
 import {Btn} from '../ui';
 import {Card,Chip,Chips,Row,SearchInput,SectionLabel,Sheet,Note} from './index';
+import {textError} from './validate';
 
 /** A city of the catalog (`catalog.get` places) or one the person added (pending until staff checks the spelling). */
 export type Place={id:string,country?:string|null|undefined,ru:string|null,en:string|null,pending?:boolean|undefined};
@@ -36,7 +37,10 @@ export function PlacePicker({places,current,onPick,onClose,add,clear,title}:{pla
  const exact=hits.some(p=>norm(p.ru??'')===n||norm(p.en??'')===n);
  const typed=q.trim();
  const addIn=async(c:string)=>{if(!add||typed.length<2)return;setBusy(true);setErr('');
-  try{const nm=typed[0]!.toUpperCase()+typed.slice(1);onPick(await add(c,nm));}catch{setErr(t('fe.kit.place.addFail'));}finally{setBusy(false);}};
+  const nm=typed[0]!.toUpperCase()+typed.slice(1);
+  // The server's rule for a place name (contracts/_text.mjs): one line, no markup, no long runs or odd characters.
+  const bad=textError(t,'placeName',nm);if(bad){setErr(bad);setBusy(false);return;}
+  try{onPick(await add(c,nm));}catch{setErr(t('fe.kit.place.addFail'));}finally{setBusy(false);}};
  if(ask){const cn=norm(cq);const list=all.filter(c=>!cn||norm(c.name+' '+c.alt+' '+c.code).includes(cn)).slice(0,60);
   return <Sheet title={title??t('fe.kit.place.title')} full onClose={onClose}>
    <SectionLabel>{t('fe.kit.place.whichCountry',{name:typed})}</SectionLabel>

@@ -8,6 +8,7 @@ import {Alert,Btn,Card,ChoiceChips,Chips,Empty,Field,Group,IconBtn,Input,KeyValu
 import {useFe} from './session';
 import {StaffSupport} from './support';
 import {StaffMaintenance} from './maintenance';
+import {textError,textRule} from './kit/validate';
 
 /** Staff area (/n/staff, S4 moderation): review queues with decisions, Premium for dogfooding, the journal.
  * Roles are enforced by the server only; a queue the server refuses (403) is simply not shown. */
@@ -209,8 +210,10 @@ function Choice<T extends string>({label,value,options,onChange,disabled}:{label
 }
 
 function TextField({label,value,onChange,max,rows=2}:{label:string,value:string,onChange:(v:string)=>void,max:number,rows?:number}){
- const id=useId();
- return <div className="st-block st-field"><Field id={id} label={label}><TextArea id={id} rows={rows} maxLength={max} value={value} onChange={e=>onChange(e.target.value)}/></Field></div>;
+ const id=useId();const {t}=useI18n();
+ // Kit validation layer: a staff note follows the same text rules as the server (characters, lines, long runs).
+ const err=value.trim()?textError(t,textRule(max),value):undefined;
+ return <div className="st-block st-field"><Field id={id} label={label} error={err}><TextArea id={id} rows={rows} maxLength={max*2} invalid={!!err} value={value} onChange={e=>onChange(e.target.value)}/></Field></div>;
 }
 
 /** A labelled one-line field of the staff forms. */
