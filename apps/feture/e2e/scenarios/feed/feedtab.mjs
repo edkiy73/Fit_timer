@@ -9,7 +9,7 @@ export default [
    await t.see('.posts article.post');
    for (const [label, tab] of [['Подписки', 'following'], ['Популярное', 'popular'], ['Для тебя', 'forYou']]) {
      await seg(t, label).click(); await t.wait(2500);
-     const want = (await api(t, { tab })).map(p => p.id);
+     const want = (await api(t, { tab, ...(tab === 'popular' ? { myInterests: true } : {}) })).map(p => p.id); // «Популярное» is by my interests
      const shown = await t.page.locator('.posts article.post').count();
      console.log(`   ${label}: server ${want.length}, shown ${shown}`);
      expect(shown === Math.min(want.length, 20) || (!want.length && await t.page.locator('.empty').count()), `${label}: shown ${shown} vs ${want.length}`);
@@ -48,5 +48,17 @@ export default [
  { name: 'bar: search opens posts search, bell opens notifications', persona: 'full', route: '/n/feed', run: async t => {
    await t.tap('.bar button[aria-label="Поиск"]'); await t.wait(700); expect(t.page.url().includes('/n/search'), t.page.url());
    await t.go('/n/feed'); await t.tap('.bar button[aria-label^="Уведомления"]'); await t.wait(700); expect(/notif|inbox/.test(t.page.url()), t.page.url());
+ } },
+ { name: '«Подписки» never shows my own posts (owner 28.10.2026)', persona: 'basic', route: '/n/feed', run: async t => {
+   const body = 'e2e свой пост ' + Date.now().toString(36);
+   const d = await t.api('post.saveDraft', { opId: t.uuid7(), post: { type: 'post', body, audience: 'all', inFeed: true, topics: [], mediaIds: [], interests: [], tags: [] } });
+   await t.api('post.publish', { opId: t.uuid7(), postId: d.id });
+   try {
+     const items = (await t.api('feed.list', { tab: 'following', activity: [], limit: 50 })).items;
+     expect(!items.some(x => x.id === d.id || x.author?.id === t.me.personId || x.actor?.id === t.me.personId), 'own posts / activity on the server');
+     await seg(t, 'Подписки').click(); await t.wait(2500);
+     expect(!(await t.page.locator('.posts article.post', { hasText: body }).count()), 'own post in «Подписки»');
+     await seg(t, 'Для тебя').click(); await t.see('.posts article.post:has-text("' + body + '")');
+   } finally { await t.api('post.delete', { opId: t.uuid7(), postId: d.id }); }
  } },
 ];

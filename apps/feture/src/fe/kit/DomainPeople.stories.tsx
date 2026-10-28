@@ -2,7 +2,7 @@ import type {Meta,StoryObj} from '@storybook/react-vite';
 import {useState} from 'react';
 import {fn} from 'storybook/test';
 import {Ban,Bell,Ellipsis,Heart,KeyRound,MessageCircle,Sparkles,Users,X} from 'lucide-react';
-import {Answer,AnswerScale,Av,Btn,Chip,Chips,IconBtn,LikeTile,PersonBar,PersonLine,PersonName,Pill,Radar,RequestCard,Soon,Typing} from './index';
+import {PhotoBars,Answer,AnswerScale,Av,Btn,Chip,Chips,IconBtn,LikeTile,PersonBar,PersonLine,PersonName,Pill,Radar,RequestCard,Soon,Typing,plate} from './index';
 
 const meta={title:'Домен/Люди',component:RequestCard,tags:['autodocs'],
  parameters:{docs:{description:{component:'Запрос, на который нужно ответить (доступ к приватному, связь, приглашение в пару, заявка на событие): кто просит (`PersonLine`), подробности, ответы. Ответ на вопрос заявки — `Answer`.'}}},
@@ -38,3 +38,6 @@ export const Шкала:StoryObj<typeof AnswerScale<Mark>>={name:'Шкала о�
 export const ШкалаГраница:StoryObj<typeof AnswerScale<Mark>>={name:'Шкала: выбрана граница',render:a=><AnswerScale<Mark> {...a}/>,
  args:{label:'Насколько нравится',low:'чуть-чуть',high:'очень',value:'hard',onChange:()=>{},marks:[{id:'discuss',label:'обсудить',icon:MessageCircle},{id:'hard',label:'граница',icon:Ban,taboo:true}]}};
 export const Направления:StoryObj<typeof Chip>={name:'Чипы недоступны (inactive)',render:a=><div className="dim"><Chips><Chip {...a}>Делать</Chip><Chip {...a} on>Получать</Chip></Chips></div>,args:{inactive:true,onClick:fn(),children:''}};
+
+export const ПолоскиФото:StoryObj<typeof PhotoBars>={name:'Полоски фото на шапке профиля (со счётчиком)',render:a=><div className="hero" style={{height:240}}><div className="plate" style={plate('mia')}/><PhotoBars {...a}/></div>,
+ args:{n:5,i:1,label:'Фото 2 из 5',count:true}};

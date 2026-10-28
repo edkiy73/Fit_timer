@@ -103,7 +103,7 @@ export default [
      await until(async () => !(await t.api('me.posts', {})).items.some(p => p.id === id && p.state === 'published'), 'deleted'); id = null;
    } finally { if (id) await t.api('post.delete', { opId: t.uuid7(), postId: id }); }
  } },
- { name: 'viewer: a tap on the right / left third pages forward / back; the middle does not; arrows still work', persona: 'full', route: '/n/feed', run: async t => {
+ { name: 'viewer: a tap on the right / left third pages forward / back; the middle does not; arrows still work; the action rail; a vertical swipe closes', persona: 'full', route: '/n/feed', run: async t => {
    const T2 = await author(t);
    const mediaIds = [await uploadFixture(T2, 'post'), await uploadFixture(T2, 'post')];
    const body = 'e2e листание ' + stamp();
@@ -131,6 +131,32 @@ export default [
      await t.page.mouse.move(box.x + box.width * .2, box.y + box.height / 2); await t.page.mouse.down();
      await t.page.mouse.move(box.x + box.width * .8, box.y + box.height / 2, { steps: 6 }); await t.page.mouse.up(); await t.wait(450);
      expect((await t.page.locator('.viewer.on .vw-n').innerText()).trim() === '1 / 2', 'swipe right → back once');
+
+     // The post over its media (owner 28.10.2026): like / comment / save / share on the right, author + text at the bottom.
+     const rail = t.page.locator('.viewer.on .vw-rail');
+     expect(await rail.locator('button').count() === 4, 'four actions on the right');
+     expect((await t.page.locator('.viewer.on .vw-cap').innerText()).includes(f.body.slice(0, 12)), 'the text at the bottom');
+     await rail.locator('button[aria-pressed]').first().click();
+     await until(async () => (await get(t, f.id)).liked === true || null, 'liked from the viewer');
+     expect((await rail.locator('button').first().innerText()).trim() === '1', 'the count follows: ' + await rail.locator('button').first().innerText());
+     await rail.locator('button[aria-pressed]').first().click();
+     await until(async () => (await get(t, f.id)).liked === false || null, 'unliked from the viewer');
+     await t.shot('viewer-rail');
+     // A short vertical pull springs back; a long one (up or down) closes; neither pages.
+     const pull = async dy => { const x = box.x + box.width / 2, y = box.y + box.height / 2;
+       await t.page.mouse.move(x, y); await t.page.mouse.down(); await t.page.mouse.move(x, y + dy / 2, { steps: 4 }); await t.page.mouse.move(x, y + dy, { steps: 4 }); await t.page.mouse.up(); await t.wait(500); };
+     await pull(50);
+     expect(await t.page.locator('.viewer.on').count() === 1 && (await t.page.locator('.viewer.on .vw-n').innerText()).trim() === '1 / 2', 'a short pull stays, same photo');
+     await pull(-260); await t.page.locator('.viewer').waitFor({ state: 'detached', timeout: 5000 });
+     await c.locator('.mgrid .mcell').first().click(); await t.see('.viewer.on');
+     await pull(260); await t.page.locator('.viewer').waitFor({ state: 'detached', timeout: 5000 });
+     // A tap on the text opens the post; «Назад» comes back to the feed, not to the viewer.
+     await t.go('/n/feed'); const fc = card(t, f.body); await fc.waitFor({ timeout: 30000 });
+     await fc.locator('.mgrid .mcell').first().click(); await t.see('.viewer.on .vw-cap');
+     await t.page.locator('.viewer.on .vw-txt').click(); await t.page.waitForURL(/\/n\/feed\/post\//); await t.wait(800);
+     expect(await t.page.locator('.viewer').count() === 0, 'the viewer closed');
+     await t.page.goBack(); await t.page.waitForURL(/\/n\/feed$/); await t.wait(1000);
+     expect(await t.page.locator('.viewer').count() === 0, 'back to the feed without the viewer');
    } finally { await drop(t, f.id); }
  } },
 ];

@@ -28,7 +28,7 @@ function line(tpl:string,name:string):ReactNode{
 /** One «Подписки» activity card: liked posts and people followed as a sideways strip of thumbnails, events and
  * communities as rows; ⋯ opens «Открыть профиль / Не показывать активность». Wording is the same for everyone
  * (no «он/она»): «Мира: нравится 12 публикаций», «Мира теперь следит за 9 людьми». */
-export function ActivityCardOf({a,onMenu}:{a:Act,onMenu:()=>void}){
+export function ActivityCardOf({a,onMenu}:{a:Act,onMenu?:(()=>void)|undefined}){
  const {t,locale}=useI18n();const navigate=useNavigate();
  const who=personName(a.actor);const n=a.count;const one=n===1;const M='⁣';
  const tpl=a.activity==='likes'?(one?t('fe.w3.act.likes1',{name:M}):t('fe.w3.act.likes',{name:M,n:plural(n,['публикация','публикации','публикаций'],['post','posts'],locale)}))

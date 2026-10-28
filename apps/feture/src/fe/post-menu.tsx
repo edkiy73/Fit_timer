@@ -30,13 +30,14 @@ export type Removal={postId?:string,authorId?:string,notice:string,undo?:()=>Pro
 const nameOf=(a:{name?:string|null,handle?:string|null}|null|undefined)=>a?.name||(a?.handle?'@'+a.handle:'?');
 const idList=z.object({ok:z.literal(true),items:z.array(z.object({id:z.string()}).passthrough())});
 
-/** Whether the acting profile follows `id` (null while it loads): its own «following» list, or `id`'s followers. */
-function useFollows(id:string|null){
- const {call,acting}=useFe();const [on,setOn]=useState<boolean|null>(null);
- useEffect(()=>{if(!id||!acting)return;let live=true;
+/** Whether the acting profile follows `id`: the post brings it (`author.iFollow`), so the row shows with the menu at
+ * once; only a post without it (null while it loads) asks for the «following» list, or `id`'s followers. */
+function useFollows(id:string|null,known:boolean|undefined){
+ const {call,acting}=useFe();const [on,setOn]=useState<boolean|null>(known??null);
+ useEffect(()=>{if(!id||!acting||known!==undefined)return;let live=true;
   Promise.all([call('profile.followers',{profileId:acting.id,following:true},idList).catch(()=>null),call('profile.followers',{profileId:id},idList).catch(()=>null)])
    .then(([mine,theirs])=>{if(live)setOn(!!mine?.items.some(x=>x.id===id)||!!theirs?.items.some(x=>x.id===acting.id));});
-  return ()=>{live=false;};},[call,acting,id]);
+  return ()=>{live=false;};},[call,acting,id,known]);
  return [on,setOn] as const;
 }
 
@@ -59,9 +60,9 @@ export function PostMenu({post,onClose,onChange,onRemove}:{post:Post,onClose:()=
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();const {op,drop}=useOps();
  const mine=post.rev!=null;const couple=acting?.kind==='couple';const name=nameOf(post.author);
  // «Подписаться» right here (owner 28.10.2026), so one doesn't have to open the profile for it.
- const [follows,setFollows]=useFollows(mine||post.author.id===acting?.id?null:post.author.id);
+ const [follows,setFollows]=useFollows(mine||post.author.id===acting?.id?null:post.author.id,post.author.iFollow);
  const follow=(next:boolean)=>run('follow',async opId=>{
-  await call('follow.set',{opId,profileId:post.author.id,on:next},okOnly);setFollows(next);onClose();
+  await call('follow.set',{opId,profileId:post.author.id,on:next},okOnly);setFollows(next);onChange?.({...post,author:{...post.author,iFollow:next}});onClose();
   toast(t((next?'fe.px.fl.on':'fe.px.fl.off')+(couple?'Us':''),{name}),{type:'ok'});
  });
  const [view,setView]=useState<'menu'|'delete'|'report'|'album'|'object'>('menu');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');

@@ -125,7 +125,7 @@ function MfImg({src,blur,onRatio,onFail}:{src:string,blur?:string|null|undefined
  </>;
 }
 
-export function MediaGrid({media,onExpired}:{media:MediaItem[],onExpired?:(()=>void)|undefined}){
+export function MediaGrid({media,onExpired,bar}:{media:MediaItem[],onExpired?:(()=>void)|undefined,/** The post over the viewer (`ViewerPostBar`). */ bar?:ViewerBar|undefined}){
  const {t}=useI18n();const [open,setOpen]=useState<number|null>(null);const opener=useRef<HTMLElement|null>(null);
  const list=media.filter(m=>mediaSrc(m));
  const [seen,setSeen]=useState<Record<string,number>>({});
@@ -146,13 +146,18 @@ export function MediaGrid({media,onExpired}:{media:MediaItem[],onExpired?:(()=>v
  else{const mo=mosaic(rs);
   grid=<div className="mgrid mos" style={{'--mo-ar':(1/mo.H).toFixed(4)} as CSSProperties}>{shown.map((m,i)=><button key={m.id} type="button" className="mcell mf" style={mosaicBox(mo.cells[i]!,mo.H)} aria-label={m.kind==='video'?t('fe.kit.av.play'):label} onClick={go(i)}>
    <MfImg src={mediaSrc(m)!} blur={m.src?.blur} onRatio={learn(m.id)} onFail={onExpired}/>{m.kind==='video'&&<VideoBadge durationMs={m.durationMs}/>}{i===3&&n>4&&<span className="more">+{n-4}</span>}</button>)}</div>;}
- return <>{grid}{open!==null&&<Viewer srcs={list.map(slideOf)} index={open} onClose={close} onExpired={onExpired}/>}</>;
+ // A tap anywhere on the media is the media's (a cell, a clip, an overlay the browser draws) — never «open the post».
+ return <><div className="mgrid-box" onClick={e=>e.stopPropagation()}>{grid}</div>{open!==null&&<Viewer srcs={list.map(slideOf)} index={open} onClose={close} onExpired={onExpired} bar={bar}/>}</>;
 }
 
 /** `openViewer()` — full-screen photos: ‹ ›, arrows, swipe, Esc. It is a layer of its own above the bars, the dock,
  * the bottom buttons and the toasts; the system «Назад» closes it instead of leaving the screen. */
-export function Viewer({srcs,index,onClose,onExpired}:{srcs:Slide[],index:number,onClose:()=>void,onExpired?:(()=>void)|undefined}){
- const {t}=useI18n();const [i,setI]=useState(index);const [on,setOn]=useState(false);const box=useRef<HTMLDivElement>(null);const sx=useRef<number|null>(null);
+/** A post's actions and text over the media (`ViewerPostBar`): `close` shuts the viewer; `leave` shuts it and then
+ * opens another screen, so its own history entry is gone first and «Назад» comes back to where the viewer was opened. */
+export type ViewerBar=(close:()=>void,leave:(to:string)=>void)=>ReactNode;
+export function Viewer({srcs,index,onClose,onExpired,bar}:{srcs:Slide[],index:number,onClose:()=>void,onExpired?:(()=>void)|undefined,bar?:ViewerBar|undefined}){
+ const {t}=useI18n();const navigate=useNavigate();
+ const leave=useCallback((to:string)=>{window.addEventListener('popstate',()=>setTimeout(()=>navigate(to),0),{once:true});window.history.back();},[navigate]);const [i,setI]=useState(index);const [on,setOn]=useState(false);const box=useRef<HTMLDivElement>(null);const sx=useRef<number|null>(null);
  useBackClose(onClose);
  useEffect(()=>{const r=requestAnimationFrame(()=>{setOn(true);box.current?.querySelector<HTMLButtonElement>('.vw-top .ibtn')?.focus({preventScroll:true});});return ()=>cancelAnimationFrame(r);},[]);
  const step=useCallback((d:number)=>setI(v=>Math.max(0,Math.min(srcs.length-1,v+d))),[srcs.length]);
@@ -160,7 +165,8 @@ export function Viewer({srcs,index,onClose,onExpired}:{srcs:Slide[],index:number
   document.addEventListener('keydown',k,true);return ()=>document.removeEventListener('keydown',k,true);},[onClose,step]);
  return <Layer><div ref={box} className={'viewer'+(on?' on':'')} role="dialog" aria-modal="true" aria-label={t('fe.br.viewer')}
   onPointerDown={e=>{sx.current=e.clientX;}} onPointerUp={e=>{if(sx.current==null)return;const dx=e.clientX-sx.current;sx.current=null;if(Math.abs(dx)>50)step(dx<0?1:-1);}}>
-  <PhotoTrack srcs={srcs} index={i} onExpired={onExpired} onStep={step}/>
+  <PhotoTrack srcs={srcs} index={i} onExpired={onExpired} onStep={step} onClose={onClose}/>
+  {bar?.(onClose,leave)}
   <div className="vw-top"><span className="vw-n">{i+1} / {srcs.length}</span><IconBtn icon={X} kind="glass" label={t('fe.br.close')} onClick={onClose}/></div>
   {srcs.length>1&&<>
    <button type="button" className="vw-nav l" aria-label={t('fe.br.prev')} disabled={i===0} onClick={()=>step(-1)}><ChevronLeft/></button>

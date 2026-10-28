@@ -95,6 +95,9 @@ export const postsCommands = {
       .refine(v => !v.myInterests || v.tab === 'popular', { message: 'popular_only', path: ['myInterests'] }),
   },
   'profile.posts': { profile: true, write: false, input: z.strictObject({ profileId: id, cursor: z.string().max(200).optional() }) },
+  // A profile's «Активность» tab: the person's own activity cards as «Подписки» shows them, by their «Кто видит мою
+  // активность» and the viewer's relation (the acting profile always sees its own, with who else can).
+  'profile.activity': { profile: true, write: false, input: z.strictObject({ profileId: id, cursor: z.string().max(200).optional() }) },
   'me.posts': { profile: true, write: false, input: z.strictObject({}) },
   // Saved, not yet published edits of a published post (V21 saveDraft on a live post / discardPostEdits).
   'post.saveEdits': { profile: true, write: true, input: z.strictObject({ opId, postId: id, rev: z.int().positive(), post: postFields }) },
