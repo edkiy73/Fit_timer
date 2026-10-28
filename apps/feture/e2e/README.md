@@ -20,8 +20,11 @@ one at a time (the production rate limit is shared).
 
 ## Personas (owner rule, 28.10.2026)
 
-Persona accounts (`qa-…@feture.test`) are marked `feture.account.qa` when created: Discover hides them from everyone
-else (the owner's and the test world's decks stay clean), qa viewers still see each other, people search lists them last.
+Persona accounts (`qa-…@feture.test`) are marked `feture.account.qa` when created. Everything they make or do —
+profiles, posts, discussions, replies, likes, follows, events, communities, activity, notifications — is hidden from
+everyone else (the owner's and the test world's lists stay clean; `feture.qa_hidden` inside `feture.blocked`,
+20261028240000_fe_qa_hidden.sql). qa viewers still see everything, so a scenario never needs a non-persona to see
+persona content.
 
 A scenario never uses a shared account (test1/test2/seed-*). It names a **persona** — a known account state — and
 the runner signs in as that persona **of your lane** (`E2E_LANE`, one per agent/area, 1–8 letters), so runs never log
