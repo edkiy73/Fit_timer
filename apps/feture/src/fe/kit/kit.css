@@ -380,6 +380,7 @@ button.pill{cursor:pointer}
 .v21 .cr-key>svg{width:10px;height:10px}
 /* The interest sheet: the description, then the bar with room above it. */
 .v21 .topic-desc+.cmpx{margin-top:var(--s-4)}
+.v21 .cmpx>.k-verdict+*{margin-top:var(--s-3)}
 
 /* AddCard (owner, 29.10.2026): one «add» card for every empty block — the hint wraps to two lines at most, and
    a card under another block in the same group keeps the rhythm gap. */
@@ -438,3 +439,9 @@ html:has(.fe-v21),html:has(.fe-v21) body{overscroll-behavior-y:none}
 .v21 .row>.pill:first-child{margin-left:0}
 /* An Empty with a block after it (a list card) sits on the page gutter, so its actions and the card line up with the header. */
 .v21 .empty:has(>.k-empty-after){padding-inline:0}
+
+/* The «Что у вас общего» summary on a profile and under a Discover card keeps the column rhythm on its own (29.10). */
+.v21 .compat.v14c{margin-top:var(--block-gap)}
+.v21 .fin>.df-near{margin-top:10px}.v21 .df-near>.fld{margin-top:0}
+/* A couple without a photo: its two initials sit over the name block's dark scrim (.pc-info, z 4), not under it (29.10 sweep). */
+.v21 .hero>.hero-pairav{z-index:5;pointer-events:none}

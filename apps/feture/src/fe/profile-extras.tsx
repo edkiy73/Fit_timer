@@ -4,16 +4,15 @@ import {useLocation,useNavigate,useParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Ban,Check,ChevronDown,Crown,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,Flag,Heart,History,Info,KeyRound,Link as LinkIcon,Lock,LockOpen,MapPin,MessageCircle,ShieldCheck,Undo2,Users,X} from 'lucide-react';
-import {ActingAv,Alert,Av,Bar,Btn,Card,Empty,Group,H,IconBtn,Layer,Note,PersonName,PhotoBars,PhotoTrack,Pill,PullRefresh,Row,Seg,Skel,Text,ToggleRow,Veil,View,plate} from './kit';
+import {Ban,Check,ChevronDown,Crown,ChevronLeft,ChevronRight,Ellipsis,Eye,EyeOff,Flag,Heart,History,Info,KeyRound,Link as LinkIcon,Lock,MapPin,MessageCircle,ShieldCheck,Undo2,Users,X} from 'lucide-react';
+import {ActingAv,Alert,Av,Bar,Btn,Card,Empty,Group,H,IconBtn,Layer,Note,PersonName,PhotoBars,PhotoTrack,PullRefresh,Row,Seg,Skel,Stack,Text,ToggleRow,View,coupleNames,plate} from './kit';
 import {onReadsDropped,useFe,useKeyChange} from './session';
 import {ReportSheet} from './report';
-import {PhotoBadge} from './photo-check';
 import {faceFields,NameBadges} from './faces';
 import {PostCard,postSchema,type Post} from './feed';
 import {ActivityCardOf,activitySchema,type Act} from './feed-activity';
 import type {Removal} from './post-menu';
-import {useToast as useAppToast} from './toast';
+import {useToast} from './toast';
 import {useCopyLink} from './share';
 import {PrivateVault} from './private';
 import {GiftSheet,openPaywall} from './premium';
@@ -42,16 +41,6 @@ export function pxError(e:unknown,t:T){
   if(e.rule){const k='fe.px.rule.'+e.rule;const m=t(k);if(m!==k)return m;}
  }
  return feErrorMessage(e,t);
-}
-
-/** A toast with an optional «Отменить» (undo) action. */
-export type PxToast=(m:string,err?:boolean,action?:{label:string,fn:()=>void})=>void;
-/** The app's toast (toast.tsx: one at a time, «Отменить» / «Вернуть», above sheets) in the shape these screens use:
- * `[node, toast(text, err?, action?)]`; the node is kept for the callers' layout and is always empty. */
-export function useToast(){
- const app=useAppToast();
- const show=useCallback<PxToast>((text,err=false,action)=>app(text,{...(err?{type:'err' as const}:{}),...(action?{action}:{})}),[app]);
- return [null as ReactNode,show] as const;
 }
 
 /** `div.layer > div.scrim.on + div.sheet.on` — the prototype's sheet; Esc, ✕ and the scrim close it. */
@@ -122,8 +111,8 @@ export function MatchOverlay({other,conversationId,onClose}:{other:{id:string,na
 }
 
 /** `.p-acts` of another profile: «Нравится / Отправлено / Написать» and «Подписаться / В подписках». */
-export function PersonActions({p,rel,setRel,toast,inert}:{p:PersonProfile,rel:Relation|null,setRel:(f:(r:Relation|null)=>Relation|null)=>void,toast:PxToast,inert?:boolean|undefined}){
- const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();
+export function PersonActions({p,rel,setRel,inert}:{p:PersonProfile,rel:Relation|null,setRel:(f:(r:Relation|null)=>Relation|null)=>void,inert?:boolean|undefined}){
+ const {call,acting}=useFe();const toast=useToast();const {t}=useI18n();const navigate=useNavigate();
  const [busy,setBusy]=useState<''|'like'|'follow'>('');const [why,setWhy]=useState<string|null>(null);const [match,setMatch]=useState<{conversationId?:string}|null>(null);
  const op=useRef(newOpId());const name=personName(p);const asUs=acting?.kind==='couple';
  // Owner R04 (28.10): with my own dating off a like from a profile still goes out — but the first time, a sheet says
@@ -142,13 +131,13 @@ export function PersonActions({p,rel,setRel,toast,inert}:{p:PersonProfile,rel:Re
    else{setRel(x=>x&&{...x,liked:true});toast(fill(t(asUs?'fe.px.lkd.sentUs':'fe.px.lkd.sent'),{name}));}}
   catch(e){op.current=newOpId();const rule=e instanceof FeError?e.rule:undefined;
    if(rule==='likes_not_accepted'||rule==='couples_via_discover_only'||rule==='own_discover_off')setWhy(rule);
-   else if(rule==='already_matched')setRel(x=>x&&{...x,mutual:true});else toast(pxError(e,t),true);}
+   else if(rule==='already_matched')setRel(x=>x&&{...x,mutual:true});else toast(pxError(e,t),{type:'err'});}
   finally{setBusy('');}};
  // «Отправлено» tapped again takes the like back; «Отменить» in the toast sends it again (V21 unlikeP).
  const relike=async()=>{try{const r=await call('like.send',{opId:newOpId(),profileId:p.id,source:'profile'},likeRes);
-  if(r.state==='matched'){setRel(x=>x&&{...x,mutual:true});setMatch(r.conversationId?{conversationId:r.conversationId}:{});}else setRel(x=>x&&{...x,liked:true});}catch(e){toast(pxError(e,t),true);}};
+  if(r.state==='matched'){setRel(x=>x&&{...x,mutual:true});setMatch(r.conversationId?{conversationId:r.conversationId}:{});}else setRel(x=>x&&{...x,liked:true});}catch(e){toast(pxError(e,t),{type:'err'});}};
  const unlike=async()=>{if(busy)return;setBusy('like');
-  try{await call('like.withdraw',{opId:newOpId(),profileId:p.id},ok);setRel(x=>x&&{...x,liked:false});toast(t(asUs?'fe.px.lkd.withdrawnUs':'fe.px.lkd.withdrawn'),false,{label:t('fe.mx.undo'),fn:()=>void relike()});}catch(e){toast(pxError(e,t),true);}finally{setBusy('');}};
+  try{await call('like.withdraw',{opId:newOpId(),profileId:p.id},ok);setRel(x=>x&&{...x,liked:false});toast(t(asUs?'fe.px.lkd.withdrawnUs':'fe.px.lkd.withdrawn'),{action:{label:t('fe.mx.undo'),fn:()=>void relike()}});}catch(e){toast(pxError(e,t),{type:'err'});}finally{setBusy('');}};
  // «Написать» (owner 29.10.2026): their chat, or the chat composer as a message request — with or without a mutual like.
  const writeTo=useWriteTo();const write=()=>void writeTo.open(p.id);
  const likeBtn=rel?.mutual?<Btn icon={MessageCircle} onClick={inert?undefined:write} disabled={inert}>{t(asUs&&!inert?'fe.px.act.writeUs':'fe.px.act.write')}</Btn>
@@ -183,7 +172,7 @@ export function ProfileHero({p,rel,inert,onOpen}:{p:PersonProfile,rel:Relation|n
  const src=list[i]?mediaSrc(list[i]):null;const city=cityOf(p,locale);
  return <div className="hero">
   {src?<><img className="mbg" src={src} alt="" aria-hidden="true" draggable={false}/><img src={src} alt={name} draggable={false}/></>
-   :p.kind==='couple'?<><div className="plate" style={plate(p.id)}/><div className="hero-pairav"><Av name={name} seed={p.id} size="xl"/></div></>
+   :p.kind==='couple'?<><div className="plate" style={plate(p.id)}/><div className="hero-pairav"><Av name={name} seed={p.id} size="xl" couple={coupleNames(name)}/></div></>
    :<div className="plate" style={plate(p.id)}/>}
   <PhotoBars n={list.length} i={i} label={fill(t('fe.px.ph.n'),{i:i+1,n:list.length})} count/>
   {list.length>1&&<><button type="button" className="pc-zone l" aria-label={t('fe.px.ph.prev')} onClick={()=>setIx(Math.max(0,i-1))}/><button type="button" className="pc-zone r" aria-label={t('fe.px.ph.next')} onClick={()=>setIx(Math.min(list.length-1,i+1))}/></>}
@@ -310,7 +299,7 @@ function GalleryGroup({p,onOpen,inert}:{p:PersonProfile,onOpen:(i:number)=>void,
  if(!list.length)return null;
  return <Group bare title={t('fe.px.gal.title')} action={!inert&&<button type="button" onClick={()=>navigate('/n/people/'+p.id+'/gallery')}>{t('fe.px.all')} · {list.length}</button>}>
   <Card><div className="ggrid">{list.slice(0,12).map((m,i)=><button key={i} type="button" className="gtile" disabled={inert} onClick={()=>onOpen(i)}><img src={mediaSrc(m)!} alt="" loading="lazy" draggable={false}/></button>)}</div>
-   {list.length>12&&!inert&&<Btn kind="soft" className="mt12" onClick={()=>navigate('/n/people/'+p.id+'/gallery')}>{fill(t('fe.px.gal.all'),{n:list.length})}</Btn>}</Card></Group>;
+  </Card></Group>;
 }
 
 /** Interests group of another profile (pubJars → jarShelf, six then «Ещё N»). */
@@ -390,8 +379,8 @@ export function cardRead(actingId:string,profileId:string){const hit=cardMemo.ge
 /** SC.P01 profileView: the floating ‹ and ⋯ sit on the photo and turn into a solid bar with the name past it
  * (PRF-007); hero, description, buttons, «что общего», then the body. `preview` is «Как видят» — everything drawn,
  * nothing pressable. */
-export function ProfilePage({p,preview,seg,onMore,menu,toast,onRefresh,children}:{p:PersonProfile,preview?:'all'|'granted'|undefined,seg?:ReactNode,onMore?:(()=>void)|undefined,
- menu?:((rel:Relation|null,reload:()=>void)=>ReactNode)|undefined,toast:PxToast,/** Pull-to-refresh: reads the profile again. */ onRefresh?:(()=>unknown)|undefined,children?:ReactNode}){
+export function ProfilePage({p,preview,seg,onMore,menu,onRefresh,children}:{p:PersonProfile,preview?:'all'|'granted'|undefined,seg?:ReactNode,onMore?:(()=>void)|undefined,
+ menu?:((rel:Relation|null,reload:()=>void)=>ReactNode)|undefined,/** Pull-to-refresh: reads the profile again. */ onRefresh?:(()=>unknown)|undefined,children?:ReactNode}){
  const {t}=useI18n();const navigate=useNavigate();const [rel,setRel,reloadRel]=useRelation(p.id);const [view,setView]=useState<number|null>(null);
  const bar=useRef<HTMLElement>(null);const scroller=useRef<HTMLDivElement>(null);const name=personName(p);const inert=!!preview;const list=photosOf(p);
  const onScroll=(e:React.UIEvent<HTMLDivElement>)=>{const h=e.currentTarget.querySelector('.hero');const b=bar.current;if(h&&b)b.classList.toggle('solid',h.getBoundingClientRect().bottom<b.getBoundingClientRect().bottom+8);};
@@ -407,7 +396,7 @@ export function ProfilePage({p,preview,seg,onMore,menu,toast,onRefresh,children}
    {children}
    <ProfileHero p={p} rel={rel} inert={inert} onOpen={setView}/>
    <PersonBio p={p}/>
-   <PersonActions p={p} rel={rel} setRel={setRel} toast={toast} inert={inert}/>
+   <PersonActions p={p} rel={rel} setRel={setRel} inert={inert}/>
    {!preview&&<CompatSummary profileId={p.id}/>}
    <ProfileBody p={p} inert={inert} preview={preview} onOpen={setView}/>
   </div></PullRefresh></div>
@@ -468,9 +457,10 @@ export function CompatSummary({profileId,pre}:{profileId:string,/** Already read
  useEffect(()=>{if(given)return;call('profile.compat',{profileId},compatRes).then(setC).catch(()=>{});},[call,profileId,given]);
  useKeyChange(profileId,()=>setC(null));
  if(!c)return null;
- return <div className="mt12"><section className="compat v14c"><button type="button" className="cp-h" onClick={()=>navigate('/n/people/'+profileId+'/compat')}>
-  <Venn n={c.few?'?':c.count}/><span className="grow"><b>{c.few?t('fe.px.cmp.few'):t('fe.px.cmp.hasTalk')}</b><span>{compatWords(c,t,locale,true)}</span></span><ChevronRight/>
- </button></section></div>;
+ // The full comparison says «совпадение — не согласие»; the summary stays one short line (29.10 sweep).
+ return <section className="compat v14c"><button type="button" className="cp-h" onClick={()=>navigate('/n/people/'+profileId+'/compat')}>
+  <Venn n={c.few?'?':c.count}/><span className="grow"><b>{c.few?t('fe.px.cmp.few'):t('fe.px.cmp.hasTalk')}</b><span>{compatWords(c,t,locale,false)}</span></span><ChevronRight/>
+ </button></section>;
 }
 
 function roleWord(s:z.infer<typeof side>,t:T){if(s.mark)return '';if(!s.dir||s.dir.length===3)return t('fe.px.cmp.role.all');return s.dir.map(d=>t('fe.px.cmp.role.'+d)).join(' · ');}
@@ -519,6 +509,8 @@ export function CompatScreen(){
  const name=personName(p);
  const me={name:acting?.name||acting?.handle||'?',id:acting?.id??'me',src:acting?.avatar??null};
  const them={name:name||'?',id,src:mediaSrc(p?.avatar)};
+ // A line under a row that only repeats its group's description is left out (29.10 sweep: «Роли дополняют друг друга» ×N).
+ const same=new Set(['fe.px.cmp.w.roles','fe.px.cmp.w.into','fe.px.cmp.w.try'].map(k=>t(k)));
  return <>
   <Bar title={t('fe.px.cmp.title')} back/>
   <View>
@@ -530,15 +522,15 @@ export function CompatScreen(){
       <b>{c.few?(c.topics.length?fill(t('fe.px.cmp.fewN'),{topics:plural(t,locale,'fe.px.topic',c.topics.length)}):t('fe.px.cmp.few')):t('fe.px.cmp.talk')}</b>
       <span>{c.few?c.topics.map(topic).join(', '):compatWords(c,t,locale,false)}</span>
      </div></div>
-     <p className="cmp-consent"><ShieldCheck/><span>{t('fe.px.cmp.consent')}</span></p>
-     {c.few&&<Alert icon={Info} className="mt12"><b>{t('fe.px.cmp.fewTitle')}</b>{t('fe.px.cmp.fewBody')}</Alert>}
+     <Alert icon={ShieldCheck}>{t('fe.px.cmp.consent')}</Alert>
+     {c.few&&<Alert icon={Info}><b>{t('fe.px.cmp.fewTitle')}</b>{t('fe.px.cmp.fewBody')}</Alert>}
      {!c.few&&<div className="cmp-groups">{(()=>{const g=byGroup(c);return GROUPS.filter(k=>g[k].length).map(k=><div key={k} className="cg">
       <div className={'cg-h '+CLS[k]}><i/><span>{t('fe.px.cmp.g.'+k)}</span><b>{g[k].length}</b></div>
       <p className="cg-d">{t('fe.px.cmp.d.'+k)}</p>
-      <div className="cg-rows">{g[k].map(i=><CmpRow key={i.topicId} i={i} topic={topic(i.topicId)} me={me} them={them} t={t}/>)}</div>
+      <div className="cg-rows">{g[k].map(i=><CmpRow key={i.topicId} i={i} topic={topic(i.topicId)} me={me} them={them} t={t} why={!same.has(explain(i,t,them.name))}/>)}</div>
      </div>);})()}</div>}
-     <Alert icon={Lock} className="mt16">{t('fe.px.cmp.foot')}</Alert>
-     {c.few&&<Btn kind="soft" className="mt12" onClick={()=>navigate('/n/me/interests')}>{t('fe.px.cmp.moreInt')}</Btn>}
+     <Alert icon={Lock}>{t('fe.px.cmp.foot')}</Alert>
+     {c.few&&<Btn kind="soft" onClick={()=>navigate('/n/me/interests')}>{t('fe.px.cmp.moreInt')}</Btn>}
     </>}
   </View>
  </>;
@@ -597,10 +589,10 @@ function Block({profileId,name,onClose,onDone}:{profileId:string,name:string,onC
   try{await call('block.set',{opId:newOpId(),profileId,on:true,...(also&&alsoFor?{alsoFor}:{})},ok);onDone(t(acting?.kind==='couple'?'fe.ca.blocked':'fe.px.bl.done'));}
   catch(e){setErr(pxError(e,t));}finally{setBusy(false);}};
  return <Sheet title={fill(t('fe.px.bl.title'),{name})} onClose={onClose} foot={<><Btn kind="danger" onClick={go} disabled={busy}>{t(acting?.kind==='couple'?'fe.ca.block':'fe.px.bl.ok')}</Btn><Btn kind="text" onClick={onClose}>{t('fe.px.cancel')}</Btn></>}>
-  <p className="lead">{t(acting?.kind==='couple'?'fe.ca.blockText':'fe.px.bl.text')}</p>
-  {alsoFor&&<Card list className="mt12"><ToggleRow title={t(alsoFor==='partner'?'fe.px.bl.alsoPartner':'fe.px.bl.alsoMe')} sub={t(alsoFor==='partner'?'fe.px.bl.alsoPartnerSub':'fe.px.bl.alsoMeSub')}
+  <Stack><p className="lead">{t(acting?.kind==='couple'?'fe.ca.blockText':'fe.px.bl.text')}</p>
+  {alsoFor&&<Card list><ToggleRow title={t(alsoFor==='partner'?'fe.px.bl.alsoPartner':'fe.px.bl.alsoMe')} sub={t(alsoFor==='partner'?'fe.px.bl.alsoPartnerSub':'fe.px.bl.alsoMeSub')}
    on={also} onClick={()=>setAlso(v=>!v)}/></Card>}
-  {err&&<Alert kind="err" noIcon className="mt12">{err}</Alert>}
+  {err&&<Alert kind="err" noIcon>{err}</Alert>}</Stack>
  </Sheet>;
 }
 
@@ -613,19 +605,19 @@ function EndConnection({profileId,name,mutual,onClose,onDone}:{profileId:string,
   catch(e){setErr(pxError(e,t));}finally{setBusy(false);}};
  const fact=(ok:boolean,text:string)=><div className="fact"><i className={ok?'g':'v'}>{ok?<Check/>:<Info/>}</i><span>{text}</span></div>;
  return <Sheet title={t('fe.px.ec.title')} onClose={onClose} foot={<><Btn kind="danger" onClick={go} busy={busy}>{t('fe.px.ec.ok')}</Btn><Btn kind="soft" onClick={onClose}>{t('fe.px.cancel')}</Btn></>}>
-  <p className="lead">{fill(u('fe.px.ec.lead'),{name})}</p>
+  <Stack><p className="lead">{fill(u('fe.px.ec.lead'),{name})}</p>
   <Card className="flat">{mutual&&fact(true,t('fe.px.ec.chat'))}{fact(true,u(mutual?'fe.px.ec.likeMatch':'fe.px.ec.like'))}{mutual&&fact(true,t('fe.px.ec.history'))}{fact(false,t('fe.px.ec.notBlock'))}</Card>
-  {mutual&&<Card list className="mt12"><ToggleRow title={u('fe.px.ec.revoke')} sub={t('fe.px.ec.revokeSub')} on={revoke} onClick={()=>setRevoke(v=>!v)}/></Card>}
-  <Note className="mt12">{u('fe.px.ec.block')}</Note>
-  {err&&<Alert kind="err" noIcon className="mt12">{err}</Alert>}
+  {mutual&&<Card list><ToggleRow title={u('fe.px.ec.revoke')} sub={t('fe.px.ec.revokeSub')} on={revoke} onClick={()=>setRevoke(v=>!v)}/></Card>}
+  <Note>{u('fe.px.ec.block')}</Note>
+  {err&&<Alert kind="err" noIcon>{err}</Alert>}</Stack>
  </Sheet>;
 }
 
 /** The ⋯ menu of another person's profile (ACT.profileMenu) and its sheets. `blocked` is kept by the screen: a
  * blocked profile no longer loads, so the screen shows its own blocked state with «Разблокировать». */
-export function PersonMenu({profileId,name,handle,step,setStep,blocked,setBlocked,toast,rel,onRel}:{profileId:string,name:string,/** A person's nick: «Подарить Premium» (couples have none to gift to). */ handle?:string|null|undefined,step:MenuStep,setStep:(s:MenuStep)=>void,
- blocked:boolean,setBlocked:(b:boolean)=>void,toast:(msg:string,err?:boolean)=>void,rel?:Relation|null|undefined,onRel?:(()=>void)|undefined}){
- const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const [busy,setBusy]=useState(false);
+export function PersonMenu({profileId,name,handle,step,setStep,blocked,setBlocked,rel,onRel}:{profileId:string,name:string,/** A person's nick: «Подарить Premium» (couples have none to gift to). */ handle?:string|null|undefined,step:MenuStep,setStep:(s:MenuStep)=>void,
+ blocked:boolean,setBlocked:(b:boolean)=>void,rel?:Relation|null|undefined,onRel?:(()=>void)|undefined}){
+ const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();const [busy,setBusy]=useState(false);
  const [link,setLink]=useState<{state:'ok'|'sent'|'in',view:LinkView}|null>(null);const [hidden,setHidden]=useState<boolean|null>(null);
  useEffect(()=>{if(step!=='menu'||blocked)return;call('links.mine',{},linksMineRes).then(r=>{const f=(l:LinkView[])=>l.find(x=>x.other.id===profileId);
   const c=f(r.confirmed),s=f(r.sent),i=f(r.incoming);setLink(c?{state:'ok',view:c}:s?{state:'sent',view:s}:i?{state:'in',view:i}:null);}).catch(()=>{});
@@ -634,10 +626,10 @@ export function PersonMenu({profileId,name,handle,step,setStep,blocked,setBlocke
  // «Скрыть из ленты» (the post menu's «Не показывать»): posts and activity leave the feed; the person is not told.
  const hide=async()=>{const on=!hidden;setBusy(true);
   try{await call('feedHide.set',{opId:newOpId(),kind:'author',targetId:profileId,on},ok);setHidden(on);close();toast(fill(t((on?'fe.px.menu.hidden':'fe.px.menu.unhidden')+(acting?.kind==='couple'?'Us':'')),{name}));}
-  catch(e){toast(pxError(e,t),true);}finally{setBusy(false);}};
+  catch(e){toast(pxError(e,t),{type:'err'});}finally{setBusy(false);}};
  const unblock=async()=>{setBusy(true);
   try{await call('block.set',{opId:newOpId(),profileId,on:false},ok);setBlocked(false);close();toast(t('fe.px.bl.undone'));}
-  catch(e){toast(pxError(e,t),true);}finally{setBusy(false);}};
+  catch(e){toast(pxError(e,t),{type:'err'});}finally{setBusy(false);}};
  const copyLink=useCopyLink();const copy=()=>{close();void copyLink('/n/people/'+profileId,t('fe.px.menu.copied'));};
  const row=(icon:LucideIcon,title:string,onClick:()=>void,sub?:string,danger?:boolean)=><Row noChev icon={icon} title={title} sub={sub} danger={!!danger} onClick={onClick} disabled={busy}/>;
  if(step==='menu')return <Sheet title={name} onClose={close}><Card list>
@@ -667,14 +659,14 @@ const historyRes=z.object({ok:z.literal(true),premium:z.boolean(),items:z.array(
 
 /** `/n/people/history`: free accounts see the newest decision, Premium seven days (the server decides). */
 export function HistoryScreen(){
- const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const [toastNode,toast]=useToast();
+ const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();
  const [k,setK]=useState<'all'|'pass'|'like'>('all');const [r,setR]=useState<z.infer<typeof historyRes>|null>(null);const [error,setError]=useState<unknown>(null);
  const [back,setBack]=useState<Set<string>>(new Set());const [busy,setBusy]=useState(false);
  const load=useCallback(()=>{setError(null);setR(null);call('discover.history',{kind:k},historyRes).then(setR).catch(setError);},[call,k]);
  useEffect(()=>{load();},[load]);
  const restore=async(id:string,name:string)=>{setBusy(true);
   try{await call('discover.restore',{opId:newOpId(),profileId:id},ok);setBack(s=>new Set(s).add(id));toast(fill(t('fe.px.h.back'),{name}));}
-  catch(e){toast(pxError(e,t),true);}finally{setBusy(false);}};
+  catch(e){toast(pxError(e,t),{type:'err'});}finally{setBusy(false);}};
  return <>
   <Bar title={t('fe.px.h.title')} back/>
   <View>
@@ -694,7 +686,6 @@ export function HistoryScreen(){
      </div>;})}</div>}
    {r&&!r.premium&&r.items.length>0&&<div className="paywall"><b>{t('fe.px.h.payTitle')}</b><p>{t('fe.px.h.payText')}</p><Btn onClick={()=>openPaywall('history')}>{t('fe.ax.prem.open')}</Btn></div>}
   </View>
-  {toastNode}
  </>;
 }
 
@@ -713,7 +704,7 @@ function useProposal(){
   if(typeof c.name==='string')o.name=c.name;if(typeof c.bio==='string')o.bio=c.bio;return Object.keys(o).length?o:null;},[c]);
 }
 export function MePreviewScreen(){
- const {call,acting}=useFe();const {t,locale}=useI18n();const [toastNode,toast]=useToast();
+ const {call,acting}=useFe();const {t,locale}=useI18n();
  const [lv,setLv]=useState<Lv>(()=>{const v=new URLSearchParams(location.hash.split('?')[1]??'').get('lv');return v==='granted'||v==='card'?v:'all';});
  const [p,setP]=useState<PersonProfile|null>(null);const [mode,setMode]=useState<string|null>(null);const [error,setError]=useState<unknown>(null);
  const [rel]=useRelation(acting?.id??'');
@@ -726,8 +717,7 @@ export function MePreviewScreen(){
  const seg=<Seg small={false} value={lv} onChange={setLv} label={t('fe.px.pv.title')} options={(['all','granted','card'] as const).map(id=>({id,label:t('fe.ln.pv.'+id)}))}/>;
  if(p&&!error&&lv!=='card')return <>
   {proposal&&<Alert kind="info" className="mt12">{t('fe.c6.previewNote')}</Alert>}
-  <ProfilePage p={p} preview={lv} seg={<div className="p3-seg">{seg}</div>} toast={toast}/>
-  {toastNode}
+  <ProfilePage p={p} preview={lv} seg={<div className="p3-seg">{seg}</div>}/>
  </>;
  const ph=p?mediaSrc(p.avatar):null;const city=p?cityOf(p,locale):null;
  const note=mode!=='visible'?t('fe.px.pv.cardOff'):!ph?t('fe.px.pv.cardNoPhoto'):t(acting?.kind==='couple'?'fe.px.pv.cardOnUs':'fe.px.pv.cardOn');
@@ -748,7 +738,6 @@ export function MePreviewScreen(){
      <div className="pc-body pc-full p3-card21"><PersonBio p={p}/><ProfileBody p={p} inert preview="all" onOpen={()=>{}}/></div>
     </>}
   </View>
-  {toastNode}
  </>;
 }
 
