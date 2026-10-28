@@ -138,7 +138,10 @@ export function MediaGrid({media,onExpired,bar}:{media:MediaItem[],onExpired?:((
  let grid;
  // One clip plays in place with its controls (owner, 28.10.2026); «На весь экран» opens the viewer.
  if(n===1&&shown[0]!.kind==='video'&&shown[0]!.src?.file){const m=shown[0]!;const r=rs[0];
+  // «Instafill» as for photos: the clip's own poster, blurred, fills what the clip's shape leaves of the cell.
+  const bg=m.src?.blur??mediaSrc(m,'card');
   grid=<div className="mgrid n1"><div className="mcell mv" style={r?{'--ar':fitAr(r,.8,1.91).toFixed(4)} as CSSProperties:undefined}>
+   {bg&&<img className="mbg" src={bg} alt="" aria-hidden="true" draggable={false} loading="lazy" decoding="async"/>}
    <VideoPlayer src={m.src!.file} poster={mediaSrc(m,'full')} w={m.w} h={m.h} durationMs={m.durationMs} fill onExpired={onExpired} onExpand={()=>{opener.current=null;setOpen(0);}}/></div></div>;}
  else if(n===1){const m=shown[0]!;const r=rs[0];
   grid=<div className="mgrid n1"><button type="button" className="mcell mf" style={r?{'--ar':fitAr(r,.8,1.91).toFixed(4)} as CSSProperties:undefined} aria-label={m.kind==='video'?t('fe.kit.av.play'):label} onClick={go(0)}>

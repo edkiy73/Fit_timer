@@ -145,9 +145,13 @@ export function FeedTab(){
  // Only the latest request may fill the list: a slow answer for the tab or filter left behind never overwrites the current one.
  const req=useRef(0);
  const input=useMemo(()=>feedInput(tab,f,popTag),[tab,f,popTag]);
+ const shown=useRef('');
  const load=useCallback((cursor?:string)=>{
   const n=++req.current;
-  setError(null);if(!cursor){setItems(null);setGone({});}else setMore(true);
+  // Only another tab or filter starts from the skeleton; reading the same list again keeps what is on screen (and the
+  // place the reader scrolled to) until the new page arrives.
+  const key=JSON.stringify(input);const same=shown.current===key;shown.current=key;
+  setError(null);if(!cursor){if(!same)setItems(null);setGone({});}else setMore(true);
   call('feed.list',{...input,...(cursor?{cursor}:{})},mixedPage).then(r=>{
    if(n!==req.current)return;const got=feedItems(r.items);
    setItems(prev=>cursor&&prev?[...prev,...got]:got);setNext(r.next);
