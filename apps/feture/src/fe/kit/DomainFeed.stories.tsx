@@ -2,7 +2,7 @@ import type {Meta,StoryObj} from '@storybook/react-vite';
 import {useState} from 'react';
 import {fn} from 'storybook/test';
 import {AtSign,Calendar,ChartColumn,Image as ImageIcon,Sparkles} from 'lucide-react';
-import {ActionLine,ActivityCard,ActivityItem,Av,Btn,Card,IconBtn,LikesLine,QuickStart,RichArea} from './index';
+import {ActionLine,ActivityCard,ActivityItem,Av,Btn,Card,EventTile,FeedEvents,IconBtn,LikesLine,QuickStart,RichArea,plate} from './index';
 
 const meta={title:'Домен/Лента',component:RichArea,tags:['autodocs'],
  parameters:{docs:{description:{component:'Поле текста с панелью оформления: жирный, курсив, список, цитата, ссылка (адрес проверяется: только http(s) с настоящим доменом). '+
@@ -31,3 +31,11 @@ export const БыстрыйСтарт:StoryObj<typeof QuickStart>={name:'Быс�
  args:{title:'Или сразу начать с',items:[[ImageIcon,'Фото и видео',fn()],[ChartColumn,'Опрос',fn()],[Sparkles,'Мои интересы',fn()]]},argTypes:{items:{control:false}}};
 export const СтрокаДействия:StoryObj<typeof ActionLine>={name:'Строка с действием',render:a=><ActionLine {...a}/>,
  args:{text:'Только статьи — без остальных публикаций',children:<Btn size="sm" fit>Следить за статьями</Btn>},argTypes:{children:{control:false}}};
+
+const evCover=(k:string)=><div className="plate" style={plate(k)}><span className="pi"><Calendar/></span></div>;
+export const Скоро:StoryObj<typeof FeedEvents>={name:'«Скоро» в ленте',render:a=><div className="posts"><FeedEvents {...a}/></div>,
+ parameters:{docs:{description:{story:'Ближайшие события, которые касаются смотрящего (ответил, подписан на организатора, сообщество, интересы, город, онлайн). У каждого своё «Скрыть»: скрытое не возвращается (сервер, `feedHide` kind `event`), тост даёт «Вернуть».'}}},
+ args:{title:'Скоро',items:[
+  {key:'1',tile:<EventTile row cover={evCover('a')} day="30" month="окт" place="Онлайн" time="19:00" title="Разговор о границах" org="Ты идёшь" onClick={fn()}/>,hide:'Скрыть',hideLabel:'Скрыть: Разговор о границах',onHide:fn()},
+  {key:'2',tile:<EventTile row cover={evCover('b')} day="2" month="нояб" place="Кройцберг" time="20:00" title="Вечер знакомств" org="Из твоего сообщества" onClick={fn()}/>,hide:'Скрыть',hideLabel:'Скрыть: Вечер знакомств',onHide:fn()}]},
+ argTypes:{items:{control:false}}};

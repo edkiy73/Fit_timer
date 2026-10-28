@@ -461,6 +461,34 @@ const run = {
     };
   },
 
+  async 'event.soon'(q, { acting: a }) {
+    const viewer = need(a);
+    // Why each event concerns the viewer, strongest first; an event with no reason is not offered. Interests are the
+    // viewer's levels only — «обсудить» and hard limits never pull an event in.
+    const rows = await q.query(
+      `select * from (
+         select e.id, e.title, e.kind, e.format, e.place_id, e.area, e.tz, e.starts_at, e.ends_at, e.price, e.requires_application, e.plate, e.state, e.community_id,
+           case when exists (select 1 from feture.event_rsvp r where r.event_id = e.id and r.profile_id = $1 and r.status in ('interested', 'going'))
+                  or exists (select 1 from feture.event_application x where x.event_id = e.id and x.profile_id = $1 and x.state in ('pending', 'approved')) then 'mine'
+                when exists (select 1 from feture.follow f where f.follower_profile_id = $1 and f.target_profile_id = e.organizer_profile_id) then 'follow'
+                when exists (select 1 from feture.community_member m where m.community_id = e.community_id and m.profile_id = $1 and m.state = 'active') then 'community'
+                when exists (select 1 from feture.community c where c.id = e.community_id
+                               and c.topics && array(select i.topic_id from feture.interest i where i.profile_id = $1 and i.value is not null)) then 'interests'
+                when e.format = 'online' then 'online'
+                when e.place_id = (select d.city_id from feture.profile_details d where d.profile_id = $1) then 'city'
+           end why
+         from feture.event e
+         where e.state = 'published' and e.ends_at > now() and e.starts_at < now() + interval '14 days'
+           and e.organizer_profile_id <> $1 and feture.event_visible(e, $1, $2)
+           and not exists (select 1 from feture.feed_hide h where h.profile_id = $1 and h.kind = 'event' and h.target_id = e.id)
+           and not exists (select 1 from feture.event_rsvp r where r.event_id = e.id and r.profile_id = $1 and r.status = 'not_going')
+       ) x where why is not null
+       order by case why when 'mine' then 0 when 'follow' then 1 when 'community' then 2 when 'interests' then 3 else 4 end, starts_at, id
+       limit 3`,
+      [viewer.profileId, viewer.accountId]);
+    return { items: rows.map(r => ({ ...r, starts_at: iso(r.starts_at), ends_at: iso(r.ends_at) })) };
+  },
+
   async 'event.rsvp'(q, { acting: a, input }) {
     const acting = need(a);
     if (input.status === 'going' || input.status === 'interested') await requireUnrestricted(q, acting);
