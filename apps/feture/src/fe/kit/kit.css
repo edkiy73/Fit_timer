@@ -97,6 +97,8 @@
 .v21 .k-ii[data-i="--i-sm"]{width:var(--i-sm);height:var(--i-sm)}
 .v21 .k-ii[data-i="--i-xs"]{width:var(--i-xs);height:var(--i-xs)}
 .v21 .btn.k-fit{flex:0 0 auto;width:auto}
+/* …also inside a sheet foot's row, where the other button takes the rest («Назад» + «На согласие партнёру») */
+.v21 .sheet .sh-f .row .btn.k-fit{flex:0 0 auto}
 .v21 .k-anchor{position:relative}
 .v21 .k-wait{visibility:hidden}
 /* Row with an end control: the main part is one button, the end control sits beside it. */

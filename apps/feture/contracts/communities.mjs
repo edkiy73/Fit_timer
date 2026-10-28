@@ -3,6 +3,7 @@
 import * as z from 'zod';
 import { id, opId } from './platform.mjs';
 import { field, textLength } from './_text.mjs';
+import { PLATE_KEYS } from './_plates.mjs';
 
 const code = z.string().regex(/^[a-z][a-z0-9_-]{0,31}$/);
 const fields = {
@@ -15,7 +16,7 @@ const fields = {
     .refine(v => textLength(v.join('')) <= 1000, { message: 'too_long' }),
   placeId: id.nullable().optional(),
   coverAssetId: id.nullable().optional(),
-  plate: z.enum(['lilac', 'rose', 'sea', 'amber', 'moss', 'coal']).default('lilac'),
+  plate: z.enum(PLATE_KEYS).default('lilac'),
 };
 
 export const communitiesCommands = {
@@ -29,7 +30,7 @@ export const communitiesCommands = {
       opId, communityId: id, rev: z.int().positive(),
       name: fields.name.optional(), description: fields.description.optional(), topics: fields.topics.optional(),
       privacy: fields.privacy.optional(), joinQuestion: fields.joinQuestion, rules: fields.rules.optional(),
-      placeId: fields.placeId, coverAssetId: fields.coverAssetId, plate: z.enum(['lilac', 'rose', 'sea', 'amber', 'moss', 'coal']).optional(),
+      placeId: fields.placeId, coverAssetId: fields.coverAssetId, plate: z.enum(PLATE_KEYS).optional(),
     }),
   },
   'community.get': { profile: true, write: false, input: z.strictObject({ communityId: id, invite: z.string().max(80).optional() }) },

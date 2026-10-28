@@ -10,6 +10,7 @@ import { posts } from '../server/commands/posts.mjs';
 import { communities } from '../server/commands/communities.mjs';
 import { events } from '../server/commands/events.mjs';
 import { setup as baseSetup, op } from './fe-helpers.mjs';
+import { PLATE_KEYS, articlePlate } from '../contracts/_plates.mjs';
 
 const setup = () => baseSetup({ commands: { ...platform, ...me, ...social, ...posts, ...communities, ...events } });
 const draft = (body, extra = {}) => ({ type: 'post', body, audience: 'all', inFeed: true, topics: [], mediaIds: [], interests: [], tags: [], ...extra });
@@ -295,17 +296,21 @@ test('«Подписки» activity: a burst of likes carries up to 20 things wi
     const ids = [];
     for (let i = 0; i < 22; i++) ids.push(await publish(call, 'uc', c, draft(`Пост Ноа номер ${i + 1}`)));
     ids.push(await publish(call, 'uc', c, draft('Опрос Ноа', { poll: { question: 'Чай или кофе?', options: ['Чай', 'Кофе'] } })));
+    ids.push(await publish(call, 'uc', c, draft('Длинный текст статьи о доверии и границах.', { type: 'note', title: 'Статья без фото' })));
     for (const p of ids) await like(call, 'ua', a, p);
     const group = await communityOf(db, c);
     await db.query(`insert into feture.community_member (community_id, profile_id, listed) values ($1, $2, true)`, [group, a]);
     const r = await call('ub', b, { action: 'feed.list', tab: 'following', activity: ['likes', 'communities'] });
     assert.equal(r.status, 200, JSON.stringify(r));
     const likes = r.items.find(i => i.activity === 'likes');
-    assert.equal(likes.count, 23);
+    assert.equal(likes.count, 24);
     assert.equal(likes.items.length, 20);
-    assert.equal(likes.items[0].id, ids[22]); // newest first
-    assert.deepEqual([likes.items[0].poll, likes.items[0].photos, likes.items[0].videos, likes.items[0].thumb], [true, 0, 0, null]);
-    assert.equal(likes.items[1].poll, false);
+    assert.equal(likes.items[0].id, ids[23]); // newest first
+    // An article without photos still has a cover: the plate its id picks (owner, 28.10.2026).
+    assert.deepEqual([likes.items[0].article, likes.items[0].thumb, likes.items[0].plate], [true, null, articlePlate(ids[23])]);
+    assert.ok(PLATE_KEYS.includes(likes.items[0].plate));
+    assert.deepEqual([likes.items[1].poll, likes.items[1].photos, likes.items[1].videos, likes.items[1].thumb, likes.items[1].plate], [true, 0, 0, null, undefined]);
+    assert.equal(likes.items[2].poll, false);
     assert.ok(!('audience' in likes.items[0]) && !('first_asset' in likes.items[0]) && !('owner_profile_id' in likes.items[0]));
     const comm = r.items.find(i => i.activity === 'communities');
     assert.deepEqual([comm.items[0].id, comm.items[0].members, comm.items[0].cover], [group, 2, null]);

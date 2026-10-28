@@ -6,7 +6,7 @@ import {useFe} from './session';
 import {ReportSheet as AppReportSheet} from './report';
 import {namedPlate} from './create-community';
 
-/** What only the «Сообщества» screens share, built from the kit (src/fe/kit): the named plates, the report sheet,
+/** What only the «Комьюнити» screens share, built from the kit (src/fe/kit): the named plates, the report sheet,
  * the link helpers and the plural/fill text helpers. Controls themselves always come from the kit. */
 
 export const okRes=z.object({ok:z.literal(true)}).passthrough();

@@ -14,7 +14,7 @@ import {CommPlate,NamedPlate,ReportSheet,appUrl,copyLink,fill,okRes,pl} from './
 import {faceFields} from './faces';
 import {CommunityHostEntry,DiscussionHostSheet,EventApplicationLines,JoinSheet,MembersList,isCommunityHost} from './host';
 
-/** «Сообщества» (V21 C01 catalogue with interests and filters, C03 community page with discussions, events, members
+/** «Комьюнити» (V21 C01 catalogue with interests and filters, C03 community page with discussions, events, members
  * and rules, E03 event page) with the prototype's markup. Everything shown comes from the server; details the server
  * does not give (photos of communities, activity lines) are left out rather than made up. */
 
@@ -38,7 +38,8 @@ const memItem=prof.extend({role:z.string(),read_only:z.boolean()});
 const memList=z.object({ok:z.literal(true),count:z.number(),items:z.array(memItem).nullable(),next:z.string().nullable().optional()});
 const priceSchema=z.object({kind:z.string(),amount:z.number().optional(),currency:z.string().optional(),ticketUrl:z.string().optional()}).passthrough();
 const ev=z.object({id:z.uuid(),title:z.string(),kind:z.string(),format:z.enum(['online','offline']),area:z.string().nullable(),tz:z.string().nullable().optional(),starts_at:z.string(),ends_at:z.string(),
- price:priceSchema,requires_application:z.boolean(),state:z.string(),plate:z.string().nullable().optional(),place_id:z.string().nullable().optional(),community_id:z.string().nullable().optional()});
+ price:priceSchema,requires_application:z.boolean(),state:z.string(),plate:z.string().nullable().optional(),place_id:z.string().nullable().optional(),community_id:z.string().nullable().optional(),
+ /** Only on a cancelled event: the organizer's reason. */ cancel_reason:z.string().nullable().optional()});
 type Ev=z.infer<typeof ev>;
 /** An event in a list (catalog, «Скоро» in the feed). */
 export const eventRow=ev;
@@ -55,7 +56,7 @@ export type EventFull=z.infer<typeof event>;
 const evRes=z.object({ok:z.literal(true),event});
 const mineComm=z.object({ok:z.literal(true),hosting:z.array(z.object({id:z.uuid()}).passthrough()),member:z.array(z.object({id:z.uuid()}).passthrough()),requests:z.array(z.object({community_id:z.uuid()}).passthrough())});
 const mineEvRow=z.object({id:z.uuid(),ends_at:z.string(),state:z.string()}).passthrough();
-const mineEv=z.object({ok:z.literal(true),going:z.array(mineEvRow),waiting:z.array(mineEvRow),applications:z.array(mineEvRow),interested:z.array(mineEvRow),organizing:z.array(mineEvRow)}).passthrough();
+const mineEv=z.object({ok:z.literal(true),going:z.array(mineEvRow),waiting:z.array(mineEvRow),applications:z.array(mineEvRow),interested:z.array(mineEvRow),organizing:z.array(mineEvRow),cancelled:z.array(mineEvRow).optional()}).passthrough();
 const attList=z.object({ok:z.literal(true),count:z.number(),hidden:z.number(),items:z.array(prof)});
 const savedRes=z.object({ok:z.literal(true),items:z.array(z.object({kind:z.string(),target_id:z.string()}))});
 const rsvpRes=z.object({ok:z.literal(true),pending:z.unknown().optional()}).passthrough();
@@ -225,7 +226,8 @@ function StatusPill({s}:{s:MyStatus|undefined}){
   :s==='waiting'?<Pill tone="wait" icon={Clock}>{t('fe.cm.st.waiting')}</Pill>:<Pill tone="v">{t('fe.cm.st.interested')}</Pill>;
 }
 
-/** `eventCard()` — the big card, or the row (`row`) used for «Ближайшая встреча» and cancelled events. */
+/** `eventCard()` — the big card, or the row (`row`) used for «Ближайшая встреча» and cancelled events. A cancelled row
+ * says «Отменено» and, under it, the organizer's reason (lists show it only to people it concerns — server cancelledFor). */
 export function EventCard({e,row,status,org}:{e:Ev,row?:boolean,status?:MyStatus|undefined,org?:string|undefined}){
  const {t,locale}=useI18n();const navigate=useNavigate();const tz=evTz(e);
  const day=inTz(e.starts_at,tz,locale,{day:'numeric'});const mon=inTz(e.starts_at,tz,locale,{month:'short'}).replace('.','');
@@ -233,7 +235,7 @@ export function EventCard({e,row,status,org}:{e:Ev,row?:boolean,status?:MyStatus
  const pill=cancelled?<Pill tone="bad">{t('fe.cm.st.cancelled')}</Pill>:<StatusPill s={status}/>;
  const place=e.format==='online'?t('fe.ev.online'):e.area??t('fe.ev.offline');
  return <EventTile row={row} cover={<NamedPlate k={e.plate} icon={Calendar}/>} day={day} month={mon} place={place} placeIcon={e.format==='online'?Video:MapPin}
-  status={row?pill:cancelled||status?pill:undefined} kicker={t('fe.ev.kind.'+e.kind)} title={e.title} time={timeOf(e.starts_at,tz,locale)} {...(row?{org}:{price:priceText(e.price,t,locale)})}
+  status={row?pill:cancelled||status?pill:undefined} kicker={t('fe.ev.kind.'+e.kind)} title={e.title} time={timeOf(e.starts_at,tz,locale)} {...(row?{org:org??(cancelled&&e.cancel_reason||undefined)}:{price:priceText(e.price,t,locale)})}
   onClick={()=>navigate('/n/events/'+e.id)}/>;
 }
 
@@ -321,9 +323,9 @@ export function CommunityScreen(){
  const day=(iso:string)=>new Date(iso).toLocaleDateString(loc(locale),{day:'numeric',month:'long'});
  // My request as one block (owner 28.10.2026): the state, when it went and what comes next, «Отозвать» on the right.
  const status=!c||host||member?null
-  :c.request?<StatusCard tone="wait" icon={Clock} title={t('fe.host.join.pending')}
+  :c.request?<StatusCard tone="wait" icon={Clock} title={t(couple?'fe.host.join.pendingUs':'fe.host.join.pending')}
    sub={[c.request.at?fill(t('fe.cm.req.sent'),{date:day(c.request.at)}):'',t('fe.cm.req.next')].filter(Boolean).join(' · ')}
-   action={<Btn kind="soft" size="sm" auto fit onClick={()=>setLayer('withdraw')}>{t(couple?'fe.host.join.withdrawUs':'fe.host.join.withdraw')}</Btn>}/>
+   action={<Btn kind="soft" size="sm" auto fit onClick={()=>setLayer('withdraw')}>{t('fe.host.join.withdraw')}</Btn>}/>
   :c.waiting?<StatusCard tone="wait" icon={Users} title={t('fe.host.app.st.waiting')} sub={t('fe.cm.req.partnerSub')}
    action={<Btn kind="soft" size="sm" auto fit onClick={()=>setLayer('unwait')}>{t('fe.host.join.withdraw')}</Btn>}/>
   :c.declined?<StatusCard tone="bad" icon={X} title={t('fe.cm.req.declined')} sub={fill(t('fe.cm.req.declinedSub'),{date:day(c.declined.until)})}/>

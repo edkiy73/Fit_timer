@@ -72,7 +72,8 @@ export default [
      expect(p.body.indexOf('Первый абзац') < p.body.indexOf('![](media:') && p.body.indexOf('![](media:') < p.body.indexOf('Текст после фото'), 'photo where the caret was');
      // The article screen (own post, even in review): cover on top, the photo in the text.
      await until(async () => (await t.api('post.get', { postId: id })).post?.media?.every(m => m.src), 'photo copies ready', 120000);
-     await t.go('/n/feed/post/' + id); await t.see('.note-card.full .note-cover'); await t.see('.note-card.full .md-img img');
+     await t.go('/n/feed/post/' + id); await t.see('.note-card.full .note-hero img'); await t.see('.note-card.full .md-img img');
+     await t.see(`.note-card.full .note-hero .note-t:has-text("Статья ${mark}")`);
      // The viewer from a photo in the text: above the bars, the input bar and the toasts; «Назад» closes it, the screen stays.
      const url = t.page.url();
      await t.tap('.md-img button'); await t.see('.viewer.on');
@@ -86,9 +87,44 @@ export default [
      // The card in a list: cover + title + excerpt («Мои публикации» shows own posts in any state).
      await t.go('/n/me/posts');
      const card = t.page.locator('.note-card', { hasText: 'Статья ' + mark }).first(); await card.waitFor({ timeout: 20000 });
-     await card.locator('.note-cover').waitFor({ timeout: 15000 }); expect(await card.locator('.note-cover').count() === 1, 'one cover on the card');
+     await card.locator('.note-hero img').waitFor({ timeout: 15000 }); expect(await card.locator('.note-hero img').count() === 1, 'one cover on the card');
+     expect(!(await card.locator('.note-hero .plate').count()), 'a photo cover, not the plate');
+     expect((await card.locator('.note-hero .note-t').innerText()).includes('Статья ' + mark), 'the title is on the cover');
      expect((await card.locator('.note-x').innerText()).includes('Первый абзац'), 'excerpt on the card');
      expect(!(await card.locator('.md-img').count()), 'no photo of the text on the card');
+   } finally { await drop(t, id); }
+ } },
+
+ { name: 'article without photos: the cover is its plate, the title large on it in white over the scrim, the same plate on the card and the page; always 16:9 at 360 px', persona: 'full', route: '/n/feed/new?x=note', viewport: { width: 360, height: 780 }, run: async t => {
+   const mark = stamp(); let id;
+   try {
+     await t.fill('#ntitle', 'Статья без фото и с длинным заголовком о том, как говорить о границах ' + mark);
+     await t.page.locator(ed).click(); await t.page.keyboard.type('Первый абзац статьи ' + mark + ', без единой картинки, но с обложкой.');
+     await t.tap('.ctabar .btn.primary');
+     const p = await sent(t, mark); id = p.id;
+     expect(p.type === 'note' && !p.media.length, 'an article without media: ' + p.type + ' ' + p.media.length);
+     /** The plate's colours and the title's look on one card. */
+     const look = async loc => {
+       await loc.locator('.note-hero .plate').waitFor({ timeout: 20000 });
+       return loc.evaluate(el => { const pl = el.querySelector('.note-hero .plate'), tt = el.querySelector('.note-hero .note-t'), hero = el.querySelector('.note-hero');
+         const s = getComputedStyle(tt), b = tt.getBoundingClientRect(), h = hero.getBoundingClientRect();
+         return { plate: pl.getAttribute('style'), color: s.color, size: parseFloat(s.fontSize), text: tt.textContent, inside: b.top >= h.top - 1 && b.bottom <= h.bottom + 1, img: !!hero.querySelector('img'),
+           ratio: h.width / h.height, lines: Math.round((b.height - parseFloat(s.paddingTop) - parseFloat(s.paddingBottom)) / parseFloat(s.lineHeight)) }; });
+     };
+     await t.go('/n/me/posts');
+     const card = t.page.locator('.note-card', { hasText: mark }).first(); await card.waitFor({ timeout: 20000 });
+     const a = await look(card);
+     expect(!a.img && a.plate && a.plate.includes('--p1'), 'the plate is the cover: ' + JSON.stringify(a));
+     expect(a.text.includes('Статья без фото') && a.inside, 'the title sits on the cover: ' + JSON.stringify(a));
+     expect(a.color === 'rgb(255, 255, 255)' && a.size >= 22, 'large white title: ' + a.color + ' ' + a.size);
+     // Always 16:9 (owner 28.10.2026); a long title still fits the box at 360 px (at most 3 lines).
+     expect(Math.abs(a.ratio - 16 / 9) < 0.02 && a.lines <= 3, '16:9 and the title fits in 3 lines: ' + JSON.stringify(a));
+     await t.shot('article-plate-card');
+     await t.go('/n/feed/post/' + id);
+     const b = await look(t.page.locator('.note-card.full'));
+     expect(b.plate === a.plate, 'the same plate on the page as on the card: ' + b.plate + ' vs ' + a.plate);
+     expect(b.size > a.size, 'larger title on the article page: ' + b.size + ' vs ' + a.size);
+     expect(Math.abs(b.ratio - 16 / 9) < 0.02 && b.inside && b.lines <= 3, '16:9 on the page too, the title fits in 3 lines: ' + JSON.stringify(b));
    } finally { await drop(t, id); }
  } },
 

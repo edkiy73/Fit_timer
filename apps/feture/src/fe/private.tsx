@@ -262,8 +262,8 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged}:{profileId:st
    {reqs.items.map(r=><RequestCard key={r.id}
     person={<PersonLine av={<Av name={nameOf(r.profile)} seed={r.profile?.id??r.id} src={r.profile?.avatar}/>} label={nameOf(r.profile)} onOpen={()=>r.profile&&navigate('/n/people/'+r.profile.id)}
      name={<>{withAge(nameOf(r.profile),r.profile)}<NameBadges p={r.profile}/></>} sub={<>{cp?t('fe.mx.pr.asksUs'):t('fe.priv.asks')} · {when(r.created_at,locale)}</>}/>}
-    actions={<><Btn size="md" onClick={()=>setGrantFor(r)} disabled={busy}>{t(cp?'fe.priv.grantUs':'fe.priv.grant')}</Btn>
-     <Btn size="md" kind="soft" onClick={()=>void decline(r.id,nameOf(r.profile),changed)} disabled={busy}>{t(cp?'fe.priv.declineUs':'fe.priv.decline')}</Btn></>}>
+    actions={<><Btn size="md" onClick={()=>setGrantFor(r)} disabled={busy}>{t('fe.priv.grant')}</Btn>
+     <Btn size="md" kind="soft" onClick={()=>void decline(r.id,nameOf(r.profile),changed)} disabled={busy}>{t('fe.priv.decline')}</Btn></>}>
     <Chips className="mt12">{r.scopes.map(s=><Pill key={s}>{t('fe.priv.scope.'+s)}{r.alreadyOpen?.scopes.includes(s)?' · '+t('fe.ac.gr.open'):''}</Pill>)}</Chips>
    </RequestCard>)}
   </Stack></Group>}

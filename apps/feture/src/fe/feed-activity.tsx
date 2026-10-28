@@ -44,7 +44,7 @@ export function ActivityCardOf({a,onMenu}:{a:Act,onMenu:()=>void}){
     x.poll?t('fe.kit.act.poll').toLowerCase():'',x.interests?t('fe.kit.act.interests').toLowerCase():''].filter(Boolean).join(' · ');
    const author=au?personName({name:au.name??null,handle:au.handle??null}):'';
    return {key:x.id,title,sub:[author,what].filter(Boolean).join(' · '),label:author?`${title} — ${author}`:title,go:'/n/feed/post/'+x.id,
-    thumb:{src:s(x.thumb)||null,video:x.video===true,photos:num(x.photos),videos:num(x.videos),durationMs:typeof x.durationMs==='number'?x.durationMs:null,article:x.article===true,poll:x.poll===true,interests:x.interests===true,text}};
+    thumb:{src:s(x.thumb)||null,video:x.video===true,photos:num(x.photos),videos:num(x.videos),durationMs:typeof x.durationMs==='number'?x.durationMs:null,article:x.article===true,plate:s(x.plate)||null,poll:x.poll===true,interests:x.interests===true,text}};
   }
   if(a.activity==='events')return {key:x.id,title:s(x.title),sub:[date(x.startsAt),x.format==='online'?t('fe.w3.act.online'):''].filter(Boolean).join(' · '),label:s(x.title),go:'/n/events/'+x.id,
    thumb:{src:s(x.cover)||null,icon:Calendar}};

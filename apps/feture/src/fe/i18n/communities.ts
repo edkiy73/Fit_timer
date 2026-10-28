@@ -1,4 +1,4 @@
-/** Copy of the «Сообщества» tab (src/fe/communities.tsx, host.tsx, comm-kit.tsx): catalogue, filters, community and
+/** Copy of the «Комьюнити» tab (src/fe/communities.tsx, host.tsx, comm-kit.tsx): catalogue, filters, community and
  * event pages. Plural forms are «one|few|many» (RU) and «one|other» (EN). Both locales keep the same keys. */
 export const ru = {
   'fe.cm.search': 'Поиск',
