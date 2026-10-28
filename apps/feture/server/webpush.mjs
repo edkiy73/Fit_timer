@@ -132,7 +132,8 @@ export function webPushFromEnv(env, warn = code => console.warn('feture_fe_webpu
   // Values pasted from the key file may keep its JSON quotes or a trailing comma: «"BE…",» → «BE…».
   const clean = (/** @type {unknown} */ v) => String(v ?? '').trim().replace(/,$/, '').trim().replace(/^(["'])(.*)\1$/s, '$2').trim();
   const publicKey = clean(env.FE_VAPID_PUBLIC_KEY), privateKey = clean(env.FE_VAPID_PRIVATE_KEY);
-  const subject = clean(env.FE_VAPID_SUBJECT);
+  // A bare e-mail works as the contact too: «owner@example.com» → «mailto:owner@example.com».
+  const subject = ((v) => /^[^\s@:]+@[^\s@]+\.[^\s@]+$/.test(v) ? 'mailto:' + v : v)(clean(env.FE_VAPID_SUBJECT));
   const sender = publicKey && privateKey && subject ? createWebPush({ publicKey, privateKey, subject, ...(fetch ? { fetch } : {}) }) : null;
   if (!sender && !warned) {
     warned = true;
