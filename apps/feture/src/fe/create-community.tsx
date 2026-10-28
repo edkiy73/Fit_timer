@@ -203,7 +203,7 @@ function CommunityForm({edit,reload}:{edit?:EditableCommunity&{rev:number},reloa
    const map:Record<string,keyof Errors>={name:'name',description:'desc',topics:'topics',joinQuestion:'q0',rules:'rules',placeId:'where'};
    const rule:Record<string,FieldName>={name:'communityName',description:'communityDescription',joinQuestion:'joinQuestion',rules:'communityRule'};
    const next:Errors={};for(const {path,code} of serverFields(e)){const head=path.split('.')[0]!;const k=map[head];if(!k||next[k])continue;
-    next[k]=k==='where'?t('fe.cc.err.place'):path==='rules'&&code==='too_long'?t('fe.cc.err.rulesLong'):rule[head]?textErrorMessage(t,code,FIELD[rule[head]!]):t('fe.cc.err.fields');}
+    next[k]=k==='where'?t('fe.cc.err.place'):path==='rules'&&code==='too_long'?t('fe.cc.err.rulesLong'):rule[head]?textErrorMessage(t,code,FIELD[rule[head]!]):t('fe.val.invalid');}
    if(Object.keys(next).length){setErr(next);shakeFirstErr();}else setFailure(feErrorMessage(e,t));
   }else setFailure(feErrorMessage(e,t));
  };
