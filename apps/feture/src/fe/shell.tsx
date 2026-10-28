@@ -1,4 +1,5 @@
-import {Suspense,useCallback,useEffect,useRef,useState} from 'react';
+import {Suspense,useCallback,useEffect,useLayoutEffect,useRef,useState} from 'react';
+import {flushSync} from 'react-dom';
 import {MaintenanceGate} from './maintenance';
 import {PaywallHost} from './premium';
 import {Outlet,useLocation,useNavigate} from 'react-router';
@@ -157,7 +158,10 @@ function FeLayout(){
  // without the class the dock covers the bar. Screens render the bar themselves, so the frame watches for it.
  // The search screen's `.sbar` sits in the flow, not over the view: no room is kept for a floating `.bar` there.
  const main=useRef<HTMLElement>(null);const [cta,setCta]=useState(false);const [sbar,setSbar]=useState(false);
- useEffect(()=>{const m=main.current;if(!m)return;const sync=()=>{setCta(!!m.querySelector(':scope>.ctabar'));setSbar(!!m.querySelector(':scope>.sbar'));};sync();
+ // Applied before the next paint (flushSync in the observer's microtask): a frame without the class moved the bar
+ // up under the reader on every screen with one (owner 28.10.2026: «все прыгает при переходах»).
+ useLayoutEffect(()=>{const m=main.current;if(!m)return;const sync=()=>{const c=!!m.querySelector(':scope>.ctabar'),b=!!m.querySelector(':scope>.sbar');flushSync(()=>{setCta(c);setSbar(b);});};
+  setCta(!!m.querySelector(':scope>.ctabar'));setSbar(!!m.querySelector(':scope>.sbar'));
   const o=new MutationObserver(sync);o.observe(m,{childList:true});return ()=>o.disconnect();},[]);
  // The floating header's title fades as the screen's view scrolls (--sc 0→1 over the first 48px), so it never sits on
  // top of the posts; a new screen starts at the top again.

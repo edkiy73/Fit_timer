@@ -9,9 +9,9 @@ export const socialCommands = {
     input: z.strictObject({ opId, profileId: id, on: z.boolean(), alsoFor: z.enum(['partner', 'me']).optional() }),
   },
   'blocks.list': { profile: true, write: false, input: z.strictObject({}) },
-  'follow.set': { profile: true, write: true, rate: { kind: 'follow.set', max: 200, window: '1 day' }, input: z.strictObject({ opId, profileId: id, on: z.boolean() }) },
+  'follow.set': { profile: true, write: true, rate: { kind: 'follow.set', max: 1000, window: '1 day' }, input: z.strictObject({ opId, profileId: id, on: z.boolean() }) },
   // «Удалить из подписчиков» (V21 flwRemove21): the removed person is not told; «Вернуть» within 10 minutes.
-  'follower.remove': { profile: true, write: true, rate: { kind: 'follower.remove', max: 200, window: '1 day' }, input: z.strictObject({ opId, profileId: id }) },
+  'follower.remove': { profile: true, write: true, rate: { kind: 'follower.remove', max: 1000, window: '1 day' }, input: z.strictObject({ opId, profileId: id }) },
   'follower.restore': { profile: true, write: true, input: z.strictObject({ opId, profileId: id }) },
   'feedHide.set': {
     profile: true, write: true,

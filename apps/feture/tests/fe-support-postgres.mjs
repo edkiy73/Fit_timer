@@ -75,10 +75,10 @@ test('support: a ticket reaches the staff queue, the reply comes back to the per
     assert.equal((await call('us', null, { action: 'staff.supportReply', opId: op(), ticketId: own.ticket.id, body: 'Сам себе отвечу' })).status, 403);
     assert.ok(!(await call('us', null, { action: 'staff.supportQueue' })).items.some(x => x.id === own.ticket.id));
 
-    // Daily limit: five new tickets a day.
-    for (let i = 0; i < 4; i++) assert.equal((await call('ux', null, { action: 'support.create', opId: op(), body: 'Вопрос номер ' + i })).status, 200);
-    assert.equal((await call('ux', null, { action: 'support.create', opId: op(), body: 'Вопрос номер 4' })).status, 200);
-    assert.equal((await call('ux', null, { action: 'support.create', opId: op(), body: 'Вопрос номер 5' })).status, 429);
+    // Daily limit: ten new tickets a day.
+    for (let i = 0; i < 9; i++) assert.equal((await call('ux', null, { action: 'support.create', opId: op(), body: 'Вопрос номер ' + i })).status, 200);
+    assert.equal((await call('ux', null, { action: 'support.create', opId: op(), body: 'Вопрос номер 9' })).status, 200);
+    assert.equal((await call('ux', null, { action: 'support.create', opId: op(), body: 'Вопрос номер 10' })).status, 429);
     const journal = await db.query(`select action from feture.staff_action where action like 'support.%' order by created_at`);
     assert.deepEqual(journal.map(r => r.action), ['support.reply', 'support.close']);
   } finally { await pg.close(); }

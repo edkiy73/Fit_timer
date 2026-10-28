@@ -6,7 +6,7 @@ import { id, opId } from './platform.mjs';
 
 export const photosCommands = {
   'profile.photosSet': {
-    profile: true, write: true, rate: { kind: 'profile.photos', max: 100, window: '1 day' },
+    profile: true, write: true, rate: { kind: 'profile.photos', max: 500, window: '1 day' },
     input: z.strictObject({ opId, assetIds: z.array(id).max(6).refine(v => new Set(v).size === v.length, { message: 'duplicates' }) }),
   },
 };

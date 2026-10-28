@@ -11,16 +11,16 @@ const sideFits = (/** @type {any} */ v) => (v.kind === 'ds' ? ['dom', 'sub'].inc
 
 export const peopleCommands = {
   'people.search': {
-    profile: true, write: false, rate: { kind: 'people.search', max: 600, window: '1 day' },
+    profile: true, write: false, rate: { kind: 'people.search', max: 10000, window: '1 day' },
     input: z.strictObject({ q: z.string().trim().min(2).max(40) }),
   },
   'people.byNick': {
-    profile: true, write: false, rate: { kind: 'people.nick', max: 300, window: '1 day' },
+    profile: true, write: false, rate: { kind: 'people.nick', max: 1000, window: '1 day' },
     input: z.strictObject({ handle: z.string().trim().min(3).max(20) }),
   },
   'profile.compat': { profile: true, write: false, input: z.strictObject({ profileId: id }) },
   'link.propose': {
-    profile: true, write: true, rate: { kind: 'link.propose', max: 30, window: '1 day' },
+    profile: true, write: true, rate: { kind: 'link.propose', max: 60, window: '1 day' },
     input: z.strictObject({ opId, profileId: id, kind, mySide: side.optional(), vis: vis.default('all') }).refine(sideFits, { message: 'side_rules', path: ['mySide'] }),
   },
   'link.answer': { profile: true, write: true, input: z.strictObject({ opId, linkId: id, accept: z.boolean(), vis: vis.default('all') }) },

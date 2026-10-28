@@ -89,4 +89,39 @@ export default [
      await t.api('follow.set', { opId: t.uuid7(), profileId: A.personId, on: false });
    }
  } },
+ { name: '«Подписки»: a likes card with more than 20 likes lists every one of them when opened (world-mira\'s follows)', persona: 'basic', run: async t => {
+   // The test world: the people Мира follows have a «нравится 30 публикаций» card; this persona follows them for the
+   // run (a qa account: nobody else sees it) and unfollows in `finally`.
+   const mira = ((await t.api('people.search', { q: 'mira.vey' })).items ?? []).find(x => x.handle === 'mira.vey');
+   expect(mira, 'world-mira found');
+   const theirs = ((await t.api('profile.followers', { profileId: mira.id, following: true })).items ?? []).map(x => x.id);
+   const mine = new Set(((await t.api('profile.followers', { profileId: t.me.personId, following: true })).items ?? []).map(x => x.id));
+   const added = theirs.filter(id => !mine.has(id));
+   try {
+     for (const id of added) await t.api('follow.set', { opId: t.uuid7(), profileId: id, on: true });
+     const big = await until(async () => (await stream(t)).find(x => x.kind === 'activity' && x.activity === 'likes' && x.count > 20), 'a likes card with more than 20', 30000);
+     console.log(`   ${big.actor.name ?? big.actor.handle}: ${big.count} likes, ${big.items.length} sent with the card`);
+     const probe = big.from ? await t.api('activity.items', { actorId: big.actor.id, activity: 'likes', from: big.from, to: big.at }) : null;
+     const server = !!probe?.items;
+     await t.go('/n/feed'); await t.tap('[role="tab"]:has-text("Подписки")');
+     const lc = t.page.locator('article.actc').filter({ hasText: 'нравится ' + big.count }).first(); await lc.waitFor({ timeout: 30000 });
+     await lc.locator('.actc-more').click();
+     const rows = lc.locator('.actc-list .actc-p'); await rows.first().waitFor();
+     if (server) {
+       await until(async () => (await rows.count()) >= probe.items.length || null, 'every like listed', 15000);
+       const n = await rows.count();
+       console.log(`   open list: ${n} rows of ${big.count}`);
+       expect(n === probe.items.length && n > 20, `rows ${n}, server ${probe.items.length}`);
+       expect(!(await lc.locator('.actc-list .skel').count()), 'loading rows left in the list');
+       await t.shot('ac-all-likes');
+       await lc.locator('.actc-list .btn:has-text("Свернуть")').click();
+       expect(await lc.locator('.actc-strip .actc-th').count() === n, 'the strip has them all after folding');
+     } else {
+       console.log('   the server has no activity.items yet: the card lists what it carries');
+       expect(await rows.count() === big.items.length, 'the open list has every sent item');
+     }
+   } finally {
+     for (const id of added) await t.api('follow.set', { opId: t.uuid7(), profileId: id, on: false });
+   }
+ } },
 ];

@@ -10,8 +10,9 @@ Read this before adding or changing a command. Design background: `docs/server/S
 1. **Contract** in `contracts/<area>.mjs` (`<area>Commands`): `z.strictObject` input (no extra fields, bounded strings,
    ids as `id`, writes carry `opId`), `profile` (needs an acting profile), `write` (the profile must be writable),
    and a `rate` for anything a person could spam or use to probe (`{kind,max,window}`, or a function of the input when
-   variants differ — `discover.decide`: a like 500 a day, a pass 5000 a day). Every account also has 120 requests a
-   minute in all (`api/fe.mjs` quota), so a screen must not read per item what one list read can carry.
+   variants differ — `discover.decide`: a like 1000 a day, a pass 25000 a day). Every account also has 600 requests a
+   minute in all (`api/fe.mjs` quota), so a screen must not read per item what one list read can carry. Limits
+   are listed in «Rate limits» below; a new one goes there too.
 2. **Handler** in `server/commands/<area>.mjs`, exported through the area's `Object.fromEntries(...)` map. It receives
    `(q, {acting, account, input, cfg, signal, channels})` inside the request's transaction.
 3. **Test** in `tests/fe-<area>-postgres.mjs` on PGlite as the restricted `feture_api` role: the happy path, the
@@ -44,3 +45,53 @@ Read this before adding or changing a command. Design background: `docs/server/S
   `server/commands`).
 - A command without a contract, a contract without a handler, or a new command no test calls.
 - Schema changes outside `supabase/migrations/<timestamp>_fe_<area>.sql`.
+
+## Rate limits (owner 28.10.2026: «Увеличь рейтлимиты» — normal use never meets one)
+
+Normal use must never see a limit: reads are effectively unlimited, everyday writes have ~5× headroom over a heavy
+day, and only what can pester or probe other people (invites, reports, likes, requests, sign-in style checks) stays
+moderately limited. The app retries a read refused with 429 twice in the background (2.5 s, then 6 s) and never shows
+a rate-limit error for a read. Old → new (28.10.2026):
+
+| Limit | Old | New |
+|---|---|---|
+| Account quota, all commands (`api/fe.mjs`) | 120 / min | 600 / min |
+| Per-IP quota (`api/fe.mjs`) | 240 / min | 1200 / min |
+| Reads: `people.search` | 600 / day | 10000 / day |
+| `people.byNick` (existence probe) | 300 / day | 1000 / day |
+| `discover.count` | 300 / day | 3000 / day |
+| `post.likers`, `poll.voters` | 2000 / day | 20000 / day |
+| `nick.check` (existence probe) | 30 / 10 min | 100 / 10 min |
+| `premium.giftCheck` (existence probe) | 60 / hour | 200 / hour |
+| `couple.linkPeek` (token probe) | 30 / day | 60 / day |
+| `chat.typing` | 3000 / day | 30000 / day |
+| `chat.send` | 2000 / day | 10000 / day |
+| `chat.media` | 300 / day | 1500 / day |
+| `reaction.set` | 1000 / day | 5000 / day |
+| `reply.create` | 300 / day | 1500 / day |
+| `post.publish` | 50 / day | 250 / day |
+| `follow.set`, `follower.remove` | 200 / day | 1000 / day |
+| `discover.decide` pass | 5000 / day | 25000 / day |
+| `discover.decide` like | 500 / day | 1000 / day |
+| `like.send` | 300 / day | 600 / day |
+| `event.draft`, `event.rsvp` | 200 / day | 1000 / day |
+| `event.apply` | 30 / day | 150 / day |
+| `community.join` | 50 / day | 250 / day |
+| `album.create` | 100 / day | 500 / day |
+| `gallery.bulk` | 300 / day | 1500 / day |
+| `profile.photos` | 100 / day | 500 / day |
+| `location.set`, `push.register` | 20 / day | 100 / day |
+| `post.disputeExplain` | 20 / day | 100 / day |
+| `support.reply` | 30 / day | 150 / day |
+| `premium.restore` | 10 / day | 50 / day |
+| `link.propose` | 30 / day | 60 / day |
+| `couple.invite`, `couple.link`, `couple.linkAccept` | 10 / day | 20 / day |
+| `event.submit`, `event.announce` | 10 / day | 20 / day |
+| `report.create` | 10 / day | 30 / day |
+| private part requests (`LIMITS.requestsPerDay`) | 10 / day | 20 / day |
+| `community.create`, `appeal.create`, `place.submit`, `support.create`, `account.export` | 5 / day | 10 / day |
+| `verification.ageStart`, `verification.photoStart` | 5 / day | 10 / day |
+| `premium.purchase`, `premium.gift` | 20 / day | 40 / day |
+| `tag.object` (`DISPUTE_LIMITS`, owner rule) | 30 / day | unchanged |
+| DSA notices without an account (`api/fe.mjs` notice) | 5 / hour per IP | unchanged (anonymous, abuse only) |
+

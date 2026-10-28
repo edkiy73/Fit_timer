@@ -6,7 +6,7 @@ import {Camera,Check,ChevronDown,ChevronRight,Clock,Eye,HeartOff,Users,Image as 
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,Ask as KitAsk,Av,Btn,Card,Empty,Group,H,IconBtn,Note,PhotoAdd,PhotoSlot,PhotoSlots,Row,Seg,SelectRow,Sheet,Skel,ToggleRow} from './kit';
 import {AgeCheckLink,useAgeResume} from './age-check';
-import {dropReadCache,useFe,useRealtime} from './session';
+import {dropReadCache,useFe,useRealtime,useShown} from './session';
 import {PrivateLayer} from './private';
 import {BellButton,countsRes} from './inbox';
 import {MineLayer} from './mine';
@@ -60,13 +60,15 @@ function LayerSeg({value,onChange,dots}:{value:Layer,onChange:(v:Layer)=>void,do
 }
 
 export function MeTab(){
- const {state,acting,setActing,call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();
- const [p,setP]=useState<Profile|null>(null);const [settings,setSettings]=useState<Settings|null>(null);
- const [options,setOptions]=useState<z.infer<typeof option>[]>([]);
+ const {state,acting,setActing,call,peek}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();
+ // A revisit draws what «Я» showed last on its first frame (per acting profile); the one wave of reads replaces it.
+ const [p,setP]=useShown<Profile|null>('me.p',()=>acting?peek('profile.get',{profileId:acting.id},profileRes)?.profile??null:null);
+ const [settings,setSettings]=useShown<Settings|null>('me.settings',()=>peek('profile.settings',{},settingsRes)?.settings??null);
+ const [options,setOptions]=useShown<z.infer<typeof option>[]>('me.options',()=>peek('catalog.get',{},catalogRes,{asAccount:true})?.options??[]);
  const [error,setError]=useState<unknown>(null);
  const [layer,setLayerState]=useState<Layer>(()=>{const l=new URLSearchParams(location.hash.split('?')[1]??'').get('layer');return l==='priv'||l==='mine'||l==='vis'?l:'profile';});
  const [notice,setNotice]=useState('');const [tick,setTick]=useState(0);const [switching,setSwitching]=useState(false);
- const [todo,setTodo]=useState(0);const [dots,setDots]=useState<{links:number,reqs:number,vis:number}>({links:0,reqs:0,vis:0});
+ const [todo,setTodo]=useShown('me.todo',()=>0);const [dots,setDots]=useShown<{links:number,reqs:number,vis:number}>('me.dots',()=>({links:0,reqs:0,vis:0}));
  // A link to «Я» with `?layer=` while «Я» is already open (notifications, «Моё» redirects) switches the layer too.
  const {search}=useLocation();
  useEffect(()=>{const l=new URLSearchParams(search).get('layer');setLayerState(l==='priv'||l==='mine'||l==='vis'?l:'profile');},[search]);
@@ -82,7 +84,10 @@ export function MeTab(){
   Promise.all([call('profile.get',{profileId:id},profileRes),call('profile.settings',{},settingsRes),Promise.allSettled(parts)])
    .then(([a,b])=>{setP(a.profile);setSettings(b.settings);}).catch(setError);
  },[call,acting]);
- useEffect(()=>{setP(null);load();},[load]);
+ useEffect(()=>{load();},[load]);
+ // The settings screens' reads go out while «Я» is looked at, so opening one draws it whole (its `peek`).
+ useEffect(()=>{const id=setTimeout(()=>{const any=z.unknown();for(const [a,o] of [['settings.get',{asAccount:true}],['verification.ageStatus',{asAccount:true}],['verification.photoStatus',{asAccount:true}],
+  ['notifications.settings.get',{asAccount:true}],['premium.status',{}],['blocks.list',{}]] as const)call(a,{},any,o).catch(()=>{});},1200);return ()=>clearTimeout(id);},[call]);
  useEffect(()=>{call('catalog.get',{},catalogRes,{asAccount:true}).then(r=>setOptions(r.options)).catch(()=>{});},[call]);
  // «Нужно решить» and the layers' dots: proposals of links, access requests, couple settings waiting for a partner.
  const pullCounts=useCallback(()=>{

@@ -342,6 +342,28 @@ test('«Подписки» activity: a burst of likes carries up to 20 things wi
     assert.ok(!('audience' in likes.items[0]) && !('first_asset' in likes.items[0]) && !('owner_profile_id' in likes.items[0]));
     const comm = r.items.find(i => i.activity === 'communities');
     assert.deepEqual([comm.items[0].id, comm.items[0].members, comm.items[0].cover], [group, 2, null]);
+
+    // «+N» opens all of them (activity.items): the card's person, kind and moments, newest first, in pages.
+    assert.ok(likes.from && likes.from <= likes.at, JSON.stringify([likes.from, likes.at]));
+    const card = { action: 'activity.items', actorId: a, activity: 'likes', from: likes.from, to: likes.at };
+    const all = await call('ub', b, card);
+    assert.equal(all.status, 200, JSON.stringify(all));
+    assert.deepEqual(all.items.map(i => i.id), [...ids].reverse());
+    assert.equal(all.next, null);
+    assert.deepEqual(all.items.slice(0, 20).map(i => i.id), likes.items.map(i => i.id)); // the same things the card carries
+    assert.ok(!('audience' in all.items[0]) && !('owner_profile_id' in all.items[0]));
+    // Not the card's window: nothing; a reversed window is refused.
+    const before = new Date(Date.parse(likes.from) - 1000).toISOString();
+    assert.deepEqual((await call('ub', b, { ...card, from: new Date(Date.parse(likes.from) - day).toISOString(), to: before })).items, []);
+    assert.equal((await call('ub', b, { ...card, from: likes.at, to: before })).status, 400);
+    // The same rules as the card: Alex's «Кто видит мою активность» → «никому» shows nothing to Kira; Alex sees his own.
+    await setting(db, a, 'activity_vis', 'off');
+    assert.deepEqual((await call('ub', b, card)).items, []);
+    assert.equal((await call('ua', a, card)).items.length, 24);
+    await setting(db, a, 'activity_vis', 'all');
+    // A block either way hides it.
+    await call('uc', c, { action: 'block.set', opId: op(), profileId: b, on: true });
+    assert.deepEqual((await call('ub', b, card)).items, []);
   } finally { await pg.close(); }
 });
 

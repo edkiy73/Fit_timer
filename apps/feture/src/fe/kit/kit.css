@@ -325,11 +325,12 @@ button.pill{cursor:pointer}
 .v21 .viewer:has(>.vw-track.back){background:rgba(6,4,6,calc(1 - var(--pull,0)))}
 .v21 .viewer:has(>.vw-track.pull)>:not(.vw-track){opacity:calc(1 - var(--pull,0) * 2)}
 
-/* The post viewer (owner 28.10.2026, TikTok-like): like / comment / save / share on the right, the author and two lines
-   of the text at the bottom over a scrim; a tap on the text opens the post. */
-.v21 .vw-rail{position:absolute;right:var(--s-2);bottom:calc(var(--s-9) * 3 + var(--safe-b));z-index:3;display:grid;gap:var(--s-3);justify-items:center}
-.v21 .vw-rail>button{display:grid;justify-items:center;gap:2px;min-width:48px;padding:var(--s-1) 0;border:0;background:none;color:#fff;font:var(--t-xs);font-weight:700;cursor:pointer;text-shadow:0 1px 3px rgba(0,0,0,.6)}
-.v21 .vw-rail>button>svg{width:28px;height:28px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))}
+/* The post viewer (owner 28.10.2026, TikTok-like): like and comments, small and low on the right (save and share live
+   in the post); the author and two lines of the text at the bottom over a scrim; a tap on the text opens the post.
+   Only the two buttons take taps: the rail's own box lets them through, so the right third pages everywhere else. */
+.v21 .vw-rail{position:absolute;right:var(--s-1);bottom:calc(var(--s-9) * 2 + var(--safe-b));z-index:3;display:grid;gap:var(--s-1);justify-items:center;pointer-events:none}
+.v21 .vw-rail>button{pointer-events:auto;display:grid;justify-items:center;gap:2px;min-width:44px;padding:var(--s-1) 0;border:0;background:none;color:#fff;font:var(--t-xs);font-weight:700;cursor:pointer;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.v21 .vw-rail>button>svg{width:24px;height:24px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))}
 .v21 .vw-rail>button.on{color:var(--accent)}
 .v21 .vw-rail>button:disabled{opacity:.5}
 .v21 .vw-cap{position:absolute;left:0;right:0;bottom:0;z-index:2;display:grid;gap:var(--s-1);padding:var(--s-8) calc(64px + var(--s-3)) calc(var(--s-6) + var(--safe-b) + var(--s-3)) var(--s-4);

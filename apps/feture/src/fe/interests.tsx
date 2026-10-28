@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,EyeOff,History,KeyRound,MessageCircle,Pencil,Plus,Sparkles,Trash2,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,AnswerScale,Bar,Btn,Card,Chip,Chips,Empty,Group,IconBtn,Note,Progress,Row,SearchInput,SectionLabel,Sheet,Skel,View} from './kit';
-import {useFe,usePartnerApproves} from './session';
+import {useFe,usePartnerApproves,useShown} from './session';
 import {when} from './feed';
 
 /** Interests (V21 X01 #meJars, X02, X04) with the prototype's markup: one capsule per interest — the fill is the
@@ -37,14 +37,17 @@ export const sortJars=(list:Interest[])=>[...list.filter(j=>!j.mark).sort((a,b)=
 
 /** Catalog topics and the acting profile's interests. */
 export function useInterests(){
- const {call,acting}=useFe();
- const [items,setItems]=useState<Interest[]|null>(null);const [cats,setCats]=useState<Category[]>([]);const [topics,setTopics]=useState<Topic[]>([]);
+ const {call,acting,peek}=useFe();
+ // The last answers on the first frame («Я» and the interests screen draw whole on a revisit), then read again.
+ const [items,setItems]=useShown<Interest[]|null>('int.items',()=>acting?peek('interests.list',{profileId:acting.id},listRes)?.items??null:null);
+ const cat0=()=>peek('catalog.get',{},catalogRes,{asAccount:true});
+ const [cats,setCats]=useState<Category[]>(()=>cat0()?.categories??[]);const [topics,setTopics]=useState<Topic[]>(()=>cat0()?.topics??[]);
  const [error,setError]=useState<unknown>(null);
  const load=useCallback(()=>{
   if(!acting)return;setError(null);
   call('interests.list',{profileId:acting.id},listRes).then(r=>setItems(r.items)).catch(setError);
  },[call,acting]);
- useEffect(()=>{setItems(null);load();},[load]);
+ useEffect(()=>{load();},[load]);
  useEffect(()=>{call('catalog.get',{},catalogRes,{asAccount:true}).then(r=>{setCats(r.categories);setTopics(r.topics);}).catch(()=>{});},[call]);
  return {items,cats,topics,error,load};
 }
