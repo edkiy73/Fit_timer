@@ -23,12 +23,13 @@ let catalogCache:Promise<z.infer<typeof catalogRes>>|null=null;
 
 export function useTopics(){
  const {call}=useFe();const {locale}=useI18n();
- const [data,setData]=useState<z.infer<typeof catalogRes>|null>(null);
+ const [data,setData]=useState<z.infer<typeof catalogRes>|null>(null);const [failed,setFailed]=useState(false);
  useEffect(()=>{let live=true;
   catalogCache??=call('catalog.get',{},catalogRes,{asAccount:true}).catch(e=>{catalogCache=null;throw e;});
-  catalogCache.then(d=>{if(live)setData(d);},()=>{});return ()=>{live=false;};},[call]);
+  catalogCache.then(d=>{if(live)setData(d);},()=>{if(live)setFailed(true);});return ()=>{live=false;};},[call]);
  const name=useCallback((id:string)=>{const v=data?.topics.find(o=>o.id===id);return v?(locale==='en'?v.en:v.ru):id;},[data,locale]);
- return {topics:data?.topics??[],cats:data?.categories??[],name,ready:!!data};
+ // ready: loaded or given up on (names then show as ids), so a screen waiting for it never waits forever.
+ return {topics:data?.topics??[],cats:data?.categories??[],name,ready:!!data||failed};
 }
 
 /* ---------- md(): safe Markdown, FetLife-like ---------- */

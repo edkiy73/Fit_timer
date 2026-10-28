@@ -14,7 +14,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://anrhayozrhrmiwexmbhw.supabase.co" crossorigin>
   <style>/* first paint before the app script: the V21 page colour, not a white flash */html{background:#F5F3F0}@media (prefers-color-scheme:dark){html{background:#111012}}</style>
-  <link href="https://fonts.googleapis.com/css2?family=Geologica:wght,CRSV,SHRP@300..900,0..1,0..100&family=Onest:wght@400..800&display=swap" rel="stylesheet">
+  <!-- Fonts never hold the app back: the stylesheet loads without blocking the first frame or the app script
+       (text shows in the fallback font for a moment on the very first visit, as with display=swap anyway). -->
+  <link href="https://fonts.googleapis.com/css2?family=Geologica:wght,CRSV,SHRP@300..900,0..1,0..100&family=Onest:wght@400..800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Geologica:wght,CRSV,SHRP@300..900,0..1,0..100&family=Onest:wght@400..800&display=swap" rel="stylesheet"></noscript>
   <link rel="icon" type="image/svg+xml" href="/icon.svg">
   <link rel="manifest" href="/site.webmanifest">
 </head>

@@ -40,7 +40,7 @@ import { webPushFromEnv } from '../server/webpush.mjs';
 
 const require = createRequire(import.meta.url);
 const { store } = require('../../../packages/core/server/store');
-const { allowedOrigin, rateOkScoped } = require('../../../packages/core/server/util');
+const { allowedOrigin, rateOkScoped, ipHash } = require('../../../packages/core/server/util');
 const Supabase = require('../../../packages/core/server/supabase');
 const CorePush = require('../../../packages/core/server/push');
 const CoreMail = require('../../../packages/core/server/mail');
@@ -52,7 +52,7 @@ const configured = !!(env.FETURE_DATABASE_URL && env.FETURE_ID_PEPPER);
 // One small pool per warm instance; Supavisor transaction mode needs prepare:false.
 const POOL = 5;
 const sql = configured
-  ? postgres(env.FETURE_DATABASE_URL, { prepare: false, max: POOL, idle_timeout: 20, connect_timeout: 8, types: POSTGRES_TYPES })
+  ? postgres(env.FETURE_DATABASE_URL, { prepare: false, max: POOL, idle_timeout: 60, connect_timeout: 8, types: POSTGRES_TYPES })
   : null;
 
 /** Media backend: Cloudflare R2 + media domain when configured (after launch), otherwise the prelaunch
@@ -99,7 +99,7 @@ const signals = db && realtimeOn ? createSignals({
 /** A verified Core session is reused for 30 s per warm instance (keyed by a hash of the identity headers), so most
  * requests skip one store round trip. A sign-out reaches every instance within 30 s. */
 const AUTH_TTL = 30000;
-/** @type {Map<string, {at: number, core: any}>} */
+/** @type {Map<string, {at: number, core: Promise<any>}>} */
 const authCache = new Map();
 /** @param {any} req */
 async function cachedAuth(req) {
@@ -107,9 +107,12 @@ async function cachedAuth(req) {
   const key = createHash('sha256').update([h('x-fit-email'), h('x-fit-device'), h('x-fit-token')].join('\n')).digest('base64url');
   const hit = authCache.get(key);
   if (hit && Date.now() - hit.at < AUTH_TTL) return hit.core;
-  const core = await authenticate(req, store);
+  // The promise is cached, not the result: the screen's first requests arrive together and share one check.
+  const core = authenticate(req, store);
   if (authCache.size > 5000) authCache.clear();
-  authCache.set(key, { at: Date.now(), core });
+  const entry = { at: Date.now(), core };
+  authCache.set(key, entry);
+  core.catch(() => { if (authCache.get(key) === entry) authCache.delete(key); }); // a refusal or an outage is never kept
   return core;
 }
 
@@ -124,11 +127,15 @@ const handler = db && createFeHandler({
   commands: { ...platform, ...me, ...access, ...couples, ...staff, ...social, ...posts, ...moderation, ...communities, ...events, ...photos, ...gallery, ...discover, ...chats, ...inbox, ...people, ...premium, ...verification, ...accounts, ...dsa, ...support },
   authenticate: req => cachedAuth(req),
   quota: async (req, coreKey) => { // coreKey: Core account hash, only for the ephemeral rate-limit key
-    // Same budget as /api/domain: per account across devices and IPs, plus a per-IP cap.
+    // Same budget as /api/domain: per account across devices and IPs, plus a per-IP cap (the same keys
+    // rateOkScoped(req, 'feture-fe-ip', 240, '', 60, true) uses). Both counters and their expiry go in ONE store
+    // request: each separate one is a full round trip to the store (60–300 ms seen in the access log).
     const window = Math.floor(Date.now() / 60000);
-    // Both counters at once: they are independent store round trips.
-    const [count, ipOk] = await Promise.all([store.incr(`rl:feture-fe-account:${coreKey}:${window}`, 65), rateOkScoped(req, 'feture-fe-ip', 240, '', 60, true)]);
-    return count <= 120 && ipOk;
+    const account = `rl:feture-fe-account:${coreKey}:${window}`;
+    const ip = `rl:feture-fe-ip:${ipHash(req)}:${window}`;
+    const [count, , ipCount] = await store.pipe([['INCR', account], ['EXPIRE', account, '65'], ['INCR', ip], ['EXPIRE', ip, '65']]);
+    const ipMax = process.env.ALLOW_MEMORY_STORE === '1' ? 240 * 50 : 240;
+    return Number(count) <= 120 && Number(ipCount) <= ipMax;
   },
   cors,
   log: event => console.info('feture_fe_access', JSON.stringify(event)),
