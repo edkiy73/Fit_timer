@@ -2,9 +2,9 @@ import {Fragment,useCallback,useEffect,useState,type CSSProperties,type ReactNod
 import {useLocation,useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Camera,Check,ChevronDown,ChevronRight,Clock,Eye,HeartOff,Users,Image as ImageIcon,Newspaper,Plus,Settings,Star,Trash2,X} from 'lucide-react';
+import {Camera,ChevronDown,ChevronRight,ClipboardList,Clock,Eye,HeartOff,PenLine,Users,Newspaper,Settings,Star,Trash2,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Ask as KitAsk,Av,Btn,Card,Empty,Group,H,IconBtn,Note,PhotoAdd,PhotoSlot,PhotoSlots,Row,Seg,SelectRow,Sheet,Skel,ToggleRow} from './kit';
+import {AddCard,Alert,Ask as KitAsk,Av,Btn,Card,Empty,Group,H,IconBtn,Note,PhotoAdd,PhotoSlot,PhotoSlots,Row,Seg,SelectRow,Sheet,Skel,ToggleRow} from './kit';
 import {AgeCheckLink,useAgeResume} from './age-check';
 import {dropReadCache,useFe,useRealtime} from './session';
 import {PrivateLayer} from './private';
@@ -126,11 +126,12 @@ export function MeTab(){
       {notice&&<Alert kind="ok" noIcon>{notice}</Alert>}
       {acting.kind==='couple'&&<><CouplePending base={p} tick={tick} onDecided={msg=>{setNotice(msg);load();}}/><CoupleMembers/></>}
       <PhotosBlock p={p} settings={settings} onChanged={load}/>
-      <Group title={t('fe.me.basics')} action={<AudTag k="all"/>}>
+      <Group id="meBasics" title={t('fe.me.basics')} action={<AudTag k="all"/>}>
        <Card className="blk-btn" label={t('fe.me.editBasics')} onClick={()=>navigate('/n/me/edit?only=basics')}>
         <span className="blk-name">{name}{p.age&&p.showAge!==false?', '+p.age:''}{p.city&&(locale==='en'?p.city.en:p.city.ru)?' · '+(locale==='en'?p.city.en:p.city.ru):''}</span>
-        <span className="blk-bio">{p.bio?p.bio.replace(/[*_~`>#[\]()]/g,'').slice(0,240):t('fe.mx.noBio')}</span><span className="chv"><ChevronRight/></span>
+        {p.bio&&<span className="blk-bio">{p.bio.replace(/[*_~`>#[\]()]/g,'').slice(0,240)}</span>}<span className="chv"><ChevronRight/></span>
        </Card>
+       {!p.bio&&<AddCard icon={PenLine} title={t(acting.kind==='couple'?'fe.mp.bioAddUs':'fe.mp.bioAdd')} sub={t(acting.kind==='couple'?'fe.mp.bioAddSubUs':'fe.mp.bioAddSub')} onClick={()=>navigate('/n/me/edit?only=basics')}/>}
       </Group>
       <DetailsBlock p={p} label={label}/>
       {acting.kind==='person'&&couple&&<StatusHint p={p} coupleId={couple.id} onDone={load}/>}
@@ -158,12 +159,12 @@ function DetailsBlock({p,label}:{p:Profile,label:(kind:string,code:string)=>stri
  const rows=DETAIL_ROWS.filter(([f])=>!cp||COUPLE_ROWS.includes(f)).map(([field,kind])=>{const v=p.details[field];const codes=Array.isArray(v)?v as string[]:typeof v==='string'?[v]:[];
   return codes.length?[field,t(kind==='status'?'fe.mx.f.status':'fe.reg.kind.'+kind),codes.map(c=>label(kind,c)).join(', ')]:null;}).filter((x):x is string[]=>!!x);
  const title=cp?t('fe.mx.detailsCouple'):t('fe.me.details');
- return <Group title={title} action={<AudTag k={p.detailsVis??'all'}/>}>
-  <Card className="blk-btn" label={t('fe.mx.editOf',{title})} onClick={()=>navigate('/n/me/edit?only=details')}>
-   {rows.length?<dl className="kv">{rows.map(([f,k,v])=><Fragment key={f}><dt>{k}</dt><dd>{v}</dd></Fragment>)}</dl>
-    :<p className="blk-empty">{cp?t('fe.mx.detailsEmptyCouple'):t('fe.mx.detailsEmpty')}</p>}
+ return <Group id="meDet" title={title} action={<AudTag k={p.detailsVis??'all'}/>}>
+  {rows.length?<Card className="blk-btn" label={t('fe.mx.editOf',{title})} onClick={()=>navigate('/n/me/edit?only=details')}>
+   <dl className="kv">{rows.map(([f,k,v])=><Fragment key={f}><dt>{k}</dt><dd>{v}</dd></Fragment>)}</dl>
    <span className="chv"><ChevronRight/></span>
   </Card>
+   :<AddCard icon={ClipboardList} title={t('fe.mp.detailsAdd')} sub={cp?t('fe.mx.detailsEmptyCouple'):t('fe.mx.detailsEmpty')} onClick={()=>navigate('/n/me/edit?only=details')}/>}
  </Group>;
 }
 
@@ -211,8 +212,7 @@ function PhotosBlock({p,settings,onChanged}:{p:Profile,settings:Settings,onChang
  },[waiting,p.id,call,onChanged]);
  const edit=()=>navigate('/n/me/edit?only=media');
  if(!items.length)return <Group className="ph20" id="mePh" title={t('fe.me.photos')} action={<AudTag k="all"/>}>
-  <button type="button" className="ph-empty" onClick={edit}><span className="pe-ic"><Camera/></span>
-   <span className="tx"><b>{cp?t('fe.mx.ph.addCouple'):t('fe.me.photoAdd')}</b><small>{settings.discoverMode==='visible'?(cp?t('fe.mx.ph.needCouple'):t('fe.mx.ph.need')):t('fe.mx.ph.mainHint')}</small></span><Plus/></button>
+  <AddCard icon={Camera} title={cp?t('fe.mx.ph.addCouple'):t('fe.me.photoAdd')} sub={settings.discoverMode==='visible'?(cp?t('fe.mx.ph.needCouple'):t('fe.mx.ph.need')):t('fe.mx.ph.mainHint')} onClick={edit}/>
  </Group>;
  const write=async(ids:string[],msg:string,prev?:string[])=>{
   setBusy(true);
@@ -246,12 +246,11 @@ function PhotosBlock({p,settings,onChanged}:{p:Profile,settings:Settings,onChang
  </Group>;
 }
 
-/** `galleryOwn20()` — «Все» and the albums (wave 5, src/fe/gallery.tsx), «Загрузить» to the composer with photos. */
+/** `galleryOwn20()` — «Все» and the albums (wave 5, src/fe/gallery.tsx), «Загрузить» to the composer with photos;
+ * empty — the one «add» card, no header action (like every empty block of «Я»). */
 function GalleryBlock({p}:{p:Profile}){
- const {t}=useI18n();const navigate=useNavigate();
- return <Group className="gal20" id="meGal" title={t('fe.mx.gal')} action={<button type="button" onClick={()=>navigate('/n/feed/new?x=media')}><Plus/>{t('fe.mx.gal.upload')}</button>}>
-  <MeGallery profileId={p.id} couple={p.kind==='couple'}/>
- </Group>;
+ const {t}=useI18n();
+ return <MeGallery profileId={p.id} couple={p.kind==='couple'} title={t('fe.mx.gal')}/>;
 }
 
 /** `meVisLayer()` — Discover, the profile card, likes, activity, mentions; the couple's own group comes after. */

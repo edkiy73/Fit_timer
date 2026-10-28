@@ -185,7 +185,6 @@ test('invitations: a week of quiet after a decline, ten a day, deleted couples k
     const { runJobs } = await import('../server/jobs.mjs');
     await runJobs(db, { scan: null });
     assert.equal((await db.query('select count(*)::int n from feture.interest where profile_id = $1', [pair]))[0].n, 0);
-    assert.equal((await db.query('select count(*)::int n from feture.interest_history where profile_id = $1', [pair]))[0].n, 0);
     assert.ok(x);
   } finally { await pg.close(); }
 });

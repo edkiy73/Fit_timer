@@ -186,12 +186,19 @@ const run = {
       const dto = await mediaDto(cfg.media, m, { viewerProfileId: viewer.profileId, place: own ? 'own' : 'private', showExplicit: !!acc.show_explicit });
       if (dto) shown.push(own ? dto : { ...dto, watermark });
     }
+    // The «По доступу» interests are part of what the private part opens (with «Описание»): the owner sees them all
+    // here, a viewer with the info grant sees them as `interests.list` shows them (a hard limit only as a limit).
+    const jars = own || scopes.includes('info') ? await q.query(
+      `select i.topic_id, i.value, i.mark, i.dir from feture.interest i join feture.topic t on t.id = i.topic_id
+       where i.profile_id = $1 and i.vis = 'granted' and ($2 or not t.hidden) order by t.position`, [input.profileId, own]) : [];
+    const interests = jars.map(r => !own && r.mark === 'hard' ? { topicId: r.topic_id, mark: 'hard' }
+      : { topicId: r.topic_id, value: r.value, mark: r.mark, dir: r.dir, ...(own ? { vis: 'granted' } : {}) });
     const [g] = own ? [] : await q.query(
       `select until from feture.access_grant where owner_profile_id = $1 and viewer_profile_id = $2 and revoked_at is null`, [input.profileId, viewer.profileId]);
     return {
       exists: true, own, on: o.private_on, scopes, until: g?.until ?? null,
       text: own || scopes.includes('info') ? (o.text ?? '') : null,
-      media: shown,
+      media: shown, interests,
       ...(own ? { available, counts: await openCounts(q, input.profileId) } : await (async () => {
         // Asking again for more (or for a longer term) works like the first request.
         const blocker = await requestBlocker(q, viewer, input.profileId);

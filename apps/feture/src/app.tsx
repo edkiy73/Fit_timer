@@ -32,7 +32,7 @@ const PremiumScreen=screen(accountExtra,'PremiumScreen'),SecurityScreen=screen(a
 const CompatScreen=screen(profileExtras,'CompatScreen'),HistoryScreen=screen(profileExtras,'HistoryScreen'),MePreviewScreen=screen(profileExtras,'MePreviewScreen');
 const AccessScreen=screen(access,'AccessScreen'),LinksScreen=screen(links,'LinksScreen'),LinkEditScreen=screen(links,'LinkEditScreen');
 const FollowsScreen=screen(browse,'FollowsScreen'),GalleryScreen=screen(browse,'GalleryScreen'),SearchScreen=screen(browse,'SearchScreen'),TopicScreen=screen(browse,'TopicScreen');
-const InterestsScreen=screen(interests,'InterestsScreen'),InterestsHistoryScreen=screen(interests,'InterestsHistoryScreen'),StaffScreen=screen(staff,'StaffScreen');
+const InterestsScreen=screen(interests,'InterestsScreen'),StaffScreen=screen(staff,'StaffScreen');
 const AgeCheckScreen=screen(ageCheck,'AgeCheckScreen'),PhotoCheckScreen=screen(photoCheck,'PhotoCheckScreen');
 const PostScreen=screen(feed,'PostScreen'),ComposeScreen=screen(feed,'ComposeScreen'),EditPostScreen=screen(feed,'EditPostScreen');
 const CreateCommunityScreen=screen(createCommunity,'CreateCommunityScreen'),EditCommunityScreen=screen(createCommunity,'EditCommunityScreen');
@@ -335,7 +335,6 @@ export const routes: RouteObject[] = [
         {path:'me/saved', element:<SavedScreen />},
         {path:'me/pair', element:<PairScreen />},
         {path:'me/interests', element:<InterestsScreen />},
-        {path:'me/interests/history', element:<InterestsHistoryScreen />},
         {path:'staff', element:<StaffScreen />},
         {path:'*', element:<Navigate to="/n/feed" replace/>}
       ]

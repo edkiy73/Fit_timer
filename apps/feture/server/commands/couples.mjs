@@ -98,7 +98,7 @@ export async function deleteCouple(q, profileId, reason) {
   await closeAll(q, profileId, 'couple_stopped');
   await closeOutgoing(q, profileId);
   await q.query(`update feture.partner_approval set state = 'cancelled', decided_at = now() where profile_id = $1 and state = 'pending'`, [profileId]);
-  for (const t of ['interest', 'interest_history', 'private_part', 'profile_location']) await q.query(`delete from feture.${t} where profile_id = $1`, [profileId]);
+  for (const t of ['interest', 'private_part', 'profile_location']) await q.query(`delete from feture.${t} where profile_id = $1`, [profileId]);
   await q.query(`update feture.profile_details set bio = '', city_id = null, roles = '{}', formats = '{}', seeks = '{}' where profile_id = $1`, [profileId]);
   const media = await q.query(
     `update feture.media_asset set state = 'removed', removed_at = now() where owner_profile_id = $1 and state not in ('removed', 'blocked') returning id`, [profileId]);

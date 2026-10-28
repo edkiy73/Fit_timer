@@ -159,7 +159,7 @@ test('settings and visibility: per profile, per account, notification defaults a
   } finally { await pg.close(); }
 });
 
-test('interests: scale or mark, direction rules, visibility for others, owner-only history with a lossless cursor', async () => {
+test('interests: scale or mark, direction rules, visibility for others, remove', async () => {
   const { pg, db, call, person, coupleOf } = await setup();
   try {
     const a = await person('ua', 'Alex'), b = await person('ub', 'Kira');
@@ -176,20 +176,7 @@ test('interests: scale or mark, direction rules, visibility for others, owner-on
     assert.deepEqual((await call('ub', b, { action: 'interests.list', profileId: a })).items, [{ topicId: 'filming', mark: 'hard' }]);
 
     assert.equal((await call('ua', a, { action: 'interests.remove', opId: op(), topicId: 'shibari' })).removed, true);
-    // Page through the whole history one row at a time: every row comes exactly once.
-    const all = [];
-    let cursor;
-    do {
-      const page = await call('ua', a, { action: 'interests.history', limit: 1, ...(cursor ? { cursor } : {}) });
-      all.push(...page.items);
-      cursor = page.next;
-    } while (cursor);
-    const [{ n }] = await db.query('select count(*)::int n from feture.interest_history where profile_id = $1', [a]);
-    assert.equal(all.length, n);
-    assert.equal(new Set(all.map(h => h.id)).size, n);
-    assert.ok(all.some(h => h.topicId === 'bondage' && h.kind === 'vis' && h.to.vis === 'granted'));
-    assert.equal((await call('ua', a, { action: 'interests.history', cursor: 'not-a-cursor' })).status, 400);
-    assert.equal((await call('ub', a, { action: 'interests.history' })).status, 403);
+    assert.equal((await call('ua', a, { action: 'interests.list', profileId: a })).items.length, 2);
 
     // As a couple: applies at once while the partner does not ask to approve; waits for the partner once they do.
     const pc = await coupleOf([a, b]);

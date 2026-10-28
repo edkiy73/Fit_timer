@@ -239,7 +239,7 @@ export function DetailsGroup({p}:{p:PersonProfile}){
   <Card><dl className="kv">{rows.map(([k,v])=><Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>)}</dl></Card></Group>;
 }
 
-const jarItem=z.object({topicId:z.string(),value:z.number().nullable().optional(),mark:z.string().nullable().optional(),dir:z.array(z.string()).nullable().optional()}).passthrough();
+const jarItem=z.object({topicId:z.string(),value:z.number().nullable().optional(),mark:z.string().nullable().optional(),dir:z.array(z.string()).nullable().optional(),vis:z.string().nullable().optional()}).passthrough();
 const jarsRes=z.object({ok:z.literal(true),items:z.array(jarItem)});
 type Jar=z.infer<typeof jarItem>;
 const sortJars=(l:Jar[])=>[...l.filter(j=>!j.mark).sort((a,b)=>(b.value??0)-(a.value??0)),...l.filter(j=>j.mark==='discuss'),...l.filter(j=>j.mark==='hard')];
@@ -308,10 +308,13 @@ function GalleryGroup({p,onOpen,inert}:{p:PersonProfile,onOpen:(i:number)=>void,
 }
 
 /** Interests group of another profile (pubJars → jarShelf, six then «Ещё N»). */
-function InterestsGroup({profileId,name,inert}:{profileId:string,name:string,inert?:boolean|undefined}){
+function InterestsGroup({profileId,name,inert,preview}:{profileId:string,name:string,inert?:boolean|undefined,preview?:'all'|'granted'|undefined}){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const topic=useTopics();const [items,setItems]=useState<Jar[]>([]);
  const [open,setOpen]=useState<string|null>(null);
- useEffect(()=>{setItems([]);call('interests.list',{profileId},jarsRes).then(r=>setItems(r.items)).catch(()=>{});},[call,profileId]);
+ // «Как видят» reads the own list (every audience): keep only what that audience gets — public ones, plus «По доступу»
+ // with access; «Только я» never; a hard limit only as a limit, as the server sends it to others.
+ useEffect(()=>{setItems([]);call('interests.list',{profileId},jarsRes).then(r=>setItems(!preview?r.items
+  :r.items.filter(j=>(j.vis??'public')==='public'||(preview==='granted'&&j.vis==='granted')).map(j=>j.mark==='hard'?{topicId:j.topicId,mark:'hard'}:j))).catch(()=>{});},[call,profileId,preview]);
  if(!items.length)return null;
  // Someone else's interest opens the comparison (V21 openTopic); the acting profile's own opens the topic.
  const own=profileId===acting?.id;
@@ -326,7 +329,7 @@ export function ProfileBody({p,inert,preview,onOpen}:{p:PersonProfile,inert?:boo
  return <>
   <DetailsGroup p={p}/>
   <LinksSection profileId={p.id} inert={inert}/>
-  <InterestsGroup profileId={p.id} name={personName(p)||'?'} inert={inert}/>
+  <InterestsGroup profileId={p.id} name={personName(p)||'?'} inert={inert} preview={preview}/>
   <GalleryGroup p={p} onOpen={onOpen} inert={inert}/>
   <PrivateVault profileId={p.id} name={personName(p)} {...(preview?{preview}:{})}/>
   <Activity profileId={p.id} inert={inert} preview={!!preview}/>

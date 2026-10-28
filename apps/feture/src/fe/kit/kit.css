@@ -353,3 +353,9 @@ button.pill{cursor:pointer}
 .v21 .k-video video::-webkit-media-controls-start-playback-button,
 .v21 .k-video video::-webkit-media-controls-overlay-enclosure{display:none!important;-webkit-appearance:none}
 .v21 .mgrid-box{display:contents}
+
+/* AddCard (owner, 29.10.2026): one «add» card for every empty block — the hint wraps to two lines at most, and
+   a card under another block in the same group keeps the rhythm gap. */
+.v21 .ph-empty .tx small{display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.35}
+.v21 .ph-empty:disabled{opacity:.55}
+.v21 .grp>*+.ph-empty{margin-top:var(--s-2)}
