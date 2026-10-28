@@ -133,3 +133,15 @@ Canonical Core auth and PostgreSQL-owned FetUre domain data remain the architect
 - **Three gates, do not conflate:** (1) `PR/CI+review passed → safe code merge to main` (agent-owned); (2) `milestone UX/device acceptance` (agent does available browser/device QA and asks owner to assess the assembled feature at milestones, **not each PR**); (3) `launch/live enablement` (explicit owner decision where required). Unavailable external device/provider/live multi-account checks stay open as milestone acceptance, not as a blanket blocker for merging reversible, safely gated pre-launch implementation.
 - **Risk escalation:** auth/permissions, private photos or data disclosure, adult proof, moderation, billing and irreversible operations need a focused independent security/privacy review plus existing tests. A staged private-media UI may merge after that review **only while publication and sharing remain server-denied until their separate consent, staff review and authorization gate**. Do not auto-approve or switch on public exposure. Stop and ask the owner for *actual product/policy choices*, launching real users, payments, final legal text, public release of sensitive media, shared-system destructive changes, production SQL/migrations without prior authorization, or app store publication. Shared Core changes also need cross-app CI and impact review, but not a routine owner visual sign-off.
 - **Manual session vs unattended automation:** an agent explicitly working in an active user chat may choose and execute a safe merge. No background bots, scheduled autonomous development, GitHub auto-merge without agent review, separately paid AI APIs, or model-driven Actions. The owner can still request review-only ("проверь") or explicitly hold a PR; honor those requests.
+
+## Одно действие — один компонент (owner rule, 2026-10-29)
+
+Things with the same meaning use **one shared component** everywhere: composer row (`Composer`, `src/fe/create-entry.tsx`),
+«Создать» sheet (`CreateSheet`), post/article editor (`ComposeScreen`; in a community only «Кто видит» becomes a fixed
+line and there is no album), report (`ReportSheet`), empty block add-card (`AddCard`), empty state (`Empty`), link copy
+(`useCopyLink`, `src/fe/share.tsx`), follow (`FollowButton`, `src/fe/follow.tsx`), like, avatar (`Av`/`ActingAv`), media
+grid, viewer, uploader, list paging (`LoadMore`), pull-to-refresh, confirmation (`Ask`), toasts (`useToast`), button rows
+(`Actions`). A variant is a **prop**, never a copy; a PR that adds a second version is wrong. Screens follow the kit
+layout grid (`--gut`, `--page-max`, `--block-gap`) and check them at 390, 768 and 1280 px. `npm run check:kit` fails
+on known copies outside their home (`ONE` in `tools/check-fe-kit.mjs`) and ratchets margin classes, «nothing here»
+notes and hand-made button rows.

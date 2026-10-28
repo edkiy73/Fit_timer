@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {AtSign,CircleCheck,Search,ShieldCheck} from 'lucide-react';
+import {Users,AtSign,CircleCheck,Search,ShieldCheck} from 'lucide-react';
 import {Alert,Ask,Btn,Card,Check,Chip,Chips,ChoiceChips,Empty,Field,H,Input,Note,Pill,Row,SearchInput,SectionLabel,Select,Sheet,Skel,Stack,Text,TextArea} from './kit';
 import {useTopics} from './post-parts';
 import {useChecks} from './kit/validate';
@@ -265,7 +265,7 @@ function Picker({title,items,base,label,sel,max,onToggle,onClear,onClose}:{title
   {groups.map(([g,list])=>{const vis=list.filter(hit);if(!list.length||query&&!vis.length)return null;
    return <section key={g} className={'fsec'+(query?' searching':'')}><SectionLabel>{g}</SectionLabel>
     <Chips>{vis.map(o=><Chip key={o.code} on={sel.includes(o.code)} onClick={()=>onToggle(o.code)}>{label(o)}</Chip>)}</Chips></section>;})}
-  {query&&!total&&<Note className="sh-empty">{t('fe.onb.findNone')}</Note>}
+  {query&&!total&&<Empty compact icon={Search} title={t('fe.onb.findNone')}/>}
  </Sheet>;
 }
 
@@ -320,7 +320,7 @@ function FirstSteps({profileId,about,onBack}:{profileId:string,about:About,onBac
     <p className="fhint mt8">{t('fe.onb2.interestsNote')}</p>
    </section>
    <section className="fin"><div className="fin-t"><b>{t('fe.onb2.comms')}</b></div>
-    {comms===null?<Skel kind="card" rows={2}/>:!comms.length?<Note>{t('fe.onb2.noComms')}</Note>
+    {comms===null?<Skel kind="card" rows={2}/>:!comms.length?<Empty compact icon={Users} title={t('fe.onb2.noComms')}/>
      :<Card list>{comms.map(c=><Row key={c.id} title={c.name} sub={[c.privacy==='open'?t('fe.onb2.open'):t('fe.onb2.closed'),t('fe.onb2.members',{n:c.members})].join(' · ')}
       onClick={()=>setPreview(c)} end={joins[c.id]
        ?<Btn kind="soft" size="sm" fit onClick={()=>setJoins(({[c.id]:_,...rest})=>rest)}>{c.privacy==='open'?t('fe.onb2.unjoin'):t('fe.onb2.unrequest')}</Btn>
@@ -335,26 +335,26 @@ function FirstSteps({profileId,about,onBack}:{profileId:string,about:About,onBac
 }
 
 /** The short preview of a community during sign-up (no app screens inside the sign-up — V21 AUTH-017): what it is,
- * its rules, the join question of a closed one, «Принимаю правила». */
+ * its rules, the join question of a closed one; the button accepts the rules. */
 function CommPreview({c,profileId,chosen,onClose,onJoin}:{c:Comm,profileId:string,chosen?:Join|undefined,onClose:()=>void,onJoin:(j:Join)=>void}){
  const {call}=useFe();const {t}=useI18n();const {name:tname}=useTopics();const fid=useId();
  const [full,setFull]=useState<CommFull|null>(null);const [failed,setFailed]=useState(false);
- const [answer,setAnswer]=useState(chosen?.answer??'');const [ok,setOk]=useState(!!chosen);const [err,setErr]=useState<{answer?:string,ok?:string}>({});
+ const [answer,setAnswer]=useState(chosen?.answer??'');const [err,setErr]=useState<{answer?:string}>({});
  useEffect(()=>{call('community.get',{communityId:c.id},commFull,{profileId}).then(r=>setFull(r.community)).catch(()=>setFailed(true));},[call,c.id,profileId]);
  const closed=c.privacy!=='open';const q=closed?full?.joinQuestion??null:null;
  const checks=useChecks(q?{answer:'joinAnswer'}:{},{answer});
- const join=()=>{const e:{answer?:string,ok?:string}={};
+ // The button itself accepts the rules (owner 29.10.2026: no separate «Принимаю правила» box).
+ const join=()=>{const e:{answer?:string}={};
   const textOk=checks.submit();
-  if(textOk&&q&&answer.trim().length<10)e.answer=t('fe.host.join.answerShort');if(!ok)e.ok=t('fe.host.join.acceptNeeded');
+  if(textOk&&q&&answer.trim().length<10)e.answer=t('fe.host.join.answerShort');
   setErr(e);if(textOk&&!Object.keys(e).length)onJoin({answer:closed?answer.trim():''});};
  return <Sheet title={c.name} sub={[closed?t('fe.onb2.closed'):t('fe.onb2.open'),t('fe.onb2.members',{n:c.members})].join(' · ')} onClose={onClose}
-  foot={<Btn onClick={join} disabled={!full}>{closed?t('fe.onb2.request'):t('fe.onb2.join')}</Btn>}>
+  foot={<Btn onClick={join} disabled={!full}>{closed?t('fe.host.join.acceptSend'):t('fe.host.join.acceptJoin')}</Btn>}>
   {failed?<Alert kind="err">{t('fe.onb2.previewFailed')}</Alert>:!full?<Skel kind="card" rows={2}/>:<Stack gap={4}>
    {full.description&&<Text>{full.description}</Text>}
    {full.topics.length>0&&<Chips>{full.topics.map(x=><Chip key={x}>{tname(x)}</Chip>)}</Chips>}
    {full.rules.length>0&&<><SectionLabel>{t('fe.onb2.rules')}</SectionLabel><Card><ol className="rules">{full.rules.map((r,i)=><li key={i}>{r}</li>)}</ol></Card></>}
-   {q&&<Field id={fid} name="answer" label={q} error={checks.error('answer')??err.answer} hint={t('fe.host.join.answerHint')}><TextArea id={fid} rows={3} {...checks.input('answer')} value={answer} placeholder={t('fe.host.join.answerPh')} onChange={e=>{setAnswer(e.target.value);setErr(x=>x.ok?{ok:x.ok}:{});}}/>{checks.counter('answer')}</Field>}
-   <Field error={err.ok}><Check on={ok} error={!!err.ok} onChange={setOk}>{t('fe.host.join.accept')}</Check></Field>
+   {q&&<Field id={fid} name="answer" label={q} error={checks.error('answer')??err.answer} hint={t('fe.host.join.answerHint')}><TextArea id={fid} rows={3} {...checks.input('answer')} value={answer} placeholder={t('fe.host.join.answerPh')} onChange={e=>{setAnswer(e.target.value);setErr({});}}/>{checks.counter('answer')}</Field>}
   </Stack>}
  </Sheet>;
 }

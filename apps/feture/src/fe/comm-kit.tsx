@@ -1,7 +1,6 @@
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Users,type LucideIcon} from 'lucide-react';
-import {publicOrigin} from '../api-url';
 import {useFe} from './session';
 import {ReportSheet as AppReportSheet} from './report';
 import {namedPlate} from './create-community';
@@ -31,8 +30,4 @@ export function ReportSheet({targetType,targetId,onClose,onDone}:{targetType:'co
  return <AppReportSheet targetType={targetType} targetId={targetId} onClose={onClose} onDone={()=>onDone(t(acting?.kind==='couple'?'fe.ca.reported':'fe.cm.reported'))}/>;
 }
 
-/** Copies a link; says so either way. */
-export async function copyLink(url:string){
- try{await navigator.clipboard.writeText(url);return true;}catch{return false;}
-}
-export const appUrl=(path:string)=>`${publicOrigin()}/#${path}`;
+export {appUrl,copyLink} from './share';

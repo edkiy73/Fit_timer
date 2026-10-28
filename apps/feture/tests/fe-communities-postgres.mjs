@@ -151,6 +151,40 @@ test('discussions: members write, closed ones are for members, read-only cannot 
   } finally { await pg.close(); }
 });
 
+test('one editor everywhere (owner 29.10.2026): articles, interests and drafts in a community; a discussion stays the community\'s', async () => {
+  const { pg, db, call, a, b, make } = await world();
+  try {
+    const open = await make('ua', a, { name: 'Клуб статей', privacy: 'open' });
+    await call('ub', b, { action: 'community.join', opId: op(), communityId: open, rulesAccepted: true });
+    // An article inside the community: published there, never in the main feed, everyone the community shows it to.
+    const note = draft('Длинный текст статьи для участников клуба, больше двадцати знаков.', { type: 'note', title: 'Статья клуба', communityId: open, audience: 'followers' });
+    const d = await call('ub', b, { action: 'post.saveDraft', opId: op(), post: note });
+    assert.equal(d.status, 200, JSON.stringify(d));
+    assert.equal((await call('ub', b, { action: 'post.publish', opId: op(), postId: d.id })).state, 'published');
+    const art = (await call('ub', b, { action: 'post.get', postId: d.id })).post;
+    assert.deepEqual([art.type, art.audience, art.inFeed, art.communityId], ['note', 'all', false, open]);
+    assert.ok((await call('ua', a, { action: 'community.discussions', communityId: open })).items.some(i => i.id === d.id && i.title === 'Статья клуба'));
+    assert.ok(!(await call('ua', a, { action: 'feed.list', tab: 'forYou' })).items.some(i => i.id === d.id));
+    // «Мои интересы» on a discussion: the author's public rated interests, as anywhere.
+    const [topic] = (await db.query(`select id from feture.topic where not hidden and category_id <> 'limits' order by id limit 1`)).map(r => r.id);
+    await db.query(`insert into feture.interest (profile_id, topic_id, value, vis) values ($1, $2, 7, 'public')`, [b, topic]);
+    const withInts = await call('ub', b, { action: 'post.saveDraft', opId: op(), post: draft('Мои интересы', { communityId: open, interests: [topic] }) });
+    assert.equal(withInts.status, 200, JSON.stringify(withInts));
+    // A draft stays in its community: saving it again cannot move it to the feed or widen it, an edit neither.
+    const again = await call('ub', b, { action: 'post.saveDraft', opId: op(), postId: withInts.id, post: draft('Мои интересы, правка', { interests: [topic], audience: 'followers' }) });
+    assert.equal(again.status, 200, JSON.stringify(again));
+    const [row] = await db.query('select community_id, audience, in_feed from feture.post where id = $1', [withInts.id]);
+    assert.deepEqual([row.community_id, row.audience, row.in_feed], [open, 'all', false]);
+    assert.equal((await call('ub', b, { action: 'post.publish', opId: op(), postId: withInts.id })).state, 'published');
+    const live = (await call('ub', b, { action: 'post.get', postId: withInts.id })).post;
+    assert.equal(live.interests[0].topicId, topic);
+    const ed = await call('ub', b, { action: 'post.edit', opId: op(), postId: live.id, rev: live.rev, post: draft('Мои интересы, ещё правка', { interests: [topic], audience: 'granted' }) });
+    assert.equal(ed.status, 200, JSON.stringify(ed));
+    const [after] = await db.query('select community_id, audience, in_feed from feture.post where id = $1', [live.id]);
+    assert.deepEqual([after.community_id, after.audience, after.in_feed], [open, 'all', false]);
+  } finally { await pg.close(); }
+});
+
 test('review fixes: refs on update, wider privacy keeps old discussions for members, bans cover couples, couples read, votes and host limits', async () => {
   const { pg, db, call, coupleOf, a, b, c, make, decide } = await world();
   try {

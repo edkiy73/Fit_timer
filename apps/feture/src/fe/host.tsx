@@ -14,6 +14,7 @@ import {FIELD,serverFields,textError,textErrorMessage,type FieldName} from './ki
 import {appUrl,copyLink,fill,okRes,pl,plWord} from './comm-kit';
 import {EventCard} from './communities';
 import {faceFields,NameBadges,withAge} from './faces';
+import {useCopyLink} from './share';
 
 /** Tools for community hosts and event organisers (V21 C04/C05 join, C03 «Участники» / C09, C10 manage, C11 requests;
  * E03 «Участие», E06 apply, E15 organiser panel, E16 applications, E17/E18 attendees). The server decides who may do
@@ -100,14 +101,13 @@ export function CommunityHostEntry({c}:{c:{id:string,me?:{role:string,state:stri
 /** C04/C05 — the join sheet: the rules, the join question for a closed community, «Принимаю правила». */
 export function JoinSheet({c,invite,onClose,onDone}:{c:{id:string,name:string,privacy:string,rules:string[],joinQuestion?:string|null},invite?:string|undefined,onClose:()=>void,onDone:(msg:string)=>void}){
  const {call,acting}=useFe();const {t}=useI18n();
- const [answer,setAnswer]=useState('');const [accepted,setAccepted]=useState(false);
- const [err,setErr]=useState<{answer?:string|undefined,ok?:string|undefined}>({});const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const [answer,setAnswer]=useState('');
+ const [err,setErr]=useState<{answer?:string|undefined}>({});const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
  const couple=acting?.kind==='couple';const closed=c.privacy!=='open';const q=closed?c.joinQuestion??null:null;const toPartner=usePartnerApproves();
  const send=async()=>{
-  const e:{answer?:string|undefined,ok?:string|undefined}={};
+  const e:{answer?:string|undefined}={};
   const ea=q?textError(t,'joinAnswer',answer):undefined;
   if(ea)e.answer=ea;else if(q&&answer.trim().length<10)e.answer=t('fe.host.join.answerShort');
-  if(!accepted)e.ok=t('fe.host.join.acceptNeeded');
   setErr(e);if(Object.keys(e).length){shakeFirstErr();return;}
   setBusy(true);setFailure('');
   try{
@@ -116,14 +116,13 @@ export function JoinSheet({c,invite,onClose,onDone}:{c:{id:string,name:string,pr
   }catch(x){const f=serverFields(x).find(f=>f.path==='answer');if(f){setErr({answer:textErrorMessage(t,f.code,FIELD.joinAnswer)});shakeFirstErr();}else setFailure(feErrorMessage(x,t));}finally{setBusy(false);}
  };
  return <Sheet title={closed?t('fe.host.join.requestTitle'):t('fe.host.join.rulesTitle')} onClose={onClose}
-  foot={<Btn onClick={send} busy={busy} disabled={busy}>{toPartner?t('fe.ca.toPartner'):closed?t(couple?'fe.host.join.sendCouple':'fe.host.join.send'):t(couple?'fe.host.join.joinCouple':'fe.host.join.join')}</Btn>}>
-  <Card className="flat"><ol className="rules">{c.rules.map((r,i)=><li key={i}>{r}</li>)}</ol></Card>
-  {q&&<div className="mt16"><Field name="answer" label={q} value={answer} onChange={v=>{setAnswer(v);if(err.answer)setErr({...err,answer:undefined});}} err={err.answer} textarea rows={3} check="joinAnswer"
-   ph={t('fe.host.join.answerPh')} hint={t('fe.host.join.answerHint')}/></div>}
-  <div className={'field mt16'+(err.ok?' err':'')}>
-   <Check on={accepted} error={!!err.ok} onChange={v=>{setAccepted(v);setErr({...err,ok:undefined});}}>{t('fe.host.join.accept')}{err.ok&&<FErr>{err.ok}</FErr>}</Check>
-  </div>
-  {failure&&<Alert kind="err" icon={Info} className="mt12">{failure}</Alert>}
+  foot={<Btn onClick={send} busy={busy} disabled={busy}>{toPartner?t('fe.host.join.acceptPartner'):closed?t(couple?'fe.host.join.acceptSendCouple':'fe.host.join.acceptSend'):t(couple?'fe.host.join.acceptJoinCouple':'fe.host.join.acceptJoin')}</Btn>}>
+  <Stack gap={4}>
+   <Card className="flat"><ol className="rules">{c.rules.map((r,i)=><li key={i}>{r}</li>)}</ol></Card>
+   {q&&<Field name="answer" label={q} value={answer} onChange={v=>{setAnswer(v);if(err.answer)setErr({});}} err={err.answer} textarea rows={3} check="joinAnswer"
+    ph={t('fe.host.join.answerPh')} hint={t('fe.host.join.answerHint')}/>}
+   {failure&&<Alert kind="err" icon={Info}>{failure}</Alert>}
+  </Stack>
  </Sheet>;
 }
 
@@ -138,7 +137,7 @@ export function DiscussionHostSheet({d,host=true,onClose,onDone,onReport}:{d:{id
   try{await call('discussion.host',{opId:newOpId(),postId:d.id,change},okRes);onDone(change==='excludePopular'||change==='includePopular'?t('fe.w7.disc.'+change):t('fe.cm.disc.'+change),change);}
   catch(x){toast(feErrorMessage(x,t),{type:'err'});}finally{setBusy(false);}
  };
- const copy=async()=>{const okc=await copyLink(appUrl('/n/feed/post/'+d.id));onClose();toast(t(okc?'fe.w7.disc.copied':'fe.cm.copyFailed'),{type:okc?'ok':'warn'});};
+ const copyLink=useCopyLink();const copy=()=>{onClose();void copyLink('/n/feed/post/'+d.id,t('fe.w7.disc.copied'));};
  if(confirm)return <Ask icon={Trash2} danger title={t('fe.host.disc.removeQ')} text={t('fe.host.disc.removeText')} ok={t('fe.host.disc.remove')} busy={busy} onOk={()=>void act('remove')} onCancel={()=>setConfirm(false)}/>;
  return <Sheet title={t('fe.cm.discussion')} sub={d.title||undefined} onClose={onClose}><Card list>
   {host&&<Row icon={d.pinned?PinOff:Pin} tone="v" title={d.pinned?t('fe.host.disc.unpin'):t('fe.host.disc.pin')} noChev disabled={busy} onClick={()=>void act(d.pinned?'unpin':'pin')}/>}

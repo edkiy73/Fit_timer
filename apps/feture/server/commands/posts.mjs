@@ -36,6 +36,16 @@ const MENTION = /@([A-Za-z0-9_.]{3,20})/g;
 /** @param {Acting | null} acting @returns {Acting} */
 const need = acting => { if (!acting) throw new Error('acting profile missing'); return acting; };
 
+/** A discussion stays its community's whatever the editor sends (owner 29.10.2026: one editor everywhere): seen by
+ * everyone the community shows it to, never in the main feed, never in a gallery album. Everything else a post has
+ * (articles, interests, mentions, topics, drafts) works the same. @param {any} f @param {string | null | undefined} communityId */
+function asDiscussion(f, communityId) {
+  const { communityId: _, ...rest } = f;
+  if (!communityId) return rest;
+  if (f.albumId) fail(400, 'invalid_input', { fields: ['albumId'] });
+  return { ...rest, audience: 'all', inFeed: false, communityId };
+}
+
 /** Discussions: the community must be published and the acting profile allowed to write there (members who are not
  * read-only; a couple when it or both partners are members). @param {Q} q @param {string | null | undefined} communityId @param {Acting} acting */
 async function requireCommunityWriter(q, communityId, acting) {
@@ -209,6 +219,7 @@ async function doPublish(q, postId, ownerProfileId) {
 export async function doEdit(q, postId, actor, rev, f) {
   const [p] = await q.query('select * from feture.post where id = $1 and owner_profile_id = $2 for update', [postId, actor.profileId]);
   if (!p) fail(404, 'not_found');
+  f = asDiscussion(f, p.community_id);
   if (p.state === 'draft' && p.created_by !== actor.accountId) fail(404, 'not_found'); // a couple's draft is its writer's alone
   if (p.rev !== rev) fail(409, 'conflict', { rev: p.rev });
   if (p.state === 'draft') {
@@ -580,7 +591,7 @@ async function postDtos(q, rows, viewer, media, showExplicit) {
       likes: c.likes, liked: c.liked, replies: c.replies, saved: c.saved,
       publishedAt: p.published_at, editedAt: p.edited_at,
       // The gallery album goes back to its owner only (the post menu and the editor keep it; V21 postAlbum / setAlbum).
-      ...(p.own ? { state: p.state, rev: p.rev, inFeed: p.in_feed, returned: p.removed_reason, ...('album_id' in p ? { albumId: p.album_id } : {}),
+      ...(p.own ? { state: p.state, rev: p.rev, inFeed: p.in_feed, returned: p.removed_reason, ...(p.community_id ? { communityId: p.community_id } : {}), ...('album_id' in p ? { albumId: p.album_id } : {}),
         ...(disputes.some(d => d.post_id === p.id) ? { dispute: { note: p.dispute_note ?? null } } : {}) } : {}),
     };
   });
@@ -600,20 +611,20 @@ export function readCursor(c) {
 const run = {
   async 'post.saveDraft'(q, { acting: a, input }) {
     const acting = need(a);
-    const f = input.post;
+    let f = input.post;
     let postId = input.postId;
     if (postId) {
-      const [p] = await q.query(`select state, created_by from feture.post where id = $1 and owner_profile_id = $2 for update`, [postId, acting.profileId]);
+      const [p] = await q.query(`select state, created_by, community_id from feture.post where id = $1 and owner_profile_id = $2 for update`, [postId, acting.profileId]);
       if (!p || p.created_by !== acting.accountId) fail(404, 'not_found'); // a couple's draft belongs to the partner who wrote it
       if (p.state !== 'draft') fail(409, 'conflict', { state: p.state });
+      f = asDiscussion(f, p.community_id); // a draft stays where it was started
       // Changing a draft the partner is asked to approve withdraws that request: they must see the final version.
       await q.query(`update feture.partner_approval set state = 'cancelled', decided_at = now() where target_type = 'post' and target_id = $1 and state = 'pending'`, [postId]);
       await q.query(`update feture.post set type = $2, title = $3, body = $4, in_feed = $5, topics = $6, album_id = $7, rev = rev + 1, updated_at = now() where id = $1`,
         [postId, f.type, f.title ?? null, f.body, f.inFeed, f.topics, f.albumId ?? null]);
     } else {
       await requireCommunityWriter(q, f.communityId, acting);
-      // A discussion is for the community: everyone there, never in the main feed.
-      if (f.communityId) { f.audience = 'all'; f.inFeed = false; }
+      f = asDiscussion(f, f.communityId);
       [{ id: postId }] = await q.query(
         `insert into feture.post (owner_profile_id, created_by, type, title, body, audience, in_feed, topics, album_id, community_id)
          values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) returning id`,

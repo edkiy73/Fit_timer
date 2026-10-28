@@ -223,6 +223,12 @@ export function Stack({children,gap=3,row,className,grow,align,justify}:{childre
  return <div className={[row?'k-row':'k-stack','k-g'+gap,grow?'k-grow':'',align?'k-al-'+align:'',justify?'k-js-'+justify:'',className].filter(Boolean).join(' ')}>{children}</div>;
 }
 
+/** The one row of buttons (owner 29.10.2026): side by side with equal widths across the column, or `stack`ed; the gap
+ * and the alignment are the kit's. Screens never line buttons up with their own Stack, margins or widths. */
+export function Actions({children,stack}:{children:ReactNode,/** One under another (a main action and its alternatives). */ stack?:boolean}){
+ return <div className={'k-actions'+(stack?' k-actions-stack':'')}>{children}</div>;
+}
+
 /** `.card` — the surface every block sits on. `list` holds Rows (dividers between them come with it); `form` holds
  * fields and has no surface of its own in V21 (fields sit on the page, 16 apart). Radius, fill and shadow are tokens, so changing the card here changes every card. */
 export function Card({children,list,form,className,id,onClick,label,tone}:{children:ReactNode,list?:boolean,form?:boolean,className?:string,id?:string,/** danger: the edge of something irreversible (delete account). */ tone?:'danger',/** A whole card that opens something. */ onClick?:()=>void,label?:string}){

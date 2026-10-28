@@ -16,6 +16,9 @@ export const Нейтральное:S={name:'Нейтральное (plain)',arg
 export const СДействием:S={name:'С кнопками под текстом (action)',args:{kind:'err',noIcon:true,children:'Сообщество изменили, пока ты редактировал.',action:<Btn kind="text" auto icon={RefreshCw}>Загрузить заново</Btn>}};
 export const Вопрос:S={name:'Вопрос на месте (alertdialog)',args:{kind:'warn',noIcon:true,role:'alertdialog',children:'Удалить черновик?',action:<><Btn kind="danger" size="sm" auto>Удалить</Btn><Btn kind="text" size="sm" auto>Отмена</Btn></>}};
 export const Нажимаемое:S={name:'Нажимаемое (onClick)',args:{kind:'warn',icon:Clock,children:<><b>Tom предлагает изменение</b>Имя пары · нажми, чтобы ответить</>,onClick:()=>{}}};
+export const ПустоКомпактно:StoryObj<typeof Empty>={name:'Пустое: часть экрана или листа (compact)',render:a=><Card><Empty {...a}/></Card>,args:{icon:Heart,title:'Ничего не нашлось',text:'Попробуй другое слово.',compact:true}};
+export const ПустоБезТекста:StoryObj<typeof Empty>={name:'Пустое: заголовок и кнопка',render:a=><Empty {...a}><Btn kind="soft">Смотреть события</Btn></Empty>,args:{icon:Heart,title:'Ближайших событий нет'},
+ parameters:{docs:{description:{story:'Отступы внутри одни и те же: иконка → заголовок → (строка) → кнопки; кнопка никогда не прилипает к заголовку. Две кнопки — в `Actions`.'}}}};
 export const ПустоКрупно:StoryObj<typeof Empty>={name:'Пустое: крупно, сверху, с блоком после',render:a=><Empty {...a}><Btn auto>Изменить фильтры</Btn></Empty>,
  args:{icon:Users,title:'Знакомства выключены',text:'Включи, и тебя увидят те, кто тоже включил.',big:true,top:true,
   after:<Card list className="mt16"><Row icon={Sparkles} title="Интересы" sub="Расскажи о себе" onClick={()=>{}}/></Card>}};
