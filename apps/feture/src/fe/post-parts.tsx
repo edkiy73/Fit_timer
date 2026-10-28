@@ -113,15 +113,17 @@ const mosaicBox=([x,y,w,h]:Cell,H:number):CSSProperties=>{const g=1.5,l=x>1e-3?g
  return {left:`calc(${(x*100).toFixed(3)}% + ${l}px)`,top:`calc(${(y/H*100).toFixed(3)}% + ${t}px)`,width:`calc(${(w*100).toFixed(3)}% - ${l+r}px)`,height:`calc(${(h/H*100).toFixed(3)}% - ${t+b}px)`};};
 export const mediaSrc=(m:MediaItem,size:'card'|'full'='card')=>m.src?(size==='full'?m.src.full??m.src.card:m.src.card??m.src.full)??m.src.thumb??m.src.blur??null:null;
 
-/** Signed media links expire: a picture that fails to load asks the owner of the list for fresh links once. */
+/** Signed media links expire: a picture that fails to load asks the owner of the list for fresh links once. Like `Av`,
+ * a picture that does not load is never a broken-image mark: the cell keeps its calm placeholder until fresh links come. */
 function MfImg({src,blur,onRatio,onFail}:{src:string,blur?:string|null|undefined,onRatio?:(r:number)=>void,onFail?:(()=>void)|undefined}){
- const failed=useRef(false);
+ const failed=useRef(false);const [bad,setBad]=useState<Record<string,true>>({});
+ const bg=blur||src;
  return <>
   {/* The tiny blurred copy from the server shows first; the full picture fades in over it when loaded. */}
-  <img className="mbg" src={blur||src} alt="" aria-hidden="true" draggable={false} loading="lazy" decoding="async"/>
-  <img className="mfg" src={src} alt="" draggable={false} loading="lazy" decoding="async"
+  {!bad[bg]&&<img className="mbg" src={bg} alt="" aria-hidden="true" draggable={false} loading="lazy" decoding="async" onError={()=>setBad(x=>({...x,[bg]:true}))}/>}
+  {!bad[src]&&<img className="mfg" src={src} alt="" draggable={false} loading="lazy" decoding="async"
    onLoad={e=>{const i=e.currentTarget;if(i.naturalWidth&&i.naturalHeight)onRatio?.(i.naturalWidth/i.naturalHeight);}}
-   onError={()=>{if(failed.current)return;failed.current=true;onFail?.();}}/>
+   onError={()=>{setBad(x=>({...x,[src]:true}));if(failed.current)return;failed.current=true;onFail?.();}}/>}
  </>;
 }
 

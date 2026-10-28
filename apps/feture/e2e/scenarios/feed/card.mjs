@@ -181,14 +181,14 @@ export default [
      expect(await t.page.locator('.viewer').count() === 0, 'back to the feed without the viewer');
    } finally { await drop(t, f.id); }
  } },
- { name: 'a photo that does not load (link ran out, photo removed) shows initials, never a broken-image mark', persona: 'full', run: async t => {
+ { name: 'a photo that does not load (link ran out, photo removed) shows initials (media: a calm placeholder), never a broken-image mark', persona: 'full', run: async t => {
    // Every signed picture link fails, as an expired one does.
    await t.page.route(/\/(storage\/v1\/object\/sign|v)\/[^?]+\?(token|t)=/, r => r.fulfill({ status: 400, body: 'expired' }));
    await t.go('/n/feed'); await t.see('.posts article.post .av'); await t.wait(2500);
-   const s = await t.page.evaluate(() => ({ broken: [...document.querySelectorAll('.av>img')].filter(i => i.complete && !i.naturalWidth && i.getBoundingClientRect().width).length,
+   const s = await t.page.evaluate(() => ({ broken: [...document.querySelectorAll('.av>img, .mcell img')].filter(i => i.complete && !i.naturalWidth && i.getBoundingClientRect().width).map(i => (i.parentElement.className + '>' + i.className)),
      ini: document.querySelectorAll('.av.ini').length }));
    await t.shot('avatar-initials');
-   expect(s.broken === 0, s.broken + ' broken avatar images');
+   expect(!s.broken.length, 'broken images: ' + s.broken.join(', '));
    expect(s.ini > 0, 'no initials shown');
    await t.page.unroute(/\/(storage\/v1\/object\/sign|v)\/[^?]+\?(token|t)=/);
  }, allow4xx: true },
