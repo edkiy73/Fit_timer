@@ -26,6 +26,8 @@ export const moderationCommands = {
     profile: false, write: true,
     input: z.strictObject({ opId, postId: id, restore: z.boolean(), note: text(500).default('') }),
   },
+  // An account that reached the claim restriction was looked at by staff (it leaves the «на проверке» list).
+  'staff.disputeClaimantReviewed': { profile: false, write: true, input: z.strictObject({ opId, profileId: id }) },
   'staff.revisionQueue': { profile: false, write: false, input: z.strictObject({ limit: z.int().min(1).max(50).default(20) }) },
   'staff.revisionDecide': {
     profile: false, write: true,

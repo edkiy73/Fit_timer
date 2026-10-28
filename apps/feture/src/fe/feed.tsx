@@ -12,7 +12,7 @@ import {Uploader} from './kit/Uploader';
 import {useSendPhoto,useSendVideo} from './media-upload';
 import {VIDEO_TYPES} from './kit/media';
 import {BellButton} from './inbox';
-import {PostMenu,ReplyMenu,type Removal} from './post-menu';
+import {DisputeNotice,PostMenu,ReplyMenu,type Removal} from './post-menu';
 import {restoreInto,useToast} from './toast';
 import {MarksSheet,MediaGrid,Poll,RichText,Viewer,marksPage,mdPlain,mediaSrc,personName,plural,useTopics,type CatTopic,type MarksPage,type PollData} from './post-parts';
 import {AlbumField,albumOfPost} from './gallery';
@@ -32,6 +32,8 @@ export const postSchema=z.object({id:z.uuid(),type:z.enum(['post','note']),title
  audience:z.string().optional(),editedAt:z.string().nullable().optional(),
  // Own posts only: what the edit screen starts from.
  rev:z.number().int().optional(),inFeed:z.boolean().optional(),returned:z.string().nullable().optional(),albumId:z.uuid().nullable().optional(),
+ // Own posts hidden by «это я на фото — против»: only the author's explanation, never who objected.
+ dispute:z.object({note:z.string().nullable()}).optional(),
  poll:z.object({question:z.string(),options:z.array(z.string()),myVote:z.number().nullable().optional(),results:z.array(z.number()).nullable().optional()}).nullable().optional(),
  interests:z.array(interest).nullable().optional(),tags:z.array(tag).optional(),
  // Mentions that are links (V21 unmentionMe): only these @names open a profile.
@@ -380,6 +382,7 @@ export function PostCard({post,onChange,onRemove,onExpired,full=false,onReply,pr
   {mine&&!preview&&(waiting.length>0||declined.length>0)&&<div className={'consent-note'+(declined.length?' bad':'')}>{declined.length?<EyeOff/>:<Clock/>}
    <span><b>{declined.length?t('fe.fd.tag.declinedBy',{names:declined.join(', ')}):t('fe.fd.tag.waiting',{names:waiting.join(', ')})}</b>{declined.length?t('fe.fd.tag.declinedText'):t('fe.fd.tag.waitingText')}</span>
    {declined.length>0&&<div className="row g8"><Btn size="sm" kind="soft" onClick={()=>navigate('/n/feed/post/'+post.id+'/edit')}>{t('fe.fd.tag.replace')}</Btn></div>}</div>}
+  {mine&&!preview&&post.dispute&&<DisputeNotice post={post} onChange={onChange}/>}
   <div className="body" onClick={open} role={full||preview?undefined:'link'} tabIndex={full||preview?undefined:0} onKeyDown={e=>{if(e.key==='Enter'&&e.target===e.currentTarget)open();}}>
    {post.type==='note'?<div className={'note-card'+(full?' full':'')}><span className="note-k"><FileText/>{t('fe.fd.article')} · {t('fe.fd.minRead',{n:words})}</span><H level={3} className="note-t">{post.title}</H>
      {full?<RichText text={post.body} mentions={post.mentions??[]}/>:<><p className="note-x">{mdPlain(post.body).slice(0,220)}{post.body.length>220?'…':''}</p><span className="note-more">{t('fe.fd.readMore')} <ChevronRight/></span></>}</div>
