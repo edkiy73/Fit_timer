@@ -37,7 +37,7 @@ export const ru = {
   'fe.br.firstN': 'Показаны последние {n}.',
   'fe.br.follow': 'Подписаться',
   'fe.br.followBack': 'Подписаться в ответ',
-  'fe.br.followUs': 'Подписаться от пары',
+  'fe.br.followUs': 'Подписать пару',
   'fe.br.unfollow': 'Отписаться',
   'fe.br.unfollowUs': 'Отписать пару',
   'fe.br.you': 'это ты',

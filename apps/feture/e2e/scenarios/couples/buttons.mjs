@@ -12,7 +12,7 @@ const noPicker = async t => {
 };
 
 export default [
- { name: 'profile as the couple: «Подписаться от пары» → «Пара подписана» and back, like/report/block speak for the couple', persona: 'pair', run: async t => {
+ { name: 'profile as the couple: «Подписать пару» → «Пара подписана» and back, like/report/block speak for the couple', persona: 'pair', run: async t => {
    const couple = await coupleOf(t); expect(couple, 'the pair has an active couple'); await actAs(t, couple.id);
    const mate = await t.persona('mate');
    // Whom the couple follows (the profile page reads the same list).
@@ -21,15 +21,15 @@ export default [
    if ((await rel()).iFollow) await t.api('follow.set', { opId: t.uuid7(), profileId: mate.personId, on: false }, undefined, couple.id);
    try {
      await t.go('/n/people/' + mate.personId);
-     await t.tap('.p-acts button:has-text("Подписаться от пары")');
+     await t.tap('.p-acts button:has-text("Подписать пару")');
      await toastSee(t, 'Пара теперь в подписчиках');
      await t.see('.p-acts button:has-text("Пара подписана")');
      expect((await rel()).iFollow, 'the couple does not follow after the tap');
      await t.tap('.p-acts button:has-text("Пара подписана")');
      await toastSee(t, 'Пара отписалась от');
-     await t.see('.p-acts button:has-text("Подписаться от пары")');
+     await t.see('.p-acts button:has-text("Подписать пару")');
      // The like button (or why the couple likes from Discover only) — never the personal «Нравится».
-     const like = t.page.locator('.p-acts button', { hasText: /Нравится\s+от\s+пары|Отправлено от пары|Написать от пары/ });
+     const like = t.page.locator('.p-acts button', { hasText: /Нам нравится|Пара отправила|Написать от нас/ });
      const why = t.page.locator('.profile-like-note');
      expect(await like.count() || await why.count(), 'no couple like button and no reason');
      await noPicker(t);
@@ -108,14 +108,14 @@ export default [
    const approves = (await t.api('couple.get', {}, undefined, couple.id)).couple.members.find(m => !m.me)?.approvesPartner;
    await t.go('/n/communities/' + host.openId);
    await t.tap('button:has-text("Вступить от пары")');
-   await t.see(sheet + ' button:has-text("' + (approves ? 'Отправить партнёру на согласие' : 'Вступить от пары') + '")');
+   await t.see(sheet + ' button:has-text("' + (approves ? 'На согласие партнёру' : 'Вступить от пары') + '")');
    await t.page.keyboard.press('Escape');
  } },
  { name: 'couple profile edit: the save button says when it goes to the partner', persona: 'pair', run: async t => {
    const couple = await coupleOf(t); await actAs(t, couple.id);
    const approves = (await t.api('couple.get', {}, undefined, couple.id)).couple.members.find(m => !m.me)?.approvesPartner;
    await t.go('/n/me/edit');
-   await t.see('.ctabar button:has-text("' + (approves ? 'Сохранить — уйдёт партнёру на согласие' : 'Сохранить') + '")');
+   await t.see('.ctabar button:has-text("' + (approves ? 'Сохранить — на согласие партнёру' : 'Сохранить') + '")');
    await noPicker(t);
  } },
  { name: 'as oneself: the same buttons keep the personal wording', persona: 'pair', run: async t => {

@@ -321,9 +321,9 @@ export function CommunityScreen(){
  const day=(iso:string)=>new Date(iso).toLocaleDateString(loc(locale),{day:'numeric',month:'long'});
  // My request as one block (owner 28.10.2026): the state, when it went and what comes next, «Отозвать» on the right.
  const status=!c||host||member?null
-  :c.request?<StatusCard tone="wait" icon={Clock} title={t('fe.host.join.pending')}
+  :c.request?<StatusCard tone="wait" icon={Clock} title={t(couple?'fe.host.join.pendingUs':'fe.host.join.pending')}
    sub={[c.request.at?fill(t('fe.cm.req.sent'),{date:day(c.request.at)}):'',t('fe.cm.req.next')].filter(Boolean).join(' · ')}
-   action={<Btn kind="soft" size="sm" auto fit onClick={()=>setLayer('withdraw')}>{t(couple?'fe.host.join.withdrawUs':'fe.host.join.withdraw')}</Btn>}/>
+   action={<Btn kind="soft" size="sm" auto fit onClick={()=>setLayer('withdraw')}>{t('fe.host.join.withdraw')}</Btn>}/>
   :c.waiting?<StatusCard tone="wait" icon={Users} title={t('fe.host.app.st.waiting')} sub={t('fe.cm.req.partnerSub')}
    action={<Btn kind="soft" size="sm" auto fit onClick={()=>setLayer('unwait')}>{t('fe.host.join.withdraw')}</Btn>}/>
   :c.declined?<StatusCard tone="bad" icon={X} title={t('fe.cm.req.declined')} sub={fill(t('fe.cm.req.declinedSub'),{date:day(c.declined.until)})}/>

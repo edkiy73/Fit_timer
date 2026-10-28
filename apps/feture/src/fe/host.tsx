@@ -333,8 +333,8 @@ export function EventApplicationLines({e,busy,onWithdraw,onCancelWait}:{e:{requi
  const tone=({pending:'wait',waiting:'wait',approved:'ok',declined:'bad'} as Record<string,'wait'|'ok'|'bad'>)[st];
  const act=st==='pending'?onWithdraw:st==='waiting'?onCancelWait:undefined;
  return <><SectionLabel>{t('fe.host.ev.attendance')}</SectionLabel>
-  <StatusCard tone={tone} icon={Icon} title={t('fe.host.app.st.'+st)} sub={t('fe.host.app.stText.'+st)}
-   action={act&&<Btn kind="soft" size="sm" auto fit disabled={busy} onClick={act}>{t(acting?.kind==='couple'?'fe.host.app.withdrawUs':'fe.host.join.withdraw')}</Btn>}/></>;
+  <StatusCard tone={tone} icon={Icon} title={t('fe.host.app.st.'+st+(st==='pending'&&acting?.kind==='couple'?'Us':''))} sub={t('fe.host.app.stText.'+st)}
+   action={act&&<Btn kind="soft" size="sm" auto fit disabled={busy} onClick={act}>{t('fe.host.join.withdraw')}</Btn>}/></>;
 }
 
 /** E06 — the application: answers to the organiser's questions, a note and the requirements. */
