@@ -235,6 +235,13 @@ export function RadioList<T extends string>({value,options,onChange,label,bare}:
 export function ChoiceChips<T extends string>({value,options,onChange,label,scroll,disabled}:{value:T|null|undefined,options:readonly (readonly [T,ReactNode])[],onChange:(v:T)=>void,label:string,scroll?:boolean,disabled?:boolean}){
  return <div className={'chips'+(scroll?' scroll':'')} role="radiogroup" aria-label={label} aria-disabled={disabled||undefined}>{options.map(([k,l])=><button key={k} type="button" disabled={disabled} className={'chip'+(value===k?' on':'')} role="radio" aria-checked={value===k} onClick={()=>onChange(k)}>{l}</button>)}</div>;
 }
+/** Several values from a list as rows with a box (what to open, what to keep). A row may say more under its title
+ * («не запрошено», «уже открыто»); `value` keeps the order of `options`. */
+export function CheckList<T extends string>({value,options,onChange,label,bare}:{value:readonly T[],options:readonly (readonly [T,ReactNode,ReactNode?])[],onChange:(v:T[])=>void,label:string,/** Rows only, no card frame (inside a sheet). */ bare?:boolean}){
+ const flip=(k:T)=>onChange(options.map(o=>o[0]).filter(x=>x===k?!value.includes(k):value.includes(x)));
+ return <div className={bare?'k-radios':'card list'} role="group" aria-label={label}>{options.map(([k,title,sub])=>{const on=value.includes(k);return <button key={k} type="button" className={'radio k-chk'+(on?' on':'')} role="checkbox" aria-checked={on} onClick={()=>flip(k)}>
+  <i><Check2/></i><span className="tx">{title}{sub&&<small>{sub}</small>}</span></button>;})}</div>;
+}
 /** `.check` — a checkbox with its text (consents, «Также заблокировать» in forms). */
 export function Check({on,onChange,children,error}:{on:boolean,onChange:(v:boolean)=>void,children:ReactNode,error?:boolean}){
  return <button type="button" role="checkbox" aria-checked={on} className={'check'+(on?' on':'')+(error?' err':'')} onClick={()=>onChange(!on)}><i><Check2/></i><span>{children}</span></button>;

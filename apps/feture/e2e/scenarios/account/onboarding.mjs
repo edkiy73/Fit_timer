@@ -1,8 +1,8 @@
 // Sign-up step 1 → step 2 (V21 A05): «Дальше» keeps nothing on the server yet; step 2 picks topics, previews a community
 // with its rules and joins it; «Готово» saves the answers, sends the join and opens the feed on the chosen topics.
 // Then the city picker in the profile editor: search, a country, «Добавить свой город». Read back through the API.
-import { expect, until, toastSee } from './helpers.mjs';
-import { PROD, uuid7 } from '../lib.mjs';
+import { expect, until, toastSee, dropsNew } from '../helpers.mjs';
+import { PROD, uuid7 } from '../../lib.mjs';
 
 async function documents() {
   const r = await fetch(`${PROD}/api/catalog?resource=documents&locale=ru`, { cache: 'no-store' }).then(x => x.json());
@@ -70,4 +70,4 @@ export const editor = [{ name: 'profile editor: nickname checked in place', pers
   await t.tap('.sheet.on .li:has-text("Убрать из профиля")'); await t.see('Убрать последнее фото?');
   await t.tap('[role="alertdialog"] button:has-text("Отмена"), .ask button:has-text("Отмена")'); await t.see('.mi img');
 }}];
-export default [...main, ...editor];
+export default dropsNew([...main, ...editor]);

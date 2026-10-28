@@ -206,11 +206,22 @@ export function PhotoAdd({label,hint,big,tall,ghost,disabled,busy,onClick}:{labe
 }
 
 /** The full-screen photo strip: the current picture slides in (index in a CSS variable). */
-export function PhotoTrack({srcs,index}:{srcs:string[],index:number}){
- return <div className="vw-track" style={{'--i':index} as CSSProperties}>{srcs.map((s,k)=><figure key={k}><img src={s} alt="" draggable={false}/></figure>)}</div>;
+export function PhotoTrack({srcs,index,wm}:{srcs:string[],index:number,/** Someone else's private photos: the viewer's own handle across each one. */ wm?:string|null|undefined}){
+ return <div className="vw-track" style={{'--i':index} as CSSProperties}>{srcs.map((s,k)=><figure key={k}><img src={s} alt="" draggable={false}/>{wm&&<Watermark text={wm}/>}</figure>)}</div>;
+}
+/** The viewing person's handle repeated across a private photo opened to them (V21 privPeek): a leak points at the
+ * person who saw it. Sits inside a positioned frame (a viewer figure). */
+export function Watermark({text}:{text:string}){
+ return <div className="vw-wm" aria-hidden="true">{Array.from({length:18},(_,i)=><span key={i}>{text}</span>)}</div>;
 }
 
 /* ---------------- Private layer ---------------- */
+
+/** The day's request budget («Осталось N из M»): one segment per request (at most 15), lit while it is left. */
+export function Quota({left,max,label}:{left:number,max:number,label:string}){
+ const n=Math.min(max,15),lit=Math.round(Math.max(0,Math.min(left,max))*n/Math.max(1,max));
+ return <div className="quota" role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={max} aria-valuenow={left}>{Array.from({length:n},(_,i)=><i key={i} className={i<lit?undefined:'off'}/>)}</div>;
+}
 
 /** The head of the private layer: lock, title, and the switch that opens or closes it. */
 export function VaultHead({title,on,onToggle,label,inCard}:{title:ReactNode,on?:boolean|undefined,onToggle?:(()=>void)|undefined,label?:string|undefined,/** Inside a summary card: tighter. */ inCard?:boolean|undefined}){

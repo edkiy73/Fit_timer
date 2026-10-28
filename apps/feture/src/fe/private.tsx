@@ -1,65 +1,267 @@
-import {useCallback,useEffect,useRef,useState} from 'react';
+import {useCallback,useEffect,useRef,useState,type ReactNode} from 'react';
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {ChevronRight,Lock,LockOpen,Plus,X} from 'lucide-react';
-import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Av,Btn,Card,Chip,Chips,ChoiceChips,Empty,Group,Note,PersonLine,Pill,RequestCard,Row,SectionLabel,SelectRow,Sheet,Skel,Stack,ToggleRow,VaultHead} from './kit';
+import {ChevronRight,Clock,Lock,LockOpen,Plus,Send,X} from 'lucide-react';
+import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
+import {Alert,Av,Btn,Card,CheckList,Chips,ChoiceChips,Empty,Group,Note,PersonLine,Pill,Quota,RequestCard,Row,SectionLabel,SelectRow,Sheet,Skel,Stack,ToggleRow,VaultHead,Veil} from './kit';
 import {AgeCheckLink,useAgeResume} from './age-check';
 import {useFe} from './session';
 import {when} from './feed';
 import {useToast} from './toast';
 import {Ask,AudTag} from './me';
 import {faceFields,NameBadges,withAge} from './faces';
+import {PhotoViewer,mediaSrc} from './profile-extras';
 
-/** Slice C (V21 X01 «Приватное», P07, P08). Before access the server sends nothing real — only whether a private
- * part exists and what can be asked for; access is per profile, per scope and for a term. */
+/** Wave 4 «Приватное и доступы» (V21 X01, P06–P09, P11). Before access the server sends nothing real — only whether a
+ * private part exists and what can be asked for; access is per profile, per part and for a term. Everything a person
+ * decides here is read back from the server; nothing is assumed locally. */
+export type Scope='info'|'photos'|'video';
+const SCOPES:Scope[]=['info','photos','video'];
+const scopes=z.array(z.string()).transform(a=>SCOPES.filter(s=>a.includes(s)));
 const who=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),...faceFields}).nullable();
-const incoming=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),scopes:z.array(z.string()),created_at:z.string(),profile:who}))});
-const grants=z.object({ok:z.literal(true),items:z.array(z.object({scopes:z.array(z.string()),until:z.string().nullable(),granted_at:z.string(),profile:who}))});
-const priv=z.object({ok:z.literal(true),exists:z.boolean(),own:z.boolean().optional(),on:z.boolean().optional(),scopes:z.array(z.string()).optional(),until:z.string().nullable().optional(),
- text:z.string().nullable().optional(),media:z.array(z.unknown()).optional(),available:z.array(z.string()).optional(),canRequest:z.boolean().optional(),reason:z.string().nullable().optional()}).passthrough();
+type Who=z.infer<typeof who>;
+const quotaShape=z.object({left:z.number(),max:z.number(),resetsAt:z.string().nullable()});
+type QuotaT=z.infer<typeof quotaShape>;
+const quotaRes=quotaShape.passthrough();
+const open=z.object({scopes,until:z.string().nullable()});
+const incomingItem=z.object({id:z.uuid(),scopes,created_at:z.string(),alreadyOpen:open.nullable().optional(),profile:who});
+type Incoming=z.infer<typeof incomingItem>;
+const incoming=z.object({ok:z.literal(true),items:z.array(incomingItem),next:z.string().nullable().optional(),available:scopes.optional()});
+const grantItem=z.object({scopes,until:z.string().nullable(),granted_at:z.string(),profile:who});
+export type GrantItem=z.infer<typeof grantItem>;
+export const grantsRes=z.object({ok:z.literal(true),items:z.array(grantItem),next:z.string().nullable().optional()});
+const outItem=z.object({id:z.uuid(),scopes,state:z.string(),created_at:z.string(),decidedAt:z.string().nullable().optional(),reaskAt:z.string().nullable().optional(),
+ granted:open.nullable().optional(),profile:who});
+export type OutItem=z.infer<typeof outItem>;
+export const outRes=z.object({ok:z.literal(true),items:z.array(outItem),next:z.string().nullable().optional(),quota:quotaShape.optional()});
+const privMedia=z.object({src:z.record(z.string(),z.string()).nullable(),pending:z.boolean().optional(),kind:z.string().optional(),watermark:z.string().nullable().optional()}).passthrough();
+const priv=z.object({ok:z.literal(true),exists:z.boolean(),own:z.boolean().optional(),on:z.boolean().optional(),scopes:scopes.optional(),until:z.string().nullable().optional(),
+ text:z.string().nullable().optional(),media:z.array(privMedia).optional(),available:scopes.optional(),canRequest:z.boolean().optional(),reason:z.string().nullable().optional()}).passthrough();
+type Priv=z.infer<typeof priv>;
 const ok=z.object({ok:z.literal(true)}).passthrough();
+const requestRes=z.object({ok:z.literal(true),quota:quotaShape}).passthrough();
+const declineRes=z.object({ok:z.literal(true),reaskDays:z.number(),undoUntil:z.string()}).passthrough();
+const grantRes=z.object({ok:z.literal(true),pending:z.unknown().optional()}).passthrough();
 const interestsRes=z.object({ok:z.literal(true),items:z.array(z.object({vis:z.string().nullable().optional()}).passthrough())});
-const nameOf=(p:z.infer<typeof who>)=>p?(p.name||(p.handle?'@'+p.handle:'?')):'—';
+type CallOpts={profileId?:string,asAccount?:boolean};
 
-/** `mePrivLayer()` — access requests, what access opens (the vault summary → P04), who has access (three, «Все · N» /
- * «Отозвать все»), and the settings: the private part switch and who may ask. */
+export const nameOf=(p:Who)=>p?(p.name||(p.handle?'@'+p.handle:'?')):'—';
+
+/** Scope names, dates and error texts shared by every access screen. */
+export function useAccessWords(){
+ const {t,locale}=useI18n();const lc=locale==='en'?'en':'ru';
+ const what=(l:readonly string[])=>l.map(s=>t('fe.priv.scope.'+s)).join(', ');
+ const until=(u:string|null|undefined)=>u?t('fe.priv.until',{date:new Date(u).toLocaleDateString(lc,{day:'numeric',month:'short'})}):t('fe.priv.noTerm');
+ const at=(u:string)=>new Date(u).toLocaleString(lc,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+ const days=(u:string)=>Math.max(1,Math.ceil((new Date(u).getTime()-Date.now())/864e5));
+ const err=(e:unknown)=>{
+  if(e instanceof FeError&&e.rule)for(const k of ['fe.ac.rule.'+e.rule,'fe.priv.reason.'+e.rule]){const m=t(k);if(m!==k)return m;}
+  return feErrorMessage(e,t);
+ };
+ return {what,until,at,days,err,when:(u:string)=>when(u,locale)};
+}
+
+/* ---------------- what a permission does (V21 accessSummary) ---------------- */
+
+/** Who sees which parts and for how long, what stays closed, and what it never does. */
+function AccessSummary({name,sel,all,until,couple}:{name:string,sel:Scope[],all:Scope[],until:string,couple?:boolean}){
+ const {t}=useI18n();
+ const low=(l:Scope[])=>l.map(s=>t('fe.priv.scope.'+s).toLowerCase()).join(', ');
+ if(!sel.length)return <Alert kind="warn" noIcon className="mt12">{t('fe.ac.sum.none')}</Alert>;
+ const closed=all.filter(s=>!sel.includes(s));const rest=low(closed);
+ return <Alert kind="info" noIcon className="mt12">
+  <span aria-live="polite">{t('fe.ac.sum.sees',{name,what:low(sel),until})}{closed.length?' '+t(closed.length>1?'fe.ac.sum.closedN':'fe.ac.sum.closed1',{what:rest.charAt(0).toUpperCase()+rest.slice(1)}):''}</span>
+  <Note as="ul" className="mt8"><li>{t('fe.ac.sum.noChat')}</li><li>{t('fe.ac.sum.revoke')}</li>{couple&&<li>{t('fe.ac.sum.couple')}</li>}</Note>
+ </Alert>;
+}
+
+/* ---------------- asking (P06) ---------------- */
+
+/** reqAccess: which parts to ask for, how many requests are left today; when none are left, when the next comes back. */
+export function RequestSheet({profileId,available,onClose,onSent}:{profileId:string,available:Scope[],onClose:()=>void,onSent:()=>void}){
+ const {call,acting}=useFe();const {t}=useI18n();const toast=useToast();const w=useAccessWords();
+ const [q,setQ]=useState<QuotaT|null>(null);const [busy,setBusy]=useState(false);const [error,setError]=useState<unknown>(null);
+ const [sel,setSel]=useState<Scope[]>(()=>available.includes('info')?['info']:available.slice(0,1));
+ const op=useRef(newOpId());
+ const loadQuota=useCallback(()=>{call('access.quota',{},quotaRes,{fresh:true}).then(setQ).catch(()=>{});},[call]);
+ useEffect(()=>{loadQuota();},[loadQuota]);
+ const send=async()=>{setBusy(true);setError(null);
+  try{const r=await call('access.request',{opId:op.current,profileId,scopes:sel},requestRes);toast(t('fe.ac.rq.sent',{left:r.quota.left,max:r.quota.max}),{type:'ok'});onSent();}
+  catch(e){setError(e);op.current=newOpId();if(e instanceof FeError&&e.code==='rate_limited')loadQuota();}finally{setBusy(false);}};
+ if(q&&q.left<=0)return <Sheet title={t('fe.ac.lim.title')} onClose={onClose} foot={<Btn onClick={onClose}>{t('fe.ac.ok')}</Btn>}>
+  <Note>{t('fe.ac.lim.text',{max:q.max,at:q.resetsAt?w.at(q.resetsAt):'—'})}</Note>
+  <Quota left={0} max={q.max} label={t('fe.ac.rq.leftLabel',{left:0,max:q.max})}/>
+  <Note className="mt8">{t('fe.ac.lim.wait')}</Note>
+ </Sheet>;
+ const age=error instanceof FeError&&error.rule==='age_check_required';
+ return <Sheet title={t('fe.ac.rq.title')} onClose={onClose} foot={<Btn icon={Send} disabled={!sel.length||busy} busy={busy} onClick={()=>void send()}>{t('fe.ac.rq.send')}</Btn>}>
+  {acting?.kind==='couple'&&<Note>{t('fe.ac.rq.forUs')}</Note>}
+  <CheckList bare label={t('fe.ac.rq.what')} value={sel} onChange={setSel} options={available.map(s=>[s,t('fe.priv.scope.'+s)] as const)}/>
+  <SectionLabel action={q&&<b>{t('fe.ac.rq.leftN',{left:q.left,max:q.max})}</b>}>{t('fe.ac.rq.left')}</SectionLabel>
+  {q?<Quota left={q.left} max={q.max} label={t('fe.ac.rq.leftLabel',{left:q.left,max:q.max})}/>:<Skel kind="line" rows={1}/>}
+  <Alert kind="info" className="mt12">{t('fe.ac.rq.info')}</Alert>
+  {!!error&&<Alert kind="err" noIcon className="mt12">{w.err(error)}{age&&<><br/><AgeCheckLink intent={'access:'+profileId}/></>}</Alert>}
+ </Sheet>;
+}
+
+/** Cancels my waiting request; the day's attempt is not given back. */
+export function useCancelRequest(){
+ const {call}=useFe();const {t}=useI18n();const toast=useToast();const w=useAccessWords();
+ return async(requestId:string)=>{
+  try{await call('access.cancel',{opId:newOpId(),requestId},ok);toast(t('fe.ac.cancelled'),{type:'ok'});return true;}
+  catch(e){toast(w.err(e),{type:'err'});return false;}
+ };
+}
+
+/** «Запрос уже отправлен»: what was asked and when, cancel it, or go to all my requests (P07 «Мои запросы»). */
+export function PendingSheet({profileId,name,onClose,onCancelled}:{profileId:string,name:string,onClose:()=>void,onCancelled:()=>void}){
+ const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const w=useAccessWords();const cancel=useCancelRequest();
+ const [req,setReq]=useState<OutItem|null|undefined>(undefined);const [busy,setBusy]=useState(false);
+ useEffect(()=>{call('access.lists',{tab:'out',filter:'pending'},outRes,{fresh:true}).then(r=>setReq(r.items.find(x=>x.profile?.id===profileId)??null)).catch(()=>setReq(null));},[call,profileId]);
+ return <Sheet title={t('fe.ac.pd.title')} onClose={onClose} lead={<span className="ico a"><Clock/></span>} foot={<>
+  {req&&<Btn kind="soft" busy={busy} disabled={busy} onClick={async()=>{setBusy(true);if(await cancel(req.id))onCancelled();setBusy(false);}}>{t('fe.ac.pd.cancel')}</Btn>}
+  <Btn kind="text" onClick={()=>navigate('/n/me/access?tab=out')}>{t('fe.ac.pd.all')}</Btn></>}>
+  <Note>{t('fe.ac.pd.lead',{name})}</Note>
+  {req===undefined?<Skel kind="list" rows={1}/>:req?<Card list className="mt12"><Row icon={Lock} title={w.what(req.scopes)} sub={t('fe.ac.pd.sent',{when:w.when(req.created_at)})}/></Card>
+   :<Alert kind="warn" noIcon className="mt12">{t('fe.ac.pd.gone')}</Alert>}
+ </Sheet>;
+}
+
+/* ---------------- deciding (P09, decline with undo) ---------------- */
+
+/** Declines a request with a toast that says what the person will see and offers «Отменить» for the server's window. */
+export function useDecline(){
+ const {call}=useFe();const {t}=useI18n();const toast=useToast();const w=useAccessWords();
+ return async(requestId:string,name:string,after:()=>void,opts?:CallOpts)=>{
+  try{
+   const r=await call('access.decline',{opId:newOpId(),requestId},declineRes,opts);after();
+   const ms=Math.max(1500,new Date(r.undoUntil).getTime()-Date.now()-800);
+   toast(t('fe.ac.dec.done',{name,d:r.reaskDays}),{type:'ok',ms,action:{label:t('fe.ac.undo'),fn:()=>{
+    call('access.undoDecline',{opId:newOpId(),requestId},ok,opts).then(()=>{toast(t('fe.ac.dec.undone'),{type:'ok'});after();}).catch(e=>toast(w.err(e),{type:'err'}));}}});
+   return true;
+  }catch(e){toast(w.err(e),{type:'err'});return false;}
+ };
+}
+
+/** `grantSheet()` — every part the owner has (asked ones preselected, «не запрошено» / «уже открыто» marked), the term,
+ * the summary of what it opens; «Отказать» from the same sheet. */
+function GrantSheet({r,available,onClose,onDone,onDecline}:{r:Incoming,available:Scope[],onClose:()=>void,onDone:()=>void,onDecline:()=>void}){
+ const {call,acting}=useFe();const {t}=useI18n();const toast=useToast();const w=useAccessWords();
+ const had=r.alreadyOpen??null;const all=available.length?available:r.scopes;const name=nameOf(r.profile);
+ const [sel,setSel]=useState<Scope[]>(()=>all.filter(s=>r.scopes.includes(s)||had?.scopes.includes(s)));
+ const [term,setTerm]=useState<'1d'|'7d'|'none'>('7d');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const op=useRef(newOpId());const couple=acting?.kind==='couple';
+ const grant=async()=>{setBusy(true);setFailure('');
+  try{const res=await call('access.grant',{opId:op.current,requestId:r.id,scopes:sel,term},grantRes);
+   toast(res.pending?t('fe.ac.gr.partner'):t('fe.ac.gr.done',{name}),{type:'ok'});onDone();}
+  catch(e){setFailure(w.err(e));op.current=newOpId();}finally{setBusy(false);}};
+ return <Sheet title={t('fe.mx.pr.grantTitle',{name})} sub={t('fe.ac.gr.asks',{what:w.what(r.scopes).toLowerCase()})} onClose={onClose} foot={<>
+  <Btn icon={LockOpen} disabled={!sel.length||busy} busy={busy} onClick={()=>void grant()}>{t('fe.mx.pr.grantOk.'+term)}</Btn>
+  <Btn kind="soft" disabled={busy} onClick={onDecline}>{t('fe.priv.decline')}</Btn></>}>
+  {had&&<Note>{t('fe.ac.gr.had',{what:w.what(had.scopes),until:w.until(had.until)})}</Note>}
+  <CheckList bare label={t('fe.mx.pr.what')} value={sel} onChange={setSel}
+   options={all.map(s=>[s,t('fe.priv.scope.'+s),had?.scopes.includes(s)?t('fe.ac.gr.open'):!r.scopes.includes(s)?t('fe.ac.gr.notAsked'):undefined] as const)}/>
+  <SectionLabel>{t('fe.priv.term')}</SectionLabel>
+  <ChoiceChips label={t('fe.priv.term')} value={term} onChange={setTerm} options={(['1d','7d','none'] as const).map(v=>[v,t('fe.mx.pr.term.'+v)] as const)}/>
+  <AccessSummary name={name} sel={sel} all={all} until={t('fe.ac.term.'+term)} couple={couple}/>
+  {failure&&<Alert kind="err" noIcon className="mt12">{failure}</Alert>}
+ </Sheet>;
+}
+
+/* ---------------- what is open (P07 «Открыто мной», P11) ---------------- */
+
+/** «Отозвать доступ у X?» — new views stop now; what was seen cannot be recalled. `narrow` revokes by an empty
+ * narrowing (the sheet's «пусто → отзыв»). */
+function RevokeAsk({g,narrow,onCancel,onDone}:{g:GrantItem,narrow:boolean,onCancel:()=>void,onDone:()=>void}){
+ const {call}=useFe();const {t}=useI18n();const toast=useToast();const w=useAccessWords();
+ const [busy,setBusy]=useState(false);const [error,setError]=useState('');const id=g.profile?.id;
+ const run=async()=>{if(!id)return;setBusy(true);setError('');
+  try{if(narrow)await call('access.narrow',{opId:newOpId(),profileId:id,scopes:[]},ok);else await call('access.revoke',{opId:newOpId(),profileId:id},ok);
+   toast(t('fe.mx.pr.revoked'),{type:'ok'});onDone();}catch(e){setError(w.err(e));}finally{setBusy(false);}};
+ return <Ask icon={Lock} danger title={t('fe.ac.rv.title',{name:nameOf(g.profile)})} text={t('fe.ac.rv.text')} ok={t('fe.ac.rv.ok')} busy={busy} error={error||undefined}
+  onCancel={onCancel} onOk={()=>void run()}/>;
+}
+
+/** «Изменить» — uncheck parts; nothing left is a revoke; «Отозвать доступ полностью» from here too. Only narrowing. */
+function NarrowSheet({g,onClose,onRevoke,onDone}:{g:GrantItem,onClose:()=>void,onRevoke:(viaNarrow:boolean)=>void,onDone:()=>void}){
+ const {call}=useFe();const {t}=useI18n();const toast=useToast();const w=useAccessWords();
+ const [sel,setSel]=useState<Scope[]>(g.scopes);const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const save=async()=>{if(!sel.length){onRevoke(true);return;}if(!g.profile)return;setBusy(true);setFailure('');
+  try{await call('access.narrow',{opId:newOpId(),profileId:g.profile.id,scopes:sel},ok);toast(t('fe.ac.nw.done'),{type:'ok'});onDone();}
+  catch(e){setFailure(w.err(e));}finally{setBusy(false);}};
+ const same=sel.length===g.scopes.length;
+ return <Sheet title={t('fe.ac.nw.title',{name:nameOf(g.profile)})} onClose={onClose} foot={
+  <Btn kind={sel.length?'primary':'danger'} disabled={busy||same} busy={busy} onClick={()=>void save()}>{sel.length?t('fe.ac.nw.save'):t('fe.ac.nw.empty')}</Btn>}>
+  <SectionLabel>{t('fe.ac.nw.what')}</SectionLabel>
+  <CheckList bare label={t('fe.ac.nw.what')} value={sel} onChange={setSel} options={g.scopes.map(s=>[s,t('fe.priv.scope.'+s)] as const)}/>
+  <Note className="mt8">{t('fe.ac.nw.only')}</Note>
+  <AccessSummary name={nameOf(g.profile)} sel={sel} all={g.scopes} until={w.until(g.until)}/>
+  <Btn kind="text" auto className="danger mt8" onClick={()=>onRevoke(false)}>{t('fe.ac.nw.revoke')}</Btn>
+  {failure&&<Alert kind="err" noIcon className="mt12">{failure}</Alert>}
+ </Sheet>;
+}
+
+/** The narrow sheet and the revoke question for one grant at a time; `node` goes once into the screen. */
+export function useGrantActions(reload:()=>void){
+ const [narrow,setNarrow]=useState<GrantItem|null>(null);const [revoke,setRevoke]=useState<{g:GrantItem,narrow:boolean}|null>(null);
+ const node=<>
+  {narrow&&<NarrowSheet g={narrow} onClose={()=>setNarrow(null)} onDone={()=>{setNarrow(null);reload();}}
+   onRevoke={via=>{setRevoke({g:narrow,narrow:via});setNarrow(null);}}/>}
+  {revoke&&<RevokeAsk g={revoke.g} narrow={revoke.narrow} onCancel={()=>setRevoke(null)} onDone={()=>{setRevoke(null);reload();}}/>}
+ </>;
+ return {node,edit:(g:GrantItem)=>setNarrow(g),revoke:(g:GrantItem)=>setRevoke({g,narrow:false})};
+}
+
+/** One person I opened my private part to: what, until when, «Изменить» / «Отозвать». */
+export function GrantCard({g,onEdit,onRevoke}:{g:GrantItem,onEdit:()=>void,onRevoke:()=>void}){
+ const {t}=useI18n();const navigate=useNavigate();const w=useAccessWords();const name=nameOf(g.profile);
+ return <RequestCard person={<PersonLine av={<Av name={name} seed={g.profile?.id??name} src={g.profile?.avatar}/>} label={name}
+   onOpen={()=>g.profile&&navigate('/n/people/'+g.profile.id)} name={<>{name}<NameBadges p={g.profile}/></>} sub={w.what(g.scopes)}/>}
+  actions={<><Btn size="md" kind="soft" onClick={onEdit}>{t('fe.ac.edit')}</Btn><Btn size="md" kind="danger" onClick={onRevoke}>{t('fe.mx.pr.revoke')}</Btn></>}>
+  <Chips className="mt12"><Pill tone="v" icon={Clock}>{w.until(g.until)}</Pill></Chips>
+ </RequestCard>;
+}
+
+/* ---------------- «Я → Приватное» (X01) ---------------- */
+
+/** `mePrivLayer()` — access requests (grant sheet, decline with undo), what access opens (→ P04), who has access (three,
+ * «Все · N» → P07), and the settings: the private part switch and who may ask. */
 export function PrivateLayer({profileId,on,requestsFrom,onChanged}:{profileId:string,on:boolean,requestsFrom:'all'|'matches'|'none',onChanged:()=>void}){
- const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
- const [mine,setMine]=useState<z.infer<typeof priv>|null>(null);const [reqs,setReqs]=useState<z.infer<typeof incoming>['items']>([]);const [given,setGiven]=useState<z.infer<typeof grants>['items']>([]);
- const [jarsG,setJarsG]=useState(0);const [allGiven,setAllGiven]=useState(false);
+ const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();const w=useAccessWords();const decline=useDecline();
+ const [mine,setMine]=useState<Priv|null>(null);const [reqs,setReqs]=useState<z.infer<typeof incoming>|null>(null);const [given,setGiven]=useState<GrantItem[]>([]);
+ const [jarsG,setJarsG]=useState(0);
  const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);
- const [grantFor,setGrantFor]=useState<z.infer<typeof incoming>['items'][number]|null>(null);const [asking,setAsking]=useState<'off'|'revokeAll'|null>(null);
+ const [grantFor,setGrantFor]=useState<Incoming|null>(null);const [asking,setAsking]=useState<'off'|'revokeAll'|null>(null);
  const cp=acting?.kind==='couple';
- const load=useCallback(()=>{setError(null);Promise.all([call('private.get',{profileId},priv),call('access.lists',{tab:'incoming'},incoming),call('access.lists',{tab:'byme'},grants),
+ const load=useCallback(()=>{setError(null);Promise.all([call('private.get',{profileId},priv,{fresh:true}),call('access.lists',{tab:'incoming'},incoming,{fresh:true}),call('access.lists',{tab:'byme'},grantsRes,{fresh:true}),
   call('interests.list',{profileId},interestsRes).then(r=>r.items.filter(j=>j.vis==='granted').length).catch(()=>0)])
-  .then(([a,b,c,d])=>{setMine(a);setReqs(b.items);setGiven(c.items);setJarsG(d);}).catch(setError);},[call,profileId]);
+  .then(([a,b,c,d])=>{setMine(a);setReqs(b);setGiven(c.items);setJarsG(d);}).catch(setError);},[call,profileId]);
  useEffect(()=>{load();},[load]);
- const act=async(fn:()=>Promise<unknown>,msg:string)=>{setBusy(true);try{await fn();toast(msg,{type:'ok'});load();onChanged();return true;}catch(e){toast(feErrorMessage(e,t),{type:'err'});return false;}finally{setBusy(false);}};
- const scopeLabel=(s:string)=>t('fe.priv.scope.'+s);
- const until=(u:string|null)=>u?t('fe.priv.until').replace('{date}',new Date(u).toLocaleDateString(locale==='en'?'en':'ru',{day:'numeric',month:'short'})):t('fe.priv.noTerm');
+ const changed=()=>{load();onChanged();};
+ const grants=useGrantActions(changed);
+ const act=async(fn:()=>Promise<unknown>,msg:string)=>{setBusy(true);try{await fn();toast(msg,{type:'ok'});changed();return true;}catch(e){toast(w.err(e),{type:'err'});return false;}finally{setBusy(false);}};
  if(error)return <Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>;
- if(!mine)return <Skel kind="card" rows={2}/>;
+ if(!mine||!reqs)return <Skel kind="card" rows={2}/>;
  const editor=()=>navigate('/n/me/edit?only=priv');
  const enable=()=>void act(()=>call('private.setOn',{opId:newOpId(),on:true},ok),t('fe.mx.pr.onDone'));
  const offAsk=asking==='off'&&<Ask icon={Lock} danger title={t('fe.mx.pr.offTitle')} busy={busy}
-  text={[given.length||reqs.length?t('fe.mx.pr.offWhat',{g:given.length,q:reqs.length}):t('fe.mx.pr.offAll'),t('fe.mx.pr.offRest')].join(' ')} ok={t('fe.mx.pr.offOk')}
+  text={[given.length||reqs.items.length?t('fe.mx.pr.offWhat',{g:given.length,q:reqs.items.length}):t('fe.mx.pr.offAll'),t('fe.mx.pr.offRest')].join(' ')} ok={t('fe.mx.pr.offOk')}
   onCancel={()=>setAsking(null)} onOk={async()=>{if(await act(()=>call('private.setOn',{opId:newOpId(),on:false,confirm:true},ok),t('fe.mx.pr.offDone')))setAsking(null);}}/>;
  if(!on)return <Group title={t('fe.priv.title')} action={<span className="aud">{t('fe.mx.pr.offTag')}</span>}>
   <div className="vault off"><div className="vault-b"><p className="vault-lead">{cp?t('fe.mx.pr.leadUs'):t('fe.mx.pr.lead')}</p>
    <Btn icon={LockOpen} disabled={busy} busy={busy} onClick={enable}>{t('fe.mx.pr.enable')}</Btn></div></div></Group>;
  const media=Array.isArray(mine.media)?mine.media.length:0;const txt=mine.text??'';
  const bits=[txt?t('fe.mx.pr.bit.text'):'',media?t('fe.mx.pr.bit.media',{n:media}):'',jarsG?t('fe.mx.pr.bit.jars',{n:jarsG}):''].filter(Boolean);
- const shown=allGiven?given:given.slice(0,3);
+ const available=reqs.available??[];
  return <>
-  {reqs.length>0&&<Group title={<>{t('fe.priv.requests')} · {reqs.length}</>}><Stack gap={2}>
-   {reqs.map(r=><RequestCard key={r.id}
+  {reqs.items.length>0&&<Group title={<>{t('fe.priv.requests')} · {reqs.items.length}</>}><Stack gap={2}>
+   {reqs.items.map(r=><RequestCard key={r.id}
     person={<PersonLine av={<Av name={nameOf(r.profile)} seed={r.profile?.id??r.id} src={r.profile?.avatar}/>} label={nameOf(r.profile)} onOpen={()=>r.profile&&navigate('/n/people/'+r.profile.id)}
      name={<>{withAge(nameOf(r.profile),r.profile)}<NameBadges p={r.profile}/></>} sub={<>{cp?t('fe.mx.pr.asksUs'):t('fe.priv.asks')} · {when(r.created_at,locale)}</>}/>}
     actions={<><Btn size="md" onClick={()=>setGrantFor(r)} disabled={busy}>{t('fe.priv.grant')}</Btn>
-     <Btn size="md" kind="soft" onClick={()=>void act(()=>call('access.decline',{opId:newOpId(),requestId:r.id},ok),t('fe.mx.pr.declined'))} disabled={busy}>{t('fe.priv.decline')}</Btn></>}>
-    <Chips className="mt12">{r.scopes.map(s=><Pill key={s}>{scopeLabel(s)}</Pill>)}</Chips>
+     <Btn size="md" kind="soft" onClick={()=>void decline(r.id,nameOf(r.profile),changed)} disabled={busy}>{t('fe.priv.decline')}</Btn></>}>
+    <Chips className="mt12">{r.scopes.map(s=><Pill key={s}>{t('fe.priv.scope.'+s)}{r.alreadyOpen?.scopes.includes(s)?' · '+t('fe.ac.gr.open'):''}</Pill>)}</Chips>
    </RequestCard>)}
   </Stack></Group>}
   <Group title={t('fe.mx.pr.opens')} action={<AudTag k="granted"/>}>
@@ -70,12 +272,10 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged}:{profileId:st
      <span className="tx"><b>{t('fe.mx.pr.add')}</b><small>{cp?t('fe.mx.pr.addSubUs'):t('fe.mx.pr.addSub')}</small></span><Plus/></button></Card>}
   </Group>
   <Group title={<>{t('fe.mx.pr.who')}{given.length?' · '+given.length:''}</>}
-   action={given.length>3?<button type="button" onClick={()=>setAllGiven(v=>!v)}>{allGiven?t('fe.mx.pr.less'):t('fe.mx.pr.all',{n:given.length})}</button>
+   action={given.length>3?<button type="button" onClick={()=>navigate('/n/me/access?tab=byme')}>{t('fe.mx.pr.all',{n:given.length})}</button>
     :given.length?<button type="button" className="danger" onClick={()=>setAsking('revokeAll')}>{t('fe.mx.pr.revokeAll')}</button>:null}>
-   {given.length===0?<Note>{t('fe.mx.pr.none')}</Note>:<Card list>{shown.map((g,i)=><Row key={i} noChev onClick={()=>g.profile&&navigate('/n/people/'+g.profile.id)}
-    av={<Av name={nameOf(g.profile)} seed={g.profile?.id??String(i)} size="sm" src={g.profile?.avatar}/>}
-    title={<>{nameOf(g.profile)}<NameBadges p={g.profile}/></>} sub={<>{g.scopes.map(scopeLabel).join(', ')} · {until(g.until)}</>}
-    end={g.profile&&<Btn size="sm" kind="text" auto className="danger" onClick={()=>void act(()=>call('access.revoke',{opId:newOpId(),profileId:g.profile!.id},ok),t('fe.mx.pr.revoked'))} disabled={busy}>{t('fe.mx.pr.revoke')}</Btn>}/>)}</Card>}
+   {given.length===0?<Note>{t('fe.mx.pr.none')}</Note>:<Stack gap={2}>{given.slice(0,3).map((g,i)=><GrantCard key={g.profile?.id??i} g={g} onEdit={()=>grants.edit(g)} onRevoke={()=>grants.revoke(g)}/>)}</Stack>}
+   <Card list className="mt12"><Row icon={LockOpen} title={cp?t('fe.ac.centerUs'):t('fe.ac.center')} onClick={()=>navigate('/n/me/access')}/></Card>
   </Group>
   <Group title={t('fe.mx.pr.settings')}><Card list>
    <ToggleRow title={t('fe.priv.on')} sub={t('fe.mx.pr.onSub')} on={on} disabled={busy} onClick={()=>setAsking('off')}/>
@@ -85,46 +285,62 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged}:{profileId:st
   {offAsk}
   {asking==='revokeAll'&&<Ask icon={Lock} danger title={t('fe.mx.pr.revokeAllTitle')} text={t('fe.mx.pr.revokeAllText',{n:given.length})} ok={t('fe.mx.pr.revokeAll')} busy={busy}
    onCancel={()=>setAsking(null)} onOk={async()=>{if(await act(()=>call('access.revokeAll',{opId:newOpId(),confirm:true},ok),t('fe.mx.pr.revokedAll')))setAsking(null);}}/>}
-  {grantFor&&<GrantSheet r={grantFor} onClose={()=>setGrantFor(null)} onDone={msg=>{setGrantFor(null);toast(msg,{type:'ok'});load();onChanged();}}/>}
+  {grantFor&&<GrantSheet r={grantFor} available={available} onClose={()=>setGrantFor(null)} onDone={()=>{setGrantFor(null);changed();}}
+   onDecline={()=>{const r=grantFor;setGrantFor(null);void decline(r.id,nameOf(r.profile),changed);}}/>}
+  {grants.node}
  </>;
 }
 
-/** `grantSheet()` — what to share (the asked scopes, preselected) and for how long; «Отказать» from the same sheet. */
-function GrantSheet({r,onClose,onDone}:{r:z.infer<typeof incoming>['items'][number],onClose:()=>void,onDone:(msg:string)=>void}){
- const {call}=useFe();const {t}=useI18n();
- const [sel,setSel]=useState<string[]>(r.scopes);const [term,setTerm]=useState<'1d'|'7d'|'none'>('7d');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
- const op=useRef(newOpId());
- const run=async(grant:boolean)=>{setBusy(true);setFailure('');
-  try{if(grant)await call('access.grant',{opId:op.current,requestId:r.id,scopes:sel,term},ok);else await call('access.decline',{opId:newOpId(),requestId:r.id},ok);
-   onDone(grant?t('fe.mx.pr.granted'):t('fe.mx.pr.declined'));}catch(e){setFailure(feErrorMessage(e,t));op.current=newOpId();}finally{setBusy(false);}};
- return <Sheet title={t('fe.mx.pr.grantTitle',{name:nameOf(r.profile)})} onClose={onClose} foot={<>
-  <Btn icon={LockOpen} disabled={!sel.length||busy} busy={busy} onClick={()=>run(true)}>{t('fe.mx.pr.grantOk.'+term)}</Btn>
-  <Btn kind="soft" disabled={busy} onClick={()=>run(false)}>{t('fe.priv.decline')}</Btn></>}>
-  <Note>{t('fe.mx.pr.asksFor')} {r.scopes.map(s=>t('fe.priv.scope.'+s).toLowerCase()).join(', ')}</Note>
-  <div className="chips mt12" role="group" aria-label={t('fe.mx.pr.what')}>{(['info','photos','video'] as const).filter(s=>r.scopes.includes(s)).map(s=><Chip key={s} on={sel.includes(s)}
-   onClick={()=>setSel(v=>v.includes(s)?v.filter(x=>x!==s):[...v,s])}>{t('fe.priv.scope.'+s)}</Chip>)}</div>
-  <SectionLabel>{t('fe.priv.term')}</SectionLabel>
-  <ChoiceChips label={t('fe.priv.term')} value={term} onChange={setTerm} options={(['1d','7d','none'] as const).map(v=>[v,t('fe.mx.pr.term.'+v)] as const)}/>
-  {failure&&<Alert kind="err" noIcon className="mt12">{failure}</Alert>}
- </Sheet>;
-}
+/* ---------------- someone's private part from the outside (P01 vault, P08) ---------------- */
 
-/** Another person's private part on their profile: nothing until access; then what was granted. */
-export function PrivateOf({profileId}:{profileId:string}){
- const {call}=useFe();const {t,locale}=useI18n();
- const [p,setP]=useState<z.infer<typeof priv>|null>(null);const [busy,setBusy]=useState(false);const [note,setNote]=useState('');const op=useRef(newOpId());
- const load=useCallback(()=>{call('private.get',{profileId},priv).then(setP).catch(()=>setP(null));},[call,profileId]);
+/** vaultHTML + veilBlock / privOpenHTML. Before access nothing real is sent — the veil hides placeholders only. Photos
+ * opened to me carry my own handle (the server's `watermark`). `preview` («Как видят») draws it as a viewer would see
+ * it: buttons inert, but my own photos still open in the viewer. */
+export function PrivateVault({profileId,name,preview}:{profileId:string,name:string,preview?:'all'|'granted'|undefined}){
+ const {call}=useFe();const {t}=useI18n();const w=useAccessWords();
+ const [p,setP]=useState<Priv|null>(null);const [view,setView]=useState<number|null>(null);
+ const [sheet,setSheet]=useState<'request'|'pending'|null>(null);const [reaskAt,setReaskAt]=useState<string|null>(null);
+ const load=useCallback(()=>{call('private.get',{profileId},priv,{fresh:true}).then(setP).catch(()=>setP(null));},[call,profileId]);
  useEffect(()=>{load();},[load]);
- const request=async()=>{if(!p)return;setBusy(true);setNote('');try{await call('access.request',{opId:op.current,profileId,scopes:p.available??['info']},ok);setNote(t('fe.priv.requested'));load();}catch(e){setNote(feErrorMessage(e,t));op.current=newOpId();}finally{setBusy(false);}};
- // Back from the age check this request sent the person to: ask again.
- useAgeResume(v=>v==='access:'+profileId,()=>void request(),!!p?.canRequest);
+ // Back from the age check this request sent the person to: open the request sheet again.
+ useAgeResume(v=>v==='access:'+profileId,()=>setSheet('request'),!!p?.canRequest);
+ const reason=preview?null:p?.reason??null;
+ useEffect(()=>{if(reason!=='cooldown')return;
+  call('access.lists',{tab:'out'},outRes).then(r=>setReaskAt(r.items.find(x=>x.profile?.id===profileId&&x.reaskAt)?.reaskAt??null)).catch(()=>{});},[call,profileId,reason]);
  if(!p||!p.exists)return null;
- const open=(p.scopes??[]).length>0;
- return <Group title={t('fe.priv.title')} action={open&&p.until&&<span className="aud">{t('fe.priv.until').replace('{date}',new Date(p.until).toLocaleDateString(locale==='en'?'en':'ru',{day:'numeric',month:'short'}))}</span>}>
-  {open?<Card>{p.text?<div className="md bio"><p>{p.text}</p></div>:<Note>{t('fe.priv.emptyText')}</Note>}</Card>
-   :<Card><div className="fact"><i className="v"><Lock/></i><span>{t('fe.priv.closed').replace('{scopes}',(p.available??[]).map(s=>t('fe.priv.scope.'+s)).join(', '))}</span></div>
-    {p.canRequest?<Btn kind="soft" size="md" icon={LockOpen} onClick={request} disabled={busy} className="mt12">{t('fe.priv.ask')}</Btn>:p.reason&&<Note className="mt8">{t('fe.priv.reason.'+p.reason)}</Note>}
-   </Card>}
-  {note&&<Alert kind="ok" noIcon className="mt8">{note}{note===t('fe.rule.age_check_required')&&<><br/><AgeCheckLink intent={'access:'+profileId}/></>}</Alert>}
- </Group>;
+ if(preview&&(!p.on||!(p.available??[]).length))return null;
+ const available=p.available??[];const scopesOpen=preview==='granted'?available:preview?[]:(p.scopes??[]);
+ const done=()=>{setSheet(null);load();};
+ const sheets=<>
+  {sheet==='request'&&<RequestSheet profileId={profileId} available={scopesOpen.length?available.filter(s=>!scopesOpen.includes(s)):available} onClose={()=>setSheet(null)} onSent={done}/>}
+  {sheet==='pending'&&<PendingSheet profileId={profileId} name={name} onClose={()=>setSheet(null)} onCancelled={done}/>}
+ </>;
+ const head=(isOpen:boolean,badge?:ReactNode)=><div className="vault-h"><span className="vi">{isOpen?<LockOpen/>:<Lock/>}</span><div><b>{t('fe.px.pr.title')}</b></div>{badge&&<span className="vst">{badge}</span>}</div>;
+ if(scopesOpen.length){
+  const photos=(p.media??[]).filter(m=>m.kind!=='video'&&mediaSrc(m)&&(preview||scopesOpen.includes('photos')));
+  const wm=preview||p.own?null:photos.find(m=>m.watermark)?.watermark??null;
+  const until=!preview&&p.until?<Pill tone="v">{w.until(p.until)}</Pill>:undefined;
+  const desc=scopesOpen.includes('info')&&p.text?<Group title={t('fe.px.pr.desc')}><Card><div className="md bio">{p.text.split(/\n{2,}/).map((x,i)=><p key={i}>{x}</p>)}</div></Card></Group>:null;
+  const more=!preview&&(reason==='pending'?<Btn kind="text" auto icon={Clock} onClick={()=>setSheet('pending')}>{t('fe.ac.rq.waiting')}</Btn>
+   :p.canRequest&&available.some(s=>!scopesOpen.includes(s))?<Btn kind="soft" size="sm" auto icon={LockOpen} onClick={()=>setSheet('request')}>{t('fe.ac.rq.askMore')}</Btn>:null);
+  return <section className="vault open" id="priv">{head(true,until)}<div className="vault-b">
+   {desc}
+   {photos.length>0&&<Group bare title={<>{t('fe.px.pr.photos')} · {photos.length}</>} foot={preview?t('fe.px.pr.wmPreview'):t('fe.px.pr.wm')}>
+    <div className="ggrid">{photos.map((m,i)=><button key={i} type="button" className="gtile" onClick={()=>setView(i)}><img src={mediaSrc(m)!} alt="" loading="lazy" draggable={false}/></button>)}</div>
+   </Group>}
+   {!desc&&!photos.length&&<Note>{t('fe.px.pr.nothing')}</Note>}
+   {more}
+  </div>
+  {view!==null&&<PhotoViewer srcs={photos.map(m=>m.src?.full??mediaSrc(m)!)} index={view} wm={wm} onClose={()=>setView(null)}/>}
+  {sheets}</section>;
+ }
+ const action=preview?<Btn kind="dark" disabled aria-disabled="true">{t('fe.px.pr.ask')}</Btn>
+  :reason==='pending'?<Btn kind="dark" icon={Clock} onClick={()=>setSheet('pending')}>{t('fe.ac.rq.waiting')}</Btn>
+  :reason==='not_accepting'?<Pill icon={Lock}>{t('fe.px.pr.notAccepting')}</Pill>
+  :reason==='cooldown'?<Pill icon={Clock}>{reaskAt?t('fe.ac.rq.again',{n:w.days(reaskAt)}):t('fe.px.pr.cooldown')}</Pill>
+  :reason?<Pill icon={Lock}>{t('fe.px.pr.r.'+reason)}</Pill>
+  :p.canRequest?<Btn kind="dark" icon={LockOpen} onClick={()=>setSheet('request')}>{t('fe.px.pr.ask')}</Btn>:null;
+ return <section className="vault closed" id="priv">{head(false)}<div className="vault-b">
+  <Veil lock={false} toggles title={t('fe.px.pr.decides').replace('{name}',name)} text={t('fe.px.pr.decidesText')} action={action}/>
+ </div>{sheets}</section>;
 }

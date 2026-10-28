@@ -30,6 +30,7 @@ A new component or variant ships with its story in the same PR.
 | Tabs | `Seg` — the only tab control: counts, dots, scrolls at 5+ |
 | Lists | `Row` (icon/avatar, title, sub, value, badge, chevron), `ToggleRow`, `SelectRow` |
 | Choice pills | `Chip`, `Chips` |
+| Several from a list as rows | `CheckList` (a box per row, a line under the title: «не запрошено», «уже открыто») |
 | Text fields | `Field` (label + error) around `Input`, `TextArea`, `SearchInput`, `Select`; files via `FilePick` |
 | Overlays | `Sheet` (bottom sheet), `Ask` (confirmation), `Layer` (portal for custom overlays inside the kit only) |
 | Feedback | `Alert` (ok / err / warn / info in the flow), `useToast` (transient, with «Отменить»), `Empty`, `Skel` |
@@ -57,8 +58,8 @@ Product pieces that repeat or carry their own look. Screens use these, never the
 | Create | `Swatches` (cover colour plates) |
 | Interests | `AnswerScale` (1–10 with «обсудить» / «граница» marks) |
 | People | `PersonName` (name on a photo card), `PersonLine` + `RequestCard` + `Answer` (requests and applications), `LikeTile`, `Radar` |
-| Photos and checks | `PhotoSlots` / `PhotoSlot` / `PhotoAdd` (profile photo grid, drag to reorder, `loading`), `PhotoTrack` (viewer strip), `Pose` (the gesture to show; the shot itself is `CaptureFrame`) |
-| Private layer | `VaultHead` (lock, title, switch) |
+| Photos and checks | `PhotoSlots` / `PhotoSlot` / `PhotoAdd` (profile photo grid, drag to reorder, `loading`), `PhotoTrack` (viewer strip; `wm` puts the viewer's handle on someone else's private photos), `Watermark`, `Pose` (the gesture to show; the shot itself is `CaptureFrame`) |
+| Private layer | `VaultHead` (lock, title, switch), `Quota` (requests left today as segments) |
 | Staff review | `ReviewCard`, `KeyValues`, `ReviewMedia`, `ReviewPair` |
 | Feed (`kit/feed.tsx`, «Домен/Лента») | `RichArea` (text + formatting bar: bold, italic, list, quote, link with an address check; Markdown out), `LikesLine` («Нравится: …»), `ActivityCard` + `ActivityItem` («Подписки» activity, folds), `QuickStart` (create sheet tiles), `ActionLine` (quiet line + one action) |
 
