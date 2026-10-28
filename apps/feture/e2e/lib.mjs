@@ -3,10 +3,14 @@
 // runners never log each other out.
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 
 export const PROD = process.env.FE_API || 'https://feture-mvp.vercel.app';
 const DIR = new URL('.', import.meta.url).pathname;
-const SESS = DIR + '.sessions.json';
+// One session cache for every worktree and runner on this machine (E2E_SESSIONS overrides): sign-ins are limited per
+// address (120 / 15 min) and per account (20 / 15 min), and a cache per worktree signed every persona in again in each.
+const SESS = process.env.E2E_SESSIONS || os.homedir() + '/.cache/feture-e2e/sessions.json';
+fs.mkdirSync(SESS.replace(/\/[^/]*$/, ''), { recursive: true });
 const sessions = fs.existsSync(SESS) ? JSON.parse(fs.readFileSync(SESS, 'utf8')) : {};
 /** Writes the cache merged with what other runner processes wrote meanwhile (a lost entry would mean a fresh sign-in,
  * which signs out the other process's open page). */
@@ -46,7 +50,7 @@ export async function session(email, { fresh = false } = {}) {
     if (d && (!s || d.syncToken !== s.syncToken)) { s = sessions[email] = s ? Object.assign(s, d) : d; fresh = false; }
   }
   if (!fresh && s && Date.now() - s._at < 6 * 3600e3) return s;
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 18; i++) { // a 429 waits a minute: up to a whole 15-minute limit window
     let c = await admin({ action: 'user_test_code', email });
     if (c.status === 404) { await admin({ action: 'user_create', email }); c = await admin({ action: 'user_test_code', email }); }
     if (!c.code) throw new Error('test code for ' + email + ': ' + c.status + ' ' + c.error);
@@ -64,7 +68,7 @@ export async function session(email, { fresh = false } = {}) {
     if (v.status === 429) { await sleep(60000); continue; }
     // 403 bad_code: another runner (another lane or worktree) asked a code for the same account — the shared staff
     // persona — after us, which replaced ours. Wait a little, take its session if it got one, else ask again.
-    if (v.status === 403 && i < 9) {
+    if (v.status === 403 && i < 17) {
       await sleep(1500 + Math.random() * 3500);
       let d; try { d = JSON.parse(fs.readFileSync(SESS, 'utf8'))[email]; } catch {}
       if (d?.syncToken && d.syncToken !== s?.syncToken && Date.now() - d._at < 6 * 3600e3) { sessions[email] = s ? Object.assign(s, d) : d; return sessions[email]; }

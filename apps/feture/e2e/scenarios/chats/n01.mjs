@@ -56,7 +56,8 @@ const scenarios = [
     await t.shot('n01-todo');
   } },
   { name: 'N01 filters: a chip narrows the cards, «Все» resets; switching tabs resets the filter', persona: 'host', route: null, run: async t => {
-    await ensureAccessRequest(t); await ensureJoin(t, 'basic');
+    await ensureAccessRequest(t); const j = await ensureJoin(t, 'temp'); // fresh: see «Одобрить» below
+    try {
     await openTodo(t);
     await t.tap('.inbox-filters .chip:has-text("Сообщества")');
     await t.see('.inbox-filters .chip.on:has-text("Сообщества")');
@@ -67,6 +68,7 @@ const scenarios = [
     await t.tap('.inbox-filters .chip:has-text("Доступы")');
     await t.tap('[role=tab]:has-text("Все уведомления")');
     await t.see('.inbox-filters .chip.on:has-text("Все")');
+    } finally { await outOf(t, t.me.closedId, j.email); }
   } },
   { name: 'N01 «Прочитать все» marks every notification read (server too) and hides itself', persona: 'host', route: null, run: async t => {
     // At least one unread notification: `mate` follows the host again.
@@ -137,7 +139,8 @@ const scenarios = [
     } finally { await tidy(t); }
   } },
   { name: 'N01 community request: «Одобрить» makes a member', persona: 'host', route: null, run: async t => {
-    const j = await ensureJoin(t, 'basic'), lina = j.personId, CLUB = t.me.closedId;
+    // A fresh person: `basic` may still be held a week by a decline in an older run (communities/host.mjs C11 declined it).
+    const j = await ensureJoin(t, 'temp'), lina = j.personId, CLUB = t.me.closedId;
     try {
       await openTodo(t);
       await cardOf(t, j.name, 'Заявка в сообщество').locator('button:has-text("Одобрить")').click();
@@ -147,7 +150,9 @@ const scenarios = [
     } finally { await t.api('community.leave', { opId: t.uuid7(), communityId: CLUB }, j.email); }
   } },
   { name: 'N01 community request: «Отклонить» declines', persona: 'host', route: null, run: async t => {
-    const j = await ensureJoin(t, 'stranger'), ari = j.personId, CLUB = t.me.closedId;
+    // A decline holds that person's next request for a week (and `stranger` is asked in by communities/host.mjs too),
+    // so a fresh `temp` person asks each run.
+    const j = await ensureJoin(t, 'temp'), ari = j.personId, CLUB = t.me.closedId;
     try {
       await openTodo(t);
       await cardOf(t, j.name, 'Заявка в сообщество').locator('button:has-text("Отклонить")').click();

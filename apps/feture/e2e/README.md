@@ -6,7 +6,7 @@ one at a time (the production rate limit is shared).
 
 ## Layout
 
-    e2e/lib.mjs            API access, sign-in (admin test code), the session cache (.sessions.json, shared by processes)
+    e2e/lib.mjs            API access, sign-in (admin test code), the session cache (~/.cache/feture-e2e/sessions.json or E2E_SESSIONS, shared by every worktree and process)
     e2e/personas.mjs       account states, built through app commands
     e2e/run.mjs            runs one scenario file
     e2e/run-all.sh         runs every file in order and prints a summary
