@@ -152,14 +152,15 @@ jobs:
             grep -qi "CN=Android Debug" "$RUNNER_TEMP/certs.txt"
           fi
           "$AAPT" dump badging "$APK" | grep -E "^package:|^application-label:"
-          "$AAPT" dump badging "$APK" | grep -q "package: name='ru.feture.app' versionCode='${VERSION_CODE}'"
+          "$AAPT" dump badging "$APK" | grep -q "package: name='ru.feture.app' versionCode='${VERSION_CODE}'" || { echo "::error::Пакет или versionCode не совпали (ждали ${VERSION_CODE})"; exit 1; }
           # The direct APK may install its own updates; the store build (AAB) never asks for that.
-          "$AAPT" dump badging "$APK" | grep -q "uses-permission: name='android.permission.REQUEST_INSTALL_PACKAGES'"
+          "$AAPT" dump badging "$APK" | grep -q "uses-permission: name='android.permission.REQUEST_INSTALL_PACKAGES'" || { echo "::error::Нет разрешения на установку обновлений"; exit 1; }
           # The google-services plugin turned the Firebase client config into resources, or native push stays silent.
-          "$AAPT" dump resources "$APK" | grep -q "string/google_app_id"
+          "$AAPT" dump resources "$APK" | grep -q "string/google_app_id" || { echo "::error::Нет настроек Firebase в APK"; exit 1; }
           # SHA-256 of the signing certificate: public, goes into public/.well-known/assetlinks.json for App Links.
-          HEX=$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$RUNNER_TEMP/certs.txt" | head -1)
-          test -n "$HEX"
+          # apksigner prints «Signer #1 certificate …» or «V2 Signer: certificate …» depending on the schemes used.
+          HEX=$(sed -n -E 's/^(Signer #1|V[0-9.]+ Signer:) certificate SHA-256 digest: //p' "$RUNNER_TEMP/certs.txt" | head -1)
+          test -n "$HEX" || { echo "::error::Не нашли SHA-256 сертификата"; exit 1; }
           echo "CERT_SHA256=$(echo "$HEX" | tr 'a-f' 'A-F' | sed 's/../&:/g; s/:$//')" >> "$GITHUB_ENV"
           if [ "$MODE" = "release" ]; then
             cp "$APK" FetUre-latest.apk
