@@ -6,7 +6,7 @@ import {ArrowUpDown,AtSign,Bell,BellOff,Bookmark,Check,Calendar,ChartColumn,Chev
 import type {LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicOrigin} from '../api-url';
-import {articlePlate,ActingAv,ActionLine,ActivityCard,ActivityItem,Alert,ArticleCard,ArticleImage,Ask,Av,BAD_CHARS,Bar,Btn,Card,Chip,Chips,Counter,Empty,FeedEvents,Field,FilePick,Group,H,IconBtn,Input,LikesLine,Note,QuickStart,RichEditor,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,VideoBadge,View,ViewerPostBar,hasLongWord,mdImages,type RichEditorHandle} from './kit';
+import {articlePlate,ActingAv,ActionLine,ActivityCard,ActivityItem,Alert,ArticleCard,ArticleImage,Ask,Av,BAD_CHARS,Bar,Btn,Card,Chip,Chips,Counter,Empty,FeedEvents,Field,FilePick,Group,H,IconBtn,LoadMore,Input,LikesLine,Note,QuickStart,RichEditor,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,VideoBadge,View,ViewerPostBar,hasLongWord,mdImages,type RichEditorHandle} from './kit';
 import {shakeFirstErr} from './kit/validate';
 import {useFe,usePartnerApproves} from './session';
 import {ActivityCardOf,activitySchema,type Act} from './feed-activity';
@@ -175,7 +175,8 @@ export function FeedTab(){
    ...f.types.map(x=><Chip key={'y'+x} filter on label={t('fe.w3.ff.remove',{name:typeName(x)})} onClick={()=>rm('types',x)}>{typeName(x)} <X/></Chip>)]
   :quick[tab].map(x=><Chip key={x} filter on={false} onClick={()=>toggleTopic(x)}>#{tname(x)}</Chip>);
  const replace=(np:Post)=>setItems(list=>list?.map(x=>!isAct(x)&&x.id===np.id?np:x)??null);
- const refetch=(id:string)=>{call('post.get',{postId:id},onePost).then(r=>replace(r.post)).catch(()=>{});};
+ // A picture whose link ran out: the post is asked again past the read cache (it could hold the same old links).
+ const refetch=(id:string)=>{call('post.get',{postId:id},onePost,{fresh:true}).then(r=>replace(r.post)).catch(()=>{});};
  const posts=(items??[]).filter((x):x is Post=>!isAct(x));
  // Removing posts of an author (or one post) with «Вернуть» in the toast.
  const removeWith=(r:Removal)=>{
@@ -216,7 +217,7 @@ export function FeedTab(){
    }}/>,
    // «Скоро» (V21 feedEvLess) sits after the third item of «Для тебя» (or after the last one of a short feed).
    ...(tab==='forYou'&&i===Math.min(2,items.length-1)?[<SoonBlock key="soon" s={soon}/>]:[])])}</div>
-  {next&&<Btn kind="soft" className="mt12" onClick={()=>load(next)} busy={more} disabled={more}>{t('fe.feed.more')}</Btn>}
+  <LoadMore more={!!next} busy={more} error={error} onMore={()=>{if(next)load(next);}}/>
   {!!hidden&&<button type="button" className="linkbtn feed-hid" onClick={()=>navigate('/n/settings/hidden')}><EyeOff/>{t('fe.fd.hiddenN',{n:hidden})}</button>}
  </>;
  return <>
@@ -472,7 +473,7 @@ function PostInterests({list,preview,author}:{list:z.infer<typeof interest>[],pr
  const {t}=useI18n();const navigate=useNavigate();const {topics}=useTopics();const {acting}=useFe();const [open,setOpen]=useState<string|null>(null);
  const own=author.id===acting?.id;
  const shown=open?list.find(j=>j.topicId===open):undefined;
- return <>{open&&<CompareSheet topicId={open} name={nameOf(author)} theirs={shown?asInterest(shown):undefined} onClose={()=>setOpen(null)}/>} <div className="testcard" style={{'--n':Math.min(4,list.length)} as React.CSSProperties} aria-label={t('fe.fd.myInterests')}>
+ return <>{open&&<CompareSheet topicId={open} name={nameOf(author)} avatar={author?.avatar} personId={author?.id} theirs={shown?asInterest(shown):undefined} onClose={()=>setOpen(null)}/>} <div className="testcard" style={{'--n':Math.min(4,list.length)} as React.CSSProperties} aria-label={t('fe.fd.myInterests')}>
   <b className="attachment-title">{t('fe.fd.myInterests')}</b>
   <Jars list={list.map(j=>({...j,vis:'public'}) as unknown as Interest)} topics={topics as never} onOpen={id=>{if(preview)return;if(own)navigate('/n/topics/'+id);else setOpen(id);}}/>
  </div></>;
@@ -545,7 +546,7 @@ export function PostScreen(){
     :!post||!list?<Skel kind="post" rows={1}/>
     :<>
      {typeof notice==='string'&&notice&&<Alert kind="ok" className="mb12">{notice}</Alert>}
-     <PostCard post={post} onChange={setPost} full onReply={focusBox} onExpired={()=>{call('post.get',{postId:id},onePost).then(r=>setPost(r.post)).catch(()=>{});}} onRemove={r=>{
+     <PostCard post={post} onChange={setPost} full onReply={focusBox} onExpired={()=>{call('post.get',{postId:id},onePost,{fresh:true}).then(r=>setPost(r.post)).catch(()=>{});}} onRemove={r=>{
       navigate('/n/feed',{replace:true});const undo=r.undo;
       toast(r.notice,{type:'ok',action:undo?{label:t('fe.tl.undo'),fn:()=>{undo().then(()=>navigate('/n/feed/post/'+id),e=>toast(feErrorMessage(e,t),{type:'err'}));}}:null});
      }}/>

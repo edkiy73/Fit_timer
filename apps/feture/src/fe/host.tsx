@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,Bell,ChevronRight,CircleCheck,Clock,Copy,Ellipsis,FileText,Flag,Info,Link as LinkIcon,Lock,MessageCircle,Pencil,Pin,PinOff,Send,Settings,ShieldAlert,Trash2,TrendingDown,TrendingUp,User,UserMinus,UserPlus,Users,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Announcement,Answer,Ask,Av,Bar,Btn,Card,IconBtn,Check,Empty,Group,Note,PersonLine,Pill,RequestCard,Row,SectionLabel,Seg,Sheet,Skel,Stack,StatusCard,SubBar} from './kit';
+import {Alert,Announcement,Answer,Ask,Av,Bar,Btn,Card,IconBtn,Check,Empty,Group,LoadMore,Note,PersonLine,Pill,RequestCard,Row,SectionLabel,Seg,Sheet,Skel,Stack,StatusCard,SubBar} from './kit';
 import {useFe,usePartnerApproves} from './session';
 import {WriteBtn,useWriteTo} from './write-to';
 import {useToast} from './toast';
@@ -163,13 +163,13 @@ export function MembersList({c,data,onChange}:{c:{id:string,me?:{role:string,sta
   toast(t('fe.host.mem.done.'+ch).replace('{name}',pname(m)),{type:'ok'});setOpen(null);setConfirm(false);onChange();}
   catch(x){toast(feErrorMessage(x,t),{type:'err'});}finally{setBusy(false);}
  };
- // «Показать ещё» (V21 cMoreMembers): the server gives 20 a page; further pages are added under the first one.
- const [more,setMore]=useState<{items:Mem[],next:string|null}|null>(null);const [loadingMore,setLoadingMore]=useState(false);
+ // The server gives 20 a page; further pages are added under the first one as the list is scrolled (LoadMore).
+ const [more,setMore]=useState<{items:Mem[],next:string|null}|null>(null);const [loadingMore,setLoadingMore]=useState(false);const [moreErr,setMoreErr]=useState<unknown>(null);
  useEffect(()=>{setMore(null);setDone({});},[data]);
  const next=more?more.next:data?.next??null;
- const showMore=async()=>{if(!next||loadingMore)return;setLoadingMore(true);
+ const showMore=async()=>{if(!next||loadingMore)return;setLoadingMore(true);setMoreErr(null);
   try{const r=await call('community.members',{communityId:c.id,cursor:next},memList);setMore(m=>({items:[...(m?.items??[]),...(r.items??[])],next:r.next??null}));}
-  catch(x){toast(feErrorMessage(x,t),{type:'err'});}finally{setLoadingMore(false);}};
+  catch(x){setMoreErr(x);}finally{setLoadingMore(false);}};
  if(!data)return <Skel kind="list"/>;
  const items=data.items===null?null:[...data.items,...(more?.items??[]).filter(m=>!data.items!.some(x=>x.id===m.id))].map(m=>done[m.id]?{...m,...done[m.id]}:m);
  // The sheet reads the person from the list as it is now (not as it was when tapped).
@@ -187,7 +187,7 @@ export function MembersList({c,data,onChange}:{c:{id:string,me?:{role:string,sta
    <Card list>{hosts.map(row)}</Card>
    <SectionLabel>{pl(data.count,t('fe.cm.members'),locale)}</SectionLabel>
    {members.length?<Card list>{members.map(row)}</Card>:<Note>{t('fe.cm.noOtherMembers')}</Note>}
-   {next&&<Btn kind="soft" className="mt12" busy={loadingMore} disabled={loadingMore} onClick={()=>void showMore()}>{t('fe.w7.mem.more')}</Btn>}
+   <LoadMore more={!!next} busy={loadingMore} error={moreErr} onMore={()=>void showMore()}/>
   </>}
   {open&&!confirm&&<Sheet title={pname(open)} onClose={()=>setOpen(null)}><Card list>
    <Row icon={User} title={t('fe.host.mem.profile')} onClick={()=>navigate('/n/people/'+open.id)}/>
