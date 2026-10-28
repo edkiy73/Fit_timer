@@ -550,7 +550,7 @@ function Likes({onCount,toDiscover}:{onCount:(n:number)=>void,toDiscover:()=>voi
   </LikeTile>;})}</div>
   :<Empty icon={Heart} title={t('fe.px.lk.inEmpty')} text={t(us?'fe.px.lk.inEmptyUs':'fe.px.lk.inEmptyText')}><Btn kind="soft" onClick={()=>navigate('/n/me')}>{t(us?'fe.px.lk.improveUs':'fe.px.lk.improve')}</Btn></Empty>;
  return <>
-  <View>{seg}{body}</View>
+  <View refresh={load}>{seg}{body}</View>
   {toastNode}
   {match&&<MatchOverlay other={{id:match.card.id,name:cname(match.card),src:photo(match.card)}} conversationId={match.conversationId} onClose={()=>setMatch(null)}/>}
  </>;
@@ -570,7 +570,7 @@ export function PersonScreen(){
  const setBlock=useCallback((b:boolean)=>{setBlocked(b);if(!b)load();},[load]);
  const name=personName(p);
  if(p&&!blocked)return <>
-  <ProfilePage p={p} onMore={()=>setMenu('menu')} toast={toast}
+  <ProfilePage p={p} onMore={()=>setMenu('menu')} toast={toast} onRefresh={load}
    menu={(rel,reload)=><PersonMenu profileId={id} name={name} handle={p.kind==='person'?p.handle:null} step={menu} setStep={setMenu} blocked={blocked} setBlocked={setBlock} toast={toast} rel={rel} onRel={reload}/>}/>
   {toastNode}
  </>;

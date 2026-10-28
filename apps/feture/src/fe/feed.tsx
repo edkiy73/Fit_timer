@@ -5,9 +5,10 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {ArrowUpDown,AtSign,Bell,BellOff,Bookmark,Check,Calendar,ChartColumn,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,FileText,Globe,Heart,Image as ImageIcon,KeyRound,Lock,MessageCircle,MessageSquareText,Newspaper,Pencil,Plus,Search,SendHorizontal,Share,SlidersHorizontal,Sparkles,Trash2,User,Users,X} from 'lucide-react';
 import type {LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Actions,articlePlate,ActingAv,ActionLine,ActivityCard,ActivityItem,Alert,ArticleCard,ArticleImage,Ask,Av,BAD_CHARS,Bar,Btn,Card,Chip,Chips,Counter,Empty,FeedEvents,Field,FilePick,Group,H,IconBtn,LoadMore,Input,LikesLine,Note,QuickStart,RichEditor,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,VideoBadge,View,ViewerPostBar,hasLongWord,mdImages,type RichEditorHandle} from './kit';
+import {Actions,articlePlate,ActingAv,ActionLine,ActivityCard,ActivityItem,Alert,ArticleCard,ArticleImage,Ask,Av,BAD_CHARS,NewPill,Bar,Btn,Card,Chip,Chips,Counter,Empty,FeedEvents,Field,FilePick,Group,H,IconBtn,LoadMore,Input,LikesLine,Note,QuickStart,RichEditor,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,VideoBadge,View,ViewerPostBar,hasLongWord,mdImages,type RichEditorHandle} from './kit';
 import {shakeFirstErr} from './kit/validate';
-import {useFe,usePartnerApproves} from './session';
+import {refreshReads,useFe,usePartnerApproves} from './session';
+import {useNewerPosts} from './feed-newer';
 import {ActivityCardOf,activitySchema,type Act} from './feed-activity';
 import {Uploader} from './kit/Uploader';
 import {useSendPhoto,useSendVideo} from './media-upload';
@@ -106,7 +107,7 @@ function useSoon(){
     call('feedHide.set',{opId:newOpId(),kind:'event',targetId:e.id,on:false},okOnly).then(()=>{setItems(was);load();},err=>toast(feErrorMessage(err,t),{type:'err'}));}}});
   }catch(err){setItems(was);toast(feErrorMessage(err,t),{type:'err'});}
  };
- return {items,hide,loaded};
+ return {items,hide,loaded,load};
 }
 function SoonBlock({s}:{s:ReturnType<typeof useSoon>}){
  const {t}=useI18n();const {acting}=useFe();const us=acting?.kind==='couple';
@@ -148,6 +149,8 @@ export function FeedTab(){
  const [quick,setQuick]=useState<Record<Tab,string[]>>({forYou:[],following:[],popular:[]});
  // Only the latest request may fill the list: a slow answer for the tab or filter left behind never overwrites the current one.
  const req=useRef(0);
+ const shownItems=useRef(items);shownItems.current=items;
+ const lightRef=useRef<()=>void>(()=>{});const light=()=>lightRef.current();
  const input=useMemo(()=>feedInput(tab,f,popTag),[tab,f,popTag]);
  const shown=useRef('');
  const load=useCallback((cursor?:string)=>{
@@ -162,14 +165,25 @@ export function FeedTab(){
    if(!filtN(f)&&!cursor&&tab!=='popular'){const fq:Record<string,number>={};got.forEach(p=>{if(!isAct(p))(p.topics??[]).forEach(x=>{fq[x]=(fq[x]??0)+1;});});
     setQuick(q=>({...q,[tab]:Object.keys(fq).sort((a,b)=>fq[b]!-fq[a]!).slice(0,7)}));}
   };
-  // The first page from memory paints at once; the server is asked behind it and a changed page (a post published
-  // or removed meanwhile, here or elsewhere) replaces it without a blank frame.
-  call('feed.list',{...input,...(cursor?{cursor}:{})},mixedPage,cursor?{}:{onFresh:put}).then(put).catch(e=>{if(n===req.current)setError(e);}).finally(()=>{if(n===req.current)setMore(false);});
- },[call,input,f,tab]);
+  // The first page from memory paints at once; the server is asked behind it and a changed page (a post removed or
+  // edited, my own post published elsewhere) replaces it without a blank frame. Others' posts newer than the newest
+  // shown are never put above the reader: they light «Новые публикации ↑» (owner 29.10.2026).
+  const later=(r:z.infer<typeof mixedPage>)=>{
+   if(n!==req.current)return;if(tab==='popular'){put(r);return;}
+   const cur=shownItems.current??[];const ids=new Set(cur.map(x=>x.id));
+   const topAt=cur.reduce((m,x)=>!isAct(x)&&x.publishedAt&&x.publishedAt>m?x.publishedAt:m,'');
+   const held=(x:unknown)=>{const p=postSchema.safeParse(x);return p.success&&!ids.has(p.data.id)&&!!p.data.publishedAt&&p.data.publishedAt>topAt&&p.data.author.id!==acting?.id;};
+   if(r.items.some(held))light();put({...r,items:r.items.filter(x=>!held(x))});
+  };
+  call('feed.list',{...input,...(cursor?{cursor}:{})},mixedPage,cursor?{}:{onFresh:later}).then(put).catch(e=>{if(n===req.current)setError(e);}).finally(()=>{if(n===req.current)setMore(false);});
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[call,input,f,tab,acting?.id]);
  useEffect(()=>{load();},[load]);
  const loadHidden=useCallback(()=>{call('feedHide.list',{},hiddenList).then(r=>setHidden(r.items.filter(x=>x.kind==='post'||x.kind==='author').length)).catch(()=>setHidden(h=>h??0));},[call]);
  useEffect(()=>{loadHidden();},[loadHidden]);
  const soon=useSoon();
+ const [newer,seen,lightUp]=useNewerPosts(input,items&&items.filter((x):x is Post=>!isAct(x)),tab!=='popular');lightRef.current=lightUp;
+ const refresh=()=>{seen();load();loadHidden();if(tab==='forYou')soon.load();};
  const setF=(next:Filters)=>setFilters(x=>({...x,[tab]:next}));
  const toggleTopic=(id:string)=>setF({...f,topics:sel.includes(id)?sel.filter(x=>x!==id):[...sel,id]});
  const me=nameOf(acting);
@@ -213,6 +227,7 @@ export function FeedTab(){
   :tab==='following'?<Empty icon={Users} title={t('fe.fd.noFollows')} text={t('fe.fd.noFollowsText')}><Btn onClick={()=>navigate('/n/search?scope=people')}>{t('fe.fd.findPeople')}</Btn></Empty>
   :<Empty icon={Newspaper} title={t('fe.fd.noPosts')} text={t('fe.fd.noPostsText')}><Btn onClick={()=>navigate('/n/search?scope=people')}>{t('fe.fd.findPeople')}</Btn></Empty>;
  else body=<>
+  {newer&&<NewPill label={t('fe.kit.newPosts')} onClick={()=>{seen();void refreshReads(()=>load());}}/>}
   <div className="posts">{items.flatMap((p,i)=>[isAct(p)?<ActivityCardOf key={p.id} a={p} onMenu={()=>setActMenu(p)}/>
    :gone[p.id]?<Alert key={p.id} kind="info" icon={EyeOff} className="mb12" action={<Actions><Btn size="sm" kind="soft" fit onClick={()=>restore(p.id,gone[p.id]!)}>{t('fe.tl.undo')}</Btn>
      <Btn size="sm" kind="text" fit onClick={()=>muteAuthor(gone[p.id]!)}>{t('fe.w3.hide.author',{name:gone[p.id]!.name})}</Btn></Actions>}>{t('fe.w3.hide.row')}</Alert>
@@ -229,7 +244,7 @@ export function FeedTab(){
  </>;
  return <>
   <Bar title={t('fe.nav.feed')}><IconBtn icon={Plus} label={t('fe.fd.createPub')} aria-haspopup="dialog" onClick={()=>setSheet('create')}/><IconBtn icon={Search} label={t('fe.br.search')} onClick={()=>navigate('/n/search?scope=posts')}/><BellButton/></Bar>
-  <View>
+  <View refresh={refresh}>
    <div><Seg value={tab} onChange={v=>{setNotice('');setTab(v);}} options={[{id:'forYou',label:t('fe.feed.tab.forYou')},{id:'following',label:t('fe.feed.tab.following')},{id:'popular',label:t('fe.fd.tab.popular')}]}/></div>
    {notice&&<Alert kind="ok">{notice}</Alert>}
    {welcome&&!acting?.avatar&&<Card><Stack gap={3}>

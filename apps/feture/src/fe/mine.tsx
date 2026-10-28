@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Bookmark,Calendar,Clock,LockOpen,MessageCircle,Newspaper,Pencil,Plus,Trash2,TriangleAlert,Users,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Ask,Av,Bar,Btn,Card,Empty,Group,IconBtn,Note,Row,Skel,Stack,View} from './kit';
+import {Alert,Ask,Av,Bar,Btn,Card,Empty,Group,IconBtn,Note,Row,Skel,Stack,View,useRefreshable} from './kit';
 import {useFe} from './session';
 import {PostCard,SavedEditSheet,postSchema,savedEdit,when,type Post,type SavedEdit} from './feed';
 import {EventRow,type Ev} from './browse';
@@ -65,7 +65,7 @@ export function MinePartScreen({part}:{part:'posts'|'events'|'saved'|'communitie
  const create=part==='events'?'/n/events/new':part==='communities'?'/n/communities/new':null;
  return <>
   <Bar title={title} back>{create&&<IconBtn icon={Plus} kind="ghost" label={t(part==='events'?'fe.ce.create':'fe.cc.create')} onClick={()=>navigate(create)}/>}</Bar>
-  <View className="nodock">{part==='posts'?<MyPosts/>:part==='events'?<MyEvents/>:part==='saved'?<Saved/>:<MyCommunities/>}</View>
+  <View className="nodock" refresh>{part==='posts'?<MyPosts/>:part==='events'?<MyEvents/>:part==='saved'?<Saved/>:<MyCommunities/>}</View>
  </>;
 }
 
@@ -92,7 +92,7 @@ function MyCommunities(){
 function useLoad<T>(fn:()=>Promise<T>){
  const [data,setData]=useState<T|null>(null);const [error,setError]=useState<unknown>(null);
  const load=useCallback(()=>{setError(null);fn().then(setData).catch(setError);},[fn]);
- useEffect(()=>{load();},[load]);
+ useEffect(()=>{load();},[load]);useRefreshable(load);
  return {data,setData,error,load};
 }
 function Failed({error,retry}:{error:unknown,retry:()=>void}){const {t}=useI18n();return <Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={retry}>{t('fe.retry')}</Btn></Empty>;}
@@ -192,7 +192,7 @@ export function MyPostsScreen(){
  }
  return <>
   <Bar title={couple?t('fe.fd.mine.titleUs'):t('fe.fd.mine.title')} back small><IconBtn icon={Plus} label={t('fe.create')} aria-haspopup="dialog" onClick={()=>setCreate(true)}/></Bar>
-  <View className="nodock">{body}</View>
+  <View className="nodock" refresh>{body}</View>
   {create&&<CreateSheet onClose={()=>setCreate(false)}/>}
   {edits&&<SavedEditSheet e={edits} onClose={()=>setEdits(null)} onDone={msg=>{setEdits(null);toast(msg,{type:'ok'});load();}}/>}
  </>;
@@ -239,6 +239,6 @@ export function SavedScreen(){
  </>;
  return <>
   <Bar title={t('fe.fd.sv.title')} back small/>
-  <View className="nodock">{body}</View>
+  <View className="nodock" refresh={load}>{body}</View>
  </>;
 }

@@ -1,10 +1,10 @@
-import {Fragment,useCallback,useEffect,useState,type CSSProperties,type ReactNode} from 'react';
+import {Fragment,useCallback,useEffect,useRef,useState,type CSSProperties,type ReactNode} from 'react';
 import {useLocation,useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Camera,ChevronDown,ChevronRight,ClipboardList,Clock,Eye,HeartOff,PenLine,Users,Newspaper,Settings,Star,Trash2,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {AddCard,Alert,Ask as KitAsk,Av,Btn,Card,Empty,Group,H,IconBtn,Note,PhotoAdd,PhotoSlot,PhotoSlots,RadioList,Row,Seg,SelectRow,Sheet,Skel,ToggleRow} from './kit';
+import {AddCard,Alert,Ask as KitAsk,Av,Btn,Card,Empty,Group,H,IconBtn,Note,PhotoAdd,PhotoSlot,PhotoSlots,PullRefresh,RadioList,Row,Seg,SelectRow,Sheet,Skel,ToggleRow} from './kit';
 import {AgeCheckLink,useAgeResume} from './age-check';
 import {dropReadCache,useFe,useRealtime,useShown} from './session';
 import {PrivateLayer} from './private';
@@ -100,6 +100,7 @@ export function MeTab(){
  },[call,acting]);
  useEffect(()=>{pullCounts();},[pullCounts,tick]);
  useRealtime(['decide','notify'],pullCounts);
+ const scroller=useRef<HTMLDivElement>(null);
  if(state.status!=='ready'||!acting)return null;
  const profiles=state.boot.profiles.filter(x=>x.state!=='deleted');
  const couple=profiles.find(x=>x.kind==='couple');const person=profiles.find(x=>x.kind==='person');
@@ -110,7 +111,7 @@ export function MeTab(){
  const layerDots:Record<Layer,string>={profile:dots.links?t('fe.mx.dot.links'):'',priv:privOn&&dots.reqs?t('fe.mx.dot.reqs'):'',vis:dots.vis?t('fe.mx.dot.vis'):'',mine:''};
  return <>
   <H level={1} className="sr-only" tabIndex={-1}>{t('fe.nav.me')}</H>
-  <div className="view me18 me-x01">
+  <div ref={scroller} className="view me18 me-x01"><PullRefresh target={scroller} onRefresh={()=>{load();pullCounts();}}>
    <header className="me18-h wrap">
     <span className="av-wrap"><Av name={name} seed={acting.id} src={avatarSrc}/></span>
     {couple?<button type="button" className="me18-who" aria-haspopup="dialog" aria-label={t('fe.mx.whose')} onClick={()=>setSwitching(true)}>
@@ -149,7 +150,7 @@ export function MeTab(){
      :layer==='mine'?<MineLayer/>
      :<>{acting.kind==='couple'&&<CouplePending base={p} tick={tick} onDecided={()=>{load();pullCounts();}}/>}<Visibility p={p} settings={settings} onChanged={load}/>{acting.kind==='couple'&&<CoupleVisGroup/>}</>}
    </div>
-  </div>
+  </PullRefresh></div>
   {switching&&<ActAsSheet onClose={()=>setSwitching(false)}/>}
  </>;
 }
