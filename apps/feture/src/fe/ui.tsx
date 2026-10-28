@@ -71,11 +71,15 @@ export const Btn=forwardRef<HTMLButtonElement,BtnProps&{busy?:boolean,fit?:boole
 });
 
 /** `empty()` — one look for empty, error and unavailable states. */
-export function Empty({icon:Icon,title,text,children,role,art,wide,big,top,after}:{icon?:LucideIcon,title:string,text?:string,children?:ReactNode,role?:'status'|'alert',
+/** The one empty state of the app (owner 29.10.2026): icon, title, an optional line, optional actions — fixed spacing
+ * inside; two actions go in `Actions`. A whole screen or tab uses the default; an empty part of a screen or a sheet
+ * (no search results, nothing in a section) is `compact`. Never a Note or a paragraph of a screen's own. */
+export function Empty({icon:Icon,title,text,children,role,art,wide,big,top,after,compact}:{icon?:LucideIcon,title:string,text?:string|undefined,children?:ReactNode,role?:'status'|'alert',
+ /** An empty part of a screen or a sheet: less room around, a smaller icon. */ compact?:boolean,
  /** A picture instead of the icon disc (pair art, radar). */ art?:ReactNode,/** Content (a card, a list) spans the width. */ wide?:boolean,
  /** A larger title and a narrower text (a whole tab that is switched off). */ big?:boolean,/** Starts right under the header instead of mid-screen. */ top?:boolean,
  /** Blocks after the buttons, full width and left-aligned (choices, «что останется»). */ after?:ReactNode}){
- return <div className={['empty',wide?'k-empty-wide':'',big?'k-empty-big':'',top?'k-empty-top':''].filter(Boolean).join(' ')} role={role}>{art??(Icon&&<div className="em-ic"><Icon/></div>)}<h3>{title}</h3>{text&&<p>{text}</p>}{children&&<div className="btns">{children}</div>}{after&&<div className="k-empty-after">{after}</div>}</div>;
+ return <div className={['empty',wide?'k-empty-wide':'',big?'k-empty-big':'',top?'k-empty-top':'',compact?'k-empty-compact':''].filter(Boolean).join(' ')} role={role}>{art??(Icon&&<div className="em-ic"><Icon/></div>)}<h3>{title}</h3>{text&&<p>{text}</p>}{children&&<div className="btns">{children}</div>}{after&&<div className="k-empty-after">{after}</div>}</div>;
 }
 
 /** `seg()` — segmented tabs with the sliding knob. */

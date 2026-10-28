@@ -7,10 +7,12 @@ import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {ActingAv,Alert,Announcement,Ask,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,CommunityHead,CoverBar,Discussion,Empty,EventHero,EventTile,Group,IconBtn,LinkBtn,Note,Pill,Row,Rsvp,SectionLabel,Seg,Sheet,Skel,Spacer,StatusCard,Text,ToggleRow,Veil,View,useRefreshable} from './kit';
 import {useFe,useKeyChange} from './session';
 import {when} from './feed';
+import {Composer} from './create-entry';
+import {useCopyLink} from './share';
 import {BellButton} from './inbox';
 import {useToast} from './toast';
 import {placeName,useCatalog} from './create-community';
-import {CommPlate,NamedPlate,ReportSheet,appUrl,copyLink,fill,okRes,pl} from './comm-kit';
+import {CommPlate,NamedPlate,ReportSheet,appUrl,fill,okRes,pl} from './comm-kit';
 import {faceFields} from './faces';
 import {CommunityHostEntry,type DiscussionChange,DiscussionHostSheet,EventApplicationLines,JoinSheet,MembersList,isCommunityHost} from './host';
 
@@ -325,7 +327,7 @@ export function CommunityScreen(){
   :v.items.map(d=>d.id!==id?d:change==='pin'||change==='unpin'?{...d,pinned:change==='pin'}:{...d,popularExcluded:change==='excludePopular'})});
  const act=async(fn:()=>Promise<unknown>,ok:string)=>{setBusy(true);try{await fn();setLayer('');toast(ok,{type:'ok'});load();}catch(e){toast(feErrorMessage(e,t),{type:'err'});}finally{setBusy(false);}};
  const mute=()=>{if(!c)return;const on=!c.me?.muted;void act(async()=>{await call('community.self',{opId:newOpId(),communityId:c.id,muted:on},okRes);setC(v=>v?.me?{...v,me:{...v.me,muted:on}}:v);},t(on?'fe.cm.muted':'fe.cm.unmuted'));};
- const share=async()=>{setLayer('');const okc=await copyLink(appUrl('/n/communities/'+id));toast(t(okc?'fe.cm.linkCopied':'fe.cm.copyFailed'),{type:okc?'ok':'warn'});};
+ const copy=useCopyLink();const share=()=>{setLayer('');void copy('/n/communities/'+id,t('fe.cm.linkCopied'));};
  const sorted=[...evs].sort((a,b)=>Date.parse(a.starts_at)-Date.parse(b.starts_at));const next=sorted[0];
  // Removed once (a ban): even an open community takes a request now (the server answers the same way).
  const banned=c?.me?.state==='removed';
@@ -352,8 +354,8 @@ export function CommunityScreen(){
        <span>{c.privacy==='open'?<Globe/>:<Lock/>}{t('fe.cm.privacyMeta.'+c.privacy)}</span>
        <span>{place?<MapPin/>:<Video/>}{place||t('fe.cm.online')}</span>
        {c.me?.muted&&<span><BellOff/>{t('fe.cm.mutedMeta')}</span>}</>}/>
-     {c.state==='in_review'&&<Alert kind="warn" icon={Clock} className="mt12"><b>{t('fe.cm.inReview')}</b>{t(couple?'fe.cm.inReviewTextCouple':'fe.cm.inReviewText')}</Alert>}
-     {c.state==='rejected'&&<Alert kind="err" icon={Ban} className="mt12"><b>{t('fe.cm.rejected')}</b>{String((c as {rejectReason?:unknown}).rejectReason??'')}</Alert>}
+     {c.state==='in_review'&&<Alert kind="warn" icon={Clock}><b>{t('fe.cm.inReview')}</b>{t(couple?'fe.cm.inReviewTextCouple':'fe.cm.inReviewText')}</Alert>}
+     {c.state==='rejected'&&<Alert kind="err" icon={Ban}><b>{t('fe.cm.rejected')}</b>{String((c as {rejectReason?:unknown}).rejectReason??'')}</Alert>}
      <div className="md bio cdesc"><p>{c.description}</p></div>
      <Chips className="mt12">{c.topics.map(x=><Chip key={x} className="tag" onClick={()=>navigate('/n/topics/'+x)}>#{tname(x)}</Chip>)}</Chips>
      {status?<><Spacer size={4}/>{status}</>:<div className="row g8 mt16 cm-act">
@@ -365,12 +367,7 @@ export function CommunityScreen(){
      <Spacer size={3}/>
      <Seg value={tab} onChange={setTab} options={[{id:'disc',label:t('fe.comm.tab.disc')},{id:'events',label:t('fe.comm.tab.events'),n:evs.length},{id:'members',label:t('fe.cm.tab.members')},{id:'rules',label:t('fe.comm.tab.rules')}]}/>
      {tab==='disc'?(discs?.locked?<Veil tall title={t('fe.cm.discForMembers')} text={c.request?t('fe.cm.discPending'):t('fe.cm.discRequest')}/>:<>
-      {member&&!c.me?.readOnly&&<div className="composer c-composer">
-       <button type="button" className="cmp-main" onClick={()=>navigate('/n/feed/new?community='+c.id)}>{acting&&<ActingAv p={acting}/>}<span>{t(couple?'fe.cm.topicCouple':'fe.comm.newTopic')}</span></button>
-       <IconBtn icon={ImageIcon} kind="ghost" size="sm" label={t('fe.cm.media')} onClick={()=>navigate('/n/feed/new?community='+c.id+'&x=media')}/>
-       <IconBtn icon={ChartColumn} kind="ghost" size="sm" label={t('fe.cm.poll')} onClick={()=>navigate('/n/feed/new?community='+c.id+'&x=poll')}/>
-       <IconBtn icon={Plus} kind="add" label={t('fe.cm.startDisc')} onClick={()=>navigate('/n/feed/new?community='+c.id)}/>
-      </div>}
+      {member&&!c.me?.readOnly&&<Composer community={{id:c.id,canEvent:host}}/>}
       {!discs?<Skel kind="list"/>:discs.items.length===0?<Empty icon={MessageCircle} title={t('fe.comm.noDisc')} text={member?t('fe.cm.noDiscMember'):t('fe.cm.noDiscGuest')}/>
        :<Card list>{discs.items.map(d=>{const a=d.owner_profile_id?names.get(d.owner_profile_id):undefined;
         return <Discussion key={d.id} onClick={()=>navigate('/n/feed/post/'+d.id)} pinned={d.pinned?t('fe.comm.pinned'):undefined} title={d.title} excerpt={d.excerpt}
@@ -378,7 +375,7 @@ export function CommunityScreen(){
          tools={<IconBtn icon={Ellipsis} kind="ghost" size="sm" aria-haspopup="dialog" label={t(host?'fe.cm.hostTools':'fe.cm.more')} onClick={()=>setHostTools(d.id)}/>}/>;})}</Card>}
      </>)
      :tab==='events'?(evs.length?<div className="evgrid">{sorted.map(e=><EventCard key={e.id} e={e}/>)}</div>
-      :<Empty icon={Calendar} title={t('fe.cm.noEvents')}>{host?<Btn onClick={()=>navigate('/n/events/new?community='+c.id)}>{t('fe.ce.create')}</Btn>
+      :<Empty icon={Calendar} title={t('fe.cm.noEvents')} text={t(host?'fe.cm.noEventsHost':'fe.cm.noEventsText')}>{host?<Btn onClick={()=>navigate('/n/events/new?community='+c.id)}>{t('fe.ce.create')}</Btn>
        :<Btn kind="soft" onClick={()=>navigate('/n/communities?sub=events')}>{t('fe.w7.toEvents.btn')}</Btn>}</Empty>)
      :tab==='members'?<MembersList c={c} data={mem} onChange={load}/>
      :<Card><ol className="rules">{c.rules.map((r,i)=><li key={i}>{r}</li>)}</ol></Card>}
@@ -455,7 +452,7 @@ export function EventScreen(){
  const markTicket=async()=>{if(await send({status:'going',ticketMarked:true},t(couple?'fe.w7.tk.markedUs':'fe.w7.tk.marked')))setLayer('');};
  const unmarkTicket=async()=>{if(await send({status:(st as Status|null)??'going',ticketMarked:false},t('fe.w7.tk.unmarked'),()=>void send({status:'going',ticketMarked:true},t('fe.w7.tk.marked'))))setLayer('');};
  const save=async()=>{const on=!saved;setSaved(on);try{await call('saved.set',{opId:newOpId(),kind:'event',targetId:id,on},okRes);toast(t((on?'fe.cm.saved':'fe.cm.unsaved')+(couple?'Us':'')),on?{type:'ok'}:{});}catch(x){setSaved(!on);toast(feErrorMessage(x,t),{type:'err'});}};
- const share=async()=>{setLayer('');const okc=await copyLink(appUrl('/n/events/'+id));toast(t(okc?'fe.cm.evLinkCopied':'fe.cm.copyFailed'),{type:okc?'ok':'warn'});};
+ const copy=useCopyLink();const share=()=>{setLayer('');void copy('/n/events/'+id,t('fe.cm.evLinkCopied'));};
  const withdraw=async()=>{if(!app)return;setBusy(true);try{await call('event.applicationWithdraw',{opId:newOpId(),applicationId:app.id},okRes);setLayer('');toast(t(couple?'fe.cm.appWithdrawnUs':'fe.cm.appWithdrawn'),{type:'ok'});load();}catch(x){toast(feErrorMessage(x,t),{type:'err'});}finally{setBusy(false);}};
  // A couple's application the partner has not approved yet is taken back as that approval (decide.cancel).
  const unwait=async()=>{const w=e?.me.waiting;if(!w)return;setBusy(true);try{await call('decide.cancel',{opId:newOpId(),approvalId:w.id},okRes);setLayer('');toast(t(couple?'fe.cm.appWithdrawnUs':'fe.cm.appWithdrawn'),{type:'ok'});load();}catch(x){toast(feErrorMessage(x,t),{type:'err'});}finally{setBusy(false);}};

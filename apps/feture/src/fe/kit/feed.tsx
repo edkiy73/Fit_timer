@@ -1,6 +1,6 @@
 import React,{forwardRef,useCallback,useEffect,useImperativeHandle,useLayoutEffect,useRef,useState,type ReactNode} from 'react';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Bold,ChartColumn,ChevronDown,ChevronRight,Ellipsis,FileText,Heading,Heart,Image as ImageIcon,ImagePlus,Italic,Link as LinkIcon,List,ListOrdered,MessageCircle,MessageSquareText,Quote,Sparkles,Strikethrough,Video,type LucideIcon} from 'lucide-react';
+import {Bold,ChartColumn,ChevronDown,ChevronRight,Ellipsis,FileText,Heading,Heart,Image as ImageIcon,ImagePlus,Italic,Link as LinkIcon,List,ListOrdered,MessageCircle,MessageSquareText,Plus,Quote,Sparkles,Strikethrough,Video,type LucideIcon} from 'lucide-react';
 import {fmtDur} from './media';
 import {Av,Btn,Field,H,IconBtn,Input,Sheet,Skel,Text,namedPlate,type PlateKey} from './index';
 import {domToMd,imageBlock,linkOk,mdToDom} from './rich-md';
@@ -258,6 +258,21 @@ export function ViewerPostBar({author,text,liked,likes,replies,labels,onLike,onC
 /** «Или сразу начать с» under the create choices: dashed tiles that open the editor with a part already added. */
 export function QuickStart({title,items}:{title:ReactNode,items:[LucideIcon,string,()=>void][]}){
  return <><p className="create-qt">{title}</p><div className="create-q">{items.map(([I,l,fn])=><button key={l} type="button" onClick={fn}><I/>{l}</button>)}</div></>;
+}
+
+/** The one composer row (owner 29.10.2026: one composer everywhere — the feed, a community's discussions, any place
+ * you write from). Who writes (`av`, the acting profile's `ActingAv`) and the hint («Что нового?» / «Новая тема») open
+ * the editor; photo and poll open it with that part added; the accent «+» opens the create sheet. A place changes only
+ * the texts and where the taps lead — never the look or the set of buttons. */
+export function ComposerRow({av,placeholder,onOpen,media,poll,create}:{av?:ReactNode,placeholder:string,onOpen:()=>void,
+ media:{label:string,onClick:()=>void},poll:{label:string,onClick:()=>void},
+ /** The accent «+»: the create sheet («Публикация», «Статья», «Событие» where allowed). */ create:{label:string,onClick:()=>void}}){
+ return <div className="composer">
+  <button type="button" className="cmp-main" onClick={onOpen}>{av}<span>{placeholder}</span></button>
+  <IconBtn icon={ImageIcon} kind="ghost" size="sm" label={media.label} onClick={media.onClick}/>
+  <IconBtn icon={ChartColumn} kind="ghost" size="sm" label={poll.label} onClick={poll.onClick}/>
+  <IconBtn icon={Plus} kind="add" label={create.label} aria-haspopup="dialog" onClick={create.onClick}/>
+ </div>;
 }
 
 /** «Скоро» in the feed (V21 feedEvLess): a few upcoming events as compact tiles (`EventTile row`). Each tile has its own

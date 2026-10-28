@@ -11,7 +11,7 @@ import { checkOptions } from './me.mjs';
 import { qaProfile, requireUnrestricted } from '../profiles.mjs';
 import { isPremium } from './premium.mjs';
 import { photoVerifiedOf } from './verification.mjs';
-import { endConversations, openConversation } from './chats.mjs';
+import { endConversations, endRequestChat, openConversation } from './chats.mjs';
 import { PREMIUM_SQL } from './faces.mjs';
 import { needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
 import { photosFor } from './photos.mjs';
@@ -510,7 +510,11 @@ const run = {
     const rows = await q.query(
       `update feture.profile_match set ended_at = now(), ended_by_profile = $1
        where ended_at is null and profile_a = least($1::uuid, $2::uuid) and profile_b = greatest($1::uuid, $2::uuid) returning id`, [acting.profileId, input.profileId]);
-    if (!rows[0]) fail(404, 'not_found');
+    if (!rows[0]) {
+      // A chat that began as a message request has no match: it ends the same way, and nobody is told.
+      if (!(await endRequestChat(q, acting.profileId, input.profileId))) fail(404, 'not_found');
+      return { ended: true };
+    }
     await q.query(`update feture.profile_like set state = 'withdrawn', updated_at = now() where from_profile_id = $1 and to_profile_id = $2 and state = 'matched'`, [acting.profileId, input.profileId]);
     if (input.revokeMyGrant) {
       await q.query(`update feture.access_grant set revoked_at = now() where owner_profile_id = $1 and viewer_profile_id = $2 and revoked_at is null`, [acting.profileId, input.profileId]);

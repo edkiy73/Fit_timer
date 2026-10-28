@@ -2,7 +2,7 @@ import {Fragment,useCallback,useEffect,useLayoutEffect,useRef,useState,type CSSP
 import {useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Archive,ArchiveRestore,Ban,Camera,Check,ChevronDown,ChevronLeft,CircleAlert,Clock,Copy,Ellipsis,Eye,EyeOff,Film,Flag,Image as ImageIcon,Info,Lock,LockOpen,MessageCircle,Plus,Search,SendHorizontal,Sparkles,Undo2,User,Users,X} from 'lucide-react';
+import {Archive,ArchiveRestore,Ban,Camera,Check,ChevronDown,ChevronLeft,CircleAlert,Clock,Copy,Ellipsis,Eye,EyeOff,Film,Flag,Image as ImageIcon,Inbox,Info,Lock,LockOpen,MessageCircle,Plus,Search,SendHorizontal,Sparkles,Undo2,User,Users,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {ActingAv,Alert,Av,Bar,Btn,Card,Check as CheckBox,Chip,Chips,Empty,Field,FilePick,Group,IconBtn,Layer,Note,PersonBar,Pill,RadioList,Row,SearchInput,SectionLabel,SelectRow,Sheet,Skel,Stack,Text,TextArea,ToggleRow,Typing,VideoBadge,VideoPlayer,View,type Voice,VoiceBubble,VoiceRecorder} from './kit';
 import {VIDEO_TYPES} from './kit/media';
@@ -15,14 +15,22 @@ import {useToast} from './toast';
 import {softMax,textError} from './kit/validate';
 import {BellButton,SegN} from './inbox';
 
-/** Slice G (V21 H01, H02, H05) with the prototype's markup. A conversation exists only after a mutual like (server).
+/** Slice G (V21 H01, H02, H05) with the prototype's markup. A conversation comes with a mutual like or, since the owner's
+ * decision of 29.10.2026, with a message request: «Написать» without a chat opens this screen as a request composer
+ * (`/n/chats/new/:to`), the recipient finds it in «Запросы» and answers, hides or reports it (server rules).
  * New messages and receipts arrive on a realtime «chat» signal (S2 §8); a slow poll stays as the fallback. */
 const media=z.object({src:z.record(z.string(),z.string()).nullable()}).passthrough();
-const chat=z.object({id:z.uuid(),state:z.string(),side:z.object({id:z.uuid(),kind:z.enum(['person','couple'])}),newMatch:z.boolean(),
+// Where the two know each other from (server: requestContext).
+const ctxItem=z.object({kind:z.string(),name:z.string().optional(),title:z.string().optional(),startsAt:z.string().optional()}).passthrough();
+type Ctx=z.infer<typeof ctxItem>;
+// A request to this side: its sender waits (`renewAt`: when one more may go), its recipient decides.
+const reqView=z.object({role:z.enum(['sender','recipient']),renewAt:z.string().optional(),context:z.array(ctxItem).optional(),at:z.string().nullable().optional()}).nullable().optional();
+type Req=NonNullable<z.infer<typeof reqView>>;
+const chat=z.object({request:reqView,origin:z.string().optional(),id:z.uuid(),state:z.string(),side:z.object({id:z.uuid(),kind:z.enum(['person','couple'])}),newMatch:z.boolean(),
  other:z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),avatar:media.nullable()}),
  unread:z.number(),muted:z.boolean(),archived:z.boolean().optional(),last:z.object({body:z.string(),media:z.boolean(),mode:z.string(),mine:z.boolean(),kind:z.string().nullable().optional()}).nullable(),at:z.string()});
 type Chat=z.infer<typeof chat>;
-const list=z.object({ok:z.literal(true),items:z.array(chat)});
+const list=z.object({ok:z.literal(true),items:z.array(chat),requests:z.array(chat).optional()});
 // Own messages carry when each member of the other side read them (`readBy`, a couple has two) and, for a
 // disappearing photo, how each of them handled it (`views`); never whose account it was (V21 chatReadInfo / chatMedia).
 const msg=z.object({id:z.uuid(),seq:z.number(),mine:z.boolean(),body:z.string(),at:z.string(),replyTo:z.uuid().nullable().optional(),
@@ -34,12 +42,26 @@ const msg=z.object({id:z.uuid(),seq:z.number(),mine:z.boolean(),body:z.string(),
 const startersRes=z.object({ok:z.literal(true),topics:z.array(z.string())});
 const topicsRes=z.object({ok:z.literal(true),topics:z.array(z.object({id:z.string(),ru:z.string().nullable(),en:z.string().nullable()}).passthrough())}).passthrough();
 type Msg=z.infer<typeof msg>;
-const msgs=z.object({ok:z.literal(true),state:z.string(),items:z.array(msg),otherRead:z.number(),lastSeq:z.number(),typingTag:z.string().optional()});
+const msgs=z.object({ok:z.literal(true),state:z.string(),items:z.array(msg),otherRead:z.number(),lastSeq:z.number(),typingTag:z.string().optional(),request:reqView});
+const withRes=z.object({ok:z.literal(true),conversationId:z.uuid().nullable(),canRequest:z.boolean().optional(),rule:z.string().optional(),answers:z.boolean().optional(),
+ context:z.array(ctxItem).optional(),left:z.number().optional(),max:z.number().optional()}).passthrough();
+const profileRes=z.object({ok:z.literal(true),profile:z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),avatar:media.nullable()}).passthrough()});
+const requestRes=z.object({ok:z.literal(true),conversationId:z.uuid().optional(),state:z.string().optional(),pending:z.object({approvalId:z.uuid()}).optional()}).passthrough();
 const ok=z.object({ok:z.literal(true)}).passthrough();
 const opened=z.object({ok:z.literal(true),media:z.object({src:z.record(z.string(),z.string()).nullable()}).passthrough().nullable(),until:z.string().nullable().optional(),gone:z.boolean().optional()}).passthrough();
 const grantList=z.object({ok:z.literal(true),items:z.array(z.object({profile:z.object({id:z.uuid()}).passthrough()}).passthrough())});
 
 const nameOf=(o:{name?:string|null,handle?:string|null})=>o.name||(o.handle?'@'+o.handle:'?');
+type T=(k:string,v?:Record<string,string>)=>string;
+/** A request's sender as its recipient sees it: a couple shows as «Пара …». */
+const senderName=(o:{kind?:string,name?:string|null,handle?:string|null},t:T)=>o.kind==='couple'?t('fe.rq.couple',{name:nameOf(o)}):nameOf(o);
+/** «Участник сообщества «…» · Идёт на «…» 19.11 · Подписан на тебя» — or «Пока не знакомы». */
+function contextLine(ctx:Ctx[]|undefined,t:T,locale:string,us:boolean){
+ const parts=(ctx??[]).map(c=>c.kind==='follows'?t(us?'fe.rq.ctx.followsUs':'fe.rq.ctx.follows')
+  :c.kind==='community'?t('fe.rq.ctx.community',{name:c.name??''})
+  :c.kind==='event'?t('fe.rq.ctx.event',{title:c.title??'',date:c.startsAt?new Date(c.startsAt).toLocaleDateString(locale==='en'?'en-GB':'ru',{day:'2-digit',month:'2-digit'}):''}).trim():'').filter(Boolean);
+ return parts.length?parts.join(' · '):t('fe.rq.ctx.none');
+}
 function ago(iso:string,locale:string){const s=(Date.now()-Date.parse(iso))/1000;const ru=locale!=='en';
  if(s<3600)return Math.max(1,Math.floor(s/60))+(ru?' мин':' min');if(s<86400)return Math.floor(s/3600)+(ru?' ч':' h');
  return new Date(iso).toLocaleDateString(ru?'ru':'en',{day:'numeric',month:'short'});}
@@ -62,12 +84,14 @@ export function ChatsTab(){
  const [params]=useSearchParams();const archived=params.get('archived')==='1';
  useScreenTag(archived?'H05':'H01');
  const [kind,setKind]=useState<'all'|'me'|'couple'>('all');const [items,setItems]=useState<Chat[]|null>(null);const [error,setError]=useState<unknown>(null);
+ // «Запросы» (message requests to my profiles, not answered yet): a folder at the top with their count.
+ const [requests,setRequests]=useState<Chat[]>([]);
  const [searching,setSearching]=useState(false);const [q,setQ]=useState('');const qRef=useRef<HTMLInputElement>(null);
  // One list for every split: the counters on «Личные» / «Чаты пары» come from the same rows.
- const load=useCallback(()=>{setError(null);call('chats.list',{filter:'all',archived},list,{asAccount:true}).then(r=>setItems(r.items)).catch(setError);},[call,archived]);
+ const load=useCallback(()=>{setError(null);call('chats.list',{filter:'all',archived},list,{asAccount:true}).then(r=>{setItems(r.items);setRequests(r.requests??[]);}).catch(setError);},[call,archived]);
  useEffect(()=>{setItems(null);},[archived]);
  useEffect(()=>{load();const id=setInterval(load,30000);return ()=>clearInterval(id);},[load]);
- useRealtime('chat',load);
+ useRealtime(['chat','notify'],load);
  // «Отменить» on the archive toast runs after the chat closed: the list asks again.
  useEffect(()=>{addEventListener(RELOAD,load);return ()=>removeEventListener(RELOAD,load);},[load]);
  useEffect(()=>{if(searching)qRef.current?.focus();},[searching]);
@@ -104,6 +128,7 @@ export function ChatsTab(){
   <View refresh={load}>
    {couple&&<SegN value={kind} onChange={setKind} options={[{id:'all',label:t('fe.chats.all')},{id:'me',label:t('fe.chats.personal'),n:unreadFor('me')},{id:'couple',label:t('fe.chats.couple'),n:unreadFor('couple')}]}/>}
    {couple&&kind==='couple'&&<Note className="mt8">{t('fe.chx.coupleNote',{name:couple.name})}</Note>}
+   {requests.length>0&&<Card list className="mt8"><Row icon={Inbox} tone="v" title={t('fe.rq.folder')} sub={t('fe.rq.folderSub')} badge={requests.length} onClick={()=>navigate('/n/chats/requests')}/></Card>}
    {searching&&<div className="chat-q mt12"><SearchInput ref={qRef} label={t('fe.chx.search')} placeholder={t('fe.chx.searchPh')} value={q} onChange={e=>setQ(e.target.value)}/>
     <IconBtn icon={X} kind="ghost" size="sm" label={t('fe.chx.searchClose')} onClick={toggleSearch}/></div>}
    {error&&!items?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
@@ -118,6 +143,30 @@ export function ChatsTab(){
      {!rows.length&&!fresh.length&&(needle?<Empty icon={Search} title={t('fe.chx.notFound',{q:q.trim()})}><Btn kind="text" auto onClick={()=>setQ('')}>{t('fe.chx.clear')}</Btn></Empty>
       :<Empty icon={MessageCircle} title={t('fe.chx.noChats')} text={t('fe.chx.noChatsText')}/>)}
     </>}
+  </View>
+ </>;
+}
+
+/* ================= «Запросы» (message requests, owner 29.10.2026) ================= */
+/** Requests to the account's profiles nobody answered yet: who, where they know each other from, the first message.
+ * Opening one reads it without telling its sender; the answer is given in the conversation. */
+export function RequestsScreen(){
+ const {call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();
+ useScreenTag('H01');
+ const [items,setItems]=useState<Chat[]|null>(null);const [error,setError]=useState<unknown>(null);
+ const load=useCallback(()=>{setError(null);call('chats.list',{filter:'all'},list,{asAccount:true}).then(r=>setItems(r.requests??[])).catch(setError);},[call]);
+ useEffect(()=>{load();const id=setInterval(load,30000);return ()=>clearInterval(id);},[load]);
+ useRealtime(['chat','notify'],load);
+ const preview=(c:Chat)=>!c.last?'':c.last.media&&!c.last.body?t('fe.chats.photo'):c.last.body;
+ return <>
+  <Bar title={t('fe.rq.title')} back="/n/chats" small/>
+  <View className="nodock">
+   {error&&!items?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
+    :items===null?<Skel kind="list" rows={3}/>
+    :items.length?<Card list>{items.map(c=><Row key={c.id} av={<Av name={nameOf(c.other)} seed={c.other.id} size="lg" src={c.other.avatar?.src?.thumb}/>}
+      title={senderName(c.other,t)} sub={<>{c.side.kind==='couple'&&<span className="ct-us"><Users/>{t('fe.chx.coupleChat')}</span>}{contextLine(c.request?.context,t,locale,c.side.kind==='couple')}</>}
+      extra={<Text as="div" size="sm" tone="mute" className="one">{preview(c)}</Text>} val={ago(c.at,locale)} onClick={()=>navigate('/n/chats/'+c.id)}/>)}</Card>
+    :<Empty icon={Inbox} title={t('fe.rq.empty')} text={t('fe.rq.emptyText')}/>}
   </View>
  </>;
 }
@@ -152,9 +201,20 @@ type SheetKind='attach'|'menu'|'end'|'report'|'block'|'msg'|'readers'|'copy';
 const GROW=120;
 
 /* ================= H02 conversation ================= */
+/** `/n/chats/:id` — a conversation; `/n/chats/new/:to` — «Написать» someone without a chat yet: the same screen as a
+ * request composer (one first message, text and / or one photo). Keyed, so a sent request opens as a fresh screen. */
 export function ChatScreen(){
- const {id=''}=useParams();const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
+ const {id='',to=''}=useParams();
+ return <ChatView key={id||'new:'+to} id={id} to={to}/>;
+}
+
+/** The draft of a request: whether it may go out, why not, where they know each other from, how many are left today. */
+type Draft={canRequest:boolean,rule?:string|undefined,context:Ctx[],left?:number|undefined,max?:number|undefined};
+
+function ChatView({id,to}:{id:string,to:string}){
+ const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
  useScreenTag('H02');
+ const [draft,setDraft]=useState<Draft|null>(null);const [req,setReq]=useState<Req|null>(null);const [reqBusy,setReqBusy]=useState('');
  const [meta,setMeta]=useState<Chat|null>(null);const [items,setItems]=useState<Msg[]|null>(null);const [state,setState]=useState('active');const [otherRead,setOtherRead]=useState(0);const [tag,setTag]=useState<string|null>(null);
  const [error,setError]=useState<unknown>(null);const [text,setText]=useState('');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
  const [pend,setPend]=useState<Pend[]>([]);const [tries,setTries]=useState(0);const [replyTo,setReplyTo]=useState<string|null>(null);
@@ -187,24 +247,37 @@ export function ChatScreen(){
  const rule=mode==='normal'?{}:mode==='once'?{viewRule:'once'}:{viewRule:'timer',viewSeconds:60};
  const sendChatPhoto=useSendPhoto('chat',rule,profileId);const sendChatVideo=useSendVideo('chat',rule,profileId);const sendVoice=useSendVoice(profileId);
  useEffect(()=>{
-  // An archived conversation is opened from «Архив» too, so both lists are asked.
+  if(to){
+   // «Написать» without a chat: their chat after all (opened elsewhere meanwhile), or the request composer.
+   if(!acting)return;
+   Promise.all([call('chat.with',{profileId:to},withRes),call('profile.get',{profileId:to},profileRes)]).then(([w,p])=>{
+    if(w.conversationId){navigate('/n/chats/'+w.conversationId,{replace:true});return;}
+    setDraft({canRequest:!!w.canRequest,rule:w.rule,context:w.context??[],left:w.left,max:w.max});
+    setMeta({id:'',state:'active',side:{id:acting.id,kind:acting.kind},newMatch:false,other:{id:p.profile.id,kind:p.profile.kind,handle:p.profile.handle,name:p.profile.name,avatar:p.profile.avatar},
+     unread:0,muted:false,last:null,at:new Date().toISOString(),request:null});
+    setItems([]);
+   }).catch(setError);
+   return;
+  }
+  // An archived conversation is opened from «Архив» too, so both lists are asked; a request to me from «Запросы».
   Promise.all([call('chats.list',{filter:'all'},list,{asAccount:true}),call('chats.list',{filter:'all',archived:true},list,{asAccount:true})])
-   .then(([a,b])=>{const c=[...a.items,...b.items].find(x=>x.id===id);if(c){setMeta(c);setState(c.state);}else setError(new FeError('not_found',404));}).catch(setError);
- },[call,id,tries]);
+   .then(([a,b])=>{const c=[...a.items,...(a.requests??[]),...b.items].find(x=>x.id===id);if(c){setMeta(c);setState(c.state);setReq(c.request??null);}else setError(new FeError('not_found',404));}).catch(setError);
+ },[call,id,to,tries,acting,navigate]);
  const pull=useCallback(async(initial:boolean)=>{
-  if(!meta)return;
+  if(!meta||!id)return;
   const r=await call('chat.messages',initial?{conversationId:id}:{conversationId:id,afterSeq:last.current},msgs,{profileId:meta.side.id});
-  setState(r.state);setOtherRead(r.otherRead);if(r.typingTag)setTag(r.typingTag);
+  setState(r.state);setOtherRead(r.otherRead);if(r.typingTag)setTag(r.typingTag);setReq(r.request??null);
   // A refresh after an ephemeral view also needs the states of older messages: the initial pull replaces the list.
   if(initial)setItems(r.items);
   else if(r.items.length)setItems(prev=>{const p=prev??[];const seenIds=new Set(p.map(m=>m.id));return [...p,...r.items.filter(m=>!seenIds.has(m.id))].sort((a,b)=>a.seq-b.seq);});
   else setItems(prev=>prev??[]);
   if(r.items.length){
    last.current=Math.max(last.current,...r.items.map(m=>m.seq));
-   call('chat.read',{conversationId:id,upToSeq:last.current},ok,{profileId:meta.side.id}).catch(()=>{});
+   // A request to me is read without telling its sender (the server keeps it unread until I answer).
+   if(r.request?.role!=='recipient')call('chat.read',{conversationId:id,upToSeq:last.current},ok,{profileId:meta.side.id}).catch(()=>{});
   }
  },[call,id,meta]);
- useEffect(()=>{if(!meta)return;pull(true).catch(setError);const iv=setInterval(()=>{pull(false).catch(()=>{});},30000);return ()=>clearInterval(iv);},[meta,pull]);
+ useEffect(()=>{if(!meta||!id)return;pull(true).catch(setError);const iv=setInterval(()=>{pull(false).catch(()=>{});},30000);return ()=>clearInterval(iv);},[meta,pull,id]);
  // The signal names no conversation (S2 §8): any «chat» signal asks this one for what is new after the last seq.
  useRealtime('chat',()=>{pull(false).catch(()=>{});setTyping(false);});
  // «печатает…» (owner, 28.10): the other side's typing signal shows a line under the messages for ~5 s; mine goes out
@@ -212,11 +285,11 @@ export function ChatScreen(){
  const [typing,setTyping]=useState(false);const typingTimer=useRef<ReturnType<typeof setTimeout>|undefined>(undefined);const lastTyping=useRef(0);
  useTypingSignal(tag,()=>{setTyping(true);clearTimeout(typingTimer.current);typingTimer.current=setTimeout(()=>setTyping(false),5000);});
  useEffect(()=>()=>clearTimeout(typingTimer.current),[]);
- const typed=()=>{if(!meta||state!=='active'||Date.now()-lastTyping.current<4000)return;lastTyping.current=Date.now();
+ const typed=()=>{if(!meta||!id||req||state!=='active'||Date.now()-lastTyping.current<4000)return;lastTyping.current=Date.now();
   call('chat.typing',{conversationId:id},ok,{profileId:meta.side.id}).catch(()=>{});};
  // Private access between the two sides: the pills above the chat and «Отозвать мой доступ» in the menu (V11 UX-16).
  const loadGrants=useCallback(()=>{
-  if(!meta)return;const other=meta.other.id;const opts={profileId:meta.side.id};
+  if(!meta||!id)return;const other=meta.other.id;const opts={profileId:meta.side.id};
   Promise.all([call('access.lists',{tab:'byme'},grantList,opts),call('access.lists',{tab:'withme'},grantList,opts)])
    .then(([a,b])=>setGrants({byMe:a.items.some(x=>x.profile.id===other),withMe:b.items.some(x=>x.profile.id===other)})).catch(()=>{});
  },[call,meta]);
@@ -224,7 +297,7 @@ export function ChatScreen(){
  // «С чего начать» (V21 ice): questions about interests both sides show publicly, before the two general ones.
  const [starters,setStarters]=useState<string[]>([]);
  const empty=items!==null&&items.length===0&&state==='active';
- useEffect(()=>{if(!meta||!empty)return;let live=true;
+ useEffect(()=>{if(!meta||!empty||!id)return;let live=true;
   Promise.all([call('chat.starters',{conversationId:id},startersRes,{profileId:meta.side.id}),call('catalog.get',{},topicsRes,{asAccount:true})])
    .then(([s,c])=>{if(!live)return;const name=new Map(c.topics.map(x=>[x.id,(locale==='en'?x.en||x.ru:x.ru||x.en)??'']));setStarters(s.topics.map(id=>name.get(id)??'').filter(Boolean));}).catch(()=>{});
   return ()=>{live=false;};},[call,id,meta,empty,locale]);
@@ -254,10 +327,34 @@ export function ChatScreen(){
    setPend(list=>list.filter(x=>x.key!==p.key));
   }catch(e){setPend(list=>list.map(x=>x.key===p.key?{...x,status:'failed'}:x));toast(e instanceof FeError&&e.code!=='network'?feErrorMessage(e,t):t('fe.chx.msgFailed'),{type:'err'});}
  };
+ /* ---- message requests: the first message goes with chat.request (also one more after a month without an answer) ---- */
+ const canRenew=req?.role==='sender'&&!!req.renewAt&&Date.parse(req.renewAt)<=Date.now();
+ const asRequest=!!draft||canRenew;
+ const reqOp=useRef(newOpId());
+ const ruleText=(rule:string|undefined)=>{
+  if(rule==='requests_day'){const max=draft?.max??10;return t(max<10?'fe.rq.no.requests_dayLow':'fe.rq.no.requests_day',{max:String(max)});}
+  if(rule==='request_pending')return t('fe.rq.waitText',{name:meta?nameOf(meta.other):''});
+  const k='fe.rq.no.'+(rule??'other');const m=t(k,{name:meta?nameOf(meta.other):''});return m===k?t('fe.rq.no.other'):m;
+ };
+ const requestError=(e:unknown)=>e instanceof FeError&&e.rule?ruleText(e.rule):feErrorMessage(e,t);
+ const sendRequest=async(body:string,assetId?:string)=>{
+  if(!meta||reqBusy)return;setReqBusy('send');setFailure('');
+  try{
+   const r=await call('chat.request',{opId:reqOp.current,profileId:meta.other.id,body,...(assetId?{assetId}:{})},requestRes,{profileId:meta.side.id});
+   reqOp.current=newOpId();setText('');if(input.current)input.current.style.height='';
+   // A couple whose partner approves first contacts: it goes once the partner agrees (Q01 «Ждёт подтверждения»).
+   if(r.pending){toast(t('fe.ca.waitPartner'),{type:'ok'});navigate('/n/chats',{replace:true});return;}
+   if(r.state==='request')toast(t(meta.side.kind==='couple'?'fe.rq.sentUs':'fe.rq.sent'),{type:'ok'});
+   stick.current=true;
+   if(r.conversationId&&r.conversationId!==id)navigate('/n/chats/'+r.conversationId,{replace:true});else await pull(false).catch(()=>{});
+  }catch(e){reqOp.current=newOpId();setFailure(requestError(e));}
+  finally{setReqBusy('');}
+ };
  const send=()=>{
   const body=text.trim();if(!body||!meta)return;
   // Kit validation layer: the server's rule for a message (length, characters, lines, long runs) before it leaves.
   const bad=textError(t,'chatMessage',body);if(bad){toast(bad,{type:'err'});return;}
+  if(asRequest){void sendRequest(body);return;}
   const p:Pend={key:newOpId(),body,opId:newOpId(),at:new Date().toISOString(),status:'sending',...(replyTo?{replyTo}:{})};
   setPend(list=>[...list,p]);setText('');setReplyTo(null);stick.current=true;
   if(input.current)input.current.style.height='';
@@ -369,6 +466,8 @@ export function ChatScreen(){
  },[call,id,profileId]);
  const uploaded=async(got:Uploaded[])=>{
   const g=got[0];setPicked(null);if(!g)return;
+  // A request's photo goes with the typed text as its one first message.
+  if(asRequest){if(g.file)URL.revokeObjectURL(g.file);URL.revokeObjectURL(g.url);await sendRequest(text.trim(),g.id);return;}
   const o:Outgoing={preview:g.url,mode,assetId:g.id,opId:newOpId(),...(g.kind==='video'?{video:{durationMs:g.durationMs??0}}:{})};
   if(g.file)URL.revokeObjectURL(g.file);
   setOut(o);outRef.current=o;setFailure('');stick.current=true;
@@ -429,7 +528,17 @@ export function ChatScreen(){
  const theirs=(items??[]).filter(m=>!m.mine).slice(-20).reverse();
  const openReport=()=>{setRpSel([]);setSheetErr('');setSheet('report');};
  // A chat is reported as its conversation with the selected messages; with nothing of theirs to show, the profile is.
- const reportDone=(blocked:boolean)=>{if(blocked)navigate('/n/chats');else{setSheet(null);toast(t(meta?.side.kind==='couple'?'fe.ca.reported':'fe.chx.reportDone'),{type:'ok'});}};
+ const reportDone=(blocked:boolean)=>{if(blocked){if(req?.role==='recipient')toast(t('fe.rq.reported'),{type:'ok'});navigate('/n/chats');}else{setSheet(null);toast(t(meta?.side.kind==='couple'?'fe.ca.reported':'fe.chx.reportDone'),{type:'ok'});}};
+ /* ---- a request to me: «Ответить» (a normal chat from now on), «Скрыть» (its sender is not told), «Пожаловаться и
+    заблокировать» (the report sheet with its messages picked and «Также заблокировать» on) ---- */
+ const answerReq=async(answer:'accept'|'hide')=>{
+  if(!meta||reqBusy)return;setReqBusy(answer);
+  try{await call('chat.requestAnswer',{opId:newOpId(),conversationId:id,answer},ok,{profileId:meta.side.id});
+   if(answer==='hide'){toast(t('fe.rq.hidden',{name:otherName}),{type:'ok'});navigate('/n/chats/requests',{replace:true});return;}
+   setReq(null);toast(t('fe.rq.answered'),{type:'ok'});requestAnimationFrame(()=>input.current?.focus({preventScroll:true}));}
+  catch(e){toast(feErrorMessage(e,t),{type:'err'});}finally{setReqBusy('');}
+ };
+ const reportReq=()=>{setRpSel(theirs.map(m=>m.id).slice(0,20));setSheetErr('');setSheet('report');};
 
  // Back from the age check a photo sent us to: the attach sheet opens again (the photo itself is picked anew).
  useAgeResume(v=>v==='attach:'+id,()=>{setSheetErr('');setSheet('attach');},!!meta&&state==='active');
@@ -441,6 +550,8 @@ export function ChatScreen(){
   {!(error instanceof FeError&&error.code==='not_found')&&<Btn onClick={()=>{setError(null);if(meta)pull(true).catch(setError);else setTries(n=>n+1);}}>{t('fe.retry')}</Btn>}
   <Btn kind="soft" onClick={()=>navigate('/n/chats')}>{t('fe.chats.back')}</Btn></Empty></View></>;
  const ended=state!=='active';
+ // The input shows in a chat, in a request composer that may send, and for a waiting sender once a month passed.
+ const canWrite=draft?draft.canRequest:!req||canRenew;
  const sheetAlert=sheetErr?<Alert kind="err" noIcon className="mt12">{sheetErr}{sheetErr===t('fe.chx.ageRequired')&&<><br/><AgeCheckLink intent={'attach:'+id}/></>}</Alert>:null;
  const all=items??[];
  // Read receipts: the other side's avatar under the last own message they have read.
@@ -455,9 +566,9 @@ export function ChatScreen(){
  return <>
   <PersonBar onBack={back} {...(meta?{name:otherName,onOpen:()=>navigate('/n/people/'+meta.other.id),av:<Av name={otherName} seed={meta.other.id} size="sm" src={meta.other.avatar?.src?.thumb}/>}:{})}
    sub={couple?<><span className="ct-us"><Users/>{t('fe.chx.coupleChat')}</span> · {t('fe.chx.coupleSees')}</>:undefined}>
-   <IconBtn icon={Ellipsis} kind="ghost" label={t('fe.chx.menu')} disabled={!meta} onClick={()=>{setSheetErr('');setSheet('menu');}}/>
+   <IconBtn icon={Ellipsis} kind="ghost" label={t('fe.chx.menu')} disabled={!meta||!!draft} onClick={()=>{setSheetErr('');setSheet('menu');}}/>
   </PersonBar>
-  <div ref={viewRef} className={'view nodock'+(ended?'':' cta1')} onScroll={onScroll}><div className="wrap">
+  <div ref={viewRef} className={'view nodock'+(ended||!canWrite?'':' cta1')} onScroll={onScroll}><div className="wrap">
    {meta&&state==='active'&&(grants.byMe||grants.withMe)&&<div className="chat-ctx">
     {grants.byMe&&grants.withMe?<Pill tone="ok" icon={LockOpen} onClick={()=>navigate('/n/people/'+meta.other.id)}>{t('fe.chx.pillBoth')}</Pill>
      :grants.withMe?<Pill tone="ok" icon={LockOpen} onClick={()=>navigate('/n/people/'+meta.other.id)}>{t('fe.chx.pillTheirs')}</Pill>
@@ -465,7 +576,7 @@ export function ChatScreen(){
    </div>}
    {items===null?<Skel kind="list" rows={4}/>:<>
     <div className="msgs" id="msgs">
-     <div className="msg sys">{t('fe.chx.matchSys')}</div>
+     {!draft&&meta?.origin!=='request'&&<div className="msg sys">{t('fe.chx.matchSys')}</div>}
      {all.map(m=>{
       return <Fragment key={m.id}>
        {sep(m.at)}
@@ -491,7 +602,17 @@ export function ChatScreen(){
        <Btn kind="text" size="sm" auto icon={X} onClick={()=>setVoiceOut(null)}>{t('fe.chx.drop')}</Btn></Stack>}</>}
      {typing&&!ended&&<Typing>{t('fe.w7.typing',{name:otherName})}</Typing>}
     </div>
-    {!ended&&all.length===0&&pend.length===0&&<><SectionLabel>{t('fe.chx.starters')}</SectionLabel><Chips className="ice">
+    {draft&&meta&&(draft.canRequest
+     ?<Alert kind="info" icon={MessageCircle} className="mt16"><b>{t('fe.rq.draft',{name:otherName})}</b>{t('fe.rq.draftOne')}
+      {draft.left!==undefined&&draft.max!==undefined&&draft.left<=3?' '+t('fe.rq.left',{n:String(draft.left),max:String(draft.max)}):''}</Alert>
+     :<Alert kind="warn" className="mt16"><b>{t('fe.rq.no.title')}</b>{ruleText(draft.rule)}</Alert>)}
+    {req?.role==='sender'&&!ended&&<Alert kind="info" icon={Clock} className="mt16"><b>{t('fe.rq.wait')}</b>{canRenew?t('fe.rq.renew'):t('fe.rq.waitText',{name:otherName})}</Alert>}
+    {req?.role==='recipient'&&!ended&&meta&&<Alert kind="info" icon={MessageCircle} className="mt16" action={<Stack gap={2}>
+      <Btn icon={MessageCircle} busy={reqBusy==='accept'} disabled={!!reqBusy} onClick={()=>void answerReq('accept')}>{t('fe.rq.answer')}</Btn>
+      <Btn kind="soft" icon={EyeOff} busy={reqBusy==='hide'} disabled={!!reqBusy} onClick={()=>void answerReq('hide')}>{t('fe.rq.hide')}</Btn>
+      <Btn kind="text" icon={Flag} disabled={!!reqBusy} onClick={reportReq}>{t('fe.rq.reportBlock')}</Btn></Stack>}>
+     <b>{t('fe.rq.in',{name:senderName(meta.other,t)})}</b>{contextLine(req.context,t,locale,meta.side.kind==='couple')}. {t('fe.rq.inText',{name:otherName})}</Alert>}
+    {!ended&&canWrite&&!req&&all.length===0&&pend.length===0&&<><SectionLabel>{t('fe.chx.starters')}</SectionLabel><Chips className="ice">
      {[...starters.slice(0,2).map(n=>t('fe.w7.ice.topic',{topic:n})),t('fe.chx.ice1'),t('fe.chx.ice2')].map(s=><Chip key={s} onClick={()=>{setText(s);requestAnimationFrame(()=>{if(input.current){grow(input.current);input.current.focus();}});}}>{s}</Chip>)}
     </Chips></>}
     {ended&&<Alert kind="info" icon={Ban} className="mt16"><b>{t('fe.chx.endedTitle')}</b>{t(couple?'fe.chx.endedTextUs':'fe.chx.endedText')}</Alert>}
@@ -502,15 +623,16 @@ export function ChatScreen(){
    </>}
   </div></div>
   <button type="button" className={'chat-down'+(ended?' low':'')+(!near?' on':'')} aria-label={t('fe.chx.toLatest')} onClick={toBottom}><ChevronDown/>{fresh>0&&<em>{fresh>99?'99+':fresh}</em>}</button>
-  {!ended&&<div className="inputbar" ref={bar}>
+  {!ended&&canWrite&&<div className="inputbar" ref={bar}>
    {replyTo&&quoteOf(replyTo)&&<div className="reply-target chat-reply">{quote(replyTo,true)}<IconBtn icon={X} size="sm" label={t('fe.chx.cancelReply')} onClick={()=>{setReplyTo(null);input.current?.focus({preventScroll:true});}}/></div>}
-   <IconBtn icon={Plus} kind="ghost" label={t('fe.chx.attach')} disabled={!meta||!!out?.pending} onClick={()=>{setSheetErr('');setSheet('attach');}}/>
+   <IconBtn icon={Plus} kind="ghost" label={t('fe.chx.attach')} disabled={!meta||!!out?.pending||!!reqBusy} onClick={()=>{setSheetErr('');setSheet('attach');}}/>
    {couple&&acting?.kind==='couple'&&<ActingAv p={acting} size="xs"/>}
    <TextArea ref={input} bare grow={GROW} rows={1} maxLength={softMax('chatMessage')} value={text} onChange={e=>{setText(e.target.value);if(e.target.value.trim())typed();}}
     placeholder={couple?t('fe.chx.messagePhCouple'):t('fe.chx.messagePh')} aria-label={couple?t('fe.chx.messagePhCouple'):t('fe.chx.message')} title={t('fe.chx.enterHint')} enterKeyHint="enter"
     onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!coarse&&!e.nativeEvent.isComposing){e.preventDefault();send();}}}/>
    {/* An empty box offers a voice message instead of «Отправить» (hold to record). */}
-   {text.trim()||!meta?<IconBtn icon={SendHorizontal} kind="send" onClick={send} disabled={!meta||!text.trim()} label={couple?t('fe.fd.sendUs'):t('fe.feed.send')}/>
+   {/* A request has no voice message: its one first message is text and / or a photo. */}
+   {text.trim()||!meta||asRequest?<IconBtn icon={SendHorizontal} kind="send" onClick={send} disabled={!meta||!text.trim()||!!reqBusy} label={couple?t('fe.fd.sendUs'):t('fe.feed.send')}/>
     :<VoiceRecorder onSend={v=>void deliverVoice(v)} onError={voiceError} disabled={voiceOut?.status==='sending'}/>}
   </div>}
   <FilePick ref={gallery} accept={'image/*,'+VIDEO_TYPES.join(',')} onFiles={f=>pick([...f])}/>
@@ -546,9 +668,10 @@ export function ChatScreen(){
      the device, the view rule — the kit Uploader, as everywhere; «Отправить» uploads and posts it. */}
   {picked&&<Uploader files={picked} max={1} aspects={['orig','4:5','1:1','16:9']} send={sendPhotoUp} sendVideo={sendVideoUp} title={t('fe.av.attachTitle')}
    doneLabel={t('fe.chx.send')} onDone={got=>void uploaded(got)} onClose={()=>{setPicked(null);setSheetErr('');}}>
-   <Group title={t('fe.chx.howView')} foot={<>{t('fe.chx.modeSub.'+(mode==='normal'||mode==='once'?mode:'timer'))}{mode!=='normal'?' · '+t('fe.chx.ephNote'):''}</>}><Card>
+   {/* A request's photo is an ordinary one: disappearing photos need a chat both answered. */}
+   {!asRequest&&<Group title={t('fe.chx.howView')} foot={<>{t('fe.chx.modeSub.'+(mode==='normal'||mode==='once'?mode:'timer'))}{mode!=='normal'?' · '+t('fe.chx.ephNote'):''}</>}><Card>
     <SelectRow<Mode> solo label={t('fe.chx.howView')} value={mode} onChange={v=>setMode(v)} options={MODES.map(m=>[m,t('fe.chx.mode.'+m)] as const)}/>
-   </Card></Group>
+   </Card></Group>}
    <Note>{t('fe.chx.shotNote')}</Note>
    {sheetAlert}
   </Uploader>}

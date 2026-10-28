@@ -93,6 +93,12 @@ export default [
      await t.see('.rsvp .r-interested:has-text("Нам интересно")');
      await t.see('.rsvp .r-going:has-text("Идём вдвоём")');
      await t.see('.rsvp .r-not:has-text("Не идём")');
+     // Labels never wrap or cut (owner 29.10.2026): the two yes answers share a line, «Не идём» is the line under them.
+     for (const w of [360, 390]) {
+       await t.page.setViewportSize({ width: w, height: 800 }); await t.wait(200);
+       const bad = await t.page.$$eval('.rsvp button span', ss => ss.filter(s => s.scrollWidth > s.clientWidth + 1 || s.getClientRects().length > 1).map(s => s.textContent));
+       expect(!bad.length, 'rsvp labels wrapped or cut at ' + w + ': ' + bad.join(', '));
+     }
      await t.tap('.rsvp .r-interested');
      await t.page.locator('.toast', { hasText: /Вам интересно|Ответ от пары ждёт согласия партнёра/ }).first().waitFor({ state: 'visible', timeout: 30000 });
      await noPicker(t);
@@ -108,7 +114,7 @@ export default [
    const approves = (await t.api('couple.get', {}, undefined, couple.id)).couple.members.find(m => !m.me)?.approvesPartner;
    await t.go('/n/communities/' + host.openId);
    await t.tap('button:has-text("Вступить от пары")');
-   await t.see(sheet + ' button:has-text("' + (approves ? 'На согласие партнёру' : 'Вступить от пары') + '")');
+   await t.see(sheet + ' button:has-text("' + (approves ? 'Принять правила — на согласие партнёру' : 'Принять правила и вступить от пары') + '")');
    await t.page.keyboard.press('Escape');
  } },
  { name: 'couple profile edit: the save button says when it goes to the partner', persona: 'pair', run: async t => {

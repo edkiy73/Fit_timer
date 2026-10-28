@@ -2,7 +2,7 @@ import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {BookOpen,ChevronLeft,ChevronRight,CircleCheck,Clock,Ellipsis,History,Image as ImageIcon,Pencil,Plus,Search as SearchIcon,SlidersHorizontal,User,UserMinus,Users,X} from 'lucide-react';
+import {Newspaper,BookOpen,ChevronLeft,ChevronRight,CircleCheck,Clock,Ellipsis,History,Image as ImageIcon,Pencil,Plus,Search as SearchIcon,SlidersHorizontal,User,UserMinus,Users,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,H,IconBtn,LoadMore,Note,Pill,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Stack,View,plate} from './kit';
 import {useFe,useKeyChange} from './session';
@@ -10,6 +10,7 @@ import {PostCard,postSchema,type Post} from './feed';
 import {InterestSheet,Jars,useInterests} from './interests';
 import {faceFields,NameBadges} from './faces';
 import {useToast} from './toast';
+import {FollowButton} from './follow';
 
 /** Discovery screens with the prototype's markup: V21 F04 (an interest's page), G01 (global search), P10 (followers /
  * following) and P20 (gallery). Everything shown comes from the server; the client only narrows what the server already
@@ -117,7 +118,7 @@ export function TopicScreen(){
     <SectionLabel>{t('fe.br.posts')}</SectionLabel>
     {error&&!posts?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>load()}>{t('fe.retry')}</Btn></Empty>
      :posts===null?<Skel kind="list"/>
-     :posts.length===0?<><Note>{t('fe.br.topic.noPosts')}</Note><Btn kind="soft" className="mt12" icon={Pencil} onClick={()=>navigate('/n/feed/new')}>{t('fe.br.topic.write',{name})}</Btn></>
+     :posts.length===0?<Empty compact icon={Newspaper} title={t('fe.br.topic.noPosts')}><Btn kind="soft" icon={Pencil} onClick={()=>navigate('/n/feed/new')}>{t('fe.br.topic.write',{name})}</Btn></Empty>
      :<><PostList items={posts} setItems={f=>setPosts(list=>list?f(list):list)}/>
       <LoadMore more={!!next} busy={more} error={error} onMore={()=>{if(next)load(next);}}/></>}
    </>}
@@ -279,14 +280,6 @@ export function FollowsScreen(){
  useEffect(()=>{if(mine||!id){setWho('');return;}call('profile.get',{profileId:id},profileRes).then(r=>setWho(nameOf(r.profile))).catch(()=>{});},[call,id,mine]);
  const own=new Set(state.status==='ready'?state.boot.profiles.map(p=>p.id):[]);const asUs=acting?.kind==='couple';
  const toast=useToast();const [menu,setMenu]=useState<Follower|null>(null);
- // Follow / unfollow from the list, with «Отменить» in the toast (V21 flwToggle).
- const setFollow=async(k:Follower,on:boolean,undo:boolean)=>{
-  setBusy(k.id);setFailure('');
-  try{await call('follow.set',{opId:newOpId(),profileId:k.id,on},ok);setMyFollows(s=>{const n=new Set(s);if(on)n.add(k.id);else n.delete(k.id);return n;});if(mine)load();
-   if(!undo)toast(t((on?'fe.px.fl.on':'fe.px.fl.off')+(asUs?'Us':'')).replace('{name}',nameOf(k)),{type:'ok',action:{label:t('fe.mx.undo'),fn:()=>void setFollow(k,!on,true)}});}
-  catch(e){setFailure(feErrorMessage(e,t));}finally{setBusy('');}
- };
- const toggle=(k:Follower)=>{if(!busy)void setFollow(k,!myFollows.has(k.id),false);};
  // «Убрать из подписчиков» (V21 flwRemove21): the person is not told; «Вернуть» works for ten minutes.
  const removeFollower=async(k:Follower)=>{setMenu(null);setBusy(k.id);setFailure('');
   try{await call('follower.remove',{opId:newOpId(),profileId:k.id},ok);setLists(l=>l&&{...l,followers:l.followers.filter(x=>x.id!==k.id)});
@@ -310,8 +303,8 @@ export function FollowsScreen(){
      return <Row key={k.id} className="frow" onClick={()=>navigate(self?'/n/me':'/n/people/'+k.id)} av={<Av name={nameOf(k)} seed={k.id} src={k.avatar}/>}
       title={<><span className="fnm">{nameOf(k)}</span><NameBadges p={k}/></>} sub={k.handle?'@'+k.handle:''}
       end={self?<Note>{k.id===acting?.id?(asUs?t('fe.br.youUs'):t('fe.br.you')):k.kind==='person'?t('fe.br.yourOwn'):t('fe.br.yourCouple')}</Note>
-       :<><Btn size="sm" kind={fol?'soft':'primary'} aria-pressed={fol} disabled={busy===k.id} onClick={()=>toggle(k)}>
-        {fol?(asUs?t('fe.br.unfollowUs'):t('fe.br.unfollow')):(asUs?t('fe.br.followUs'):mine&&tab==='followers'?t('fe.br.followBack'):t('fe.br.follow'))}</Btn>
+       :<><FollowButton size="sm" profileId={k.id} name={nameOf(k)} on={fol} back={mine&&tab==='followers'} disabled={busy===k.id}
+         onChange={on=>{setMyFollows(s=>{const n=new Set(s);if(on)n.add(k.id);else n.delete(k.id);return n;});if(mine)load();}}/>
         {mine&&tab==='followers'&&<IconBtn icon={Ellipsis} kind="ghost" size="sm" aria-haspopup="dialog" label={t('fe.w7.flw.menu').replace('{name}',nameOf(k))} disabled={busy===k.id} onClick={()=>setMenu(k)}/>}</>}/>;})}</Card>}
    {lists&&list&&list.length>=FOLLOW_PAGE&&<Note className="mt12">{t('fe.br.firstN',{n:FOLLOW_PAGE})}</Note>}
   </View>

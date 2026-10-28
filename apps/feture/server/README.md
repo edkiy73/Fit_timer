@@ -93,5 +93,8 @@ a rate-limit error for a read. Old → new (28.10.2026):
 | `verification.ageStart`, `verification.photoStart` | 5 / day | 10 / day |
 | `premium.purchase`, `premium.gift` | 20 / day | 40 / day |
 | `tag.object` (`DISPUTE_LIMITS`, owner rule) | 30 / day | unchanged |
+| message requests (`REQUEST_LIMITS`, owner 29.10.2026): new requests per profile | — | 10 / day; 3 / day after 3+ of its requests were hidden or reported in 14 days |
+| `chat.with` («Написать»: names the target's rule) | — | 3000 / day |
+| `chat.request` calls (outer bound, refusals included) | — | 300 / day |
 | DSA notices without an account (`api/fe.mjs` notice) | 5 / hour per IP | unchanged (anonymous, abuse only) |
 

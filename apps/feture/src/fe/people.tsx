@@ -4,13 +4,14 @@ import {useNavigate,useParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Ban,Bell,CalendarDays,Check,ChevronDown,ChevronLeft,ChevronRight,EyeOff,Heart,Ellipsis,History,Info,KeyRound,LocateFixed,Lock,MapPin,MessageCircle,SlidersHorizontal,Sparkles,Undo2,Users,X} from 'lucide-react';
-import {Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,H,IconBtn,LikeTile,Note,PersonName,PhotoBars,Pill,Radar,Range,RangeDual,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Soon,Stack,Text,View,plate} from './kit';
+import {Search,Ban,Bell,CalendarDays,Check,ChevronDown,ChevronLeft,ChevronRight,EyeOff,Heart,Ellipsis,History,Info,KeyRound,LocateFixed,Lock,MapPin,MessageCircle,SlidersHorizontal,Sparkles,Undo2,Users,X} from 'lucide-react';
+import {Actions,Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,H,IconBtn,LikeTile,Note,PersonName,PhotoBars,Pill,Radar,Range,RangeDual,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Soon,Stack,Text,View,plate} from './kit';
 import {useFe} from './session';
 import {DiscoverPhotoAsk} from './discover-photo';
 import {NameBadges} from './faces';
 import {BellButton} from './inbox';
 import {when} from './feed';
+import {FollowButton} from './follow';
 import {catalogRes,cardOneRead,cardRead,CompatSummary,FollowCounts,MatchOverlay,PersonBio,PersonMenu,PhotoViewer,ProfileBody,ProfilePage,personName,personProfileRes,pxError,readCard,readCatalog,usePrivate,useRelation,useToast,type CardPre,type PxToast,
  type Catalog,type MenuStep,type PersonProfile,type Relation} from './profile-extras';
 
@@ -175,7 +176,7 @@ function DiscoverFilter({initial,onClose,onApplied}:{initial:Filter,onClose:()=>
      :shown.map((g,i)=><section key={g.title||i} className="fsec">{g.title&&<SectionLabel>{g.title}</SectionLabel>}<Chips>
       {g.list.map(([id,l])=><Chip key={id} on={isOn(id)} onClick={()=>pick(id)}>{l}</Chip>)}
      </Chips></section>)}
-    {cat&&!shown.length&&<Note className="sh-empty">{t('fe.df.nothing')}</Note>}
+    {cat&&!shown.length&&<Empty compact icon={Search} title={t('fe.df.nothing')}/>}
    </div>
   </Sheet>;
  }
@@ -428,23 +429,12 @@ function TopCard({c,cardRef,nextRef,actsRef,onDecide,toast}:{c:Card,cardRef:Reac
   <div className="pc-body pc-full">
    {pre?<><PersonBio p={pre.profile}/><div className="mt12"><CompatSummary profileId={c.id} pre={pre.compat}/></div><ProfileBody p={pre.profile} pre={pre} onOpen={setView}/></>
     :<><Skel kind="card" rows={2}/><Skel kind="post" rows={1}/></>}
-   <div className="pc-foot"><FollowBtn id={c.id} name={name} rel={rel} setRel={setRel} toast={toast}/><Btn kind="soft" onClick={()=>navigate('/n/people/'+c.id)}>{t('fe.px.deck.full')}</Btn></div>
+   <div className="pc-foot"><FollowButton profileId={c.id} name={name} on={!!rel?.iFollow} disabled={!rel} onChange={on=>setRel(x=>x&&{...x,iFollow:on,followers:Math.max(0,x.followers+(on?1:-1))})}/><Btn kind="soft" onClick={()=>navigate('/n/people/'+c.id)}>{t('fe.px.deck.full')}</Btn></div>
   </div>
   {view!==null&&<PhotoViewer srcs={list.map(x=>x.full)} index={view} onClose={()=>setView(null)}/>}
  </article>;
 }
 
-/** followBtnHTML: one «Подписаться» for the profile page and the Discover card; as the couple it says so. */
-function FollowBtn({id,name,rel,setRel,toast}:{id:string,name:string,rel:Relation|null,setRel:(f:(r:Relation|null)=>Relation|null)=>void,toast:PxToast}){
- const {call,acting}=useFe();const {t}=useI18n();const [busy,setBusy]=useState(false);const on=!!rel?.iFollow;
- const set=async(next:boolean,undo:boolean)=>{
-  try{await call('follow.set',{opId:newOpId(),profileId:id,on:next},ok);setRel(x=>x&&{...x,iFollow:next,followers:Math.max(0,x.followers+(next?1:-1))});
-   if(!undo)toast(fill(t((next?'fe.px.fl.on':'fe.px.fl.off')+(acting?.kind==='couple'?'Us':'')),{name}),false,{label:t('fe.mx.undo'),fn:()=>void set(!next,true)});}
-  catch(e){toast(pxError(e,t),true);}};
- const go=async()=>{if(!rel||busy)return;setBusy(true);try{await set(!on,false);}finally{setBusy(false);}};
- return <Btn kind="soft" busy={busy} aria-pressed={on} title={on?t(acting?.kind==='couple'?'fe.px.act.unfollowHintUs':'fe.px.act.unfollowHint'):undefined} onClick={go} disabled={!rel}>
-  {on?<><Check/>{t(acting?.kind==='couple'?'fe.px.act.followingUs':'fe.px.act.following')}</>:acting?.kind==='couple'?t('fe.px.act.followUs'):t('fe.people.follow')}</Btn>;
-}
 
 /** D01 — Discover is off for this profile: no candidates, two honest ways in (browse hidden / browse and be seen). */
 const photoIdsRes=z.object({ok:z.literal(true),profile:z.object({photos:z.array(z.object({id:z.string()}).passthrough())}).passthrough()});
@@ -502,16 +492,16 @@ function DeckEmpty({byFilter,filterOn,openFilter,likesN,toLikes}:{byFilter:numbe
  // where else to go as one list in one icon tone.
  return <Empty top title={byF?t('fe.px.empty.byF'):t('fe.px.empty.titleShort')} art={<Radar small src={acting?.avatar} seed={acting?.id??'me'}/>}
   text={byF?fill(t('fe.px.empty.byFText'),{n:byFilter!>=100?'100+':byFilter!}):filterOn?t('fe.px.empty.withF'):t('fe.px.empty.textShort')}
-  after={<Card list className="mt16">
+  after={<Card list>
    <Row icon={CalendarDays} tone="v" title={t('fe.w7.toEvents.near')} onClick={()=>navigate('/n/communities?sub=events')}/>
    <Row icon={Users} tone="v" title={t('fe.px.empty.comm')} onClick={()=>navigate('/n/communities')}/>
    <Row icon={Sparkles} tone="v" title={t('fe.px.empty.int')} onClick={()=>navigate('/n/me/interests')}/>
   </Card>}>
    {filterOn>0&&<Btn onClick={openFilter}>{t('fe.px.empty.change')}</Btn>}
-   <Stack row gap={2}>
-    <Btn kind="soft" size="sm" icon={Heart} onClick={toLikes}>{t('fe.px.empty.likes')}{likesN?` · ${likesN}`:''}</Btn>
-    <Btn kind="soft" size="sm" icon={History} onClick={()=>navigate('/n/people/history')}>{t('fe.px.empty.recent')}</Btn>
-   </Stack>
+   <Actions>
+    <Btn kind="soft" icon={Heart} onClick={toLikes}>{t('fe.px.empty.likes')}{likesN?` · ${likesN}`:''}</Btn>
+    <Btn kind="soft" icon={History} onClick={()=>navigate('/n/people/history')}>{t('fe.px.empty.recent')}</Btn>
+   </Actions>
  </Empty>;
 }
 
