@@ -2,9 +2,9 @@ import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Newspaper,BookOpen,ChevronLeft,ChevronRight,CircleCheck,Clock,Ellipsis,History,Image as ImageIcon,Pencil,Plus,Search as SearchIcon,SlidersHorizontal,User,UserMinus,Users,X} from 'lucide-react';
+import {Newspaper,BookOpen,ChevronLeft,ChevronRight,CircleCheck,Ellipsis,History,Pencil,Plus,Search as SearchIcon,SlidersHorizontal,User,UserMinus,Users,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,H,IconBtn,LoadMore,Note,Pill,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Stack,View,plate} from './kit';
+import {ActingAv,Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,H,IconBtn,LoadMore,Note,Pill,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Stack,View,plate} from './kit';
 import {useFe,useKeyChange} from './session';
 import {PostCard,postSchema,type Post} from './feed';
 import {InterestSheet,Jars,useInterests} from './interests';
@@ -193,8 +193,10 @@ export function SearchScreen(){
  const LIMIT=3;
  const render=(k:Exclude<Scope,'all'>,list:unknown[])=>{
   if(k==='people')return <Card list>{(list as Person[]).map(p=><Row key={p.id} onClick={()=>{commit();navigate('/n/people/'+p.id);}}
-   av={<Av name={nameOf(p)} seed={p.id} src={mediaSrc(p.avatar)}/>} title={nameOf(p)+(p.ages.length?', '+p.ages.join(' · '):'')}
-   sub={[p.handle?'@'+p.handle:null,p.city?(locale==='en'?p.city.en:p.city.ru):null].filter(Boolean).join(' · ')}/>)}</Card>;
+   av={<ActingAv size="" p={{id:p.id,kind:p.kind,name:nameOf(p),avatar:mediaSrc(p.avatar)}}/>}
+   // A couple: its two names already say who; both ages go to the line under it («34 и 31»), never «, 34 · 31» in the title.
+   title={nameOf(p)+(p.kind==='person'&&p.ages.length?', '+p.ages[0]:'')}
+   sub={[p.kind==='couple'&&p.ages.length?p.ages.join(t('fe.br.and')):p.handle?'@'+p.handle:null,p.city?(locale==='en'?p.city.en:p.city.ru):null].filter(Boolean).join(' · ')}/>)}</Card>;
   if(k==='posts')return <PostList items={list as Post[]} setItems={f=>setRes(r=>r&&{...r,posts:f(r.posts)})}/>;
   if(k==='communities')return <>{(list as Comm[]).map(c=><CommunityCard key={c.id} c={c} tname={tname}/>)}</>;
   if(k==='events')return <Stack gap={2}>{(list as Ev[]).map(e=><EventRow key={e.id} e={e}/>)}</Stack>;
@@ -214,15 +216,15 @@ export function SearchScreen(){
   </div>
   <View>
    <Seg value={scope} onChange={setScope} label={t('fe.br.search')} options={SCOPES.map(k=>({id:k,label:k==='all'?t('fe.br.all'):names[k]}))}/>
-   {fk&&<Chips className="mt12"><Chip filter on={nF>0} icon={SlidersHorizontal} popup badge={nF||undefined} label={t('fe.w3.sf.open')} onClick={()=>setFOpen(true)}>{t('fe.fd.filters')}</Chip></Chips>}
+   {fk&&<Chips><Chip filter on={nF>0} icon={SlidersHorizontal} popup badge={nF||undefined} label={t('fe.w3.sf.open')} onClick={()=>setFOpen(true)}>{t('fe.fd.filters')}</Chip></Chips>}
    {term.length<2?<>
     {recent.length>0&&<><div className="res-h">{t('fe.br.recent')}<button type="button" onClick={()=>{setRecent([]);writeRecent([]);}}>{t('fe.br.clear')}</button></div>
      <Card list>{recent.map(x=><div key={x} className="recent"><History/><button type="button" className="tx" onClick={()=>use(x)}>{x}</button>
       <IconBtn icon={X} kind="ghost" size="sm" label={t('fe.br.remove')} onClick={()=>{const l=recent.filter(v=>v!==x);setRecent(l);writeRecent(l);}}/></div>)}</Card></>}
     {topics.length>0&&<><div className="res-h">{t('fe.br.popular')}</div>
      <Chips>{topics.slice(0,5).map(x=><Chip key={x.id} onClick={()=>use(locale==='en'?x.en:x.ru)}>#{locale==='en'?x.en:x.ru}</Chip>)}</Chips></>}
-    {scope==='people'&&<Alert kind="info" className="mt16">{t('fe.br.peopleHint')}</Alert>}
-    {(scope==='posts'||scope==='communities'||scope==='events')&&<Alert kind="info" className="mt16">{t('fe.br.catalogHint')}</Alert>}
+    {scope==='people'&&<Alert kind="info">{t('fe.br.peopleHint')}</Alert>}
+    {(scope==='posts'||scope==='communities'||scope==='events')&&<Alert kind="info">{t('fe.br.catalogHint')}</Alert>}
    </>
    :error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}/>
    :!res||busy&&!sections.length?<Skel kind="list"/>
@@ -295,41 +297,24 @@ export function FollowsScreen(){
    <Seg value={tab} onChange={v=>setParams({tab:v},{replace:true})} options={[
     {id:'followers',label:t('fe.br.followers')+(lists?' · '+countLabel(lists.followers.length):'')},
     {id:'following',label:t('fe.br.following')+(lists?' · '+countLabel(lists.following.length):'')}]}/>
-   {failure&&<Alert kind="err" className="mt12">{failure}</Alert>}
+   {failure&&<Alert kind="err">{failure}</Alert>}
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :list===null?<Skel kind="list"/>
     :!list.length?<Empty icon={Users} title={tab==='following'?t('fe.br.noFollowing'):t('fe.br.noFollowers')}/>
-    :<Card list className="mt12">{list.map(k=>{const self=own.has(k.id);const fol=myFollows.has(k.id);
+    :<Card list>{list.map(k=>{const self=own.has(k.id);const fol=myFollows.has(k.id);
      return <Row key={k.id} className="frow" onClick={()=>navigate(self?'/n/me':'/n/people/'+k.id)} av={<Av name={nameOf(k)} seed={k.id} src={k.avatar}/>}
       title={<><span className="fnm">{nameOf(k)}</span><NameBadges p={k}/></>} sub={k.handle?'@'+k.handle:''}
       end={self?<Note>{k.id===acting?.id?(asUs?t('fe.br.youUs'):t('fe.br.you')):k.kind==='person'?t('fe.br.yourOwn'):t('fe.br.yourCouple')}</Note>
        :<><FollowButton size="sm" profileId={k.id} name={nameOf(k)} on={fol} back={mine&&tab==='followers'} disabled={busy===k.id}
          onChange={on=>{setMyFollows(s=>{const n=new Set(s);if(on)n.add(k.id);else n.delete(k.id);return n;});if(mine)load();}}/>
         {mine&&tab==='followers'&&<IconBtn icon={Ellipsis} kind="ghost" size="sm" aria-haspopup="dialog" label={t('fe.w7.flw.menu').replace('{name}',nameOf(k))} disabled={busy===k.id} onClick={()=>setMenu(k)}/>}</>}/>;})}</Card>}
-   {lists&&list&&list.length>=FOLLOW_PAGE&&<Note className="mt12">{t('fe.br.firstN',{n:FOLLOW_PAGE})}</Note>}
+   {lists&&list&&list.length>=FOLLOW_PAGE&&<Note>{t('fe.br.firstN',{n:FOLLOW_PAGE})}</Note>}
   </View>
   {menu&&<Sheet title={nameOf(menu)} sub={menu.handle?'@'+menu.handle:undefined} onClose={()=>setMenu(null)}><Card list>
    <Row icon={User} title={t('fe.w7.flw.profile')} onClick={()=>{const k=menu;setMenu(null);navigate('/n/people/'+k.id);}}/>
    <Row icon={UserMinus} danger title={t('fe.w7.flw.remove')} sub={t('fe.w7.flw.removeSub')} onClick={()=>void removeFollower(menu)}/>
   </Card></Sheet>}
  </>;
-}
-
-/** Links to P10 and P20 from a profile: followers, following and the gallery. */
-export function ProfileLinks({profileId,photos,self=false}:{profileId:string,photos?:number,self?:boolean}){
- const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();
- const [n,setN]=useState<{followers:number,following:number}|null>(null);
- useEffect(()=>{
-  setN(null);
-  Promise.all([call('profile.followers',{profileId},followersRes),call('profile.followers',{profileId,following:true},followersRes)])
-   .then(([a,b])=>setN({followers:a.items.length,following:b.items.length})).catch(()=>{});
- },[call,profileId]);
- const base=self?'/n/me/follows':`/n/people/${profileId}/follows`;
- return <Card list className="mt12">
-  <Row icon={Users} tone="v" title={t('fe.br.followers')+(n?' · '+countLabel(n.followers):'')} onClick={()=>navigate(base+'?tab=followers')}/>
-  <Row icon={Users} tone="v" title={t('fe.br.following')+(n?' · '+countLabel(n.following):'')} onClick={()=>navigate(base+'?tab=following')}/>
-  <Row icon={ImageIcon} tone="g" title={t('fe.br.gallery')+(photos!=null?' · '+photos:'')} onClick={()=>navigate(`/n/people/${profileId}/gallery`)}/>
- </Card>;
 }
 
 /* ---------- V21 P20: gallery — src/fe/gallery.tsx ---------- */

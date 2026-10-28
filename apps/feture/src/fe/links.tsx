@@ -8,7 +8,7 @@ import {newOpId} from '../feture/fe-api';
 import {AddCard,Alert,Ask,Av,Bar,Btn,Card,Chip,Chips,Empty,Group,IconBtn,Note,PersonLine,RadioList,RequestCard,Row,SearchInput,SectionLabel,Seg,SelectRow,Skel,Spacer,View} from './kit';
 import {useFe,useKeyChange,useShown} from './session';
 import {NameBadges,faceFields,withAge} from './faces';
-import {KINDS,SIDES,Sheet,linkLabel,linksMineRes,mediaSrc,personName,personProfileRes,pxError,useToast,type Kind,type LinkView,type LinksMine,type PersonProfile} from './profile-extras';
+import {KINDS,SIDES,Sheet,linkLabel,linksMineRes,mediaSrc,personName,personProfileRes,pxError,type Kind,type LinkView,type LinksMine,type PersonProfile} from './profile-extras';
 
 /** Links between profiles with the V21 prototype's markup: «Мои связи» (P21 — proposals waiting for an answer,
  * confirmed links with their visibility, sent requests, who may propose) and the link editor (P22 — propose a link
@@ -101,7 +101,7 @@ function LinkPicker({mine,onClose}:{mine:LinksMine,onClose:()=>void}){
 
 /** `/n/me/links` — SC.P21 for the own profile. */
 export function LinksScreen(){
- const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const [toastNode,toast]=useToast();
+ const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToastV21();
  const [r,setR]=useState<LinksMine|null>(null);const [from,setFrom]=useState<LinksFrom|null>(null);const [error,setError]=useState<unknown>(null);
  const [busy,setBusy]=useState(false);const [menu,setMenu]=useState<{l:LinkView,pend:boolean}|null>(null);const [removing,setRemoving]=useState<LinkView|null>(null);
  const [picking,setPicking]=useState(false);
@@ -110,7 +110,7 @@ export function LinksScreen(){
  useKeyChange(acting?.id??'',()=>setR(null));
  useEffect(()=>{load();},[load]);
  const act=async(fn:()=>Promise<Record<string,unknown>>,msg:string)=>{setBusy(true);
-  try{const res=await fn();toast(res.pending?t('fe.ln.t.pending'):msg);load();return true;}catch(e){toast(pxError(e,t),true);load();return false;}finally{setBusy(false);}};
+  try{const res=await fn();toast(res.pending?t('fe.ln.t.pending'):msg);load();return true;}catch(e){toast(pxError(e,t),{type:'err'});load();return false;}finally{setBusy(false);}};
  const closeMenu=useCallback(()=>setMenu(null),[]);const closeRemove=useCallback(()=>setRemoving(null),[]);
  const answer=(l:LinkView,accept:boolean)=>l.change
   ?act(()=>call('link.answerChange',{opId:newOpId(),linkId:l.id,accept},ok),accept?t('fe.ln.t.changeOk'):t('fe.ln.t.declined'))
@@ -164,7 +164,6 @@ export function LinksScreen(){
    <Btn kind="text" onClick={closeRemove}>{t('fe.ln.cancel')}</Btn></>}>
    <p className="lead">{fill(t('fe.ln.removeText'),{name:nameOf(removing)})}</p>
   </Sheet>}
-  {toastNode}
  </>;
 }
 

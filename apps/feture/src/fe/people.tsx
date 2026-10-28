@@ -5,15 +5,16 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Search,Ban,Bell,CalendarDays,Check,ChevronDown,ChevronLeft,ChevronRight,EyeOff,Heart,Ellipsis,History,Info,KeyRound,LocateFixed,Lock,MapPin,MessageCircle,SlidersHorizontal,Sparkles,Undo2,Users,X} from 'lucide-react';
-import {Actions,Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,H,IconBtn,LikeTile,Note,PersonName,PhotoBars,Pill,Radar,Range,RangeDual,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Soon,Stack,Text,View,plate} from './kit';
+import {Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,IconBtn,LikeTile,Note,PairArt,PersonName,PhotoBars,Pill,Radar,Range,RangeDual,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Soon,Stack,Text,View,plate} from './kit';
 import {useFe} from './session';
+import {useToast} from './toast';
 import {DiscoverPhotoAsk} from './discover-photo';
 import {NameBadges} from './faces';
 import {BellButton} from './inbox';
 import {when} from './feed';
 import {FollowButton} from './follow';
-import {catalogRes,cardOneRead,cardRead,CompatSummary,FollowCounts,MatchOverlay,PersonBio,PersonMenu,PhotoViewer,ProfileBody,ProfilePage,personName,personProfileRes,pxError,readCard,readCatalog,usePrivate,useRelation,useToast,type CardPre,type PxToast,
- type Catalog,type MenuStep,type PersonProfile,type Relation} from './profile-extras';
+import {catalogRes,cardOneRead,cardRead,CompatSummary,FollowCounts,MatchOverlay,PersonBio,PersonMenu,PhotoViewer,ProfileBody,ProfilePage,personName,personProfileRes,pxError,readCard,readCatalog,usePrivate,useRelation,type CardPre,
+ type Catalog,type MenuStep,type PersonProfile} from './profile-extras';
 
 /** Slice F (V21 D03–D10): Discover cards from the server's mutual pool with the whole profile under the photo, swipe
  * or buttons to like / pass, «Это взаимно» → chat, the likes grid and another person's profile (P01). The client shows
@@ -34,7 +35,6 @@ const outgoing=z.object({ok:z.literal(true),items:z.array(z.object({profile:card
 const ok=z.object({ok:z.literal(true)}).passthrough();
 const likeRes=z.object({ok:z.literal(true),state:z.string().optional(),conversationId:z.uuid().optional()}).passthrough();
 const undone=z.object({ok:z.literal(true),profileId:z.uuid(),decision:z.enum(['like','pass'])}).passthrough();
-const settingsRes=z.object({ok:z.literal(true),settings:z.object({discoverMode:z.string()}).passthrough()});
 
 const photo=(c:{avatar:z.infer<typeof media>|null})=>c.avatar&&!c.avatar.pending?c.avatar.src?.card??c.avatar.src?.full??c.avatar.src?.thumb??null:null;
 const cname=(c:{name:string|null,handle:string|null})=>c.name||(c.handle?'@'+c.handle:'?');
@@ -75,7 +75,7 @@ export function PeopleTab(){
    {deckOn&&<IconBtn icon={History} label={t('fe.px.h.open')} title={t('fe.px.h.open')} onClick={()=>navigate('/n/people/history')}/>}
    {deckOn?<IconBtn ref={opener} icon={SlidersHorizontal} aria-haspopup="dialog" label={on?t('fe.df.openOn').replace('{n}',String(on)):t('fe.df.open')} badge={on||undefined} disabled={!filter} onClick={()=>setOpen(true)}/>:<BellButton/>}
   </header>
-  {tab==='discover'?<Discover reloadKey={deckKey} onOff={setOff} filterOn={on} openFilter={()=>setOpen(true)} likesN={likesN} toLikes={()=>setTab('likes')} onLikes={countLikes}/>:<Likes onCount={setLikesN} toDiscover={()=>setTab('discover')}/>}
+  {tab==='discover'?<Discover reloadKey={deckKey} onOff={setOff} filterOn={on} openFilter={()=>setOpen(true)} onLikes={countLikes}/>:<Likes onCount={setLikesN} toDiscover={()=>setTab('discover')}/>}
   {open&&filter&&<DiscoverFilter initial={filter} onClose={close} onApplied={f=>{setFilter(f);setDeckKey(k=>k+1);close();}}/>}
  </>;
 }
@@ -124,7 +124,7 @@ function DiscoverFilter({initial,onClose,onApplied}:{initial:Filter,onClose:()=>
  const [cat,setCat]=useState<Catalog|null>(null);const [count,setCount]=useState<{count:number,capped:boolean}|null>(null);
  const [countError,setCountError]=useState<unknown>(null);const [busy,setBusy]=useState(false);const [error,setError]=useState<unknown>(null);
  // `body` sits inside the sheet's scrolling `.sh-b`: a nested list starts at the top and takes the focus.
- const body=useRef<HTMLDivElement>(null);
+ const body=useRef<HTMLElement>(null);
  const lab=(x:{ru:string|null,en:string|null})=>(locale==='en'?x.en||x.ru:x.ru||x.en)||'';
  useEffect(()=>{call('catalog.get',{},catalogRes,{asAccount:true}).then(setCat).catch(()=>{});},[call]);
  useEffect(()=>{body.current?.closest<HTMLElement>('.sheet')?.focus({preventScroll:true});const b=body.current?.closest('.sh-b');if(b)b.scrollTop=0;},[sub]);
@@ -171,7 +171,7 @@ function DiscoverFilter({initial,onClose,onApplied}:{initial:Filter,onClose:()=>
    lead={<IconBtn icon={ChevronLeft} kind="ghost" size="sm" label={t('fe.df.back')} onClick={back}/>}
    search={total>10&&<SearchInput label={t('fe.df.find')} value={q} onChange={e=>setQ(e.target.value)}/>}
    foot={<Btn onClick={back}>{n&&sub!=='city'?fill(t('fe.df.doneN'),{n}):t('fe.df.done')}</Btn>}>
-   <div ref={body}>
+   <div ref={body as React.RefObject<HTMLDivElement>}>
     {!cat?<Skel kind="list"/>
      :shown.map((g,i)=><section key={g.title||i} className="fsec">{g.title&&<SectionLabel>{g.title}</SectionLabel>}<Chips>
       {g.list.map(([id,l])=><Chip key={id} on={isOn(id)} onClick={()=>pick(id)}>{l}</Chip>)}
@@ -187,20 +187,22 @@ function DiscoverFilter({initial,onClose,onApplied}:{initial:Filter,onClose:()=>
    {on>0&&<p className="df-sum">{summary()}</p>}
    <Btn onClick={apply} busy={busy} disabled={busy||noPlace}>{noPlace?t('fe.w7.df.needPlace'):count?count.count?fill(t('fe.df.showN'),{n:count.capped?'100+':count.count}):t('fe.df.applyAnyway'):t('fe.df.showPlain')}</Btn>
   </>}>
-   <div ref={body}>
+   <>
     <section className="fin"><div className="fin-t"><b>{t('fe.df.where')}</b>{where!=='any'&&clr(()=>setWhereTo('any'))}</div>
      <ChoiceChips label={t('fe.df.where')} value={where} options={(['any','city','nearby'] as const).map(v=>[v,v==='nearby'?t('fe.w7.df.nearby'):t('fe.df.where.'+v)] as const)}
       onChange={v=>{setWhereTo(v);if(v==='city'&&!f.cityId)setSub('city');}}/>
      {where==='city'&&<div className="fld"><button type="button" className="fld-main" onClick={()=>setSub('city')}><MapPin/><span>{place?lab(place):t('fe.df.pickCity')}</span></button>
       {f.cityId?clr(()=>setF(x=>({...x,cityId:null}))):<ChevronRight/>}</div>}
-     {noPlace&&loc===false&&<><div className="fld"><button type="button" className="fld-main" onClick={()=>void share()} disabled={geo==='busy'||geo==='wait'} aria-busy={geo==='busy'||undefined}>
-       <LocateFixed/><span>{t('fe.w7.df.share')}</span></button><ChevronRight/></div>
-      {geo==='denied'&&<Alert kind="warn" className="mt8">{t('fe.w7.df.denied')}</Alert>}
-      {geo==='wait'&&<Alert kind="info" className="mt8">{t('fe.w7.df.wait')}</Alert>}</>}
-     {where==='nearby'&&loc===null&&<Skel kind="list" rows={1}/>}
-     {where==='nearby'&&loc===true&&<><Stack row justify="between" className="mt8"><Text size="sm" tone="mute" as="span">{t('fe.w7.df.radius')}</Text><Text bold as="span">{fill(t('fe.w7.df.upTo'),{n:f.radiusKm})}</Text></Stack>
-      <Range min={5} max={100} step={5} value={Math.min(100,f.radiusKm)} label={t('fe.w7.df.radius')} onChange={v=>setF(x=>({...x,radiusKm:v}))}/></>}
-     {where==='nearby'&&<Note className="mt8">{t('fe.w7.df.coarse')}</Note>}
+     {where==='nearby'&&<Stack gap={2} className="df-near">
+      {noPlace&&loc===false&&<><div className="fld"><button type="button" className="fld-main" onClick={()=>void share()} disabled={geo==='busy'||geo==='wait'} aria-busy={geo==='busy'||undefined}>
+        <LocateFixed/><span>{t('fe.w7.df.share')}</span></button><ChevronRight/></div>
+       {geo==='denied'&&<Alert kind="warn">{t('fe.w7.df.denied')}</Alert>}
+       {geo==='wait'&&<Alert kind="info">{t('fe.w7.df.wait')}</Alert>}</>}
+      {loc===null&&<Skel kind="list" rows={1}/>}
+      {loc===true&&<div><Stack row justify="between"><Text size="sm" tone="mute" as="span">{t('fe.w7.df.radius')}</Text><Text bold as="span">{fill(t('fe.w7.df.upTo'),{n:f.radiusKm})}</Text></Stack>
+       <Range min={5} max={100} step={5} value={Math.min(100,f.radiusKm)} label={t('fe.w7.df.radius')} onChange={v=>setF(x=>({...x,radiusKm:v}))}/></div>}
+      <Note>{t('fe.w7.df.coarse')}</Note>
+     </Stack>}
     </section>
     <section className="fin"><div className="fin-t"><b>{t('fe.df.show')}</b>{f.show!=='all'&&clr(()=>setF(x=>({...x,show:'all'})))}</div>
      <ChoiceChips label={t('fe.df.show')} value={f.show} options={(['all','people','pairs'] as const).map(v=>[v,t('fe.df.show.'+v)] as const)} onChange={v=>setF(x=>({...x,show:v}))}/>
@@ -215,10 +217,12 @@ function DiscoverFilter({initial,onClose,onApplied}:{initial:Filter,onClose:()=>
        sub={<span className={sel.length?'on':''}>{sel.length?sel.slice(0,2).join(', ')+(sel.length>2?fill(t('fe.df.andMore'),{n:sel.length-2}):''):t('fe.df.any')}</span>}/>
        {f[k].length>0&&clr(()=>setF(x=>({...x,[k]:[]})))}</div>;})}
     </Card></div>
-    {count&&count.count===0&&<Alert kind="warn" icon={Info} className="mt12"><b>{t('fe.df.nobody')}</b>{t('fe.df.nobodyText')}</Alert>}
-    {countError!=null&&<Alert kind="err" noIcon className="mt12">{feErrorMessage(countError,t)}</Alert>}
-    {error!=null&&<Alert kind="err" noIcon className="mt12">{feErrorMessage(error,t)}</Alert>}
-   </div>
+    {count&&count.count===0&&<Alert kind="warn" icon={Info}><b>{t('fe.df.nobody')}</b>{t('fe.df.nobodyText')}</Alert>}
+    {countError!=null&&<Alert kind="err" noIcon>{feErrorMessage(countError,t)}</Alert>}
+    {error!=null&&<Alert kind="err" noIcon>{feErrorMessage(error,t)}</Alert>}
+    {/* Last, so the sections stay the sheet body's own children (its rhythm and the notice gap apply). */}
+    <i ref={body} hidden/>
+   </>
  </Sheet>;
 }
 
@@ -228,11 +232,11 @@ type Decision={card:Card,dir:1|-1};
 /** The deck is a local queue: a swipe takes the top card away at once and sends the decision in the background (one
  * request per swipe, in order, so «Вернуть» always meets the server's last decision); the queue is refilled before it
  * runs out and the next cards' photos are loaded ahead, so there is never a reload between two people. */
-function Discover({reloadKey,onOff,filterOn,openFilter,likesN,toLikes,onLikes}:{reloadKey:number,onOff:(off:boolean)=>void,filterOn:number,openFilter:()=>void,likesN:number,toLikes:()=>void,onLikes:()=>void}){
+function Discover({reloadKey,onOff,filterOn,openFilter,onLikes}:{reloadKey:number,onOff:(off:boolean)=>void,filterOn:number,openFilter:()=>void,onLikes:()=>void}){
  const {call,acting,state}=useFe();const {t}=useI18n();
  const [cards,setCards]=useState<Card[]|null>(null);const [off,setOff]=useState(false);const [error,setError]=useState<unknown>(null);
  const [closed,setClosed]=useState(false);const [needsLoc,setNeedsLoc]=useState(false);
- const [match,setMatch]=useState<{card:Card,conversationId?:string}|null>(null);const [toastNode,toast]=useToast();
+ const [match,setMatch]=useState<{card:Card,conversationId?:string}|null>(null);const toast=useToast();
  const [made,setMade]=useState<Decision[]>([]);const [byFilter,setByFilter]=useState<number|null>(null);
  const [filling,setFilling]=useState(false);const [settled,setSettled]=useState(0);
  const busy=useRef(false);const top=useRef<HTMLElement|null>(null);const next=useRef<HTMLElement|null>(null);const acts=useRef<HTMLDivElement>(null);
@@ -280,11 +284,11 @@ function Discover({reloadKey,onOff,filterOn,openFilter,likesN,toLikes,onLikes}:{
   sent.then(r=>{pendingN.current--;if(g!==gen.current)return;setSettled(n=>n+1);
    if(c.likedMe||r.state==='matched')onLikes();
    if(r.state==='matched')setMatch({card:c,...(r.conversationId?{conversationId:r.conversationId}:{})});
-   else if(dir>0)toast(fill(t(acting?.kind==='couple'?'fe.px.lkd.sentUs':'fe.px.lkd.sent'),{name:cname(c)}),false,{label:t('fe.mx.undo'),fn:()=>undoRef.current()});
+   else if(dir>0)toast(fill(t(acting?.kind==='couple'?'fe.px.lkd.sentUs':'fe.px.lkd.sent'),{name:cname(c)}),{action:{label:t('fe.mx.undo'),fn:()=>undoRef.current()}});
   },e=>{pendingN.current--;if(g!==gen.current)return;setSettled(n=>n+1);
    // Already decided (another device, a retried request) or no longer in Discover: the card is gone either way.
    if(e instanceof FeError&&(e.code==='conflict'||e.code==='not_found'))return;
-   gone.current.delete(c.id);setMade(m=>m.filter(x=>x.card.id!==c.id));setCards(cur=>[c,...(cur??[]).filter(x=>x.id!==c.id)]);toast(pxError(e,t),true);});
+   gone.current.delete(c.id);setMade(m=>m.filter(x=>x.card.id!==c.id));setCards(cur=>[c,...(cur??[]).filter(x=>x.id!==c.id)]);toast(pxError(e,t),{type:'err'});});
  },[cards,call,t,toast,onLikes,acting?.kind]);
  // The server allows one free undo a day (shared with «Вернуть» in the history) and says so when it is spent.
  const undo=async()=>{
@@ -292,28 +296,28 @@ function Discover({reloadKey,onOff,filterOn,openFilter,likesN,toLikes,onLikes}:{
   try{await chain.current.catch(()=>{});const r=await call('discover.undo',{opId:newOpId()},undone);const back=made.find(x=>x.card.id===r.profileId)?.card;
    setMade(m=>m.filter(x=>x.card.id!==r.profileId));gone.current.delete(r.profileId);toast(t('fe.px.undo.back'));
    if(back)setCards(cur=>[back,...(cur??[]).filter(x=>x.id!==back.id)]);else load();}
-  catch(e){if(e instanceof FeError&&e.code==='premium_required')openPaywall('undo');else toast(pxError(e,t),true);}finally{busy.current=false;}
+  catch(e){if(e instanceof FeError&&e.code==='premium_required')openPaywall('undo');else toast(pxError(e,t),{type:'err'});}finally{busy.current=false;}
  };
  undoRef.current=()=>void undo();
  useEffect(()=>{const key=(e:KeyboardEvent)=>{if(match||document.querySelector('.fe-v21 .layer .sheet')||/INPUT|TEXTAREA|SELECT/.test((e.target as HTMLElement).tagName))return;
   if(e.key==='ArrowRight')void decide(1);if(e.key==='ArrowLeft')void decide(-1);};
   document.addEventListener('keydown',key);return ()=>document.removeEventListener('keydown',key);},[decide,match]);
- const box=(node:ReactNode)=><><View>{node}</View>{toastNode}</>;
+ const box=(node:ReactNode)=><><View>{node}</View></>;
  const overlay=match&&<MatchOverlay other={{id:match.card.id,name:cname(match.card),src:photo(match.card)}} conversationId={match.conversationId} onClose={()=>setMatch(null)}/>;
  if(error&&!cards?.length)return box(<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>load()}>{t('fe.retry')}</Btn></Empty>);
- const skel=<div className="view deckmode"><div className="deck"><div className="pc top fe-pc-skel"><div className="pc-ph"><i className="sk sk-media"/></div></div></div>{toastNode}{overlay}</div>;
+ const skel=<div className="view deckmode"><div className="deck"><div className="pc top fe-pc-skel"><div className="pc-ph"><i className="sk sk-media"/></div></div></div>{overlay}</div>;
  if(cards===null)return skel;
- if(closed)return box(<DatingSoon toast={toast}/>);
- if(off)return box(<DatingOff onChanged={()=>{setCards(null);load();}} toast={toast}/>);
+ if(closed)return box(<DatingSoon/>);
+ if(off)return box(<DatingOff onChanged={()=>{setCards(null);load();}}/>);
  const [c,nx]=cards;
  // The last decisions are still on their way: they may free more people, so no «nobody left» yet.
  if(!c&&(filling||pendingN.current>0))return skel;
  if(!c&&needsLoc)return box(<Empty top icon={LocateFixed} title={t('fe.w7.df.locGone')} text={t('fe.w7.df.locGoneText')}><Btn onClick={openFilter}>{t('fe.px.empty.change')}</Btn></Empty>);
- if(!c)return <>{box(<DeckEmpty byFilter={filterOn?byFilter:null} filterOn={filterOn} openFilter={openFilter} likesN={likesN} toLikes={toLikes}/>)}{overlay}</>;
+ if(!c)return <>{box(<DeckEmpty byFilter={filterOn?byFilter:null} filterOn={filterOn} openFilter={openFilter}/>)}{overlay}</>;
  return <div className="view deckmode">
   <div className="deck">
    {nx&&<NextCard key={nx.id} c={nx} cardRef={next}/>}
-   <TopCard key={c.id} c={c} cardRef={top} nextRef={next} actsRef={acts} onDecide={decide} toast={toast}/>
+   <TopCard key={c.id} c={c} cardRef={top} nextRef={next} actsRef={acts} onDecide={decide}/>
    <div className="acts onphoto" ref={acts}>
     <button type="button" className={'act undo'+(made.length?'':' off')} aria-label={t('fe.people.undo')} onClick={undo}><Undo2/></button>
     <button type="button" className="act pass" aria-label={t('fe.people.pass')} onClick={()=>void decide(-1)}><X/></button>
@@ -321,7 +325,7 @@ function Discover({reloadKey,onOff,filterOn,openFilter,likesN,toLikes,onLikes}:{
     <button type="button" className="act like" aria-label={t(acting?.kind==='couple'?'fe.px.deck.likeUs':'fe.px.deck.like')} onClick={()=>void decide(1)}><HeartF/></button>
    </div>
   </div>
-  {toastNode}{overlay}
+  {overlay}
  </div>;
 }
 
@@ -363,8 +367,8 @@ function NextCard({c,cardRef}:{c:Card,cardRef:React.RefObject<HTMLElement|null>}
 
 /** The top card (deckInner/card): photo with bars and zones, tags, stamps, the info block and — scrolled — the whole
  * profile in its own layout with «Подписаться» and «Полный профиль». Horizontal drag decides, vertical scrolls. */
-function TopCard({c,cardRef,nextRef,actsRef,onDecide,toast}:{c:Card,cardRef:React.RefObject<HTMLElement|null>,nextRef:React.RefObject<HTMLElement|null>,
- actsRef:React.RefObject<HTMLDivElement|null>,onDecide:(dir:1|-1)=>void,toast:PxToast}){
+function TopCard({c,cardRef,nextRef,actsRef,onDecide}:{c:Card,cardRef:React.RefObject<HTMLElement|null>,nextRef:React.RefObject<HTMLElement|null>,
+ actsRef:React.RefObject<HTMLDivElement|null>,onDecide:(dir:1|-1)=>void}){
  const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const aid=acting?.id??'';
  const [ix,setIx]=useState(0);const [view,setView]=useState<number|null>(null);
  // Everything under the photo (bio, compatibility, details, interests, posts, the private part) comes in one read as
@@ -427,7 +431,7 @@ function TopCard({c,cardRef,nextRef,actsRef,onDecide,toast}:{c:Card,cardRef:Reac
    </div>
   </div>
   <div className="pc-body pc-full">
-   {pre?<><PersonBio p={pre.profile}/><div className="mt12"><CompatSummary profileId={c.id} pre={pre.compat}/></div><ProfileBody p={pre.profile} pre={pre} onOpen={setView}/></>
+   {pre?<><PersonBio p={pre.profile}/><CompatSummary profileId={c.id} pre={pre.compat}/><ProfileBody p={pre.profile} pre={pre} onOpen={setView}/></>
     :<><Skel kind="card" rows={2}/><Skel kind="post" rows={1}/></>}
    <div className="pc-foot"><FollowButton profileId={c.id} name={name} on={!!rel?.iFollow} disabled={!rel} onChange={on=>setRel(x=>x&&{...x,iFollow:on,followers:Math.max(0,x.followers+(on?1:-1))})}/><Btn kind="soft" onClick={()=>navigate('/n/people/'+c.id)}>{t('fe.px.deck.full')}</Btn></div>
   </div>
@@ -438,8 +442,8 @@ function TopCard({c,cardRef,nextRef,actsRef,onDecide,toast}:{c:Card,cardRef:Reac
 
 /** D01 — Discover is off for this profile: no candidates, two honest ways in (browse hidden / browse and be seen). */
 const photoIdsRes=z.object({ok:z.literal(true),profile:z.object({photos:z.array(z.object({id:z.string()}).passthrough())}).passthrough()});
-function DatingOff({onChanged,toast}:{onChanged:()=>void,toast:PxToast}){
- const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const [busy,setBusy]=useState<''|'hidden'|'visible'>('');
+function DatingOff({onChanged}:{onChanged:()=>void}){
+ const {call,acting}=useFe();const toast=useToast();const {t}=useI18n();const [busy,setBusy]=useState<''|'hidden'|'visible'>('');
  const couple=acting?.kind==='couple';
  // Owner 28.10.2026: «Показываться» without any photo asks for one first (DiscoverPhotoAsk), then switches on.
  const [askPhoto,setAskPhoto]=useState<string[]|null>(null);
@@ -454,30 +458,25 @@ function DatingOff({onChanged,toast}:{onChanged:()=>void,toast:PxToast}){
   try{const r=await call('profile.setVisibility',{opId:newOpId(),setting:'discoverMode',value},ok);
    if(r.pending){toast(t('fe.px.off.wait'));return;}
    const hasPhoto=acting?.avatar!=null;toast(value==='hidden'?t('fe.px.off.peekDone'):hasPhoto?t('fe.px.off.onDone'):t('fe.px.off.onNoPhoto'));onChanged();}
-  catch(e){toast(pxError(e,t),true);}finally{setBusy('');}};
- return <Empty top big={!couple} title={t(couple?'fe.px.off.titleUs':'fe.px.off.title')} text={t(couple?'fe.px.off.textUs':'fe.px.off.text')}
-  art={couple?<span className="ico l"><Heart/></span>:<div className="pair-art" aria-hidden="true"><span className="pa-o pa-o1"/><span className="pa-o pa-o2"/><span className="pa-ring"/><span className="pa-heart"><HeartF/></span><i className="pa-d d1"/><i className="pa-d d2"/><i className="pa-d d3"/></div>}
-  after={<><div className="dmode">
-   <button type="button" className={'dm'+(busy==='hidden'?' busy':'')} onClick={()=>set('hidden')} disabled={!!busy}><span className="ico v"><EyeOff/></span><span className="tx"><b>{t('fe.px.off.peek')}</b></span><ChevronRight/></button>
-   <button type="button" className={'dm'+(busy==='visible'?' busy':'')} onClick={()=>set('visible')} disabled={!!busy}><span className="ico l"><Heart/></span><span className="tx"><b>{t('fe.px.off.on')}</b>{couple&&<small>{t('fe.px.off.onUsSub')}</small>}</span><ChevronRight/></button>
-  </div>
-  {couple?<Btn kind="text" auto className="mt12" onClick={()=>navigate('/n/me?layer=vis')}>{t('fe.px.off.allVis')}</Btn>
-   :<Card list className="mt16">
-    <Row icon={Check} tone="g" title={t('fe.px.off.stays')} sub={t('fe.px.off.staysSub')}/>
-    <Row icon={MessageCircle} title={t('fe.px.off.chat')} sub={t('fe.px.off.chatSub')}/>
-   </Card>}
-   {askPhoto&&<DiscoverPhotoAsk existing={askPhoto} couple={couple} onCancel={()=>setAskPhoto(null)} onAdded={async()=>{setAskPhoto(null);await set('visible',true);}}/>}</>}/>;
+  catch(e){toast(pxError(e,t),{type:'err'});}finally{setBusy('');}};
+ // Owner 29.10.2026 sweep: the art, the title, one line and the two ways in — nothing to read past them.
+ return <Empty top big title={t(couple?'fe.px.off.titleUs':'fe.px.off.title')} text={t(couple?'fe.px.off.textUs':'fe.px.off.text')} art={<PairArt/>}
+  after={<><Card list>
+   <Row icon={EyeOff} tone="v" title={t('fe.px.off.peek')} onClick={()=>void set('hidden')} disabled={!!busy}/>
+   <Row icon={Heart} tone="l" title={t('fe.px.off.on')} sub={couple?t('fe.px.off.onUsSub'):undefined} onClick={()=>void set('visible')} disabled={!!busy}/>
+  </Card>
+  {askPhoto&&<DiscoverPhotoAsk existing={askPhoto} couple={couple} onCancel={()=>setAskPhoto(null)} onAdded={async()=>{setAskPhoto(null);await set('visible',true);}}/>}</>}/>;
 }
 
 /** D11 — dating switched off by the team (deck `closed`): a teaser, nothing about candidates, and «Сообщить о
  * запуске» (dating.notify; a notification comes when it opens). */
-function DatingSoon({toast}:{toast:PxToast}){
- const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();
+function DatingSoon(){
+ const {call}=useFe();const toast=useToast();const {t}=useI18n();const navigate=useNavigate();
  const [on,setOn]=useState<boolean|null>(null);const [busy,setBusy]=useState(false);
  useEffect(()=>{call('dating.status',{},datingStatusRes,{asAccount:true}).then(r=>setOn(r.notify)).catch(()=>setOn(false));},[call]);
  const flip=async()=>{if(busy||on===null)return;setBusy(true);
   try{const r=await call('dating.notify',{opId:newOpId(),on:!on},notifyRes,{asAccount:true});setOn(r.notify);toast(t(r.notify?'fe.w7.soon.on':'fe.w7.soon.off'));}
-  catch(e){toast(pxError(e,t),true);}finally{setBusy(false);}};
+  catch(e){toast(pxError(e,t),{type:'err'});}finally{setBusy(false);}};
  return <Soon badge={t('fe.w7.soon.badge')} title={t('fe.w7.soon.title')} text={t('fe.w7.soon.text')}
   points={[[Sparkles,t('fe.w7.soon.p1')],[KeyRound,t('fe.w7.soon.p2')],[MessageCircle,t('fe.w7.soon.p3')]]}>
   <Btn kind={on?'soft':'primary'} icon={on?Check:Bell} busy={busy||on===null} disabled={busy||on===null} pressed={!!on} onClick={()=>void flip()}>{t(on?'fe.w7.soon.notifyOn':'fe.w7.soon.notify')}</Btn>
@@ -486,10 +485,10 @@ function DatingSoon({toast}:{toast:PxToast}){
 }
 
 /** D10 — nobody left: the radar, why (filters or simply everyone seen), and where to go next. */
-function DeckEmpty({byFilter,filterOn,openFilter,likesN,toLikes}:{byFilter:number|null,filterOn:number,openFilter:()=>void,likesN:number,toLikes:()=>void}){
+function DeckEmpty({byFilter,filterOn,openFilter}:{byFilter:number|null,filterOn:number,openFilter:()=>void}){
  const {acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const byF=!!byFilter&&byFilter>0;
- // Owner 28.10.2026: compact — a small radar, a short title and one line, «Симпатии» / «Недавние» side by side, and
- // where else to go as one list in one icon tone.
+ // Owner 28.10.2026: compact — a small radar, a short title and one line, and where else to go as one list in one
+ // icon tone. «Симпатии» and «Просмотренные» are the header's tab and history button: not repeated here (29.10 sweep).
  return <Empty top title={byF?t('fe.px.empty.byF'):t('fe.px.empty.titleShort')} art={<Radar small src={acting?.avatar} seed={acting?.id??'me'}/>}
   text={byF?fill(t('fe.px.empty.byFText'),{n:byFilter!>=100?'100+':byFilter!}):filterOn?t('fe.px.empty.withF'):t('fe.px.empty.textShort')}
   after={<Card list>
@@ -498,16 +497,12 @@ function DeckEmpty({byFilter,filterOn,openFilter,likesN,toLikes}:{byFilter:numbe
    <Row icon={Sparkles} tone="v" title={t('fe.px.empty.int')} onClick={()=>navigate('/n/me/interests')}/>
   </Card>}>
    {filterOn>0&&<Btn onClick={openFilter}>{t('fe.px.empty.change')}</Btn>}
-   <Actions>
-    <Btn kind="soft" icon={Heart} onClick={toLikes}>{t('fe.px.empty.likes')}{likesN?` · ${likesN}`:''}</Btn>
-    <Btn kind="soft" icon={History} onClick={()=>navigate('/n/people/history')}>{t('fe.px.empty.recent')}</Btn>
-   </Actions>
  </Empty>;
 }
 
 /* ---------- D06 likes ---------- */
 function Likes({onCount,toDiscover}:{onCount:(n:number)=>void,toDiscover:()=>void}){
- const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const [toastNode,toast]=useToast();
+ const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
  const [k,setK]=useState<'in'|'out'>('in');const us=acting?.kind==='couple';
  const [inc,setInc]=useState<z.infer<typeof incoming>['items']|null>(null);const [out,setOut]=useState<z.infer<typeof outgoing>['items']|null>(null);
  const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState('');const [match,setMatch]=useState<{card:Card,conversationId?:string}|null>(null);
@@ -516,22 +511,22 @@ function Likes({onCount,toDiscover}:{onCount:(n:number)=>void,toDiscover:()=>voi
  useEffect(()=>{load();},[load,acting?.id]);
  // «Отменить» after ✕: the dismissal is the last Discover decision, so one undo brings the like back (V21 likePass).
  const undoDismiss=async()=>{try{await call('discover.undo',{opId:newOpId()},undone);load();}
-  catch(e){if(e instanceof FeError&&e.code==='premium_required')openPaywall('undo');else toast(pxError(e,t),true);}};
+  catch(e){if(e instanceof FeError&&e.code==='premium_required')openPaywall('undo');else toast(pxError(e,t),{type:'err'});}};
  const dismiss=async(c:Card)=>{if(busy)return;setBusy(c.id);
   try{await call('like.dismiss',{opId:newOpId(),profileId:c.id},ok);setInc(l=>{const n=l?.filter(x=>x.profile.id!==c.id)??null;onCount(n?.length??0);return n;});
-   toast(fill(t('fe.px.lk.removed'),{name:cname(c)}),false,{label:t('fe.mx.undo'),fn:()=>void undoDismiss()});}
-  catch(e){toast(pxError(e,t),true);}finally{setBusy('');}};
+   toast(fill(t('fe.px.lk.removed'),{name:cname(c)}),{action:{label:t('fe.mx.undo'),fn:()=>void undoDismiss()}});}
+  catch(e){toast(pxError(e,t),{type:'err'});}finally{setBusy('');}};
  // «Отменить» after taking a like back sends it again from where it came (never 'discover': like.send refuses it).
  const resend=async(c:Card,source:string|null|undefined)=>{
-  try{await call('like.send',{opId:newOpId(),profileId:c.id,source:source==='profile'?'profile':'likes'},likeRes);load();}catch(e){toast(pxError(e,t),true);}};
+  try{await call('like.send',{opId:newOpId(),profileId:c.id,source:source==='profile'?'profile':'likes'},likeRes);load();}catch(e){toast(pxError(e,t),{type:'err'});}};
  const back=async(c:Card)=>{if(busy)return;setBusy(c.id);
   try{const r=await call('like.send',{opId:newOpId(),profileId:c.id,source:'likes'},likeRes);setInc(l=>{const n=l?.filter(x=>x.profile.id!==c.id)??null;onCount(n?.length??0);return n;});
    if(r.state==='matched')setMatch({card:c,...(r.conversationId?{conversationId:r.conversationId}:{})});else toast(fill(t(us?'fe.px.lkd.sentUs':'fe.px.lkd.sent'),{name:cname(c)}));}
-  catch(e){toast(pxError(e,t),true);}finally{setBusy('');}};
+  catch(e){toast(pxError(e,t),{type:'err'});}finally{setBusy('');}};
  const unlike=async(c:Card,source?:string|null)=>{if(busy)return;setBusy(c.id);
   try{await call('like.withdraw',{opId:newOpId(),profileId:c.id},ok);setOut(l=>l?.filter(x=>x.profile.id!==c.id)??null);
-   toast(t(us?'fe.px.lkd.withdrawnUs':'fe.px.lkd.withdrawn'),false,{label:t('fe.mx.undo'),fn:()=>void resend(c,source)});}
-  catch(e){toast(pxError(e,t),true);}finally{setBusy('');}};
+   toast(t(us?'fe.px.lkd.withdrawnUs':'fe.px.lkd.withdrawn'),{action:{label:t('fe.mx.undo'),fn:()=>void resend(c,source)}});}
+  catch(e){toast(pxError(e,t),{type:'err'});}finally{setBusy('');}};
  const seg=<CSeg value={k} onChange={setK} options={[{id:'in',label:t(us?'fe.px.lk.inUs':'fe.px.lk.in'),n:inc?.length??0},{id:'out',label:t(us?'fe.px.lk.outUs':'fe.px.lk.out')}]}/>;
  let body:ReactNode;
  if(error)body=<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>;
@@ -551,7 +546,7 @@ function Likes({onCount,toDiscover}:{onCount:(n:number)=>void,toDiscover:()=>voi
   :<Empty icon={Heart} title={t('fe.px.lk.inEmpty')} text={t(us?'fe.px.lk.inEmptyUs':'fe.px.lk.inEmptyText')}><Btn kind="soft" onClick={()=>navigate('/n/me')}>{t(us?'fe.px.lk.improveUs':'fe.px.lk.improve')}</Btn></Empty>;
  return <>
   <View refresh={load}>{seg}{body}</View>
-  {toastNode}
+  
   {match&&<MatchOverlay other={{id:match.card.id,name:cname(match.card),src:photo(match.card)}} conversationId={match.conversationId} onClose={()=>setMatch(null)}/>}
  </>;
 }
@@ -561,7 +556,7 @@ export function PersonScreen(){
  const {id=''}=useParams();const {call,acting}=useFe();const {t}=useI18n();
  // «Полный профиль» from a Discover card: the profile that card already read paints the page at once.
  const [p,setP]=useState<PersonProfile|null>(()=>acting?cardRead(acting.id,id)?.profile??null:null);const [error,setError]=useState<unknown>(null);
- const [menu,setMenu]=useState<MenuStep>(null);const [blocked,setBlocked]=useState(false);const [toastNode,toast]=useToast();
+ const [menu,setMenu]=useState<MenuStep>(null);const [blocked,setBlocked]=useState(false);
  // Another person starts from the skeleton; reading the same one again (after «Разблокировать») keeps the page.
  const [was,setWas]=useState(id);if(was!==id){setWas(id);setP(null);}
  const load=useCallback(()=>{setError(null);call('profile.get',{profileId:id},personProfileRes).then(r=>setP(r.profile)).catch(e=>{setP(null);setError(e);});},[call,id]);
@@ -570,9 +565,9 @@ export function PersonScreen(){
  const setBlock=useCallback((b:boolean)=>{setBlocked(b);if(!b)load();},[load]);
  const name=personName(p);
  if(p&&!blocked)return <>
-  <ProfilePage p={p} onMore={()=>setMenu('menu')} toast={toast} onRefresh={load}
-   menu={(rel,reload)=><PersonMenu profileId={id} name={name} handle={p.kind==='person'?p.handle:null} step={menu} setStep={setMenu} blocked={blocked} setBlocked={setBlock} toast={toast} rel={rel} onRel={reload}/>}/>
-  {toastNode}
+  <ProfilePage p={p} onMore={()=>setMenu('menu')} onRefresh={load}
+   menu={(rel,reload)=><PersonMenu profileId={id} name={name} handle={p.kind==='person'?p.handle:null} step={menu} setStep={setMenu} blocked={blocked} setBlocked={setBlock} rel={rel} onRel={reload}/>}/>
+  
  </>;
  return <>
   <Bar title={blocked?t('fe.px.bl.stateTitle'):error?t('fe.px.unavailable'):''} back>
@@ -581,8 +576,8 @@ export function PersonScreen(){
   {blocked?<View><Empty icon={Ban} title={t('fe.px.bl.stateTitle')} text={t('fe.px.bl.stateText')}><Btn kind="soft" onClick={()=>setMenu('menu')}>{t('fe.px.menu.unblock')}</Btn></Empty></View>
    :error?<View><Empty icon={Lock} title={t('fe.px.unavailable')} text={pxError(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty></View>
    :<div className="view nodock top0 profile-page"><div className="wrap"><div className="hero"><Skel kind="fill" rows={1}/></div><Skel kind="card" rows={2}/></div></div>}
-  {blocked&&<PersonMenu profileId={id} name={name} step={menu} setStep={setMenu} blocked setBlocked={setBlock} toast={toast}/>}
-  {toastNode}
+  {blocked&&<PersonMenu profileId={id} name={name} step={menu} setStep={setMenu} blocked setBlocked={setBlock}/>}
+  
  </>;
 }
 

@@ -48,7 +48,7 @@ export function CompareSheet({topicId,name,avatar,personId,theirs,onClose}:{topi
   {mineAll===null?<Skel kind="line" rows={2}/>:<div className="cmpx">
    <CmpRow i={item} topic={title} me={me} them={them} t={k=>t(k)} why={false} lock={lock}/>
    {verdict}
-   {group&&group!=='bound'&&group!=='discuss'&&<Text size="xs" tone="faint" center className="mt12">{t('fe.px.cmp.notConsent')}</Text>}
+   {group&&group!=='bound'&&group!=='discuss'&&<Text size="xs" tone="faint" center>{t('fe.px.cmp.notConsent')}</Text>}
   </div>}
  </Sheet>;
 }

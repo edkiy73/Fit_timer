@@ -182,6 +182,13 @@ export function Radar({src,seed,small}:{src?:string|null|undefined,seed:string,/
  </div>;
 }
 
+/** «Знакомства выключены» (V21 D01): two circles meeting over a heart, a soft ring and rising dots — the same for a
+ * person and a couple; still under reduced motion. */
+export function PairArt(){
+ return <div className="pair-art" aria-hidden="true"><span className="pa-o pa-o1"/><span className="pa-o pa-o2"/><span className="pa-ring"/>
+  <span className="pa-heart"><Heart fill="currentColor"/></span><i className="pa-d d1"/><i className="pa-d d2"/><i className="pa-d d3"/></div>;
+}
+
 /** «Скоро» — a feature that is not open yet (dating switched off by the team, V21 D11): two circles with a heart, the
  * «Скоро» label, a title, a line, what it will be (icon + text each) and the screen's buttons in `children`. */
 export function Soon({badge,title,text,points,children}:{badge:ReactNode,title:ReactNode,text?:ReactNode,points?:[LucideIcon,ReactNode][],children?:ReactNode}){
