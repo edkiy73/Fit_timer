@@ -301,6 +301,9 @@ button.pill{cursor:pointer}
 /* A clip in a feed card plays in place (post-parts MediaGrid): the cell is its frame. */
 .v21 .mcell.mv{display:block}
 .v21 .mcell.mv>.k-video{position:absolute;inset:0;width:100%;height:100%;max-height:none;border-radius:0}
+/* «Instafill» behind an in-place clip: its blurred poster fills the sides; the player itself stays transparent there. */
+.v21 .mcell.mv>.mbg{position:absolute;inset:-12%;width:124%;height:124%;max-width:none;object-fit:cover;filter:blur(26px) saturate(1.15) brightness(.92);opacity:.9}
+.v21 .mcell.mv>.k-video,.v21 .mcell.mv>.k-video>video{background:transparent}
 
 /* Profile header photo (owner 28.10.2026): no fade of the page top over it, a dark scrim in both themes so the story
    bars, ‹ and ⋯ read on any photo, and «2 / 6» under the bars. */

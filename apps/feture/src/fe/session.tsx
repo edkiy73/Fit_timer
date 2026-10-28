@@ -40,7 +40,7 @@ const BOOT_KEY='feture.fe.boot:';
 /** Reads (no opId) are kept so returning to a screen is instant; any write or realtime signal drops them all, so
  * nothing stale outlives a change. The server stays the source of truth. A read younger than READ_TTL is answered
  * from memory; an older one (up to STALE_TTL) is answered from memory too — the screen appears at once, whole — while
- * it is asked again in the background; if the answer changed, the screens read again and show the new one.
+ * it is asked again in the background, and the new answer is what the next visit shows.
  * The cache holds the server's raw answer per (account, profile, command, input): two screens that read the same
  * command with different schemas share one request. */
 const READ_TTL=30000;
@@ -63,8 +63,6 @@ const dropReads=(action:string)=>{const only=NARROW_WRITES[action];if(!only){rea
  * Without this a second «Без звука» / «В архив» within 30 s was answered from memory and never reached the server. */
 const WRITES_WITHOUT_OPID=new Set(['chat.read','chat.mute','chat.archive','notifications.read','notifications.readAll','media.commit','staff.mediaView','profile.setVisibility']);
 export function dropReadCache(){readCache.clear();}
-/** Screens read again (through a new `call`) when a background refresh brought a different answer. */
-const staleListeners=new Set<()=>void>();
 
 export function FeSessionProvider({children}:{children:ReactNode}){
  const auth=useOptionalAuth();
@@ -73,8 +71,6 @@ export function FeSessionProvider({children}:{children:ReactNode}){
  const sessionKey=auth.session?[auth.session.email,auth.session.deviceId,auth.session.syncToken].join('\n'):'';
  const latestSession=useRef(auth.session);latestSession.current=auth.session;
  const [state,setState]=useState<State>({status:'loading'});
- const [rev,setRev]=useState(0);
- useEffect(()=>{const bump=()=>setRev(n=>n+1);staleListeners.add(bump);return ()=>{staleListeners.delete(bump);};},[]);
  const [nonce,setNonce]=useState(0);
  const [actingId,setActingId]=useState<string|null>(()=>{try{return sessionStorage.getItem(ACTING_KEY);}catch{return null;}});
  // Signed out after being signed in: this browser stops getting the account's pushes.
@@ -101,7 +97,13 @@ export function FeSessionProvider({children}:{children:ReactNode}){
  const acting=profiles.find(p=>p.id===actingId)??profiles.find(p=>p.kind==='person')??null;
  const setActing=useCallback((id:string)=>{setActingId(id);try{sessionStorage.setItem(ACTING_KEY,id);}catch{/* this tab only */}},[]);
  const reload=useCallback(()=>setNonce(n=>n+1),[]);
+ // `call` keeps its identity while the same login acts as the same profile: screens load with `useEffect(…,[call])`,
+ // so a new `call` reloads every open screen — a refreshed bootstrap or session object must not do that (owner
+ // 28.10.2026: «моргает при скролле и вылетает в новую загрузку»).
+ const stateRef=useRef(state);stateRef.current=state;
+ const ready=state.status==='ready';
  const call=useCallback(<T,>(action:string,input:Record<string,unknown>,schema:z.ZodType<T>,opts:{asAccount?:boolean,profileId?:string,signal?:AbortSignal,/** Skip the short read cache: «Обновить» and other explicit refreshes. */ fresh?:boolean}={})=>{
+  const state=stateRef.current;
   if(state.status!=='ready')return Promise.reject(new FeError('auth_required'));
   const profileId=opts.asAccount?undefined:opts.profileId??acting?.id;
   // The newest session object (same login and token): its expiry may have been extended by Core's refresh.
@@ -129,11 +131,10 @@ export function FeSessionProvider({children}:{children:ReactNode}){
    // Stale: answer from memory now, ask the server in the background.
    value=hit.value;
    if(!hit.refreshing){hit.refreshing=true;
-    ask().then(async body=>{
-     const before=JSON.stringify(await hit.value);
+    // The new answer is kept for the next visit; an open screen is never torn down under the reader.
+    ask().then(body=>{
      if(readCache.get(key)!==hit)return; // a write or a signal emptied the cache meanwhile
-     const entry:Entry={at:Date.now(),action,value:Promise.resolve(body),settled:true};readCache.set(key,entry);
-     if(JSON.stringify(body)!==before)for(const l of [...staleListeners])l();
+     readCache.set(key,{at:Date.now(),action,value:Promise.resolve(body),settled:true});
     },()=>{hit.refreshing=false;});}
   }else{value=ask();store(value);}
   // Not bound to the caller's AbortSignal: a screen that unmounts must not cancel a read another screen will reuse.
@@ -141,7 +142,7 @@ export function FeSessionProvider({children}:{children:ReactNode}){
   if(opts.signal){const sig=opts.signal;return new Promise<T>((res,rej)=>{sig.addEventListener('abort',()=>rej(new DOMException('Aborted','AbortError')),{once:true});parsed.then(res,rej);});}
   return parsed;
  // eslint-disable-next-line react-hooks/exhaustive-deps
- },[state,acting?.id,rev,sessionKey]);
+ },[ready,acting?.id,sessionKey]);
  const value=useMemo(()=>({state,acting,setActing,reload,call}),[state,acting,setActing,reload,call]);
  // One socket per signed-in session, joined to the channels of every profile this account may act as.
  const listeners=useRef(new Set<RtListener>());
