@@ -6,7 +6,7 @@ import {ArrowUpDown,AtSign,Bell,BellOff,Bookmark,Check,Calendar,ChartColumn,Chev
 import type {LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicOrigin} from '../api-url';
-import {ActingAv,ActionLine,ActivityCard,ActivityItem,Alert,ArticleCard,ArticleImage,Ask,Av,BAD_CHARS,Bar,Btn,Card,Chip,Chips,Counter,Empty,FeedEvents,Field,FilePick,Group,H,IconBtn,Input,LikesLine,Note,QuickStart,RichEditor,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,VideoBadge,View,hasLongWord,mdImages,type RichEditorHandle} from './kit';
+import {articlePlate,ActingAv,ActionLine,ActivityCard,ActivityItem,Alert,ArticleCard,ArticleImage,Ask,Av,BAD_CHARS,Bar,Btn,Card,Chip,Chips,Counter,Empty,FeedEvents,Field,FilePick,Group,H,IconBtn,Input,LikesLine,Note,QuickStart,RichEditor,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,VideoBadge,View,hasLongWord,mdImages,type RichEditorHandle} from './kit';
 import {shakeFirstErr} from './kit/validate';
 import {useFe,usePartnerApproves} from './session';
 import {ActivityCardOf,activitySchema,type Act} from './feed-activity';
@@ -380,11 +380,13 @@ export function PostCard({post,onChange,onRemove,onExpired,full=false,onReply,pr
  const answer=async(a:'ok'|'no')=>{if(busy)return;setBusy(true);try{await call('tag.answer',{opId:newOpId(),postId:post.id,answer:a},okOnly);onChange({...post,tags:(post.tags??[]).map(x=>x.id===me?.id?{...x,state:a}:x)});toast(a==='ok'?t('fe.fd.tag.confirmed'):t('fe.fd.tag.declined'),{type:'ok'});}
   catch(e){toast(feErrorMessage(e,t),{type:'err'});}finally{setBusy(false);}};
  const words=Math.max(1,Math.round(post.body.split(/\s+/).length/180));
- // An article (owner 28.10.2026): the first photo not placed in the text is the cover; the photos in the text show
- // where they stand; any other photo goes under the text.
+ // An article (owner 28.10.2026): it always has a cover — the first photo not placed in the text (else its first photo,
+ // the same on the card and the page), or without photos its own plate; the photos in the text show where they stand;
+ // any other photo goes under the text.
  const art=useMemo(()=>{if(post.type!=='note')return null;const refs=mdImages(post.body);const ok=post.media.filter(m=>mediaSrc(m));
   const coverM=ok.find(m=>!refs.includes(m.id))??null;const shown=refs.map(id=>ok.find(m=>m.id===id)).filter((m):m is typeof ok[number]=>!!m);
-  return {cover:coverM?mediaSrc(coverM,full?'full':'card'):ok[0]&&!full?mediaSrc(ok[0]):null,shown,slides:shown.map(m=>({id:m.id})),rest:ok.filter(m=>m!==coverM&&!refs.includes(m.id))};},[post.type,post.body,post.media,full]);
+  const c=coverM??ok[0];
+  return {cover:c?mediaSrc(c,full?'full':'card'):null,shown,slides:shown.map(m=>({id:m.id})),rest:ok.filter(m=>m!==coverM&&!refs.includes(m.id))};},[post.type,post.body,post.media,full]);
  const plain=mdPlain(post.body);const [view,setView]=useState<number|null>(null);
  return <article className="post">
   <div className="post-h">
@@ -407,7 +409,7 @@ export function PostCard({post,onChange,onRemove,onExpired,full=false,onReply,pr
    {declined.length>0&&<div className="row g8"><Btn size="sm" kind="soft" onClick={()=>navigate('/n/feed/post/'+post.id+'/edit')}>{t('fe.fd.tag.replace')}</Btn></div>}</div>}
   {mine&&!preview&&post.dispute&&<DisputeNotice post={post} onChange={onChange}/>}
   <div className="body" onClick={open} role={full||preview?undefined:'link'} tabIndex={full||preview?undefined:0} onKeyDown={e=>{if(e.key==='Enter'&&e.target===e.currentTarget)open();}}>
-   {art?<ArticleCard cover={art.cover} kicker={<>{t('fe.fd.article')} · {t('fe.fd.minRead',{n:words})}</>} title={post.title} full={full}
+   {art?<ArticleCard cover={art.cover} plate={articlePlate(post.id)} kicker={<>{t('fe.fd.article')} · {t('fe.fd.minRead',{n:words})}</>} title={post.title} full={full}
      excerpt={<>{plain.slice(0,220)}{plain.length>220?'…':''}</>} more={t('fe.fd.readMore')}>
      <RichText text={post.body} mentions={post.mentions??[]} images={id=>{const k=art.slides.findIndex(x=>x.id===id);const m=art.shown[k];
       return m?<ArticleImage src={mediaSrc(m,'full')!} label={t('fe.fd.openFull')} onOpen={()=>setView(k)}/>:null;}}/>
@@ -695,6 +697,7 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
  // Interests a post may carry: the author's own public ones with a level, never limits (server rule).
  const eligible=(myJars??[]).filter(j=>j.vis==='public'&&j.value!=null&&!j.mark&&catalog.find(c=>c.id===j.topicId)?.categoryId!=='limits');
  // Picked photos go through the kit uploader: format 4:5 / 1:1 / as is, crop, compression without metadata, progress.
+ // An article's cover is always 16:9 (owner, 28.10.2026): its crop step offers only that; photos in the text keep theirs.
  const [picked,setPicked]=useState<File[]|null>(null);const sendPhoto=useSendPhoto('post');const sendVideo=useSendVideo('post');
  const addMedia=(files:FileList)=>{setFailure('');setPicked([...files]);};
  const pick=(f:'media'|'cover'|'inline')=>{setPickFor(f);file.current?.click();};
@@ -916,7 +919,7 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
   {picked&&(pickFor==='media'?<Uploader files={picked} aspects={['4:5','1:1','orig']} max={MEDIA_MAX-media.length} send={sendPhoto} sendVideo={sendVideo} onClose={()=>setPicked(null)}
    onDone={got=>{setPicked(null);setMedia(m=>[...m,...got.map(g=>({id:g.id,preview:g.url,kind:g.kind,durationMs:g.durationMs}))]);setErrs(e=>{const {media:_m,...rest}=e;return rest;});}}/>
    // An article: the cover (16:9 or as is) or one photo into the text where the caret was; photos only.
-   :<Uploader files={picked.slice(0,1)} aspects={pickFor==='cover'?['16:9','orig']:['orig','4:5','1:1']} max={1} send={sendPhoto} onClose={()=>setPicked(null)}
+   :<Uploader files={picked.slice(0,1)} aspects={pickFor==='cover'?['16:9']:['orig','4:5','1:1']} max={1} send={sendPhoto} onClose={()=>setPicked(null)}
     onDone={got=>{setPicked(null);const g=got[0];if(!g)return;setMedia(m=>[...m,{id:g.id,preview:g.url,kind:g.kind}]);
      if(pickFor==='cover')setCoverId(g.id);else requestAnimationFrame(()=>text.current?.insertImage(g.id,g.url));}}/>)}
   {viewer!==null&&<Viewer srcs={shownMedia.map(m=>m.preview)} index={viewer} onClose={()=>setViewer(null)}/>}

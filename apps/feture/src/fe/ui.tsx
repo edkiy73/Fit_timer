@@ -3,6 +3,7 @@ import {createPortal} from 'react-dom';
 import {useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {ChevronLeft,type LucideIcon} from 'lucide-react';
+import {PLATE_KEYS,articlePlate,type PlateKey} from '../../contracts/_plates.mjs';
 
 /** V21 building blocks with the prototype's own markup and class names (styles: kit/base.css, started from
  * public/prototype-v21.html). Icons come only from Lucide. */
@@ -14,6 +15,18 @@ const PLATES=[['#7A1236','#FF5A7A','#B9A6FF','#2A0D1F'],['#3C1B5A','#FF9F7A','#7
 export function plate(seed:string):CSSProperties{
  let h=0;for(const c of seed)h=(h*31+c.charCodeAt(0))>>>0;
  const p=PLATES[h%PLATES.length]!;
+ return {'--p1':p[0],'--p2':p[1],'--p3':p[2],'--p4':p[3],position:'absolute',inset:0} as CSSProperties;
+}
+// Prototype PL: the named cover plates a community, an event or an article (no photos) has instead of a photo; the keys
+// are shared with the server (contracts/_plates.mjs).
+const NAMED:Record<PlateKey,readonly [string,string,string,string]>={
+ lilac:['#5C47D6','#FF5A7A','#F6B49B','#1A0F3A'],rose:['#7A1236','#FF5A7A','#B9A6FF','#2A0D1F'],sea:['#1F3A4A','#7FE0B9','#B9A6FF','#0E1A22'],
+ amber:['#4A2A12','#FFB25A','#FF5A7A','#1F120A'],moss:['#25403A','#C6F27F','#2A2A55','#0D1714'],coal:['#2B2B2B','#FF6B3D','#6F6F6F','#0F0F0F'],
+};
+export {PLATE_KEYS,articlePlate,type PlateKey};
+/** The style of a named plate (`.plate`); an unknown key paints «rose». */
+export function namedPlate(k:string):CSSProperties{
+ const p=NAMED[k as PlateKey]??NAMED.rose;
  return {'--p1':p[0],'--p2':p[1],'--p3':p[2],'--p4':p[3],position:'absolute',inset:0} as CSSProperties;
 }
 const initial=(name:string)=>[...(name.trim()||'?')][0]!.toUpperCase();
