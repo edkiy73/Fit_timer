@@ -1,9 +1,10 @@
-import React,{type CSSProperties,type ReactNode} from 'react';
+import React,{useRef,type CSSProperties,type ReactNode} from 'react';
 import {useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Check,ChevronLeft,Clock,Heart,Image as ImageIcon,Lock,Plus,Ticket,UserRound,Users,type LucideIcon} from 'lucide-react';
 import {Av,Btn,Card,IconBtn,Note,Row,Skel,Switch,plate} from './index';
 import {VideoPlayer} from './av';
+import type {Clip} from './media';
 import './domain.css';
 
 /** FetUre domain pieces (Storybook «Домен»): the parts of screens that are product-specific but repeat or carry their
@@ -229,14 +230,28 @@ export function PhotoAdd({label,hint,big,tall,ghost,disabled,busy,onClick}:{labe
  return <button type="button" className={'ph-add'+(big?' big':'')+(tall?' tall':'')} disabled={disabled} aria-busy={busy||undefined} onClick={onClick} aria-label={label}><Plus/>{hint&&<small>{hint}</small>}</button>;
 }
 
-/** The full-screen photo strip: the current picture slides in (index in a CSS variable). */
-/** A viewer slide: a picture, or a clip (`video` = its link, `poster` its frame) that plays when it is the current one. */
-export type Slide=string|{video:string,poster?:string|null|undefined,durationMs?:number|null|undefined};
-export function PhotoTrack({srcs,index,wm,onExpired}:{srcs:Slide[],index:number,/** Someone else's private photos: the viewer's own handle across each one. */ wm?:string|null|undefined,
- /** A clip's link ran out. */ onExpired?:(()=>void)|undefined}){
- return <div className="vw-track" style={{'--i':index} as CSSProperties}>{srcs.map((s,k)=><figure key={k}>
+/** The full-screen photo strip: the current picture slides in (index in a CSS variable). With `onStep` a tap on the
+ * left / right third pages back / forward (owner, 28.10.2026; swipes and arrows stay the viewer's); the middle is the
+ * clip's own play / pause. A tap that ends a swipe is not a tap. */
+/** A viewer slide: a picture, or a clip (`video` = its link, `poster` its frame, `clip` its trim and crop) that plays
+ * when it is the current one. */
+export type Slide=string|{video:string,poster?:string|null|undefined,durationMs?:number|null|undefined,clip?:Clip|null|undefined};
+export function PhotoTrack({srcs,index,wm,onExpired,onStep}:{srcs:Slide[],index:number,/** Someone else's private photos: the viewer's own handle across each one. */ wm?:string|null|undefined,
+ /** A clip's link ran out. */ onExpired?:(()=>void)|undefined,/** Tap paging: −1 / +1. */ onStep?:((d:-1|1)=>void)|undefined}){
+ const down=useRef<[number,number]|null>(null);
+ const tap=(e:React.MouseEvent<HTMLDivElement>)=>{
+  const d=down.current;down.current=null;
+  if(d&&Math.hypot(e.clientX-d[0],e.clientY-d[1])>12){e.stopPropagation();e.preventDefault();return;}
+  if(!onStep||srcs.length<2||(e.target as HTMLElement).closest('.k-vbar'))return;
+  // Measured on the slide that was tapped: the strip itself is shifted by the index.
+  const r=((e.target as HTMLElement).closest('figure')??e.currentTarget).getBoundingClientRect();const f=(e.clientX-r.left)/r.width;
+  if(f>1/3&&f<2/3)return;
+  e.stopPropagation();e.preventDefault();
+  const dir=f<=1/3?-1:1;if((dir<0&&index>0)||(dir>0&&index<srcs.length-1))onStep(dir);
+ };
+ return <div className="vw-track" style={{'--i':index} as CSSProperties} onPointerDownCapture={e=>{down.current=[e.clientX,e.clientY];}} onClickCapture={tap}>{srcs.map((s,k)=><figure key={k}>
   {typeof s==='string'?<img src={s} alt="" draggable={false}/>
-   :k===index?<VideoPlayer src={s.video} poster={s.poster} durationMs={s.durationMs} fill autoPlay onExpired={onExpired}/>
+   :k===index?<VideoPlayer src={s.video} poster={s.poster} durationMs={s.durationMs} clip={s.clip} fill autoPlay onExpired={onExpired}/>
    :s.poster?<img src={s.poster} alt="" draggable={false}/>:null}
   {wm&&<Watermark text={wm}/>}</figure>)}</div>;
 }

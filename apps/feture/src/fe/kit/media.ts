@@ -8,7 +8,7 @@ export type Crop={x:number,y:number,z:number};
 export const NO_CROP:Crop={x:0,y:0,z:1};
 export type Prepared={blob:Blob,url:string,w:number,h:number,size:number};
 
-const MAX_SIDE=2048;const QUALITY=.86;
+const MAX_SIDE=2048;const QUALITY=.86;const POSTER_SIDE=1280;
 export const PHOTO_TYPES=['image/jpeg','image/png','image/webp','image/heic','image/heif'];
 export const PHOTO_MAX_BYTES=25*1024*1024;
 
@@ -32,17 +32,18 @@ export async function preparePhoto(file:Blob):Promise<Prepared>{
  const bmp=await decode(file);try{return await draw(bmp,0,0,bmp.width,bmp.height);}finally{bmp.close();}
 }
 
-/** The frame `aspect` placed by `crop` on the photo (same maths as the crop sheet's preview). */
+/** The source rectangle of the frame `aspect` placed by `crop` on a W×H picture (same maths as the crop sheet's
+ * preview): at zoom 1 the largest aspect box that fits; zoom shrinks it around the shifted centre. */
+export function cropRect(W:number,H:number,aspect:Exclude<Aspect,'orig'>,crop:Crop):{sx:number,sy:number,sw:number,sh:number}{
+ const [aw,ah]=ASPECTS[aspect];
+ const base=Math.min(W/aw,H/ah);const fw=aw*base/crop.z,fh=ah*base/crop.z;
+ const cx=W/2-crop.x*W,cy=H/2-crop.y*H;
+ return {sx:Math.max(0,Math.min(W-fw,cx-fw/2)),sy:Math.max(0,Math.min(H-fh,cy-fh/2)),sw:fw,sh:fh};
+}
+/** The frame `aspect` placed by `crop` on the photo. */
 export async function cropPhoto(file:Blob,aspect:Exclude<Aspect,'orig'>,crop:Crop):Promise<Prepared>{
  const bmp=await decode(file);
- try{
-  const [aw,ah]=ASPECTS[aspect];const W=bmp.width,H=bmp.height;
-  // The frame at zoom 1 is the largest aspect box that fits; zoom shrinks it around the shifted centre.
-  const base=Math.min(W/aw,H/ah);const fw=aw*base/crop.z,fh=ah*base/crop.z;
-  const cx=W/2-crop.x*W,cy=H/2-crop.y*H;
-  const sx=Math.max(0,Math.min(W-fw,cx-fw/2)),sy=Math.max(0,Math.min(H-fh,cy-fh/2));
-  return await draw(bmp,sx,sy,fw,fh);
- }finally{bmp.close();}
+ try{const r=cropRect(bmp.width,bmp.height,aspect,crop);return await draw(bmp,r.sx,r.sy,r.sw,r.sh);}finally{bmp.close();}
 }
 
 export const isPhoto=(f:File)=>PHOTO_TYPES.includes(f.type)||/\.(heic|heif)$/i.test(f.name);
@@ -55,13 +56,90 @@ export const VIDEO_MAX_BYTES=100*1024*1024;
 export const VIDEO_MAX_MS=60_000;
 export const VOICE_MAX_MS=300_000;
 export const isVideo=(f:File)=>VIDEO_TYPES.includes(f.type)||/\.(mp4|mov|m4v|webm)$/i.test(f.name);
+/** «0:07.5»: to a tenth of a second (trim handles). */
+export const fmtDurFine=(ms:number)=>{const d=Math.max(0,Math.round(ms/100));const s=Math.floor(d/10);return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}.${d%10}`;};
 /** «0:07», «1:00», «4:59». */
 export const fmtDur=(ms:number|null|undefined)=>{const s=Math.max(0,Math.round((ms??0)/1000));return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;};
 
+/** A clip's trim and crop as the server stores them (media `clip`): the part that plays and the frame. The file is
+ * never cut — every player honours this (owner, 28.10.2026). */
+export type ClipCrop={aspect:Exclude<Aspect,'orig'>}&Crop;
+export type Clip={startMs?:number|undefined,endMs?:number|undefined,crop?:ClipCrop|undefined};
+/** What the uploader sends with a clip (media.uploadIntent `edit`). */
+export type VideoEdit={trim?:{startMs:number,endMs:number}|undefined,crop?:ClipCrop|undefined};
+export const TRIM_MIN_MS=1000;
 /** A picked clip, ready to send: its length, its size and a poster frame (JPEG, from the first moment) cut on the
- * device. The clip itself is sent as picked; the poster is what lists and covers show. */
-export type PreparedVideo={file:File,poster:Blob,url:string,w:number,h:number,durationMs:number,size:number,mime:string};
-const POSTER_SIDE=1280;
+ * device. The clip itself is sent as picked; the poster is what lists and covers show. With `edit` the poster is the
+ * cropped frame at the trim start, and `durationMs` stays the whole clip's (the server checks the trim against it). */
+export type PreparedVideo={file:File,poster:Blob,url:string,w:number,h:number,durationMs:number,size:number,mime:string,edit?:VideoEdit|undefined};
+
+/** Where the video sits in its box for a crop: size and offset in % of the box (the crop sheet's maths with the clip
+ * covering the frame). `r` = the clip's own width / height. */
+export function clipBox(r:number,crop:ClipCrop):{w:number,h:number,x:number,y:number}{
+ const [aw,ah]=ASPECTS[crop.aspect];const a=aw/ah;
+ let w=100,h=100;if(r>a)w=r/a*100;else h=a/r*100;
+ w*=crop.z;h*=crop.z;
+ return {w,h,x:(100-w)/2+crop.x*w,y:(100-h)/2+crop.y*h};
+}
+/** The part of a clip that plays, in seconds: [start, end]. */
+export function clipSpan(clip:Clip|null|undefined,durationS:number):[number,number]{
+ const end=clip?.endMs!=null?Math.min(durationS||Infinity,clip.endMs/1000):durationS;
+ return [Math.max(0,(clip?.startMs??0)/1000),Number.isFinite(end)?end:durationS];
+}
+
+/** Opens a clip in a hidden video element and reads its real length (recorded WebM reports none until the end is
+ * sought). The caller seeks it with `frameAt` and revokes `src` when done. */
+export function openVideo(file:File):Promise<{v:HTMLVideoElement,src:string,length:number}>{
+ return new Promise((res,rej)=>{
+  const src=URL.createObjectURL(file);const v=document.createElement('video');
+  v.muted=true;v.playsInline=true;v.preload='auto';v.src=src;
+  let over=false;const fail=()=>{if(over)return;over=true;clearTimeout(timer);URL.revokeObjectURL(src);rej(new Error('video'));};
+  const timer=setTimeout(fail,20000);
+  v.onerror=fail;
+  v.onloadedmetadata=()=>{
+   if(Number.isFinite(v.duration)){over=true;clearTimeout(timer);res({v,src,length:v.duration});return;}
+   v.onseeked=()=>{if(over)return;over=true;clearTimeout(timer);v.onseeked=null;res({v,src,length:Number.isFinite(v.duration)?v.duration:v.currentTime});};
+   v.currentTime=1e7;
+  };
+ });
+}
+/** Seeks the clip to `t` seconds and draws that frame (cropped when `crop` is given) as a JPEG at most `side` long. */
+export function frameAt(v:HTMLVideoElement,t:number,{crop,side=POSTER_SIDE,quality=.82}:{crop?:ClipCrop|undefined,side?:number,quality?:number}={}):Promise<{blob:Blob,w:number,h:number}>{
+ return new Promise((res,rej)=>{
+  const draw=()=>{
+   const W=v.videoWidth,H=v.videoHeight;if(!W||!H){rej(new Error('video'));return;}
+   const r=crop?cropRect(W,H,crop.aspect,crop):{sx:0,sy:0,sw:W,sh:H};
+   const k=Math.min(1,side/Math.max(r.sw,r.sh));const w=Math.max(1,Math.round(r.sw*k)),h=Math.max(1,Math.round(r.sh*k));
+   const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');if(!g){rej(new Error('canvas'));return;}
+   try{g.drawImage(v,r.sx,r.sy,r.sw,r.sh,0,0,w,h);}catch{rej(new Error('video'));return;}
+   c.toBlob(b=>b?res({blob:b,w,h}):rej(new Error('encode')),'image/jpeg',quality);
+  };
+  const target=Math.max(0,Math.min(t,(Number.isFinite(v.duration)?v.duration:t)-.05));
+  if(Math.abs(v.currentTime-target)<.01&&v.readyState>=2){draw();return;}
+  const timer=setTimeout(()=>{v.onseeked=null;rej(new Error('seek'));},10000);
+  v.onseeked=()=>{clearTimeout(timer);v.onseeked=null;draw();};
+  v.currentTime=target;
+ });
+}
+/** The poster of an edited clip: the frame at the trim start, cropped; and the whole frame there for the crop sheet. */
+export async function clipPoster(file:File,edit:VideoEdit|undefined):Promise<{poster:Blob,url:string,w:number,h:number,full:string}>{
+ const o=await openVideo(file);
+ try{
+  const at=Math.max(.1,(edit?.trim?.startMs??0)/1000+.05);
+  const whole=await frameAt(o.v,at);
+  const cut=edit?.crop?await frameAt(o.v,at,{crop:edit.crop}):whole;
+  return {poster:cut.blob,url:URL.createObjectURL(cut.blob),w:cut.w,h:cut.h,full:URL.createObjectURL(whole.blob)};
+ }finally{URL.revokeObjectURL(o.src);o.v.removeAttribute('src');o.v.load();}
+}
+/** `n` small frames across the clip for the trim filmstrip. */
+export async function filmstrip(file:File,n:number,height=96):Promise<string[]>{
+ const o=await openVideo(file);
+ try{
+  const out:string[]=[];
+  for(let i=0;i<n;i++){const f=await frameAt(o.v,(i+.5)*o.length/n,{side:height*2,quality:.7});out.push(URL.createObjectURL(f.blob));}
+  return out;
+ }finally{URL.revokeObjectURL(o.src);o.v.removeAttribute('src');o.v.load();}
+}
 
 /** Reads the length and cuts the poster frame. Rejects when the browser cannot decode the clip (it could not play it
  * either). `mime` falls back to the file name: some pickers give an empty type for .mov. */

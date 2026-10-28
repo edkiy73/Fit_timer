@@ -1,6 +1,8 @@
 // Post card and post screen: what every tap does, read back from the server. `full` taps; someone else's post is
 // written by `stranger` (a basic person of the lane) and deleted at the end.
 import { expect, until, toastSee, stamp } from '../helpers.mjs';
+import { STAFF } from '../../personas.mjs';
+import { uploadFixture } from '../../lib.mjs';
 const author = async t => (await t.persona('stranger')).email;
 const draft = (body, extra = {}) => ({ type: 'post', body, audience: 'all', inFeed: true, topics: ['bondage'], mediaIds: [], interests: [], tags: [], ...extra });
 async function fixture(t, extra) {
@@ -100,5 +102,35 @@ export default [
      await t.page.locator('.dialog.on .btn.danger, .sheet.on .btn.danger').first().click();
      await until(async () => !(await t.api('me.posts', {})).items.some(p => p.id === id && p.state === 'published'), 'deleted'); id = null;
    } finally { if (id) await t.api('post.delete', { opId: t.uuid7(), postId: id }); }
+ } },
+ { name: 'viewer: a tap on the right / left third pages forward / back; the middle does not; arrows still work', persona: 'full', route: '/n/feed', run: async t => {
+   const T2 = await author(t);
+   const mediaIds = [await uploadFixture(T2, 'post'), await uploadFixture(T2, 'post')];
+   const body = 'e2e листание ' + stamp();
+   const d = await t.api('post.saveDraft', { opId: t.uuid7(), post: draft(body, { mediaIds }) }, T2);
+   await t.api('post.publish', { opId: t.uuid7(), postId: d.id }, T2);
+   const f = { id: d.id, body };
+   try {
+     // Photos are checked first: approve them as staff when the scan sends them there, then the post goes out.
+     await until(async () => {
+       for (const a of mediaIds) await t.api('staff.mediaDecide', { opId: t.uuid7(), assetId: a, decision: 'approve', explicit: false }, STAFF);
+       return (await get(t, f.id))?.media?.filter(m => m.src).length === 2 || null;
+     }, 'both photos ready', 180000);
+     await t.go('/n/feed/post/' + f.id); const c = card(t, f.body); await c.waitFor();
+     await c.locator('.mgrid .mcell').first().click(); await t.see('.viewer.on .vw-n:has-text("1 / 2")');
+     const box = await t.page.locator('.viewer.on .vw-track').boundingBox();
+     const at = async fx => { await t.page.mouse.click(box.x + box.width * fx, box.y + box.height / 2); await t.wait(450); return (await t.page.locator('.viewer.on .vw-n').innerText()).trim(); };
+     expect(await at(.5) === '1 / 2', 'the middle does not page');
+     expect(await at(.85) === '2 / 2', 'right third → next');
+     expect(await at(.85) === '2 / 2', 'stays on the last');
+     await t.shot('viewer-tap-paged');
+     expect(await at(.15) === '1 / 2', 'left third → back');
+     await t.page.keyboard.press('ArrowRight'); await t.wait(400);
+     expect((await t.page.locator('.viewer.on .vw-n').innerText()).trim() === '2 / 2', 'arrow key');
+     // A swipe is not also a tap.
+     await t.page.mouse.move(box.x + box.width * .2, box.y + box.height / 2); await t.page.mouse.down();
+     await t.page.mouse.move(box.x + box.width * .8, box.y + box.height / 2, { steps: 6 }); await t.page.mouse.up(); await t.wait(450);
+     expect((await t.page.locator('.viewer.on .vw-n').innerText()).trim() === '1 / 2', 'swipe right → back once');
+   } finally { await drop(t, f.id); }
  } },
 ];

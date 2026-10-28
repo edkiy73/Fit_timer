@@ -5,8 +5,10 @@ import {Btn,Range,Sheet} from './index';
 import {ASPECTS,NO_CROP,type Aspect,type Crop} from './media';
 
 /** The crop sheet: the photo under a fixed frame (4:5, 1:1, 16:9); drag moves it, two fingers / wheel / slider zoom
- * (1–3×). «Сбросить» centres it, «Применить» returns the placement — cropPhoto() cuts the same frame. */
-export function CropSheet({src,aspect,initial=NO_CROP,onApply,onClose}:{src:string,aspect:Exclude<Aspect,'orig'>,initial?:Crop,onApply:(c:Crop)=>void,onClose:()=>void}){
+ * (1–3×). «Сбросить» centres it, «Применить» returns the placement — cropPhoto() cuts the same frame; for a clip the
+ * picture is its frame at the trim start and the placement is stored with it (players apply it, kit/media.ts clipBox). */
+export function CropSheet({src,aspect,initial=NO_CROP,onApply,onClose,hint}:{src:string,aspect:Exclude<Aspect,'orig'>,initial?:Crop,onApply:(c:Crop)=>void,onClose:()=>void,
+ /** The line under the title (a clip's frame says it is applied when it plays). */ hint?:string|undefined}){
  const {t}=useI18n();
  const [st,setSt]=useState<Crop>(initial);const [box,setBox]=useState({w:0,h:0});const [nat,setNat]=useState({w:0,h:0});
  // The sheet renders through a portal a frame later, so the frame is measured when it appears (callback ref).
@@ -30,7 +32,7 @@ export function CropSheet({src,aspect,initial=NO_CROP,onApply,onClose}:{src:stri
   el.addEventListener('wheel',wheel,{passive:false});return ()=>el.removeEventListener('wheel',wheel);});
  const [aw,ah]=ASPECTS[aspect];
  const vars={'--k-ar':`${aw}/${ah}`,'--k-w':`${w}px`,'--k-h':`${h}px`,'--k-tx':`${(box.w-w)/2+st.x*w}px`,'--k-ty':`${(box.h-h)/2+st.y*h}px`} as CSSProperties;
- return <Sheet title={t('fe.kit.crop.title')} sub={t('fe.kit.crop.hint')} full onClose={onClose}
+ return <Sheet title={t('fe.kit.crop.title')} sub={hint??t('fe.kit.crop.hint')} full onClose={onClose}
   foot={<div className="row g8"><Btn kind="soft" fit onClick={()=>setSt(NO_CROP)}>{t('fe.kit.crop.reset')}</Btn><Btn onClick={()=>onApply(fit(st))}>{t('fe.kit.crop.apply')}</Btn></div>}>
   <div ref={frame} className="k-crop" style={vars} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
    <img ref={el=>{if(el?.complete&&el.naturalWidth&&!nat.w)setNat({w:el.naturalWidth,h:el.naturalHeight});}} src={src} alt="" draggable={false}
