@@ -4,7 +4,7 @@ import { fail } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { mediaDto } from '../media/assets.mjs';
 import { checkOptions } from './me.mjs';
-import { requireUnrestricted } from '../profiles.mjs';
+import { qaProfile, requireUnrestricted } from '../profiles.mjs';
 import { isPremium } from './premium.mjs';
 import { photoVerifiedOf } from './verification.mjs';
 import { endConversations, openConversation } from './chats.mjs';
@@ -31,7 +31,8 @@ const DEFAULT_FILTER = { show: 'all', ageMin: 18, ageMax: 99, cityId: null, plac
 const POOL = `p.id <> $1 and p.state = 'active'
   and exists (select 1 from feture.profile_settings s where s.profile_id = p.id and s.discover_mode = 'visible') and feture.discoverable(p.id) and not feture.blocked($1, p.id) and not feture.related($1, p.id)
   and not exists (select 1 from feture.discover_decision x where x.profile_id = $1 and x.target_profile_id = p.id)
-  and not exists (select 1 from feture.profile_match m where m.ended_at is null and m.profile_a = least($1, p.id) and m.profile_b = greatest($1, p.id))`;
+  and not exists (select 1 from feture.profile_match m where m.ended_at is null and m.profile_a = least($1, p.id) and m.profile_b = greatest($1, p.id))
+  and (not ${qaProfile('p.id')} or ${qaProfile('$1')})`;
 /** Filter predicate over parameters $2–$15 (see filterParams). It matches only what the profile shows everyone, so
  * neither the deck nor the count can reveal hidden details or a hidden age: details of a person only with
  * details_vis 'all' (a couple's role, format and seek are always public); a narrowed age range only over shown ages,

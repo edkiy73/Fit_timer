@@ -39,7 +39,8 @@ async function authenticate(req,store,qaResolver) {
   // QA access is a server-only, live prelaunch entitlement, NOT proof of identity or age.
   // No client flag or self-declared DOB can ever grant it.
   const qaUntil=qaResolver?await qaResolver(keyHash):null;
-  const actor=Object.freeze({accountHash:keyHash,verifiedAdult:!!qaUntil,qaUntil,accountGeneration:typeof account.since==='string'&&Number.isFinite(Date.parse(account.since))?sha(keyHash+':'+account.since):undefined});
+  // e2e persona logins (qa-…@feture.test, signed in only with the admin test code): their FetUre account is marked qa.
+  const actor=Object.freeze({qa:/^qa-[a-z0-9-]+@feture\.test$/.test(email),accountHash:keyHash,verifiedAdult:!!qaUntil,qaUntil,accountGeneration:typeof account.since==='string'&&Number.isFinite(Date.parse(account.since))?sha(keyHash+':'+account.since):undefined});
   authenticatedActors.add(actor);
   return actor;
 }

@@ -111,11 +111,13 @@ function DiscoverFilter({initial,onClose,onApplied}:{initial:Filter,onClose:()=>
  const [where,setWhere]=useState<Where>(initial.placeMode==='nearby'?'nearby':initial.cityId?'city':'any');
  // «Рядом»: is an approximate place shared already (location.get); null while unknown.
  const [loc,setLoc]=useState<boolean|null>(null);const [geo,setGeo]=useState<''|'busy'|'denied'|'wait'>('');
- useEffect(()=>{call('location.get',{},locationRes).then(r=>setLoc(!!r.location)).catch(()=>setLoc(false));},[call]);
+ // A slow first read must not undo a place shared meanwhile (it left «Рядом» without its radius: D04).
+ const shared=useRef(false);
+ useEffect(()=>{call('location.get',{},locationRes).then(r=>{if(!shared.current)setLoc(!!r.location);}).catch(()=>{if(!shared.current)setLoc(false);});},[call]);
  const noPlace=where==='nearby'&&loc!==true;
  const share=async()=>{if(geo==='busy')return;setGeo('busy');
   try{const c=await coarsePosition();const r=await call('location.set',{opId:newOpId(),lat:c.lat,lon:c.lon},locationRes);
-   if(r.pending){setGeo('wait');return;}setLoc(true);setGeo('');}
+   if(r.pending){setGeo('wait');return;}shared.current=true;setLoc(true);setGeo('');}
   catch(e){if(e instanceof FeError)setError(e);setGeo('denied');}};
  const setWhereTo=(v:Where)=>{setWhere(v);setF(x=>v==='nearby'?{...x,placeMode:'nearby',cityId:null}:v==='any'?{...x,placeMode:'city',cityId:null}:{...x,placeMode:'city'});};
  const [cat,setCat]=useState<Catalog|null>(null);const [count,setCount]=useState<{count:number,capped:boolean}|null>(null);

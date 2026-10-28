@@ -33,9 +33,10 @@ export default [
      await t.tap('.acts button[aria-label="Пропустить"]'); await t.wait(1200);
      const second = await p.locator('.deck .pc.top').getAttribute('aria-label').catch(() => null);
      expect(second !== first, 'pass moves the deck on');
-     await t.tap('.acts .act.undo'); await t.wait(1500);
-     // One free undo a day (Q6): after it, «Вернуть» opens Premium with the undo feature marked — then back to the deck.
-     if (t.page.url().includes('/n/premium')) { await t.see('.pw-f.on'); await t.page.goBack(); await t.see('.bar .seg [role="tab"]'); }
+     await t.tap('.acts .act.undo');
+     // One free undo a day (Q6): after it, «Вернуть» opens the Premium sheet with the undo feature marked — closed with Esc.
+     await t.see('.toast:has-text("Профиль возвращён"), .sheet.on .pw-f.on', 20000);
+     if (await p.locator('.sheet.on .pw-f.on').count()) { await p.keyboard.press('Escape'); await t.notSee('.sheet.on', 800); }
    } else console.log('   (deck empty for this persona — only the empty state checked)');
    await t.tap('.bar [role="tab"]:has-text("Симпатии")'); await t.see('.view .seg [role="tab"]');
    await t.tap('.view .seg [role="tab"]:nth-of-type(2)'); await t.wait(1500);
@@ -51,16 +52,22 @@ export default [
    await p.keyboard.press('Escape'); await t.notSee('.sheet.on', 800);
    await t.tap('.pbar button[aria-label="Ещё"]'); await t.tap('.sheet.on .li.danger:has-text("Пожаловаться")');
    await t.see('.sheet.on [role="radiogroup"]'); await t.see('.sheet.on textarea.inp'); await t.see('.sheet.on button[role="switch"][aria-checked="true"]');
-   await t.tap('.sheet.on .sh-f .btn.danger'); await t.see('.sheet.on .alert.err'); // no reason chosen → the error, nothing sent
+   // No reason chosen → the first wrong field (the reasons) is marked and shakes, nothing is sent (no summary line since #1409).
+   await t.tap('.sheet.on .sh-f .btn.danger'); await t.see('.sheet.on .field.err[data-field="reason"] .ferr');
+   expect(!(await p.locator('.sheet.on .alert.err').count()), 'no summary error line in the report sheet');
    await t.tap('.sheet.on .sh-h button[aria-label="Закрыть"]'); await t.notSee('.sheet.on', 800);
    await t.tap('.pbar button[aria-label="Ещё"]'); await t.tap('.sheet.on .li.danger:has-text("Заблокировать")');
    await t.see('.sheet.on .sh-f .btn.danger'); await t.tap('.sheet.on .sh-f .btn.text'); await t.notSee('.sheet.on', 800);
-   // The private part: request access, then cancel it so the run leaves nothing behind.
+   // The private part: request access (the sheet with scopes and today's quota), then cancel it so the run leaves nothing behind.
    const vault = p.locator('#priv'); await vault.waitFor({ timeout: 20000 }).catch(() => {});
    if (await vault.count()) {
      await vault.scrollIntoViewIfNeeded();
+     const sent = vault.locator('.veil-act .btn.dark:has-text("Запрос отправлен")');
+     // «Запрос отправлен» opens the pending sheet; «Отменить запрос» there takes it back (also a request a failed run left).
+     const cancel = async () => { await sent.click(); await t.tap('.sheet.on .sh-f .btn.soft'); await t.notSee('.sheet.on', 1500); await t.see('#priv .veil-act .btn.dark:not(:has-text("Запрос отправлен"))', 30000); };
+     if (await sent.count()) await cancel();
      const ask = vault.locator('.veil-act .btn.dark:not([disabled])');
-     if (await ask.count()) { await ask.click(); await t.see('#priv .pill.wait'); await t.tap('#priv .veil-act .btn.soft'); await t.see('#priv .veil-act .btn.dark', 30000); }
+     if (await ask.count()) { await ask.click(); await t.tap('.sheet.on .sh-f .btn:has-text("Отправить запрос")'); await t.notSee('.sheet.on', 1500); await t.see('#priv .veil-act .btn.dark:has-text("Запрос отправлен")'); await cancel(); }
      else console.log('   (vault state: ' + (await vault.locator('.veil-act').innerText().catch(() => 'open')) + ')');
    } else console.log('   (the profile shows no private part)');
    const cmp = p.locator('.compat .cp-h'); if (await cmp.count()) { await cmp.click(); await t.see('.cmp14'); await t.page.goBack(); await t.see('.profile-page .hero'); }

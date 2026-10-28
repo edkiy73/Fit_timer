@@ -210,3 +210,17 @@ test('deck cards carry what the top card shows (photos, follower counts, follow,
     assert.deepEqual((await call('ua', a, { action: 'discover.deck' })).items.map((/** @type {any} */ x) => x.id), [c]);
   } finally { await pg.close(); }
 });
+
+test('e2e persona accounts (qa-… logins) stay out of everyone else’s Discover and last in search; they still meet each other', async () => {
+  const { pg, db, call, member, deck } = await world();
+  try {
+    const a = await member('ua', 'Alex'), b = await member('ub', 'Kira');
+    const qa1 = await member('qa-1', 'qa_l_full'), qa2 = await member('qa-2', 'qa_l_mate');
+    assert.deepEqual((await db.query('select qa from feture.account where person_profile_id = any($1) order by qa', [[a, qa1]])).map(r => r.qa), [false, true]);
+    assert.deepEqual((await deck('ua', a)).sort(), ['Kira']);
+    assert.equal((await call('ua', a, { action: 'discover.count', filter: { show: 'all', ageMin: 18, ageMax: 99, cityId: null, genders: [], orients: [], formats: [], seeks: [], roles: [], topics: [] } })).count, 1);
+    assert.equal((await call('ua', a, { action: 'discover.decide', opId: op(), profileId: qa1, decision: 'like' })).error, 'not_found');
+    assert.deepEqual((await deck('qa-1', qa1)).sort(), ['Alex', 'Kira', 'qa_l_mate']);
+    assert.ok(b && qa2);
+  } finally { await pg.close(); }
+});
