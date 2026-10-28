@@ -1806,7 +1806,7 @@
 .v21 .w-kick{display:inline-flex;align-items:center;gap:8px;justify-self:start;margin:0;padding:6px 12px 6px 10px;border-radius:var(--r-full);background:rgba(255,255,255,.07);box-shadow:inset 0 0 0 1px var(--line2);font-size:var(--fs-cap);font-weight:650;letter-spacing:.02em;color:var(--mute)}
 .v21 .w-kick i{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 0 rgba(255,61,97,.6);animation:wPulse 2.4s ease-out infinite}
 @keyframes wPulse{0%{box-shadow:0 0 0 0 rgba(255,61,97,.6)}70%,100%{box-shadow:0 0 0 9px rgba(255,61,97,0)}}
-.v21 h1.w-title{margin:0;font:800 clamp(38px,11vw,52px)/.98 var(--font);letter-spacing:-.05em;text-wrap:balance}
+.v21 h1.w-title{margin:0;font:800 clamp(38px,11vw,52px)/.98 var(--font-head);font-variation-settings:var(--font-head-axes);letter-spacing:-.05em;text-wrap:balance}
 .v21 .w-title em{font-style:normal;background:linear-gradient(100deg,#FF3D61 10%,#FF7A93 45%,#A797FF 90%);-webkit-background-clip:text;background-clip:text;color:transparent}
 .v21 .w-sub{margin:0;max-width:34ch;font-size:var(--fs-md);line-height:1.45;color:var(--mute)}
 /* the slider card: glass, one grid cell for all slides */
@@ -3463,7 +3463,7 @@
 .v21 #dialog h2,
 .v21 .brand b,
 .v21 .me18-who b,
-.v21 .bar h1{font-family:var(--font-head)}
+.v21 .bar h1{font-family:var(--font-head);font-variation-settings:var(--font-head-axes)}
 .v21 .btn.primary,
 .v21 .ibtn.add,
 .v21 .composer .ibtn.add,
