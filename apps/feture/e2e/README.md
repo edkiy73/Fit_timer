@@ -11,6 +11,9 @@ one at a time (the production rate limit is shared).
     e2e/run.mjs            runs one scenario file
     e2e/run-all.sh         runs every file in order and prints a summary
     e2e/fixtures/          photo.jpg, cover.png
+    e2e/seed-world.mjs     the owner's «test world» on production (world-*@feture.test, docs/test-world.md) —
+                           look-only content like seed people: scenarios never use these accounts as actors
+    e2e/world-media.json   its people-free CC0 / public-domain pictures (source page + license)
     e2e/scenarios/helpers.mjs   shared helpers (until, pinned, toastSee, askAccess, uploaderDone, outOf, …)
     e2e/scenarios/<area>/  feed, me, chats (with the inbox), communities (with events), people,
                            account (start, sign-up, onboarding, settings, lists, age document, staff)

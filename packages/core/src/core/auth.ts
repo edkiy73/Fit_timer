@@ -51,6 +51,16 @@ export interface ClaimHandleInput {
   extra?: Record<string, unknown>;
 }
 
+/** One signed-in device of the account (`sessions`); `id` is opaque, never the device id. */
+export interface AuthSessionInfo {
+  id: string;
+  current: boolean;
+  label: string;
+  platform: string;
+  at: string | null;
+  expiresAt: string;
+}
+
 export interface AuthClient {
   sendCode(email: string, locale?: AuthLocale): Promise<Record<string, unknown>>;
   verifyCode(input: VerifyInput): Promise<AuthSession & Record<string, unknown>>;
@@ -63,6 +73,16 @@ export interface AuthClient {
   forget(scope?: 'all' | string, extra?: Record<string, unknown>): Promise<Record<string, unknown>>;
   logout(): Promise<void>;
   authFields(): Promise<{email:string; deviceId:string; syncToken:string} | null>;
+  /** Devices signed in to this account (this one first). */
+  sessions?(): Promise<AuthSessionInfo[]>;
+  /** Signs another device out (this device signs out with logout()). */
+  revokeSession?(id: string): Promise<void>;
+  /** Signs every other device out; resolves with how many. */
+  revokeOtherSessions?(): Promise<number>;
+  /** Sends a code to the new address (only where the product enabled email change). */
+  changeEmailStart?(newEmail: string, locale?: AuthLocale): Promise<Record<string, unknown>>;
+  /** Confirms the code; the stored session moves to the new address and is returned. */
+  changeEmailConfirm?(newEmail: string, code: string): Promise<AuthSession>;
 }
 
 const EMAIL = /^[^\s@]{1,64}@[^\s@.]+(\.[^\s@.]+)+$/;
@@ -367,6 +387,45 @@ export function createAuthClient(options: AuthClientOptions = {}): AuthClient {
       if(session) await commitSession(null, session);
     },
 
-    authFields
+    authFields,
+
+    async sessions() {
+      const session = await getSession();
+      if(!session) throw new Error('not_authenticated');
+      const result = await post({action:'sessions', email:session.email, deviceId:session.deviceId, syncToken:session.syncToken});
+      return Array.isArray(result.sessions) ? result.sessions as AuthSessionInfo[] : [];
+    },
+
+    async revokeSession(id) {
+      const session = await getSession();
+      if(!session) throw new Error('not_authenticated');
+      await post({action:'session_revoke', email:session.email, deviceId:session.deviceId, syncToken:session.syncToken, target:String(id || '')});
+    },
+
+    async revokeOtherSessions() {
+      const session = await getSession();
+      if(!session) throw new Error('not_authenticated');
+      const result = await post({action:'sessions_revoke_others', email:session.email, deviceId:session.deviceId, syncToken:session.syncToken});
+      return typeof result.revoked === 'number' ? result.revoked : 0;
+    },
+
+    async changeEmailStart(newEmail, locale = 'ru') {
+      const session = await getSession();
+      if(!session) throw new Error('not_authenticated');
+      const next = normalizeEmail(newEmail);
+      if(!validEmail(next)) throw new Error('bad_email');
+      return post({action:'email_change_send', email:session.email, deviceId:session.deviceId, syncToken:session.syncToken, newEmail:next, locale:localeOf(locale)});
+    },
+
+    async changeEmailConfirm(newEmail, code) {
+      const session = await getSession();
+      if(!session) throw new Error('not_authenticated');
+      const next = normalizeEmail(newEmail);
+      const result = await post({action:'email_change_verify', email:session.email, deviceId:session.deviceId, syncToken:session.syncToken,
+        newEmail:next, code:String(code || '').replace(/\D/g, '').slice(0, 12)});
+      const moved: AuthSession = {...session, email:normalizeEmail(result.email || next)};
+      await commitSession(moved, session);
+      return moved;
+    }
   };
 }

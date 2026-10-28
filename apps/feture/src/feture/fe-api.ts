@@ -6,6 +6,9 @@ import {requireCurrentSession} from './domain-api';
 /** Client for `POST /api/fe` (docs/server/S2-API.md). One command per call: `{action, ...input}`; the acting
  * profile («Я» / «Мы») goes in `X-Fe-Profile`; writes carry an `opId` the caller keeps for retries of the
  * same user action, so a repeated tap or a lost response never applies twice. */
+/** Window event fired when the server answers «maintenance» (detail: {message}). */
+export const MAINTENANCE_EVENT='fe-maintenance';
+
 export class FeError extends Error {
  constructor(public code:string,public status=0,public rule?:string,public fields?:string[],public state?:string){super(code);}
 }
@@ -42,6 +45,10 @@ export async function feRequest<T>(session:AuthSession,action:string,input:Recor
  await requireCurrentSession(session,signal);
  if(!response.ok){
   const f=failure.safeParse(body);
+  // Maintenance (wave 8): the app frame swaps to the «Скоро вернёмся» screen, whatever screen asked.
+  if(f.success&&f.data.error==='maintenance'&&typeof window!=='undefined'){
+   const m=(body as {message?:unknown}).message;window.dispatchEvent(new CustomEvent(MAINTENANCE_EVENT,{detail:{message:typeof m==='string'?m:null}}));
+  }
   throw f.success?new FeError(f.data.error,response.status,f.data.rule,f.data.fields,f.data.state):new FeError('unavailable',response.status);
  }
  const parsed=schema.safeParse(body);

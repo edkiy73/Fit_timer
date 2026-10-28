@@ -5,7 +5,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicBase} from '../api-url';
-import {Ban,Check,ChevronDown,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,Flag,Heart,History,Info,Link as LinkIcon,Lock,LockOpen,MapPin,MessageCircle,ShieldCheck,Undo2,Users,X} from 'lucide-react';
+import {Ban,Check,ChevronDown,Crown,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,Flag,Heart,History,Info,Link as LinkIcon,Lock,LockOpen,MapPin,MessageCircle,ShieldCheck,Undo2,Users,X} from 'lucide-react';
 import {Alert,Av,Bar,Btn,Card,Empty,Group,H,IconBtn,Layer,Note,PersonName,PhotoTrack,Pill,RadioList,Row,Seg,Skel,TextArea,ToggleRow,Veil,View,plate} from './kit';
 import {useFe} from './session';
 import {PhotoBadge} from './photo-check';
@@ -14,6 +14,7 @@ import {PostCard,postSchema,type Post} from './feed';
 import type {Removal} from './post-menu';
 import {useToast as useAppToast} from './toast';
 import {PrivateVault} from './private';
+import {GiftSheet,openPaywall} from './premium';
 
 /** Profile extras with the V21 prototype's markup: «Что у вас общего» (P05), the person menu (report / block / hide
  * from feed, S02), confirmed links and «Предложить связь» (F2, P21/P22), «Просмотренные» (D09) and «Как видят» (P03).
@@ -522,7 +523,7 @@ function Block({profileId,name,onClose,onDone}:{profileId:string,name:string,onC
  </Sheet>;
 }
 
-type MenuStep='menu'|'report'|'block'|'end'|null;
+type MenuStep='menu'|'report'|'block'|'end'|'gift'|null;
 /** End a connection (ACT.endConn): withdraws the like; for a match the chat closes too (`match.end`). */
 function EndConnection({profileId,name,mutual,onClose,onDone}:{profileId:string,name:string,mutual:boolean,onClose:()=>void,onDone:(msg:string)=>void}){
  const {call}=useFe();const {t}=useI18n();const [revoke,setRevoke]=useState(true);const [busy,setBusy]=useState(false);const [err,setErr]=useState('');
@@ -541,7 +542,7 @@ function EndConnection({profileId,name,mutual,onClose,onDone}:{profileId:string,
 
 /** The ⋯ menu of another person's profile (ACT.profileMenu) and its sheets. `blocked` is kept by the screen: a
  * blocked profile no longer loads, so the screen shows its own blocked state with «Разблокировать». */
-export function PersonMenu({profileId,name,step,setStep,blocked,setBlocked,toast,rel,onRel}:{profileId:string,name:string,step:MenuStep,setStep:(s:MenuStep)=>void,
+export function PersonMenu({profileId,name,handle,step,setStep,blocked,setBlocked,toast,rel,onRel}:{profileId:string,name:string,/** A person's nick: «Подарить Premium» (couples have none to gift to). */ handle?:string|null|undefined,step:MenuStep,setStep:(s:MenuStep)=>void,
  blocked:boolean,setBlocked:(b:boolean)=>void,toast:(msg:string,err?:boolean)=>void,rel?:Relation|null|undefined,onRel?:(()=>void)|undefined}){
  const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const [busy,setBusy]=useState(false);
  const [link,setLink]=useState<{state:'ok'|'sent'|'in',view:LinkView}|null>(null);const [hidden,setHidden]=useState<boolean|null>(null);
@@ -566,12 +567,14 @@ export function PersonMenu({profileId,name,step,setStep,blocked,setBlocked,toast
     :row(Users,t('fe.px.menu.link'),()=>{close();navigate('/n/people/'+profileId+'/link');},t('fe.px.menu.linkSub'))}
    {hidden!==null&&(hidden?row(Eye,t('fe.px.menu.unhide'),hide):row(EyeOff,t('fe.px.menu.hide'),hide,t('fe.px.menu.hideSub')))}
    {(rel?.liked||rel?.mutual)&&row(X,t('fe.px.menu.end'),()=>setStep('end'),t(rel.mutual?'fe.px.menu.endMatch':'fe.px.menu.endLike'))}
+   {handle&&row(Crown,t('fe.w8.gift.menu'),()=>setStep('gift'))}
    {row(Flag,t('fe.px.menu.report'),()=>setStep('report'),undefined,true)}
    {row(Ban,t('fe.px.menu.block'),()=>setStep('block'),t('fe.px.menu.blockSub'),true)}
   </>}
  </Card></Sheet>;
  if(step==='end')return <EndConnection profileId={profileId} name={name} mutual={!!rel?.mutual} onClose={close} onDone={msg=>{close();toast(msg);onRel?.();}}/>;
  if(step==='report')return <Report profileId={profileId} onClose={close} onDone={(msg,b)=>{close();if(b)setBlocked(true);toast(msg);}}/>;
+ if(step==='gift'&&handle)return <GiftSheet handle={handle} onClose={close}/>;
  if(step==='block')return <Block profileId={profileId} name={name} onClose={close} onDone={msg=>{close();setBlocked(true);toast(msg);}}/>;
  return null;
 }
@@ -608,7 +611,7 @@ export function HistoryScreen(){
       {h.decision==='pass'&&<button type="button" className="hrest" disabled={done||busy} onClick={()=>restore(p.id,name)}
        aria-label={done?fill(t('fe.px.h.back'),{name}):fill(t('fe.px.h.restore'),{name})} title={done?fill(t('fe.px.h.back'),{name}):fill(t('fe.px.h.restore'),{name})}>{done?<Check/>:<Undo2/>}</button>}
      </div>;})}</div>}
-   {r&&!r.premium&&r.items.length>0&&<div className="paywall"><b>{t('fe.px.h.payTitle')}</b><p>{t('fe.px.h.payText')}</p><Btn onClick={()=>navigate('/n/premium?for=history')}>{t('fe.ax.prem.open')}</Btn></div>}
+   {r&&!r.premium&&r.items.length>0&&<div className="paywall"><b>{t('fe.px.h.payTitle')}</b><p>{t('fe.px.h.payText')}</p><Btn onClick={()=>openPaywall('history')}>{t('fe.ax.prem.open')}</Btn></div>}
   </View>
   {toastNode}
  </>;

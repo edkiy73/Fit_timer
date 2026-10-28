@@ -13,9 +13,11 @@ import { limit } from './limits.mjs';
  * @typedef {import('./db.mjs').Db} Db @typedef {import('./db.mjs').Q} Q
  * @typedef {import('./accounts.mjs').AccountRow} AccountRow @typedef {import('./profiles.mjs').Acting} Acting
  * @typedef {{media: import('./media/assets.mjs').MediaConfig, pepper?: string, realtime?: {url: string, key: string} | null,
- *   push?: {webKey: string} | null}} Cfg
+ *   push?: {webKey: string} | null, billing?: {providers: import('./commands/premium.mjs').PaymentProvider[]} | null}} Cfg
  *   pepper is filled in by the handler; realtime: the public Supabase URL and publishable key for the client socket;
- *   push.webKey: the public VAPID key browsers subscribe with (the private one never leaves the job worker)
+ *   push.webKey: the public VAPID key browsers subscribe with (the private one never leaves the job worker);
+ *   billing.providers: the configured payment providers (none until their keys exist — purchases then answer
+ *   503 «payments_unavailable»)
  * @typedef {{
  *   input: import('zod').ZodType, profile: boolean, write: boolean, ledger?: boolean, allowPaused?: boolean,
  *   rate?: {kind: string, max: number, window: string},
@@ -36,9 +38,21 @@ export const MAX_BODY = 16 * 1024;
  *   quota: (req: Req, coreKey: string) => Promise<boolean>,
  *   cors: (req: Req, res: Res) => boolean,
  *   log: (event: {requestId: string, action: string, outcome: string, ms: number, stages: Record<string, number>}) => void,
- *   signals?: import('./realtime.mjs').Signals | null}} deps
+ *   signals?: import('./realtime.mjs').Signals | null, maintenanceTtl?: number}} deps
+ *   maintenanceTtl: how long (ms) a warm instance trusts the last read of the maintenance switch
  */
-export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota, cors, log, signals = null }) {
+export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota, cors, log, signals = null, maintenanceTtl = 15000 }) {
+  /** Maintenance (wave 8): while on, non-staff get 503 «maintenance» for everything but `platform.maintenance`.
+   * Before its migration is applied the table is missing: then it is simply off. */
+  let maint = { at: 0, active: false, message: /** @type {string | null} */ (null) };
+  const maintenance = async () => {
+    if (Date.now() - maint.at < maintenanceTtl) return maint;
+    try {
+      const [m] = await db.query('select active, message from feture.maintenance limit 1');
+      maint = { at: Date.now(), active: !!m?.active, message: m?.message ?? null };
+    } catch { maint = { at: Date.now(), active: false, message: null }; }
+    return maint;
+  };
   /** @param {Req} req @param {Res} res */
   return async function handler(req, res) {
     const requestId = randomUUID();
@@ -87,6 +101,12 @@ export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota
       if (!parsed.success) fail(400, 'invalid_input', { fields: [...new Set(parsed.error.issues.map(i => i.path.join('.') || '(root)'))] });
       const input = parsed.data;
       const account = await resolveAccount(db, pepper, core); mark('account');
+      if (action !== 'platform.maintenance') {
+        const m = await maintenance();
+        if (m.active && !(await db.query('select 1 from feture.staff_role where account_id = $1 and revoked_at is null limit 1', [account.id])).length) {
+          fail(503, 'maintenance', { message: m.message });
+        }
+      }
       const profileId = header(req, 'x-fe-profile');
       // Per-account limits are committed on their own, before the command: a failed attempt (not found, rule) still counts.
       const rate = cmd.rate;
