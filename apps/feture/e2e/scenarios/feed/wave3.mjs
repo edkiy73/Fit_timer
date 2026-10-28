@@ -86,8 +86,8 @@ export default [
      const req = t.page.waitForRequest(r => r.url().includes('/api/fe') && /"types":\["poll"\]/.test(r.postData() || ''));
      await apply.click(); await req; await toastSee(t, 'Фильтры применены');
      await t.see('.filterline .chip:has-text("С опросом")'); await t.see(`article.post:has-text("${mark}")`);
-     const cards = await t.page.locator('.posts > article.post').count(); const polls = await t.page.locator('.posts > article.post:has(.poll)').count();
-     expect(cards > 0 && cards === polls, `only polls: ${polls}/${cards}`);
+     // The list is replaced by the filtered one once the request answers; wait for it instead of counting the old one.
+     await until(async () => { const cards = await t.page.locator('.posts > article.post').count(); const polls = await t.page.locator('.posts > article.post:has(.poll)').count(); return cards > 0 && cards === polls; }, 'only polls in the list');
      await t.tap('.filterline .chip:has-text("С опросом")'); await t.notSee('.filterline .chip:has-text("С опросом")', 1500);
      // «Подписки» of `full` (follows nobody in this lane) with only articles: nothing — the button says so and is off.
      await t.tap('[role="tab"]:has-text("Подписки")'); await t.tap('.filterline .chip:has-text("Фильтры")');
