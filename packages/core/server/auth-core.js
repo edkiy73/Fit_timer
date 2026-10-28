@@ -26,7 +26,7 @@
    расширению аккаунта продукта (хуки передаются в createAuthHandler). */
 
 const { store } = require('./store');
-const { SESSION_TTL, sessionExpiresAt, revokeSession, validSession, activeSession, send, fail, readBody, rateOk, rateOkScoped, rndId, sameSecret, cors } = require('./util');
+const { SESSION_TTL, sessionExpiresAt, sessionId, revokeSession, validSession, activeSession, send, fail, readBody, rateOk, rateOkScoped, rndId, sameSecret, cors } = require('./util');
 const { sendMail } = require('./mail');
 const { recordClientError } = require('./diagnostics');
 const SyncShadow = require('./sync-shadow');
@@ -69,8 +69,6 @@ function deviceLabel(ua, platform){
   const p = String(platform || '').replace(/[^a-z]/gi, '').slice(0, 12).toLowerCase();
   return p === 'ios' ? 'iPhone' : p === 'android' ? 'Android' : '';
 }
-// A session is named by an opaque id in lists: the device id itself is never sent back.
-const sessionId = deviceId => sha('session:' + deviceId).slice(0, 16);
 
 /* Product composition supplies account-extension hooks (the no-op NO_ACCOUNT_EXTENSION below
    documents the contract) and the analytics engine bound to its event taxonomy. */

@@ -91,7 +91,7 @@ export async function sweepNotices(db) {
 /** @type {Record<keyof typeof dsaCommands, Command['run']>} */
 const run = {
   async 'staff.noticeQueue'(q, { account, input }) {
-    await requireStaff(q, account.id, ['owner', 'lead', 'moderator']);
+    await requireStaff(q, account, ['owner', 'lead', 'moderator']);
     // The sender's address stays out of the queue; staff act on the content, the answer goes by itself.
     const items = await q.query(
       `select id, target_url, reason, explanation, created_at, sender_email is not null answerable
@@ -100,7 +100,7 @@ const run = {
   },
 
   async 'staff.noticeDecide'(q, { account, input }) {
-    await requireStaff(q, account.id, ['owner', 'lead', 'moderator']);
+    await requireStaff(q, account, ['owner', 'lead', 'moderator']);
     const rows = await q.query(
       `update feture.dsa_notice set state = 'decided', outcome = $2, rule = $3, decided_by = $4, decided_at = now()
        where id = $1 and state = 'open' returning id`, [input.noticeId, input.outcome, input.rule ?? null, account.id]);
@@ -112,7 +112,7 @@ const run = {
 
   async 'staff.transparency'(q, { account, input }) {
     // For the transparency report: numbers and median times only (art. 15).
-    await requireStaff(q, account.id, ['owner', 'lead', 'auditor']);
+    await requireStaff(q, account, ['owner', 'lead', 'auditor']);
     const range = [input.from, input.to];
     const by = (/** @type {string} */ sql) => q.query(sql, range);
     return {

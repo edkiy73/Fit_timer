@@ -1,4 +1,5 @@
 import {useCallback,useEffect,useState} from 'react';
+import {z} from 'zod';
 import {useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
@@ -68,17 +69,39 @@ function EmailChangeSheet({current,onClose}:{current:string,onClose:()=>void}){
  </Sheet>;
 }
 
+const devicesRes=z.object({ok:z.literal(true),items:z.array(z.object({id:z.string(),seenAt:z.string(),city:z.string().nullable(),country:z.string().nullable()}))});
+type Seen=z.infer<typeof devicesRes>['items'][number];
+
+/** «активно 2 ч назад» / «Берлин, Германия»: the device's last use and rough place (account.devices). */
+function useSeenText(){
+ const {t,locale}=useI18n();
+ const rel=new Intl.RelativeTimeFormat(locale,{numeric:'auto'});
+ let region:Intl.DisplayNames|null=null;try{region=new Intl.DisplayNames([locale],{type:'region'});}catch{/* old browser: the code */}
+ const when=(iso:string)=>{const s=(Date.now()-Date.parse(iso))/1000;
+  if(s<120)return t('fe.dev.now');
+  const [n,u]:[number,Intl.RelativeTimeFormatUnit]=s<3600?[Math.round(s/60),'minute']:s<86400?[Math.round(s/3600),'hour']:[Math.round(s/86400),'day'];
+  return t('fe.dev.seen',{when:rel.format(-n,u)});};
+ const place=(x:Seen)=>[x.city,x.country?(region?.of(x.country)??x.country):null].filter(Boolean).join(', ');
+ return {when,place};
+}
+
 export function SecurityScreen(){
- const {state}=useFe();const {t}=useI18n();const auth=useOptionalAuth();const date=useDate();const toast=useToast();
+ const {state,call}=useFe();const {t}=useI18n();const seenText=useSeenText();const auth=useOptionalAuth();const date=useDate();const toast=useToast();
  const email=state.status==='ready'?state.session.email:'';
  const [list,setList]=useShown<AuthSessionInfo[]|null>('set.sessions',()=>null);const [loadErr,setLoadErr]=useState(false);
  const [sheet,setSheet]=useState<null|'email'|'others'|'logout'|AuthSessionInfo>(null);const [busy,setBusy]=useState(false);const [err,setErr]=useState('');
- const load=useCallback(()=>{setLoadErr(false);const s=auth.client.sessions;if(!s){setList([]);return;}s().then(setList).catch(()=>setLoadErr(true));},[auth.client]);
+ const [seen,setSeen]=useState<Record<string,Seen>>({});
+ const load=useCallback(()=>{setLoadErr(false);const s=auth.client.sessions;if(!s){setList([]);return;}s().then(setList).catch(()=>setLoadErr(true));
+  // When and where each device last used the app: a quiet extra, the list works without it.
+  call('account.devices',{},devicesRes,{asAccount:true,fresh:true}).then(r=>setSeen(Object.fromEntries(r.items.map(x=>[x.id,x])))).catch(()=>{});},[auth.client,call]);
  useEffect(()=>{load();},[load,email]);
  const others=(list??[]).filter(s=>!s.current);
  const run=async(job:()=>Promise<string>)=>{setBusy(true);setErr('');
   try{const msg=await job();setSheet(null);toast(msg,{type:'ok'});load();}catch{setErr(t('fe.error.generic'));}finally{setBusy(false);}};
  const name=(s:AuthSessionInfo)=>s.label||t('fe.w8.sec.unknownDevice');
+ /** «Chrome · Mac · Берлин, Германия · активно 2 ч назад»; without a note of use, when it signed in. */
+ const line=(s:AuthSessionInfo)=>{const x=seen[s.id];
+  return [s.current?name(s):null,x?seenText.place(x):null,s.current?t('fe.dev.now'):x?seenText.when(x.seenAt):s.at?t('fe.dev.signedIn',{date:date(s.at)}):null].filter(Boolean).join(' · ');};
  return <>
   <Bar title={t('fe.ax.sec.title')} back="/n/settings"/>
   <View className="nodock compact">
@@ -88,26 +111,26 @@ export function SecurityScreen(){
     {auth.client.changeEmailStart&&<Row icon={Pencil} title={t('fe.w8.sec.change')} sub={t('fe.w8.sec.changeSub')} onClick={()=>setSheet('email')}/>}
    </Card>
    <Note className="mt8">{t('fe.w8.sec.oauthNote')}</Note>
-   <Group title={t('fe.ax.sec.sessions')} foot={t('fe.w8.sec.sessionsNote')}>
+   <Group title={t('fe.dev.title')} foot={t('fe.dev.note')}>
     {loadErr?<Alert kind="err" action={<Btn kind="soft" size="sm" auto onClick={load}>{t('fe.retry')}</Btn>}>{t('fe.w8.sec.loadFailed')}</Alert>
      :!list?<Skel kind="list" rows={1}/>
      :<Card list>{list.map(s=><Row key={s.id} icon={mobile(s.label)?Smartphone:Globe} tone={s.current?'g':undefined} noChev
       title={s.current?t('fe.ax.sec.thisDevice'):name(s)}
-      sub={s.current?name(s)+' · '+t('fe.ax.sec.now')+' · '+t('fe.ax.sec.expires',{date:date(s.expiresAt)}):s.at?t('fe.w8.sec.signedIn',{date:date(s.at)}):undefined}
-      end={s.current?undefined:<Btn kind="text" size="sm" auto onClick={()=>setSheet(s)}>{t('fe.w8.sec.end')}</Btn>}/>)}</Card>}
+      sub={line(s)||undefined}
+      end={s.current?undefined:<Btn kind="text" size="sm" auto onClick={()=>setSheet(s)}>{t('fe.dev.out')}</Btn>}/>)}</Card>}
    </Group>
    <Stack gap={2} className="mt12">
-    {others.length>0&&<Btn kind="soft" icon={ShieldCheck} onClick={()=>setSheet('others')}>{t('fe.w8.sec.others')}</Btn>}
+    {others.length>0&&<Btn kind="soft" icon={ShieldCheck} onClick={()=>setSheet('others')}>{t('fe.dev.others')}</Btn>}
     <Btn kind="text" icon={LogOut} onClick={()=>setSheet('logout')}>{t('fe.ax.sec.logout')}</Btn>
    </Stack>
   </View>
   {sheet==='email'&&<EmailChangeSheet current={email} onClose={()=>setSheet(null)}/>}
-  {sheet==='others'&&<Ask title={t('fe.w8.sec.othersTitle')} text={t('fe.w8.sec.othersText')} ok={t('fe.w8.sec.othersOk')} danger busy={busy} error={err||undefined}
-   onOk={()=>void run(async()=>t('fe.w8.sec.othersDone',{n:String(await auth.client.revokeOtherSessions!())}))} onCancel={()=>setSheet(null)}/>}
+  {sheet==='others'&&<Ask title={t('fe.dev.othersTitle')} text={t('fe.dev.othersText')} ok={t('fe.dev.others')} danger busy={busy} error={err||undefined}
+   onOk={()=>void run(async()=>t('fe.dev.othersDone',{n:String(await auth.client.revokeOtherSessions!())}))} onCancel={()=>setSheet(null)}/>}
   {sheet==='logout'&&<Ask title={t('fe.ax.sec.logout')} ok={t('fe.ax.sec.logout')} danger busy={busy} error={err||undefined}
    onOk={async()=>{setBusy(true);setErr('');try{await auth.logout();}catch{setErr(t('fe.ax.sec.logoutFailed'));}finally{setBusy(false);}}} onCancel={()=>setSheet(null)}/>}
-  {sheet&&typeof sheet==='object'&&<Ask title={t('fe.w8.sec.endTitle')} text={t('fe.w8.sec.endText',{name:name(sheet)})} ok={t('fe.w8.sec.end')} danger busy={busy} error={err||undefined}
-   onOk={()=>void run(async()=>{await auth.client.revokeSession!(sheet.id);return t('fe.w8.sec.ended');})} onCancel={()=>setSheet(null)}/>}
+  {sheet&&typeof sheet==='object'&&<Ask title={t('fe.dev.outTitle')} text={t('fe.dev.outText',{name:name(sheet)})} ok={t('fe.dev.out')} danger busy={busy} error={err||undefined}
+   onOk={()=>void run(async()=>{await auth.client.revokeSession!(sheet.id);return t('fe.dev.outDone');})} onCancel={()=>setSheet(null)}/>}
  </>;
 }
 

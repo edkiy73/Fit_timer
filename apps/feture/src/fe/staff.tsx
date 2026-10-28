@@ -5,7 +5,8 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {BadgeCheck,Ban,Check,ChevronRight,Eye,IdCard,Image,Inbox,Lock,RefreshCw,ShieldAlert,ShieldCheck,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,Btn,Card,ChoiceChips,Chips,Empty,Field,Group,IconBtn,Input,KeyValues,Note,Pill,ReviewCard,ReviewMedia,ReviewPair,Row,SectionLabel,Seg,Skel,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble} from './kit';
-import {useFe} from './session';
+import {askFactor,useFe} from './session';
+import {FactorPromptHost,FactorReset,StaffEnrol,StaffUnlock,factorSchema,type Factor} from './staff-factor';
 import {StaffSupport} from './support';
 import {StaffMaintenance} from './maintenance';
 import {textError,textRule} from './kit/validate';
@@ -13,7 +14,7 @@ import {textError,textRule} from './kit/validate';
 /** Staff area (/n/staff, S4 moderation): review queues with decisions, Premium for dogfooding, the journal.
  * Roles are enforced by the server only; a queue the server refuses (403) is simply not shown. */
 const ok=z.object({ok:z.literal(true)}).passthrough();
-const meRes=z.object({ok:z.literal(true),roles:z.array(z.string())});
+const meRes=z.object({ok:z.literal(true),roles:z.array(z.string()),factor:factorSchema.optional()});
 const ts=z.string().nullable().optional();
 const opt=<T extends z.ZodType>(s:T)=>s.nullable().optional();
 
@@ -47,8 +48,9 @@ type MediaItem=z.infer<typeof mediaItem>;type CommItem=z.infer<typeof commItem>;
 type DisputeItem=z.infer<typeof disputeItem>;type RevisionItem=z.infer<typeof revisionItem>;type ReportItem=z.infer<typeof reportItem>;type AppealItem=z.infer<typeof appealItem>;type NoticeItem=z.infer<typeof noticeItem>;type PlaceItem=z.infer<typeof placeItem>;
 type Items={dispute:DisputeItem[],report:ReportItem[],revision:RevisionItem[],media:MediaItem[],community:CommItem[],event:EventItem[],age:AgeItem[],photo:PhotoItem[],appeal:AppealItem[],notice:NoticeItem[],place:PlaceItem[]};
 type QueueId=keyof Items;
-const list=<T extends z.ZodType>(item:T)=>z.object({ok:z.literal(true),items:z.array(item)});
-const QUEUES:{[K in QueueId]:{action:string,schema:z.ZodType<{items:Items[K]}>,key:(x:Items[K][number])=>string}}={
+/** `locked`: documents and selfies wait for a fresh second-factor code (staff.ageCheckQueue, staff.photoCheckQueue). */
+const list=<T extends z.ZodType>(item:T)=>z.object({ok:z.literal(true),items:z.array(item),locked:z.boolean().optional()});
+const QUEUES:{[K in QueueId]:{action:string,schema:z.ZodType<{items:Items[K],locked?:boolean|undefined}>,key:(x:Items[K][number])=>string}}={
  // V21 M01 puts «это я на фото» disputes and post reports first.
  dispute:{action:'staff.disputeQueue',schema:list(disputeItem),key:x=>x.id},
  report:{action:'staff.reportQueue',schema:list(reportItem),key:x=>x.targetType+':'+x.targetId+':'+(x.author?.id??'')},
@@ -66,21 +68,27 @@ const QUEUE_IDS=Object.keys(QUEUES) as QueueId[];
 /** Who may open what (the server's requireStaff lists); the screen only asks for what the roles allow. Queues not
  * listed are open to every staff role that has a queue. */
 const QUEUE_ROLES:Partial<Record<QueueId,string[]>>={appeal:['owner','lead']};
-const SECTION_ROLES={queues:['owner','lead','moderator','verifier'],support:['owner','lead','moderator','support'],premium:['owner','lead'],maintenance:['owner','lead'],journal:['owner','lead','auditor']} as const;
-const SECTIONS=['queues','support','premium','maintenance','journal'] as const;
+const SECTION_ROLES={queues:['owner','lead','moderator','verifier'],support:['owner','lead','moderator','support'],premium:['owner','lead'],maintenance:['owner','lead'],journal:['owner','lead','auditor'],access:['owner','lead']} as const;
+const SECTIONS=['queues','support','premium','maintenance','journal','access'] as const;
 type Section=typeof SECTIONS[number];
 const can=(roles:readonly string[],need:readonly string[]|undefined)=>!need||roles.some(r=>need.includes(r));
 const LIMIT=50;
-type Loaded={[K in QueueId]?:{items:Items[K]}|{error:unknown}};
+type Loaded={[K in QueueId]?:{items:Items[K],locked?:boolean|undefined}|{error:unknown}};
 const forbidden=(e:unknown)=>e instanceof FeError&&e.code==='forbidden';
 
 /** Staff roles of the signed-in account; [] for everyone else (and while loading: null). */
-export function useStaffRoles(){
- const {call,peek}=useFe();const [roles,setRoles]=useState<string[]|null>(()=>peek('staff.me',{},meRes,{asAccount:true})?.roles??null);
+export function useStaffRoles(){return useStaffMe().roles;}
+
+/** Roles and this sign-in's second-factor state (`reload` after a code). `checked`: the server answered in this visit —
+ * the remembered answer may be hours old, so the staff area waits for it before opening anything (`fresh` = true). */
+function useStaffMe({fresh=false}:{fresh?:boolean}={}){
+ const {call,peek}=useFe();
+ const [me,setMe]=useState<{roles:string[]|null,factor:Factor|null,checked:boolean}>(()=>{const p=peek('staff.me',{},meRes,{asAccount:true});return {roles:p?.roles??null,factor:p?.factor??null,checked:false};});
+ const [nonce,setNonce]=useState(0);
  useEffect(()=>{const ctl=new AbortController();
-  call('staff.me',{},meRes,{asAccount:true,signal:ctl.signal}).then(r=>setRoles(r.roles)).catch(()=>{if(!ctl.signal.aborted)setRoles([]);});
-  return ()=>ctl.abort();},[call]);
- return roles;
+  call('staff.me',{},meRes,{asAccount:true,signal:ctl.signal,fresh:fresh||nonce>0}).then(r=>setMe({roles:r.roles,factor:r.factor??null,checked:true})).catch(()=>{if(!ctl.signal.aborted)setMe({roles:[],factor:null,checked:true});});
+  return ()=>ctl.abort();},[call,nonce,fresh]);
+ return {...me,reload:useCallback(()=>setNonce(n=>n+1),[])};
 }
 
 /** Me header button, shown only to staff. */
@@ -91,18 +99,22 @@ export function StaffEntry(){
 }
 
 export function StaffScreen(){
- const {t}=useI18n();const roles=useStaffRoles();const navigate=useNavigate();
+ const {t}=useI18n();const {roles,factor,checked,reload}=useStaffMe({fresh:true});const navigate=useNavigate();
  const [section,setSection]=useState<Section>('queues');
  return <>
   <SubBar title={t('fe.staff.title')} sub={t('fe.staff.sub')} onBack={()=>navigate('/n/me')}/>
   <View className="st nodock">
-   {roles===null?<Skel kind="list"/>
+   {roles===null||(!checked&&!!roles.length)?<Skel kind="list"/>
     :!roles.length?<Empty icon={Lock} title={t('fe.staff.unavailable')} text={t('fe.staff.unavailableText')}/>
+    // Second factor first (server/commands/staff.mjs): connect the app, then a code in this sign-in.
+    :factor&&!factor.enrolled?<StaffEnrol onDone={reload}/>
+    :factor&&!factor.verified?<StaffUnlock factor={factor} onDone={reload}/>
     :<>
+     <FactorPromptHost onEnrol={reload}/>
      <Note className="mb12">{t('fe.staff.roles')}: {roles.map(r=>t('fe.staff.role.'+r)).join(', ')}</Note>
      {SECTIONS.filter(id=>can(roles,SECTION_ROLES[id])).length>1&&<Seg small={false} value={section} onChange={setSection} options={SECTIONS.filter(id=>can(roles,SECTION_ROLES[id])).map(id=>({id,label:id==='support'?t('fe.w8.staff.support'):id==='maintenance'?t('fe.w8.staff.maint'):t('fe.staff.section.'+id)}))}/>}
      {(()=>{const ok=SECTIONS.filter(id=>can(roles,SECTION_ROLES[id]));const cur=ok.includes(section)?section:ok[0];
-      return cur==='queues'?<Queues/>:cur==='support'?<StaffSupport/>:cur==='premium'?<Premium/>:cur==='maintenance'?<StaffMaintenance/>:cur==='journal'?<Journal/>:null;})()}
+      return cur==='queues'?<Queues/>:cur==='support'?<StaffSupport/>:cur==='premium'?<Premium/>:cur==='maintenance'?<StaffMaintenance/>:cur==='journal'?<Journal/>:cur==='access'?<FactorReset/>:null;})()}
     </>}
   </View>
  </>;
@@ -115,8 +127,8 @@ function Queues(){
   setData(null);setNotice('');
   const ids=QUEUE_IDS.filter(id=>can(roles??[],QUEUE_ROLES[id]));
   void Promise.allSettled(ids.map(id=>call(QUEUES[id].action,{limit:LIMIT},QUEUES[id].schema as z.ZodType<{items:unknown[]}>,{asAccount:true,fresh}))).then(rs=>{
-   const next:Record<string,{items:unknown[]}|{error:unknown}>={};
-   rs.forEach((r,i)=>{const id=ids[i]!;if(r.status==='fulfilled')next[id]={items:r.value.items};else if(!forbidden(r.reason))next[id]={error:r.reason};});
+   const next:Record<string,{items:unknown[],locked?:boolean|undefined}|{error:unknown}>={};
+   rs.forEach((r,i)=>{const id=ids[i]!;if(r.status==='fulfilled')next[id]={items:r.value.items,locked:(r.value as {locked?:boolean}).locked};else if(!forbidden(r.reason))next[id]={error:r.reason};});
    setData(next as Loaded);
    setTab(cur=>cur&&next[cur]?cur:QUEUE_IDS.find(id=>{const v=next[id];return v&&'items' in v&&v.items.length;})??QUEUE_IDS.find(id=>next[id])??null);
   });
@@ -141,6 +153,7 @@ function Queues(){
   {notice&&<Alert kind="ok" icon={Check} className="mb12">{notice}</Alert>}
   {!current?null:'error' in current?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(current.error,t)}><Btn kind="soft" onClick={()=>load(true)}>{t('fe.retry')}</Btn></Empty>
    :!current.items.length?<Empty icon={Inbox} title={t('fe.staff.qEmpty')} text={t('fe.staff.qEmptyText')}/>
+   :current.locked?<Alert kind="info" icon={Lock} action={<Btn kind="soft" size="sm" auto onClick={()=>void askFactor('fresh').then(ok=>{if(ok)load(true);})}>{t('fe.sf.enterCode')}</Btn>}>{t('fe.sf.lockedMedia')}</Alert>
    :<><SectionLabel>{t('fe.staff.inQueue',{n:count(tab)})}</SectionLabel><QueueList id={tab} items={current.items} onDone={key=>done(tab,key)}/></>}
  </>;
 }

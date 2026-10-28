@@ -5,6 +5,8 @@ import { FeError, fail } from './errors.mjs';
 import { once } from './ops.mjs';
 import { actingProfile } from './profiles.mjs';
 import { limit } from './limits.mjs';
+import { hmac } from './hash.mjs';
+import { noteSeen, placeOf } from './devices.mjs';
 
 /**
  * `POST /api/fe` — the new command endpoint (docs/server/S2-API.md). Domains register commands;
@@ -47,7 +49,7 @@ export function inputIssues(issues) {
 
 /**
  * @param {{db: Db, pepper: string, cfg: Cfg, commands: Record<string, Command>,
- *   authenticate: (req: Req) => Promise<{accountHash: string, accountGeneration?: string, qa?: boolean}>,
+ *   authenticate: (req: Req) => Promise<{accountHash: string, accountGeneration?: string, qa?: boolean, sessionId?: string, sessionKey?: string}>,
  *   quota: (req: Req, coreKey: string) => Promise<boolean>,
  *   cors: (req: Req, res: Res) => boolean,
  *   log: (event: {requestId: string, action: string, outcome: string, ms: number, stages: Record<string, number>}) => void,
@@ -124,6 +126,10 @@ export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota
       let account;
       try {
         account = await resolveAccount(db, pepper, core); mark('account');
+        // This sign-in (device + token), keyed so the database cannot match it to a token: the staff second-factor
+        // window belongs to it. No session key from authentication = never verified (fail closed).
+        account = { ...account, session: core.sessionKey ? hmac(pepper, 'fe-session:v1:' + core.sessionKey).toString('base64url') : null };
+        await noteSeen(db, account.id, core.sessionId, placeOf(req.headers));
         if (action !== 'platform.maintenance') {
           const m = await maintenance();
           if (m.active && !(await db.query('select 1 from feture.staff_role where account_id = $1 and revoked_at is null limit 1', [account.id])).length) {

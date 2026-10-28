@@ -1,10 +1,9 @@
-// Wave 8 «Аккаунт, оплата, поддержка» (lane `w8`): K06 sign-in & security (email change form, sessions), S01 support
+// Wave 8 «Аккаунт, оплата, поддержка» (lane `w8`): K06 sign-in & security (email change form; «Мои устройства» moved to security.mjs), S01 support
 // (a ticket, the staff reply, the answer back), MAINT (the maintenance screen — simulated in the browser only, never
 // switched on in production from a scenario: it would lock every other agent out), B01 Premium (paywall, purchase
 // confirmation without a provider, restore, gift form). Everything that reaches the server is read back through the API.
 // Needs the wave-8 server (Core sessions/email-change actions, support.*, premium.* additions): marked «after deploy».
 import { noLayer, sheet, toastSee } from '../helpers.mjs';
-import { post, signInDevice } from '../../lib.mjs';
 
 const ok = (r, what) => { if (!r?.ok) throw new Error(what + ': ' + JSON.stringify(r)); return r; };
 
@@ -23,19 +22,6 @@ export default [
    await t.tap('text=Сменить почту');
    await t.fill('#fe-k6-new', other.email); await t.tap(sheet + ' >> text=Получить код');
    await t.see('Этот адрес уже занят другим аккаунтом');
- } },
- { name: 'K06 sessions: this device listed first, «Выйти везде кроме этого» signs a second device out (after deploy)', persona: 'basic', route: '/n/settings/security', run: async t => {
-   await t.see('Это устройство'); await t.notSee('Не удалось загрузить список устройств', 800);
-   // A second device of the same account, signed in through Core with the admin test code.
-   const second = await signInDevice(t.me.email, 'e2e-w8-second');
-   await t.page.reload(); await t.see('Завершить');
-   await t.tap('text=Выйти везде, кроме этого устройства'); await t.tap('.dialog >> text=Выйти везде');
-   await toastSee(t, 'Вышли на других устройствах');
-   await t.notSee('text=Завершить', 3000);
-   await t.see('Это устройство');
-   // Read back: the second device's token no longer works.
-   const st = await post('/api/auth', { action: 'status', ...second });
-   if (st.status !== 403) throw new Error('second device still signed in: ' + st.status);
  } },
  { name: 'S01 support: a ticket reaches staff, the reply comes back to the person (after deploy)', persona: 'basic', route: '/n/help', run: async t => {
    const text = 'e2e w8 вопрос ' + Date.now().toString(36);

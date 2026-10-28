@@ -113,6 +113,12 @@ function sameSecret(a, b){
   return require('crypto').timingSafeEqual(A, B);
 }
 
+// A session is named by an opaque id in lists (auth-core `sessions`) and by products that annotate the list; the
+// device id itself is never sent back.
+function sessionId(deviceId){
+  return require('crypto').createHash('sha256').update('session:' + String(deviceId)).digest('hex').slice(0, 16);
+}
+
 // Absolute lifetime. Existing records derive it from their original server-issued at.
 const SESSION_TTL = 90 * 24 * 3600;
 function sessionExpiresAt(device){
@@ -206,5 +212,5 @@ function cors(req, res){
   return false;
 }
 
-module.exports = { SESSION_TTL, sessionExpiresAt, activeSession, validSession, revokeSession, send, fail, readBody, readBodyWithRaw, rateOk, rateOkScoped, rndId, sameSecret, cors, allowedOrigin, ipHash, MAX_BODY,
+module.exports = { SESSION_TTL, sessionExpiresAt, sessionId, activeSession, validSession, revokeSession, send, fail, readBody, readBodyWithRaw, rateOk, rateOkScoped, rndId, sameSecret, cors, allowedOrigin, ipHash, MAX_BODY,
                    clampText, clampLine, cleanPic, cleanLink };

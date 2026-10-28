@@ -1,0 +1,12 @@
+/* Security pieces (kit/security.tsx). */
+.v21 .k-qr{display:flex;justify-content:center}
+.v21 .k-qr svg{width:var(--qr-size,200px);height:var(--qr-size,200px);max-width:100%;border-radius:var(--r-m);box-shadow:0 0 0 1px var(--line)}
+.v21 .k-qr .k-qr-paper{fill:var(--qr-paper)}
+.v21 .k-qr .k-qr-ink{fill:var(--qr-ink)}
+.v21 .k-key{display:grid;justify-items:start;gap:6px;padding:12px 14px;border-radius:var(--r);background:var(--raise)}
+.v21 .k-key-l{font:var(--t-xs);color:var(--mute)}
+.v21 .k-key-v{font:600 var(--fs-md)/1.4 var(--font-mono);letter-spacing:.04em;word-spacing:.2em;color:var(--ink);overflow-wrap:normal;word-break:keep-all;user-select:all}
+.v21 .k-codes{display:grid;gap:12px}
+.v21 .k-codes-l{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 16px;margin:0;padding:14px 16px 14px 36px;border-radius:var(--r);background:var(--raise);counter-reset:none}
+.v21 .k-codes-l li{font:var(--t-sm);color:var(--faint)}
+.v21 .k-codes-l code{font:600 var(--fs-md)/1.4 var(--font-mono);color:var(--ink);letter-spacing:.03em;user-select:all}

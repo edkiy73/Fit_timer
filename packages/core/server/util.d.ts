@@ -4,6 +4,8 @@ export interface SessionDevice {h:string; at:string; expiresAt?:string}
 export interface SessionAccountStore {get(key:string):Promise<string|null>}
 export const SESSION_TTL: number;
 export function sessionExpiresAt(device:SessionDevice|null|undefined):number;
+/** Opaque id of a session in lists (the device id is never sent back). */
+export function sessionId(deviceId:string):string;
 export function validSession(device:SessionDevice|null|undefined,token:string,accountStore?:SessionAccountStore):Promise<boolean>;
 export function revokeSession(device:SessionDevice):Promise<void>;
 export function activeSession(device:SessionDevice|null|undefined,accountStore?:SessionAccountStore):Promise<boolean>;

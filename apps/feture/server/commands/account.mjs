@@ -4,6 +4,7 @@ import { fail } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { deleteCouple } from './couples.mjs';
 import { endConversations } from './chats.mjs';
+import { removeFactor } from '../second-factor.mjs';
 
 /** Account deletion and data export (S1 §16).
  * Deleting: every couple of the account is deleted (the partner stays with a text archive), the person profile and its
@@ -100,6 +101,8 @@ const run = {
     await q.query(`delete from feture.conversation_member where account_id = $1`, [a.id]);
     for (const t of ['notification', 'push_device', 'notification_settings']) await q.query(`delete from feture.${t} where ${t === 'notification' ? 'recipient_account_id' : 'account_id'} = $1`, [a.id]);
     await q.query(`update feture.staff_role set revoked_at = now() where account_id = $1 and revoked_at is null`, [a.id]);
+    await removeFactor(q, a.id);
+    for (const t of ['staff_session', 'session_seen']) await q.query(`delete from feture.${t} where account_id = $1`, [a.id]);
     if (a.handle) {
       await q.query(`insert into feture.handle_hold (handle, profile_id, until) values (lower($1), $2, now() + make_interval(days => $3))
                      on conflict (handle) do update set until = excluded.until, profile_id = excluded.profile_id`, [a.handle, a.person_profile_id, HOLD_DAYS]);
@@ -111,6 +114,19 @@ const run = {
     await q.query(`delete from feture.launch_wish where account_id = $1`, [a.id]);
     await q.query(`delete from feture.account_link where account_id = $1`, [a.id]);
     return { deleted: true };
+  },
+
+  // «Мои устройства»: when each signed-in device last used the app and roughly where (server/devices.mjs). The list
+  // of devices itself comes from Core (sessions); this only annotates it by Core's opaque session id.
+  async 'account.devices'(q, { account }) {
+    await q.query(`delete from feture.session_seen where account_id = $1 and seen_at < now() - interval '90 days'`, [account.id]);
+    const rows = await q.query(`select session_id, seen_at, place from feture.session_seen where account_id = $1 order by seen_at desc limit 20`, [account.id]);
+    return {
+      items: rows.map(r => {
+        const [city = '', country = ''] = String(r.place ?? '').split('|');
+        return { id: r.session_id, seenAt: r.seen_at, city: city || null, country: country || null };
+      }),
+    };
   },
 
   async 'account.export'(q, { account }) {

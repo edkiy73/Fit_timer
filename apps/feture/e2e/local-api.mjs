@@ -9,6 +9,7 @@
 import http from 'node:http';
 import { createHash, randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { PGlite } from '@electric-sql/pglite';
 import { fromPglite } from '../server/db.mjs';
 import { createFeHandler } from '../server/handler.mjs';
@@ -40,7 +41,14 @@ import { support } from '../server/commands/support.mjs';
 
 const PORT = Number(process.argv[2] ?? process.env.PORT ?? 4290);
 const BASE = `http://localhost:${PORT}`;
-const STAFF = 'qa-staff@feture.test';
+const STAFF = 'qa-staff@feture.test', STAFF2 = 'qa-staff2@feture.test';
+const { sessionId } = createRequire(import.meta.url)('../../../packages/core/server/util');
+/** Signed-in devices per e-mail, as Core keeps them: deviceId → {token, at, label, platform}. «Мои устройства» lists
+ * them; signing a device out forgets its token (its next request is a 401). */
+const devices = new Map();
+const label = ua => { const u = String(ua ?? ''); const b = /Chrome\//.test(u) ? 'Chrome' : /Firefox\//.test(u) ? 'Firefox' : /Safari\//.test(u) ? 'Safari' : '';
+  const o = /Mac OS X|Macintosh/.test(u) ? 'Mac' : /Android/.test(u) ? 'Android' : /Linux/.test(u) ? 'Linux' : ''; return [b, o].filter(Boolean).join(' · '); };
+const deviceOf = (email, deviceId, token) => { const d = devices.get(email)?.get(deviceId); return d && d.token === token ? d : null; };
 const mig = name => readFileSync(new URL('../supabase/migrations/' + name, import.meta.url), 'utf8');
 
 const pg = new PGlite();
@@ -75,11 +83,13 @@ const handler = createFeHandler({
   db, pepper: 'local-e2e-pepper-'.padEnd(40, 'x'),
   cfg: { media: { storage, delivery: signedStorageDelivery(storage) }, realtime: null, push: null, billing: { providers: [] } },
   commands: { ...platform, ...me, ...access, ...couples, ...staff, ...social, ...posts, ...moderation, ...communities, ...events, ...photos, ...gallery, ...discover, ...chats, ...inbox, ...people, ...premium, ...verification, ...accounts, ...dsa, ...support },
-  // A session token is `local:<email>`: the account is the e-mail; persona logins (qa-…) are qa accounts, as in Core.
+  // A session token is issued per device at sign-in: the account is the e-mail; persona logins (qa-…) are qa accounts,
+  // as in Core. The session key (staff second factor) and id («Мои устройства») follow Core's identity (lib/feture/identity.js).
   authenticate: async req => {
-    const email = String(req.headers['x-fit-email'] ?? '').toLowerCase();
-    if (!email || req.headers['x-fit-token'] !== 'local:' + email) { const e = new Error('auth'); /** @type {any} */ (e).status = 401; throw e; }
-    return { accountHash: createHash('sha256').update(email).digest('hex'), accountGeneration: 'g1', qa: email.startsWith('qa-') };
+    const email = String(req.headers['x-fit-email'] ?? '').toLowerCase(), device = String(req.headers['x-fit-device'] ?? ''), token = String(req.headers['x-fit-token'] ?? '');
+    if (!email || !deviceOf(email, device, token)) { const e = new Error('auth'); /** @type {any} */ (e).status = 401; throw e; }
+    return { accountHash: createHash('sha256').update(email).digest('hex'), accountGeneration: 'g1', qa: email.startsWith('qa-'),
+      sessionId: sessionId(device), sessionKey: createHash('sha256').update('fe-session:' + device + ':' + token).digest('hex') };
   },
   quota: async () => true, cors: () => false, log: () => {}, maintenanceTtl: 0,
 });
@@ -87,8 +97,9 @@ const handler = createFeHandler({
 /** The shared staff persona holds the moderator and verifier roles (granted once, as the owner does on production). */
 async function staffRoles() {
   await db.query(
-    `insert into feture.staff_role (account_id, role) select a.id, r from feture.account a join feture.profile p on p.id = a.person_profile_id, unnest(array['moderator', 'verifier', 'lead']) r
-     where p.handle = 'qa_mod1' and not exists (select 1 from feture.staff_role s where s.account_id = a.id and s.role = r and s.revoked_at is null)`).catch(e => console.error('staff role', e.message));
+    `insert into feture.staff_role (account_id, role) select a.id, x.r from feture.account a join feture.profile p on p.id = a.person_profile_id,
+       (values ('qa_mod1', 'moderator'), ('qa_mod1', 'verifier'), ('qa_mod1', 'lead'), ('qa_mod2', 'moderator')) x(h, r)
+     where p.handle = x.h and not exists (select 1 from feture.staff_role s where s.account_id = a.id and s.role = x.r and s.revoked_at is null)`).catch(e => console.error('staff role', e.message));
 }
 
 const body = req => new Promise((resolve, reject) => { const c = []; req.on('data', d => c.push(d)); req.on('end', () => resolve(Buffer.concat(c))); req.on('error', reject); });
@@ -105,6 +116,12 @@ http.createServer(async (req, res) => {
       if (!o) { res.statusCode = 404; return res.end(); }
       res.setHeader('content-type', o.mime); res.setHeader('access-control-allow-origin', '*'); res.statusCode = 200; return res.end(Buffer.from(o.bytes));
     }
+    // Local only (screenshots of the «fresh code» prompt): the staff check of a handle's sign-ins is 11 minutes old.
+    if (url.pathname === '/local/stale-factor' && req.method === 'POST') {
+      await pg.query(`update feture.staff_session s set checked_at = now() - interval '11 minutes' from feture.account a join feture.profile p on p.id = a.person_profile_id
+                      where s.account_id = a.id and p.handle = $1`, [url.searchParams.get('handle')]);
+      return json(res, 200, { ok: true });
+    }
     if (url.pathname === '/api/catalog' && url.searchParams.get('resource') === 'documents') {
       return json(res, 200, { ok: true, documents: DOCS.map(d => ({ id: d.id, key: d.key, hash: d.hash, requiresAccept: d.required, locale: 'ru' })) });
     }
@@ -115,7 +132,24 @@ http.createServer(async (req, res) => {
     }
     if (url.pathname === '/api/auth') {
       const b = JSON.parse((await body(req)).toString() || '{}');
-      if (b.action === 'verify') return json(res, 200, { ok: true, syncToken: 'local:' + String(b.email).toLowerCase(), expiresAt: null });
+      const email = String(b.email ?? '').toLowerCase();
+      if (b.action === 'verify') {
+        const syncToken = 'local:' + randomUUID();
+        if (!devices.has(email)) devices.set(email, new Map());
+        devices.get(email).set(String(b.deviceId), { token: syncToken, at: new Date().toISOString(), label: label(req.headers['user-agent']), platform: String(b.platform ?? 'web') });
+        return json(res, 200, { ok: true, syncToken, expiresAt: null });
+      }
+      if (['status', 'sessions', 'session_revoke', 'sessions_revoke_others'].includes(b.action)) {
+        if (!deviceOf(email, String(b.deviceId), String(b.syncToken))) return json(res, 403, { ok: false, error: 'bad_sync_token' });
+        const mine = devices.get(email);
+        if (b.action === 'status') return json(res, 200, { ok: true, expiresAt: null });
+        if (b.action === 'sessions') return json(res, 200, { ok: true, sessions: [...mine].map(([id, d]) => ({ id: sessionId(id), current: id === b.deviceId, label: d.label, platform: d.platform, at: d.at, expiresAt: new Date(Date.now() + 90 * 864e5).toISOString() }))
+          .sort((x, y) => Number(y.current) - Number(x.current)) });
+        const targets = [...mine.keys()].filter(id => b.action === 'sessions_revoke_others' ? id !== b.deviceId : sessionId(id) === b.target);
+        if (b.action === 'session_revoke' && targets[0] === b.deviceId) return json(res, 400, { ok: false, error: 'current_session' });
+        for (const id of targets) mine.delete(id);
+        return json(res, 200, { ok: true, revoked: targets.length });
+      }
       return json(res, 200, { ok: true });
     }
     if (url.pathname === '/api/fe') {
@@ -124,7 +158,7 @@ http.createServer(async (req, res) => {
       const out = { statusCode: 0, headers: {}, setHeader(k, v) { this.headers[k] = v; }, end(s) { this.text = s; } };
       try { await handler(fake, out); }
       catch (e) { if (e?.status === 401) return json(res, 401, { ok: false, error: 'auth_required' }); throw e; }
-      if (String(req.headers['x-fit-email']).toLowerCase() === STAFF) await staffRoles();
+      if ([STAFF, STAFF2].includes(String(req.headers['x-fit-email']).toLowerCase())) await staffRoles();
       res.statusCode = out.statusCode || 200; res.setHeader('content-type', 'application/json');
       return res.end(out.text ?? '{}');
     }
@@ -135,4 +169,3 @@ http.createServer(async (req, res) => {
 // The queue worker (scans, variants, notifications) once a second, as the cron does on production.
 let busy = false;
 setInterval(async () => { if (busy) return; busy = true; try { await runJobs(db, { scan, push: null, mail: null, signals: null, limit: 20 }); } catch (e) { console.error('jobs', e?.message ?? e); } finally { busy = false; } }, 1000);
-void randomUUID;

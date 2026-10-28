@@ -7,9 +7,14 @@ import { PGlite } from '@electric-sql/pglite';
 import { fromPglite } from '../server/db.mjs';
 import { createFeHandler } from '../server/handler.mjs';
 import { tokenDelivery } from '../server/media/delivery.mjs';
+import { hmac } from '../server/hash.mjs';
+
+const PEPPER = 'p'.repeat(40);
+/** The keyed session id the handler stores for a test sign-in (`x-test-session`, default «test-session»). */
+export const testSessionKey = (session = 'test-session') => hmac(PEPPER, 'fe-session:v1:' + session).toString('base64url');
 
 export const MIGRATIONS = ['20261027120000_fe_platform.sql', '20261027120100_fe_media_bucket.sql', '20261027125900_fe_me.sql',
-  '20261027130000_fe_catalog.sql', '20261027140000_fe_access.sql', '20261027150000_fe_couples.sql', '20261027160000_fe_staff.sql', '20261027170000_fe_feed.sql', '20261027175000_fe_moderation.sql', '20261027180000_fe_communities.sql', '20261027190000_fe_events.sql', '20261027210000_fe_discover.sql', '20261027220000_fe_chats.sql', '20261027230000_fe_notifications.sql', '20261027240000_fe_people.sql', '20261027250000_fe_premium.sql', '20261027260000_fe_moderation_more.sql', '20261027270000_fe_push.sql', '20261027280000_fe_dsa.sql', '20261027300000_fe_photo_check.sql', '20261028120000_fe_places.sql', '20261028130000_fe_age_document.sql', '20261028150000_fe_wave3.sql', '20261028160000_fe_albums.sql', '20261028170000_fe_access_center.sql', '20261028180000_fe_waves67.sql', '20261028190000_fe_media_av.sql', '20261028200000_fe_account.sql', '20261028220000_fe_drop_notesub.sql', '20261028221500_fe_dispute_guard.sql', '20261028230000_fe_qa_accounts.sql', '20261028231000_fe_video_edit.sql', '20261028233000_fe_video_edit_drop.sql', '20261028240000_fe_qa_hidden.sql', '20261029010000_fe_interest_history_drop.sql', '20261029120000_fe_chat_requests.sql'];
+  '20261027130000_fe_catalog.sql', '20261027140000_fe_access.sql', '20261027150000_fe_couples.sql', '20261027160000_fe_staff.sql', '20261027170000_fe_feed.sql', '20261027175000_fe_moderation.sql', '20261027180000_fe_communities.sql', '20261027190000_fe_events.sql', '20261027210000_fe_discover.sql', '20261027220000_fe_chats.sql', '20261027230000_fe_notifications.sql', '20261027240000_fe_people.sql', '20261027250000_fe_premium.sql', '20261027260000_fe_moderation_more.sql', '20261027270000_fe_push.sql', '20261027280000_fe_dsa.sql', '20261027300000_fe_photo_check.sql', '20261028120000_fe_places.sql', '20261028130000_fe_age_document.sql', '20261028150000_fe_wave3.sql', '20261028160000_fe_albums.sql', '20261028170000_fe_access_center.sql', '20261028180000_fe_waves67.sql', '20261028190000_fe_media_av.sql', '20261028200000_fe_account.sql', '20261028220000_fe_drop_notesub.sql', '20261028221500_fe_dispute_guard.sql', '20261028230000_fe_qa_accounts.sql', '20261028231000_fe_video_edit.sql', '20261028233000_fe_video_edit_drop.sql', '20261028240000_fe_qa_hidden.sql', '20261029010000_fe_interest_history_drop.sql', '20261029120000_fe_chat_requests.sql', '20261029140000_fe_second_factor.sql'];
 const mig = name => readFileSync(new URL('../supabase/migrations/' + name, import.meta.url), 'utf8');
 
 export const DOCS = ['terms', 'privacy', 'community', 'adult-content', 'cookies'].map((key, i) => ({
@@ -20,8 +25,11 @@ export const ACCEPT = DOCS.filter(d => d.required).map(d => ({ id: d.id, content
 let ops = 0;
 export const op = () => `018f0000-0000-7000-8000-${String(++ops).padStart(12, '0')}`;
 
-/** @param {{commands: Record<string, any>, migrations?: string[], signals?: (db: any) => any, realtime?: {url: string, key: string}, push?: {webKey: string}, billing?: any}} opts */
-export async function setup({ commands, migrations = MIGRATIONS, signals, realtime, push, billing }) {
+/** staffFactor: false (default) — a staff role granted in a test comes with an enrolled second factor and a fresh check
+ * in the default test session, so tests about other staff work need no codes; true — the real thing
+ * (tests/fe-second-factor-postgres.mjs).
+ * @param {{commands: Record<string, any>, migrations?: string[], signals?: (db: any) => any, realtime?: {url: string, key: string}, push?: {webKey: string}, billing?: any, staffFactor?: boolean}} opts */
+export async function setup({ commands, migrations = MIGRATIONS, signals, realtime, push, billing, staffFactor = false }) {
   const pg = new PGlite();
   await pg.exec('create role anon; create role authenticated;');
   await pg.exec(`
@@ -35,14 +43,26 @@ export async function setup({ commands, migrations = MIGRATIONS, signals, realti
     insert into public.feture_document_versions (id, document_key, locale, content_hash, requires_accept) values
       ${DOCS.map(d => `('${d.id}', '${d.key}', 'ru', '${d.hash}', ${d.required})`).join(', ')};`);
   for (const f of migrations) await pg.exec(mig(f));
+  if (!staffFactor && migrations.includes('20261029140000_fe_second_factor.sql')) {
+    await pg.exec(`
+      create function public.test_staff_factor() returns trigger language plpgsql security definer as $f$
+      begin
+        insert into feture.account_totp (account_id, secret_sealed, enabled_at) values (new.account_id, 'test', now()) on conflict do nothing;
+        insert into feture.staff_session (account_id, session_key) values (new.account_id, '${testSessionKey()}')
+          on conflict (account_id, session_key) do update set started_at = now(), checked_at = now();
+        return new;
+      end $f$;
+      create trigger test_staff_factor after insert on feture.staff_role for each row execute function public.test_staff_factor();`);
+  }
   await pg.exec('set role feture_api');
   const db = fromPglite(pg);
   const handler = createFeHandler({
-    db, pepper: 'p'.repeat(40), commands,
+    db, pepper: PEPPER, commands,
     cfg: { media: { storage: null, delivery: tokenDelivery('s'.repeat(40), 'https://media.test') }, realtime: realtime ?? null, push: push ?? null, ...(billing ? { billing } : {}) },
     signals: signals ? signals(db) : null,
     // A test user named qa-… stands for an e2e persona login (qa-…@feture.test).
-    authenticate: async req => ({ accountHash: String(req.headers['x-test-user']), accountGeneration: String(req.headers['x-test-gen'] ?? 'g1'), qa: String(req.headers['x-test-user']).startsWith('qa-') }),
+    authenticate: async req => ({ accountHash: String(req.headers['x-test-user']), accountGeneration: String(req.headers['x-test-gen'] ?? 'g1'), qa: String(req.headers['x-test-user']).startsWith('qa-'),
+      sessionKey: String(req.headers['x-test-session'] ?? 'test-session'), ...(req.headers['x-test-sid'] ? { sessionId: String(req.headers['x-test-sid']) } : {}) }),
     quota: async () => true, cors: () => false, log: () => {}, maintenanceTtl: 0,
   });
   /** @param {string} user @param {string | null} profile @param {Record<string, unknown>} body @param {Record<string, string>} [headers] */

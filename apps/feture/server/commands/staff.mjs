@@ -2,6 +2,7 @@
 import { staffCommands } from '../../contracts/staff.mjs';
 import { fail } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
+import { checkCode, confirmEnrol, factorState, removeFactor, startEnrol } from '../second-factor.mjs';
 
 /** S4 steps 1–2: staff roles, journal, media review (docs/server/S4-MODERATION.md).
  * Staff are ordinary accounts with a role; a staff member never decides about their own profiles or couple.
@@ -14,13 +15,66 @@ const REVIEWERS = ['owner', 'lead', 'moderator', 'verifier'];
 const staffProfile = account => account.person_profile_id ?? account.id;
 const PUBLIC_ONLY = new Set(['avatar', 'community', 'event']);
 
-/** @param {Q} q @param {string} accountId @param {string[]} roles @returns {Promise<string[]>} the staff member's roles */
-export async function requireStaff(q, accountId, roles) {
+/** Staff second factor (owner 29.10.2026, docs/infra/security.md): every staff role needs an authenticator app and a
+ * code in this sign-in, good for STAFF_WINDOW; dangerous actions (roles, bans, documents and selfies, resetting
+ * someone's factor) want a code from the last FRESH_WINDOW. A refusal is 403 `second_factor` with `rule`:
+ * `enrol` (no app yet), `verify` (no code in this sign-in or the window ran out), `fresh` (ask for a code again). */
+export const STAFF_WINDOW = { hours: 12 };
+export const FRESH_WINDOW = { minutes: 10 };
+
+/** This sign-in's staff check. @param {Q} q @param {import('../accounts.mjs').AccountRow} account */
+export async function staffCheck(q, account) {
+  const [r] = await q.query(
+    `select t.enabled_at is not null enrolled,
+            s.started_at > now() - make_interval(hours => $3) verified,
+            s.checked_at > now() - make_interval(mins => $4) fresh,
+            s.started_at + make_interval(hours => $3) until, s.checked_at + make_interval(mins => $4) fresh_until
+     from (select $1::uuid account_id) a
+     left join feture.account_totp t on t.account_id = a.account_id
+     left join feture.staff_session s on s.account_id = a.account_id and s.session_key = $2`,
+    [account.id, account.session ?? '', STAFF_WINDOW.hours, FRESH_WINDOW.minutes]);
+  const verified = !!account.session && !!r?.enrolled && !!r?.verified;
+  return { enrolled: !!r?.enrolled, verified, fresh: verified && !!r?.fresh, until: verified ? r.until : null, freshUntil: verified && r.fresh ? r.fresh_until : null };
+}
+
+/** Roles only, no factor: enrolment and the check itself. @param {Q} q @param {string} accountId @param {string[]} roles */
+async function staffRoles(q, accountId, roles) {
   const rows = await q.query(`select role from feture.staff_role where account_id = $1 and revoked_at is null`, [accountId]);
   const mine = rows.map(r => /** @type {string} */ (r.role));
   if (!mine.some(r => roles.includes(r))) fail(403, 'forbidden');
   return mine;
 }
+const ANY_STAFF = ['owner', 'lead', 'moderator', 'verifier', 'support', 'auditor'];
+
+/** A staff command: one of `roles`, and the second factor in this sign-in (`fresh`: a code within FRESH_WINDOW).
+ * @param {Q} q @param {import('../accounts.mjs').AccountRow} account @param {string[]} roles @param {{fresh?: boolean}} [opts]
+ * @returns {Promise<string[]>} the staff member's roles */
+export async function requireStaff(q, account, roles, { fresh = false } = {}) {
+  const mine = await staffRoles(q, account.id, roles);
+  const c = await staffCheck(q, account);
+  if (!c.enrolled) fail(403, 'second_factor', { rule: 'enrol' });
+  if (!c.verified) fail(403, 'second_factor', { rule: 'verify' });
+  if (fresh && !c.fresh) fail(403, 'second_factor', { rule: 'fresh' });
+  return mine;
+}
+
+/** A code was right: open (or extend the check of) this sign-in's staff window. A window that ran out starts anew.
+ * @param {Q} q @param {import('../accounts.mjs').AccountRow} account */
+async function openStaffSession(q, account) {
+  if (!account.session) fail(401, 'auth_required');
+  await q.query(
+    `insert into feture.staff_session (account_id, session_key) values ($1, $2)
+     on conflict (account_id, session_key) do update set checked_at = now(),
+       started_at = case when feture.staff_session.started_at > now() - make_interval(hours => $3) then feture.staff_session.started_at else now() end`,
+    [account.id, account.session, STAFF_WINDOW.hours]);
+  // Old windows of this account are of no use to anyone.
+  await q.query(`delete from feture.staff_session where account_id = $1 and started_at < now() - make_interval(hours => $2)`, [account.id, STAFF_WINDOW.hours]);
+  return staffCheck(q, account);
+}
+
+/** @param {import('../second-factor.mjs').CheckResult} r */
+const refused = r => r.ok ? {} : { verified: false, reason: r.reason, left: r.left, lockedUntil: r.lockedUntil };
+
 
 /** @param {Q} q @param {string} staff @param {string} action @param {string} targetType @param {string | null} targetId @param {Record<string, unknown>} [detail] */
 export async function journal(q, staff, action, targetType, targetId, detail = {}) {
@@ -42,11 +96,60 @@ async function reviewable(q, accountId, assetId, { lock = false } = {}) {
 const run = {
   async 'staff.me'(q, { account }) {
     const rows = await q.query(`select role from feture.staff_role where account_id = $1 and revoked_at is null order by role`, [account.id]);
-    return { roles: rows.map(r => r.role) };
+    if (!rows.length) return { roles: [] };
+    const [c, f] = [await staffCheck(q, account), await factorState(q, account.id)];
+    return { roles: rows.map(r => r.role), factor: { ...c, lockedUntil: f.lockedUntil, recoveryLeft: f.recoveryLeft } };
+  },
+
+  // Enrolment: a new secret for the authenticator app (QR + the key typed by hand), then the first code.
+  async 'staff.totpStart'(q, { account, cfg }) {
+    await staffRoles(q, account.id, ANY_STAFF);
+    const [p] = await q.query('select handle from feture.profile where id = $1', [account.person_profile_id]);
+    return await startEnrol(q, account.id, cfg.pepper ?? '', p?.handle ? '@' + p.handle : 'staff');
+  },
+
+  async 'staff.totpConfirm'(q, { account, input, cfg }) {
+    await staffRoles(q, account.id, ANY_STAFF);
+    const { result, codes } = await confirmEnrol(q, account.id, cfg.pepper ?? '', input.code);
+    if (!result.ok) return refused(result);
+    await journal(q, account.id, 'staff.factorOn', 'account', account.id);
+    // Shown once: the server keeps only their hashes (this command is never stored in the replay ledger).
+    return { ...(await openStaffSession(q, account)), verified: true, codes };
+  },
+
+  async 'staff.totpVerify'(q, { account, input, cfg }) {
+    await staffRoles(q, account.id, ANY_STAFF);
+    const r = await checkCode(q, account.id, cfg.pepper ?? '', input.code);
+    if (!r.ok) {
+      if (r.lockedNow) await journal(q, account.id, 'staff.factorLocked', 'account', account.id);
+      return refused(r);
+    }
+    if (r.recovery) await journal(q, account.id, 'staff.recoveryUsed', 'account', account.id);
+    const f = await factorState(q, account.id);
+    return { ...(await openStaffSession(q, account)), verified: true, recovery: r.recovery, recoveryLeft: f.recoveryLeft };
+  },
+
+  // Lost phone: an owner or lead removes someone's factor; they enrol again at their next visit. Leads cannot reset
+  // the owner; nobody resets their own (that would bypass the factor).
+  async 'staff.totpReset'(q, { account, input }) {
+    const roles = await requireStaff(q, account, ['owner', 'lead'], { fresh: true });
+    const [t] = await q.query(
+      `select a.id from feture.profile p join feture.account a on a.person_profile_id = p.id
+       where lower(p.handle) = lower($1) and p.kind = 'person'`, [String(input.handle).replace(/^@/, '')]);
+    if (!t) fail(404, 'not_found');
+    if (t.id === account.id) fail(422, 'rule_violation', { rule: 'self' });
+    if (!roles.includes('owner')) {
+      const [o] = await q.query(`select 1 from feture.staff_role where account_id = $1 and role = 'owner' and revoked_at is null`, [t.id]);
+      if (o) fail(403, 'forbidden');
+    }
+    const removed = await removeFactor(q, t.id);
+    await q.query('delete from feture.staff_session where account_id = $1', [t.id]);
+    await journal(q, account.id, 'staff.factorReset', 'account', t.id, { removed });
+    return { reset: removed };
   },
 
   async 'staff.grant'(q, { account, input }) {
-    await requireStaff(q, account.id, ['owner']);
+    await requireStaff(q, account, ['owner'], { fresh: true });
     const [t] = await q.query(
       `select a.id from feture.profile p join feture.account a on a.person_profile_id = p.id
        where lower(p.handle) = lower($1) and p.kind = 'person' and a.state = 'active' and p.state = 'active'`,
@@ -57,11 +160,13 @@ const run = {
       ? await q.query(`insert into feture.staff_role (account_id, role, granted_by) values ($1, $2, $3) on conflict do nothing returning 1`, [t.id, input.role, account.id])
       : await q.query(`update feture.staff_role set revoked_at = now() where account_id = $1 and role = $2 and revoked_at is null returning 1`, [t.id, input.role]);
     if (changed.length) await journal(q, account.id, input.grant ? 'staff.grant' : 'staff.revoke', 'account', t.id, { role: input.role });
+    // A revoked role ends the person's staff windows at once: with another role left they verify again.
+    if (!input.grant) await q.query('delete from feture.staff_session where account_id = $1', [t.id]);
     return { changed: changed.length > 0 };
   },
 
   async 'staff.mediaQueue'(q, { account, input, cfg }) {
-    await requireStaff(q, account.id, REVIEWERS);
+    await requireStaff(q, account, REVIEWERS);
     const rows = await q.query(
       `select m.id, m.purpose, m.kind, m.explicitness, m.reject_reason reason, m.created_at, m.copies_at, m.width, m.height
        from feture.media_asset m
@@ -83,7 +188,7 @@ const run = {
   },
 
   async 'staff.mediaView'(q, { account, input, cfg }) {
-    await requireStaff(q, account.id, REVIEWERS);
+    await requireStaff(q, account, REVIEWERS);
     const a = await reviewable(q, account.id, input.assetId);
     // Age/photo-check selfies and identity documents open only in their own check queue, never by id from here.
     if (a.purpose === 'verification') fail(404, 'not_found');
@@ -104,7 +209,7 @@ const run = {
   },
 
   async 'staff.mediaDecide'(q, { account, input }) {
-    await requireStaff(q, account.id, REVIEWERS);
+    await requireStaff(q, account, REVIEWERS);
     const a = await reviewable(q, account.id, input.assetId, { lock: true });
     // Suspected CSAM can be escalated from any outcome (a later look, a report); everything else decides waiting media only.
     const escalate = input.decision === 'reject' && input.reason === 'csam_suspected';
@@ -133,7 +238,7 @@ const run = {
   },
 
   async 'staff.datingSwitch'(q, { account, input }) {
-    await requireStaff(q, account.id, ['owner', 'lead']);
+    await requireStaff(q, account, ['owner', 'lead']);
     const [s] = await q.query(`select is_on from feture.platform_switch where key = 'dating' for update`);
     if (s?.is_on === input.on) return { on: input.on, notified: 0 };
     await q.query(
@@ -148,7 +253,7 @@ const run = {
   },
 
   async 'staff.journal'(q, { account, input }) {
-    await requireStaff(q, account.id, ['owner', 'lead', 'auditor']);
+    await requireStaff(q, account, ['owner', 'lead', 'auditor']);
     const rows = await q.query(
       `select id, staff_account_id, action, target_type, target_id, detail, created_at from feture.staff_action
        where ($1::uuid is null or target_id = $1) order by created_at desc limit $2`, [input.targetId ?? null, input.limit]);

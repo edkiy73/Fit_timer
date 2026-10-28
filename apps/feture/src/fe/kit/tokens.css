@@ -51,6 +51,9 @@
  /* Camera frame (CaptureFrame): the same dark viewfinder in light and dark themes. */
  --cam-bg:#140B11; --cam-ink:#fff; --cam-guide:rgba(255,255,255,.6);
 
+ /* QR code (QrCode): dark modules on paper in both themes — scanners need the contrast. Monospace for keys and codes. */
+ --qr-ink:#111; --qr-paper:#fff; --font-mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+
  /* Focus ring — the same on every interactive control. */
  --focus:0 0 0 3px color-mix(in srgb,var(--accent) 35%,transparent);
 }

@@ -639,7 +639,7 @@ const run = {
   },
 
   async 'staff.eventQueue'(q, { account, input }) {
-    await requireStaff(q, account.id, ['owner', 'lead', 'moderator']);
+    await requireStaff(q, account, ['owner', 'lead', 'moderator']);
     const items = await q.query(
       `select e.id, e.rev, e.title, e.kind, e.description, e.format, e.area, e.exact_address, e.join_url, e.starts_at, e.ends_at, e.price,
          e.requirements, e.questions, e.cover_asset_id, e.community_id, e.state, e.pending_change, e.created_at,
@@ -652,7 +652,7 @@ const run = {
   },
 
   async 'staff.eventDecide'(q, { account, input }) {
-    await requireStaff(q, account.id, ['owner', 'lead', 'moderator']);
+    await requireStaff(q, account, ['owner', 'lead', 'moderator']);
     const [e] = await q.query('select * from feture.event where id = $1 for update', [input.eventId]);
     if (!e) fail(404, 'not_found');
     const [{ own }] = await q.query('select exists (select 1 from feture.profile_member where profile_id = $1 and account_id = $2) own', [e.organizer_profile_id, account.id]);

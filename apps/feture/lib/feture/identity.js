@@ -2,7 +2,7 @@
 'use strict';
 const { createHash } = require('node:crypto');
 const { reject } = require('./errors');
-const { validSession } = require('../../../../packages/core/server/util');
+const { validSession, sessionId } = require('../../../../packages/core/server/util');
 const authenticatedActors = new WeakSet();
 const EMAIL = /^[^\s@]{1,64}@[^\s@.]+(\.[^\s@.]+)+$/;
 /** @param {string} value */
@@ -40,7 +40,10 @@ async function authenticate(req,store,qaResolver) {
   // No client flag or self-declared DOB can ever grant it.
   const qaUntil=qaResolver?await qaResolver(keyHash):null;
   // e2e persona logins (qa-…@feture.test, signed in only with the admin test code): their FetUre account is marked qa.
-  const actor=Object.freeze({qa:/^qa-[a-z0-9-]+@feture\.test$/.test(email),accountHash:keyHash,verifiedAdult:!!qaUntil,qaUntil,accountGeneration:typeof account.since==='string'&&Number.isFinite(Date.parse(account.since))?sha(keyHash+':'+account.since):undefined});
+  const actor=Object.freeze({qa:/^qa-[a-z0-9-]+@feture\.test$/.test(email),accountHash:keyHash,verifiedAdult:!!qaUntil,qaUntil,accountGeneration:typeof account.since==='string'&&Number.isFinite(Date.parse(account.since))?sha(keyHash+':'+account.since):undefined,
+    // This sign-in on this device: sessionId is Core's opaque id from the sessions list («Мои устройства»); sessionKey
+    // also covers the token, so a new sign-in on the same device is a new session (staff second-factor checks).
+    sessionId:sessionId(deviceId),sessionKey:sha('fe-session:'+deviceId+':'+device.h)});
   authenticatedActors.add(actor);
   return actor;
 }

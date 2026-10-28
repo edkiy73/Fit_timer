@@ -16,19 +16,22 @@
 //              published open offline event; creation goes through review by STAFF
 //   stranger   a `basic` person for short-lived contacts (a match that is ended, a block that is undone)
 //   inviter, invitee   two `basic` people for the couple flow (free of couples between runs)
-//   staff      the shared qa moderator (STAFF) — only for staff screens and review steps
+//   staff      the shared qa moderator (STAFF) — only for staff screens and review steps; its second factor (TOTP) is
+//              enrolled on first use and a code is entered whenever needed (lib.mjs staffFactor)
+//   staff2     a second staff account (STAFF2, moderator) whose factor scenarios reset and enrol again on the screen
 // Building is idempotent: a second call only adds what is missing (fresh kinds excepted). Staff steps (approving
 // photos, the age check, communities and events) are done by STAFF, which holds the moderator role on production
 // (granted once by the owner's session). Never edit an account in the database: every state comes from app commands.
-import { PROD, api, boot, post, session, uploadFixture, uuid7, sleep } from './lib.mjs';
+import { PROD, api, boot, post, session, staffFactor, uploadFixture, uuid7, sleep } from './lib.mjs';
 
 export const STAFF = 'qa-staff@feture.test';
+export const STAFF2 = 'qa-staff2@feture.test';
 const mail = (lane, kind) => `qa-${lane}-${kind}@feture.test`;
 const handleOf = (lane, kind) => `qa_${lane}_${kind}`.slice(0, 20);
 const must = (r, what) => { if (r.status && r.status >= 400) throw new Error(`${what}: ${r.status} ${JSON.stringify(r).slice(0, 300)}`); return r; };
 const FULL = new Set(['full', 'pa', 'pb', 'asker', 'asker2', 'asker3', 'mate', 'chats', 'host']);
 const BASIC = new Set(['basic', 'stranger', 'inviter', 'invitee']);
-export const KINDS = ['new', 'temp', 'owner', ...BASIC, ...FULL, 'pair', 'staff'];
+export const KINDS = ['new', 'temp', 'owner', ...BASIC, ...FULL, 'pair', 'staff', 'staff2'];
 
 let docs;
 async function documents() {
@@ -203,10 +206,11 @@ async function hostEvent(email, title, price, extra = {}) {
   return e.id;
 }
 
-/** The staff account exists and holds a role (the role itself is granted once, out of band). */
+/** The staff account exists, holds a role (granted once, out of band) and has its second factor with a code from the
+ * last few minutes in this sign-in — so the browser page, which shares the session, opens the staff area directly. */
 export async function staff() {
   await registered(STAFF, 'qa_mod1', 'off');
-  const me = await api(STAFF, 'staff.me');
+  const me = await staffFactor(STAFF, { fresh: true });
   if (!me.roles?.length) throw new Error('qa-staff has no staff role — grant it once (feture.staff_role)');
   return STAFF;
 }
@@ -215,7 +219,8 @@ const built = new Map(); // one build per process and kind; later calls in the s
 export async function persona(lane, kind) {
   if (!/^[a-z0-9]{1,8}$/.test(lane)) throw new Error('lane: 1–8 lowercase letters/digits');
   const key = lane + ':' + kind;
-  if (!['new', 'temp', 'owner'].includes(kind) && built.has(key)) return built.get(key);
+  // staff: built every time, so a scenario starts with a fresh code (dangerous actions want one from the last 10 min).
+  if (!['new', 'temp', 'owner', 'staff'].includes(kind) && built.has(key)) return built.get(key);
   const p = await build(lane, kind);
   if (!['new', 'temp', 'owner'].includes(kind)) built.set(key, p);
   return p;
@@ -226,6 +231,13 @@ async function build(lane, kind) {
     const email = mail(lane, 'new-' + Date.now().toString(36)); await session(email); return { email, kind };
   }
   if (kind === 'staff') { await staff(); const s = await session(STAFF); return { email: STAFF, handle: 'qa_mod1', kind, personId: s.personId }; }
+  if (kind === 'staff2') {
+    // Holds the moderator role (granted out of band like STAFF's); scenarios reset its factor and enrol on the screen.
+    await registered(STAFF2, 'qa_mod2', 'off');
+    const me = await api(STAFF2, 'staff.me');
+    if (!me.roles?.length) throw new Error('qa-staff2 has no staff role — grant «moderator» once (feture.staff_role)');
+    return { email: STAFF2, handle: 'qa_mod2', kind, personId: (await session(STAFF2)).personId };
+  }
   if (kind === 'temp' || kind === 'owner') {
     const ts = Date.now().toString(36);
     const email = mail(lane, 'tmp-' + ts), handle = handleOf(lane, 't' + ts);
