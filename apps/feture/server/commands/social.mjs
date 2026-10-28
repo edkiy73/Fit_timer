@@ -193,6 +193,10 @@ const run = {
         const [v] = await q.query(`select 1 from feture.post p where p.id = $1 and feture.post_visible(p, $2, $3)`, [input.targetId, acting.profileId, acting.accountId]);
         if (!v) fail(404, 'not_found');
       }
+      if (input.kind === 'event') {
+        const [v] = await q.query(`select 1 from feture.event e where e.id = $1 and feture.event_visible(e, $2, $3)`, [input.targetId, acting.profileId, acting.accountId]);
+        if (!v) fail(404, 'not_found');
+      }
       await q.query(`insert into feture.feed_hide (profile_id, kind, target_id) values ($1, $2, $3) on conflict do nothing`, [acting.profileId, input.kind, input.targetId]);
     } else {
       await q.query(`delete from feture.feed_hide where profile_id = $1 and kind = $2 and target_id = $3`, [acting.profileId, input.kind, input.targetId]);
@@ -219,6 +223,8 @@ const run = {
          case when h.kind in ('author', 'activity') then (select json_build_object('id', p.id, 'handle', p.handle, 'name', p.name) from feture.profile p where p.id = h.target_id and p.state = 'active')
               when h.kind = 'post' then (select json_build_object('id', x.id, 'excerpt', left(coalesce(x.title, x.body), 60)) from feture.post x
                                          where x.id = h.target_id and feture.post_visible(x, $1, $2))
+              when h.kind = 'event' then (select json_build_object('id', e.id, 'title', e.title) from feture.event e
+                                          where e.id = h.target_id and feture.event_visible(e, $1, $2))
          end target
        from feture.feed_hide h where h.profile_id = $1 order by h.created_at desc limit 200`, [acting.profileId, acting.accountId]);
     return { items, count: items.length };

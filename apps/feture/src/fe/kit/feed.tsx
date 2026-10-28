@@ -103,6 +103,15 @@ export function QuickStart({title,items}:{title:ReactNode,items:[LucideIcon,stri
  return <><p className="create-qt">{title}</p><div className="create-q">{items.map(([I,l,fn])=><button key={l} type="button" onClick={fn}><I/>{l}</button>)}</div></>;
 }
 
+/** «Скоро» in the feed (V21 feedEvLess): a few upcoming events as compact tiles (`EventTile row`), each with its own
+ * «Скрыть». The block disappears with its last event. */
+export function FeedEvents({title,items}:{title:ReactNode,items:{key:string,tile:ReactNode,hide:ReactNode,hideLabel:string,onHide:()=>void}[]}){
+ if(!items.length)return null;
+ return <section className="feed-ev k-fev-block"><small>{title}</small>
+  {items.map(i=><div key={i.key} className="k-fev">{i.tile}<button type="button" className="linkbtn k-fev-hide" aria-label={i.hideLabel} onClick={i.onHide}>{i.hide}</button></div>)}
+ </section>;
+}
+
 /** A quiet line with one action on the right (under an article: «Только статьи — без остальных публикаций · Следить»). */
 export function ActionLine({text,children}:{text:ReactNode,children:ReactNode}){
  return <div className="note-sub"><span>{text}</span>{children}</div>;

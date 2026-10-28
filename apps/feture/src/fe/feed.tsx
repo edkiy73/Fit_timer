@@ -6,7 +6,7 @@ import {ArrowUpDown,AtSign,Bell,BellOff,Bookmark,Check,Calendar,ChartColumn,Chev
 import type {LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicOrigin} from '../api-url';
-import {ActionLine,ActivityCard,ActivityItem,Alert,Ask,Av,Bar,Btn,Card,Chip,Chips,Counter,Empty,Field,FilePick,Group,H,IconBtn,Input,LikesLine,Note,QuickStart,RichArea,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,ToggleRow,VideoBadge,View,type RichAreaHandle} from './kit';
+import {ActingAv,ActionLine,ActivityCard,ActivityItem,Alert,Ask,Av,Bar,Btn,Card,Chip,Chips,Counter,Empty,FeedEvents,Field,FilePick,Group,H,IconBtn,Input,LikesLine,Note,QuickStart,RichArea,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,ToggleRow,VideoBadge,View,type RichAreaHandle} from './kit';
 import {useFe} from './session';
 import {Uploader} from './kit/Uploader';
 import {useSendPhoto,useSendVideo} from './media-upload';
@@ -18,6 +18,8 @@ import {MarksSheet,MediaGrid,Poll,RichText,Viewer,marksPage,mdPlain,mediaSrc,per
 import {AlbumField,albumOfPost} from './gallery';
 import {Jars,useInterests,type Interest} from './interests';
 import {NameBadges} from './faces';
+import {EventCard,eventRow} from './communities';
+import {CompareSheet,asInterest} from './compare';
 
 /** Slice B (V21 F01, F05, F07, F09) with the prototype's markup: feed tabs, composer row, topic chips and filters,
  * posts (text, media, poll, interests, marks), replies in threads, the composer and its preview.
@@ -81,6 +83,33 @@ const mixedPage=z.object({ok:z.literal(true),items:z.array(z.unknown()),next:z.s
 const feedItems=(raw:unknown[]):FeedItem[]=>raw.flatMap((x):FeedItem[]=>{const a=activitySchema.safeParse(x);if(a.success)return [a.data];const p=postSchema.safeParse(x);return p.success?[p.data]:[];});
 type Gone={authorId:string,name:string,undo:()=>Promise<void>};
 
+/* ---------- «Скоро»: upcoming events for the acting profile ---------- */
+
+const soonRes=z.object({ok:z.literal(true),items:z.array(eventRow.extend({why:z.string()}))});
+type SoonEv=z.infer<typeof soonRes>['items'][number];
+/** What `event.soon` offers the acting profile, and «Скрыть» (feed_hide kind 'event') with «Вернуть» in the toast. */
+function useSoon(){
+ const {call,acting}=useFe();const {t}=useI18n();const toast=useToast();
+ const [items,setItems]=useState<SoonEv[]>([]);
+ const load=useCallback(()=>{call('event.soon',{},soonRes).then(r=>setItems(r.items)).catch(()=>setItems([]));},[call]);
+ useEffect(()=>{setItems([]);load();},[load,acting?.id]);
+ const hide=async(e:SoonEv)=>{
+  const was=items;setItems(l=>l.filter(x=>x.id!==e.id));
+  try{
+   await call('feedHide.set',{opId:newOpId(),kind:'event',targetId:e.id,on:true},okOnly);
+   toast(t(acting?.kind==='couple'?'fe.soon.hiddenUs':'fe.soon.hidden'),{type:'ok',action:{label:t('fe.tl.undo'),fn:()=>{
+    call('feedHide.set',{opId:newOpId(),kind:'event',targetId:e.id,on:false},okOnly).then(()=>{setItems(was);load();},err=>toast(feErrorMessage(err,t),{type:'err'}));}}});
+  }catch(err){setItems(was);toast(feErrorMessage(err,t),{type:'err'});}
+ };
+ return {items,hide};
+}
+function SoonBlock({s}:{s:ReturnType<typeof useSoon>}){
+ const {t}=useI18n();const {acting}=useFe();const us=acting?.kind==='couple';
+ const why=(w:string)=>{const k='fe.soon.why.'+w+(us&&(w==='mine'||w==='follow'||w==='community'||w==='interests'||w==='city')?'Us':'');const v=t(k);return v===k?undefined:v;};
+ return <FeedEvents title={t('fe.soon.title')} items={s.items.map(e=>({key:e.id,tile:<EventCard e={e} row org={why(e.why)}/>,hide:t('fe.soon.hide'),
+  hideLabel:t('fe.soon.hideOne',{title:e.title}),onHide:()=>void s.hide(e)}))}/>;
+}
+
 export function FeedTab(){
  const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const location=useLocation();const toast=useToast();
  const {name:tname,topics:catalog,cats}=useTopics();const {items:jars}=useInterests();
@@ -120,6 +149,7 @@ export function FeedTab(){
  useEffect(()=>{load();},[load]);
  const loadHidden=useCallback(()=>{call('feedHide.list',{},hiddenList).then(r=>setHidden(r.items.filter(x=>x.kind==='post'||x.kind==='author').length)).catch(()=>{});},[call]);
  useEffect(()=>{loadHidden();},[loadHidden]);
+ const soon=useSoon();
  const setF=(next:Filters)=>setFilters(x=>({...x,[tab]:next}));
  const toggleTopic=(id:string)=>setF({...f,topics:sel.includes(id)?sel.filter(x=>x!==id):[...sel,id]});
  const me=nameOf(acting);
@@ -159,7 +189,7 @@ export function FeedTab(){
   :tab==='following'?<Empty icon={Users} title={t('fe.fd.noFollows')} text={t('fe.fd.noFollowsText')}><Btn onClick={()=>navigate('/n/search?scope=people')}>{t('fe.fd.findPeople')}</Btn></Empty>
   :<Empty icon={Newspaper} title={t('fe.fd.noPosts')} text={t('fe.fd.noPostsText')}><Btn onClick={()=>navigate('/n/search?scope=people')}>{t('fe.fd.findPeople')}</Btn></Empty>;
  else body=<>
-  <div className="posts">{items.map(p=>isAct(p)?<ActivityCardOf key={p.id} a={p} onMenu={()=>setActMenu(p)}/>
+  <div className="posts">{items.flatMap((p,i)=>[isAct(p)?<ActivityCardOf key={p.id} a={p} onMenu={()=>setActMenu(p)}/>
    :gone[p.id]?<Alert key={p.id} kind="info" icon={EyeOff} className="mb12" action={<Stack row gap={2}><Btn size="sm" kind="soft" fit onClick={()=>restore(p.id,gone[p.id]!)}>{t('fe.tl.undo')}</Btn>
      <Btn size="sm" kind="text" fit onClick={()=>muteAuthor(gone[p.id]!)}>{t('fe.w3.hide.author',{name:gone[p.id]!.name})}</Btn></Stack>}>{t('fe.w3.hide.row')}</Alert>
    :<PostCard key={p.id} post={p} onChange={replace} onExpired={()=>refetch(p.id)}
@@ -167,7 +197,9 @@ export function FeedTab(){
     // «Скрыть публикацию» leaves a row in its place (V21 FEED-011) until the feed reloads.
     if(r.hidden&&r.postId&&r.undo){const g={authorId:r.hidden.authorId,name:r.hidden.authorName,undo:r.undo};setGone(x=>({...x,[r.postId!]:g}));setNotice('');loadHidden();return;}
     removeWith(r);
-   }}/>)}</div>
+   }}/>,
+   // «Скоро» (V21 feedEvLess) sits after the third item of «Для тебя» (or after the last one of a short feed).
+   ...(tab==='forYou'&&i===Math.min(2,items.length-1)?[<SoonBlock key="soon" s={soon}/>]:[])])}</div>
   {next&&<Btn kind="soft" className="mt12" onClick={()=>load(next)} busy={more} disabled={more}>{t('fe.feed.more')}</Btn>}
   {hidden>0&&<button type="button" className="linkbtn feed-hid" onClick={()=>navigate('/n/settings/hidden')}><EyeOff/>{t('fe.fd.hiddenN',{n:hidden})}</button>}
  </>;
@@ -182,7 +214,7 @@ export function FeedTab(){
      <Btn kind="soft" size="sm" fit onClick={()=>setWelcome(false)}>{t('fe.fd.welcome.hide')}</Btn></Stack>
    </Stack></Card>}
    <div className="composer">
-    <button type="button" className="cmp-main" onClick={()=>navigate('/n/feed/new')}>{acting&&<Av name={me} seed={acting.id} size="sm" src={acting.avatar} couple={acting.kind==='couple'&&acting.name?coupleOf({kind:'couple',name:acting.name}):undefined}/>}<span>{t('fe.feed.whatsNew')}</span></button>
+    <button type="button" className="cmp-main" onClick={()=>navigate('/n/feed/new')}>{acting&&<ActingAv p={acting}/>}<span>{t(acting?.kind==='couple'?'fe.feed.whatsNewUs':'fe.feed.whatsNew')}</span></button>
     <IconBtn icon={ImageIcon} kind="ghost" size="sm" label={t('fe.fd.photoOrVideo')} onClick={()=>navigate('/n/feed/new?x=media')}/>
     <IconBtn icon={ChartColumn} kind="ghost" size="sm" label={t('fe.feed.poll')} onClick={()=>navigate('/n/feed/new?x=poll')}/>
     <IconBtn icon={Plus} kind="add" label={t('fe.create')} onClick={()=>setSheet('create')}/>
@@ -386,7 +418,7 @@ export function PostCard({post,onChange,onRemove,onExpired,full=false,onReply,pr
     :<>{post.title&&<H level={4} as="h3" className="post-title">{post.title}</H>}{post.body&&<RichText text={post.body} mentions={post.mentions??[]}/>}</>}
    <MediaGrid media={post.media} onExpired={onExpired}/>
    {post.poll&&<Poll postId={post.id} poll={post.poll as PollData} preview={preview} mine={mine} onChange={np=>onChange({...post,poll:np})}/>}
-   {post.interests&&post.interests.length>0&&<PostInterests list={post.interests} preview={preview}/>}
+   {post.interests&&post.interests.length>0&&<PostInterests list={post.interests} preview={preview} author={post.author}/>}
   </div>
   {okTags.length>0&&<div className="tagged"><Users/><span>{t('fe.fd.inPhoto')} {okTags.map((x,i)=><span key={x.id}>{i>0&&', '}<button type="button" disabled={preview} onClick={()=>navigate(x.id===acting?.id?'/n/me':'/n/people/'+x.id)}>{x.id===acting?.id?t('fe.fd.you'):nameOf(x)}</button></span>)}</span></div>}
   {post.topics&&post.topics.length>0&&<div className="tags" style={tready?undefined:{visibility:'hidden'}}>{post.topics.map(x=><button key={x} type="button" disabled={preview} onClick={()=>navigate('/n/topics/'+x)}>#{tname(x)}</button>)}</div>}
@@ -417,13 +449,16 @@ function TagReviewSheet({post,busy,onClose,onAnswer}:{post:Post,busy:boolean,onC
  </Sheet>;
 }
 
-/** The «Мои интересы» card of a post: a snapshot of the author's public interests; a jar opens the topic. */
-function PostInterests({list,preview}:{list:z.infer<typeof interest>[],preview:boolean}){
- const {t}=useI18n();const navigate=useNavigate();const {topics}=useTopics();
- return <div className="testcard" style={{'--n':Math.min(4,list.length)} as React.CSSProperties} aria-label={t('fe.fd.myInterests')}>
+/** The «Мои интересы» card of a post: a snapshot of the author's public interests. Someone else's jar opens the
+ * comparison (what it is, their answer, yours); your own opens the topic. */
+function PostInterests({list,preview,author}:{list:z.infer<typeof interest>[],preview:boolean,author:Post['author']}){
+ const {t}=useI18n();const navigate=useNavigate();const {topics}=useTopics();const {acting}=useFe();const [open,setOpen]=useState<string|null>(null);
+ const own=author.id===acting?.id;
+ const shown=open?list.find(j=>j.topicId===open):undefined;
+ return <>{open&&<CompareSheet topicId={open} name={nameOf(author)} theirs={shown?asInterest(shown):undefined} onClose={()=>setOpen(null)}/>} <div className="testcard" style={{'--n':Math.min(4,list.length)} as React.CSSProperties} aria-label={t('fe.fd.myInterests')}>
   <b className="attachment-title">{t('fe.fd.myInterests')}</b>
-  <Jars list={list.map(j=>({...j,vis:'public'}) as unknown as Interest)} topics={topics as never} onOpen={id=>{if(!preview)navigate('/n/topics/'+id);}}/>
- </div>;
+  <Jars list={list.map(j=>({...j,vis:'public'}) as unknown as Interest)} topics={topics as never} onOpen={id=>{if(preview)return;if(own)navigate('/n/topics/'+id);else setOpen(id);}}/>
+ </div></>;
 }
 
 /* ---------- F05: post + replies ---------- */
@@ -520,9 +555,10 @@ export function PostScreen(){
   {post&&<div className="inputbar">
    {target&&<div className="reply-target"><span>{t('fe.fd.replyTo')} <b>{nameOf(target.author)}</b></span><IconBtn icon={X} size="sm" label={t('fe.fd.cancelReply')} onClick={()=>setTarget(null)}/></div>}
    {editing&&<div className="reply-target"><span>{t('fe.fd.editingReply')}</span><IconBtn icon={X} size="sm" label={t('fe.pm.cancel')} onClick={()=>{setEditing(null);setText('');}}/></div>}
+   {acting&&<ActingAv p={acting} size="xs"/>}
    <TextArea bare ref={box} rows={1} maxLength={1000} value={text} onChange={e=>{setText(e.target.value);grow(e.target);}} placeholder={couple?t('fe.fd.replyPhCouple'):t('fe.fd.replyPh')} aria-label={couple?t('fe.fd.replyAsCouple'):t('fe.fd.reply')}
     onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();void send();}}}/>
-   <IconBtn icon={SendHorizontal} kind="send" className={busy?'busy':undefined} onClick={send} disabled={busy||!text.trim()} label={t('fe.feed.send')}/>
+   <IconBtn icon={SendHorizontal} kind="send" className={busy?'busy':undefined} onClick={send} disabled={busy||!text.trim()} label={couple?t('fe.fd.sendUs'):t('fe.feed.send')}/>
   </div>}
   {likersOpen&&<MarksSheet title={t('fe.w3.likers.title')} empty={t('fe.w3.likers.none')} first={likers} onClose={()=>setLikersOpen(false)}
    load={cursor=>call('post.likers',{targetId:id,...(cursor?{cursor}:{})},marksPage)}/>}
@@ -736,7 +772,7 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
   ['granted',KeyRound,t('fe.fd.aud2.granted'),couple?t('fe.fd.aud2.grantedSubUs'):t('fe.fd.aud2.grantedSub')],...(edit?.audience==='only'?[['only',EyeOff,t('fe.fd.aud2.only'),t('fe.fd.aud2.onlySub')] as [Audience,LucideIcon,string,string]]:[])];
  const aud=AUDS.find(a=>a[0]===audience)??AUDS[0]!;const AudIcon=aud[1];
  const who=[communityId||!inFeed?'':aud[3],couple?t('fe.fd.asCoupleLine'):'',hasMedia?(live?t('fe.fd.hintLive'):t('fe.fd.hintReview')):''].filter(Boolean).join('. ');
- const barTitle=communityId?t('fe.comm.newTopic'):draft?(note?t('fe.fd.noteDraft'):t('fe.fd.draft')):edit?(note?t('fe.fd.editNote'):t('fe.fd.editPost')):note?t('fe.fd.newNote'):t('fe.feed.new');
+ const barTitle=communityId?t(couple?'fe.cm.topicCouple':'fe.comm.newTopic'):draft?(note?t('fe.fd.noteDraft'):t('fe.fd.draft')):edit?(note?t('fe.fd.editNote'):t('fe.fd.editPost')):note?t('fe.fd.newNote'):t('fe.feed.new');
  const audSelect=(solo:boolean,icon?:LucideIcon)=><SelectRow solo={solo} {...(icon?{icon}:{})} label={t('fe.feed.audience')} value={audience} options={AUDS.map(a=>[a[0],a[2]] as const)}
   onChange={v=>{setAudience(v);if(v!=='all'&&people.length)toast(t('fe.fd.tagsNeedAll'),{type:'info'});}}/>;
  const err=(k:string)=>errs[k]?<div className="ferr">{errs[k]}</div>:null;
@@ -816,7 +852,7 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
      <div className="mention-box k-anchor">
      <RichArea ref={text} invalid={!!errs.body} rows={note?10:6} maxLength={max} value={body} onValue={(v,el)=>{setBody(v);caret(el);}} autoFocus={!x}
       onKeyUp={e=>{if(e.key==='Escape')setSug(null);else if(e.key.startsWith('Arrow'))caret(e.currentTarget);}} onClick={e=>caret(e.currentTarget)} onBlur={()=>setTimeout(()=>setSug(null),200)}
-      placeholder={note?t('fe.fd.notePh'):poll?t('fe.fd.pollPh'):couple?t('fe.fd.composePhUs'):t('fe.fd.composePh')} aria-label={t('fe.fd.text')}/>
+      placeholder={note?(couple?t('fe.fd.notePhUs'):t('fe.fd.notePh')):poll?(couple?t('fe.fd.pollPhUs'):t('fe.fd.pollPh')):couple?t('fe.fd.composePhUs'):t('fe.fd.composePh')} aria-label={t('fe.fd.text')}/>
      {sug&&sugList.length>0&&<div className="mention-sug" role="listbox" aria-label={t('fe.fd.whoMention')}>{sugList.map(p=><button key={p.id} type="button" role="option" aria-selected={false}
       onMouseDown={e=>e.preventDefault()} onClick={()=>pickMention(p)}><Av name={p.name} seed={p.id} src={p.avatar} size="xs"/><span><b>{p.name}</b> <small>@{p.handle}{p.mentionable===false?' · '+t('fe.lo.mention.silent'):''}</small></span></button>)}</div>}
      </div>

@@ -226,7 +226,7 @@ export function LinkEditScreen(){
   :ex?.st==='in'?<Btn onClick={()=>navigate('/n/me/links')}>{t('fe.ln.p22.toLinks')}</Btn>
   :ex?.st==='sent'?<div className="row g8"><Btn kind="soft" className="danger" onClick={cancel} disabled={busy}>{t('fe.ln.cancelReq')}</Btn>
    <Btn onClick={update} busy={busy} disabled={busy||!sentChanged}>{t('fe.w7.ln.update')}</Btn></div>
-  :<Btn onClick={send} disabled={busy}>{conf?changed?t('fe.ln.p22.proposeChange'):t('fe.ln.p22.save'):t('fe.ln.p22.send')}</Btn>;
+  :<Btn onClick={send} disabled={busy}>{conf?changed?t(we?'fe.ln.p22.proposeChangeUs':'fe.ln.p22.proposeChange'):t('fe.ln.p22.save'):t(we?'fe.ln.p22.sendUs':'fe.ln.p22.send')}</Btn>;
  return <>
   <Bar title={conf||ex?.st==='sent'?t('fe.ln.p22.edit'):t('fe.ln.p22.new')} onBack={()=>{if(dirty)setLeaving(true);else navigate(-1);}}/>
   <View className="nodock cta1">
