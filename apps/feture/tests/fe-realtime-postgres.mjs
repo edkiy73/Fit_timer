@@ -8,7 +8,7 @@ import { social } from '../server/commands/social.mjs';
 import { discover } from '../server/commands/discover.mjs';
 import { chats } from '../server/commands/chats.mjs';
 import { couples } from '../server/commands/couples.mjs';
-import { channelFor, createSignals, broadcastSender } from '../server/realtime.mjs';
+import { channelFor, createSignals, broadcastSender, typingTag } from '../server/realtime.mjs';
 import { runJobs } from '../server/jobs.mjs';
 import { setup as baseSetup, op } from './fe-helpers.mjs';
 
@@ -98,6 +98,24 @@ test('chat.send and chat.read signal the other side with the kind only, after co
     assert.deepEqual(sent, [[{ topic: channelFor(PEPPER, a, [await accountOf(a)]), event: 'new', payload: { k: 'chat' }, private: false }]]);
     sent.length = 0;
     await call('ub', b, { action: 'chat.read', conversationId: conv, upToSeq: 1 });
+    assert.deepEqual(sent, []);
+  } finally { await pg.close(); }
+});
+
+test('«печатает…»: the other side hears typing with the conversation tag only; members only, nothing stored', async () => {
+  const { pg, call, person, matchUp, sent, accountOf } = await world();
+  try {
+    const a = await person('ua', 'alex'), b = await person('ub', 'kira'), c = await person('uc', 'noa');
+    const conv = await matchUp('ua', a, 'ub', b);
+    const tag = (await call('ub', b, { action: 'chat.messages', conversationId: conv })).typingTag;
+    assert.equal(tag, typingTag(PEPPER, conv));
+    assert.equal((await call('ua', a, { action: 'chat.messages', conversationId: conv })).typingTag, tag);
+    sent.length = 0;
+    assert.equal((await call('ua', a, { action: 'chat.typing', conversationId: conv })).sent, true);
+    assert.deepEqual(sent, [[{ topic: channelFor(PEPPER, b, [await accountOf(b)]), event: 'new', payload: { k: 'typing', t: tag }, private: false }]]);
+    for (const leak of [conv, a, b, 'alex']) assert.ok(!JSON.stringify(sent).includes(leak), leak);
+    sent.length = 0;
+    assert.equal((await call('uc', c, { action: 'chat.typing', conversationId: conv })).status, 404);
     assert.deepEqual(sent, []);
   } finally { await pg.close(); }
 });

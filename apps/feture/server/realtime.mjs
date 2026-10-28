@@ -10,13 +10,22 @@ import { b64url, hmac } from './hash.mjs';
  * that «something of this kind happened now».
  * Sending is best-effort: errors and timeouts are swallowed, a command or a worker tick never fails because of it.
  * @typedef {import('./db.mjs').Q} Q
- * @typedef {'chat' | 'notify' | 'decide' | 'feed'} Kind
- * @typedef {{profile: string, kind: Kind}} Signal
- * @typedef {(messages: {topic: string, event: string, payload: {k: Kind}, private: false}[]) => Promise<void>} Sender
+ * `typing` (owner, 28.10: «печатает…») is the one kind with a second field: `t`, an opaque per-conversation tag
+ * (typingTag) that only the conversation's members get in chat.messages, so a client can tell which chat it is
+ * about; it is never stored and carries no ids, names or text either.
+ * @typedef {'chat' | 'notify' | 'decide' | 'feed' | 'typing'} Kind
+ * @typedef {{profile: string, kind: Kind, tag?: string | undefined}} Signal
+ * @typedef {(messages: {topic: string, event: string, payload: {k: Kind, t?: string}, private: false}[]) => Promise<void>} Sender
  * @typedef {{send: (signals: Signal[]) => Promise<void>, channels: (q: Q, profileIds: string[]) => Promise<Record<string, string>>}} Signals
  */
 
-export const KINDS = /** @type {const} */ (['chat', 'notify', 'decide', 'feed']);
+export const KINDS = /** @type {const} */ (['chat', 'notify', 'decide', 'feed', 'typing']);
+
+/** The typing tag of a conversation: opaque, stable, only for its members. @param {string} pepper @param {string} conversationId */
+export function typingTag(pepper, conversationId) {
+  if (!pepper) throw new Error('pepper_missing');
+  return b64url(hmac(pepper, `typing:${conversationId}`)).slice(0, 16);
+}
 const BATCH = 100; // messages per REST call (a worker tick may notify many profiles)
 const TOKEN_CHARS = 32; // 192 bits of the HMAC; at least 22 chars (128 bits) are required
 
@@ -68,9 +77,10 @@ export function createSignals({ db, pepper, sender, onError = () => {} }) {
         const messages = [];
         for (const s of wanted) {
           const topic = topics[s.profile];
-          if (!topic || seen.has(topic + s.kind)) continue;
-          seen.add(topic + s.kind);
-          messages.push({ topic, event: 'new', payload: { k: s.kind }, private: /** @type {const} */ (false) });
+          const tag = s.kind === 'typing' && typeof s.tag === 'string' ? s.tag : undefined;
+          if (!topic || seen.has(topic + s.kind + (tag ?? ''))) continue;
+          seen.add(topic + s.kind + (tag ?? ''));
+          messages.push({ topic, event: 'new', payload: tag ? { k: s.kind, t: tag } : { k: s.kind }, private: /** @type {const} */ (false) });
         }
         for (let i = 0; i < messages.length; i += BATCH) await sender(messages.slice(i, i + BATCH));
       } catch (error) {

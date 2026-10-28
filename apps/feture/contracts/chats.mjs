@@ -29,6 +29,9 @@ export const chatsCommands = {
   'chat.openMedia': { profile: true, write: true, ledger: false, input: z.strictObject({ opId, messageId: id }) },
   // «С чего начать» (V21 ice): topics both sides show publicly.
   'chat.starters': { profile: true, write: false, input: z.strictObject({ conversationId: id }) },
+  // «печатает…» (owner, 28.10): a short-lived realtime signal to the other side, nothing stored; the client sends it at
+  // most every few seconds while typing.
+  'chat.typing': { profile: true, write: false, rate: { kind: 'chat.typing', max: 3000, window: '1 day' }, input: z.strictObject({ conversationId: id }) },
   'chat.read': { profile: true, write: true, ledger: false, input: z.strictObject({ conversationId: id, upToSeq: seq }) },
   'chat.mute': { profile: true, write: true, ledger: false, input: z.strictObject({ conversationId: id, on: z.boolean() }) },
   'chat.archive': { profile: true, write: true, ledger: false, input: z.strictObject({ conversationId: id, on: z.boolean() }) },

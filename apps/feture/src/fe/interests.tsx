@@ -104,8 +104,11 @@ export function InterestSheet({topicId,topics,cats,current,defaultVis='public',o
   try{await call('interests.remove',{opId:newOpId(),topicId},ok);onDone(t('fe.int.removed'));}
   catch(e){setFailure(feErrorMessage(e,t));setAsking(false);}finally{setBusy(false);}
  };
- // The kit sheet (in the app layer, above the phone dock); Escape, ✕ and the scrim close it.
- return <Sheet title={name} sub={cat?(locale==='en'?cat.en:cat.ru):undefined} onClose={onClose} foot={<>
+ // The kit sheet (in the app layer, above the phone dock); Escape, ✕ and the scrim close it — after asking, when
+ // something was changed and not saved (V21 editJar).
+ const init=useRef({v,dir:dir.join(),vis});
+ const dirty=!busy&&(v!==init.current.v||dir.join()!==init.current.dir||vis!==init.current.vis);
+ return <Sheet title={name} sub={cat?(locale==='en'?cat.en:cat.ru):undefined} onClose={onClose} dirty={dirty} foot={<>
   {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
   {asking?<>
    <Note><b>{t('fe.int.ed.removeQ',{topic:name})}</b> {t('fe.int.ed.removeText')}</Note>
@@ -212,7 +215,7 @@ function TopicPicker({cats,topics,have,presetVis,onClose,onDone}:{cats:Category[
    onDone(pending?t('fe.int.pending'):t('fe.int.addedN',{n:sel.length}));
   }catch(e){setFailure(feErrorMessage(e,t));}finally{setBusy(false);}
  };
- if(stage==='pick')return <Sheet title={t('fe.int.addMany')} onClose={onClose} full
+ if(stage==='pick')return <Sheet title={t('fe.int.addMany')} onClose={onClose} full dirty={sel.length>0}
   foot={<Btn className={sel.length?undefined:'off'} disabled={!sel.length} onClick={()=>{setStep(0);setStage('answer');setQ('');}}>{t('fe.int.continue')}{sel.length?` · ${sel.length}`:''}</Btn>}>
   <Note>{t('fe.int.addManyHint')}</Note>
   {left.length>0&&<div className="mt12"><SearchInput label={t('fe.int.searchPh')} value={q} onChange={e=>setQ(e.target.value)}/></div>}
@@ -222,7 +225,7 @@ function TopicPicker({cats,topics,have,presetVis,onClose,onDone}:{cats:Category[
    :<Note className="mt12">{left.length?t('fe.int.notFound'):t('fe.int.allAdded')}</Note>}
  </Sheet>;
  if(stage==='answer'&&cur&&d){const tp=topics.find(x=>x.id===cur);const desc=tp?(locale==='en'?tp.descEn:tp.descRu):null;
-  return <Sheet key={cur} title={tp?label(tp):cur} onClose={onClose} full
+  return <Sheet key={cur} title={tp?label(tp):cur} onClose={onClose} full dirty
    foot={fromReview?<Btn onClick={next}>{t('fe.int.toReview')}</Btn>
     :<div className="row g8"><Btn kind="soft" onClick={back}>{t('fe.back')}</Btn>
      {d.v!=null&&<Btn onClick={next}>{step===sel.length-1?t('fe.int.review'):t('fe.int.next')}</Btn>}</div>}>
@@ -232,7 +235,7 @@ function TopicPicker({cats,topics,have,presetVis,onClose,onDone}:{cats:Category[
    <InterestFields limit={tp?.categoryId===LIMITS} couple={couple} v={d.v} setV={answer} dir={d.dir} setDir={f=>put(x=>({...x,dir:f(x.dir)}))} vis={d.vis} setVis={vis=>put(x=>({...x,vis}))}/>
   </Sheet>;}
  const list:Interest[]=sel.map(id=>{const x=drafts[id]!;return {topicId:id,vis:x.vis,...(typeof x.v==='number'?{value:x.v,dir:x.dir}:{mark:x.v as 'discuss'|'hard'})};});
- return <Sheet title={t('fe.int.check')} onClose={onClose}
+ return <Sheet title={t('fe.int.check')} onClose={onClose} dirty={!busy}
   foot={<>{failure&&<Alert kind="err" noIcon>{failure}</Alert>}
    <div className="row g8"><Btn kind="soft" onClick={back} disabled={busy}>{t('fe.back')}</Btn><Btn busy={busy} onClick={save}>{t('fe.int.saveAll')}</Btn></div></>}>
   <Note>{t('fe.int.checkHint',{n:sel.length})}</Note>

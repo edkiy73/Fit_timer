@@ -155,7 +155,7 @@ test('read times and disappearing-photo states go only to the sender; a couple o
     const conv = await converse(a, pair);
     const m1 = await call('ua', a, { action: 'chat.send', opId: op(), conversationId: conv, body: 'Привет!' });
     let mine = (await call('ua', a, { action: 'chat.messages', conversationId: conv })).items[0];
-    assert.deepEqual(mine.readBy, [{ read: false, readAt: null }, { read: false, readAt: null }]);
+    assert.deepEqual(mine.readBy.map((/** @type {any} */ r) => ({ read: r.read, readAt: r.readAt })), [{ read: false, readAt: null }, { read: false, readAt: null }]);
     await call('ub', pair, { action: 'chat.read', conversationId: conv, upToSeq: 1 });
     mine = (await call('ua', a, { action: 'chat.messages', conversationId: conv })).items[0];
     assert.equal(mine.readBy.filter((/** @type {any} */ r) => r.read && r.readAt).length, 1);
@@ -260,5 +260,35 @@ test('«Рядом»: only shared locations, rounded to ~5 km, distance in 5 km 
     await call('ua', a, { action: 'location.clear', opId: op() });
     assert.equal((await call('ua', a, { action: 'discover.deck' })).needsLocation, true);
     assert.equal((await call('ub', b, { action: 'discover.deck' })).items.find((/** @type {any} */ x) => x.handle === 'Alex').distanceKm, null);
+  } finally { await pg.close(); }
+});
+
+test('R04: with my dating off a like from a profile page still goes out; Discover stays closed to me', async () => {
+  const { pg, call, member } = await world();
+  try {
+    const a = await member('ua', 'Alex'), b = await member('ub', 'Kira');
+    await call('ua', a, { action: 'profile.setVisibility', opId: op(), setting: 'discoverMode', value: 'off' });
+    assert.equal((await call('ua', a, { action: 'like.send', opId: op(), profileId: b, source: 'profile' })).state, 'liked');
+    assert.equal((await call('ub', b, { action: 'likes.incoming' })).items.length, 1);
+    assert.equal((await call('ua', a, { action: 'discover.decide', opId: op(), profileId: b, decision: 'like' })).rule, 'own_discover_off');
+    // They answer from their likes list: a match, as with any like.
+    assert.equal((await call('ub', b, { action: 'like.send', opId: op(), profileId: a, source: 'likes' })).state, 'matched');
+  } finally { await pg.close(); }
+});
+
+test('couple chats: each reader comes with their person profile, only on the sender’s own messages', async () => {
+  const { pg, call, person, coupleOf, converse } = await world();
+  try {
+    const a = await person('ua', 'Alex'), b = await person('ub', 'Kira'), c = await person('uc', 'Noa');
+    const pair = await coupleOf([b, c]);
+    const conv = await converse(a, pair);
+    await call('ua', a, { action: 'chat.send', opId: op(), conversationId: conv, body: 'Привет!' });
+    await call('ub', pair, { action: 'chat.read', conversationId: conv, upToSeq: 1 });
+    const mine = (await call('ua', a, { action: 'chat.messages', conversationId: conv })).items[0];
+    const by = Object.fromEntries(mine.readBy.map((/** @type {any} */ r) => [r.reader?.handle, r.read]));
+    assert.deepEqual(by, { Kira: true, Noa: false });
+    assert.ok(mine.readBy.every((/** @type {any} */ r) => r.reader.id && 'avatar' in r.reader));
+    const theirs = (await call('uc', pair, { action: 'chat.messages', conversationId: conv })).items[0];
+    assert.equal(theirs.readBy, undefined);
   } finally { await pg.close(); }
 });

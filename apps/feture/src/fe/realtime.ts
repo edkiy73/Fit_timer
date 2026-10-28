@@ -3,11 +3,11 @@
  * members get in `session.bootstrap`; a message carries only a kind (`{k}`), and screens then fetch with the normal
  * commands. Polling stays as the fallback, so a lost socket only makes updates slower, never wrong. */
 
-export type RtKind='chat'|'notify'|'decide'|'feed';
-export const RT_KINDS:readonly RtKind[]=['chat','notify','decide','feed'];
+export type RtKind='chat'|'notify'|'decide'|'feed'|'typing';
+export const RT_KINDS:readonly RtKind[]=['chat','notify','decide','feed','typing'];
 export type RtConfig={url:string,key:string,channels:Record<string,string>};
 /** `kind` is null after a reconnect: signals may have been missed, so everyone refreshes once. */
-export type RtListener=(kind:RtKind|null,profileId:string|null)=>void;
+export type RtListener=(kind:RtKind|null,profileId:string|null,tag?:string)=>void;
 
 const HEARTBEAT_MS=25_000;
 const BACKOFF_MS=[1_000,2_000,5_000,10_000,30_000];
@@ -64,7 +64,7 @@ export function connectRealtime(cfg:RtConfig,listener:RtListener):{close:()=>voi
    }
    if(f.event==='broadcast'&&f.payload?.event==='new'){
     const k=f.payload?.payload?.k;
-    if(RT_KINDS.includes(k))listener(k,profile);
+    const tag=f.payload?.payload?.t;if(RT_KINDS.includes(k))listener(k,profile,typeof tag==='string'?tag:undefined);
    }
   };
   ws.onclose=()=>{joinedOnce=true;stop();schedule();};

@@ -105,7 +105,8 @@ export function FeSessionProvider({children}:{children:ReactNode}){
  const rtKey=rt?JSON.stringify(rt):'';
  useEffect(()=>{
   if(!rt)return;
-  const conn=connectRealtime(rt,(kind,profile)=>{readCache.clear();for(const l of [...listeners.current]){try{l(kind,profile);}catch{/* one screen never breaks another */}}});
+  // «печатает…» changes no data: it never empties the read cache.
+  const conn=connectRealtime(rt,(kind,profile,tag)=>{if(kind!=='typing')readCache.clear();for(const l of [...listeners.current]){try{l(kind,profile,tag);}catch{/* one screen never breaks another */}}});
   return ()=>conn.close();
  },[rtKey]);
  const subscribe=useCallback((l:RtListener)=>{listeners.current.add(l);return ()=>{listeners.current.delete(l);};},[]);
@@ -128,6 +129,17 @@ export function useRealtime(kinds:RtKind|readonly RtKind[],handler:()=>void){
   });
   return ()=>{clearTimeout(timer);off();};
  },[subscribe,key]);
+}
+
+/** «печатает…»: calls `handler` at once for each typing signal whose conversation tag is `tag` (chat.messages
+ * `typingTag`); a reconnect or another chat's signal is ignored. */
+export function useTypingSignal(tag:string|null|undefined,handler:()=>void){
+ const subscribe=useContext(RtCtx);
+ const latest=useRef(handler);latest.current=handler;
+ useEffect(()=>{
+  if(!subscribe||!tag)return;
+  return subscribe((kind,_p,t)=>{if(kind==='typing'&&t===tag)latest.current();});
+ },[subscribe,tag]);
 }
 
 export function useFe(){

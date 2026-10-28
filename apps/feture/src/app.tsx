@@ -320,6 +320,7 @@ export const routes: RouteObject[] = [
         {path:'me/links', element:<LinksScreen />},
         {path:'me/edit', element:<MeEditScreen />},
         {path:'me/events', element:<MinePartScreen part="events" />},
+        {path:'me/communities', element:<MinePartScreen part="communities" />},
         {path:'me/shared', element:<AccessScreen mine />},
         {path:'me/access', element:<AccessScreen />},
         {path:'me/follows', element:<FollowsScreen />},
