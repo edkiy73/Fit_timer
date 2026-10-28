@@ -239,9 +239,11 @@ button.pill{cursor:pointer}
 
 /* The photo viewer is a layer of its own above the bars, the dock, the bottom buttons and the toasts. */
 .v21 .layer:has(>.viewer){z-index:70}
-/* FeedEvents («Скоро» in the feed): one compact tile per event, its «Скрыть» under it on the right */
-.v21 .k-fev{display:flex;flex-direction:column;gap:var(--s-1)}
-.v21 .k-fev+.k-fev{margin-top:var(--s-3)}
-.v21 .k-fev .k-fev-hide{align-self:flex-end}
+/* FeedEvents («Скоро» in the feed): one compact tile per event, its ⋯ in the tile's top-right corner (36px seen, 44px to tap) */
+.v21 .k-fev{position:relative}
+.v21 .k-fev+.k-fev{margin-top:var(--s-2)}
+.v21 .k-fev>.evc.row .bd>small,.v21 .k-fev>.evc.row .bd>b{padding-right:var(--s-7)}
+.v21 .k-fev>.k-fev-menu{position:absolute;top:var(--s-1);right:var(--s-1);color:var(--mute)}
+.v21 .k-fev>.k-fev-menu::after{content:'';position:absolute;inset:calc(-1 * var(--s-1))}
 /* ActingAv in an input bar: the acting profile before the field, centred on the one-line box */
 .v21 .inputbar>.av{flex:none;align-self:flex-end;margin-bottom:7px}

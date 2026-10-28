@@ -35,7 +35,8 @@ export default [
      expect(JSON.stringify(shown) === JSON.stringify(items.map(e => e.title)), `tiles ${JSON.stringify(shown)} vs server ${JSON.stringify(items.map(e => e.title))}`);
      const first = items[0];
      // «Скрыть» → the tile leaves at once, the toast offers «Вернуть», which brings it back.
-     await t.tap(`.feed-ev button[aria-label="Скрыть событие «${first.title}»"]`); hid.add(first.id);
+     const hideIt = async () => { await t.tap(`.feed-ev button[aria-label="Действия с событием «${first.title}»"]`); await t.tap('.sheet button:has-text("Скрыть событие")'); };
+     await hideIt(); hid.add(first.id);
      await toastSee(t, 'Событие скрыто');
      // Titles can repeat in the test world: count the tiles instead of matching the hidden one by name.
     await until(async () => (await t.page.locator('.feed-ev .k-fev .evc').count()) === items.length - 1, 'the hidden tile leaves at once');
@@ -43,7 +44,7 @@ export default [
      await t.see(`.feed-ev .evc:has-text("${first.title}")`);
      await until(async () => !(await hiddenEvents(t)).includes(first.id), '«Вернуть» unhid it');
      // Hidden again: in «Скрытое», out of event.soon, and a reload keeps it out.
-     await t.tap(`.feed-ev button[aria-label="Скрыть событие «${first.title}»"]`);
+     await hideIt();
      await until(async () => (await hiddenEvents(t)).includes(first.id), 'feedHide.list has the event');
      expect(!(await soon(t)).some(e => e.id === first.id), 'event.soon still offers the hidden event');
      await t.go('/n/feed'); await t.see('.posts article.post'); await t.see('.feed-ev.k-fev-block, .posts');

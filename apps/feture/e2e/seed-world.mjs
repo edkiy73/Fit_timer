@@ -1,7 +1,8 @@
 // FetUre «test world» (owner, 28.10.2026): production filled with ~28 people, couples, communities, events, posts,
 // chats and requests in many different states, so the app can be looked at as if many people used it.
 //   FE_ADMIN_KEY=… node e2e/seed-world.mjs [phase…]      phases: accounts photos profile social couples communities
-//                                                        events posts variety access moderation verify (default: all, in order)
+//                                                        events posts variety following access moderation verify
+//                                                        (default: all, in order); verify-following reads back «Подписки» only
 // Rules (apps/feture/AGENTS.md §4, §6, e2e/README.md):
 // - every state is built only through app commands (/api/fe) exactly as a person would; staff steps (photo review,
 //   age checks, community/event review) go through qa-staff@feture.test; nothing is written to the database directly;
@@ -899,6 +900,125 @@ async function varietyVerify() {
   return out;
 }
 
+// ---------------------------------------------------------------- phase: following («Подписки» from several viewers)
+// Owner, 28.10.2026: «Подписки из v21 — нужны тестовые данные разные». Activity shows only from people the viewer
+// follows, and one person's actions of one kind with no pause over 6 hours fold into one card — so every size comes
+// from its own person: likes 1 (gleb, roman: the six-photo series only), 3 (timur), 8 (sasha: photo, video, poll,
+// interests, text, article mixed), 20+ (liza); follows 1 (roman), 5 (gleb), 15 (vesta); events 1 (kira / vesta / timur),
+// 3 (daniel); communities 1 (timur / vesta), 3 (daniel). Mira, Lev and Kira follow all of them, so each of their
+// «Подписки» shows every kind and size between posts of the people they follow. Mira mutes Egor's activity («Не
+// показывать активность»): his posts stay, his cards go. A rerun only adds what is missing; a size grows only if the
+// same person acts again within 6 hours of the last run (the phase never likes or follows beyond its lists).
+const SUBS_VIEWERS = ['mira', 'lev', 'kira'];
+const SUBS_PRODUCERS = ['gleb', 'roman', 'timur', 'sasha', 'liza', 'vesta', 'daniel'];
+/** Gleb follows four more (5 in all); Vesta one more (15 in all); Roman keeps his one (Mira). */
+const SUBS_FOLLOWS = { gleb: ['lev', 'kira', 'vesta', 'timur'], vesta: ['sasha'] };
+/** What Sasha likes besides the six-photo series (8 in all), found by the start of the text. */
+const SASHA_LIKES = ['Короткое видео: свет на воде', 'Вопрос к тем, кто ходит на вечера', 'Обновила карту интересов', 'Иду учиться.',
+  'Вечер в Амстердаме: каналы', 'Планирую вечера на зиму', '@title:Безопасность в шибари: пять правил'];
+
+/** A six-second abstract clip (soft light moving over water, drawn on a canvas and recorded by Chromium's
+ * MediaRecorder — made by this script, no people, no third-party footage) and its first frame as the poster. */
+async function clip() {
+  const vf = CACHE + 'clip.webm', pf = CACHE + 'clip-poster.jpg';
+  if (!fs.existsSync(vf) || !fs.existsSync(pf)) {
+    const { chromium } = await import('playwright-core');
+    const browser = await chromium.launch({ headless: true });
+    try {
+      const page = await browser.newPage();
+      const [v, p] = await page.evaluate(async () => {
+        const c = document.createElement('canvas'); c.width = 540; c.height = 720; const g = c.getContext('2d');
+        const draw = f => {
+          const sky = g.createLinearGradient(0, 0, 0, 720); sky.addColorStop(0, '#1b2a4a'); sky.addColorStop(1, '#0b3d4f'); g.fillStyle = sky; g.fillRect(0, 0, 540, 720);
+          for (let i = 0; i < 9; i++) {
+            const x = 270 + Math.sin(f / 30 + i) * 200, y = 120 + i * 70 + Math.cos(f / 22 + i * 2) * 18;
+            const r = g.createRadialGradient(x, y, 4, x, y, 120); r.addColorStop(0, `hsla(${30 + i * 8},90%,70%,.55)`); r.addColorStop(1, 'hsla(200,80%,40%,0)');
+            g.fillStyle = r; g.fillRect(0, 0, 540, 720);
+          }
+        };
+        const b64 = async blob => { const buf = new Uint8Array(await blob.arrayBuffer()); let s = ''; for (let i = 0; i < buf.length; i += 0x8000) s += String.fromCharCode(...buf.subarray(i, i + 0x8000)); return btoa(s); };
+        draw(0); const poster = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.85));
+        const rec = new MediaRecorder(c.captureStream(24), { mimeType: 'video/webm' }); const parts = [];
+        rec.ondataavailable = e => parts.push(e.data);
+        let f = 0; const iv = setInterval(() => draw(f++), 40);
+        rec.start(250); await new Promise(r => setTimeout(r, 6100)); rec.stop(); clearInterval(iv); await new Promise(r => { rec.onstop = r; });
+        return [await b64(new Blob(parts, { type: 'video/webm' })), await b64(poster)];
+      });
+      fs.mkdirSync(CACHE, { recursive: true });
+      fs.writeFileSync(vf, Buffer.from(v, 'base64')); fs.writeFileSync(pf, Buffer.from(p, 'base64'));
+    } finally { await browser.close(); }
+  }
+  return { video: fs.readFileSync(vf), poster: fs.readFileSync(pf), durationMs: 6000 };
+}
+/** Uploads a clip as the composer does (intent with length and poster → two PUTs → commit); staff approves it. */
+async function uploadVideo(key, c) {
+  const i = await api(email(key), 'media.uploadIntent', { opId: uuid7(), purpose: 'post', kind: 'video', mime: 'video/webm', bytes: c.video.length, durationMs: c.durationMs,
+    poster: { mime: 'image/jpeg', bytes: c.poster.length } });
+  if (!i.assetId || !i.posterUpload) throw new Error('uploadIntent video ' + JSON.stringify(i).slice(0, 200));
+  for (const [u, b] of [[i.upload, c.video], [i.posterUpload, c.poster]]) {
+    const put = await fetch(u.url, { method: u.method, headers: u.headers, body: b });
+    if (!put.ok) throw new Error('upload PUT ' + put.status);
+  }
+  must(await api(email(key), 'media.commit', { assetId: i.assetId }), 'commit video');
+  await approveAsset(i.assetId);
+  return i.assetId;
+}
+const follow = async (a, b) => must(await api(email(a), 'follow.set', { opId: uuid7(), profileId: await pid(b), on: true }), `follow ${a}→${b}`);
+
+async function following() {
+  // The viewers follow every producer (posts of these people then sit between the cards too).
+  for (const v of SUBS_VIEWERS) for (const p of SUBS_PRODUCERS) if (p !== v) await step(`follow ${v}→${p}`, () => follow(v, p));
+  // A video post from Vesta (followed by all three viewers): the video thumbnail in Sasha's likes.
+  const video = await step('vesta video', async () => {
+    const body = 'Короткое видео: свет на воде в Батуми, шесть секунд тишины.';
+    const have = (await postsOf('vesta')).find(x => (x.body ?? '').startsWith(body.slice(0, 30)));
+    if (have) return have.id;
+    const assetId = await uploadVideo('vesta', await clip());
+    const d = must(await api(email('vesta'), 'post.saveDraft', { opId: uuid7(), post: { type: 'post', audience: 'all', topics: [], body, mediaIds: [assetId] } }), 'saveDraft video');
+    const id = d.id ?? d.postId;
+    must(await api(email('vesta'), 'post.publish', { opId: uuid7(), postId: id }), 'publish video');
+    (await postsOf('vesta')).push({ id, body });
+    return id;
+  });
+  // Follows in three sizes.
+  for (const [a, list] of Object.entries(SUBS_FOLLOWS)) for (const b of list) await step(`follow ${a}→${b}`, () => follow(a, b));
+  // Sasha likes eight posts of different kinds in one sitting.
+  await step('sasha likes', async () => {
+    const feed = [];
+    let cursor;
+    for (let i = 0; i < 4; i++) { const r = await api(email('sasha'), 'feed.list', { tab: 'forYou', limit: 50, ...(cursor ? { cursor } : {}) }); feed.push(...(r.items ?? [])); cursor = r.next; if (!cursor) break; }
+    for (const start of SASHA_LIKES) {
+      const p = start.startsWith('@title:') ? feed.find(x => x.title === start.slice(7)) : feed.find(x => (x.body ?? '').startsWith(start));
+      if (!p) { if (start.startsWith('Короткое видео') && video) await like('sasha', video); else problems.push('sasha like: no post «' + start + '»'); continue; }
+      if (!p.liked) await like('sasha', p.id);
+    }
+  });
+  // Mira mutes Egor's activity: his posts stay in her «Подписки», his cards do not.
+  await step('mira mutes egor activity', async () => must(await api(email('mira'), 'activity.mute', { opId: uuid7(), profileId: await pid('egor'), on: true }), 'activity.mute'));
+}
+
+/** Every activity kind and size each viewer's «Подписки» shows, read back as the app reads it. */
+async function followingVerify() {
+  const out = {}; const want = { likes: [1, 3, 8, 20], follows: [1, 5, 15], events: [1, 3], communities: [1, 3] };
+  for (const v of SUBS_VIEWERS) {
+    const items = []; let cursor;
+    for (let i = 0; i < 8; i++) {
+      const r = await api(email(v), 'feed.list', { tab: 'following', activity: [], limit: 50, ...(cursor ? { cursor } : {}) });
+      items.push(...(r.items ?? [])); cursor = r.next; if (!cursor) break;
+    }
+    const acts = items.filter(x => x.kind === 'activity');
+    const sizes = {};
+    for (const a of acts) (sizes[a.activity] ??= []).push(`${a.actor?.handle} ${a.count}`);
+    const missing = Object.entries(want).flatMap(([k, ns]) => ns.filter(n => !acts.some(a => a.activity === k && (n === 20 ? a.count >= 20 : a.count === n))).map(n => `${k} ${n === 20 ? '20+' : n}`));
+    const sasha = acts.find(a => a.activity === 'likes' && a.actor?.handle === P.sasha.handle);
+    const kindsOf = x => x.video ? 'video' : x.photos ? 'photo' : x.poll ? 'poll' : x.interests ? 'interests' : x.title ? 'article' : 'text';
+    out[`«Подписки» of ${v}`] = { posts: items.length - acts.length, cards: acts.length, ...sizes, missing: missing.length ? missing : 'none',
+      ...(sasha ? { 'sasha liked': sasha.items.map(kindsOf).join(', ') } : {}),
+      ...(v === 'mira' ? { 'egor (muted)': `cards ${acts.filter(a => a.actor?.handle === P.egor.handle).length}, posts ${items.filter(x => x.kind === 'post' && x.author?.handle === P.egor.handle).length}` } : {}) };
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------- phase: access requests
 async function access() {
   const req = async (from, to, scopes) => {
@@ -1010,8 +1130,9 @@ async function verify() {
 const PHASES = { accounts: async () => { for (const c of CAST) await step('account ' + c.key, () => account(c)); },
   photos: async () => { await staff(); for (const c of CAST) if (c.face || c.tier === 'doc') await step('photo/age ' + c.key, () => photo(c)); },
   profile: async () => { for (const c of CAST) if (!['fresh', 'min'].includes(c.tier)) await step('profile ' + c.key, () => profileExtras(c)); },
-  social, couples, communities, events, posts, variety, access, moderation,
-  verify: async () => { const v = await verify(); console.log(JSON.stringify({ ...v, ...await varietyVerify() }, null, 1)); } };
+  social, couples, communities, events, posts, variety, following, access, moderation,
+  verify: async () => { const v = await verify(); console.log(JSON.stringify({ ...v, ...await varietyVerify(), ...await followingVerify() }, null, 1)); },
+  'verify-following': async () => console.log(JSON.stringify(await followingVerify(), null, 1)) };
 if (import.meta.url === `file://${process.argv[1]}`) {
   if (!process.env.FE_ADMIN_KEY) { console.error('FE_ADMIN_KEY is required'); process.exit(1); }
   const want = process.argv.slice(2).length ? process.argv.slice(2) : Object.keys(PHASES);
