@@ -132,15 +132,17 @@ export function webPushFromEnv(env, warn = code => console.warn('feture_fe_webpu
   // Values pasted from the key file may keep its JSON quotes or a trailing comma: «"BE…",» → «BE…».
   const clean = (/** @type {unknown} */ v) => String(v ?? '').trim().replace(/,$/, '').trim().replace(/^(["'])(.*)\1$/s, '$2').trim();
   const publicKey = clean(env.FE_VAPID_PUBLIC_KEY), privateKey = clean(env.FE_VAPID_PRIVATE_KEY);
-  // A bare e-mail works as the contact too: «owner@example.com» → «mailto:owner@example.com».
-  const subject = ((v) => /^[^\s@:]+@[^\s@]+\.[^\s@]+$/.test(v) ? 'mailto:' + v : v)(clean(env.FE_VAPID_SUBJECT));
+  // The contact for push services (RFC 8292 «sub»): mailto: or https:. A bare e-mail gets «mailto:»; anything else
+  // (empty, a stray paste) falls back to the site's own address, which the standard allows — the keys are what matter.
+  const rawSubject = clean(env.FE_VAPID_SUBJECT);
+  const subject = /^(mailto:|https:)/.test(rawSubject) ? rawSubject : /^[^\s@:]+@[^\s@]+\.[^\s@]+$/.test(rawSubject) ? 'mailto:' + rawSubject : 'https://feture-mvp.vercel.app';
   const sender = publicKey && privateKey && subject ? createWebPush({ publicKey, privateKey, subject, ...(fetch ? { fetch } : {}) }) : null;
   if (!sender && !warned) {
     warned = true;
     // What is wrong, without the values: decoded lengths and the subject's scheme (public 65 bytes starting 0x04,
     // private 32 bytes, subject mailto:/https:). Enough to tell a swapped or truncated paste from a missing one.
     const pub = unb64(publicKey), d = unb64(privateKey);
-    warn(publicKey || privateKey || subject ? `invalid_keys pub=${pub.length}/${pub[0] ?? '-'} priv=${d.length} subj=${/^(mailto:|https:)/.test(subject) ? 'ok' : 'bad'} raw=${publicKey.length}/${privateKey.length}` : 'off_no_keys');
+    warn(publicKey || privateKey || rawSubject ? `invalid_keys pub=${pub.length}/${pub[0] ?? '-'} priv=${d.length} subj=${/^(mailto:|https:)/.test(subject) ? 'ok' : 'bad'} raw=${publicKey.length}/${privateKey.length}` : 'off_no_keys');
   }
   return sender;
 }

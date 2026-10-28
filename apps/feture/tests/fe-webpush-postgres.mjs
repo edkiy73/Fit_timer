@@ -175,6 +175,7 @@ test('without keys nothing is sent and it is said once; phones still go through 
   const pasted = webPushFromEnv({ FE_VAPID_PUBLIC_KEY: ` "${KEYS.publicKey}",`, FE_VAPID_PRIVATE_KEY: `"${KEYS.privateKey}",`, FE_VAPID_SUBJECT: `'${KEYS.subject}'` }, () => {});
   assert.equal(pasted?.publicKey, createWebPush(KEYS)?.publicKey);
   assert.ok(webPushFromEnv({ FE_VAPID_PUBLIC_KEY: KEYS.publicKey, FE_VAPID_PRIVATE_KEY: KEYS.privateKey, FE_VAPID_SUBJECT: 'owner@example.com' }, () => {}), 'a bare e-mail is a fine contact');
+  assert.ok(webPushFromEnv({ FE_VAPID_PUBLIC_KEY: KEYS.publicKey, FE_VAPID_PRIVATE_KEY: KEYS.privateKey, FE_VAPID_SUBJECT: 'subject' }, () => {}), 'a stray contact falls back to the site');
 
   const { pg, db, call, posts, native, deliver, member } = await world();
   try {
