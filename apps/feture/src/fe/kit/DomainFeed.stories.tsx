@@ -55,8 +55,9 @@ export const СтрокаДействия:StoryObj<typeof ActionLine>={name:'С�
 
 const evCover=(k:string)=><div className="plate" style={plate(k)}><span className="pi"><Calendar/></span></div>;
 export const Скоро:StoryObj<typeof FeedEvents>={name:'«Скоро» в ленте',render:a=><div className="posts"><FeedEvents {...a}/></div>,
- parameters:{docs:{description:{story:'Ближайшие события, которые касаются смотрящего (ответил, подписан на организатора, сообщество, интересы, город, онлайн). У каждого своё «Скрыть»: скрытое не возвращается (сервер, `feedHide` kind `event`), тост даёт «Вернуть».'}}},
+ parameters:{docs:{description:{story:'Ближайшие события, которые касаются смотрящего (ответил, подписан на организатора, сообщество, интересы, город, онлайн). У каждой плитки свой ⋯ в правом верхнем углу (как у публикации; 36 px, нажимается на 44 px): он открывает меню «Открыть событие» / «Скрыть событие» (экран — `Sheet` с `Row`). Скрытое не возвращается (сервер, `feedHide` kind `event`), тост даёт «Вернуть».'}}},
  args:{title:'Скоро',items:[
-  {key:'1',tile:<EventTile row cover={evCover('a')} day="30" month="окт" place="Онлайн" time="19:00" title="Разговор о границах" org="Ты идёшь" onClick={fn()}/>,hide:'Скрыть',hideLabel:'Скрыть: Разговор о границах',onHide:fn()},
-  {key:'2',tile:<EventTile row cover={evCover('b')} day="2" month="нояб" place="Кройцберг" time="20:00" title="Вечер знакомств" org="Из твоего сообщества" onClick={fn()}/>,hide:'Скрыть',hideLabel:'Скрыть: Вечер знакомств',onHide:fn()}]},
+  {key:'1',tile:<EventTile row cover={evCover('a')} day="30" month="окт" place="Онлайн" time="19:00" title="Разговор о границах" org="Ты идёшь" onClick={fn()}/>,menuLabel:'Действия с событием «Разговор о границах»',onMenu:fn()},
+  {key:'2',tile:<EventTile row cover={evCover('b')} day="2" month="нояб" place="Кройцберг" time="20:00" title="Вечер знакомств" org="Из твоего сообщества" onClick={fn()}/>,menuLabel:'Действия с событием «Вечер знакомств»',onMenu:fn()},
+  {key:'3',tile:<EventTile row cover={evCover('c')} day="14" month="нояб" place="Нойкёльн" time="18:30" title="Мастерская по верёвке для начинающих и тех, кто давно не практиковал" org="По твоим интересам" onClick={fn()}/>,menuLabel:'Действия с событием «Мастерская по верёвке для начинающих…»',onMenu:fn()}]},
  argTypes:{items:{control:false}}};

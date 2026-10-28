@@ -2,8 +2,11 @@
  * links), and the interest comparison sheet (compare.tsx). Wording stays gender-neutral. */
 export const ru = {
   'fe.soon.title': 'Скоро',
-  'fe.soon.hide': 'Скрыть',
-  'fe.soon.hideOne': 'Скрыть событие «{title}»',
+  'fe.soon.menu': 'Действия с событием «{title}»',
+  'fe.soon.open': 'Открыть событие',
+  'fe.soon.hide': 'Скрыть событие',
+  'fe.soon.hideSub': 'Больше не появится в «Скоро»',
+  'fe.soon.hideSubUs': 'Больше не появится в «Скоро» у пары',
   'fe.soon.hidden': 'Событие скрыто',
   'fe.soon.hiddenUs': 'Событие скрыто для пары',
   'fe.soon.why.mine': 'Есть в твоих событиях',
@@ -46,8 +49,11 @@ export const ru = {
 
 export const en: typeof ru = {
   'fe.soon.title': 'Coming up',
-  'fe.soon.hide': 'Hide',
-  'fe.soon.hideOne': 'Hide the event “{title}”',
+  'fe.soon.menu': 'Actions for the event “{title}”',
+  'fe.soon.open': 'Open the event',
+  'fe.soon.hide': 'Hide the event',
+  'fe.soon.hideSub': 'It won’t show up in “Coming up” again',
+  'fe.soon.hideSubUs': 'It won’t show up in the couple’s “Coming up” again',
   'fe.soon.hidden': 'Event hidden',
   'fe.soon.hiddenUs': 'Event hidden for the couple',
   'fe.soon.why.mine': 'In your events',

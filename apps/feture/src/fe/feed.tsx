@@ -105,8 +105,15 @@ function useSoon(){
 function SoonBlock({s}:{s:ReturnType<typeof useSoon>}){
  const {t}=useI18n();const {acting}=useFe();const us=acting?.kind==='couple';
  const why=(w:string)=>{const k='fe.soon.why.'+w+(us&&(w==='mine'||w==='follow'||w==='community'||w==='interests'||w==='city')?'Us':'');const v=t(k);return v===k?undefined:v;};
- return <FeedEvents title={t('fe.soon.title')} items={s.items.map(e=>({key:e.id,tile:<EventCard e={e} row org={why(e.why)}/>,hide:t('fe.soon.hide'),
-  hideLabel:t('fe.soon.hideOne',{title:e.title}),onHide:()=>void s.hide(e)}))}/>;
+ const navigate=useNavigate();const [menu,setMenu]=useState<SoonEv|null>(null);
+ return <>
+  <FeedEvents title={t('fe.soon.title')} items={s.items.map(e=>({key:e.id,tile:<EventCard e={e} row org={why(e.why)}/>,
+   menuLabel:t('fe.soon.menu',{title:e.title}),open:menu?.id===e.id,onMenu:()=>setMenu(e)}))}/>
+  {menu&&<Sheet title={menu.title} onClose={()=>setMenu(null)}><Card list>
+   <Row noChev icon={Calendar} title={t('fe.soon.open')} onClick={()=>{const id=menu.id;setMenu(null);navigate('/n/events/'+id);}}/>
+   <Row noChev icon={EyeOff} title={t('fe.soon.hide')} sub={t(us?'fe.soon.hideSubUs':'fe.soon.hideSub')} onClick={()=>{const e=menu;setMenu(null);void s.hide(e);}}/>
+  </Card></Sheet>}
+ </>;
 }
 
 export function FeedTab(){
