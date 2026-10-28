@@ -56,31 +56,13 @@ export function MineLayer(){
  </>;
 }
 
-/** The screens behind the «Моё» rows: F10 posts, E10 events, G04 saved, P07 «Мне открыли». */
-export function MinePartScreen({part}:{part:'posts'|'events'|'saved'|'shared'}){
+/** The screens behind the «Моё» rows: F10 posts, E10 events, G04 saved («Мне открыли» is the access centre, access.tsx). */
+export function MinePartScreen({part}:{part:'posts'|'events'|'saved'}){
  const {acting}=useFe();const {t}=useI18n();const cp=acting?.kind==='couple';
- const title=part==='posts'?(cp?t('fe.mx.mine.postsUs'):t('fe.mx.mine.posts')):part==='events'?(cp?t('fe.mx.mine.eventsUs'):t('fe.mx.mine.events')):part==='saved'?t('fe.mx.mine.saved'):(cp?t('fe.mx.mine.sharedUs'):t('fe.mx.mine.shared'));
+ const title=part==='posts'?(cp?t('fe.mx.mine.postsUs'):t('fe.mx.mine.posts')):part==='events'?(cp?t('fe.mx.mine.eventsUs'):t('fe.mx.mine.events')):t('fe.mx.mine.saved');
  return <>
   <Bar title={title} back/>
-  <View className="nodock">{part==='posts'?<MyPosts/>:part==='events'?<MyEvents/>:part==='saved'?<Saved/>:<Shared/>}</View>
- </>;
-}
-
-function Shared(){
- const {call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();
- const {data,error,load}=useLoad(useCallback(()=>Promise.all([call('access.lists',{tab:'withme'},withMe),call('access.lists',{tab:'out'},outReqs)]),[call]));
- if(error)return <Failed error={error} retry={load}/>;
- if(!data)return <Skel kind="list"/>;
- const [a,b]=data;const pending=b.items.filter(x=>x.state==='pending');
- const date=(u:string|null)=>u?t('fe.priv.until').replace('{date}',new Date(u).toLocaleDateString(locale==='en'?'en':'ru',{day:'numeric',month:'short'})):t('fe.priv.noTerm');
- if(!a.items.length&&!pending.length)return <Empty icon={LockOpen} title={t('fe.mx.mine.sharedEmpty')} text={t('fe.mx.mine.sharedEmptyText')}/>;
- return <>
-  {a.items.length>0&&<Group title={<>{t('fe.mx.mine.sharedOpen')} · {a.items.length}</>}><Card list>
-   {a.items.map((g,i)=><Row key={i} onClick={()=>g.profile&&navigate('/n/people/'+g.profile.id)} av={<Av name={nameOf(g.profile)} seed={g.profile?.id??String(i)} size="sm" src={g.profile?.avatar}/>}
-    title={<>{nameOf(g.profile)}<NameBadges p={g.profile}/></>} sub={<>{g.scopes.map(s=>t('fe.priv.scope.'+s)).join(', ')} · {date(g.until)}</>}/>)}</Card></Group>}
-  {pending.length>0&&<Group title={<>{t('fe.mx.mine.sharedPending')} · {pending.length}</>}><Card list>
-   {pending.map(r=><Row key={r.id} onClick={()=>r.profile&&navigate('/n/people/'+r.profile.id)} av={<Av name={nameOf(r.profile)} seed={r.profile?.id??r.id} size="sm" src={r.profile?.avatar}/>}
-    title={<>{nameOf(r.profile)}<NameBadges p={r.profile}/></>} sub={<>{r.scopes.map(s=>t('fe.priv.scope.'+s)).join(', ')} · {t('fe.mx.mine.awaiting')}</>}/>)}</Card></Group>}
+  <View className="nodock">{part==='posts'?<MyPosts/>:part==='events'?<MyEvents/>:<Saved/>}</View>
  </>;
 }
 

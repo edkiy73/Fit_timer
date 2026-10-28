@@ -1,7 +1,7 @@
 import type {Meta,StoryObj} from '@storybook/react-vite';
 import {fn} from 'storybook/test';
 import {Camera,Eye,Hand,Image as ImageIcon,Plus,Trash2,Users,X} from 'lucide-react';
-import {AlbumCard,AlbumMeta,AlbumRow,Card,GalleryAdd,GalleryGrid,GalleryTile,KeyValues,SelectionBar,Note,PhotoAdd,PhotoSlot,PhotoSlots,PhotoTrack,Pose,ReviewCard,ReviewMedia,ReviewPair,VaultHead} from './index';
+import {AlbumCard,AlbumMeta,AlbumRow,Card,GalleryAdd,GalleryGrid,GalleryTile,KeyValues,Note,PhotoAdd,PhotoSlot,PhotoSlots,PhotoTrack,Pose,Quota,ReviewCard,ReviewMedia,ReviewPair,SelectionBar,VaultHead} from './index';
 
 // A tiny inline picture so the stories need no network.
 const PIC='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 5"><defs><linearGradient id="g" x2="1" y2="1"><stop offset="0" stop-color="#7A1236"/><stop offset="1" stop-color="#FF9F7A"/></linearGradient></defs><rect width="4" height="5" fill="url(#g)"/></svg>');
@@ -26,6 +26,10 @@ export const Жест:StoryObj<typeof Pose>={name:'Жест для селфи',r
 export const ЖестЗагрузка:StoryObj<typeof Pose>={name:'Жест: загрузка',render:a=><Pose {...a}/>,args:{icon:Camera,label:'Покажи жест'}};
 
 export const Лента:StoryObj<typeof PhotoTrack>={name:'Лента полноэкранного просмотра',render:a=><div className="viewer on k-demo-viewer"><PhotoTrack {...a}/></div>,args:{srcs:[PIC,PIC,PIC],index:1}};
+
+export const ЛентаСоЗнаком:StoryObj<typeof PhotoTrack>={name:'Чужое приватное фото: водяной знак с ником смотрящего',render:a=><div className="viewer on k-demo-viewer"><PhotoTrack {...a}/></div>,args:{srcs:[PIC],index:0,wm:'@mia_29'}};
+export const Квота:StoryObj<typeof Quota>={name:'Запросы на сегодня (Quota)',render:a=><Quota {...a}/>,args:{left:7,max:10,label:'Осталось запросов сегодня: 7 из 10'}};
+export const КвотаПусто:StoryObj<typeof Quota>={name:'Запросы на сегодня: закончились',render:a=><Quota {...a}/>,args:{left:0,max:10,label:'Осталось запросов сегодня: 0 из 10'}};
 
 export const Приватное:StoryObj<typeof VaultHead>={name:'Шапка приватного слоя',render:a=><section className="vault"><VaultHead {...a}/></section>,args:{title:'Приватное',label:'Приватное',on:true,onToggle:fn()}};
 export const ПриватноеВКарточке:StoryObj<typeof VaultHead>={name:'Шапка приватного слоя в карточке',render:a=><Card className="vault"><VaultHead {...a}/></Card>,args:{title:'Текст · 3 фото',inCard:true}};
