@@ -1,6 +1,7 @@
 // @ts-check
 import { ACTIVITY_KINDS, postFields, postsCommands } from '../../contracts/posts.mjs';
 import { likePattern, writeCursor } from '../search.mjs';
+import { acceptsMention, popularScore } from '../sql-rules.mjs';
 import { fail, isUniqueViolation } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
@@ -118,10 +119,7 @@ async function writeMentions(q, sourceType, sourceId, text, authorProfileId) {
   await q.query(`delete from feture.mention where source_type = $1 and source_id = $2 and not notified`, [sourceType, sourceId]);
   if (!handles.length) return [];
   const rows = await q.query(
-    `select p.id from feture.profile p join feture.profile_settings s on s.profile_id = p.id
-     where lower(p.handle) = any($1) and p.kind = 'person' and p.state = 'active' and p.id <> $2
-       and not feture.blocked($2, p.id)
-       and (s.mentions_from = 'all' or (s.mentions_from = 'follow' and exists (select 1 from feture.follow f where f.follower_profile_id = p.id and f.target_profile_id = $2)))`,
+    `select p.id from feture.profile p where lower(p.handle) = any($1) and ${acceptsMention('p', '$2')}`,
     [handles, authorProfileId]);
   for (const r of rows) {
     await q.query(`insert into feture.mention (source_type, source_id, profile_id) values ($1, $2, $3) on conflict do nothing`, [sourceType, sourceId, r.id]);
@@ -229,6 +227,21 @@ export async function applyEdit(q, postId, actor, f, oldMedia) {
   await announce(q, postId);
   await dropHiddenPostPhotos(q, actor.profileId); // a narrowed post takes its photos off the profile
   return { state: p.state, rev: p.rev };
+}
+
+/** Owner rule, 28.10.2026: a change of who sees a post never lets an unreviewed version out. Paths that change a post
+ * outside doEdit (moving it into an album, narrowing it to followers) bump its rev; an open revision (a wider audience
+ * or new photos waiting for staff) is then carried over to the new version instead of turning stale — it stays in the
+ * review queue, follows the post's album, and is narrowed with it when the album is for followers. Nothing becomes
+ * visible here: the live post keeps its own (narrower) audience until staff approve. @param {Q} q @param {string[]} postIds */
+export async function rebaseRevisions(q, postIds) {
+  if (!postIds.length) return;
+  await q.query(
+    `update feture.post_revision r set base_rev = p.rev,
+       payload = (case when p.album_id is null then r.payload - 'albumId' else jsonb_set(r.payload, '{albumId}', to_jsonb(p.album_id::text)) end)
+         || (case when al.vis = 'followers' and r.payload->>'audience' = 'all' then '{"audience": "followers"}'::jsonb else '{}'::jsonb end)
+     from feture.post p left join feture.album al on al.id = p.album_id
+     where r.post_id = p.id and p.id = any($1::uuid[]) and r.state = 'review'`, [postIds]);
 }
 
 /** A live post as the editor's fields (postFields), to change one thing through the usual edit path.
@@ -593,8 +606,8 @@ const run = {
               or exists (select 1 from feture.follow f where f.follower_profile_id = $1 and f.target_profile_id = p.owner_profile_id)
               or (p.type = 'note' and exists (select 1 from feture.note_subscription n where n.subscriber_profile_id = $1 and n.author_profile_id = p.owner_profile_id)))
          and ($5::timestamptz is null or (p.published_at, p.id) < ($5::timestamptz, $6::uuid))
-         and ($4 <> 'popular' or p.published_at > now() - interval '14 days')
-       order by case when $4 = 'popular' then (select count(*) from feture.reaction r where r.target_type = 'post' and r.target_id = p.id) end desc nulls last,
+         and ($4 <> 'popular' or p.published_at > now() - interval '7 days')
+       order by case when $4 = 'popular' then ${popularScore('p', '$1')} end desc nulls last,
                 p.published_at desc, p.id desc limit $7`,
       [viewer.profileId, viewer.accountId, input.topics?.length ? input.topics : null, input.tab, popular ? null : cur?.at ?? null, popular ? null : cur?.id ?? null, input.limit + 1,
        // Search (I01): words in the title or text; % and _ typed by the person are literal.
@@ -607,7 +620,7 @@ const run = {
       // Posts are built side by side: the pool gate caps database concurrency, media URL signing overlaps.
       const items = await postDtos(q, page.map(p => ({ ...p, own: p.owner_profile_id === viewer.profileId })), viewer, cfg.media, !!acc.show_explicit);
       const last = page[page.length - 1];
-      // «Популярное» (V21 F01) is one page of the last two weeks by likes; the keyset cursor follows time, so no next page.
+      // «Популярное» (V21 F01) is one page of the last 7 days by popularScore; the keyset cursor follows time, so no next page.
       return { items, next: !popular && rows.length > input.limit ? writeCursor(last.published_at, last.id) : null };
     }
     const bursts = actKinds.length ? await activityBursts(q, viewer, actKinds, cur, input.limit + 1) : [];

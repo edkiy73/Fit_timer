@@ -5,7 +5,7 @@ import { enqueue } from '../outbox.mjs';
 import { needsPartner, requestApproval } from '../approvals.mjs';
 import { mediaDto } from '../media/assets.mjs';
 import { otherProfile } from './access.mjs';
-import { deletePost, doEdit, postFieldsOf, readCursor } from './posts.mjs';
+import { deletePost, doEdit, postFieldsOf, readCursor, rebaseRevisions } from './posts.mjs';
 import { currentPhotos, dropHiddenPostPhotos, setProfilePhotos } from './photos.mjs';
 
 /** Wave 5 «Галерея и альбомы» (V21 galAlbum*, galSel*, postAlbum*, setAlbum, phToggle).
@@ -130,6 +130,7 @@ async function narrowPosts(q, acting, postIds) {
   await q.query(
     `update feture.post_revision set payload = jsonb_set(payload, '{audience}', '"followers"')
      where post_id = any($1::uuid[]) and state = 'review' and payload->>'audience' = 'all'`, [postIds]);
+  await rebaseRevisions(q, rows.map(r => r.id)); // still waiting for staff, now on the narrowed version
   await dropHiddenPostPhotos(q, acting.profileId);
   return rows.length;
 }
@@ -144,6 +145,7 @@ async function moveToAlbum(q, acting, posts, albumId, confirm) {
   const ids = posts.map(p => p.id);
   await q.query('update feture.post set album_id = $2, rev = rev + 1, updated_at = now() where id = any($1::uuid[])', [ids, albumId]);
   const narrowed = await narrowPosts(q, acting, widerThanAlbum);
+  await rebaseRevisions(q, ids); // a pending wider audience follows the post into its album (and its audience)
   return { albumId, moved: ids.length, narrowed };
 }
 

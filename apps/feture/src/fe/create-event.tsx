@@ -1,5 +1,5 @@
 import {useEffect,useRef,useState,type ReactNode} from 'react';
-import {useNavigate,useParams} from 'react-router';
+import {useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Calendar,Check,ChevronLeft,CircleAlert,Clock,EyeOff,Link as LinkIcon,Lock,MapPin,RefreshCw,Ticket,Unlock,Video} from 'lucide-react';
@@ -135,7 +135,48 @@ function fromEvent(e:Loaded):Form{
   currency:CURRENCIES.find(([,c])=>c===p.currency)?.[0]??'€',ticketUrl:p.ticketUrl??'',requirements:e.requirements??''};
 }
 
-export function CreateEventScreen(){return <EventEditor/>;}
+/** A saved draft as the editor's form: the form as typed (draftOf), or an event's fields for a draft made from a
+ * withdrawn event (server formOf: instants, a price object, questions). Unknown or wrong-typed keys keep the defaults. */
+function fromDraft(raw:Record<string,unknown>,cover:{id:string,src?:Record<string,string>|null|undefined}|null):Form{
+ const base=fresh();const f:Form={...base};
+ const str=(k:Key)=>{const v=raw[k];if(typeof v==='string')(f as Record<Key,unknown>)[k]=v;};
+ (['title','description','communityId','date','date2','t1','t2','tz','placeId','area','exactAddress','joinUrl','question','amount','currency','ticketUrl','requirements'] as Key[]).forEach(str);
+ if(KINDS.includes(raw.kind as Kind))f.kind=raw.kind as Kind;
+ if(raw.format==='online'||raw.format==='offline')f.format=raw.format;
+ if(typeof raw.requiresApplication==='boolean')f.requiresApplication=raw.requiresApplication;
+ const plate=PLATE_KEYS.find(k=>k===raw.plate);if(plate)f.plate=plate;
+ if(raw.price==='free'||raw.price==='door'||raw.price==='ext')f.price=raw.price;
+ // A withdrawn event's draft: times as instants in its zone, the price as an object, the first question.
+ if(typeof raw.date!=='string'&&typeof raw.startsAt==='string'&&typeof raw.endsAt==='string'){
+  const s0=wall(raw.startsAt,f.tz),e0=wall(raw.endsAt,f.tz);f.date=s0.date;f.t1=s0.time;f.t2=e0.time;f.date2=e0.date!==s0.date?e0.date:'';}
+ const pr=raw.price as {kind?:unknown,amount?:unknown,currency?:unknown,ticketUrl?:unknown}|null|undefined;
+ if(pr&&typeof pr==='object'){f.price=pr.kind==='door'?'door':pr.kind==='external'?'ext':'free';
+  if(typeof pr.amount==='number')f.amount=String(pr.amount);
+  const cur=CURRENCIES.find(([,c])=>c===pr.currency);if(cur)f.currency=cur[0];
+  if(typeof pr.ticketUrl==='string')f.ticketUrl=pr.ticketUrl;}
+ if(Array.isArray(raw.questions)&&typeof raw.questions[0]==='string')f.question=raw.questions[0];
+ for(const k of ['placeId','area','exactAddress','joinUrl','requirements','communityId'] as Key[])if(raw[k]===null)(f as Record<Key,unknown>)[k]='';
+ const src=cover?.src;f.cover=cover?{id:cover.id,preview:src?.card??src?.full??src?.thumb??''}:null;
+ return f;
+}
+const draftRes=z.object({ok:z.literal(true),draft:z.object({id:z.uuid(),form:z.record(z.string(),z.unknown()),step:z.number().nullable().optional(),
+ cover:z.object({id:z.uuid(),src:z.record(z.string(),z.string()).nullable().optional()}).passthrough().nullable().optional()}).passthrough()});
+type Resume={id:string,form:Form,step:number};
+
+/** E11 «Новое событие»; with `?draft=` — «Продолжить» a saved draft at the step it was left on (event.draftGet). */
+export function CreateEventScreen(){
+ const [params]=useSearchParams();const draft=params.get('draft');const {call}=useFe();const {t}=useI18n();
+ const [resume,setResume]=useState<Resume|null>(null);const [error,setError]=useState<unknown>(null);
+ useEffect(()=>{if(!draft)return;setResume(null);setError(null);
+  call('event.draftGet',{draftId:draft},draftRes).then(r=>setResume({id:r.draft.id,form:fromDraft(r.draft.form,r.draft.cover??null),step:Math.min(4,Math.max(1,r.draft.step??1))})).catch(setError);},[call,draft]);
+ if(!draft)return <EventEditor/>;
+ if(resume)return <EventEditor key={resume.id} resume={resume}/>;
+ return <>
+  <Bar title={t('fe.ce.titleDraft')} back small/>
+  <View className="nodock">{error?<Empty icon={CircleAlert} role="alert" title={t('fe.error.title')} text={error instanceof FeError&&error.code==='not_found'?t('fe.lo.ev.draftGone'):feErrorMessage(error,t)}/>
+   :<Skel kind="list"/>}</View>
+ </>;
+}
 
 /** E11 in edit mode (prototype `evEdit` → E11 with `edit`): the same four steps without drafts, saved with `event.update`. */
 export function EditEventScreen(){
@@ -158,11 +199,11 @@ export function EditEventScreen(){
  </>;
 }
 
-function EventEditor({edit,reload}:{edit?:Edit,reload?:()=>void}){
+function EventEditor({edit,reload,resume}:{edit?:Edit,reload?:()=>void,resume?:Resume}){
  const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const catalog=useCatalog();
  const draftOp=useOp(),submitOp=useOp(),deleteOp=useOp(),updateOp=useOp();
- const [f,setF]=useState<Form>(()=>edit?.form??fresh());const [stale,setStale]=useState(false);const [step,setStep]=useState(1);const [cityOpen,setCityOpen]=useState(false);const [err,setErr]=useState<Errors>({});
- const [draftId,setDraftId]=useState<string|null>(null);const [busy,setBusy]=useState(false);
+ const [f,setF]=useState<Form>(()=>edit?.form??resume?.form??fresh());const [stale,setStale]=useState(false);const [step,setStep]=useState(resume?.step??1);const [cityOpen,setCityOpen]=useState(false);const [err,setErr]=useState<Errors>({});
+ const [draftId,setDraftId]=useState<string|null>(resume?.id??null);const [busy,setBusy]=useState(false);
  const [notice,setNotice]=useState<{kind:'ok'|'warn'|'err',text:string}|null>(null);const [pv,setPv]=useState<'all'|'ok'>('all');const [asking,setAsking]=useState(false);
  const [hosting,setHosting]=useState<{id:string,name:string}[]>([]);
  const couple=acting?.kind==='couple';

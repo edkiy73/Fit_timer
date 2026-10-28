@@ -11,6 +11,7 @@ import {SignedOut} from './start';
 import {ToastProvider,useToast} from './toast';
 import {PushOffer} from './push';
 import {ActAsSheet} from './couple';
+import {DockHide} from './dock';
 import './kit/base.css';
 import './kit/tokens.css';
 import './kit/kit.css';
@@ -123,8 +124,11 @@ function FeLayout(){
  // V21 dockMe: with an active couple «Я» opens «Действовать как» (the person and the couple, what waits on each).
  const pair=state.status==='ready'&&state.boot.profiles.some(p=>p.kind==='couple'&&p.state==='active');const [actAs,setActAs]=useState(false);
  const current=pathname.split('/')[2]||'feed';
- // V21 keeps the phone dock on every screen (chats, profiles, editors too); only moderation hides it (SC.M01 dock:false).
- const nodock=current==='staff';
+ // V21 keeps the phone dock on every screen (chats, profiles, editors too); only moderation hides it (SC.M01 dock:false),
+ // and a screen while one of its modes asks for it (useHideDock: the gallery's selection mode).
+ const [hiders,setHiders]=useState(0);
+ const hideDock=useCallback((on:boolean)=>setHiders(n=>Math.max(0,n+(on?1:-1))),[]);
+ const nodock=current==='staff'||hiders>0;
  const badge=useTabBadges();
  useNewVersion(pathname);
  const em=(n:number|'dot'|0)=>n==='dot'?<em className="dot"/>:n?<em>{n>99?'99+':n}</em>:null;
@@ -148,7 +152,7 @@ function FeLayout(){
    </button>}
   </aside>
   <main ref={main} className={(nodock?'main':'main has-dock')+(sbar?'':' hasbar')+(cta?' hascta':'')}>
-   <ToastProvider nodock={nodock}>
+   <DockHide.Provider value={hideDock}><ToastProvider nodock={nodock}>
    <Hello/>
    <PushOffer/>
    <Outlet/>
@@ -159,7 +163,7 @@ function FeLayout(){
     </button>)}
    </nav>}
    {actAs&&<ActAsSheet onClose={()=>setActAs(false)}/>}
-   </ToastProvider>
+   </ToastProvider></DockHide.Provider>
   </main>
  </div></div>;
 }

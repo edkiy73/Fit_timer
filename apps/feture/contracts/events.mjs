@@ -55,6 +55,9 @@ export const eventsCommands = {
     }),
   },
   'event.draftDelete': { profile: true, write: true, input: z.strictObject({ opId, draftId: id }) },
+  // «Продолжить» a draft: the form as saved, the step it was left on, the cover (own drafts only; a couple's drafts
+  // are the couple's — either partner continues them).
+  'event.draftGet': { profile: true, write: false, input: z.strictObject({ draftId: id }) },
   'event.submit': {
     profile: true, write: true, rate: { kind: 'event.submit', max: 10, window: '1 day' },
     input: z.strictObject({ opId, draftId: id.optional(), event: eventFields }),
