@@ -17,6 +17,7 @@ export const ru = {
   'fe.kit.fmt.photo': 'Фото в текст',
   'fe.kit.fmt.photoRm': 'Убрать фото из текста',
   'fe.kit.fmt.insert': 'Вставить',
+  'fe.kit.act.article': 'Статья',
   'fe.kit.act.poll': 'Опрос',
   'fe.kit.act.interests': 'Интересы',
 } as const;
@@ -39,6 +40,7 @@ export const en = {
   'fe.kit.fmt.photo': 'Photo in the text',
   'fe.kit.fmt.photoRm': 'Remove the photo from the text',
   'fe.kit.fmt.insert': 'Insert',
+  'fe.kit.act.article': 'Article',
   'fe.kit.act.poll': 'Poll',
   'fe.kit.act.interests': 'Interests',
 } as const;

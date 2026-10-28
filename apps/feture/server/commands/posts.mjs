@@ -432,7 +432,7 @@ async function activityDtos(q, viewer, media, bursts) {
   const ids = (/** @type {string} */ typ) => [...new Set(bursts.filter(b => b.typ === typ).flatMap(b => b.targets))];
   const [posts, events, groups, people] = await Promise.all([
     ids('likes').length ? q.query(
-      `select x.id, x.title, left(x.body, 140) excerpt, x.audience, x.owner_profile_id,
+      `select x.id, x.title, left(x.body, 140) excerpt, x.type = 'note' article, x.audience, x.owner_profile_id,
               json_build_object('id', o.id, 'kind', o.kind, 'handle', o.handle, 'name', o.name) author,
               exists (select 1 from feture.poll pl where pl.post_id = x.id) poll, jsonb_array_length(x.interests) > 0 interests,
               (select count(*)::int from feture.media_attachment a join feture.media_asset m on m.id = a.asset_id

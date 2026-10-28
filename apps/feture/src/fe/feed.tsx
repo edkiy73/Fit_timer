@@ -2,7 +2,7 @@ import {useCallback,useEffect,useMemo,useRef,useState,type ReactNode} from 'reac
 import {useLocation,useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {ArrowUpDown,AtSign,Bell,BellOff,Bookmark,Check,Calendar,ChartColumn,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,FileText,Globe,Heart,Image as ImageIcon,KeyRound,Lock,MessageCircle,Newspaper,Pencil,Plus,Search,SendHorizontal,Share,SlidersHorizontal,Sparkles,Trash2,User,Users,X} from 'lucide-react';
+import {ArrowUpDown,AtSign,Bell,BellOff,Bookmark,Check,Calendar,ChartColumn,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,FileText,Globe,Heart,Image as ImageIcon,KeyRound,Lock,MessageCircle,MessageSquareText,Newspaper,Pencil,Plus,Search,SendHorizontal,Share,SlidersHorizontal,Sparkles,Trash2,User,Users,X} from 'lucide-react';
 import type {LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicOrigin} from '../api-url';
@@ -104,7 +104,8 @@ function useSoon(){
 }
 function SoonBlock({s}:{s:ReturnType<typeof useSoon>}){
  const {t}=useI18n();const {acting}=useFe();const us=acting?.kind==='couple';
- const why=(w:string)=>{const k='fe.soon.why.'+w+(us&&(w==='mine'||w==='follow'||w==='community'||w==='interests'||w==='city')?'Us':'');const v=t(k);return v===k?undefined:v;};
+ // «Онлайн» is already in the tile's place line, so that reason adds nothing under it.
+ const why=(w:string)=>{if(w==='online')return undefined;const k='fe.soon.why.'+w+(us&&(w==='mine'||w==='follow'||w==='community'||w==='interests'||w==='city')?'Us':'');const v=t(k);return v===k?undefined:v;};
  const navigate=useNavigate();const [menu,setMenu]=useState<SoonEv|null>(null);
  return <>
   <FeedEvents title={t('fe.soon.title')} items={s.items.map(e=>({key:e.id,tile:<EventCard e={e} row org={why(e.why)}/>,
@@ -276,7 +277,7 @@ function PopInfoSheet({onClose}:{onClose:()=>void}){
 /** `ACT.create` — what to create: a post, an article or an event; or straight to photos, a poll, my interests. */
 export function CreateSheet({onClose}:{onClose:()=>void}){
  const {t}=useI18n();const navigate=useNavigate();
- const rows:[LucideIcon,string,string,string,string][]=[[Pencil,'l',t('fe.fd.cr.post'),t('fe.fd.cr.postSub'),'/n/feed/new'],[FileText,'v',t('fe.fd.cr.note'),t('fe.fd.cr.noteSub'),'/n/feed/new?x=note'],[Calendar,'g',t('fe.fd.cr.event'),t('fe.fd.cr.eventSub'),'/n/events/new']];
+ const rows:[LucideIcon,string,string,string,string][]=[[MessageSquareText,'l',t('fe.fd.cr.post'),t('fe.fd.cr.postSub'),'/n/feed/new'],[FileText,'v',t('fe.fd.cr.note'),t('fe.fd.cr.noteSub'),'/n/feed/new?x=note'],[Calendar,'g',t('fe.fd.cr.event'),t('fe.fd.cr.eventSub'),'/n/events/new']];
  const go=(to:string)=>()=>{onClose();navigate(to);};
  return <Sheet title={t('fe.create')} onClose={onClose}>
   <Card list>{rows.map(([I,tone,b,s,to])=><Row key={to} icon={I} tone={tone} title={b} sub={s} onClick={go(to)}/>)}</Card>
