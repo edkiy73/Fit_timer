@@ -1,7 +1,7 @@
 {
   "appId": "ru.feture.app",
   "appName": "FetUre",
-  "webDir": "dist",
+  "webDir": "dist-native",
   "backgroundColor": "#241628",
   "android": {
     "backgroundColor": "#241628",

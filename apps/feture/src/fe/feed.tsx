@@ -5,6 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {ArrowUpDown,AtSign,Bell,BellOff,Bookmark,Check,Calendar,ChartColumn,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,FileText,Globe,Heart,Image as ImageIcon,KeyRound,Lock,MessageCircle,Newspaper,Pencil,Plus,Search,SendHorizontal,Share,SlidersHorizontal,Sparkles,Trash2,User,Users,X} from 'lucide-react';
 import type {LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
+import {publicOrigin} from '../api-url';
 import {ActionLine,ActivityCard,ActivityItem,Alert,Ask,Av,Bar,Btn,Card,Chip,Chips,Counter,Empty,Field,FilePick,Group,H,IconBtn,Input,LikesLine,Note,QuickStart,RichArea,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,ToggleRow,View,type RichAreaHandle} from './kit';
 import {useFe} from './session';
 import {Uploader} from './kit/Uploader';
@@ -334,7 +335,7 @@ export function PostCard({post,onChange,onRemove,onExpired,full=false,onReply,pr
     toast(on?(acting?.kind==='couple'?t('fe.fd.savedUs'):t('fe.fd.savedMe')):t('fe.fd.unsaved'),on?{type:'ok',action:{label:t('fe.fd.open'),fn:()=>navigate('/n/me/saved')}}:{action:{label:t('fe.tl.undo'),fn:resave}});}
   }catch(e){onChange(post);toast(feErrorMessage(e,t),{type:'err'});}finally{setBusy(false);}
  };
- const share=async()=>{const url=`${location.origin}/#/n/feed/post/${post.id}`;try{await navigator.clipboard.writeText(url);toast(t('fe.fd.linkCopied'),{type:'ok'});}catch{toast(url,{type:'info'});}};
+ const share=async()=>{const url=`${publicOrigin()}/#/n/feed/post/${post.id}`;try{await navigator.clipboard.writeText(url);toast(t('fe.fd.linkCopied'),{type:'ok'});}catch{toast(url,{type:'info'});}};
  const open=()=>{if(!full&&!preview)navigate('/n/feed/post/'+post.id);};
  const mine=post.rev!=null;
  const me=post.tags?.find(x=>x.id===acting?.id);

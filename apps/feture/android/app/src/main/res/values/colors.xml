@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- backgroundColor in capacitor.config.json: window and splash behind the web app. -->
+    <color name="feture_background">#241628</color>
+    <!-- The square behind the mark in public/fe-logo.svg. -->
+    <color name="feture_icon_background">#1E1219</color>
+    <color name="feture_accent">#DF234A</color>
+</resources>

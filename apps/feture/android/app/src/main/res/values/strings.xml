@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">FetUre</string>
+    <string name="title_activity_main">FetUre</string>
+    <string name="package_name">ru.feture.app</string>
+    <string name="custom_url_scheme">ru.feture.app</string>
+</resources>

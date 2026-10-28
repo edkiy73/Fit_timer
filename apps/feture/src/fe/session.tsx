@@ -5,6 +5,7 @@ import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import {feRequest,FeError} from '../feture/fe-api';
 import {connectRealtime,type RtKind,type RtListener} from './realtime';
 import {forgetWebPush,noteAction} from './push-web';
+import {forgetNativePush} from './push-native';
 
 /** What `session.bootstrap` returns: the FetUre account and the profiles this account may act as. */
 const profileCard=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string(),state:z.string(),avatarAssetId:z.uuid().nullable(),avatar:z.string().nullable().optional()});
@@ -54,7 +55,7 @@ export function FeSessionProvider({children}:{children:ReactNode}){
  const [actingId,setActingId]=useState<string|null>(()=>{try{return sessionStorage.getItem(ACTING_KEY);}catch{return null;}});
  // Signed out after being signed in: this browser stops getting the account's pushes.
  const had=useRef(false);
- useEffect(()=>{if(auth.session)had.current=true;else if(!auth.loading&&had.current){had.current=false;void forgetWebPush();}},[auth.loading,auth.session]);
+ useEffect(()=>{if(auth.session)had.current=true;else if(!auth.loading&&had.current){had.current=false;void forgetWebPush();void forgetNativePush();}},[auth.loading,auth.session]);
  useEffect(()=>{
   if(auth.loading){setState({status:'loading'});return;}
   if(!auth.session){readCache.clear();try{for(const k of Object.keys(localStorage))if(k.startsWith(BOOT_KEY))localStorage.removeItem(k);}catch{/* no storage */}setState({status:'signedOut'});return;}

@@ -1,4 +1,4 @@
-/* V21 N02 web push: the one-time offer after the first useful action, the switch in K05 notification settings. */
+/* V21 N02 push (web push on the site, FCM in the app — `fe.push.app.*`): the one-time offer after the first useful action, the switch in K05 notification settings. */
 export const ru = {
  'fe.push.chatOffer': 'Не пропустить ответ? Можно включить уведомления',
  'fe.push.turnOn': 'Включить',
@@ -18,6 +18,11 @@ export const ru = {
  'fe.push.homeScreen': 'На iPhone и iPad уведомления приходят, если добавить FetUre на экран «Домой»: «Поделиться» → «На экран „Домой“», затем открыть оттуда.',
  'fe.push.unsupported': 'Этот браузер не умеет показывать уведомления сайтов.',
  'fe.push.offNote': 'Уведомления в браузер пока не настроены на сервере.',
+ 'fe.push.app.deniedToast': 'Телефон не разрешил уведомления. Включить можно в настройках телефона → Приложения → FetUre → Уведомления',
+ 'fe.push.app.switchOn': 'Приходят на этот телефон',
+ 'fe.push.app.switchOff': 'На этом телефоне выключены',
+ 'fe.push.app.switchDenied': 'Телефон запретил уведомления',
+ 'fe.push.app.denied': 'Уведомления для FetUre запрещены на телефоне. Открой настройки телефона → Приложения → FetUre → Уведомления → «Разрешить», затем включи переключатель снова.',
 };
 export const en = {
  'fe.push.chatOffer': 'Don’t miss a reply? You can turn on notifications',
@@ -38,4 +43,9 @@ export const en = {
  'fe.push.homeScreen': 'On iPhone and iPad notifications work once FetUre is on the Home Screen: “Share” → “Add to Home Screen”, then open it from there.',
  'fe.push.unsupported': 'This browser can’t show site notifications.',
  'fe.push.offNote': 'Browser notifications aren’t set up on the server yet.',
+ 'fe.push.app.deniedToast': 'Your phone didn’t allow notifications. You can allow them in phone Settings → Apps → FetUre → Notifications',
+ 'fe.push.app.switchOn': 'Coming to this phone',
+ 'fe.push.app.switchOff': 'Off on this phone',
+ 'fe.push.app.switchDenied': 'Blocked by the phone',
+ 'fe.push.app.denied': 'Notifications for FetUre are blocked on your phone. Open phone Settings → Apps → FetUre → Notifications → “Allow”, then turn the switch on again.',
 };
