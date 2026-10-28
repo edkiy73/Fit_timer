@@ -1,0 +1,129 @@
+name: FetUre — тестовый APK
+
+# ТЕСТОВАЯ сборка FetUre для Android: только ручной запуск (Actions → «FetUre — тестовый APK» → Run workflow).
+# Никогда не запускается на push — владелец: APK не собирается на каждый коммит (apps/feture/AGENTS.md §3).
+#
+# Что получается:
+# - GitHub Release «feture-apk-test-<дата>-<номер запуска>» (prerelease) с файлом FetUre-test-<версия>.apk —
+#   прямая ссылка для скачивания на телефон;
+# - тот же APK как artifact запуска.
+#
+# Подпись — ТОЛЬКО debug-ключ Android, который создаёт сам Gradle на раннере. Это не ключ для магазина и не
+# секреты KEYSTORE_* (FitTimer/UnMute) — они здесь не читаются. Debug-ключ хранится в кэше Actions, чтобы
+# следующая тестовая сборка ставилась поверх предыдущей; если кэш истёк (7 дней без запусков), ключ будет новым и
+# телефон попросит удалить старую тестовую версию перед установкой.
+# Приложение работает с боевым API https://feture-mvp.vercel.app (src/api-url.ts).
+on:
+  workflow_dispatch:
+    inputs:
+      notes:
+        description: "Что проверить в этой сборке (попадёт в описание релиза)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: feture-android-test
+  cancel-in-progress: false
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: apps/feture
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Версия сборки
+        run: |
+          echo "VERSION_CODE=$((100 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
+          echo "VERSION_NAME=0.1.${GITHUB_RUN_NUMBER}-test" >> "$GITHUB_ENV"
+          echo "TAG=feture-apk-test-$(date -u +%Y-%m-%d)-${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+
+      - name: Node.js 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/feture/package-lock.json
+
+      - name: Java 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Gradle 8.14.3
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '8.14.3'
+
+      - name: Тестовый debug-ключ (кэш, не секрет)
+        uses: actions/cache@v5
+        with:
+          path: ~/.android/debug.keystore
+          key: feture-android-debug-keystore
+
+      - name: Зависимости, сайт и Capacitor
+        run: |
+          npm ci --no-audit --no-fund
+          npm run mobile:sync
+
+      - name: Debug APK
+        run: gradle -p android :app:assembleDebug --no-daemon
+
+      - name: Проверить APK
+        run: |
+          APK=$(find android/app/build/outputs/apk/debug -name '*.apk' | head -1)
+          test -n "$APK"
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -Vr | head -1)
+          "$APKSIGNER" verify --print-certs "$APK" | grep -i "Android Debug"
+          AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt | sort -Vr | head -1)
+          "$AAPT" dump badging "$APK" | grep -E "^package:|^application-label:"
+          "$AAPT" dump badging "$APK" | grep -q "package: name='ru.feture.app'"
+          cp "$APK" "FetUre-test-${VERSION_NAME}.apk"
+          ls -la "FetUre-test-${VERSION_NAME}.apk"
+
+      - name: Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: FetUre-test-${{ env.VERSION_NAME }}
+          path: apps/feture/FetUre-test-${{ env.VERSION_NAME }}.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Релиз со ссылкой для скачивания
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NOTES: ${{ inputs.notes }}
+        run: |
+          {
+            echo "**ТЕСТОВАЯ сборка FetUre для Android — не для магазина.**"
+            echo
+            echo "Скачай на телефоне файл FetUre-test-${VERSION_NAME}.apk ниже и открой его. Android попросит разрешить установку из этого источника (браузера или «Файлов») — разреши."
+            echo "Если телефон пишет, что приложение не установлено или конфликтует, — удали прежнюю тестовую версию FetUre и поставь заново."
+            echo
+            echo "Работает с сайтом https://feture-mvp.vercel.app (те же аккаунты и данные). Вход — по коду из письма."
+            echo "Пока нет: уведомлений на телефон (нужен Firebase), открытия ссылок FetUre сразу в приложении."
+            echo
+            echo "Версия ${VERSION_NAME} (versionCode ${VERSION_CODE}), commit ${GITHUB_SHA}. Подпись: debug-ключ (тестовый)."
+            if [ -n "$NOTES" ]; then echo; echo "Что проверить: $NOTES"; fi
+          } > release-notes.md
+          gh release create "$TAG" "FetUre-test-${VERSION_NAME}.apk" \
+            --target "$GITHUB_SHA" \
+            --title "FetUre — тестовый APK ${VERSION_NAME}" \
+            --notes-file release-notes.md \
+            --prerelease \
+            --latest=false
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/FetUre-test-${VERSION_NAME}.apk"
+          {
+            echo "### FetUre — тестовый APK ${VERSION_NAME}"
+            echo
+            echo "Скачать: ${URL}"
+            echo
+            echo "Релиз: https://github.com/${GITHUB_REPOSITORY}/releases/tag/${TAG}"
+          } >> "$GITHUB_STEP_SUMMARY"

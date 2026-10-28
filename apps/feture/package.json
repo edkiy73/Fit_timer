@@ -16,6 +16,7 @@
     "test:unit": "vitest run",
     "test:browser": "npm run build && node tests/e2e.mjs",
     "check": "npm run check:kit && npm run check:server && npm run check:catalog && npm run typecheck && npm run test:smoke && npm run test:prototype && npm run test:unit && npm run test:security && npm run test:seed && npm run test:interests && npm run build",
+    "mobile:sync": "node scripts/mobile.mjs android",
     "mobile:prepare:android": "node scripts/mobile.mjs android",
     "mobile:prepare:ios": "node scripts/mobile.mjs ios",
     "test:security": "node --test tests/domain-security.js tests/verification-engine.js tests/diagnostics-privacy.js tests/admin-observability-isolation.js tests/private-metrics.js tests/operators-security.js",

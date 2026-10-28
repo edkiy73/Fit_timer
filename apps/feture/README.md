@@ -51,8 +51,9 @@ Vercel root: `apps/feture`; build `npm run build`; output `dist`.
 - Read `AGENTS.md` in this directory: mandatory website and Android/iOS coverage, lean testing.
 - Desktop ≥1100px: sidebar; tablet 768–1099px: horizontal tab bar; phone <768px: safe-area bottom dock. Same React code on all sizes.
 - `public/site.webmanifest` and `public/icon.svg`: installable web metadata. No service worker that could cache stale private data.
-- `capacitor.config.json` and `scripts/mobile.mjs`: Capacitor 8.5.2 shell setup in parity with UnMute. `npm run mobile:prepare:android` and `npm run mobile:prepare:ios` (macOS/Xcode) build the web bundle and sync native shells, but **do not compile/sign APK or IPA**.
-- Native API requests use `src/api-url.ts` so `capacitor://localhost` or `https://localhost` sends requests to `https://feture-mvp.vercel.app`; browsers keep same-origin requests. The mobile shell is not production-auth ready until its dedicated backend secrets are configured.
+- `capacitor.config.json`, `scripts/mobile.mjs`, `android/`: Capacitor 8.5.2 shell in parity with UnMute. `npm run mobile:sync` builds the website, copies the app part of `dist/` into `dist-native/` (the Capacitor `webDir`: no Storybook `/kit`, prototypes or web-push worker) and syncs `android/`. The Android project is checked in; its launcher icon and splash are vector drawables of `public/fe-logo.svg` (no raster assets), background `#241628` from `capacitor.config.json`. No Gradle wrapper is committed: CI uses Gradle 8.14.3 like UnMute. `npm run mobile:prepare:ios` (macOS/Xcode) prepares the iOS shell; no IPA is built.
+- **Test APK** (owner request 28.10.2026): GitHub Actions → «FetUre — тестовый APK» (`.github/workflows/feture-android.yml`), manual run only, never on push. It builds a debug-signed APK (Android debug key kept in the Actions cache, no release keys or `KEYSTORE_*` secrets) and publishes it as a prerelease `feture-apk-test-<date>-<run>` with a direct download link, plus a run artifact. Not a store build.
+- Native API requests use `src/api-url.ts` (`apiUrl`) so the app on `https://localhost` calls `https://feture-mvp.vercel.app`, whose CORS list (`config/product.json`) already allows the native origins; browsers keep same-origin requests. Links people copy in the app (`publicOrigin()` / `publicBase()`) point at the public website, not `localhost`. Web push stays web-only (`push-web.ts` skips Capacitor); native push needs Firebase and is not set up yet.
 - Do not introduce extra UI test suites during rapid iteration: typecheck, build and minimal existing checks; only new high-risk data/privacy/auth regressions warrant focused tests.
 
 ## MVP implementation handoff (2026-10-10)
@@ -65,7 +66,7 @@ F01 deployment discipline: `vercel.json` uses `scripts/vercel-ignore.mjs`; docum
 - Hash routes: `/#/explore`, `/#/explore/:categoryId`, `/#/community`, `/#/dating`. Search (`q`), interest editor (`interest`) and definitions (`hint`) are represented in the URL. Browser back restores the screen/scroll and closes the top URL overlay.
 - React Aria dialogs trap/restore focus and close on Escape/outside click. Shared typed primitives live in `src/feture/components/`; Motion tokens in `src/feture/motion.ts`, with reduced-motion support.
 - Account settings offer system/light/dark appearance; only the appearance preference is stored in localStorage. Interest records remain in the existing IndexedDB store.
-- `src/feture/native-navigation.tsx` adds a native back adapter and root exit confirmation. Real Android/iOS acceptance is pending O05; no signed binaries were built.
+- `src/feture/native-navigation.tsx` adds the Android Back adapter: it closes kit sheets/dialogs (Escape) and earlier dialogs, walks history, sends other `/n/*` screens to the feed and asks before closing on the feed. Real-device acceptance is pending O05; only a debug-signed test APK exists.
 - Nonfunctional social actions and fake like were removed. The remaining fixtures are read-only pre-launch content until server domains replace them.
 
 

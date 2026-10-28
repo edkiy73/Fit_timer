@@ -21,9 +21,15 @@ export function NativeNavigation(){
       if(overlay){
         if(location.state?.overlayKey===overlay)navigate(-1);
         else{query.delete(overlay);navigate({pathname:location.pathname,search:query.toString()},{replace:true});}
-      }else if(document.querySelector('[role="dialog"]')){
+      }else if(document.querySelector('[role="dialog"],[role="alertdialog"]')){
+        // Earlier screens close on this event; kit sheets and dialogs (src/fe/kit) close on Escape.
         window.dispatchEvent(new Event('feture:dismiss-overlay'));
+        document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
       }else if((window.history.state?.idx||0)>0)navigate(-1);
+      else if(location.pathname.startsWith('/n/')){
+        // The V21 app: any other screen goes to the feed, the feed asks before closing.
+        if(location.pathname!=='/n/feed')navigate('/n/feed',{replace:true});else setExitPrompt(true);
+      }
       else if(location.pathname!=='/'&&location.pathname!=='/world')navigate('/world',{replace:true});
       else setExitPrompt(true);
     });
@@ -31,5 +37,5 @@ export function NativeNavigation(){
     void registration.then(listener=>{if(removed)void listener.remove();else handle=listener;});
     return ()=>{removed=true;if(handle)void handle.remove();};
   },[]);
-  return exitPrompt?<AppDialog title="Закрыть FetUre?" onClose={()=>setExitPrompt(false)}><p className="ft-muted">Твои сохранённые отметки останутся на устройстве.</p><div className="ft-dialog-actions"><ActionButton onClick={()=>setExitPrompt(false)}>Остаться</ActionButton><button type="button" className="ft-textbtn" onClick={()=>void App.exitApp()}>Закрыть приложение</button></div></AppDialog>:null;
+  return exitPrompt?<AppDialog title="Закрыть FetUre?" onClose={()=>setExitPrompt(false)}><p className="ft-muted">Всё сохранено в твоём аккаунте.</p><div className="ft-dialog-actions"><ActionButton onClick={()=>setExitPrompt(false)}>Остаться</ActionButton><button type="button" className="ft-textbtn" onClick={()=>void App.exitApp()}>Закрыть приложение</button></div></AppDialog>:null;
 }
