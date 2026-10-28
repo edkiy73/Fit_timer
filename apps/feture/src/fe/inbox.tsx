@@ -152,7 +152,7 @@ export function InboxScreen(){
  const decisionCard=(d:Decision)=>{
   switch(d.kind){
    case 'pinv':return card(d,t('fe.ibx.k.pinv'),two(d,
-    {label:t('fe.ibx.accept'),fn:()=>void act(d.id+'y',async()=>{await call('couple.inviteAnswer',{opId:newOpId(),inviteId:d.id,accept:true},ok,{asAccount:true});reload();},t('fe.ibx.done'))},
+    {label:t('fe.ibx.accept'),fn:()=>void act(d.id+'y',async()=>{await call('couple.inviteAnswer',{opId:newOpId(),inviteId:d.id,accept:true},ok,{asAccount:true});reload();navigate('/n/me/pair?setup=1');},t('fe.ibx.done'))},
     {label:t('fe.ibx.decline'),fn:()=>void act(d.id+'n',()=>call('couple.inviteAnswer',{opId:newOpId(),inviteId:d.id,accept:false},ok,{asAccount:true}),t('fe.ibx.declined'))}));
    case 'req':return card(d,d.label==='couple'?t('fe.ibx.k.reqCouple'):t('fe.ibx.k.req'),two(d,
     {label:t('fe.ibx.review'),fn:()=>{asAddressee(d.addressee);navigate('/n/me?layer=priv');}},
@@ -172,7 +172,7 @@ export function InboxScreen(){
   }
  };
  const jointRow=(d:Decision)=><Row key={d.kind+d.id} icon={d.kind==='jointReturned'?Pencil:Clock} noChev title={t('fe.ibx.k.'+d.kind)} sub={<>{t('fe.ibx.k.jointSub')} · {when(d.at,locale)}</>}
-  onClick={()=>{asAddressee(d.addressee);navigate('/n/me');}}/>;
+  onClick={()=>navigate('/n/me/pair?approval='+d.id)}/>;
  const group=(items:Decision[])=>{
   const rest=items.filter(d=>d.kind==='joint'||d.kind==='jointReturned');
   const order=['pinv','link','linkChange','tag'];

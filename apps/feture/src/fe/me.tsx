@@ -13,7 +13,7 @@ import {MineLayer} from './mine';
 import {MeJars} from './interests';
 import {StaffEntry} from './staff';
 import {LinksBlock,waitingCount} from './links';
-import {CoupleMembers,CouplePending,CoupleVisGroup} from './couple';
+import {ActAsSheet,CoupleMembers,CouplePending,CoupleVisGroup} from './couple';
 import {linksMineRes} from './profile-extras';
 import {useToast} from './toast';
 import {useDragOrder} from './reorder';
@@ -140,16 +140,7 @@ export function MeTab(){
      :<>{acting.kind==='couple'&&<CouplePending base={p} tick={tick} onDecided={()=>{load();pullCounts();}}/>}<Visibility p={p} settings={settings} onChanged={load}/>{acting.kind==='couple'&&<CoupleVisGroup/>}</>}
    </div>
   </div>
-  {switching&&<Sheet title={t('fe.mx.whose')} onClose={()=>setSwitching(false)}>
-   <Card list>
-    {[person,couple].filter(Boolean).map(x=>{const on=x!.id===acting.id;
-     return <Row key={x!.id} pressed={on} noChev onClick={()=>{setSwitching(false);if(!on)setActing(x!.id);}}
-      av={<Av name={x!.name||x!.handle||'?'} seed={x!.id} src={x!.avatar} size="sm"/>}
-      title={x!.name||x!.handle} sub={x!.kind==='couple'?t('fe.me.coupleProfile'):t('fe.me.personalProfile')}
-      val={on?<span className="ico g"><Check/></span>:undefined}/>;})}
-   </Card>
-   <Note className="mt12">{t('fe.mx.whoseNote')}</Note>
-  </Sheet>}
+  {switching&&<ActAsSheet onClose={()=>setSwitching(false)}/>}
  </>;
 }
 

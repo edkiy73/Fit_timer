@@ -1,6 +1,6 @@
-import {Fragment,useCallback,useEffect,useRef,useState,type ReactNode} from 'react';
+import {Fragment,useCallback,useEffect,useMemo,useRef,useState,type ReactNode} from 'react';
 import type {LucideIcon} from 'lucide-react';
-import {useNavigate,useParams} from 'react-router';
+import {useLocation,useNavigate,useParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
@@ -596,17 +596,25 @@ function BackBtn(){const {t}=useI18n();const navigate=useNavigate();return <Icon
  * Знакомства». «Все» and «С доступом» are the profile page itself drawn as a viewer sees it (the server's own data,
  * filtered by the owner's settings; the private part from the own `private.get`); «Знакомства» is the Discover card
  * with the whole profile under it. Buttons are drawn but do nothing. */
+function useProposal(){
+ const st=useLocation().state as {proposal?:Record<string,unknown>}|null;const c=st?.proposal;
+ return useMemo(()=>{if(!c)return null;const o:{name?:string,bio?:string}={};
+  if(typeof c.name==='string')o.name=c.name;if(typeof c.bio==='string')o.bio=c.bio;return Object.keys(o).length?o:null;},[c]);
+}
 export function MePreviewScreen(){
  const {call,acting}=useFe();const {t,locale}=useI18n();const [toastNode,toast]=useToast();
  const [lv,setLv]=useState<Lv>(()=>{const v=new URLSearchParams(location.hash.split('?')[1]??'').get('lv');return v==='granted'||v==='card'?v:'all';});
  const [p,setP]=useState<PersonProfile|null>(null);const [mode,setMode]=useState<string|null>(null);const [error,setError]=useState<unknown>(null);
  const [rel]=useRelation(acting?.id??'');
+ // V21 pairReview «Весь профиль после изменений»: a couple's proposed name / bio drawn over the live profile.
+ const proposal=useProposal();
  const load=useCallback(()=>{if(!acting)return;setError(null);
   Promise.all([call('profile.get',{profileId:acting.id},personProfileRes),call('profile.settings',{},ownSettingsRes).catch(()=>null)])
-   .then(([a,s])=>{setP(a.profile);setMode(s?.settings.discoverMode??null);}).catch(setError);},[call,acting]);
+   .then(([a,s])=>{setP(proposal?{...a.profile,...proposal}:a.profile);setMode(s?.settings.discoverMode??null);}).catch(setError);},[call,acting,proposal]);
  useEffect(()=>{load();},[load]);
  const seg=<Seg small={false} value={lv} onChange={setLv} label={t('fe.px.pv.title')} options={(['all','granted','card'] as const).map(id=>({id,label:t('fe.ln.pv.'+id)}))}/>;
  if(p&&!error&&lv!=='card')return <>
+  {proposal&&<Alert kind="info" className="mt12">{t('fe.c6.previewNote')}</Alert>}
   <ProfilePage p={p} preview={lv} seg={<div className="p3-seg">{seg}</div>} toast={toast}/>
   {toastNode}
  </>;
