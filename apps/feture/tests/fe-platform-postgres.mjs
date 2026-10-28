@@ -10,7 +10,8 @@ import { actingProfile } from '../server/profiles.mjs';
 import { once } from '../server/ops.mjs';
 import { registerApprovalKind, requestApproval, decideApproval, cancelApproval, listApprovals, needsPartner, narrowCouple } from '../server/approvals.mjs';
 import { enqueue, claim, complete, drain } from '../server/outbox.mjs';
-import { uploadIntent, commitUpload, removeAsset, mediaDto, ORIGINAL_KEY } from '../server/media/assets.mjs';
+import { platformCommands } from '../contracts/platform.mjs';
+import { uploadIntent, commitUpload, removeAsset, mediaDto, videoTiming, ORIGINAL_KEY } from '../server/media/assets.mjs';
 import { scanAsset, sniff } from '../server/media/scan.mjs';
 import { verifyMediaToken, issueMediaToken } from '../server/media/token.mjs';
 import { tokenDelivery, signedStorageDelivery } from '../server/media/delivery.mjs';
@@ -33,6 +34,7 @@ async function setup() {
   await pg.exec(readFileSync(new URL('../supabase/migrations/20261028180000_fe_waves67.sql', import.meta.url), 'utf8').split('\n').find(l => l.startsWith('alter table feture.partner_approval')));
   // Video and voice on media_asset (the media part of 20261028190000_fe_media_av.sql; the chat part needs the chat tables).
   await pg.exec(readFileSync(new URL('../supabase/migrations/20261028190000_fe_media_av.sql', import.meta.url), 'utf8').split('-- «Прослушано»')[0]);
+  await pg.exec(readFileSync(new URL('../supabase/migrations/20261028231000_fe_video_edit.sql', import.meta.url), 'utf8'));
   await pg.exec('set role feture_api');
   return { pg, db: fromPglite(pg) };
 }
@@ -571,6 +573,30 @@ test('media av: video and voice limits, poster upload, scan (length, sound only,
     const purge = mediaHandlers(db, { scan: deps(pass) })['media.purge'];
     await purge({ payload: { assetId: l.assetId }, profile_id: pa });
     assert.equal(storage.objects.has(`u/${l.assetId}.poster`), false);
+
+    // Trim and crop (owner, 28.10): stored on the asset, never cut from the file. 1–60 s inside the declared length.
+    const crop = { aspect: '1:1', x: 0.1, y: -0.2, z: 1.5 };
+    await reject(video({ edit: { trim: { startMs: 0, endMs: 800 } } }), 'rule_violation'); // under a second
+    await reject(video({ edit: { trim: { startMs: 5000, endMs: 25000 } } }), 'rule_violation'); // past the 20 s clip
+    await reject(video({ edit: { trim: { startMs: 9000, endMs: 8000 } } }), 'rule_violation'); // backwards
+    await reject(db.tx(q => uploadIntent(q, asA, cfg, { purpose: 'post', kind: 'image', mime: 'image/jpeg', bytes: 10, edit: { crop } })), 'rule_violation');
+    await assert.rejects(db.query(`update feture.media_asset set frame = '{"aspect":"3:2","x":0,"y":0,"z":1}' where id = $1`, [v.assetId]), /media_asset_frame/);
+    const e = await video({ bytes: clip.length, edit: { trim: { startMs: 2500, endMs: 12500 }, crop } });
+    storage.objects.set(`u/${e.assetId}`, { bytes: clip, mime: 'video/mp4' });
+    storage.objects.set(`u/${e.assetId}.poster`, { bytes: JPEG, mime: 'image/jpeg' });
+    await db.tx(q => commitUpload(q, asA, cfg, e.assetId));
+    assert.equal(await scanAsset(db, deps(pass), e.assetId), 'needs_review');
+    const er = await row(e.assetId);
+    assert.deepEqual([er.trim_start_ms, er.trim_end_ms, er.frame], [2500, 12500, crop]);
+    const ed = await mediaDto(cfg, er, { viewerProfileId: pa, place: 'own', showExplicit: false });
+    assert.deepEqual([ed.durationMs, ed.clip], [10000, { startMs: 2500, endMs: 12500, crop }]);
+    // A trim declared past the real (scanned) length ends at the real end; a crop alone keeps the whole length.
+    assert.deepEqual(videoTiming({ duration_ms: 9000, trim_start_ms: 2500, trim_end_ms: 12500, frame: null }), { durationMs: 6500, clip: { startMs: 2500, endMs: 9000 } });
+    assert.deepEqual(videoTiming({ duration_ms: 9000, trim_start_ms: null, trim_end_ms: null, frame: crop }), { durationMs: 9000, clip: { crop } });
+    assert.deepEqual(videoTiming({ duration_ms: 9000 }), { durationMs: 9000 });
+    // Through the API contract: unknown keys and out-of-range crops are refused before the handler.
+    assert.equal(platformCommands['media.uploadIntent'].input.safeParse({ opId: '018f0000-0000-7000-8000-0000000000e1', purpose: 'post', kind: 'video', mime: 'video/mp4', bytes: 10, durationMs: 5000, poster, edit: { crop: { ...crop, z: 4 } } }).success, false);
+    assert.equal(platformCommands['media.uploadIntent'].input.safeParse({ opId: '018f0000-0000-7000-8000-0000000000e1', purpose: 'post', kind: 'video', mime: 'video/mp4', bytes: 10, durationMs: 5000, poster, edit: { trim: { startMs: 0, endMs: 3000 }, crop } }).success, true);
 
     // Voice: sound only → approved without an image scanner (nothing visual to check), with its length and waveform.
     const s = await voice({ peaks: [1, 5, 31, 0] });

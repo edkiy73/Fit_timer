@@ -20,8 +20,8 @@ import { limit } from './limits.mjs';
  *   503 «payments_unavailable»)
  * @typedef {{
  *   input: import('zod').ZodType, profile: boolean, write: boolean, ledger?: boolean, allowPaused?: boolean,
- *   rate?: {kind: string, max: number, window: string},
- *   run: (q: Q, ctx: {account: AccountRow, acting: Acting | null, input: any, cfg: Cfg, coreAccountHash: string,
+ *   rate?: {kind: string, max: number, window: string} | ((input: any) => {kind: string, max: number, window: string} | null),
+ *   run: (q: Q, ctx: {account: AccountRow, acting: Acting | null, input: any, cfg: Cfg, coreAccountHash: string, coreQa?: boolean,
  *     signal: (profileId: string | null | undefined, kind: import('./realtime.mjs').Kind, tag?: string) => void,
  *     channels: (q: Q, profileIds: string[]) => Promise<Record<string, string>>}) => Promise<Record<string, unknown>>
  * }} Command
@@ -47,7 +47,7 @@ export function inputIssues(issues) {
 
 /**
  * @param {{db: Db, pepper: string, cfg: Cfg, commands: Record<string, Command>,
- *   authenticate: (req: Req) => Promise<{accountHash: string, accountGeneration?: string}>,
+ *   authenticate: (req: Req) => Promise<{accountHash: string, accountGeneration?: string, qa?: boolean}>,
  *   quota: (req: Req, coreKey: string) => Promise<boolean>,
  *   cors: (req: Req, res: Res) => boolean,
  *   log: (event: {requestId: string, action: string, outcome: string, ms: number, stages: Record<string, number>}) => void,
@@ -122,7 +122,7 @@ export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota
       }
       const profileId = header(req, 'x-fe-profile');
       // Per-account limits are committed on their own, before the command: a failed attempt (not found, rule) still counts.
-      const rate = cmd.rate;
+      const rate = typeof cmd.rate === 'function' ? cmd.rate(input) : cmd.rate;
       const replay = rate && typeof input.opId === 'string'
         && (await db.query('select 1 from feture.op_ledger where account_id = $1 and op_id = $2', [account.id, input.opId])).length > 0;
       if (rate && !replay) await db.tx(q => limit(q, account.id, rate.kind, rate.max, rate.window));
@@ -141,7 +141,7 @@ export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota
         pending = []; // a retried transaction starts over
         const acting = cmd.profile ? await actingProfile(q, account.id, profileId, { write: cmd.write, allowPaused: cmd.allowPaused }) : null;
         // coreAccountHash is stable across Core re-registrations; only for markers that must survive them (under-18).
-        return cmd.run(q, { account, acting, input, cfg: { ...cfg, pepper }, coreAccountHash: core.accountHash, signal, channels });
+        return cmd.run(q, { account, acting, input, cfg: { ...cfg, pepper }, coreAccountHash: core.accountHash, coreQa: core.qa === true, signal, channels });
       };
       const result = !cmd.write ? await exec(db)
         // The acting profile is part of the request: the same opId under another profile is a conflict, not a replay.

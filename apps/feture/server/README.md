@@ -9,7 +9,9 @@ Read this before adding or changing a command. Design background: `docs/server/S
 
 1. **Contract** in `contracts/<area>.mjs` (`<area>Commands`): `z.strictObject` input (no extra fields, bounded strings,
    ids as `id`, writes carry `opId`), `profile` (needs an acting profile), `write` (the profile must be writable),
-   and a `rate` for anything a person could spam or use to probe (`{kind,max,window}`).
+   and a `rate` for anything a person could spam or use to probe (`{kind,max,window}`, or a function of the input when
+   variants differ — `discover.decide`: a like 500 a day, a pass 5000 a day). Every account also has 120 requests a
+   minute in all (`api/fe.mjs` quota), so a screen must not read per item what one list read can carry.
 2. **Handler** in `server/commands/<area>.mjs`, exported through the area's `Object.fromEntries(...)` map. It receives
    `(q, {acting, account, input, cfg, signal, channels})` inside the request's transaction.
 3. **Test** in `tests/fe-<area>-postgres.mjs` on PGlite as the restricted `feture_api` role: the happy path, the

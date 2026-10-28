@@ -41,7 +41,12 @@ const BOOT_KEY='feture.fe.boot:';
  * them all, so nothing stale outlives a change. The server stays the source of truth. */
 const READ_TTL=30000;
 const wait=(ms:number)=>new Promise<void>(r=>setTimeout(r,ms));
-const readCache=new Map<string,{at:number,value:Promise<unknown>}>();
+const readCache=new Map<string,{at:number,action:string,value:Promise<unknown>}>();
+/** Writes that change only a known corner: they drop the reads of that corner, not the whole cache. A Discover swipe
+ * changes the deck, likes and matches — never the catalog, one's own follows or other screens — so a swipe costs one
+ * request instead of every open screen reading again (owner 28.10.2026: the rate limit after a few swipes). */
+const NARROW_WRITES:Record<string,RegExp>={'discover.decide':/^(discover\.|likes\.|matches\.)/};
+const dropReads=(action:string)=>{const only=NARROW_WRITES[action];if(!only){readCache.clear();return;}for(const [k,v] of readCache)if(only.test(v.action))readCache.delete(k);};
 /** Writes whose input carries no opId (contracts with `ledger: false`): never served from the cache, and they drop it.
  * Without this a second «Без звука» / «В архив» within 30 s was answered from memory and never reached the server. */
 const WRITES_WITHOUT_OPID=new Set(['chat.read','chat.mute','chat.archive','notifications.read','notifications.readAll','media.commit','staff.mediaView','profile.setVisibility']);
@@ -81,8 +86,8 @@ export function FeSessionProvider({children}:{children:ReactNode}){
   if(state.status!=='ready')return Promise.reject(new FeError('auth_required'));
   const profileId=opts.asAccount?undefined:opts.profileId??acting?.id;
   if('opId' in input||WRITES_WITHOUT_OPID.has(action)){ // a write: whatever was read before may have changed
-   readCache.clear();
-   return feRequest(state.session,action,input,schema,{signal:opts.signal,profileId}).then(r=>{noteAction(action);return r;}).finally(()=>readCache.clear());
+   dropReads(action);
+   return feRequest(state.session,action,input,schema,{signal:opts.signal,profileId}).then(r=>{noteAction(action);return r;}).finally(()=>dropReads(action));
   }
   let sid=schemaIds.get(schema);if(sid==null){sid=++schemaSeq;schemaIds.set(schema,sid);}
   const key=JSON.stringify([state.session.email,profileId??'',action,input,sid]);
@@ -94,7 +99,7 @@ export function FeSessionProvider({children}:{children:ReactNode}){
   const once=()=>feRequest(state.session,action,input,schema,{profileId});
   const value=once().catch(e=>e instanceof FeError&&e.code==='rate_limited'?wait(2500).then(once):Promise.reject(e))
    .catch(e=>e instanceof FeError&&e.code==='rate_limited'?wait(6000).then(once):Promise.reject(e));
-  readCache.set(key,{at:Date.now(),value});
+  readCache.set(key,{at:Date.now(),action,value});
   value.catch(()=>{if(readCache.get(key)?.value===value)readCache.delete(key);});
   if(opts.signal){const sig=opts.signal;return new Promise<T>((res,rej)=>{sig.addEventListener('abort',()=>rej(new DOMException('Aborted','AbortError')),{once:true});value.then(res,rej);});}
   return value;
