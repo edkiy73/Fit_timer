@@ -24,3 +24,20 @@ export const acceptsMention = (target, author) => `(${target}.kind = 'person' an
   and not feture.blocked(${author}, ${target}.id)
   and coalesce((select s.mentions_from = 'all' or (s.mentions_from = 'follow' and exists (select 1 from feture.follow f where f.follower_profile_id = ${target}.id and f.target_profile_id = ${author}))
                 from feture.profile_settings s where s.profile_id = ${target}.id), false))`;
+
+/** Whether a cancelled event still concerns the viewer (owner, 28.10.2026): the organizer, and people who had a relation
+ * to it — «Интересно» / «Иду», an application (waiting, approved, or closed by the cancel) or saved it. «Не иду» is no
+ * relation. Such people keep seeing it with «Отменено» and the reason in the catalogue, «Скоро» and «Мои события» until
+ * its original start; everyone else never sees it in lists (a direct link still opens the cancelled page). A couple's
+ * relation is the couple profile's own. The same people are notified of the cancel (notify.mjs).
+ * @param {string} e event alias @param {string} viewer the viewer's profile id (`$n`) */
+export const cancelledFor = (e, viewer) => `(${e}.organizer_profile_id = ${viewer}
+  or exists (select 1 from feture.event_rsvp r where r.event_id = ${e}.id and r.profile_id = ${viewer} and r.status in ('interested', 'going'))
+  or exists (select 1 from feture.event_application x where x.event_id = ${e}.id and x.profile_id = ${viewer} and x.state in ('pending', 'approved', 'closed'))
+  or exists (select 1 from feture.saved_item s where s.kind = 'event' and s.target_id = ${e}.id::text and s.profile_id = ${viewer}
+             and not exists (select 1 from feture.event_rsvp r where r.event_id = ${e}.id and r.profile_id = ${viewer} and r.status = 'not_going')))`;
+
+/** An event as lists show it: published and not over yet, or cancelled, still before its original start, for the people
+ * it concerns (`cancelledFor`). Callers add `feture.event_visible`. @param {string} e event alias @param {string} viewer (`$n`) */
+export const listedEvent = (e, viewer) => `(${e}.state = 'published' and ${e}.ends_at > now()
+  or ${e}.state = 'cancelled' and ${e}.starts_at > now() and ${cancelledFor(e, viewer)})`;

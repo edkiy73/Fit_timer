@@ -195,7 +195,16 @@ export default [
    await t.page.locator(dialog + ' textarea').fill('E2E: тестовое событие');
    await t.page.locator(dialog + ' .btn.danger').click({ timeout: 5000 });
    await toast(t, 'Событие отменено');
-   if ((await get(t, id, (await t.persona('full')).email)).state !== 'cancelled') throw new Error('not cancelled');
+   const guest = await t.persona('full'), other = await t.persona('basic');
+   const ev = await get(t, id, guest.email);
+   if (ev.state !== 'cancelled') throw new Error('not cancelled');
+   // Owner 28.10.2026: a cancelled event stays in lists only for people it concerns (the guest applied in E06) and the
+   // organizer, until its start; nobody else finds it in the catalogue — a direct link still opens it.
+   const found = async as => ((await t.api('event.catalog', { q: ev.title }, as)).items ?? []).find(x => x.id === id);
+   if ((await found(guest.email))?.state !== 'cancelled') throw new Error('the guest lost the cancelled event in the catalogue');
+   if (!((await t.api('event.mine', {}, guest.email)).cancelled ?? []).some(x => x.id === id)) throw new Error('not in the guest\'s «Мои события → Отменены»');
+   if (await found(other.email)) throw new Error('a stranger sees the cancelled event in the catalogue');
+   if ((await get(t, id, other.email))?.state !== 'cancelled') throw new Error('the direct link no longer opens it');
  } },
  { name: 'E03 open event: RSVP going → interested → cleared (the host\'s open event)', persona: 'full', run: async t => {
    const COFFEE = (await t.persona('host')).eventId;

@@ -3,26 +3,26 @@
 // app already uses (fe.px.act.likeUs, fe.cm.rsvpC.*, fe.host.app.applyCouple). When the partner approves the couple's
 // changes, the button says it goes to the partner and the toast says it waits for them. Keys ending in `Us` are the
 // couple variant of the key without it; `fe.ca.*` are shared couple words.
+// Every label fits a 360 px phone on one line where buttons sit side by side (e2e couples/fit.mjs, owner: «главное
+// чтобы они везде умещались»): where a card already names the couple («Предлагает паре связь», «Заявка пары…»), its
+// two buttons keep the short verbs.
 export const ru = {
-  'fe.ca.toPartner': 'Отправить партнёру на согласие',
+  'fe.ca.toPartner': 'На согласие партнёру',
   'fe.ca.waitPartner': 'Отправлено партнёру — сработает после согласия',
   'fe.ca.reportSend': 'Отправить жалобу от пары',
   'fe.ca.reported': 'Жалоба от пары отправлена. Сообщим о решении в уведомлениях',
   'fe.ca.block': 'Заблокировать для пары',
   'fe.ca.blocked': 'Заблокировано для пары',
   'fe.ca.blockText': 'Симпатии, чат и доступы пары прекратятся сразу. Человек не получит уведомление. Разблокировка не вернёт доступы.',
-  'fe.ca.confirm': 'Подтвердить от пары',
-  'fe.ca.decline': 'Отклонить от пары',
-  'fe.ca.approve': 'Одобрить от пары',
   // Profile and Discover.
   'fe.px.fl.onUs': 'Пара теперь в подписчиках {name}',
-  'fe.px.act.writeUs': 'Написать от пары',
+  'fe.px.act.writeUs': 'Написать от нас',
   'fe.px.m.textUs': 'Вы и {name} понравились друг другу. Теперь можно написать от пары.',
   'fe.px.m.writeUs': 'Написать от пары',
   'fe.px.fl.offUs': 'Пара отписалась от {name}',
   'fe.px.act.followingUs': 'Пара подписана',
   'fe.px.act.unfollowHintUs': 'Нажми, чтобы отписать пару',
-  'fe.px.act.sentUs': 'Отправлено от пары',
+  'fe.px.act.sentUs': 'Пара отправила',
   'fe.px.act.unlikeHintUs': 'Нажми, чтобы снять симпатию пары',
   'fe.px.lkd.sentUs': 'Симпатия от пары отправлена — {name} узнает о ней',
   'fe.px.lkd.withdrawnUs': 'Симпатия пары снята',
@@ -58,8 +58,9 @@ export const ru = {
   'fe.cm.leaveQUs': 'Выйти паре из «{name}»?',
   'fe.cm.appWithdrawnUs': 'Заявка пары отозвана',
   'fe.host.join.sendCouple': 'Отправить заявку от пары',
-  'fe.host.app.withdrawUs': 'Отозвать заявку пары',
-  'fe.host.join.withdrawUs': 'Отозвать заявку пары',
+  // A pending request / application card: the title names the couple, «Отозвать» stays short beside it.
+  'fe.host.join.pendingUs': 'Заявка пары на рассмотрении',
+  'fe.host.app.st.pendingUs': 'Заявка пары на рассмотрении',
   'fe.w7.tk.boughtUs': 'Билеты уже куплены',
   'fe.w7.tk.markedUs': 'Отмечено «Идём вдвоём» с билетами — покажите их на входе',
   // Private part and access.
@@ -73,8 +74,6 @@ export const ru = {
   'fe.ac.dec.doneUs': 'Пара отказала. {name} увидит «решили не открывать» и сможет спросить снова через {d} дн.',
   'fe.ac.rv.okUs': 'Отозвать от пары',
   'fe.ac.nw.doneUs': 'Доступ пары изменён',
-  'fe.priv.grantUs': 'Открыть от пары',
-  'fe.priv.declineUs': 'Отказать от пары',
   'fe.mx.pr.revokedUs': 'Доступ пары отозван',
   'fe.mx.pr.onDoneUs': 'Приватная часть пары включена',
   'fe.mx.pr.offDoneUs': 'Приватная часть пары выключена',
@@ -94,22 +93,19 @@ export const ru = {
   'fe.mine.noPostsTextUs': 'Посты пары, черновики и то, что на проверке, будут здесь.',
   'fe.px.lk.outEmptyTextUs': 'Симпатии, которые отправит пара, будут здесь, пока на них не ответят.',
   'fe.w3.pop.emptyTextUs': 'В интересах пары за неделю ничего не публиковали. Загляните позже или откройте «Для тебя».',
-  'fe.me.saveToPartner': 'Сохранить — уйдёт партнёру на согласие',
+  'fe.me.saveToPartner': 'Сохранить — на согласие партнёру',
   'fe.me.savedUs': 'Сохранено в профиле пары',
   'fe.int.savedUs': 'Сохранено в интересах пары',
 };
 
 export const en: typeof ru = {
-  'fe.ca.toPartner': 'Send to your partner for approval',
+  'fe.ca.toPartner': 'For your partner’s approval',
   'fe.ca.waitPartner': 'Sent to your partner — takes effect once they agree',
   'fe.ca.reportSend': 'Send report as the couple',
   'fe.ca.reported': 'Report sent as the couple. We’ll notify you of the decision',
   'fe.ca.block': 'Block for the couple',
   'fe.ca.blocked': 'Blocked for the couple',
   'fe.ca.blockText': 'Likes, chat and the couple’s shared access end immediately. They won’t be notified. Unblocking doesn’t restore access.',
-  'fe.ca.confirm': 'Confirm as the couple',
-  'fe.ca.decline': 'Decline as the couple',
-  'fe.ca.approve': 'Approve as the couple',
   'fe.px.fl.onUs': 'The couple now follows {name}',
   'fe.px.act.writeUs': 'Message as us',
   'fe.px.m.textUs': 'You two and {name} like each other. You can write as the couple now.',
@@ -151,8 +147,8 @@ export const en: typeof ru = {
   'fe.cm.leaveQUs': 'Leave “{name}” as the couple?',
   'fe.cm.appWithdrawnUs': 'The couple’s application withdrawn',
   'fe.host.join.sendCouple': 'Send request as the couple',
-  'fe.host.app.withdrawUs': 'Withdraw the couple’s application',
-  'fe.host.join.withdrawUs': 'Withdraw the couple’s request',
+  'fe.host.join.pendingUs': 'The couple’s request is under review',
+  'fe.host.app.st.pendingUs': 'The couple applied — under review',
   'fe.w7.tk.boughtUs': 'We already have tickets',
   'fe.w7.tk.markedUs': 'Marked “We’re going” with tickets — show them at the door',
   'fe.ac.rq.sendUs': 'Request as the couple',
@@ -165,8 +161,6 @@ export const en: typeof ru = {
   'fe.ac.dec.doneUs': 'The couple declined. {name} will see “decided not to share” and can ask again in {d} d.',
   'fe.ac.rv.okUs': 'Revoke as the couple',
   'fe.ac.nw.doneUs': 'The couple’s access updated',
-  'fe.priv.grantUs': 'Share as the couple',
-  'fe.priv.declineUs': 'Decline as the couple',
   'fe.mx.pr.revokedUs': 'The couple’s access revoked',
   'fe.mx.pr.onDoneUs': 'The couple’s private part is on',
   'fe.mx.pr.offDoneUs': 'The couple’s private part is off',
@@ -184,7 +178,7 @@ export const en: typeof ru = {
   'fe.mine.noPostsTextUs': 'The couple’s posts, drafts and what’s in review will be here.',
   'fe.px.lk.outEmptyTextUs': 'Likes the couple sends stay here until they’re answered.',
   'fe.w3.pop.emptyTextUs': 'Nothing was posted in the couple’s interests this week. Check back later or open “For you”.',
-  'fe.me.saveToPartner': 'Save — goes to your partner for approval',
+  'fe.me.saveToPartner': 'Save — for your partner’s approval',
   'fe.me.savedUs': 'Saved to the couple profile',
   'fe.int.savedUs': 'Saved to the couple’s interests',
 };

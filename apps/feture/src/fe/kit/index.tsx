@@ -12,7 +12,7 @@ import './kit.css';
  * `npm run check:kit` (part of `npm run check`) fails when a screen hand-writes what the kit has.
  * Each piece keeps the prototype's markup and class names, so base.css styles it. */
 
-export {Av,Bar,Btn,Empty,Layer,Seg,Skel,View,plate} from '../ui';
+export {Av,Bar,Btn,Empty,Layer,Seg,Skel,View,plate,namedPlate,articlePlate,PLATE_KEYS,type PlateKey} from '../ui';
 export type {SegOption} from '../ui';
 
 /** `.ibtn` — a round icon button; the label is required (it is the only text a screen reader gets). */

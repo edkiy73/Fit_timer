@@ -60,7 +60,7 @@ function LinkRequest({l,couple,small,busy,onAnswer}:{l:LinkView,couple:boolean,s
  const who=<>{withAge(name,l.other)}<NameBadges p={l.other}/></>;
  return <RequestCard className="lk-req" person={<PersonLine small={small} av={<Av name={name} seed={l.other.id} size={small?'sm':''} src={l.other.avatar}/>} label={name} onOpen={go} name={who}
   sub={l.change?fill(t('fe.ln.proposesChange'),{from:linkLabel(t,l.kind,l.side),to:t('fe.px.lk.k.'+l.change.kind)}):fill(couple?t('fe.ln.proposesCouple'):t('fe.ln.proposes'),{label:linkLabel(t,l.kind,l.side)})}/>}
-  actions={<><Btn size="md" disabled={busy} onClick={()=>onAnswer(true)}>{t(couple?'fe.ca.confirm':'fe.ln.confirm')}</Btn><Btn size="md" kind="soft" disabled={busy} onClick={()=>onAnswer(false)}>{t(couple?'fe.ca.decline':'fe.ln.decline')}</Btn></>}/>;
+  actions={<><Btn size="md" disabled={busy} onClick={()=>onAnswer(true)}>{t('fe.ln.confirm')}</Btn><Btn size="md" kind="soft" disabled={busy} onClick={()=>onAnswer(false)}>{t('fe.ln.decline')}</Btn></>}/>;
 }
 
 /** «+» in «Мои связи» (V21 linkAdd / linkPick): whom to propose a link to — people the profile knows (follows or is

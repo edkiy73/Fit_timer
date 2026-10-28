@@ -93,8 +93,6 @@ export function InboxScreen(){
    if(waits)toast(t('fe.ln.t.pending'),{type:'ok'});else if(done)toast(done,{type:'ok'});load();}catch(e){toast(feErrorMessage(e,t),{type:'err'});load();}finally{setBusy('');}
  };
  const asProfile=(d:Decision)=>d.addressee?{profileId:d.addressee}:{};
- /** Addressed to the couple: its buttons speak for the couple even while acting as oneself. */
- const forUs=(d:Decision)=>profiles.find(p=>p.id===d.addressee)?.kind==='couple';
  const declineAccess=useDecline();
  const decideApp=(d:Decision,approve:boolean)=>act(d.id+(approve?'y':'n'),async()=>{
   if(!d.objectId)throw new FeError('not_found',404);
@@ -164,14 +162,14 @@ export function InboxScreen(){
    case 'req':return card(d,d.label==='couple'?t('fe.ibx.k.reqCouple'):t('fe.ibx.k.req'),two(d,
     {label:t('fe.ibx.review'),fn:()=>{asAddressee(d.addressee);navigate('/n/me?layer=priv');}},
     // Declining says what the person will see and offers «Отменить» while the server still allows it.
-    {label:t(forUs(d)?'fe.ca.decline':'fe.ibx.decline'),fn:()=>{if(busy)return;setBusy(d.id+'n');void declineAccess(d.id,nameOf(d.actor),load,asProfile(d)).finally(()=>setBusy(''));}}));
+    {label:t('fe.ibx.decline'),fn:()=>{if(busy)return;setBusy(d.id+'n');void declineAccess(d.id,nameOf(d.actor),load,asProfile(d)).finally(()=>setBusy(''));}}));
    case 'capp':case 'eapp':return card(d,d.kind==='capp'?t('fe.ibx.k.capp'):t('fe.ibx.k.eapp'),<>
-    {two(d,{label:t(forUs(d)?'fe.ca.approve':'fe.ibx.approve'),fn:()=>void decideApp(d,true)},{label:t(forUs(d)?'fe.ca.decline':'fe.ibx.decline'),fn:()=>void decideApp(d,false)})}
+    {two(d,{label:t('fe.ibx.approve'),fn:()=>void decideApp(d,true)},{label:t('fe.ibx.decline'),fn:()=>void decideApp(d,false)})}
    </>);
    case 'link':case 'linkChange':{const cmd=d.kind==='link'?'link.answer':'link.answerChange';const extra=d.kind==='link'?{vis:'all'}:{};
     return card(d,t('fe.ibx.k.'+d.kind),two(d,
-     {label:t(forUs(d)?'fe.ca.confirm':'fe.ibx.confirm'),fn:()=>void act(d.id+'y',()=>call(cmd,{opId:newOpId(),linkId:d.id,accept:true,...extra},ok,asProfile(d)),t('fe.ibx.done'))},
-     {label:t(forUs(d)?'fe.ca.decline':'fe.ibx.decline'),fn:()=>void act(d.id+'n',()=>call(cmd,{opId:newOpId(),linkId:d.id,accept:false,...extra},ok,asProfile(d)),t('fe.ibx.declined'))}));}
+     {label:t('fe.ibx.confirm'),fn:()=>void act(d.id+'y',()=>call(cmd,{opId:newOpId(),linkId:d.id,accept:true,...extra},ok,asProfile(d)),t('fe.ibx.done'))},
+     {label:t('fe.ibx.decline'),fn:()=>void act(d.id+'n',()=>call(cmd,{opId:newOpId(),linkId:d.id,accept:false,...extra},ok,asProfile(d)),t('fe.ibx.declined'))}));}
    case 'tag':return card(d,t('fe.ibx.k.tag'),two(d,
     {label:t('fe.ibx.review'),fn:()=>navigate('/n/feed/post/'+(d.objectId??d.id))},
     {label:t('fe.ibx.against'),fn:()=>void act(d.id+'n',()=>call('tag.answer',{opId:newOpId(),postId:d.objectId??d.id,answer:'no'},ok,asProfile(d)),t('fe.ibx.declined'))}));

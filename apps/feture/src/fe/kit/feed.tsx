@@ -2,7 +2,7 @@ import React,{forwardRef,useCallback,useEffect,useImperativeHandle,useLayoutEffe
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Bold,ChartColumn,ChevronDown,ChevronRight,Ellipsis,FileText,Heading,Image as ImageIcon,ImagePlus,Italic,Link as LinkIcon,List,ListOrdered,MessageSquareText,Quote,Sparkles,Strikethrough,Video,type LucideIcon} from 'lucide-react';
 import {fmtDur} from './media';
-import {Av,Btn,Field,H,IconBtn,Input,Sheet,Text} from './index';
+import {Av,Btn,Field,H,IconBtn,Input,Sheet,Text,namedPlate,type PlateKey} from './index';
 import {domToMd,imageBlock,linkOk,mdToDom} from './rich-md';
 
 export {linkOk,BAD_CHARS,hasLongWord,mdImages} from './rich-md';
@@ -141,10 +141,11 @@ export function LikesLine({people,text,onClick}:{people:{id:string,name:string,a
 }
 
 /** What an activity thumbnail shows (V21 likeThumb): a liked post — its first picture (or video poster) with the media
- * capsule and poll / interests marks, otherwise a poll, interests or text tile; a person — their face; an event or a
- * community — its cover (or `icon`). */
+ * capsule and poll / interests marks, otherwise a poll, interests or text tile; an article — always its cover: the photo,
+ * or its plate (`plate`, sent by the server), with the article mark; a person — their face; an event or a community —
+ * its cover (or `icon`). */
 export type ActThumb={src?:string|null|undefined,video?:boolean|undefined,photos?:number|undefined,videos?:number|undefined,
- durationMs?:number|null|undefined,article?:boolean|undefined,poll?:boolean|undefined,interests?:boolean|undefined,text?:string|undefined,
+ durationMs?:number|null|undefined,article?:boolean|undefined,/** An article without a photo: its plate key. */ plate?:string|null|undefined,poll?:boolean|undefined,interests?:boolean|undefined,text?:string|undefined,
  person?:{id:string,name:string,avatar?:string|null|undefined}|undefined,icon?:LucideIcon|undefined};
 
 /** The media capsule (▣ 3 · 🎥 0:06 · ▣ 3 🎥 1), as in the feed. */
@@ -159,10 +160,11 @@ function thumbParts(x:ActThumb,row:boolean,t:(k:string)=>string):{cls:string,bod
  if(x.person)return {cls:'round',body:<Av name={x.person.name} seed={x.person.id} src={x.person.avatar}/>};
  const media=(x.photos??0)+(x.videos??0);
  if(x.src||x.video||media){
-  const marks=!row&&(x.article||x.poll||x.interests)?<span className="actc-xs" aria-hidden="true">{x.article&&<i><FileText/></i>}{x.poll&&<i><ChartColumn/></i>}{x.interests&&<i><Sparkles/></i>}</span>:null;
+  const marks=x.article||!row&&(x.poll||x.interests)?<span className="actc-xs" aria-hidden="true">{x.article&&<i><FileText/></i>}{!row&&x.poll&&<i><ChartColumn/></i>}{!row&&x.interests&&<i><Sparkles/></i>}</span>:null;
   return {cls:media>1?'multi':'',body:<>{x.src?<img src={x.src} alt="" loading="lazy" draggable={false}/>:<span className="actc-vid"><Video/></span>}
    <MediaMark photos={x.photos} videos={x.videos} durationMs={x.durationMs}/>{marks}</>};
  }
+ if(x.article&&x.plate)return {cls:'',body:<div className="plate" style={namedPlate(x.plate)}><span className="pi"><FileText/></span></div>};
  if(x.icon)return {cls:row?'ic':'kind',body:React.createElement(x.icon)};
  if(x.article)return {cls:row?'ic':'kind',body:<><FileText/>{!row&&<small>{t('fe.kit.act.article')}</small>}</>};
  if(x.poll)return {cls:row?'ic':'kind',body:<><ChartColumn/>{!row&&<small>{t('fe.kit.act.poll')}</small>}</>};
@@ -249,12 +251,19 @@ export function ActionLine({text,action,onAction}:{text:ReactNode,action:string,
 
 /* ---------------- Articles ---------------- */
 
-/** An article: the cover (its first photo), the «Статья · N мин» line, the title, and in a list the first words and
- * «Читать». On the article's own screen (`full`) the text itself goes in `children` instead of the excerpt. */
-export function ArticleCard({cover,kicker,title,excerpt,more,full,children}:{cover?:string|null|undefined,kicker:ReactNode,title:ReactNode,excerpt?:ReactNode,more?:ReactNode,full?:boolean,children?:ReactNode}){
+/** An article (owner, 28.10.2026: it always has a cover, like an event): the cover is its first photo, or without photos
+ * the named plate `plate` (`articlePlate(id)` — the same one every time); always 16:9 (a photo is cropped to the middle).
+ * The title (up to 3 lines) is set large on the cover over a bottom scrim, so it reads on any photo in both themes; under it the «Статья · N мин» line and, in a list, the first
+ * words and «Читать». On the article's own screen (`full`) the text itself goes in `children` instead of the excerpt. */
+export function ArticleCard({cover,plate:pk,kicker,title,excerpt,more,full,children}:{cover?:string|null|undefined,
+ /** The plate when there is no photo (`articlePlate(post.id)`). */ plate?:PlateKey|string|null|undefined,
+ kicker:ReactNode,title:ReactNode,excerpt?:ReactNode,more?:ReactNode,full?:boolean,children?:ReactNode}){
  return <div className={'note-card'+(full?' full':'')}>
-  {cover&&<img className="note-cover" src={cover} alt="" loading="lazy" decoding="async" draggable={false}/>}
-  <span className="note-k"><FileText/>{kicker}</span><H level={3} className="note-t">{title}</H>
+  <div className="note-hero">
+   {cover?<img src={cover} alt="" loading="lazy" decoding="async" draggable={false}/>:<div className="plate" style={namedPlate(pk||'lilac')}><span className="pi"><FileText/></span></div>}
+   <H level={3} className="note-t">{title}</H>
+  </div>
+  <span className="note-k"><FileText/>{kicker}</span>
   {full?children:<>{excerpt&&<p className="note-x">{excerpt}</p>}{more&&<span className="note-more">{more} <ChevronRight/></span>}</>}
  </div>;
 }
