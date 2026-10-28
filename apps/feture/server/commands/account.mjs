@@ -36,7 +36,7 @@ async function clearPerson(q, pp) {
   // Access both ways and requests.
   await q.query(`update feture.access_grant set revoked_at = now() where (owner_profile_id = $1 or viewer_profile_id = $1) and revoked_at is null`, [pp]);
   await q.query(`update feture.access_request set state = 'closed', closed_reason = 'revoked', decided_at = now() where (owner_profile_id = $1 or requester_profile_id = $1) and state = 'pending'`, [pp]);
-  for (const t of ['interest', 'interest_history', 'private_part', 'discover_decision', 'discover_filter', 'saved_item', 'feed_hide', 'profile_location']) {
+  for (const t of ['interest', 'private_part', 'discover_decision', 'discover_filter', 'saved_item', 'feed_hide', 'profile_location']) {
     await q.query(`delete from feture.${t} where profile_id = $1`, [pp]);
   }
   await q.query(`update feture.profile_details set bio = '', city_id = null, genders = '{}', orients = '{}', roles = '{}', formats = '{}', seeks = '{}', status = null where profile_id = $1`, [pp]);
@@ -131,7 +131,6 @@ const run = {
            where p.id in (${mine})`),
         posts: await many(`select id, type, title, body, audience, state, created_at, published_at from feture.post where owner_profile_id in (${mine}) and created_by = $1 order by created_at limit 5000`),
         replies: await many(`select id, post_id, body, created_at from feture.reply where author_profile_id in (${mine}) and sent_by = $1 and state = 'published' order by created_at limit 5000`),
-        interestHistory: await many(`select h.profile_id, h.topic_id, h.kind, h.from_state, h.to_state, h.created_at from feture.interest_history h where h.profile_id in (${mine}) order by h.created_at limit 5000`),
         blocks: await many(`select b.blocker_profile_id, t.handle, b.created_at from feture.block b join feture.profile t on t.id = b.blocked_profile_id where b.blocker_profile_id in (${mine})`),
         saved: await many(`select profile_id, kind, target_id, created_at from feture.saved_item where profile_id in (${mine})`),
         discoverFilter: await many(`select * from feture.discover_filter where profile_id in (${mine})`),

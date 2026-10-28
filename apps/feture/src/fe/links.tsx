@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {CircleAlert,Link2,Pencil,Plus,Trash2,User,Users,X} from 'lucide-react';
 import {useToast as useToastV21} from './toast';
 import {newOpId} from '../feture/fe-api';
-import {Alert,Ask,Av,Bar,Btn,Card,Chip,Chips,Empty,Group,IconBtn,Note,PersonLine,RadioList,RequestCard,Row,SearchInput,SectionLabel,Seg,SelectRow,Skel,Spacer,View} from './kit';
+import {AddCard,Alert,Ask,Av,Bar,Btn,Card,Chip,Chips,Empty,Group,IconBtn,Note,PersonLine,RadioList,RequestCard,Row,SearchInput,SectionLabel,Seg,SelectRow,Skel,Spacer,View} from './kit';
 import {useFe,useKeyChange,useShown} from './session';
 import {NameBadges,faceFields,withAge} from './faces';
 import {KINDS,SIDES,Sheet,linkLabel,linksMineRes,mediaSrc,personName,personProfileRes,pxError,useToast,type Kind,type LinkView,type LinksMine,type PersonProfile} from './profile-extras';
@@ -43,13 +43,12 @@ export function LinksBlock({onChanged}:{onChanged?:()=>void}){
    toast(res.pending?t('fe.ln.t.pending'):accept?(l.change?t('fe.ln.t.changeOk'):t('fe.ln.t.confirmed')):t('fe.ln.t.declined'),{type:'ok'});load();onChanged?.();}
   catch(e){toast(pxError(e,t),{type:'err'});}finally{setBusy(false);}};
  const title=inc.length?fill(t(inc.length===1?'fe.mx.lk.titleNew1':'fe.mx.lk.titleNew'),{n:inc.length}):t('fe.mx.lk.title');
- return <Group bare={!list.length} title={title} action={(list.length||inc.length)?<button type="button" onClick={manage}>{t('fe.mx.lk.manage')}</button>:null}>
+ return <Group title={title} action={(list.length||inc.length)?<button type="button" onClick={manage}>{t('fe.mx.lk.manage')}</button>:null}>
   {inc.length>0&&<div className="lk-inc">{inc.map(l=><LinkRequest key={l.id} l={l} couple={couple} small busy={busy} onAnswer={a=>void answer(l,a)}/>)}</div>}
   {list.length?<Card list>{list.slice(0,4).map(l=>{const name=nameOf(l);const v=l.vis;
    return <Row key={l.id} av={<Av name={name} seed={l.other.id} size="sm" src={l.other.avatar}/>} title={<>{name}<NameBadges p={l.other}/></>}
     sub={linkLabel(t,l.kind,l.side)+(v!=='all'?' · '+(v==='us'?t('fe.mx.lk.visUs'):t('fe.mx.lk.visFollowers')):'')} onClick={()=>navigate('/n/people/'+l.other.id)}/>;})}</Card>
-   :<Card><button type="button" className="ph-empty" onClick={manage}><span className="pe-ic"><Link2/></span>
-    <span className="tx"><b>{t('fe.mx.lk.add')}</b><small>{couple?t('fe.mx.lk.addSubCouple'):t('fe.mx.lk.addSub')}</small></span><Plus/></button></Card>}
+   :<AddCard icon={Link2} title={t('fe.mx.lk.add')} sub={couple?t('fe.mx.lk.addSubCouple'):t('fe.mx.lk.addSub')} onClick={manage}/>}
  </Group>;
 }
 

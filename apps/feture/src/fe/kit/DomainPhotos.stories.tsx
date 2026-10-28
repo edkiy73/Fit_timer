@@ -32,6 +32,8 @@ export const Квота:StoryObj<typeof Quota>={name:'Запросы на сег
 export const КвотаПусто:StoryObj<typeof Quota>={name:'Запросы на сегодня: закончились',render:a=><Quota {...a}/>,args:{left:0,max:10,label:'Осталось запросов сегодня: 0 из 10'}};
 
 export const Приватное:StoryObj<typeof VaultHead>={name:'Шапка приватного слоя',render:a=><section className="vault"><VaultHead {...a}/></section>,args:{title:'Приватное',label:'Приватное',on:true,onToggle:fn()}};
+export const ПриватноеПусто:StoryObj<typeof VaultHead>={name:'Шапка приватного слоя: пусто (переключатель недоступен)',render:a=><section className="vault"><VaultHead {...a}/></section>,
+ args:{title:'Приватная часть',sub:'Включится, когда добавишь что-нибудь',label:'Приватная часть',on:false,disabled:true,onToggle:fn()}};
 export const ПриватноеВКарточке:StoryObj<typeof VaultHead>={name:'Шапка приватного слоя в карточке',render:a=><Card className="vault"><VaultHead {...a}/></Card>,args:{title:'Текст · 3 фото',inCard:true}};
 
 export const Проверка:StoryObj<typeof ReviewCard>={name:'Карточка проверки (персонал)',render:a=><ReviewCard {...a}/>,

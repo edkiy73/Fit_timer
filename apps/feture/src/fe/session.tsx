@@ -30,7 +30,7 @@ type FeSession={
  acting:ProfileCard|null;
  setActing:(profileId:string)=>void;
  reload:()=>void;
- call:<T>(action:string,input:Record<string,unknown>,schema:z.ZodType<T>,opts?:{asAccount?:boolean,profileId?:string,signal?:AbortSignal,fresh?:boolean})=>Promise<T>;
+ call:<T>(action:string,input:Record<string,unknown>,schema:z.ZodType<T>,opts?:{asAccount?:boolean,profileId?:string,signal?:AbortSignal,fresh?:boolean,onFresh?:(v:T)=>void})=>Promise<T>;
  /** The last answer this session got for a read, at once (null when never read): a screen draws it on its first frame
   * and reads again behind it, so a revisit never flashes a skeleton. Writes and signals do not forget it. */
  peek:<T>(action:string,input:Record<string,unknown>,schema:z.ZodType<T>,opts?:{asAccount?:boolean,profileId?:string})=>T|null;
@@ -68,11 +68,17 @@ function parse<T>(value:Promise<unknown>,schema:z.ZodType<T>):Promise<T>{
  * changes the deck, likes and matches — never the catalog, one's own follows or other screens — so a swipe costs one
  * request instead of every open screen reading again (owner 28.10.2026: the rate limit after a few swipes). */
 const NARROW_WRITES:Record<string,RegExp>={'discover.decide':/^(discover\.|likes\.|matches\.)/};
-const dropReads=(action:string)=>{const only=NARROW_WRITES[action];if(!only){readCache.clear();return;}for(const [k,v] of readCache)if(only.test(v.action))readCache.delete(k);};
+const dropReads=(action:string)=>{const only=NARROW_WRITES[action];if(!only){readCache.clear();for(const f of dropListeners)f();return;}for(const [k,v] of readCache)if(only.test(v.action))readCache.delete(k);};
+/** Screen-level memories outside the read cache (a prefetched profile card) that a write must forget too. */
+const dropListeners=new Set<()=>void>();
+export function onReadsDropped(f:()=>void){dropListeners.add(f);return ()=>{dropListeners.delete(f);};}
 /** Writes whose input carries no opId (contracts with `ledger: false`): never served from the cache, and they drop it.
  * Without this a second «Без звука» / «В архив» within 30 s was answered from memory and never reached the server. */
 const WRITES_WITHOUT_OPID=new Set(['chat.read','chat.mute','chat.archive','notifications.read','notifications.readAll','media.commit','staff.mediaView','profile.setVisibility']);
-export function dropReadCache(){readCache.clear();}
+/** Two answers that differ only in the request id or in the signatures of media links are the same for a screen. */
+const sameAnswer=(a:unknown,b:unknown)=>{const k=(_:string,v:unknown)=>_==='requestId'?undefined:typeof v==='string'&&/^https?:\/\//.test(v)?v.split('?')[0]:v;
+ return JSON.stringify(a,k)===JSON.stringify(b,k);};
+export function dropReadCache(){readCache.clear();for(const f of dropListeners)f();}
 /** The last answer per read key — what a screen shows first on a revisit (see `peek`); emptied only at sign-out. */
 const lastBody=new Map<string,unknown>();
 const remember=(key:string,body:unknown)=>{lastBody.delete(key);lastBody.set(key,body);if(lastBody.size>READ_MAX){const first=lastBody.keys().next().value;if(first!==undefined)lastBody.delete(first);}};
@@ -117,7 +123,10 @@ export function FeSessionProvider({children}:{children:ReactNode}){
  // 28.10.2026: «моргает при скролле и вылетает в новую загрузку»).
  const stateRef=useRef(state);stateRef.current=state;
  const ready=state.status==='ready';
- const call=useCallback(<T,>(action:string,input:Record<string,unknown>,schema:z.ZodType<T>,opts:{asAccount?:boolean,profileId?:string,signal?:AbortSignal,/** Skip the short read cache: «Обновить» and other explicit refreshes. */ fresh?:boolean}={})=>{
+ const call=useCallback(<T,>(action:string,input:Record<string,unknown>,schema:z.ZodType<T>,opts:{asAccount?:boolean,profileId?:string,signal?:AbortSignal,/** Skip the short read cache: «Обновить» and other explicit refreshes. */ fresh?:boolean,
+  /** Answered from memory: the screen draws that at once, the server is asked behind it, and a different answer comes
+   * here — a list that must show what changed elsewhere (a post published from another screen or device) on return. */
+  onFresh?:(v:T)=>void}={})=>{
   const state=stateRef.current;
   if(state.status!=='ready')return Promise.reject(new FeError('auth_required'));
   const profileId=opts.asAccount?undefined:opts.profileId??acting?.id;
@@ -140,7 +149,12 @@ export function FeSessionProvider({children}:{children:ReactNode}){
    if(readCache.size>READ_MAX){const first=readCache.keys().next().value;if(first!==undefined)readCache.delete(first);}
   };
   let value:Promise<unknown>;
-  if(hit&&!opts.fresh&&age<READ_TTL)value=hit.value;
+  // `onFresh`: whatever memory answers, the server is asked too and a changed answer replaces it on screen.
+  const behind=(old:Promise<unknown>)=>{if(!opts.onFresh)return;const onFresh=opts.onFresh;const next=ask();
+   Promise.all([old,next]).then(([a,b])=>{if(readCache.get(key)===hit)readCache.set(key,{at:Date.now(),action,value:Promise.resolve(b),settled:true,until:linksExpireAt(b)});remember(key,b);
+    if(sameAnswer(a,b))return;const r=schema.safeParse(b);if(r.success)onFresh(r.data);}).catch(()=>{});};
+  if(hit&&!opts.fresh&&age<READ_TTL){value=hit.value;behind(value);}
+  else if(hit&&!opts.fresh&&opts.onFresh&&hit.settled&&age<STALE_TTL){value=hit.value;behind(value);}
   else if(hit&&!opts.fresh&&age<STALE_TTL&&hit.settled){
    // Stale: answer from memory now, ask the server in the background.
    value=hit.value;

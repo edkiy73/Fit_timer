@@ -28,6 +28,7 @@ A new component or variant ships with its story in the same PR.
 | Body | `View`, `Group` (titled section with action and footnote) |
 | Buttons | `Btn` (primary / soft / text / danger; `busy` blinks, never spins), `IconBtn` (round, label required) |
 | Tabs | `Seg` — the only tab control: counts, dots, scrolls at 5+ |
+| Empty section | `AddCard` — the one «add» card of every empty block (icon in a soft circle, title, a plain hint up to two lines, «+»); straight in a `Group`, no Card around; a filled block shows its content and its header action instead |
 | Lists | `Row` (icon/avatar, title, sub, value, badge, chevron), `ToggleRow`, `SelectRow` |
 | Choice pills | `Chip`, `Chips` |
 | One from a list as rows | `RadioList` (rows carry their own frame: never put it in a `Card`; a line under a row's title explains it) |
@@ -73,7 +74,7 @@ Product pieces that repeat or carry their own look. Screens use these, never the
 | People | `PersonName` (name on a photo card), `PersonLine` + `RequestCard` + `Answer` (requests and applications), `LikeTile`, `Radar` (`small`: compact, for the empty deck), `Soon` («Скоро»: a feature not open yet — art, label, title, points, buttons), `Typing` («печатает…» under chat messages) |
 | Gallery | `AlbumRow` + `AlbumCard` (cover / mosaic / icon, open, followers lock), `AlbumMeta`, `GalleryGrid` + `GalleryTile` (count, followers, review; selection `selected`, cover `picked`) + `GalleryAdd`, `SelectionBar` (pinned count + actions) |
 | Photos and checks | `PhotoSlots` / `PhotoSlot` / `PhotoAdd` (profile photo grid, drag to reorder, `loading`), `PhotoTrack` (viewer strip; `wm` puts the viewer's handle on someone else's private photos), `Watermark`, `Pose` (the gesture to show; the shot itself is `CaptureFrame`) |
-| Private layer | `VaultHead` (lock, title, switch), `Quota` (requests left today as segments) |
+| Private layer | `VaultHead` (lock, title, `sub` state line, switch; `disabled` while there is nothing to open), `Quota` (requests left today as segments) |
 | Couple | `ActingAv` (who you act as on every place you write from: the profile's picture, the couple's two initials on its plate; there is no «от кого» picker), `ActorCards` + `ActorCard` («Действовать как»: pick the profile, open it, a dot when something waits), `ReviewMeta` (who proposed, version), `ReviewPost` (what a joint change publishes), `ReturnNote` (the partner's «на доработку» comment) |
 | Staff review | `ReviewCard`, `KeyValues`, `ReviewMedia`, `ReviewPair` |
 | Account (`kit/account.tsx`, «Домен/Аккаунт») | `PremiumHero` (crown plate; `onClose` for the paywall sheet), `PremiumFeats` (what Premium gives, `current` marked), `PlanCards` (plans / gift terms, one chosen, corner badge), `Maintenance` (the whole «Технические работы» screen), `Thread` (a support conversation: mine right, support left) |

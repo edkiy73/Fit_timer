@@ -35,7 +35,6 @@
 | `place.submit` | W | страна, название | — | используется сразу, → очередь сотрудника |
 | `interests.list` | R | `profileId` | — | свои — все; чужие — публичные (+ `granted`, если есть доступ «Описание и интересы») |
 | `interests.set` / `interests.setMany` / `interests.remove` | W | тема, значение, направление, видимость | согласие | пишет историю |
-| `interests.history` | R | — | — | только владелец |
 | `settings.get` / `settings.update` | R/W | язык, размытие, рассылка | — (аккаунт) | |
 | `notifications.settings.update` | W | режим, каналы, дайджест, тихие часы, категории | — (аккаунт) | |
 | `push.register` / `push.unregister` | W | токен, платформа | — | |

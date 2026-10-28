@@ -7,7 +7,7 @@ import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicBase} from '../api-url';
 import {Ban,Check,ChevronDown,Crown,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,Flag,Heart,History,Info,KeyRound,Link as LinkIcon,Lock,LockOpen,MapPin,MessageCircle,ShieldCheck,Undo2,Users,X} from 'lucide-react';
 import {ActingAv,Alert,Av,Bar,Btn,Card,Empty,Group,H,IconBtn,Layer,Note,PersonName,PhotoBars,PhotoTrack,Pill,Row,Seg,Skel,Text,ToggleRow,Veil,View,plate} from './kit';
-import {useFe,useKeyChange} from './session';
+import {onReadsDropped,useFe,useKeyChange} from './session';
 import {ReportSheet} from './report';
 import {PhotoBadge} from './photo-check';
 import {faceFields,NameBadges} from './faces';
@@ -243,7 +243,7 @@ export function DetailsGroup({p}:{p:PersonProfile}){
   <Card><dl className="kv">{rows.map(([k,v])=><Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>)}</dl></Card></Group>;
 }
 
-const jarItem=z.object({topicId:z.string(),value:z.number().nullable().optional(),mark:z.string().nullable().optional(),dir:z.array(z.string()).nullable().optional()}).passthrough();
+const jarItem=z.object({topicId:z.string(),value:z.number().nullable().optional(),mark:z.string().nullable().optional(),dir:z.array(z.string()).nullable().optional(),vis:z.string().nullable().optional()}).passthrough();
 const jarsRes=z.object({ok:z.literal(true),items:z.array(jarItem)});
 type Jar=z.infer<typeof jarItem>;
 const sortJars=(l:Jar[])=>[...l.filter(j=>!j.mark).sort((a,b)=>(b.value??0)-(a.value??0)),...l.filter(j=>j.mark==='discuss'),...l.filter(j=>j.mark==='hard')];
@@ -285,7 +285,7 @@ function Activity({profileId,inert,preview,pre}:{profileId:string,inert?:boolean
  const [acts,setActs]=useState<Act[]|null>(()=>pre?pre.activity?actsOf(pre.activity):[]:null);const own=profileId===acting?.id;const [vis,setVis]=useState<string|null>(null);
  const given=!!pre;
  // Another profile starts empty; reading the same one again keeps what is shown until the answer comes.
- useEffect(()=>{if(given)return;call('profile.posts',{profileId},postsRes).then(r=>setItems(r.items)).catch(()=>setItems(l=>l??[]));},[call,profileId,given]);
+ useEffect(()=>{if(given)return;const put=(r:z.infer<typeof postsRes>)=>setItems(r.items);call('profile.posts',{profileId},postsRes,{onFresh:put}).then(put).catch(()=>setItems(l=>l??[]));},[call,profileId,given]);
  useEffect(()=>{if(given)return;call('profile.activity',{profileId},actRes).then(r=>setActs(actsOf(r))).catch(()=>setActs(l=>l??[]));},[call,profileId,given]);
  useKeyChange(profileId,()=>{setItems(null);setActs(null);});
  useEffect(()=>{if(!own){setVis(null);return;}call('profile.settings',{},ownVis).then(r=>setVis(r.settings.activityVis??'all')).catch(()=>setVis('all'));},[call,own]);
@@ -316,10 +316,16 @@ function GalleryGroup({p,onOpen,inert}:{p:PersonProfile,onOpen:(i:number)=>void,
 }
 
 /** Interests group of another profile (pubJars → jarShelf, six then «Ещё N»). */
-function InterestsGroup({profileId,name,avatar,inert,pre}:{profileId:string,name:string,avatar?:string|null|undefined,inert?:boolean|undefined,pre?:CardPre|undefined}){
- const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const topic=useTopics();const [items,setItems]=useState<Jar[]>(()=>pre?.interests?.items??[]);
+function InterestsGroup({profileId,name,avatar,inert,pre,preview}:{profileId:string,name:string,avatar?:string|null|undefined,inert?:boolean|undefined,pre?:CardPre|undefined,preview?:'all'|'granted'|undefined}){
+ const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const topic=useTopics();
+ // «Как видят» reads the own list (every audience): keep only what that audience gets — public ones, plus «По доступу»
+ // with access; «Только я» never; a hard limit only as a limit, as the server sends it to others.
+ const audience=(l:Jar[])=>!preview?l:l.filter(j=>(j.vis??'public')==='public'||(preview==='granted'&&j.vis==='granted')).map(j=>j.mark==='hard'?{topicId:j.topicId,mark:'hard'}:j);
+ const [items,setItems]=useState<Jar[]>(()=>audience(pre?.interests?.items??[]));
  const [open,setOpen]=useState<string|null>(null);const given=!!pre;
- useEffect(()=>{if(given)return;call('interests.list',{profileId},jarsRes).then(r=>setItems(r.items)).catch(()=>{});},[call,profileId,given]);
+ useEffect(()=>{if(given)return;call('interests.list',{profileId},jarsRes).then(r=>setItems(audience(r.items))).catch(()=>{});
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[call,profileId,given,preview]);
  useKeyChange(profileId,()=>setItems([]));
  if(!items.length)return null;
  // Someone else's interest opens the comparison (V21 openTopic); the acting profile's own opens the topic.
@@ -336,7 +342,7 @@ export function ProfileBody({p,inert,preview,onOpen,pre}:{p:PersonProfile,inert?
  return <>
   <DetailsGroup p={p}/>
   <LinksSection profileId={p.id} inert={inert} pre={pre}/>
-  <InterestsGroup profileId={p.id} name={personName(p)||'?'} avatar={mediaSrc(p.avatar)} inert={inert} pre={pre}/>
+  <InterestsGroup profileId={p.id} name={personName(p)||'?'} avatar={mediaSrc(p.avatar)} inert={inert} pre={pre} preview={preview}/>
   <GalleryGroup p={p} onOpen={onOpen} inert={inert}/>
   <PrivateVault profileId={p.id} name={personName(p)} {...(preview?{preview}:{})} {...(pre?{pre:pre.private??{ok:true,exists:false}}:{})}/>
   <Activity profileId={p.id} inert={inert} preview={!!preview} pre={pre}/>
@@ -352,6 +358,8 @@ export type CardPre={profile:PersonProfile,compat:Compat|null,links:z.infer<type
 const safe=<S extends z.ZodType>(schema:S,v:unknown):z.infer<S>|null=>{if(v==null)return null;const r=schema.safeParse(v);return r.success?r.data:null;};
 /** Cards read (or being read) for the acting profile, newest last; a card read once is not asked again for a while. */
 const cardMemo=new Map<string,{at:number,value:Promise<CardPre>,done?:CardPre}>();
+// A write (an own post published, edited or deleted; a follow) makes a prefetched card stale like any read.
+onReadsDropped(()=>cardMemo.clear());
 const CARD_TTL=5*60000;
 /** Whether the server has `discover.card` (null: not known yet). Without it a card costs seven reads, so the deck then
  * reads only the card someone stays on (`cardOneRead() === false`), never the next one ahead. */
