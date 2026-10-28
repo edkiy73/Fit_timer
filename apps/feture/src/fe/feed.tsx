@@ -104,7 +104,8 @@ function useSoon(){
 }
 function SoonBlock({s}:{s:ReturnType<typeof useSoon>}){
  const {t}=useI18n();const {acting}=useFe();const us=acting?.kind==='couple';
- const why=(w:string)=>{const k='fe.soon.why.'+w+(us&&(w==='mine'||w==='follow'||w==='community'||w==='interests'||w==='city')?'Us':'');const v=t(k);return v===k?undefined:v;};
+ // «Онлайн» is already in the tile's place line, so that reason adds nothing under it.
+ const why=(w:string)=>{if(w==='online')return undefined;const k='fe.soon.why.'+w+(us&&(w==='mine'||w==='follow'||w==='community'||w==='interests'||w==='city')?'Us':'');const v=t(k);return v===k?undefined:v;};
  const navigate=useNavigate();const [menu,setMenu]=useState<SoonEv|null>(null);
  return <>
   <FeedEvents title={t('fe.soon.title')} items={s.items.map(e=>({key:e.id,tile:<EventCard e={e} row org={why(e.why)}/>,
