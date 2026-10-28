@@ -210,3 +210,9 @@ button.pill{cursor:pointer}
 .v21 .k-rlock svg{width:var(--i-sm);height:var(--i-sm)}
 .v21 .k-rec .k-voice{flex:1}
 @media (prefers-reduced-motion:reduce){.v21 .k-rdot,.v21 .k-rhint,.v21 .k-rlock{transition:none;transform:none}}
+/* FeedEvents («Скоро» in the feed): one compact tile per event, its «Скрыть» under it on the right */
+.v21 .k-fev{display:flex;flex-direction:column;gap:var(--s-1)}
+.v21 .k-fev+.k-fev{margin-top:var(--s-3)}
+.v21 .k-fev .k-fev-hide{align-self:flex-end}
+/* ActingAv in an input bar: the acting profile before the field, centred on the one-line box */
+.v21 .inputbar>.av{flex:none;align-self:flex-end;margin-bottom:7px}

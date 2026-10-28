@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {AtSign,Ban,BellOff,Check,EyeOff,Flag,Images,Link as LinkIcon,Pencil,Trash2,User,X} from 'lucide-react';
 import type {LucideIcon} from 'lucide-react';
-import {feErrorMessage,newOpId} from '../feture/fe-api';
+import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicOrigin} from '../api-url';
 import {Alert,Ask as KitAsk,Btn,Card,RadioList,Row,Sheet,TextArea,ToggleRow} from './kit';
 import {useFe} from './session';
@@ -17,6 +17,8 @@ import {PostAlbumSheet,inGallery} from './gallery';
  * copy link, report. A reply — edit / delete own; profile / report / block for someone else's.
  * Confirmations replace the sheet with the prototype's `ask()` dialog in the same layer. */
 const okOnly=z.object({ok:z.literal(true)}).passthrough();
+const objected=z.object({ok:z.literal(true),hidden:z.boolean()}).passthrough();
+const explained=z.object({ok:z.literal(true),note:z.string().nullable()}).passthrough();
 const deleted=z.object({ok:z.literal(true),state:z.string().optional()}).passthrough();
 const REASONS=['threat','private','minor','spam','other'] as const;
 type Reason=typeof REASONS[number];
@@ -74,7 +76,7 @@ export function PostMenu({post,onClose,onChange,onRemove}:{post:Post,onClose:()=
  const run=async(key:string,fn:(opId:string)=>Promise<Removal|void>)=>{
   if(busy)return;setBusy(true);setFailure('');
   try{const r=await fn(op(key));if(r)onRemove(r);}
-  catch(e){setFailure(feErrorMessage(e,t));drop(key);}
+  catch(e){setFailure(e instanceof FeError&&e.code==='rate_limited'&&e.rule==='claim_limit'?t('fe.w3.object.limit'):feErrorMessage(e,t));drop(key);}
   finally{setBusy(false);}
  };
  const hide=(kind:'post'|'author')=>run('hide.'+kind,async opId=>{
@@ -96,8 +98,9 @@ export function PostMenu({post,onClose,onChange,onRemove}:{post:Post,onClose:()=
   onChange?.({...post,tags});onClose();toast(a==='ok'?t('fe.fd.tag.confirmed'):a==='no'?t('fe.fd.tag.declined'):t('fe.pm.tag.removed'),{type:'ok'});
  });
  const object=()=>run('tag.object',async opId=>{
-  await call('tag.object',{opId,postId:post.id},okOnly);
-  return {postId:post.id,notice:t('fe.w3.object.done')};
+  // Hidden at once for a marked or trusted person; otherwise it goes to moderators first (and leaves this feed).
+  const r=await call('tag.object',{opId,postId:post.id},objected);
+  return {postId:post.id,notice:r.hidden?t('fe.w3.object.done'):t('fe.w3.object.queued')};
  });
  // «Убрать упоминание меня» (V21 unmentionMe): only when the server lists the acting profile as a linked mention.
  const mentioned=!mine&&!!acting&&(post.mentions??[]).some(m=>m.id===acting.id);
@@ -138,6 +141,29 @@ export function PostMenu({post,onClose,onChange,onRemove}:{post:Post,onClose:()=
     <Row noChev icon={Flag} title={t('fe.pm.report')} danger onClick={()=>go('report')}/>
    </>}
   </Card>
+  {failure&&<Alert kind="err" className="mt12">{failure}</Alert>}
+ </Sheet>;
+}
+
+/** The author's own post hidden by «это я на фото — против» (owner decision 28.10.2026): why, never who, and a short
+ * explanation for moderators. */
+export function DisputeNotice({post,onChange}:{post:Post,onChange:(p:Post)=>void}){
+ const {t}=useI18n();const [open,setOpen]=useState(false);
+ const note=post.dispute?.note??null;
+ return <><Alert kind="warn" icon={EyeOff} className="mt12"><b>{t('fe.w3.dispute.hidden')}</b>{note?t('fe.w3.dispute.yours',{text:note}):t('fe.w3.dispute.hiddenText')}
+   <div className="row g8 mt12"><Btn size="sm" kind="soft" fit onClick={()=>setOpen(true)}>{note?t('fe.w3.dispute.edit'):t('fe.w3.dispute.explain')}</Btn></div></Alert>
+  {open&&<DisputeExplainSheet post={post} onClose={()=>setOpen(false)} onDone={n=>{setOpen(false);onChange({...post,dispute:{note:n}});}}/>}</>;
+}
+
+function DisputeExplainSheet({post,onClose,onDone}:{post:Post,onClose:()=>void,onDone:(note:string|null)=>void}){
+ const {call}=useFe();const {t}=useI18n();const toast=useToast();const {op,drop}=useOps();
+ const [text,setText]=useState(post.dispute?.note??'');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ useEscape(onClose);
+ const send=async()=>{if(busy)return;setBusy(true);setFailure('');
+  try{const r=await call('post.disputeExplain',{opId:op('explain'),postId:post.id,note:text.trim().slice(0,500)},explained);toast(t('fe.w3.dispute.sent'),{type:'ok'});onDone(r.note);}
+  catch(e){setFailure(feErrorMessage(e,t));drop('explain');}finally{setBusy(false);}};
+ return <Sheet title={t('fe.w3.dispute.sheetTitle')} sub={t('fe.w3.dispute.sheetSub')} onClose={onClose} foot={<Btn onClick={send} disabled={busy||!text.trim()} busy={busy}>{t('fe.w3.dispute.send')}</Btn>}>
+  <TextArea rows={4} maxLength={500} value={text} aria-label={t('fe.w3.dispute.sheetTitle')} onChange={e=>setText(e.target.value)}/>
   {failure&&<Alert kind="err" className="mt12">{failure}</Alert>}
  </Sheet>;
 }

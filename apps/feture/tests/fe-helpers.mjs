@@ -9,7 +9,7 @@ import { createFeHandler } from '../server/handler.mjs';
 import { tokenDelivery } from '../server/media/delivery.mjs';
 
 export const MIGRATIONS = ['20261027120000_fe_platform.sql', '20261027120100_fe_media_bucket.sql', '20261027125900_fe_me.sql',
-  '20261027130000_fe_catalog.sql', '20261027140000_fe_access.sql', '20261027150000_fe_couples.sql', '20261027160000_fe_staff.sql', '20261027170000_fe_feed.sql', '20261027175000_fe_moderation.sql', '20261027180000_fe_communities.sql', '20261027190000_fe_events.sql', '20261027210000_fe_discover.sql', '20261027220000_fe_chats.sql', '20261027230000_fe_notifications.sql', '20261027240000_fe_people.sql', '20261027250000_fe_premium.sql', '20261027260000_fe_moderation_more.sql', '20261027270000_fe_push.sql', '20261027280000_fe_dsa.sql', '20261027300000_fe_photo_check.sql', '20261028120000_fe_places.sql', '20261028130000_fe_age_document.sql', '20261028150000_fe_wave3.sql', '20261028160000_fe_albums.sql', '20261028170000_fe_access_center.sql', '20261028180000_fe_waves67.sql', '20261028190000_fe_media_av.sql', '20261028200000_fe_account.sql'];
+  '20261027130000_fe_catalog.sql', '20261027140000_fe_access.sql', '20261027150000_fe_couples.sql', '20261027160000_fe_staff.sql', '20261027170000_fe_feed.sql', '20261027175000_fe_moderation.sql', '20261027180000_fe_communities.sql', '20261027190000_fe_events.sql', '20261027210000_fe_discover.sql', '20261027220000_fe_chats.sql', '20261027230000_fe_notifications.sql', '20261027240000_fe_people.sql', '20261027250000_fe_premium.sql', '20261027260000_fe_moderation_more.sql', '20261027270000_fe_push.sql', '20261027280000_fe_dsa.sql', '20261027300000_fe_photo_check.sql', '20261028120000_fe_places.sql', '20261028130000_fe_age_document.sql', '20261028150000_fe_wave3.sql', '20261028160000_fe_albums.sql', '20261028170000_fe_access_center.sql', '20261028180000_fe_waves67.sql', '20261028190000_fe_media_av.sql', '20261028200000_fe_account.sql', '20261028221500_fe_dispute_guard.sql'];
 const mig = name => readFileSync(new URL('../supabase/migrations/' + name, import.meta.url), 'utf8');
 
 export const DOCS = ['terms', 'privacy', 'community', 'adult-content', 'cookies'].map((key, i) => ({
@@ -69,4 +69,17 @@ export async function setup({ commands, migrations = MIGRATIONS, signals, realti
     return id;
   };
   return { pg, db, call, person, coupleOf };
+}
+
+/** A person whose profile photo staff matched with a selfie, with an account `days` old — a trusted claimant of
+ * «это я на фото» when older than DISPUTE_LIMITS.trustedAccountAge. @param {any} db @param {string} profileId @param {number} days */
+export async function photoVerified(db, profileId, days = 40) {
+  const [{ id: accountId }] = await db.query('select id from feture.account where person_profile_id = $1', [profileId]);
+  const [{ id: photo }] = await db.query(
+    `insert into feture.media_asset (owner_profile_id, uploaded_by, kind, purpose, storage_key, mime, declared_bytes, state, explicitness, copies_at)
+     values ($1, $2, 'image', 'avatar', 'u/' || gen_random_uuid(), 'image/jpeg', 10, 'approved', 'safe', now()) returning id`, [profileId, accountId]);
+  await db.query('update feture.profile set avatar_asset_id = $2 where id = $1', [profileId, photo]);
+  await db.query(`insert into feture.photo_check (profile_id, account_id, gesture, photo_asset_id, state, decided_at) values ($1, $2, 'thumbs_up', $3, 'approved', now())`,
+    [profileId, accountId, photo]);
+  await db.query(`update feture.account set created_at = now() - make_interval(days => $2) where id = $1`, [accountId, days]);
 }

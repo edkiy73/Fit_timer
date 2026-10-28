@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,ChartColumn,Bell,BellOff,Bookmark,BookmarkCheck,Calendar,CalendarPlus,Check,ChevronLeft,Clock,Ellipsis,Eye,ExternalLink,FileText,Flag,Globe,Image as ImageIcon,Link as LinkIcon,Lock,Map as MapIcon,MapPin,MessageCircle,Plus,Search,Settings,Share,SlidersHorizontal,Ticket,TriangleAlert,Users,Video,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Announcement,Ask,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,CommunityHead,CoverBar,Discussion,Empty,EventHero,EventTile,Group,IconBtn,LinkBtn,Note,Pill,Row,Rsvp,SectionLabel,Seg,Sheet,Skel,Spacer,Text,ToggleRow,Veil} from './kit';
+import {ActingAv,Alert,Announcement,Ask,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,CommunityHead,CoverBar,Discussion,Empty,EventHero,EventTile,Group,IconBtn,LinkBtn,Note,Pill,Row,Rsvp,SectionLabel,Seg,Sheet,Skel,Spacer,Text,ToggleRow,Veil} from './kit';
 import {useFe} from './session';
 import {when} from './feed';
 import {BellButton} from './inbox';
@@ -39,6 +39,8 @@ const priceSchema=z.object({kind:z.string(),amount:z.number().optional(),currenc
 const ev=z.object({id:z.uuid(),title:z.string(),kind:z.string(),format:z.enum(['online','offline']),area:z.string().nullable(),tz:z.string().nullable().optional(),starts_at:z.string(),ends_at:z.string(),
  price:priceSchema,requires_application:z.boolean(),state:z.string(),plate:z.string().nullable().optional(),place_id:z.string().nullable().optional(),community_id:z.string().nullable().optional()});
 type Ev=z.infer<typeof ev>;
+/** An event in a list (catalog, «Скоро» in the feed). */
+export const eventRow=ev;
 const evList=z.object({ok:z.literal(true),items:z.array(ev),next:z.string().nullable()});
 const rsvpObj=z.object({status:z.string().nullable().optional(),showInList:z.boolean().nullable().optional(),ticketMarked:z.boolean().nullable().optional()}).passthrough();
 const announcement=z.object({id:z.uuid(),body:z.string(),automatic:z.boolean(),created_at:z.string()}).passthrough();
@@ -335,7 +337,7 @@ export function CommunityScreen(){
      <Seg value={tab} onChange={setTab} options={[{id:'disc',label:t('fe.comm.tab.disc')},{id:'events',label:t('fe.comm.tab.events'),n:evs.length},{id:'members',label:t('fe.cm.tab.members')},{id:'rules',label:t('fe.comm.tab.rules')}]}/>
      {tab==='disc'?(discs?.locked?<Veil tall title={t('fe.cm.discForMembers')} text={c.request?t('fe.cm.discPending'):t('fe.cm.discRequest')}/>:<>
       {member&&!c.me?.readOnly&&<div className="composer c-composer">
-       <button type="button" className="cmp-main" onClick={()=>navigate('/n/feed/new?community='+c.id)}>{acting&&<Av name={pname(acting)} seed={acting.id} src={acting.avatar} size="sm"/>}<span>{t(couple?'fe.cm.topicCouple':'fe.comm.newTopic')}</span></button>
+       <button type="button" className="cmp-main" onClick={()=>navigate('/n/feed/new?community='+c.id)}>{acting&&<ActingAv p={acting}/>}<span>{t(couple?'fe.cm.topicCouple':'fe.comm.newTopic')}</span></button>
        <IconBtn icon={ImageIcon} kind="ghost" size="sm" label={t('fe.cm.media')} onClick={()=>navigate('/n/feed/new?community='+c.id+'&x=media')}/>
        <IconBtn icon={ChartColumn} kind="ghost" size="sm" label={t('fe.cm.poll')} onClick={()=>navigate('/n/feed/new?community='+c.id+'&x=poll')}/>
        <IconBtn icon={Plus} kind="add" label={t('fe.cm.startDisc')} onClick={()=>navigate('/n/feed/new?community='+c.id)}/>
