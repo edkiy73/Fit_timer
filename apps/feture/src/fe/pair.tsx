@@ -56,7 +56,9 @@ export function PairScreen(){
   if(!couple||fresh)call('couple.invites',{},invitesRes,{asAccount:true}).then(setInv).catch(e=>setFailure(feErrorMessage(e,t)));
  },[call,couple,fresh,t]);
  useEffect(()=>{load();},[load]);
- const act=async(fn:()=>Promise<unknown>,after?:()=>void)=>{setBusy(true);setFailure('');try{await fn();after?.();load();}catch(e){setFailure(e instanceof FeError&&e.rule?t('fe.pair.rule.'+e.rule):feErrorMessage(e,t));}finally{setBusy(false);}};
+ const act=async(fn:()=>Promise<unknown>,after?:()=>void)=>{setBusy(true);setFailure('');try{await fn();after?.();load();}catch(e){setFailure(pairError(e));}finally{setBusy(false);}};
+ // A pair-specific text when there is one; otherwise the common message (a 429 is «слишком много действий», not «нет связи»).
+ const pairError=(e:unknown)=>{if(e instanceof FeError&&e.rule&&e.code!=='rate_limited'){const k='fe.pair.rule.'+e.rule;const m=t(k);if(m!==k)return m;}return feErrorMessage(e,t);};
  const meName=nameOf(person);
  if(state.status!=='ready')return null;
  if(couple&&!fresh&&!c&&!failure)return <><Bar title={t('fe.pair.title')} back="/n/me"/><View><Skel kind="list"/></View></>;
