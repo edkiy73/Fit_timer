@@ -73,20 +73,21 @@ export default [
  } },
  { name: 'MAINT: a «maintenance» answer swaps the app for the screen; «Проверить ещё раз» brings it back', persona: 'basic', route: '/n/settings', run: async t => {
    await t.see('Настройки');
+   // The status the screen polls is answered here (production stays untouched); the switch itself is what fe-api fires
+   // on a 503 «maintenance» answer (a simulated 503 would count as a server error in the runner).
    let down = true;
    await t.page.route('**/api/fe', async route => {
      const body = route.request().postDataJSON?.() ?? {};
-     if (!down) return route.continue();
-     if (body.action === 'platform.maintenance') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, active: true, message: 'Обновляем базу e2e' }) });
-     return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'maintenance', message: 'Обновляем базу e2e' }) });
+     if (body.action !== 'platform.maintenance') return route.fallback();
+     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, active: down, message: down ? 'Обновляем базу e2e' : null, requestId: 'e2e' }) });
    });
    try {
-     await t.tap('text=Помощь и безопасность');
-     await t.see('Скоро вернёмся'); await t.see('Обновляем базу e2e');
+     await t.page.evaluate(() => window.dispatchEvent(new CustomEvent('fe-maintenance', { detail: { message: 'Обновляем базу e2e' } })));
+     await t.see('Скоро вернёмся'); await t.see('Обновляем базу e2e'); await t.notSee('header.bar', 300);
      await t.tap('text=Проверить ещё раз'); await t.see('Работы ещё идут');
      down = false;
      await t.tap('text=Проверить ещё раз');
-     await t.notSee('Скоро вернёмся', 8000);
+     await t.notSee('Скоро вернёмся', 4000); await t.see('Настройки');
    } finally { await t.page.unroute('**/api/fe'); }
  } },
  { name: 'B01 Premium: plans, the purchase confirmation says payment comes later (no charge), restore answers', persona: 'basic', route: '/n/premium', run: async t => {

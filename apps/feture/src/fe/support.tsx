@@ -22,7 +22,7 @@ const queueRes=z.object({ok:z.literal(true),items:z.array(ticket.extend({handle:
 const okRes=z.object({ok:z.literal(true)}).passthrough();
 
 const useWhen=()=>{const {locale}=useI18n();return (v:string)=>new Date(v).toLocaleString(locale==='en'?'en-GB':'ru-RU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});};
-const errText=(e:unknown,t:(k:string)=>string)=>e instanceof FeError&&e.code==='invalid_input'?t('fe.w8.sup.short'):feErrorMessage(e,t);
+const errText=(e:unknown,t:(k:string)=>string)=>e instanceof FeError&&e.code==='invalid_input'&&e.fields?.includes('body')?t('fe.w8.sup.short'):feErrorMessage(e,t);
 
 /** The writing sheet (supportWrite / supportSend). */
 export function SupportSheet({onClose,onSent}:{onClose:()=>void,onSent:(t:Ticket)=>void}){
