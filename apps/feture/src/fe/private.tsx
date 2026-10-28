@@ -361,12 +361,14 @@ function DescSheet({text,onClose,onSaved}:{text:string,onClose:()=>void,onSaved:
 /** vaultHTML + veilBlock / privOpenHTML. Before access nothing real is sent — the veil hides placeholders only. Photos
  * opened to me carry my own handle (the server's `watermark`). `preview` («Как видят») draws it as a viewer would see
  * it: buttons inert, but my own photos still open in the viewer. */
-export function PrivateVault({profileId,name,preview}:{profileId:string,name:string,preview?:'all'|'granted'|undefined}){
+export function PrivateVault({profileId,name,preview,pre}:{profileId:string,name:string,preview?:'all'|'granted'|undefined,
+ /** The `private.get` answer already read (a Discover card's `discover.card`): shown at once, not asked again. */ pre?:unknown}){
  const {call,acting}=useFe();const us=acting?.kind==='couple'&&!preview;const {t}=useI18n();const w=useAccessWords();
- const [p,setP]=useState<Priv|null>(null);const [view,setView]=useState<number|null>(null);
+ const [p,setP]=useState<Priv|null>(()=>{const r=pre?priv.safeParse(pre):null;return r?.success?r.data:null;});const [view,setView]=useState<number|null>(null);
  const [sheet,setSheet]=useState<'request'|'pending'|null>(null);const [reaskAt,setReaskAt]=useState<string|null>(null);
  const load=useCallback(()=>{call('private.get',{profileId},priv,{fresh:true}).then(setP).catch(()=>setP(null));},[call,profileId]);
- useEffect(()=>{load();},[load]);
+ const given=pre!=null;
+ useEffect(()=>{if(!given)load();},[load,given]);
  // Back from the age check this request sent the person to: open the request sheet again.
  useAgeResume(v=>v==='access:'+profileId,()=>setSheet('request'),!!p?.canRequest);
  const reason=preview?null:p?.reason??null;

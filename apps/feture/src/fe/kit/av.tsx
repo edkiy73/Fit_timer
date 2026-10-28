@@ -31,6 +31,8 @@ export function VideoPlayer({src,poster,w,h,durationMs,autoPlay,fill,onExpired,l
  const {t}=useI18n();const v=useRef<HTMLVideoElement>(null);
  const [started,setStarted]=useState(false);const [playing,setPlaying]=useState(false);const [ready,setReady]=useState(false);
  const [pos,setPos]=useState(0);const [muted,setMuted]=useState(false);const [bar,setBar]=useState(true);
+ // A poster that does not load (link ran out) is never a broken-image mark: the dark film instead.
+ const [badPoster,setBadPoster]=useState<string|null>(null);
  const [len,setLen]=useState(Math.max(0,(durationMs??0)/1000));
  const failed=useRef(false);const raf=useRef(0);const hide=useRef<ReturnType<typeof setTimeout>|undefined>(undefined);
  useEffect(()=>{failed.current=false;},[src]);
@@ -64,7 +66,7 @@ export function VideoPlayer({src,poster,w,h,durationMs,autoPlay,fill,onExpired,l
    onPlay={e=>{const el=e.currentTarget;if(playingNow&&playingNow!==el)playingNow.pause();playingNow=el;setPlaying(true);cancelAnimationFrame(raf.current);raf.current=requestAnimationFrame(loop);poke();}}
    onPause={()=>{setPlaying(false);cancelAnimationFrame(raf.current);poke(true);}} onEnded={stop} onTimeUpdate={tick} onVolumeChange={e=>setMuted(e.currentTarget.muted)}
    onError={()=>{if(failed.current)return;failed.current=true;setPlaying(false);setStarted(false);setReady(false);onExpired?.();}}/>}
-  {!(started&&ready)&&(poster?<img className="k-vposter" src={poster} alt="" draggable={false}/>:<span className="k-vnone"/>)}
+  {!(started&&ready)&&(poster&&badPoster!==poster?<img className="k-vposter" src={poster} alt="" draggable={false} onError={()=>setBadPoster(poster)}/>:<span className="k-vnone"/>)}
   {src?<>
    {<button type="button" className="k-vplay" aria-label={(playing?t('fe.kit.av.pause'):t('fe.kit.av.play'))+(!started&&len?' · '+fmtDur(len*1000):'')}
     onClick={e=>{e.stopPropagation();toggle();}}>{playing?<Pause/>:<Play/>}</button>}

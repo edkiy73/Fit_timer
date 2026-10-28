@@ -4,9 +4,9 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Check,ChevronLeft,ChevronRight,Globe,Image as ImageIcon,Images,MoreHorizontal,Pencil,Plus,Trash2,Users,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {AddCard,AlbumCard,AlbumMeta,AlbumRow,Ask,Btn,Card,Counter,Empty,Field,GalleryAdd,GalleryGrid,GalleryTile,Group,IconBtn,Input,Note,Row,SelectRow,SelectionBar,Sheet,Skel,SubBar,View} from './kit';
+import {AddCard,AlbumCard,AlbumMeta,AlbumRow,Ask,Btn,Card,Counter,Empty,Field,GalleryAdd,GalleryGrid,GalleryTile,Group,IconBtn,Input,LoadMore,Note,Row,SelectRow,SelectionBar,Sheet,Skel,SubBar,View} from './kit';
 import {FIELD,serverFields,softMax,textError,textErrorMessage,textLength} from './kit/validate';
-import {useFe} from './session';
+import {useFe,useShown} from './session';
 import {useToast} from './toast';
 import {useHideDock} from './dock';
 import type {Post} from './feed';
@@ -114,7 +114,7 @@ export function GalleryScreen(){
  const [error,setError]=useState<unknown>(null);const [tick,setTick]=useState(0);
  const [sel,setSel]=useState<Set<string>|null>(null);const [sheet,setSheet]=useState<SheetKind>(null);const [ask,setAsk]=useState<AskKind>(null);
  useHideDock(sel!==null); // the selection mode keeps its own bar at the bottom: no dock under it (V21 SC.P20 dock:false)
- const [busy,setBusy]=useState(false);const [more,setMore]=useState(false);
+ const [busy,setBusy]=useState(false);const [more,setMore]=useState(false);const [moreErr,setMoreErr]=useState<unknown>(null);
  const reload=useCallback(()=>setTick(n=>n+1),[]);
  useEffect(()=>{
   let live=true;setError(null);
@@ -133,10 +133,10 @@ export function GalleryScreen(){
  const own=!!albums?.own;
  const view=a?inAlbum:all;const items=view?.items??[];
  const loadMore=async()=>{
-  if(!view?.next||more)return;setMore(true);
+  if(!view?.next||more)return;setMore(true);setMoreErr(null);
   try{const r=await call('gallery.list',{profileId:id,...(a?{albumId:a}:{}),cursor:view.next},galleryRes);
    (a?setInAlbum:setAll)(v=>v?{ok:true,items:[...v.items,...r.items],next:r.next}:r);}
-  catch(e){toast(feErrorMessage(e,t),{type:'err'});}finally{setMore(false);}
+  catch(e){setMoreErr(e);}finally{setMore(false);}
  };
  const fail=(e:unknown)=>toast(feErrorMessage(e,t),{type:'err'});
  const run=async(fn:()=>Promise<void>)=>{if(busy)return;setBusy(true);try{await fn();}catch(e){fail(e);}finally{setBusy(false);}};
@@ -245,7 +245,7 @@ export function GalleryScreen(){
       </GalleryGrid>
       :<Empty icon={ImageIcon} title={t('fe.gal.empty')}/>}
      {own&&a&&inAlbum&&!items.length&&<Note className="mt12">{t('fe.gal.emptyAlbumHint')}</Note>}
-     {view?.next&&<Btn kind="soft" className="mt12" busy={more} disabled={more} onClick={()=>void loadMore()}>{t('fe.gal.more')}</Btn>}
+     <LoadMore more={!!view?.next} busy={more} error={moreErr} onMore={()=>void loadMore()}/>
     </>}
   </View>
   {sel&&<SelectionBar status={picked.length?t('fe.gal.selectedN',{n:picked.length}):t('fe.gal.tapToSelect')} actions={[
@@ -309,8 +309,8 @@ function CoverSheet({profileId,album:al,onClose,onSet}:{profileId:string,album:A
 
 /** `galleryOwn20()`: «Все» and the albums as cards (four to a line), «+ Альбом»; empty — one row to the first upload. */
 export function MeGallery({profileId,couple,title}:{profileId:string,couple:boolean,title:string}){
- const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();
- const [data,setData]=useState<{albums:Album[],all:z.infer<typeof galleryRes>}|null>(null);const [tick,setTick]=useState(0);const [creating,setCreating]=useState(false);
+ const {call,peek}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();
+ const [data,setData]=useShown<{albums:Album[],all:z.infer<typeof galleryRes>}|null>('gal.me:'+profileId,()=>{const a=peek('album.list',{profileId},albumsRes),g=peek('gallery.list',{profileId},galleryRes);return a&&g?{albums:a.items,all:g}:null;});const [tick,setTick]=useState(0);const [creating,setCreating]=useState(false);
  useEffect(()=>{let live=true;
   Promise.all([call('album.list',{profileId},albumsRes),call('gallery.list',{profileId},galleryRes)]).then(([a,g])=>{if(live)setData({albums:a.items,all:g});}).catch(()=>{if(live)setData({albums:[],all:{ok:true,items:[],next:null}});});
   return ()=>{live=false;};},[call,profileId,tick]);

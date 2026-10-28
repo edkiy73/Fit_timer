@@ -28,13 +28,18 @@ export default [
    await t.page.locator('.sheet.on .chip:not(.more)').first().click(); await t.tap('.sheet.on .sh-f .btn'); await toastSee(t, '');
    expect((await t.page.locator('.filterline .chip.on').count()) >= 1, 'sheet filter on');
  } },
- { name: '«Ещё» loads the next page without duplicates', persona: 'full', route: '/n/feed', run: async t => {
+ { name: 'scrolling down loads the next page by itself (no «Показать ещё» button), without duplicates', persona: 'full', route: '/n/feed', run: async t => {
    await t.see('.posts article.post'); const before = await t.page.locator('.posts article.post').count();
-   const more = t.page.locator('.view .btn:has-text("Показать ещё"), .view .btn:has-text("Ещё")').first();
-   if (!(await more.count())) { console.log(`   ${before} posts, no next page`); return; }
-   await more.scrollIntoViewIfNeeded(); await more.click(); await until(async () => (await t.page.locator('.posts article.post').count()) > before, 'next page');
+   expect(!(await t.page.locator('.view .btn:has-text("Показать ещё")').count()), 'a «Показать ещё» button is still there');
+   if (!(await t.page.locator('.view .k-more').count())) { console.log(`   ${before} posts, no next page`); return; }
+   // Scroll the screen (not the sentinel into view): the page is asked about a screen before the end.
+   for (let i = 0; i < 40 && (await t.page.locator('.posts article.post').count()) <= before; i++) {
+     await t.page.evaluate(() => { const v = document.querySelector('.view'); v.scrollBy(0, v.clientHeight * .8); }); await t.wait(350);
+   }
+   await until(async () => (await t.page.locator('.posts article.post').count()) > before, 'next page by scrolling');
    const ids = await t.page.locator('.posts article.post').evaluateAll(a => a.map(x => x.textContent.slice(0, 60)));
-   expect(new Set(ids).size === ids.length, 'duplicates after «Ещё»');
+   expect(new Set(ids).size === ids.length, 'duplicates after the next page');
+   await t.shot('feed-page2');
  } },
  { name: 'composer row: text → editor, photo → file picker, poll → poll ready, «+» → post / article / event', persona: 'full', route: '/n/feed', run: async t => {
    await t.see('.composer'); await t.tap('.composer .cmp-main'); await t.see('.compose .rte-ed'); await t.go('/n/feed');

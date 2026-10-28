@@ -2,7 +2,7 @@ import {useCallback,useEffect,useState} from 'react';
 import {useNavigate,useSearchParams} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Lock,LockOpen,Send,X} from 'lucide-react';
-import {Av,Bar,Btn,Card,Chip,Empty,Note,Pill,Row,Seg,Skel,Spacer,Stack,View} from './kit';
+import {Av,Bar,Btn,Card,Chip,Empty,LoadMore,Note,Pill,Row,Seg,Skel,Spacer,Stack,View} from './kit';
 import {useFe} from './session';
 import {useToast} from './toast';
 import {NameBadges} from './faces';
@@ -15,13 +15,14 @@ type Tab='byme'|'withme'|'out';
 const TONE:Record<string,'ok'|'wait'|'v'|'bad'|undefined>={pending:'wait',partial:'ok',granted:'ok',revoked:'bad',replaced:'v'};
 
 function usePaged<T,R extends {items:T[],next?:string|null|undefined}>(fetch:(cursor?:string)=>Promise<R>){
- const {t}=useI18n();const toast=useToast();const w=useAccessWords();
+ const {t}=useI18n();const w=useAccessWords();
  const [first,setFirst]=useState<R|null>(null);const [items,setItems]=useState<T[]|null>(null);const [next,setNext]=useState<string|null>(null);
  const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);
  const load=useCallback(()=>{setError(null);fetch().then(r=>{setFirst(r);setItems(r.items);setNext(r.next??null);}).catch(setError);},[fetch]);
  useEffect(()=>{load();},[load]);
- const more=async()=>{if(!next)return;setBusy(true);try{const r=await fetch(next);setItems(l=>[...(l??[]),...r.items]);setNext(r.next??null);}catch(e){toast(w.err(e),{type:'err'});}finally{setBusy(false);}};
- const moreBtn=next?<Btn kind="soft" className="mt12" busy={busy} disabled={busy} onClick={()=>void more()}>{t('fe.ac.more')}</Btn>:null;
+ const [moreErr,setMoreErr]=useState<unknown>(null);
+ const more=async()=>{if(!next||busy)return;setBusy(true);setMoreErr(null);try{const r=await fetch(next);setItems(l=>[...(l??[]),...r.items]);setNext(r.next??null);}catch(e){setMoreErr(e);}finally{setBusy(false);}};
+ const moreBtn=<LoadMore more={!!next} busy={busy} error={moreErr} onMore={()=>void more()}/>;
  const failed=error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={w.err(error)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>:null;
  return {first,items,load,moreBtn,failed};
 }

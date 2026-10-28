@@ -1,8 +1,8 @@
 import type {Meta,StoryObj} from '@storybook/react-vite';
 import {useState} from 'react';
 import {fn} from 'storybook/test';
-import {Ban,Bell,Ellipsis,Heart,KeyRound,MessageCircle,Sparkles,Users,X} from 'lucide-react';
-import {PhotoBars,Answer,AnswerScale,Av,Btn,Chip,Chips,IconBtn,LikeTile,PersonBar,PersonLine,PersonName,Pill,Radar,RequestCard,Soon,Typing,plate} from './index';
+import {ArrowLeftRight,Ban,Bell,Ellipsis,Heart,KeyRound,MessageCircle,Sparkles,Users,X} from 'lucide-react';
+import {PhotoBars,Answer,AnswerScale,Av,Btn,Chip,Chips,IconBtn,LikeTile,PersonBar,PersonLine,PersonName,Pill,Radar,RequestCard,Soon,Typing,Verdict,plate} from './index';
 
 const meta={title:'Домен/Люди',component:RequestCard,tags:['autodocs'],
  parameters:{docs:{description:{component:'Запрос, на который нужно ответить (доступ к приватному, связь, приглашение в пару, заявка на событие): кто просит (`PersonLine`), подробности, ответы. Ответ на вопрос заявки — `Answer`.'}}},
@@ -28,6 +28,7 @@ export const Скоро:StoryObj<typeof Soon>={name:'Скоро (знакомс�
  args:{badge:'Скоро',title:'Готовим знакомства',text:'Подборка по тому, что откликается вам обоим.',points:[[Sparkles,'Совпадения по интересам и границам'],[KeyRound,'Приватное открываешь ты'],[MessageCircle,'Написать — только при взаимной симпатии']]},argTypes:{points:{control:false}}};
 export const Печатает:StoryObj<typeof Typing>={name:'«печатает…» в чате',render:a=><div className="msgs"><div className="msg">Привет!</div><Typing {...a}/></div>,args:{children:'Mia печатает…'}};
 export const Радар:StoryObj<typeof Radar>={name:'Радар (никого рядом)',render:a=><div className="empty"><Radar {...a}/></div>,args:{seed:'me'}};
+export const РадарМалый:StoryObj<typeof Radar>={name:'Радар компактный (пустая колода)',render:a=><div className="empty"><Radar {...a}/></div>,args:{seed:'me',small:true}};
 
 type Mark='discuss'|'hard';
 export const Шкала:StoryObj<typeof AnswerScale<Mark>>={name:'Шкала ответа 1–10',
@@ -41,3 +42,10 @@ export const Направления:StoryObj<typeof Chip>={name:'Чипы нед
 
 export const ПолоскиФото:StoryObj<typeof PhotoBars>={name:'Полоски фото на шапке профиля (со счётчиком)',render:a=><div className="hero" style={{height:240}}><div className="plate" style={plate('mia')}/><PhotoBars {...a}/></div>,
  args:{n:5,i:1,label:'Фото 2 из 5',count:true}};
+
+export const Вердикт:StoryObj<typeof Verdict>={name:'Вердикт сравнения (Verdict)',
+ parameters:{docs:{description:{story:'Одна короткая строка под полосой сравнения интереса: иконка в тоне, вердикт жирным и не больше одной тихой строки.'}}},
+ render:a=><Verdict {...a}/>,args:{icon:ArrowLeftRight,tone:'ok',title:'Дополняете друг друга',sub:'Тебе ближе давать, Мире — получать'},
+ argTypes:{icon:{control:false},tone:{control:'inline-radio',options:[undefined,'ok','try','warn','bad']}}};
+export const ВердиктГраница:StoryObj<typeof Verdict>={name:'Вердикт: граница',render:a=><Verdict {...a}/>,args:{icon:Ban,tone:'bad',title:'Границы',sub:'Для Миры это граница — не предлагай и не уговаривай'}};
+export const АватарБезФото:StoryObj<typeof Av>={name:'Аватар: фото не загрузилось → инициалы',render:()=><Av name="Яна" seed="yana" src="https://example.invalid/broken.jpg"/>};

@@ -2,7 +2,7 @@ import type {Meta,StoryObj} from '@storybook/react-vite';
 import {useState} from 'react';
 import {fn} from 'storybook/test';
 import {Bell,Camera,Eye,Hand,KeyRound,Link2,Lock,Trash2,Users,X} from 'lucide-react';
-import {AddCard,Av,Btn,Card,Group,IconBtn,Row,SelectRow,ToggleRow} from './index';
+import {AddCard,Av,Btn,Card,Group,IconBtn,LoadMore,Row,SelectRow,ToggleRow} from './index';
 
 const meta={title:'Списки/Строка',component:Row,tags:['autodocs'],
  parameters:{docs:{description:{component:'Пункт настроек, меню, списка людей — всегда внутри `<Card list>`. Слева иконка (`icon`, `tone`) или аватар (`av`), справа значение, бейдж и стрелка. Опасное действие — `danger` (без стрелки).'}}},
@@ -39,3 +39,11 @@ export const ДобавитьНесколько:StoryObj<typeof AddCard>={name:'
  render:()=><><Group title="Фото профиля"><AddCard icon={Camera} title="Добавить фото" sub="Первое фото станет главным" onClick={()=>{}}/></Group>
   <Group title="Связи"><AddCard icon={Link2} title="Добавить связь" sub="Отношения, практика, наставничество" onClick={()=>{}}/></Group>
   <Group title="Описание"><AddCard icon={Lock} title="Добавить описание" sub="Длинная подсказка переносится на вторую строку, но не дальше — коротко и по делу" onClick={()=>{}}/></Group></>};
+
+export const БесконечнаяЛента:StoryObj<typeof LoadMore>={name:'Подгрузка при прокрутке (LoadMore)',decorators:[S=><S/>],
+ parameters:{docs:{description:{story:'После постраничного списка вместо «Показать ещё»: следующая страница запрашивается сама примерно за экран до конца. Пока грузится — три мигающие точки в блоке постоянной высоты; при ошибке — одна строка «Не загрузилось · Повторить»; когда страниц больше нет — ничего.'}}},
+ render:a=>{const [n,setN]=useState(8);const [busy,setBusy]=useState(false);
+  return <div style={{height:320,overflow:'auto'}}><Card list>{Array.from({length:n},(_,i)=><Row key={i} title={'Строка '+(i+1)}/>)}</Card>
+   <LoadMore {...a} more={a.more&&n<40} busy={busy||a.busy} onMore={()=>{setBusy(true);setTimeout(()=>{setN(x=>x+8);setBusy(false);},700);}}/></div>;},
+ args:{more:true,busy:false,error:null,onMore:fn()}};
+export const ПодгрузкаОшибка:StoryObj<typeof LoadMore>={name:'Подгрузка: ошибка',render:a=><LoadMore {...a}/>,args:{more:true,busy:false,error:new Error('x'),onMore:fn()}};

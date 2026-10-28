@@ -76,7 +76,7 @@ const forbidden=(e:unknown)=>e instanceof FeError&&e.code==='forbidden';
 
 /** Staff roles of the signed-in account; [] for everyone else (and while loading: null). */
 export function useStaffRoles(){
- const {call}=useFe();const [roles,setRoles]=useState<string[]|null>(null);
+ const {call,peek}=useFe();const [roles,setRoles]=useState<string[]|null>(()=>peek('staff.me',{},meRes,{asAccount:true})?.roles??null);
  useEffect(()=>{const ctl=new AbortController();
   call('staff.me',{},meRes,{asAccount:true,signal:ctl.signal}).then(r=>setRoles(r.roles)).catch(()=>{if(!ctl.signal.aborted)setRoles([]);});
   return ()=>ctl.abort();},[call]);

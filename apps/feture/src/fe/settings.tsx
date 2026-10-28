@@ -7,7 +7,7 @@ import {Ban,Bell,Calendar,Camera,CircleHelp,Crown,Download,Eye,EyeOff,Globe,Hear
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {getThemePreference,setThemePreference,type ThemePreference} from '../theme';
 import {Alert,Bar,Btn,Card,Empty,Field,H,Input,Note,Row,SectionLabel,SelectRow,Skel,ToggleRow,View} from './kit';
-import {useFe} from './session';
+import {useFe,useShown} from './session';
 import {useToast} from './toast';
 import {usePremiumStatus} from './account-extra';
 import {Sheet} from './profile-extras';
@@ -15,7 +15,7 @@ import {HiddenFeedSheet} from './settings-lists';
 import {Ask,LinkRow} from './settings-ui';
 import {disableWebPush} from './push-web';
 import {disableNativePush} from './push-native';
-import {PushSwitch} from './push';
+import {PushSwitch,warmPushState} from './push';
 
 /** V21 K01 (settings), K05 (notifications), K07 (my data and deletion) on /api/fe. */
 const settingsRes=z.object({ok:z.literal(true),settings:z.object({locale:z.string(),chatBlur:z.boolean(),newsOptIn:z.boolean(),showExplicit:z.boolean()})});
@@ -32,17 +32,24 @@ const blocksRes=z.object({ok:z.literal(true),items:z.array(z.unknown())}).passth
 type AgeState='ok'|'pending'|'none';
 
 export function SettingsScreen(){
- const {call,state,acting}=useFe();const {t,preference,setPreference,canSwitch}=useI18n();const auth=useOptionalAuth();const navigate=useNavigate();const toast=useToast();
- const [blocked,setBlocked]=useState<number|null>(null);
- const [s,setS]=useState<z.infer<typeof settingsRes>['settings']|null>(null);const [age,setAge]=useState<AgeState|null>(null);const [photo,setPhoto]=useState<z.infer<typeof photoRes>['state']|null>(null);
+ const {call,peek,state,acting}=useFe();const {t,preference,setPreference,canSwitch}=useI18n();const auth=useOptionalAuth();const navigate=useNavigate();const toast=useToast();
+ // What the screen showed last (or the last answers) on the first frame; one wave of reads replaces them together.
+ const ageOf=(r:z.infer<typeof ageRes>):AgeState=>r.verified?'ok':r.check?.state==='submitted'?'pending':'none';
+ const [blocked,setBlocked]=useShown<number|null>('set.blocked',()=>peek('blocks.list',{},blocksRes)?.items.length??null);
+ const [s,setS]=useShown<z.infer<typeof settingsRes>['settings']|null>('set.s',()=>peek('settings.get',{},settingsRes,{asAccount:true})?.settings??null);
+ const [age,setAge]=useShown<AgeState|null>('set.age',()=>{const r=peek('verification.ageStatus',{},ageRes,{asAccount:true});return r?ageOf(r):null;});
+ const [photo,setPhoto]=useShown<z.infer<typeof photoRes>['state']|null>('set.photo',()=>peek('verification.photoStatus',{},photoRes,{asAccount:true})?.state??null);
  const [theme,setTheme]=useState<ThemePreference>(getThemePreference());
  const [error,setError]=useState<unknown>(null);const premium=usePremiumStatus().status;
  const [layer,setLayer]=useState<'hidden'|'logout'|null>(null);const [leaving,setLeaving]=useState(false);
- const load=useCallback(()=>{setError(null);call('settings.get',{},settingsRes,{asAccount:true}).then(r=>setS(r.settings)).catch(setError);
-  call('verification.ageStatus',{},ageRes,{asAccount:true}).then(r=>setAge(r.verified?'ok':r.check?.state==='submitted'?'pending':'none')).catch(()=>{});
-  call('verification.photoStatus',{},photoRes,{asAccount:true}).then(r=>setPhoto(r.state)).catch(()=>{});
-  call('blocks.list',{},blocksRes).then(r=>setBlocked(r.items.length)).catch(()=>{});},[call]);
- useEffect(()=>{load();},[load]);
+ const load=useCallback(()=>{setError(null);
+  void Promise.allSettled([call('settings.get',{},settingsRes,{asAccount:true}),call('verification.ageStatus',{},ageRes,{asAccount:true}),
+   call('verification.photoStatus',{},photoRes,{asAccount:true}),call('blocks.list',{},blocksRes)]).then(([a,b,c,d])=>{
+   if(a.status==='fulfilled')setS(a.value.settings);else setError(a.reason);
+   if(b.status==='fulfilled')setAge(ageOf(b.value));if(c.status==='fulfilled')setPhoto(c.value.state);if(d.status==='fulfilled')setBlocked(d.value.items.length);});
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[call]);
+ useEffect(()=>{load();warmPushState();},[load]);
  const update=async(patch:Record<string,unknown>,done?:string)=>{
   // Optimistic: the switch moves at once and comes back if the server says no.
   const before=s;if(s)setS({...s,...patch} as typeof s);
@@ -57,7 +64,8 @@ export function SettingsScreen(){
  return <>
   <Bar title={t('fe.set.title')} back="/n/me"/>
   <View className="nodock compact">
-   {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>:<>
+   {error&&!s?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
+    :!s?<><SectionLabel>{t('fe.set.account')}</SectionLabel><Skel kind="list" rows={6}/><SectionLabel>{t('fe.set.app')}</SectionLabel><Skel kind="list" rows={3}/></>:<>
     <SectionLabel>{t('fe.set.account')}</SectionLabel>
     <Card list>
      <LinkRow icon={KeyRound} title={t('fe.set.signIn')} sub={email||t('fe.set.noEmail')} onClick={()=>navigate('/n/settings/security')}/>
@@ -106,8 +114,8 @@ const CATS:[keyof Notif['categories'],LucideIcon][]=[['match',MessageCircle],['l
 const HALF_HOURS=Array.from({length:48},(_,i)=>`${String(i>>1).padStart(2,'0')}:${i%2?'30':'00'}`);
 
 export function NotificationSettingsScreen(){
- const {call,state}=useFe();const {t}=useI18n();const toast=useToast();
- const [n,setN]=useState<Notif|null>(null);const [error,setError]=useState<unknown>(null);
+ const {call,peek,state}=useFe();const {t}=useI18n();const toast=useToast();
+ const [n,setN]=useShown<Notif|null>('set.notif',()=>peek('notifications.settings.get',{},notifRes,{asAccount:true})?.settings??null);const [error,setError]=useState<unknown>(null);
  const email=state.status==='ready'?state.session.email:'';
  const load=useCallback(()=>{setError(null);call('notifications.settings.get',{},notifRes,{asAccount:true}).then(r=>setN(r.settings)).catch(setError);},[call]);
  useEffect(()=>{load();},[load]);
@@ -120,7 +128,7 @@ export function NotificationSettingsScreen(){
  return <>
   <Bar title={t('fe.set.notifications')} back="/n/settings"/>
   <View className="nodock compact">
-   {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
+   {error&&!n?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :!n?<><SectionLabel>{t('fe.set.n.lock')}</SectionLabel><Skel kind="card" rows={2}/><Skel kind="list" rows={4}/></>:<>
     <SectionLabel>{t('fe.set.n.lock')}</SectionLabel>
     <div className="nmode">{(['safe','normal'] as const).map(k=><button key={k} type="button" className={'nm'+(n.mode===k?' on':'')} aria-pressed={n.mode===k}

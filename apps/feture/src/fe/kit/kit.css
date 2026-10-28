@@ -316,20 +316,25 @@ button.pill{cursor:pointer}
 .v21 .hero .pc-bars.counted{top:calc(var(--s-1) + var(--safe-t))}
 .v21 .hero .pc-bars.counted>.pc-count{margin-top:calc(var(--s-9) - var(--s-3))}
 
-/* A vertical swipe closes any full-screen viewer: the picture follows the finger, the backdrop fades. */
+/* A vertical swipe closes any full-screen viewer (Instagram / Telegram): only the picture follows the finger and shrinks a
+   little; the backdrop stays put and fades with the distance; the clip's bar, its play mark and the viewer's buttons and
+   caption hide while dragging; past the threshold the picture slides away and everything fades (.out), else it springs
+   back (.back). The figure has no background of its own, so no edge moves with it. */
 .v21 .vw-track.pull{transition:none}
 .v21 .vw-track.back{transition:transform .22s var(--ease)}
-.v21 .vw-track.pull figure,
-.v21 .vw-track.back figure{transform:translateY(var(--dy,0px));transition:inherit}
-.v21 .viewer:has(>.vw-track.pull),
-.v21 .viewer:has(>.vw-track.back){background:rgba(6,4,6,calc(1 - var(--pull,0)))}
-.v21 .viewer:has(>.vw-track.pull)>:not(.vw-track){opacity:calc(1 - var(--pull,0) * 2)}
+.v21 .vw-track:is(.pull,.back,.out) figure{transform:translateY(var(--dy,0px)) scale(var(--sc,1));transition:inherit}
+.v21 .vw-track.out figure{transition:transform .18s ease-in,opacity .18s ease-in;opacity:0}
+.v21 .vw-track:is(.pull,.out) :is(.k-vbar,.k-vplay,.k-vdur,.mplay){opacity:0;pointer-events:none;transition:none}
+.v21 .viewer:has(>.vw-track:is(.pull,.back,.out)){background:rgba(6,4,6,calc(1 - var(--pull,0)))}
+.v21 .viewer:has(>.vw-track:is(.back,.out)){transition:opacity .2s,background-color .2s}
+.v21 .viewer:has(>.vw-track:is(.pull,.out))>:not(.vw-track){opacity:0;pointer-events:none;transition:opacity var(--d-fast)}
 
-/* The post viewer (owner 28.10.2026, TikTok-like): like / comment / save / share on the right, the author and two lines
-   of the text at the bottom over a scrim; a tap on the text opens the post. */
-.v21 .vw-rail{position:absolute;right:var(--s-2);bottom:calc(var(--s-9) * 3 + var(--safe-b));z-index:3;display:grid;gap:var(--s-3);justify-items:center}
-.v21 .vw-rail>button{display:grid;justify-items:center;gap:2px;min-width:48px;padding:var(--s-1) 0;border:0;background:none;color:#fff;font:var(--t-xs);font-weight:700;cursor:pointer;text-shadow:0 1px 3px rgba(0,0,0,.6)}
-.v21 .vw-rail>button>svg{width:28px;height:28px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))}
+/* The post viewer (owner 28.10.2026, TikTok-like): like and comments, small and low on the right (save and share live
+   in the post); the author and two lines of the text at the bottom over a scrim; a tap on the text opens the post.
+   Only the two buttons take taps: the rail's own box lets them through, so the right third pages everywhere else. */
+.v21 .vw-rail{position:absolute;right:var(--s-1);bottom:calc(var(--s-9) * 2 + var(--safe-b));z-index:3;display:grid;gap:var(--s-1);justify-items:center;pointer-events:none}
+.v21 .vw-rail>button{pointer-events:auto;display:grid;justify-items:center;gap:2px;min-width:44px;padding:var(--s-1) 0;border:0;background:none;color:#fff;font:var(--t-xs);font-weight:700;cursor:pointer;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.v21 .vw-rail>button>svg{width:24px;height:24px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))}
 .v21 .vw-rail>button.on{color:var(--accent)}
 .v21 .vw-rail>button:disabled{opacity:.5}
 .v21 .vw-cap{position:absolute;left:0;right:0;bottom:0;z-index:2;display:grid;gap:var(--s-1);padding:var(--s-8) calc(64px + var(--s-3)) calc(var(--s-6) + var(--safe-b) + var(--s-3)) var(--s-4);
@@ -353,6 +358,28 @@ button.pill{cursor:pointer}
 .v21 .k-video video::-webkit-media-controls-start-playback-button,
 .v21 .k-video video::-webkit-media-controls-overlay-enclosure{display:none!important;-webkit-appearance:none}
 .v21 .mgrid-box{display:contents}
+
+/* LoadMore (infinite scroll): a box of fixed height after a paged list — three dots blink while the next page loads,
+   a failed page leaves one quiet line with «Повторить». Nothing around it moves. */
+.v21 .k-more{display:flex;align-items:center;justify-content:center;gap:var(--s-2);min-height:var(--h-md);margin-top:var(--s-2);color:var(--mute);font:var(--t-sm)}
+.v21 .k-more-dots{display:inline-flex;gap:var(--s-1)}
+.v21 .k-more-dots>i{width:6px;height:6px;border-radius:50%;background:var(--faint);animation:fe-blink 1.2s ease-in-out infinite}
+.v21 .k-more-dots>i:nth-child(2){animation-delay:.2s}.v21 .k-more-dots>i:nth-child(3){animation-delay:.4s}
+@media (prefers-reduced-motion:reduce){.v21 .k-more-dots>i{animation:none}}
+
+/* Verdict: one short line under a comparison bar (the interest sheet) — icon + bold verdict, at most one quiet line. */
+.v21 .k-verdict{display:grid;justify-items:center;gap:var(--s-1);margin:var(--s-3) 0 0;text-align:center}
+.v21 .k-verdict>b{display:inline-flex;align-items:center;gap:var(--s-1);font:var(--t-body);font-weight:750;color:var(--ink)}
+.v21 .k-verdict>b>svg{flex:none;width:18px;height:18px;color:var(--mute)}
+.v21 .k-verdict.ok>b>svg{color:var(--ok)}.v21 .k-verdict.try>b>svg{color:var(--accent)}
+.v21 .k-verdict.warn>b>svg{color:var(--warn)}.v21 .k-verdict.bad>b>svg{color:var(--danger)}
+.v21 .k-verdict>span{max-width:34ch;font:var(--t-sm);color:var(--mute);overflow-wrap:anywhere}
+/* The comparison bar's own side kept private: a small key on the avatar. */
+.v21 .cr-av{position:relative}
+.v21 .cr-key{position:absolute;right:-3px;bottom:-3px;z-index:1;width:16px;height:16px;border-radius:50%;display:grid;place-items:center;background:var(--surf);color:var(--mute);box-shadow:0 0 0 1.5px var(--surf)}
+.v21 .cr-key>svg{width:10px;height:10px}
+/* The interest sheet: the description, then the bar with room above it. */
+.v21 .topic-desc+.cmpx{margin-top:var(--s-4)}
 
 /* AddCard (owner, 29.10.2026): one «add» card for every empty block — the hint wraps to two lines at most, and
    a card under another block in the same group keeps the rhythm gap. */

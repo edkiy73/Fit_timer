@@ -82,8 +82,8 @@ test('registration: catalog, nickname rules, under-18 keeps only a marker, docum
 test('nick.check is rate limited per account', async () => {
   const { pg, call } = await setup();
   try {
-    for (let i = 0; i < 30; i++) assert.equal((await call('u1', null, { action: 'nick.check', handle: 'Name' + i })).status, 200);
-    assert.equal((await call('u1', null, { action: 'nick.check', handle: 'Name31' })).status, 429);
+    for (let i = 0; i < 100; i++) assert.equal((await call('u1', null, { action: 'nick.check', handle: 'Name' + i })).status, 200);
+    assert.equal((await call('u1', null, { action: 'nick.check', handle: 'Name101' })).status, 429);
     assert.equal((await call('u2', null, { action: 'nick.check', handle: 'Name31' })).status, 200);
   } finally { await pg.close(); }
 });

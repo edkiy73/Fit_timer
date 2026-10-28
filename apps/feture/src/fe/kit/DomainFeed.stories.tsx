@@ -97,5 +97,5 @@ export const Скоро:StoryObj<typeof FeedEvents>={name:'«Скоро» в л�
 export const ПросмотрПоста:StoryObj<typeof ViewerPostBar>={name:'Просмотр медиа поста: действия справа, текст внизу',
  render:a=><div className="viewer on k-demo-viewer" style={{height:520}}><PhotoTrack srcs={[pic('Фото',800,1000)]} index={0} onClose={fn()}/><ViewerPostBar {...a}/></div>,
  args:{author:{id:'mia',name:'Mia'},text:'Вечер у озера — первая прогулка после долгой недели. Тишина, туман и ни одного человека вокруг, только утки и мы.',
-  liked:true,likes:12,replies:3,saved:false,labels:{like:'Нравится',comment:'Комментарии',save:'Сохранить',share:'Поделиться',open:'Открыть публикацию'},
-  onLike:fn(),onComment:fn(),onSave:fn(),onShare:fn(),onOpen:fn(),onAuthor:fn()}};
+  liked:true,likes:12,replies:3,labels:{like:'Нравится',comment:'Комментарии',open:'Открыть публикацию'},
+  onLike:fn(),onComment:fn(),onOpen:fn(),onAuthor:fn()}};

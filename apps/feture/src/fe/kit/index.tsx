@@ -327,6 +327,35 @@ export function useBackClose(onClose:()=>void){
  },[]);
 }
 
+/** The scroll box an element lives in (a screen's `.view`, a sheet body), or null for the page itself. */
+function scrollBox(el:HTMLElement|null):HTMLElement|null{
+ for(let p=el?.parentElement;p;p=p.parentElement){const o=getComputedStyle(p).overflowY;if(o==='auto'||o==='scroll')return p;}
+ return null;
+}
+/** Infinite scroll (owner 28.10.2026: no «Показать ещё» buttons): put it after a paged list. When the reader comes
+ * within about a screen of the end it asks for the next page (`onMore`) by itself; meanwhile three dots blink in a
+ * box of fixed height (nothing jumps), a failed page leaves one quiet retry line, and with no more pages it is gone.
+ * `more` — there is a next page; `busy` — it is being loaded; `error` — the last page failed. */
+export function LoadMore({more,busy,error,onMore,label}:{more:boolean,busy?:boolean|undefined,error?:unknown,onMore:()=>void,/** What is loading, for screen readers. */ label?:string|undefined}){
+ const {t}=useI18n();const box=useRef<HTMLDivElement>(null);const near=useRef(false);
+ const cb=useRef(onMore);cb.current=onMore;
+ const state=useRef({more,busy,error});state.current={more,busy,error};
+ const ask=()=>{const s=state.current;if(near.current&&s.more&&!s.busy&&!s.error)cb.current();};
+ useEffect(()=>{
+  const el=box.current;if(!el||!more||typeof IntersectionObserver==='undefined')return;
+  const root=scrollBox(el);
+  const io=new IntersectionObserver(es=>{near.current=es.some(e=>e.isIntersecting);ask();},{root,rootMargin:'0px 0px 100% 0px'});
+  io.observe(el);return ()=>io.disconnect();
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[more]);
+ // A page that did not fill the screen: the end is still near once it has come, so the next one is asked at once.
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ useEffect(()=>{if(!busy&&!error)ask();},[busy,error]);
+ if(!more)return null;
+ if(error&&!busy)return <div className="k-more err" role="alert"><span>{t('fe.kit.more.fail')}</span><Btn kind="text" size="sm" fit onClick={()=>cb.current()}>{t('fe.kit.more.retry')}</Btn></div>;
+ return <div ref={box} className="k-more" role="status" aria-busy={busy||undefined} aria-label={label??t('fe.kit.more.loading')}>{busy&&<span className="k-more-dots" aria-hidden="true"><i/><i/><i/></span>}</div>;
+}
+
 export * from './domain';
 export * from './feed';
 export * from './account';

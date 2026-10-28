@@ -6,7 +6,7 @@ import {Camera,CameraOff,Clock,FileUp,Hand,IdCard,ImagePlus,Info,Lock,RefreshCw,
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,Bar,Btn,CaptureFrame,Card,Empty,FilePick,Group,RadioList,Row,Skel,Text,View} from './kit';
 import {useSendPhoto} from './media-upload';
-import {useFe} from './session';
+import {useFe,useShown} from './session';
 
 /** V21 A07 «Проверка возраста» on /api/fe (server/commands/premium.mjs). Two methods:
  * - selfie: the server picks a gesture (`verification.ageStart`), the person sends a selfie making it, staff compare
@@ -73,8 +73,8 @@ export function useAgeResume(match:(intent:string)=>boolean,run:(intent:string)=
 }
 
 export function AgeCheckScreen(){
- const {call,state}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const [params]=useSearchParams();
- const [s,setS]=useState<Status|null>(null);const [error,setError]=useState<unknown>(null);
+ const {call,peek,state}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const [params]=useSearchParams();
+ const [s,setS]=useShown<Status|null>('set.ageCheck',()=>peek('verification.ageStatus',{},statusRes,{asAccount:true}));const [error,setError]=useState<unknown>(null);
  const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [needPhoto,setNeedPhoto]=useState(false);
  const [shot,setShot]=useState<{blob:Blob,url:string,method:Method}|null>(null);
  const [choice,setChoice]=useState<Method|null>(null);const [denied,setDenied]=useState<Method|null>(null);const [choosing,setChoosing]=useState(false);

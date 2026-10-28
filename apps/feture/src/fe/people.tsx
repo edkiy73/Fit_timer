@@ -11,7 +11,7 @@ import {DiscoverPhotoAsk} from './discover-photo';
 import {NameBadges} from './faces';
 import {BellButton} from './inbox';
 import {when} from './feed';
-import {catalogRes,CompatSummary,FollowCounts,MatchOverlay,PersonBio,PersonMenu,PhotoViewer,ProfileBody,ProfilePage,personName,personProfileRes,pxError,usePrivate,useRelation,useToast,type PxToast,
+import {catalogRes,cardOneRead,cardRead,CompatSummary,FollowCounts,MatchOverlay,PersonBio,PersonMenu,PhotoViewer,ProfileBody,ProfilePage,personName,personProfileRes,pxError,readCard,readCatalog,usePrivate,useRelation,useToast,type CardPre,type PxToast,
  type Catalog,type MenuStep,type PersonProfile,type Relation} from './profile-extras';
 
 /** Slice F (V21 D03–D10): Discover cards from the server's mutual pool with the whole profile under the photo, swipe
@@ -257,6 +257,8 @@ function Discover({reloadKey,onOff,filterOn,openFilter,likesN,toLikes,onLikes}:{
  useEffect(()=>{if(cards&&cards.length<=REFILL_AT&&!off&&!closed)refill();},[cards,settled,refill,off,closed]);
  // The next cards' photos load while the current one is looked at.
  useEffect(()=>{for(const c of (cards??[]).slice(0,6))preload(cardPhotos(c)[0]?.card);},[cards]);
+ // Option and topic names under a card are there before the first card is scrolled.
+ useEffect(()=>{readCatalog(call).catch(()=>{});},[call]);
  // When the filters are what empties Discover, say so (PPL-013): the count without them.
  const empty=!!cards&&!cards.length&&!filling&&!pendingN.current;
  useEffect(()=>{if(!empty||!filterOn){setByFilter(null);return;}
@@ -346,7 +348,10 @@ function CardTags({c}:{c:Card}){
 function plural5(t:(k:string)=>string,locale:string,base:string,n:number){const m10=n%10,m100=n%100;return t(base+(locale==='en'?(n===1?'1':'5'):m10===1&&m100!==11?'1':m10>=2&&m10<=4&&(m100<12||m100>14)?'2':'5'));}
 
 function NextCard({c,cardRef}:{c:Card,cardRef:React.RefObject<HTMLElement|null>}){
- const {locale}=useI18n();const city=c.city?(locale==='en'?c.city.en||c.city.ru:c.city.ru||c.city.en):null;
+ const {locale}=useI18n();const {call,acting}=useFe();const city=c.city?(locale==='en'?c.city.en||c.city.ru:c.city.ru||c.city.en):null;
+ // What is under its photo is read now (one request), so the card is whole the moment it is on top.
+ const aid=acting?.id??'';
+ useEffect(()=>{if(aid&&cardOneRead()!==false)readCard(call,aid,c.id).catch(()=>{});},[call,aid,c.id]);
  return <article ref={cardRef as React.RefObject<HTMLElement>} className="pc next" inert aria-hidden="true">
   <div className="pc-ph"><CardPhoto c={c} src={cardPhotos(c)[0]?.card??null}/><CardTags c={c}/>
    <div className="pc-info"><PersonName name={cname(c)} age={c.ages.join(' · ')}><NameBadges p={c}/></PersonName>
@@ -359,24 +364,33 @@ function NextCard({c,cardRef}:{c:Card,cardRef:React.RefObject<HTMLElement|null>}
  * profile in its own layout with «Подписаться» and «Полный профиль». Horizontal drag decides, vertical scrolls. */
 function TopCard({c,cardRef,nextRef,actsRef,onDecide,toast}:{c:Card,cardRef:React.RefObject<HTMLElement|null>,nextRef:React.RefObject<HTMLElement|null>,
  actsRef:React.RefObject<HTMLDivElement|null>,onDecide:(dir:1|-1)=>void,toast:PxToast}){
- const {call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();
- const [p,setP]=useState<PersonProfile|null>(null);const [ix,setIx]=useState(0);const [view,setView]=useState<number|null>(null);
- // What is under the photo (bio, compatibility, posts, the private part) is read only once the card is scrolled:
- // a swipe costs the decision alone.
- const [deep,setDeep]=useState(false);
+ const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const aid=acting?.id??'';
+ const [ix,setIx]=useState(0);const [view,setView]=useState<number|null>(null);
+ // Everything under the photo (bio, compatibility, details, interests, posts, the private part) comes in one read as
+ // soon as the card is next in the deck (NextCard) — usually it is here before the card is on top, so the whole body
+ // is drawn on the first frame. Until then its place is held by blocks of about its size; nothing loads on scroll.
+ const [pre,setPre]=useState<CardPre|null>(()=>aid?cardRead(aid,c.id):null);
+ useEffect(()=>{if(pre||!aid)return;let live=true;
+  // A server without the one read: the parts are asked only once someone stays on the card, so quick swipes stay cheap.
+  const go=()=>readCard(call,aid,c.id).then(r=>{if(live)setPre(r);}).catch(()=>{});
+  const timer=cardOneRead()===false?setTimeout(go,700):(go(),undefined);
+  return ()=>{live=false;clearTimeout(timer);};},[call,aid,c.id,pre]);
+ const p:PersonProfile|null=pre?.profile??null;
  const known=c.followers!=null?{followers:c.followers,following:c.following??0,iFollow:!!c.iFollow,liked:false,mutual:false}:null;
- const [rel,setRel]=useRelation(c.id,{known,skip:!deep});
- useEffect(()=>{if(!deep)return;call('profile.get',{profileId:c.id},personProfileRes).then(r=>setP(r.profile)).catch(()=>{});},[call,c.id,deep]);
+ const [rel,setRel]=useRelation(c.id,{known});
  const photos=!c.photos&&p?p.photos.filter(m=>!m.pending&&m.src).map(m=>({card:m.src?.card??m.src?.full??m.src?.thumb??'',full:m.src?.full??m.src?.card??''})):[];
  const list=photos.length?photos:cardPhotos(c);
  useEffect(()=>{for(const x of list.slice(1,3))preload(x.card);},[list.length>1?list[1]!.card:'']);
  const i=Math.min(ix,Math.max(0,list.length-1));const city=c.city?(locale==='en'?c.city.en||c.city.ru:c.city.ru||c.city.en):null;
  const nudge=useRef(0);
  const step=(d:number)=>{const n=i+d;const el=cardRef.current;if(n<0||n>=list.length){if(el){el.classList.remove('nudge-l','nudge-r');void el.offsetWidth;el.classList.add(d<0?'nudge-l':'nudge-r');}return;}setIx(n);};
+ // The handlers stay bound for the card's life: a new `onDecide` (the deck refilled meanwhile) must not drop a drag.
+ const decideRef=useRef(onDecide);decideRef.current=onDecide;
  // initDeck: pointer drag on the card, the like/pass stamps follow the distance; a fast flick counts too.
  useEffect(()=>{const el=cardRef.current;if(!el)return;
   let sx=0,sy=0,t0=0,dx=0,mode:''|'x'|'y'='',pid:number|null=null;
-  const onScroll=()=>{actsRef.current?.classList.toggle('onphoto',el.scrollTop<el.clientHeight*.55);if(el.scrollTop>24)setDeep(true);};
+  // Scrolling only flips a class on the buttons (no re-render per frame).
+  const onScroll=()=>{actsRef.current?.classList.toggle('onphoto',el.scrollTop<el.clientHeight*.55);};
   const down=(e:PointerEvent)=>{if(e.button>0||(e.target as HTMLElement).closest('button,a,input,textarea,select'))return;sx=e.clientX;sy=e.clientY;t0=e.timeStamp;dx=0;mode='';pid=e.pointerId;};
   const move=(e:PointerEvent)=>{if(pid!==e.pointerId)return;const mx=e.clientX-sx,my=e.clientY-sy;const nx=nextRef.current;
    if(!mode){if(Math.abs(mx)>10&&Math.abs(mx)>Math.abs(my)*1.2){mode='x';el.setPointerCapture(pid);el.classList.add('drag');nx?.classList.add('drag');}else if(Math.abs(my)>10&&Math.abs(my)>Math.abs(mx)*1.2)mode='y';}
@@ -384,7 +398,7 @@ function TopCard({c,cardRef,nextRef,actsRef,onDecide,toast}:{c:Card,cardRef:Reac
     el.style.setProperty('--l',String(Math.max(0,Math.min(1,dx/110))));el.style.setProperty('--n',String(Math.max(0,Math.min(1,-dx/110))));}};
   const end=(e:PointerEvent)=>{if(pid!==e.pointerId)return;pid=null;el.classList.remove('drag');nextRef.current?.classList.remove('drag');
    if(mode==='x'){nudge.current=e.timeStamp;
-    if(Math.abs(dx)>Math.max(80,Math.min(110,el.clientWidth*.28))||Math.abs(dx)>44&&Math.abs(dx)/Math.max(1,e.timeStamp-t0)>.6)onDecide(dx>0?1:-1);
+    if(Math.abs(dx)>Math.max(80,Math.min(110,el.clientWidth*.28))||Math.abs(dx)>44&&Math.abs(dx)/Math.max(1,e.timeStamp-t0)>.6)decideRef.current(dx>0?1:-1);
     else{el.style.transform='';if(nextRef.current)nextRef.current.style.transform='';el.style.setProperty('--l','0');el.style.setProperty('--n','0');}}
    mode='';};
   const cancel=(e:PointerEvent)=>{dx=0;end(e);};
@@ -395,7 +409,7 @@ function TopCard({c,cardRef,nextRef,actsRef,onDecide,toast}:{c:Card,cardRef:Reac
   el.addEventListener('pointercancel',cancel);el.addEventListener('lostpointercapture',lost);el.addEventListener('click',click,true);el.addEventListener('dragstart',drag);
   return ()=>{el.removeEventListener('scroll',onScroll);el.removeEventListener('pointerdown',down);el.removeEventListener('pointermove',move);el.removeEventListener('pointerup',end);
    el.removeEventListener('pointercancel',cancel);el.removeEventListener('lostpointercapture',lost);el.removeEventListener('click',click,true);el.removeEventListener('dragstart',drag);};
- },[cardRef,nextRef,actsRef,onDecide]);
+ },[cardRef,nextRef,actsRef]);
  const name=cname(c);
  return <article ref={cardRef as React.RefObject<HTMLElement>} className="pc top" aria-label={name}>
   <div className="pc-ph">
@@ -412,7 +426,8 @@ function TopCard({c,cardRef,nextRef,actsRef,onDecide,toast}:{c:Card,cardRef:Reac
    </div>
   </div>
   <div className="pc-body pc-full">
-   {deep&&p&&<><PersonBio p={p}/><div className="mt12"><CompatSummary profileId={c.id}/></div><ProfileBody p={p} onOpen={setView}/></>}
+   {pre?<><PersonBio p={pre.profile}/><div className="mt12"><CompatSummary profileId={c.id} pre={pre.compat}/></div><ProfileBody p={pre.profile} pre={pre} onOpen={setView}/></>
+    :<><Skel kind="card" rows={2}/><Skel kind="post" rows={1}/></>}
    <div className="pc-foot"><FollowBtn id={c.id} name={name} rel={rel} setRel={setRel} toast={toast}/><Btn kind="soft" onClick={()=>navigate('/n/people/'+c.id)}>{t('fe.px.deck.full')}</Btn></div>
   </div>
   {view!==null&&<PhotoViewer srcs={list.map(x=>x.full)} index={view} onClose={()=>setView(null)}/>}
@@ -483,16 +498,20 @@ function DatingSoon({toast}:{toast:PxToast}){
 /** D10 — nobody left: the radar, why (filters or simply everyone seen), and where to go next. */
 function DeckEmpty({byFilter,filterOn,openFilter,likesN,toLikes}:{byFilter:number|null,filterOn:number,openFilter:()=>void,likesN:number,toLikes:()=>void}){
  const {acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const byF=!!byFilter&&byFilter>0;
- return <Empty top big title={byF?t('fe.px.empty.byF'):t('fe.px.empty.title')} art={<Radar src={acting?.avatar} seed={acting?.id??'me'}/>}
-  text={byF?fill(t('fe.px.empty.byFText'),{n:byFilter!>=100?'100+':byFilter!}):filterOn?t('fe.px.empty.withF'):t('fe.px.empty.text')}
+ // Owner 28.10.2026: compact — a small radar, a short title and one line, «Симпатии» / «Недавние» side by side, and
+ // where else to go as one list in one icon tone.
+ return <Empty top title={byF?t('fe.px.empty.byF'):t('fe.px.empty.titleShort')} art={<Radar small src={acting?.avatar} seed={acting?.id??'me'}/>}
+  text={byF?fill(t('fe.px.empty.byFText'),{n:byFilter!>=100?'100+':byFilter!}):filterOn?t('fe.px.empty.withF'):t('fe.px.empty.textShort')}
   after={<Card list className="mt16">
-   <Row icon={CalendarDays} tone="l" title={t('fe.w7.toEvents.near')} sub={t('fe.w7.toEvents.nearSub')} onClick={()=>navigate('/n/communities?sub=events')}/>
-   <Row icon={Users} tone="v" title={t('fe.px.empty.comm')} sub={t('fe.px.empty.commSub')} onClick={()=>navigate('/n/communities')}/>
-   <Row icon={Sparkles} tone="l" title={t('fe.px.empty.int')} sub={t('fe.px.empty.intSub')} onClick={()=>navigate('/n/me/interests')}/>
+   <Row icon={CalendarDays} tone="v" title={t('fe.w7.toEvents.near')} onClick={()=>navigate('/n/communities?sub=events')}/>
+   <Row icon={Users} tone="v" title={t('fe.px.empty.comm')} onClick={()=>navigate('/n/communities')}/>
+   <Row icon={Sparkles} tone="v" title={t('fe.px.empty.int')} onClick={()=>navigate('/n/me/interests')}/>
   </Card>}>
    {filterOn>0&&<Btn onClick={openFilter}>{t('fe.px.empty.change')}</Btn>}
-   <Btn kind="soft" onClick={toLikes}>{t('fe.px.empty.likes')}{likesN?` · ${likesN}`:''}</Btn>
-   <Btn kind="text" onClick={()=>navigate('/n/people/history')}>{t('fe.px.empty.recent')}</Btn>
+   <Stack row gap={2}>
+    <Btn kind="soft" size="sm" icon={Heart} onClick={toLikes}>{t('fe.px.empty.likes')}{likesN?` · ${likesN}`:''}</Btn>
+    <Btn kind="soft" size="sm" icon={History} onClick={()=>navigate('/n/people/history')}>{t('fe.px.empty.recent')}</Btn>
+   </Stack>
  </Empty>;
 }
 
@@ -549,10 +568,13 @@ function Likes({onCount,toDiscover}:{onCount:(n:number)=>void,toDiscover:()=>voi
 
 /* ---------- P01 another person's profile ---------- */
 export function PersonScreen(){
- const {id=''}=useParams();const {call}=useFe();const {t}=useI18n();
- const [p,setP]=useState<PersonProfile|null>(null);const [error,setError]=useState<unknown>(null);
+ const {id=''}=useParams();const {call,acting}=useFe();const {t}=useI18n();
+ // «Полный профиль» from a Discover card: the profile that card already read paints the page at once.
+ const [p,setP]=useState<PersonProfile|null>(()=>acting?cardRead(acting.id,id)?.profile??null:null);const [error,setError]=useState<unknown>(null);
  const [menu,setMenu]=useState<MenuStep>(null);const [blocked,setBlocked]=useState(false);const [toastNode,toast]=useToast();
- const load=useCallback(()=>{setError(null);setP(null);call('profile.get',{profileId:id},personProfileRes).then(r=>setP(r.profile)).catch(setError);},[call,id]);
+ // Another person starts from the skeleton; reading the same one again (after «Разблокировать») keeps the page.
+ const [was,setWas]=useState(id);if(was!==id){setWas(id);setP(null);}
+ const load=useCallback(()=>{setError(null);call('profile.get',{profileId:id},personProfileRes).then(r=>setP(r.profile)).catch(e=>{setP(null);setError(e);});},[call,id]);
  useEffect(()=>{setBlocked(false);setMenu(null);load();},[load]);
  // After «Разблокировать» the profile is loaded again.
  const setBlock=useCallback((b:boolean)=>{setBlocked(b);if(!b)load();},[load]);

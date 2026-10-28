@@ -128,14 +128,14 @@ const handler = db && createFeHandler({
   authenticate: req => cachedAuth(req),
   quota: async (req, coreKey) => { // coreKey: Core account hash, only for the ephemeral rate-limit key
     // Same budget as /api/domain: per account across devices and IPs, plus a per-IP cap (the same keys
-    // rateOkScoped(req, 'feture-fe-ip', 240, '', 60, true) uses). Both counters and their expiry go in ONE store
+    // rateOkScoped(req, 'feture-fe-ip', 1200, '', 60, true) uses). Both counters and their expiry go in ONE store
     // request: each separate one is a full round trip to the store (60–300 ms seen in the access log).
     const window = Math.floor(Date.now() / 60000);
     const account = `rl:feture-fe-account:${coreKey}:${window}`;
     const ip = `rl:feture-fe-ip:${ipHash(req)}:${window}`;
     const [count, , ipCount] = await store.pipe([['INCR', account], ['EXPIRE', account, '65'], ['INCR', ip], ['EXPIRE', ip, '65']]);
-    const ipMax = process.env.ALLOW_MEMORY_STORE === '1' ? 240 * 50 : 240;
-    return Number(count) <= 120 && Number(ipCount) <= ipMax;
+    const ipMax = process.env.ALLOW_MEMORY_STORE === '1' ? 1200 * 50 : 1200;
+    return Number(count) <= 600 && Number(ipCount) <= ipMax;
   },
   cors,
   log: event => console.info('feture_fe_access', JSON.stringify(event)),

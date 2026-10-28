@@ -35,6 +35,8 @@
 .v21 .lk .k-lk-open{position:absolute;inset:0}
 /* Radar of the empty deck. */
 .v21 .radar .k-cover{width:100%;height:100%;object-fit:cover}
+/* `small`: the same picture at 60 % (scaled, so the dots keep their places); the margins take back the space it no longer needs. */
+.v21 .radar.k-radar-sm{transform:scale(.6);margin:calc(var(--s-1) - 40px) auto calc(var(--s-2) - 40px)}
 .v21 .radar .dot.k-radar-d1,.v21 .radar .dot.k-radar-d2{position:absolute;overflow:hidden}
 .v21 .radar .dot.k-radar-d1{left:18px;top:60px}
 .v21 .radar .dot.k-radar-d2{right:24px;top:150px;width:22px;height:22px}

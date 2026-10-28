@@ -132,9 +132,17 @@ export default [
      await t.page.mouse.move(box.x + box.width * .8, box.y + box.height / 2, { steps: 6 }); await t.page.mouse.up(); await t.wait(450);
      expect((await t.page.locator('.viewer.on .vw-n').innerText()).trim() === '1 / 2', 'swipe right → back once');
 
-     // The post over its media (owner 28.10.2026): like / comment / save / share on the right, author + text at the bottom.
+     // The post over its media (owner 28.10.2026): like (with the count) and comments, small and low on the right —
+     // save and share stay in the post; author + text at the bottom.
      const rail = t.page.locator('.viewer.on .vw-rail');
-     expect(await rail.locator('button').count() === 4, 'four actions on the right');
+     expect(await rail.locator('button').count() === 2, 'two actions on the right');
+     // The rail never takes paging: a tap in the right third at the rail's height (beside its buttons) still pages.
+     const rb = await rail.boundingBox();
+     expect(rb.height <= 120 && rb.y > box.y + box.height / 2, 'the rail is small and low: ' + JSON.stringify(rb));
+     await t.page.mouse.click(rb.x - 16, rb.y + rb.height / 2); await t.wait(450);
+     expect((await t.page.locator('.viewer.on .vw-n').innerText()).trim() === '2 / 2', 'a tap beside the rail pages forward');
+     await t.page.mouse.click(box.x + box.width * .85, box.y + 40); await t.wait(450);
+     await t.page.keyboard.press('ArrowLeft'); await t.wait(400);
      expect((await t.page.locator('.viewer.on .vw-cap').innerText()).includes(f.body.slice(0, 12)), 'the text at the bottom');
      await rail.locator('button[aria-pressed]').first().click();
      await until(async () => (await get(t, f.id)).liked === true || null, 'liked from the viewer');
@@ -146,6 +154,20 @@ export default [
      const pull = async dy => { const x = box.x + box.width / 2, y = box.y + box.height / 2;
        await t.page.mouse.move(x, y); await t.page.mouse.down(); await t.page.mouse.move(x, y + dy / 2, { steps: 4 }); await t.page.mouse.move(x, y + dy, { steps: 4 }); await t.page.mouse.up(); await t.wait(500); };
      await pull(50);
+     // While dragging only the picture moves: the backdrop (the viewer box) stays put and fades, the buttons hide.
+     { const x = box.x + box.width / 2, y = box.y + box.height / 2;
+       await t.page.mouse.move(x, y); await t.page.mouse.down(); await t.page.mouse.move(x, y - 120, { steps: 6 }); await t.wait(450);
+       const s = await t.page.evaluate(() => { const v = document.querySelector('.viewer.on'), f = v.querySelector('.vw-track figure:not([hidden])');
+         const bg = getComputedStyle(v).backgroundColor, a = +(bg.match(/rgba?\(([^)]+)\)/)[1].split(',')[3] ?? 1);
+         return { vTop: v.getBoundingClientRect().top, fTop: [...v.querySelectorAll('.vw-track figure')].map(e => e.getBoundingClientRect().top), alpha: a,
+           top: +getComputedStyle(v.querySelector('.vw-top')).opacity }; });
+       await t.shot('viewer-dragging');
+       await t.page.mouse.up(); await t.wait(500);
+       expect(Math.abs(s.vTop) < 1, 'the backdrop moved: ' + s.vTop);
+       expect(s.fTop.some(v => v < -60), 'the picture did not follow the finger: ' + s.fTop);
+       expect(s.alpha < .9 && s.alpha > .2, 'the backdrop did not fade with the distance: ' + s.alpha);
+       expect(s.top < .5, 'the buttons stayed while dragging: ' + s.top); }
+     expect(await t.page.locator('.viewer.on').count() === 1, 'a 120 px pull up closed the viewer');
      expect(await t.page.locator('.viewer.on').count() === 1 && (await t.page.locator('.viewer.on .vw-n').innerText()).trim() === '1 / 2', 'a short pull stays, same photo');
      await pull(-260); await t.page.locator('.viewer').waitFor({ state: 'detached', timeout: 5000 });
      await c.locator('.mgrid .mcell').first().click(); await t.see('.viewer.on');
@@ -159,4 +181,15 @@ export default [
      expect(await t.page.locator('.viewer').count() === 0, 'back to the feed without the viewer');
    } finally { await drop(t, f.id); }
  } },
+ { name: 'a photo that does not load (link ran out, photo removed) shows initials (media: a calm placeholder), never a broken-image mark', persona: 'full', run: async t => {
+   // Every signed picture link fails, as an expired one does.
+   await t.page.route(/\/(storage\/v1\/object\/sign|v)\/[^?]+\?(token|t)=/, r => r.fulfill({ status: 400, body: 'expired' }));
+   await t.go('/n/feed'); await t.see('.posts article.post .av'); await t.wait(2500);
+   const s = await t.page.evaluate(() => ({ broken: [...document.querySelectorAll('.av>img, .mcell img')].filter(i => i.complete && !i.naturalWidth && i.getBoundingClientRect().width).map(i => (i.parentElement.className + '>' + i.className)),
+     ini: document.querySelectorAll('.av.ini').length }));
+   await t.shot('avatar-initials');
+   expect(!s.broken.length, 'broken images: ' + s.broken.join(', '));
+   expect(s.ini > 0, 'no initials shown');
+   await t.page.unroute(/\/(storage\/v1\/object\/sign|v)\/[^?]+\?(token|t)=/);
+ }, allow4xx: true },
 ];

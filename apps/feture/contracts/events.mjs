@@ -51,7 +51,7 @@ export const eventFields = z.strictObject(base).refine(shapeRules, { message: 'e
 
 export const eventsCommands = {
   'event.draftSave': {
-    profile: true, write: true, rate: { kind: 'event.draft', max: 200, window: '1 day' },
+    profile: true, write: true, rate: { kind: 'event.draft', max: 1000, window: '1 day' },
     // A draft keeps whatever is filled in; only a title is needed to save it.
     input: z.strictObject({
       opId, draftId: id.optional(), step: z.int().min(1).max(4).default(1),
@@ -65,7 +65,7 @@ export const eventsCommands = {
   // are the couple's — either partner continues them).
   'event.draftGet': { profile: true, write: false, input: z.strictObject({ draftId: id }) },
   'event.submit': {
-    profile: true, write: true, rate: { kind: 'event.submit', max: 10, window: '1 day' },
+    profile: true, write: true, rate: { kind: 'event.submit', max: 20, window: '1 day' },
     input: z.strictObject({ opId, draftId: id.optional(), event: eventFields }),
   },
   'event.withdraw': { profile: true, write: true, input: z.strictObject({ opId, eventId: id }) },
@@ -98,14 +98,14 @@ export const eventsCommands = {
   // interests, online or in its city. Events it hid with «Скрыть» (feed_hide kind 'event') never come back here.
   'event.soon': { profile: true, write: false, input: z.strictObject({}) },
   'event.rsvp': {
-    profile: true, write: true, rate: { kind: 'event.rsvp', max: 200, window: '1 day' },
+    profile: true, write: true, rate: { kind: 'event.rsvp', max: 1000, window: '1 day' },
     input: z.strictObject({
       opId, eventId: id, status: z.enum(['interested', 'going', 'not_going']).nullable(),
       showInList: z.boolean().optional(), ticketMarked: z.boolean().optional(),
     }),
   },
   'event.apply': {
-    profile: true, write: true, rate: { kind: 'event.apply', max: 30, window: '1 day' },
+    profile: true, write: true, rate: { kind: 'event.apply', max: 150, window: '1 day' },
     input: z.strictObject({
       opId, eventId: id, answers: z.array(field('eventAnswer')).min(1).max(3),
       note: field('applyNote').default(''), requirementsAccepted: z.literal(true),
@@ -121,7 +121,7 @@ export const eventsCommands = {
     input: z.strictObject({ opId, applicationId: id, rev: z.int().positive(), approve: z.boolean() }),
   },
   'event.announce': {
-    profile: true, write: true, rate: { kind: 'event.announce', max: 10, window: '1 day' },
+    profile: true, write: true, rate: { kind: 'event.announce', max: 20, window: '1 day' },
     input: z.strictObject({ opId, eventId: id, body: field('announcement') }),
   },
   'event.attendees': {

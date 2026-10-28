@@ -6,7 +6,7 @@ import {CircleAlert,Link2,Pencil,Plus,Trash2,User,Users,X} from 'lucide-react';
 import {useToast as useToastV21} from './toast';
 import {newOpId} from '../feture/fe-api';
 import {AddCard,Alert,Ask,Av,Bar,Btn,Card,Chip,Chips,Empty,Group,IconBtn,Note,PersonLine,RadioList,RequestCard,Row,SearchInput,SectionLabel,Seg,SelectRow,Skel,Spacer,View} from './kit';
-import {useFe} from './session';
+import {useFe,useKeyChange,useShown} from './session';
 import {NameBadges,faceFields,withAge} from './faces';
 import {KINDS,SIDES,Sheet,linkLabel,linksMineRes,mediaSrc,personName,personProfileRes,pxError,useToast,type Kind,type LinkView,type LinksMine,type PersonProfile} from './profile-extras';
 
@@ -29,8 +29,8 @@ export const waitingCount=(r:LinksMine)=>r.incoming.length+r.confirmed.filter(l=
 /** `linksBlock(owner,true)` on the Me profile layer: proposals waiting for an answer on top (compact cards with
  * «Подтвердить / Отклонить»), then up to four confirmed links and «Управлять»; empty — one «Добавить связь» row. */
 export function LinksBlock({onChanged}:{onChanged?:()=>void}){
- const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToastV21();
- const [r,setR]=useState<LinksMine|null>(null);const [busy,setBusy]=useState(false);
+ const {call,acting,peek}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToastV21();
+ const [r,setR]=useShown<LinksMine|null>('links.block',()=>peek('links.mine',{},linksMineRes));const [busy,setBusy]=useState(false);
  const load=useCallback(()=>{call('links.mine',{},linksMineRes).then(setR).catch(()=>{});},[call]);
  useEffect(()=>{load();},[load]);
  if(!r)return null;
@@ -107,7 +107,8 @@ export function LinksScreen(){
  const [picking,setPicking]=useState(false);
  const load=useCallback(()=>{setError(null);Promise.all([call('links.mine',{},linksMineRes),call('profile.settings',{},settingsRes).catch(()=>null)])
   .then(([a,b])=>{setR(a);setFrom(b?.settings.linksFrom??null);}).catch(setError);},[call]);
- useEffect(()=>{setR(null);load();},[load]);
+ useKeyChange(acting?.id??'',()=>setR(null));
+ useEffect(()=>{load();},[load]);
  const act=async(fn:()=>Promise<Record<string,unknown>>,msg:string)=>{setBusy(true);
   try{const res=await fn();toast(res.pending?t('fe.ln.t.pending'):msg);load();return true;}catch(e){toast(pxError(e,t),true);load();return false;}finally{setBusy(false);}};
  const closeMenu=useCallback(()=>setMenu(null),[]);const closeRemove=useCallback(()=>setRemoving(null),[]);

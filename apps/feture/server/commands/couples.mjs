@@ -123,7 +123,7 @@ export async function deleteCouple(q, profileId, reason) {
 /** @type {Record<keyof typeof couplesCommands, Command['run']>} */
 const run = {
   async 'couple.invite'(q, { account, input }) {
-    // Limited by the handler (10 a day, failures included) so invitations cannot pester or probe who is in a couple.
+    // Limited by the handler (20 a day, failures included) so invitations cannot pester or probe who is in a couple.
     if (account.person_profile_id && (await q.query('select feture.restricted($1) r', [account.person_profile_id]))[0].r) fail(403, 'forbidden', { rule: 'restricted' });
     const [me] = await q.query(
       `select a.person_profile_id, p.name, p.handle from feture.account a join feture.profile p on p.id = a.person_profile_id

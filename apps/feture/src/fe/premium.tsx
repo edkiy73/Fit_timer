@@ -6,7 +6,7 @@ import {AtSign,Check,Crown,Gift,History,RotateCcw,Undo2,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,Ask,Av,Bar,Btn,Card,Empty,Field,Group,Input,KeyValues,Note,PlanCards,PremiumFeats,PremiumHero,Row,SectionLabel,Sheet,Skel,Stack,ToggleRow,View} from './kit';
 import {useToast} from './toast';
-import {useFe} from './session';
+import {useFe,useShown} from './session';
 
 /** V21 B01 Premium (wave 8): what Premium gives, plans, the purchase confirmation, auto-renewal, «Восстановить
  * покупки», gifts — all on the provider-agnostic server layer (`premium.*`). No payment provider is connected yet:
@@ -28,7 +28,7 @@ export const useDate=()=>{const {locale}=useI18n();return (v:string)=>new Date(v
 
 /** The account's Premium state (`premium.status`); null while loading or unknown. Shared with the settings row. */
 export function usePremiumStatus(){
- const {call}=useFe();const [status,setStatus]=useState<Status|null>(null);const [error,setError]=useState<unknown>(null);
+ const {call,peek}=useFe();const [status,setStatus]=useShown<Status|null>('premium.status',()=>peek('premium.status',{},statusRes));const [error,setError]=useState<unknown>(null);
  const load=useCallback((fresh=false)=>{setError(null);call('premium.status',{},statusRes,{fresh}).then(setStatus).catch(setError);},[call]);
  useEffect(()=>{load();},[load]);
  return {status,error,load};

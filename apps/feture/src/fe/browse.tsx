@@ -4,8 +4,8 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {BookOpen,ChevronLeft,ChevronRight,CircleCheck,Clock,Ellipsis,History,Image as ImageIcon,Pencil,Plus,Search as SearchIcon,SlidersHorizontal,User,UserMinus,Users,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,H,IconBtn,Note,Pill,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Stack,View,plate} from './kit';
-import {useFe} from './session';
+import {Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,H,IconBtn,LoadMore,Note,Pill,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Stack,View,plate} from './kit';
+import {useFe,useKeyChange} from './session';
 import {PostCard,postSchema,type Post} from './feed';
 import {InterestSheet,Jars,useInterests} from './interests';
 import {faceFields,NameBadges} from './faces';
@@ -119,7 +119,7 @@ export function TopicScreen(){
      :posts===null?<Skel kind="list"/>
      :posts.length===0?<><Note>{t('fe.br.topic.noPosts')}</Note><Btn kind="soft" className="mt12" icon={Pencil} onClick={()=>navigate('/n/feed/new')}>{t('fe.br.topic.write',{name})}</Btn></>
      :<><PostList items={posts} setItems={f=>setPosts(list=>list?f(list):list)}/>
-      {next&&<Btn kind="soft" onClick={()=>load(next)} disabled={more} busy={more}>{t('fe.feed.more')}</Btn>}</>}
+      <LoadMore more={!!next} busy={more} error={error} onMore={()=>{if(next)load(next);}}/></>}
    </>}
   </View>
   {sheet&&tp&&<InterestSheet topicId={id} topics={topics} cats={cats} current={current} onClose={close} onDone={msg=>{close();setNotice(msg);reloadMine();}}/>}
@@ -272,7 +272,8 @@ export function FollowsScreen(){
   Promise.all([call('profile.followers',{profileId:id},followersRes),call('profile.followers',{profileId:id,following:true},followersRes)])
    .then(([a,b])=>setLists({followers:a.items,following:b.items})).catch(setError);
  },[call,id]);
- useEffect(()=>{setLists(null);load();},[load]);
+ useKeyChange(id,()=>setLists(null));
+ useEffect(()=>{load();},[load]);
  // Whom the acting profile follows, for the buttons on each row.
  useEffect(()=>{if(!acting)return;call('profile.followers',{profileId:acting.id,following:true},followersRes).then(r=>setMyFollows(new Set(r.items.map(x=>x.id)))).catch(()=>{});},[call,acting]);
  useEffect(()=>{if(mine||!id){setWho('');return;}call('profile.get',{profileId:id},profileRes).then(r=>setWho(nameOf(r.profile))).catch(()=>{});},[call,id,mine]);

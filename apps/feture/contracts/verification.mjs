@@ -6,7 +6,7 @@ import { id, opId } from './platform.mjs';
 
 const reason = z.string().regex(/^[a-z_]{2,32}$/);
 export const verificationCommands = {
-  'verification.photoStart': { profile: false, write: true, rate: { kind: 'verification.photo', max: 5, window: '1 day' }, input: z.strictObject({ opId }) },
+  'verification.photoStart': { profile: false, write: true, rate: { kind: 'verification.photo', max: 10, window: '1 day' }, input: z.strictObject({ opId }) },
   'verification.photoSubmit': { profile: false, write: true, input: z.strictObject({ opId, checkId: id, assetId: id }) },
   'verification.photoStatus': { profile: false, write: false, input: z.strictObject({}) },
   'staff.photoCheckQueue': { profile: false, write: false, input: z.strictObject({ limit: z.int().min(1).max(50).default(20) }) },

@@ -165,15 +165,15 @@ test('review fixes: partner sees values, stop closes the couple’s outgoing sid
   } finally { await pg.close(); }
 });
 
-test('invitations: a week of quiet after a decline, ten a day, deleted couples keep no content', async () => {
+test('invitations: a week of quiet after a decline, twenty a day, deleted couples keep no content', async () => {
   const { pg, db, call, person } = await setup();
   try {
     await person('ua', 'Alex'); await person('ub', 'Kira');
     const inv = await call('ua', null, { action: 'couple.invite', opId: op(), handle: 'Kira' });
     await call('ub', null, { action: 'couple.inviteAnswer', opId: op(), inviteId: inv.id, accept: false });
     assert.equal((await call('ua', null, { action: 'couple.invite', opId: op(), handle: 'Kira' })).rule, 'invite_cooldown');
-    for (let i = 0; i < 8; i++) await call('ua', null, { action: 'couple.invite', opId: op(), handle: 'nobody' + i }); // not found, still counted
-    assert.equal((await call('ua', null, { action: 'couple.invite', opId: op(), handle: 'nobody9' })).status, 429);
+    for (let i = 0; i < 18; i++) await call('ua', null, { action: 'couple.invite', opId: op(), handle: 'nobody' + i }); // not found, still counted
+    assert.equal((await call('ua', null, { action: 'couple.invite', opId: op(), handle: 'nobody19' })).status, 429);
 
     const [{ id: x }] = await db.query(`select id from feture.account where person_profile_id = (select id from feture.profile where handle = 'Kira')`);
     await person('uc', 'Noa');

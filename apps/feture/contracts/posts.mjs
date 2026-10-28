@@ -73,7 +73,7 @@ export const ACTIVITY_KINDS = /** @type {const} */ (['posts', 'likes', 'events',
 
 export const postsCommands = {
   'post.saveDraft': { profile: true, write: true, input: z.strictObject({ opId, postId: id.optional(), post: postFields }) },
-  'post.publish': { profile: true, write: true, rate: { kind: 'post.publish', max: 50, window: '1 day' }, input: z.strictObject({ opId, postId: id }) },
+  'post.publish': { profile: true, write: true, rate: { kind: 'post.publish', max: 250, window: '1 day' }, input: z.strictObject({ opId, postId: id }) },
   'post.edit': { profile: true, write: true, input: z.strictObject({ opId, postId: id, rev: z.int().positive(), post: postFields }) },
   'post.delete': { profile: true, write: true, input: z.strictObject({ opId, postId: id }) },
   'post.get': { profile: true, write: false, input: z.strictObject({ postId: id }) },
@@ -98,6 +98,15 @@ export const postsCommands = {
   // A profile's «Активность» tab: the person's own activity cards as «Подписки» shows them, by their «Кто видит мою
   // активность» and the viewer's relation (the acting profile always sees its own, with who else can).
   'profile.activity': { profile: true, write: false, input: z.strictObject({ profileId: id, cursor: z.string().max(200).optional() }) },
+  // One activity card's things past the 20 it carries («+N» / «Показать все» open them all): the card's person, kind and
+  // its first / last moment (`from` / `at` of the card), under the same rules as the card.
+  'activity.items': {
+    profile: true, write: false,
+    input: z.strictObject({
+      actorId: id, activity: z.enum(['likes', 'events', 'communities', 'follows']),
+      from: z.iso.datetime({ offset: true }), to: z.iso.datetime({ offset: true }), cursor: z.string().max(200).optional(),
+    }).refine(v => Date.parse(v.from) <= Date.parse(v.to), { message: 'range', path: ['from'] }),
+  },
   'me.posts': { profile: true, write: false, input: z.strictObject({}) },
   // Saved, not yet published edits of a published post (V21 saveDraft on a live post / discardPostEdits).
   'post.saveEdits': { profile: true, write: true, input: z.strictObject({ opId, postId: id, rev: z.int().positive(), post: postFields }) },
@@ -105,23 +114,23 @@ export const postsCommands = {
   'post.discardEdits': { profile: true, write: true, input: z.strictObject({ opId, postId: id }) },
   // «Нравится» (V21 likers): who liked a post or a reply the viewer may see.
   'post.likers': {
-    profile: true, write: false, rate: { kind: 'post.likers', max: 2000, window: '1 day' },
+    profile: true, write: false, rate: { kind: 'post.likers', max: 20000, window: '1 day' },
     input: z.strictObject({ targetType: z.enum(['post', 'reply']).default('post'), targetId: id, cursor: z.string().max(200).optional() }),
   },
   // Who chose a poll option (V21 pollPeople): after one's own vote, or for the author.
   'poll.voters': {
-    profile: true, write: false, rate: { kind: 'poll.voters', max: 2000, window: '1 day' },
+    profile: true, write: false, rate: { kind: 'poll.voters', max: 20000, window: '1 day' },
     input: z.strictObject({ postId: id, option: z.int().min(0).max(9), cursor: z.string().max(200).optional() }),
   },
   // «Убрать упоминание» (V21 unmentionMe): the name stays as plain text, it is no longer a link.
   'post.unmentionMe': { profile: true, write: true, input: z.strictObject({ opId, postId: id, replyId: id.optional() }) },
   'reaction.set': {
-    profile: true, write: true, rate: { kind: 'reaction.set', max: 1000, window: '1 day' },
+    profile: true, write: true, rate: { kind: 'reaction.set', max: 5000, window: '1 day' },
     input: z.strictObject({ opId, targetType: z.enum(['post', 'reply']), targetId: id, on: z.boolean() }),
   },
   'poll.vote': { profile: true, write: true, input: z.strictObject({ opId, postId: id, option: z.int().min(0).max(9).nullable() }) },
   'reply.create': {
-    profile: true, write: true, rate: { kind: 'reply.create', max: 300, window: '1 day' },
+    profile: true, write: true, rate: { kind: 'reply.create', max: 1500, window: '1 day' },
     input: z.strictObject({ opId, postId: id, parentId: id.optional(), body: field('reply') }),
   },
   'reply.edit': { profile: true, write: true, input: z.strictObject({ opId, replyId: id, rev: z.int().positive(), body: field('reply') }) },
@@ -131,11 +140,11 @@ export const postsCommands = {
   'tag.object': { profile: true, write: true, rate: { kind: 'tag.object', max: DISPUTE_LIMITS.callsPerDay, window: '1 day' }, input: z.strictObject({ opId, postId: id }) },
   // The author's short explanation for staff while their post is hidden by a dispute.
   'post.disputeExplain': {
-    profile: true, write: true, rate: { kind: 'post.dispute_explain', max: 20, window: '1 day' },
+    profile: true, write: true, rate: { kind: 'post.dispute_explain', max: 100, window: '1 day' },
     input: z.strictObject({ opId, postId: id, note: field('disputeNote') }),
   },
   'report.create': {
-    profile: true, write: true, rate: { kind: 'report.create', max: 10, window: '1 day' },
+    profile: true, write: true, rate: { kind: 'report.create', max: 30, window: '1 day' },
     input: z.strictObject({
       opId,
       // A chat is reported as its conversation with the selected messages (Q27).
