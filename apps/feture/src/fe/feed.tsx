@@ -6,10 +6,11 @@ import {ArrowUpDown,AtSign,Bell,BellOff,Bookmark,Check,Calendar,ChartColumn,Chev
 import type {LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicOrigin} from '../api-url';
-import {ActionLine,ActivityCard,ActivityItem,Alert,Ask,Av,Bar,Btn,Card,Chip,Chips,Counter,Empty,Field,FilePick,Group,H,IconBtn,Input,LikesLine,Note,QuickStart,RichArea,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,ToggleRow,View,type RichAreaHandle} from './kit';
+import {ActionLine,ActivityCard,ActivityItem,Alert,Ask,Av,Bar,Btn,Card,Chip,Chips,Counter,Empty,Field,FilePick,Group,H,IconBtn,Input,LikesLine,Note,QuickStart,RichArea,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,ToggleRow,VideoBadge,View,type RichAreaHandle} from './kit';
 import {useFe} from './session';
 import {Uploader} from './kit/Uploader';
-import {useSendPhoto} from './media-upload';
+import {useSendPhoto,useSendVideo} from './media-upload';
+import {VIDEO_TYPES} from './kit/media';
 import {BellButton} from './inbox';
 import {PostMenu,ReplyMenu,type Removal} from './post-menu';
 import {restoreInto,useToast} from './toast';
@@ -22,7 +23,7 @@ import {NameBadges} from './faces';
  * posts (text, media, poll, interests, marks), replies in threads, the composer and its preview.
  * Visibility and counts are the server's; the client never filters or invents them. */
 const author=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string(),avatar:z.string().nullable().optional(),photoVerified:z.boolean().optional(),premium:z.boolean().optional()});
-const media=z.object({id:z.uuid(),kind:z.string(),w:z.number().nullable(),h:z.number().nullable(),pending:z.boolean(),blurred:z.boolean(),src:z.record(z.string(),z.string()).nullable()});
+const media=z.object({id:z.uuid(),kind:z.string(),w:z.number().nullable(),h:z.number().nullable(),pending:z.boolean(),blurred:z.boolean(),src:z.record(z.string(),z.string()).nullable(),durationMs:z.number().nullable().optional()});
 const tag=z.object({id:z.uuid(),handle:z.string().nullable().optional(),name:z.string().nullable().optional(),state:z.string().optional()}).passthrough();
 const interest=z.object({topicId:z.string(),value:z.number().nullable().optional(),dir:z.unknown().optional()}).passthrough();
 export const postSchema=z.object({id:z.uuid(),type:z.enum(['post','note']),title:z.string().nullable(),body:z.string(),author,media:z.array(media),
@@ -598,7 +599,7 @@ const withSavedEdits=(p:Post,e:SavedEdit):Post=>({...p,type:e.post.type??p.type,
  topics:e.post.topics??[],media:e.media,poll:e.post.poll?{question:e.post.poll.question,options:e.post.poll.options,myVote:null,results:null}:null,
  interests:(e.post.interests??[]).map(topicId=>({topicId})),tags:(e.post.tags??[]).map(id=>p.tags?.find(x=>x.id===id)??{id}),rev:e.baseRev});
 
-type MediaDraft={id:string,preview:string};
+type MediaDraft={id:string,preview:string,kind?:string|undefined,durationMs?:number|null|undefined};
 type Person={id:string,name:string};
 type Mention={id:string,handle:string,name:string,avatar:string|null};
 const mentionRes=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),avatar:z.unknown().optional()}).passthrough())});
@@ -616,7 +617,7 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
  const [body,setBody]=useState(edit?.body??'');
  const [audience,setAudience]=useState<Audience>(()=>(['all','followers','granted','only'] as const).includes(edit?.audience as Audience)?edit!.audience as Audience:'all');
  const [inFeed,setInFeed]=useState(edit?.inFeed??true);
- const [media,setMedia]=useState<MediaDraft[]>(()=>edit?edit.media.map(m=>({id:m.id,preview:mediaSrc(m)??''})):[]);
+ const [media,setMedia]=useState<MediaDraft[]>(()=>edit?edit.media.map(m=>({id:m.id,preview:mediaSrc(m)??'',kind:m.kind,durationMs:m.durationMs})):[]);
  const [poll,setPoll]=useState<{question:string,options:string[]}|null>(()=>edit?.poll?{question:edit.poll.question,options:[...edit.poll.options]}:x==='poll'?{question:'',options:['','']}:null);
  const [interests,setInterests]=useState<string[]|null>(()=>edit?.interests?.length?edit.interests.map(i=>i.topicId):null);
  const [topics,setTopics]=useState<string[]>(edit?.topics??[]);
@@ -644,7 +645,7 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
  // Interests a post may carry: the author's own public ones with a level, never limits (server rule).
  const eligible=(myJars??[]).filter(j=>j.vis==='public'&&j.value!=null&&!j.mark&&catalog.find(c=>c.id===j.topicId)?.categoryId!=='limits');
  // Picked photos go through the kit uploader: format 4:5 / 1:1 / as is, crop, compression without metadata, progress.
- const [picked,setPicked]=useState<File[]|null>(null);const sendPhoto=useSendPhoto('post');
+ const [picked,setPicked]=useState<File[]|null>(null);const sendPhoto=useSendPhoto('post');const sendVideo=useSendVideo('post');
  const addMedia=(files:FileList)=>{setFailure('');setPicked([...files]);};
  const max=note?NOTE_MAX:1000;
  const fields=()=>({type:note?'note' as const:'post' as const,...(note&&title.trim()?{title:title.trim()}:{}),body:body.trim(),audience,inFeed,topics,mediaIds:media.map(m=>m.id),
@@ -754,7 +755,7 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
 
  if(preview){
   const fake:Post={id:edit?.id??'00000000-0000-7000-8000-000000000000',type:note?'note':'post',title:note?title.trim():null,body:body.trim(),author:{id:acting?.id??'',kind:acting?.kind??'person',handle:acting?.handle??null,name:acting?.name??nameOf(acting),avatar:acting?.avatar??null},
-   media:media.map(m=>({id:m.id,kind:'image',w:null,h:null,pending:false,blurred:false,src:{card:m.preview,full:m.preview}})),topics,likes:0,liked:false,replies:0,saved:false,publishedAt:null,
+   media:media.map(m=>({id:m.id,kind:m.kind??'image',w:null,h:null,pending:false,blurred:false,src:{card:m.preview,full:m.preview},durationMs:m.durationMs??null})),topics,likes:0,liked:false,replies:0,saved:false,publishedAt:null,
    ...(audience!=='all'?{audience}:{}),poll:poll?{question:poll.question,options:poll.options,myVote:null,results:null}:null,interests:interests?.map(id=>{const j=eligible.find(e=>e.topicId===id);return {topicId:id,value:j?.value??null,dir:j?.dir};})??null,tags:[]};
   const steps=[people.length&&audience==='all'&&hasMedia?t('fe.fd.next.marks',{names:people.map(p=>p.name).join(', ')}):'',hasMedia?t('fe.fd.next.review'):'',hasMedia||people.length?(live?t('fe.fd.next.oldVersion'):t('fe.fd.next.onlyYou')):''].filter(Boolean);
   return <>
@@ -794,7 +795,7 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
      <Counter n={body.length} max={max}/>
     </Field>
     {hasMedia&&<div className="cmp-media" ref={mediaRef}><Group title={t('fe.fd.mediaN',{n:media.length,max:MEDIA_MAX})} foot={audience==='granted'?t('fe.fd.mediaGranted'):t('fe.fd.mediaFoot')}>
-     <Card><div className="edit-ph">{media.map((m,i)=><div key={m.id}><img src={m.preview} alt=""/>
+     <Card><div className="edit-ph">{media.map((m,i)=><div key={m.id}><img src={m.preview} alt=""/>{m.kind==='video'&&<VideoBadge durationMs={m.durationMs}/>}
       <button type="button" className="rm" aria-label={t('fe.fd.remove')} onClick={()=>setMedia(l=>l.filter(y=>y.id!==m.id))}><X/></button>
       <button type="button" className="vw" aria-label={t('fe.fd.view')} onClick={()=>setViewer(i)}/></div>)}
       {media.length<MEDIA_MAX&&<button type="button" aria-label={t('fe.fd.addMedia')} disabled={uploading} onClick={()=>file.current?.click()}><Plus/></button>}</div>
@@ -802,7 +803,7 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
        sub={people.length?people.map(p=>p.name+(edit?.tags?.find(x=>x.id===p.id)?.state==='no'?` (${t('fe.fd.declinedShort')})`:edit?.tags?.find(x=>x.id===p.id)?.state==='ok'?'':` (${t('fe.fd.waitingShort')})`)).join(', '):t('fe.fd.peopleInPhotoSub')}/></Card>}
      </Card>
      </Group></div>}
-    <FilePick ref={file} accept="image/*" multiple onFiles={addMedia}/>
+    <FilePick ref={file} accept={'image/*,'+VIDEO_TYPES.join(',')} multiple onFiles={addMedia}/>
     <div className="attach v14">
      {!hasMedia&&<button type="button" disabled={uploading} onClick={()=>file.current?.click()}><ImageIcon/><span>{t('fe.feed.media')}</span></button>}
      {!poll&&<button type="button" onClick={()=>setPoll({question:'',options:['','']})}><ChartColumn/><span>{t('fe.feed.poll')}</span></button>}
@@ -850,8 +851,8 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
    onApply={v=>{if(v.length>3){toast(t('fe.fd.max3'),{type:'warn'});return;}setTopics(v);setSheet(null);}}/>}
   {sheet==='mention'&&<MentionSheet onClose={()=>setSheet(null)} onPick={insertMention}/>}
   {sheet==='people'&&<PeopleSheet value={people} onClose={()=>setSheet(null)} onApply={v=>{setPeople(v);setSheet(null);}} locked={(edit?.tags??[]).filter(x=>x.state==='no').map(x=>x.id)}/>}
-  {picked&&<Uploader files={picked} aspects={['4:5','1:1','orig']} max={MEDIA_MAX-media.length} send={sendPhoto} onClose={()=>setPicked(null)}
-   onDone={got=>{setPicked(null);setMedia(m=>[...m,...got.map(g=>({id:g.id,preview:g.url}))]);setErrs(e=>{const {media:_m,...rest}=e;return rest;});}}/>}
+  {picked&&<Uploader files={picked} aspects={['4:5','1:1','orig']} max={MEDIA_MAX-media.length} send={sendPhoto} sendVideo={sendVideo} onClose={()=>setPicked(null)}
+   onDone={got=>{setPicked(null);setMedia(m=>[...m,...got.map(g=>({id:g.id,preview:g.url,kind:g.kind,durationMs:g.durationMs}))]);setErrs(e=>{const {media:_m,...rest}=e;return rest;});}}/>}
   {viewer!==null&&<Viewer srcs={media.map(m=>m.preview)} index={viewer} onClose={()=>setViewer(null)}/>}
   {ask&&<LeaveAsk live={live} busy={!!busy} onCancel={()=>setAsk(false)} onDiscard={()=>{setAsk(false);back();}}
    onSave={async()=>{const ok=live?await saveEdits():await saveDraft();setAsk(false);if(ok)back();}}/>}

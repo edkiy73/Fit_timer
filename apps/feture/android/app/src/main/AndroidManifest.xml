@@ -49,4 +49,8 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <!-- «Люди рядом» uses a rounded position only, so only approximate location is requested (Android 12+). -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Voice messages in chats (MediaRecorder in the WebView; Capacitor's WebChromeClient asks at the first hold). -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
 </manifest>

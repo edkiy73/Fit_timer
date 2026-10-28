@@ -37,6 +37,8 @@ A new component or variant ships with its story in the same PR.
 | People | `Av` |
 | Verification shot | `CaptureFrame` (face oval / document frame, hint, the taken shot whole; tokens `--cam-*`) |
 | Spacing | `Stack` (gap, row, align, justify), `Spacer` (room between blocks outside a Stack), `Divider` |
+| Video (`kit/av.tsx`, «Медиа/Видео и голос») | `VideoPlayer` (poster + play + length, plays in place without download; `fill` + `autoPlay` in a viewer), `VideoBadge` (▶ + length over a poster in grids and tiles); viewer slides take clips (`PhotoTrack` `Slide`); `Uploader` `sendVideo` takes clips (≤ 1 min, ≤ 100 MB, poster cut on the device, no crop) |
+| Voice messages | `VoiceRecorder` (mic button: hold, slide left to cancel, up to lock; tap = hands-free with listen-before-send; ≤ 5 min; asks for the microphone only on press), `VoiceBubble` (play / pause, waveform progress and seek, time, «Прослушано» / unheard dot) |
 
 Round 4 variants: `Btn kind="dark"` (on a light veil) and `square` (icon-only, button height); `Row` `body` (a plain
 step line), `extra` (content under the title as is), `expanded` (chevron down for a row that opens a section), title

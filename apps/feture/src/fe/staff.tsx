@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {BadgeCheck,Ban,Check,ChevronRight,Eye,IdCard,Image,Inbox,Lock,RefreshCw,ShieldAlert,ShieldCheck,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Btn,Card,ChoiceChips,Chips,Empty,Field,Group,IconBtn,Input,KeyValues,Note,Pill,ReviewCard,ReviewMedia,ReviewPair,Row,SectionLabel,Seg,Skel,SubBar,Text,TextArea,View} from './kit';
+import {Alert,Btn,Card,ChoiceChips,Chips,Empty,Field,Group,IconBtn,Input,KeyValues,Note,Pill,ReviewCard,ReviewMedia,ReviewPair,Row,SectionLabel,Seg,Skel,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble} from './kit';
 import {useFe} from './session';
 
 /** Staff area (/n/staff, S4 moderation): review queues with decisions, Premium for dogfooding, the journal.
@@ -222,7 +222,7 @@ const MEDIA_REASONS=['minor','not_a_person','violence','private_material','spam'
 const PUBLIC_ONLY=new Set(['avatar','community','event']);
 function MediaCard({item,onDone}:{item:MediaItem,onDone:()=>void}){
  const {call}=useFe();const {t}=useI18n();const when=useWhen();
- const [src,setSrc]=useState<{card:string,full:string}|null|undefined>(undefined);const [viewing,setViewing]=useState(false);
+ const [src,setSrc]=useState<{card?:string|undefined,full?:string|undefined,file?:string|undefined}|null|undefined>(undefined);const [viewing,setViewing]=useState(false);
  const [reason,setReason]=useState<typeof MEDIA_REASONS[number]|''>('');const [ask,setAsk]=useState<'reject'|'csam'|null>(null);
  const d=useDecide(onDone);
  // The full picture only through staff.mediaView: it returns short-lived URLs and journals the look.
@@ -231,7 +231,9 @@ function MediaCard({item,onDone}:{item:MediaItem,onDone:()=>void}){
  const purpose=t('fe.staff.media.purpose.'+item.purpose);
  return <StCard title={purpose.startsWith('fe.')?item.purpose:purpose} meta={when(item.createdAt)}>
   <ReviewMedia blur={item.blur} icon={Eye}>
-   {src?(item.kind==='video'?<video src={src.full} controls playsInline/>:<a href={src.full} target="_blank" rel="noreferrer noopener"><img src={src.card} alt="" draggable={false}/></a>):undefined}
+   {src?(item.kind==='video'?<VideoPlayer src={src.file} poster={src.card} w={item.w} h={item.h} label={t('fe.kit.av.video')}/>
+    :item.kind==='audio'?<VoiceBubble src={src.file} durationMs={null} mine/>
+    :<a href={src.full} target="_blank" rel="noreferrer noopener"><img src={src.card} alt="" draggable={false}/></a>):undefined}
   </ReviewMedia>
   <Kv rows={[[t('fe.staff.media.authorLabel'),item.authorLabel],[t('fe.staff.media.scanner'),item.reason]]}/>
   {src===undefined?<div className="st-block">
