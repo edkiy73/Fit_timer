@@ -1,12 +1,10 @@
 // Backlog wave 3 screens (posts, feed, search): each scenario taps what a person taps and reads the result back
 // through the API. Two people of the lane: `full` (the viewer, interests, a photo) and `basic` (the other author).
 // Everything a scenario creates is removed in its `finally`.
-import { expect, until, toastSee } from './helpers.mjs';
-import { persona, STAFF } from '../personas.mjs';
-import { uploadFixture } from '../lib.mjs';
+import { expect, until, toastSee } from '../helpers.mjs';
+import { STAFF } from '../../personas.mjs';
+import { uploadFixture } from '../../lib.mjs';
 
-const LANE = process.env.E2E_LANE || 'w3';
-const other = () => persona(LANE, 'basic');
 const tag = () => 'w3-' + Date.now().toString(36);
 /** A published post of `as` (an e-mail); returns its id. */
 async function publish(t, as, post) {
@@ -21,7 +19,7 @@ const sheet = '.sheet.on';
 
 export default [
  { name: 'likers: «Нравится: тебе» opens the list; the mention is a link and «Убрать упоминание меня» unlinks it', persona: 'full', run: async t => {
-   const B = await other(); const mark = tag();
+   const B = await t.persona('basic'); const mark = tag();
    const id = await publish(t, B.email, { body: `${mark} привет @${t.me.handle ?? 'qa_w3_full'} и @nobody_here_w3` });
    try {
      await t.api('reaction.set', { opId: t.uuid7(), targetType: 'post', targetId: id, on: true });
@@ -40,7 +38,7 @@ export default [
  } },
 
  { name: 'poll voters: after the vote a count opens who chose it', persona: 'full', run: async t => {
-   const B = await other(); const mark = tag();
+   const B = await t.persona('basic'); const mark = tag();
    const id = await publish(t, B.email, { body: mark, poll: { question: 'Чай или кофе ' + mark, options: ['Чай', 'Кофе'] } });
    try {
      const before = await t.api('poll.voters', { postId: id, option: 0 }); expect(before.status === 403, 'voters closed before the vote: ' + before.status);
@@ -68,14 +66,16 @@ export default [
      // Saved again (API) → «Опубликовать правки» from the list.
      const rev = (await t.api('post.get', { postId: id })).post.rev;
      const se = await t.api('post.saveEdits', { opId: t.uuid7(), postId: id, rev, post: { body: 'Итог ' + mark } }); expect(se.saved, 'saveEdits ' + JSON.stringify(se).slice(0, 200));
-     await t.go('/n/me/posts'); await t.tap(`.li:has-text("Итог ${mark}")`); await t.tap(`${sheet} .li:has-text("Опубликовать правки")`);
+     await t.page.reload(); await t.tap(`.li:has-text("Итог ${mark}")`); // same route: reload to read the list again await t.see(`${sheet} .li:has-text("Опубликовать правки")`); await t.wait(600);
+     const pubReq = t.page.waitForResponse(r => /"action":"post.publishEdits"/.test(r.request().postData() || ''), { timeout: 15000 });
+     await t.tap(`${sheet} .li:has-text("Опубликовать правки")`); const pr = await pubReq; expect(pr.status() === 200, 'publishEdits ' + pr.status() + ' ' + (await pr.text()).slice(0, 200));
      await toastSee(t, 'Правки опубликованы');
      await until(async () => (await t.api('post.get', { postId: id })).post.body === 'Итог ' + mark, 'edits published');
    } finally { await drop(t, t.me.email, id); }
  } },
 
  { name: 'feed filters: kinds of post with «Показать N», ✕ on the active chip; nothing → «Нет подходящих» disabled', persona: 'full', run: async t => {
-   const B = await other(); const mark = tag();
+   const B = await t.persona('basic'); const mark = tag();
    const id = await publish(t, B.email, { body: mark, poll: { question: 'Опрос ' + mark, options: ['Да', 'Нет'] } });
    try {
      await t.go('/n/feed'); await t.tap('.filterline .chip:has-text("Фильтры")');
@@ -98,7 +98,7 @@ export default [
  } },
 
  { name: '«Подписки»: an activity card, ⋯ → «Не показывать активность», «Вернуть»', persona: 'basic', run: async t => {
-   const A = await persona(LANE, 'full'); const mark = tag();
+   const A = await t.persona('full'); const mark = tag();
    const id = await publish(t, t.me.email, { body: 'Пост для активности ' + mark });
    try {
      await t.api('follow.set', { opId: t.uuid7(), profileId: A.personId, on: true });
@@ -141,7 +141,7 @@ export default [
  } },
 
  { name: 'unsent reply waits with «Повторить»; replies page «Показать ещё N из M»', persona: 'full', allow4xx: true, run: async t => {
-   const B = await other(); const mark = tag();
+   const B = await t.persona('basic'); const mark = tag();
    const id = await publish(t, B.email, { body: 'Ответы ' + mark });
    try {
      for (let i = 0; i < 21; i++) await t.api('reply.create', { opId: t.uuid7(), postId: id, body: `r${i} ${mark}` }, B.email);
@@ -158,7 +158,7 @@ export default [
  } },
 
  { name: '«Следить за статьями» under an article: the author\'s articles come to «Подписки»', persona: 'full', run: async t => {
-   const B = await other(); const mark = tag();
+   const B = await t.persona('basic'); const mark = tag();
    const id = await publish(t, B.email, { type: 'note', title: 'Статья ' + mark, body: 'Длинный текст статьи для проверки подписки ' + mark });
    try {
      await t.api('noteSub.set', { opId: t.uuid7(), profileId: B.personId, on: false });
@@ -168,7 +168,7 @@ export default [
  } },
 
  { name: '«Скрыть публикацию» leaves a row with «Вернуть»; own name opens «Я»', persona: 'full', run: async t => {
-   const B = await other(); const mark = tag();
+   const B = await t.persona('basic'); const mark = tag();
    const id = await publish(t, B.email, { body: 'Скрыть ' + mark });
    const mine = await publish(t, t.me.email, { body: 'Своя ' + mark });
    try {
@@ -184,7 +184,7 @@ export default [
  } },
 
  { name: 'composer: quick start, formatting bar (bold, link check), «Упомянуть» sheet → mention on the server', persona: 'full', run: async t => {
-   const B = await other(); const mark = tag(); let id = null;
+   const B = await t.persona('basic'); const mark = tag(); let id = null;
    try {
      await t.go('/n/feed'); await t.tap('.composer [aria-label="Создать"]'); await t.see(`${sheet}:has-text("Или сразу начать с")`);
      await t.tap(`${sheet} .create-q button:has-text("Опрос")`); await until(async () => t.page.url().includes('x=poll'), 'poll editor', 8000); await t.see('#pollQ');
@@ -205,7 +205,7 @@ export default [
  } },
 
  { name: 'photo mark: «Подробнее» sheet → «Разрешить»; «Это я — против» asks before hiding', persona: 'full', run: async t => {
-   const B = await other(); const mark = tag();
+   const B = await t.persona('basic'); const mark = tag();
    const asset = await uploadFixture(B.email, 'post');
    const d = await t.api('post.saveDraft', { opId: t.uuid7(), post: { body: 'Фото ' + mark, mediaIds: [asset], tags: [t.me.personId] } }, B.email);
    const id = d.id;
