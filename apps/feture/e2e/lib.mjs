@@ -8,6 +8,13 @@ export const PROD = process.env.FE_API || 'https://feture-mvp.vercel.app';
 const DIR = new URL('.', import.meta.url).pathname;
 const SESS = DIR + '.sessions.json';
 const sessions = fs.existsSync(SESS) ? JSON.parse(fs.readFileSync(SESS, 'utf8')) : {};
+/** Writes the cache merged with what other runner processes wrote meanwhile (a lost entry would mean a fresh sign-in,
+ * which signs out the other process's open page). */
+function saveSessions() {
+  let disk = {}; try { disk = JSON.parse(fs.readFileSync(SESS, 'utf8')); } catch {}
+  for (const [k, v] of Object.entries(disk)) { if (!sessions[k]) sessions[k] = v; else if (v._at > sessions[k]._at) Object.assign(sessions[k], v); }
+  fs.writeFileSync(SESS, JSON.stringify(sessions), { mode: 0o600 });
+}
 export const sleep = ms => new Promise(z => setTimeout(z, ms));
 
 export async function post(path, body, headers = {}) {
@@ -24,7 +31,11 @@ const admin = body => post('/api/admin', body, { 'x-admin-key': process.env.FE_A
 
 /** A signed-in session for this e-mail (the Core account is created on first use). */
 export async function session(email, { fresh = false } = {}) {
-  const s = sessions[email];
+  let s = sessions[email];
+  if (!s || fresh) { // another runner process may have signed in meanwhile: take its token instead of replacing it
+    let d; try { d = JSON.parse(fs.readFileSync(SESS, 'utf8'))[email]; } catch {}
+    if (d && (!s || d.syncToken !== s.syncToken)) { s = sessions[email] = s ? Object.assign(s, d) : d; fresh = false; }
+  }
   if (!fresh && s && Date.now() - s._at < 6 * 3600e3) return s;
   for (let i = 0; i < 10; i++) {
     let c = await admin({ action: 'user_test_code', email });
@@ -34,7 +45,7 @@ export async function session(email, { fresh = false } = {}) {
     const v = await post('/api/auth', { action: 'verify', email, code: c.code, deviceId });
     if (v.syncToken) {
       sessions[email] = { email, deviceId, syncToken: v.syncToken, handle: v.handle ?? null, locale: 'ru', sub: null, premium: false, owned: [], fresh: false, expiresAt: v.expiresAt ?? null, _at: Date.now() };
-      fs.writeFileSync(SESS, JSON.stringify(sessions), { mode: 0o600 });
+      saveSessions();
       return sessions[email];
     }
     if (v.status === 429) { await sleep(60000); continue; }
@@ -52,7 +63,7 @@ export async function api(email, action, input = {}, profile) {
   if (profile) h['x-fe-profile'] = profile;
   else if (s.personId) h['x-fe-profile'] = s.personId;
   let r = await post('/api/fe', { action, ...input }, h);
-  if (r.status === 401) { await session(email, { fresh: true }); return api(email, action, input, profile); }
+  if (r.status === 401) { console.error(`   (401 on ${action} for ${email}: signing in again — an open browser page of this account is now signed out)`); await session(email, { fresh: true }); return api(email, action, input, profile); }
   return r;
 }
 export async function boot(email) {
@@ -60,7 +71,7 @@ export async function boot(email) {
   const s = await session(email);
   s.personId = b.profiles?.find(p => p.kind === 'person')?.id ?? null;
   s.coupleId = b.profiles?.find(p => p.kind === 'couple' && p.state === 'active')?.id ?? null;
-  fs.writeFileSync(SESS, JSON.stringify(sessions), { mode: 0o600 });
+  saveSessions();
   return b;
 }
 

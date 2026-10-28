@@ -1,10 +1,12 @@
 // FetUre interaction runner. Usage (from apps/feture):
 //   FE_ADMIN_KEY=… E2E_LANE=<your lane> APP=http://localhost:<port> node e2e/run.mjs <scenario-file.mjs> [name-filter]
 // A scenario file exports `default [{name, persona:'full'|'basic'|'new'|'pair'|…, route:'/n/…', run: async t => {…}}]`.
-// `persona` signs the browser in as that persona of your lane (e2e/personas.mjs); `as:'email'` still works for odd cases.
+// `persona` signs the browser in as that persona of your lane (e2e/personas.mjs); `persona: null` opens the app signed
+// out. There is no default account: a scenario without `persona` fails.
 // t: page (Playwright), go(route), tap(textOrSelector), fill(selectorOrLabel, value), see(text), notSee(text), wait(ms),
 //    api(action, input, asEmail?, profile?) — a direct API call for setup or to read the result back, me (the persona),
-//    pid(asEmail?), shot(name).
+//    persona(kind) — another persona of the same lane (an actor who asks, invites, applies…; built on first use),
+//    admin(action, body) — the admin API (test codes), pid(asEmail?), boot(asEmail?), shot(name).
 // Fails on: thrown errors, a failed see(), console errors, any /api/fe response ≥ 500 or an unexpected 4xx.
 // APP is a local `vite preview` of your build; /api is proxied to production (the shared API).
 import { chromium } from 'playwright-core';
@@ -20,9 +22,12 @@ const scenarios = (await import(new URL(file, 'file://' + process.cwd() + '/').h
 const browser = await chromium.launch({ headless: true });
 const results = [];
 for (const sc of scenarios) {
-  const me = sc.persona ? await persona(LANE, sc.persona) : { email: sc.as || 'test1@feture.test' };
+  if (sc.persona === undefined) { results.push({ name: sc.name, ok: false, err: 'no persona' }); console.log('FAIL ' + sc.name + '\n   ✗ every scenario names a persona (or persona: null for signed out)'); continue; }
+  let me;
+  try { me = sc.persona ? await persona(LANE, sc.persona) : { email: null }; }
+  catch (e) { results.push({ name: sc.name, ok: false, err: 'persona: ' + e.message }); console.log('FAIL ' + sc.name + '\n   ✗ persona ' + sc.persona + ': ' + e.message); continue; }
   const email = me.email;
-  const s = await session(email); await boot(email);
+  const s = email ? await session(email) : null; if (email) await boot(email);
   const ctx = await browser.newContext({ viewport: sc.viewport || { width: 390, height: 844 }, locale: 'ru-RU', timezoneId: 'Europe/Berlin' });
   if (APP !== PROD) await ctx.route(APP + '/api/**', async r => {
     try {
@@ -32,7 +37,7 @@ for (const sc of scenarios) {
       await r.fulfill({ response: res });
     } catch { /* context closed */ }
   });
-  await ctx.addInitScript(x => { const { _at, personId, ...rest } = x; localStorage.setItem('feture.auth.session', JSON.stringify(rest)); localStorage.setItem('feture.auth.device', rest.deviceId); }, s);
+  if (s) await ctx.addInitScript(x => { const { _at, personId, ...rest } = x; localStorage.setItem('feture.auth.session', JSON.stringify(rest)); localStorage.setItem('feture.auth.device', rest.deviceId); }, s);
   const page = await ctx.newPage();
   const problems = [];
   page.on('console', m => { if (m.type() === 'error' && !/favicon|Failed to load resource: the server responded with a status of 4/.test(m.text())) problems.push('console: ' + m.text().slice(0, 300)); });
@@ -48,8 +53,10 @@ for (const sc of scenarios) {
     notSee: async (q, timeout = 3000) => { await page.waitForTimeout(timeout); if (await loc(q).first().isVisible().catch(() => false)) throw new Error('should not see: ' + q); },
     wait: ms => page.waitForTimeout(ms),
     api: (action, input, as, profile) => api(as || email, action, input, profile),
+    persona: kind => persona(LANE, kind),
+    admin: (action, body) => post('/api/admin', { action, ...body }, { 'x-admin-key': process.env.FE_ADMIN_KEY ?? '' }),
     pid: async as => { await api(as || email, 'profile.settings', {}); return (await session(as || email)).personId; },
-    boot: async as => { const s2 = await session(as || email); return post('/api/fe', { action: 'session.bootstrap' }, { 'x-fit-email': s2.email, 'x-fit-device': s2.deviceId, 'x-fit-token': s2.syncToken }); },
+    boot: as => boot(as || email), // session.bootstrap; also refreshes the cached person / couple ids for t.api
     shot: async n => page.screenshot({ path: OUT + n + '.png' }),
   };
   const t0 = Date.now(); let err = null;
