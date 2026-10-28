@@ -6,7 +6,7 @@ import {Check,ChevronLeft,ChevronRight,Globe,Image as ImageIcon,Images,MoreHoriz
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {AlbumCard,AlbumMeta,AlbumRow,Ask,Btn,Card,Counter,Empty,Field,GalleryAdd,GalleryGrid,GalleryTile,Group,IconBtn,Input,Note,Row,SelectRow,SelectionBar,Sheet,Skel,SubBar,View} from './kit';
 import {FIELD,serverFields,softMax,textError,textErrorMessage,textLength} from './kit/validate';
-import {useFe} from './session';
+import {useFe,useShown} from './session';
 import {useToast} from './toast';
 import {useHideDock} from './dock';
 import type {Post} from './feed';
@@ -309,8 +309,8 @@ function CoverSheet({profileId,album:al,onClose,onSet}:{profileId:string,album:A
 
 /** `galleryOwn20()`: «Все» and the albums as cards (four to a line), «+ Альбом»; empty — one row to the first upload. */
 export function MeGallery({profileId,couple}:{profileId:string,couple:boolean}){
- const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();
- const [data,setData]=useState<{albums:Album[],all:z.infer<typeof galleryRes>}|null>(null);const [tick,setTick]=useState(0);const [creating,setCreating]=useState(false);
+ const {call,peek}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();
+ const [data,setData]=useShown<{albums:Album[],all:z.infer<typeof galleryRes>}|null>('gal.me:'+profileId,()=>{const a=peek('album.list',{profileId},albumsRes),g=peek('gallery.list',{profileId},galleryRes);return a&&g?{albums:a.items,all:g}:null;});const [tick,setTick]=useState(0);const [creating,setCreating]=useState(false);
  useEffect(()=>{let live=true;
   Promise.all([call('album.list',{profileId},albumsRes),call('gallery.list',{profileId},galleryRes)]).then(([a,g])=>{if(live)setData({albums:a.items,all:g});}).catch(()=>{if(live)setData({albums:[],all:{ok:true,items:[],next:null}});});
   return ()=>{live=false;};},[call,profileId,tick]);

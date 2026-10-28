@@ -21,7 +21,7 @@ const fields = {
 
 export const communitiesCommands = {
   'community.create': {
-    profile: true, write: true, rate: { kind: 'community.create', max: 5, window: '1 day' },
+    profile: true, write: true, rate: { kind: 'community.create', max: 10, window: '1 day' },
     input: z.strictObject({ opId, ...fields }).refine(v => v.privacy !== 'open' || !v.joinQuestion, { message: 'question_only_when_closed', path: ['joinQuestion'] }),
   },
   'community.update': {
@@ -41,7 +41,7 @@ export const communitiesCommands = {
   },
   'community.mine': { profile: true, write: false, input: z.strictObject({}) },
   'community.join': {
-    profile: true, write: true, rate: { kind: 'community.join', max: 50, window: '1 day' },
+    profile: true, write: true, rate: { kind: 'community.join', max: 250, window: '1 day' },
     input: z.strictObject({ opId, communityId: id, rulesAccepted: z.literal(true), answer: field('joinAnswer').default(''), invite: z.string().max(80).optional() }),
   },
   'community.requestWithdraw': { profile: true, write: true, input: z.strictObject({ opId, requestId: id }) },

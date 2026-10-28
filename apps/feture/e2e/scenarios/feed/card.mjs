@@ -132,9 +132,17 @@ export default [
      await t.page.mouse.move(box.x + box.width * .8, box.y + box.height / 2, { steps: 6 }); await t.page.mouse.up(); await t.wait(450);
      expect((await t.page.locator('.viewer.on .vw-n').innerText()).trim() === '1 / 2', 'swipe right → back once');
 
-     // The post over its media (owner 28.10.2026): like / comment / save / share on the right, author + text at the bottom.
+     // The post over its media (owner 28.10.2026): like (with the count) and comments, small and low on the right —
+     // save and share stay in the post; author + text at the bottom.
      const rail = t.page.locator('.viewer.on .vw-rail');
-     expect(await rail.locator('button').count() === 4, 'four actions on the right');
+     expect(await rail.locator('button').count() === 2, 'two actions on the right');
+     // The rail never takes paging: a tap in the right third at the rail's height (beside its buttons) still pages.
+     const rb = await rail.boundingBox();
+     expect(rb.height <= 120 && rb.y > box.y + box.height / 2, 'the rail is small and low: ' + JSON.stringify(rb));
+     await t.page.mouse.click(rb.x - 16, rb.y + rb.height / 2); await t.wait(450);
+     expect((await t.page.locator('.viewer.on .vw-n').innerText()).trim() === '2 / 2', 'a tap beside the rail pages forward');
+     await t.page.mouse.click(box.x + box.width * .85, box.y + 40); await t.wait(450);
+     await t.page.keyboard.press('ArrowLeft'); await t.wait(400);
      expect((await t.page.locator('.viewer.on .vw-cap').innerText()).includes(f.body.slice(0, 12)), 'the text at the bottom');
      await rail.locator('button[aria-pressed]').first().click();
      await until(async () => (await get(t, f.id)).liked === true || null, 'liked from the viewer');

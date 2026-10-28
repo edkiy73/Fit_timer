@@ -1,8 +1,8 @@
 import React,{forwardRef,useCallback,useEffect,useImperativeHandle,useLayoutEffect,useRef,useState,type ReactNode} from 'react';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Bold,Bookmark,ChartColumn,ChevronDown,ChevronRight,Ellipsis,FileText,Heading,Heart,Image as ImageIcon,ImagePlus,Italic,Link as LinkIcon,List,ListOrdered,MessageCircle,MessageSquareText,Quote,Share,Sparkles,Strikethrough,Video,type LucideIcon} from 'lucide-react';
+import {Bold,ChartColumn,ChevronDown,ChevronRight,Ellipsis,FileText,Heading,Heart,Image as ImageIcon,ImagePlus,Italic,Link as LinkIcon,List,ListOrdered,MessageCircle,MessageSquareText,Quote,Sparkles,Strikethrough,Video,type LucideIcon} from 'lucide-react';
 import {fmtDur} from './media';
-import {Av,Btn,Field,H,IconBtn,Input,Sheet,Text,namedPlate,type PlateKey} from './index';
+import {Av,Btn,Field,H,IconBtn,Input,Sheet,Skel,Text,namedPlate,type PlateKey} from './index';
 import {domToMd,imageBlock,linkOk,mdToDom} from './rich-md';
 
 export {linkOk,BAD_CHARS,hasLongWord,mdImages} from './rich-md';
@@ -201,14 +201,17 @@ function ActStrip({tiles,rest,onOpen,label}:{tiles:ReactNode[],rest:number,onOpe
 /** One «Подписки» activity card (V21 actCard): who, what (one line, the time under it), ⋯, and the things it is about.
  * With `tiles` (liked posts, people followed) the things are a sideways strip; «+N» opens them as a list (`items`)
  * with «Свернуть». Without tiles `items` show `fold` rows and «Ещё N». `total` — how many there are in all (the
- * server sends up to 20); those not sent are named at the end of the open list (`restText`). */
-export function ActivityCard({actor,text,time,menuLabel,onMenu,onActor,items,tiles,total,fold=2,more,less,restText}:{actor:{id:string,name:string,avatar?:string|null|undefined},text:ReactNode,time:ReactNode,
+ * server sends up to 20). Opening calls `onOpen`, where the screen reads the rest and passes it in `items`; while
+ * `loading` the rows still to come are skeleton rows; what is still missing after that is named by `restText`. */
+export function ActivityCard({actor,text,time,menuLabel,onMenu,onActor,items,tiles,total,fold=2,more,less,restText,onOpen,loading}:{actor:{id:string,name:string,avatar?:string|null|undefined},text:ReactNode,time:ReactNode,
  /** Without `onMenu` (a profile's own «Активность») there is no ⋯. */ menuLabel:string,onMenu?:(()=>void)|undefined,onActor?:()=>void,items:ReactNode[],tiles?:ReactNode[]|undefined,total?:number|undefined,fold?:number,
- /** «Показать все» (strip) / «Ещё N» (rows). */ more:string,less:string,/** «И ещё N — в профиле». */ restText?:ReactNode}){
- const [open,setOpen]=useState(false);const all=Math.max(total??items.length,items.length);const rest=all-items.length;
+ /** «Показать все» (strip) / «Ещё N» (rows). */ more:string,less:string,/** «И ещё N — в профиле». */ restText?:ReactNode,
+ /** The card was opened: read what was not sent. */ onOpen?:(()=>void)|undefined,/** The rest is being read. */ loading?:boolean|undefined}){
+ const [open,setOpenRaw]=useState(false);const all=Math.max(total??items.length,items.length);const rest=all-items.length;
+ const setOpen=(v:boolean)=>{setOpenRaw(v);if(v)onOpen?.();};
  const av=<Av name={actor.name} seed={actor.id} src={actor.avatar} size="sm"/>;
  let body:ReactNode=null;
- if(open)body=<div className="actc-list">{items}{rest>0&&restText&&<Text size="sm" tone="mute">{restText}</Text>}
+ if(open)body=<div className="actc-list">{items}{rest>0&&(loading?<Skel kind="list" rows={Math.min(3,rest)}/>:restText&&<Text size="sm" tone="mute">{restText}</Text>)}
   <Btn kind="text" auto aria-expanded onClick={()=>setOpen(false)}>{less}</Btn></div>;
  else if(tiles?.length)body=<ActStrip tiles={tiles} rest={rest} label={more} onOpen={()=>setOpen(true)}/>;
  else if(items.length)body=<div className="actc-list">{items.slice(0,fold)}
@@ -230,19 +233,18 @@ export function ActivityItem({icon:I,av,thumb,title,sub,onClick}:{icon?:LucideIc
 
 /* ---------------- Post viewer ---------------- */
 
-/** Over a post's full-screen media (owner 28.10.2026, TikTok-like): «Нравится» with the count, comments, «Сохранить»
- * and «Поделиться» down the right side; the author and two lines of the text at the bottom over a scrim — a tap on the
- * text opens the post. Goes inside the viewer next to its track (`Viewer` `bar`), so tap paging stays as it is. */
-export function ViewerPostBar({author,text,liked,likes,replies,saved,labels,onLike,onComment,onSave,onShare,onOpen,onAuthor}:{
- author:{id:string,name:string,avatar?:string|null|undefined},text:string,liked:boolean,likes:number,replies:number,saved:boolean,
- labels:{like:string,comment:string,save:string,share:string,open:string},onLike:()=>void,onComment:()=>void,onSave:()=>void,onShare:()=>void,
+/** Over a post's full-screen media (owner 28.10.2026, TikTok-like): «Нравится» with the count and the comments, small,
+ * low on the right (save and share stay in the post itself — owner 28.10.2026); the author and two lines of the text at
+ * the bottom over a scrim — a tap on the text opens the post. Goes inside the viewer next to its track (`Viewer` `bar`):
+ * only the two buttons take taps, so a tap anywhere else in the right third still pages. */
+export function ViewerPostBar({author,text,liked,likes,replies,labels,onLike,onComment,onOpen,onAuthor}:{
+ author:{id:string,name:string,avatar?:string|null|undefined},text:string,liked:boolean,likes:number,replies:number,
+ labels:{like:string,comment:string,open:string},onLike:()=>void,onComment:()=>void,
  onOpen:()=>void,onAuthor:()=>void}){
  return <>
   <div className="vw-rail">
    <button type="button" className={liked?'on':undefined} aria-pressed={liked} aria-label={labels.like} onClick={onLike}><Heart fill={liked?'currentColor':'none'}/><span>{likes}</span></button>
    <button type="button" aria-label={labels.comment} onClick={onComment}><MessageCircle/><span>{replies}</span></button>
-   <button type="button" className={saved?'on':undefined} aria-pressed={saved} aria-label={labels.save} onClick={onSave}><Bookmark fill={saved?'currentColor':'none'}/></button>
-   <button type="button" aria-label={labels.share} onClick={onShare}><Share/></button>
   </div>
   <div className="vw-cap">
    <button type="button" className="vw-who" onClick={onAuthor}><Av name={author.name} seed={author.id} src={author.avatar} size="xs"/>{author.name}</button>

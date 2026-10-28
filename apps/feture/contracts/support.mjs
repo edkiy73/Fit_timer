@@ -10,12 +10,12 @@ export const SUPPORT_TOPICS = /** @type {const} */ (['account', 'safety', 'premi
 
 export const supportCommands = {
   'support.create': {
-    profile: false, write: true, rate: { kind: 'support.create', max: 5, window: '1 day' },
+    profile: false, write: true, rate: { kind: 'support.create', max: 10, window: '1 day' },
     input: z.strictObject({ opId, topic: z.enum(SUPPORT_TOPICS).default('other'), body }),
   },
   'support.mine': { profile: false, write: false, input: z.strictObject({}) },
   'support.reply': {
-    profile: false, write: true, rate: { kind: 'support.reply', max: 30, window: '1 day' },
+    profile: false, write: true, rate: { kind: 'support.reply', max: 150, window: '1 day' },
     input: z.strictObject({ opId, ticketId: id, body }),
   },
   'staff.supportQueue': {

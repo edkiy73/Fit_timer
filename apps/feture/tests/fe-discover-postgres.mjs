@@ -6,9 +6,12 @@ import { me } from '../server/commands/me.mjs';
 import { social } from '../server/commands/social.mjs';
 import { photos } from '../server/commands/photos.mjs';
 import { discover } from '../server/commands/discover.mjs';
+import { people } from '../server/commands/people.mjs';
+import { access } from '../server/commands/access.mjs';
+import { posts } from '../server/commands/posts.mjs';
 import { setup as baseSetup, op } from './fe-helpers.mjs';
 
-const setup = () => baseSetup({ commands: { ...platform, ...me, ...social, ...photos, ...discover } });
+const setup = () => baseSetup({ commands: { ...platform, ...me, ...social, ...photos, ...discover, ...people, ...access, ...posts } });
 
 async function world() {
   const env = await setup();
@@ -203,7 +206,7 @@ test('deck cards carry what the top card shows (photos, follower counts, follow,
     assert.equal(noa.iFollow, false);
     // A pass is counted apart from likes: a day of likes used up still lets the person skip.
     const [acc] = await db.query('select account_id from feture.profile_member where profile_id = $1', [a]);
-    await db.query(`insert into feture.rate_event (account_id, kind) select $1, 'discover.decide' from generate_series(1, 500)`, [acc.account_id]);
+    await db.query(`insert into feture.rate_event (account_id, kind) select $1, 'discover.decide' from generate_series(1, 1000)`, [acc.account_id]);
     assert.equal((await call('ua', a, { action: 'discover.decide', opId: op(), profileId: b, decision: 'like' })).error, 'rate_limited');
     assert.equal((await call('ua', a, { action: 'discover.decide', opId: op(), profileId: b, decision: 'pass' })).decision, 'pass');
     // A passed person does not come back in the deck.
@@ -222,5 +225,28 @@ test('e2e persona accounts (qa-… logins) stay out of everyone else’s Discove
     assert.equal((await call('ua', a, { action: 'discover.decide', opId: op(), profileId: qa1, decision: 'like' })).error, 'not_found');
     assert.deepEqual((await deck('qa-1', qa1)).sort(), ['Alex', 'Kira', 'qa_l_mate']);
     assert.ok(b && qa2);
+  } finally { await pg.close(); }
+});
+
+test('discover.card: everything under a card in one read — each part as its own command answers it; a blocked or missing profile is not found', async () => {
+  const { pg, call, member } = await world();
+  try {
+    const a = await member('ua', 'Alex'), b = await member('ub', 'Kira'), c = await member('uc', 'Noa');
+    const r = await call('ua', a, { action: 'discover.card', profileId: b });
+    assert.equal(r.status, 200, JSON.stringify(r));
+    assert.equal(r.profile.ok, true);
+    assert.equal(r.profile.profile.id, b);
+    assert.equal(r.profile.profile.handle, 'Kira');
+    // The same answers the profile page reads one by one.
+    for (const [k, action] of [['compat', 'profile.compat'], ['links', 'links.ofProfile'], ['interests', 'interests.list'], ['private', 'private.get'], ['posts', 'profile.posts'], ['activity', 'profile.activity']]) {
+      const { status: _s, requestId: _r, ...alone } = await call('ua', a, { action, profileId: b });
+      assert.deepEqual(r[k], alone, k);
+    }
+    // Blocked either way, or no such profile: not found, nothing of it.
+    await call('uc', c, { action: 'block.set', opId: op(), profileId: a, on: true });
+    const blocked = await call('ua', a, { action: 'discover.card', profileId: c });
+    assert.equal(blocked.status, 404);
+    assert.equal(blocked.profile, undefined);
+    assert.equal((await call('ua', a, { action: 'discover.card', profileId: '00000000-0000-4000-8000-000000000000' })).status, 404);
   } finally { await pg.close(); }
 });

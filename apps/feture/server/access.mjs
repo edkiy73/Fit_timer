@@ -9,7 +9,7 @@
 
 export const SCOPES = /** @type {const} */ (['info', 'photos', 'video']);
 // declineUndoSeconds: a decline can be taken back this long; until then the requester sees the request as waiting.
-export const LIMITS = Object.freeze({ photos: 12, videos: 6, requestsPerDay: 10, reaskDays: 30, declineUndoSeconds: 10 });
+export const LIMITS = Object.freeze({ photos: 12, videos: 6, requestsPerDay: 20, reaskDays: 30, declineUndoSeconds: 10 });
 
 /** Scopes the viewer may see in the owner's private part (empty when none). @param {Q} q @param {string} ownerProfileId @param {Acting} viewer
  * @returns {Promise<Scope[]>} */

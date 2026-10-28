@@ -6,7 +6,7 @@ import type {AuthResponseError,AuthSessionInfo} from '@appbase/core/auth.js';
 import {Book,Calendar,Crown,Globe,Heart,Lock,LogOut,Mail,Pencil,ShieldCheck,Smartphone,type LucideIcon} from 'lucide-react';
 import {Alert,Ask,Bar,Btn,Card,CodeInput,Field,Group,Input,Note,Pill,Row,SectionLabel,Sheet,Skel,Stack,View} from './kit';
 import {useToast} from './toast';
-import {useFe} from './session';
+import {useFe,useShown} from './session';
 import {useDate} from './premium';
 import {SupportBlock} from './support';
 
@@ -71,7 +71,7 @@ function EmailChangeSheet({current,onClose}:{current:string,onClose:()=>void}){
 export function SecurityScreen(){
  const {state}=useFe();const {t}=useI18n();const auth=useOptionalAuth();const date=useDate();const toast=useToast();
  const email=state.status==='ready'?state.session.email:'';
- const [list,setList]=useState<AuthSessionInfo[]|null>(null);const [loadErr,setLoadErr]=useState(false);
+ const [list,setList]=useShown<AuthSessionInfo[]|null>('set.sessions',()=>null);const [loadErr,setLoadErr]=useState(false);
  const [sheet,setSheet]=useState<null|'email'|'others'|'logout'|AuthSessionInfo>(null);const [busy,setBusy]=useState(false);const [err,setErr]=useState('');
  const load=useCallback(()=>{setLoadErr(false);const s=auth.client.sessions;if(!s){setList([]);return;}s().then(setList).catch(()=>setLoadErr(true));},[auth.client]);
  useEffect(()=>{load();},[load,email]);
@@ -90,7 +90,7 @@ export function SecurityScreen(){
    <Note className="mt8">{t('fe.w8.sec.oauthNote')}</Note>
    <Group title={t('fe.ax.sec.sessions')} foot={t('fe.w8.sec.sessionsNote')}>
     {loadErr?<Alert kind="err" action={<Btn kind="soft" size="sm" auto onClick={load}>{t('fe.retry')}</Btn>}>{t('fe.w8.sec.loadFailed')}</Alert>
-     :!list?<Skel kind="list" rows={2}/>
+     :!list?<Skel kind="list" rows={1}/>
      :<Card list>{list.map(s=><Row key={s.id} icon={mobile(s.label)?Smartphone:Globe} tone={s.current?'g':undefined} noChev
       title={s.current?t('fe.ax.sec.thisDevice'):name(s)}
       sub={s.current?name(s)+' · '+t('fe.ax.sec.now')+' · '+t('fe.ax.sec.expires',{date:date(s.expiresAt)}):s.at?t('fe.w8.sec.signedIn',{date:date(s.at)}):undefined}

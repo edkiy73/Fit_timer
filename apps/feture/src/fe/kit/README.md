@@ -44,7 +44,7 @@ A new component or variant ships with its story in the same PR.
 | Viewer paging | `PhotoTrack` `onStep`: a tap on the left / right third pages back / forward, the middle is the clip's play / pause; swipes and ← → stay the viewer's |
 <<<<<<< HEAD
 | Viewer close by swipe | `PhotoTrack` `onClose`: a vertical swipe (up or down) closes any full-screen viewer — the picture follows the finger, the backdrop fades, a short pull springs back; sideways swipes, taps and the clip's bar are untouched |
-| Post viewer | `ViewerPostBar` (kit/feed.tsx): inside a post's media viewer — «Нравится» with the count, comments, «Сохранить», «Поделиться» down the right; the author and two lines of the text at the bottom over a scrim, a tap on the text opens the post (`Viewer` / `MediaGrid` `bar`) |
+| Post viewer | `ViewerPostBar` (kit/feed.tsx): inside a post's media viewer — «Нравится» with the count and comments, small, low on the right (save and share stay in the post; the rest of the right third still pages); the author and two lines of the text at the bottom over a scrim, a tap on the text opens the post (`Viewer` / `MediaGrid` `bar`) |
 | Profile photo bars | `PhotoBars` (story bars over a person card / profile header; `count` adds «2 / 6»; the header has a dark top scrim in both themes) |
 | Upload rows | `Uploader` rows: preview in the chosen format (1:1 square, 4:5, «Как есть» the file's shape, ≤ 80 px), name + ✕ «Убрать», state, then «Обрезать» / «Кадрировать» / «Повторить» on one line at the text's left edge — the same for photos and clips |
 =======
@@ -72,7 +72,7 @@ Product pieces that repeat or carry their own look. Screens use these, never the
 | Community | `CommunityHead` (cover, picture, name, meta; loading shape), `Discussion` (row with pinned mark and host ⋯), `Veil` (closed content under glass), `StatusCard` (my join request / event application as one block: icon, state, line, «Отозвать» at the end; tones wait / ok / bad) |
 | Create | `Swatches` (cover colour plates); the named plates themselves: `namedPlate(key)` / `PLATE_KEYS` (keys shared with the server in `contracts/_plates.mjs`) |
 | Interests | `AnswerScale` (1–10 with «обсудить» / «граница» marks) |
-| People | `PersonName` (name on a photo card), `PersonLine` + `RequestCard` + `Answer` (requests and applications), `LikeTile`, `Radar`, `Soon` («Скоро»: a feature not open yet — art, label, title, points, buttons), `Typing` («печатает…» under chat messages) |
+| People | `PersonName` (name on a photo card), `PersonLine` + `RequestCard` + `Answer` (requests and applications), `LikeTile`, `Radar` (`small`: compact, for the empty deck), `Soon` («Скоро»: a feature not open yet — art, label, title, points, buttons), `Typing` («печатает…» under chat messages) |
 | Gallery | `AlbumRow` + `AlbumCard` (cover / mosaic / icon, open, followers lock), `AlbumMeta`, `GalleryGrid` + `GalleryTile` (count, followers, review; selection `selected`, cover `picked`) + `GalleryAdd`, `SelectionBar` (pinned count + actions) |
 | Photos and checks | `PhotoSlots` / `PhotoSlot` / `PhotoAdd` (profile photo grid, drag to reorder, `loading`), `PhotoTrack` (viewer strip; `wm` puts the viewer's handle on someone else's private photos), `Watermark`, `Pose` (the gesture to show; the shot itself is `CaptureFrame`) |
 | Private layer | `VaultHead` (lock, title, switch), `Quota` (requests left today as segments) |

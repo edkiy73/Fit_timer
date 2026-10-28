@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,ChartColumn,Bell,BellOff,Bookmark,BookmarkCheck,Calendar,CalendarPlus,Check,ChevronLeft,Clock,Ellipsis,Eye,ExternalLink,FileText,Flag,Globe,Image as ImageIcon,Link as LinkIcon,Lock,Map as MapIcon,MapPin,MessageCircle,Plus,Search,Settings,Share,SlidersHorizontal,Ticket,TriangleAlert,Users,Video,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {ActingAv,Alert,Announcement,Ask,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,CommunityHead,CoverBar,Discussion,Empty,EventHero,EventTile,Group,IconBtn,LinkBtn,Note,Pill,Row,Rsvp,SectionLabel,Seg,Sheet,Skel,Spacer,StatusCard,Text,ToggleRow,Veil} from './kit';
-import {useFe} from './session';
+import {useFe,useKeyChange} from './session';
 import {when} from './feed';
 import {BellButton} from './inbox';
 import {useToast} from './toast';
@@ -104,7 +104,8 @@ function MyShortcut({kind,count}:{kind:'communities'|'events',count:number}){
 /** What the acting profile has to do with communities: hosted, joined, waiting (community.mine). */
 function useMyCommunities(){
  const {call,acting}=useFe();const [m,setM]=useState<z.infer<typeof mineComm>|null>(null);
- useEffect(()=>{setM(null);call('community.mine',{},mineComm).then(setM).catch(()=>{});},[call,acting?.id]);
+ useKeyChange(acting?.id??'',()=>setM(null));
+ useEffect(()=>{call('community.mine',{},mineComm).then(setM).catch(()=>{});},[call,acting?.id]);
  return useMemo(()=>{
   const hosting=new Set(m?.hosting.map(x=>x.id)??[]);const member=new Set(m?.member.map(x=>x.id)??[]);const pending=new Set(m?.requests.map(x=>x.community_id)??[]);
   return {hosting,member,pending,count:new Set([...hosting,...member,...pending]).size};
@@ -209,7 +210,8 @@ const evInput=(f:EvFilter,communityId?:string)=>({format:f.format,when:f.when,pr
 type MyStatus='organizer'|'going'|'pending'|'interested'|'waiting';
 function useMyEvents(){
  const {call,acting}=useFe();const [m,setM]=useState<z.infer<typeof mineEv>|null>(null);
- useEffect(()=>{setM(null);call('event.mine',{},mineEv).then(setM).catch(()=>{});},[call,acting?.id]);
+ useKeyChange(acting?.id??'',()=>setM(null));
+ useEffect(()=>{call('event.mine',{},mineEv).then(setM).catch(()=>{});},[call,acting?.id]);
  return useMemo(()=>{
   const st=new Map<string,MyStatus>();const now=Date.now();const up=(r:{ends_at:string})=>Date.parse(r.ends_at)>now;
   m?.interested.forEach(r=>st.set(r.id,'interested'));m?.waiting.forEach(r=>st.set(r.id,'waiting'));m?.applications.forEach(r=>st.set(r.id,'pending'));

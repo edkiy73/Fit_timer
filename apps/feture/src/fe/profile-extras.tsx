@@ -7,7 +7,7 @@ import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicBase} from '../api-url';
 import {Ban,Check,ChevronDown,Crown,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,Flag,Heart,History,Info,Link as LinkIcon,Lock,LockOpen,MapPin,MessageCircle,ShieldCheck,Undo2,Users,X} from 'lucide-react';
 import {ActingAv,Alert,Av,Bar,Btn,Card,Empty,Group,H,IconBtn,Layer,Note,PersonName,PhotoBars,PhotoTrack,Pill,Row,Seg,Skel,Text,ToggleRow,Veil,View,plate} from './kit';
-import {useFe} from './session';
+import {useFe,useKeyChange} from './session';
 import {ReportSheet} from './report';
 import {PhotoBadge} from './photo-check';
 import {faceFields,NameBadges} from './faces';
@@ -224,9 +224,13 @@ export const catalogRes=z.object({ok:z.literal(true),options:z.array(z.object({k
  categories:z.array(z.object({id:z.string(),...named}).passthrough()),
  places:z.array(z.object({id:z.string(),...named}).passthrough())}).passthrough();
 export type Catalog=z.infer<typeof catalogRes>;
+/** The catalog once read: option and topic names show on the first render (a name that turns from its code into a
+ * word a moment later moves the lines under it). */
+let catalogMemo:Catalog|null=null;
+export function readCatalog(call:ReturnType<typeof useFe>['call']){return call('catalog.get',{},catalogRes,{asAccount:true}).then(r=>{catalogMemo=r;return r;});}
 function useOptions(){
- const {call}=useFe();const {locale}=useI18n();const [opts,setOpts]=useState<Catalog['options']>([]);
- useEffect(()=>{call('catalog.get',{},catalogRes,{asAccount:true}).then(r=>setOpts(r.options)).catch(()=>{});},[call]);
+ const {call}=useFe();const {locale}=useI18n();const [opts,setOpts]=useState<Catalog['options']>(()=>catalogMemo?.options??[]);
+ useEffect(()=>{readCatalog(call).then(r=>setOpts(o=>o===r.options?o:r.options)).catch(()=>{});},[call]);
  return (kind:string,code:string)=>{const o=opts.find(x=>x.kind===kind&&x.code===code);return o?((locale==='en'?o.en||o.ru:o.ru||o.en)??code):code;};
 }
 /** detailsGroup: every chosen detail in one card; a couple shows role, format and «в поиске». */
@@ -264,8 +268,8 @@ const privRes=z.object({ok:z.literal(true),exists:z.boolean(),own:z.boolean().op
 type Priv=z.infer<typeof privRes>;
 /** Whether a profile has a private part and what of it is open to the viewer; the same read as PrivateVault's. */
 export function usePrivate(profileId:string,skip=false){
- const {call}=useFe();const [p,setP]=useState<Priv|null>(null);
- useEffect(()=>{setP(null);if(skip)return;call('private.get',{profileId},privRes).then(setP).catch(()=>{});},[call,profileId,skip]);
+ const {call}=useFe();const [p,setP]=useState<Priv|null>(null);useKeyChange(profileId,()=>setP(null));
+ useEffect(()=>{if(skip)return;call('private.get',{profileId},privRes).then(setP).catch(()=>{});},[call,profileId,skip]);
  return p;
 }
 const postsRes=z.object({ok:z.literal(true),items:z.array(z.lazy(()=>postSchema)),next:z.string().nullable().optional()}).passthrough();
@@ -275,11 +279,15 @@ const ownVis=z.object({ok:z.literal(true),settings:z.object({activityVis:z.enum(
  * of each. «Активность» is the person's own activity cards (as «Подписки» shows them) by their «Кто видит мою
  * активность» and the viewer's relation (the server decides); on one's own profile it says who else sees it. «Как
  * видят» (`preview`) shows it only when everyone may. */
-function Activity({profileId,inert,preview}:{profileId:string,inert?:boolean|undefined,preview?:boolean|undefined}){
- const {call,acting}=useFe();const {t}=useI18n();const [items,setItems]=useState<Post[]|null>(null);const [tab,setTab]=useState<'posts'|'notes'|'acts'>('posts');
- const [acts,setActs]=useState<Act[]|null>(null);const own=profileId===acting?.id;const [vis,setVis]=useState<string|null>(null);
- useEffect(()=>{setItems(null);call('profile.posts',{profileId},postsRes).then(r=>setItems(r.items)).catch(()=>setItems([]));},[call,profileId]);
- useEffect(()=>{setActs(null);call('profile.activity',{profileId},actRes).then(r=>setActs(r.items.flatMap(x=>{const a=activitySchema.safeParse(x);return a.success?[a.data]:[];}))).catch(()=>setActs([]));},[call,profileId]);
+const actsOf=(r:z.infer<typeof actRes>)=>r.items.flatMap(x=>{const a=activitySchema.safeParse(x);return a.success?[a.data]:[];});
+function Activity({profileId,inert,preview,pre}:{profileId:string,inert?:boolean|undefined,preview?:boolean|undefined,pre?:CardPre|undefined}){
+ const {call,acting}=useFe();const {t}=useI18n();const [items,setItems]=useState<Post[]|null>(()=>pre?pre.posts?.items??[]:null);const [tab,setTab]=useState<'posts'|'notes'|'acts'>('posts');
+ const [acts,setActs]=useState<Act[]|null>(()=>pre?pre.activity?actsOf(pre.activity):[]:null);const own=profileId===acting?.id;const [vis,setVis]=useState<string|null>(null);
+ const given=!!pre;
+ // Another profile starts empty; reading the same one again keeps what is shown until the answer comes.
+ useEffect(()=>{if(given)return;call('profile.posts',{profileId},postsRes).then(r=>setItems(r.items)).catch(()=>setItems(l=>l??[]));},[call,profileId,given]);
+ useEffect(()=>{if(given)return;call('profile.activity',{profileId},actRes).then(r=>setActs(actsOf(r))).catch(()=>setActs(l=>l??[]));},[call,profileId,given]);
+ useKeyChange(profileId,()=>{setItems(null);setActs(null);});
  useEffect(()=>{if(!own){setVis(null);return;}call('profile.settings',{},ownVis).then(r=>setVis(r.settings.activityVis??'all')).catch(()=>setVis('all'));},[call,own]);
  if(!items||!acts||(own&&!vis))return null;
  const shownActs=preview&&vis!=='all'?[]:acts;
@@ -308,10 +316,11 @@ function GalleryGroup({p,onOpen,inert}:{p:PersonProfile,onOpen:(i:number)=>void,
 }
 
 /** Interests group of another profile (pubJars → jarShelf, six then «Ещё N»). */
-function InterestsGroup({profileId,name,inert}:{profileId:string,name:string,inert?:boolean|undefined}){
- const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const topic=useTopics();const [items,setItems]=useState<Jar[]>([]);
- const [open,setOpen]=useState<string|null>(null);
- useEffect(()=>{setItems([]);call('interests.list',{profileId},jarsRes).then(r=>setItems(r.items)).catch(()=>{});},[call,profileId]);
+function InterestsGroup({profileId,name,inert,pre}:{profileId:string,name:string,inert?:boolean|undefined,pre?:CardPre|undefined}){
+ const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const topic=useTopics();const [items,setItems]=useState<Jar[]>(()=>pre?.interests?.items??[]);
+ const [open,setOpen]=useState<string|null>(null);const given=!!pre;
+ useEffect(()=>{if(given)return;call('interests.list',{profileId},jarsRes).then(r=>setItems(r.items)).catch(()=>{});},[call,profileId,given]);
+ useKeyChange(profileId,()=>setItems([]));
  if(!items.length)return null;
  // Someone else's interest opens the comparison (V21 openTopic); the acting profile's own opens the topic.
  const own=profileId===acting?.id;
@@ -322,16 +331,55 @@ function InterestsGroup({profileId,name,inert}:{profileId:string,name:string,ine
 }
 
 /** Everything under the photo and the buttons — the same body on the profile page and under a Discover card. */
-export function ProfileBody({p,inert,preview,onOpen}:{p:PersonProfile,inert?:boolean|undefined,preview?:'all'|'granted'|undefined,onOpen:(i:number)=>void}){
+export function ProfileBody({p,inert,preview,onOpen,pre}:{p:PersonProfile,inert?:boolean|undefined,preview?:'all'|'granted'|undefined,onOpen:(i:number)=>void,
+ /** Everything already read in one go (a Discover card): the body appears whole, nothing pops in under the reader. */ pre?:CardPre|undefined}){
  return <>
   <DetailsGroup p={p}/>
-  <LinksSection profileId={p.id} inert={inert}/>
-  <InterestsGroup profileId={p.id} name={personName(p)||'?'} inert={inert}/>
+  <LinksSection profileId={p.id} inert={inert} pre={pre}/>
+  <InterestsGroup profileId={p.id} name={personName(p)||'?'} inert={inert} pre={pre}/>
   <GalleryGroup p={p} onOpen={onOpen} inert={inert}/>
-  <PrivateVault profileId={p.id} name={personName(p)} {...(preview?{preview}:{})}/>
-  <Activity profileId={p.id} inert={inert} preview={!!preview}/>
+  <PrivateVault profileId={p.id} name={personName(p)} {...(preview?{preview}:{})} {...(pre?{pre:pre.private??{ok:true,exists:false}}:{})}/>
+  <Activity profileId={p.id} inert={inert} preview={!!preview} pre={pre}/>
  </>;
 }
+
+/* ---------- a Discover card's details in one read (discover.card) ---------- */
+const linksRes0=z.object({ok:z.literal(true),items:z.array(z.unknown())}).passthrough();
+const cardRes=z.object({ok:z.literal(true),profile:personProfileRes,compat:z.unknown().nullable(),links:linksRes0.nullable(),interests:jarsRes.nullable(),
+ private:z.unknown().nullable(),posts:postsRes.nullable(),activity:actRes.nullable()});
+export type CardPre={profile:PersonProfile,compat:Compat|null,links:z.infer<typeof linksRes>|null,interests:z.infer<typeof jarsRes>|null,
+ private:unknown,posts:z.infer<typeof postsRes>|null,activity:z.infer<typeof actRes>|null};
+const safe=<S extends z.ZodType>(schema:S,v:unknown):z.infer<S>|null=>{if(v==null)return null;const r=schema.safeParse(v);return r.success?r.data:null;};
+/** Cards read (or being read) for the acting profile, newest last; a card read once is not asked again for a while. */
+const cardMemo=new Map<string,{at:number,value:Promise<CardPre>,done?:CardPre}>();
+const CARD_TTL=5*60000;
+/** Whether the server has `discover.card` (null: not known yet). Without it a card costs seven reads, so the deck then
+ * reads only the card someone stays on (`cardOneRead() === false`), never the next one ahead. */
+let cardCmd:boolean|null=null;
+export const cardOneRead=()=>cardCmd;
+/** Everything under a Discover card's photo — the profile, «что общего», links, interests, the private part, posts and
+ * activity — in one read (`discover.card`); a server without it answers with the same commands asked side by side.
+ * Asked when the card is next in the deck, so it is there before the card is on top. */
+export function readCard(call:ReturnType<typeof useFe>['call'],actingId:string,profileId:string):Promise<CardPre>{
+ const key=actingId+':'+profileId;const hit=cardMemo.get(key);
+ if(hit&&Date.now()-hit.at<CARD_TTL)return hit.value;
+ const one=cardCmd===false?Promise.reject(new FeError('invalid_input')):call('discover.card',{profileId},cardRes).then(r=>({profile:r.profile.profile,compat:safe(compatRes,r.compat),links:safe(linksRes,r.links),interests:r.interests,
+  private:r.private,posts:r.posts,activity:r.activity}));
+ const each=()=>Promise.all([call('profile.get',{profileId},personProfileRes),
+  call('profile.compat',{profileId},compatRes).catch(()=>null),call('links.ofProfile',{profileId},linksRes).catch(()=>null),
+  call('interests.list',{profileId},jarsRes).catch(()=>null),call('private.get',{profileId},privRes).catch(()=>null),
+  call('profile.posts',{profileId},postsRes).catch(()=>null),call('profile.activity',{profileId},actRes).catch(()=>null)])
+  .then(([p,compat,links,interests,priv,posts,activity])=>({profile:p.profile,compat,links,interests,private:priv,posts,activity}));
+ // Not found is final; anything else (an older server without the command) asks the parts one by one.
+ const value=one.then(v=>{cardCmd=true;return v;},e=>{if(e instanceof FeError&&e.code==='not_found')throw e;
+  if(e instanceof FeError&&e.code==='invalid_input')cardCmd=false;return each();});
+ const entry:{at:number,value:Promise<CardPre>,done?:CardPre}={at:Date.now(),value};cardMemo.set(key,entry);
+ value.then(v=>{entry.done=v;},()=>{if(cardMemo.get(key)===entry)cardMemo.delete(key);});
+ if(cardMemo.size>60){const first=cardMemo.keys().next().value;if(first!==undefined)cardMemo.delete(first);}
+ return value;
+}
+/** A card already read: the top card draws its whole body on the first render. */
+export function cardRead(actingId:string,profileId:string){const hit=cardMemo.get(actingId+':'+profileId);return hit&&Date.now()-hit.at<CARD_TTL?hit.done??null:null;}
 
 /** SC.P01 profileView: the floating ‹ and ⋯ sit on the photo and turn into a solid bar with the name past it
  * (PRF-007); hero, description, buttons, «что общего», then the body. `preview` is «Как видят» — everything drawn,
@@ -387,9 +435,10 @@ const compatRes=z.discriminatedUnion('few',[
 ]);
 type Compat=z.infer<typeof compatRes>;
 
+const topicNames=(c:Catalog,locale:string)=>new Map(c.topics.map(x=>[x.id,(locale==='en'?x.en||x.ru:x.ru||x.en)||x.id]));
 function useTopics(){
- const {call}=useFe();const {locale}=useI18n();const [names,setNames]=useState<Map<string,string>>(new Map());
- useEffect(()=>{call('catalog.get',{},catalogRes,{asAccount:true}).then(r=>setNames(new Map(r.topics.map(x=>[x.id,(locale==='en'?x.en||x.ru:x.ru||x.en)||x.id])))).catch(()=>{});},[call,locale]);
+ const {call}=useFe();const {locale}=useI18n();const [names,setNames]=useState<Map<string,string>>(()=>catalogMemo?topicNames(catalogMemo,locale):new Map());
+ useEffect(()=>{readCatalog(call).then(r=>setNames(topicNames(r,locale))).catch(()=>{});},[call,locale]);
  return (id:string)=>names.get(id)??id;
 }
 const byGroup=(c:Compat)=>{const out:Record<Group,CompatItem[]>={complement:[],match:[],try:[],discuss:[],bound:[]};if(!c.few)for(const i of c.items)out[i.group].push(i);
@@ -408,9 +457,10 @@ function compatWords(c:Compat,t:T,locale:string,consent:boolean){
 function Venn({n}:{n:number|string}){return <div className="venn mini"><i/><i/><b>{n}</b></div>;}
 
 /** The compact block on a profile (compatBlock compact); opens the full comparison. */
-export function CompatSummary({profileId}:{profileId:string}){
- const {call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const [c,setC]=useState<Compat|null>(null);
- useEffect(()=>{setC(null);call('profile.compat',{profileId},compatRes).then(setC).catch(()=>{});},[call,profileId]);
+export function CompatSummary({profileId,pre}:{profileId:string,/** Already read (a Discover card): shown at once. */ pre?:Compat|null|undefined}){
+ const {call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const [c,setC]=useState<Compat|null>(pre??null);const given=pre!==undefined;
+ useEffect(()=>{if(given)return;call('profile.compat',{profileId},compatRes).then(setC).catch(()=>{});},[call,profileId,given]);
+ useKeyChange(profileId,()=>setC(null));
  if(!c)return null;
  return <div className="mt12"><section className="compat v14c"><button type="button" className="cp-h" onClick={()=>navigate('/n/people/'+profileId+'/compat')}>
   <Venn n={c.few?'?':c.count}/><span className="grow"><b>{c.few?t('fe.px.cmp.few'):t('fe.px.cmp.hasTalk')}</b><span>{compatWords(c,t,locale,true)}</span></span><ChevronRight/>
@@ -505,10 +555,11 @@ const linksRes=z.object({ok:z.literal(true),items:z.array(z.object({id:z.string(
  other:linkOther}).passthrough())});
 
 /** Confirmed links of a profile as far as both endpoints' visibility allows (linksBlock as another person sees it). */
-export function LinksSection({profileId,inert}:{profileId:string,inert?:boolean|undefined}){
+export function LinksSection({profileId,inert,pre}:{profileId:string,inert?:boolean|undefined,pre?:CardPre|undefined}){
  const {call,acting,state}=useFe();const {t}=useI18n();const navigate=useNavigate();
- const [items,setItems]=useState<z.infer<typeof linksRes>['items']>([]);const [all,setAll]=useState(false);
- useEffect(()=>{setItems([]);call('links.ofProfile',{profileId},linksRes).then(r=>setItems(r.items)).catch(()=>{});},[call,profileId]);
+ const [items,setItems]=useState<z.infer<typeof linksRes>['items']>(()=>pre?.links?.items??[]);const [all,setAll]=useState(false);const given=!!pre;
+ useEffect(()=>{if(given)return;call('links.ofProfile',{profileId},linksRes).then(r=>setItems(r.items)).catch(()=>{});},[call,profileId,given]);
+ useKeyChange(profileId,()=>setItems([]));
  if(!items.length)return null;
  const own=new Set(state.status==='ready'?state.boot.profiles.map(p=>p.id):[]);
  const shown=all?items:items.slice(0,4);

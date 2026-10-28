@@ -192,7 +192,7 @@ test('age check by document: a rejection deletes it too; a document nobody decid
   } finally { await pg.close(); }
 });
 
-test('age check: the method can switch before sending; the selfie flow stays as it was; five starts a day across methods', async () => {
+test('age check: the method can switch before sending; the selfie flow stays as it was; ten starts a day across methods', async () => {
   const { pg, db, call, person } = await world();
   try {
     const a = await person('ua', 'Alex', { verified: false });
@@ -209,8 +209,8 @@ test('age check: the method can switch before sending; the selfie flow stays as 
     await call('um', null, { action: 'staff.ageCheckDecide', opId: op(), checkId: s.id, approve: true });
     assert.equal((await db.query('select state from feture.media_asset where id = $1', [selfie]))[0].state, 'needs_review'); // kept 30 days
     assert.equal((await db.query(`select count(*)::int n from feture.outbox where topic = 'verification.dropDocument'`))[0].n, 0);
-    // The daily limit counts every start, whatever the method: 3 above + 2 here, then refused.
-    assert.equal((await call('ua', null, { action: 'verification.ageStart', opId: op(), method: 'document' })).status, 200);
+    // The daily limit counts every start, whatever the method: 3 above + 7 here, then refused.
+    for (let i = 0; i < 6; i++) assert.equal((await call('ua', null, { action: 'verification.ageStart', opId: op(), method: 'document' })).status, 200);
     assert.equal((await call('ua', null, { action: 'verification.ageStart', opId: op(), method: 'document' })).status, 200);
     assert.equal((await call('ua', null, { action: 'verification.ageStart', opId: op(), method: 'document' })).status, 429);
   } finally { await pg.close(); }
