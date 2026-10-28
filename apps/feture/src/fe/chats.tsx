@@ -4,11 +4,12 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Archive,ArchiveRestore,Ban,Camera,Check,ChevronDown,ChevronLeft,CircleAlert,Clock,Copy,Ellipsis,Eye,EyeOff,Film,Flag,Image as ImageIcon,Info,Lock,LockOpen,MessageCircle,Plus,Search,SendHorizontal,Sparkles,Undo2,User,Users,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {ActingAv,Alert,Av,Bar,Btn,Card,Check as CheckBox,Chip,Chips,Empty,Field,FilePick,Group,IconBtn,Layer,Note,PersonBar,Pill,RadioList,Row,SearchInput,SectionLabel,SelectRow,Sheet,Skel,Stack,Text,TextArea,ToggleRow,Typing,VideoBadge,VideoPlayer,View,VoiceBubble,VoiceRecorder,type Voice} from './kit';
+import {ActingAv,Alert,Av,Bar,Btn,Card,Check as CheckBox,Chip,Chips,Empty,Field,FilePick,Group,IconBtn,Layer,Note,PersonBar,Pill,RadioList,Row,SearchInput,SectionLabel,SelectRow,Sheet,Skel,Stack,Text,TextArea,ToggleRow,Typing,VideoBadge,VideoPlayer,View,type Voice,VoiceBubble,VoiceRecorder} from './kit';
 import {VIDEO_MAX_BYTES,VIDEO_MAX_MS,VIDEO_TYPES,isVideo,prepareVideo,type PreparedVideo} from './kit/media';
 import {useSendVideo,useSendVoice} from './media-upload';
 import {AgeCheckLink,useAgeResume} from './age-check';
 import {useFe,useRealtime,useTypingSignal} from './session';
+import {ReportSheet} from './report';
 import {useToast} from './toast';
 import {BellButton,SegN} from './inbox';
 
@@ -140,8 +141,6 @@ function MatchRing({frac,lit}:{frac:number,lit:boolean}){
 type Mode='normal'|'once'|'t15'|'t120'|'t1440';
 const MODES:Mode[]=['normal','once','t15','t120','t1440'];
 const TTL:Record<string,number>={t15:15*60e3,t120:2*3600e3,t1440:24*3600e3};
-const REASONS=['threat','private','minor','spam','other'] as const;
-type Reason=typeof REASONS[number];
 /** A photo on its way: the asset is kept between attempts, so a retry after review only sends the message. */
 type Outgoing={file:File,preview:string,mode:Mode,assetId?:string,assetMode?:Mode,opId:string,pending?:boolean,/** A clip (preview = its poster). */ video?:PreparedVideo};
 /** A text on its way (the prototype's optimistic bubble with «Отправляется» / «Не отправлено · Повторить»). */
@@ -174,7 +173,7 @@ export function ChatScreen(){
  const [sheet,setSheet]=useState<SheetKind|null>(null);const [sheetErr,setSheetErr]=useState('');const [sheetBusy,setSheetBusy]=useState(false);
  const [msgFor,setMsgFor]=useState<Msg|null>(null);
  const [out,setOut]=useState<Outgoing|null>(null);const outRef=useRef<Outgoing|null>(null);outRef.current=out;
- const [rp,setRp]=useState<{why:Reason|null,details:string,block:boolean,sel:string[]}>({why:null,details:'',block:true,sel:[]});
+ const [rpSel,setRpSel]=useState<string[]>([]);
  const [grants,setGrants]=useState<{byMe:boolean,withMe:boolean}>({byMe:false,withMe:false});const [ecRevoke,setEcRevoke]=useState(true);
  const [near,setNear]=useState(true);const [fresh,setFresh]=useState(0);const [,tick]=useState(0);
  const viewRef=useRef<HTMLDivElement>(null);const last=useRef(0);const input=useRef<HTMLTextAreaElement>(null);
@@ -449,19 +448,9 @@ export function ChatScreen(){
   setState('ended');setSheet(null);toast(t('fe.chx.endDone'),{type:'ok'});dropOut(outRef.current);});
  const block=()=>meta&&run(async()=>{await call('block.set',{opId:newOpId(),profileId:meta.other.id,on:true},ok,{profileId:meta.side.id});navigate('/n/chats');});
  const theirs=(items??[]).filter(m=>!m.mine).slice(-20).reverse();
- const openReport=()=>{setRp({why:null,details:'',block:true,sel:[]});setSheetErr('');setSheet('report');};
- const sendReport=()=>{
-  if(!meta)return;
-  if(!rp.why){setSheetErr(t('fe.chx.needWhy'));return;}
-  if(theirs.length&&!rp.sel.length){setSheetErr(t('fe.chx.needMsg'));return;}
-  void run(async()=>{
-   const base={opId:newOpId(),reason:rp.why,details:rp.details.trim().slice(0,500),alsoBlock:rp.block};
-   // A chat is reported as its conversation with the selected messages; with nothing of theirs to show, the profile is.
-   const inp=theirs.length?{...base,targetType:'conversation',targetId:id,messageIds:rp.sel}:{...base,targetType:'profile',targetId:meta.other.id};
-   await call('report.create',inp,ok,{profileId:meta.side.id});
-   if(rp.block)navigate('/n/chats');else{setSheet(null);toast(t('fe.chx.reportDone'),{type:'ok'});}
-  });
- };
+ const openReport=()=>{setRpSel([]);setSheetErr('');setSheet('report');};
+ // A chat is reported as its conversation with the selected messages; with nothing of theirs to show, the profile is.
+ const reportDone=(blocked:boolean)=>{if(blocked)navigate('/n/chats');else{setSheet(null);toast(t('fe.chx.reportDone'),{type:'ok'});}};
 
  // Back from the age check a photo sent us to: the attach sheet opens again (the photo itself is picked anew).
  useAgeResume(v=>v==='attach:'+id,()=>{setSheetErr('');setSheet('attach');},!!meta&&state==='active');
@@ -614,22 +603,14 @@ export function ChatScreen(){
    {sheetAlert}
   </Sheet>}
 
-  {sheet==='report'&&meta&&<Sheet title={t('fe.chx.report')} onClose={closeSheet}
-   foot={<Btn kind="danger" onClick={sendReport} busy={sheetBusy} disabled={sheetBusy}>{t('fe.chx.reportSend')}</Btn>}>
-   {theirs.length?<Group bare title={t('fe.chx.reportPick')} foot={t('fe.chx.reportPickNote')}><Card>
-    {theirs.map(m=>{const on=rp.sel.includes(m.id);
-     return <CheckBox key={m.id} on={on} onChange={()=>setRp(r=>({...r,sel:on?r.sel.filter(x=>x!==m.id):r.sel.length>=20?r.sel:[...r.sel,m.id]}))}>
+  {sheet==='report'&&meta&&<ReportSheet block profileId={meta.side.id} onClose={closeSheet} onDone={reportDone}
+   targetType={theirs.length?'conversation':'profile'} targetId={theirs.length?id:meta.other.id} extra={theirs.length?{messageIds:rpSel}:undefined}
+   check={()=>theirs.length&&!rpSel.length?t('fe.chx.needMsg'):''}
+   before={theirs.length?<Group bare title={t('fe.chx.reportPick')} foot={t('fe.chx.reportPickNote')}><Card>
+    {theirs.map(m=>{const on=rpSel.includes(m.id);
+     return <CheckBox key={m.id} on={on} onChange={()=>setRpSel(r=>on?r.filter(x=>x!==m.id):r.length>=20?r:[...r,m.id])}>
       {m.body||(m.media?mediaWord(m):'')}<Text as="div" size="cap" tone="mute">{day(m.at)} · {time(m.at)}</Text></CheckBox>;})}
-   </Card></Group>
-   :<Note>{t('fe.chx.reportNoMsgs')}</Note>}
-   <Group bare title={t('fe.chx.reason')}>
-    <RadioList label={t('fe.chx.reason')} value={rp.why} onChange={k=>setRp(r=>({...r,why:k}))} options={REASONS.map(k=>[k,t('fe.chx.reason.'+k)] as const)}/>
-   </Group>
-   <div className="mt16"><Field id="chat-report-details" label={<>{t('fe.chx.details')}<i>{t('fe.chx.optional')}</i></>}>
-    <TextArea id="chat-report-details" rows={3} maxLength={500} value={rp.details} onChange={e=>setRp(r=>({...r,details:e.target.value}))}/></Field></div>
-   <Card list><ToggleRow title={t('fe.chx.alsoBlock')} sub={t('fe.chx.alsoBlockSub')} on={rp.block} onClick={()=>setRp(r=>({...r,block:!r.block}))}/></Card>
-   {sheetAlert}
-  </Sheet>}
+   </Card></Group>:<Note>{t('fe.chx.reportNoMsgs')}</Note>}/>}
 
   {sheet==='block'&&meta&&<Sheet title={fill(t('fe.chx.blockTitle'))} lead={<span className="ico l"><Ban/></span>} onClose={closeSheet}
    foot={<><Btn kind="danger" onClick={()=>void block()} busy={sheetBusy} disabled={sheetBusy}>{t('fe.chx.block')}</Btn><Btn kind="soft" onClick={closeSheet}>{t('fe.chx.cancel')}</Btn></>}>

@@ -1,8 +1,8 @@
 import type {Meta,StoryObj} from '@storybook/react-vite';
 import {useState} from 'react';
 import {fn} from 'storybook/test';
-import {Ellipsis,Globe,MapPin,MessageCircle,Users} from 'lucide-react';
-import {Av,Btn,Card,CommunityHead,Discussion,IconBtn,Swatches,Veil,plate} from './index';
+import {CircleCheck,Clock,Ellipsis,FileText,Globe,MapPin,MessageCircle,Users,X} from 'lucide-react';
+import {Av,Btn,Card,CommunityHead,Discussion,IconBtn,StatusCard,Swatches,Veil,plate} from './index';
 
 const meta={title:'Домен/Сообщества',component:CommunityHead,tags:['autodocs'],
  parameters:{docs:{description:{component:'Шапка сообщества: широкая обложка, квадратная картинка, название и строка фактов. Без `name` — заглушка той же формы, пока страница грузится.'}}},
@@ -29,3 +29,14 @@ export const ВуальСДействием:StoryObj<typeof Veil>={name:'Вуа�
 const PLATES=[['lilac','Сирень'],['rose','Роза'],['sea','Море'],['amber','Янтарь'],['moss','Мох'],['coal','Уголь']] as const;
 export const Цвета:StoryObj<typeof Swatches<string>>={name:'Цвет обложки',render:a=>{const [v,setV]=useState<string|null>(a.value);return <Swatches {...a} value={v} onChange={setV}/>;},
  args:{label:'Или цвет',value:'sea',onChange:()=>{},options:PLATES.map(([k,l])=>[k,l,plate(k)] as const)},argTypes:{value:{control:'inline-radio',options:[null,...PLATES.map(p=>p[0])]},options:{control:false}}};
+
+export const Статус:StoryObj<typeof StatusCard>={name:'Статус заявки',render:a=><StatusCard {...a}/>,
+ parameters:{docs:{description:{story:'Моя заявка в сообщество или на событие одним блоком: значок, состояние, строка под ним и действие справа. Тоны: wait — на рассмотрении, ok — приняли, bad — отклонили, без тона — не отправлена.'}}},
+ args:{tone:'wait',icon:Clock,title:'Заявка на рассмотрении',sub:'Отправлена сегодня · ведущие ответят в уведомлениях',action:<Btn kind="soft" size="sm" auto fit>Отозвать</Btn>},
+ argTypes:{tone:{control:'inline-radio',options:[undefined,'wait','ok','bad']},icon:{control:false},action:{control:false}}};
+export const СтатусыВсе:StoryObj<typeof StatusCard>={name:'Статус заявки — все состояния',render:()=><div className="k-stack k-g3">
+ <StatusCard icon={FileText} title="Нужна заявка" sub="Организатор отберёт участников"/>
+ <StatusCard tone="wait" icon={Clock} title="Заявка на рассмотрении" sub="Отправлена 28 окт." action={<Btn kind="soft" size="sm" auto fit>Отозвать</Btn>}/>
+ <StatusCard tone="ok" icon={CircleCheck} title="Заявка одобрена" sub="Адрес и ссылка открыты"/>
+ <StatusCard tone="bad" icon={X} title="Заявку отклонили" sub="Можно отправить новую через 7 дней"/>
+</div>};

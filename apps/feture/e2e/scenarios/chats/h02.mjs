@@ -297,7 +297,7 @@ const scenarios = [
       await t.tap('.sheet .li:has-text("Пожаловаться")');
       await t.see('.sheet.on .check');
       await t.tap('.sheet .sh-f button:has-text("Отправить жалобу")');
-      await t.see('.sheet .alert.err:has-text("Выбери причину")');
+      await t.see('.sheet .ferr:has-text("Выбери причину")'); await t.see('.sheet .ferr:has-text("Опиши, что случилось")');
       await t.tap('.sheet .radio:has-text("Другое")');
       await t.tap('.sheet .sh-f button:has-text("Отправить жалобу")');
       await t.see('.sheet .alert.err:has-text("Отметь хотя бы одно")');
