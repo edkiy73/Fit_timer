@@ -1,7 +1,7 @@
 // @ts-check
 import { ACTIVITY_KINDS, DISPUTE_LIMITS, postFields, postsCommands } from '../../contracts/posts.mjs';
 import { likePattern, writeCursor } from '../search.mjs';
-import { acceptsMention, popularScore } from '../sql-rules.mjs';
+import { acceptsMention, popularScore, qaHidden } from '../sql-rules.mjs';
 import { fail, isUniqueViolation } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
@@ -360,7 +360,8 @@ async function markers(q, viewer, media, source, params, cursor) {
     select src.profile_id id, src.created_at, p.kind, p.handle, p.name,
       exists (select 1 from feture.profile_member m where m.profile_id = p.id and m.account_id = $2 and m.state = 'active') mine,
       p.state = 'active' and coalesce(s.show_likes, true) and not feture.blocked($1, p.id) and not feture.restricted(p.id) shown
-    from src join feture.profile p on p.id = src.profile_id left join feture.profile_settings s on s.profile_id = p.id)`;
+    from src join feture.profile p on p.id = src.profile_id left join feture.profile_settings s on s.profile_id = p.id
+    where not ${qaHidden('p.id', '$1')})`;
   const [{ total, hidden }] = await q.query(`${people} select count(*)::int total, count(*) filter (where not (mine or shown))::int hidden from x`, base);
   const n = base.length;
   const rows = await q.query(
@@ -922,6 +923,8 @@ const run = {
     const rows = await q.query(
       `select r.id, r.parent_id, r.state, r.body, r.created_at, r.edited_at, r.rev, r.author_profile_id = $2 mine,
          feture.blocked($2, r.author_profile_id) hidden,
+         ${qaHidden('r.author_profile_id', '$2')} and not exists (select 1 from feture.reply c where c.parent_id = r.id and c.state = 'published'
+           and not ${qaHidden('c.author_profile_id', '$2')}) qa_out,
          (select json_build_object('id', p.id, 'kind', p.kind, 'handle', p.handle, 'name', p.name, 'avatarAssetId', p.avatar_asset_id) from feture.profile p where p.id = r.author_profile_id and p.state = 'active') author,
          (select count(*)::int from feture.reaction x where x.target_type = 'reply' and x.target_id = r.id) likes,
          exists (select 1 from feture.reaction x where x.target_type = 'reply' and x.target_id = r.id and x.profile_id = $2) liked,
@@ -931,7 +934,8 @@ const run = {
        from feture.reply r where r.post_id = $1 and r.state <> 'removed' order by r.created_at`, [input.postId, viewer.profileId]);
     // Deleted without live replies disappear; with replies they stay as a stub; blocked authors show as hidden.
     const items = [];
-    for (const r of rows.filter(x => x.state === 'published' || x.has_replies)) {
+    // e2e persona replies vanish for everyone else (a stub stays only above someone else's answer).
+    for (const r of rows.filter(x => (x.state === 'published' || x.has_replies) && !x.qa_out)) {
       let author = null;
       if (r.author) {
         const { avatarAssetId, ...rest } = r.author;

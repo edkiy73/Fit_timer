@@ -67,7 +67,9 @@ export default [
    } finally { await t.api('post.delete', { opId: t.uuid7(), postId: s.id }); }
  } },
  { name: 'C11 request: «Одобрить» → «Отменить» keeps it waiting; approving again goes out after the toast', persona: 'host', run: async t => {
-   const basic = await t.persona('basic');
+   // A fresh person each run: `basic` is also asked in by other scenarios, and a decline elsewhere holds its next
+   // request for a week.
+   const basic = await t.persona('temp');
    const CLOSED = t.me.closedId;
    const reqs = async () => (await t.api('community.requests', { communityId: CLOSED, tab: 'pending' })).items ?? [];
    const member = async () => (await t.api('community.mine', {}, basic.email)).member.some(c => c.id === CLOSED);

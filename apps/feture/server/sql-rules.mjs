@@ -2,6 +2,14 @@
 /** SQL pieces of product rules that several commands share (feed and communities, posts and people lists), kept in
  * one place so the same rule never drifts between two copies. Each returns an SQL expression; the arguments are SQL
  * names or `$n` parameters, never values typed by a person. */
+import { qaProfile } from './profiles.mjs';
+
+/** e2e persona content (owner 28.10.2026): a profile of a persona account (feture.account.qa) is hidden from every
+ * viewer who is not one. The database applies it everywhere through feture.blocked() → feture.qa_hidden()
+ * (20261028240000_fe_qa_hidden.sql); this copy is for the few places that turn a block into a visible stub (a reply
+ * shown as «скрыто») or a count, where persona content must vanish instead.
+ * @param {string} owner profile id expression @param {string} viewer the viewer's profile id (`$n`) */
+export const qaHidden = (owner, viewer) => `(${qaProfile(owner)} and not ${qaProfile(viewer)})`;
 
 /** «Популярное» (owner, 28.10.2026 — «как лучше для продукта»): discussed beats loud. People who replied weigh most,
  * then replies, likes a little: 3 × distinct repliers + 1 × replies + 0.5 × likes. The author's own replies and like
