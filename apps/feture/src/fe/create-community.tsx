@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {CircleAlert,Clock,Image as ImageIcon,Lock,MapPin,RefreshCw,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,FilePick,Group,Input,Note,SelectRow as KitSelectRow,Skel,Swatches,TextArea,View} from './kit';
+import {Alert,Av,Bar,Btn,Card,Chip,Chips,Counter,Empty,FilePick,Group,Input,Note,SelectRow as KitSelectRow,Skel,Swatches,TextArea,View} from './kit';
 import {useFe} from './session';
 import {Uploader} from './kit/Uploader';
 import {useSendPhoto} from './media-upload';
@@ -44,33 +44,35 @@ export function useOp(){
  return {opFor,done};
 }
 
-/** shakeFirstErr(): the first field with an error shakes, gets focus and scrolls into view. */
-export function shakeFirstErr(){
- requestAnimationFrame(()=>{
-  const e=document.querySelector<HTMLElement>('.v21 .field.err');if(!e)return;
-  e.classList.remove('shake');void e.offsetWidth;e.classList.add('shake');
-  e.querySelector<HTMLElement>('.inp,input,textarea,select,button')?.focus({preventScroll:true});
-  e.scrollIntoView({block:'center',behavior:'smooth'});
- });
-}
+/** shakeFirstErr lives in the kit's validation layer; re-exported for the screens that import it from here. */
+import {FIELD,serverFields,shakeFirstErr,softMax,textError,textErrorMessage,textLength,type FieldName,type TextRule} from './kit/validate';
+export {shakeFirstErr};
 
 export const FErr=({children}:{children:ReactNode})=><div className="ferr"><CircleAlert/>{children}</div>;
 
 type FieldProps={name:string,label:string,value:string,onChange:(v:string)=>void,err?:string|undefined,opt?:boolean,hint?:string,max?:number,ph?:string,
- type?:'text'|'email'|'tel'|'url'|'number'|'password'|'date'|'time',textarea?:boolean,rows?:number,icon?:LucideIcon,inputMode?:'url'|'decimal'|'text',min?:string};
+ type?:'text'|'email'|'tel'|'url'|'number'|'password'|'date'|'time',textarea?:boolean,rows?:number,icon?:LucideIcon,inputMode?:'url'|'decimal'|'text',min?:string,
+ /** Kit validation (kit/validate): the server's rule for this field, or a check of its own — the error shows on blur;
+  * the form's submit check fills `err` with the same message. */
+ check?:FieldName|TextRule|((v:string)=>string|undefined)};
 /** `field()` — label, input or textarea, then the error (or hint) and the counter. */
-export function Field({name,label,value,onChange,err,opt,hint,max,ph,type='text',textarea,rows,icon:Icon,inputMode,min,className}:FieldProps&{className?:string}){
- const {t}=useI18n();
+export function Field({name,label,value,onChange,err,opt,hint,max,ph,type='text',textarea,rows,icon:Icon,inputMode,min,className,check}:FieldProps&{className?:string}){
+ const {t}=useI18n();const [touched,setTouched]=useState(false);
+ const rule=typeof check==='function'?undefined:check;
+ const own=touched&&check&&value.trim()?(typeof check==='function'?check(value):textError(t,check,value)):undefined;
+ const error=err??own;const limit=max??(rule?FIELD_RULE(rule).max:undefined);
+ const cap=rule?softMax(rule):limit?limit*2:undefined;
  const input=textarea
-  ?<TextArea name={name} rows={rows} maxLength={max?max+50:undefined} placeholder={ph} value={value} onChange={e=>onChange(e.target.value)} invalid={!!err}/>
-  :<Input name={name} type={type} value={value} placeholder={ph} inputMode={inputMode} min={min} maxLength={max?max+50:undefined} onChange={e=>onChange(e.target.value)} invalid={!!err}/>;
- return <label className={'field'+(err?' err':'')+(className?' '+className:'')} data-field={name}>
+  ?<TextArea name={name} rows={rows} maxLength={cap} placeholder={ph} value={value} onChange={e=>onChange(e.target.value)} onBlur={()=>setTouched(true)} invalid={!!error}/>
+  :<Input name={name} type={type} value={value} placeholder={ph} inputMode={inputMode} min={min} maxLength={cap} onChange={e=>onChange(e.target.value)} onBlur={()=>setTouched(true)} invalid={!!error}/>;
+ return <label className={'field'+(error?' err':'')+(className?' '+className:'')} data-field={name}>
   <span>{label}{opt&&<i>{t('fe.cc.optional')}</i>}</span>
   {Icon?<div className="inwrap"><Icon/>{input}</div>:input}
-  {err?<FErr>{err}</FErr>:hint?<div className="fhint">{hint}</div>:null}
-  {max?<div className="counter">{value.length} / {max}</div>:null}
+  {error?<FErr>{error}</FErr>:hint?<div className="fhint">{hint}</div>:null}
+  {limit?<Counter n={textLength(value)} max={limit}/>:null}
  </label>;
 }
+const FIELD_RULE=(r:FieldName|TextRule)=>typeof r==='string'?FIELD[r]:r;
 
 /** The kit's SelectRow under the item-list props other screens import from here (no label = the `solo` variant). */
 export function SelectRow<T extends string>({label,value,items,onChange,sub,aria,icon}:{label?:string,value:T,items:[T,string][],onChange:(v:T)=>void,sub?:string,aria?:string,icon?:LucideIcon}){
@@ -170,14 +172,18 @@ function CommunityForm({edit,reload}:{edit?:EditableCommunity&{rev:number},reloa
   if(topics.length>=3){setTopicsMax(true);return;}
   setTopics([...topics,id]);clear('topics');setTopicsMax(false);
  };
+ /** Rules, one per line: each by the server's rule, up to 20, 1000 characters together. */
+ const rulesError=(v:string)=>{const rl=ruleLines(v);
+  if(!rl.length)return t('fe.cc.err.rules');if(rl.length>20)return t('fe.cc.err.rulesMany');
+  for(const r of rl){const m=textError(t,'communityRule',r);if(m)return m;}
+  return textLength(rl.join(''))>1000?t('fe.cc.err.rulesLong'):undefined;};
  const validate=()=>{
-  const e:Errors={};const nm=name.trim(),d=desc.trim(),rl=ruleLines(rules);
-  if(nm.length<3)e.name=t('fe.cc.err.name');else if(nm.length>50)e.name=t('fe.cc.err.nameLong');
-  if(d.length<20)e.desc=t('fe.cc.err.desc');else if(d.length>500)e.desc=t('fe.cc.err.descLong');
+  const e:Errors={};const nm=name.trim(),d=desc.trim();
+  const en=textError(t,'communityName',nm);if(en)e.name=en;
+  const ed=textError(t,'communityDescription',d);if(ed)e.desc=ed;
   if(!topics.length)e.topics=t('fe.cc.err.topics');
-  if(privacy!=='open'&&q0.trim().length>120)e.q0=t('fe.cc.err.question');
-  if(!rl.length)e.rules=t('fe.cc.err.rules');else if(rl.length>20)e.rules=t('fe.cc.err.rulesMany');
-  else if(rl.some(r=>r.length>300))e.rules=t('fe.cc.err.ruleLong');else if(rl.join('').length>1000)e.rules=t('fe.cc.err.rulesLong');
+  const eq=privacy!=='open'?textError(t,'joinQuestion',q0):undefined;if(eq)e.q0=eq;
+  const er=rulesError(rules);if(er)e.rules=er;
   setErr(e);return !Object.keys(e).length;
  };
  /** The edit as `community.update` takes it: only the fields that differ from what was loaded. */
@@ -195,7 +201,9 @@ function CommunityForm({edit,reload}:{edit?:EditableCommunity&{rev:number},reloa
   else if(e instanceof FeError&&e.code==='conflict'){setStale(true);setFailure(feErrorMessage(e,t));}
   else if(e instanceof FeError&&e.code==='invalid_input'&&e.fields?.length){
    const map:Record<string,keyof Errors>={name:'name',description:'desc',topics:'topics',joinQuestion:'q0',rules:'rules',placeId:'where'};
-   const next:Errors={};for(const f of e.fields){const k=map[f.split('.')[0]!];if(k)next[k]=k==='where'?t('fe.cc.err.place'):t('fe.cc.err.fields');}
+   const rule:Record<string,FieldName>={name:'communityName',description:'communityDescription',joinQuestion:'joinQuestion',rules:'communityRule'};
+   const next:Errors={};for(const {path,code} of serverFields(e)){const head=path.split('.')[0]!;const k=map[head];if(!k||next[k])continue;
+    next[k]=k==='where'?t('fe.cc.err.place'):path==='rules'&&code==='too_long'?t('fe.cc.err.rulesLong'):rule[head]?textErrorMessage(t,code,FIELD[rule[head]!]):t('fe.cc.err.fields');}
    if(Object.keys(next).length){setErr(next);shakeFirstErr();}else setFailure(feErrorMessage(e,t));
   }else setFailure(feErrorMessage(e,t));
  };
@@ -236,16 +244,16 @@ function CommunityForm({edit,reload}:{edit?:EditableCommunity&{rev:number},reloa
    {edit&&published&&<Alert icon={Clock} className="mb12">{t('fe.ece.c.reviewHint')}</Alert>}
    {edit&&edit.pendingChange!=null&&<Alert kind="warn" role="none" icon={Clock} className="mb12">{t('fe.ece.c.pendingChange')}</Alert>}
    <Group><Card form>
-    <Field name="name" label={t('fe.cc.name')} ph={t('fe.cc.namePh')} max={50} value={name} onChange={v=>{setName(v);clear('name');}} err={err.name}/>
-    <Field name="desc" label={t('fe.cc.desc')} ph={t('fe.cc.descPh')} max={500} textarea rows={5} value={desc} onChange={v=>{setDesc(v);clear('desc');}} err={err.desc}/>
+    <Field name="name" label={t('fe.cc.name')} ph={t('fe.cc.namePh')} check="communityName" value={name} onChange={v=>{setName(v);clear('name');}} err={err.name}/>
+    <Field name="desc" label={t('fe.cc.desc')} ph={t('fe.cc.descPh')} check="communityDescription" textarea rows={5} value={desc} onChange={v=>{setDesc(v);clear('desc');}} err={err.desc}/>
     <div className={'field'+(err.topics?' err':'')} data-field="topics"><span className="flabel">{t('fe.cc.topics')}<i>{t('fe.cc.topicsRange')}</i></span>
      <ChipGroup items={topicItems} selected={topics} onToggle={toggleTopic}/>
      {err.topics?<FErr>{err.topics}</FErr>:topicsMax?<div className="fhint" role="status">{t('fe.cc.topicsMax')}</div>:null}
     </div>
     <Card list><SelectRow icon={Lock} label={t('fe.cc.privacy')} value={privacy} onChange={setPrivacy} items={(['open','closed','hidden'] as const).map(k=>[k,t('fe.cc.privacy.'+k)])}/></Card>
-    {privacy!=='open'&&<Field name="q0" label={t('fe.cc.question')} opt ph={t('fe.cc.questionPh')} max={120} value={q0} onChange={v=>{setQ0(v);clear('q0');}} err={err.q0}/>}
+    {privacy!=='open'&&<Field name="q0" label={t('fe.cc.question')} opt ph={t('fe.cc.questionPh')} check="joinQuestion" value={q0} onChange={v=>{setQ0(v);clear('q0');}} err={err.q0}/>}
     <Card list {...(err.where?{className:'field err'}:{})}><SelectRow icon={MapPin} label={t('fe.cc.where')} value={where} onChange={v=>{setWhere(v);clear('where');}} items={places}/>{err.where&&<FErr>{err.where}</FErr>}</Card>
-    <Field name="rules" label={t('fe.cc.rules')} ph={t('fe.cc.rulesPh')} max={1000} textarea rows={4} value={rules} onChange={v=>{setRules(v);clear('rules');}} err={err.rules}/>
+    <Field name="rules" label={t('fe.cc.rules')} ph={t('fe.cc.rulesPh')} max={1000} check={rulesError} textarea rows={4} value={rules} onChange={v=>{setRules(v);clear('rules');}} err={err.rules}/>
     <CoverField purpose="community" plate={plate} setPlate={setPlate} cover={cover} setCover={setCover}/>
    </Card></Group>
    {failure&&<Alert kind="err" noIcon action={stale&&reload?<Btn kind="text" auto icon={RefreshCw} onClick={reload}>{t('fe.ece.reload')}</Btn>:undefined}>{failure}</Alert>}

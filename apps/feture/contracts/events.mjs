@@ -2,10 +2,12 @@
 /** Slice D2: events (S2-CATALOG «D. События», extract/communities-events.md §1.8–1.12). */
 import * as z from 'zod';
 import { id, opId } from './platform.mjs';
-import { line, text } from './me.mjs';
+import { checkText, field, lineRule } from './_text.mjs';
 
 const CURRENCY = z.enum(['EUR', 'USD', 'GBP', 'RUB', 'CHF']);
-const https = z.string().max(500).regex(/^https:\/\/[^\s]+$/);
+// Absolute https only, printable ASCII (an IDN host goes as punycode), no user:password@ in front of the host.
+const https = z.string().trim().max(500).regex(/^https:\/\/[\x21-\x7e]+$/)
+  .refine(v => { try { const u = new URL(v); return !u.username && !u.password && !!u.hostname.includes('.'); } catch { return false; } }, { message: 'bad_url' });
 const amount = z.number().positive().max(100000);
 const price = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('free') }),
@@ -17,23 +19,25 @@ const plate = z.enum(['lilac', 'rose', 'sea', 'amber', 'moss', 'coal']);
 const ZONES = new Set([...Intl.supportedValuesOf('timeZone'), 'UTC']);
 const tz = z.string().max(64).refine(v => ZONES.has(v), { message: 'unknown_zone' });
 
+/** A draft's title: the event title's rules without its minimum. */
+const DRAFT_TITLE = lineRule(80);
 /** What an event is made of (V21 evfValidate); the same shape for submit and the base of edits. */
 const base = {
-  title: line(80).refine(v => v.length >= 5, { message: 'too_short' }),
+  title: field('eventTitle'),
   kind: z.enum(['meetup', 'workshop', 'talk', 'party']),
-  description: text(1500).refine(v => v.length >= 20, { message: 'too_short' }),
+  description: field('eventDescription'),
   format: z.enum(['offline', 'online']),
   placeId: id.nullable().default(null),
-  area: line(120).nullable().default(null),
-  exactAddress: text(300).nullable().default(null),
+  area: field('eventArea').nullable().default(null),
+  exactAddress: field('eventAddress').nullable().default(null),
   joinUrl: https.nullable().default(null),
   tz,
   startsAt: z.iso.datetime({ offset: true }),
   endsAt: z.iso.datetime({ offset: true }),
   price: price.default({ kind: 'free' }),
   requiresApplication: z.boolean().default(false),
-  questions: z.array(text(200).refine(v => v.length > 0, { message: 'empty' })).max(3).default([]),
-  requirements: text(500).nullable().default(null),
+  questions: z.array(field('eventQuestion')).max(3).default([]),
+  requirements: field('eventRequirements').nullable().default(null),
   coverAssetId: id.nullable().default(null),
   plate: plate.default('lilac'),
   communityId: id.nullable().default(null),
@@ -51,6 +55,7 @@ export const eventsCommands = {
     input: z.strictObject({
       opId, draftId: id.optional(), step: z.int().min(1).max(4).default(1),
       form: z.record(z.string().max(40), z.unknown()).refine(f => typeof f.title === 'string' && f.title.trim().length > 0, { message: 'title_required' })
+        .refine(f => !checkText(f.title, DRAFT_TITLE).error, { message: 'bad_title', path: ['title'] })
         .refine(f => JSON.stringify(f).length <= 8000, { message: 'too_long' }),
     }),
   },
@@ -67,7 +72,7 @@ export const eventsCommands = {
     profile: true, write: true,
     input: z.strictObject({ opId, eventId: id, rev: z.int().positive(), event: eventFields }),
   },
-  'event.cancel': { profile: true, write: true, input: z.strictObject({ opId, eventId: id, reason: text(300).default('') }) },
+  'event.cancel': { profile: true, write: true, input: z.strictObject({ opId, eventId: id, reason: field('reason').default('') }) },
   'event.get': { profile: true, write: false, input: z.strictObject({ eventId: id }) },
   'event.catalog': {
     profile: true, write: false,
@@ -97,8 +102,8 @@ export const eventsCommands = {
   'event.apply': {
     profile: true, write: true, rate: { kind: 'event.apply', max: 30, window: '1 day' },
     input: z.strictObject({
-      opId, eventId: id, answers: z.array(text(300).refine(v => v.length >= 3, { message: 'too_short' })).min(1).max(3),
-      note: text(300).default(''), requirementsAccepted: z.literal(true),
+      opId, eventId: id, answers: z.array(field('eventAnswer')).min(1).max(3),
+      note: field('applyNote').default(''), requirementsAccepted: z.literal(true),
     }),
   },
   'event.applicationWithdraw': { profile: true, write: true, input: z.strictObject({ opId, applicationId: id }) },
@@ -112,7 +117,7 @@ export const eventsCommands = {
   },
   'event.announce': {
     profile: true, write: true, rate: { kind: 'event.announce', max: 10, window: '1 day' },
-    input: z.strictObject({ opId, eventId: id, body: text(500).refine(v => v.length >= 5, { message: 'too_short' }) }),
+    input: z.strictObject({ opId, eventId: id, body: field('announcement') }),
   },
   'event.attendees': {
     profile: true, write: false,
@@ -121,6 +126,6 @@ export const eventsCommands = {
   'staff.eventQueue': { profile: false, write: false, input: z.strictObject({ limit: z.int().min(1).max(50).default(20) }) },
   'staff.eventDecide': {
     profile: false, write: true,
-    input: z.strictObject({ opId, eventId: id, rev: z.int().positive(), decision: z.enum(['approve', 'reject', 'hide']), reason: text(300).default('') }),
+    input: z.strictObject({ opId, eventId: id, rev: z.int().positive(), decision: z.enum(['approve', 'reject', 'hide']), reason: field('reason').default('') }),
   },
 };

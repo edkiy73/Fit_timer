@@ -32,6 +32,7 @@ A new component or variant ships with its story in the same PR.
 | Choice pills | `Chip`, `Chips` |
 | Several from a list as rows | `CheckList` (a box per row, a line under the title: «не запрошено», «уже открыто») |
 | Text fields | `Field` (label + error) around `Input`, `TextArea`, `SearchInput`, `Select`; files via `FilePick` |
+| Checking typed text | `useChecks` / `textError` / `shakeFirstErr` (`kit/validate.tsx`, story «Поле ввода → С проверкой»): the server's own rules from `contracts/_text.mjs` (`FIELD.<name>`) — error under the field on blur and submit, `Counter` from 80% of the limit, the first wrong field shakes, `fromServer(e)` puts an `invalid_input` refusal (`fields` + `reasons`) on its field. Never a length or character check of a screen's own |
 | Overlays | `Sheet` (bottom sheet; `dirty` — unsaved choices: ✕ / scrim / Esc ask «Закрыть без сохранения?»), `Ask` (confirmation), `Layer` (portal for custom overlays inside the kit only) |
 | Feedback | `Alert` (ok / err / warn / info in the flow), `useToast` (transient, with «Отменить»), `Empty`, `Skel` |
 | People | `Av` |

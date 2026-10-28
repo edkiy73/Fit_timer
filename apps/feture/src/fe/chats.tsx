@@ -10,6 +10,7 @@ import {useSendVideo,useSendVoice} from './media-upload';
 import {AgeCheckLink,useAgeResume} from './age-check';
 import {useFe,useRealtime,useTypingSignal} from './session';
 import {useToast} from './toast';
+import {softMax,textError} from './kit/validate';
 import {BellButton,SegN} from './inbox';
 
 /** Slice G (V21 H01, H02, H05) with the prototype's markup. A conversation exists only after a mutual like (server).
@@ -252,7 +253,8 @@ export function ChatScreen(){
  };
  const send=()=>{
   const body=text.trim();if(!body||!meta)return;
-  if(body.length>2000){toast(t('fe.chx.tooLong'),{type:'err'});return;}
+  // Kit validation layer: the server's rule for a message (length, characters, lines, long runs) before it leaves.
+  const bad=textError(t,'chatMessage',body);if(bad){toast(bad,{type:'err'});return;}
   const p:Pend={key:newOpId(),body,opId:newOpId(),at:new Date().toISOString(),status:'sending',...(replyTo?{replyTo}:{})};
   setPend(list=>[...list,p]);setText('');setReplyTo(null);stick.current=true;
   if(input.current)input.current.style.height='';
@@ -454,6 +456,7 @@ export function ChatScreen(){
   if(!meta)return;
   if(!rp.why){setSheetErr(t('fe.chx.needWhy'));return;}
   if(theirs.length&&!rp.sel.length){setSheetErr(t('fe.chx.needMsg'));return;}
+  const bad=textError(t,'reportDetails',rp.details);if(bad){setSheetErr(bad);return;}
   void run(async()=>{
    const base={opId:newOpId(),reason:rp.why,details:rp.details.trim().slice(0,500),alsoBlock:rp.block};
    // A chat is reported as its conversation with the selected messages; with nothing of theirs to show, the profile is.
@@ -536,7 +539,7 @@ export function ChatScreen(){
   {!ended&&<div className="inputbar" ref={bar}>
    {replyTo&&quoteOf(replyTo)&&<div className="reply-target chat-reply">{quote(replyTo,true)}<IconBtn icon={X} size="sm" label={t('fe.chx.cancelReply')} onClick={()=>{setReplyTo(null);input.current?.focus({preventScroll:true});}}/></div>}
    <IconBtn icon={Plus} kind="ghost" label={t('fe.chx.attach')} disabled={!meta||!!out?.pending} onClick={()=>{setSheetErr('');setSheet('attach');}}/>
-   <TextArea ref={input} bare grow={GROW} rows={1} maxLength={2000} value={text} onChange={e=>{setText(e.target.value);if(e.target.value.trim())typed();}}
+   <TextArea ref={input} bare grow={GROW} rows={1} maxLength={softMax('chatMessage')} value={text} onChange={e=>{setText(e.target.value);if(e.target.value.trim())typed();}}
     placeholder={couple?t('fe.chx.messagePhCouple'):t('fe.chx.messagePh')} aria-label={t('fe.chx.message')} title={t('fe.chx.enterHint')} enterKeyHint="enter"
     onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!coarse&&!e.nativeEvent.isComposing){e.preventDefault();send();}}}/>
    {/* An empty box offers a voice message instead of «Отправить» (hold to record). */}
@@ -625,7 +628,7 @@ export function ChatScreen(){
     <RadioList label={t('fe.chx.reason')} value={rp.why} onChange={k=>setRp(r=>({...r,why:k}))} options={REASONS.map(k=>[k,t('fe.chx.reason.'+k)] as const)}/>
    </Group>
    <div className="mt16"><Field id="chat-report-details" label={<>{t('fe.chx.details')}<i>{t('fe.chx.optional')}</i></>}>
-    <TextArea id="chat-report-details" rows={3} maxLength={500} value={rp.details} onChange={e=>setRp(r=>({...r,details:e.target.value}))}/></Field></div>
+    <TextArea id="chat-report-details" rows={3} maxLength={softMax('reportDetails')} invalid={!!textError(t,'reportDetails',rp.details)} value={rp.details} onChange={e=>setRp(r=>({...r,details:e.target.value}))}/></Field></div>
    <Card list><ToggleRow title={t('fe.chx.alsoBlock')} sub={t('fe.chx.alsoBlockSub')} on={rp.block} onClick={()=>setRp(r=>({...r,block:!r.block}))}/></Card>
    {sheetAlert}
   </Sheet>}

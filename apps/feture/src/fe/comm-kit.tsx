@@ -6,6 +6,7 @@ import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicOrigin} from '../api-url';
 import {Alert,Btn,RadioList,Sheet,TextArea} from './kit';
 import {useFe} from './session';
+import {softMax,textError} from './kit/validate';
 import {namedPlate} from './create-community';
 
 /** What only the «Сообщества» screens share, built from the kit (src/fe/kit): the named plates, the report sheet,
@@ -34,6 +35,7 @@ export function ReportSheet({targetType,targetId,onClose,onDone}:{targetType:'co
  const [reason,setReason]=useState<typeof REASONS[number]|''>('');const [details,setDetails]=useState('');const [busy,setBusy]=useState(false);const [err,setErr]=useState('');const op=useRef(newOpId());
  const send=async()=>{
   if(!reason){setErr(t('fe.pm.rp.chooseReason'));return;}
+  const bad=textError(t,'reportDetails',details);if(bad){setErr(bad);return;}
   setBusy(true);setErr('');
   try{await call('report.create',{opId:op.current,targetType,targetId,reason,details:details.trim().slice(0,500)},okRes);onDone(t('fe.cm.reported'));}
   catch(e){setErr(feErrorMessage(e,t));op.current=newOpId();}finally{setBusy(false);}
@@ -41,7 +43,7 @@ export function ReportSheet({targetType,targetId,onClose,onDone}:{targetType:'co
  return <Sheet title={t('fe.pm.rp.title')} onClose={onClose} foot={<Btn kind="danger" onClick={send} busy={busy} disabled={busy} icon={Flag}>{t('fe.pm.rp.send')}</Btn>}>
   <RadioList label={t('fe.pm.rp.reason')} value={reason||null} onChange={k=>{setReason(k);setErr('');}} options={REASONS.map(k=>[k,t('fe.pm.rp.'+k)] as const)}/>
   <label className="field mt16"><span>{t('fe.pm.rp.details')}<i>{t('fe.pm.rp.optional')}</i></span>
-   <TextArea rows={3} maxLength={500} value={details} onChange={e=>setDetails(e.target.value)}/></label>
+   <TextArea rows={3} maxLength={softMax('reportDetails')} invalid={!!textError(t,'reportDetails',details)} value={details} onChange={e=>setDetails(e.target.value)}/></label>
   {err&&<Alert kind="err" icon={Info} className="mt12">{err}</Alert>}
  </Sheet>;
 }

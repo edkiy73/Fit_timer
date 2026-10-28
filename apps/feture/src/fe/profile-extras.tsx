@@ -8,6 +8,7 @@ import {publicBase} from '../api-url';
 import {Ban,Check,ChevronDown,Crown,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,Flag,Heart,History,Info,Link as LinkIcon,Lock,LockOpen,MapPin,MessageCircle,ShieldCheck,Undo2,Users,X} from 'lucide-react';
 import {Alert,Av,Bar,Btn,Card,Empty,Group,H,IconBtn,Layer,Note,PersonName,PhotoTrack,Pill,RadioList,Row,Seg,Skel,TextArea,ToggleRow,Veil,View,plate} from './kit';
 import {useFe} from './session';
+import {softMax,textError} from './kit/validate';
 import {PhotoBadge} from './photo-check';
 import {faceFields,NameBadges} from './faces';
 import {PostCard,postSchema,type Post} from './feed';
@@ -495,13 +496,14 @@ function Report({profileId,onClose,onDone}:{profileId:string,onClose:()=>void,on
  const [busy,setBusy]=useState(false);const [err,setErr]=useState('');const op=useRef(newOpId());
  const send=async()=>{
   if(!why){setErr(t('fe.px.rp.choose'));return;}
+  const bad=textError(t,'reportDetails',details);if(bad){setErr(bad);return;}
   setBusy(true);setErr('');
   try{await call('report.create',{opId:op.current,targetType:'profile',targetId:profileId,reason:why,details:details.trim().slice(0,500),alsoBlock},ok);onDone(t('fe.px.rp.sent'),alsoBlock);}
   catch(e){setErr(pxError(e,t));op.current=newOpId();}finally{setBusy(false);}
  };
  return <Sheet title={t('fe.px.rp.title')} onClose={onClose} foot={<Btn kind="danger" onClick={send} disabled={busy}>{t('fe.px.rp.send')}</Btn>}>
   <RadioList bare label={t('fe.px.rp.reason')} value={why} onChange={k=>{setWhy(k);setErr('');}} options={REASONS.map(k=>[k,t('fe.px.rp.'+k)] as const)}/>
-  <label className="field mt16"><span>{t('fe.px.rp.details')}<i>{t('fe.px.rp.optional')}</i></span><TextArea rows={3} maxLength={500} value={details} onChange={e=>setDetails(e.target.value)}/></label>
+  <label className="field mt16"><span>{t('fe.px.rp.details')}<i>{t('fe.px.rp.optional')}</i></span><TextArea rows={3} maxLength={softMax('reportDetails')} invalid={!!textError(t,'reportDetails',details)} value={details} onChange={e=>setDetails(e.target.value)}/></label>
   <Card list><ToggleRow title={t('fe.px.rp.alsoBlock')} sub={t('fe.px.rp.alsoBlockSub')} on={alsoBlock} onClick={()=>setAlso(v=>!v)}/></Card>
   {err&&<Alert kind="err" noIcon className="mt12">{err}</Alert>}
  </Sheet>;

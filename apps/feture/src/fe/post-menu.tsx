@@ -8,6 +8,7 @@ import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicOrigin} from '../api-url';
 import {Alert,Ask as KitAsk,Btn,Card,RadioList,Row,Sheet,TextArea,ToggleRow} from './kit';
 import {useFe} from './session';
+import {softMax,textError} from './kit/validate';
 import {useToast} from './toast';
 import type {Post,Reply} from './feed';
 import {PostAlbumSheet,inGallery} from './gallery';
@@ -50,6 +51,7 @@ export function ReportSheet({targetType,targetId,onClose,onDone}:{targetType:'po
  useEscape(onClose);
  const send=async()=>{
   if(!reason){setFailure(t('fe.pm.rp.chooseReason'));setShake(true);setTimeout(()=>setShake(false),500);return;}
+  const bad=textError(t,'reportDetails',details);if(bad){setFailure(bad);return;}
   if(busy)return;setBusy(true);setFailure('');
   try{await call('report.create',{opId:op('report'),targetType,targetId,reason,details:details.trim().slice(0,500),alsoBlock},okOnly);onDone(alsoBlock);}
   catch(e){setFailure(feErrorMessage(e,t));drop('report');}finally{setBusy(false);}
@@ -59,7 +61,7 @@ export function ReportSheet({targetType,targetId,onClose,onDone}:{targetType:'po
    <RadioList label={t('fe.pm.rp.reason')} value={reason} options={REASONS.map(k=>[k,t('fe.pm.rp.'+k)] as const)} onChange={k=>{setReason(k);setFailure('');}}/>
   </div>
   <label className="field mt16"><span>{t('fe.pm.rp.details')}<i>{t('fe.pm.rp.optional')}</i></span>
-   <TextArea rows={3} maxLength={500} value={details} onChange={e=>setDetails(e.target.value)}/></label>
+   <TextArea rows={3} maxLength={softMax('reportDetails')} invalid={!!textError(t,'reportDetails',details)} value={details} onChange={e=>setDetails(e.target.value)}/></label>
   <Card list><ToggleRow title={t('fe.pm.rp.alsoBlock')} sub={t('fe.pm.rp.alsoBlockSub')} on={alsoBlock} onClick={()=>setAlsoBlock(v=>!v)}/></Card>
   {failure&&<Alert kind="err" className="mt12">{failure}</Alert>}
  </Sheet>;

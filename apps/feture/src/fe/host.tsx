@@ -9,6 +9,7 @@ import {useFe} from './session';
 import {useToast} from './toast';
 import {when} from './feed';
 import {FErr,Field,SelectRow,shakeFirstErr} from './create-community';
+import {FIELD,serverFields,textError,textErrorMessage,type FieldName} from './kit/validate';
 import {appUrl,copyLink,fill,okRes,pl,plWord} from './comm-kit';
 import {EventCard} from './communities';
 import {faceFields,NameBadges,withAge} from './faces';
@@ -103,19 +104,20 @@ export function JoinSheet({c,invite,onClose,onDone}:{c:{id:string,name:string,pr
  const couple=acting?.kind==='couple';const closed=c.privacy!=='open';const q=closed?c.joinQuestion??null:null;
  const send=async()=>{
   const e:{answer?:string|undefined,ok?:string|undefined}={};
-  if(q&&answer.trim().length<10)e.answer=t('fe.host.join.answerShort');
+  const ea=q?textError(t,'joinAnswer',answer):undefined;
+  if(ea)e.answer=ea;else if(q&&answer.trim().length<10)e.answer=t('fe.host.join.answerShort');
   if(!accepted)e.ok=t('fe.host.join.acceptNeeded');
   setErr(e);if(Object.keys(e).length){shakeFirstErr();return;}
   setBusy(true);setFailure('');
   try{
    const r=await call('community.join',{opId:newOpId(),communityId:c.id,rulesAccepted:true,answer:closed?answer.trim():'',...(invite?{invite}:{})},joinRes);
    onDone(r.pending?t('fe.host.join.waitingPartner'):r.state==='member'?fill(t(couple?'fe.cm.joinedCouple':'fe.cm.joined'),{name:c.name}):t('fe.cm.requestSent'));
-  }catch(x){setFailure(feErrorMessage(x,t));}finally{setBusy(false);}
+  }catch(x){const f=serverFields(x).find(f=>f.path==='answer');if(f){setErr({answer:textErrorMessage(t,f.code,FIELD.joinAnswer)});shakeFirstErr();}else setFailure(feErrorMessage(x,t));}finally{setBusy(false);}
  };
  return <Sheet title={closed?t('fe.host.join.requestTitle'):t('fe.host.join.rulesTitle')} onClose={onClose}
   foot={<Btn onClick={send} busy={busy} disabled={busy}>{closed?t('fe.host.join.send'):t('fe.host.join.join')}</Btn>}>
   <Card className="flat"><ol className="rules">{c.rules.map((r,i)=><li key={i}>{r}</li>)}</ol></Card>
-  {q&&<div className="mt16"><Field name="answer" label={q} value={answer} onChange={v=>{setAnswer(v);if(err.answer)setErr({...err,answer:undefined});}} err={err.answer} textarea rows={3} max={300}
+  {q&&<div className="mt16"><Field name="answer" label={q} value={answer} onChange={v=>{setAnswer(v);if(err.answer)setErr({...err,answer:undefined});}} err={err.answer} textarea rows={3} check="joinAnswer"
    ph={t('fe.host.join.answerPh')} hint={t('fe.host.join.answerHint')}/></div>}
   <div className={'field mt16'+(err.ok?' err':'')}>
    <Check on={accepted} error={!!err.ok} onChange={v=>{setAccepted(v);setErr({...err,ok:undefined});}}>{t('fe.host.join.accept')}{err.ok&&<FErr>{err.ok}</FErr>}</Check>
@@ -338,14 +340,20 @@ export function EventApplyScreen(){
  const open=!!e&&e.requiresApplication&&e.state==='published'&&!e.past;
  const send=async()=>{
   if(!e)return;const x:Record<string,string>={};
-  qs.forEach((_,i)=>{if((answers[i]??'').trim().length<3)x['q'+i]=t('fe.host.app.answerShort');});
+  qs.forEach((_,i)=>{const a=answers[i]??'';const m=a.trim().length<3?t('fe.host.app.answerShort'):textError(t,'eventAnswer',a);if(m)x['q'+i]=m;});
+  const en=textError(t,'applyNote',note);if(en)x.note=en;
   if(!accepted)x.ok=t('fe.host.app.acceptNeeded');
   setErr(x);if(Object.keys(x).length){shakeFirstErr();return;}
   setBusy(true);setFailure('');
   try{
    const r=await call('event.apply',{opId:newOpId(),eventId:id,answers:qs.map((_,i)=>(answers[i]??'').trim()),note:note.trim(),requirementsAccepted:true},joinRes);
    toast(r.pending?t('fe.host.app.sentPartner'):t('fe.cm.appSent'),{type:'ok'});navigate(`/n/events/${id}`,{replace:true});
-  }catch(y){setFailure(feErrorMessage(y,t));}finally{setBusy(false);}
+  }catch(y){
+   // answers.N → the N-th answer, note → the note (contracts/events.mjs event.apply).
+   const x:Record<string,string>={};for(const {path,code} of serverFields(y)){const [h,n]=path.split('.');const k=h==='answers'?'q'+(n??0):h==='note'?'note':'';
+    const r:FieldName|undefined=h==='answers'?'eventAnswer':h==='note'?'applyNote':undefined;if(k&&r&&!x[k])x[k]=textErrorMessage(t,code,FIELD[r]);}
+   if(Object.keys(x).length){setErr(x);shakeFirstErr();}else setFailure(feErrorMessage(y,t));
+  }finally{setBusy(false);}
  };
  return <>
   <SubBar title={t('fe.cm.applyTitle')} sub={e?.title} back={`/n/events/${id}`}/>
@@ -355,9 +363,9 @@ export function EventApplyScreen(){
     :<>
      <Alert kind="info">{couple?t('fe.host.app.infoCouple'):t('fe.host.app.info')}</Alert>
      <Group title={t('fe.host.app.answers')}><Card form>
-      {qs.map((q,i)=><Field key={i} name={'q'+i} label={q} value={answers[i]??''} textarea rows={3} max={300} err={err['q'+i]}
+      {qs.map((q,i)=><Field key={i} name={'q'+i} label={q} value={answers[i]??''} textarea rows={3} check="eventAnswer" err={err['q'+i]}
        onChange={v=>{const a=[...answers];a[i]=v;setAnswers(a);if(err['q'+i]){const n={...err};delete n['q'+i];setErr(n);}}}/>)}
-      <Field name="note" label={t('fe.host.app.note')} value={note} onChange={setNote} opt ph={t('fe.host.app.notePh')} textarea rows={2} max={300}/>
+      <Field name="note" label={t('fe.host.app.note')} value={note} onChange={v=>{setNote(v);if(err.note){const n={...err};delete n.note;setErr(n);}}} err={err.note} opt ph={t('fe.host.app.notePh')} textarea rows={2} check="applyNote"/>
      </Card></Group>
      <div className={'field'+(err.ok?' err':'')}>
       <Check on={accepted} error={!!err.ok} onChange={v=>{setAccepted(v);const n={...err};delete n.ok;setErr(n);}}>{t('fe.host.app.accept')}{err.ok&&<FErr>{err.ok}</FErr>}</Check>
@@ -382,11 +390,14 @@ export function EventManageScreen(){
  const notice=useRef((location.state as {notice?:unknown}|null)?.notice);
  useEffect(()=>{if(typeof notice.current==='string'){toast(notice.current,{type:'ok'});notice.current=undefined;}},[toast]);
  const announce=async()=>{
-  const b=body.trim();if(b.length<5){setErr(t('fe.host.ev.announceShort'));shakeFirstErr();return;}
+  const b=body.trim();const m=b.length<5?t('fe.host.ev.announceShort'):textError(t,'announcement',b);if(m){setErr(m);shakeFirstErr();return;}
   setBusy(true);
-  try{await call('event.announce',{opId:newOpId(),eventId:id,body:b},okRes);setBody('');setMode('');toast(t('fe.host.ev.announceSent'),{type:'ok'});load();}catch(x){toast(feErrorMessage(x,t),{type:'err'});}finally{setBusy(false);}
+  try{await call('event.announce',{opId:newOpId(),eventId:id,body:b},okRes);setBody('');setMode('');toast(t('fe.host.ev.announceSent'),{type:'ok'});load();}
+  catch(x){const f=serverFields(x).find(f=>f.path==='body');if(f){setErr(textErrorMessage(t,f.code,FIELD.announcement));shakeFirstErr();}else toast(feErrorMessage(x,t),{type:'err'});}finally{setBusy(false);}
  };
+ const [reasonErr,setReasonErr]=useState('');
  const cancel=async()=>{
+  const m=textError(t,'reason',reason);if(m){setReasonErr(m);shakeFirstErr();return;}
   setBusy(true);
   try{await call('event.cancel',{opId:newOpId(),eventId:id,reason:reason.trim()},okRes);setMode('');toast(t('fe.host.ev.cancelled'),{type:'ok'});load();}catch(x){toast(feErrorMessage(x,t),{type:'err'});}finally{setBusy(false);}
  };
@@ -421,10 +432,10 @@ export function EventManageScreen(){
   </div></div>
   {e&&mode==='announce'&&<Sheet title={t('fe.host.ev.announceTitle')} onClose={()=>setMode('')} foot={<Btn icon={Send} onClick={()=>void announce()} busy={busy} disabled={busy}>{t('fe.host.ev.send')}</Btn>}>
    <p className="lead">{t('fe.host.ev.announceLead')}</p>
-   <Field name="announce" label={t('fe.host.ev.announceLabel')} value={body} onChange={v=>{setBody(v);setErr('');}} err={err||undefined} textarea rows={4} max={500} ph={t('fe.host.ev.announcePh')}/>
+   <Field name="announce" label={t('fe.host.ev.announceLabel')} value={body} onChange={v=>{setBody(v);setErr('');}} err={err||undefined} textarea rows={4} check="announcement" ph={t('fe.host.ev.announcePh')}/>
   </Sheet>}
   {e&&mode==='cancel'&&<Ask icon={Ban} danger title={t('fe.host.ev.cancelQ')} text={t('fe.host.ev.cancelText')} ok={t('fe.host.ev.cancel')} busy={busy} onOk={()=>void cancel()} onCancel={()=>setMode('')}>
-   <Field name="reason" className="k-left" label={t('fe.host.ev.reason')} opt textarea rows={3} max={250} value={reason} onChange={setReason}/>
+   <Field name="reason" className="k-left" label={t('fe.host.ev.reason')} opt textarea rows={3} check="reason" value={reason} err={reasonErr||undefined} onChange={v=>{setReason(v);setReasonErr('');}}/>
    <p className="mt8">{t('fe.host.ev.refunds')}</p>
   </Ask>}
  </>;

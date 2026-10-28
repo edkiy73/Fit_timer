@@ -2,7 +2,7 @@
 /** Slice B: posts, replies, reactions, polls, photo marks, reports (S2-CATALOG «B», extract/feed-content.md). */
 import * as z from 'zod';
 import { id, opId } from './platform.mjs';
-import { text } from './me.mjs';
+import { field } from './_text.mjs';
 
 const code = z.string().regex(/^[a-z][a-z0-9_-]{0,31}$/);
 const unique = (/** @type {z.ZodArray<any>} */ arr) => arr.refine(v => new Set(v).size === v.length, { message: 'duplicates' });
@@ -10,15 +10,15 @@ const unique = (/** @type {z.ZodArray<any>} */ arr) => arr.refine(v => new Set(v
 /** What a post is made of; the same shape for drafts, publishing and edits. */
 export const postFields = z.strictObject({
   type: z.enum(['post', 'note']).default('post'),
-  title: text(120).optional(),
-  body: text(10000).default(''),
+  title: field('postTitle').optional(),
+  body: field('postBody').default(''),
   audience: z.enum(['all', 'followers', 'granted', 'only']).default('all'),
   inFeed: z.boolean().default(true),
   topics: unique(z.array(code).max(3)).default([]),
   mediaIds: unique(z.array(id).max(6)).default([]),
   poll: z.strictObject({
-    question: text(200).refine(v => v.length > 0, { message: 'empty' }),
-    options: z.array(text(80).refine(v => v.length > 0, { message: 'empty' })).min(2).max(10)
+    question: field('pollQuestion'),
+    options: z.array(field('pollOption')).min(2).max(10)
       .refine(v => new Set(v.map(o => o.toLowerCase())).size === v.length, { message: 'duplicates' }),
   }).optional(),
   interests: unique(z.array(code).max(4)).default([]),
@@ -84,9 +84,9 @@ export const postsCommands = {
   'poll.vote': { profile: true, write: true, input: z.strictObject({ opId, postId: id, option: z.int().min(0).max(9).nullable() }) },
   'reply.create': {
     profile: true, write: true, rate: { kind: 'reply.create', max: 300, window: '1 day' },
-    input: z.strictObject({ opId, postId: id, parentId: id.optional(), body: text(1000).refine(v => v.length > 0, { message: 'empty' }) }),
+    input: z.strictObject({ opId, postId: id, parentId: id.optional(), body: field('reply') }),
   },
-  'reply.edit': { profile: true, write: true, input: z.strictObject({ opId, replyId: id, rev: z.int().positive(), body: text(1000).refine(v => v.length > 0, { message: 'empty' }) }) },
+  'reply.edit': { profile: true, write: true, input: z.strictObject({ opId, replyId: id, rev: z.int().positive(), body: field('reply') }) },
   'reply.delete': { profile: true, write: true, input: z.strictObject({ opId, replyId: id }) },
   'post.replies': { profile: true, write: false, input: z.strictObject({ postId: id }) },
   'tag.answer': { profile: true, write: true, input: z.strictObject({ opId, postId: id, answer: z.enum(['ok', 'no', 'remove']) }) },
@@ -100,7 +100,7 @@ export const postsCommands = {
       targetId: id,
       messageIds: z.array(id).min(1).max(20).transform(v => [...new Set(v)]).optional(),
       reason: z.enum(['threat', 'private', 'minor', 'spam', 'other']),
-      details: text(500).default(''),
+      details: field('reportDetails').default(''),
       alsoBlock: z.boolean().default(false),
     }).refine(v => (v.targetType === 'conversation') === !!v.messageIds, { message: 'messages_for_chats_only', path: ['messageIds'] }),
   },

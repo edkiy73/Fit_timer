@@ -7,6 +7,7 @@ import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {AtSign,CircleCheck,Search,ShieldCheck} from 'lucide-react';
 import {Alert,Ask,Btn,Card,Check,Chip,Chips,ChoiceChips,Empty,Field,H,Input,Note,Pill,Row,SearchInput,SectionLabel,Select,Sheet,Skel,Stack,Text,TextArea} from './kit';
 import {useTopics} from './post-parts';
+import {useChecks} from './kit/validate';
 import {useFe} from './session';
 import {useToast} from './toast';
 import {AuthBar,AuthFrame,AuthLogo} from './start';
@@ -333,16 +334,18 @@ function CommPreview({c,profileId,chosen,onClose,onJoin}:{c:Comm,profileId:strin
  const [answer,setAnswer]=useState(chosen?.answer??'');const [ok,setOk]=useState(!!chosen);const [err,setErr]=useState<{answer?:string,ok?:string}>({});
  useEffect(()=>{call('community.get',{communityId:c.id},commFull,{profileId}).then(r=>setFull(r.community)).catch(()=>setFailed(true));},[call,c.id,profileId]);
  const closed=c.privacy!=='open';const q=closed?full?.joinQuestion??null:null;
+ const checks=useChecks(q?{answer:'joinAnswer'}:{},{answer});
  const join=()=>{const e:{answer?:string,ok?:string}={};
-  if(q&&answer.trim().length<10)e.answer=t('fe.host.join.answerShort');if(!ok)e.ok=t('fe.host.join.acceptNeeded');
-  setErr(e);if(!Object.keys(e).length)onJoin({answer:closed?answer.trim():''});};
+  const textOk=checks.submit();
+  if(textOk&&q&&answer.trim().length<10)e.answer=t('fe.host.join.answerShort');if(!ok)e.ok=t('fe.host.join.acceptNeeded');
+  setErr(e);if(textOk&&!Object.keys(e).length)onJoin({answer:closed?answer.trim():''});};
  return <Sheet title={c.name} sub={[closed?t('fe.onb2.closed'):t('fe.onb2.open'),t('fe.onb2.members',{n:c.members})].join(' · ')} onClose={onClose}
   foot={<Btn onClick={join} disabled={!full}>{closed?t('fe.onb2.request'):t('fe.onb2.join')}</Btn>}>
   {failed?<Alert kind="err">{t('fe.onb2.previewFailed')}</Alert>:!full?<Skel kind="card" rows={2}/>:<Stack gap={4}>
    {full.description&&<Text>{full.description}</Text>}
    {full.topics.length>0&&<Chips>{full.topics.map(x=><Chip key={x}>{tname(x)}</Chip>)}</Chips>}
    {full.rules.length>0&&<><SectionLabel>{t('fe.onb2.rules')}</SectionLabel><Card><ol className="rules">{full.rules.map((r,i)=><li key={i}>{r}</li>)}</ol></Card></>}
-   {q&&<Field id={fid} label={q} error={err.answer} hint={t('fe.host.join.answerHint')}><TextArea id={fid} rows={3} maxLength={300} value={answer} placeholder={t('fe.host.join.answerPh')} onChange={e=>setAnswer(e.target.value)}/></Field>}
+   {q&&<Field id={fid} name="answer" label={q} error={checks.error('answer')??err.answer} hint={t('fe.host.join.answerHint')}><TextArea id={fid} rows={3} {...checks.input('answer')} value={answer} placeholder={t('fe.host.join.answerPh')} onChange={e=>{setAnswer(e.target.value);setErr(x=>x.ok?{ok:x.ok}:{});}}/>{checks.counter('answer')}</Field>}
    <Field error={err.ok}><Check on={ok} error={!!err.ok} onChange={setOk}>{t('fe.host.join.accept')}</Check></Field>
   </Stack>}
  </Sheet>;
