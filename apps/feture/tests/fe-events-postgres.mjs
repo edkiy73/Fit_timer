@@ -270,3 +270,76 @@ test('event.applicationWithdraw: the applicant only, pending or approved; admiss
     assert.equal((await call('ub', b, { action: 'event.applicationWithdraw', opId: op(), applicationId: app3.id })).status, 404);
   } finally { await pg.close(); }
 });
+
+test('«Скоро» in the feed: only events that concern the viewer, strongest reason first; «Скрыть» keeps them out', async () => {
+  const { pg, db, call, a, b, c, berlin, publish } = await world();
+  try {
+    const online = { format: 'online', placeId: null, area: null, exactAddress: null, joinUrl: 'https://meet.example/soon' };
+    const soon = async (/** @type {string} */ user, /** @type {string} */ profile) => (await call(user, profile, { action: 'event.soon' })).items.map((/** @type {any} */ x) => [x.id, x.why]);
+    const near = await publish('ua', a, { startsAt: at(5), endsAt: at(5, 3) });                  // offline, Berlin
+    const web = await publish('ua', a, { ...online, title: 'Онлайн-разговор', startsAt: at(2), endsAt: at(2, 2) });
+    await publish('ua', a, { ...online, title: 'Через три недели', startsAt: at(21), endsAt: at(21, 2) }); // too far ahead
+    // No city, nothing followed: only the online one concerns Kira; the organizer never sees their own here.
+    assert.deepEqual(await soon('ub', b), [[web, 'online']]);
+    assert.deepEqual(await soon('ua', a), []);
+    await db.query(`update feture.profile_details set city_id = $2 where profile_id = $1`, [b, berlin]);
+    assert.deepEqual(await soon('ub', b), [[web, 'online'], [near, 'city']]);
+    // Following the organizer, then answering «иду», moves an event up.
+    await call('ub', b, { action: 'follow.set', opId: op(), profileId: a, on: true });
+    assert.deepEqual(await soon('ub', b), [[web, 'follow'], [near, 'follow']]);
+    await call('ub', b, { action: 'event.rsvp', opId: op(), eventId: near, status: 'going' });
+    assert.deepEqual(await soon('ub', b), [[near, 'mine'], [web, 'follow']]);
+    // «Не иду» takes it out of «Скоро».
+    await call('ub', b, { action: 'event.rsvp', opId: op(), eventId: near, status: 'not_going' });
+    assert.deepEqual(await soon('ub', b), [[web, 'follow']]);
+    // «Скрыть»: gone for this profile only, listed in «Скрытое» with its title; «Вернуть» brings it back.
+    assert.equal((await call('ub', b, { action: 'feedHide.set', opId: op(), kind: 'event', targetId: web, on: true })).status, 200);
+    assert.deepEqual(await soon('ub', b), []);
+    const hidden = (await call('ub', b, { action: 'feedHide.list' })).items.find((/** @type {any} */ x) => x.kind === 'event');
+    assert.deepEqual(hidden.target, { id: web, title: 'Онлайн-разговор' });
+    assert.deepEqual(await soon('uc', c), [[web, 'online']]);
+    await call('ub', b, { action: 'feedHide.set', opId: op(), kind: 'event', targetId: web, on: false });
+    assert.deepEqual(await soon('ub', b), [[web, 'follow']]);
+    // Blocked: the organizer's events are not offered and cannot be «hidden» either (no probing).
+    await call('ua', a, { action: 'block.set', opId: op(), profileId: c, on: true });
+    assert.deepEqual(await soon('uc', c), []);
+    assert.equal((await call('uc', c, { action: 'feedHide.set', opId: op(), kind: 'event', targetId: web, on: true })).status, 404);
+    assert.equal((await call('ub', b, { action: 'feedHide.set', opId: op(), kind: 'event', targetId: '00000000-0000-7000-8000-000000000000', on: true })).status, 404);
+  } finally { await pg.close(); }
+});
+
+test('«Скоро» by interests and communities: a level on the community’s topic counts, a hard limit does not', async () => {
+  const { pg, call, a, b, c, publish } = await world();
+  try {
+    const cr = await call('ua', a, { action: 'community.create', opId: op(), name: 'Верёвочный клуб', privacy: 'open', description: 'Встречи и разговоры о верёвке для новичков', topics: ['shibari'], rules: ['Уважать границы'] });
+    const q = (await call('um', null, { action: 'staff.communityQueue' })).items.find((/** @type {any} */ x) => x.id === cr.id);
+    await call('um', null, { action: 'staff.communityDecide', opId: op(), communityId: cr.id, rev: q.rev, decision: 'approve' });
+    const id = await publish('ua', a, { communityId: cr.id, title: 'Встреча клуба', startsAt: at(4), endsAt: at(4, 2) });
+    const why = async (/** @type {string} */ user, /** @type {string} */ profile) => (await call(user, profile, { action: 'event.soon' })).items.map((/** @type {any} */ x) => [x.id, x.why]);
+    assert.deepEqual(await why('ub', b), []);
+    await call('ub', b, { action: 'interests.set', opId: op(), topicId: 'shibari', mark: 'hard', vis: 'only' });
+    assert.deepEqual(await why('ub', b), []);
+    await call('ub', b, { action: 'interests.set', opId: op(), topicId: 'shibari', value: 7, dir: ['give'], vis: 'only' });
+    assert.deepEqual(await why('ub', b), [[id, 'interests']]);
+    assert.equal((await call('uc', c, { action: 'community.join', opId: op(), communityId: cr.id, rulesAccepted: true })).state, 'member');
+    assert.deepEqual(await why('uc', c), [[id, 'community']]);
+  } finally { await pg.close(); }
+});
+
+test('applications (owner check 28.10.2026): a declined one cannot be sent again, the organizer may still approve it; a withdrawn one can', async () => {
+  const { pg, call, a, b, publish } = await world();
+  try {
+    const id = await publish('ua', a, { requiresApplication: true, questions: ['Был ли опыт?'] });
+    const apply = () => call('ub', b, { action: 'event.apply', opId: op(), eventId: id, answers: ['Да, был'], requirementsAccepted: true });
+    const app = await apply();
+    const [x] = (await call('ua', a, { action: 'event.applications', eventId: id, state: 'pending' })).items;
+    const no = await call('ua', a, { action: 'event.applicationDecide', opId: op(), applicationId: app.id, rev: x.rev, approve: false });
+    const again = await apply();
+    assert.deepEqual([again.status, again.rule], [422, 'application_declined']);
+    // «Всё-таки одобрить» still works on the same application (a second open row would have broken it).
+    assert.equal((await call('ua', a, { action: 'event.applicationDecide', opId: op(), applicationId: app.id, rev: no.rev, approve: true })).state, 'approved');
+    assert.ok((await call('ub', b, { action: 'event.get', eventId: id })).event.exactAddress);
+    await call('ub', b, { action: 'event.applicationWithdraw', opId: op(), applicationId: app.id });
+    assert.equal((await apply()).state, 'pending');
+  } finally { await pg.close(); }
+});

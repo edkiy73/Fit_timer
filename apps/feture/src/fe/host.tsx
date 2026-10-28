@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,Bell,ChevronRight,CircleCheck,Clock,Copy,Ellipsis,FileText,Flag,Info,Link as LinkIcon,Lock,Pencil,Pin,PinOff,Send,Settings,ShieldAlert,Trash2,TrendingDown,TrendingUp,User,UserMinus,UserPlus,Users,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Announcement,Answer,Ask,Av,Bar,Btn,Card,IconBtn,Check,Empty,Group,Note,PersonLine,Pill,RequestCard,Row,SectionLabel,Seg,Sheet,Skel,Stack,SubBar} from './kit';
+import {Alert,Announcement,Answer,Ask,Av,Bar,Btn,Card,IconBtn,Check,Empty,Group,Note,PersonLine,Pill,RequestCard,Row,SectionLabel,Seg,Sheet,Skel,Stack,StatusCard,SubBar} from './kit';
 import {useFe} from './session';
 import {useToast} from './toast';
 import {when} from './feed';
@@ -318,15 +318,23 @@ export function CommunityMembersScreen(){
 
 /* ---------------- Events ---------------- */
 
-/** E03 «Участие» for events by application: the state of my application (V21 statusline). */
-export function EventApplicationLines({e}:{e:{requiresApplication:boolean,me:Record<string,unknown>}}){
+/** E03 «Участие» for events by application: my application as one StatusCard (the same card as a community join
+ * request): the state, what happens next, and «Отозвать» on the right while it waits (for the organizer, or for the
+ * partner of a couple). */
+export function EventApplicationLines({e,busy,onWithdraw,onCancelWait}:{e:{requiresApplication:boolean,me:Record<string,unknown>},busy?:boolean,
+ /** Withdraw a pending application (asks first). */ onWithdraw?:()=>void,/** Take back a couple's application the partner has not approved yet. */ onCancelWait?:()=>void}){
  const {t}=useI18n();
  if(!e.requiresApplication)return null;
  const parsed=application.nullable().optional().safeParse(e.me.application);const app=parsed.success?parsed.data??null:null;
- const st=e.me.waiting?'waiting':app&&['pending','approved','declined'].includes(app.state)?app.state:'none';
- const Icon=({none:FileText,pending:Clock,approved:CircleCheck,declined:X,waiting:Clock} as Record<string,LucideIcon>)[st]!;
+ // Only a waiting application counts here: a couple's «идём» waiting for the partner is the RSVP's business.
+ const wait=e.me.waiting as {kind?:string}|null|undefined;
+ const st=wait?.kind==='event.apply'?'waiting':app&&['pending','approved','declined'].includes(app.state)?app.state:'none';
+ const Icon=({none:FileText,pending:Clock,approved:CircleCheck,declined:X,waiting:Users} as Record<string,LucideIcon>)[st]!;
+ const tone=({pending:'wait',waiting:'wait',approved:'ok',declined:'bad'} as Record<string,'wait'|'ok'|'bad'>)[st];
+ const act=st==='pending'?onWithdraw:st==='waiting'?onCancelWait:undefined;
  return <><SectionLabel>{t('fe.host.ev.attendance')}</SectionLabel>
-  <Card list><div className="statusline"><span className="ico"><Icon/></span><span className="tx"><b>{t('fe.host.app.st.'+st)}</b><small>{t('fe.host.app.stText.'+st)}</small></span></div></Card></>;
+  <StatusCard tone={tone} icon={Icon} title={t('fe.host.app.st.'+st)} sub={t('fe.host.app.stText.'+st)}
+   action={act&&<Btn kind="soft" size="sm" auto fit disabled={busy} onClick={act}>{t('fe.host.join.withdraw')}</Btn>}/></>;
 }
 
 /** E06 — the application: answers to the organiser's questions, a note and the requirements. */

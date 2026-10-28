@@ -140,3 +140,10 @@
 .v21 .k-typing-dots i:nth-child(2){animation-delay:.15s}.v21 .k-typing-dots i:nth-child(3){animation-delay:.3s}
 @keyframes k-typing{0%,80%,100%{opacity:.35;transform:translateY(0)}40%{opacity:1;transform:translateY(-2px)}}
 @media (prefers-reduced-motion:reduce){.v21 .k-typing-dots i{animation:none}}
+
+/* StatusCard: my request / application as one block; the tone colours the icon and tints the card. */
+.v21 .k-status .li{align-items:center}
+.v21 .k-status .li .btn{flex:none}
+.v21 .k-status-wait{background:var(--warn-soft);border-color:transparent}.v21 .k-status-wait .ico{color:var(--warn)}
+.v21 .k-status-ok{background:var(--ok-soft);border-color:transparent}.v21 .k-status-ok .ico{color:var(--ok)}
+.v21 .k-status-bad{background:var(--danger-soft);border-color:transparent}.v21 .k-status-bad .ico{color:var(--danger)}

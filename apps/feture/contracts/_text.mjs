@@ -125,7 +125,8 @@ export const FIELD = Object.freeze({
   chatMessage: textRule(2000, { min: 1 }),
   caption: textRule(2000),
   support: textRule(2000, { min: 5 }),
-  reportDetails: textRule(500),
+  reportDetails: textRule(500, { min: 10 }),   // owner 28.10.2026: required
+  disputeNote: textRule(500),                  // DISPUTE_LIMITS.explainMax (contracts/posts.mjs)
   appeal: textRule(1000, { min: 10 }),
   staffNote: textRule(500),
   staffReason: textRule(300, { min: 3 }),

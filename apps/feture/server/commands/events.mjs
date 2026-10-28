@@ -119,6 +119,13 @@ function checkApplication(e, c) {
   if (c.answers.length !== e.questions.length) fail(400, 'invalid_input', { fields: ['answers'] });
 }
 
+/** A declined application is the organizer's answer: no new one (the organizer may still approve it after all, and a
+ * second open row next to it would break that). A withdrawn one may be sent again. @param {Q} q @param {string} eventId @param {string} profileId */
+async function notDeclined(q, eventId, profileId) {
+  const [x] = await q.query(`select state from feture.event_application where event_id = $1 and profile_id = $2 order by created_at desc limit 1`, [eventId, profileId]);
+  if (x?.state === 'declined') fail(422, 'rule_violation', { rule: 'application_declined' });
+}
+
 /** Cancels the profile's pending partner approvals of one kind for a target (a replaced or withdrawn answer).
  * @param {Q} q @param {string} profileId @param {string} kind @param {string} targetId */
 async function dropPending(q, profileId, kind, targetId) {
@@ -264,6 +271,7 @@ registerApprovalKind('event.apply', {
   apply: async (q, row) => {
     const e = await openFor(q, String(row.target_id), row.profile_id, row.requested_by);
     checkApplication(e, row.change);
+    await notDeclined(q, e.id, row.profile_id);
     await writeApplication(q, e, row.profile_id, row.requested_by, row.change);
   },
   preview: approvalEventCard,
@@ -366,7 +374,7 @@ const run = {
     const [mine] = await q.query(
       `select (select json_build_object('status', r.status, 'showInList', r.show_in_list, 'ticketMarked', r.ticket_marked) from feture.event_rsvp r where r.event_id = $1 and r.profile_id = $2) rsvp,
               (select json_build_object('id', x.id, 'state', x.state, 'rev', x.rev) from feture.event_application x where x.event_id = $1 and x.profile_id = $2 order by x.created_at desc limit 1) application,
-              (select json_build_object('kind', p.kind, 'change', p.change) from feture.partner_approval p where p.profile_id = $2 and p.target_id = $1 and p.state = 'pending' and p.kind in ('event.rsvp', 'event.apply') limit 1) waiting`,
+              (select json_build_object('id', p.id, 'kind', p.kind, 'change', p.change) from feture.partner_approval p where p.profile_id = $2 and p.target_id = $1 and p.state = 'pending' and p.kind in ('event.rsvp', 'event.apply') limit 1) waiting`,
       [e.id, viewer.profileId]);
     const counts = await crowd(q, e, viewer.profileId);
     const org = await withFaces(q, cfg.media, viewer, await q.query(`select p.id, p.kind, p.handle, p.name from feture.profile p where p.id = $1`, [e.organizer_profile_id]), r => r);
@@ -461,6 +469,34 @@ const run = {
     };
   },
 
+  async 'event.soon'(q, { acting: a }) {
+    const viewer = need(a);
+    // Why each event concerns the viewer, strongest first; an event with no reason is not offered. Interests are the
+    // viewer's levels only — «обсудить» and hard limits never pull an event in.
+    const rows = await q.query(
+      `select * from (
+         select e.id, e.title, e.kind, e.format, e.place_id, e.area, e.tz, e.starts_at, e.ends_at, e.price, e.requires_application, e.plate, e.state, e.community_id,
+           case when exists (select 1 from feture.event_rsvp r where r.event_id = e.id and r.profile_id = $1 and r.status in ('interested', 'going'))
+                  or exists (select 1 from feture.event_application x where x.event_id = e.id and x.profile_id = $1 and x.state in ('pending', 'approved')) then 'mine'
+                when exists (select 1 from feture.follow f where f.follower_profile_id = $1 and f.target_profile_id = e.organizer_profile_id) then 'follow'
+                when exists (select 1 from feture.community_member m where m.community_id = e.community_id and m.profile_id = $1 and m.state = 'active') then 'community'
+                when exists (select 1 from feture.community c where c.id = e.community_id
+                               and c.topics && array(select i.topic_id from feture.interest i where i.profile_id = $1 and i.value is not null)) then 'interests'
+                when e.format = 'online' then 'online'
+                when e.place_id = (select d.city_id from feture.profile_details d where d.profile_id = $1) then 'city'
+           end why
+         from feture.event e
+         where e.state = 'published' and e.ends_at > now() and e.starts_at < now() + interval '14 days'
+           and e.organizer_profile_id <> $1 and feture.event_visible(e, $1, $2)
+           and not exists (select 1 from feture.feed_hide h where h.profile_id = $1 and h.kind = 'event' and h.target_id = e.id)
+           and not exists (select 1 from feture.event_rsvp r where r.event_id = e.id and r.profile_id = $1 and r.status = 'not_going')
+       ) x where why is not null
+       order by case why when 'mine' then 0 when 'follow' then 1 when 'community' then 2 when 'interests' then 3 else 4 end, starts_at, id
+       limit 3`,
+      [viewer.profileId, viewer.accountId]);
+    return { items: rows.map(r => ({ ...r, starts_at: iso(r.starts_at), ends_at: iso(r.ends_at) })) };
+  },
+
   async 'event.rsvp'(q, { acting: a, input }) {
     const acting = need(a);
     if (input.status === 'going' || input.status === 'interested') await requireUnrestricted(q, acting);
@@ -488,6 +524,7 @@ const run = {
     const e = await openFor(q, input.eventId, acting.profileId, acting.accountId);
     const c = { answers: input.answers, note: input.note };
     checkApplication(e, c);
+    await notDeclined(q, e.id, acting.profileId);
     if (needsPartner(acting, 'event.apply')) {
       return { pending: await requestApproval(q, acting, { kind: 'event.apply', targetType: 'event', targetId: e.id, change: c, summary: [e.title] }) };
     }

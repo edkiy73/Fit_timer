@@ -12,6 +12,8 @@ export const ru = {
   'fe.kit.fmt.linkHint': 'Перед переходом спросим, точно ли открыть сайт.',
   'fe.kit.fmt.badUrl': 'Проверь адрес: он начинается с https:// и содержит домен, например example.com',
   'fe.kit.fmt.insert': 'Вставить',
+  'fe.kit.act.poll': 'Опрос',
+  'fe.kit.act.interests': 'Интересы',
 } as const;
 
 export const en = {
@@ -27,4 +29,6 @@ export const en = {
   'fe.kit.fmt.linkHint': 'People are asked before a site opens.',
   'fe.kit.fmt.badUrl': 'Check the address: it starts with https:// and has a domain, like example.com',
   'fe.kit.fmt.insert': 'Insert',
+  'fe.kit.act.poll': 'Poll',
+  'fe.kit.act.interests': 'Interests',
 } as const;

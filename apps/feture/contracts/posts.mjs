@@ -4,6 +4,24 @@ import * as z from 'zod';
 import { id, opId } from './platform.mjs';
 import { field } from './_text.mjs';
 
+/** «Это я на фото — против» (tag.object) guard, owner decision 28.10.2026: every limit and threshold in one place
+ * (server/commands/posts.mjs `tag.object`, server/commands/moderation.mjs `staff.disputeDecide`). */
+export const DISPUTE_LIMITS = Object.freeze({
+  callsPerDay: 30,             // any tag.object call (contract rate), a ceiling over both kinds below
+  taggedPerDay: 20,            // objections by a person marked on the photo
+  untaggedPerDay: 3,           // claims by someone not marked, per account (a couple's partners each have their own)
+  untaggedPerMonth: 10,
+  monthWindow: '30 days',
+  trustedAccountAge: '7 days', // trusted: photo verified + account at least this old + strikes ≤ trustMaxStrikes
+  trustMaxStrikes: 1,          // owner 28.10: the first confirmed false claim is a warning; the second takes instant hide away
+  strikesNoInstant: 2,         // from here a claim never hides at once (the same line as trustMaxStrikes = 1)
+  strikesRestricted: 3,        // from here untagged claims are refused and staff review the account
+  attackClaims: 3,             // this many suspicious untagged claims against one author…
+  attackWindow: '24 hours',    // …within this window suspend instant hiding of that author's posts
+  attackYoungAge: '30 days',   // a claim is suspicious when the account is younger than this or not trusted
+  explainMax: 500,             // the author's explanation for staff
+});
+
 const code = z.string().regex(/^[a-z][a-z0-9_-]{0,31}$/);
 const unique = (/** @type {z.ZodArray<any>} */ arr) => arr.refine(v => new Set(v).size === v.length, { message: 'duplicates' });
 
@@ -90,7 +108,12 @@ export const postsCommands = {
   'reply.delete': { profile: true, write: true, input: z.strictObject({ opId, replyId: id }) },
   'post.replies': { profile: true, write: false, input: z.strictObject({ postId: id }) },
   'tag.answer': { profile: true, write: true, input: z.strictObject({ opId, postId: id, answer: z.enum(['ok', 'no', 'remove']) }) },
-  'tag.object': { profile: true, write: true, rate: { kind: 'tag.object', max: 20, window: '1 day' }, input: z.strictObject({ opId, postId: id }) },
+  'tag.object': { profile: true, write: true, rate: { kind: 'tag.object', max: DISPUTE_LIMITS.callsPerDay, window: '1 day' }, input: z.strictObject({ opId, postId: id }) },
+  // The author's short explanation for staff while their post is hidden by a dispute.
+  'post.disputeExplain': {
+    profile: true, write: true, rate: { kind: 'post.dispute_explain', max: 20, window: '1 day' },
+    input: z.strictObject({ opId, postId: id, note: field('disputeNote') }),
+  },
   'report.create': {
     profile: true, write: true, rate: { kind: 'report.create', max: 10, window: '1 day' },
     input: z.strictObject({
@@ -100,7 +123,8 @@ export const postsCommands = {
       targetId: id,
       messageIds: z.array(id).min(1).max(20).transform(v => [...new Set(v)]).optional(),
       reason: z.enum(['threat', 'private', 'minor', 'spam', 'other']),
-      details: field('reportDetails').default(''),
+      // Owner 28.10.2026: details are required — at least 10 characters after trimming (the sheet checks the same).
+      details: field('reportDetails'),
       alsoBlock: z.boolean().default(false),
     }).refine(v => (v.targetType === 'conversation') === !!v.messageIds, { message: 'messages_for_chats_only', path: ['messageIds'] }),
   },

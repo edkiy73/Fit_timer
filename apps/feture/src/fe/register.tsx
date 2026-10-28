@@ -13,6 +13,7 @@ import {useToast} from './toast';
 import {AuthBar,AuthFrame,AuthLogo} from './start';
 import {TermsSheet,loadDocuments} from './terms-sheet';
 import {pendingPairLink} from './pair-link';
+import {DiscoverPhotoAsk} from './discover-photo';
 
 /** V21 A04 (nickname, date of birth, consent) → A04X (under 18) → A05 «Расскажи о себе» (Discover on by default —
  * owner decision 27.10.2026; who sees the answers: «Все» by default — owner decision 27.10.2026). Each screen has the
@@ -24,11 +25,12 @@ export const nickAnswer=z.object({ok:z.literal(true),available:z.boolean(),reaso
 const option=z.object({kind:z.string(),code:z.string(),ru:z.string(),en:z.string()});
 const catalog=z.object({ok:z.literal(true),options:z.array(option)});
 const onboarded=z.object({ok:z.literal(true),discoverVisible:z.boolean(),photoNeeded:z.boolean()});
+const photoIds=z.object({ok:z.literal(true),profile:z.object({photos:z.array(z.object({id:z.string()}).passthrough())}).passthrough()});
 
 type Form={nick:string,dd:string,mm:string,yy:string,terms:boolean,news:boolean,u18retry:boolean};
 type Step={id:'A04'}|{id:'A04X'}|{id:'A05',profileId:string,about?:About}|{id:'A05B',profileId:string,about:About};
 /** The answers of «Расскажи о себе»; they are saved together with step 2 («Готово»), so «‹» from step 2 keeps them. */
-type About={pick:Record<Kind,string[]>,vis:'only'|'granted'|'all',discover:'visible'|'off',photo:'now'|'later',partner:''|'yes'|'no'};
+type About={pick:Record<Kind,string[]>,vis:'only'|'granted'|'all',discover:'visible'|'off',partner:''|'yes'|'no'};
 
 export function Register(){
  const {state}=useFe();
@@ -42,7 +44,7 @@ export function Register(){
  return <AuthFrame screen={step.id}>
   {step.id==='A04X'?<Under18 onBack={()=>setStep({id:'A04'})} onFix={()=>{setForm(f=>({...f,dd:'',mm:'',yy:'',u18retry:true}));setStep({id:'A04'});}} onHome={leave}/>
    :step.id==='A05B'?<FirstSteps profileId={step.profileId} about={step.about} onBack={()=>setStep({id:'A05',profileId:step.profileId,about:step.about})}/>
-   :step.id==='A05'?<AboutYou initial={step.about} onNext={about=>setStep({id:'A05B',profileId:step.profileId,about})}/>
+   :step.id==='A05'?<AboutYou profileId={step.profileId} initial={step.about} onNext={about=>setStep({id:'A05B',profileId:step.profileId,about})}/>
    :<Account form={form} setForm={setForm} onBack={leave} onCreated={profileId=>setStep({id:'A05',profileId})} onUnder18={()=>setStep({id:'A04X'})}/>}
  </AuthFrame>;
 }
@@ -168,13 +170,19 @@ const BASE:Partial<Record<Kind,number>>={gender:8,orient:8,format:6,role:5};
 const SHOWN=5;
 type Opt=z.infer<typeof option>;
 
-function AboutYou({onNext,initial}:{initial?:About|undefined,onNext:(a:About)=>void}){
+function AboutYou({profileId,onNext,initial}:{profileId:string,initial?:About|undefined,onNext:(a:About)=>void}){
  const {call}=useFe();const {t,locale}=useI18n();const toast=useToast();
  const [options,setOptions]=useState<Opt[]|null>(null);const [loadFailed,setLoadFailed]=useState(false);
  const [picked,setPicked]=useState<Record<Kind,string[]>>(initial?.pick??{gender:[],orient:[],role:[],status:[],format:[],seek:[]});
  const [vis,setVis]=useState<'only'|'granted'|'all'>(initial?.vis??'all');
- const [discover,setDiscover]=useState<'visible'|'off'>(initial?.discover??'visible');
- const [photo,setPhoto]=useState<'now'|'later'>(initial?.photo??'now');
+ // Owner 28.10.2026: off by default; «Показываться» asks for a photo first and turns on once one is added (it is reviewed).
+ const [discover,setDiscover]=useState<'visible'|'off'>(initial?.discover??'off');
+ const [photos,setPhotos]=useState<string[]|null>(null);const [askPhoto,setAskPhoto]=useState(false);
+ const pickDiscover=async(v:'visible'|'off')=>{
+  if(v==='off'){setDiscover('off');return;}
+  const have=photos??await call('profile.get',{profileId},photoIds,{profileId}).then(r=>r.profile.photos.map(x=>x.id)).catch(()=>[] as string[]);
+  setPhotos(have);if(have.length)setDiscover('visible');else setAskPhoto(true);
+ };
  const [partner,setPartner]=useState<''|'yes'|'no'>(initial?.partner??'');
  const [picker,setPicker]=useState<Kind|null>(null);
  const load=()=>{setLoadFailed(false);setOptions(null);call('catalog.get',{},catalog,{asAccount:true}).then(r=>setOptions(r.options)).catch(()=>setLoadFailed(true));};
@@ -192,7 +200,7 @@ function AboutYou({onNext,initial}:{initial?:About|undefined,onNext:(a:About)=>v
  // The chips once on screen stay there: choosing in «Все · N» adds a chip, never moves the others.
  const shown=useRef<Record<string,Set<string>>>({});
  // V21 A05: «Дальше» / «Позже» go to step 2 (interests and communities); everything is saved there by «Готово».
- const finish=(skip:boolean)=>onNext({pick:skip?{gender:[],orient:[],role:[],status:[],format:[],seek:[]}:picked,vis,discover,photo,partner});
+ const finish=(skip:boolean)=>onNext({pick:skip?{gender:[],orient:[],role:[],status:[],format:[],seek:[]}:picked,vis,discover,partner});
  const radio=<T extends string>(items:[T,string][],sel:T|'',pick:(v:T)=>void,aria:string)=><ChoiceChips label={aria} value={sel||null} options={items} onChange={pick}/>;
  const group=(kind:Kind)=>{
   const list=listOf(kind);if(!list.length)return null;
@@ -216,9 +224,8 @@ function AboutYou({onNext,initial}:{initial?:About|undefined,onNext:(a:About)=>v
    <Steps at={2}/>
    <H level={2} className="t">{t('fe.reg.about.title')}</H>
    <section className="fin"><div className="fin-t"><b>{t('fe.reg.discover.title')}</b></div>
-    {radio([['visible',t('fe.onb.discover.on')],['off',t('fe.onb.discover.off')]],discover,setDiscover,t('fe.reg.discover.title'))}
+    {radio([['visible',t('fe.onb.discover.on')],['off',t('fe.onb.discover.off')]],discover,v=>void pickDiscover(v),t('fe.reg.discover.title'))}
     <p className="fhint mt8">{discover==='visible'?t('fe.onb.discover.noteOn'):t('fe.onb.discover.noteOff')}</p>
-    {discover==='visible'&&<div className="mt12">{radio([['now',t('fe.onb.photo.now')],['later',t('fe.onb.photo.later')]],photo,setPhoto,t('fe.onb.photo.aria'))}</div>}
    </section>
    <section className="fin"><div className="fin-t"><b>{t('fe.onb.partner.title')}</b></div>
     {radio([['yes',t('fe.onb.partner.yes')],['no',t('fe.onb.partner.no')]],partner,v=>setPartner(p=>p===v?'':v),t('fe.onb.partner.title'))}
@@ -235,6 +242,8 @@ function AboutYou({onNext,initial}:{initial?:About|undefined,onNext:(a:About)=>v
    <Btn onClick={()=>finish(false)}>{t('fe.onb.next')}</Btn>
    <Btn className="secondary" kind="soft" onClick={()=>finish(true)}>{t('fe.onb.later')}</Btn>
   </div></div>
+  {askPhoto&&<DiscoverPhotoAsk existing={photos??[]} profileId={profileId} onCancel={()=>setAskPhoto(false)}
+   onAdded={()=>{setAskPhoto(false);setPhotos(p=>[...(p??[]),'added']);setDiscover('visible');toast(t('fe.onb.discover.photoAdded'),{type:'ok'});}}/>}
   {picker&&<Picker title={t('fe.onb.kind.'+picker)} items={listOf(picker)} base={BASE[picker]??8} label={label} sel={picked[picker]} max={LIMIT[picker]>1&&LIMIT[picker]<9?LIMIT[picker]:0}
    onToggle={c=>toggle(picker,c)} onClear={()=>setPicked(p=>({...p,[picker]:[]}))} onClose={()=>setPicker(null)}/>}
  </>;
@@ -287,14 +296,14 @@ function FirstSteps({profileId,about,onBack}:{profileId:string,about:About,onBac
  const done=async()=>{
   setBusy(true);setFailure('');const p=about.pick;
   try{
-   const r=await call('onboarding.complete',{opId:opId.current,detailsVis:about.vis,genders:p.gender,orients:p.orient,roles:p.role,formats:p.format,seeks:p.seek,status:p.status[0]??null,discover:about.discover},onboarded,{profileId});
+   await call('onboarding.complete',{opId:opId.current,detailsVis:about.vis,genders:p.gender,orients:p.orient,roles:p.role,formats:p.format,seeks:p.seek,status:p.status[0]??null,discover:about.discover},onboarded,{profileId});
    let failed=0;
    for(const [communityId,j] of Object.entries(joins)){
     try{await call('community.join',{opId:newOpId(),communityId,rulesAccepted:true,answer:j.answer},z.object({ok:z.literal(true)}).passthrough(),{profileId});}catch{failed++;}
    }
    const names=tp.map(tname);
-   // V21 AUTH-019: «Да, вместе» — the pair invitation; «Добавлю фото сейчас» — the profile photos; otherwise the feed.
-   const to=pendingPairLink()?'/n/me/pair?auto=1':about.partner==='yes'?'/n/me/pair':about.discover==='visible'&&about.photo==='now'&&r.photoNeeded?'/n/me':'/n/feed';
+   // V21 AUTH-019: «Да, вместе» — the pair invitation; otherwise the feed (the photo for Discover was asked on step 1).
+   const to=pendingPairLink()?'/n/me/pair?auto=1':about.partner==='yes'?'/n/me/pair':'/n/feed';
    // The app frame (and its toasts) appears after reload(): the feed shows the message and keeps the filter.
    const hello=failed?t('fe.onb2.joinFailed'):names.length&&to==='/n/feed'?t('fe.onb2.doneTopics',{list:names.join(', ')}):t('fe.onb2.done');
    navigate(to,{replace:true,state:{welcome:true,hello,warn:failed>0,...(to==='/n/feed'?{topics:tp}:{})}});

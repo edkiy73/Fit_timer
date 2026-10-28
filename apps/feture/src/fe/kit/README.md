@@ -30,6 +30,7 @@ A new component or variant ships with its story in the same PR.
 | Tabs | `Seg` — the only tab control: counts, dots, scrolls at 5+ |
 | Lists | `Row` (icon/avatar, title, sub, value, badge, chevron), `ToggleRow`, `SelectRow` |
 | Choice pills | `Chip`, `Chips` |
+| One from a list as rows | `RadioList` (rows carry their own frame: never put it in a `Card`; a line under a row's title explains it) |
 | Several from a list as rows | `CheckList` (a box per row, a line under the title: «не запрошено», «уже открыто») |
 | Text fields | `Field` (label + error) around `Input`, `TextArea`, `SearchInput`, `Select`; files via `FilePick` |
 | Checking typed text | `useChecks` / `textError` / `shakeFirstErr` (`kit/validate.tsx`, story «Поле ввода → С проверкой»): the server's own rules from `contracts/_text.mjs` (`FIELD.<name>`) — error under the field on blur and submit, `Counter` from 80% of the limit, the first wrong field shakes, `fromServer(e)` puts an `invalid_input` refusal (`fields` + `reasons`) on its field. Never a length or character check of a screen's own |
@@ -57,17 +58,17 @@ Product pieces that repeat or carry their own look. Screens use these, never the
 |---|---|
 | Header over a cover / of a chat | `CoverBar` (glass buttons, title shows on scroll), `PersonBar` (‹, avatar + name + line, opens the profile) |
 | Event | `EventTile` (`eventCard()`: card / `row` / still preview), `EventHero` (cover, glass labels, title, status), `Rsvp` («Интересно / Иду / Не иду»), `Announcement` |
-| Community | `CommunityHead` (cover, picture, name, meta; loading shape), `Discussion` (row with pinned mark and host ⋯), `Veil` (closed content under glass) |
+| Community | `CommunityHead` (cover, picture, name, meta; loading shape), `Discussion` (row with pinned mark and host ⋯), `Veil` (closed content under glass), `StatusCard` (my join request / event application as one block: icon, state, line, «Отозвать» at the end; tones wait / ok / bad) |
 | Create | `Swatches` (cover colour plates) |
 | Interests | `AnswerScale` (1–10 with «обсудить» / «граница» marks) |
 | People | `PersonName` (name on a photo card), `PersonLine` + `RequestCard` + `Answer` (requests and applications), `LikeTile`, `Radar`, `Soon` («Скоро»: a feature not open yet — art, label, title, points, buttons), `Typing` («печатает…» under chat messages) |
 | Gallery | `AlbumRow` + `AlbumCard` (cover / mosaic / icon, open, followers lock), `AlbumMeta`, `GalleryGrid` + `GalleryTile` (count, followers, review; selection `selected`, cover `picked`) + `GalleryAdd`, `SelectionBar` (pinned count + actions) |
 | Photos and checks | `PhotoSlots` / `PhotoSlot` / `PhotoAdd` (profile photo grid, drag to reorder, `loading`), `PhotoTrack` (viewer strip; `wm` puts the viewer's handle on someone else's private photos), `Watermark`, `Pose` (the gesture to show; the shot itself is `CaptureFrame`) |
 | Private layer | `VaultHead` (lock, title, switch), `Quota` (requests left today as segments) |
-| Couple | `ActorCards` + `ActorCard` («Действовать как»: pick the profile, open it, a dot when something waits), `ReviewMeta` (who proposed, version), `ReviewPost` (what a joint change publishes), `ReturnNote` (the partner's «на доработку» comment) |
+| Couple | `ActingAv` (who you act as on every place you write from: the profile's picture, the couple's two initials on its plate; there is no «от кого» picker), `ActorCards` + `ActorCard` («Действовать как»: pick the profile, open it, a dot when something waits), `ReviewMeta` (who proposed, version), `ReviewPost` (what a joint change publishes), `ReturnNote` (the partner's «на доработку» comment) |
 | Staff review | `ReviewCard`, `KeyValues`, `ReviewMedia`, `ReviewPair` |
 | Account (`kit/account.tsx`, «Домен/Аккаунт») | `PremiumHero` (crown plate; `onClose` for the paywall sheet), `PremiumFeats` (what Premium gives, `current` marked), `PlanCards` (plans / gift terms, one chosen, corner badge), `Maintenance` (the whole «Технические работы» screen), `Thread` (a support conversation: mine right, support left) |
-| Feed (`kit/feed.tsx`, «Домен/Лента») | `RichArea` (text + formatting bar: bold, italic, list, quote, link with an address check; Markdown out), `LikesLine` («Нравится: …»), `ActivityCard` + `ActivityItem` («Подписки» activity, folds), `QuickStart` (create sheet tiles), `ActionLine` (quiet line + one action) |
+| Feed (`kit/feed.tsx`, «Домен/Лента») | `RichArea` (text + formatting bar: bold, italic, list, quote, link with an address check; Markdown out), `LikesLine` («Нравится: …»), `ActivityCard` + `ActivityItem` + `ActivityTile` («Подписки» activity: likes / follows as a sideways strip of thumbnails with «+N», events / communities as rows with «Ещё N», open list with «Свернуть»; `total` names what the server did not send; thumbnails show photo / video / poll / interests / text / face), `QuickStart` (create sheet tiles), `ActionLine` (quiet line + one action), `FeedEvents` («Скоро»: compact event tiles, each with «Скрыть») |
 
 Loading is a soft blink in place (`Skel`, `busy`), never a spinner. Icons come only from `lucide-react`.
 

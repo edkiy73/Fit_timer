@@ -3,6 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { checkText, FIELD, lineRule, textRule, textLength } from '../contracts/_text.mjs';
+import { DISPUTE_LIMITS } from '../contracts/posts.mjs';
 import { platform } from '../server/commands/platform.mjs';
 import { me } from '../server/commands/me.mjs';
 import { posts } from '../server/commands/posts.mjs';
@@ -15,6 +16,7 @@ const U = (/** @type {number[]} */ ...c) => String.fromCodePoint(...c);
 const err = (/** @type {string} */ v, /** @type {any} */ rule) => checkText(v, rule).error;
 
 test('rules: characters, lines, lengths, runs without spaces', () => {
+  assert.equal(FIELD.disputeNote.max, DISPUTE_LIMITS.explainMax, 'one limit for the dispute note');
   const name = FIELD.profileName, bio = FIELD.bio;
   // Normalised: NFC, trimmed, spaces collapsed in a line, at most one empty line in text.
   assert.equal(checkText('  Анна   Ли ', name).value, 'Анна Ли');

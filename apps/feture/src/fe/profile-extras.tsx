@@ -6,9 +6,9 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicBase} from '../api-url';
 import {Ban,Check,ChevronDown,Crown,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,Flag,Heart,History,Info,Link as LinkIcon,Lock,LockOpen,MapPin,MessageCircle,ShieldCheck,Undo2,Users,X} from 'lucide-react';
-import {Alert,Av,Bar,Btn,Card,Empty,Group,H,IconBtn,Layer,Note,PersonName,PhotoTrack,Pill,RadioList,Row,Seg,Skel,TextArea,ToggleRow,Veil,View,plate} from './kit';
+import {Alert,Av,Bar,Btn,Card,Empty,Group,H,IconBtn,Layer,Note,PersonName,PhotoTrack,Pill,Row,Seg,Skel,ToggleRow,Veil,View,plate} from './kit';
 import {useFe} from './session';
-import {softMax,textError} from './kit/validate';
+import {ReportSheet} from './report';
 import {PhotoBadge} from './photo-check';
 import {faceFields,NameBadges} from './faces';
 import {PostCard,postSchema,type Post} from './feed';
@@ -16,6 +16,7 @@ import type {Removal} from './post-menu';
 import {useToast as useAppToast} from './toast';
 import {PrivateVault} from './private';
 import {GiftSheet,openPaywall} from './premium';
+import {CompareSheet,asInterest} from './compare';
 
 /** Profile extras with the V21 prototype's markup: «Что у вас общего» (P05), the person menu (report / block / hide
  * from feed, S02), confirmed links and «Предложить связь» (F2, P21/P22), «Просмотренные» (D09) and «Как видят» (P03).
@@ -290,12 +291,17 @@ function GalleryGroup({p,onOpen,inert}:{p:PersonProfile,onOpen:(i:number)=>void,
 }
 
 /** Interests group of another profile (pubJars → jarShelf, six then «Ещё N»). */
-function InterestsGroup({profileId,inert}:{profileId:string,inert?:boolean|undefined}){
- const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const topic=useTopics();const [items,setItems]=useState<Jar[]>([]);
+function InterestsGroup({profileId,name,inert}:{profileId:string,name:string,inert?:boolean|undefined}){
+ const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const topic=useTopics();const [items,setItems]=useState<Jar[]>([]);
+ const [open,setOpen]=useState<string|null>(null);
  useEffect(()=>{setItems([]);call('interests.list',{profileId},jarsRes).then(r=>setItems(r.items)).catch(()=>{});},[call,profileId]);
  if(!items.length)return null;
+ // Someone else's interest opens the comparison (V21 openTopic); the acting profile's own opens the topic.
+ const own=profileId===acting?.id;
+ const theirs=(id:string)=>{const j=items.find(x=>x.topicId===id);return j?asInterest(j):undefined;};
  return <Group title={t('fe.px.int.title')}>
-  <Card><Jars items={items} topic={topic} max={6} {...(inert?{}:{onTopic:(id:string)=>navigate('/n/topics/'+id)})}/></Card></Group>;
+  <Card><Jars items={items} topic={topic} max={6} {...(inert?{}:{onTopic:(id:string)=>own?navigate('/n/topics/'+id):setOpen(id)})}/></Card>
+  {open&&<CompareSheet key={open} topicId={open} name={name} theirs={theirs(open)} onClose={()=>setOpen(null)}/>}</Group>;
 }
 
 /** Everything under the photo and the buttons — the same body on the profile page and under a Discover card. */
@@ -303,7 +309,7 @@ export function ProfileBody({p,inert,preview,onOpen}:{p:PersonProfile,inert?:boo
  return <>
   <DetailsGroup p={p}/>
   <LinksSection profileId={p.id} inert={inert}/>
-  <InterestsGroup profileId={p.id} inert={inert}/>
+  <InterestsGroup profileId={p.id} name={personName(p)||'?'} inert={inert}/>
   <GalleryGroup p={p} onOpen={onOpen} inert={inert}/>
   <PrivateVault profileId={p.id} name={personName(p)} {...(preview?{preview}:{})}/>
   <Activity profileId={p.id} inert={inert}/>
@@ -344,7 +350,19 @@ const GROUPS=['complement','match','try','discuss','bound'] as const;
 type Group=typeof GROUPS[number];
 const CLS:Record<Group,string>={complement:'k-comp',match:'k-match',try:'k-try',discuss:'k-disc',bound:'k-bound'};
 const compatItem=z.object({topicId:z.string(),group:z.enum(GROUPS),mine:side,theirs:side});
-type CompatItem=z.infer<typeof compatItem>;
+export type CompatItem=z.infer<typeof compatItem>;
+type Side=z.infer<typeof side>;
+/** The group of one topic both answered — the same rule as the server's «Что у вас общего» (people.mjs `group`):
+ * a hard limit on either side is a boundary, never a fit; «обсудить» or a gap of 4+ is to discuss; give↔receive fits;
+ * both 6+ match; otherwise to try. */
+export function compatGroup(mine:Side,theirs:Side):CompatItem['group']{
+ if(mine.mark==='hard'||theirs.mark==='hard')return 'bound';
+ if(mine.mark==='discuss'||theirs.mark==='discuss')return 'discuss';
+ const md=mine.dir??[],td=theirs.dir??[];
+ if((md.includes('give')&&td.includes('get'))||(md.includes('get')&&td.includes('give')))return 'complement';
+ if(mine.value==null||theirs.value==null||Math.abs(mine.value-theirs.value)>=4)return 'discuss';
+ return mine.value>=6&&theirs.value>=6?'match':'try';
+}
 const compatRes=z.discriminatedUnion('few',[
  z.object({ok:z.literal(true),few:z.literal(true),topics:z.array(z.string())}),
  z.object({ok:z.literal(true),few:z.literal(false),count:z.number(),items:z.array(compatItem)}),
@@ -396,7 +414,7 @@ function explain(i:CompatItem,t:T,name:string){
 }
 
 /** cmpRow: my fill with the topic inside, both values at the ends; a limit is a word, never a number. */
-function CmpRow({i,topic,me,them,t}:{i:CompatItem,topic:string,me:{name:string,id:string,src?:string|null},them:{name:string,id:string,src?:string|null},t:T}){
+export function CmpRow({i,topic,me,them,t}:{i:CompatItem,topic:string,me:{name:string,id:string,src?:string|null},them:{name:string,id:string,src?:string|null},t:T}){
  const lim=i.group==='bound'||!!i.mine.mark;const lv=lim?0:(i.mine.value??0);
  const val=(s:z.infer<typeof side>)=>s.mark==='hard'?<small className="lim t">{t('fe.px.cmp.taboo')}</small>:s.mark==='discuss'?<small className="lim s">{t('fe.px.cmp.negot')}</small>:<b>{s.value??'—'}</b>;
  const why=explain(i,t,them.name);const ra=roleWord(i.mine,t),rb=roleWord(i.theirs,t);
@@ -488,25 +506,10 @@ export function LinksSection({profileId,inert}:{profileId:string,inert?:boolean|
 
 /* ---------- the person menu (S02) ---------- */
 const feedHiddenRes=z.object({ok:z.literal(true),items:z.array(z.object({kind:z.string(),target_id:z.string()}).passthrough())}).passthrough();
-const REASONS=['threat','private','minor','spam','other'] as const;
 
 function Report({profileId,onClose,onDone}:{profileId:string,onClose:()=>void,onDone:(msg:string,blocked:boolean)=>void}){
- const {call}=useFe();const {t}=useI18n();
- const [why,setWhy]=useState<typeof REASONS[number]|null>(null);const [details,setDetails]=useState('');const [alsoBlock,setAlso]=useState(true);
- const [busy,setBusy]=useState(false);const [err,setErr]=useState('');const op=useRef(newOpId());
- const send=async()=>{
-  if(!why){setErr(t('fe.px.rp.choose'));return;}
-  const bad=textError(t,'reportDetails',details);if(bad){setErr(bad);return;}
-  setBusy(true);setErr('');
-  try{await call('report.create',{opId:op.current,targetType:'profile',targetId:profileId,reason:why,details:details.trim().slice(0,500),alsoBlock},ok);onDone(t('fe.px.rp.sent'),alsoBlock);}
-  catch(e){setErr(pxError(e,t));op.current=newOpId();}finally{setBusy(false);}
- };
- return <Sheet title={t('fe.px.rp.title')} onClose={onClose} foot={<Btn kind="danger" onClick={send} disabled={busy}>{t('fe.px.rp.send')}</Btn>}>
-  <RadioList bare label={t('fe.px.rp.reason')} value={why} onChange={k=>{setWhy(k);setErr('');}} options={REASONS.map(k=>[k,t('fe.px.rp.'+k)] as const)}/>
-  <label className="field mt16"><span>{t('fe.px.rp.details')}<i>{t('fe.px.rp.optional')}</i></span><TextArea rows={3} maxLength={softMax('reportDetails')} invalid={!!textError(t,'reportDetails',details)} value={details} onChange={e=>setDetails(e.target.value)}/></label>
-  <Card list><ToggleRow title={t('fe.px.rp.alsoBlock')} sub={t('fe.px.rp.alsoBlockSub')} on={alsoBlock} onClick={()=>setAlso(v=>!v)}/></Card>
-  {err&&<Alert kind="err" noIcon className="mt12">{err}</Alert>}
- </Sheet>;
+ const {t}=useI18n();
+ return <ReportSheet targetType="profile" targetId={profileId} block onClose={onClose} onDone={b=>onDone(t('fe.px.rp.sent'),b)}/>;
 }
 
 function Block({profileId,name,onClose,onDone}:{profileId:string,name:string,onClose:()=>void,onDone:(msg:string)=>void}){

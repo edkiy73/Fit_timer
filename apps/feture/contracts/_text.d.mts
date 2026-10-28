@@ -18,7 +18,7 @@ export type FieldName =
   | 'eventTitle' | 'eventDescription' | 'eventArea' | 'eventAddress' | 'eventQuestion' | 'eventRequirements' | 'eventAnswer'
   | 'applyNote' | 'announcement' | 'reason' | 'returnNote'
   | 'postTitle' | 'postBody' | 'pollQuestion' | 'pollOption' | 'reply'
-  | 'chatMessage' | 'caption' | 'support' | 'reportDetails' | 'appeal' | 'staffNote' | 'staffReason' | 'maintenance'
+  | 'chatMessage' | 'caption' | 'support' | 'reportDetails' | 'disputeNote' | 'appeal' | 'staffNote' | 'staffReason' | 'maintenance'
   | 'albumTitle' | 'dsaExplanation' | 'dsaName';
 export declare const FIELD: Readonly<Record<FieldName, TextRule>>;
 export declare function field(name: FieldName): z.ZodType<string, string>;

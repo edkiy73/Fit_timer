@@ -36,7 +36,10 @@ const appealItem=z.object({id:z.uuid(),target_type:z.string(),target_id:z.string
 const noticeItem=z.object({id:z.uuid(),target_url:opt(z.string()),reason:z.string(),explanation:opt(z.string()),created_at:ts,answerable:opt(z.boolean())});
 const placeItem=z.object({id:z.uuid(),country:opt(z.string()),name_ru:opt(z.string()),name_en:opt(z.string()),created_at:ts,used:opt(z.number())});
 const journalItem=z.object({id:z.union([z.string(),z.number()]),staff_account_id:z.string(),action:z.string(),target_type:opt(z.string()),target_id:opt(z.string()),detail:z.unknown().optional(),created_at:ts});
-const disputeItem=z.object({id:z.uuid(),disputed_at:ts,excerpt:opt(z.string()),media:opt(z.number())});
+const disputeClaim=z.object({tagged:z.boolean(),hid:z.boolean().optional(),at:ts,trust:z.string(),strikes:z.number()});
+const disputeItem=z.object({id:z.uuid(),disputed_at:ts,opened_at:ts,excerpt:opt(z.string()),media:opt(z.number()),hidden:z.boolean().optional(),urgent:z.boolean().optional(),
+ attack:z.boolean().optional(),tagged:z.boolean().optional(),note:opt(z.string()),claims:z.array(disputeClaim).optional().default([])});
+const flaggedRes=z.object({ok:z.literal(true),flagged:z.array(z.object({profileId:z.uuid(),handle:z.string().nullable(),strikes:z.number(),flaggedAt:ts})).optional().default([])}).passthrough();
 const revisionItem=z.object({id:z.uuid(),postId:z.uuid(),createdAt:ts,live:opt(z.string()),proposed:z.unknown().optional()});
 const grantRes=z.object({ok:z.literal(true),id:z.string(),until:z.string()});
 
@@ -133,6 +136,7 @@ function Queues(){
   {/* The queue switch on the one tab control: more than four queues scroll sideways, each with its count. */}
   <Seg value={tab} onChange={id=>{setTab(id);setNotice('');}} label={t('fe.staff.queuesLabel')} options={avail.map(id=>({id,label:id==='photo'?t('fe.pc.staff.tab'):t('fe.staff.q.'+id),n:count(id)}))}/>
   {(tab==='dispute'||tab==='report')&&<Alert kind="info" icon={ShieldCheck} className="mt12"><b>{t('fe.staff.howTitle')}</b>{t('fe.staff.howText')}</Alert>}
+  {tab==='dispute'&&<FlaggedClaimants/>}
   <div className="st-tools"><Btn kind="text" size="sm" auto icon={RefreshCw} onClick={()=>load(true)}>{t('fe.staff.refresh')}</Btn></div>
   {notice&&<Alert kind="ok" icon={Check} className="mb12">{notice}</Alert>}
   {!current?null:'error' in current?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(current.error,t)}><Btn kind="soft" onClick={()=>load(true)}>{t('fe.retry')}</Btn></Empty>
@@ -383,22 +387,53 @@ function PhotoCard({item,onDone}:{item:PhotoItem,onDone:()=>void}){
 
 // ——— «это я на фото» and post edits (V21 M01) ———
 
-/** The post's text opens the post; removing asks first; both sides are told the decision by the server. */
+/** «Это я на фото — против» (owner decision 28.10.2026): a claim that could not hide the post comes first as urgent;
+ * staff see whether each claimant is marked on the photo, their trust level and strikes (never who they are), a possible
+ * attack on the author and the author's explanation. «Подтвердилось» removes the post (asks first); «не подтвердилось»
+ * restores it at once and gives each unmarked claimant a strike. */
 function DisputeCard({item,onDone}:{item:DisputeItem,onDone:()=>void}){
  const {t}=useI18n();const when=useWhen();const navigate=useNavigate();const d=useDecide(onDone);
  const [note,setNote]=useState('');const [ask,setAsk]=useState(false);
  const decide=(restore:boolean)=>d.run('staff.disputeDecide',{postId:item.id,restore,note:note.trim()});
  return <Card className="rqcard mod-card">
   <div className="row"><span className="rq-av"><span className="av ini"><ShieldAlert/></span></span><div className="grow"><Text as="b" size="strong">{t('fe.staff.dispute.title')}</Text>
-   <Note>{when(item.disputed_at)}{item.media?' · '+t('fe.staff.dispute.media',{n:String(item.media)}):''}</Note></div>
+   <Note>{when(item.opened_at??item.disputed_at)}{item.media?' · '+t('fe.staff.dispute.media',{n:String(item.media)}):''}</Note></div>
    {!!item.media&&<span className="ico v" aria-hidden="true"><Image/></span>}</div>
+  <Chips className="st-block">
+   {item.urgent?<Pill tone="hot">{t('fe.staff.dispute.urgent')}</Pill>:<Pill tone="wait">{t('fe.staff.dispute.hidden')}</Pill>}
+   {item.attack&&<Pill tone="bad">{t('fe.staff.dispute.attack')}</Pill>}
+   <Pill>{t('fe.staff.dispute.claims',{n:String(item.claims.length)})}</Pill>
+  </Chips>
   {item.excerpt&&<button type="button" className="mod-x" onClick={()=>navigate('/n/feed/post/'+item.id)}>{item.excerpt.slice(0,160)}</button>}
+  <div className="st-block"><KeyValues rows={item.claims.map((c,i)=>[t('fe.staff.dispute.claim',{n:String(i+1)}),
+   [c.tagged?t('fe.staff.dispute.tagged'):t('fe.staff.dispute.untagged'),t('fe.staff.dispute.trust.'+c.trust),t('fe.staff.dispute.strikes',{n:String(c.strikes)})].join(' · ')])}/></div>
+  {item.note&&<div className="st-block"><KeyValues rows={[[t('fe.staff.dispute.authorNote'),item.note]]}/></div>}
   <TextField label={t('fe.staff.note')} value={note} onChange={setNote} max={500}/>
   {ask?<Confirm text={t('fe.staff.dispute.confirmRemove')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>decide(false)}/>
    :<div className="row g8 mt12"><Btn kind="danger" size="md" disabled={d.busy} onClick={()=>setAsk(true)}>{t('fe.staff.dispute.remove')}</Btn>
     <Btn kind="soft" size="md" disabled={d.busy} busy={d.busy} onClick={()=>decide(true)}>{t('fe.staff.dispute.restore')}</Btn></div>}
   <Failure text={d.failure}/>
  </Card>;
+}
+
+/** Accounts whose «это я на фото» claims were found false three times: claims are closed for them, staff take a look
+ * (the profile opens; «Проверено» takes it off the list). */
+function FlaggedClaimants(){
+ const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();
+ const [list,setList]=useState<z.infer<typeof flaggedRes>['flagged']>([]);const [failure,setFailure]=useState('');const [busy,setBusy]=useState('');
+ useEffect(()=>{const ctl=new AbortController();
+  call('staff.disputeQueue',{limit:1},flaggedRes,{asAccount:true,signal:ctl.signal}).then(r=>setList(r.flagged)).catch(()=>{});
+  return ()=>ctl.abort();},[call]);
+ if(!list.length)return null;
+ const reviewed=async(profileId:string)=>{setBusy(profileId);setFailure('');
+  try{await call('staff.disputeClaimantReviewed',{opId:newOpId(),profileId},ok,{asAccount:true});setList(l=>l.filter(x=>x.profileId!==profileId));}
+  catch(e){setFailure(feErrorMessage(e,t));}finally{setBusy('');}};
+ return <Group title={t('fe.staff.dispute.flagged')}>
+  <Card list>{list.map(f=><Row key={f.profileId} icon={ShieldAlert} title={f.handle?'@'+f.handle:t('fe.staff.dispute.noHandle')} sub={t('fe.staff.dispute.flaggedSub',{n:String(f.strikes)})}
+   onClick={()=>navigate('/n/people/'+f.profileId)}
+   end={<Btn kind="soft" size="sm" auto disabled={!!busy} busy={busy===f.profileId} onClick={()=>void reviewed(f.profileId)}>{t('fe.staff.dispute.reviewed')}</Btn>}/>)}</Card>
+  <Failure text={failure}/>
+ </Group>;
 }
 
 function RevisionCard({item,onDone}:{item:RevisionItem,onDone:()=>void}){

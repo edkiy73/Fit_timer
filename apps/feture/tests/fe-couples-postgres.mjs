@@ -45,7 +45,7 @@ test('invitations: exact nickname, one outgoing, visible decline, withdraw, both
   } finally { await pg.close(); }
 });
 
-test('a new couple starts empty, in Discover, readable by both; approvals are each member’s own setting', async () => {
+test('a new couple starts empty, outside Discover, readable by both; approvals are each member’s own setting', async () => {
   const { pg, db, call, person } = await setup();
   try {
     const a = await person('ua', 'Alex'), b = await person('ub', 'Kira');
@@ -60,7 +60,7 @@ test('a new couple starts empty, in Discover, readable by both; approvals are ea
     assert.deepEqual([view.name, view.state, view.members.length, view.members[0].me], ['Alex и Kira', 'active', 2, true]);
     assert.equal((await call('ua', pair, { action: 'interests.list', profileId: pair })).items.length, 0); // nothing copied (CPL-003)
     assert.equal((await call('ua', pair, { action: 'private.get', profileId: pair })).text, '');
-    assert.equal((await call('ua', pair, { action: 'profile.settings' })).settings.discoverMode, 'visible');
+    assert.equal((await call('ua', pair, { action: 'profile.settings' })).settings.discoverMode, 'off'); // owner 28.10.2026: switched on with a photo
 
     // Kira asks to approve Alex's widening changes; Alex's own setting stays off.
     assert.equal((await call('ub', pair, { action: 'couple.setApproval', opId: op(), approvesPartner: true })).approvesPartner, true);

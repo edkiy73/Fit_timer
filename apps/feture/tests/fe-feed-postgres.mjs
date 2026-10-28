@@ -9,7 +9,7 @@ import { couples } from '../server/commands/couples.mjs';
 import { social } from '../server/commands/social.mjs';
 import { posts } from '../server/commands/posts.mjs';
 import { mediaHandlers } from '../server/jobs.mjs';
-import { setup as baseSetup, op } from './fe-helpers.mjs';
+import { setup as baseSetup, op, photoVerified } from './fe-helpers.mjs';
 
 const setup = () => baseSetup({ commands: { ...platform, ...me, ...access, ...couples, ...social, ...posts } });
 const draft = (body, extra = {}) => ({ type: 'post', body, audience: 'all', inFeed: true, topics: [], mediaIds: [], interests: [], tags: [], ...extra });
@@ -136,7 +136,9 @@ test('photo marks and disputes; polls; replies; reactions', async () => {
     assert.equal((await call('ub', b, { action: 'post.get', postId: tagged.id })).status, 200);
     await call('ub', b, { action: 'tag.answer', opId: op(), postId: tagged.id, answer: 'ok' });
     assert.deepEqual((await call('uc', c, { action: 'post.get', postId: tagged.id })).post.tags.map(t => t.handle), ['Kira']);
-    // Someone not marked says it is them: hidden for everyone but the author.
+    // Someone not marked and trusted (photo verified, account older than a week) says it is them: hidden for everyone
+    // but the author (tests/fe-dispute-postgres.mjs: who else only reaches the staff queue).
+    await photoVerified(db, c);
     await call('uc', c, { action: 'tag.object', opId: op(), postId: tagged.id });
     assert.equal((await call('ub', b, { action: 'post.get', postId: tagged.id })).status, 404);
     assert.equal((await call('ua', a, { action: 'post.get', postId: tagged.id })).status, 200);
@@ -184,7 +186,7 @@ test('edits: minor applies, major goes to review; reports hide and can block; co
     assert.equal(major.review, true);
     assert.equal((await call('ub', b, { action: 'post.get', postId: p.id })).post.media.length, 1); // the live version stays
 
-    const report = await call('ub', b, { action: 'report.create', opId: op(), targetType: 'post', targetId: p.id, reason: 'spam', alsoBlock: true });
+    const report = await call('ub', b, { action: 'report.create', opId: op(), targetType: 'post', targetId: p.id, reason: 'spam', details: 'Подробности для модератора', alsoBlock: true });
     assert.equal(report.reported, true);
     assert.equal((await call('ub', b, { action: 'post.get', postId: p.id })).status, 404);
     assert.equal((await db.query(`select count(*)::int n from feture.report where target_id = $1`, [p.id]))[0].n, 1);
@@ -229,6 +231,7 @@ test('review fixes: approval bound to the version, disputes need photos and surv
     assert.equal((await call('ub', pair, { action: 'post.edit', opId: op(), postId: d.id, rev: 3, post: draft('Чужое') })).status, 404);
 
     // Disputes need photos; reordering photos neither lifts a dispute nor re-asks marked people.
+    await photoVerified(db, c);
     const text = await publish(call, 'ua', a, draft('Только текст'));
     assert.equal((await call('uc', c, { action: 'tag.object', opId: op(), postId: text.id })).rule, 'no_photos');
     const i1 = await asset(db, a), i2 = await asset(db, a);
@@ -249,7 +252,7 @@ test('review fixes: approval bound to the version, disputes need photos and surv
 
     // Deleting a reported post keeps it as evidence.
     const rep = await publish(call, 'ub', b, draft('Спорный'));
-    await call('ua', a, { action: 'report.create', opId: op(), targetType: 'post', targetId: rep.id, reason: 'spam' });
+    await call('ua', a, { action: 'report.create', opId: op(), targetType: 'post', targetId: rep.id, reason: 'spam', details: 'Подробности для модератора' });
     assert.equal((await call('ub', b, { action: 'post.delete', opId: op(), postId: rep.id })).state, 'archived');
 
     // A block on a person also ends follows of the couples they are in.

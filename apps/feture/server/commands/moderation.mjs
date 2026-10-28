@@ -3,7 +3,8 @@ import { moderationCommands } from '../../contracts/moderation.mjs';
 import { fail, isUniqueViolation } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { journal, requireStaff } from './staff.mjs';
-import { applyEdit, settlePublication } from './posts.mjs';
+import { applyEdit, claimantTrust, settlePublication } from './posts.mjs';
+import { DISPUTE_LIMITS } from '../../contracts/posts.mjs';
 import { narrowCouple } from '../approvals.mjs';
 import { closeAll } from './access.mjs';
 import { settleAvatar } from './photos.mjs';
@@ -158,35 +159,81 @@ const run = {
 
   async 'staff.disputeQueue'(q, { account, input }) {
     await requireStaff(q, account.id, MODERATORS);
-    const items = await q.query(
-      `select p.id, p.disputed_at, left(coalesce(p.title || ': ', '') || p.body, 300) excerpt,
-         (select count(*)::int from feture.media_attachment a where a.target_type = 'post' and a.target_id = p.id) media
-       from feture.post p
-       where p.disputed_at is not null and p.state = 'published'
+    // Posts with open «это я на фото» claims (owner decision 28.10.2026): claims that could not hide the post (it is
+    // still visible) come first as urgent, then by age. Claimants are never named; staff see whether each was marked
+    // on the photo, their trust level and strikes, a possible attack on the author and the author's explanation.
+    const rows = await q.query(
+      `select p.id, p.disputed_at, p.dispute_note note, left(coalesce(p.title || ': ', '') || p.body, 300) excerpt,
+         (select count(*)::int from feture.media_attachment a where a.target_type = 'post' and a.target_id = p.id) media,
+         min(d.created_at) opened_at, bool_or(d.hid) hid, bool_or(d.attack) attack, bool_or(d.tagged) tagged,
+         json_agg(json_build_object('account', d.claimant_account, 'tagged', d.tagged, 'hid', d.hid, 'at', d.created_at) order by d.created_at) claims
+       from feture.photo_dispute d join feture.post p on p.id = d.post_id
+       where d.state = 'open' and p.state = 'published'
          and not exists (select 1 from feture.profile_member m where m.profile_id = p.owner_profile_id and m.account_id = $1)
-       order by p.disputed_at limit $2`, [account.id, input.limit]);
-    return { items };
+       group by p.id
+       order by (p.disputed_at is null and not bool_or(d.hid)) desc, min(d.created_at) limit $2`, [account.id, input.limit]);
+    const items = [];
+    for (const r of rows) {
+      const claims = [];
+      for (const c of typeof r.claims === 'string' ? JSON.parse(r.claims) : r.claims) {
+        const tr = c.account ? await claimantTrust(q, c.account) : { level: 'unverified', strikes: 0 };
+        claims.push({ tagged: c.tagged, hid: c.hid, at: c.at, trust: tr.level, strikes: tr.strikes });
+      }
+      const hidden = !!r.disputed_at || r.hid;
+      items.push({ id: r.id, disputed_at: r.disputed_at, opened_at: r.opened_at, excerpt: r.excerpt, media: r.media, hidden, urgent: !hidden,
+        attack: !!r.attack, tagged: !!r.tagged, note: r.note ?? null, claims });
+    }
+    // Accounts that reached the claim restriction wait for a staff look (S4: a person, so staff may see the handle).
+    const flagged = await q.query(
+      `select p.id "profileId", p.handle, a.dispute_strikes strikes, a.dispute_flagged_at "flaggedAt"
+       from feture.account a join feture.profile p on p.id = a.person_profile_id
+       where a.dispute_flagged_at is not null and (a.dispute_reviewed_at is null or a.dispute_reviewed_at < a.dispute_flagged_at) and a.id <> $1
+       order by a.dispute_flagged_at limit 20`, [account.id]);
+    return { items, flagged };
   },
 
   async 'staff.disputeDecide'(q, { account, input }) {
     await requireStaff(q, account.id, MODERATORS);
     const t = await targetOwner(q, account.id, 'post', input.postId);
     const [p] = await q.query('select disputed_at from feture.post where id = $1', [input.postId]);
-    if (!p.disputed_at || t.state !== 'published') fail(409, 'conflict');
+    const claims = await q.query(`select id, claimant_profile_id, claimant_account, tagged from feture.photo_dispute where post_id = $1 and state = 'open' for update`, [input.postId]);
+    if ((!p.disputed_at && !claims.length) || t.state !== 'published') fail(409, 'conflict');
+    await q.query(`update feture.photo_dispute set state = $2, decided_at = now() where post_id = $1 and state = 'open'`, [input.postId, input.restore ? 'rejected' : 'confirmed']);
     if (input.restore) {
-      // Restored only when the person is not recognisable or consent is confirmed (V21 M01).
-      const [{ disputed_by: by }] = await q.query(`update feture.post set disputed_at = null where id = $1 returning (select disputed_by from feture.post where id = $1) disputed_by`, [input.postId]);
-      await q.query(`update feture.post set disputed_by = null where id = $1`, [input.postId]);
+      // «Не подтвердилось»: the post is back at once, the author is told (if it was hidden), every claimant who was not
+      // marked on the photo gets a strike. A marked person's own «no» stays: that mark is theirs to decide.
+      await q.query(`update feture.post set disputed_at = null, disputed_by = null, dispute_note = null where id = $1`, [input.postId]);
       await settleAvatar(q, t.owner);
-      await enqueue(q, 'post.restored', t.owner, { postId: input.postId });
-      if (by) await enqueue(q, 'dispute.resolved', by, { postId: input.postId, outcome: 'restored' });
+      if (p.disputed_at) await enqueue(q, 'post.restored', t.owner, { postId: input.postId });
+      const struck = new Set();
+      for (const c of claims) {
+        if (c.claimant_profile_id) await enqueue(q, 'dispute.resolved', c.claimant_profile_id, { postId: input.postId, outcome: 'restored' });
+        if (c.tagged || !c.claimant_account || struck.has(c.claimant_account)) continue;
+        struck.add(c.claimant_account);
+        const [s] = await q.query(
+          `update feture.account set dispute_strikes = dispute_strikes + 1,
+             dispute_flagged_at = case when dispute_strikes + 1 >= $2 and dispute_flagged_at is null then now() else dispute_flagged_at end
+           where id = $1 returning dispute_strikes strikes, person_profile_id`, [c.claimant_account, DISPUTE_LIMITS.strikesRestricted]);
+        if (s && s.strikes === DISPUTE_LIMITS.strikesRestricted) await journal(q, account.id, 'dispute.claimantRestricted', 'profile', s.person_profile_id, { strikes: s.strikes });
+      }
     } else {
       await q.query(`update feture.post set state = 'removed', removed_reason = 'consent', updated_at = now() where id = $1`, [input.postId]);
       await settleAvatar(q, t.owner);
       await enqueue(q, 'content.removed', t.owner, { targetType: 'post', targetId: input.postId, rule: 'consent' });
+      for (const c of claims) if (c.claimant_profile_id) await enqueue(q, 'dispute.resolved', c.claimant_profile_id, { postId: input.postId, outcome: 'removed' });
     }
-    await journal(q, account.id, input.restore ? 'dispute.restore' : 'dispute.remove', 'post', input.postId, { from: t.state });
+    await journal(q, account.id, input.restore ? 'dispute.restore' : 'dispute.remove', 'post', input.postId, { from: t.state, claims: claims.length, note: input.note });
     return { state: input.restore ? 'published' : 'removed' };
+  },
+
+  async 'staff.disputeClaimantReviewed'(q, { account, input }) {
+    await requireStaff(q, account.id, MODERATORS);
+    await targetOwner(q, account.id, 'profile', input.profileId);
+    const rows = await q.query(
+      `update feture.account set dispute_reviewed_at = now() where person_profile_id = $1 and dispute_flagged_at is not null returning id`, [input.profileId]);
+    if (!rows[0]) fail(404, 'not_found');
+    await journal(q, account.id, 'dispute.claimantReviewed', 'profile', input.profileId, {});
+    return { reviewed: true };
   },
 
   async 'staff.revisionQueue'(q, { account, input }) {

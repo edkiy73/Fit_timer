@@ -26,10 +26,16 @@ test('reports: grouped and ordered, decided once with reasons, reporters told; d
     const spam = await pub('ua', a, 'Купи подписку');
     const scary = await pub('ua', a, 'Угроза');
     const modsOwn = await pub('um', mod, 'Пост модератора');
-    await call('ub', b, { action: 'report.create', opId: op(), targetType: 'post', targetId: spam, reason: 'spam' });
-    await call('uc', c, { action: 'report.create', opId: op(), targetType: 'post', targetId: spam, reason: 'spam', details: 'реклама' });
-    await call('ub', b, { action: 'report.create', opId: op(), targetType: 'post', targetId: scary, reason: 'threat' });
-    await call('ub', b, { action: 'report.create', opId: op(), targetType: 'post', targetId: modsOwn, reason: 'other' });
+    // Details are required (owner 28.10.2026): missing, blank or under 10 characters is rejected, nothing is queued.
+    for (const details of [undefined, '', '          ', 'коротко']) {
+      const bad = await call('ub', b, { action: 'report.create', opId: op(), targetType: 'post', targetId: spam, reason: 'spam', ...(details === undefined ? {} : { details }) });
+      assert.equal(bad.status, 400); assert.deepEqual(bad.fields, ['details']);
+    }
+    assert.equal((await db.query('select count(*)::int n from feture.report'))[0].n, 0);
+    await call('ub', b, { action: 'report.create', opId: op(), targetType: 'post', targetId: spam, reason: 'spam', details: 'Подробности для модератора' });
+    await call('uc', c, { action: 'report.create', opId: op(), targetType: 'post', targetId: spam, reason: 'spam', details: 'реклама в общей ленте' });
+    await call('ub', b, { action: 'report.create', opId: op(), targetType: 'post', targetId: scary, reason: 'threat', details: 'Подробности для модератора' });
+    await call('ub', b, { action: 'report.create', opId: op(), targetType: 'post', targetId: modsOwn, reason: 'other', details: 'Подробности для модератора' });
 
     assert.equal((await call('ua', null, { action: 'staff.reportQueue' })).status, 403);
     const queue = (await call('um', null, { action: 'staff.reportQueue' })).items;
@@ -93,7 +99,7 @@ test('review fixes: no suspension through reports, rank rules, suspension covers
     await call('uo', null, { action: 'staff.grant', opId: op(), handle: 'Mira', role: 'moderator', grant: true });
 
     // Profiles are never removed through a report decision, and a decision needs an open report.
-    await call('ub', b, { action: 'report.create', opId: op(), targetType: 'profile', targetId: a, reason: 'threat' });
+    await call('ub', b, { action: 'report.create', opId: op(), targetType: 'profile', targetId: a, reason: 'threat', details: 'Подробности для модератора' });
     assert.equal((await call('um', null, { action: 'staff.reportDecide', opId: op(), targetType: 'profile', targetId: a, decision: 'remove', rule: 'threats' })).status, 400);
     const d = await call('ua', a, { action: 'post.saveDraft', opId: op(), post: draft('Без жалоб') });
     await call('ua', a, { action: 'post.publish', opId: op(), postId: d.id });
@@ -124,7 +130,7 @@ test('review fixes: no suspension through reports, rank rules, suspension covers
     await call('ua', a, { action: 'post.edit', opId: op(), postId: p.id, rev: r1, post: draft('Фото.', { mediaIds: [i1] }) });   // minor → supersedes it
     assert.deepEqual((await call('um', null, { action: 'staff.revisionQueue' })).items, []);
     assert.equal((await call('um', null, { action: 'staff.mediaView', assetId: i1 })).status, 409);
-    await call('ub', b, { action: 'report.create', opId: op(), targetType: 'post', targetId: p.id, reason: 'private' });
+    await call('ub', b, { action: 'report.create', opId: op(), targetType: 'post', targetId: p.id, reason: 'private', details: 'Подробности для модератора' });
     assert.ok((await call('um', null, { action: 'staff.mediaView', assetId: i1 })).src);
     const queue = (await call('um', null, { action: 'staff.reportQueue' })).items;
     assert.equal(queue.find(x => x.targetId === p.id).reported.body, 'Фото.'); // evidence snapshot taken at report time

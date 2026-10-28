@@ -1,7 +1,7 @@
 // FetUre «test world» (owner, 28.10.2026): production filled with ~28 people, couples, communities, events, posts,
 // chats and requests in many different states, so the app can be looked at as if many people used it.
 //   FE_ADMIN_KEY=… node e2e/seed-world.mjs [phase…]      phases: accounts photos profile social couples communities
-//                                                        events posts access moderation verify (default: all, in order)
+//                                                        events posts variety access moderation verify (default: all, in order)
 // Rules (apps/feture/AGENTS.md §4, §6, e2e/README.md):
 // - every state is built only through app commands (/api/fe) exactly as a person would; staff steps (photo review,
 //   age checks, community/event review) go through qa-staff@feture.test; nothing is written to the database directly;
@@ -759,6 +759,146 @@ async function posts() {
   void t1; void t8; void t9; void m5;
 }
 
+// ---------------------------------------------------------------- phase: variety (every list and counter in many sizes)
+// Owner, 28.10.2026: «мало тестовых данных с разным кол-вом всего». Bursts the «Подписки» feed folds into one card
+// (likes of 8–20 posts, a dozen follows, events and communities within hours), followers 0 / 1 / ~5 / 20+, posts with
+// 0 / 1 / many replies and likes, a poll with 20+ votes, communities of 1 / 5 / 20+ members, an event with 20+ «иду»,
+// a long article next to a two-word post, profiles with one photo and with several. Max (empty states), Sonya
+// (unfinished sign-up) and Vlad (blocked spammer) stay out of it.
+const ACTORS = CAST.filter(c => !['sonya', 'max', 'vlad'].includes(c.key)).map(c => c.key);
+const MORE_FOLLOWS = {
+  // Mira gets 20+ followers; Stas exactly one (Liza); Den and Max keep none.
+  alisa: ['mira'], gleb: ['mira'], olya: ['mira'], roman: ['mira'], eva: ['mira'], ilya: ['mira'], marta: ['mira'], stas: ['mira'], den: ['mira'],
+  liza: ['stas'],
+  // Vesta follows eleven more people at once — a «теперь следит за 11 людьми» card for Mira, Kira and Daniel.
+  vesta: ['lev', 'timur', 'alisa', 'katya', 'egor', 'liza', 'nastya', 'yana', 'oleg', 'zhenya', 'olya'],
+  // Mira follows a few more, so her «Подписки» has more people in it.
+  mira: ['timur', 'liza', 'egor', 'nastya'],
+};
+/** Who likes many posts in one sitting (the newest posts of others first): Mira sees Lev, Kira, Daniel, Liza, Egor; Lev and Timur see Mira. */
+const MASS_LIKES = { lev: 15, kira: 12, daniel: 8, mira: 10, liza: 20, egor: 14 };
+const LONG_NOTE = ['Этот текст я писала почти месяц. Он длинный, потому что короче не получилось: про то, как я училась говорить «нет» и почему это оказалось важнее, чем научиться говорить «да».',
+  '**Откуда всё началось.** Первые полгода в сообществе я соглашалась почти на всё. Не потому что хотела, а потому что боялась показаться скучной, неопытной, «не своей». Мне казалось, что отказ — это конец разговора и, может быть, конец знакомства.',
+  'Потом был вечер, после которого я неделю не могла объяснить себе, что пошло не так. Формально всё было по правилам: меня спросили, я кивнула. Но кивнула я не человеку, а своему страху.',
+  '**Что изменилось.** Я начала с малого — с «давай не сегодня» в переписке. Оказалось, что почти никто не обижается. Те, кто обижался, сами быстро исчезали, и это тоже было ответом.',
+  '- Я перестала объяснять каждый отказ. «Нет» — это законченное предложение.\n- Я завела заметку со своими «да», «может быть» и «нет» и перечитываю её перед встречами.\n- Я договариваюсь о паузе заранее: слово, жест, просто «стоп, мне нужна минута».\n- Я разрешила себе передумывать посреди процесса.',
+  '> Согласие, которое нельзя забрать, — это не согласие, а обещание. А обещания под давлением ничего не стоят.',
+  '**Что говорят другие.** Я спросила десяток знакомых, как они учились отказывать. Почти все вспомнили один и тот же момент: когда их «нет» впервые спокойно приняли. После этого становилось легче — и говорить, и слышать.',
+  'Ещё одно наблюдение: умение отказывать сделало мои «да» честнее. Теперь, когда я соглашаюсь, я правда этого хочу, и партнёры это чувствуют. Встречи стали спокойнее, разговоры — длиннее, а афтеркер — теплее.',
+  '**Если ты сейчас там, где была я.** Попробуй начать с одного отказа в неделю — в чём угодно, не обязательно в практике. Отказаться от второй чашки кофе, от звонка в неудобное время, от встречи, на которую не хочется идти. Это мышца, и её можно тренировать.',
+  'И помни: человек, которому важно твоё согласие, будет рад твоему «нет» не меньше, чем «да». Потому что «нет» значит, что ты ему доверяешь достаточно, чтобы говорить правду.',
+  'Спасибо всем, кто дочитал. Если хочется обсудить — пишите в ответах или приходите на онлайн-разговор у @kira.night.'].join('\n\n');
+const KNOTS = [['lev', 'Одноколонный, конечно. С него начинают все мои ученики.'], ['liza', 'Двухколонный — до сих пор путаюсь в направлении.'], ['timur', 'Беседочный, ещё в походах.'],
+  ['stas', 'Пока ни одного не выучил, только смотрю видео.'], ['nastya', 'Одноколонный, на курсе у Льва.'], ['zhenya', 'Шнурки считаются? :)'], ['egor', 'Восьмёрку — со скалолазания.'],
+  ['katya', 'Кажется, тоже одноколонный.'], ['daniel', 'Я больше по ремням и пряжкам, но одноколонный знаю.'], ['vesta', 'Не вяжу, только фотографирую узлы.'],
+  ['yana', 'Пока никакой, но очень хочу научиться!'], ['kira', 'Двойную петлю, по книжке.'], ['oleg', 'Морские узлы — в яхт-клубе.'], ['alisa', 'Одноколонный, давным-давно.'],
+  ['gleb', 'Мы с Олей учились вместе, по видео.'], ['marta', 'Ещё не пробовала.'], ['mira', 'Спасибо всем! Как много разных историй.', 1], ['lev', '@stas.d, приходи на открытый вечер — покажу.', 4]];
+async function eventByTitle(host, title) {
+  return ((await api(email(host), 'event.mine', {})).organizing ?? []).find(x => x.title === title && x.state !== 'withdrawn') ?? null;
+}
+async function variety() {
+  // Follows, including Vesta's burst.
+  for (const [a, list] of Object.entries(MORE_FOLLOWS)) for (const b of list)
+    await step(`follow ${a}→${b}`, async () => must(await api(email(a), 'follow.set', { opId: uuid7(), profileId: await pid(b), on: true }), 'follow'));
+
+  // New posts: six photos, a two-word post, a long article, a post with exactly one reply and one like, many replies, a poll with many votes.
+  const series = await step('vesta six photos', () => publish('vesta', { body: 'Серия «Фактуры»: шесть кадров за неделю — кожа, кружево, верёвка, бархат, мастерская, ремень.', pics: ['leather', 'lace', 'rope', 'velvet', 'workshop', 'belt'], topics: ['exhibition'] }));
+  await step('stas short', () => publish('stas', { body: 'Иду учиться.' }));
+  await step('nastya long article', () => publish('nastya', { type: 'note', title: 'Как я училась говорить «нет»', topics: ['talk'], body: LONG_NOTE }));
+  const one = await step('marta one reply', () => publish('marta', { body: 'Посоветуйте фильм на среду — что-нибудь тёплое и без спешки.' }));
+  if (one) { await step('marta reply', () => thread(one, [['ilya', '«Перед рассветом». Проверено :)']])); await step('marta like', () => like('ilya', one)); }
+  const knots = await step('mira many replies', () => publish('mira', { body: 'Какой узел вы выучили первым? Расскажите в ответах — соберу всё в одну памятку для новичков.', topics: ['shibari'] }));
+  if (knots) await step('thread knots', () => thread(knots, KNOTS));
+  const poll = await step('lev big poll', () => publish('lev', { body: 'Планирую вечера на зиму. Какой формат вам ближе? Голосуйте, даже если редко приходите.',
+    poll: { question: 'Какой формат вечера вам ближе?', options: ['Открытый вечер для всех', 'Практика в парах', 'Лекция и вопросы', 'Онлайн-разбор'] } }));
+  if (poll) for (const [i, w] of ACTORS.filter(k => k !== 'lev').entries()) await step(`vote ${w} big poll`, async () => { await api(email(w), 'poll.vote', { opId: uuid7(), postId: poll, option: [0, 0, 1, 2, 0, 3, 1, 0, 2][i % 9] }); });
+  // The six-photo series: liked by nearly everyone (20+), the knots question by about half.
+  if (series) for (const w of ACTORS.filter(k => k !== 'vesta')) await step(`like ${w} series`, () => like(w, series));
+  if (knots) for (const w of ACTORS.filter((k, i) => k !== 'mira' && i % 2 === 0)) await step(`like ${w} knots`, () => like(w, knots));
+
+  // Mass likes: each liker likes the newest posts of others it may see, in one sitting.
+  for (const [who, n] of Object.entries(MASS_LIKES)) await step(`mass likes ${who}`, async () => {
+    const me = await pid(who);
+    const feed = (await api(email(who), 'feed.list', { tab: 'forYou', limit: 50 })).items ?? [];
+    for (const p of feed.filter(x => x.author?.id !== me).slice(0, n)) if (!p.liked) await like(who, p.id);
+  });
+
+  // Communities: «Верёвка и чай» grows past 20; the book club reaches 5; a new open community keeps only its host (1).
+  const rope = await communityByName('lev', 'Верёвка и чай'), books = await communityByName('kira', 'Книжный клуб: о близости');
+  const join = async (who, c, listed) => {
+    const r = await api(email(who), 'community.join', { opId: uuid7(), communityId: c.id, rulesAccepted: true, answer: '' });
+    if (r.status !== 409) must(r, 'join');
+    if (listed) await api(email(who), 'community.self', { opId: uuid7(), communityId: c.id, listed: true });
+  };
+  if (rope) for (const w of ['gleb', 'olya', 'roman', 'eva', 'ilya', 'marta', 'den', 'oleg', 'alisa', 'artem', 'sasha', 'nika', 'daniel', 'kira'])
+    await step(`join ${w}→rope`, () => join(w, rope, ['daniel', 'kira', 'oleg', 'alisa'].includes(w)));
+  if (books) for (const w of ['daniel', 'katya']) await step(`join ${w}→books`, () => join(w, books, w === 'daniel'));
+  await step('community of one', async () => {
+    let c = await communityByName('daniel', 'Кожа и ремесло');
+    if (!c) c = { id: must(await api(email('daniel'), 'community.create', { opId: uuid7(), name: 'Кожа и ремесло', privacy: 'open',
+      description: 'Для тех, кто работает с кожей руками: инструменты, выкройки, уход. Только открылось — пока здесь один ведущий.',
+      topics: ['leather'], rules: ['Показываем свои работы', 'Без рекламы'], plate: 'coal', placeId: null, coverAssetId: null }), 'community.create').id };
+    const full = (await api(email('daniel'), 'community.get', { communityId: c.id })).community;
+    if (full.state !== 'published' || full.pendingChange) await approveCommunity(c.id);
+  });
+
+  // Events: «Вечер шибари» gets 20+ «иду»; Daniel plans three events at once (an «в планах 3 события» card).
+  const night = await eventByTitle('lev', 'Вечер шибари для начинающих');
+  if (night) for (const w of ['gleb', 'olya', 'ilya', 'marta', 'den', 'oleg', 'alisa', 'artem', 'sasha', 'nika', 'roman', 'eva', 'kira', 'daniel', 'vesta', 'egor'])
+    await step(`rsvp ${w} going rope-night`, async () => must(await api(email(w), 'event.rsvp', { opId: uuid7(), eventId: night.id, status: 'going', showInList: true }), 'rsvp'));
+  for (const [host, title, status] of [['kira', 'Онлайн-разговор: границы и согласие', 'interested'], ['lev', 'Онлайн-воркшоп: афтеркер после практик', 'going']]) {
+    const ev = await eventByTitle(host, title);
+    if (ev) await step(`rsvp daniel ${title}`, async () => must(await api(email('daniel'), 'event.rsvp', { opId: uuid7(), eventId: ev.id, status, showInList: true }), 'rsvp'));
+  }
+
+  // Profile photos: Mira and Vesta show several (their face + photos of their public posts); everyone else one or none.
+  for (const key of ['mira', 'vesta']) await step(`profile photos ${key}`, async () => {
+    const me = await pid(key);
+    const prof = (await api(email(key), 'profile.get', { profileId: me })).profile;
+    const have = prof?.photos ?? [];
+    if (have.length >= 4) return;
+    const own = (await api(email(key), 'me.posts', {})).items ?? [];
+    const extra = [];
+    for (const p of own.filter(x => x.state === 'published' && (x.audience ?? 'all') === 'all')) {
+      const full = (await api(email(key), 'post.get', { postId: p.id })).post;
+      for (const m of full?.media ?? []) if (extra.length < 5 - have.length && m.kind !== 'video' && !have.some(h => h.id === m.id)) extra.push(m.id);
+    }
+    must(await api(email(key), 'profile.photosSet', { opId: uuid7(), assetIds: [...have.map(x => x.id), ...extra] }), 'photosSet ' + key);
+  });
+}
+
+/** Counts behind the variety phase, read back through the app. */
+async function varietyVerify() {
+  const out = {};
+  for (const k of ['mira', 'kira', 'timur', 'stas', 'den', 'max']) out[`followers ${k}`] = ((await api(email('lev'), 'profile.followers', { profileId: await pid(k) })).items ?? []).length;
+  out['vesta follows'] = ((await api(email('lev'), 'profile.followers', { profileId: await pid('vesta'), following: true })).items ?? []).length;
+  for (const k of ['mira', 'vesta', 'lev']) out[`profile photos ${k}`] = ((await api(email(k), 'profile.get', { profileId: await pid(k) })).profile?.photos ?? []).length;
+  const posts = (await api(email('lev'), 'feed.list', { tab: 'forYou', limit: 50 })).items ?? [];
+  const find = start => posts.find(p => (p.body ?? '').startsWith(start));
+  for (const [label, start] of [['six photos', 'Серия «Фактуры»'], ['two words', 'Иду учиться'], ['one reply', 'Посоветуйте фильм'], ['many replies', 'Какой узел'], ['big poll', 'Планирую вечера']]) {
+    const p = find(start);
+    out[`post «${label}»`] = p ? `photos ${p.media?.length ?? 0}, likes ${p.likes}, replies ${p.replies}${p.poll ? `, votes ${(p.poll.results ?? []).reduce((a, b) => a + b, 0)}` : ''}` : 'missing';
+  }
+  const note = posts.find(p => p.title === 'Как я училась говорить «нет»');
+  out['long article length'] = note ? note.body.length : 'missing';
+  for (const [host, name] of [['lev', 'Верёвка и чай'], ['kira', 'Книжный клуб: о близости'], ['daniel', 'Кожа и ремесло'], ['vesta', 'Фото и эстетика']]) {
+    const c = await communityByName(host, name);
+    out[`members «${name}»`] = c ? ((await api(email(host), 'community.members', { communityId: c.id })).items ?? []).length : 'missing';
+  }
+  const night = await eventByTitle('lev', 'Вечер шибари для начинающих');
+  if (night) out['«Вечер шибари» going'] = ((await api(email('lev'), 'event.attendees', { eventId: night.id, kind: 'going' })).items ?? []).length;
+  for (const viewer of ['mira', 'timur', 'kira']) {
+    const items = [];
+    let cursor;
+    for (let i = 0; i < 4; i++) {
+      const r = await api(email(viewer), 'feed.list', { tab: 'following', activity: ['likes', 'events', 'communities', 'follows'], limit: 50, ...(cursor ? { cursor } : {}) });
+      items.push(...(r.items ?? [])); cursor = r.next; if (!cursor) break;
+    }
+    out[`«Подписки» of ${viewer}`] = items.filter(x => x.kind === 'activity').map(x => `${x.actor?.handle} ${x.activity} ${x.count}/${x.items.length}`).join('; ');
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------- phase: access requests
 async function access() {
   const req = async (from, to, scopes) => {
@@ -805,7 +945,7 @@ async function moderation() {
     await step('report reply', async () => {
       if (!spam) return;
       const r = must(await api(email('vlad'), 'reply.create', { opId: uuid7(), postId: spam.id, body: 'Пишите в телеграм, там дешевле!' }), 'reply');
-      must(await api(email('zhenya'), 'report.create', { opId: uuid7(), targetType: 'reply', targetId: r.id ?? r.replyId, reason: 'spam', details: '' }), 'report reply');
+      must(await api(email('zhenya'), 'report.create', { opId: uuid7(), targetType: 'reply', targetId: r.id ?? r.replyId, reason: 'spam', details: 'Ссылка на сторонний магазин в ответе.' }), 'report reply');
     });
     done.reports = true;
     fs.writeFileSync(DIR + '.world-state.json', JSON.stringify(done));
@@ -870,8 +1010,8 @@ async function verify() {
 const PHASES = { accounts: async () => { for (const c of CAST) await step('account ' + c.key, () => account(c)); },
   photos: async () => { await staff(); for (const c of CAST) if (c.face || c.tier === 'doc') await step('photo/age ' + c.key, () => photo(c)); },
   profile: async () => { for (const c of CAST) if (!['fresh', 'min'].includes(c.tier)) await step('profile ' + c.key, () => profileExtras(c)); },
-  social, couples, communities, events, posts, access, moderation,
-  verify: async () => { const v = await verify(); console.log(JSON.stringify(v, null, 1)); } };
+  social, couples, communities, events, posts, variety, access, moderation,
+  verify: async () => { const v = await verify(); console.log(JSON.stringify({ ...v, ...await varietyVerify() }, null, 1)); } };
 if (import.meta.url === `file://${process.argv[1]}`) {
   if (!process.env.FE_ADMIN_KEY) { console.error('FE_ADMIN_KEY is required'); process.exit(1); }
   const want = process.argv.slice(2).length ? process.argv.slice(2) : Object.keys(PHASES);

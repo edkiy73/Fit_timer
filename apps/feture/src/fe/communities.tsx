@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,ChartColumn,Bell,BellOff,Bookmark,BookmarkCheck,Calendar,CalendarPlus,Check,ChevronLeft,Clock,Ellipsis,Eye,ExternalLink,FileText,Flag,Globe,Image as ImageIcon,Link as LinkIcon,Lock,Map as MapIcon,MapPin,MessageCircle,Plus,Search,Settings,Share,SlidersHorizontal,Ticket,TriangleAlert,Users,Video,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Announcement,Ask,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,CommunityHead,CoverBar,Discussion,Empty,EventHero,EventTile,Group,IconBtn,LinkBtn,Note,Pill,Row,Rsvp,SectionLabel,Seg,Sheet,Skel,Spacer,Text,ToggleRow,Veil} from './kit';
+import {ActingAv,Alert,Announcement,Ask,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,CommunityHead,CoverBar,Discussion,Empty,EventHero,EventTile,Group,IconBtn,LinkBtn,Note,Pill,Row,Rsvp,SectionLabel,Seg,Sheet,Skel,Spacer,StatusCard,Text,ToggleRow,Veil} from './kit';
 import {useFe} from './session';
 import {when} from './feed';
 import {BellButton} from './inbox';
@@ -27,7 +27,8 @@ const catalog=z.object({ok:z.literal(true),items:z.array(card),next:z.string().n
 const prof=z.object({id:z.uuid(),kind:z.string(),handle:z.string().nullable(),name:z.string().nullable(),...faceFields}).passthrough();
 const community=z.object({id:z.uuid(),name:z.string(),description:z.string(),topics:z.array(z.string()),privacy:z.string(),rules:z.array(z.string()),members:z.number(),
  plate:z.string().nullable().optional(),cover:media.nullable().optional(),placeId:z.string().nullable().optional(),hosts:z.array(prof.extend({role:z.string()})).optional(),
- me:z.object({role:z.string(),state:z.string(),muted:z.boolean().optional(),readOnly:z.boolean().optional()}).passthrough().nullable(),request:z.object({id:z.uuid()}).nullable(),joinQuestion:z.string().nullable(),
+ me:z.object({role:z.string(),state:z.string(),muted:z.boolean().optional(),readOnly:z.boolean().optional()}).passthrough().nullable(),request:z.object({id:z.uuid(),at:z.string().nullable().optional()}).nullable(),joinQuestion:z.string().nullable(),
+ declined:z.object({until:z.string()}).nullable().optional(),waiting:z.object({id:z.uuid()}).nullable().optional(),
  pendingRequests:z.number().optional(),state:z.string().optional()}).passthrough();
 export type Community=z.infer<typeof community>;
 const commRes=z.object({ok:z.literal(true),community});
@@ -39,6 +40,8 @@ const priceSchema=z.object({kind:z.string(),amount:z.number().optional(),currenc
 const ev=z.object({id:z.uuid(),title:z.string(),kind:z.string(),format:z.enum(['online','offline']),area:z.string().nullable(),tz:z.string().nullable().optional(),starts_at:z.string(),ends_at:z.string(),
  price:priceSchema,requires_application:z.boolean(),state:z.string(),plate:z.string().nullable().optional(),place_id:z.string().nullable().optional(),community_id:z.string().nullable().optional()});
 type Ev=z.infer<typeof ev>;
+/** An event in a list (catalog, «Скоро» in the feed). */
+export const eventRow=ev;
 const evList=z.object({ok:z.literal(true),items:z.array(ev),next:z.string().nullable()});
 const rsvpObj=z.object({status:z.string().nullable().optional(),showInList:z.boolean().nullable().optional(),ticketMarked:z.boolean().nullable().optional()}).passthrough();
 const announcement=z.object({id:z.uuid(),body:z.string(),automatic:z.boolean(),created_at:z.string()}).passthrough();
@@ -47,7 +50,7 @@ const event=z.object({id:z.uuid(),title:z.string(),kind:z.string(),description:z
  requirements:z.string().nullable(),state:z.string(),past:z.boolean(),going:z.number(),interested:z.number(),exactAddress:z.string().nullable(),joinUrl:z.string().nullable(),locked:z.boolean(),
  plate:z.string().nullable().optional(),communityId:z.string().nullable().optional(),cancelReason:z.string().nullable().optional(),
  organizer:prof.nullable().optional(),announcements:z.array(announcement).optional(),
- me:z.object({rsvp:rsvpObj.nullable().optional(),application:z.object({id:z.uuid(),state:z.string(),rev:z.number()}).nullable().optional(),waiting:z.unknown().optional()}).passthrough()}).passthrough();
+ me:z.object({rsvp:rsvpObj.nullable().optional(),application:z.object({id:z.uuid(),state:z.string(),rev:z.number()}).nullable().optional(),waiting:z.object({id:z.uuid(),kind:z.string()}).passthrough().nullable().optional()}).passthrough()}).passthrough();
 export type EventFull=z.infer<typeof event>;
 const evRes=z.object({ok:z.literal(true),event});
 const mineComm=z.object({ok:z.literal(true),hosting:z.array(z.object({id:z.uuid()}).passthrough()),member:z.array(z.object({id:z.uuid()}).passthrough()),requests:z.array(z.object({community_id:z.uuid()}).passthrough())});
@@ -289,14 +292,20 @@ export function CommunityScreen(){
  const setTab=(v:CTab)=>{const n=new URLSearchParams(sp);if(v==='disc')n.delete('t');else n.set('t',v);setSp(n,{replace:true});};
  const [c,setC]=useState<Community|null>(null);const [discs,setDiscs]=useState<z.infer<typeof discRes>|null>(null);const [mem,setMem]=useState<z.infer<typeof memList>|null>(null);
  const [evs,setEvs]=useState<Ev[]>([]);const [error,setError]=useState<unknown>(null);
- const [layer,setLayer]=useState<''|'menu'|'join'|'leave'|'withdraw'|'report'>('');const [busy,setBusy]=useState(false);const [hostTools,setHostTools]=useState<z.infer<typeof disc>|null>(null);
+ const [layer,setLayer]=useState<''|'menu'|'join'|'leave'|'withdraw'|'unwait'|'report'>('');const [busy,setBusy]=useState(false);const [hostTools,setHostTools]=useState<z.infer<typeof disc>|null>(null);
  const [reportPost,setReportPost]=useState<string|null>(null);
  const load=useCallback(()=>{setError(null);
-  Promise.all([call('community.get',{communityId:id,...(invite?{invite}:{})},commRes),
-   call('community.discussions',{communityId:id},discRes).catch(e=>{if(invite)return {ok:true as const,locked:true,items:[]};throw e;}),
-   call('community.members',{communityId:id},memList).catch(()=>null),
-   call('event.catalog',{communityId:id},evList).then(r=>r.items.filter(e=>e.state==='published')).catch(()=>[] as Ev[])])
-  .then(([a,b,m,e])=>{setC(a.community);setDiscs(b);setMem(m);setEvs(e);}).catch(setError);},[call,id,invite]);
+  // A hidden community seen through an invite link (or a pending request) shows only its card: its discussions,
+  // members and events are for members, so they are not asked for (they would only answer 404).
+  call('community.get',{communityId:id,...(invite?{invite}:{})},commRes).then(async a=>{
+   const outside=a.community.privacy==='hidden'&&a.community.me?.state!=='active'&&!a.community.state;
+   const locked:z.infer<typeof discRes>={ok:true,locked:true,items:[]};
+   const [b,m,e]=outside?[locked,null,[] as Ev[]] as const:await Promise.all([
+    call('community.discussions',{communityId:id},discRes),
+    call('community.members',{communityId:id},memList).catch(()=>null),
+    call('event.catalog',{communityId:id},evList).then(r=>r.items.filter(e=>e.state==='published')).catch(()=>[] as Ev[])]);
+   setC(a.community);setDiscs(b);setMem(m);setEvs(e);
+  }).catch(setError);},[call,id,invite]);
  useEffect(()=>{load();},[load]);
  const couple=acting?.kind==='couple';
  const tname=(x:string)=>{const v=cat?.topics.find(o=>o.id===x);return v?(locale==='en'?v.en:v.ru):x;};
@@ -307,6 +316,18 @@ export function CommunityScreen(){
  const mute=()=>{if(!c)return;const on=!c.me?.muted;void act(()=>call('community.self',{opId:newOpId(),communityId:c.id,muted:on},okRes),t(on?'fe.cm.muted':'fe.cm.unmuted'));};
  const share=async()=>{setLayer('');const okc=await copyLink(appUrl('/n/communities/'+id));toast(t(okc?'fe.cm.linkCopied':'fe.cm.copyFailed'),{type:okc?'ok':'warn'});};
  const sorted=[...evs].sort((a,b)=>Date.parse(a.starts_at)-Date.parse(b.starts_at));const next=sorted[0];
+ // Removed once (a ban): even an open community takes a request now (the server answers the same way).
+ const banned=c?.me?.state==='removed';
+ const day=(iso:string)=>new Date(iso).toLocaleDateString(loc(locale),{day:'numeric',month:'long'});
+ // My request as one block (owner 28.10.2026): the state, when it went and what comes next, «Отозвать» on the right.
+ const status=!c||host||member?null
+  :c.request?<StatusCard tone="wait" icon={Clock} title={t('fe.host.join.pending')}
+   sub={[c.request.at?fill(t('fe.cm.req.sent'),{date:day(c.request.at)}):'',t('fe.cm.req.next')].filter(Boolean).join(' · ')}
+   action={<Btn kind="soft" size="sm" auto fit onClick={()=>setLayer('withdraw')}>{t('fe.host.join.withdraw')}</Btn>}/>
+  :c.waiting?<StatusCard tone="wait" icon={Users} title={t('fe.host.app.st.waiting')} sub={t('fe.cm.req.partnerSub')}
+   action={<Btn kind="soft" size="sm" auto fit onClick={()=>setLayer('unwait')}>{t('fe.host.join.withdraw')}</Btn>}/>
+  :c.declined?<StatusCard tone="bad" icon={X} title={t('fe.cm.req.declined')} sub={fill(t('fe.cm.req.declinedSub'),{date:day(c.declined.until)})}/>
+  :null;
  return <>
   <CoverBar title={c?.name}>
    {c&&<IconBtn icon={Ellipsis} kind="glass" label={t('fe.cm.more')} onClick={()=>setLayer('menu')}/>}
@@ -324,18 +345,17 @@ export function CommunityScreen(){
      {c.state==='rejected'&&<Alert kind="err" icon={Ban} className="mt12"><b>{t('fe.cm.rejected')}</b>{String((c as {rejectReason?:unknown}).rejectReason??'')}</Alert>}
      <div className="md bio cdesc"><p>{c.description}</p></div>
      <Chips className="mt12">{c.topics.map(x=><Chip key={x} className="tag" onClick={()=>navigate('/n/topics/'+x)}>#{tname(x)}</Chip>)}</Chips>
-     <div className="row g8 mt16 cm-act">
+     {status?<><Spacer size={4}/>{status}</>:<div className="row g8 mt16 cm-act">
       {host?<CommunityHostEntry c={c}/>
        :member?<Pill tone="ok" icon={Check}>{t(couple?'fe.cm.memberCouple':'fe.comm.member')}</Pill>
-       :c.request?<><Pill tone="wait" icon={Clock}>{t('fe.host.join.pending')}</Pill><Btn kind="soft" size="md" auto fit className="k-push" onClick={()=>setLayer('withdraw')}>{t('fe.host.join.withdraw')}</Btn></>
-       :(!c.state||c.state==='published')?<Btn size="md" onClick={()=>setLayer('join')}>{c.privacy!=='open'?t(couple?'fe.host.join.requestCouple':'fe.host.join.request'):t(couple?'fe.host.join.joinCouple':'fe.host.join.join')}</Btn>:null}
-     </div>
+       :(!c.state||c.state==='published')?<Btn size="md" onClick={()=>setLayer('join')}>{c.privacy!=='open'||banned?t(couple?'fe.host.join.requestCouple':'fe.host.join.request'):t(couple?'fe.host.join.joinCouple':'fe.host.join.join')}</Btn>:null}
+     </div>}
      {next&&tab!=='events'&&<Group className="cm-next" title={t('fe.cm.nextMeetup')} action={evs.length>1&&<button type="button" onClick={()=>setTab('events')}>{fill(t('fe.cm.allN'),{n:evs.length})}</button>}><EventCard e={next} row/></Group>}
      <Spacer size={3}/>
      <Seg value={tab} onChange={setTab} options={[{id:'disc',label:t('fe.comm.tab.disc')},{id:'events',label:t('fe.comm.tab.events'),n:evs.length},{id:'members',label:t('fe.cm.tab.members')},{id:'rules',label:t('fe.comm.tab.rules')}]}/>
      {tab==='disc'?(discs?.locked?<Veil tall title={t('fe.cm.discForMembers')} text={c.request?t('fe.cm.discPending'):t('fe.cm.discRequest')}/>:<>
       {member&&!c.me?.readOnly&&<div className="composer c-composer">
-       <button type="button" className="cmp-main" onClick={()=>navigate('/n/feed/new?community='+c.id)}>{acting&&<Av name={pname(acting)} seed={acting.id} src={acting.avatar} size="sm"/>}<span>{t(couple?'fe.cm.topicCouple':'fe.comm.newTopic')}</span></button>
+       <button type="button" className="cmp-main" onClick={()=>navigate('/n/feed/new?community='+c.id)}>{acting&&<ActingAv p={acting}/>}<span>{t(couple?'fe.cm.topicCouple':'fe.comm.newTopic')}</span></button>
        <IconBtn icon={ImageIcon} kind="ghost" size="sm" label={t('fe.cm.media')} onClick={()=>navigate('/n/feed/new?community='+c.id+'&x=media')}/>
        <IconBtn icon={ChartColumn} kind="ghost" size="sm" label={t('fe.cm.poll')} onClick={()=>navigate('/n/feed/new?community='+c.id+'&x=poll')}/>
        <IconBtn icon={Plus} kind="add" label={t('fe.cm.startDisc')} onClick={()=>navigate('/n/feed/new?community='+c.id)}/>
@@ -359,11 +379,13 @@ export function CommunityScreen(){
    {member&&!owner&&<Row icon={X} danger title={t('fe.cm.leave')} noChev onClick={()=>setLayer('leave')}/>}
    {!owner&&<Row icon={Flag} danger title={t('fe.cm.report')} noChev onClick={()=>setLayer('report')}/>}
   </Card></Sheet>}
-  {c&&layer==='join'&&<JoinSheet c={c} invite={invite} onClose={()=>setLayer('')} onDone={msg=>{setLayer('');toast(msg,{type:'ok'});load();}}/>}
+  {c&&layer==='join'&&<JoinSheet c={banned&&c.privacy==='open'?{...c,privacy:'closed',joinQuestion:null}:c} invite={invite} onClose={()=>setLayer('')} onDone={msg=>{setLayer('');toast(msg,{type:'ok'});load();}}/>}
   {c&&layer==='leave'&&<Ask icon={Users} danger title={fill(t('fe.cm.leaveQ'),{name:c.name})} text={t(c.privacy==='open'?'fe.cm.leaveTextOpen':'fe.cm.leaveTextClosed')} ok={t('fe.comm.leave')} busy={busy}
    onOk={()=>void act(()=>call('community.leave',{opId:newOpId(),communityId:c.id},okRes),t('fe.cm.left'))} onCancel={()=>setLayer('')}/>}
   {c&&layer==='withdraw'&&<Ask icon={FileText} danger title={t('fe.host.join.withdrawQ')} ok={t('fe.host.join.withdraw')} busy={busy}
    onOk={()=>void act(()=>call('community.requestWithdraw',{opId:newOpId(),requestId:c.request!.id},okRes),t('fe.host.join.withdrawn'))} onCancel={()=>setLayer('')}/>}
+  {c&&layer==='unwait'&&c.waiting&&<Ask icon={FileText} danger title={t('fe.host.join.withdrawQ')} text={t('fe.cm.req.unwaitText')} ok={t('fe.host.join.withdraw')} busy={busy}
+   onOk={()=>void act(()=>call('decide.cancel',{opId:newOpId(),approvalId:c.waiting!.id},okRes),t('fe.host.join.withdrawn'))} onCancel={()=>setLayer('')}/>}
   {c&&layer==='report'&&<ReportSheet targetType="community" targetId={c.id} onClose={()=>setLayer('')} onDone={msg=>{setLayer('');toast(msg,{type:'ok'});}}/>}
   {hostTools&&<DiscussionHostSheet d={hostTools} host={host} onClose={()=>setHostTools(null)} onDone={msg=>{setHostTools(null);toast(msg,{type:'ok'});load();}}
    onReport={acting&&hostTools.owner_profile_id!==acting.id?()=>{setReportPost(hostTools.id);setHostTools(null);}:undefined}/>}
@@ -387,7 +409,7 @@ export function EventScreen(){
  const {id=''}=useParams();const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
  const [e,setE]=useState<EventFull|null>(null);const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);
  const [comm,setComm]=useState<{id:string,name:string,plate?:string|null|undefined,cover?:z.infer<typeof media>|null|undefined}|null>(null);const [saved,setSaved]=useState(false);const [faces,setFaces]=useState<z.infer<typeof prof>[]>([]);
- const [layer,setLayer]=useState<''|'menu'|'venue'|'report'|'withdraw'|'ticket'>('');
+ const [layer,setLayer]=useState<''|'menu'|'venue'|'report'|'withdraw'|'unwait'|'ticket'>('');
  const op=useRef(newOpId());
  const load=useCallback(()=>{setError(null);call('event.get',{eventId:id},evRes).then(r=>{setE(r.event);
   const cid=r.event.communityId;if(cid)call('community.get',{communityId:cid},commRes).then(x=>setComm(x.community)).catch(()=>setComm(null));
@@ -424,6 +446,8 @@ export function EventScreen(){
  const save=async()=>{const on=!saved;setSaved(on);try{await call('saved.set',{opId:newOpId(),kind:'event',targetId:id,on},okRes);toast(t(on?'fe.cm.saved':'fe.cm.unsaved'),on?{type:'ok'}:{});}catch(x){setSaved(!on);toast(feErrorMessage(x,t),{type:'err'});}};
  const share=async()=>{setLayer('');const okc=await copyLink(appUrl('/n/events/'+id));toast(t(okc?'fe.cm.evLinkCopied':'fe.cm.copyFailed'),{type:okc?'ok':'warn'});};
  const withdraw=async()=>{if(!app)return;setBusy(true);try{await call('event.applicationWithdraw',{opId:newOpId(),applicationId:app.id},okRes);setLayer('');toast(t('fe.cm.appWithdrawn'),{type:'ok'});load();}catch(x){toast(feErrorMessage(x,t),{type:'err'});}finally{setBusy(false);}};
+ // A couple's application the partner has not approved yet is taken back as that approval (decide.cancel).
+ const unwait=async()=>{const w=e?.me.waiting;if(!w)return;setBusy(true);try{await call('decide.cancel',{opId:newOpId(),approvalId:w.id},okRes);setLayer('');toast(t('fe.cm.appWithdrawn'),{type:'ok'});load();}catch(x){toast(feErrorMessage(x,t),{type:'err'});}finally{setBusy(false);}};
  const tz=e?evTz(e):USER_TZ;const away=!!e&&e.format==='online'&&e.tz!==USER_TZ;
  const open=!!e&&e.state==='published'&&!e.past;const cancelled=e?.state==='cancelled';
  const admitted=!!e&&(orgMe||(!!e.joinUrl||!!e.exactAddress));
@@ -439,8 +463,8 @@ export function EventScreen(){
   if(cancelled)cta=<Btn kind="soft" onClick={()=>navigate('/n/communities?sub=events')}>{t('fe.cm.similar')}</Btn>;
   else if(e.past)cta=<Btn kind="soft" className="off" disabled>{t('fe.cm.ended')}</Btn>;
   else if(e.requiresApplication&&!app&&!waiting)cta=<Btn icon={FileText} onClick={()=>navigate(`/n/events/${id}/apply`)}>{couple?t('fe.host.app.applyCouple'):t('fe.host.app.apply')}</Btn>;
-  else if(e.requiresApplication&&app?.state==='pending')cta=<Btn kind="soft" onClick={()=>setLayer('withdraw')}>{t('fe.host.app.withdraw')}</Btn>;
-  else if(e.requiresApplication&&app?.state==='declined')cta=<Btn kind="soft" className="off" disabled>{t('fe.cm.appDeclined')}</Btn>;
+  // Pending / declined: the «Участие» card says it and holds «Отозвать»; a declined one cannot be sent again.
+  else if(e.requiresApplication&&(app?.state==='pending'||app?.state==='declined'))cta=null;
   else if(external&&!ticketed&&(!e.requiresApplication||app?.state==='approved'))cta=<Btn icon={Ticket} onClick={()=>setLayer('ticket')}>{t('fe.w7.tk.cta')}</Btn>;
   else if(admitted)cta=<Btn icon={e.format==='online'?Video:MapPin} onClick={()=>setLayer('venue')}>{t(e.format==='online'?'fe.cm.howJoin':'fe.cm.address')}</Btn>;
  }
@@ -476,7 +500,7 @@ export function EventScreen(){
        {waiting?<Pill tone="wait" icon={Clock}>{t('fe.cm.st.waiting')}</Pill>:st?<Btn kind="text" auto onClick={()=>void rsvp(null)} disabled={busy}>{t('fe.cm.clearAnswer')}</Btn>:<Note as="span">{t('fe.cm.noAnswer')}</Note>}</div>
       <Rsvp<'interested'|'going'|'not_going'> label={t('fe.cm.yourAnswer')} value={st as 'interested'|'going'|'not_going'|null} couple={couple} disabled={busy} onChange={v=>void rsvp(st===v?null:v)}
        options={([['interested',Eye,'interested'],['going',Check,'going'],['not_going',X,'not']] as const).map(([v,Ic,tone])=>[v,t((couple?'fe.cm.rsvpC.':'fe.cm.rsvp.')+v),Ic,tone] as const)}/></section>}
-     {!orgMe&&open&&<EventApplicationLines e={e}/>}
+     {!orgMe&&open&&<EventApplicationLines e={e} busy={busy} onWithdraw={()=>setLayer('withdraw')} onCancelWait={()=>setLayer('unwait')}/>}
      <Card list className="mt12">
       <Row icon={Calendar} tone="l" title={inTz(e.startsAt,tz,locale,{weekday:'short',day:'numeric',month:'long'})}
        sub={<>{timeOf(e.startsAt,tz,locale)}–{timeOf(e.endsAt,tz,locale)} {t(e.format==='online'?'fe.ev.yourTime':'fe.cm.localTime')}{away&&<><br/>{t('fe.cm.forOrganizer')}: {timeOf(e.startsAt,e.tz,locale)}–{timeOf(e.endsAt,e.tz,locale)} {e.tz}</>}</>}/>
@@ -522,6 +546,7 @@ export function EventScreen(){
    <Note className="mt12">{ticketed?t('fe.w7.tk.showAtDoor'):t(couple?'fe.w7.tk.boughtHintCouple':'fe.w7.tk.boughtHint')}</Note>
   </Sheet>}
   {e&&layer==='withdraw'&&<Ask icon={FileText} danger title={t('fe.host.app.withdrawQ')} text={t('fe.host.app.withdrawText')} ok={t('fe.host.app.withdrawOk')} busy={busy} onOk={()=>void withdraw()} onCancel={()=>setLayer('')}/>}
+  {e&&layer==='unwait'&&<Ask icon={FileText} danger title={t('fe.host.app.withdrawQ')} text={t('fe.cm.req.unwaitText')} ok={t('fe.host.app.withdrawOk')} busy={busy} onOk={()=>void unwait()} onCancel={()=>setLayer('')}/>}
   {e&&layer==='report'&&<ReportSheet targetType="event" targetId={e.id} onClose={()=>setLayer('')} onDone={msg=>{setLayer('');toast(msg,{type:'ok'});}}/>}
  </>;
 }

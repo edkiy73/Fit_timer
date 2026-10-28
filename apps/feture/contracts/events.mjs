@@ -92,6 +92,10 @@ export const eventsCommands = {
     }).refine(v => !v.from || !v.to || Date.parse(v.from) < Date.parse(v.to), { message: 'from_after_to', path: ['to'] }),
   },
   'event.mine': { profile: true, write: false, input: z.strictObject({}) },
+  // «Скоро» in the feed (V21 feedEventPicks, FEED-014): up to three upcoming events (two weeks ahead) that concern the
+  // acting profile — answered, organised by someone it follows, of a joined community, of a community on its
+  // interests, online or in its city. Events it hid with «Скрыть» (feed_hide kind 'event') never come back here.
+  'event.soon': { profile: true, write: false, input: z.strictObject({}) },
   'event.rsvp': {
     profile: true, write: true, rate: { kind: 'event.rsvp', max: 200, window: '1 day' },
     input: z.strictObject({

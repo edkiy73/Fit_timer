@@ -1,5 +1,5 @@
 // @ts-check
-import { ACTIVITY_KINDS, postFields, postsCommands } from '../../contracts/posts.mjs';
+import { ACTIVITY_KINDS, DISPUTE_LIMITS, postFields, postsCommands } from '../../contracts/posts.mjs';
 import { likePattern, writeCursor } from '../search.mjs';
 import { acceptsMention, popularScore } from '../sql-rules.mjs';
 import { fail, isUniqueViolation } from '../errors.mjs';
@@ -7,7 +7,7 @@ import { enqueue } from '../outbox.mjs';
 import { needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
 import { avatarSrc, mediaDto } from '../media/assets.mjs';
 import { blockProfile } from './social.mjs';
-import { canWrite } from './communities.mjs';
+import { canWrite, coverOf } from './communities.mjs';
 import { PREMIUM_SQL, withFaces } from './faces.mjs';
 import { hasPhotoCheck } from './verification.mjs';
 import { dropHiddenPostPhotos, settleAvatar } from './photos.mjs';
@@ -23,6 +23,10 @@ import { dropHiddenPostPhotos, settleAvatar } from './photos.mjs';
 
 const AUD = ['only', 'granted', 'followers', 'all'];
 const PUBLIC_AUD = new Set(['all', 'followers']);
+/** How many things one activity card carries (V21 actCard: the strip scrolls through them; the rest is «ещё N» from
+ * `count`). */
+const ACT_ITEMS = 20;
+
 const MENTION = /@([A-Za-z0-9_.]{3,20})/g;
 
 /** @param {Acting | null} acting @returns {Acting} */
@@ -43,6 +47,23 @@ async function visiblePost(q, postId, viewer) {
      from feture.post p where p.id = $1 and feture.post_visible(p, $2, $3)`, [postId, viewer.profileId, viewer.accountId]);
   if (!p) fail(404, 'not_found');
   return p;
+}
+
+/** How far a claimant of «это я на фото» is trusted (owner decision 28.10.2026, `DISPUTE_LIMITS`): the person
+ * profile's photo verified against a selfie, the account old enough and no confirmed false claims. Per account: a
+ * couple's partners are judged each on their own. `level` is what staff see: the first rule that fails.
+ * @param {Q} q @param {string} accountId */
+export async function claimantTrust(q, accountId) {
+  const pv = await hasPhotoCheck(q);
+  const [a] = await q.query(
+    `select a.dispute_strikes strikes, ${pv ? 'coalesce(feture.photo_verified(a.person_profile_id), false)' : 'false'} verified,
+            a.created_at <= now() - $2::interval old, a.created_at > now() - $3::interval young
+     from feture.account a where a.id = $1`, [accountId, DISPUTE_LIMITS.trustedAccountAge, DISPUTE_LIMITS.attackYoungAge]);
+  if (!a) return { trusted: false, young: true, strikes: 0, level: 'unverified' };
+  const strikes = Number(a.strikes);
+  const level = strikes >= DISPUTE_LIMITS.strikesRestricted ? 'restricted' : strikes > DISPUTE_LIMITS.trustMaxStrikes ? 'struck'
+    : !a.verified ? 'unverified' : !a.old ? 'new' : 'trusted';
+  return { trusted: level === 'trusted', young: a.young, strikes, level };
 }
 
 /** Words added between two texts (bag of words), for the major-edit rule. @param {string} a @param {string} b */
@@ -395,7 +416,7 @@ async function activityBursts(q, viewer, kinds, cur, limit) {
      ), numbered as (
        select *, sum(brk) over (partition by actor, typ order by t, target rows unbounded preceding) burst from marked
      ), bursts as (
-       select actor, typ, max(t) last_at, count(*)::int n, (array_agg(target order by t desc))[1:6] targets,
+       select actor, typ, max(t) last_at, count(*)::int n, (array_agg(target order by t desc))[1:${ACT_ITEMS}] targets,
               md5(actor::text || typ || min(t)::text)::uuid id
        from numbered group by actor, typ, burst
      )
@@ -404,25 +425,57 @@ async function activityBursts(q, viewer, kinds, cur, limit) {
     [viewer.profileId, viewer.accountId, kinds, cur?.at ?? null, cur?.id ?? null, limit]);
 }
 
-/** Activity cards for the screen: the person, how many, and up to six of the things (posts, events, communities,
- * people). @param {Q} q @param {Acting} viewer @param {import('../media/assets.mjs').MediaConfig} media @param {any[]} bursts */
+/** Activity cards for the screen: the person, how many, and up to ACT_ITEMS of the things — a liked post with its
+ * first picture and what it is made of (V21 likeThumb), an event or a community with its cover, a person with their
+ * face. @param {Q} q @param {Acting} viewer @param {import('../media/assets.mjs').MediaConfig} media @param {any[]} bursts */
 async function activityDtos(q, viewer, media, bursts) {
   if (!bursts.length) return [];
   const ids = (/** @type {string} */ typ) => [...new Set(bursts.filter(b => b.typ === typ).flatMap(b => b.targets))];
-  const posts = ids('likes').length ? await q.query(
-    `select x.id, x.title, left(x.body, 140) excerpt, json_build_object('id', o.id, 'kind', o.kind, 'handle', o.handle, 'name', o.name) author
-     from feture.post x join feture.profile o on o.id = x.owner_profile_id where x.id = any($1::uuid[])`, [ids('likes')]) : [];
-  const events = ids('events').length ? await q.query(
-    `select e.id, e.title, e.format, e.starts_at "startsAt", e.state from feture.event e where e.id = any($1::uuid[])`, [ids('events')]) : [];
-  const groups = ids('communities').length ? await q.query(
-    `select c.id, c.name, c.privacy, c.plate from feture.community c where c.id = any($1::uuid[])`, [ids('communities')]) : [];
-  const people = ids('follows').length ? await q.query(
-    `select p.id, p.kind, p.handle, p.name from feture.profile p where p.id = any($1::uuid[])`, [ids('follows')]) : [];
-  await withFaces(q, media, viewer, people, r => r);
-  const actors = await q.query(`select p.id, p.kind, p.handle, p.name from feture.profile p where p.id = any($1::uuid[])`, [[...new Set(bursts.map(b => b.actor))]]);
+  const [posts, events, groups, people] = await Promise.all([
+    ids('likes').length ? q.query(
+      `select x.id, x.title, left(x.body, 140) excerpt, x.audience, x.owner_profile_id,
+              json_build_object('id', o.id, 'kind', o.kind, 'handle', o.handle, 'name', o.name) author,
+              exists (select 1 from feture.poll pl where pl.post_id = x.id) poll, jsonb_array_length(x.interests) > 0 interests,
+              (select count(*)::int from feture.media_attachment a join feture.media_asset m on m.id = a.asset_id
+                where a.target_type = 'post' and a.target_id = x.id and m.kind <> 'video') photos,
+              (select count(*)::int from feture.media_attachment a join feture.media_asset m on m.id = a.asset_id
+                where a.target_type = 'post' and a.target_id = x.id and m.kind = 'video') videos,
+              (select to_jsonb(m) from feture.media_attachment a join feture.media_asset m on m.id = a.asset_id
+                where a.target_type = 'post' and a.target_id = x.id order by a.position limit 1) first_asset
+       from feture.post x join feture.profile o on o.id = x.owner_profile_id where x.id = any($1::uuid[])`, [ids('likes')]) : [],
+    ids('events').length ? q.query(
+      `select e.id, e.title, e.format, e.starts_at "startsAt", e.state, e.plate,
+              (select to_jsonb(m) from feture.media_asset m where m.id = e.cover_asset_id) cover_asset
+       from feture.event e where e.id = any($1::uuid[])`, [ids('events')]) : [],
+    ids('communities').length ? q.query(
+      `select c.id, c.name, c.privacy, c.plate,
+              (select count(*)::int from feture.community_member m where m.community_id = c.id and m.state = 'active') members,
+              (select to_jsonb(m) from feture.media_asset m where m.id = c.cover_asset_id) cover_asset
+       from feture.community c where c.id = any($1::uuid[])`, [ids('communities')]) : [],
+    ids('follows').length ? q.query(
+      `select p.id, p.kind, p.handle, p.name from feture.profile p where p.id = any($1::uuid[])`, [ids('follows')]) : [],
+  ]);
+  const [actors] = await Promise.all([
+    q.query(`select p.id, p.kind, p.handle, p.name from feture.profile p where p.id = any($1::uuid[])`, [[...new Set(bursts.map(b => b.actor))]]),
+    withFaces(q, media, viewer, people, r => r),
+  ]);
   await withFaces(q, media, viewer, actors, r => r);
+  // Pictures are signed in the same tick (the delivery coalesces them). A liked post's picture follows the post's own
+  // audience (explicit stays covered — the viewer opens the post to choose); a cover is what a public place shows.
+  /** @param {any} d */
+  const pic = d => (d?.src ? d.src.thumb ?? d.src.blur ?? null : null);
+  const pubCover = async (/** @type {any} */ x) => { const { cover_asset, ...r } = x; return { ...r, cover: pic(await coverOf(media, cover_asset, viewer.profileId)) }; };
+  const [postOut, eventOut, groupOut] = await Promise.all([
+    Promise.all(posts.map(async ({ first_asset, audience, owner_profile_id, ...x }) => {
+      const place = owner_profile_id === viewer.profileId ? 'own' : PUBLIC_AUD.has(audience) ? 'public' : 'private';
+      const d = first_asset && media?.delivery ? await mediaDto(media, first_asset, { viewerProfileId: viewer.profileId, place, showExplicit: false }).catch(() => null) : null;
+      return { ...x, thumb: pic(d), video: first_asset?.kind === 'video', durationMs: first_asset?.kind === 'video' ? first_asset.duration_ms ?? null : null };
+    })),
+    Promise.all(events.map(pubCover)),
+    Promise.all(groups.map(pubCover)),
+  ]);
   /** @type {Record<string, any[]>} */
-  const pool = { likes: posts, events, communities: groups, follows: people };
+  const pool = { likes: postOut, events: eventOut, communities: groupOut, follows: people };
   return bursts.map(b => ({
     kind: 'activity', id: b.id, activity: b.typ, actor: actors.find(x => x.id === b.actor), count: b.n, at: new Date(b.last_at).toISOString(),
     items: b.targets.map((/** @type {string} */ t) => pool[b.typ].find(x => x.id === t)).filter(Boolean),
@@ -442,7 +495,7 @@ async function postDtos(q, rows, viewer, media, showExplicit) {
   const ids = rows.map(p => p.id);
   const owners = [...new Set(rows.map(p => p.owner_profile_id))];
   const ownIds = rows.filter(p => p.own).map(p => p.id);
-  const [authors, assets, polls, mine, counts, tags, mentions] = await Promise.all([
+  const [authors, assets, polls, mine, counts, tags, mentions, disputes] = await Promise.all([
     // The name badges (V21 nameBadges): «Фото подтверждено» and the public Premium crown.
     q.query(`select p.id, p.kind, p.handle, p.name, p.avatar_asset_id, ${pv ? 'feture.photo_verified(p.id)' : 'false'} "photoVerified", ${PREMIUM_SQL} premium
              from feture.profile p where p.id = any($1::uuid[])`, [owners]),
@@ -466,6 +519,8 @@ async function postDtos(q, rows, viewer, media, showExplicit) {
       `select m.source_id post_id, p.id, p.handle from feture.mention m join feture.profile p on p.id = m.profile_id
        where m.source_type = 'post' and m.source_id = any($1::uuid[]) and not m.removed and p.state = 'active' and not feture.blocked($2, p.id)`,
       [ids, viewer.profileId]),
+    // Own posts hidden by an open «это я на фото» claim: the author sees that, never the claimant.
+    ownIds.length ? q.query(`select distinct d.post_id from feture.photo_dispute d where d.post_id = any($1::uuid[]) and d.state = 'open' and d.hid`, [ownIds]) : [],
   ]);
   // Results only after one's own vote (V21 pollHTML), or for the author.
   const showResults = polls.map(pl => pl.post_id).filter(id => ownIds.includes(id) || mine.some(m => m.post_id === id));
@@ -500,7 +555,8 @@ async function postDtos(q, rows, viewer, media, showExplicit) {
       likes: c.likes, liked: c.liked, replies: c.replies, saved: c.saved,
       publishedAt: p.published_at, editedAt: p.edited_at,
       // The gallery album goes back to its owner only (the post menu and the editor keep it; V21 postAlbum / setAlbum).
-      ...(p.own ? { state: p.state, rev: p.rev, inFeed: p.in_feed, returned: p.removed_reason, ...('album_id' in p ? { albumId: p.album_id } : {}) } : {}),
+      ...(p.own ? { state: p.state, rev: p.rev, inFeed: p.in_feed, returned: p.removed_reason, ...('album_id' in p ? { albumId: p.album_id } : {}),
+        ...(disputes.some(d => d.post_id === p.id) ? { dispute: { note: p.dispute_note ?? null } } : {}) } : {}),
     };
   });
 }
@@ -902,24 +958,67 @@ const run = {
     return { answer: input.answer };
   },
 
-  async 'tag.object'(q, { acting: a, input }) {
+  async 'tag.object'(q, { acting: a, input, account }) {
     const viewer = need(a);
     const p = await visiblePost(q, input.postId, viewer);
     if (p.own) fail(422, 'rule_violation', { rule: 'own_post' });
     // «Это я на фото» only makes sense where there are photos; text posts go through reports.
     const [{ n }] = await q.query(`select count(*)::int n from feture.media_attachment where target_type = 'post' and target_id = $1`, [input.postId]);
     if (!n) fail(422, 'rule_violation', { rule: 'no_photos' });
+    const L = DISPUTE_LIMITS;
+    // Claims of one account are counted under a lock (parallel requests cannot pass a limit together).
+    await q.query(`select pg_advisory_xact_lock(hashtext('feture-dispute:' || $1))`, [account.id]);
+    const [open] = await q.query(`select hid from feture.photo_dispute where post_id = $1 and claimant_account = $2 and state = 'open'`, [input.postId, account.id]);
+    if (open) return { hidden: open.hid, queued: true };
+    const count = async (/** @type {boolean} */ tagged, /** @type {string} */ window) => (await q.query(
+      `select count(*)::int n from feture.photo_dispute where claimant_account = $1 and tagged = $2 and created_at > now() - $3::interval`,
+      [account.id, tagged, window]))[0].n;
     const [t] = await q.query('select state from feture.photo_tag where post_id = $1 and profile_id = $2', [input.postId, viewer.profileId]);
+    const trust = await claimantTrust(q, account.id);
+    let hid = false, suspicious = false, attack = false;
     if (t) {
+      // A person marked on the photo: their «no» hides it at once, as a declined mark (V21 tagObject).
+      if (await count(true, '1 day') >= L.taggedPerDay) fail(429, 'rate_limited');
       await q.query(`update feture.photo_tag set state = 'no', decided_at = now() where post_id = $1 and profile_id = $2`, [input.postId, viewer.profileId]);
+      hid = true;
     } else {
-      // «Это я на фото — против публикации»: hidden for everyone at once until staff decide; the objector is not named.
-      await q.query(`update feture.post set disputed_at = coalesce(disputed_at, now()), disputed_by = coalesce(disputed_by, $2) where id = $1`, [input.postId, viewer.profileId]);
-      await enqueue(q, 'moderation.dispute', p.owner_profile_id, { postId: input.postId, by: viewer.profileId });
+      if (trust.strikes >= L.strikesRestricted) fail(422, 'rule_violation', { rule: 'claims_restricted' });
+      if (await count(false, '1 day') >= L.untaggedPerDay || await count(false, L.monthWindow) >= L.untaggedPerMonth) fail(429, 'rate_limited', { rule: 'claim_limit' });
+      suspicious = trust.young || !trust.trusted;
+      // Mass attack guard: several suspicious claims against one author within a day suspend instant hiding of their
+      // posts; the claims still reach staff first.
+      await q.query(`select pg_advisory_xact_lock(hashtext('feture-dispute-author:' || $1))`, [p.owner_profile_id]);
+      const [{ n: recent }] = await q.query(
+        `select count(*)::int n from feture.photo_dispute where author_profile_id = $1 and not tagged and suspicious and created_at > now() - $2::interval`,
+        [p.owner_profile_id, L.attackWindow]);
+      attack = recent + (suspicious ? 1 : 0) >= L.attackClaims;
+      if (attack) await q.query(`update feture.photo_dispute set attack = true where author_profile_id = $1 and state = 'open' and not attack`, [p.owner_profile_id]);
+      hid = trust.trusted && trust.strikes < L.strikesNoInstant && !attack;
+      if (hid) await q.query(`update feture.post set disputed_at = coalesce(disputed_at, now()), disputed_by = coalesce(disputed_by, $2) where id = $1`, [input.postId, viewer.profileId]);
+      // A claim that only queues still takes the post out of the claimant's own feed, as a report does.
+      else await q.query(`insert into feture.feed_hide (profile_id, kind, target_id) values ($1, 'post', $2) on conflict do nothing`, [viewer.profileId, input.postId]);
     }
-    await enqueue(q, 'post.disputed', p.owner_profile_id, { postId: input.postId });
-    await settleAvatar(q, p.owner_profile_id);
-    return { hidden: true };
+    await q.query(
+      `insert into feture.photo_dispute (post_id, author_profile_id, claimant_profile_id, claimant_account, tagged, trusted, suspicious, hid, attack)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [input.postId, p.owner_profile_id, viewer.profileId, account.id, !!t, trust.trusted, suspicious, hid, attack]);
+    // The author learns only that someone in the photo objects, never who; nothing while the post stays visible.
+    if (hid) {
+      await enqueue(q, 'post.disputed', p.owner_profile_id, { postId: input.postId });
+      await settleAvatar(q, p.owner_profile_id);
+    }
+    return { hidden: hid, queued: true };
+  },
+
+  async 'post.disputeExplain'(q, { acting: a, input }) {
+    const viewer = need(a);
+    const p = await visiblePost(q, input.postId, viewer);
+    if (!p.own) fail(404, 'not_found');
+    // Only while the post is hidden by an open dispute: that is all the author is told about.
+    const [{ hidden }] = await q.query(`select exists (select 1 from feture.photo_dispute where post_id = $1 and state = 'open' and hid) hidden`, [input.postId]);
+    if (!hidden) fail(409, 'conflict', { rule: 'not_disputed' });
+    await q.query(`update feture.post set dispute_note = $2 where id = $1`, [input.postId, input.note || null]);
+    return { note: input.note || null };
   },
 
   async 'report.create'(q, { acting: a, input, account }) {

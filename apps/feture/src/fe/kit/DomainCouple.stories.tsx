@@ -1,6 +1,6 @@
 import type {Meta,StoryObj} from '@storybook/react-vite';
 import {fn} from 'storybook/test';
-import {ActorCard,ActorCards,Av,Btn,ReturnNote,ReviewMeta,ReviewPost,Sheet} from './index';
+import {ActingAv,ActorCard,ActorCards,Av,Btn,ReturnNote,ReviewMeta,ReviewPost,Sheet,Stack} from './index';
 
 const meta={title:'Домен/Пара',component:ActorCard,tags:['autodocs'],
  parameters:{docs:{description:{component:'«Действовать как» (док «Я» при активной паре): карточка профиля выбирает его, кнопка справа открывает профиль. `dot` — что-то ждёт решения. Карточки — внутри `ActorCards` (подпись снизу). Для согласований пары: `ReviewMeta` (кто предложил, версия), `ReviewPost` (что будет опубликовано), `ReturnNote` (комментарий «на доработку»).'}}},
@@ -20,3 +20,7 @@ export const Согласование:StoryObj<typeof ReviewPost>={name:'Лис�
   <ReviewMeta by="Tom" version="Версия 2"/><ReviewPost {...a}/></Sheet>,
  args:{title:'Вечер настолок',children:<p>Собираемся в субботу, берите любимые игры.</p>,meta:'2 фото · видят все'}};
 export const Возвращено:StoryObj<typeof ReturnNote>={name:'Комментарий «на доработку»',render:a=><ReturnNote {...a}/>,args:{children:'«Давай другое фото»'}};
+
+export const КемДействую:StoryObj<typeof ActingAv>={name:'Аватар «кем действую»',render:a=><Stack row gap={3}><ActingAv {...a}/><ActingAv p={{id:'pair',kind:'couple',name:'Mia и Tom'}}/><ActingAv p={{id:'pair',kind:'couple',name:'Mia и Tom'}} size="xs"/></Stack>,
+ parameters:{docs:{description:{story:'На каждом месте, откуда пишут («Что нового», ответ, сообщение, новая тема): фото профиля, от имени которого действуешь, а у пары без фото — оба инициала на плашке пары. Выбора «от кого» нигде нет (правило владельца): решает «Действовать как» в доке.'}}},
+ args:{p:{id:'mia',kind:'person',name:'Mia'},size:'sm'},argTypes:{p:{control:false},size:{control:'inline-radio',options:['xs','sm','']}}};
