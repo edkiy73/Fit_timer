@@ -27,6 +27,8 @@ describe('kit validation layer',()=>{
   expect(textErrorMessage(t,'too_short',FIELD.communityName)).toBe('Минимум 3 символа');
   expect(textErrorMessage(t,'too_short',FIELD.joinAnswer.min?FIELD.joinAnswer:FIELD.placeName)).toBe('Минимум 2 символа');
   expect(textErrorMessage(t,'long_word',FIELD.profileName)).toContain('40');
+  expect(textErrorMessage(t,'empty',FIELD.eventTitle)).toBe('Минимум 5 символов');
+  expect(textErrorMessage(t,'empty',FIELD.profileName)).toBe('Заполни это поле');
   expect(textErrorMessage(t,'whatever',FIELD.bio)).toBe(ru['fe.val.invalid']);
  });
  it('agrees with the server contracts on every value',()=>{

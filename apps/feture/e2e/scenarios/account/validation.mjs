@@ -56,7 +56,7 @@ export default [
    const before = (await t.api('support.mine', {})).tickets?.length ?? 0;
    await t.tap('text=Написать в поддержку'); await t.see(sheet + ' >> text=Сообщение');
    await t.fill('#fe-sup-text', '        '); await t.tap(sheet + ' >> text=Отправить');
-   has(await errText(t, 'body'), /Заполни/, 'only spaces');
+   has(await errText(t, 'body'), /Напиши хотя бы пару слов|Минимум 5/, 'only spaces');
    await t.fill('#fe-sup-text', 'Не приходит' + ZWSP + ' код'); await t.page.keyboard.press('Tab');
    has(await errText(t, 'body'), /невидимые/, 'zero-width space');
    await t.fill('#fe-sup-text', 'abc'); await t.tap(sheet + ' >> text=Отправить');

@@ -28,7 +28,7 @@ const useWhen=()=>{const {locale}=useI18n();return (v:string)=>new Date(v).toLoc
 export function SupportSheet({onClose,onSent}:{onClose:()=>void,onSent:(t:Ticket)=>void}){
  const {call}=useFe();const {t}=useI18n();const toast=useToast();
  const [topic,setTopic]=useState<Topic>('other');const [body,setBody]=useState('');const [err,setErr]=useState('');const [busy,setBusy]=useState(false);
- const checks=useChecks({body:'support'},{body},{body:{too_short:t('fe.w8.sup.short')}});
+ const checks=useChecks({body:'support'},{body},{body:{too_short:t('fe.w8.sup.short'),empty:t('fe.w8.sup.short')}});
  const send=async()=>{
   if(!checks.submit())return;
   setBusy(true);setErr('');
@@ -50,7 +50,7 @@ export function SupportSheet({onClose,onSent}:{onClose:()=>void,onSent:(t:Ticket
 function TicketSheet({item,onClose,onChange}:{item:Ticket,onClose:()=>void,onChange:(t:Ticket)=>void}){
  const {call}=useFe();const {t}=useI18n();const when=useWhen();
  const [body,setBody]=useState('');const [err,setErr]=useState('');const [busy,setBusy]=useState(false);
- const checks=useChecks({body:'support'},{body},{body:{too_short:t('fe.w8.sup.short')}});
+ const checks=useChecks({body:'support'},{body},{body:{too_short:t('fe.w8.sup.short'),empty:t('fe.w8.sup.short')}});
  const reply=async()=>{
   if(!checks.submit())return;
   setBusy(true);setErr('');

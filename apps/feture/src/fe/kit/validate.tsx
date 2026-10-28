@@ -18,7 +18,8 @@ const CODES=new Set<string>(['bad_characters','line_break','markup','empty','too
 /** The message for a refusal code; `{n}` is the rule's limit for that code, `{chars}` the word «символ» in its form. */
 export function textErrorMessage(t:T,code:string,rule:TextRule):string{
  if(!CODES.has(code))return t('fe.val.invalid');
- const c=code as TextError;
+ // Nothing typed where a few characters are needed: say how many («Минимум 5 символов»), not just «Заполни».
+ const c=(code==='empty'&&rule.min>1?'too_short':code) as TextError;
  const n=c==='too_short'?rule.min:c==='too_long'?rule.max:c==='too_many_lines'?rule.lines:c==='long_word'?rule.run:0;
  let form='other';try{form=new Intl.PluralRules(t('fe.val.locale')).select(n);}catch{/* keep «other» */}
  return t('fe.val.'+c,{n,chars:t('fe.val.chars.'+form)});
