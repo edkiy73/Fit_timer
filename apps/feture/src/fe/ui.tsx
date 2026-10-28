@@ -7,7 +7,7 @@ import {PLATE_KEYS,articlePlate,type PlateKey} from '../../contracts/_plates.mjs
 import {linkExpiresAt} from './kit/media';
 
 /** V21 building blocks with the prototype's own markup and class names (styles: kit/base.css, started from
- * public/prototype-v21.html). Icons come only from Lucide. */
+ * docs/v21/prototype-v21.html). Icons come only from Lucide. */
 
 // V21 plates (prototype PL): the coloured disc behind initials.
 const PLATES=[['#7A1236','#FF5A7A','#B9A6FF','#2A0D1F'],['#3C1B5A','#FF9F7A','#7A1236','#170A14'],['#1F3A4A','#7FE0B9','#B9A6FF','#0E1A22'],

@@ -1,7 +1,7 @@
 # FEED & CONTENT — server domain requirements from prototype V21
 
 Scope: posts (text / media / poll / interests / article), audiences, composer and drafts, edits and review, replies, reactions, poll votes, mentions, photo marks (people on photos), topics, saved, «Скрытое в ленте», follows and article subscriptions, activity stream, feed composition, reports and moderation of posts, galleries and albums, content search.
-Source: `apps/feture/public/prototype-v21.html` (line numbers are given as `L1234`), V21-INTEGRATION-GUIDE §5/§11, V21-CHANGELOG (FEED-001…043), existing `lib/feture/*`, migrations, `docs/community-posts.md`, `community-follow-mute.md`, `moderation.md`.
+Source: `apps/feture/docs/v21/prototype-v21.html` (line numbers are given as `L1234`), V21-INTEGRATION-GUIDE §5/§11, V21-CHANGELOG (FEED-001…043), existing `lib/feture/*`, migrations, `docs/community-posts.md`, `community-follow-mute.md`, `moderation.md`.
 
 Conventions:
 - **P** = profile (person | couple). The acting profile is always explicit (`actingProfileId`). Each write stores `profile_id` (owner) and `acted_by_account_id`.

@@ -1,6 +1,6 @@
 # FetUre S1/S2 extraction — PEOPLE · DISCOVER · LINKS · BLOCKS · CHATS · NOTIFICATIONS · «НУЖНО РЕШИТЬ»
 
-Source of truth: `apps/feture/public/prototype-v21.html` (line refs below are to that file unless noted), V21-INTEGRATION-GUIDE.md §5/§11, AGENTS.md. Read-only extraction; nothing in the repo was changed.
+Source of truth: `apps/feture/docs/v21/prototype-v21.html` (line refs below are to that file unless noted), V21-INTEGRATION-GUIDE.md §5/§11, AGENTS.md. Read-only extraction; nothing in the repo was changed.
 
 Conventions used here
 - `profile` = person or couple profile (owner of everything below). `account` = a member login. In the prototype the acting identity is `me` / `couple` (`activeActor()` 4044, `actionAuthor()` 4054, `withActor()` 4056); a viewer's per-profile state is `social(actor)` 4059 (follows, likesIn/Out, matches, reqIn/Out, sharedByMe, threads, archived, muted, decided, history, filters.dating).
@@ -307,7 +307,7 @@ Rules: a member's personal items are never shown to the partner (CPL-015, 7942);
 | Underage signal | reason `minor` ⇒ priority 1 (existing priority 1–3) | — |
 | Sanctions effect | restriction closes peer eligibility: remove from deck/search, block new likes/requests/messages, revoke grants (existing moderation.md) | extend to likes, matches, conversations (end or freeze) |
 | Rate limits / abuse | access quota 10/24h; like/message rate limits (implied, not in V21); link max 30 | — |
-| Auto-checks | `moderation-engine.js` label adapter for message text/media (types "message/media" planned in moderation.md) | no auto-ban by count |
+| Auto-checks | `moderation-engine.js` label adapter for message text/media (types "message/media") | no auto-ban by count |
 
 ---
 

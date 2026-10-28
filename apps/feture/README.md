@@ -1,110 +1,41 @@
-# FetUre — AppBase product
+# FetUre
 
-FetUre is an independent app within the AppBase monorepo (React + TypeScript + Vite, with Task Mini as architectural reference). Production site: https://feture-mvp.vercel.app.
+An 18+ community app: profiles and interests, posts with photo and video, communities and events, Discover, a
+private part opened by access, chats. One React + TypeScript + Vite app for the website and the Android app
+(Capacitor); iOS later. Pre-launch. Site: https://feture-mvp.vercel.app (the app is `/#/n/feed`).
 
-## Database co-location (2026-10-10)
-- FetUre shares the **FitT Supabase project** (`anrhayozrhrmiwexmbhw`, Tokyo / `ap-northeast-1` verified 2026-10-11), not FitTimer's application tables.
-- Strictly `public.feture_*`-prefixed domain tables are deployed. `supabase/migrations/20261010_001_feture_domain.sql` is the initial domain/schema seed; later CLI migrations include scoped seed and interest transactions. Never reapply the initial migration to the same database without reviewing existing tables.
-- 12 interest categories, 144 interests, and 18 *demonstration test descriptors* seeded from `data/concept-catalog.json`. The old descriptors are hidden from the catalogue; the W03.1 questionnaire engine and six reviewed questionnaires now use immutable published versions and server scoring. No future draft is published automatically.
-- `supabase/migrations/20261010_002_catalog_read.sql` allows **anonymous SELECT** for ONLY the three public taxonomy tables; all six private tables have RLS enabled and NO anon/authenticated grants or policies.
-- AppBase server sessions are authoritative. The database uses server-derived opaque `account_hash` (NOT `auth.users` IDs, and never a client-supplied email). Private features must require server-side identity verification before any service-role request.
-- A shared Supabase project shares quota/availability and privileged project credentials. Prefixes/RLS protect from ordinary access, but **not** from compromised service-role credentials; never put such credentials in browser code.
-- `api/catalog.js` is a narrow public server proxy with a publishable (anon) key, **not service-role**. It returns public taxonomy and reviewed legal publications only. No client direct DB calls. Vercel variables: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`.
+**Rules for anyone changing it: [AGENTS.md](AGENTS.md).** Infrastructure decisions: [docs/infra/](docs/infra/README.md).
 
-## Interfaces
-- `/#/tests`: private saved questionnaire attempts, resume, explicit skips, separate retakes and explainable results. The product admin edits data-only definitions and explicitly publishes reviewed immutable versions. Six starting questionnaires are published after exact-revision editorial review; production adult/auth acceptance remains open. [Questionnaire contract](docs/questionnaires.md).
-- `/`: **native React** experience. Tabs «Мой мир», «Исследовать», «Сообщество», «Знакомства» are React components; no iframe. Interest editing, per-category jars and privacy choices are functional.
-- `/concept.html`: archived clickable 3.1 reference, not production UI.
-- React uses the live public taxonomy from `/api/catalog` with an explicit bundled offline fallback.
-- All 144 topics have Russian definitions and searchable synonyms from the same public editorial release, with selected related topics. The interest editor explains the term before asking for a personal response. `npm run check:catalog` validates this release during checks and builds; admin drafts (W01.1) and reviewed immutable publication (W01.2) are implemented, subject to independent review; no public version changes without a deliberate admin publish. See [editorial contract](docs/catalog-editorial.md).
-- Community posts and dating profiles still use hardcoded fixtures in the inspected React source, not working social services. Any legacy demonstration labels are implementation debt: current owner policy requires seed provenance in database/admin only and no technical badges in consumer UI during pre-launch development.
-- Private interests use a dedicated owner-scoped IndexedDB cache/outbox and `/api/domain` list/set/delete. UUIDs and expected revisions survive retries/restarts; conflicts require an explicit choice. Guest records are imported only by confirmation and stay private. Confirmed logout fences all tabs and clears only the captured owner. [Queue contract and verification](docs/interest-queue.md).
-- A02.1 server foundation is deployed in PostgreSQL: independent stance/experience/boundary, intensity 1–5, revisions, operation receipts and deletion tombstones. A02.2 editor and A02.3/A03 client transport now use this model. **Live cloud saving is not yet accepted/enabled**: A01 server auth/mail environment and the trusted A04 adult gate are still blockers. No age bypass was added. [Server contract](docs/interest-transactions.md).
-- A04.2/A04.3 add a checked verification engine and persistent denied-by-default PostgreSQL attempts/global receipts: policy/expiry, terminal rejection/revocation and replay rules. The schema is deployed with **zero enabled policies**. No production provider, webhook route or adult authorization is connected. [Verification contract](docs/verification-contract.md).
-- A05 supplies a product Admin document editor, nine starting drafts, immutable reviewed versions and exact-version account consent. Public documents remain readable without age/auth; sensitive repositories require current canonical RU consent. No draft is automatically published. Legal review and live authenticated acceptance remain open. [Document contract](docs/documents-consent.md).
-- W05.1 adds explicit result-to-map preview and selected private additions. Existing manual choices/boundaries/deleted marks are protected; retries are atomic. The private diary also links separately saved results. [Result-map contract](docs/result-map.md).
-- Core document sync now contains settings only. The old prototype interest-map path and timestamp merge are removed; the old local mirror is discarded without legacy conversion (pre-launch disposable data). Settings sync responses exclude obsolete private documents even for premium accounts.
-- `/#/catalog`: AppBase React route reading public catalogue from Supabase through `/api/catalog`.
-- `/#/account`: AppBase email sign-in shell. **Account storage and verification still require separately configured AppBase server backend**.
-  The code form explains the 15-minute lifetime, supports correcting the email address, clears the previous code after a successful resend, and distinguishes request/day limits from other failures.
-- `/#/admin`: AppBase admin shell.
-- `/#/comparisons`: voluntary comparison of explicitly selected themes; separate consent from each participant, revocation, no overall score or private answers. [Comparison contract](docs/comparisons.md).
-- `/#/operator`: personal Core sign-in for QA operators/managers/auditors, no shared admin key; temporary adult QA grants and audited roles only. Production verification remains separate. [Operator permissions](docs/operators.md).
+## Parts
 
-## Next stages
-1. Complete visual parity and accessibility verification for React screens, and migrate remaining demonstrative interactions to working product domains.
-2. Complete A01/A04 and live acceptance of the domain queue on two devices, then add profile/test features; no direct browser private writes.
-3. Only after verified identity and moderation, add community publishing, profile disclosure rules and optional dating.
-4. When the product grows, consider moving prefixed tables to a separate database; namespace isolation does not imply independent quotas or service-role boundaries.
+- `src/fe/` — every user screen (route `/n/*`), built from the kit `src/fe/kit/` ([README](src/fe/kit/README.md),
+  Storybook published at `/kit/`).
+- `src/feture/` — staff pages: AppBase admin sections (`/admin`) and the staff workspace (`/operator`), plus the
+  `/api/fe` client (`fe-api.ts`).
+- `api/fe.mjs` + `server/` + `contracts/` — the app's command API ([server/README.md](server/README.md)); SQL in
+  `supabase/migrations/` (schema `feture` in the shared FitT Supabase project, Tokyo). Design notes: `docs/server/`.
+- `api/admin.js`, `api/auth.js`, `api/domain.js`, `lib/` — AppBase sign-in, admin and the earlier backend that the
+  admin sections still use.
+- `e2e/` — interaction scenarios with personas ([e2e/README.md](e2e/README.md)); test world: [docs/test-world.md](docs/test-world.md).
+- `android/` — Capacitor shell; releases: [docs/android-release.md](docs/android-release.md).
+- `docs/v21/` — the frozen V21 prototype for side-by-side comparison (open `prototype-v21.html` in a browser).
 
-Run `npm ci --prefix apps/feture` and `npm --prefix apps/feture run check`.
-Vercel root: `apps/feture`; build `npm run build`; output `dist`.
+## Run and check
 
-## React migration step (2026-10-10)
-- `src/feture/model.ts`: strongly typed independent private state, with no record-clock merge.
-- `src/feture/use-interest-map.ts`: React subscription to the owner-scoped domain cache/queue; no client Supabase secrets.
-- `src/feture/experience.tsx`: real React app shell, topics, per-topic editor with boundary/intensity separation, community/dating previews.
-- `public/images/profile-*.webp`: portraits extracted from prior self-contained concept.
-- The next blocker for real account sync is dedicated FetUre AppBase **server auth/store** environment and server account verification; do not route private writes through anonymous Supabase keys.
+    npm ci                      # in apps/feture
+    npm run dev                 # local site; /api needs the Vercel env, so use preview + proxy for real data
+    npm run check               # everything CI runs: kit/server ratchets, typecheck, unit, Postgres (PGlite) tests, build
+    npm run storybook           # the kit
 
-## Cross-platform and test policy
-- Read `AGENTS.md` in this directory: mandatory website and Android/iOS coverage, lean testing.
-- Desktop ≥1100px: sidebar; tablet 768–1099px: horizontal tab bar; phone <768px: safe-area bottom dock. Same React code on all sizes.
-- `public/site.webmanifest` and `public/icon.svg`: installable web metadata. No service worker that could cache stale private data.
-- `capacitor.config.json`, `scripts/mobile.mjs`, `android/`: Capacitor 8.5.2 shell in parity with UnMute. `npm run mobile:sync` builds the website, copies the app part of `dist/` into `dist-native/` (the Capacitor `webDir`: no Storybook `/kit`, prototypes or web-push worker) and syncs `android/`. The Android project is checked in; its launcher icon and splash are vector drawables of `public/fe-logo.svg` (no raster assets), background `#241628` from `capacitor.config.json`. No Gradle wrapper is committed: CI uses Gradle 8.14.3 like UnMute. `npm run mobile:prepare:ios` (macOS/Xcode) prepares the iOS shell; no IPA is built.
-- **Android APK** (owner request 28.10.2026: like UnMute/FitTimer): GitHub Actions → «FetUre — APK для установки» (`.github/workflows/feture-android.yml`), manual run or a push to `main` that changes `android-release.json` — never on every commit. With the owner's `FETURE_KEYSTORE_*` secrets it signs with FetUre's own key (never FitTimer/UnMute keys) and publishes `feture-latest` (stable download) + `feture-apk-archive`; without them it builds a debug-signed prerelease `feture-apk-test-<date>-<run>`. In-app updates (Admin → «Обновление приложения», `src/fe/app-update.tsx`) and App Links (`src/fe/app-links.ts`, `public/.well-known/assetlinks.json`). Owner steps and details: [docs/android-release.md](docs/android-release.md).
-- Native API requests use `src/api-url.ts` (`apiUrl`) so the app on `https://localhost` calls `https://feture-mvp.vercel.app`, whose CORS list (`config/product.json`) already allows the native origins; browsers keep same-origin requests. Links people copy in the app (`publicOrigin()` / `publicBase()`) point at the public website, not `localhost`. Web push stays web-only (`push-web.ts` skips Capacitor). In the app push goes through FCM (`src/fe/push-native.ts`, `@capacitor/push-notifications`, Firebase project `feture-3f173`, client config `android/app/google-services.json`): the same K05 switch and once-only offer ask Android 13+ permission from a tap and register the token with `push.register` (`platform: android`); sign-out/switch-off unregisters; a tap opens `data.url` (only `/#/n/...`). The server sends once `FIREBASE_SERVICE_ACCOUNT_JSON` is set on Vercel.
-- Do not introduce extra UI test suites during rapid iteration: typecheck, build and minimal existing checks; only new high-risk data/privacy/auth regressions warrant focused tests.
+Scenarios on a local build (production API, your own lane; never print the admin key):
 
-## MVP implementation handoff (2026-10-10)
-The authoritative dependency-ordered backlog is [the SOL 6.1 MVP plan](docs/launch-mvp-plan-2026-10-10.md). Read [the audit and sources](docs/mvp-audit-2026-10-10.md) for verified repository facts, source conflicts and decisions. **F01–F03 web foundations** are complete; **F04 restrictive server foundation** is implemented; **F05 scoped seed framework** is complete and applied; the next slice is **A01** (connect existing Core account/email services and verify sign-in), starting at medium effort. Native hardware acceptance remains O05. See [the environment readiness snapshot](docs/environment-readiness-2026-10-10.md) for live service blockers. The domain-storage design in the plan is a target, not an already deployed migration.
+    npm run build && npx vite preview --port 4250 --strictPort &
+    FE_ADMIN_KEY=… E2E_LANE=me APP=http://localhost:4250 node e2e/run.mjs e2e/scenarios/me/profile.mjs
 
-F01 deployment discipline: `vercel.json` uses `scripts/vercel-ignore.mjs`; documentation/tests and other product changes skip FetUre builds, own/shared runtime changes deploy, missing Git history deploys. Actual Vercel skip status remains to be observed after a documentation-only push.
+## Deploy
 
-
-## Navigation and UI foundation (F02/F03)
-- Hash routes: `/#/explore`, `/#/explore/:categoryId`, `/#/community`, `/#/dating`. Search (`q`), interest editor (`interest`) and definitions (`hint`) are represented in the URL. Browser back restores the screen/scroll and closes the top URL overlay.
-- React Aria dialogs trap/restore focus and close on Escape/outside click. Shared typed primitives live in `src/feture/components/`; Motion tokens in `src/feture/motion.ts`, with reduced-motion support.
-- Account settings offer system/light/dark appearance; only the appearance preference is stored in localStorage. Interest records remain in the existing IndexedDB store.
-- `src/feture/native-navigation.tsx` adds the Android Back adapter: it closes kit sheets/dialogs (Escape) and earlier dialogs, walks history, sends other `/n/*` screens to the feed and asks before closing on the feed. Real-device acceptance is pending O05; only a debug-signed test APK exists.
-- Nonfunctional social actions and fake like were removed. The remaining fixtures are read-only pre-launch content until server domains replace them.
-
-
-## Private domain API foundation (F04)
-`POST /api/domain` verifies Core device-token headers and reads only the caller's profile through a fixed server query. Owner hashes, roles and age flags in payloads are rejected. Map reads remain gated until trusted age verification (A04); cloud persistence and real sharing are not active. See [API contract and limits](docs/domain-api-contract.md). Production still lacks Core store/mail/server-secret configuration; missing services yield explicit errors. See the current migration evidence below; production auth/mail environment remains unconfigured.
-
-Server CommonJS modules are checked with strict TypeScript/JSDoc contracts, and `npm run check` includes the focused `npm run test:security` boundary check. Core logout now revokes the server token. Authenticated requests and push dispatch enforce an absolute 90-day session deadline; network failures retain local credentials for retry. A01 live email acceptance remains blocked by production configuration.
-
-
-## Seed operations (F05)
-See [operator contract and commands](seed/README.md) and [verification evidence](seed/verification-2026-10-10.md). F05.1 offline inputs are a historical baseline. The current SQL generator previews live rows before reviewed atomic apply/cleanup through the Supabase operator workflow. Private sidecar provenance separates the 156 reference catalog records from 3 synthetic profiles; no Core accounts are created. Synthetic cleanup preserves the reference catalog and refuses dependent records. Runtime UI/API behavior has not changed.
-
-## A01 service setup
-
-See [required configuration and sign-in acceptance](docs/auth-service-setup.md).
-`npm run check:auth-env` performs an offline, value-redacted configuration check;
-it never sends email, accesses the database or proves a live sign-in. Existing
-Vercel Secret values cannot be retrieved for transfer via the connector. Production
-FetUre still needs server storage/mail configuration. A01 remains incomplete: server logout/expiry are implemented and checked locally,
-but real OTP delivery, two controlled production accounts and live recovery are pending.
-
-## Continued high-effort implementation (2026-10-11)
-A04.3 persistent attempts/receipts, A05 reviewed document versions/consent, and A06 private profile schema are applied. The verification policies and published legal documents are empty by design. [Private profile contract](docs/private-profile.md). External production OTP/age/legal acceptance remains open; development continues with scoped permissions next. Earlier handoff/stop notes describe historical slices and are superseded by the owner override in AGENTS.md.
-
-P01.1/P04.1 add server-filtered profile/map projections, optional field visibility, partial expiring grants, explicit contact permission, revoke/block, cursor permission management and audience preview. [Scope contract](docs/scoped-access.md). Albums, live adult accounts and chat are still separate acceptance criteria.
-
-P03.1 adds profile reports, own status/appeals and a manual Admin case queue with selected permitted snapshots, immutable decision audit and revocable sanctions. Automatic label adapter is isolated and falls back to manual review; no provider or worker is connected. [Moderation contract](docs/moderation.md). Individual staff roles and other UGC types remain later integrations.
-
-W06.1 добавляет личный дневник и историю карты в `/journal`: owner-only записи, привязка к теме, CAS/retry, удаление без восстановления старым запросом, atomically recorded map history и отдельная очистка. [Контракт и границы проверки](docs/private-journal.md). Браузерная/native приёмка и живой доступ после A01/A04 остаются открыты.
-
-Персональные роли QA-операторов и их ограничения: [docs/operators.md](docs/operators.md).
-
-Текстовые обсуждения: [контракт C01.1](docs/community-posts.md), приватные черновики, отправка на проверку, выбор аудитории и отзыв получателей по личному коду, жалобы на конкретную версию и собственные статусы через вкладку «Сообщество». Личные решения управляющего в /#/operator.
-
-Ручная проверка текстовых публикаций — рабочий экран `/#/operator` → «Публикации», личная роль управляющего и актуальный допуск 18+/согласия; аудитору доступен журнал без текста.
-
-## Design quality and manual multi-agent development (2026-10-12)
-- [Start / one Issue per run](docs/agent-team/START.md), [MVP to production issue index](docs/agent-team/ISSUES.md), [12-line Claude ↔ Codex handoff](docs/agent-team/HANDOFF.md).
-- [Owner-approved Claude mobile visual prototype + production guide](docs/design-reference/README.md). Do not copy HTML prototype into runtime; design tablet and desktop separately.
-- [UI acceptance](docs/ui-quality.md) — real screen behavior, state handling, color themes and visible browser proof.
-- No separate model APIs, scheduled background agents or automatic merges. CI for code remains unchanged.
+- Website: Vercel project `feture-mvp` (root `apps/feture`, build `npm run build`, output `dist`) deploys `main`;
+  `scripts/vercel-ignore.mjs` skips commits that change only docs/tests.
+- Android APK: GitHub Actions «FetUre — APK для установки» (`.github/workflows/feture-android.yml`), then publish the
+  build in-app as a required update (see AGENTS.md).
+- Database: apply new files from `supabase/migrations/` to the live project (see `server/README.md`).

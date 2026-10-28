@@ -1236,7 +1236,6 @@
 
 /* =====================================================================
    V10 owner revision, part 1 — Claude, 15.10.2026.
-   See docs/design-reference/V10-OWNER-REVISION-PLAN.md (part 1).
    ===================================================================== */
 
 /* -- one column geometry: bar, hero, tabs and content share the same edges -- */
@@ -1510,7 +1509,6 @@
 
 /* =====================================================================
    V10 owner revision, round 2 — Claude, 15.10.2026.
-   See docs/design-reference/V10-OWNER-REVISION-PLAN.md («Второй круг»).
    ===================================================================== */
 
 /* -- glass buttons over a rounded hero: keep them inside the picture, not on its edge -- */

@@ -26,11 +26,8 @@ export function NativeNavigation(){
         window.dispatchEvent(new Event('feture:dismiss-overlay'));
         document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
       }else if((window.history.state?.idx||0)>0)navigate(-1);
-      else if(location.pathname.startsWith('/n/')){
-        // The V21 app: any other screen goes to the feed, the feed asks before closing.
-        if(location.pathname!=='/n/feed')navigate('/n/feed',{replace:true});else setExitPrompt(true);
-      }
-      else if(location.pathname!=='/'&&location.pathname!=='/world')navigate('/world',{replace:true});
+      // Any other screen goes to the feed, the feed asks before closing.
+      else if(location.pathname!=='/n/feed')navigate('/n/feed',{replace:true});
       else setExitPrompt(true);
     });
     let handle:Awaited<typeof registration>|undefined;

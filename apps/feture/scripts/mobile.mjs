@@ -11,10 +11,9 @@ function run(cmd,args){const r=spawnSync(process.platform==='win32'?cmd+'.cmd':c
 if(!skipBuild)run('npm',['run','build']);
 if(!existsSync('dist/index.html')){console.error('dist/index.html is missing: run npm run build first.');process.exit(1)}
 
-// The website also publishes Storybook (/kit), the design prototypes and the web-push service worker. None of them
-// belongs in the app (they would add ~80 MB to the APK, and the app never registers a service worker); neither does
-// .well-known/assetlinks.json (App Links proof for the website).
-const WEB_ONLY=name=>name==='kit'||name==='.well-known'||name==='fe-sw.js'||name==='concept.html'||name==='design-handoff.html'||/^prototype-.*\.html$/.test(name);
+// The website also publishes Storybook (/kit) and the web-push service worker. Neither belongs in the app (the app
+// never registers a service worker); neither does .well-known/assetlinks.json (App Links proof for the website).
+const WEB_ONLY=name=>name==='kit'||name==='.well-known'||name==='fe-sw.js';
 rmSync('dist-native',{recursive:true,force:true});
 cpSync('dist','dist-native',{recursive:true,filter:src=>src==='dist'||!WEB_ONLY(basename(src))||!/^dist[\\/][^\\/]+$/.test(src)});
 
