@@ -38,7 +38,8 @@ export function queuePageSql(input, keys, base, baseParams) {
   const limit = ph(input.limit);
   const orderBy = keys.map(k => `x.${k.name} ${dirOf(k, input)}`).join(', ');
   const cursorCols = keys.map(k => `x.${k.name}::text as ${k.name}_cursor`).join(', ');
-  return { sql: `select x.*, ${cursorCols} from (${base}) x where ${where} order by ${orderBy} limit ${limit}`, params };
+  // `x_total`: how many rows from here on (the whole queue on a first page) — counted before the limit.
+  return { sql: `select x.*, ${cursorCols}, count(*) over ()::int as x_total from (${base}) x where ${where} order by ${orderBy} limit ${limit}`, params };
 }
 
 /** Cursor of a row. @param {Record<string, any>} row @param {QueueKey[]} keys */
@@ -51,11 +52,12 @@ export const rowCursor = (row, keys) => keys.map(k => String(row[`${k.name}_curs
 export function pageInfo(rows, keys, limit) {
   const last = rows[rows.length - 1];
   const tail = last ? rowCursor(last, keys) : null;
-  return { next: rows.length === limit ? tail : null, tail };
+  // `total`: on a first page the size of the whole queue (a later page counts from its cursor on).
+  return { next: rows.length === limit ? tail : null, tail, total: last ? Number(last.x_total) : 0 };
 }
 
 /** Rows as the response carries them: the cursor columns dropped. @param {Record<string, any>[]} rows */
-export const plainRows = rows => rows.map(r => Object.fromEntries(Object.entries(r).filter(([k]) => !k.endsWith('_cursor'))));
+export const plainRows = rows => rows.map(r => Object.fromEntries(Object.entries(r).filter(([k]) => !k.endsWith('_cursor') && k !== 'x_total')));
 
 /** Most queues: the creation time (the reader's order), then the id. */
 export const CREATED_KEYS = [{ name: 'created_at', type: 'timestamptz' }, { name: 'id', type: 'uuid', dir: 'asc' }];

@@ -2,10 +2,12 @@ import {useCallback,useEffect,useId,useRef,useState,type ReactNode} from 'react'
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {BadgeCheck,Ban,Check,Eye,Gavel,IdCard,ImageOff,Inbox,ListFilter,Lock,Minus,RefreshCw,Search,ShieldAlert,ShieldCheck,X} from 'lucide-react';
+import {BadgeCheck,Ban,CalendarDays,Check,ChevronLeft,ChevronRight,Eye,FilePen,Flag,Gavel,IdCard,Image,ImageOff,Inbox,ListFilter,Lock,MapPin,Minus,RefreshCw,Scale,Search,ShieldAlert,ShieldCheck,UserX,Users,X,Ellipsis,Film,Mic,Camera,Image as ImageIcon,LifeBuoy,Crown,Wrench,ScrollText,KeyRound,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Actions,Alert,Btn,Card,ChoiceChips,Chips,Divider,Empty,ExpandRow,Field,Form,Group,IconBtn,Input,KeyValues,LoadMore,MoreInfo,Note,Pill,ReviewCard,ReviewMedia,ReviewPair,Row,SectionLabel,Seg,Select,Sheet,Skel,Stack,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble} from './kit';
+import {Actions,Alert,Btn,Card,ChoiceChips,Chips,Divider,Empty,ExpandRow,Field,Form,Group,IconBtn,Input,KeyValues,LoadMore,MoreInfo,Note,Pill,ReviewCard,ReviewMedia,ReviewPair,ReviewTiles,type Slide,useBackClose,Row,SectionLabel,Seg,Select,Sheet,Skel,Stack,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble} from './kit';
 import {askFactor,useFe} from './session';
+import {useToast} from './toast';
+import {Viewer} from './post-parts';
 import {FactorPromptHost,FactorReset,StaffEnrol,StaffUnlock,factorSchema,type Factor} from './staff-factor';
 import {StaffSupport} from './support';
 import {useStaffPage} from './staff-paged';
@@ -55,7 +57,7 @@ type DisputeItem=z.infer<typeof disputeItem>;type RevisionItem=z.infer<typeof re
 type Items={dispute:DisputeItem[],report:ReportItem[],revision:RevisionItem[],media:MediaItem[],community:CommItem[],event:EventItem[],age:AgeItem[],photo:PhotoItem[],appeal:AppealItem[],notice:NoticeItem[],place:PlaceItem[]};
 type QueueId=keyof Items;
 /** `locked`: documents and selfies wait for a fresh second-factor code (staff.ageCheckQueue, staff.photoCheckQueue). */
-const list=<T extends z.ZodType>(item:T)=>z.object({ok:z.literal(true),items:z.array(item),locked:z.boolean().optional(),next:z.string().nullable().optional(),tail:z.string().nullable().optional()});
+const list=<T extends z.ZodType>(item:T)=>z.object({ok:z.literal(true),items:z.array(item),locked:z.boolean().optional(),next:z.string().nullable().optional(),tail:z.string().nullable().optional(),total:z.number().optional()});
 const journalPage=list(journalItem);
 const QUEUES:{[K in QueueId]:{action:string,schema:z.ZodType<{items:Items[K],locked?:boolean|undefined}>,key:(x:Items[K][number])=>string}}={
  // V21 M01 puts «это я на фото» disputes and post reports first.
@@ -80,7 +82,7 @@ const SECTIONS=['queues','support','premium','maintenance','journal','access'] a
 type Section=typeof SECTIONS[number];
 const can=(roles:readonly string[],need:readonly string[]|undefined)=>!need||roles.some(r=>need.includes(r));
 const LIMIT=50;
-type Loaded={[K in QueueId]?:{items:Items[K],locked?:boolean|undefined,next?:string|null|undefined,tail?:string|null|undefined}|{error:unknown}};
+type Loaded={[K in QueueId]?:{items:Items[K],locked?:boolean|undefined,next?:string|null|undefined,tail?:string|null|undefined,total?:number|undefined}|{error:unknown}};
 const forbidden=(e:unknown)=>e instanceof FeError&&e.code==='forbidden';
 
 /** Staff roles of the signed-in account; [] for everyone else (and while loading: null). */
@@ -107,9 +109,16 @@ export function StaffEntry(){
 
 export function StaffScreen(){
  const {t}=useI18n();const {roles,factor,checked,reload}=useStaffMe({fresh:true});const navigate=useNavigate();
- const [section,setSection]=useState<Section>('queues');
+ const [section,setSection]=useState<Section>('queues');const [menu,setMenu]=useState(false);
+ const ok:Section[]=roles?SECTIONS.filter(id=>can(roles,SECTION_ROLES[id])):[];const cur:Section=ok.includes(section)?section:ok[0]??'queues';
+ // Daily work (queues, support) is on the switch; the rarer tools (Premium, maintenance, journal, access) in the menu.
+ const daily:Section[]=ok.filter(id=>id==='queues'||id==='support');const tools:Section[]=ok.filter(id=>!daily.includes(id));
+ const label=(id:Section)=>t(SECTION_LABEL[id]);
+ const ready=!!roles?.length&&checked&&!(factor&&(!factor.enrolled||!factor.verified));
  return <>
-  <SubBar title={t('fe.staff.title')} sub={t('fe.staff.sub')} onBack={()=>navigate('/n/me')}/>
+  <SubBar title={tools.includes(cur)?label(cur):t('fe.staff.title')} onBack={()=>tools.includes(cur)?setSection(daily[0]??'queues'):navigate('/n/me')}>
+   {ready&&tools.length>0&&<IconBtn icon={Ellipsis} kind="ghost" label={t('fe.staff.tools')} onClick={()=>setMenu(true)}/>}
+  </SubBar>
   <View className="nodock">
    {roles===null||(!checked&&!!roles.length)?<Skel kind="list"/>
     :!roles.length?<Empty icon={Lock} title={t('fe.staff.unavailable')} text={t('fe.staff.unavailableText')}/>
@@ -118,17 +127,23 @@ export function StaffScreen(){
     :factor&&!factor.verified?<StaffUnlock factor={factor} onDone={reload}/>
     :<>
      <FactorPromptHost onEnrol={reload}/>
-     <Note>{t('fe.staff.roles')}: {roles.map(r=>t('fe.staff.role.'+r)).join(', ')}</Note>
-     {SECTIONS.filter(id=>can(roles,SECTION_ROLES[id])).length>1&&<Seg small={false} value={section} onChange={setSection} options={SECTIONS.filter(id=>can(roles,SECTION_ROLES[id])).map(id=>({id,label:id==='support'?t('fe.w8.staff.support'):id==='maintenance'?t('fe.w8.staff.maint'):t('fe.staff.section.'+id)}))}/>}
-     {(()=>{const ok=SECTIONS.filter(id=>can(roles,SECTION_ROLES[id]));const cur=ok.includes(section)?section:ok[0];
-      return cur==='queues'?<Queues/>:cur==='support'?<StaffSupport/>:cur==='premium'?<Premium/>:cur==='maintenance'?<StaffMaintenance/>:cur==='journal'?<Journal/>:cur==='access'?<FactorReset/>:null;})()}
+     {daily.length>1&&daily.includes(cur)&&<Seg<Section> small={false} value={cur} onChange={setSection} options={daily.map(id=>({id,label:label(id)}))}/>}
+     {cur==='queues'?<Queues/>:cur==='support'?<StaffSupport/>:cur==='premium'?<Premium/>:cur==='maintenance'?<StaffMaintenance/>:cur==='journal'?<Journal/>:cur==='access'?<FactorReset/>:null}
     </>}
   </View>
+  {menu&&<Sheet title={t('fe.staff.tools')} sub={roles?.length?t('fe.staff.roles')+': '+roles.map(r=>t('fe.staff.role.'+r)).join(', '):undefined} onClose={()=>setMenu(false)}>
+   <BackCloses onClose={()=>setMenu(false)}/>
+   <Card list>{tools.map(id=><Row key={id} icon={SECTION_ICON[id]} title={label(id)} onClick={()=>{setSection(id);setMenu(false);}}/>)}</Card>
+  </Sheet>}
  </>;
 }
+/** The system «Назад» closes the sheet it sits in instead of leaving the staff area. */
+function BackCloses({onClose}:{onClose:()=>void}){useBackClose(onClose);return null;}
+const SECTION_LABEL:Record<Section,string>={queues:'fe.staff.section.queues',support:'fe.w8.staff.support',premium:'fe.staff.section.premium',maintenance:'fe.w8.staff.maint',journal:'fe.staff.section.journal',access:'fe.staff.section.access'};
+const SECTION_ICON:Record<Section,LucideIcon>={queues:Inbox,support:LifeBuoy,premium:Crown,maintenance:Wrench,journal:ScrollText,access:KeyRound};
 
 type Order='old'|'new';
-type PageOf={items:unknown[],locked?:boolean|undefined,next?:string|null|undefined,tail?:string|null|undefined};
+type PageOf={items:unknown[],locked?:boolean|undefined,next?:string|null|undefined,tail?:string|null|undefined,total?:number|undefined};
 /** Live refresh: every 20 s the open queue looks for what is new, while the tab is visible. */
 const REFRESH_MS=20000;
 
@@ -148,47 +163,57 @@ function mergeLive(d:Loaded|null,id:QueueId,order:Order,r:PageOf):Loaded|null{
 }
 
 function Queues(){
- const {call}=useFe();const {t}=useI18n();const roles=useStaffRoles();
- const [data,setData]=useState<Loaded|null>(null);const [tab,setTab]=useState<QueueId|null>(null);const [notice,setNotice]=useState('');
- const [order,setOrder]=useState<Order>('old');
+ const {call}=useFe();const {t}=useI18n();const toast=useToast();const roles=useStaffRoles();
+ const [data,setData]=useState<Loaded|null>(null);const [tab,setTab]=useState<QueueId|'all'>('all');const [notice,setNotice]=useState('');
+ // Oldest first: what waits longest is decided first; urgent items are lifted to the top of the list (see `sorted`).
+ const order:Order='old';
+ const [focus,setFocus]=useState<number|null>(null);const [picking,setPicking]=useState(false);
  const [pageBusy,setPageBusy]=useState(false);const [pageError,setPageError]=useState<unknown>(null);
  // The live timer reads the screen as it is at each tick, not as it was when the timer was set.
- const live=useRef({data:null as Loaded|null,tab:null as QueueId|null,order:'old' as Order,busy:false});
- live.current={data,tab,order,busy:pageBusy};
+ const live=useRef({data:null as Loaded|null,tab:'all' as QueueId|'all',busy:false,focus:false});
+ live.current={data,tab,busy:pageBusy,focus:focus!==null};
  const load=useCallback((fresh=false)=>{
   setData(null);setNotice('');setPageError(null);
   const ids=QUEUE_IDS.filter(id=>can(roles??[],QUEUE_ROLES[id]));
   void Promise.allSettled(ids.map(id=>call(QUEUES[id].action,{limit:LIMIT,order},QUEUES[id].schema as z.ZodType<PageOf>,{asAccount:true,fresh}))).then(rs=>{
    const next:Record<string,PageOf|{error:unknown}>={};
-   rs.forEach((r,i)=>{const id=ids[i]!;if(r.status==='fulfilled')next[id]={items:r.value.items,locked:r.value.locked,next:r.value.next,tail:r.value.tail};else if(!forbidden(r.reason))next[id]={error:r.reason};});
+   rs.forEach((r,i)=>{const id=ids[i]!;if(r.status==='fulfilled')next[id]={items:r.value.items,locked:r.value.locked,next:r.value.next,tail:r.value.tail,total:r.value.total};else if(!forbidden(r.reason))next[id]={error:r.reason};});
    setData(next as Loaded);
-   setTab(cur=>cur&&next[cur]?cur:QUEUE_IDS.find(id=>{const v=next[id];return v&&'items' in v&&v.items.length;})??QUEUE_IDS.find(id=>next[id])??null);
   });
  },[call,roles,order]);
  useEffect(()=>{if(roles)load();},[load,roles]);
  useEffect(()=>{
   const timer=setInterval(()=>{
    const s=live.current;
-   if(document.hidden||!s.data||!s.tab||s.busy)return;
-   const id=s.tab;const v=s.data[id];if(!v||!('items' in v))return;
-   const ord=s.order;
-   // Oldest first with more pages to load: the rest comes with «Ещё». Otherwise ask for what is new.
-   if(ord==='old'&&v.next)return;
-   const after=ord==='old'&&v.tail?v.tail:undefined;
-   void call(QUEUES[id].action,{limit:LIMIT,order:ord,...(after?{after}:{})},QUEUES[id].schema as z.ZodType<PageOf>,{asAccount:true})
-    .then(r=>{if(live.current.order===ord)setData(d=>mergeLive(d,id,ord,r));})
-    .catch(()=>{});
+   // Not while one item is open: the list would move under the review.
+   if(document.hidden||!s.data||s.busy||s.focus)return;
+   const ids=s.tab==='all'?(Object.keys(s.data) as QueueId[]):[s.tab];
+   for(const id of ids){
+    const v=s.data[id];if(!v||!('items' in v)||v.next)continue; // more pages to load: the rest comes with «Ещё»
+    void call(QUEUES[id].action,{limit:LIMIT,order:'old',...(v.tail?{after:v.tail}:{})},QUEUES[id].schema as z.ZodType<PageOf>,{asAccount:true})
+     .then(r=>setData(d=>mergeLive(d,id,'old',r))).catch(()=>{});
+   }
   },REFRESH_MS);
   return()=>clearInterval(timer);
  },[call]);
  if(!data)return <Skel kind="list"/>;
  const avail=QUEUE_IDS.filter(id=>data[id]);
- if(!avail.length||!tab)return <Empty icon={Inbox} title={t('fe.staff.noQueues')}/>;
+ if(!avail.length)return <Empty icon={Inbox} title={t('fe.staff.noQueues')}/>;
  const failed=(id:QueueId)=>{const v=data[id];return !!v&&'error' in v;};
- const count=(id:QueueId)=>{const v=data[id];return v&&'items' in v?(v.items.length>=LIMIT||v.next?v.items.length+'+':v.items.length):undefined;};
+ const itemsOf=(id:QueueId)=>{const v=data[id];return v&&'items' in v?v.items as unknown[]:[];};
+ const more=(id:QueueId)=>{const v=data[id];return !!v&&'items' in v&&!!v.next;};
+ // The whole queue (the server counts it), not just the loaded page.
+ const count=(id:QueueId)=>{const v=data[id];const n=itemsOf(id).length;return v&&'items' in v&&v.total!==undefined?Math.max(v.total,n):more(id)?n+'+':n;};
+ const totalOf=(id:QueueId)=>{const c=count(id);return typeof c==='number'?c:parseInt(c,10);};
+ // The work list: one queue, or every queue together; urgent first, then what is past its time, then the oldest.
+ const ids=tab==='all'?avail:[tab];
+ const entries:Entry[]=ids.flatMap(id=>itemsOf(id).map(item=>({id,item,key:(QUEUES[id].key as (x:unknown)=>string)(item),...urgencyOf(id,item)})));
+ entries.sort((x,y)=>rank(x)-rank(y)||x.since-y.since);
+ const urgentN=entries.filter(e=>e.level==='urgent').length;const lateN=entries.filter(e=>e.level==='late').length;
+ const allUrgent=avail.reduce((n,id)=>n+itemsOf(id).filter(x=>urgencyOf(id,x).level==='urgent').length,0);
  // Every queue pages: the next page starts after the cursor of the last item shown, appended without repeats.
- const loadMore=()=>{
-  if(!tab)return;const id=tab;const v=data[id];
+ const loadMore=(id:QueueId)=>{
+  const v=data[id];
   if(!v||!('items' in v)||!v.next||pageBusy)return;
   setPageBusy(true);
   void call(QUEUES[id].action,{limit:LIMIT,order,after:v.next},QUEUES[id].schema as z.ZodType<PageOf>,{asAccount:true}).then(r=>{
@@ -197,29 +222,116 @@ function Queues(){
    setPageError(null);
   }).catch(e=>setPageError(e)).finally(()=>setPageBusy(false));
  };
+ // A decision takes the item out; the review stays open on the one that now has its place (the next), or closes at the end.
  const done=(id:QueueId,key:string)=>{
-  setNotice(t('fe.staff.done'));
   setData(d=>{if(!d)return d;const v=d[id];if(!v||!('items' in v))return d;
-   const keyOf=QUEUES[id].key as (x:unknown)=>string;return {...d,[id]:{items:(v.items as unknown[]).filter(x=>keyOf(x)!==key),next:v.next,tail:v.tail}} as Loaded;});
+   const keyOf=QUEUES[id].key as (x:unknown)=>string;return {...d,[id]:{items:(v.items as unknown[]).filter(x=>keyOf(x)!==key),next:v.next,tail:v.tail,locked:v.locked,total:v.total!==undefined?Math.max(0,v.total-1):undefined}} as Loaded;});
+  setFocus(f=>f===null?null:entries.length<=1?null:Math.min(f,entries.length-2));
+  if(entries.length<=1)setNotice(t('fe.staff.allDone'));
  };
- const current=data[tab];
- const refresh=<Btn kind="text" size="sm" auto icon={RefreshCw} onClick={()=>load(true)}>{t('fe.staff.refresh')}</Btn>;
+ const locked=ids.some(id=>{const v=data[id];return !!v&&'items' in v&&!!v.locked&&v.items.length>0;});
+ const errors=ids.filter(failed);
+ const single=tab!=='all'?tab:null;
+ const cur=focus!==null?entries[focus]:undefined;
  return <>
-  {/* The queue switch on the one tab control: more than four queues scroll sideways, each with its count. */}
-  <Seg value={tab} onChange={id=>{setTab(id);setNotice('');}} label={t('fe.staff.queuesLabel')}
-   options={avail.map(id=>({id,label:id==='photo'?t('fe.pc.staff.tab'):t('fe.staff.q.'+id),n:count(id),...(failed(id)?{dot:t('fe.error.title')}:{})}))}/>
-  {(tab==='dispute'||tab==='report')&&<Alert kind="info" icon={ShieldCheck}><b>{t('fe.staff.howTitle')}</b> {t('fe.staff.howText')}</Alert>}
-  {tab==='dispute'&&<FlaggedClaimants/>}
-  <Seg value={order} onChange={o=>setOrder(o)} label={t('fe.staff.order.label')} options={[{id:'old',label:t('fe.staff.order.old')},{id:'new',label:t('fe.staff.order.new')}]}/>
-  <SectionLabel action={refresh}>{t('fe.staff.inQueue',{n:String(count(tab)??0)})}</SectionLabel>
+  {/* What is shown: everything together, or one queue — picked in a sheet with each queue's count and urgent items. */}
+  <SectionLabel action={<Btn kind="text" size="sm" auto icon={RefreshCw} onClick={()=>load(true)}>{t('fe.staff.refresh')}</Btn>}>
+   {t('fe.staff.waiting',{n:String(ids.reduce((n,id)=>n+totalOf(id),0))})}
+  </SectionLabel>
+  <Actions><Btn kind="soft" icon={ListFilter} onClick={()=>setPicking(true)}>{tab==='all'?t('fe.staff.q.all'):queueLabel(tab,t)}</Btn></Actions>
+  {(urgentN>0||lateN>0)&&<Chips>{urgentN>0&&<Pill tone="bad">{t('fe.staff.urgentN',{n:String(urgentN)})}</Pill>}{lateN>0&&<Pill tone="wait">{t('fe.staff.lateN',{n:String(lateN)})}</Pill>}</Chips>}
+  {picking&&<Sheet title={t('fe.staff.queuesLabel')} onClose={()=>setPicking(false)}>
+   <BackCloses onClose={()=>setPicking(false)}/>
+   <Card list>
+    {[...(['all'] as const),...avail].map(id=>{const urg=id==='all'?allUrgent:itemsOf(id).filter(x=>urgencyOf(id,x).level==='urgent').length;
+     const n=id==='all'?avail.reduce((m,q)=>m+totalOf(q),0):count(id);
+     return <Row key={id} icon={id==='all'?Inbox:QUEUE_ICON[id]} title={id==='all'?t('fe.staff.q.all'):queueLabel(id,t)} pressed={tab===id}
+      sub={id!=='all'&&failed(id)?t('fe.error.title'):urg?t('fe.staff.urgentN',{n:String(urg)}):undefined} val={String(n)}
+      onClick={()=>{setTab(id);setNotice('');setFocus(null);setPicking(false);}}/>;})}
+   </Card>
+  </Sheet>}
   {notice&&<Alert kind="ok" icon={Check}>{notice}</Alert>}
-  {!current?null:'error' in current?<Alert kind="err" action={<Btn kind="soft" size="sm" auto icon={RefreshCw} onClick={()=>load(true)}>{t('fe.retry')}</Btn>}>{feErrorMessage(current.error,t)}</Alert>
-   :!current.items.length?<Empty compact icon={Inbox} title={t('fe.staff.qEmpty')} text={t('fe.staff.qEmptyText')}/>
-   :current.locked?<Alert kind="info" icon={Lock} action={<Btn kind="soft" size="sm" auto onClick={()=>void askFactor('fresh').then(ok=>{if(ok)load(true);})}>{t('fe.sf.enterCode')}</Btn>}>{t('fe.sf.lockedMedia')}</Alert>
-   :<>
-    <QueueList id={tab} items={current.items} onDone={key=>done(tab,key)}/>
-    <LoadMore more={!!current.next} busy={pageBusy} error={pageError} onMore={loadMore}/></>}
+  {errors.map(id=><Alert key={id} kind="err" action={<Btn kind="soft" size="sm" auto icon={RefreshCw} onClick={()=>load(true)}>{t('fe.retry')}</Btn>}>
+   {t('fe.staff.q.'+id)}: {feErrorMessage((data[id] as {error:unknown}).error,t)}</Alert>)}
+  {locked&&<Alert kind="info" icon={Lock} action={<Btn kind="soft" size="sm" auto onClick={()=>void askFactor('fresh').then(ok=>{if(ok)load(true);})}>{t('fe.sf.enterCode')}</Btn>}>{t('fe.sf.lockedMedia')}</Alert>}
+  {single==='dispute'&&<FlaggedClaimants/>}
+  {!entries.length?<Empty compact icon={Inbox} title={t('fe.staff.qEmpty')} text={t('fe.staff.qEmptyText')}/>
+   :<Card list>{entries.map((e,i)=><QueueRow key={e.id+':'+e.key} e={e} onOpen={()=>setFocus(i)}/>)}</Card>}
+  {/* One «Ещё» for the list: the next page of every queue in it that has more. */}
+  <LoadMore more={ids.some(more)} busy={pageBusy} error={pageError} onMore={()=>ids.filter(more).forEach(loadMore)}/>
+  {cur&&focus!==null&&<Sheet full className="st-focus" title={titleOf(cur,t)} sub={t('fe.staff.pos',{n:String(focus+1),all:String(entries.length)})+' · '+t('fe.staff.waits',{time:waited(cur.since,t)})}
+   head={<><IconBtn icon={ChevronLeft} kind="ghost" size="sm" label={t('fe.staff.prev')} disabled={focus===0} onClick={()=>setFocus(focus-1)}/>
+    <IconBtn icon={ChevronRight} kind="ghost" size="sm" label={t('fe.staff.next')} disabled={focus>=entries.length-1} onClick={()=>setFocus(focus+1)}/></>}
+   onClose={()=>setFocus(null)}>
+   <BackCloses onClose={()=>setFocus(null)}/>
+   {cur.id==='dispute'&&<Note>{t('fe.staff.howText')}</Note>}
+   <QueueList key={cur.id+':'+cur.key} id={cur.id} items={[cur.item]} onDone={key=>{toast(t('fe.staff.done'),{type:'ok'});done(cur.id,key);}}/>
+  </Sheet>}
  </>;
+}
+
+type Level='urgent'|'late'|null;
+type Entry={id:QueueId,item:unknown,key:string,level:Level,since:number};
+const HOUR=3600e3;
+/** How long an item may wait before it is late (owner's working rules, pre-launch; one place to change them). */
+const SLA:Record<QueueId,number>={dispute:24*HOUR,report:24*HOUR,revision:48*HOUR,media:24*HOUR,community:48*HOUR,event:48*HOUR,age:24*HOUR,photo:24*HOUR,appeal:72*HOUR,notice:24*HOUR,place:7*24*HOUR};
+/** When an item started to wait. */
+function sinceOf(id:QueueId,x:unknown):number{
+ const o=x as Record<string,unknown>;
+ const v=id==='dispute'?o.opened_at??o.disputed_at:id==='report'?o.firstAt:id==='revision'||id==='media'?o.createdAt:id==='age'||id==='photo'?o.submittedAt:o.created_at;
+ const n=typeof v==='string'?Date.parse(v):NaN;return Number.isFinite(n)?n:Date.now();
+}
+/** Urgent: minors, threats, a suspected attack or CSAM — whatever the age; late: past its time. */
+function urgencyOf(id:QueueId,x:unknown):{level:Level,since:number}{
+ const o=x as Record<string,unknown>;const since=sinceOf(id,x);
+ const urgent=id==='report'?(o.reasons as string[]).some(r=>r==='minor'||r==='threat')
+  :id==='dispute'?!!o.urgent||!!o.attack
+  :id==='media'?/minor|csam/.test(String(o.reason??''))
+  :id==='notice'?o.reason==='minors':false;
+ return {level:urgent?'urgent':Date.now()-since>SLA[id]?'late':null,since};
+}
+const queueLabel=(id:QueueId,t:T)=>id==='photo'?t('fe.pc.staff.tab'):t('fe.staff.q.'+id);
+/** Minors and CSAM before any other urgent item, then other urgent, then overdue, then the rest. */
+const rank=(e:Entry)=>{const o=e.item as Record<string,unknown>;
+ const grave=e.id==='report'?(o.reasons as string[]).includes('minor'):e.id==='media'?/minor|csam/.test(String(o.reason??'')):e.id==='notice'?o.reason==='minors':false;
+ return e.level==='urgent'?(grave?0:1):e.level==='late'?2:3;};
+const QUEUE_ICON:Record<QueueId,LucideIcon>={dispute:UserX,report:Flag,revision:FilePen,media:Image,community:Users,event:CalendarDays,age:IdCard,photo:BadgeCheck,appeal:Scale,notice:Gavel,place:MapPin};
+type T=(k:string,v?:Record<string,string>)=>string;
+const nick=(h:unknown)=>typeof h==='string'&&h?'@'+h:'';
+function titleOf(e:Entry,t:T):string{
+ const o=e.item as Record<string,any>;
+ switch(e.id){
+  case 'report':return t('fe.staff.reportOn',{what:t('fe.staff.report.type.'+o.targetType).toLowerCase()});
+  case 'media':{const p=t('fe.staff.media.purpose.'+o.purpose);return p.startsWith('fe.')?t('fe.staff.q.media'):p;}
+  case 'community':return o.name;case 'event':return o.title;
+  case 'place':return [o.name_ru,o.name_en].filter(Boolean).join(' / ')||t('fe.staff.q.place');
+  case 'photo':return t('fe.pc.staff.tab');
+  default:return t('fe.staff.q.'+e.id);
+ }
+}
+function subOf(e:Entry,t:T):string{
+ const o=e.item as Record<string,any>;
+ switch(e.id){
+  case 'report':return [(o.reasons as string[]).map(r=>t('fe.staff.report.reason.'+r)).join(', '),nick(o.author?.handle)].filter(Boolean).join(' · ');
+  case 'dispute':return o.excerpt??'';
+  case 'revision':return o.live??'';
+  case 'media':return o.authorLabel??'';
+  case 'community':case 'event':return o.state==='in_review'?t('fe.staff.newItem'):t('fe.staff.changed');
+  case 'age':case 'photo':return nick(o.profile?.handle);
+  case 'appeal':return [nick(o.handle),o.body].filter(Boolean).join(' · ');
+  case 'notice':return t('fe.staff.rule.'+o.reason)+(o.target_url?' · '+o.target_url:'');
+  case 'place':return o.country??'';
+  default:return '';
+ }
+}
+/** «3 ч», «2 дн»: how long it waits. */
+function waited(since:number,t:T){const m=Math.max(1,Math.round((Date.now()-since)/60000));
+ return m<60?t('fe.staff.wait.m',{n:String(m)}):m<48*60?t('fe.staff.wait.h',{n:String(Math.round(m/60))}):t('fe.staff.wait.d',{n:String(Math.round(m/1440))});}
+/** One line of the work list: what it is, why, how long it waits; urgent / late marked. */
+function QueueRow({e,onOpen}:{e:Entry,onOpen:()=>void}){
+ const {t}=useI18n();
+ return <Row icon={QUEUE_ICON[e.id]} tone={e.level==='urgent'?'l':undefined} title={titleOf(e,t)} sub={subOf(e,t)||undefined} onClick={onOpen}
+  val={e.level?<Pill tone={e.level==='urgent'?'bad':'wait'}>{e.level==='urgent'?t('fe.staff.urgent'):waited(e.since,t)}</Pill>:waited(e.since,t)}/>;
 }
 
 function QueueList({id,items,onDone}:{id:QueueId,items:unknown[],onDone:(key:string)=>void}){
@@ -315,10 +427,8 @@ function Changes({change,diff}:{change:Record<string,unknown>|null|undefined,dif
  return <>
   <Alert kind="warn">{t('fe.staff.pendingChange')}</Alert>
   <Kv rows={rows}/>
-  {'coverAssetId' in change&&c&&<ReviewPair>
-   <ReviewMedia icon={ImageOff} caption={<Note>{t('fe.staff.chg.was')}</Note>}>{c.was?<img src={c.was} alt="" draggable={false}/>:undefined}</ReviewMedia>
-   <ReviewMedia icon={ImageOff} caption={<Note>{c.missing?t('fe.staff.comm.noPicture'):t('fe.staff.chg.now')}</Note>}>{c.now?<img src={c.now} alt="" draggable={false}/>:undefined}</ReviewMedia>
-  </ReviewPair>}
+  {'coverAssetId' in change&&c&&<LookTiles tiles={[{label:t('fe.staff.chg.was'),icon:ImageOff},{label:c.missing?t('fe.staff.comm.noPicture'):t('fe.staff.chg.now'),icon:ImageOff}]}
+   shown={{slides:[c.was??null,c.now??null],thumbs:[c.was??null,c.now??null]}}/>}
   <Details data={change}/>
  </>;
 }
@@ -334,6 +444,10 @@ function Confirm({text,danger,busy,onYes,onNo}:{text:string,danger?:boolean,busy
 
 /** One reason / rule from a set, as a labelled field of the card's form. */
 function Choice<T extends string>({label,value,options,onChange,disabled}:{label:string,value:T|'',options:{id:T,label:string}[],onChange:(v:T)=>void,disabled?:boolean}){
+ const {t}=useI18n();
+ // A long list (rules, reasons) is one line on a phone; two to four options stay chips, one tap each.
+ if(options.length>4)return <Field label={label}><Select<string> label={label} value={value} onChange={v=>{if(v)onChange(v as T);}}
+  options={[['',t('fe.staff.pick')] as const,...options.map(o=>[o.id,o.label] as const)]}/></Field>;
  return <Field label={label}><ChoiceChips label={label} value={value||null} onChange={onChange} disabled={!!disabled} options={options.map(o=>[o.id,o.label] as const)}/></Field>;
 }
 
@@ -352,10 +466,6 @@ function LineField({label,value,onChange,max,...rest}:{label:string,value:string
 
 function Failure({text}:{text:string}){return text?<Alert kind="err">{text}</Alert>:null;}
 
-/** The button that opens a private picture on request, with the line saying every look is journaled. */
-function OpenLook({label,busy,onClick,err,note}:{label:string,busy:boolean,onClick:()=>void,err?:string,note:string}){
- return <Stack gap={2}><Btn kind="soft" icon={Eye} busy={busy} disabled={busy} onClick={onClick}>{label}</Btn><Note>{note}</Note>{err&&<Failure text={err}/>}</Stack>;
-}
 
 const RULES=['minors','threats','private_material','spam','illegal','community_rules'] as const;
 
@@ -365,23 +475,19 @@ const MEDIA_REASONS=['minor','not_a_person','violence','private_material','spam'
 const PUBLIC_ONLY=new Set(['avatar','community','event']);
 function MediaCard({item,onDone}:{item:MediaItem,onDone:()=>void}){
  const {call}=useFe();const {t}=useI18n();const when=useWhen();const val=useVal();
- const [src,setSrc]=useState<{card?:string|undefined,full?:string|undefined,file?:string|undefined}|null|undefined>(undefined);const [viewing,setViewing]=useState(false);
+ const [src,setSrc]=useState<{card?:string|undefined,full?:string|undefined,file?:string|undefined}|null|undefined>(undefined);
  const [reason,setReason]=useState<typeof MEDIA_REASONS[number]|''>('');const [ask,setAsk]=useState<'reject'|'csam'|null>(null);
  const d=useDecide(onDone);
  // The full picture only through staff.mediaView: it returns short-lived URLs and journals the look.
- const open=async()=>{setViewing(true);d.setFailure('');
-  try{const r=await call('staff.mediaView',{assetId:item.id},viewRes,{asAccount:true});setSrc(r.src);}catch(e){d.setFailure(feErrorMessage(e,t));}finally{setViewing(false);}};
+ const open=async():Promise<Shown>=>{const r=await call('staff.mediaView',{assetId:item.id},viewRes,{asAccount:true});setSrc(r.src);
+  return {slides:[slideOf(item.kind,r.src)],thumbs:[thumbOf(r.src)]};};
  const purpose=t('fe.staff.media.purpose.'+item.purpose);
  const explicit=!PUBLIC_ONLY.has(item.purpose);
  return <StCard title={purpose.startsWith('fe.')?t('fe.staff.media.purpose.other'):purpose} meta={when(item.createdAt)}>
-  <ReviewMedia blur={item.blur} icon={Eye}>
-   {src?(item.kind==='video'?<VideoPlayer src={src.file} poster={src.card} w={item.w} h={item.h} label={t('fe.kit.av.video')}/>
-    :item.kind==='audio'?<VoiceBubble src={src.file} durationMs={null} mine/>
-    :<a href={src.full} target="_blank" rel="noreferrer noopener"><img src={src.card} alt="" draggable={false}/></a>):undefined}
-  </ReviewMedia>
+  <LookTiles tiles={[{label:t(item.kind==='video'?'fe.staff.tile.video':item.kind==='audio'?'fe.staff.tile.audio':'fe.staff.tile.photo',{n:'1'}),icon:tileIcon(item.kind),blur:item.blur}]}
+   load={open} note={t('fe.staff.media.openNote')}/>
+  {src&&item.kind==='audio'&&src.file&&<VoiceBubble src={src.file} durationMs={null} mine/>}
   <Kv rows={[[t('fe.staff.media.authorLabel'),item.authorLabel],[t('fe.staff.media.scanner'),val(item.reason)]]}/>
-  {src===undefined?<OpenLook label={t('fe.staff.media.open')} busy={viewing} onClick={open} note={t('fe.staff.media.openNote')}/>
-   :src===null?<Alert kind="warn">{t('fe.staff.media.noCopies')}</Alert>:null}
   {src!==undefined&&!ask&&<>
    {src&&!explicit&&<Note>{t('fe.staff.media.publicOnly')}</Note>}
    <Choice label={t('fe.staff.reason')} value={reason} onChange={setReason} disabled={d.busy} options={MEDIA_REASONS.map(id=>({id,label:t('fe.staff.media.reason.'+id)}))}/>
@@ -418,7 +524,7 @@ function CommunityCard({item,onDone}:{item:CommItem,onDone:()=>void}){
  return <StCard title={item.name} meta={<>{item.state==='in_review'&&<Pill tone="wait">{t('fe.staff.newItem')}</Pill>}{when(item.created_at)}</>}>
   {item.description&&<p className="st-text">{item.description}</p>}
   {!!item.resubmits&&<Alert kind="info">{fill(t('fe.staff.comm.resubmit'),{n:item.resubmits,max:3})}{item.prev_reject_reason&&<> {t('fe.staff.comm.prevReason')}: {item.prev_reject_reason}</>}</Alert>}
-  {item.state==='in_review'&&item.cover&&<ReviewMedia icon={ImageOff}>{(item.cover.src?.card??item.cover.src?.thumb)?<img src={item.cover.src.card??item.cover.src.thumb} alt="" draggable={false}/>:undefined}</ReviewMedia>}
+  {item.state==='in_review'&&item.cover&&<LookTiles tiles={[{label:t('fe.staff.comm.cover'),icon:ImageOff}]} shown={given([item.cover.src])}/>}
   <Kv rows={[[t('fe.staff.comm.privacy'),privacy],[t('fe.staff.topics'),item.topics?.join(', ')],[t('fe.staff.comm.rules'),rules],[t('fe.staff.comm.question'),item.join_question]]}/>
   {rules===null&&<Details data={item.rules}/>}
   <Changes change={item.pending_change} diff={{before:{name:item.name,description:item.description,privacy:item.privacy,joinQuestion:item.join_question,topics:item.topics},
@@ -462,24 +568,18 @@ function AgeCard({item,onDone}:{item:AgeItem,onDone:()=>void}){
  return <AgeSelfieCard item={item} onDone={onDone}/>;
 }
 const ageOpenRes=z.object({ok:z.literal(true),selfie:mediaDto,document:mediaDto,photo:mediaDto});
-/** A selfie or a document opens on request (staff.ageCheckOpen): a fresh code if needed, one journal line per look. */
-function useAgeOpen(checkId:string){
- const {call}=useFe();const {t}=useI18n();
- const [shown,setShown]=useState<z.infer<typeof ageOpenRes>|null>(null);const [busy,setBusy]=useState(false);const [err,setErr]=useState('');
- const open=async()=>{setBusy(true);setErr('');
-  try{setShown(await call('staff.ageCheckOpen',{checkId},ageOpenRes,{asAccount:true}));}catch(e){setErr(feErrorMessage(e,t));}finally{setBusy(false);}};
- const button=(label:string)=><OpenLook label={label} busy={busy} onClick={open} note={t('fe.staff.age.openNote')} err={err}/>;
- return {shown,button};
-}
+type AgeShown=z.infer<typeof ageOpenRes>;
+const srcOf=(m:AgeShown['selfie']):Src=>(m?.src??null) as Src;
 function AgeDocCard({item,onDone}:{item:AgeItem,onDone:()=>void}){
- const {t}=useI18n();const when=useWhen();const who=useWho();
+ const {call}=useFe();const {t}=useI18n();const when=useWhen();const who=useWho();
  const d=useDecide(onDone,e=>forbidden(e)?t('fe.staff.age.own'):null);
  const [reason,setReason]=useState<typeof DOC_REASONS[number]|''>('');const [ask,setAsk]=useState(false);
- const look=useAgeOpen(item.id);const doc=look.shown?.document?.src?.full??look.shown?.document?.src?.card??null;
+ // The document opens on a tap (staff.ageCheckOpen: a fresh code if needed, one journal line per look).
+ const [doc,setDoc]=useState<string|null>(null);
+ const load=async():Promise<Shown>=>{const r=await call('staff.ageCheckOpen',{checkId:item.id},ageOpenRes,{asAccount:true});const sh=given([srcOf(r.document)]);setDoc((sh.slides[0] as string|null)??null);return sh;};
  return <StCard title={who(item.profile)} meta={when(item.submittedAt)}>
   <Alert kind="info" icon={IdCard}>{t('fe.staff.age.docTask')}</Alert>
-  {look.shown?<><ReviewMedia icon={X}>{doc?<img src={doc} alt="" draggable={false}/>:undefined}</ReviewMedia>
-  <Note>{doc?t('fe.staff.age.docPrivacy'):t('fe.staff.age.noDoc')}</Note></>:look.button(t('fe.staff.age.openDoc'))}
+  <LookTiles tiles={[{label:t('fe.staff.age.doc'),icon:IdCard}]} load={load} note={t('fe.staff.age.openNote')}/>
   <Choice label={t('fe.staff.reason')} value={reason} onChange={setReason} disabled={d.busy} options={DOC_REASONS.map(id=>({id,label:t('fe.staff.age.reason.'+id)}))}/>
   {ask?<Confirm text={t('fe.staff.age.confirmRejectDoc')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>d.run('staff.ageCheckDecide',{checkId:item.id,approve:false,reason})}/>
    :<Actions><Btn icon={Check} disabled={d.busy||!doc} onClick={()=>d.run('staff.ageCheckDecide',{checkId:item.id,approve:true})}>{t('fe.staff.age.approveDoc')}</Btn>
@@ -488,19 +588,16 @@ function AgeDocCard({item,onDone}:{item:AgeItem,onDone:()=>void}){
  </StCard>;
 }
 function AgeSelfieCard({item,onDone}:{item:AgeItem,onDone:()=>void}){
- const {t}=useI18n();const when=useWhen();const who=useWho();
+ const {call}=useFe();const {t}=useI18n();const when=useWhen();const who=useWho();
  // The server never lets staff decide their own check; its refusal is explained in plain words.
  const d=useDecide(onDone,e=>forbidden(e)?t('fe.staff.age.own'):null);
  const [reason,setReason]=useState<typeof AGE_REASONS[number]|''>('');const [ask,setAsk]=useState(false);
- const look=useAgeOpen(item.id);const selfie=look.shown?.selfie?.src?.full??look.shown?.selfie?.src?.card??null;const photo=look.shown?.photo?.src?.card??look.shown?.photo?.src?.thumb??null;
+ const [selfie,setSelfie]=useState(false);
+ const load=async():Promise<Shown>=>{const r=await call('staff.ageCheckOpen',{checkId:item.id},ageOpenRes,{asAccount:true});const sh=given([srcOf(r.selfie),srcOf(r.photo)]);setSelfie(!!sh.slides[0]);return sh;};
  const g=item.gesture??'';const gesture=t('fe.staff.age.gesture.'+g);
  return <StCard title={who(item.profile)} meta={when(item.submittedAt)}>
   <Alert kind="info" icon={Eye}>{t('fe.staff.age.gesture')}: <b>{gesture.startsWith('fe.')?t('fe.staff.age.gesture.other'):gesture}</b></Alert>
-  {!look.shown?look.button(t('fe.staff.age.openSelfie')):<ReviewPair>
-   <ReviewMedia icon={X} caption={<Note>{t('fe.staff.age.selfie')}</Note>}>{selfie?<img src={selfie} alt="" draggable={false}/>:undefined}</ReviewMedia>
-   <ReviewMedia icon={Eye} caption={<Note>{t('fe.staff.age.photo')}</Note>}>{photo?<img src={photo} alt="" draggable={false}/>:undefined}</ReviewMedia>
-  </ReviewPair>}
-  {look.shown&&!selfie&&<Note>{t('fe.staff.age.noSelfie')}</Note>}
+  <LookTiles tiles={[{label:t('fe.staff.age.selfie'),icon:Camera},{label:t('fe.staff.age.photo'),icon:ImageIcon}]} load={load} note={t('fe.staff.age.openNote')}/>
   <Choice label={t('fe.staff.reason')} value={reason} onChange={setReason} disabled={d.busy} options={AGE_REASONS.map(id=>({id,label:t('fe.staff.age.reason.'+id)}))}/>
   {ask?<Confirm text={t('fe.staff.age.confirmReject')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>d.run('staff.ageCheckDecide',{checkId:item.id,approve:false,reason})}/>
    :<Actions><Btn icon={Check} disabled={d.busy||!selfie} onClick={()=>d.run('staff.ageCheckDecide',{checkId:item.id,approve:true})}>{t('fe.staff.age.approve')}</Btn>
@@ -517,15 +614,12 @@ function PhotoCard({item,onDone}:{item:PhotoItem,onDone:()=>void}){
  const d=useDecide(onDone,e=>forbidden(e)?t('fe.pc.staff.own'):null);
  const [reason,setReason]=useState<typeof PHOTO_REASONS[number]|''>('');const [ask,setAsk]=useState(false);
  const selfie=item.selfie?.src?.full??item.selfie?.src?.card??null;
- const photos=(item.photos??[item.photo]).map(p=>p?.src?.card??p?.src?.thumb??null).filter((v):v is string=>!!v);
  const gesture=t('fe.staff.age.gesture.'+item.gesture);
  return <StCard title={who(item.profile)} meta={when(item.submittedAt)}>
   <Alert kind="info" icon={Eye}>{t('fe.staff.age.gesture')}: <b>{gesture.startsWith('fe.')?t('fe.staff.age.gesture.other'):gesture}</b></Alert>
   <Note>{t('fe.pc.staff.compare')}</Note>
-  <ReviewPair>
-   <ReviewMedia icon={X} caption={<Note>{t('fe.pc.staff.selfie')}</Note>}>{selfie?<img src={selfie} alt="" draggable={false}/>:undefined}</ReviewMedia>
-   {(photos.length?photos:[null]).map((src,i)=><ReviewMedia key={i} icon={Eye} caption={<Note>{t('fe.pc.staff.photo')}{photos.length>1?' '+(i+1):''}</Note>}>{src?<img src={src} alt="" draggable={false}/>:undefined}</ReviewMedia>)}
-  </ReviewPair>
+  <LookTiles tiles={[{label:t('fe.pc.staff.selfie'),icon:Camera},...(item.photos??[item.photo]).map((_,k,a)=>({label:t('fe.pc.staff.photo')+(a.length>1?' '+(k+1):''),icon:ImageIcon}))]}
+   shown={given([item.selfie?.src as Src,...(item.photos??[item.photo]).map(p=>p?.src as Src)])}/>
   {!selfie&&<Note>{t('fe.staff.age.noSelfie')}</Note>}
   <Choice label={t('fe.staff.reason')} value={reason} onChange={setReason} disabled={d.busy} options={PHOTO_REASONS.map(id=>({id,label:t('fe.pc.reason.'+id)}))}/>
   {ask?<Confirm text={t('fe.pc.staff.confirmReject')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>d.run('staff.photoCheckDecide',{checkId:item.id,approve:false,reason})}/>
@@ -604,20 +698,52 @@ function RevisionCard({item,onDone}:{item:RevisionItem,onDone:()=>void}){
 
 /** One reported photo, clip or voice message: opens on request through staff.mediaView (short-lived URLs, a journal line
  * per look), so the queue itself shows nothing private. */
-function Evidence({assetId,kind,label}:{assetId:string,kind:string,label:string}){
- const {call}=useFe();const {t}=useI18n();
- const [src,setSrc]=useState<{card?:string|undefined,full?:string|undefined,file?:string|undefined}|null|undefined>(undefined);
- const [busy,setBusy]=useState(false);const [err,setErr]=useState('');
- const open=async()=>{setBusy(true);setErr('');
-  try{const r=await call('staff.mediaView',{assetId},viewRes,{asAccount:true});setSrc(r.src);}catch(e){setErr(feErrorMessage(e,t));}finally{setBusy(false);}};
- if(src===undefined)return <OpenLook label={label} busy={busy} onClick={open} note={t('fe.staff.media.openNote')} err={err}/>;
- if(src===null)return <Alert kind="warn">{t('fe.staff.media.noCopies')}</Alert>;
- return <ReviewMedia icon={Eye}>
-  {kind==='video'?<VideoPlayer src={src.file} poster={src.card} label={t('fe.kit.av.video')}/>
-   :kind==='audio'?<VoiceBubble src={src.file} durationMs={null} mine/>
-   :<a href={src.full} target="_blank" rel="noreferrer noopener"><img src={src.card} alt="" draggable={false}/></a>}
- </ReviewMedia>;
+type Shown={slides:(Slide|null)[],thumbs:(string|null)[]};
+type Tile={label:string,icon?:LucideIcon|undefined,blur?:string|null|undefined};
+/** Media under review, one look everywhere: square tiles with a caption; a tap opens the full-screen viewer (swipe
+ * between them, ✕ or «Назад» closes it). Private material comes through `load` only on that tap — one journal line per
+ * look; what the queue already carries (public covers, photo checks) is `shown`. */
+function LookTiles({tiles,load,shown:given,onShown,note}:{tiles:Tile[],load?:(()=>Promise<Shown>)|undefined,shown?:Shown|undefined,onShown?:((s:Shown)=>void)|undefined,note?:string|undefined}){
+ const {t}=useI18n();
+ const [got,setGot]=useState<Shown|null>(null);const shown=given??got;
+ const [busy,setBusy]=useState(false);const [err,setErr]=useState('');const [open,setOpen]=useState<number|null>(null);
+ const tap=async(i:number)=>{
+  let s=shown;
+  if(!s){if(!load)return;setBusy(true);setErr('');
+   try{s=await load();setGot(s);onShown?.(s);}catch(e){setErr(feErrorMessage(e,t));return;}finally{setBusy(false);}}
+  if(s.slides[i])setOpen(i);else setErr(t('fe.staff.media.noCopies'));
+ };
+ const slides=(shown?.slides??[]).filter((x):x is Slide=>!!x);
+ const at=open===null||!shown?0:shown.slides.slice(0,open).filter(Boolean).length;
+ return <Stack gap={2}>
+  <ReviewTiles tiles={tiles.map((x,i)=>({...x,thumb:shown?.thumbs[i]??null,busy}))} onOpen={i=>void tap(i)}/>
+  {load&&!shown&&note&&<Note>{note}</Note>}
+  {err&&<Alert kind="err">{err}</Alert>}
+  {open!==null&&slides.length>0&&<Viewer srcs={slides} index={at} onClose={()=>setOpen(null)}/>}
+ </Stack>;
 }
+type Src={card?:string|undefined,full?:string|undefined,file?:string|undefined,thumb?:string|undefined}|null|undefined;
+/** A served media as a viewer slide (a clip plays in the viewer) and its tile picture. */
+const slideOf=(kind:string,src:Src):Slide|null=>!src?null:kind==='video'&&src.file?{video:src.file,poster:src.card??null}:kind==='audio'?null:src.full??src.card??null;
+const thumbOf=(src:Src)=>src?.card??src?.thumb??null;
+const tileIcon=(kind:string)=>kind==='video'?Film:kind==='audio'?Mic:ImageIcon;
+
+/** Reported photos and clips: all open together on the first tap (staff.mediaView each), voice messages play below. */
+function EvidenceGrid({items}:{items:{assetId:string,kind:string}[]}){
+ const {call}=useFe();const {t}=useI18n();const [audio,setAudio]=useState<string[]>([]);
+ const load=async():Promise<Shown>=>{
+  const rs=await Promise.all(items.map(e=>call('staff.mediaView',{assetId:e.assetId},viewRes,{asAccount:true})));
+  setAudio(items.flatMap((e,i)=>e.kind==='audio'&&rs[i]!.src?.file?[rs[i]!.src!.file!]:[]));
+  return {slides:items.map((e,i)=>slideOf(e.kind,rs[i]!.src)),thumbs:items.map((_,i)=>thumbOf(rs[i]!.src))};
+ };
+ return <>
+  <LookTiles tiles={items.map((e,i)=>({label:t(e.kind==='video'?'fe.staff.tile.video':e.kind==='audio'?'fe.staff.tile.audio':'fe.staff.tile.photo',{n:String(i+1)}),icon:tileIcon(e.kind)}))}
+   load={load} note={t('fe.staff.media.openNote')}/>
+  {audio.map(src=><VoiceBubble key={src} src={src} durationMs={null} mine/>)}
+ </>;
+}
+/** Pictures the queue already carries (covers, photo checks) as tiles. */
+const given=(srcs:Src[],full=true):Shown=>({slides:srcs.map(x=>x?(full?x.full??x.card??x.thumb??null:x.card??x.thumb??null):null),thumbs:srcs.map(thumbOf)});
 
 function ReportCard({item,onDone}:{item:ReportItem,onDone:()=>void}){
  const {t}=useI18n();const val=useVal();const when=useWhen();const d=useDecide(onDone);
@@ -636,7 +762,7 @@ function ReportCard({item,onDone}:{item:ReportItem,onDone:()=>void}){
   <Kv rows={[[t('fe.staff.author'),author],[t('fe.staff.state'),val(item.state)],[t('fe.staff.report.media'),item.media?String(item.media):null],
    [t('fe.staff.report.details'),item.details?.length?item.details.join(' · '):null]]}/>
   {messages&&<Card list>{messages.map(m=><Row key={m.seq} title={m.body||t('fe.staff.report.mediaOnly')} sub={when(m.at)}/>)}</Card>}
-  {item.evidence?.map((e,i)=><Evidence key={e.assetId} assetId={e.assetId} kind={e.kind} label={t('fe.staff.report.openMedia',{n:String(i+1),all:String(item.evidence!.length)})}/>)}
+  {!!item.evidence?.length&&<EvidenceGrid items={item.evidence}/>}
   <Details data={item.reported}/>
   {!people&&<Choice label={t('fe.staff.rule')} value={rule} onChange={setRule} disabled={d.busy} options={RULES.map(id=>({id,label:t('fe.staff.rule.'+id)}))}/>}
   <TextField label={t('fe.staff.note')} value={note} onChange={setNote} max={500}/>
@@ -671,6 +797,7 @@ function Measures({profileId,name,onClose,onApplied}:{profileId:string,name:stri
   void d.run(kind==='restrict'?'staff.restrict':'staff.sanction',kind==='restrict'
    ?{profileId,on:true,rule,note:note.trim(),...timed}:{profileId,decision:'suspend',rule,note:note.trim(),...timed});};
  return <Sheet title={t('fe.staff.m.title',{name})} onClose={onClose}>
+  <BackCloses onClose={onClose}/>
   <Form>
    <Choice label={t('fe.staff.rule')} value={rule} onChange={v=>{setRule(v);if(GRAVE.has(v))setDays('0');}} disabled={d.busy} options={RULES.map(id=>({id,label:t('fe.staff.rule.'+id)}))}/>
    <Choice label={t('fe.staff.m.kind')} value={kind} onChange={v=>{setKind(v);if(v==='suspend'&&!lead&&days==='0')setDays('7');}} disabled={d.busy}

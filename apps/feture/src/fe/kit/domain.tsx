@@ -479,6 +479,14 @@ export function ReviewMedia({children,blur,icon:I,caption}:{children?:ReactNode,
  const box=<div className="st-media">{children??(blur?<img className="st-blur" src={blur} alt="" draggable={false}/>:I?<div className="st-ph"><I/></div>:null)}</div>;
  return caption!==undefined?<figure>{box}<figcaption>{caption}</figcaption></figure>:box;
 }
+/** Media under review, the same everywhere in the staff area: square tiles (three across) with a caption — a blurred
+ * preview or an icon until opened, then the picture; the screen opens the media on tap. */
+export function ReviewTiles({tiles,onOpen}:{tiles:{label:string,thumb?:string|null|undefined,blur?:string|null|undefined,icon?:LucideIcon|undefined,busy?:boolean|undefined}[],onOpen:(i:number)=>void}){
+ return <div className="st-tiles">{tiles.map((x,i)=>{const I=x.icon;
+  return <button key={i} type="button" className="st-tile" aria-label={x.label} aria-busy={x.busy||undefined} disabled={!!x.busy} onClick={()=>onOpen(i)}>
+   {x.thumb?<img src={x.thumb} alt="" draggable={false}/>:x.blur?<img className="st-blur" src={x.blur} alt="" draggable={false}/>:null}
+   {!x.thumb&&I&&<span className="st-tile-ico"><I/></span>}<span className="st-tile-cap">{x.label}</span></button>;})}</div>;
+}
 /** Two or more pictures side by side (a selfie and the profile photos). */
 export function ReviewPair({children}:{children:ReactNode}){return <div className="st-pair">{children}</div>;}
 
