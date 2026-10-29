@@ -8,9 +8,9 @@ const iconArg={options:Object.keys(icons),mapping:icons,control:{type:'select' a
 
 const meta={
  title:'Кнопки/Кнопка',component:Btn,tags:['autodocs'],
- parameters:{docs:{description:{component:'Главное действие экрана или группы. **Одна главная на группу**; вторая — `soft`, опасная — `danger`, лёгкая — `text`. Загрузка (`busy`) — мягкое мигание на месте, без спиннера и без изменения ширины. Не пиши свою кнопку через `<button className="btn">`.'}}},
- args:{children:'Опубликовать',kind:'primary',size:'',auto:false,disabled:false,busy:false,onClick:fn()},
- argTypes:{kind:{control:'inline-radio',options:['primary','soft','danger','text','dark']},size:{control:'inline-radio',options:['','md','sm'],labels:{'':'48','md':'44','sm':'36'}},icon:iconArg},
+ parameters:{docs:{description:{component:'Главное действие экрана или группы. **Одна главная на группу**; вторая — `soft`, опасная — `danger`. Тихие действия — три вида: `quiet` (едва заметная подложка, например «Не иду»), `ghost` (без подложки, цвет текста), `text` (слово-ссылка акцентом). Нажатое состояние (`pressed`: «Отправлено», «Вы подписаны», мой ответ) у всех видов одно — мягкая акцентная подложка и акцентная подпись. Загрузка (`busy`) — мягкое мигание на месте, без спиннера и без изменения ширины. Не пиши свою кнопку через `<button className="btn">`.'}}},
+ args:{children:'Опубликовать',kind:'primary',size:'',auto:false,disabled:false,busy:false,pressed:false,onClick:fn()},
+ argTypes:{kind:{control:'inline-radio',options:['primary','soft','quiet','ghost','text','danger','dark']},size:{control:'inline-radio',options:['','md','sm'],labels:{'':'48','md':'44','sm':'36'}},icon:iconArg},
 } satisfies Meta<typeof Btn>;
 export default meta;
 type S=StoryObj<typeof meta>;
@@ -23,8 +23,17 @@ export const СИконкой:S={name:'С иконкой',args:{icon:Plus,childr
 export const Загрузка:S={args:{busy:true}};
 export const Выключена:S={args:{disabled:true}};
 export const ВсеСостояния:S={name:'Все виды и состояния',render:a=><Stack gap={2}>
- {(['primary','soft','danger','text'] as const).map(k=><Stack key={k} row gap={2}><Btn {...a} kind={k} auto>{k}</Btn><Btn {...a} kind={k} auto disabled>выкл.</Btn><Btn {...a} kind={k} auto busy>загрузка</Btn></Stack>)}
+ {(['primary','soft','quiet','ghost','text','danger','dark'] as const).map(k=><Stack key={k} row gap={2}><Btn {...a} kind={k} size="sm" auto>{k}</Btn><Btn {...a} kind={k} size="sm" auto pressed icon={Heart}>нажата</Btn><Btn {...a} kind={k} size="sm" auto disabled>выкл.</Btn><Btn {...a} kind={k} size="sm" auto busy>загрузка</Btn></Stack>)}
  <Stack row gap={2}><Btn {...a} auto>48</Btn><Btn {...a} size="md" auto>44</Btn><Btn {...a} size="sm" auto>36</Btn></Stack></Stack>};
+export const Тихие:S={name:'Тихие: quiet, ghost, text',render:a=><Stack gap={3}>
+ <Actions><Btn {...a} kind="primary" icon={Heart}>Иду</Btn><Btn {...a} kind="quiet">Не иду</Btn></Actions>
+ <Actions><Btn {...a} kind="soft">Изменить</Btn><Btn {...a} kind="ghost">Отмена</Btn></Actions>
+ <Btn {...a} kind="text" auto>Подробнее о правилах</Btn></Stack>,
+ parameters:{docs:{description:{story:'`quiet` — второе, равноправное, но тихое действие рядом с главным (подложка едва заметна). `ghost` — отмена или выход без веса. `text` — слово-ссылка внутри блока или под ним.'}}}};
+export const Нажатая:S={name:'Нажатая (pressed)',render:a=><Stack gap={2}>
+ <Actions><Btn {...a} kind="primary" pressed icon={Heart}>Отправлено</Btn><Btn {...a} kind="soft" pressed>Вы подписаны</Btn></Actions>
+ <Actions><Btn {...a} kind="quiet" pressed>Не иду</Btn><Btn {...a} kind="ghost" pressed>Сохранено</Btn></Actions></Stack>,
+ parameters:{docs:{description:{story:'Нажатое состояние (`pressed`, `aria-pressed`) одно для всех видов: мягкая акцентная подложка, акцентная подпись и иконка видны в обеих темах.'}}}};
 
 export const Круглая:StoryObj<typeof IconBtn>={name:'Круглая кнопка',render:a=><IconBtn {...a}/>,
  args:{icon:Bell,label:'Уведомления',kind:'',size:'',disabled:false,badge:undefined},

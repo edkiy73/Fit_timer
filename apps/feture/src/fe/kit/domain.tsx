@@ -1,4 +1,4 @@
-import React,{useRef,type CSSProperties,type ReactNode} from 'react';
+import React,{useEffect,useRef,type CSSProperties,type ReactNode} from 'react';
 import {useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Check,ChevronLeft,Clock,Heart,Image as ImageIcon,Lock,Plus,Ticket,UserRound,Users,type LucideIcon} from 'lucide-react';
@@ -16,8 +16,16 @@ import './domain.css';
 /** A header that floats over a cover picture (community, event): glass round buttons; the title shows only once the
  * cover scrolls away. `children` are the actions on the right. */
 export function CoverBar({title,onBack,children}:{title?:string|null|undefined,onBack?:(()=>void)|undefined,children?:ReactNode}){
- const {t}=useI18n();const navigate=useNavigate();
- return <header className="bar overlay ev-bar">
+ const {t}=useI18n();const navigate=useNavigate();const ref=useRef<HTMLElement>(null);
+ // Once the cover has scrolled under the header it becomes the glass bar with the title (base.css `.ev-bar.solid`).
+ useEffect(()=>{const bar=ref.current,main=bar?.parentElement;if(!bar||!main)return;
+  // A title on the cover (event) turns it as soon as it would slide under the buttons; else the cover's bottom edge.
+  const on=()=>{const v=main.querySelector(':scope>.view');const title=v?.querySelector('.ev-hero .ev-title');const cover=v?.querySelector(':is(.ev-hero,.cm-hero)');
+   const edge=title?title.getBoundingClientRect().top:cover?cover.getBoundingClientRect().bottom:Infinity;
+   bar.classList.toggle('solid',edge<bar.getBoundingClientRect().bottom+8);};
+  main.addEventListener('scroll',on,{capture:true,passive:true});on();
+  return ()=>main.removeEventListener('scroll',on,{capture:true});},[]);
+ return <header ref={ref} className="bar overlay ev-bar">
   <IconBtn icon={ChevronLeft} kind="glass" label={t('fe.back')} onClick={()=>onBack?onBack():navigate(-1)}/>
   <b className="ev-bar-t" aria-hidden="true">{title}</b><span className="k-grow"/>
   {children}

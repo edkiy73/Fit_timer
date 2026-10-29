@@ -62,7 +62,9 @@ export function Bar({title,back,onBack,small,children}:{title:string,back?:strin
  </header>;
 }
 
-type BtnProps=ButtonHTMLAttributes<HTMLButtonElement>&{kind?:'primary'|'soft'|'text'|'danger'|'dark',size?:''|'md'|'sm',auto?:boolean,icon?:LucideIcon};
+/** Kinds: `primary` (one per group), `soft` (second, on a surface with a line), `danger`, `dark` (on a light veil) and
+ * three quiet ones — `quiet` (barely tinted plate), `ghost` (no plate, ink text), `text` (link-style accent word). */
+type BtnProps=ButtonHTMLAttributes<HTMLButtonElement>&{kind?:'primary'|'soft'|'text'|'danger'|'dark'|'quiet'|'ghost',size?:''|'md'|'sm',auto?:boolean,icon?:LucideIcon};
 /** `.btn` — 48 / md 44 / sm 36; one main button per group. */
 export const Btn=forwardRef<HTMLButtonElement,BtnProps&{busy?:boolean,fit?:boolean,pressed?:boolean,square?:boolean}>(function Btn({kind='primary',size='',auto,fit,pressed,square,icon:Icon,className,children,type='button',busy,...rest},ref){
  // `busy` blinks in place (owner: never a spinner); `fit` keeps the button at its text width inside a row;

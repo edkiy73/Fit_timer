@@ -3,6 +3,7 @@ import {useState} from 'react';
 import {fn} from 'storybook/test';
 import {History,RefreshCw,Undo2} from 'lucide-react';
 import {Btn,Maintenance,PlanCards,PremiumFeats,PremiumHero,Thread} from './index';
+import {UpdateRequired,UpdateStateProvider,type UpdateState} from '../app-update';
 
 const meta={title:'Домен/Аккаунт',component:PremiumHero,tags:['autodocs'],
  parameters:{docs:{description:{component:'Аккаунт (волна 8): плашка Premium, что даёт Premium, карточки тарифов и сроков подарка, экран техработ, переписка с поддержкой.'}}},
@@ -31,3 +32,12 @@ export const ТехработыБезСообщения:StoryObj<typeof Maintena
 
 export const Переписка:StoryObj<typeof Thread>={name:'Переписка с поддержкой',render:a=><Thread {...a}/>,
  args:{label:'Обращение',messages:[{id:'1',mine:true,text:'Не приходит код из письма',meta:'28 окт, 14:02'},{id:'2',mine:false,text:'Проверь папку «Спам»: код живёт 15 минут.',meta:'Поддержка · 28 окт, 14:20'}]},argTypes:{messages:{control:false}}};
+
+type UpdStatus=UpdateState['status'];
+const updState=(status:UpdStatus):UpdateState=>({offer:{level:'required',channel:'direct',versionCode:42,versionName:'1.4',url:'https://example.org/app.apk',message:''},
+ status,progress:-1,start:async()=>{},cancel:async()=>{},dismiss:()=>{}});
+/** The same frame the app gives it (shell `Center`): the whole app is this screen until the update is installed. */
+export const ОбязательноеОбновление:StoryObj<{status:UpdStatus}>={name:'Обязательное обновление',
+ render:a=><div className="view"><div className="wrap"><UpdateStateProvider value={updState(a.status)}><UpdateRequired/></UpdateStateProvider></div></div>,
+ args:{status:'error'},argTypes:{status:{control:'inline-radio',options:['idle','downloading','permission','error']}},
+ parameters:{docs:{description:{story:'Ошибка и подсказка про разрешение стоят под кнопкой с обычным отступом блока; текст сообщения — по левому краю.'}}}};

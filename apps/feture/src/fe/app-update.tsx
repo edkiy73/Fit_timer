@@ -94,8 +94,10 @@ function useAppUpdate(){
  return {offer:visible?offer:null,status,progress,start,cancel,dismiss};
 }
 
-type UpdateState=ReturnType<typeof useAppUpdate>;
+export type UpdateState=ReturnType<typeof useAppUpdate>;
 const UpdateContext=createContext<UpdateState|null>(null);
+/** Storybook («Домен/Аккаунт → Обязательное обновление») renders the update screens with a given state. */
+export const UpdateStateProvider=UpdateContext.Provider;
 
 /** One update check for the whole V21 app (FeRoot). */
 export function AppUpdateProvider({children}:{children:ReactNode}){
