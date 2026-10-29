@@ -174,16 +174,17 @@ const run = {
 
   async 'staff.mediaQueue'(q, { account, input, cfg }) {
     await requireStaff(q, account, REVIEWERS);
-    // Keyset paging: the cursor is the last item's created_at (as text, full precision) and id, so no item is skipped.
-    const [after, afterId] = input.after ? input.after.split('|') : [null, null];
+    // Keyset paging: the cursor names the last item of the page. Its created_at is read from the row itself, not sent
+    // back through the driver (a JS timestamp would drop microseconds and repeat that item on the next page).
+    const afterId = input.after ? input.after.split('|')[1] : null;
     const rows = await q.query(
       `select m.id, m.purpose, m.kind, m.explicitness, m.reject_reason reason, m.created_at, m.copies_at, m.width, m.height,
          m.created_at::text as cursor_at
        from feture.media_asset m
        where m.state = 'needs_review' and m.purpose <> 'verification'   -- selfies are decided in the age-check queue
          and not exists (select 1 from feture.profile_member pm where pm.profile_id = m.owner_profile_id and pm.account_id = $1)
-         and ($3::timestamptz is null or (m.created_at, m.id) > ($3::timestamptz, $4::uuid))
-       order by m.created_at, m.id limit $2`, [account.id, input.limit, after, afterId]);
+         and ($3::uuid is null or (m.created_at, m.id) > ((select a.created_at from feture.media_asset a where a.id = $3::uuid), $3::uuid))
+       order by m.created_at, m.id limit $2`, [account.id, input.limit, afterId]);
     const last = rows[rows.length - 1];
     const next = rows.length === input.limit && last ? `${last.cursor_at}|${last.id}` : null;
     // The queue shows blurred previews; the full picture opens through staff.mediaView, which is journalled.
