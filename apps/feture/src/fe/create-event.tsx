@@ -28,7 +28,7 @@ type Errors=Partial<Record<Key,string>>;
 const KINDS:Kind[]=['meetup','workshop','talk','party'];
 const CURRENCIES:[string,string][]=[['€','EUR'],['$','USD'],['£','GBP'],['₽','RUB'],['CHF','CHF'],['zł','PLN'],['Kč','CZK'],['₺','TRY'],['₴','UAH'],['₸','KZT'],['₾','GEL'],['AED','AED'],['C$','CAD'],['A$','AUD'],['¥','JPY']];
 const DAY=864e5;
-const HTTPS=/^https:\/\/[^\s]+$/;
+const HTTPS=/^https?:\/\/[^\s]+$/;
 const userTz=()=>{try{return Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';}catch{return 'UTC';}};
 const isoDay=(ms:number)=>{const d=new Date(ms);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
 const knownZone=(tz:string)=>{try{return tz==='UTC'||Intl.supportedValuesOf('timeZone').includes(tz);}catch{return true;}};
@@ -350,7 +350,6 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
   </div>}
   {f.price==='ext'&&<Field name="ext" label={t('fe.ce.ticket')} icon={LinkIcon} ph="tickets.example.org" hint={t('fe.ce.ticketHint')} value={f.ticketUrl} onChange={v=>set('ticketUrl',v)} err={err.ticketUrl}/>}
   <Field name="reqs" label={t('fe.ce.reqs')} opt textarea rows={3} check="eventRequirements" ph={t('fe.ce.reqsPh')} value={f.requirements} onChange={v=>set('requirements',v)} err={err.requirements}/>
-  <Alert icon={EyeOff}>{t('fe.ce.listsHidden')}</Alert>
  </>;
  if(step===4){
   const {start,end}=times(f);const ok=Number.isFinite(start)&&Number.isFinite(end);
