@@ -261,18 +261,20 @@ export function QuickStart({title,items}:{title:ReactNode,items:[LucideIcon,stri
 }
 
 /** The one composer row (owner 29.10.2026: one composer everywhere — the feed, a community's discussions, any place
- * you write from). Who writes (`av`, the acting profile's `ActingAv`) and the hint («Что нового?» / «Новая тема») open
- * the editor; photo and poll open it with that part added; the accent «+» opens the create sheet. A place changes only
- * the texts and where the taps lead — never the look or the set of buttons. */
-export function ComposerRow({av,placeholder,onOpen,media,poll,create}:{av?:ReactNode,placeholder:string,onOpen:()=>void,
- media:{label:string,onClick:()=>void},poll:{label:string,onClick:()=>void},
- /** The accent «+»: the create sheet («Публикация», «Статья», «Событие» where allowed). */ create:{label:string,onClick:()=>void}}){
- return <div className="composer">
-  <button type="button" className="cmp-main" onClick={onOpen}>{av}<span>{placeholder}</span></button>
-  <IconBtn icon={ImageIcon} kind="ghost" size="sm" label={media.label} onClick={media.onClick}/>
-  <IconBtn icon={ChartColumn} kind="ghost" size="sm" label={poll.label} onClick={poll.onClick}/>
-  <IconBtn icon={Plus} kind="add" label={create.label} aria-haspopup="dialog" onClick={create.onClick}/>
- </div>;
+ * you write from). Who writes (`av`, the acting profile's `ActingAv`), the hint («Что нового?» / «Новая тема»), photo,
+ * poll and the accent «+». The whole row is ONE button (owner 29.10.2026: a tap anywhere — the hint, an icon, «+» —
+ * opens the create sheet with every choice, so an article or an event is never hidden behind «+»): the icons only hint
+ * that a post can be more than text and never act or look pressed on their own. A place changes only the hint and
+ * what `onOpen` opens — never the look or the set of icons. */
+export function ComposerRow({av,placeholder,label,onOpen}:{av?:ReactNode,placeholder:string,
+ /** The row's name for screen readers: «Создать». */ label:string,
+ /** Opens the create sheet («Публикация», «Статья», «Событие» where allowed, the quick starts). */ onOpen:()=>void}){
+ return <button type="button" className="composer" aria-label={label} aria-haspopup="dialog" onClick={onOpen}>
+  <span className="cmp-main">{av}<span>{placeholder}</span></span>
+  <span className="ibtn ghost sm" aria-hidden="true"><ImageIcon/></span>
+  <span className="ibtn ghost sm" aria-hidden="true"><ChartColumn/></span>
+  <span className="ibtn add" aria-hidden="true"><Plus/></span>
+ </button>;
 }
 
 /** «Скоро» in the feed (V21 feedEvLess): a few upcoming events as compact tiles (`EventTile row`). Each tile has its own

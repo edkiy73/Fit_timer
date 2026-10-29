@@ -715,6 +715,9 @@
 .v21 .composer>span:not(.ibtn):not(.av){flex:1;color:var(--faint);font-size:var(--fs-body)}
 .v21 .composer .ibtn{width:38px;height:38px}
 .v21 .composer .ibtn.add{background:var(--accent);color:#fff;border-radius:var(--r-m)}
+.v21 button.composer{transition:background .15s,border-color .15s,transform .12s}.v21 button.composer:hover{background:var(--raise);border-color:var(--line2)}.v21 button.composer:active{transform:scale(.985)}.v21 button.composer:focus-visible{border-radius:var(--r-l)}
+/* The icons are hints inside the one button: never a hit target, a hover or a press of their own. */
+.v21 .composer .ibtn{pointer-events:none}
 .v21 .disc-a{margin-top:12px}
 .v21 .mention-sug{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:7;display:grid;padding:6px;border-radius:var(--r);background:var(--surf);border:1px solid var(--line);box-shadow:var(--shadow,0 8px 24px rgba(0,0,0,.25))}
 .v21 .mention-sug button{display:flex;align-items:center;gap:10px;min-height:40px;padding:0 8px;border-radius:var(--r-s);text-align:left;color:var(--ink)}

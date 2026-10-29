@@ -181,7 +181,7 @@ export default [
  { name: 'composer: quick start, formatting bar (bold, link check), «Упомянуть» sheet → mention on the server', persona: 'full', run: async t => {
    const B = await t.persona('basic'); const mark = tag(); let id = null;
    try {
-     await t.go('/n/feed'); await t.tap('.composer [aria-label="Создать"]'); await t.see(`${sheet}:has-text("Или сразу начать с")`);
+     await t.go('/n/feed'); await t.tap('.composer[aria-label="Создать"]'); await t.see(`${sheet}:has-text("Или сразу начать с")`);
      await t.tap(`${sheet} .create-q button:has-text("Опрос")`); await until(async () => t.page.url().includes('x=poll'), 'poll editor', 8000); await t.see('#pollQ');
      await t.go('/n/feed/new');
      const ta = t.page.locator('.rte-ed'); await ta.click(); await t.page.keyboard.type('жирный ' + mark);

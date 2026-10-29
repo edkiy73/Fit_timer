@@ -33,14 +33,13 @@ export function CreateSheet({onClose,community}:{onClose:()=>void,community?:Wri
 }
 
 /** The composer row of any place (kit `ComposerRow`) with its create sheet: «Что нового?» in the feed, «Новая тема»
- * in a community; the same buttons, the same sheet. */
+ * in a community. A tap anywhere on the row opens `CreateSheet` (owner 29.10.2026) — no icon has its own way in. */
 export function Composer({community}:{community?:WriteIn|null|undefined}){
- const {acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const [open,setOpen]=useState(false);
+ const {acting}=useFe();const {t}=useI18n();const [open,setOpen]=useState(false);
  const us=acting?.kind==='couple';
  return <>
   <ComposerRow av={acting&&<ActingAv p={acting}/>} placeholder={community?t(us?'fe.cm.topicCouple':'fe.comm.newTopic'):t(us?'fe.feed.whatsNewUs':'fe.feed.whatsNew')}
-   onOpen={()=>navigate(newPostPath(community))} media={{label:t('fe.fd.photoOrVideo'),onClick:()=>navigate(newPostPath(community,'media'))}}
-   poll={{label:t('fe.feed.poll'),onClick:()=>navigate(newPostPath(community,'poll'))}} create={{label:t('fe.create'),onClick:()=>setOpen(true)}}/>
+   label={t('fe.create')} onOpen={()=>setOpen(true)}/>
   {open&&<CreateSheet community={community} onClose={()=>setOpen(false)}/>}
  </>;
 }

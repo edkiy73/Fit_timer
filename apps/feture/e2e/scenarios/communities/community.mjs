@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 // Communities of persona `host`: its open one and its closed one (with a join question). A visitor is `full`; the
 // owner's own screens run as `host`. Every scenario leaves the visitor outside again and deletes what it posted.
-import { FIXTURES, until, uploaderDone } from '../helpers.mjs';
+import { FIXTURES, until, uploaderDone, composerSheet } from '../helpers.mjs';
 let OPEN, CLOSED, MINE, OPEN_NAME, CLOSED_NAME;
 async function init(t) {
   const h = t.me.kind === 'host' ? t.me : await t.persona('host');
@@ -109,7 +109,7 @@ const scenarios = [
  { name: 'C03 new discussion with a poll lands in the community; reply; cleanup', persona: 'host', route: '/n/communities/@MINE', run: async t => {
    const stamp = 'E2E опрос ' + Date.now().toString(36);
    await t.see('.view .composer');
-   await t.tap('.view .composer button[aria-label="Опрос"]');
+   await composerSheet(t, 'poll', '.view'); await t.tap(sheet + ' .create-q button:has-text("Опрос")');
    await t.see('#pollQ');
    await t.page.locator('.compose .rte-ed').first().fill(stamp + ': как вам формат?');
    await t.page.locator('#pollQ').fill('Какой формат удобнее?');
@@ -133,8 +133,9 @@ const scenarios = [
  { name: 'C03 new discussion with a photo (file chooser opens), published; cleanup', persona: 'host', route: '/n/communities/@MINE', run: async t => {
    const stamp = 'E2E фото ' + Date.now().toString(36);
    await t.see('.view .composer');
+   await composerSheet(t, 'media', '.view');
    const fc = t.page.waitForEvent('filechooser', { timeout: 8000 });
-   await t.tap('.view .composer .ibtn.ghost >> nth=0');
+   await t.tap(sheet + ' .create-q button:has-text("Фото и видео")');
    const chooser = await fc;
    await chooser.setFiles({ name: 'p.png', mimeType: 'image/png', buffer: PNG });
    await uploaderDone(t);
@@ -150,20 +151,20 @@ const scenarios = [
    await t.api('post.delete', { opId: t.uuid7(), postId: id });
  } },
 
- // One composer everywhere (owner 29.10.2026): the community's row is the feed's, its «+» is the same «Создать».
- { name: 'ONE «+» as host: «Создать» offers «Событие», made in this community', persona: 'host', route: '/n/communities/@MINE', run: async t => {
+ // One composer everywhere (owner 29.10.2026): the community's row is the feed's — a tap anywhere on it is the same «Создать».
+ { name: 'ONE «Создать» as host: the row offers «Событие», made in this community', persona: 'host', route: '/n/communities/@MINE', run: async t => {
    await t.see('.view .composer .cmp-main:has-text("Новая тема")');
-   await t.tap('.view .composer .ibtn.add'); await t.see(sheet + ':has-text("Создать")');
+   await composerSheet(t, 'field', '.view');
    await t.see(sheet + ' .li:has-text("Публикация")'); await t.see(sheet + ' .li:has-text("Статья")');
    await t.tap(sheet + ' .li:has-text("Событие")');
    await t.wait(800);
    if (!t.page.url().includes('/n/events/new?community=' + MINE)) throw new Error('event editor not for the community: ' + t.page.url());
    await t.see(CLOSED_NAME); // the event starts linked to the community
  } },
- { name: 'ONE «+» as member: «Публикация» and «Статья», no «Событие»', persona: 'full', run: async t => {
+ { name: 'ONE «Создать» as member: «Публикация» and «Статья», no «Событие»', persona: 'full', run: async t => {
    await t.api('community.join', { opId: t.uuid7(), communityId: OPEN, rulesAccepted: true });
    await t.go('/n/communities/' + OPEN);
-   await t.see('.view .composer'); await t.tap('.view .composer .ibtn.add');
+   await t.see('.view .composer'); await composerSheet(t, 'poll', '.view');
    await t.see(sheet + ' .li:has-text("Публикация")'); await t.see(sheet + ' .li:has-text("Статья")');
    if (await t.page.locator(sheet + ' .li:has-text("Событие")').count()) throw new Error('a member is offered «Событие»');
    await t.shot('community-create-member');
@@ -174,7 +175,7 @@ const scenarios = [
    const made = [];
    try {
      await t.go('/n/communities/' + OPEN);
-     await t.tap('.view .composer .ibtn.add'); await t.tap(sheet + ' .li:has-text("Статья")');
+     await composerSheet(t, 'media', '.view'); await t.tap(sheet + ' .li:has-text("Статья")');
      await t.see('#ntitle');
      await t.see('.view .li:has-text("Видят все")'); // who sees it is the community's, not a choice
      if (await t.page.locator('.view .selrow').count()) throw new Error('an audience selector in a community');
@@ -189,7 +190,7 @@ const scenarios = [
      if (art.type !== 'note' || art.inFeed !== false) throw new Error('article: ' + art.type + ', in feed ' + art.inFeed);
 
      const ints = 'E2E интересы ' + Date.now().toString(36);
-     await t.tap('.view .composer .ibtn.add'); await t.tap(sheet + ' .create-q button:has-text("Мои интересы")');
+     await composerSheet(t, 'add', '.view'); await t.tap(sheet + ' .create-q button:has-text("Мои интересы")');
      await t.see('.cmp-ints', 15000);
      await t.page.locator('.compose .rte-ed').first().fill(ints);
      await t.tap('.ctabar .btn:not(.soft)');

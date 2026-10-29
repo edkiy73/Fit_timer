@@ -27,6 +27,15 @@ export const FIXTURES = new URL('../fixtures/', import.meta.url).pathname;
 export const sheet = '.sheet.on', dialog = '.dialog.on';
 export const toast = (t, s) => t.see('.toast:has-text("' + s + '")');
 /** No sheet or dialog left open. */
+/** The composer row is ONE button (owner 29.10.2026): tap a spot of it — `part` 'field', 'media', 'poll' or 'add', or
+ * the row itself — with a real mouse click there (the icons are not buttons) and wait for the «Создать» sheet. */
+export async function composerSheet(t, part = 'field', scope = '') {
+  const row = t.page.locator(`${scope} .composer`.trim()).first();
+  const sel = { field: '.cmp-main', media: '.ibtn.ghost >> nth=0', poll: '.ibtn.ghost >> nth=1', add: '.ibtn.add' }[part];
+  const b = await (sel ? row.locator(sel) : row).first().boundingBox();
+  await t.page.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
+  await t.see('.sheet.on:has-text("Создать")'); await t.see('.sheet.on .create-q');
+}
 export async function noLayer(t) { await t.wait(400); if (await t.page.locator('.sheet.on, .dialog.on').count()) throw new Error('layer still open'); }
 /** The display name of a persona (falls back to the nickname). */
 export async function nameOf(t, p) { const pr = (await t.api('profile.get', { profileId: p.personId }, p.email)).profile; return pr?.name || p.handle; }
