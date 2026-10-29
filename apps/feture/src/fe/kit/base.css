@@ -3105,9 +3105,6 @@
 .v21 .dating-bar .author-picker.v14 .author-trigger .av{width:28px;height:28px}
 @media(max-width:374px){.v21 .dating-bar .author-picker.v14 .author-trigger>svg{display:none}.v21 .dating-bar .author-picker.v14 .author-trigger{padding-right:8px}}
 
-.v21 .free14{display:flex;gap:10px;margin-top:16px;padding:14px 16px;border-radius:var(--r);background:var(--ok-soft);font-size:var(--fs-sm);line-height:1.45}
-.v21 .free14>svg{width:18px;height:18px;flex:none;margin-top:2px;color:var(--ok)}
-.v21 .free14 b{display:block;margin-bottom:2px}
 
 /* V17 — one profile page: the identity switch on the hero, the audience lens on the private part, owner-only list */
 .v21 .who-sw{display:inline-flex;gap:2px;padding:3px;border-radius:var(--r-full);background:rgba(12,8,12,.42);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
@@ -3323,7 +3320,6 @@
 
 /* V20 · third round */
 .v21 .lk-inc .lk-req{margin-bottom:8px}.v21 .lk-inc .lk-req .btn{flex:1}
-.v21 .me-todo{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;margin:2px 0 10px;padding:0 12px 0 14px;border-radius:var(--r);background:var(--surface);box-shadow:var(--sh1,0 0 0 1px var(--line));font-weight:600;font-size:var(--fs-sm);text-align:left}.v21 .me-todo i{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none}.v21 .me-todo span{flex:1}.v21 .me-todo b{font-weight:700;color:var(--accent)}.v21 .me-todo svg{width:18px;height:18px;opacity:.5}
 .v21 .me4 .seg button{padding:0 4px;min-width:0}.v21 .me4 .seg button>span{position:relative;overflow:visible;white-space:nowrap}.v21 .me4 .tdot{position:absolute;top:1px;right:0;width:6px;height:6px;border-radius:50%;background:var(--accent)}
 /* V21 (VIS-003/ME-011): the «new» dot sits inside its own label (room reserved), never on the next tab; labels keep 14 px */
 .v21 .me4 .seg button>span:has(.tdot){padding-right:9px}
@@ -3489,9 +3485,6 @@
 /* V21.1 (VIS-008): every select is one control — the whole row is the tap target; inline sort selects get a 44 px tap area */
 .v21 .selrow.solo{position:relative;min-height:28px}.v21 .selrow.solo::before{content:"";position:absolute;inset:-8px 0}
 /* V21.1 (ME-047): the status hint has its own space under «Данные» */
-.v21 .me-stat21{margin:10px 0 22px;align-items:flex-start}.v21 .me-stat21>span{display:grid;gap:10px}.v21 .me-stat21 b{font-weight:600;line-height:1.35}
-.v21 .me-stat21-a{display:flex;gap:8px;flex-wrap:wrap}.v21 .alert .me-stat21-a .btn{width:auto;flex:0 0 auto;min-height:36px;padding:0 14px;border-radius:var(--r-m);font-size:var(--fs-sm)}
-.v21 .alert.info.me-stat21{margin:16px 0 24px;padding:14px 16px}
 /* ==== V21 · lead · CSS end ==== */
 /* · */
 /* · */
@@ -3509,7 +3502,6 @@
 /* V21 (AUTH-017): the community picture in the sign-up preview sheet */
 .v21 .onb-pv-av{position:relative;display:block;width:48px;height:48px;border-radius:var(--r);overflow:hidden;flex:none}.v21 .onb-pv-av>*{width:100%!important;height:100%!important;border-radius:inherit}
 /* V21 (AUTH-004): the terms link sits under the checkbox text, outside the checkbox */
-.v21 .auth-wrap>.btn.terms-read{display:flex;width:fit-content;margin:-6px auto 6px 34px;min-height:36px;padding:0;font-size:var(--fs-sm)}
 /* V21 (SET-017): the disabled «Новый код через N с» stays readable */
 .v21 #resend:disabled{color:var(--mute);opacity:1}
 /* V21 (AUTH-008): slide text is never cut — the picture shrinks instead; very short phones scroll (buttons stay pinned) */
@@ -3735,8 +3727,6 @@
 .v21 .lk-t21{display:block;font-size:var(--fs-cap);margin-top:2px}
 /* V21 (ME-039): side names under the kind, without a leading dot */
 .v21 .p22-kinds21 .radio .tx small{display:block;margin-top:2px}
-/* V21 (ME-047) */
-.v21 .me-stat21{margin:0 0 16px}.v21 .me-stat21>span{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}.v21 .me-stat21 .btn{padding-inline:0;min-height:32px}
 /* V21 (ME-051) */
 .v21 .rte-tb button[disabled]{opacity:.35;pointer-events:none}
 /* V21 (ME-029): on very narrow phones the follower's buttons go under the name so the name stays readable */

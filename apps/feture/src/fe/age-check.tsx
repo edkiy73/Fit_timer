@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Camera,CameraOff,Clock,FileUp,Hand,IdCard,ImagePlus,Info,Lock,RefreshCw,ScanFace,ShieldCheck,TriangleAlert,UserCheck,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Bar,Btn,CaptureFrame,Card,Empty,FilePick,Group,RadioList,Row,Skel,Text,View} from './kit';
+import {Actions,Alert,Bar,Btn,CaptureFrame,Card,Empty,FilePick,Group,RadioList,Row,Skel,Text,View} from './kit';
 import {useSendPhoto} from './media-upload';
 import {useFe,useShown} from './session';
 
@@ -137,7 +137,7 @@ export function AgeCheckScreen(){
   <FilePick ref={docCam} accept="image/*" capture="environment" onFiles={f=>void pick(f[0],'document')}/>
   <FilePick ref={file} accept="image/jpeg,image/png,image/webp,image/heic,image/heif" onFiles={f=>void pick(f[0],'document')}/>
  </>;
- const alertErr=failure?<Alert kind="err" icon={X} className="mt12">{failure}</Alert>:null;
+ const alertErr=failure?<Alert kind="err" icon={X}>{failure}</Alert>:null;
  const back='/n/settings';
  if(error)return <><Bar title={t('fe.age.title')} back={back}/><View className="nodock"><Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>load(true)}>{t('fe.retry')}</Btn></Empty></View></>;
  if(!s)return <><Bar title={t('fe.age.title')} back={back}/><View className="nodock"><Skel kind="list"/></View></>;
@@ -163,18 +163,18 @@ export function AgeCheckScreen(){
   </Empty>{pickers}{alertErr}
  </View></>;
 
- const other=<Btn kind="text" className="mt8" onClick={()=>{setShot(null);setChoice(null);setChoosing(true);setFailure('');}} disabled={busy}>{t('fe.age.otherMethod')}</Btn>;
+ const other=<Btn kind="text" onClick={()=>{setShot(null);setChoice(null);setChoosing(true);setFailure('');}} disabled={busy}>{t('fe.age.otherMethod')}</Btn>;
  // ageShot, document: the frame, then the shot to send.
  if(!choosing&&c?.state==='started'&&c.method==='document'){
   const mine=shot?.method==='document'?shot:null;
   return <><Bar title={t('fe.age.docTitle')} back={back}/><View className="nodock">
    <CaptureFrame shape="document" hint={t('fe.age.docFrame')} src={mine?.url} alt={t('fe.age.docShotAlt')}/>
-   {mine?<><Btn className="mt16" onClick={send} busy={busy} disabled={busy||!person}>{t('fe.age.send')}</Btn>
-     <Btn kind="soft" className="mt8" icon={FileUp} onClick={()=>file.current?.click()} disabled={busy}>{t('fe.age.docOther')}</Btn></>
-    :<><Btn className="mt16" icon={Camera} onClick={()=>docCam.current?.click()}>{t('fe.age.docShoot')}</Btn>
-     <Btn kind="soft" className="mt8" icon={FileUp} onClick={()=>file.current?.click()}>{t('fe.age.docUpload')}</Btn></>}
+   <Actions stack>{mine?<><Btn onClick={send} busy={busy} disabled={busy||!person}>{t('fe.age.send')}</Btn>
+     <Btn kind="soft" icon={FileUp} onClick={()=>file.current?.click()} disabled={busy}>{t('fe.age.docOther')}</Btn></>
+    :<><Btn icon={Camera} onClick={()=>docCam.current?.click()}>{t('fe.age.docShoot')}</Btn>
+     <Btn kind="soft" icon={FileUp} onClick={()=>file.current?.click()}>{t('fe.age.docUpload')}</Btn></>}</Actions>
    {pickers}{alertErr}
-   <Card list className="mt16">
+   <Card list>
     <Row icon={Info} title={t('fe.age.docReq1')}/>
     <Row icon={Info} title={t('fe.age.docReq2')}/>
     <Row icon={Lock} title={t('fe.age.docStored')} sub={t('fe.age.docStoredText')}/>
@@ -188,12 +188,12 @@ export function AgeCheckScreen(){
   const mine=shot?.method==='selfie'?shot:null;
   return <><Bar title={t('fe.age.selfieTitle')} back={back}/><View className="nodock">
    <Card list><Row icon={Hand} tone="v" title={g} sub={t('fe.age.gestureLabel')}/></Card>
-   <div className="mt12"><CaptureFrame shape="face" hint={t('fe.age.frame')} src={mine?.url} alt={t('fe.age.shotAlt')}/></div>
-   {mine?<><Btn className="mt16" onClick={send} busy={busy} disabled={busy||!person}>{t('fe.age.send')}</Btn>
-     <Btn kind="soft" className="mt8" icon={Camera} onClick={()=>cam.current?.click()} disabled={busy}>{t('fe.age.retake')}</Btn></>
-    :<Btn className="mt16" icon={Camera} onClick={()=>cam.current?.click()}>{t('fe.age.shoot')}</Btn>}
+   <CaptureFrame shape="face" hint={t('fe.age.frame')} src={mine?.url} alt={t('fe.age.shotAlt')}/>
+   {mine?<Actions stack><Btn onClick={send} busy={busy} disabled={busy||!person}>{t('fe.age.send')}</Btn>
+     <Btn kind="soft" icon={Camera} onClick={()=>cam.current?.click()} disabled={busy}>{t('fe.age.retake')}</Btn></Actions>
+    :<Btn icon={Camera} onClick={()=>cam.current?.click()}>{t('fe.age.shoot')}</Btn>}
    {pickers}{alertErr}
-   <Alert icon={Lock} className="mt16">{t('fe.age.camNote')}</Alert>
+   <Alert icon={Lock}>{t('fe.age.camNote')}</Alert>
    {other}
   </View></>;
  }
@@ -203,20 +203,20 @@ export function AgeCheckScreen(){
  const doc=m==='document';
  return <><Bar title={t('fe.age.title')} back={back}/><View className="nodock">
   <Text>{t('fe.age.lead')}</Text>
-  {c?.state==='rejected'&&!choosing&&<Alert kind="err" icon={TriangleAlert} role="status" className="mt12"><b>{t('fe.age.rejected')}</b>{reason}{t('fe.age.rejectedText')}</Alert>}
-  {c?.state==='approved'&&<Alert kind="warn" icon={Clock} className="mt12"><b>{t('fe.age.expiredProof')}</b>{t('fe.age.expiredProofText')}</Alert>}
-  {c?.state==='expired'&&!choosing&&<Alert kind="warn" icon={Clock} className="mt12"><b>{t('fe.age.expiredTry')}</b>{t(c.method==='document'?'fe.age.expiredDocText':'fe.age.expiredTryText')}</Alert>}
-  <Group title={t('fe.age.methodLabel')} className="mt16">
+  {c?.state==='rejected'&&!choosing&&<Alert kind="err" icon={TriangleAlert} role="status"><b>{t('fe.age.rejected')}</b>{reason}{t('fe.age.rejectedText')}</Alert>}
+  {c?.state==='approved'&&<Alert kind="warn" icon={Clock}><b>{t('fe.age.expiredProof')}</b>{t('fe.age.expiredProofText')}</Alert>}
+  {c?.state==='expired'&&!choosing&&<Alert kind="warn" icon={Clock}><b>{t('fe.age.expiredTry')}</b>{t(c.method==='document'?'fe.age.expiredDocText':'fe.age.expiredTryText')}</Alert>}
+  <Group title={t('fe.age.methodLabel')}>
    <RadioList label={t('fe.age.methodLabel')} value={m} onChange={v=>{setChoice(v);setNeedPhoto(false);setFailure('');}}
     options={[['selfie',<b key="s">{t('fe.age.method')}</b>,t('fe.age.methodSub')] as const,['document',<b key="d">{t('fe.age.methodDoc')}</b>,t('fe.age.methodDocSub')] as const]}/>
   </Group>
-  <Alert icon={Lock} className="mt16">{t('fe.age.camNoteShort')}</Alert>
-  {needPhoto&&!doc?<Alert kind="warn" icon={ImagePlus} role="alert" className="mt16">{t('fe.age.needPhoto')}<Btn kind="soft" size="sm" auto icon={ImagePlus} onClick={()=>navigate('/n/me')}>{t('fe.age.addPhoto')}</Btn></Alert>
-   :doc?<><Btn className="mt24" icon={Camera} onClick={()=>void allowCamera('document')} busy={busy} disabled={busy}>{t('fe.age.docShoot')}</Btn>
-     <Btn kind="soft" className="mt8" icon={FileUp} onClick={()=>file.current?.click()} disabled={busy}>{t('fe.age.docUpload')}</Btn></>
-   :<Btn className="mt24" icon={Camera} onClick={()=>void allowCamera('selfie')} busy={busy} disabled={busy}>{t('fe.age.allowCam')}</Btn>}
+  <Alert icon={Lock}>{t('fe.age.camNoteShort')}</Alert>
+  {needPhoto&&!doc?<Alert kind="warn" icon={ImagePlus} role="alert" action={<Btn kind="soft" size="sm" auto icon={ImagePlus} onClick={()=>navigate('/n/me')}>{t('fe.age.addPhoto')}</Btn>}>{t('fe.age.needPhoto')}</Alert>
+   :doc?<Actions stack><Btn icon={Camera} onClick={()=>void allowCamera('document')} busy={busy} disabled={busy}>{t('fe.age.docShoot')}</Btn>
+     <Btn kind="soft" icon={FileUp} onClick={()=>file.current?.click()} disabled={busy}>{t('fe.age.docUpload')}</Btn></Actions>
+   :<Btn icon={Camera} onClick={()=>void allowCamera('selfie')} busy={busy} disabled={busy}>{t('fe.age.allowCam')}</Btn>}
   {pickers}{alertErr}
-  <Group title={t('fe.age.how')} className="mt24">
+  <Group title={t('fe.age.how')}>
    <Card list>{doc?<>
     <Row icon={IdCard} tone="v" title={t('fe.age.docStep1')}/>
     <Row icon={UserCheck} tone="v" title={t('fe.age.docStep2')}/>

@@ -90,7 +90,7 @@ export default [
    try {
      await t.tap('.li:has-text("Скрыть из знакомств")');
      await until(async () => (await t.api('profile.settings', {}, undefined, cp)).settings.discoverMode === 'off', 'discover off');
-     await t.see('text=Пара скрыта из знакомств');
+     await t.see('text=Пара скрыта из знакомств'); await t.see('.li:has-text("Пара в знакомствах"):has-text("Выключен")');
      await t.tap('.li:has-text("Закрыть приватную часть")');
      await t.tap('.dialog.on button:has-text("Закрыть")');
      await until(async () => (await t.api('profile.settings', {}, undefined, cp)).settings.requestsFrom === 'none', 'requests off');

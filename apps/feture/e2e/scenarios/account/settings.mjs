@@ -73,11 +73,11 @@ export default [
  { name: 'K05 every switch, select and category persists', persona: 'full', route: '/n/settings/notifications', run: async t => {
    const orig = await notif(t);
    try {
-     await t.see('Пуш на телефон');
+     await t.see('Пуш-уведомления');
      await t.tap('.nm >> text=Обычные'); await t.see('Обычные уведомления');
      await until(async () => eq((await notif(t)).mode, 'normal', 'mode'));
      await t.tap('.nm >> text=Безопасные'); await until(async () => eq((await notif(t)).mode, 'safe', 'mode back'));
-     const push = t.page.locator('button[role=switch]:has-text("Пуш на телефон")');
+     const push = t.page.locator('button[role=switch]:has-text("Пуш-уведомления")');
      await push.click(); await until(async () => eq((await notif(t)).push, !orig.push, 'push'));
      if (orig.push) { if (!(await t.page.locator('.nt-t[aria-label^="Пуш:"]').first().isDisabled())) throw new Error('push column should be disabled'); }
      await push.click(); await until(async () => eq((await notif(t)).push, orig.push, 'push back'));
@@ -109,7 +109,7 @@ export default [
  { name: 'K05 rapid taps: both changes reach the server', persona: 'full', route: '/n/settings/notifications', run: async t => {
    const orig = await notif(t);
    try {
-     await t.see('Пуш на телефон');
+     await t.see('Пуш-уведомления');
      const b1 = t.page.locator('.nt-t[aria-label="Почта: Новые симпатии"]'), b2 = t.page.locator('.nt-t[aria-label="Почта: Новые подписчики"]');
      await b1.click(); await b2.click(); await t.wait(2500);
      const n = await notif(t);

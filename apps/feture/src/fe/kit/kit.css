@@ -445,3 +445,7 @@ html:has(.fe-v21),html:has(.fe-v21) body{overscroll-behavior-y:none}
 .v21 .fin>.df-near{margin-top:10px}.v21 .df-near>.fld{margin-top:0}
 /* A couple without a photo: its two initials sit over the name block's dark scrim (.pc-info, z 4), not under it (29.10 sweep). */
 .v21 .hero>.hero-pairav{z-index:5;pointer-events:none}
+/* Check with `aside`: an explicit consent (sign-up terms) and its «Читать» on one row; the box keeps its own tap area. */
+.v21 .k-check-row{display:flex;align-items:center;gap:var(--s-2)}
+.v21 .k-check-row>.check{flex:1;min-width:0}
+.v21 .k-check-row>.btn{flex:none}

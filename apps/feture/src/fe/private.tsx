@@ -72,12 +72,12 @@ export function useAccessWords(){
 function AccessSummary({name,sel,all,until,couple}:{name:string,sel:Scope[],all:Scope[],until:string,couple?:boolean}){
  const {t}=useI18n();
  const low=(l:Scope[])=>l.map(s=>t('fe.priv.scope.'+s).toLowerCase()).join(', ');
- if(!sel.length)return <Alert kind="warn" noIcon className="mt12">{t('fe.ac.sum.none')}</Alert>;
+ if(!sel.length)return <Alert kind="warn" noIcon>{t('fe.ac.sum.none')}</Alert>;
  const closed=all.filter(s=>!sel.includes(s));const rest=low(closed);
- return <Alert kind="info" noIcon className="mt12">
+ return <Alert kind="info" noIcon><Stack gap={2}>
   <span aria-live="polite">{t('fe.ac.sum.sees',{name,what:low(sel),until})}{closed.length?' '+t(closed.length>1?'fe.ac.sum.closedN':'fe.ac.sum.closed1',{what:rest.charAt(0).toUpperCase()+rest.slice(1)}):''}</span>
-  <Note as="ul" className="mt8"><li>{t('fe.ac.sum.noChat')}</li><li>{t('fe.ac.sum.revoke')}</li>{couple&&<li>{t('fe.ac.sum.couple')}</li>}</Note>
- </Alert>;
+  <Note as="ul"><li>{t('fe.ac.sum.noChat')}</li><li>{t('fe.ac.sum.revoke')}</li>{couple&&<li>{t('fe.ac.sum.couple')}</li>}</Note>
+ </Stack></Alert>;
 }
 
 /* ---------------- asking (P06) ---------------- */
@@ -94,9 +94,11 @@ export function RequestSheet({profileId,available,onClose,onSent}:{profileId:str
   try{const r=await call('access.request',{opId:op.current,profileId,scopes:sel},requestRes);toast(t('fe.ac.rq.sent'+(acting?.kind==='couple'?'Us':''),{left:r.quota.left,max:r.quota.max}),{type:'ok'});onSent();}
   catch(e){setError(e);op.current=newOpId();if(e instanceof FeError&&e.code==='rate_limited')loadQuota();}finally{setBusy(false);}};
  if(q&&q.left<=0)return <Sheet title={t('fe.ac.lim.title')} onClose={onClose} foot={<Btn onClick={onClose}>{t('fe.ac.ok')}</Btn>}>
-  <Note>{t('fe.ac.lim.text',{max:q.max,at:q.resetsAt?w.at(q.resetsAt):'—'})}</Note>
-  <Quota left={0} max={q.max} label={t('fe.ac.rq.leftLabel',{left:0,max:q.max})}/>
-  <Note className="mt8">{t('fe.ac.lim.wait')}</Note>
+  <Stack gap={3}>
+   <Note>{t('fe.ac.lim.text',{max:q.max,at:q.resetsAt?w.at(q.resetsAt):'—'})}</Note>
+   <Quota left={0} max={q.max} label={t('fe.ac.rq.leftLabel',{left:0,max:q.max})}/>
+   <Note>{t('fe.ac.lim.wait')}</Note>
+  </Stack>
  </Sheet>;
  const age=error instanceof FeError&&error.rule==='age_check_required';
  return <Sheet title={t('fe.ac.rq.title')} onClose={onClose} foot={<Btn icon={Send} disabled={!sel.length||busy} busy={busy} onClick={()=>void send()}>{t('fe.ac.rq.send'+(acting?.kind==='couple'?'Us':''))}</Btn>}>
@@ -104,8 +106,8 @@ export function RequestSheet({profileId,available,onClose,onSent}:{profileId:str
   <CheckList bare label={t('fe.ac.rq.what')} value={sel} onChange={setSel} options={available.map(s=>[s,t('fe.priv.scope.'+s)] as const)}/>
   <SectionLabel action={q&&<b>{t('fe.ac.rq.leftN',{left:q.left,max:q.max})}</b>}>{t('fe.ac.rq.left')}</SectionLabel>
   {q?<Quota left={q.left} max={q.max} label={t('fe.ac.rq.leftLabel',{left:q.left,max:q.max})}/>:<Skel kind="line" rows={1}/>}
-  <Alert kind="info" className="mt12">{t('fe.ac.rq.info')}</Alert>
-  {!!error&&<Alert kind="err" noIcon className="mt12">{w.err(error)}{age&&<><br/><AgeCheckLink intent={'access:'+profileId}/></>}</Alert>}
+  <Alert kind="info">{t('fe.ac.rq.info')}</Alert>
+  {!!error&&<Alert kind="err" noIcon>{w.err(error)}{age&&<><br/><AgeCheckLink intent={'access:'+profileId}/></>}</Alert>}
  </Sheet>;
 }
 
@@ -126,9 +128,11 @@ export function PendingSheet({profileId,name,onClose,onCancelled}:{profileId:str
  return <Sheet title={t('fe.ac.pd.title')} onClose={onClose} lead={<span className="ico a"><Clock/></span>} foot={<>
   {req&&<Btn kind="soft" busy={busy} disabled={busy} onClick={async()=>{setBusy(true);if(await cancel(req.id))onCancelled();setBusy(false);}}>{t('fe.ac.pd.cancel')}</Btn>}
   <Btn kind="text" onClick={()=>navigate('/n/me/access?tab=out')}>{t('fe.ac.pd.all')}</Btn></>}>
-  <Note>{t('fe.ac.pd.lead',{name})}</Note>
-  {req===undefined?<Skel kind="list" rows={1}/>:req?<Card list className="mt12"><Row icon={Lock} title={w.what(req.scopes)} sub={t('fe.ac.pd.sent',{when:w.when(req.created_at)})}/></Card>
-   :<Alert kind="warn" noIcon className="mt12">{t('fe.ac.pd.gone')}</Alert>}
+  <Stack gap={3}>
+   <Note>{t('fe.ac.pd.lead',{name})}</Note>
+   {req===undefined?<Skel kind="list" rows={1}/>:req?<Card list><Row icon={Lock} title={w.what(req.scopes)} sub={t('fe.ac.pd.sent',{when:w.when(req.created_at)})}/></Card>
+    :<Alert kind="warn" noIcon>{t('fe.ac.pd.gone')}</Alert>}
+  </Stack>
  </Sheet>;
 }
 
@@ -171,7 +175,7 @@ function GrantSheet({r,available,onClose,onDone,onDecline}:{r:Incoming,available
   <SectionLabel>{t('fe.priv.term')}</SectionLabel>
   <ChoiceChips label={t('fe.priv.term')} value={term} onChange={setTerm} options={(['1d','7d','none'] as const).map(v=>[v,t('fe.mx.pr.term.'+v)] as const)}/>
   <AccessSummary name={name} sel={sel} all={all} until={t('fe.ac.term.'+term)} couple={couple}/>
-  {failure&&<Alert kind="err" noIcon className="mt12">{failure}</Alert>}
+  {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
  </Sheet>;
 }
 
@@ -200,11 +204,13 @@ function NarrowSheet({g,onClose,onRevoke,onDone}:{g:GrantItem,onClose:()=>void,o
  return <Sheet title={t('fe.ac.nw.title',{name:nameOf(g.profile)})} onClose={onClose} foot={
   <Btn kind={sel.length?'primary':'danger'} disabled={busy||same} busy={busy} onClick={()=>void save()}>{sel.length?t('fe.ac.nw.save'):t('fe.ac.nw.empty')}</Btn>}>
   <SectionLabel>{t('fe.ac.nw.what')}</SectionLabel>
-  <CheckList bare label={t('fe.ac.nw.what')} value={sel} onChange={setSel} options={g.scopes.map(s=>[s,t('fe.priv.scope.'+s)] as const)}/>
-  <Note className="mt8">{t('fe.ac.nw.only')}</Note>
-  <AccessSummary name={nameOf(g.profile)} sel={sel} all={g.scopes} until={w.until(g.until)}/>
-  <Btn kind="text" auto className="danger mt8" onClick={()=>onRevoke(false)}>{t('fe.ac.nw.revoke')}</Btn>
-  {failure&&<Alert kind="err" noIcon className="mt12">{failure}</Alert>}
+  <Stack gap={3}>
+   <CheckList bare label={t('fe.ac.nw.what')} value={sel} onChange={setSel} options={g.scopes.map(s=>[s,t('fe.priv.scope.'+s)] as const)}/>
+   <Note>{t('fe.ac.nw.only')}</Note>
+   <AccessSummary name={nameOf(g.profile)} sel={sel} all={g.scopes} until={w.until(g.until)}/>
+   <Btn kind="text" auto className="danger" onClick={()=>onRevoke(false)}>{t('fe.ac.nw.revoke')}</Btn>
+   {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
+  </Stack>
  </Sheet>;
 }
 
@@ -225,7 +231,7 @@ export function GrantCard({g,onEdit,onRevoke}:{g:GrantItem,onEdit:()=>void,onRev
  return <RequestCard person={<PersonLine av={<Av name={name} seed={g.profile?.id??name} src={g.profile?.avatar}/>} label={name}
    onOpen={()=>g.profile&&navigate('/n/people/'+g.profile.id)} name={<>{name}<NameBadges p={g.profile}/></>} sub={w.what(g.scopes)}/>}
   actions={<><Btn size="md" kind="soft" onClick={onEdit}>{t('fe.ac.edit')}</Btn><Btn size="md" kind="danger" onClick={onRevoke}>{t('fe.mx.pr.revoke')}</Btn></>}>
-  <Chips className="mt12"><Pill tone="v" icon={Clock}>{w.until(g.until)}</Pill></Chips>
+  <Chips><Pill tone="v" icon={Clock}>{w.until(g.until)}</Pill></Chips>
  </RequestCard>;
 }
 
@@ -280,7 +286,7 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged}:{profileId:st
  return <>
   <section className={'vault'+(on&&!empty?'':' off')} id="privHead">
    <VaultHead title={t('fe.priv.title')} label={t('fe.priv.title')} sub={sub} on={on&&!empty} disabled={empty||busy} onToggle={toggle}/>
-   <Card list className="mt12"><SelectRow row label={t('fe.mx.pr.reqFrom')} value={requestsFrom} options={(['all','matches','none'] as const).map(v=>[v,t('fe.mx.pr.from.'+v)] as const)}
+   <Card list><SelectRow row label={t('fe.mx.pr.reqFrom')} value={requestsFrom} options={(['all','matches','none'] as const).map(v=>[v,t('fe.mx.pr.from.'+v)] as const)}
     onChange={v=>void act(()=>call('profile.setVisibility',{opId:newOpId(),setting:'requestsFrom',value:v},ok),t('fe.mx.saved'))}/></Card>
   </section>
   {reqs.items.length>0&&<Group title={<>{t('fe.priv.requests')} · {reqs.items.length}</>}><Stack gap={2}>
@@ -289,7 +295,7 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged}:{profileId:st
      name={<>{withAge(nameOf(r.profile),r.profile)}<NameBadges p={r.profile}/></>} sub={<>{cp?t('fe.mx.pr.asksUs'):t('fe.priv.asks')} · {when(r.created_at,locale)}</>}/>}
     actions={<><Btn size="md" onClick={()=>setGrantFor(r)} disabled={busy}>{t('fe.priv.grant')}</Btn>
      <Btn size="md" kind="soft" onClick={()=>void decline(r.id,nameOf(r.profile),changed)} disabled={busy}>{t('fe.priv.decline')}</Btn></>}>
-    <Chips className="mt12">{r.scopes.map(s=><Pill key={s}>{t('fe.priv.scope.'+s)}{r.alreadyOpen?.scopes.includes(s)?' · '+t('fe.ac.gr.open'):''}</Pill>)}</Chips>
+    <Chips>{r.scopes.map(s=><Pill key={s}>{t('fe.priv.scope.'+s)}{r.alreadyOpen?.scopes.includes(s)?' · '+t('fe.ac.gr.open'):''}</Pill>)}</Chips>
    </RequestCard>)}
   </Stack></Group>}
   {!cp&&<Group id="privDesc" title={t('fe.mp.desc')}>
@@ -311,7 +317,7 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged}:{profileId:st
     :<Card list>{given.slice(0,5).map((g,i)=>{const n=nameOf(g.profile);
      return <Row key={g.profile?.id??i} av={<Av name={n} seed={g.profile?.id??n} size="sm" src={g.profile?.avatar}/>} title={<>{n}<NameBadges p={g.profile}/></>} sub={w.what(g.scopes)+' · '+w.until(g.until)}
       onClick={()=>g.profile&&navigate('/n/people/'+g.profile.id)} end={<IconBtn icon={MoreHorizontal} kind="ghost" size="sm" label={t('fe.mp.more',{name:n})} onClick={()=>setSheet({k:'grant',g})}/>}/>;})}</Card>}
-   <Card list className="mt12"><Row icon={LockOpen} title={t('fe.mp.accessAll')} val={given.length>5?given.length:undefined} onClick={()=>navigate('/n/me/access')}/></Card>
+   <Card list><Row icon={LockOpen} title={t('fe.mp.accessAll')} val={given.length>5?given.length:undefined} onClick={()=>navigate('/n/me/access')}/></Card>
   </Group>
   {asking==='off'&&<Ask icon={Lock} danger title={t('fe.mx.pr.offTitle')} busy={busy}
    text={[given.length||reqs.items.length?t('fe.mx.pr.offWhat',{g:given.length,q:reqs.items.length}):t('fe.mx.pr.offAll'),t('fe.mx.pr.offRest')].join(' ')} ok={t('fe.mx.pr.offOk')}
@@ -352,7 +358,7 @@ function DescSheet({text,onClose,onSaved}:{text:string,onClose:()=>void,onSaved:
  return <Sheet title={t('fe.mp.desc')} onClose={onClose} dirty={!busy&&v!==text} foot={<Btn busy={busy} disabled={busy||v.trim()===text.trim()} onClick={()=>void save()}>{t('fe.me.save')}</Btn>}>
   <Field name="privText" error={checks.error('privText')}><TextArea rows={6} {...checks.input('privText')} value={v} placeholder={t('fe.mx.ed.privPh')} aria-label={t('fe.mp.desc')} onChange={e=>setV(e.target.value)}/>
    <Counter n={textLength(v)} max={FIELD.privateText.max}/></Field>
-  {failure&&<Alert kind="err" noIcon className="mt12">{failure}</Alert>}
+  {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
  </Sheet>;
 }
 
@@ -395,7 +401,7 @@ export function PrivateVault({profileId,name,preview,pre}:{profileId:string,name
    {photos.length>0&&<Group bare title={<>{t('fe.px.pr.photos')} · {photos.length}</>} foot={preview?t('fe.px.pr.wmPreview'):t('fe.px.pr.wm')}>
     <div className="ggrid">{photos.map((m,i)=><button key={i} type="button" className="gtile" onClick={()=>setView(i)}><img src={mediaSrc(m)!} alt="" loading="lazy" draggable={false}/></button>)}</div>
    </Group>}
-   {!desc&&!photos.length&&<Note>{t('fe.px.pr.nothing')}</Note>}
+   {!desc&&!photos.length&&<Empty compact icon={Lock} title={t('fe.px.pr.nothing')}/>}
    {more}
   </div>
   {view!==null&&<PhotoViewer srcs={photos.map(m=>m.src?.full??mediaSrc(m)!)} index={view} wm={wm} onClose={()=>setView(null)}/>}

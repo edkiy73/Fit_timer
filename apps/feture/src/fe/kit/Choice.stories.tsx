@@ -1,6 +1,7 @@
 import type {Meta,StoryObj} from '@storybook/react-vite';
 import {useState} from 'react';
-import {Check,CheckList,ChoiceChips,Chip,Chips,Field,RadioList,Range,Stack,Switch} from './index';
+import {ChipPick} from './ChipPick';
+import {Btn,Check,CheckList,ChoiceChips,Chip,Chips,Field,RadioList,Range,Stack,Switch} from './index';
 
 const meta={title:'Выбор/Чип',component:Chip,tags:['autodocs'],
  parameters:{docs:{description:{component:'Несколько значений из набора (темы, интересы) или фильтр. `more` — «Все · N», открывает полный список. Одно значение из набора — `ChoiceChips`.'}}},
@@ -17,6 +18,9 @@ export const Радиосписок:S={name:'Радиосписок',render:()=>
 export const НесколькоСтроками:S={name:'Несколько из списка строками (CheckList)',render:()=>{const [v,setV]=useState<('info'|'photos'|'video')[]>(['info','photos']);
  return <CheckList label="Что открыть" value={v} onChange={setV} options={[['info','Описание','запрошено'],['photos','Фото','уже открыто'],['video','Видео','не запрошено']]}/>;}};
 export const Галочка:S={render:()=>{const [a,setA]=useState(false);return <Stack gap={2}><Check on={a} onChange={setA}>Принимаю условия и политику</Check><Check on={false} error onChange={()=>{}}>Ошибка — без отметки дальше нельзя</Check></Stack>;}};
+export const ГалочкаСДействием:S={name:'Галочка с действием (aside)',render:()=>{const [a,setA]=useState(false);return <Check on={a} onChange={setA} aside={<Btn kind="text" size="sm" auto onClick={()=>{}}>Читать</Btn>}>Принимаю условия и политику приватности</Check>;}};
+export const ДлинныйСписок:S={name:'Длинный список (ChipPick)',render:()=>{const opts=['женщина','мужчина','небинарная персона','транс-женщина','транс-мужчина','гендерквир','агендер','пока ищу слово','бигендер','демигендер','пангендер'].map((l,i)=>({code:'g'+i,label:l}));
+ const [v,setV]=useState<string[]>(['g2']);return <ChipPick label="Гендер" options={opts} value={v} max={5} onClear={()=>setV([])} onToggle={c=>setV(x=>x.includes(c)?x.filter(y=>y!==c):x.length<5?[...x,c]:x)}/>;}};
 export const Переключатель:S={render:()=>{const [a,setA]=useState(true);return <Stack row gap={3}><Switch label="Включён" on={a} onChange={setA}/><Switch label="Выключен" on={false} disabled onChange={()=>{}}/></Stack>;}};
 export const Ползунок:S={render:()=>{const [v,setV]=useState(30);return <Field label={`Возраст до ${v}`}><Range label="Возраст" min={18} max={99} value={v} onChange={setV}/></Field>;}};
 export const Метка:S={name:'Чип-метка (без нажатия)',render:()=><Chips><Chip>Статья</Chip><Chip on>Выбрано</Chip></Chips>};
