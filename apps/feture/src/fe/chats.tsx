@@ -226,6 +226,18 @@ type SheetKind='attach'|'menu'|'end'|'report'|'block'|'msg'|'readers'|'copy';
 const GROW=120;
 
 /* ================= H02 conversation ================= */
+/** An unsent message is kept per conversation while the app is open (tab switch, back, another chat): it is in memory and in
+ * sessionStorage, and goes away when the message is sent or the box is emptied. */
+const chatDrafts=new Map<string,string>();
+function readChatDraft(key:string){
+ const m=chatDrafts.get(key);if(m!==undefined)return m;
+ try{return sessionStorage.getItem('fe.chatdraft.'+key)??'';}catch{return '';}
+}
+function writeChatDraft(key:string,text:string){
+ if(text)chatDrafts.set(key,text);else chatDrafts.delete(key);
+ try{if(text)sessionStorage.setItem('fe.chatdraft.'+key,text);else sessionStorage.removeItem('fe.chatdraft.'+key);}catch{/* private mode */}
+}
+
 /** `/n/chats/:id` — a conversation; `/n/chats/new/:to` — «Написать» someone without a chat yet: the same screen as a
  * request composer (one first message, text and / or one photo). Keyed, so a sent request opens as a fresh screen. */
 export function ChatScreen(){
@@ -241,7 +253,8 @@ function ChatView({id,to}:{id:string,to:string}){
  useScreenTag('H02');
  const [draft,setDraft]=useState<Draft|null>(null);const [req,setReq]=useState<Req|null>(null);const [reqBusy,setReqBusy]=useState('');
  const [meta,setMeta]=useState<Chat|null>(null);const [items,setItems]=useState<Msg[]|null>(null);const [state,setState]=useState('active');const [otherRead,setOtherRead]=useState(0);const [tag,setTag]=useState<string|null>(null);
- const [error,setError]=useState<unknown>(null);const [text,setText]=useState('');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const [error,setError]=useState<unknown>(null);const [text,setText]=useState(()=>readChatDraft(id||'new:'+to));const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ useEffect(()=>{writeChatDraft(id||'new:'+to,text);},[id,to,text]);
  const [pend,setPend]=useState<Pend[]>([]);const [tries,setTries]=useState(0);const [replyTo,setReplyTo]=useState<string|null>(null);
  const [open,setOpen]=useState<Record<string,string>>({});
  // The «down» button sits above the input bar (`--ctah`); the bar grows with a reply quote or a long message.

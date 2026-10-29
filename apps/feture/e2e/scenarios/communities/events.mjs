@@ -2,7 +2,7 @@
 // The organiser is persona `host`, the guest is `full`; the open event for RSVP is the host's published one. The
 // chain shares the created event id through e2e/out/event-<lane>.json; «E15 cancel» ends it (cleanup cancels leftovers).
 import fs from 'node:fs';
-import { uploaderDone } from '../helpers.mjs';
+import { uploaderDone, leaveGuard, expect } from '../helpers.mjs';
 const sheet = '.sheet.on', dialog = '.dialog.on';
 const toast = (t, s) => t.see('.toast:has-text("' + s + '")');
 import { STAFF } from '../../personas.mjs';
@@ -41,18 +41,29 @@ export default [
    await next(t); await t.see('.field.err:has-text("https://")');
    await t.tap('.ctabar .btn.soft'); await t.see('.stepper:has-text("1/4")');
    if (await t.page.locator('input[name="title"]').inputValue() !== 'E2E проверка шагов') throw new Error('back lost the title');
-   await t.see('.btn:has-text("Удалить черновик")');
-   await t.tap('.btn:has-text("Удалить черновик")'); await t.tap('.alert .btn.danger');
-   await t.wait(1200);
+   await t.notSee('.btn:has-text("Удалить черновик")', 300); // a new event is not a draft the person saved
+   await cleanup(t);
    const m = await t.api('event.mine', {});
    if (m.drafts.some(d => (d.title ?? d.form?.title) === 'E2E проверка шагов')) throw new Error('draft not deleted');
+ } },
+ { name: 'E11 leave guard: a filled new event asks on back and tab; «Остаться» keeps it; «Сохранить черновик» keeps a draft', persona: 'host', route: '/n/events/new', run: async t => {
+   await cleanup(t); await t.go('/n/events/new'); await t.page.reload(); await t.see('input[name="title"]');
+   expect(!(await t.page.locator('css=header .btn:has-text("Сохранить черновик")').count()), 'no draft text on an empty new event');
+   const typed = async () => { await t.fill('input[name="title"]', 'E2E охрана выхода'); await t.see('css=header .btn:has-text("Сохранить черновик")'); };
+   await leaveGuard(t, { typed, kept: async () => (await t.page.locator('input[name="title"]').inputValue()) === 'E2E охрана выхода', via: 'tab', url: '/events/new' });
+   await t.go('/n/events/new'); await t.page.reload(); await typed(); await t.tap('.bar .ibtn >> nth=0');
+   for (const b of ['Сохранить черновик', 'Не сохранять', 'Остаться']) await t.see(`.dialog.on .btn:has-text("${b}")`);
+   await t.tap('.dialog.on .btn.primary'); await t.wait(1500);
+   const m = await t.api('event.mine', {});
+   expect(m.drafts.some(d => (d.title ?? d.form?.title) === 'E2E охрана выхода'), 'draft stored by «Сохранить черновик»');
+   await cleanup(t);
  } },
  { name: 'E11 cover photo uploads into a draft, draft deleted', persona: 'host', route: '/n/events/new', run: async t => {
    await t.fill('input[name="title"]', 'E2E обложка события');
    await t.page.locator('[data-field="cover"] input[type="file"]').setInputFiles({ name: 'cover.png', mimeType: 'image/png', buffer: PNG });
    await uploaderDone(t);
    await t.see('.evcov img', 20000);
-   await noToast(t); await t.tap('css=header .btn:has-text("В черновик")');
+   await noToast(t); await t.tap('css=header .btn:has-text("Сохранить черновик")');
    await t.see('.alert.ok:has-text("Черновик сохранён")');
    await t.tap('.btn:has-text("Удалить черновик")'); await t.tap('.alert .btn.danger');
    await t.wait(1200);

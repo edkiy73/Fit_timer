@@ -159,11 +159,10 @@ function DisputeExplainSheet({post,onClose,onDone}:{post:Post,onClose:()=>void,o
  const {call}=useFe();const {t}=useI18n();const toast=useToast();const {op,drop}=useOps();
  const [text,setText]=useState(post.dispute?.note??'');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
  const checks=useChecks({note:'disputeNote'},{note:text});
- useEscape(onClose);
  const send=async()=>{if(busy||!checks.submit())return;setBusy(true);setFailure('');
   try{const r=await call('post.disputeExplain',{opId:op('explain'),postId:post.id,note:text.trim()},explained);toast(t('fe.w3.dispute.sent'),{type:'ok'});onDone(r.note);}
   catch(e){if(!checks.fromServer(e))setFailure(feErrorMessage(e,t));drop('explain');}finally{setBusy(false);}};
- return <Sheet title={t('fe.w3.dispute.sheetTitle')} sub={t('fe.w3.dispute.sheetSub')} onClose={onClose} foot={<Btn onClick={send} disabled={busy||!text.trim()} busy={busy}>{t('fe.w3.dispute.send')}</Btn>}>
+ return <Sheet title={t('fe.w3.dispute.sheetTitle')} sub={t('fe.w3.dispute.sheetSub')} onClose={onClose} dirty={!busy&&text.trim()!==(post.dispute?.note??'').trim()} foot={<Btn onClick={send} disabled={busy||!text.trim()} busy={busy}>{t('fe.w3.dispute.send')}</Btn>}>
   <Field name="note" error={checks.error('note')}>
    <TextArea rows={4} {...checks.input('note')} value={text} aria-label={t('fe.w3.dispute.sheetTitle')} onChange={e=>setText(e.target.value)}/>
    {checks.counter('note')}

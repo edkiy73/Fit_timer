@@ -1,8 +1,8 @@
 import type {Meta,StoryObj} from '@storybook/react-vite';
 import {useState} from 'react';
 import {fn} from 'storybook/test';
-import {Bell,Camera,Eye,Hand,KeyRound,Link2,Lock,Trash2,Users,X} from 'lucide-react';
-import {AddCard,Av,Btn,Card,Group,IconBtn,LoadMore,Row,SelectRow,StatTiles,ToggleRow} from './index';
+import {Bell,Camera,ChartColumn,Eye,Hand,Sparkles,KeyRound,Link2,Lock,Trash2,Users,X} from 'lucide-react';
+import {AddCard,Av,Btn,Card,ExpandRow,Group,IconBtn,LoadMore,Row,SelectRow,StatTiles,ToggleRow} from './index';
 
 const meta={title:'Списки/Строка',component:Row,tags:['autodocs'],
  parameters:{docs:{description:{component:'Пункт настроек, меню, списка людей — всегда внутри `<Card list>`. Слева иконка (`icon`, `tone`) или аватар (`av`), справа значение, бейдж и стрелка. Опасное действие — `danger` (без стрелки).'}}},
@@ -52,3 +52,8 @@ export const Счётчики:StoryObj<typeof StatTiles>={name:'Счётчики
  args:{items:[{n:12,label:'участников',onClick:fn()},{n:3,label:'обсуждения',onClick:fn()},{n:2,label:'ждут решения',onClick:fn()}]}};
 export const СчётчикиДва:StoryObj<typeof StatTiles>={name:'Счётчики — два',render:a=><StatTiles {...a}/>,decorators:[S=><S/>],
  args:{items:[{n:8,label:'идут',onClick:fn()},{n:5,label:'интересуются',onClick:fn()}]}};
+
+export const РазворотВСтроке:StoryObj={name:'Необязательный раздел формы (ExpandRow)',parameters:{docs:{description:{story:'Закрытый раздел — одна строка списка; открытый — поля прямо под ней, в том же списке (без карточки в карточке). «Убрать» закрывает и очищает раздел.'}}},
+ render:()=>{const [a,setA]=useState(false);const [b,setB]=useState(false);return <>
+  <ExpandRow icon={ChartColumn} title="Опрос" sub={a?undefined:'Вопрос и варианты'} open={a} onToggle={()=>setA(!a)} onRemove={()=>setA(false)} removeLabel="Убрать"><p>Поля опроса</p></ExpandRow>
+  <ExpandRow icon={Sparkles} title="Интересы" open={b} onToggle={()=>setB(!b)}><p>Выбор интересов</p></ExpandRow></>;}};

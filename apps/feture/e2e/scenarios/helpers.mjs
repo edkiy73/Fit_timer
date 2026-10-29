@@ -144,3 +144,24 @@ export async function sheetBelowStatusBar(t, inset = 28) {
   expect(r.headH >= 56 + inset - 1, `sheet header shorter than a page title bar: ${r.headH} < ${56 + inset}`);
   return r;
 }
+
+/** Leave guard (kit `useLeaveGuard`): with something typed, leaving by the screen's own back, by Browser Back and by a dock tab
+ * asks first; «Остаться» keeps the input and the place, «Не сохранять» / «Выйти» leaves. `typed()` puts the input in and
+ * `kept()` says whether it is still there. `via` is `back`, `browser` or `tab`. */
+export async function leaveGuard(t, { typed, kept, via, leave = 'danger', url }) {
+  const ask = '.dialog.on';
+  await typed();
+  if (via === 'back') await t.tap('.bar .ibtn >> nth=0');
+  else if (via === 'browser') await t.page.goBack();
+  else await t.tap('nav.dock a, nav.dock button >> nth=0');
+  await t.see(ask, 5000);
+  await t.tap(`${ask} .btn:has-text("Остаться")`); await t.notSee(ask, 2000);
+  expect(await kept(), 'input kept after «Остаться» (' + via + ')');
+  if (url) expect(t.page.url().includes(url), 'still on ' + url + ': ' + t.page.url());
+  if (via === 'back') await t.tap('.bar .ibtn >> nth=0');
+  else if (via === 'browser') await t.page.goBack();
+  else await t.tap('nav.dock a, nav.dock button >> nth=0');
+  await t.see(ask, 5000);
+  await t.tap(`${ask} .btn.${leave}`); await t.wait(800);
+  if (url) expect(!t.page.url().includes(url), 'left ' + url + ': ' + t.page.url());
+}

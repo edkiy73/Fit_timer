@@ -1,5 +1,5 @@
 // F «Новая публикация»: every control, checked by what the server stored — not by screenshots.
-import { expect, until, pngOf, toastSee, stamp } from '../helpers.mjs';
+import { expect, until, pngOf, toastSee, stamp, leaveGuard } from '../helpers.mjs';
 const mine = async t => (await t.api('me.posts', {})).items;
 const newest = async (t, body) => until(async () => (await mine(t)).find(p => p.body === body && p.state !== 'draft'), 'post sent: ' + body);
 const cleanup = async (t, id) => { if (id) await t.api('post.delete', { opId: t.uuid7(), postId: id }); };
@@ -8,6 +8,9 @@ const text = async t => (await t.page.locator(ta).innerText()).replace(/\u00a0/g
 const inView = async (t, sel) => { await t.wait(700); const b = await t.page.locator(sel).first().boundingBox(); const vh = t.page.viewportSize().height;
   expect(b && b.y > 0 && b.y < vh - 140, `${sel} not in view (y=${b && Math.round(b.y)})`); };
 const publishBtn = '.ctabar .btn.primary';
+/** An optional section is a row that opens in place: `row(t, 'Опрос')` taps it, `sec('Темы')` is its open body. */
+const row = (t, name) => t.tap(`.k-exp > .li:has(b:text-is("${name}"))`);
+const sec = name => `.k-exp:has(> .li b:text-is("${name}"))`;
 /** The kit uploader sheet after a pick: wait for the row, «Готово», the photo lands in the form. */
 const uploaded = async t => { await t.see('.sheet.on .k-uprow:has-text("без геометки")', 20000); await t.tap('.sheet.on .sh-f button:has-text("Готово")'); await t.see('.edit-ph img', 30000); };
 
@@ -36,7 +39,7 @@ export default [
  { name: 'poll: add/remove options, validation, publish → stored poll', persona: 'full', route: '/n/feed/new', run: async t => {
    let id;
    try {
-     await t.see(ta); await t.tap('.attach button:has-text("Опрос")'); await t.see('#pollQ'); await inView(t, '#pollQ');
+     await t.see(ta); await row(t, 'Опрос'); await t.see('#pollQ'); await inView(t, '#pollQ');
      await t.tap(publishBtn); await t.see('.ferr'); // empty question/options refused
      const body = 'e2e опрос ' + stamp();
      await t.fill(ta, body); await t.fill('#pollQ', 'Куда пойдём?');
@@ -66,16 +69,16 @@ export default [
    try {
      await t.see(ta); await t.fill(ta, 'привет');
      await t.page.locator(ta).click(); await t.page.keyboard.press('End'); await t.page.keyboard.type(' @'); await t.wait(200); expect((await text(t)) === 'привет @', 'mention: ' + await text(t));
-     const chips = t.page.locator('.grp:has-text("Темы") .chips .chip:not(.more)');
+     await row(t, 'Темы'); const chips = t.page.locator(sec('Темы') + ' .chips .chip:not(.more)');
      for (let i = 0; i < 3; i++) await chips.nth(i).click();
-     expect((await t.page.locator('.grp:has-text("Темы") .chip.on').count()) === 3, '3 topics on');
+     expect((await t.page.locator(sec('Темы') + ' .chip.on').count()) === 3, '3 topics on');
      await chips.nth(3).click(); await toastSee(t, '');
-     expect((await t.page.locator('.grp:has-text("Темы") .chip.on').count()) === 3, 'still 3 after the 4th');
+     expect((await t.page.locator(sec('Темы') + ' .chip.on').count()) === 3, 'still 3 after the 4th');
      await chips.nth(0).click(); await t.tap('.chip.more'); await t.see('.sheet.on');
      expect(!(await t.page.locator('.sheet.on:has-text("Применить фильтры")').count()), 'post topic sheet must not be the feed filter');
      await t.page.locator('.sheet.on .chip:not(.on):not(.more)').first().click(); await t.page.locator('.sheet.on .chip:not(.on):not(.more)').first().click(); await toastSee(t, 'не больше 3');
      await t.tap('.sheet.on .sh-f button:has-text("Готово")'); await t.notSee('.sheet.on', 500);
-     expect((await t.page.locator('.grp:has-text("Темы") .chip.on').count()) === 3, 'sheet applied 3');
+     expect((await t.page.locator(sec('Темы') + ' .chip.on').count()) === 3, 'sheet applied 3');
      const body = 'e2e темы ' + stamp(); await t.fill(ta, body); await t.tap(publishBtn);
      const p = await newest(t, body); id = p.id; expect(p.topics.length === 3, 'topics ' + JSON.stringify(p.topics));
    } finally { await cleanup(t, id); }
@@ -83,11 +86,11 @@ export default [
  { name: 'my interests: attach up to 4, remove, publish → stored', persona: 'full', route: '/n/feed/new', run: async t => {
    let id;
    try {
-     await t.see(ta); await t.tap('.attach button:has-text("Мои интересы")'); await t.wait(500);
-     const sec = 'section.grp:has(.grp-t span:text-is("Интересы"))';
-     if (!(await t.page.locator(sec).count())) { await toastSee(t, ''); console.log('   no public interests — toast shown'); return; }
-     await inView(t, sec);
-     const on = await t.page.locator(sec + ' .chip.on').count(); expect(on >= 1 && on <= 4, 'preselected ' + on);
+     await t.see(ta); await row(t, 'Интересы'); await t.wait(500);
+     const isec = sec('Интересы') + '.open';
+     if (!(await t.page.locator(isec).count())) { await toastSee(t, ''); console.log('   no public interests — toast shown'); return; }
+     await inView(t, isec);
+     const on = await t.page.locator(isec + ' .chip.on').count(); expect(on >= 1 && on <= 4, 'preselected ' + on);
      const body = 'e2e интересы ' + stamp(); await t.fill(ta, body); await t.tap(publishBtn);
      const p = await newest(t, body); id = p.id; expect((p.interests ?? []).length === on, 'interests ' + JSON.stringify(p.interests));
    } finally { await cleanup(t, id); }
@@ -162,5 +165,22 @@ export default [
      const p = await until(async () => (await mine(t)).find(x => x.body.includes(tag) && x.state !== 'draft'), 'stored'); id = p.id;
      expect(p.body.includes(first + ' привет'), 'body ' + p.body);
    } finally { await cleanup(t, id); }
+ } },
+ { name: 'leave guard: a typed post asks on own back, Browser Back and a tab; «Остаться» keeps the text, header shows no draft text until something is typed', persona: 'full', route: '/n/feed', run: async t => {
+   // A reload gives the feed entry the router's own key, so Browser Back to it can be intercepted (as it is for a person who opened the app there).
+   const open = async () => { await t.go('/n/feed'); await t.page.reload(); await t.tap('.bar [aria-label="Создать публикацию"]'); await t.tap('.sheet.on .li:has-text("Публикация")'); await t.see(ta); };
+   await open();
+   expect(!(await t.page.locator('.bar .btn:has-text("Сохранить черновик"), .bar .btn:has-text("В черновик")').count()), 'no draft text on a new empty post');
+   const typed = async () => { await t.fill(ta, 'не потерять ' + stamp()); await t.see('.bar .btn:has-text("Сохранить черновик")'); };
+   for (const via of ['back', 'browser', 'tab']) {
+     if (via !== 'back') await open();
+     await leaveGuard(t, { typed, kept: async () => (await text(t)).startsWith('не потерять'), via, url: '/feed/new' });
+   }
+   // three answers: «Сохранить черновик» / «Не сохранять» / «Остаться»
+   await open(); await typed(); await t.tap('.bar .ibtn >> nth=0');
+   for (const b of ['Сохранить черновик', 'Не сохранять', 'Остаться']) await t.see(`.dialog.on .btn:has-text("${b}")`);
+   const body = await text(t);
+   await t.tap('.dialog.on .btn.primary'); await until(async () => !t.page.url().includes('/feed/new'), 'left after saving the draft', 10000);
+   const d = await until(async () => (await mine(t)).find(p => p.body === body && p.state === 'draft'), 'draft stored'); await cleanup(t, d.id);
  } },
 ];

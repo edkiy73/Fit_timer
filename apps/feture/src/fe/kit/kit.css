@@ -551,3 +551,10 @@ html:has(.fe-v21),html:has(.fe-v21) body{overscroll-behavior-y:none}
 .v21 .k-draft .k-draft-v{position:absolute;left:4px;bottom:4px;display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--scrim);color:#fff}
 .v21 .k-draft .k-draft-v svg{width:12px;height:12px}
 .v21 .k-draft .k-draft-th>b{position:absolute;inset:0;display:grid;place-items:center;background:var(--scrim);color:#fff;font-size:var(--fs-sm);font-weight:700}
+
+/* expandRow: an optional form section opening under its row, inside the same list card */
+.v21 .k-exp{border-top:1px solid var(--line)}
+.v21 .k-exp:first-child{border-top:0}
+.v21 .k-exp>.li{border-top:0}
+.v21 .k-exp-b{display:grid;gap:var(--s-3);padding:0 0 var(--s-4);justify-items:stretch}
+.v21 .k-exp-b>.btn.text{justify-self:start}

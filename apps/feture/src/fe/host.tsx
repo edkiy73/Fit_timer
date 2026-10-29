@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,Bell,ChevronRight,CircleCheck,Clock,Copy,Ellipsis,FileText,Flag,Info,Link as LinkIcon,Lock,MessageCircle,Pencil,Pin,PinOff,Send,Settings,ShieldAlert,Trash2,TrendingDown,TrendingUp,User,UserMinus,UserPlus,Users,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Announcement,Answer,Ask,Av,Btn,Card,IconBtn,Empty,Group,LoadMore,Note,PersonLine,Pill,RequestCard,Row,SectionLabel,Seg,Sheet,Skel,Stack,StatTiles,SubBar,nickShown} from './kit';
+import {Alert,Announcement,Answer,Ask,Av,Btn,Card,IconBtn,Empty,Group,LoadMore,Note,PersonLine,Pill,RequestCard,Row,SectionLabel,Seg,Sheet,Skel,Stack,StatTiles,SubBar,nickShown,useLeaveGuard} from './kit';
 import {useFe,usePartnerApproves} from './session';
 import {WriteBtn,useWriteTo} from './write-to';
 import {useToast} from './toast';
@@ -115,7 +115,7 @@ export function JoinSheet({c,invite,onClose,onDone}:{c:{id:string,name:string,pr
    onDone(r.pending?t('fe.host.join.waitingPartner'):r.state==='member'?fill(t(couple?'fe.cm.joinedCouple':'fe.cm.joined'),{name:c.name}):t('fe.cm.requestSent'));
   }catch(x){const f=serverFields(x).find(f=>f.path==='answer');if(f){setErr({answer:textErrorMessage(t,f.code,FIELD.joinAnswer)});shakeFirstErr();}else setFailure(feErrorMessage(x,t));}finally{setBusy(false);}
  };
- return <Sheet title={closed?t('fe.host.join.requestTitle'):t('fe.host.join.rulesTitle')} onClose={onClose}
+ return <Sheet title={closed?t('fe.host.join.requestTitle'):t('fe.host.join.rulesTitle')} onClose={onClose} dirty={!busy&&!!answer.trim()}
   foot={<Btn onClick={send} busy={busy} disabled={busy}>{toPartner?t('fe.host.join.acceptPartner'):closed?t(couple?'fe.host.join.acceptSendCouple':'fe.host.join.acceptSend'):t(couple?'fe.host.join.acceptJoinCouple':'fe.host.join.acceptJoin')}</Btn>}>
   <Stack gap={4}>
    <Group title={t('fe.comm.tab.rules')}><Card className="flat"><ol className="rules">{c.rules.map((r,i)=><li key={i}>{r}</li>)}</ol></Card></Group>
@@ -352,6 +352,7 @@ export function EventApplyScreen(){
  const {data:e,error,load}=useLoad(fetch);
  const [answers,setAnswers]=useState<string[]>([]);const [note,setNote]=useState('');
  const [err,setErr]=useState<Record<string,string>>({});const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const guard=useLeaveGuard(!busy&&(answers.some(a=>a.trim())||!!note.trim()));
  const couple=acting?.kind==='couple';const qs=e?.questions?.length?e.questions:[];const toPartner=usePartnerApproves();
  const open=!!e&&e.requiresApplication&&e.state==='published'&&!e.past;
  const reqs=(e?.requirements??'').split('\n').map(x=>x.trim()).filter(Boolean);
@@ -365,7 +366,7 @@ export function EventApplyScreen(){
   setBusy(true);setFailure('');
   try{
    const r=await call('event.apply',{opId:newOpId(),eventId:id,answers:qs.map((_,i)=>(answers[i]??'').trim()),note:note.trim(),requirementsAccepted:true},joinRes);
-   toast(r.pending?t('fe.host.app.sentPartner'):t('fe.cm.appSent'),{type:'ok'});navigate(`/n/events/${id}`,{replace:true});
+   toast(r.pending?t('fe.host.app.sentPartner'):t('fe.cm.appSent'),{type:'ok'});guard.pass(()=>navigate(`/n/events/${id}`,{replace:true}));
   }catch(y){
    // answers.N → the N-th answer, note → the note (contracts/events.mjs event.apply).
    const x:Record<string,string>={};for(const {path,code} of serverFields(y)){const [h,n]=path.split('.');const k=h==='answers'?'q'+(n??0):h==='note'?'note':'';
@@ -390,6 +391,7 @@ export function EventApplyScreen(){
     </>}
   </div></div>
   {open&&<div className="ctabar"><div className="wrap"><Btn onClick={()=>void send()} busy={busy} disabled={busy}>{label}</Btn></div></div>}
+  {guard.node}
  </>;
 }
 
@@ -445,7 +447,7 @@ export function EventManageScreen(){
     {!!e.announcements?.length&&<><SectionLabel>{t('fe.host.ev.sent')}</SectionLabel>{e.announcements.map(a=><Announcement key={a.id} icon={Bell} body={a.body} meta={<>{a.automatic?t('fe.cm.auto'):''}{when(a.created_at,locale)}</>}/>)}</>}
    </>}
   </div></div>
-  {e&&mode==='announce'&&<Sheet title={t('fe.host.ev.announceTitle')} onClose={()=>setMode('')} foot={<Btn icon={Send} onClick={()=>void announce()} busy={busy} disabled={busy}>{t('fe.host.ev.send')}</Btn>}>
+  {e&&mode==='announce'&&<Sheet title={t('fe.host.ev.announceTitle')} onClose={()=>setMode('')} dirty={!busy&&!!body.trim()} foot={<Btn icon={Send} onClick={()=>void announce()} busy={busy} disabled={busy}>{t('fe.host.ev.send')}</Btn>}>
    <p className="lead">{t('fe.host.ev.announceLead')}</p>
    <Field name="announce" label={t('fe.host.ev.announceLabel')} value={body} onChange={v=>{setBody(v);setErr('');}} err={err||undefined} textarea rows={4} check="announcement" ph={t('fe.host.ev.announcePh')}/>
   </Sheet>}

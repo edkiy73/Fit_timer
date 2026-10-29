@@ -71,7 +71,7 @@ function AlbumNameSheet({title,cta,initial='',albums,except,save,onClose}:{title
   catch(e){setErr(e instanceof FeError&&e.rule==='duplicate'?t('fe.gal.nameDup'):e instanceof FeError&&e.rule==='album_limit'?t('fe.gal.limit'):serverFields(e).some(f=>f.path==='title')?textErrorMessage(t,serverFields(e)[0]!.code,FIELD.albumTitle):feErrorMessage(e,t));}
   finally{setBusy(false);}
  };
- return <Sheet title={title} onClose={onClose} foot={<Btn onClick={go} busy={busy} disabled={busy}>{cta}</Btn>}>
+ return <Sheet title={title} onClose={onClose} dirty={!busy&&name.trim()!==initial.trim()} foot={<Btn onClick={go} busy={busy} disabled={busy}>{cta}</Btn>}>
   <Field id="albumName" name="albumName" label={t('fe.gal.name')} error={err||undefined}>
    <Input id="albumName" value={name} maxLength={softMax('albumTitle')} onBlur={()=>{if(name.trim())setErr(textError(t,'albumTitle',name)??'');}} autoFocus autoComplete="off" invalid={!!err} placeholder={t('fe.gal.namePh')}
     onChange={e=>{setName(e.target.value);setErr('');}} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();void go();}}}/>
@@ -369,7 +369,7 @@ export function PostAlbumSheet({post,onClose,onChange}:{post:Post,onClose:()=>vo
 
 /** «Альбом в галерее» in the composer, for a post with photos for everyone or followers. A followers-only album
  * narrows the post too (`onNarrow`); «Новый альбом…» creates one and picks it. */
-export function AlbumField({value,onChange,audience,onNarrow}:{value:string|null,onChange:(v:string|null)=>void,audience:string,onNarrow:()=>void}){
+export function AlbumField({value,onChange,audience,onNarrow,bare}:{bare?:boolean,value:string|null,onChange:(v:string|null)=>void,audience:string,onNarrow:()=>void}){
  const {call,acting}=useFe();const {t}=useI18n();const toast=useToast();
  const [albums,setAlbums]=useState<Album[]>([]);const [creating,setCreating]=useState(false);
  useEffect(()=>{if(!acting)return;call('album.list',{profileId:acting.id},albumsRes).then(r=>setAlbums(r.items)).catch(()=>{});},[call,acting]);
@@ -380,8 +380,8 @@ export function AlbumField({value,onChange,audience,onNarrow}:{value:string|null
  const options=useMemo(()=>[['',t('fe.gal.noAlbum')] as const,...albums.map(a=>[a.id,a.title] as const),['__new',t('fe.gal.newDots')] as const],[albums,t]);
  // An album chosen elsewhere (from the gallery's «+ Добавить») shows once the list arrives.
  return <>
-  <Card list className="mt8"><SelectRow row icon={Images} label={t('fe.gal.postAlbum')} sub={t('fe.gal.postAlbumSub')} value={value&&albums.some(a=>a.id===value)?value:''} options={options}
-   onChange={v=>{if(v==='__new'){setCreating(true);return;}pick(v||null);}}/></Card>
+  {(()=>{const sel=<SelectRow row icon={Images} label={t('fe.gal.postAlbum')} sub={t('fe.gal.postAlbumSub')} value={value&&albums.some(a=>a.id===value)?value:''} options={options}
+   onChange={v=>{if(v==='__new'){setCreating(true);return;}pick(v||null);}}/>;return bare?sel:<Card list className="mt8">{sel}</Card>;})()}
   {creating&&<NewAlbumSheet albums={albums} onClose={()=>setCreating(false)} onCreated={x=>{const l=[...albums,x];setAlbums(l);pick(x.id,l);toast(t('fe.gal.createdShort'),{type:'ok'});}}/>}
  </>;
 }

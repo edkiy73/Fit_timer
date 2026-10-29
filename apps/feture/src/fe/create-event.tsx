@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Calendar,Check,ChevronLeft,CircleAlert,Clock,EyeOff,Link as LinkIcon,Lock,MapPin,RefreshCw,Ticket,Unlock,Video} from 'lucide-react';
 import {FeError,feErrorMessage} from '../feture/fe-api';
-import {Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,EventTile,Group,Note,Row,Seg,SectionLabel,Select,Skel,Steps,ToggleRow,View} from './kit';
+import {Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,EventTile,Group,Note,Row,Seg,SectionLabel,Select,Skel,Steps,ToggleRow,View,useLeaveGuard} from './kit';
 import {PickField,PlacePicker} from './kit/Place';
 import {useFe} from './session';
 import {ONLINE_ZONES,placeZone,zoneLabel} from './event-time';
@@ -206,10 +206,12 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
  const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const catalog=useCatalog();
  const draftOp=useOp(),submitOp=useOp(),deleteOp=useOp(),updateOp=useOp();
  const [f,setF]=useState<Form>(()=>edit?.form??resume?.form??{...fresh(),communityId:community??''});const [stale,setStale]=useState(false);const [step,setStep]=useState(resume?.step??1);const [cityOpen,setCityOpen]=useState(false);const [err,setErr]=useState<Errors>({});
- const [draftId,setDraftId]=useState<string|null>(resume?.id??null);const [busy,setBusy]=useState(false);
+ const [draftId,setDraftId]=useState<string|null>(resume?.id??null);const [busy,setBusy]=useState(false);const [kept,setKept]=useState(false);
  const [notice,setNotice]=useState<{kind:'ok'|'warn'|'err',text:string}|null>(null);const [pv,setPv]=useState<'all'|'ok'>('all');const [asking,setAsking]=useState(false);
  const [hosting,setHosting]=useState<{id:string,name:string}[]>([]);
  const couple=acting?.kind==='couple';
+ // What the server has (or the form was opened with): leaving with more than that asks first.
+ const savedAs=useRef(JSON.stringify(f));const dirty=JSON.stringify(f)!==savedAs.current;
  useEffect(()=>{if(edit)return;call('community.mine',{},comms).then(r=>setHosting(r.hosting.filter(c=>c.state==='published'&&(c.role==='owner'||c.role==='host')))).catch(()=>{});},[call,edit]);
  // After publication who is admitted stays as it is (the server answers admission_frozen otherwise).
  const frozen=edit?.state==='published';
@@ -226,15 +228,17 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
   const r=await call('event.draftSave',{opId:draftOp.opFor(payload),...payload},saved);draftOp.done();
   setDraftId(r.id);return r.id;
  };
- const toDraft=async()=>{
-  if(busy)return;setNotice(null);
+ const toDraft=async():Promise<boolean>=>{
+  if(busy)return false;setNotice(null);
   const dt=f.title.trim()?textError(t,lineRule(80),f.title):t('fe.ce.err.draftTitle');
-  if(dt){setErr(e=>({...e,title:dt}));if(step!==1)setStep(1);shakeFirstErr();return;}
+  if(dt){setErr(e=>({...e,title:dt}));if(step!==1)setStep(1);shakeFirstErr();return false;}
   setBusy(true);
-  try{await saveDraft(step);setNotice({kind:'ok',text:couple?t('fe.ce.draftSavedCouple'):t('fe.ce.draftSaved')});}
-  catch(e){setNotice({kind:'err',text:feErrorMessage(e,t)});}
+  try{await saveDraft(step);savedAs.current=JSON.stringify(f);setKept(true);setNotice({kind:'ok',text:couple?t('fe.ce.draftSavedCouple'):t('fe.ce.draftSaved')});return true;}
+  catch(e){setNotice({kind:'err',text:feErrorMessage(e,t)});return false;}
   finally{setBusy(false);}
  };
+ // Leaving a filled form: a new event offers to keep it as a draft; editing a saved event only asks to leave.
+ const guard=useLeaveGuard(dirty&&!busy,edit?undefined:{title:t('fe.ce.leave.title'),text:t('fe.ce.leave.text'),label:t('fe.ce.toDraft'),run:toDraft});
  const next=async()=>{
   if(busy)return;setNotice(null);
   const e=validate(f,step,t,edit?.orig);setErr(e);
@@ -242,7 +246,7 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
   if(edit){setStep(step+1);return;}
   setBusy(true);
   // The draft follows every step; a failed save does not hold the person back, it only says so.
-  try{await saveDraft(step+1);}catch(x){setNotice({kind:'warn',text:t('fe.ce.draftFailed').replace('{reason}',feErrorMessage(x,t))});}
+  try{await saveDraft(step+1);savedAs.current=JSON.stringify(f);}catch(x){setNotice({kind:'warn',text:t('fe.ce.draftFailed').replace('{reason}',feErrorMessage(x,t))});}
   finally{setBusy(false);}
   setStep(step+1);
  };
@@ -262,11 +266,11 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
     const r=await call('event.update',{opId:updateOp.opFor(payload),...payload},updated);updateOp.done();
     const notice=r.pending?t('fe.ece.e.pending'):edit.state!=='published'?t('fe.ece.e.savedReview')
      :r.review?.length?reviewNotice(r.review,t):t('fe.ece.e.saved');
-    navigate(`/n/events/${edit.id}/manage`,{replace:true,state:{notice}});
+    guard.pass(()=>navigate(`/n/events/${edit.id}/manage`,{replace:true,state:{notice}}));
     return;
    }
    const r=await call('event.submit',{opId:submitOp.opFor(payload),...payload},submitted);submitOp.done();
-   navigate('/n/me/events',{replace:true,state:{notice:r.state==='pending_partner'?t('fe.ce.donePending'):t('fe.ce.done')}});
+   guard.pass(()=>navigate('/n/me/events',{replace:true,state:{notice:r.state==='pending_partner'?t('fe.ce.donePending'):t('fe.ce.done')}}));
   }catch(x){
    if(edit&&x instanceof FeError&&x.code==='conflict'){setStale(true);setNotice({kind:'err',text:feErrorMessage(x,t)});}
    else if(x instanceof FeError&&x.code==='invalid_input'&&x.fields?.length){
@@ -286,7 +290,7 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
  const removeDraft=async()=>{
   if(!draftId||busy)return;setBusy(true);setNotice(null);
   const payload={draftId};
-  try{await call('event.draftDelete',{opId:deleteOp.opFor(payload),...payload},okRes);deleteOp.done();navigate('/n/me/events',{replace:true});}
+  try{await call('event.draftDelete',{opId:deleteOp.opFor(payload),...payload},okRes);deleteOp.done();guard.pass(()=>navigate('/n/me/events',{replace:true}));}
   catch(e){setNotice({kind:'err',text:feErrorMessage(e,t)});setAsking(false);}
   finally{setBusy(false);}
  };
@@ -372,18 +376,19 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
  }
 
  return <>
-  <Bar title={edit?t('fe.ece.e.title'):draftId?t('fe.ce.titleDraft'):t('fe.ce.title')} small onBack={back}>
-   {!edit&&<Btn kind="text" auto onClick={toDraft} disabled={busy}>{t('fe.ce.toDraft')}</Btn>}
+  <Bar title={edit?t('fe.ece.e.title'):resume?t('fe.ce.titleDraft'):t('fe.ce.title')} small onBack={back}>
+   {!edit&&dirty&&<Btn kind="text" auto onClick={()=>void toDraft()} disabled={busy}>{t('fe.ce.toDraft')}</Btn>}
   </Bar>
   <div className="view nodock cta1"><div className="wrap">
    <Steps step={step} total={4} name={names[step-1]!}/>
    {edit&&edit.pendingChange!=null&&step===1&&<Alert kind="warn" role="none" icon={Clock}>{t('fe.ece.e.pendingChange')}</Alert>}
    {step<4?<Group><Card form>{body}</Card></Group>:body}
    {notice&&<Alert ref={noticeRef} kind={notice.kind} noIcon action={stale&&reload?<Btn kind="text" auto icon={RefreshCw} onClick={reload}>{t('fe.ece.reload')}</Btn>:undefined}>{notice.text}</Alert>}
-   {draftId&&(asking
+   {(resume||kept)&&draftId&&(asking
     ?<Alert kind="warn" noIcon role="alertdialog" action={<><Btn kind="danger" size="sm" auto onClick={removeDraft} disabled={busy}>{t('fe.ce.draftDeleteOk')}</Btn><Btn kind="text" size="sm" auto onClick={()=>setAsking(false)}>{t('fe.ce.cancel')}</Btn></>}>{t('fe.ce.draftDeleteAsk')}</Alert>
     :<div className="row"><Btn kind="text" size="sm" auto onClick={()=>setAsking(true)} disabled={busy}>{t('fe.ce.draftDelete')}</Btn></div>)}
   </div></div>
+  {guard.node}
   <div className="ctabar"><div className="wrap"><div className="row g8">
    {step>1&&<Btn kind="soft" fit icon={ChevronLeft} onClick={back} disabled={busy}>{t('fe.ce.back')}</Btn>}
    <Btn onClick={step<4?next:submit} disabled={busy}>{busy?(step<4?t('fe.ce.saving'):t('fe.ce.sending')):step<4?t('fe.ce.next'):edit?t('fe.ece.save'):t('fe.ce.submit')}</Btn>

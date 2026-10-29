@@ -6,7 +6,7 @@ import {AtSign,Check,Copy,EyeOff,Heart,Link as LinkIcon,Lock,ShieldCheck,Users,X
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicBase} from '../api-url';
 import {copyLink} from './share';
-import {Actions,Alert,Av,Bar,Btn,Card,Field,Group,H,Input,Note,PersonLine,Pill,RadioList,RequestCard,Row,SelectRow,Sheet,Skel,Stack,View,Who} from './kit';
+import {Actions,Alert,Av,Bar,Btn,Card,Field,Group,H,Input,Note,PersonLine,Pill,RadioList,RequestCard,Row,SelectRow,Sheet,Skel,Stack,View,Who,useLeaveGuard} from './kit';
 import {useFe} from './session';
 import {Ask} from './me';
 import {useToast} from './toast';
@@ -88,6 +88,7 @@ export function PairScreen(){
  const act=async(fn:()=>Promise<unknown>,after?:()=>void)=>{setBusy(true);setFailure('');try{await fn();after?.();load();}catch(e){setFailure(pairError(e));}finally{setBusy(false);}};
  const toSetup=()=>{reload();navigate('/n/me/pair?setup=1',{replace:true});};
  const meName=nameOf(person);
+ const guard=useLeaveGuard(!busy&&!!nick.trim());
  if(state.status!=='ready')return null;
  // A partner link: who invites, then accept (the couple forms at once) → Q09.
  if(token&&!inCouple)return <LinkLanding token={token} me={{name:meName,id:person?.id,src:person?.avatar}}
@@ -178,6 +179,7 @@ export function PairScreen(){
    </>}
    {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
   </div></View>
+  {guard.node}
   {link&&<Sheet title={t('fe.c6.link.sheet')} onClose={()=>setLink(null)} foot={<Btn icon={Copy} onClick={()=>{void copyLink(link.url).then(ok=>toast(t(ok?'fe.c6.link.copied':'fe.c6.link.copyHand'),{type:ok?'ok':'info'}));}}>{t('fe.c6.link.copyBtn')}</Btn>}>
    <p className="lead">{t('fe.c6.link.lead')}</p>
    <Field id="fe-pair-link" label={t('fe.c6.link.label')}><Input id="fe-pair-link" name="pairLink" readOnly value={link.url} onFocus={e=>e.currentTarget.select()}/></Field>
@@ -239,17 +241,19 @@ function SetupView({c,coupleId,onDone}:{c:Couple,coupleId:string,onDone:()=>void
  const [mode,setMode]=useState<'trust'|'approve'>(me?.approvesPartner?'approve':'trust');
  const [req,setReq]=useState<'all'|'matches'|'none'>('all');
  const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const op=useRef(newOpId());
+ const guard=useLeaveGuard(!busy&&(nick.trim().replace(/^@/,'')!==(c.handle??'')||cname.trim()!==(c.chosenName??'')));
  useEffect(()=>{call('profile.settings',{},settingsRes,{profileId:coupleId}).then(r=>setReq(r.settings.requestsFrom??'all')).catch(()=>{});},[call,coupleId]);
  const done=async()=>{setBusy(true);setFailure('');
   const h=nick.trim().replace(/^@/,'');
   if(h!==c.handle&&(!REG_NICK.test(h)||/\.\./.test(h)||!/[A-Za-z]/.test(h))){setNickErr(t('fe.reg.nick.format'));setBusy(false);setTimeout(shakeFirstErr);return;}
   if(!checks.submit()){setBusy(false);return;}
   try{const r=await call('couple.setup',{opId:op.current,mode,requestsFrom:req,...(h!==c.handle?{handle:h}:{}),...(cname.trim()!==(c.chosenName??'')?{name:cname.trim()}:{})},ok,{profileId:coupleId});
-   toast(r.pending?t('fe.c6.q9.pending'):t('fe.c6.q9.saved'),{type:'ok'});onDone();}
+   toast(r.pending?t('fe.c6.q9.pending'):t('fe.c6.q9.saved'),{type:'ok'});guard.pass(onDone);}
   catch(e){if(e instanceof FeError&&e.fields?.includes('handle')){setNickErr(t('fe.reg.nick.taken'));setTimeout(shakeFirstErr);}else if(!checks.fromServer(e))setFailure(feErrorMessage(e,t));op.current=newOpId();}finally{setBusy(false);}};
  const partners=`${nameOf(me)} ${t('fe.pair.and')} ${nameOf(other)}`;
  return <>
   <Bar title={t('fe.c6.q9.title')} back="/n/me/pair"/>
+  {guard.node}
   <View className="nodock">
    <Scene me={{name:nameOf(me),id:me?.profileId}} other={{name:nameOf(other),id:other?.profileId}} state="on"/>
    <H level={2} className="t center">{t('fe.c6.q9.head')}</H>
