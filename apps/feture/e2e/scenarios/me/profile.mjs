@@ -142,7 +142,7 @@ export default [
    }
  } },
  { name: 'Моё: every row opens its screen', persona: 'full', route: '/n/me?layer=mine', allow4xx: true, run: async t => {
-   for (const [row, path] of [['Публикации и статьи', '/n/me/posts'], ['Мои события', '/n/me/events'], ['Подписчики и подписки', '/n/me/follows'], ['Сохранённое', '/n/me/saved'], ['Мне открыли', '/n/me/shared'], ['Создать пару', '/n/me/pair']]) {
+   for (const [row, path] of [['Публикации и статьи', '/n/me/posts'], ['Мои события', '/n/me/events'], ['Подписчики и подписки', '/n/me/follows'], ['Сохранённое', '/n/me/saved'], ['Мне открыли', '/n/me/access?tab=withme'], ['Создать пару', '/n/me/pair']]) {
      await t.go('/n/me?layer=mine'); await t.tap(`.li:has-text("${row}")`); await t.wait(1500);
      expect(t.page.url().includes(path), row + ' → ' + t.page.url());
      expect(!(await t.page.locator('.empty[role="alert"]').count()), row + ' shows an error');

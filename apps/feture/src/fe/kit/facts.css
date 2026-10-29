@@ -22,6 +22,7 @@
 .v21 .k-fact-h{display:flex;align-items:center;gap:12px}
 .v21 .k-fact-t{flex:1;min-width:0;font-size:var(--fs-body);font-weight:600;color:var(--ink)}
 .v21 .k-fact-b{margin-top:var(--s-3)}
-/* the name keeps its width; the value takes the rest and only then ends in «…» */
+/* the name keeps its width; the value takes the rest and wraps to a second line next to the audience tag («Пока не
+   знаю») instead of ending in «…» */
 .v21 .li.k-fact-row>.selrow>.selt{flex:0 0 auto;max-width:50%}
-.v21 .li.k-fact-row>.selrow>.selv{flex:1 1 auto;max-width:none}
+.v21 .li.k-fact-row>.selrow>.selv{flex:1 1 auto;max-width:none;white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:normal}
