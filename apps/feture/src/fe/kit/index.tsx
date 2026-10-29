@@ -415,4 +415,5 @@ export * from './feed';
 export * from './account';
 export * from './security';
 export * from './av';
+export * from './facts';
 export {NewPill,PullRefresh,PullRefreshRunner,useRefreshable} from './pull';

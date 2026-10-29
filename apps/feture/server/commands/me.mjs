@@ -1,5 +1,5 @@
 // @ts-check
-import { meCommands, NOTIFICATION_DEFAULTS, PROFILE_SETTINGS } from '../../contracts/me.mjs';
+import { ABOUT_FACTS, meCommands, NOTIFICATION_DEFAULTS, PROFILE_SETTINGS } from '../../contracts/me.mjs';
 import { fail, isUniqueViolation } from '../errors.mjs';
 import { hmac } from '../hash.mjs';
 import { mediaDto } from '../media/assets.mjs';
@@ -86,6 +86,7 @@ async function profileView(q, viewer, profileId, media) {
   const [p] = await q.query(
     `select p.id, p.kind, p.handle, p.name, p.state, p.rev, p.avatar_asset_id,
        d.bio, d.show_age, d.details_vis, d.genders, d.orients, d.roles, d.formats, d.seeks, d.status,
+       d.height, d.smoking, d.alcohol, d.kids, d.langs, d.zodiac, d.about_vis,
        pl.id city_id, pl.name_ru city_ru, pl.name_en city_en, pl.state city_state,
        a.birth_date, ${PREMIUM_SQL} premium,
        exists (select 1 from feture.profile_member m where m.profile_id = p.id and m.account_id = $2 and m.state = 'active') own
@@ -109,6 +110,7 @@ async function profileView(q, viewer, profileId, media) {
     if (detailsOpen) /** @type {any} */ (details)[field] = p[field] ?? [];
   }
   if (p.kind === 'person' && detailsOpen) /** @type {any} */ (details).status = p.status ?? null;
+  const about = p.kind === 'person' ? await aboutFor(q, p, own, profileId, viewer) : {};
   const city = p.city_id && (own || p.city_state === 'approved') ? { id: p.city_id, ru: p.city_ru, en: p.city_en, pending: p.city_state !== 'approved' } : null;
   let avatar = null;
   if (p.avatar_asset_id) {
@@ -121,17 +123,45 @@ async function profileView(q, viewer, profileId, media) {
     age: p.kind === 'person' && p.birth_date && (own || p.show_age) ? ageOn(String(p.birth_date instanceof Date ? p.birth_date.toISOString().slice(0, 10) : p.birth_date)) : null,
     city,
     details,
+    about,
     avatar,
     photos: await photosFor(q, p.id, viewer.profileId, media),
     photoVerified: (await photoVerifiedOf(q, [p.id])).get(p.id) ?? false, // only the yes/no, never the check itself (V01)
     premium: !!p.premium, // the public gold badge (V10 «Значки»), never the end date
 
-    ...(own ? { rev: p.rev, showAge: !!p.show_age, detailsVis: p.details_vis ?? null, state: p.state } : {}),
+    ...(own ? { rev: p.rev, showAge: !!p.show_age, detailsVis: p.details_vis ?? null, aboutVis: aboutVisOf(p.about_vis), state: p.state } : {}),
   };
 }
 
+/** The owner's audience of every fact; a fact never given one is «Только ты». @param {unknown} raw */
+const aboutVisOf = raw => Object.fromEntries(ABOUT_FACTS.map(k => {
+  const v = raw && typeof raw === 'object' ? /** @type {Record<string, unknown>} */ (raw)[k] : null;
+  return [k, v === 'all' || v === 'granted' ? v : 'only'];
+}));
+
+/** «Обо мне» facts the viewer may see (owner 29.10.2026): the owner sees all filled ones; others only those whose own
+ * audience is `all`, or `granted` with the private part's «Описание» access — a closed fact is never sent.
+ * @param {Q} q @param {Record<string, any>} p @param {boolean} own @param {string} profileId @param {Acting} viewer */
+async function aboutFor(q, p, own, profileId, viewer) {
+  const vis = aboutVisOf(p.about_vis);
+  /** @type {Record<string, unknown>} */
+  const out = {};
+  let granted = /** @type {boolean | null} */ (null);
+  for (const k of ABOUT_FACTS) {
+    const v = p[k];
+    if (v === null || v === undefined || (Array.isArray(v) && !v.length)) continue;
+    if (!own && vis[k] !== 'all') {
+      if (vis[k] !== 'granted') continue;
+      granted ??= (await grantedScopes(q, profileId, viewer)).includes('info');
+      if (!granted) continue;
+    }
+    out[k] = v;
+  }
+  return out;
+}
+
 /** Fields only a person has (couples take theirs from the members' personal profiles). */
-const PERSON_FIELDS = ['handle', 'showAge', 'detailsVis', 'genders', 'orients', 'status'];
+const PERSON_FIELDS = ['handle', 'showAge', 'detailsVis', 'genders', 'orients', 'status', ...ABOUT_FACTS, 'aboutVis'];
 
 /** Profile edit, shared by the direct path and an approved couple change. Re-checks the revision.
  * @param {Q} q @param {string} profileId @param {string} accountId @param {Record<string, any>} input */
@@ -168,12 +198,15 @@ async function doProfileUpdate(q, profileId, accountId, input) {
   if (input.name !== undefined) await q.query('update feture.profile set name = $2 where id = $1', [profileId, input.name]);
   /** @type {[string, unknown][]} */
   const sets = [];
-  const map = { bio: 'bio', cityId: 'city_id', showAge: 'show_age', detailsVis: 'details_vis', genders: 'genders', orients: 'orients', roles: 'roles', formats: 'formats', seeks: 'seeks', status: 'status' };
+  const map = { bio: 'bio', cityId: 'city_id', showAge: 'show_age', detailsVis: 'details_vis', genders: 'genders', orients: 'orients', roles: 'roles', formats: 'formats', seeks: 'seeks', status: 'status',
+    height: 'height', smoking: 'smoking', alcohol: 'alcohol', kids: 'kids', langs: 'langs', zodiac: 'zodiac' };
   for (const [k, col] of Object.entries(map)) if (input[k] !== undefined) sets.push([col, input[k]]);
-  if (sets.length) {
+  // A fact's audience is changed one key at a time; the others stay as they were.
+  const visSet = input.aboutVis ? `about_vis = about_vis || $${sets.length + 2}::jsonb, ` : '';
+  if (sets.length || visSet) {
     await q.query(
-      `update feture.profile_details set ${sets.map(([col], i) => `${col} = $${i + 2}`).join(', ')}, updated_at = now() where profile_id = $1`,
-      [profileId, ...sets.map(([, v]) => v)]);
+      `update feture.profile_details set ${sets.map(([col], i) => `${col} = $${i + 2}, `).join('')}${visSet}updated_at = now() where profile_id = $1`,
+      [profileId, ...sets.map(([, v]) => v), ...(visSet ? [JSON.stringify(input.aboutVis)] : [])]);
   }
   const [{ rev }] = await q.query('update feture.profile set rev = rev + 1, updated_at = now() where id = $1 returning rev', [profileId]);
   return { rev };

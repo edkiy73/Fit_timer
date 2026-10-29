@@ -1,0 +1,27 @@
+/* «Обо мне» pieces (kit/facts.tsx). */
+.v21 .k-facts{display:flex;flex-wrap:wrap;gap:var(--s-2);margin:0;padding:0;list-style:none}
+.v21 .k-facts>li{display:contents}
+.v21 .k-fact{display:inline-flex;align-items:center;gap:6px;min-height:34px;max-width:100%;padding:6px 12px;border:1px solid var(--line);border-radius:var(--r-full);
+ background:var(--surf);font:500 var(--fs-sm)/1.25 var(--font);color:var(--ink);text-align:left;transition:background .15s,border-color .15s,color .15s}
+.v21 .k-fact svg{flex:none;width:16px;height:16px;stroke-width:1.75;color:var(--mute)}
+.v21 button.k-fact{cursor:pointer}
+.v21 .k-fact.open{background:var(--accent-soft);border-color:transparent;color:var(--accent)}
+.v21 .k-fact.open svg{color:var(--accent)}
+.v21 button.k-fact:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* the audience tag that opens a choice: the .aud look + a chevron, the native select over it */
+.v21 .aud.k-aud-sel{position:relative;flex:none;gap:4px;cursor:pointer}
+.v21 .aud.k-aud-sel>svg:last-of-type{width:12px;height:12px;opacity:.8}
+.v21 .aud.k-aud-sel select{appearance:none;-webkit-appearance:none;position:absolute;inset:0;width:100%;height:100%;margin:0;border:0;opacity:0;cursor:pointer;font:inherit}
+.v21 .aud.k-aud-sel:has(select:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+.v21 .aud.k-aud-sel:has(select:disabled){opacity:.45;cursor:not-allowed}
+
+/* an editor row: icon, name + value, the audience at the end; `col` puts the control under the name line */
+.v21 .li.k-fact-row>.aud{margin-left:var(--s-1)}
+.v21 .li.k-fact-row.col{display:block}
+.v21 .k-fact-h{display:flex;align-items:center;gap:12px}
+.v21 .k-fact-t{flex:1;min-width:0;font-size:var(--fs-body);font-weight:600;color:var(--ink)}
+.v21 .k-fact-b{margin-top:var(--s-3)}
+/* the name keeps its width; the value takes the rest and only then ends in «…» */
+.v21 .li.k-fact-row>.selrow>.selt{flex:0 0 auto;max-width:50%}
+.v21 .li.k-fact-row>.selrow>.selv{flex:1 1 auto;max-width:none}
