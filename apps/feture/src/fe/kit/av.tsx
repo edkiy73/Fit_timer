@@ -17,6 +17,11 @@ export function VideoBadge({durationMs}:{durationMs?:number|null|undefined}){
 /** One clip plays at a time: starting one pauses the one before (a feed with several clips, a viewer over a card). */
 let playingNow:HTMLVideoElement|null=null;
 
+/** Android's WebView and some browsers paint their own gray «play» picture inside a `<video>` that has no poster and no
+ * frame yet (stretched over the whole box — the ugly flash when a clip opens, and in the margins around a clip).
+ * Giving the element a transparent poster of its own keeps it empty until the first real frame. */
+export const NO_POSTER='data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
 /** A clip with our own controls (owner, 28.10.2026: the system ones did not show on phones). The poster with a round
  * play button and the length; a tap anywhere plays / pauses in place, and while it plays the bar under it shows
  * play / pause, the time, a scrub line and sound on / off (`onExpand` adds «На весь экран»). Nothing offers a
@@ -58,9 +63,9 @@ export function VideoPlayer({src,poster,w,h,durationMs,autoPlay,fill,onExpired,l
  const style=(w&&h?{'--ar':`${w}/${h}`,'--arn':String(w/h)}:{}) as CSSProperties;
  const shown=!playing||bar;
  const name=label??t('fe.kit.av.video');
- return <div className={'k-video'+(fill?' fill':'')+(started?' on':'')+(playing?' playing':'')+(shown?'':' quiet')} style={style}
+ return <div className={'k-video'+(fill?' fill':'')+(started&&ready?' rdy':'')+(started?' on':'')+(playing?' playing':'')+(shown?'':' quiet')} style={style}
   onContextMenu={noMenu} onClick={src?e=>{e.stopPropagation();toggle();}:undefined} onPointerMove={playing?()=>poke():undefined}>
-  {src&&<video ref={v} src={src} playsInline preload={autoPlay?'auto':'metadata'} muted={muted} disablePictureInPicture disableRemotePlayback
+  {src&&<video ref={v} src={src} poster={NO_POSTER} playsInline preload={autoPlay?'auto':'metadata'} muted={muted} disablePictureInPicture disableRemotePlayback
    controlsList="nodownload noremoteplayback noplaybackrate" aria-label={name} tabIndex={-1}
    onLoadedMetadata={measure} onDurationChange={measure} onSeeked={tick}
    onPlay={e=>{const el=e.currentTarget;if(playingNow&&playingNow!==el)playingNow.pause();playingNow=el;setPlaying(true);cancelAnimationFrame(raf.current);raf.current=requestAnimationFrame(loop);poke();}}
