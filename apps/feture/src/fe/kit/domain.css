@@ -149,3 +149,26 @@
 .v21 .k-status-wait{background:var(--warn-soft);border-color:transparent}.v21 .k-status-wait .ico{color:var(--warn)}
 .v21 .k-status-ok{background:var(--ok-soft);border-color:transparent}.v21 .k-status-ok .ico{color:var(--ok)}
 .v21 .k-status-bad{background:var(--danger-soft);border-color:transparent}.v21 .k-status-bad .ico{color:var(--danger)}
+/* Chats list (ChatList / ChatRow): one block in the page rhythm; the rows divide themselves. */
+.v21 .k-chat-list{display:grid;grid-template-columns:minmax(0,1fr)}
+.v21 .chat-row small.k-chat-note{margin-top:2px;color:var(--faint)}
+.v21 .chat-row.on{background:var(--raise)}
+/* Desktop split (ChatPane / ChatPick): the chats screens take the empty right column and become list | conversation. */
+.v21 .k-chat-pane,.v21 .k-chat-pick{display:none}
+@container stage (min-width:1100px){
+ .v21 .root>.main:has(>.k-chat-pane),.v21 .root>.main:has(>.k-chat-pick){grid-column:2/-1;display:grid;grid-template-columns:minmax(300px,360px) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto}
+ .v21 .main:has(>.k-chat-pane)>*{grid-column:2}
+ .v21 .main:has(>.k-chat-pane)>.bar{grid-row:1}
+ .v21 .main:has(>.k-chat-pane)>.view{grid-row:2}
+ .v21 .main:has(>.k-chat-pane)>.inputbar{grid-row:3}
+ .v21 .main:has(>.k-chat-pane)>.k-chat-pane{grid-column:1;grid-row:1/-1;display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line)}
+ .v21 .main:has(>.k-chat-pick)>*{grid-column:1}
+ .v21 .main:has(>.k-chat-pick)>.bar{grid-row:1}
+ .v21 .main:has(>.k-chat-pick)>.view{grid-row:2/-1}
+ .v21 .main:has(>.k-chat-pick)>.k-chat-pick{grid-column:2;grid-row:1/-1;display:grid;place-items:center;padding:var(--gut);border-left:1px solid var(--line)}
+ .v21 .k-chat-pane-h{flex:none;display:flex;align-items:center;min-height:calc(56px + var(--safe-t));padding:8px var(--gut)}
+ .v21 .k-chat-pane-h b{font:700 var(--fs-h2)/1.15 var(--font);letter-spacing:-.025em}
+ .v21 .k-chat-pane-b{flex:1;min-height:0;overflow-y:auto;padding:0 8px var(--gut);scrollbar-width:thin}
+ .v21 .k-chat-pane .chat-row{padding:10px 8px;border-radius:var(--r)}
+ .v21 .k-chat-pane .chat-row+.chat-row{border-top-color:transparent}
+}

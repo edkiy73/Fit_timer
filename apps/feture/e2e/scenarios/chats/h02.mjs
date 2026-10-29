@@ -126,13 +126,20 @@ const scenarios = [
     await t.page.keyboard.press('Escape');
     await t.notSee('.sheet.on', 600);
   } },
-  { name: 'H02 too long text is cut at 2000 characters; spaces only cannot be sent', persona: 'chats', route: '/n/chats/@T2', run: async t => {
+  { name: 'H02 over 2000 characters: the counter turns red and «Отправить» is off; the server refuses it too; spaces only cannot be sent', persona: 'chats', route: '/n/chats/@T2', run: async t => {
     await ready(t);
+    // A soft limit (kit validation): a paste is never cut silently — the counter shows from 80% and blocks the send.
+    await t.fill('.inputbar textarea', 'я'.repeat(1700));
+    await t.see('.inputbar .counter:has-text("1700 / 2000")');
+    if (await t.page.locator('.inputbar .counter.over').count()) throw new Error('1700 should not be over');
     await t.fill('.inputbar textarea', 'я'.repeat(2100));
-    const n = (await t.page.locator('.inputbar textarea').inputValue()).length;
-    if (n !== 2000) throw new Error('maxLength not applied: ' + n);
+    await t.see('.inputbar .counter.over:has-text("2100 / 2000")');
+    if (await t.page.locator('.inputbar button[aria-label="Отправить"]:enabled').count()) throw new Error('an over-long message should not be sendable');
+    const r = await t.api('chat.send', { opId: t.uuid7(), conversationId: T2, body: 'я'.repeat(2001) });
+    expect(r.status === 400 || r.ok !== true, 'the server refuses 2001 characters: ' + JSON.stringify(r).slice(0, 200));
     await t.fill('.inputbar textarea', '   ');
     if (await t.page.locator('.inputbar button[aria-label="Отправить"]:enabled').count()) throw new Error('spaces only should not be sendable');
+    if (await t.page.locator('.inputbar .counter').count()) throw new Error('no counter for a short text');
   } },
   { name: 'H02 attach sheet: ✕, scrim and Esc close it', persona: 'chats', route: '/n/chats/@T2', run: async t => {
     await ready(t);
@@ -150,9 +157,11 @@ const scenarios = [
     await t.see('.sheet.on .k-upthumb img');
     await t.tap('.sheet .sh-f button:has-text("Отправить")');
     await t.page.locator('.sheet.on').waitFor({ state: 'detached', timeout: 45000 });
-    await t.page.locator('.msgs .msg.me.has-media').last().waitFor({ timeout: 20000 });
-    const all = await lastMsgs(t); const mine = all.at(-1);
-    if (!mine || mine.seq <= before || !mine.media) throw new Error('photo message not stored');
+    // The sheet closes as soon as the file is up; the message itself is posted right after (an optimistic bubble meanwhile),
+    // so wait for the server to have it and for the bubble to settle instead of reading once (that was the flake).
+    const mine = await until(async () => { const m = (await lastMsgs(t)).at(-1); return m && m.seq > before && m.media ? m : null; }, 'photo message not stored', 30000);
+    await t.page.locator(`.msgs [data-msg-id="${mine.id}"]`).waitFor({ timeout: 20000 });
+    await t.notSee('.msgs .msg.me.has-media.sending', 500);
     await t.shot('h02-photo-sent');
     const theirs = (await lastMsgs(t, TEST2)).find(m => m.id === mine.id);
     if (!theirs) throw new Error('test2 does not get the photo message');
