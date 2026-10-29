@@ -100,7 +100,7 @@ async function profileView(q, viewer, profileId, media) {
   if (!p.own && (await q.query('select feture.blocked($1, $2) b', [viewer.profileId, profileId]))[0].b) fail(404, 'not_found');
   const own = p.own;
   // Details: own view sees everything; others per details_vis (couples always show role/format/seek);
-  // `granted` opens together with the private part's «Описание и интересы» (info) access.
+  // `granted` opens together with the private part's «Описание» (info) access.
   const detailsOpen = own || p.kind === 'couple' || p.details_vis === 'all'
     || (p.details_vis === 'granted' && (await grantedScopes(q, profileId, viewer)).includes('info'));
   const details = {};
@@ -409,9 +409,9 @@ const run = {
       const [p] = await q.query(`select feture.blocked($2, id) b from feture.profile where id = $1 and state = 'active'`, [input.profileId, acting.profileId]);
       if (!p || p.b) fail(404, 'not_found');
     }
-    // Others see public interests, plus «По доступу» ones with the info grant (ME-025: they open with the
-    // description); a hard limit shows only that it is a limit (V21: «нельзя» without details).
-    const info = !own && (await grantedScopes(q, input.profileId, acting)).includes('info');
+    // Others see public interests, plus «По доступу» ones with the interests grant; a hard limit shows only that it
+    // is a limit (V21: «нельзя» without details).
+    const info = !own && (await grantedScopes(q, input.profileId, acting)).includes('interests');
     const rows = await q.query(
       `select i.topic_id, i.value, i.mark, i.dir, i.vis from feture.interest i join feture.topic t on t.id = i.topic_id
        where i.profile_id = $1 and ($2 or ((i.vis = 'public' or (i.vis = 'granted' and $3)) and not t.hidden)) order by t.position`,

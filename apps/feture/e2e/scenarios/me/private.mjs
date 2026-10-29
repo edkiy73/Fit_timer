@@ -1,5 +1,5 @@
-// «Я → Приватное» X01 (the tab is the private part, owner 29.10.2026) + editor P04: requests (grant with a term, decline),
-// revoke from «Доступ» ⋯, description / photo / interest added in the tab, on/off, who may ask.
+// «Я → Приватное» X01 (the tab is the private part, owner 29.10.2026) + editor P04: requests answered in the one
+// «Доступы» screen (grant with a term, decline, revoke), description / photo / interest added in the tab, on/off, who may ask.
 // A declined/revoked asker has a cooldown, so each run takes the next seed person that may ask.
 // The asker is persona `asker` (a full person of the lane). Granting then revoking leaves no cooldown, so `full` is
 // reused; a decline starts a 30-day cooldown for that pair, so the decline runs on a fresh `owner` each time.
@@ -12,21 +12,23 @@ export default [
  { name: 'P07 grant a request for 24 h, then revoke it', persona: 'full', route: '/n/me', allow4xx: true, run: async t => {
    const a = await asker(t);
    try {
-     await t.go('/n/me?layer=priv'); const card = t.page.locator('.rqcard', { hasText: a.name });
+     // «Я → Приватное» shows one «Доступы» row with the waiting count; it opens the screen on «Открыто».
+     await t.go('/n/me?layer=priv'); await t.see('#privWho .li:has-text("Ждут ответа")'); await t.tap('#privWho .li');
+     expect(t.page.url().includes('/n/me/access') && t.page.url().includes('tab=byme'), 'opened «Доступы → Открыто»: ' + t.page.url());
+     const card = t.page.locator('.rqcard', { hasText: a.name });
      await card.waitFor({ timeout: 30000 }); await card.locator('button:has-text("Открыть доступ")').click();
      await t.see('.sheet.on'); await t.tap('.sheet.on [role="radio"]:has-text("24 часа")');
      await pinned(t, 'Открыть на 24 часа'); await t.tap('.sh-f button:has-text("Открыть на 24 часа")');
      const g = await until(async () => (await byme(t)).find(x => x.profile?.id === a.id), 'granted'); expect(g.until, 'granted with a term: ' + JSON.stringify(g));
      expect(Math.abs(new Date(g.until) - Date.now() - 24 * 3600e3) < 3600e3, 'term ≈ 24 h: ' + g.until);
-     const row = t.page.locator('#privWho .li', { hasText: a.name }); await row.waitFor({ timeout: 30000 }); await t.shot('priv-grant');
-     await row.locator('button[aria-label^="Что сделать с доступом"]').click(); await t.see('.sheet.on');
-     await t.tap('.sheet.on .li:has-text("Отозвать")'); await t.tap('.dialog.on button:has-text("Отозвать")');
+     const row = t.page.locator('.rqcard', { hasText: a.name }).filter({ has: t.page.locator('button:has-text("Отозвать")') }); await row.waitFor({ timeout: 30000 }); await t.shot('priv-grant');
+     await row.locator('button:has-text("Отозвать")').click(); await t.tap('.dialog.on button:has-text("Отозвать")');
      await until(async () => !(await byme(t)).some(x => x.profile?.id === a.id), 'revoked');
    } finally { for (const g of await byme(t)) if (g.profile?.id === a.id) await t.api('access.revoke', { opId: t.uuid7(), profileId: a.id }); }
  } },
  { name: 'P07 decline a request (grant sheet ✕ keeps it pending)', persona: 'owner', route: '/n/me', allow4xx: true, run: async t => {
    const a = await asker(t);
-   await t.go('/n/me?layer=priv'); const card = t.page.locator('.rqcard', { hasText: a.name }); await card.waitFor({ timeout: 30000 });
+   await t.go('/n/me/access?tab=byme'); const card = t.page.locator('.rqcard', { hasText: a.name }); await card.waitFor({ timeout: 30000 });
    await card.locator('button:has-text("Открыть доступ")').click(); await t.see('.sheet.on'); await t.tap('.sheet.on .sh-h button'); await t.notSee('.sheet.on', 800);
    expect((await incoming(t)).some(x => x.profile?.id === a.id), 'still pending after ✕');
    await card.locator('button:has-text("Отказать")').click();
@@ -47,7 +49,7 @@ export default [
    expect(!p0.text && !(p0.media ?? []).length, 'basic starts with an empty private part: ' + JSON.stringify(p0).slice(0, 200));
    try {
      await t.see('#privHead'); expect(await t.page.locator('#privHead button[role="switch"]').isDisabled(), 'switch is off while empty');
-     await t.see('#privDesc .ph-empty'); await t.see('#privMedia .ph-empty'); await t.see('#privJars .ph-empty'); await t.see('#privWho:has-text("Пока никому не открыт")');
+     await t.see('#privDesc .ph-empty'); await t.see('#privMedia .ph-empty'); await t.see('#privJars .ph-empty'); await t.see('#privWho .li:has-text("Доступы")');
      await t.shot('priv-empty');
      // Description
      await t.tap('#privDesc .ph-empty'); await t.fill('.sheet.on textarea', 'Сначала созвон, потом встреча.');

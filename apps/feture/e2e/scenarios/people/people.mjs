@@ -1,6 +1,6 @@
 // People screens on the kit: Discover deck (pass, like + undo), the filter sheet (nested list, back, Esc, close),
 // «Симпатии» tabs, a person profile (menu sheet open/close, report and block sheets open/close, request access,
-// compat), and the Discover history. Fails on console errors via run.mjs.
+// compat, the age check before a request), and the Discover history. Fails on console errors via run.mjs.
 // The person whose profile is opened is persona `mate` (full, with a private part); `full` looks.
 import { expect, until } from '../helpers.mjs';
 
@@ -71,6 +71,27 @@ export default [
      else console.log('   (vault state: ' + (await vault.locator('.veil-act').innerText().catch(() => 'open')) + ')');
    } else console.log('   (the profile shows no private part)');
    const cmp = p.locator('.compat .cp-h'); if (await cmp.count()) { await cmp.click(); await t.see('.cmp14'); await t.page.goBack(); await t.see('.profile-page .hero'); }
+ } },
+ { name: 'P01 private part, viewer without an age check: «Подтвердить возраст» opens the check for this profile; back with resume opens the request sheet', persona: 'basic', allow4xx: true, run: async t => {
+   const mate = await t.persona('mate');
+   const p0 = await t.api('private.get', { profileId: mate.personId });
+   if (!p0.canRequest) { console.log('   (basic cannot ask mate now: ' + p0.reason + ')'); return; }
+   expect(p0.age === 'me', 'the server says the viewer needs the age check: ' + p0.age);
+   await t.go('/n/people/' + mate.personId);
+   await t.see('#priv:has-text("Приватное открывают только тем, кому есть 18")');
+   await t.tap('#priv button:has-text("Подтвердить возраст")');
+   await until(() => t.page.url().includes('/n/settings/age') || null, 'on the age check: ' + t.page.url());
+   const u = new URL(t.page.url().replace('/#/', '/'));
+   expect(u.searchParams.get('do') === 'access:' + mate.personId && u.searchParams.get('then') === '/n/people/' + mate.personId, 'returns to this profile with the request: ' + t.page.url());
+ } },
+ { name: 'P01 back from the age check (verified): «?resume=access:<id>» opens the request sheet on that profile', persona: 'full', allow4xx: true, run: async t => {
+   const mate = await t.persona('mate');
+   const p0 = await t.api('private.get', { profileId: mate.personId });
+   if (!p0.canRequest) { console.log('   (full cannot ask mate now: ' + p0.reason + ')'); return; }
+   await t.go('/n/people/' + mate.personId + '?resume=access:' + mate.personId);
+   await t.see('.sheet.on h2:has-text("Запросить приватную часть")');
+   expect(!t.page.url().includes('resume='), 'resume is taken off the address: ' + t.page.url());
+   await t.page.keyboard.press('Escape');
  } },
  { name: 'P01 back from a profile opened in «Люди» (deck, «Симпатии») returns there; a profile opened by link goes to «Люди»', persona: 'full', route: '/n/feed', allow4xx: true, run: async t => {
    const p = t.page; const at = re => until(() => re.test(p.url()) || null, 'at ' + re + ', not ' + p.url(), 15000);

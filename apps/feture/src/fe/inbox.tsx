@@ -158,7 +158,7 @@ export function InboxScreen(){
     {label:t('fe.ibx.accept'),fn:()=>void act(d.id+'y',async()=>{await call('couple.inviteAnswer',{opId:newOpId(),inviteId:d.id,accept:true},ok,{asAccount:true});reload();navigate('/n/me/pair?setup=1');},t('fe.ibx.done'))},
     {label:t('fe.ibx.decline'),fn:()=>void act(d.id+'n',()=>call('couple.inviteAnswer',{opId:newOpId(),inviteId:d.id,accept:false},ok,{asAccount:true}),t('fe.ibx.declined'))}));
    case 'req':return card(d,d.label==='couple'?t('fe.ibx.k.reqCouple'):t('fe.ibx.k.req'),two(d,
-    {label:t('fe.ibx.review'),fn:()=>{asAddressee(d.addressee);navigate('/n/me?layer=priv');}},
+    {label:t('fe.ibx.review'),fn:()=>{asAddressee(d.addressee);navigate('/n/me/access?tab=byme');}},
     // Declining says what the person will see and offers «Отменить» while the server still allows it.
     {label:t('fe.ibx.decline'),fn:()=>{if(busy)return;setBusy(d.id+'n');void declineAccess(d.id,nameOf(d.actor),load,asProfile(d)).finally(()=>setBusy(''));}}));
    case 'capp':case 'eapp':return card(d,d.kind==='capp'?t('fe.ibx.k.capp'):t('fe.ibx.k.eapp'),<>

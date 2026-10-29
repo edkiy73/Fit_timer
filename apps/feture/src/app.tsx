@@ -155,7 +155,7 @@ export const routes: RouteObject[] = [
         {path:'me/edit', element:<MeEditScreen />},
         {path:'me/events', element:<MinePartScreen part="events" />},
         {path:'me/communities', element:<MinePartScreen part="communities" />},
-        {path:'me/shared', element:<AccessScreen mine />},
+        {path:'me/shared', element:<Navigate to="/n/me/access?tab=withme" replace/>}, // «Моё → Мне открыли»: the one «Доступы» screen
         {path:'me/access', element:<AccessScreen />},
         {path:'me/follows', element:<FollowsScreen />},
         {path:'me/posts', element:<MyPostsScreen />},

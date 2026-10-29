@@ -1,7 +1,7 @@
 import type {Meta,StoryObj} from '@storybook/react-vite';
 import {useState} from 'react';
 import {ChipPick} from './ChipPick';
-import {Btn,Card,Check,CheckList,ChoiceCards,ChoiceChips,Chip,Chips,Field,RadioList,Range,Row,Stack,Switch,TimeSpan} from './index';
+import {Btn,Card,Check,CheckList,ChoiceCards,ChoiceChips,Chip,Chips,Field,MultiChips,RadioList,Range,Row,Stack,Switch,TimeSpan} from './index';
 
 const meta={title:'Выбор/Чип',component:Chip,tags:['autodocs'],
  parameters:{docs:{description:{component:'Несколько значений из набора (темы, интересы) или фильтр. `more` — «Все · N», открывает полный список. Одно значение из набора — `ChoiceChips`.'}}},
@@ -13,6 +13,10 @@ export const Чип:S={render:a=>{const [on,setOn]=useState(!!a.on);return <Chip
 export const Состояния:S={render:()=><Chips><Chip onClick={()=>{}}>Обычный</Chip><Chip on onClick={()=>{}}>Выбран</Chip><Chip more onClick={()=>{}}>Все · 75</Chip><Chip disabled onClick={()=>{}}>Выключен</Chip></Chips>};
 export const Набор:S={name:'Несколько из набора',render:()=>{const [v,setV]=useState(['rope']);const t=(id:string)=>setV(x=>x.includes(id)?x.filter(y=>y!==id):[...x,id]);
  return <Chips>{[['rope','Связывание'],['care','Забота после'],['role','Ролевые игры'],['sense','Сенсорные игры']].map(([id,l])=><Chip key={id} on={v.includes(id!)} onClick={()=>t(id!)}>{l}</Chip>)}</Chips>;}};
+export const НесколькоСоВсё:S={name:'Несколько из набора со «Всё» (MultiChips)',render:()=>{const [v,setV]=useState<('info'|'media'|'interests')[]>(['info','media','interests']);
+ return <Stack gap={3}><MultiChips label="Что запросить" all="Всё" value={v} onChange={setV} options={[['info','Описание'],['media','Фото и видео'],['interests','Интересы']]}/>
+  <MultiChips label="Что запросить" all="Всё" value={[]} onChange={()=>{}} options={[['info','Описание'],['interests','Интересы']]}/>
+  <MultiChips label="Что запросить" all="Всё" disabled value={['info']} onChange={()=>{}} options={[['info','Описание'],['media','Фото']]}/></Stack>;}};
 export const ОдинИзНабора:S={name:'Один из набора (ChoiceChips)',render:()=>{const [v,setV]=useState('all');return <ChoiceChips label="Кто видит" value={v} onChange={setV} options={[['all','Все'],['fol','Подписчики'],['only','Только я']]}/>;}};
 export const Радиосписок:S={name:'Радиосписок',render:()=>{const [v,setV]=useState('spam');return <RadioList label="Причина" value={v} onChange={setV} options={[['spam','Спам или мошенничество'],['threat','Угрозы или шантаж','С подробностями'],['other','Другое']]}/>;}};
 export const НесколькоСтроками:S={name:'Несколько из списка строками (CheckList)',render:()=>{const [v,setV]=useState<('info'|'photos'|'video')[]>(['info','photos']);
