@@ -469,3 +469,5 @@ html:has(.fe-v21),html:has(.fe-v21) body{overscroll-behavior-y:none}
 .v21 .k-check-row{display:flex;align-items:center;gap:var(--s-2)}
 .v21 .k-check-row>.check{flex:1;min-width:0}
 .v21 .k-check-row>.btn{flex:none}
+/* The message box's counter (kit validate `limitCounter`) is a line of its own above the box, right-aligned. */
+.v21 .inputbar>.counter{flex:0 0 100%;order:-1;margin:0;padding:0 4px 2px}

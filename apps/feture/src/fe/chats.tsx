@@ -2,9 +2,9 @@ import {Fragment,useCallback,useEffect,useLayoutEffect,useRef,useState,type CSSP
 import {useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Archive,ArchiveRestore,Ban,Camera,Check,ChevronDown,ChevronLeft,CircleAlert,Clock,Copy,Ellipsis,Eye,EyeOff,Film,Flag,Image as ImageIcon,Inbox,Info,Lock,LockOpen,MessageCircle,Plus,Search,SendHorizontal,Sparkles,Undo2,User,Users,X} from 'lucide-react';
+import {Archive,ArchiveRestore,Ban,Camera,Check,ChevronDown,ChevronLeft,CircleAlert,Clock,Copy,Ellipsis,Eye,EyeOff,Film,Flag,Image as ImageIcon,Inbox,Info,Lock,LockOpen,MessageCircle,Plus,Search,SendHorizontal,Sparkles,Undo2,User,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {ActingAv,Alert,Av,Bar,Btn,Card,Check as CheckBox,Chip,Chips,Empty,Field,FilePick,Group,IconBtn,Layer,Note,PersonBar,Pill,RadioList,Row,SearchInput,SectionLabel,SelectRow,Sheet,Skel,Stack,Text,TextArea,ToggleRow,Typing,VideoBadge,VideoPlayer,View,type Voice,VoiceBubble,VoiceRecorder} from './kit';
+import {ActingAv,Actions,Alert,ChatList,ChatPane,ChatPick,ChatRow,CoupleTag,NewMatch,NewMatches,Av,Bar,Btn,Card,Check as CheckBox,Chip,Chips,Empty,Field,FilePick,Group,IconBtn,Layer,Note,PersonBar,Pill,RadioList,Row,SearchInput,SectionLabel,SelectRow,Sheet,Skel,Spacer,Text,TextArea,ToggleRow,Typing,VideoBadge,VideoPlayer,View,type Voice,VoiceBubble,VoiceRecorder} from './kit';
 import {VIDEO_TYPES} from './kit/media';
 import {Uploader,type SendPhoto,type SendVideo,type Uploaded} from './kit/Uploader';
 import {useSendPhoto,useSendVideo,useSendVoice} from './media-upload';
@@ -12,7 +12,7 @@ import {AgeCheckLink,useAgeResume} from './age-check';
 import {useFe,useRealtime,useTypingSignal} from './session';
 import {ReportSheet} from './report';
 import {useToast} from './toast';
-import {softMax,textError} from './kit/validate';
+import {limitCounter,overMax,softMax,textError} from './kit/validate';
 import {BellButton,SegN} from './inbox';
 
 /** Slice G (V21 H01, H02, H05) with the prototype's markup. A conversation comes with a mutual like or, since the owner's
@@ -55,7 +55,7 @@ const nameOf=(o:{name?:string|null,handle?:string|null})=>o.name||(o.handle?'@'+
 type T=(k:string,v?:Record<string,string>)=>string;
 /** A request's sender as its recipient sees it: a couple shows as «Пара …». */
 const senderName=(o:{kind?:string,name?:string|null,handle?:string|null},t:T)=>o.kind==='couple'?t('fe.rq.couple',{name:nameOf(o)}):nameOf(o);
-/** «Участник сообщества «…» · Идёт на «…» 19.11 · Подписан на тебя» — or «Пока не знакомы». */
+/** «Участник сообщества «…» · Идёт на «…» 19.11 · Твой подписчик» — or «Пока не знакомы». */
 function contextLine(ctx:Ctx[]|undefined,t:T,locale:string,us:boolean){
  const parts=(ctx??[]).map(c=>c.kind==='follows'?t(us?'fe.rq.ctx.followsUs':'fe.rq.ctx.follows')
   :c.kind==='community'?t('fe.rq.ctx.community',{name:c.name??''})
@@ -79,6 +79,33 @@ function useCouple(){
 
 /* ================= H01 chats / H05 archive ================= */
 const RELOAD='fe:chats-reload';
+/** The last line of a chat in a list: the message, «Фото», «Голосовое»… or why there is none. */
+const previewOf=(c:Chat,t:T)=>c.state==='ended'?t('fe.chx.endedRow'):!c.last?t('fe.chx.sayFirst'):c.last.media&&!c.last.body?(c.last.mode!=='normal'?t('fe.chats.ephemeral'):c.last.kind==='audio'?t('fe.av.voice'):c.last.kind==='video'?t('fe.av.video'):t('fe.chats.photo')):c.last.body;
+/** The list read last: the desktop list next to a conversation draws it at once while it asks again. */
+let lastList:{items:Chat[],requests:Chat[]}|null=null;
+const WIDE='(min-width:1100px)';
+/** Desktop, where chats are a list and a conversation side by side (kit `ChatPane` / `ChatPick`). */
+function useWide(){
+ const [w,setW]=useState(()=>typeof matchMedia==='function'&&matchMedia(WIDE).matches);
+ useEffect(()=>{if(typeof matchMedia!=='function')return;const m=matchMedia(WIDE);const on=()=>setW(m.matches);m.addEventListener('change',on);return ()=>m.removeEventListener('change',on);},[]);
+ return w;
+}
+/** The chats list beside an open conversation on desktop. */
+function ChatsSide({current}:{current:string}){
+ const {call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();
+ const [data,setData]=useState(lastList);
+ const load=useCallback(()=>{call('chats.list',{filter:'all',archived:false},list,{asAccount:true}).then(r=>{lastList={items:r.items,requests:r.requests??[]};setData(lastList);}).catch(()=>{});},[call]);
+ useEffect(()=>{load();},[load]);
+ useRealtime(['chat','notify'],load);
+ return <ChatPane title={t('fe.nav.chats')}>
+  {data===null?<Skel kind="list" rows={6}/>:<>
+   {data.requests.length>0&&<Card list><Row icon={Inbox} tone="v" title={t('fe.rq.folder')} badge={data.requests.length} onClick={()=>navigate('/n/chats/requests')}/></Card>}
+   <ChatList>{data.items.map(c=><ChatRow key={c.id} on={c.id===current} av={<Av name={nameOf(c.other)} seed={c.other.id} size="lg" src={c.other.avatar?.src?.thumb}/>} name={nameOf(c.other)}
+    tag={c.side.kind==='couple'&&<CoupleTag>{t('fe.chx.coupleChat')}</CoupleTag>} line={previewOf(c,t)} time={ago(c.at,locale)} unread={c.id===current?0:c.unread} ended={c.state==='ended'}
+    onClick={()=>navigate('/n/chats/'+c.id,{replace:true})}/>)}</ChatList>
+  </>}
+ </ChatPane>;
+}
 export function ChatsTab(){
  const {call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const couple=useCouple();
  const [params]=useSearchParams();const archived=params.get('archived')==='1';
@@ -88,7 +115,7 @@ export function ChatsTab(){
  const [requests,setRequests]=useState<Chat[]>([]);
  const [searching,setSearching]=useState(false);const [q,setQ]=useState('');const qRef=useRef<HTMLInputElement>(null);
  // One list for every split: the counters on «Личные» / «Чаты пары» come from the same rows.
- const load=useCallback(()=>{setError(null);call('chats.list',{filter:'all',archived},list,{asAccount:true}).then(r=>{setItems(r.items);setRequests(r.requests??[]);}).catch(setError);},[call,archived]);
+ const load=useCallback(()=>{setError(null);call('chats.list',{filter:'all',archived},list,{asAccount:true}).then(r=>{setItems(r.items);setRequests(r.requests??[]);if(!archived)lastList={items:r.items,requests:r.requests??[]};}).catch(setError);},[call,archived]);
  useEffect(()=>{setItems(null);},[archived]);
  useEffect(()=>{load();const id=setInterval(load,30000);return ()=>clearInterval(id);},[load]);
  useRealtime(['chat','notify'],load);
@@ -103,12 +130,9 @@ export function ChatsTab(){
  // A contact without messages lives only in «Новые совпадения»; an ended chat without messages leaves the list (server).
  const fresh=archived?[]:mine.filter(c=>c.newMatch&&c.state==='active');const rows=mine.filter(c=>!fresh.includes(c));
  const unreadFor=(s:'me'|'couple')=>(items??[]).filter(c=>side(c)===s&&c.unread>0).length;
- const preview=(c:Chat)=>c.state==='ended'?t('fe.chx.endedRow'):!c.last?t('fe.chx.sayFirst'):c.last.media&&!c.last.body?(c.last.mode!=='normal'?t('fe.chats.ephemeral'):c.last.kind==='audio'?t('fe.av.voice'):c.last.kind==='video'?t('fe.av.video'):t('fe.chats.photo')):c.last.body;
- const row=(c:Chat)=><button key={c.id} type="button" className={'chat-row'+(c.unread?' unread':'')+(c.state==='ended'?' ended':'')} onClick={()=>navigate('/n/chats/'+c.id)}>
-  <Av name={nameOf(c.other)} seed={c.other.id} size="lg" src={c.other.avatar?.src?.thumb}/>
-  <span className="tx"><b>{nameOf(c.other)}</b><small>{c.side.kind==='couple'&&<span className="ct-us"><Users/>{t('fe.chx.coupleChat')}</span>}{preview(c)}</small></span>
-  <span className="side2">{c.unread>0&&<span className="unr">{c.unread>99?'99+':c.unread}</span>}<time>{ago(c.at,locale)}</time></span>
- </button>;
+ const preview=(c:Chat)=>previewOf(c,t);const wide=useWide();
+ const row=(c:Chat)=><ChatRow key={c.id} av={<Av name={nameOf(c.other)} seed={c.other.id} size="lg" src={c.other.avatar?.src?.thumb}/>} name={nameOf(c.other)}
+  tag={c.side.kind==='couple'&&<CoupleTag>{t('fe.chx.coupleChat')}</CoupleTag>} line={preview(c)} time={ago(c.at,locale)} unread={c.unread} ended={c.state==='ended'} onClick={()=>navigate('/n/chats/'+c.id)}/>;
  const toggleSearch=()=>{setSearching(s=>!s);setQ('');};
 
  if(archived)return <>
@@ -116,7 +140,7 @@ export function ChatsTab(){
   <View className="nodock" refresh={load}>
    {error&&!items?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :items===null?<Skel kind="list"/>
-    :rows.length?rows.map(row):<Empty icon={Archive} title={t('fe.chx.archiveEmpty')}/>}
+    :rows.length?<ChatList>{rows.map(row)}</ChatList>:<Empty icon={Archive} title={t('fe.chx.archiveEmpty')}/>}
   </View>
  </>;
  return <>
@@ -127,23 +151,22 @@ export function ChatsTab(){
   </Bar>
   <View refresh={load}>
    {couple&&<SegN value={kind} onChange={setKind} options={[{id:'all',label:t('fe.chats.all')},{id:'me',label:t('fe.chats.personal'),n:unreadFor('me')},{id:'couple',label:t('fe.chats.couple'),n:unreadFor('couple')}]}/>}
-   {couple&&kind==='couple'&&<Note className="mt8">{t('fe.chx.coupleNote',{name:couple.name})}</Note>}
-   {requests.length>0&&<Card list className="mt8"><Row icon={Inbox} tone="v" title={t('fe.rq.folder')} sub={t('fe.rq.folderSub')} badge={requests.length} onClick={()=>navigate('/n/chats/requests')}/></Card>}
-   {searching&&<div className="chat-q mt12"><SearchInput ref={qRef} label={t('fe.chx.search')} placeholder={t('fe.chx.searchPh')} value={q} onChange={e=>setQ(e.target.value)}/>
+   {couple&&kind==='couple'&&<Note>{t('fe.chx.coupleNote',{name:couple.name})}</Note>}
+   {requests.length>0&&<Card list><Row icon={Inbox} tone="v" title={t('fe.rq.folder')} sub={t('fe.rq.folderSub')} badge={requests.length} onClick={()=>navigate('/n/chats/requests')}/></Card>}
+   {searching&&<div className="chat-q"><SearchInput ref={qRef} label={t('fe.chx.search')} placeholder={t('fe.chx.searchPh')} value={q} onChange={e=>setQ(e.target.value)}/>
     <IconBtn icon={X} kind="ghost" size="sm" label={t('fe.chx.searchClose')} onClick={toggleSearch}/></div>}
    {error&&!items?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :items===null?<Skel kind="list" rows={4}/>
     :<>
-     {fresh.length>0&&<><SectionLabel>{t('fe.chats.newMatches')}</SectionLabel>
-      <div className="matches">{fresh.map(c=><button key={c.id} type="button" onClick={()=>navigate('/n/chats/'+c.id)}>
-       <span className="ring2"><Av name={nameOf(c.other)} seed={c.other.id} src={c.other.avatar?.src?.thumb}/>{c.side.kind==='couple'&&<i className="m-us" aria-hidden="true"><Users/></i>}</span>
-       <span className="mn">{nameOf(c.other)}</span>{c.side.kind==='couple'&&<span className="sr-only">{t('fe.chx.coupleChatSr')}</span>}
-      </button>)}</div></>}
-     {rows.map(row)}
+     {fresh.length>0&&<div><SectionLabel>{t('fe.chats.newMatches')}</SectionLabel>
+      <NewMatches>{fresh.map(c=><NewMatch key={c.id} av={<Av name={nameOf(c.other)} seed={c.other.id} src={c.other.avatar?.src?.thumb}/>} name={nameOf(c.other)}
+       us={c.side.kind==='couple'?t('fe.chx.coupleChatSr'):undefined} onClick={()=>navigate('/n/chats/'+c.id)}/>)}</NewMatches></div>}
+     {rows.length>0&&<ChatList>{rows.map(row)}</ChatList>}
      {!rows.length&&!fresh.length&&(needle?<Empty icon={Search} title={t('fe.chx.notFound',{q:q.trim()})}><Btn kind="text" auto onClick={()=>setQ('')}>{t('fe.chx.clear')}</Btn></Empty>
       :<Empty icon={MessageCircle} title={t('fe.chx.noChats')} text={t('fe.chx.noChatsText')}/>)}
     </>}
   </View>
+  {wide&&(items?.length??0)>0&&<ChatPick><Empty compact icon={MessageCircle} title={t('fe.chx.pick')}/></ChatPick>}
  </>;
 }
 
@@ -160,12 +183,12 @@ export function RequestsScreen(){
  const preview=(c:Chat)=>!c.last?'':c.last.media&&!c.last.body?t('fe.chats.photo'):c.last.body;
  return <>
   <Bar title={t('fe.rq.title')} back="/n/chats" small/>
-  <View className="nodock">
+  <View className="nodock" refresh={load}>
    {error&&!items?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :items===null?<Skel kind="list" rows={3}/>
-    :items.length?<Card list>{items.map(c=><Row key={c.id} av={<Av name={nameOf(c.other)} seed={c.other.id} size="lg" src={c.other.avatar?.src?.thumb}/>}
-      title={senderName(c.other,t)} sub={<>{c.side.kind==='couple'&&<span className="ct-us"><Users/>{t('fe.chx.coupleChat')}</span>}{contextLine(c.request?.context,t,locale,c.side.kind==='couple')}</>}
-      extra={<Text as="div" size="sm" tone="mute" className="one">{preview(c)}</Text>} val={ago(c.at,locale)} onClick={()=>navigate('/n/chats/'+c.id)}/>)}</Card>
+    :items.length?<ChatList>{items.map(c=><ChatRow key={c.id} av={<Av name={nameOf(c.other)} seed={c.other.id} size="lg" src={c.other.avatar?.src?.thumb}/>} name={senderName(c.other,t)}
+      tag={c.side.kind==='couple'&&<CoupleTag>{t('fe.chx.coupleChat')}</CoupleTag>} line={preview(c)} note={contextLine(c.request?.context,t,locale,c.side.kind==='couple')}
+      time={ago(c.at,locale)} onClick={()=>navigate('/n/chats/'+c.id)}/>)}</ChatList>
     :<Empty icon={Inbox} title={t('fe.rq.empty')} text={t('fe.rq.emptyText')}/>}
   </View>
  </>;
@@ -212,7 +235,7 @@ export function ChatScreen(){
 type Draft={canRequest:boolean,rule?:string|undefined,context:Ctx[],left?:number|undefined,max?:number|undefined};
 
 function ChatView({id,to}:{id:string,to:string}){
- const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
+ const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();const wide=useWide();
  useScreenTag('H02');
  const [draft,setDraft]=useState<Draft|null>(null);const [req,setReq]=useState<Req|null>(null);const [reqBusy,setReqBusy]=useState('');
  const [meta,setMeta]=useState<Chat|null>(null);const [items,setItems]=useState<Msg[]|null>(null);const [state,setState]=useState('active');const [otherRead,setOtherRead]=useState(0);const [tag,setTag]=useState<string|null>(null);
@@ -552,7 +575,7 @@ function ChatView({id,to}:{id:string,to:string}){
  const ended=state!=='active';
  // The input shows in a chat, in a request composer that may send, and for a waiting sender once a month passed.
  const canWrite=draft?draft.canRequest:!req||canRenew;
- const sheetAlert=sheetErr?<Alert kind="err" noIcon className="mt12">{sheetErr}{sheetErr===t('fe.chx.ageRequired')&&<><br/><AgeCheckLink intent={'attach:'+id}/></>}</Alert>:null;
+ const sheetAlert=sheetErr?<Alert kind="err" noIcon>{sheetErr}{sheetErr===t('fe.chx.ageRequired')&&<><br/><AgeCheckLink intent={'attach:'+id}/></>}</Alert>:null;
  const all=items??[];
  // Read receipts: the other side's avatar under the last own message they have read.
  const lastRead=[...all].reverse().find(m=>m.mine&&m.seq<=otherRead)?.id;
@@ -565,7 +588,7 @@ function ChatView({id,to}:{id:string,to:string}){
  const sep=(iso:string)=>{const d=day(iso);if(d===lastDay)return null;lastDay=d;return <div className="daysep">{d}</div>;};
  return <>
   <PersonBar onBack={back} {...(meta?{name:otherName,onOpen:()=>navigate('/n/people/'+meta.other.id),av:<Av name={otherName} seed={meta.other.id} size="sm" src={meta.other.avatar?.src?.thumb}/>}:{})}
-   sub={couple?<><span className="ct-us"><Users/>{t('fe.chx.coupleChat')}</span> · {t('fe.chx.coupleSees')}</>:undefined}>
+   sub={couple?<><CoupleTag>{t('fe.chx.coupleChat')}</CoupleTag>{t('fe.chx.coupleSees')}</>:undefined}>
    <IconBtn icon={Ellipsis} kind="ghost" label={t('fe.chx.menu')} disabled={!meta||!!draft} onClick={()=>{setSheetErr('');setSheet('menu');}}/>
   </PersonBar>
   <div ref={viewRef} className={'view nodock'+(ended||!canWrite?'':' cta1')} onScroll={onScroll}><div className="wrap">
@@ -598,32 +621,33 @@ function ChatView({id,to}:{id:string,to:string}){
      {out&&<div className="msg me has-media sending"><span className="mtile"><img src={out.preview} alt="" draggable={false}/>{out.video&&<VideoBadge durationMs={out.video.durationMs}/>}</span></div>}
      {voiceOut&&<><div className={'msg me has-media '+voiceOut.status}><VoiceBubble durationMs={voiceOut.v.durationMs} peaks={voiceOut.v.peaks} mine/>
       <div className="st"><span aria-label={voiceOut.status==='sending'?t('fe.chx.stSending'):t('fe.chx.stFailed')}>{voiceOut.status==='sending'?<Clock/>:<CircleAlert/>}</span></div></div>
-      {voiceOut.status==='failed'&&!ended&&<Stack row gap={2}><Btn kind="text" size="sm" auto icon={Undo2} onClick={()=>void deliverVoice(voiceOut.v)}>{t('fe.chx.retryMsg')}</Btn>
-       <Btn kind="text" size="sm" auto icon={X} onClick={()=>setVoiceOut(null)}>{t('fe.chx.drop')}</Btn></Stack>}</>}
+      {voiceOut.status==='failed'&&!ended&&<><button type="button" className="msg-retry" onClick={()=>void deliverVoice(voiceOut.v)}><Undo2/>{t('fe.chx.retryMsg')}</button>
+       <button type="button" className="msg-retry" onClick={()=>setVoiceOut(null)}><X/>{t('fe.chx.drop')}</button></>}</>}
      {typing&&!ended&&<Typing>{t('fe.w7.typing',{name:otherName})}</Typing>}
     </div>
     {draft&&meta&&(draft.canRequest
-     ?<Alert kind="info" icon={MessageCircle} className="mt16"><b>{t('fe.rq.draft',{name:otherName})}</b>{t('fe.rq.draftOne')}
+     ?<Alert kind="info" icon={MessageCircle}><b>{t('fe.rq.draft',{name:otherName})}</b>{t('fe.rq.draftOne')}
       {draft.left!==undefined&&draft.max!==undefined&&draft.left<=3?' '+t('fe.rq.left',{n:String(draft.left),max:String(draft.max)}):''}</Alert>
-     :<Alert kind="warn" className="mt16"><b>{t('fe.rq.no.title')}</b>{ruleText(draft.rule)}</Alert>)}
-    {req?.role==='sender'&&!ended&&<Alert kind="info" icon={Clock} className="mt16"><b>{t('fe.rq.wait')}</b>{canRenew?t('fe.rq.renew'):t('fe.rq.waitText',{name:otherName})}</Alert>}
-    {req?.role==='recipient'&&!ended&&meta&&<Alert kind="info" icon={MessageCircle} className="mt16" action={<Stack gap={2}>
-      <Btn icon={MessageCircle} busy={reqBusy==='accept'} disabled={!!reqBusy} onClick={()=>void answerReq('accept')}>{t('fe.rq.answer')}</Btn>
-      <Btn kind="soft" icon={EyeOff} busy={reqBusy==='hide'} disabled={!!reqBusy} onClick={()=>void answerReq('hide')}>{t('fe.rq.hide')}</Btn>
-      <Btn kind="text" icon={Flag} disabled={!!reqBusy} onClick={reportReq}>{t('fe.rq.reportBlock')}</Btn></Stack>}>
+     :<Alert kind="warn"><b>{t('fe.rq.no.title')}</b>{ruleText(draft.rule)}</Alert>)}
+    {req?.role==='sender'&&!ended&&<Alert kind="info" icon={Clock}><b>{t('fe.rq.wait')}</b>{canRenew?t('fe.rq.renew'):t('fe.rq.waitText',{name:otherName})}</Alert>}
+    {req?.role==='recipient'&&!ended&&meta&&<Alert kind="info" icon={MessageCircle} action={<><Actions>
+      <Btn busy={reqBusy==='accept'} disabled={!!reqBusy} onClick={()=>void answerReq('accept')}>{t('fe.rq.answer')}</Btn>
+      <Btn kind="soft" busy={reqBusy==='hide'} disabled={!!reqBusy} onClick={()=>void answerReq('hide')}>{t('fe.rq.hide')}</Btn></Actions>
+      <Btn kind="text" size="sm" auto icon={Flag} disabled={!!reqBusy} onClick={reportReq}>{t('fe.rq.reportBlock')}</Btn></>}>
      <b>{t('fe.rq.in',{name:senderName(meta.other,t)})}</b>{contextLine(req.context,t,locale,meta.side.kind==='couple')}. {t('fe.rq.inText',{name:otherName})}</Alert>}
     {!ended&&canWrite&&!req&&all.length===0&&pend.length===0&&<><SectionLabel>{t('fe.chx.starters')}</SectionLabel><Chips className="ice">
      {[...starters.slice(0,2).map(n=>t('fe.w7.ice.topic',{topic:n})),t('fe.chx.ice1'),t('fe.chx.ice2')].map(s=><Chip key={s} onClick={()=>{setText(s);requestAnimationFrame(()=>{if(input.current){grow(input.current);input.current.focus();}});}}>{s}</Chip>)}
     </Chips></>}
-    {ended&&<Alert kind="info" icon={Ban} className="mt16"><b>{t('fe.chx.endedTitle')}</b>{t(couple?'fe.chx.endedTextUs':'fe.chx.endedText')}</Alert>}
-    {out?.pending&&<Alert kind="info" icon={Clock}><b>{out.video?t('fe.av.videoPending'):t('fe.chx.pending')}</b>
-     <Stack row gap={2}><Btn kind="soft" size="sm" auto busy={busy} disabled={busy} onClick={()=>void retryPending(false)}>{t('fe.chx.retry')}</Btn><Btn kind="text" size="sm" auto onClick={()=>dropOut(out)}>{t('fe.chx.drop')}</Btn></Stack></Alert>}
-    {failure&&<Alert kind="err" noIcon>{failure}{failure===t('fe.chx.ageRequired')&&<><br/><AgeCheckLink intent={'attach:'+id}/></>}{out&&!out.pending&&<Stack row gap={2}><Btn kind="soft" size="sm" auto busy={busy} disabled={busy} onClick={()=>void retryPending(false)}>{t('fe.chx.retry')}</Btn>
-     <Btn kind="text" size="sm" auto onClick={()=>{dropOut(out);setFailure('');}}>{t('fe.chx.drop')}</Btn></Stack>}</Alert>}
+    {ended&&<Alert kind="info" icon={Ban}><b>{t('fe.chx.endedTitle')}</b>{t(couple?'fe.chx.endedTextUs':'fe.chx.endedText')}</Alert>}
+    {out?.pending&&<Alert kind="info" icon={Clock} action={<Actions><Btn kind="soft" size="sm" busy={busy} disabled={busy} onClick={()=>void retryPending(false)}>{t('fe.chx.retry')}</Btn>
+     <Btn kind="text" size="sm" onClick={()=>dropOut(out)}>{t('fe.chx.drop')}</Btn></Actions>}><b>{out.video?t('fe.av.videoPending'):t('fe.chx.pending')}</b></Alert>}
+    {failure&&<Alert kind="err" noIcon action={out&&!out.pending?<Actions><Btn kind="soft" size="sm" busy={busy} disabled={busy} onClick={()=>void retryPending(false)}>{t('fe.chx.retry')}</Btn>
+     <Btn kind="text" size="sm" onClick={()=>{dropOut(out);setFailure('');}}>{t('fe.chx.drop')}</Btn></Actions>:undefined}>{failure}{failure===t('fe.chx.ageRequired')&&<><br/><AgeCheckLink intent={'attach:'+id}/></>}</Alert>}
    </>}
   </div></div>
   <button type="button" className={'chat-down'+(ended?' low':'')+(!near?' on':'')} aria-label={t('fe.chx.toLatest')} onClick={toBottom}><ChevronDown/>{fresh>0&&<em>{fresh>99?'99+':fresh}</em>}</button>
   {!ended&&canWrite&&<div className="inputbar" ref={bar}>
+   {limitCounter('chatMessage',text)}
    {replyTo&&quoteOf(replyTo)&&<div className="reply-target chat-reply">{quote(replyTo,true)}<IconBtn icon={X} size="sm" label={t('fe.chx.cancelReply')} onClick={()=>{setReplyTo(null);input.current?.focus({preventScroll:true});}}/></div>}
    <IconBtn icon={Plus} kind="ghost" label={t('fe.chx.attach')} disabled={!meta||!!out?.pending||!!reqBusy} onClick={()=>{setSheetErr('');setSheet('attach');}}/>
    {couple&&acting?.kind==='couple'&&<ActingAv p={acting} size="xs"/>}
@@ -632,9 +656,10 @@ function ChatView({id,to}:{id:string,to:string}){
     onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!coarse&&!e.nativeEvent.isComposing){e.preventDefault();send();}}}/>
    {/* An empty box offers a voice message instead of «Отправить» (hold to record). */}
    {/* A request has no voice message: its one first message is text and / or a photo. */}
-   {text.trim()||!meta||asRequest?<IconBtn icon={SendHorizontal} kind="send" onClick={send} disabled={!meta||!text.trim()||!!reqBusy} label={couple?t('fe.fd.sendUs'):t('fe.feed.send')}/>
+   {text.trim()||!meta||asRequest?<IconBtn icon={SendHorizontal} kind="send" onClick={send} disabled={!meta||!text.trim()||overMax('chatMessage',text)||!!reqBusy} label={couple?t('fe.fd.sendUs'):t('fe.feed.send')}/>
     :<VoiceRecorder onSend={v=>void deliverVoice(v)} onError={voiceError} disabled={voiceOut?.status==='sending'}/>}
   </div>}
+  {wide&&<ChatsSide current={id}/>}
   <FilePick ref={gallery} accept={'image/*,'+VIDEO_TYPES.join(',')} onFiles={f=>pick([...f])}/>
   <FilePick ref={camera} accept="image/*" capture="environment" onFiles={f=>pick([...f])}/>
   <FilePick ref={videoPick} accept={VIDEO_TYPES.join(',')} onFiles={f=>pick([...f])}/>
@@ -682,11 +707,11 @@ function ChatView({id,to}:{id:string,to:string}){
     <Row icon={Sparkles} tone="l" title={t('fe.chx.shared')} onClick={()=>navigate('/n/people/'+meta.other.id+'/compat')}/>
     {grants.byMe&&<Row noChev icon={Lock} tone="v" title={t(couple?'fe.chx.revokeUs':'fe.chx.revoke')} sub={t('fe.chx.revokeSub')} onClick={()=>{if(!sheetBusy)void revoke();}}/>}
    </Card>
-   <Card list className="mt12">
+   <Card list>
     <ToggleRow title={t('fe.chx.mute')} sub={t('fe.chx.muteSub')} on={meta.muted} onClick={()=>{if(!sheetBusy)void toggleMute();}}/>
     <Row noChev icon={meta.archived?ArchiveRestore:Archive} title={meta.archived?t('fe.chx.unarchive'):t('fe.chx.archive')} sub={t('fe.chx.archiveSub')} onClick={()=>{if(!sheetBusy)void toggleArchive();}}/>
    </Card>
-   <Card list className="mt12">
+   <Card list>
     {!ended&&<Row noChev icon={X} danger title={t('fe.chx.end')} sub={t('fe.chx.endSub')} onClick={()=>{setSheetErr('');setSheet('end');}}/>}
     <Row noChev icon={Flag} danger title={t('fe.chx.report')} onClick={openReport}/>
     <Row noChev icon={Ban} danger title={t('fe.chx.block')} onClick={()=>{setSheetErr('');setSheet('block');}}/>
@@ -701,8 +726,8 @@ function ChatView({id,to}:{id:string,to:string}){
     {(['endFact1','endFact2','endFact3'] as const).map(k=><div key={k} className="fact"><i className="g"><Check/></i><span>{t('fe.chx.'+k+(couple&&k==='endFact2'?'Us':''))}</span></div>)}
     <div className="fact"><i className="v"><Info/></i><span>{t('fe.chx.endFact4')}</span></div>
    </Card>
-   {grants.byMe&&<Card list className="mt12"><ToggleRow title={t(couple?'fe.chx.ecRevokeUs':'fe.chx.ecRevoke')} sub={t('fe.chx.ecRevokeSub')} on={ecRevoke} onClick={()=>setEcRevoke(v=>!v)}/></Card>}
-   <Note className="mt12">{t(couple?'fe.chx.endNoteUs':'fe.chx.endNote')}</Note>
+   {grants.byMe&&<Card list><ToggleRow title={t(couple?'fe.chx.ecRevokeUs':'fe.chx.ecRevoke')} sub={t('fe.chx.ecRevokeSub')} on={ecRevoke} onClick={()=>setEcRevoke(v=>!v)}/></Card>}
+   <Spacer/><Note>{t(couple?'fe.chx.endNoteUs':'fe.chx.endNote')}</Note>
    {sheetAlert}
   </Sheet>}
 

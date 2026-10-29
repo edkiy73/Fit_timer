@@ -26,8 +26,8 @@ async function sentBy(t, to, body, profile) {
 async function openRequest(t, name) {
   await t.go('/n/chats');
   await t.tap('.li:has-text("Запросы")');
-  await t.see('.li:has-text("' + name + '")');
-  await t.tap('.li:has-text("' + name + '")');
+  await t.see('.chat-row:has-text("' + name + '")');
+  await t.tap('.chat-row:has-text("' + name + '")');
   await t.see('.alert:has-text("хочет начать переписку")');
 }
 
@@ -72,10 +72,10 @@ export default [
    await t.see('.li:has-text("Запросы")');
    await t.shot('mr-folder');
    await t.tap('.li:has-text("Запросы")');
-   await t.see('.li:has-text("@' + s.handle + '"), .li:has-text("' + s.handle + '")');
-   await t.see('.li:has-text("Подписан на тебя")');
+   await t.see('.chat-row:has-text("' + s.handle + '")');
+   await t.see('.chat-row:has-text("Твой подписчик")');
    await t.shot('mr-requests');
-   await t.tap('.li:has-text("' + s.handle + '")');
+   await t.tap('.chat-row:has-text("' + s.handle + '")');
    await t.see('.alert:has-text("хочет начать переписку")');
    await t.see('.alert:has-text("не узнает, что сообщение прочитано")');
    await t.shot('mr-request-open');
@@ -102,11 +102,11 @@ export default [
    expect((await t.api('chat.messages', { conversationId: conv })).status === 404, 'not found for the recipient');
  } },
 
- { name: '«Пожаловаться и заблокировать»: report sheet with the message picked, a block, the request gone', persona: 'basic', run: async t => {
+ { name: '«Пожаловаться» (report + block): report sheet with the message picked, a block, the request gone', persona: 'basic', run: async t => {
    const { s } = await sentBy(t, t.me, 'mr реклама подписывайся ' + stamp());
    try {
      await openRequest(t, s.handle);
-     await t.tap('.alert button:has-text("Пожаловаться и заблокировать")');
+     await t.tap('.alert button:has-text("Пожаловаться")');
      await t.see(sheet + ':has-text("Пожаловаться")');
      await t.tap(sheet + ' .radio:has-text("Спам")');
      await t.fill('#report-details', 'Рассылает рекламу незнакомым людям');

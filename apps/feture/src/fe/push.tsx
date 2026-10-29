@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {Bell} from 'lucide-react';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {newOpId} from '../feture/fe-api';
-import {Alert,Btn,Card,Note,Row,Sheet,ToggleRow} from './kit';
+import {Alert,Btn,Card,Note,Row,Sheet,Spacer,ToggleRow} from './kit';
 import {useFe} from './session';
 import {useToast} from './toast';
 import {disableWebPush,enableWebPush,needsHomeScreen,onUseful,refreshWebPush,webPushState,webPushSupported,type WebPushState} from './push-web';
@@ -79,7 +79,7 @@ export function PushOffer(){
  return <Sheet title={t('fe.push.offerTitle')} lead={<span className="ico l"><Bell/></span>} onClose={close}
   foot={<><Btn onClick={()=>{close();void turnOn();}}>{t('fe.push.offerOk')}</Btn><Btn kind="text" onClick={close}>{t('fe.push.later')}</Btn></>}>
   <Card list><Row icon={Bell} title="FetUre" sub={t('fe.push.preview')}/></Card>
-  <Note className="mt8">{t('fe.push.offerText')}</Note>
+  <Spacer size={2}/><Note>{t('fe.push.offerText')}</Note>
  </Sheet>;
 }
 
@@ -97,7 +97,7 @@ export function PushSwitch(){
  const turnOn=useTurnOn();
  const read=native?nativePushState:webPushState;
  useEffect(()=>{let live=true;void read().then(v=>{if(live)setS(v);});return ()=>{live=false;};},[read,setS]);
- if(!native&&!webPushSupported())return needsHomeScreen()?<Note className="mt8">{t('fe.push.homeScreen')}</Note>:null;
+ if(!native&&!webPushSupported())return needsHomeScreen()?<Note>{t('fe.push.homeScreen')}</Note>:null;
  if((!native&&!webKey)||!s||s==='unsupported')return null;
  const flip=()=>{
   if(busy)return;setBusy(true);
@@ -107,8 +107,8 @@ export function PushSwitch(){
  };
  const k=native?'fe.push.app.':'fe.push.';
  return <>
-  <Card list className="mt8"><ToggleRow title={t('fe.push.switch')} sub={s==='on'?t(k+'switchOn'):s==='denied'?t(k+'switchDenied'):t(k+'switchOff')} on={s==='on'} disabled={busy} onClick={flip}/></Card>
-  {s==='denied'&&<Alert kind="warn" className="mt8">{t(k+'denied')}</Alert>}
+  <Card list><ToggleRow title={t('fe.push.switch')} sub={s==='on'?t(k+'switchOn'):s==='denied'?t(k+'switchDenied'):t(k+'switchOff')} on={s==='on'} disabled={busy} onClick={flip}/></Card>
+  {s==='denied'&&<Alert kind="warn">{t(k+'denied')}</Alert>}
  </>;
 }
 

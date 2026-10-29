@@ -31,6 +31,10 @@ export function textError(t:T,rule:FieldName|TextRule,value:string):string|undef
 /** Native `maxLength` that still lets an overflow show (the counter turns red, the error explains) instead of cutting a
  * paste silently; the server guard is far above it. */
 export const softMax=(rule:FieldName|TextRule)=>ruleOf(rule).max*2;
+/** Past the limit (the soft `maxLength` let it in): the send stays off while the counter is red. */
+export const overMax=(rule:FieldName|TextRule,value:string)=>textLength(value)>ruleOf(rule).max;
+/** The kit `Counter` for a field outside a form (the chat message box): from 80% of the limit, red past it. */
+export function limitCounter(rule:FieldName|TextRule,value:string):ReactNode{const r=ruleOf(rule);const n=textLength(value);return n>=r.max*0.8?<Counter n={n} max={r.max}/>:null;}
 
 /** shakeFirstErr(): the first field with an error shakes, gets focus and scrolls into view. */
 export function shakeFirstErr(){

@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {AtSign,Bell,Calendar,Check,CircleCheck,Clock,Crown,EyeOff,FileText,Filter,Heart,LifeBuoy,LockOpen,MessageCircle,Pencil,Shield,ShieldCheck,Trash2,Users,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Av,Bar,Btn,Card,Chip,Chips,Empty,IconBtn,Note,Row,SectionLabel,Seg,Skel,Text,View,plate} from './kit';
+import {Av,Bar,Btn,Card,Chip,Chips,Empty,IconBtn,PersonLine,RequestCard,Row,SectionLabel,Seg,Skel,View,plate} from './kit';
 import {useFe,useRealtime} from './session';
 import {useToast} from './toast';
 import {when} from './feed';
@@ -145,14 +145,9 @@ export function InboxScreen(){
   </button>;};
 
  /* ---- decisions (todoGroupHTML) ---- */
- const card=(d:Decision,text:string,buttons:ReactNode,thumb?:ReactNode)=><Card key={d.kind+d.id} className="rqcard">
-  <div className="row">
-   <button type="button" className="rq-av" aria-label={nameOf(d.actor)} onClick={()=>d.actor&&navigate('/n/people/'+d.actor.id)}><Av name={nameOf(d.actor)} seed={d.actor?.id??d.id} src={d.actor?.avatar}/></button>
-   <button type="button" className="grow" onClick={()=>d.actor&&navigate('/n/people/'+d.actor.id)}><Text as="b" size="strong">{d.kind==='tag'?nameOf(d.actor):withAge(nameOf(d.actor),d.actor)}<NameBadges p={d.actor}/></Text><Note>{text} · {when(d.at,locale)}</Note></button>
-   {thumb}
-  </div>
-  <div className="row g8 mt12">{buttons}</div>
- </Card>;
+ const card=(d:Decision,text:string,buttons:ReactNode)=><RequestCard key={d.kind+d.id} actions={buttons}
+  person={<PersonLine av={<Av name={nameOf(d.actor)} seed={d.actor?.id??d.id} src={d.actor?.avatar}/>} label={nameOf(d.actor)} onOpen={d.actor?()=>navigate('/n/people/'+d.actor!.id):undefined}
+   name={<>{d.kind==='tag'?nameOf(d.actor):withAge(nameOf(d.actor),d.actor)}<NameBadges p={d.actor}/></>} sub={<>{text} · {when(d.at,locale)}</>}/>}/>;
  const two=(d:Decision,yes:{label:string,fn:()=>void},no?:{label:string,fn:()=>void})=><>
   <Btn size="md" busy={busy===d.id+'y'} disabled={!!busy} onClick={yes.fn}>{yes.label}</Btn>
   {no&&<Btn size="md" kind="soft" busy={busy===d.id+'n'} disabled={!!busy} onClick={no.fn}>{no.label}</Btn>}
@@ -206,7 +201,9 @@ export function InboxScreen(){
   if(!list.length)return all.length?filteredEmpty:<Empty icon={Bell} title={t('fe.ibx.none')} text={t('fe.ibx.noneText')}/>;
   const neu=list.filter(n=>!n.read),old=list.filter(n=>n.read);
   // «Новые» opens its own block, so its label takes the kit's first-label spacing (`.sec:first-child`).
-  return <>{neu.length>0&&<div><SectionLabel>{t('fe.ibx.new')}</SectionLabel>{neu.map(row)}</div>}{old.length>0&&<><SectionLabel>{t('fe.ibx.earlier')}</SectionLabel>{old.map(row)}</>}</>;
+  const readAllBtn=filter==='all'&&<Btn kind="text" size="sm" auto icon={Check} busy={readAllBusy} disabled={readAllBusy} onClick={()=>void readAll()}>{t('fe.ibx.readAll')}</Btn>;
+  // Rows sit in their own block under the label, so the first one has no divider glued to the label.
+  return <>{neu.length>0&&<div><SectionLabel action={readAllBtn}>{t('fe.ibx.new')}</SectionLabel><div>{neu.map(row)}</div></div>}{old.length>0&&<div><SectionLabel>{t('fe.ibx.earlier')}</SectionLabel><div>{old.map(row)}</div></div>}</>;
  };
  const kinds=new Set<Kind>(k==='todo'?(decide??[]).map(decideKind):(notes??[]).map(noteKind));
  const loading=decide===null||notes===null;
@@ -214,7 +211,6 @@ export function InboxScreen(){
   <Bar title={t('fe.inbox.title')} back/>
   <View className="nodock" refresh={load}>
    <SegN small value={k} onChange={pickTab} options={[{id:'todo',label:t('fe.inbox.todo'),n:decide?.length??0},{id:'all',label:t('fe.inbox.all'),n:unread}]}/>
-   {k==='all'&&unread>0&&<button type="button" className="inbox-read-all" disabled={readAllBusy} onClick={()=>void readAll()}><Check/>{t('fe.ibx.readAll')}</button>}
    {!loading&&!error&&<Chips scroll className="inbox-filters">{FILTERS.filter(v=>v==='all'||v===filter||kinds.has(v)).map(v=>
     <Chip key={v} on={filter===v} onClick={()=>setFilter(v)}>{t('fe.ibx.f.'+v)}</Chip>)}</Chips>}
    {error&&loading?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>

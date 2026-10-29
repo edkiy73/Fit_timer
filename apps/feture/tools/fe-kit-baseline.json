@@ -5,10 +5,6 @@
  "src/fe/browse.tsx": {
   "margin class": 1
  },
- "src/fe/chats.tsx": {
-  "margin class": 13,
-  "button row": 3
- },
  "src/fe/couple.tsx": {
   "empty note": 1
  },
@@ -19,9 +15,6 @@
  "src/fe/gallery.tsx": {
   "margin class": 1,
   "empty note": 1
- },
- "src/fe/inbox.tsx": {
-  "margin class": 1
  },
  "src/fe/interests.tsx": {
   "margin class": 4,
@@ -35,9 +28,6 @@
   "button row": 1
  },
  "src/fe/profile-extras.tsx": {
-  "margin class": 4
- },
- "src/fe/push.tsx": {
   "margin class": 4
  },
  "src/fe/shell.css": {

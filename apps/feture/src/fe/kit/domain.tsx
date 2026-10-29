@@ -205,6 +205,47 @@ export function Typing({children}:{children:ReactNode}){
  return <div className="k-typing" role="status" aria-live="polite"><span className="k-typing-dots" aria-hidden="true"><i/><i/><i/></span><span>{children}</span></div>;
 }
 
+/* ---------------- Chats ---------------- */
+
+/** «Чат пары» — the violet mark before a line of a conversation the couple profile holds (both partners see it). */
+export function CoupleTag({children}:{children:ReactNode}){
+ return <span className="ct-us"><Users aria-hidden="true"/>{children}</span>;
+}
+/** One conversation in a list (chats, archive, «Запросы»): avatar, name, the last message (`line`, one line, cut), an
+ * optional second line (`note`: where a request comes from), time, unread count; `ended` greys the line. Rows sit in
+ * a `ChatList`, which draws the dividers and keeps the page rhythm out of the list. */
+export function ChatRow({av,name,tag,line,note,time,unread,ended,on,onClick}:{av:ReactNode,name:ReactNode,/** `CoupleTag` before the line. */ tag?:ReactNode,
+ line:ReactNode,note?:ReactNode,time:ReactNode,unread?:number|undefined,ended?:boolean|undefined,/** The conversation open next to the list (desktop). */ on?:boolean|undefined,onClick:()=>void}){
+ return <button type="button" className={'chat-row'+(unread?' unread':'')+(ended?' ended':'')+(on?' on':'')} aria-current={on?'page':undefined} onClick={onClick}>
+  {av}
+  <span className="tx"><b>{name}</b><small>{tag}{line}</small>{note&&<small className="k-chat-note">{note}</small>}</span>
+  <span className="side2">{unread?<span className="unr">{unread>99?'99+':unread}</span>:null}<time>{time}</time></span>
+ </button>;
+}
+export function ChatList({children}:{children:ReactNode}){
+ return <div className="k-chat-list">{children}</div>;
+}
+/** Desktop (stage ≥ 1100 px): chats are a list and a conversation side by side, Telegram-like. The screen takes the
+ * empty right column too. `ChatPane` is the list next to an open conversation (title, then the rows, scrolling on its
+ * own); `ChatPick` is the right side of the chats list while nothing is open. Both are hidden below 1100 px, so a phone
+ * and a tablet keep one screen at a time. */
+export function ChatPane({title,children}:{title:string,children:ReactNode}){
+ return <aside className="k-chat-pane" aria-label={title}><div className="k-chat-pane-h"><b>{title}</b></div><div className="k-chat-pane-b">{children}</div></aside>;
+}
+export function ChatPick({children}:{children:ReactNode}){
+ return <div className="k-chat-pick">{children}</div>;
+}
+/** «Новые совпадения»: a contact without messages yet as a ringed avatar with the name; `us` marks the couple's. */
+export function NewMatches({children}:{children:ReactNode}){
+ return <div className="matches">{children}</div>;
+}
+export function NewMatch({av,name,us,onClick}:{av:ReactNode,name:string,/** Screen-reader words for the couple's contact. */ us?:string|undefined,onClick:()=>void}){
+ return <button type="button" onClick={onClick}>
+  <span className="ring2">{av}{us&&<i className="m-us" aria-hidden="true"><Users/></i>}</span>
+  <span className="mn">{name}</span>{us&&<span className="sr-only">{us}</span>}
+ </button>;
+}
+
 /* ---------------- Photos ---------------- */
 
 /** What to show in the selfie (a gesture): icon, label, value; without `value` the value blinks while it loads. */

@@ -79,10 +79,10 @@ const scenarios = [
     await t.tap('[role=tab]:has-text("Все уведомления")');
     await t.see('.nt', 20000);
     if (!(await t.page.locator('.nt.unread').count())) { console.log('   (nothing unread, skipping the tap)'); return; }
-    await t.tap('.inbox-read-all');
+    await t.tap('.sec button:has-text("Прочитать все")');
     await t.see('Все прочитаны');
     await t.notSee('.nt.unread', 300);
-    await t.notSee('.inbox-read-all', 100);
+    await t.notSee('.sec button:has-text("Прочитать все")', 100);
     const n = await t.api('notifications.list', {});
     if ((n.items ?? []).some(x => !x.read)) throw new Error('server still has unread');
   } },
