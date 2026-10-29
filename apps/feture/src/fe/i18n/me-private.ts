@@ -23,11 +23,6 @@ export const ru = {
   'fe.mp.jarsAdd': 'Добавить интерес',
   'fe.mp.jarsAddSub': 'То, чем делишься не со всеми',
   'fe.mp.jarsAddSubUs': 'То, чем делитесь не со всеми',
-  'fe.mp.access': 'Доступ',
-  'fe.mp.accessNone': 'Пока никому не открыт',
-  'fe.mp.accessAll': 'Все доступы и запросы',
-  'fe.mp.more': 'Что сделать с доступом {name}',
-  'fe.mp.edit': 'Изменить, что открыто',
 } as const;
 export const en = {
   'fe.mp.bioAdd': 'Tell about yourself',
@@ -53,9 +48,4 @@ export const en = {
   'fe.mp.jarsAdd': 'Add an interest',
   'fe.mp.jarsAddSub': 'What you don’t share with everyone',
   'fe.mp.jarsAddSubUs': 'What you don’t share with everyone',
-  'fe.mp.access': 'Access',
-  'fe.mp.accessNone': 'Not open to anyone yet',
-  'fe.mp.accessAll': 'All access and requests',
-  'fe.mp.more': 'What to do with {name}’s access',
-  'fe.mp.edit': 'Change what’s open',
 } as const;

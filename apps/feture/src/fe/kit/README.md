@@ -33,7 +33,7 @@ A new component or variant ships with its story in the same PR.
 | Empty section | `AddCard` — the one «add» card of every empty block (icon in a soft circle, title, a plain hint up to two lines, «+»); straight in a `Group`, no Card around; a filled block shows its content and its header action instead |
 | Counts as tiles | `StatTiles` (2–3 tiles: the number, a word, a tap opens the list) — manage screens of a community and an event |
 | Lists | `Row` (icon/avatar, title, sub, value, badge, chevron), `ToggleRow`, `SelectRow` |
-| Choice pills | `Chip`, `Chips`; a long list of options — `ChipPick` (`kit/ChipPick.tsx`: five chips + «Все · N» opening the list in a sheet with search, «Популярное» / «Ещё варианты», n / max; the one picker of profile details in sign-up and the profile editor) |
+| Choice pills | `Chip`, `Chips`; several from a small set — `MultiChips` (`all` — a first «Всё» chip that picks every option; the request sheet of a private part); a long list of options — `ChipPick` (`kit/ChipPick.tsx`: five chips + «Все · N» opening the list in a sheet with search, «Популярное» / «Ещё варианты», n / max; the one picker of profile details in sign-up and the profile editor) |
 | One from a list as rows | `RadioList` (rows carry their own frame: never put it in a `Card`; a line under a row's title explains it) |
 | One box with a consent | `Check` (`aside` — a small action on the same row, outside the box: «Принимаю условия…» + «Читать»; only where law needs a separate consent, otherwise the button itself accepts) |
 | Several from a list as rows | `CheckList` (a box per row, a line under the title: «не запрошено», «уже открыто») |
