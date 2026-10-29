@@ -88,14 +88,24 @@
    one grid cell, so the gap between blocks is the same value in every queue (16, the form-field gap). A block never
    carries a margin of its own here. */
 .v21 .card.st-card{display:grid;gap:var(--s-4);min-width:0}
-.v21 .st-card>*{margin:0}
+.v21 .card.st-card>*{margin:0}
+/* «Подробнее» lines up with the text of the card, not with its own button padding. */
+.v21 .st-more>.btn.text{padding-inline:0}
 .v21 .st-card.st-danger{border-color:var(--danger)}
 .v21 .st-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:var(--s-1) var(--s-3)}
 .v21 .st-head b{font-size:var(--fs-md);overflow-wrap:anywhere;min-width:0}
 .v21 .sheet.st-focus .card.st-card{background:none;border:0;box-shadow:none;padding:0}
 .v21 .sheet.st-focus .st-head b{display:none}
 /* One item under review: its decision row stays at the bottom of the screen, whatever the length of the item. */
-.v21 .sheet.st-focus .st-card>.k-actions{position:sticky;bottom:-20px;z-index:2;margin-inline:-16px;padding:12px 16px calc(12px + var(--safe-b,0px));background:var(--bg);border-top:1px solid var(--line)}
+.v21 .sheet.st-focus .st-card>.k-actions{position:sticky;bottom:-20px;z-index:2;width:auto;margin-inline:-16px;padding:12px 16px calc(12px + var(--safe-b,0px));background:var(--bg);border-top:1px solid var(--line)}
+.v21 .st-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s-2)}
+.v21 .st-tile{position:relative;aspect-ratio:1;display:grid;place-items:center;padding:0;border-radius:var(--r);background:var(--surf);border:1px solid var(--line);color:var(--mute);overflow:hidden;cursor:pointer}
+.v21 .st-tile>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.v21 .st-tile>img.st-blur{filter:blur(14px);transform:scale(1.15)}
+.v21 .st-tile-ico{position:relative;display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:color-mix(in srgb,var(--bg) 70%,transparent);color:var(--ink)}
+.v21 .st-tile-ico svg{width:20px;height:20px}
+.v21 .st-tile-cap{position:absolute;left:0;right:0;bottom:0;padding:18px 8px 6px;font-size:var(--fs-cap);color:#fff;text-align:left;background:linear-gradient(transparent,rgba(0,0,0,.6))}
+.v21 .st-tile[aria-busy]{opacity:.6}
 .v21 .st-meta{font-size:var(--fs-cap);color:var(--mute);display:inline-flex;gap:6px;align-items:center}
 .v21 .st-text{white-space:pre-wrap;overflow-wrap:anywhere;font-size:var(--fs-sm);line-height:1.5}
 .v21 .st-kv-row{display:contents}
