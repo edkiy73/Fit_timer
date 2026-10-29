@@ -2,11 +2,11 @@
 /** S4 step 3: report, dispute and sanction commands for staff (docs/server/S4-MODERATION.md §2–4).
  * (`action` is the command name in the request body, so decisions are called `decision`.) */
 import * as z from 'zod';
-import { id, opId } from './platform.mjs';
+import { id, opId, queuePaging } from './platform.mjs';
 import { field } from './_text.mjs';
 
 export const moderationCommands = {
-  'staff.reportQueue': { profile: false, write: false, input: z.strictObject({ limit: z.int().min(1).max(50).default(20) }) },
+  'staff.reportQueue': { profile: false, write: false, input: z.strictObject({ ...queuePaging }) },
   'staff.reportDecide': {
     profile: false, write: true,
     input: z.strictObject({
@@ -21,14 +21,14 @@ export const moderationCommands = {
     }).refine(v => v.decision === 'keep' || !!v.rule, { message: 'remove needs a rule', path: ['rule'] })
       .refine(v => !['profile', 'conversation'].includes(v.targetType) || v.decision === 'keep', { message: 'people are sanctioned through staff.sanction or staff.restrict', path: ['decision'] }),
   },
-  'staff.disputeQueue': { profile: false, write: false, input: z.strictObject({ limit: z.int().min(1).max(50).default(20) }) },
+  'staff.disputeQueue': { profile: false, write: false, input: z.strictObject({ ...queuePaging }) },
   'staff.disputeDecide': {
     profile: false, write: true,
     input: z.strictObject({ opId, postId: id, restore: z.boolean(), note: field('staffNote').default('') }),
   },
   // An account that reached the claim restriction was looked at by staff (it leaves the «на проверке» list).
   'staff.disputeClaimantReviewed': { profile: false, write: true, input: z.strictObject({ opId, profileId: id }) },
-  'staff.revisionQueue': { profile: false, write: false, input: z.strictObject({ limit: z.int().min(1).max(50).default(20) }) },
+  'staff.revisionQueue': { profile: false, write: false, input: z.strictObject({ ...queuePaging }) },
   'staff.revisionDecide': {
     profile: false, write: true,
     input: z.strictObject({
@@ -54,7 +54,7 @@ export const moderationCommands = {
       note: field('staffNote').default(''),
     }),
   },
-  'staff.placeQueue': { profile: false, write: false, input: z.strictObject({ limit: z.int().min(1).max(50).default(20) }) },
+  'staff.placeQueue': { profile: false, write: false, input: z.strictObject({ ...queuePaging }) },
   'staff.placeDecide': {
     profile: false, write: true,
     input: z.strictObject({ opId, placeId: id, decision: z.enum(['approve', 'reject']), nameRu: field('placeName').optional(), nameEn: field('placeName').optional() }),
@@ -63,6 +63,6 @@ export const moderationCommands = {
     profile: true, write: true, rate: { kind: 'appeal.create', max: 10, window: '1 day' },
     input: z.strictObject({ opId, targetType: z.enum(['post', 'reply', 'community', 'event', 'profile']), targetId: id, body: field('appeal') }),
   },
-  'staff.appealQueue': { profile: false, write: false, input: z.strictObject({ limit: z.int().min(1).max(50).default(20) }) },
+  'staff.appealQueue': { profile: false, write: false, input: z.strictObject({ ...queuePaging }) },
   'staff.appealDecide': { profile: false, write: true, input: z.strictObject({ opId, appealId: id, grant: z.boolean(), note: field('staffNote').default('') }) },
 };

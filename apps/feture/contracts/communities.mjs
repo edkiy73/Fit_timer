@@ -1,7 +1,7 @@
 // @ts-check
 /** Slice D1: communities (S2-CATALOG «D. Сообщества», extract/communities-events.md). */
 import * as z from 'zod';
-import { id, opId } from './platform.mjs';
+import { id, opId, queuePaging } from './platform.mjs';
 import { field, textLength } from './_text.mjs';
 import { PLATE_KEYS } from './_plates.mjs';
 
@@ -70,7 +70,7 @@ export const communitiesCommands = {
     profile: true, write: true,
     input: z.strictObject({ opId, postId: id, change: z.enum(['pin', 'unpin', 'excludePopular', 'includePopular', 'remove']) }),
   },
-  'staff.communityQueue': { profile: false, write: false, input: z.strictObject({ limit: z.int().min(1).max(50).default(20) }) },
+  'staff.communityQueue': { profile: false, write: false, input: z.strictObject({ ...queuePaging }) },
   'staff.communityDecide': {
     profile: false, write: true,
     input: z.strictObject({ opId, communityId: id, rev: z.int().positive(), decision: z.enum(['approve', 'reject']), reason: field('reason').default('') }),

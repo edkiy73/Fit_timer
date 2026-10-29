@@ -2,7 +2,7 @@
 /** Slice H1: Premium entitlements and the age check — by a selfie with a gesture or by an identity document (A07,
  * S2-CATALOG «H»). Store purchases and gifts come with a payment provider. */
 import * as z from 'zod';
-import { id, opId } from './platform.mjs';
+import { id, opId, queuePaging } from './platform.mjs';
 import { field } from './_text.mjs';
 
 const reason = z.string().regex(/^[a-z_]{2,32}$/);
@@ -33,7 +33,7 @@ export const premiumCommands = {
   'verification.ageStart': { profile: false, write: true, rate: { kind: 'verification.age', max: 10, window: '1 day' }, input: z.strictObject({ opId, method: z.enum(AGE_METHODS).default('selfie') }) },
   'verification.ageSubmit': { profile: false, write: true, input: z.strictObject({ opId, checkId: id, assetId: id }) },
   'verification.ageStatus': { profile: false, write: false, input: z.strictObject({}) },
-  'staff.ageCheckQueue': { profile: false, write: false, input: z.strictObject({ limit: z.int().min(1).max(50).default(20) }) },
+  'staff.ageCheckQueue': { profile: false, write: false, input: z.strictObject({ ...queuePaging }) },
   'staff.ageCheckDecide': {
     profile: false, write: true,
     input: z.strictObject({ opId, checkId: id, approve: z.boolean(), reason: reason.optional() })
