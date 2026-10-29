@@ -71,7 +71,7 @@ export async function joinRequest(t, communityId, as) {
 }
 /** The kit uploader sheet after a file pick: the row is checked, «Готово» closes it. */
 export async function uploaderDone(t) {
-  await t.see('.sheet.on .k-uprow:has-text("без геометки")', 20000);
+  await t.see('.sheet.on .k-uprow:has(.k-upthumb img)', 20000);
   await t.tap('.sheet.on .sh-f button:has-text("Готово")');
   await t.page.locator('.sheet.on .k-uprow').first().waitFor({ state: 'detached', timeout: 60000 });
 }

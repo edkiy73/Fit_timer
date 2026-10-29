@@ -49,7 +49,7 @@ export const postFields = z.strictObject({
   mediaIds: unique(z.array(id).max(6)).default([]),
   poll: z.strictObject({
     question: field('pollQuestion'),
-    options: z.array(field('pollOption')).min(2).max(10)
+    options: z.array(field('pollOption')).min(2).max(6)
       .refine(v => new Set(v.map(o => o.toLowerCase())).size === v.length, { message: 'duplicates' }),
   }).optional(),
   interests: unique(z.array(code).max(4)).default([]),

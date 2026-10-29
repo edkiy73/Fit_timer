@@ -5,9 +5,9 @@ import { id, opId } from './platform.mjs';
 import { checkText, field, lineRule } from './_text.mjs';
 import { PLATE_KEYS } from './_plates.mjs';
 
-const CURRENCY = z.enum(['EUR', 'USD', 'GBP', 'RUB', 'CHF']);
-// Absolute https only, printable ASCII (an IDN host goes as punycode), no user:password@ in front of the host.
-const https = z.string().trim().max(500).regex(/^https:\/\/[\x21-\x7e]+$/)
+const CURRENCY = z.enum(['EUR', 'USD', 'GBP', 'RUB', 'CHF', 'PLN', 'CZK', 'TRY', 'UAH', 'KZT', 'GEL', 'AED', 'CAD', 'AUD', 'JPY']);
+// Absolute http(s) only, printable ASCII (an IDN host goes as punycode), no user:password@ in front of the host.
+const https = z.string().trim().max(500).regex(/^https?:\/\/[\x21-\x7e]+$/)
   .refine(v => { try { const u = new URL(v); return !u.username && !u.password && !!u.hostname.includes('.'); } catch { return false; } }, { message: 'bad_url' });
 const amount = z.number().positive().max(100000);
 const price = z.discriminatedUnion('kind', [

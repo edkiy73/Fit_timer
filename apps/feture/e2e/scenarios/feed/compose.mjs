@@ -12,7 +12,7 @@ const publishBtn = '.ctabar .btn.primary';
 const row = (t, name) => t.tap(`.k-exp > .li:has(b:text-is("${name}"))`);
 const sec = name => `.k-exp:has(> .li b:text-is("${name}"))`;
 /** The kit uploader sheet after a pick: wait for the row, «Готово», the photo lands in the form. */
-const uploaded = async t => { await t.see('.sheet.on .k-uprow:has-text("без геометки")', 20000); await t.tap('.sheet.on .sh-f button:has-text("Готово")'); await t.see('.edit-ph img', 30000); };
+const uploaded = async t => { await t.see('.sheet.on .k-uprow:has(.k-upthumb img)', 20000); await t.tap('.sheet.on .sh-f button:has-text("Готово")'); await t.see('.edit-ph img', 30000); };
 
 export default [
  { name: 'opening «Новая публикация» again starts a fresh form', persona: 'full', route: '/n/feed/new', run: async t => {

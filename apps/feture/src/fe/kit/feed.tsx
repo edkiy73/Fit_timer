@@ -3,7 +3,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Bold,ChartColumn,ChevronDown,ChevronRight,Ellipsis,FileText,Heading,Heart,Image as ImageIcon,ImagePlus,Italic,Link as LinkIcon,List,ListOrdered,MessageCircle,MessageSquareText,Plus,Quote,Sparkles,Strikethrough,Video,type LucideIcon} from 'lucide-react';
 import {fmtDur} from './media';
 import {Av,Btn,Field,H,IconBtn,Input,Sheet,Skel,Text,namedPlate,type PlateKey} from './index';
-import {domToMd,imageBlock,linkOk,mdToDom} from './rich-md';
+import {domToMd,imageBlock,linkOk,mdToDom,mentionNodes} from './rich-md';
 
 export {linkOk,BAD_CHARS,hasLongWord,mdImages} from './rich-md';
 
@@ -26,6 +26,10 @@ const block=()=>{try{return String(document.queryCommandValue('formatBlock')||''
  * media in articles. The value in and out is the safe Markdown RichText shows; the editor never stores HTML, pastes
  * plain text only and keeps links to http(s) with a real domain. «- », «1. » and «> » at a line start make a list or a
  * quote (Backspace right after gives the marks back). */
+/** Puts the nodes at the range and the caret after the last one. */
+function placeNodes(r:Range,nodes:Node[]){const s=getSelection();for(const n of [...nodes].reverse())r.insertNode(n);const last=nodes[nodes.length-1]!;
+ const nr=document.createRange();nr.setStart(last,last.nodeType===3?(last.nodeValue??'').length:last.childNodes.length);nr.collapse(true);s?.removeAllRanges();s?.addRange(nr);}
+
 export const RichEditor=forwardRef<RichEditorHandle,{value:string,onValue:(md:string)=>void,label:string,placeholder?:string|undefined,invalid?:boolean,
  /** Articles: the heading button. */ headings?:boolean,
  /** Articles: pictures in the text. `src` gives the address of an own media id; `onAdd` opens the picker (the caller then calls `insertImage`). */
@@ -49,7 +53,8 @@ export const RichEditor=forwardRef<RichEditorHandle,{value:string,onValue:(md:st
  // The bar's state and the last caret, so a sheet (link, mention, photo picker) comes back to it.
  useEffect(()=>{const f=()=>{const s=getSelection();if(!s?.rangeCount||!inside(s.anchorNode))return;at.current=s.getRangeAt(0).cloneRange();
   const q=(c:string)=>{try{return document.queryCommandState(c);}catch{return false;}};const blk=block();
-  setState({bold:q('bold'),italic:q('italic'),strikeThrough:q('strikeThrough'),insertUnorderedList:q('insertUnorderedList'),insertOrderedList:q('insertOrderedList'),h4:blk==='h4',blockquote:blk==='blockquote'});};
+  // A heading is bold by itself: «Ж» is not lit just because the line is a heading.
+  setState({bold:q('bold')&&blk!=='h4',italic:q('italic'),strikeThrough:q('strikeThrough'),insertUnorderedList:q('insertUnorderedList'),insertOrderedList:q('insertOrderedList'),h4:blk==='h4',blockquote:blk==='blockquote'});};
   document.addEventListener('selectionchange',f);return ()=>document.removeEventListener('selectionchange',f);},[]);
  const restore=()=>{const el=ed.current;if(!el)return;el.focus();const s=getSelection();const r=at.current;
   if(r&&inside(r.startContainer)){s?.removeAllRanges();s?.addRange(r);}else{s?.selectAllChildren(el);s?.collapseToEnd();}};
@@ -57,7 +62,8 @@ export const RichEditor=forwardRef<RichEditorHandle,{value:string,onValue:(md:st
   if(c==='h4'||c==='blockquote')exec('formatBlock',block()===c?'p':c);else exec(c);sync();};
  useImperativeHandle(ref,()=>({
   focus:()=>restore(),
-  insertText:text=>{restore();if(!exec('insertText',text)){const s=getSelection();const r=s?.rangeCount?s.getRangeAt(0):null;if(r){r.deleteContents();r.insertNode(document.createTextNode(text));r.collapse(false);}}sync();},
+  insertText:text=>{restore();const mn=mentionNodes(document,text);const sl=getSelection();if(mn&&sl?.rangeCount){const rg=sl.getRangeAt(0);rg.deleteContents();placeNodes(rg,mn);sync();return;}
+   if(!exec('insertText',text)){const s=getSelection();const r=s?.rangeCount?s.getRangeAt(0):null;if(r){r.deleteContents();r.insertNode(document.createTextNode(text));r.collapse(false);}}sync();},
   insertImage:(mid,src)=>{const el=ed.current;if(!el)return;const r=at.current&&inside(at.current.startContainer)?at.current:null;
    let blk:Node|null=r?r.startContainer:null;while(blk&&blk.parentNode!==el)blk=blk.parentNode;
    const fig=imageBlock(document,mid,src,rmLabel);
@@ -70,6 +76,7 @@ export const RichEditor=forwardRef<RichEditorHandle,{value:string,onValue:(md:st
    const m=(n.nodeValue??'').slice(0,s.anchorOffset).match(/(^|[\s( ])@([a-z0-9_.]{0,30})$/i);return m?{q:m[2]!.toLowerCase()}:null;},
   replaceMention:text=>{const s=getSelection();if(!s?.rangeCount)return;const n=s.anchorNode;if(!n||n.nodeType!==3||!inside(n))return;const off=s.anchorOffset;
    const m=(n.nodeValue??'').slice(0,off).match(/@([a-z0-9_.]{0,30})$/i);if(!m)return;const r=document.createRange();r.setStart(n,off-m[0].length);r.setEnd(n,off);s.removeAllRanges();s.addRange(r);
+   const mn=mentionNodes(document,text);if(mn){r.deleteContents();placeNodes(r,mn);sync();return;}
    if(!exec('insertText',text)){r.deleteContents();r.insertNode(document.createTextNode(text));}sync();},
  // eslint-disable-next-line react-hooks/exhaustive-deps
  }),[sync,rmLabel]);

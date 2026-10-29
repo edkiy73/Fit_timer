@@ -8,7 +8,7 @@ export default [
      await t.see('.ph-slots');
      const [ch] = await Promise.all([t.page.waitForEvent('filechooser'), t.page.locator('.ph-add:not(.ghost)').first().click()]);
      await ch.setFiles([{ name: 'a.png', mimeType: 'image/png', buffer: await pngOf(t) }, { name: 'b.png', mimeType: 'image/png', buffer: await pngOf(t) }]);
-     await t.see('.sheet.on .k-uprow:has-text("без геометки")', 20000);
+     await t.see('.sheet.on .k-uprow:has(.k-upthumb img)', 20000);
      expect(!(await t.page.locator('.sheet.on .seg').count()), 'profile photos must not offer other formats');
      await t.tap('.sheet.on .k-uprow >> nth=0 >> button:has-text("Кадрировать")'); await t.see('.k-crop img');
      const b = await t.page.locator('.k-crop').boundingBox(); expect(Math.abs(b.width / b.height - .8) < .02, 'crop frame 4:5');
@@ -25,7 +25,7 @@ export default [
    await t.see('button:has-text("16:9")');
    const [ch] = await Promise.all([t.page.waitForEvent('filechooser'), t.page.locator('button:has-text("16:9")').first().click()]);
    await ch.setFiles({ name: 'cover.png', mimeType: 'image/png', buffer: await pngOf(t) });
-   await t.see('.sheet.on .k-uprow:has-text("без геометки")', 20000);
+   await t.see('.sheet.on .k-uprow:has(.k-upthumb img)', 20000);
    expect(!(await t.page.locator('.sheet.on button:has-text("Добавить ещё")').count()), 'one cover only');
    await t.tap('.sheet.on .k-uprow >> nth=0 >> button:has-text("Кадрировать")'); await t.see('.k-crop img');
    const b = await t.page.locator('.k-crop').boundingBox(); expect(Math.abs(b.width / b.height - 16 / 9) < .03, 'crop frame 16:9: ' + (b.width / b.height).toFixed(2));

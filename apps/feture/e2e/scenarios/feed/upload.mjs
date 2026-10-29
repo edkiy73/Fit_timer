@@ -17,7 +17,7 @@ export default [{ name: 'uploader: format, crop, ready, publish with a cropped 4
     await t.see('.compose .rte-ed');
     const [ch] = await Promise.all([t.page.waitForEvent('filechooser'), t.page.locator('.attach button:has-text("Фото")').click()]);
     await ch.setFiles([{ name: 'wide.png', mimeType: 'image/png', buffer: await pngOf(t) }, { name: 'two.png', mimeType: 'image/png', buffer: await pngOf(t) }]);
-    await t.see('.sheet.on .k-uprow'); await t.see('.sheet.on .k-uprow:has-text("без геометки")', 15000);
+    await t.see('.sheet.on .k-uprow'); await t.see('.sheet.on .k-uprow:has(.k-upthumb img)', 15000);
     expect((await t.page.locator('.sheet.on .k-uprow').count()) === 2, 'two rows');
     await sheetBelowStatusBar(t); await t.shot('up-sheet-safe-top');
     await t.page.evaluate(() => document.querySelectorAll('html, .v21').forEach(e => e.style.removeProperty('--safe-area-inset-top')));
@@ -48,15 +48,15 @@ export default [{ name: 'uploader: format, crop, ready, publish with a cropped 4
   await t.see('.compose .rte-ed');
   const [ch] = await Promise.all([t.page.waitForEvent('filechooser'), t.page.locator('.attach button:has-text("Фото")').click()]);
   await ch.setFiles([{ name: 'free.png', mimeType: 'image/png', buffer: await pngOf(t) }]);
-  await t.see('.sheet.on .k-uprow:has-text("без геометки")', 15000);
+  await t.see('.sheet.on .k-uprow:has(.k-upthumb img)', 15000);
   // «Свой» comes first in the format chooser.
   expect((await t.page.locator('.sheet.on .seg button').first().innerText()).trim() === 'Свой', '«Свой» is the first format');
   await t.tap('.sheet.on .seg button:has-text("Свой")'); await t.wait(800);
   const ratio = async () => { const b = await t.page.locator('.sheet.on .k-upthumb').first().boundingBox(); return b.width / b.height; };
   const r0 = await ratio();
   await t.tap('.sheet.on .k-uprow >> button:has-text("Кадрировать")'); await t.wait(1200); await t.see('.k-crop.free .k-crop-frame');
-  await frameOk(t, 'free initial'); await t.see('.k-crop-h.e'); await t.shot('up-crop-free');
-  const grab = async h => { const b = await t.page.locator('.k-crop-h.' + h).boundingBox(); return [b.x + b.width / 2, b.y + b.height / 2]; };
+  await frameOk(t, 'free initial'); await t.see('.k-crop-h.c-e'); await t.shot('up-crop-free');
+  const grab = async h => { const b = await t.page.locator('.k-crop-h.c-' + h).boundingBox(); return [b.x + b.width / 2, b.y + b.height / 2]; };
   // Drag the right border left and the bottom border up: the frame gets narrower and shorter by different amounts.
   const fw = async () => { const b = await t.page.locator('.k-crop-frame').boundingBox(); return b; };
   const f0 = await fw();

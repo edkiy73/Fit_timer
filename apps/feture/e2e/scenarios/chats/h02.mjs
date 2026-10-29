@@ -21,7 +21,7 @@ const pickPhoto = async t => {
   await t.tap('.sheet .li:has-text("Из галереи")');
   await (await chooser).setFiles(PHOTO);
   // The kit Uploader, as everywhere: preview, format and crop, compression on the device, then the view rule.
-  await t.see('.sheet.on:has-text("Фото или видео") .k-uprow:has-text("без геометки")', 15000);
+  await t.see('.sheet.on:has-text("Фото или видео") .k-uprow:has(.k-upthumb img)', 15000);
 };
 
 /** A fresh match test1 ↔ noa; returns {me, noa, conv}. */

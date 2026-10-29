@@ -6,7 +6,7 @@ import {Ban,ChartColumn,Bell,BellOff,Bookmark,BookmarkCheck,Calendar,CalendarChe
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {Actions,Alert,Announcement,Ask,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,CommunityHead,CoverBar,Discussion,Empty,EventAnswer,EventHero,EventTile,Fact,Group,IconBtn,LinkBtn,Note,Pill,Row,Rsvp,SectionLabel,Seg,Sheet,Skel,Spacer,Stack,StatusCard,Text,ToggleRow,Veil,View,useRefreshable} from './kit';
 import {useFe,useKeyChange} from './session';
-import {mdPlain} from './post-parts';
+import {mdPlain,RichText} from './post-parts';
 import {evParts,evRange,evTz,evWhere,inTz,usePlaces} from './event-time';
 import {when} from './feed';
 import {Composer} from './create-entry';
@@ -527,7 +527,7 @@ export function EventScreen(){
      </Card>
      {answer}
      <Group title={t('fe.ev.about')}><Card><Stack gap={3}>
-      <Text pre tone="ink">{e.description}</Text>
+      <RichText text={e.description}/>
       {!!reqs.length&&<Stack gap={1}><Text size="sm" tone="ink" bold>{t('fe.ev.requirements')}</Text>{reqs.map((r,i)=><Fact key={i} icon={Check}>{r}</Fact>)}<Note>{t('fe.cm.reqNote')}</Note></Stack>}
      </Stack></Card></Group>
      {!!e.announcements?.length&&<Group title={t('fe.cm.orgUpdates')}><Card list>{e.announcements.map(a=><Announcement key={a.id} icon={Bell} body={a.body} meta={<>{a.automatic?t('fe.cm.auto'):''}{when(a.created_at,locale)}</>}/>)}</Card></Group>}

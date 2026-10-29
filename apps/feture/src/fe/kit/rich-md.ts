@@ -13,7 +13,7 @@ export function linkOk(url:string){
 /** One picture line of an article: `![alt](media:<uuid>)`. */
 export const MEDIA_LINE=/^!\[([^\]\n]{0,120})\]\(media:([0-9a-f-]{36})\)$/;
 
-const INLINE=/(`[^`\n]+`)|(\[[^\]\n]{1,120}\]\(https?:\/\/[^\s()<>"']{1,400}\))|(\*\*[^*\n]+\*\*|__[^_\n]+__)|(~~[^~\n]+~~)|((?:^|(?<=[\s(]))[*_][^*_\n]+[*_](?=$|[\s).,!?:;]))/gi;
+const INLINE=/(`[^`\n]+`)|(\[[^\]\n]{1,120}\]\(https?:\/\/[^\s()<>"']{1,400}\))|(\*\*[^*\n]+\*\*|__[^_\n]+__)|(~~[^~\n]+~~)|((?:^|(?<=[\s(]))[*_][^*_\n]+[*_](?=$|[\s).,!?:;]))|((?:^|(?<=[\s(]))@[a-z0-9_.]{2,30})/gi;
 
 function inline(doc:Document,parent:Node,s:string){
  let last=0;
@@ -24,11 +24,19 @@ function inline(doc:Document,parent:Node,s:string){
   else if(m[3]){const b=doc.createElement('b');inline(doc,b,v.slice(2,-2));parent.appendChild(b);}
   else if(m[4]){const x=doc.createElement('s');inline(doc,x,v.slice(2,-2));parent.appendChild(x);}
   else if(m[5]){const x=doc.createElement('i');inline(doc,x,v.slice(1,-1));parent.appendChild(x);}
+  // An @nick is drawn like a link in the editor; the stored text stays the plain «@nick» (domToMd keeps only the words).
+  else if(m[6]){const x=doc.createElement('span');x.className='mention';x.textContent=v;parent.appendChild(x);}
   last=i+v.length;
  }
  if(last<s.length)parent.appendChild(doc.createTextNode(s.slice(last)));
 }
 const withBreaks=(doc:Document,el:HTMLElement,lines:string[])=>{lines.forEach((l,i)=>{if(i)el.appendChild(doc.createElement('br'));inline(doc,el,l);});return el;};
+
+/** «@nick» (with the space after it) as the editor draws a picked mention: the coloured word and the space to go on typing in. */
+export function mentionNodes(doc:Document,text:string):Node[]|null{
+ if(!/^@[a-z0-9_.]{2,30} ?$/i.test(text))return null;const x=doc.createElement('span');x.className='mention';x.textContent=text.trim();
+ return [x,doc.createTextNode(text.endsWith(' ')?'\u00a0':'')];
+}
 
 export type ImageSrc=(id:string)=>string|null|undefined;
 /** The editor's picture block: not editable inside, removed by its ✕ or with Backspace. */

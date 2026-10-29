@@ -4,7 +4,9 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Calendar,Check,ChevronLeft,CircleAlert,Clock,EyeOff,Link as LinkIcon,Lock,MapPin,RefreshCw,Ticket,Unlock,Video} from 'lucide-react';
 import {FeError,feErrorMessage} from '../feture/fe-api';
-import {Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,EventTile,Group,Note,Row,Seg,SectionLabel,Select,Skel,Steps,ToggleRow,View,useLeaveGuard} from './kit';
+import {Alert,Av,Bar,Btn,Card,Chip,Chips,Counter,Empty,EventHero,Fact,Group,Note,RichEditor,Row,Seg,Select,Skel,Stack,Steps,ToggleRow,View,useLeaveGuard} from './kit';
+import {NamedPlate} from './comm-kit';
+import {RichText} from './post-parts';
 import {PickField,PlacePicker} from './kit/Place';
 import {useFe} from './session';
 import {ONLINE_ZONES,placeZone,zoneLabel} from './event-time';
@@ -24,9 +26,9 @@ type Key=keyof Form;
 type Errors=Partial<Record<Key,string>>;
 
 const KINDS:Kind[]=['meetup','workshop','talk','party'];
-const CURRENCIES:[string,string][]=[['€','EUR'],['$','USD'],['£','GBP'],['₽','RUB'],['CHF','CHF']];
+const CURRENCIES:[string,string][]=[['€','EUR'],['$','USD'],['£','GBP'],['₽','RUB'],['CHF','CHF'],['zł','PLN'],['Kč','CZK'],['₺','TRY'],['₴','UAH'],['₸','KZT'],['₾','GEL'],['AED','AED'],['C$','CAD'],['A$','AUD'],['¥','JPY']];
 const DAY=864e5;
-const HTTPS=/^https:\/\/[^\s]+$/;
+const HTTPS=/^https?:\/\/[^\s]+$/;
 const userTz=()=>{try{return Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';}catch{return 'UTC';}};
 const isoDay=(ms:number)=>{const d=new Date(ms);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
 const knownZone=(tz:string)=>{try{return tz==='UTC'||Intl.supportedValuesOf('timeZone').includes(tz);}catch{return true;}};
@@ -70,7 +72,7 @@ function validate(f:Form,step:number,t:(k:string,v?:Record<string,string|number>
    if(!f.placeId)e.placeId=t('fe.ce.err.city');
    if(!f.area.trim())e.area=t('fe.ce.err.area');else{const m=tx('eventArea',f.area);if(m)e.area=m;}
    if(!f.exactAddress.trim())e.exactAddress=t('fe.ce.err.addr');else{const m=tx('eventAddress',f.exactAddress);if(m)e.exactAddress=m;}
-  }else if(!HTTPS.test(f.joinUrl.trim())||f.joinUrl.trim().length>500)e.joinUrl=t('fe.ce.err.link');
+  }else if(!HTTPS.test(ticketHref(f.joinUrl))||!/\S+\.\S+/.test(ticketHref(f.joinUrl))||ticketHref(f.joinUrl).length>500)e.joinUrl=t('fe.ce.err.link');
  }
  if(step===3){
   if(f.price!=='free'){const a=amountOf(f.amount);if(!(a>0&&a<=100000))e.amount=t('fe.ce.err.amount');}
@@ -86,7 +88,7 @@ const STEP_OF:Partial<Record<Key,number>>={title:1,kind:1,description:1,communit
 function eventOf(f:Form){
  const {start,end}=times(f);const off=f.format==='offline';const cur=CURRENCIES.find(([s])=>s===f.currency)?.[1]??'EUR';
  return {title:f.title.trim(),kind:f.kind,description:f.description.trim(),format:f.format,
-  placeId:off?f.placeId:null,area:off?f.area.trim():null,exactAddress:off?f.exactAddress.trim():null,joinUrl:off?null:f.joinUrl.trim(),
+  placeId:off?f.placeId:null,area:off?f.area.trim():null,exactAddress:off?f.exactAddress.trim():null,joinUrl:off?null:ticketHref(f.joinUrl),
   tz:f.tz,startsAt:new Date(start).toISOString(),endsAt:new Date(end).toISOString(),
   price:f.price==='free'?{kind:'free'}:f.price==='door'?{kind:'door',amount:amountOf(f.amount),currency:cur}:{kind:'external',amount:amountOf(f.amount),currency:cur,ticketUrl:ticketHref(f.ticketUrl)},
   requiresApplication:f.requiresApplication,questions:f.requiresApplication&&f.question.trim()?[f.question.trim()]:[],
@@ -303,16 +305,18 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
  let body:ReactNode=null;
  if(step===1)body=<>
   {couple&&acting&&<p className="as-line full"><Av name={acting.name} seed={acting.id} size="xs" src={acting.avatar}/><span>{t('fe.ce.organiser')} <b>{acting.name}</b></span></p>}
+  <CoverField purpose="event" plate={f.plate} setPlate={k=>set('plate',k)} cover={f.cover} setCover={c=>set('cover',c)}/>
+  {err.cover&&<FErr>{err.cover}</FErr>}
   <Field name="title" label={t('fe.ce.name')} ph={t('fe.ce.namePh')} check="eventTitle" value={f.title} onChange={v=>set('title',v)} err={err.title}/>
   <div className={'field'+(err.kind?' err':'')} data-field="type"><span className="flabel">{t('fe.ce.type')}</span>
    <ChipGroup items={KINDS.map(k=>[k,t('fe.ce.kind.'+k)])} selected={f.kind?[f.kind]:[]} onToggle={k=>set('kind',k as Kind)}/>
    {err.kind&&<FErr>{err.kind}</FErr>}</div>
-  <Field name="desc" label={t('fe.ce.desc')} ph={t('fe.ce.descPh')} check="eventDescription" textarea rows={6} value={f.description} onChange={v=>set('description',v)} err={err.description}/>
+  <div className={'field'+(err.description?' err':'')} data-field="desc"><span className="flabel">{t('fe.ce.desc')}</span>
+   <RichEditor id="evdesc" label={t('fe.ce.desc')} placeholder={t('fe.ce.descPh')} value={f.description} onValue={v=>set('description',v)} invalid={!!err.description} headings long/>
+   <Counter n={f.description.length} max={1500}/>{err.description&&<FErr>{err.description}</FErr>}</div>
   {!edit&&(hosting.length>0||f.communityId)&&<div className={'field'+(err.communityId?' err':'')}>
    <SelectRow label={t('fe.ce.community')} sub={t('fe.ce.communitySub')} value={f.communityId} onChange={v=>set('communityId',v)} items={[['',t('fe.ce.communityNone')],...hosting.map(c=>[c.id,c.name] as [string,string])]}/>
    {err.communityId&&<FErr>{err.communityId}</FErr>}</div>}
-  <CoverField purpose="event" plate={f.plate} setPlate={k=>set('plate',k)} cover={f.cover} setCover={c=>set('cover',c)}/>
-  {err.cover&&<FErr>{err.cover}</FErr>}
  </>;
  if(step===2)body=<>
   <div className="field"><span className="flabel">{t('fe.ce.format')}</span><Chips>
@@ -327,12 +331,12 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
    <Select label={t('fe.ce.tz')} value={f.tz} onChange={v=>set('tz',v)} options={tzItems}/>
    {err.tz?<FErr>{err.tz}</FErr>:<div className="fhint">{t('fe.ce.tzHintOnline')}</div>}</label>}
   {f.format==='offline'?<>
-   <div data-field="city"><PickField label={t('fe.ce.city')} value={places.find(([id])=>id===f.placeId)?.[1]??null} placeholder={t('fe.ce.cityPh')} error={err.placeId} onClick={()=>setCityOpen(true)}/></div>
+   <div data-field="city"><PickField label={t('fe.ce.city')} value={places.find(([id])=>id===f.placeId)?.[1]??null} placeholder={t('fe.ce.cityPh')} error={err.placeId} onClick={()=>setCityOpen(true)}/>
+    {f.placeId&&<div className="fhint" data-field="tz">{t('fe.ce.tzFromCity',{zone:zoneLabel(f.tz,new Date(times(f).start||Date.now()).toISOString(),locale)})}</div>}</div>
    {cityOpen&&<PlacePicker places={catalog?.places??[]} current={f.placeId||null} onPick={x=>{if(x){pickPlace(x.id);setErr(e=>({...e,placeId:''}));}setCityOpen(false);}} onClose={()=>setCityOpen(false)}/>}
-   {f.placeId&&<div className="fhint" data-field="tz">{t('fe.ce.tzFromCity',{zone:zoneLabel(f.tz,new Date(times(f).start||Date.now()).toISOString(),locale)})}</div>}
    <Field name="area" label={t('fe.ce.area')} ph={t('fe.ce.areaPh')} check="eventArea" value={f.area} onChange={v=>set('area',v)} err={err.area}/>
    <Field name="addr" label={t('fe.ce.addr')} icon={Lock} ph={t('fe.ce.addrPh')} check="eventAddress" value={f.exactAddress} onChange={v=>set('exactAddress',v)} err={err.exactAddress}/>
-  </>:<Field name="link" label={t('fe.ce.link')} icon={LinkIcon} type="url" inputMode="url" ph="https://" value={f.joinUrl} onChange={v=>set('joinUrl',v)} err={err.joinUrl}/>}
+  </>:<Field name="link" label={t('fe.ce.link')} icon={LinkIcon} type="url" inputMode="url" ph={t('fe.ce.linkPh')} value={f.joinUrl} onChange={v=>set('joinUrl',v)} err={err.joinUrl}/>}
  </>;
  if(step===3)body=<>
   <Card list><ToggleRow title={t('fe.ce.approval')} sub={frozen?t('fe.ece.e.frozen'):t(f.format==='online'?'fe.ce.approvalSubOnline':'fe.ce.approvalSub')} on={f.requiresApplication} disabled={frozen} onClick={()=>set('requiresApplication',!f.requiresApplication)}/></Card>
@@ -342,11 +346,10 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
    {(['free','door','ext'] as const).map(k=>chip(f.price===k,t('fe.ce.price.'+k),()=>set('price',k),k))}</Chips></div>
   {f.price!=='free'&&<div className="row g8 ev-price k-al-start">
    <div className="grow"><Field name="amount" label={t('fe.ce.amount')} ph="15" inputMode="decimal" value={f.amount} onChange={v=>set('amount',v)} err={err.amount}/></div>
-   <div className="ev-cur"><SelectRow aria={t('fe.ce.currency')} value={f.currency} onChange={v=>set('currency',v)} items={CURRENCIES.map(([s])=>[s,s])}/></div>
+   <label className="field ev-cur"><span>{t('fe.ce.currency')}</span><Select label={t('fe.ce.currency')} value={f.currency} onChange={v=>set('currency',v)} options={CURRENCIES.map(([sym,code])=>[sym,code+' '+sym] as [string,string])}/></label>
   </div>}
   {f.price==='ext'&&<Field name="ext" label={t('fe.ce.ticket')} icon={LinkIcon} ph="tickets.example.org" hint={t('fe.ce.ticketHint')} value={f.ticketUrl} onChange={v=>set('ticketUrl',v)} err={err.ticketUrl}/>}
   <Field name="reqs" label={t('fe.ce.reqs')} opt textarea rows={3} check="eventRequirements" ph={t('fe.ce.reqsPh')} value={f.requirements} onChange={v=>set('requirements',v)} err={err.requirements}/>
-  <Alert icon={EyeOff}>{t('fe.ce.listsHidden')}</Alert>
  </>;
  if(step===4){
   const {start,end}=times(f);const ok=Number.isFinite(start)&&Number.isFinite(end);
@@ -357,20 +360,24 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
   const area=f.format==='online'?t('fe.ce.online'):f.area.trim()||(catalog?placeName(catalog.places.find(p=>p.id===f.placeId)??{ru:'',en:''},locale):'');
   body=<>
    <Seg value={pv} onChange={setPv} options={[{id:'all',label:t('fe.ce.pv.all')},{id:'ok',label:t('fe.ce.pv.ok')}]}/>
-   <EventTile cover={f.cover?<img className="evimg" src={f.cover.preview} alt="" draggable={false}/>:<div className="plate" style={namedPlate(f.plate)}><span className="pi"><Calendar/></span></div>}
-    {...(ok?{day:fmt(start,{day:'numeric'}),month:fmt(start,{month:'short'})}:{})} place={area} placeIcon={f.format==='online'?Video:MapPin}
-    kicker={<>{f.kind?t('fe.ce.kind.'+f.kind):''}{acting?' · '+acting.name:''}</>} title={f.title.trim()} time={ok?fmt(start,{hour:'2-digit',minute:'2-digit'}):''} price={priceText}/>
-   <Card list><Row icon={pv==='ok'?Unlock:Lock} tone={pv==='ok'?'g':undefined} title={f.format==='online'?t('fe.ce.pv.link'):t('fe.ce.pv.address')}
-    sub={pv==='ok'?(f.format==='online'?f.joinUrl.trim():f.exactAddress.trim()):t(f.format==='online'?'fe.ce.pv.hiddenLink':'fe.ce.pv.hidden')}/></Card>
+   {/* The same skeleton as the event's own page: the cover with the title, who organises, when / where / price, about. */}
+   <EventHero cover={f.cover?<img className="evimg" src={f.cover.preview} alt="" draggable={false}/>:<NamedPlate k={f.plate} icon={Calendar}/>} title={f.title.trim()}
+    tags={[<>{f.format==='online'?<Video/>:<MapPin/>}{area}</>,...(f.kind?[t('fe.ce.kind.'+f.kind)]:[])]}/>
+   {acting&&<Card list><Row av={<Av name={acting.name} seed={acting.id} size="sm" src={acting.avatar}/>} title={acting.name} sub={t('fe.ev.organizer')} noChev/></Card>}
    <Card list>
     <Row icon={Calendar} tone="l" title={ok?fmt(start,{weekday:'short',day:'numeric',month:'long'}):''}
      sub={ok?`${fmt(start,{hour:'2-digit',minute:'2-digit'})}–${fmt(end,{hour:'2-digit',minute:'2-digit'})} · ${zoneLabel(f.tz,new Date(start).toISOString(),locale)}`:''}/>
+    <Row icon={f.format==='online'?Video:MapPin} tone="v" title={area} wrap
+     sub={pv==='ok'?(f.format==='online'?ticketHref(f.joinUrl):f.exactAddress.trim()):t(f.format==='online'?'fe.ce.pv.hiddenLink':'fe.ce.pv.hidden')}
+     end={pv==='ok'?undefined:<span className="lockpill"><Lock/></span>}/>
     <Row icon={Ticket} tone="a" title={priceText}
      sub={f.price==='ext'?t('fe.ce.pv.ticketOn').replace('{site}',site):f.requiresApplication?t('fe.ce.pv.byApplication'):t(f.format==='online'?'fe.ce.pv.justJoin':'fe.ce.pv.justCome')}/>
    </Card>
-   {f.description.trim()&&<><SectionLabel>{t('fe.ce.pv.about')}</SectionLabel><div className="md bio"><p>{f.description.trim()}</p></div></>}
-   {f.requirements.trim()&&<><SectionLabel>{t('fe.ce.reqs')}</SectionLabel><Card><div className="fact"><i className="v"><Check/></i><span>{f.requirements.trim()}</span></div></Card></>}
-   {f.requiresApplication&&f.question.trim()&&<><SectionLabel>{t('fe.ce.question')}</SectionLabel><Note>{f.question.trim()}</Note></>}
+   {f.requiresApplication&&f.question.trim()&&<Card><Stack gap={2}><b>{t('fe.ce.question')}</b><Note>{f.question.trim()}</Note></Stack></Card>}
+   <Group title={t('fe.ev.about')}><Card><Stack gap={3}>
+    <RichText text={f.description.trim()}/>
+    {f.requirements.trim()&&<Stack gap={1}><b>{t('fe.ev.requirements')}</b>{f.requirements.split('\n').map(r=>r.trim()).filter(Boolean).map((r,i)=><Fact key={i} icon={Check}>{r}</Fact>)}</Stack>}
+   </Stack></Card></Group>
    <Alert kind="warn" icon={Clock}>{edit?(frozen?t('fe.ece.e.reviewPublished'):t('fe.ece.e.reviewBefore')):couple?t('fe.ce.reviewCouple'):t('fe.ce.review')}</Alert>
   </>;
  }
@@ -382,7 +389,7 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
   <div className="view nodock cta1"><div className="wrap">
    <Steps step={step} total={4} name={names[step-1]!}/>
    {edit&&edit.pendingChange!=null&&step===1&&<Alert kind="warn" role="none" icon={Clock}>{t('fe.ece.e.pendingChange')}</Alert>}
-   {step<4?<Group><Card form>{body}</Card></Group>:body}
+   {step<4?<Group><Card form><div className="k-form">{body}</div></Card></Group>:body}
    {notice&&<Alert ref={noticeRef} kind={notice.kind} noIcon action={stale&&reload?<Btn kind="text" auto icon={RefreshCw} onClick={reload}>{t('fe.ece.reload')}</Btn>:undefined}>{notice.text}</Alert>}
    {(resume||kept)&&draftId&&(asking
     ?<Alert kind="warn" noIcon role="alertdialog" action={<><Btn kind="danger" size="sm" auto onClick={removeDraft} disabled={busy}>{t('fe.ce.draftDeleteOk')}</Btn><Btn kind="text" size="sm" auto onClick={()=>setAsking(false)}>{t('fe.ce.cancel')}</Btn></>}>{t('fe.ce.draftDeleteAsk')}</Alert>

@@ -3,7 +3,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Crop as CropIcon,Plus,RotateCcw,Scissors,ShieldCheck,Upload,X} from 'lucide-react';
 import {Alert,Ask,Btn,FilePick,IconBtn,Progress,Seg,Sheet} from './index';
 import {CropSheet} from './Crop';
-import {TrimSheet} from './Trim';
+import {ClipEditSheet} from './Trim';
 import {VideoBadge} from './av';
 import {ASPECTS,NO_CROP,PHOTO_MAX_BYTES,VIDEO_MAX_BYTES,VIDEO_MAX_MS,VIDEO_SOURCE_MAX_BYTES,VIDEO_SOURCE_MAX_MS,VIDEO_TYPES,clipPoster,cropPhoto,cropRect,fmtDur,isPhoto,isVideo,kb,
  preparePhoto,prepareVideo,videoEditPath,type Aspect,type Crop,type Prepared,type PreparedVideo,type VideoEdit} from './media';
@@ -166,11 +166,10 @@ export function Uploader({files,aspects=['orig'],max,send,sendVideo,onDone,onClo
  const busy=sending||items.some(i=>i.status==='prep');const ready=items.filter(i=>i.status!=='error'&&i.prep).length;
  const close=()=>{if(sending){stopper.current?.abort();return;}if(items.length)setAsking(true);else onClose();};
  const lenOf=(i:Item)=>i.made?.durationMs??(i.trim?i.trim.endMs-i.trim.startMs:i.vid?.durationMs??0);
- const status=(i:Item)=>i.status==='prep'?t('fe.kit.up.prep'):i.status==='error'?i.err:i.status==='make'?t('fe.kit.up.making').replace('{n}',String(Math.round(i.progress*100)))
+ // While a photo is being prepared the preview shows its skeleton: no text that appears and vanishes.
+ const status=(i:Item)=>i.status==='prep'?'':i.status==='error'?i.err:i.status==='make'?t('fe.kit.up.making').replace('{n}',String(Math.round(i.progress*100)))
   :i.status==='up'?t('fe.kit.up.loading').replace('{n}',String(Math.round(i.progress*100)))
-  :i.vid?(i.made?t('fe.kit.up.made').replace('{from}',kb(i.file.size)).replace('{to}',kb(i.made.size))
-   :i.trim?t('fe.kit.up.videoCut').replace('{full}',fmtDur(i.vid.durationMs)):t('fe.kit.up.video')).replace('{dur}',fmtDur(lenOf(i)))
-  :i.prep?(i.prep.size<i.file.size*.95?t('fe.kit.up.done').replace('{from}',kb(i.file.size)).replace('{to}',kb(i.prep.size)):t('fe.kit.up.doneSame').replace('{to}',kb(i.prep.size))):'';
+  :'';
  const cur=items.find(i=>i.key===cropping);const trimCur=items.find(i=>i.key===trimming);
  const redo=(it:Item,p:Partial<Item>)=>{const next={...it,...p,status:'prep' as const,id:undefined,made:undefined};patch(it.key,{...p,status:'prep',id:undefined,made:undefined});void prepare(next,aspect);};
  // A clip that cannot be made here goes as picked: no trim, no frame (its own shape in the row).
@@ -184,12 +183,12 @@ export function Uploader({files,aspects=['orig'],max,send,sendVideo,onDone,onClo
     <div className="k-upthumb-box"><div className="k-upthumb" style={thumbBox(editable(i)?aspect:'orig',i.prep?.w,i.prep?.h)}>{i.prep?<img src={i.prep.url} alt=""/>:<span className="sk"/>}
      {i.vid&&<VideoBadge durationMs={lenOf(i)}/>}</div></div>
     <div className="k-uptx"><div className="k-uphead"><b>{i.file.name}</b>
-      {!sending&&<IconBtn icon={X} kind="ghost" size="sm" label={t('fe.kit.up.remove')} onClick={()=>setItems(l=>l.filter(x=>x.key!==i.key))}/>}</div><small>{status(i)}</small>
+      {!sending&&<IconBtn icon={X} kind="ghost" size="sm" label={t('fe.kit.up.remove')} onClick={()=>setItems(l=>l.filter(x=>x.key!==i.key))}/>}</div>{status(i)&&<small>{status(i)}</small>}
      {(i.status==='make'||i.status==='up'||i.status==='ok')&&<Progress value={i.status==='ok'?1:i.progress}/>}
      {i.status==='make'&&<div className="k-upacts"><Btn kind="text" size="sm" auto icon={X} onClick={()=>stopper.current?.abort()}>{t('fe.kit.up.cancel')}</Btn></div>}
      {!sending&&((i.vid&&!i.asIs)||editable(i)||i.status==='error')&&<div className="k-upacts">
-      {i.vid&&!i.asIs&&i.prep&&<Btn kind="text" size="sm" auto icon={Scissors} onClick={()=>setTrimming(i.key)}>{t('fe.kit.up.trim')}</Btn>}
-      {editable(i)&&i.prep&&i.full&&<Btn kind="text" size="sm" auto icon={CropIcon} onClick={()=>setCropping(i.key)}>{t('fe.kit.up.crop')}</Btn>}
+      {i.vid&&!i.asIs&&i.prep&&i.full&&<Btn kind="text" size="sm" auto icon={Scissors} onClick={()=>setTrimming(i.key)}>{t('fe.kit.up.editClip')}</Btn>}
+      {!i.vid&&editable(i)&&i.prep&&i.full&&<Btn kind="text" size="sm" auto icon={CropIcon} onClick={()=>setCropping(i.key)}>{t('fe.kit.up.crop')}</Btn>}
       {i.status==='error'&&i.prep&&<Btn kind="text" size="sm" auto icon={RotateCcw} onClick={()=>void done()}>{t('fe.kit.up.retry')}</Btn>}
       {/* This clip could not be made here, but the original fits the server as it is. */}
       {i.status==='error'&&i.vid&&!i.made&&!i.asIs&&fits(i.vid)&&<Btn kind="text" size="sm" auto icon={Upload} onClick={()=>{const next={...i,asIs:true,trim:undefined,crop:NO_CROP};
@@ -200,12 +199,15 @@ export function Uploader({files,aspects=['orig'],max,send,sendVideo,onDone,onClo
    {items.length<max&&!sending&&<Btn kind="soft" icon={Plus} onClick={()=>more.current?.click()}>{t('fe.kit.up.more').replace('{n}',String(items.length)).replace('{max}',String(max))}</Btn>}
    <FilePick ref={more} accept={sendVideo?'image/*,'+VIDEO_TYPES.join(','):'image/*'} multiple onFiles={f=>add([...f])}/>
    {children}
-   <Alert kind="info" icon={ShieldCheck}>{t('fe.kit.up.privacy')}{anyClip&&path!==undefined?' '+t(path?'fe.kit.up.videoNote':'fe.kit.up.videoNoteAsIs'):''}</Alert>
+   <Alert kind="info" icon={ShieldCheck}><div className="k-upnote">
+    {items.some(i=>!i.vid)&&<p>{t('fe.kit.up.notePhoto')}</p>}
+    {anyClip&&path!==undefined&&<p>{t(path?'fe.kit.up.noteVideo':'fe.kit.up.videoNoteAsIs')}</p>}
+    <p>{t('fe.kit.up.noteFaces')}</p></div></Alert>
   </Sheet>
-  {cur&&cur.full&&<CropSheet src={cur.full} aspect={aspect} initial={cur.crop} hint={cur.vid?t('fe.kit.crop.hintVideo'):undefined} onClose={()=>setCropping(null)}
+  {cur&&cur.full&&!cur.vid&&<CropSheet src={cur.full} aspect={aspect} initial={cur.crop} onClose={()=>setCropping(null)}
    onApply={c=>{setCropping(null);redo(cur,{crop:c});}}/>}
-  {trimCur&&trimCur.vid&&<TrimSheet file={trimCur.file} durationMs={trimCur.vid.durationMs} initial={trimCur.trim} crop={aspect!=='orig'||trimCur.crop.rect?{aspect,...trimCur.crop}:undefined}
-   onClose={()=>setTrimming(null)} onApply={tr=>{setTrimming(null);redo(trimCur,{trim:tr??undefined});}}/>}
+  {trimCur&&trimCur.vid&&trimCur.full&&<ClipEditSheet file={trimCur.file} durationMs={trimCur.vid.durationMs} frame={trimCur.full} aspect={aspect} initialCrop={trimCur.crop} initialTrim={trimCur.trim}
+   onClose={()=>setTrimming(null)} onApply={r=>{setTrimming(null);redo(trimCur,{crop:r.crop,trim:r.trim??undefined});}}/>}
   {asking&&<Ask title={t('fe.kit.up.closeAsk')} text={t('fe.kit.up.closeText')} ok={t('fe.kit.up.close')} danger onOk={()=>{setAsking(false);onClose();}} onCancel={()=>setAsking(false)}/>}
  </>;
 }
