@@ -377,7 +377,7 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
 
  return <>
   <Bar title={edit?t('fe.ece.e.title'):resume?t('fe.ce.titleDraft'):t('fe.ce.title')} small onBack={back}>
-   {!edit&&dirty&&<Btn kind="text" auto onClick={()=>void toDraft()} disabled={busy}>{t('fe.ce.toDraft')}</Btn>}
+   {!edit&&dirty&&kept&&<Btn kind="text" auto onClick={()=>void toDraft()} disabled={busy}>{t('fe.ce.toDraft')}</Btn>}
   </Bar>
   <div className="view nodock cta1"><div className="wrap">
    <Steps step={step} total={4} name={names[step-1]!}/>
