@@ -9,6 +9,8 @@ import { sweepEphemeral } from './commands/chats.mjs';
 import { notifyHandlers } from './notify.mjs';
 import { pushHandlers, sweepPushSent } from './push.mjs';
 import { noticeHandlers, sweepNotices } from './commands/dsa.mjs';
+import { helpHandlers, sweepPublicHelp } from './commands/support.mjs';
+import { supportEmail } from './support-config.mjs';
 import { sweepSelfies, verificationHandlers } from './commands/premium.mjs';
 
 /** Queue worker (S2 §8, D7). Called every minute by pg_cron + pg_net (Vercel Hobby cron is daily only)
@@ -174,6 +176,7 @@ export async function runJobs(db, deps) {
   if (deps.signals && signals.length) await deps.signals.send(signals);
   // Replies to notices in a small batch of their own: a slow mail service never outlives the claim.
   await drain(db, noticeHandlers(db, deps.mail ?? null), { limit: 10, lockSeconds: 300 });
+  await drain(db, helpHandlers(db, deps.mail ?? null, supportEmail()), { limit: 10, lockSeconds: 300 });
   // Pushes in a small batch of their own, so a slow provider never outlives the claim.
   const pushes = await drain(db, pushHandlers(db, deps.push ?? null), { limit: 20, lockSeconds: 300 });
   const processed = media + inbox + pushes;
@@ -186,6 +189,7 @@ export async function runJobs(db, deps) {
   const selfies = await sweepSelfies(db);
   await sweepPushSent(db);
   await sweepNotices(db);
+  await sweepPublicHelp(db);
   // Finished outbox items stay a week (some «told already today» checks read them), then go.
   await db.query(`delete from feture.outbox where done_at < now() - interval '7 days'`);
   return { processed, expired, ledger, markers, couples, ephemeral, reminders, selfies };

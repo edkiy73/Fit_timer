@@ -26,7 +26,7 @@ import { people } from '../server/commands/people.mjs';
 import { premium } from '../server/commands/premium.mjs';
 import { verification } from '../server/commands/verification.mjs';
 import { accounts } from '../server/commands/account.mjs';
-import { support } from '../server/commands/support.mjs';
+import { support, takeHelp } from '../server/commands/support.mjs';
 import { runJobs } from '../server/jobs.mjs';
 import { dsa, takeNotice } from '../server/commands/dsa.mjs';
 import { readJson } from '../server/handler.mjs';
@@ -196,6 +196,30 @@ export default async function fe(/** @type {any} */ req, /** @type {any} */ res)
       const email = typeof body.senderEmail === 'string' ? body.senderEmail.trim().toLowerCase() : '';
       if (email && !(await rateOkScoped(req, 'feture-notice-to', 3, createHash('sha256').update(email).digest('hex'), 86400, true))) return json(res, 429, { ok: false, error: 'rate_limited' });
       const out = await takeNotice(db, body);
+      return json(res, out.status, out.body);
+    } catch (error) {
+      const status = /** @type {any} */ (error)?.status;
+      return json(res, status === 400 || status === 413 ? status : 503, { ok: false, error: status === 413 ? 'too_large' : status === 400 ? 'invalid_input' : 'unavailable' });
+    }
+  }
+  if (flag(req, 'help')) {
+    // «Нужна помощь со входом»: a message to support without an account. Same guards as the public notice form: JSON
+    // only, our own origins, a few an hour per network address, a cap for everyone together, and at most three an hour
+    // naming the same contact (we never become a way to flood one mailbox).
+    if (cors(req, res)) return;
+    if (req.method !== 'POST') return json(res, 405, { ok: false });
+    if (!/^application\/json\b/i.test(String(req.headers?.['content-type'] || ''))) return json(res, 415, { ok: false, error: 'json_only' });
+    const origin = req.headers?.origin;
+    const allowed = allowedOrigin(req);
+    if (origin && allowed !== '*' && allowed !== origin) return json(res, 403, { ok: false });
+    if (!db) return json(res, 503, { ok: false, error: 'unavailable' });
+    if (!(await rateOkScoped(req, 'feture-help-ip', 5, '', 3600, true))) return json(res, 429, { ok: false, error: 'rate_limited' });
+    if (!(await rateOkScoped(req, 'feture-help-all', 100, 'all', 3600, true))) return json(res, 429, { ok: false, error: 'rate_limited' });
+    try {
+      const body = await readJson(req);
+      const contact = typeof body.contact === 'string' ? body.contact.trim().toLowerCase() : '';
+      if (contact && !(await rateOkScoped(req, 'feture-help-to', 3, createHash('sha256').update(contact).digest('hex'), 3600, true))) return json(res, 429, { ok: false, error: 'rate_limited' });
+      const out = await takeHelp(db, body);
       return json(res, out.status, out.body);
     } catch (error) {
       const status = /** @type {any} */ (error)?.status;

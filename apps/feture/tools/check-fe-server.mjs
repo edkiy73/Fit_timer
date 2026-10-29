@@ -15,7 +15,8 @@ const ls = (d, re) => readdirSync(join(ROOT, d)).filter(f => re.test(f)).map(f =
 // the job worker (server/jobs.mjs) from queued items, have no contract on purpose and must never get one.
 //   notice.decided      — dsa.mjs noticeHandlers: mails the outcome of a DSA notice to its sender
 //   verification.expire — premium.mjs verificationHandlers: deletes a decided age/photo-check selfie after 30 days
-const INTERNAL_JOBS = new Set(['notice.decided', 'verification.expire']);
+//   support.public — support.mjs helpHandlers: mails a public «помощь со входом» message to the support address once
+const INTERNAL_JOBS = new Set(['notice.decided', 'verification.expire', 'support.public']);
 
 const actions = new Set();
 for (const f of ls('contracts', /\.mjs$/)) for (const m of read(f).matchAll(/^\s+'([a-z][A-Za-z]*\.[A-Za-z.]+)':\s*\{/gm)) actions.add(m[1]);

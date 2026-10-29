@@ -3,8 +3,8 @@ import {useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Check,Inbox,LifeBuoy,MessageCircle,RefreshCw,X} from 'lucide-react';
-import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Actions,Alert,Btn,Card,ChoiceChips,Empty,Field,Group,Note,Row,Seg,Sheet,Skel,Stack,TextArea,Thread} from './kit';
+import {feErrorMessage,newOpId,sendPublicHelp} from '../feture/fe-api';
+import {Actions,Alert,Btn,Card,ChoiceChips,Empty,Field,Group,Input,Note,Row,Seg,Sheet,Skel,Stack,TextArea,Thread} from './kit';
 import {useToast} from './toast';
 import {FIELD,serverFields,softMax,textError,textErrorMessage,useChecks} from './kit/validate';
 import {useFe} from './session';
@@ -43,6 +43,41 @@ export function SupportSheet({onClose,onSent}:{onClose:()=>void,onSent:(t:Ticket
    {checks.counter('body')}
   </Field>
   <Note>{t('fe.w8.sup.threat')}</Note>
+ </Sheet>;
+}
+
+/** «Нужна помощь со входом» — the one entry for signed-out screens (welcome, e-mail, code): a text link that opens the
+ * public form. No account needed: the message goes to the support mailbox (`POST /api/fe?help=1`). */
+export function SignInHelp({className}:{className?:string}){
+ const {t}=useI18n();const [open,setOpen]=useState(false);
+ return <>
+  <Btn kind="text" auto {...(className?{className}:{})} aria-haspopup="dialog" onClick={()=>setOpen(true)}>{t('fe.hp.link')}</Btn>
+  {open&&<SignInHelpSheet onClose={()=>setOpen(false)}/>}
+ </>;
+}
+
+function SignInHelpSheet({onClose}:{onClose:()=>void}){
+ const {t,locale}=useI18n();
+ const [body,setBody]=useState('');const [contact,setContact]=useState('');const [err,setErr]=useState('');const [busy,setBusy]=useState(false);const [done,setDone]=useState(false);
+ const checks=useChecks({body:'support'},{body},{body:{too_short:t('fe.w8.sup.short'),empty:t('fe.w8.sup.short')}});
+ const send=async()=>{
+  if(!checks.submit())return;
+  setBusy(true);setErr('');
+  try{await sendPublicHelp({body:body.trim(),contact:contact.trim()||undefined,locale:locale==='en'?'en':'ru'});setDone(true);}
+  catch(e){setErr(feErrorMessage(e,t));}finally{setBusy(false);}
+ };
+ if(done)return <Sheet title={t('fe.hp.title')} onClose={onClose} foot={<Btn onClick={onClose}>{t('fe.hp.close')}</Btn>}>
+  <Alert kind="ok">{t('fe.hp.sent')}</Alert>
+ </Sheet>;
+ return <Sheet title={t('fe.hp.title')} onClose={onClose} dirty={!!body.trim()} foot={<Btn busy={busy} onClick={()=>void send()}>{t('fe.w8.sup.send')}</Btn>}>
+  <p className="lead">{t('fe.hp.lead')}</p>
+  <Field id="fe-hp-text" name="body" label={t('fe.w8.sup.message')} error={checks.error('body')??(err||undefined)}>
+   <TextArea id="fe-hp-text" rows={5} {...checks.input('body')} invalid={!!(checks.error('body')??err)} value={body} placeholder={t('fe.w8.sup.placeholder')} onChange={e=>{setBody(e.target.value);setErr('');}}/>
+   {checks.counter('body')}
+  </Field>
+  <Field id="fe-hp-contact" label={t('fe.hp.contact')} optional={t('fe.reg.optional')} hint={t('fe.hp.contactHint')}>
+   <Input id="fe-hp-contact" value={contact} maxLength={120} autoComplete="email" onChange={e=>setContact(e.target.value)}/>
+  </Field>
  </Sheet>;
 }
 

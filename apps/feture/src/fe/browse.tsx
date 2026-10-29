@@ -11,6 +11,7 @@ import {InterestSheet,Jars,useInterests} from './interests';
 import {faceFields,NameBadges} from './faces';
 import {useToast} from './toast';
 import {FollowButton} from './follow';
+import {topicMatches} from './topic-search';
 
 /** Discovery screens with the prototype's markup: V21 F04 (an interest's page), G01 (global search), P10 (followers /
  * following) and P20 (gallery). Everything shown comes from the server; the client only narrows what the server already
@@ -160,7 +161,7 @@ export function SearchScreen(){
   const timer=setTimeout(()=>{
    const want=(k:Scope)=>scope==='all'||scope===k;
    // Interests are found in the catalog; communities by the interests that match, plus names in the catalogue's first page.
-   const matched=topics.filter(x=>x.ru.toLowerCase().includes(low)||x.en.toLowerCase().includes(low)||x.id.includes(low));
+   const matched=topics.filter(x=>topicMatches(x,low));
    const ids=matched.slice(0,10).map(x=>x.id);const opts={signal:ctl.signal};
    const none=Promise.resolve(null);
    Promise.allSettled([

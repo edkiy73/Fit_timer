@@ -1,5 +1,5 @@
 // @ts-check
-import { supportCommands } from '../../contracts/support.mjs';
+import { helpInput, supportCommands } from '../../contracts/support.mjs';
 import { fail } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { journal, requireStaff } from './staff.mjs';
@@ -96,3 +96,45 @@ const run = {
 /** @type {Record<string, Command>} */
 export const support = Object.fromEntries(
   Object.entries(supportCommands).map(([action, def]) => [action, { ...def, run: run[/** @type {keyof typeof run} */ (action)] }]));
+
+/** Takes a message from the public help form (a person who cannot sign in). Stores it and queues a mail to the support
+ * address; answers the same way whatever happens next. @param {import('../db.mjs').Db} db @param {unknown} body
+ * @returns {Promise<{status: number, body: object}>} */
+export async function takeHelp(db, body) {
+  const parsed = helpInput.safeParse(body);
+  if (!parsed.success) return { status: 400, body: { ok: false, error: 'invalid_input', fields: [...new Set(parsed.error.issues.map(i => i.path.join('.')))] } };
+  const m = parsed.data;
+  await db.tx(async q => {
+    const [row] = await q.query(`insert into feture.support_public (body, contact, locale) values ($1, $2, $3) returning id::text`, [m.body, m.contact ?? null, m.locale]);
+    await enqueue(q, 'support.public', null, { helpId: row.id });
+  });
+  return { status: 200, body: { ok: true, received: true } };
+}
+
+/** Mails each public help message once to the support address (claimed before sending, released if sending fails).
+ * Without working mail there is no handler: messages wait in the queue. @param {import('../db.mjs').Db} db
+ * @param {((mail: {to: string, subject: string, text: string}) => Promise<unknown>) | null} mailer @param {string} to
+ * @returns {Record<string, (item: import('../outbox.mjs').OutboxItem) => Promise<void>>} */
+export function helpHandlers(db, mailer, to) {
+  if (!mailer) return {};
+  return {
+    'support.public': async (/** @type {import('../outbox.mjs').OutboxItem} */ item) => {
+      const id = /** @type {any} */ (item.payload).helpId;
+      const [m] = await db.query(`update feture.support_public set mailed_at = now() where id = $1 and mailed_at is null returning body, contact, locale`, [id]);
+      if (!m) return;
+      try {
+        await Promise.race([mailer({ to, subject: 'FetUre: помощь со входом', text: `${m.body}\n\n— Как ответить: ${m.contact ?? 'не указано'}\n— Язык: ${m.locale}` }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('mail_timeout')), 15_000))]);
+      } catch (error) {
+        await db.query('update feture.support_public set mailed_at = null where id = $1', [id]);
+        throw error;
+      }
+    },
+  };
+}
+
+/** Public help messages are deleted after 90 days. @param {import('../db.mjs').Db} db */
+export async function sweepPublicHelp(db) {
+  if (!(await db.query(`select to_regclass('feture.support_public') is not null ok`))[0].ok) return 0;
+  return (await db.query(`delete from feture.support_public where created_at < now() - interval '90 days' returning 1`)).length;
+}

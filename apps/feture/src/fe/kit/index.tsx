@@ -1,5 +1,5 @@
 import React,{forwardRef,useEffect,useRef,useState,type ButtonHTMLAttributes,type ReactNode} from 'react';
-import {useNavigate} from 'react-router';
+import {useBlocker,useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Check as Check2,ChevronDown,ChevronLeft,ChevronRight,CircleAlert,CircleCheck,Info,Plus,Search,TriangleAlert,X,type LucideIcon} from 'lucide-react';
 import {Btn,Layer} from '../ui';
@@ -63,6 +63,21 @@ export function Sheet({title,sub,lead,head,search,onClose,children,foot,full,cla
   {asking&&<Ask tone="a" title={t('fe.kit.sheet.dirtyTitle')} text={t('fe.kit.sheet.dirtyText')} ok={t('fe.kit.sheet.dirtyOk')} cancel={t('fe.kit.sheet.dirtyStay')} danger
    onOk={()=>{setAsking(false);onClose();}} onCancel={()=>setAsking(false)}/>}
  </Layer>;
+}
+
+/** `useLeaveGuard(dirty)` — one guard for every edited form that is a screen (not a sheet; a sheet has `dirty`).
+ * While `dirty`, leaving the screen — its own back button, the dock / side tabs, the browser's Back, closing the tab —
+ * asks «Выйти без сохранения?» (Остаться / Выйти). Render `node` once; run the form's own «after save» navigation
+ * through `pass(() => …)` so a saved form is not asked about. */
+export function useLeaveGuard(dirty:boolean){
+ const {t}=useI18n();const live=useRef(dirty);live.current=dirty;const skip=useRef(false);
+ const blocker=useBlocker(({currentLocation,nextLocation})=>live.current&&!skip.current&&currentLocation.pathname!==nextLocation.pathname);
+ useEffect(()=>{if(!dirty)return;const h=(e:BeforeUnloadEvent)=>{e.preventDefault();};window.addEventListener('beforeunload',h);return ()=>window.removeEventListener('beforeunload',h);},[dirty]);
+ const pass=(go:()=>void)=>{skip.current=true;go();setTimeout(()=>{skip.current=false;},600);};
+ const node=blocker.state==='blocked'
+  ?<Ask tone="a" danger title={t('fe.lo.leave.title')} text={t('fe.lo.leave.text')} ok={t('fe.lo.leave.ok')} cancel={t('fe.lo.leave.stay')}
+    onOk={()=>blocker.proceed()} onCancel={()=>blocker.reset()}/>:null;
+ return {node,pass};
 }
 
 /** `ask()` — the confirmation dialog: icon, title, text, an optional error, the main and the cancel button.

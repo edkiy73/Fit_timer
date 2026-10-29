@@ -16,6 +16,7 @@ import {FollowButton} from './follow';
 import {catalogRes,cardOneRead,cardRead,CompatSummary,FollowCounts,MatchOverlay,PersonBio,PersonMenu,PhotoViewer,ProfileBody,ProfilePage,personName,personProfileRes,pxError,readCard,readCatalog,usePrivate,useRelation,type CardPre,
  type Catalog,type MenuStep,type PersonProfile} from './profile-extras';
 import {AboutGroup} from './about-facts';
+import {topicMatches} from './topic-search';
 
 /** Slice F (V21 D03–D10): Discover cards from the server's mutual pool with the whole profile under the photo, swipe
  * or buttons to like / pass, «Это взаимно» → chat, the likes grid and another person's profile (P01). The client shows
@@ -164,7 +165,7 @@ function DiscoverFilter({initial,onClose,onApplied}:{initial:Filter,onClose:()=>
  const clr=(fn:()=>void)=><button type="button" className="fclr" aria-label={t('fe.df.clear')} onClick={fn}><X/></button>;
  if(sub){
   const all=groups(sub);const total=all.reduce((n,g)=>n+g.list.length,0);const needle=q.trim().toLowerCase();
-  const shown=all.map(g=>({...g,list:needle?g.list.filter(([,l])=>l.toLowerCase().includes(needle)):g.list})).filter(g=>g.list.length);
+  const shown=all.map(g=>({...g,list:needle?g.list.filter(([id,l])=>l.toLowerCase().includes(needle)||(sub==='topics'&&(()=>{const x=cat?.topics.find(y=>y.id===id);return !!x&&topicMatches(x,needle);})())):g.list})).filter(g=>g.list.length);
   const isOn=(id:string)=>sub==='city'?f.cityId===id:f[sub].includes(id);
   const pick=(id:string)=>{if(sub==='city'){setF(x=>({...x,placeMode:'city',cityId:x.cityId===id?null:id}));setWhere('city');}else toggle(sub,id);};
   const n=sub==='city'?(f.cityId?1:0):f[sub].length;

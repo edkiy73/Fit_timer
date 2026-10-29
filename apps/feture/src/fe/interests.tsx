@@ -7,6 +7,7 @@ import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {AddCard,Alert,AnswerScale,Bar,Btn,Card,Chip,Chips,Empty,Group,IconBtn,Note,Progress,Row,SearchInput,SectionLabel,Sheet,Skel,View} from './kit';
 import {useFe,usePartnerApproves,useShown} from './session';
 import {when} from './feed';
+import {topicMatches} from './topic-search';
 
 /** Interests (V21 X01 #meJars, X02, X04) with the prototype's markup: one capsule per interest — the fill is the
  * level 1–10; «обсудить» and «граница» are marks, never levels. Everything comes from the server. */
@@ -195,7 +196,7 @@ export function TopicPicker({cats,topics,have,presetVis,onClose,onDone}:{cats:Ca
  const couple=acting?.kind==='couple';const toPartner=usePartnerApproves();
  const nq=q.trim().toLowerCase();const label=(x:{ru:string,en:string})=>locale==='en'?x.en:x.ru;
  const left=topics.filter(x=>!have.has(x.id));
- const sections=cats.map(c=>({c,ts:left.filter(x=>x.categoryId===c.id&&(!nq||label(x).toLowerCase().includes(nq)))})).filter(s=>s.ts.length);
+ const sections=cats.map(c=>({c,ts:left.filter(x=>x.categoryId===c.id&&topicMatches(x,nq))})).filter(s=>s.ts.length);
  const toggle=(id:string)=>setSel(l=>l.includes(id)?l.filter(x=>x!==id):[...l,id]);
  const cur=sel[step];const d=cur?drafts[cur]??{v:null,dir:[...DIRS],vis:presetVis}:null;
  const put=(f:(d:Draft)=>Draft)=>{if(!cur)return;setDrafts(all=>({...all,[cur]:f(all[cur]??{v:null,dir:[...DIRS],vis:presetVis})}));};

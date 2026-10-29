@@ -24,6 +24,7 @@ import {EventCard,eventRow} from './communities';
 import {Composer,CreateSheet} from './create-entry';
 import {useCopyLink} from './share';
 import {CompareSheet,asInterest} from './compare';
+import {topicMatches} from './topic-search';
 
 /** Slice B (V21 F01, F05, F07, F09) with the prototype's markup: feed tabs, composer row, topic chips and filters,
  * posts (text, media, poll, interests, marks), replies in threads, the composer and its preview.
@@ -322,9 +323,9 @@ function FeedFilterSheet({tab,topics,cats,popular,value,locale,onClose,onApply}:
   lead={<IconBtn icon={ChevronLeft} kind="ghost" size="sm" label={t('fe.fd.backToFilters')} onClick={()=>{setSub(null);setQ('');}}/>}
   search={<SearchInput value={q} onChange={e=>setQ(e.target.value)} label={t('fe.fd.findOption')}/>}
   foot={<Btn onClick={()=>{setSub(null);setQ('');}}>{t('fe.fd.done')}</Btn>}>
-  {cats.map(c=>{const list=topics.filter(x=>x.categoryId===c.id&&(!low||nm(x).toLowerCase().includes(low)));if(!list.length)return null;
+  {cats.map(c=>{const list=topics.filter(x=>x.categoryId===c.id&&topicMatches(x,low));if(!list.length)return null;
    return <section key={c.id} className="fsec"><SectionLabel>{locale==='en'?c.en:c.ru}</SectionLabel><Chips>{list.map(x=><Chip key={x.id} on={d[sub].includes(x.id)} onClick={()=>flip(sub,x.id)}>{nm(x)}</Chip>)}</Chips></section>;})}
-  {low&&!topics.some(x=>nm(x).toLowerCase().includes(low))&&<Empty compact icon={Search} title={t('fe.br.nothing')}/>}
+  {low&&!topics.some(x=>topicMatches(x,low))&&<Empty compact icon={Search} title={t('fe.br.nothing')}/>}
  </Sheet>;
  return <Sheet full title={t('fe.fd.feedFilters')} onClose={onClose} head={<Btn kind="text" auto onClick={()=>setD(NO_FILTERS)}>{t('fe.fd.reset')}</Btn>}
   foot={<Btn onClick={()=>onApply(d)} disabled={n===0} busy={count===null}>{label}</Btn>}>
@@ -356,9 +357,9 @@ export function FilterSheet({title,topics,cats,popular,value,onClose,onApply,max
   head={!all&&!max?<Btn kind="text" auto onClick={()=>setD([])}>{t('fe.fd.reset')}</Btn>:undefined}
   search={all?<SearchInput value={q} onChange={e=>setQ(e.target.value)} label={t('fe.fd.findOption')}/>:undefined}
   foot={all?<Btn onClick={()=>{setAll(false);setQ('');}}>{t('fe.fd.done')}</Btn>:<Btn onClick={()=>onApply(d)}>{max?t('fe.fd.done'):t('fe.fd.applyFilters')}</Btn>}>
-    {all?<>{cats.map(c=>{const list=topics.filter(x=>x.categoryId===c.id&&(!low||nm(x).toLowerCase().includes(low)));if(!list.length)return null;
+    {all?<>{cats.map(c=>{const list=topics.filter(x=>x.categoryId===c.id&&topicMatches(x,low));if(!list.length)return null;
       return <section key={c.id} className="fsec"><SectionLabel>{locale==='en'?c.en:c.ru}</SectionLabel><Chips>{list.map(chip)}</Chips></section>;})}
-     {low&&!topics.some(x=>nm(x).toLowerCase().includes(low))&&<Empty compact icon={Search} title={t('fe.br.nothing')}/>}</>
+     {low&&!topics.some(x=>topicMatches(x,low))&&<Empty compact icon={Search} title={t('fe.br.nothing')}/>}</>
     :<section className="fin"><div className="fin-t"><b>{max?t('fe.fd.topicsUpTo3'):t('fe.fd.showTopics')}</b><span>{max?t('fe.fd.topicsPicked',{n:d.length,max}):t('fe.fd.pickAny')}</span>{d.length>0&&<button type="button" className="fclr" onClick={()=>setD([])}>{t('fe.fd.clear')}</button>}</div>
      <Chips>{pop.map(chip)}<Chip more icon={Search} onClick={()=>setAll(true)}>{t('fe.br.seeAll')} · {topics.length}</Chip></Chips>
     </section>}

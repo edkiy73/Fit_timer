@@ -15,7 +15,7 @@ export const ru = {
   'fe.rq.writeTo': 'Написать {name}',
   // The composer of a request.
   'fe.rq.draft': 'Это запрос. {name} увидит сообщение и решит, отвечать ли',
-  'fe.rq.draftOne': 'До ответа — одно сообщение: текст и, если хочешь, фото.',
+  'fe.rq.draftOne': "До ответа — одно сообщение: текст и, если хочешь, одно фото или видео.",
   'fe.rq.left': 'Сегодня можно ещё {n} из {max}',
   'fe.rq.sent': 'Запрос отправлен',
   'fe.rq.sentUs': 'Запрос от пары отправлен',
@@ -71,7 +71,7 @@ export const en = {
   'fe.rq.write': 'Message',
   'fe.rq.writeTo': 'Message {name}',
   'fe.rq.draft': 'This is a request. {name} will see the message and decide whether to reply',
-  'fe.rq.draftOne': 'One message until they reply: text and, if you like, a photo.',
+  'fe.rq.draftOne': "One message until they reply: text and, if you like, one photo or video.",
   'fe.rq.left': '{n} of {max} left today',
   'fe.rq.sent': 'Request sent',
   'fe.rq.sentUs': 'Request sent from the couple',

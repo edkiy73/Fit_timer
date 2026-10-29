@@ -249,7 +249,7 @@ export function CoupleVisGroup(){
  return <Group title={t('fe.cw.pair')}><Card list>
   <Row icon={Check} title={t('fe.mx.cp.approval')} sub={t('fe.mx.cp.approvalSub')} onClick={()=>navigate('/n/me/pair?trust=1')}/>
   {/* `danger` as a class keeps the chevron: this row opens a screen, the decision is made there. */}
-  <Row icon={X} className="danger" title={t('fe.mx.cp.unlink')} onClick={()=>navigate('/n/me/pair?stop=1')}/>
+  <Row icon={X} className="danger" title={t('fe.mx.cp.unlink')} sub={t('fe.mx.cp.unlinkSub')} onClick={()=>navigate('/n/me/pair?stop=1')}/>
  </Card></Group>;
 }
 
