@@ -25,6 +25,8 @@ import { withFaces } from './faces.mjs';
 
 const PRIVACY = ['hidden', 'closed', 'open'];
 const MAJOR = ['name', 'description', 'coverAssetId'];
+/** A rejected community may be sent again at most this many times, at most once in this many hours. */
+const RESUBMIT = { max: 3, hours: 24 };
 const COLS = { name: 'name', description: 'description', topics: 'topics', privacy: 'privacy', joinQuestion: 'join_question', rules: 'rules', placeId: 'place_id', coverAssetId: 'cover_asset_id', plate: 'plate' };
 
 /** Signs of life on a card (V21 commPulse): when the viewer could last read a discussion, the next upcoming event, the
@@ -190,6 +192,17 @@ registerApprovalKind('community.join', {
   },
 });
 
+/** What the author sees under a rejection: attempts left, whether anything changed since, when the next try is allowed.
+ * @param {any} c */
+function resubmitState(c) {
+  const next = c.resubmitted_at ? new Date(new Date(c.resubmitted_at).getTime() + RESUBMIT.hours * 3600e3) : null;
+  return {
+    left: Math.max(0, RESUBMIT.max - c.resubmits), max: RESUBMIT.max,
+    edited: c.rejected_rev === null || c.rev > c.rejected_rev,
+    after: next && next.getTime() > Date.now() ? next.toISOString() : null,
+  };
+}
+
 /** @type {Record<keyof typeof communitiesCommands, Command['run']>} */
 const run = {
   async 'community.create'(q, { acting: a, input }) {
@@ -233,6 +246,25 @@ const run = {
     return { rev, review: Object.keys(later) };
   },
 
+  async 'community.resubmit'(q, { acting: a, input }) {
+    const acting = need(a);
+    await requireHost(q, input.communityId, acting, 'owner');
+    const [c] = await q.query(`select * from feture.community where id = $1 for update`, [input.communityId]);
+    if (!c) fail(404, 'not_found');
+    if (c.state !== 'rejected') fail(409, 'conflict', { state: c.state });
+    // The attempts ran out: only an appeal is left (appeal.create, targetType 'community').
+    if (c.resubmits >= RESUBMIT.max) fail(409, 'conflict', { rule: 'no_attempts' });
+    // Nothing changed since staff said no: the same thing would be rejected again.
+    if (c.rejected_rev !== null && c.rev <= c.rejected_rev) fail(409, 'conflict', { rule: 'unchanged' });
+    const { after } = resubmitState(c);
+    if (after) fail(409, 'conflict', { rule: 'too_soon', until: after });
+    await q.query(
+      `update feture.community set state = 'in_review', prev_reject_reason = reject_reason, reject_reason = null, resubmits = resubmits + 1, resubmitted_at = now(), rev = rev + 1, updated_at = now() where id = $1`, [c.id]);
+    await enqueue(q, 'moderation.community', c.owner_profile_id, { communityId: c.id, resubmit: true });
+    const [{ rev }] = await q.query('select rev from feture.community where id = $1', [c.id]);
+    return { id: c.id, state: 'in_review', rev, left: RESUBMIT.max - c.resubmits - 1 };
+  },
+
   async 'community.get'(q, { acting: a, input, cfg }) {
     const viewer = need(a);
     const c = await visible(q, input.communityId, viewer, input.invite);
@@ -266,6 +298,7 @@ const run = {
         waiting: waiting ? { id: waiting.id } : null,
         ...(host ? { pendingRequests: counts.requests } : {}),
         ...(c.own ? { state: c.state, rev: c.rev, pendingChange: c.pending_change, rejectReason: c.reject_reason } : {}),
+        ...(c.own && c.state === 'rejected' ? { resubmit: resubmitState(c) } : {}),
       },
     };
   },
@@ -516,15 +549,26 @@ const run = {
     return { change: input.change };
   },
 
-  async 'staff.communityQueue'(q, { account, input }) {
+  async 'staff.communityQueue'(q, { account, input, cfg }) {
     await requireStaff(q, account, ['owner', 'lead', 'moderator']);
     const { sql, params } = queuePageSql(input, CREATED_KEYS,
-      `select c.id, c.rev, c.name, c.description, c.topics, c.privacy, c.join_question, c.rules, c.cover_asset_id, c.place_id, c.state, c.pending_change, c.created_at
+      `select c.id, c.rev, c.name, c.description, c.topics, c.privacy, c.join_question, c.rules, c.cover_asset_id, c.place_id, c.state, c.pending_change, c.created_at,
+         c.resubmits, c.prev_reject_reason,
+         (select to_jsonb(m) from feture.media_asset m where m.id = c.cover_asset_id) cover_asset,
+         (select to_jsonb(m) from feture.media_asset m where m.id = case when jsonb_typeof(c.pending_change -> 'coverAssetId') = 'string' then (c.pending_change ->> 'coverAssetId')::uuid end) new_cover_asset
        from feture.community c
        where (c.state = 'in_review' or c.pending_change is not null)
          and not exists (select 1 from feture.profile_member m where m.profile_id = c.owner_profile_id and m.account_id = $1)`, [account.id]);
     const rows = await q.query(sql, params);
-    return { items: plainRows(rows), ...pageInfo(rows, CREATED_KEYS, input.limit) };
+    // The cover (current and the proposed one) comes straight in the item as staff see media, not through staff.mediaView:
+    // a community cover is public content its owner proposes, so the look is not a private-material look and is not journalled.
+    const ctx = { viewerProfileId: account.person_profile_id ?? account.id, place: /** @type {const} */ ('own'), showExplicit: true, staff: true };
+    const pic = (/** @type {any} */ asset) => asset && cfg.media?.delivery ? mediaDto(cfg.media, asset, ctx).catch(() => null) : null;
+    const items = [];
+    for (const { cover_asset, new_cover_asset, ...r } of plainRows(rows)) {
+      items.push({ ...r, cover: await pic(cover_asset), newCover: await pic(new_cover_asset) });
+    }
+    return { items, ...pageInfo(rows, CREATED_KEYS, input.limit) };
   },
 
   async 'staff.communityDecide'(q, { account, input }) {
@@ -545,7 +589,7 @@ const run = {
       await q.query(
         input.decision === 'approve'
           ? `update feture.community set state = 'published', published_at = now(), reject_reason = null where id = $1`
-          : `update feture.community set state = 'rejected', reject_reason = $2 where id = $1`,
+          : `update feture.community set state = 'rejected', reject_reason = $2, rejected_rev = rev where id = $1`,
         input.decision === 'approve' ? [c.id] : [c.id, input.reason]);
     } else if (c.pending_change) {
       if (input.decision === 'approve') {

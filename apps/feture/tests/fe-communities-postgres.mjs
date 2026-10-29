@@ -6,10 +6,11 @@ import { me } from '../server/commands/me.mjs';
 import { social } from '../server/commands/social.mjs';
 import { posts } from '../server/commands/posts.mjs';
 import { staff } from '../server/commands/staff.mjs';
+import { moderation } from '../server/commands/moderation.mjs';
 import { communities } from '../server/commands/communities.mjs';
 import { setup as baseSetup, op } from './fe-helpers.mjs';
 
-const setup = () => baseSetup({ commands: { ...platform, ...me, ...social, ...posts, ...staff, ...communities } });
+const setup = () => baseSetup({ commands: { ...platform, ...me, ...social, ...posts, ...staff, ...moderation, ...communities } });
 const base = { description: 'Встречи и разговоры о верёвке для новичков', topics: ['shibari'], rules: ['Уважать границы'], plate: 'rose' };
 const draft = (body, extra = {}) => ({ type: 'post', body, audience: 'all', inFeed: true, topics: [], mediaIds: [], interests: [], tags: [], ...extra });
 
@@ -353,5 +354,80 @@ test('join flows (owner check 28.10.2026): a decline holds a new request for 7 d
     assert.equal((await call('uc', c, { action: 'community.discussions', communityId: hidden })).locked, true);
     await call('uc', c, { action: 'community.requestWithdraw', opId: op(), requestId: hr.id });
     assert.equal((await call('uc', c, { action: 'community.get', communityId: hidden })).status, 404);
+  } finally { await pg.close(); }
+});
+
+test('rejected community: resubmit needs an edit, 3 tries, once a day; then only an appeal; staff see the cover and the history', async () => {
+  const { pg, db, call, a, decide } = await world();
+  try {
+    const r = await call('ua', a, { action: 'community.create', opId: op(), name: 'Клуб с обложкой', privacy: 'open', ...base });
+    const id = r.id;
+    const queueItem = async () => (await call('um', null, { action: 'staff.communityQueue' })).items.find((/** @type {any} */ x) => x.id === id);
+    const reject = async () => { const it = await queueItem(); return call('um', null, { action: 'staff.communityDecide', opId: op(), communityId: id, rev: it.rev, decision: 'reject', reason: 'Уточни описание' }); };
+    const resubmit = () => call('ua', a, { action: 'community.resubmit', opId: op(), communityId: id });
+    const edit = async (/** @type {string} */ d) => {
+      const g = (await call('ua', a, { action: 'community.get', communityId: id })).community;
+      return call('ua', a, { action: 'community.update', opId: op(), communityId: id, rev: g.rev, description: d });
+    };
+    // Not rejected yet: nothing to send again. Another person cannot.
+    assert.equal((await resubmit()).status, 409);
+    await reject();
+    const g0 = (await call('ua', a, { action: 'community.get', communityId: id })).community;
+    assert.equal(g0.state, 'rejected');
+    assert.deepEqual([g0.resubmit.left, g0.resubmit.edited, g0.resubmit.after], [3, false, null]);
+    assert.equal((await call('ub', (await db.query('select id from feture.profile where handle = $1', ['Kira']))[0]?.id, { action: 'community.resubmit', opId: op(), communityId: id })).status, 403);
+    // No edits since the rejection: refused.
+    const same = await resubmit();
+    assert.deepEqual([same.status, same.rule], [409, 'unchanged']);
+    // Edit, then resubmit: back in the queue with «1 of 3» and the old reason.
+    await edit('Новое описание после отклонения, исправлено');
+    assert.equal((await call('ua', a, { action: 'community.get', communityId: id })).community.resubmit.edited, true);
+    const ok = await resubmit();
+    assert.deepEqual([ok.status, ok.state, ok.left], [200, 'in_review', 2]);
+    let it = await queueItem();
+    assert.deepEqual([it.resubmits, it.prev_reject_reason], [1, 'Уточни описание']);
+    assert.equal((await call('ua', a, { action: 'community.get', communityId: id })).community.rejectReason, null);
+    // Two more rounds; the day rule holds in between.
+    for (const n of [2, 3]) {
+      await reject();
+      await edit('Ещё одна правка описания, круг ' + n + ' сообщества');
+      const soon = await resubmit();
+      assert.deepEqual([soon.status, soon.rule], [409, 'too_soon']);
+      assert.ok(soon.until);
+      await db.query(`update feture.community set resubmitted_at = now() - interval '25 hours' where id = $1`, [id]);
+      assert.equal((await resubmit()).status, 200);
+    }
+    // The fourth is not allowed, even edited and after a day.
+    await reject();
+    await edit('Четвёртая правка описания сообщества');
+    await db.query(`update feture.community set resubmitted_at = now() - interval '25 hours' where id = $1`, [id]);
+    const fourth = await resubmit();
+    assert.deepEqual([fourth.status, fourth.rule], [409, 'no_attempts']);
+    assert.equal((await call('ua', a, { action: 'community.get', communityId: id })).community.resubmit.left, 0);
+    // What is left is an appeal.
+    const ap = await call('ua', a, { action: 'appeal.create', opId: op(), targetType: 'community', targetId: id, body: 'Я исправил всё, что просили, прошу посмотреть ещё раз' });
+    assert.equal(ap.status, 200, JSON.stringify(ap));
+    assert.equal(ap.state, 'open');
+  } finally { await pg.close(); }
+});
+
+test('staff queue carries the current and the proposed cover without staff.mediaView or a journal entry', async () => {
+  const { pg, db, call, a, make } = await world();
+  try {
+    const id = await make('ua', a, { name: 'Клуб обложек', privacy: 'open' });
+    const [{ account_id }] = await db.query('select account_id from feture.profile_member where profile_id = $1 limit 1', [a]);
+    const [cov] = await db.query(
+      `insert into feture.media_asset (owner_profile_id, uploaded_by, kind, purpose, storage_key, mime, declared_bytes, state, explicitness, copies_at)
+       values ($1, $2, 'image', 'community', 'u/' || gen_random_uuid(), 'image/jpeg', 10, 'approved', 'safe', now()) returning id`, [a, account_id]);
+    const g = (await call('ua', a, { action: 'community.get', communityId: id })).community;
+    const upd = await call('ua', a, { action: 'community.update', opId: op(), communityId: id, rev: g.rev, coverAssetId: cov.id });
+    assert.deepEqual(upd.review, ['coverAssetId']);
+    const before = (await db.query(`select count(*)::int n from feture.staff_action`))[0].n;
+    const item = (await call('um', null, { action: 'staff.communityQueue' })).items.find((/** @type {any} */ x) => x.id === id);
+    assert.ok(item.newCover?.src?.card, 'proposed cover link');
+    assert.equal(item.cover, null);
+    assert.equal((await db.query(`select count(*)::int n from feture.staff_action`))[0].n, before); // nothing journalled at load
+    // staff.mediaView is not widened: an approved cover is not media waiting for review.
+    assert.equal((await call('um', null, { action: 'staff.mediaView', assetId: cov.id })).status, 409);
   } finally { await pg.close(); }
 });

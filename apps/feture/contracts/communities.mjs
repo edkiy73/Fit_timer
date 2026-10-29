@@ -33,6 +33,8 @@ export const communitiesCommands = {
       placeId: fields.placeId, coverAssetId: fields.coverAssetId, plate: z.enum(PLATE_KEYS).optional(),
     }),
   },
+  // A rejected community goes back to staff: only after an edit since the rejection, at most 3 times, once a day.
+  'community.resubmit': { profile: true, write: true, input: z.strictObject({ opId, communityId: id }) },
   'community.get': { profile: true, write: false, input: z.strictObject({ communityId: id, invite: z.string().max(80).optional() }) },
   'community.catalog': {
     profile: true, write: false,
