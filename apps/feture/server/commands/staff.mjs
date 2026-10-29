@@ -85,7 +85,7 @@ export async function openStaffSession(q, account) {
 export const refused = r => r.ok ? {} : { verified: false, reason: r.reason, left: r.left, lockedUntil: r.lockedUntil };
 
 
-/** @param {Q} q @param {string} staff @param {string} action @param {string} targetType @param {string | null} targetId @param {Record<string, unknown>} [detail] */
+/** @param {Q} q @param {string | null} staff null: the worker (a timed measure ran out) @param {string} action @param {string} targetType @param {string | null} targetId @param {Record<string, unknown>} [detail] */
 export async function journal(q, staff, action, targetType, targetId, detail = {}) {
   await q.query(`insert into feture.staff_action (staff_account_id, action, target_type, target_id, detail) values ($1, $2, $3, $4, $5)`,
     [staff, action, targetType, targetId, JSON.stringify(detail)]);

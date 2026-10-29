@@ -3,6 +3,8 @@ import { drain, enqueue } from './outbox.mjs';
 import { scanAsset, servedKeys } from './media/scan.mjs';
 import { POSTER_UPLOAD_KEY } from './media/assets.mjs';
 import { deleteCouple } from './commands/couples.mjs';
+import { setSuspended } from './commands/moderation.mjs';
+import { journal } from './commands/staff.mjs';
 import { settlePublication } from './commands/posts.mjs';
 import { settleAvatarsOf } from './commands/photos.mjs';
 import { sweepEphemeral } from './commands/chats.mjs';
@@ -165,6 +167,35 @@ export async function sweepExpiredCouples(db) {
   return due.length;
 }
 
+/** Timed suspensions and restrictions that ran out are lifted (audit 30.10, item 9): the person is told, and the journal
+ * keeps a line without a staff member. @param {Db} db */
+export async function sweepExpiredSanctions(db) {
+  // Tests with a part of the schema run the worker without timed measures.
+  if (!(await db.query(`select exists (select 1 from information_schema.columns where table_schema = 'feture' and table_name = 'profile' and column_name = 'suspended_until') ok`))[0].ok) return 0;
+  const due = await db.query(
+    `select id, 'suspension' what from feture.profile where state = 'suspended' and suspended_until < now()
+     union all select id, 'restriction' from feture.profile where restricted_at is not null and restricted_until < now() limit 50`);
+  for (const d of due) {
+    await db.tx(async q => {
+      if (d.what === 'suspension') {
+        const [still] = await q.query(`select 1 from feture.profile where id = $1 and state = 'suspended' and suspended_until < now() for update`, [d.id]);
+        if (!still) return;
+        await setSuspended(q, d.id, false, null);
+        await enqueue(q, 'profile.restored', d.id, { rule: 'expired' });
+        await journal(q, null, 'sanction.expired', 'profile', d.id);
+      } else {
+        const rows = await q.query(
+          `update feture.profile set restricted_at = null, restriction_rule = null, restricted_until = null, updated_at = now()
+           where id = $1 and restricted_at is not null and restricted_until < now() returning id`, [d.id]);
+        if (!rows[0]) return;
+        await enqueue(q, 'profile.unrestricted', d.id, { rule: 'expired' });
+        await journal(q, null, 'restrict.expired', 'profile', d.id);
+      }
+    });
+  }
+  return due.length;
+}
+
 /** One worker tick. @param {Db} db @param {JobDeps} deps */
 export async function runJobs(db, deps) {
   // Media first with its own budget, so a burst of likes never delays scans and publication; then the inbox.
@@ -184,6 +215,7 @@ export async function runJobs(db, deps) {
   const ledger = await sweepOpLedger(db);
   const markers = await sweepMarkers(db);
   const couples = await sweepExpiredCouples(db);
+  await sweepExpiredSanctions(db);
   const ephemeral = await sweepEphemeral(db);
   const reminders = await sweepEventReminders(db);
   const selfies = await sweepSelfies(db);
