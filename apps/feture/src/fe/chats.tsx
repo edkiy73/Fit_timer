@@ -48,7 +48,9 @@ const withRes=z.object({ok:z.literal(true),conversationId:z.uuid().nullable(),ca
 const profileRes=z.object({ok:z.literal(true),profile:z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),avatar:media.nullable()}).passthrough()});
 const requestRes=z.object({ok:z.literal(true),conversationId:z.uuid().optional(),state:z.string().optional(),pending:z.object({approvalId:z.uuid()}).optional()}).passthrough();
 const ok=z.object({ok:z.literal(true)}).passthrough();
-const opened=z.object({ok:z.literal(true),media:z.object({src:z.record(z.string(),z.string()).nullable()}).passthrough().nullable(),until:z.string().nullable().optional(),gone:z.boolean().optional()}).passthrough();
+const opened=z.object({ok:z.literal(true),media:z.object({src:z.record(z.string(),z.string()).nullable()}).passthrough().nullable(),until:z.string().nullable().optional(),gone:z.boolean().optional(),startBy:z.string().optional()}).passthrough();
+/** A disappearing clip began to play: the timer (or the closed single view) is now real. */
+const startedRes=z.object({ok:z.literal(true),started:z.boolean(),until:z.string().nullable().optional(),gone:z.boolean().optional()}).passthrough();
 const grantList=z.object({ok:z.literal(true),items:z.array(z.object({profile:z.object({id:z.uuid()}).passthrough()}).passthrough())});
 
 const nameOf=(o:{name?:string|null,handle?:string|null})=>o.name||(o.handle?'@'+o.handle:'?');
@@ -196,12 +198,12 @@ export function RequestsScreen(){
 
 /* ================= shared sheet bits ================= */
 /** `openViewer()` for one chat photo: optional label («Один просмотр…») and the viewer's handle as a watermark. */
-function Viewer({src,video,label,wm,onClose}:{src:string,/** A clip: it plays over its poster `src`. */ video?:string|undefined,label?:string|undefined,wm?:string|undefined,onClose:()=>void}){
+function Viewer({src,video,label,wm,onPlaying,onClose}:{src:string,/** A clip: it plays over its poster `src`. */ video?:string|undefined,label?:string|undefined,wm?:string|undefined,/** The clip really began to play. */ onPlaying?:(()=>void)|undefined,onClose:()=>void}){
  const {t}=useI18n();const [on,setOn]=useState(false);const close=useRef<HTMLButtonElement>(null);
  useEffect(()=>{const r=requestAnimationFrame(()=>{setOn(true);close.current?.focus({preventScroll:true});});return ()=>cancelAnimationFrame(r);},[]);
  useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();onClose();}};addEventListener('keydown',k);return ()=>removeEventListener('keydown',k);},[onClose]);
  return <Layer><div className={'viewer'+(on?' on':'')} role="dialog" aria-modal="true" aria-label={t('fe.chx.viewer')}>
-  <div className="vw-track"><figure>{video?<VideoPlayer src={video} poster={src} fill autoPlay/>:<img src={src} alt="" draggable={false}/>}{wm&&<div className="vw-wm" aria-hidden="true">{Array.from({length:18},(_,i)=><span key={i}>{wm}</span>)}</div>}</figure></div>
+  <div className="vw-track"><figure>{video?<VideoPlayer src={video} poster={src} fill autoPlay onPlaying={onPlaying}/>:<img src={src} alt="" draggable={false}/>}{wm&&<div className="vw-wm" aria-hidden="true">{Array.from({length:18},(_,i)=><span key={i}>{wm}</span>)}</div>}</figure></div>
   <div className="vw-top"><span className="vw-n"/>{label&&<span className="vw-label">{label}</span>}<IconBtn ref={close} icon={X} kind="glass" label={t('fe.chx.close')} onClick={onClose}/></div>
  </div></Layer>;
 }
@@ -248,7 +250,7 @@ function ChatView({id,to}:{id:string,to:string}){
   const ro=new ResizeObserver(()=>m.style.setProperty('--ctah',el.offsetHeight+'px'));ro.observe(el);
   return ()=>{ro.disconnect();m.style.removeProperty('--ctah');};},[state,items===null]);
  const [eph,setEph]=useState<Record<string,{state:'open'|'done',until?:number}>>({});
- const [viewer,setViewer]=useState<{src:string,video?:string|undefined,label?:string|undefined,wm?:string|undefined}|null>(null);
+ const [viewer,setViewer]=useState<{src:string,video?:string|undefined,label?:string|undefined,wm?:string|undefined,onPlaying?:(()=>void)|undefined}|null>(null);
  // A covered clip opened by a tap plays in its bubble (the photo goes to the viewer).
  const [openVid,setOpenVid]=useState<Record<string,{file:string,poster?:string|undefined}>>({});
  // A voice message on its way (an optimistic bubble), and the ones this account has just played.
@@ -400,8 +402,22 @@ function ChatView({id,to}:{id:string,to:string}){
    if(r.gone||!src){setEph(e=>({...e,[m.id]:{state:'done'}}));return;}
    if(m.mine){setViewer({src,video});return;}
    const once=md.mode==='once';const until=r.until?Date.parse(r.until):undefined;
+   const wm=acting?.handle?'@'+acting.handle:undefined;
+   if(r.startBy&&video){
+    // A disappearing clip: nothing is used up until it really plays (a slow network must not burn the view); the first
+    // `playing` tells the server, which then starts the timer / closes the single view.
+    let told=false;
+    const started=()=>{if(told)return;told=true;
+     call('chat.mediaStarted',{opId:newOpId(),messageId:m.id},startedRes,{profileId:meta.side.id}).then(s=>{
+      if(s.gone){setEph(e=>({...e,[m.id]:{state:'done'}}));setViewer(null);return;}
+      const u=s.until?Date.parse(s.until):undefined;
+      setEph(e=>({...e,[m.id]:once?{state:'done'}:{state:'open',...(u?{until:u}:{})}}));
+      if(!once&&u)setViewer(v=>v&&{...v,label:t('fe.chx.viewerLeft',{left:left(u)})});
+     }).catch(()=>{told=false;});};
+    setViewer({src,video,onPlaying:started,wm,...(once?{label:t('fe.chx.viewerOnce')}:{})});return;
+   }
    setEph(e=>({...e,[m.id]:once?{state:'done'}:{state:'open',...(until?{until}:{})}}));
-   setViewer({src,video,label:once?t('fe.chx.viewerOnce'):until?t('fe.chx.viewerLeft',{left:left(until)}):undefined,wm:acting?.handle?'@'+acting.handle:undefined});
+   setViewer({src,video,label:once?t('fe.chx.viewerOnce'):until?t('fe.chx.viewerLeft',{left:left(until)}):undefined,wm});
   }catch(e){toast(feErrorMessage(e,t),{type:'err'});}
  };
  const left=(until:number)=>{const min=Math.max(1,Math.ceil((until-Date.now())/60e3));const h=Math.floor(min/60),r=min%60;
@@ -663,7 +679,7 @@ function ChatView({id,to}:{id:string,to:string}){
   <FilePick ref={gallery} accept={'image/*,'+VIDEO_TYPES.join(',')} onFiles={f=>pick([...f])}/>
   <FilePick ref={camera} accept="image/*" capture="environment" onFiles={f=>pick([...f])}/>
   <FilePick ref={videoPick} accept={VIDEO_TYPES.join(',')} onFiles={f=>pick([...f])}/>
-  {viewer&&<Viewer src={viewer.src} video={viewer.video} label={viewer.label} wm={viewer.wm} onClose={()=>{setViewer(null);pull(true).catch(()=>{});}}/>}
+  {viewer&&<Viewer src={viewer.src} video={viewer.video} label={viewer.label} wm={viewer.wm} onPlaying={viewer.onPlaying} onClose={()=>{setViewer(null);pull(true).catch(()=>{});}}/>}
 
   {sheet==='msg'&&msgFor&&<Sheet title={t('fe.chx.msgTitle')} onClose={closeSheet}>
    <Card list>

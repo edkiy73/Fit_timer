@@ -228,8 +228,50 @@ test('voice and video in chats: members only, «прослушано», voice al
     const oc = await call('ua', a, { action: 'chat.sendMedia', opId: op(), conversationId: conv, assetId: onceClip, mode: 'once' });
     const listed = (await call('ub', b, { action: 'chat.messages', conversationId: conv })).items.at(-1).media;
     assert.deepEqual([listed.ephemeral, listed.kind, listed.src], [true, 'video', undefined]);
+    const g1 = await call('ub', b, { action: 'chat.openMedia', opId: op(), messageId: oc.id });
+    assert.ok(g1.media.src.file && g1.startBy && g1.gone === false);
+    // Opening only grants: the view is NOT spent while the clip loads — it can be opened again inside the grant ...
     assert.ok((await call('ub', b, { action: 'chat.openMedia', opId: op(), messageId: oc.id })).media.src.file);
+    assert.equal((await db.query(`select done from feture.message_media_view where message_id = $1`, [oc.id]))[0].done, false);
+    // ... never by the sender or a third party, and not before a grant.
+    assert.equal((await call('ua', a, { action: 'chat.mediaStarted', opId: op(), messageId: oc.id })).status, 404);
+    assert.equal((await call('uc', c, { action: 'chat.mediaStarted', opId: op(), messageId: oc.id })).status, 404);
+    // Playback began: the single view is spent, a repeat of the report is harmless, a new open is refused.
+    const st = await call('ub', b, { action: 'chat.mediaStarted', opId: op(), messageId: oc.id });
+    assert.deepEqual([st.started, st.until, st.gone], [true, null, false]);
+    assert.equal((await call('ub', b, { action: 'chat.mediaStarted', opId: op(), messageId: oc.id })).started, true);
     assert.equal((await call('ub', b, { action: 'chat.openMedia', opId: op(), messageId: oc.id })).gone, true);
+    // The served copy outlives the playback: not burnt at the start, burnt by the sweep after the grace.
+    assert.equal((await db.query(`select a.state from feture.message m join feture.media_asset a on a.id = m.media_asset_id where m.id = $1`, [oc.id]))[0].state, 'approved');
+    await sweepEphemeral(db);
+    assert.equal((await db.query(`select a.state from feture.message m join feture.media_asset a on a.id = m.media_asset_id where m.id = $1`, [oc.id]))[0].state, 'approved');
+    await db.query(`update feture.message_media_view set opened_at = now() - interval '11 minutes' where message_id = $1`, [oc.id]);
+    await sweepEphemeral(db);
+    assert.equal((await db.query(`select a.state from feture.message m join feture.media_asset a on a.id = m.media_asset_id where m.id = $1`, [oc.id]))[0].state, 'removed');
+
+    // A grant never started runs out: the sweep closes it and burns the clip; a late report is refused.
+    const lateClip = await call('ua', a, { action: 'chat.sendMedia', opId: op(), conversationId: conv, assetId: await avAsset(db, a, 'video', 'once'), mode: 'once' });
+    assert.equal((await call('ub', b, { action: 'chat.mediaStarted', opId: op(), messageId: lateClip.id })).rule, 'not_opened');
+    await call('ub', b, { action: 'chat.openMedia', opId: op(), messageId: lateClip.id });
+    await db.query(`update feture.message_media_view set granted_at = now() - interval '3 minutes' where message_id = $1`, [lateClip.id]);
+    const gone = await call('ub', b, { action: 'chat.mediaStarted', opId: op(), messageId: lateClip.id });
+    assert.deepEqual([gone.started, gone.gone], [false, true]);
+    assert.equal((await call('ub', b, { action: 'chat.openMedia', opId: op(), messageId: lateClip.id })).gone, true);
+    assert.equal((await db.query(`select a.state from feture.message m join feture.media_asset a on a.id = m.media_asset_id where m.id = $1`, [lateClip.id]))[0].state, 'removed');
+    const sweepClip = await call('ua', a, { action: 'chat.sendMedia', opId: op(), conversationId: conv, assetId: await avAsset(db, a, 'video', 'once'), mode: 'once' });
+    await call('ub', b, { action: 'chat.openMedia', opId: op(), messageId: sweepClip.id });
+    await db.query(`update feture.message_media_view set granted_at = now() - interval '3 minutes' where message_id = $1`, [sweepClip.id]);
+    await sweepEphemeral(db);
+    assert.equal((await db.query(`select a.state from feture.message m join feture.media_asset a on a.id = m.media_asset_id where m.id = $1`, [sweepClip.id]))[0].state, 'removed');
+
+    // A timer clip: the countdown starts at playback, not at the open.
+    const tClip = await call('ua', a, { action: 'chat.sendMedia', opId: op(), conversationId: conv, assetId: await avAsset(db, a, 'video', 'once'), mode: 't15' });
+    const tg = await call('ub', b, { action: 'chat.openMedia', opId: op(), messageId: tClip.id });
+    assert.deepEqual([tg.until, !!tg.startBy], [null, true]);
+    assert.equal((await db.query(`select opened_at from feture.message_media_view where message_id = $1`, [tClip.id]))[0].opened_at, null);
+    const ts = await call('ub', b, { action: 'chat.mediaStarted', opId: op(), messageId: tClip.id });
+    assert.ok(ts.until && Date.parse(ts.until) > Date.now() + 14 * 60e3);
+    assert.ok((await call('ub', b, { action: 'chat.openMedia', opId: op(), messageId: tClip.id })).until);
 
     // A block hides the conversation, its voice messages and the «прослушано» mark either way.
     await call('ub', b, { action: 'block.set', opId: op(), profileId: a, on: true });

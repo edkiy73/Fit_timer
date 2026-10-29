@@ -22,6 +22,14 @@ import { typingTag } from '../realtime.mjs';
 
 const TTL_MIN = { t15: 15, t120: 120, t1440: 1440 };
 const UNOPENED_DAYS = 7;
+// A disappearing CLIP: opening hands out a grant, the view is spent / the timer starts when playback begins
+// (chat.mediaStarted). A grant never started runs out after GRANT_SEC and then counts as the view (the server cannot
+// tell «still loading» from «downloaded but never reported»); GRANT_SLACK_SEC covers a late request. The clip link is
+// valid GRANT_LINK_SEC from the grant, and a finished clip stays served for CLIP_BURN_GRACE_MIN so it can play out.
+const GRANT_SEC = 120;
+const GRANT_SLACK_SEC = 10;
+const GRANT_LINK_SEC = 300;
+const CLIP_BURN_GRACE_MIN = 10;
 
 /** @param {Acting | null} acting @returns {Acting} */
 const need = acting => { if (!acting) throw new Error('acting profile missing'); return acting; };
@@ -132,6 +140,7 @@ function chatSignal(signal, c, acting) {
 function ephemeralState(m, view) {
   if (!view) return 'none';
   if (view.done) return 'done';
+  if (!view.opened_at && view.granted_at && Date.now() - new Date(view.granted_at).getTime() > (GRANT_SEC + GRANT_SLACK_SEC) * 1e3) return 'done';
   if (view.opened_at) {
     if (m.media_mode === 'once') return 'done';
     const until = new Date(view.opened_at).getTime() + TTL_MIN[/** @type {keyof typeof TTL_MIN} */ (m.media_mode)] * 6e4;
@@ -146,6 +155,9 @@ async function burnIfDone(q, messageId) {
   const [x] = await q.query(
     `select m.media_asset_id from feture.message m where m.id = $1 and m.media_asset_id is not null
        and not exists (select 1 from feture.message_media_view v where v.message_id = m.id and not v.done)
+       -- A clip that just started playing plays out first; the sweep burns it after CLIP_BURN_GRACE_MIN.
+       and not exists (select 1 from feture.message_media_view v join feture.media_asset a on a.id = m.media_asset_id
+         where v.message_id = m.id and a.kind = 'video' and v.opened_at > now() - interval '${CLIP_BURN_GRACE_MIN} minutes')
        -- A file in an open report stays as evidence until the report is decided.
        and not exists (select 1 from feture.report r where r.state = 'open' and r.target_type = 'conversation' and m.id = any(r.message_ids))`, [messageId]);
   if (!x) return;
@@ -159,18 +171,23 @@ async function burnIfDone(q, messageId) {
 /** Timers that ran out and unopened files older than 7 days count as done; finished files go. @param {Db} db */
 export async function sweepEphemeral(db) {
   if (!(await db.query(`select to_regclass('feture.message_media_view') is not null ok`))[0].ok) return 0;
+  const grants = (await db.query(`select exists (select 1 from information_schema.columns where table_schema = 'feture' and table_name = 'message_media_view' and column_name = 'granted_at') ok`))[0].ok;
   const due = await db.query(
     `update feture.message_media_view v set done = true from feture.message m
      where m.id = v.message_id and not v.done and (
        v.opened_at is not null and m.media_mode = 'once'
        or v.opened_at is not null and v.opened_at + (case m.media_mode when 't15' then 15 when 't120' then 120 else 1440 end) * interval '1 minute' < now()
-       or v.opened_at is null and m.created_at < now() - interval '${UNOPENED_DAYS} days')
+       or v.opened_at is null and m.created_at < now() - interval '${UNOPENED_DAYS} days'
+       ${grants ? `or v.opened_at is null and v.granted_at is not null and v.granted_at + interval '${GRANT_SEC + GRANT_SLACK_SEC} seconds' < now()` : ''})
      returning v.message_id`);
   // Also files whose last view finished but whose burn was lost (a crash between the two steps).
   const finished = await db.query(
     `select m.id message_id from feture.message m join feture.media_asset a on a.id = m.media_asset_id
      where m.media_mode <> 'normal' and a.state not in ('removed', 'blocked')
-       and not exists (select 1 from feture.message_media_view v where v.message_id = m.id and not v.done) limit 200`);
+       and not exists (select 1 from feture.message_media_view v where v.message_id = m.id and not v.done)
+       -- A clip that just started plays out before its served copies go.
+       and not exists (select 1 from feture.message_media_view v where v.message_id = m.id and a.kind = 'video' and v.opened_at > now() - interval '${CLIP_BURN_GRACE_MIN} minutes')
+     limit 200`);
   for (const id of new Set([...due, ...finished].map(r => r.message_id))) await db.tx(q => burnIfDone(q, id));
   return due.length;
 }
@@ -557,20 +574,60 @@ const run = {
       await burnIfDone(q, m.id);
       return { media: null, gone: true }; // returned, not thrown: the closing writes must commit
     }
+    // A disappearing clip is only granted here; the view is spent / the timer starts at chat.mediaStarted.
+    const clip = asset?.kind === 'video';
+    let grant = /** @type {Date | null} */ (null);
     if (state === 'unopened') {
       // Nothing is used up unless the viewer can really see it now.
       if (c.state !== 'active') fail(409, 'conflict', { rule: 'ended' });
       if (!asset || asset.state !== 'approved' || !asset.copies_at) fail(409, 'conflict', { rule: 'pending' });
       if (asset.explicitness !== 'safe' && !prefs.show_explicit) fail(422, 'rule_violation', { rule: 'explicit_off' });
-      await q.query(`update feture.message_media_view set opened_at = now(), done = $3 where message_id = $1 and viewer_account_id = $2`,
-        [m.id, acting.accountId, m.media_mode === 'once']);
+      if (clip) {
+        // A grant still running is shown again with a link that dies at the first grant's expiry; it is never extended.
+        grant = view.granted_at ? new Date(view.granted_at) : new Date();
+        if (!view.granted_at) await q.query('update feture.message_media_view set granted_at = $3 where message_id = $1 and viewer_account_id = $2', [m.id, acting.accountId, grant]);
+      } else {
+        await q.query(`update feture.message_media_view set opened_at = now(), done = $3 where message_id = $1 and viewer_account_id = $2`,
+          [m.id, acting.accountId, m.media_mode === 'once']);
+      }
     }
+    const fileTtlCap = grant ? Math.max(1, Math.floor((grant.getTime() + GRANT_LINK_SEC * 1e3 - Date.now()) / 1e3)) : undefined;
     const media = asset && asset.state !== 'removed'
-      ? await mediaDto(cfg.media, { ...asset, view_rule: 'once' }, { viewerProfileId: acting.profileId, place: 'chat', showExplicit: prefs.show_explicit, opened: true, staff: false }).catch(() => null)
+      ? await mediaDto(cfg.media, { ...asset, view_rule: 'once' }, { viewerProfileId: acting.profileId, place: 'chat', showExplicit: prefs.show_explicit, opened: true, staff: false, ...(fileTtlCap ? { fileTtlCap } : {}) }).catch(() => null)
       : null;
+    if (grant) return { media, until: null, gone: !media, ...(media ? { startBy: new Date(grant.getTime() + GRANT_SEC * 1e3) } : {}) };
     if (m.media_mode === 'once') await burnIfDone(q, m.id);
     const until = m.media_mode === 'once' ? null : new Date((view?.opened_at ? new Date(view.opened_at).getTime() : Date.now()) + TTL_MIN[/** @type {keyof typeof TTL_MIN} */ (m.media_mode)] * 6e4);
     return { media, until, gone: false };
+  },
+
+  async 'chat.mediaStarted'(q, { acting: a, input }) {
+    // The clip really began to play for this viewer: now the single view is spent (once) / the timer starts. Only the
+    // recipient, only after chat.openMedia gave a grant, only inside it; a repeat of the same report changes nothing.
+    const acting = need(a);
+    const [m] = await q.query('select * from feture.message where id = $1 for update', [input.messageId]);
+    if (!m) fail(404, 'not_found');
+    await memberOf(q, m.conversation_id, acting);
+    if (m.media_mode === 'normal' || m.author_profile_id === acting.profileId) fail(404, 'not_found');
+    const [view] = await q.query('select * from feture.message_media_view where message_id = $1 and viewer_account_id = $2 for update', [m.id, acting.accountId]);
+    if (!view) fail(404, 'not_found');
+    const ttl = TTL_MIN[/** @type {keyof typeof TTL_MIN} */ (m.media_mode)];
+    if (view.opened_at) {
+      const until = ttl ? new Date(new Date(view.opened_at).getTime() + ttl * 6e4) : null;
+      return { started: true, until, gone: false }; // a repeat of the report (a retry): nothing changes
+    }
+    if (view.done) return { started: false, until: null, gone: true };
+    if (!view.granted_at) fail(409, 'conflict', { rule: 'not_opened' });
+    if (Date.now() - new Date(view.granted_at).getTime() > (GRANT_SEC + GRANT_SLACK_SEC) * 1e3) {
+      // The grant ran out unstarted: it counts as the view.
+      await q.query('update feture.message_media_view set done = true where message_id = $1 and viewer_account_id = $2', [m.id, acting.accountId]);
+      await burnIfDone(q, m.id);
+      return { started: false, until: null, gone: true };
+    }
+    const once = m.media_mode === 'once';
+    const [{ at }] = await q.query(`update feture.message_media_view set opened_at = now(), done = $3 where message_id = $1 and viewer_account_id = $2 returning opened_at at`, [m.id, acting.accountId, once]);
+    // No burn here: the served copy outlives the playback by CLIP_BURN_GRACE_MIN (the sweep burns finished clips).
+    return { started: true, until: ttl ? new Date(new Date(at).getTime() + ttl * 6e4) : null, gone: false };
   },
 
   async 'chat.listened'(q, { acting: a, input, signal }) {
