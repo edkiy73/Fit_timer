@@ -70,7 +70,7 @@ export const en: Record<keyof typeof ru, string> = {
   "fe.reg.dobInvalid": "Check your date of birth.",
   "fe.reg.terms": "I accept the terms and privacy policy",
   "fe.reg.termsMissing": "You need to accept the terms to create an account.",
-  "fe.reg.readTerms": "Read the terms and policy",
+  "fe.reg.readTerms": "Read",
   "fe.reg.news": "Email me FetUre news",
   "fe.reg.optional": "optional",
   "fe.reg.continue": "Continue",

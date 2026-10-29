@@ -2,9 +2,9 @@ import {useCallback,useEffect,useId,useRef,useState,type ReactNode} from 'react'
 import {useNavigate,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {AtSign,ChevronDown,ChevronRight,Clock,Lock,Plus,Sparkles,Star,Trash2,X} from 'lucide-react';
+import {AtSign,Camera,ChevronDown,ChevronRight,Clock,Lock,Plus,Sparkles,Star,Trash2,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Bar,Btn,Card,Chip,Counter,Empty,Field,FilePick,Group,Input,Note,PhotoAdd,PhotoSlot,PhotoSlots,Row,Sheet,Skel,TextArea,ToggleRow,VaultHead} from './kit';
+import {AddCard,Alert,Bar,Btn,Card,Counter,Empty,Field,FilePick,Group,Input,Note,PhotoAdd,PhotoSlot,PhotoSlots,Row,Sheet,Skel,TextArea,ToggleRow,VaultHead} from './kit';
 import {useFe,usePartnerApproves} from './session';
 import {Uploader} from './kit/Uploader';
 import {PickField,PlacePicker,type Place} from './kit/Place';
@@ -15,6 +15,7 @@ import {Ask,AudTag,COUPLE_ROWS,DETAIL_ROWS,MAX_PHOTOS,catalogRes,ok,photoSrc,pro
 import {NICK,nickAnswer} from './register';
 import {FIELD,shakeFirstErr,textLength,useChecks} from './kit/validate';
 import {PostPhotoPicker} from './gallery';
+import {ChipPick} from './kit/ChipPick';
 
 /** V21 P02 «Редактировать профиль» and P04 «Приватная часть» (`SC.P02` with `only`): one editor, opened at the block
  * that was tapped on «Я» — `media` (the photo slots), `basics` (name, nickname, age, about, city), `details` (the
@@ -135,13 +136,15 @@ export function MeEditScreen(){
  const addPlace=async(country:string,name:string):Promise<Place>=>{
   const r=await call('place.submit',{opId:newOpId(),country,name},z.object({placeId:z.string()}),{asAccount:true});
   const x={id:r.placeId,country,ru:name,en:name,pending:true};setAdded(x);toast(t('fe.kit.place.added',{name}),{type:'ok'});return x;};
- const chips=(f:string,kind:string)=>{if(!d)return null;const v=d.details[f];const multi=f!=='status';const sel=multi?(Array.isArray(v)?v:[]):(typeof v==='string'?[v]:[]);
+ // The same picker as sign-up (kit ChipPick): five chips and «Все · N» for a long list, not a wall of every option.
+ const chips=(f:string,kind:string)=>{if(!d)return null;const v=d.details[f];const multi=f!=='status';const sel=multi?(Array.isArray(v)?v as string[]:[]):(typeof v==='string'?[v]:[]);
   const opts=cat?.options.filter(x=>x.kind===kind)??[];
-  return <div className="chips" role="group" aria-label={t(kind==='status'?'fe.mx.f.status':'fe.reg.kind.'+kind)}>{opts.map(x=>{const on=sel.includes(x.code);
-   return <Chip key={x.code} on={on} onClick={()=>{
-    if(!multi){set({details:{...d.details,[f]:on?null:x.code}});return;}
-    if(!on&&sel.length>=(MULTI_MAX[f]??5)){toast(t('fe.mx.ed.max5'),{type:'info'});return;}
-    set({details:{...d.details,[f]:on?sel.filter(c=>c!==x.code):[...sel,x.code]}});}}>{locale==='en'?x.en:x.ru}</Chip>;})}</div>;};
+  const toggle=(code:string)=>{const on=sel.includes(code);
+   if(!multi){set({details:{...d.details,[f]:on?null:code}});return;}
+   if(!on&&sel.length>=(MULTI_MAX[f]??5)){toast(t('fe.mx.ed.max5'),{type:'info'});return;}
+   set({details:{...d.details,[f]:on?sel.filter(c=>c!==code):[...sel,code]}});};
+  return <ChipPick label={t(kind==='status'?'fe.mx.f.status':'fe.reg.kind.'+kind)} options={opts.map(x=>({code:x.code,label:locale==='en'?x.en:x.ru,search:x.ru+' '+x.en}))}
+   value={sel} onToggle={toggle} onClear={()=>set({details:{...d.details,[f]:multi?[]:null}})} max={multi?(MULTI_MAX[f]??5):0}/>;};
  const anyDetails=!!d&&fields.some(([f])=>{const v=d.details[f];return Array.isArray(v)?v.length>0:!!v;});
  const who=only==='details'||(whoOpen??!anyDetails);
  return <>
@@ -183,12 +186,12 @@ export function MeEditScreen(){
        </Card></Group>}
        <Group title={<>{t('fe.mx.ed.privJars')}{jars.granted?' · '+jars.granted:''}</>} foot={t('fe.mx.ed.privJarsFoot')}
         action={jars.granted>0&&<button type="button" onClick={()=>navigate('/n/me/interests?add=1&vis=granted')}><Plus/>{t('fe.mx.ed.add')}</button>}>
-        {jars.granted===0&&<Btn kind="soft" icon={Plus} onClick={()=>navigate('/n/me/interests?add=1&vis=granted')}>{t('fe.int.add')}</Btn>}</Group>
+        {jars.granted===0&&<AddCard icon={Sparkles} title={t('fe.int.add')} sub={t(cp?'fe.mp.jarsAddSubUs':'fe.mp.jarsAddSub')} onClick={()=>navigate('/n/me/interests?add=1&vis=granted')}/>}</Group>
        {!cp&&<Group title={t('fe.mx.ed.privMedia')} action={<Note as="span">{d.privMedia.length}/{PRIV_MAX}</Note>}>
-        {d.privMedia.length?slots('privMedia',d.privMedia,PRIV_MAX):<Btn kind="soft" icon={Plus} disabled={!!uploading} busy={uploading==='privMedia'} onClick={()=>pick('privMedia')}>{t('fe.mx.ed.privUpload')}</Btn>}</Group>}
+        {d.privMedia.length?slots('privMedia',d.privMedia,PRIV_MAX):<AddCard icon={Camera} title={t('fe.mp.mediaAdd')} sub={t('fe.mp.mediaAddSub')} disabled={!!uploading} busy={uploading==='privMedia'} onClick={()=>pick('privMedia')}/>}</Group>}
       </div>}
      </section>}
-     {failure&&<Alert kind="err" noIcon className="mt12">{failure}</Alert>}
+     {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
     </>}
   </div></div>
   {d&&<div className="ctabar"><div className="wrap"><Btn onClick={save} disabled={!dirty||busy} busy={busy}>{toPartner?t('fe.me.saveToPartner'):t('fe.me.save')}</Btn></div></div>}

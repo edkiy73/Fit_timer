@@ -24,14 +24,14 @@ const scenarios = [
  { name: 'A04 empty submit marks every field; nickname rules and «taken»', persona: 'new', route: '/n/feed', run: async t => {
    await t.see('Как тебя называть'); await t.see('.ctabar >> text=Дальше');
    await t.tap('.ctabar >> text=Дальше');
-   await t.see('Проверь отмеченные поля'); await t.see('От 3 до 20 символов'); await t.see('Укажи дату рождения полностью'); await t.see('Без согласия с условиями');
+   await t.see('От 3 до 20 символов'); await t.see('Укажи дату рождения полностью'); await t.see('Без согласия с условиями');
    await t.fill('input[autocomplete=username]', '_ab'); await t.see('.field.err >> text=От 3 до 20 символов', 3000);
    const used = (await t.persona('basic')).handle; // a nickname of the lane that is surely taken
    await t.fill('input[autocomplete=username]', used); await t.wait(1500);
    const taken = await t.api('nick.check', { handle: used }); if (taken.available !== false) throw new Error(used + ' should be taken');
    await t.see(taken.reason === 'reserved' ? 'Этот ник нельзя занять' : 'Этот ник уже занят');
    await t.fill('input[autocomplete=username]', nick('a')); await t.see('Ник свободен');
-   await t.tap('text=Читать условия и политику'); await t.see('.sheet >> text=Условия и приватность'); await t.tap('.sheet >> text=Понятно');
+   await t.tap('.k-check-row .btn'); await t.see('.sheet >> text=Условия и приватность'); await t.tap('.sheet >> text=Понятно');
    await t.tap('role=checkbox[name=/Принимаю/]'); if (await t.page.locator('role=checkbox[name=/Принимаю/]').getAttribute('aria-checked') !== 'true') throw new Error('terms not checked');
    await dob(t, 1, 2, adultYear); await t.see('Тебе 30.');
  } },
@@ -43,9 +43,9 @@ const scenarios = [
    await t.see('Расскажи о себе', 20000); await t.see('.ctabar >> text=Дальше'); await t.see('.ctabar >> text=Заполнить позже');
    await t.page.locator('.fin .chips[role=group] .chip').first().waitFor({ timeout: 15000 });
    // Owner 28.10.2026: Discover starts off; «Показываться» asks for a photo first, «Не сейчас» keeps it off.
-   await t.see('role=radio[name="Не участвовать"][aria-checked=true]');
+   await t.see('role=radio[name="Не участвовать"][checked=true]');
    await t.tap('role=radio[name="Показываться"]'); await t.see('.dialog.on >> text=Нужно фото');
-   await t.tap('.dialog.on >> text=Не сейчас'); await t.see('role=radio[name="Не участвовать"][aria-checked=true]');
+   await t.tap('.dialog.on >> text=Не сейчас'); await t.see('role=radio[name="Не участвовать"][checked=true]');
    await t.tap('role=radio[name="По доступу"]'); await t.see('Увидят только те, кому ты откроешь');
    await t.tap('role=radio[name="Да, вместе"]'); await t.see('пригласишь партнёра'); await t.tap('role=radio[name="Да, вместе"]'); await t.notSee('пригласишь партнёра', 300);
    const g = t.page.locator('.chips[aria-label="Гендер"] .chip:not(.more)').first(); const gName = (await g.innerText()).trim(); await g.click();

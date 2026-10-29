@@ -3,7 +3,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,Calendar,Eye,FileText,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Av,Bar,Btn,Card,Empty,Note,Row,SectionLabel,Skel,View} from './kit';
+import {Av,Bar,Btn,Card,Empty,Note,Row,SectionLabel,Skel,Stack,View} from './kit';
 import {useFe,useShown} from './session';
 import {useToast} from './toast';
 import {when} from './feed';
@@ -72,8 +72,8 @@ export function HiddenFeedSheet({onClose}:{onClose:()=>void}){
  const {t}=useI18n();const {acting,state}=useFe();const h=useHidden();
  const hasCouple=state.status==='ready'&&state.boot.profiles.some(p=>p.kind==='couple'&&p.state!=='deleted');
  return <Sheet title={t('fe.tl.h.title')} onClose={onClose}>
-  {hasCouple&&<Note className="mb8">{acting?.kind==='couple'?t('fe.tl.h.feedCouple'):t('fe.tl.h.feedMine')}</Note>}
-  <HiddenList h={h}/>
+  <Stack gap={3}>{hasCouple&&<Note>{acting?.kind==='couple'?t('fe.tl.h.feedCouple'):t('fe.tl.h.feedMine')}</Note>}
+  <HiddenList h={h}/></Stack>
  </Sheet>;
 }
 
@@ -82,8 +82,8 @@ export function HiddenFeedScreen(){
  return <>
   <Bar title={t('fe.tl.h.title')} back="/n/settings"/>
   <View className="nodock compact">
-   {acting?.kind==='couple'&&<Note className="mb12">{t('fe.tl.h.couple')}</Note>}
-   <HiddenList h={h}/>
+   <Stack gap={3}>{acting?.kind==='couple'&&<Note>{t('fe.tl.h.couple')}</Note>}
+   <HiddenList h={h}/></Stack>
   </View>
  </>;
 }
@@ -120,14 +120,18 @@ export function BlockedScreen(){
  return <>
   <Bar title={t('fe.tl.b.title')} back="/n/settings"/>
   <View className="nodock compact">
-   <Note className="mb12">{other?(couple?t('fe.tl.b.noteCouple').replace('{name}',nameOf(acting)):t('fe.tl.b.noteMine')):t('fe.tl.b.note')}</Note>
+   {/* Whose list this is (person or couple) heads it; what blocking does is said under a list that has someone. */}
+   <Stack gap={3}>
+   {other&&<Note>{couple?t('fe.tl.b.noteCouple').replace('{name}',nameOf(acting)):t('fe.tl.b.noteMine')}</Note>}
    {error&&!items?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :items===null?<Skel kind="list"/>
     :items.length===0?<Empty icon={Ban} title={t('fe.tl.b.empty')} text={t('fe.tl.b.emptyText')}/>
     :<Card list>{items.map(b=>{const name=nameOf(b)||'?';const forBoth=otherIds.has(b.id);
      return <Row key={b.id} av={<Av name={name} seed={b.id}/>} title={name} sub={(forBoth?t('fe.tl.b.both'):t('fe.tl.b.blocked'))+' '+when(b.created_at,locale)}
-      extra={other&&!forBoth?<div className="mt8"><Btn kind="text" size="sm" auto onClick={()=>void both(b)} busy={busy==='b:'+b.id} disabled={!!busy}>{couple?t('fe.tl.b.forMe'):t('fe.tl.b.forCouple')}</Btn></div>:undefined}
+      extra={other&&!forBoth?<Btn kind="text" size="sm" auto onClick={()=>void both(b)} busy={busy==='b:'+b.id} disabled={!!busy}>{couple?t('fe.tl.b.forMe'):t('fe.tl.b.forCouple')}</Btn>:undefined}
       end={<Btn kind="soft" size="sm" fit onClick={()=>{setAsk(b);setFailure('');}} disabled={!!busy}>{t('fe.tl.b.unblock')}</Btn>}/>;})}</Card>}
+   {items&&items.length>0&&<Note>{t('fe.tl.b.note')}</Note>}
+   </Stack>
   </View>
   {ask&&<Ask icon={Ban} title={t('fe.tl.b.askTitle').replace('{name}',askName)}
    text={couple?t('fe.tl.b.askTextCouple').replace('{name}',askName).replace('{pair}',nameOf(acting)):t('fe.tl.b.askText')}

@@ -6,7 +6,7 @@ import {AtSign,Check,Copy,EyeOff,Heart,Link as LinkIcon,Lock,ShieldCheck,Users,X
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicBase} from '../api-url';
 import {copyLink} from './share';
-import {Alert,Av,Bar,Btn,Card,Field,Group,H,Input,Note,PersonLine,Pill,RadioList,RequestCard,Row,SelectRow,Sheet,Skel,View} from './kit';
+import {Actions,Alert,Av,Bar,Btn,Card,Field,Group,H,Input,Note,PersonLine,Pill,RadioList,RequestCard,Row,SelectRow,Sheet,Skel,Stack,View} from './kit';
 import {useFe} from './session';
 import {Ask} from './me';
 import {useToast} from './toast';
@@ -106,15 +106,15 @@ export function PairScreen(){
     <H level={2} className="t center">{t('fe.pq.stoppedTitle')}</H>
     <p className="lead center">{t('fe.pq.stoppedLead')}</p>
     <Note className="center">{t('fe.pq.agreed',{n:agreed,date:until})}</Note>
-    <div className="btns mt16">
+    <Actions stack>
      {me?.restoreAgreed?<Btn icon={Check} disabled>{t('fe.pq.waitPartner',{name:nameOf(other)})}</Btn>
       :<Btn disabled={busy} busy={busy} onClick={()=>act(async()=>{const r=await call('couple.restore',{opId:newOpId()},z.object({ok:z.literal(true),state:z.string().optional()}).passthrough(),{profileId:couple.id});
         toast(r.state==='active'?t('fe.pq.restored'):t('fe.pq.waitPartner',{name:nameOf(other)}),{type:'ok'});if(r.state==='active')reload();})}>{t('fe.pq.restore')}</Btn>}
      <Btn kind="soft" disabled={busy} onClick={()=>setAskNew(true)}>{t('fe.pq.new')}</Btn>
      <Note className="center">{t('fe.pq.newNote')}</Note>
      {acting?.kind==='couple'&&person&&<Btn kind="text" onClick={()=>{setActing(person.id);navigate('/n/me');}}>{t('fe.pq.toPersonal')}</Btn>}
-    </div>
-    {failure&&<Alert kind="err" noIcon className="mt12">{failure}</Alert>}
+    </Actions>
+    {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
    </div></View>
    {askNew&&<Ask icon={Users} danger title={t('fe.pq.newTitle')} text={t('fe.pq.newText',{name:c.name||`${nameOf(me)} ${t('fe.pair.and')} ${nameOf(other)}`})} ok={t('fe.pq.newOk')}
     onCancel={()=>setAskNew(false)} onOk={()=>{setAskNew(false);if(acting?.kind==='couple'&&person)setActing(person.id);setFresh(true);}}/>}
@@ -135,9 +135,9 @@ export function PairScreen(){
       <Btn kind="soft" onClick={()=>{setActing(couple.id);navigate('/n/me');}}>{t('fe.pair.actAsUs')}</Btn></Group>
      {c.state==='active'&&<Group title={t('fe.pair.careful')}>
       {!confirmStop?<Card list><Row icon={X} danger title={t('fe.pair.stop')} onClick={()=>setConfirmStop(true)}/></Card>
-       :<Card><p>{t('fe.pair.stopText')}</p><div className="btns mt12">
+       :<Card><Stack gap={3}><p>{t('fe.pair.stopText')}</p><Actions stack>
         <Btn kind="danger" disabled={busy} onClick={()=>act(()=>call('couple.stop',{opId:newOpId(),confirm:true},ok,{profileId:couple.id}),()=>{setConfirmStop(false);reload();})}>{t('fe.pair.stop')}</Btn>
-        <Btn kind="text" onClick={()=>setConfirmStop(false)}>{t('fe.cancel')}</Btn></div></Card>}
+        <Btn kind="text" onClick={()=>setConfirmStop(false)}>{t('fe.cancel')}</Btn></Actions></Stack></Card>}
      </Group>}
     </div>
     {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
@@ -158,28 +158,28 @@ export function PairScreen(){
    <H level={2} className="t center">{out?t('fe.pair.waiting').replace('{name}',nameOf(out.profile)):t('fe.pair.inviteTitle')}</H>
    <Note className="center">{t('fe.pair.inviteText')}</Note>
    {inv===null?<Skel kind="list"/>:<>
-    {inv.incoming.map(i=><RequestCard key={i.id} className="mt12" person={<PersonLine av={<Av name={nameOf(i.profile)} seed={i.profile?.id??i.id}/>} name={nameOf(i.profile)} sub={<>{t('fe.inbox.kind.pinv')} · {when(i.created_at,locale)}</>}/>}
+    {inv.incoming.map(i=><RequestCard key={i.id} person={<PersonLine av={<Av name={nameOf(i.profile)} seed={i.profile?.id??i.id}/>} name={nameOf(i.profile)} sub={<>{t('fe.inbox.kind.pinv')} · {when(i.created_at,locale)}</>}/>}
      actions={<><Btn size="md" disabled={busy} onClick={()=>act(()=>call('couple.inviteAnswer',{opId:newOpId(),inviteId:i.id,accept:true},ok,{asAccount:true}),toSetup)}>{t('fe.inbox.accept')}</Btn>
       <Btn size="md" kind="soft" disabled={busy} onClick={()=>act(()=>call('couple.inviteAnswer',{opId:newOpId(),inviteId:i.id,accept:false},ok,{asAccount:true}))}>{t('fe.priv.decline')}</Btn></>}/>)}
-    {out?<div className="btns mt16"><Btn kind="soft" disabled={busy} onClick={()=>act(()=>call('couple.inviteWithdraw',{opId:newOpId(),inviteId:out.id},ok,{asAccount:true}))}>{t('fe.pair.withdraw')}</Btn></div>
-     :<Card form className="mt16">
-      <label className="field"><span>{t('fe.pair.partnerNick')}</span><div className="inwrap"><AtSign/><Input value={nick} onChange={e=>setNick(e.target.value.replace(/^@/,''))} placeholder="nickname" autoCapitalize="off" spellCheck={false} maxLength={20}/></div><div className="fhint">{t('fe.pair.nickHint')}</div></label>
+    {out?<Btn kind="soft" disabled={busy} onClick={()=>act(()=>call('couple.inviteWithdraw',{opId:newOpId(),inviteId:out.id},ok,{asAccount:true}))}>{t('fe.pair.withdraw')}</Btn>
+     :<Card form>
+      <Field id="fe-pair-nick" label={t('fe.pair.partnerNick')} hint={t('fe.pair.nickHint')}><div className="inwrap"><AtSign/><Input id="fe-pair-nick" value={nick} onChange={e=>setNick(e.target.value.replace(/^@/,''))} placeholder="nickname" autoCapitalize="off" spellCheck={false} maxLength={20}/></div></Field>
       {lookup.hit?<Row av={<Av name={nameOf(lookup.hit)} seed={lookup.hit.id} src={thumb(lookup.hit)} size="sm"/>} title={nameOf(lookup.hit)} sub={'@'+lookup.hit.handle} end={<Pill tone="ok" icon={Check}>{t('fe.pq.found')}</Pill>}/>
        :lookup.issue?<Note>{t('fe.pq.issue.'+lookup.issue)}</Note>:null}
       <Btn disabled={busy||!lookup.hit} onClick={()=>act(async()=>{await call('couple.invite',{opId:op.current,handle:nick.trim(),...(couple&&fresh?{replacePaused:true}:{})},ok,{asAccount:true});op.current=newOpId();setNick('');if(couple&&fresh)reload();})}>{t('fe.pair.invite')}</Btn>
      </Card>}
     {!out&&!(couple&&fresh)&&<Group title={t('fe.c6.link.group')} foot={t('fe.c6.link.foot')}>
-     {inv.link&&<Card list><Row icon={LinkIcon} title={t('fe.c6.link.live')} sub={t('fe.c6.link.until',{date:new Date(inv.link.expiresAt).toLocaleDateString(locale==='en'?'en':'ru',{day:'numeric',month:'long'})})}
+     <Stack gap={3}>{inv.link&&<Card list><Row icon={LinkIcon} title={t('fe.c6.link.live')} sub={t('fe.c6.link.until',{date:new Date(inv.link.expiresAt).toLocaleDateString(locale==='en'?'en':'ru',{day:'numeric',month:'long'})})}
       end={<Btn kind="text" size="sm" auto disabled={busy} onClick={()=>{const id=inv.link!.id;void act(()=>call('couple.linkRevoke',{opId:newOpId(),linkId:id},ok,{asAccount:true}),()=>{setLink(null);toast(t('fe.c6.link.revoked'),{type:'ok'});});}}>{t('fe.c6.link.revoke')}</Btn>}/></Card>}
-     <Btn kind="soft" icon={LinkIcon} className={inv.link?'mt12':undefined} disabled={busy} onClick={()=>void makeLink()}>{inv.link?t('fe.c6.link.new'):t('fe.c6.link.copy')}</Btn>
+     <Btn kind="soft" icon={LinkIcon} disabled={busy} onClick={()=>void makeLink()}>{inv.link?t('fe.c6.link.new'):t('fe.c6.link.copy')}</Btn></Stack>
     </Group>}
    </>}
-   {failure&&<Alert kind="err" noIcon className="mt12">{failure}</Alert>}
+   {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
   </div></View>
   {link&&<Sheet title={t('fe.c6.link.sheet')} onClose={()=>setLink(null)} foot={<Btn icon={Copy} onClick={()=>{void copyLink(link.url).then(ok=>toast(t(ok?'fe.c6.link.copied':'fe.c6.link.copyHand'),{type:ok?'ok':'info'}));}}>{t('fe.c6.link.copyBtn')}</Btn>}>
    <p className="lead">{t('fe.c6.link.lead')}</p>
    <Field id="fe-pair-link" label={t('fe.c6.link.label')}><Input id="fe-pair-link" name="pairLink" readOnly value={link.url} onFocus={e=>e.currentTarget.select()}/></Field>
-   <Alert kind="info" className="mt12">{t('fe.c6.link.atOnce')}</Alert>
+   <Alert kind="info">{t('fe.c6.link.atOnce')}</Alert>
    <Note>{t('fe.c6.link.until',{date:new Date(link.expiresAt).toLocaleDateString(locale==='en'?'en':'ru',{day:'numeric',month:'long'})})} · {t('fe.c6.link.once')}</Note>
   </Sheet>}
  </>;
@@ -207,22 +207,22 @@ function LinkLanding({token,me,auto,onClose,onAccepted}:{token:string,auto:boole
   <Bar title={t('fe.pair.title')} onBack={onClose}/>
   <View className="nodock"><div className="pair-wrap">
    <Scene me={me} other={from?{name:nameOf(from),id:from.id}:null} state={from?'ready':''}/>
-   {dead?<><H level={2} className="t center">{t('fe.c6.land.deadTitle')}</H><Alert kind="warn" className="mt12">{dead}</Alert>
-     <div className="btns mt16"><Btn kind="soft" onClick={onClose}>{t('fe.c6.land.toPair')}</Btn></div></>
+   {dead?<><H level={2} className="t center">{t('fe.c6.land.deadTitle')}</H><Alert kind="warn">{dead}</Alert>
+     <Btn kind="soft" onClick={onClose}>{t('fe.c6.land.toPair')}</Btn></>
     :!from?<Skel kind="list"/>
     :<>
      <H level={2} className="t center">{t('fe.c6.land.title',{name:nameOf(from)})}</H>
      <p className="lead center">{t('fe.c6.land.lead')}</p>
-     <Alert kind="info" className="mt12">{auto?t('fe.c6.land.forming'):t('fe.c6.land.atOnce')}</Alert>
-     <Card list className="mt12">
+     <Alert kind="info">{auto?t('fe.c6.land.forming'):t('fe.c6.land.atOnce')}</Alert>
+     <Card list>
       <Row icon={Heart} title={t('fe.c6.land.d1')} sub={t('fe.c6.land.d1s')}/>
       <Row icon={Users} title={t('fe.c6.land.d2')} sub={t('fe.c6.land.d2s')}/>
       <Row icon={ShieldCheck} title={t('fe.c6.land.d3')} sub={t('fe.c6.land.d3s')}/>
      </Card>
-     {!auto||failure?<div className="btns mt16"><Btn disabled={busy} busy={busy} onClick={()=>void accept()}>{t('fe.c6.land.accept')}</Btn>
-      <Btn kind="soft" disabled={busy} onClick={onClose}>{t('fe.c6.land.decline')}</Btn></div>:null}
+     {!auto||failure?<Actions stack><Btn disabled={busy} busy={busy} onClick={()=>void accept()}>{t('fe.c6.land.accept')}</Btn>
+      <Btn kind="soft" disabled={busy} onClick={onClose}>{t('fe.c6.land.decline')}</Btn></Actions>:null}
     </>}
-   {failure&&<Alert kind="err" noIcon className="mt12">{failure}</Alert>}
+   {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
   </div></View>
  </>;
 }
@@ -251,7 +251,7 @@ function SetupView({c,coupleId,onDone}:{c:Couple,coupleId:string,onDone:()=>void
     <SelectRow icon={Lock} label={t('fe.c6.q9.req')} sub={t('fe.c6.q9.req.'+req)} value={req} onChange={setReq}
      options={(['all','matches','none'] as const).map(v=>[v,t('fe.c6.q9.reqv.'+v)] as const)}/>
    </Card></Group>
-   {failure&&<Alert kind="err" noIcon className="mt12">{failure}</Alert>}
+   {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
   </View>
   <div className="ctabar"><div className="wrap"><Btn disabled={busy} busy={busy} onClick={()=>void done()}>{t('fe.c6.q9.done')}</Btn></div></div>
  </>;
@@ -286,8 +286,8 @@ function CoupleSettings({c,coupleId,other,trustOpen,onChanged}:{c:Couple,coupleI
    <Row icon={Check} title={t('fe.c6.trust.title')} sub={me?.approvesPartner?t('fe.c6.trust.on'):t('fe.c6.trust.off')} onClick={()=>setTrust(true)}/>
   </Card></Group>
   <Group title={t('fe.c6.safe.group')}><Card list>
-   {off?<Row icon={EyeOff} title={t('fe.c6.safe.hiddenTitle')} sub={t('fe.c6.safe.hiddenSub')} val={<Check/>}/>
-    :<Row icon={EyeOff} noChev title={t('fe.c6.safe.hide')} sub={t('fe.c6.safe.hideSub')} disabled={!s||!!busy} onClick={hide}/>}
+   {/* Hidden already: «Знакомства» above says so — no second status line for the same thing. */}
+   {!off&&<Row icon={EyeOff} noChev title={t('fe.c6.safe.hide')} sub={t('fe.c6.safe.hideSub')} disabled={!s||!!busy} onClick={hide}/>}
    {closed?<Row icon={Lock} title={t('fe.c6.safe.closedTitle')} sub={t('fe.c6.safe.closedSub')} val={<Check/>}/>
     :<Row icon={Lock} noChev title={t('fe.c6.safe.close')} sub={t('fe.c6.safe.closeSub')} disabled={!s||!!busy} onClick={()=>setAskClose(true)}/>}
   </Card></Group>
@@ -304,10 +304,12 @@ function TrustSheet({coupleId,on,other,otherOn,onClose,onDone}:{coupleId:string,
   try{await call('couple.setApproval',{opId:newOpId(),approvesPartner:v==='on'},ok,{profileId:coupleId});toast(t('fe.c6.trust.saved'),{type:'ok'});onDone();}
   catch(e){setFailure(feErrorMessage(e,t));}finally{setBusy(false);}};
  return <Sheet title={t('fe.c6.trust.title')} onClose={onClose} foot={<Btn disabled={busy} busy={busy} onClick={()=>void save()}>{t('fe.c6.trust.save')}</Btn>}>
-  <p className="lead">{t('fe.c6.trust.lead',{name:other})}</p>
-  <RadioList bare label={t('fe.c6.trust.title')} value={v} onChange={setV} options={[['off',t('fe.c6.trust.offT'),t('fe.c6.trust.offS')],['on',t('fe.c6.trust.onT'),t('fe.c6.trust.onS')]] as const}/>
-  <Note className="mt12">{t('fe.c6.trust.note')} {otherOn?t('fe.c6.trust.otherOn',{name:other}):t('fe.c6.trust.otherOff',{name:other})}</Note>
-  {failure&&<Alert kind="err" noIcon className="mt12">{failure}</Alert>}
+  <Stack gap={3}>
+   <p className="lead">{t('fe.c6.trust.lead',{name:other})}</p>
+   <RadioList bare label={t('fe.c6.trust.title')} value={v} onChange={setV} options={[['off',t('fe.c6.trust.offT'),t('fe.c6.trust.offS')],['on',t('fe.c6.trust.onT'),t('fe.c6.trust.onS')]] as const}/>
+   <Note>{t('fe.c6.trust.note')} {otherOn?t('fe.c6.trust.otherOn',{name:other}):t('fe.c6.trust.otherOff',{name:other})}</Note>
+   {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
+  </Stack>
  </Sheet>;
 }
 

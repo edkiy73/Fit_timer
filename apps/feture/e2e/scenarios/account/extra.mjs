@@ -32,7 +32,7 @@ export default [
  } },
  { name: 'V01 photo check: gesture shown, pinned CTA, a selfie can be picked and retaken (not sent)', persona: 'full', route: '/n/settings/photo-check', run: async t => {
    const s = await t.api('verification.photoStatus', {});
-   if (s.state === 'approved' || s.state === 'pending') { await t.see('.pv-state'); return; }
+   if (s.state === 'approved' || s.state === 'pending') { await t.see('.empty[role=status]'); return; }
    await t.see('.pv-pose b:not([aria-busy])', 15000);
    await t.see('.ctabar .btn');
    const jpg = Buffer.from('/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q==', 'base64');

@@ -263,8 +263,10 @@ export function CheckList<T extends string>({value,options,onChange,label}:{valu
   <i><Check2/></i><span className="tx">{title}{sub&&<small>{sub}</small>}</span></button>;})}</div>;
 }
 /** `.check` — a checkbox with its text (consents, «Также заблокировать» in forms). */
-export function Check({on,onChange,children,error}:{on:boolean,onChange:(v:boolean)=>void,children:ReactNode,error?:boolean}){
- return <button type="button" role="checkbox" aria-checked={on} className={'check'+(on?' on':'')+(error?' err':'')} onClick={()=>onChange(!on)}><i><Check2/></i><span>{children}</span></button>;
+export function Check({on,onChange,children,error,aside}:{on:boolean,onChange:(v:boolean)=>void,children:ReactNode,error?:boolean,
+ /** A small action on the same row, outside the box's tap area (an explicit consent and «Читать» next to it). */ aside?:ReactNode}){
+ const box=<button type="button" role="checkbox" aria-checked={on} className={'check'+(on?' on':'')+(error?' err':'')} onClick={()=>onChange(!on)}><i><Check2/></i><span>{children}</span></button>;
+ return aside?<div className="k-check-row">{box}{aside}</div>:box;
 }
 /** `.sw` — a bare switch, for a row the kit's ToggleRow does not fit. */
 export function Switch({on,onChange,label,disabled,className}:{on:boolean,onChange:(v:boolean)=>void,label:string,disabled?:boolean|undefined,className?:string}){
@@ -360,6 +362,14 @@ export function LoadMore({more,busy,error,onMore,label}:{more:boolean,busy?:bool
  if(!more)return null;
  if(error&&!busy)return <div className="k-more err" role="alert"><span>{t('fe.kit.more.fail')}</span><Btn kind="text" size="sm" fit onClick={()=>cb.current()}>{t('fe.kit.more.retry')}</Btn></div>;
  return <div ref={box} className="k-more" role="status" aria-busy={busy||undefined} aria-label={label??t('fe.kit.more.loading')}>{busy&&<span className="k-more-dots" aria-hidden="true"><i/><i/><i/></span>}</div>;
+}
+
+/** Counts as tiles in a row (a manage screen: members, requests, who is going): the number large, a word under it; a
+ * tile with `onClick` opens its list. Two or three tiles share the width. */
+export function StatTiles({items}:{items:readonly {n:number,label:string,onClick?:(()=>void)|undefined}[]}){
+ return <div className={'stat3'+(items.length===2?' two':'')}>{items.map((x,i)=>x.onClick
+  ?<button key={i} type="button" onClick={x.onClick}><b>{x.n}</b><small>{x.label}</small></button>
+  :<div key={i}><b>{x.n}</b><small>{x.label}</small></div>)}</div>;
 }
 
 export * from './domain';

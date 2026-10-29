@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Check,Inbox,LifeBuoy,MessageCircle,RefreshCw,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Btn,Card,ChoiceChips,Empty,Field,Group,Note,Row,Seg,Sheet,Skel,Stack,TextArea,Thread} from './kit';
+import {Actions,Alert,Btn,Card,ChoiceChips,Empty,Field,Group,Note,Row,Seg,Sheet,Skel,Stack,TextArea,Thread} from './kit';
 import {useToast} from './toast';
 import {FIELD,serverFields,softMax,textError,textErrorMessage,useChecks} from './kit/validate';
 import {useFe} from './session';
@@ -42,7 +42,7 @@ export function SupportSheet({onClose,onSent}:{onClose:()=>void,onSent:(t:Ticket
    <TextArea id="fe-sup-text" rows={5} {...checks.input('body')} invalid={!!(checks.error('body')??err)} value={body} placeholder={t('fe.w8.sup.placeholder')} onChange={e=>{setBody(e.target.value);setErr('');}}/>
    {checks.counter('body')}
   </Field>
-  <Note className="mt8">{t('fe.w8.sup.threat')}</Note>
+  <Note>{t('fe.w8.sup.threat')}</Note>
  </Sheet>;
 }
 
@@ -126,10 +126,10 @@ function StaffTicket({item,when,onDone}:{item:z.infer<typeof queueRes>['items'][
     <Field id={'fe-st-sup-'+item.id} label={t('fe.w8.staff.answer')} error={err||undefined}>
      <TextArea id={'fe-st-sup-'+item.id} rows={3} maxLength={softMax('support')} value={body} invalid={!!err} onChange={e=>{setBody(e.target.value);setErr('');}}/>
     </Field>
-    <Stack row gap={2}>
-     <Btn size="sm" auto busy={busy} icon={MessageCircle} onClick={()=>void send(false)}>{t('fe.w8.staff.send')}</Btn>
-     <Btn size="sm" auto kind="soft" disabled={busy} onClick={()=>void send(true)}>{body.trim()?t('fe.w8.staff.sendClose'):t('fe.w8.staff.close')}</Btn>
-    </Stack>
+    <Actions>
+     <Btn size="sm" busy={busy} icon={MessageCircle} onClick={()=>void send(false)}>{t('fe.w8.staff.send')}</Btn>
+     <Btn size="sm" kind="soft" disabled={busy} onClick={()=>void send(true)}>{body.trim()?t('fe.w8.staff.sendClose'):t('fe.w8.staff.close')}</Btn>
+    </Actions>
    </>}
   </Stack>
  </Card>;

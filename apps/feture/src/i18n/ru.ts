@@ -68,7 +68,7 @@ export const ru = {
   "fe.reg.dobInvalid": "Проверь дату рождения.",
   "fe.reg.terms": "Принимаю условия и политику приватности",
   "fe.reg.termsMissing": "Без согласия с условиями аккаунт не создать.",
-  "fe.reg.readTerms": "Читать условия и политику",
+  "fe.reg.readTerms": "Читать",
   "fe.reg.news": "Присылать новости FetUre на почту",
   "fe.reg.optional": "необязательно",
   "fe.reg.continue": "Дальше",

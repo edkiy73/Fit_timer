@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,ChartColumn,Bell,BellOff,Bookmark,BookmarkCheck,Calendar,CalendarPlus,Check,ChevronLeft,Clock,Ellipsis,Eye,ExternalLink,FileText,Flag,Globe,Image as ImageIcon,Link as LinkIcon,Lock,Map as MapIcon,MapPin,MessageCircle,Plus,Search,Settings,Share,SlidersHorizontal,Ticket,TriangleAlert,Users,Video,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {ActingAv,Alert,Announcement,Ask,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,CommunityHead,CoverBar,Discussion,Empty,EventHero,EventTile,Group,IconBtn,LinkBtn,Note,Pill,Row,Rsvp,SectionLabel,Seg,Sheet,Skel,Spacer,StatusCard,Text,ToggleRow,Veil,View,useRefreshable} from './kit';
+import {Actions,Alert,Announcement,Ask,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,CommunityHead,CoverBar,Discussion,Empty,EventHero,EventTile,Group,IconBtn,LinkBtn,Note,Pill,Row,Rsvp,SectionLabel,Seg,Sheet,Skel,Spacer,Stack,StatusCard,Text,ToggleRow,Veil,View,useRefreshable} from './kit';
 import {useFe,useKeyChange} from './session';
 import {when} from './feed';
 import {Composer} from './create-entry';
@@ -234,14 +234,14 @@ function StatusPill({s}:{s:MyStatus|undefined}){
 
 /** `eventCard()` — the big card, or the row (`row`) used for «Ближайшая встреча» and cancelled events. A cancelled row
  * says «Отменено» and, under it, the organizer's reason (lists show it only to people it concerns — server cancelledFor). */
-export function EventCard({e,row,status,org}:{e:Ev,row?:boolean,status?:MyStatus|undefined,org?:string|undefined}){
+export function EventCard({e,row,status,org,pill:own}:{e:Ev,row?:boolean,status?:MyStatus|undefined,org?:string|undefined,/** A status label of the screen's own (the organiser panel). */ pill?:ReactNode}){
  const {t,locale}=useI18n();const navigate=useNavigate();const tz=evTz(e);
  const day=inTz(e.starts_at,tz,locale,{day:'numeric'});const mon=inTz(e.starts_at,tz,locale,{month:'short'}).replace('.','');
  const cancelled=e.state==='cancelled';
- const pill=cancelled?<Pill tone="bad">{t('fe.cm.st.cancelled')}</Pill>:<StatusPill s={status}/>;
+ const pill=own??(cancelled?<Pill tone="bad">{t('fe.cm.st.cancelled')}</Pill>:<StatusPill s={status}/>);
  const place=e.format==='online'?t('fe.ev.online'):e.area??t('fe.ev.offline');
  return <EventTile row={row} cover={<NamedPlate k={e.plate} icon={Calendar}/>} day={day} month={mon} place={place} placeIcon={e.format==='online'?Video:MapPin}
-  status={row?pill:cancelled||status?pill:undefined} kicker={t('fe.ev.kind.'+e.kind)} title={e.title} time={timeOf(e.starts_at,tz,locale)} {...(row?{org:org??(cancelled&&e.cancel_reason||undefined)}:{price:priceText(e.price,t,locale)})}
+  status={row||own?pill:cancelled||status?pill:undefined} kicker={t('fe.ev.kind.'+e.kind)} title={e.title} time={timeOf(e.starts_at,tz,locale)} {...(row?{org:org??(cancelled&&e.cancel_reason||undefined)}:{price:priceText(e.price,t,locale)})}
   onClick={()=>navigate('/n/events/'+e.id)}/>;
 }
 
@@ -280,7 +280,7 @@ function EvFilterSheet({value,onApply,onClose}:{value:EvFilter,onApply:(f:EvFilt
   <div className="fin-b"><ChoiceChips label={label} value={d[k]} onChange={o=>setD(x=>({...x,[k]:o}))} options={opts.map(o=>[o,t(lk+o)] as const)}/>{extra}</div></section>;
  return <Sheet full title={t('fe.cm.evFiltersTitle')} onClose={onClose} dirty={JSON.stringify(d)!==JSON.stringify(value)} head={<Btn kind="text" auto onClick={()=>setD(EF0)}>{t('fe.cm.reset')}</Btn>}
   foot={n&&!n.n?<Btn kind="soft" disabled aria-disabled="true">{t('fe.cm.evNoneMatch')}</Btn>:<Btn onClick={()=>onApply(d)}>{n?fill(t('fe.cm.showN'),{n:(n.more?'20+ ':'')+pl(n.n,t('fe.cm.events'),locale).replace(n.more?/^\d+ /:/^$/,'')}):t('fe.cm.applyFilters')}</Btn>}>
-  {one('format',['all','offline','online'] as const,t('fe.cm.format'),'fe.ev.format.',<Note className="mt8">{t('fe.cm.cityNote')}</Note>)}
+  {one('format',['all','offline','online'] as const,t('fe.cm.format'),'fe.ev.format.',<Note>{t('fe.cm.cityNote')}</Note>)}
   {one('when',['any','week','weekend','month'] as const,t('fe.cm.when'),'fe.cm.when.')}
   <section className="fin"><div className="fin-t"><b>{t('fe.cm.type')}</b><span>{t('fe.cm.pickAny')}</span>{d.kinds.length>0&&clr(()=>setD(x=>({...x,kinds:[]})))}</div>
    <div className="fin-b"><Chips>{KINDS.map(k=><Chip key={k} on={d.kinds.includes(k)} onClick={()=>setD(x=>({...x,kinds:x.kinds.includes(k)?x.kinds.filter(y=>y!==k):[...x.kinds,k]}))}>{t('fe.ev.kind.'+k)}</Chip>)}</Chips></div></section>
@@ -357,15 +357,13 @@ export function CommunityScreen(){
      {c.state==='in_review'&&<Alert kind="warn" icon={Clock}><b>{t('fe.cm.inReview')}</b>{t(couple?'fe.cm.inReviewTextCouple':'fe.cm.inReviewText')}</Alert>}
      {c.state==='rejected'&&<Alert kind="err" icon={Ban}><b>{t('fe.cm.rejected')}</b>{String((c as {rejectReason?:unknown}).rejectReason??'')}</Alert>}
      <div className="md bio cdesc"><p>{c.description}</p></div>
-     <Chips className="mt12">{c.topics.map(x=><Chip key={x} className="tag" onClick={()=>navigate('/n/topics/'+x)}>#{tname(x)}</Chip>)}</Chips>
-     {status?<><Spacer size={4}/>{status}</>:<div className="row g8 mt16 cm-act">
-      {host?<CommunityHostEntry c={c}/>
-       :member?<Pill tone="ok" icon={Check}>{t(couple?'fe.cm.memberCouple':'fe.comm.member')}</Pill>
-       :(!c.state||c.state==='published')?<Btn size="md" onClick={()=>setLayer('join')}>{c.privacy!=='open'||banned?t(couple?'fe.host.join.requestCouple':'fe.host.join.request'):t(couple?'fe.host.join.joinCouple':'fe.host.join.join')}</Btn>:null}
-     </div>}
+     {c.topics.length>0&&<Chips>{c.topics.map(x=><Chip key={x} className="tag" onClick={()=>navigate('/n/topics/'+x)}>#{tname(x)}</Chip>)}</Chips>}
+     {status??(host?<div className="cm-act"><Actions><CommunityHostEntry c={c}/></Actions></div>
+      :member?<div className="cm-act"><Pill tone="ok" icon={Check}>{t(couple?'fe.cm.memberCouple':'fe.comm.member')}</Pill></div>
+      :(!c.state||c.state==='published')?<div className="cm-act"><Actions><Btn size="md" onClick={()=>setLayer('join')}>{c.privacy!=='open'||banned?t(couple?'fe.host.join.requestCouple':'fe.host.join.request'):t(couple?'fe.host.join.joinCouple':'fe.host.join.join')}</Btn></Actions></div>:null)}
      {next&&tab!=='events'&&<Group className="cm-next" title={t('fe.cm.nextMeetup')} action={evs.length>1&&<button type="button" onClick={()=>setTab('events')}>{fill(t('fe.cm.allN'),{n:evs.length})}</button>}><EventCard e={next} row/></Group>}
      <Spacer size={3}/>
-     <Seg value={tab} onChange={setTab} options={[{id:'disc',label:t('fe.comm.tab.disc')},{id:'events',label:t('fe.comm.tab.events'),n:evs.length},{id:'members',label:t('fe.cm.tab.members')},{id:'rules',label:t('fe.comm.tab.rules')}]}/>
+     <Seg value={tab} onChange={setTab} options={[{id:'disc',label:t('fe.cm.tab.disc')},{id:'events',label:t('fe.comm.tab.events'),n:evs.length},{id:'members',label:t('fe.cm.tab.members')},{id:'rules',label:t('fe.comm.tab.rules')}]}/>
      {tab==='disc'?(discs?.locked?<Veil tall title={t('fe.cm.discForMembers')} text={c.request?t('fe.cm.discPending'):t('fe.cm.discRequest')}/>:<>
       {member&&!c.me?.readOnly&&<Composer community={{id:c.id,canEvent:host}}/>}
       {!discs?<Skel kind="list"/>:discs.items.length===0?<Empty icon={MessageCircle} title={t('fe.comm.noDisc')} text={member?t('fe.cm.noDiscMember'):t('fe.cm.noDiscGuest')}/>
@@ -496,20 +494,20 @@ export function EventScreen(){
      <EventHero cover={<NamedPlate k={e.plate} icon={Calendar}/>} title={e.title} status={statusPill}
       tags={[<>{e.format==='online'?<Video/>:<MapPin/>}{e.format==='online'?t('fe.ev.online'):e.area??t('fe.ev.offline')}</>,t('fe.ev.kind.'+e.kind)]}/>
      {orgMe&&<div className="entity-manage"><Btn kind="soft" size="md" className="manage-entry" icon={Settings} onClick={()=>navigate(`/n/events/${e.id}/manage`)}>{t('fe.host.manage')}</Btn></div>}
-     {cancelled&&<Alert kind="err" icon={TriangleAlert} className="mt16"><b>{t('fe.cm.evCancelled')}</b>{e.cancelReason??''}</Alert>}
-     {e.state==='pending_partner'?<Alert kind="warn" icon={Clock} className="mt16"><b>{t('fe.cm.waitsPartnerT')}</b>{t('fe.cm.waitsPartnerText')}</Alert>
-      :e.state==='in_review'?<Alert kind="warn" icon={Clock} className="mt16"><b>{t('fe.cm.inReview')}</b>{t(couple?'fe.cm.evReviewTextCouple':'fe.cm.evReviewText')}</Alert>
-      :e.state==='rejected'?<Alert kind="err" icon={Ban} className="mt16"><b>{t('fe.cm.rejected')}</b>{String((e as {rejectReason?:unknown}).rejectReason??'')}</Alert>:null}
-     <Card list className="mt16">
+     {cancelled&&<Alert kind="err" icon={TriangleAlert}><b>{t('fe.cm.evCancelled')}</b>{e.cancelReason??''}</Alert>}
+     {e.state==='pending_partner'?<Alert kind="warn" icon={Clock}><b>{t('fe.cm.waitsPartnerT')}</b>{t('fe.cm.waitsPartnerText')}</Alert>
+      :e.state==='in_review'?<Alert kind="warn" icon={Clock}><b>{t('fe.cm.inReview')}</b>{t(couple?'fe.cm.evReviewTextCouple':'fe.cm.evReviewText')}</Alert>
+      :e.state==='rejected'?<Alert kind="err" icon={Ban}><b>{t('fe.cm.rejected')}</b>{String((e as {rejectReason?:unknown}).rejectReason??'')}</Alert>:null}
+     <Card list>
       {e.organizer&&<Row av={<Av name={pname(e.organizer)} seed={e.organizer.id} size="sm" src={e.organizer.avatar}/>} title={pname(e.organizer)} sub={t('fe.ev.organizer')} onClick={()=>navigate(orgMe?'/n/me':'/n/people/'+e.organizer!.id)}/>}
       {comm&&<Row av={<span className="av sm">{coverSrc(comm.cover)?<img src={coverSrc(comm.cover)!} alt="" draggable={false}/>:<NamedPlate k={comm.plate}/>}</span>} title={comm.name} sub={t('fe.cm.community')} onClick={()=>navigate('/n/communities/'+comm.id)}/>}
      </Card>
      {showRsvp&&<section className="rsvp-box"><div className="rsvp-h"><b>{t(couple?'fe.cm.rsvpQCouple':'fe.ev.question')}</b>
-       {waiting?<Pill tone="wait" icon={Clock}>{t('fe.cm.st.waiting')}</Pill>:st?<Btn kind="text" auto onClick={()=>void rsvp(null)} disabled={busy}>{t('fe.cm.clearAnswer')}</Btn>:<Note as="span">{t('fe.cm.noAnswer')}</Note>}</div>
+       {waiting?<Pill tone="wait" icon={Clock}>{t('fe.cm.st.waiting')}</Pill>:st?<Btn kind="text" auto onClick={()=>void rsvp(null)} disabled={busy}>{t('fe.cm.clearAnswer')}</Btn>:null}</div>
       <Rsvp<'interested'|'going'|'not_going'> label={t('fe.cm.yourAnswer')} value={st as 'interested'|'going'|'not_going'|null} couple={couple} disabled={busy} onChange={v=>void rsvp(st===v?null:v)}
        options={([['interested',Eye,'interested'],['going',Check,'going'],['not_going',X,'not']] as const).map(([v,Ic,tone])=>[v,t((couple?'fe.cm.rsvpC.':'fe.cm.rsvp.')+v),Ic,tone] as const)}/></section>}
      {!orgMe&&open&&<EventApplicationLines e={e} busy={busy} onWithdraw={()=>setLayer('withdraw')} onCancelWait={()=>setLayer('unwait')}/>}
-     <Card list className="mt12">
+     <Card list>
       <Row icon={Calendar} tone="l" title={inTz(e.startsAt,tz,locale,{weekday:'short',day:'numeric',month:'long'})}
        sub={<>{timeOf(e.startsAt,tz,locale)}–{timeOf(e.endsAt,tz,locale)} {t(e.format==='online'?'fe.ev.yourTime':'fe.cm.localTime')}{away&&<><br/>{t('fe.cm.forOrganizer')}: {timeOf(e.startsAt,e.tz,locale)}–{timeOf(e.endsAt,e.tz,locale)} {e.tz}</>}</>}/>
       {orgMe&&!cancelled&&(e.joinUrl||e.exactAddress)
@@ -519,8 +517,8 @@ export function EventScreen(){
        onClick={external?()=>setLayer('ticket'):undefined}/>}
      </Card>
      <SectionLabel>{t('fe.ev.about')}</SectionLabel><div className="md bio"><p>{e.description}</p></div>
-     {e.requirements&&<><SectionLabel>{t('fe.ev.requirements')}</SectionLabel><Card>{e.requirements.split('\n').filter(Boolean).map((r,i)=><div key={i} className="fact"><i className="v"><Check/></i><span>{r}</span></div>)}<Note className="mt8">{t('fe.cm.reqNote')}</Note></Card></>}
-     {going+interested===0?(orgMe&&!cancelled&&!e.past&&<><SectionLabel>{t('fe.cm.crowd')}</SectionLabel><Note>{t('fe.cm.nobodyYet')}</Note></>)
+     {e.requirements&&<><SectionLabel>{t('fe.ev.requirements')}</SectionLabel><Card><Stack gap={2}>{e.requirements.split('\n').filter(Boolean).map((r,i)=><div key={i} className="fact"><i className="v"><Check/></i><span>{r}</span></div>)}<Note>{t('fe.cm.reqNote')}</Note></Stack></Card></>}
+     {going+interested===0?(orgMe&&!cancelled&&!e.past&&<Group title={t('fe.cm.crowd')}><Empty compact icon={Users} title={t('fe.cm.nobodyYet')}/></Group>)
       :<><SectionLabel>{e.past?t('fe.cm.whoWas'):t('fe.cm.crowd')}</SectionLabel><Card list>
        <Row av={faces.length?<span className="av-stack">{faces.map(f=><Av key={f.id} name={pname(f)} seed={f.id} size="sm" src={f.avatar}/>)}</span>:undefined}
         title={fill(t(e.past?'fe.cm.attendedN':'fe.cm.goingN'),{n:going})} sub={e.past?undefined:fill(t('fe.cm.interestedN'),{n:interested})} onClick={()=>navigate(`/n/events/${id}/attendees`)}/></Card></>}
@@ -539,19 +537,19 @@ export function EventScreen(){
     :(e.exactAddress&&<LinkBtn kind="primary" icon={MapIcon} href={'https://www.openstreetmap.org/search?query='+encodeURIComponent(e.exactAddress)}>{t('fe.cm.openMaps')}</LinkBtn>)}
     <Btn kind="soft" icon={CalendarPlus} onClick={()=>{downloadIcs(e);toast(t('fe.cm.calDone'),{type:'ok'});}}>{t('fe.cm.toCal')}</Btn></>}>
    {e.format==='online'?<Card className="flat"><div className="flabel">{t('fe.cm.link')}</div><Text as="b" size="md" bold breakAll>{e.joinUrl}</Text></Card>
-    :<><Card className="flat"><Text as="b" size="md" bold>{e.exactAddress}</Text><Note className="mt8">{e.area} · {inTz(e.startsAt,tz,locale,{weekday:'short',day:'numeric',month:'long'})}, {timeOf(e.startsAt,tz,locale)}</Note></Card><Note className="mt12">{t('fe.cm.addrNote')}</Note></>}
+    :<Stack gap={3}><Card className="flat"><Stack gap={2}><Text as="b" size="md" bold>{e.exactAddress}</Text><Note>{e.area} · {inTz(e.startsAt,tz,locale,{weekday:'short',day:'numeric',month:'long'})}, {timeOf(e.startsAt,tz,locale)}</Note></Stack></Card><Note>{t('fe.cm.addrNote')}</Note></Stack>}
   </Sheet>}
   {e&&layer==='ticket'&&ticketUrl&&<Sheet title={t('fe.w7.tk.title')} sub={site} onClose={()=>setLayer('')}
    foot={<>{<LinkBtn kind="primary" icon={ExternalLink} href={ticketUrl}>{t('fe.w7.tk.go')}</LinkBtn>}
     {ticketed?<Btn kind="soft" busy={busy} disabled={busy} onClick={()=>void unmarkTicket()}>{t('fe.w7.tk.unmark')}</Btn>
      :<Btn kind="soft" icon={Check} busy={busy} disabled={busy} onClick={()=>void markTicket()}>{t(couple?'fe.w7.tk.boughtUs':'fe.w7.tk.bought')}</Btn>}</>}>
-   <Card list>
+   <Stack gap={3}><Card list>
     {e.organizer&&<Row av={<Av name={pname(e.organizer)} seed={e.organizer.id} size="sm" src={e.organizer.avatar}/>} title={pname(e.organizer)} sub={t('fe.ev.organizer')}/>}
     <Row icon={Globe} tone="v" title={site||ticketUrl} sub={t('fe.w7.tk.site')} wrap/>
     <Row icon={Ticket} tone="a" title={priceText(e.price,t,locale)} sub={ticketed?t('fe.w7.tk.mine'):t('fe.w7.tk.price')}/>
    </Card>
-   <Alert kind="warn" className="mt12">{t('fe.w7.tk.outside')}</Alert>
-   <Note className="mt12">{ticketed?t('fe.w7.tk.showAtDoor'):t(couple?'fe.w7.tk.boughtHintCouple':'fe.w7.tk.boughtHint')}</Note>
+   <Alert kind="warn">{t('fe.w7.tk.outside')}</Alert>
+   <Note>{ticketed?t('fe.w7.tk.showAtDoor'):t(couple?'fe.w7.tk.boughtHintCouple':'fe.w7.tk.boughtHint')}</Note></Stack>
   </Sheet>}
   {e&&layer==='withdraw'&&<Ask icon={FileText} danger title={t('fe.host.app.withdrawQ')} text={t('fe.host.app.withdrawText')} ok={t('fe.host.app.withdrawOk')} busy={busy} onOk={()=>void withdraw()} onCancel={()=>setLayer('')}/>}
   {e&&layer==='unwait'&&<Ask icon={FileText} danger title={t('fe.host.app.withdrawQ')} text={t('fe.cm.req.unwaitText')} ok={t('fe.host.app.withdrawOk')} busy={busy} onOk={()=>void unwait()} onCancel={()=>setLayer('')}/>}

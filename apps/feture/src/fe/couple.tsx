@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Calendar,Check,Clock,Eye,MapPin,Pencil,Video,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {ActorCard,ActorCards,Alert,Av,Btn,Card,Counter,EventTile,Field,Group,Note,ReturnNote,ReviewMeta,ReviewPost,Row,Sheet,TextArea} from './kit';
+import {ActorCard,ActorCards,Alert,Av,Btn,Card,Counter,Empty,EventTile,Field,Group,Note,ReturnNote,ReviewMeta,ReviewPost,Row,Sheet,Spacer,Stack,TextArea} from './kit';
 import {NamedPlate} from './comm-kit';
 import {useFe,useRealtime} from './session';
 import {useToast} from './toast';
@@ -152,17 +152,20 @@ export function ApprovalSheet({a,base,coupleId,partner,onClose,onDone}:{a:Approv
  if(returning)return <ReturnSheet a={a} coupleId={coupleId} onClose={()=>setReturning(false)} onDone={onDone}/>;
  const foot=a.mine
   ?<>{edit&&<Btn kind={back?'primary':'soft'} icon={Pencil} disabled={busy} onClick={()=>go(edit)}>{t('fe.c6.edit.'+(a.kind.startsWith('event.')?(a.kind==='event.rsvp'||a.kind==='event.apply'?'answer':'event'):a.kind.startsWith('post.')?'post':'other'))}</Btn>}
-   <Btn kind="soft" className={edit?'mt8':undefined} disabled={busy} busy={busy} onClick={()=>run('cancel')}>{t('fe.cw.cancel')}</Btn></>
+   <Btn kind="soft" disabled={busy} busy={busy} onClick={()=>run('cancel')}>{t('fe.cw.cancel')}</Btn></>
   :back?undefined
-  :<><Btn disabled={busy} busy={busy} onClick={()=>run('approve')}>{t('fe.cw.approve')}</Btn><Btn kind="soft" className="mt8" disabled={busy} onClick={()=>setReturning(true)}>{t('fe.cw.return')}</Btn></>;
+  :<><Btn disabled={busy} busy={busy} onClick={()=>run('approve')}>{t('fe.cw.approve')}</Btn><Btn kind="soft" disabled={busy} onClick={()=>setReturning(true)}>{t('fe.cw.return')}</Btn></>;
  return <Sheet title={t('fe.c6.sheet.'+(a.kind.startsWith('post.')?'post':a.kind.startsWith('event.')?'event':a.kind==='access.grant'?'access':PROFILE_KINDS.includes(a.kind)?'profile':'other'))} sub={kindTitle(a,t)} onClose={onClose} foot={foot}>
   <ReviewMeta by={a.mine?t('fe.c6.byMe'):t('fe.c6.by',{name:partner})} version={a.version?t('fe.c6.version',{n:a.version}):undefined}/>
   {back?<><p className="lead">{a.mine?t('fe.c6.backLeadMine',{name:partner}):t('fe.c6.backLeadTheirs',{name:partner})}</p>{a.comment?<ReturnNote>{a.comment}</ReturnNote>:<Note>{t('fe.c6.noComment')}</Note>}</>
    :<p className="lead">{a.mine?t('fe.c6.leadMine',{name:partner}):t('fe.c6.leadTheirs',{name:partner})}</p>}
-  <div className="mt12"><Preview a={a} base={base}/></div>
-  {PROFILE_KINDS.includes(a.kind)&&a.kind!=='interests.set'&&<Btn kind="text" auto icon={Eye} className="mt12" onClick={()=>go('/n/me/preview',{proposal:a.change??{}})}>{back?t('fe.c6.sentVersion'):t('fe.c6.whole')}</Btn>}
-  {ev&&<Btn kind="soft" size="md" icon={Calendar} className="mt12" onClick={()=>go('/n/events/'+ev.id)}>{t('fe.c6.openEvent')}</Btn>}
-  {failure&&<Alert kind="err" noIcon className="mt12">{failure}</Alert>}
+  <Spacer size={3}/>
+  <Stack gap={3}>
+   <Preview a={a} base={base}/>
+   {PROFILE_KINDS.includes(a.kind)&&a.kind!=='interests.set'&&<Btn kind="text" auto icon={Eye} onClick={()=>go('/n/me/preview',{proposal:a.change??{}})}>{back?t('fe.c6.sentVersion'):t('fe.c6.whole')}</Btn>}
+   {ev&&<Btn kind="soft" size="md" icon={Calendar} onClick={()=>go('/n/events/'+ev.id)}>{t('fe.c6.openEvent')}</Btn>}
+   {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
+  </Stack>
  </Sheet>;
 }
 
@@ -171,14 +174,14 @@ function Preview({a,base}:{a:Approval,base?:CoupleBase|undefined}){
  const {t,locale}=useI18n();const p=a.preview;
  if(p?.post)return <>
   <ReviewPost title={p.post.title||undefined} meta={p.post.media?t('fe.c6.media',{n:p.post.media}):undefined}>{p.post.body?<p>{p.post.body}</p>:null}</ReviewPost>
-  {p.post.changed&&<Alert kind="warn" className="mt12">{t('fe.c6.changed')}</Alert>}
+  {p.post.changed&&<Alert kind="warn">{t('fe.c6.changed')}</Alert>}
  </>;
  if(p?.event){const e=p.event;const d=e.startsAt?new Date(e.startsAt):null;const lc=locale==='en'?'en':'ru';
   return <>
    <EventTile row cover={<NamedPlate k={null} icon={Calendar}/>} day={d?d.getDate():undefined} month={d?d.toLocaleDateString(lc,{month:'short'}):undefined}
     place={e.format==='online'?t('fe.c6.online'):(locale==='en'?e.city?.en:e.city?.ru)??''} placeIcon={e.format==='online'?Video:MapPin}
     time={d?d.toLocaleTimeString(lc,{hour:'2-digit',minute:'2-digit'}):undefined} title={e.title??''}/>
-   {a.kind==='event.rsvp'&&p.rsvp&&<Note className="mt8">{t('fe.c6.rsvp.'+(['going','interested','not_going'].includes(p.rsvp)?p.rsvp:'other'))}</Note>}
+   {a.kind==='event.rsvp'&&p.rsvp&&<Note>{t('fe.c6.rsvp.'+(['going','interested','not_going'].includes(p.rsvp)?p.rsvp:'other'))}</Note>}
   </>;}
  // A message request from the couple: to whom, and the first message as it will go.
  if(a.kind==='chat.request'&&p)return <ReviewPost byline={p.profile?<><Av name={nameOf(p.profile)} seed={p.profile.id} size="sm"/><div><b>{nameOf(p.profile)}</b>{p.profile.handle&&<small>@{p.profile.handle}</small>}</div></>:undefined}
@@ -212,7 +215,7 @@ function Diff({a,base}:{a:Approval,base?:CoupleBase|undefined}){
  }else if(a.kind==='profile.setVisibility'&&typeof c.setting==='string'){
   rows.push({k:c.setting,label:label(c.setting),now:word(c.value)});
  }else for(const s of a.summary??[])if(typeof s==='string')rows.push({k:s,label:label(s),now:word(c[s])});
- if(!rows.length)return <Note>{t('fe.cw.noDiff')}</Note>;
+ if(!rows.length)return <Empty compact icon={Eye} title={t('fe.cw.noDiff')}/>;
  return <dl className="diff">{rows.map(r=><div key={r.k}><dt>{r.label}</dt><dd>{r.was!==undefined&&<div className="was">{r.was}</div>}<div className="now">{r.now}</div></dd></div>)}</dl>;
 }
 
@@ -235,7 +238,7 @@ function ReturnSheet({a,coupleId,onClose,onDone}:{a:Approval,coupleId:string,onC
    <TextArea id="fe-ret-note" name="returnNote" rows={3} {...checks.input('note')} value={note} placeholder={rsvp?t('fe.c6.ret.phRsvp'):t('fe.c6.ret.ph')} onChange={e=>setNote(e.target.value)}/>
   </Field>
   <Counter n={textLength(note)} max={FIELD.returnNote.max}/>
-  {failure&&<Alert kind="err" noIcon className="mt12">{failure}</Alert>}
+  {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
  </Sheet>;
 }
 
