@@ -4,8 +4,8 @@
 /* Cover header: the glass labels over the event cover. */
 .v21 .ev-hero .k-ev-tags{margin-bottom:var(--s-2)}
 /* Placeholder shapes inside covers and heads. */
-.v21 .skel-fill{position:absolute;inset:0}
-.v21 .k-sk-fill{position:absolute;inset:0;display:block;border-radius:0}
+/* safe-t: ok — fills its own parent box, not the screen top */.v21 .skel-fill{position:absolute;inset:0}
+/* safe-t: ok — fills its own parent box, not the screen top */.v21 .k-sk-fill{position:absolute;inset:0;display:block;border-radius:0}
 .v21 .k-sk-event{display:block;height:250px;border-radius:var(--r-xl);margin-top:var(--s-3)}
 .v21 .skel-event{padding-top:var(--s-2)}
 .v21 .k-sk-title{display:block;height:28px;margin:var(--s-2) 0}
@@ -28,13 +28,13 @@
 .v21 .k-swatches{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px;max-width:360px}
 .v21 .k-plate-sw{position:relative;width:100%;aspect-ratio:1;border-radius:var(--r-l);overflow:hidden;outline:0;outline-offset:2px}
 .v21 .k-plate-sw.on{outline:3px solid var(--ink)}
-.v21 .k-plate-sw .plate{position:absolute;inset:0}
+/* safe-t: ok — fills its own parent box, not the screen top */.v21 .k-plate-sw .plate{position:absolute;inset:0}
 /* Person line of request cards. */
 .v21 .k-pl-name{font-size:var(--fs-md)}
 .v21 .k-pl-go{text-align:left}
 .v21 .application-answer .k-answer{margin-top:var(--s-1)}
 /* Likes grid tile: the whole photo opens the profile. */
-.v21 .lk .k-lk-open{position:absolute;inset:0}
+/* safe-t: ok — fills its own parent box, not the screen top */.v21 .lk .k-lk-open{position:absolute;inset:0}
 /* Radar of the empty deck. */
 .v21 .radar .k-cover{width:100%;height:100%;object-fit:cover}
 /* `small`: the same picture at 60 % (scaled, so the dots keep their places); the margins take back the space it no longer needs. */

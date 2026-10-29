@@ -37,7 +37,7 @@ for (const sc of scenarios) {
   const email = me.email;
   const s = email ? await session(email) : null; if (email) await boot(email);
   if (sc.mic === true) micBrowser ??= await chromium.launch({ ...CHANNEL, headless: true, args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] });
-  const ctx = await (sc.mic === true ? micBrowser : browser).newContext({ viewport: sc.viewport || { width: 390, height: 844 }, locale: 'ru-RU', timezoneId: 'Europe/Berlin', ...(sc.touch ? { hasTouch: true, isMobile: true } : {}) });
+  const ctx = await (sc.mic === true ? micBrowser : browser).newContext({ viewport: sc.viewport || { width: 390, height: 844 }, locale: 'ru-RU', ...(process.env.E2E_DARK ? { colorScheme: 'dark' } : {}), timezoneId: 'Europe/Berlin', ...(sc.touch ? { hasTouch: true, isMobile: true } : {}) });
   if (APP !== PROD) await ctx.route(APP + '/api/**', async r => {
     try {
       let res;

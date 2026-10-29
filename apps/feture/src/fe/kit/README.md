@@ -6,6 +6,8 @@ font, size, spacing or radius. `npm run check:kit` (part of `npm run check`, so 
 of hand-written pieces may only go down (`tools/fe-kit-baseline.json`). After moving a screen onto the kit, run
 `node tools/check-fe-kit.mjs --update`.
 
+**Top edge.** Anything pinned to the top of the screen (fixed/absolute/sticky with `top:0` / `inset:0`, a full-height `Sheet full`, an overlay) keeps `var(--safe-t)` in its top padding/offset, so the status bar never covers a title; a full-height sheet's header is the same height as the `Bar`. `npm run check:safe-top` (in `npm run check`) fails on a rule that pins to the top without `--safe-t`; a box that is not at the screen top says so with `/* safe-t: ok — <why> */`.
+
 ## Storybook
 
 Every kit component has a story (`src/fe/kit/*.stories.tsx`): description, Controls, all states, code; tokens

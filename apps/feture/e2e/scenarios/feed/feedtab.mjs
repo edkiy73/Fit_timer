@@ -1,5 +1,5 @@
 // «Лента»: tabs, topic filters, «Ещё», the composer row and the bar — compared with what the server returns.
-import { expect, until, toastSee, composerSheet } from '../helpers.mjs';
+import { sheetBelowStatusBar, expect, until, toastSee, composerSheet } from '../helpers.mjs';
 const bodies = async t => (await t.page.locator('.posts article.post .body').allInnerTexts()).map(s => s.trim().slice(0, 40));
 const api = async (t, input) => (await t.api('feed.list', { tab: 'forYou', limit: 20, ...input })).items;
 const seg = (t, label) => t.page.locator('.seg button', { hasText: label }).first();
@@ -24,7 +24,7 @@ export default [
    expect(tags.every(x => x.includes(name)), `every post has #${name}`);
    await t.page.locator('.filterline .chip.on').first().click(); await t.wait(1500);
    expect(!(await t.page.locator('.filterline .chips .chip.on').count()), 'filter cleared');
-   await t.tap('.filterline button[aria-label="Фильтры"]'); await t.see('.sheet.on');
+   await t.tap('.filterline button[aria-label="Фильтры"]'); await t.see('.sheet.on'); await sheetBelowStatusBar(t); await t.shot('filters-safe-top');
    await t.page.locator('.sheet.on .chip:not(.more)').first().click(); await t.tap('.sheet.on .sh-f .btn'); await toastSee(t, '');
    expect((await t.page.locator('.filterline .chip.on').count()) >= 1, 'sheet filter on');
  } },

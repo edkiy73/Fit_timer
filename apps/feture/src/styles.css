@@ -31,7 +31,7 @@ h2{margin:0 0 8px}
 .route-fallback{display:grid;gap:12px;justify-items:start}
 .route-fallback .link-button{padding-left:0}
 
-.feture-preview{position:fixed;inset:0;width:100vw;height:100dvh;border:0;background:#1a111c;display:block}
+/* safe-t: ok — dev preview iframe, not the app */.feture-preview{position:fixed;inset:0;width:100vw;height:100dvh;border:0;background:#1a111c;display:block}
 
 /* FetUre live catalogue: scoped styles, no impact on the iframe concept. */
 .feture-catalog{display:grid;gap:12px;line-height:1.45}
