@@ -1,7 +1,7 @@
 import type {Meta,StoryObj} from '@storybook/react-vite';
 import {fn} from 'storybook/test';
-import {Camera,Eye,Hand,Image as ImageIcon,Plus,Trash2,Users,X} from 'lucide-react';
-import {MoreInfo,AlbumCard,AlbumMeta,AlbumRow,Card,GalleryAdd,GalleryGrid,GalleryTile,KeyValues,Note,PhotoAdd,PhotoSlot,PhotoSlots,PhotoTrack,Pose,Quota,ReviewCard,ReviewMedia,ReviewPair,SelectionBar,VaultHead} from './index';
+import {Ban,Camera,Check,Eye,Hand,Image as ImageIcon,Plus,Trash2,Users,X} from 'lucide-react';
+import {Actions,Btn,Field,MoreInfo,TextArea,AlbumCard,AlbumMeta,AlbumRow,Card,GalleryAdd,GalleryGrid,GalleryTile,KeyValues,Note,PhotoAdd,PhotoSlot,PhotoSlots,PhotoTrack,Pose,Quota,ReviewCard,ReviewMedia,ReviewPair,SelectionBar,VaultHead} from './index';
 
 // A tiny inline picture so the stories need no network.
 const PIC='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 5"><defs><linearGradient id="g" x2="1" y2="1"><stop offset="0" stop-color="#7A1236"/><stop offset="1" stop-color="#FF9F7A"/></linearGradient></defs><rect width="4" height="5" fill="url(#g)"/></svg>');
@@ -37,7 +37,10 @@ export const ПриватноеПусто:StoryObj<typeof VaultHead>={name:'Ша
 export const ПриватноеВКарточке:StoryObj<typeof VaultHead>={name:'Шапка приватного слоя в карточке',render:a=><Card className="vault"><VaultHead {...a}/></Card>,args:{title:'Текст · 3 фото',inCard:true}};
 
 export const Проверка:StoryObj<typeof ReviewCard>={name:'Карточка проверки (персонал)',render:a=><ReviewCard {...a}/>,
- args:{title:'Фото профиля',meta:'28 окт, 12:40',danger:false,children:<><ReviewMedia blur={PIC}/><KeyValues rows={[['Автор','@mia'],['Сканер','ok'],['Пусто','']]}/></>},argTypes:{children:{control:false}}};
+ args:{title:'Фото профиля',meta:'28 окт, 12:40',danger:false,children:<><ReviewMedia blur={PIC}/><KeyValues rows={[['Автор','@mia'],['Проверка','Автоматической проверки нет, смотрит человек'],['Пусто','']]}/>
+  <Field id="rv-note" label="Причина для автора (необязательно)"><TextArea id="rv-note" rows={2}/></Field>
+  <Actions><Btn icon={Check}>Одобрить</Btn><Btn kind="soft" icon={Ban}>Отклонить</Btn></Actions></>},argTypes:{children:{control:false}},
+ parameters:{docs:{description:{story:'Один порядок для каждой очереди: кто или что и когда, содержание, главные факты (`KeyValues`, пустые строки скрыты), форма, ряд решений в `Actions` — сначала «да», потом «нет» или опасное. Все блоки карточки стоят через один отступ (16 px); блоки сами отступов не задают. Технические данные — только под `MoreInfo`.'}}}};
 export const ПодробнееСтрока:StoryObj<typeof MoreInfo>={name:'Подробнее (сырые данные под кнопкой)',render:a=><MoreInfo {...a}/>,args:{label:'Подробнее',hideLabel:'Скрыть',children:'{"title":"Вечер настолок","price":{"kind":"free"}}'}};
 export const ПроверкаПара:StoryObj<typeof ReviewCard>={name:'Проверка: селфи и фото рядом',render:a=><ReviewCard {...a}/>,
  args:{title:'@mia',meta:'вчера',danger:true,children:<ReviewPair><ReviewMedia icon={X} caption={<Note>Селфи</Note>}/><ReviewMedia icon={Eye} caption={<Note>Фото профиля</Note>}><img src={PIC} alt=""/></ReviewMedia></ReviewPair>}};

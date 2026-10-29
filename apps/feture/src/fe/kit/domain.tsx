@@ -461,6 +461,8 @@ export function VaultHead({title,sub,on,onToggle,disabled,label,inCard}:{title:R
 
 /** A staff review card: the title, when, and the decision controls; `danger` marks a report about a minor. */
 export function ReviewCard({title,meta,children,danger}:{title:ReactNode,meta?:ReactNode,children:ReactNode,danger?:boolean|undefined}){
+ // Order of a card: who / what + when, the content, key facts (KeyValues), the form, then the decision row (Actions: the
+ // positive answer first, then reject / danger). Every block is one grid cell — the gap between blocks is one value.
  return <Card className={'st-card'+(danger?' st-danger':'')}>
   <header className="st-head"><b>{title}</b>{meta&&<span className="st-meta">{meta}</span>}</header>
   {children}
@@ -478,7 +480,7 @@ export function ReviewMedia({children,blur,icon:I,caption}:{children?:ReactNode,
  return caption!==undefined?<figure>{box}<figcaption>{caption}</figcaption></figure>:box;
 }
 /** Two or more pictures side by side (a selfie and the profile photos). */
-export function ReviewPair({children}:{children:ReactNode}){return <div className="st-pair st-block">{children}</div>;}
+export function ReviewPair({children}:{children:ReactNode}){return <div className="st-pair">{children}</div>;}
 
 /* ---------------- Couple ---------------- */
 

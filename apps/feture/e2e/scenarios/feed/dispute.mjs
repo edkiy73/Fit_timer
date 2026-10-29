@@ -79,7 +79,7 @@ export default [
      await card.locator('text=не отмечен').first().waitFor();
      await card.locator('text=страйков: 0').first().waitFor();
      await card.locator('.btn').filter({ hasText: /^Подтвердилось$/ }).first().click();
-     await card.locator('.st-confirm .btn.danger').click();
+     await card.locator('[role=alertdialog] .btn.danger').click();
      await t.see('Решение сохранено.');
      await until(async () => (await t.api('post.get', { postId: f.id }, author.email)).post?.state === 'removed', 'removed');
    } finally { await drop(t, author, f?.id); await dropTemp(t, claimant); }
