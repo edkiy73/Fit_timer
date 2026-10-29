@@ -2,7 +2,7 @@ import {useCallback,useEffect,useId,useRef,useState,type ReactNode} from 'react'
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {BadgeCheck,Ban,Check,ChevronRight,Eye,IdCard,Image,Inbox,Lock,RefreshCw,ShieldAlert,ShieldCheck,X} from 'lucide-react';
+import {BadgeCheck,Ban,Check,ChevronRight,Eye,IdCard,Image,ImageOff,Inbox,Lock,RefreshCw,ShieldAlert,ShieldCheck,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,Btn,Card,ChoiceChips,Chips,Empty,Field,Group,IconBtn,Input,KeyValues,LoadMore,Note,Pill,ReviewCard,ReviewMedia,ReviewPair,Row,SectionLabel,Seg,Skel,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble} from './kit';
 import {askFactor,useFe} from './session';
@@ -10,6 +10,7 @@ import {FactorPromptHost,FactorReset,StaffEnrol,StaffUnlock,factorSchema,type Fa
 import {StaffSupport} from './support';
 import {StaffMaintenance} from './maintenance';
 import {textError,textRule} from './kit/validate';
+import {fill} from './comm-kit';
 
 /** Staff area (/n/staff, S4 moderation): review queues with decisions, Premium for dogfooding, the journal.
  * Roles are enforced by the server only; a queue the server refuses (403) is simply not shown. */
@@ -21,7 +22,8 @@ const opt=<T extends z.ZodType>(s:T)=>s.nullable().optional();
 const mediaItem=z.object({id:z.uuid(),purpose:z.string(),kind:z.string(),authorLabel:opt(z.string()),reason:opt(z.string()),createdAt:ts,w:opt(z.number()),h:opt(z.number()),blur:opt(z.string())});
 const viewRes=z.object({ok:z.literal(true),src:z.object({card:z.string().optional(),full:z.string().optional(),file:z.string().optional()}).nullable()});
 const commItem=z.object({id:z.uuid(),rev:z.number(),name:z.string(),description:opt(z.string()),topics:opt(z.array(z.string())),privacy:opt(z.string()),join_question:opt(z.string()),
- rules:z.unknown().optional(),state:z.string(),pending_change:z.record(z.string(),z.unknown()).nullable().optional(),created_at:ts}).passthrough();
+ rules:z.unknown().optional(),state:z.string(),pending_change:z.record(z.string(),z.unknown()).nullable().optional(),created_at:ts,
+ resubmits:z.number().optional(),prev_reject_reason:opt(z.string()),cover:z.object({src:z.record(z.string(),z.string()).nullable()}).passthrough().nullable().optional(),newCover:z.object({src:z.record(z.string(),z.string()).nullable()}).passthrough().nullable().optional()}).passthrough();
 const eventItem=z.object({id:z.uuid(),rev:z.number(),title:z.string(),kind:opt(z.string()),description:opt(z.string()),format:opt(z.string()),area:opt(z.string()),exact_address:opt(z.string()),
  join_url:opt(z.string()),starts_at:ts,ends_at:ts,price:z.unknown().optional(),requirements:opt(z.string()),state:z.string(),pending_change:z.record(z.string(),z.unknown()).nullable().optional(),
  created_at:ts,organizer:opt(z.object({id:z.string(),kind:z.string().optional(),handle:z.string().nullable().optional()}).passthrough())}).passthrough();
@@ -251,11 +253,25 @@ const Kv=KeyValues;
 
 const show=(v:unknown):string=>v===null||v===undefined?'—':typeof v==='string'?v:Array.isArray(v)?v.map(show).join(', '):JSON.stringify(v);
 
-function Changes({change}:{change:Record<string,unknown>|null|undefined}){
+/** What waits for a decision. With `diff` (a community) every field reads «Название: было → стало» in words, and a new
+ * cover shows as a picture next to the old one; without it the raw fields are listed. */
+function Changes({change,diff}:{change:Record<string,unknown>|null|undefined,diff?:{before:Record<string,unknown>,covers:{was:string|null,now:string|null,missing:boolean}}}){
  const {t}=useI18n();
  if(!change||!Object.keys(change).length)return null;
- return <Alert kind="warn" className="st-block"><b>{t('fe.staff.pendingChange')}</b><br/>
+ if(!diff)return <Alert kind="warn" className="st-block"><b>{t('fe.staff.pendingChange')}</b><br/>
   {Object.entries(change).map(([k,v])=><span key={k} className="st-change"><code>{k}</code>: {show(v)}<br/></span>)}</Alert>;
+ const word=(k:string,v:unknown)=>v===null||v===undefined||v===''?t('fe.staff.chg.empty'):k==='privacy'?t('fe.staff.chg.privacy.'+String(v)):show(v);
+ return <Alert kind="warn" className="st-block"><b>{t('fe.staff.pendingChange')}</b><br/>
+  {Object.entries(change).map(([k,v])=>{
+   if(k==='coverAssetId')return <div key={k} className="st-change"><b>{t('fe.staff.chg.coverAssetId')}</b>
+    <ReviewPair>
+     <ReviewMedia icon={ImageOff} caption={<Note>{t('fe.staff.chg.was')}</Note>}>{diff.covers.was?<img src={diff.covers.was} alt="" draggable={false}/>:undefined}</ReviewMedia>
+     <ReviewMedia icon={ImageOff} caption={<Note>{diff.covers.missing?t('fe.staff.comm.noPicture'):t('fe.staff.chg.now')}</Note>}>{diff.covers.now?<img src={diff.covers.now} alt="" draggable={false}/>:undefined}</ReviewMedia>
+    </ReviewPair></div>;
+   const label=t('fe.staff.chg.'+k);const long=k==='description';
+   return <div key={k} className="st-change"><b>{label}</b>{long?<><br/>{t('fe.staff.chg.was')}: {word(k,diff.before[k])}<br/>{t('fe.staff.chg.now')}: {word(k,v)}</>
+    :<>: {word(k,diff.before[k])} → {word(k,v)}</>}</div>;
+  })}</Alert>;
 }
 
 /** Inline confirmation for destructive decisions (no window.confirm). */
@@ -351,8 +367,12 @@ function CommunityCard({item,onDone}:{item:CommItem,onDone:()=>void}){
  const decide=(decision:'approve'|'reject')=>d.run('staff.communityDecide',{communityId:item.id,rev:item.rev,decision,reason:reason.trim()});
  return <StCard title={item.name} meta={<>{item.state==='in_review'&&<Pill tone="wait">{t('fe.staff.newItem')}</Pill>} {when(item.created_at)}</>}>
   {item.description&&<p className="st-text">{item.description}</p>}
+  {!!item.resubmits&&<Alert kind="info" className="st-block"><b>{fill(t('fe.staff.comm.resubmit'),{n:item.resubmits,max:3})}</b>
+   {item.prev_reject_reason&&<><br/>{t('fe.staff.comm.prevReason')}: {item.prev_reject_reason}</>}</Alert>}
+  {item.state==='in_review'&&item.cover&&<ReviewMedia icon={ImageOff}>{(item.cover.src?.card??item.cover.src?.thumb)?<img src={item.cover.src.card??item.cover.src.thumb} alt="" draggable={false}/>:undefined}</ReviewMedia>}
   <Kv rows={[[t('fe.staff.comm.privacy'),item.privacy],['#',item.topics?.join(', ')],[t('fe.staff.comm.rules'),item.rules?show(item.rules):null],[t('fe.staff.comm.question'),item.join_question]]}/>
-  <Changes change={item.pending_change}/>
+  <Changes change={item.pending_change} diff={{before:{name:item.name,description:item.description,privacy:item.privacy,joinQuestion:item.join_question},
+   covers:{was:item.cover?.src?.card??item.cover?.src?.thumb??null,now:item.newCover?.src?.card??item.newCover?.src?.thumb??null,missing:!item.newCover?.src}}}/>
   <TextField label={t('fe.staff.reasonText')} value={reason} onChange={setReason} max={300}/>
   {ask?<Confirm text={t('fe.staff.comm.confirmReject')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>decide('reject')}/>
    :<div className="st-row st-block"><Btn size="sm" auto icon={Check} disabled={d.busy} onClick={()=>decide('approve')}>{t('fe.staff.approve')}</Btn>

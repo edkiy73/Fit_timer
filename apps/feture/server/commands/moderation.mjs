@@ -356,7 +356,7 @@ const run = {
     const own = {
       post: `select owner_profile_id o, state = 'removed' hit from feture.post where id = $1`,
       reply: `select author_profile_id o, state = 'removed' hit from feture.reply where id = $1`,
-      community: `select owner_profile_id o, state = 'hidden' hit from feture.community where id = $1`,
+      community: `select owner_profile_id o, state in ('hidden', 'rejected') hit from feture.community where id = $1`,
       event: `select organizer_profile_id o, state = 'hidden' hit from feture.event where id = $1`,
       profile: `select id o, restricted_at is not null hit from feture.profile where id = $1`,
     }[/** @type {'post'} */ (input.targetType)];
@@ -413,7 +413,7 @@ const run = {
 
 /** Staff decisions that may be appealed, per target. */
 const APPEALABLE = {
-  post: ['report.remove', 'dispute.remove'], reply: ['report.remove'], community: ['report.remove'], event: ['report.remove', 'event.hide'], profile: ['restrict.on'],
+  post: ['report.remove', 'dispute.remove'], reply: ['report.remove'], community: ['report.remove', 'community.reject'], event: ['report.remove', 'event.hide'], profile: ['restrict.on'],
 };
 
 /** Puts the target back where it was before the decision (never simply «published»): a post that was still being
@@ -431,7 +431,8 @@ async function restoreTarget(q, type, id, from) {
     return rows.length > 0;
   }
   if (type === 'reply') return (await q.query(`update feture.reply set state = 'published' where id = $1 and state = 'removed' and body <> '' returning id`, [id])).length > 0;
-  if (type === 'community') return (await q.query(`update feture.community set state = 'published', reject_reason = null, updated_at = now() where id = $1 and state = 'hidden' returning id`, [id])).length > 0;
+  // A rejected community that wins its appeal is published (its cover is checked like any other; it stays as it was).
+  if (type === 'community') return (await q.query(`update feture.community set state = 'published', published_at = coalesce(published_at, now()), reject_reason = null, updated_at = now() where id = $1 and state in ('hidden', 'rejected') returning id`, [id])).length > 0;
   if (type === 'event') {
     const back = from === 'cancelled' ? 'cancelled' : 'published';
     return (await q.query(`update feture.event set state = $2, reject_reason = null, rev = rev + 1, updated_at = now() where id = $1 and state = 'hidden' returning id`, [id, back])).length > 0;

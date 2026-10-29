@@ -3,7 +3,7 @@ import {useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,ChartColumn,Bell,BellOff,Bookmark,BookmarkCheck,Calendar,CalendarCheck,CalendarPlus,Check,ChevronLeft,Clock,Ellipsis,Eye,ExternalLink,FileText,Flag,Globe,Image as ImageIcon,Link as LinkIcon,Lock,Map as MapIcon,MapPin,MessageCircle,Plus,Search,Settings,Share,SlidersHorizontal,Ticket,TriangleAlert,Users,Video,X} from 'lucide-react';
-import {feErrorMessage,newOpId} from '../feture/fe-api';
+import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Actions,Alert,Announcement,Ask,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,CommunityHead,CoverBar,Discussion,Empty,EventAnswer,EventHero,EventTile,Fact,Group,IconBtn,LinkBtn,Note,Pill,Row,Rsvp,SectionLabel,Seg,Sheet,Skel,Spacer,Stack,StatusCard,Text,ToggleRow,Veil,View,useRefreshable} from './kit';
 import {useFe,useKeyChange} from './session';
 import {mdPlain,RichText} from './post-parts';
@@ -13,9 +13,10 @@ import {Composer} from './create-entry';
 import {useCopyLink} from './share';
 import {BellButton} from './inbox';
 import {useToast} from './toast';
-import {placeName,useCatalog} from './create-community';
+import {Field as FormField,placeName,shakeFirstErr,useCatalog} from './create-community';
 import {CommPlate,NamedPlate,ReportSheet,appUrl,fill,okRes,pl} from './comm-kit';
 import {faceFields} from './faces';
+import {textError} from './kit/validate';
 import {CommunityHostEntry,type DiscussionChange,DiscussionHostSheet,JoinSheet,MembersList,isCommunityHost,useEventApplication} from './host';
 
 /** «Комьюнити» (V21 C01 catalogue with interests and filters, C03 community page with discussions, events, members
@@ -33,7 +34,9 @@ const community=z.object({id:z.uuid(),name:z.string(),description:z.string(),top
  plate:z.string().nullable().optional(),cover:media.nullable().optional(),placeId:z.string().nullable().optional(),hosts:z.array(prof.extend({role:z.string()})).optional(),
  me:z.object({role:z.string(),state:z.string(),muted:z.boolean().optional(),readOnly:z.boolean().optional()}).passthrough().nullable(),request:z.object({id:z.uuid(),at:z.string().nullable().optional()}).nullable(),joinQuestion:z.string().nullable(),
  declined:z.object({until:z.string()}).nullable().optional(),waiting:z.object({id:z.uuid()}).nullable().optional(),
- pendingRequests:z.number().optional(),state:z.string().optional()}).passthrough();
+ pendingRequests:z.number().optional(),state:z.string().optional(),rejectReason:z.string().nullable().optional(),
+ /** Only on my rejected community: attempts left, whether anything changed since, when the next try opens. */
+ resubmit:z.object({left:z.number(),max:z.number(),edited:z.boolean(),after:z.string().nullable()}).optional()}).passthrough();
 export type Community=z.infer<typeof community>;
 const commRes=z.object({ok:z.literal(true),community});
 const disc=z.object({id:z.uuid(),title:z.string().nullable(),excerpt:z.string(),pinned:z.boolean(),published_at:z.string().nullable(),replies:z.number(),owner_profile_id:z.string().nullable().optional(),popularExcluded:z.boolean().optional()});
@@ -288,6 +291,24 @@ function EvFilterSheet({value,onApply,onClose}:{value:EvFilter,onApply:(f:EvFilt
 /* ---------------- C03: the community page ---------------- */
 
 type CTab='disc'|'events'|'members'|'rules';
+/** The author's appeal of a rejected community (the existing appeal.create; another staff member looks again). */
+function AppealSheet({id,onClose,onDone}:{id:string,onClose:()=>void,onDone:(msg:string)=>void}){
+ const {call}=useFe();const {t}=useI18n();
+ const [body,setBody]=useState('');const [err,setErr]=useState('');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const send=async()=>{
+  const e=textError(t,'appeal',body);setErr(e??'');if(e){shakeFirstErr();return;}
+  setBusy(true);setFailure('');
+  try{await call('appeal.create',{opId:newOpId(),targetType:'community',targetId:id,body:body.trim()},okRes);onDone(t('fe.cm.appealSent'));}
+  catch(x){setFailure(x instanceof FeError&&x.rule==='appeal_open'?t('fe.cm.appealOpen'):feErrorMessage(x,t));}finally{setBusy(false);}
+ };
+ return <Sheet title={t('fe.cm.appealTitle')} onClose={onClose} dirty={!busy&&!!body.trim()} foot={<Btn onClick={()=>void send()} busy={busy} disabled={busy}>{t('fe.cm.appealSend')}</Btn>}>
+  <Stack gap={4}>
+   <FormField name="appeal" label={t('fe.cm.appealLabel')} value={body} onChange={v=>{setBody(v);if(err)setErr('');}} err={err} textarea rows={5} check="appeal" ph={t('fe.cm.appealPh')}/>
+   {failure&&<Alert kind="err" icon={TriangleAlert}>{failure}</Alert>}
+  </Stack>
+ </Sheet>;
+}
+
 export function CommunityScreen(){
  const {id=''}=useParams();const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();const cat=useCatalog();
  const [sp,setSp]=useSearchParams();const invite=sp.get('invite')??undefined;
@@ -295,7 +316,7 @@ export function CommunityScreen(){
  const setTab=(v:CTab)=>{const n=new URLSearchParams(sp);if(v==='disc')n.delete('t');else n.set('t',v);setSp(n,{replace:true});};
  const [c,setC]=useState<Community|null>(null);const [discs,setDiscs]=useState<z.infer<typeof discRes>|null>(null);const [mem,setMem]=useState<z.infer<typeof memList>|null>(null);
  const [evs,setEvs]=useState<Ev[]>([]);const [error,setError]=useState<unknown>(null);
- const [layer,setLayer]=useState<''|'menu'|'join'|'leave'|'withdraw'|'unwait'|'report'>('');const [busy,setBusy]=useState(false);const [hostToolsId,setHostTools]=useState<string|null>(null);
+ const [layer,setLayer]=useState<''|'menu'|'join'|'leave'|'withdraw'|'unwait'|'report'|'appeal'>('');const [busy,setBusy]=useState(false);const [hostToolsId,setHostTools]=useState<string|null>(null);
  const [reportPost,setReportPost]=useState<string|null>(null);
  const load=useCallback(()=>{setError(null);
   // A hidden community seen through an invite link (or a pending request) shows only its card: its discussions,
@@ -350,7 +371,13 @@ export function CommunityScreen(){
        <span>{place?<MapPin/>:<Video/>}{place||t('fe.cm.online')}</span>
        {c.me?.muted&&<span><BellOff/>{t('fe.cm.mutedMeta')}</span>}</>}/>
      {c.state==='in_review'&&<Alert kind="warn" icon={Clock}><b>{t('fe.cm.inReview')}</b>{t(couple?'fe.cm.inReviewTextCouple':'fe.cm.inReviewText')}</Alert>}
-     {c.state==='rejected'&&<Alert kind="err" icon={Ban}><b>{t('fe.cm.rejected')}</b>{String((c as {rejectReason?:unknown}).rejectReason??'')}</Alert>}
+     {c.state==='rejected'&&<>
+      <Alert kind="err" icon={Ban}><b>{t('fe.cm.rejected')}</b>{c.rejectReason??''}</Alert>
+      {c.resubmit&&host&&(c.resubmit.left>0
+       ?<><Actions><Btn size="md" disabled={busy||!c.resubmit.edited||!!c.resubmit.after} busy={busy} onClick={()=>void act(()=>call('community.resubmit',{opId:newOpId(),communityId:c.id},okRes),t('fe.cm.resubmitted'))}>{t('fe.cm.resubmit')}</Btn></Actions>
+        <Note>{!c.resubmit.edited?t('fe.cm.resubmitEdit'):c.resubmit.after?fill(t('fe.cm.resubmitWait'),{date:day(c.resubmit.after)}):fill(t('fe.cm.resubmitLeft'),{n:c.resubmit.left})}</Note></>
+       :<><Note>{t('fe.cm.resubmitOut')}</Note><Actions><Btn kind="soft" size="md" onClick={()=>setLayer('appeal')}>{t('fe.cm.appeal')}</Btn></Actions></>)}
+     </>}
      <div className="md bio cdesc"><p>{c.description}</p></div>
      {c.topics.length>0&&<Chips>{c.topics.map(x=><Chip key={x} className="tag" onClick={()=>navigate('/n/topics/'+x)}>#{tname(x)}</Chip>)}</Chips>}
      {status??(host?<div className="cm-act"><Actions><CommunityHostEntry c={c}/></Actions></div>
@@ -387,6 +414,7 @@ export function CommunityScreen(){
    onOk={()=>void act(()=>call('community.requestWithdraw',{opId:newOpId(),requestId:c.request!.id},okRes),t('fe.host.join.withdrawn'))} onCancel={()=>setLayer('')}/>}
   {c&&layer==='unwait'&&c.waiting&&<Ask icon={FileText} danger title={t('fe.host.join.withdrawQ')} text={t('fe.cm.req.unwaitText')} ok={t('fe.host.join.withdraw')} busy={busy}
    onOk={()=>void act(()=>call('decide.cancel',{opId:newOpId(),approvalId:c.waiting!.id},okRes),t('fe.host.join.withdrawn'))} onCancel={()=>setLayer('')}/>}
+  {c&&layer==='appeal'&&<AppealSheet id={c.id} onClose={()=>setLayer('')} onDone={msg=>{setLayer('');toast(msg,{type:'ok'});}}/>}
   {c&&layer==='report'&&<ReportSheet targetType="community" targetId={c.id} onClose={()=>setLayer('')} onDone={msg=>{setLayer('');toast(msg,{type:'ok'});}}/>}
   {hostTools&&<DiscussionHostSheet d={hostTools} host={host} onClose={()=>setHostTools(null)} onDone={(msg,change)=>{patchDisc(hostTools.id,change);setHostTools(null);toast(msg,{type:'ok'});load();}}
    onReport={acting&&hostTools.owner_profile_id!==acting.id?()=>{setReportPost(hostTools.id);setHostTools(null);}:undefined}/>}
