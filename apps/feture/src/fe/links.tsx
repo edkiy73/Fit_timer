@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {CircleAlert,Link2,Pencil,Plus,Trash2,User,Users,X} from 'lucide-react';
 import {useToast as useToastV21} from './toast';
 import {newOpId} from '../feture/fe-api';
-import {AddCard,Alert,Ask,Av,Bar,Btn,Card,Chip,Chips,Empty,Group,IconBtn,Note,PersonLine,RadioList,RequestCard,Row,SearchInput,SectionLabel,Seg,SelectRow,Skel,Spacer,View} from './kit';
+import {AddCard,Alert,Ask,Av,Bar,Btn,Card,Chip,Chips,Empty,Group,IconBtn,Note,PersonLine,RadioList,RequestCard,Row,SearchInput,SectionLabel,Seg,SelectRow,Skel,Spacer,View,Who} from './kit';
 import {useFe,useKeyChange,useShown} from './session';
 import {NameBadges,faceFields,withAge} from './faces';
 import {KINDS,SIDES,Sheet,linkLabel,linksMineRes,mediaSrc,personName,personProfileRes,pxError,type Kind,type LinkView,type LinksMine,type PersonProfile} from './profile-extras';
@@ -94,7 +94,7 @@ function LinkPicker({mine,onClose}:{mine:LinksMine,onClose:()=>void}){
    :list===null?<Skel kind="list" rows={3}/>
    :!list.length?<Note>{tab==='known'&&!needle?t('fe.w7.lp.noKnown'):t('fe.w7.lp.none')}</Note>
    :<Card list>{list.map(p=>{const name=personName(p)||'?';const w=why(p.id);
-    return <Row key={p.id} av={<Av name={name} seed={p.id} size="sm" src={p.src}/>} title={name} sub={w||(p.handle?'@'+p.handle:undefined)} disabled={!!w}
+    return <Row key={p.id} av={<Av name={name} seed={p.id} size="sm" src={p.src}/>} title={<Who name={name} nick={p.handle}/>} sub={w||undefined} disabled={!!w}
      onClick={()=>{onClose();navigate('/n/people/'+p.id+'/link');}}/>;})}</Card>}
  </Sheet>;
 }

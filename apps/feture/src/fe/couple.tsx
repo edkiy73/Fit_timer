@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Calendar,Check,Clock,Eye,MapPin,Pencil,Video,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {ActorCard,ActorCards,Alert,Av,Btn,Card,Counter,Empty,EventTile,Field,Group,Note,ReturnNote,ReviewMeta,ReviewPost,Row,Sheet,Spacer,Stack,TextArea} from './kit';
+import {ActorCard,ActorCards,Alert,Av,Btn,Card,Counter,Empty,EventTile,Field,Group,Note,ReturnNote,ReviewMeta,ReviewPost,Row,Sheet,Spacer,Stack,TextArea,Who} from './kit';
 import {NamedPlate} from './comm-kit';
 import {useFe,useRealtime} from './session';
 import {useToast} from './toast';
@@ -72,7 +72,7 @@ export function CoupleMembers(){
  const {t}=useI18n();const members=useCoupleMembers();
  if(!members?.length)return null;
  return <Group title={t('fe.cw.members')}><Card list>
-  {members.map(m=><Row key={m.profileId} av={<Av name={nameOf(m)} seed={m.profileId} size="sm"/>} title={nameOf(m)} sub={m.handle&&m.name?'@'+m.handle:undefined}/>)}
+  {members.map(m=><Row key={m.profileId} av={<Av name={nameOf(m)} seed={m.profileId} size="sm"/>} title={<Who name={nameOf(m)} nick={m.handle}/>}/>)}
  </Card></Group>;
 }
 

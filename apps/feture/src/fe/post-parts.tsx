@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Check,ChevronLeft,ChevronRight,Link as LinkIcon,Undo2,Users,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Ask,Av,Btn,Card,Empty,H,IconBtn,Layer,LoadMore,Note,PhotoTrack,Row,Sheet,Skel,VideoBadge,VideoPlayer,useBackClose,type Slide} from './kit';
+import {Ask,Av,Btn,Card,Empty,H,IconBtn,Layer,LoadMore,Note,PhotoTrack,Row,Sheet,Skel,VideoBadge,VideoPlayer,useBackClose,type Slide,nickShown} from './kit';
 import {useFe} from './session';
 import {useToast} from './toast';
 
@@ -248,7 +248,7 @@ export function MarksSheet({title,empty,load,onClose,first}:{title:string,empty:
    :!data?<Skel kind="list"/>
    :!items.length&&!data.hidden?<Empty icon={Users} title={empty}/>
    :<>{items.length>0&&<Card list>{items.map(p=><Row key={p.id} av={<Av name={personName(p)} seed={p.id} src={p.avatar} size="sm"/>}
-     title={p.id===acting?.id?t('fe.w3.you'):personName(p)} sub={p.handle?'@'+p.handle:undefined}
+     title={p.id===acting?.id?t('fe.w3.you'):personName(p)} sub={nickShown(p.handle,p.name)??undefined}
      onClick={()=>{onClose();navigate(p.mine?'/n/me':'/n/people/'+p.id);}}/>)}</Card>}
     <LoadMore more={!!data.next} busy={more} error={moreErr} onMore={next}/>
     {data.hidden>0&&<p className="grp-n">{t('fe.w3.likers.hidden',{n:data.hidden})}</p>}</>}

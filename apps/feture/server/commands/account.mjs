@@ -112,7 +112,7 @@ const run = {
       await q.query(`insert into feture.handle_hold (handle, profile_id, until) values (lower($1), $2, now() + make_interval(days => $3))
                      on conflict (handle) do update set until = excluded.until, profile_id = excluded.profile_id`, [a.handle, a.person_profile_id, HOLD_DAYS]);
     }
-    await q.query(`update feture.profile set state = 'deleted', handle = null, name = '', avatar_asset_id = null, updated_at = now() where id = $1`, [a.person_profile_id]);
+    await q.query(`update feture.profile set state = 'deleted', handle = null, chosen_name = '', avatar_asset_id = null, updated_at = now() where id = $1`, [a.person_profile_id]);
     await q.query(`update feture.profile_member set state = 'left', left_at = now() where account_id = $1 and state = 'active'`, [a.id]);
     await q.query(`update feture.account set state = 'deleted', birth_date = null, news_opt_in = false, updated_at = now() where id = $1`, [a.id]);
     await q.query(`update feture.couple_link set revoked_at = now() where from_account = $1 and used_at is null and revoked_at is null`, [a.id]);

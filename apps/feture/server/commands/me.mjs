@@ -56,7 +56,7 @@ export async function checkOptions(q, input) {
 
 /** @param {Q} q @param {string} h @param {string | null} [self] the profile renaming itself (its own hold does not count)
  * @returns {Promise<'ok' | 'reserved' | 'taken'>} */
-async function handleState(q, h, self = null) {
+export async function handleState(q, h, self = null) {
   const sk = skeleton(h);
   // Service-like stems anywhere in the nickname (the_admin, real_feture), through look-alikes.
   if (RESERVED_STEMS.some(stem => sk.includes(skeleton(stem)))) return 'reserved';
@@ -67,6 +67,64 @@ async function handleState(q, h, self = null) {
             exists (select 1 from feture.handle_hold where handle = lower($1) and until > now() and profile_id is distinct from $2::uuid) held`,
     [h, self]);
   return r.taken || r.held ? 'taken' : 'ok';
+}
+
+/** Nick and name change limits (owner 29.10.2026): a nick once per 6 months, the first change after sign-up (or after a
+ * couple forms) free; a name once per 2 weeks, the first fill and one correction free. A letter-case change is free. */
+const NICK_EVERY = "interval '6 months'", NAME_EVERY = "interval '14 days'", NAME_FREE = 2;
+const LIMITS_SQL = (/** @type {string} */ p) => `case when ${p}.handle_changes > 0 then ${p}.handle_changed_at + ${NICK_EVERY} end nick_at,
+  case when ${p}.name_changes >= ${NAME_FREE} then ${p}.name_changed_at + ${NAME_EVERY} end name_at, now() now_at`;
+/** The moment as ISO when it is still ahead, else null (may change now). @param {any} at @param {any} now */
+const ahead = (at, now) => at && new Date(at) > new Date(now) ? new Date(at).toISOString() : null;
+
+/** The profile's nick, chosen name and limits. @param {Q} q @param {string} profileId @param {boolean} lock */
+async function identityRow(q, profileId, lock) {
+  const [p] = await q.query(`select p.handle, p.chosen_name, ${LIMITS_SQL('p')} from feture.profile p where p.id = $1 ${lock ? 'for update' : ''}`, [profileId]);
+  return p;
+}
+
+/** Refuses a nick or name change the limits do not allow yet (with `until`), or a nick that is not free.
+ * @param {Q} q @param {string} profileId @param {{handle?: string, name?: string}} input @param {any} p identityRow */
+async function checkIdentity(q, profileId, input, p) {
+  const nick = input.handle !== undefined && input.handle.toLowerCase() !== String(p.handle ?? '').toLowerCase();
+  if (nick) {
+    const until = ahead(p.nick_at, p.now_at);
+    if (until) fail(422, 'rule_violation', { rule: 'handle_change_cooldown', until });
+    if (await handleState(q, /** @type {string} */ (input.handle), profileId) !== 'ok') fail(409, 'conflict', { field: 'handle' });
+  }
+  const name = input.name !== undefined && input.name !== p.chosen_name;
+  if (name) {
+    const until = ahead(p.name_at, p.now_at);
+    if (until) fail(422, 'rule_violation', { rule: 'name_change_cooldown', until });
+  }
+  return { nick, name };
+}
+
+/** Writes a new nick and / or chosen name within the limits; `name` (what everyone sees) follows by trigger.
+ * Shared by profile.update (also an approved couple change) and couple.setup.
+ * @param {Q} q @param {string} profileId @param {{handle?: string, name?: string}} input */
+export async function writeIdentity(q, profileId, input) {
+  const p = await identityRow(q, profileId, true);
+  const { nick, name } = await checkIdentity(q, profileId, input, p);
+  if (input.handle !== undefined && input.handle !== p.handle) {
+    // The old nickname stays held for 30 days: nobody else can take it and pose as the previous owner.
+    if (nick && p.handle) {
+      await q.query(
+        `insert into feture.handle_hold (handle, profile_id, until) values (lower($1), $2, now() + interval '30 days')
+         on conflict (handle) do update set profile_id = excluded.profile_id, until = excluded.until`, [p.handle, profileId]);
+    }
+    try {
+      await q.query(
+        `update feture.profile set handle = $2, handle_changed_at = case when $3 then now() else handle_changed_at end,
+           handle_changes = handle_changes + case when $3 then 1 else 0 end where id = $1`, [profileId, input.handle, nick]);
+    } catch (error) {
+      if (isUniqueViolation(error)) fail(409, 'conflict', { field: 'handle' });
+      throw error;
+    }
+  }
+  if (name) {
+    await q.query(`update feture.profile set chosen_name = $2, name_changed_at = now(), name_changes = name_changes + 1 where id = $1`, [profileId, input.name]);
+  }
 }
 
 /** Current documents that must be accepted. Fails closed: if any mandatory document is not published (or not
@@ -84,7 +142,7 @@ async function requiredDocuments(q, locale) {
  * @param {Acting} viewer @param {string} profileId @param {import('../media/assets.mjs').MediaConfig} media */
 async function profileView(q, viewer, profileId, media) {
   const [p] = await q.query(
-    `select p.id, p.kind, p.handle, p.name, p.state, p.rev, p.avatar_asset_id,
+    `select p.id, p.kind, p.handle, p.name, p.state, p.rev, p.avatar_asset_id, p.chosen_name, p.handle_changes, ${LIMITS_SQL('p')},
        d.bio, d.show_age, d.details_vis, d.genders, d.orients, d.roles, d.formats, d.seeks, d.status,
        pl.id city_id, pl.name_ru city_ru, pl.name_en city_en, pl.state city_state,
        a.birth_date, ${PREMIUM_SQL} premium,
@@ -126,46 +184,30 @@ async function profileView(q, viewer, profileId, media) {
     photoVerified: (await photoVerifiedOf(q, [p.id])).get(p.id) ?? false, // only the yes/no, never the check itself (V01)
     premium: !!p.premium, // the public gold badge (V10 «Значки»), never the end date
 
-    ...(own ? { rev: p.rev, showAge: !!p.show_age, detailsVis: p.details_vis ?? null, state: p.state } : {}),
+    ...(own ? {
+      rev: p.rev, showAge: !!p.show_age, detailsVis: p.details_vis ?? null, state: p.state,
+      // The edit screen: what the person typed (empty — the nick is shown) and when the nick / name may change next.
+      chosenName: p.chosen_name, nickAt: ahead(p.nick_at, p.now_at), nameAt: ahead(p.name_at, p.now_at), nickFirst: p.handle_changes === 0,
+    } : {}),
   };
 }
 
 /** Fields only a person has (couples take theirs from the members' personal profiles). */
-const PERSON_FIELDS = ['handle', 'showAge', 'detailsVis', 'genders', 'orients', 'status'];
+const PERSON_FIELDS = ['showAge', 'detailsVis', 'genders', 'orients', 'status'];
 
 /** Profile edit, shared by the direct path and an approved couple change. Re-checks the revision.
  * @param {Q} q @param {string} profileId @param {string} accountId @param {Record<string, any>} input */
 async function doProfileUpdate(q, profileId, accountId, input) {
   await checkOptions(q, input);
-  const [p] = await q.query(
-    `select rev, handle, handle_changed_at > now() - interval '30 days' recently from feture.profile where id = $1 for update`, [profileId]);
+  const [p] = await q.query(`select rev from feture.profile where id = $1 for update`, [profileId]);
   if (p.rev !== input.rev) fail(409, 'conflict', { rev: p.rev });
-  if (input.handle !== undefined && input.handle !== p.handle) {
-    if (input.handle.toLowerCase() !== String(p.handle).toLowerCase()) {
-      if (p.recently) fail(422, 'rule_violation', { rule: 'handle_change_cooldown' });
-      if (await handleState(q, input.handle, profileId) !== 'ok') fail(409, 'conflict', { field: 'handle' });
-      // The old nickname stays held for 30 days: nobody else can take it and pose as the previous owner.
-      await q.query(
-        `insert into feture.handle_hold (handle, profile_id, until) values (lower($1), $2, now() + interval '30 days')
-         on conflict (handle) do update set profile_id = excluded.profile_id, until = excluded.until`, [p.handle, profileId]);
-    }
-    try {
-      // Only a new nickname starts the 30-day cooldown; changing letter case does not.
-      await q.query(
-        `update feture.profile set handle = $2, handle_changed_at = case when lower(handle) = lower($2) then handle_changed_at else now() end where id = $1`,
-        [profileId, input.handle]);
-    } catch (error) {
-      if (isUniqueViolation(error)) fail(409, 'conflict', { field: 'handle' });
-      throw error;
-    }
-  }
+  await writeIdentity(q, profileId, input);
   if (input.cityId) {
     // Own submitted cities may be used at once; others' pending or rejected ones may not.
     const [c] = await q.query(
       `select 1 from feture.place where id = $1 and (state = 'approved' or (state = 'pending' and submitted_by = $2))`, [input.cityId, accountId]);
     if (!c) fail(400, 'invalid_input', { fields: ['cityId'] });
   }
-  if (input.name !== undefined) await q.query('update feture.profile set name = $2 where id = $1', [profileId, input.name]);
   /** @type {[string, unknown][]} */
   const sets = [];
   const map = { bio: 'bio', cityId: 'city_id', showAge: 'show_age', detailsVis: 'details_vis', genders: 'genders', orients: 'orients', roles: 'roles', formats: 'formats', seeks: 'seeks', status: 'status' };
@@ -291,7 +333,8 @@ const run = {
     let profileId;
     try {
       [{ id: profileId }] = await q.query(
-        `insert into feture.profile (kind, handle, name) values ('person', $1, $1) returning id`, [input.handle]);
+        `insert into feture.profile (kind, handle, chosen_name, name_changes, name_changed_at) values ('person', $1, $2, $3, case when $3 > 0 then now() end) returning id`,
+        [input.handle, input.name ?? '', input.name ? 1 : 0]);
     } catch (error) {
       if (isUniqueViolation(error)) fail(409, 'conflict', { field: 'handle' });
       throw error;
@@ -342,6 +385,8 @@ const run = {
       if (needsPartner(acting, 'profile.update')) {
         const [p] = await q.query('select rev from feture.profile where id = $1', [acting.profileId]);
         if (p.rev !== change.rev) fail(409, 'conflict', { rev: p.rev });
+        // A nick or name the limits refuse is refused now, not after the partner said yes.
+        await checkIdentity(q, acting.profileId, change, await identityRow(q, acting.profileId, false));
         return { pending: await requestApproval(q, acting, { kind: 'profile.update', targetType: 'profile', targetId: acting.profileId, change, summary: Object.keys(change).filter(k => k !== 'rev') }) };
       }
       const out = await doProfileUpdate(q, acting.profileId, acting.accountId, change);

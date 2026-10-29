@@ -5,7 +5,7 @@ import { fail, isUniqueViolation } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { narrowCouple } from '../approvals.mjs';
 import { closeAll } from './access.mjs';
-import { setVisibilityAs } from './me.mjs';
+import { handleState, setVisibilityAs, writeIdentity } from './me.mjs';
 import { randomBytes } from 'node:crypto';
 import { sha256 } from '../hash.mjs';
 
@@ -53,6 +53,19 @@ async function liveLink(q, token, accountId, lock) {
   return l;
 }
 
+/** A free nick for a new couple from the partners' nicks (owner 29.10.2026): anya_max, then anya_max2 …; the partners
+ * may change it once for free (couple.setup or the profile editor). @param {Q} q @param {string[]} handles */
+async function coupleNick(q, handles) {
+  const part = (/** @type {string} */ h) => String(h ?? '').toLowerCase().slice(0, 9).replace(/[._]+$/, '');
+  let base = handles.map(part).filter(Boolean).join('_');
+  if (!/^[a-z0-9][a-z0-9_.]{1,18}[a-z0-9]$/.test(base) || !/[a-z]/.test(base) || base.includes('..')) base = 'pair';
+  for (let n = 1; n < 500; n++) {
+    const cand = n === 1 ? base : base.slice(0, 20 - String(n).length) + n;
+    if (await handleState(q, cand) === 'ok') return cand;
+  }
+  return 'pair_' + randomBytes(6).toString('hex').slice(0, 10);
+}
+
 /** Forms a couple of two accounts (an accepted invitation or link): both must still be free and active; the couple
  * starts empty; other pending invitations of both are void. @param {Q} q @param {string} fromAccount @param {string} toAccount */
 async function formCouple(q, fromAccount, toAccount) {
@@ -63,11 +76,17 @@ async function formCouple(q, fromAccount, toAccount) {
     `select count(*)::int active from (select a.state, p.state pstate from feture.account a join feture.profile p on p.id = a.person_profile_id
      where a.id = any($1) for share of a, p) x where x.state = 'active' and x.pstate = 'active'`, [[fromAccount, toAccount]]);
   if (active !== 2) fail(409, 'conflict', { rule: 'unavailable' });
-  const names = await q.query(
-    `select coalesce(nullif(p.name, ''), p.handle) n from feture.account a join feture.profile p on p.id = a.person_profile_id where a.id = any($1)
+  const nicks = await q.query(
+    `select p.handle from feture.account a join feture.profile p on p.id = a.person_profile_id where a.id = any($1)
      order by array_position($1, a.id)`, [[fromAccount, toAccount]]);
-  const [couple] = await q.query(
-    `insert into feture.profile (kind, name) values ('couple', $1) returning id`, [names.map(r => r.n).join(' и ').slice(0, 60)]);
+  // The couple's name stays empty: everyone sees «Имя и Имя» of the partners until they choose one (trigger).
+  let couple;
+  try {
+    [couple] = await q.query(`insert into feture.profile (kind, handle) values ('couple', $1) returning id`, [await coupleNick(q, nicks.map(r => r.handle))]);
+  } catch (error) {
+    if (isUniqueViolation(error)) fail(409, 'conflict', { rule: 'busy' });
+    throw error;
+  }
   for (const acc of [fromAccount, toAccount]) {
     await q.query(`insert into feture.profile_member (profile_id, profile_kind, account_id, joined_at) values ($1, 'couple', $2, now())`, [couple.id, acc]);
   }
@@ -116,7 +135,7 @@ export async function deleteCouple(q, profileId, reason) {
   const members = await q.query(
     `update feture.profile_member set state = 'left', left_at = now() where profile_id = $1 and state = 'active' returning account_id`, [profileId]);
   await q.query(
-    `update feture.profile set state = 'deleted', restore_until = null, paused_at = null, handle = null, name = '', updated_at = now() where id = $1`, [profileId]);
+    `update feture.profile set state = 'deleted', restore_until = null, paused_at = null, handle = null, chosen_name = '', updated_at = now() where id = $1`, [profileId]);
   for (const m of members) await enqueue(q, 'couple.deleted', null, { profileId, for: m.account_id, reason });
 }
 
@@ -244,6 +263,11 @@ const run = {
     // My own mode (each partner chooses independently), then who may ask for access — a widening of that waits for the
     // partner only when the partner asked to approve my changes.
     const approves = input.mode === 'approve';
+    // The couple's nick (suggested when it formed) and name, within the same limits as the profile editor.
+    if (input.handle !== undefined || input.name !== undefined) {
+      await writeIdentity(q, acting.profileId, { ...(input.handle !== undefined ? { handle: input.handle } : {}), ...(input.name !== undefined ? { name: input.name } : {}) });
+      await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: 'profile' });
+    }
     const [m] = await q.query(
       `update feture.profile_member set approves_partner = $3 where profile_id = $1 and account_id = $2 and approves_partner <> $3 returning 1`,
       [acting.profileId, acting.accountId, approves]);
@@ -255,7 +279,7 @@ const run = {
   async 'couple.get'(q, { acting: a }) {
     const acting = need(a);
     coupleOnly(acting);
-    const [p] = await q.query(`select id, name, state, paused_at, restore_until, created_at from feture.profile where id = $1`, [acting.profileId]);
+    const [p] = await q.query(`select id, handle, name, chosen_name, state, paused_at, restore_until, created_at from feture.profile where id = $1`, [acting.profileId]);
     const members = await q.query(
       `select m.account_id = $2 me, m.approves_partner, pp.id profile_id, pp.handle, pp.name,
          exists (select 1 from feture.couple_restore r where r.profile_id = m.profile_id and r.account_id = m.account_id) restore_agreed
@@ -263,7 +287,7 @@ const run = {
        where m.profile_id = $1 and m.state = 'active' order by m.account_id = $2 desc`, [acting.profileId, acting.accountId]);
     return {
       couple: {
-        id: p.id, name: p.name, state: p.state, since: p.created_at, pausedAt: p.paused_at, restoreUntil: p.restore_until,
+        id: p.id, handle: p.handle, name: p.name, chosenName: p.chosen_name, state: p.state, since: p.created_at, pausedAt: p.paused_at, restoreUntil: p.restore_until,
         members: members.map(m => ({ me: m.me, profileId: m.profile_id, handle: m.handle, name: m.name, approvesPartner: m.approves_partner, restoreAgreed: m.restore_agreed })),
       },
     };

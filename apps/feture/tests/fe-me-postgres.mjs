@@ -222,3 +222,45 @@ test('interests: scale or mark, direction rules, visibility for others, remove',
     assert.ok((await call('ua', pc, { action: 'profile.setVisibility', opId: op(), setting: 'discoverMode', value: 'visible' })).pending?.approvalId);
   } finally { await pg.close(); }
 });
+
+test('name and nick (owner 29.10.2026): optional name shown instead of the nick, nick 6 months with one free change, name 2 weeks with one free correction', async () => {
+  const { pg, db, call, person } = await setup();
+  try {
+    // Sign-up: the name is optional; without one everyone sees the nick.
+    const named = await register(call, 'un', 'anya_k', { name: '  Аня  ' });
+    assert.equal(named.status, 200);
+    const b = await person('ub', 'Kira');
+    const seenNamed = (await call('ub', b, { action: 'profile.get', profileId: named.profileId })).profile;
+    assert.deepEqual([seenNamed.name, seenNamed.handle, seenNamed.chosenName], ['Аня', 'anya_k', undefined]); // only the owner sees what was typed
+    const a = await person('ua', 'Alex');
+    let own = (await call('ua', a, { action: 'profile.get', profileId: a })).profile;
+    assert.deepEqual([own.name, own.chosenName, own.nickAt, own.nameAt, own.nickFirst], ['Alex', '', null, null, true]);
+    const set = async (/** @type {object} */ x) => { const r = await call('ua', a, { action: 'profile.update', opId: op(), rev: own.rev, ...x }); own = (await call('ua', a, { action: 'profile.get', profileId: a })).profile; return r; };
+
+    // Nick: the first change after sign-up is free, the next one waits 6 months (the refusal says until when).
+    assert.equal((await set({ handle: 'alex_one' })).status, 200);
+    assert.deepEqual([own.handle, own.nickFirst, typeof own.nickAt], ['alex_one', false, 'string']);
+    const early = await set({ handle: 'alex_two' });
+    assert.deepEqual([early.status, early.rule], [422, 'handle_change_cooldown']);
+    const days = (Date.parse(early.until) - Date.now()) / 864e5;
+    assert.ok(days > 180 && days < 185, String(days));
+    assert.equal((await set({ handle: 'Alex_One' })).status, 200); // letter case only: free
+    await db.query(`update feture.profile set handle_changed_at = now() - interval '6 months 1 day' where id = $1`, [a]);
+    assert.equal((await set({ handle: 'alex_two' })).status, 200);
+    assert.equal((await set({ handle: 'alex_three' })).rule, 'handle_change_cooldown');
+
+    // Name: the first fill and one correction are free, then once per 2 weeks; any human name, Cyrillic and spaces.
+    assert.equal((await set({ name: 'Алекс Б' })).status, 200);
+    assert.equal((await call('ub', b, { action: 'profile.get', profileId: a })).profile.name, 'Алекс Б');
+    assert.equal((await set({ name: 'Алекс В' })).status, 200); // the typo fix
+    assert.equal(typeof own.nameAt, 'string');
+    const third = await set({ name: 'Саша' });
+    assert.deepEqual([third.status, third.rule], [422, 'name_change_cooldown']);
+    assert.ok((Date.parse(third.until) - Date.now()) / 864e5 > 13.5);
+    await db.query(`update feture.profile set name_changed_at = now() - interval '15 days' where id = $1`, [a]);
+    // Cleared: the nick is shown again.
+    assert.equal((await set({ name: '' })).status, 200);
+    assert.deepEqual([own.name, own.chosenName], ['alex_two', '']);
+    assert.equal((await call('ub', b, { action: 'profile.get', profileId: a })).profile.name, 'alex_two');
+  } finally { await pg.close(); }
+});

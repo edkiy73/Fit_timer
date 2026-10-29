@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {AtSign,Check,Crown,Gift,History,RotateCcw,Undo2,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Actions,Alert,Ask,Av,Bar,Btn,Card,Empty,Field,Group,Input,KeyValues,Note,PlanCards,PremiumFeats,PremiumHero,Row,SectionLabel,Sheet,Skel,Spacer,Stack,ToggleRow,View} from './kit';
+import {Actions,Alert,Ask,Av,Bar,Btn,Card,Empty,Field,Group,Input,KeyValues,Note,PlanCards,PremiumFeats,PremiumHero,Row,SectionLabel,Sheet,Skel,Spacer,Stack,ToggleRow,View,Who} from './kit';
 import {useToast} from './toast';
 import {useFe,useShown} from './session';
 
@@ -117,7 +117,7 @@ export function GiftSheet({handle,onClose,onDone}:{handle?:string|null|undefined
  useEffect(()=>{if(handle)void find(handle);},[handle,find]);
  const price=t('fe.w8.gift.'+plan+'Price');
  const name=to?.recipient.name||to?.recipient.handle||'';
- const person=to&&<Card list><Row noChev av={<Av name={name} seed={to.recipient.id} src={to.recipient.avatar}/>} title={name} sub={to.recipient.handle?'@'+to.recipient.handle:undefined}
+ const person=to&&<Card list><Row noChev av={<Av name={name} seed={to.recipient.id} src={to.recipient.avatar}/>} title={<Who name={name} nick={to.recipient.handle}/>}
   end={handle||step==='confirm'?undefined:<Btn kind="text" size="sm" auto onClick={()=>{setTo(null);setNick('');}}>{t('fe.w8.gift.change')}</Btn>}/></Card>;
  if(step==='confirm'&&to)return <Sheet title={t('fe.w8.gift.confirmTitle')} onClose={onClose}
   foot={<Actions stack>{status?.payments?<Btn busy={busy} onClick={()=>void pay('premium.gift',{handle:to.recipient.handle,plan,anonymous:anon},t('fe.w8.gift.done'))}>{t('fe.w8.buy.pay',{price})}</Btn>:null}

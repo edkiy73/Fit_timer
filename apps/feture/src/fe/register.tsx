@@ -28,7 +28,7 @@ const catalog=z.object({ok:z.literal(true),options:z.array(option)});
 const onboarded=z.object({ok:z.literal(true),discoverVisible:z.boolean(),photoNeeded:z.boolean()});
 const photoIds=z.object({ok:z.literal(true),profile:z.object({photos:z.array(z.object({id:z.string()}).passthrough())}).passthrough()});
 
-type Form={nick:string,dd:string,mm:string,yy:string,terms:boolean,news:boolean,u18retry:boolean};
+type Form={nick:string,name:string,dd:string,mm:string,yy:string,terms:boolean,news:boolean,u18retry:boolean};
 type Step={id:'A04'}|{id:'A04X'}|{id:'A05',profileId:string,about?:About}|{id:'A05B',profileId:string,about:About};
 /** The answers of «Расскажи о себе»; they are saved together with step 2 («Готово»), so «‹» from step 2 keeps them. */
 type About={pick:Record<Kind,string[]>,vis:'only'|'granted'|'all',discover:'visible'|'off',partner:''|'yes'|'no'};
@@ -38,7 +38,7 @@ export function Register(){
  // An account made earlier but not finished (the page was closed on A05) continues at A05.
  const made=state.status==='ready'?state.boot.profiles.find(p=>p.kind==='person'&&p.state!=='deleted'):undefined;
  const [step,setStep]=useState<Step>(made?{id:'A05',profileId:made.id}:{id:'A04'});
- const [form,setForm]=useState<Form>({nick:'',dd:'',mm:'',yy:'',terms:false,news:false,u18retry:false});
+ const [form,setForm]=useState<Form>({nick:'',name:'',dd:'',mm:'',yy:'',terms:false,news:false,u18retry:false});
  const {logout}=useOptionalAuth();
  // «На главную» and «‹» on the first form leave the sign-up: the session ends and the start screen (A01) opens.
  const leave=()=>{void logout();};
@@ -58,7 +58,9 @@ function shake(el:Element|null){if(!el)return;el.classList.remove('shake');void 
 
 function Account({form,setForm,onBack,onCreated,onUnder18}:{form:Form,setForm:React.Dispatch<React.SetStateAction<Form>>,onBack:()=>void,onCreated:(profileId:string)=>void,onUnder18:()=>void}){
  const {call}=useFe();const {t,locale}=useI18n();const toast=useToast();
- const {nick,dd,mm,yy,terms,news}=form;
+ const {nick,name,dd,mm,yy,terms,news}=form;
+ // «Как тебя называть» is optional: checked by the server's rule only when something is typed.
+ const checks=useChecks(name.trim()?{name:'profileName' as const}:{},{name});
  const set=(p:Partial<Form>)=>setForm(f=>({...f,...p}));
  const [nickState,setNickState]=useState<'idle'|'ok'|string>('idle');
  const [errors,setErrors]=useState<Record<string,string>>({});const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
@@ -86,6 +88,7 @@ function Account({form,setForm,onBack,onCreated,onUnder18}:{form:Form,setForm:Re
   if(!dd||!mm||!yy)e.dob=t('fe.reg.dobMissing');
   if(!terms)e.terms=t('fe.reg.termsMissing');
   setErrors(e);setFailure('');
+  if(!Object.keys(e).length&&!checks.submit())return;
   if(Object.keys(e).length){
    shake(wrap.current?.querySelector(`[data-field="${Object.keys(e)[0]}"]`)??null);return;
   }
@@ -97,19 +100,20 @@ function Account({form,setForm,onBack,onCreated,onUnder18}:{form:Form,setForm:Re
    const docs=await loadDocuments(locale==='en'?'en':'ru');
    const documents=docs.filter(d=>d.requiresAccept).map(d=>({id:d.id,contentHash:d.hash}));
    const birthDate=`${yy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`;
-   const r=await call('account.create',{opId:opId.current,handle:nick.trim(),birthDate,locale:locale==='en'?'en':'ru',documents,newsOptIn:news},created,{asAccount:true});
+   const r=await call('account.create',{opId:opId.current,handle:nick.trim(),...(name.trim()?{name:name.trim()}:{}),birthDate,locale:locale==='en'?'en':'ru',documents,newsOptIn:news},created,{asAccount:true});
    if(r.rule==='under_18'){onUnder18();return;}
    if(!r.profileId)throw new FeError('unavailable');
    onCreated(r.profileId);
   }catch(error){
    if(error instanceof FeError&&error.fields?.includes('handle'))setErrors({nick:t('fe.reg.nick.taken')});
+   else if(checks.fromServer(error)){/* shown under the name */}
    else if(error instanceof FeError&&error.fields?.includes('birthDate'))setErrors({dob:t('fe.reg.dobInvalid')});
    else setFailure(feErrorMessage(error,t));
    opId.current=newOpId();
   }finally{setBusy(false);}
  };
  const dob=(p:Partial<Form>)=>{set(p);setErrors(x=>({...x,dob:''}));};
- const nickId=useId();
+ const nickId=useId();const nameId=useId();
  const nickError=errors.nick||(nickState!=='idle'&&nickState!=='ok'?t('fe.reg.nick.'+nickState):'');
  const days=useMemo(()=>[['',t('fe.reg.day')] as const,...Array.from({length:dMax},(_,i)=>[String(i+1),String(i+1)] as const)],[dMax,t]);
  const monthOpts=useMemo(()=>[['',t('fe.reg.month')] as const,...months.map((m,i)=>[String(i+1),m] as const)],[months,t]);
@@ -120,6 +124,9 @@ function Account({form,setForm,onBack,onCreated,onUnder18}:{form:Form,setForm:Re
    <AuthLogo/>
    <Steps at={1}/>
    <H level={2} className="t">{t('fe.reg.title')}</H>
+   {/* The heading asks «Как тебя называть»: the name (optional, any) first, then the nick everyone has. */}
+   <Field id={nameId} name="name" label={t('fe.me.name')} optional={t('fe.reg.optional')} hint={t('fe.nn.nameHint')} error={checks.error('name')}>
+    <Input id={nameId} value={name} placeholder={t('fe.nn.namePh')} autoComplete="nickname" {...checks.input('name')} onChange={e=>set({name:e.target.value})}/>{checks.counter('name')}</Field>
    <div data-field="nick"><Field id={nickId} label={t('fe.reg.nick')} error={nickError||undefined}>
     <div className="inwrap"><AtSign/><Input id={nickId} value={nick} onChange={e=>{set({nick:e.target.value});setErrors(x=>({...x,nick:''}));}} placeholder="alex_b" autoComplete="username" autoCapitalize="off" spellCheck={false} maxLength={20} invalid={!!errors.nick}/></div>
     {nickError?null:nickState==='ok'?<div className="fok"><CircleCheck/>{t('fe.reg.nickOk')}</div>:<div className="fhint">{t('fe.reg.nickHint')}</div>}

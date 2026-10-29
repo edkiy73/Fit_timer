@@ -2,7 +2,7 @@ import type {Meta,StoryObj} from '@storybook/react-vite';
 import {useState} from 'react';
 import {fn} from 'storybook/test';
 import {ArrowLeftRight,Ban,Bell,Ellipsis,Heart,KeyRound,MessageCircle,Sparkles,Users,X} from 'lucide-react';
-import {PhotoBars,Answer,AnswerScale,Av,Btn,Chip,Chips,IconBtn,LikeTile,PersonBar,PersonLine,PairArt,PersonName,Pill,Radar,RequestCard,Soon,Typing,Verdict,plate} from './index';
+import {PhotoBars,Answer,AnswerScale,Av,Btn,Card,Chip,Chips,IconBtn,LikeTile,PersonBar,PersonLine,PairArt,PersonName,Pill,Radar,RequestCard,Row,Soon,Typing,Verdict,Who,plate} from './index';
 
 const meta={title:'Домен/Люди',component:RequestCard,tags:['autodocs'],
  parameters:{docs:{description:{component:'Запрос, на который нужно ответить (доступ к приватному, связь, приглашение в пару, заявка на событие): кто просит (`PersonLine`), подробности, ответы. Ответ на вопрос заявки — `Answer`.'}}},
@@ -17,6 +17,16 @@ export const Заявка:S={name:'Заявка на событие',args:{class
 export const БезКнопок:S={name:'Без ответа (только показ)',args:{actions:undefined,person:<PersonLine av={<Av name="Kai" seed="kai" size="sm"/>} small name="Kai" sub="Приглашает в пару · вчера"/>,children:undefined}};
 
 export const ИмяНаФото:StoryObj<typeof PersonName>={name:'Имя на фото',render:a=><div className="k-demo-dark"><PersonName {...a}/></div>,args:{name:'Mia',age:'29'}};
+export const ИмяИНикВШапке:StoryObj<typeof PersonName>={name:'Имя и ник: шапка профиля',parameters:{docs:{description:{story:'Шапка профиля (человек и пара): серый @ник под именем. Без имени показан ник — второй строки нет.'}}},
+ render:a=><div className="k-demo-dark"><PersonName {...a}/></div>,args:{name:'Аня',age:'29',nick:'anya_k'}};
+export const ИмяИНикВСписке:StoryObj<typeof Who>={name:'Имя и ник: строки',
+ parameters:{docs:{description:{story:'`Who` — имя и серый @ник в одну строку: поиск, подсказки @упоминаний, приглашение в пару, подписки. Лента, комментарии, чаты, уведомления и лайки показывают только имя. Без имени — ник вместо имени, без повтора.'}}},
+ render:a=><Card list>
+  <Row av={<Av name={a.name} seed="a" size="sm"/>} title={<Who {...a}/>} sub="Москва"/>
+  <Row av={<Av name="Аня и Макс" seed="p" size="sm" couple={['Аня','Макс']}/>} title={<Who name="Аня и Макс" nick="anya_max"/>} sub="Пара"/>
+  <Row av={<Av name="kira_m" seed="k" size="sm"/>} title={<Who name="kira_m" nick="kira_m"/>} sub="Без имени — только ник"/>
+  <Row av={<Av name="Александра" seed="l" size="sm"/>} title={<Who name="Александра Константинопольская" nick="alexandra_konstantin"/>} sub="Длинное имя: ник уступает место первым"/>
+ </Card>,args:{name:'Аня',nick:'anya_k'}};
 export const ШапкаЧата:StoryObj<typeof PersonBar>={name:'Шапка чата',render:a=><PersonBar {...a}><IconBtn icon={Ellipsis} kind="ghost" label="Меню"/></PersonBar>,
  args:{name:'Mia & Tom',av:<Av name="Mia" seed="mia" size="sm"/>,sub:<><Users/> Чат пары · видят оба</>,onOpen:fn(),onBack:fn()},argTypes:{av:{control:false},sub:{control:false}}};
 export const ШапкаЧатаЗагрузка:StoryObj<typeof PersonBar>={name:'Шапка чата: загрузка',render:a=><PersonBar {...a}/>,args:{onBack:fn()}};

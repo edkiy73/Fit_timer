@@ -2,7 +2,7 @@
 /** Slice C «Я» commands of `POST /api/fe` (docs/server/S2-CATALOG.md «C»). Shared by server and client. */
 import * as z from 'zod';
 import { id, opId } from './platform.mjs';
-import { field } from './_text.mjs';
+import { field, fieldOrEmpty } from './_text.mjs';
 
 /** Nickname: 3–20 of [A-Za-z0-9_.], starts and ends with a letter or digit, no '..', at least one letter (V21 AUTH-001). */
 export const handle = z.string().trim().min(3).max(20)
@@ -71,6 +71,8 @@ export const meCommands = {
       locale: z.enum(['ru', 'en']),
       documents: z.array(z.strictObject({ id, contentHash: z.string().regex(/^[a-f0-9]{64}$/) })).max(20),
       newsOptIn: z.boolean(),
+      // «Как тебя называть» (optional, any name; empty — the nick is shown).
+      name: field('profileName').optional(),
     }),
   },
   'onboarding.complete': {
@@ -90,7 +92,8 @@ export const meCommands = {
       opId,
       rev: z.int().positive(),
       handle: handle.optional(),
-      name: field('profileName').optional(),
+      // Empty clears the chosen name: the nick (a couple: the partners' names) is shown instead.
+      name: fieldOrEmpty('profileName').optional(),
       bio: field('bio').optional(),
       cityId: id.nullable().optional(),
       showAge: z.boolean().optional(),

@@ -198,3 +198,10 @@
 .v21 .k-answer-f{border-top:1px solid var(--line);padding-top:var(--s-3)}
 .v21 .k-answer-f>.li{padding:0;min-height:0;border-top:0}
 .v21 .k-answer-f>.note{margin:0}
+
+/* Name and @nick (owner 29.10.2026): the grey nick next to a name in a row, under the name in a profile header. */
+.v21 .k-who{display:inline-flex;align-items:baseline;gap:var(--s-2);min-width:0;max-width:100%;vertical-align:bottom}
+.v21 .k-who-n{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.v21 .k-who>.nbadge{flex:none;align-self:center}
+.v21 .k-nick{flex:0 1000 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mute);font-weight:400;font-size:var(--fs-sm)}
+.v21 .pc-nick{margin:2px 0 0;font-size:var(--fs-sm);line-height:1.4;color:inherit;opacity:.78;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

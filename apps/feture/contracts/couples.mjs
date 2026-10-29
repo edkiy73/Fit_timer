@@ -3,6 +3,8 @@
  * profile); everything done as the couple needs `X-Fe-Profile` of the couple. */
 import * as z from 'zod';
 import { id, opId } from './platform.mjs';
+import { fieldOrEmpty } from './_text.mjs';
+import { handle } from './me.mjs';
 
 /** 32 random bytes, base64url. */
 const token = z.string().regex(/^[A-Za-z0-9_-]{43}$/);
@@ -34,6 +36,10 @@ export const couplesCommands = {
   // V21 Q09 right after the couple forms: my own approval mode and who may request access, in one call.
   'couple.setup': {
     profile: true, write: true,
-    input: z.strictObject({ opId, mode: z.enum(['trust', 'approve']), requestsFrom: z.enum(['all', 'matches', 'none']) }),
+    input: z.strictObject({
+      opId, mode: z.enum(['trust', 'approve']), requestsFrom: z.enum(['all', 'matches', 'none']),
+      // The couple's nick (suggested from the partners' nicks) and optional name, if the partner changed them here.
+      handle: handle.optional(), name: fieldOrEmpty('profileName').optional(),
+    }),
   },
 };

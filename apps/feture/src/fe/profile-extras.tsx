@@ -177,7 +177,7 @@ export function ProfileHero({p,rel,inert,onOpen}:{p:PersonProfile,rel:Relation|n
   <PhotoBars n={list.length} i={i} label={fill(t('fe.px.ph.n'),{i:i+1,n:list.length})} count/>
   {list.length>1&&<><button type="button" className="pc-zone l" aria-label={t('fe.px.ph.prev')} onClick={()=>setIx(Math.max(0,i-1))}/><button type="button" className="pc-zone r" aria-label={t('fe.px.ph.next')} onClick={()=>setIx(Math.min(list.length-1,i+1))}/></>}
   {src&&onOpen&&<button type="button" className="pc-zone c" aria-label={t('fe.px.ph.full')} onClick={()=>onOpen(i)}/>}
-  <div className="pc-info"><PersonName name={name} age={p.age||undefined}><NameBadges p={p}/></PersonName>
+  <div className="pc-info"><PersonName name={name} age={p.age||undefined} nick={p.handle}><NameBadges p={p}/></PersonName>
    {city&&<div className="pc-who"><span className="pl"><MapPin/>{city}</span></div>}
    <FollowCounts id={p.id} rel={rel} inert={inert}/></div>
  </div>;

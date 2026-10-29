@@ -3,7 +3,7 @@ import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Calendar,Users} from 'lucide-react';
-import {ActivityCard,ActivityItem,ActivityTile,type ActThumb} from './kit';
+import {ActivityCard,ActivityItem,ActivityTile,type ActThumb,nickShown} from './kit';
 import {mdPlain,personName,plural} from './post-parts';
 import {when} from './feed';
 import {useFe} from './session';
@@ -66,7 +66,7 @@ export function ActivityCardOf({a,onMenu}:{a:Act,onMenu?:(()=>void)|undefined}){
   if(a.activity==='communities')return {key:x.id,title:s(x.name),sub:plural(num(x.members),['участник','участника','участников'],['member','members'],locale),label:s(x.name),go:'/n/communities/'+x.id,
    thumb:{src:s(x.cover)||null,icon:Users}};
   const nm=personName({name:s(x.name)||null,handle:s(x.handle)||null});
-  return {key:x.id,title:nm,sub:s(x.handle)?'@'+s(x.handle):'',label:nm,go:'/n/people/'+x.id,thumb:{person:{id:x.id,name:nm,avatar:s(x.avatar)||null}}};
+  return {key:x.id,title:nm,sub:nickShown(s(x.handle),nm)??'',label:nm,go:'/n/people/'+x.id,thumb:{person:{id:x.id,name:nm,avatar:s(x.avatar)||null}}};
  });
  const items=parts.map(p=><ActivityItem key={p.key} thumb={p.thumb} title={p.title} sub={p.sub||undefined} onClick={()=>navigate(p.go)}/>);
  const tiles=strip&&parts.length>1?parts.map(p=><ActivityTile key={p.key} thumb={p.thumb} label={p.label} onClick={()=>navigate(p.go)}/>):undefined;

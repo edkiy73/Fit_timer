@@ -140,3 +140,10 @@ export const FIELD = Object.freeze({
 /** @typedef {keyof typeof FIELD} FieldName */
 /** The zod schema of a named field. */
 export const field = (/** @type {FieldName} */ name) => textSchema(FIELD[name]);
+/** A named field that may also be cleared: blank becomes '' (the profile's name — empty shows the nick). */
+export const fieldOrEmpty = (/** @type {FieldName} */ name) => z.string().max(FIELD[name].max * 4 + 100, { message: 'too_long' }).transform((v, ctx) => {
+  if (!v.trim()) return '';
+  const r = checkText(v, FIELD[name]);
+  if (r.error) { ctx.addIssue({ code: 'custom', message: r.error }); return z.NEVER; }
+  return r.value;
+});

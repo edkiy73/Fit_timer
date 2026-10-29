@@ -11,7 +11,8 @@ export const MAINTENANCE_EVENT='fe-maintenance';
 
 export class FeError extends Error {
  constructor(public code:string,public status=0,public rule?:string,public fields?:string[],public state?:string,
-  /** invalid_input: why each field was refused (contracts/_text.mjs codes: too_long, long_word, bad_characters…). */public reasons?:Record<string,string>){super(code);}
+  /** invalid_input: why each field was refused (contracts/_text.mjs codes: too_long, long_word, bad_characters…). */public reasons?:Record<string,string>,
+  /** A limit's refusal: when it is possible again (nick / name change, ISO). */public until?:string){super(code);}
 }
 
 /** UUID v7 (time-ordered), as the server's ledger expects. */
@@ -23,7 +24,7 @@ export function newOpId():string{
  return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`;
 }
 
-const failure=z.object({error:z.string(),rule:z.string().optional(),fields:z.array(z.string()).optional(),state:z.string().optional(),reasons:z.record(z.string(),z.string()).optional()});
+const failure=z.object({error:z.string(),rule:z.string().optional(),fields:z.array(z.string()).optional(),state:z.string().optional(),reasons:z.record(z.string(),z.string()).optional(),until:z.string().optional()});
 
 export async function feRequest<T>(session:AuthSession,action:string,input:Record<string,unknown>,schema:z.ZodType<T>,
  opts:{profileId?:string|undefined,signal?:AbortSignal|undefined}={}):Promise<T>{
@@ -50,18 +51,24 @@ export async function feRequest<T>(session:AuthSession,action:string,input:Recor
   if(f.success&&f.data.error==='maintenance'&&typeof window!=='undefined'){
    const m=(body as {message?:unknown}).message;window.dispatchEvent(new CustomEvent(MAINTENANCE_EVENT,{detail:{message:typeof m==='string'?m:null}}));
   }
-  throw f.success?new FeError(f.data.error,response.status,f.data.rule,f.data.fields,f.data.state,f.data.reasons):new FeError('unavailable',response.status);
+  throw f.success?new FeError(f.data.error,response.status,f.data.rule,f.data.fields,f.data.state,f.data.reasons,f.data.until):new FeError('unavailable',response.status);
  }
  const parsed=schema.safeParse(body);
  if(!parsed.success)throw new FeError('unavailable',response.status);
  return parsed.data;
 }
 
+/** «29 апреля» in the app's language (the date a limit lifts). */
+export function dayMonth(iso:string):string{
+ const lang=typeof document!=='undefined'&&document.documentElement.lang.startsWith('en')?'en':'ru';
+ return new Date(iso).toLocaleDateString(lang,{day:'numeric',month:'long'});
+}
+
 /** Plain-language message for an error; screens show it instead of codes. */
 export function feErrorMessage(error:unknown,t:(key:string)=>string):string{
  const e=error instanceof FeError?error:null;
  if(!e)return t('fe.error.generic');
- if(e.code==='rule_violation'&&e.rule){const k='fe.rule.'+e.rule;const m=t(k);if(m!==k)return m;}
+ if(e.code==='rule_violation'&&e.rule){const k='fe.rule.'+e.rule;const m=t(k);if(m!==k)return m.replace('{date}',e.until?dayMonth(e.until):'');}
  const k='fe.error.'+e.code;const m=t(k);
  return m!==k?m:t('fe.error.generic');
 }

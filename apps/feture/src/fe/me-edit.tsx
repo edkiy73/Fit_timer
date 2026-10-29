@@ -3,7 +3,7 @@ import {useNavigate,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {AtSign,Camera,ChevronDown,ChevronRight,Clock,Lock,Plus,Sparkles,Star,Trash2,X} from 'lucide-react';
-import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
+import {FeError,dayMonth,feErrorMessage,newOpId} from '../feture/fe-api';
 import {AddCard,Alert,Bar,Btn,Card,Counter,Empty,Field,FilePick,Group,Input,Note,PhotoAdd,PhotoSlot,PhotoSlots,Row,Sheet,Skel,TextArea,ToggleRow,VaultHead} from './kit';
 import {useFe,usePartnerApproves} from './session';
 import {Uploader} from './kit/Uploader';
@@ -54,7 +54,7 @@ export function MeEditScreen(){
    .then(([a,b,c,e])=>{
     const pr=a.profile;const det:Draft['details']={};
     for(const [f] of DETAIL_ROWS){const v=pr.details[f];det[f]=f==='status'?(typeof v==='string'?v:null):Array.isArray(v)?v.filter((x):x is string=>typeof x==='string'):[];}
-    const draft:Draft={name:pr.name??'',handle:pr.handle??'',bio:pr.bio,cityId:typeof pr.cityId==='string'?pr.cityId:pr.city?.id??null, // profile.get sends the city as {id, ru, en, pending}
+    const draft:Draft={name:pr.chosenName??'',handle:pr.handle??'',bio:pr.bio,cityId:typeof pr.cityId==='string'?pr.cityId:pr.city?.id??null, // profile.get sends the city as {id, ru, en, pending}
      showAge:pr.showAge!==false,details:det,
      photos:pr.photos.map(toPh),privOn:b.on!==false,privText:b.text??'',privMedia:(b.media??[]).map(toPh)};
     setP(pr);setBase(draft);setD(structuredClone(draft));setCat(c);setGrants(b.counts?.grants??0);
@@ -67,7 +67,7 @@ export function MeEditScreen(){
  const set=(patch:Partial<Draft>)=>setD(v=>v?{...v,...patch}:v);
  const show=(k:Exclude<Only,null>)=>!only||only===k;
  // Kit validation layer: the fields on screen, by the server's rules (contracts/_text.mjs).
- const checks=useChecks({...(show('basics')?{name:'profileName' as const,bio:'bio' as const}:{}),...(show('priv')&&!cp&&d?.privOn?{privText:'privateText' as const}:{})},
+ const checks=useChecks({...(show('basics')?{...(d?.name.trim()?{name:'profileName' as const}:{}),bio:'bio' as const}:{}),...(show('priv')&&!cp&&d?.privOn?{privText:'privateText' as const}:{})},
   {name:d?.name??'',bio:d?.bio??'',privText:d?.privText??''});
  // Opened by a link (no app history behind it), back and «Сохранить» return to «Я» instead of leaving the app.
  const home='/n/me'+(only==='priv'?'?layer=priv':'');const canBack=((history.state as {idx?:number}|null)?.idx??0)>0;
@@ -86,7 +86,7 @@ export function MeEditScreen(){
   if(!checks.submit())return;
   // V21 P02: the nickname is checked in place — format first, then whether it is free (the server decides at save too).
   const h=d.handle.trim();
-  if(!cp&&h!==base.handle){
+  if(h!==base.handle){
    if(!NICK.test(h)||/\.\./.test(h)||!/[A-Za-z]/.test(h)){setNickErr(t('fe.reg.nick.format'));setTimeout(shakeFirstErr);return;}
    const r=await call('nick.check',{handle:h},nickAnswer,{asAccount:true}).catch(()=>null);
    if(r&&!r.available){setNickErr(t('fe.reg.nick.'+(r.reason==='reserved'?'reserved':'taken')));setTimeout(shakeFirstErr);return;}
@@ -96,7 +96,7 @@ export function MeEditScreen(){
    let pending=false;
    const upd:Record<string,unknown>={};
    if(d.name.trim()!==base.name)upd.name=d.name.trim();
-   if(!cp&&d.handle.trim()!==base.handle)upd.handle=d.handle.trim();
+   if(d.handle.trim()!==base.handle)upd.handle=d.handle.trim();
    if(d.bio.trim()!==base.bio)upd.bio=d.bio.trim();
    if(d.cityId!==base.cityId)upd.cityId=d.cityId;
    if(!cp&&d.showAge!==base.showAge)upd.showAge=d.showAge;
@@ -162,8 +162,14 @@ export function MeEditScreen(){
       set({photos:[...d.photos,{id:m.id,src:m.src,pending:false}]});}}/>}
      {(show('basics')||show('details'))&&<Group><Card form className="pe-form">
       {show('basics')&&<>
-       <Field id={fid+'n'} name="name" label={cp?t('fe.mx.ed.coupleName'):t('fe.me.name')} error={checks.error('name')}><Input id={fid+'n'} value={d.name} {...checks.input('name')} onChange={e=>set({name:e.target.value})}/>{checks.counter('name')}</Field>
-       {!cp&&<Field id={fid+'h'} name="handle" label={t('fe.mx.ed.nick')} error={nickErr||undefined}><div className="inwrap"><AtSign/><Input id={fid+'h'} value={d.handle} maxLength={20} autoCapitalize="off" spellCheck={false} invalid={!!nickErr} onChange={e=>{set({handle:e.target.value.replace(/^@/,'')});setNickErr('');}}/></div></Field>}
+       {/* Owner 29.10.2026: an optional name (any, not necessarily real; empty — the nick is shown) and the unique nick,
+           each with its change limit said under the field. */}
+       <Field id={fid+'n'} name="name" label={cp?t('fe.nn.nameUs'):t('fe.nn.name')} optional={t('fe.reg.optional')} error={checks.error('name')}
+        hint={p.nameAt?t('fe.nn.nameAt',{date:dayMonth(p.nameAt)}):cp?t('fe.nn.nameHintUs'):t('fe.nn.nameHint')}>
+        <Input id={fid+'n'} value={d.name} maxLength={FIELD.profileName.max} {...checks.input('name')} disabled={!!p.nameAt} placeholder={cp?'':base?.handle} onChange={e=>set({name:e.target.value})}/>{checks.counter('name')}</Field>
+       <Field id={fid+'h'} name="handle" label={cp?t('fe.nn.nickUs'):t('fe.nn.nick')} error={nickErr||undefined}
+        hint={p.nickAt?t('fe.nn.nickAt',{date:dayMonth(p.nickAt)}):p.nickFirst?t('fe.nn.nickFirst'):t('fe.nn.nickEvery')}>
+        <div className="inwrap"><AtSign/><Input id={fid+'h'} value={d.handle} maxLength={20} autoCapitalize="off" spellCheck={false} disabled={!!p.nickAt} invalid={!!nickErr} onChange={e=>{set({handle:e.target.value.replace(/^@/,'')});setNickErr('');}}/></div></Field>
        {!cp&&<ToggleRow title={t('fe.mx.ed.showAge')} on={d.showAge} onClick={()=>set({showAge:!d.showAge})}/>}
        <Field id={fid+'b'} name="bio" label={t('fe.mx.ed.about')} error={checks.error('bio')}><TextArea id={fid+'b'} rows={4} {...checks.input('bio')} value={d.bio} placeholder={t('fe.mx.ed.aboutPh')} onChange={e=>set({bio:e.target.value})}/><Counter n={textLength(d.bio)} max={FIELD.bio.max}/></Field>
        <PickField label={t('fe.mx.ed.city')} value={placeName(d.cityId)} placeholder={t('fe.mx.ed.noCity')} onClick={()=>setCity(true)}/>

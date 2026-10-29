@@ -46,9 +46,28 @@ export function PersonBar({name,av,sub,onOpen,onBack,children}:{name?:string|und
 }
 
 /** A person's or couple's name on a photo card: name, ages, badges (verified photo…). */
-export function PersonName({name,age,children,as='h2'}:{name:ReactNode,age?:ReactNode,children?:ReactNode,as?:'h2'|'h3'|'p'}){
- const T=as;
- return <T className="pc-name"><span className="pcn">{name}</span>{age!==undefined&&age!==null&&age!==''&&<span>{age}</span>}{children}</T>;
+export function PersonName({name,age,children,as='h2',nick}:{name:ReactNode,age?:ReactNode,children?:ReactNode,as?:'h2'|'h3'|'p',
+ /** The profile header only: the @nick in grey under the name (hidden when the name already is the nick). */ nick?:string|null|undefined}){
+ const T=as;const n=nickShown(nick,typeof name==='string'?name:null);
+ const h=<T className="pc-name"><span className="pcn">{name}</span>{age!==undefined&&age!==null&&age!==''&&<span>{age}</span>}{children}</T>;
+ return n?<>{h}<p className="pc-nick">{n}</p></>:h;
+}
+
+/** Name and @nick (owner 29.10.2026): everyone has a unique nick and may have a name; without a name the nick is
+ * the name. Feed, comments, chats, notifications and likes show the name only; the @nick in grey is added only
+ * where it must be known — profile header (`PersonName nick`), search, @mention suggestions, the pair invite,
+ * follow lists. '@nick', or null when there is none or the name already is it. */
+export function nickShown(nick:string|null|undefined,name?:string|null|undefined):string|null{
+ if(!nick)return null;return (name??'').replace(/^@/,'').toLowerCase()===nick.toLowerCase()?null:'@'+nick;
+}
+/** The grey @nick next to a name. Nothing when `nickShown` says so. */
+export function Nick({nick,name}:{nick?:string|null|undefined,name?:string|null|undefined}){
+ const n=nickShown(nick,name);return n?<span className="k-nick">{n}</span>:null;
+}
+/** A name with its @nick on one line (rows of search, mention suggestions, the pair invite, follow lists): the name
+ * keeps its weight and ellipsis, `children` (badges) follow it, the grey nick gives way first on a narrow row. */
+export function Who({name,nick,age,children}:{name:string,nick?:string|null|undefined,/** «Аня, 29» */ age?:number|string|null|undefined,children?:ReactNode}){
+ return <span className="k-who"><span className="k-who-n">{name}{age!==undefined&&age!==null&&age!==''?', '+age:''}</span>{children}<Nick nick={nick} name={name}/></span>;
 }
 
 /* ---------------- Covers ---------------- */

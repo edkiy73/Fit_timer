@@ -36,7 +36,7 @@ describe('kit validation layer',()=>{
    ['communityName',v=>communitiesCommands['community.create'].input.shape.name.safeParse(v).success],
    ['communityDescription',v=>communitiesCommands['community.create'].input.shape.description.safeParse(v).success],
    ['bio',v=>meCommands['profile.update'].input.shape.bio.safeParse(v).success],
-   ['profileName',v=>meCommands['profile.update'].input.shape.name.safeParse(v).success],
+   ['profileName',v=>meCommands['account.create'].input.shape.name.safeParse(v).success], // profile.update also takes '' (clears the name)
    ['support',v=>supportCommands['support.create'].input.shape.body.safeParse(v).success],
   ];
   for(const [name,server] of cases)for(const v of CORPUS)expect([name,v,!textError(t,name,v)]).toEqual([name,v,server(v)]);

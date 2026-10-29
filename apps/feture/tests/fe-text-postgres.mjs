@@ -78,8 +78,9 @@ test('commands refuse hostile text with the field and the reason, and store the 
     assert.deepEqual([r.status, r.error, r.fields, r.reasons], [400, 'invalid_input', ['name'], { name: 'bad_characters' }]);
     r = await upd({ name: 'x'.repeat(50) });
     assert.deepEqual(r.reasons, { name: 'long_word' });
-    r = await upd({ name: ' \t ' });
-    assert.deepEqual(r.reasons, { name: 'empty' });
+    // Blank clears the chosen name (the nick is shown, owner 29.10.2026): it passes the text check; the stale rev stops it here.
+    r = await upd({ name: ' \t ', rev: own.rev + 100 });
+    assert.deepEqual([r.status, r.reasons], [409, undefined]);
     r = await upd({ bio: Array(30).fill('a').join('\n') });
     assert.deepEqual(r.reasons, { bio: 'too_many_lines' });
     r = await upd({ name: '  Алекс   Б ', bio: 'Привет\r\n\r\n\r\nмир  ' });

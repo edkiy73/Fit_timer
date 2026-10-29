@@ -28,7 +28,7 @@ export const popularScore = (p, viewer) => `(
  * author, not blocked either way, and their setting allows it — everyone, or only people they follow.
  * Used where the mention is written (only these become links and notify) and in the lists the mention picker shows.
  * @param {string} target profile alias with `kind`, `state`, `id` @param {string} author the author's profile id (`$n`) */
-export const acceptsMention = (target, author) => `(${target}.kind = 'person' and ${target}.state = 'active' and ${target}.id <> ${author}
+export const acceptsMention = (target, author) => `(${target}.kind in ('person', 'couple') and ${target}.state = 'active' and ${target}.id <> ${author}
   and not feture.blocked(${author}, ${target}.id)
   and coalesce((select s.mentions_from = 'all' or (s.mentions_from = 'follow' and exists (select 1 from feture.follow f where f.follower_profile_id = ${target}.id and f.target_profile_id = ${author}))
                 from feture.profile_settings s where s.profile_id = ${target}.id), false))`;

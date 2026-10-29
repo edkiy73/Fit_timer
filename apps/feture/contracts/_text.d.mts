@@ -22,3 +22,4 @@ export type FieldName =
   | 'albumTitle' | 'dsaExplanation' | 'dsaName';
 export declare const FIELD: Readonly<Record<FieldName, TextRule>>;
 export declare function field(name: FieldName): z.ZodType<string, string>;
+export declare function fieldOrEmpty(name: FieldName): z.ZodType<string, string>;
