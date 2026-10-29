@@ -1,6 +1,7 @@
 // @ts-check
 import { hmac } from './hash.mjs';
 import { enqueue } from './outbox.mjs';
+import { staffFactorRequired } from './staff-factor-switch.mjs';
 
 /** Sign-ins (owner 29.10.2026, docs/infra/security.md): the second step of an account with an optional second factor,
  * and the notice about a sign-in from a new device.
@@ -37,6 +38,11 @@ export const sessionHash = (pepper, sessionKey) => sessionKey ? hmac(pepper, 'fe
  * @param {Db | Q} q @param {AccountRow} account */
 export async function signinBlocked(q, account) {
   if (!account.factor_on) return false;
+  // Test-only switch OFF: a staff account is not asked for its code; everyone else still is.
+  if (!(await staffFactorRequired(q))) {
+    const [s] = await q.query('select exists (select 1 from feture.staff_role where account_id = $1 and revoked_at is null) staff', [account.id]);
+    if (s?.staff) return false;
+  }
   if (!account.session) return true;
   const [r] = await q.query(
     `select exists (select 1 from feture.session_factor where account_id = $1 and session_key = $2)

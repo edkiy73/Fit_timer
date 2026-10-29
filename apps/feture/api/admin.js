@@ -11,9 +11,10 @@ const {createPrivateMetrics}=require('../lib/feture/private-metrics');
 const {createMetricsAdmin}=require('../lib/feture/private-metrics-admin');
 const {createOperatorEndpoint}=require('../lib/feture/operators');
 const {createUpdateAdmin,sendPublicUpdate}=require('../lib/app-update');
+const {createStaffFactorAdmin}=require('../lib/feture/staff-factor-admin');
 const {cors,fail,rateOkScoped,readBody}=require('../../../packages/core/server/util');
 
-const coreAdmin = createAdminHandler({analyticsStats,handlers:[createCatalogAdmin(Supabase),createTestsAdmin(Supabase),createDocumentsAdmin(Supabase),createModerationAdmin(Supabase,store),createMetricsAdmin(createPrivateMetrics(store)),createUpdateAdmin(store)]});
+const coreAdmin = createAdminHandler({analyticsStats,handlers:[createCatalogAdmin(Supabase),createTestsAdmin(Supabase),createDocumentsAdmin(Supabase),createModerationAdmin(Supabase,store),createMetricsAdmin(createPrivateMetrics(store)),createUpdateAdmin(store),createStaffFactorAdmin()]});
 
 const {secondStepGuard}=require('../lib/feture/second-step');
 const operators=createOperatorEndpoint({transport:Supabase,accounts:store,cors,guard:secondStepGuard,quota:(req,owner)=>rateOkScoped(req,'feture-operators',120,owner,60,true)});
