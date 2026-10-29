@@ -3,10 +3,10 @@ import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
-import {Ban,Bell,Calendar,Camera,CircleHelp,Crown,Download,Eye,EyeOff,Globe,Heart,Image,KeyRound,LogOut,Mail,MessageCircle,Moon,ShieldCheck,Smartphone,Sparkles,Trash2,Users,X,type LucideIcon} from 'lucide-react';
+import {Ban,Bell,Calendar,Camera,CircleHelp,Crown,Download,EyeOff,Globe,Heart,Image,KeyRound,LogOut,Mail,MessageCircle,Moon,ShieldCheck,Smartphone,Sparkles,Trash2,Users,X,type LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {getThemePreference,setThemePreference,type ThemePreference} from '../theme';
-import {Alert,Bar,Btn,Card,Empty,Field,Group,H,Input,Note,Row,SectionLabel,SelectRow,Skel,Stack,ToggleRow,View} from './kit';
+import {Alert,Bar,Btn,Card,ChannelHeads,ChannelToggle,ChoiceCards,Empty,Field,Group,H,Input,LockPreview,Note,Row,SectionLabel,SelectRow,Skel,Stack,Switch,TimeSpan,ToggleRow,View} from './kit';
 import {useFe,useShown} from './session';
 import {useToast} from './toast';
 import {usePremiumStatus} from './account-extra';
@@ -72,7 +72,6 @@ export function SettingsScreen(){
      <LinkRow icon={ShieldCheck} tone={age==='ok'?'g':''} title={t('fe.set.age')} sub={t('fe.set.ageNote')} val={ageVal} onClick={()=>navigate('/n/settings/age')}/>
      <LinkRow icon={Camera} tone="v" title={t('fe.pc.row')} sub={t('fe.set.pcSub')} val={photoVal} onClick={()=>navigate('/n/settings/photo-check')}/>
      <LinkRow icon={Crown} tone="l" title="Premium" sub={t('fe.set.premSub')} val={premium?t(premium.premium?'fe.set.premOn':'fe.set.premOff'):undefined} onClick={()=>navigate('/n/premium')}/>
-     <LinkRow icon={Eye} title={t('fe.set.privacy')} sub={t('fe.set.privacyNote')} onClick={()=>navigate('/n/me?layer=vis')}/>
      {couple?<LinkRow icon={Users} tone="v" title={t('fe.set.pair')} sub={t('fe.set.pairSub',{name:couple.name||couple.handle||''})} onClick={()=>navigate('/n/me/pair')}/>
       :<LinkRow icon={Users} tone="v" title={t('fe.set.pairNew')} sub={t('fe.set.pairNewSub')} onClick={()=>navigate('/n/me/pair')}/>}
     </Card>
@@ -130,12 +129,11 @@ export function NotificationSettingsScreen(){
    {error&&!n?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :!n?<><SectionLabel>{t('fe.set.n.lock')}</SectionLabel><Skel kind="card" rows={2}/><Skel kind="list" rows={4}/></>:<>
     <SectionLabel>{t('fe.set.n.lock')}</SectionLabel>
-    <div className="nmode">{(['safe','normal'] as const).map(k=><button key={k} type="button" className={'nm'+(n.mode===k?' on':'')} aria-pressed={n.mode===k}
-     onClick={()=>n.mode!==k&&void save({...n,mode:k},t('fe.set.n.modeDone.'+k))}>
-     <span className="rd"/><b>{t('fe.set.n.mode.'+k)}{k==='safe'&&<em>{t('fe.set.n.default')}</em>}</b><small>{t('fe.set.n.modeNote.'+k)}</small></button>)}</div>
-    <Stack gap={2}><div className="lockscreen" aria-hidden="true"><span className="ls-app"><img src="/icon.svg" alt=""/>FetUre</span>
-     <b>{safe?t('fe.set.n.lsSafeT'):t('fe.set.n.lsNormalT')}</b><span>{safe?t('fe.set.n.lsSafeB'):t('fe.set.n.lsNormalB')}</span><small>{t('fe.ax.sec.now')}</small></div>
-     <Note>{t('fe.set.n.lockNote')}</Note></Stack>
+    <ChoiceCards label={t('fe.set.n.lock')} value={n.mode} onChange={k=>void save({...n,mode:k},t('fe.set.n.modeDone.'+k))}
+      options={(['normal','safe'] as const).map(k=>[k,t('fe.set.n.mode.'+k),t('fe.set.n.modeNote.'+k)] as const)}/>
+    <LockPreview app="FetUre" icon="/icon.svg" items={safe
+      ?[{title:'FetUre',body:t('fe.set.n.lsSafe'),time:t('fe.ax.sec.now')},{title:'FetUre',body:t('fe.set.n.lsSafe'),time:t('fe.set.n.lsAgo')}]
+      :[{title:t('fe.set.n.lsMsgT'),body:t('fe.set.n.lsMsgB'),time:t('fe.ax.sec.now')},{title:t('fe.set.n.lsLikeT'),body:t('fe.set.n.lsLikeB'),time:t('fe.set.n.lsAgo')}]}/>
     <SectionLabel>{t('fe.set.n.channels')}</SectionLabel>
     <Card list>
      <ToggleRow title={t('fe.set.n.push')} sub={t('fe.set.n.pushSub')} on={n.push} onClick={()=>void save({...n,push:!n.push})}/>
@@ -145,18 +143,17 @@ export function NotificationSettingsScreen(){
       options={(['instant','daily','weekly'] as const).map(v=>[v,t('fe.set.n.digest.'+v)] as const)} onChange={v=>void save({...n,digest:v})}/>}
     </Card>
     {n.push&&device.note}
-    <SectionLabel action={<span className="nhead"><span>{t('fe.set.n.colPush')}</span><span>{t('fe.set.n.colEmail')}</span></span>}>{t('fe.set.n.what')}</SectionLabel>
+    <SectionLabel action={<ChannelHeads labels={[t('fe.set.n.colPush'),t('fe.set.n.colEmail')]}/>}>{t('fe.set.n.what')}</SectionLabel>
     <Card list className="ncats">{CATS.map(([k,Icon])=>{const c=n.categories[k];const title=t('fe.set.n.cat.'+k);
      const flip=(ch:'push'|'email')=>void save({...n,categories:{...n.categories,[k]:{...c,[ch]:!c[ch]}}});
      return <Row key={k} icon={Icon} title={title} sub={t('fe.set.n.catSub.'+k)} end={<>
-      <button type="button" className={'nt-t'+(c.push&&n.push?' on':'')} disabled={!n.push} aria-pressed={c.push} aria-label={t('fe.set.n.colPush')+': '+title} onClick={()=>flip('push')}><Smartphone/></button>
-      <button type="button" className={'nt-t'+(c.email&&n.email?' on':'')} disabled={!n.email} aria-pressed={c.email} aria-label={t('fe.set.n.colEmail')+': '+title} onClick={()=>flip('email')}><Mail/></button></>}/>;})}</Card>
+      <ChannelToggle icon={Smartphone} on={c.push} disabled={!n.push} label={t('fe.set.n.colPush')+': '+title} onClick={()=>flip('push')}/>
+      <ChannelToggle icon={Mail} on={c.email} disabled={!n.email} label={t('fe.set.n.colEmail')+': '+title} onClick={()=>flip('email')}/></>}/>;})}</Card>
     <Group title={t('fe.set.n.quiet')} foot={t('fe.set.n.security')}><Card list>
-     <ToggleRow title={t('fe.set.n.quietOn',{from:n.quiet.from,to:n.quiet.to})} sub={t('fe.set.n.quietNote')} on={n.quiet.on} onClick={()=>void save({...n,quiet:{...n.quiet,on:!n.quiet.on}})}/>
-     {n.quiet.on&&<>
-      <SelectRow row label={t('fe.set.n.from')} value={n.quiet.from} options={HALF_HOURS.map(v=>[v,v] as const)} onChange={v=>void save({...n,quiet:{...n.quiet,from:v}})}/>
-      <SelectRow row label={t('fe.set.n.to')} value={n.quiet.to} options={HALF_HOURS.map(v=>[v,v] as const)} onChange={v=>void save({...n,quiet:{...n.quiet,to:v}})}/>
-     </>}
+     <Row title={t('fe.set.n.dnd')} extra={<TimeSpan from={n.quiet.from} to={n.quiet.to} options={HALF_HOURS.map(v=>[v,v] as const)} disabled={!n.quiet.on}
+       words={{from:t('fe.set.n.from'),to:t('fe.set.n.to'),fromLabel:t('fe.set.n.fromLabel'),toLabel:t('fe.set.n.toLabel')}}
+       onFrom={v=>void save({...n,quiet:{...n.quiet,from:v}})} onTo={v=>void save({...n,quiet:{...n.quiet,to:v}})}/>}
+      end={<Switch label={t('fe.set.n.dnd')} on={n.quiet.on} onChange={on=>void save({...n,quiet:{...n.quiet,on}})}/>}/>
     </Card></Group>
    </>}
   </View>

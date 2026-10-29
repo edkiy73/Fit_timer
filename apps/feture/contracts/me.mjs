@@ -44,14 +44,17 @@ export const notificationSettings = z.strictObject({
   // V21 N02: the one-time «Не пропустить ответ?» offer was shown (never twice, on any device).
   offered: z.boolean().optional(),
 });
-/** V21 K05 defaults: discreet lock-screen text, quiet nights, likes grouped. */
+/** K05 defaults (owner 29.10.2026): every category on, push and email; email comes as a daily digest; the lock screen
+ * stays discreet («Безопасные»), quiet nights, likes grouped. An account that never saved its settings has no row and
+ * follows these; one that saved keeps what it saved (20261029150000_fe_notification_defaults.sql moves untouched
+ * category sets to the new defaults). */
 export const NOTIFICATION_DEFAULTS = Object.freeze({
   mode: 'safe', push: true, email: true, digest: 'daily',
   quiet: { on: true, from: '23:00', to: '08:00' },
   categories: {
-    match: { push: true, email: true }, likes: { push: true, email: false }, req: { push: true, email: true },
-    events: { push: true, email: true }, replies: { push: true, email: false }, follows: { push: true, email: false },
-    groups: { push: false, email: false }, news: { push: false, email: true },
+    match: { push: true, email: true }, likes: { push: true, email: true }, req: { push: true, email: true },
+    events: { push: true, email: true }, replies: { push: true, email: true }, follows: { push: true, email: true },
+    groups: { push: true, email: true }, news: { push: true, email: true },
   },
 });
 

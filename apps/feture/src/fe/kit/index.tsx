@@ -384,6 +384,24 @@ export function StatTiles({items}:{items:readonly {n:number,label:string,onClick
   :<div key={i}><b>{x.n}</b><small>{x.label}</small></div>)}</div>;
 }
 
+/** One of two or three options as equal cards side by side (a mode: «Обычные» / «Безопасные» on the lock screen): a
+ * round mark, a bold title and a line under it. Every card has the same height and the same inner alignment, whatever
+ * the length of its text; no «по умолчанию» badges — the line says what the option does. */
+export function ChoiceCards<T extends string>({value,options,onChange,label}:{value:T,options:readonly (readonly [T,ReactNode,ReactNode?])[],onChange:(v:T)=>void,label:string}){
+ return <div className={'k-cards'+(options.length===3?' three':'')} role="radiogroup" aria-label={label}>{options.map(([k,title,sub])=>
+  <button key={k} type="button" role="radio" aria-checked={value===k} className={'k-card'+(value===k?' on':'')} onClick={()=>{if(value!==k)onChange(k);}}>
+   <i aria-hidden="true"/><b>{title}</b>{sub&&<small>{sub}</small>}</button>)}</div>;
+}
+
+/** A span of time on one line, as words with two inline selects: «с 23:00 до 08:00». It goes under a row's title
+ * (`Row extra`) next to the switch that turns it on; `disabled` dims it while the switch is off. */
+export function TimeSpan<T extends string>({from,to,options,onFrom,onTo,words,disabled}:{from:T,to:T,options:readonly (readonly [T,string])[],onFrom:(v:T)=>void,onTo:(v:T)=>void,
+ /** The words around the times and the selects' names: {from:'с', to:'до', fromLabel:'Начало', toLabel:'Конец'}. */ words:{from:string,to:string,fromLabel:string,toLabel:string},disabled?:boolean}){
+ const pick=(v:T,on:(v:T)=>void,l:string)=><label className="k-tsel"><span aria-hidden="true">{options.find(([k])=>k===v)?.[1]??v}</span>
+  <select value={v} disabled={disabled} aria-label={l} onChange={e=>on(e.target.value as T)}>{options.map(([k,x])=><option key={k} value={k}>{x}</option>)}</select></label>;
+ return <span className={'k-tspan'+(disabled?' off':'')}>{words.from} {pick(from,onFrom,words.fromLabel)} {words.to} {pick(to,onTo,words.toLabel)}</span>;
+}
+
 export * from './domain';
 export * from './feed';
 export * from './account';

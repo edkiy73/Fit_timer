@@ -299,7 +299,7 @@ function Visibility({p,settings,onChanged}:{p:Profile,settings:Settings,onChange
    {toggle('showLikes',cp?t('fe.mx.v.showLikesUs'):t('fe.mx.v.showLikes'),cp?t('fe.mx.v.showLikesSubUs'):t('fe.mx.v.showLikesSub'),settings.showLikes!==false)}
   </Card></Group>
   {/* «Кто может мне писать» (owner 29.10.2026, message requests); the server enforces it. */}
-  <Group title={cp?t('fe.rq.set.titleUs'):t('fe.rq.set.title')} foot={t('fe.rq.set.sub')}>
+  <Group title={cp?t('fe.rq.set.titleUs'):t('fe.rq.set.title')}>
    <RadioList label={cp?t('fe.rq.set.titleUs'):t('fe.rq.set.title')} value={settings.messagesFrom??'known'} onChange={v=>{if(v!==(settings.messagesFrom??'known'))void set('messagesFrom',v);}}
     options={(['all','known','none'] as const).map(v=>[v,t('fe.rq.set.'+v+(v==='known'&&cp?'Us':'')),v==='none'?t('fe.rq.set.noneSub'):undefined] as const)}/>
   </Group>

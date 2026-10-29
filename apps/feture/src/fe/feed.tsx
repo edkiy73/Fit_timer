@@ -38,7 +38,7 @@ export const postSchema=z.object({id:z.uuid(),type:z.enum(['post','note']),title
  // The audience is sent for own posts and for posts narrower than «all».
  audience:z.string().optional(),editedAt:z.string().nullable().optional(),
  // Own posts only: what the edit screen starts from.
- rev:z.number().int().optional(),inFeed:z.boolean().optional(),returned:z.string().nullable().optional(),albumId:z.uuid().nullable().optional(),
+ rev:z.number().int().optional(),/** Own posts: when it last changed (a draft's «Изменён …»). */ updatedAt:z.string().nullable().optional(),inFeed:z.boolean().optional(),returned:z.string().nullable().optional(),albumId:z.uuid().nullable().optional(),
  // A discussion: its community (the editor keeps it there and shows who sees it).
  communityId:z.uuid().optional(),
  // Own posts hidden by «это я на фото — против»: only the author's explanation, never who objected.
