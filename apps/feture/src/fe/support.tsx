@@ -8,6 +8,7 @@ import {Actions,Alert,Btn,Card,ChoiceChips,Empty,Field,Group,Input,Note,Row,Seg,
 import {useToast} from './toast';
 import {FIELD,serverFields,softMax,textError,textErrorMessage,useChecks} from './kit/validate';
 import {useFe} from './session';
+import {clearDraft,draftKey,readDraft,writeDraft} from './drafts';
 
 /** S01 «Написать в поддержку» (wave 8): the person writes, staff answer in the staff screen, the answer comes back
  * here (and as an inbox item). No email: everything stays in the app. */
@@ -145,12 +146,15 @@ export function StaffSupport(){
 }
 
 function StaffTicket({item,when,onDone}:{item:z.infer<typeof queueRes>['items'][number],when:(v:string)=>string,onDone:()=>void}){
- const {call}=useFe();const {t}=useI18n();const toast=useToast();
- const [body,setBody]=useState('');const [busy,setBusy]=useState(false);const [err,setErr]=useState('');
+ const {call,state}=useFe();const {t}=useI18n();const toast=useToast();
+ // A half-written reply is kept per staff account and ticket (drafts.ts) until it is sent.
+ const draftSlot=draftKey(state.status==='ready'?state.boot.account.id:'','staff','support:'+item.id);
+ const [body,setBody]=useState(()=>readDraft(draftSlot)?.text??'');const [busy,setBusy]=useState(false);const [err,setErr]=useState('');
+ useEffect(()=>{writeDraft(draftSlot,body);},[draftSlot,body]);
  const send=async(close:boolean)=>{
   const m=!close||body.trim()?textError(t,'support',body):undefined;if(m){setErr(m);return;}
   setBusy(true);setErr('');
-  try{await call('staff.supportReply',{opId:newOpId(),ticketId:item.id,close,...(body.trim()?{body:body.trim()}:{})},okRes,{asAccount:true});toast(t('fe.staff.done'),{type:'ok'});onDone();}
+  try{await call('staff.supportReply',{opId:newOpId(),ticketId:item.id,close,...(body.trim()?{body:body.trim()}:{})},okRes,{asAccount:true});clearDraft(draftSlot);toast(t('fe.staff.done'),{type:'ok'});onDone();}
   catch(e){const f=serverFields(e).find(f=>f.path==='body');setErr(f?textErrorMessage(t,f.code,FIELD.support):feErrorMessage(e,t));}finally{setBusy(false);}
  };
  return <Card>
