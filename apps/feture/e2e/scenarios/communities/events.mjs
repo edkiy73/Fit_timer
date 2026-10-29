@@ -97,9 +97,11 @@ export default [
    await t.tap('.ctabar .btn:has-text("Подать заявку")');
    await t.see('.ctabar .btn:has-text("Отправить заявку")');
    await t.tap('.ctabar .btn');
-   await t.see('.field.err:has-text("Ответь хотя бы парой слов")'); await t.see('.field.err:has-text("Нужно согласие")');
+   await t.see('.field.err:has-text("Ответь хотя бы парой слов")');
+   // the button accepts the requirements (owner 29.10.2026: no «Принимаю условия» box, as when joining a community)
+   if (await t.page.locator('button.check').count()) throw new Error('a «Принимаю условия» box is back');
    await t.fill('textarea[name="q0"]', 'Да, был на паре встреч.');
-   await t.tap('button.check'); await t.tap('.ctabar .btn');
+   await t.tap('.ctabar .btn');
    await toast(t, 'Заявка отправлена');
    if ((await get(t, id)).me.application?.state !== 'pending') throw new Error('application not pending');
    await t.tap('.k-status .btn:has-text("Отозвать")');
@@ -109,7 +111,7 @@ export default [
    await t.see('.ctabar .btn:has-text("Подать заявку")');
    await t.tap('.ctabar .btn:has-text("Подать заявку")');
    await t.fill('textarea[name="q0"]', 'Да, был на паре встреч.');
-   await t.tap('button.check'); await t.tap('.ctabar .btn');
+   await t.tap('.ctabar .btn');
    await toast(t, 'Заявка отправлена');
  } },
  { name: 'E16 organiser approves the application', persona: 'host', run: async t => {
@@ -146,7 +148,8 @@ export default [
    await noToast(t); await t.tap('css=header button[aria-pressed]'); await toast(t, 'Убрано из сохранённого');
    s = await t.api('saved.list', { kind: 'event' }); if (s.items.some(x => x.target_id === id)) throw new Error('still saved');
    await noToast(t); await t.tap('css=header button[aria-label="Поделиться"]');
-   await t.see('.toast:has-text("Ссылка на событие скопирована"), .toast:has-text("Не удалось скопировать")');
+   // copied, or (headless clipboard refused) the toast shows the link to copy by hand (share.tsx useCopyLink)
+   await t.see('.toast:has-text("Ссылка на событие скопирована"), .toast:has-text("/n/events/' + id + '")');
    await noToast(t); await t.tap('css=header button[aria-label="Ещё"]'); await t.see(sheet);
    const dl = t.page.waitForEvent('download', { timeout: 8000 });
    await t.tap(sheet + ' .li:has-text("Добавить в календарь")');

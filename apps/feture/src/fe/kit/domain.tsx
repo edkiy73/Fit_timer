@@ -143,7 +143,7 @@ export function AnswerScale<M extends string>({value,onChange,label,low,high,mar
 
 /** The cover colour: round-cornered swatches (the plates); the chosen one has a ring. `none` = a photo is chosen. */
 export function Swatches<K extends string>({value,options,onChange,label}:{value:K|null,options:readonly (readonly [K,string,CSSProperties])[],onChange:(k:K)=>void,label:string}){
- return <div className="chips" role="group" aria-label={label}>{options.map(([k,l,st])=><button key={k} type="button" className={'k-plate-sw'+(value===k?' on':'')} aria-label={l} aria-pressed={value===k} onClick={()=>onChange(k)}>
+ return <div className="k-swatches" role="group" aria-label={label}>{options.map(([k,l,st])=><button key={k} type="button" className={'k-plate-sw'+(value===k?' on':'')} aria-label={l} aria-pressed={value===k} onClick={()=>onChange(k)}>
   <div className="plate" style={st}/></button>)}</div>;
 }
 

@@ -50,7 +50,7 @@ export default [
      await t.go('/n/events/' + h.appEventId);
      await t.see('.k-status:has-text("Нужна заявка")'); await t.notSee('.rsvp', 300);
      await t.tap('.ctabar .btn:has-text("Подать заявку")');
-     await t.fill('textarea[name="q0"]', 'Да, был на паре встреч.'); await t.tap('button.check'); await t.tap('.ctabar .btn');
+     await t.fill('textarea[name="q0"]', 'Да, был на паре встреч.'); await t.tap('.ctabar .btn');
      await toast(t, 'Заявка отправлена');
      expect((await get(t, h.appEventId)).me.application?.state === 'pending', 'pending on the server');
      await t.see('.k-status:has-text("Заявка на рассмотрении") .btn:has-text("Отозвать")');

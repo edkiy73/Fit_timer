@@ -15,19 +15,9 @@
   "margin class": 13,
   "button row": 3
  },
- "src/fe/communities.tsx": {
-  "margin class": 14,
-  "empty note": 1
- },
  "src/fe/couple.tsx": {
   "margin class": 8,
   "empty note": 2
- },
- "src/fe/create-community.tsx": {
-  "margin class": 3
- },
- "src/fe/create-event.tsx": {
-  "margin class": 10
  },
  "src/fe/feed.tsx": {
   "margin class": 11,
@@ -36,11 +26,6 @@
  "src/fe/gallery.tsx": {
   "margin class": 2,
   "empty note": 1
- },
- "src/fe/host.tsx": {
-  "margin class": 10,
-  "empty note": 1,
-  "button row": 1
  },
  "src/fe/inbox.tsx": {
   "margin class": 1
@@ -104,8 +89,5 @@
  "src/fe/support.tsx": {
   "margin class": 1,
   "button row": 1
- },
- "src/fe/terms-sheet.tsx": {
-  "margin class": 3
  }
 }

@@ -31,6 +31,7 @@ A new component or variant ships with its story in the same PR.
 | Buttons | `Btn` (primary / soft / text / danger; `busy` blinks, never spins), `IconBtn` (round, label required) |
 | Tabs | `Seg` — the only tab control: counts, dots, scrolls at 5+ |
 | Empty section | `AddCard` — the one «add» card of every empty block (icon in a soft circle, title, a plain hint up to two lines, «+»); straight in a `Group`, no Card around; a filled block shows its content and its header action instead |
+| Counts as tiles | `StatTiles` (2–3 tiles: the number, a word, a tap opens the list) — manage screens of a community and an event |
 | Lists | `Row` (icon/avatar, title, sub, value, badge, chevron), `ToggleRow`, `SelectRow` |
 | Choice pills | `Chip`, `Chips` |
 | One from a list as rows | `RadioList` (rows carry their own frame: never put it in a `Card`; a line under a row's title explains it) |

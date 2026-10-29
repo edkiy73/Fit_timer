@@ -2,9 +2,9 @@ import {useCallback,useEffect,useRef,useState,type ReactNode} from 'react';
 import {useNavigate,useParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {CircleAlert,Clock,Image as ImageIcon,Lock,MapPin,RefreshCw,X,type LucideIcon} from 'lucide-react';
+import {CircleAlert,Clock,Image as ImageIcon,Lock,RefreshCw,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Av,Bar,Btn,Card,Chip,Chips,Counter,Empty,FilePick,Group,Input,Note,SelectRow as KitSelectRow,Skel,Swatches,TextArea,View} from './kit';
+import {Alert,Av,Bar,Btn,Card,Chip,Chips,Counter,Empty,FilePick,Group,Input,Note,SelectRow as KitSelectRow,Skel,Stack,Swatches,TextArea,View} from './kit';
 import {useFe} from './session';
 import {Uploader} from './kit/Uploader';
 import {useSendPhoto} from './media-upload';
@@ -61,7 +61,7 @@ export function Field({name,label,value,onChange,err,opt,hint,max,ph,type='text'
   <span>{label}{opt&&<i>{t('fe.cc.optional')}</i>}</span>
   {Icon?<div className="inwrap"><Icon/>{input}</div>:input}
   {error?<FErr>{error}</FErr>:hint?<div className="fhint">{hint}</div>:null}
-  {limit?<Counter n={textLength(value)} max={limit}/>:null}
+  {limit&&textLength(value)>=limit*0.8?<Counter n={textLength(value)} max={limit}/>:null}
  </label>;
 }
 const FIELD_RULE=(r:FieldName|TextRule)=>typeof r==='string'?FIELD[r]:r;
@@ -87,10 +87,12 @@ export function CoverField({purpose,plate,setPlate,cover,setCover}:{purpose:'com
   <FilePick ref={file} accept="image/*" onFiles={fs=>{const f=fs[0];if(f)add(f);}}/>
   {picked&&<Uploader files={picked} aspects={['16:9']} max={1} send={send} title={t('fe.cc.cover')} onClose={()=>setPicked(null)}
    onDone={got=>{setPicked(null);const g=got[0];if(g)setCover({id:g.id,preview:g.url});}}/>}
-  <Btn kind="soft" size="md" icon={ImageIcon} className="k-mb-cover" onClick={()=>file.current?.click()} disabled={busy}>{busy?t('fe.cc.coverUploading'):cover?t('fe.cc.coverReplace'):t('fe.cc.coverUpload')}</Btn>
+  <Stack gap={2}>
+  <Btn kind="soft" size="md" icon={ImageIcon} onClick={()=>file.current?.click()} disabled={busy}>{busy?t('fe.cc.coverUploading'):cover?t('fe.cc.coverReplace'):t('fe.cc.coverUpload')}</Btn>
   {err&&<FErr>{err}</FErr>}
-  <Note as="div" className="mb8">{t('fe.cc.coverOr')}</Note>
+  <Note as="div">{t('fe.cc.coverOr')}</Note>
   <Swatches label={t('fe.cc.coverOr')} value={cover?null:plate as PlateKey} onChange={k=>{setPlate(k);setCover(null);}} options={PLATE_KEYS.map(k=>[k,t('fe.cc.plate.'+k),namedPlate(k)] as const)}/>
+  </Stack>
  </div>;
 }
 
@@ -233,8 +235,8 @@ function CommunityForm({edit,reload}:{edit?:EditableCommunity&{rev:number},reloa
   <Bar title={edit?t('fe.ece.c.title'):t('fe.cc.title')} back small/>
   <div className="view nodock cta1"><div className="wrap">
    {!edit&&couple&&acting&&<p className="as-line full"><Av name={acting.name} seed={acting.id} size="xs" src={acting.avatar}/><span>{t('fe.cc.asCouple')} <b>{acting.name}</b></span></p>}
-   {edit&&published&&<Alert icon={Clock} className="mb12">{t('fe.ece.c.reviewHint')}</Alert>}
-   {edit&&edit.pendingChange!=null&&<Alert kind="warn" role="none" icon={Clock} className="mb12">{t('fe.ece.c.pendingChange')}</Alert>}
+   {edit&&published&&<Alert icon={Clock}>{t('fe.ece.c.reviewHint')}</Alert>}
+   {edit&&edit.pendingChange!=null&&<Alert kind="warn" role="none" icon={Clock}>{t('fe.ece.c.pendingChange')}</Alert>}
    <Group><Card form>
     <Field name="name" label={t('fe.cc.name')} ph={t('fe.cc.namePh')} check="communityName" value={name} onChange={v=>{setName(v);clear('name');}} err={err.name}/>
     <Field name="desc" label={t('fe.cc.desc')} ph={t('fe.cc.descPh')} check="communityDescription" textarea rows={5} value={desc} onChange={v=>{setDesc(v);clear('desc');}} err={err.desc}/>
@@ -242,9 +244,9 @@ function CommunityForm({edit,reload}:{edit?:EditableCommunity&{rev:number},reloa
      <ChipGroup items={topicItems} selected={topics} onToggle={toggleTopic}/>
      {err.topics?<FErr>{err.topics}</FErr>:topicsMax?<div className="fhint" role="status">{t('fe.cc.topicsMax')}</div>:null}
     </div>
-    <Card list><SelectRow icon={Lock} label={t('fe.cc.privacy')} value={privacy} onChange={setPrivacy} items={(['open','closed','hidden'] as const).map(k=>[k,t('fe.cc.privacy.'+k)])}/></Card>
+    <div className="field" data-field="privacy"><SelectRow label={t('fe.cc.privacy')} value={privacy} onChange={setPrivacy} items={(['open','closed','hidden'] as const).map(k=>[k,t('fe.cc.privacy.'+k)])}/></div>
     {privacy!=='open'&&<Field name="q0" label={t('fe.cc.question')} opt ph={t('fe.cc.questionPh')} check="joinQuestion" value={q0} onChange={v=>{setQ0(v);clear('q0');}} err={err.q0}/>}
-    <Card list {...(err.where?{className:'field err'}:{})}><SelectRow icon={MapPin} label={t('fe.cc.where')} value={where} onChange={v=>{setWhere(v);clear('where');}} items={places}/>{err.where&&<FErr>{err.where}</FErr>}</Card>
+    <div className={'field'+(err.where?' err':'')} data-field="where"><SelectRow label={t('fe.cc.where')} value={where} onChange={v=>{setWhere(v);clear('where');}} items={places}/>{err.where&&<FErr>{err.where}</FErr>}</div>
     <Field name="rules" label={t('fe.cc.rules')} ph={t('fe.cc.rulesPh')} max={1000} check={rulesError} textarea rows={4} value={rules} onChange={v=>{setRules(v);clear('rules');}} err={err.rules}/>
     <CoverField purpose="community" plate={plate} setPlate={setPlate} cover={cover} setCover={setCover}/>
    </Card></Group>
