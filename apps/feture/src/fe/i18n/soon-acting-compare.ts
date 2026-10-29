@@ -29,8 +29,6 @@ export const ru = {
   'fe.ln.p22.proposeChangeUs': 'Предложить изменение от пары',
 
   'fe.cmpx.theirsNone': '{name} не показывает ответ на эту тему',
-  'fe.cmpx.none': 'У тебя этого интереса пока нет',
-  'fe.cmpx.noneUs': 'У пары этого интереса пока нет',
   'fe.cmpx.visOnly': 'Твой ответ видишь только ты.',
   'fe.cmpx.visOnlyUs': 'Этот ответ видите только вы двое.',
   'fe.cmpx.visGranted': 'Твой ответ видят только те, кому открыт доступ.',
@@ -72,8 +70,6 @@ export const en: typeof ru = {
   'fe.ln.p22.proposeChangeUs': 'Propose the change as the couple',
 
   'fe.cmpx.theirsNone': '{name} doesn’t show an answer on this topic',
-  'fe.cmpx.none': 'You don’t have this interest yet',
-  'fe.cmpx.noneUs': 'The couple doesn’t have this interest yet',
   'fe.cmpx.visOnly': 'Only you see your answer.',
   'fe.cmpx.visOnlyUs': 'Only the two of you see this answer.',
   'fe.cmpx.visGranted': 'Only people with access see your answer.',

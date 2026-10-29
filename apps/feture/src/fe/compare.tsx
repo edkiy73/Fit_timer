@@ -36,7 +36,8 @@ export function CompareSheet({topicId,name,avatar,personId,theirs,onClose}:{topi
  const item:CompatItem={topicId,group:group??'try',mine:mine??empty,theirs:theirs??empty};
  const lock=mine&&mine.vis!=='public'?t(mine.vis==='granted'?(us?'fe.cmpx.visGrantedUs':'fe.cmpx.visGranted'):(us?'fe.cmpx.visOnlyUs':'fe.cmpx.visOnly')):undefined;
  const verdict=!theirs?<Verdict icon={EyeOff} title={t('fe.cmpx.theirsNone',{name})}/>
-  :!mine?<Verdict icon={Plus} title={t(us?'fe.cmpx.noneUs':'fe.cmpx.none')}/>
+  // No verdict when you don't have it yet: the dash on your side and «Добавить себе» already say it (owner 29.10.2026).
+  :!mine?null
   :group&&<Verdict className="cmpx-verdict" tone={TONE[group]} icon={ICON[group]} title={t('fe.px.cmp.g.'+group)}
     sub={theirs.mark==='hard'&&mine.mark!=='hard'?t('fe.cmpx.theirHard',{name}):sayWhy(explain(item,k=>t(k),name),t('fe.px.cmp.w.roles'))}/>;
  return <Sheet title={title} sub={cat?(locale==='en'?cat.en:cat.ru):undefined} onClose={onClose} foot={<>
