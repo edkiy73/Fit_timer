@@ -59,6 +59,19 @@ async function requestBlocker(q, viewer, ownerId) {
   return null;
 }
 
+/** Whether everyone who would see the private part is a verified adult (Q26): `ok`, `me` (the viewing account is not)
+ * or `partner` (acting as a couple whose other member is not). Read before access so the screen can send the person to
+ * the age check instead of failing the request. @param {Q} q @param {Acting} acting @param {string} accountId
+ * @returns {Promise<{viewers: string[], age: 'ok' | 'me' | 'partner'}>} */
+async function ageState(q, acting, accountId) {
+  const viewers = await memberAccounts(q, acting.profileId);
+  const rows = await q.query(
+    `select id from feture.account where id = any($1) and coalesce(age_verified_until > now(), false) = false`, [viewers]);
+  const bad = rows.map(r => /** @type {string} */ (r.id));
+  const age = !viewers.includes(accountId) || bad.includes(accountId) ? 'me' : bad.length ? 'partner' : 'ok';
+  return { viewers, age };
+}
+
 /** Requests sent from any of the account's profiles in the last 24 h count against one daily limit; cancelled ones
  * too («попытка не возвращается»). `resetsAt`: when the next attempt comes back (null while nothing is used).
  * @param {Q} q @param {Acting} acting @returns {Promise<{left: number, max: number, resetsAt: string | null}>} */
@@ -169,7 +182,8 @@ const run = {
     if (!own && !scopes.length) {
       // Before access nothing real is sent: only whether there is a private part and what can be asked for.
       const blocker = await requestBlocker(q, viewer, input.profileId);
-      return { exists: available.length > 0, available, canRequest: blocker === null && available.length > 0, reason: blocker, quota: await quota(q, viewer) };
+      return { exists: available.length > 0, available, canRequest: blocker === null && available.length > 0, reason: blocker, quota: await quota(q, viewer),
+        age: (await ageState(q, viewer, account.id)).age };
     }
     // Every private photo or video someone else opens carries the viewing person's own handle (V21 privPeek: «с твоим
     // водяным знаком»): the account's personal handle, also when acting as a couple, so a leak points at a person.
@@ -186,9 +200,9 @@ const run = {
       const dto = await mediaDto(cfg.media, m, { viewerProfileId: viewer.profileId, place: own ? 'own' : 'private', showExplicit: !!acc.show_explicit });
       if (dto) shown.push(own ? dto : { ...dto, watermark });
     }
-    // The «По доступу» interests are part of what the private part opens (with «Описание»): the owner sees them all
-    // here, a viewer with the info grant sees them as `interests.list` shows them (a hard limit only as a limit).
-    const jars = own || scopes.includes('info') ? await q.query(
+    // The «По доступу» interests are a part of the private part of their own («Интересы»): the owner sees them all
+    // here, a viewer with the interests grant sees them as `interests.list` shows them (a hard limit only as a limit).
+    const jars = own || scopes.includes('interests') ? await q.query(
       `select i.topic_id, i.value, i.mark, i.dir from feture.interest i join feture.topic t on t.id = i.topic_id
        where i.profile_id = $1 and i.vis = 'granted' and ($2 or not t.hidden) order by t.position`, [input.profileId, own]) : [];
     const interests = jars.map(r => !own && r.mark === 'hard' ? { topicId: r.topic_id, mark: 'hard' }
@@ -202,7 +216,7 @@ const run = {
       ...(own ? { available, counts: await openCounts(q, input.profileId) } : await (async () => {
         // Asking again for more (or for a longer term) works like the first request.
         const blocker = await requestBlocker(q, viewer, input.profileId);
-        return { available, canRequest: blocker === null, reason: blocker, quota: await quota(q, viewer) };
+        return { available, canRequest: blocker === null, reason: blocker, quota: await quota(q, viewer), age: (await ageState(q, viewer, account.id)).age };
       })()),
     };
   },
@@ -261,10 +275,8 @@ const run = {
     // One request budget per account across «Я» and «Мы»; serialised so parallel requests cannot all pass.
     await q.query(`select pg_advisory_xact_lock(hashtext('feture-access-quota:' || $1))`, [acting.accountId]);
     // Every account that would see the private part must be verified adult: both partners for a couple (Q26).
-    const viewers = await memberAccounts(q, acting.profileId);
-    const [{ unverified }] = await q.query(
-      `select count(*)::int unverified from feture.account where id = any($1) and coalesce(age_verified_until > now(), false) = false`, [viewers]);
-    if (unverified || !viewers.includes(account.id)) fail(422, 'rule_violation', { rule: 'age_check_required' });
+    const { viewers, age } = await ageState(q, acting, account.id);
+    if (age !== 'ok') fail(422, 'rule_violation', { rule: 'age_check_required', who: age });
     await lockOwner(q, input.profileId);
     const blocker = await requestBlocker(q, acting, input.profileId);
     if (blocker === 'unavailable') fail(404, 'not_found');

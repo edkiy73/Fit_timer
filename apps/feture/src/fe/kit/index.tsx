@@ -255,6 +255,20 @@ export function RadioList<T extends string>({value,options,onChange,label}:{valu
 export function ChoiceChips<T extends string>({value,options,onChange,label,scroll,disabled}:{value:T|null|undefined,options:readonly (readonly [T,ReactNode])[],onChange:(v:T)=>void,label:string,scroll?:boolean,disabled?:boolean}){
  return <div className={'chips'+(scroll?' scroll':'')} role="radiogroup" aria-label={label} aria-disabled={disabled||undefined}>{options.map(([k,l])=><button key={k} type="button" disabled={disabled} className={'chip'+(value===k?' on':'')} role="radio" aria-checked={value===k} onClick={()=>onChange(k)}>{l}</button>)}</div>;
 }
+/** Several values from a small set as chips (what to ask for). `all` adds a first chip that picks every option at once
+ * and reads as picked while all are; a tap on it with everything picked clears the choice. `value` keeps the order of
+ * `options`. */
+export function MultiChips<T extends string>({value,options,onChange,label,all,disabled}:{value:readonly T[],options:readonly (readonly [T,ReactNode])[],onChange:(v:T[])=>void,label:string,
+ /** The «Всё» chip's label; shown only when there are two options or more. */ all?:ReactNode,disabled?:boolean}){
+ // «Всё» or several (owner 29.10.2026): with every option picked only «Всё» is lit; a tap on one part then picks that
+ // part alone; picking the last missing part lights «Всё» again.
+ const keys=options.map(o=>o[0]);const showAll=!!all&&keys.length>1;const every=keys.length>0&&keys.every(k=>value.includes(k));
+ const flip=(k:T)=>onChange(showAll&&every?[k]:keys.filter(x=>x===k?!value.includes(k):value.includes(x)));
+ return <div className="chips" role="group" aria-label={label}>
+  {showAll&&<button type="button" disabled={disabled} className={'chip'+(every?' on':'')} aria-pressed={every} onClick={()=>onChange(keys)}>{all}</button>}
+  {options.map(([k,l])=>{const on=value.includes(k)&&!(showAll&&every);return <button key={k} type="button" disabled={disabled} className={'chip'+(on?' on':'')} aria-pressed={on} onClick={()=>flip(k)}>{l}</button>;})}
+ </div>;
+}
 /** Several values from a list as rows with a box (what to open, what to keep). A row may say more under its title
  * («не запрошено», «уже открыто»); `value` keeps the order of `options`. */
 export function CheckList<T extends string>({value,options,onChange,label}:{value:readonly T[],options:readonly (readonly [T,ReactNode,ReactNode?])[],onChange:(v:T[])=>void,label:string,/** Kept for old calls; the rows never have a second frame. */ bare?:boolean}){
