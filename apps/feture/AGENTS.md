@@ -48,6 +48,7 @@ Old plans, audits and prototypes V5–V20 were removed on 29.10.2026; git histor
 7. Icons only from Lucide (`lucide-react`). Loading = skeletons or a soft blink in place, never a spinner next to text.
 8. When the V21 prototype disagrees with itself, ask the owner which look the kit keeps; don't copy inconsistencies.
 9. Всё, что прижато к верху экрана, учитывает --safe-t (проверяет check:safe-top).
+10. Расстояние между полями формы одно везде — 16px, его задаёт только общий стиль `.field`. Новых обёрток с собственным отступом не заводим; после правки формы расстояния замеряются в браузере (между соседними полями ровно 16px).
 
 ## Server (owner, 28.10.2026)
 

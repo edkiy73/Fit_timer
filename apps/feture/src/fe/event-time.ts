@@ -23,7 +23,10 @@ const ZONE_NAME:Record<string,[string,string]>={
  'Europe/Zurich':['Цюрих','Zurich'],'Europe/Amsterdam':['Амстердам','Amsterdam'],'Europe/Paris':['Париж','Paris'],'Europe/Madrid':['Мадрид','Madrid'],
  'Europe/Rome':['Рим','Rome'],'Europe/Warsaw':['Варшава','Warsaw'],'Europe/Prague':['Прага','Prague'],'Europe/Kyiv':['Киев','Kyiv'],
  'Europe/Istanbul':['Стамбул','Istanbul'],'Asia/Tbilisi':['Тбилиси','Tbilisi'],'Asia/Almaty':['Алма-Ата','Almaty'],'Asia/Krasnoyarsk':['Красноярск','Krasnoyarsk'],
- 'Asia/Novosibirsk':['Новосибирск','Novosibirsk'],'Asia/Yekaterinburg':['Екатеринбург','Yekaterinburg'],'UTC':['UTC','UTC']};
+ 'Asia/Novosibirsk':['Новосибирск','Novosibirsk'],'Asia/Yekaterinburg':['Екатеринбург','Yekaterinburg'],'UTC':['UTC','UTC'],
+ 'Asia/Dubai':['Дубай','Dubai'],'Asia/Tashkent':['Ташкент','Tashkent'],'Asia/Irkutsk':['Иркутск','Irkutsk'],'Asia/Vladivostok':['Владивосток','Vladivostok'],'Asia/Bangkok':['Бангкок','Bangkok'],
+ 'Asia/Singapore':['Сингапур','Singapore'],'Asia/Tokyo':['Токио','Tokyo'],'Australia/Sydney':['Сидней','Sydney'],'Pacific/Auckland':['Окленд','Auckland'],'America/Sao_Paulo':['Сан-Паулу','São Paulo'],
+ 'America/New_York':['Нью-Йорк','New York'],'America/Chicago':['Чикаго','Chicago'],'America/Denver':['Денвер','Denver'],'America/Los_Angeles':['Лос-Анджелес','Los Angeles']};
 const zoneName=(tz:string,locale:string)=>{const n=ZONE_NAME[tz];return n?n[locale==='en'?1:0]:(tz.split('/').pop()??tz).replace(/_/g,' ');};
 /** «UTC+1», «UTC+5:30», «UTC». */
 const offsetOf=(iso:string,tz:string,locale:string)=>{
@@ -59,7 +62,7 @@ const COUNTRY_TZ:Record<string,string>={DE:'Europe/Berlin',RU:'Europe/Moscow',GB
 export const placeZone=(p:{code?:string|null|undefined,country?:string|null|undefined}|null|undefined)=>
  p?(p.code&&CODE_TZ[p.code])||(p.country&&COUNTRY_TZ[p.country.toUpperCase()])||null:null;
 /** Zones offered for an online event, which has no city. */
-export const ONLINE_ZONES=['Europe/Berlin','Europe/Moscow','Europe/London'];
+export const ONLINE_ZONES=['Europe/Berlin','Europe/Moscow','Europe/London','Europe/Kyiv','Europe/Istanbul','Asia/Tbilisi','Asia/Dubai','Asia/Almaty','Asia/Tashkent','Asia/Yekaterinburg','Asia/Novosibirsk','Asia/Krasnoyarsk','Asia/Irkutsk','Asia/Vladivostok','Asia/Bangkok','Asia/Singapore','Asia/Tokyo','Australia/Sydney','Pacific/Auckland','America/Sao_Paulo','America/New_York','America/Chicago','America/Denver','America/Los_Angeles','UTC'];
 
 const placesRes=z.object({ok:z.literal(true),places:z.array(z.object({id:z.uuid(),ru:z.string().nullable(),en:z.string().nullable()}).passthrough())}).passthrough();
 let placesCache:Promise<Map<string,{ru:string|null,en:string|null}>>|null=null;

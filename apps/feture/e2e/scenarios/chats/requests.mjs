@@ -207,7 +207,7 @@ export default [
    const chooser = t.page.waitForEvent('filechooser');
    await t.tap('.sheet .li:has-text("Из галереи")');
    await (await chooser).setFiles(PHOTO);
-   await t.see('.sheet.on .k-uprow:has-text("без геометки")', 20000);
+   await t.see('.sheet.on .k-uprow:has(.k-upthumb img)', 20000);
    if (await t.page.locator('.sheet.on:has-text("Как можно смотреть")').count()) throw new Error('a request has no disappearing modes');
    await t.tap('.sheet.on .sh-f button:has-text("Отправить")');
    await t.see('.alert:has-text("Подожди ответа")', 60000);

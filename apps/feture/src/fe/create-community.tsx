@@ -4,9 +4,10 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {CircleAlert,Clock,Image as ImageIcon,Lock,RefreshCw,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Av,Bar,Btn,Card,Chip,Chips,Counter,Empty,FilePick,Group,Input,Note,SelectRow as KitSelectRow,Skel,Stack,Swatches,TextArea,View,useLeaveGuard} from './kit';
+import {Alert,AddCard,Av,Bar,Btn,Card,Chip,Chips,Counter,Empty,FilePick,Group,Input,Note,SelectRow as KitSelectRow,Skel,Stack,Swatches,TextArea,View,useLeaveGuard} from './kit';
 import {useFe} from './session';
 import {Uploader} from './kit/Uploader';
+import {PhotoTiles} from './kit/PhotoTiles';
 import {useSendPhoto} from './media-upload';
 
 /** V21 C08 «Новое сообщество» with the prototype's markup (field(), chipGroup(), selectRow(), the cover picker);
@@ -83,16 +84,15 @@ export function CoverField({purpose,plate,setPlate,cover,setCover}:{purpose:'com
  const [picked,setPicked]=useState<File[]|null>(null);const send=useSendPhoto(purpose);
  const add=(f:File)=>{setErr('');setPicked([f]);};
  return <div className={'field'+(err?' err':'')} data-field="cover"><span className="flabel">{t('fe.cc.cover')}</span>
-  {cover&&<div className="evcov"><img src={cover.preview} alt=""/><button type="button" className="rm" aria-label={t('fe.cc.coverRemove')} onClick={()=>setCover(null)}><X/></button></div>}
+  {cover&&<PhotoTiles wide tiles={[{id:cover.id,src:cover.preview}]} removeLabel={t('fe.cc.coverRemove')} viewLabel={t('fe.cc.cover')} onRemove={()=>setCover(null)}/>}
   <FilePick ref={file} accept="image/*" onFiles={fs=>{const f=fs[0];if(f)add(f);}}/>
   {picked&&<Uploader files={picked} aspects={['16:9']} max={1} send={send} title={t('fe.cc.cover')} onClose={()=>setPicked(null)}
    onDone={got=>{setPicked(null);const g=got[0];if(g)setCover({id:g.id,preview:g.url});}}/>}
-  <Stack gap={2}>
-  <Btn kind="soft" size="md" icon={ImageIcon} onClick={()=>file.current?.click()} disabled={busy}>{busy?t('fe.cc.coverUploading'):cover?t('fe.cc.coverReplace'):t('fe.cc.coverUpload')}</Btn>
-  {err&&<FErr>{err}</FErr>}
-  <Note as="div">{t('fe.cc.coverOr')}</Note>
-  <Swatches label={t('fe.cc.coverOr')} value={cover?null:plate as PlateKey} onChange={k=>{setPlate(k);setCover(null);}} options={PLATE_KEYS.map(k=>[k,t('fe.cc.plate.'+k),namedPlate(k)] as const)}/>
-  </Stack>
+  {!cover&&<>
+   <AddCard icon={ImageIcon} title={busy?t('fe.cc.coverUploading'):t('fe.fd.addCover')} sub="16:9" disabled={busy} onClick={()=>file.current?.click()}/>
+   {err&&<FErr>{err}</FErr>}
+   <div className="cov-or"><span>{t('fe.cc.coverOr')}</span>
+    <Swatches label={t('fe.cc.coverOr')} value={plate as PlateKey} onChange={k=>{setPlate(k);setCover(null);}} options={PLATE_KEYS.map(k=>[k,t('fe.cc.plate.'+k),namedPlate(k)] as const)}/></div></>}
  </div>;
 }
 

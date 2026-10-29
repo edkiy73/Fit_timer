@@ -1,9 +1,10 @@
 import {useEffect,useRef,useState,type CSSProperties,type KeyboardEvent as RKeyboardEvent,type PointerEvent as RPointerEvent} from 'react';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Pause,Play} from 'lucide-react';
-import {Btn,Note,Sheet} from './index';
+import {Btn,IconBtn,Note,Sheet} from './index';
+import {CropSheet} from './Crop';
 import {NO_POSTER} from './av';
-import {ASPECTS,TRIM_MIN_MS,VIDEO_MAX_MS,clipBox,filmstrip,fmtDurFine,type ClipCrop} from './media';
+import {ASPECTS,NO_CROP,TRIM_MIN_MS,VIDEO_MAX_MS,clipBox,filmstrip,fmtDurFine,type Aspect,type ClipCrop,type Crop} from './media';
 
 const FRAMES=8;
 /** The trim sheet (owner, 28.10.2026): the clip on top (in its crop when there is one) playing the chosen part in a
@@ -11,16 +12,23 @@ const FRAMES=8;
  * focused handle by 0.1 s (with Shift by 1 s). The part is 1 s … 1 min, so a longer clip (up to 10 min) always keeps
  * at most a minute. «Всё видео» («Первая минута» for a longer clip) resets, «Применить» returns it (null = the whole
  * clip). Only this part is sent: the uploader cuts and compresses it on the device (kit/video-edit.ts). */
-export function TrimSheet({file,durationMs,initial,crop,onApply,onClose}:{file:File,durationMs:number,initial?:{startMs:number,endMs:number}|undefined,
- crop?:ClipCrop|undefined,onApply:(t:{startMs:number,endMs:number}|null)=>void,onClose:()=>void}){
+export function TrimSheet({file,durationMs,initial,crop,onApply,onClose,bare,onChange,resetRef,noPreview,videoRef}:{file:File,durationMs:number,initial?:{startMs:number,endMs:number}|undefined,
+ crop?:ClipCrop|undefined,onApply:(t:{startMs:number,endMs:number}|null)=>void,onClose:()=>void,
+ /** Inside the clip editor: no sheet of its own; every change goes to `onChange`, `resetRef` gets the reset. */ bare?:boolean,
+ onChange?:((t:{startMs:number,endMs:number}|null)=>void)|undefined,resetRef?:{current:(()=>void)|null}|undefined,
+ /** The clip editor shows the video itself (in its crop frame): only the play button and the strip are drawn here. */ noPreview?:boolean,videoRef?:React.RefObject<HTMLVideoElement|null>}){
  const {t}=useI18n();const D=Math.max(TRIM_MIN_MS,durationMs);const MAX=Math.min(D,VIDEO_MAX_MS);
  const [a,setA]=useState(initial?.startMs??0);const [b,setB]=useState(Math.min(initial?.endMs??MAX,D));
  const [frames,setFrames]=useState<string[]>([]);const [src,setSrc]=useState('');const [nat,setNat]=useState<number|null>(null);
- const [playing,setPlaying]=useState(false);const [at,setAt]=useState(a);
- const v=useRef<HTMLVideoElement>(null);const strip=useRef<HTMLDivElement>(null);const span=useRef<[number,number]>([a,b]);span.current=[a,b];
+ const [playing,setPlaying]=useState(false);const [at,setAt]=useState(a);const [ready,setReady]=useState(false);
+ const own=useRef<HTMLVideoElement>(null);const v=(videoRef??own) as React.RefObject<HTMLVideoElement|null>;const strip=useRef<HTMLDivElement>(null);const span=useRef<[number,number]>([a,b]);span.current=[a,b];
  useEffect(()=>{const u=URL.createObjectURL(file);setSrc(u);let live=true;let got:string[]=[];
   filmstrip(file,FRAMES).then(f=>{got=f;if(live)setFrames(f);else f.forEach(x=>URL.revokeObjectURL(x));}).catch(()=>{});
   return ()=>{live=false;URL.revokeObjectURL(u);got.forEach(x=>URL.revokeObjectURL(x));};},[file]);
+ // The video drawn by the clip editor: follow its play / pause and start at the part's start.
+ useEffect(()=>{const el=v.current;if(!noPreview||!el)return;const p=()=>setPlaying(true),q=()=>setPlaying(false),m=()=>{el.currentTime=span.current[0]/1000;};
+  el.addEventListener('play',p);el.addEventListener('pause',q);el.addEventListener('loadedmetadata',m);if(el.readyState>=1)m();
+  return ()=>{el.removeEventListener('play',p);el.removeEventListener('pause',q);el.removeEventListener('loadedmetadata',m);};},[noPreview]);// eslint-disable-line react-hooks/exhaustive-deps
  // Plays the chosen part in a loop.
  useEffect(()=>{let r=0;const step=()=>{const el=v.current;if(el){const [s,e]=span.current;
    if(el.currentTime*1000>=e-30||el.currentTime*1000<s-200)el.currentTime=s/1000;setAt(el.currentTime*1000);}
@@ -52,16 +60,19 @@ export function TrimSheet({file,durationMs,initial,crop,onApply,onClose}:{file:F
  const box=crop&&nat?clipBox(nat,crop):null;const [aw,ah]=crop?crop.rect?[(nat||1)*crop.rect[2],crop.rect[3]]:crop.aspect==='orig'?[1,1]:ASPECTS[crop.aspect]:[0,0];
  const prev={...(crop?{'--ar':`${aw}/${ah}`}:nat?{'--ar':nat.toFixed(4)}:{}),...(box?{'--vw':box.w+'%','--vh':box.h+'%','--vx':box.x+'%','--vy':box.y+'%'}:{})} as CSSProperties;
  const long=D>MAX;const whole=a===0&&b>=Math.min(D,MAX);
- return <Sheet title={t('fe.kit.trim.title')} sub={t('fe.kit.trim.hint')} full onClose={onClose}
-  foot={<div className="row g8"><Btn kind="soft" fit disabled={whole} onClick={()=>{setA(0);setB(Math.min(D,MAX));show(0);}}>{t(long?'fe.kit.trim.resetLong':'fe.kit.trim.reset')}</Btn>
-   <Btn onClick={()=>onApply(a<=0&&b>=D?null:{startMs:a,endMs:b})}>{t('fe.kit.trim.apply')}</Btn></div>}>
+ const resetAll=()=>{setA(0);setB(Math.min(D,MAX));show(0);};
+ if(resetRef)resetRef.current=resetAll;
+ useEffect(()=>{onChange?.(a<=0&&b>=D?null:{startMs:a,endMs:b});},[a,b]);// eslint-disable-line react-hooks/exhaustive-deps
+ const body=
   <div className="k-trim">
-   <div className={'k-video k-trim-prev'+(crop?' crop':'')+(playing?' playing on':' on')} style={prev} onClick={toggle}>
+   {noPreview?<div className="k-trim-ctl"><IconBtn icon={playing?Pause:Play} kind="ghost" size="sm" label={playing?t('fe.kit.av.pause'):t('fe.kit.av.play')} onClick={toggle}/></div>:<>
+   <div className={'k-video k-trim-prev'+(crop?' crop':'')+(ready?' rdy':'')+(playing?' playing on':' on')} style={prev} onClick={toggle}>
     {src&&<video ref={v} src={src} poster={NO_POSTER} muted playsInline preload="auto" disablePictureInPicture
      onLoadedMetadata={e=>{const el=e.currentTarget;if(el.videoWidth)setNat(el.videoWidth/el.videoHeight);el.currentTime=a/1000;}}
-     onPlay={()=>setPlaying(true)} onPause={()=>setPlaying(false)}/>}
+     onLoadedData={()=>setReady(true)} onPlay={()=>setPlaying(true)} onPause={()=>setPlaying(false)}/>}
     <button type="button" className="k-vplay" aria-label={playing?t('fe.kit.av.pause'):t('fe.kit.av.play')} onClick={e=>{e.stopPropagation();toggle();}}>{playing?<Pause/>:<Play/>}</button>
    </div>
+   </>}
    <div ref={strip} className="k-trim-strip" style={{'--a':pc(a),'--b':pc(b),'--at':pc(at)} as CSSProperties} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
     <div className="k-trim-frames" aria-hidden="true">{(frames.length?frames:Array.from({length:FRAMES},()=>'')).map((f,i)=>f?<img key={i} src={f} alt="" draggable={false}/>:<i key={i} className="sk"/>)}</div>
     <i className="k-trim-dim l" aria-hidden="true"/><i className="k-trim-dim r" aria-hidden="true"/>
@@ -75,6 +86,26 @@ export function TrimSheet({file,durationMs,initial,crop,onApply,onClose}:{file:F
    </div>
    <div className="k-trim-meta"><span>{fmtDurFine(a)}</span><b aria-live="polite">{t('fe.kit.trim.length').replace('{dur}',fmtDurFine(b-a))}</b><span>{fmtDurFine(b)}</span></div>
    <Note>{t('fe.kit.trim.note')}</Note>
-  </div>
+  </div> ;
+ return bare?body:<Sheet title={t('fe.kit.trim.title')} sub={t('fe.kit.trim.hint')} full onClose={onClose}
+  foot={<div className="row g8"><Btn kind="soft" fit disabled={whole} onClick={resetAll}>{t(long?'fe.kit.trim.resetLong':'fe.kit.trim.reset')}</Btn>
+   <Btn onClick={()=>onApply(a<=0&&b>=D?null:{startMs:a,endMs:b})}>{t('fe.kit.trim.apply')}</Btn></div>}>{body}</Sheet>;
+}
+
+
+/** One editor for a clip (owner, 29.10.2026): ONE view — the clip itself in its crop frame (the same frame as a photo's: a
+ * fixed format moves the clip under it, «Свой» drags the borders), and under it the part that is sent (play, filmstrip with
+ * two handles). One «Применить» returns both. */
+export function ClipEditSheet({file,durationMs,frame,aspect,initialCrop,initialTrim,onApply,onClose}:{file:File,durationMs:number,frame:string,aspect:Aspect,initialCrop?:Crop|undefined,
+ initialTrim?:{startMs:number,endMs:number}|undefined,onApply:(r:{crop:Crop,trim:{startMs:number,endMs:number}|null})=>void,onClose:()=>void}){
+ const {t}=useI18n();
+ const [crop,setCrop]=useState<Crop>(initialCrop??NO_CROP);const [trim,setTrim]=useState<{startMs:number,endMs:number}|null>(initialTrim??null);
+ const cropReset=useRef<(()=>void)|null>(null);const trimReset=useRef<(()=>void)|null>(null);
+ const vref=useRef<HTMLVideoElement|null>(null);const [url,setUrl]=useState('');
+ useEffect(()=>{const u=URL.createObjectURL(file);setUrl(u);return ()=>URL.revokeObjectURL(u);},[file]);
+ return <Sheet title={t('fe.kit.clip.title')} sub={t(aspect==='orig'?'fe.kit.clip.hintFree':'fe.kit.clip.hint')} full onClose={onClose}
+  foot={<div className="row g8"><Btn kind="soft" fit onClick={()=>{cropReset.current?.();trimReset.current?.();}}>{t('fe.kit.crop.reset')}</Btn><Btn onClick={()=>onApply({crop,trim})}>{t('fe.kit.trim.apply')}</Btn></div>}>
+  {url&&<CropSheet bare aspect={aspect} src={frame} video={{ref:vref,src:url}} initial={initialCrop} onApply={()=>{}} onClose={()=>{}} onChange={setCrop} resetRef={cropReset}/>}
+  <TrimSheet bare noPreview videoRef={vref} file={file} durationMs={durationMs} initial={initialTrim} onApply={()=>{}} onClose={()=>{}} onChange={setTrim} resetRef={trimReset}/>
  </Sheet>;
 }
