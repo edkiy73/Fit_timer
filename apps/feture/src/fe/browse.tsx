@@ -133,9 +133,10 @@ export function TopicScreen(){
 
 const SCOPES=['all','people','posts','communities','events','topics'] as const;
 type Scope=typeof SCOPES[number];
-const RECENT_KEY='feture.fe.searchRecent';
-const readRecent=():string[]=>{try{const v=JSON.parse(localStorage.getItem(RECENT_KEY)??'[]');return Array.isArray(v)?v.filter((x):x is string=>typeof x==='string').slice(0,6):[];}catch{return [];}};
-const writeRecent=(list:string[])=>{try{localStorage.setItem(RECENT_KEY,JSON.stringify(list));}catch{/* this device only */}};
+/** Recent searches are kept per account (a shared phone shows one person's searches to another otherwise). */
+const RECENT_KEY='feture.fe.searchRecent:';
+const readRecent=(account:string):string[]=>{try{const v=JSON.parse(localStorage.getItem(RECENT_KEY+account)??'[]');return Array.isArray(v)?v.filter((x):x is string=>typeof x==='string').slice(0,6):[];}catch{return [];}};
+const writeRecent=(account:string,list:string[])=>{try{localStorage.setItem(RECENT_KEY+account,JSON.stringify(list));}catch{/* this device only */}};
 type Results={people:Person[],posts:Post[],communities:Comm[],events:Ev[],topics:Topic[]};
 /** V21 gFilters: what the server can narrow a search by, per kind of result. */
 type SearchFilters={posts:{types:string[],topics:string[]},events:{format:'all'|'offline'|'online',when:'any'|'week'|'weekend'|'month',price:'any'|'free'|'paid'},communities:{privacy:'any'|'open'|'closed'}};
@@ -145,9 +146,9 @@ const sfCount=(f:SearchFilters,k:'posts'|'events'|'communities')=>k==='posts'?f.
 const POST_TYPES=['note','text','photo','poll','interests'] as const;
 
 export function SearchScreen(){
- const {call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const [params,setParams]=useSearchParams();
+ const {call,state}=useFe();const account=state.status==='ready'?state.boot.account.id:'';const {t,locale}=useI18n();const navigate=useNavigate();const [params,setParams]=useSearchParams();
  const scope:Scope=(SCOPES as readonly string[]).includes(params.get('scope')??'')?params.get('scope') as Scope:'all';
- const [q,setQ]=useState(()=>params.get('q')??'');const [recent,setRecent]=useState(readRecent);
+ const [q,setQ]=useState(()=>params.get('q')??'');const [recent,setRecent]=useState(()=>readRecent(account));
  const {data:catalog}=useCatalog();const topics=useMemo(()=>catalog?.topics??[],[catalog]);
  const tname=useCallback((x:string)=>{const v=topics.find(o=>o.id===x);return v?(locale==='en'?v.en:v.ru):x;},[topics,locale]);
  const [res,setRes]=useState<Results|null>(null);const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);
@@ -188,7 +189,7 @@ export function SearchScreen(){
   return ()=>{clearTimeout(timer);ctl.abort();};
  },[term,scope,topics,call,sf]);
  const setScope=(s:Scope)=>{commit();setParams(p=>{const n=new URLSearchParams(p);n.set('scope',s);return n;},{replace:true});};
- const commit=()=>{if(term.length<2||recent.includes(term))return;const list=[term,...recent].slice(0,6);setRecent(list);writeRecent(list);};
+ const commit=()=>{if(term.length<2||recent.includes(term))return;const list=[term,...recent].slice(0,6);setRecent(list);writeRecent(account,list);};
  const use=(v:string)=>{setQ(v);input.current?.focus({preventScroll:true});};
  const names:Record<Exclude<Scope,'all'>,string>={people:t('fe.br.people'),posts:t('fe.br.posts'),communities:t('fe.br.communities'),events:t('fe.br.events'),topics:t('fe.br.topics')};
  const order:Exclude<Scope,'all'>[]=scope==='all'?['people','communities','events','topics','posts']:[scope];
@@ -220,9 +221,9 @@ export function SearchScreen(){
    <Seg value={scope} onChange={setScope} label={t('fe.br.search')} options={SCOPES.map(k=>({id:k,label:k==='all'?t('fe.br.all'):names[k]}))}/>
    {fk&&<Chips><Chip filter on={nF>0} icon={SlidersHorizontal} popup badge={nF||undefined} label={t('fe.w3.sf.open')} onClick={()=>setFOpen(true)}>{t('fe.fd.filters')}</Chip></Chips>}
    {term.length<2?<>
-    {recent.length>0&&<><div className="res-h">{t('fe.br.recent')}<button type="button" onClick={()=>{setRecent([]);writeRecent([]);}}>{t('fe.br.clear')}</button></div>
+    {recent.length>0&&<><div className="res-h">{t('fe.br.recent')}<button type="button" onClick={()=>{setRecent([]);writeRecent(account,[]);}}>{t('fe.br.clear')}</button></div>
      <Card list>{recent.map(x=><div key={x} className="recent"><History/><button type="button" className="tx" onClick={()=>use(x)}>{x}</button>
-      <IconBtn icon={X} kind="ghost" size="sm" label={t('fe.br.remove')} onClick={()=>{const l=recent.filter(v=>v!==x);setRecent(l);writeRecent(l);}}/></div>)}</Card></>}
+      <IconBtn icon={X} kind="ghost" size="sm" label={t('fe.br.remove')} onClick={()=>{const l=recent.filter(v=>v!==x);setRecent(l);writeRecent(account,l);}}/></div>)}</Card></>}
     {topics.length>0&&<><div className="res-h">{t('fe.br.popular')}</div>
      <Chips>{topics.slice(0,5).map(x=><Chip key={x.id} onClick={()=>use(locale==='en'?x.en:x.ru)}>#{locale==='en'?x.en:x.ru}</Chip>)}</Chips></>}
     {scope==='people'&&<Alert kind="info">{t('fe.br.peopleHint')}</Alert>}

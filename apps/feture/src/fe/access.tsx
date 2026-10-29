@@ -96,20 +96,22 @@ function WithMeTab(){
  * «Изменить» narrows, «Отозвать» after a question. */
 function ByMeTab(){
  const {call}=useFe();const {t}=useI18n();const w=useAccessWords();
- const [incoming,setIncoming]=useState<IncomingList|null>(null);const [inErr,setInErr]=useState<unknown>(null);
- const reloadIn=useCallback(()=>{setInErr(null);call('access.lists',{tab:'incoming'},incomingRes,{fresh:true}).then(setIncoming).catch(setInErr);},[call]);
- useEffect(()=>{reloadIn();},[reloadIn]);
+ // Requests to me are paged like the grants below (a long list is no longer cut at the first page); the server gives no total.
+ const fetchIn=useCallback((cursor?:string)=>call('access.lists',{tab:'incoming',...(cursor?{cursor}:{})},incomingRes,{fresh:true}),[call]);
+ const inPg=usePaged<IncomingList['items'][number],Awaited<ReturnType<typeof fetchIn>>>(fetchIn);
+ const reloadIn=inPg.load;
  const fetch=useCallback((cursor?:string)=>call('access.lists',{tab:'byme',...(cursor?{cursor}:{})},grantsRes,{fresh:true}),[call]);
  const pg=usePaged<GrantItem,Awaited<ReturnType<typeof fetch>>>(fetch);
  const acts=useGrantActions(pg.load);
  const changed=()=>{reloadIn();pg.load();};
  if(pg.failed)return pg.failed;
- if(inErr)return <Empty icon={X} role="alert" title={t('fe.error.title')} text={w.err(inErr)}><Btn kind="soft" onClick={reloadIn}>{t('fe.retry')}</Btn></Empty>;
- if(!pg.items||!incoming)return <Skel kind="card" rows={2}/>;
+ if(inPg.failed)return inPg.failed;
+ if(!pg.items||!inPg.items||!inPg.first)return <Skel kind="card" rows={2}/>;
+ const incoming:IncomingList={...inPg.first,items:inPg.items};
  const asks=incoming.items.length>0;
  if(!asks&&!pg.items.length)return <Empty icon={Lock} title={t('fe.ac.by.empty')} text={t('fe.ac.by.emptyText')}/>;
  return <>
-  {asks&&<Group title={<>{t('fe.ac.in.title')} · {incoming.items.length}</>}><RequestCards data={incoming} onChanged={changed}/></Group>}
+  {asks&&<Group title={t('fe.ac.in.title')}><RequestCards data={incoming} onChanged={changed}/>{inPg.moreBtn}</Group>}
   {pg.items.length>0&&<Group title={asks?t('fe.ac.in.open'):undefined}><Stack gap={2}>{pg.items.map((g,i)=><GrantCard key={g.profile?.id??i} g={g} onEdit={()=>acts.edit(g)} onRevoke={()=>acts.revoke(g)}/>)}</Stack>{pg.moreBtn}</Group>}
   {acts.node}
  </>;

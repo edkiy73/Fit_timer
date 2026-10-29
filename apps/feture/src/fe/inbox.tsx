@@ -116,7 +116,20 @@ export function InboxScreen(){
   if(n.type==='supportReply'){navigate('/n/help'+(typeof n.data.ticketId==='string'?'?ticket='+encodeURIComponent(n.data.ticketId):''));return;}
   if(n.type==='premiumGift'){navigate('/n/premium');return;}
   if(n.type==='signinNew'){navigate('/n/settings/security');return;}
-  if(n.type.startsWith('pair.')){if(couple)setActing(couple.id);navigate('/n/me');return;}
+  if(n.type.startsWith('pair.')){
+   if(couple)setActing(couple.id);
+   const what=typeof n.data.what==='string'?n.data.what:'';const target=typeof n.data.target==='string'?n.data.target:'';
+   if(n.type==='pair.decided'){navigate('/n/inbox');return;}
+   if(n.type==='pair.acted'){
+    if(what==='post'||what==='post_archived'){navigate('/n/me/posts');return;}
+    if(what==='photos'||what==='album'){navigate(couple?'/n/people/'+couple.id+'/gallery':'/n/me');return;}
+    if(what==='chatRequest'){navigate('/n/chats');return;}
+    if(what==='like'||what==='follow'){navigate(target?'/n/people/'+target:'/n/me');return;}
+    if(what==='link'){navigate('/n/me/links');return;}
+    if(what==='location'){navigate('/n/me/pair');return;}
+    if(what==='block'){navigate('/n/settings/blocked');return;}
+   }
+   navigate('/n/me');return;}
   const o=n.object;if(!o?.id){if(n.actor)navigate('/n/people/'+n.actor.id);return;}
   navigate(o.type==='post'||o.type==='reply'?'/n/feed/post/'+(n.data.postId as string|undefined??o.id):o.type==='community'?'/n/communities/'+o.id:o.type==='event'?'/n/events/'+o.id:o.type==='conversation'?'/n/chats/'+o.id:o.type==='profile'?'/n/people/'+o.id:'/n/me');
  };
@@ -138,7 +151,11 @@ export function InboxScreen(){
    const what=[typeof n.data.device==='string'&&n.data.device?n.data.device:t('fe.w8.sec.unknownDevice'),[city,country].filter(Boolean).join(', ')].filter(Boolean).join(', ');
    return <><b>{t('fe.ibx.t.signinNew')}</b>: {what}</>;
   }
-  if(n.type.startsWith('pair.'))return <><b>{couple?.name||t('fe.inbox.whom.couple')}</b> · {t('fe.inbox.type.'+n.type)!=='fe.inbox.type.'+n.type?t('fe.inbox.type.'+n.type):t('fe.inbox.type.other')}</>;
+  if(n.type.startsWith('pair.')){
+   // «Партнёр добавил фото пары»: the server says what was done (`data.what`) or how a change was answered (`data.state`).
+   const detail=n.type==='pair.acted'&&typeof n.data.what==='string'?'fe.inbox.pair.acted.'+n.data.what:n.type==='pair.decided'&&typeof n.data.state==='string'?'fe.inbox.pair.decided.'+n.data.state:'';
+   const own=detail&&t(detail)!==detail?t(detail):'';
+   return <><b>{couple?.name||t('fe.inbox.whom.couple')}</b> · {own||(t('fe.inbox.type.'+n.type)!=='fe.inbox.type.'+n.type?t('fe.inbox.type.'+n.type):t('fe.inbox.type.other'))}</>;}
   const key='fe.ibx.t.'+n.type;const s=t(key);
   if(s!==key)return rich(s,who);
   const label=t('fe.inbox.type.'+n.type)!=='fe.inbox.type.'+n.type?t('fe.inbox.type.'+n.type):t('fe.inbox.type.other');

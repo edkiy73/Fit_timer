@@ -2,9 +2,9 @@ import {useCallback,useEffect,useId,useRef,useState,type ReactNode} from 'react'
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {BadgeCheck,Ban,Check,ChevronRight,Eye,IdCard,Image,Inbox,Lock,RefreshCw,ShieldAlert,ShieldCheck,X} from 'lucide-react';
+import {BadgeCheck,Ban,Check,Gavel,ChevronRight,Eye,IdCard,Image,Inbox,Lock,RefreshCw,ShieldAlert,ShieldCheck,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Btn,Card,ChoiceChips,Chips,Empty,Field,Group,IconBtn,Input,KeyValues,LoadMore,MoreInfo,Note,Pill,ReviewCard,ReviewMedia,ReviewPair,Row,SectionLabel,Seg,Select,Skel,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble} from './kit';
+import {Alert,Btn,Card,ChoiceChips,Chips,Empty,Field,Group,IconBtn,Input,KeyValues,LoadMore,MoreInfo,Note,Pill,ReviewCard,ReviewMedia,ReviewPair,Row,SectionLabel,Seg,Select,Sheet,Skel,Stack,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble} from './kit';
 import {askFactor,useFe} from './session';
 import {FactorPromptHost,FactorReset,StaffEnrol,StaffUnlock,factorSchema,type Factor} from './staff-factor';
 import {StaffSupport} from './support';
@@ -531,25 +531,65 @@ function RevisionCard({item,onDone}:{item:RevisionItem,onDone:()=>void}){
 // ——— reports, appeals, DSA notices, cities ———
 
 function ReportCard({item,onDone}:{item:ReportItem,onDone:()=>void}){
- const {t}=useI18n();const when=useWhen();const d=useDecide(onDone);
+ const {t}=useI18n();const val=useVal();const when=useWhen();const d=useDecide(onDone);
  const [rule,setRule]=useState<typeof RULES[number]|''>('');const [note,setNote]=useState('');const [ask,setAsk]=useState(false);
  const people=item.targetType==='profile'||item.targetType==='conversation';
  const base={targetType:item.targetType,targetId:item.targetId,note:note.trim(),...(item.targetType==='conversation'&&item.author?{reportedProfileId:item.author.id}:{})};
  const author=item.author?[item.author.name,item.author.handle&&'@'+item.author.handle].filter(Boolean).join(' '):null;
+ // Whom a measure is for: the reported profile, or in a chat the side it was reported about.
+ const target=item.targetType==='profile'?{id:item.targetId,name:author??''}:item.targetType==='conversation'&&item.author?{id:item.author.id,name:author??''}:null;
+ const [measures,setMeasures]=useState(false);
  return <StCard title={t('fe.staff.report.type.'+item.targetType)} danger={item.reasons.includes('minor')} meta={when(item.firstAt)}>
   <Chips className="st-block">{item.reasons.map(r=><Pill key={r} tone={r==='minor'?'bad':undefined}>{t('fe.staff.report.reason.'+r)}</Pill>)}
    <Pill>{t('fe.staff.report.count')}: {item.reports}</Pill></Chips>
   {item.excerpt&&<p className="st-text"><Text as="span" size="xs" tone="mute">{t('fe.staff.report.now')}: </Text>{item.excerpt}</p>}
-  <Kv rows={[[t('fe.staff.author'),author],[t('fe.staff.state'),item.state],[t('fe.staff.report.media'),item.media?String(item.media):null],
+  <Kv rows={[[t('fe.staff.author'),author],[t('fe.staff.state'),val(item.state)],[t('fe.staff.report.media'),item.media?String(item.media):null],
    [t('fe.staff.report.details'),item.details?.length?item.details.join(' · '):null],[t('fe.staff.report.snapshot'),item.reported?<MoreInfo label={t('fe.staff.more')} hideLabel={t('fe.staff.moreHide')}>{show(item.reported)}</MoreInfo>:null]]}/>
   {!people&&<Choice label={t('fe.staff.rule')} value={rule} onChange={setRule} disabled={d.busy} options={RULES.map(id=>({id,label:t('fe.staff.rule.'+id)}))}/>}
-  {people&&<Note className="st-block">{t('fe.staff.report.peopleNote')}</Note>}
   <TextField label={t('fe.staff.note')} value={note} onChange={setNote} max={500}/>
   {ask?<Confirm text={t('fe.staff.report.confirmRemove')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>d.run('staff.reportDecide',{...base,decision:'remove',rule})}/>
    :<div className="st-row st-block"><Btn kind="soft" size="sm" auto icon={Check} disabled={d.busy} onClick={()=>d.run('staff.reportDecide',{...base,decision:'keep'})}>{t('fe.staff.report.keep')}</Btn>
-    {!people&&<Btn kind="danger" size="sm" auto icon={Ban} disabled={d.busy||!rule} onClick={()=>setAsk(true)}>{t('fe.staff.report.remove')}</Btn>}</div>}
+    {!people&&<Btn kind="danger" size="sm" auto icon={Ban} disabled={d.busy||!rule} onClick={()=>setAsk(true)}>{t('fe.staff.report.remove')}</Btn>}
+    {people&&target&&<Btn kind="danger" size="sm" auto icon={Gavel} disabled={d.busy} onClick={()=>setMeasures(true)}>{t('fe.staff.m.open')}</Btn>}</div>}
   <Failure text={d.failure}/>
+  {measures&&target&&<Measures profileId={target.id} name={target.name} onClose={()=>setMeasures(false)}
+   onApplied={()=>{setMeasures(false);void d.run('staff.reportDecide',{...base,decision:'keep',note:(note.trim()||t('fe.staff.m.reportNote')).slice(0,500)});}}/>}
  </StCard>;
+}
+
+const DAYS=[1,3,7,30] as const;
+/** Rules whose measure is never timed and is applied and lifted by a lead (server OWNER_ONLY_LIFT). */
+const GRAVE=new Set<string>(['minors','illegal']);
+
+/** «Принять меры» on a report about a person or a chat: a restriction or a suspension, for a set time or until lifted
+ * (staff.restrict / staff.sanction). Moderators: timed measures and restrictions; until lifted suspension — leads. */
+function Measures({profileId,name,onClose,onApplied}:{profileId:string,name:string,onClose:()=>void,onApplied:()=>void}){
+ const {t,locale}=useI18n();const roles=useStaffRoles();const lead=(roles??[]).some(r=>r==='owner'||r==='lead');
+ const d=useDecide(onApplied);
+ const [rule,setRule]=useState<typeof RULES[number]|''>('');const [kind,setKind]=useState<'restrict'|'suspend'>('restrict');
+ const [days,setDays]=useState<string>('7');const [note,setNote]=useState('');const [ask,setAsk]=useState(false);
+ const grave=!!rule&&GRAVE.has(rule);
+ // Until lifted only: grave rules. A moderator's suspension is always timed.
+ const forever=grave||days==='0';const blocked=kind==='suspend'&&forever&&!lead;
+ const dayOpts=[...(grave?[]:DAYS.map(n=>({id:String(n),label:t('fe.staff.m.days.'+n)}))),...(kind==='restrict'||lead?[{id:'0',label:t('fe.staff.m.forever')}]:[])];
+ const until=forever?null:new Date(Date.now()+Number(days)*864e5).toLocaleDateString(locale==='en'?'en-GB':'ru-RU',{day:'numeric',month:'long'});
+ const effect=t(kind==='restrict'?'fe.staff.m.effect.restrict':'fe.staff.m.effect.suspend',{name})+' '+(until?t('fe.staff.m.until',{date:until}):t('fe.staff.m.untilLifted'));
+ const apply=()=>{const timed=forever?{}:{days:Number(days)};
+  void d.run(kind==='restrict'?'staff.restrict':'staff.sanction',kind==='restrict'
+   ?{profileId,on:true,rule,note:note.trim(),...timed}:{profileId,decision:'suspend',rule,note:note.trim(),...timed});};
+ return <Sheet title={t('fe.staff.m.title',{name})} onClose={onClose}>
+  <Stack gap={4}>
+   <Choice label={t('fe.staff.rule')} value={rule} onChange={v=>{setRule(v);if(GRAVE.has(v))setDays('0');}} disabled={d.busy} options={RULES.map(id=>({id,label:t('fe.staff.rule.'+id)}))}/>
+   <Choice label={t('fe.staff.m.kind')} value={kind} onChange={v=>{setKind(v);if(v==='suspend'&&!lead&&days==='0')setDays('7');}} disabled={d.busy}
+    options={[{id:'restrict' as const,label:t('fe.staff.m.restrict')},{id:'suspend' as const,label:t('fe.staff.m.suspend')}]}/>
+   {dayOpts.length>1&&<Choice label={t('fe.staff.m.for')} value={grave?'0':days} onChange={setDays} disabled={d.busy} options={dayOpts}/>}
+   {blocked?<Alert kind="warn">{t('fe.staff.m.leadOnly')}</Alert>:rule&&<Note>{effect}</Note>}
+   <TextField label={t('fe.staff.note')} value={note} onChange={setNote} max={500}/>
+   {ask?<Confirm text={effect} danger busy={d.busy} onNo={()=>setAsk(false)} onYes={apply}/>
+    :<Btn kind="danger" icon={Gavel} disabled={d.busy||!rule||blocked} onClick={()=>setAsk(true)}>{t(kind==='restrict'?'fe.staff.m.doRestrict':'fe.staff.m.doSuspend')}</Btn>}
+   <Failure text={d.failure}/>
+  </Stack>
+ </Sheet>;
 }
 
 function AppealCard({item,onDone}:{item:AppealItem,onDone:()=>void}){

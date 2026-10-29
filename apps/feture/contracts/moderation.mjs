@@ -44,6 +44,8 @@ export const moderationCommands = {
       decision: z.enum(['suspend', 'lift']),
       rule: z.enum(['minors', 'threats', 'private_material', 'spam', 'illegal', 'community_rules', 'appeal_granted']),
       note: field('staffNote').default(''),
+      // A timed measure ends on its own after this many days; none = until staff lift it.
+      days: z.union([z.literal(1), z.literal(3), z.literal(7), z.literal(30)]).optional(),
     }),
   },
   'staff.restrict': {
@@ -52,6 +54,8 @@ export const moderationCommands = {
       opId, profileId: id, on: z.boolean(),
       rule: z.enum(['minors', 'threats', 'private_material', 'spam', 'illegal', 'community_rules', 'appeal_granted']),
       note: field('staffNote').default(''),
+      // A timed measure ends on its own after this many days; none = until staff lift it.
+      days: z.union([z.literal(1), z.literal(3), z.literal(7), z.literal(30)]).optional(),
     }),
   },
   'staff.placeQueue': { profile: false, write: false, input: z.strictObject({ ...queuePaging }) },
