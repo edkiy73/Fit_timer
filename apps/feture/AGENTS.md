@@ -67,6 +67,18 @@ or a helper defined twice (`tools/fe-server-baseline.json` only shrinks). Text i
   (`POST /api/admin {action:'feture.update.publish', …, minimumCode = latestCode}`), otherwise phones never see it.
   Before real users, switch to a soft banner except for breaking changes. Signing keys come only from the
   `FETURE_KEYSTORE_*` secrets; agents never create or read keys.
+- **Name and @nick** (29.10.2026). Every profile — person and couple — has a unique @nick (latin, the old rules) and an
+  optional name («Как тебя называть», any name, «Можно не настоящее»); without a name the nick is shown, a couple
+  without one shows «Имя и Имя» of the partners. `profile.name` is what everyone sees (kept by triggers from
+  `chosen_name`, `handle` and the partners); writes go to `chosen_name`. Limits on the server: a nick once per 6 months,
+  the first change after sign-up (or after a couple forms) free; a name once per 2 weeks, the first fill and one
+  correction free; refusals carry `until`. A couple's nick is suggested from both nicks (`anya_max`) and can be changed
+  in the setup right after it forms; couples take @mentions like people. Feed, comments, chats, notifications and
+  likes show the name only; the grey @nick (kit `PersonName nick` / `Who`) only in the profile header, search,
+  @mention suggestions, the pair invite and follow lists.
+- **«Обо мне» facts are always visible to everyone** (29.10.2026): no per-fact audience; on a person's profile they
+  sit under the bio and under the main buttons (Нравится / Подписаться / Написать).
+- **«Я» uses the same header as every tab** (29.10.2026): kit `Bar` with `lead` (avatar), `sub` and `onTitle`.
 - Media is reviewed before it is shown: `uploaded → scanning → needs_review → approved / rejected / blocked`.
   Staff roles: owner, lead, moderator, verifier, support, auditor — checked on the server only.
 

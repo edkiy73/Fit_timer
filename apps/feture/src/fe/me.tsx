@@ -2,9 +2,9 @@ import {Fragment,useCallback,useEffect,useRef,useState,type CSSProperties,type R
 import {useLocation,useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Camera,ChevronDown,ChevronRight,ClipboardList,Clock,Eye,HeartOff,Inbox,PenLine,Users,Newspaper,Settings,Star,Trash2,X} from 'lucide-react';
+import {Camera,ChevronRight,ClipboardList,Clock,Eye,HeartOff,Inbox,PenLine,Users,Newspaper,Settings,Star,Trash2,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Actions,AddCard,Alert,Ask as KitAsk,Av,Btn,Card,Empty,Group,H,IconBtn,PhotoAdd,PhotoSlot,PhotoSlots,PullRefresh,RadioList,Row,Seg,SelectRow,Sheet,Skel,ToggleRow} from './kit';
+import {Actions,AddCard,Alert,Ask as KitAsk,Av,Btn,Card,Empty,Group,H,IconBtn,PhotoAdd,PhotoSlot,PhotoSlots,PullRefresh,RadioList,Row,Seg,SelectRow,Sheet,Skel,ToggleRow,Bar} from './kit';
 import {AgeCheckLink,useAgeResume} from './age-check';
 import {dropReadCache,useFe,useRealtime,useShown} from './session';
 import {PrivateLayer} from './private';
@@ -28,7 +28,7 @@ import {MeAboutBlock} from './about-facts';
 export const media=z.object({id:z.uuid(),pending:z.boolean(),blurred:z.boolean().optional(),src:z.record(z.string(),z.string()).nullable(),
  /** A photo taken from one of the profile's own posts (wave 5): «Открыть публикацию». */ postId:z.uuid().optional()});
 export const profile=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),own:z.boolean(),bio:z.string(),
- age:z.number().nullable(),city:z.object({id:z.string().optional(),ru:z.string().nullable(),en:z.string().nullable(),pending:z.boolean()}).nullable(),avatar:media.nullable(),photos:z.array(media),
+ age:z.number().nullable(),chosenName:z.string().optional(),nickAt:z.string().nullable().optional(),nameAt:z.string().nullable().optional(),nickFirst:z.boolean().optional(),city:z.object({id:z.string().optional(),ru:z.string().nullable(),en:z.string().nullable(),pending:z.boolean()}).nullable(),avatar:media.nullable(),photos:z.array(media),
  details:z.record(z.string(),z.unknown()),rev:z.number().optional(),detailsVis:z.string().nullable().optional(),showAge:z.boolean().optional(),cityId:z.string().nullable().optional()}).passthrough();
 export const profileRes=z.object({ok:z.literal(true),profile});
 export const settingsShape=z.object({discoverMode:z.enum(['visible','hidden','off']),privateOn:z.boolean(),acceptProfileLikes:z.boolean().optional(),requestsFrom:z.enum(['all','matches','none']).optional(),
@@ -111,18 +111,16 @@ export function MeTab(){
  const privOn=settings?.privateOn!==false;
  const layerDots:Record<Layer,string>={profile:dots.links?t('fe.mx.dot.links'):'',priv:privOn&&dots.reqs?t('fe.mx.dot.reqs'):'',vis:dots.vis?t('fe.mx.dot.vis'):'',mine:''};
  return <>
-  <H level={1} className="sr-only" tabIndex={-1}>{t('fe.nav.me')}</H>
+  {/* Owner 29.10.2026: the same floating header as every tab — the avatar left of the name, glass round buttons. */}
+  <Bar title={name} lead={<Av name={name} seed={acting.id} src={avatarSrc}/>}
+   sub={couple?(acting.kind==='couple'?t('fe.me.weCouple'):t('fe.me.iPersonal')):t('fe.me.personalProfile')}
+   {...(couple?{onTitle:()=>setSwitching(true),titleLabel:t('fe.mx.whose')}:{})}>
+   <StaffEntry/>
+   <BellButton/>
+   <IconBtn icon={Eye} label={t('fe.mx.howSeen')} title={t('fe.mx.howSeen')} onClick={()=>navigate('/n/me/preview')}/>
+   <IconBtn icon={Settings} label={t('fe.me.settings')} onClick={()=>navigate('/n/settings')}/>
+  </Bar>
   <div ref={scroller} className="view me18 me-x01"><PullRefresh target={scroller} onRefresh={()=>{load();pullCounts();}}>
-   <header className="me18-h wrap">
-    <span className="av-wrap"><Av name={name} seed={acting.id} src={avatarSrc}/></span>
-    {couple?<button type="button" className="me18-who" aria-haspopup="dialog" aria-label={t('fe.mx.whose')} onClick={()=>setSwitching(true)}>
-      <b><span>{name}</span><ChevronDown/></b><small>{acting.kind==='couple'?t('fe.me.weCouple'):t('fe.me.iPersonal')}</small></button>
-     :<div className="me18-who"><b><span>{name}</span></b><small>{t('fe.me.personalProfile')}</small></div>}
-    <StaffEntry/>
-    <BellButton/>
-    <IconBtn icon={Eye} label={t('fe.mx.howSeen')} title={t('fe.mx.howSeen')} onClick={()=>navigate('/n/me/preview')}/>
-    <IconBtn icon={Settings} label={t('fe.me.settings')} onClick={()=>navigate('/n/settings')}/>
-   </header>
    <div className="wrap">
     {todo>0&&<Card list><Row className="me-todo" icon={Inbox} tone="l" title={t('fe.mx.todo')} badge={todo} onClick={()=>navigate('/n/inbox')}/></Card>}
     <div className="me18-seg me4"><LayerSeg value={layer} onChange={setLayer} dots={layerDots}/></div>

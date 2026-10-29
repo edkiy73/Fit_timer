@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,Bell,ChevronRight,CircleCheck,Clock,Copy,Ellipsis,FileText,Flag,Info,Link as LinkIcon,Lock,MessageCircle,Pencil,Pin,PinOff,Send,Settings,ShieldAlert,Trash2,TrendingDown,TrendingUp,User,UserMinus,UserPlus,Users,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Announcement,Answer,Ask,Av,Btn,Card,IconBtn,Empty,Group,LoadMore,Note,PersonLine,Pill,RequestCard,Row,SectionLabel,Seg,Sheet,Skel,Stack,StatTiles,SubBar} from './kit';
+import {Alert,Announcement,Answer,Ask,Av,Btn,Card,IconBtn,Empty,Group,LoadMore,Note,PersonLine,Pill,RequestCard,Row,SectionLabel,Seg,Sheet,Skel,Stack,StatTiles,SubBar,nickShown} from './kit';
 import {useFe,usePartnerApproves} from './session';
 import {WriteBtn,useWriteTo} from './write-to';
 import {useToast} from './toast';
@@ -81,7 +81,7 @@ function useLater(){
 /** `personRow()` — avatar, name, a line under it and the chevron (opens the profile). */
 function PersonRow({p,sub,end,onClick}:{p:Prof,sub?:string|undefined,end?:ReactNode,onClick?:()=>void}){
  const navigate=useNavigate();const {acting}=useFe();
- return <Row av={<Av name={pname(p)} seed={p.id} src={p.avatar}/>} title={<>{withAge(pname(p),p)}<NameBadges p={p}/></>} sub={sub||(p.handle&&p.name?'@'+p.handle:undefined)}
+ return <Row av={<Av name={pname(p)} seed={p.id} src={p.avatar}/>} title={<>{withAge(pname(p),p)}<NameBadges p={p}/></>} sub={sub||nickShown(p.handle,p.name)||undefined}
   end={end} onClick={onClick??(()=>navigate(p.id===acting?.id?'/n/me':'/n/people/'+p.id))}/>;
 }
 
@@ -176,7 +176,7 @@ export function MembersList({c,data,onChange}:{c:{id:string,me?:{role:string,sta
  const sub=(m:Mem)=>m.id===acting?.id?(m.role==='owner'?t('fe.cm.youOwner'):t('fe.host.mem.you')):m.role==='owner'?t('fe.cm.owner'):m.role==='host'?t('fe.cm.hostSub'):m.read_only?t('fe.cm.cantPost'):undefined;
  const canManage=(m:Mem)=>host&&m.id!==acting?.id&&m.role!=='owner'&&(m.role!=='host'||owner);
  // No «Написать» icon in the members list (owner 29.10.2026): people write first from a profile; hosts find «Написать» in ⋯.
- const row=(m:Mem)=><PersonRow key={m.id} p={m} sub={sub(m)??(m.handle&&m.name?'@'+m.handle:t('fe.cm.memberSub'))} {...(canManage(m)?{onClick:()=>setOpen(m.id),end:<IconBtn icon={Ellipsis} kind="ghost" size="sm" label={t('fe.cm.more')} onClick={()=>setOpen(m.id)}/>}:{})}/>;
+ const row=(m:Mem)=><PersonRow key={m.id} p={m} sub={sub(m)??nickShown(m.handle,m.name)??t('fe.cm.memberSub')} {...(canManage(m)?{onClick:()=>setOpen(m.id),end:<IconBtn icon={Ellipsis} kind="ghost" size="sm" label={t('fe.cm.more')} onClick={()=>setOpen(m.id)}/>}:{})}/>;
  const hosts=items?.filter(m=>m.role!=='member')??[];const members=items?.filter(m=>m.role==='member')??[];
  return <>
   {items===null?<Empty compact icon={Users} title={pl(data.count,t('fe.cm.members'),locale)} text={t('fe.host.mem.afterJoin')}/>:<>

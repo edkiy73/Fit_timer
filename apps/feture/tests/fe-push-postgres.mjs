@@ -64,7 +64,7 @@ test('a like: one neutral push (no names), grouped hourly; «normal» names who 
     await db.query(`update feture.notification_settings set settings = settings || '{"mode": "normal"}' where account_id = (select id from feture.account where person_profile_id = $1)`, [b]);
     // The other side likes back: Kira gets the match with Dana's name (whoever made the match gets nothing about it).
     const d = await member('ud', 'Dana');
-    await db.query(`update feture.profile set name = 'Дана' where id = $1`, [d]);
+    await db.query(`update feture.profile set chosen_name = 'Дана' where id = $1`, [d]);
     await call('ub', b, { action: 'like.send', opId: op(), profileId: d, source: 'profile' });
     const conv = (await call('ud', d, { action: 'like.send', opId: op(), profileId: b, source: 'likes' })).conversationId;
     await deliver();
@@ -99,7 +99,7 @@ test('«Обычные»: name and the first 80 characters; media-only says its 
   const t = PUSH_TEXT.ru;
   try {
     const a = await member('ua', 'Mira'), b = await member('ub', 'Kira');
-    await db.query(`update feture.profile set name = 'Мира' where id = $1`, [a]);
+    await db.query(`update feture.profile set chosen_name = 'Мира' where id = $1`, [a]);
     await call('ub', null, { action: 'push.register', opId: op(), platform: 'ios', token: 'tok-kira-1', tz: 'UTC' });
     await call('ua', a, { action: 'like.send', opId: op(), profileId: b, source: 'profile' });
     const conv = (await call('ub', b, { action: 'like.send', opId: op(), profileId: a, source: 'likes' })).conversationId;
@@ -139,13 +139,13 @@ test('«Обычные»: name and the first 80 characters; media-only says its 
 
     // A like back from someone else names them; a couple's verb is plural.
     const c = await member('uc', 'Noa');
-    await db.query(`update feture.profile set name = 'Ноа' where id = $1`, [c]);
+    await db.query(`update feture.profile set chosen_name = 'Ноа' where id = $1`, [c]);
     await call('uc', c, { action: 'like.send', opId: op(), profileId: b, source: 'profile' });
     await deliver(); // grouped: Mira's like already made this hour's push, so this one is read straight from its notification
     const [n] = await db.query(`select id from feture.notification where type = 'like' and actor_profile_id = $1`, [c]);
     assert.deepEqual(await personalText(db, b, { kind: 'likes', notificationId: n.id }, t), { title: 'Ноа', body: 'Ставит тебе симпатию' });
     const pairId = await coupleOf([c, await member('ue', 'Eli')]);
-    await db.query(`update feture.profile set name = 'Ноа и Эли' where id = $1`, [pairId]);
+    await db.query(`update feture.profile set chosen_name = 'Ноа и Эли' where id = $1`, [pairId]);
     const [pn] = await db.query(`insert into feture.notification (recipient_account_id, addressee_profile_id, type, actor_profile_id, source) values ($1, $2, 'like', $3, 'test') returning id`, [kira, b, pairId]);
     assert.deepEqual(await personalText(db, b, { kind: 'likes', notificationId: pn.id }, t), { title: 'Ноа и Эли', body: 'Ставят тебе симпатию' });
     // A type that is not about a person (a grant of the private part, too) names nobody.

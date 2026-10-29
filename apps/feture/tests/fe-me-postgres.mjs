@@ -223,7 +223,49 @@ test('interests: scale or mark, direction rules, visibility for others, remove',
   } finally { await pg.close(); }
 });
 
-test('«Обо мне» facts (owner 29.10.2026): validation, per-fact audience for a stranger / with access / the owner, person only', async () => {
+test('name and nick (owner 29.10.2026): optional name shown instead of the nick, nick 6 months with one free change, name 2 weeks with one free correction', async () => {
+  const { pg, db, call, person } = await setup();
+  try {
+    // Sign-up: the name is optional; without one everyone sees the nick.
+    const named = await register(call, 'un', 'anya_k', { name: '  Аня  ' });
+    assert.equal(named.status, 200);
+    const b = await person('ub', 'Kira');
+    const seenNamed = (await call('ub', b, { action: 'profile.get', profileId: named.profileId })).profile;
+    assert.deepEqual([seenNamed.name, seenNamed.handle, seenNamed.chosenName], ['Аня', 'anya_k', undefined]); // only the owner sees what was typed
+    const a = await person('ua', 'Alex');
+    let own = (await call('ua', a, { action: 'profile.get', profileId: a })).profile;
+    assert.deepEqual([own.name, own.chosenName, own.nickAt, own.nameAt, own.nickFirst], ['Alex', '', null, null, true]);
+    const set = async (/** @type {object} */ x) => { const r = await call('ua', a, { action: 'profile.update', opId: op(), rev: own.rev, ...x }); own = (await call('ua', a, { action: 'profile.get', profileId: a })).profile; return r; };
+
+    // Nick: the first change after sign-up is free, the next one waits 6 months (the refusal says until when).
+    assert.equal((await set({ handle: 'alex_one' })).status, 200);
+    assert.deepEqual([own.handle, own.nickFirst, typeof own.nickAt], ['alex_one', false, 'string']);
+    const early = await set({ handle: 'alex_two' });
+    assert.deepEqual([early.status, early.rule], [422, 'handle_change_cooldown']);
+    const days = (Date.parse(early.until) - Date.now()) / 864e5;
+    assert.ok(days > 180 && days < 185, String(days));
+    assert.equal((await set({ handle: 'Alex_One' })).status, 200); // letter case only: free
+    await db.query(`update feture.profile set handle_changed_at = now() - interval '6 months 1 day' where id = $1`, [a]);
+    assert.equal((await set({ handle: 'alex_two' })).status, 200);
+    assert.equal((await set({ handle: 'alex_three' })).rule, 'handle_change_cooldown');
+
+    // Name: the first fill and one correction are free, then once per 2 weeks; any human name, Cyrillic and spaces.
+    assert.equal((await set({ name: 'Алекс Б' })).status, 200);
+    assert.equal((await call('ub', b, { action: 'profile.get', profileId: a })).profile.name, 'Алекс Б');
+    assert.equal((await set({ name: 'Алекс В' })).status, 200); // the typo fix
+    assert.equal(typeof own.nameAt, 'string');
+    const third = await set({ name: 'Саша' });
+    assert.deepEqual([third.status, third.rule], [422, 'name_change_cooldown']);
+    assert.ok((Date.parse(third.until) - Date.now()) / 864e5 > 13.5);
+    await db.query(`update feture.profile set name_changed_at = now() - interval '15 days' where id = $1`, [a]);
+    // Cleared: the nick is shown again.
+    assert.equal((await set({ name: '' })).status, 200);
+    assert.deepEqual([own.name, own.chosenName], ['alex_two', '']);
+    assert.equal((await call('ub', b, { action: 'profile.get', profileId: a })).profile.name, 'alex_two');
+  } finally { await pg.close(); }
+});
+
+test('«Обо мне» facts (owner 29.10.2026): validation, always visible to everyone (a stranger sees every filled fact), person only', async () => {
   const { pg, db, call, person, coupleOf } = await setup();
   try {
     const a = await person('ua', 'Alex'), b = await person('ub', 'Kira'), c = await person('uc', 'Noa');
@@ -231,48 +273,30 @@ test('«Обо мне» facts (owner 29.10.2026): validation, per-fact audience 
       const rev = (await call(user, pid, { action: 'profile.get', profileId: pid })).profile.rev;
       return call(user, pid, { action: 'profile.update', opId: op(), rev, ...input });
     };
-    // Bounds and lists: refused field by field, nothing written.
+    // Bounds and lists: refused field by field, nothing written; there is no per-fact audience any more.
     for (const [bad, field] of [[{ height: 119 }, 'height'], [{ height: 231 }, 'height'], [{ height: 174.5 }, 'height'], [{ smoking: 'often' }, 'smoking'],
       [{ alcohol: 'yes' }, 'alcohol'], [{ kids: 'many' }, 'kids'], [{ zodiac: 'ophiuchus' }, 'zodiac'], [{ langs: ['ru', 'ru'] }, 'langs'],
-      [{ langs: ['ru', 'en', 'de', 'fr', 'es', 'it', 'pt'] }, 'langs'], [{ langs: ['xx'] }, 'langs'], [{ aboutVis: { height: 'friends' } }, 'aboutVis'],
-      [{ aboutVis: { weight: 'all' } }, 'aboutVis']]) {
+      [{ langs: ['ru', 'en', 'de', 'fr', 'es', 'it', 'pt'] }, 'langs'], [{ langs: ['xx'] }, 'langs'], [{ aboutVis: { height: 'all' } }, '(root)']]) {
       const r = await up(bad);
       assert.deepEqual([r.status, r.fields?.[0]?.split('.')[0]], [400, field], JSON.stringify(bad));
     }
     assert.equal((await db.query('select height from feture.profile_details where profile_id = $1', [a]))[0].height, null);
 
-    // Filled, no audience chosen yet: «Только ты» — the owner sees everything, a stranger nothing.
-    assert.equal((await up({ height: 174, smoking: 'sometimes', alcohol: 'rarely', kids: 'unsure', langs: ['ru', 'en', 'de'], zodiac: 'scorpio' })).status, 200);
-    let own = (await call('ua', a, { action: 'profile.get', profileId: a })).profile;
-    assert.deepEqual(own.about, { height: 174, smoking: 'sometimes', alcohol: 'rarely', kids: 'unsure', langs: ['ru', 'en', 'de'], zodiac: 'scorpio' });
-    assert.deepEqual(own.aboutVis, { height: 'only', smoking: 'only', alcohol: 'only', kids: 'only', langs: 'only', zodiac: 'only' });
-    assert.deepEqual((await call('ub', b, { action: 'profile.get', profileId: a })).profile.about, {});
-
-    // Each fact its own audience; changing one leaves the others.
-    assert.equal((await up({ aboutVis: { height: 'all', langs: 'all', smoking: 'granted', zodiac: 'granted' } })).status, 200);
-    assert.equal((await up({ aboutVis: { zodiac: 'only' } })).status, 200);
-    own = (await call('ua', a, { action: 'profile.get', profileId: a })).profile;
-    assert.deepEqual(own.aboutVis, { height: 'all', smoking: 'granted', alcohol: 'only', kids: 'only', langs: 'all', zodiac: 'only' });
-    assert.deepEqual((await call('ub', b, { action: 'profile.get', profileId: a })).profile.about, { height: 174, langs: ['ru', 'en', 'de'] });
-
-    // «По доступу» opens with the private part's «Описание» access, and closes with it.
-    await call('ua', a, { action: 'private.setText', opId: op(), text: 'Сначала — переписка.' });
-    const req = await call('ub', b, { action: 'access.request', opId: op(), profileId: a, scopes: ['info'] });
-    assert.equal((await call('ua', a, { action: 'access.grant', opId: op(), requestId: req.id, scopes: ['info'], term: '1d' })).state, 'granted');
-    assert.deepEqual((await call('ub', b, { action: 'profile.get', profileId: a })).profile.about, { height: 174, smoking: 'sometimes', langs: ['ru', 'en', 'de'] });
-    assert.deepEqual((await call('uc', c, { action: 'profile.get', profileId: a })).profile.about, { height: 174, langs: ['ru', 'en', 'de'] }); // no access
-    assert.equal((await call('uc', c, { action: 'profile.get', profileId: a })).profile.aboutVis, undefined); // the audience is the owner's own business
-    await db.query(`update feture.access_grant set until = now() - interval '1 second'`);
-    assert.deepEqual((await call('ub', b, { action: 'profile.get', profileId: a })).profile.about, { height: 174, langs: ['ru', 'en', 'de'] });
+    // Filled: the owner, a stranger and anyone else see every filled fact.
+    const all = { height: 174, smoking: 'sometimes', alcohol: 'rarely', kids: 'unsure', langs: ['ru', 'en', 'de'], zodiac: 'scorpio' };
+    assert.equal((await up(all)).status, 200);
+    const own = (await call('ua', a, { action: 'profile.get', profileId: a })).profile;
+    assert.deepEqual([own.about, own.aboutVis], [all, undefined]);
+    assert.deepEqual((await call('ub', b, { action: 'profile.get', profileId: a })).profile.about, all);
+    assert.deepEqual((await call('uc', c, { action: 'profile.get', profileId: a })).profile.about, all);
 
     // Clearing a fact removes it for everyone.
     assert.equal((await up({ height: null, langs: [] })).status, 200);
-    assert.deepEqual((await call('ub', b, { action: 'profile.get', profileId: a })).profile.about, {});
+    assert.deepEqual((await call('ub', b, { action: 'profile.get', profileId: a })).profile.about, { smoking: 'sometimes', alcohol: 'rarely', kids: 'unsure', zodiac: 'scorpio' });
 
     // Facts are personal: a couple profile has none and cannot set them.
     const pair = await coupleOf([a, b]);
     assert.deepEqual((await up({ height: 180 }, 'ua', pair)).fields, ['height']);
-    assert.deepEqual((await up({ aboutVis: { height: 'all' } }, 'ua', pair)).fields, ['aboutVis']);
     assert.deepEqual((await call('uc', c, { action: 'profile.get', profileId: pair })).profile.about, {});
   } finally { await pg.close(); }
 });

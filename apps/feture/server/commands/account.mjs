@@ -43,7 +43,7 @@ async function clearPerson(q, pp) {
     await q.query(`delete from feture.${t} where profile_id = $1`, [pp]);
   }
   await q.query(`update feture.profile_details set bio = '', city_id = null, genders = '{}', orients = '{}', roles = '{}', formats = '{}', seeks = '{}', status = null,
-    height = null, smoking = null, alcohol = null, kids = null, langs = '{}', zodiac = null, about_vis = '{}' where profile_id = $1`, [pp]);
+    height = null, smoking = null, alcohol = null, kids = null, langs = '{}', zodiac = null where profile_id = $1`, [pp]);
   await q.query(`update feture.profile_settings set discover_mode = 'off', updated_at = now() where profile_id = $1`, [pp]);
   // Social graph.
   await q.query(`delete from feture.follow where follower_profile_id = $1 or target_profile_id = $1`, [pp]);
@@ -113,7 +113,7 @@ const run = {
       await q.query(`insert into feture.handle_hold (handle, profile_id, until) values (lower($1), $2, now() + make_interval(days => $3))
                      on conflict (handle) do update set until = excluded.until, profile_id = excluded.profile_id`, [a.handle, a.person_profile_id, HOLD_DAYS]);
     }
-    await q.query(`update feture.profile set state = 'deleted', handle = null, name = '', avatar_asset_id = null, updated_at = now() where id = $1`, [a.person_profile_id]);
+    await q.query(`update feture.profile set state = 'deleted', handle = null, chosen_name = '', avatar_asset_id = null, updated_at = now() where id = $1`, [a.person_profile_id]);
     await q.query(`update feture.profile_member set state = 'left', left_at = now() where account_id = $1 and state = 'active'`, [a.id]);
     await q.query(`update feture.account set state = 'deleted', birth_date = null, news_opt_in = false, updated_at = now() where id = $1`, [a.id]);
     await q.query(`update feture.couple_link set revoked_at = now() where from_account = $1 and used_at is null and revoked_at is null`, [a.id]);

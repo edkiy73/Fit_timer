@@ -178,7 +178,7 @@ export function ProfileHero({p,rel,inert,onOpen}:{p:PersonProfile,rel:Relation|n
   <PhotoBars n={list.length} i={i} label={fill(t('fe.px.ph.n'),{i:i+1,n:list.length})} count/>
   {list.length>1&&<><button type="button" className="pc-zone l" aria-label={t('fe.px.ph.prev')} onClick={()=>setIx(Math.max(0,i-1))}/><button type="button" className="pc-zone r" aria-label={t('fe.px.ph.next')} onClick={()=>setIx(Math.min(list.length-1,i+1))}/></>}
   {src&&onOpen&&<button type="button" className="pc-zone c" aria-label={t('fe.px.ph.full')} onClick={()=>onOpen(i)}/>}
-  <div className="pc-info"><PersonName name={name} age={p.age||undefined}><NameBadges p={p}/></PersonName>
+  <div className="pc-info"><PersonName name={name} age={p.age||undefined} nick={p.handle}><NameBadges p={p}/></PersonName>
    {city&&<div className="pc-who"><span className="pl"><MapPin/>{city}</span></div>}
    <FollowCounts id={p.id} rel={rel} inert={inert}/></div>
  </div>;
@@ -397,8 +397,9 @@ export function ProfilePage({p,preview,seg,onMore,menu,onRefresh,children}:{p:Pe
    {children}
    <ProfileHero p={p} rel={rel} inert={inert} onOpen={setView}/>
    <PersonBio p={p}/>
-   <AboutGroup p={p} preview={preview} inert={inert}/>
    <PersonActions p={p} rel={rel} setRel={setRel} inert={inert}/>
+   {/* Owner 29.10.2026: «Обо мне» under the bio and under the main buttons. */}
+   <AboutGroup p={p} inert={inert}/>
    {!preview&&<CompatSummary profileId={p.id}/>}
    <ProfileBody p={p} inert={inert} preview={preview} onOpen={setView}/>
   </div></PullRefresh></div>
@@ -737,7 +738,7 @@ export function MePreviewScreen(){
        <div className="pc-hint"><ChevronDown/>{t('fe.px.card.hint')}</div></div>
      </div></div>
      <Note className="center mt12">{note}</Note>
-     <div className="pc-body pc-full p3-card21"><PersonBio p={p}/><AboutGroup p={p} preview="all" inert/><ProfileBody p={p} inert preview="all" onOpen={()=>{}}/></div>
+     <div className="pc-body pc-full p3-card21"><PersonBio p={p}/><AboutGroup p={p} inert/><ProfileBody p={p} inert preview="all" onOpen={()=>{}}/></div>
     </>}
   </View>
  </>;

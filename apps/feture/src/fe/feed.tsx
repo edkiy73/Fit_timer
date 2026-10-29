@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {AtSign,Bell,BellOff,Bookmark,Check,Calendar,ChartColumn,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,FileText,Globe,Heart,Image as ImageIcon,KeyRound,Lock,MessageCircle,MessageSquareText,Newspaper,Pencil,Plus,Search,SendHorizontal,Share,SlidersHorizontal,Sparkles,Trash2,User,Users,X} from 'lucide-react';
 import type {LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Actions,articlePlate,ActingAv,ActionLine,ActivityCard,ActivityItem,Alert,ArticleCard,ArticleImage,Ask,Av,BAD_CHARS,NewPill,Bar,Btn,Card,Chip,Chips,Counter,Empty,FeedEvents,Field,FilePick,Group,H,IconBtn,LoadMore,Input,LikesLine,Note,QuickStart,RichEditor,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,VideoBadge,View,ViewerPostBar,hasLongWord,mdImages,type RichEditorHandle} from './kit';
+import {Actions,articlePlate,ActingAv,ActionLine,ActivityCard,ActivityItem,Alert,ArticleCard,ArticleImage,Ask,Av,BAD_CHARS,NewPill,Bar,Btn,Card,Chip,Chips,Counter,Empty,FeedEvents,Field,FilePick,Group,H,IconBtn,LoadMore,Input,LikesLine,Note,QuickStart,RichEditor,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,VideoBadge,View,ViewerPostBar,hasLongWord,mdImages,type RichEditorHandle,Who} from './kit';
 import {shakeFirstErr} from './kit/validate';
 import {refreshReads,useFe,usePartnerApproves} from './session';
 import {useNewerPosts} from './feed-newer';
@@ -777,7 +777,7 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
    // looked up the same way before publishing.
    const asked=[...new Set([...body.matchAll(/(?:^|[\s(])@([a-z0-9_.]{2,30})/gi)].map(m=>m[1]!.toLowerCase()))].filter(h=>h!==acting?.handle?.toLowerCase());
    await Promise.all(asked.filter(h=>!known.current.has(h)).slice(0,5).map(h=>call('people.search',{q:h},mentionRes).then(r=>{
-    const p=r.items.find(x=>x.handle?.toLowerCase()===h);if(p)known.current.set(h,p.kind==='person'&&p.mentionable!==false);}).catch(()=>{})));
+    const p=r.items.find(x=>x.handle?.toLowerCase()===h);if(p)known.current.set(h,p.mentionable!==false);}).catch(()=>{})));
    const unheard=asked.filter(h=>known.current.get(h)===false);
    const d=await call('post.saveDraft',{opId:ops.current.draft,...(postId?{postId}:{}),post:fields()},saved);setPostId(d.id);
    const r=await call('post.publish',{opId:ops.current.publish,postId:d.id},published);
@@ -837,11 +837,11 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
   const m=text.current?.mention();if(!m){setSug(null);return;}
   setSug({q:m.q});
   if(folks===null&&acting){setFolks([]);call('profile.followers',{profileId:acting.id,following:true},mentionRes)
-   .then(r=>setFolks(r.items.filter(p=>p.kind==='person'&&p.handle).map(p=>({id:p.id,handle:p.handle!,name:nameOf(p),avatar:null,mentionable:p.mentionable})))).catch(()=>{});}
+   .then(r=>setFolks(r.items.filter(p=>!!p.handle).map(p=>({id:p.id,handle:p.handle!,name:nameOf(p),avatar:null,mentionable:p.mentionable})))).catch(()=>{});}
  };
  useEffect(()=>{
   if(!sug||sug.q.length<2){setFound([]);return;}
-  const id=setTimeout(()=>{call('people.search',{q:sug.q},mentionRes).then(r=>setFound(r.items.filter(p=>p.kind==='person'&&p.handle).map(p=>({id:p.id,handle:p.handle!,name:nameOf(p),avatar:thumbOf(p.avatar),mentionable:p.mentionable})))).catch(()=>setFound([]));},250);
+  const id=setTimeout(()=>{call('people.search',{q:sug.q},mentionRes).then(r=>setFound(r.items.filter(p=>!!p.handle).map(p=>({id:p.id,handle:p.handle!,name:nameOf(p),avatar:thumbOf(p.avatar),mentionable:p.mentionable})))).catch(()=>setFound([]));},250);
   return ()=>clearTimeout(id);
  },[sug?.q,call]);
  const sugList=sug?[...new Map([...(folks??[]),...found].map(p=>[p.id,p])).values()]
@@ -892,7 +892,7 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
       images={note?{src:id=>media.find(m=>m.id===id)?.preview,onAdd:()=>pick('inline'),disabled:uploading||noteMedia.length>=MEDIA_MAX}:undefined}
       placeholder={note?(couple?t('fe.fd.notePhUs'):t('fe.fd.notePh')):poll?(couple?t('fe.fd.pollPhUs'):t('fe.fd.pollPh')):couple?t('fe.fd.composePhUs'):t('fe.fd.composePh')} label={t('fe.fd.text')}/>
      {sug&&sugList.length>0&&<div className="mention-sug" role="listbox" aria-label={t('fe.fd.whoMention')}>{sugList.map(p=><button key={p.id} type="button" role="option" aria-selected={false}
-      onMouseDown={e=>e.preventDefault()} onClick={()=>pickMention(p)}><Av name={p.name} seed={p.id} src={p.avatar} size="xs"/><span><b>{p.name}</b> <small>@{p.handle}{p.mentionable===false?' · '+t('fe.lo.mention.silent'):''}</small></span></button>)}</div>}
+      onMouseDown={e=>e.preventDefault()} onClick={()=>pickMention(p)}><Av name={p.name} seed={p.id} src={p.avatar} size="xs"/><span><b><Who name={p.name} nick={p.handle}/></b>{p.mentionable===false&&<small> · {t('fe.lo.mention.silent')}</small>}</span></button>)}</div>}
      </div>
      <Counter n={body.length} max={max}/>
     </Field>
@@ -1008,9 +1008,9 @@ function MentionSheet({onClose,onPick}:{onClose:()=>void,onPick:(handle:string,m
   return ()=>clearTimeout(id);},[low,call]);
  const match=(p:Mention)=>!low||p.handle.toLowerCase().startsWith(low)||p.name.toLowerCase().includes(low);
  const mine=(near??[]).filter(match) as (Mention&{kind:string})[];const known=new Set(mine.map(p=>p.id));const rest=found.filter(p=>!known.has(p.id));
- const issue=(p:Mention&{kind:string})=>p.kind==='couple'?t('fe.w3.mention.couple'):!p.handle?t('fe.w3.mention.noNick'):'';
- const row=(p:Mention&{kind:string})=>{const why=issue(p);return <Row key={p.id} noChev av={<Av name={p.name} seed={p.id} src={p.avatar} size="sm"/>} title={p.name}
-  sub={why||'@'+p.handle+(p.mentionable===false?' · '+t('fe.lo.mention.silent'):'')}
+ const issue=(p:Mention&{kind:string})=>!p.handle?t('fe.w3.mention.noNick'):'';
+ const row=(p:Mention&{kind:string})=>{const why=issue(p);return <Row key={p.id} noChev av={<Av name={p.name} seed={p.id} src={p.avatar} size="sm"/>} title={<Who name={p.name} nick={p.handle}/>}
+  sub={why||(p.mentionable===false?t('fe.lo.mention.silent'):undefined)}
   onClick={()=>{if(why){toast(why,{type:'info'});return;}onPick(p.handle,p.mentionable);}}/>;};
  return <Sheet full title={t('fe.fd.mention')} sub={t('fe.w3.mention.sub')} onClose={onClose} search={<SearchInput value={q} onChange={e=>setQ(e.target.value)} label={t('fe.w3.mention.find')}/>}>
   {near===null?<Skel kind="list"/>:<>

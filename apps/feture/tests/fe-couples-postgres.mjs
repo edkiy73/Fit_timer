@@ -188,3 +188,36 @@ test('invitations: a week of quiet after a decline, twenty a day, deleted couple
     assert.ok(x);
   } finally { await pg.close(); }
 });
+
+test('couple nick (owner 29.10.2026): suggested from the partners’ nicks, unique, changeable once in setup, then the same limits; default name follows the partners', async () => {
+  const { pg, db, call, person } = await setup();
+  try {
+    const a = await person('ua', 'Anya'), b = await person('ub', 'Max');
+    await person('uc', 'anya_max'); // the obvious nick is taken by a person
+    const inv = await call('ua', null, { action: 'couple.invite', opId: op(), handle: 'Max' });
+    const pair = (await call('ub', null, { action: 'couple.inviteAnswer', opId: op(), inviteId: inv.id, accept: true })).profileId;
+    let c = (await call('ub', pair, { action: 'couple.get' })).couple;
+    assert.deepEqual([c.handle, c.name, c.chosenName], ['anya_max2', 'Anya и Max', '']);
+    // A partner's name change shows in the couple's default name.
+    const pa = (await call('ua', a, { action: 'profile.get', profileId: a })).profile;
+    await call('ua', a, { action: 'profile.update', opId: op(), rev: pa.rev, name: 'Аня' });
+    assert.equal((await call('ub', pair, { action: 'couple.get' })).couple.name, 'Аня и Max');
+    // Setup: the nick must stay unique; a free one and a name are taken; the first change was the free one.
+    assert.equal((await call('ub', pair, { action: 'couple.setup', opId: op(), mode: 'trust', requestsFrom: 'all', handle: 'Max' })).field, 'handle');
+    assert.equal((await call('ub', pair, { action: 'couple.setup', opId: op(), mode: 'trust', requestsFrom: 'all', handle: 'two_of_us', name: 'Мы' })).status, 200);
+    c = (await call('ub', pair, { action: 'couple.get' })).couple;
+    assert.deepEqual([c.handle, c.name], ['two_of_us', 'Мы']);
+    const own = (await call('ua', pair, { action: 'profile.get', profileId: pair })).profile;
+    assert.deepEqual([own.handle, own.nickFirst, typeof own.nickAt], ['two_of_us', false, 'string']);
+    const again = await call('ua', pair, { action: 'profile.update', opId: op(), rev: own.rev, handle: 'us_again' });
+    assert.deepEqual([again.status, again.rule], [422, 'handle_change_cooldown']);
+    // Cleared name: «Имя и Имя» again; the nick is a person's and a couple's alike (unique across both).
+    assert.equal((await call('ua', pair, { action: 'profile.update', opId: op(), rev: own.rev, name: '' })).status, 200);
+    assert.equal((await call('ub', pair, { action: 'couple.get' })).couple.name, 'Аня и Max');
+    assert.equal((await call('uc', null, { action: 'nick.check', handle: 'two_of_us' })).available, false);
+    // A couple always has a nick.
+    const [{ n }] = await db.query(`select count(*)::int n from feture.profile where kind = 'couple' and state <> 'deleted' and handle is null`);
+    assert.equal(n, 0);
+    assert.ok(b);
+  } finally { await pg.close(); }
+});

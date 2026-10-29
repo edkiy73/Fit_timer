@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Newspaper,BookOpen,ChevronLeft,ChevronRight,CircleCheck,Ellipsis,History,Pencil,Plus,Search as SearchIcon,SlidersHorizontal,User,UserMinus,Users,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {ActingAv,Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,H,IconBtn,LoadMore,Note,Pill,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Stack,View,plate} from './kit';
+import {ActingAv,Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,H,IconBtn,LoadMore,Note,Pill,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Stack,View,plate,Who,nickShown} from './kit';
 import {useFe,useKeyChange} from './session';
 import {PostCard,postSchema,type Post} from './feed';
 import {InterestSheet,Jars,useInterests} from './interests';
@@ -195,8 +195,8 @@ export function SearchScreen(){
   if(k==='people')return <Card list>{(list as Person[]).map(p=><Row key={p.id} onClick={()=>{commit();navigate('/n/people/'+p.id);}}
    av={<ActingAv size="" p={{id:p.id,kind:p.kind,name:nameOf(p),avatar:mediaSrc(p.avatar)}}/>}
    // A couple: its two names already say who; both ages go to the line under it («34 и 31»), never «, 34 · 31» in the title.
-   title={nameOf(p)+(p.kind==='person'&&p.ages.length?', '+p.ages[0]:'')}
-   sub={[p.kind==='couple'&&p.ages.length?p.ages.join(t('fe.br.and')):p.handle?'@'+p.handle:null,p.city?(locale==='en'?p.city.en:p.city.ru):null].filter(Boolean).join(' · ')}/>)}</Card>;
+   title={<Who name={nameOf(p)} nick={p.handle} age={p.kind==='person'?p.ages[0]:undefined}/>}
+   sub={[p.kind==='couple'&&p.ages.length?p.ages.join(t('fe.br.and')):null,p.city?(locale==='en'?p.city.en:p.city.ru):null].filter(Boolean).join(' · ')||undefined}/>)}</Card>;
   if(k==='posts')return <PostList items={list as Post[]} setItems={f=>setRes(r=>r&&{...r,posts:f(r.posts)})}/>;
   if(k==='communities')return <>{(list as Comm[]).map(c=><CommunityCard key={c.id} c={c} tname={tname}/>)}</>;
   if(k==='events')return <Stack gap={2}>{(list as Ev[]).map(e=><EventRow key={e.id} e={e}/>)}</Stack>;
@@ -303,14 +303,14 @@ export function FollowsScreen(){
     :!list.length?<Empty icon={Users} title={tab==='following'?t('fe.br.noFollowing'):t('fe.br.noFollowers')}/>
     :<Card list>{list.map(k=>{const self=own.has(k.id);const fol=myFollows.has(k.id);
      return <Row key={k.id} className="frow" onClick={()=>navigate(self?'/n/me':'/n/people/'+k.id)} av={<Av name={nameOf(k)} seed={k.id} src={k.avatar}/>}
-      title={<><span className="fnm">{nameOf(k)}</span><NameBadges p={k}/></>} sub={k.handle?'@'+k.handle:''}
+      title={<Who name={nameOf(k)} nick={k.handle}><NameBadges p={k}/></Who>}
       end={self?<Note>{k.id===acting?.id?(asUs?t('fe.br.youUs'):t('fe.br.you')):k.kind==='person'?t('fe.br.yourOwn'):t('fe.br.yourCouple')}</Note>
        :<><FollowButton size="sm" profileId={k.id} name={nameOf(k)} on={fol} back={mine&&tab==='followers'} disabled={busy===k.id}
          onChange={on=>{setMyFollows(s=>{const n=new Set(s);if(on)n.add(k.id);else n.delete(k.id);return n;});if(mine)load();}}/>
         {mine&&tab==='followers'&&<IconBtn icon={Ellipsis} kind="ghost" size="sm" aria-haspopup="dialog" label={t('fe.w7.flw.menu').replace('{name}',nameOf(k))} disabled={busy===k.id} onClick={()=>setMenu(k)}/>}</>}/>;})}</Card>}
    {lists&&list&&list.length>=FOLLOW_PAGE&&<Note>{t('fe.br.firstN',{n:FOLLOW_PAGE})}</Note>}
   </View>
-  {menu&&<Sheet title={nameOf(menu)} sub={menu.handle?'@'+menu.handle:undefined} onClose={()=>setMenu(null)}><Card list>
+  {menu&&<Sheet title={nameOf(menu)} sub={nickShown(menu.handle,menu.name)??undefined} onClose={()=>setMenu(null)}><Card list>
    <Row icon={User} title={t('fe.w7.flw.profile')} onClick={()=>{const k=menu;setMenu(null);navigate('/n/people/'+k.id);}}/>
    <Row icon={UserMinus} danger title={t('fe.w7.flw.remove')} sub={t('fe.w7.flw.removeSub')} onClick={()=>void removeFollower(menu)}/>
   </Card></Sheet>}

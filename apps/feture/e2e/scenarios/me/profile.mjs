@@ -10,15 +10,17 @@ export default [
    try { await t.page.reload();
    await t.see('.me18-seg'); await t.see('#mePh');
    await t.tap('button[aria-label="Как видят"]'); await t.wait(800); expect(t.page.url().includes('/n/me/preview'), 'eye → preview: ' + t.page.url());
-   await t.go('/n/me'); await t.tap('.me18-h button[aria-label^="Настройки"]'); await t.wait(800); expect(t.page.url().includes('/n/settings'), 'settings: ' + t.page.url());
+   await t.go('/n/me'); await t.tap('header.bar button[aria-label^="Настройки"]'); await t.wait(800); expect(t.page.url().includes('/n/settings'), 'settings: ' + t.page.url());
    await t.go('/n/me'); await t.see('.me-todo'); await t.tap('.me-todo'); await t.wait(800); expect(t.page.url().includes('/n/inbox'), 'todo → inbox: ' + t.page.url());
-   await t.go('/n/me'); await t.see('#mePh'); await t.page.locator('.me18-h .ibtn').first().click(); await t.wait(800); expect(t.page.url().includes('/n/inbox'), 'bell → inbox: ' + t.page.url());
+   await t.go('/n/me'); await t.see('#mePh'); await t.page.locator('header.bar .ibtn').first().click(); await t.wait(800); expect(t.page.url().includes('/n/inbox'), 'bell → inbox: ' + t.page.url());
    } finally {
      await cancelAsk(t, a);
    }
  } },
  { name: 'X01 tabs switch, keep ?layer, and a ?layer link while «Я» is open', persona: 'full', route: '/n/me', run: async t => {
    for (const [tab, layer, sel] of [['Приватное', 'priv', '#privHead'], ['Видимость', 'vis', 'select[aria-label="Режим"]'], ['Моё', 'mine', '.li:has-text("Сохранённое")'], ['Профиль', null, '#mePh']]) {
+     // The header floats over the content like on every tab (owner 29.10.2026): back to the top before the next tab.
+     await t.page.evaluate(() => document.querySelector('.main>.view')?.scrollTo(0, 0)); await t.wait(200);
      await t.tap(`.me18-seg button:has-text("${tab}")`); await t.see(sel);
      expect(layer ? t.page.url().includes('layer=' + layer) : !t.page.url().includes('layer='), 'url for ' + tab + ': ' + t.page.url());
    }
@@ -42,16 +44,17 @@ export default [
      const r = await t.api('profile.update', { opId: t.uuid7(), rev: p.rev, bio: '', showAge: true, cityId: null }); expect(r.ok, 'restore ' + JSON.stringify(r));
    }
  } },
- { name: 'P02 basics: empty name is refused in plain words', persona: 'full', route: '/n/me/edit?only=basics', allow4xx: true, run: async t => {
-   await t.see('.field'); await t.fill('.field:has-text("Имя") input', '');
-   await t.tap('.ctabar button:has-text("Сохранить")'); await t.wait(2000);
-   if (!t.page.url().includes('/edit')) throw new Error('empty name was accepted');
-   // Kit validation layer: the error shows under the field (before #validation it came back from the server as an alert).
-   const err = await t.page.locator('.field.err .ferr, .alert.err').first().textContent({ timeout: 10000 });
+ { name: 'P02 name and nick (owner 29.10.2026): «Как тебя называть» is optional with its hint, a bad name is refused in plain words, the nick says when it may change', persona: 'full', route: '/n/me/edit?only=basics', allow4xx: true, run: async t => {
+   await t.see('[data-field="name"]'); await t.see('Можно не настоящее'); await t.see('[data-field="handle"] .fhint');
+   // Nothing is saved here: name and nick changes are limited (2 weeks / 6 months), so the scenario never spends them.
+   await t.fill('[data-field="name"] input', '<b>Аня</b>');
+   await t.tap('.ctabar button:has-text("Сохранить")'); await t.wait(1500);
+   if (!t.page.url().includes('/edit')) throw new Error('a name with markup was accepted');
+   const err = await t.page.locator('[data-field="name"] .ferr, .alert.err').first().textContent({ timeout: 10000 });
    expect(!/invalid_input|undefined|\berror\b/i.test(err), 'plain words: ' + err);
  } },
  { name: 'P02 nickname: bad format refused', persona: 'full', route: '/n/me/edit?only=basics', allow4xx: true, run: async t => {
-   await t.fill('.field:has-text("Ник") input', 'a!'); await t.tap('.ctabar button:has-text("Сохранить")'); await t.wait(1500);
+   await t.fill('[data-field="handle"] input', 'a!'); await t.tap('.ctabar button:has-text("Сохранить")'); await t.wait(1500);
    await t.see('[data-field="handle"] .ferr, .alert.err'); expect(t.page.url().includes('/edit'), 'stays on editor'); // checked in place since #1374
  } },
  { name: 'P02 details: role chip → Сохранить → persisted', persona: 'full', route: '/n/me', run: async t => {

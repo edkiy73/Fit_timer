@@ -1,0 +1,31 @@
+// Name and @nick (owner 29.10.2026): an optional name, a unique nick, change limits.
+export const ru = {
+  'fe.nn.name': 'Как тебя называть',
+  'fe.nn.nameUs': 'Как вас называть',
+  'fe.nn.nameHint': 'Можно не настоящее. Без имени покажем ник.',
+  'fe.nn.nameHintUs': 'Можно не настоящее. Без имени покажем ваши имена.',
+  'fe.nn.nameAt': 'Имя можно сменить {date}.',
+  'fe.nn.nick': 'Ник',
+  'fe.nn.namePh': 'Например, Аня',
+  'fe.nn.nickUs': 'Ник пары',
+  'fe.nn.nickFirst': 'Сменить ник можно сейчас, дальше — раз в полгода.',
+  'fe.nn.nickEvery': 'Ник меняется раз в полгода.',
+  'fe.nn.nickAt': 'Ник можно сменить {date}.',
+  'fe.nn.nickUsHint': 'По нику вас найдут и отметят. Сменить можно сейчас, дальше — раз в полгода.',
+  'fe.nn.group': 'Ник и имя',
+};
+export const en = {
+  'fe.nn.name': 'What should we call you',
+  'fe.nn.nameUs': 'What should we call you two',
+  'fe.nn.nameHint': 'Doesn’t have to be your real name. Without one we show your nickname.',
+  'fe.nn.nameHintUs': 'Doesn’t have to be real. Without one we show both your names.',
+  'fe.nn.nameAt': 'You can change the name on {date}.',
+  'fe.nn.nick': 'Nickname',
+  'fe.nn.namePh': 'For example, Anna',
+  'fe.nn.nickUs': 'Couple’s nickname',
+  'fe.nn.nickFirst': 'You can change it now, then once every six months.',
+  'fe.nn.nickEvery': 'The nickname changes once every six months.',
+  'fe.nn.nickAt': 'You can change the nickname on {date}.',
+  'fe.nn.nickUsHint': 'People find and tag you by it. Change it now, then once every six months.',
+  'fe.nn.group': 'Nickname and name',
+};

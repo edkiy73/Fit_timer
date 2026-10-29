@@ -245,11 +245,11 @@ test('mentions: people.search and follower lists say who takes a mention from th
     assert.deepEqual(Object.fromEntries(following.map((/** @type {any} */ x) => [x.handle, x.mentionable])), { mira_all: true, mira_none: false });
     const followers = (await call('ua', a, { action: 'profile.followers', profileId: a })).items;
     assert.deepEqual(followers.map((/** @type {any} */ x) => [x.handle, x.mentionable]), [['mira_follow', true]]);
-    // A couple is never mentionable.
+    // Owner 29.10.2026: a couple has a nick for tagging, so it takes mentions by the same rule.
     const cp = await coupleOf([b, c]);
     await db.query(`update feture.profile set handle = 'mira_pair', state = 'active' where id = $1`, [cp]);
-    const pair = (await call('ua', a, { action: 'people.search', q: 'mira_pair' })).items[0];
-    if (pair) assert.equal(pair.mentionable, false);
+    const pair = (await call('ua', a, { action: 'people.search', q: 'mira_pair' })).items.find((/** @type {any} */ x) => x.id === cp);
+    assert.equal(pair?.mentionable, true);
   } finally { await pg.close(); }
 });
 

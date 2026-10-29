@@ -2,7 +2,7 @@
 /** Slice C «Я» commands of `POST /api/fe` (docs/server/S2-CATALOG.md «C»). Shared by server and client. */
 import * as z from 'zod';
 import { id, opId } from './platform.mjs';
-import { field } from './_text.mjs';
+import { field, fieldOrEmpty } from './_text.mjs';
 import { ABOUT, ABOUT_FACTS } from './_about.mjs';
 
 export { ABOUT, ABOUT_FACTS };
@@ -17,7 +17,6 @@ const birthDate = z.iso.date();
 const detailsVis = z.enum(['only', 'granted', 'all']);
 const discoverMode = z.enum(['visible', 'hidden', 'off']);
 
-const aboutVisValue = z.enum(['only', 'granted', 'all']);
 const aboutInput = {
   height: z.int().min(ABOUT.height.min).max(ABOUT.height.max).nullable().optional(),
   smoking: z.enum(ABOUT.smoking).nullable().optional(),
@@ -25,7 +24,6 @@ const aboutInput = {
   kids: z.enum(ABOUT.kids).nullable().optional(),
   langs: z.array(z.enum(ABOUT.langs)).max(ABOUT.langsMax).refine(v => new Set(v).size === v.length, { message: 'duplicates' }).optional(),
   zodiac: z.enum(ABOUT.zodiac).nullable().optional(),
-  aboutVis: z.strictObject(Object.fromEntries(ABOUT_FACTS.map(k => [k, aboutVisValue.optional()]))).optional(),
 };
 
 export const PROFILE_SETTINGS = /** @type {const} */ ({
@@ -85,6 +83,8 @@ export const meCommands = {
       locale: z.enum(['ru', 'en']),
       documents: z.array(z.strictObject({ id, contentHash: z.string().regex(/^[a-f0-9]{64}$/) })).max(20),
       newsOptIn: z.boolean(),
+      // «Как тебя называть» (optional, any name; empty — the nick is shown).
+      name: field('profileName').optional(),
     }),
   },
   'onboarding.complete': {
@@ -104,7 +104,8 @@ export const meCommands = {
       opId,
       rev: z.int().positive(),
       handle: handle.optional(),
-      name: field('profileName').optional(),
+      // Empty clears the chosen name: the nick (a couple: the partners' names) is shown instead.
+      name: fieldOrEmpty('profileName').optional(),
       bio: field('bio').optional(),
       cityId: id.nullable().optional(),
       showAge: z.boolean().optional(),

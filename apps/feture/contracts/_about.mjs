@@ -10,5 +10,5 @@ export const ABOUT = Object.freeze({
   langs: /** @type {const} */ (['ru', 'en', 'de', 'fr', 'es', 'it', 'pt', 'uk', 'be', 'kk', 'pl', 'cs', 'nl', 'sv', 'fi', 'el', 'tr', 'he', 'ar', 'ka', 'hy', 'zh', 'ja', 'ko']),
   langsMax: 6,
 });
-/** The facts in display order; `aboutVis` keys are these. */
+/** The facts in display order (always visible to everyone, owner 29.10.2026). */
 export const ABOUT_FACTS = /** @type {const} */ (['height', 'smoking', 'alcohol', 'kids', 'langs', 'zodiac']);

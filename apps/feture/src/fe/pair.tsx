@@ -6,12 +6,14 @@ import {AtSign,Check,Copy,EyeOff,Heart,Link as LinkIcon,Lock,ShieldCheck,Users,X
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicBase} from '../api-url';
 import {copyLink} from './share';
-import {Actions,Alert,Av,Bar,Btn,Card,Field,Group,H,Input,Note,PersonLine,Pill,RadioList,RequestCard,Row,SelectRow,Sheet,Skel,Stack,View} from './kit';
+import {Actions,Alert,Av,Bar,Btn,Card,Field,Group,H,Input,Note,PersonLine,Pill,RadioList,RequestCard,Row,SelectRow,Sheet,Skel,Stack,View,Who} from './kit';
 import {useFe} from './session';
 import {Ask} from './me';
 import {useToast} from './toast';
 import {when} from './feed';
 import {CoupleWork} from './couple';
+import {NICK as REG_NICK} from './register';
+import {shakeFirstErr,useChecks} from './kit/validate';
 import {PAIR_TOKEN as TOKEN,dropPairLink as dropLink,pendingPairLink} from './pair-link';
 
 /** Slice E (V21 Q01, Q06, Q07, Q09): a couple starts by an invitation to an exact nickname, or by a single-use link for
@@ -21,7 +23,7 @@ import {PAIR_TOKEN as TOKEN,dropPairLink as dropLink,pendingPairLink} from './pa
 const who=z.object({id:z.uuid(),handle:z.string().nullable(),name:z.string().nullable()}).nullable();
 const invitesRes=z.object({ok:z.literal(true),outgoing:z.array(z.object({id:z.uuid(),state:z.string(),created_at:z.string(),profile:who})),incoming:z.array(z.object({id:z.uuid(),created_at:z.string(),profile:who})),
  link:z.object({id:z.uuid(),createdAt:z.string(),expiresAt:z.string()}).nullable().optional()});
-const coupleRes=z.object({ok:z.literal(true),couple:z.object({id:z.uuid(),name:z.string().nullable(),state:z.string(),since:z.string(),restoreUntil:z.string().nullable(),
+const coupleRes=z.object({ok:z.literal(true),couple:z.object({id:z.uuid(),handle:z.string().nullable().optional(),name:z.string().nullable(),chosenName:z.string().optional(),state:z.string(),since:z.string(),restoreUntil:z.string().nullable(),
  members:z.array(z.object({me:z.boolean(),profileId:z.uuid(),handle:z.string().nullable(),name:z.string().nullable(),approvesPartner:z.boolean(),restoreAgreed:z.boolean()}))})});
 const ok=z.object({ok:z.literal(true)}).passthrough();
 const settingsRes=z.object({ok:z.literal(true),settings:z.object({discoverMode:z.string(),requestsFrom:z.enum(['all','matches','none']).optional()}).passthrough()});
@@ -164,7 +166,7 @@ export function PairScreen(){
     {out?<Btn kind="soft" disabled={busy} onClick={()=>act(()=>call('couple.inviteWithdraw',{opId:newOpId(),inviteId:out.id},ok,{asAccount:true}))}>{t('fe.pair.withdraw')}</Btn>
      :<Card form>
       <Field id="fe-pair-nick" label={t('fe.pair.partnerNick')} hint={t('fe.pair.nickHint')}><div className="inwrap"><AtSign/><Input id="fe-pair-nick" value={nick} onChange={e=>setNick(e.target.value.replace(/^@/,''))} placeholder="nickname" autoCapitalize="off" spellCheck={false} maxLength={20}/></div></Field>
-      {lookup.hit?<Row av={<Av name={nameOf(lookup.hit)} seed={lookup.hit.id} src={thumb(lookup.hit)} size="sm"/>} title={nameOf(lookup.hit)} sub={'@'+lookup.hit.handle} end={<Pill tone="ok" icon={Check}>{t('fe.pq.found')}</Pill>}/>
+      {lookup.hit?<Row av={<Av name={nameOf(lookup.hit)} seed={lookup.hit.id} src={thumb(lookup.hit)} size="sm"/>} title={<Who name={nameOf(lookup.hit)} nick={lookup.hit.handle}/>} end={<Pill tone="ok" icon={Check}>{t('fe.pq.found')}</Pill>}/>
        :lookup.issue?<Note>{t('fe.pq.issue.'+lookup.issue)}</Note>:null}
       <Btn disabled={busy||!lookup.hit} onClick={()=>act(async()=>{await call('couple.invite',{opId:op.current,handle:nick.trim(),...(couple&&fresh?{replacePaused:true}:{})},ok,{asAccount:true});op.current=newOpId();setNick('');if(couple&&fresh)reload();})}>{t('fe.pair.invite')}</Btn>
      </Card>}
@@ -227,24 +229,37 @@ function LinkLanding({token,me,auto,onClose,onAccepted}:{token:string,auto:boole
  </>;
 }
 
-/** V21 Q09 right after the couple forms: my approval mode and who may ask for access, saved in one call → Q01. */
+/** V21 Q09 right after the couple forms: the couple's nick (suggested from both nicks, owner 29.10.2026) and optional
+ * name, my approval mode and who may ask for access, saved in one call → Q01. */
 function SetupView({c,coupleId,onDone}:{c:Couple,coupleId:string,onDone:()=>void}){
  const {call}=useFe();const {t}=useI18n();const toast=useToast();
+ const [nick,setNick]=useState(c.handle??'');const [cname,setCname]=useState(c.chosenName??'');const [nickErr,setNickErr]=useState('');
+ const checks=useChecks(cname.trim()?{name:'profileName' as const}:{},{name:cname});
  const me=c.members.find(m=>m.me);const other=c.members.find(m=>!m.me);
  const [mode,setMode]=useState<'trust'|'approve'>(me?.approvesPartner?'approve':'trust');
  const [req,setReq]=useState<'all'|'matches'|'none'>('all');
  const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const op=useRef(newOpId());
  useEffect(()=>{call('profile.settings',{},settingsRes,{profileId:coupleId}).then(r=>setReq(r.settings.requestsFrom??'all')).catch(()=>{});},[call,coupleId]);
  const done=async()=>{setBusy(true);setFailure('');
-  try{const r=await call('couple.setup',{opId:op.current,mode,requestsFrom:req},ok,{profileId:coupleId});
+  const h=nick.trim().replace(/^@/,'');
+  if(h!==c.handle&&(!REG_NICK.test(h)||/\.\./.test(h)||!/[A-Za-z]/.test(h))){setNickErr(t('fe.reg.nick.format'));setBusy(false);setTimeout(shakeFirstErr);return;}
+  if(!checks.submit()){setBusy(false);return;}
+  try{const r=await call('couple.setup',{opId:op.current,mode,requestsFrom:req,...(h!==c.handle?{handle:h}:{}),...(cname.trim()!==(c.chosenName??'')?{name:cname.trim()}:{})},ok,{profileId:coupleId});
    toast(r.pending?t('fe.c6.q9.pending'):t('fe.c6.q9.saved'),{type:'ok'});onDone();}
-  catch(e){setFailure(feErrorMessage(e,t));op.current=newOpId();}finally{setBusy(false);}};
+  catch(e){if(e instanceof FeError&&e.fields?.includes('handle')){setNickErr(t('fe.reg.nick.taken'));setTimeout(shakeFirstErr);}else if(!checks.fromServer(e))setFailure(feErrorMessage(e,t));op.current=newOpId();}finally{setBusy(false);}};
+ const partners=`${nameOf(me)} ${t('fe.pair.and')} ${nameOf(other)}`;
  return <>
   <Bar title={t('fe.c6.q9.title')} back="/n/me/pair"/>
   <View className="nodock">
    <Scene me={{name:nameOf(me),id:me?.profileId}} other={{name:nameOf(other),id:other?.profileId}} state="on"/>
    <H level={2} className="t center">{t('fe.c6.q9.head')}</H>
    <p className="lead center">{t('fe.c6.q9.lead')}</p>
+   <Group title={t('fe.nn.group')}><Card form>
+    <Field id="fe-cp-nick" name="handle" label={t('fe.nn.nick')} hint={t('fe.nn.nickUsHint')} error={nickErr||undefined}>
+     <div className="inwrap"><AtSign/><Input id="fe-cp-nick" value={nick} maxLength={20} autoCapitalize="off" spellCheck={false} invalid={!!nickErr} onChange={e=>{setNick(e.target.value.replace(/^@/,''));setNickErr('');}}/></div></Field>
+    <Field id="fe-cp-name" name="name" label={t('fe.nn.nameUs')} optional={t('fe.reg.optional')} hint={t('fe.nn.nameHintUs')} error={checks.error('name')}>
+     <Input id="fe-cp-name" value={cname} placeholder={partners} {...checks.input('name')} onChange={e=>setCname(e.target.value)}/>{checks.counter('name')}</Field>
+   </Card></Group>
    <Group title={t('fe.c6.q9.rules')} foot={t('fe.c6.q9.foot')}><Card list>
     <SelectRow icon={Check} label={t('fe.c6.trust.title')} sub={mode==='approve'?t('fe.c6.q9.modeOn'):t('fe.c6.q9.modeOff')} value={mode} onChange={setMode}
      options={[['approve',t('fe.c6.q9.need')],['trust',t('fe.c6.q9.noNeed')]] as const}/>
