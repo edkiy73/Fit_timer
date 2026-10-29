@@ -212,6 +212,8 @@ button.pill{cursor:pointer}
 .v21 .k-trim-prev.crop>video{inset:auto;left:var(--vx,0);top:var(--vy,0);width:var(--vw,100%);height:var(--vh,100%);object-fit:fill}
 .v21 .k-trim-prev.crop:not([style*="--vw"])>video{object-fit:cover;inset:0;width:100%;height:100%}
 .v21 .k-video>video::-internal-media-controls-download-button{display:none}
+/* The clip shows only once it has a frame; until then the poster picture (or the dark film) is all there is. */
+.v21 .k-video:not(.rdy)>video{opacity:0}
 .v21 .k-vnone{position:absolute;inset:0;background:var(--cam-bg)}
 .v21 .k-vplay{position:absolute;left:50%;top:50%;z-index:1;width:var(--h-xl);height:var(--h-xl);margin:calc(var(--h-xl) / -2) 0 0 calc(var(--h-xl) / -2);border-radius:50%;
  display:grid;place-items:center;background:color-mix(in srgb,var(--cam-bg) 55%,transparent);color:var(--cam-ink);backdrop-filter:blur(6px);transition:opacity var(--d-fast)}
@@ -307,10 +309,8 @@ button.pill{cursor:pointer}
 
 /* Profile header photo (owner 28.10.2026): no fade of the page top over it, a dark scrim in both themes so the story
    bars, ‹ and ⋯ read on any photo, and «2 / 6» under the bars.
-   Status bar (owner 29.10.2026, Android): every screen's view — full-bleed heroes too (profile, couple, community and
-   event covers) — keeps the phone's status-bar strip (--safe-t, 0 on the web) clear with a hard edge, so the clock and
-   icons sit on the page colour and stay readable; the floating ‹ / ⋯ sit below it (`.bar.overlay` padding). */
-.v21 .main>.view{-webkit-mask-image:linear-gradient(to bottom,transparent var(--safe-t),#000 var(--safe-t));mask-image:linear-gradient(to bottom,transparent var(--safe-t),#000 var(--safe-t))}
+   Status bar (owner 29.10.2026): no fill and no clip at the top — a screen scrolls under the system bar like in any app; only the
+   floating ‹ / ⋯ and bars sit below it (`.bar.overlay` padding, --safe-t). */
 .v21 .hero:has(>.pc-bars,>img)::after{content:"";position:absolute;left:0;right:0;top:0;z-index:2;height:calc(var(--s-9) * 2 + var(--safe-t));background:linear-gradient(rgba(6,4,6,.62),rgba(6,4,6,.28) 55%,transparent);pointer-events:none}
 .v21 .pc-bars.counted{flex-wrap:wrap;row-gap:var(--s-2)}
 .v21 .pc-bars>.pc-count{margin-left:auto;display:inline-flex;align-items:center;gap:var(--s-1);padding:var(--s-0) var(--s-2);border-radius:var(--r-full);background:rgba(6,4,6,.55);color:#fff;font:var(--t-xs);font-weight:700;font-variant-numeric:tabular-nums}

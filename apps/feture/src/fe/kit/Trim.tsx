@@ -2,6 +2,7 @@ import {useEffect,useRef,useState,type CSSProperties,type KeyboardEvent as RKeyb
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Pause,Play} from 'lucide-react';
 import {Btn,Note,Sheet} from './index';
+import {NO_POSTER} from './av';
 import {ASPECTS,TRIM_MIN_MS,VIDEO_MAX_MS,clipBox,filmstrip,fmtDurFine,type ClipCrop} from './media';
 
 const FRAMES=8;
@@ -56,7 +57,7 @@ export function TrimSheet({file,durationMs,initial,crop,onApply,onClose}:{file:F
    <Btn onClick={()=>onApply(a<=0&&b>=D?null:{startMs:a,endMs:b})}>{t('fe.kit.trim.apply')}</Btn></div>}>
   <div className="k-trim">
    <div className={'k-video k-trim-prev'+(crop?' crop':'')+(playing?' playing on':' on')} style={prev} onClick={toggle}>
-    {src&&<video ref={v} src={src} muted playsInline preload="auto" disablePictureInPicture
+    {src&&<video ref={v} src={src} poster={NO_POSTER} muted playsInline preload="auto" disablePictureInPicture
      onLoadedMetadata={e=>{const el=e.currentTarget;if(el.videoWidth)setNat(el.videoWidth/el.videoHeight);el.currentTime=a/1000;}}
      onPlay={()=>setPlaying(true)} onPause={()=>setPlaying(false)}/>}
     <button type="button" className="k-vplay" aria-label={playing?t('fe.kit.av.pause'):t('fe.kit.av.play')} onClick={e=>{e.stopPropagation();toggle();}}>{playing?<Pause/>:<Play/>}</button>
