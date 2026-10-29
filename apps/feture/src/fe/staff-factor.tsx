@@ -3,7 +3,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {UserX} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Ask,Btn,Card,Field,Group,H,Input,Note,Sheet,Stack} from './kit';
+import {Alert,Ask,Btn,Field,Form,Group,H,Input,Note,Sheet,Stack} from './kit';
 import {CodeForm,FactorEnrol,checkRes,startRes} from './factor';
 import {setFactorPrompt,useFe} from './session';
 import {useToast} from './toast';
@@ -63,11 +63,11 @@ export function FactorReset(){
    toast(t(r.reset?'fe.sf.resetDone':'fe.sf.resetNone',{nick:clean}),{type:r.reset?'ok':'info'});setNick('');}
   catch(e){setErr(feErrorMessage(e,t));}finally{setBusy(false);}};
  return <Group title={t('fe.sf.resetTitle')} foot={t('fe.sf.resetLead')}>
-  <Card><Stack gap={3}>
+  <Form>
    <Field id="fe-sf-reset" label={t('fe.sf.resetNick')}><Input id="fe-sf-reset" value={nick} placeholder="@nick" autoCapitalize="off" autoComplete="off" spellCheck={false} onChange={e=>setNick(e.target.value)}/></Field>
-   {err&&<Alert kind="err">{err}</Alert>}
    <Btn kind="soft" icon={UserX} busy={busy} disabled={busy||clean.length<2} onClick={()=>{setErr('');setAsk(true);}}>{t('fe.sf.resetBtn')}</Btn>
-  </Stack></Card>
+   {err&&<Alert kind="err">{err}</Alert>}
+  </Form>
   {ask&&<Ask icon={UserX} title={t('fe.sf.resetAsk',{nick:clean})} ok={t('fe.sf.resetBtn')} danger onOk={()=>void reset()} onCancel={()=>setAsk(false)}/>}
  </Group>;
 }

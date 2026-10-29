@@ -169,6 +169,10 @@ export function Chips({children,scroll,className,label,role}:{children:ReactNode
  return <div className={['chips',scroll?'scroll':'',className].filter(Boolean).join(' ')} role={role??(label?'group':undefined)} aria-label={label}>{children}</div>;
 }
 
+/** One even column of form blocks (fields, a notice, the main button), 16 apart whatever each holds (owner, rule 10); the
+ * last block is the primary button. Screens never space a form with their own wrappers or margins. */
+export function Form({children}:{children:ReactNode}){return <div className="k-form">{children}</div>;}
+
 /** `.alert` — a notice in the flow: ok, err (announced), warn, info. */
 const ALERT_ICON:Record<'ok'|'err'|'warn'|'info'|'plain',LucideIcon>={ok:CircleCheck,err:CircleAlert,warn:TriangleAlert,info:Info,plain:Info};
 export const Alert=forwardRef<HTMLDivElement,{kind?:'ok'|'err'|'warn'|'info'|'plain',children:ReactNode,icon?:LucideIcon,noIcon?:boolean,className?:string,

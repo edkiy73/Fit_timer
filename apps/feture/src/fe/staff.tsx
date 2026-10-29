@@ -2,9 +2,9 @@ import {useCallback,useEffect,useId,useRef,useState,type ReactNode} from 'react'
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {BadgeCheck,Ban,Check,ChevronRight,Eye,Gavel,IdCard,Image,ImageOff,Inbox,Lock,RefreshCw,ShieldAlert,ShieldCheck,X} from 'lucide-react';
+import {BadgeCheck,Ban,Check,Eye,Gavel,IdCard,ImageOff,Inbox,ListFilter,Lock,Minus,RefreshCw,Search,ShieldAlert,ShieldCheck,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Btn,Card,ChoiceChips,Chips,Empty,Field,Group,IconBtn,Input,KeyValues,LoadMore,MoreInfo,Note,Pill,ReviewCard,ReviewMedia,ReviewPair,Row,SectionLabel,Seg,Select,Sheet,Skel,Stack,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble} from './kit';
+import {Actions,Alert,Btn,Card,ChoiceChips,Chips,Divider,Empty,ExpandRow,Field,Form,Group,IconBtn,Input,KeyValues,LoadMore,MoreInfo,Note,Pill,ReviewCard,ReviewMedia,ReviewPair,Row,SectionLabel,Seg,Select,Sheet,Skel,Stack,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble} from './kit';
 import {askFactor,useFe} from './session';
 import {FactorPromptHost,FactorReset,StaffEnrol,StaffUnlock,factorSchema,type Factor} from './staff-factor';
 import {StaffSupport} from './support';
@@ -110,7 +110,7 @@ export function StaffScreen(){
  const [section,setSection]=useState<Section>('queues');
  return <>
   <SubBar title={t('fe.staff.title')} sub={t('fe.staff.sub')} onBack={()=>navigate('/n/me')}/>
-  <View className="st nodock">
+  <View className="nodock">
    {roles===null||(!checked&&!!roles.length)?<Skel kind="list"/>
     :!roles.length?<Empty icon={Lock} title={t('fe.staff.unavailable')} text={t('fe.staff.unavailableText')}/>
     // Second factor first (server/commands/staff.mjs): connect the app, then a code in this sign-in.
@@ -118,7 +118,7 @@ export function StaffScreen(){
     :factor&&!factor.verified?<StaffUnlock factor={factor} onDone={reload}/>
     :<>
      <FactorPromptHost onEnrol={reload}/>
-     <Note className="mb12">{t('fe.staff.roles')}: {roles.map(r=>t('fe.staff.role.'+r)).join(', ')}</Note>
+     <Note>{t('fe.staff.roles')}: {roles.map(r=>t('fe.staff.role.'+r)).join(', ')}</Note>
      {SECTIONS.filter(id=>can(roles,SECTION_ROLES[id])).length>1&&<Seg small={false} value={section} onChange={setSection} options={SECTIONS.filter(id=>can(roles,SECTION_ROLES[id])).map(id=>({id,label:id==='support'?t('fe.w8.staff.support'):id==='maintenance'?t('fe.w8.staff.maint'):t('fe.staff.section.'+id)}))}/>}
      {(()=>{const ok=SECTIONS.filter(id=>can(roles,SECTION_ROLES[id]));const cur=ok.includes(section)?section:ok[0];
       return cur==='queues'?<Queues/>:cur==='support'?<StaffSupport/>:cur==='premium'?<Premium/>:cur==='maintenance'?<StaffMaintenance/>:cur==='journal'?<Journal/>:cur==='access'?<FactorReset/>:null;})()}
@@ -184,7 +184,8 @@ function Queues(){
  if(!data)return <Skel kind="list"/>;
  const avail=QUEUE_IDS.filter(id=>data[id]);
  if(!avail.length||!tab)return <Empty icon={Inbox} title={t('fe.staff.noQueues')}/>;
- const count=(id:QueueId)=>{const v=data[id];return v&&'items' in v?(v.items.length>=LIMIT||v.next?v.items.length+'+':String(v.items.length)):'!';};
+ const failed=(id:QueueId)=>{const v=data[id];return !!v&&'error' in v;};
+ const count=(id:QueueId)=>{const v=data[id];return v&&'items' in v?(v.items.length>=LIMIT||v.next?v.items.length+'+':v.items.length):undefined;};
  // Every queue pages: the next page starts after the cursor of the last item shown, appended without repeats.
  const loadMore=()=>{
   if(!tab)return;const id=tab;const v=data[id];
@@ -202,27 +203,28 @@ function Queues(){
    const keyOf=QUEUES[id].key as (x:unknown)=>string;return {...d,[id]:{items:(v.items as unknown[]).filter(x=>keyOf(x)!==key),next:v.next,tail:v.tail}} as Loaded;});
  };
  const current=data[tab];
+ const refresh=<Btn kind="text" size="sm" auto icon={RefreshCw} onClick={()=>load(true)}>{t('fe.staff.refresh')}</Btn>;
  return <>
   {/* The queue switch on the one tab control: more than four queues scroll sideways, each with its count. */}
-  <Seg value={tab} onChange={id=>{setTab(id);setNotice('');}} label={t('fe.staff.queuesLabel')} options={avail.map(id=>({id,label:id==='photo'?t('fe.pc.staff.tab'):t('fe.staff.q.'+id),n:count(id)}))}/>
-  {(tab==='dispute'||tab==='report')&&<Alert kind="info" icon={ShieldCheck} className="mt12"><b>{t('fe.staff.howTitle')}</b>{t('fe.staff.howText')}</Alert>}
+  <Seg value={tab} onChange={id=>{setTab(id);setNotice('');}} label={t('fe.staff.queuesLabel')}
+   options={avail.map(id=>({id,label:id==='photo'?t('fe.pc.staff.tab'):t('fe.staff.q.'+id),n:count(id),...(failed(id)?{dot:t('fe.error.title')}:{})}))}/>
+  {(tab==='dispute'||tab==='report')&&<Alert kind="info" icon={ShieldCheck}><b>{t('fe.staff.howTitle')}</b> {t('fe.staff.howText')}</Alert>}
   {tab==='dispute'&&<FlaggedClaimants/>}
-  <div className="st-tools">
-   <Seg value={order} onChange={o=>setOrder(o)} label={t('fe.staff.order.label')} options={[{id:'old',label:t('fe.staff.order.old')},{id:'new',label:t('fe.staff.order.new')}]}/>
-   <Btn kind="text" size="sm" auto icon={RefreshCw} onClick={()=>load(true)}>{t('fe.staff.refresh')}</Btn>
-  </div>
-  {notice&&<Alert kind="ok" icon={Check} className="mb12">{notice}</Alert>}
-  {!current?null:'error' in current?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(current.error,t)}><Btn kind="soft" onClick={()=>load(true)}>{t('fe.retry')}</Btn></Empty>
-   :!current.items.length?<Empty icon={Inbox} title={t('fe.staff.qEmpty')} text={t('fe.staff.qEmptyText')}/>
+  <Seg value={order} onChange={o=>setOrder(o)} label={t('fe.staff.order.label')} options={[{id:'old',label:t('fe.staff.order.old')},{id:'new',label:t('fe.staff.order.new')}]}/>
+  <SectionLabel action={refresh}>{t('fe.staff.inQueue',{n:String(count(tab)??0)})}</SectionLabel>
+  {notice&&<Alert kind="ok" icon={Check}>{notice}</Alert>}
+  {!current?null:'error' in current?<Alert kind="err" action={<Btn kind="soft" size="sm" auto icon={RefreshCw} onClick={()=>load(true)}>{t('fe.retry')}</Btn>}>{feErrorMessage(current.error,t)}</Alert>
+   :!current.items.length?<Empty compact icon={Inbox} title={t('fe.staff.qEmpty')} text={t('fe.staff.qEmptyText')}/>
    :current.locked?<Alert kind="info" icon={Lock} action={<Btn kind="soft" size="sm" auto onClick={()=>void askFactor('fresh').then(ok=>{if(ok)load(true);})}>{t('fe.sf.enterCode')}</Btn>}>{t('fe.sf.lockedMedia')}</Alert>
-   :<><SectionLabel>{t('fe.staff.inQueue',{n:count(tab)})}</SectionLabel><QueueList id={tab} items={current.items} onDone={key=>done(tab,key)}/>
+   :<>
+    <QueueList id={tab} items={current.items} onDone={key=>done(tab,key)}/>
     <LoadMore more={!!current.next} busy={pageBusy} error={pageError} onMore={loadMore}/></>}
  </>;
 }
 
 function QueueList({id,items,onDone}:{id:QueueId,items:unknown[],onDone:(key:string)=>void}){
  const keyOf=QUEUES[id].key as (x:unknown)=>string;
- return <div className="st-list">{items.map(x=>{const k=keyOf(x);const done=()=>onDone(k);
+ return <Stack gap={3}>{items.map(x=>{const k=keyOf(x);const done=()=>onDone(k);
   switch(id){
    case 'dispute':return <DisputeCard key={k} item={x as DisputeItem} onDone={done}/>;
    case 'revision':return <RevisionCard key={k} item={x as RevisionItem} onDone={done}/>;
@@ -236,7 +238,7 @@ function QueueList({id,items,onDone}:{id:QueueId,items:unknown[],onDone:(key:str
    case 'notice':return <NoticeCard key={k} item={x as NoticeItem} onDone={done}/>;
    case 'place':return <PlaceCard key={k} item={x as PlaceItem} onDone={done}/>;
   }
- })}</div>;
+ })}</Stack>;
 }
 
 // ——— shared pieces ———
@@ -258,64 +260,102 @@ const Kv=KeyValues;
 
 /** A raw status / format / scanner word from the server in plain words (`fe.staff.val.<word>`); an unknown word stays as it is. */
 const useVal=()=>{const {t}=useI18n();return (v:string|null|undefined)=>{if(!v)return v;const k='fe.staff.val.'+v;const x=t(k);return x===k?v:x;};};
+/** `fe.staff.journal.action.<a>` / `.type.<x>` in words; an unknown one reads «Другое действие» / «объект», never the code. */
+const useJournalWord=()=>{const {t}=useI18n();return (kind:'action'|'type',v:string)=>{const k='fe.staff.journal.'+kind+'.'+v;const x=t(k);return x===k?t('fe.staff.journal.'+kind+'.other'):x;};};
+/** @nick of a profile, or a plain word when it has none — never its id. */
+const useWho=()=>{const {t}=useI18n();return (p:{handle?:string|null|undefined}|null|undefined)=>p?.handle?'@'+p.handle:t('fe.staff.noName');};
 
 const show=(v:unknown):string=>v===null||v===undefined?'—':typeof v==='string'?v:Array.isArray(v)?v.map(show).join(', '):JSON.stringify(v);
+/** A value that reads as words (text, number, a list of those); anything structured is not shown on the card. */
+const plain=(v:unknown):string|null=>{
+ if(v===null||v===undefined||v==='')return null;
+ if(typeof v==='string')return v;
+ if(typeof v==='number')return String(v);
+ if(Array.isArray(v)){const parts=v.map(plain);return parts.every(p=>p!==null)?(parts as string[]).join(', '):null;}
+ return null;
+};
 
-/** What waits for a decision. With `diff` (a community) every field reads «Название: было → стало» in words, and a new
- * cover shows as a picture next to the old one; without it the raw fields are listed. */
-function Changes({change,diff}:{change:Record<string,unknown>|null|undefined,diff?:{before:Record<string,unknown>,covers:{was:string|null,now:string|null,missing:boolean}}}){
+/** Technical details (ids, raw records) only behind «Подробнее» — never in the visible card. */
+function Details({data}:{data:unknown}){
  const {t}=useI18n();
- if(!change||!Object.keys(change).length)return null;
- if(!diff)return <Alert kind="warn" className="st-block"><b>{t('fe.staff.pendingChange')}</b><br/>
-  {Object.entries(change).map(([k,v])=><span key={k} className="st-change"><code>{k}</code>: {show(v)}<br/></span>)}</Alert>;
- const word=(k:string,v:unknown)=>v===null||v===undefined||v===''?t('fe.staff.chg.empty'):k==='privacy'?t('fe.staff.chg.privacy.'+String(v)):show(v);
- return <Alert kind="warn" className="st-block"><b>{t('fe.staff.pendingChange')}</b><br/>
-  {Object.entries(change).map(([k,v])=>{
-   if(k==='coverAssetId')return <div key={k} className="st-change"><b>{t('fe.staff.chg.coverAssetId')}</b>
-    <ReviewPair>
-     <ReviewMedia icon={ImageOff} caption={<Note>{t('fe.staff.chg.was')}</Note>}>{diff.covers.was?<img src={diff.covers.was} alt="" draggable={false}/>:undefined}</ReviewMedia>
-     <ReviewMedia icon={ImageOff} caption={<Note>{diff.covers.missing?t('fe.staff.comm.noPicture'):t('fe.staff.chg.now')}</Note>}>{diff.covers.now?<img src={diff.covers.now} alt="" draggable={false}/>:undefined}</ReviewMedia>
-    </ReviewPair></div>;
-   const label=t('fe.staff.chg.'+k);const long=k==='description';
-   return <div key={k} className="st-change"><b>{label}</b>{long?<><br/>{t('fe.staff.chg.was')}: {word(k,diff.before[k])}<br/>{t('fe.staff.chg.now')}: {word(k,v)}</>
-    :<>: {word(k,diff.before[k])} → {word(k,v)}</>}</div>;
-  })}</Alert>;
+ if(data===null||data===undefined||data===''||show(data)==='{}'||show(data)==='[]')return null;
+ return <MoreInfo label={t('fe.staff.more')} hideLabel={t('fe.staff.moreHide')}>{show(data)}</MoreInfo>;
 }
 
-/** Inline confirmation for destructive decisions (no window.confirm). */
+/** The text of what is judged. A tap opens the post when `to` is given. */
+function Quote({label,text,to}:{label?:string,text:string,to?:string}){
+ const {t}=useI18n();const navigate=useNavigate();
+ return <Stack gap={1}>
+  <Text size="sm">{label&&<Text as="span" size="xs" tone="mute">{label}: </Text>}{text.slice(0,600)}</Text>
+  {to&&<Btn kind="text" size="sm" auto onClick={()=>navigate(to)}>{t('fe.staff.openPost')}</Btn>}
+ </Stack>;
+}
+
+/** What waits for a decision, in words: every field reads «Название: было → стало»; a new cover shows as a picture next
+ * to the old one. A field with no plain label or value stays out of the card (it is in «Подробнее»). */
+type Diff={before:Record<string,unknown>,covers?:{was:string|null,now:string|null,missing:boolean}};
+function Changes({change,diff}:{change:Record<string,unknown>|null|undefined,diff:Diff}){
+ const {t,locale}=useI18n();const when=useWhen();const val=useVal();
+ if(!change||!Object.keys(change).length)return null;
+ const word=(k:string,v:unknown):string=>{
+  if(v===null||v===undefined||v==='')return t('fe.staff.chg.empty');
+  if(k==='privacy'){const w=t('fe.staff.chg.privacy.'+String(v));return w.startsWith('fe.')?String(v):w;}
+  if(k==='startsAt'||k==='endsAt')return when(String(v));
+  if(k==='format'||k==='kind')return val(String(v))??'';
+  if(k==='price'&&v&&typeof v==='object')return priceText(v as {kind:string,amount?:number,currency?:string},t,locale);
+  if(typeof v==='boolean')return t(v?'fe.staff.yes':'fe.staff.no');
+  return plain(v)??t('fe.staff.chg.changed');
+ };
+ const label=(k:string)=>{const x=t('fe.staff.chg.'+k);return x.startsWith('fe.')?null:x;};
+ const rows:[string,ReactNode][]=Object.entries(change).filter(([k])=>k!=='coverAssetId'&&label(k)).map(([k,v])=>{
+  const was=word(k,diff.before[k]);const now=word(k,v);
+  return [label(k)!,k==='description'?<><Text as="div" size="sm" tone="mute">{t('fe.staff.chg.was')}: {was}</Text><Text as="div" size="sm">{t('fe.staff.chg.now')}: {now}</Text></>:was+' → '+now];
+ });
+ const c=diff.covers;
+ return <>
+  <Alert kind="warn">{t('fe.staff.pendingChange')}</Alert>
+  <Kv rows={rows}/>
+  {'coverAssetId' in change&&c&&<ReviewPair>
+   <ReviewMedia icon={ImageOff} caption={<Note>{t('fe.staff.chg.was')}</Note>}>{c.was?<img src={c.was} alt="" draggable={false}/>:undefined}</ReviewMedia>
+   <ReviewMedia icon={ImageOff} caption={<Note>{c.missing?t('fe.staff.comm.noPicture'):t('fe.staff.chg.now')}</Note>}>{c.now?<img src={c.now} alt="" draggable={false}/>:undefined}</ReviewMedia>
+  </ReviewPair>}
+  <Details data={change}/>
+ </>;
+}
+
+/** Inline confirmation for destructive decisions (no window.confirm): a question with its two answers, the danger one last. */
 function Confirm({text,danger,busy,onYes,onNo}:{text:string,danger?:boolean,busy:boolean,onYes:()=>void,onNo:()=>void}){
  const {t}=useI18n();
- return <div className="st-confirm" role="alertdialog" aria-label={text}>
-  {danger?<Alert kind="err" icon={ShieldAlert}>{text}</Alert>:<Alert kind="warn">{text}</Alert>}
-  <div className="st-row">
-   <Btn kind="danger" size="sm" auto disabled={busy} onClick={onYes} busy={busy}>{t('fe.staff.confirm')}</Btn>
-   <Btn kind="text" size="sm" auto disabled={busy} onClick={onNo}>{t('fe.cancel')}</Btn>
-  </div>
- </div>;
+ return <Alert kind={danger?'err':'warn'} role="alertdialog" {...(danger?{icon:ShieldAlert}:{})} action={<Actions>
+  <Btn kind="soft" disabled={busy} onClick={onNo}>{t('fe.cancel')}</Btn>
+  <Btn kind="danger" disabled={busy} busy={busy} onClick={onYes}>{t('fe.staff.confirm')}</Btn>
+ </Actions>}>{text}</Alert>;
 }
 
-/** One reason / rule from a set. A disabled fieldset turns every chip off while a decision is being saved
- * (the kit's ChoiceChips has no `disabled` of its own). */
+/** One reason / rule from a set, as a labelled field of the card's form. */
 function Choice<T extends string>({label,value,options,onChange,disabled}:{label:string,value:T|'',options:{id:T,label:string}[],onChange:(v:T)=>void,disabled?:boolean}){
- return <fieldset className="st-block st-fs" disabled={disabled}><Note>{label}</Note>
-  <div className="mt8"><ChoiceChips label={label} value={value||null} onChange={onChange} options={options.map(o=>[o.id,o.label] as const)}/></div></fieldset>;
+ return <Field label={label}><ChoiceChips label={label} value={value||null} onChange={onChange} disabled={!!disabled} options={options.map(o=>[o.id,o.label] as const)}/></Field>;
 }
 
 function TextField({label,value,onChange,max,rows=2}:{label:string,value:string,onChange:(v:string)=>void,max:number,rows?:number}){
  const id=useId();const {t}=useI18n();
  // Kit validation layer: a staff note follows the same text rules as the server (characters, lines, long runs).
  const err=value.trim()?textError(t,textRule(max),value):undefined;
- return <div className="st-block st-field"><Field id={id} label={label} error={err}><TextArea id={id} rows={rows} maxLength={max*2} invalid={!!err} value={value} onChange={e=>onChange(e.target.value)}/></Field></div>;
+ return <Field id={id} label={label} error={err}><TextArea id={id} rows={rows} maxLength={max*2} invalid={!!err} value={value} onChange={e=>onChange(e.target.value)}/></Field>;
 }
 
 /** A labelled one-line field of the staff forms. */
-function LineField({label,value,onChange,max,className,...rest}:{label:string,value:string,onChange:(v:string)=>void,max:number,className?:string}&Pick<React.InputHTMLAttributes<HTMLInputElement>,'inputMode'|'autoCapitalize'|'spellCheck'>){
+function LineField({label,value,onChange,max,...rest}:{label:string,value:string,onChange:(v:string)=>void,max:number}&Pick<React.InputHTMLAttributes<HTMLInputElement>,'inputMode'|'autoCapitalize'|'spellCheck'>){
  const id=useId();
- const field=<Field id={id} label={label}><Input id={id} value={value} maxLength={max} onChange={e=>onChange(e.target.value)} {...rest}/></Field>;
- return className?<div className={className}>{field}</div>:field;
+ return <Field id={id} label={label}><Input id={id} value={value} maxLength={max} onChange={e=>onChange(e.target.value)} {...rest}/></Field>;
 }
 
-function Failure({text}:{text:string}){return text?<Alert kind="err" icon={X} className="st-block">{text}</Alert>:null;}
+function Failure({text}:{text:string}){return text?<Alert kind="err">{text}</Alert>:null;}
+
+/** The button that opens a private picture on request, with the line saying every look is journaled. */
+function OpenLook({label,busy,onClick,err,note}:{label:string,busy:boolean,onClick:()=>void,err?:string,note:string}){
+ return <Stack gap={2}><Btn kind="soft" icon={Eye} busy={busy} disabled={busy} onClick={onClick}>{label}</Btn><Note>{note}</Note>{err&&<Failure text={err}/>}</Stack>;
+}
 
 const RULES=['minors','threats','private_material','spam','illegal','community_rules'] as const;
 
@@ -332,25 +372,24 @@ function MediaCard({item,onDone}:{item:MediaItem,onDone:()=>void}){
  const open=async()=>{setViewing(true);d.setFailure('');
   try{const r=await call('staff.mediaView',{assetId:item.id},viewRes,{asAccount:true});setSrc(r.src);}catch(e){d.setFailure(feErrorMessage(e,t));}finally{setViewing(false);}};
  const purpose=t('fe.staff.media.purpose.'+item.purpose);
- return <StCard title={purpose.startsWith('fe.')?item.purpose:purpose} meta={when(item.createdAt)}>
+ const explicit=!PUBLIC_ONLY.has(item.purpose);
+ return <StCard title={purpose.startsWith('fe.')?t('fe.staff.media.purpose.other'):purpose} meta={when(item.createdAt)}>
   <ReviewMedia blur={item.blur} icon={Eye}>
    {src?(item.kind==='video'?<VideoPlayer src={src.file} poster={src.card} w={item.w} h={item.h} label={t('fe.kit.av.video')}/>
     :item.kind==='audio'?<VoiceBubble src={src.file} durationMs={null} mine/>
     :<a href={src.full} target="_blank" rel="noreferrer noopener"><img src={src.card} alt="" draggable={false}/></a>):undefined}
   </ReviewMedia>
   <Kv rows={[[t('fe.staff.media.authorLabel'),item.authorLabel],[t('fe.staff.media.scanner'),val(item.reason)]]}/>
-  {src===undefined?<div className="st-block">
-    <Btn kind="soft" size="md" icon={Eye} disabled={viewing} busy={viewing} onClick={open}>{t('fe.staff.media.open')}</Btn>
-    <Note className="mt8">{t('fe.staff.media.openNote')}</Note></div>
-   :src===null?<Note className="st-block">{t('fe.staff.media.noCopies')}</Note>:null}
+  {src===undefined?<OpenLook label={t('fe.staff.media.open')} busy={viewing} onClick={open} note={t('fe.staff.media.openNote')}/>
+   :src===null?<Alert kind="warn">{t('fe.staff.media.noCopies')}</Alert>:null}
   {src!==undefined&&!ask&&<>
-   {src&&<div className="st-row st-block">
-    <Btn size="sm" auto icon={Check} disabled={d.busy} onClick={()=>d.run('staff.mediaDecide',{assetId:item.id,decision:'approve',explicit:false})}>{t('fe.staff.media.approveSafe')}</Btn>
-    {!PUBLIC_ONLY.has(item.purpose)&&<Btn kind="soft" size="sm" auto disabled={d.busy} onClick={()=>d.run('staff.mediaDecide',{assetId:item.id,decision:'approve',explicit:true})}>{t('fe.staff.media.approveExplicit')}</Btn>}
-   </div>}
-   {src&&PUBLIC_ONLY.has(item.purpose)&&<Note>{t('fe.staff.media.publicOnly')}</Note>}
+   {src&&!explicit&&<Note>{t('fe.staff.media.publicOnly')}</Note>}
    <Choice label={t('fe.staff.reason')} value={reason} onChange={setReason} disabled={d.busy} options={MEDIA_REASONS.map(id=>({id,label:t('fe.staff.media.reason.'+id)}))}/>
-   <div className="st-row st-block"><Btn kind="soft" size="sm" auto icon={Ban} disabled={d.busy||!reason} onClick={()=>setAsk('reject')}>{t('fe.staff.reject')}</Btn></div>
+   <Actions stack={!!src&&explicit}>
+    {src&&<Btn icon={Check} disabled={d.busy} onClick={()=>d.run('staff.mediaDecide',{assetId:item.id,decision:'approve',explicit:false})}>{t('fe.staff.media.approveSafe')}</Btn>}
+    {src&&explicit&&<Btn kind="soft" icon={Check} disabled={d.busy} onClick={()=>d.run('staff.mediaDecide',{assetId:item.id,decision:'approve',explicit:true})}>{t('fe.staff.media.approveExplicit')}</Btn>}
+    <Btn kind="soft" icon={Ban} disabled={d.busy||!reason} onClick={()=>setAsk('reject')}>{t('fe.staff.reject')}</Btn>
+   </Actions>
   </>}
   {ask==='reject'&&<Confirm text={t('fe.staff.media.confirmReject')} busy={d.busy} onNo={()=>setAsk(null)} onYes={()=>d.run('staff.mediaDecide',{assetId:item.id,decision:'reject',reason})}/>}
   <Csam busy={d.busy} asking={ask==='csam'} onAsk={()=>setAsk('csam')} onNo={()=>setAsk(null)} onYes={()=>d.run('staff.mediaDecide',{assetId:item.id,decision:'reject',reason:'csam_suspected'})}/>
@@ -361,10 +400,11 @@ function MediaCard({item,onDone}:{item:MediaItem,onDone:()=>void}){
 /** Escalation of suspected CSAM: its own clearly marked danger action, apart from the ordinary reasons. */
 function Csam({busy,asking,onAsk,onYes,onNo}:{busy:boolean,asking:boolean,onAsk:()=>void,onYes:()=>void,onNo:()=>void}){
  const {t}=useI18n();
- return <div className="st-csam">
+ return <>
+  <Divider/>
   {asking?<Confirm danger text={t('fe.staff.csam.confirm')} busy={busy} onYes={onYes} onNo={onNo}/>
-   :<Btn kind="danger" size="sm" auto icon={ShieldAlert} disabled={busy} onClick={onAsk}>{t('fe.staff.csam.action')}</Btn>}
- </div>;
+   :<Actions><Btn kind="danger" icon={ShieldAlert} disabled={busy} onClick={onAsk}>{t('fe.staff.csam.action')}</Btn></Actions>}
+ </>;
 }
 
 // ——— communities and events ———
@@ -373,37 +413,41 @@ function CommunityCard({item,onDone}:{item:CommItem,onDone:()=>void}){
  const {t}=useI18n();const when=useWhen();const d=useDecide(onDone);
  const [reason,setReason]=useState('');const [ask,setAsk]=useState(false);
  const decide=(decision:'approve'|'reject')=>d.run('staff.communityDecide',{communityId:item.id,rev:item.rev,decision,reason:reason.trim()});
- return <StCard title={item.name} meta={<>{item.state==='in_review'&&<Pill tone="wait">{t('fe.staff.newItem')}</Pill>} {when(item.created_at)}</>}>
+ const privacy=item.privacy?(t('fe.staff.chg.privacy.'+item.privacy).startsWith('fe.')?item.privacy:t('fe.staff.chg.privacy.'+item.privacy)):null;
+ const rules=plain(item.rules);
+ return <StCard title={item.name} meta={<>{item.state==='in_review'&&<Pill tone="wait">{t('fe.staff.newItem')}</Pill>}{when(item.created_at)}</>}>
   {item.description&&<p className="st-text">{item.description}</p>}
-  {!!item.resubmits&&<Alert kind="info" className="st-block"><b>{fill(t('fe.staff.comm.resubmit'),{n:item.resubmits,max:3})}</b>
-   {item.prev_reject_reason&&<><br/>{t('fe.staff.comm.prevReason')}: {item.prev_reject_reason}</>}</Alert>}
+  {!!item.resubmits&&<Alert kind="info">{fill(t('fe.staff.comm.resubmit'),{n:item.resubmits,max:3})}{item.prev_reject_reason&&<> {t('fe.staff.comm.prevReason')}: {item.prev_reject_reason}</>}</Alert>}
   {item.state==='in_review'&&item.cover&&<ReviewMedia icon={ImageOff}>{(item.cover.src?.card??item.cover.src?.thumb)?<img src={item.cover.src.card??item.cover.src.thumb} alt="" draggable={false}/>:undefined}</ReviewMedia>}
-  <Kv rows={[[t('fe.staff.comm.privacy'),item.privacy],['#',item.topics?.join(', ')],[t('fe.staff.comm.rules'),item.rules?show(item.rules):null],[t('fe.staff.comm.question'),item.join_question]]}/>
-  <Changes change={item.pending_change} diff={{before:{name:item.name,description:item.description,privacy:item.privacy,joinQuestion:item.join_question},
+  <Kv rows={[[t('fe.staff.comm.privacy'),privacy],[t('fe.staff.topics'),item.topics?.join(', ')],[t('fe.staff.comm.rules'),rules],[t('fe.staff.comm.question'),item.join_question]]}/>
+  {rules===null&&<Details data={item.rules}/>}
+  <Changes change={item.pending_change} diff={{before:{name:item.name,description:item.description,privacy:item.privacy,joinQuestion:item.join_question,topics:item.topics},
    covers:{was:item.cover?.src?.card??item.cover?.src?.thumb??null,now:item.newCover?.src?.card??item.newCover?.src?.thumb??null,missing:!item.newCover?.src}}}/>
   <TextField label={t('fe.staff.reasonText')} value={reason} onChange={setReason} max={300}/>
   {ask?<Confirm text={t('fe.staff.comm.confirmReject')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>decide('reject')}/>
-   :<div className="st-row st-block"><Btn size="sm" auto icon={Check} disabled={d.busy} onClick={()=>decide('approve')}>{t('fe.staff.approve')}</Btn>
-    <Btn kind="soft" size="sm" auto icon={Ban} disabled={d.busy} onClick={()=>setAsk(true)}>{t('fe.staff.reject')}</Btn></div>}
+   :<Actions><Btn icon={Check} disabled={d.busy} onClick={()=>decide('approve')}>{t('fe.staff.approve')}</Btn>
+    <Btn kind="soft" icon={Ban} disabled={d.busy} onClick={()=>setAsk(true)}>{t('fe.staff.reject')}</Btn></Actions>}
   <Failure text={d.failure}/>
  </StCard>;
 }
 
 function EventCard({item,onDone}:{item:EventItem,onDone:()=>void}){
- const {t,locale}=useI18n();const when=useWhen();const val=useVal();const d=useDecide(onDone);
+ const {t,locale}=useI18n();const when=useWhen();const val=useVal();const who=useWho();const d=useDecide(onDone);
  const [reason,setReason]=useState('');const [ask,setAsk]=useState<'reject'|'hide'|null>(null);
  const decide=(decision:'approve'|'reject'|'hide')=>d.run('staff.eventDecide',{eventId:item.id,rev:item.rev,decision,reason:reason.trim()});
- return <StCard title={item.title} meta={<>{item.state==='in_review'&&<Pill tone="wait">{t('fe.staff.newItem')}</Pill>} {when(item.created_at)}</>}>
+ const hideable=item.state==='published';
+ return <StCard title={item.title} meta={<>{item.state==='in_review'&&<Pill tone="wait">{t('fe.staff.newItem')}</Pill>}{when(item.created_at)}</>}>
   {item.description&&<p className="st-text">{item.description}</p>}
-  <Kv rows={[[t('fe.staff.event.organizer'),item.organizer?.handle?'@'+item.organizer.handle:null],[t('fe.staff.event.when'),item.starts_at?inTz(item.starts_at,evTz(item),locale,{day:'numeric',month:'short'}).replace('.','')+', '+evRange({starts_at:item.starts_at,...(item.ends_at?{ends_at:item.ends_at}:{}),tz:item.tz},locale):null],
+  <Kv rows={[[t('fe.staff.event.organizer'),item.organizer?.handle?who(item.organizer):null],[t('fe.staff.event.when'),item.starts_at?inTz(item.starts_at,evTz(item),locale,{day:'numeric',month:'short'}).replace('.','')+', '+evRange({starts_at:item.starts_at,...(item.ends_at?{ends_at:item.ends_at}:{}),tz:item.tz},locale):null],
    [t('fe.staff.event.where'),[val(item.format),item.area].filter(Boolean).join(' · ')],[t('fe.staff.event.address'),item.exact_address],[t('fe.staff.event.link'),item.join_url],
    [t('fe.staff.event.price'),item.price?priceText(item.price as {kind:string,amount?:number,currency?:string},t,locale):null],[t('fe.staff.event.requirements'),item.requirements]]}/>
-  <Changes change={item.pending_change}/>
+  <Changes change={item.pending_change} diff={{before:{title:item.title,description:item.description,kind:item.kind,format:item.format,area:item.area,exactAddress:item.exact_address,joinUrl:item.join_url,tz:item.tz,
+   startsAt:item.starts_at,endsAt:item.ends_at,price:item.price,requirements:item.requirements}}}/>
   <TextField label={t('fe.staff.reasonText')} value={reason} onChange={setReason} max={300}/>
   {ask?<Confirm text={t(ask==='hide'?'fe.staff.event.confirmHide':'fe.staff.event.confirmReject')} busy={d.busy} onNo={()=>setAsk(null)} onYes={()=>decide(ask)}/>
-   :<div className="st-row st-block"><Btn size="sm" auto icon={Check} disabled={d.busy} onClick={()=>decide('approve')}>{t('fe.staff.approve')}</Btn>
-    <Btn kind="soft" size="sm" auto icon={Ban} disabled={d.busy} onClick={()=>setAsk('reject')}>{t('fe.staff.reject')}</Btn>
-    {item.state==='published'&&<Btn kind="danger" size="sm" auto disabled={d.busy} onClick={()=>setAsk('hide')}>{t('fe.staff.event.hide')}</Btn>}</div>}
+   :<Actions stack={hideable}><Btn icon={Check} disabled={d.busy} onClick={()=>decide('approve')}>{t('fe.staff.approve')}</Btn>
+    <Btn kind="soft" icon={Ban} disabled={d.busy} onClick={()=>setAsk('reject')}>{t('fe.staff.reject')}</Btn>
+    {hideable&&<Btn kind="danger" icon={Ban} disabled={d.busy} onClick={()=>setAsk('hide')}>{t('fe.staff.event.hide')}</Btn>}</Actions>}
   <Failure text={d.failure}/>
  </StCard>;
 }
@@ -424,44 +468,43 @@ function useAgeOpen(checkId:string){
  const [shown,setShown]=useState<z.infer<typeof ageOpenRes>|null>(null);const [busy,setBusy]=useState(false);const [err,setErr]=useState('');
  const open=async()=>{setBusy(true);setErr('');
   try{setShown(await call('staff.ageCheckOpen',{checkId},ageOpenRes,{asAccount:true}));}catch(e){setErr(feErrorMessage(e,t));}finally{setBusy(false);}};
- const button=(label:string)=><Stack gap={2} className="st-block"><Btn kind="soft" size="md" icon={Eye} busy={busy} disabled={busy} onClick={open}>{label}</Btn>
-  <Note>{t('fe.staff.age.openNote')}</Note>{err&&<Failure text={err}/>}</Stack>;
+ const button=(label:string)=><OpenLook label={label} busy={busy} onClick={open} note={t('fe.staff.age.openNote')} err={err}/>;
  return {shown,button};
 }
 function AgeDocCard({item,onDone}:{item:AgeItem,onDone:()=>void}){
- const {t}=useI18n();const when=useWhen();
+ const {t}=useI18n();const when=useWhen();const who=useWho();
  const d=useDecide(onDone,e=>forbidden(e)?t('fe.staff.age.own'):null);
  const [reason,setReason]=useState<typeof DOC_REASONS[number]|''>('');const [ask,setAsk]=useState(false);
  const look=useAgeOpen(item.id);const doc=look.shown?.document?.src?.full??look.shown?.document?.src?.card??null;
- return <StCard title={item.profile.handle?'@'+item.profile.handle:item.profile.id} meta={when(item.submittedAt)}>
-  <Alert kind="info" icon={IdCard} className="st-block">{t('fe.staff.age.docTask')}</Alert>
-  {look.shown?<><div className="st-media st-block">{doc?<img src={doc} alt="" draggable={false}/>:<div className="st-ph"><X/></div>}</div>
+ return <StCard title={who(item.profile)} meta={when(item.submittedAt)}>
+  <Alert kind="info" icon={IdCard}>{t('fe.staff.age.docTask')}</Alert>
+  {look.shown?<><ReviewMedia icon={X}>{doc?<img src={doc} alt="" draggable={false}/>:undefined}</ReviewMedia>
   <Note>{doc?t('fe.staff.age.docPrivacy'):t('fe.staff.age.noDoc')}</Note></>:look.button(t('fe.staff.age.openDoc'))}
   <Choice label={t('fe.staff.reason')} value={reason} onChange={setReason} disabled={d.busy} options={DOC_REASONS.map(id=>({id,label:t('fe.staff.age.reason.'+id)}))}/>
   {ask?<Confirm text={t('fe.staff.age.confirmRejectDoc')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>d.run('staff.ageCheckDecide',{checkId:item.id,approve:false,reason})}/>
-   :<div className="st-row st-block"><Btn size="sm" auto icon={Check} disabled={d.busy||!doc} onClick={()=>d.run('staff.ageCheckDecide',{checkId:item.id,approve:true})}>{t('fe.staff.age.approveDoc')}</Btn>
-    <Btn kind="soft" size="sm" auto icon={Ban} disabled={d.busy||!reason} onClick={()=>setAsk(true)}>{t('fe.staff.reject')}</Btn></div>}
+   :<Actions><Btn icon={Check} disabled={d.busy||!doc} onClick={()=>d.run('staff.ageCheckDecide',{checkId:item.id,approve:true})}>{t('fe.staff.age.approveDoc')}</Btn>
+    <Btn kind="soft" icon={Ban} disabled={d.busy||!reason} onClick={()=>setAsk(true)}>{t('fe.staff.reject')}</Btn></Actions>}
   <Failure text={d.failure}/>
  </StCard>;
 }
 function AgeSelfieCard({item,onDone}:{item:AgeItem,onDone:()=>void}){
- const {t}=useI18n();const when=useWhen();
+ const {t}=useI18n();const when=useWhen();const who=useWho();
  // The server never lets staff decide their own check; its refusal is explained in plain words.
  const d=useDecide(onDone,e=>forbidden(e)?t('fe.staff.age.own'):null);
  const [reason,setReason]=useState<typeof AGE_REASONS[number]|''>('');const [ask,setAsk]=useState(false);
  const look=useAgeOpen(item.id);const selfie=look.shown?.selfie?.src?.full??look.shown?.selfie?.src?.card??null;const photo=look.shown?.photo?.src?.card??look.shown?.photo?.src?.thumb??null;
  const g=item.gesture??'';const gesture=t('fe.staff.age.gesture.'+g);
- return <StCard title={item.profile.handle?'@'+item.profile.handle:item.profile.id} meta={when(item.submittedAt)}>
-  <Alert kind="info" icon={Eye} className="st-block">{t('fe.staff.age.gesture')}: <b>{gesture.startsWith('fe.')?g:gesture}</b></Alert>
-  {!look.shown?look.button(t('fe.staff.age.openSelfie')):<div className="st-pair st-block">
-   <figure><div className="st-media">{selfie?<img src={selfie} alt="" draggable={false}/>:<div className="st-ph"><X/></div>}</div><figcaption><Note>{t('fe.staff.age.selfie')}</Note></figcaption></figure>
-   <figure><div className="st-media">{photo?<img src={photo} alt="" draggable={false}/>:<div className="st-ph"><Eye/></div>}</div><figcaption><Note>{t('fe.staff.age.photo')}</Note></figcaption></figure>
-  </div>}
+ return <StCard title={who(item.profile)} meta={when(item.submittedAt)}>
+  <Alert kind="info" icon={Eye}>{t('fe.staff.age.gesture')}: <b>{gesture.startsWith('fe.')?t('fe.staff.age.gesture.other'):gesture}</b></Alert>
+  {!look.shown?look.button(t('fe.staff.age.openSelfie')):<ReviewPair>
+   <ReviewMedia icon={X} caption={<Note>{t('fe.staff.age.selfie')}</Note>}>{selfie?<img src={selfie} alt="" draggable={false}/>:undefined}</ReviewMedia>
+   <ReviewMedia icon={Eye} caption={<Note>{t('fe.staff.age.photo')}</Note>}>{photo?<img src={photo} alt="" draggable={false}/>:undefined}</ReviewMedia>
+  </ReviewPair>}
   {look.shown&&!selfie&&<Note>{t('fe.staff.age.noSelfie')}</Note>}
   <Choice label={t('fe.staff.reason')} value={reason} onChange={setReason} disabled={d.busy} options={AGE_REASONS.map(id=>({id,label:t('fe.staff.age.reason.'+id)}))}/>
   {ask?<Confirm text={t('fe.staff.age.confirmReject')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>d.run('staff.ageCheckDecide',{checkId:item.id,approve:false,reason})}/>
-   :<div className="st-row st-block"><Btn size="sm" auto icon={Check} disabled={d.busy||!selfie} onClick={()=>d.run('staff.ageCheckDecide',{checkId:item.id,approve:true})}>{t('fe.staff.age.approve')}</Btn>
-    <Btn kind="soft" size="sm" auto icon={Ban} disabled={d.busy||!reason} onClick={()=>setAsk(true)}>{t('fe.staff.reject')}</Btn></div>}
+   :<Actions><Btn icon={Check} disabled={d.busy||!selfie} onClick={()=>d.run('staff.ageCheckDecide',{checkId:item.id,approve:true})}>{t('fe.staff.age.approve')}</Btn>
+    <Btn kind="soft" icon={Ban} disabled={d.busy||!reason} onClick={()=>setAsk(true)}>{t('fe.staff.reject')}</Btn></Actions>}
   <Failure text={d.failure}/>
  </StCard>;
 }
@@ -470,14 +513,14 @@ function AgeSelfieCard({item,onDone}:{item:AgeItem,onDone:()=>void}){
 
 const PHOTO_REASONS=['gesture_mismatch','face_hidden','not_same_person','bad_photo'] as const;
 function PhotoCard({item,onDone}:{item:PhotoItem,onDone:()=>void}){
- const {t}=useI18n();const when=useWhen();
+ const {t}=useI18n();const when=useWhen();const who=useWho();
  const d=useDecide(onDone,e=>forbidden(e)?t('fe.pc.staff.own'):null);
  const [reason,setReason]=useState<typeof PHOTO_REASONS[number]|''>('');const [ask,setAsk]=useState(false);
  const selfie=item.selfie?.src?.full??item.selfie?.src?.card??null;
  const photos=(item.photos??[item.photo]).map(p=>p?.src?.card??p?.src?.thumb??null).filter((v):v is string=>!!v);
  const gesture=t('fe.staff.age.gesture.'+item.gesture);
- return <StCard title={item.profile.handle?'@'+item.profile.handle:item.profile.id} meta={when(item.submittedAt)}>
-  <Alert kind="info" icon={Eye} className="st-block">{t('fe.staff.age.gesture')}: <b>{gesture.startsWith('fe.')?item.gesture:gesture}</b></Alert>
+ return <StCard title={who(item.profile)} meta={when(item.submittedAt)}>
+  <Alert kind="info" icon={Eye}>{t('fe.staff.age.gesture')}: <b>{gesture.startsWith('fe.')?t('fe.staff.age.gesture.other'):gesture}</b></Alert>
   <Note>{t('fe.pc.staff.compare')}</Note>
   <ReviewPair>
    <ReviewMedia icon={X} caption={<Note>{t('fe.pc.staff.selfie')}</Note>}>{selfie?<img src={selfie} alt="" draggable={false}/>:undefined}</ReviewMedia>
@@ -486,8 +529,8 @@ function PhotoCard({item,onDone}:{item:PhotoItem,onDone:()=>void}){
   {!selfie&&<Note>{t('fe.staff.age.noSelfie')}</Note>}
   <Choice label={t('fe.staff.reason')} value={reason} onChange={setReason} disabled={d.busy} options={PHOTO_REASONS.map(id=>({id,label:t('fe.pc.reason.'+id)}))}/>
   {ask?<Confirm text={t('fe.pc.staff.confirmReject')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>d.run('staff.photoCheckDecide',{checkId:item.id,approve:false,reason})}/>
-   :<div className="st-row st-block"><Btn size="sm" auto icon={BadgeCheck} disabled={d.busy||!selfie} onClick={()=>d.run('staff.photoCheckDecide',{checkId:item.id,approve:true})}>{t('fe.pc.staff.approve')}</Btn>
-    <Btn kind="soft" size="sm" auto icon={Ban} disabled={d.busy||!reason} onClick={()=>setAsk(true)}>{t('fe.staff.reject')}</Btn></div>}
+   :<Actions><Btn icon={BadgeCheck} disabled={d.busy||!selfie} onClick={()=>d.run('staff.photoCheckDecide',{checkId:item.id,approve:true})}>{t('fe.pc.staff.approve')}</Btn>
+    <Btn kind="soft" icon={Ban} disabled={d.busy||!reason} onClick={()=>setAsk(true)}>{t('fe.staff.reject')}</Btn></Actions>}
   <Failure text={d.failure}/>
  </StCard>;
 }
@@ -499,28 +542,25 @@ function PhotoCard({item,onDone}:{item:PhotoItem,onDone:()=>void}){
  * attack on the author and the author's explanation. «Подтвердилось» removes the post (asks first); «не подтвердилось»
  * restores it at once and gives each unmarked claimant a strike. */
 function DisputeCard({item,onDone}:{item:DisputeItem,onDone:()=>void}){
- const {t}=useI18n();const when=useWhen();const navigate=useNavigate();const d=useDecide(onDone);
+ const {t}=useI18n();const when=useWhen();const d=useDecide(onDone);
  const [note,setNote]=useState('');const [ask,setAsk]=useState(false);
  const decide=(restore:boolean)=>d.run('staff.disputeDecide',{postId:item.id,restore,note:note.trim()});
- return <Card className="rqcard mod-card">
-  <div className="row"><span className="rq-av"><span className="av ini"><ShieldAlert/></span></span><div className="grow"><Text as="b" size="strong">{t('fe.staff.dispute.title')}</Text>
-   <Note>{when(item.opened_at??item.disputed_at)}{item.media?' · '+t('fe.staff.dispute.media',{n:String(item.media)}):''}</Note></div>
-   {!!item.media&&<span className="ico v" aria-hidden="true"><Image/></span>}</div>
-  <Chips className="st-block">
+ return <StCard title={t('fe.staff.dispute.title')} danger={!!item.urgent} meta={when(item.opened_at??item.disputed_at)+(item.media?' · '+t('fe.staff.dispute.media',{n:String(item.media)}):'')}>
+  <Chips>
    {item.urgent?<Pill tone="hot">{t('fe.staff.dispute.urgent')}</Pill>:<Pill tone="wait">{t('fe.staff.dispute.hidden')}</Pill>}
    {item.attack&&<Pill tone="bad">{t('fe.staff.dispute.attack')}</Pill>}
    <Pill>{t('fe.staff.dispute.claims',{n:String(item.claims.length)})}</Pill>
   </Chips>
-  {item.excerpt&&<button type="button" className="mod-x" onClick={()=>navigate('/n/feed/post/'+item.id)}>{item.excerpt.slice(0,160)}</button>}
-  <div className="st-block"><KeyValues rows={item.claims.map((c,i)=>[t('fe.staff.dispute.claim',{n:String(i+1)}),
-   [c.tagged?t('fe.staff.dispute.tagged'):t('fe.staff.dispute.untagged'),t('fe.staff.dispute.trust.'+c.trust),t('fe.staff.dispute.strikes',{n:String(c.strikes)})].join(' · ')])}/></div>
-  {item.note&&<div className="st-block"><KeyValues rows={[[t('fe.staff.dispute.authorNote'),item.note]]}/></div>}
+  {item.excerpt&&<Quote text={item.excerpt.slice(0,160)} to={'/n/feed/post/'+item.id}/>}
+  <Kv rows={[...item.claims.map((c,i):[string,string]=>[t('fe.staff.dispute.claim',{n:String(i+1)}),
+   [c.tagged?t('fe.staff.dispute.tagged'):t('fe.staff.dispute.untagged'),t('fe.staff.dispute.trust.'+c.trust),t('fe.staff.dispute.strikes',{n:String(c.strikes)})].join(' · ')]),
+   [t('fe.staff.dispute.authorNote'),item.note]]}/>
   <TextField label={t('fe.staff.note')} value={note} onChange={setNote} max={500}/>
   {ask?<Confirm text={t('fe.staff.dispute.confirmRemove')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>decide(false)}/>
-   :<div className="row g8 mt12"><Btn kind="danger" size="md" disabled={d.busy} onClick={()=>setAsk(true)}>{t('fe.staff.dispute.remove')}</Btn>
-    <Btn kind="soft" size="md" disabled={d.busy} busy={d.busy} onClick={()=>decide(true)}>{t('fe.staff.dispute.restore')}</Btn></div>}
+   :<Actions><Btn icon={Check} disabled={d.busy} busy={d.busy} onClick={()=>decide(true)}>{t('fe.staff.dispute.restore')}</Btn>
+    <Btn kind="danger" icon={Ban} disabled={d.busy} onClick={()=>setAsk(true)}>{t('fe.staff.dispute.remove')}</Btn></Actions>}
   <Failure text={d.failure}/>
- </Card>;
+ </StCard>;
 }
 
 /** Accounts whose «это я на фото» claims were found false three times: claims are closed for them, staff take a look
@@ -544,20 +584,20 @@ function FlaggedClaimants(){
 }
 
 function RevisionCard({item,onDone}:{item:RevisionItem,onDone:()=>void}){
- const {t}=useI18n();const when=useWhen();const navigate=useNavigate();const d=useDecide(onDone);
+ const {t}=useI18n();const when=useWhen();const d=useDecide(onDone);
  const [rule,setRule]=useState<typeof RULES[number]|''>('');const [ask,setAsk]=useState(false);
  const proposed=item.proposed&&typeof item.proposed==='object'?item.proposed as Record<string,unknown>:null;
- const text=proposed?[proposed.title,proposed.body].filter(v=>typeof v==='string'&&v).join(': '):show(item.proposed);
- return <Card className="rqcard mod-card">
-  <div className="row"><div className="grow"><Text as="b" size="strong">{t('fe.staff.revision.title')}</Text><Note>{when(item.createdAt)}</Note></div></div>
-  {item.live&&<button type="button" className="mod-x" onClick={()=>navigate('/n/feed/post/'+item.postId)}><Text as="span" size="xs" tone="mute">{t('fe.staff.revision.live')}: </Text>{item.live.slice(0,160)}</button>}
-  {text&&<p className="mod-r">{text.slice(0,600)}</p>}
+ const text=proposed?[proposed.title,proposed.body].filter(v=>typeof v==='string'&&v).join(': '):plain(item.proposed)??'';
+ return <StCard title={t('fe.staff.revision.title')} meta={when(item.createdAt)}>
+  {item.live&&<Quote label={t('fe.staff.revision.live')} text={item.live.slice(0,160)} to={'/n/feed/post/'+item.postId}/>}
+  {text&&<p className="st-text">{text.slice(0,600)}</p>}
+  {!text&&<Details data={item.proposed}/>}
   <Choice label={t('fe.staff.rule')} value={rule} onChange={setRule} disabled={d.busy} options={RULES.map(id=>({id,label:t('fe.staff.rule.'+id)}))}/>
   {ask?<Confirm text={t('fe.staff.revision.confirmReject')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>d.run('staff.revisionDecide',{revisionId:item.id,decision:'reject',rule})}/>
-   :<div className="row g8 mt12"><Btn size="md" icon={Check} disabled={d.busy} busy={d.busy} onClick={()=>d.run('staff.revisionDecide',{revisionId:item.id,decision:'approve'})}>{t('fe.staff.approve')}</Btn>
-    <Btn kind="soft" size="md" icon={Ban} disabled={d.busy||!rule} onClick={()=>setAsk(true)}>{t('fe.staff.reject')}</Btn></div>}
+   :<Actions><Btn icon={Check} disabled={d.busy} busy={d.busy} onClick={()=>d.run('staff.revisionDecide',{revisionId:item.id,decision:'approve'})}>{t('fe.staff.approve')}</Btn>
+    <Btn kind="soft" icon={Ban} disabled={d.busy||!rule} onClick={()=>setAsk(true)}>{t('fe.staff.reject')}</Btn></Actions>}
   <Failure text={d.failure}/>
- </Card>;
+ </StCard>;
 }
 
 // ——— reports, appeals, DSA notices, cities ———
@@ -570,8 +610,8 @@ function Evidence({assetId,kind,label}:{assetId:string,kind:string,label:string}
  const [busy,setBusy]=useState(false);const [err,setErr]=useState('');
  const open=async()=>{setBusy(true);setErr('');
   try{const r=await call('staff.mediaView',{assetId},viewRes,{asAccount:true});setSrc(r.src);}catch(e){setErr(feErrorMessage(e,t));}finally{setBusy(false);}};
- if(src===undefined)return <div className="st-block"><Btn kind="soft" size="sm" auto icon={Eye} busy={busy} disabled={busy} onClick={open}>{label}</Btn>{err&&<Failure text={err}/>}</div>;
- if(src===null)return <Empty compact icon={ImageOff} title={t('fe.staff.media.noCopies')}/>;
+ if(src===undefined)return <OpenLook label={label} busy={busy} onClick={open} note={t('fe.staff.media.openNote')} err={err}/>;
+ if(src===null)return <Alert kind="warn">{t('fe.staff.media.noCopies')}</Alert>;
  return <ReviewMedia icon={Eye}>
   {kind==='video'?<VideoPlayer src={src.file} poster={src.card} label={t('fe.kit.av.video')}/>
    :kind==='audio'?<VoiceBubble src={src.file} durationMs={null} mine/>
@@ -588,22 +628,22 @@ function ReportCard({item,onDone}:{item:ReportItem,onDone:()=>void}){
  // Whom a measure is for: the reported profile, or in a chat the side it was reported about.
  const target=item.targetType==='profile'?{id:item.targetId,name:author??''}:item.targetType==='conversation'&&item.author?{id:item.author.id,name:author??''}:null;
  const [measures,setMeasures]=useState(false);
+ const messages=Array.isArray((item.reported as {messages?:unknown})?.messages)?(item.reported as {messages:{seq:number,body:string,media:boolean,at:string}[]}).messages:null;
  return <StCard title={t('fe.staff.report.type.'+item.targetType)} danger={item.reasons.includes('minor')} meta={when(item.firstAt)}>
-  <Chips className="st-block">{item.reasons.map(r=><Pill key={r} tone={r==='minor'?'bad':undefined}>{t('fe.staff.report.reason.'+r)}</Pill>)}
+  <Chips>{item.reasons.map(r=><Pill key={r} tone={r==='minor'?'bad':undefined}>{(x=>x.startsWith('fe.')?t('fe.staff.report.reason.other'):x)(t('fe.staff.report.reason.'+r))}</Pill>)}
    <Pill>{t('fe.staff.report.count')}: {item.reports}</Pill></Chips>
-  {item.excerpt&&<p className="st-text"><Text as="span" size="xs" tone="mute">{t('fe.staff.report.now')}: </Text>{item.excerpt}</p>}
+  {item.excerpt&&<Quote label={t('fe.staff.report.now')} text={item.excerpt}/>}
   <Kv rows={[[t('fe.staff.author'),author],[t('fe.staff.state'),val(item.state)],[t('fe.staff.report.media'),item.media?String(item.media):null],
-   [t('fe.staff.report.details'),item.details?.length?item.details.join(' · '):null],[t('fe.staff.report.snapshot'),item.reported?<MoreInfo label={t('fe.staff.more')} hideLabel={t('fe.staff.moreHide')}>{show(item.reported)}</MoreInfo>:null]]}/>
-  {Array.isArray((item.reported as {messages?:unknown})?.messages)&&<Card list className="st-block">
-   {((item.reported as {messages:{seq:number,body:string,media:boolean,at:string}[]}).messages).map(m=><Row key={m.seq} title={m.body||t('fe.staff.report.mediaOnly')} sub={when(m.at)}/>)}</Card>}
+   [t('fe.staff.report.details'),item.details?.length?item.details.join(' · '):null]]}/>
+  {messages&&<Card list>{messages.map(m=><Row key={m.seq} title={m.body||t('fe.staff.report.mediaOnly')} sub={when(m.at)}/>)}</Card>}
   {item.evidence?.map((e,i)=><Evidence key={e.assetId} assetId={e.assetId} kind={e.kind} label={t('fe.staff.report.openMedia',{n:String(i+1),all:String(item.evidence!.length)})}/>)}
-  {!!item.evidence?.length&&<Note>{t('fe.staff.media.openNote')}</Note>}
+  <Details data={item.reported}/>
   {!people&&<Choice label={t('fe.staff.rule')} value={rule} onChange={setRule} disabled={d.busy} options={RULES.map(id=>({id,label:t('fe.staff.rule.'+id)}))}/>}
   <TextField label={t('fe.staff.note')} value={note} onChange={setNote} max={500}/>
   {ask?<Confirm text={t('fe.staff.report.confirmRemove')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>d.run('staff.reportDecide',{...base,decision:'remove',rule})}/>
-   :<div className="st-row st-block"><Btn kind="soft" size="sm" auto icon={Check} disabled={d.busy} onClick={()=>d.run('staff.reportDecide',{...base,decision:'keep'})}>{t('fe.staff.report.keep')}</Btn>
-    {!people&&<Btn kind="danger" size="sm" auto icon={Ban} disabled={d.busy||!rule} onClick={()=>setAsk(true)}>{t('fe.staff.report.remove')}</Btn>}
-    {people&&target&&<Btn kind="danger" size="sm" auto icon={Gavel} disabled={d.busy} onClick={()=>setMeasures(true)}>{t('fe.staff.m.open')}</Btn>}</div>}
+   :<Actions><Btn icon={Check} disabled={d.busy} onClick={()=>d.run('staff.reportDecide',{...base,decision:'keep'})}>{t('fe.staff.report.keep')}</Btn>
+    {!people&&<Btn kind="danger" icon={Ban} disabled={d.busy||!rule} onClick={()=>setAsk(true)}>{t('fe.staff.report.remove')}</Btn>}
+    {people&&target&&<Btn kind="danger" icon={Gavel} disabled={d.busy} onClick={()=>setMeasures(true)}>{t('fe.staff.m.open')}</Btn>}</Actions>}
   <Failure text={d.failure}/>
   {measures&&target&&<Measures profileId={target.id} name={target.name} onClose={()=>setMeasures(false)}
    onApplied={()=>{setMeasures(false);void d.run('staff.reportDecide',{...base,decision:'keep',note:(note.trim()||t('fe.staff.m.reportNote')).slice(0,500)});}}/>}
@@ -631,7 +671,7 @@ function Measures({profileId,name,onClose,onApplied}:{profileId:string,name:stri
   void d.run(kind==='restrict'?'staff.restrict':'staff.sanction',kind==='restrict'
    ?{profileId,on:true,rule,note:note.trim(),...timed}:{profileId,decision:'suspend',rule,note:note.trim(),...timed});};
  return <Sheet title={t('fe.staff.m.title',{name})} onClose={onClose}>
-  <Stack gap={4}>
+  <Form>
    <Choice label={t('fe.staff.rule')} value={rule} onChange={v=>{setRule(v);if(GRAVE.has(v))setDays('0');}} disabled={d.busy} options={RULES.map(id=>({id,label:t('fe.staff.rule.'+id)}))}/>
    <Choice label={t('fe.staff.m.kind')} value={kind} onChange={v=>{setKind(v);if(v==='suspend'&&!lead&&days==='0')setDays('7');}} disabled={d.busy}
     options={[{id:'restrict' as const,label:t('fe.staff.m.restrict')},{id:'suspend' as const,label:t('fe.staff.m.suspend')}]}/>
@@ -641,23 +681,24 @@ function Measures({profileId,name,onClose,onApplied}:{profileId:string,name:stri
    {ask?<Confirm text={effect} danger busy={d.busy} onNo={()=>setAsk(false)} onYes={apply}/>
     :<Btn kind="danger" icon={Gavel} disabled={d.busy||!rule||blocked} onClick={()=>setAsk(true)}>{t(kind==='restrict'?'fe.staff.m.doRestrict':'fe.staff.m.doSuspend')}</Btn>}
    <Failure text={d.failure}/>
-  </Stack>
+  </Form>
  </Sheet>;
 }
 
 function AppealCard({item,onDone}:{item:AppealItem,onDone:()=>void}){
- const {t}=useI18n();const when=useWhen();const d=useDecide(onDone);
+ const {t}=useI18n();const when=useWhen();const jw=useJournalWord();const d=useDecide(onDone);
  const [note,setNote]=useState('');const [ask,setAsk]=useState(false);
  const mine=!!item.decision?.mine;
  const decide=(grant:boolean)=>d.run('staff.appealDecide',{appealId:item.id,grant,note:note.trim()});
  return <StCard title={(item.handle?'@'+item.handle+' · ':'')+t('fe.staff.report.type.'+item.target_type)} meta={when(item.created_at)}>
-  <p className="st-text"><Text as="span" size="xs" tone="mute">{t('fe.staff.appeal.body')}: </Text>{item.body}</p>
-  {item.decision&&<Kv rows={[[t('fe.staff.appeal.decision'),item.decision.action+' · '+when(item.decision.at)],['',item.decision.detail?show(item.decision.detail):null]]}/>}
-  {mine?<Alert kind="warn" className="st-block">{t('fe.staff.appeal.sameStaff')}</Alert>:<>
+  <Quote label={t('fe.staff.appeal.body')} text={item.body}/>
+  {item.decision&&<Kv rows={[[t('fe.staff.appeal.decision'),jw('action',item.decision.action)+' · '+when(item.decision.at)]]}/>}
+  {item.decision&&<Details data={item.decision.detail}/>}
+  {mine?<Alert kind="warn">{t('fe.staff.appeal.sameStaff')}</Alert>:<>
    <TextField label={t('fe.staff.note')} value={note} onChange={setNote} max={500}/>
    {ask?<Confirm text={t('fe.staff.appeal.confirmDeny')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>decide(false)}/>
-    :<div className="st-row st-block"><Btn size="sm" auto icon={Check} disabled={d.busy} onClick={()=>decide(true)}>{t('fe.staff.appeal.grant')}</Btn>
-     <Btn kind="soft" size="sm" auto icon={Ban} disabled={d.busy} onClick={()=>setAsk(true)}>{t('fe.staff.appeal.deny')}</Btn></div>}
+    :<Actions><Btn icon={Check} disabled={d.busy} onClick={()=>decide(true)}>{t('fe.staff.appeal.grant')}</Btn>
+     <Btn kind="soft" icon={Ban} disabled={d.busy} onClick={()=>setAsk(true)}>{t('fe.staff.appeal.deny')}</Btn></Actions>}
   </>}
   <Failure text={d.failure}/>
  </StCard>;
@@ -669,17 +710,18 @@ function NoticeCard({item,onDone}:{item:NoticeItem,onDone:()=>void}){
  const [rule,setRule]=useState<typeof NOTICE_RULES[number]|''>('');const [note,setNote]=useState('');const [ask,setAsk]=useState(false);
  const decide=(outcome:'removed'|'kept'|'not_actionable')=>d.run('staff.noticeDecide',{noticeId:item.id,outcome,note:note.trim(),...(outcome==='removed'?{rule}:{})});
  const csam=item.reason==='csam';
- return <StCard title={t('fe.staff.notice.reason.'+item.reason)} danger={csam||item.reason==='minors'} meta={when(item.created_at)}>
-  {csam&&<Alert kind="err" icon={ShieldAlert} className="st-block"><b>{t('fe.staff.csam.flag')}</b></Alert>}
+ const reason=t('fe.staff.notice.reason.'+item.reason);
+ return <StCard title={reason.startsWith('fe.')?t('fe.staff.notice.reason.other'):reason} danger={csam||item.reason==='minors'} meta={when(item.created_at)}>
+  {csam&&<Alert kind="err" icon={ShieldAlert}><b>{t('fe.staff.csam.flag')}</b></Alert>}
   <Kv rows={[[t('fe.staff.notice.url'),item.target_url],[t('fe.staff.notice.explanation'),item.explanation]]}/>
-  <Note className="st-block">{item.answerable?t('fe.staff.notice.answerable'):t('fe.staff.notice.anonymous')}</Note>
+  <Note>{item.answerable?t('fe.staff.notice.answerable'):t('fe.staff.notice.anonymous')}</Note>
   <Choice label={t('fe.staff.rule')} value={rule} onChange={setRule} disabled={d.busy} options={NOTICE_RULES.map(id=>({id,label:t('fe.staff.rule.'+id)}))}/>
   <TextField label={t('fe.staff.note')} value={note} onChange={setNote} max={500}/>
   {ask?<Confirm text={t('fe.staff.notice.confirmRemoved')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>decide('removed')}/>
-   :<div className="st-row st-block">
-    <Btn kind="danger" size="sm" auto icon={Ban} disabled={d.busy||!rule} onClick={()=>setAsk(true)}>{t('fe.staff.notice.removed')}</Btn>
-    <Btn kind="soft" size="sm" auto disabled={d.busy} onClick={()=>decide('kept')}>{t('fe.staff.notice.kept')}</Btn>
-    <Btn kind="text" size="sm" auto disabled={d.busy} onClick={()=>decide('not_actionable')}>{t('fe.staff.notice.not_actionable')}</Btn></div>}
+   :<Actions stack>
+    <Btn icon={Check} disabled={d.busy} onClick={()=>decide('kept')}>{t('fe.staff.notice.kept')}</Btn>
+    <Btn kind="soft" icon={Minus} disabled={d.busy} onClick={()=>decide('not_actionable')}>{t('fe.staff.notice.not_actionable')}</Btn>
+    <Btn kind="danger" icon={Ban} disabled={d.busy||!rule} onClick={()=>setAsk(true)}>{t('fe.staff.notice.removed')}</Btn></Actions>}
   <Failure text={d.failure}/>
  </StCard>;
 }
@@ -687,16 +729,14 @@ function NoticeCard({item,onDone}:{item:NoticeItem,onDone:()=>void}){
 function PlaceCard({item,onDone}:{item:PlaceItem,onDone:()=>void}){
  const {t}=useI18n();const when=useWhen();const d=useDecide(onDone);
  const [ru,setRu]=useState(item.name_ru??'');const [en,setEn]=useState(item.name_en??'');const [ask,setAsk]=useState(false);
- return <StCard title={[item.name_ru,item.name_en].filter(Boolean).join(' / ')||'—'} meta={when(item.created_at)}>
+ return <StCard title={[item.name_ru,item.name_en].filter(Boolean).join(' / ')||t('fe.staff.place.unnamed')} meta={when(item.created_at)}>
   <Kv rows={[[t('fe.staff.place.country'),item.country],[t('fe.staff.place.used'),String(item.used??0)]]}/>
-  <div className="st-row st-block">
-   <LineField label={t('fe.staff.place.nameRu')} value={ru} max={80} onChange={setRu}/>
-   <LineField label={t('fe.staff.place.nameEn')} value={en} max={80} onChange={setEn}/>
-  </div>
+  <LineField label={t('fe.staff.place.nameRu')} value={ru} max={80} onChange={setRu}/>
+  <LineField label={t('fe.staff.place.nameEn')} value={en} max={80} onChange={setEn}/>
   {ask?<Confirm text={t('fe.staff.place.confirmReject')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>d.run('staff.placeDecide',{placeId:item.id,decision:'reject'})}/>
-   :<div className="st-row st-block"><Btn size="sm" auto icon={Check} disabled={d.busy} onClick={()=>d.run('staff.placeDecide',{placeId:item.id,decision:'approve',
+   :<Actions><Btn icon={Check} disabled={d.busy} onClick={()=>d.run('staff.placeDecide',{placeId:item.id,decision:'approve',
      ...(ru.trim()?{nameRu:ru.trim()}:{}),...(en.trim()?{nameEn:en.trim()}:{})})}>{t('fe.staff.approve')}</Btn>
-    <Btn kind="soft" size="sm" auto icon={Ban} disabled={d.busy} onClick={()=>setAsk(true)}>{t('fe.staff.reject')}</Btn></div>}
+    <Btn kind="soft" icon={Ban} disabled={d.busy} onClick={()=>setAsk(true)}>{t('fe.staff.reject')}</Btn></Actions>}
   <Failure text={d.failure}/>
  </StCard>;
 }
@@ -720,27 +760,24 @@ function Premium(){
   catch(e){err(e);}finally{setBusy(false);}};
  const uuid=/^[0-9a-f-]{36}$/i.test(entitlement.trim());
  return <>
-  <Group title={t('fe.staff.premium.grantTitle')}>
-   <Card form>
-    <Note>{t('fe.staff.premium.grantNote')}</Note>
-    <div className="st-row st-block">
-     <LineField label={t('fe.staff.premium.handle')} value={handle} max={21} autoCapitalize="none" onChange={setHandle}/>
-     <LineField className="st-days" label={t('fe.staff.premium.days')} inputMode="numeric" value={days} max={3} onChange={v=>setDays(v.replace(/\D/g,''))}/>
-    </div>
+  <Group title={t('fe.staff.premium.grantTitle')} foot={t('fe.staff.premium.grantNote')}>
+   <Form>
+    <LineField label={t('fe.staff.premium.handle')} value={handle} max={21} autoCapitalize="none" onChange={setHandle}/>
+    <LineField label={t('fe.staff.premium.days')} inputMode="numeric" value={days} max={3} onChange={v=>setDays(v.replace(/\D/g,''))}/>
     <TextField label={t('fe.staff.premium.reason')} value={reason} onChange={setReason} max={300}/>
-    <div className="st-row st-block"><Btn size="md" auto disabled={busy||!canGrant} onClick={grant} busy={busy}>{t('fe.staff.premium.grant')}</Btn></div>
-    {granted&&<Alert kind="ok" icon={Check} className="st-block">{t('fe.staff.premium.granted',{until:when(granted.until)})}<br/><code>{granted.id}</code></Alert>}
-   </Card>
+    <Btn icon={Check} disabled={busy||!canGrant} onClick={grant} busy={busy}>{t('fe.staff.premium.grant')}</Btn>
+    {granted&&<Alert kind="ok" icon={Check} action={<Actions><Btn kind="soft" size="sm" onClick={()=>setEntitlement(granted.id)}>{t('fe.staff.premium.revokeThis')}</Btn></Actions>}>{t('fe.staff.premium.granted',{until:when(granted.until)})}</Alert>}
+    {granted&&<Details data={granted.id}/>}
+   </Form>
   </Group>
-  <Group title={t('fe.staff.premium.revokeTitle')}>
-   <Card form>
-    <Note>{t('fe.staff.premium.revokeNote')}</Note>
-    <LineField className="st-block st-field" label={t('fe.staff.premium.entitlement')} value={entitlement} max={36} autoCapitalize="none" spellCheck={false} onChange={setEntitlement}/>
+  <Group title={t('fe.staff.premium.revokeTitle')} foot={t('fe.staff.premium.revokeNote')}>
+   <Form>
+    <LineField label={t('fe.staff.premium.entitlement')} value={entitlement} max={36} autoCapitalize="none" spellCheck={false} onChange={setEntitlement}/>
     <TextField label={t('fe.staff.premium.reason')} value={revokeReason} onChange={setRevokeReason} max={300}/>
     {ask?<Confirm text={t('fe.staff.premium.confirmRevoke')} busy={busy} onNo={()=>setAsk(false)} onYes={revoke}/>
-     :<div className="st-row st-block"><Btn kind="danger" size="md" auto disabled={busy||!uuid||revokeReason.trim().length<3} onClick={()=>setAsk(true)}>{t('fe.staff.premium.revoke')}</Btn></div>}
-    {revoked&&<Alert kind="ok" icon={Check} className="st-block">{revoked}</Alert>}
-   </Card>
+     :<Btn kind="danger" disabled={busy||!uuid||revokeReason.trim().length<3} onClick={()=>setAsk(true)}>{t('fe.staff.premium.revoke')}</Btn>}
+    {revoked&&<Alert kind="ok" icon={Check}>{revoked}</Alert>}
+   </Form>
   </Group>
   <Failure text={failure}/>
  </>;
@@ -756,37 +793,44 @@ const JOURNAL_ACTIONS=['age.view','age.approve','age.reject','photo.view','photo
 type JournalRow=z.infer<typeof journalItem>;
 
 function Journal(){
- const {call}=useFe();const {t}=useI18n();const when=useWhen();
- const [filter,setFilter]=useState('');const [applied,setApplied]=useState('');
+ const {call}=useFe();const {t}=useI18n();const when=useWhen();const jw=useJournalWord();
+ // The object the list is narrowed to: its code (sent to the server) and a plain name of it for the reader.
+ const [applied,setApplied]=useState<{id:string,label:string}|null>(null);const [code,setCode]=useState('');const [codeOpen,setCodeOpen]=useState(false);
  const [who,setWho]=useState('');const [what,setWhat]=useState('');
  // Staff for the «Кто» filter: everyone seen in the journal so far (the journal is the only place that names them).
  const [staffSeen,setStaffSeen]=useState<Record<string,string>>({});
- const word=(v:string,k:string)=>{const x=t(k+v);return x===k+v?v:x;};
- const fetchPage=useCallback((after?:string)=>call('staff.journal',{limit:50,...(applied?{targetId:applied}:{}),...(who?{staffAccountId:who}:{}),...(what?{what}:{}),...(after?{after}:{})},journalPage,{asAccount:true})
-  .then(r=>{setStaffSeen(m=>{const n={...m};for(const x of r.items)if(x.staff_account_id)n[x.staff_account_id]=name(x);return n;});return r;}),[call,applied,who,what]);
- const {items,error,reload:load,moreProps}=useStaffPage(fetchPage,x=>String(x.id));
  const name=(x:JournalRow)=>x.staff_name||(x.staff_handle?'@'+x.staff_handle:t('fe.staff.journal.unknownStaff'));
- const valid=!filter.trim()||/^[0-9a-f-]{36}$/i.test(filter.trim());
+ const targetId=applied?.id;
+ const fetchPage=useCallback((after?:string)=>call('staff.journal',{limit:50,...(targetId?{targetId}:{}),...(who?{staffAccountId:who}:{}),...(what?{what}:{}),...(after?{after}:{})},journalPage,{asAccount:true})
+  .then(r=>{setStaffSeen(m=>{const n={...m};for(const x of r.items)if(x.staff_account_id)n[x.staff_account_id]=x.staff_name||(x.staff_handle?'@'+x.staff_handle:t('fe.staff.journal.unknownStaff'));return n;});return r;}),[call,targetId,who,what,t]);
+ const {items,error,reload:load,moreProps}=useStaffPage(fetchPage,x=>String(x.id));
+ const valid=/^[0-9a-f-]{36}$/i.test(code.trim());
  const staffOptions:[string,string][]=[['',t('fe.staff.journal.anyone')],...Object.entries(staffSeen).map(([id,n])=>[id,n] as [string,string])];
- if(who&&!staffSeen[who])staffOptions.push([who,who.slice(0,8)]);
+ if(who&&!staffSeen[who])staffOptions.push([who,t('fe.staff.journal.unknownStaff')]);
  return <>
-  <div className="st-row mt8">
-   <LineField label={t('fe.staff.journal.filter')} value={filter} max={36} spellCheck={false} onChange={setFilter}/>
-   <Btn kind="soft" size="md" auto disabled={!valid} onClick={()=>{const v=filter.trim();if(v===applied)load();else setApplied(v);}}>{t('fe.staff.journal.apply')}</Btn>
-  </div>
-  <div className="st-row">
+  <Form>
    <Field id="st-j-who" label={t('fe.staff.journal.who')}><Select id="st-j-who" label={t('fe.staff.journal.who')} value={who} options={staffOptions} onChange={setWho}/></Field>
-   <Field id="st-j-what" label={t('fe.staff.journal.what')}><Select id="st-j-what" label={t('fe.staff.journal.what')} value={what} options={[['',t('fe.staff.journal.anything')],...JOURNAL_ACTIONS.map(a=>[a,word(a,'fe.staff.journal.action.')] as [string,string])]} onChange={setWhat}/></Field>
-  </div>
-  {error?(forbidden(error)?<Empty icon={Lock} title={t('fe.staff.unavailable')} text={t('fe.staff.journal.forbidden')}/>
-    :<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>)
+   <Field id="st-j-what" label={t('fe.staff.journal.what')}><Select id="st-j-what" label={t('fe.staff.journal.what')} value={what} options={[['',t('fe.staff.journal.anything')],...JOURNAL_ACTIONS.map(a=>[a,jw('action',a)] as [string,string])]} onChange={setWhat}/></Field>
+  </Form>
+  {applied?<Alert kind="info" icon={ListFilter} action={<Btn kind="soft" size="sm" auto onClick={()=>setApplied(null)}>{t('fe.staff.journal.showAll')}</Btn>}>{t('fe.staff.journal.onlyThis',{what:applied.label})}</Alert>
+   :<Card list><ExpandRow icon={Search} title={t('fe.staff.journal.byCode')} open={codeOpen} onToggle={()=>setCodeOpen(o=>!o)}>
+    <Form>
+     <LineField label={t('fe.staff.journal.filter')} value={code} max={36} spellCheck={false} onChange={setCode}/>
+     <Btn kind="soft" disabled={!valid} onClick={()=>{setApplied({id:code.trim(),label:t('fe.staff.journal.thatCode')});setCode('');setCodeOpen(false);}}>{t('fe.staff.journal.apply')}</Btn>
+    </Form>
+   </ExpandRow></Card>}
+  {error?(forbidden(error)?<Empty compact icon={Lock} title={t('fe.staff.unavailable')} text={t('fe.staff.journal.forbidden')}/>
+    :<Alert kind="err" action={<Btn kind="soft" size="sm" auto icon={RefreshCw} onClick={load}>{t('fe.retry')}</Btn>}>{feErrorMessage(error,t)}</Alert>)
    :items===null?<Skel kind="list"/>
-   :!items.length?<Empty icon={Inbox} title={t('fe.staff.journal.empty')}/>
-   :<><Card list className="mt8">{items.map(x=><Row key={String(x.id)}
-     title={<>{x.staff_account_id?name(x):t('fe.staff.journal.auto')} · {word(x.action,'fe.staff.journal.action.')}{x.target_type?' · '+word(x.target_type,'fe.staff.journal.type.'):''}</>}
-     sub={<>{when(x.created_at)}{x.target_id?' · '+x.target_id:''}</>}
-     extra={x.detail!==undefined&&x.detail!==null&&show(x.detail)!=='{}'?<MoreInfo label={t('fe.staff.more')} hideLabel={t('fe.staff.moreHide')}>{show(x.detail)}</MoreInfo>:undefined}
-     end={<IconBtn icon={ChevronRight} kind="ghost" label={t('fe.staff.journal.apply')} disabled={!x.target_id} onClick={()=>{if(x.target_id){setFilter(x.target_id);setApplied(x.target_id);}}}/>}/>)}</Card>
+   :!items.length?<Empty compact icon={Inbox} title={t('fe.staff.journal.empty')}/>
+   :<><Card list>{items.map(x=>{
+     const typeWord=x.target_type?jw('type',x.target_type):null;
+     const raw=x.target_id||(x.detail!==undefined&&x.detail!==null&&show(x.detail)!=='{}')?{...(x.target_id?{target:x.target_id}:{}),...(x.detail!==undefined&&x.detail!==null?{detail:x.detail}:{})}:null;
+     return <Row key={String(x.id)}
+      title={(x.staff_account_id?name(x):t('fe.staff.journal.auto'))+' · '+jw('action',x.action)}
+      sub={when(x.created_at)+(typeWord?' · '+typeWord:'')}
+      extra={raw?<Details data={raw}/>:undefined}
+      end={x.target_id?<IconBtn icon={ListFilter} kind="ghost" label={t('fe.staff.journal.sameObject')} onClick={()=>setApplied({id:x.target_id!,label:typeWord??t('fe.staff.journal.thatCode')})}/>:undefined}/>;})}</Card>
     <LoadMore {...moreProps}/></>}
  </>;
 }

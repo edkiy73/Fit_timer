@@ -2,9 +2,9 @@ import {useCallback,useEffect,useState} from 'react';
 import {useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Check,Inbox,LifeBuoy,MessageCircle,RefreshCw,X} from 'lucide-react';
+import {Check,Inbox,LifeBuoy,MessageCircle,RefreshCw} from 'lucide-react';
 import {feErrorMessage,newOpId,sendPublicHelp} from '../feture/fe-api';
-import {Actions,Alert,Btn,Card,ChoiceChips,Empty,Field,Group,Input,LoadMore,Note,Row,Seg,Sheet,Skel,Stack,TextArea,Thread} from './kit';
+import {Actions,Alert,Btn,Card,ChoiceChips,Empty,Field,Group,Input,KeyValues,LoadMore,Note,ReviewCard,Row,Seg,Sheet,Skel,Stack,TextArea,Thread} from './kit';
 import {useToast} from './toast';
 import {FIELD,serverFields,softMax,textError,textErrorMessage,useChecks} from './kit/validate';
 import {useFe} from './session';
@@ -137,10 +137,10 @@ export function StaffSupport(){
  const fetchPage=useCallback((after?:string)=>call('staff.supportQueue',{state,limit:20,...(after?{after}:{})},queueRes,{asAccount:true,fresh:true}),[call,state]);
  const {items,setItems,error,reload:load,moreProps}=useStaffPage(fetchPage,x=>x.id);
  return <Stack gap={3}>
-  <Seg value={state} onChange={setState} options={(['open','answered','closed'] as const).map(id=>({id,label:t('fe.w8.sup.s.'+id)}))}/>
-  {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
+  <Seg value={state} onChange={setState} label={t('fe.w8.staff.support')} options={(['open','answered','closed'] as const).map(id=>({id,label:t('fe.w8.sup.s.'+id)}))}/>
+  {error?<Alert kind="err" action={<Btn kind="soft" size="sm" auto icon={RefreshCw} onClick={load}>{t('fe.retry')}</Btn>}>{feErrorMessage(error,t)}</Alert>
    :!items?<Skel kind="list"/>
-   :!items.length?<Empty icon={Inbox} title={t('fe.w8.staff.supEmpty')}/>
+   :!items.length?<Empty compact icon={Inbox} title={t('fe.w8.staff.supEmpty')}/>
    :<>{items.map(x=><StaffTicket key={x.id} item={x} when={when} onDone={()=>setItems(l=>l?.filter(y=>y.id!==x.id)??l)}/>)}<LoadMore {...moreProps}/></>}
  </Stack>;
 }
@@ -157,19 +157,17 @@ function StaffTicket({item,when,onDone}:{item:z.infer<typeof queueRes>['items'][
   try{await call('staff.supportReply',{opId:newOpId(),ticketId:item.id,close,...(body.trim()?{body:body.trim()}:{})},okRes,{asAccount:true});clearDraft(draftSlot);toast(t('fe.staff.done'),{type:'ok'});onDone();}
   catch(e){const f=serverFields(e).find(f=>f.path==='body');setErr(f?textErrorMessage(t,f.code,FIELD.support):feErrorMessage(e,t));}finally{setBusy(false);}
  };
- return <Card>
-  <Stack gap={2}>
-   <Row noChev icon={LifeBuoy} title={t('fe.w8.sup.t.'+item.topic)} sub={t('fe.w8.staff.from',{handle:item.handle?'@'+item.handle:'—'})+' · '+when(item.updatedAt)}/>
-   <Thread label={t('fe.w8.sup.ticket')} messages={item.messages.map(m=>({id:m.id,mine:m.fromStaff,text:m.body,meta:(m.fromStaff?t('fe.w8.sup.support'):item.handle?'@'+item.handle:'—')+' · '+when(m.at)}))}/>
-   {item.state!=='closed'&&<>
-    <Field id={'fe-st-sup-'+item.id} label={t('fe.w8.staff.answer')} error={err||undefined}>
-     <TextArea id={'fe-st-sup-'+item.id} rows={3} maxLength={softMax('support')} value={body} invalid={!!err} onChange={e=>{setBody(e.target.value);setErr('');}}/>
-    </Field>
-    <Actions>
-     <Btn size="sm" busy={busy} icon={MessageCircle} onClick={()=>void send(false)}>{t('fe.w8.staff.send')}</Btn>
-     <Btn size="sm" kind="soft" disabled={busy} onClick={()=>void send(true)}>{body.trim()?t('fe.w8.staff.sendClose'):t('fe.w8.staff.close')}</Btn>
-    </Actions>
-   </>}
-  </Stack>
- </Card>;
+ return <ReviewCard title={t('fe.w8.sup.t.'+item.topic)} meta={when(item.updatedAt)}>
+  <KeyValues rows={[[t('fe.staff.fromLabel'),item.handle?'@'+item.handle:t('fe.staff.noName')]]}/>
+  <Thread label={t('fe.w8.sup.ticket')} messages={item.messages.map(m=>({id:m.id,mine:m.fromStaff,text:m.body,meta:(m.fromStaff?t('fe.w8.sup.support'):item.handle?'@'+item.handle:t('fe.staff.noName'))+' · '+when(m.at)}))}/>
+  {item.state!=='closed'&&<>
+   <Field id={'fe-st-sup-'+item.id} label={t('fe.w8.staff.answer')} error={err||undefined}>
+    <TextArea id={'fe-st-sup-'+item.id} rows={3} maxLength={softMax('support')} value={body} invalid={!!err} onChange={e=>{setBody(e.target.value);setErr('');}}/>
+   </Field>
+   <Actions>
+    <Btn busy={busy} icon={MessageCircle} onClick={()=>void send(false)}>{t('fe.w8.staff.send')}</Btn>
+    <Btn kind="soft" disabled={busy} onClick={()=>void send(true)}>{body.trim()?t('fe.w8.staff.sendClose'):t('fe.w8.staff.close')}</Btn>
+   </Actions>
+  </>}
+ </ReviewCard>;
 }

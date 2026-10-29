@@ -17,8 +17,8 @@ export default [
    await t.see('.seg'); await t.page.locator('.seg[aria-label="Очереди проверки"] [role=tab]').first().waitFor({ timeout: 20000 });
    const tabs = t.page.locator('.seg[aria-label="Очереди проверки"] [role=tab]'); const n = await tabs.count(); if (n < 3) throw new Error('queue tabs: ' + n);
    for (let i = 0; i < n; i++) { await tabs.nth(i).click(); await t.wait(150); if (await tabs.nth(i).getAttribute('aria-selected') !== 'true') throw new Error('tab not selected ' + i);
-     if (await t.page.locator('.view .empty[role=alert]').count()) throw new Error('queue error on tab ' + (await tabs.nth(i).innerText())); }
-   await t.tap('.st-tools .btn'); await t.page.locator('.seg[aria-label="Очереди проверки"] [role=tab]').first().waitFor({ timeout: 20000 });
+     if (await t.page.locator('.view .alert.err').count()) throw new Error('queue error on tab ' + (await tabs.nth(i).innerText())); }
+   await t.tap('.view .sec .btn:has-text("Обновить")'); await t.page.locator('.seg[aria-label="Очереди проверки"] [role=tab]').first().waitFor({ timeout: 20000 });
    await t.tap('.seg >> text=Премиум'); await t.see('Выдать Премиум для теста');
    await t.tap('.seg >> text=Журнал'); await t.page.locator('.view .card.list, .view .empty').first().waitFor({ timeout: 15000 });
    await t.tap('header.bar button[aria-label="Назад"]'); await t.page.waitForURL(/\/n\/me/);
@@ -43,8 +43,8 @@ export default [
    const reject = card.locator('.btn:has-text("Отклонить")');
    if (!(await reject.isDisabled())) throw new Error('reject must wait for a reason');
    await card.locator('[role=radiogroup] .chip').first().click(); await reject.click();
-   await card.locator('.st-confirm .btn:has-text("Отмена")').click(); await card.locator('.btn:has-text("Отклонить")').click();
-   await card.locator('.st-confirm .btn.danger').click();
+   await card.locator('[role=alertdialog] .btn:has-text("Отмена")').click(); await card.locator('.btn:has-text("Отклонить")').click();
+   await card.locator('[role=alertdialog] .btn.danger').click();
    await t.see('Решение сохранено.');
    await until(async () => { const s = await t.api('verification.photoStatus', {}, who); if (s.state !== 'rejected') throw new Error('state ' + s.state); });
    } finally { await drop(t, tmp); }
@@ -62,7 +62,7 @@ export default [
      await until(async () => { const s = await t.api('premium.status', {}, other); if (!s.premium) throw new Error('not premium'); });
      const id = await t.page.getByLabel('Номер выдачи').inputValue(); if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error('entitlement id not filled: ' + id);
      await t.page.locator('textarea').nth(1).fill('e2e отзыв');
-     await t.tap('.btn.danger:has-text("Отозвать")'); await t.tap('.st-confirm .btn.danger'); await t.see('Выдача отозвана.');
+     await t.tap('.btn.danger:has-text("Отозвать")'); await t.tap('[role=alertdialog] .btn.danger'); await t.see('Выдача отозвана.');
      await until(async () => { const s = await t.api('premium.status', {}, other); if (s.premium) throw new Error('still premium'); });
      await t.tap('.seg >> text=Журнал'); await t.page.locator('.view .card.list').first().waitFor({ timeout: 15000 });
      await t.see('.view .card.list >> text=premium');

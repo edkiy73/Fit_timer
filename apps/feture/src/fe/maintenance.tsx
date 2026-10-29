@@ -4,7 +4,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import {Power,RefreshCw,Wrench} from 'lucide-react';
 import {FeError,feErrorMessage,feRequest,newOpId,MAINTENANCE_EVENT} from '../feture/fe-api';
-import {Alert,Ask,Btn,Card,Field,Group,Input,Maintenance,Note,Row,Stack} from './kit';
+import {Alert,Ask,Btn,Card,Field,Form,Group,Input,Maintenance,Note,Row,Skel} from './kit';
 import {useFe} from './session';
 import {softMax,textError} from './kit/validate';
 
@@ -47,23 +47,26 @@ function MaintenanceView({message,onRetry}:{message:string|null,onRetry:()=>Prom
 export function StaffMaintenance(){
  const {call}=useFe();const {t}=useI18n();
  const [st,setSt]=useState<{active:boolean,message:string|null}|null>(null);const [msg,setMsg]=useState('');
- const [ask,setAsk]=useState(false);const [busy,setBusy]=useState(false);const [error,setError]=useState('');
- useEffect(()=>{call('platform.maintenance',{},statusRes,{asAccount:true,fresh:true}).then(r=>{setSt(r);setMsg(r.message??'');}).catch(e=>setError(feErrorMessage(e,t)));},[call,t]);
+ const [ask,setAsk]=useState(false);const [busy,setBusy]=useState(false);const [error,setError]=useState('');const [loadError,setLoadError]=useState('');
+ const load=useCallback(()=>{setLoadError('');call('platform.maintenance',{},statusRes,{asAccount:true,fresh:true}).then(r=>{setSt(r);setMsg(r.message??'');}).catch(e=>setLoadError(feErrorMessage(e,t)));},[call,t]);
+ useEffect(()=>{load();},[load]);
  const msgErr=textError(t,'maintenance',msg);
  const set=async(active:boolean)=>{if(active&&msgErr){setError(msgErr);setAsk(false);return;}setBusy(true);setError('');
   try{const r=await call('staff.maintenanceSet',{opId:newOpId(),active,...(active&&msg.trim()?{message:msg.trim()}:{})},statusRes,{asAccount:true});
    setSt(r);setAsk(false);}
   catch(e){setError(feErrorMessage(e,t));}finally{setBusy(false);}};
  return <Group title={t('fe.w8.staff.maintTitle')} foot={t('fe.w8.staff.maintNote')}>
-  <Stack gap={3}>
-   {st&&<Card list><Row noChev icon={Wrench} tone={st.active?'l':'g'} title={st.active?t('fe.w8.staff.maintIsOn'):t('fe.w8.staff.maintIsOff')} sub={st.active&&st.message?st.message:undefined}/></Card>}
-   {st&&!st.active&&<Field id="fe-maint-msg" label={t('fe.w8.staff.maintMessage')} error={msg.trim()?msgErr:undefined}>
-    <Input id="fe-maint-msg" value={msg} maxLength={softMax('maintenance')} invalid={!!msg.trim()&&!!msgErr} onChange={e=>setMsg(e.target.value)}/>
-   </Field>}
-   {error&&<Alert kind="err">{error}</Alert>}
-   {st&&(st.active?<Btn kind="soft" icon={Power} busy={busy} onClick={()=>void set(false)}>{t('fe.w8.staff.maintOff')}</Btn>
-    :<Btn kind="danger" icon={Power} onClick={()=>setAsk(true)}>{t('fe.w8.staff.maintOn')}</Btn>)}
-  </Stack>
+  {loadError?<Alert kind="err" action={<Btn kind="soft" size="sm" auto icon={RefreshCw} onClick={load}>{t('fe.retry')}</Btn>}>{loadError}</Alert>
+   :!st?<Skel kind="list" rows={1}/>
+   :<Form>
+    <Card list><Row noChev icon={Wrench} tone={st.active?'l':'g'} title={st.active?t('fe.w8.staff.maintIsOn'):t('fe.w8.staff.maintIsOff')} sub={st.active&&st.message?st.message:undefined}/></Card>
+    {!st.active&&<Field id="fe-maint-msg" label={t('fe.w8.staff.maintMessage')} error={msg.trim()?msgErr:undefined}>
+     <Input id="fe-maint-msg" value={msg} maxLength={softMax('maintenance')} invalid={!!msg.trim()&&!!msgErr} onChange={e=>setMsg(e.target.value)}/>
+    </Field>}
+    {st.active?<Btn kind="soft" icon={Power} busy={busy} onClick={()=>void set(false)}>{t('fe.w8.staff.maintOff')}</Btn>
+     :<Btn kind="danger" icon={Power} onClick={()=>setAsk(true)}>{t('fe.w8.staff.maintOn')}</Btn>}
+    {error&&<Alert kind="err">{error}</Alert>}
+   </Form>}
   {ask&&<Ask title={t('fe.w8.staff.maintTitle')} text={t('fe.w8.staff.maintAsk')} ok={t('fe.w8.staff.maintOn')} danger busy={busy} onOk={()=>void set(true)} onCancel={()=>setAsk(false)}/>}
  </Group>;
 }

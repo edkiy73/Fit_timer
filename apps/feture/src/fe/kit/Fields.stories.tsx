@@ -1,6 +1,6 @@
 import type {Meta,StoryObj} from '@storybook/react-vite';
 import {useState} from 'react';
-import {Btn,Counter,Field,Input,SearchInput,Select,Stack,TextArea} from './index';
+import {Btn,Counter,Field,Form,Input,SearchInput,Select,Stack,TextArea} from './index';
 import {useChecks} from './validate';
 
 const meta={title:'Поля/Поле ввода',component:Input,tags:['autodocs'],
@@ -31,3 +31,10 @@ export const СПроверкой:S={name:'С проверкой (правила
   <Field id="vb" name="bio" label="О себе" error={v.error('bio')}><TextArea id="vb" rows={3} value={bio} {...v.input('bio')} onChange={e=>setBio(e.target.value)}/>{v.counter('bio')}</Field>
   <Btn onClick={()=>v.submit()}>Сохранить</Btn>
  </Stack>;},decorators:[S=><S/>]};
+
+export const ФормаКолонкой:StoryObj<typeof Form>={name:'Форма: колонка полей (Form)',render:()=><Form>
+ <Field id="fm-a" label="Ник"><Input id="fm-a" placeholder="mia_rope"/></Field>
+ <Field id="fm-b" label="Дней"><Input id="fm-b" inputMode="numeric" defaultValue="30"/></Field>
+ <Field id="fm-c" label="Зачем"><TextArea id="fm-c" rows={2}/></Field>
+ <Btn>Выдать</Btn></Form>,
+ parameters:{docs:{description:{story:'`Form` — одна колонка блоков формы: поля, уведомление, главная кнопка последней. Между соседями всегда 16 px, что бы в блоке ни лежало; своих обёрток и отступов экран не заводит.'}}}};
