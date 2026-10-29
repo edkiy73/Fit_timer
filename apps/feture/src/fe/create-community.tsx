@@ -221,7 +221,7 @@ function CommunityForm({edit,reload}:{edit?:EditableCommunity&{rev:number},reloa
   try{
    const r=await call('community.create',{opId:opFor(input),...input},created);done();
    const notice=r.pending?t('fe.cc.pending'):couple?t('fe.cc.doneCouple'):t('fe.cc.done');
-   navigate('/n/me?layer=mine&part=communities',{replace:true,state:{notice}});
+   navigate('/n/me/communities',{replace:true,state:{notice}});
   }catch(e){fail(e);}finally{setBusy(false);}
  };
 

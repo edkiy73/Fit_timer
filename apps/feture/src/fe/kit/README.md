@@ -68,6 +68,8 @@ text), `onClick` (the whole notice opens something), `role="alertdialog"` (an in
 `breakAll`; `Empty big` / `top` / `after`; `Skel kind="fill"` (fills a cover) / `"event"`; `CodeInput` `disabled`,
 `onComplete`, `onEnter`, `digitLabel` (the app's `.code` look); `RangeDual labels`; `Note as="ul"`.
 Token added: `--fs-xl` (24).
+Event page round (29.10.2026): `Text pre` keeps the line breaks of a person's plain text (an event description);
+`Fact` — one line of a short list with an icon in front (requirements, what Premium gives).
 
 Feed sweep (29.10.2026, kit.css): with no `.ctx` column the desktop grid grows both sides alike, so the content
 column sits in the middle of the window; `.inputbar` follows `--page-max` on tablet / desktop; `RichEditor`'s bar wraps
@@ -82,7 +84,7 @@ Product pieces that repeat or carry their own look. Screens use these, never the
 | Need | Use |
 |---|---|
 | Header over a cover / of a chat | `CoverBar` (glass buttons over the cover; once the cover's title or the cover scrolls under them, the header becomes the glass bar — the dock's `--nav` + blur — with the title; never a gradient band over the content), `PersonBar` (‹, avatar + name + line, opens the profile) |
-| Event | `EventTile` (`eventCard()`: card / `row` / still preview), `EventHero` (cover, glass labels, title, status), `Rsvp` («Интересно / Иду / Не иду»), `Announcement` |
+| Event | `EventTile` (`eventCard()`: card / `row` / still preview), `EventHero` (cover, glass labels, title, status), `Rsvp` («Интересно / Иду / Не иду»: all three on the quiet plate, the chosen one in its tone; two yes answers on one line and «Не иду» under them on a phone, three in a row from 600 px), `EventAnswer` (the event page's «участие» block, the same in every state: heading + small action (`Снять ответ`, «Ждёт партнёра»), a state line with tone and its action under the text, the choices or buttons, a footer row — the «Показывать меня в списке» switch or a note; a state alone makes the card itself the state line), `Announcement` |
 | Community | `CommunityHead` (cover, picture, name, meta; loading shape), `Discussion` (row with pinned mark and host ⋯), `Veil` (closed content under glass), `StatusCard` (my join request / event application as one block: icon, state, line, «Отозвать» at the end; tones wait / ok / bad) |
 | Create | `Swatches` (cover colour plates); the named plates themselves: `namedPlate(key)` / `PLATE_KEYS` (keys shared with the server in `contracts/_plates.mjs`) |
 | Interests | `AnswerScale` (1–10 with «обсудить» / «граница» marks) |

@@ -213,10 +213,11 @@ export function H({level,as,children,className,id,tabIndex}:{/** 0 = display (ev
  return <Tag id={id} tabIndex={tabIndex} className={['k-h'+level,className].filter(Boolean).join(' ')}>{children}</Tag>;
 }
 /** Running text on the type scale; `tone` from the colour tokens. */
-export function Text({size='body',tone,as='p',children,className,center,bold,breakAll}:{size?:'md'|'body'|'strong'|'sm'|'xs'|'cap'|'label'|'micro',tone?:'ink'|'mute'|'faint'|'accent'|'danger'|'ok',
- as?:'p'|'span'|'div'|'small'|'b',children:ReactNode,className?:string,center?:boolean,/** Heavy weight on any size (an address, a name line). */ bold?:boolean,/** Links and addresses break anywhere. */ breakAll?:boolean}){
+export function Text({size='body',tone,as='p',children,className,center,bold,breakAll,pre}:{size?:'md'|'body'|'strong'|'sm'|'xs'|'cap'|'label'|'micro',tone?:'ink'|'mute'|'faint'|'accent'|'danger'|'ok',
+ as?:'p'|'span'|'div'|'small'|'b',children:ReactNode,className?:string,center?:boolean,/** Heavy weight on any size (an address, a name line). */ bold?:boolean,/** Links and addresses break anywhere. */ breakAll?:boolean,
+ /** Keeps the line breaks of a person's plain text (an event description). */ pre?:boolean}){
  const Tag=as;
- return <Tag className={['k-'+size,tone?'k-'+tone:'',center?'k-center':'',bold?'k-bold':'',breakAll?'k-break-all':'',className].filter(Boolean).join(' ')}>{children}</Tag>;
+ return <Tag className={['k-'+size,tone?'k-'+tone:'',center?'k-center':'',bold?'k-bold':'',breakAll?'k-break-all':'',pre?'k-pre':'',className].filter(Boolean).join(' ')}>{children}</Tag>;
 }
 /** Vertical / horizontal stacks: spacing between blocks comes only from the scale (gap 1–6 = 4…24 px). */
 export function Stack({children,gap=3,row,className,grow,align,justify}:{children:ReactNode,gap?:0|1|2|3|4|5|6,row?:boolean,className?:string,grow?:boolean,align?:'start'|'center'|'end'|'stretch',justify?:'start'|'between'|'end'|'center'}){
@@ -305,6 +306,11 @@ export function Badge({n,dot,label}:{n?:number|undefined,dot?:boolean,label?:str
 }
 /** `.note` — a quiet hint line; `.sec` — a section label above a block. */
 export function Note({children,className,as='p'}:{children:ReactNode,className?:string,as?:'p'|'span'|'div'|'small'|'ul'}){const T=as;return <T className={'note'+(className?' '+className:'')}>{children}</T>;}
+/** `.fact` — one line of a short list with an icon in front (an event's requirements, what Premium gives); `tone`
+ * colours the icon: ok (green), v (accent), a (warning); without it the icon is quiet. */
+export function Fact({icon:Icon,tone,children}:{icon:LucideIcon,tone?:'ok'|'v'|'a'|undefined,children:ReactNode}){
+ return <div className="fact"><i className={tone==='ok'?'g':tone}><Icon/></i><span>{children}</span></div>;
+}
 export function SectionLabel({children,action,id,className}:{children:ReactNode,action?:ReactNode,id?:string,className?:string}){return <div className={'sec'+(className?' '+className:'')} id={id}><span>{children}</span>{action}</div>;}
 /** «12 / 1000» under a text field. */
 export function Counter({n,max}:{n:number,max:number}){return <div className={'counter'+(n>max?' over':'')} aria-live="polite">{n} / {max}</div>;}

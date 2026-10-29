@@ -89,7 +89,7 @@ export default [
    try {
      await t.go('/n/events/' + id);
      await t.see('.rsvp.us');
-     await t.see('.rsvp-h :text("Пойдёте вдвоём?")');
+     await t.see('.k-answer-h :text("Пойдёте вдвоём?")');
      await t.see('.rsvp .r-interested:has-text("Нам интересно")');
      await t.see('.rsvp .r-going:has-text("Идём вдвоём")');
      await t.see('.rsvp .r-not:has-text("Не идём")');

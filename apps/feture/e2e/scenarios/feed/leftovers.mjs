@@ -48,7 +48,7 @@ export default [
    const title = 'Черновик ' + tag();
    const s = ok(await t.api('event.draftSave', { opId: t.uuid7(), step: 3, form: { title, kind: 'talk', description: 'Описание черновика для проверки', format: 'online', joinUrl: 'https://meet.example/lo' } }), 'draftSave');
    try {
-     await t.go('/n/me?layer=mine&part=events');
+     await t.go('/n/me/events');
      await t.tap(`.li:has-text("${title}") button:has-text("Продолжить")`);
      await t.see('.stepper:has-text("3/4")');
      expect(t.page.url().includes('draft=' + s.id), 'the draft is in the address');

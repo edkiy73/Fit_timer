@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,Bell,ChevronRight,CircleCheck,Clock,Copy,Ellipsis,FileText,Flag,Info,Link as LinkIcon,Lock,MessageCircle,Pencil,Pin,PinOff,Send,Settings,ShieldAlert,Trash2,TrendingDown,TrendingUp,User,UserMinus,UserPlus,Users,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Announcement,Answer,Ask,Av,Btn,Card,IconBtn,Empty,Group,LoadMore,Note,PersonLine,Pill,RequestCard,Row,SectionLabel,Seg,Sheet,Skel,Stack,StatTiles,StatusCard,SubBar} from './kit';
+import {Alert,Announcement,Answer,Ask,Av,Btn,Card,IconBtn,Empty,Group,LoadMore,Note,PersonLine,Pill,RequestCard,Row,SectionLabel,Seg,Sheet,Skel,Stack,StatTiles,SubBar} from './kit';
 import {useFe,usePartnerApproves} from './session';
 import {WriteBtn,useWriteTo} from './write-to';
 import {useToast} from './toast';
@@ -175,9 +175,8 @@ export function MembersList({c,data,onChange}:{c:{id:string,me?:{role:string,sta
  const open=openId?items?.find(m=>m.id===openId)??null:null;
  const sub=(m:Mem)=>m.id===acting?.id?(m.role==='owner'?t('fe.cm.youOwner'):t('fe.host.mem.you')):m.role==='owner'?t('fe.cm.owner'):m.role==='host'?t('fe.cm.hostSub'):m.read_only?t('fe.cm.cantPost'):undefined;
  const canManage=(m:Mem)=>host&&m.id!==acting?.id&&m.role!=='owner'&&(m.role!=='host'||owner);
- // «Написать» someone of the community (owner 29.10.2026: a message request when there is no chat); hosts find it in ⋯.
- const row=(m:Mem)=><PersonRow key={m.id} p={m} sub={sub(m)??(m.handle&&m.name?'@'+m.handle:t('fe.cm.memberSub'))} {...(canManage(m)?{onClick:()=>setOpen(m.id),end:<IconBtn icon={Ellipsis} kind="ghost" size="sm" label={t('fe.cm.more')} onClick={()=>setOpen(m.id)}/>}
-  :m.id!==acting?.id?{end:<WriteBtn id={m.id} name={pname(m)}/>}:{})}/>;
+ // No «Написать» icon in the members list (owner 29.10.2026): people write first from a profile; hosts find «Написать» in ⋯.
+ const row=(m:Mem)=><PersonRow key={m.id} p={m} sub={sub(m)??(m.handle&&m.name?'@'+m.handle:t('fe.cm.memberSub'))} {...(canManage(m)?{onClick:()=>setOpen(m.id),end:<IconBtn icon={Ellipsis} kind="ghost" size="sm" label={t('fe.cm.more')} onClick={()=>setOpen(m.id)}/>}:{})}/>;
  const hosts=items?.filter(m=>m.role!=='member')??[];const members=items?.filter(m=>m.role==='member')??[];
  return <>
   {items===null?<Empty compact icon={Users} title={pl(data.count,t('fe.cm.members'),locale)} text={t('fe.host.mem.afterJoin')}/>:<>
@@ -326,23 +325,22 @@ export function CommunityMembersScreen(){
 
 /* ---------------- Events ---------------- */
 
-/** E03 «Участие» for events by application: my application as one StatusCard (the same card as a community join
- * request): the state, what happens next, and «Отозвать» on the right while it waits (for the organizer, or for the
- * partner of a couple). */
-export function EventApplicationLines({e,busy,onWithdraw,onCancelWait}:{e:{requiresApplication:boolean,me:Record<string,unknown>},busy?:boolean,
+/** The application part of an event's «участие» block (`EventAnswer` status line): the state of my application —
+ * none / pending / approved / declined, or a couple's one waiting for the partner — its line and «Отозвать». Null
+ * for an event without an application. */
+export function useEventApplication(e:{requiresApplication:boolean,me:Record<string,unknown>}|null,{busy,onWithdraw,onCancelWait}:{busy?:boolean,
  /** Withdraw a pending application (asks first). */ onWithdraw?:()=>void,/** Take back a couple's application the partner has not approved yet. */ onCancelWait?:()=>void}){
  const {t}=useI18n();const {acting}=useFe();
- if(!e.requiresApplication)return null;
+ if(!e?.requiresApplication)return null;
  const parsed=application.nullable().optional().safeParse(e.me.application);const app=parsed.success?parsed.data??null:null;
  // Only a waiting application counts here: a couple's «идём» waiting for the partner is the RSVP's business.
  const wait=e.me.waiting as {kind?:string}|null|undefined;
- const st=wait?.kind==='event.apply'?'waiting':app&&['pending','approved','declined'].includes(app.state)?app.state:'none';
- const Icon=({none:FileText,pending:Clock,approved:CircleCheck,declined:X,waiting:Users} as Record<string,LucideIcon>)[st]!;
+ const st=(wait?.kind==='event.apply'?'waiting':app&&['pending','approved','declined'].includes(app.state)?app.state:'none') as 'none'|'pending'|'approved'|'declined'|'waiting';
+ const icon=({none:FileText,pending:Clock,approved:CircleCheck,declined:X,waiting:Users} as Record<string,LucideIcon>)[st]!;
  const tone=({pending:'wait',waiting:'wait',approved:'ok',declined:'bad'} as Record<string,'wait'|'ok'|'bad'>)[st];
  const act=st==='pending'?onWithdraw:st==='waiting'?onCancelWait:undefined;
- return <><SectionLabel>{t('fe.host.ev.attendance')}</SectionLabel>
-  <StatusCard tone={tone} icon={Icon} title={t('fe.host.app.st.'+st+(st==='pending'&&acting?.kind==='couple'?'Us':''))} sub={t('fe.host.app.stText.'+st)}
-   action={act&&<Btn kind="soft" size="sm" auto fit disabled={busy} onClick={act}>{t('fe.host.join.withdraw')}</Btn>}/></>;
+ return {st,status:{tone,icon,title:t('fe.host.app.st.'+st+(st==='pending'&&acting?.kind==='couple'?'Us':'')),sub:t('fe.host.app.stText.'+st),
+  action:act&&<Btn kind="soft" size="sm" auto fit disabled={busy} onClick={act}>{t('fe.host.join.withdraw')}</Btn>}};
 }
 
 /** E06 — the application: answers to the organiser's questions, a note and the requirements. */
@@ -500,7 +498,8 @@ export function EventApplicationsScreen(){
  </>;
 }
 
-/** E17 / E18 — who is going or interested (the organiser sees everyone; guests see who shows it). */
+/** E17 / E18 — who is going or interested (the organiser sees everyone; guests see who shows it). Only the organiser
+ * has «Написать» at the end of a row (owner 29.10.2026); everyone else writes first from the person's profile. */
 export function EventAttendeesScreen(){
  const {id=''}=useParams();const [sp,setSp]=useSearchParams();const {call,acting}=useFe();const {t}=useI18n();
  const k=sp.get('k')==='interested'?'interested':'going';
@@ -513,7 +512,7 @@ export function EventAttendeesScreen(){
    <Seg small value={k} onChange={v=>setSp({k:v},{replace:true})} label={t('fe.cm.crowdTitle')} options={[{id:'going',label:data?.e.past?t('fe.cm.attended'):t('fe.host.att.going')},{id:'interested',label:t('fe.host.att.interested')}]}/>
    {!data?<Loading error={error} retry={load}/>:<>
     {data.l.items.length?<Card list>{data.l.items.map(p=><PersonRow key={p.id} p={p} sub={p.id===acting?.id?t(p.kind==='couple'?'fe.cm.thatsYouTwo':'fe.cm.thatsYou'):p.kind==='couple'?t('fe.host.att.couple'):undefined}
-     end={p.id!==acting?.id?<WriteBtn id={p.id} name={pname(p)}/>:undefined}/>)}</Card>
+     end={org&&p.id!==acting?.id?<WriteBtn id={p.id} name={pname(p)}/>:undefined}/>)}</Card>
      :<Empty compact icon={Users} title={t('fe.cm.nobody')}/>}
     {k==='going'&&data.l.items.some(p=>p.kind==='couple')&&<Note>{t('fe.cm.coupleTwo')}</Note>}
     {k==='going'&&!org&&data.l.hidden>0&&<Note>{fill(t('fe.cm.hiddenN'),{n:data.l.hidden})}</Note>}

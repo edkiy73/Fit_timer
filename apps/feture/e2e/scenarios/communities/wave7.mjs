@@ -37,7 +37,7 @@ export default [
    await t.api('event.rsvp', { opId: t.uuid7(), eventId: id, status: 'interested' });
    try {
      await t.go('/n/events/' + id);
-     await t.tap('.rsvp-box .btn:has-text("Снять ответ")');
+     await t.tap('.k-answer-h .btn:has-text("Снять ответ")');
      await toastSee(t, 'Ответ снят');
      await until(async () => (await rsvpOf(t, id)) === null || !(await rsvpOf(t, id))?.status, 'cleared');
      await t.tap('.toast button:has-text("Отменить")');

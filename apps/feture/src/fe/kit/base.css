@@ -1450,10 +1450,6 @@
 /* =====================================================================
    V10 owner revision, part 6 — events: RSVP states, drafts, gallery.
    ===================================================================== */
-.v21 .rsvp-box{margin-top:24px;padding:14px;border-radius:var(--r-l);background:var(--surf);border:1px solid var(--line)}
-.v21 .rsvp-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 2px 12px}
-.v21 .rsvp-h b{font-size:var(--fs-md);font-weight:650}.v21 .rsvp-h .btn.text{min-height:32px;padding:0 4px;font-size:var(--fs-sm)}
-.v21 .rsvp-box .note{margin:10px 2px 0}
 .v21 .rsvp button{display:flex;align-items:center;justify-content:center;gap:6px;min-height:46px;padding:0 6px;transition:background .15s,box-shadow .15s,color .15s}
 .v21 .rsvp button span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .v21 .rsvp button.on{box-shadow:inset 0 0 0 1.5px currentColor}
@@ -2931,7 +2927,6 @@
 .v21 .application-card>.application-answer:last-child{margin-bottom:0}
 .v21 .stat3>button{text-align:left;color:var(--ink);font:inherit;min-width:0;transition:background .15s}
 .v21 .stat3>button:hover{background:var(--raise)}.v21 .stat3>button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.v21 .entity-manage{margin:16px 0}.v21 .manage-entry{width:100%;min-width:0}
 .v21 .pv-capture{display:grid;grid-template-columns:minmax(100px,136px) minmax(0,1fr);gap:16px;align-items:center}
 .v21 .pv-preview{aspect-ratio:4/5;overflow:hidden;border-radius:var(--r);background:var(--raise)}
 .v21 .pv-preview img{display:block;width:100%;height:100%;object-fit:contain}

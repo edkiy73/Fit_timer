@@ -53,7 +53,7 @@ export function MineLayer(){
    {row(Calendar,cp?t('fe.mx.mine.eventsUs'):t('fe.mx.mine.events'),'/n/me/events',String(c.events))}
    {row(Users,t('fe.mx.mine.follows'),'/n/me/follows?tab=followers',`${c.followers} · ${c.following}`)}
    {row(Bookmark,t('fe.mx.mine.saved'),'/n/me/saved',String(c.saved),cp?t('fe.mx.mine.savedSubUs'):'')}
-   {row(LockOpen,cp?t('fe.mx.mine.sharedUs'):t('fe.mx.mine.shared'),'/n/me/shared',String(c.withMe),c.out?t(cp?'fe.mx.mine.outUs':'fe.mx.mine.out',{n:c.out}):t(cp?'fe.mx.mine.sharedSubUs':'fe.mx.mine.sharedSub'))}
+   {row(LockOpen,cp?t('fe.mx.mine.sharedUs'):t('fe.mx.mine.shared'),'/n/me/access?tab=withme',String(c.withMe),c.out?t(cp?'fe.mx.mine.outUs':'fe.mx.mine.out',{n:c.out}):t(cp?'fe.mx.mine.sharedSubUs':'fe.mx.mine.sharedSub'))}
   </Card></Group>}
  </>;
 }
@@ -64,6 +64,11 @@ export function MinePartScreen({part}:{part:'posts'|'events'|'saved'|'communitie
  const title=part==='posts'?(cp?t('fe.mx.mine.postsUs'):t('fe.mx.mine.posts')):part==='events'?(cp?t('fe.mx.mine.eventsUs'):t('fe.mx.mine.events')):part==='saved'?t('fe.mx.mine.saved')
   :t(cp?'fe.cc.mineCouple':'fe.cc.mine');
  const create=part==='events'?'/n/events/new':part==='communities'?'/n/communities/new':null;
+ // After creating an event or a community the editor comes straight here with a notice (no hop through «Я»).
+ const location=useLocation();const toast=useToast();
+ useEffect(()=>{const n=(location.state as {notice?:unknown}|null)?.notice;if(typeof n==='string'&&n){toast(n,{type:'ok'});navigate(location.pathname,{replace:true,state:null});}
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[]);
  return <>
   <Bar title={title} back>{create&&<IconBtn icon={Plus} kind="ghost" label={t(part==='events'?'fe.ce.create':'fe.cc.create')} onClick={()=>navigate(create)}/>}</Bar>
   <View className="nodock" refresh>{part==='posts'?<MyPosts/>:part==='events'?<MyEvents/>:part==='saved'?<Saved/>:<MyCommunities/>}</View>

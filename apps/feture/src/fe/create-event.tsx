@@ -263,7 +263,7 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
     return;
    }
    const r=await call('event.submit',{opId:submitOp.opFor(payload),...payload},submitted);submitOp.done();
-   navigate('/n/me?layer=mine&part=events',{replace:true,state:{notice:r.state==='pending_partner'?t('fe.ce.donePending'):t('fe.ce.done')}});
+   navigate('/n/me/events',{replace:true,state:{notice:r.state==='pending_partner'?t('fe.ce.donePending'):t('fe.ce.done')}});
   }catch(x){
    if(edit&&x instanceof FeError&&x.code==='conflict'){setStale(true);setNotice({kind:'err',text:feErrorMessage(x,t)});}
    else if(x instanceof FeError&&x.code==='invalid_input'&&x.fields?.length){
@@ -283,7 +283,7 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
  const removeDraft=async()=>{
   if(!draftId||busy)return;setBusy(true);setNotice(null);
   const payload={draftId};
-  try{await call('event.draftDelete',{opId:deleteOp.opFor(payload),...payload},okRes);deleteOp.done();navigate('/n/me?layer=mine&part=events',{replace:true});}
+  try{await call('event.draftDelete',{opId:deleteOp.opFor(payload),...payload},okRes);deleteOp.done();navigate('/n/me/events',{replace:true});}
   catch(e){setNotice({kind:'err',text:feErrorMessage(e,t)});setAsking(false);}
   finally{setBusy(false);}
  };
