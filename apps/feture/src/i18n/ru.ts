@@ -269,7 +269,6 @@ export const ru = {
   "fe.ev.rsvp.interested": "Интересно",
   "fe.ev.rsvp.going": "Иду",
   "fe.ev.rsvp.not_going": "Не иду",
-  "fe.ev.yourTime": "по твоему времени",
   "fe.ev.join": "Подключиться",
   "fe.ev.linkLocked": "Ссылка на подключение откроется, когда ответишь «Иду»",
   "fe.ev.addressLocked": "Точный адрес откроется, когда ответишь «Иду»",

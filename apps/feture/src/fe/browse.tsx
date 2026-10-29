@@ -1,3 +1,4 @@
+import {evParts,evWhere,usePlaces} from './event-time';
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
@@ -24,7 +25,7 @@ const postPage=z.object({ok:z.literal(true),items:z.array(z.lazy(()=>postSchema)
 const commCard=z.object({id:z.uuid(),name:z.string(),topics:z.array(z.string()),privacy:z.string(),members:z.number(),joined:z.boolean()}).passthrough();
 const commList=z.object({ok:z.literal(true),items:z.array(commCard),next:z.string().nullable()});
 type Comm=z.infer<typeof commCard>;
-const evRow=z.object({id:z.uuid(),title:z.string(),kind:z.string(),format:z.enum(['online','offline']),area:z.string().nullable(),starts_at:z.string(),state:z.string()}).passthrough();
+const evRow=z.object({id:z.uuid(),title:z.string(),kind:z.string(),format:z.enum(['online','offline']),area:z.string().nullable(),place_id:z.string().nullable().optional(),tz:z.string().nullable().optional(),starts_at:z.string(),state:z.string()}).passthrough();
 const evList=z.object({ok:z.literal(true),items:z.array(evRow),next:z.string().nullable()});
 export type Ev=z.infer<typeof evRow>;
 const media=z.object({src:z.record(z.string(),z.string()).nullable(),pending:z.boolean().optional()}).passthrough();
@@ -68,10 +69,10 @@ function CommunityCard({c,tname}:{c:Comm,tname:(id:string)=>string}){
 
 /** `eventCard(id,{row:1})` — an event as a row. */
 export function EventRow({e}:{e:Ev}){
- const {t,locale}=useI18n();const navigate=useNavigate();const d=new Date(e.starts_at);const lc=locale==='en'?'en':'ru';
+ const {t,locale}=useI18n();const navigate=useNavigate();const pt=evParts(e,locale);const places=usePlaces();
  return <button type="button" className="evc row" onClick={()=>navigate('/n/events/'+e.id)}>
-  <div className="cv"><div className="plate" style={plate(e.id)}/><div className="date"><b>{d.getDate()}</b><small>{d.toLocaleDateString(lc,{month:'short'})}</small></div></div>
-  <div className="bd"><small>{e.format==='online'?t('fe.ev.online'):e.area} · {d.toLocaleTimeString(lc,{hour:'2-digit',minute:'2-digit'})}</small><b>{e.title}</b>
+  <div className="cv"><div className="plate" style={plate(e.id)}/><div className="date"><b>{pt.day}</b><small>{pt.month}</small></div></div>
+  <div className="bd"><small>{evWhere(e,places,locale,t('fe.ev.online'),t('fe.ev.offline'))} · {pt.time} · {pt.zone}</small><b>{e.title}</b>
    {e.state==='cancelled'&&<Pill tone="bad">{t('fe.ev.cancelled')}</Pill>}</div>
  </button>;
 }

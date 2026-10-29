@@ -1,3 +1,4 @@
+import {evWhen} from './event-time';
 import {useCallback,useEffect,useState} from 'react';
 import {useLocation,useNavigate} from 'react-router';
 import {z} from 'zod';
@@ -18,7 +19,7 @@ import {faceFields,NameBadges} from './faces';
 /** V21 X01 «Моё» (`meMineLayer()`): only lists — posts (drafts on the second line), events, followers, saved and what
  * others shared with me; each row opens its own screen (F10, E10, P10, G04, P07) with the counts from the server. */
 const posts=z.object({ok:z.literal(true),items:z.array(z.lazy(()=>postSchema))});
-const ev=z.object({id:z.uuid(),title:z.string(),format:z.string(),starts_at:z.string(),state:z.string(),cancel_reason:z.string().nullable().optional()}).passthrough();
+const ev=z.object({id:z.uuid(),title:z.string(),format:z.string(),tz:z.string().nullable().optional(),starts_at:z.string(),state:z.string(),cancel_reason:z.string().nullable().optional()}).passthrough();
 const evs=z.object({ok:z.literal(true),going:z.array(ev),interested:z.array(ev),organizing:z.array(ev),applications:z.array(ev),cancelled:z.array(ev).optional()}).passthrough();
 const saved=z.object({ok:z.literal(true),items:z.array(z.object({kind:z.string(),target_id:z.string(),created_at:z.string()}))});
 const followers=z.object({ok:z.literal(true),items:z.array(z.unknown())}).passthrough();
@@ -143,7 +144,7 @@ function MyEvents(){
       <IconBtn icon={Trash2} kind="ghost" size="sm" label={t('fe.ce.draftDelete')} onClick={()=>{setFailure('');setAsking(d);}}/></Stack>}/>;})}</Card></Group>}
   {groups.filter(([,l])=>l.length).map(([k,l])=><Group key={k} title={t('fe.mine.ev.'+k)}><Card list>
    {l.map(e=><Row key={e.id} noChev onClick={()=>navigate('/n/events/'+e.id)} title={e.title}
-    sub={date(e.starts_at)+(e.state!=='published'?' · '+t('fe.mine.state.'+e.state):'')+(e.cancel_reason?' · '+e.cancel_reason:'')}/>)}</Card></Group>)}
+    sub={evWhen(e,locale)+(e.state!=='published'?' · '+t('fe.mine.state.'+e.state):'')+(e.cancel_reason?' · '+e.cancel_reason:'')}/>)}</Card></Group>)}
   {asking&&<Ask icon={Trash2} danger title={t('fe.ce.draftDelete')+'?'} text={t('fe.ce.draftDeleteAsk')} ok={t('fe.ce.draftDeleteOk')} busy={busy} error={failure||undefined}
    onOk={()=>void remove()} onCancel={()=>setAsking(null)}/>}
  </>;
@@ -164,7 +165,7 @@ const postsRev=z.object({ok:z.literal(true),items:z.array(z.lazy(()=>postSchema)
  pendingEdits:z.array(z.lazy(()=>savedEdit)).optional()});
 const savedRes=saved;
 const onePost=z.object({ok:z.literal(true),post:z.lazy(()=>postSchema)});
-const oneEvent=z.object({ok:z.literal(true),event:z.object({id:z.uuid(),title:z.string(),kind:z.string(),format:z.enum(['online','offline']),area:z.string().nullable(),startsAt:z.string(),state:z.string()}).passthrough()});
+const oneEvent=z.object({ok:z.literal(true),event:z.object({id:z.uuid(),title:z.string(),kind:z.string(),format:z.enum(['online','offline']),area:z.string().nullable(),tz:z.string().nullable().optional(),placeId:z.string().nullable().optional(),startsAt:z.string(),state:z.string()}).passthrough()});
 
 /* ---------- F10 «Мои публикации» ---------- */
 
@@ -238,7 +239,7 @@ export function SavedScreen(){
    // Each saved thing is fetched as the viewer may see it now; what is gone (deleted, hidden, blocked) is counted, not shown.
    const got=await Promise.all(items.map(async it=>{
     try{
-     if(it.kind==='event'){const e=(await call('event.get',{eventId:it.id},oneEvent)).event;return {it,ev:{id:e.id,title:e.title,kind:e.kind,format:e.format,area:e.area,starts_at:e.startsAt,state:e.state} as Ev};}
+     if(it.kind==='event'){const e=(await call('event.get',{eventId:it.id},oneEvent)).event;return {it,ev:{id:e.id,title:e.title,kind:e.kind,format:e.format,area:e.area,tz:e.tz,place_id:e.placeId,starts_at:e.startsAt,state:e.state} as Ev};}
      if(it.kind==='post'||it.kind==='discussion')return {it,post:(await call('post.get',{postId:it.id},onePost)).post};
     }catch{/* no longer visible */}
     return {it};

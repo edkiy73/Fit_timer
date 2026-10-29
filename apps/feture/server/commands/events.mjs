@@ -227,7 +227,7 @@ async function doUpdate(q, acting, eventId, rev, f) {
  * @param {Q} q @param {import('../approvals.mjs').ApprovalRow} row */
 async function approvalEventCard(q, row) {
   const [x] = await q.query(
-    `select e.id, e.title, e.kind, e.format, e.area, e.starts_at, e.ends_at, e.state, e.rev, pl.name_ru city_ru, pl.name_en city_en
+    `select e.id, e.title, e.kind, e.format, e.area, e.tz, e.starts_at, e.ends_at, e.state, e.rev, pl.name_ru city_ru, pl.name_en city_en
      from feture.event e left join feture.place pl on pl.id = e.place_id
      where e.id = $1 and (e.organizer_profile_id = $2 or feture.event_visible(e, $2, $3))`, [row.target_id, row.profile_id, row.requested_by]);
   if (!x) return null;
@@ -235,7 +235,7 @@ async function approvalEventCard(q, row) {
   const f = row.kind === 'event.update' ? c.event : {};
   return {
     event: {
-      id: x.id, title: f.title ?? x.title, kind: f.kind ?? x.kind, format: f.format ?? x.format, area: f.area !== undefined ? f.area : x.area,
+      id: x.id, title: f.title ?? x.title, kind: f.kind ?? x.kind, format: f.format ?? x.format, area: f.area !== undefined ? f.area : x.area, tz: f.tz ?? x.tz,
       startsAt: f.startsAt ?? x.starts_at, endsAt: f.endsAt ?? x.ends_at, state: x.state, rev: row.kind === 'event.update' ? c.rev : x.rev,
       city: x.city_ru ? { ru: x.city_ru, en: x.city_en } : null,
     },
@@ -457,7 +457,7 @@ const run = {
 
   async 'event.mine'(q, { acting: a }) {
     const viewer = need(a);
-    const pick = `e.id, e.title, e.format, e.starts_at, e.ends_at, e.state, e.plate`;
+    const pick = `e.id, e.title, e.format, e.tz, e.area, e.place_id, e.starts_at, e.ends_at, e.state, e.plate`;
     const organizing = await q.query(`select ${pick} from feture.event e where e.organizer_profile_id = $1 order by e.starts_at desc limit 100`, [viewer.profileId]);
     const answered = await q.query(
       `select ${pick}, r.status, e.ends_at <= now() past from feture.event_rsvp r join feture.event e on e.id = r.event_id

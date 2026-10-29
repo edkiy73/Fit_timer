@@ -6,6 +6,8 @@ import {Ban,ChartColumn,Bell,BellOff,Bookmark,BookmarkCheck,Calendar,CalendarChe
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {Actions,Alert,Announcement,Ask,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,CommunityHead,CoverBar,Discussion,Empty,EventAnswer,EventHero,EventTile,Fact,Group,IconBtn,LinkBtn,Note,Pill,Row,Rsvp,SectionLabel,Seg,Sheet,Skel,Spacer,Stack,StatusCard,Text,ToggleRow,Veil,View,useRefreshable} from './kit';
 import {useFe,useKeyChange} from './session';
+import {mdPlain} from './post-parts';
+import {evParts,evRange,evTz,evWhere,inTz,usePlaces} from './event-time';
 import {when} from './feed';
 import {Composer} from './create-entry';
 import {useCopyLink} from './share';
@@ -39,8 +41,8 @@ const discRes=z.object({ok:z.literal(true),locked:z.boolean(),items:z.array(disc
 const memItem=prof.extend({role:z.string(),read_only:z.boolean()});
 const memList=z.object({ok:z.literal(true),count:z.number(),items:z.array(memItem).nullable(),next:z.string().nullable().optional()});
 const priceSchema=z.object({kind:z.string(),amount:z.number().optional(),currency:z.string().optional(),ticketUrl:z.string().optional()}).passthrough();
-const ev=z.object({id:z.uuid(),title:z.string(),kind:z.string(),format:z.enum(['online','offline']),area:z.string().nullable(),tz:z.string().nullable().optional(),starts_at:z.string(),ends_at:z.string(),
- price:priceSchema,requires_application:z.boolean(),state:z.string(),plate:z.string().nullable().optional(),place_id:z.string().nullable().optional(),community_id:z.string().nullable().optional(),
+const ev=z.object({id:z.uuid(),title:z.string(),kind:z.string(),format:z.enum(['online','offline']),area:z.string().nullable(),place_id:z.string().nullable().optional(),tz:z.string().nullable().optional(),starts_at:z.string(),ends_at:z.string(),
+ price:priceSchema,requires_application:z.boolean(),state:z.string(),plate:z.string().nullable().optional(),community_id:z.string().nullable().optional(),
  /** Only on a cancelled event: the organizer's reason. */ cancel_reason:z.string().nullable().optional()});
 type Ev=z.infer<typeof ev>;
 /** An event in a list (catalog, «Скоро» in the feed). */
@@ -65,11 +67,6 @@ const rsvpRes=z.object({ok:z.literal(true),pending:z.unknown().optional()}).pass
 
 const pname=(p:{name?:string|null,handle?:string|null}|null|undefined)=>p?.name||(p?.handle?'@'+p.handle:'?');
 const loc=(locale:string)=>locale==='en'?'en-GB':'ru-RU';
-export const USER_TZ=(()=>{try{return Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';}catch{return 'UTC';}})();
-/** In-person events are shown in the venue's time, online ones in the viewer's (V21 evTz). */
-export const evTz=(e:{format:string,tz?:string|null|undefined})=>e.format==='online'?USER_TZ:(e.tz||USER_TZ);
-export const inTz=(iso:string,tz:string,locale:string,o:Intl.DateTimeFormatOptions)=>{try{return new Date(iso).toLocaleString(loc(locale),{...o,timeZone:tz});}catch{return new Date(iso).toLocaleString(loc(locale),o);}};
-const timeOf=(iso:string,tz:string,locale:string)=>inTz(iso,tz,locale,{hour:'2-digit',minute:'2-digit'});
 const CUR:Record<string,string>={EUR:'€',USD:'$',GBP:'£',RUB:'₽',CHF:'CHF'};
 export function priceText(p:{kind:string,amount?:number|undefined,currency?:string|undefined},t:(k:string)=>string,locale:string){
  if(p.kind==='free'||p.amount==null)return t('fe.ev.free');
@@ -154,8 +151,6 @@ function CommCover({cover,k,size,hero}:{cover?:z.infer<typeof media>|null|undefi
  const src=coverSrc(cover,size);
  return src?<img className="evimg" src={src} alt="" draggable={false}/>:hero?<NamedPlate k={k}/>:<CommPlate k={k}/>;
 }
-/** Markdown marks off, for one-line previews (V21 mdPlain). */
-const plainText=(s:string)=>s.replace(/[*_~`#>]+/g,'').replace(/\s+/g,' ').trim();
 /** V21 F.rel: «только что», «5 мин назад», «вчера», «3 дня назад», then the date. */
 function relDay(iso:string,locale:string){
  const d=(Date.now()-Date.parse(iso))/1000;const en=locale==='en';
@@ -178,7 +173,7 @@ function CommCard({c,tname,place,mine}:{c:Card,tname:(id:string)=>string,place:s
  const pulse=[c.lastTalkAt?fill(t('fe.cm.lastTalk'),{when:relDay(c.lastTalkAt,locale)}):'',c.nextEventAt?fill(t('fe.cm.nextMeet'),{date:shortDate(c.nextEventAt,locale)}):''].filter(Boolean);
  return <button type="button" className="cmc" onClick={()=>navigate('/n/communities/'+c.id)}>
   <div className="cv"><CommCover cover={c.cover} k={c.plate}/></div>
-  <div className="tx"><b>{c.name}</b><small>{c.description?plainText(c.description):c.topics.map(x=>'#'+tname(x)).join(' ')}</small>
+  <div className="tx"><b>{c.name}</b><small>{c.description?mdPlain(c.description):c.topics.map(x=>'#'+tname(x)).join(' ')}</small>
    <div className="meta"><span>{pl(c.members,t('fe.cm.members'),locale)}</span><span>·</span><span>{place||t('fe.cm.online')}</span>{state&&<> {state}</>}</div>
    {pulse.length>0&&<div className="pulse"><Clock/><span>{pulse.join(' · ')}</span></div>}
   </div>
@@ -235,13 +230,13 @@ function StatusPill({s}:{s:MyStatus|undefined}){
 /** `eventCard()` — the big card, or the row (`row`) used for «Ближайшая встреча» and cancelled events. A cancelled row
  * says «Отменено» and, under it, the organizer's reason (lists show it only to people it concerns — server cancelledFor). */
 export function EventCard({e,row,status,org,pill:own}:{e:Ev,row?:boolean,status?:MyStatus|undefined,org?:string|undefined,/** A status label of the screen's own (the organiser panel). */ pill?:ReactNode}){
- const {t,locale}=useI18n();const navigate=useNavigate();const tz=evTz(e);
- const day=inTz(e.starts_at,tz,locale,{day:'numeric'});const mon=inTz(e.starts_at,tz,locale,{month:'short'}).replace('.','');
+ const {t,locale}=useI18n();const navigate=useNavigate();
+ const pt=evParts(e,locale);const places=usePlaces();
  const cancelled=e.state==='cancelled';
  const pill=own??(cancelled?<Pill tone="bad">{t('fe.cm.st.cancelled')}</Pill>:<StatusPill s={status}/>);
- const place=e.format==='online'?t('fe.ev.online'):e.area??t('fe.ev.offline');
- return <EventTile row={row} cover={<NamedPlate k={e.plate} icon={Calendar}/>} day={day} month={mon} place={place} placeIcon={e.format==='online'?Video:MapPin}
-  status={row||own?pill:cancelled||status?pill:undefined} kicker={t('fe.ev.kind.'+e.kind)} title={e.title} time={timeOf(e.starts_at,tz,locale)} {...(row?{org:org??(cancelled&&e.cancel_reason||undefined)}:{price:priceText(e.price,t,locale)})}
+ const place=evWhere(e,places,locale,t('fe.ev.online'),t('fe.ev.offline'));
+ return <EventTile row={row} cover={<NamedPlate k={e.plate} icon={Calendar}/>} day={pt.day} month={pt.month} place={place} placeIcon={e.format==='online'?Video:MapPin}
+  status={row||own?pill:cancelled||status?pill:undefined} kicker={t('fe.ev.kind.'+e.kind)} title={e.title} time={pt.time+' · '+pt.zone} {...(row?{org:org??(cancelled&&e.cancel_reason||undefined)}:{price:priceText(e.price,t,locale)})}
   onClick={()=>navigate('/n/events/'+e.id)}/>;
 }
 
@@ -368,7 +363,7 @@ export function CommunityScreen(){
       {member&&!c.me?.readOnly&&<Composer community={{id:c.id,canEvent:host}}/>}
       {!discs?<Skel kind="list"/>:discs.items.length===0?<Empty icon={MessageCircle} title={t('fe.comm.noDisc')} text={member?t('fe.cm.noDiscMember'):t('fe.cm.noDiscGuest')}/>
        :<Card list>{discs.items.map(d=>{const a=d.owner_profile_id?names.get(d.owner_profile_id):undefined;
-        return <Discussion key={d.id} onClick={()=>navigate('/n/feed/post/'+d.id)} pinned={d.pinned?t('fe.comm.pinned'):undefined} title={d.title} excerpt={d.excerpt}
+        return <Discussion key={d.id} onClick={()=>navigate('/n/feed/post/'+d.id,{state:{tab:'communities'}})} pinned={d.pinned?t('fe.comm.pinned'):undefined} title={d.title?mdPlain(d.title):d.title} excerpt={mdPlain(d.excerpt)}
          meta={<>{a&&<><Av name={pname(a)} seed={a.id} size="xs" src={a.avatar}/><span>{pname(a)}</span><span>·</span></>}<span>{when(d.published_at,locale)}</span><span><MessageCircle/>{d.replies}</span></>}
          tools={<IconBtn icon={Ellipsis} kind="ghost" size="sm" aria-haspopup="dialog" label={t(host?'fe.cm.hostTools':'fe.cm.more')} onClick={()=>setHostTools(d.id)}/>}/>;})}</Card>}
      </>)
@@ -458,7 +453,7 @@ export function EventScreen(){
  const withdraw=async()=>{if(!app)return;setBusy(true);try{await call('event.applicationWithdraw',{opId:newOpId(),applicationId:app.id},okRes);setLayer('');toast(t(couple?'fe.cm.appWithdrawnUs':'fe.cm.appWithdrawn'),{type:'ok'});load();}catch(x){toast(feErrorMessage(x,t),{type:'err'});}finally{setBusy(false);}};
  // A couple's application the partner has not approved yet is taken back as that approval (decide.cancel).
  const unwait=async()=>{const w=e?.me.waiting;if(!w)return;setBusy(true);try{await call('decide.cancel',{opId:newOpId(),approvalId:w.id},okRes);setLayer('');toast(t(couple?'fe.cm.appWithdrawnUs':'fe.cm.appWithdrawn'),{type:'ok'});load();}catch(x){toast(feErrorMessage(x,t),{type:'err'});}finally{setBusy(false);}};
- const tz=e?evTz(e):USER_TZ;const away=!!e&&e.format==='online'&&e.tz!==USER_TZ;
+ const tz=e?evTz(e):'UTC';const places=usePlaces();const where=e?evWhere(e,places,locale,t('fe.ev.online'),t('fe.ev.offline')):'';
  const open=!!e&&e.state==='published'&&!e.past;const cancelled=e?.state==='cancelled';
  const admitted=!!e&&(orgMe||(!!e.joinUrl||!!e.exactAddress));
  const application=useEventApplication(e&&!orgMe&&open?e:null,{busy,onWithdraw:()=>setLayer('withdraw'),onCancelWait:()=>setLayer('unwait')});
@@ -515,7 +510,7 @@ export function EventScreen(){
     :!e?<><EventHero/><Skel kind="list" rows={4}/></>
     :<>
      <EventHero cover={<NamedPlate k={e.plate} icon={Calendar}/>} title={e.title}
-      tags={[<>{e.format==='online'?<Video/>:<MapPin/>}{e.format==='online'?t('fe.ev.online'):e.area??t('fe.ev.offline')}</>,t('fe.ev.kind.'+e.kind)]}/>
+      tags={[<>{e.format==='online'?<Video/>:<MapPin/>}{where}</>,t('fe.ev.kind.'+e.kind)]}/>
      {/* Who: the organiser and the community. */}
      {(e.organizer||comm)&&<Card list>
       {e.organizer&&<Row av={<Av name={pname(e.organizer)} seed={e.organizer.id} size="sm" src={e.organizer.avatar}/>} title={pname(e.organizer)} sub={t('fe.ev.organizer')} onClick={()=>navigate(orgMe?'/n/me':'/n/people/'+e.organizer!.id)}/>}
@@ -524,10 +519,10 @@ export function EventScreen(){
      {/* What and when: the date, the place (closed until «Иду»), the price. */}
      <Card list>
       <Row icon={Calendar} tone="l" title={inTz(e.startsAt,tz,locale,{weekday:'short',day:'numeric',month:'long'})}
-       sub={<>{timeOf(e.startsAt,tz,locale)}–{timeOf(e.endsAt,tz,locale)} {t(e.format==='online'?'fe.ev.yourTime':'fe.cm.localTime')}{away&&<><br/>{t('fe.cm.forOrganizer')}: {timeOf(e.startsAt,e.tz,locale)}–{timeOf(e.endsAt,e.tz,locale)} {e.tz}</>}</>}/>
+       sub={evRange(e,locale)}/>
       {orgMe&&!cancelled&&(e.joinUrl||e.exactAddress)
-       ?<Row icon={e.format==='online'?Video:MapPin} tone="v" title={e.format==='online'?t('fe.ev.online'):e.area} sub={venueHint||undefined} wrap onClick={()=>setLayer('venue')}/>
-       :<Row icon={e.format==='online'?Video:MapPin} tone="v" title={e.format==='online'?t('fe.ev.online'):e.area} sub={venueHint||undefined} end={!admitted&&!cancelled&&!e.past&&<span className="lockpill"><Lock/></span>}/>}
+       ?<Row icon={e.format==='online'?Video:MapPin} tone="v" title={where} sub={venueHint||undefined} wrap onClick={()=>setLayer('venue')}/>
+       :<Row icon={e.format==='online'?Video:MapPin} tone="v" title={where} sub={venueHint||undefined} end={!admitted&&!cancelled&&!e.past&&<span className="lockpill"><Lock/></span>}/>}
       {!cancelled&&<Row icon={Ticket} tone="a" title={priceText(e.price,t,locale)} sub={priceSub||undefined} onClick={external?()=>setLayer('ticket'):undefined}/>}
      </Card>
      {answer}
@@ -552,7 +547,7 @@ export function EventScreen(){
     :(e.exactAddress&&<LinkBtn kind="primary" icon={MapIcon} href={'https://www.openstreetmap.org/search?query='+encodeURIComponent(e.exactAddress)}>{t('fe.cm.openMaps')}</LinkBtn>)}
     <Btn kind="soft" icon={CalendarPlus} onClick={()=>{downloadIcs(e);toast(t('fe.cm.calDone'),{type:'ok'});}}>{t('fe.cm.toCal')}</Btn></>}>
    {e.format==='online'?<Card className="flat"><div className="flabel">{t('fe.cm.link')}</div><Text as="b" size="md" bold breakAll>{e.joinUrl}</Text></Card>
-    :<Stack gap={3}><Card className="flat"><Stack gap={2}><Text as="b" size="md" bold>{e.exactAddress}</Text><Note>{e.area} · {inTz(e.startsAt,tz,locale,{weekday:'short',day:'numeric',month:'long'})}, {timeOf(e.startsAt,tz,locale)}</Note></Stack></Card><Note>{t('fe.cm.addrNote')}</Note></Stack>}
+    :<Stack gap={3}><Card className="flat"><Stack gap={2}><Text as="b" size="md" bold>{e.exactAddress}</Text><Note>{where} · {inTz(e.startsAt,tz,locale,{weekday:'short',day:'numeric',month:'long'})}, {evParts(e,locale).time}</Note></Stack></Card><Note>{t('fe.cm.addrNote')}</Note></Stack>}
   </Sheet>}
   {e&&layer==='ticket'&&ticketUrl&&<Sheet title={t('fe.w7.tk.title')} sub={site} onClose={()=>setLayer('')}
    foot={<>{<LinkBtn kind="primary" icon={ExternalLink} href={ticketUrl}>{t('fe.w7.tk.go')}</LinkBtn>}

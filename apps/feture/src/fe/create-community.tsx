@@ -18,7 +18,7 @@ export {PLATE_KEYS,namedPlate,type PlateKey};
 
 const catalogRes=z.object({ok:z.literal(true),
  topics:z.array(z.object({id:z.string(),ru:z.string(),en:z.string()}).passthrough()),
- places:z.array(z.object({id:z.uuid(),country:z.string().nullable().optional(),ru:z.string().nullable(),en:z.string().nullable()}).passthrough())}).passthrough();
+ places:z.array(z.object({id:z.uuid(),code:z.string().nullable().optional(),country:z.string().nullable().optional(),ru:z.string().nullable(),en:z.string().nullable()}).passthrough())}).passthrough();
 export type Catalog=z.infer<typeof catalogRes>;
 /** Topics and approved places (`catalog.get`). */
 export function useCatalog(){
