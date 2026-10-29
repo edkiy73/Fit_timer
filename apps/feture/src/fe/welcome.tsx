@@ -3,6 +3,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Check,ChevronLeft,ChevronRight,EyeOff,Globe,Heart,KeyRound,LockOpen,MapPin,MessageCircle} from 'lucide-react';
 import {Btn,H,IconBtn,plate} from './kit';
 import {TermsSheet} from './terms-sheet';
+import {SignInHelp} from './support';
 
 /** V21 A01 «Приветствие» with the prototype's markup (`.welcome.wv`): the hero, six slides that cross-fade as the
  * active bar fills (CSS animation; hover/focus pauses it, reduced motion stops it), swipe and arrow keys, then
@@ -81,6 +82,7 @@ export function Welcome({onStart}:{onStart:(mode:'up'|'in')=>void}){
     </section>
     <div className="w-act">
      <div className="w-cta"><Btn onClick={()=>start('up')}>{t('fe.cw.w.create')}</Btn><Btn kind="soft" onClick={()=>start('in')}>{t('fe.cw.w.haveAccount')}</Btn></div>
+     <SignInHelp/>
      <div className="w-age">{t('fe.cw.w.age')} <a href="#" onClick={e=>{e.preventDefault();setTerms(true);}}>{t('fe.cw.w.terms')}</a>.</div>
     </div>
    </div>

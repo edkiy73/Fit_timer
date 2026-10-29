@@ -6,7 +6,8 @@ import { platform } from '../server/commands/platform.mjs';
 import { me } from '../server/commands/me.mjs';
 import { staff } from '../server/commands/staff.mjs';
 import { inbox } from '../server/commands/inbox.mjs';
-import { support } from '../server/commands/support.mjs';
+import { support, takeHelp, helpHandlers, sweepPublicHelp } from '../server/commands/support.mjs';
+import { supportEmail, SUPPORT_EMAIL_DEFAULT } from '../server/support-config.mjs';
 import { notifyHandlers } from '../server/notify.mjs';
 import { drain } from '../server/outbox.mjs';
 import { setup, op } from './fe-helpers.mjs';
@@ -104,5 +105,30 @@ test('maintenance: owner/lead switch it; everyone else gets the maintenance answ
     assert.equal((await call('uo', null, { action: 'staff.maintenanceSet', opId: op(), active: false })).active, false);
     assert.equal((await call('ua', null, { action: 'support.mine' })).status, 200);
     assert.equal((await call('ua', null, { action: 'platform.maintenance' })).message, null);
+  } finally { await pg.close(); }
+});
+
+test('public help: anyone can write without an account; validated; mailed once to the one configured address; old ones are swept', async () => {
+  const { pg, db } = await world();
+  try {
+    assert.equal(supportEmail({}), SUPPORT_EMAIL_DEFAULT);
+    assert.equal(supportEmail({ FETURE_SUPPORT_EMAIL: ' help@example.org ' }), 'help@example.org');
+    assert.equal((await takeHelp(db, { body: 'x' })).status, 400); // too short
+    assert.equal((await takeHelp(db, { body: 'Не приходит код из письма', extra: 1 })).status, 400); // strict
+    assert.equal((await takeHelp(db, { body: 'Не приходит код из письма', contact: 'a'.repeat(121) })).status, 400);
+    assert.equal((await takeHelp(db, { body: 'Не приходит код из письма', contact: 'me@example.org', locale: 'ru' })).status, 200);
+    assert.equal((await takeHelp(db, { body: 'The code never arrives' })).status, 200);
+    /** @type {any[]} */
+    const mails = [];
+    const handlers = helpHandlers(db, async m => { mails.push(m); }, supportEmail({}));
+    await drain(db, handlers, { limit: 10 });
+    assert.equal(mails.length, 2);
+    assert.ok(mails.every(m => m.to === SUPPORT_EMAIL_DEFAULT));
+    assert.ok(mails.some(m => m.text.includes('me@example.org')));
+    await drain(db, handlers, { limit: 10 });
+    assert.equal(mails.length, 2); // once each
+    assert.deepEqual(helpHandlers(db, null, 'x'), {}); // no mail service: the queue waits
+    await db.query(`update feture.support_public set created_at = now() - interval '91 days' where contact is null`);
+    assert.equal(await sweepPublicHelp(db), 1);
   } finally { await pg.close(); }
 });

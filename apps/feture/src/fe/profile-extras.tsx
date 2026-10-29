@@ -5,8 +5,8 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Ban,Check,ChevronDown,Crown,ChevronLeft,ChevronRight,Ellipsis,Eye,EyeOff,Flag,Heart,History,Info,KeyRound,Link as LinkIcon,Lock,MapPin,MessageCircle,ShieldCheck,Undo2,Users,X} from 'lucide-react';
-import {ActingAv,Alert,Av,Bar,Btn,Card,Empty,Group,H,IconBtn,Layer,Note,PersonName,PhotoBars,PhotoTrack,PullRefresh,Row,Seg,Skel,Stack,Text,ToggleRow,View,coupleNames,plate} from './kit';
-import {onReadsDropped,useFe,useKeyChange} from './session';
+import {ActingAv,Alert,Av,Bar,Btn,Card,Empty,Group,H,IconBtn,Layer,LoadMore,Note,PersonName,PhotoBars,PhotoTrack,PullRefresh,Row,Seg,Skel,Stack,Text,ToggleRow,View,coupleNames,plate} from './kit';
+import {onReadsDropped,useFe,useKeyChange,useShown} from './session';
 import {ReportSheet} from './report';
 import {faceFields,NameBadges} from './faces';
 import {PostCard,postSchema,type Post} from './feed';
@@ -55,6 +55,15 @@ export const personProfile=z.object({id:z.uuid(),kind:z.enum(['person','couple']
  age:z.number().nullable(),city:z.object({ru:z.string().nullable(),en:z.string().nullable()}).nullable(),avatar:media.nullable(),photos:z.array(media),details:z.record(z.string(),z.unknown()),photoVerified:z.boolean().optional(),premium:z.boolean().optional()}).passthrough();
 export const personProfileRes=z.object({ok:z.literal(true),profile:personProfile});
 export type PersonProfile=z.infer<typeof personProfile>;
+/** «Как видят»: the own profile as the audience's projection, the way the server draws it for another viewer
+ * (server/commands/me.mjs): no age while «Показывать возраст» is off, «Данные» only when their audience reaches the
+ * viewer (everyone: «Всем»; with access: «Всем» and «С доступом»), no city that is still waiting for a check. */
+export function viewedBy(p:PersonProfile,lv:'all'|'granted'|'card'):PersonProfile{
+ const x=p as PersonProfile&{showAge?:boolean,detailsVis?:string|null};const vis=x.detailsVis??'all';
+ const open=p.kind==='couple'||vis==='all'||(vis==='granted'&&lv==='granted');
+ const city=p.city&&(p.city as {pending?:boolean}).pending?null:p.city;
+ return {...p,age:p.kind==='person'&&x.showAge===false?null:p.age,details:open?p.details:{},city};
+}
 export const mediaSrc=(m:z.infer<typeof media>|null|undefined)=>m&&!m.pending?m.src?.card??m.src?.full??m.src?.thumb??null:null;
 export const personName=(p:{name:string|null,handle:string|null}|null)=>p?.name||(p?.handle?'@'+p.handle:'');
 
@@ -272,10 +281,13 @@ function Activity({profileId,inert,preview,pre}:{profileId:string,inert?:boolean
  const {call,acting}=useFe();const {t}=useI18n();const [items,setItems]=useState<Post[]|null>(()=>pre?pre.posts?.items??[]:null);const [tab,setTab]=useState<'posts'|'notes'|'acts'>('posts');
  const [acts,setActs]=useState<Act[]|null>(()=>pre?pre.activity?actsOf(pre.activity):[]:null);const own=profileId===acting?.id;const [vis,setVis]=useState<string|null>(null);
  const given=!!pre;
+ // The first three of each list are drawn; «Показать ещё» opens the rest and the existing paging (`next`) loads further pages.
+ const [nextP,setNextP]=useState<string|null>(()=>pre?.posts?.next??null);const [nextA,setNextA]=useState<string|null>(()=>pre?.activity?.next??null);
+ const [expanded,setExpanded]=useState(false);const [moreBusy,setMoreBusy]=useState(false);const [moreErr,setMoreErr]=useState<unknown>(null);
  // Another profile starts empty; reading the same one again keeps what is shown until the answer comes.
- useEffect(()=>{if(given)return;const put=(r:z.infer<typeof postsRes>)=>setItems(r.items);call('profile.posts',{profileId},postsRes,{onFresh:put}).then(put).catch(()=>setItems(l=>l??[]));},[call,profileId,given]);
- useEffect(()=>{if(given)return;call('profile.activity',{profileId},actRes).then(r=>setActs(actsOf(r))).catch(()=>setActs(l=>l??[]));},[call,profileId,given]);
- useKeyChange(profileId,()=>{setItems(null);setActs(null);});
+ useEffect(()=>{if(given)return;const put=(r:z.infer<typeof postsRes>)=>{setItems(r.items);setNextP(r.next??null);};call('profile.posts',{profileId},postsRes,{onFresh:put}).then(put).catch(()=>setItems(l=>l??[]));},[call,profileId,given]);
+ useEffect(()=>{if(given)return;call('profile.activity',{profileId},actRes).then(r=>{setActs(actsOf(r));setNextA(r.next??null);}).catch(()=>setActs(l=>l??[]));},[call,profileId,given]);
+ useKeyChange(profileId,()=>{setItems(null);setActs(null);setNextP(null);setNextA(null);setExpanded(false);});
  useEffect(()=>{if(!own){setVis(null);return;}call('profile.settings',{},ownVis).then(r=>setVis(r.settings.activityVis??'all')).catch(()=>setVis('all'));},[call,own]);
  if(!items||!acts||(own&&!vis))return null;
  const shownActs=preview&&vis!=='all'?[]:acts;
@@ -285,23 +297,40 @@ function Activity({profileId,inert,preview,pre}:{profileId:string,inert?:boolean
  const cur=on.find(x=>x[0]===tab)??on[0]!;
  const change=(p:Post)=>setItems(l=>l&&l.map(x=>x.id===p.id?p:x));const remove=(r:Removal)=>setItems(l=>l&&l.filter(x=>x.id!==r.postId&&x.author.id!==r.authorId));
  const list=cur[0]==='posts'?posts:notes;
+ const nextCur=cur[0]==='acts'?nextA:nextP;const total=cur[0]==='acts'?shownActs.length:list.length;
+ const loadNext=async()=>{if(!nextCur||moreBusy)return;setMoreBusy(true);setMoreErr(null);
+  try{if(cur[0]==='acts'){const r=await call('profile.activity',{profileId,cursor:nextCur},actRes);setActs(l=>[...(l??[]),...actsOf(r)]);setNextA(r.next??null);}
+   else{const r=await call('profile.posts',{profileId,cursor:nextCur},postsRes);setItems(l=>[...(l??[]),...r.items.filter(x=>!(l??[]).some(y=>y.id===x.id))]);setNextP(r.next??null);}
+  }catch(e){setMoreErr(e);}finally{setMoreBusy(false);}};
+ const cut=expanded?Infinity:3;
+ const foot=!expanded?(total>3||nextCur)&&<Btn kind="soft" onClick={()=>setExpanded(true)}>{t('fe.px.act.more')}</Btn>
+  :<LoadMore more={!!nextCur} busy={moreBusy} error={moreErr} onMore={()=>void loadNext()}/>;
  return <Group className="activity" title={on.length>1?undefined:cur[1]}>
   {on.length>1&&<Seg value={cur[0]} onChange={v=>setTab(v)} options={on.map(x=>({id:x[0],label:x[1]}))}/>}
   {cur[0]==='acts'?<>
     {own&&!preview&&<Text size="sm" tone="mute">{t('fe.px.act.actsSees.'+vis)}</Text>}
-    <div className="posts" inert={inert||undefined}>{shownActs.slice(0,3).map(a=><ActivityCardOf key={a.id} a={a}/>)}</div></>
-   :<div className="posts" inert={inert||undefined}>{list.slice(0,3).map(x=><PostCard key={x.id} post={x} onChange={change} onRemove={remove}/>)}</div>}
+    <div className="posts" inert={inert||undefined}>{shownActs.slice(0,cut).map(a=><ActivityCardOf key={a.id} a={a}/>)}</div>{foot}</>
+   :<div className="posts" inert={inert||undefined}>{list.slice(0,cut).map(x=><PostCard key={x.id} post={x} onChange={change} onRemove={remove}/>)}</div>}
+  {cur[0]!=='acts'&&foot}
  </Group>;
 }
 
-/** Gallery (galleryBlock): the profile photos the viewer may see; «Все · N» opens P20. */
-function GalleryGroup({p,onOpen,inert}:{p:PersonProfile,onOpen:(i:number)=>void,inert?:boolean|undefined}){
- const {t}=useI18n();const navigate=useNavigate();const list=photosOf(p);
+/** Gallery (galleryBlock): one source with the screen it opens (`gallery.list`, the same call as P20 «Все»), so the
+ * counter, the thumbnails and what opens always agree; a tile and «Все · N» both open that gallery. In «Как видят»
+ * only what everyone sees is drawn. */
+function GalleryGroup({p,inert,preview}:{p:PersonProfile,inert?:boolean|undefined,preview?:boolean|undefined}){
+ const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();
+ const [g,setG]=useShown<z.infer<typeof galleryList>|null>('px.gal:'+p.id,()=>null);
+ useEffect(()=>{let live=true;call('gallery.list',{profileId:p.id},galleryList).then(r=>{if(live)setG(r);}).catch(()=>{});return ()=>{live=false;};},[call,p.id,setG]);
+ const tiles=(g?.items??[]).filter(x=>!preview||!x.audience||x.audience==='all');
+ const list=tiles.map(x=>({src:x.media.src?.thumb??x.media.src?.card??null})).filter((x):x is {src:string}=>!!x.src);
  if(!list.length)return null;
- return <Group bare title={t('fe.px.gal.title')} action={!inert&&<button type="button" onClick={()=>navigate('/n/people/'+p.id+'/gallery')}>{t('fe.px.all')} · {list.length}</button>}>
-  <Card><div className="ggrid">{list.slice(0,12).map((m,i)=><button key={i} type="button" className="gtile" disabled={inert} onClick={()=>onOpen(i)}><img src={mediaSrc(m)!} alt="" loading="lazy" draggable={false}/></button>)}</div>
+ const open=()=>navigate('/n/people/'+p.id+'/gallery');
+ return <Group bare title={t('fe.px.gal.title')} action={!inert&&<button type="button" onClick={open}>{t('fe.px.all')} · {list.length}{g?.next?'+':''}</button>}>
+  <Card><div className="ggrid">{list.slice(0,12).map((m,i)=><button key={i} type="button" className="gtile" disabled={inert} aria-label={t('fe.mx.ph.nOf',{n:i+1,total:list.length})} onClick={open}><img src={m.src} alt="" loading="lazy" draggable={false}/></button>)}</div>
   </Card></Group>;
 }
+const galleryList=z.object({ok:z.literal(true),items:z.array(z.object({postId:z.string(),media:z.object({src:z.record(z.string(),z.string()).nullable()}).passthrough(),audience:z.string().optional()}).passthrough()),next:z.string().nullable()});
 
 /** Interests group of another profile (pubJars → jarShelf, six then «Ещё N»). */
 function InterestsGroup({profileId,name,avatar,inert,pre,preview}:{profileId:string,name:string,avatar?:string|null|undefined,inert?:boolean|undefined,pre?:CardPre|undefined,preview?:'all'|'granted'|undefined}){
@@ -325,13 +354,13 @@ function InterestsGroup({profileId,name,avatar,inert,pre,preview}:{profileId:str
 }
 
 /** Everything under the photo and the buttons — the same body on the profile page and under a Discover card. */
-export function ProfileBody({p,inert,preview,onOpen,pre}:{p:PersonProfile,inert?:boolean|undefined,preview?:'all'|'granted'|undefined,onOpen:(i:number)=>void,
+export function ProfileBody({p,inert,preview,pre}:{p:PersonProfile,inert?:boolean|undefined,preview?:'all'|'granted'|undefined,onOpen?:(i:number)=>void,
  /** Everything already read in one go (a Discover card): the body appears whole, nothing pops in under the reader. */ pre?:CardPre|undefined}){
  return <>
   <DetailsGroup p={p}/>
   <LinksSection profileId={p.id} inert={inert} pre={pre}/>
   <InterestsGroup profileId={p.id} name={personName(p)||'?'} avatar={mediaSrc(p.avatar)} inert={inert} pre={pre} preview={preview}/>
-  <GalleryGroup p={p} onOpen={onOpen} inert={inert}/>
+  <GalleryGroup p={p} inert={inert} preview={!!preview}/>
   <PrivateVault profileId={p.id} name={personName(p)} {...(preview?{preview}:{})} {...(pre?{pre:pre.private??{ok:true,exists:false}}:{})}/>
   <Activity profileId={p.id} inert={inert} preview={!!preview} pre={pre}/>
  </>;
@@ -720,9 +749,10 @@ export function MePreviewScreen(){
  const seg=<Seg small={false} value={lv} onChange={setLv} label={t('fe.px.pv.title')} options={(['all','granted','card'] as const).map(id=>({id,label:t('fe.ln.pv.'+id)}))}/>;
  if(p&&!error&&lv!=='card')return <>
   {proposal&&<Alert kind="info" className="mt12">{t('fe.c6.previewNote')}</Alert>}
-  <ProfilePage p={p} preview={lv} seg={<div className="p3-seg">{seg}</div>}/>
+  <ProfilePage p={viewedBy(p,lv)} preview={lv} seg={<div className="p3-seg">{seg}</div>}/>
  </>;
- const ph=p?mediaSrc(p.avatar):null;const city=p?cityOf(p,locale):null;
+ const vp=p?viewedBy(p,'card'):null;
+ const ph=p?mediaSrc(p.avatar):null;const city=vp?cityOf(vp,locale):null;
  const note=mode!=='visible'?t('fe.px.pv.cardOff'):!ph?t('fe.px.pv.cardNoPhoto'):t(acting?.kind==='couple'?'fe.px.pv.cardOnUs':'fe.px.pv.cardOn');
  return <>
   <header className="bar"><BackBtn/><div className="bar-seg">{seg}</div><H level={1} className="sm" tabIndex={-1}><span className="sr-only">{t('fe.px.pv.title')}</span></H></header>
@@ -732,13 +762,13 @@ export function MePreviewScreen(){
     :<>
      <div className="mt12"><div className="card18">
       {ph?<><img className="mbg" src={ph} alt="" aria-hidden="true" draggable={false}/><img src={ph} alt={personName(p)} draggable={false}/></>:<div className="plate" style={plate(p.id)}/>}
-      <div className="pc-info"><PersonName name={personName(p)} age={p.age||undefined}><NameBadges p={p}/></PersonName>
+      <div className="pc-info"><PersonName name={personName(p)} age={vp?.age||undefined}><NameBadges p={p}/></PersonName>
        {city&&<div className="pc-who"><span className="pl"><MapPin/>{city}</span></div>}
        <FollowCounts id={p.id} rel={rel} inert/>
        <div className="pc-hint"><ChevronDown/>{t('fe.px.card.hint')}</div></div>
      </div></div>
      <Note className="center mt12">{note}</Note>
-     <div className="pc-body pc-full p3-card21"><PersonBio p={p}/><AboutGroup p={p} inert/><ProfileBody p={p} inert preview="all" onOpen={()=>{}}/></div>
+     <div className="pc-body pc-full p3-card21"><PersonBio p={p}/><AboutGroup p={p} inert/><ProfileBody p={vp??p} inert preview="all" onOpen={()=>{}}/></div>
     </>}
   </View>
  </>;

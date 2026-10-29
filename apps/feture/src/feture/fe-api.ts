@@ -26,6 +26,16 @@ export function newOpId():string{
 
 const failure=z.object({error:z.string(),rule:z.string().optional(),fields:z.array(z.string()).optional(),state:z.string().optional(),reasons:z.record(z.string(),z.string()).optional(),until:z.string().optional()});
 
+/** «Нужна помощь со входом»: a message to support without an account (`POST /api/fe?help=1`, rate-limited per network
+ * address on the server). Resolves when it was taken. */
+export async function sendPublicHelp(input:{body:string,contact?:string|undefined,locale:'ru'|'en'}):Promise<void>{
+ let response:Response;
+ try{response=await fetch(apiUrl('/api/fe?help=1'),{method:'POST',cache:'no-store',headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({body:input.body,...(input.contact?{contact:input.contact}:{}),locale:input.locale}),signal:AbortSignal.timeout(15000)});}
+ catch{throw new FeError('network');}
+ if(!response.ok)throw new FeError(response.status===429?'rate_limited':response.status===400?'invalid_input':'unavailable',response.status);
+}
+
 export async function feRequest<T>(session:AuthSession,action:string,input:Record<string,unknown>,schema:z.ZodType<T>,
  opts:{profileId?:string|undefined,signal?:AbortSignal|undefined}={}):Promise<T>{
  const {signal,profileId}=opts;

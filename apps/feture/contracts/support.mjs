@@ -2,7 +2,7 @@
 /** Wave 8: «Написать в поддержку» (S01) with staff replies in the staff screen, and the maintenance switch (MAINT). */
 import * as z from 'zod';
 import { id, opId } from './platform.mjs';
-import { field } from './_text.mjs';
+import { field, line } from './_text.mjs';
 
 /** A message to or from support: at least five characters (V21 supportSend), at most 2000. */
 const body = field('support');
@@ -34,3 +34,7 @@ export const supportCommands = {
     input: z.strictObject({ opId, active: z.boolean(), message: field('maintenance').optional() }),
   },
 };
+
+/** The public help form for people who cannot sign in (`POST /api/fe?help=1`, no account): what went wrong, and an
+ * optional way to answer (an address or a handle). Same text rule as a ticket. */
+export const helpInput = z.strictObject({ body, contact: line(120).optional(), locale: z.enum(['ru', 'en']).default('ru') });

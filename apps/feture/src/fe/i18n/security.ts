@@ -1,7 +1,7 @@
 /** Staff second factor (2FA) and «Мои устройства» (owner 29.10.2026, docs/infra/security.md). */
 export const ru = {
   'fe.sf.enrolTitle': 'Защита входа',
-  'fe.sf.enrolLead': 'Сотрудникам нужен второй ключ — код из приложения на телефоне. Тогда аккаунт не уведут, даже украв почту.',
+  'fe.sf.enrolLead': "Сотрудникам нужен второй ключ — код из приложения на телефоне. Даже с доступом к почте войти без кода не получится.",
   'fe.sf.scan': 'Отсканируй QR в приложении-аутентификаторе: Google Authenticator, «Яндекс Ключ», 1Password.',
   'fe.sf.qr': 'QR-код для приложения-аутентификатора',
   'fe.sf.key': 'Или введи ключ вручную',
@@ -53,7 +53,7 @@ export const ru = {
   'fe.uf.row': 'Код из приложения',
   'fe.uf.on': 'Включён',
   'fe.uf.offSub': 'Выключен',
-  'fe.uf.foot': 'При входе спросим ещё 6 цифр из приложения на телефоне. Тогда аккаунт не уведут, даже украв почту.',
+  'fe.uf.foot': "При входе спросим ещё 6 цифр из приложения на телефоне. Даже с доступом к почте войти без кода не получится.",
   'fe.uf.left': 'Кодов восстановления: {n}',
   'fe.uf.required': 'Обязателен для сотрудников',
   'fe.uf.newCodes': 'Новые коды восстановления',
@@ -75,7 +75,7 @@ export const ru = {
 
 export const en = {
   'fe.sf.enrolTitle': 'Sign-in protection',
-  'fe.sf.enrolLead': 'Staff need a second key — a code from an app on your phone. Then nobody can take the account, even with your email.',
+  'fe.sf.enrolLead': "Staff need a second key — a code from an app on your phone. Even with access to your email, signing in without the code won’t work.",
   'fe.sf.scan': 'Scan the QR code in an authenticator app: Google Authenticator, Yandex Key, 1Password.',
   'fe.sf.qr': 'QR code for the authenticator app',
   'fe.sf.key': 'Or type the key by hand',
@@ -126,7 +126,7 @@ export const en = {
   'fe.uf.row': 'Code from an app',
   'fe.uf.on': 'On',
   'fe.uf.offSub': 'Off',
-  'fe.uf.foot': 'At sign-in we’ll also ask for 6 digits from an app on your phone. Then nobody gets in with just your email.',
+  'fe.uf.foot': "At sign-in we’ll also ask for 6 digits from an app on your phone. Even with access to your email, signing in without the code won’t work.",
   'fe.uf.left': 'Recovery codes left: {n}',
   'fe.uf.required': 'Required for staff',
   'fe.uf.newCodes': 'New recovery codes',

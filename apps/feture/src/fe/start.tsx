@@ -7,6 +7,7 @@ import {Alert,Bar,Btn,CodeInput,Field,H,Input,Seg,Spacer,Stack} from './kit';
 import {pendingPairLink} from './pair-link';
 import {ToastProvider} from './toast';
 import {Welcome} from './welcome';
+import {SignInHelp} from './support';
 
 /** The signed-out and sign-up frame of V21: `.stage > .root.auth > main.main.hasbar(header.bar, .view, .ctabar)`,
  * so the auth screens get the prototype's header, the card look on a computer and the bottom-pinned buttons. */
@@ -77,6 +78,7 @@ function EmailStep({mode,onBack,onMode,onCode}:{mode:Mode,onBack:()=>void,onMode
    </Field></div>
    <Btn onClick={send} disabled={busy} busy={busy}>{t('fe.onb.getCode')}</Btn>
    {noMail&&<Btn kind="text" onClick={()=>{const v=email.trim().toLowerCase();lastEmail=v;onCode(v,false);}}>{t('fe.onb.haveCode')}</Btn>}
+   <SignInHelp/>
   </div></div>
  </>;
 }
@@ -129,6 +131,7 @@ function CodeStep({email,sent,onBack}:{email:string,sent:boolean,onBack:()=>void
      <Btn kind="text" auto onClick={onBack}>{t('fe.onb.code.change')}</Btn>
      <Btn kind="text" auto onClick={resend} disabled={!!left||busy}>{left?t('fe.onb.code.resendIn').replace('{n}',String(left)):t('fe.onb.code.resend')}</Btn>
     </div>
+    <SignInHelp/>
    </Stack>
   </div></div>
  </>;

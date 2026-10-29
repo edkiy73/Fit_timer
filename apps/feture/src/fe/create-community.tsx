@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {CircleAlert,Clock,Image as ImageIcon,Lock,RefreshCw,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Av,Bar,Btn,Card,Chip,Chips,Counter,Empty,FilePick,Group,Input,Note,SelectRow as KitSelectRow,Skel,Stack,Swatches,TextArea,View} from './kit';
+import {Alert,Av,Bar,Btn,Card,Chip,Chips,Counter,Empty,FilePick,Group,Input,Note,SelectRow as KitSelectRow,Skel,Stack,Swatches,TextArea,View,useLeaveGuard} from './kit';
 import {useFe} from './session';
 import {Uploader} from './kit/Uploader';
 import {useSendPhoto} from './media-upload';
@@ -201,17 +201,19 @@ function CommunityForm({edit,reload}:{edit?:EditableCommunity&{rev:number},reloa
    if(Object.keys(next).length){setErr(next);shakeFirstErr();}else setFailure(feErrorMessage(e,t));
   }else setFailure(feErrorMessage(e,t));
  };
+ const dirty=!busy&&(edit?Object.keys(changes(edit)).length>0:!!(name.trim()||desc.trim()||topics.length||rules.trim()||cover));
+ const guard=useLeaveGuard(dirty);
  const save=async()=>{
   if(busy)return;setFailure('');setStale(false);
   if(!validate()){shakeFirstErr();return;}
   if(edit){
    const diff=changes(edit);
-   if(!Object.keys(diff).length){navigate(`/n/communities/${edit.id}/manage`,{replace:true,state:{notice:t('fe.ece.c.nothing')}});return;}
+   if(!Object.keys(diff).length){guard.pass(()=>navigate(`/n/communities/${edit.id}/manage`,{replace:true,state:{notice:t('fe.ece.c.nothing')}}));return;}
    const input={communityId:edit.id,rev:edit.rev,...diff};
    setBusy(true);
    try{
     const r=await call('community.update',{opId:opFor(input),...input},updated);done();
-    navigate(`/n/communities/${edit.id}/manage`,{replace:true,state:{notice:reviewNotice(r.review,t)}});
+    guard.pass(()=>navigate(`/n/communities/${edit.id}/manage`,{replace:true,state:{notice:reviewNotice(r.review,t)}}));
    }catch(e){fail(e);}finally{setBusy(false);}
    return;
   }
@@ -221,7 +223,7 @@ function CommunityForm({edit,reload}:{edit?:EditableCommunity&{rev:number},reloa
   try{
    const r=await call('community.create',{opId:opFor(input),...input},created);done();
    const notice=r.pending?t('fe.cc.pending'):couple?t('fe.cc.doneCouple'):t('fe.cc.done');
-   navigate('/n/me/communities',{replace:true,state:{notice}});
+   guard.pass(()=>navigate('/n/me/communities',{replace:true,state:{notice}}));
   }catch(e){fail(e);}finally{setBusy(false);}
  };
 
@@ -232,6 +234,7 @@ function CommunityForm({edit,reload}:{edit?:EditableCommunity&{rev:number},reloa
  const places:[string,string][]=[...known,...extra,['online',t('fe.cc.online')]];
  const published=edit?.state==='published';
  return <>
+  {guard.node}
   <Bar title={edit?t('fe.ece.c.title'):t('fe.cc.title')} back small/>
   <div className="view nodock cta1"><div className="wrap">
    {!edit&&couple&&acting&&<p className="as-line full"><Av name={acting.name} seed={acting.id} size="xs" src={acting.avatar}/><span>{t('fe.cc.asCouple')} <b>{acting.name}</b></span></p>}
