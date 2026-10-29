@@ -18,7 +18,7 @@ const fakeSend=(fail:boolean):SendPhoto=>{let n=0;return (_b,on)=>new Promise((r
 
 const meta={title:'Медиа/Загрузка фото',component:Uploader,tags:['autodocs'],
  parameters:{docs:{description:{component:'Лист загрузки: формат (если месту разрешено несколько); строка на каждый файл — превью в выбранном формате (1:1 — квадрат, 4:5, «Как есть» — форма самого файла, не больше 80 px), имя и ✕ «Убрать» справа, состояние, прогресс и под текстом в одну строку от его левого края «Обрезать» (видео), «Кадрировать» (если формат не «Как есть»), «Повторить»; затем «Добавить ещё», что добавил экран (`children`: в чате — как смотреть), заметка о приватности (всегда с отступом), кнопка (`doneLabel`, по умолчанию «Готово · N»). Это единственный способ отправить фото или видео — посты, профиль, галерея, чаты. Видео (`sendVideo`) готовится на устройстве при отправке: только выбранный отрезок (до минуты; у длинного видео сначала — первая минута), обрезанный по кадру, не больше 1280 px, сжатый (H.264 ~2,5 Мбит/с + AAC, MP4) — «Готовим видео… 42%» с «Отменить»; обложка — первый кадр готового видео. Исходник — до 10 минут и 2 ГБ, лимиты сервера (минута, 100 МБ) — на готовый файл. Путь: WebCodecs в воркере, иначе запись с холста в реальном времени (MediaRecorder), иначе видео уходит как есть (до минуты и 100 МБ) без обрезки и кадра — с пояснением. Фото сжимаются и очищаются от метаданных прямо на устройстве; уходят на сервер по «Готово». Отправку делает экран — `useSendPhoto(purpose)`.\n\nФорматы по местам: пост — 4:5 / 1:1 / как есть; фото профиля — 4:5; обложка события и сообщества — 16:9; фото события — как есть / 4:5 / 1:1 / 16:9.'}}},
- args:{files:[],aspects:['4:5','1:1','orig'],max:6,send:fakeSend(false),onDone:()=>{},onClose:()=>{}},
+ args:{files:[],aspects:['orig','4:5','1:1'],max:6,send:fakeSend(false),onDone:()=>{},onClose:()=>{}},
  argTypes:{aspects:{control:'check',options:['4:5','1:1','16:9','orig']},files:{control:false},send:{control:false}},
 } satisfies Meta<typeof Uploader>;
 export default meta;
@@ -27,13 +27,16 @@ const Live=(a:S['args']&{fail?:boolean})=>{const [files,setFiles]=useState<File[
  useEffect(()=>{void Promise.all([sample('Первое'),sample('Второе',800,1200)]).then(setFiles);},[]);
  if(!files)return <span/>;if(!open)return <Btn kind="soft" onClick={()=>setOpen(true)}>Открыть снова</Btn>;
  return <Uploader {...a!} max={a?.max??6} files={files} send={fakeSend(!!a?.fail)} onDone={()=>setOpen(false)} onClose={()=>setOpen(false)}/>;};
-export const Пост:S={name:'Пост (4:5 / 1:1 / как есть)',render:a=><Live {...a}/>};
+export const Пост:S={name:'Пост (Свой / 4:5 / 1:1)',render:a=><Live {...a}/>};
 export const ФотоПрофиля:S={name:'Фото профиля (только 4:5)',render:a=><Live {...a} aspects={['4:5']} max={6}/>};
 export const Обложка:S={name:'Обложка (16:9, одно фото)',render:a=><Live {...a} aspects={['16:9']} max={1}/>};
 export const СОшибкой:S={name:'Ошибка отправки и «Повторить»',render:a=><Live {...a} fail/>};
 
 export const Кадрирование:StoryObj<typeof CropSheet>={name:'Кадрирование',render:a=>{const [src,setSrc]=useState('');useEffect(()=>{void sample('Кадр').then(f=>setSrc(URL.createObjectURL(f)));},[]);
- return src?<CropSheet {...a} src={src}/>:<span/>;},args:{aspect:'4:5',onApply:()=>{},onClose:()=>{}},argTypes:{aspect:{control:'inline-radio',options:['4:5','1:1','16:9']}}};
+ return src?<CropSheet {...a} src={src}/>:<span/>;},args:{aspect:'4:5',onApply:()=>{},onClose:()=>{}},argTypes:{aspect:{control:'inline-radio',options:['orig','4:5','1:1','16:9']}}};
+/** Свой формат: рамку тянут за края и углы, фото двигают и масштабируют под ней; рамка видна со всех четырёх сторон. */
+export const КадрированиеСвой:StoryObj<typeof CropSheet>={name:'Кадрирование: свой формат',render:a=>{const [src,setSrc]=useState('');useEffect(()=>{void sample('Кадр',1200,800).then(f=>setSrc(URL.createObjectURL(f)));},[]);
+ return src?<CropSheet {...a} src={src}/>:<span/>;},args:{aspect:'orig',onApply:()=>{},onClose:()=>{}}};
 
 /** CaptureFrame: the viewfinder of a verification shot — face oval (selfie with a gesture) or document frame; with `src`
  * the taken shot, shown whole (documents are never cropped). */

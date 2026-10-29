@@ -4,7 +4,8 @@
 export type Aspect='orig'|'4:5'|'1:1'|'16:9';
 export const ASPECTS:Record<Exclude<Aspect,'orig'>,[number,number]>={'4:5':[4,5],'1:1':[1,1],'16:9':[16,9]};
 /** Where the frame sits on the photo: x/y shift as a share of the scaled photo (0 = centred), z ≥ 1 zoom. */
-export type Crop={x:number,y:number,z:number};
+/** `rect` (free format): the frame as a share of the whole photo [x, y, width, height]; then x / y / z are not used. */
+export type Crop={x:number,y:number,z:number,rect?:[number,number,number,number]|undefined};
 export const NO_CROP:Crop={x:0,y:0,z:1};
 export type Prepared={blob:Blob,url:string,w:number,h:number,size:number};
 
@@ -34,14 +35,16 @@ export async function preparePhoto(file:Blob):Promise<Prepared>{
 
 /** The source rectangle of the frame `aspect` placed by `crop` on a W×H picture (same maths as the crop sheet's
  * preview): at zoom 1 the largest aspect box that fits; zoom shrinks it around the shifted centre. */
-export function cropRect(W:number,H:number,aspect:Exclude<Aspect,'orig'>,crop:Crop):{sx:number,sy:number,sw:number,sh:number}{
+export function cropRect(W:number,H:number,aspect:Aspect,crop:Crop):{sx:number,sy:number,sw:number,sh:number}{
+ if(crop.rect||aspect==='orig'){const [rx,ry,rw,rh]=crop.rect??[0,0,1,1];
+  return {sx:rx*W,sy:ry*H,sw:Math.max(1,rw*W),sh:Math.max(1,rh*H)};}
  const [aw,ah]=ASPECTS[aspect];
  const base=Math.min(W/aw,H/ah);const fw=aw*base/crop.z,fh=ah*base/crop.z;
  const cx=W/2-crop.x*W,cy=H/2-crop.y*H;
  return {sx:Math.max(0,Math.min(W-fw,cx-fw/2)),sy:Math.max(0,Math.min(H-fh,cy-fh/2)),sw:fw,sh:fh};
 }
 /** The frame `aspect` placed by `crop` on the photo. */
-export async function cropPhoto(file:Blob,aspect:Exclude<Aspect,'orig'>,crop:Crop):Promise<Prepared>{
+export async function cropPhoto(file:Blob,aspect:Aspect,crop:Crop):Promise<Prepared>{
  const bmp=await decode(file);
  try{const r=cropRect(bmp.width,bmp.height,aspect,crop);return await draw(bmp,r.sx,r.sy,r.sw,r.sh);}finally{bmp.close();}
 }
@@ -67,7 +70,7 @@ export const fmtDur=(ms:number|null|undefined)=>{const s=Math.max(0,Math.round((
 export const VIDEO_SOURCE_MAX_BYTES=2*1024*1024*1024;
 export const VIDEO_SOURCE_MAX_MS=600_000;
 /** The frame of a clip as the crop sheet returns it. */
-export type ClipCrop={aspect:Exclude<Aspect,'orig'>}&Crop;
+export type ClipCrop={aspect:Aspect}&Crop;
 /** The author's choice for a clip: the part to keep and the frame. Applied on the device; nothing of it goes to the server. */
 export type VideoEdit={trim?:{startMs:number,endMs:number}|undefined,crop?:ClipCrop|undefined};
 export const TRIM_MIN_MS=1000;
@@ -78,7 +81,8 @@ export type PreparedVideo={file:File,poster:Blob,url:string,w:number,h:number,du
 /** Where the video sits in its box for a crop preview (trim sheet): size and offset in % of the box (the crop sheet's
  * maths with the clip covering the frame). `r` = the clip's own width / height. */
 export function clipBox(r:number,crop:ClipCrop):{w:number,h:number,x:number,y:number}{
- const [aw,ah]=ASPECTS[crop.aspect];const a=aw/ah;
+ if(crop.rect){const [rx,ry,rw,rh]=crop.rect;const w=100/rw,h=100/rh;return {w,h,x:-rx*w,y:-ry*h};}
+ const [aw,ah]=crop.aspect==='orig'?[1,1]:ASPECTS[crop.aspect];const a=aw/ah;
  let w=100,h=100;if(r>a)w=r/a*100;else h=a/r*100;
  w*=crop.z;h*=crop.z;
  return {w,h,x:(100-w)/2+crop.x*w,y:(100-h)/2+crop.y*h};

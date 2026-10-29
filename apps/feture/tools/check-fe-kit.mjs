@@ -51,6 +51,7 @@ const ONE = [
   ['report call (use ReportSheet from report.tsx)', /call\('report\.create'/g, ['src/fe/report.tsx']],
   ['clipboard (use useCopyLink / copyLink from share.tsx)', /navigator\.clipboard/g, ['src/fe/share.tsx', 'src/fe/chats.tsx']],
   ['follow call (use FollowButton from follow.tsx)', /call\('follow\.set'/g, ['src/fe/follow.tsx']],
+  ['photo tile grid (use PhotoTiles from kit/PhotoTiles.tsx)', /className=(?:"|\{['`])[^"'`}]*(?<![\w-])(?:edit-ph|k-ptiles)(?![\w-])/g, ['src/fe/kit/PhotoTiles.tsx']],
   ['browser confirm (use Ask)', /window\.confirm\(/g, []],
   ['«Принимаю правила» box (the join button accepts the rules)', /fe\.host\.join\.accept'/g, []],
 ];

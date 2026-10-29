@@ -49,7 +49,7 @@ export function TrimSheet({file,durationMs,initial,crop,onApply,onClose}:{file:F
  };
  const toggle=()=>{const el=v.current;if(!el)return;if(el.paused){if(el.currentTime*1000<a||el.currentTime*1000>=b-30)el.currentTime=a/1000;void el.play().catch(()=>{});}else el.pause();};
  const pc=(ms:number)=>`${(ms/D*100).toFixed(3)}%`;
- const box=crop&&nat?clipBox(nat,crop):null;const [aw,ah]=crop?ASPECTS[crop.aspect]:[0,0];
+ const box=crop&&nat?clipBox(nat,crop):null;const [aw,ah]=crop?crop.rect?[(nat||1)*crop.rect[2],crop.rect[3]]:crop.aspect==='orig'?[1,1]:ASPECTS[crop.aspect]:[0,0];
  const prev={...(crop?{'--ar':`${aw}/${ah}`}:nat?{'--ar':nat.toFixed(4)}:{}),...(box?{'--vw':box.w+'%','--vh':box.h+'%','--vx':box.x+'%','--vy':box.y+'%'}:{})} as CSSProperties;
  const long=D>MAX;const whole=a===0&&b>=Math.min(D,MAX);
  return <Sheet title={t('fe.kit.trim.title')} sub={t('fe.kit.trim.hint')} full onClose={onClose}
