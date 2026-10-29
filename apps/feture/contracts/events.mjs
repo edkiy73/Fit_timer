@@ -1,7 +1,7 @@
 // @ts-check
 /** Slice D2: events (S2-CATALOG «D. События», extract/communities-events.md §1.8–1.12). */
 import * as z from 'zod';
-import { id, opId } from './platform.mjs';
+import { id, opId, queuePaging } from './platform.mjs';
 import { checkText, field, lineRule } from './_text.mjs';
 import { PLATE_KEYS } from './_plates.mjs';
 
@@ -128,7 +128,7 @@ export const eventsCommands = {
     profile: true, write: false,
     input: z.strictObject({ eventId: id, kind: z.enum(['going', 'interested']).default('going') }),
   },
-  'staff.eventQueue': { profile: false, write: false, input: z.strictObject({ limit: z.int().min(1).max(50).default(20) }) },
+  'staff.eventQueue': { profile: false, write: false, input: z.strictObject({ ...queuePaging }) },
   'staff.eventDecide': {
     profile: false, write: true,
     input: z.strictObject({ opId, eventId: id, rev: z.int().positive(), decision: z.enum(['approve', 'reject', 'hide']), reason: field('reason').default('') }),

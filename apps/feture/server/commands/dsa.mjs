@@ -3,6 +3,7 @@ import { dsaCommands, noticeInput } from '../../contracts/dsa.mjs';
 import { fail } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { journal, requireStaff } from './staff.mjs';
+import { pageInfo, plainRows, queuePageSql } from '../queue-page.mjs';
 
 /** S4 steps 5–6 (S4-MODERATION §6–7). Anyone, with or without an account, can send a notice about illegal content
  * (DSA art. 16): where it is, why, and an address to be answered at (not needed for child abuse). Staff look at it,
@@ -15,6 +16,9 @@ import { journal, requireStaff } from './staff.mjs';
  */
 
 const PRIORITY = `case reason when 'csam' then 0 when 'minors' then 1 when 'threats' then 2 when 'private_material' then 3 else 5 end`;
+
+/** Sort keys: severity (lower first), then the notice's creation time and id. */
+const NOTICE_KEYS = [{ name: 'prio', type: 'int', dir: 'asc' }, { name: 'created_at', type: 'timestamptz' }, { name: 'id', type: 'uuid', dir: 'asc' }];
 const RULES = {
   ru: { minors: 'защита несовершеннолетних', threats: 'угрозы и шантаж', private_material: 'чужие приватные материалы', spam: 'спам', illegal: 'незаконный контент', community_rules: 'правила сообщества', ip: 'нарушение авторских прав' },
   en: { minors: 'protection of minors', threats: 'threats and blackmail', private_material: "other people's private material", spam: 'spam', illegal: 'illegal content', community_rules: 'community rules', ip: 'copyright infringement' },
@@ -93,10 +97,12 @@ const run = {
   async 'staff.noticeQueue'(q, { account, input }) {
     await requireStaff(q, account, ['owner', 'lead', 'moderator']);
     // The sender's address stays out of the queue; staff act on the content, the answer goes by itself.
-    const items = await q.query(
-      `select id, target_url, reason, explanation, created_at, sender_email is not null answerable
-       from feture.dsa_notice where state = 'open' order by ${PRIORITY}, created_at limit $1`, [input.limit]);
-    return { items };
+    // Severity first (CSAM above the rest), then the reader's date order.
+    const { sql, params } = queuePageSql(input, NOTICE_KEYS,
+      `select id, target_url, reason, explanation, created_at, sender_email is not null answerable, (${PRIORITY})::int prio
+       from feture.dsa_notice where state = 'open'`, []);
+    const rows = await q.query(sql, params);
+    return { items: plainRows(rows), ...pageInfo(rows, NOTICE_KEYS, input.limit) };
   },
 
   async 'staff.noticeDecide'(q, { account, input }) {

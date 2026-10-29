@@ -8,6 +8,13 @@ import { field } from './_text.mjs';
 export const id = z.uuid();
 /** Client operation id: one per user intent, reused on retry. */
 export const opId = z.uuid();
+/** Paging and sort of every staff queue: `after` is the cursor the server sent as `tail` / `next`; `order` is the
+ * reader's choice (`old` first or `new` first). */
+export const queuePaging = {
+  limit: z.int().min(1).max(50).default(20),
+  after: z.string().max(400).optional(),
+  order: z.enum(['old', 'new']).default('old'),
+};
 
 const media = {
   purpose: z.enum(['post', 'avatar', 'private', 'chat', 'gallery', 'community', 'event', 'verification', 'voice']),

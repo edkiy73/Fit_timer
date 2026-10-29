@@ -1,7 +1,7 @@
 // @ts-check
 /** S4 steps 5–6: notices of illegal content without an account (DSA art. 16) and transparency figures (art. 15). */
 import * as z from 'zod';
-import { id, opId } from './platform.mjs';
+import { id, opId, queuePaging } from './platform.mjs';
 import { field } from './_text.mjs';
 
 /** The public form (no account): `POST /api/fe?notice=1`. */
@@ -20,7 +20,7 @@ export const noticeInput = z.strictObject({
 
 const day = z.iso.date().refine(v => v >= '2020-01-01' && v <= '2100-12-31', { message: 'out_of_range' });
 export const dsaCommands = {
-  'staff.noticeQueue': { profile: false, write: false, input: z.strictObject({ limit: z.int().min(1).max(50).default(20) }) },
+  'staff.noticeQueue': { profile: false, write: false, input: z.strictObject({ ...queuePaging }) },
   'staff.noticeDecide': {
     profile: false, write: true,
     input: z.strictObject({

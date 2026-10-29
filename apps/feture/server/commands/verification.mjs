@@ -6,6 +6,8 @@ import { enqueue } from '../outbox.mjs';
 import { mediaDto } from '../media/assets.mjs';
 import { GESTURES } from './premium.mjs';
 import { journal, requireStaff, staffCheck } from './staff.mjs';
+import { pageInfo, queuePageSql, SUBMITTED_KEYS } from '../queue-page.mjs';
+
 
 /** V01 photo verification (S2-CATALOG «H» `verification.photoSubmit`, S3-MEDIA §8). The server picks a gesture, the
  * person sends a selfie making it, staff compare it with the profile photos. The result is the «Фото подтверждено»
@@ -100,10 +102,12 @@ const run = {
     await requireStaff(q, account, STAFF);
     // Selfies open only with a code from the last 10 minutes (as in staff.ageCheckQueue): otherwise `locked`.
     const locked = !(await staffCheck(q, account)).fresh;
-    const rows = await q.query(
+    const { sql, params } = queuePageSql(input, SUBMITTED_KEYS,
       `select c.id, c.gesture, c.submitted_at, c.asset_id, c.photo_asset_id, p.id profile_id, p.handle
        from feture.photo_check c join feture.profile p on p.id = c.profile_id
-       where c.state = 'submitted' and c.account_id <> $1 order by c.submitted_at limit $2`, [account.id, input.limit]);
+       where c.state = 'submitted' and c.account_id <> $1`, [account.id]);
+    const rows = await q.query(sql, params);
+    const page = pageInfo(rows, SUBMITTED_KEYS, input.limit);
     const ctx = { viewerProfileId: account.person_profile_id ?? account.id, place: /** @type {const} */ ('own'), showExplicit: true, staff: true };
     const items = [];
     for (const r of rows) {
@@ -127,7 +131,7 @@ const run = {
         photo: dtos[0] ?? null, photos: dtos,
       });
     }
-    return { items, locked };
+    return { items, locked, ...page };
   },
 
   async 'staff.photoCheckDecide'(q, { account, input }) {

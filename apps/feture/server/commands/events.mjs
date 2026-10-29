@@ -9,6 +9,7 @@ import { journal, requireStaff } from './staff.mjs';
 import { mediaDto } from '../media/assets.mjs';
 import { ageOn, withFaces } from './faces.mjs';
 import { cancelledFor, listedEvent } from '../sql-rules.mjs';
+import { CREATED_KEYS, pageInfo, plainRows, queuePageSql } from '../queue-page.mjs';
 
 /** Slice D2: events (S1 §10, extract/communities-events.md §1.8–1.12).
  * An event belongs to the organizing profile (a couple can organize) and goes to staff before it is published; a couple
@@ -640,15 +641,15 @@ const run = {
 
   async 'staff.eventQueue'(q, { account, input }) {
     await requireStaff(q, account, ['owner', 'lead', 'moderator']);
-    const items = await q.query(
+    const { sql, params } = queuePageSql(input, CREATED_KEYS,
       `select e.id, e.rev, e.title, e.kind, e.description, e.format, e.area, e.exact_address, e.join_url, e.starts_at, e.ends_at, e.price,
          e.requirements, e.questions, e.cover_asset_id, e.community_id, e.state, e.pending_change, e.created_at,
          json_build_object('id', o.id, 'kind', o.kind, 'handle', o.handle) organizer
        from feture.event e join feture.profile o on o.id = e.organizer_profile_id
        where (e.state = 'in_review' or e.state = 'published' and e.pending_change is not null)
-         and not exists (select 1 from feture.profile_member m where m.profile_id = e.organizer_profile_id and m.account_id = $1)
-       order by e.created_at limit $2`, [account.id, input.limit]);
-    return { items };
+         and not exists (select 1 from feture.profile_member m where m.profile_id = e.organizer_profile_id and m.account_id = $1)`, [account.id]);
+    const rows = await q.query(sql, params);
+    return { items: plainRows(rows), ...pageInfo(rows, CREATED_KEYS, input.limit) };
   },
 
   async 'staff.eventDecide'(q, { account, input }) {

@@ -6,6 +6,9 @@ import { enqueue } from '../outbox.mjs';
 import { avatarSrc, mediaDto } from '../media/assets.mjs';
 import { servedKeys } from '../media/scan.mjs';
 import { journal, requireStaff, staffCheck } from './staff.mjs';
+import { pageInfo, queuePageSql, SUBMITTED_KEYS } from '../queue-page.mjs';
+
+/** Sort keys of the check queues: when the check was submitted, then its id. */
 
 /** Slice H1: Premium and the age check (S1 §15, S3 §8, V21 A07).
  * Premium belongs to an account; acting as a couple, the couple has it when at least one partner does (Q12). Premium
@@ -349,10 +352,12 @@ const run = {
     // Documents and selfies open only with a code from the last 10 minutes; without one the queue still lists who is
     // waiting (`locked`, no pictures, nothing journalled) and the screen asks for the code.
     const locked = !(await staffCheck(q, account)).fresh;
-    const rows = await q.query(
+    const { sql, params } = queuePageSql(input, SUBMITTED_KEYS,
       `select c.id, c.method, c.gesture, c.submitted_at, c.asset_id, p.id profile_id, p.handle, p.avatar_asset_id avatar_id
        from feture.age_check c join feture.account a on a.id = c.account_id join feture.profile p on p.id = a.person_profile_id
-       where c.state = 'submitted' and c.account_id <> $1 order by c.submitted_at limit $2`, [account.id, input.limit]);
+       where c.state = 'submitted' and c.account_id <> $1`, [account.id]);
+    const rows = await q.query(sql, params);
+    const page = pageInfo(rows, SUBMITTED_KEYS, input.limit);
     const items = [];
     for (const r of rows) {
       const doc = r.method === 'document';
@@ -369,7 +374,7 @@ const run = {
         photo: avatar && !locked ? await mediaDto(cfg.media, avatar, ctx).catch(() => null) : null,
       });
     }
-    return { items, locked };
+    return { items, locked, ...page };
   },
 
   async 'staff.ageCheckDecide'(q, { account, input }) {

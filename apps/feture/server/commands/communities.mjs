@@ -10,6 +10,8 @@ import { sha256 } from '../hash.mjs';
 import { needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
 import { journal, requireStaff } from './staff.mjs';
 import { mediaDto } from '../media/assets.mjs';
+import { CREATED_KEYS, pageInfo, plainRows, queuePageSql } from '../queue-page.mjs';
+
 import { withFaces } from './faces.mjs';
 
 /** Slice D1: communities and discussions (S1 §9, extract/communities-events.md).
@@ -516,13 +518,13 @@ const run = {
 
   async 'staff.communityQueue'(q, { account, input }) {
     await requireStaff(q, account, ['owner', 'lead', 'moderator']);
-    const items = await q.query(
+    const { sql, params } = queuePageSql(input, CREATED_KEYS,
       `select c.id, c.rev, c.name, c.description, c.topics, c.privacy, c.join_question, c.rules, c.cover_asset_id, c.place_id, c.state, c.pending_change, c.created_at
        from feture.community c
        where (c.state = 'in_review' or c.pending_change is not null)
-         and not exists (select 1 from feture.profile_member m where m.profile_id = c.owner_profile_id and m.account_id = $1)
-       order by c.created_at limit $2`, [account.id, input.limit]);
-    return { items };
+         and not exists (select 1 from feture.profile_member m where m.profile_id = c.owner_profile_id and m.account_id = $1)`, [account.id]);
+    const rows = await q.query(sql, params);
+    return { items: plainRows(rows), ...pageInfo(rows, CREATED_KEYS, input.limit) };
   },
 
   async 'staff.communityDecide'(q, { account, input }) {

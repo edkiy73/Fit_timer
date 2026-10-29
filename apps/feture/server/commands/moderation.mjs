@@ -8,6 +8,13 @@ import { DISPUTE_LIMITS } from '../../contracts/posts.mjs';
 import { narrowCouple } from '../approvals.mjs';
 import { closeAll } from './access.mjs';
 import { settleAvatar } from './photos.mjs';
+import { CREATED_KEYS, pageInfo, queuePageSql } from '../queue-page.mjs';
+
+/** Sort keys of the queues here (each unique last key; `order` follows the reader's choice). */
+const REPORT_KEYS = [{ name: 'priority', type: 'int', dir: 'asc' }, { name: 'first_at', type: 'timestamptz' },
+  { name: 'target_type', type: 'text', dir: 'asc' }, { name: 'target_id', type: 'uuid', dir: 'asc' }];
+const DISPUTE_KEYS = [{ name: 'urgent', type: 'boolean', dir: 'desc' }, { name: 'opened_at', type: 'timestamptz' },
+  { name: 'id', type: 'uuid', dir: 'asc' }];
 
 /** S4 step 3 (docs/server/S4-MODERATION.md §2–4): reports grouped by target, decisions with a statement of reasons,
  * «это я на фото» disputes, profile sanctions. Staff never decide about their own profiles or couple; every decision
@@ -84,14 +91,16 @@ async function checkRank(q, roles, profileId) {
 const run = {
   async 'staff.reportQueue'(q, { account, input }) {
     await requireStaff(q, account, MODERATORS);
-    const groups = await q.query(
+    // Groups by priority first (a threat above spam), then the reader's date order.
+    const { sql, params } = queuePageSql(input, REPORT_KEYS,
       `select r.target_type, r.target_id, count(*)::int reports, min(r.created_at) first_at, max(r.created_at) last_at,
-         array_agg(distinct r.reason) reasons, min(${PRIORITY.replace(/reason/g, 'r.reason')}) priority,
+         array_agg(distinct r.reason) reasons, min(${PRIORITY.replace(/reason/g, 'r.reason')})::int priority,
          array_remove(array_agg(nullif(r.details, '')), null) details,
          (array_agg(r.snapshot order by r.created_at) filter (where r.snapshot is not null))[1] snapshot,
          (array_agg(r.reporter_profile_id order by r.created_at))[1] first_reporter, r.reported_profile_id
-       from feture.report r where r.state = 'open' group by r.target_type, r.target_id, r.reported_profile_id
-       order by priority, first_at limit $1`, [input.limit]);
+       from feture.report r where r.state = 'open' group by r.target_type, r.target_id, r.reported_profile_id`, []);
+    const groups = await q.query(sql, params);
+    const page = pageInfo(groups, REPORT_KEYS, input.limit);
     const items = [];
     for (const g of groups) {
       // Snapshot of what was reported; the author's identity is shown, the reporters' is not.
@@ -120,7 +129,7 @@ const run = {
       items.push({ targetType: g.target_type, targetId: g.target_id, reports: g.reports, reasons: g.reasons, priority: g.priority,
         details: g.details.slice(0, 5), firstAt: g.first_at, lastAt: g.last_at, reported: g.snapshot, excerpt: snap.excerpt, state: snap.state, media: snap.media, author });
     }
-    return { items };
+    return { items, ...page };
   },
 
   async 'staff.reportDecide'(q, { account, input }) {
@@ -162,16 +171,19 @@ const run = {
     // Posts with open «это я на фото» claims (owner decision 28.10.2026): claims that could not hide the post (it is
     // still visible) come first as urgent, then by age. Claimants are never named; staff see whether each was marked
     // on the photo, their trust level and strikes, a possible attack on the author and the author's explanation.
-    const rows = await q.query(
+    // Urgent claims (not yet hidden, nobody has hidden the photo) come first, then the reader's date order.
+    const { sql, params } = queuePageSql(input, DISPUTE_KEYS,
       `select p.id, p.disputed_at, p.dispute_note note, left(coalesce(p.title || ': ', '') || p.body, 300) excerpt,
          (select count(*)::int from feture.media_attachment a where a.target_type = 'post' and a.target_id = p.id) media,
          min(d.created_at) opened_at, bool_or(d.hid) hid, bool_or(d.attack) attack, bool_or(d.tagged) tagged,
+         (p.disputed_at is null and not bool_or(d.hid)) urgent,
          json_agg(json_build_object('account', d.claimant_account, 'tagged', d.tagged, 'hid', d.hid, 'at', d.created_at) order by d.created_at) claims
        from feture.photo_dispute d join feture.post p on p.id = d.post_id
        where d.state = 'open' and p.state = 'published'
          and not exists (select 1 from feture.profile_member m where m.profile_id = p.owner_profile_id and m.account_id = $1)
-       group by p.id
-       order by (p.disputed_at is null and not bool_or(d.hid)) desc, min(d.created_at) limit $2`, [account.id, input.limit]);
+       group by p.id`, [account.id]);
+    const rows = await q.query(sql, params);
+    const page = pageInfo(rows, DISPUTE_KEYS, input.limit);
     const items = [];
     for (const r of rows) {
       const claims = [];
@@ -189,7 +201,7 @@ const run = {
        from feture.account a join feture.profile p on p.id = a.person_profile_id
        where a.dispute_flagged_at is not null and (a.dispute_reviewed_at is null or a.dispute_reviewed_at < a.dispute_flagged_at) and a.id <> $1
        order by a.dispute_flagged_at limit 20`, [account.id]);
-    return { items, flagged };
+    return { items, flagged, ...page };
   },
 
   async 'staff.disputeDecide'(q, { account, input }) {
@@ -238,12 +250,12 @@ const run = {
 
   async 'staff.revisionQueue'(q, { account, input }) {
     await requireStaff(q, account, MODERATORS);
-    const items = await q.query(
+    const { sql, params } = queuePageSql(input, CREATED_KEYS,
       `select r.id, r.post_id, r.created_at, r.payload, left(coalesce(p.title || ': ', '') || p.body, 300) live
        from feture.post_revision r join feture.post p on p.id = r.post_id
-       where r.state = 'review' and not exists (select 1 from feture.profile_member m where m.profile_id = p.owner_profile_id and m.account_id = $1)
-       order by r.created_at limit $2`, [account.id, input.limit]);
-    return { items: items.map(r => ({ id: r.id, postId: r.post_id, createdAt: r.created_at, live: r.live, proposed: r.payload })) };
+       where r.state = 'review' and not exists (select 1 from feture.profile_member m where m.profile_id = p.owner_profile_id and m.account_id = $1)`, [account.id]);
+    const rows = await q.query(sql, params);
+    return { items: rows.map(r => ({ id: r.id, postId: r.post_id, createdAt: r.created_at, live: r.live, proposed: r.payload })), ...pageInfo(rows, CREATED_KEYS, input.limit) };
   },
 
   async 'staff.revisionDecide'(q, { account, input }) {
@@ -320,11 +332,12 @@ const run = {
 
   async 'staff.placeQueue'(q, { account, input }) {
     await requireStaff(q, account, [...MODERATORS, 'verifier']);
-    const items = await q.query(
+    const { sql, params } = queuePageSql(input, CREATED_KEYS,
       `select pl.id, pl.country, pl.name_ru, pl.name_en, pl.created_at,
          (select count(*)::int from feture.profile_details d where d.city_id = pl.id) used
-       from feture.place pl where pl.state = 'pending' order by pl.created_at limit $1`, [input.limit]);
-    return { items };
+       from feture.place pl where pl.state = 'pending'`, []);
+    const rows = await q.query(sql, params);
+    return { items: rows.map(r => ({ id: r.id, country: r.country, name_ru: r.name_ru, name_en: r.name_en, created_at: r.created_at, used: r.used })), ...pageInfo(rows, CREATED_KEYS, input.limit) };
   },
 
   async 'staff.placeDecide'(q, { account, input }) {
@@ -368,14 +381,14 @@ const run = {
 
   async 'staff.appealQueue'(q, { account, input }) {
     await requireStaff(q, account, ['owner', 'lead']);
-    const items = await q.query(
+    const { sql, params } = queuePageSql(input, CREATED_KEYS,
       `select ap.id, ap.target_type, ap.target_id, ap.body, ap.created_at, p.handle,
          (select json_build_object('action', s.action, 'detail', s.detail, 'at', s.created_at, 'mine', s.staff_account_id = $1) from feture.staff_action s
           where s.id = ap.staff_action_id) decision
        from feture.appeal ap join feture.profile p on p.id = ap.profile_id
-       where ap.state = 'open' and not exists (select 1 from feture.profile_member m where m.profile_id = ap.profile_id and m.account_id = $1)
-       order by ap.created_at limit $2`, [account.id, input.limit]);
-    return { items };
+       where ap.state = 'open' and not exists (select 1 from feture.profile_member m where m.profile_id = ap.profile_id and m.account_id = $1)`, [account.id]);
+    const rows = await q.query(sql, params);
+    return { items: rows.map(r => ({ id: r.id, target_type: r.target_type, target_id: r.target_id, body: r.body, created_at: r.created_at, handle: r.handle, decision: r.decision })), ...pageInfo(rows, CREATED_KEYS, input.limit) };
   },
 
   async 'staff.appealDecide'(q, { account, input }) {

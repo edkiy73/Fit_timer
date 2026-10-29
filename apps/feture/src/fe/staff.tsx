@@ -1,4 +1,4 @@
-import {useCallback,useEffect,useId,useState,type ReactNode} from 'react';
+import {useCallback,useEffect,useId,useRef,useState,type ReactNode} from 'react';
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
@@ -49,13 +49,13 @@ type DisputeItem=z.infer<typeof disputeItem>;type RevisionItem=z.infer<typeof re
 type Items={dispute:DisputeItem[],report:ReportItem[],revision:RevisionItem[],media:MediaItem[],community:CommItem[],event:EventItem[],age:AgeItem[],photo:PhotoItem[],appeal:AppealItem[],notice:NoticeItem[],place:PlaceItem[]};
 type QueueId=keyof Items;
 /** `locked`: documents and selfies wait for a fresh second-factor code (staff.ageCheckQueue, staff.photoCheckQueue). */
-const list=<T extends z.ZodType>(item:T)=>z.object({ok:z.literal(true),items:z.array(item),locked:z.boolean().optional()});
+const list=<T extends z.ZodType>(item:T)=>z.object({ok:z.literal(true),items:z.array(item),locked:z.boolean().optional(),next:z.string().nullable().optional(),tail:z.string().nullable().optional()});
 const QUEUES:{[K in QueueId]:{action:string,schema:z.ZodType<{items:Items[K],locked?:boolean|undefined}>,key:(x:Items[K][number])=>string}}={
  // V21 M01 puts «это я на фото» disputes and post reports first.
  dispute:{action:'staff.disputeQueue',schema:list(disputeItem),key:x=>x.id},
  report:{action:'staff.reportQueue',schema:list(reportItem),key:x=>x.targetType+':'+x.targetId+':'+(x.author?.id??'')},
  revision:{action:'staff.revisionQueue',schema:list(revisionItem),key:x=>x.id},
- media:{action:'staff.mediaQueue',schema:list(mediaItem).extend({next:z.string().nullable().optional()}),key:x=>x.id},
+ media:{action:'staff.mediaQueue',schema:list(mediaItem),key:x=>x.id},
  community:{action:'staff.communityQueue',schema:list(commItem),key:x=>x.id},
  event:{action:'staff.eventQueue',schema:list(eventItem),key:x=>x.id},
  age:{action:'staff.ageCheckQueue',schema:list(ageItem),key:x=>x.id},
@@ -73,7 +73,7 @@ const SECTIONS=['queues','support','premium','maintenance','journal','access'] a
 type Section=typeof SECTIONS[number];
 const can=(roles:readonly string[],need:readonly string[]|undefined)=>!need||roles.some(r=>need.includes(r));
 const LIMIT=50;
-type Loaded={[K in QueueId]?:{items:Items[K],locked?:boolean|undefined,next?:string|null|undefined}|{error:unknown}};
+type Loaded={[K in QueueId]?:{items:Items[K],locked?:boolean|undefined,next?:string|null|undefined,tail?:string|null|undefined}|{error:unknown}};
 const forbidden=(e:unknown)=>e instanceof FeError&&e.code==='forbidden';
 
 /** Staff roles of the signed-in account; [] for everyone else (and while loading: null). */
@@ -120,39 +120,79 @@ export function StaffScreen(){
  </>;
 }
 
+type Order='old'|'new';
+type PageOf={items:unknown[],locked?:boolean|undefined,next?:string|null|undefined,tail?:string|null|undefined};
+/** Live refresh: every 20 s the open queue looks for what is new, while the tab is visible. */
+const REFRESH_MS=20000;
+
+/** Merges a live look into the open queue. Newest first: the top page is refreshed and new items land above. Oldest
+ * first: what came after the last shown item lands below (the rest comes with «Ещё»). Nothing is repeated. */
+function mergeLive(d:Loaded|null,id:QueueId,order:Order,r:PageOf):Loaded|null{
+ const cur=d?.[id];if(!d||!cur||!('items' in cur))return d;
+ const keyOf=QUEUES[id].key as (x:unknown)=>string;
+ const fresh=r.items;
+ if(order==='new'){
+  const top=new Set(fresh.map(keyOf));
+  return {...d,[id]:{...cur,items:[...fresh,...cur.items.filter(x=>!top.has(keyOf(x)))],locked:r.locked??cur.locked}} as Loaded;
+ }
+ if(!fresh.length)return d;
+ const have=new Set(cur.items.map(keyOf));
+ return {...d,[id]:{...cur,items:[...cur.items,...fresh.filter(x=>!have.has(keyOf(x)))],next:r.next??null,tail:r.tail??cur.tail,locked:r.locked??cur.locked}} as Loaded;
+}
+
 function Queues(){
  const {call}=useFe();const {t}=useI18n();const roles=useStaffRoles();
  const [data,setData]=useState<Loaded|null>(null);const [tab,setTab]=useState<QueueId|null>(null);const [notice,setNotice]=useState('');
+ const [order,setOrder]=useState<Order>('old');
  const [pageBusy,setPageBusy]=useState(false);const [pageError,setPageError]=useState<unknown>(null);
+ // The live timer reads the screen as it is at each tick, not as it was when the timer was set.
+ const live=useRef({data:null as Loaded|null,tab:null as QueueId|null,order:'old' as Order,busy:false});
+ live.current={data,tab,order,busy:pageBusy};
  const load=useCallback((fresh=false)=>{
   setData(null);setNotice('');setPageError(null);
   const ids=QUEUE_IDS.filter(id=>can(roles??[],QUEUE_ROLES[id]));
-  void Promise.allSettled(ids.map(id=>call(QUEUES[id].action,{limit:LIMIT},QUEUES[id].schema as z.ZodType<{items:unknown[]}>,{asAccount:true,fresh}))).then(rs=>{
-   const next:Record<string,{items:unknown[],locked?:boolean|undefined,next?:string|null|undefined}|{error:unknown}>={};
-   rs.forEach((r,i)=>{const id=ids[i]!;if(r.status==='fulfilled')next[id]={items:r.value.items,locked:(r.value as {locked?:boolean}).locked,next:(r.value as {next?:string|null}).next};else if(!forbidden(r.reason))next[id]={error:r.reason};});
+  void Promise.allSettled(ids.map(id=>call(QUEUES[id].action,{limit:LIMIT,order},QUEUES[id].schema as z.ZodType<PageOf>,{asAccount:true,fresh}))).then(rs=>{
+   const next:Record<string,PageOf|{error:unknown}>={};
+   rs.forEach((r,i)=>{const id=ids[i]!;if(r.status==='fulfilled')next[id]={items:r.value.items,locked:r.value.locked,next:r.value.next,tail:r.value.tail};else if(!forbidden(r.reason))next[id]={error:r.reason};});
    setData(next as Loaded);
    setTab(cur=>cur&&next[cur]?cur:QUEUE_IDS.find(id=>{const v=next[id];return v&&'items' in v&&v.items.length;})??QUEUE_IDS.find(id=>next[id])??null);
   });
- },[call,roles]);
+ },[call,roles,order]);
  useEffect(()=>{if(roles)load();},[load,roles]);
+ useEffect(()=>{
+  const timer=setInterval(()=>{
+   const s=live.current;
+   if(document.hidden||!s.data||!s.tab||s.busy)return;
+   const id=s.tab;const v=s.data[id];if(!v||!('items' in v))return;
+   const ord=s.order;
+   // Oldest first with more pages to load: the rest comes with «Ещё». Otherwise ask for what is new.
+   if(ord==='old'&&v.next)return;
+   const after=ord==='old'&&v.tail?v.tail:undefined;
+   void call(QUEUES[id].action,{limit:LIMIT,order:ord,...(after?{after}:{})},QUEUES[id].schema as z.ZodType<PageOf>,{asAccount:true})
+    .then(r=>{if(live.current.order===ord)setData(d=>mergeLive(d,id,ord,r));})
+    .catch(()=>{});
+  },REFRESH_MS);
+  return()=>clearInterval(timer);
+ },[call]);
  if(!data)return <Skel kind="list"/>;
  const avail=QUEUE_IDS.filter(id=>data[id]);
  if(!avail.length||!tab)return <Empty icon={Inbox} title={t('fe.staff.noQueues')}/>;
  const count=(id:QueueId)=>{const v=data[id];return v&&'items' in v?(v.items.length>=LIMIT||v.next?v.items.length+'+':String(v.items.length)):'!';};
- // The media queue is paged: the next page starts after the cursor of the last one, appended without repeats.
+ // Every queue pages: the next page starts after the cursor of the last item shown, appended without repeats.
  const loadMore=()=>{
-  const v=data.media;if(!v||!('items' in v)||!v.next||pageBusy)return;
+  if(!tab)return;const id=tab;const v=data[id];
+  if(!v||!('items' in v)||!v.next||pageBusy)return;
   setPageBusy(true);
-  void call(QUEUES.media.action,{limit:LIMIT,after:v.next},QUEUES.media.schema as z.ZodType<{items:MediaItem[],next?:string|null}>,{asAccount:true}).then(r=>{
-   setData(d=>{const cur=d?.media;if(!d||!cur||!('items' in cur))return d;const have=new Set(cur.items.map(x=>x.id));
-    return {...d,media:{...cur,items:[...cur.items,...r.items.filter(x=>!have.has(x.id))],next:r.next}};});
+  void call(QUEUES[id].action,{limit:LIMIT,order,after:v.next},QUEUES[id].schema as z.ZodType<PageOf>,{asAccount:true}).then(r=>{
+   setData(d=>{const cur=d?.[id];if(!d||!cur||!('items' in cur))return d;const keyOf=QUEUES[id].key as (x:unknown)=>string;const have=new Set(cur.items.map(keyOf));
+    return {...d,[id]:{...cur,items:[...cur.items,...r.items.filter(x=>!have.has(keyOf(x)))],next:r.next??null,tail:r.tail??cur.tail}} as Loaded;});
    setPageError(null);
   }).catch(e=>setPageError(e)).finally(()=>setPageBusy(false));
  };
  const done=(id:QueueId,key:string)=>{
   setNotice(t('fe.staff.done'));
   setData(d=>{if(!d)return d;const v=d[id];if(!v||!('items' in v))return d;
-   const keyOf=QUEUES[id].key as (x:unknown)=>string;return {...d,[id]:{items:(v.items as unknown[]).filter(x=>keyOf(x)!==key)}};});
+   const keyOf=QUEUES[id].key as (x:unknown)=>string;return {...d,[id]:{items:(v.items as unknown[]).filter(x=>keyOf(x)!==key),next:v.next,tail:v.tail}} as Loaded;});
  };
  const current=data[tab];
  return <>
@@ -160,13 +200,16 @@ function Queues(){
   <Seg value={tab} onChange={id=>{setTab(id);setNotice('');}} label={t('fe.staff.queuesLabel')} options={avail.map(id=>({id,label:id==='photo'?t('fe.pc.staff.tab'):t('fe.staff.q.'+id),n:count(id)}))}/>
   {(tab==='dispute'||tab==='report')&&<Alert kind="info" icon={ShieldCheck} className="mt12"><b>{t('fe.staff.howTitle')}</b>{t('fe.staff.howText')}</Alert>}
   {tab==='dispute'&&<FlaggedClaimants/>}
-  <div className="st-tools"><Btn kind="text" size="sm" auto icon={RefreshCw} onClick={()=>load(true)}>{t('fe.staff.refresh')}</Btn></div>
+  <div className="st-tools">
+   <Seg value={order} onChange={o=>setOrder(o)} label={t('fe.staff.order.label')} options={[{id:'old',label:t('fe.staff.order.old')},{id:'new',label:t('fe.staff.order.new')}]}/>
+   <Btn kind="text" size="sm" auto icon={RefreshCw} onClick={()=>load(true)}>{t('fe.staff.refresh')}</Btn>
+  </div>
   {notice&&<Alert kind="ok" icon={Check} className="mb12">{notice}</Alert>}
   {!current?null:'error' in current?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(current.error,t)}><Btn kind="soft" onClick={()=>load(true)}>{t('fe.retry')}</Btn></Empty>
    :!current.items.length?<Empty icon={Inbox} title={t('fe.staff.qEmpty')} text={t('fe.staff.qEmptyText')}/>
    :current.locked?<Alert kind="info" icon={Lock} action={<Btn kind="soft" size="sm" auto onClick={()=>void askFactor('fresh').then(ok=>{if(ok)load(true);})}>{t('fe.sf.enterCode')}</Btn>}>{t('fe.sf.lockedMedia')}</Alert>
    :<><SectionLabel>{t('fe.staff.inQueue',{n:count(tab)})}</SectionLabel><QueueList id={tab} items={current.items} onDone={key=>done(tab,key)}/>
-    {tab==='media'&&<LoadMore more={!!current.next} busy={pageBusy} error={pageError} onMore={loadMore}/>}</>}
+    <LoadMore more={!!current.next} busy={pageBusy} error={pageError} onMore={loadMore}/></>}
  </>;
 }
 
