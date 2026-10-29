@@ -92,6 +92,10 @@
 .v21 .st-card.st-danger{border-color:var(--danger)}
 .v21 .st-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:var(--s-1) var(--s-3)}
 .v21 .st-head b{font-size:var(--fs-md);overflow-wrap:anywhere;min-width:0}
+.v21 .sheet.st-focus .card.st-card{background:none;border:0;box-shadow:none;padding:0}
+.v21 .sheet.st-focus .st-head b{display:none}
+/* One item under review: its decision row stays at the bottom of the screen, whatever the length of the item. */
+.v21 .sheet.st-focus .st-card>.k-actions{position:sticky;bottom:-20px;z-index:2;margin-inline:-16px;padding:12px 16px calc(12px + var(--safe-b,0px));background:var(--bg);border-top:1px solid var(--line)}
 .v21 .st-meta{font-size:var(--fs-cap);color:var(--mute);display:inline-flex;gap:6px;align-items:center}
 .v21 .st-text{white-space:pre-wrap;overflow-wrap:anywhere;font-size:var(--fs-sm);line-height:1.5}
 .v21 .st-kv-row{display:contents}
