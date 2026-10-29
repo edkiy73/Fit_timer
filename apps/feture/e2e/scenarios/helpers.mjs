@@ -132,3 +132,15 @@ export async function pullDown(t, { x = 195, from = 300, to = 560, steps = 16, m
   await c.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   await c.detach();
 }
+
+// Status bar over the top of an edge-to-edge phone (owner 29.10.2026): the open full-height sheet's header must start
+// below the inset — the title is never drawn under the system bar and sits as low as a page title (the kit Bar).
+export async function sheetBelowStatusBar(t, inset = 28) {
+  await t.page.evaluate(px => document.querySelectorAll('html, .v21').forEach(e => e.style.setProperty('--safe-area-inset-top', px + 'px')), inset);
+  await t.wait(200);
+  const r = await t.page.evaluate(() => { const h = document.querySelector('.sheet.on .sh-h'), x = h?.querySelector('h2'); if (!h || !x) return null; const a = h.getBoundingClientRect(), b = x.getBoundingClientRect(); return { head: a.top, headH: a.height, title: b.top, titleBottom: b.bottom }; });
+  expect(r, 'no open sheet header');
+  expect(r.title >= inset, `sheet title above the status bar: top ${r.title} < ${inset}`);
+  expect(r.headH >= 56 + inset - 1, `sheet header shorter than a page title bar: ${r.headH} < ${56 + inset}`);
+  return r;
+}

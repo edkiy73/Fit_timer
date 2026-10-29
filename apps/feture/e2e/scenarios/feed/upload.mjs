@@ -1,6 +1,6 @@
 // Kit uploader in the post composer: pick → format → crop → «Готово» → photo attached → published; read back.
 // A clip longer than a minute (made on the device, owner 28.10.2026): taken, starts as its first minute, the note says so.
-import { expect, until, pngOf, sourceClip } from '../helpers.mjs';
+import { sheetBelowStatusBar, expect, until, pngOf, sourceClip } from '../helpers.mjs';
 const mine = async t => (await t.api('me.posts', {})).items;
 export default [{ name: 'uploader: format, crop, ready, publish with a cropped 4:5 photo', persona: 'full', route: '/n/feed/new', run: async t => {
   let id;
@@ -10,6 +10,8 @@ export default [{ name: 'uploader: format, crop, ready, publish with a cropped 4
     await ch.setFiles([{ name: 'wide.png', mimeType: 'image/png', buffer: await pngOf(t) }, { name: 'two.png', mimeType: 'image/png', buffer: await pngOf(t) }]);
     await t.see('.sheet.on .k-uprow'); await t.see('.sheet.on .k-uprow:has-text("без геометки")', 15000);
     expect((await t.page.locator('.sheet.on .k-uprow').count()) === 2, 'two rows');
+    await sheetBelowStatusBar(t); await t.shot('up-sheet-safe-top');
+    await t.page.evaluate(() => document.querySelectorAll('html, .v21').forEach(e => e.style.removeProperty('--safe-area-inset-top')));
     await t.shot('up-sheet');
     // The previews follow the format: 1:1 square, 4:5 tall, «Как есть» the file's own shape (this one is square).
     const ratio = async () => { const b = await t.page.locator('.sheet.on .k-upthumb').first().boundingBox(); return b.width / b.height; };
@@ -20,7 +22,8 @@ export default [{ name: 'uploader: format, crop, ready, publish with a cropped 4
     await t.tap('.sheet.on .k-uprow >> nth=0 >> button:has-text("Кадрировать")'); await t.wait(1500); await t.see('.k-crop img');
     const b = await t.page.locator('.k-crop').boundingBox(); expect(Math.abs(b.width / b.height - .8) < .02, 'frame 4:5: ' + (b.width / b.height).toFixed(3));
     await t.page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await t.page.mouse.down(); await t.page.mouse.move(b.x + b.width / 2 + 40, b.y + b.height / 2, { steps: 5 }); await t.page.mouse.up();
-    await t.page.locator('.k-crop-zoom input').fill('1.6'); await t.shot('up-crop');
+    await t.page.locator('.k-crop-zoom input').fill('1.6'); await sheetBelowStatusBar(t); await t.shot('up-crop');
+    await t.page.evaluate(() => document.querySelectorAll('html, .v21').forEach(e => e.style.removeProperty('--safe-area-inset-top')));
     await t.tap('.sheet.on .sh-f button:has-text("Применить")'); await t.see('.sheet.on .k-uprow');
     await t.tap('.sheet.on .k-uprow >> nth=1 >> button[aria-label="Убрать"]'); expect((await t.page.locator('.sheet.on .k-uprow').count()) === 1, 'removed one');
     await t.see('.sheet.on .sh-f button:has-text("Готово · 1")', 15000); await t.tap('.sheet.on .sh-f button:has-text("Готово")');

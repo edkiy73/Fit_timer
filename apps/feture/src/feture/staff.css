@@ -63,7 +63,7 @@
 .ft-post-author strong small{font-size:11px;font-weight:500;color:#b2a5b0}
 .ft-post-author p{font-size:11px;color:var(--ft-muted);margin:4px 0 0}
 .ft-post-copy{margin:19px 0;font-size:14px;line-height:1.75;color:#514353}
-.ft-overlay{position:fixed;z-index:1000;inset:0;background:#24142b99;display:flex;justify-content:center;align-items:center;padding:20px}
+/* safe-t: ok — desktop staff overlay; the phone rule in the media query adds env(safe-area-inset-top) */.ft-overlay{position:fixed;z-index:1000;inset:0;background:#24142b99;display:flex;justify-content:center;align-items:center;padding:20px}
 .ft-dialog{width:min(100%,520px);max-height:min(90dvh,820px);overflow:auto;border-radius:25px;background:var(--ft-white);box-shadow:0 22px 100px #18091a66;padding:28px;position:relative}
 .ft-dialog-close{position:absolute;right:19px;top:19px;background:#f4ecf1;border-radius:10px;display:grid;place-items:center;width:35px;height:35px}
 .ft-dialog h2{font-size:25px;line-height:1.2;margin:5px 45px 7px 0;letter-spacing:-.035em}
