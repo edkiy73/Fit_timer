@@ -45,7 +45,7 @@ export function MineLayer(){
  const cp=acting.kind==='couple';
  const row=(icon:typeof Users,title:string,to:string,val:string|null,sub?:string)=><Row icon={icon} title={title} sub={sub||undefined} val={val} onClick={()=>navigate(to)}/>;
  return <>
-  {typeof notice==='string'&&notice&&<Alert kind="ok" noIcon className="mb12">{notice}</Alert>}
+  {typeof notice==='string'&&notice&&<Alert kind="ok" noIcon>{notice}</Alert>}
   {!cp&&<PairEntry/>}
   {!c?<Skel kind="list" rows={5}/>:<Group><Card list>
    {row(Newspaper,cp?t('fe.mx.mine.postsUs'):t('fe.mx.mine.posts'),'/n/me/posts',String(c.posts),c.drafts?t('fe.mx.mine.drafts',{n:c.drafts}):'')}
@@ -89,9 +89,11 @@ function MyCommunities(){
  </>;
 }
 
-function useLoad<T>(fn:()=>Promise<T>){
+/** `fn` gets a setter for `onFresh`: a list answered from memory is replaced when the server's answer differs (an
+ * article published a minute ago shows its cover, not the plate of the moment its photo was still being checked). */
+function useLoad<T>(fn:(fresh:(v:T)=>void)=>Promise<T>){
  const [data,setData]=useState<T|null>(null);const [error,setError]=useState<unknown>(null);
- const load=useCallback(()=>{setError(null);fn().then(setData).catch(setError);},[fn]);
+ const load=useCallback(()=>{setError(null);fn(setData).then(setData).catch(setError);},[fn]);
  useEffect(()=>{load();},[load]);useRefreshable(load);
  return {data,setData,error,load};
 }
@@ -99,7 +101,7 @@ function Failed({error,retry}:{error:unknown,retry:()=>void}){const {t}=useI18n(
 
 function MyPosts(){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();
- const {data,setData,error,load}=useLoad(useCallback(()=>call('me.posts',{},posts),[call]));
+ const {data,setData,error,load}=useLoad(useCallback((fresh:(v:z.infer<typeof posts>)=>void)=>call('me.posts',{},posts,{onFresh:fresh}),[call]));
  if(error)return <Failed error={error} retry={load}/>;
  if(!data)return <Skel kind="post"/>;
  if(!data.items.length)return <Empty icon={Newspaper} title={t('fe.mine.noPosts')} text={t(acting?.kind==='couple'?'fe.mine.noPostsTextUs':'fe.mine.noPostsText')}><Btn kind="soft" onClick={()=>navigate('/n/feed/new')}>{t('fe.feed.new')}</Btn></Empty>;
@@ -163,7 +165,7 @@ const oneEvent=z.object({ok:z.literal(true),event:z.object({id:z.uuid(),title:z.
 export function MyPostsScreen(){
  const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
  const couple=acting?.kind==='couple';
- const {data,setData,error,load}=useLoad(useCallback(()=>call('me.posts',{},postsRev),[call]));
+ const {data,setData,error,load}=useLoad(useCallback((fresh:(v:z.infer<typeof postsRev>)=>void)=>call('me.posts',{},postsRev,{onFresh:fresh}),[call]));
  const [create,setCreate]=useState(false);
  const [edits,setEdits]=useState<SavedEdit|null>(null);
  const replace=(np:Post)=>setData(d=>d?{...d,items:d.items.map(x=>x.id===np.id?np:x)}:d);
@@ -235,7 +237,7 @@ export function SavedScreen(){
    onRemove={r=>setList(l=>l&&{...l,posts:l.posts.filter(x=>x.id!==r.postId&&x.author.id!==r.authorId)})}/>)}</div></Group>}
   {list.discussions.length>0&&<Group title={t('fe.fd.sv.discussions',{n:list.discussions.length})}><Card list>
    {list.discussions.map(d=><Row key={d.id} icon={MessageCircle} title={d.title||mdPlain(d.body).slice(0,60)} onClick={()=>navigate('/n/feed/post/'+d.id)}/>)}</Card></Group>}
-  {list.gone>0&&<Note className="mt12">{t('fe.fd.sv.gone',{n:list.gone})}</Note>}
+  {list.gone>0&&<Note>{t('fe.fd.sv.gone',{n:list.gone})}</Note>}
  </>;
  return <>
   <Bar title={t('fe.fd.sv.title')} back small/>

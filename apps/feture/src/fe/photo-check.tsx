@@ -2,7 +2,7 @@ import {useCallback,useEffect,useRef,useState} from 'react';
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {BadgeCheck,Camera,ChevronRight,Clock,ImagePlus,Info,Lock,RefreshCw,TriangleAlert,X} from 'lucide-react';
+import {BadgeCheck,Camera,Clock,ImagePlus,Info,Lock,RefreshCw,TriangleAlert,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,Bar,Btn,Card,Empty,FilePick,Note,Pose,Row,Skel,View} from './kit';
 import {useFe,useShown} from './session';
@@ -41,7 +41,7 @@ export function PhotoCheckScreen(){
  // No profile photo yet: known from the session at once (the server says the same on «start»), so the screen is drawn
  // in its final shape on the first frame.
  const [needPhoto,setNeedPhoto]=useState(()=>state.status==='ready'&&state.boot.profiles.some(p=>p.kind==='person'&&p.state!=='deleted'&&p.avatar==null));
- const [shot,setShot]=useState<{blob:Blob,url:string}|null>(null);const input=useRef<HTMLInputElement>(null);
+ const [shot,setShot]=useState<{blob:Blob,url:string}|null>(null);const input=useRef<HTMLInputElement>(null);const [about,setAbout]=useState(false);
  const person=state.status==='ready'?state.boot.profiles.find(p=>p.kind==='person'&&p.state!=='deleted'):undefined;
  const load=useCallback((fresh=false)=>{setError(null);call('verification.photoStatus',{},photoStatusRes,{asAccount:true,fresh}).then(setS).catch(setError);},[call]);
  useEffect(()=>{load();},[load]);
@@ -86,13 +86,13 @@ export function PhotoCheckScreen(){
  if(s.state==='approved'){
   const date=s.decidedAt?new Date(s.decidedAt).toLocaleDateString(locale==='en'?'en':'ru',{day:'numeric',month:'long',year:'numeric'}).replace(/\.$/,''):'';
   return <>{bar}<View className="nodock">
-   <div className="pv-state ok" role="status"><PhotoBadge/><b>{t('fe.pc.okTitle')}</b><p>{t('fe.pc.okText').replace('{date}',date)}</p></div>
+   <Empty icon={BadgeCheck} role="status" title={t('fe.pc.okTitle')} text={t('fe.pc.okText').replace('{date}',date)}/>
    <About/>
   </View></>;
  }
  if(s.state==='pending')return <>{bar}<View className="nodock">
-  <div className="pv-state wait" role="status"><span className="ico a"><Clock/></span><b>{t('fe.pc.waitTitle')}</b><p>{t('fe.pc.waitText')}</p>
-   <Btn kind="soft" size="sm" auto icon={RefreshCw} onClick={()=>load(true)}>{t('fe.pc.refresh')}</Btn></div>
+  <Empty icon={Clock} role="status" title={t('fe.pc.waitTitle')} text={t('fe.pc.waitText')}>
+   <Btn kind="soft" icon={RefreshCw} onClick={()=>load(true)}>{t('fe.pc.refresh')}</Btn></Empty>
   <About/>
  </View></>;
 
@@ -107,16 +107,17 @@ export function PhotoCheckScreen(){
   {s.state==='rejected'&&<Alert kind="err" role="status" icon={TriangleAlert}><b>{t('fe.pc.rejected')}</b>{reason}{t('fe.pc.rejectedText')}</Alert>}
   {s.lapsed&&<Alert kind="warn" icon={Clock}><b>{t('fe.pc.lapsed')}</b>{t('fe.pc.lapsedText')}</Alert>}
   <p className="lead">{t('fe.pc.lead')}</p>
-  {!needPhoto&&<Pose className="mt12" icon={Camera} label={t('fe.pc.poseLabel')} value={c?gesture:undefined}/>}
-  {c&&shot&&<Card className="pv-capture mt12"><div className="pv-preview"><img src={shot.url} alt={t('fe.pc.shotAlt')} draggable={false}/></div>
+  {!needPhoto&&<Pose icon={Camera} label={t('fe.pc.poseLabel')} value={c?gesture:undefined}/>}
+  {c&&shot&&<Card className="pv-capture"><div className="pv-preview"><img src={shot.url} alt={t('fe.pc.shotAlt')} draggable={false}/></div>
    <div className="pv-capture-info"><b>{t('fe.pc.ready')}</b><Note>{t('fe.pc.readyText')}</Note>
     <Btn kind="soft" size="md" auto icon={Camera} onClick={()=>input.current?.click()} disabled={busy}>{t('fe.pc.retake')}</Btn></div></Card>}
   <FilePick ref={input} accept="image/*" capture="user" onFiles={f=>void pick(f[0])}/>
-  <Card list className="mt12">{(['fe.pc.req1','fe.pc.req2','fe.pc.req3'] as const).map(k=>
+  <Card list>{(['fe.pc.req1','fe.pc.req2','fe.pc.req3'] as const).map(k=>
    <Row key={k} icon={Info} body={t(k)}/>)}</Card>
-  <details className="pv-about mt16"><summary><Info/><span>{t('fe.pc.how')}</span><ChevronRight/></summary><About/></details>
-  {needPhoto&&<Alert kind="warn" role="alert" icon={ImagePlus} className="mt16">{t('fe.pc.needPhoto')}<Btn kind="soft" size="sm" auto icon={ImagePlus} onClick={()=>navigate('/n/me')}>{t('fe.pc.addPhoto')}</Btn></Alert>}
-  {failure&&<Alert kind="err" icon={X} className="mt12">{failure}</Alert>}
+  <Card list><Row icon={Info} tone="v" title={t('fe.pc.how')} expanded={about} onClick={()=>setAbout(v=>!v)}/></Card>
+  {about&&<About/>}
+  {needPhoto&&<Alert kind="warn" role="alert" icon={ImagePlus} action={<Btn kind="soft" size="sm" auto icon={ImagePlus} onClick={()=>navigate('/n/me')}>{t('fe.pc.addPhoto')}</Btn>}>{t('fe.pc.needPhoto')}</Alert>}
+  {failure&&<Alert kind="err" icon={X}>{failure}</Alert>}
  </View>
  {cta&&<div className="ctabar"><div className="wrap">{cta}</div></div>}</>;
 }

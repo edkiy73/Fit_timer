@@ -2,7 +2,7 @@ import type {Meta,StoryObj} from '@storybook/react-vite';
 import {useState} from 'react';
 import {fn} from 'storybook/test';
 import {Bell,Camera,Eye,Hand,KeyRound,Link2,Lock,Trash2,Users,X} from 'lucide-react';
-import {AddCard,Av,Btn,Card,Group,IconBtn,LoadMore,Row,SelectRow,ToggleRow} from './index';
+import {AddCard,Av,Btn,Card,Group,IconBtn,LoadMore,Row,SelectRow,StatTiles,ToggleRow} from './index';
 
 const meta={title:'Списки/Строка',component:Row,tags:['autodocs'],
  parameters:{docs:{description:{component:'Пункт настроек, меню, списка людей — всегда внутри `<Card list>`. Слева иконка (`icon`, `tone`) или аватар (`av`), справа значение, бейдж и стрелка. Опасное действие — `danger` (без стрелки).'}}},
@@ -47,3 +47,8 @@ export const БесконечнаяЛента:StoryObj<typeof LoadMore>={name:'�
    <LoadMore {...a} more={a.more&&n<40} busy={busy||a.busy} onMore={()=>{setBusy(true);setTimeout(()=>{setN(x=>x+8);setBusy(false);},700);}}/></div>;},
  args:{more:true,busy:false,error:null,onMore:fn()}};
 export const ПодгрузкаОшибка:StoryObj<typeof LoadMore>={name:'Подгрузка: ошибка',render:a=><LoadMore {...a}/>,args:{more:true,busy:false,error:new Error('x'),onMore:fn()}};
+
+export const Счётчики:StoryObj<typeof StatTiles>={name:'Счётчики (StatTiles)',render:a=><StatTiles {...a}/>,decorators:[S=><S/>],
+ args:{items:[{n:12,label:'участников',onClick:fn()},{n:3,label:'обсуждения',onClick:fn()},{n:2,label:'ждут решения',onClick:fn()}]}};
+export const СчётчикиДва:StoryObj<typeof StatTiles>={name:'Счётчики — два',render:a=><StatTiles {...a}/>,decorators:[S=><S/>],
+ args:{items:[{n:8,label:'идут',onClick:fn()},{n:5,label:'интересуются',onClick:fn()}]}};

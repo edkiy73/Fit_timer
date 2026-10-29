@@ -244,7 +244,7 @@ export function GalleryScreen(){
           setSel(s=>{const n=new Set(s);if(on)n.delete(x.postId);else n.add(x.postId);return n;});}}/>;})}
       </GalleryGrid>
       :<Empty icon={ImageIcon} title={t('fe.gal.empty')}/>}
-     {own&&a&&inAlbum&&!items.length&&<Note className="mt12">{t('fe.gal.emptyAlbumHint')}</Note>}
+     {own&&a&&inAlbum&&!items.length&&<Note>{t('fe.gal.emptyAlbumHint')}</Note>}
      <LoadMore more={!!view?.next} busy={more} error={moreErr} onMore={()=>void loadMore()}/>
     </>}
   </View>

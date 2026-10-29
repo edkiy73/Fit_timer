@@ -64,15 +64,16 @@ function Mention({handle,id}:{handle:string,id:string}){
  * whose picture is not there (hidden, still in review) shows nothing. */
 export function RichText({text,className,mentions,images}:{text:string,className?:string,mentions?:MentionRef[]|undefined,images?:((id:string)=>ReactNode)|undefined}){
  const {t}=useI18n();const [link,setLink]=useState<string|null>(null);
- const lines=text.split('\n');const blocks:ReactNode[]=[];let para:string[]=[];let list:{t:'ul'|'ol',items:string[]}|null=null;let k=0;
+ const lines=text.split('\n');const blocks:ReactNode[]=[];let para:string[]=[];let list:{t:'ul'|'ol',items:string[],start?:number}|null=null;let k=0;
  const il=(s:string)=><Inline s={s} onLink={setLink} mentions={mentions}/>;
  const flushP=()=>{if(para.length){const p=para;blocks.push(<p key={k++}>{p.map((x,i)=><Fragment key={i}>{i>0&&<br/>}{il(x)}</Fragment>)}</p>);para=[];}};
- const flushL=()=>{if(list){const l=list;const T=l.t;blocks.push(<T key={k++}>{l.items.map((x,i)=><li key={i}>{il(x)}</li>)}</T>);list=null;}};
+ const flushL=()=>{if(list){const l=list;const T=l.t;blocks.push(<T key={k++} {...(T==='ol'&&l.start&&l.start!==1?{start:l.start}:{})}>{l.items.map((x,i)=><li key={i}>{il(x)}</li>)}</T>);list=null;}};
  for(let i=0;i<lines.length;i++){const l=lines[i]!;let m:RegExpMatchArray|null;
-  if(!l.trim()){flushP();flushL();continue;}
+  // A blank line between items of one list keeps the list (Markdown's loose list): «1. … ⏎⏎ 2. …» counts on.
+  if(!l.trim()){flushP();const nx=lines.slice(i+1).find(x=>x.trim());if(!(list&&nx&&(list.t==='ol'?/^\s*\d+[.)]\s/:/^\s*[-*]\s/).test(nx)))flushL();continue;}
   if((m=l.trim().match(/^!\[[^\]\n]{0,120}\]\(media:([0-9a-f-]{36})\)$/))){flushP();flushL();const img=images?.(m[1]!);if(img)blocks.push(<Fragment key={k++}>{img}</Fragment>);continue;}
   if(/^\\([-*]|\d+[.)]|>|#{1,3})\s/.test(l)){flushL();para.push(l.slice(1));continue;}
-  if((m=l.match(/^\s*[-*]\s+(.*)/))||(m=l.match(/^\s*\d+[.)]\s+(.*)/))){const tp=/^\s*\d/.test(l)?'ol':'ul';flushP();if(list&&list.t!==tp)flushL();list??={t:tp,items:[]};list.items.push(m[1]!);continue;}
+  if((m=l.match(/^\s*[-*]\s+(.*)/))||(m=l.match(/^\s*\d+[.)]\s+(.*)/))){const tp=/^\s*\d/.test(l)?'ol':'ul';flushP();if(list&&list.t!==tp)flushL();list??={t:tp,items:[],...(tp==='ol'?{start:parseInt(l,10)}:{})};list.items.push(m[1]!);continue;}
   flushL();
   if((m=l.match(/^>\s?(.*)/))){flushP();const q=[m[1]!];while(i+1<lines.length&&/^>/.test(lines[i+1]!))q.push(lines[++i]!.replace(/^>\s?/,''));
    blocks.push(<blockquote key={k++}>{q.map((x,j)=><Fragment key={j}>{j>0&&<br/>}{il(x)}</Fragment>)}</blockquote>);continue;}

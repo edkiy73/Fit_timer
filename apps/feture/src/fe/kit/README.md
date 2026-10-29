@@ -31,9 +31,11 @@ A new component or variant ships with its story in the same PR.
 | Buttons | `Btn` (primary / soft / text / danger; `busy` blinks, never spins), `IconBtn` (round, label required) |
 | Tabs | `Seg` — the only tab control: counts, dots, scrolls at 5+ |
 | Empty section | `AddCard` — the one «add» card of every empty block (icon in a soft circle, title, a plain hint up to two lines, «+»); straight in a `Group`, no Card around; a filled block shows its content and its header action instead |
+| Counts as tiles | `StatTiles` (2–3 tiles: the number, a word, a tap opens the list) — manage screens of a community and an event |
 | Lists | `Row` (icon/avatar, title, sub, value, badge, chevron), `ToggleRow`, `SelectRow` |
-| Choice pills | `Chip`, `Chips` |
+| Choice pills | `Chip`, `Chips`; a long list of options — `ChipPick` (`kit/ChipPick.tsx`: five chips + «Все · N» opening the list in a sheet with search, «Популярное» / «Ещё варианты», n / max; the one picker of profile details in sign-up and the profile editor) |
 | One from a list as rows | `RadioList` (rows carry their own frame: never put it in a `Card`; a line under a row's title explains it) |
+| One box with a consent | `Check` (`aside` — a small action on the same row, outside the box: «Принимаю условия…» + «Читать»; only where law needs a separate consent, otherwise the button itself accepts) |
 | Several from a list as rows | `CheckList` (a box per row, a line under the title: «не запрошено», «уже открыто») |
 | Text fields | `Field` (label + error) around `Input`, `TextArea`, `SearchInput`, `Select`; files via `FilePick` |
 | Checking typed text | `useChecks` / `textError` / `shakeFirstErr` (`kit/validate.tsx`, story «Поле ввода → С проверкой»): the server's own rules from `contracts/_text.mjs` (`FIELD.<name>`) — error under the field on blur and submit, `Counter` from 80% of the limit, the first wrong field shakes, `fromServer(e)` puts an `invalid_input` refusal (`fields` + `reasons`) on its field. Never a length or character check of a screen's own |
@@ -64,6 +66,12 @@ text), `onClick` (the whole notice opens something), `role="alertdialog"` (an in
 `breakAll`; `Empty big` / `top` / `after`; `Skel kind="fill"` (fills a cover) / `"event"`; `CodeInput` `disabled`,
 `onComplete`, `onEnter`, `digitLabel` (the app's `.code` look); `RangeDual labels`; `Note as="ul"`.
 Token added: `--fs-xl` (24).
+
+Feed sweep (29.10.2026, kit.css): with no `.ctx` column the desktop grid grows both sides alike, so the content
+column sits in the middle of the window; `.inputbar` follows `--page-max` on tablet / desktop; `RichEditor`'s bar wraps
+on a narrow phone instead of cutting buttons off; the search field's clear «×» is `--mute`, not system blue; an `Alert`
+inside a post or a list of posts gets the 12 px rhythm like in a `Card`; `LikesLine` right under a post sits 12 px
+under its actions.
 
 ## Domain components (`kit/domain.tsx`, Storybook «Домен»)
 

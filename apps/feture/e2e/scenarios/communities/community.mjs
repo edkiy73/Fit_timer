@@ -102,9 +102,9 @@ const scenarios = [
  { name: 'C03 tabs: events, members, rules render', persona: 'host', route: '/n/communities/@MINE', run: async t => {
    await t.see(`.cm-head h2:has-text("${CLOSED_NAME}")`);
    await t.tap('.seg button:has-text("Правила")'); await t.see('ol.rules li');
-   await t.tap('.seg button:has-text("Участники")'); await t.see('Ведущие');
+   await t.tap('.seg button:has-text("Люди")'); await t.see('Ведущие');
    await t.tap('.seg button:has-text("События")'); await t.wait(500);
-   await t.tap('.seg button:has-text("Обсуждения")'); await t.see('.view .composer');
+   await t.tap('.seg button:has-text("Темы")'); await t.see('.view .composer');
  } },
  { name: 'C03 new discussion with a poll lands in the community; reply; cleanup', persona: 'host', route: '/n/communities/@MINE', run: async t => {
    const stamp = 'E2E опрос ' + Date.now().toString(36);

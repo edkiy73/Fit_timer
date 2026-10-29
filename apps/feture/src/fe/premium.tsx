@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {AtSign,Check,Crown,Gift,History,RotateCcw,Undo2,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Ask,Av,Bar,Btn,Card,Empty,Field,Group,Input,KeyValues,Note,PlanCards,PremiumFeats,PremiumHero,Row,SectionLabel,Sheet,Skel,Stack,ToggleRow,View} from './kit';
+import {Actions,Alert,Ask,Av,Bar,Btn,Card,Empty,Field,Group,Input,KeyValues,Note,PlanCards,PremiumFeats,PremiumHero,Row,SectionLabel,Sheet,Skel,Spacer,Stack,ToggleRow,View} from './kit';
 import {useToast} from './toast';
 import {useFe,useShown} from './session';
 
@@ -67,10 +67,12 @@ function BuySheet({plan,payments,onClose,onDone}:{plan:Plan,payments:boolean,onC
  const price=t('fe.ax.prem.'+plan+'Price');
  return <Sheet title={t('fe.w8.buy.title')} onClose={onClose}
   foot={payments?<Btn busy={busy} onClick={()=>void pay('premium.purchase',{plan},t('fe.w8.buy.done'))}>{t('fe.w8.buy.pay',{price})}</Btn>:<Btn kind="soft" onClick={onClose}>{t('fe.close')}</Btn>}>
-  <KeyValues rows={[[t('fe.w8.buy.plan'),t('fe.ax.prem.'+plan)],[t('fe.w8.buy.price'),price]]}/>
-  <Note className="mt12">{t('fe.w8.prem.charge',{price,period:t(plan==='year'?'fe.w8.prem.periodYear':'fe.w8.prem.periodMonth')})}</Note>
-  {!payments&&<Alert kind="info" className="mt12"><b>{t('fe.w8.buy.soon')}</b>{t('fe.w8.buy.soonText')}</Alert>}
-  {error&&<Alert kind="err" className="mt12">{error}</Alert>}
+  <Stack gap={3}>
+   <KeyValues rows={[[t('fe.w8.buy.plan'),t('fe.ax.prem.'+plan)],[t('fe.w8.buy.price'),price]]}/>
+   {payments?<Note>{t('fe.w8.prem.charge',{price,period:t(plan==='year'?'fe.w8.prem.periodYear':'fe.w8.prem.periodMonth')})}</Note>
+    :<Alert kind="info"><b>{t('fe.w8.buy.soon')}</b>{t('fe.w8.buy.soonText')}</Alert>}
+   {error&&<Alert kind="err">{error}</Alert>}
+  </Stack>
  </Sheet>;
 }
 
@@ -80,9 +82,9 @@ export function PaywallSheet({kind,onClose}:{kind:Feat|null,onClose:()=>void}){
  const {status,load}=usePremiumStatus();const [plan,setPlan]=useState<Plan>('year');const [buy,setBuy]=useState(false);
  if(buy)return <BuySheet plan={plan} payments={!!status?.payments} onClose={()=>setBuy(false)} onDone={()=>{load(true);onClose();}}/>;
  return <Sheet title="FetUre Premium" onClose={onClose}
-  foot={<Stack gap={2}><Btn onClick={()=>setBuy(true)}>{t('fe.ax.prem.buy',{price:t('fe.ax.prem.'+plan+'Price')})}</Btn>
+  foot={<><Btn onClick={()=>setBuy(true)}>{t('fe.ax.prem.buy',{price:t('fe.ax.prem.'+plan+'Price')})}</Btn>
    <Note>{t('fe.w8.pw.note')}</Note>
-   <Btn kind="text" onClick={()=>{onClose();navigate('/n/premium'+(kind?'?for='+kind:''));}}>{t('fe.w8.buy.more')}</Btn></Stack>}>
+   <Btn kind="text" onClick={()=>{onClose();navigate('/n/premium'+(kind?'?for='+kind:''));}}>{t('fe.w8.buy.more')}</Btn></>}>
   <PremiumHero lead={t('fe.ax.prem.lead')}/>
   <PremiumFeats items={feats} current={kind} neededLabel={t('fe.ax.prem.needed')}/>
   <PlanCards<Plan> label={t('fe.ax.prem.plan')} plans={plans} value={plan} onChange={setPlan}/>
@@ -118,12 +120,14 @@ export function GiftSheet({handle,onClose,onDone}:{handle?:string|null|undefined
  const person=to&&<Card list><Row noChev av={<Av name={name} seed={to.recipient.id} src={to.recipient.avatar}/>} title={name} sub={to.recipient.handle?'@'+to.recipient.handle:undefined}
   end={handle||step==='confirm'?undefined:<Btn kind="text" size="sm" auto onClick={()=>{setTo(null);setNick('');}}>{t('fe.w8.gift.change')}</Btn>}/></Card>;
  if(step==='confirm'&&to)return <Sheet title={t('fe.w8.gift.confirmTitle')} onClose={onClose}
-  foot={<Stack gap={2}>{status?.payments?<Btn busy={busy} onClick={()=>void pay('premium.gift',{handle:to.recipient.handle,plan,anonymous:anon},t('fe.w8.gift.done'))}>{t('fe.w8.buy.pay',{price})}</Btn>:null}
-   <Btn kind={status?.payments?'text':'soft'} onClick={()=>setStep('form')}>{t('fe.w8.gift.back')}</Btn></Stack>}>
-  {person}
-  <KeyValues rows={[[t('fe.w8.gift.term'),t('fe.w8.gift.'+plan)],[t('fe.w8.buy.price'),price],[t('fe.w8.gift.anon'),anon?t('fe.w8.yes'):t('fe.w8.no')]]}/>
-  {!status?.payments&&<Alert kind="info" className="mt12"><b>{t('fe.w8.buy.soon')}</b>{t('fe.w8.buy.soonText')}</Alert>}
-  {error&&<Alert kind="err" className="mt12">{error}</Alert>}
+  foot={<Actions stack>{status?.payments?<Btn busy={busy} onClick={()=>void pay('premium.gift',{handle:to.recipient.handle,plan,anonymous:anon},t('fe.w8.gift.done'))}>{t('fe.w8.buy.pay',{price})}</Btn>:null}
+   <Btn kind={status?.payments?'text':'soft'} onClick={()=>setStep('form')}>{t('fe.w8.gift.back')}</Btn></Actions>}>
+  <Stack gap={3}>
+   {person}
+   <KeyValues rows={[[t('fe.w8.gift.term'),t('fe.w8.gift.'+plan)],[t('fe.w8.buy.price'),price],[t('fe.w8.gift.anon'),anon?t('fe.w8.yes'):t('fe.w8.no')]]}/>
+   {!status?.payments&&<Alert kind="info"><b>{t('fe.w8.buy.soon')}</b>{t('fe.w8.buy.soonText')}</Alert>}
+   {error&&<Alert kind="err">{error}</Alert>}
+  </Stack>
  </Sheet>;
  return <Sheet title={t('fe.w8.gift.title')} onClose={onClose} dirty={!!nick&&!handle}
   foot={to?<Btn onClick={()=>setStep('confirm')}>{t('fe.w8.gift.next',{price})}</Btn>:undefined}>
@@ -134,12 +138,12 @@ export function GiftSheet({handle,onClose,onDone}:{handle?:string|null|undefined
    </Field>
    <Btn kind="soft" size="md" icon={AtSign} busy={finding} onClick={()=>void find(nick)}>{t('fe.w8.gift.find')}</Btn>
   </Stack>}
-  {to?.queued&&<Alert kind="info" className="mt12">{t('fe.w8.gift.queued',{name})}</Alert>}
+  {to?.queued&&<Alert kind="info">{t('fe.w8.gift.queued',{name})}</Alert>}
   {to&&<>
    <SectionLabel>{t('fe.w8.gift.term')}</SectionLabel>
    <PlanCards<GiftPlan> label={t('fe.w8.gift.term')} value={plan} onChange={setPlan}
     plans={(['m1','m3','m12'] as const).map(id=>({id,title:t('fe.w8.gift.'+id),price:t('fe.w8.gift.'+id+'Price')}))}/>
-   <Card list className="mt12"><ToggleRow title={t('fe.w8.gift.anon')} sub={t('fe.w8.gift.anonSub')} on={anon} onClick={()=>setAnon(v=>!v)}/></Card>
+   <Spacer size={3}/><Card list><ToggleRow title={t('fe.w8.gift.anon')} sub={t('fe.w8.gift.anonSub')} on={anon} onClick={()=>setAnon(v=>!v)}/></Card>
   </>}
  </Sheet>;
 }
@@ -164,7 +168,7 @@ export function PremiumScreen(){
    <PremiumHero lead={t('fe.ax.prem.lead')}/>
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>load(true)}>{t('fe.retry')}</Btn></Empty>
     :!status?<Skel kind="list"/>:<>
-    {premium&&<Alert kind="ok" icon={Check} className="mt12">{status.viaPartner
+    {premium&&<Alert kind="ok" icon={Check}>{status.viaPartner
      ?<><b>{t('fe.ax.prem.viaPartner')}</b>{t('fe.ax.prem.viaPartnerText')}</>
      :<><b>{status.source==='gift'?t('fe.w8.prem.gift'):t('fe.ax.prem.active')}</b>{until?t('fe.ax.prem.until',{date:until}):''}</>}</Alert>}
     {premium&&!status.viaPartner&&<Group title={t('fe.w8.prem.manage')}>
@@ -175,16 +179,16 @@ export function PremiumScreen(){
        :<Row icon={RotateCcw} title={t('fe.w8.prem.renew')} sub={t('fe.w8.prem.noRenew',{date:until})}/>}
      </Card>
     </Group>}
-    <div className="free14"><Check/><span><b>{t('fe.ax.prem.freeTitle')}</b>{t('fe.ax.prem.freeText')}</span></div>
+    <Alert kind="ok" icon={Check} role="none"><b>{t('fe.ax.prem.freeTitle')}</b>{t('fe.ax.prem.freeText')}</Alert>
     <SectionLabel>{t('fe.ax.prem.what')}</SectionLabel>
     <PremiumFeats items={feats} current={kind} neededLabel={premium?undefined:t('fe.ax.prem.needed')}/>
     {!premium&&<>
      <SectionLabel>{t('fe.ax.prem.plan')}</SectionLabel>
-     <PlanCards<Plan> label={t('fe.ax.prem.plan')} plans={plans} value={plan} onChange={setPlan}/>
-     <Note className="mt12">{t('fe.w8.prem.charge',{price:t('fe.ax.prem.'+plan+'Price'),period:t(plan==='year'?'fe.w8.prem.periodYear':'fe.w8.prem.periodMonth')})}</Note>
-     {!status.payments&&<div id="fe-ax-soon"><Note className="mt12"><b>{t('fe.w8.buy.soon')}.</b> {t('fe.w8.buy.soonText')}</Note></div>}
+     <Stack gap={2}><PlanCards<Plan> label={t('fe.ax.prem.plan')} plans={plans} value={plan} onChange={setPlan}/>
+     {status.payments?<Note>{t('fe.w8.prem.charge',{price:t('fe.ax.prem.'+plan+'Price'),period:t(plan==='year'?'fe.w8.prem.periodYear':'fe.w8.prem.periodMonth')})}</Note>
+      :<div id="fe-ax-soon"><Note><b>{t('fe.w8.buy.soon')}.</b> {t('fe.w8.buy.soonText')}</Note></div>}</Stack>
     </>}
-    <Card list className="mt12"><Row icon={RotateCcw} title={t('fe.w8.prem.restore')} sub={t('fe.w8.prem.restoreSub')} noChev disabled={busy==='restore'} onClick={()=>void restore()}/></Card>
+    <Card list><Row icon={RotateCcw} title={t('fe.w8.prem.restore')} sub={t('fe.w8.prem.restoreSub')} noChev disabled={busy==='restore'} onClick={()=>void restore()}/></Card>
     <Group title={t('fe.w8.prem.giftTitle')}>
      <Card list>
       <Row icon={Gift} tone="l" title={t('fe.w8.prem.giftRow')} sub={t('fe.w8.prem.giftRowSub')} onClick={()=>setSheet('gift')}/>

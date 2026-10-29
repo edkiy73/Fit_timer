@@ -90,7 +90,10 @@ export default [
      await until(async () => { const cards = await t.page.locator('.posts > article.post').count(); const polls = await t.page.locator('.posts > article.post:has(.poll)').count(); return cards > 0 && cards === polls; }, 'only polls in the list');
      await t.tap('.filterline .chip:has-text("С опросом")'); await t.notSee('.filterline .chip:has-text("С опросом")', 1500);
      // «Подписки» of `full` (follows nobody in this lane) with only articles: nothing — the button says so and is off.
-     await t.tap('[role="tab"]:has-text("Подписки")'); await t.tap('.filterline .chip:has-text("Фильтры")');
+     // An empty «Подписки» without filters has nothing to filter: no «Фильтры» row under its empty state.
+     await t.tap('[role="tab"]:has-text("Подписки")'); await t.wait(2500);
+     if (!((await t.api('feed.list', { tab: 'following', activity: [], limit: 5 })).items ?? []).length) { await t.see('.empty'); expect(!(await t.page.locator('.filterline').count()), 'no filters on an empty tab'); return; }
+     await t.tap('.filterline .chip:has-text("Фильтры")');
      await t.tap(`${sheet} .chip:has-text("Статьи")`); await t.tap(`${sheet} .chip:has-text("Лайки")`);
      const f = (await t.api('feed.list', { tab: 'following', types: ['note'], activity: ['likes'], limit: 50 }));
      if (!f.items.length) { await t.see(`${sheet} .sh-f button:has-text("Нет подходящих публикаций")`); expect(!(await apply.isEnabled()), 'disabled'); }
@@ -140,14 +143,16 @@ export default [
    await t.notSee('button:has-text("Сбросить фильтры")', 2500);
  } },
 
- { name: 'unsent reply waits with «Повторить»; replies page «Показать ещё N из M»', persona: 'full', allow4xx: true, run: async t => {
+ { name: 'unsent reply waits with «Повторить»; replies come in pages of 20, the next one on scrolling (LoadMore, no button)', persona: 'full', allow4xx: true, run: async t => {
    const B = await t.persona('basic'); const mark = tag();
    const id = await publish(t, B.email, { body: 'Ответы ' + mark });
    try {
      for (let i = 0; i < 21; i++) await t.api('reply.create', { opId: t.uuid7(), postId: id, body: `r${i} ${mark}` }, B.email);
      await t.go('/n/feed/post/' + id);
-     await t.see('button:has-text("Показать ещё 1 из 1")'); await t.tap('button:has-text("Показать ещё 1 из 1")');
-     await t.notSee('button:has-text("Показать ещё")', 1000);
+     await t.see('.cm'); expect(await t.page.locator('.th').count() === 20, 'the first page of 20 threads: ' + await t.page.locator('.th').count());
+     expect(!(await t.page.locator('button:has-text("Показать ещё")').count()), 'no «Показать ещё» button');
+     await t.page.locator('.th').last().scrollIntoViewIfNeeded(); await t.page.mouse.wheel(0, 4000);
+     await until(async () => (await t.page.locator('.th').count()) === 21, 'the 21st thread after scrolling', 10000);
      let fail = true;
      await t.page.route('**/api/fe', async r => { if (fail && /"action":"reply.create"/.test(r.request().postData() || '')) { fail = false; await r.fulfill({ status: 409, contentType: 'application/json', body: '{"ok":false,"error":"conflict"}' }); } else await r.fallback(); });
      await t.fill('.inputbar textarea', 'Мой ответ ' + mark); await t.tap('.inputbar [aria-label="Отправить"]');

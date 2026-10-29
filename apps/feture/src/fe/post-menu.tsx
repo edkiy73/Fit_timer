@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {AtSign,Ban,BellOff,Check,EyeOff,Flag,Images,Link as LinkIcon,Pencil,Trash2,User,UserCheck,UserPlus,X} from 'lucide-react';
 import type {LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Ask as KitAsk,Btn,Card,Field,Row,Sheet,TextArea} from './kit';
+import {Actions,Alert,Ask as KitAsk,Btn,Card,Field,Row,Sheet,TextArea} from './kit';
 import {useChecks} from './kit/validate';
 import {useFe} from './session';
 import {ReportSheet} from './report';
@@ -13,6 +13,7 @@ import {useToast} from './toast';
 import type {Post,Reply} from './feed';
 import {PostAlbumSheet,inGallery} from './gallery';
 import {useCopyLink} from './share';
+import {useFollow} from './follow';
 
 /** V21 `ACT.postMenu` / `ACT.rMore` with the prototype's markup (`div.layer > div.scrim.on + div.sheet.on`).
  * Own post — edit / copy link / delete; someone else's — answers about a photo mark, hide the post, mute the author,
@@ -61,10 +62,9 @@ export function PostMenu({post,onClose,onChange,onRemove}:{post:Post,onClose:()=
  const mine=post.rev!=null;const couple=acting?.kind==='couple';const name=nameOf(post.author);
  // «Подписаться» right here (owner 28.10.2026), so one doesn't have to open the profile for it.
  const [follows,setFollows]=useFollows(mine||post.author.id===acting?.id?null:post.author.id,post.author.iFollow);
- const follow=(next:boolean)=>run('follow',async opId=>{
-  await call('follow.set',{opId,profileId:post.author.id,on:next},okOnly);setFollows(next);onChange?.({...post,author:{...post.author,iFollow:next}});onClose();
-  toast(t((next?'fe.px.fl.on':'fe.px.fl.off')+(couple?'Us':''),{name}),{type:'ok'});
- });
+ // The one follow action (`useFollow`, the same as `FollowButton`): the same call, wording and «Отменить».
+ const fol=useFollow({profileId:post.author.id,name,onChange:on=>{setFollows(on);onChange?.({...post,author:{...post.author,iFollow:on}});}});
+ const follow=(next:boolean)=>{onClose();void fol.toggle(next);};
  const [view,setView]=useState<'menu'|'delete'|'report'|'album'|'object'>('menu');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
  useEscape(onClose);
  const go=(v:typeof view)=>{setFailure('');setView(v);};
@@ -131,15 +131,15 @@ export function PostMenu({post,onClose,onChange,onRemove}:{post:Post,onClose:()=
     {mentioned&&<Row noChev icon={AtSign} title={t('fe.w3.unmention')} sub={t('fe.w3.unmentionSub')} onClick={unmention} disabled={busy}/>}
     {!me&&hasMedia&&<Row noChev icon={EyeOff} title={t('fe.pm.tag.thatsMe')} sub={t('fe.pm.tag.thatsMeSub')} onClick={()=>go('object')} disabled={busy}/>}
     {follows!==null&&(follows
-     ?<Row noChev icon={UserCheck} title={t(couple?'fe.pm.unfollowUs':'fe.pm.unfollow')} sub={name} onClick={()=>follow(false)} disabled={busy}/>
-     :<Row noChev icon={UserPlus} title={t(couple?'fe.pm.followUs':'fe.pm.follow')} sub={name} onClick={()=>follow(true)} disabled={busy}/>)}
+     ?<Row noChev icon={UserCheck} title={t(couple?'fe.pm.unfollowUs':'fe.pm.unfollow')} sub={name} onClick={()=>follow(false)} disabled={busy||fol.busy}/>
+     :<Row noChev icon={UserPlus} title={t(couple?'fe.pm.followUs':'fe.pm.follow')} sub={name} onClick={()=>follow(true)} disabled={busy||fol.busy}/>)}
     <Row noChev icon={EyeOff} title={t('fe.pm.hidePost')} sub={t('fe.pm.hidePostSub')} onClick={()=>hide('post')} disabled={busy}/>
     <Row noChev icon={BellOff} title={t('fe.pm.mute')} sub={t('fe.pm.muteSub',{name})} onClick={()=>hide('author')} disabled={busy}/>
     <Row noChev icon={LinkIcon} title={t('fe.pm.copyLink')} onClick={copy}/>
     <Row noChev icon={Flag} title={t('fe.pm.report')} danger onClick={()=>go('report')}/>
    </>}
   </Card>
-  {failure&&<Alert kind="err" className="mt12">{failure}</Alert>}
+  {failure&&<Alert kind="err">{failure}</Alert>}
  </Sheet>;
 }
 
@@ -148,8 +148,8 @@ export function PostMenu({post,onClose,onChange,onRemove}:{post:Post,onClose:()=
 export function DisputeNotice({post,onChange}:{post:Post,onChange:(p:Post)=>void}){
  const {t}=useI18n();const [open,setOpen]=useState(false);
  const note=post.dispute?.note??null;
- return <><Alert kind="warn" icon={EyeOff} className="mt12"><b>{t('fe.w3.dispute.hidden')}</b>{note?t('fe.w3.dispute.yours',{text:note}):t('fe.w3.dispute.hiddenText')}
-   <div className="row g8 mt12"><Btn size="sm" kind="soft" fit onClick={()=>setOpen(true)}>{note?t('fe.w3.dispute.edit'):t('fe.w3.dispute.explain')}</Btn></div></Alert>
+ return <><Alert kind="warn" icon={EyeOff} action={<Actions><Btn size="sm" kind="soft" fit onClick={()=>setOpen(true)}>{note?t('fe.w3.dispute.edit'):t('fe.w3.dispute.explain')}</Btn></Actions>}>
+   <b>{t('fe.w3.dispute.hidden')}</b>{note?t('fe.w3.dispute.yours',{text:note}):t('fe.w3.dispute.hiddenText')}</Alert>
   {open&&<DisputeExplainSheet post={post} onClose={()=>setOpen(false)} onDone={n=>{setOpen(false);onChange({...post,dispute:{note:n}});}}/>}</>;
 }
 
@@ -166,7 +166,7 @@ function DisputeExplainSheet({post,onClose,onDone}:{post:Post,onClose:()=>void,o
    <TextArea rows={4} {...checks.input('note')} value={text} aria-label={t('fe.w3.dispute.sheetTitle')} onChange={e=>setText(e.target.value)}/>
    {checks.counter('note')}
   </Field>
-  {failure&&<Alert kind="err" className="mt12">{failure}</Alert>}
+  {failure&&<Alert kind="err">{failure}</Alert>}
  </Sheet>;
 }
 
@@ -198,6 +198,6 @@ export function ReplyMenu({reply,postId,onClose,onEdit,onDone}:{reply:Reply,post
     {reply.author&&<Row noChev icon={Ban} title={t('fe.pm.r.block',{name})} sub={t('fe.pm.r.blockSub')} danger onClick={()=>setView('block')}/>}
    </>}
   </Card>
-  {failure&&<Alert kind="err" className="mt12">{failure}</Alert>}
+  {failure&&<Alert kind="err">{failure}</Alert>}
  </Sheet>;
 }

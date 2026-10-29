@@ -24,7 +24,9 @@
 .v21 .veil-content .bar-sk.k-w70{width:70%}
 .v21 .veil-content .bar-sk.k-w50{width:50%}
 /* Cover colour swatches. */
-.v21 .k-plate-sw{position:relative;width:52px;height:52px;border-radius:var(--r-l);overflow:hidden;outline:0;outline-offset:2px}
+/* the plates share one row whatever the width (they never wrap a lone plate onto a second line) */
+.v21 .k-swatches{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px;max-width:360px}
+.v21 .k-plate-sw{position:relative;width:100%;aspect-ratio:1;border-radius:var(--r-l);overflow:hidden;outline:0;outline-offset:2px}
 .v21 .k-plate-sw.on{outline:3px solid var(--ink)}
 .v21 .k-plate-sw .plate{position:absolute;inset:0}
 /* Person line of request cards. */
@@ -132,7 +134,6 @@
 .v21 .note.k-mem-hint{margin:var(--s-1) 0 var(--s-3)}
 .v21 .sec.k-sec-first{margin-top:var(--s-1)}
 .v21 .card.k-preview-post{padding:0 var(--s-4);margin-top:10px}
-.v21 .btn.k-mb-cover{margin-bottom:10px}
 .v21 .recent button.tx{text-align:left}
 .v21 .viewer.k-demo-viewer{position:relative;inset:auto;height:240px;opacity:1}
 /* «печатает…» under the messages of a chat: three soft dots and a short line. */

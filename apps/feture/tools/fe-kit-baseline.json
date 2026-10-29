@@ -1,42 +1,20 @@
 {
- "src/fe/access.tsx": {
-  "margin class": 2
- },
- "src/fe/account-extra.tsx": {
-  "margin class": 3
- },
  "src/fe/age-check.tsx": {
-  "margin class": 23
+  "margin class": 1
  },
  "src/fe/browse.tsx": {
   "margin class": 1
  },
- "src/fe/communities.tsx": {
-  "margin class": 14,
-  "empty note": 1
- },
  "src/fe/couple.tsx": {
-  "margin class": 8,
-  "empty note": 2
- },
- "src/fe/create-community.tsx": {
-  "margin class": 3
- },
- "src/fe/create-event.tsx": {
-  "margin class": 10
+  "empty note": 1
  },
  "src/fe/feed.tsx": {
-  "margin class": 11,
-  "button row": 5
+  "margin class": 2,
+  "button row": 3
  },
  "src/fe/gallery.tsx": {
-  "margin class": 2,
+  "margin class": 1,
   "empty note": 1
- },
- "src/fe/host.tsx": {
-  "margin class": 10,
-  "empty note": 1,
-  "button row": 1
  },
  "src/fe/interests.tsx": {
   "margin class": 4,
@@ -46,40 +24,11 @@
   "margin class": 6,
   "button row": 1
  },
- "src/fe/me-edit.tsx": {
-  "margin class": 1
- },
  "src/fe/mine.tsx": {
-  "margin class": 2,
   "button row": 1
- },
- "src/fe/pair.tsx": {
-  "margin class": 17
- },
- "src/fe/photo-check.tsx": {
-  "margin class": 6
- },
- "src/fe/post-menu.tsx": {
-  "margin class": 5
- },
- "src/fe/premium.tsx": {
-  "margin class": 11
- },
- "src/fe/private.tsx": {
-  "margin class": 17,
-  "empty note": 1
  },
  "src/fe/profile-extras.tsx": {
   "margin class": 4
- },
- "src/fe/register.tsx": {
-  "margin class": 8
- },
- "src/fe/settings-lists.tsx": {
-  "margin class": 4
- },
- "src/fe/settings.tsx": {
-  "margin class": 6
  },
  "src/fe/shell.css": {
   "stylesheet": 1
@@ -87,15 +36,5 @@
  "src/fe/staff.tsx": {
   "margin class": 9,
   "empty note": 3
- },
- "src/fe/start.tsx": {
-  "margin class": 3
- },
- "src/fe/support.tsx": {
-  "margin class": 1,
-  "button row": 1
- },
- "src/fe/terms-sheet.tsx": {
-  "margin class": 3
  }
 }

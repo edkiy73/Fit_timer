@@ -4,8 +4,8 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Users,AtSign,CircleCheck,Search,ShieldCheck} from 'lucide-react';
-import {Alert,Ask,Btn,Card,Check,Chip,Chips,ChoiceChips,Empty,Field,H,Input,Note,Pill,Row,SearchInput,SectionLabel,Select,Sheet,Skel,Stack,Text,TextArea} from './kit';
+import {Users,AtSign,CircleCheck,ShieldCheck} from 'lucide-react';
+import {Alert,Ask,Btn,Card,Check,Chip,Chips,ChoiceChips,Divider,Empty,Field,H,Input,Note,Row,SectionLabel,Select,Sheet,Skel,Spacer,Stack,Text,TextArea} from './kit';
 import {useTopics} from './post-parts';
 import {useChecks} from './kit/validate';
 import {useFe} from './session';
@@ -14,6 +14,7 @@ import {AuthBar,AuthFrame,AuthLogo} from './start';
 import {TermsSheet,loadDocuments} from './terms-sheet';
 import {pendingPairLink} from './pair-link';
 import {DiscoverPhotoAsk} from './discover-photo';
+import {ChipPick} from './kit/ChipPick';
 
 /** V21 A04 (nickname, date of birth, consent) → A04X (under 18) → A05 «Расскажи о себе» (Discover on by default —
  * owner decision 27.10.2026; who sees the answers: «Все» by default — owner decision 27.10.2026). Each screen has the
@@ -131,13 +132,14 @@ function Account({form,setForm,onBack,onCreated,onUnder18}:{form:Form,setForm:Re
     </div>
     {!errors.dob&&<div className="fhint">{age!==null&&age>=18&&<b className="k-ok">{t('fe.reg.age').replace('{age}',String(age))} </b>}{t('fe.reg.dobHint')}</div>}
    </Field></div>
-   <div className="hr"/>
-   <div data-field="terms"><Check on={terms} error={!!errors.terms} onChange={v=>{set({terms:v});setErrors(x=>({...x,terms:''}));}}>
+   <Divider/>
+   {/* Sign-up keeps its own consent box (18+ and sensitive data need an explicit «yes»), with «Читать» on the same row. */}
+   <div data-field="terms"><Check on={terms} error={!!errors.terms} onChange={v=>{set({terms:v});setErrors(x=>({...x,terms:''}));}}
+    aside={<Btn kind="text" size="sm" auto aria-haspopup="dialog" onClick={()=>setSheet(true)}>{t('fe.reg.readTerms')}</Btn>}>
     {t('fe.reg.terms')}{errors.terms&&<span className="ferr">{errors.terms}</span>}
    </Check></div>
-   <Btn kind="text" auto className="terms-read" aria-haspopup="dialog" onClick={()=>setSheet(true)}>{t('fe.reg.readTerms')}</Btn>
    <Check on={news} onChange={v=>set({news:v})}>{t('fe.reg.news')} <Text as="span" size="xs" tone="mute">· {t('fe.reg.optional')}</Text></Check>
-   {failure&&<Alert kind="err" className="mt16">{failure}</Alert>}
+   {failure&&<Alert kind="err">{failure}</Alert>}
   </div></div>
   <div className="ctabar"><div className="wrap"><Btn onClick={()=>submit()} disabled={busy} busy={busy}>{t('fe.reg.continue')}</Btn></div></div>
   {sheet&&<TermsSheet onClose={()=>setSheet(false)}/>}
@@ -183,7 +185,6 @@ function AboutYou({profileId,onNext,initial}:{profileId:string,initial?:About|un
   setPhotos(have);if(have.length)setDiscover('visible');else setAskPhoto(true);
  };
  const [partner,setPartner]=useState<''|'yes'|'no'>(initial?.partner??'');
- const [picker,setPicker]=useState<Kind|null>(null);
  const load=()=>{setLoadFailed(false);setOptions(null);call('catalog.get',{},catalog,{asAccount:true}).then(r=>setOptions(r.options)).catch(()=>setLoadFailed(true));};
  useEffect(load,[call]);
  const label=(o:Opt)=>locale==='en'?o.en:o.ru;
@@ -196,23 +197,15 @@ function AboutYou({profileId,onNext,initial}:{profileId:string,initial?:About|un
   if(p[kind].length>=LIMIT[kind]){toast(t('fe.onb.max').replace('{n}',String(LIMIT[kind])),{type:'info'});return p;}
   return {...p,[kind]:[...p[kind],code]};
  });
- // The chips once on screen stay there: choosing in «Все · N» adds a chip, never moves the others.
- const shown=useRef<Record<string,Set<string>>>({});
  // V21 A05: «Дальше» / «Позже» go to step 2 (interests and communities); everything is saved there by «Готово».
  const finish=(skip:boolean)=>onNext({pick:skip?{gender:[],orient:[],role:[],status:[],format:[],seek:[]}:picked,vis,discover,partner});
  const radio=<T extends string>(items:[T,string][],sel:T|'',pick:(v:T)=>void,aria:string)=><ChoiceChips label={aria} value={sel||null} options={items} onChange={pick}/>;
  const group=(kind:Kind)=>{
   const list=listOf(kind);if(!list.length)return null;
-  const sel=picked[kind];
-  let chips=list;let more=false;
-  if(list.length>SHOWN+2){
-   const s=shown.current[kind]=new Set([...(shown.current[kind]??[]),...list.slice(0,SHOWN).map(o=>o.code),...sel]);
-   chips=list.filter(o=>s.has(o.code));more=true;
-  }
   const title=t('fe.onb.kind.'+kind);
   return <section key={kind} className="fin"><div className="fin-t"><b>{title}</b>{MULTI.includes(kind)&&<span>{t('fe.reg.pickAny')}</span>}</div>
-   <Chips label={title}>{chips.map(o=><Chip key={o.code} on={sel.includes(o.code)} onClick={()=>toggle(kind,o.code)}>{label(o)}</Chip>)}
-    {more&&<Chip more popup icon={Search} onClick={()=>setPicker(kind)}>{t('fe.onb.all').replace('{n}',String(list.length))}</Chip>}</Chips>
+   <ChipPick label={title} options={list.map(o=>({code:o.code,label:label(o),search:o.ru+' '+o.en}))} value={picked[kind]} onToggle={c=>toggle(kind,c)}
+    onClear={()=>setPicked(p=>({...p,[kind]:[]}))} base={BASE[kind]??8} shown={SHOWN} max={LIMIT[kind]>1&&LIMIT[kind]<9?LIMIT[kind]:0}/>
   </section>;
  };
  return <>
@@ -223,19 +216,19 @@ function AboutYou({profileId,onNext,initial}:{profileId:string,initial?:About|un
    <Steps at={2}/>
    <H level={2} className="t">{t('fe.reg.about.title')}</H>
    <section className="fin"><div className="fin-t"><b>{t('fe.reg.discover.title')}</b></div>
-    {radio([['visible',t('fe.onb.discover.on')],['off',t('fe.onb.discover.off')]],discover,v=>void pickDiscover(v),t('fe.reg.discover.title'))}
-    <p className="fhint mt8">{discover==='visible'?t('fe.onb.discover.noteOn'):t('fe.onb.discover.noteOff')}</p>
+    <Stack gap={2}>{radio([['visible',t('fe.onb.discover.on')],['off',t('fe.onb.discover.off')]],discover,v=>void pickDiscover(v),t('fe.reg.discover.title'))}
+     <Note>{discover==='visible'?t('fe.onb.discover.noteOn'):t('fe.onb.discover.noteOff')}</Note></Stack>
    </section>
    <section className="fin"><div className="fin-t"><b>{t('fe.onb.partner.title')}</b></div>
-    {radio([['yes',t('fe.onb.partner.yes')],['no',t('fe.onb.partner.no')]],partner,v=>setPartner(p=>p===v?'':v),t('fe.onb.partner.title'))}
-    {partner==='yes'&&<p className="fhint mt8">{t('fe.onb.partner.note')}</p>}
+    <Stack gap={2}>{radio([['yes',t('fe.onb.partner.yes')],['no',t('fe.onb.partner.no')]],partner,v=>setPartner(p=>p===v?'':v),t('fe.onb.partner.title'))}
+     {partner==='yes'&&<Note>{t('fe.onb.partner.note')}</Note>}</Stack>
    </section>
    <section className="fin"><div className="fin-t"><b>{t('fe.reg.vis.title')}</b></div>
-    {radio([['only',t('fe.reg.vis.only')],['granted',t('fe.reg.vis.granted')],['all',t('fe.reg.vis.all')]],vis,setVis,t('fe.reg.vis.title'))}
-    <p className="fhint mt8">{t('fe.reg.vis.note.'+vis)}</p>
+    <Stack gap={2}>{radio([['only',t('fe.reg.vis.only')],['granted',t('fe.reg.vis.granted')],['all',t('fe.reg.vis.all')]],vis,setVis,t('fe.reg.vis.title'))}
+     <Note>{t('fe.reg.vis.note.'+vis)}</Note></Stack>
    </section>
-   {loadFailed?<Alert kind="err" className="mt16">{t('fe.onb.optionsFailed')} <Btn kind="text" auto onClick={load}>{t('fe.retry')}</Btn></Alert>
-    :options===null?<div className="mt16"><Skel kind="card" rows={3}/></div>:KINDS.map(group)}
+   {loadFailed?<Alert kind="err" action={<Btn kind="soft" size="sm" auto onClick={load}>{t('fe.retry')}</Btn>}>{t('fe.onb.optionsFailed')}</Alert>
+    :options===null?<><Spacer size={4}/><Skel kind="card" rows={3}/></>:KINDS.map(group)}
   </div></div>
   <div className="ctabar"><div className="wrap">
    <Btn onClick={()=>finish(false)}>{t('fe.onb.next')}</Btn>
@@ -243,30 +236,7 @@ function AboutYou({profileId,onNext,initial}:{profileId:string,initial?:About|un
   </div></div>
   {askPhoto&&<DiscoverPhotoAsk existing={photos??[]} profileId={profileId} onCancel={()=>setAskPhoto(false)}
    onAdded={()=>{setAskPhoto(false);setPhotos(p=>[...(p??[]),'added']);setDiscover('visible');toast(t('fe.onb.discover.photoAdded'),{type:'ok'});}}/>}
-  {picker&&<Picker title={t('fe.onb.kind.'+picker)} items={listOf(picker)} base={BASE[picker]??8} label={label} sel={picked[picker]} max={LIMIT[picker]>1&&LIMIT[picker]<9?LIMIT[picker]:0}
-   onToggle={c=>toggle(picker,c)} onClear={()=>setPicked(p=>({...p,[picker]:[]}))} onClose={()=>setPicker(null)}/>}
  </>;
-}
-
-/** V21 `openChipPicker()`: the full list in a sheet — search (RU and EN), «Популярное» / «Ещё варианты», the
- * count of chosen (n/max), «Сбросить» and «Готово · n». */
-function Picker({title,items,base,label,sel,max,onToggle,onClear,onClose}:{title:string,items:Opt[],base:number,label:(o:Opt)=>string,sel:string[],max:number,onToggle:(c:string)=>void,onClear:()=>void,onClose:()=>void}){
- const {t}=useI18n();const [q,setQ]=useState('');
- const query=q.trim().toLowerCase();
- const hit=(o:Opt)=>!query||`${o.ru} ${o.en} ${o.code}`.toLowerCase().includes(query);
- const groups:[string,Opt[]][]=[[t('fe.onb.popular'),items.slice(0,base)],[t('fe.onb.moreOptions'),items.slice(base)]];
- const total=items.filter(hit).length;
- return <Sheet full title={title} onClose={onClose} head={<Pill tone={sel.length?'v':undefined}>{max?`${sel.length}/${max}`:sel.length}</Pill>}
-  search={<SearchInput label={t('fe.onb.find')} value={q} onChange={e=>setQ(e.target.value)}/>}
-  foot={<div className="row g8">
-   {sel.length>0&&<Btn kind="soft" fit onClick={onClear}>{t('fe.onb.clear')}</Btn>}
-   <Btn onClick={onClose}>{sel.length?t('fe.onb.doneN').replace('{n}',String(sel.length)):t('fe.reg.done')}</Btn>
-  </div>}>
-  {groups.map(([g,list])=>{const vis=list.filter(hit);if(!list.length||query&&!vis.length)return null;
-   return <section key={g} className={'fsec'+(query?' searching':'')}><SectionLabel>{g}</SectionLabel>
-    <Chips>{vis.map(o=><Chip key={o.code} on={sel.includes(o.code)} onClick={()=>onToggle(o.code)}>{label(o)}</Chip>)}</Chips></section>;})}
-  {query&&!total&&<Empty compact icon={Search} title={t('fe.onb.findNone')}/>}
- </Sheet>;
 }
 
 /* ---------- A05 step 2 — «Что тебе интересно?» (V21 AUTH-017/018) ---------- */
@@ -316,8 +286,8 @@ function FirstSteps({profileId,about,onBack}:{profileId:string,about:About,onBac
    <Steps at={3}/>
    <H level={2} className="t">{t('fe.onb2.title')}</H>
    <section className="fin"><div className="fin-t"><b>{t('fe.onb2.interests')}</b><span>{t('fe.reg.pickAny')}</span></div>
-    {ready?<Chips label={t('fe.onb2.interests')}>{pop.map(id=><Chip key={id} on={tp.includes(id)} onClick={()=>toggle(id)}>{tname(id)}</Chip>)}</Chips>:<Skel kind="line" rows={2}/>}
-    <p className="fhint mt8">{t('fe.onb2.interestsNote')}</p>
+    <Stack gap={2}>{ready?<Chips label={t('fe.onb2.interests')}>{pop.map(id=><Chip key={id} on={tp.includes(id)} onClick={()=>toggle(id)}>{tname(id)}</Chip>)}</Chips>:<Skel kind="line" rows={2}/>}
+     <Note>{t('fe.onb2.interestsNote')}</Note></Stack>
    </section>
    <section className="fin"><div className="fin-t"><b>{t('fe.onb2.comms')}</b></div>
     {comms===null?<Skel kind="card" rows={2}/>:!comms.length?<Empty compact icon={Users} title={t('fe.onb2.noComms')}/>
@@ -326,7 +296,7 @@ function FirstSteps({profileId,about,onBack}:{profileId:string,about:About,onBac
        ?<Btn kind="soft" size="sm" fit onClick={()=>setJoins(({[c.id]:_,...rest})=>rest)}>{c.privacy==='open'?t('fe.onb2.unjoin'):t('fe.onb2.unrequest')}</Btn>
        :<Btn size="sm" fit onClick={()=>setPreview(c)}>{c.privacy==='open'?t('fe.onb2.join'):t('fe.onb2.request')}</Btn>}/>)}</Card>}
    </section>
-   {failure&&<Alert kind="err" className="mt16">{failure}</Alert>}
+   {failure&&<Alert kind="err">{failure}</Alert>}
   </div></div>
   <div className="ctabar"><div className="wrap"><Btn onClick={done} busy={busy} disabled={busy}>{t('fe.onb2.finish')}</Btn></div></div>
   {preview&&<CommPreview c={preview} profileId={profileId} chosen={joins[preview.id]} onClose={()=>setPreview(null)}

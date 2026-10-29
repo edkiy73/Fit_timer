@@ -88,6 +88,21 @@ export default [
      await t.wait(1500); expect(!(await t.page.locator('.sheet.on').count()), 'report sheet closed');
    } finally { await drop(t, f.id); }
  } },
+ { name: '«⋯» on someone’s post: «Подписаться» is the shared follow (toast with «Отменить», read back), then «Отписаться»', persona: 'full', route: '/n/feed', run: async t => {
+   const f = await fixture(t); const S = await t.persona('stranger');
+   const follows = async () => ((await t.api('profile.followers', { profileId: t.me.personId, following: true })).items ?? []).some(x => x.id === S.personId);
+   const was = await follows();
+   try {
+     if (was) await t.api('follow.set', { opId: t.uuid7(), profileId: S.personId, on: false });
+     await t.go('/n/feed/post/' + f.id); const c = card(t, f.body); await c.waitFor();
+     await c.locator('.post-h button[aria-label="Ещё"]').click(); await t.tap('.sheet.on .li:has-text("Подписаться")');
+     await t.see('.toast:has-text("Отменить")'); await until(follows, 'following on the server');
+     await t.tap('.toast .tb'); await until(async () => !(await follows()), '«Отменить» undoes it');
+     await c.locator('.post-h button[aria-label="Ещё"]').click(); await t.tap('.sheet.on .li:has-text("Подписаться")'); await until(follows, 'following again');
+     await t.wait(3500); await c.locator('.post-h button[aria-label="Ещё"]').click(); await t.tap('.sheet.on .li:has-text("Отписаться")');
+     await until(async () => !(await follows()), 'unfollowed');
+   } finally { await t.api('follow.set', { opId: t.uuid7(), profileId: S.personId, on: was }); await drop(t, f.id); }
+ } },
  { name: '«⋯» on my post: edit text → saved; delete → gone', persona: 'full', route: '/n/feed', run: async t => {
    const body = 'e2e мой ' + stamp();
    const d = await t.api('post.saveDraft', { opId: t.uuid7(), post: draft(body) }); await t.api('post.publish', { opId: t.uuid7(), postId: d.id });

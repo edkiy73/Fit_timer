@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Calendar,Check,ChevronLeft,CircleAlert,Clock,EyeOff,Link as LinkIcon,Lock,MapPin,RefreshCw,Ticket,Unlock,Video} from 'lucide-react';
 import {FeError,feErrorMessage} from '../feture/fe-api';
-import {Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,EventTile,Group,Note,Row,Seg,SectionLabel,Select,Skel,Spacer,Steps,ToggleRow,View} from './kit';
+import {Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,EventTile,Group,Note,Row,Seg,SectionLabel,Select,Skel,Steps,ToggleRow,View} from './kit';
 import {PickField,PlacePicker} from './kit/Place';
 import {useFe} from './session';
 import {FIELD,lineRule,serverFields,textError,textErrorMessage,type FieldName} from './kit/validate';
@@ -328,9 +328,9 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
  </>;
  if(step===3)body=<>
   <Card list><ToggleRow title={t('fe.ce.approval')} sub={frozen?t('fe.ece.e.frozen'):t('fe.ce.approvalSub')} on={f.requiresApplication} disabled={frozen} onClick={()=>set('requiresApplication',!f.requiresApplication)}/></Card>
-  {frozen&&f.requiresApplication&&f.question.trim()&&<div className="field mt12"><span className="flabel">{t('fe.ce.question')}</span><Note>{f.question.trim()}</Note></div>}
-  {!frozen&&f.requiresApplication&&<><Spacer size={3}/><Field name="q0" label={t('fe.ce.question')} ph={t('fe.ce.questionPh')} check="eventQuestion" value={f.question} onChange={v=>set('question',v)} err={err.question}/></>}
-  <div className="field mt12"><span className="flabel">{t('fe.ce.price')}</span><Chips>
+  {frozen&&f.requiresApplication&&f.question.trim()&&<div className="field"><span className="flabel">{t('fe.ce.question')}</span><Note>{f.question.trim()}</Note></div>}
+  {!frozen&&f.requiresApplication&&<><Field name="q0" label={t('fe.ce.question')} ph={t('fe.ce.questionPh')} check="eventQuestion" value={f.question} onChange={v=>set('question',v)} err={err.question}/></>}
+  <div className="field"><span className="flabel">{t('fe.ce.price')}</span><Chips>
    {(['free','door','ext'] as const).map(k=>chip(f.price===k,t('fe.ce.price.'+k),()=>set('price',k),k))}</Chips></div>
   {f.price!=='free'&&<div className="row g8 ev-price k-al-start">
    <div className="grow"><Field name="amount" label={t('fe.ce.amount')} ph="15" inputMode="decimal" value={f.amount} onChange={v=>set('amount',v)} err={err.amount}/></div>
@@ -338,7 +338,7 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
   </div>}
   {f.price==='ext'&&<Field name="ext" label={t('fe.ce.ticket')} icon={LinkIcon} ph="tickets.example.org" hint={t('fe.ce.ticketHint')} value={f.ticketUrl} onChange={v=>set('ticketUrl',v)} err={err.ticketUrl}/>}
   <Field name="reqs" label={t('fe.ce.reqs')} opt textarea rows={3} check="eventRequirements" ph={t('fe.ce.reqsPh')} value={f.requirements} onChange={v=>set('requirements',v)} err={err.requirements}/>
-  <Alert icon={EyeOff} className="mt8">{t('fe.ce.listsHidden')}</Alert>
+  <Alert icon={EyeOff}>{t('fe.ce.listsHidden')}</Alert>
  </>;
  if(step===4){
   const {start,end}=times(f);const ok=Number.isFinite(start)&&Number.isFinite(end);
@@ -352,9 +352,9 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
    <EventTile cover={f.cover?<img className="evimg" src={f.cover.preview} alt="" draggable={false}/>:<div className="plate" style={namedPlate(f.plate)}><span className="pi"><Calendar/></span></div>}
     {...(ok?{day:fmt(start,{day:'numeric'}),month:fmt(start,{month:'short'})}:{})} place={area} placeIcon={f.format==='online'?Video:MapPin}
     kicker={<>{f.kind?t('fe.ce.kind.'+f.kind):''}{acting?' · '+acting.name:''}</>} title={f.title.trim()} time={ok?fmt(start,{hour:'2-digit',minute:'2-digit'}):''} price={priceText}/>
-   <Card list className="mt12"><Row icon={pv==='ok'?Unlock:Lock} tone={pv==='ok'?'g':undefined} title={f.format==='online'?t('fe.ce.pv.link'):t('fe.ce.pv.address')}
+   <Card list><Row icon={pv==='ok'?Unlock:Lock} tone={pv==='ok'?'g':undefined} title={f.format==='online'?t('fe.ce.pv.link'):t('fe.ce.pv.address')}
     sub={pv==='ok'?(f.format==='online'?f.joinUrl.trim():f.exactAddress.trim()):t('fe.ce.pv.hidden')}/></Card>
-   <Card list className="mt12">
+   <Card list>
     <Row icon={Calendar} tone="l" title={ok?fmt(start,{weekday:'short',day:'numeric',month:'long'}):''}
      sub={<>{ok?`${fmt(start,{hour:'2-digit',minute:'2-digit'})}–${fmt(end,{hour:'2-digit',minute:'2-digit'})}`:''} {f.format==='online'?t('fe.ce.pv.yourTime'):t('fe.ce.pv.localTime')}</>}/>
     <Row icon={Ticket} tone="a" title={priceText}
@@ -363,7 +363,7 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
    {f.description.trim()&&<><SectionLabel>{t('fe.ce.pv.about')}</SectionLabel><div className="md bio"><p>{f.description.trim()}</p></div></>}
    {f.requirements.trim()&&<><SectionLabel>{t('fe.ce.reqs')}</SectionLabel><Card><div className="fact"><i className="v"><Check/></i><span>{f.requirements.trim()}</span></div></Card></>}
    {f.requiresApplication&&f.question.trim()&&<><SectionLabel>{t('fe.ce.question')}</SectionLabel><Note>{f.question.trim()}</Note></>}
-   <Alert kind="warn" icon={Clock} className="mt12">{edit?(frozen?t('fe.ece.e.reviewPublished'):t('fe.ece.e.reviewBefore')):couple?t('fe.ce.reviewCouple'):t('fe.ce.review')}</Alert>
+   <Alert kind="warn" icon={Clock}>{edit?(frozen?t('fe.ece.e.reviewPublished'):t('fe.ece.e.reviewBefore')):couple?t('fe.ce.reviewCouple'):t('fe.ce.review')}</Alert>
   </>;
  }
 
@@ -373,12 +373,12 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
   </Bar>
   <div className="view nodock cta1"><div className="wrap">
    <Steps step={step} total={4} name={names[step-1]!}/>
-   {edit&&edit.pendingChange!=null&&step===1&&<Alert kind="warn" role="none" icon={Clock} className="mb12">{t('fe.ece.e.pendingChange')}</Alert>}
+   {edit&&edit.pendingChange!=null&&step===1&&<Alert kind="warn" role="none" icon={Clock}>{t('fe.ece.e.pendingChange')}</Alert>}
    {step<4?<Group><Card form>{body}</Card></Group>:body}
-   {notice&&<Alert ref={noticeRef} kind={notice.kind} noIcon className="mt12" action={stale&&reload?<Btn kind="text" auto icon={RefreshCw} onClick={reload}>{t('fe.ece.reload')}</Btn>:undefined}>{notice.text}</Alert>}
+   {notice&&<Alert ref={noticeRef} kind={notice.kind} noIcon action={stale&&reload?<Btn kind="text" auto icon={RefreshCw} onClick={reload}>{t('fe.ece.reload')}</Btn>:undefined}>{notice.text}</Alert>}
    {draftId&&(asking
-    ?<Alert kind="warn" noIcon role="alertdialog" className="mt12" action={<><Btn kind="danger" size="sm" auto onClick={removeDraft} disabled={busy}>{t('fe.ce.draftDeleteOk')}</Btn><Btn kind="text" size="sm" auto onClick={()=>setAsking(false)}>{t('fe.ce.cancel')}</Btn></>}>{t('fe.ce.draftDeleteAsk')}</Alert>
-    :<div className="row mt12"><Btn kind="text" size="sm" auto onClick={()=>setAsking(true)} disabled={busy}>{t('fe.ce.draftDelete')}</Btn></div>)}
+    ?<Alert kind="warn" noIcon role="alertdialog" action={<><Btn kind="danger" size="sm" auto onClick={removeDraft} disabled={busy}>{t('fe.ce.draftDeleteOk')}</Btn><Btn kind="text" size="sm" auto onClick={()=>setAsking(false)}>{t('fe.ce.cancel')}</Btn></>}>{t('fe.ce.draftDeleteAsk')}</Alert>
+    :<div className="row"><Btn kind="text" size="sm" auto onClick={()=>setAsking(true)} disabled={busy}>{t('fe.ce.draftDelete')}</Btn></div>)}
   </div></div>
   <div className="ctabar"><div className="wrap"><div className="row g8">
    {step>1&&<Btn kind="soft" fit icon={ChevronLeft} onClick={back} disabled={busy}>{t('fe.ce.back')}</Btn>}
