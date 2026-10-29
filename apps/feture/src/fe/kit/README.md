@@ -65,6 +65,12 @@ text), `onClick` (the whole notice opens something), `role="alertdialog"` (an in
 `onComplete`, `onEnter`, `digitLabel` (the app's `.code` look); `RangeDual labels`; `Note as="ul"`.
 Token added: `--fs-xl` (24).
 
+Feed sweep (29.10.2026, kit.css): with no `.ctx` column the desktop grid grows both sides alike, so the content
+column sits in the middle of the window; `.inputbar` follows `--page-max` on tablet / desktop; `RichEditor`'s bar wraps
+on a narrow phone instead of cutting buttons off; the search field's clear «×» is `--mute`, not system blue; an `Alert`
+inside a post or a list of posts gets the 12 px rhythm like in a `Card`; `LikesLine` right under a post sits 12 px
+under its actions.
+
 ## Domain components (`kit/domain.tsx`, Storybook «Домен»)
 
 Product pieces that repeat or carry their own look. Screens use these, never the markup.

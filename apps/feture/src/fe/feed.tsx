@@ -1,8 +1,8 @@
-import {useCallback,useEffect,useMemo,useRef,useState,type CSSProperties,type ReactNode} from 'react';
+import {Fragment,useCallback,useEffect,useMemo,useRef,useState,type CSSProperties,type ReactNode} from 'react';
 import {useLocation,useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {ArrowUpDown,AtSign,Bell,BellOff,Bookmark,Check,Calendar,ChartColumn,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,FileText,Globe,Heart,Image as ImageIcon,KeyRound,Lock,MessageCircle,MessageSquareText,Newspaper,Pencil,Plus,Search,SendHorizontal,Share,SlidersHorizontal,Sparkles,Trash2,User,Users,X} from 'lucide-react';
+import {AtSign,Bell,BellOff,Bookmark,Check,Calendar,ChartColumn,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,FileText,Globe,Heart,Image as ImageIcon,KeyRound,Lock,MessageCircle,MessageSquareText,Newspaper,Pencil,Plus,Search,SendHorizontal,Share,SlidersHorizontal,Sparkles,Trash2,User,Users,X} from 'lucide-react';
 import type {LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {Actions,articlePlate,ActingAv,ActionLine,ActivityCard,ActivityItem,Alert,ArticleCard,ArticleImage,Ask,Av,BAD_CHARS,NewPill,Bar,Btn,Card,Chip,Chips,Counter,Empty,FeedEvents,Field,FilePick,Group,H,IconBtn,LoadMore,Input,LikesLine,Note,QuickStart,RichEditor,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,VideoBadge,View,ViewerPostBar,hasLongWord,mdImages,type RichEditorHandle} from './kit';
@@ -229,7 +229,7 @@ export function FeedTab(){
  else body=<>
   {newer&&<NewPill label={t('fe.kit.newPosts')} onClick={()=>{seen();void refreshReads(()=>load());}}/>}
   <div className="posts">{items.flatMap((p,i)=>[isAct(p)?<ActivityCardOf key={p.id} a={p} onMenu={()=>setActMenu(p)}/>
-   :gone[p.id]?<Alert key={p.id} kind="info" icon={EyeOff} className="mb12" action={<Actions><Btn size="sm" kind="soft" fit onClick={()=>restore(p.id,gone[p.id]!)}>{t('fe.tl.undo')}</Btn>
+   :gone[p.id]?<Alert key={p.id} kind="info" icon={EyeOff} action={<Actions><Btn size="sm" kind="soft" fit onClick={()=>restore(p.id,gone[p.id]!)}>{t('fe.tl.undo')}</Btn>
      <Btn size="sm" kind="text" fit onClick={()=>muteAuthor(gone[p.id]!)}>{t('fe.w3.hide.author',{name:gone[p.id]!.name})}</Btn></Actions>}>{t('fe.w3.hide.row')}</Alert>
    :<PostCard key={p.id} post={p} onChange={replace} onExpired={()=>refetch(p.id)}
    onRemove={r=>{
@@ -258,7 +258,7 @@ export function FeedTab(){
      <Chips scroll label={t('fe.w3.pop.chips')}><Chip filter on={!popTag} onClick={()=>setPopTag('')}>{t('fe.w3.pop.all')}</Chip>
       {myTopics.map(x=><Chip key={x} filter on={popTag===x} onClick={()=>setPopTag(popTag===x?'':x)}>#{tname(x)}</Chip>)}</Chips>
      <PopularDiscussions topic={popTag}/></>)
-    :ready&&(chips.length>0||catalog.length>0)&&<div className="filterline"><Chips scroll>{chips}</Chips>
+    :ready&&(chips.length>0||catalog.length>0)&&(filtN(f)>0||!!items?.length)&&<div className="filterline"><Chips scroll>{chips}</Chips>
      <Chip filter on={filtN(f)>0} icon={SlidersHorizontal} label={t('fe.fd.filters')} popup onClick={()=>setSheet('filters')}>{t('fe.fd.filters')}{filtN(f)>0&&<em className="badge-abs">{filtN(f)}</em>}</Chip>
     </div>}
    {body}
@@ -416,10 +416,11 @@ export function PostCard({post,onChange,onRemove,onExpired,full=false,onReply,pr
   <div className="post-h">
    <button type="button" className="who" disabled={preview} onClick={()=>navigate(mine||post.author.id===acting?.id?'/n/me':'/n/people/'+post.author.id)}>
     <Av name={nameOf(post.author)} seed={post.author.id} size="sm" couple={coupleOf(post.author)} src={post.author.avatar}/>
-    <span className="tx"><b><span className="nmt">{nameOf(post.author)}</span><NameBadges p={post.author}/></b><small>{preview?t('fe.fd.justNow'):when(post.publishedAt,locale)}
-     {AudI&&<> · <span className="aud"><AudI/>{t('fe.fd.aud.'+post.audience)}</span></>}
-     {mine&&post.inFeed===false&&<> · <span className="aud"><EyeOff/>{t('fe.fd.notInFeed')}</span></>}
-     {post.state&&post.state!=='published'?' · '+t('fe.feed.state.'+post.state):''}{post.editedAt&&!preview?' · '+t('fe.fd.edited'):''}</small></span>
+    <span className="tx"><b><span className="nmt">{nameOf(post.author)}</span><NameBadges p={post.author}/></b><small>{/* Parts joined by « · » only between them: a post in review has no time yet, so no dangling dot. */}
+     {[preview?t('fe.fd.justNow'):when(post.publishedAt,locale),
+      AudI&&<span className="aud"><AudI/>{t('fe.fd.aud.'+post.audience)}</span>,
+      mine&&post.inFeed===false&&<span className="aud"><EyeOff/>{t('fe.fd.notInFeed')}</span>,
+      post.state&&post.state!=='published'?t('fe.feed.state.'+post.state):'',post.editedAt&&!preview?t('fe.fd.edited'):''].filter(Boolean).map((x,i)=><Fragment key={i}>{i>0&&' · '}{x}</Fragment>)}</small></span>
    </button>
    {!preview&&<IconBtn icon={Ellipsis} kind="ghost" size="sm" label={t('fe.more')} aria-haspopup="dialog" aria-expanded={menu} onClick={e=>{more.current=e.currentTarget;setMenu(true);}}/>}
   </div>
@@ -551,19 +552,21 @@ export function PostScreen(){
    {error?<Empty icon={Lock} title={t('fe.feed.unavailable')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>navigate('/n/feed')}>{t('fe.feed.toFeed')}</Btn></Empty>
     :!post||!list?<Skel kind="post" rows={1}/>
     :<>
-     {typeof notice==='string'&&notice&&<Alert kind="ok" className="mb12">{notice}</Alert>}
+     {typeof notice==='string'&&notice&&<Alert kind="ok">{notice}</Alert>}
      <PostCard post={post} onChange={setPost} full onReply={focusBox} onExpired={()=>{call('post.get',{postId:id},onePost,{fresh:true}).then(r=>setPost(r.post)).catch(()=>{});}} onRemove={r=>{
       navigate('/n/feed',{replace:true});const undo=r.undo;
       toast(r.notice,{type:'ok',action:undo?{label:t('fe.tl.undo'),fn:()=>{undo().then(()=>navigate('/n/feed/post/'+id),e=>toast(feErrorMessage(e,t),{type:'err'}));}}:null});
      }}/>
      {likesLine()}
-     <SectionLabel id="replies">{plural(post.replies,['ответ','ответа','ответов'],['reply','replies'],locale)}</SectionLabel>
-     {list.some(r=>!r.deleted)?<ReplyTree list={list} sort={sort} setSort={s=>{setSort(s);setLimit(REPLY_PAGE);}} open={open} setOpen={setOpen} liked={liked} delta={delta}
+     {/* One line: how many replies and, with two threads or more, their order on the right (no separate «Сортировка» row). */}
+     <SectionLabel id="replies" action={list.filter(r=>!r.parentId||!list.some(x=>x.id===r.parentId)).length>1&&<span className="fl-row cm-sort"><SelectRow solo label={t('fe.fd.sortAria')} value={sort}
+      onChange={s=>{setSort(s);setLimit(REPLY_PAGE);}} options={[['top',t('fe.fd.sortTop')],['new',t('fe.fd.sortNew')]] as const}/></span>}>{plural(post.replies,['ответ','ответа','ответов'],['reply','replies'],locale)}</SectionLabel>
+     {list.some(r=>!r.deleted)?<ReplyTree list={list} sort={sort} open={open} setOpen={setOpen} liked={liked} delta={delta}
        onLike={likeReply} onReply={r=>{setEditing(null);setTarget(r);focusBox();}} onMore={setMenu} limit={limit} onPage={()=>setLimit(n=>n+REPLY_PAGE)}/>
       :!failed.length&&<button type="button" className="note-empty" onClick={focusBox}>{t('fe.feed.noReplies')}</button>}
-     {failed.map(f=><Alert key={f.opId} kind="err" role="status" className="mt8" action={<Stack row gap={2}>
+     {failed.map(f=><Alert key={f.opId} kind="err" role="status" action={<Actions>
       <Btn size="sm" fit busy={busy} disabled={busy} onClick={()=>retry(f)}>{t('fe.w3.retry.again')}</Btn>
-      <Btn size="sm" kind="text" fit onClick={()=>{setFailed(l=>l.filter(x=>x.opId!==f.opId));setText(f.body);focusBox();}}>{t('fe.w3.retry.edit')}</Btn></Stack>}>
+      <Btn size="sm" kind="text" fit onClick={()=>{setFailed(l=>l.filter(x=>x.opId!==f.opId));setText(f.body);focusBox();}}>{t('fe.w3.retry.edit')}</Btn></Actions>}>
       <b>{t('fe.w3.retry.notSent')}</b> {f.body.length>140?f.body.slice(0,140)+'…':f.body}</Alert>)}
     </>}
   </View>
@@ -588,7 +591,7 @@ const rootOf=(list:Reply[],id:string)=>{const by=new Map(list.map(r=>[r.id,r]));
 /** Replies like Threads / X: a top-level reply with a thread line; every answer inside the branch hangs one step in,
  * deeper answers say whom they answer. A long branch shows two answers and «Ещё N ответов». */
 const REPLY_PAGE=20;
-function ReplyTree({list,sort,setSort,open,setOpen,liked,delta,onLike,onReply,onMore,limit,onPage}:{list:Reply[],sort:'top'|'new',setSort:(s:'top'|'new')=>void,open:string[],setOpen:(f:(o:string[])=>string[])=>void,
+function ReplyTree({list,sort,open,setOpen,liked,delta,onLike,onReply,onMore,limit,onPage}:{list:Reply[],sort:'top'|'new',open:string[],setOpen:(f:(o:string[])=>string[])=>void,
  liked:Set<string>,delta:Record<string,number>,onLike:(r:Reply)=>void,onReply:(r:Reply)=>void,onMore:(r:Reply)=>void,limit:number,onPage:()=>void}){
  const {t,locale}=useI18n();const navigate=useNavigate();const {acting}=useFe();
  const by=useMemo(()=>new Map(list.map(r=>[r.id,r])),[list]);
@@ -617,8 +620,6 @@ function ReplyTree({list,sort,setSort,open,setOpen,liked,delta,onLike,onReply,on
    </>}</div>
   </article>;};
  return <>
-  {roots.length>1&&<div className="fl-row cm-sort"><span className="sortlab"><ArrowUpDown/>{t('fe.fd.sort')}</span>
-   <SelectRow solo label={t('fe.fd.sortAria')} value={sort} onChange={setSort} options={[['top',t('fe.fd.sortTop')],['new',t('fe.fd.sortNew')]] as const}/></div>}
   {ordered.slice(0,limit).map(root=>{const all=flat(root);const isOpen=open.includes(root.id)||all.length<=3;const shown=isOpen?all:all.slice(0,2);const rest=all.length-shown.length;
    return <div key={root.id} className={'th'+(all.length?' has-kids':'')}>{one(root,root,false)}
     {all.length>0&&<div className="cm-kids">{shown.map(c=>one(c,root,true))}
@@ -628,7 +629,7 @@ function ReplyTree({list,sort,setSort,open,setOpen,liked,delta,onLike,onReply,on
      {isOpen&&all.length>3&&<button type="button" className="cm-more less" onClick={()=>setOpen(o=>o.filter(x=>x!==root.id))}>{t('fe.fd.collapse')}</button>}
     </div>}
    </div>;})}
-  {ordered.length>limit&&<Btn kind="soft" className="mt8" onClick={onPage}>{t('fe.w3.replies.more',{n:Math.min(REPLY_PAGE,ordered.length-limit),m:ordered.length-limit})}</Btn>}
+  <LoadMore more={ordered.length>limit} busy={false} error={null} onMore={onPage}/>
  </>;
 }
 
@@ -809,7 +810,7 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
  const AUDS:[Audience,LucideIcon,string,string][]=[['all',Globe,t('fe.fd.aud2.all'),couple?t('fe.fd.aud2.allSubUs'):t('fe.fd.aud2.allSub')],['followers',Users,t('fe.fd.aud2.followers'),couple?t('fe.fd.aud2.followersSubUs'):t('fe.fd.aud2.followersSub')],
   ['granted',KeyRound,t('fe.fd.aud2.granted'),couple?t('fe.fd.aud2.grantedSubUs'):t('fe.fd.aud2.grantedSub')],...(edit?.audience==='only'?[['only',EyeOff,t('fe.fd.aud2.only'),t('fe.fd.aud2.onlySub')] as [Audience,LucideIcon,string,string]]:[])];
  const aud=AUDS.find(a=>a[0]===audience)??AUDS[0]!;const AudIcon=aud[1];
- const who=[communityId?'':aud[3],couple?t('fe.fd.asCoupleLine'):'',hasMedia?(live?t('fe.fd.hintLive'):t('fe.fd.hintReview')):''].filter(Boolean).join('. ');
+ const who=[communityId?'':aud[3],hasMedia?(live?t('fe.fd.hintLive'):t('fe.fd.hintReview')):''].filter(Boolean).join('. ');
  const barTitle=communityId&&!edit&&!note?t(couple?'fe.cm.topicCouple':'fe.comm.newTopic'):draft?(note?t('fe.fd.noteDraft'):t('fe.fd.draft')):edit?(note?t('fe.fd.editNote'):t('fe.fd.editPost')):note?t('fe.fd.newNote'):t('fe.feed.new');
  // «Кому видно» on the left, the choice on the right (owner 28.10.2026), the same row in every composer.
  const audSelect=()=><SelectRow icon={AudIcon} label={t('fe.fd.audLabel')} value={audience} options={AUDS.map(a=>[a[0],a[2]] as const)}
@@ -863,14 +864,14 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
    <header className="bar"><IconBtn icon={ChevronLeft} kind="ghost" label={t('fe.back')} onClick={()=>setPreview(false)}/><H level={1} className="sm" tabIndex={-1}>{t('fe.fd.preview')}</H></header>
    <View className="nodock cta1">
     <Card className="preview-post k-preview-post"><PostCard post={fake} onChange={()=>{}} onRemove={()=>{}} full preview/></Card>
-    <Card list className="mt16">{audRow()}</Card>
-    {steps.length>0&&<Card className="mt16 next-steps"><b>{t('fe.fd.next.title')}</b><ul>{steps.map(s=><li key={s}>{s}</li>)}</ul></Card>}
-    {failure&&<Alert kind="err" className="mt12">{failure}</Alert>}
+    <Card list>{audRow()}</Card>
+    {steps.length>0&&<Card className="next-steps"><b>{t('fe.fd.next.title')}</b><ul>{steps.map(s=><li key={s}>{s}</li>)}</ul></Card>}
+    {failure&&<Alert kind="err">{failure}</Alert>}
    </View>
-   <div className="ctabar"><div className="wrap"><div className="row g8">
-    <Btn kind="soft" fit onClick={()=>setPreview(false)}>{t('fe.fd.change')}</Btn>
+   <div className="ctabar"><div className="wrap"><Actions>
+    <Btn kind="soft" onClick={()=>setPreview(false)}>{t('fe.fd.change')}</Btn>
     <Btn onClick={publish} disabled={!!busy||uploading} busy={busy==='publish'}>{cta}</Btn>
-   </div></div></div>
+   </Actions></div></div>
   </>;
  }
 
@@ -879,8 +880,8 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
    {!live&&<Btn kind="text" auto busy={busy==='draft'} disabled={!!busy} onClick={saveDraft}>{t('fe.fd.toDraft')}</Btn>}
    {live&&<Btn kind="text" auto busy={busy==='draft'} disabled={!!busy} onClick={()=>void saveEdits()}>{t('fe.w3.edits.save')}</Btn>}</header>
   <View className="nodock cta1">
+   <Card list>{audRow()}</Card>
    <Group>
-   <Card list className="mb12">{audRow()}</Card>
    <Card className="compose v14">
     {who&&<p className="cmp-who">{who}</p>}
     {note&&<Field id="ntitle" label={t('fe.fd.title')} error={errs.title}><Input id="ntitle" invalid={!!errs.title} value={title} maxLength={120} onChange={e=>setTitle(e.target.value)} placeholder={t('fe.fd.titlePh')}/></Field>}
@@ -1039,6 +1040,6 @@ export function SavedEditSheet({e,onClose,onDone}:{e:SavedEdit,onClose:()=>void,
    <Row noChev icon={Eye} title={t('fe.w3.edits.openPost')} onClick={()=>{onClose();navigate('/n/feed/post/'+e.postId);}}/>
    <Row noChev icon={Trash2} danger title={t('fe.w3.edits.discard')} onClick={()=>setAsk(true)}/>
   </Card>
-  {failure&&<Alert kind="err" className="mt12">{failure}</Alert>}
+  {failure&&<Alert kind="err">{failure}</Alert>}
  </Sheet>;
 }

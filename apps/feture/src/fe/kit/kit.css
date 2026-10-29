@@ -445,3 +445,26 @@ html:has(.fe-v21),html:has(.fe-v21) body{overscroll-behavior-y:none}
 .v21 .fin>.df-near{margin-top:10px}.v21 .df-near>.fld{margin-top:0}
 /* A couple without a photo: its two initials sit over the name block's dark scrim (.pc-info, z 4), not under it (29.10 sweep). */
 .v21 .hero>.hero-pairav{z-index:5;pointer-events:none}
+/* Desktop without a context column (no screen fills `.ctx` today): the side and the right column grow alike, so the
+   content column sits in the middle of the window instead of hugging the sidebar with an empty band on the right. */
+@container stage (min-width:1100px){.v21 .root:not(:has(>.ctx)){grid-template-columns:minmax(232px,1fr) minmax(0,880px) minmax(0,1fr)}}
+/* LikesLine under a whole post (the post screen): it belongs to the post's actions, not a block of its own — 12 px
+   under the heart instead of the post's bottom padding plus the line's own margin (34 px). */
+.v21 .post:has(+.likes-line){padding-bottom:4px}
+.v21 .post+.likes-line{margin-top:0}
+/* Editor attach row: a label stays on one line («Мои интересы» broke into two at 390 px and the row looked uneven). */
+.v21 .attach.v14 button>span{white-space:nowrap}
+/* Search field: the browser's own clear «×» was system blue; it takes the kit's quiet ink (Lucide X as a mask). */
+.v21 input[type="search"]::-webkit-search-cancel-button{-webkit-appearance:none;appearance:none;width:18px;height:18px;cursor:pointer;background:var(--mute);
+ -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M18 6 6 18M6 6l12 12'/%3E%3C/svg%3E") center/contain no-repeat;
+ mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M18 6 6 18M6 6l12 12'/%3E%3C/svg%3E") center/contain no-repeat}
+/* The reply / message bar on tablet and desktop follows the page column (--page-max), so the avatar and «Отправить»
+   line up with the post above instead of sticking out by 10 px on each side. */
+@container stage (min-width:768px){.v21 .main>.inputbar.inputbar{padding-inline:max(var(--gut),calc((100% - var(--page-max)) / 2))}}
+/* The same notice rhythm inside a post card and a list of posts (a hidden post's «Вернуть» row, the author's
+   «скрыта по жалобе» notice): 12 px from the block above and below, zero specificity, no margins in the screen. */
+.v21 :where(.post,.posts)>:where(.alert):where(:not(:first-child)),
+.v21 :where(.post,.posts)>:where(.alert)+:where(:not(.alert,[hidden])){margin-top:var(--block-gap)}
+/* RichEditor bar on a narrow phone: the buttons wrap to a second line instead of being cut off (base.css kept
+   `overflow:hidden`, so at 360 px the article's quote and «Фото в текст» were out of reach). */
+.v21 .rte-box>.rte-tb{flex-wrap:wrap;overflow:visible;contain:none}
