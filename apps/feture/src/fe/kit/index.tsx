@@ -260,11 +260,13 @@ export function ChoiceChips<T extends string>({value,options,onChange,label,scro
  * `options`. */
 export function MultiChips<T extends string>({value,options,onChange,label,all,disabled}:{value:readonly T[],options:readonly (readonly [T,ReactNode])[],onChange:(v:T[])=>void,label:string,
  /** The «Всё» chip's label; shown only when there are two options or more. */ all?:ReactNode,disabled?:boolean}){
- const keys=options.map(o=>o[0]);const every=keys.length>0&&keys.every(k=>value.includes(k));
- const flip=(k:T)=>onChange(keys.filter(x=>x===k?!value.includes(k):value.includes(x)));
+ // «Всё» or several (owner 29.10.2026): with every option picked only «Всё» is lit; a tap on one part then picks that
+ // part alone; picking the last missing part lights «Всё» again.
+ const keys=options.map(o=>o[0]);const showAll=!!all&&keys.length>1;const every=keys.length>0&&keys.every(k=>value.includes(k));
+ const flip=(k:T)=>onChange(showAll&&every?[k]:keys.filter(x=>x===k?!value.includes(k):value.includes(x)));
  return <div className="chips" role="group" aria-label={label}>
-  {all&&keys.length>1&&<button type="button" disabled={disabled} className={'chip'+(every?' on':'')} aria-pressed={every} onClick={()=>onChange(every?[]:keys)}>{all}</button>}
-  {options.map(([k,l])=>{const on=value.includes(k);return <button key={k} type="button" disabled={disabled} className={'chip'+(on?' on':'')} aria-pressed={on} onClick={()=>flip(k)}>{l}</button>;})}
+  {showAll&&<button type="button" disabled={disabled} className={'chip'+(every?' on':'')} aria-pressed={every} onClick={()=>onChange(keys)}>{all}</button>}
+  {options.map(([k,l])=>{const on=value.includes(k)&&!(showAll&&every);return <button key={k} type="button" disabled={disabled} className={'chip'+(on?' on':'')} aria-pressed={on} onClick={()=>flip(k)}>{l}</button>;})}
  </div>;
 }
 /** Several values from a list as rows with a box (what to open, what to keep). A row may say more under its title

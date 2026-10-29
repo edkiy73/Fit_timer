@@ -16,7 +16,7 @@ export const Набор:S={name:'Несколько из набора',render:()
 export const НесколькоСоВсё:S={name:'Несколько из набора со «Всё» (MultiChips)',render:()=>{const [v,setV]=useState<('info'|'media'|'interests')[]>(['info','media','interests']);
  return <Stack gap={3}><MultiChips label="Что запросить" all="Всё" value={v} onChange={setV} options={[['info','Описание'],['media','Фото и видео'],['interests','Интересы']]}/>
   <MultiChips label="Что запросить" all="Всё" value={[]} onChange={()=>{}} options={[['info','Описание'],['interests','Интересы']]}/>
-  <MultiChips label="Что запросить" all="Всё" disabled value={['info']} onChange={()=>{}} options={[['info','Описание'],['media','Фото']]}/></Stack>;}};
+  <MultiChips label="Что запросить" all="Всё" disabled value={['info']} onChange={()=>{}} options={[['info','Описание'],['media','Фото и видео']]}/></Stack>;}};
 export const ОдинИзНабора:S={name:'Один из набора (ChoiceChips)',render:()=>{const [v,setV]=useState('all');return <ChoiceChips label="Кто видит" value={v} onChange={setV} options={[['all','Все'],['fol','Подписчики'],['only','Только я']]}/>;}};
 export const Радиосписок:S={name:'Радиосписок',render:()=>{const [v,setV]=useState('spam');return <RadioList label="Причина" value={v} onChange={setV} options={[['spam','Спам или мошенничество'],['threat','Угрозы или шантаж','С подробностями'],['other','Другое']]}/>;}};
 export const НесколькоСтроками:S={name:'Несколько из списка строками (CheckList)',render:()=>{const [v,setV]=useState<('info'|'photos'|'video')[]>(['info','photos']);
