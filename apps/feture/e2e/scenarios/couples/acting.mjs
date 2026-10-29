@@ -23,7 +23,8 @@ export default [
    await noPicker(t);
    // The editor.
    await composerSheet(t); await t.tap('.sheet.on .li:has-text("Публикация")'); await t.see('.compose .rte-ed[data-ph="О чём хотите рассказать?"]');
-   await t.see('.cmp-who:has-text("От пары")'); await t.see('.ctabar button:has-text("Опубликовать от пары"), .compose ~ * button:has-text("Опубликовать от пары"), button:has-text("Опубликовать от пары")');
+   // The editor shows the acting couple by avatar and «Опубликовать от пары» (no separate «От пары» line since 29.10).
+   await t.see('.ctabar button:has-text("Опубликовать от пары"), .compose ~ * button:has-text("Опубликовать от пары"), button:has-text("Опубликовать от пары")');
    await noPicker(t);
    // A reply box under a post the couple can see.
    const post = (await t.api('feed.list', { tab: 'forYou', limit: 5 }, undefined, couple.id)).items?.find(x => x.id && x.type);
