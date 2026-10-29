@@ -3,7 +3,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {ChevronLeft,FileText,Heart,Lock,ShieldCheck,Trash2,Users,type LucideIcon} from 'lucide-react';
 import {apiUrl} from '../api-url';
 import {documentsResponse,type PublishedDocument} from '../feture/document-model';
-import {Alert,Btn,Card,H,Note,Row,Sheet,Skel} from './kit';
+import {Alert,Btn,Card,H,Note,Row,Sheet,Skel,Spacer} from './kit';
 
 /** V21 `ACT.terms` + `ACT.legalDoc`: «Условия и приватность» — four short facts and the documents a new account
  * accepts, each opening its published text (server: /api/catalog?resource=documents). Used by A01 and A04. */
@@ -36,9 +36,10 @@ export function TermsSheet({onClose}:{onClose:()=>void}){
     :<Note key={i}>{b.text}</Note>)}</div>
    :<>
     {facts.map(([Icon,k])=><div key={k} className="fact"><i className="v"><Icon/></i><span><b>{t(`fe.onb.terms.${k}`)}.</b> {t(`fe.onb.terms.${k}Text`)}</span></div>)}
-    {failed?<Alert kind="err" noIcon className="mt16">{t('fe.onb.terms.failed')}</Alert>
-     :docs===null?<div className="mt16"><Skel kind="list" rows={2}/></div>
-     :<Card list className="mt16">{list.map(d=><Row key={d.id} icon={ICON[d.key]??FileText} title={d.title} onClick={()=>setOpen(d)}/>)}</Card>}
+    <Spacer size={3}/>
+    {failed?<Alert kind="err" noIcon>{t('fe.onb.terms.failed')}</Alert>
+     :docs===null?<Skel kind="list" rows={2}/>
+     :<Card list>{list.map(d=><Row key={d.id} icon={ICON[d.key]??FileText} title={d.title} onClick={()=>setOpen(d)}/>)}</Card>}
    </>}
  </Sheet>;
 }
