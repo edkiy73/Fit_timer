@@ -4,7 +4,7 @@ import * as z from 'zod';
 import { id, opId } from './platform.mjs';
 
 /** Six digits from the authenticator app, or a recovery code (xxxxx-xxxxx); spaces are dropped. */
-const factorCode = z.string().max(40).transform(v => v.replace(/\s/g, '')).pipe(z.string().regex(/^(\d{6}|[A-Za-z0-9]{5}-?[A-Za-z0-9]{5})$/));
+export const factorCode = z.string().max(40).transform(v => v.replace(/\s/g, '')).pipe(z.string().regex(/^(\d{6}|[A-Za-z0-9]{5}-?[A-Za-z0-9]{5})$/));
 
 export const staffCommands = {
   'staff.me': { profile: false, write: false, input: z.strictObject({}) },

@@ -33,7 +33,8 @@ Read this before adding or changing a command. Design background: `docs/server/S
 | Live update of the other side | `signal(profileId, kind)` from the handler context (sent after commit) |
 | Idempotent writes | the handler pipeline stores `opId` results; never add a second ledger |
 | Text from people in a contract | `field('<name>')` from `contracts/_text.mjs` (rules in `FIELD`, shared with the app's forms); `text(max)` / `line(max)` only for a one-off. Never `z.string()` for something people type and others see |
-| Second factor (TOTP + recovery codes; staff now, everyone later) | `startEnrol`, `confirmEnrol`, `checkCode`, `removeFactor` (`second-factor.mjs`); staff gate `requireStaff(q, account, roles, {fresh})` |
+| Second factor (TOTP + recovery codes; staff required, everyone optional) | `startEnrol`, `confirmEnrol`, `checkCode`, `removeFactor` (`second-factor.mjs`); staff gate `requireStaff(q, account, roles, {fresh})`; sign-in second step `signinBlocked` / `passSignin` (`signin.mjs`, checked by the handler before every command — only `SIGNIN_OPEN` pass) and `guardCoreBody` / `guardCoreRequest` (`core-guard.mjs`) for every other endpoint that takes a Core session |
+| New-device sign-in notice | `noteSignin` / `sendSigninMail` (`signin.mjs`), run by the handler and the Core guard; never from a command |
 | Typed words / keyset pages | `likePattern(q)` for ILIKE, `writeCursor(at, id)` (`search.mjs`) |
 | «Популярное» order / who takes a mention | `popularScore(p, viewer)`, `acceptsMention(target, author)` (`sql-rules.mjs`) — SQL pieces, never a second copy of the rule |
 | A path that changes a post outside the edit (album, narrowing) | `rebaseRevisions(q, postIds)` (`commands/posts.mjs`) keeps a waiting staff review current |
@@ -89,7 +90,7 @@ a rate-limit error for a read. Old → new (28.10.2026):
 | `couple.invite`, `couple.link`, `couple.linkAccept` | 10 / day | 20 / day |
 | `event.submit`, `event.announce` | 10 / day | 20 / day |
 | `report.create` | 10 / day | 30 / day |
-| private part requests (`LIMITS.requestsPerDay`) | 10 / day | 20 / day |
+| private part requests (`LIMITS.requestsPerDay`; owner 29.10.2026: «10 в день более чем достаточно») | 20 / day | 10 / day |
 | `community.create`, `appeal.create`, `place.submit`, `support.create`, `account.export` | 5 / day | 10 / day |
 | `verification.ageStart`, `verification.photoStart` | 5 / day | 10 / day |
 | `premium.purchase`, `premium.gift` | 20 / day | 40 / day |
@@ -99,5 +100,8 @@ a rate-limit error for a read. Old → new (28.10.2026):
 | `chat.request` calls (outer bound, refusals included) | — | 300 / day |
 | `staff.totpVerify`, `staff.totpConfirm` (calls; wrong codes lock after 5 in 15 min, `server/second-factor.mjs`) | — | 60 / hour |
 | `staff.totpStart` | — | 20 / hour |
+| `account.factorConfirm`, `account.factorOff`, `account.factorCodes`, `account.factorSignIn` (the staff `factor.check` budget) | — | 60 / hour |
+| `account.factorStart` (`factor.start`) | — | 20 / hour |
+| New-device notices (`server/signin.mjs`) | — | 5 / hour per account |
 | DSA notices without an account (`api/fe.mjs` notice) | 5 / hour per IP | unchanged (anonymous, abuse only) |
 

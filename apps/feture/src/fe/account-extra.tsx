@@ -10,6 +10,7 @@ import {useToast} from './toast';
 import {useFe,useShown} from './session';
 import {useDate} from './premium';
 import {SupportBlock} from './support';
+import {FactorSettings} from './factor';
 
 /** V21 K06 (sign-in & security) and S01 (help & safety); B01 Premium lives in premium.tsx. */
 export {PremiumScreen,usePremiumStatus} from './premium';
@@ -109,6 +110,7 @@ export function SecurityScreen(){
     <Row icon={Mail} title={<>{t('fe.ax.sec.email')} <Pill tone="ok">{t('fe.ax.sec.primary')}</Pill></>} sub={<span className="one">{email||'—'}</span>}/>
     {auth.client.changeEmailStart&&<Row icon={Pencil} title={t('fe.w8.sec.change')} sub={t('fe.w8.sec.changeSub')} onClick={()=>setSheet('email')}/>}
    </Card></Group>
+   <FactorSettings/>
    <Group title={t('fe.dev.title')} foot={t('fe.dev.note')}>
     {loadErr?<Alert kind="err" action={<Btn kind="soft" size="sm" auto onClick={load}>{t('fe.retry')}</Btn>}>{t('fe.w8.sec.loadFailed')}</Alert>
      :!list?<Skel kind="list" rows={1}/>

@@ -44,13 +44,18 @@ commands; a second call only adds what is missing.
 | `stranger` | like `basic` | short-lived contacts: a match that is ended, a block that is undone, a post author, a joiner |
 | `inviter`, `invitee` | like `basic`, free of couples between runs | the couple flow |
 | `full` | visible in Discover, approved photo, age verified, public interests, a private text | the main actor of most screens |
-| `asker` (`asker2`, `asker3`) | a `full` person | asks others for their private part (20 a day; the next one takes over) |
+| `asker` (`asker2`, `asker3`) | a `full` person | asks others for their private part (10 a day; the next one takes over) |
 | `mate` | a `full` person | talks with `chats` (both age verified: timer / once photos), proposes links, follows |
 | `chats` | a `full` person with conversations with `mate`, `asker`, `basic` (messages both ways); `.with.<kind>.conversationId` | chat list and conversation |
 | `host` | a `full` person owning a published open community (`openId`), a published closed one with a join question (`closedId`), a closed one without a question (`closedNoQId`), a hidden one (`hiddenId`, reached by an invite link), a published open offline event (`eventId`), one with tickets on the organizer’s site (`ticketEventId`), an online event by application (`appEventId`) and a cancelled one (`cancelledEventId`) — approved by STAFF | community owner screens, the inbox with decisions, every way of joining (`communities/joins.mjs`, `event-joins.mjs`, lane `jn`) |
 | `pair` | two `full` people (`pa`, `pb`) in an active couple (`partner`, `coupleId`) | couple screens |
 | `staff` | the shared qa moderator (`qa-staff@feture.test`); its second factor is enrolled on first use and codes are entered by `lib.mjs` (`staffFactor`, the secret in `<E2E_SESSIONS>.factor.json`, never in the repo) | staff screens and review steps only |
 | `staff2` | a second staff account (`qa-staff2@feture.test`, moderator, granted out of band) | the 2FA enrolment screen (the lead resets its factor first) |
+
+A persona with the optional second factor on (`account/factor.mjs`, owner 29.10.2026) keeps its secret in the same
+factor file: the scenario saves it with `saveFactor(factorKey(email), {secret, codes})` before confirming, and from then
+on `api()` enters the sign-in code itself when the server asks for it (403 `second_factor` rule `signin`, also for the
+staff personas after a fresh sign-in). Use a fresh-each-call persona (`temp`) and turn the factor off at the end.
 
 Cooldowns decide which persona a scenario may use repeatedly: a revoked grant, a withdrawn request, a left community
 or a cancelled invite can be redone at once; a **declined** access request (30 days) or couple invitation (7 days)

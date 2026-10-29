@@ -8,12 +8,13 @@ import { setup as baseSetup, op } from './fe-helpers.mjs';
 
 const setup = () => baseSetup({ commands: { ...platform, ...me, ...access } });
 
-test('requests and grants: age check, available scopes, nothing before access, «Описание» opens details and interests, terms', async () => {
+test('requests and grants: age check, available scopes, nothing before access, «Описание» opens details, «Интересы» the private interests, terms', async () => {
   const { pg, db, call, person } = await setup();
   try {
     const a = await person('ua', 'Alex'), b = await person('ub', 'Kira');
     const unverified = await person('uc', 'Noa', { verified: false });
-    assert.equal((await call('uc', unverified, { action: 'access.request', opId: op(), profileId: a, scopes: ['info'] })).rule, 'age_check_required');
+    const r0 = await call('uc', unverified, { action: 'access.request', opId: op(), profileId: a, scopes: ['info'] });
+    assert.deepEqual(['rule', 'who'].map(k => r0[k]), ['age_check_required', 'me']);
     assert.equal((await call('ub', b, { action: 'access.request', opId: op(), profileId: a, scopes: ['info'] })).rule, 'scope_not_available'); // empty part
 
     await call('ua', a, { action: 'private.setText', opId: op(), text: 'Перед встречей — звонок.' });
@@ -21,7 +22,8 @@ test('requests and grants: age check, available scopes, nothing before access, �
     await call('ua', a, { action: 'profile.update', opId: op(), rev: 1, detailsVis: 'granted', genders: ['woman'] });
 
     const veil = await call('ub', b, { action: 'private.get', profileId: a });
-    assert.deepEqual([veil.exists, veil.available, veil.canRequest, veil.text, veil.interests], [true, ['info'], true, undefined, undefined]); // no real data before access
+    assert.deepEqual([veil.exists, veil.available, veil.canRequest, veil.text, veil.interests, veil.age], [true, ['info', 'interests'], true, undefined, undefined, 'ok']); // no real data before access
+    assert.equal((await call('uc', unverified, { action: 'private.get', profileId: a })).age, 'me'); // the screen sends them to the age check first
     assert.equal((await call('ub', b, { action: 'access.request', opId: op(), profileId: a, scopes: ['photos'] })).rule, 'scope_not_available');
     const req = await call('ub', b, { action: 'access.request', opId: op(), profileId: a, scopes: ['info'] });
     assert.equal(req.status, 200);
@@ -34,9 +36,14 @@ test('requests and grants: age check, available scopes, nothing before access, �
     const granted = await call('ua', a, { action: 'access.grant', opId: op(), requestId: req.id, scopes: ['info'], term: '1d' });
     assert.deepEqual([granted.status, granted.state], [200, 'granted']);
 
-    const open = await call('ub', b, { action: 'private.get', profileId: a });
-    assert.deepEqual([open.text, open.scopes], ['Перед встречей — звонок.', ['info']]);
+    let open = await call('ub', b, { action: 'private.get', profileId: a });
+    assert.deepEqual([open.text, open.scopes, open.interests], ['Перед встречей — звонок.', ['info'], []]); // «Описание» alone keeps the interests closed
     assert.ok(new Date(open.until) > new Date());
+    assert.equal((await call('ub', b, { action: 'interests.list', profileId: a })).items.length, 0);
+    const more = await call('ub', b, { action: 'access.request', opId: op(), profileId: a, scopes: ['interests'] });
+    assert.equal((await call('ua', a, { action: 'access.grant', opId: op(), requestId: more.id, scopes: ['info', 'interests'], term: '1d' })).state, 'granted');
+    open = await call('ub', b, { action: 'private.get', profileId: a });
+    assert.deepEqual(open.scopes, ['info', 'interests']);
     assert.deepEqual((await call('ub', b, { action: 'interests.list', profileId: a })).items.map(i => i.topicId), ['bondage']);
     assert.deepEqual(open.interests.map(i => [i.topicId, i.value]), [['bondage', 8]]); // the private part lists its interests
     const mine = await call('ua', a, { action: 'private.get', profileId: a });
@@ -71,20 +78,20 @@ test('decline cooldown, daily budget across «Я» and «Мы», related profile
     await db.query(`update feture.access_request set decided_at = now() - interval '31 days'`);
     assert.equal((await call('ub', b, { action: 'access.request', opId: op(), profileId: a, scopes: ['info'] })).rule, 'not_accepting');
 
-    // Twenty requests a day per account, personal and couple together; cancelling does not refund.
+    // Ten requests a day per account, personal and couple together; cancelling does not refund.
     const owners = [];
-    for (let i = 0; i < 21; i++) {
+    for (let i = 0; i < 10; i++) {
       const o = await person('owner' + i, 'owner' + i);
       await call('owner' + i, o, { action: 'private.setText', opId: op(), text: 'x' });
       owners.push(o);
     }
-    for (let i = 0; i < 16; i++) assert.equal((await call('ub', b, { action: 'access.request', opId: op(), profileId: owners[i], scopes: ['info'] })).status, 200);
-    const last = await call('ub', pair, { action: 'access.request', opId: op(), profileId: owners[16], scopes: ['info'] });
+    for (let i = 0; i < 6; i++) assert.equal((await call('ub', b, { action: 'access.request', opId: op(), profileId: owners[i], scopes: ['info'] })).status, 200);
+    const last = await call('ub', pair, { action: 'access.request', opId: op(), profileId: owners[6], scopes: ['info'] });
     assert.equal(last.status, 200);
     await call('ub', pair, { action: 'access.cancel', opId: op(), requestId: last.id });
-    for (let i = 17; i < 19; i++) assert.equal((await call('ub', b, { action: 'access.request', opId: op(), profileId: owners[i], scopes: ['info'] })).status, 200);
-    // 1 (declined) + 16 + 1 couple (cancelled) + 2 = 20 in the last day.
-    const over = await call('ub', b, { action: 'access.request', opId: op(), profileId: owners[19], scopes: ['info'] });
+    for (let i = 7; i < 9; i++) assert.equal((await call('ub', b, { action: 'access.request', opId: op(), profileId: owners[i], scopes: ['info'] })).status, 200);
+    // 1 (declined) + 6 + 1 couple (cancelled) + 2 = 10 in the last day.
+    const over = await call('ub', b, { action: 'access.request', opId: op(), profileId: owners[9], scopes: ['info'] });
     assert.deepEqual([over.status, over.rule], [429, 'request_quota']);
     assert.equal((await call('ub', b, { action: 'access.lists', tab: 'out' })).quotaLeft, 0);
   } finally { await pg.close(); }
@@ -217,12 +224,12 @@ test('wave 4: request chosen parts, quota left and when it comes back, cancel ke
     await call('ua', a, { action: 'private.setText', opId: op(), text: 'Текст' });
     await privatePhoto(db, a);
     const fresh = await call('ub', b, { action: 'access.quota' });
-    assert.deepEqual([fresh.left, fresh.max, fresh.resetsAt], [20, 20, null]);
+    assert.deepEqual([fresh.left, fresh.max, fresh.resetsAt], [10, 10, null]);
     const veil = await call('ub', b, { action: 'private.get', profileId: a });
-    assert.equal(veil.quota.left, 20);
+    assert.equal(veil.quota.left, 10);
 
     const r = await call('ub', b, { action: 'access.request', opId: op(), profileId: a, scopes: ['info', 'photos'] });
-    assert.deepEqual([r.status, r.state, r.scopes, r.quota.left, r.quotaLeft], [200, 'pending', ['info', 'photos'], 19, 19]);
+    assert.deepEqual([r.status, r.state, r.scopes, r.quota.left, r.quotaLeft], [200, 'pending', ['info', 'photos'], 9, 9]);
     const back = new Date(r.quota.resetsAt).getTime() - Date.now();
     assert.ok(back > 23.9 * 3600e3 && back <= 24 * 3600e3, 'the attempt comes back a day after it was used');
     assert.equal((await call('ub', b, { action: 'access.request', opId: op(), profileId: a, scopes: ['info', 'info'] })).status, 400);
@@ -235,10 +242,10 @@ test('wave 4: request chosen parts, quota left and when it comes back, cancel ke
     const c = await person('uc', 'Noa');
     assert.equal((await call('uc', c, { action: 'access.cancel', opId: op(), requestId: r.id })).status, 404);
     const cancelled = await call('ub', b, { action: 'access.cancel', opId: op(), requestId: r.id });
-    assert.deepEqual([cancelled.state, cancelled.quota.left], ['cancelled', 19]);
-    assert.equal((await call('ub', b, { action: 'access.quota' })).left, 19);
+    assert.deepEqual([cancelled.state, cancelled.quota.left], ['cancelled', 9]);
+    assert.equal((await call('ub', b, { action: 'access.quota' })).left, 9);
     const out = await call('ub', b, { action: 'access.lists', tab: 'out' });
-    assert.deepEqual([out.items[0].state, out.items[0].requested, out.quota.left], ['cancelled', ['info', 'photos'], 19]);
+    assert.deepEqual([out.items[0].state, out.items[0].requested, out.quota.left], ['cancelled', ['info', 'photos'], 9]);
     assert.deepEqual((await call('ub', b, { action: 'access.lists', tab: 'out', filter: 'pending' })).items, []);
     assert.equal((await call('ua', a, { action: 'access.lists', tab: 'incoming' })).items.length, 0);
   } finally { await pg.close(); }
@@ -270,7 +277,7 @@ test('wave 4: grant more than asked, alreadyOpen on a repeat, the three access-c
     // The viewer's private photos carry the viewer's own handle; the owner's own view has none.
     const seen = await call('ub', b, { action: 'private.get', profileId: a });
     assert.deepEqual(seen.media.map((/** @type {any} */ m) => [m.id, m.watermark]), [[photo, '@Kira']]);
-    assert.equal(seen.quota.left, 19);
+    assert.equal(seen.quota.left, 9);
     assert.equal((await call('ua', a, { action: 'private.get', profileId: a })).media[0].watermark, undefined);
 
     // A repeat request: the owner sees what is already open; the new answer replaces it.

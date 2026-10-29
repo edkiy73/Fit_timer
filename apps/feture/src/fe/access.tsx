@@ -2,15 +2,15 @@ import {useCallback,useEffect,useState} from 'react';
 import {useNavigate,useSearchParams} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Lock,LockOpen,Send,X} from 'lucide-react';
-import {Av,Bar,Btn,Card,Chip,Empty,LoadMore,Note,Pill,Row,Seg,Skel,Spacer,Stack,View} from './kit';
+import {Av,Bar,Btn,Card,Chip,Empty,Group,LoadMore,Note,Pill,Row,Seg,Skel,Spacer,Stack,View} from './kit';
 import {useFe} from './session';
-import {useToast} from './toast';
 import {NameBadges} from './faces';
-import {GrantCard,grantsRes,nameOf,outRes,useAccessWords,useCancelRequest,useGrantActions,type GrantItem,type OutItem} from './private';
+import {GrantCard,grantsRes,incomingRes,nameOf,outRes,RequestCards,useAccessWords,useCancelRequest,useGrantActions,type GrantItem,type IncomingList,type OutItem} from './private';
 
-/** V21 P07 — one access centre: «Открыто мной» (narrow / revoke), «Мне открыли», «Мои запросы» (statuses, filter
- * «Ждут ответа», cancel a waiting request). `mine` is the «Моё → Мне открыли» entry: without «Открыто мной».
- * Requests to me and who may ask stay in «Я → Приватное» (linked at the bottom). Lists are paged by the server. */
+/** V21 P07 — the one «Доступы» screen (owner, 29.10.2026: no duplicates): «Открыто» — requests to me waiting for
+ * an answer, then who sees what (narrow / revoke); «Мне открыли»; «Мои запросы» (statuses, filter «Ждут ответа», cancel
+ * a waiting request). «Я → Приватное» opens it on «Открыто», «Моё → Мне открыли» (`/n/me/shared` → `?tab=withme`)
+ * on «Мне открыли». Lists are paged by the server. */
 type Tab='byme'|'withme'|'out';
 const TONE:Record<string,'ok'|'wait'|'v'|'bad'|undefined>={pending:'wait',partial:'ok',granted:'ok',revoked:'bad',replaced:'v'};
 
@@ -27,20 +27,21 @@ function usePaged<T,R extends {items:T[],next?:string|null|undefined}>(fetch:(cu
  return {first,items,load,moreBtn,failed};
 }
 
-export function AccessScreen({mine}:{mine?:boolean}){
- const {acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const [params,setParams]=useSearchParams();
+const TABS:Tab[]=['byme','withme','out'];
+
+export function AccessScreen(){
+ const {acting}=useFe();const {t}=useI18n();const [params,setParams]=useSearchParams();
  const cp=acting?.kind==='couple';const us=cp?'Us':'';
- const tabs:Tab[]=mine?['withme','out']:['byme','withme','out'];
- const raw=params.get('tab') as Tab|null;const tab:Tab=raw&&tabs.includes(raw)?raw:tabs[0]!;
+ const raw=params.get('tab') as Tab|null;const tab:Tab=raw&&TABS.includes(raw)?raw:'byme';
  const set=(k:string,v:string|null)=>{const n=new URLSearchParams(params);if(v)n.set(k,v);else n.delete(k);setParams(n,{replace:true});};
- const title=mine?t(cp?'fe.mx.mine.sharedUs':'fe.mx.mine.shared'):t('fe.ac.title'+us);
+ const title=t('fe.ac.title'+us);
  return <>
   <Bar title={title} back small/>
   <View className="nodock">
-   <Seg value={tab} onChange={v=>set('tab',v)} label={title} options={tabs.map(id=>({id,label:t('fe.ac.tab.'+id+us)}))}/>
+   <Seg value={tab} onChange={v=>set('tab',v)} label={title} options={TABS.map(id=>({id,label:t('fe.ac.tab.'+id+us)}))}/>
    <Spacer size={3}/>
-   {tab==='out'?<OutTab pendingOnly={params.get('f')==='pending'} onFilter={on=>set('f',on?'pending':null)}/>:tab==='withme'?<WithMeTab/>:<ByMeTab/>}
-   <Card list><Row icon={Lock} title={t('fe.ac.priv'+us)} sub={t('fe.ac.privSub'+us)} onClick={()=>navigate('/n/me?layer=priv')}/></Card>
+   {tab==='out'?<OutTab pendingOnly={params.get('f')==='pending'} onFilter={on=>set('f',on?'pending':null)}/>:tab==='withme'?<WithMeTab/>
+    :<ByMeTab/>}
   </View>
  </>;
 }
@@ -91,14 +92,25 @@ function WithMeTab(){
   title={<>{nameOf(g.profile)}<NameBadges p={g.profile}/></>} sub={`${w.what(g.scopes)} · ${w.until(g.until)}`}/>)}</Card>{pg.moreBtn}</>;
 }
 
-/** «Открыто мной»: who sees which parts of my private part; «Изменить» narrows, «Отозвать» after a question. */
+/** «Открыто»: requests to me waiting for an answer first, then who sees which parts of my private part;
+ * «Изменить» narrows, «Отозвать» after a question. */
 function ByMeTab(){
- const {call}=useFe();const {t}=useI18n();
+ const {call}=useFe();const {t}=useI18n();const w=useAccessWords();
+ const [incoming,setIncoming]=useState<IncomingList|null>(null);const [inErr,setInErr]=useState<unknown>(null);
+ const reloadIn=useCallback(()=>{setInErr(null);call('access.lists',{tab:'incoming'},incomingRes,{fresh:true}).then(setIncoming).catch(setInErr);},[call]);
+ useEffect(()=>{reloadIn();},[reloadIn]);
  const fetch=useCallback((cursor?:string)=>call('access.lists',{tab:'byme',...(cursor?{cursor}:{})},grantsRes,{fresh:true}),[call]);
  const pg=usePaged<GrantItem,Awaited<ReturnType<typeof fetch>>>(fetch);
  const acts=useGrantActions(pg.load);
+ const changed=()=>{reloadIn();pg.load();};
  if(pg.failed)return pg.failed;
- if(!pg.items)return <Skel kind="card" rows={2}/>;
- if(!pg.items.length)return <Empty icon={Lock} title={t('fe.ac.by.empty')} text={t('fe.ac.by.emptyText')}/>;
- return <><Stack gap={2}>{pg.items.map((g,i)=><GrantCard key={g.profile?.id??i} g={g} onEdit={()=>acts.edit(g)} onRevoke={()=>acts.revoke(g)}/>)}</Stack>{pg.moreBtn}{acts.node}</>;
+ if(inErr)return <Empty icon={X} role="alert" title={t('fe.error.title')} text={w.err(inErr)}><Btn kind="soft" onClick={reloadIn}>{t('fe.retry')}</Btn></Empty>;
+ if(!pg.items||!incoming)return <Skel kind="card" rows={2}/>;
+ const asks=incoming.items.length>0;
+ if(!asks&&!pg.items.length)return <Empty icon={Lock} title={t('fe.ac.by.empty')} text={t('fe.ac.by.emptyText')}/>;
+ return <>
+  {asks&&<Group title={<>{t('fe.ac.in.title')} · {incoming.items.length}</>}><RequestCards data={incoming} onChanged={changed}/></Group>}
+  {pg.items.length>0&&<Group title={asks?t('fe.ac.in.open'):undefined}><Stack gap={2}>{pg.items.map((g,i)=><GrantCard key={g.profile?.id??i} g={g} onEdit={()=>acts.edit(g)} onRevoke={()=>acts.revoke(g)}/>)}</Stack>{pg.moreBtn}</Group>}
+  {acts.node}
+ </>;
 }

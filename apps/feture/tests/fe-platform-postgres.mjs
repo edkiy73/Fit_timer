@@ -36,6 +36,8 @@ async function setup() {
   await pg.exec(readFileSync(new URL('../supabase/migrations/20261028190000_fe_media_av.sql', import.meta.url), 'utf8').split('-- «Прослушано»')[0]);
   await pg.exec(readFileSync(new URL('../supabase/migrations/20261028231000_fe_video_edit.sql', import.meta.url), 'utf8'));
   await pg.exec(readFileSync(new URL('../supabase/migrations/20261028233000_fe_video_edit_drop.sql', import.meta.url), 'utf8'));
+  // The account read checks whether a second factor is on; the handler checks the sign-in second step and new devices.
+  for (const f of ['20261029140000_fe_second_factor.sql', '20261029180000_fe_user_second_factor.sql']) await pg.exec(readFileSync(new URL('../supabase/migrations/' + f, import.meta.url), 'utf8'));
   await pg.exec('set role feture_api');
   return { pg, db: fromPglite(pg) };
 }
