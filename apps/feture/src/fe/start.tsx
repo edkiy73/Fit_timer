@@ -15,9 +15,10 @@ export function AuthFrame({screen,children}:{screen:string,children:ReactNode}){
 }
 
 /** `bar('',{back:1,actions})` of the auth screens: only «‹» and, where the prototype has it, the language switch. */
-export function AuthBar({onBack,lang}:{onBack?:()=>void,lang?:boolean}){
- const {locale,canSwitch,setPreference}=useI18n();
+export function AuthBar({onBack,onLeave,lang}:{onBack?:()=>void,/** «Выйти»: ends an unfinished sign-up (the session) and returns to the start screen. */ onLeave?:()=>void,lang?:boolean}){
+ const {t,locale,canSwitch,setPreference}=useI18n();
  return <Bar title="" {...(onBack?{onBack}:{})}>
+  {onLeave&&<Btn kind="text" size="sm" onClick={onLeave}>{t('fe.set.logout')}</Btn>}
   {lang&&canSwitch&&<div className="langsw" role="group" aria-label="Language">{(['ru','en'] as const).map(l=><button key={l} type="button" className={locale===l?'on':''} aria-pressed={locale===l} onClick={()=>setPreference(l)}>{l.toUpperCase()}</button>)}</div>}
  </Bar>;
 }
