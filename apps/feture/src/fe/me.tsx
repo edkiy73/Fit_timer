@@ -20,6 +20,7 @@ import {DiscoverPhotoAsk} from './discover-photo';
 import {useDragOrder} from './reorder';
 import {MeGallery} from './gallery';
 import {Viewer} from './post-parts';
+import {MeAboutBlock} from './about-facts';
 
 /** V21 X01 «Я» with the prototype's markup (`meHead18`, `meProfileLayer`, `meVisLayer`): the header with the avatar,
  * bell, «Как видят» and settings; «Нужно решить»; the four layers with their red dots; photos, basics, details,
@@ -140,6 +141,7 @@ export function MeTab(){
        </Card>
        {!p.bio&&<AddCard icon={PenLine} title={t(acting.kind==='couple'?'fe.mp.bioAddUs':'fe.mp.bioAdd')} sub={t(acting.kind==='couple'?'fe.mp.bioAddSubUs':'fe.mp.bioAddSub')} onClick={()=>navigate('/n/me/edit?only=basics')}/>}
       </Group>
+      <MeAboutBlock p={p}/>
       <DetailsBlock p={p} label={label}/>
       {acting.kind==='person'&&couple&&<StatusHint p={p} coupleId={couple.id} onDone={load}/>}
       <MeJars key={p.id}/>

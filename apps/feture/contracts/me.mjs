@@ -3,6 +3,9 @@
 import * as z from 'zod';
 import { id, opId } from './platform.mjs';
 import { field } from './_text.mjs';
+import { ABOUT, ABOUT_FACTS } from './_about.mjs';
+
+export { ABOUT, ABOUT_FACTS };
 
 /** Nickname: 3–20 of [A-Za-z0-9_.], starts and ends with a letter or digit, no '..', at least one letter (V21 AUTH-001). */
 export const handle = z.string().trim().min(3).max(20)
@@ -13,6 +16,17 @@ const codes = (/** @type {number} */ max) => z.array(code).max(max).refine(v => 
 const birthDate = z.iso.date();
 const detailsVis = z.enum(['only', 'granted', 'all']);
 const discoverMode = z.enum(['visible', 'hidden', 'off']);
+
+const aboutVisValue = z.enum(['only', 'granted', 'all']);
+const aboutInput = {
+  height: z.int().min(ABOUT.height.min).max(ABOUT.height.max).nullable().optional(),
+  smoking: z.enum(ABOUT.smoking).nullable().optional(),
+  alcohol: z.enum(ABOUT.alcohol).nullable().optional(),
+  kids: z.enum(ABOUT.kids).nullable().optional(),
+  langs: z.array(z.enum(ABOUT.langs)).max(ABOUT.langsMax).refine(v => new Set(v).size === v.length, { message: 'duplicates' }).optional(),
+  zodiac: z.enum(ABOUT.zodiac).nullable().optional(),
+  aboutVis: z.strictObject(Object.fromEntries(ABOUT_FACTS.map(k => [k, aboutVisValue.optional()]))).optional(),
+};
 
 export const PROFILE_SETTINGS = /** @type {const} */ ({
   discoverMode: discoverMode,
@@ -98,6 +112,7 @@ export const meCommands = {
       genders: codes(5).optional(), orients: codes(5).optional(), roles: codes(5).optional(),
       formats: codes(5).optional(), seeks: codes(9).optional(),
       status: code.nullable().optional(),
+      ...aboutInput,
     }),
   },
   'profile.settings': { profile: true, write: false, input: z.strictObject({}) },

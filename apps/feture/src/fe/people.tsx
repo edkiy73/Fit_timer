@@ -15,6 +15,7 @@ import {when} from './feed';
 import {FollowButton} from './follow';
 import {catalogRes,cardOneRead,cardRead,CompatSummary,FollowCounts,MatchOverlay,PersonBio,PersonMenu,PhotoViewer,ProfileBody,ProfilePage,personName,personProfileRes,pxError,readCard,readCatalog,usePrivate,useRelation,type CardPre,
  type Catalog,type MenuStep,type PersonProfile} from './profile-extras';
+import {AboutGroup} from './about-facts';
 
 /** Slice F (V21 D03–D10): Discover cards from the server's mutual pool with the whole profile under the photo, swipe
  * or buttons to like / pass, «Это взаимно» → chat, the likes grid and another person's profile (P01). The client shows
@@ -431,7 +432,7 @@ function TopCard({c,cardRef,nextRef,actsRef,onDecide}:{c:Card,cardRef:React.RefO
    </div>
   </div>
   <div className="pc-body pc-full">
-   {pre?<><PersonBio p={pre.profile}/><CompatSummary profileId={c.id} pre={pre.compat}/><ProfileBody p={pre.profile} pre={pre} onOpen={setView}/></>
+   {pre?<><PersonBio p={pre.profile}/><AboutGroup p={pre.profile}/><CompatSummary profileId={c.id} pre={pre.compat}/><ProfileBody p={pre.profile} pre={pre} onOpen={setView}/></>
     :<><Skel kind="card" rows={2}/><Skel kind="post" rows={1}/></>}
    <div className="pc-foot"><FollowButton profileId={c.id} name={name} on={!!rel?.iFollow} disabled={!rel} onChange={on=>setRel(x=>x&&{...x,iFollow:on,followers:Math.max(0,x.followers+(on?1:-1))})}/><Btn kind="soft" onClick={()=>navigate('/n/people/'+c.id)}>{t('fe.px.deck.full')}</Btn></div>
   </div>
