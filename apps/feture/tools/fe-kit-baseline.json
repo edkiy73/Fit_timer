@@ -13,11 +13,11 @@
   "empty note": 1
  },
  "src/fe/feed.tsx": {
-  "margin class": 11,
-  "button row": 5
+  "margin class": 2,
+  "button row": 3
  },
  "src/fe/gallery.tsx": {
-  "margin class": 2,
+  "margin class": 1,
   "empty note": 1
  },
  "src/fe/inbox.tsx": {
@@ -32,11 +32,7 @@
   "button row": 1
  },
  "src/fe/mine.tsx": {
-  "margin class": 2,
   "button row": 1
- },
- "src/fe/post-menu.tsx": {
-  "margin class": 5
  },
  "src/fe/profile-extras.tsx": {
   "margin class": 4

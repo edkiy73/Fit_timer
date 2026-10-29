@@ -23,7 +23,7 @@ export const ru = {
 
   'fe.feed.whatsNewUs': 'Что нового у вас?',
   'fe.fd.sendUs': 'Отправить от пары',
-  'fe.fd.notePhUs': 'Текст статьи от пары: история, опыт, разбор. До 10 000 знаков, можно с заголовками и списками.',
+  'fe.fd.notePhUs': 'Ваша история, опыт, разбор…',
   'fe.fd.pollPhUs': 'Несколько слов к опросу от пары — по желанию',
   'fe.ln.p22.sendUs': 'Отправить запрос от пары',
   'fe.ln.p22.proposeChangeUs': 'Предложить изменение от пары',
@@ -66,7 +66,7 @@ export const en: typeof ru = {
 
   'fe.feed.whatsNewUs': 'What’s new with you two?',
   'fe.fd.sendUs': 'Send as the couple',
-  'fe.fd.notePhUs': 'The couple’s article: a story, experience or breakdown. Up to 10,000 characters, headings and lists welcome.',
+  'fe.fd.notePhUs': 'Your story, experience, breakdown…',
   'fe.fd.pollPhUs': 'A few words about the couple’s poll — optional',
   'fe.ln.p22.sendUs': 'Send request as the couple',
   'fe.ln.p22.proposeChangeUs': 'Propose the change as the couple',
