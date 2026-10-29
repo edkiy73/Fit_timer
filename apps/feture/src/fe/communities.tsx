@@ -98,7 +98,7 @@ function MyShortcut({kind,count}:{kind:'communities'|'events',count:number}){
  const {t}=useI18n();const navigate=useNavigate();const {acting}=useFe();const couple=acting?.kind==='couple';
  const k=kind==='communities'?'fe.cc':'fe.ce';const Icon=kind==='communities'?Users:Calendar;
  return <div className="myev">
-  <button type="button" className="myev-main" onClick={()=>navigate('/n/me?layer=mine&part='+kind)}><span className="ico g"><Icon/></span><span className="tx"><b>{t(k+(couple?'.mineCouple':'.mine'))}{count?<em>{count}</em>:null}</b></span></button>
+  <button type="button" className="myev-main" onClick={()=>navigate('/n/me/'+kind)}><span className="ico g"><Icon/></span><span className="tx"><b>{t(k+(couple?'.mineCouple':'.mine'))}{count?<em>{count}</em>:null}</b></span></button>
   <IconBtn icon={Plus} kind="add" label={t(k+'.create')} onClick={()=>navigate(kind==='communities'?'/n/communities/new':'/n/events/new')}/>
  </div>;
 }
