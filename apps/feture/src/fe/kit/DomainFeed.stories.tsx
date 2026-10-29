@@ -84,9 +84,9 @@ export const Миниатюры:StoryObj<typeof ActivityTile>={name:'Миниа�
 export const БыстрыйСтарт:StoryObj<typeof QuickStart>={name:'Быстрый старт',render:a=><QuickStart {...a}/>,
  args:{title:'Или сразу начать с',items:[[ImageIcon,'Фото и видео',fn()],[ChartColumn,'Опрос',fn()],[Sparkles,'Мои интересы',fn()]]},argTypes:{items:{control:false}}};
 export const Композер:StoryObj<typeof ComposerRow>={name:'Строка «написать» (одна везде)',render:a=><div className="posts"><ComposerRow {...a}/></div>,
- args:{av:<Av name="Mia" seed="mia" size="sm"/>,placeholder:'Что нового?',onOpen:fn(),media:{label:'Фото или видео',onClick:fn()},poll:{label:'Опрос',onClick:fn()},create:{label:'Создать',onClick:fn()}},
+ args:{av:<Av name="Mia" seed="mia" size="sm"/>,placeholder:'Что нового?',label:'Создать',onOpen:fn()},
  argTypes:{av:{control:false}},
- parameters:{docs:{description:{story:'Одна строка «написать» для ленты, обсуждений сообщества и любого другого места (решение владельца 29.10.2026): аватар того, от чьего имени пишешь, подсказка, фото, опрос и «+» — лист «Создать» (Публикация, Статья; Событие — где можно). Место меняет только подсказку («Что нового?» / «Новая тема») и куда ведут кнопки. В приложении её собирает `Composer` (src/fe/create-entry.tsx) — экраны не пишут строку сами.'}}}};
+ parameters:{docs:{description:{story:'Одна строка «написать» для ленты, обсуждений сообщества и любого другого места (решение владельца 29.10.2026): аватар того, от чьего имени пишешь, подсказка, фото, опрос и «+». Вся строка — одна кнопка «Создать»: тап в любом месте (подсказка, любая иконка, «+») открывает лист «Создать» (Публикация, Статья; Событие — где можно; ниже «Фото и видео», «Опрос», «Мои интересы»). Иконки только подсказывают, что можно не только текст, и не нажимаются отдельно. Место меняет только подсказку («Что нового?» / «Новая тема») и какой лист открывается. В приложении её собирает `Composer` (src/fe/create-entry.tsx) — экраны не пишут строку сами.'}}}};
 export const КомпозерСообщество:StoryObj<typeof ComposerRow>={...Композер,name:'Строка «написать» в сообществе',args:{...Композер.args,placeholder:'Новая тема'}};
 export const СтрокаДействия:StoryObj<typeof ActionLine>={name:'Подсказка со ссылкой',render:a=><ActionLine {...a}/>,
  args:{text:'Топ недели по твоим интересам',action:'Как подбираем',onAction:fn()}};
