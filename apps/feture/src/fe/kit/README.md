@@ -24,11 +24,11 @@ A new component or variant ships with its story in the same PR.
 
 | Need | Use |
 |---|---|
-| Screen header | `Bar` (title, back, actions) / `SubBar` (+ second line) |
+| Screen header | `Bar` (title, back, actions) / `SubBar` (+ second line). The header floats: glass round buttons over the content, the title fades on scroll; no band, fade or mask over the content (only the phone status-bar strip `--safe-t` is kept clear) |
 | Body | `View`, `Group` (titled section with action and footnote) |
 | Page layout grid | Tokens `--gut` (page gutter, 16), `--page-max` (content column, 680, centred on tablet/desktop), `--block-gap` (12 between blocks of a screen column, applied by kit.css with zero specificity). Screens add no margins, paddings or widths of their own; `check:kit` ratchets `mt*`/`mb*` classes. Check every changed screen at 390, 768 and 1280 px |
 | Row of buttons | `Actions` (equal widths across the column, one gap; `stack` — one under another). Never a `Stack row` of `Btn`s |
-| Buttons | `Btn` (primary / soft / text / danger; `busy` blinks, never spins), `IconBtn` (round, label required) |
+| Buttons | `Btn` (primary / soft / danger / dark; `busy` blinks, never spins), `IconBtn` (round, label required). Quiet actions, three kinds: `quiet` — a barely tinted plate, for a second equal but calm choice next to the main one («Не иду»); `ghost` — no plate, ink text, for cancel / skip without weight; `text` — a link-style accent word inside or under a block. `pressed` (aria-pressed: like sent, following, my answer) is one look for every kind — soft accent plate, accent label (story «Кнопки → Нажатая») |
 | Tabs | `Seg` — the only tab control: counts, dots, scrolls at 5+ |
 | Empty section | `AddCard` — the one «add» card of every empty block (icon in a soft circle, title, a plain hint up to two lines, «+»); straight in a `Group`, no Card around; a filled block shows its content and its header action instead |
 | Counts as tiles | `StatTiles` (2–3 tiles: the number, a word, a tap opens the list) — manage screens of a community and an event |
@@ -56,7 +56,7 @@ A new component or variant ships with its story in the same PR.
 | Newer items above | `NewPill` («Новые публикации ↑»): in the list's flow before the items, sticks under the header, takes no room; the tap scrolls up and shows them — never insert new items above the reader without it (feed: `useNewerPosts`) |
 | Paged lists | `LoadMore` after the list (`more`, `busy`, `error`, `onMore`): infinite scroll — the next page is asked about a screen before the end, three dots blink in a fixed-height box, a failed page leaves one «Не загрузилось · Повторить» line. Never a «Показать ещё» button |
 | A comparison's verdict | `Verdict` (icon, `tone` ok / try / warn / bad, bold title, at most one quiet line), centred under a comparison bar (the interest sheet) |
-| Notices in the flow | An `Alert` in a screen body, sheet body, `Group` or `Card` always gets the 12 px rhythm gap from the block above and below (base.css «A notice never sits glued», zero specificity: a screen's `mt*` still wins); inside `Stack` the gap does it |
+| Notices in the flow | An `Alert` or `Note` after a button, `Actions`, a card, a field or any block gets `--block-gap` in every container — screen, sheet, `Group`, `Card`, `Empty`, centred screens (kit.css «A notice never sits glued», zero specificity: a screen's `mt*` still wins); text before it keeps the text rhythm; inside `Stack` / `Actions` the gap does it. Alert text is always left-aligned, also in a centred block |
 | Voice messages | `VoiceRecorder` (mic button: hold, slide left to cancel, up to lock; tap = hands-free with listen-before-send; ≤ 5 min; asks for the microphone only on press), `VoiceBubble` (play / pause, waveform progress and seek, time, «Прослушано» / unheard dot) |
 
 Round 4 variants: `Btn kind="dark"` (on a light veil) and `square` (icon-only, button height); `Row` `body` (a plain
@@ -79,7 +79,7 @@ Product pieces that repeat or carry their own look. Screens use these, never the
 
 | Need | Use |
 |---|---|
-| Header over a cover / of a chat | `CoverBar` (glass buttons, title shows on scroll), `PersonBar` (‹, avatar + name + line, opens the profile) |
+| Header over a cover / of a chat | `CoverBar` (glass buttons over the cover; once the cover's title or the cover scrolls under them, the header becomes the glass bar — the dock's `--nav` + blur — with the title; never a gradient band over the content), `PersonBar` (‹, avatar + name + line, opens the profile) |
 | Event | `EventTile` (`eventCard()`: card / `row` / still preview), `EventHero` (cover, glass labels, title, status), `Rsvp` («Интересно / Иду / Не иду»), `Announcement` |
 | Community | `CommunityHead` (cover, picture, name, meta; loading shape), `Discussion` (row with pinned mark and host ⋯), `Veil` (closed content under glass), `StatusCard` (my join request / event application as one block: icon, state, line, «Отозвать» at the end; tones wait / ok / bad) |
 | Create | `Swatches` (cover colour plates); the named plates themselves: `namedPlate(key)` / `PLATE_KEYS` (keys shared with the server in `contracts/_plates.mjs`) |

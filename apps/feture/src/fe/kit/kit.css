@@ -306,8 +306,11 @@ button.pill{cursor:pointer}
 .v21 .mcell.mv>.k-video,.v21 .mcell.mv>.k-video>video{background:transparent}
 
 /* Profile header photo (owner 28.10.2026): no fade of the page top over it, a dark scrim in both themes so the story
-   bars, ‹ and ⋯ read on any photo, and «2 / 6» under the bars. */
-.v21 .main.hasbar>.view.top0{-webkit-mask-image:none;mask-image:none}
+   bars, ‹ and ⋯ read on any photo, and «2 / 6» under the bars.
+   Status bar (owner 29.10.2026, Android): every screen's view — full-bleed heroes too (profile, couple, community and
+   event covers) — keeps the phone's status-bar strip (--safe-t, 0 on the web) clear with a hard edge, so the clock and
+   icons sit on the page colour and stay readable; the floating ‹ / ⋯ sit below it (`.bar.overlay` padding). */
+.v21 .main>.view{-webkit-mask-image:linear-gradient(to bottom,transparent var(--safe-t),#000 var(--safe-t));mask-image:linear-gradient(to bottom,transparent var(--safe-t),#000 var(--safe-t))}
 .v21 .hero:has(>.pc-bars,>img)::after{content:"";position:absolute;left:0;right:0;top:0;z-index:2;height:calc(var(--s-9) * 2 + var(--safe-t));background:linear-gradient(rgba(6,4,6,.62),rgba(6,4,6,.28) 55%,transparent);pointer-events:none}
 .v21 .pc-bars.counted{flex-wrap:wrap;row-gap:var(--s-2)}
 .v21 .pc-bars>.pc-count{margin-left:auto;display:inline-flex;align-items:center;gap:var(--s-1);padding:var(--s-0) var(--s-2);border-radius:var(--r-full);background:rgba(6,4,6,.55);color:#fff;font:var(--t-xs);font-weight:700;font-variant-numeric:tabular-nums}
@@ -420,7 +423,7 @@ html:has(.fe-v21),html:has(.fe-v21) body{overscroll-behavior-y:none}
    take the column of the block under them (`after`) so both line up. */
 .v21 .empty>h3+.btns{margin-top:12px}
 .v21 .empty:has(>.k-empty-after)>.btns{max-width:none}
-.v21 .empty>.btns+.k-empty-after>:first-child{margin-top:var(--s-4)}
+.v21 .empty>.btns+.k-empty-after>:first-child{margin-top:var(--block-gap)}
 /* Empty compact: a part of a screen or a sheet — less room, a smaller icon, the same order and gaps. */
 .v21 .empty.k-empty-compact{padding:16px 12px}
 .v21 .empty.k-empty-compact .em-ic{width:40px;height:40px;margin-bottom:10px}
@@ -471,3 +474,23 @@ html:has(.fe-v21),html:has(.fe-v21) body{overscroll-behavior-y:none}
 .v21 .k-check-row>.btn{flex:none}
 /* The message box's counter (kit validate `limitCounter`) is a line of its own above the box, right-aligned. */
 .v21 .inputbar>.counter{flex:0 0 100%;order:-1;margin:0;padding:0 4px 2px}
+
+/* A notice never sits glued (owner, 29.10.2026: «опять прилипла подсказка»). One rule for every container: an Alert or
+   a Note that follows a button, a row of buttons (Actions), a card, a field or any other block gets the block gap —
+   in a screen, a sheet, a group, a card, an Empty and the centred screens (update, maintenance). Text before it (a
+   paragraph, a heading, a label) keeps the text rhythm instead. Boxes that space their children by `gap` (Stack,
+   Actions, rows, chips) are left out so the gap never doubles. Zero specificity: a screen's .mt* still wins; `.note`
+   has its margin:0 at zero specificity too (base.css), so this reaches it. */
+.v21 :where(:not(.k-stack,.k-row,.k-actions,.btns,.row,.chips,.seg,.bar,.sh-h,.inputbar,.li,.tx,.alert,.k-alert-act,.p-acts))>:where(:not(p,h1,h2,h3,h4,.lead,.t,span,small,b,i,em,strong,label,br,input,[hidden]))+:where(.alert,.note){margin-top:var(--block-gap)}
+/* A notice is read from the left even inside a centred block (Empty, the update screen): icon and text on one edge. */
+.v21 .alert{text-align:left}
+.v21 .empty>.k-empty-after>.alert,.v21 .empty>.alert{justify-self:stretch}
+
+/* Buttons (owner, 29.10.2026). Quiet actions come in three kinds: `quiet` — a barely tinted plate, `ghost` — no plate,
+   the ink colour, `text` — a link-style accent word. Pressed (`pressed` / aria-pressed: «Нравится» sent, following,
+   my RSVP) is one look for every kind: the soft accent plate with the accent label — never the accent fill, whose
+   text would vanish (the old `.btn.primary` fill rule came after `.btn.on` and painted it over). */
+.v21 .btn.quiet{background:color-mix(in srgb,var(--ink) 5%,transparent);color:var(--ink);box-shadow:none}
+.v21 .btn.ghost{background:none;color:var(--ink);box-shadow:none}
+@media (hover:hover){.v21 .btn.quiet:hover{background:color-mix(in srgb,var(--ink) 10%,transparent)}.v21 .btn.ghost:hover{background:color-mix(in srgb,var(--ink) 6%,transparent)}}
+.v21 .btn.btn.on,.v21 .btn.btn[aria-pressed="true"]{background:var(--accent-soft);border-color:transparent;color:var(--accent);box-shadow:none}

@@ -1,6 +1,6 @@
 import type {Meta,StoryObj} from '@storybook/react-vite';
 import {Clock,Heart,RefreshCw,Sparkles,Users} from 'lucide-react';
-import {Alert,Btn,Card,Empty,Row,Skel,Stack} from './index';
+import {Actions,Alert,Btn,Card,Empty,Group,Note,Row,Skel,Stack} from './index';
 
 const meta={title:'Сообщения/Сообщение',component:Alert,tags:['autodocs'],
  parameters:{docs:{description:{component:'Постоянное сообщение в потоке экрана: `ok`, `info`, `warn`, `err` (ошибку читает экранный диктор). Временное — уведомление (toast). Пустой экран — `Empty`. Загрузка — `Skel`, мягкое мигание, без спиннеров.'}}},
@@ -22,3 +22,11 @@ export const ПустоБезТекста:StoryObj<typeof Empty>={name:'Пуст
 export const ПустоКрупно:StoryObj<typeof Empty>={name:'Пустое: крупно, сверху, с блоком после',render:a=><Empty {...a}><Btn auto>Изменить фильтры</Btn></Empty>,
  args:{icon:Users,title:'Знакомства выключены',text:'Включи, и тебя увидят те, кто тоже включил.',big:true,top:true,
   after:<Card list className="mt16"><Row icon={Sparkles} title="Интересы" sub="Расскажи о себе" onClick={()=>{}}/></Card>}};
+export const ПодКнопкой:S={name:'Под кнопкой и блоком — с отступом',render:()=><div className="view"><div className="wrap">
+ <Btn>Повторить</Btn>
+ <Alert kind="err">Не получилось скачать обновление. Проверь связь и нажми «Повторить».</Alert>
+ <Actions><Btn kind="soft">Изменить</Btn><Btn kind="quiet">Позже</Btn></Actions>
+ <Note>Подсказка под рядом кнопок стоит с тем же отступом блока.</Note>
+ <Group title="Уведомления"><Card><Row title="На экране блокировки" sub="Новое сообщение"/></Card><Note>Текст сообщений на заблокированном экране не показываем.</Note></Group>
+ <Card><Btn kind="soft">Проверить ещё раз</Btn><Alert kind="info">В карточке — тот же отступ.</Alert></Card>
+</div></div>,parameters:{docs:{description:{story:'Одно правило набора: сообщение или подсказка после кнопки, ряда кнопок, карточки, поля или любого блока получает отступ блока (`--block-gap`) в любом контейнере — экран, лист, группа, карточка, `Empty`. Внутри `Stack` и `Actions` отступ даёт их `gap`.'}}}};
