@@ -49,3 +49,21 @@ export function Thread({messages,label}:{messages:ThreadMessage[],label:string})
   <div className="mtx">{m.text}</div>{m.meta&&<div className="st">{m.meta}</div>}
  </div>)}</div>;
 }
+
+/** What a notification looks like on a locked phone (Settings → Notifications): the app line, the title, the text and
+ * the time, dark in both themes like a lock screen. `items` stack as on the phone; the screen passes exactly what the
+ * chosen mode sends. Decorative: the choice above it is the control. */
+export function LockPreview({app,icon,items}:{app:string,icon:string,items:readonly {title:ReactNode,body:ReactNode,time:ReactNode}[]}){
+ return <div className="k-lock" aria-hidden="true">{items.map((x,i)=><div key={i} className="k-lock-n">
+  <span className="k-lock-app"><img src={icon} alt=""/>{app}<small>{x.time}</small></span><b>{x.title}</b><span>{x.body}</span></div>)}</div>;
+}
+
+/** The column heads over channel toggles («Пуш», «Почта»), set in a section label's action slot. */
+export function ChannelHeads({labels}:{labels:readonly string[]}){
+ return <span className="nhead">{labels.map(l=><span key={l}>{l}</span>)}</span>;
+}
+/** One channel of a notification category as a square icon toggle (push / email) at the end of a row; `disabled` while
+ * the channel itself is off (then it shows off whatever its own value). */
+export function ChannelToggle({icon:Icon,on,disabled,label,onClick}:{icon:LucideIcon,on:boolean,disabled?:boolean,label:string,onClick:()=>void}){
+ return <button type="button" className={'nt-t'+(on&&!disabled?' on':'')} disabled={disabled} aria-pressed={on} aria-label={label} onClick={onClick}><Icon/></button>;
+}

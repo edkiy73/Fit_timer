@@ -2,6 +2,7 @@
 // settings and interests through the real /api/fe handler.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { platform } from '../server/commands/platform.mjs';
 import { me } from '../server/commands/me.mjs';
 import { ageOn } from '../server/commands/faces.mjs';
@@ -156,6 +157,28 @@ test('settings and visibility: per profile, per account, notification defaults a
     assert.equal((await call('ua', null, { action: 'notifications.settings.update', opId: op(), settings: { ...n, quiet: { ...n.quiet, from: '23:15' } } })).status, 400);
     assert.equal((await call('ua', null, { action: 'notifications.settings.update', opId: op(), settings: { ...n, mode: 'normal' } })).status, 200);
     assert.equal((await call('ua', null, { action: 'notifications.settings.get' })).settings.mode, 'normal');
+  } finally { await pg.close(); }
+});
+
+test('notification defaults (owner 29.10.2026): every category on for a new account; a stored set left at the old defaults moves, a chosen one stays', async () => {
+  const { pg, db, call, person } = await setup();
+  try {
+    await person('ua', 'Alex'); await person('ub', 'Kira'); await person('uc', 'Noa');
+    const n = (await call('ua', null, { action: 'notifications.settings.get' })).settings;
+    assert.ok(Object.values(n.categories).every((/** @type {any} */ c) => c.push && c.email));
+    assert.deepEqual([n.mode, n.email, n.digest], ['safe', true, 'daily']);
+    const old = { match: { push: true, email: true }, likes: { push: true, email: false }, req: { push: true, email: true }, events: { push: true, email: true },
+      replies: { push: true, email: false }, follows: { push: true, email: false }, groups: { push: false, email: false }, news: { push: false, email: true } };
+    // Kira only saw the push offer (the app saved the old defaults with it); Noa turned community pushes on herself.
+    await call('ub', null, { action: 'notifications.settings.update', opId: op(), settings: { ...n, categories: old, offered: true } });
+    await call('uc', null, { action: 'notifications.settings.update', opId: op(), settings: { ...n, categories: { ...old, groups: { push: true, email: false } } } });
+    await pg.exec(readFileSync(new URL('../supabase/migrations/20261029153000_fe_notification_defaults.sql', import.meta.url), 'utf8'));
+    const kira = (await call('ub', null, { action: 'notifications.settings.get' })).settings;
+    assert.deepEqual([kira.categories, kira.offered], [n.categories, true]);
+    const noa = (await call('uc', null, { action: 'notifications.settings.get' })).settings;
+    assert.deepEqual(noa.categories.groups, { push: true, email: false });
+    assert.deepEqual(noa.categories.news, { push: false, email: true });
+    void db;
   } finally { await pg.close(); }
 });
 

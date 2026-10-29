@@ -1,27 +1,27 @@
 import {useCallback,useEffect,useRef,useState,type ReactNode} from 'react';
-import {useNavigate} from 'react-router';
+import {useLocation,useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {KeyRound,Camera,ChevronRight,Clock,Eye,Lock,LockOpen,MoreHorizontal,PenLine,Pencil,Send,Sparkles,Trash2,X} from 'lucide-react';
+import {KeyRound,Camera,ChevronRight,Clock,Eye,Lock,LockOpen,PenLine,Send,ShieldCheck,Sparkles,Trash2,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {AddCard,Alert,Av,Btn,Card,CheckList,Chips,ChoiceChips,Counter,Empty,Field,FilePick,Group,IconBtn,Note,PersonLine,PhotoAdd,PhotoSlot,PhotoSlots,Pill,Quota,RequestCard,Row,SectionLabel,SelectRow,Sheet,Skel,Stack,TextArea,VaultHead,Veil} from './kit';
+import {AddCard,Alert,Av,Btn,Card,CheckList,Chips,ChoiceChips,Counter,Empty,Field,FilePick,Group,MultiChips,Note,PersonLine,PhotoAdd,PhotoSlot,PhotoSlots,Pill,RequestCard,Row,SectionLabel,SelectRow,Sheet,Skel,Stack,TextArea,VaultHead,Veil} from './kit';
 import {Uploader} from './kit/Uploader';
 import {FIELD,textLength,useChecks} from './kit/validate';
 import {useSendPhoto} from './media-upload';
 import {InterestSheet,Jars,TopicPicker,sortJars,useInterests} from './interests';
-import {AgeCheckLink,useAgeResume} from './age-check';
+import {AgeCheckLink,agePath,useAgeResume} from './age-check';
 import {useFe} from './session';
 import {when} from './feed';
 import {useToast} from './toast';
-import {Ask,AudTag} from './me-parts';
+import {Ask} from './me-parts';
 import {faceFields,NameBadges,withAge} from './faces';
-import {PhotoViewer,mediaSrc} from './profile-extras';
+import {PhotoViewer,mediaSrc,plural} from './profile-extras';
 
 /** Wave 4 «Приватное и доступы» (V21 X01, P06–P09, P11). Before access the server sends nothing real — only whether a
  * private part exists and what can be asked for; access is per profile, per part and for a term. Everything a person
  * decides here is read back from the server; nothing is assumed locally. */
-export type Scope='info'|'photos'|'video';
-const SCOPES:Scope[]=['info','photos','video'];
+export type Scope='info'|'photos'|'video'|'interests';
+const SCOPES:Scope[]=['info','photos','video','interests'];
 const scopes=z.array(z.string()).transform(a=>SCOPES.filter(s=>a.includes(s)));
 const who=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),...faceFields}).nullable();
 type Who=z.infer<typeof who>;
@@ -42,7 +42,8 @@ export const outRes=z.object({ok:z.literal(true),items:z.array(outItem),next:z.s
 const privMedia=z.object({id:z.uuid().optional(),src:z.record(z.string(),z.string()).nullable(),pending:z.boolean().optional(),kind:z.string().optional(),watermark:z.string().nullable().optional()}).passthrough();
 const priv=z.object({ok:z.literal(true),exists:z.boolean(),own:z.boolean().optional(),on:z.boolean().optional(),scopes:scopes.optional(),until:z.string().nullable().optional(),
  text:z.string().nullable().optional(),media:z.array(privMedia).optional(),
- interests:z.array(z.object({topicId:z.string(),value:z.number().nullable().optional(),mark:z.enum(['discuss','hard']).nullable().optional(),dir:z.array(z.string()).nullable().optional(),vis:z.enum(['public','granted','only']).nullable().optional()})).optional(),available:scopes.optional(),canRequest:z.boolean().optional(),reason:z.string().nullable().optional()}).passthrough();
+ interests:z.array(z.object({topicId:z.string(),value:z.number().nullable().optional(),mark:z.enum(['discuss','hard']).nullable().optional(),dir:z.array(z.string()).nullable().optional(),vis:z.enum(['public','granted','only']).nullable().optional()})).optional(),available:scopes.optional(),canRequest:z.boolean().optional(),reason:z.string().nullable().optional(),
+ /** Everyone who would see it is a verified adult (`ok`), or the viewer (`me`) / the couple's partner (`partner`) is not. */ age:z.enum(['ok','me','partner']).optional()}).passthrough();
 type Priv=z.infer<typeof priv>;
 const ok=z.object({ok:z.literal(true)}).passthrough();
 const requestRes=z.object({ok:z.literal(true),quota:quotaShape}).passthrough();
@@ -82,31 +83,40 @@ function AccessSummary({name,sel,all,until,couple}:{name:string,sel:Scope[],all:
 
 /* ---------------- asking (P06) ---------------- */
 
-/** reqAccess: which parts to ask for, how many requests are left today; when none are left, when the next comes back. */
+/** The parts a person asks for, as the request sheet names them: «Описание», «Фото и видео» (photos and clips together),
+ * «Интересы». Only the parts the owner's private part really has are offered. */
+type Part='info'|'media'|'interests';
+const PART_SCOPES:Record<Part,Scope[]>={info:['info'],media:['photos','video'],interests:['interests']};
+const partsOf=(available:readonly Scope[])=>(Object.keys(PART_SCOPES) as Part[]).filter(k=>PART_SCOPES[k].some(s=>available.includes(s)));
+
+/** reqAccess: which parts to ask for as chips («Всё» picks every one), how many requests are left today in one line;
+ * when none are left, when the next comes back. */
 export function RequestSheet({profileId,available,onClose,onSent}:{profileId:string,available:Scope[],onClose:()=>void,onSent:()=>void}){
- const {call,acting}=useFe();const {t}=useI18n();const toast=useToast();const w=useAccessWords();
+ const {call,acting}=useFe();const {t,locale}=useI18n();const toast=useToast();const w=useAccessWords();
  const [q,setQ]=useState<QuotaT|null>(null);const [busy,setBusy]=useState(false);const [error,setError]=useState<unknown>(null);
- const [sel,setSel]=useState<Scope[]>(()=>available.includes('info')?['info']:available.slice(0,1));
- const op=useRef(newOpId());
+ const parts=partsOf(available);
+ const [sel,setSel]=useState<Part[]>(parts);
+ const op=useRef(newOpId());const us=acting?.kind==='couple';
  const loadQuota=useCallback(()=>{call('access.quota',{},quotaRes,{fresh:true}).then(setQ).catch(()=>{});},[call]);
  useEffect(()=>{loadQuota();},[loadQuota]);
+ const scopesSel=SCOPES.filter(s=>available.includes(s)&&sel.some(k=>PART_SCOPES[k].includes(s)));
  const send=async()=>{setBusy(true);setError(null);
-  try{const r=await call('access.request',{opId:op.current,profileId,scopes:sel},requestRes);toast(t('fe.ac.rq.sent'+(acting?.kind==='couple'?'Us':''),{left:r.quota.left,max:r.quota.max}),{type:'ok'});onSent();}
+  try{const r=await call('access.request',{opId:op.current,profileId,scopes:scopesSel},requestRes);toast(t('fe.ac.rq.sent'+(us?'Us':''),{left:r.quota.left,max:r.quota.max}),{type:'ok'});onSent();}
   catch(e){setError(e);op.current=newOpId();if(e instanceof FeError&&e.code==='rate_limited')loadQuota();}finally{setBusy(false);}};
  if(q&&q.left<=0)return <Sheet title={t('fe.ac.lim.title')} onClose={onClose} foot={<Btn onClick={onClose}>{t('fe.ac.ok')}</Btn>}>
-  <Stack gap={3}>
-   <Note>{t('fe.ac.lim.text',{max:q.max,at:q.resetsAt?w.at(q.resetsAt):'—'})}</Note>
-   <Quota left={0} max={q.max} label={t('fe.ac.rq.leftLabel',{left:0,max:q.max})}/>
-   <Note>{t('fe.ac.lim.wait')}</Note>
-  </Stack>
+  <Note>{t('fe.ac.lim.text',{max:q.max,at:q.resetsAt?w.at(q.resetsAt):'—'})}</Note>
  </Sheet>;
  const age=error instanceof FeError&&error.rule==='age_check_required';
- return <Sheet title={t('fe.ac.rq.title')} onClose={onClose} foot={<Btn icon={Send} disabled={!sel.length||busy} busy={busy} onClick={()=>void send()}>{t('fe.ac.rq.send'+(acting?.kind==='couple'?'Us':''))}</Btn>}>
-  {acting?.kind==='couple'&&<Note>{t('fe.ac.rq.forUs')}</Note>}
-  <CheckList bare label={t('fe.ac.rq.what')} value={sel} onChange={setSel} options={available.map(s=>[s,t('fe.priv.scope.'+s)] as const)}/>
-  <SectionLabel action={q&&<b>{t('fe.ac.rq.leftN',{left:q.left,max:q.max})}</b>}>{t('fe.ac.rq.left')}</SectionLabel>
-  {q?<Quota left={q.left} max={q.max} label={t('fe.ac.rq.leftLabel',{left:q.left,max:q.max})}/>:<Skel kind="line" rows={1}/>}
-  <Alert kind="info">{t('fe.ac.rq.info')}</Alert>
+ const label=(k:Part)=>t('fe.ac.part.'+k);
+ return <Sheet title={t('fe.ac.rq.title')} onClose={onClose} foot={<Btn icon={Send} disabled={!scopesSel.length||busy} busy={busy} onClick={()=>void send()}>{t('fe.ac.rq.send'+(us?'Us':''))}</Btn>}>
+  <SectionLabel>{t('fe.ac.rq.what')}</SectionLabel>
+  <Stack gap={3}>
+   <MultiChips label={t('fe.ac.rq.what')} all={t('fe.ac.part.all')} value={sel} onChange={setSel} options={parts.map(k=>[k,label(k)] as const)}/>
+   <Stack gap={1}>
+    <Note>{t(us?'fe.ac.rq.infoUs':'fe.ac.rq.info')}</Note>
+    {q?<Note>{plural(t,locale,'fe.ac.rq.leftToday',q.left)}</Note>:<Skel kind="line" rows={1}/>}
+   </Stack>
+  </Stack>
   {!!error&&<Alert kind="err" noIcon>{w.err(error)}{age&&<><br/><AgeCheckLink intent={'access:'+profileId}/></>}</Alert>}
  </Sheet>;
 }
@@ -179,7 +189,7 @@ function GrantSheet({r,available,onClose,onDone,onDecline}:{r:Incoming,available
  </Sheet>;
 }
 
-/* ---------------- what is open (P07 «Открыто мной», P11) ---------------- */
+/* ---------------- what is open (P07 «Открыто», P11) ---------------- */
 
 /** «Отозвать доступ у X?» — new views stop now; what was seen cannot be recalled. `narrow` revokes by an empty
  * narrowing (the sheet's «пусто → отзыв»). */
@@ -235,6 +245,28 @@ export function GrantCard({g,onEdit,onRevoke}:{g:GrantItem,onEdit:()=>void,onRev
  </RequestCard>;
 }
 
+export const incomingRes=incoming;
+export type IncomingList=z.infer<typeof incoming>;
+
+/** Requests to my private part waiting for an answer (P09): who asks, what, «Открыть» (the grant sheet) / «Отказать»
+ * (with undo). Lives in «Доступы → Открыто». */
+export function RequestCards({data,onChanged}:{data:IncomingList,onChanged:()=>void}){
+ const {acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const decline=useDecline();
+ const [grantFor,setGrantFor]=useState<Incoming|null>(null);const cp=acting?.kind==='couple';
+ return <><Stack gap={2}>
+  {data.items.map(r=><RequestCard key={r.id}
+   person={<PersonLine av={<Av name={nameOf(r.profile)} seed={r.profile?.id??r.id} src={r.profile?.avatar}/>} label={nameOf(r.profile)} onOpen={()=>r.profile&&navigate('/n/people/'+r.profile.id)}
+    name={<>{withAge(nameOf(r.profile),r.profile)}<NameBadges p={r.profile}/></>} sub={<>{cp?t('fe.mx.pr.asksUs'):t('fe.priv.asks')} · {when(r.created_at,locale)}</>}/>}
+   actions={<><Btn size="md" onClick={()=>setGrantFor(r)}>{t('fe.priv.grant')}</Btn>
+    <Btn size="md" kind="soft" onClick={()=>void decline(r.id,nameOf(r.profile),onChanged)}>{t('fe.priv.decline')}</Btn></>}>
+   <Chips>{r.scopes.map(s=><Pill key={s}>{t('fe.priv.scope.'+s)}{r.alreadyOpen?.scopes.includes(s)?' · '+t('fe.ac.gr.open'):''}</Pill>)}</Chips>
+  </RequestCard>)}
+ </Stack>
+ {grantFor&&<GrantSheet r={grantFor} available={data.available??[]} onClose={()=>setGrantFor(null)} onDone={()=>{setGrantFor(null);onChanged();}}
+  onDecline={()=>{const r=grantFor;setGrantFor(null);void decline(r.id,nameOf(r.profile),onChanged);}}/>}
+ </>;
+}
+
 /* ---------------- «Я → Приватное» (X01) ---------------- */
 
 const PRIV_MAX=18;
@@ -242,14 +274,15 @@ const ownSrc=(m:{src:Record<string,string>|null})=>m.src?(m.src.thumb??m.src.car
 
 /** `mePrivLayer()` — the tab IS the private part (owner, 29.10.2026): its switch and «Кто может просить доступ» on top,
  * then what it opens as it will be seen — «Описание», «Фото и видео», «Интересы» (each empty one is the kit's «add»
- * card; an interest is added right here with «По доступу» preset) — then «Доступ»: who has it, «⋯» to change or revoke,
- * and the access center. Requests waiting for an answer come first. A couple's part holds interests only. */
+ * card; an interest is added right here with «По доступу» preset) — then one «Доступы» row (waiting requests counted)
+ * that opens the one «Доступы» screen on «Открыто», where requests are answered and access changed. A couple's
+ * part holds interests only. */
 export function PrivateLayer({profileId,on,requestsFrom,onChanged}:{profileId:string,on:boolean,requestsFrom:'all'|'matches'|'none',onChanged:()=>void}){
- const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();const w=useAccessWords();const decline=useDecline();
+ const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();const w=useAccessWords();
  const [mine,setMine]=useState<Priv|null>(null);const [reqs,setReqs]=useState<z.infer<typeof incoming>|null>(null);const [given,setGiven]=useState<GrantItem[]>([]);
  const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);
- const [grantFor,setGrantFor]=useState<Incoming|null>(null);const [asking,setAsking]=useState<'off'|null>(null);
- const [sheet,setSheet]=useState<{k:'desc'}|{k:'media',i:number}|{k:'grant',g:GrantItem}|{k:'jar',id:string}|{k:'pick'}|null>(null);
+ const [asking,setAsking]=useState<'off'|null>(null);
+ const [sheet,setSheet]=useState<{k:'desc'}|{k:'media',i:number}|{k:'jar',id:string}|{k:'pick'}|null>(null);
  const [viewing,setViewing]=useState<number|null>(null);const [picked,setPicked]=useState<File[]|null>(null);
  const file=useRef<HTMLInputElement>(null);const sendPrivate=useSendPhoto('private');
  const jars=useInterests();
@@ -263,7 +296,6 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged}:{profileId:st
   const poll=()=>{id=window.setTimeout(()=>{n++;call('private.get',{profileId},priv,{fresh:true}).then(r=>{if(!live)return;setMine(r);if(r.media?.some(m=>!m.src)&&n<20)poll();}).catch(()=>{if(live&&n<20)poll();});},4000);};
   poll();return ()=>{live=false;window.clearTimeout(id);};},[waiting,call,profileId]);
  const changed=()=>{load();onChanged();};
- const grants=useGrantActions(changed);
  // A widening change of the couple (switching the private part on, wider «who may ask») may wait for the partner.
  const act=async(fn:()=>Promise<Record<string,unknown>>,msg:string)=>{setBusy(true);try{const r=await fn();toast(r.pending?t('fe.ca.waitPartner'):msg,{type:'ok'});changed();return true;}catch(e){toast(w.err(e),{type:'err'});return false;}finally{setBusy(false);}};
  if(error)return <Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>;
@@ -281,7 +313,6 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged}:{profileId:st
  const toggle=()=>{if(on)setAsking('off');else void act(()=>call('private.setOn',{opId:newOpId(),on:true},ok),t(cp?'fe.mx.pr.onDoneUs':'fe.mx.pr.onDone'));};
  const name=(id:string)=>{const x=jars.topics.find(o=>o.id===id);return x?(locale==='en'?x.en:x.ru):id;};
  const addJar=()=>setSheet({k:'pick'});
- const available=reqs.available??[];
  const cur=sheet?.k==='media'?media[sheet.i]:undefined;
  return <>
   <section className={'vault'+(on&&!empty?'':' off')} id="privHead">
@@ -289,15 +320,6 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged}:{profileId:st
    <Card list><SelectRow row label={t('fe.mx.pr.reqFrom')} value={requestsFrom} options={(['all','matches','none'] as const).map(v=>[v,t('fe.mx.pr.from.'+v)] as const)}
     onChange={v=>void act(()=>call('profile.setVisibility',{opId:newOpId(),setting:'requestsFrom',value:v},ok),t('fe.mx.saved'))}/></Card>
   </section>
-  {reqs.items.length>0&&<Group title={<>{t('fe.priv.requests')} · {reqs.items.length}</>}><Stack gap={2}>
-   {reqs.items.map(r=><RequestCard key={r.id}
-    person={<PersonLine av={<Av name={nameOf(r.profile)} seed={r.profile?.id??r.id} src={r.profile?.avatar}/>} label={nameOf(r.profile)} onOpen={()=>r.profile&&navigate('/n/people/'+r.profile.id)}
-     name={<>{withAge(nameOf(r.profile),r.profile)}<NameBadges p={r.profile}/></>} sub={<>{cp?t('fe.mx.pr.asksUs'):t('fe.priv.asks')} · {when(r.created_at,locale)}</>}/>}
-    actions={<><Btn size="md" onClick={()=>setGrantFor(r)} disabled={busy}>{t('fe.priv.grant')}</Btn>
-     <Btn size="md" kind="soft" onClick={()=>void decline(r.id,nameOf(r.profile),changed)} disabled={busy}>{t('fe.priv.decline')}</Btn></>}>
-    <Chips>{r.scopes.map(s=><Pill key={s}>{t('fe.priv.scope.'+s)}{r.alreadyOpen?.scopes.includes(s)?' · '+t('fe.ac.gr.open'):''}</Pill>)}</Chips>
-   </RequestCard>)}
-  </Stack></Group>}
   {!cp&&<Group id="privDesc" title={t('fe.mp.desc')}>
    {txt?<Card className="blk-btn" label={t('fe.mx.editOf',{title:t('fe.mp.desc')})} onClick={()=>setSheet({k:'desc'})}><span className="blk-bio">{txt}</span><span className="chv"><ChevronRight/></span></Card>
     :<AddCard icon={PenLine} title={t('fe.mp.descAdd')} sub={t('fe.mp.descAddSub')} onClick={()=>setSheet({k:'desc'})}/>}
@@ -312,22 +334,13 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged}:{profileId:st
    {privJars.length?<Jars list={sortJars(privJars)} topics={jars.topics} onOpen={id=>setSheet({k:'jar',id})}/>
     :<AddCard icon={Sparkles} title={t('fe.mp.jarsAdd')} sub={t(cp?'fe.mp.jarsAddSubUs':'fe.mp.jarsAddSub')} disabled={!jars.items} onClick={addJar}/>}
   </Group>
-  <Group id="privWho" title={<>{t('fe.mp.access')}{given.length?' · '+given.length:''}</>}>
-   {given.length===0?<Empty compact icon={KeyRound} title={t('fe.mp.accessNone')}/>
-    :<Card list>{given.slice(0,5).map((g,i)=>{const n=nameOf(g.profile);
-     return <Row key={g.profile?.id??i} av={<Av name={n} seed={g.profile?.id??n} size="sm" src={g.profile?.avatar}/>} title={<>{n}<NameBadges p={g.profile}/></>} sub={w.what(g.scopes)+' · '+w.until(g.until)}
-      onClick={()=>g.profile&&navigate('/n/people/'+g.profile.id)} end={<IconBtn icon={MoreHorizontal} kind="ghost" size="sm" label={t('fe.mp.more',{name:n})} onClick={()=>setSheet({k:'grant',g})}/>}/>;})}</Card>}
-   <Card list><Row icon={LockOpen} title={t('fe.mp.accessAll')} val={given.length>5?given.length:undefined} onClick={()=>navigate('/n/me/access')}/></Card>
-  </Group>
+  {/* Requests to me and who sees what live in the one «Доступы» screen (owner, 29.10.2026: no second copy here). */}
+  <Group id="privWho"><Card list><Row icon={KeyRound} title={t('fe.ac.entry')} badge={reqs.items.length||undefined}
+   sub={reqs.items.length?t('fe.ac.entryWait',{n:reqs.items.length}):given.length?t('fe.ac.entryOpen',{n:given.length}):t(cp?'fe.ac.entrySubUs':'fe.ac.entrySub')}
+   onClick={()=>navigate('/n/me/access?tab=byme')}/></Card></Group>
   {asking==='off'&&<Ask icon={Lock} danger title={t('fe.mx.pr.offTitle')} busy={busy}
    text={[given.length||reqs.items.length?t('fe.mx.pr.offWhat',{g:given.length,q:reqs.items.length}):t('fe.mx.pr.offAll'),t('fe.mx.pr.offRest')].join(' ')} ok={t('fe.mx.pr.offOk')}
    onCancel={()=>setAsking(null)} onOk={async()=>{if(await act(()=>call('private.setOn',{opId:newOpId(),on:false,confirm:true},ok),t(cp?'fe.mx.pr.offDoneUs':'fe.mx.pr.offDone')))setAsking(null);}}/>}
-  {grantFor&&<GrantSheet r={grantFor} available={available} onClose={()=>setGrantFor(null)} onDone={()=>{setGrantFor(null);changed();}}
-   onDecline={()=>{const r=grantFor;setGrantFor(null);void decline(r.id,nameOf(r.profile),changed);}}/>}
-  {sheet?.k==='grant'&&<Sheet title={nameOf(sheet.g.profile)} sub={w.what(sheet.g.scopes)+' · '+w.until(sheet.g.until)} onClose={()=>setSheet(null)}><Card list>
-   <Row icon={Pencil} title={t('fe.mp.edit')} noChev onClick={()=>{const g=sheet.g;setSheet(null);grants.edit(g);}}/>
-   <Row icon={Lock} title={t('fe.mx.pr.revoke')} danger onClick={()=>{const g=sheet.g;setSheet(null);grants.revoke(g);}}/>
-  </Card></Sheet>}
   {sheet?.k==='desc'&&<DescSheet text={txt} onClose={()=>setSheet(null)} onSaved={async()=>{setSheet(null);await ensureOn();toast(t('fe.mp.descSaved'),{type:'ok'});changed();}}/>}
   {sheet?.k==='media'&&cur&&<Sheet title={t('fe.mx.ph.nOf',{n:sheet.i+1,total:media.length})} onClose={()=>setSheet(null)}>
    <div className="ph-sheet-prev">{ownSrc(cur)&&<img src={cur.src?.card??ownSrc(cur)!} alt="" draggable={false}/>}</div>
@@ -344,7 +357,6 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged}:{profileId:st
   <FilePick ref={file} accept="image/*" multiple onFiles={f=>setPicked([...f])}/>
   {picked&&<Uploader files={picked} aspects={['orig','4:5','1:1']} max={PRIV_MAX-media.length} send={sendPrivate} onClose={()=>setPicked(null)}
    onDone={got=>{setPicked(null);if(got.length)void saveMedia([...ids,...got.map(g=>g.id)],t('fe.mp.mediaSaved'));}}/>}
-  {grants.node}
  </>;
 }
 
@@ -369,14 +381,18 @@ function DescSheet({text,onClose,onSaved}:{text:string,onClose:()=>void,onSaved:
  * it: buttons inert, but my own photos still open in the viewer. */
 export function PrivateVault({profileId,name,preview,pre}:{profileId:string,name:string,preview?:'all'|'granted'|undefined,
  /** The `private.get` answer already read (a Discover card's `discover.card`): shown at once, not asked again. */ pre?:unknown}){
- const {call,acting}=useFe();const us=acting?.kind==='couple'&&!preview;const {t}=useI18n();const w=useAccessWords();
+ const {call,acting}=useFe();const us=acting?.kind==='couple'&&!preview;const {t}=useI18n();const w=useAccessWords();const navigate=useNavigate();const loc=useLocation();
  const [p,setP]=useState<Priv|null>(()=>{const r=pre?priv.safeParse(pre):null;return r?.success?r.data:null;});const [view,setView]=useState<number|null>(null);
  const [sheet,setSheet]=useState<'request'|'pending'|null>(null);const [reaskAt,setReaskAt]=useState<string|null>(null);
  const load=useCallback(()=>{call('private.get',{profileId},priv,{fresh:true}).then(setP).catch(()=>setP(null));},[call,profileId]);
  const given=pre!=null;
  useEffect(()=>{if(!given)load();},[load,given]);
  // Back from the age check this request sent the person to: open the request sheet again.
- useAgeResume(v=>v==='access:'+profileId,()=>setSheet('request'),!!p?.canRequest);
+ const ageOk=!!preview||!p?.age||p.age==='ok';
+ useAgeResume(v=>v==='access:'+profileId,()=>setSheet('request'),!!p?.canRequest&&ageOk);
+ // Only adults see private parts (the server refuses the request otherwise): the button sends to the age check first
+ // and comes back here with the request sheet open.
+ const toAge=()=>navigate(agePath(loc.pathname+loc.search,'access:'+profileId));
  const reason=preview?null:p?.reason??null;
  useEffect(()=>{if(reason!=='cooldown')return;
   call('access.lists',{tab:'out'},outRes).then(r=>setReaskAt(r.items.find(x=>x.profile?.id===profileId&&x.reaskAt)?.reaskAt??null)).catch(()=>{});},[call,profileId,reason]);
@@ -384,6 +400,8 @@ export function PrivateVault({profileId,name,preview,pre}:{profileId:string,name
  if(preview&&(!p.on||!(p.available??[]).length))return null;
  const available=p.available??[];const scopesOpen=preview==='granted'?available:preview?[]:(p.scopes??[]);
  const done=()=>{setSheet(null);load();};
+ const ask=()=>{if(p.age==='me')toAge();else setSheet('request');};
+ const ageLine=!ageOk&&p.canRequest?<Note>{t('fe.ac.age.text')}</Note>:null;
  const sheets=<>
   {sheet==='request'&&<RequestSheet profileId={profileId} available={scopesOpen.length?available.filter(s=>!scopesOpen.includes(s)):available} onClose={()=>setSheet(null)} onSent={done}/>}
   {sheet==='pending'&&<PendingSheet profileId={profileId} name={name} onClose={()=>setSheet(null)} onCancelled={done}/>}
@@ -395,14 +413,15 @@ export function PrivateVault({profileId,name,preview,pre}:{profileId:string,name
   const until=!preview&&p.until?<Pill tone="v">{w.until(p.until)}</Pill>:undefined;
   const desc=scopesOpen.includes('info')&&p.text?<Group title={t('fe.px.pr.desc')}><Card><div className="md bio">{p.text.split(/\n{2,}/).map((x,i)=><p key={i}>{x}</p>)}</div></Card></Group>:null;
   const more=!preview&&(reason==='pending'?<Btn kind="text" auto icon={Clock} onClick={()=>setSheet('pending')}>{t(us?'fe.ac.rq.waitingUs':'fe.ac.rq.waiting')}</Btn>
-   :p.canRequest&&available.some(s=>!scopesOpen.includes(s))?<Btn kind="soft" size="sm" auto icon={LockOpen} onClick={()=>setSheet('request')}>{t(us?'fe.ac.rq.askMoreUs':'fe.ac.rq.askMore')}</Btn>:null);
+   :p.canRequest&&available.some(s=>!scopesOpen.includes(s))?(p.age==='partner'?<Pill icon={Clock}>{t('fe.ac.age.partner')}</Pill>
+    :<Btn kind="soft" size="sm" auto icon={p.age==='me'?ShieldCheck:LockOpen} onClick={ask}>{p.age==='me'?t('fe.ac.age.go'):t(us?'fe.ac.rq.askMoreUs':'fe.ac.rq.askMore')}</Btn>):null);
   return <section className="vault open" id="priv">{head(true,until)}<div className="vault-b">
    {desc}
    {photos.length>0&&<Group bare title={<>{t('fe.px.pr.photos')} · {photos.length}</>} foot={preview?t('fe.px.pr.wmPreview'):t('fe.px.pr.wm')}>
     <div className="ggrid">{photos.map((m,i)=><button key={i} type="button" className="gtile" onClick={()=>setView(i)}><img src={mediaSrc(m)!} alt="" loading="lazy" draggable={false}/></button>)}</div>
    </Group>}
    {!desc&&!photos.length&&<Empty compact icon={Lock} title={t('fe.px.pr.nothing')}/>}
-   {more}
+   {more}{more&&ageLine}
   </div>
   {view!==null&&<PhotoViewer srcs={photos.map(m=>m.src?.full??mediaSrc(m)!)} index={view} wm={wm} onClose={()=>setView(null)}/>}
   {sheets}</section>;
@@ -412,8 +431,10 @@ export function PrivateVault({profileId,name,preview,pre}:{profileId:string,name
   :reason==='not_accepting'?<Pill icon={Lock}>{t('fe.px.pr.notAccepting')}</Pill>
   :reason==='cooldown'?<Pill icon={Clock}>{reaskAt?t('fe.ac.rq.again',{n:w.days(reaskAt)}):t('fe.px.pr.cooldown')}</Pill>
   :reason?<Pill icon={Lock}>{t('fe.px.pr.r.'+reason)}</Pill>
+  :p.canRequest&&p.age==='partner'?<Pill icon={ShieldCheck}>{t('fe.ac.age.partner')}</Pill>
+  :p.canRequest&&p.age==='me'?<Btn kind="dark" icon={ShieldCheck} onClick={toAge}>{t('fe.ac.age.go')}</Btn>
   :p.canRequest?<Btn kind="dark" icon={LockOpen} onClick={()=>setSheet('request')}>{t(us?'fe.px.pr.askUs':'fe.px.pr.ask')}</Btn>:null;
  return <section className="vault closed" id="priv">{head(false)}<div className="vault-b">
-  <Veil lock={false} toggles title={t('fe.px.pr.decides').replace('{name}',name)} text={t('fe.px.pr.decidesText')} action={action}/>
+  <Veil lock={false} toggles title={t('fe.px.pr.decides').replace('{name}',name)} text={!ageOk&&p.canRequest?t('fe.ac.age.text'):t('fe.px.pr.decidesText')} action={action}/>
  </div>{sheets}</section>;
 }

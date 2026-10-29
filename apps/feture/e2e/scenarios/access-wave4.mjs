@@ -1,6 +1,6 @@
 // Wave 4 «Приватное и доступы» with two people of one lane: A (persona `pa`) asks, B (persona `pb`) owns a private part
 // with a description and an approved photo. Each step taps through the screens and reads the result back via the API.
-//   request sheet (parts, «осталось N сегодня») → «Запрос уже отправлен» → «Мои запросы» (filter) → B declines, the
+//   request sheet (parts as chips with «Всё», «Сегодня можно ещё N») → «Запрос уже отправлен» → «Мои запросы» (filter) → B declines, the
 //   toast's «Отменить» undoes it → B opens a part that was not asked for → A sees the photo with their own watermark
 //   → B narrows («Изменить») → B revokes after the question → A asks again and cancels («попытка не возвращается»).
 // Uses 2 of A's 10 daily requests per run. A decline is always undone, so no 30-day cooldown is left behind.
@@ -46,18 +46,23 @@ async function setup(t) {
 }
 
 export default [
- { name: 'A asks for the description: sheet with parts and «осталось N из M», then «Запрос уже отправлен» → «Мои запросы»', persona: 'pa', allow4xx: true, run: async t => {
+ { name: 'A asks for the description: chips with «Всё» and «Сегодня можно ещё N», then «Запрос уже отправлен» → «Мои запросы»', persona: 'pa', allow4xx: true, run: async t => {
    const { a, b } = await setup(t);
    const before = await quota(t, a);
    expect(before.left > 0, 'A has no requests left today (resets ' + before.resetsAt + ')');
    await t.go('/n/people/' + b.personId);
    await t.tap('#priv button:has-text("Попросить доступ")');
    await t.see('.sheet.on h2:has-text("Запросить приватную часть")');
-   await t.see(`.sheet.on .sec:has-text("${before.left} из ${before.max}")`);
-   await t.see('.sheet.on .quota'); await t.shot('w4-request-sheet');
-   // Only «Описание» is preselected; «Фото» is offered but stays off.
-   expect(await t.page.locator('.sheet.on [role="checkbox"][aria-checked="true"]').count() === 1, 'one part preselected');
-   await t.see('.sheet.on [role="checkbox"]:has-text("Фото")');
+   await t.see(`.sheet.on .note:has-text("Сегодня можно ещё ${before.left}")`);
+   expect(!(await t.page.locator('.sheet.on .quota').count()), 'no segment bar');
+   // Every part the private part has is a chip, all picked at first; «Всё» clears them, then «Описание» alone.
+   const chip = l => t.page.locator('.sheet.on .chips button.chip', { hasText: l });
+   expect(await chip('Всё').getAttribute('aria-pressed') === 'true', '«Всё» picked at first');
+   await t.see('.sheet.on .chips button.chip:has-text("Фото")'); await t.shot('w4-request-sheet');
+   await chip('Всё').click();
+   expect(await t.page.locator('.sheet.on .chips button.chip[aria-pressed="true"]').count() === 0, '«Всё» again clears the choice');
+   expect(await t.page.locator('.sheet.on .sh-f button:has-text("Отправить запрос")').isDisabled(), 'nothing picked: send is off');
+   await chip('Описание').click();
    await t.tap('.sheet.on .sh-f button:has-text("Отправить запрос")');
    await toastSee(t, 'Запрос отправлен');
    const r = await until(async () => { const x = await outFor(t, a, b); return x?.state === 'pending' && x; }, 'request is pending on the server');
@@ -78,7 +83,7 @@ export default [
  { name: 'B declines with an explanation, «Отменить» in the toast brings the request back, then opens a part that was not asked for', persona: 'pb', allow4xx: true, run: async t => {
    const { a, b } = await people();
    expect(await incomingFrom(t, a, b), 'B has the request from A');
-   await t.go('/n/me?layer=priv');
+   await t.go('/n/me/access?tab=byme');
    const card = t.page.locator('.rqcard', { hasText: 'qa_w4_pa' }).first();
    await card.waitFor({ timeout: 30000 });
    await card.locator('button:has-text("Отказать")').click();
@@ -103,7 +108,7 @@ export default [
    expect(g.until && new Date(g.until) - Date.now() < 25 * 3600e3, '24 h term: ' + g.until);
    expect((await outFor(t, a, b))?.state === 'granted', 'A sees «открыт»');
  } },
- { name: 'A sees the private photo with their own watermark; «Мне открыли» lists B and links to «Я → Приватное»', persona: 'pa', run: async t => {
+ { name: 'A sees the private photo with their own watermark; «Моё → Мне открыли» is the «Доступы» tab and lists B', persona: 'pa', run: async t => {
    const { a, b } = await people();
    const p = await t.api('private.get', { profileId: b.personId }, a.email);
    expect((p.media ?? []).every(m => m.watermark === '@' + a.handle), 'server watermark is A\'s handle: ' + JSON.stringify((p.media ?? []).map(m => m.watermark)));
@@ -114,8 +119,10 @@ export default [
    await t.see(`.viewer .vw-wm span:has-text("@${a.handle}")`); await t.shot('w4-watermark');
    await t.page.keyboard.press('Escape');
    await t.go('/n/me/shared');
+   await t.see('.seg [aria-selected="true"]:has-text("Мне открыли")');
+   expect(t.page.url().includes('/n/me/access') && t.page.url().includes('tab=withme'), 'one screen: ' + t.page.url());
    await t.see(`.li:has-text("qa_w4_pb")`);
-   await t.see('.li:has-text("Я → Приватное")');
+   await t.notSee('.li:has-text("Я → Приватное")', 500);
  } },
  { name: 'B narrows to the description («Изменить»), then revokes after «Отозвать доступ у …?»', persona: 'pb', run: async t => {
    const { a, b } = await people();

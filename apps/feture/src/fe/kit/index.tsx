@@ -256,6 +256,20 @@ export function RadioList<T extends string>({value,options,onChange,label}:{valu
 export function ChoiceChips<T extends string>({value,options,onChange,label,scroll,disabled}:{value:T|null|undefined,options:readonly (readonly [T,ReactNode])[],onChange:(v:T)=>void,label:string,scroll?:boolean,disabled?:boolean}){
  return <div className={'chips'+(scroll?' scroll':'')} role="radiogroup" aria-label={label} aria-disabled={disabled||undefined}>{options.map(([k,l])=><button key={k} type="button" disabled={disabled} className={'chip'+(value===k?' on':'')} role="radio" aria-checked={value===k} onClick={()=>onChange(k)}>{l}</button>)}</div>;
 }
+/** Several values from a small set as chips (what to ask for). `all` adds a first chip that picks every option at once
+ * and reads as picked while all are; a tap on it with everything picked clears the choice. `value` keeps the order of
+ * `options`. */
+export function MultiChips<T extends string>({value,options,onChange,label,all,disabled}:{value:readonly T[],options:readonly (readonly [T,ReactNode])[],onChange:(v:T[])=>void,label:string,
+ /** The «Всё» chip's label; shown only when there are two options or more. */ all?:ReactNode,disabled?:boolean}){
+ // «Всё» or several (owner 29.10.2026): with every option picked only «Всё» is lit; a tap on one part then picks that
+ // part alone; picking the last missing part lights «Всё» again.
+ const keys=options.map(o=>o[0]);const showAll=!!all&&keys.length>1;const every=keys.length>0&&keys.every(k=>value.includes(k));
+ const flip=(k:T)=>onChange(showAll&&every?[k]:keys.filter(x=>x===k?!value.includes(k):value.includes(x)));
+ return <div className="chips" role="group" aria-label={label}>
+  {showAll&&<button type="button" disabled={disabled} className={'chip'+(every?' on':'')} aria-pressed={every} onClick={()=>onChange(keys)}>{all}</button>}
+  {options.map(([k,l])=>{const on=value.includes(k)&&!(showAll&&every);return <button key={k} type="button" disabled={disabled} className={'chip'+(on?' on':'')} aria-pressed={on} onClick={()=>flip(k)}>{l}</button>;})}
+ </div>;
+}
 /** Several values from a list as rows with a box (what to open, what to keep). A row may say more under its title
  * («не запрошено», «уже открыто»); `value` keeps the order of `options`. */
 export function CheckList<T extends string>({value,options,onChange,label}:{value:readonly T[],options:readonly (readonly [T,ReactNode,ReactNode?])[],onChange:(v:T[])=>void,label:string,/** Kept for old calls; the rows never have a second frame. */ bare?:boolean}){
@@ -376,6 +390,24 @@ export function StatTiles({items}:{items:readonly {n:number,label:string,onClick
  return <div className={'stat3'+(items.length===2?' two':'')}>{items.map((x,i)=>x.onClick
   ?<button key={i} type="button" onClick={x.onClick}><b>{x.n}</b><small>{x.label}</small></button>
   :<div key={i}><b>{x.n}</b><small>{x.label}</small></div>)}</div>;
+}
+
+/** One of two or three options as equal cards side by side (a mode: «Обычные» / «Безопасные» on the lock screen): a
+ * round mark, a bold title and a line under it. Every card has the same height and the same inner alignment, whatever
+ * the length of its text; no «по умолчанию» badges — the line says what the option does. */
+export function ChoiceCards<T extends string>({value,options,onChange,label}:{value:T,options:readonly (readonly [T,ReactNode,ReactNode?])[],onChange:(v:T)=>void,label:string}){
+ return <div className={'k-cards'+(options.length===3?' three':'')} role="radiogroup" aria-label={label}>{options.map(([k,title,sub])=>
+  <button key={k} type="button" role="radio" aria-checked={value===k} className={'k-card'+(value===k?' on':'')} onClick={()=>{if(value!==k)onChange(k);}}>
+   <i aria-hidden="true"/><b>{title}</b>{sub&&<small>{sub}</small>}</button>)}</div>;
+}
+
+/** A span of time on one line, as words with two inline selects: «с 23:00 до 08:00». It goes under a row's title
+ * (`Row extra`) next to the switch that turns it on; `disabled` dims it while the switch is off. */
+export function TimeSpan<T extends string>({from,to,options,onFrom,onTo,words,disabled}:{from:T,to:T,options:readonly (readonly [T,string])[],onFrom:(v:T)=>void,onTo:(v:T)=>void,
+ /** The words around the times and the selects' names: {from:'с', to:'до', fromLabel:'Начало', toLabel:'Конец'}. */ words:{from:string,to:string,fromLabel:string,toLabel:string},disabled?:boolean}){
+ const pick=(v:T,on:(v:T)=>void,l:string)=><label className="k-tsel"><span aria-hidden="true">{options.find(([k])=>k===v)?.[1]??v}</span>
+  <select value={v} disabled={disabled} aria-label={l} onChange={e=>on(e.target.value as T)}>{options.map(([k,x])=><option key={k} value={k}>{x}</option>)}</select></label>;
+ return <span className={'k-tspan'+(disabled?' off':'')}>{words.from} {pick(from,onFrom,words.fromLabel)} {words.to} {pick(to,onTo,words.toLabel)}</span>;
 }
 
 export * from './domain';

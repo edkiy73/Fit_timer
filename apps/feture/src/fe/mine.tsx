@@ -4,12 +4,13 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Bookmark,Calendar,Clock,LockOpen,MessageCircle,Newspaper,Pencil,Plus,Trash2,TriangleAlert,Users,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Ask,Av,Bar,Btn,Card,Empty,Group,IconBtn,Note,Row,Skel,Stack,View,useRefreshable} from './kit';
+import {ActingAv,Alert,Ask,Av,Bar,Btn,Card,DraftCard,Empty,Group,IconBtn,Note,Row,Skel,Stack,View,useRefreshable} from './kit';
 import {useFe} from './session';
 import {PostCard,SavedEditSheet,postSchema,savedEdit,when,type Post,type SavedEdit} from './feed';
 import {EventRow,type Ev} from './browse';
 import {CreateSheet} from './create-entry';
-import {mdPlain} from './post-parts';
+import {mdPlain,mediaSrc,plural} from './post-parts';
+import {PostMenu} from './post-menu';
 import {useToast} from './toast';
 import {PairEntry} from './pair';
 import {faceFields,NameBadges} from './faces';
@@ -162,12 +163,27 @@ const oneEvent=z.object({ok:z.literal(true),event:z.object({id:z.uuid(),title:z.
 
 /* ---------- F10 «Мои публикации» ---------- */
 
+/** What a draft holds, for its card (owner 29.10.2026): «Черновик · 2 фото», «Черновик статьи», «Пустой черновик». */
+function draftLabel(p:Post,t:(k:string,v?:Record<string,string|number>)=>string,locale:string){
+ const photos=p.media.filter(m=>m.kind!=='video').length,clips=p.media.length-photos;
+ const has=[photos?plural(photos,['фото','фото','фото'],['photo','photos'],locale):'',clips?plural(clips,['видео','видео','видео'],['video','videos'],locale):'',p.poll?t('fe.fd.mine.draftPoll'):'',p.interests?.length?t('fe.fd.mine.draftInterests'):''].filter(Boolean);
+ const base=p.type==='note'?t('fe.fd.mine.draftNote'):t('fe.fd.mine.draft');
+ if(!has.length&&!draftText(p))return t('fe.fd.mine.draftEmpty');
+ return [base,has.join(', ')].filter(Boolean).join(' · ');
+}
+const draftText=(p:Post)=>[p.title,mdPlain(p.body)||p.poll?.question].filter(Boolean).join(' — ').slice(0,400);
+
 export function MyPostsScreen(){
  const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
  const couple=acting?.kind==='couple';
  const {data,setData,error,load}=useLoad(useCallback((fresh:(v:z.infer<typeof postsRev>)=>void)=>call('me.posts',{},postsRev,{onFresh:fresh}),[call]));
  const [create,setCreate]=useState(false);
- const [edits,setEdits]=useState<SavedEdit|null>(null);
+ const [edits,setEdits]=useState<SavedEdit|null>(null);const [menu,setMenu]=useState<Post|null>(null);
+ // «Изменён 29 окт, 14:20»; within the hour «Изменён 5 минут назад».
+ const changed=(iso:string|null|undefined)=>{if(!iso)return t('fe.fd.mine.draftNoDate');const d=new Date(iso);
+  if(Date.now()-d.getTime()<3600e3)return t('fe.fd.mine.editedAt',{when:when(iso,locale)});
+  const lc=locale==='en'?'en':'ru';const day=d.toLocaleDateString(lc,{day:'numeric',month:'short',...(d.getFullYear()!==new Date().getFullYear()?{year:'numeric'}:{})}).replace('.','');
+  return t('fe.fd.mine.editedAt',{when:day+', '+d.toLocaleTimeString(lc,{hour:'2-digit',minute:'2-digit'})});};
  const replace=(np:Post)=>setData(d=>d?{...d,items:d.items.map(x=>x.id===np.id?np:x)}:d);
  const card=(p:Post)=><PostCard key={p.id} post={p} onChange={replace} onExpired={()=>{call('post.get',{postId:p.id},onePost,{fresh:true}).then(r=>replace(r.post)).catch(()=>{});}}
   onRemove={r=>{setData(d=>d?{...d,items:d.items.filter(x=>x.id!==r.postId)}:d);toast(r.notice,{type:'ok'});}}/>;
@@ -183,7 +199,11 @@ export function MyPostsScreen(){
     <Btn onClick={()=>navigate('/n/feed/new')}>{couple?t('fe.fd.mine.createUs'):t('fe.fd.mine.create')}</Btn></Empty>
    :<>
     {returned.length>0&&<Group title={t('fe.fd.mine.returned',{n:returned.length})}><Card list>{returned.map(p=>row(p,TriangleAlert,t('fe.fd.mine.returnedSub')))}</Card></Group>}
-    {drafts.length>0&&<Group title={t('fe.fd.mine.drafts',{n:drafts.length})}><Card list>{drafts.map(p=>row(p,Pencil,t('fe.fd.mine.editedAt',{when:when(p.editedAt??p.publishedAt,locale)||'—'})))}</Card></Group>}
+    {drafts.length>0&&<Group title={t('fe.fd.mine.drafts',{n:drafts.length})}><div className="posts">{drafts.map(p=><DraftCard key={p.id}
+     av={<ActingAv p={{id:p.author.id,kind:p.author.kind,name:p.author.name,handle:p.author.handle,avatar:p.author.avatar}}/>}
+     label={draftLabel(p,t,locale)} when={changed(p.updatedAt??p.editedAt??p.publishedAt)} text={draftText(p)}
+     thumbs={p.media.map(m=>({src:mediaSrc(m),video:m.kind==='video'}))} openLabel={t('fe.pm.editFull')} moreLabel={t('fe.more')}
+     onOpen={()=>navigate('/n/feed/post/'+p.id+'/edit')} onMore={()=>setMenu(p)}/>)}</div></Group>}
     {(data.pendingEdits??[]).length>0&&<Group title={t('fe.w3.edits.group',{n:data.pendingEdits!.length})}><Card list>{data.pendingEdits!.map(e=><Row key={e.postId} icon={Pencil}
      title={mdPlain(e.post.title||e.post.body||'').slice(0,60)||t('fe.fd.mine.noText')} sub={t('fe.w3.edits.sub',{when:when(e.savedAt,locale)})} onClick={()=>setEdits(e)}/>)}</Card></Group>}
     {revs.length>0&&<Group title={t('fe.fd.mine.revisions',{n:revs.length})}><Card list>{revs.map(p=><Row key={p.id} icon={Clock} title={mdPlain(p.title||p.body).slice(0,60)||t('fe.fd.mine.noText')} sub={t('fe.fd.mine.revisionsSub')}
@@ -196,6 +216,7 @@ export function MyPostsScreen(){
   <Bar title={couple?t('fe.fd.mine.titleUs'):t('fe.fd.mine.title')} back small><IconBtn icon={Plus} label={t('fe.create')} aria-haspopup="dialog" onClick={()=>setCreate(true)}/></Bar>
   <View className="nodock" refresh>{body}</View>
   {create&&<CreateSheet onClose={()=>setCreate(false)}/>}
+  {menu&&<PostMenu post={menu} onClose={()=>setMenu(null)} onRemove={r=>{setMenu(null);setData(d=>d?{...d,items:d.items.filter(x=>x.id!==r.postId)}:d);toast(r.notice,{type:'ok'});}}/>}
   {edits&&<SavedEditSheet e={edits} onClose={()=>setEdits(null)} onDone={msg=>{setEdits(null);toast(msg,{type:'ok'});load();}}/>}
  </>;
 }

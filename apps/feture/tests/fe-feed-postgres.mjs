@@ -242,6 +242,15 @@ test('review fixes: approval bound to the version, disputes need photos and surv
     // The partner cannot read or edit the draft.
     assert.equal((await call('ub', pair, { action: 'post.get', postId: d.id })).status, 404);
     assert.equal((await call('ub', pair, { action: 'post.edit', opId: op(), postId: d.id, rev: 3, post: draft('Чужое') })).status, 404);
+    // Nor delete it (owner 29.10.2026: drafts have «Удалить черновик»); the writer's own delete removes it for good —
+    // it is not archived into the couple's archive, and the partner hears nothing about it.
+    assert.equal((await call('ub', pair, { action: 'post.delete', opId: op(), postId: d.id })).status, 404);
+    const mineList = (await call('ua', pair, { action: 'me.posts' })).items;
+    assert.ok(mineList.find((/** @type {any} */ x) => x.id === d.id).updatedAt, 'a draft says when it changed');
+    const outboxBefore = (await db.query(`select count(*)::int n from feture.outbox where topic = 'couple.changed'`))[0].n;
+    assert.equal((await call('ua', pair, { action: 'post.delete', opId: op(), postId: d.id })).state, 'deleted');
+    assert.equal((await db.query(`select count(*)::int n from feture.outbox where topic = 'couple.changed'`))[0].n, outboxBefore);
+    assert.equal((await db.query(`select count(*)::int n from feture.post where id = $1`, [d.id]))[0].n, 0);
 
     // Disputes need photos; reordering photos neither lifts a dispute nor re-asks marked people.
     await photoVerified(db, c);

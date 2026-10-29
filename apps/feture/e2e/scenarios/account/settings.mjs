@@ -54,7 +54,8 @@ export default [
    await t.tap('text=Заблокированные'); await t.page.waitForURL(/settings\/blocked/); await back();
    await t.tap('text=Мои данные и удаление'); await t.see('Скачать мои данные'); await back();
    await t.tap('text=Помощь и безопасность'); await t.see('Частые вопросы'); await back();
-   await t.tap('text=Приватность'); await t.page.waitForURL(/\/n\/me/);
+   // «Приватность и видимость» was a second way into the profile's «Видимость» tab: gone (owner 29.10.2026).
+   await t.notSee('text=Приватность и видимость', 300);
  } },
  { name: 'K01 hidden-from-feed sheet: open, ✕, Esc, scrim', persona: 'full', route: '/n/settings', run: async t => {
    await t.tap('text=Скрытое в ленте'); await t.see('.sheet >> text=Скрытое в ленте');
@@ -74,9 +75,16 @@ export default [
    const orig = await notif(t);
    try {
      await t.see('Пуш-уведомления');
-     await t.tap('.nm >> text=Обычные'); await t.see('Обычные уведомления');
+     // The two cards; the preview under them shows exactly what the chosen mode sends; no «по умолчанию» badge.
+     await t.notSee('text=по умолчанию', 300); await t.notSee('text=Скрыть и сам факт', 300);
+     const lockText = () => t.page.locator('.k-lock').innerText();
+     await t.tap('.k-card >> text=Обычные'); await t.see('Теперь с именем и началом сообщения');
      await until(async () => eq((await notif(t)).mode, 'normal', 'mode'));
-     await t.tap('.nm >> text=Безопасные'); await until(async () => eq((await notif(t)).mode, 'safe', 'mode back'));
+     if (!(await lockText()).includes('Мира')) throw new Error('normal preview shows a name');
+     await t.tap('.k-card >> text=Безопасные'); await until(async () => eq((await notif(t)).mode, 'safe', 'mode back'));
+     if ((await lockText()).includes('Мира') || !(await lockText()).includes('Новое уведомление')) throw new Error('safe preview has no names');
+     const [h1, h2] = await t.page.locator('.k-card').evaluateAll(els => els.map(e => e.getBoundingClientRect().height));
+     if (Math.abs(h1 - h2) > 1) throw new Error(`cards differ in height: ${h1} / ${h2}`);
      const push = t.page.locator('button[role=switch]:has-text("Пуш-уведомления")');
      await push.click(); await until(async () => eq((await notif(t)).push, !orig.push, 'push'));
      if (orig.push) { if (!(await t.page.locator('.nt-t[aria-label^="Пуш:"]').first().isDisabled())) throw new Error('push column should be disabled'); }
@@ -88,21 +96,23 @@ export default [
      await mail.click(); await until(async () => eq((await notif(t)).email, false, 'email off'));
      await t.notSee('select[aria-label="Как присылать письма"]', 300);
      await mail.click(); await until(async () => eq((await notif(t)).email, true, 'email on again'));
-     for (const cat of ['Совпадения и сообщения', 'Новые симпатии', 'Сообщества', 'Новости FetUre']) {
+     for (const cat of ['Совпадения и сообщения', 'Новые симпатии', 'Сообщества', 'Новости и акции FetUre']) {
        const b = t.page.locator(`.nt-t[aria-label="Почта: ${cat}"]`); const was = await b.getAttribute('aria-pressed');
        await b.click(); await until(async () => eq(await b.getAttribute('aria-pressed'), String(was !== 'true'), cat + ' pressed'));
        const p = t.page.locator(`.nt-t[aria-label="Пуш: ${cat}"]`); const wasP = await p.getAttribute('aria-pressed');
        await p.click(); await until(async () => eq(await p.getAttribute('aria-pressed'), String(wasP !== 'true'), cat + ' push pressed'));
      }
      await until(async () => { const n = await notif(t); eq(n.categories.groups.email, !orig.categories.groups.email, 'groups email'); eq(n.categories.match.push, !orig.categories.match.push, 'match push'); });
-     const quiet = t.page.locator('button[role=switch]:has-text("Не беспокоить")');
+     const quiet = t.page.locator('button[role=switch][aria-label="Не беспокоить"]');
      if (!orig.quiet.on) { await quiet.click(); await until(async () => eq((await notif(t)).quiet.on, true, 'quiet on')); }
-     await sel(t, 'С').selectOption('22:30'); await until(async () => eq((await notif(t)).quiet.from, '22:30', 'quiet from'));
-     await sel(t, 'До').selectOption('07:00'); await until(async () => eq((await notif(t)).quiet.to, '07:00', 'quiet to'));
-     await t.see('Не беспокоить 22:30–07:00');
+     // «Не беспокоить с 23:00 до 08:00» on one row: two selects in the row, the switch at its end.
+     await sel(t, 'Начало тихих часов').selectOption('22:30'); await until(async () => eq((await notif(t)).quiet.from, '22:30', 'quiet from'));
+     await sel(t, 'Конец тихих часов').selectOption('07:00'); await until(async () => eq((await notif(t)).quiet.to, '07:00', 'quiet to'));
+     await t.see('.k-tsel span:text-is("22:30")'); await t.see('.k-tsel span:text-is("07:00")');
      await quiet.click(); await until(async () => eq((await notif(t)).quiet.on, false, 'quiet off'));
-     await t.page.reload(); await t.see('Не беспокоить 22:30–07:00');
-     eq(await t.page.locator('button[role=switch]:has-text("Не беспокоить")').getAttribute('aria-checked'), 'false', 'quiet off after reload');
+     await t.page.reload(); await t.see('.k-tsel span:text-is("22:30")');
+     eq(await t.page.locator('button[role=switch][aria-label="Не беспокоить"]').getAttribute('aria-checked'), 'false', 'quiet off after reload');
+     if (!(await sel(t, 'Начало тихих часов').isDisabled())) throw new Error('times are dimmed while quiet hours are off');
    } finally { await t.api('notifications.settings.update', { opId: t.uuid7(), settings: orig }); }
    eq(await notif(t), orig, 'restored');
  } },

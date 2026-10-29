@@ -2,7 +2,7 @@ import type {Meta,StoryObj} from '@storybook/react-vite';
 import {useRef,useState} from 'react';
 import {fn} from 'storybook/test';
 import {AtSign,Calendar,ChartColumn,Image as ImageIcon,Sparkles} from 'lucide-react';
-import {ActionLine,ActivityCard,ActivityItem,ActivityTile,type ActThumb,ArticleCard,ArticleImage,Av,Card,ComposerRow,EventTile,FeedEvents,IconBtn,LikesLine,plate,PLATE_KEYS,articlePlate,QuickStart,RichEditor,type RichEditorHandle,PhotoTrack,ViewerPostBar} from './index';
+import {ActionLine,DraftCard,ActivityCard,ActivityItem,ActivityTile,type ActThumb,ArticleCard,ArticleImage,Av,Card,ComposerRow,EventTile,FeedEvents,IconBtn,LikesLine,plate,PLATE_KEYS,articlePlate,QuickStart,RichEditor,type RichEditorHandle,PhotoTrack,ViewerPostBar} from './index';
 
 /** A picture drawn in place (no network): a soft gradient with a word. */
 const pic=(word:string,w=1200,h=675)=>{const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d')!;
@@ -104,3 +104,12 @@ export const ПросмотрПоста:StoryObj<typeof ViewerPostBar>={name:'П
  args:{author:{id:'mia',name:'Mia'},text:'Вечер у озера — первая прогулка после долгой недели. Тишина, туман и ни одного человека вокруг, только утки и мы.',
   liked:true,likes:12,replies:3,labels:{like:'Нравится',comment:'Комментарии',open:'Открыть публикацию'},
   onLike:fn(),onComment:fn(),onOpen:fn(),onAuthor:fn()}};
+
+export const Черновик:S={name:'Черновик (DraftCard)',parameters:{docs:{description:{story:'Черновик в «Мои публикации»: рамка и шапка карточки публикации — аватар автора, что в черновике («Черновик · 2 фото», «Пустой черновик»), когда изменён, ⋯ (редактировать, «Удалить черновик»); начало текста до трёх строк и превью медиа. Нажатие открывает редактор.'}}},
+ render:()=><div className="posts">
+  <DraftCard av={<Av name="Mia" seed="mia" size="sm"/>} label="Черновик · 2 фото" when="Изменён 29 окт, 14:20" text="Вечер у озера — первая прогулка после долгой недели. Тишина, туман и ни одного человека вокруг."
+   thumbs={[{src:pic('Озеро',240,240)},{src:pic('Туман',240,240),video:true}]} openLabel="Редактировать" moreLabel="Ещё" onOpen={fn()} onMore={fn()}/>
+  <DraftCard av={<Av name="Mia" seed="mia" size="sm"/>} label="Черновик · 6 фото" when="Изменён 5 минут назад"
+   thumbs={[{src:pic('1',240,240)},{src:pic('2',240,240)},{},{src:pic('4',240,240)},{},{}]} openLabel="Редактировать" moreLabel="Ещё" onOpen={fn()} onMore={fn()}/>
+  <DraftCard av={<Av name="Mia" seed="mia" size="sm"/>} label="Пустой черновик" when="Изменён вчера" openLabel="Редактировать" moreLabel="Ещё" onOpen={fn()} onMore={fn()}/>
+ </div>};

@@ -4,12 +4,13 @@
  * the viewing account is one of the grant's viewers (a couple grant is for both members, not a new partner);
  * the owner's private part is on and the owner profile is active.
  * @typedef {import('./db.mjs').Q} Q @typedef {import('./profiles.mjs').Acting} Acting
- * @typedef {'info' | 'photos' | 'video'} Scope
+ * @typedef {'info' | 'photos' | 'video' | 'interests'} Scope
  */
 
-export const SCOPES = /** @type {const} */ (['info', 'photos', 'video']);
+// info = the description (and profile details shown «по доступу»), interests = the «По доступу» interests.
+export const SCOPES = /** @type {const} */ (['info', 'photos', 'video', 'interests']);
 // declineUndoSeconds: a decline can be taken back this long; until then the requester sees the request as waiting.
-export const LIMITS = Object.freeze({ photos: 12, videos: 6, requestsPerDay: 20, reaskDays: 30, declineUndoSeconds: 10 });
+export const LIMITS = Object.freeze({ photos: 12, videos: 6, requestsPerDay: 10, reaskDays: 30, declineUndoSeconds: 10 });
 
 /** Scopes the viewer may see in the owner's private part (empty when none). @param {Q} q @param {string} ownerProfileId @param {Acting} viewer
  * @returns {Promise<Scope[]>} */
@@ -32,8 +33,8 @@ export async function grantedScopes(q, ownerProfileId, viewer) {
 export async function availableScopes(q, ownerProfileId) {
   const [r] = await q.query(
     `select
-       coalesce((select text <> '' from feture.private_part where profile_id = $1), false)
-         or exists (select 1 from feture.interest where profile_id = $1 and vis = 'granted') info,
+       coalesce((select text <> '' from feture.private_part where profile_id = $1), false) info,
+       exists (select 1 from feture.interest i join feture.topic t on t.id = i.topic_id where i.profile_id = $1 and i.vis = 'granted' and not t.hidden) interests,
        exists (select 1 from feture.media_attachment a join feture.media_asset m on m.id = a.asset_id
                where a.target_type = 'private' and a.target_id = $1 and m.kind = 'image' and m.state in ('uploaded', 'scanning', 'needs_review', 'approved')) photos,
        exists (select 1 from feture.media_attachment a join feture.media_asset m on m.id = a.asset_id

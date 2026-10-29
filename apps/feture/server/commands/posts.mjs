@@ -297,13 +297,15 @@ export async function postFieldsOf(q, postId) {
 /** Deletes an own post (post.delete and the gallery selection): a couple's post, a removed one or one under open
  * reports is archived instead. @param {Q} q @param {Acting} acting @param {string} postId */
 export async function deletePost(q, acting, postId) {
-  const [p] = await q.query(`select state from feture.post where id = $1 and owner_profile_id = $2 for update`, [postId, acting.profileId]);
-  if (!p) fail(404, 'not_found');
+  const [p] = await q.query(`select state, created_by from feture.post where id = $1 and owner_profile_id = $2 for update`, [postId, acting.profileId]);
+  // A couple's draft is the partner's who wrote it (me.posts shows it only to them): the other partner cannot touch it.
+  if (!p || (p.state === 'draft' && p.created_by !== acting.accountId)) fail(404, 'not_found');
   await q.query(`update feture.partner_approval set state = 'cancelled', decided_at = now() where target_type = 'post' and target_id = $1 and state = 'pending'`, [postId]);
   // A post removed by moderation or under open reports is only hidden, so the evidence stays for staff (S4 §3).
   const [{ reported }] = await q.query(`select exists (select 1 from feture.report where target_type = 'post' and target_id = $1 and state = 'open') reported`, [postId]);
-  if (acting.kind === 'couple' || p.state === 'removed' || reported) {
-    // A couple's post is hidden into the couple's archive, not destroyed by one partner (V21 «Скрыть совместную»).
+  if ((acting.kind === 'couple' && p.state !== 'draft') || p.state === 'removed' || reported) {
+    // A couple's post is hidden into the couple's archive, not destroyed by one partner (V21 «Скрыть совместную»); a
+    // draft nobody else has seen is simply deleted.
     await q.query(`update feture.post set state = 'archived', updated_at = now() where id = $1`, [postId]);
     return 'archived';
   }
@@ -591,7 +593,7 @@ async function postDtos(q, rows, viewer, media, showExplicit) {
       likes: c.likes, liked: c.liked, replies: c.replies, saved: c.saved,
       publishedAt: p.published_at, editedAt: p.edited_at,
       // The gallery album goes back to its owner only (the post menu and the editor keep it; V21 postAlbum / setAlbum).
-      ...(p.own ? { state: p.state, rev: p.rev, inFeed: p.in_feed, returned: p.removed_reason, ...(p.community_id ? { communityId: p.community_id } : {}), ...('album_id' in p ? { albumId: p.album_id } : {}),
+      ...(p.own ? { state: p.state, rev: p.rev, updatedAt: p.updated_at, inFeed: p.in_feed, returned: p.removed_reason, ...(p.community_id ? { communityId: p.community_id } : {}), ...('album_id' in p ? { albumId: p.album_id } : {}),
         ...(disputes.some(d => d.post_id === p.id) ? { dispute: { note: p.dispute_note ?? null } } : {}) } : {}),
     };
   });
@@ -658,7 +660,7 @@ const run = {
     const acting = need(a);
     const state = await deletePost(q, acting, input.postId);
     await dropHiddenPostPhotos(q, acting.profileId); // its photos leave the profile with it (V21 galSelDel)
-    if (acting.kind === 'couple') await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: 'post_archived' });
+    if (acting.kind === 'couple' && state === 'archived') await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: 'post_archived' });
     return { state };
   },
 

@@ -12,7 +12,7 @@ const noPicker = async t => {
 };
 
 export default [
- { name: 'profile as the couple: «Подписать пару» → «Пара подписана» and back, like/report/block speak for the couple', persona: 'pair', run: async t => {
+ { name: 'profile as the couple: «Подписать пару» → «Мы подписаны» and back, like/report/block speak for the couple', persona: 'pair', run: async t => {
    const couple = await coupleOf(t); expect(couple, 'the pair has an active couple'); await actAs(t, couple.id);
    const mate = await t.persona('mate');
    // Whom the couple follows (the profile page reads the same list).
@@ -23,13 +23,13 @@ export default [
      await t.go('/n/people/' + mate.personId);
      await t.tap('.p-acts button:has-text("Подписать пару")');
      await toastSee(t, 'Пара теперь в подписчиках');
-     await t.see('.p-acts button:has-text("Пара подписана")');
+     await t.see('.p-acts button:has-text("Мы подписаны")');
      expect((await rel()).iFollow, 'the couple does not follow after the tap');
-     await t.tap('.p-acts button:has-text("Пара подписана")');
+     await t.tap('.p-acts button:has-text("Мы подписаны")');
      await toastSee(t, 'Пара отписалась от');
      await t.see('.p-acts button:has-text("Подписать пару")');
      // The like button (or why the couple likes from Discover only) — never the personal «Нравится».
-     const like = t.page.locator('.p-acts button', { hasText: /Нам нравится|Пара отправила|Написать от нас/ });
+     const like = t.page.locator('.p-acts button', { hasText: /Нам нравится|Мы отправили|Написать от нас/ });
      const why = t.page.locator('.profile-like-note');
      expect(await like.count() || await why.count(), 'no couple like button and no reason');
      await noPicker(t);
@@ -54,7 +54,7 @@ export default [
    const label = (await ask.innerText()).trim();
    if (/Попросить доступ от пары/.test(label)) {
      await ask.click(); await t.see(sheet + ' button:has-text("Запросить от пары")');
-     await t.see(sheet + ' :text("Доступ запрашивается для пары")');
+     await t.see(sheet + ' :text("Откроется вам обоим")');
      await t.page.keyboard.press('Escape');
    } else console.log('   the couple already asked mate — button: ' + label);
  } },
@@ -129,7 +129,7 @@ export default [
    const mate = await t.persona('mate');
    await t.go('/n/people/' + mate.personId);
    await t.see('.p-acts .btn');
-   expect(!(await t.page.locator('.p-acts :text("от пары"), .p-acts :text("Пара подписана")').count()), 'couple words on a personal profile view');
+   expect(!(await t.page.locator('.p-acts :text("от пары"), .p-acts :text("Мы подписаны")').count()), 'couple words on a personal profile view');
    const id = (await t.persona('host')).eventId;
    await t.go('/n/events/' + id); await t.see('.rsvp');
    expect(!(await t.page.locator('.rsvp.us').count()), 'the couple RSVP shows as oneself');

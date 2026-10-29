@@ -60,6 +60,8 @@ function Ask({icon,title,text,ok,busy,failure,onOk,onCancel}:{icon:LucideIcon,ti
 export function PostMenu({post,onClose,onChange,onRemove}:{post:Post,onClose:()=>void,onChange?:(p:Post)=>void,onRemove:(r:Removal)=>void}){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();const {op,drop}=useOps();
  const mine=post.rev!=null;const couple=acting?.kind==='couple';const name=nameOf(post.author);
+ // A draft (owner 29.10.2026): «Удалить черновик», asked once like a post; it is the writer's own, so no couple wording.
+ const draft=mine&&post.state==='draft';
  // «Подписаться» right here (owner 28.10.2026), so one doesn't have to open the profile for it.
  const [follows,setFollows]=useFollows(mine||post.author.id===acting?.id?null:post.author.id,post.author.iFollow);
  // The one follow action (`useFollow`, the same as `FollowButton`): the same call, wording and «Отменить».
@@ -82,7 +84,7 @@ export function PostMenu({post,onClose,onChange,onRemove}:{post:Post,onClose:()=
  });
  const del=()=>run('delete',async opId=>{
   const r=await call('post.delete',{opId,postId:post.id},deleted);
-  return {postId:post.id,notice:r.state==='archived'?t('fe.pm.done.archived'):t('fe.pm.done.deleted')};
+  return {postId:post.id,notice:draft?t('fe.pm.done.draftDeleted'):r.state==='archived'?t('fe.pm.done.archived'):t('fe.pm.done.deleted')};
  });
  const copyLink=useCopyLink();const copy=()=>{onClose();void copyLink('/n/feed/post/'+post.id);};
  // A photo mark of the acting profile on someone else's post.
@@ -104,7 +106,7 @@ export function PostMenu({post,onClose,onChange,onRemove}:{post:Post,onClose:()=
   onChange?.({...post,mentions:(post.mentions??[]).filter(m=>m.id!==acting?.id)});onClose();toast(t('fe.w3.unmention.done'),{type:'ok'});
  });
 
- if(view==='delete')return <Ask icon={Trash2} title={couple?t('fe.pm.delTitleCouple'):t('fe.pm.delTitle')} text={couple?t('fe.pm.delTextCouple'):t('fe.pm.delText')} ok={couple?t('fe.pm.hideOk'):t('fe.pm.delete')}
+ if(view==='delete')return <Ask icon={Trash2} title={draft?t('fe.pm.delDraftTitle'):couple?t('fe.pm.delTitleCouple'):t('fe.pm.delTitle')} text={draft?t('fe.pm.delDraftText'):couple?t('fe.pm.delTextCouple'):t('fe.pm.delText')} ok={couple&&!draft?t('fe.pm.hideOk'):t('fe.pm.delete')}
   busy={busy} failure={failure} onOk={del} onCancel={()=>go('menu')}/>;
  // «Это я — против» asks first (V21 tagObject): the post hides for everyone at once.
  if(view==='object')return <Ask icon={EyeOff} title={t('fe.w3.object.title')} text={t('fe.w3.object.text')} ok={t('fe.w3.object.ok')} busy={busy} failure={failure} onOk={object} onCancel={()=>go('menu')}/>;
@@ -118,7 +120,7 @@ export function PostMenu({post,onClose,onChange,onRemove}:{post:Post,onClose:()=
     <Row noChev icon={Pencil} title={t('fe.pm.editFull')} onClick={()=>{onClose();navigate('/n/feed/post/'+post.id+'/edit');}}/>
     {inGallery(post)&&<Row noChev icon={Images} title={t('fe.gal.postAlbum')} sub={t('fe.gal.postAlbumMenuSub')} onClick={()=>go('album')}/>}
     {published&&<Row noChev icon={LinkIcon} title={t('fe.pm.copyLink')} onClick={copy}/>}
-    <Row noChev icon={Trash2} title={t('fe.pm.delete')} danger onClick={()=>go('delete')}/>
+    <Row noChev icon={Trash2} title={draft?t('fe.pm.deleteDraft'):t('fe.pm.delete')} danger onClick={()=>go('delete')}/>
    </>:<>
     {me?.state==='pending'&&<>
      <Row noChev icon={Check} title={t('fe.pm.tag.confirm')} onClick={()=>answer('ok')} disabled={busy}/>

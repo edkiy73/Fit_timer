@@ -44,7 +44,7 @@ commands; a second call only adds what is missing.
 | `stranger` | like `basic` | short-lived contacts: a match that is ended, a block that is undone, a post author, a joiner |
 | `inviter`, `invitee` | like `basic`, free of couples between runs | the couple flow |
 | `full` | visible in Discover, approved photo, age verified, public interests, a private text | the main actor of most screens |
-| `asker` (`asker2`, `asker3`) | a `full` person | asks others for their private part (20 a day; the next one takes over) |
+| `asker` (`asker2`, `asker3`) | a `full` person | asks others for their private part (10 a day; the next one takes over) |
 | `mate` | a `full` person | talks with `chats` (both age verified: timer / once photos), proposes links, follows |
 | `chats` | a `full` person with conversations with `mate`, `asker`, `basic` (messages both ways); `.with.<kind>.conversationId` | chat list and conversation |
 | `host` | a `full` person owning a published open community (`openId`), a published closed one with a join question (`closedId`), a closed one without a question (`closedNoQId`), a hidden one (`hiddenId`, reached by an invite link), a published open offline event (`eventId`), one with tickets on the organizer’s site (`ticketEventId`), an online event by application (`appEventId`) and a cancelled one (`cancelledEventId`) — approved by STAFF | community owner screens, the inbox with decisions, every way of joining (`communities/joins.mjs`, `event-joins.mjs`, lane `jn`) |
