@@ -1,3 +1,4 @@
+import {evParts} from './event-time';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
@@ -17,7 +18,7 @@ import {FIELD,textLength,useChecks} from './kit/validate';
  * The «Действовать как» sheet of the dock «Я» lives here too. */
 const member=z.object({me:z.boolean(),profileId:z.uuid(),handle:z.string().nullable(),name:z.string().nullable()}).passthrough();
 const coupleRes=z.object({ok:z.literal(true),couple:z.object({id:z.uuid(),members:z.array(member)}).passthrough()});
-const evCard=z.object({id:z.uuid(),title:z.string().nullable(),format:z.string().nullable().optional(),startsAt:z.string().nullable().optional(),
+const evCard=z.object({id:z.uuid(),title:z.string().nullable(),format:z.string().nullable().optional(),startsAt:z.string().nullable().optional(),tz:z.string().nullable().optional(),
  city:z.object({ru:z.string().nullable(),en:z.string().nullable()}).nullable().optional()}).passthrough();
 const preview=z.object({
  post:z.object({title:z.string().nullable().optional(),body:z.string().nullable().optional(),media:z.number().optional(),changed:z.boolean().optional()}).passthrough().optional(),
@@ -176,11 +177,11 @@ function Preview({a,base}:{a:Approval,base?:CoupleBase|undefined}){
   <ReviewPost title={p.post.title||undefined} meta={p.post.media?t('fe.c6.media',{n:p.post.media}):undefined}>{p.post.body?<p>{p.post.body}</p>:null}</ReviewPost>
   {p.post.changed&&<Alert kind="warn">{t('fe.c6.changed')}</Alert>}
  </>;
- if(p?.event){const e=p.event;const d=e.startsAt?new Date(e.startsAt):null;const lc=locale==='en'?'en':'ru';
+ if(p?.event){const e=p.event;const pt=e.startsAt?evParts({startsAt:e.startsAt,tz:e.tz},locale):null;
   return <>
-   <EventTile row cover={<NamedPlate k={null} icon={Calendar}/>} day={d?d.getDate():undefined} month={d?d.toLocaleDateString(lc,{month:'short'}):undefined}
+   <EventTile row cover={<NamedPlate k={null} icon={Calendar}/>} day={pt?.day} month={pt?.month}
     place={e.format==='online'?t('fe.c6.online'):(locale==='en'?e.city?.en:e.city?.ru)??''} placeIcon={e.format==='online'?Video:MapPin}
-    time={d?d.toLocaleTimeString(lc,{hour:'2-digit',minute:'2-digit'}):undefined} title={e.title??''}/>
+    time={pt?pt.time+' · '+pt.zone:undefined} title={e.title??''}/>
    {a.kind==='event.rsvp'&&p.rsvp&&<Note>{t('fe.c6.rsvp.'+(['going','interested','not_going'].includes(p.rsvp)?p.rsvp:'other'))}</Note>}
   </>;}
  // A message request from the couple: to whom, and the first message as it will go.

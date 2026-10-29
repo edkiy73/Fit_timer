@@ -7,6 +7,7 @@ import {FeError,feErrorMessage} from '../feture/fe-api';
 import {Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,EventTile,Group,Note,Row,Seg,SectionLabel,Select,Skel,Steps,ToggleRow,View} from './kit';
 import {PickField,PlacePicker} from './kit/Place';
 import {useFe} from './session';
+import {ONLINE_ZONES,placeZone,zoneLabel} from './event-time';
 import {FIELD,lineRule,serverFields,textError,textErrorMessage,type FieldName} from './kit/validate';
 import {ChipGroup,CoverField,FErr,Field,PLATE_KEYS,SelectRow,namedPlate,placeName,reviewNotice,shakeFirstErr,useCatalog,useOp,type Cover,type PlateKey} from './create-community';
 
@@ -24,7 +25,6 @@ type Errors=Partial<Record<Key,string>>;
 
 const KINDS:Kind[]=['meetup','workshop','talk','party'];
 const CURRENCIES:[string,string][]=[['€','EUR'],['$','USD'],['£','GBP'],['₽','RUB'],['CHF','CHF']];
-const ZONES:[string,string][]=[['Europe/Berlin','fe.ce.tz.berlin'],['Europe/Moscow','fe.ce.tz.moscow'],['Europe/London','fe.ce.tz.london']];
 const DAY=864e5;
 const HTTPS=/^https:\/\/[^\s]+$/;
 const userTz=()=>{try{return Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';}catch{return 'UTC';}};
@@ -213,10 +213,13 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
  useEffect(()=>{if(edit)return;call('community.mine',{},comms).then(r=>setHosting(r.hosting.filter(c=>c.state==='published'&&(c.role==='owner'||c.role==='host')))).catch(()=>{});},[call,edit]);
  // After publication who is admitted stays as it is (the server answers admission_frozen otherwise).
  const frozen=edit?.state==='published';
- // The first approved place is the default city, as the prototype starts with one.
- useEffect(()=>{const first=catalog?.places[0];if(first)setF(x=>x.placeId?x:{...x,placeId:first.id});},[catalog]);
+ // No city is chosen for the organiser: the place is an empty required choice (checked on step 2).
  useEffect(()=>{document.querySelector('.v21 .view')?.scrollTo({top:0});},[step]);
 
+ const placeOf=(id:string)=>catalog?.places.find(p=>p.id===id);
+ // An offline event keeps the zone of its city; the zone is never typed in.
+ const pickPlace=(id:string)=>setF(x=>({...x,placeId:id,tz:placeZone(placeOf(id))??x.tz}));
+ const pickFormat=(k:'offline'|'online')=>setF(x=>({...x,format:k,tz:k==='offline'?(placeZone(placeOf(x.placeId))??x.tz):(ONLINE_ZONES.includes(x.tz)?x.tz:ONLINE_ZONES.includes(userTz())?userTz():ONLINE_ZONES[0]!)}));
  const set=<K extends Key>(k:K,v:Form[K])=>{setF(x=>({...x,[k]:v}));setErr(e=>{if(!e[k])return e;const n={...e};delete n[k];return n;});};
  const saveDraft=async(nextStep:number)=>{
   const payload={...(draftId?{draftId}:{}),step:nextStep,form:draftOf(f)};
@@ -290,7 +293,7 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
 
  const names=[1,2,3,4].map(i=>t('fe.ce.step.'+i));
  const places:[string,string][]=(catalog?.places??[]).map(p=>[p.id,placeName(p,locale)]);
- const tzItems:[string,string][]=[...(!ZONES.some(([z])=>z===f.tz)?[[f.tz,`${f.tz} · ${t('fe.ce.tzSelected')}`] as [string,string]]:[]),...ZONES.map(([z,k])=>[z,t(k)] as [string,string])];
+ const tzItems:[string,string][]=[...new Set([f.tz,...ONLINE_ZONES])].map(z=>[z,zoneLabel(z,f.date?new Date(times(f).start||Date.now()).toISOString():new Date().toISOString(),locale)] as [string,string]);
  const chip=(on:boolean,label:string,onClick:()=>void,key:string)=><Chip key={key} on={on} onClick={onClick}>{label}</Chip>;
 
  let body:ReactNode=null;
@@ -309,25 +312,26 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
  </>;
  if(step===2)body=<>
   <div className="field"><span className="flabel">{t('fe.ce.format')}</span><Chips>
-   {(['offline','online'] as const).map(k=>chip(f.format===k,t('fe.ce.'+k),()=>set('format',k),k))}</Chips></div>
+   {(['offline','online'] as const).map(k=>chip(f.format===k,t('fe.ce.'+k),()=>pickFormat(k),k))}</Chips></div>
   <Field name="date" label={t('fe.ce.date')} type="date" min={isoDay(Date.now())} value={f.date} onChange={v=>set('date',v)} err={err.date}/>
   <Field name="date2" label={t('fe.ce.date2')} type="date" opt min={f.date} value={f.date2} onChange={v=>{set('date2',v);setErr(e=>({...e,t2:''}));}}/>
   <div className="row g8 k-al-start">
    <div className="grow"><Field name="t1" label={t('fe.ce.t1')} type="time" value={f.t1} onChange={v=>{set('t1',v);setErr(e=>({...e,t2:''}));}}/></div>
    <div className="grow"><Field name="t2" label={t('fe.ce.t2')} type="time" value={f.t2} onChange={v=>set('t2',v)} err={err.t2||undefined}/></div>
   </div>
-  <label className={'field'+(err.tz?' err':'')} data-field="tz"><span>{t('fe.ce.tz')}</span>
+  {f.format==='online'&&<label className={'field'+(err.tz?' err':'')} data-field="tz"><span>{t('fe.ce.tz')}</span>
    <Select label={t('fe.ce.tz')} value={f.tz} onChange={v=>set('tz',v)} options={tzItems}/>
-   {err.tz?<FErr>{err.tz}</FErr>:<div className="fhint">{t('fe.ce.tzHint')}</div>}</label>
+   {err.tz?<FErr>{err.tz}</FErr>:<div className="fhint">{t('fe.ce.tzHintOnline')}</div>}</label>}
   {f.format==='offline'?<>
-   <div data-field="city"><PickField label={t('fe.ce.city')} value={places.find(([id])=>id===f.placeId)?.[1]??null} placeholder="—" error={err.placeId} onClick={()=>setCityOpen(true)}/></div>
-   {cityOpen&&<PlacePicker places={catalog?.places??[]} current={f.placeId||null} onPick={x=>{if(x)set('placeId',x.id);setCityOpen(false);}} onClose={()=>setCityOpen(false)}/>}
+   <div data-field="city"><PickField label={t('fe.ce.city')} value={places.find(([id])=>id===f.placeId)?.[1]??null} placeholder={t('fe.ce.cityPh')} error={err.placeId} onClick={()=>setCityOpen(true)}/></div>
+   {cityOpen&&<PlacePicker places={catalog?.places??[]} current={f.placeId||null} onPick={x=>{if(x){pickPlace(x.id);setErr(e=>({...e,placeId:''}));}setCityOpen(false);}} onClose={()=>setCityOpen(false)}/>}
+   {f.placeId&&<div className="fhint" data-field="tz">{t('fe.ce.tzFromCity',{zone:zoneLabel(f.tz,new Date(times(f).start||Date.now()).toISOString(),locale)})}</div>}
    <Field name="area" label={t('fe.ce.area')} ph={t('fe.ce.areaPh')} check="eventArea" value={f.area} onChange={v=>set('area',v)} err={err.area}/>
    <Field name="addr" label={t('fe.ce.addr')} icon={Lock} ph={t('fe.ce.addrPh')} check="eventAddress" value={f.exactAddress} onChange={v=>set('exactAddress',v)} err={err.exactAddress}/>
   </>:<Field name="link" label={t('fe.ce.link')} icon={LinkIcon} type="url" inputMode="url" ph="https://" value={f.joinUrl} onChange={v=>set('joinUrl',v)} err={err.joinUrl}/>}
  </>;
  if(step===3)body=<>
-  <Card list><ToggleRow title={t('fe.ce.approval')} sub={frozen?t('fe.ece.e.frozen'):t('fe.ce.approvalSub')} on={f.requiresApplication} disabled={frozen} onClick={()=>set('requiresApplication',!f.requiresApplication)}/></Card>
+  <Card list><ToggleRow title={t('fe.ce.approval')} sub={frozen?t('fe.ece.e.frozen'):t(f.format==='online'?'fe.ce.approvalSubOnline':'fe.ce.approvalSub')} on={f.requiresApplication} disabled={frozen} onClick={()=>set('requiresApplication',!f.requiresApplication)}/></Card>
   {frozen&&f.requiresApplication&&f.question.trim()&&<div className="field"><span className="flabel">{t('fe.ce.question')}</span><Note>{f.question.trim()}</Note></div>}
   {!frozen&&f.requiresApplication&&<><Field name="q0" label={t('fe.ce.question')} ph={t('fe.ce.questionPh')} check="eventQuestion" value={f.question} onChange={v=>set('question',v)} err={err.question}/></>}
   <div className="field"><span className="flabel">{t('fe.ce.price')}</span><Chips>
@@ -342,7 +346,7 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
  </>;
  if(step===4){
   const {start,end}=times(f);const ok=Number.isFinite(start)&&Number.isFinite(end);
-  const tzView=f.format==='online'?undefined:f.tz;
+  const tzView=f.tz;
   const fmt=(ms:number,o:Intl.DateTimeFormatOptions)=>{try{return new Date(ms).toLocaleString(locale==='en'?'en':'ru',{...o,timeZone:tzView});}catch{return new Date(ms).toLocaleString(locale==='en'?'en':'ru',o);}};
   const priceText=f.price==='free'?t('fe.ce.price.free'):`${f.amount.trim()} ${f.currency}`;
   const site=f.price==='ext'?ticketHref(f.ticketUrl).replace(/^https?:\/\//i,'').split('/')[0]??'':'';
@@ -353,12 +357,12 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
     {...(ok?{day:fmt(start,{day:'numeric'}),month:fmt(start,{month:'short'})}:{})} place={area} placeIcon={f.format==='online'?Video:MapPin}
     kicker={<>{f.kind?t('fe.ce.kind.'+f.kind):''}{acting?' · '+acting.name:''}</>} title={f.title.trim()} time={ok?fmt(start,{hour:'2-digit',minute:'2-digit'}):''} price={priceText}/>
    <Card list><Row icon={pv==='ok'?Unlock:Lock} tone={pv==='ok'?'g':undefined} title={f.format==='online'?t('fe.ce.pv.link'):t('fe.ce.pv.address')}
-    sub={pv==='ok'?(f.format==='online'?f.joinUrl.trim():f.exactAddress.trim()):t('fe.ce.pv.hidden')}/></Card>
+    sub={pv==='ok'?(f.format==='online'?f.joinUrl.trim():f.exactAddress.trim()):t(f.format==='online'?'fe.ce.pv.hiddenLink':'fe.ce.pv.hidden')}/></Card>
    <Card list>
     <Row icon={Calendar} tone="l" title={ok?fmt(start,{weekday:'short',day:'numeric',month:'long'}):''}
-     sub={<>{ok?`${fmt(start,{hour:'2-digit',minute:'2-digit'})}–${fmt(end,{hour:'2-digit',minute:'2-digit'})}`:''} {f.format==='online'?t('fe.ce.pv.yourTime'):t('fe.ce.pv.localTime')}</>}/>
+     sub={ok?`${fmt(start,{hour:'2-digit',minute:'2-digit'})}–${fmt(end,{hour:'2-digit',minute:'2-digit'})} · ${zoneLabel(f.tz,new Date(start).toISOString(),locale)}`:''}/>
     <Row icon={Ticket} tone="a" title={priceText}
-     sub={f.price==='ext'?t('fe.ce.pv.ticketOn').replace('{site}',site):f.requiresApplication?t('fe.ce.pv.byApplication'):t('fe.ce.pv.justCome')}/>
+     sub={f.price==='ext'?t('fe.ce.pv.ticketOn').replace('{site}',site):f.requiresApplication?t('fe.ce.pv.byApplication'):t(f.format==='online'?'fe.ce.pv.justJoin':'fe.ce.pv.justCome')}/>
    </Card>
    {f.description.trim()&&<><SectionLabel>{t('fe.ce.pv.about')}</SectionLabel><div className="md bio"><p>{f.description.trim()}</p></div></>}
    {f.requirements.trim()&&<><SectionLabel>{t('fe.ce.reqs')}</SectionLabel><Card><div className="fact"><i className="v"><Check/></i><span>{f.requirements.trim()}</span></div></Card></>}

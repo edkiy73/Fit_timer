@@ -271,7 +271,6 @@ export const en: Record<keyof typeof ru, string> = {
   "fe.ev.rsvp.interested": "Interested",
   "fe.ev.rsvp.going": "Going",
   "fe.ev.rsvp.not_going": "Not going",
-  "fe.ev.yourTime": "your time",
   "fe.ev.join": "Join",
   "fe.ev.linkLocked": "The join link opens once you answer “Going”",
   "fe.ev.addressLocked": "The exact address opens once you answer “Going”",

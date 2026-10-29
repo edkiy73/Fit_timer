@@ -144,7 +144,11 @@ function FeLayout(){
  const name=acting?.name||acting?.handle||'?';
  // V21 dockMe: with an active couple «Я» opens «Действовать как» (the person and the couple, what waits on each).
  const pair=state.status==='ready'&&state.boot.profiles.some(p=>p.kind==='couple'&&p.state==='active');const [actAs,setActAs]=useState(false);
- const current=pathname.split('/')[2]||'feed';
+ // The active section follows where the person came from (location state `tab`), and a screen of their own profile
+ // (a gallery at /n/people/<own id>) belongs to «Я», not «Люди».
+ const parts=pathname.split('/');const fromTab=(useLocation().state as {tab?:unknown}|null)?.tab;
+ const mine=state.status==='ready'?state.boot.profiles.some(p=>p.id===parts[3]):false;
+ const current=typeof fromTab==='string'&&FE_TABS.some(x=>x.id===fromTab)?fromTab:parts[2]==='people'&&mine?'me':parts[2]||'feed';
  // V21 keeps the phone dock on every screen (chats, profiles, editors too); only moderation hides it (SC.M01 dock:false),
  // and a screen while one of its modes asks for it (useHideDock: the gallery's selection mode).
  const [hiders,setHiders]=useState(0);

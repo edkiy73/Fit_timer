@@ -223,9 +223,9 @@ export function CommunityManageScreen(){
    {!c?<Loading error={error} retry={load}/>:!isHost(c)?<Empty icon={Lock} title={t('fe.host.onlyHosts')} text={t('fe.host.onlyHostsText')}/>:<>
     <StatTiles items={[{n:c.members,label:plWord(c.members,t('fe.cm.members'),locale),onClick:()=>navigate(`/n/communities/${id}?t=members`)},
      {n:data.discs,label:plWord(data.discs,t('fe.cm.discussions'),locale),onClick:()=>navigate(`/n/communities/${id}`)},
-     {n,label:t('fe.host.requestsWaiting'),onClick:()=>navigate(`/n/communities/${id}/requests`)}]}/>
+     {n,label:t('fe.host.requestsWaiting'),onClick:()=>navigate(`/n/communities/${id}/requests`,{state:{from:`/n/communities/${id}/manage`}})}]}/>
     <Card list>
-     <Row icon={FileText} tone="v" title={t('fe.host.requests')} badge={n||undefined} onClick={()=>navigate(`/n/communities/${id}/requests`)}/>
+     <Row icon={FileText} tone="v" title={t('fe.host.requests')} badge={n||undefined} onClick={()=>navigate(`/n/communities/${id}/requests`,{state:{from:`/n/communities/${id}/manage`}})}/>
      <Row icon={Users} title={t('fe.host.membersTitle')} sub={t('fe.host.membersSub')} onClick={()=>navigate(`/n/communities/${id}?t=members`)}/>
      <Row icon={ShieldAlert} title={t('fe.w7.c10.reports')} sub={t('fe.w7.c10.reportsSub')} onClick={()=>setReports(true)}/>
      {owner&&<Row icon={Pencil} title={t('fe.cm.descRules')} onClick={()=>navigate(`/n/communities/${id}/edit`)}/>}
@@ -274,6 +274,8 @@ function InviteRows({communityId}:{communityId:string}){
 export function CommunityRequestsScreen(){
  const {id=''}=useParams();const {call}=useFe();const {t,locale}=useI18n();const toast=useToast();const navigate=useNavigate();
  const [sp,setSp]=useSearchParams();const tab=sp.get('t')==='history'?'history':'pending';
+ // Back goes where the person came from (the management screen, or the community page).
+ const loc=useLocation();const from=(loc.state as {from?:unknown}|null)?.from;
  const [c,setC]=useState<Comm|null>(null);
  const loadC=useCallback(()=>{call('community.get',{communityId:id},commSchema).then(r=>setC(r.community)).catch(()=>{});},[call,id]);
  useEffect(()=>{loadC();},[loadC]);
@@ -293,9 +295,9 @@ export function CommunityRequestsScreen(){
   toast(approve?t('fe.cm.req.approved'):t('fe.host.req.declined'),{type:'ok',ms:UNDO_MS,action:{label:t('fe.mx.undo'),fn:()=>{if(cancel('req'+r.id))unhold(r.id);else toast(t('fe.w7.undo.late'),{type:'warn'});}}});
  };
  return <>
-  <SubBar title={t('fe.cm.reqTitle')} sub={c?.name} back={`/n/communities/${id}`}/>
+  <SubBar title={t('fe.cm.reqTitle')} sub={c?.name} back={typeof from==='string'&&from.startsWith('/n/')?from:`/n/communities/${id}`}/>
   <div className="view nodock"><div className="wrap">
-   <Seg value={tab} onChange={v=>setSp(v==='history'?{t:'history'}:{},{replace:true})} label={t('fe.cm.reqTitle')}
+   <Seg value={tab} onChange={v=>setSp(v==='history'?{t:'history'}:{},{replace:true,state:loc.state})} label={t('fe.cm.reqTitle')}
     options={[{id:'pending',label:t('fe.host.req.tabNew'),n:c?.pendingRequests},{id:'history',label:t('fe.host.req.tabHistory')}]}/>
    {!items?<Loading error={error} retry={load} kind="card"/>
     :!items.filter(r=>!held.has(r.id)).length?<Empty icon={FileText} title={tab==='history'?t('fe.host.req.noHistory'):t('fe.host.req.none')} text={t('fe.host.req.privacy')}/>

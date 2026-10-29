@@ -70,6 +70,10 @@ export default [
    await t.fill('input[name="date"]', iso);
    await t.fill('input[name="area"]', 'Митте');
    await t.fill('input[name="addr"]', 'Тестовая улица 1, вход со двора');
+   // The city is an empty required choice: no step 3 until it is picked; its time zone follows it.
+   await next(t); await t.see('[data-field="city"] .field.err');
+   await t.tap('[data-field="city"] .sel-btn'); await t.tap('[role="dialog"] >> text=Берлин');
+   await t.see('[data-field="tz"]:has-text("UTC")');
    await next(t); await t.see('.stepper:has-text("3/4")');
    await t.tap('button[role="switch"]:has-text("Участие по заявке")');
    await next(t); await t.see('.field.err');
