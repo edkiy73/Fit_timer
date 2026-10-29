@@ -22,7 +22,7 @@ const CORE = '../../../packages/core/server/';
 const LIB = '../lib/feture/';
 /** @type {Db | null} */
 let pool = null;
-function database() {
+export function database() {
   const env = process.env;
   if (!env.FETURE_DATABASE_URL || !env.FETURE_ID_PEPPER) return null;
   pool ??= fromPostgres(postgres(env.FETURE_DATABASE_URL, { prepare: false, max: 2, idle_timeout: 60, connect_timeout: 8, types: POSTGRES_TYPES }), 2);

@@ -4,6 +4,7 @@ import { fail } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { checkCode, confirmEnrol, factorState, removeFactor, startEnrol } from '../second-factor.mjs';
 import { passSignin } from '../signin.mjs';
+import { staffFactorRequired } from '../staff-factor-switch.mjs';
 
 /** S4 steps 1–2: staff roles, journal, media review (docs/server/S4-MODERATION.md).
  * Staff are ordinary accounts with a role; a staff member never decides about their own profiles or couple.
@@ -25,6 +26,8 @@ export const FRESH_WINDOW = { minutes: 10 };
 
 /** This sign-in's staff check. @param {Q} q @param {import('../accounts.mjs').AccountRow} account */
 export async function staffCheck(q, account) {
+  // The test-only switch is OFF (staff-factor-switch.mjs): the requirement is waived, nothing is stored or deleted.
+  if (!(await staffFactorRequired(q))) return { enrolled: true, verified: true, fresh: true, until: null, freshUntil: null, waived: true };
   const [r] = await q.query(
     `select t.enabled_at is not null enrolled,
             s.started_at > now() - make_interval(hours => $3) verified,
@@ -35,7 +38,7 @@ export async function staffCheck(q, account) {
      left join feture.staff_session s on s.account_id = a.account_id and s.session_key = $2`,
     [account.id, account.session ?? '', STAFF_WINDOW.hours, FRESH_WINDOW.minutes]);
   const verified = !!account.session && !!r?.enrolled && !!r?.verified;
-  return { enrolled: !!r?.enrolled, verified, fresh: verified && !!r?.fresh, until: verified ? r.until : null, freshUntil: verified && r.fresh ? r.fresh_until : null };
+  return { waived: false, enrolled: !!r?.enrolled, verified, fresh: verified && !!r?.fresh, until: verified ? r.until : null, freshUntil: verified && r.fresh ? r.fresh_until : null };
 }
 
 /** Roles only, no factor: enrolment and the check itself. @param {Q} q @param {string} accountId @param {string[]} roles */
@@ -53,6 +56,7 @@ export const ANY_STAFF = ['owner', 'lead', 'moderator', 'verifier', 'support', '
 export async function requireStaff(q, account, roles, { fresh = false } = {}) {
   const mine = await staffRoles(q, account.id, roles);
   const c = await staffCheck(q, account);
+  if (c.waived) return mine;
   if (!c.enrolled) fail(403, 'second_factor', { rule: 'enrol' });
   if (!c.verified) fail(403, 'second_factor', { rule: 'verify' });
   if (fresh && !c.fresh) fail(403, 'second_factor', { rule: 'fresh' });

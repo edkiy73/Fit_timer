@@ -45,12 +45,14 @@ const ModerationAdmin=page(()=>import('./feture/moderation-admin'),'ModerationAd
 const OperatorsAdmin=page(()=>import('./feture/operators-admin'),'OperatorsAdmin');
 const MetricsAdmin=page(()=>import('./feture/metrics-admin'),'MetricsAdmin');
 const UpdateAdmin=page(()=>import('./feture/update-admin'),'UpdateAdmin');
+const StaffFactorAdmin=page(()=>import('./feture/staff-factor-admin'),'StaffFactorAdmin');
 const QaAdultAdmin=page(()=>import('./feture/qa-adult-admin'),'QaAdultAdmin');
 const OperatorPage=page(()=>import('./feture/operator-page'),'OperatorPage');
 const productAdminSections:readonly AdminSection[]=[
   // Keep IDs stable: AppBase persists the last selected tab in sessionStorage.
   {id:'feture-moderation',label:'Модерация публикаций',group:'Проверка и доступ',render:context=><ModerationAdmin {...context}/>},
   {id:'feture-qa-adult',label:'Временный доступ 18+',group:'Проверка и доступ',render:context=><QaAdultAdmin {...context}/>},
+  {id:'feture-staff-factor',label:'2FA для сотрудников',group:'Проверка и доступ',render:context=><StaffFactorAdmin {...context}/>},
   {id:'feture-operators',label:'Роли операторов',group:'Проверка и доступ',render:context=><OperatorsAdmin {...context}/>},
   {id:'feture-catalog',label:'Темы каталога',group:'Редактура',render:context=><CatalogAdmin {...context}/>},
   {id:'feture-tests',label:'Опросники',group:'Редактура',render:context=><QuestionnairesAdmin {...context}/>},
