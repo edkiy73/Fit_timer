@@ -4,7 +4,7 @@
 // approval when asked) and receive; a mutual like still opens a chat at once. Lane `mr`.
 // Senders are fresh `temp` personas, so a hidden request (30 days) or the daily limit never blocks a rerun; recipients
 // are the lane's `basic`, `stranger`, `host` and `pair`, each restored at the end (settings, blocks, RSVPs, hides).
-import { FIXTURES, expect, sheet, toastSee, until } from '../helpers.mjs';
+import { FIXTURES, expect, nameOf, sheet, toastSee, until } from '../helpers.mjs';
 
 const PHOTO = FIXTURES + 'photo.jpg';
 const box = '.inputbar textarea';
@@ -128,12 +128,17 @@ export default [
    expect((await t.api('chat.request', { opId: t.uuid7(), profileId: to.personId, body: 'привет' })).rule === 'messages_known', 'server refuses');
  } },
 
- { name: 'a member of the same community writes from the member list; context «Участник сообщества»', persona: 'temp', run: async t => {
+ { name: 'a member of the same community writes from a profile opened in «Люди» (no write icon in the list); context «Участник сообщества»', persona: 'temp', run: async t => {
    const host = await t.persona('host');
    await t.api('community.join', { opId: t.uuid7(), communityId: host.openId, rulesAccepted: true });
    try {
      await t.go('/n/communities/' + host.openId + '?t=members');
-     await t.tap('button[aria-label^="Написать"]');
+     const hn = await nameOf(t, host);
+     await t.see('.card.list .li:has-text("' + hn + '")');
+     // Owner 29.10.2026: the members list has no «Написать» icon; people write first from a profile.
+     expect(!(await t.page.locator('.card.list .li button[aria-label^="Написать"]').count()), 'a write icon in the members list');
+     await t.tap('.card.list .li:has-text("' + hn + '")');
+     await t.tap('.p-acts button[aria-label="Написать"]');
      await t.see('.alert:has-text("Это запрос.")');
      await t.fill(box, 'mr из сообщества ' + stamp());
      await t.tap(sendBtn);
@@ -144,14 +149,18 @@ export default [
    } finally { await t.api('community.leave', { opId: t.uuid7(), communityId: host.openId }).catch(() => {}); }
  } },
 
- { name: 'an event attendee writes from «Кто идёт»; context «Идёт на … дата»', persona: 'temp', run: async t => {
+ { name: 'an event attendee writes from a profile opened in «Кто идёт» (only the organiser has the icon); context «Идёт на … дата»', persona: 'temp', run: async t => {
    const host = await t.persona('host'); const st = await t.persona('stranger');
    await setFrom(t, st, 'known');
    await t.api('event.rsvp', { opId: t.uuid7(), eventId: host.eventId, status: 'going', showInList: true }, st.email);
    await t.api('event.rsvp', { opId: t.uuid7(), eventId: host.eventId, status: 'going', showInList: true });
    try {
      await t.go('/n/events/' + host.eventId + '/attendees');
-     await t.tap('button[aria-label^="Написать ' + st.handle + '"], button[aria-label^="Написать @' + st.handle + '"]');
+     const sn = await nameOf(t, st);
+     await t.see('.card.list .li:has-text("' + sn + '")');
+     expect(!(await t.page.locator('.card.list .li button[aria-label^="Написать"]').count()), 'a write icon in «Кто идёт» for a guest');
+     await t.tap('.card.list .li:has-text("' + sn + '")');
+     await t.tap('.p-acts button[aria-label="Написать"]');
      await t.see('.alert:has-text("Это запрос.")');
      await t.fill(box, 'mr тоже иду ' + stamp());
      await t.tap(sendBtn);

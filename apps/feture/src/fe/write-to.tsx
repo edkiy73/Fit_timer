@@ -22,7 +22,7 @@ export function useWriteTo(){
  return {open,busy};
 }
 
-/** The round «Написать» at the end of a person row (members, attendees). */
+/** The round «Написать» at the end of a person row — only in the event organiser's «Кто идёт» (owner 29.10.2026). */
 export function WriteBtn({id,name}:{id:string,name:string}){
  const {t}=useI18n();const {open,busy}=useWriteTo();
  return <IconBtn icon={MessageCircle} kind="ghost" size="sm" label={t('fe.rq.writeTo',{name})} disabled={busy===id} onClick={e=>{e.stopPropagation();void open(id);}}/>;

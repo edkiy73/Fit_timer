@@ -134,14 +134,14 @@ export default [
    await t.tap('.rsvp .r-going'); await toast(t, 'Ты идёшь');
    if ((await get(t, id)).me.rsvp?.status !== 'going') throw new Error('rsvp going not saved');
    const was = (await get(t, id)).me.rsvp?.showInList;
-   await t.tap('button[role="switch"]:has-text("Показывать моё участие")'); await toast(t, 'Видимость сохранена');
+   await t.tap('.k-answer button[role="switch"]:has-text("Показывать меня в списке")'); await toast(t, 'Видимость сохранена');
    if ((await get(t, id)).me.rsvp?.showInList === was) throw new Error('visibility not saved');
    await t.tap('.ctabar .btn:has-text("Адрес и как пройти")'); await t.see(sheet + ':has-text("Тестовая улица 1")');
    await t.page.keyboard.press('Escape'); await t.wait(300);
    await t.tap('.rsvp .r-interested'); await toast(t, 'Отметили «Интересно»');
    await t.tap('.rsvp .r-not'); await toast(t, 'Отметили «Не иду»');
    if ((await get(t, id)).me.rsvp?.status !== 'not_going') throw new Error('not_going not saved');
-   await t.tap('.rsvp-h .btn'); await toast(t, 'Ответ снят');
+   await t.tap('.k-answer-h .btn'); await toast(t, 'Ответ снят');
    await t.tap('.rsvp .r-going'); await toast(t, 'Ты идёшь');
    await noToast(t); await t.tap('css=header button[aria-pressed]'); await toast(t, 'Сохранено');
    let s = await t.api('saved.list', { kind: 'event' }); if (!s.items.some(x => x.target_id === id)) throw new Error('not saved');
@@ -159,6 +159,8 @@ export default [
  { name: 'E17 attendees: organiser sees the guest', persona: 'host', run: async t => {
    await t.go('/n/events/' + evId() + '/attendees?k=going');
    await t.see('.card.list .li');
+   // Only the organiser has «Написать» at the end of a row (owner 29.10.2026).
+   await t.see('.card.list .li button[aria-label^="Написать"]');
    await t.tap('.seg button:has-text("Интересуются")'); await t.wait(800);
  } },
  { name: 'E11 edit: description saved, read back', persona: 'host', run: async t => {
@@ -212,7 +214,7 @@ export default [
  { name: 'E03 open event: RSVP going → interested → cleared (the host\'s open event)', persona: 'full', run: async t => {
    const COFFEE = (await t.persona('host')).eventId;
    await t.go('/n/events/' + COFFEE); await t.see('.rsvp');
-   if ((await get(t, COFFEE)).me.rsvp?.status) { await t.tap('.rsvp-h .btn'); await toast(t, 'Ответ снят'); }
+   if ((await get(t, COFFEE)).me.rsvp?.status) { await t.tap('.k-answer-h .btn'); await toast(t, 'Ответ снят'); }
    await t.tap('.rsvp .r-interested'); await toast(t, 'Отметили «Интересно»');
    await t.tap('.rsvp .r-going'); await toast(t, 'Ты идёшь');
    if ((await get(t, COFFEE)).me.rsvp?.status !== 'going') throw new Error('not going');

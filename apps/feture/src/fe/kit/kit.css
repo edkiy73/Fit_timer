@@ -429,15 +429,24 @@ html:has(.fe-v21),html:has(.fe-v21) body{overscroll-behavior-y:none}
 .v21 .empty.k-empty-compact .em-ic{width:40px;height:40px;margin-bottom:10px}
 .v21 .empty.k-empty-compact .em-ic svg{width:20px;height:20px}
 .v21 .empty.k-empty-compact h3{font-size:var(--fs-body)}
-/* Rsvp (owner 29.10.2026): labels never wrap at any width, solo or couple — the two answers that say yes
-   («Интересно», «Иду» / «Нам интересно», «Идём вдвоём») are two equal buttons on one line, «Не иду / Не идём» is a quiet
-   text answer under them across the row. Overrides the older three-tile rules in base.css (loaded after kit.css, hence .rsvp.rsvp). */
+/* Rsvp (owner 29.10.2026): every answer is a button you can see — all three sit on a quiet plate (the Btn `quiet` tint),
+   the chosen one takes its tone. Labels never wrap, solo or couple: on a phone the two yes answers («Интересно», «Иду» /
+   «Нам интересно», «Идём вдвоём») share the first line and «Не иду / Не идём» is a lower plate across the row; from a
+   tablet up the three stand in one line. Overrides the older tile rules in base.css (hence .rsvp.rsvp). */
 .v21 .rsvp.rsvp{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s-2)}
-.v21 .rsvp.rsvp button,.v21 .rsvp.rsvp.us button{flex-direction:row;gap:6px;min-height:var(--h-md);padding:0 var(--s-2);font-size:var(--fs-sm);line-height:1.2}
+.v21 .rsvp.rsvp button,.v21 .rsvp.rsvp.us button{flex-direction:row;gap:6px;min-height:var(--h-md);padding:0 var(--s-2);border-radius:var(--r-m);font-size:var(--fs-sm);font-weight:600;line-height:1.2;
+ background:color-mix(in srgb,var(--ink) 5%,transparent);color:var(--ink);box-shadow:none}
+@media (hover:hover){.v21 .rsvp.rsvp button:not(.on):not(:disabled):hover{background:color-mix(in srgb,var(--ink) 10%,transparent)}}
 .v21 .rsvp.rsvp button span,.v21 .rsvp.rsvp.us button>span{display:block;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal}
-.v21 .rsvp.rsvp button.r-not{grid-column:1/-1;min-height:var(--h-sm);background:none;box-shadow:none;font-weight:500;color:var(--mute)}
+.v21 .rsvp.rsvp button svg{flex:none;width:18px;height:18px}
+.v21 .rsvp.rsvp button.r-not{grid-column:1/-1;min-height:var(--h-sm);font-weight:550}
 .v21 .rsvp.rsvp button.r-not svg{width:16px;height:16px}
-.v21 .rsvp.rsvp button.r-not.on{background:var(--raise);color:var(--ink);box-shadow:none}
+.v21 .rsvp.rsvp.has button:not(.on){color:var(--mute)}
+.v21 .rsvp.rsvp button.r-interested.on{background:var(--violet-soft);color:var(--violet);box-shadow:inset 0 0 0 1.5px currentColor}
+.v21 .rsvp.rsvp button.r-going.on{background:var(--ok);color:var(--surf);box-shadow:none}
+.v21 .rsvp.rsvp button.r-not.on{background:color-mix(in srgb,var(--ink) 12%,transparent);color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--line2)}
+@container stage (max-width:379px){.v21 .rsvp.rsvp button,.v21 .rsvp.rsvp.us button{gap:4px;padding:0 var(--s-1)}.v21 .rsvp.rsvp button svg{width:16px;height:16px}}
+@container stage (min-width:600px){.v21 .rsvp.rsvp{grid-template-columns:repeat(3,minmax(0,1fr))}.v21 .rsvp.rsvp button.r-not{grid-column:auto;min-height:var(--h-md)}}
 /* A pill that starts a row sits on the page gutter like everything else (no indent of its own). */
 .v21 .row>.pill:first-child{margin-left:0}
 /* An Empty with a block after it (a list card) sits on the page gutter, so its actions and the card line up with the header. */

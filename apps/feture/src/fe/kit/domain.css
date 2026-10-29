@@ -119,6 +119,7 @@
 /* ---- Generic kit additions of round 4 ---- */
 .v21 .k-bold{font-weight:700}
 .v21 .k-break-all{word-break:break-all}
+.v21 .k-pre{white-space:pre-line;overflow-wrap:anywhere}
 .v21 .k-sp{flex:none}
 .v21 .k-sp-1{height:var(--s-1)}.v21 .k-sp-2{height:var(--s-2)}.v21 .k-sp-3{height:var(--s-3)}.v21 .k-sp-4{height:var(--s-4)}.v21 .k-sp-6{height:var(--s-6)}
 .v21 .k-alert-act{display:flex;flex-wrap:wrap;gap:var(--s-2);margin-top:6px}
@@ -173,3 +174,27 @@
  .v21 .k-chat-pane .chat-row{padding:10px 8px;border-radius:var(--r)}
  .v21 .k-chat-pane .chat-row+.chat-row{border-top-color:transparent}
 }
+/* EventAnswer: the person's relation to an event as one card — heading row, state line, choices, footer row. The parts
+   follow one 12 px rhythm in every state, so the block never changes shape between «по заявке» and a free event. */
+.v21 .card.k-answer{display:grid;gap:var(--s-3);padding:var(--s-4)}
+.v21 .k-answer-h{display:flex;align-items:center;justify-content:space-between;gap:var(--s-3);min-height:var(--h-sm)}
+.v21 .k-answer-h>b{font-size:var(--fs-md);font-weight:650;line-height:1.3;min-width:0}
+.v21 .k-answer-h>.btn.text{flex:none;min-height:var(--h-sm);padding:0 var(--s-1);font-size:var(--fs-sm)}
+.v21 .k-answer-h>.pill{flex:none}
+/* The state line: icon | text, its action under the text (never squeezing it); tinted by tone. */
+.v21 .k-answer .k-answer-st{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:var(--s-3);row-gap:var(--s-3);align-items:start;padding:var(--s-3);border-radius:var(--r-m);background:var(--raise);border:0}
+.v21 .k-answer .k-answer-st>.ico{color:var(--mute)}
+.v21 .k-answer-st>.tx>b{display:block;font-size:var(--fs-body);font-weight:600;line-height:1.35}
+.v21 .k-answer-st>.tx>small{display:block;margin-top:2px;font-size:var(--fs-xs);line-height:1.4;color:var(--mute)}
+.v21 .k-answer-st>.btn{grid-column:2;justify-self:start}
+.v21 .k-answer .k-answer-st.k-status-wait{background:var(--warn-soft)}.v21 .k-answer .k-status-wait>.ico{color:var(--warn)}
+.v21 .k-answer .k-answer-st.k-status-ok{background:var(--ok-soft)}.v21 .k-answer .k-status-ok>.ico{color:var(--ok)}
+.v21 .k-answer .k-answer-st.k-status-bad{background:var(--danger-soft)}.v21 .k-answer .k-status-bad>.ico{color:var(--danger)}
+/* Only a state (cancelled, over, waiting for review): the card itself is the state line — no box in a box. */
+.v21 .card.k-answer.k-answer-solo{padding:0;overflow:hidden}
+.v21 .k-answer.k-answer-solo .k-answer-st{border-radius:0;padding:var(--s-4)}
+.v21 .card.k-answer.k-answer-solo:has(.k-status-wait,.k-status-ok,.k-status-bad){border-color:transparent}
+.v21 .k-answer-b{display:grid;gap:var(--s-2);min-width:0}
+.v21 .k-answer-f{border-top:1px solid var(--line);padding-top:var(--s-3)}
+.v21 .k-answer-f>.li{padding:0;min-height:0;border-top:0}
+.v21 .k-answer-f>.note{margin:0}

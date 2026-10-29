@@ -100,7 +100,7 @@ export default [
  { name: 'JN-E5 cancelled event: the reason, no answers, «Похожие события»; the server refuses an answer', persona: 'basic', allow4xx: true, run: async t => {
    const h = await host(t);
    await t.go('/n/events/' + h.cancelledEventId);
-   await t.see('.alert.err:has-text("Событие отменено")'); await t.see('text=Ведущий заболел');
+   await t.see('.k-answer .k-status-bad:has-text("Событие отменено")'); await t.see('text=Ведущий заболел');
    await t.notSee('.rsvp', 300);
    await t.see('.ctabar .btn:has-text("Похожие события")');
    const r = await t.api('event.rsvp', { opId: t.uuid7(), eventId: h.cancelledEventId, status: 'interested' });

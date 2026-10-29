@@ -115,6 +115,25 @@ export function Rsvp<T extends string>({value,options,onChange,label,disabled,co
  </div>;
 }
 
+/** «Твоё участие» on an event page (owner 29.10.2026: one structure for every state). One card that holds the person's
+ * whole relation to the event: the question or the role as its heading with a small action on the right («Снять
+ * ответ», a «Ждёт партнёра» pill), a state line (application, cancelled, past, review; tones like `StatusCard`, the
+ * action at its end), the choices (`Rsvp`) or the main buttons (`Actions`), and a footer row that belongs to the answer
+ * (the «Показывать меня в списке» switch). Events with and without an application use the same block; only what is
+ * inside changes. */
+export function EventAnswer({title,aside,status,children,foot,label}:{title?:ReactNode,aside?:ReactNode,
+ status?:{tone?:'wait'|'ok'|'bad'|undefined,icon:LucideIcon,title:ReactNode,sub?:ReactNode,action?:ReactNode}|null|undefined,
+ /** The choices or buttons. */ children?:ReactNode,/** A row under a hairline: a `ToggleRow` or a `Note`. */ foot?:ReactNode,label?:string|undefined}){
+ const S=status?.icon;const solo=!!status&&!title&&!aside&&!children&&!foot;
+ return <section className={'card k-answer'+(solo?' k-answer-solo':'')} aria-label={label}>
+  {(title||aside)&&<div className="k-answer-h"><b>{title}</b>{aside}</div>}
+  {status&&S&&<div className={'k-answer-st k-status'+(status.tone?' k-status-'+status.tone:'')}><span className="ico"><S/></span>
+   <span className="tx"><b>{status.title}</b>{status.sub&&<small>{status.sub}</small>}</span>{status.action}</div>}
+  {children&&<div className="k-answer-b">{children}</div>}
+  {foot&&<div className="k-answer-f">{foot}</div>}
+ </section>;
+}
+
 /** Something closed to the viewer: blurred placeholder lines under glass, a lock, why, and what can be done. */
 export function Veil({title,text,lock=true,action,error,tall,toggles}:{title:ReactNode,text?:ReactNode,lock?:boolean|undefined,action?:ReactNode,error?:ReactNode,
  /** Reserve more height (a whole tab behind the veil). */ tall?:boolean|undefined,/** Show three fake toggles under the lines (a private layer). */ toggles?:boolean|undefined}){
