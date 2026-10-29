@@ -8,6 +8,7 @@ import {Globe,Image as FeedIcon,MessageCircle,Plus,User,Users,X,type LucideIcon}
 import {feErrorMessage} from '../feture/fe-api';
 import {Av,Btn,Empty,H,Skel} from './kit';
 import {FeSessionProvider,useFe,useRealtime} from './session';
+import {sweepDrafts} from './drafts';
 import {countsRes} from './inbox';
 import {Register} from './register';
 import {SignedOut} from './start';
@@ -49,6 +50,7 @@ function useImageFade(){
 }
 
 export function FeRoot(){
+ useEffect(()=>{sweepDrafts();},[]);
  return <FeSessionProvider><AppUpdateProvider><ImageFade/><div className="v21 fe-v21"><MaintenanceGate><FeGate/></MaintenanceGate></div></AppUpdateProvider></FeSessionProvider>;
 }
 function ImageFade(){useImageFade();return null;}

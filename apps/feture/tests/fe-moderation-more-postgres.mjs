@@ -13,7 +13,7 @@ import { discover } from '../server/commands/discover.mjs';
 import { chats } from '../server/commands/chats.mjs';
 import { people } from '../server/commands/people.mjs';
 import { inbox } from '../server/commands/inbox.mjs';
-import { sweepEventReminders } from '../server/jobs.mjs';
+import { sweepEventReminders, sweepExpiredSanctions } from '../server/jobs.mjs';
 import { setup as baseSetup, op } from './fe-helpers.mjs';
 
 const setup = () => baseSetup({ commands: { ...platform, ...me, ...social, ...posts, ...staff, ...moderation, ...communities, ...events, ...discover, ...chats, ...people, ...inbox } });
@@ -151,5 +151,40 @@ test('review fixes: no appeal against a host removal, restore returns the previo
     const l = await call('ub', b, { action: 'link.propose', opId: op(), profileId: a, kind: 'friend' });
     assert.equal(l.status, 404);
     assert.equal((await call('ub', b, { action: 'like.send', opId: op(), profileId: a, source: 'profile' })).status, 404);
+  } finally { await pg.close(); }
+});
+
+test('timed measures: moderators suspend or restrict for a set time, it ends on its own; until lifted is for leads', async () => {
+  const { pg, db, call, member } = await world();
+  try {
+    const a = await member('ua', 'Alex'), b = await member('ub', 'Kira');
+    const conv = (await call('ua', a, { action: 'like.send', opId: op(), profileId: b, source: 'likes' }), (await call('ub', b, { action: 'like.send', opId: op(), profileId: a, source: 'likes' })).conversationId);
+    // Minors / illegal: never timed. A timed lift makes no sense.
+    assert.equal((await call('um', null, { action: 'staff.restrict', opId: op(), profileId: b, on: true, rule: 'minors', days: 7 })).status, 400);
+    assert.equal((await call('ul', null, { action: 'staff.sanction', opId: op(), profileId: b, decision: 'suspend', rule: 'illegal', days: 7 })).status, 400);
+    assert.equal((await call('um', null, { action: 'staff.sanction', opId: op(), profileId: b, decision: 'suspend', rule: 'spam' })).status, 403);
+
+    // A restriction for a day: in force now, gone as soon as its time is up (before the worker runs), then lifted.
+    const r = await call('um', null, { action: 'staff.restrict', opId: op(), profileId: b, on: true, rule: 'spam', days: 1 });
+    assert.ok(r.until);
+    assert.equal((await call('ub', b, { action: 'chat.send', opId: op(), conversationId: conv, body: 'Купи' })).rule, 'restricted');
+    await db.query(`update feture.profile set restricted_until = now() - interval '1 minute' where id = $1`, [b]);
+    assert.equal((await call('ub', b, { action: 'chat.send', opId: op(), conversationId: conv, body: 'Привет' })).seq, 1);
+    assert.equal(await sweepExpiredSanctions(db), 1);
+    const [rp] = await db.query('select restricted_at, restricted_until from feture.profile where id = $1', [b]);
+    assert.equal(rp.restricted_at, null); assert.equal(rp.restricted_until, null);
+
+    // A moderator suspends for 3 days; the worker restores the profile and the account when it runs out.
+    const s = await call('um', null, { action: 'staff.sanction', opId: op(), profileId: b, decision: 'suspend', rule: 'spam', days: 3 });
+    assert.equal(s.state, 'suspended');
+    assert.equal(await sweepExpiredSanctions(db), 0); // not yet
+    await db.query(`update feture.profile set suspended_until = now() - interval '1 minute' where id = $1`, [b]);
+    assert.equal(await sweepExpiredSanctions(db), 1);
+    const [sp] = await db.query(`select p.state, p.suspended_until, a.state account from feture.profile p join feture.account a on a.person_profile_id = p.id where p.id = $1`, [b]);
+    assert.deepEqual({ ...sp }, { state: 'active', suspended_until: null, account: 'active' });
+    const lines = await db.query(`select staff_account_id, action from feture.staff_action where target_id = $1 and action like '%.expired' order by created_at`, [b]);
+    assert.deepEqual(lines.map(l => [l.staff_account_id, l.action]), [[null, 'restrict.expired'], [null, 'sanction.expired']]);
+    const told = await db.query(`select payload from feture.outbox where topic in ('profile.suspended', 'profile.restricted') and payload->>'days' is not null`);
+    assert.equal(told.length, 2);
   } finally { await pg.close(); }
 });

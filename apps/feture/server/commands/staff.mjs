@@ -5,9 +5,11 @@ import { enqueue } from '../outbox.mjs';
 import { checkCode, confirmEnrol, factorState, removeFactor, startEnrol } from '../second-factor.mjs';
 import { passSignin } from '../signin.mjs';
 import { staffFactorRequired } from '../staff-factor-switch.mjs';
-import { pageInfo, queuePageSql } from '../queue-page.mjs';
+import { pageInfo, plainRows, queuePageSql } from '../queue-page.mjs';
 
 /** Media queue sort: the upload time, then the id (unique). */
+/** The journal reads newest first, always. */
+const JOURNAL_KEYS = [{ name: 'created_at', type: 'timestamptz', dir: 'desc' }, { name: 'id', type: 'uuid', dir: 'desc' }];
 const MEDIA_KEYS = [{ name: 'created_at', type: 'timestamptz' }, { name: 'id', type: 'uuid' }];
 
 /** S4 steps 1–2: staff roles, journal, media review (docs/server/S4-MODERATION.md).
@@ -85,7 +87,7 @@ export async function openStaffSession(q, account) {
 export const refused = r => r.ok ? {} : { verified: false, reason: r.reason, left: r.left, lockedUntil: r.lockedUntil };
 
 
-/** @param {Q} q @param {string} staff @param {string} action @param {string} targetType @param {string | null} targetId @param {Record<string, unknown>} [detail] */
+/** @param {Q} q @param {string | null} staff null: the worker (a timed measure ran out) @param {string} action @param {string} targetType @param {string | null} targetId @param {Record<string, unknown>} [detail] */
 export async function journal(q, staff, action, targetType, targetId, detail = {}) {
   await q.query(`insert into feture.staff_action (staff_account_id, action, target_type, target_id, detail) values ($1, $2, $3, $4, $5)`,
     [staff, action, targetType, targetId, JSON.stringify(detail)]);
@@ -267,10 +269,14 @@ const run = {
 
   async 'staff.journal'(q, { account, input }) {
     await requireStaff(q, account, ['owner', 'lead', 'auditor']);
-    const rows = await q.query(
-      `select id, staff_account_id, action, target_type, target_id, detail, created_at from feture.staff_action
-       where ($1::uuid is null or target_id = $1) order by created_at desc limit $2`, [input.targetId ?? null, input.limit]);
-    return { items: rows };
+    const { sql, params } = queuePageSql(input, JOURNAL_KEYS,
+      `select s.id, s.staff_account_id, p.name as staff_name, p.handle as staff_handle, s.action, s.target_type, s.target_id, s.detail, s.created_at
+       from feture.staff_action s
+       left join feture.account a on a.id = s.staff_account_id left join feture.profile p on p.id = a.person_profile_id
+       where ($1::uuid is null or s.target_id = $1) and ($2::uuid is null or s.staff_account_id = $2) and ($3::text is null or s.action = $3)`,
+      [input.targetId ?? null, input.staffAccountId ?? null, input.what ?? null]);
+    const rows = await q.query(sql, params);
+    return { items: plainRows(rows), ...pageInfo(rows, JOURNAL_KEYS, input.limit) };
   },
 };
 

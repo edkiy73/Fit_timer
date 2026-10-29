@@ -885,6 +885,7 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
     <Btn kind="soft" onClick={()=>setPreview(false)}>{t('fe.fd.change')}</Btn>
     <Btn onClick={publish} disabled={!!busy||uploading} busy={busy==='publish'}>{cta}</Btn>
    </Actions></div></div>
+   {guard.node}
   </>;
  }
 

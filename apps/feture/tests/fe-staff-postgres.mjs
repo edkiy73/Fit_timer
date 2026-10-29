@@ -75,6 +75,21 @@ test('staff: roles are server-side, owner grants, queue excludes own media, deci
     const j = await call('uo', null, { action: 'staff.journal' });
     assert.deepEqual([...new Set(j.items.map(i => i.action))].sort(), ['media.approve', 'media.reject', 'media.view', 'staff.grant']);
     assert.equal((await call('um', null, { action: 'staff.journal' })).status, 403); // moderators do not read the journal
+    // Who did it: the staff member's name and @nick come with each row; filters by person and by action; pages by cursor.
+    assert.ok(j.items.every(i => i.staff_handle && i.staff_account_id && 'staff_name' in i));
+    const byMira = await call('uo', null, { action: 'staff.journal', staffAccountId: j.items.find(i => i.staff_handle === 'Mira').staff_account_id });
+    assert.ok(byMira.items.length && byMira.items.every(i => i.staff_handle === 'Mira'));
+    const views = await call('uo', null, { action: 'staff.journal', what: 'media.view' });
+    assert.ok(views.items.length && views.items.every(i => i.action === 'media.view'));
+    const onlyView = await call('uo', null, { action: 'staff.journal', limit: 1 });
+    assert.equal(onlyView.items.length, 1);
+    assert.ok(onlyView.next, 'a full page offers the next one');
+    const seen = [onlyView.items[0].id];
+    for (let after = onlyView.next; after;) {
+      const pg2 = await call('uo', null, { action: 'staff.journal', limit: 1, after });
+      seen.push(...pg2.items.map(i => i.id)); after = pg2.next;
+    }
+    assert.deepEqual(seen, j.items.map(i => i.id), 'paging yields the same newest-first list once');
     await pg.exec('reset role; set role feture_api');
     await assert.rejects(db.query('delete from feture.staff_action'), /permission denied|immutable/);
     await assert.rejects(db.query(`update feture.staff_action set action = 'x.y'`), /permission denied|immutable/);

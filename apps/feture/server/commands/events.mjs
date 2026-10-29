@@ -642,7 +642,7 @@ const run = {
   async 'staff.eventQueue'(q, { account, input }) {
     await requireStaff(q, account, ['owner', 'lead', 'moderator']);
     const { sql, params } = queuePageSql(input, CREATED_KEYS,
-      `select e.id, e.rev, e.title, e.kind, e.description, e.format, e.area, e.exact_address, e.join_url, e.starts_at, e.ends_at, e.price,
+      `select e.id, e.rev, e.title, e.kind, e.description, e.format, e.area, e.exact_address, e.join_url, e.tz, e.starts_at, e.ends_at, e.price,
          e.requirements, e.questions, e.cover_asset_id, e.community_id, e.state, e.pending_change, e.created_at,
          json_build_object('id', o.id, 'kind', o.kind, 'handle', o.handle) organizer
        from feture.event e join feture.profile o on o.id = e.organizer_profile_id
