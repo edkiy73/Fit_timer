@@ -42,7 +42,8 @@ async function clearPerson(q, pp) {
   for (const t of ['interest', 'private_part', 'discover_decision', 'discover_filter', 'saved_item', 'feed_hide', 'profile_location']) {
     await q.query(`delete from feture.${t} where profile_id = $1`, [pp]);
   }
-  await q.query(`update feture.profile_details set bio = '', city_id = null, genders = '{}', orients = '{}', roles = '{}', formats = '{}', seeks = '{}', status = null where profile_id = $1`, [pp]);
+  await q.query(`update feture.profile_details set bio = '', city_id = null, genders = '{}', orients = '{}', roles = '{}', formats = '{}', seeks = '{}', status = null,
+    height = null, smoking = null, alcohol = null, kids = null, langs = '{}', zodiac = null where profile_id = $1`, [pp]);
   await q.query(`update feture.profile_settings set discover_mode = 'off', updated_at = now() where profile_id = $1`, [pp]);
   // Social graph.
   await q.query(`delete from feture.follow where follower_profile_id = $1 or target_profile_id = $1`, [pp]);

@@ -7,6 +7,5 @@
 .fe-v21 .bar .sk.fe-sk-title{width:120px;height:16px}
 .fe-v21 .dock-av .sk.fe-sk-av{width:100%;height:100%;border-radius:50%}
 .fe-v21 .side .navb em.dot{min-width:9px;width:9px;height:9px;padding:0}
-/* «Я» (V21 X01) has no `header.bar` in the prototype, so its main is not `.hasbar`; the shell sets `.hasbar` on every
-   tab root, which pushed the header ~58 px down. */
-.v21 .main.hasbar>.view.me18.me-x01,.v21 .main>.view.me18.me-x01{padding-top:4px;-webkit-mask-image:none;mask-image:none}
+/* «Я» has the same floating `header.bar` as every tab (owner 29.10.2026), so it keeps the tab's top padding. */
+.v21 .main>.view.me18.me-x01{-webkit-mask-image:none;mask-image:none}

@@ -76,6 +76,9 @@ or a helper defined twice (`tools/fe-server-baseline.json` only shrinks). Text i
   in the setup right after it forms; couples take @mentions like people. Feed, comments, chats, notifications and
   likes show the name only; the grey @nick (kit `PersonName nick` / `Who`) only in the profile header, search,
   @mention suggestions, the pair invite and follow lists.
+- **«Обо мне» facts are always visible to everyone** (29.10.2026): no per-fact audience; on a person's profile they
+  sit under the bio and under the main buttons (Нравится / Подписаться / Написать).
+- **«Я» uses the same header as every tab** (29.10.2026): kit `Bar` with `lead` (avatar), `sub` and `onTitle`.
 - Media is reviewed before it is shown: `uploaded → scanning → needs_review → approved / rejected / blocked`.
   Staff roles: owner, lead, moderator, verifier, support, auditor — checked on the server only.
 

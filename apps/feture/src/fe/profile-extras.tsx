@@ -18,6 +18,7 @@ import {PrivateVault} from './private';
 import {GiftSheet,openPaywall} from './premium';
 import {CompareSheet,asInterest} from './compare';
 import {useWriteTo} from './write-to';
+import {AboutGroup} from './about-facts';
 
 /** Profile extras with the V21 prototype's markup: «Что у вас общего» (P05), the person menu (report / block / hide
  * from feed, S02), confirmed links and «Предложить связь» (F2, P21/P22), «Просмотренные» (D09) and «Как видят» (P03).
@@ -397,6 +398,8 @@ export function ProfilePage({p,preview,seg,onMore,menu,onRefresh,children}:{p:Pe
    <ProfileHero p={p} rel={rel} inert={inert} onOpen={setView}/>
    <PersonBio p={p}/>
    <PersonActions p={p} rel={rel} setRel={setRel} inert={inert}/>
+   {/* Owner 29.10.2026: «Обо мне» under the bio and under the main buttons. */}
+   <AboutGroup p={p} inert={inert}/>
    {!preview&&<CompatSummary profileId={p.id}/>}
    <ProfileBody p={p} inert={inert} preview={preview} onOpen={setView}/>
   </div></PullRefresh></div>
@@ -735,7 +738,7 @@ export function MePreviewScreen(){
        <div className="pc-hint"><ChevronDown/>{t('fe.px.card.hint')}</div></div>
      </div></div>
      <Note className="center mt12">{note}</Note>
-     <div className="pc-body pc-full p3-card21"><PersonBio p={p}/><ProfileBody p={p} inert preview="all" onOpen={()=>{}}/></div>
+     <div className="pc-body pc-full p3-card21"><PersonBio p={p}/><AboutGroup p={p} inert/><ProfileBody p={p} inert preview="all" onOpen={()=>{}}/></div>
     </>}
   </View>
  </>;

@@ -10,15 +10,17 @@ export default [
    try { await t.page.reload();
    await t.see('.me18-seg'); await t.see('#mePh');
    await t.tap('button[aria-label="Как видят"]'); await t.wait(800); expect(t.page.url().includes('/n/me/preview'), 'eye → preview: ' + t.page.url());
-   await t.go('/n/me'); await t.tap('.me18-h button[aria-label^="Настройки"]'); await t.wait(800); expect(t.page.url().includes('/n/settings'), 'settings: ' + t.page.url());
+   await t.go('/n/me'); await t.tap('header.bar button[aria-label^="Настройки"]'); await t.wait(800); expect(t.page.url().includes('/n/settings'), 'settings: ' + t.page.url());
    await t.go('/n/me'); await t.see('.me-todo'); await t.tap('.me-todo'); await t.wait(800); expect(t.page.url().includes('/n/inbox'), 'todo → inbox: ' + t.page.url());
-   await t.go('/n/me'); await t.see('#mePh'); await t.page.locator('.me18-h .ibtn').first().click(); await t.wait(800); expect(t.page.url().includes('/n/inbox'), 'bell → inbox: ' + t.page.url());
+   await t.go('/n/me'); await t.see('#mePh'); await t.page.locator('header.bar .ibtn').first().click(); await t.wait(800); expect(t.page.url().includes('/n/inbox'), 'bell → inbox: ' + t.page.url());
    } finally {
      await cancelAsk(t, a);
    }
  } },
  { name: 'X01 tabs switch, keep ?layer, and a ?layer link while «Я» is open', persona: 'full', route: '/n/me', run: async t => {
    for (const [tab, layer, sel] of [['Приватное', 'priv', '#privHead'], ['Видимость', 'vis', 'select[aria-label="Режим"]'], ['Моё', 'mine', '.li:has-text("Сохранённое")'], ['Профиль', null, '#mePh']]) {
+     // The header floats over the content like on every tab (owner 29.10.2026): back to the top before the next tab.
+     await t.page.evaluate(() => document.querySelector('.main>.view')?.scrollTo(0, 0)); await t.wait(200);
      await t.tap(`.me18-seg button:has-text("${tab}")`); await t.see(sel);
      expect(layer ? t.page.url().includes('layer=' + layer) : !t.page.url().includes('layer='), 'url for ' + tab + ': ' + t.page.url());
    }
@@ -143,7 +145,7 @@ export default [
    }
  } },
  { name: 'Моё: every row opens its screen', persona: 'full', route: '/n/me?layer=mine', allow4xx: true, run: async t => {
-   for (const [row, path] of [['Публикации и статьи', '/n/me/posts'], ['Мои события', '/n/me/events'], ['Подписчики и подписки', '/n/me/follows'], ['Сохранённое', '/n/me/saved'], ['Мне открыли', '/n/me/shared'], ['Создать пару', '/n/me/pair']]) {
+   for (const [row, path] of [['Публикации и статьи', '/n/me/posts'], ['Мои события', '/n/me/events'], ['Подписчики и подписки', '/n/me/follows'], ['Сохранённое', '/n/me/saved'], ['Мне открыли', '/n/me/access?tab=withme'], ['Создать пару', '/n/me/pair']]) {
      await t.go('/n/me?layer=mine'); await t.tap(`.li:has-text("${row}")`); await t.wait(1500);
      expect(t.page.url().includes(path), row + ' → ' + t.page.url());
      expect(!(await t.page.locator('.empty[role="alert"]').count()), row + ' shows an error');

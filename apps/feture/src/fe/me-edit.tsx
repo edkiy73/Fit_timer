@@ -16,12 +16,13 @@ import {NICK,nickAnswer} from './register';
 import {FIELD,shakeFirstErr,textLength,useChecks} from './kit/validate';
 import {PostPhotoPicker} from './gallery';
 import {ChipPick} from './kit/ChipPick';
+import {AboutEditor,aboutDraft,aboutPatch,type AboutDraft} from './about-facts';
 
 /** V21 P02 «Редактировать профиль» and P04 «Приватная часть» (`SC.P02` with `only`): one editor, opened at the block
  * that was tapped on «Я» — `media` (the photo slots), `basics` (name, nickname, age, about, city), `details` (the
- * catalog answers) or `priv` (the private part); without `only` the whole profile. Nothing is written until
+ * catalog answers), `about` («Обо мне» facts, about-facts.tsx) or `priv` (the private part); without `only` the whole profile. Nothing is written until
  * «Сохранить»; a couple's widening change comes back `pending` and waits for the partner (server rule). */
-type Only='media'|'basics'|'details'|'priv'|null;
+type Only='media'|'basics'|'details'|'priv'|'about'|null;
 type Ph={id:string,src:string|null,pending:boolean};
 const intent=z.object({ok:z.literal(true),assetId:z.uuid(),upload:z.object({url:z.string(),method:z.string(),headers:z.record(z.string(),z.string())})});
 const privMedia=z.object({id:z.uuid(),src:z.record(z.string(),z.string()).nullable().optional(),pending:z.boolean().optional()}).passthrough();
@@ -36,12 +37,14 @@ const toPh=(m:{id:string,src?:Record<string,string>|null|undefined,pending?:bool
 
 export function MeEditScreen(){
  const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
- const [params]=useSearchParams();const o=params.get('only');const only:Only=o==='media'||o==='basics'||o==='details'||o==='priv'?o:null;
+ const [params]=useSearchParams();const o=params.get('only');const only:Only=o==='media'||o==='basics'||o==='details'||o==='priv'||o==='about'?o:null;
  const [p,setP]=useState<Profile|null>(null);const [base,setBase]=useState<Draft|null>(null);const [d,setD]=useState<Draft|null>(null);
  const [cat,setCat]=useState<z.infer<typeof catalogRes>|null>(null);const [jars,setJars]=useState({all:0,granted:0});const [grants,setGrants]=useState(0);
  const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
  const [whoOpen,setWhoOpen]=useState<boolean|null>(null);const [city,setCity]=useState(false);const [phSheet,setPhSheet]=useState<{k:'photos'|'privMedia',i:number}|null>(null);
  const [askOff,setAskOff]=useState(false);const [nickErr,setNickErr]=useState('');const [askLast,setAskLast]=useState<number|null>(null);const [discoverOn,setDiscoverOn]=useState(false);const [added,setAdded]=useState<Place|null>(null);const [uploading,setUploading]=useState<'photos'|'privMedia'|null>(null);
+ // «Обо мне» (person only) keeps its own draft next to the rest; «Сохранить» writes it with the profile.
+ const [ab,setAb]=useState<{base:AboutDraft,d:AboutDraft}|null>(null);
  const file=useRef<HTMLInputElement>(null);const fileKind=useRef<'photos'|'privMedia'>('photos');const fid=useId();
  // Press and drag to change the order in the draft; «Сохранить» writes it.
  const drag=useDragOrder<'photos'|'privMedia'>((k,ids)=>setD(x=>{if(!x)return x;const by=new Map(x[k].map(p=>[p.id,p]));const next=ids.map(i=>by.get(i)).filter((p):p is Ph=>!!p);return next.length===x[k].length?{...x,[k]:next}:x;}));
@@ -57,13 +60,15 @@ export function MeEditScreen(){
     const draft:Draft={name:pr.chosenName??'',handle:pr.handle??'',bio:pr.bio,cityId:typeof pr.cityId==='string'?pr.cityId:pr.city?.id??null, // profile.get sends the city as {id, ru, en, pending}
      showAge:pr.showAge!==false,details:det,
      photos:pr.photos.map(toPh),privOn:b.on!==false,privText:b.text??'',privMedia:(b.media??[]).map(toPh)};
+    if(pr.kind==='person'){const x=aboutDraft(pr);setAb({base:x,d:structuredClone(x)});}
     setP(pr);setBase(draft);setD(structuredClone(draft));setCat(c);setGrants(b.counts?.grants??0);
     setJars({all:e.items.length,granted:e.items.filter(j=>j.vis==='granted').length});
    }).catch(setError);
  },[call,acting]);
  useEffect(()=>{load();},[load]);
  const label=(kind:string,code:string)=>{const x=cat?.options.find(y=>y.kind===kind&&y.code===code);return x?(locale==='en'?x.en:x.ru):code;};
- const dirty=!!d&&!!base&&JSON.stringify(d)!==JSON.stringify(base);
+ const aboutDirty=!!ab&&Object.keys(aboutPatch(ab.base,ab.d)).length>0;
+ const dirty=!!d&&!!base&&(JSON.stringify(d)!==JSON.stringify(base)||aboutDirty);
  const set=(patch:Partial<Draft>)=>setD(v=>v?{...v,...patch}:v);
  const show=(k:Exclude<Only,null>)=>!only||only===k;
  // Kit validation layer: the fields on screen, by the server's rules (contracts/_text.mjs).
@@ -73,7 +78,7 @@ export function MeEditScreen(){
  const home='/n/me'+(only==='priv'?'?layer=priv':'');const canBack=((history.state as {idx?:number}|null)?.idx??0)>0;
  const leave=()=>canBack?navigate(-1):navigate(home,{replace:true});
  const fields=DETAIL_ROWS.filter(([f])=>!cp||COUPLE_ROWS.includes(f));
- const title=only==='media'?t('fe.me.photos'):only==='basics'?t('fe.me.basics'):only==='details'?(cp?t('fe.mx.detailsCouple'):t('fe.me.details')):only==='priv'?t('fe.priv.title'):(cp?t('fe.me.coupleProfile'):t('fe.mx.ed.myProfile'));
+ const title=only==='media'?t('fe.me.photos'):only==='basics'?t('fe.me.basics'):only==='details'?(cp?t('fe.mx.detailsCouple'):t('fe.me.details')):only==='priv'?t('fe.priv.title'):only==='about'?t('fe.ab.title'):(cp?t('fe.me.coupleProfile'):t('fe.mx.ed.myProfile'));
 
  // Profile photos are 4:5 (the profile's frame); private ones may keep their shape. Kit uploader: crop, compress, no metadata.
  const [picked,setPicked]=useState<{k:'photos'|'privMedia',files:File[]}|null>(null);
@@ -101,6 +106,7 @@ export function MeEditScreen(){
    if(d.cityId!==base.cityId)upd.cityId=d.cityId;
    if(!cp&&d.showAge!==base.showAge)upd.showAge=d.showAge;
    for(const [f] of fields)if(JSON.stringify(d.details[f])!==JSON.stringify(base.details[f]))upd[f]=d.details[f];
+   if(ab&&!cp)Object.assign(upd,aboutPatch(ab.base,ab.d));
    if(Object.keys(upd).length){const r=await call('profile.update',{opId:newOpId(),rev:p.rev,...upd},ok);pending||=!!r.pending;}
    if(JSON.stringify(d.photos.map(x=>x.id))!==JSON.stringify(base.photos.map(x=>x.id))){const r=await call('profile.photosSet',{opId:newOpId(),assetIds:d.photos.map(x=>x.id)},ok);pending||=!!r.pending;}
    if(d.privOn!==base.privOn&&!d.privOn)await call('private.setOn',{opId:newOpId(),on:false,confirm:true},ok);
@@ -113,7 +119,7 @@ export function MeEditScreen(){
  };
 
  if(!acting)return null;
- const aud=only==='priv'?<AudTag k="granted"/>:only?<AudTag k={only==='details'?(p?.detailsVis??'all'):'all'}/>:null;
+ const aud=only==='priv'?<AudTag k="granted"/>:only&&only!=='about'?<AudTag k={only==='details'?(p?.detailsVis??'all'):'all'}/>:null;
  const slots=(k:'photos'|'privMedia',base:Ph[],max:number)=>{
   const list=drag.arrange(k,base);const ids=base.map(x=>x.id);
   const cells:ReactNode[]=list.map((ph,i)=><PhotoSlot key={ph.id} id={ph.id} big={k==='photos'&&i===0} dragging={drag.preview?.drag===ph.id} src={ph.src}
@@ -181,6 +187,7 @@ export function MeEditScreen(){
        {who&&fields.map(([f,kind])=><div key={f} className="field"><span className="flabel">{t(kind==='status'?'fe.mx.f.status':'fe.reg.kind.'+kind)}</span>{chips(f,kind)}</div>)}
       </div>}
      </Card></Group>}
+     {show('about')&&!cp&&ab&&<AboutEditor d={ab.d} titled={!only} onChange={x=>setAb(v=>v&&{...v,d:x})}/>}
      {!only&&<Group id="peJars" title={cp?t('fe.int.titleCouple'):t('fe.int.title')}><Card list>
       <Row icon={Sparkles} title={t('fe.int.all')} sub={t('fe.mx.ed.jarsSub')} val={jars.all} onClick={()=>navigate('/n/me/interests')}/>
      </Card></Group>}

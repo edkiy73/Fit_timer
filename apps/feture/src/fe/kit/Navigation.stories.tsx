@@ -1,7 +1,7 @@
 import type {Meta,StoryObj} from '@storybook/react-vite';
 import {useState} from 'react';
 import {Settings} from 'lucide-react';
-import {Bar,IconBtn,Seg,SubBar} from './index';
+import {Av,Bar,IconBtn,Seg,SubBar} from './index';
 
 const meta={title:'Навигация/Вкладки',component:Seg,tags:['autodocs'],
  parameters:{docs:{description:{component:'**Единственный** способ переключать разделы экрана. 2–4 вкладки делят ширину, 5 и больше прокручиваются. `n` — счётчик, `dot` — что-то ждёт. Не делай вкладки из чипов или подчёркнутых кнопок.'}}},
@@ -17,5 +17,9 @@ export const Прокрутка:S={name:'Пять и больше — прокр
 
 export const Шапка:StoryObj<typeof Bar>={name:'Шапка экрана',render:a=><Bar {...a}><IconBtn icon={Settings} label="Настройки"/></Bar>,args:{title:'Лента',small:false},
  parameters:{docs:{description:{story:'Заголовок экрана; `back` — стрелка назад, справа — круглые кнопки действий.'}}}};
+export const ШапкаСАватаркой:StoryObj<typeof Bar>={name:'Шапка вкладки с аватаркой («Я»)',
+ parameters:{docs:{description:{story:'Та же шапка, что у «Ленты» и «Комьюнити» (большой заголовок, стеклянные круглые кнопки, заголовок гаснет при прокрутке), с аватаркой слева от имени и второй строкой. `onTitle` — имя открывает «Чей профиль» (есть пара).'}}},
+ render:a=><Bar {...a}><IconBtn icon={Settings} label="Настройки"/></Bar>,
+ args:{title:'Бромэн',lead:<Av name="Бромэн" seed="me" size="sm"/>,sub:'Личный профиль',onTitle:()=>{},titleLabel:'Чей профиль'},argTypes:{lead:{control:false}}};
 export const ШапкаНазад:StoryObj<typeof Bar>={name:'Шапка с «назад»',render:a=><Bar {...a}/>,args:{title:'Новая публикация',back:true}};
 export const ШапкаДвеСтроки:StoryObj<typeof SubBar>={name:'Шапка с подзаголовком',render:a=><SubBar {...a}/>,args:{title:'Круг о границах',sub:'Сообщество · 128 участников'}};

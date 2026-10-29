@@ -205,3 +205,17 @@
 .v21 .k-who>.nbadge{flex:none;align-self:center}
 .v21 .k-nick{flex:0 1000 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mute);font-weight:400;font-size:var(--fs-sm)}
 .v21 .pc-nick{margin:2px 0 0;font-size:var(--fs-sm);line-height:1.4;color:inherit;opacity:.78;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Bar with a leading avatar and a second line (owner 29.10.2026: «Я» uses the same floating header as every tab). */
+.v21 .bar h1.k-bar-who{display:flex;align-items:center;min-width:0}
+.v21 .bar h1.k-bar-who .bar-who{display:flex;align-items:center;gap:var(--s-3);min-width:0;max-width:100%;padding:0;margin:0;border:0;background:none;font:inherit;color:inherit;text-align:left;cursor:pointer;pointer-events:auto;border-radius:var(--r)}
+.v21 .bar h1.k-bar-who>.bar-lead{margin-right:var(--s-3)}
+.v21 .bar h1.k-bar-who .bar-lead{flex:none;display:flex}
+.v21 .bar h1.k-bar-who .bar-lead .av{width:44px;height:44px}
+.v21 .bar h1.k-bar-who .bar-tt{display:flex;flex-direction:column;min-width:0}
+.v21 .bar h1.k-bar-who .bar-t{display:flex;align-items:center;gap:4px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.v21 .bar h1.k-bar-who .bar-t>svg{width:18px;height:18px;flex:none;color:var(--mute)}
+.v21 .bar h1.k-bar-who .sub{margin-top:1px}
+.v21 .main>.bar>h1.k-bar-who .bar-who{pointer-events:auto}
+/* Once the screen scrolls, the fading title lets taps through to the content under it, like every tab's title. */
+.v21 .main.scrolled>.bar>h1.k-bar-who .bar-who{pointer-events:none}

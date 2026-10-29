@@ -264,3 +264,39 @@ test('name and nick (owner 29.10.2026): optional name shown instead of the nick,
     assert.equal((await call('ub', b, { action: 'profile.get', profileId: a })).profile.name, 'alex_two');
   } finally { await pg.close(); }
 });
+
+test('«Обо мне» facts (owner 29.10.2026): validation, always visible to everyone (a stranger sees every filled fact), person only', async () => {
+  const { pg, db, call, person, coupleOf } = await setup();
+  try {
+    const a = await person('ua', 'Alex'), b = await person('ub', 'Kira'), c = await person('uc', 'Noa');
+    const up = async (input, user = 'ua', pid = a) => {
+      const rev = (await call(user, pid, { action: 'profile.get', profileId: pid })).profile.rev;
+      return call(user, pid, { action: 'profile.update', opId: op(), rev, ...input });
+    };
+    // Bounds and lists: refused field by field, nothing written; there is no per-fact audience any more.
+    for (const [bad, field] of [[{ height: 119 }, 'height'], [{ height: 231 }, 'height'], [{ height: 174.5 }, 'height'], [{ smoking: 'often' }, 'smoking'],
+      [{ alcohol: 'yes' }, 'alcohol'], [{ kids: 'many' }, 'kids'], [{ zodiac: 'ophiuchus' }, 'zodiac'], [{ langs: ['ru', 'ru'] }, 'langs'],
+      [{ langs: ['ru', 'en', 'de', 'fr', 'es', 'it', 'pt'] }, 'langs'], [{ langs: ['xx'] }, 'langs'], [{ aboutVis: { height: 'all' } }, '(root)']]) {
+      const r = await up(bad);
+      assert.deepEqual([r.status, r.fields?.[0]?.split('.')[0]], [400, field], JSON.stringify(bad));
+    }
+    assert.equal((await db.query('select height from feture.profile_details where profile_id = $1', [a]))[0].height, null);
+
+    // Filled: the owner, a stranger and anyone else see every filled fact.
+    const all = { height: 174, smoking: 'sometimes', alcohol: 'rarely', kids: 'unsure', langs: ['ru', 'en', 'de'], zodiac: 'scorpio' };
+    assert.equal((await up(all)).status, 200);
+    const own = (await call('ua', a, { action: 'profile.get', profileId: a })).profile;
+    assert.deepEqual([own.about, own.aboutVis], [all, undefined]);
+    assert.deepEqual((await call('ub', b, { action: 'profile.get', profileId: a })).profile.about, all);
+    assert.deepEqual((await call('uc', c, { action: 'profile.get', profileId: a })).profile.about, all);
+
+    // Clearing a fact removes it for everyone.
+    assert.equal((await up({ height: null, langs: [] })).status, 200);
+    assert.deepEqual((await call('ub', b, { action: 'profile.get', profileId: a })).profile.about, { smoking: 'sometimes', alcohol: 'rarely', kids: 'unsure', zodiac: 'scorpio' });
+
+    // Facts are personal: a couple profile has none and cannot set them.
+    const pair = await coupleOf([a, b]);
+    assert.deepEqual((await up({ height: 180 }, 'ua', pair)).fields, ['height']);
+    assert.deepEqual((await call('uc', c, { action: 'profile.get', profileId: pair })).profile.about, {});
+  } finally { await pg.close(); }
+});
