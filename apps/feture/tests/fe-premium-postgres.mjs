@@ -65,7 +65,8 @@ test('age check: needs an approved profile photo, server-chosen gesture, staff o
     assert.deepEqual((await call('ua', null, { action: 'verification.ageSubmit', opId: op(), checkId: s.id, assetId: await asset(db, a, 'post') })).fields, ['assetId']);
     await call('ua', null, { action: 'verification.ageSubmit', opId: op(), checkId: s.id, assetId: await asset(db, a, 'verification', 'needs_review') });
     const queue = (await call('um', null, { action: 'staff.ageCheckQueue' })).items;
-    assert.deepEqual([queue.length, queue[0].gesture, !!queue[0].selfie, !!queue[0].photo], [1, s.gesture, true, true]);
+    const open = await call('um', null, { action: 'staff.ageCheckOpen', checkId: queue[0].id });
+    assert.deepEqual([queue.length, queue[0].gesture, !!open.selfie, !!open.photo], [1, s.gesture, true, true]);
     assert.equal((await call('ua', null, { action: 'staff.ageCheckQueue' })).status, 403);
     assert.deepEqual((await call('um', null, { action: 'staff.ageCheckDecide', opId: op(), checkId: s.id, approve: false })).fields, ['reason']);
     await call('um', null, { action: 'staff.ageCheckDecide', opId: op(), checkId: s.id, approve: true });
@@ -116,10 +117,15 @@ test('age check by document: no profile photo needed, staff read it alone; nobod
     assert.deepEqual([st.check.method, st.check.state, st.check.gesture], ['document', 'submitted', null]);
 
     // Staff see the document, not a profile photo or a gesture; every look is journaled.
+    // The queue lists the check without pictures and journals nothing; opening it shows the document once per look.
     const [item] = (await call('um', null, { action: 'staff.ageCheckQueue' })).items;
-    assert.deepEqual([item.method, item.gesture, item.selfie, item.photo, !!item.document?.src], ['document', null, null, null, true]);
-    const [{ n: looks }] = await db.query(`select count(*)::int n from feture.staff_action where action = 'age.view' and detail->>'method' = 'document'`);
-    assert.equal(looks, 1);
+    assert.deepEqual([item.method, item.gesture, item.selfie, item.photo, item.document], ['document', null, null, null, null]);
+    const looked = async () => (await db.query(`select count(*)::int n from feture.staff_action where action = 'age.view' and detail->>'method' = 'document'`))[0].n;
+    assert.equal(await looked(), 0);
+    const opened = await call('um', null, { action: 'staff.ageCheckOpen', checkId: item.id });
+    assert.deepEqual([opened.selfie, opened.photo, !!opened.document?.src], [null, null, true]);
+    assert.equal(await looked(), 1);
+    for (const u of ['ua', 'ub', 'us']) assert.equal((await call(u, null, { action: 'staff.ageCheckOpen', checkId: item.id })).status, 403);
 
     // Nobody else: not the partner, the couple or a stranger — not through the queue, the media view or a profile.
     for (const u of ['ua', 'ub', 'us']) assert.equal((await call(u, null, { action: 'staff.ageCheckQueue' })).status, 403);
@@ -205,7 +211,9 @@ test('age check: the method can switch before sending; the selfie flow stays as 
     // Sent: the method no longer changes.
     assert.equal((await call('ua', null, { action: 'verification.ageStart', opId: op(), method: 'document' })).method, 'selfie');
     const [item] = (await call('um', null, { action: 'staff.ageCheckQueue' })).items;
-    assert.deepEqual([item.method, item.gesture, !!item.selfie, !!item.photo, item.document], ['selfie', s.gesture, true, true, null]);
+    assert.deepEqual([item.method, item.gesture], ['selfie', s.gesture]);
+    const look = await call('um', null, { action: 'staff.ageCheckOpen', checkId: item.id });
+    assert.deepEqual([!!look.selfie, !!look.photo, look.document], [true, true, null]);
     await call('um', null, { action: 'staff.ageCheckDecide', opId: op(), checkId: s.id, approve: true });
     assert.equal((await db.query('select state from feture.media_asset where id = $1', [selfie]))[0].state, 'needs_review'); // kept 30 days
     assert.equal((await db.query(`select count(*)::int n from feture.outbox where topic = 'verification.dropDocument'`))[0].n, 0);

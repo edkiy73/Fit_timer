@@ -34,6 +34,8 @@ export const premiumCommands = {
   'verification.ageSubmit': { profile: false, write: true, input: z.strictObject({ opId, checkId: id, assetId: id }) },
   'verification.ageStatus': { profile: false, write: false, input: z.strictObject({}) },
   'staff.ageCheckQueue': { profile: false, write: false, input: z.strictObject({ ...queuePaging }) },
+  // Opening a document or a selfie is its own step (audit 30.10, item 12): fresh code, one journal line per look.
+  'staff.ageCheckOpen': { profile: false, write: true, ledger: false, input: z.strictObject({ checkId: id }) },
   'staff.ageCheckDecide': {
     profile: false, write: true,
     input: z.strictObject({ opId, checkId: id, approve: z.boolean(), reason: reason.optional() })

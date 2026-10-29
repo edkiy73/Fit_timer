@@ -207,12 +207,16 @@ const run = {
     const a = await reviewable(q, account.id, input.assetId);
     // Age/photo-check selfies and identity documents open only in their own check queue, never by id from here.
     if (a.purpose === 'verification') fail(404, 'not_found');
-    // Staff see content only for what is waiting for them (S4 §3): media on review, or media of a post under open
-    // reports or a dispute; never blocked material or private media at large.
+    // Staff see content only for what is waiting for them (S4 §3): media on review, media of a post under open
+    // reports or a dispute, or of chat messages picked as evidence in an open report; never blocked material or
+    // private media at large.
     const [{ inCase }] = await q.query(
       `select exists (select 1 from feture.media_attachment ma join feture.post p on p.id = ma.target_id
          where ma.target_type = 'post' and ma.asset_id = $1
-           and (p.disputed_at is not null or exists (select 1 from feture.report r where r.target_type = 'post' and r.target_id = p.id and r.state = 'open'))) "inCase"`, [a.id]);
+           and (p.disputed_at is not null or exists (select 1 from feture.report r where r.target_type = 'post' and r.target_id = p.id and r.state = 'open')))
+       -- A chat message the reporter chose as evidence, while that report is open: only those, never the rest of the chat.
+       or exists (select 1 from feture.message m join feture.report r on r.target_type = 'conversation' and r.target_id = m.conversation_id
+         and r.state = 'open' and m.id = any(r.message_ids) where m.media_asset_id = $1) "inCase"`, [a.id]);
     if (a.state === 'blocked' || (a.state !== 'needs_review' && !inCase)) fail(409, 'conflict', { state: a.state });
     await journal(q, account.id, 'media.view', 'media', a.id);
     if (!a.copies_at || !cfg.media.delivery) return { src: null };
