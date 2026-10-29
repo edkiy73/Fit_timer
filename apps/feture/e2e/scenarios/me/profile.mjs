@@ -1,4 +1,4 @@
-// «Я» X01 + profile editor P02 + photos + visibility + «Моё». Run: FE_ADMIN_KEY=1234 APP=http://localhost:4233 node run.mjs profile.mjs
+// «Я» X01 + profile editor P02 + photos + visibility + «Моё». Run: FE_ADMIN_KEY=… APP=http://localhost:4233 node run.mjs profile.mjs
 // «Нужно решить» on «Я» shows while something waits: `asker` (a full person of the lane) asks for the private part,
 // and the request is cancelled at the end.
 import { pinned, expect, pngOf, toastSee, pick, until, uploaderDone, askAccess, cancelAsk, FIXTURES } from '../helpers.mjs';

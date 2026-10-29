@@ -1261,7 +1261,8 @@
 }
 /* desktop: the background fills the whole window; side columns grow outward, their content hugs the centre */
 @container stage (min-width:1100px){
-  .v21 .root{grid-template-columns:minmax(232px,1fr) minmax(0,880px) minmax(320px,1fr);max-width:none}
+  /* the third column is empty (no context panel yet): it mirrors the menu, so the page column sits in the window's centre */
+  .v21 .root{grid-template-columns:minmax(232px,1fr) minmax(0,880px) minmax(232px,1fr);max-width:none}
   .v21 .side{padding:22px 14px 22px max(14px,calc(100% - 218px))}
   .v21 .ctx{padding:22px max(18px,calc(100% - 302px)) 40px 18px}
   .v21 .side .navb{min-height:0}

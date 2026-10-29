@@ -364,6 +364,14 @@ export function LoadMore({more,busy,error,onMore,label}:{more:boolean,busy?:bool
  return <div ref={box} className="k-more" role="status" aria-busy={busy||undefined} aria-label={label??t('fe.kit.more.loading')}>{busy&&<span className="k-more-dots" aria-hidden="true"><i/><i/><i/></span>}</div>;
 }
 
+/** Counts as tiles in a row (a manage screen: members, requests, who is going): the number large, a word under it; a
+ * tile with `onClick` opens its list. Two or three tiles share the width. */
+export function StatTiles({items}:{items:readonly {n:number,label:string,onClick?:(()=>void)|undefined}[]}){
+ return <div className={'stat3'+(items.length===2?' two':'')}>{items.map((x,i)=>x.onClick
+  ?<button key={i} type="button" onClick={x.onClick}><b>{x.n}</b><small>{x.label}</small></button>
+  :<div key={i}><b>{x.n}</b><small>{x.label}</small></div>)}</div>;
+}
+
 export * from './domain';
 export * from './feed';
 export * from './account';
