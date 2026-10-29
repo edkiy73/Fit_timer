@@ -128,9 +128,19 @@ const run = {
       const [{ own }] = await q.query(`select exists (select 1 from feture.profile_member where profile_id = $1 and account_id = $2) own`, [snap.owner, account.id]);
       if (own) continue;
       const [author] = await q.query(`select id, kind, handle, name, state from feture.profile where id = $1`, [snap.owner]);
+      // What a moderator may open (staff.mediaView, journaled per look): a post's attachments, or the media of the chat
+      // messages picked in open reports. Ids and kinds only; the pictures come on request.
+      const evidence = g.target_type === 'post'
+        ? await q.query(`select a.asset_id "assetId", m.kind from feture.media_attachment a join feture.media_asset m on m.id = a.asset_id
+            where a.target_type = 'post' and a.target_id = $1 order by a.position`, [g.target_id])
+        : g.target_type === 'conversation'
+          ? await q.query(`select ms.seq::int seq, ms.media_asset_id "assetId", m.kind from feture.message ms join feture.media_asset m on m.id = ms.media_asset_id
+              where ms.conversation_id = $1 and ms.id in (select unnest(r.message_ids) from feture.report r
+                where r.target_type = 'conversation' and r.target_id = $1 and r.state = 'open') order by ms.seq`, [g.target_id])
+          : [];
       // Evidence as it was when first reported (S4 §3), plus how it looks now.
       items.push({ targetType: g.target_type, targetId: g.target_id, reports: g.reports, reasons: g.reasons, priority: g.priority,
-        details: g.details.slice(0, 5), firstAt: g.first_at, lastAt: g.last_at, reported: g.snapshot, excerpt: snap.excerpt, state: snap.state, media: snap.media, author });
+        details: g.details.slice(0, 5), firstAt: g.first_at, lastAt: g.last_at, reported: g.snapshot, excerpt: snap.excerpt, state: snap.state, media: snap.media, author, evidence });
     }
     return { items, ...page };
   },

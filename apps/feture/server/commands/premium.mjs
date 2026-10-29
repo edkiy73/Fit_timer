@@ -347,34 +347,44 @@ const run = {
     };
   },
 
-  async 'staff.ageCheckQueue'(q, { account, input, cfg }) {
+  async 'staff.ageCheckQueue'(q, { account, input }) {
     await requireStaff(q, account, ['owner', 'lead', 'moderator', 'verifier']);
-    // Documents and selfies open only with a code from the last 10 minutes; without one the queue still lists who is
-    // waiting (`locked`, no pictures, nothing journalled) and the screen asks for the code.
+    // The queue lists who is waiting, never the pictures: a document or a selfie opens by itself (staff.ageCheckOpen),
+    // so loading the staff area journals nothing. `locked`: no code from the last 10 minutes, opening will ask for one.
     const locked = !(await staffCheck(q, account)).fresh;
     const { sql, params } = queuePageSql(input, SUBMITTED_KEYS,
-      `select c.id, c.method, c.gesture, c.submitted_at, c.asset_id, p.id profile_id, p.handle, p.avatar_asset_id avatar_id
+      `select c.id, c.method, c.gesture, c.submitted_at, p.id profile_id, p.handle
        from feture.age_check c join feture.account a on a.id = c.account_id join feture.profile p on p.id = a.person_profile_id
        where c.state = 'submitted' and c.account_id <> $1`, [account.id]);
     const rows = await q.query(sql, params);
     const page = pageInfo(rows, SUBMITTED_KEYS, input.limit);
-    const items = [];
-    for (const r of rows) {
-      const doc = r.method === 'document';
-      const [shot] = r.asset_id ? await q.query(`select * from feture.media_asset where id = $1 and purpose = 'verification'`, [r.asset_id]) : [null];
-      // A document is read on its own (the birth date): no profile photo next to it.
-      const [avatar] = !doc && r.avatar_id ? await q.query('select * from feture.media_asset where id = $1', [r.avatar_id]) : [null];
-      const ctx = { viewerProfileId: account.person_profile_id ?? account.id, place: /** @type {const} */ ('own'), showExplicit: true, staff: true };
-      // Every look at a selfie or a document is journaled (S4 §3).
-      if (!locked) await journal(q, account.id, 'age.view', 'account', null, { checkId: r.id, method: r.method });
-      const image = shot && !locked ? await mediaDto(cfg.media, shot, ctx).catch(() => null) : null;
-      items.push({
-        id: r.id, method: r.method, gesture: doc ? null : r.gesture, submittedAt: r.submitted_at, profile: { id: r.profile_id, handle: r.handle },
-        selfie: doc ? null : image, document: doc ? image : null,
-        photo: avatar && !locked ? await mediaDto(cfg.media, avatar, ctx).catch(() => null) : null,
-      });
-    }
+    const items = rows.map(r => ({
+      id: r.id, method: r.method, gesture: r.method === 'document' ? null : r.gesture, submittedAt: r.submitted_at,
+      profile: { id: r.profile_id, handle: r.handle }, selfie: null, document: null, photo: null,
+    }));
     return { items, locked, ...page };
+  },
+
+  async 'staff.ageCheckOpen'(q, { account, input, cfg }) {
+    // A look at a selfie or an identity document: a code from the last 10 minutes, and every look is journaled (S4 §3).
+    await requireStaff(q, account, ['owner', 'lead', 'moderator', 'verifier'], { fresh: true });
+    const [c] = await q.query(
+      `select c.id, c.state, c.method, c.asset_id, c.account_id, p.avatar_asset_id avatar_id from feture.age_check c
+       join feture.account a on a.id = c.account_id join feture.profile p on p.id = a.person_profile_id where c.id = $1`, [input.checkId]);
+    if (!c) fail(404, 'not_found');
+    if (c.account_id === account.id) fail(403, 'forbidden');
+    if (c.state !== 'submitted') fail(409, 'conflict', { state: c.state });
+    const doc = c.method === 'document';
+    const [shot] = c.asset_id ? await q.query(`select * from feture.media_asset where id = $1 and purpose = 'verification'`, [c.asset_id]) : [null];
+    // A document is read on its own (the birth date): no profile photo next to it.
+    const [avatar] = !doc && c.avatar_id ? await q.query('select * from feture.media_asset where id = $1', [c.avatar_id]) : [null];
+    const ctx = { viewerProfileId: account.person_profile_id ?? account.id, place: /** @type {const} */ ('own'), showExplicit: true, staff: true };
+    await journal(q, account.id, 'age.view', 'account', null, { checkId: c.id, method: c.method });
+    const image = shot ? await mediaDto(cfg.media, shot, ctx).catch(() => null) : null;
+    return {
+      selfie: doc ? null : image, document: doc ? image : null,
+      photo: avatar ? await mediaDto(cfg.media, avatar, ctx).catch(() => null) : null,
+    };
   },
 
   async 'staff.ageCheckDecide'(q, { account, input }) {

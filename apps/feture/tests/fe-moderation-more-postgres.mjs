@@ -188,3 +188,32 @@ test('timed measures: moderators suspend or restrict for a set time, it ends on 
     assert.equal(told.length, 2);
   } finally { await pg.close(); }
 });
+
+test('report evidence: staff open the media of picked chat messages while the report is open, nothing else of the chat', async () => {
+  const { pg, db, call, member } = await world();
+  try {
+    const a = await member('ua', 'Alex'), b = await member('ub', 'Kira');
+    await call('ua', a, { action: 'discover.decide', opId: op(), profileId: b, decision: 'like' });
+    const conv = (await call('ub', b, { action: 'like.send', opId: op(), profileId: a, source: 'likes' })).conversationId;
+    const picked = await call('ub', b, { action: 'chat.send', opId: op(), conversationId: conv, body: 'Фото' });
+    const other = await call('ub', b, { action: 'chat.send', opId: op(), conversationId: conv, body: 'Ещё фото' });
+    const [{ account_id: kira }] = await db.query('select account_id from feture.profile_member where profile_id = $1 limit 1', [b]);
+    const media = async (/** @type {string} */ messageId) => {
+      const [m] = await db.query(
+        `insert into feture.media_asset (owner_profile_id, uploaded_by, kind, purpose, storage_key, mime, declared_bytes, state, explicitness, copies_at)
+         values ($1, $2, 'image', 'chat', 'c/' || gen_random_uuid(), 'image/jpeg', 10, 'approved', 'safe', now()) returning id`, [b, kira]);
+      await db.query('update feture.message set media_asset_id = $1 where id = $2', [m.id, messageId]);
+      return m.id;
+    };
+    const shown = await media(picked.id), hidden = await media(other.id);
+    assert.equal((await call('um', null, { action: 'staff.mediaView', assetId: shown })).status, 409); // no report yet
+    await call('ua', a, { action: 'report.create', opId: op(), targetType: 'conversation', targetId: conv, messageIds: [picked.id], reason: 'threat', details: 'Подробности для модератора' });
+    const card = (await call('um', null, { action: 'staff.reportQueue' })).items.find((/** @type {any} */ i) => i.targetType === 'conversation');
+    assert.deepEqual(card.evidence.map((/** @type {any} */ e) => e.assetId), [shown]);
+    assert.equal((await call('um', null, { action: 'staff.mediaView', assetId: shown })).ok, true);
+    assert.equal((await call('um', null, { action: 'staff.mediaView', assetId: hidden })).status, 409); // not picked
+    assert.equal((await db.query(`select count(*)::int n from feture.staff_action where action = 'media.view' and target_id = $1`, [shown]))[0].n, 1);
+    await call('um', null, { action: 'staff.reportDecide', opId: op(), targetType: 'conversation', targetId: conv, decision: 'keep', reportedProfileId: b });
+    assert.equal((await call('um', null, { action: 'staff.mediaView', assetId: shown })).status, 409); // closed
+  } finally { await pg.close(); }
+});

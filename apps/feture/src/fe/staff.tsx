@@ -36,7 +36,8 @@ const ageItem=checkItem.extend({method:z.enum(['selfie','document']).optional().
 const photoItem=checkItem.extend({photos:z.array(mediaDto).optional()});
 const reportItem=z.object({targetType:z.enum(['profile','post','reply','community','event','conversation']),targetId:z.uuid(),reports:z.number(),reasons:z.array(z.string()),
  details:opt(z.array(z.string())),firstAt:ts,lastAt:ts,reported:z.unknown().optional(),excerpt:opt(z.string()),state:opt(z.string()),media:opt(z.number()),
- author:opt(z.object({id:z.string(),kind:z.string().optional(),handle:z.string().nullable().optional(),name:z.string().nullable().optional()}).passthrough())});
+ author:opt(z.object({id:z.string(),kind:z.string().optional(),handle:z.string().nullable().optional(),name:z.string().nullable().optional()}).passthrough()),
+ evidence:opt(z.array(z.object({assetId:z.uuid(),kind:z.string(),seq:opt(z.number())})))});
 const appealItem=z.object({id:z.uuid(),target_type:z.string(),target_id:z.string(),body:z.string(),created_at:ts,handle:opt(z.string()),
  decision:opt(z.object({action:z.string(),detail:z.unknown().optional(),at:ts,mine:z.boolean().optional()}).passthrough())});
 const noticeItem=z.object({id:z.uuid(),target_url:opt(z.string()),reason:z.string(),explanation:opt(z.string()),created_at:ts,answerable:opt(z.boolean())});
@@ -416,15 +417,26 @@ function AgeCard({item,onDone}:{item:AgeItem,onDone:()=>void}){
  if(item.method==='document')return <AgeDocCard item={item} onDone={onDone}/>;
  return <AgeSelfieCard item={item} onDone={onDone}/>;
 }
+const ageOpenRes=z.object({ok:z.literal(true),selfie:mediaDto,document:mediaDto,photo:mediaDto});
+/** A selfie or a document opens on request (staff.ageCheckOpen): a fresh code if needed, one journal line per look. */
+function useAgeOpen(checkId:string){
+ const {call}=useFe();const {t}=useI18n();
+ const [shown,setShown]=useState<z.infer<typeof ageOpenRes>|null>(null);const [busy,setBusy]=useState(false);const [err,setErr]=useState('');
+ const open=async()=>{setBusy(true);setErr('');
+  try{setShown(await call('staff.ageCheckOpen',{checkId},ageOpenRes,{asAccount:true}));}catch(e){setErr(feErrorMessage(e,t));}finally{setBusy(false);}};
+ const button=(label:string)=><Stack gap={2} className="st-block"><Btn kind="soft" size="md" icon={Eye} busy={busy} disabled={busy} onClick={open}>{label}</Btn>
+  <Note>{t('fe.staff.age.openNote')}</Note>{err&&<Failure text={err}/>}</Stack>;
+ return {shown,button};
+}
 function AgeDocCard({item,onDone}:{item:AgeItem,onDone:()=>void}){
  const {t}=useI18n();const when=useWhen();
  const d=useDecide(onDone,e=>forbidden(e)?t('fe.staff.age.own'):null);
  const [reason,setReason]=useState<typeof DOC_REASONS[number]|''>('');const [ask,setAsk]=useState(false);
- const doc=item.document?.src?.full??item.document?.src?.card??null;
+ const look=useAgeOpen(item.id);const doc=look.shown?.document?.src?.full??look.shown?.document?.src?.card??null;
  return <StCard title={item.profile.handle?'@'+item.profile.handle:item.profile.id} meta={when(item.submittedAt)}>
   <Alert kind="info" icon={IdCard} className="st-block">{t('fe.staff.age.docTask')}</Alert>
-  <div className="st-media st-block">{doc?<img src={doc} alt="" draggable={false}/>:<div className="st-ph"><X/></div>}</div>
-  <Note>{doc?t('fe.staff.age.docPrivacy'):t('fe.staff.age.noDoc')}</Note>
+  {look.shown?<><div className="st-media st-block">{doc?<img src={doc} alt="" draggable={false}/>:<div className="st-ph"><X/></div>}</div>
+  <Note>{doc?t('fe.staff.age.docPrivacy'):t('fe.staff.age.noDoc')}</Note></>:look.button(t('fe.staff.age.openDoc'))}
   <Choice label={t('fe.staff.reason')} value={reason} onChange={setReason} disabled={d.busy} options={DOC_REASONS.map(id=>({id,label:t('fe.staff.age.reason.'+id)}))}/>
   {ask?<Confirm text={t('fe.staff.age.confirmRejectDoc')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>d.run('staff.ageCheckDecide',{checkId:item.id,approve:false,reason})}/>
    :<div className="st-row st-block"><Btn size="sm" auto icon={Check} disabled={d.busy||!doc} onClick={()=>d.run('staff.ageCheckDecide',{checkId:item.id,approve:true})}>{t('fe.staff.age.approveDoc')}</Btn>
@@ -437,15 +449,15 @@ function AgeSelfieCard({item,onDone}:{item:AgeItem,onDone:()=>void}){
  // The server never lets staff decide their own check; its refusal is explained in plain words.
  const d=useDecide(onDone,e=>forbidden(e)?t('fe.staff.age.own'):null);
  const [reason,setReason]=useState<typeof AGE_REASONS[number]|''>('');const [ask,setAsk]=useState(false);
- const selfie=item.selfie?.src?.full??item.selfie?.src?.card??null;const photo=item.photo?.src?.card??item.photo?.src?.thumb??null;
+ const look=useAgeOpen(item.id);const selfie=look.shown?.selfie?.src?.full??look.shown?.selfie?.src?.card??null;const photo=look.shown?.photo?.src?.card??look.shown?.photo?.src?.thumb??null;
  const g=item.gesture??'';const gesture=t('fe.staff.age.gesture.'+g);
  return <StCard title={item.profile.handle?'@'+item.profile.handle:item.profile.id} meta={when(item.submittedAt)}>
   <Alert kind="info" icon={Eye} className="st-block">{t('fe.staff.age.gesture')}: <b>{gesture.startsWith('fe.')?g:gesture}</b></Alert>
-  <div className="st-pair st-block">
+  {!look.shown?look.button(t('fe.staff.age.openSelfie')):<div className="st-pair st-block">
    <figure><div className="st-media">{selfie?<img src={selfie} alt="" draggable={false}/>:<div className="st-ph"><X/></div>}</div><figcaption><Note>{t('fe.staff.age.selfie')}</Note></figcaption></figure>
    <figure><div className="st-media">{photo?<img src={photo} alt="" draggable={false}/>:<div className="st-ph"><Eye/></div>}</div><figcaption><Note>{t('fe.staff.age.photo')}</Note></figcaption></figure>
-  </div>
-  {!selfie&&<Note>{t('fe.staff.age.noSelfie')}</Note>}
+  </div>}
+  {look.shown&&!selfie&&<Note>{t('fe.staff.age.noSelfie')}</Note>}
   <Choice label={t('fe.staff.reason')} value={reason} onChange={setReason} disabled={d.busy} options={AGE_REASONS.map(id=>({id,label:t('fe.staff.age.reason.'+id)}))}/>
   {ask?<Confirm text={t('fe.staff.age.confirmReject')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>d.run('staff.ageCheckDecide',{checkId:item.id,approve:false,reason})}/>
    :<div className="st-row st-block"><Btn size="sm" auto icon={Check} disabled={d.busy||!selfie} onClick={()=>d.run('staff.ageCheckDecide',{checkId:item.id,approve:true})}>{t('fe.staff.age.approve')}</Btn>
@@ -550,6 +562,23 @@ function RevisionCard({item,onDone}:{item:RevisionItem,onDone:()=>void}){
 
 // ——— reports, appeals, DSA notices, cities ———
 
+/** One reported photo, clip or voice message: opens on request through staff.mediaView (short-lived URLs, a journal line
+ * per look), so the queue itself shows nothing private. */
+function Evidence({assetId,kind,label}:{assetId:string,kind:string,label:string}){
+ const {call}=useFe();const {t}=useI18n();
+ const [src,setSrc]=useState<{card?:string|undefined,full?:string|undefined,file?:string|undefined}|null|undefined>(undefined);
+ const [busy,setBusy]=useState(false);const [err,setErr]=useState('');
+ const open=async()=>{setBusy(true);setErr('');
+  try{const r=await call('staff.mediaView',{assetId},viewRes,{asAccount:true});setSrc(r.src);}catch(e){setErr(feErrorMessage(e,t));}finally{setBusy(false);}};
+ if(src===undefined)return <div className="st-block"><Btn kind="soft" size="sm" auto icon={Eye} busy={busy} disabled={busy} onClick={open}>{label}</Btn>{err&&<Failure text={err}/>}</div>;
+ if(src===null)return <Empty compact icon={ImageOff} title={t('fe.staff.media.noCopies')}/>;
+ return <ReviewMedia icon={Eye}>
+  {kind==='video'?<VideoPlayer src={src.file} poster={src.card} label={t('fe.kit.av.video')}/>
+   :kind==='audio'?<VoiceBubble src={src.file} durationMs={null} mine/>
+   :<a href={src.full} target="_blank" rel="noreferrer noopener"><img src={src.card} alt="" draggable={false}/></a>}
+ </ReviewMedia>;
+}
+
 function ReportCard({item,onDone}:{item:ReportItem,onDone:()=>void}){
  const {t}=useI18n();const val=useVal();const when=useWhen();const d=useDecide(onDone);
  const [rule,setRule]=useState<typeof RULES[number]|''>('');const [note,setNote]=useState('');const [ask,setAsk]=useState(false);
@@ -565,6 +594,10 @@ function ReportCard({item,onDone}:{item:ReportItem,onDone:()=>void}){
   {item.excerpt&&<p className="st-text"><Text as="span" size="xs" tone="mute">{t('fe.staff.report.now')}: </Text>{item.excerpt}</p>}
   <Kv rows={[[t('fe.staff.author'),author],[t('fe.staff.state'),val(item.state)],[t('fe.staff.report.media'),item.media?String(item.media):null],
    [t('fe.staff.report.details'),item.details?.length?item.details.join(' · '):null],[t('fe.staff.report.snapshot'),item.reported?<MoreInfo label={t('fe.staff.more')} hideLabel={t('fe.staff.moreHide')}>{show(item.reported)}</MoreInfo>:null]]}/>
+  {Array.isArray((item.reported as {messages?:unknown})?.messages)&&<Card list className="st-block">
+   {((item.reported as {messages:{seq:number,body:string,media:boolean,at:string}[]}).messages).map(m=><Row key={m.seq} title={m.body||t('fe.staff.report.mediaOnly')} sub={when(m.at)}/>)}</Card>}
+  {item.evidence?.map((e,i)=><Evidence key={e.assetId} assetId={e.assetId} kind={e.kind} label={t('fe.staff.report.openMedia',{n:String(i+1),all:String(item.evidence!.length)})}/>)}
+  {!!item.evidence?.length&&<Note>{t('fe.staff.media.openNote')}</Note>}
   {!people&&<Choice label={t('fe.staff.rule')} value={rule} onChange={setRule} disabled={d.busy} options={RULES.map(id=>({id,label:t('fe.staff.rule.'+id)}))}/>}
   <TextField label={t('fe.staff.note')} value={note} onChange={setNote} max={500}/>
   {ask?<Confirm text={t('fe.staff.report.confirmRemove')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>d.run('staff.reportDecide',{...base,decision:'remove',rule})}/>
