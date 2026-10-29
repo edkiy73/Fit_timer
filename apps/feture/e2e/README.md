@@ -52,6 +52,11 @@ commands; a second call only adds what is missing.
 | `staff` | the shared qa moderator (`qa-staff@feture.test`); its second factor is enrolled on first use and codes are entered by `lib.mjs` (`staffFactor`, the secret in `<E2E_SESSIONS>.factor.json`, never in the repo) | staff screens and review steps only |
 | `staff2` | a second staff account (`qa-staff2@feture.test`, moderator, granted out of band) | the 2FA enrolment screen (the lead resets its factor first) |
 
+A persona with the optional second factor on (`account/factor.mjs`, owner 29.10.2026) keeps its secret in the same
+factor file: the scenario saves it with `saveFactor(factorKey(email), {secret, codes})` before confirming, and from then
+on `api()` enters the sign-in code itself when the server asks for it (403 `second_factor` rule `signin`, also for the
+staff personas after a fresh sign-in). Use a fresh-each-call persona (`temp`) and turn the factor off at the end.
+
 Cooldowns decide which persona a scenario may use repeatedly: a revoked grant, a withdrawn request, a left community
 or a cancelled invite can be redone at once; a **declined** access request (30 days) or couple invitation (7 days)
 cannot, so those run on a fresh `owner` / `temp`.

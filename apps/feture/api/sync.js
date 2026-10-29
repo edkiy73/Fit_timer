@@ -5,7 +5,21 @@ const sync = createSyncHandler({registry, accountProfile:ACCOUNT_PROFILE});
 
 // FetUre uses Core sync only for settings. Core premium pulls may still contain
 // older, unregistered documents: whitelist the response before any bytes leave.
-module.exports = (req,res) => sync(req,new Proxy(res,{
+const { cors, fail, readBody } = require('../../../packages/core/server/util');
+
+// The sign-in second step (optional factor, server/core-guard.mjs) guards settings sync like every other endpoint.
+module.exports = async (req,res) => {
+  if(req.method==='POST'){
+    let body;
+    try{ body = await readBody(req, 4 * 1024 * 1024); }catch{ cors(req,res); return fail(res,413,'too_large'); }
+    req.body = body; req.rawBody = undefined;
+    const { guardCoreBody } = await import('../server/core-guard.mjs');
+    const refusal = await guardCoreBody(req, body);
+    if(refusal){ if(cors(req,res)) return; return fail(res, refusal.status, refusal.error, refusal.rule ? {rule:refusal.rule} : {}); }
+  }
+  return filtered(req,res);
+};
+const filtered = (req,res) => sync(req,new Proxy(res,{
   get(target,key){
     if(key==='end')return value=>{
       if(target.statusCode===200){

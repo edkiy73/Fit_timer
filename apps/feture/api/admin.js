@@ -15,7 +15,8 @@ const {cors,fail,rateOkScoped,readBody}=require('../../../packages/core/server/u
 
 const coreAdmin = createAdminHandler({analyticsStats,handlers:[createCatalogAdmin(Supabase),createTestsAdmin(Supabase),createDocumentsAdmin(Supabase),createModerationAdmin(Supabase,store),createMetricsAdmin(createPrivateMetrics(store)),createUpdateAdmin(store)]});
 
-const operators=createOperatorEndpoint({transport:Supabase,accounts:store,cors,quota:(req,owner)=>rateOkScoped(req,'feture-operators',120,owner,60,true)});
+const {secondStepGuard}=require('../lib/feture/second-step');
+const operators=createOperatorEndpoint({transport:Supabase,accounts:store,cors,guard:secondStepGuard,quota:(req,owner)=>rateOkScoped(req,'feture-operators',120,owner,60,true)});
 module.exports=async(req,res)=>{
  // /api/config (vercel.json rewrite): the published Android update, read by the installed app. Public, no secrets.
  if(req.method==='GET'&&req.query&&req.query.public_config==='1'){if(cors(req,res))return;return sendPublicUpdate(store,res);}

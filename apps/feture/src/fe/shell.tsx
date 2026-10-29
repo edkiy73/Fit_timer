@@ -11,6 +11,7 @@ import {FeSessionProvider,useFe,useRealtime} from './session';
 import {countsRes} from './inbox';
 import {Register} from './register';
 import {SignedOut} from './start';
+import {SigninFactor} from './factor';
 import {ToastProvider,useToast} from './toast';
 import {PushOffer} from './push';
 import {ActAsSheet} from './couple';
@@ -103,6 +104,8 @@ function FeGate(){
  if(state.status==='loading')return <ShellSkeleton/>;
  // V21 A01 → A02 → A03: a signed-out visitor sees the welcome slides, then sign-up / sign-in by an email code.
  if(state.status==='signedOut')return <SignedOut/>;
+ // A code from the app before anything else (the account turned the second factor on).
+ if(state.status==='factor')return <SigninFactor/>;
  if(state.status==='error')return <Center><Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(state.error,t)}>
   <Btn kind="soft" onClick={reload}>{t('fe.retry')}</Btn></Empty></Center>;
  // V21 A04 → A04X → A05 in the auth frame (header bar, view, bottom-pinned buttons).
