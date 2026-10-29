@@ -107,7 +107,7 @@ export function RequestSheet({profileId,available,onClose,onSent}:{profileId:str
   <Note>{t('fe.ac.lim.text',{max:q.max,at:q.resetsAt?w.at(q.resetsAt):'—'})}</Note>
  </Sheet>;
  const age=error instanceof FeError&&error.rule==='age_check_required';
- const label=(k:Part)=>k==='media'?t(available.includes('photos')&&available.includes('video')?'fe.ac.part.media':available.includes('video')?'fe.priv.scope.video':'fe.priv.scope.photos'):t('fe.ac.part.'+k);
+ const label=(k:Part)=>t('fe.ac.part.'+k);
  return <Sheet title={t('fe.ac.rq.title')} onClose={onClose} foot={<Btn icon={Send} disabled={!scopesSel.length||busy} busy={busy} onClick={()=>void send()}>{t('fe.ac.rq.send'+(us?'Us':''))}</Btn>}>
   <SectionLabel>{t('fe.ac.rq.what')}</SectionLabel>
   <Stack gap={3}>
