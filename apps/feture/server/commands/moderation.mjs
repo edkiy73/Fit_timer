@@ -26,6 +26,7 @@ const MODERATORS = ['owner', 'lead', 'moderator'];
 const RANK = { owner: 4, lead: 3, moderator: 2, verifier: 1, auditor: 1, support: 1 };
 // Suspensions for these rules (and CSAM) can be lifted by the owner only (S4 §5).
 const OWNER_ONLY_LIFT = new Set(['minors', 'illegal', 'csam']);
+const DAY = 24 * 60 * 60 * 1000;
 // Queue order (S4 §2): minors first, then threats, private material, spam, the rest.
 const PRIORITY = `case reason when 'minor' then 0 when 'threat' then 2 when 'private' then 3 when 'spam' then 5 else 6 end`;
 
@@ -47,10 +48,12 @@ async function targetOwner(q, staffAccount, type, id) {
 
 /** Suspends or restores a person and everything they act as: the account, the person profile and their couple
  * (the couple is closed like a safety stop, so the partner cannot keep acting as it). A couple profile alone can
- * be suspended too. @param {Q} q @param {string} profileId @param {boolean} suspend @param {string} rule */
-async function setSuspended(q, profileId, suspend, rule) {
+ * be suspended too. A timed suspension keeps its end in `suspended_until` (lifted by sweepExpiredSanctions).
+ * @param {Q} q @param {string} profileId @param {boolean} suspend @param {string | null} rule @param {Date | null} [until] */
+export async function setSuspended(q, profileId, suspend, rule, until = null) {
   const [p] = await q.query(`select id, kind, state from feture.profile where id = $1 for update`, [profileId]);
   if (!p || (suspend ? !['active', 'paused'].includes(p.state) : p.state !== 'suspended')) fail(409, 'conflict');
+  await q.query(`update feture.profile set suspended_until = $2 where id = $1`, [p.id, suspend ? until : null]);
   const profiles = [p.id];
   if (p.kind === 'person') {
     const couples = await q.query(
@@ -287,36 +290,45 @@ const run = {
   },
 
   async 'staff.sanction'(q, { account, input }) {
-    // A suspension (ban) is a dangerous action: a code from the last 10 minutes (staff.mjs FRESH_WINDOW).
-    const roles = await requireStaff(q, account, ['owner', 'lead'], { fresh: input.decision === 'suspend' });
+    // A suspension (ban) is a dangerous action: a code from the last 10 minutes (staff.mjs FRESH_WINDOW). Moderators
+    // suspend for a set time; until lifted — and lifting — is for leads. Minors and illegal content: no timed measure.
+    const suspend = input.decision === 'suspend';
+    const roles = await requireStaff(q, account, suspend && input.days ? MODERATORS : ['owner', 'lead'], { fresh: suspend });
+    if (input.days && (!suspend || OWNER_ONLY_LIFT.has(input.rule))) fail(400, 'invalid_input', { fields: ['days'] });
     await targetOwner(q, account.id, 'profile', input.profileId);
     await checkRank(q, roles, input.profileId);
-    if (input.decision === 'lift') {
+    if (!suspend) {
       const [{ rule }] = await q.query(
         `select coalesce((select a.suspension_rule from feture.account a where a.person_profile_id = $1), '') rule`, [input.profileId]);
       if (OWNER_ONLY_LIFT.has(rule) && !roles.includes('owner')) fail(403, 'forbidden');
     }
-    await setSuspended(q, input.profileId, input.decision === 'suspend', input.rule);
-    await enqueue(q, input.decision === 'suspend' ? 'profile.suspended' : 'profile.restored', input.profileId, { rule: input.rule });
-    await journal(q, account.id, 'sanction.' + input.decision, 'profile', input.profileId, { rule: input.rule });
-    return { state: input.decision === 'suspend' ? 'suspended' : 'active' };
+    const until = suspend && input.days ? new Date(Date.now() + input.days * DAY) : null;
+    await setSuspended(q, input.profileId, suspend, input.rule, until);
+    const days = until ? { days: input.days, until: until.toISOString() } : {};
+    await enqueue(q, suspend ? 'profile.suspended' : 'profile.restored', input.profileId, { rule: input.rule, ...days });
+    await journal(q, account.id, 'sanction.' + input.decision, 'profile', input.profileId, { rule: input.rule, ...days, note: input.note });
+    return { state: suspend ? 'suspended' : 'active', until: until?.toISOString() ?? null };
   },
 
   async 'staff.restrict'(q, { account, input }) {
     // Restriction (S4 §4): out of Discover and search, no new likes, access requests, messages or links; the access
-    // it was given is revoked. Lighter than a suspension, so moderators may apply it.
+    // it was given is revoked. Lighter than a suspension, so moderators may apply it, for a set time or until lifted.
     const roles = await requireStaff(q, account, MODERATORS);
     await targetOwner(q, account.id, 'profile', input.profileId);
     await checkRank(q, roles, input.profileId);
     if (input.on && input.rule === 'appeal_granted') fail(400, 'invalid_input', { fields: ['rule'] });
+    if (input.days && (!input.on || OWNER_ONLY_LIFT.has(input.rule))) fail(400, 'invalid_input', { fields: ['days'] });
     if (!input.on) {
       // Restrictions for minors or illegal content are lifted by leads only.
       const [{ rule }] = await q.query(`select coalesce(restriction_rule, '') rule from feture.profile where id = $1`, [input.profileId]);
       if (OWNER_ONLY_LIFT.has(rule) && !roles.some(r => r === 'owner' || r === 'lead')) fail(403, 'forbidden');
     }
+    const until = input.on && input.days ? new Date(Date.now() + input.days * DAY) : null;
+    // One that already ran out (the worker has not lifted it yet) counts as none.
     const rows = await q.query(
-      `update feture.profile set restricted_at = $2, restriction_rule = $3, updated_at = now() where id = $1 and (restricted_at is null) = $4 returning id`,
-      [input.profileId, input.on ? new Date() : null, input.on ? input.rule : null, input.on]);
+      `update feture.profile set restricted_at = $2, restriction_rule = $3, restricted_until = $5, updated_at = now()
+       where id = $1 and (restricted_at is null or restricted_until <= now()) = $4 returning id`,
+      [input.profileId, input.on ? new Date() : null, input.on ? input.rule : null, input.on, until]);
     if (!rows[0]) fail(409, 'conflict', { rule: input.on ? 'already_restricted' : 'not_restricted' });
     if (input.on) {
       // The person and the couples they act as.
@@ -325,9 +337,10 @@ const run = {
       await q.query(`update feture.access_grant set revoked_at = now() where viewer_profile_id in (${sides}) and revoked_at is null`, [input.profileId]);
       await q.query(`update feture.access_request set state = 'closed', closed_reason = 'revoked', decided_at = now() where requester_profile_id in (${sides}) and state = 'pending'`, [input.profileId]);
     }
-    await enqueue(q, input.on ? 'profile.restricted' : 'profile.unrestricted', input.profileId, { rule: input.rule });
-    await journal(q, account.id, input.on ? 'restrict.on' : 'restrict.off', 'profile', input.profileId, { rule: input.rule, note: input.note });
-    return { restricted: input.on };
+    const days = until ? { days: input.days, until: until.toISOString() } : {};
+    await enqueue(q, input.on ? 'profile.restricted' : 'profile.unrestricted', input.profileId, { rule: input.rule, ...days });
+    await journal(q, account.id, input.on ? 'restrict.on' : 'restrict.off', 'profile', input.profileId, { rule: input.rule, ...days, note: input.note });
+    return { restricted: input.on, until: until?.toISOString() ?? null };
   },
 
   async 'staff.placeQueue'(q, { account, input }) {
@@ -436,7 +449,7 @@ async function restoreTarget(q, type, id, from) {
     const back = from === 'cancelled' ? 'cancelled' : 'published';
     return (await q.query(`update feture.event set state = $2, reject_reason = null, rev = rev + 1, updated_at = now() where id = $1 and state = 'hidden' returning id`, [id, back])).length > 0;
   }
-  return (await q.query(`update feture.profile set restricted_at = null, restriction_rule = null, updated_at = now() where id = $1 and restricted_at is not null returning id`, [id])).length > 0;
+  return (await q.query(`update feture.profile set restricted_at = null, restriction_rule = null, restricted_until = null, updated_at = now() where id = $1 and restricted_at is not null returning id`, [id])).length > 0;
 }
 
 /** @type {Record<string, Command>} */
