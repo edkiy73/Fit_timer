@@ -2,9 +2,9 @@ import {Fragment,useCallback,useEffect,useRef,useState,type CSSProperties,type R
 import {useLocation,useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Camera,ChevronDown,ChevronRight,ClipboardList,Clock,Eye,HeartOff,PenLine,Users,Newspaper,Settings,Star,Trash2,X} from 'lucide-react';
+import {Camera,ChevronDown,ChevronRight,ClipboardList,Clock,Eye,HeartOff,Inbox,PenLine,Users,Newspaper,Settings,Star,Trash2,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {AddCard,Alert,Ask as KitAsk,Av,Btn,Card,Empty,Group,H,IconBtn,Note,PhotoAdd,PhotoSlot,PhotoSlots,PullRefresh,RadioList,Row,Seg,SelectRow,Sheet,Skel,ToggleRow} from './kit';
+import {Actions,AddCard,Alert,Ask as KitAsk,Av,Btn,Card,Empty,Group,H,IconBtn,PhotoAdd,PhotoSlot,PhotoSlots,PullRefresh,RadioList,Row,Seg,SelectRow,Sheet,Skel,ToggleRow} from './kit';
 import {AgeCheckLink,useAgeResume} from './age-check';
 import {dropReadCache,useFe,useRealtime,useShown} from './session';
 import {PrivateLayer} from './private';
@@ -123,7 +123,7 @@ export function MeTab(){
     <IconBtn icon={Settings} label={t('fe.me.settings')} onClick={()=>navigate('/n/settings')}/>
    </header>
    <div className="wrap">
-    {todo>0&&<button type="button" className="me-todo" onClick={()=>navigate('/n/inbox')}><i/><span>{t('fe.mx.todo')}</span><b>{todo}</b><ChevronRight/></button>}
+    {todo>0&&<Card list><Row className="me-todo" icon={Inbox} tone="l" title={t('fe.mx.todo')} badge={todo} onClick={()=>navigate('/n/inbox')}/></Card>}
     <div className="me18-seg me4"><LayerSeg value={layer} onChange={setLayer} dots={layerDots}/></div>
    </div>
    <div className="wrap">
@@ -192,9 +192,9 @@ function StatusHint({p,coupleId,onDone}:{p:Profile,coupleId:string,onDone:()=>vo
     catch(e){toast(feErrorMessage(e,t),{type:'err'});}})()}});}
   catch(e){setFailure(feErrorMessage(e,t));}finally{setBusy(false);}};
  const keep=()=>{try{localStorage.setItem(STAT_HINT_KEY,p.id);}catch{/* per-viewer convenience only */}setOff(true);};
- return <Alert kind="info" role="none" icon={Users} className="me-stat21"><b>{t(status?'fe.mx.stat.single':'fe.mx.stat.none',{name:partner||t('fe.mx.stat.partner')})}</b>
-  <span className="me-stat21-a"><Btn size="sm" onClick={fix} disabled={busy} busy={busy}>{t('fe.mx.stat.fix')}</Btn><Btn size="sm" kind="soft" onClick={keep}>{t('fe.mx.stat.keep')}</Btn></span>
-  {failure&&<Note as="span">{failure}</Note>}</Alert>;
+ return <Alert kind="info" role="none" icon={Users} className="me-stat"
+  action={<Actions><Btn size="sm" onClick={fix} disabled={busy} busy={busy}>{t('fe.mx.stat.fix')}</Btn><Btn size="sm" kind="soft" onClick={keep}>{t('fe.mx.stat.keep')}</Btn></Actions>}>
+  {t(status?'fe.mx.stat.single':'fe.mx.stat.none',{name:partner||t('fe.mx.stat.partner')})}{failure&&<><br/>{failure}</>}</Alert>;
 }
 
 export const photoSrc=(m:{src:Record<string,string>|null},size:'card'|'thumb'|'full'='card')=>m.src?(m.src[size]??m.src.card??m.src.thumb??m.src.blur??null):null;

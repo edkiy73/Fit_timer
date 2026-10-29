@@ -80,7 +80,7 @@ export default [
    const status = async () => (await t.api('profile.get', { profileId: t.me.personId })).profile.details?.status ?? null;
    const was = await status();
    if (was && was !== 'single') { console.log('   (status already set: ' + was + ' — hint not shown)'); return; }
-   const fix = t.page.locator('.me-stat21 .btn:has-text("Поменять")');
+   const fix = t.page.locator('.me-stat .btn:has-text("Поменять")');
    await fix.waitFor({ timeout: 20000 }).catch(() => {});
    if (!(await fix.count())) { console.log('   (hint not shown for the acting profile — skipped)'); return; }
    await fix.click();

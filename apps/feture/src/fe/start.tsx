@@ -3,7 +3,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import type {AuthResponseError} from '@appbase/core/auth.js';
 import {CircleAlert,Mail} from 'lucide-react';
-import {Alert,Bar,Btn,CodeInput,Field,H,Input,Seg} from './kit';
+import {Alert,Bar,Btn,CodeInput,Field,H,Input,Seg,Spacer,Stack} from './kit';
 import {pendingPairLink} from './pair-link';
 import {ToastProvider} from './toast';
 import {Welcome} from './welcome';
@@ -75,7 +75,7 @@ function EmailStep({mode,onBack,onMode,onCode}:{mode:Mode,onBack:()=>void,onMode
     {!error&&<div className="fhint">{t('fe.onb.email.hint')}</div>}
    </Field></div>
    <Btn onClick={send} disabled={busy} busy={busy}>{t('fe.onb.getCode')}</Btn>
-   {noMail&&<Btn kind="text" className="mt8" onClick={()=>{const v=email.trim().toLowerCase();lastEmail=v;onCode(v,false);}}>{t('fe.onb.haveCode')}</Btn>}
+   {noMail&&<Btn kind="text" onClick={()=>{const v=email.trim().toLowerCase();lastEmail=v;onCode(v,false);}}>{t('fe.onb.haveCode')}</Btn>}
   </div></div>
  </>;
 }
@@ -121,11 +121,14 @@ function CodeStep({email,sent,onBack}:{email:string,sent:boolean,onBack:()=>void
    <CodeInput ref={box} name="code" label={t('fe.onb.code.title')} digitLabel={t('fe.onb.code.digit')} value={code} invalid={!!error} disabled={locked}
     onChange={v=>{setCode(v);setError('');}} onComplete={v=>void check(v)} onEnter={v=>void check(v)}/>
    {error&&<div className="ferr" role="alert"><CircleAlert/>{error}</div>}
-   <Btn className="mt24" onClick={()=>check(code)} disabled={locked||busy} busy={busy}>{t('fe.onb.code.confirm')}</Btn>
-   <div className="authrow mt16">
-    <Btn kind="text" auto onClick={onBack}>{t('fe.onb.code.change')}</Btn>
-    <Btn kind="text" auto onClick={resend} disabled={!!left||busy}>{left?t('fe.onb.code.resendIn').replace('{n}',String(left)):t('fe.onb.code.resend')}</Btn>
-   </div>
+   <Spacer size={6}/>
+   <Stack gap={4}>
+    <Btn onClick={()=>check(code)} disabled={locked||busy} busy={busy}>{t('fe.onb.code.confirm')}</Btn>
+    <div className="authrow">
+     <Btn kind="text" auto onClick={onBack}>{t('fe.onb.code.change')}</Btn>
+     <Btn kind="text" auto onClick={resend} disabled={!!left||busy}>{left?t('fe.onb.code.resendIn').replace('{n}',String(left)):t('fe.onb.code.resend')}</Btn>
+    </div>
+   </Stack>
   </div></div>
  </>;
 }

@@ -263,8 +263,10 @@ export function CheckList<T extends string>({value,options,onChange,label}:{valu
   <i><Check2/></i><span className="tx">{title}{sub&&<small>{sub}</small>}</span></button>;})}</div>;
 }
 /** `.check` — a checkbox with its text (consents, «Также заблокировать» in forms). */
-export function Check({on,onChange,children,error}:{on:boolean,onChange:(v:boolean)=>void,children:ReactNode,error?:boolean}){
- return <button type="button" role="checkbox" aria-checked={on} className={'check'+(on?' on':'')+(error?' err':'')} onClick={()=>onChange(!on)}><i><Check2/></i><span>{children}</span></button>;
+export function Check({on,onChange,children,error,aside}:{on:boolean,onChange:(v:boolean)=>void,children:ReactNode,error?:boolean,
+ /** A small action on the same row, outside the box's tap area (an explicit consent and «Читать» next to it). */ aside?:ReactNode}){
+ const box=<button type="button" role="checkbox" aria-checked={on} className={'check'+(on?' on':'')+(error?' err':'')} onClick={()=>onChange(!on)}><i><Check2/></i><span>{children}</span></button>;
+ return aside?<div className="k-check-row">{box}{aside}</div>:box;
 }
 /** `.sw` — a bare switch, for a row the kit's ToggleRow does not fit. */
 export function Switch({on,onChange,label,disabled,className}:{on:boolean,onChange:(v:boolean)=>void,label:string,disabled?:boolean|undefined,className?:string}){

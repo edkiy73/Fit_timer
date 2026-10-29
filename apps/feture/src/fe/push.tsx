@@ -111,3 +111,29 @@ export function PushSwitch(){
   {s==='denied'&&<Alert kind="warn" className="mt8">{t(k+'denied')}</Alert>}
  </>;
 }
+
+/** K05 «Куда присылать» (sweep 29.10.2026): the account's push switch and this device's subscription are one block —
+ * the device row sits right under the account switch in the same card (shown while push is on), and a refused
+ * permission gets one short line under the card. Replaces the separate «Push-уведомления» card there. */
+export function usePushDevice(){
+ const {state,call}=useFe();const {t}=useI18n();
+ const webKey=state.status==='ready'?state.boot.push?.webKey:undefined;
+ const [s,setS0]=useState<WebPushState|null>(lastPushState);const [busy,setBusy]=useState(false);
+ const setS=useCallback((v:WebPushState)=>{lastPushState=v;setS0(v);},[]);
+ const turnOn=useTurnOn();
+ const read=native?nativePushState:webPushState;
+ useEffect(()=>{let live=true;void read().then(v=>{if(live)setS(v);});return ()=>{live=false;};},[read,setS]);
+ if(!native&&!webPushSupported())return {row:null,note:needsHomeScreen()?<Note>{t('fe.push.homeScreen')}</Note>:null};
+ if((!native&&!webKey)||!s||s==='unsupported')return {row:null,note:null};
+ const flip=()=>{
+  if(busy)return;setBusy(true);
+  const done=(p:Promise<unknown>)=>void p.finally(()=>read().then(setS).finally(()=>setBusy(false)));
+  if(s==='on')done(native?disableNativePush(call):disableWebPush(call));
+  else done(turnOn());
+ };
+ const k=native?'app':'web';
+ return {
+  row:<ToggleRow title={t('fe.set.n.dev.'+k)} sub={t('fe.set.n.dev.'+(s==='on'?'on':s==='denied'?'denied.'+k:'off'))} on={s==='on'} disabled={busy} onClick={flip}/>,
+  note:s==='denied'?<Alert kind="warn">{t('fe.set.n.dev.deniedText.'+k)}</Alert>:null,
+ };
+}

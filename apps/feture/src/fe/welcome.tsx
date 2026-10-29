@@ -20,7 +20,7 @@ function fit(root:HTMLElement){
 const nn=(n:number)=>String(n+1).padStart(2,'0');
 /** `av(id,cls)` without a photo: initials on a plate. */
 // The prototype's demo people (same photos as its PEOPLE seed).
-const PHOTO:Record<string,number>={Sofi:1,Leon:2,Mia:3,Kai:4,Maya:5,Ari:6,Kira:7,Mark:8,Lina:9};
+const PHOTO:Record<string,number>={Sofi:1,Leon:2,Mia:3,Kai:4,Ari:6,Lina:9};
 function Ava({name,cls}:{name:string,cls:string}){
  const n=PHOTO[name];
  if(n)return <span className={'av '+cls}><img src={import.meta.env.BASE_URL+'images/profile-'+n+'-45.webp'} alt="" loading="lazy"/></span>;

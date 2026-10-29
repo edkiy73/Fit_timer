@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import type {AuthResponseError,AuthSessionInfo} from '@appbase/core/auth.js';
 import {Book,Calendar,Crown,Globe,Heart,Lock,LogOut,Mail,Pencil,ShieldCheck,Smartphone,type LucideIcon} from 'lucide-react';
-import {Alert,Ask,Bar,Btn,Card,CodeInput,Field,Group,Input,Note,Pill,Row,SectionLabel,Sheet,Skel,Stack,View} from './kit';
+import {Actions,Alert,Ask,Bar,Btn,Card,CodeInput,Field,Group,Input,Note,Pill,Row,SectionLabel,Sheet,Skel,View} from './kit';
 import {useToast} from './toast';
 import {useFe,useShown} from './session';
 import {useDate} from './premium';
@@ -61,7 +61,7 @@ function EmailChangeSheet({current,onClose}:{current:string,onClose:()=>void}){
   </Field>
  </Sheet>;
  return <Sheet title={t('fe.w8.mail.codeTitle')} onClose={onClose} dirty
-  foot={<Stack gap={2}><Btn busy={busy} disabled={code.length<6} onClick={()=>void confirm()}>{t('fe.w8.mail.confirm')}</Btn><Btn kind="text" onClick={()=>{setStep(1);setErr('');}}>{t('fe.w8.mail.other')}</Btn></Stack>}>
+  foot={<Actions stack><Btn busy={busy} disabled={code.length<6} onClick={()=>void confirm()}>{t('fe.w8.mail.confirm')}</Btn><Btn kind="text" onClick={()=>{setStep(1);setErr('');}}>{t('fe.w8.mail.other')}</Btn></Actions>}>
   <p className="lead">{t('fe.w8.mail.codeLead',{email})}</p>
   <Field label={t('fe.w8.mail.code')} error={err||undefined}>
    <CodeInput value={code} onChange={v=>{setCode(v);setErr('');}} label={t('fe.w8.mail.code')} invalid={!!err} autoFocus disabled={busy} onComplete={c=>void confirm(c)}/>
@@ -105,12 +105,10 @@ export function SecurityScreen(){
  return <>
   <Bar title={t('fe.ax.sec.title')} back="/n/settings"/>
   <View className="nodock compact">
-   <SectionLabel>{t('fe.ax.sec.methods')}</SectionLabel>
-   <Card list>
+   <Group title={t('fe.ax.sec.methods')} foot={t('fe.w8.sec.oauthNote')}><Card list>
     <Row icon={Mail} title={<>{t('fe.ax.sec.email')} <Pill tone="ok">{t('fe.ax.sec.primary')}</Pill></>} sub={<span className="one">{email||'—'}</span>}/>
     {auth.client.changeEmailStart&&<Row icon={Pencil} title={t('fe.w8.sec.change')} sub={t('fe.w8.sec.changeSub')} onClick={()=>setSheet('email')}/>}
-   </Card>
-   <Note className="mt8">{t('fe.w8.sec.oauthNote')}</Note>
+   </Card></Group>
    <Group title={t('fe.dev.title')} foot={t('fe.dev.note')}>
     {loadErr?<Alert kind="err" action={<Btn kind="soft" size="sm" auto onClick={load}>{t('fe.retry')}</Btn>}>{t('fe.w8.sec.loadFailed')}</Alert>
      :!list?<Skel kind="list" rows={1}/>
@@ -119,10 +117,10 @@ export function SecurityScreen(){
       sub={line(s)||undefined}
       end={s.current?undefined:<Btn kind="text" size="sm" auto onClick={()=>setSheet(s)}>{t('fe.dev.out')}</Btn>}/>)}</Card>}
    </Group>
-   <Stack gap={2} className="mt12">
+   <Actions stack>
     {others.length>0&&<Btn kind="soft" icon={ShieldCheck} onClick={()=>setSheet('others')}>{t('fe.dev.others')}</Btn>}
     <Btn kind="text" icon={LogOut} onClick={()=>setSheet('logout')}>{t('fe.ax.sec.logout')}</Btn>
-   </Stack>
+   </Actions>
   </View>
   {sheet==='email'&&<EmailChangeSheet current={email} onClose={()=>setSheet(null)}/>}
   {sheet==='others'&&<Ask title={t('fe.dev.othersTitle')} text={t('fe.dev.othersText')} ok={t('fe.dev.others')} danger busy={busy} error={err||undefined}
@@ -149,7 +147,7 @@ export function HelpScreen(){
    <Card list>{(['rules','report'] as const).map(row)}</Card>
    <SectionLabel>{t('fe.ax.help.faq')}</SectionLabel>
    <Card list>{(['shield','lock','heart','cal','crown'] as const).map(row)}</Card>
-   <Alert kind="warn" className="mt16"><b>{t('fe.ax.help.threatTitle')}</b>{t('fe.ax.help.threatText')}</Alert>
+   <Alert kind="warn"><b>{t('fe.ax.help.threatTitle')}</b>{t('fe.ax.help.threatText')}</Alert>
   </View>
   {open&&<Sheet title={t('fe.ax.help.'+open)} onClose={close}
    foot={open==='crown'?<Btn kind="soft" onClick={()=>navigate('/n/premium')}>{t('fe.ax.help.morePremium')}</Btn>:undefined}>

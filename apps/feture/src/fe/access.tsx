@@ -40,7 +40,7 @@ export function AccessScreen({mine}:{mine?:boolean}){
    <Seg value={tab} onChange={v=>set('tab',v)} label={title} options={tabs.map(id=>({id,label:t('fe.ac.tab.'+id+us)}))}/>
    <Spacer size={3}/>
    {tab==='out'?<OutTab pendingOnly={params.get('f')==='pending'} onFilter={on=>set('f',on?'pending':null)}/>:tab==='withme'?<WithMeTab/>:<ByMeTab/>}
-   <Card list className="mt12"><Row icon={Lock} title={t('fe.ac.priv'+us)} sub={t('fe.ac.privSub'+us)} onClick={()=>navigate('/n/me?layer=priv')}/></Card>
+   <Card list><Row icon={Lock} title={t('fe.ac.priv'+us)} sub={t('fe.ac.privSub'+us)} onClick={()=>navigate('/n/me?layer=priv')}/></Card>
   </View>
  </>;
 }
@@ -66,7 +66,7 @@ function OutTab({pendingOnly,onFilter}:{pendingOnly:boolean,onFilter:(on:boolean
   :['expired','revoked','replaced','cancelled','closed'].includes(r.state)||(r.state==='declined'&&!(r.reaskAt&&new Date(r.reaskAt)>new Date()))
    ?<Btn size="sm" kind="text" auto onClick={()=>profile(r)}>{t('fe.ac.out.again')}</Btn>:null;
  return <>{head}
-  <Card list className="mt12">{pg.items.map(r=><Row key={r.id} onClick={()=>profile(r)} av={<Av name={nameOf(r.profile)} seed={r.profile?.id??r.id} size="sm" src={r.profile?.avatar}/>}
+  <Card list>{pg.items.map(r=><Row key={r.id} onClick={()=>profile(r)} av={<Av name={nameOf(r.profile)} seed={r.profile?.id??r.id} size="sm" src={r.profile?.avatar}/>}
    title={<>{nameOf(r.profile)}<NameBadges p={r.profile}/> <Pill tone={TONE[r.state]}>{t('fe.ac.st.'+r.state)}</Pill></>}
    sub={t('fe.ac.out.asked',{what:w.what(r.scopes),when:w.when(r.created_at)})}
    extra={<>
