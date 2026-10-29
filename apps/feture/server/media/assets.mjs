@@ -142,11 +142,12 @@ async function ownAsset(q, acting, assetId, { lock = false } = {}) {
  * @param {{id: string, owner_profile_id: string, kind: string, purpose: string, state: string, explicitness: string,
  *   width: number | null, height: number | null, view_rule: string, copies_at?: unknown, duration_ms?: number | null,
  *   waveform?: number[] | null}} asset
- * @param {{viewerProfileId: string, place: Place, showExplicit: boolean, staff?: boolean, opened?: boolean, blurAll?: boolean}} ctx
+ * @param {{viewerProfileId: string, place: Place, showExplicit: boolean, staff?: boolean, opened?: boolean, blurAll?: boolean, fileTtlCap?: number}} ctx
  *   showExplicit: the viewer turned explicit content on — on the website, as Apple 1.2 requires —
  *   and has not asked to blur it (chatBlur). The same answer applies in the apps once set.
  *   opened: a view-once/timer media the viewer has consciously opened just now (chat.openMedia).
  *   blurAll: the viewer asked to blur all incoming chat media (chatBlur).
+   fileTtlCap: seconds; the clip link never lives longer (a re-given disappearing-clip grant keeps its first expiry).
  */
 export async function mediaDto(cfg, asset, ctx) {
   const own = asset.owner_profile_id === ctx.viewerProfileId;
@@ -179,7 +180,7 @@ export async function mediaDto(cfg, asset, ctx) {
   /** @type {import('./delivery.mjs').Variant[]} */
   const variants = blurred ? ['blur'] : asset.kind === 'video' ? ['thumb', 'card', 'full', 'file'] : ['thumb', 'card', 'full'];
   const urls = await cfg.delivery.urls(variants.map(variant => ({ assetId: asset.id, variant, viewerProfileId: ctx.viewerProfileId,
-    ttlSeconds: variant === 'file' ? Math.max(ttl, FILE_TTL_MIN) : ttl })));
+    ttlSeconds: variant === 'file' ? Math.min(Math.max(ttl, FILE_TTL_MIN), ctx.fileTtlCap ?? Infinity) : ttl })));
   return {
     id: asset.id,
     kind: asset.kind,

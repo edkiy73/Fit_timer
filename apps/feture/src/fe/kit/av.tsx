@@ -29,9 +29,10 @@ export const NO_POSTER='data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAA
  * the device before upload), so it plays as it is. `autoPlay` starts at once (the viewer; silently when the browser refuses sound without a tap). Without `src`
  * (still checked, covered) only the poster shows. `onExpired`: the signed link ran out — the screen asks for fresh
  * links. */
-export function VideoPlayer({src,poster,w,h,durationMs,autoPlay,fill,onExpired,label,onExpand}:{src?:string|null|undefined,poster?:string|null|undefined,
+export function VideoPlayer({src,poster,w,h,durationMs,autoPlay,fill,onExpired,onPlaying,label,onExpand}:{src?:string|null|undefined,poster?:string|null|undefined,
  w?:number|null|undefined,h?:number|null|undefined,durationMs?:number|null|undefined,autoPlay?:boolean|undefined,
- /** Fill the parent (viewer slide) instead of keeping the clip's own shape. */ fill?:boolean|undefined,onExpired?:(()=>void)|undefined,label?:string|undefined,
+ /** Fill the parent (viewer slide) instead of keeping the clip's own shape. */ fill?:boolean|undefined,onExpired?:(()=>void)|undefined,
+ /** Playback really began (the `playing` event: a frame is on screen); may fire again after a pause or seek. */ onPlaying?:(()=>void)|undefined,label?:string|undefined,
  /** Opens the clip full screen (feed). */ onExpand?:(()=>void)|undefined}){
  const {t}=useI18n();const v=useRef<HTMLVideoElement>(null);
  const [started,setStarted]=useState(false);const [playing,setPlaying]=useState(false);const [ready,setReady]=useState(false);
@@ -69,6 +70,7 @@ export function VideoPlayer({src,poster,w,h,durationMs,autoPlay,fill,onExpired,l
    controlsList="nodownload noremoteplayback noplaybackrate" aria-label={name} tabIndex={-1}
    onLoadedMetadata={measure} onDurationChange={measure} onSeeked={tick}
    onPlay={e=>{const el=e.currentTarget;if(playingNow&&playingNow!==el)playingNow.pause();playingNow=el;setPlaying(true);cancelAnimationFrame(raf.current);raf.current=requestAnimationFrame(loop);poke();}}
+   onPlaying={()=>onPlaying?.()}
    onPause={()=>{setPlaying(false);cancelAnimationFrame(raf.current);poke(true);}} onEnded={stop} onTimeUpdate={tick} onVolumeChange={e=>setMuted(e.currentTarget.muted)}
    onError={()=>{if(failed.current)return;failed.current=true;setPlaying(false);setStarted(false);setReady(false);onExpired?.();}}/>}
   {!(started&&ready)&&(poster&&badPoster!==poster?<img className="k-vposter" src={poster} alt="" draggable={false} onError={()=>setBadPoster(poster)}/>:<span className="k-vnone"/>)}
