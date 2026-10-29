@@ -35,6 +35,9 @@ export const staffCommands = {
   'staff.datingSwitch': { profile: false, write: true, input: z.strictObject({ opId, on: z.boolean() }) },
   'staff.journal': {
     profile: false, write: false,
-    input: z.strictObject({ targetId: id.optional(), limit: z.int().min(1).max(100).default(50) }),
+    input: z.strictObject({
+      targetId: id.optional(), staffAccountId: id.optional(), what: z.string().regex(/^[a-z]+(\.[a-zA-Z]+)+$/).max(60).optional(),
+      limit: z.int().min(1).max(100).default(50), after: z.string().max(400).optional(),
+    }),
   },
 };

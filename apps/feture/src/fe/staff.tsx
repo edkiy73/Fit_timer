@@ -4,10 +4,13 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {BadgeCheck,Ban,Check,Gavel,ChevronRight,Eye,IdCard,Image,Inbox,Lock,RefreshCw,ShieldAlert,ShieldCheck,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Btn,Card,ChoiceChips,Sheet,Stack,Chips,Empty,Field,Group,IconBtn,Input,KeyValues,LoadMore,Note,Pill,ReviewCard,ReviewMedia,ReviewPair,Row,SectionLabel,Seg,Skel,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble} from './kit';
+import {Alert,Btn,Card,ChoiceChips,Chips,Empty,Field,Group,IconBtn,Input,KeyValues,LoadMore,MoreInfo,Note,Pill,ReviewCard,ReviewMedia,ReviewPair,Row,SectionLabel,Seg,Select,Sheet,Skel,Stack,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble} from './kit';
 import {askFactor,useFe} from './session';
 import {FactorPromptHost,FactorReset,StaffEnrol,StaffUnlock,factorSchema,type Factor} from './staff-factor';
 import {StaffSupport} from './support';
+import {useStaffPage} from './staff-paged';
+import {priceText} from './communities';
+import {evRange,evTz,inTz} from './event-time';
 import {StaffMaintenance} from './maintenance';
 import {textError,textRule} from './kit/validate';
 
@@ -23,7 +26,7 @@ const viewRes=z.object({ok:z.literal(true),src:z.object({card:z.string().optiona
 const commItem=z.object({id:z.uuid(),rev:z.number(),name:z.string(),description:opt(z.string()),topics:opt(z.array(z.string())),privacy:opt(z.string()),join_question:opt(z.string()),
  rules:z.unknown().optional(),state:z.string(),pending_change:z.record(z.string(),z.unknown()).nullable().optional(),created_at:ts}).passthrough();
 const eventItem=z.object({id:z.uuid(),rev:z.number(),title:z.string(),kind:opt(z.string()),description:opt(z.string()),format:opt(z.string()),area:opt(z.string()),exact_address:opt(z.string()),
- join_url:opt(z.string()),starts_at:ts,ends_at:ts,price:z.unknown().optional(),requirements:opt(z.string()),state:z.string(),pending_change:z.record(z.string(),z.unknown()).nullable().optional(),
+ join_url:opt(z.string()),tz:opt(z.string()),starts_at:ts,ends_at:ts,price:z.unknown().optional(),requirements:opt(z.string()),state:z.string(),pending_change:z.record(z.string(),z.unknown()).nullable().optional(),
  created_at:ts,organizer:opt(z.object({id:z.string(),kind:z.string().optional(),handle:z.string().nullable().optional()}).passthrough())}).passthrough();
 const mediaDto=z.object({src:z.record(z.string(),z.string()).nullable().optional()}).passthrough().nullable().optional();
 const checkItem=z.object({id:z.uuid(),gesture:z.string(),submittedAt:ts,profile:z.object({id:z.string(),handle:z.string().nullable()}),selfie:mediaDto,photo:mediaDto});
@@ -36,7 +39,7 @@ const appealItem=z.object({id:z.uuid(),target_type:z.string(),target_id:z.string
  decision:opt(z.object({action:z.string(),detail:z.unknown().optional(),at:ts,mine:z.boolean().optional()}).passthrough())});
 const noticeItem=z.object({id:z.uuid(),target_url:opt(z.string()),reason:z.string(),explanation:opt(z.string()),created_at:ts,answerable:opt(z.boolean())});
 const placeItem=z.object({id:z.uuid(),country:opt(z.string()),name_ru:opt(z.string()),name_en:opt(z.string()),created_at:ts,used:opt(z.number())});
-const journalItem=z.object({id:z.union([z.string(),z.number()]),staff_account_id:z.string(),action:z.string(),target_type:opt(z.string()),target_id:opt(z.string()),detail:z.unknown().optional(),created_at:ts});
+const journalItem=z.object({id:z.union([z.string(),z.number()]),staff_account_id:opt(z.string()),staff_name:opt(z.string()),staff_handle:opt(z.string()),action:z.string(),target_type:opt(z.string()),target_id:opt(z.string()),detail:z.unknown().optional(),created_at:ts});
 const disputeClaim=z.object({tagged:z.boolean(),hid:z.boolean().optional(),at:ts,trust:z.string(),strikes:z.number()});
 const disputeItem=z.object({id:z.uuid(),disputed_at:ts,opened_at:ts,excerpt:opt(z.string()),media:opt(z.number()),hidden:z.boolean().optional(),urgent:z.boolean().optional(),
  attack:z.boolean().optional(),tagged:z.boolean().optional(),note:opt(z.string()),claims:z.array(disputeClaim).optional().default([])});
@@ -50,6 +53,7 @@ type Items={dispute:DisputeItem[],report:ReportItem[],revision:RevisionItem[],me
 type QueueId=keyof Items;
 /** `locked`: documents and selfies wait for a fresh second-factor code (staff.ageCheckQueue, staff.photoCheckQueue). */
 const list=<T extends z.ZodType>(item:T)=>z.object({ok:z.literal(true),items:z.array(item),locked:z.boolean().optional(),next:z.string().nullable().optional(),tail:z.string().nullable().optional()});
+const journalPage=list(journalItem);
 const QUEUES:{[K in QueueId]:{action:string,schema:z.ZodType<{items:Items[K],locked?:boolean|undefined}>,key:(x:Items[K][number])=>string}}={
  // V21 M01 puts «это я на фото» disputes and post reports first.
  dispute:{action:'staff.disputeQueue',schema:list(disputeItem),key:x=>x.id},
@@ -249,6 +253,9 @@ const useWhen=()=>{const {locale}=useI18n();return (v:string|null|undefined)=>v?
 const StCard=ReviewCard;
 const Kv=KeyValues;
 
+/** A raw status / format / scanner word from the server in plain words (`fe.staff.val.<word>`); an unknown word stays as it is. */
+const useVal=()=>{const {t}=useI18n();return (v:string|null|undefined)=>{if(!v)return v;const k='fe.staff.val.'+v;const x=t(k);return x===k?v:x;};};
+
 const show=(v:unknown):string=>v===null||v===undefined?'—':typeof v==='string'?v:Array.isArray(v)?v.map(show).join(', '):JSON.stringify(v);
 
 function Changes({change}:{change:Record<string,unknown>|null|undefined}){
@@ -300,7 +307,7 @@ const RULES=['minors','threats','private_material','spam','illegal','community_r
 const MEDIA_REASONS=['minor','not_a_person','violence','private_material','spam','invalid','other'] as const;
 const PUBLIC_ONLY=new Set(['avatar','community','event']);
 function MediaCard({item,onDone}:{item:MediaItem,onDone:()=>void}){
- const {call}=useFe();const {t}=useI18n();const when=useWhen();
+ const {call}=useFe();const {t}=useI18n();const when=useWhen();const val=useVal();
  const [src,setSrc]=useState<{card?:string|undefined,full?:string|undefined,file?:string|undefined}|null|undefined>(undefined);const [viewing,setViewing]=useState(false);
  const [reason,setReason]=useState<typeof MEDIA_REASONS[number]|''>('');const [ask,setAsk]=useState<'reject'|'csam'|null>(null);
  const d=useDecide(onDone);
@@ -314,7 +321,7 @@ function MediaCard({item,onDone}:{item:MediaItem,onDone:()=>void}){
     :item.kind==='audio'?<VoiceBubble src={src.file} durationMs={null} mine/>
     :<a href={src.full} target="_blank" rel="noreferrer noopener"><img src={src.card} alt="" draggable={false}/></a>):undefined}
   </ReviewMedia>
-  <Kv rows={[[t('fe.staff.media.authorLabel'),item.authorLabel],[t('fe.staff.media.scanner'),item.reason]]}/>
+  <Kv rows={[[t('fe.staff.media.authorLabel'),item.authorLabel],[t('fe.staff.media.scanner'),val(item.reason)]]}/>
   {src===undefined?<div className="st-block">
     <Btn kind="soft" size="md" icon={Eye} disabled={viewing} busy={viewing} onClick={open}>{t('fe.staff.media.open')}</Btn>
     <Note className="mt8">{t('fe.staff.media.openNote')}</Note></div>
@@ -362,14 +369,14 @@ function CommunityCard({item,onDone}:{item:CommItem,onDone:()=>void}){
 }
 
 function EventCard({item,onDone}:{item:EventItem,onDone:()=>void}){
- const {t}=useI18n();const when=useWhen();const d=useDecide(onDone);
+ const {t,locale}=useI18n();const when=useWhen();const val=useVal();const d=useDecide(onDone);
  const [reason,setReason]=useState('');const [ask,setAsk]=useState<'reject'|'hide'|null>(null);
  const decide=(decision:'approve'|'reject'|'hide')=>d.run('staff.eventDecide',{eventId:item.id,rev:item.rev,decision,reason:reason.trim()});
  return <StCard title={item.title} meta={<>{item.state==='in_review'&&<Pill tone="wait">{t('fe.staff.newItem')}</Pill>} {when(item.created_at)}</>}>
   {item.description&&<p className="st-text">{item.description}</p>}
-  <Kv rows={[[t('fe.staff.event.organizer'),item.organizer?.handle?'@'+item.organizer.handle:null],[t('fe.staff.event.when'),item.starts_at?when(item.starts_at)+' – '+when(item.ends_at):null],
-   [t('fe.staff.event.where'),[item.format,item.area].filter(Boolean).join(' · ')],[t('fe.staff.event.address'),item.exact_address],[t('fe.staff.event.link'),item.join_url],
-   [t('fe.staff.event.price'),item.price?show(item.price):null],[t('fe.staff.event.requirements'),item.requirements]]}/>
+  <Kv rows={[[t('fe.staff.event.organizer'),item.organizer?.handle?'@'+item.organizer.handle:null],[t('fe.staff.event.when'),item.starts_at?inTz(item.starts_at,evTz(item),locale,{day:'numeric',month:'short'}).replace('.','')+', '+evRange({starts_at:item.starts_at,...(item.ends_at?{ends_at:item.ends_at}:{}),tz:item.tz},locale):null],
+   [t('fe.staff.event.where'),[val(item.format),item.area].filter(Boolean).join(' · ')],[t('fe.staff.event.address'),item.exact_address],[t('fe.staff.event.link'),item.join_url],
+   [t('fe.staff.event.price'),item.price?priceText(item.price as {kind:string,amount?:number,currency?:string},t,locale):null],[t('fe.staff.event.requirements'),item.requirements]]}/>
   <Changes change={item.pending_change}/>
   <TextField label={t('fe.staff.reasonText')} value={reason} onChange={setReason} max={300}/>
   {ask?<Confirm text={t(ask==='hide'?'fe.staff.event.confirmHide':'fe.staff.event.confirmReject')} busy={d.busy} onNo={()=>setAsk(null)} onYes={()=>decide(ask)}/>
@@ -524,7 +531,7 @@ function RevisionCard({item,onDone}:{item:RevisionItem,onDone:()=>void}){
 // ——— reports, appeals, DSA notices, cities ———
 
 function ReportCard({item,onDone}:{item:ReportItem,onDone:()=>void}){
- const {t}=useI18n();const when=useWhen();const d=useDecide(onDone);
+ const {t}=useI18n();const val=useVal();const when=useWhen();const d=useDecide(onDone);
  const [rule,setRule]=useState<typeof RULES[number]|''>('');const [note,setNote]=useState('');const [ask,setAsk]=useState(false);
  const people=item.targetType==='profile'||item.targetType==='conversation';
  const base={targetType:item.targetType,targetId:item.targetId,note:note.trim(),...(item.targetType==='conversation'&&item.author?{reportedProfileId:item.author.id}:{})};
@@ -536,8 +543,8 @@ function ReportCard({item,onDone}:{item:ReportItem,onDone:()=>void}){
   <Chips className="st-block">{item.reasons.map(r=><Pill key={r} tone={r==='minor'?'bad':undefined}>{t('fe.staff.report.reason.'+r)}</Pill>)}
    <Pill>{t('fe.staff.report.count')}: {item.reports}</Pill></Chips>
   {item.excerpt&&<p className="st-text"><Text as="span" size="xs" tone="mute">{t('fe.staff.report.now')}: </Text>{item.excerpt}</p>}
-  <Kv rows={[[t('fe.staff.author'),author],[t('fe.staff.state'),item.state],[t('fe.staff.report.media'),item.media?String(item.media):null],
-   [t('fe.staff.report.details'),item.details?.length?item.details.join(' · '):null],[t('fe.staff.report.snapshot'),item.reported?show(item.reported):null]]}/>
+  <Kv rows={[[t('fe.staff.author'),author],[t('fe.staff.state'),val(item.state)],[t('fe.staff.report.media'),item.media?String(item.media):null],
+   [t('fe.staff.report.details'),item.details?.length?item.details.join(' · '):null],[t('fe.staff.report.snapshot'),item.reported?<MoreInfo label={t('fe.staff.more')} hideLabel={t('fe.staff.moreHide')}>{show(item.reported)}</MoreInfo>:null]]}/>
   {!people&&<Choice label={t('fe.staff.rule')} value={rule} onChange={setRule} disabled={d.busy} options={RULES.map(id=>({id,label:t('fe.staff.rule.'+id)}))}/>}
   <TextField label={t('fe.staff.note')} value={note} onChange={setNote} max={500}/>
   {ask?<Confirm text={t('fe.staff.report.confirmRemove')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>d.run('staff.reportDecide',{...base,decision:'remove',rule})}/>
@@ -688,26 +695,45 @@ function Premium(){
 
 // ——— journal ———
 
+const JOURNAL_ACTIONS=['age.view','age.approve','age.reject','photo.view','photo.approve','photo.reject','community.approve','community.reject','event.approve','event.reject','event.hide',
+ 'media.view','media.approve','media.reject','notice.removed','notice.kept','notice.not_actionable','place.approve','place.reject','premium.grant','premium.revoke','report.keep','report.remove',
+ 'revision.approve','revision.reject','sanction.suspend','sanction.lift','sanction.expired','restrict.on','restrict.off','restrict.expired','staff.grant','staff.revoke','staff.factorOn','staff.factorLocked',
+ 'staff.factorReset','staff.recoveryUsed','support.reply','support.close','appeal.grant','appeal.deny','dating.on','dating.off','maintenance.on','maintenance.off',
+ 'dispute.restore','dispute.remove','dispute.claimantReviewed','dispute.claimantRestricted'] as const;
+type JournalRow=z.infer<typeof journalItem>;
+
 function Journal(){
  const {call}=useFe();const {t}=useI18n();const when=useWhen();
- const [items,setItems]=useState<z.infer<typeof journalItem>[]|null>(null);const [error,setError]=useState<unknown>(null);
  const [filter,setFilter]=useState('');const [applied,setApplied]=useState('');
- const load=useCallback(()=>{setItems(null);setError(null);
-  call('staff.journal',{limit:100,...(applied?{targetId:applied}:{})},list(journalItem),{asAccount:true}).then(r=>setItems(r.items)).catch(setError);},[call,applied]);
- useEffect(()=>{load();},[load]);
+ const [who,setWho]=useState('');const [what,setWhat]=useState('');
+ // Staff for the «Кто» filter: everyone seen in the journal so far (the journal is the only place that names them).
+ const [staffSeen,setStaffSeen]=useState<Record<string,string>>({});
+ const word=(v:string,k:string)=>{const x=t(k+v);return x===k+v?v:x;};
+ const fetchPage=useCallback((after?:string)=>call('staff.journal',{limit:50,...(applied?{targetId:applied}:{}),...(who?{staffAccountId:who}:{}),...(what?{what}:{}),...(after?{after}:{})},journalPage,{asAccount:true})
+  .then(r=>{setStaffSeen(m=>{const n={...m};for(const x of r.items)if(x.staff_account_id)n[x.staff_account_id]=name(x);return n;});return r;}),[call,applied,who,what]);
+ const {items,error,reload:load,moreProps}=useStaffPage(fetchPage,x=>String(x.id));
+ const name=(x:JournalRow)=>x.staff_name||(x.staff_handle?'@'+x.staff_handle:t('fe.staff.journal.unknownStaff'));
  const valid=!filter.trim()||/^[0-9a-f-]{36}$/i.test(filter.trim());
+ const staffOptions:[string,string][]=[['',t('fe.staff.journal.anyone')],...Object.entries(staffSeen).map(([id,n])=>[id,n] as [string,string])];
+ if(who&&!staffSeen[who])staffOptions.push([who,who.slice(0,8)]);
  return <>
   <div className="st-row mt8">
    <LineField label={t('fe.staff.journal.filter')} value={filter} max={36} spellCheck={false} onChange={setFilter}/>
    <Btn kind="soft" size="md" auto disabled={!valid} onClick={()=>{const v=filter.trim();if(v===applied)load();else setApplied(v);}}>{t('fe.staff.journal.apply')}</Btn>
   </div>
+  <div className="st-row">
+   <Field id="st-j-who" label={t('fe.staff.journal.who')}><Select id="st-j-who" label={t('fe.staff.journal.who')} value={who} options={staffOptions} onChange={setWho}/></Field>
+   <Field id="st-j-what" label={t('fe.staff.journal.what')}><Select id="st-j-what" label={t('fe.staff.journal.what')} value={what} options={[['',t('fe.staff.journal.anything')],...JOURNAL_ACTIONS.map(a=>[a,word(a,'fe.staff.journal.action.')] as [string,string])]} onChange={setWhat}/></Field>
+  </div>
   {error?(forbidden(error)?<Empty icon={Lock} title={t('fe.staff.unavailable')} text={t('fe.staff.journal.forbidden')}/>
     :<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>)
    :items===null?<Skel kind="list"/>
    :!items.length?<Empty icon={Inbox} title={t('fe.staff.journal.empty')}/>
-   :<Card list className="mt8">{items.map(x=><Row key={String(x.id)} title={<>{x.action}{x.target_type?' · '+x.target_type:''}</>}
+   :<><Card list className="mt8">{items.map(x=><Row key={String(x.id)}
+     title={<>{x.staff_account_id?name(x):t('fe.staff.journal.auto')} · {word(x.action,'fe.staff.journal.action.')}{x.target_type?' · '+word(x.target_type,'fe.staff.journal.type.'):''}</>}
      sub={<>{when(x.created_at)}{x.target_id?' · '+x.target_id:''}</>}
-     extra={x.detail!==undefined&&x.detail!==null&&show(x.detail)!=='{}'?<small className="st-detail"><code>{show(x.detail)}</code></small>:undefined}
-     end={<IconBtn icon={ChevronRight} kind="ghost" label={t('fe.staff.journal.apply')} disabled={!x.target_id} onClick={()=>{if(x.target_id){setFilter(x.target_id);setApplied(x.target_id);}}}/>}/>)}</Card>}
+     extra={x.detail!==undefined&&x.detail!==null&&show(x.detail)!=='{}'?<MoreInfo label={t('fe.staff.more')} hideLabel={t('fe.staff.moreHide')}>{show(x.detail)}</MoreInfo>:undefined}
+     end={<IconBtn icon={ChevronRight} kind="ghost" label={t('fe.staff.journal.apply')} disabled={!x.target_id} onClick={()=>{if(x.target_id){setFilter(x.target_id);setApplied(x.target_id);}}}/>}/>)}</Card>
+    <LoadMore {...moreProps}/></>}
  </>;
 }

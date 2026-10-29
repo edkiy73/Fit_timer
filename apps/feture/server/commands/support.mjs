@@ -2,6 +2,7 @@
 import { helpInput, supportCommands } from '../../contracts/support.mjs';
 import { fail } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
+import { pageInfo, queuePageSql } from '../queue-page.mjs';
 import { journal, requireStaff } from './staff.mjs';
 
 /** Wave 8: support tickets (S01 «Написать в поддержку») and the maintenance switch (MAINT).
@@ -56,13 +57,14 @@ const run = {
 
   async 'staff.supportQueue'(q, { account, input }) {
     await requireStaff(q, account, SUPPORT_ROLES);
-    const rows = await q.query(
+    // Open tickets: the longest waiting first; answered and closed: the latest first.
+    const keys = [{ name: 'updated_at', type: 'timestamptz', dir: input.state === 'open' ? 'asc' : 'desc' }, { name: 'id', type: 'uuid', dir: 'asc' }];
+    const { sql, params } = queuePageSql(input, keys,
       `select t.*, p.handle from feture.support_ticket t join feture.account a on a.id = t.account_id
-       left join feture.profile p on p.id = a.person_profile_id
-       where t.state = $1 and t.account_id <> $2 order by t.updated_at ${input.state === 'open' ? 'asc' : 'desc'} limit $3`,
-      [input.state, account.id, input.limit]);
+       left join feture.profile p on p.id = a.person_profile_id where t.state = $1 and t.account_id <> $2`, [input.state, account.id]);
+    const rows = await q.query(sql, params);
     const msgs = await threads(q, rows.map(r => r.id));
-    return { items: rows.map(r => ({ ...ticketDto(r, msgs), handle: r.handle ?? null })) };
+    return { items: rows.map(r => ({ ...ticketDto(r, msgs), handle: r.handle ?? null })), ...pageInfo(rows, keys, input.limit) };
   },
 
   async 'staff.supportReply'(q, { account, input }) {
