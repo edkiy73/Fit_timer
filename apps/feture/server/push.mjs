@@ -3,8 +3,10 @@ import { NOTIFICATION_DEFAULTS } from '../contracts/me.mjs';
 import { enqueue } from './outbox.mjs';
 
 /** Push delivery (S2 §8, extract/people-discover-chats.md §4.4). The queue sends it, never a command.
- * Texts are neutral: no names, no message text, no couple names, nothing about interests or the private part. «safe»
- * (the default) shows only that something new is there; «normal» says what kind of thing it is. The person's settings
+ * «safe» (the default, «Безопасные») shows only that something new is there: no names, no text. «normal» («Обычные»,
+ * owner 29.10.2026) names who it is from and starts the message: «Мира · Привет! Видела тебя…», «Sofi · Ставит тебе
+ * симпатию» (`personalText`). Never in any mode: private-part content, once-view / timed media or their captions,
+ * anyone hidden by a block or gone — then the neutral kind text is used. The person's settings
  * decide: push on or off, per category, quiet hours in the device's time zone (nothing is sent then), likes at most
  * once an hour. Gone tokens are dropped; devices unseen for 60 days get nothing.
  * @typedef {import('./db.mjs').Db} Db @typedef {import('./db.mjs').Q} Q @typedef {import('./outbox.mjs').OutboxItem} OutboxItem
@@ -13,14 +15,29 @@ import { enqueue } from './outbox.mjs';
  *   platforms: the device kinds this transport can reach (all when absent)
  */
 
-const TEXT = {
+export const PUSH_TEXT = {
   ru: {
     title: 'FetUre', safe: 'Новое уведомление', messages: 'Новое сообщение', likes: 'Новая симпатия', match: 'Новое совпадение',
     decide: 'Есть, что решить', requests: 'Новый запрос на переписку', events: 'Новости события', replies: 'Новый ответ', follows: 'Новый подписчик', groups: 'Новое в сообществе', other: 'Новое уведомление',
+    media: { image: 'Фото', video: 'Видео', audio: 'Голосовое' },
+    // What someone did, after their name in the title: [a person, a couple].
+    act: {
+      like: ['Ставит тебе симпатию', 'Ставят тебе симпатию'], match: ['Это взаимно! Можно написать', 'Это взаимно! Можно написать'],
+      chatRequest: ['Хочет начать переписку', 'Хотят начать переписку'], follow: ['Подписывается на тебя', 'Подписываются на тебя'],
+      reply: ['Отвечает на твою публикацию', 'Отвечают на твою публикацию'], postLike: ['Нравится твоя публикация', 'Нравится твоя публикация'],
+      mention: ['Упоминает тебя в публикации', 'Упоминают тебя в публикации'], notePublished: ['Новая статья', 'Новая статья'],
+    },
   },
   en: {
     title: 'FetUre', safe: 'New notification', messages: 'New message', likes: 'New like', match: 'New match',
     decide: 'Something to decide', requests: 'New message request', events: 'Event update', replies: 'New reply', follows: 'New follower', groups: 'New in a community', other: 'New notification',
+    media: { image: 'Photo', video: 'Video', audio: 'Voice message' },
+    act: {
+      like: ['Sent you a like', 'Sent you a like'], match: ['It’s a match! Say hi', 'It’s a match! Say hi'],
+      chatRequest: ['Wants to start a conversation', 'Want to start a conversation'], follow: ['Started following you', 'Started following you'],
+      reply: ['Replied to your post', 'Replied to your post'], postLike: ['Liked your post', 'Liked your post'],
+      mention: ['Mentioned you in a post', 'Mentioned you in a post'], notePublished: ['New article', 'New article'],
+    },
   },
 };
 /** Settings category of each push kind (V21 K05); kinds without one follow only the global switch. */
@@ -29,12 +46,58 @@ const CATEGORY = { likes: 'likes', match: 'match', decide: 'req', requests: 'req
 const SEND_TIMEOUT_MS = 10_000;
 
 /** Queues one push for a recipient of an outbox item, once (a retried handler never doubles it). Items older than a day
- * (a backlog after deploy, a long outage) make no push: it would only be noise by then.
- * @param {Q} q @param {OutboxItem} item @param {{account: string, profile: string | null}} r @param {string} kind @param {string} [notificationId] */
-export async function queuePush(q, item, r, kind, notificationId) {
+ * (a backlog after deploy, a long outage) make no push: it would only be noise by then. `message`: the chat message it
+ * is about (ids only; the text is read at send time, and only in «normal» mode).
+ * @param {Q} q @param {OutboxItem} item @param {{account: string, profile: string | null}} r @param {string} kind @param {string} [notificationId]
+ * @param {{conversationId: string, seq: number}} [message] */
+export async function queuePush(q, item, r, kind, notificationId, message) {
   if (item.created_at && Date.now() - new Date(item.created_at).getTime() > 864e5) return;
   const fresh = await q.query(`insert into feture.push_sent (key) values ($1) on conflict do nothing returning key`, [`q:${item.id}:${r.account}`]);
-  if (fresh[0]) await enqueue(q, 'push.deliver', r.profile, { account: r.account, kind, ...(notificationId ? { notificationId } : {}) });
+  if (fresh[0]) await enqueue(q, 'push.deliver', r.profile, { account: r.account, kind, ...(notificationId ? { notificationId } : {}),
+    ...(message ? { conversationId: message.conversationId, seq: message.seq } : {}) });
+}
+
+const PREVIEW = 80;
+/** The start of a message for the lock screen: one line, at most 80 characters (by code points, so no broken emoji).
+ * @param {string} body */
+export function clip(body) {
+  const one = [...String(body ?? '').replace(/\s+/g, ' ').trim()];
+  return one.length > PREVIEW ? one.slice(0, PREVIEW).join('').trimEnd() + '…' : one.join('');
+}
+
+/** «normal» mode: who it is from and what, or null for the neutral text. Read at send time, so a message or a
+ * notification taken back, a block or a profile gone since makes no name. Only for a recipient profile (an item
+ * addressed to the account names nobody).
+ * @param {Db | Q} db @param {string | null} recipient profile the push is for
+ * @param {{kind: string, notificationId?: string, conversationId?: string, seq?: number}} p @param {typeof PUSH_TEXT.ru} t
+ * @returns {Promise<{title: string, body: string} | null>} */
+export async function personalText(db, recipient, p, t) {
+  if (!recipient) return null;
+  /** @param {any} who */
+  const nameOf = who => who.name || (who.handle ? '@' + who.handle : '');
+  if (p.kind === 'messages' && p.conversationId && p.seq != null) {
+    const [m] = await db.query(
+      `select m.body, m.media_mode, a.kind media_kind, a.purpose, pr.name, pr.handle, feture.blocked($3, m.author_profile_id) hidden
+       from feture.message m join feture.profile pr on pr.id = m.author_profile_id and pr.state = 'active'
+       left join feture.media_asset a on a.id = m.media_asset_id
+       where m.conversation_id = $1 and m.seq = $2`, [p.conversationId, p.seq, recipient]);
+    if (!m || m.hidden || !nameOf(m)) return null;
+    // Once-view and timed media, and anything from the private part: never their content or caption, only the kind.
+    const sealed = m.media_mode !== 'normal' || m.purpose === 'private';
+    const text = sealed ? '' : clip(m.body);
+    const kind = m.media_kind ? t.media[/** @type {keyof typeof t.media} */ (m.media_kind)] : '';
+    return { title: nameOf(m), body: text || kind || t.messages };
+  }
+  if (p.notificationId) {
+    const [n] = await db.query(
+      `select n.type, pr.name, pr.handle, pr.kind, feture.blocked($2, n.actor_profile_id) hidden
+       from feture.notification n join feture.profile pr on pr.id = n.actor_profile_id and pr.state = 'active'
+       where n.id = $1 and n.retracted_at is null`, [p.notificationId, recipient]);
+    const act = n && t.act[/** @type {keyof typeof t.act} */ (n.type)];
+    if (!act || n.hidden || !nameOf(n)) return null;
+    return { title: nameOf(n), body: act[n.kind === 'couple' ? 1 : 0] };
+  }
+  return null;
 }
 
 /** Where a tap on the push opens the app (hash routes of the /n screens). Fixed addresses only: never an id. */
@@ -108,7 +171,7 @@ export function pushHandlers(db, transport) {
   return {
     'push.deliver': async (/** @type {OutboxItem} */ item) => {
       if (!transport) return;
-      const p = /** @type {{account: string, kind: string, notificationId?: string}} */ (/** @type {any} */ (item.payload));
+      const p = /** @type {{account: string, kind: string, notificationId?: string, conversationId?: string, seq?: number}} */ (/** @type {any} */ (item.payload));
       const [a] = await db.query(
         `select a.locale, a.state, s.settings from feture.account a left join feture.notification_settings s on s.account_id = a.id where a.id = $1`, [p.account]);
       if (!a || a.state !== 'active') return;
@@ -125,8 +188,11 @@ export function pushHandlers(db, transport) {
           `select exists (select 1 from feture.rate_event where account_id = $1 and kind = 'push.likes' and created_at > now() - interval '1 hour') recent`, [p.account]);
         if (recent) return;
       }
-      const t = TEXT[String(a.locale).startsWith('en') ? 'en' : 'ru'];
-      const body = settings.mode === 'normal' ? t[/** @type {keyof typeof t} */ (p.kind)] ?? t.other : t.safe;
+      const t = PUSH_TEXT[String(a.locale).startsWith('en') ? 'en' : 'ru'];
+      const kindText = /** @type {string | undefined} */ (/** @type {any} */ (t)[p.kind]);
+      const named = settings.mode === 'normal' ? await personalText(db, item.profile_id, p, t) : null;
+      const title = named?.title ?? t.title;
+      const body = named?.body ?? (settings.mode === 'normal' && typeof kindText === 'string' ? kindText : t.safe);
       const devices = await db.query(
         `select token_hash, platform, token, tz from feture.push_device where account_id = $1 and platform = any($2::text[]) and last_seen_at > now() - interval '60 days'`,
         [p.account, transport.platforms ?? ['ios', 'android', 'web']]);
@@ -137,7 +203,7 @@ export function pushHandlers(db, transport) {
         const first = await db.query(`insert into feture.push_sent (key) values ($1) on conflict do nothing returning key`, [`d:${item.id}:${Buffer.from(d.token_hash).toString('hex')}`]);
         if (!first[0]) continue;
         try {
-          await withTimeout(transport.send(d.platform, d.token, { title: t.title, body, data: {
+          await withTimeout(transport.send(d.platform, d.token, { title, body, data: {
             t: p.kind === 'messages' || p.kind === 'requests' ? 'chat' : p.kind === 'decide' ? 'decide' : 'notif',
             url: OPENS[/** @type {keyof typeof OPENS} */ (p.kind)] ?? '/#/n/inbox',
           } }));

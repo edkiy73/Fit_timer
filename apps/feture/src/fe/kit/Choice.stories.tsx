@@ -1,7 +1,7 @@
 import type {Meta,StoryObj} from '@storybook/react-vite';
 import {useState} from 'react';
 import {ChipPick} from './ChipPick';
-import {Btn,Check,CheckList,ChoiceChips,Chip,Chips,Field,RadioList,Range,Stack,Switch} from './index';
+import {Btn,Card,Check,CheckList,ChoiceCards,ChoiceChips,Chip,Chips,Field,RadioList,Range,Row,Stack,Switch,TimeSpan} from './index';
 
 const meta={title:'Выбор/Чип',component:Chip,tags:['autodocs'],
  parameters:{docs:{description:{component:'Несколько значений из набора (темы, интересы) или фильтр. `more` — «Все · N», открывает полный список. Одно значение из набора — `ChoiceChips`.'}}},
@@ -25,3 +25,9 @@ export const Переключатель:S={render:()=>{const [a,setA]=useState(t
 export const Ползунок:S={render:()=>{const [v,setV]=useState(30);return <Field label={`Возраст до ${v}`}><Range label="Возраст" min={18} max={99} value={v} onChange={setV}/></Field>;}};
 export const Метка:S={name:'Чип-метка (без нажатия)',render:()=><Chips><Chip>Статья</Chip><Chip on>Выбрано</Chip></Chips>};
 export const СБейджем:S={name:'Чип со счётчиком',render:()=><Chips><Chip filter lit badge={2} onClick={()=>{}}>Фильтры</Chip></Chips>};
+export const Карточки:S={name:'Один из двух карточками (ChoiceCards)',render:()=>{const [v,setV]=useState<'normal'|'safe'>('safe');
+ return <ChoiceCards label="Что видно на экране блокировки" value={v} onChange={setV} options={[['normal','Обычные','Имя и начало сообщения, кто поставил симпатию'],['safe','Безопасные','Без имён и текста']]}/>;}};
+export const Промежуток:S={name:'Промежуток времени в строке (TimeSpan)',render:()=>{const [on,setOn]=useState(true);const [f,setF]=useState('23:00');const [to,setTo]=useState('08:00');
+ const opts=Array.from({length:48},(_,i)=>`${String(i>>1).padStart(2,'0')}:${i%2?'30':'00'}`).map(x=>[x,x] as const);
+ return <Card list><Row title="Не беспокоить" extra={<TimeSpan from={f} to={to} options={opts} onFrom={setF} onTo={setTo} disabled={!on} words={{from:'с',to:'до',fromLabel:'Начало',toLabel:'Конец'}}/>}
+  end={<Switch label="Не беспокоить" on={on} onChange={setOn}/>}/></Card>;}};

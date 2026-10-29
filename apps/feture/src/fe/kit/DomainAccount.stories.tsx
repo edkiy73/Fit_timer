@@ -1,8 +1,8 @@
 import type {Meta,StoryObj} from '@storybook/react-vite';
 import {useState} from 'react';
 import {fn} from 'storybook/test';
-import {History,RefreshCw,Undo2} from 'lucide-react';
-import {Btn,Maintenance,PlanCards,PremiumFeats,PremiumHero,Thread} from './index';
+import {History,Mail,MessageCircle,RefreshCw,Smartphone,Undo2} from 'lucide-react';
+import {Btn,Card,ChannelHeads,ChannelToggle,ChoiceCards,LockPreview,Maintenance,PlanCards,PremiumFeats,PremiumHero,Row,SectionLabel,Thread} from './index';
 import {UpdateRequired,UpdateStateProvider,type UpdateState} from '../app-update';
 
 const meta={title:'Домен/Аккаунт',component:PremiumHero,tags:['autodocs'],
@@ -41,3 +41,15 @@ export const ОбязательноеОбновление:StoryObj<{status:UpdSt
  render:a=><div className="view"><div className="wrap"><UpdateStateProvider value={updState(a.status)}><UpdateRequired/></UpdateStateProvider></div></div>,
  args:{status:'error'},argTypes:{status:{control:'inline-radio',options:['idle','downloading','permission','error']}},
  parameters:{docs:{description:{story:'Ошибка и подсказка про разрешение стоят под кнопкой с обычным отступом блока; текст сообщения — по левому краю.'}}}};
+
+export const ЭкранБлокировки:S={name:'Экран блокировки (LockPreview)',parameters:{docs:{description:{story:'Как уведомление выглядит на заблокированном телефоне: тёмный экран в обеих темах. Экран передаёт ровно то, что пришлёт выбранный режим; переключение ChoiceCards меняет превью.'}}},
+ render:()=>{const [m,setM]=useState<'normal'|'safe'>('safe');return <div style={{display:"grid",gap:12,maxWidth:420}}>
+  <ChoiceCards label="Что видно на экране блокировки" value={m} onChange={setM} options={[['normal','Обычные','Имя и начало сообщения, кто поставил симпатию'],['safe','Безопасные','Без имён и текста — только «Новое уведомление»']]}/>
+  <LockPreview app="FetUre" icon="/icon.svg" items={m==='safe'?[{title:'FetUre',body:'Новое уведомление',time:'сейчас'},{title:'FetUre',body:'Новое уведомление',time:'2 мин'}]
+   :[{title:'Мира',body:'Привет! Видела тебя на встрече в субботу…',time:'сейчас'},{title:'Sofi',body:'Ставит тебе симпатию',time:'2 мин'}]}/></div>;}};
+export const Каналы:S={name:'Каналы категории (ChannelToggle)',parameters:{docs:{description:{story:'Пуш и почта для категории уведомлений: квадратные переключатели в конце строки, заголовки колонок — ChannelHeads в SectionLabel. Выключенный канал гасит колонку.'}}},
+ render:()=>{const [p,setP]=useState(true);const [e,setE]=useState(false);return <div style={{maxWidth:420}}>
+  <SectionLabel action={<ChannelHeads labels={['Пуш','Почта']}/>}>О чём сообщать</SectionLabel>
+  <Card list className="ncats"><Row icon={MessageCircle} title="Совпадения и сообщения" sub="Взаимная симпатия, новое сообщение" end={<>
+   <ChannelToggle icon={Smartphone} on={p} label="Пуш: Совпадения" onClick={()=>setP(v=>!v)}/><ChannelToggle icon={Mail} on={e} label="Почта: Совпадения" onClick={()=>setE(v=>!v)}/></>}/>
+   <Row icon={MessageCircle} title="Почта выключена" sub="Колонка погашена" end={<><ChannelToggle icon={Smartphone} on label="Пуш" onClick={()=>{}}/><ChannelToggle icon={Mail} on disabled label="Почта" onClick={()=>{}}/></>}/></Card></div>;}};

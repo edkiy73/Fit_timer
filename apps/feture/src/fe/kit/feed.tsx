@@ -317,3 +317,25 @@ export function ArticleCard({cover,plate:pk,kicker,title,excerpt,more,full,child
 export function ArticleImage({src,label,onOpen}:{src:string,label:string,onOpen:()=>void}){
  return <figure className="md-img"><button type="button" aria-label={label} onClick={e=>{e.stopPropagation();onOpen();}}><img src={src} alt="" loading="lazy" decoding="async" draggable={false}/></button></figure>;
 }
+
+/* ---------------- Drafts ---------------- */
+
+/** A draft among the author's posts («Мои публикации → Черновики», owner 29.10.2026): the post card's own frame and
+ * header — the author's picture, what the draft holds («Черновик · 2 фото», «Пустой черновик»), when it was changed —
+ * with ⋯ (edit, «Удалить черновик»), then the start of the text (up to three lines) and small previews of its media.
+ * A tap on the header, the text or a preview opens the editor. */
+export function DraftCard({av,label,when,text,thumbs=[],extra=0,onOpen,onMore,openLabel,moreLabel}:{av:ReactNode,label:ReactNode,when:ReactNode,text?:string|undefined,
+ /** Previews (≤ 4 shown); `video` marks a clip. A preview that has no address yet (still being checked) is a plain tile. */ thumbs?:readonly {src?:string|null|undefined,video?:boolean}[],
+ /** Media beyond the previews: «+N» on the last one. */ extra?:number,onOpen:()=>void,onMore:()=>void,openLabel:string,moreLabel:string}){
+ const shown=thumbs.slice(0,4);const rest=extra+Math.max(0,thumbs.length-shown.length);
+ return <article className="post k-draft">
+  <div className="post-h">
+   <button type="button" className="who" aria-label={openLabel} onClick={onOpen}>{av}<span className="tx"><b>{label}</b><small>{when}</small></span></button>
+   <IconBtn icon={Ellipsis} kind="ghost" size="sm" label={moreLabel} aria-haspopup="dialog" onClick={onMore}/>
+  </div>
+  {text&&<button type="button" className="k-draft-x" onClick={onOpen} tabIndex={-1}>{text}</button>}
+  {shown.length>0&&<button type="button" className="k-draft-m" onClick={onOpen} tabIndex={-1} aria-hidden="true">{shown.map((m,i)=><span key={i} className="k-draft-th">
+   {m.src?<img src={m.src} alt="" loading="lazy" decoding="async" draggable={false}/>:<ImageIcon/>}{m.video&&<i className="k-draft-v"><Video/></i>}
+   {i===shown.length-1&&rest>0&&<b>+{rest}</b>}</span>)}</button>}
+ </article>;
+}
