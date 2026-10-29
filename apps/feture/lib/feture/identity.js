@@ -43,7 +43,9 @@ async function authenticate(req,store,qaResolver) {
   const actor=Object.freeze({qa:/^qa-[a-z0-9-]+@feture\.test$/.test(email),accountHash:keyHash,verifiedAdult:!!qaUntil,qaUntil,accountGeneration:typeof account.since==='string'&&Number.isFinite(Date.parse(account.since))?sha(keyHash+':'+account.since):undefined,
     // This sign-in on this device: sessionId is Core's opaque id from the sessions list («Мои устройства»); sessionKey
     // also covers the token, so a new sign-in on the same device is a new session (staff second-factor checks).
-    sessionId:sessionId(deviceId),sessionKey:sha('fe-session:'+deviceId+':'+device.h)});
+    sessionId:sessionId(deviceId),sessionKey:sha('fe-session:'+deviceId+':'+device.h),
+    // Core's coarse device family («Chrome · Mac») and when this sign-in was opened: the new-device notice (server/signin.mjs).
+    deviceLabel:typeof device.label==='string'?device.label.slice(0,40):'',signedInAt:typeof device.at==='string'?device.at:''});
   authenticatedActors.add(actor);
   return actor;
 }

@@ -8,7 +8,8 @@ import { enqueue } from './outbox.mjs';
  * симпатию» (`personalText`). Never in any mode: private-part content, once-view / timed media or their captions,
  * anyone hidden by a block or gone — then the neutral kind text is used. The person's settings
  * decide: push on or off, per category, quiet hours in the device's time zone (nothing is sent then), likes at most
- * once an hour. Gone tokens are dropped; devices unseen for 60 days get nothing.
+ * once an hour. A new sign-in («security») has no category: only the push switch and quiet hours hold it back.
+ * Gone tokens are dropped; devices unseen for 60 days get nothing.
  * @typedef {import('./db.mjs').Db} Db @typedef {import('./db.mjs').Q} Q @typedef {import('./outbox.mjs').OutboxItem} OutboxItem
  * @typedef {{title: string, body: string, data: Record<string, string>}} Message
  * @typedef {{send: (platform: string, token: string, message: Message) => Promise<unknown>, platforms?: string[]}} Transport
@@ -19,6 +20,7 @@ export const PUSH_TEXT = {
   ru: {
     title: 'FetUre', safe: 'Новое уведомление', messages: 'Новое сообщение', likes: 'Новая симпатия', match: 'Новое совпадение',
     decide: 'Есть, что решить', requests: 'Новый запрос на переписку', events: 'Новости события', replies: 'Новый ответ', follows: 'Новый подписчик', groups: 'Новое в сообществе', other: 'Новое уведомление',
+    security: 'Вход с нового устройства',
     media: { image: 'Фото', video: 'Видео', audio: 'Голосовое' },
     // What someone did, after their name in the title: [a person, a couple].
     act: {
@@ -31,6 +33,7 @@ export const PUSH_TEXT = {
   en: {
     title: 'FetUre', safe: 'New notification', messages: 'New message', likes: 'New like', match: 'New match',
     decide: 'Something to decide', requests: 'New message request', events: 'Event update', replies: 'New reply', follows: 'New follower', groups: 'New in a community', other: 'New notification',
+    security: 'New device signed in',
     media: { image: 'Photo', video: 'Video', audio: 'Voice message' },
     act: {
       like: ['Sent you a like', 'Sent you a like'], match: ['It’s a match! Say hi', 'It’s a match! Say hi'],
@@ -101,7 +104,7 @@ export async function personalText(db, recipient, p, t) {
 }
 
 /** Where a tap on the push opens the app (hash routes of the /n screens). Fixed addresses only: never an id. */
-const OPENS = { messages: '/#/n/chats', match: '/#/n/chats', requests: '/#/n/chats/requests', decide: '/#/n/inbox' };
+const OPENS = { messages: '/#/n/chats', match: '/#/n/chats', requests: '/#/n/chats/requests', decide: '/#/n/inbox', security: '/#/n/settings/security' };
 
 /** One transport for every device kind: the web sender (webpush.mjs, our own VAPID keys) and the native one (Core's
  * FCM/APNs) side by side. null when neither is configured. A new native sender is one more entry here.
@@ -139,6 +142,7 @@ export async function sweepPushSent(db) {
 
 /** The push kind of a notification type. @param {string} type */
 export function pushKind(type) {
+  if (type === 'signinNew') return 'security';
   if (type === 'like') return 'likes';
   if (type === 'match') return 'match';
   if (type === 'chatRequest') return 'requests';
@@ -192,7 +196,8 @@ export function pushHandlers(db, transport) {
       const kindText = /** @type {string | undefined} */ (/** @type {any} */ (t)[p.kind]);
       const named = settings.mode === 'normal' ? await personalText(db, item.profile_id, p, t) : null;
       const title = named?.title ?? t.title;
-      const body = named?.body ?? (settings.mode === 'normal' && typeof kindText === 'string' ? kindText : t.safe);
+      // A new sign-in says what it is in every mode («FetUre · Вход с нового устройства»): no device, no place.
+      const body = p.kind === 'security' ? t.security : named?.body ?? (settings.mode === 'normal' && typeof kindText === 'string' ? kindText : t.safe);
       const devices = await db.query(
         `select token_hash, platform, token, tz from feture.push_device where account_id = $1 and platform = any($2::text[]) and last_seen_at > now() - interval '60 days'`,
         [p.account, transport.platforms ?? ['ios', 'android', 'web']]);

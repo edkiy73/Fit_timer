@@ -37,13 +37,13 @@ import { createSharpRenderer } from '../server/media/render.mjs';
 import { broadcastSender, createSignals } from '../server/realtime.mjs';
 import { pushTransport } from '../server/push.mjs';
 import { webPushFromEnv } from '../server/webpush.mjs';
+import { appUrl, coreMailer } from '../server/core-guard.mjs';
 
 const require = createRequire(import.meta.url);
 const { store } = require('../../../packages/core/server/store');
 const { allowedOrigin, rateOkScoped, ipHash } = require('../../../packages/core/server/util');
 const Supabase = require('../../../packages/core/server/supabase');
 const CorePush = require('../../../packages/core/server/push');
-const CoreMail = require('../../../packages/core/server/mail');
 const { authenticate } = require('../lib/feture/identity');
 
 const env = process.env;
@@ -139,6 +139,9 @@ const handler = db && createFeHandler({
   },
   cors,
   log: event => console.info('feture_fe_access', JSON.stringify(event)),
+  // The new-device email goes straight to the signed-in address (never stored): server/signin.mjs.
+  mail: configured ? coreMailer() : null,
+  appUrl: appUrl(),
 });
 
 /** @param {string} given @param {string} expected */
@@ -169,8 +172,7 @@ export default async function fe(/** @type {any} */ req, /** @type {any} */ res)
       const info = CorePush.pushInfo();
       const push = pushTransport({ native: info.android || info.ios ? CorePush.sendToDevice : null, web: webPush });
       // Only a real sending domain: Resend's test domain delivers to its owner alone.
-      const mailInfo = CoreMail.mailInfo();
-      const mail = mailInfo.ready && !mailInfo.testDomain ? (/** @type {{to: string, subject: string, text: string}} */ m) => CoreMail.sendMail(m) : null;
+      const mail = coreMailer();
       return json(res, 200, { ok: true, ...(await runJobs(db, { scan, push, mail, signals })) });
     } catch {
       return json(res, 503, { ok: false, error: 'unavailable' });

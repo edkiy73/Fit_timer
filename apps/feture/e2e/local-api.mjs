@@ -38,6 +38,7 @@ import { verification } from '../server/commands/verification.mjs';
 import { accounts } from '../server/commands/account.mjs';
 import { dsa } from '../server/commands/dsa.mjs';
 import { support } from '../server/commands/support.mjs';
+import { coreSessionBlocked, GUARDED_AUTH } from '../server/core-guard.mjs';
 
 const PORT = Number(process.argv[2] ?? process.env.PORT ?? 4290);
 const BASE = `http://localhost:${PORT}`;
@@ -48,6 +49,10 @@ const { sessionId } = createRequire(import.meta.url)('../../../packages/core/ser
 const devices = new Map();
 const label = ua => { const u = String(ua ?? ''); const b = /Chrome\//.test(u) ? 'Chrome' : /Firefox\//.test(u) ? 'Firefox' : /Safari\//.test(u) ? 'Safari' : '';
   const o = /Mac OS X|Macintosh/.test(u) ? 'Mac' : /Android/.test(u) ? 'Android' : /Linux/.test(u) ? 'Linux' : ''; return [b, o].filter(Boolean).join(' · '); };
+const PEPPER = 'local-e2e-pepper-'.padEnd(40, 'x');
+/** The identity Core gives /api/fe for a signed-in device (lib/feture/identity.js): account, sign-in, device family. */
+const coreOf = (email, device, token, d) => ({ accountHash: createHash('sha256').update(email).digest('hex'), accountGeneration: 'g1', qa: email.startsWith('qa-'),
+  sessionId: sessionId(device), sessionKey: createHash('sha256').update('fe-session:' + device + ':' + token).digest('hex'), deviceLabel: d.label, signedInAt: d.at });
 const deviceOf = (email, deviceId, token) => { const d = devices.get(email)?.get(deviceId); return d && d.token === token ? d : null; };
 const mig = name => readFileSync(new URL('../supabase/migrations/' + name, import.meta.url), 'utf8');
 
@@ -80,16 +85,16 @@ const storage = {
 const scan = { storage, scanner: null, classifier: null, renderer: createSharpRenderer() };
 
 const handler = createFeHandler({
-  db, pepper: 'local-e2e-pepper-'.padEnd(40, 'x'),
+  db, pepper: PEPPER,
   cfg: { media: { storage, delivery: signedStorageDelivery(storage) }, realtime: null, push: null, billing: { providers: [] } },
   commands: { ...platform, ...me, ...access, ...couples, ...staff, ...social, ...posts, ...moderation, ...communities, ...events, ...photos, ...gallery, ...discover, ...chats, ...inbox, ...people, ...premium, ...verification, ...accounts, ...dsa, ...support },
   // A session token is issued per device at sign-in: the account is the e-mail; persona logins (qa-…) are qa accounts,
   // as in Core. The session key (staff second factor) and id («Мои устройства») follow Core's identity (lib/feture/identity.js).
   authenticate: async req => {
     const email = String(req.headers['x-fit-email'] ?? '').toLowerCase(), device = String(req.headers['x-fit-device'] ?? ''), token = String(req.headers['x-fit-token'] ?? '');
-    if (!email || !deviceOf(email, device, token)) { const e = new Error('auth'); /** @type {any} */ (e).status = 401; throw e; }
-    return { accountHash: createHash('sha256').update(email).digest('hex'), accountGeneration: 'g1', qa: email.startsWith('qa-'),
-      sessionId: sessionId(device), sessionKey: createHash('sha256').update('fe-session:' + device + ':' + token).digest('hex') };
+    const d = email ? deviceOf(email, device, token) : null;
+    if (!d) { const e = new Error('auth'); /** @type {any} */ (e).status = 401; throw e; }
+    return coreOf(email, device, token, d);
   },
   quota: async () => true, cors: () => false, log: () => {}, maintenanceTtl: 0,
 });
@@ -140,7 +145,12 @@ http.createServer(async (req, res) => {
         return json(res, 200, { ok: true, syncToken, expiresAt: null });
       }
       if (['status', 'sessions', 'session_revoke', 'sessions_revoke_others'].includes(b.action)) {
-        if (!deviceOf(email, String(b.deviceId), String(b.syncToken))) return json(res, 403, { ok: false, error: 'bad_sync_token' });
+        const d = deviceOf(email, String(b.deviceId), String(b.syncToken));
+        if (!d) return json(res, 403, { ok: false, error: 'bad_sync_token' });
+        // Core's session actions wait for the sign-in second step, as api/auth.js does (server/core-guard.mjs).
+        if (GUARDED_AUTH.has(b.action) && await coreSessionBlocked(coreOf(email, String(b.deviceId), String(b.syncToken), d), { db, pepper: PEPPER, mail: null })) {
+          return json(res, 403, { ok: false, error: 'second_factor', rule: 'signin' });
+        }
         const mine = devices.get(email);
         if (b.action === 'status') return json(res, 200, { ok: true, expiresAt: null });
         if (b.action === 'sessions') return json(res, 200, { ok: true, sessions: [...mine].map(([id, d]) => ({ id: sessionId(id), current: id === b.deviceId, label: d.label, platform: d.platform, at: d.at, expiresAt: new Date(Date.now() + 90 * 864e5).toISOString() }))

@@ -13,8 +13,8 @@ const {timingSafeEqual}=require('node:crypto');
 const sameSecret=(a,b)=>{const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);};
 /** Only this endpoint supplies the authenticated actor and bootstrap authority.
  * QA roles never enter Core admin handlers or read private map/tests/journal.
- * @param {{transport:import('./contracts').Transport,accounts:import('./contracts').AccountStore,cors:(req:import('./contracts').Request,res:import('./contracts').Response)=>boolean,quota:(req:import('./contracts').Request,owner:string)=>Promise<boolean>}} deps */
-function createOperatorEndpoint({transport,accounts,cors,quota}){
+ * @param {{transport:import('./contracts').Transport,accounts:import('./contracts').AccountStore,cors:(req:import('./contracts').Request,res:import('./contracts').Response)=>boolean,quota:(req:import('./contracts').Request,owner:string)=>Promise<boolean>,guard?:(req:import('./contracts').Request,actor:import('./contracts').Actor)=>Promise<void>}} deps */
+function createOperatorEndpoint({transport,accounts,cors,quota,guard}){
  /** @param {import('./contracts').Request} req @param {import('./contracts').Response} res */
  return async(req,res)=>{
   res.setHeader('Cache-Control','no-store');res.setHeader('Content-Type','application/json; charset=utf-8');
@@ -22,6 +22,7 @@ function createOperatorEndpoint({transport,accounts,cors,quota}){
   try{
    if(req.method!=='POST')reject(405,'method_not_allowed');
    const actor=await authenticate(req,accounts);
+   if(guard)await guard(req,actor); // the second step of the sign-in (server/core-guard.mjs)
    if(!actor.accountGeneration)reject(403,'forbidden');
    if(!await quota(req,actor.accountHash))reject(429,'rate_limited');
    const input=await readBody(req);

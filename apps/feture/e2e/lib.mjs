@@ -20,11 +20,13 @@ function saveSessions() {
   for (const [k, v] of Object.entries(disk)) { if (!sessions[k]) sessions[k] = v; else if (v._at > sessions[k]._at) Object.assign(sessions[k], v); }
   fs.writeFileSync(SESS, JSON.stringify(sessions), { mode: 0o600 });
 }
-/** Staff second factor of persona accounts: the authenticator secret and recovery codes per API host and e-mail, next
- * to the session cache (mode 600, never in the repo). Losing it means a lead resets the factor (staff.totpReset). */
+/** Second factor of persona accounts (staff, and personas that turned the optional one on): the authenticator secret and
+ * recovery codes per API host and e-mail (`factorKey`), next to the session cache (mode 600, never in the repo). Losing
+ * it means a lead resets the factor (staff.totpReset). */
 const FACTOR = SESS.replace(/\.json$/, '') + '.factor.json';
-const readFactor = () => { try { return JSON.parse(fs.readFileSync(FACTOR, 'utf8')); } catch { return {}; } };
-const saveFactor = (key, value) => { const all = readFactor(); all[key] = value; fs.writeFileSync(FACTOR, JSON.stringify(all), { mode: 0o600 }); };
+export const factorKey = email => PROD + ' ' + email;
+export const readFactor = () => { try { return JSON.parse(fs.readFileSync(FACTOR, 'utf8')); } catch { return {}; } };
+export const saveFactor = (key, value) => { const all = readFactor(); all[key] = value; fs.writeFileSync(FACTOR, JSON.stringify(all), { mode: 0o600 }); };
 export const sleep = ms => new Promise(z => setTimeout(z, ms));
 
 export async function post(path, body, headers = {}) {
@@ -100,6 +102,12 @@ export async function api(email, action, input = {}, profile) {
     await staffFactor(email, { fresh: true });
     r = await post('/api/fe', { action, ...input }, h);
   }
+  // A sign-in of an account with a factor on that has not entered a code yet (server/signin.mjs): the helper enters
+  // one from the saved secret, as the person would, and asks again.
+  if (r.status === 403 && r.error === 'second_factor' && r.rule === 'signin' && !api.inSignin) {
+    await signinFactor(email);
+    r = await post('/api/fe', { action, ...input }, h);
+  }
   if (r.status === 401) { console.error(`   (401 on ${action} for ${email}: signing in again — an open browser page of this account is now signed out)`); await session(email, { fresh: true }); return api(email, action, input, profile); }
   // A session signed in again elsewhere may not know its person profile yet: bootstrap fills it in, then retry once.
   if (r.status === 400 && r.error === 'profile_required' && !profile && !s.personId && action !== 'session.bootstrap') {
@@ -145,7 +153,7 @@ async function codeCall(email, action, secret) {
  * and recovery codes are saved before the code is sent), otherwise enters a code when this sign-in has none or, with
  * `fresh`, when the last code is older than ~6 minutes. Returns staff.me. */
 export async function staffFactor(email, { fresh = false } = {}) {
-  const key = PROD + ' ' + email;
+  const key = factorKey(email);
   api.inFactor = true;
   try {
     const me = await api(email, 'staff.me');
@@ -165,4 +173,12 @@ export async function staffFactor(email, { fresh = false } = {}) {
     await codeCall(email, 'staff.totpVerify', saved.secret);
     return api(email, 'staff.me');
   } finally { api.inFactor = false; }
+}
+
+/** The sign-in second step of this persona's current sign-in, with the saved secret. */
+export async function signinFactor(email) {
+  const saved = readFactor()[factorKey(email)];
+  if (!saved?.secret) throw new Error(`${email} has a second factor on ${PROD} but its secret is not in ${FACTOR}: a lead resets it (staff.totpReset)`);
+  api.inSignin = true;
+  try { return await codeCall(email, 'account.factorSignIn', saved.secret); } finally { api.inSignin = false; }
 }

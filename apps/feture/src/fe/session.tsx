@@ -23,6 +23,9 @@ type State=
  |{status:'loading'}
  |{status:'signedOut'}
  |{status:'error',error:unknown}
+ /** The account has a code from an app on and this sign-in has not entered one (server 403 second_factor `signin`):
+  * only the code screen (factor.tsx `SigninFactor`) until then. */
+ |{status:'factor',session:AuthSession}
  |{status:'ready',session:AuthSession,boot:Bootstrap};
 
 type FeSession={
@@ -75,7 +78,7 @@ const dropListeners=new Set<()=>void>();
 export function onReadsDropped(f:()=>void){dropListeners.add(f);return ()=>{dropListeners.delete(f);};}
 /** Writes whose input carries no opId (contracts with `ledger: false`): never served from the cache, and they drop it.
  * Without this a second «Без звука» / «В архив» within 30 s was answered from memory and never reached the server. */
-const WRITES_WITHOUT_OPID=new Set(['staff.totpStart','staff.totpConfirm','staff.totpVerify','chat.read','chat.mute','chat.archive','notifications.read','notifications.readAll','media.commit','staff.mediaView','profile.setVisibility']);
+const WRITES_WITHOUT_OPID=new Set(['staff.totpStart','staff.totpConfirm','staff.totpVerify','account.factorStart','account.factorConfirm','account.factorOff','account.factorCodes','account.factorSignIn','chat.read','chat.mute','chat.archive','notifications.read','notifications.readAll','media.commit','staff.mediaView','profile.setVisibility']);
 /** Two answers that differ only in the request id or in the signatures of media links are the same for a screen. */
 const sameAnswer=(a:unknown,b:unknown)=>{const k=(_:string,v:unknown)=>_==='requestId'?undefined:typeof v==='string'&&/^https?:\/\//.test(v)?v.split('?')[0]:v;
  return JSON.stringify(a,k)===JSON.stringify(b,k);};
@@ -112,6 +115,8 @@ export function askFactor(need:FactorNeed):Promise<boolean>{
  asking??=factorPrompt(need).finally(()=>{asking=null;});
  return asking;
 }
+/** The sign-in second step (optional factor, server/signin.mjs). */
+const signinStep=(e:unknown)=>e instanceof FeError&&e.code==='second_factor'&&e.rule==='signin';
 const factorNeed=(e:unknown):FactorNeed|null=>e instanceof FeError&&e.code==='second_factor'&&(e.rule==='verify'||e.rule==='fresh'||e.rule==='enrol')?e.rule:null;
 
 export function FeSessionProvider({children}:{children:ReactNode}){
@@ -121,6 +126,8 @@ export function FeSessionProvider({children}:{children:ReactNode}){
  const sessionKey=auth.session?[auth.session.email,auth.session.deviceId,auth.session.syncToken].join('\n'):'';
  const latestSession=useRef(auth.session);latestSession.current=auth.session;
  const [state,setState]=useState<State>({status:'loading'});
+ /** This sign-in was refused for the second step: no remembered start is painted until bootstrap answers again. */
+ const pendingFactor=useRef(false);
  const [nonce,setNonce]=useState(0);
  const [actingId,setActingId]=useState<string|null>(()=>{try{return sessionStorage.getItem(ACTING_KEY);}catch{return null;}});
  // Signed out after being signed in: this browser stops getting the account's pushes.
@@ -132,15 +139,18 @@ export function FeSessionProvider({children}:{children:ReactNode}){
   const session=latestSession.current!;const ctl=new AbortController();
   // The last bootstrap of this account paints the app at once; the fresh one replaces it in the background.
   let cached:Bootstrap|null=null;
-  try{const raw=localStorage.getItem(BOOT_KEY+session.email);if(raw){const r=bootstrapSchema.safeParse(JSON.parse(raw));if(r.success)cached=r.data;}}catch{/* no storage */}
+  if(!pendingFactor.current)try{const raw=localStorage.getItem(BOOT_KEY+session.email);if(raw){const r=bootstrapSchema.safeParse(JSON.parse(raw));if(r.success)cached=r.data;}}catch{/* no storage */}
   setState(cached?{status:'ready',session,boot:cached}:{status:'loading'});
   // «Too many at once» (429) is asked again after a pause before the whole app shows an error.
   const ask=()=>feRequest(session,'session.bootstrap',{},bootstrapSchema,{signal:ctl.signal});
   const later=(ms:number)=>(e:unknown)=>e instanceof FeError&&e.code==='rate_limited'&&!ctl.signal.aborted?wait(ms).then(ask):Promise.reject(e);
   ask().catch(later(2500)).catch(later(6000))
-   .then(boot=>{try{localStorage.setItem(BOOT_KEY+session.email,JSON.stringify(boot));}catch{/* no storage */}
+   .then(boot=>{pendingFactor.current=false;try{localStorage.setItem(BOOT_KEY+session.email,JSON.stringify(boot));}catch{/* no storage */}
     setState(cur=>cur.status==='ready'&&JSON.stringify(cur.boot)===JSON.stringify(boot)?cur:{status:'ready',session,boot});})
-   .catch(error=>{if(!ctl.signal.aborted)setState(cached&&!(error instanceof FeError&&error.code==='auth_required')?(cur=>cur):error instanceof FeError&&error.code==='auth_required'?{status:'signedOut'}:{status:'error',error});});
+   .catch(error=>{if(ctl.signal.aborted)return;
+    // The second step comes before anything, also over a remembered start (the factor was turned on elsewhere).
+    if(signinStep(error)){pendingFactor.current=true;readCache.clear();setState({status:'factor',session});return;}
+    setState(cached&&!(error instanceof FeError&&error.code==='auth_required')?(cur=>cur):error instanceof FeError&&error.code==='auth_required'?{status:'signedOut'}:{status:'error',error});});
   return ()=>ctl.abort();
  },[auth.loading,sessionKey,nonce]);
  const profiles=state.status==='ready'?state.boot.profiles.filter(p=>p.state!=='deleted'):[];
@@ -204,8 +214,12 @@ export function FeSessionProvider({children}:{children:ReactNode}){
  // and, after a right code, goes again (a write with the same opId — the refusal stored nothing).
  const call=useCallback(<T,>(action:string,input:Record<string,unknown>,schema:z.ZodType<T>,opts:{asAccount?:boolean,profileId?:string,signal?:AbortSignal,fresh?:boolean,onFresh?:(v:T)=>void}={})=>{
   const go=()=>callOnce(action,input,schema,opts);
-  return go().catch((e:unknown)=>{const need=factorNeed(e);return need&&factorPrompt?askFactor(need).then(ok=>ok?go():Promise.reject(e)):Promise.reject(e);});
- },[callOnce]);
+  return go().catch((e:unknown)=>{
+   // This sign-in must pass the second step now (the factor was turned on on another device): the app starts over
+   // and shows the code screen.
+   if(signinStep(e)){if(!pendingFactor.current){pendingFactor.current=true;reload();}return Promise.reject(e);}
+   const need=factorNeed(e);return need&&factorPrompt?askFactor(need).then(ok=>ok?go():Promise.reject(e)):Promise.reject(e);});
+ },[callOnce,reload]);
  const peek=useCallback(<T,>(action:string,input:Record<string,unknown>,schema:z.ZodType<T>,opts:{asAccount?:boolean,profileId?:string}={}):T|null=>{
   const state=stateRef.current;if(state.status!=='ready')return null;
   const profileId=opts.asAccount?undefined:opts.profileId??acting?.id;

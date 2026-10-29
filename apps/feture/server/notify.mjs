@@ -66,9 +66,12 @@ const TYPES = /** @type {Record<string, {type: string, actor?: string, object?: 
   'dating.launched': { type: 'datingLaunched' },
   'support.replied': { type: 'supportReply' },
   'premium.gifted': { type: 'premiumGift', actor: 'from' },
+  // A sign-in from a new device (server/signin.mjs): to the account, always (no setting turns it off); opens «Мои устройства».
+  'signin.new': { type: 'signinNew' },
 });
-/** Payload fields kept in `data` (codes and ids only, never free text). */
-const KEEP = ['what', 'change', 'reason', 'state', 'kind', 'resolution', 'rule', 'targetType', 'targetId', 'answer', 'outcome', 'changes', 'approves', 'ticketId', 'days'];
+/** Payload fields kept in `data` (codes and ids only, never free text; `device` / `place` of a new sign-in are Core's
+ * device family and the edge network's «city|CC», never anything a person typed). */
+const KEEP = ['device', 'place', 'what', 'change', 'reason', 'state', 'kind', 'resolution', 'rule', 'targetType', 'targetId', 'answer', 'outcome', 'changes', 'approves', 'ticketId', 'days'];
 
 /** @param {any} payload */
 const pick = payload => Object.fromEntries(KEEP.filter(k => payload[k] !== undefined).map(k => [k, payload[k]]));
