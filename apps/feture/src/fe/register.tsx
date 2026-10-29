@@ -40,12 +40,13 @@ export function Register(){
  const [step,setStep]=useState<Step>(made?{id:'A05',profileId:made.id}:{id:'A04'});
  const [form,setForm]=useState<Form>({nick:'',name:'',dd:'',mm:'',yy:'',terms:false,news:false,u18retry:false});
  const {logout}=useOptionalAuth();
- // «На главную» and «‹» on the first form leave the sign-up: the session ends and the start screen (A01) opens.
+ // «На главную», «‹» on the first form and «Выйти» on steps 2–3 leave the sign-up: the session ends and the start screen (A01) opens.
+ // Unsaved answers of steps 2–3 are dropped (they are saved only by «Готово»); the next sign-in resumes at step 2.
  const leave=()=>{void logout();};
  return <AuthFrame screen={step.id}>
   {step.id==='A04X'?<Under18 onBack={()=>setStep({id:'A04'})} onFix={()=>{setForm(f=>({...f,dd:'',mm:'',yy:'',u18retry:true}));setStep({id:'A04'});}} onHome={leave}/>
-   :step.id==='A05B'?<FirstSteps profileId={step.profileId} about={step.about} onBack={()=>setStep({id:'A05',profileId:step.profileId,about:step.about})}/>
-   :step.id==='A05'?<AboutYou profileId={step.profileId} initial={step.about} onNext={about=>setStep({id:'A05B',profileId:step.profileId,about})}/>
+   :step.id==='A05B'?<FirstSteps profileId={step.profileId} about={step.about} onLeave={leave} onBack={()=>setStep({id:'A05',profileId:step.profileId,about:step.about})}/>
+   :step.id==='A05'?<AboutYou profileId={step.profileId} initial={step.about} onLeave={leave} onNext={about=>setStep({id:'A05B',profileId:step.profileId,about})}/>
    :<Account form={form} setForm={setForm} onBack={leave} onCreated={profileId=>setStep({id:'A05',profileId})} onUnder18={()=>setStep({id:'A04X'})}/>}
  </AuthFrame>;
 }
@@ -178,7 +179,7 @@ const BASE:Partial<Record<Kind,number>>={gender:8,orient:8,format:6,role:5};
 const SHOWN=5;
 type Opt=z.infer<typeof option>;
 
-function AboutYou({profileId,onNext,initial}:{profileId:string,initial?:About|undefined,onNext:(a:About)=>void}){
+function AboutYou({profileId,onNext,onLeave,initial}:{profileId:string,onLeave:()=>void,initial?:About|undefined,onNext:(a:About)=>void}){
  const {call}=useFe();const {t,locale}=useI18n();const toast=useToast();
  const [options,setOptions]=useState<Opt[]|null>(null);const [loadFailed,setLoadFailed]=useState(false);
  const [picked,setPicked]=useState<Record<Kind,string[]>>(initial?.pick??{gender:[],orient:[],role:[],status:[],format:[],seek:[]});
@@ -217,7 +218,7 @@ function AboutYou({profileId,onNext,initial}:{profileId:string,initial?:About|un
  };
  return <>
   {/* No «‹» here: the account already exists, the form before cannot be sent again. */}
-  <AuthBar/>
+  <AuthBar onLeave={onLeave}/>
   <div className="view nodock cta2"><div className="auth-wrap identity-onboarding">
    <AuthLogo/>
    <Steps at={2}/>
@@ -258,7 +259,7 @@ type Join={answer:string};
 /** Topics pick communities and the first feed; a community card opens a short preview with its rules, where the
  * person joins (or asks to). Nothing is sent before «Готово»: then the answers of step 1 are saved, the joins go out,
  * and the feed opens filtered by the chosen topics (the toast offers «Показать всё»). */
-function FirstSteps({profileId,about,onBack}:{profileId:string,about:About,onBack:()=>void}){
+function FirstSteps({profileId,about,onBack,onLeave}:{profileId:string,about:About,onBack:()=>void,onLeave:()=>void}){
  const {call,reload}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();
  const {topics:all,name:tname,ready}=useTopics();
  const [tp,setTp]=useState<string[]>([]);const [comms,setComms]=useState<Comm[]|null>(null);
@@ -287,7 +288,7 @@ function FirstSteps({profileId,about,onBack}:{profileId:string,about:About,onBac
   }catch(e){setFailure(feErrorMessage(e,t));opId.current=newOpId();setBusy(false);}
  };
  return <>
-  <AuthBar onBack={onBack}/>
+  <AuthBar onBack={onBack} onLeave={onLeave}/>
   <div className="view nodock cta1"><div className="auth-wrap identity-onboarding">
    <AuthLogo/>
    <Steps at={3}/>

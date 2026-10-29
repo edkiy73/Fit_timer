@@ -663,7 +663,7 @@ function ChatView({id,to}:{id:string,to:string}){
   <FilePick ref={gallery} accept={'image/*,'+VIDEO_TYPES.join(',')} onFiles={f=>pick([...f])}/>
   <FilePick ref={camera} accept="image/*" capture="environment" onFiles={f=>pick([...f])}/>
   <FilePick ref={videoPick} accept={VIDEO_TYPES.join(',')} onFiles={f=>pick([...f])}/>
-  {viewer&&<Viewer src={viewer.src} label={viewer.label} wm={viewer.wm} onClose={()=>{setViewer(null);pull(true).catch(()=>{});}}/>}
+  {viewer&&<Viewer src={viewer.src} video={viewer.video} label={viewer.label} wm={viewer.wm} onClose={()=>{setViewer(null);pull(true).catch(()=>{});}}/>}
 
   {sheet==='msg'&&msgFor&&<Sheet title={t('fe.chx.msgTitle')} onClose={closeSheet}>
    <Card list>

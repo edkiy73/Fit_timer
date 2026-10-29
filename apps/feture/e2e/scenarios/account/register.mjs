@@ -4,7 +4,7 @@ import { dropsNew } from '../helpers.mjs';
 const N = process.env.REG_N || String(Date.now() % 1e7);
 const nick = k => `e2e${N}${k}`.slice(0, 20);
 /** Sign-up step 2 (topics and communities): «Готово» with nothing picked. */
-const step2 = async t => { await t.see('Что тебе интересно?', 20000); await t.tap('.ctabar >> text=Готово'); };
+const step2 = async t => { await t.see('Что тебе интересно?', 20000); await t.see('header.bar >> text=Выйти'); await t.shot('register-steps-leave'); await t.tap('.ctabar >> text=Готово'); };
 const eq = (a, b, what) => { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${what}: expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`); };
 const dob = async (t, d, m, y) => { const s = t.page.locator('.dob select'); await s.nth(2).selectOption(String(y)); await s.nth(1).selectOption(String(m)); await s.nth(0).selectOption(String(d)); await t.wait(200); };
 const adultYear = new Date().getFullYear() - 30, kidYear = new Date().getFullYear() - 15;
@@ -77,6 +77,8 @@ const scenarios = [
  } },
  { name: 'A05 «Заполнить позже» finishes with nothing chosen', persona: 'new', route: '/n/feed', run: async t => {
    await toAboutYou(t, 'c', 3);
+   // Item 24: an unfinished sign-up has a way out in the header on both steps (it ends the session, like «‹» on A04).
+   await t.see('header.bar >> text=Выйти'); await t.shot('register-about-leave');
    // Known (server): session.bootstrap says onboarded as soon as the profile exists, so a reload on A05 opens the app
    // instead of A05 — not covered here until the owner decides on the onboarded_at backfill.
    await t.tap('.ctabar >> text=Заполнить позже'); await step2(t);
