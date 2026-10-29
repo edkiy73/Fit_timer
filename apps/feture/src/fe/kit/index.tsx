@@ -1,7 +1,7 @@
 import React,{forwardRef,useEffect,useRef,useState,type ButtonHTMLAttributes,type ReactNode} from 'react';
 import {useBlocker,useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Check as Check2,ChevronDown,ChevronLeft,ChevronRight,CircleAlert,CircleCheck,Info,Plus,Search,TriangleAlert,X,type LucideIcon} from 'lucide-react';
+import {Check as Check2,ChevronDown,ChevronLeft,ChevronRight,CircleAlert,CircleCheck,Info,Pencil,Plus,Search,TriangleAlert,X,type LucideIcon} from 'lucide-react';
 import {Btn,Layer} from '../ui';
 import './tokens.css';
 import './kit.css';
@@ -65,18 +65,24 @@ export function Sheet({title,sub,lead,head,search,onClose,children,foot,full,cla
  </Layer>;
 }
 
-/** `useLeaveGuard(dirty)` — one guard for every edited form that is a screen (not a sheet; a sheet has `dirty`).
+/** `useLeaveGuard(dirty, save?)` — one guard for every edited form that is a screen (not a sheet; a sheet has `dirty`).
  * While `dirty`, leaving the screen — its own back button, the dock / side tabs, the browser's Back, closing the tab —
  * asks «Выйти без сохранения?» (Остаться / Выйти). Render `node` once; run the form's own «after save» navigation
- * through `pass(() => …)` so a saved form is not asked about. */
-export function useLeaveGuard(dirty:boolean){
- const {t}=useI18n();const live=useRef(dirty);live.current=dirty;const skip=useRef(false);
+ * through `pass(() => …)` so a saved form is not asked about.
+ * `save` (optional) is a third answer for a form that can keep its work: «Сохранить черновик / Не сохранять / Остаться».
+ * `run` saves and says whether it worked (the person leaves only then); `discard` runs on «Не сохранять». */
+export function useLeaveGuard(dirty:boolean,save?:{title?:string,text?:string,label?:string,run:()=>Promise<boolean>|boolean,discard?:()=>void}){
+ const {t}=useI18n();const live=useRef(dirty);live.current=dirty;const skip=useRef(false);const [busy,setBusy]=useState(false);
  const blocker=useBlocker(({currentLocation,nextLocation})=>live.current&&!skip.current&&currentLocation.pathname!==nextLocation.pathname);
  useEffect(()=>{if(!dirty)return;const h=(e:BeforeUnloadEvent)=>{e.preventDefault();};window.addEventListener('beforeunload',h);return ()=>window.removeEventListener('beforeunload',h);},[dirty]);
  const pass=(go:()=>void)=>{skip.current=true;go();setTimeout(()=>{skip.current=false;},600);};
  const node=blocker.state==='blocked'
-  ?<Ask tone="a" danger title={t('fe.lo.leave.title')} text={t('fe.lo.leave.text')} ok={t('fe.lo.leave.ok')} cancel={t('fe.lo.leave.stay')}
-    onOk={()=>blocker.proceed()} onCancel={()=>blocker.reset()}/>:null;
+  ?(save
+   ?<Ask tone="v" icon={Pencil} title={save.title??t('fe.lo.leave.saveTitle')} text={save.text??t('fe.lo.leave.saveText')} ok={save.label??t('fe.lo.leave.save')} busy={busy} cancel={t('fe.lo.leave.stay')}
+    alt={{label:t('fe.lo.leave.discard'),danger:true,onClick:()=>{save.discard?.();blocker.proceed();}}}
+    onOk={async()=>{setBusy(true);let ok=false;try{ok=!!(await save.run());}catch{ok=false;}setBusy(false);if(ok){skip.current=true;blocker.proceed();}}} onCancel={()=>blocker.reset()}/>
+   :<Ask tone="a" danger title={t('fe.lo.leave.title')} text={t('fe.lo.leave.text')} ok={t('fe.lo.leave.ok')} cancel={t('fe.lo.leave.stay')}
+    onOk={()=>blocker.proceed()} onCancel={()=>blocker.reset()}/>):null;
  return {node,pass};
 }
 
@@ -127,6 +133,17 @@ export function ToggleRow({icon:Icon,title,sub,on,onClick,disabled}:{icon?:Lucid
   {Icon&&<span className="ico"><Icon/></span>}
   <span className="tx"><b>{title}</b>{sub&&<small>{sub}</small>}</span><span className={'sw'+(on?' on':'')} aria-hidden="true"/>
  </button>;
+}
+
+/** `expandRow()` — an optional section of a form as ONE list row that opens in place (poll, interests, topics): closed it
+ * shows the icon, the title and what is set; open, its fields sit right under the row, inside the same list — no card
+ * in a card. `onRemove` adds «Убрать» under the fields (the section goes back to closed and empty). */
+export function ExpandRow({icon,title,sub,val,open,onToggle,onRemove,removeLabel,children,tone}:{icon:LucideIcon,title:ReactNode,sub?:ReactNode,val?:ReactNode,open:boolean,onToggle:()=>void,
+ onRemove?:()=>void,removeLabel?:string,children:ReactNode,tone?:string}){
+ return <div className={'k-exp'+(open?' open':'')}>
+  <Row icon={icon} {...(tone?{tone}:{})} title={title} sub={sub} val={val} expanded={open} onClick={onToggle}/>
+  {open&&<div className="k-exp-b">{children}{onRemove&&<Btn kind="text" size="sm" auto onClick={onRemove}>{removeLabel}</Btn>}</div>}
+ </div>;
 }
 
 /** `selectRow()` — a label with the chosen value; the native select opens over it. */

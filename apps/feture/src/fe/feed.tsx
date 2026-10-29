@@ -2,10 +2,10 @@ import {Fragment,useCallback,useEffect,useMemo,useRef,useState,type CSSPropertie
 import {useLocation,useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {AtSign,Bell,BellOff,Bookmark,Check,Calendar,ChartColumn,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,FileText,Globe,Heart,Image as ImageIcon,KeyRound,Lock,MessageCircle,MessageSquareText,Newspaper,Pencil,Plus,Search,SendHorizontal,Share,SlidersHorizontal,Sparkles,Trash2,User,Users,X} from 'lucide-react';
+import {AtSign,Bell,BellOff,Bookmark,Check,Calendar,ChartColumn,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,FileText,Globe,Hash,Heart,Image as ImageIcon,KeyRound,Lock,MessageCircle,MessageSquareText,Newspaper,Pencil,Plus,Search,SendHorizontal,Share,SlidersHorizontal,Sparkles,Trash2,User,Users,X} from 'lucide-react';
 import type {LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Actions,articlePlate,ActingAv,ActionLine,ActivityCard,ActivityItem,Alert,ArticleCard,ArticleImage,Ask,Av,BAD_CHARS,NewPill,Bar,Btn,Card,Chip,Chips,Counter,Empty,FeedEvents,Field,FilePick,Group,H,IconBtn,LoadMore,Input,LikesLine,Note,QuickStart,RichEditor,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,VideoBadge,View,ViewerPostBar,hasLongWord,mdImages,type RichEditorHandle,Who} from './kit';
+import {Actions,articlePlate,ActingAv,ActionLine,ActivityCard,ActivityItem,Alert,ArticleCard,ArticleImage,Ask,Av,ExpandRow,useLeaveGuard,BAD_CHARS,NewPill,Bar,Btn,Card,Chip,Chips,Counter,Empty,FeedEvents,Field,FilePick,Group,H,IconBtn,LoadMore,Input,LikesLine,Note,QuickStart,RichEditor,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,VideoBadge,View,ViewerPostBar,hasLongWord,mdImages,type RichEditorHandle,Who} from './kit';
 import {shakeFirstErr} from './kit/validate';
 import {refreshReads,useFe,usePartnerApproves} from './session';
 import {useNewerPosts} from './feed-newer';
@@ -496,6 +496,7 @@ export function PostScreen(){
  const notice=(location.state as {notice?:unknown}|null)?.notice;
  const [post,setPost]=useState<Post|null>(null);const [list,setList]=useState<Reply[]|null>(null);const [error,setError]=useState<unknown>(null);
  const [text,setText]=useState('');const [busy,setBusy]=useState(false);const opId=useRef(newOpId());const box=useRef<HTMLTextAreaElement>(null);
+ const guard=useLeaveGuard(!!text.trim()&&!busy);
  const [target,setTarget]=useState<Reply|null>(null);const [editing,setEditing]=useState<Reply|null>(null);
  const [sort,setSort]=useState<'top'|'new'>('top');const [open,setOpen]=useState<string[]>([]);const [menu,setMenu]=useState<Reply|null>(null);
  const [liked,setLiked]=useState<Set<string>>(new Set());
@@ -584,6 +585,8 @@ export function PostScreen(){
    load={cursor=>call('post.likers',{targetId:id,...(cursor?{cursor}:{})},marksPage)}/>}
   {menu&&post&&<ReplyMenu reply={menu} postId={id} onClose={()=>setMenu(null)} onEdit={r=>{setMenu(null);setTarget(null);setEditing(r);setText(r.body??'');requestAnimationFrame(()=>{grow(box.current);focusBox();});}}
    onDone={msg=>{setMenu(null);if(msg)toast(msg,{type:'ok'});loadReplies();call('post.get',{postId:id},onePost).then(r=>setPost(r.post)).catch(()=>{});}}/>}
+
+  {guard.node}
  </>;
 }
 
@@ -718,12 +721,15 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
  const couple=acting?.kind==='couple';const toPartner=usePartnerApproves();
  // What an attach button adds (a poll, interests, photos) appears below the text: bring it into view, or the tap
  // looks like it did nothing on a phone.
- const pollRef=useRef<HTMLElement>(null);const intRef=useRef<HTMLElement>(null);const mediaRef=useRef<HTMLDivElement>(null);
+ const mediaRef=useRef<HTMLDivElement>(null);
  const reveal=(el:HTMLElement|null)=>requestAnimationFrame(()=>el?.scrollIntoView({block:'nearest',behavior:'smooth'}));
  const hasPoll=!!poll,hasInts=interests!==null,nMedia=media.length;
+ // The optional sections are rows that open in place; a section with data opens by itself (a poll from the «Создать» sheet, an edited post).
+ const [openPoll,setOpenPoll]=useState(false);const [openInts,setOpenInts]=useState(false);const [openTopics,setOpenTopics]=useState(false);
+ useEffect(()=>{if(hasPoll)setOpenPoll(true);},[hasPoll]);
+ useEffect(()=>{if(hasInts)setOpenInts(true);},[hasInts]);
  const first=useRef(true);
- useEffect(()=>{if(first.current)return;if(hasPoll)reveal(pollRef.current);},[hasPoll]);
- useEffect(()=>{if(first.current)return;if(hasInts)reveal(intRef.current);},[hasInts]);
+ useEffect(()=>{if(first.current)return;if(hasPoll)reveal(document.getElementById('pollQ'));},[hasPoll]);
  useEffect(()=>{if(first.current)return;if(nMedia)reveal(mediaRef.current);},[nMedia]);
  useEffect(()=>{first.current=false;},[]);
  useEffect(()=>{if(x==='media'&&!edit)setTimeout(()=>file.current?.click(),250);},[x,edit]);
@@ -754,15 +760,16 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
    poll.options.forEach((o,i)=>{if(!o.trim())e['o'+i]=t('fe.fd.err.option');});
    const low=poll.options.map(o=>o.trim().toLowerCase()).filter(Boolean);if(new Set(low).size!==low.length)e.opts=t('fe.fd.err.dupes');}
   if(interests&&!interests.length)e.interests=t('fe.fd.err.interests');
+  if(e.pollQ||e.opts||Object.keys(e).some(k=>/^o\d+$/.test(k)))setOpenPoll(true);if(e.interests)setOpenInts(true);
   setErrs(e);setFailure('');
   // The fields say what's wrong; the first one shakes and scrolls into view (no extra line at the bottom).
   if(Object.keys(e).length){requestAnimationFrame(()=>{if(document.querySelector('.v21 .field.err'))shakeFirstErr();else document.querySelector('.v21 .ferr')?.scrollIntoView({block:'center',behavior:'smooth'});});return false;}return true;};
- const snap=JSON.stringify([title,fields()]);const clean=useRef(snap);const [ask,setAsk]=useState(false);
+ const snap=JSON.stringify([title,fields()]);const clean=useRef(snap);
  const done=(state:string|undefined,unheard:string[]=[])=>{
   const msg0=state==='review'?t('fe.fd.sentReview'):state==='pending_partner'?t('fe.fd.sentPartner'):t('fe.fd.published');
   const msg=unheard.length?msg0+' '+t('fe.w3.mention.unheard',{names:unheard.map(h=>'@'+h).join(', ')}):msg0;
   toast(msg,{type:unheard.length?'warn':'ok',action:{label:t('fe.fd.myPosts'),fn:()=>navigate('/n/me/posts')}});
-  navigate(communityId?'/n/communities/'+communityId:state==='review'||state==='pending_partner'?'/n/me/posts':'/n/feed',{replace:true});
+  guard.pass(()=>navigate(communityId?'/n/communities/'+communityId:state==='review'||state==='pending_partner'?'/n/me/posts':'/n/feed',{replace:true}));
  };
  const publish=async()=>{
   if(busy||uploading||!validate())return;setBusy('publish');setFailure('');
@@ -771,7 +778,7 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
     const r=await call('post.edit',{opId:ops.current.edit,postId:edit!.id,rev:edit!.rev!,post:fields()},edited);
     if(fromSaved)await call('post.discardEdits',{opId:newOpId(),postId:edit!.id},okOnly).catch(()=>{});
     const notice=r.pending!=null?t('fe.pm.ed.pending'):r.review?t('fe.pm.ed.review'):t('fe.pm.ed.saved');
-    navigate('/n/feed/post/'+edit!.id,{replace:true,state:{notice}});return;
+    guard.pass(()=>navigate('/n/feed/post/'+edit!.id,{replace:true,state:{notice}}));return;
    }
    // V21 publishNow: people who limit mentions stay plain text and get no notification — say so. The server tells
    // whether each person takes a mention (`mentionable` in the picker and people lists); a nickname typed by hand is
@@ -801,10 +808,13 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
    toast(t('fe.w3.edits.saved'),{type:'ok',action:{label:t('fe.fd.open'),fn:()=>navigate('/n/me/posts')}});return true;}
   catch(e){setFailure(feErrorMessage(e,t));ops.current.draft=newOpId();return false;}finally{setBusy('');}
  };
- // V21 FEED-018: leaving with unsent changes offers to keep them (a draft, or the edit of a live post) instead of losing them.
+ // Leaving with unsent work (own back, tabs, browser Back) offers to keep it: a draft, or the edit of a live post.
  // Opened by a link (no app history): back goes to the feed instead of leaving the app.
  const back=()=>{if(((window.history.state as {idx?:number}|null)?.idx??0)>0)navigate(-1);else navigate(communityId?'/n/communities/'+communityId:'/n/feed',{replace:true});};
- const leave=()=>{if(snap!==clean.current){setAsk(true);return;}back();};
+ const hasWork=!!(title.trim()||body.trim()||media.length||poll||interests?.length);
+ const dirty=snap!==clean.current&&hasWork;
+ const guard=useLeaveGuard(dirty&&!busy,{title:live?t('fe.fd.leave.editTitle'):t('fe.fd.leave.draftTitle'),text:live?t('fe.fd.leave.editText'):t('fe.fd.leave.draftText'),
+  label:live?t('fe.w3.edits.save'):t('fe.fd.leave.saveDraft'),run:live?saveEdits:saveDraft});
  const hasMedia=note?noteMedia.length>0:media.length>0;
  // The partner approves the couple's posts and edits: the button says where it goes (the server answers `pending`).
  const cta=couple&&toPartner?t('fe.ca.toPartner'):live?(hasMedia?t('fe.fd.cta.changesReview'):t('fe.fd.cta.saveChanges')):couple?(hasMedia?t('fe.fd.cta.reviewUs'):t('fe.fd.cta.publishUs')):hasMedia?t('fe.fd.cta.review'):t('fe.feed.publish');
@@ -876,68 +886,75 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
   </>;
  }
 
+ const togglePoll=()=>{if(!poll)setPoll({question:'',options:['','']});else setOpenPoll(o=>!o);};
+ const toggleInts=()=>{if(interests===null)attachInterests();else setOpenInts(o=>!o);};
+ const peopleSub=people.length?people.map(p=>p.name+(edit?.tags?.find(x=>x.id===p.id)?.state==='no'?` (${t('fe.fd.declinedShort')})`:edit?.tags?.find(x=>x.id===p.id)?.state==='ok'?'':` (${t('fe.fd.waitingShort')})`)).join(', '):t('fe.fd.peopleInPhotoSub');
+ const showAlbum=!communityId&&!note&&hasMedia&&(audience==='all'||audience==='followers');
  return <>
-  <header className="bar"><IconBtn icon={ChevronLeft} kind="ghost" label={t('fe.back')} onClick={leave}/><H level={1} className="sm" tabIndex={-1}>{barTitle}</H>
-   {!live&&<Btn kind="text" auto busy={busy==='draft'} disabled={!!busy} onClick={saveDraft}>{t('fe.fd.toDraft')}</Btn>}
-   {live&&<Btn kind="text" auto busy={busy==='draft'} disabled={!!busy} onClick={()=>void saveEdits()}>{t('fe.w3.edits.save')}</Btn>}</header>
+  <Bar title={barTitle} small onBack={back}>
+   {!live&&dirty&&!!postId&&<Btn kind="text" auto busy={busy==='draft'} disabled={!!busy} onClick={()=>void saveDraft()}>{t('fe.fd.toDraft')}</Btn>}
+   {live&&dirty&&<Btn kind="text" auto busy={busy==='draft'} disabled={!!busy} onClick={()=>void saveEdits()}>{t('fe.w3.edits.save')}</Btn>}
+  </Bar>
   <View className="nodock cta1">
-   <Card list>{audRow()}</Card>
-   <Group>
-   <Card className="compose v14">
-    {who&&<p className="cmp-who">{who}</p>}
-    {note&&<Field id="ntitle" label={t('fe.fd.title')} error={errs.title}><Input id="ntitle" invalid={!!errs.title} value={title} maxLength={120} onChange={e=>setTitle(e.target.value)} placeholder={t('fe.fd.titlePh')}/></Field>}
-    <Field error={errs.body}>
-     <div className="mention-box k-anchor">
-     <RichEditor ref={text} invalid={!!errs.body} value={body} onValue={v=>{setBody(v);setErrs(e=>{const {body:_b,...rest}=e;return rest;});}} autoFocus={!x||x==='note'} onCaret={caret}
-      onBlur={()=>setTimeout(()=>setSug(null),200)} headings={note} long={note}
-      images={note?{src:id=>media.find(m=>m.id===id)?.preview,onAdd:()=>pick('inline'),disabled:uploading||noteMedia.length>=MEDIA_MAX}:undefined}
-      placeholder={note?(couple?t('fe.fd.notePhUs'):t('fe.fd.notePh')):poll?(couple?t('fe.fd.pollPhUs'):t('fe.fd.pollPh')):couple?t('fe.fd.composePhUs'):t('fe.fd.composePh')} label={t('fe.fd.text')}/>
-     {sug&&sugList.length>0&&<div className="mention-sug" role="listbox" aria-label={t('fe.fd.whoMention')}>{sugList.map(p=><button key={p.id} type="button" role="option" aria-selected={false}
-      onMouseDown={e=>e.preventDefault()} onClick={()=>pickMention(p)}><Av name={p.name} seed={p.id} src={p.avatar} size="xs"/><span><b><Who name={p.name} nick={p.handle}/></b>{p.mentionable===false&&<small> · {t('fe.lo.mention.silent')}</small>}</span></button>)}</div>}
+   <Group title={t('fe.fd.sec.text')}>
+    <div className="compose v14">
+     {note&&<Field id="ntitle" label={t('fe.fd.title')} error={errs.title}><Input id="ntitle" invalid={!!errs.title} value={title} maxLength={120} onChange={e=>setTitle(e.target.value)} placeholder={t('fe.fd.titlePh')}/></Field>}
+     <Field error={errs.body}>
+      <div className="mention-box k-anchor">
+      <RichEditor ref={text} invalid={!!errs.body} value={body} onValue={v=>{setBody(v);setErrs(e=>{const {body:_b,...rest}=e;return rest;});}} autoFocus={!x||x==='note'} onCaret={caret}
+       onBlur={()=>setTimeout(()=>setSug(null),200)} headings={note} long={note}
+       images={note?{src:id=>media.find(m=>m.id===id)?.preview,onAdd:()=>pick('inline'),disabled:uploading||noteMedia.length>=MEDIA_MAX}:undefined}
+       placeholder={note?(couple?t('fe.fd.notePhUs'):t('fe.fd.notePh')):poll?(couple?t('fe.fd.pollPhUs'):t('fe.fd.pollPh')):couple?t('fe.fd.composePhUs'):t('fe.fd.composePh')} label={t('fe.fd.text')}/>
+      {sug&&sugList.length>0&&<div className="mention-sug" role="listbox" aria-label={t('fe.fd.whoMention')}>{sugList.map(p=><button key={p.id} type="button" role="option" aria-selected={false}
+       onMouseDown={e=>e.preventDefault()} onClick={()=>pickMention(p)}><Av name={p.name} seed={p.id} src={p.avatar} size="xs"/><span><b><Who name={p.name} nick={p.handle}/></b>{p.mentionable===false&&<small> · {t('fe.lo.mention.silent')}</small>}</span></button>)}</div>}
+      </div>
+      <Counter n={body.length} max={max}/>
+     </Field>
+     <FilePick ref={file} accept={note?'image/*':'image/*,'+VIDEO_TYPES.join(',')} multiple={!note} onFiles={addMedia}/>
+     <div className="attach v14">
+      {!hasMedia&&!note&&<button type="button" disabled={uploading} onClick={()=>pick('media')}><ImageIcon/><span>{t('fe.feed.media')}</span></button>}
+      <button type="button" onClick={openMention}><AtSign/><span>{t('fe.fd.mention')}</span></button>
      </div>
-     <Counter n={body.length} max={max}/>
-    </Field>
-    {(note||hasMedia)&&<div className="cmp-media" ref={mediaRef}><Group title={note?t('fe.fd.cover'):t('fe.fd.mediaN',{n:media.length,max:MEDIA_MAX})} foot={note?t('fe.fd.coverFoot'):audience==='granted'?t('fe.fd.mediaGranted'):t('fe.fd.mediaFoot')}>
-     <Card><PhotoTiles tiles={shownMedia.map(m=>({id:m.id,src:m.preview,video:m.kind==='video',durationMs:m.durationMs}))} removeLabel={t('fe.fd.remove')} viewLabel={t('fe.fd.view')}
-      onRemove={id=>{if(id===coverId)setCoverId(null);setMedia(l=>l.filter(y=>y.id!==id));}} onView={setViewer}
-      add={(note?!coverId:media.length<MEDIA_MAX)?{label:note?t('fe.fd.addCover'):t('fe.fd.addMedia'),disabled:uploading||(note&&noteMedia.length>=MEDIA_MAX),onClick:()=>pick(note?'cover':'media')}:undefined}/>
-      {!note&&audience==='all'&&<Card list className="mt8"><Row icon={Users} tone="v" title={t('fe.fd.peopleInPhoto')} onClick={()=>setSheet('people')}
-       sub={people.length?people.map(p=>p.name+(edit?.tags?.find(x=>x.id===p.id)?.state==='no'?` (${t('fe.fd.declinedShort')})`:edit?.tags?.find(x=>x.id===p.id)?.state==='ok'?'':` (${t('fe.fd.waitingShort')})`)).join(', '):t('fe.fd.peopleInPhotoSub')}/></Card>}
-     </Card>
-     </Group></div>}
-    <FilePick ref={file} accept={note?'image/*':'image/*,'+VIDEO_TYPES.join(',')} multiple={!note} onFiles={addMedia}/>
-    <div className="attach v14">
-     {!hasMedia&&!note&&<button type="button" disabled={uploading} onClick={()=>pick('media')}><ImageIcon/><span>{t('fe.feed.media')}</span></button>}
-     {!poll&&!note&&<button type="button" onClick={()=>setPoll({question:'',options:['','']})}><ChartColumn/><span>{t('fe.feed.poll')}</span></button>}
-     <button type="button" onClick={openMention}><AtSign/><span>{t('fe.fd.mention')}</span></button>
-     {interests===null&&!note&&<button type="button" title={t('fe.fd.myInterestsHint')} className={wantInts?'busy':undefined} aria-busy={wantInts||undefined} onClick={attachInterests}><Sparkles/><span>{t('fe.fd.myInterests')}</span></button>}
     </div>
-   </Card>
-   {!communityId&&!note&&hasMedia&&(audience==='all'||audience==='followers')&&<AlbumField value={album} onChange={setAlbum} audience={audience} onNarrow={()=>setAudience('followers')}/>}
-   {err('media')}
    </Group>
-   {poll&&!note&&<section className="grp" ref={pollRef}><div className="grp-t"><span>{t('fe.fd.pollN',{n:poll.options.length,max:POLL_MAX})}</span><button type="button" onClick={()=>setPoll(null)}>{t('fe.fd.remove')}</button></div>
-    <Card>
-     <Field id="pollQ" label={t('fe.fd.question')} error={errs.pollQ}><Input id="pollQ" invalid={!!errs.pollQ} value={poll.question} maxLength={200} placeholder={t('fe.fd.questionPh')} onChange={e=>setPoll({...poll,question:e.target.value})}/></Field>
-     {poll.options.map((o,i)=><div key={i} className={'field pollopt'+(errs['o'+i]?' err':'')}><div className="inwrap"><span className="n">{i+1}</span>
-      <Input invalid={!!errs['o'+i]} value={o} maxLength={80} placeholder={t('fe.fd.option',{n:i+1})} aria-label={t('fe.fd.option',{n:i+1})} onChange={e=>setPoll({...poll,options:poll.options.map((v,k)=>k===i?e.target.value:v)})}/>
-      {poll.options.length>2&&<IconBtn icon={X} kind="ghost" size="sm" label={t('fe.fd.removeOption')} onClick={()=>setPoll({...poll,options:poll.options.filter((_,k)=>k!==i)})}/>}</div></div>)}
-     {poll.options.length<POLL_MAX&&<Btn kind="text" auto icon={Plus} onClick={()=>setPoll({...poll,options:[...poll.options,'']})}>{t('fe.fd.addOption')}</Btn>}
-     {err('opts')}
+   {(note||hasMedia)&&<Group title={note?t('fe.fd.cover'):t('fe.fd.mediaN',{n:media.length,max:MEDIA_MAX})} foot={note?t('fe.fd.coverFoot'):audience==='granted'?t('fe.fd.mediaGranted'):t('fe.fd.mediaFoot')}>
+    <div className="cmp-media" ref={mediaRef}><PhotoTiles tiles={shownMedia.map(m=>({id:m.id,src:m.preview,video:m.kind==='video',durationMs:m.durationMs}))} removeLabel={t('fe.fd.remove')} viewLabel={t('fe.fd.view')}
+     onRemove={id=>{if(id===coverId)setCoverId(null);setMedia(l=>l.filter(y=>y.id!==id));}} onView={setViewer}
+     add={(note?!coverId:media.length<MEDIA_MAX)?{label:note?t('fe.fd.addCover'):t('fe.fd.addMedia'),disabled:uploading||(note&&noteMedia.length>=MEDIA_MAX),onClick:()=>pick(note?'cover':'media')}:undefined}/></div>
+    {err('media')}
+   </Group>}
+   <Group title={t('fe.fd.sec.more')} foot={who||undefined}>
+    <Card list>
+     {audRow()}
+     {!note&&<ExpandRow icon={ChartColumn} title={t('fe.feed.poll')} sub={poll&&!openPoll?(poll.question.trim()||t('fe.fd.pollN',{n:poll.options.length,max:POLL_MAX})):t('fe.fd.pollRowSub')} open={openPoll&&!!poll} onToggle={togglePoll}
+      onRemove={()=>{setPoll(null);setOpenPoll(false);}} removeLabel={t('fe.fd.remove')}>
+      {poll&&<>
+       <Field id="pollQ" label={t('fe.fd.question')} error={errs.pollQ}><Input id="pollQ" invalid={!!errs.pollQ} value={poll.question} maxLength={200} placeholder={t('fe.fd.questionPh')} onChange={e=>setPoll({...poll,question:e.target.value})}/></Field>
+       {poll.options.map((o,i)=><div key={i} className={'field pollopt'+(errs['o'+i]?' err':'')}><div className="inwrap"><span className="n">{i+1}</span>
+        <Input invalid={!!errs['o'+i]} value={o} maxLength={80} placeholder={t('fe.fd.option',{n:i+1})} aria-label={t('fe.fd.option',{n:i+1})} onChange={e=>setPoll({...poll,options:poll.options.map((v,k)=>k===i?e.target.value:v)})}/>
+        {poll.options.length>2&&<IconBtn icon={X} kind="ghost" size="sm" label={t('fe.fd.removeOption')} onClick={()=>setPoll({...poll,options:poll.options.filter((_,k)=>k!==i)})}/>}</div></div>)}
+       {poll.options.length<POLL_MAX&&<Btn kind="text" auto icon={Plus} onClick={()=>setPoll({...poll,options:[...poll.options,'']})}>{t('fe.fd.addOption')}</Btn>}
+       {err('opts')}
+       <p className="grp-n">{t('fe.fd.pollFoot')}{edit?.poll?' '+t('fe.fd.pollReset'):''}</p></>}
+     </ExpandRow>}
+     {!note&&<ExpandRow icon={Sparkles} title={t('fe.fd.interests')} sub={interests&&!openInts?interests.map(tname).join(', ')||t('fe.fd.interestsRowSub'):t('fe.fd.interestsRowSub')} open={openInts&&interests!==null} onToggle={toggleInts}
+      onRemove={()=>{setInterests(null);setOpenInts(false);}} removeLabel={t('fe.fd.remove')}>
+      {interests!==null&&<>
+       {interests.length>0&&<Jars list={eligible.filter(j=>interests.includes(j.topicId))} topics={jarTopics} onOpen={()=>{}}/>}
+       <Chips>{eligible.map(j=>{const on=interests.includes(j.topicId);return <Chip key={j.topicId} on={on}
+        onClick={()=>{if(!on&&interests.length>=4){toast(t('fe.fd.max4'),{type:'warn'});return;}setInterests(on?interests.filter(v=>v!==j.topicId):[...interests,j.topicId]);}}>{tname(j.topicId)}</Chip>;})}</Chips>
+       {err('interests')}
+       <p className="grp-n">{t('fe.fd.interestsFoot')}</p></>}
+     </ExpandRow>}
+     <ExpandRow icon={Hash} title={t('fe.fd.topicsRow')} sub={topics.length?topics.map(tname).join(', '):t('fe.fd.topicsRowSub')} open={openTopics} onToggle={()=>setOpenTopics(o=>!o)}>
+      <Chips>{[...new Set([...topics,...catalog.slice(0,4).map(c=>c.id)])].map(id=>{const on=topics.includes(id);return <Chip key={id} on={on}
+       onClick={()=>{if(!on&&topics.length>=3){toast(t('fe.fd.max3'),{type:'warn'});return;}setTopics(on?topics.filter(v=>v!==id):[...topics,id]);}}>{tname(id)}</Chip>;})}
+       {catalog.length>0&&<Chip more icon={Search} onClick={()=>setSheet('topics')}>{t('fe.br.seeAll')} · {catalog.length}</Chip>}</Chips>
+      <p className="grp-n">{couple?t('fe.fd.topicsFootUs'):t('fe.fd.topicsFoot')}</p>
+     </ExpandRow>
+     {showAlbum&&<AlbumField bare value={album} onChange={setAlbum} audience={audience} onNarrow={()=>setAudience('followers')}/>}
+     {!note&&hasMedia&&audience==='all'&&<Row icon={Users} tone="v" title={t('fe.fd.peopleInPhoto')} onClick={()=>setSheet('people')} sub={peopleSub}/>}
     </Card>
-    <p className="grp-n">{t('fe.fd.pollFoot')}{edit?.poll?' '+t('fe.fd.pollReset'):''}</p></section>}
-   {interests!==null&&!note&&<section className="grp cmp-ints" ref={intRef}><div className="grp-t"><span>{t('fe.fd.interests')}</span><button type="button" onClick={()=>setInterests(null)}>{t('fe.fd.remove')}</button></div>
-    <Card>
-     {interests.length>0&&<div className="testcard"><Jars list={eligible.filter(j=>interests.includes(j.topicId))} topics={jarTopics} onOpen={()=>{}}/></div>}
-     <Chips className="mt12">{eligible.map(j=>{const on=interests.includes(j.topicId);return <Chip key={j.topicId} on={on}
-      onClick={()=>{if(!on&&interests.length>=4){toast(t('fe.fd.max4'),{type:'warn'});return;}setInterests(on?interests.filter(v=>v!==j.topicId):[...interests,j.topicId]);}}>{tname(j.topicId)}</Chip>;})}</Chips>
-     {err('interests')}
-    </Card>
-    <p className="grp-n">{t('fe.fd.interestsFoot')}</p></section>}
-   <Group title={t('fe.fd.topicsUpTo3')} foot={couple?t('fe.fd.topicsFootUs'):t('fe.fd.topicsFoot')}>
-    <Chips>{[...new Set([...topics,...catalog.slice(0,4).map(c=>c.id)])].map(id=>{const on=topics.includes(id);return <Chip key={id} on={on}
-     onClick={()=>{if(!on&&topics.length>=3){toast(t('fe.fd.max3'),{type:'warn'});return;}setTopics(on?topics.filter(v=>v!==id):[...topics,id]);}}>{tname(id)}</Chip>;})}
-     {catalog.length>0&&<Chip more icon={Search} onClick={()=>setSheet('topics')}>{t('fe.br.seeAll')} · {catalog.length}</Chip>}</Chips>
    </Group>
    {failure&&<Alert kind="err" noIcon ref={failRef}>{failure}</Alert>}
   </View>
@@ -957,16 +974,8 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
     onDone={got=>{setPicked(null);const g=got[0];if(!g)return;setMedia(m=>[...m,{id:g.id,preview:g.url,kind:g.kind,w:g.w,h:g.h}]);
      if(pickFor==='cover')setCoverId(g.id);else requestAnimationFrame(()=>text.current?.insertImage(g.id,g.url));}}/>)}
   {viewer!==null&&<Viewer srcs={shownMedia.map(m=>m.preview)} index={viewer} onClose={()=>setViewer(null)}/>}
-  {ask&&<LeaveAsk live={live} busy={!!busy} onCancel={()=>setAsk(false)} onDiscard={()=>{setAsk(false);back();}}
-   onSave={async()=>{const ok=live?await saveEdits():await saveDraft();setAsk(false);if(ok)back();}}/>}
+  {guard.node}
  </>;
-}
-
-function LeaveAsk({live,busy,onSave,onDiscard,onCancel}:{live:boolean,busy:boolean,onSave:()=>void,onDiscard:()=>void,onCancel:()=>void}){
- const {t}=useI18n();
- return <Ask icon={Pencil} tone="v" title={live?t('fe.fd.leave.editTitle'):t('fe.fd.leave.draftTitle')} text={live?t('fe.fd.leave.editText'):t('fe.fd.leave.draftText')}
-  ok={live?t('fe.w3.edits.save'):t('fe.fd.leave.saveDraft')} busy={busy} onOk={onSave} onCancel={onCancel} cancel={t('fe.pm.cancel')}
-  alt={{label:t('fe.fd.leave.discard'),onClick:onDiscard,danger:true}}/>;
 }
 
 

@@ -108,7 +108,7 @@ export function RequestSheet({profileId,available,onClose,onSent}:{profileId:str
  </Sheet>;
  const age=error instanceof FeError&&error.rule==='age_check_required';
  const label=(k:Part)=>t('fe.ac.part.'+k);
- return <Sheet title={t('fe.ac.rq.title')} onClose={onClose} foot={<Btn icon={Send} disabled={!scopesSel.length||busy} busy={busy} onClick={()=>void send()}>{t('fe.ac.rq.send'+(us?'Us':''))}</Btn>}>
+ return <Sheet title={t('fe.ac.rq.title')} onClose={onClose} dirty={!busy&&sel.length!==parts.length} foot={<Btn icon={Send} disabled={!scopesSel.length||busy} busy={busy} onClick={()=>void send()}>{t('fe.ac.rq.send'+(us?'Us':''))}</Btn>}>
   <SectionLabel>{t('fe.ac.rq.what')}</SectionLabel>
   <Stack gap={3}>
    <MultiChips label={t('fe.ac.rq.what')} all={t('fe.ac.part.all')} value={sel} onChange={setSel} options={parts.map(k=>[k,label(k)] as const)}/>

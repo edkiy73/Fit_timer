@@ -233,7 +233,7 @@ function ReturnSheet({a,coupleId,onClose,onDone}:{a:Approval,coupleId:string,onC
    const state=r.state??'returned';onDone(t('fe.cw.done.'+(['returned','expired','cancelled'].includes(state)?state:'returned')));}
   catch(e){if(!checks.fromServer(e,{comment:'note'}))setFailure(feErrorMessage(e,t));op.current=newOpId();}finally{setBusy(false);}
  };
- return <Sheet title={rsvp?t('fe.c6.ret.titleRsvp'):t('fe.c6.ret.title')} sub={kindTitle(a,t)} onClose={onClose}
+ return <Sheet title={rsvp?t('fe.c6.ret.titleRsvp'):t('fe.c6.ret.title')} sub={kindTitle(a,t)} onClose={onClose} dirty={!busy&&!!note.trim()}
   foot={<Btn disabled={busy} busy={busy} onClick={()=>void send()}>{rsvp?t('fe.c6.ret.sendRsvp'):t('fe.c6.ret.send')}</Btn>}>
   <Field id="fe-ret-note" name="note" error={checks.error('note')} label={rsvp?t('fe.c6.ret.labelRsvp'):t('fe.c6.ret.label')} optional={t('fe.c6.optional')}>
    <TextArea id="fe-ret-note" name="returnNote" rows={3} {...checks.input('note')} value={note} placeholder={rsvp?t('fe.c6.ret.phRsvp'):t('fe.c6.ret.ph')} onChange={e=>setNote(e.target.value)}/>

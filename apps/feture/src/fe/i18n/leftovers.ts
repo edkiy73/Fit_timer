@@ -12,6 +12,10 @@ export const ru = {
   'fe.lo.leave.text': 'Изменения здесь пропадут.',
   'fe.lo.leave.ok': 'Выйти',
   'fe.lo.leave.stay': 'Остаться',
+  'fe.lo.leave.saveTitle': 'Сохранить черновик?',
+  'fe.lo.leave.saveText': 'Ещё не отправлено. Черновик останется у тебя.',
+  'fe.lo.leave.save': 'Сохранить черновик',
+  'fe.lo.leave.discard': 'Не сохранять',
 } as const;
 
 export const en = {
@@ -26,4 +30,8 @@ export const en = {
   'fe.lo.leave.text': 'Your changes here will be lost.',
   'fe.lo.leave.ok': 'Leave',
   'fe.lo.leave.stay': 'Stay',
+  'fe.lo.leave.saveTitle': 'Save as a draft?',
+  'fe.lo.leave.saveText': 'Not sent yet. The draft stays with you.',
+  'fe.lo.leave.save': 'Save draft',
+  'fe.lo.leave.discard': 'Don’t save',
 } as const;

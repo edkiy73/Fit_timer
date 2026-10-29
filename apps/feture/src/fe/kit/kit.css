@@ -573,6 +573,13 @@ html:has(.fe-v21),html:has(.fe-v21) body{overscroll-behavior-y:none}
 .v21 .k-draft .k-draft-v svg{width:12px;height:12px}
 .v21 .k-draft .k-draft-th>b{position:absolute;inset:0;display:grid;place-items:center;background:var(--scrim);color:#fff;font-size:var(--fs-sm);font-weight:700}
 
+/* expandRow: an optional form section opening under its row, inside the same list card */
+.v21 .k-exp{border-top:1px solid var(--line)}
+.v21 .k-exp:first-child{border-top:0}
+.v21 .k-exp>.li{border-top:0}
+.v21 .k-exp-b{display:grid;gap:var(--s-3);padding:0 0 var(--s-4);justify-items:stretch}
+.v21 .k-exp-b>.btn.text{justify-self:start}
+
 /* Photo tiles (PhotoTiles): a fixed 3-column grid of equal cells; thumbnails are cover-cropped; «+» is a cell like the rest. */
 .v21 .k-ptiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s-2)}
 .v21 .k-ptile{position:relative;aspect-ratio:4/5;min-width:0;border-radius:var(--r);overflow:hidden;background:var(--surf);display:grid;place-items:center;color:var(--faint)}

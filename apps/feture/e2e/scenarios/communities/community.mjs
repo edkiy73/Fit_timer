@@ -179,8 +179,9 @@ const scenarios = [
      await t.see('#ntitle');
      await t.see('.view .li:has-text("Видят все")'); // who sees it is the community's, not a choice
      if (await t.page.locator('.view .selrow').count()) throw new Error('an audience selector in a community');
-     await t.see('css=header .btn:has-text("В черновик")');
+     await t.notSee('css=header .btn:has-text("Сохранить черновик")', 300); // nothing typed yet: no draft text for a new article
      await t.page.locator('#ntitle').fill(stamp);
+     await t.see('css=header .btn:has-text("Сохранить черновик")');
      await t.page.locator('.compose .rte-ed').first().fill('Текст статьи внутри сообщества, длиннее двадцати знаков.');
      await t.tap('.ctabar .btn:not(.soft)');
      await until(() => t.page.url().includes('/n/communities/' + OPEN), 'back on the community', 15000);
@@ -191,7 +192,7 @@ const scenarios = [
 
      const ints = 'E2E интересы ' + Date.now().toString(36);
      await composerSheet(t, 'add', '.view'); await t.tap(sheet + ' .create-q button:has-text("Мои интересы")');
-     await t.see('.cmp-ints', 15000);
+     await t.see('.k-exp.open:has(.li b:text-is("Интересы"))', 15000);
      await t.page.locator('.compose .rte-ed').first().fill(ints);
      await t.tap('.ctabar .btn:not(.soft)');
      await until(() => t.page.url().includes('/n/communities/' + OPEN), 'back on the community', 15000);
