@@ -4,10 +4,11 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Check,Inbox,LifeBuoy,MessageCircle,RefreshCw,X} from 'lucide-react';
 import {feErrorMessage,newOpId,sendPublicHelp} from '../feture/fe-api';
-import {Actions,Alert,Btn,Card,ChoiceChips,Empty,Field,Group,Input,Note,Row,Seg,Sheet,Skel,Stack,TextArea,Thread} from './kit';
+import {Actions,Alert,Btn,Card,ChoiceChips,Empty,Field,Group,Input,LoadMore,Note,Row,Seg,Sheet,Skel,Stack,TextArea,Thread} from './kit';
 import {useToast} from './toast';
 import {FIELD,serverFields,softMax,textError,textErrorMessage,useChecks} from './kit/validate';
 import {useFe} from './session';
+import {useStaffPage} from './staff-paged';
 
 /** S01 «Написать в поддержку» (wave 8): the person writes, staff answer in the staff screen, the answer comes back
  * here (and as an inbox item). No email: everything stays in the app. */
@@ -19,7 +20,7 @@ const ticket=z.object({id:z.uuid(),topic:z.enum(TOPICS),state:z.enum(['open','an
 type Ticket=z.infer<typeof ticket>;
 const oneRes=z.object({ok:z.literal(true),ticket});
 const mineRes=z.object({ok:z.literal(true),tickets:z.array(ticket)});
-const queueRes=z.object({ok:z.literal(true),items:z.array(ticket.extend({handle:z.string().nullable()}))});
+const queueRes=z.object({ok:z.literal(true),items:z.array(ticket.extend({handle:z.string().nullable()})),next:z.string().nullable().optional()});
 const okRes=z.object({ok:z.literal(true)}).passthrough();
 
 const useWhen=()=>{const {locale}=useI18n();return (v:string)=>new Date(v).toLocaleString(locale==='en'?'en-GB':'ru-RU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});};
@@ -132,15 +133,14 @@ export function SupportBlock(){
 export function StaffSupport(){
  const {call}=useFe();const {t}=useI18n();const when=useWhen();
  const [state,setState]=useState<'open'|'answered'|'closed'>('open');
- const [items,setItems]=useState<z.infer<typeof queueRes>['items']|null>(null);const [error,setError]=useState<unknown>(null);
- const load=useCallback(()=>{setItems(null);setError(null);call('staff.supportQueue',{state,limit:50},queueRes,{asAccount:true,fresh:true}).then(r=>setItems(r.items)).catch(setError);},[call,state]);
- useEffect(()=>{load();},[load]);
+ const fetchPage=useCallback((after?:string)=>call('staff.supportQueue',{state,limit:20,...(after?{after}:{})},queueRes,{asAccount:true,fresh:true}),[call,state]);
+ const {items,setItems,error,reload:load,moreProps}=useStaffPage(fetchPage,x=>x.id);
  return <Stack gap={3}>
   <Seg value={state} onChange={setState} options={(['open','answered','closed'] as const).map(id=>({id,label:t('fe.w8.sup.s.'+id)}))}/>
   {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
    :!items?<Skel kind="list"/>
    :!items.length?<Empty icon={Inbox} title={t('fe.w8.staff.supEmpty')}/>
-   :items.map(x=><StaffTicket key={x.id} item={x} when={when} onDone={()=>setItems(l=>l?.filter(y=>y.id!==x.id)??l)}/>)}
+   :<>{items.map(x=><StaffTicket key={x.id} item={x} when={when} onDone={()=>setItems(l=>l?.filter(y=>y.id!==x.id)??l)}/>)}<LoadMore {...moreProps}/></>}
  </Stack>;
 }
 

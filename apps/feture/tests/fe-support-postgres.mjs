@@ -85,6 +85,28 @@ test('support: a ticket reaches the staff queue, the reply comes back to the per
   } finally { await pg.close(); }
 });
 
+test('support queue pages by cursor: 51 tickets, 50 on the first page, the last one on the second, nothing twice', async () => {
+  const { pg, db, call, person } = await world();
+  try {
+    await person('ua', 'Alex');
+    await db.query(
+      `with t as (insert into feture.support_ticket (account_id, topic, updated_at)
+         select a.id, 'other', timestamptz '2026-10-01 10:00:00+00' + g * interval '1 minute'
+         from feture.account a, generate_series(1, 51) g where a.person_profile_id is not null and exists
+           (select 1 from feture.profile p where p.id = a.person_profile_id and p.handle = 'Alex') returning id)
+       insert into feture.support_message (ticket_id, body) select id, 'Вопрос по аккаунту' from t`);
+    const first = await call('us', null, { action: 'staff.supportQueue', limit: 50 });
+    assert.equal(first.items.length, 50);
+    assert.ok(first.next);
+    const second = await call('us', null, { action: 'staff.supportQueue', limit: 50, after: first.next });
+    assert.equal(second.items.length, 1);
+    assert.equal(second.next, null);
+    const ids = [...first.items, ...second.items].map(x => x.id);
+    assert.equal(new Set(ids).size, 51);
+    assert.ok(!JSON.stringify(first).includes('_cursor'));
+  } finally { await pg.close(); }
+});
+
 test('maintenance: owner/lead switch it; everyone else gets the maintenance answer, staff keep working', async () => {
   const { pg, call, person } = await world();
   try {

@@ -1,4 +1,4 @@
-import React,{useEffect,useRef,type CSSProperties,type ReactNode} from 'react';
+import React,{useEffect,useRef,useState,type CSSProperties,type ReactNode} from 'react';
 import {useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Check,ChevronLeft,Clock,Heart,Image as ImageIcon,Lock,Plus,Ticket,UserRound,Users,type LucideIcon} from 'lucide-react';
@@ -531,4 +531,12 @@ export function Verdict({icon:Icon,tone,title,sub,className}:{icon?:LucideIcon|u
  return <div className={['k-verdict',tone??'',className??''].filter(Boolean).join(' ')} role="status">
   <b>{Icon&&<Icon aria-hidden="true"/>}{title}</b>{sub&&<span>{sub}</span>}
  </div>;
+}
+
+/** `moreInfo()` — raw details (a JSON snapshot, a change record) kept out of sight under a readable card: one text
+ * button «Подробнее», and the text opens in place. The reader never sees raw data unless they ask for it. */
+export function MoreInfo({label,hideLabel,children}:{label:string,hideLabel:string,children:ReactNode}){
+ const [open,setOpen]=useState(false);
+ return <div className="st-more"><Btn kind="text" size="sm" auto onClick={()=>setOpen(o=>!o)}>{open?hideLabel:label}</Btn>
+  {open&&<small className="st-detail"><code>{children}</code></small>}</div>;
 }

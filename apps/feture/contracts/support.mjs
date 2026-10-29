@@ -20,7 +20,7 @@ export const supportCommands = {
   },
   'staff.supportQueue': {
     profile: false, write: false,
-    input: z.strictObject({ limit: z.int().min(1).max(50).default(20), state: z.enum(['open', 'answered', 'closed']).default('open') }),
+    input: z.strictObject({ limit: z.int().min(1).max(50).default(20), after: z.string().max(400).optional(), state: z.enum(['open', 'answered', 'closed']).default('open') }),
   },
   'staff.supportReply': {
     profile: false, write: true,
