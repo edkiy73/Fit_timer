@@ -11,6 +11,7 @@ import {refreshReads,useFe,usePartnerApproves} from './session';
 import {useNewerPosts} from './feed-newer';
 import {ActivityCardOf,activitySchema,type Act} from './feed-activity';
 import {Uploader} from './kit/Uploader';
+import {PhotoTiles} from './kit/PhotoTiles';
 import {useSendPhoto,useSendVideo} from './media-upload';
 import {VIDEO_TYPES} from './kit/media';
 import {BellButton} from './inbox';
@@ -673,7 +674,6 @@ const withSavedEdits=(p:Post,e:SavedEdit):Post=>({...p,type:e.post.type??p.type,
 /** An attached photo or clip: its preview, its shape (tiles follow the chosen format) and, for a clip picked now, the
  * local made file so the preview plays what the post will. */
 type MediaDraft={id:string,preview:string,kind?:string|undefined,durationMs?:number|null|undefined,w?:number|null|undefined,h?:number|null|undefined,file?:string|undefined};
-const tileAr=(m:MediaDraft|undefined)=>m?.w&&m.h?{'--ar':Math.max(.5,Math.min(2,m.w/m.h)).toFixed(4)} as CSSProperties:undefined;
 type Person={id:string,name:string};
 /** `mentionable`: the server says whether a mention by the acting profile reaches the person (their «Кто может
  * упоминать»); false — the name stays text and nobody is notified. */
@@ -898,10 +898,9 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
      <Counter n={body.length} max={max}/>
     </Field>
     {(note||hasMedia)&&<div className="cmp-media" ref={mediaRef}><Group title={note?t('fe.fd.cover'):t('fe.fd.mediaN',{n:media.length,max:MEDIA_MAX})} foot={note?t('fe.fd.coverFoot'):audience==='granted'?t('fe.fd.mediaGranted'):t('fe.fd.mediaFoot')}>
-     <Card><div className="edit-ph" style={tileAr(shownMedia[0])}>{shownMedia.map((m,i)=><div key={m.id} style={tileAr(m)}><img src={m.preview} alt=""/>{m.kind==='video'&&<VideoBadge durationMs={m.durationMs}/>}
-      <button type="button" className="rm" aria-label={t('fe.fd.remove')} onClick={()=>{if(m.id===coverId)setCoverId(null);setMedia(l=>l.filter(y=>y.id!==m.id));}}><X/></button>
-      <button type="button" className="vw" aria-label={t('fe.fd.view')} onClick={()=>setViewer(i)}/></div>)}
-      {(note?!coverId:media.length<MEDIA_MAX)&&<button type="button" aria-label={note?t('fe.fd.addCover'):t('fe.fd.addMedia')} disabled={uploading||(note&&noteMedia.length>=MEDIA_MAX)} onClick={()=>pick(note?'cover':'media')}><Plus/></button>}</div>
+     <Card><PhotoTiles tiles={shownMedia.map(m=>({id:m.id,src:m.preview,video:m.kind==='video',durationMs:m.durationMs}))} removeLabel={t('fe.fd.remove')} viewLabel={t('fe.fd.view')}
+      onRemove={id=>{if(id===coverId)setCoverId(null);setMedia(l=>l.filter(y=>y.id!==id));}} onView={setViewer}
+      add={(note?!coverId:media.length<MEDIA_MAX)?{label:note?t('fe.fd.addCover'):t('fe.fd.addMedia'),disabled:uploading||(note&&noteMedia.length>=MEDIA_MAX),onClick:()=>pick(note?'cover':'media')}:undefined}/>
       {!note&&audience==='all'&&<Card list className="mt8"><Row icon={Users} tone="v" title={t('fe.fd.peopleInPhoto')} onClick={()=>setSheet('people')}
        sub={people.length?people.map(p=>p.name+(edit?.tags?.find(x=>x.id===p.id)?.state==='no'?` (${t('fe.fd.declinedShort')})`:edit?.tags?.find(x=>x.id===p.id)?.state==='ok'?'':` (${t('fe.fd.waitingShort')})`)).join(', '):t('fe.fd.peopleInPhotoSub')}/></Card>}
      </Card>

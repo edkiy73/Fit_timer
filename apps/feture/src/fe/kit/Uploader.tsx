@@ -24,7 +24,7 @@ type Item={key:string,file:File,status:'prep'|'ready'|'make'|'up'|'ok'|'error',c
  /** The clip made for the current trim / frame (kept for a retry after a failed upload). */ made?:PreparedVideo|undefined,
  full?:string|undefined,progress:number,err?:string|undefined,id?:string|undefined,/** The original may go as picked. */ asIs?:boolean|undefined};
 
-/** The preview box of a row: the chosen format (1:1 square, 4:5, 16:9) or, «Как есть», the file's own shape — at most
+/** The preview box of a row: the chosen format (1:1 square, 4:5, 16:9) or, «Свой», the file's shape (as picked, or as cropped freely) — at most
  * 80 px on its long side. */
 const THUMB=80;
 function thumbBox(aspect:Aspect,w?:number,h?:number):CSSProperties{
@@ -33,7 +33,7 @@ function thumbBox(aspect:Aspect,w?:number,h?:number):CSSProperties{
  return {'--tw':Math.round(tw)+'px','--th':Math.round(th)+'px'} as CSSProperties;
 }
 const editOf=(it:Pick<Item,'trim'|'crop'>,aspect:Aspect):VideoEdit|undefined=>{
- const crop=aspect==='orig'?undefined:{aspect,...it.crop};
+ const crop=aspect==='orig'&&!it.crop.rect?undefined:{aspect,...it.crop};
  return it.trim||crop?{...(it.trim?{trim:it.trim}:{}),...(crop?{crop}:{})}:undefined;
 };
 const fits=(v:PreparedVideo)=>v.durationMs<=VIDEO_MAX_MS+500&&v.size<=VIDEO_MAX_BYTES&&VIDEO_TYPES.includes(v.mime);
@@ -42,7 +42,7 @@ const aborted=(e:unknown)=>e instanceof DOMException&&e.name==='AbortError';
 /** The uploader sheet — the one way media is picked and sent anywhere (posts, profile, gallery, chats): format (when a
  * screen allows several), each file as a row — its preview in that format, name, state, progress, ✕ «Убрать» at the
  * end of the name line and the actions on one line under the text: «Обрезать» (clips), «Кадрировать» (when the format
- * is not «Как есть»), «Повторить» —, «Добавить ещё», what the screen adds (`children`: a chat's view rule), a privacy
+ * is any), «Повторить» —, «Добавить ещё», what the screen adds (`children`: a chat's view rule), a privacy
  * note, and the button (`doneLabel`, «Готово · N» by default). Photos are compressed and stripped of metadata on the
  * device as soon as they are picked and cut to the frame. Clips (with `sendVideo`) are made on the device when sent
  * (kit/video-edit.ts): only the chosen part (≤ 60 s, the first minute of a longer one by default), cut to the frame,
@@ -67,7 +67,7 @@ export function Uploader({files,aspects=['orig'],max,send,sendVideo,onDone,onClo
   try{
    // The whole photo (upright, compressed) is kept once for the crop sheet; the frame is cut from it.
    const full=it.full??(await preparePhoto(it.file)).url;
-   const prep=asp==='orig'?await preparePhoto(it.file):await cropPhoto(it.file,asp,it.crop);patch(it.key,{prep,full,status:'ready',err:undefined});}
+   const prep=asp==='orig'&&!it.crop.rect?await preparePhoto(it.file):await cropPhoto(it.file,asp,it.crop);patch(it.key,{prep,full,status:'ready',err:undefined});}
   catch{patch(it.key,{status:'error',err:t('fe.kit.up.readFail')});}
  };
  // A clip's preview follows its edit: the frame at the trim start, cut to the format (the made clip's first frame).
@@ -179,7 +179,7 @@ export function Uploader({files,aspects=['orig'],max,send,sendVideo,onDone,onClo
  return <>
   <Sheet title={title??t('fe.kit.up.title')} full onClose={close}
    foot={<Btn onClick={done} busy={sending} disabled={!ready||busy}>{sending?t('fe.kit.up.busy'):doneLabel??(ready?t('fe.kit.up.ready').replace('{n}',String(ready)):t('fe.kit.up.nothing'))}</Btn>}>
-   {aspects.length>1&&<Seg label={t('fe.kit.up.format')} value={aspect} onChange={changeAspect} options={aspects.map(a=>({id:a,label:a==='orig'?t('fe.kit.up.orig'):a}))}/>}
+   {aspects.length>1&&<Seg label={t('fe.kit.up.format')} value={aspect} onChange={changeAspect} options={[...aspects].sort((a,b)=>+(b==='orig')-+(a==='orig')).map(a=>({id:a,label:a==='orig'?t('fe.kit.up.orig'):a}))}/>}
    <div className="k-uplist">{items.map(i=><div key={i.key} className={'k-uprow '+i.status}>
     <div className="k-upthumb-box"><div className="k-upthumb" style={thumbBox(editable(i)?aspect:'orig',i.prep?.w,i.prep?.h)}>{i.prep?<img src={i.prep.url} alt=""/>:<span className="sk"/>}
      {i.vid&&<VideoBadge durationMs={lenOf(i)}/>}</div></div>
@@ -187,9 +187,9 @@ export function Uploader({files,aspects=['orig'],max,send,sendVideo,onDone,onClo
       {!sending&&<IconBtn icon={X} kind="ghost" size="sm" label={t('fe.kit.up.remove')} onClick={()=>setItems(l=>l.filter(x=>x.key!==i.key))}/>}</div><small>{status(i)}</small>
      {(i.status==='make'||i.status==='up'||i.status==='ok')&&<Progress value={i.status==='ok'?1:i.progress}/>}
      {i.status==='make'&&<div className="k-upacts"><Btn kind="text" size="sm" auto icon={X} onClick={()=>stopper.current?.abort()}>{t('fe.kit.up.cancel')}</Btn></div>}
-     {!sending&&((i.vid&&!i.asIs)||(aspect!=='orig'&&editable(i))||i.status==='error')&&<div className="k-upacts">
+     {!sending&&((i.vid&&!i.asIs)||editable(i)||i.status==='error')&&<div className="k-upacts">
       {i.vid&&!i.asIs&&i.prep&&<Btn kind="text" size="sm" auto icon={Scissors} onClick={()=>setTrimming(i.key)}>{t('fe.kit.up.trim')}</Btn>}
-      {aspect!=='orig'&&editable(i)&&i.prep&&i.full&&<Btn kind="text" size="sm" auto icon={CropIcon} onClick={()=>setCropping(i.key)}>{t('fe.kit.up.crop')}</Btn>}
+      {editable(i)&&i.prep&&i.full&&<Btn kind="text" size="sm" auto icon={CropIcon} onClick={()=>setCropping(i.key)}>{t('fe.kit.up.crop')}</Btn>}
       {i.status==='error'&&i.prep&&<Btn kind="text" size="sm" auto icon={RotateCcw} onClick={()=>void done()}>{t('fe.kit.up.retry')}</Btn>}
       {/* This clip could not be made here, but the original fits the server as it is. */}
       {i.status==='error'&&i.vid&&!i.made&&!i.asIs&&fits(i.vid)&&<Btn kind="text" size="sm" auto icon={Upload} onClick={()=>{const next={...i,asIs:true,trim:undefined,crop:NO_CROP};
@@ -202,9 +202,9 @@ export function Uploader({files,aspects=['orig'],max,send,sendVideo,onDone,onClo
    {children}
    <Alert kind="info" icon={ShieldCheck}>{t('fe.kit.up.privacy')}{anyClip&&path!==undefined?' '+t(path?'fe.kit.up.videoNote':'fe.kit.up.videoNoteAsIs'):''}</Alert>
   </Sheet>
-  {cur&&cur.full&&aspect!=='orig'&&<CropSheet src={cur.full} aspect={aspect} initial={cur.crop} hint={cur.vid?t('fe.kit.crop.hintVideo'):undefined} onClose={()=>setCropping(null)}
+  {cur&&cur.full&&<CropSheet src={cur.full} aspect={aspect} initial={cur.crop} hint={cur.vid?t('fe.kit.crop.hintVideo'):undefined} onClose={()=>setCropping(null)}
    onApply={c=>{setCropping(null);redo(cur,{crop:c});}}/>}
-  {trimCur&&trimCur.vid&&<TrimSheet file={trimCur.file} durationMs={trimCur.vid.durationMs} initial={trimCur.trim} crop={aspect!=='orig'?{aspect,...trimCur.crop}:undefined}
+  {trimCur&&trimCur.vid&&<TrimSheet file={trimCur.file} durationMs={trimCur.vid.durationMs} initial={trimCur.trim} crop={aspect!=='orig'||trimCur.crop.rect?{aspect,...trimCur.crop}:undefined}
    onClose={()=>setTrimming(null)} onApply={tr=>{setTrimming(null);redo(trimCur,{trim:tr??undefined});}}/>}
   {asking&&<Ask title={t('fe.kit.up.closeAsk')} text={t('fe.kit.up.closeText')} ok={t('fe.kit.up.close')} danger onOk={()=>{setAsking(false);onClose();}} onCancel={()=>setAsking(false)}/>}
  </>;
