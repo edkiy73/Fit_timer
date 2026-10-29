@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {BadgeCheck,Ban,Check,ChevronRight,Eye,IdCard,Image,Inbox,Lock,RefreshCw,ShieldAlert,ShieldCheck,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Btn,Card,ChoiceChips,Chips,Empty,Field,Group,IconBtn,Input,KeyValues,Note,Pill,ReviewCard,ReviewMedia,ReviewPair,Row,SectionLabel,Seg,Skel,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble} from './kit';
+import {Alert,Btn,Card,ChoiceChips,Chips,Empty,Field,Group,IconBtn,Input,KeyValues,LoadMore,Note,Pill,ReviewCard,ReviewMedia,ReviewPair,Row,SectionLabel,Seg,Skel,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble} from './kit';
 import {askFactor,useFe} from './session';
 import {FactorPromptHost,FactorReset,StaffEnrol,StaffUnlock,factorSchema,type Factor} from './staff-factor';
 import {StaffSupport} from './support';
@@ -55,7 +55,7 @@ const QUEUES:{[K in QueueId]:{action:string,schema:z.ZodType<{items:Items[K],loc
  dispute:{action:'staff.disputeQueue',schema:list(disputeItem),key:x=>x.id},
  report:{action:'staff.reportQueue',schema:list(reportItem),key:x=>x.targetType+':'+x.targetId+':'+(x.author?.id??'')},
  revision:{action:'staff.revisionQueue',schema:list(revisionItem),key:x=>x.id},
- media:{action:'staff.mediaQueue',schema:list(mediaItem),key:x=>x.id},
+ media:{action:'staff.mediaQueue',schema:list(mediaItem).extend({next:z.string().nullable().optional()}),key:x=>x.id},
  community:{action:'staff.communityQueue',schema:list(commItem),key:x=>x.id},
  event:{action:'staff.eventQueue',schema:list(eventItem),key:x=>x.id},
  age:{action:'staff.ageCheckQueue',schema:list(ageItem),key:x=>x.id},
@@ -73,7 +73,7 @@ const SECTIONS=['queues','support','premium','maintenance','journal','access'] a
 type Section=typeof SECTIONS[number];
 const can=(roles:readonly string[],need:readonly string[]|undefined)=>!need||roles.some(r=>need.includes(r));
 const LIMIT=50;
-type Loaded={[K in QueueId]?:{items:Items[K],locked?:boolean|undefined}|{error:unknown}};
+type Loaded={[K in QueueId]?:{items:Items[K],locked?:boolean|undefined,next?:string|null|undefined}|{error:unknown}};
 const forbidden=(e:unknown)=>e instanceof FeError&&e.code==='forbidden';
 
 /** Staff roles of the signed-in account; [] for everyone else (and while loading: null). */
@@ -123,12 +123,13 @@ export function StaffScreen(){
 function Queues(){
  const {call}=useFe();const {t}=useI18n();const roles=useStaffRoles();
  const [data,setData]=useState<Loaded|null>(null);const [tab,setTab]=useState<QueueId|null>(null);const [notice,setNotice]=useState('');
+ const [pageBusy,setPageBusy]=useState(false);const [pageError,setPageError]=useState<unknown>(null);
  const load=useCallback((fresh=false)=>{
-  setData(null);setNotice('');
+  setData(null);setNotice('');setPageError(null);
   const ids=QUEUE_IDS.filter(id=>can(roles??[],QUEUE_ROLES[id]));
   void Promise.allSettled(ids.map(id=>call(QUEUES[id].action,{limit:LIMIT},QUEUES[id].schema as z.ZodType<{items:unknown[]}>,{asAccount:true,fresh}))).then(rs=>{
-   const next:Record<string,{items:unknown[],locked?:boolean|undefined}|{error:unknown}>={};
-   rs.forEach((r,i)=>{const id=ids[i]!;if(r.status==='fulfilled')next[id]={items:r.value.items,locked:(r.value as {locked?:boolean}).locked};else if(!forbidden(r.reason))next[id]={error:r.reason};});
+   const next:Record<string,{items:unknown[],locked?:boolean|undefined,next?:string|null|undefined}|{error:unknown}>={};
+   rs.forEach((r,i)=>{const id=ids[i]!;if(r.status==='fulfilled')next[id]={items:r.value.items,locked:(r.value as {locked?:boolean}).locked,next:(r.value as {next?:string|null}).next};else if(!forbidden(r.reason))next[id]={error:r.reason};});
    setData(next as Loaded);
    setTab(cur=>cur&&next[cur]?cur:QUEUE_IDS.find(id=>{const v=next[id];return v&&'items' in v&&v.items.length;})??QUEUE_IDS.find(id=>next[id])??null);
   });
@@ -137,7 +138,17 @@ function Queues(){
  if(!data)return <Skel kind="list"/>;
  const avail=QUEUE_IDS.filter(id=>data[id]);
  if(!avail.length||!tab)return <Empty icon={Inbox} title={t('fe.staff.noQueues')}/>;
- const count=(id:QueueId)=>{const v=data[id];return v&&'items' in v?(v.items.length>=LIMIT?LIMIT+'+':String(v.items.length)):'!';};
+ const count=(id:QueueId)=>{const v=data[id];return v&&'items' in v?(v.items.length>=LIMIT||v.next?v.items.length+'+':String(v.items.length)):'!';};
+ // The media queue is paged: the next page starts after the cursor of the last one, appended without repeats.
+ const loadMore=()=>{
+  const v=data.media;if(!v||!('items' in v)||!v.next||pageBusy)return;
+  setPageBusy(true);
+  void call(QUEUES.media.action,{limit:LIMIT,after:v.next},QUEUES.media.schema as z.ZodType<{items:MediaItem[],next?:string|null}>,{asAccount:true}).then(r=>{
+   setData(d=>{const cur=d?.media;if(!d||!cur||!('items' in cur))return d;const have=new Set(cur.items.map(x=>x.id));
+    return {...d,media:{...cur,items:[...cur.items,...r.items.filter(x=>!have.has(x.id))],next:r.next}};});
+   setPageError(null);
+  }).catch(e=>setPageError(e)).finally(()=>setPageBusy(false));
+ };
  const done=(id:QueueId,key:string)=>{
   setNotice(t('fe.staff.done'));
   setData(d=>{if(!d)return d;const v=d[id];if(!v||!('items' in v))return d;
@@ -154,7 +165,8 @@ function Queues(){
   {!current?null:'error' in current?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(current.error,t)}><Btn kind="soft" onClick={()=>load(true)}>{t('fe.retry')}</Btn></Empty>
    :!current.items.length?<Empty icon={Inbox} title={t('fe.staff.qEmpty')} text={t('fe.staff.qEmptyText')}/>
    :current.locked?<Alert kind="info" icon={Lock} action={<Btn kind="soft" size="sm" auto onClick={()=>void askFactor('fresh').then(ok=>{if(ok)load(true);})}>{t('fe.sf.enterCode')}</Btn>}>{t('fe.sf.lockedMedia')}</Alert>
-   :<><SectionLabel>{t('fe.staff.inQueue',{n:count(tab)})}</SectionLabel><QueueList id={tab} items={current.items} onDone={key=>done(tab,key)}/></>}
+   :<><SectionLabel>{t('fe.staff.inQueue',{n:count(tab)})}</SectionLabel><QueueList id={tab} items={current.items} onDone={key=>done(tab,key)}/>
+    {tab==='media'&&<LoadMore more={!!current.next} busy={pageBusy} error={pageError} onMore={loadMore}/>}</>}
  </>;
 }
 

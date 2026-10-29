@@ -4,7 +4,9 @@ import * as z from 'zod';
 import { id, opId } from './platform.mjs';
 
 /** Six digits from the authenticator app, or a recovery code (xxxxx-xxxxx); spaces are dropped. */
-export const factorCode = z.string().max(40).transform(v => v.replace(/\s/g, '')).pipe(z.string().regex(/^(\d{6}|[A-Za-z0-9]{5}-?[A-Za-z0-9]{5})$/));
+/** Keyset cursor of a queue page: `<created_at as text>|<id>` of its last item (the next page starts after it). */
+const queueCursor = z.string().max(80).regex(/^[0-9T:. +-]{10,40}\|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+export const factorCode =z.string().max(40).transform(v => v.replace(/\s/g, '')).pipe(z.string().regex(/^(\d{6}|[A-Za-z0-9]{5}-?[A-Za-z0-9]{5})$/));
 
 export const staffCommands = {
   'staff.me': { profile: false, write: false, input: z.strictObject({}) },
@@ -19,7 +21,7 @@ export const staffCommands = {
     profile: false, write: true,
     input: z.strictObject({ opId, handle: z.string().trim().max(40), role: z.enum(['lead', 'moderator', 'verifier', 'auditor', 'support']), grant: z.boolean() }),
   },
-  'staff.mediaQueue': { profile: false, write: false, input: z.strictObject({ limit: z.int().min(1).max(50).default(20) }) },
+  'staff.mediaQueue': { profile: false, write: false, input: z.strictObject({ limit: z.int().min(1).max(50).default(20), after: queueCursor.optional() }) },
   'staff.mediaView': { profile: false, write: true, ledger: false, input: z.strictObject({ assetId: id }) },
   'staff.mediaDecide': {
     profile: false, write: true,

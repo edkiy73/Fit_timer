@@ -35,6 +35,13 @@ test('staff: roles are server-side, owner grants, queue excludes own media, deci
     const queue = await call('um', null, { action: 'staff.mediaQueue' });
     assert.deepEqual(queue.items.map(i => i.id).sort(), [theirs, avatar].sort()); // never one's own media
     assert.ok(queue.items.every(i => i.blur && new URL(i.blur).pathname.endsWith('/blur')));
+    // Paging walks the whole queue, one item at a time, and ends on an empty page without a cursor.
+    const page1 = await call('um', null, { action: 'staff.mediaQueue', limit: 1 });
+    const page2 = await call('um', null, { action: 'staff.mediaQueue', limit: 1, after: page1.next });
+    const page3 = await call('um', null, { action: 'staff.mediaQueue', limit: 1, after: page2.next });
+    assert.deepEqual([...page1.items, ...page2.items].map(i => i.id).sort(), [theirs, avatar].sort());
+    assert.equal(page3.items.length, 0);
+    assert.equal(page3.next, null);
     assert.equal((await call('um', null, { action: 'staff.mediaDecide', opId: op(), assetId: own, decision: 'approve', explicit: false })).status, 403);
 
     const view = await call('um', null, { action: 'staff.mediaView', assetId: theirs });
