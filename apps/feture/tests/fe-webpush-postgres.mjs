@@ -115,7 +115,8 @@ test('a like and a message reach only that account\'s browsers, encrypted, with 
     // The 410 subscription is gone; the phone and the live browser stay.
     assert.deepEqual((await db.query(`select platform from feture.push_device where account_id = $1 order by platform`, [b.account])).map((/** @type {any} */ r) => r.platform), ['android', 'web']);
 
-    // A message in «normal» mode: what kind of thing, never its text or the sender's name; opens the chats.
+    // A message in «normal» mode («Обычные», owner 29.10.2026): the sender's name and the start of the text, only inside
+    // the encrypted payload; opens the chats.
     await db.query(`update feture.notification_settings set settings = settings || '{"mode": "normal"}' where account_id = $1`, [b.account]);
     await call('ub', b.id, { action: 'like.send', opId: op(), profileId: a.id, source: 'likes' });
     const conv = (await db.query(`select id from feture.conversation limit 1`))[0].id;
@@ -123,8 +124,8 @@ test('a like and a message reach only that account\'s browsers, encrypted, with 
     await call('ua', a.id, { action: 'chat.send', opId: op(), conversationId: conv, body: 'Секретный текст' });
     await deliver();
     const msg = posts.filter(p => p.url === kira.endpoint).map(p => kira.open(p.body));
-    assert.deepEqual(msg.at(-1), { title: 'FetUre', body: 'Новое сообщение', url: '/#/n/chats' });
-    assert.ok(!JSON.stringify(msg).includes('Секрет') && !JSON.stringify(msg).includes('Alex'));
+    assert.deepEqual(msg.at(-1), { title: 'Alex', body: 'Секретный текст', url: '/#/n/chats' });
+    assert.ok(posts.every(p => !p.body.toString('latin1').includes('Alex') && !p.body.includes(Buffer.from('Секрет'))));
 
     // Push off in the settings: nothing goes out.
     await db.query(`update feture.notification_settings set settings = settings || '{"push": false}' where account_id = $1`, [b.account]);

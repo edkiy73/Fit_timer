@@ -120,6 +120,28 @@ export default [
      expect(!t.page.url().includes('/feed/new'), 'left after discard: ' + t.page.url());
    } finally { await cleanup(t, id); }
  } },
+ { name: '«Мои публикации → Черновики»: a draft card says what it holds and when it changed; ⋯ → «Удалить черновик» asks, then it is gone', persona: 'full', route: '/n/me/posts', run: async t => {
+   const ids = [];
+   try {
+     const body = 'e2e черновик-карточка ' + stamp();
+     ids.push((await t.api('post.saveDraft', { opId: t.uuid7(), post: { body } })).id);
+     ids.push((await t.api('post.saveDraft', { opId: t.uuid7(), post: { poll: { question: 'Куда в субботу?', options: ['Озеро', 'Город'] } } })).id);
+     await t.page.reload();
+     const card = t.page.locator('.k-draft', { hasText: body }).first(); await card.waitFor({ timeout: 15000 });
+     const head = await card.locator('.post-h').innerText();
+     expect(head.includes('Черновик') && /Изменён (только что|\d+ (минут|секунд)|сейчас|\d+ \S+, \d\d:\d\d)/.test(head) && !head.includes('—'), 'draft head: ' + head);
+     await t.see('.k-draft >> text=Черновик · опрос'); // no text: it says what it holds
+     await t.shot('drafts-list');
+     await card.locator('button[aria-label="Ещё"]').click(); await t.see('.sheet.on >> text=Удалить черновик');
+     await t.tap('.sheet.on .li.danger'); await t.see('.dialog.on >> text=Удалить черновик?');
+     await t.tap('.dialog.on .btn.danger'); await toastSee(t, 'Черновик удалён');
+     await t.notSee(`.k-draft:has-text("${body}")`, 5000);
+     await until(async () => !(await mine(t)).some(p => p.id === ids[0]), 'draft deleted on the server');
+     ids.shift();
+     // A tap on the card opens the editor with the draft.
+     await t.tap('.k-draft >> text=Черновик · опрос'); await t.page.waitForURL(/\/edit/);
+   } finally { for (const id of ids) await cleanup(t, id).catch(() => {}); }
+ } },
  { name: 'publish plain text → back on the feed, post is there', persona: 'full', route: '/n/feed/new', run: async t => {
    let id;
    try {

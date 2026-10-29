@@ -1,6 +1,6 @@
 // Message requests (owner 29.10.2026): «Написать» without a mutual like opens the chat composer as a request; the
 // recipient finds it in «Чаты → Запросы» (who, where you know each other from), and answers, hides or reports + blocks
-// it; «Кто может мне писать» in «Я → Видимость» decides who may send one; 10 a day; couples send (with the partner's
+// it; «Кто может написать первым» in «Я → Видимость» decides who may send one; 10 a day; couples send (with the partner's
 // approval when asked) and receive; a mutual like still opens a chat at once. Lane `mr`.
 // Senders are fresh `temp` personas, so a hidden request (30 days) or the daily limit never blocks a rerun; recipients
 // are the lane's `basic`, `stranger`, `host` and `pair`, each restored at the end (settings, blocks, RSVPs, hides).
@@ -165,14 +165,14 @@ export default [
    }
  } },
 
- { name: '«Кто может мне писать» in «Я → Видимость»: «Никто» refuses even a follower; a block hides the person', persona: 'stranger', run: async t => {
+ { name: '«Кто может написать первым» in «Я → Видимость»: «Никто» refuses even a follower; a block hides the person', persona: 'stranger', run: async t => {
    const s = await t.persona('temp');
    await t.api('follow.set', { opId: t.uuid7(), profileId: t.me.personId, on: true }, s.email);
    try {
      await t.go('/n/me?layer=vis');
-     await t.see('.k-radios[aria-label="Кто может мне писать"]');
-     await t.page.locator('.k-radios[aria-label="Кто может мне писать"]').scrollIntoViewIfNeeded();
-     await t.tap('.k-radios[aria-label="Кто может мне писать"] .radio:has-text("Никто")');
+     await t.see('.k-radios[aria-label="Кто может написать первым"]');
+     await t.page.locator('.k-radios[aria-label="Кто может написать первым"]').scrollIntoViewIfNeeded();
+     await t.tap('.k-radios[aria-label="Кто может написать первым"] .radio:has-text("Никто")');
      await until(async () => (await t.api('profile.settings', {})).settings.messagesFrom === 'none', 'setting saved');
      await t.page.keyboard.press('Escape').catch(() => {});
      await t.shot('mr-setting');

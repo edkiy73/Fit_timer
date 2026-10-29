@@ -970,16 +970,6 @@
 .v21 .ntw{position:relative;flex:none;display:block}
 .v21 .ntw .ico{position:absolute;right:-4px;bottom:-4px;width:20px;height:20px;border-radius:50%;background:var(--surf);box-shadow:0 0 0 2px var(--bg);color:var(--ink)}
 .v21 .ntw .ico svg{width:12px;height:12px}
-.v21 .nmode{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.v21 .nm{display:grid;gap:4px;padding:12px;border-radius:var(--r-l);border:1px solid var(--line);background:var(--surf);text-align:left}
-.v21 .nm b{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:var(--fs-body);font-weight:600}
-.v21 .nm b em{font-style:normal;font-size:var(--fs-micro);font-weight:700;padding:1px 7px;border-radius:var(--r-full);background:var(--ok-soft);color:var(--ok)}
-.v21 .nm small{font-size:var(--fs-cap);color:var(--mute);line-height:1.4}
-.v21 .nm .rd{width:18px;height:18px;border-radius:50%;border:2px solid var(--line2)}
-.v21 .nm.on{border-color:var(--ink)}.v21 .nm.on .rd{border:6px solid var(--accent)}
-.v21 .lockscreen{position:relative;display:grid;gap:2px;margin-top:10px;padding:12px 14px;border-radius:var(--r-l);background:#1E1A20;color:#fff}
-.v21 .lockscreen .ls-app{display:flex;align-items:center;gap:6px;font-size:var(--fs-micro);opacity:.7;text-transform:uppercase;letter-spacing:.04em}.v21 .lockscreen .ls-app img{width:16px;height:16px;border-radius:var(--r-2xs)}
-.v21 .lockscreen b{font-size:var(--fs-body)}.v21 .lockscreen span:not(.ls-app){font-size:var(--fs-sm);opacity:.88}.v21 .lockscreen small{position:absolute;right:14px;top:12px;font-size:var(--fs-micro);opacity:.6}
 .v21 .nhead{display:flex;gap:22px;margin-left:auto;margin-right:12px;color:var(--faint)}
 .v21 .nhead svg{width:16px;height:16px}
 .v21 .ncats .li{gap:8px}
@@ -1218,7 +1208,6 @@
 @container stage (max-width:380px){
   .v21 .jars{grid-template-columns:repeat(auto-fill,minmax(78px,1fr))}
   .v21 .ans-scale{gap:3px}.v21 .ans-scale button{height:40px;font-size:var(--fs-xs);border-radius:var(--r-xs)}
-  .v21 .nmode{grid-template-columns:1fr}
   .v21 .p-acts .btn{font-size:var(--fs-sm);padding:0 8px;gap:6px}
   .v21 .pc-foot{grid-template-columns:1fr}
   .v21 .cmc .cv{width:48px;height:48px}

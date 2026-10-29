@@ -199,7 +199,9 @@ export function notifyHandlers(db, emit = () => {}) {
   // Chat messages make no inbox row, only a push to the members who did not mute the conversation.
   handlers['message.created'] = async item => {
     await db.tx(async q => {
-      for (const r of await recipientsOf(q, item.profile_id, item.payload)) await queuePush(q, item, r, 'messages');
+      const p = /** @type {any} */ (item.payload);
+      const message = p.conversationId && p.seq != null ? { conversationId: p.conversationId, seq: Number(p.seq) } : undefined;
+      for (const r of await recipientsOf(q, item.profile_id, p)) await queuePush(q, item, r, 'messages', undefined, message);
     });
   };
   // Things to decide are in «Нужно решить», not in the inbox; the recipients get a push.
