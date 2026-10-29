@@ -4,7 +4,8 @@ import { fail } from './errors.mjs';
 import { hmac } from './hash.mjs';
 
 /** A second factor per account: an authenticator app (RFC 6238 TOTP — SHA1, 6 digits, 30 s, ±1 step) plus ten
- * one-time recovery codes. Staff must have one (commands/staff.mjs); later the same calls give everyone an optional one.
+ * one-time recovery codes. Staff must have one (commands/staff.mjs); everyone else may turn one on (commands/account.mjs,
+ * the sign-in second step in signin.mjs).
  * - The secret is sealed with AES-256-GCM under a key derived (HKDF) from FETURE_ID_PEPPER: a copy of the database
  *   alone never yields it. No pepper → the server refuses (503), never stores a plain secret.
  * - Recovery codes are kept only as keyed hashes; a used one stays marked so it never works again.
@@ -186,10 +187,12 @@ export async function newRecoveryCodes(q, accountId, pepper) {
   return codes;
 }
 
-/** Removes the factor completely (a lead's reset, account deletion): enrolment starts over.
+/** Removes the factor completely (turned off, a lead's reset, account deletion): enrolment starts over, and the sign-ins
+ * that passed the old factor are forgotten (a factor turned on again asks every sign-in anew).
  * @param {Q} q @param {string} accountId */
 export async function removeFactor(q, accountId) {
   await q.query('delete from feture.account_recovery_code where account_id = $1', [accountId]);
+  await q.query('delete from feture.session_factor where account_id = $1', [accountId]);
   const gone = await q.query('delete from feture.account_totp where account_id = $1 returning 1', [accountId]);
   return gone.length > 0;
 }

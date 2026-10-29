@@ -68,9 +68,10 @@ test('second factor: enrolment, secret sealed, codes once, replay refused, wrong
     const meNow = (await call('um', null, { action: 'staff.me' })).factor;
     assert.deepEqual([meNow.enrolled, meNow.verified, meNow.fresh, meNow.recoveryLeft], [true, true, true, 10]);
 
-    // Another sign-in (another device or a new token) has no window yet.
+    // Another sign-in (another device or a new token) has no window yet — and with a factor on it reaches nothing
+    // before a code (the sign-in second step, server/signin.mjs).
     const other = { 'x-test-session': 'phone-2' };
-    assert.equal((await call('um', null, { action: 'staff.mediaQueue' }, other)).rule, 'verify');
+    assert.equal((await call('um', null, { action: 'staff.mediaQueue' }, other)).rule, 'signin');
     // The same code again (same 30 s step) is refused as used, and that is not counted as a wrong guess.
     const replay = await call('um', null, { action: 'staff.totpVerify', code: totpCode(s.secret) }, other);
     assert.deepEqual([replay.verified, replay.reason], [false, 'used']);
@@ -92,7 +93,7 @@ test('second factor: enrolment, secret sealed, codes once, replay refused, wrong
     await forgetStep(db, modId);
     const lockedRight = await call('um', null, { action: 'staff.totpVerify', code: totpCode(s.secret) }, third);
     assert.deepEqual([lockedRight.verified, lockedRight.reason], [false, 'locked']);
-    assert.ok((await call('um', null, { action: 'staff.me' }, third)).factor.lockedUntil);
+    assert.ok((await call('um', null, { action: 'staff.me' })).factor.lockedUntil);
     assert.equal((await db.query(`select 1 from feture.staff_action where action = 'staff.factorLocked'`)).length, 1);
     // The lock runs out after 15 minutes; wrong codes older than the window do not add up.
     await db.query(`update feture.account_totp set locked_until = now() - interval '1 second' where account_id = $1`, [modId]);

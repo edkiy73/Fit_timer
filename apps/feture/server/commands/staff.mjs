@@ -3,6 +3,7 @@ import { staffCommands } from '../../contracts/staff.mjs';
 import { fail } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { checkCode, confirmEnrol, factorState, removeFactor, startEnrol } from '../second-factor.mjs';
+import { passSignin } from '../signin.mjs';
 
 /** S4 steps 1–2: staff roles, journal, media review (docs/server/S4-MODERATION.md).
  * Staff are ordinary accounts with a role; a staff member never decides about their own profiles or couple.
@@ -44,7 +45,7 @@ async function staffRoles(q, accountId, roles) {
   if (!mine.some(r => roles.includes(r))) fail(403, 'forbidden');
   return mine;
 }
-const ANY_STAFF = ['owner', 'lead', 'moderator', 'verifier', 'support', 'auditor'];
+export const ANY_STAFF = ['owner', 'lead', 'moderator', 'verifier', 'support', 'auditor'];
 
 /** A staff command: one of `roles`, and the second factor in this sign-in (`fresh`: a code within FRESH_WINDOW).
  * @param {Q} q @param {import('../accounts.mjs').AccountRow} account @param {string[]} roles @param {{fresh?: boolean}} [opts]
@@ -60,7 +61,7 @@ export async function requireStaff(q, account, roles, { fresh = false } = {}) {
 
 /** A code was right: open (or extend the check of) this sign-in's staff window. A window that ran out starts anew.
  * @param {Q} q @param {import('../accounts.mjs').AccountRow} account */
-async function openStaffSession(q, account) {
+export async function openStaffSession(q, account) {
   if (!account.session) fail(401, 'auth_required');
   await q.query(
     `insert into feture.staff_session (account_id, session_key) values ($1, $2)
@@ -73,7 +74,7 @@ async function openStaffSession(q, account) {
 }
 
 /** @param {import('../second-factor.mjs').CheckResult} r */
-const refused = r => r.ok ? {} : { verified: false, reason: r.reason, left: r.left, lockedUntil: r.lockedUntil };
+export const refused = r => r.ok ? {} : { verified: false, reason: r.reason, left: r.left, lockedUntil: r.lockedUntil };
 
 
 /** @param {Q} q @param {string} staff @param {string} action @param {string} targetType @param {string | null} targetId @param {Record<string, unknown>} [detail] */
@@ -113,6 +114,7 @@ const run = {
     const { result, codes } = await confirmEnrol(q, account.id, cfg.pepper ?? '', input.code);
     if (!result.ok) return refused(result);
     await journal(q, account.id, 'staff.factorOn', 'account', account.id);
+    await passSignin(q, account); // the factor is on now: this sign-in already passed its second step
     // Shown once: the server keeps only their hashes (this command is never stored in the replay ledger).
     return { ...(await openStaffSession(q, account)), verified: true, codes };
   },
@@ -125,6 +127,7 @@ const run = {
       return refused(r);
     }
     if (r.recovery) await journal(q, account.id, 'staff.recoveryUsed', 'account', account.id);
+    await passSignin(q, account); // the same code is this sign-in's second step
     const f = await factorState(q, account.id);
     return { ...(await openStaffSession(q, account)), verified: true, recovery: r.recovery, recoveryLeft: f.recoveryLeft };
   },

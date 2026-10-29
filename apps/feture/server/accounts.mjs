@@ -3,10 +3,12 @@ import { fail, isUniqueViolation } from './errors.mjs';
 import { hmac } from './hash.mjs';
 
 /** @typedef {import('./db.mjs').Db} Db */
-/** @typedef {{id: string, state: string, locale: string, person_profile_id: string | null,
- *   session?: string | null}} AccountRow  session: this sign-in, as a keyed hash (filled in by the handler; staff checks) */
+/** @typedef {{id: string, state: string, locale: string, person_profile_id: string | null, factor_on?: boolean,
+ *   session?: string | null}} AccountRow  session: this sign-in, as a keyed hash (filled in by the handler; staff checks);
+ *   factor_on: a second factor is switched on (every sign-in then passes the second step, signin.mjs) */
 
-const SELECT = `select a.id, a.state, a.locale, a.person_profile_id
+export const SELECT = `select a.id, a.state, a.locale, a.person_profile_id,
+    exists (select 1 from feture.account_totp t where t.account_id = a.id and t.enabled_at is not null) factor_on
   from feture.account_link l join feture.account a on a.id = l.account_id
   where l.core_key_hmac = $1`;
 

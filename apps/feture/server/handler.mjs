@@ -5,8 +5,8 @@ import { FeError, fail } from './errors.mjs';
 import { once } from './ops.mjs';
 import { actingProfile } from './profiles.mjs';
 import { limit } from './limits.mjs';
-import { hmac } from './hash.mjs';
 import { noteSeen, placeOf } from './devices.mjs';
+import { SIGNIN_OPEN, noteSignin, sendSigninMail, sessionHash, signinBlocked } from './signin.mjs';
 
 /**
  * `POST /api/fe` — the new command endpoint (docs/server/S2-API.md). Domains register commands;
@@ -49,14 +49,17 @@ export function inputIssues(issues) {
 
 /**
  * @param {{db: Db, pepper: string, cfg: Cfg, commands: Record<string, Command>,
- *   authenticate: (req: Req) => Promise<{accountHash: string, accountGeneration?: string, qa?: boolean, sessionId?: string, sessionKey?: string}>,
+ *   authenticate: (req: Req) => Promise<{accountHash: string, accountGeneration?: string, qa?: boolean, sessionId?: string, sessionKey?: string,
+ *     deviceLabel?: string, signedInAt?: string}>,
  *   quota: (req: Req, coreKey: string) => Promise<boolean>,
  *   cors: (req: Req, res: Res) => boolean,
  *   log: (event: {requestId: string, action: string, outcome: string, ms: number, stages: Record<string, number>}) => void,
- *   signals?: import('./realtime.mjs').Signals | null, maintenanceTtl?: number}} deps
- *   maintenanceTtl: how long (ms) a warm instance trusts the last read of the maintenance switch
+ *   signals?: import('./realtime.mjs').Signals | null, maintenanceTtl?: number,
+ *   mail?: ((m: {to: string, subject: string, text: string}) => Promise<unknown>) | null, appUrl?: string}} deps
+ *   maintenanceTtl: how long (ms) a warm instance trusts the last read of the maintenance switch;
+ *   mail: sends the new-device email (signin.mjs) to the signed-in address — the address is never stored; appUrl: its link
  */
-export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota, cors, log, signals = null, maintenanceTtl = 15000 }) {
+export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota, cors, log, signals = null, maintenanceTtl = 15000, mail = null, appUrl = 'https://feture-mvp.vercel.app' }) {
   /** Maintenance (wave 8): while on, non-staff get 503 «maintenance» for everything but `platform.maintenance`.
    * Before its migration is applied the table is missing: then it is simply off. */
   let maint = { at: 0, active: false, message: /** @type {string | null} */ (null) };
@@ -128,14 +131,22 @@ export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota
         account = await resolveAccount(db, pepper, core); mark('account');
         // This sign-in (device + token), keyed so the database cannot match it to a token: the staff second-factor
         // window belongs to it. No session key from authentication = never verified (fail closed).
-        account = { ...account, session: core.sessionKey ? hmac(pepper, 'fe-session:v1:' + core.sessionKey).toString('base64url') : null };
-        await noteSeen(db, account.id, core.sessionId, placeOf(req.headers));
+        account = { ...account, session: sessionHash(pepper, core.sessionKey) };
+        const place = placeOf(req.headers);
+        // A sign-in from a new device: inbox item and push queued, the email sent now (signin.mjs) — also for a sign-in
+        // that still has to pass the second step (someone who has the email code but not the phone). Before noteSeen:
+        // this sign-in's own «last used» row must not make its device look known.
+        const notice = await noteSignin(db, account, core, place);
+        if (notice) await sendSigninMail(db, mail, header(req, 'x-fit-email').toLowerCase(), account, notice, appUrl);
+        await noteSeen(db, account.id, core.sessionId, place);
         if (action !== 'platform.maintenance') {
           const m = await maintenance();
           if (m.active && !(await db.query('select 1 from feture.staff_role where account_id = $1 and revoked_at is null limit 1', [account.id])).length) {
             fail(503, 'maintenance', { message: m.message });
           }
         }
+        // The second step (optional factor, staff): a sign-in without a right code reaches nothing but the code check.
+        if (!SIGNIN_OPEN.has(action) && await signinBlocked(db, account)) fail(403, 'second_factor', { rule: 'signin' });
       } catch (error) { await admitted(); throw error; }
       await admitted();
       const profileId = header(req, 'x-fe-profile');

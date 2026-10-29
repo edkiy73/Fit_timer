@@ -16,8 +16,8 @@ const {isEventsCommand}=require('./events');
 const {isShareCommand}=require('./shares');
 /** @typedef {import('./contracts').Request} Request */
 /** @typedef {import('./contracts').Response} Response */
-/** @param {{store:import('./contracts').AccountStore;repository:import('./contracts').Repository;documents?:import('./documents').DocumentsRepository;profiles?:import('./profile').ProfileRepository;access?:import('./access').AccessRepository;moderation?:import('./moderation').ModerationRepository;tests?:import('./questionnaires').TestsRepository;journal?:import('./journal').JournalRepository;shares?:import('./shares').ShareRepository;photos?:ReturnType<typeof import('./post-photos').createPhotoRepository>;posts?:import('./posts').PostsRepository;groups?:ReturnType<typeof import('./groups').createGroupsRepository>;events?:ReturnType<typeof import('./events').createEventsRepository>;cors:(req:Request,res:Response)=>boolean;quota:(req:Request,scope:string)=>Promise<boolean>;qaResolver?:(accountHash:string)=>Promise<string|null>;metrics?:ReturnType<typeof import('./private-metrics').createPrivateMetrics>;audit:(event:import('./contracts').AuditEvent)=>void}} deps */
-function createHandler({store,repository,documents,profiles,access,moderation,tests,journal,shares,posts,groups,events,photos,cors,quota,audit,qaResolver,metrics}) {
+/** @param {{store:import('./contracts').AccountStore;repository:import('./contracts').Repository;documents?:import('./documents').DocumentsRepository;profiles?:import('./profile').ProfileRepository;access?:import('./access').AccessRepository;moderation?:import('./moderation').ModerationRepository;tests?:import('./questionnaires').TestsRepository;journal?:import('./journal').JournalRepository;shares?:import('./shares').ShareRepository;photos?:ReturnType<typeof import('./post-photos').createPhotoRepository>;posts?:import('./posts').PostsRepository;groups?:ReturnType<typeof import('./groups').createGroupsRepository>;events?:ReturnType<typeof import('./events').createEventsRepository>;cors:(req:Request,res:Response)=>boolean;guard?:(req:Request,actor:import('./contracts').Actor)=>Promise<void>;quota:(req:Request,scope:string)=>Promise<boolean>;qaResolver?:(accountHash:string)=>Promise<string|null>;metrics?:ReturnType<typeof import('./private-metrics').createPrivateMetrics>;audit:(event:import('./contracts').AuditEvent)=>void}} deps */
+function createHandler({store,repository,documents,profiles,access,moderation,tests,journal,shares,posts,groups,events,photos,cors,quota,audit,qaResolver,metrics,guard}) {
   /** @param {Request} req @param {Response} res */
   return async function handler(req,res) {
     const requestId=randomUUID();
@@ -32,6 +32,8 @@ function createHandler({store,repository,documents,profiles,access,moderation,te
     try {
       if(req.method!=='POST'){res.setHeader('Allow','POST, OPTIONS');record('method_not_allowed');return send(405,{error:'method_not_allowed',requestId});}
       const actor=await authenticate(req,store,qaResolver);
+      // A sign-in that has not passed the second step (optional factor) reaches nothing here (server/core-guard.mjs).
+      if(guard)await guard(req,actor);
       if(!(await quota(req,actor.accountHash))){res.setHeader('Retry-After','60');record('rate_limited');return send(429,{error:'rate_limited',requestId});}
       const input=command(await readBody(req));action=input.action;
       const metric=/** @param {unknown} result */async result=>{if(metrics)await metrics.record(action,actor,result);};

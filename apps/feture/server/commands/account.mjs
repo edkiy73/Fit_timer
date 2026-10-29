@@ -4,7 +4,9 @@ import { fail } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { deleteCouple } from './couples.mjs';
 import { endConversations } from './chats.mjs';
-import { removeFactor } from '../second-factor.mjs';
+import { checkCode, confirmEnrol, factorState, newRecoveryCodes, removeFactor, startEnrol } from '../second-factor.mjs';
+import { keepOnlyThisSignin, passSignin } from '../signin.mjs';
+import { ANY_STAFF, journal, openStaffSession, refused } from './staff.mjs';
 
 /** Account deletion and data export (S1 §16).
  * Deleting: every couple of the account is deleted (the partner stays with a text archive), the person profile and its
@@ -72,6 +74,9 @@ async function clearPerson(q, pp) {
   }
 }
 
+/** @param {Q} q @param {string} accountId */
+const isStaff = async (q, accountId) => (await q.query(`select 1 from feture.staff_role where account_id = $1 and role = any($2) and revoked_at is null limit 1`, [accountId, ANY_STAFF])).length > 0;
+
 /** @type {Record<keyof typeof accountCommands, Command['run']>} */
 const run = {
   async 'account.delete'(q, { account, input }) {
@@ -102,7 +107,7 @@ const run = {
     for (const t of ['notification', 'push_device', 'notification_settings']) await q.query(`delete from feture.${t} where ${t === 'notification' ? 'recipient_account_id' : 'account_id'} = $1`, [a.id]);
     await q.query(`update feture.staff_role set revoked_at = now() where account_id = $1 and revoked_at is null`, [a.id]);
     await removeFactor(q, a.id);
-    for (const t of ['staff_session', 'session_seen']) await q.query(`delete from feture.${t} where account_id = $1`, [a.id]);
+    for (const t of ['staff_session', 'session_seen', 'account_signin']) await q.query(`delete from feture.${t} where account_id = $1`, [a.id]);
     if (a.handle) {
       await q.query(`insert into feture.handle_hold (handle, profile_id, until) values (lower($1), $2, now() + make_interval(days => $3))
                      on conflict (handle) do update set until = excluded.until, profile_id = excluded.profile_id`, [a.handle, a.person_profile_id, HOLD_DAYS]);
@@ -114,6 +119,57 @@ const run = {
     await q.query(`delete from feture.launch_wish where account_id = $1`, [a.id]);
     await q.query(`delete from feture.account_link where account_id = $1`, [a.id]);
     return { deleted: true };
+  },
+
+  // Optional second factor (owner 29.10.2026). Staff keep theirs on (it is required for them): no «off» for staff.
+  async 'account.factor'(q, { account }) {
+    const f = await factorState(q, account.id);
+    return { enabled: f.enrolled, recoveryLeft: f.recoveryLeft, lockedUntil: f.lockedUntil, required: await isStaff(q, account.id) };
+  },
+
+  async 'account.factorStart'(q, { account, cfg }) {
+    const [p] = await q.query('select handle from feture.profile where id = $1', [account.person_profile_id]);
+    return await startEnrol(q, account.id, cfg.pepper ?? '', p?.handle ? '@' + p.handle : 'FetUre');
+  },
+
+  async 'account.factorConfirm'(q, { account, input, cfg }) {
+    const { result, codes } = await confirmEnrol(q, account.id, cfg.pepper ?? '', input.code);
+    if (!result.ok) return refused(result);
+    // On from now: this sign-in passed; every other sign-in asks for a code at its next request.
+    await keepOnlyThisSignin(q, account);
+    // Shown once: the server keeps only their hashes.
+    return { verified: true, codes };
+  },
+
+  async 'account.factorOff'(q, { account, input, cfg }) {
+    if (await isStaff(q, account.id)) fail(409, 'conflict', { rule: 'factor_required' });
+    const r = await checkCode(q, account.id, cfg.pepper ?? '', input.code);
+    if (!r.ok) return refused(r);
+    await removeFactor(q, account.id);
+    return { verified: true, off: true };
+  },
+
+  async 'account.factorCodes'(q, { account, input, cfg }) {
+    const r = await checkCode(q, account.id, cfg.pepper ?? '', input.code);
+    if (!r.ok) return refused(r);
+    return { verified: true, codes: await newRecoveryCodes(q, account.id, cfg.pepper ?? '') };
+  },
+
+  // The sign-in second step. A staff member's code also opens the staff window of this sign-in (one code, not two).
+  async 'account.factorSignIn'(q, { account, input, cfg }) {
+    const staff = await isStaff(q, account.id);
+    const r = await checkCode(q, account.id, cfg.pepper ?? '', input.code);
+    if (!r.ok) {
+      if (staff && r.lockedNow) await journal(q, account.id, 'staff.factorLocked', 'account', account.id);
+      return refused(r);
+    }
+    await passSignin(q, account);
+    if (staff) {
+      if (r.recovery) await journal(q, account.id, 'staff.recoveryUsed', 'account', account.id);
+      await openStaffSession(q, account);
+    }
+    const f = await factorState(q, account.id);
+    return { verified: true, recovery: r.recovery, recoveryLeft: f.recoveryLeft };
   },
 
   // «Мои устройства»: when each signed-in device last used the app and roughly where (server/devices.mjs). The list

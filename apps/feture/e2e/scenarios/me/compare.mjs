@@ -66,7 +66,7 @@ export default [
      if (theirsOnly) {
        const n = topic.get(theirsOnly.topicId);
        await t.tap(`.profile-page .sc:has-text("${n}")`); await t.see(`.sheet.on h2:has-text("${n}")`);
-       await t.see('.sheet.on .k-verdict:has-text("У тебя этого интереса пока нет")');
+       expect(!(await t.page.locator('.sheet.on .k-verdict').count()), 'no verdict line when I don\'t have the interest (the button says it)');
        await t.see('.sheet.on .sh-f button:has-text("Об этом интересе")');
        await t.tap('.sheet.on .sh-f button:has-text("Добавить себе")');
        await t.tap('.sheet.on .ans-scale button:has-text("7")'); await t.tap('.sheet.on .sh-f .btn.primary');
