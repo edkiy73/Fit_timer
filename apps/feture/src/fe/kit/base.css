@@ -2899,7 +2899,7 @@
 .v21 .attachment-title{display:block;margin:0 0 10px;font-size:var(--fs-xs);font-weight:550;line-height:1.4;color:var(--mute)}
 /* One separator per boundary, including post → activity and activity → post. */
 .v21 .posts>.actc{border-bottom:0;border-top:1px solid var(--line)}
-.v21 .posts>.actc:first-child{border-top:0}
+.v21 .posts>.actc:first-child{border-top:0;padding-top:4px}
 
 
 /* V12 phone review: shared action spacing, request cards and compact profile states. */
