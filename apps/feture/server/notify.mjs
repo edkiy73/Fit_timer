@@ -54,6 +54,11 @@ const TYPES = /** @type {Record<string, {type: string, actor?: string, object?: 
   'couple.narrowed': { type: 'pair.narrowed' },
   'couple.changed': { type: 'pair.acted' },
   'couple.approvalChanged': { type: 'pair.trust' },
+  // Staff decisions that used to say nothing (audit 30.10): a city proposal, a Premium grant / withdrawal, a staff role.
+  'place.decided': { type: 'placeDecided' },
+  'premium.granted': { type: 'premiumGranted' },
+  'premium.revoked': { type: 'premiumRevoked' },
+  'staff.role': { type: 'staffRole' },
   'verification.decided': { type: 'ageCheck' },
   'verification.photoDecided': { type: 'photoCheck' },
   'profile.restricted': { type: 'profileRestricted' },
@@ -71,7 +76,7 @@ const TYPES = /** @type {Record<string, {type: string, actor?: string, object?: 
 });
 /** Payload fields kept in `data` (codes and ids only, never free text; `device` / `place` of a new sign-in are Core's
  * device family and the edge network's «city|CC», never anything a person typed). */
-const KEEP = ['device', 'place', 'what', 'change', 'reason', 'state', 'kind', 'resolution', 'rule', 'targetType', 'targetId', 'answer', 'outcome', 'changes', 'approves', 'ticketId', 'days', 'until', 'target'];
+const KEEP = ['device', 'place', 'what', 'change', 'reason', 'state', 'kind', 'resolution', 'rule', 'targetType', 'targetId', 'answer', 'outcome', 'changes', 'approves', 'ticketId', 'days', 'until', 'target', 'purpose', 'count', 'role', 'grant'];
 
 /** @param {any} payload */
 const pick = payload => Object.fromEntries(KEEP.filter(k => payload[k] !== undefined).map(k => [k, payload[k]]));
@@ -175,6 +180,37 @@ export function notifyHandlers(db, emit = () => {}) {
       });
     };
   }
+  // A photo, clip or voice message decided by staff: the owner is told once per batch — decisions on the same kind of
+  // file with the same outcome within 15 minutes (the six photos of one post) are one row that counts them.
+  handlers['media.decided'] = async item => {
+    const p = /** @type {any} */ (item.payload);
+    await tx(async (q, out) => {
+      // What it belongs to, so the row opens it: a post, a community or event cover, the chat the file was sent in.
+      const [at] = await q.query(`select target_type, target_id from feture.media_attachment where asset_id = $1 order by created_at limit 1`, [p.assetId]);
+      /** @type {[string, string] | null} */
+      let object = null;
+      if (at && ['post', 'community', 'event'].includes(at.target_type)) object = [at.target_type, at.target_id];
+      else if (at?.target_type === 'message') {
+        const [m] = await q.query(`select conversation_id from feture.message where id = $1`, [at.target_id]);
+        if (m) object = ['conversation', m.conversation_id];
+      }
+      for (const r of await recipientsOf(q, item.profile_id, p)) {
+        const [prev] = await q.query(
+          `select id from feture.notification
+           where recipient_account_id = $1 and type = 'mediaDecided' and retracted_at is null and read_at is null
+             and created_at > now() - interval '15 minutes' and data->>'purpose' = $2 and data->>'state' = $3
+             and coalesce(data->>'reason', '') = $4 and coalesce(data->>'kind', '') = $5
+             and object_id is not distinct from $6::uuid and addressee_profile_id is not distinct from $7::uuid
+           order by created_at desc limit 1`,
+          [r.account, p.purpose, p.state, p.reason ?? '', p.kind ?? '', object?.[1] ?? null, r.profile]);
+        if (prev) {
+          await q.query(`update feture.notification set data = jsonb_set(data, '{count}', to_jsonb(coalesce((data->>'count')::int, 1) + 1)) where id = $1`, [prev.id]);
+          continue;
+        }
+        await write(q, item, { type: 'mediaDecided', actor: null, objectType: object?.[0] ?? null, objectId: object?.[1] ?? null, data: pick(p) }, [r], out);
+      }
+    });
+  };
   // Event updates go to the people following the event, not to the organizer the item is addressed to.
   for (const [topic, type, admittedOnly] of /** @type {const} */ ([['event.cancelled', 'eventCancelled', false], ['event.changed', 'eventChanged', false],
     ['event.announcement', 'eventAnnouncement', true], ['event.reminder', 'eventReminder', true]])) {

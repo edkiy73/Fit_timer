@@ -366,9 +366,11 @@ const run = {
   async 'staff.placeDecide'(q, { account, input }) {
     await requireStaff(q, account, [...MODERATORS, 'verifier']);
     const rows = await q.query(
-      `update feture.place set state = $2, name_ru = coalesce($3, name_ru), name_en = coalesce($4, name_en) where id = $1 and state = 'pending' returning id`,
+      `update feture.place set state = $2, name_ru = coalesce($3, name_ru), name_en = coalesce($4, name_en) where id = $1 and state = 'pending' returning id, submitted_by`,
       [input.placeId, input.decision === 'approve' ? 'approved' : 'rejected', input.nameRu ?? null, input.nameEn ?? null]);
     if (!rows[0]) fail(409, 'conflict');
+    // The person who proposed the city is told whether it can be chosen now.
+    if (rows[0].submitted_by) await enqueue(q, 'place.decided', null, { for: rows[0].submitted_by, state: input.decision === 'approve' ? 'approved' : 'rejected' });
     await journal(q, account.id, 'place.' + input.decision, 'place', input.placeId, {});
     return { decision: input.decision };
   },

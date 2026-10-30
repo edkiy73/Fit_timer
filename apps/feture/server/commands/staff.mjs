@@ -172,7 +172,10 @@ const run = {
     const changed = input.grant
       ? await q.query(`insert into feture.staff_role (account_id, role, granted_by) values ($1, $2, $3) on conflict do nothing returning 1`, [t.id, input.role, account.id])
       : await q.query(`update feture.staff_role set revoked_at = now() where account_id = $1 and role = $2 and revoked_at is null returning 1`, [t.id, input.role]);
-    if (changed.length) await journal(q, account.id, input.grant ? 'staff.grant' : 'staff.revoke', 'account', t.id, { role: input.role });
+    if (changed.length) {
+      await journal(q, account.id, input.grant ? 'staff.grant' : 'staff.revoke', 'account', t.id, { role: input.role });
+      await enqueue(q, 'staff.role', null, { for: t.id, role: input.role, grant: input.grant });
+    }
     // A revoked role ends the person's staff windows at once: with another role left they verify again.
     if (!input.grant) await q.query('delete from feture.staff_session where account_id = $1', [t.id]);
     return { changed: changed.length > 0 };
@@ -253,6 +256,12 @@ const run = {
       await enqueue(q, 'media.purge', a.owner_profile_id, { assetId: a.id }, { delaySeconds: 30 * 24 * 3600 }); // kept 30 days for an appeal
     }
     await journal(q, account.id, 'media.' + input.decision, 'media', a.id, { explicit: input.explicit ?? null, reason: input.reason ?? null });
+    // The owner learns the outcome (audit 30.10) — except a suspected CSAM case, which nobody is tipped off about.
+    if (!escalate && a.purpose !== 'verification') {
+      await enqueue(q, 'media.decided', a.owner_profile_id, {
+        assetId: a.id, purpose: a.purpose, kind: a.kind, state: input.decision === 'approve' ? 'approved' : 'rejected', ...(input.decision === 'approve' ? {} : { reason: input.reason }),
+      });
+    }
     return { state: input.decision === 'approve' ? 'approved' : input.reason === 'csam_suspected' ? 'blocked' : 'rejected' };
   },
 

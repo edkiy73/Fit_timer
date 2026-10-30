@@ -279,6 +279,7 @@ const run = {
        returning id, ends_at`, [t.id, input.days, account.id, input.reason]);
     await recompute(q, t.id);
     await journal(q, account.id, 'premium.grant', 'account', t.id, { days: input.days, reason: input.reason, entitlementId: e.id });
+    await enqueue(q, 'premium.granted', null, { for: t.id, days: input.days, until: new Date(e.ends_at).toISOString() });
     return { id: e.id, until: e.ends_at };
   },
 
@@ -288,6 +289,7 @@ const run = {
     if (!rows[0]) fail(404, 'not_found');
     await recompute(q, rows[0].account_id);
     await journal(q, account.id, 'premium.revoke', 'account', rows[0].account_id, { reason: input.reason, entitlementId: input.entitlementId });
+    await enqueue(q, 'premium.revoked', null, { for: rows[0].account_id });
     return { revoked: true };
   },
 

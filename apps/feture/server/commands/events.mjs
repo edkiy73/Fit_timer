@@ -690,7 +690,7 @@ const run = {
     } else if (e.state === 'published' && e.pending_change) {
       await q.query(`update feture.event set pending_change = null, reject_reason = $2, rev = rev + 1, updated_at = now() where id = $1`, [e.id, input.reason || null]);
     } else fail(409, 'conflict', { state: e.state });
-    await enqueue(q, 'event.' + input.decision, e.organizer_profile_id, { eventId: e.id });
+    await enqueue(q, 'event.' + input.decision, e.organizer_profile_id, { eventId: e.id, ...(input.decision !== 'hide' && e.state === 'published' ? { what: 'change' } : {}) });
     await journal(q, account.id, 'event.' + input.decision, 'event', e.id, {
       from: e.state, rev: e.rev, reason: input.reason || null, decided: e.state === 'in_review' ? { title: e.title, description: e.description, cover: e.cover_asset_id } : e.pending_change,
     });
