@@ -17,7 +17,10 @@ import { NOTIFICATION_DEFAULTS } from '../contracts/me.mjs';
 import { setup as baseSetup, op } from './fe-helpers.mjs';
 
 const vapid = createECDH('prime256v1');vapid.generateKeys();
-const KEYS = { publicKey: vapid.getPublicKey().toString('base64url'), privateKey: vapid.getPrivateKey().toString('base64url'), subject: 'mailto:owner@example.com' };
+// ECDH's private key comes back without its leading zero byte about once in 256 runs, and the sender refuses such a key (it
+// is exactly 32 bytes): the key is padded, so the test does not fail by chance.
+const pad32 = (/** @type {Buffer} */ b) => Buffer.concat([Buffer.alloc(32 - b.length), b]);
+const KEYS = { publicKey: vapid.getPublicKey().toString('base64url'), privateKey: pad32(vapid.getPrivateKey()).toString('base64url'), subject: 'mailto:owner@example.com' };
 
 /** A browser: its own P-256 key and auth secret, and the subscription JSON it would hand to push.register. */
 function browser(/** @type {string} */ endpoint) {
