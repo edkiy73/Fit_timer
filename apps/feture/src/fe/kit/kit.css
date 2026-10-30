@@ -336,7 +336,7 @@ button.pill{cursor:pointer}
    floating ‹ / ⋯ and bars sit below it (`.bar.overlay` padding, --safe-t). */
 /* Owner 30.10.2026 (the FitTimer look): the system bar is transparent, only a short soft gradient of the page colour under its
    clock and icons so they read over any content; no fill. */
-.v21 .main::before{content:"";position:absolute;left:0;right:0;top:0;z-index:14;height:calc(var(--safe-t) + 16px);background:linear-gradient(color-mix(in srgb,var(--bg) 78%,transparent),transparent);pointer-events:none}
+.v21 .main::before{content:"";position:absolute;left:0;right:0;top:0;z-index:14;height:calc(var(--safe-t) + 10px);background:linear-gradient(color-mix(in srgb,var(--bg) 42%,transparent),transparent);pointer-events:none}
 .v21 .main:has(>.view>.hero:first-child)::before{display:none}
 .v21 .hero:has(>.pc-bars,>img)::after{content:"";position:absolute;left:0;right:0;top:0;z-index:2;height:calc(var(--s-9) * 2 + var(--safe-t));background:linear-gradient(rgba(6,4,6,.62),rgba(6,4,6,.28) 55%,transparent);pointer-events:none}
 .v21 .pc-bars.counted{flex-wrap:wrap;row-gap:var(--s-2)}
