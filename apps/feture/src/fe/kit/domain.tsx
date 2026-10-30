@@ -468,6 +468,24 @@ export function ReviewCard({title,meta,children,danger}:{title:ReactNode,meta?:R
   {children}
  </Card>;
 }
+/** The thing a staff decision is about, whole: what kind it is and the plain facts around it, its title, the text in full
+ * (a long one is folded under «Показать полностью»), then whatever else belongs to it (pictures). Never a link away: the
+ * moderator judges it here and does not lose their place. */
+export function ReviewObject({kind,title,meta,text,children}:{kind?:ReactNode,title?:ReactNode,meta?:ReactNode,text?:string|null|undefined,children?:ReactNode}){
+ const {t}=useI18n();const [open,setOpen]=useState(false);
+ const folded=!!text&&text.length>420&&!open;
+ return <section className="st-obj">
+  {(kind||meta)&&<div className="st-obj-top">{kind&&<span className="st-obj-kind">{kind}</span>}{meta&&<span className="st-meta">{meta}</span>}</div>}
+  {title&&<b className="st-obj-title">{title}</b>}
+  {text&&<p className={'st-text'+(folded?' st-fold':'')}>{text}</p>}
+  {!!text&&text.length>420&&<Btn kind="text" size="sm" auto onClick={()=>setOpen(o=>!o)}>{open?t('fe.kit.review.less'):t('fe.kit.review.more')}</Btn>}
+  {children}
+ </section>;
+}
+/** The decision of a review card: failure, the «are you sure» question and the buttons. It sits at the bottom of the
+ * screen in the same place for every kind of item (short content: pushed down; long: pinned while it scrolls), and its
+ * buttons take the width of their text and wrap under each other when two do not fit side by side. */
+export function ReviewBar({children}:{children:ReactNode}){return <div className="st-bar">{children}</div>;}
 /** Label → value pairs of a review card (empty values are left out). */
 export function KeyValues({rows}:{rows:[string,ReactNode][]}){
  const shown=rows.filter(([,v])=>v!==null&&v!==undefined&&v!=='');

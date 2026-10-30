@@ -22,7 +22,7 @@ const decideRes=z.object({ok:z.literal(true),items:z.array(decision)});
 const note=z.object({id:z.uuid(),type:z.string(),actor,data:z.record(z.string(),z.unknown()),label:z.string(),addressee:z.uuid().nullable().optional(),object:z.object({type:z.string(),id:z.uuid().nullable()}).nullable(),at:z.string(),read:z.boolean()});
 type Note=z.infer<typeof note>;
 const notesRes=z.object({ok:z.literal(true),items:z.array(note),next:z.string().nullable()});
-export const countsRes=z.object({ok:z.literal(true),decide:z.number(),notifications:z.number(),bell:z.number(),chats:z.number(),newMatches:z.number(),requests:z.number().default(0),likes:z.number()});
+export const countsRes=z.object({ok:z.literal(true),decide:z.number(),notifications:z.number(),bell:z.number(),chats:z.number(),newMatches:z.number(),requests:z.number().default(0),likes:z.number(),staff:z.boolean().default(false)});
 const ok=z.object({ok:z.literal(true)}).passthrough();
 const revList=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),rev:z.number()}).passthrough())});
 const nameOf=(a:z.infer<typeof actor>)=>a?(a.name||(a.handle?'@'+a.handle:'?')):'FetUre';
@@ -57,7 +57,7 @@ const NICO:Record<string,[LucideIcon,string]>={like:[Heart,'l'],match:[Heart,'l'
  communityApproved:[Users,'g'],communityDeclined:[Users,''],communityMember:[Users,'v'],communityPublished:[Check,'g'],communityRejected:[Shield,'l'],communityClosed:[Users,''],discussionRemoved:[Trash2,'l'],
  eventPublished:[Check,'g'],eventRejected:[Shield,'l'],eventHidden:[EyeOff,'l'],eventApplicationApproved:[Check,'g'],eventApplicationDeclined:[Calendar,''],
  linkAccepted:[Users,'g'],linkDeclined:[Users,''],linkChanged:[Users,'v'],linkRemoved:[Users,''],ageCheck:[ShieldCheck,'g'],photoCheck:[ShieldCheck,'g'],
- profileSuspended:[Shield,'l'],profileRestricted:[Shield,'l'],profileRestored:[Check,'g'],profileUnrestricted:[Check,'g'],appealDecided:[Shield,''],supportReply:[LifeBuoy,'v'],premiumGift:[Crown,'l'],premiumGranted:[Crown,'g'],premiumRevoked:[Crown,''],placeDecided:[MapPin,'g'],staffRole:[ShieldCheck,'v'],mediaDecided:[ImageIcon,'g'],signinNew:[ShieldAlert,'l']};
+ profileSuspended:[Shield,'l'],profileRestricted:[Shield,'l'],profileRestored:[Check,'g'],profileUnrestricted:[Check,'g'],appealDecided:[Shield,''],supportReply:[LifeBuoy,'v'],premiumGift:[Crown,'l'],premiumGranted:[Crown,'g'],staffAlert:[ShieldAlert,'l'],premiumRevoked:[Crown,''],placeDecided:[MapPin,'g'],staffRole:[ShieldCheck,'v'],mediaDecided:[ImageIcon,'g'],signinNew:[ShieldAlert,'l']};
 const noteIcon=(n:Note):[LucideIcon,string]=>n.type==='tagAnswered'?(n.data.answer==='ok'?[Check,'g']:[EyeOff,'l'])
  :(n.type==='ageCheck'||n.type==='photoCheck'||n.type==='mediaDecided')&&n.data.state!=='approved'?[Shield,'l']:n.type==='placeDecided'&&n.data.state!=='approved'?[MapPin,'']:n.type.startsWith('pair.')?[Users,'v']:NICO[n.type]??[Bell,''];
 
@@ -117,6 +117,7 @@ export function InboxScreen(){
   if(n.type==='supportReply'){navigate('/n/help'+(typeof n.data.ticketId==='string'?'?ticket='+encodeURIComponent(n.data.ticketId):''));return;}
   if(n.type==='premiumGift'||n.type==='premiumGranted'||n.type==='premiumRevoked'){navigate('/n/premium');return;}
   if(n.type==='staffRole'){navigate(n.data.grant===true?'/n/staff':'/n/me');return;}
+  if(n.type==='staffAlert'){navigate('/n/staff');return;}
   if(n.type==='placeDecided'){navigate('/n/me');return;}
   if(n.type==='mediaDecided'&&!n.object?.id){navigate('/n/me');return;}
   if(n.type==='signinNew'){navigate('/n/settings/security');return;}

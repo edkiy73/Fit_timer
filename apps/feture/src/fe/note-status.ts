@@ -21,6 +21,11 @@ export function statusText(n:Row,t:T,locale:string):string|null{
    }
    return why?t('fe.ibx.media.why',{head,reason:why}):head;
   }
+  case 'staffAlert':{
+   const what=String(d.what);const c=Number(d.count)||1;
+   if(c>1)return t('fe.ibx.staff.'+what+'.many',{n:String(c)});
+   return t(what==='report'?'fe.ibx.staff.report.'+(d.reason==='minor'?'minor':'threat'):'fe.ibx.staff.'+what);
+  }
   case 'placeDecided':return t('fe.ibx.t.placeDecided.'+(d.state==='approved'?'approved':'rejected'));
   case 'premiumGranted':return t('fe.ibx.t.premiumGranted',{date:day(d.until)});
   case 'staffRole':{const role=String(d.role??'');return t(d.grant===true?'fe.ibx.t.staffRole.grant':'fe.ibx.t.staffRole.revoke',{role:known('fe.staff.role.'+role)??role});}

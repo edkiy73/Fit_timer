@@ -196,13 +196,21 @@ const run = {
       ? await cfg.media.delivery.urls(rows.filter(covered).map(r => ({ assetId: r.id, variant: /** @type {const} */ ('blur'), viewerProfileId: staffProfile(account), ttlSeconds: 300 })))
       : [];
     let i = 0;
-    return {
-      items: rows.map(r => ({
+    const items = [];
+    for (const r of rows) {
+      // Where the file is used, so a moderator judges it in context: the post's text, the community or event it is the
+      // cover of; a chat file names no conversation (private).
+      const [at] = await q.query(`select target_type, target_id from feture.media_attachment where asset_id = $1 order by created_at limit 1`, [r.id]);
+      const used = !at ? null
+        : at.target_type === 'post' ? (await q.query(`select left(coalesce(title || ': ', '') || body, 300) text from feture.post where id = $1`, [at.target_id]))[0]?.text
+        : at.target_type === 'community' ? (await q.query(`select name text from feture.community where id = $1`, [at.target_id]))[0]?.text
+        : at.target_type === 'event' ? (await q.query(`select title text from feture.event where id = $1`, [at.target_id]))[0]?.text : null;
+      items.push({
         id: r.id, purpose: r.purpose, kind: r.kind, authorLabel: r.explicitness, reason: r.reason, createdAt: r.created_at, w: r.width, h: r.height,
-        blur: covered(r) ? blur[i++] : null,
-      })),
-      ...page,
-    };
+        blur: covered(r) ? blur[i++] : null, usedIn: used ?? null,
+      });
+    }
+    return { items, ...page };
   },
 
   async 'staff.mediaView'(q, { account, input, cfg }) {
@@ -216,7 +224,8 @@ const run = {
     const [{ inCase }] = await q.query(
       `select exists (select 1 from feture.media_attachment ma join feture.post p on p.id = ma.target_id
          where ma.target_type = 'post' and ma.asset_id = $1
-           and (p.disputed_at is not null or exists (select 1 from feture.report r where r.target_type = 'post' and r.target_id = p.id and r.state = 'open')))
+           and (p.disputed_at is not null or exists (select 1 from feture.photo_dispute d where d.post_id = p.id and d.state = 'open')
+                or exists (select 1 from feture.report r where r.target_type = 'post' and r.target_id = p.id and r.state = 'open')))
        -- A chat message the reporter chose as evidence, while that report is open: only those, never the rest of the chat.
        or exists (select 1 from feture.message m join feture.report r on r.target_type = 'conversation' and r.target_id = m.conversation_id
          and r.state = 'open' and m.id = any(r.message_ids) where m.media_asset_id = $1) "inCase"`, [a.id]);

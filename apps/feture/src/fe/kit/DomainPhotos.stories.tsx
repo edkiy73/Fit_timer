@@ -1,7 +1,7 @@
 import type {Meta,StoryObj} from '@storybook/react-vite';
 import {fn} from 'storybook/test';
 import {Ban,Camera,Check,Eye,Hand,Image as ImageIcon,Plus,Trash2,Users,X} from 'lucide-react';
-import {Actions,Btn,Field,MoreInfo,TextArea,AlbumCard,AlbumMeta,AlbumRow,Card,GalleryAdd,GalleryGrid,GalleryTile,KeyValues,Note,PhotoAdd,PhotoSlot,PhotoSlots,PhotoTrack,Pose,Quota,ReviewCard,ReviewMedia,ReviewPair,ReviewTiles,SelectionBar,VaultHead} from './index';
+import {Actions,Btn,Field,MoreInfo,TextArea,AlbumCard,AlbumMeta,AlbumRow,Card,GalleryAdd,GalleryGrid,GalleryTile,KeyValues,Note,PhotoAdd,PhotoSlot,PhotoSlots,PhotoTrack,Pose,Quota,ReviewCard,ReviewBar,ReviewMedia,ReviewObject,ReviewPair,ReviewTiles,SelectionBar,VaultHead} from './index';
 
 // A tiny inline picture so the stories need no network.
 const PIC='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 5"><defs><linearGradient id="g" x2="1" y2="1"><stop offset="0" stop-color="#7A1236"/><stop offset="1" stop-color="#FF9F7A"/></linearGradient></defs><rect width="4" height="5" fill="url(#g)"/></svg>');
@@ -62,3 +62,7 @@ export const ПанельВыбора:StoryObj<typeof SelectionBar>={name:'Га�
 
 export const ПроверкаПлитки:StoryObj<typeof ReviewTiles>={name:'Проверка: медиа из жалобы плитками',render:a=><Card><ReviewTiles {...a}/></Card>,
  args:{tiles:[{label:'Фото 1',icon:Eye,thumb:PIC},{label:'Фото 2',icon:Eye},{label:'Видео 3',icon:Eye,busy:true}],onOpen:()=>{}}};
+
+export const ПроверкаОбъект:StoryObj<typeof ReviewCard>={name:'Проверка: объект целиком и панель решения',render:a=><ReviewCard {...a}/>,
+ args:{title:'Жалоба на публикацию',meta:'ждёт 3 ч',children:<><ReviewObject kind="Публикация" title="Осень в Армении" meta="28 окт. · для всех" text={'Горы, листья и вино из Арени. '.repeat(30)}><ReviewTiles tiles={[{label:'Фото 1',icon:Eye},{label:'Фото 2',icon:Eye}]} onOpen={()=>{}}/></ReviewObject>
+  <ReviewBar><Actions><Btn icon={Check}>Не подтвердилось</Btn><Btn kind="danger" icon={Ban}>Подтвердилось</Btn></Actions></ReviewBar></>}};

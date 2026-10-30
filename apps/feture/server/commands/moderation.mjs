@@ -90,6 +90,34 @@ async function checkRank(q, roles, profileId) {
   if (theirs.some(r => r.role === 'owner' || (RANK[/** @type {keyof typeof RANK} */ (r.role)] ?? 0) >= mine)) fail(403, 'forbidden');
 }
 
+/** What a moderator needs to judge a reported or appealed thing, whole (S4 §3): the text in full (up to 4000
+ * characters) and the plain facts around it. Values are raw (codes, ISO dates); the screen words them.
+ * @param {Q} q @param {string} type @param {string} id */
+async function targetObject(q, type, id) {
+  const one = async (/** @type {string} */ sql) => (await q.query(sql, [id]))[0] ?? null;
+  if (type === 'post') {
+    const p = await one(`select p.title, left(p.body, 4000) body, p.type kind, p.audience, p.topics, p.state, coalesce(p.published_at, p.created_at) "at" from feture.post p where p.id = $1`);
+    return p && { kind: 'post', title: p.title, body: p.body, facts: { type: p.kind, audience: p.audience, topics: p.topics, state: p.state, at: p.at } };
+  }
+  if (type === 'reply') {
+    const r = await one(`select left(r.body, 4000) body, r.state, r.created_at "at", left(coalesce(p.title || ': ', '') || p.body, 200) under from feture.reply r join feture.post p on p.id = r.post_id where r.id = $1`);
+    return r && { kind: 'reply', title: null, body: r.body, facts: { state: r.state, at: r.at, under: r.under } };
+  }
+  if (type === 'community') {
+    const c = await one(`select c.name, left(c.description, 4000) body, c.topics, c.privacy, c.state, c.created_at "at", c.rules from feture.community c where c.id = $1`);
+    return c && { kind: 'community', title: c.name, body: c.body, facts: { topics: c.topics, privacy: c.privacy, state: c.state, at: c.at, rules: c.rules } };
+  }
+  if (type === 'event') {
+    const e = await one(`select e.title, left(e.description, 4000) body, e.format, e.area, e.starts_at, e.tz, e.state, e.created_at "at" from feture.event e where e.id = $1`);
+    return e && { kind: 'event', title: e.title, body: e.body, facts: { format: e.format, area: e.area, startsAt: e.starts_at, tz: e.tz, state: e.state, at: e.at } };
+  }
+  if (type === 'profile') {
+    const p = await one(`select p.name, p.handle, left(coalesce(d.bio, ''), 4000) body, p.state from feture.profile p left join feture.profile_details d on d.profile_id = p.id where p.id = $1`);
+    return p && { kind: 'profile', title: [p.name, p.handle && '@' + p.handle].filter(Boolean).join(' '), body: p.body, facts: { state: p.state } };
+  }
+  return null;
+}
+
 /** @type {Record<keyof typeof moderationCommands, Command['run']>} */
 const run = {
   async 'staff.reportQueue'(q, { account, input }) {
@@ -140,7 +168,8 @@ const run = {
           : [];
       // Evidence as it was when first reported (S4 §3), plus how it looks now.
       items.push({ targetType: g.target_type, targetId: g.target_id, reports: g.reports, reasons: g.reasons, priority: g.priority,
-        details: g.details.slice(0, 5), firstAt: g.first_at, lastAt: g.last_at, reported: g.snapshot, excerpt: snap.excerpt, state: snap.state, media: snap.media, author, evidence });
+        details: g.details.slice(0, 5), firstAt: g.first_at, lastAt: g.last_at, reported: g.snapshot, excerpt: snap.excerpt, state: snap.state, media: snap.media, author, evidence,
+        object: await targetObject(q, g.target_type, g.target_id) });
     }
     return { items, ...page };
   },
@@ -205,8 +234,12 @@ const run = {
         claims.push({ tagged: c.tagged, hid: c.hid, at: c.at, trust: tr.level, strikes: tr.strikes });
       }
       const hidden = !!r.disputed_at || r.hid;
+      // The post whole and its files (opened one by one through staff.mediaView, which journals each look).
+      const evidence = await q.query(
+        `select a.asset_id "assetId", m.kind from feture.media_attachment a join feture.media_asset m on m.id = a.asset_id
+         where a.target_type = 'post' and a.target_id = $1 order by a.position`, [r.id]);
       items.push({ id: r.id, disputed_at: r.disputed_at, opened_at: r.opened_at, excerpt: r.excerpt, media: r.media, hidden, urgent: !hidden,
-        attack: !!r.attack, tagged: !!r.tagged, note: r.note ?? null, claims });
+        attack: !!r.attack, tagged: !!r.tagged, note: r.note ?? null, claims, object: await targetObject(q, 'post', r.id), evidence });
     }
     // Accounts that reached the claim restriction wait for a staff look (S4: a person, so staff may see the handle).
     const flagged = await q.query(
@@ -413,7 +446,12 @@ const run = {
        from feture.appeal ap join feture.profile p on p.id = ap.profile_id
        where ap.state = 'open' and not exists (select 1 from feture.profile_member m where m.profile_id = ap.profile_id and m.account_id = $1)`, [account.id]);
     const rows = await q.query(sql, params);
-    return { items: rows.map(r => ({ id: r.id, target_type: r.target_type, target_id: r.target_id, body: r.body, created_at: r.created_at, handle: r.handle, decision: r.decision })), ...pageInfo(rows, CREATED_KEYS, input.limit) };
+    const items = [];
+    for (const r of rows) {
+      items.push({ id: r.id, target_type: r.target_type, target_id: r.target_id, body: r.body, created_at: r.created_at, handle: r.handle, decision: r.decision,
+        object: await targetObject(q, r.target_type, r.target_id) });
+    }
+    return { items, ...pageInfo(rows, CREATED_KEYS, input.limit) };
   },
 
   async 'staff.appealDecide'(q, { account, input }) {

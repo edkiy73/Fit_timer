@@ -12,12 +12,14 @@ import { staff } from '../server/commands/staff.mjs';
 import { moderation } from '../server/commands/moderation.mjs';
 import { communities } from '../server/commands/communities.mjs';
 import { premium } from '../server/commands/premium.mjs';
+import { support } from '../server/commands/support.mjs';
+import { staffCounts } from '../server/commands/staff-counts.mjs';
 import { inbox } from '../server/commands/inbox.mjs';
 import { notifyHandlers } from '../server/notify.mjs';
 import { drain } from '../server/outbox.mjs';
 import { setup as baseSetup, op } from './fe-helpers.mjs';
 
-const setup = () => baseSetup({ commands: { ...platform, ...me, ...social, ...posts, ...staff, ...moderation, ...communities, ...premium, ...inbox } });
+const setup = () => baseSetup({ commands: { ...platform, ...me, ...social, ...posts, ...staff, ...moderation, ...communities, ...premium, ...support, ...staffCounts, ...inbox } });
 const base = { description: 'Встречи и разговоры о верёвке для новичков', topics: ['shibari'], rules: ['Уважать границы'], plate: 'rose' };
 
 async function world() {
@@ -119,6 +121,47 @@ test('a change to a published community is told as a change, a new one as a new 
     await deliver();
     const items = (await notes('ua')).filter((/** @type {any} */ n) => n.type === 'communityPublished' || n.type === 'communityRejected');
     assert.deepEqual(items.map((/** @type {any} */ n) => [n.type, n.data.what ?? null]).sort(), [['communityPublished', null], ['communityRejected', 'change']]);
+  } finally { await pg.close(); }
+});
+
+test('staff learn that something waits: counts per queue, an alert for the serious, none for the ordinary', async () => {
+  const { pg, db, call, member, deliver, rowsOf } = await world();
+  try {
+    const a = await member('ua', 'Alex'), b = await member('ub', 'Kira');
+    const [{ id: mod }] = await db.query(`select a.id from feture.account a join feture.profile p on p.id = a.person_profile_id where p.handle = 'Mira'`);
+    const [{ id: boss }] = await db.query(`select a.id from feture.account a join feture.profile p on p.id = a.person_profile_id where p.handle = 'Boss'`);
+    const draft = { type: 'post', audience: 'all', inFeed: true, topics: [], mediaIds: [], interests: [], tags: [] };
+    const post = async (/** @type {string} */ body) => {
+      const d = await call('ub', b.id, { action: 'post.saveDraft', opId: op(), post: { ...draft, body } });
+      await call('ub', b.id, { action: 'post.publish', opId: op(), postId: d.id });
+      return d.id;
+    };
+    const [p1, p2, p3] = [await post('Первая'), await post('Вторая'), await post('Третья')];
+    const report = (/** @type {string} */ postId, /** @type {string} */ reason) =>
+      call('ua', a.id, { action: 'report.create', opId: op(), targetType: 'post', targetId: postId, reason, details: 'Подробности для модератора' });
+    await report(p1, 'spam');                       // ordinary: counted, nobody is woken
+    await deliver();
+    assert.deepEqual((await rowsOf(mod)).filter((/** @type {any} */ n) => n.type === 'staffAlert'), []);
+    await report(p2, 'minor'); await report(p3, 'threat');
+    await deliver();
+    const alerts = (await rowsOf(mod)).filter((/** @type {any} */ n) => n.type === 'staffAlert');
+    assert.equal(alerts.length, 2); // a minor and a threat are different alerts
+    assert.deepEqual(alerts.map((/** @type {any} */ n) => [n.data.what, n.data.reason]).sort(), [['report', 'minor'], ['report', 'threat']]);
+    assert.ok((await rowsOf(boss)).some((/** @type {any} */ n) => n.type === 'staffAlert'));
+    assert.deepEqual((await rowsOf(a.account)).filter((/** @type {any} */ n) => n.type === 'staffAlert'), []); // never the reporter
+
+    // A request to support: counted for support staff, an alert for them, none for the one who wrote.
+    await call('ua', null, { action: 'support.create', opId: op(), topic: 'other', body: 'Не могу войти в профиль, помогите' });
+    await deliver();
+    assert.ok((await rowsOf(mod)).some((/** @type {any} */ n) => n.type === 'staffAlert' && n.data.what === 'support'));
+
+    // The counts: the moderator sees what waits in the queues and in support; an ordinary person sees nothing.
+    const c = await call('um', null, { action: 'staff.counts' });
+    assert.equal(c.queues.report, 3);
+    assert.equal(c.support, 1);
+    assert.equal(c.total, Object.values(c.queues).reduce((x, y) => x + y, 0) + 1);
+    const none = await call('ua', null, { action: 'staff.counts' });
+    assert.deepEqual([none.status, none.total, none.support], [200, 0, 0]);
   } finally { await pg.close(); }
 });
 

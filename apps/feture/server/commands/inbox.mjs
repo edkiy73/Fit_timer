@@ -133,10 +133,11 @@ const run = {
             and not feture.blocked(cm.profile_id, o.id) and ${CHAT_MEMBER}) requests,
          (select count(*)::int from feture.profile_like l join feture.profile_member m on m.profile_id = l.to_profile_id and m.account_id = $1 and m.state = 'active'
             join feture.profile ap on ap.id = l.from_profile_id
-          where l.state = 'active' and ap.state = 'active' and not feture.blocked(l.to_profile_id, ap.id)) likes`, [account.id])]);
+          where l.state = 'active' and ap.state = 'active' and not feture.blocked(l.to_profile_id, ap.id)) likes,
+         exists (select 1 from feture.staff_role r where r.account_id = $1 and r.revoked_at is null) staff`, [account.id])]);
     const decide = list.length;
     // The bell shows unread news plus everything to decide; «Нужно решить» is the same number everywhere.
-    return { decide, notifications: c.notifications, bell: c.notifications + decide, chats: c.chats, newMatches: c.new_matches, requests: c.requests, likes: c.likes };
+    return { decide, notifications: c.notifications, bell: c.notifications + decide, chats: c.chats, newMatches: c.new_matches, requests: c.requests, likes: c.likes, staff: c.staff };
   },
 
   async 'push.register'(q, { account, input }) {

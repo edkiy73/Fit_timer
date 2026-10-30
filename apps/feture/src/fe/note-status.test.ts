@@ -44,6 +44,15 @@ describe('what staff decided, in plain words',()=>{
   expect(text('ru','communityRejected',{what:'change'})).toBe('Правки сообщества не приняты');
   expect(text('ru','eventPublished',{what:'change'})).toBe('Правки события приняты');
  });
+ it('tells staff what waits for them',()=>{
+  expect(text('ru','staffAlert',{what:'report',reason:'minor'})).toBe('Срочно в модерации: жалоба — несовершеннолетний');
+  expect(text('ru','staffAlert',{what:'report',reason:'threat'})).toBe('Срочно в модерации: жалоба — угрозы');
+  expect(text('ru','staffAlert',{what:'report',reason:'threat',count:4})).toBe('Срочных жалоб в модерации: 4');
+  expect(text('ru','staffAlert',{what:'support'})).toBe('Новое обращение в поддержку');
+  expect(text('ru','staffAlert',{what:'support',count:3})).toBe('Новых обращений в поддержку: 3');
+  expect(text('en','staffAlert',{what:'dispute'})).toContain('still visible');
+  expect(text('ru','staffAlert',{what:'notice'})).toBe('Срочное юридическое обращение');
+ });
  it('leaves every other row to the inbox',()=>{
   expect(text('ru','communityRejected',{})).toBeNull();
   expect(text('ru','profileRestored',{})).toBeNull();

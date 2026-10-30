@@ -9,6 +9,7 @@ import {useToast} from './toast';
 import {FIELD,serverFields,softMax,textError,textErrorMessage,useChecks} from './kit/validate';
 import {useFe} from './session';
 import {useStaffPage} from './staff-paged';
+import {pullStaffCounts} from './staff-counts';
 import {clearDraft,draftKey,readDraft,writeDraft} from './drafts';
 
 /** S01 «Написать в поддержку» (wave 8): the person writes, staff answer in the staff screen, the answer comes back
@@ -154,7 +155,7 @@ function StaffTicket({item,when,onDone}:{item:z.infer<typeof queueRes>['items'][
  const send=async(close:boolean)=>{
   const m=!close||body.trim()?textError(t,'support',body):undefined;if(m){setErr(m);return;}
   setBusy(true);setErr('');
-  try{await call('staff.supportReply',{opId:newOpId(),ticketId:item.id,close,...(body.trim()?{body:body.trim()}:{})},okRes,{asAccount:true});clearDraft(draftSlot);toast(t('fe.staff.done'),{type:'ok'});onDone();}
+  try{await call('staff.supportReply',{opId:newOpId(),ticketId:item.id,close,...(body.trim()?{body:body.trim()}:{})},okRes,{asAccount:true});clearDraft(draftSlot);toast(t('fe.staff.done'),{type:'ok'});void pullStaffCounts(call,true);onDone();}
   catch(e){const f=serverFields(e).find(f=>f.path==='body');setErr(f?textErrorMessage(t,f.code,FIELD.support):feErrorMessage(e,t));}finally{setBusy(false);}
  };
  return <ReviewCard title={t('fe.w8.sup.t.'+item.topic)} meta={when(item.updatedAt)}>

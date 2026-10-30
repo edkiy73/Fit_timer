@@ -211,6 +211,26 @@ export function notifyHandlers(db, emit = () => {}) {
       }
     });
   };
+  // Something waits for staff (a serious report, a photo dispute, a support request, a legal notice): one row per kind
+  // while it is unread, with a count; a push for the first one.
+  handlers['staff.alert'] = async item => {
+    const p = /** @type {any} */ (item.payload);
+    await tx(async (q, out) => {
+      for (const r of await recipientsOf(q, item.profile_id, p)) {
+        if (p.by && r.account === p.by) continue;
+        const [prev] = await q.query(
+          `select id from feture.notification
+           where recipient_account_id = $1 and type = 'staffAlert' and retracted_at is null and read_at is null
+             and created_at > now() - interval '15 minutes' and data->>'what' = $2 and coalesce(data->>'reason', '') = $3
+           order by created_at desc limit 1`, [r.account, p.what, p.reason ?? '']);
+        if (prev) {
+          await q.query(`update feture.notification set data = jsonb_set(data, '{count}', to_jsonb(coalesce((data->>'count')::int, 1) + 1)) where id = $1`, [prev.id]);
+          continue;
+        }
+        await write(q, item, { type: 'staffAlert', actor: null, data: pick(p) }, [r], out);
+      }
+    });
+  };
   // Event updates go to the people following the event, not to the organizer the item is addressed to.
   for (const [topic, type, admittedOnly] of /** @type {const} */ ([['event.cancelled', 'eventCancelled', false], ['event.changed', 'eventChanged', false],
     ['event.announcement', 'eventAnnouncement', true], ['event.reminder', 'eventReminder', true]])) {

@@ -3,6 +3,7 @@ import { ACTIVITY_KINDS, DISPUTE_LIMITS, postFields, postsCommands } from '../..
 import { likePattern, writeCursor } from '../search.mjs';
 import { acceptsMention, popularScore, qaHidden } from '../sql-rules.mjs';
 import { fail, isUniqueViolation } from '../errors.mjs';
+import { alertStaff } from '../staff-alert.mjs';
 import { enqueue } from '../outbox.mjs';
 import { needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
 import { avatarSrc, mediaDto } from '../media/assets.mjs';
@@ -1078,7 +1079,7 @@ const run = {
     if (hid) {
       await enqueue(q, 'post.disputed', p.owner_profile_id, { postId: input.postId });
       await settleAvatar(q, p.owner_profile_id);
-    }
+    } else await alertStaff(q, 'dispute', { by: account.id }); // still visible and waiting: urgent
     return { hidden: hid, queued: true };
   },
 
@@ -1152,6 +1153,8 @@ const run = {
        returning id, (xmax = 0) inserted`,
       [viewer.profileId, account.id, input.targetType, input.targetId, rev, input.reason, input.details, input.messageIds ?? null, snapshot ? JSON.stringify(snapshot) : null, input.targetType === 'conversation' ? ownerProfile : null]);
     if (r.inserted) await enqueue(q, 'moderation.report', ownerProfile, { reportId: r.id, reason: input.reason });
+    // A report about a minor or a threat does not wait for someone to open the queue.
+    if (r.inserted && ['minor', 'threat'].includes(input.reason)) await alertStaff(q, 'report', { reason: input.reason, by: account.id });
     // A reported message request is closed for its recipient and counts against its sender's daily requests.
     if (input.targetType === 'conversation') await markRequestReported(q, input.targetId, viewer.profileId);
     // The reporter stops seeing what they reported (V21 rpSend); blocking is optional.

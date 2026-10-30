@@ -10,6 +10,7 @@ import {Av,Btn,Empty,H,Skel} from './kit';
 import {FeSessionProvider,useFe,useRealtime} from './session';
 import {sweepDrafts} from './drafts';
 import {countsRes} from './inbox';
+import {useStaffCounts} from './staff-counts';
 import {Register} from './register';
 import {SignedOut} from './start';
 import {SigninFactor} from './factor';
@@ -119,11 +120,13 @@ function FeGate(){
 /** Tab badges as in the prototype's TABDEF: «Люди» — likes to you, «Чаты» — unread chats and message requests (a dot for new matches),
  * «Я» — things to decide. One `inbox.counts` call, refreshed by realtime signals and a slow poll. */
 function useTabBadges(){
- const {call}=useFe();const [c,setC]=useState<{likes:number,chats:number,newMatches:number,requests:number,decide:number}|null>(null);
+ const {call}=useFe();const [c,setC]=useState<{likes:number,chats:number,newMatches:number,requests:number,decide:number,staff:boolean}|null>(null);
+ // Staff: what waits in the queues and in support counts on «Я» too (one shared call, only for people with a role).
+ const staffN=useStaffCounts(!!c?.staff)?.total??0;
  const pull=useCallback(()=>{call('inbox.counts',{},countsRes,{asAccount:true}).then(setC).catch(()=>{});},[call]);
  useEffect(()=>{pull();const id=setInterval(pull,60000);return ()=>clearInterval(id);},[pull]);
  useRealtime(['notify','decide','chat'],pull);
- return (id:string):number|'dot'|0=>!c?0:id==='people'?c.likes:id==='chats'?((c.chats+c.requests)||(c.newMatches?'dot':0)):id==='me'?c.decide:0;
+ return (id:string):number|'dot'|0=>!c?0:id==='people'?c.likes:id==='chats'?((c.chats+c.requests)||(c.newMatches?'dot':0)):id==='me'?c.decide+staffN:0;
 }
 
 /** An app left open across a release keeps running the old build. On screen changes (at most once a minute) it reads

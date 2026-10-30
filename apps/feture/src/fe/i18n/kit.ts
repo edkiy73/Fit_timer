@@ -1,6 +1,8 @@
 // Design-system kit (src/fe/kit): the uploader and the crop sheet.
 export const ru = {
   'fe.kit.up.title': 'Загрузка',
+  'fe.kit.review.more': 'Показать полностью',
+  'fe.kit.review.less': 'Свернуть',
   'fe.kit.more.loading': 'Загружаем ещё',
   'fe.kit.more.fail': 'Не загрузилось',
   'fe.kit.more.retry': 'Повторить',
@@ -55,6 +57,8 @@ export const ru = {
   'fe.kit.sheet.dirtyStay': 'Остаться',
 };
 export const en: Record<keyof typeof ru, string> = {
+  'fe.kit.review.more': 'Show all',
+  'fe.kit.review.less': 'Fold',
   'fe.kit.more.loading': 'Loading more',
   'fe.kit.more.fail': 'Didn’t load',
   'fe.kit.more.retry': 'Retry',

@@ -189,3 +189,24 @@ test('mass attack: 3 suspicious claims on one author in 24 h suspend instant hid
     assert.equal((await object(call, 'uv', v, op1)).hidden, true);
   } finally { await pg.close(); }
 });
+
+test('a dispute card carries the whole post and its files, and staff may open them while the claim is open', async () => {
+  const { pg, db, call, person } = await setup();
+  try {
+    await staffSetup(db, person);
+    const a = await person('ua', 'Alex'), c = await person('uc', 'Noa');
+    const long = 'Длинный текст публикации. '.repeat(25).trim(); // over the 400 characters of an excerpt
+    const post = await photoPost(call, db, 'ua', a, long);
+    await object(call, 'uc', c, post); // an untrusted claim: the post stays visible, the item is urgent
+    const item = (await queue(call)).items.find(i => i.id === post);
+    assert.equal(item.urgent, true);
+    assert.equal(item.object.body, long.slice(0, 4000));
+    assert.ok(item.object.body.length > 400);
+    assert.equal(item.evidence.length, 1);
+    // The post is not hidden yet and no report is open, yet the claim is a case: its file opens (and is journaled).
+    assert.equal((await call('uo', null, { action: 'staff.mediaView', assetId: item.evidence[0].assetId })).ok, true);
+    // Decided → nothing to look at any more.
+    await call('uo', null, { action: 'staff.disputeDecide', opId: op(), postId: post, restore: true, note: '' });
+    assert.equal((await call('uo', null, { action: 'staff.mediaView', assetId: item.evidence[0].assetId })).status, 409);
+  } finally { await pg.close(); }
+});
