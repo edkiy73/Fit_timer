@@ -6,7 +6,11 @@ import android.content.pm.PackageManager;
 import android.content.pm.Signature;
 import android.net.Uri;
 import android.os.Build;
+import android.graphics.Color;
 import android.provider.Settings;
+import android.view.Window;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 
 import androidx.core.content.FileProvider;
 import androidx.work.Constraints;
@@ -42,6 +46,24 @@ import java.util.concurrent.Executors;
 public class FetUreUpdatePlugin extends Plugin {
     private static final String APK_MIME = "application/vnd.android.package-archive";
     private final ExecutorService updateExecutor = Executors.newSingleThreadExecutor();
+
+    /** The page tells which theme it draws (src/fe/system-bars.ts): transparent system bars, dark icons on a light page,
+     * light icons on a dark one. */
+    @PluginMethod
+    public void setBars(PluginCall call) {
+        final boolean light = call.getBoolean("light", true);
+        getActivity().runOnUiThread(() -> {
+            Window window = getActivity().getWindow();
+            window.setStatusBarColor(Color.TRANSPARENT);
+            window.setNavigationBarColor(Color.TRANSPARENT);
+            WindowInsetsControllerCompat c = WindowCompat.getInsetsController(window, window.getDecorView());
+            c.setAppearanceLightStatusBars(light);
+            c.setAppearanceLightNavigationBars(light);
+            JSObject result = new JSObject();
+            result.put("light", light);
+            call.resolve(result);
+        });
+    }
 
     @PluginMethod
     public void getDistribution(PluginCall call) {
