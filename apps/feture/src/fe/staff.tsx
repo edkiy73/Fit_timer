@@ -298,7 +298,7 @@ function urgencyOf(id:QueueId,x:unknown):{level:Level,since:number}{
  const urgent=id==='report'?(o.reasons as string[]).some(r=>r==='minor'||r==='threat')
   :id==='dispute'?!!o.urgent||!!o.attack
   :id==='media'?/minor|csam/.test(String(o.reason??''))
-  :id==='notice'?o.reason==='minors':false;
+  :id==='notice'?['csam','minors','threats'].includes(String(o.reason)):false;
  return {level:urgent?'urgent':Date.now()-since>SLA[id]?'late':null,since};
 }
 const queueLabel=(id:QueueId,t:T)=>id==='photo'?t('fe.pc.staff.tab'):t('fe.staff.q.'+id);
