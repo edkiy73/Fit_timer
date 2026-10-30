@@ -6,7 +6,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Search,Ban,Bell,CalendarDays,Check,ChevronDown,ChevronLeft,ChevronRight,EyeOff,Heart,Ellipsis,History,Info,KeyRound,LocateFixed,Lock,MapPin,MessageCircle,SlidersHorizontal,Sparkles,Undo2,Users,X} from 'lucide-react';
 import {Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,IconBtn,LikeTile,Note,PairArt,PersonName,PhotoBars,Pill,Radar,Range,RangeDual,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Soon,Stack,Text,View,plate} from './kit';
-import {useFe} from './session';
+import {useFe,useShown} from './session';
 import {useToast} from './toast';
 import {DiscoverPhotoAsk} from './discover-photo';
 import {NameBadges} from './faces';
@@ -234,22 +234,33 @@ type Decision={card:Card,dir:1|-1};
 /** The deck is a local queue: a swipe takes the top card away at once and sends the decision in the background (one
  * request per swipe, in order, so «Вернуть» always meets the server's last decision); the queue is refilled before it
  * runs out and the next cards' photos are loaded ahead, so there is never a reload between two people. */
+/** The deck as the person left it — the cards still to decide, what was decided here (for «Отменить») — kept for a way to a
+ * full profile or to «Нравятся» and back: the same card is where it was, with no new loading. A deck older than DECK_LIFE, an
+ * empty one, another filter or another acting profile loads anew. */
+type DeckMemo={cards:Card[],off:boolean,closed:boolean,needsLoc:boolean,made:Decision[],gone:Set<string>,at:number};
+const deckMemo=new Map<string,DeckMemo>();
+const DECK_LIFE=10*60e3;
+const usable=(m:DeckMemo|undefined):m is DeckMemo=>!!m&&m.cards.length>0&&Date.now()-m.at<DECK_LIFE;
+
 function Discover({reloadKey,onOff,filterOn,openFilter,onLikes}:{reloadKey:number,onOff:(off:boolean)=>void,filterOn:number,openFilter:()=>void,onLikes:()=>void}){
  const {call,acting,state}=useFe();const {t}=useI18n();
- const [cards,setCards]=useState<Card[]|null>(null);const [off,setOff]=useState(false);const [error,setError]=useState<unknown>(null);
- const [closed,setClosed]=useState(false);const [needsLoc,setNeedsLoc]=useState(false);
+ const accountId=state.status==='ready'?state.boot.account.id:'';
+ const memoKey=accountId+'|'+(acting?.id??'')+'|'+reloadKey;
+ const first=useRef(deckMemo.get(memoKey));const kept=usable(first.current)?first.current:null;
+ const fetchedAt=useRef(kept?.at??0);
+ const [cards,setCards]=useState<Card[]|null>(kept?.cards??null);const [off,setOff]=useState(kept?.off??false);const [error,setError]=useState<unknown>(null);
+ const [closed,setClosed]=useState(kept?.closed??false);const [needsLoc,setNeedsLoc]=useState(kept?.needsLoc??false);
  const [match,setMatch]=useState<{card:Card,conversationId?:string}|null>(null);const toast=useToast();
- const [made,setMade]=useState<Decision[]>([]);const [byFilter,setByFilter]=useState<number|null>(null);
+ const [made,setMade]=useState<Decision[]>(kept?.made??[]);const [byFilter,setByFilter]=useState<number|null>(null);
  const [filling,setFilling]=useState(false);const [settled,setSettled]=useState(0);
  const busy=useRef(false);const top=useRef<HTMLElement|null>(null);const next=useRef<HTMLElement|null>(null);const acts=useRef<HTMLDivElement>(null);
  const undoRef=useRef<()=>void>(()=>{});
  // Decided here (sent or on the way): a refill that still has them (the server has not recorded it yet) leaves them out.
- const gone=useRef(new Set<string>());const chain=useRef<Promise<unknown>>(Promise.resolve());
+ const gone=useRef(kept?.gone??new Set<string>());const chain=useRef<Promise<unknown>>(Promise.resolve());
  const gen=useRef(0);const exhausted=useRef(false);const filling$=useRef(false);const pendingN=useRef(0);
- const accountId=state.status==='ready'?state.boot.account.id:'';
  const apply=(r:z.infer<typeof deck>)=>{setOff(r.off);onOff(r.off);setClosed(!!r.closed);setNeedsLoc(!!r.needsLocation);};
  const load=useCallback(()=>{const g=++gen.current;setError(null);exhausted.current=false;
-  call('discover.deck',{limit:QUEUE},deck,{fresh:true}).then(r=>{if(g!==gen.current)return;apply(r);setCards(r.items.filter(c=>!gone.current.has(c.id)));})
+  call('discover.deck',{limit:QUEUE},deck,{fresh:true}).then(r=>{if(g!==gen.current)return;fetchedAt.current=Date.now();apply(r);setCards(r.items.filter(c=>!gone.current.has(c.id)));})
    .catch(e=>{if(g!==gen.current)return;setError(e);setCards(c=>c??[]);});
  },[call,onOff]);
  const refill=useCallback(()=>{if(filling$.current||exhausted.current)return;const g=gen.current;filling$.current=true;setFilling(true);
@@ -258,7 +269,17 @@ function Discover({reloadKey,onOff,filterOn,openFilter,onLikes}:{reloadKey:numbe
    .catch(()=>{exhausted.current=true;}).finally(()=>{filling$.current=false;setFilling(false);});
  },[call,onOff]);
  // A new filter (reloadKey) or another acting profile starts over.
- useEffect(()=>{gone.current=new Set();setMade([]);setCards(null);load();},[load,reloadKey,acting?.id]);
+ useEffect(()=>{
+  const m=deckMemo.get(memoKey);
+  if(usable(m)){gone.current=m.gone;fetchedAt.current=m.at;setCards(m.cards);setOff(m.off);onOff(m.off);setClosed(m.closed);setNeedsLoc(m.needsLoc);setMade(m.made);exhausted.current=false;return;}
+  gone.current=new Set();setMade([]);setCards(null);load();
+ },[load,reloadKey,acting?.id]);
+ // What is on screen is what is kept (one deck per account, acting profile and filter).
+ useEffect(()=>{
+  if(cards===null)return;
+  for(const k of [...deckMemo.keys()])if(k!==memoKey&&k.startsWith(accountId+'|'+(acting?.id??'')+'|'))deckMemo.delete(k);
+  deckMemo.set(memoKey,{cards,off,closed,needsLoc,made,gone:gone.current,at:fetchedAt.current||Date.now()});
+ },[cards,off,closed,needsLoc,made,memoKey,accountId,acting?.id]);
  // Down to the last few: ask for more. A decision that lands may free a place the last answer did not have.
  useEffect(()=>{exhausted.current=false;},[settled]);
  useEffect(()=>{if(cards&&cards.length<=REFILL_AT&&!off&&!closed)refill();},[cards,settled,refill,off,closed]);
@@ -506,7 +527,8 @@ function DeckEmpty({byFilter,filterOn,openFilter}:{byFilter:number|null,filterOn
 function Likes({onCount,toDiscover}:{onCount:(n:number)=>void,toDiscover:()=>void}){
  const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
  const [k,setK]=useState<'in'|'out'>('in');const us=acting?.kind==='couple';
- const [inc,setInc]=useState<z.infer<typeof incoming>['items']|null>(null);const [out,setOut]=useState<z.infer<typeof outgoing>['items']|null>(null);
+ // What was seen last time is shown at once and read again quietly (no loading in between).
+ const [inc,setInc]=useShown<z.infer<typeof incoming>['items']|null>('px.likes.in',()=>null);const [out,setOut]=useShown<z.infer<typeof outgoing>['items']|null>('px.likes.out',()=>null);
  const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState('');const [match,setMatch]=useState<{card:Card,conversationId?:string}|null>(null);
  const load=useCallback(()=>{setError(null);
   Promise.all([call('likes.incoming',{},incoming),call('likes.outgoing',{},outgoing)]).then(([a,b])=>{setInc(a.items);setOut(b.items);onCount(a.items.length);}).catch(setError);},[call,onCount]);
