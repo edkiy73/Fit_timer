@@ -217,3 +217,26 @@ test('report evidence: staff open the media of picked chat messages while the re
     assert.equal((await call('um', null, { action: 'staff.mediaView', assetId: shown })).status, 409); // closed
   } finally { await pg.close(); }
 });
+
+test('staff see the whole thing a report is about, and where a waiting file is used', async () => {
+  const { pg, db, call, member } = await world();
+  try {
+    const a = await member('ua', 'Alex'), b = await member('ub', 'Kira');
+    const long = 'Очень длинная публикация. '.repeat(30).trim(); // over the 400 characters an excerpt used to cut at
+    const d = await call('ub', b, { action: 'post.saveDraft', opId: op(), post: { type: 'post', title: 'Заголовок', body: long, audience: 'all', inFeed: true, topics: [], mediaIds: [], interests: [], tags: [] } });
+    await call('ub', b, { action: 'post.publish', opId: op(), postId: d.id });
+    await call('ua', a, { action: 'report.create', opId: op(), targetType: 'post', targetId: d.id, reason: 'spam', details: 'Подробности для модератора' });
+    const card = (await call('um', null, { action: 'staff.reportQueue' })).items.find((/** @type {any} */ i) => i.targetType === 'post');
+    assert.deepEqual([card.object.kind, card.object.title, card.object.body], ['post', 'Заголовок', long.slice(0, 4000)]);
+    assert.equal(card.object.facts.audience, 'all');
+
+    // A file waiting for review that belongs to that post says so in the media queue.
+    const [{ account_id }] = await db.query('select account_id from feture.profile_member where profile_id = $1 limit 1', [b]);
+    const [m] = await db.query(
+      `insert into feture.media_asset (owner_profile_id, uploaded_by, kind, purpose, storage_key, mime, declared_bytes, state, explicitness, copies_at)
+       values ($1, $2, 'image', 'post', 'u/' || gen_random_uuid(), 'image/jpeg', 10, 'needs_review', 'safe', now()) returning id`, [b, account_id]);
+    await db.query(`insert into feture.media_attachment (asset_id, target_type, target_id) values ($1, 'post', $2)`, [m.id, d.id]);
+    const queued = (await call('um', null, { action: 'staff.mediaQueue' })).items.find((/** @type {any} */ i) => i.id === m.id);
+    assert.ok(queued.usedIn.startsWith('Заголовок: Очень длинная публикация.'));
+  } finally { await pg.close(); }
+});

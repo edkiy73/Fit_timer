@@ -1,12 +1,13 @@
-import {useCallback,useEffect,useId,useRef,useState,type ReactNode} from 'react';
+import {Children,Fragment,cloneElement,isValidElement,useCallback,useEffect,useId,useRef,useState,type ReactNode} from 'react';
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {BadgeCheck,Ban,CalendarDays,Check,ChevronLeft,ChevronRight,Eye,FilePen,Flag,Gavel,IdCard,Image,ImageOff,Inbox,ListFilter,Lock,MapPin,Minus,RefreshCw,Scale,Search,ShieldAlert,ShieldCheck,UserX,Users,X,Ellipsis,Film,Mic,Camera,Image as ImageIcon,LifeBuoy,Crown,Wrench,ScrollText,KeyRound,type LucideIcon} from 'lucide-react';
+import {ArrowUpDown,BadgeCheck,Ban,CalendarDays,Check,ClipboardCheck,ChevronLeft,ChevronRight,Eye,FilePen,Flag,Gavel,IdCard,Image,ImageOff,Inbox,ListFilter,Lock,MapPin,Minus,RefreshCw,Scale,Search,ShieldAlert,ShieldCheck,UserX,Users,X,Ellipsis,Film,Mic,Camera,Image as ImageIcon,LifeBuoy,Crown,Wrench,ScrollText,KeyRound,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Actions,Alert,Btn,Card,ChoiceChips,Chips,Divider,Empty,ExpandRow,Field,Form,Group,IconBtn,Input,KeyValues,LoadMore,MoreInfo,Note,Pill,ReviewCard,ReviewMedia,ReviewPair,ReviewTiles,type Slide,useBackClose,Row,SectionLabel,Seg,Select,Sheet,Skel,Stack,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble} from './kit';
+import {Actions,Alert,Btn,Card,ChoiceChips,Chips,Divider,Empty,ExpandRow,Field,Form,Group,IconBtn,Input,KeyValues,LoadMore,MoreInfo,Note,Pill,ReviewBar,ReviewCard,ReviewMedia,ReviewObject,ReviewPair,ReviewTiles,type Slide,useBackClose,Row,SectionLabel,Seg,Select,Sheet,Skel,Stack,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble} from './kit';
 import {askFactor,useFe} from './session';
 import {useToast} from './toast';
+import {pullStaffCounts,useStaffCounts} from './staff-counts';
 import {Viewer} from './post-parts';
 import {FactorPromptHost,FactorReset,StaffEnrol,StaffUnlock,factorSchema,type Factor} from './staff-factor';
 import {StaffSupport} from './support';
@@ -24,7 +25,9 @@ const meRes=z.object({ok:z.literal(true),roles:z.array(z.string()),factor:factor
 const ts=z.string().nullable().optional();
 const opt=<T extends z.ZodType>(s:T)=>s.nullable().optional();
 
-const mediaItem=z.object({id:z.uuid(),purpose:z.string(),kind:z.string(),authorLabel:opt(z.string()),reason:opt(z.string()),createdAt:ts,w:opt(z.number()),h:opt(z.number()),blur:opt(z.string())});
+const objectDto=z.object({kind:z.string(),title:z.string().nullable().optional(),body:z.string().nullable().optional(),facts:z.record(z.string(),z.unknown()).optional()}).nullable().optional();
+type ObjectDto=z.infer<typeof objectDto>;
+const mediaItem=z.object({id:z.uuid(),purpose:z.string(),kind:z.string(),usedIn:opt(z.string()),authorLabel:opt(z.string()),reason:opt(z.string()),createdAt:ts,w:opt(z.number()),h:opt(z.number()),blur:opt(z.string())});
 const viewRes=z.object({ok:z.literal(true),src:z.object({card:z.string().optional(),full:z.string().optional(),file:z.string().optional()}).nullable()});
 const commItem=z.object({id:z.uuid(),rev:z.number(),name:z.string(),description:opt(z.string()),topics:opt(z.array(z.string())),privacy:opt(z.string()),join_question:opt(z.string()),
  rules:z.unknown().optional(),state:z.string(),pending_change:z.record(z.string(),z.unknown()).nullable().optional(),created_at:ts,
@@ -39,15 +42,16 @@ const photoItem=checkItem.extend({photos:z.array(mediaDto).optional()});
 const reportItem=z.object({targetType:z.enum(['profile','post','reply','community','event','conversation']),targetId:z.uuid(),reports:z.number(),reasons:z.array(z.string()),
  details:opt(z.array(z.string())),firstAt:ts,lastAt:ts,reported:z.unknown().optional(),excerpt:opt(z.string()),state:opt(z.string()),media:opt(z.number()),
  author:opt(z.object({id:z.string(),kind:z.string().optional(),handle:z.string().nullable().optional(),name:z.string().nullable().optional()}).passthrough()),
- evidence:opt(z.array(z.object({assetId:z.uuid(),kind:z.string(),seq:opt(z.number())})))});
-const appealItem=z.object({id:z.uuid(),target_type:z.string(),target_id:z.string(),body:z.string(),created_at:ts,handle:opt(z.string()),
+ evidence:opt(z.array(z.object({assetId:z.uuid(),kind:z.string(),seq:opt(z.number())}))),object:objectDto});
+const appealItem=z.object({id:z.uuid(),target_type:z.string(),target_id:z.string(),body:z.string(),created_at:ts,handle:opt(z.string()),object:objectDto,
  decision:opt(z.object({action:z.string(),detail:z.unknown().optional(),at:ts,mine:z.boolean().optional()}).passthrough())});
 const noticeItem=z.object({id:z.uuid(),target_url:opt(z.string()),reason:z.string(),explanation:opt(z.string()),created_at:ts,answerable:opt(z.boolean())});
 const placeItem=z.object({id:z.uuid(),country:opt(z.string()),name_ru:opt(z.string()),name_en:opt(z.string()),created_at:ts,used:opt(z.number())});
 const journalItem=z.object({id:z.union([z.string(),z.number()]),staff_account_id:opt(z.string()),staff_name:opt(z.string()),staff_handle:opt(z.string()),action:z.string(),target_type:opt(z.string()),target_id:opt(z.string()),detail:z.unknown().optional(),created_at:ts});
 const disputeClaim=z.object({tagged:z.boolean(),hid:z.boolean().optional(),at:ts,trust:z.string(),strikes:z.number()});
 const disputeItem=z.object({id:z.uuid(),disputed_at:ts,opened_at:ts,excerpt:opt(z.string()),media:opt(z.number()),hidden:z.boolean().optional(),urgent:z.boolean().optional(),
- attack:z.boolean().optional(),tagged:z.boolean().optional(),note:opt(z.string()),claims:z.array(disputeClaim).optional().default([])});
+ attack:z.boolean().optional(),tagged:z.boolean().optional(),note:opt(z.string()),claims:z.array(disputeClaim).optional().default([]),
+ object:objectDto,evidence:opt(z.array(z.object({assetId:z.uuid(),kind:z.string()})))});
 const flaggedRes=z.object({ok:z.literal(true),flagged:z.array(z.object({profileId:z.uuid(),handle:z.string().nullable(),strikes:z.number(),flaggedAt:ts})).optional().default([])}).passthrough();
 const revisionItem=z.object({id:z.uuid(),postId:z.uuid(),createdAt:ts,live:opt(z.string()),proposed:z.unknown().optional()});
 const grantRes=z.object({ok:z.literal(true),id:z.string(),until:z.string()});
@@ -103,8 +107,10 @@ function useStaffMe({fresh=false}:{fresh?:boolean}={}){
 /** Me header button, shown only to staff. */
 export function StaffEntry(){
  const roles=useStaffRoles();const {t}=useI18n();const navigate=useNavigate();
+ const waiting=useStaffCounts(!!roles?.length)?.total;
  if(!roles?.length)return null;
- return <IconBtn icon={ShieldCheck} label={t('fe.staff.entry')} title={t('fe.staff.entryText')} onClick={()=>navigate('/n/staff')}/>;
+ // The number on the shield is what waits for this person in the queues and in support.
+ return <IconBtn icon={ShieldCheck} label={waiting?t('fe.staff.entryN',{n:String(waiting)}):t('fe.staff.entry')} title={t('fe.staff.entryText')} badge={waiting||undefined} onClick={()=>navigate('/n/staff')}/>;
 }
 
 export function StaffScreen(){
@@ -115,6 +121,7 @@ export function StaffScreen(){
  const daily:Section[]=ok.filter(id=>id==='queues'||id==='support');const tools:Section[]=ok.filter(id=>!daily.includes(id));
  const label=(id:Section)=>t(SECTION_LABEL[id]);
  const ready=!!roles?.length&&checked&&!(factor&&(!factor.enrolled||!factor.verified));
+ const counts=useStaffCounts(ready);
  return <>
   <SubBar title={tools.includes(cur)?label(cur):t('fe.staff.title')} onBack={()=>tools.includes(cur)?setSection(daily[0]??'queues'):navigate('/n/me')}>
    {ready&&tools.length>0&&<IconBtn icon={Ellipsis} kind="ghost" label={t('fe.staff.tools')} onClick={()=>setMenu(true)}/>}
@@ -127,7 +134,8 @@ export function StaffScreen(){
     :factor&&!factor.verified?<StaffUnlock factor={factor} onDone={reload}/>
     :<>
      <FactorPromptHost onEnrol={reload}/>
-     {daily.length>1&&daily.includes(cur)&&<Seg<Section> small={false} value={cur} onChange={setSection} options={daily.map(id=>({id,label:label(id)}))}/>}
+     {daily.length>1&&daily.includes(cur)&&<Seg<Section> small={false} value={cur} onChange={setSection}
+      options={daily.map(id=>{const n=id==='queues'?(counts?counts.total-counts.support:0):(counts?.support??0);return {id,label:label(id),...(n>0?{n}:{})};})}/>}
      {cur==='queues'?<Queues/>:cur==='support'?<StaffSupport/>:cur==='premium'?<Premium/>:cur==='maintenance'?<StaffMaintenance/>:cur==='journal'?<Journal/>:cur==='access'?<FactorReset/>:null}
     </>}
   </View>
@@ -165,19 +173,21 @@ function mergeLive(d:Loaded|null,id:QueueId,order:Order,r:PageOf):Loaded|null{
 function Queues(){
  const {call}=useFe();const {t}=useI18n();const toast=useToast();const roles=useStaffRoles();
  const [data,setData]=useState<Loaded|null>(null);const [tab,setTab]=useState<QueueId|'all'>('all');const [notice,setNotice]=useState('');
- // Oldest first: what waits longest is decided first; urgent items are lifted to the top of the list (see `sorted`).
- const order:Order='old';
+ // Within each group (urgent / overdue / the rest) the oldest waits first by default; «Сначала новые» turns it round.
+ const [order,setOrder]=useState<Order>('old');
+ const known=useRef(new Set<string>()); // what was in the list when it loaded: later arrivals are «Новое»
  const [focus,setFocus]=useState<number|null>(null);const [picking,setPicking]=useState(false);
  const [pageBusy,setPageBusy]=useState(false);const [pageError,setPageError]=useState<unknown>(null);
  // The live timer reads the screen as it is at each tick, not as it was when the timer was set.
- const live=useRef({data:null as Loaded|null,tab:'all' as QueueId|'all',busy:false,focus:false});
- live.current={data,tab,busy:pageBusy,focus:focus!==null};
+ const live=useRef({data:null as Loaded|null,tab:'all' as QueueId|'all',busy:false,focus:false,order:'old' as Order});
+ live.current={data,tab,busy:pageBusy,focus:focus!==null,order};
  const load=useCallback((fresh=false)=>{
   setData(null);setNotice('');setPageError(null);
   const ids=QUEUE_IDS.filter(id=>can(roles??[],QUEUE_ROLES[id]));
   void Promise.allSettled(ids.map(id=>call(QUEUES[id].action,{limit:LIMIT,order},QUEUES[id].schema as z.ZodType<PageOf>,{asAccount:true,fresh}))).then(rs=>{
    const next:Record<string,PageOf|{error:unknown}>={};
    rs.forEach((r,i)=>{const id=ids[i]!;if(r.status==='fulfilled')next[id]={items:r.value.items,locked:r.value.locked,next:r.value.next,tail:r.value.tail,total:r.value.total};else if(!forbidden(r.reason))next[id]={error:r.reason};});
+   known.current=new Set(Object.entries(next).flatMap(([id,v])=>'items' in v?(v.items as unknown[]).map(x=>id+':'+(QUEUES[id as QueueId].key as (x:unknown)=>string)(x)):[]));
    setData(next as Loaded);
   });
  },[call,roles,order]);
@@ -190,8 +200,9 @@ function Queues(){
    const ids=s.tab==='all'?(Object.keys(s.data) as QueueId[]):[s.tab];
    for(const id of ids){
     const v=s.data[id];if(!v||!('items' in v)||v.next)continue; // more pages to load: the rest comes with «Ещё»
-    void call(QUEUES[id].action,{limit:LIMIT,order:'old',...(v.tail?{after:v.tail}:{})},QUEUES[id].schema as z.ZodType<PageOf>,{asAccount:true})
-     .then(r=>setData(d=>mergeLive(d,id,'old',r))).catch(()=>{});
+    const ord=s.order;
+    void call(QUEUES[id].action,{limit:LIMIT,order:ord,...(ord==='old'&&v.tail?{after:v.tail}:{})},QUEUES[id].schema as z.ZodType<PageOf>,{asAccount:true})
+     .then(r=>{if(live.current.order===ord)setData(d=>mergeLive(d,id,ord,r));}).catch(()=>{});
    }
   },REFRESH_MS);
   return()=>clearInterval(timer);
@@ -208,7 +219,7 @@ function Queues(){
  // The work list: one queue, or every queue together; urgent first, then what is past its time, then the oldest.
  const ids=tab==='all'?avail:[tab];
  const entries:Entry[]=ids.flatMap(id=>itemsOf(id).map(item=>({id,item,key:(QUEUES[id].key as (x:unknown)=>string)(item),...urgencyOf(id,item)})));
- entries.sort((x,y)=>rank(x)-rank(y)||x.since-y.since);
+ entries.sort((x,y)=>rank(x)-rank(y)||(order==='old'?x.since-y.since:y.since-x.since));
  const urgentN=entries.filter(e=>e.level==='urgent').length;const lateN=entries.filter(e=>e.level==='late').length;
  const allUrgent=avail.reduce((n,id)=>n+itemsOf(id).filter(x=>urgencyOf(id,x).level==='urgent').length,0);
  // Every queue pages: the next page starts after the cursor of the last item shown, appended without repeats.
@@ -226,6 +237,7 @@ function Queues(){
  const done=(id:QueueId,key:string)=>{
   setData(d=>{if(!d)return d;const v=d[id];if(!v||!('items' in v))return d;
    const keyOf=QUEUES[id].key as (x:unknown)=>string;return {...d,[id]:{items:(v.items as unknown[]).filter(x=>keyOf(x)!==key),next:v.next,tail:v.tail,locked:v.locked,total:v.total!==undefined?Math.max(0,v.total-1):undefined}} as Loaded;});
+  void pullStaffCounts(call,true); // the numbers on the tabs, the dock and the profile follow the decision
   setFocus(f=>f===null?null:entries.length<=1?null:Math.min(f,entries.length-2));
   if(entries.length<=1)setNotice(t('fe.staff.allDone'));
  };
@@ -235,28 +247,27 @@ function Queues(){
  const cur=focus!==null?entries[focus]:undefined;
  return <>
   {/* What is shown: everything together, or one queue — picked in a sheet with each queue's count and urgent items. */}
-  <SectionLabel action={<Btn kind="text" size="sm" auto icon={RefreshCw} onClick={()=>load(true)}>{t('fe.staff.refresh')}</Btn>}>
-   {t('fe.staff.waiting',{n:String(ids.reduce((n,id)=>n+totalOf(id),0))})}
-  </SectionLabel>
-  <Actions><Btn kind="soft" icon={ListFilter} onClick={()=>setPicking(true)}>{tab==='all'?t('fe.staff.q.all'):queueLabel(tab,t)}</Btn></Actions>
+  <SectionLabel>{t('fe.staff.waiting',{n:String(ids.reduce((n,id)=>n+totalOf(id),0))})} · {t(order==='old'?'fe.staff.order.oldTop':'fe.staff.order.newTop')}</SectionLabel>
+  <div className="st-filterrow">
+   <Btn kind="soft" icon={ListFilter} onClick={()=>setPicking(true)}>{tab==='all'?t('fe.staff.q.all'):queueLabel(tab,t)}</Btn>
+   <IconBtn icon={ArrowUpDown} label={t(order==='old'?'fe.staff.sort.toNew':'fe.staff.sort.toOld')} onClick={()=>{setOrder(o=>o==='old'?'new':'old');setNotice('');setFocus(null);}}/>
+   <IconBtn icon={RefreshCw} label={t('fe.staff.refresh')} onClick={()=>load(true)}/>
+  </div>
   {(urgentN>0||lateN>0)&&<Chips>{urgentN>0&&<Pill tone="bad">{t('fe.staff.urgentN',{n:String(urgentN)})}</Pill>}{lateN>0&&<Pill tone="wait">{t('fe.staff.lateN',{n:String(lateN)})}</Pill>}</Chips>}
-  {picking&&<Sheet title={t('fe.staff.queuesLabel')} onClose={()=>setPicking(false)}>
-   <BackCloses onClose={()=>setPicking(false)}/>
-   <Card list>
-    {[...(['all'] as const),...avail].map(id=>{const urg=id==='all'?allUrgent:itemsOf(id).filter(x=>urgencyOf(id,x).level==='urgent').length;
-     const n=id==='all'?avail.reduce((m,q)=>m+totalOf(q),0):count(id);
-     return <Row key={id} icon={id==='all'?Inbox:QUEUE_ICON[id]} title={id==='all'?t('fe.staff.q.all'):queueLabel(id,t)} pressed={tab===id}
-      sub={id!=='all'&&failed(id)?t('fe.error.title'):urg?t('fe.staff.urgentN',{n:String(urg)}):undefined} val={String(n)}
-      onClick={()=>{setTab(id);setNotice('');setFocus(null);setPicking(false);}}/>;})}
-   </Card>
-  </Sheet>}
   {notice&&<Alert kind="ok" icon={Check}>{notice}</Alert>}
   {errors.map(id=><Alert key={id} kind="err" action={<Btn kind="soft" size="sm" auto icon={RefreshCw} onClick={()=>load(true)}>{t('fe.retry')}</Btn>}>
    {t('fe.staff.q.'+id)}: {feErrorMessage((data[id] as {error:unknown}).error,t)}</Alert>)}
   {locked&&<Alert kind="info" icon={Lock} action={<Btn kind="soft" size="sm" auto onClick={()=>void askFactor('fresh').then(ok=>{if(ok)load(true);})}>{t('fe.sf.enterCode')}</Btn>}>{t('fe.sf.lockedMedia')}</Alert>}
   {single==='dispute'&&<FlaggedClaimants/>}
   {!entries.length?<Empty compact icon={Inbox} title={t('fe.staff.qEmpty')} text={t('fe.staff.qEmptyText')}/>
-   :<Card list>{entries.map((e,i)=><QueueRow key={e.id+':'+e.key} e={e} onOpen={()=>setFocus(i)}/>)}</Card>}
+   :(()=>{
+    // Groups say why the order is what it is: urgent first, then what is past its time, then the rest.
+    const groups=(['urgent','late','rest'] as const).map(g=>({g,part:entries.map((e,i)=>({e,i})).filter(x=>groupOf(x.e)===g)})).filter(x=>x.part.length);
+    return groups.map(({g,part})=><Fragment key={g}>
+     {groups.length>1&&<SectionLabel>{t('fe.staff.group.'+g,{n:String(part.length)})}</SectionLabel>}
+     <Card list>{part.map(({e,i})=><QueueRow key={e.id+':'+e.key} e={e} fresh={!known.current.has(e.id+':'+e.key)} onOpen={()=>{known.current.add(e.id+':'+e.key);setFocus(i);}}/>)}</Card>
+    </Fragment>);
+   })()}
   {/* One «Ещё» for the list: the next page of every queue in it that has more. */}
   <LoadMore more={ids.some(more)} busy={pageBusy} error={pageError} onMore={()=>ids.filter(more).forEach(loadMore)}/>
   {cur&&focus!==null&&<Sheet full className="st-focus" title={titleOf(cur,t)} sub={t('fe.staff.pos',{n:String(focus+1),all:String(entries.length)})+' · '+t('fe.staff.waits',{time:waited(cur.since,t)})}
@@ -287,7 +298,7 @@ function urgencyOf(id:QueueId,x:unknown):{level:Level,since:number}{
  const urgent=id==='report'?(o.reasons as string[]).some(r=>r==='minor'||r==='threat')
   :id==='dispute'?!!o.urgent||!!o.attack
   :id==='media'?/minor|csam/.test(String(o.reason??''))
-  :id==='notice'?o.reason==='minors':false;
+  :id==='notice'?['csam','minors','threats'].includes(String(o.reason)):false;
  return {level:urgent?'urgent':Date.now()-since>SLA[id]?'late':null,since};
 }
 const queueLabel=(id:QueueId,t:T)=>id==='photo'?t('fe.pc.staff.tab'):t('fe.staff.q.'+id);
@@ -301,42 +312,49 @@ const nick=(h:unknown)=>typeof h==='string'&&h?'@'+h:'';
 function titleOf(e:Entry,t:T):string{
  const o=e.item as Record<string,any>;
  switch(e.id){
-  case 'report':return t('fe.staff.reportOn',{what:t('fe.staff.report.type.'+o.targetType).toLowerCase()});
-  case 'media':{const p=t('fe.staff.media.purpose.'+o.purpose);return p.startsWith('fe.')?t('fe.staff.q.media'):p;}
-  case 'community':return o.name;case 'event':return o.title;
-  case 'place':return [o.name_ru,o.name_en].filter(Boolean).join(' / ')||t('fe.staff.q.place');
-  case 'photo':return t('fe.pc.staff.tab');
-  default:return t('fe.staff.q.'+e.id);
+  case 'report':return t('fe.staff.what.report.'+o.targetType);
+  case 'community':return t(o.state==='in_review'?'fe.staff.what.community.new':'fe.staff.what.community.change');
+  case 'event':return t(o.state==='in_review'?'fe.staff.what.event.new':'fe.staff.what.event.change');
+  case 'age':return t(o.method==='document'?'fe.staff.what.age.doc':'fe.staff.what.age.selfie');
+  default:return t('fe.staff.what.'+e.id);
  }
 }
-function subOf(e:Entry,t:T):string{
+const snip=(v:unknown,n=90)=>{const x=typeof v==='string'?v.replace(/\s+/g,' ').trim():'';return x.length>n?x.slice(0,n)+'…':x;};
+/** The two lines under a row's title: who / why, then the thing itself. */
+function gistOf(e:Entry,t:T):[string,string]{
  const o=e.item as Record<string,any>;
+ const purpose=(p:unknown)=>{const x=t('fe.staff.media.purpose.'+p);return x.startsWith('fe.')?'':x;};
  switch(e.id){
-  case 'report':return [(o.reasons as string[]).map(r=>t('fe.staff.report.reason.'+r)).join(', '),nick(o.author?.handle)].filter(Boolean).join(' · ');
-  case 'dispute':return o.excerpt??'';
-  case 'revision':return o.live??'';
-  case 'media':return o.authorLabel??'';
-  case 'community':case 'event':return o.state==='in_review'?t('fe.staff.newItem'):t('fe.staff.changed');
-  case 'age':case 'photo':return nick(o.profile?.handle);
-  case 'appeal':return [nick(o.handle),o.body].filter(Boolean).join(' · ');
-  case 'notice':return t('fe.staff.rule.'+o.reason)+(o.target_url?' · '+o.target_url:'');
-  case 'place':return o.country??'';
-  default:return '';
+  case 'report':return [[(o.reasons as string[]).map(r=>{const x=t('fe.staff.report.reason.'+r);return x.startsWith('fe.')?t('fe.staff.report.reason.other'):x;}).join(', '),nick(o.author?.handle)].filter(Boolean).join(' · '),snip(o.object?.title?o.object.title+': '+o.object.body:o.excerpt)];
+  case 'dispute':return [[t('fe.staff.dispute.claims',{n:String(o.claims?.length??1)}),t(o.hidden?'fe.staff.dispute.hidden':'fe.staff.dispute.urgent')].join(' · '),snip(o.excerpt)];
+  case 'revision':return [t('fe.staff.gist.revision'),snip(o.live)];
+  case 'media':return [purpose(o.purpose),snip(o.usedIn)];
+  case 'community':return [o.name,snip(o.description)];
+  case 'event':return [o.title,snip(o.description)];
+  case 'age':return [nick(o.profile?.handle),''];
+  case 'photo':return [nick(o.profile?.handle),''];
+  case 'appeal':return [[nick(o.handle),t('fe.staff.report.type.'+o.target_type)].filter(Boolean).join(' · '),snip(o.body)];
+  case 'notice':return [t('fe.staff.notice.reason.'+o.reason).startsWith('fe.')?'':t('fe.staff.notice.reason.'+o.reason),snip(o.target_url)];
+  case 'place':return [[o.name_ru,o.name_en].filter(Boolean).join(' / '),[o.country,o.used?t('fe.staff.place.usedN',{n:String(o.used)}):''].filter(Boolean).join(' · ')];
+  default:return ['',''];
  }
 }
 /** «3 ч», «2 дн»: how long it waits. */
 function waited(since:number,t:T){const m=Math.max(1,Math.round((Date.now()-since)/60000));
  return m<60?t('fe.staff.wait.m',{n:String(m)}):m<48*60?t('fe.staff.wait.h',{n:String(Math.round(m/60))}):t('fe.staff.wait.d',{n:String(Math.round(m/1440))});}
-/** One line of the work list: what it is, why, how long it waits; urgent / late marked. */
-function QueueRow({e,onOpen}:{e:Entry,onOpen:()=>void}){
- const {t}=useI18n();
- return <Row icon={QUEUE_ICON[e.id]} tone={e.level==='urgent'?'l':undefined} title={titleOf(e,t)} sub={subOf(e,t)||undefined} onClick={onOpen}
-  val={e.level?<Pill tone={e.level==='urgent'?'bad':'wait'}>{e.level==='urgent'?t('fe.staff.urgent'):waited(e.since,t)}</Pill>:waited(e.since,t)}/>;
+const groupOf=(e:Entry):'urgent'|'late'|'rest'=>e.level==='urgent'?'urgent':e.level==='late'?'late':'rest';
+/** One row of the work list: what it is (the kind, in words), who and why, the thing itself in a line, how long it
+ * waits; urgent and new marked. */
+function QueueRow({e,fresh,onOpen}:{e:Entry,fresh:boolean,onOpen:()=>void}){
+ const {t}=useI18n();const [line1,line2]=gistOf(e,t);
+ return <Row icon={QUEUE_ICON[e.id]} tone={e.level==='urgent'?'l':undefined} title={titleOf(e,t)} sub={line1||undefined}
+  extra={line2?<small className="st-gist">{line2}</small>:undefined} onClick={onOpen}
+  val={fresh?<Pill tone="v">{t('fe.staff.new')}</Pill>:waited(e.since,t)}/>;
 }
 
 function QueueList({id,items,onDone}:{id:QueueId,items:unknown[],onDone:(key:string)=>void}){
  const keyOf=QUEUES[id].key as (x:unknown)=>string;
- return <Stack gap={3}>{items.map(x=>{const k=keyOf(x);const done=()=>onDone(k);
+ return <>{items.map(x=>{const k=keyOf(x);const done=()=>onDone(k);
   switch(id){
    case 'dispute':return <DisputeCard key={k} item={x as DisputeItem} onDone={done}/>;
    case 'revision':return <RevisionCard key={k} item={x as RevisionItem} onDone={done}/>;
@@ -350,7 +368,7 @@ function QueueList({id,items,onDone}:{id:QueueId,items:unknown[],onDone:(key:str
    case 'notice':return <NoticeCard key={k} item={x as NoticeItem} onDone={done}/>;
    case 'place':return <PlaceCard key={k} item={x as PlaceItem} onDone={done}/>;
   }
- })}</Stack>;
+ })}</>;
 }
 
 // ——— shared pieces ———
@@ -367,7 +385,22 @@ function useDecide(onDone:()=>void,mapError?:(e:unknown)=>string|null){
 
 const useWhen=()=>{const {locale}=useI18n();return (v:string|null|undefined)=>v?new Date(v).toLocaleString(locale==='en'?'en-GB':'ru-RU',{dateStyle:'medium',timeStyle:'short'}):'—';};
 
-const StCard=ReviewCard;
+/** One queue item as a card: what has to be decided, what happened, the thing itself, the form — and at the bottom, in the
+ * same place for every kind of item, the decision bar. A card just lists its blocks; its Actions / Confirm / Failure are
+ * gathered into the bar here (the failure above the buttons). */
+function StCard({title,meta,task,danger,children}:{title:ReactNode,meta?:ReactNode,task?:ReactNode,danger?:boolean|undefined,children:ReactNode}){
+ const {t}=useI18n();
+ const kids=Children.toArray(children);
+ const inBar=(c:ReactNode)=>isValidElement(c)&&(c.type===Actions||c.type===Confirm||c.type===Failure);
+ const bar=kids.filter(inBar).sort((a,b)=>Number(isValidElement(a)&&a.type!==Failure)-Number(isValidElement(b)&&b.type!==Failure))
+  // The buttons take the width of their text, whatever each card asked for.
+  .map(c=>isValidElement(c)&&c.type===Actions?cloneElement(c as React.ReactElement<{fit?:boolean,stack?:boolean}>,{fit:true,stack:false}):c);
+ return <ReviewCard title={title} meta={meta} danger={danger}>
+  {task&&<Alert kind="info" icon={ClipboardCheck}><b>{t('fe.staff.task')}</b> {task}</Alert>}
+  {kids.filter(c=>!inBar(c))}
+  {bar.length>0&&<ReviewBar>{bar}</ReviewBar>}
+ </ReviewCard>;
+}
 const Kv=KeyValues;
 
 /** A raw status / format / scanner word from the server in plain words (`fe.staff.val.<word>`); an unknown word stays as it is. */
@@ -395,12 +428,22 @@ function Details({data}:{data:unknown}){
 }
 
 /** The text of what is judged. A tap opens the post when `to` is given. */
-function Quote({label,text,to}:{label?:string,text:string,to?:string}){
- const {t}=useI18n();const navigate=useNavigate();
- return <Stack gap={1}>
-  <Text size="sm">{label&&<Text as="span" size="xs" tone="mute">{label}: </Text>}{text.slice(0,600)}</Text>
-  {to&&<Btn kind="text" size="sm" auto onClick={()=>navigate(to)}>{t('fe.staff.openPost')}</Btn>}
- </Stack>;
+function Quote({label,text}:{label?:string,text:string}){
+ return <Text size="sm">{label&&<Text as="span" size="xs" tone="mute">{label}: </Text>}{text}</Text>;
+}
+
+/** The plain facts around a reported or appealed thing, as one line under its kind. */
+function factsLine(o:ObjectDto,t:(k:string,v?:Record<string,string>)=>string,when:(v:string|null|undefined)=>string,val:(v:string|null|undefined)=>string|null|undefined):string{
+ if(!o)return '';const f=o.facts??{};const parts:string[]=[];
+ if(typeof f.at==='string')parts.push(when(f.at));
+ if(typeof f.state==='string'&&f.state!=='published')parts.push(val(f.state)??f.state);
+ const aud=typeof f.audience==='string'?{followers:'fe.fd.aud.followers',granted:'fe.fd.aud.granted',only:'fe.fd.aud.only'}[f.audience]:undefined;
+ if(aud)parts.push(t('fe.staff.obj.audience',{who:t(aud)}));
+ if(typeof f.privacy==='string'){const x=t('fe.staff.chg.privacy.'+f.privacy);if(!x.startsWith('fe.'))parts.push(x);}
+ if(typeof f.format==='string')parts.push(val(f.format)??f.format);
+ if(typeof f.area==='string'&&f.area)parts.push(f.area);
+ if(Array.isArray(f.topics)&&f.topics.length)parts.push(f.topics.join(', '));
+ return parts.join(' · ');
 }
 
 /** What waits for a decision, in words: every field reads «Название: было → стало»; a new cover shows as a picture next
@@ -483,11 +526,12 @@ function MediaCard({item,onDone}:{item:MediaItem,onDone:()=>void}){
   return {slides:[slideOf(item.kind,r.src)],thumbs:[thumbOf(r.src)]};};
  const purpose=t('fe.staff.media.purpose.'+item.purpose);
  const explicit=!PUBLIC_ONLY.has(item.purpose);
- return <StCard title={purpose.startsWith('fe.')?t('fe.staff.media.purpose.other'):purpose} meta={when(item.createdAt)}>
+ return <StCard title={purpose.startsWith('fe.')?t('fe.staff.media.purpose.other'):purpose} task={t('fe.staff.task.media')} meta={when(item.createdAt)}>
   <LookTiles tiles={[{label:t(item.kind==='video'?'fe.staff.tile.video':item.kind==='audio'?'fe.staff.tile.audio':'fe.staff.tile.photo',{n:'1'}),icon:tileIcon(item.kind),blur:item.blur}]}
    load={open} note={t('fe.staff.media.openNote')}/>
   {src&&item.kind==='audio'&&src.file&&<VoiceBubble src={src.file} durationMs={null} mine/>}
-  <Kv rows={[[t('fe.staff.media.authorLabel'),item.authorLabel],[t('fe.staff.media.scanner'),val(item.reason)]]}/>
+  <Kv rows={[[t('fe.staff.media.purposeLabel'),purpose.startsWith('fe.')?null:purpose],[t('fe.staff.media.authorLabel'),item.authorLabel],[t('fe.staff.media.scanner'),val(item.reason)]]}/>
+  {item.usedIn&&<ReviewObject kind={t('fe.staff.obj.usedIn')} text={item.usedIn}/>}
   {src!==undefined&&!ask&&<>
    {src&&!explicit&&<Note>{t('fe.staff.media.publicOnly')}</Note>}
    <Choice label={t('fe.staff.reason')} value={reason} onChange={setReason} disabled={d.busy} options={MEDIA_REASONS.map(id=>({id,label:t('fe.staff.media.reason.'+id)}))}/>
@@ -521,7 +565,7 @@ function CommunityCard({item,onDone}:{item:CommItem,onDone:()=>void}){
  const decide=(decision:'approve'|'reject')=>d.run('staff.communityDecide',{communityId:item.id,rev:item.rev,decision,reason:reason.trim()});
  const privacy=item.privacy?(t('fe.staff.chg.privacy.'+item.privacy).startsWith('fe.')?item.privacy:t('fe.staff.chg.privacy.'+item.privacy)):null;
  const rules=plain(item.rules);
- return <StCard title={item.name} meta={<>{item.state==='in_review'&&<Pill tone="wait">{t('fe.staff.newItem')}</Pill>}{when(item.created_at)}</>}>
+ return <StCard task={t(item.state==='in_review'?'fe.staff.task.community.new':'fe.staff.task.community.change')} title={item.name} meta={<>{item.state==='in_review'&&<Pill tone="wait">{t('fe.staff.newItem')}</Pill>}{when(item.created_at)}</>}>
   {item.description&&<p className="st-text">{item.description}</p>}
   {!!item.resubmits&&<Alert kind="info">{fill(t('fe.staff.comm.resubmit'),{n:item.resubmits,max:3})}{item.prev_reject_reason&&<> {t('fe.staff.comm.prevReason')}: {item.prev_reject_reason}</>}</Alert>}
   {item.state==='in_review'&&item.cover&&<LookTiles tiles={[{label:t('fe.staff.comm.cover'),icon:ImageOff}]} shown={given([item.cover.src])}/>}
@@ -542,7 +586,7 @@ function EventCard({item,onDone}:{item:EventItem,onDone:()=>void}){
  const [reason,setReason]=useState('');const [ask,setAsk]=useState<'reject'|'hide'|null>(null);
  const decide=(decision:'approve'|'reject'|'hide')=>d.run('staff.eventDecide',{eventId:item.id,rev:item.rev,decision,reason:reason.trim()});
  const hideable=item.state==='published';
- return <StCard title={item.title} meta={<>{item.state==='in_review'&&<Pill tone="wait">{t('fe.staff.newItem')}</Pill>}{when(item.created_at)}</>}>
+ return <StCard task={t(item.state==='in_review'?'fe.staff.task.event.new':'fe.staff.task.event.change')} title={item.title} meta={<>{item.state==='in_review'&&<Pill tone="wait">{t('fe.staff.newItem')}</Pill>}{when(item.created_at)}</>}>
   {item.description&&<p className="st-text">{item.description}</p>}
   <Kv rows={[[t('fe.staff.event.organizer'),item.organizer?.handle?who(item.organizer):null],[t('fe.staff.event.when'),item.starts_at?inTz(item.starts_at,evTz(item),locale,{day:'numeric',month:'short'}).replace('.','')+', '+evRange({starts_at:item.starts_at,...(item.ends_at?{ends_at:item.ends_at}:{}),tz:item.tz},locale):null],
    [t('fe.staff.event.where'),[val(item.format),item.area].filter(Boolean).join(' · ')],[t('fe.staff.event.address'),item.exact_address],[t('fe.staff.event.link'),item.join_url],
@@ -577,7 +621,7 @@ function AgeDocCard({item,onDone}:{item:AgeItem,onDone:()=>void}){
  // The document opens on a tap (staff.ageCheckOpen: a fresh code if needed, one journal line per look).
  const [doc,setDoc]=useState<string|null>(null);
  const load=async():Promise<Shown>=>{const r=await call('staff.ageCheckOpen',{checkId:item.id},ageOpenRes,{asAccount:true});const sh=given([srcOf(r.document)]);setDoc((sh.slides[0] as string|null)??null);return sh;};
- return <StCard title={who(item.profile)} meta={when(item.submittedAt)}>
+ return <StCard task={t('fe.staff.task.age.doc')} title={who(item.profile)} meta={when(item.submittedAt)}>
   <Alert kind="info" icon={IdCard}>{t('fe.staff.age.docTask')}</Alert>
   <LookTiles tiles={[{label:t('fe.staff.age.doc'),icon:IdCard}]} load={load} note={t('fe.staff.age.openNote')}/>
   <Choice label={t('fe.staff.reason')} value={reason} onChange={setReason} disabled={d.busy} options={DOC_REASONS.map(id=>({id,label:t('fe.staff.age.reason.'+id)}))}/>
@@ -595,7 +639,7 @@ function AgeSelfieCard({item,onDone}:{item:AgeItem,onDone:()=>void}){
  const [selfie,setSelfie]=useState(false);
  const load=async():Promise<Shown>=>{const r=await call('staff.ageCheckOpen',{checkId:item.id},ageOpenRes,{asAccount:true});const sh=given([srcOf(r.selfie),srcOf(r.photo)]);setSelfie(!!sh.slides[0]);return sh;};
  const g=item.gesture??'';const gesture=t('fe.staff.age.gesture.'+g);
- return <StCard title={who(item.profile)} meta={when(item.submittedAt)}>
+ return <StCard task={t('fe.staff.task.age.selfie')} title={who(item.profile)} meta={when(item.submittedAt)}>
   <Alert kind="info" icon={Eye}>{t('fe.staff.age.gesture')}: <b>{gesture.startsWith('fe.')?t('fe.staff.age.gesture.other'):gesture}</b></Alert>
   <LookTiles tiles={[{label:t('fe.staff.age.selfie'),icon:Camera},{label:t('fe.staff.age.photo'),icon:ImageIcon}]} load={load} note={t('fe.staff.age.openNote')}/>
   <Choice label={t('fe.staff.reason')} value={reason} onChange={setReason} disabled={d.busy} options={AGE_REASONS.map(id=>({id,label:t('fe.staff.age.reason.'+id)}))}/>
@@ -615,7 +659,7 @@ function PhotoCard({item,onDone}:{item:PhotoItem,onDone:()=>void}){
  const [reason,setReason]=useState<typeof PHOTO_REASONS[number]|''>('');const [ask,setAsk]=useState(false);
  const selfie=item.selfie?.src?.full??item.selfie?.src?.card??null;
  const gesture=t('fe.staff.age.gesture.'+item.gesture);
- return <StCard title={who(item.profile)} meta={when(item.submittedAt)}>
+ return <StCard task={t('fe.staff.task.photo')} title={who(item.profile)} meta={when(item.submittedAt)}>
   <Alert kind="info" icon={Eye}>{t('fe.staff.age.gesture')}: <b>{gesture.startsWith('fe.')?t('fe.staff.age.gesture.other'):gesture}</b></Alert>
   <Note>{t('fe.pc.staff.compare')}</Note>
   <LookTiles tiles={[{label:t('fe.pc.staff.selfie'),icon:Camera},...(item.photos??[item.photo]).map((_,k,a)=>({label:t('fe.pc.staff.photo')+(a.length>1?' '+(k+1):''),icon:ImageIcon}))]}
@@ -636,19 +680,22 @@ function PhotoCard({item,onDone}:{item:PhotoItem,onDone:()=>void}){
  * attack on the author and the author's explanation. «Подтвердилось» removes the post (asks first); «не подтвердилось»
  * restores it at once and gives each unmarked claimant a strike. */
 function DisputeCard({item,onDone}:{item:DisputeItem,onDone:()=>void}){
- const {t}=useI18n();const when=useWhen();const d=useDecide(onDone);
+ const {t}=useI18n();const when=useWhen();const val=useVal();const d=useDecide(onDone);
  const [note,setNote]=useState('');const [ask,setAsk]=useState(false);
  const decide=(restore:boolean)=>d.run('staff.disputeDecide',{postId:item.id,restore,note:note.trim()});
- return <StCard title={t('fe.staff.dispute.title')} danger={!!item.urgent} meta={when(item.opened_at??item.disputed_at)+(item.media?' · '+t('fe.staff.dispute.media',{n:String(item.media)}):'')}>
+ const o=item.object;
+ return <StCard title={t('fe.staff.what.dispute')} task={t(item.hidden?'fe.staff.task.dispute.hidden':'fe.staff.task.dispute.visible')} danger={!!item.urgent} meta={when(item.opened_at??item.disputed_at)}>
   <Chips>
    {item.urgent?<Pill tone="hot">{t('fe.staff.dispute.urgent')}</Pill>:<Pill tone="wait">{t('fe.staff.dispute.hidden')}</Pill>}
    {item.attack&&<Pill tone="bad">{t('fe.staff.dispute.attack')}</Pill>}
    <Pill>{t('fe.staff.dispute.claims',{n:String(item.claims.length)})}</Pill>
   </Chips>
-  {item.excerpt&&<Quote text={item.excerpt.slice(0,160)} to={'/n/feed/post/'+item.id}/>}
   <Kv rows={[...item.claims.map((c,i):[string,string]=>[t('fe.staff.dispute.claim',{n:String(i+1)}),
    [c.tagged?t('fe.staff.dispute.tagged'):t('fe.staff.dispute.untagged'),t('fe.staff.dispute.trust.'+c.trust),t('fe.staff.dispute.strikes',{n:String(c.strikes)})].join(' · ')]),
    [t('fe.staff.dispute.authorNote'),item.note]]}/>
+  <ReviewObject kind={t('fe.staff.obj.post')} title={o?.title} meta={factsLine(o,t,when,val)} text={o?.body??item.excerpt}>
+   {!!item.evidence?.length&&<EvidenceGrid items={item.evidence}/>}
+  </ReviewObject>
   <TextField label={t('fe.staff.note')} value={note} onChange={setNote} max={500}/>
   {ask?<Confirm text={t('fe.staff.dispute.confirmRemove')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>decide(false)}/>
    :<Actions><Btn icon={Check} disabled={d.busy} busy={d.busy} onClick={()=>decide(true)}>{t('fe.staff.dispute.restore')}</Btn>
@@ -682,10 +729,9 @@ function RevisionCard({item,onDone}:{item:RevisionItem,onDone:()=>void}){
  const [rule,setRule]=useState<typeof RULES[number]|''>('');const [ask,setAsk]=useState(false);
  const proposed=item.proposed&&typeof item.proposed==='object'?item.proposed as Record<string,unknown>:null;
  const text=proposed?[proposed.title,proposed.body].filter(v=>typeof v==='string'&&v).join(': '):plain(item.proposed)??'';
- return <StCard title={t('fe.staff.revision.title')} meta={when(item.createdAt)}>
-  {item.live&&<Quote label={t('fe.staff.revision.live')} text={item.live.slice(0,160)} to={'/n/feed/post/'+item.postId}/>}
-  {text&&<p className="st-text">{text.slice(0,600)}</p>}
-  {!text&&<Details data={item.proposed}/>}
+ return <StCard title={t('fe.staff.what.revision')} task={t('fe.staff.task.revision')} meta={when(item.createdAt)}>
+  {item.live&&<ReviewObject kind={t('fe.staff.revision.live')} text={item.live}/>}
+  {text?<ReviewObject kind={t('fe.staff.revision.proposed')} text={text}/>:<Details data={item.proposed}/>}
   <Choice label={t('fe.staff.rule')} value={rule} onChange={setRule} disabled={d.busy} options={RULES.map(id=>({id,label:t('fe.staff.rule.'+id)}))}/>
   {ask?<Confirm text={t('fe.staff.revision.confirmReject')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>d.run('staff.revisionDecide',{revisionId:item.id,decision:'reject',rule})}/>
    :<Actions><Btn icon={Check} disabled={d.busy} busy={d.busy} onClick={()=>d.run('staff.revisionDecide',{revisionId:item.id,decision:'approve'})}>{t('fe.staff.approve')}</Btn>
@@ -755,20 +801,24 @@ function ReportCard({item,onDone}:{item:ReportItem,onDone:()=>void}){
  const target=item.targetType==='profile'?{id:item.targetId,name:author??''}:item.targetType==='conversation'&&item.author?{id:item.author.id,name:author??''}:null;
  const [measures,setMeasures]=useState(false);
  const messages=Array.isArray((item.reported as {messages?:unknown})?.messages)?(item.reported as {messages:{seq:number,body:string,media:boolean,at:string}[]}).messages:null;
- return <StCard title={t('fe.staff.report.type.'+item.targetType)} danger={item.reasons.includes('minor')} meta={when(item.firstAt)}>
-  <Chips>{item.reasons.map(r=><Pill key={r} tone={r==='minor'?'bad':undefined}>{(x=>x.startsWith('fe.')?t('fe.staff.report.reason.other'):x)(t('fe.staff.report.reason.'+r))}</Pill>)}
-   <Pill>{t('fe.staff.report.count')}: {item.reports}</Pill></Chips>
-  {item.excerpt&&<Quote label={t('fe.staff.report.now')} text={item.excerpt}/>}
-  <Kv rows={[[t('fe.staff.author'),author],[t('fe.staff.state'),val(item.state)],[t('fe.staff.report.media'),item.media?String(item.media):null],
-   [t('fe.staff.report.details'),item.details?.length?item.details.join(' · '):null]]}/>
-  {messages&&<Card list>{messages.map(m=><Row key={m.seq} title={m.body||t('fe.staff.report.mediaOnly')} sub={when(m.at)}/>)}</Card>}
-  {!!item.evidence?.length&&<EvidenceGrid items={item.evidence}/>}
+ const o=item.object;const under=typeof o?.facts?.under==='string'?o.facts.under:null;
+ const reasons=item.reasons.map(r=>{const x=t('fe.staff.report.reason.'+r);return x.startsWith('fe.')?t('fe.staff.report.reason.other'):x;});
+ return <StCard title={t('fe.staff.what.report.'+item.targetType)} task={t('fe.staff.task.report.'+item.targetType)} danger={item.reasons.includes('minor')} meta={when(item.firstAt)}>
+  <Kv rows={[[t('fe.staff.report.why'),<>{item.reasons.map((r,i)=><Pill key={r} tone={r==='minor'?'bad':undefined}>{reasons[i]}</Pill>)}</>],[t('fe.staff.report.times'),String(item.reports)],
+   [t('fe.staff.author'),author],[t('fe.staff.report.under'),under],[t('fe.staff.report.details'),item.details?.length?item.details.join(' · '):null]]}/>
+  {(o||item.excerpt)&&<ReviewObject kind={t('fe.staff.report.type.'+item.targetType)} title={o?.title} meta={factsLine(o,t,when,val)} text={o?.body??item.excerpt}>
+   {!!item.evidence?.length&&!messages&&<EvidenceGrid items={item.evidence}/>}
+  </ReviewObject>}
+  {messages&&<ReviewObject kind={t('fe.staff.report.picked')}>
+   {messages.map(m=><Text key={m.seq} size="sm">{m.body||t('fe.staff.report.mediaOnly')} <Text as="span" size="xs" tone="mute">· {when(m.at)}</Text></Text>)}
+   {!!item.evidence?.length&&<EvidenceGrid items={item.evidence}/>}
+  </ReviewObject>}
   <Details data={item.reported}/>
   {!people&&<Choice label={t('fe.staff.rule')} value={rule} onChange={setRule} disabled={d.busy} options={RULES.map(id=>({id,label:t('fe.staff.rule.'+id)}))}/>}
   <TextField label={t('fe.staff.note')} value={note} onChange={setNote} max={500}/>
   {ask?<Confirm text={t('fe.staff.report.confirmRemove')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>d.run('staff.reportDecide',{...base,decision:'remove',rule})}/>
    :<Actions><Btn icon={Check} disabled={d.busy} onClick={()=>d.run('staff.reportDecide',{...base,decision:'keep'})}>{t('fe.staff.report.keep')}</Btn>
-    {!people&&<Btn kind="danger" icon={Ban} disabled={d.busy||!rule} onClick={()=>setAsk(true)}>{t('fe.staff.report.remove')}</Btn>}
+    {!people&&<Btn kind="danger" icon={Ban} disabled={d.busy||!rule} onClick={()=>setAsk(true)}>{t('fe.staff.report.remove.'+item.targetType)}</Btn>}
     {people&&target&&<Btn kind="danger" icon={Gavel} disabled={d.busy} onClick={()=>setMeasures(true)}>{t('fe.staff.m.open')}</Btn>}</Actions>}
   <Failure text={d.failure}/>
   {measures&&target&&<Measures profileId={target.id} name={target.name} onClose={()=>setMeasures(false)}
@@ -813,20 +863,22 @@ function Measures({profileId,name,onClose,onApplied}:{profileId:string,name:stri
 }
 
 function AppealCard({item,onDone}:{item:AppealItem,onDone:()=>void}){
- const {t}=useI18n();const when=useWhen();const jw=useJournalWord();const d=useDecide(onDone);
+ const {t}=useI18n();const when=useWhen();const val=useVal();const jw=useJournalWord();const d=useDecide(onDone);
  const [note,setNote]=useState('');const [ask,setAsk]=useState(false);
  const mine=!!item.decision?.mine;
  const decide=(grant:boolean)=>d.run('staff.appealDecide',{appealId:item.id,grant,note:note.trim()});
- return <StCard title={(item.handle?'@'+item.handle+' · ':'')+t('fe.staff.report.type.'+item.target_type)} meta={when(item.created_at)}>
-  <Quote label={t('fe.staff.appeal.body')} text={item.body}/>
-  {item.decision&&<Kv rows={[[t('fe.staff.appeal.decision'),jw('action',item.decision.action)+' · '+when(item.decision.at)]]}/>}
+ const o=item.object;const kind=t('fe.staff.report.type.'+item.target_type);
+ return <StCard title={t('fe.staff.what.appeal')} task={t('fe.staff.task.appeal')} meta={when(item.created_at)}>
+  <Kv rows={[[t('fe.staff.appeal.who'),item.handle?'@'+item.handle:null],[t('fe.staff.appeal.what'),kind],
+   [t('fe.staff.appeal.decision'),item.decision?jw('action',item.decision.action)+' · '+when(item.decision.at):null]]}/>
+  {o&&<ReviewObject kind={kind} title={o.title} meta={factsLine(o,t,when,val)} text={o.body}/>}
+  <ReviewObject kind={t('fe.staff.appeal.body')} text={item.body}/>
   {item.decision&&<Details data={item.decision.detail}/>}
-  {mine?<Alert kind="warn">{t('fe.staff.appeal.sameStaff')}</Alert>:<>
-   <TextField label={t('fe.staff.note')} value={note} onChange={setNote} max={500}/>
-   {ask?<Confirm text={t('fe.staff.appeal.confirmDeny')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>decide(false)}/>
-    :<Actions><Btn icon={Check} disabled={d.busy} onClick={()=>decide(true)}>{t('fe.staff.appeal.grant')}</Btn>
-     <Btn kind="soft" icon={Ban} disabled={d.busy} onClick={()=>setAsk(true)}>{t('fe.staff.appeal.deny')}</Btn></Actions>}
-  </>}
+  {mine&&<Alert kind="warn">{t('fe.staff.appeal.sameStaff')}</Alert>}
+  {!mine&&<TextField label={t('fe.staff.note')} value={note} onChange={setNote} max={500}/>}
+  {!mine&&(ask?<Confirm text={t('fe.staff.appeal.confirmDeny')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>decide(false)}/>
+   :<Actions><Btn icon={Check} disabled={d.busy} onClick={()=>decide(true)}>{t('fe.staff.appeal.grant')}</Btn>
+    <Btn kind="soft" icon={Ban} disabled={d.busy} onClick={()=>setAsk(true)}>{t('fe.staff.appeal.deny')}</Btn></Actions>)}
   <Failure text={d.failure}/>
  </StCard>;
 }
@@ -838,7 +890,7 @@ function NoticeCard({item,onDone}:{item:NoticeItem,onDone:()=>void}){
  const decide=(outcome:'removed'|'kept'|'not_actionable')=>d.run('staff.noticeDecide',{noticeId:item.id,outcome,note:note.trim(),...(outcome==='removed'?{rule}:{})});
  const csam=item.reason==='csam';
  const reason=t('fe.staff.notice.reason.'+item.reason);
- return <StCard title={reason.startsWith('fe.')?t('fe.staff.notice.reason.other'):reason} danger={csam||item.reason==='minors'} meta={when(item.created_at)}>
+ return <StCard task={t('fe.staff.task.notice')} title={reason.startsWith('fe.')?t('fe.staff.notice.reason.other'):reason} danger={csam||item.reason==='minors'} meta={when(item.created_at)}>
   {csam&&<Alert kind="err" icon={ShieldAlert}><b>{t('fe.staff.csam.flag')}</b></Alert>}
   <Kv rows={[[t('fe.staff.notice.url'),item.target_url],[t('fe.staff.notice.explanation'),item.explanation]]}/>
   <Note>{item.answerable?t('fe.staff.notice.answerable'):t('fe.staff.notice.anonymous')}</Note>
@@ -856,7 +908,7 @@ function NoticeCard({item,onDone}:{item:NoticeItem,onDone:()=>void}){
 function PlaceCard({item,onDone}:{item:PlaceItem,onDone:()=>void}){
  const {t}=useI18n();const when=useWhen();const d=useDecide(onDone);
  const [ru,setRu]=useState(item.name_ru??'');const [en,setEn]=useState(item.name_en??'');const [ask,setAsk]=useState(false);
- return <StCard title={[item.name_ru,item.name_en].filter(Boolean).join(' / ')||t('fe.staff.place.unnamed')} meta={when(item.created_at)}>
+ return <StCard task={t('fe.staff.task.place')} title={[item.name_ru,item.name_en].filter(Boolean).join(' / ')||t('fe.staff.place.unnamed')} meta={when(item.created_at)}>
   <Kv rows={[[t('fe.staff.place.country'),item.country],[t('fe.staff.place.used'),String(item.used??0)]]}/>
   <LineField label={t('fe.staff.place.nameRu')} value={ru} max={80} onChange={setRu}/>
   <LineField label={t('fe.staff.place.nameEn')} value={en} max={80} onChange={setEn}/>

@@ -1,4 +1,5 @@
 // @ts-check
+import { alertStaff } from '../staff-alert.mjs';
 import { dsaCommands, noticeInput } from '../../contracts/dsa.mjs';
 import { fail } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
@@ -51,6 +52,8 @@ export async function takeNotice(db, body) {
   await db.query(
     `insert into feture.dsa_notice (target_url, reason, explanation, sender_name, sender_email, locale) values ($1, $2, $3, $4, $5, $6)`,
     [new URL(n.targetUrl).href, n.reason, n.explanation, n.senderName ?? null, n.senderEmail?.toLowerCase() ?? null, n.locale]);
+  // The most serious ones are not left for someone to find in the queue.
+  if (['csam', 'minors', 'threats'].includes(n.reason)) await db.tx(q => alertStaff(q, 'notice', { reason: n.reason }));
   return { status: 200, body: { ok: true, received: true } };
 }
 

@@ -445,6 +445,8 @@ html:has(.fe-v21),html:has(.fe-v21) body{overscroll-behavior-y:none}
 /* Actions — the one row of buttons: equal widths, the full column, the same gap everywhere (Empty, sheets, cards). */
 .v21 .k-actions{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:var(--s-2);width:100%}
 .v21 .k-actions.k-actions-stack{grid-auto-flow:row}
+.v21 .k-actions.k-actions-fit{display:flex;flex-wrap:wrap}
+.v21 .k-actions.k-actions-fit>.btn{flex:1 1 auto;width:auto;white-space:nowrap}
 /* Empty: fixed inner spacing — icon 14, title 6 to its line, 18 to the actions with or without the line; actions
    take the column of the block under them (`after`) so both line up. */
 .v21 .empty>h3+.btns{margin-top:12px}

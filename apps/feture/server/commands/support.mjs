@@ -1,6 +1,7 @@
 // @ts-check
 import { helpInput, supportCommands } from '../../contracts/support.mjs';
 import { fail } from '../errors.mjs';
+import { alertStaff } from '../staff-alert.mjs';
 import { enqueue } from '../outbox.mjs';
 import { pageInfo, queuePageSql } from '../queue-page.mjs';
 import { journal, requireStaff } from './staff.mjs';
@@ -37,6 +38,7 @@ const run = {
     if (n >= OPEN_TICKETS) fail(422, 'rule_violation', { rule: 'too_many_tickets' });
     const [t] = await q.query(`insert into feture.support_ticket (account_id, topic) values ($1, $2) returning *`, [account.id, input.topic]);
     await q.query(`insert into feture.support_message (ticket_id, body) values ($1, $2)`, [t.id, input.body]);
+    await alertStaff(q, 'support', { by: account.id });
     return { ticket: ticketDto(t, await threads(q, [t.id])) };
   },
 
@@ -52,6 +54,7 @@ const run = {
     if (t.state === 'closed') fail(409, 'conflict', { state: 'closed' });
     await q.query(`insert into feture.support_message (ticket_id, body) values ($1, $2)`, [t.id, input.body]);
     const [u] = await q.query(`update feture.support_ticket set state = 'open', updated_at = now() where id = $1 returning *`, [t.id]);
+    await alertStaff(q, 'support', { by: account.id });
     return { ticket: ticketDto(u, await threads(q, [t.id])) };
   },
 

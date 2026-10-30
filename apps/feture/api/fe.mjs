@@ -15,6 +15,7 @@ import { staff } from '../server/commands/staff.mjs';
 import { social } from '../server/commands/social.mjs';
 import { posts } from '../server/commands/posts.mjs';
 import { moderation } from '../server/commands/moderation.mjs';
+import { staffCounts } from '../server/commands/staff-counts.mjs';
 import { communities } from '../server/commands/communities.mjs';
 import { events } from '../server/commands/events.mjs';
 import { photos } from '../server/commands/photos.mjs';
@@ -124,7 +125,7 @@ const handler = db && createFeHandler({
     // Payment providers plug in here once their keys exist (server/commands/premium.mjs «Payments»); none yet.
     billing: { providers: [] } },
   signals,
-  commands: { ...platform, ...me, ...access, ...couples, ...staff, ...social, ...posts, ...moderation, ...communities, ...events, ...photos, ...gallery, ...discover, ...chats, ...inbox, ...people, ...premium, ...verification, ...accounts, ...dsa, ...support },
+  commands: { ...platform, ...me, ...access, ...couples, ...staff, ...staffCounts, ...social, ...posts, ...moderation, ...communities, ...events, ...photos, ...gallery, ...discover, ...chats, ...inbox, ...people, ...premium, ...verification, ...accounts, ...dsa, ...support },
   authenticate: req => cachedAuth(req),
   quota: async (req, coreKey) => { // coreKey: Core account hash, only for the ephemeral rate-limit key
     // Same budget as /api/domain: per account across devices and IPs, plus a per-IP cap (the same keys

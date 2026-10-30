@@ -41,3 +41,8 @@ export const staffCommands = {
     }),
   },
 };
+
+/** The size of every queue the signed-in staff member may open, and of the support requests waiting (server/commands/staff-counts.mjs). */
+export const staffCountsCommands = {
+  'staff.counts': { profile: false, write: false, input: z.strictObject({}) },
+};
