@@ -3390,10 +3390,6 @@
 .v21 .sheet .grab,
 .v21 .sheet .sh-h{touch-action:none}.v21 .sheet .grab{cursor:grab}
 
-/* V21 (VIS-009): in a dialog the person in the floating header sits on the same glass as the header buttons — messages no longer show through the name and status */
-.v21 .main[data-screen="H02"]>.bar>.row.grow,
-.v21 .main[data-screen="H03"]>.bar>.row.grow,
-.v21 .main[data-screen="H04"]>.bar>.row.grow{flex:0 1 auto;margin-right:auto;max-width:calc(100% - 104px);background:color-mix(in srgb,var(--surf) 86%,transparent);-webkit-backdrop-filter:blur(16px) saturate(1.6);backdrop-filter:blur(16px) saturate(1.6);border-radius:var(--r-xl);padding:4px 14px 4px 4px;box-shadow:0 8px 20px -14px rgba(40,10,30,.55),inset 0 0 0 1px color-mix(in srgb,var(--line) 70%,transparent)}
 
 /* V21 (VIS-004): one «+» create button everywhere — 44 px, the standard radius */
 .v21 .composer .ibtn.add,

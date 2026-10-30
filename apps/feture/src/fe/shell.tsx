@@ -158,7 +158,16 @@ function FeLayout(){
  // and a screen while one of its modes asks for it (useHideDock: the gallery's selection mode).
  const [hiders,setHiders]=useState(0);
  const hideDock=useCallback((on:boolean)=>setHiders(n=>Math.max(0,n+(on?1:-1))),[]);
- const nodock=current==='staff'||hiders>0;
+ // While a message or a reply is typed (the keyboard is up) the dock steps aside; it comes back a moment after the
+ // input loses focus — not at once, so a tap on «Отправить» is not moved from under the finger.
+ const [typing,setTyping]=useState(false);
+ useEffect(()=>{let off=0;
+  const inBar=(n:EventTarget|null)=>n instanceof Element&&!!n.closest('.inputbar');
+  const on=(e:FocusEvent)=>{if(inBar(e.target)){clearTimeout(off);setTyping(true);}};
+  const out=(e:FocusEvent)=>{if(!inBar(e.target))return;clearTimeout(off);off=window.setTimeout(()=>{if(!inBar(document.activeElement))setTyping(false);},250);};
+  document.addEventListener('focusin',on);document.addEventListener('focusout',out);
+  return ()=>{clearTimeout(off);document.removeEventListener('focusin',on);document.removeEventListener('focusout',out);};},[]);
+ const nodock=current==='staff'||hiders>0||typing;
  const badge=useTabBadges();
  useNewVersion(pathname);
  // The other screens' code comes in the background once this one is up (lazy-screens.ts).

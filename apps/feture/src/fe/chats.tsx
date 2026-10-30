@@ -13,6 +13,7 @@ import {useFe,useRealtime,useTypingSignal} from './session';
 import {readDraft,useDraftKey,writeDraft} from './drafts';
 import {ReportSheet} from './report';
 import {useToast} from './toast';
+import {PhotoBadge} from './photo-check';
 import {limitCounter,overMax,softMax,textError} from './kit/validate';
 import {BellButton,SegN} from './inbox';
 
@@ -28,7 +29,7 @@ type Ctx=z.infer<typeof ctxItem>;
 const reqView=z.object({role:z.enum(['sender','recipient']),renewAt:z.string().optional(),context:z.array(ctxItem).optional(),at:z.string().nullable().optional()}).nullable().optional();
 type Req=NonNullable<z.infer<typeof reqView>>;
 const chat=z.object({request:reqView,origin:z.string().optional(),id:z.uuid(),state:z.string(),side:z.object({id:z.uuid(),kind:z.enum(['person','couple'])}),newMatch:z.boolean(),
- other:z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),avatar:media.nullable()}),
+ other:z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),avatar:media.nullable(),ages:z.array(z.number()).optional(),photoVerified:z.boolean().optional()}),
  unread:z.number(),muted:z.boolean(),archived:z.boolean().optional(),last:z.object({body:z.string(),media:z.boolean(),mode:z.string(),mine:z.boolean(),kind:z.string().nullable().optional()}).nullable(),at:z.string()});
 type Chat=z.infer<typeof chat>;
 const list=z.object({ok:z.literal(true),items:z.array(chat),requests:z.array(chat).optional()});
@@ -599,7 +600,9 @@ function ChatView({id,to}:{id:string,to:string}){
   <Btn kind="soft" onClick={()=>navigate('/n/chats')}>{t('fe.chats.back')}</Btn></Empty></View></>;
  const ended=state!=='active';
  // The input shows in a chat, in a request composer that may send, and for a waiting sender once a month passed.
- const canWrite=draft?draft.canRequest:!req||canRenew;
+ const canWrite=draft?true:!req||canRenew;
+ // A request that may not be sent keeps the input, greyed out; a tap says why (the profile's privacy settings).
+ const blocked=!!draft&&!draft.canRequest;
  const sheetAlert=sheetErr?<Alert kind="err" noIcon>{sheetErr}{sheetErr===t('fe.chx.ageRequired')&&<><br/><AgeCheckLink intent={'attach:'+id}/></>}</Alert>:null;
  const all=items??[];
  // Read receipts: the other side's avatar under the last own message they have read.
@@ -613,15 +616,12 @@ function ChatView({id,to}:{id:string,to:string}){
  const sep=(iso:string)=>{const d=day(iso);if(d===lastDay)return null;lastDay=d;return <div className="daysep">{d}</div>;};
  return <>
   <PersonBar onBack={back} {...(meta?{name:otherName,onOpen:()=>navigate('/n/people/'+meta.other.id),av:<Av name={otherName} seed={meta.other.id} size="sm" src={meta.other.avatar?.src?.thumb}/>}:{})}
+   mark={meta?<>{meta.other.ages&&meta.other.ages.length>0&&<span className="cw-age">{meta.other.ages.join(' · ')}</span>}{meta.other.photoVerified&&<PhotoBadge/>}
+    {state==='active'&&(grants.byMe||grants.withMe)&&<span className="cw-ic" role="img" aria-label={grants.byMe&&grants.withMe?t('fe.chx.pillBoth'):grants.withMe?t('fe.chx.pillTheirs'):t('fe.chx.pillMine')}>{grants.withMe?<LockOpen/>:<Eye/>}</span>}</>:undefined}
    sub={couple?<><CoupleTag>{t('fe.chx.coupleChat')}</CoupleTag>{t('fe.chx.coupleSees')}</>:undefined}>
    <IconBtn icon={Ellipsis} kind="ghost" label={t('fe.chx.menu')} disabled={!meta||!!draft} onClick={()=>{setSheetErr('');setSheet('menu');}}/>
   </PersonBar>
   <div ref={viewRef} className={'view nodock'+(ended||!canWrite?'':' cta1')} onScroll={onScroll}><div className="wrap">
-   {meta&&state==='active'&&(grants.byMe||grants.withMe)&&<div className="chat-ctx">
-    {grants.byMe&&grants.withMe?<Pill tone="ok" icon={LockOpen} onClick={()=>navigate('/n/people/'+meta.other.id)}>{t('fe.chx.pillBoth')}</Pill>
-     :grants.withMe?<Pill tone="ok" icon={LockOpen} onClick={()=>navigate('/n/people/'+meta.other.id)}>{t('fe.chx.pillTheirs')}</Pill>
-     :<Pill tone="v" icon={Eye} onClick={()=>navigate('/n/me?layer=priv')}>{t('fe.chx.pillMine')}</Pill>}
-   </div>}
    {items===null?<Skel kind="list" rows={4}/>:<>
     <div className="msgs" id="msgs">
      {!draft&&meta?.origin!=='request'&&<div className="msg sys">{t('fe.chx.matchSys')}</div>}
@@ -650,17 +650,15 @@ function ChatView({id,to}:{id:string,to:string}){
        <button type="button" className="msg-retry" onClick={()=>setVoiceOut(null)}><X/>{t('fe.chx.drop')}</button></>}</>}
      {typing&&!ended&&<Typing>{t('fe.w7.typing',{name:otherName})}</Typing>}
     </div>
-    {draft&&meta&&(draft.canRequest
-     ?<Alert kind="info" icon={MessageCircle}><b>{t('fe.rq.draft',{name:otherName})}</b>{t('fe.rq.draftOne')}
-      {draft.left!==undefined&&draft.max!==undefined&&draft.left<=3?' '+t('fe.rq.left',{n:String(draft.left),max:String(draft.max)}):''}</Alert>
-     :<Alert kind="warn"><b>{t('fe.rq.no.title')}</b>{ruleText(draft.rule)}</Alert>)}
+    {draft&&meta&&draft.canRequest&&<Alert kind="info" icon={MessageCircle}><b>{t('fe.rq.draft',{name:otherName})}</b>{t('fe.rq.draftOne')}
+      {draft.left!==undefined&&draft.max!==undefined&&draft.left<=3?' '+t('fe.rq.left',{n:String(draft.left),max:String(draft.max)}):''}</Alert>}
     {req?.role==='sender'&&!ended&&<Alert kind="info" icon={Clock}><b>{t('fe.rq.wait')}</b>{canRenew?t('fe.rq.renew'):t('fe.rq.waitText',{name:otherName})}</Alert>}
     {req?.role==='recipient'&&!ended&&meta&&<Alert kind="info" icon={MessageCircle} action={<><Actions>
       <Btn busy={reqBusy==='accept'} disabled={!!reqBusy} onClick={()=>void answerReq('accept')}>{t('fe.rq.answer')}</Btn>
       <Btn kind="soft" busy={reqBusy==='hide'} disabled={!!reqBusy} onClick={()=>void answerReq('hide')}>{t('fe.rq.hide')}</Btn></Actions>
       <Btn kind="text" size="sm" auto icon={Flag} disabled={!!reqBusy} onClick={reportReq}>{t('fe.rq.reportBlock')}</Btn></>}>
      <b>{t('fe.rq.in',{name:senderName(meta.other,t)})}</b>{contextLine(req.context,t,locale,meta.side.kind==='couple')}. {t('fe.rq.inText',{name:otherName})}</Alert>}
-    {!ended&&canWrite&&!req&&all.length===0&&pend.length===0&&<><SectionLabel>{t('fe.chx.starters')}</SectionLabel><Chips className="ice">
+    {!ended&&canWrite&&!blocked&&!req&&all.length===0&&pend.length===0&&<><SectionLabel>{t('fe.chx.starters')}</SectionLabel><Chips className="ice">
      {[...starters.slice(0,2).map(n=>t('fe.w7.ice.topic',{topic:n})),t('fe.chx.ice1'),t('fe.chx.ice2')].map(s=><Chip key={s} onClick={()=>{setText(s);requestAnimationFrame(()=>{if(input.current){grow(input.current);input.current.focus();}});}}>{s}</Chip>)}
     </Chips></>}
     {ended&&<Alert kind="info" icon={Ban}><b>{t('fe.chx.endedTitle')}</b>{t(couple?'fe.chx.endedTextUs':'fe.chx.endedText')}</Alert>}
@@ -671,17 +669,18 @@ function ChatView({id,to}:{id:string,to:string}){
    </>}
   </div></div>
   <button type="button" className={'chat-down'+(ended?' low':'')+(!near?' on':'')} aria-label={t('fe.chx.toLatest')} onClick={toBottom}><ChevronDown/>{fresh>0&&<em>{fresh>99?'99+':fresh}</em>}</button>
-  {!ended&&canWrite&&<div className="inputbar" ref={bar}>
+  {!ended&&canWrite&&<div className={'inputbar'+(blocked?' blocked':'')} ref={bar}>
+   {blocked&&<button type="button" className="ib-block" aria-label={t('fe.rq.no.title')} onClick={()=>toast(ruleText(draft?.rule),{type:'err'})}/>}
    {limitCounter('chatMessage',text)}
    {replyTo&&quoteOf(replyTo)&&<div className="reply-target chat-reply">{quote(replyTo,true)}<IconBtn icon={X} size="sm" label={t('fe.chx.cancelReply')} onClick={()=>{setReplyTo(null);input.current?.focus({preventScroll:true});}}/></div>}
-   <IconBtn icon={Plus} kind="ghost" label={t('fe.chx.attach')} disabled={!meta||!!out?.pending||!!reqBusy} onClick={()=>{setSheetErr('');setSheet('attach');}}/>
+   <IconBtn icon={Plus} kind="ghost" label={t('fe.chx.attach')} disabled={blocked||!meta||!!out?.pending||!!reqBusy} onClick={()=>{setSheetErr('');setSheet('attach');}}/>
    {couple&&acting?.kind==='couple'&&<ActingAv p={acting} size="xs"/>}
    <TextArea ref={input} bare grow={GROW} rows={1} maxLength={softMax('chatMessage')} value={text} onChange={e=>{setText(e.target.value);if(e.target.value.trim())typed();}}
-    placeholder={couple?t('fe.chx.messagePhCouple'):t('fe.chx.messagePh')} aria-label={couple?t('fe.chx.messagePhCouple'):t('fe.chx.message')} title={t('fe.chx.enterHint')} enterKeyHint="enter"
+    disabled={blocked} placeholder={blocked?t('fe.rq.no.title'):couple?t('fe.chx.messagePhCouple'):t('fe.chx.messagePh')} aria-label={couple?t('fe.chx.messagePhCouple'):t('fe.chx.message')} title={t('fe.chx.enterHint')} enterKeyHint="enter"
     onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!coarse&&!e.nativeEvent.isComposing){e.preventDefault();send();}}}/>
    {/* An empty box offers a voice message instead of «Отправить» (hold to record). */}
    {/* A request has no voice message: its one first message is text and / or a photo. */}
-   {text.trim()||!meta||asRequest?<IconBtn icon={SendHorizontal} kind="send" onClick={send} disabled={!meta||!text.trim()||overMax('chatMessage',text)||!!reqBusy} label={couple?t('fe.fd.sendUs'):t('fe.feed.send')}/>
+   {text.trim()||!meta||asRequest?<IconBtn icon={SendHorizontal} kind="send" onClick={send} disabled={blocked||!meta||!text.trim()||overMax('chatMessage',text)||!!reqBusy} label={couple?t('fe.fd.sendUs'):t('fe.feed.send')}/>
     :<VoiceRecorder onSend={v=>void deliverVoice(v)} onError={voiceError} disabled={voiceOut?.status==='sending'}/>}
   </div>}
   {wide&&<ChatsSide current={id}/>}
