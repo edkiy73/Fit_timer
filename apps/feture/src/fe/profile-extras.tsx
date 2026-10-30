@@ -319,19 +319,20 @@ function Activity({profileId,inert,preview,pre}:{profileId:string,inert?:boolean
 /** Gallery (galleryBlock): one source with the screen it opens (`gallery.list`, the same call as P20 «Все»), so the
  * counter, the thumbnails and what opens always agree; a tile and «Все · N» both open that gallery. In «Как видят»
  * only what everyone sees is drawn. */
-function GalleryGroup({p,inert,preview}:{p:PersonProfile,inert?:boolean|undefined,preview?:boolean|undefined}){
+type GalleryData=z.infer<typeof galleryList>;
+function GalleryGroup({p,inert,preview,gal}:{p:PersonProfile,inert?:boolean|undefined,preview?:boolean|undefined,gal?:GalleryData|null|undefined}){
  const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();
- const [g,setG]=useShown<z.infer<typeof galleryList>|null>('px.gal:'+p.id,()=>null);
+ const [g,setG]=useShown<z.infer<typeof galleryList>|null>('px.gal:'+p.id,()=>gal??null);
  useEffect(()=>{let live=true;call('gallery.list',{profileId:p.id},galleryList).then(r=>{if(live)setG(r);}).catch(()=>{});return ()=>{live=false;};},[call,p.id,setG]);
  const tiles=(g?.items??[]).filter(x=>!preview||!x.audience||x.audience==='all');
- const list=tiles.map(x=>({src:x.media.src?.thumb??x.media.src?.card??null})).filter((x):x is {src:string}=>!!x.src);
+ const list=tiles.map(x=>({postId:x.postId,src:x.media.src?.thumb??x.media.src?.card??null})).filter((x):x is {postId:string,src:string}=>!!x.src);
  if(!list.length)return null;
- const open=()=>navigate('/n/people/'+p.id+'/gallery');
- return <Group bare title={t('fe.px.gal.title')} action={!inert&&<button type="button" onClick={open}>{t('fe.px.all')} · {list.length}{g?.next?'+':''}</button>}>
-  <Card><div className="ggrid">{list.slice(0,12).map((m,i)=><button key={i} type="button" className="gtile" disabled={inert} aria-label={t('fe.mx.ph.nOf',{n:i+1,total:list.length})} onClick={open}><img src={m.src} alt="" loading="lazy" draggable={false}/></button>)}</div>
+ const open=(postId?:string)=>navigate('/n/people/'+p.id+'/gallery'+(postId?'?f='+postId:''));
+ return <Group bare title={t('fe.px.gal.title')} action={!inert&&<button type="button" onClick={()=>open()}>{t('fe.px.all')} · {list.length}{g?.next?'+':''}</button>}>
+  <Card><div className="ggrid">{list.slice(0,12).map((m,i)=><button key={i} type="button" className="gtile" disabled={inert} aria-label={t('fe.mx.ph.nOf',{n:i+1,total:list.length})} onClick={()=>open(m.postId)}><img src={m.src} alt="" loading="lazy" draggable={false}/></button>)}</div>
   </Card></Group>;
 }
-const galleryList=z.object({ok:z.literal(true),items:z.array(z.object({postId:z.string(),media:z.object({src:z.record(z.string(),z.string()).nullable()}).passthrough(),audience:z.string().optional()}).passthrough()),next:z.string().nullable()});
+export const galleryList=z.object({ok:z.literal(true),items:z.array(z.object({postId:z.string(),media:z.object({src:z.record(z.string(),z.string()).nullable()}).passthrough(),audience:z.string().optional()}).passthrough()),next:z.string().nullable()});
 
 /** Interests group of another profile (pubJars → jarShelf, six then «Ещё N»). */
 function InterestsGroup({profileId,name,avatar,inert,pre,preview}:{profileId:string,name:string,avatar?:string|null|undefined,inert?:boolean|undefined,pre?:CardPre|undefined,preview?:'all'|'granted'|undefined}){
@@ -355,13 +356,13 @@ function InterestsGroup({profileId,name,avatar,inert,pre,preview}:{profileId:str
 }
 
 /** Everything under the photo and the buttons — the same body on the profile page and under a Discover card. */
-export function ProfileBody({p,inert,preview,pre}:{p:PersonProfile,inert?:boolean|undefined,preview?:'all'|'granted'|undefined,onOpen?:(i:number)=>void,
+export function ProfileBody({p,inert,preview,pre,gal}:{p:PersonProfile,inert?:boolean|undefined,preview?:'all'|'granted'|undefined,onOpen?:(i:number)=>void,gal?:GalleryData|null|undefined,
  /** Everything already read in one go (a Discover card): the body appears whole, nothing pops in under the reader. */ pre?:CardPre|undefined}){
  return <>
   <DetailsGroup p={p}/>
   <LinksSection profileId={p.id} inert={inert} pre={pre}/>
   <InterestsGroup profileId={p.id} name={personName(p)||'?'} avatar={mediaSrc(p.avatar)} inert={inert} pre={pre} preview={preview}/>
-  <GalleryGroup p={p} inert={inert} preview={!!preview}/>
+  <GalleryGroup p={p} inert={inert} preview={!!preview} gal={gal}/>
   <PrivateVault profileId={p.id} name={personName(p)} {...(preview?{preview}:{})} {...(pre?{pre:pre.private??{ok:true,exists:false}}:{})}/>
   <Activity profileId={p.id} inert={inert} preview={!!preview} pre={pre}/>
  </>;
@@ -410,7 +411,7 @@ export function cardRead(actingId:string,profileId:string){const hit=cardMemo.ge
 /** SC.P01 profileView: the floating ‹ and ⋯ sit on the photo and turn into a solid bar with the name past it
  * (PRF-007); hero, description, buttons, «что общего», then the body. `preview` is «Как видят» — everything drawn,
  * nothing pressable. */
-export function ProfilePage({p,preview,seg,onMore,menu,onRefresh,children}:{p:PersonProfile,preview?:'all'|'granted'|undefined,seg?:ReactNode,onMore?:(()=>void)|undefined,
+export function ProfilePage({p,preview,seg,onMore,menu,onRefresh,pre,gal,children}:{p:PersonProfile,/** Everything under the photo, read before the page is drawn: nothing pops in later. */ pre?:CardPre|undefined,gal?:GalleryData|null|undefined,preview?:'all'|'granted'|undefined,seg?:ReactNode,onMore?:(()=>void)|undefined,
  menu?:((rel:Relation|null,reload:()=>void)=>ReactNode)|undefined,/** Pull-to-refresh: reads the profile again. */ onRefresh?:(()=>unknown)|undefined,children?:ReactNode}){
  const {t}=useI18n();const navigate=useNavigate();const [rel,setRel,reloadRel]=useRelation(p.id);const [view,setView]=useState<number|null>(null);
  const scroller=useRef<HTMLDivElement>(null);const name=personName(p);const inert=!!preview;const list=photosOf(p);
@@ -426,11 +427,11 @@ export function ProfilePage({p,preview,seg,onMore,menu,onRefresh,children}:{p:Pe
    {children}
    <ProfileHero p={p} rel={rel} inert={inert} onOpen={setView}/>
    <PersonBio p={p}/>
-   <PersonActions p={p} rel={rel} setRel={setRel} inert={inert}/>
+   {rel||inert?<PersonActions p={p} rel={rel} setRel={setRel} inert={inert}/>:<div className="pa-hold" aria-hidden="true"><i className="sk"/><i className="sk"/><i className="sk"/></div>}
    {/* Owner 29.10.2026: «Обо мне» under the bio and under the main buttons. */}
    <AboutGroup p={p} inert={inert}/>
-   {!preview&&<CompatSummary profileId={p.id}/>}
-   <ProfileBody p={p} inert={inert} preview={preview} onOpen={setView}/>
+   {!preview&&<CompatSummary profileId={p.id} {...(pre?{pre:pre.compat}:{})}/>}
+   <ProfileBody p={p} inert={inert} preview={preview} onOpen={setView} {...(pre?{pre}:{})} {...(gal!==undefined?{gal}:{})}/>
   </div></PullRefresh></div>
   {view!==null&&<PhotoViewer srcs={list.map(m=>m.src?.full??mediaSrc(m)!)} index={view} onClose={()=>setView(null)}/>}
   {menu?.(rel,reloadRel)}

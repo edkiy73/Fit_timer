@@ -420,10 +420,11 @@ export function GalleryGrid({children,label}:{children:ReactNode,label?:string|u
 }
 /** One gallery tile (a post): its first photo, «N фото», «только подписчики», «на проверке». In selection mode
  * (`selected` true/false) a tap picks it and a round check shows; `picked` frames the chosen one (a cover). */
-export function GalleryTile({src,label,count,followers,review,selected,picked,onClick}:{src?:string|null|undefined,label:string,count?:number|undefined,
- followers?:string|undefined,review?:string|undefined,selected?:boolean|undefined,picked?:boolean|undefined,onClick:()=>void}){
+export function GalleryTile({src,label,count,followers,review,selected,picked,onClick,id,flash}:{src?:string|null|undefined,label:string,count?:number|undefined,
+ followers?:string|undefined,review?:string|undefined,selected?:boolean|undefined,picked?:boolean|undefined,onClick:()=>void,
+ /** What the tile stands for — lets a screen scroll to it. */ id?:string|undefined,/** Blinks the tile: «this is the one you tapped». */ flash?:boolean|undefined}){
  const sel=selected!==undefined;
- return <button type="button" className={'gtile'+(sel?' sel-tile'+(selected?' on':''):'')+(picked?' pick':'')} aria-label={label}
+ return <button type="button" className={'gtile'+(sel?' sel-tile'+(selected?' on':''):'')+(picked?' pick':'')+(flash?' gt-flash':'')} data-gt={id} aria-label={label}
   aria-pressed={sel?selected:picked===undefined?undefined:picked} onClick={onClick}>
   {src&&<img src={src} alt="" loading="lazy" draggable={false}/>}
   {sel?<span className="sel-ck">{selected&&<Check/>}</span>:picked?<span className="gt-k"><Check/></span>:count&&count>1?<span className="gt-n"><ImageIcon/>{count}</span>:null}
