@@ -60,7 +60,7 @@ function EmailStep({mode,onBack,onMode,onCode}:{mode:Mode,onBack:()=>void,onMode
   try{await client.sendCode(v,locale==='en'?'en':'ru');lastEmail=v;onCode(v,true);}
   catch(e){const c=codeOf(e);
    if(c==='mail_failed'||c==='no_mail'){setNoMail(true);fail(t('fe.onb.email.mailFailed'));}
-   else fail(t(c==='rate_limited'?'fe.onb.email.limit':c==='too_many_today'?'fe.onb.email.today':c==='bad_email'?'fe.onb.email.bad':'fe.onb.failed'));}
+   else{if(c==='rate_limited'||c==='too_many_today')setNoMail(true);fail(t(c==='rate_limited'?'fe.onb.email.limit':c==='too_many_today'?'fe.onb.email.today':c==='bad_email'?'fe.onb.email.bad':'fe.onb.failed'));}}
   finally{setBusy(false);}
  };
  return <>
