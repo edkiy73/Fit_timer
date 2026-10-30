@@ -4,7 +4,9 @@ import {MaintenanceGate} from './maintenance';
 import {PaywallHost} from './premium';
 import {Outlet,useLocation,useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Globe,Image as FeedIcon,MessageCircle,Plus,User,Users,X,type LucideIcon} from 'lucide-react';
+import {Ban,Globe,Image as FeedIcon,LogOut,MessageCircle,Plus,User,Users,X,type LucideIcon} from 'lucide-react';
+import {useOptionalAuth} from '@appbase/ui-react/auth.js';
+import {FeError} from '../feture/fe-api';
 import {feErrorMessage} from '../feture/fe-api';
 import {Av,Btn,Empty,H,Skel} from './kit';
 import {FeSessionProvider,useFe,useRealtime} from './session';
@@ -102,7 +104,7 @@ function ShellSkeleton(){
 }
 
 function FeGate(){
- const {state,reload}=useFe();const {t}=useI18n();
+ const {state,reload}=useFe();const {t}=useI18n();const auth=useOptionalAuth();
  // Android app below the published minimum version: nothing but the update (app-update.tsx).
  if(useUpdateRequired())return <Center><UpdateRequired/></Center>;
  if(state.status==='loading')return <ShellSkeleton/>;
@@ -110,8 +112,13 @@ function FeGate(){
  if(state.status==='signedOut')return <SignedOut/>;
  // A code from the app before anything else (the account turned the second factor on).
  if(state.status==='factor')return <SigninFactor/>;
- if(state.status==='error')return <Center><Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(state.error,t)}>
-  <Btn kind="soft" onClick={reload}>{t('fe.retry')}</Btn></Empty></Center>;
+ if(state.status==='error'){
+  // A closed account (blocked, deleted, on hold) is not a glitch: no endless retry, and a way out to another account.
+  const closed=state.error instanceof FeError&&state.error.code==='account_unavailable';
+  return <Center><Empty icon={closed?Ban:X} role="alert" title={closed?t('fe.error.closedTitle'):t('fe.error.title')} text={closed?t('fe.error.closedText'):feErrorMessage(state.error,t)}>
+   {!closed&&<Btn kind="soft" onClick={reload}>{t('fe.retry')}</Btn>}
+   <Btn kind={closed?'primary':'ghost'} icon={LogOut} onClick={()=>void auth.logout()}>{t('fe.uf.signinOut')}</Btn></Empty></Center>;
+ }
  // V21 A04 → A04X → A05 in the auth frame (header bar, view, bottom-pinned buttons).
  // The sign-up has its own toasts (limits, «Заявку отправим…») — no dock there.
  if(!state.boot.account.onboarded)return <ToastProvider nodock><Register/></ToastProvider>;

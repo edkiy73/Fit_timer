@@ -29,6 +29,8 @@ export const en: Record<keyof typeof ru, string> = {
   "fe.retry": "Try again",
   "fe.back": "Back",
   "fe.error.title": "Couldn’t open",
+  "fe.error.closedTitle": "This account is closed",
+  "fe.error.closedText": "You can’t sign in to this account right now. It isn’t a glitch — retrying won’t help. Sign out and use another account, or contact support.",
   "fe.signIn.title": "Sign in to continue",
   "fe.signIn.text": "FetUre is for adults. Sign in with a code sent to your email.",
   "fe.signIn.action": "Sign in",
