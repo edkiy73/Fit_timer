@@ -169,7 +169,7 @@ export function Viewer({srcs,index,onClose,onExpired,bar}:{srcs:Slide[],index:nu
  const step=useCallback((d:number)=>setI(v=>Math.max(0,Math.min(srcs.length-1,v+d))),[srcs.length]);
  useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();onClose();}else if((e.target as HTMLElement|null)?.closest?.('input'))return;else if(e.key==='ArrowLeft')step(-1);else if(e.key==='ArrowRight')step(1);};
   document.addEventListener('keydown',k,true);return ()=>document.removeEventListener('keydown',k,true);},[onClose,step]);
- return <Layer><div ref={box} className={'viewer'+(on?' on':'')} role="dialog" aria-modal="true" aria-label={t('fe.br.viewer')}
+ return <Layer><div ref={box} className={'viewer'+(on?' on':'')} data-slide={typeof srcs[i]==='object'?'video':'image'} role="dialog" aria-modal="true" aria-label={t('fe.br.viewer')}
   onPointerDown={e=>{sx.current=e.clientX;}} onPointerUp={e=>{if(sx.current==null)return;const dx=e.clientX-sx.current;sx.current=null;if(Math.abs(dx)>50)step(dx<0?1:-1);}}>
   <PhotoTrack srcs={srcs} index={i} onExpired={onExpired} onStep={step} onClose={onClose}/>
   {bar?.(onClose,leave)}
