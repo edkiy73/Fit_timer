@@ -13,7 +13,7 @@ import {NameBadges} from './faces';
 import {BellButton} from './inbox';
 import {when} from './feed';
 import {FollowButton} from './follow';
-import {catalogRes,cardOneRead,cardRead,CompatSummary,FollowCounts,MatchOverlay,PersonBio,PersonMenu,PhotoViewer,ProfileBody,ProfilePage,personName,personProfileRes,pxError,readCard,readCatalog,usePrivate,useRelation,type CardPre,
+import {catalogRes,cardOneRead,cardRead,galleryList,CompatSummary,FollowCounts,MatchOverlay,PersonBio,PersonMenu,PhotoViewer,ProfileBody,ProfilePage,personName,personProfileRes,pxError,readCard,readCatalog,usePrivate,useRelation,type CardPre,
  type Catalog,type MenuStep,type PersonProfile} from './profile-extras';
 import {AboutGroup} from './about-facts';
 import {topicMatches} from './topic-search';
@@ -581,6 +581,15 @@ export function PersonScreen(){
  // «Полный профиль» from a Discover card: the profile that card already read paints the page at once.
  const [p,setP]=useState<PersonProfile|null>(()=>acting?cardRead(acting.id,id)?.profile??null:null);const [error,setError]=useState<unknown>(null);
  const [menu,setMenu]=useState<MenuStep>(null);const [blocked,setBlocked]=useState(false);
+ // The whole page is read before it is drawn (the details in one read, the gallery next to it): the skeleton holds the
+ // layout and the content comes at once, instead of block after block popping in. `false`: the one read failed — the
+ // blocks then read themselves, as before.
+ const [pre,setPre]=useState<CardPre|null|false>(()=>acting?cardRead(acting.id,id):null);const [gal,setGal]=useState<z.infer<typeof galleryList>|null|undefined>(undefined);
+ useEffect(()=>{if(!acting)return;let live=true;setPre(cardRead(acting.id,id));setGal(undefined);
+  readCard(call,acting.id,id).then(v=>{if(live)setPre(v);},()=>{if(live)setPre(false);});
+  call('gallery.list',{profileId:id},galleryList).then(r=>{if(live)setGal(r);},()=>{if(live)setGal(null);});
+  return ()=>{live=false;};},[call,acting,id]);
+ const ready=pre!==null&&gal!==undefined;
  // Another person starts from the skeleton; reading the same one again (after «Разблокировать») keeps the page.
  const [was,setWas]=useState(id);if(was!==id){setWas(id);setP(null);}
  const load=useCallback(()=>{setError(null);call('profile.get',{profileId:id},personProfileRes).then(r=>setP(r.profile)).catch(e=>{setP(null);setError(e);});},[call,id]);
@@ -588,8 +597,8 @@ export function PersonScreen(){
  // After «Разблокировать» the profile is loaded again.
  const setBlock=useCallback((b:boolean)=>{setBlocked(b);if(!b)load();},[load]);
  const name=personName(p);
- if(p&&!blocked)return <>
-  <ProfilePage p={p} onMore={()=>setMenu('menu')} onRefresh={load}
+ if(p&&!blocked&&ready)return <>
+  <ProfilePage p={p} {...(pre?{pre}:{})} gal={gal} onMore={()=>setMenu('menu')} onRefresh={load}
    menu={(rel,reload)=><PersonMenu profileId={id} name={name} handle={p.kind==='person'?p.handle:null} step={menu} setStep={setMenu} blocked={blocked} setBlocked={setBlock} rel={rel} onRel={reload}/>}/>
   
  </>;

@@ -1,4 +1,4 @@
-import {useCallback,useEffect,useMemo,useState} from 'react';
+import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
@@ -138,6 +138,18 @@ export function GalleryScreen(){
    (a?setInAlbum:setAll)(v=>v?{ok:true,items:[...v.items,...r.items],next:r.next}:r);}
   catch(e){setMoreErr(e);}finally{setMore(false);}
  };
+ // Opened from a profile's preview (`?f=<post>`): scroll to the tile that was tapped, loading further pages until it is
+ // there, and blink it — so it can be tapped again.
+ const focus=params.get('f');const [flash,setFlash]=useState<string|null>(null);const focused=useRef<string|null>(null);
+ useEffect(()=>{
+  if(!focus||focused.current===focus||!view)return;
+  const el=document.querySelector<HTMLElement>('[data-gt="'+CSS.escape(focus)+'"]');
+  if(el){focused.current=focus;el.scrollIntoView({block:'center'});setFlash(focus);
+   const next=new URLSearchParams(params);next.delete('f');setParams(next,{replace:true});
+   const off=window.setTimeout(()=>setFlash(null),3200);return ()=>window.clearTimeout(off);}
+  if(view.next&&!more)void loadMore();
+  else if(!view.next)focused.current=focus;
+ });
  const fail=(e:unknown)=>toast(feErrorMessage(e,t),{type:'err'});
  const run=async(fn:()=>Promise<void>)=>{if(busy)return;setBusy(true);try{await fn();}catch(e){fail(e);}finally{setBusy(false);}};
  const picked=items.filter(x=>sel?.has(x.postId));
@@ -238,7 +250,7 @@ export function GalleryScreen(){
       :items.length||(own&&!sel)?<GalleryGrid label={cur?.title??title}>
        {own&&!sel&&<GalleryAdd label={t('fe.gal.add')} onClick={()=>navigate('/n/feed/new?x=media'+(a?'&album='+a:''))}/>}
        {items.map((x,i)=>{const on=!!sel?.has(x.postId);
-        return <GalleryTile key={x.postId} src={tileSrc(x.media)} label={t('fe.gal.tile',{n:i+1,total:items.length})} count={x.count}
+        return <GalleryTile key={x.postId} id={x.postId} flash={flash===x.postId} src={tileSrc(x.media)} label={t('fe.gal.tile',{n:i+1,total:items.length})} count={x.count}
          followers={x.audience==='followers'?t('fe.gal.followersOnly'):undefined} review={x.media.pending?t('fe.br.inReview'):undefined}
          selected={sel?on:undefined} onClick={()=>{if(!sel){navigate('/n/feed/post/'+x.postId);return;}
           setSel(s=>{const n=new Set(s);if(on)n.delete(x.postId);else n.add(x.postId);return n;});}}/>;})}
