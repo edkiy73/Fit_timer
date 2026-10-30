@@ -305,8 +305,9 @@ function Activity({profileId,inert,preview,pre}:{profileId:string,inert?:boolean
  const cut=expanded?Infinity:3;
  const foot=!expanded?(total>3||nextCur)&&<Btn kind="soft" onClick={()=>setExpanded(true)}>{t('fe.px.act.more')}</Btn>
   :<LoadMore more={!!nextCur} busy={moreBusy} error={moreErr} onMore={()=>void loadNext()}/>;
- return <Group className="activity" title={on.length>1?undefined:cur[1]}>
-  {on.length>1&&<Seg value={cur[0]} onChange={v=>setTab(v)} options={on.map(x=>({id:x[0],label:x[1]}))}/>}
+ // The tabs are there even when only one has something: a heading in their place would be a different control for the same thing.
+ return <Group className="activity">
+  <Seg value={cur[0]} onChange={v=>setTab(v)} options={on.map(x=>({id:x[0],label:x[1]}))}/>
   {cur[0]==='acts'?<>
     {own&&!preview&&<Text size="sm" tone="mute">{t('fe.px.act.actsSees.'+vis)}</Text>}
     <div className="posts" inert={inert||undefined}>{shownActs.slice(0,cut).map(a=><ActivityCardOf key={a.id} a={a}/>)}</div>{foot}</>

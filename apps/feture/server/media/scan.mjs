@@ -194,7 +194,11 @@ export async function scanAsset(db, deps, assetId) {
     if (decision.state === 'blocked') await enqueue(q, 'safety.csamMatch', asset.owner_profile_id, { assetId: asset.id });
     if (decision.state === 'needs_review') await enqueue(q, 'moderation.mediaReview', asset.owner_profile_id, { assetId: asset.id, reason: decision.reason });
     if (decision.state === 'approved') await enqueue(q, 'media.approved', asset.owner_profile_id, { assetId: asset.id });
-    if (decision.state === 'rejected' && !terminal) await enqueue(q, 'media.purge', asset.owner_profile_id, { assetId: asset.id });
+    if (decision.state === 'rejected' && !terminal) {
+      await enqueue(q, 'media.purge', asset.owner_profile_id, { assetId: asset.id });
+      // The same notice as when a moderator rejects it; approvals are the normal path and say nothing.
+      if (asset.purpose !== 'verification') await enqueue(q, 'media.decided', asset.owner_profile_id, { assetId: asset.id, purpose: asset.purpose, kind: asset.kind, state: 'rejected', reason: decision.reason });
+    }
     return true;
   });
   // Served copies only survive for approved / staff-review assets whose state did not change under us.

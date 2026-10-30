@@ -90,6 +90,16 @@ async function checkRank(q, roles, profileId) {
   if (theirs.some(r => r.role === 'owner' || (RANK[/** @type {keyof typeof RANK} */ (r.role)] ?? 0) >= mine)) fail(403, 'forbidden');
 }
 
+/** Nobody but this person may decide an appeal: no other active owner or lead (the one who appealed does not count). Appeals
+ * are for a second pair of eyes; with one reviewer the rule would leave every appeal unanswered.
+ * @param {Q} q @param {string} account @param {string | null} appellant */
+async function onlyReviewer(q, account, appellant) {
+  const [{ others }] = await q.query(
+    `select count(*)::int others from (select distinct r.account_id from feture.staff_role r join feture.account a on a.id = r.account_id
+       where r.revoked_at is null and r.role in ('owner', 'lead') and a.state = 'active' and r.account_id <> $1 and r.account_id is distinct from $2) x`, [account, appellant]);
+  return others === 0;
+}
+
 /** What a moderator needs to judge a reported or appealed thing, whole (S4 §3): the text in full (up to 4000
  * characters) and the plain facts around it. Values are raw (codes, ISO dates); the screen words them.
  * @param {Q} q @param {string} type @param {string} id */
@@ -446,9 +456,10 @@ const run = {
        from feture.appeal ap join feture.profile p on p.id = ap.profile_id
        where ap.state = 'open' and not exists (select 1 from feture.profile_member m where m.profile_id = ap.profile_id and m.account_id = $1)`, [account.id]);
     const rows = await q.query(sql, params);
+    const alone = await onlyReviewer(q, account.id, null);
     const items = [];
     for (const r of rows) {
-      items.push({ id: r.id, target_type: r.target_type, target_id: r.target_id, body: r.body, created_at: r.created_at, handle: r.handle, decision: r.decision,
+      items.push({ id: r.id, target_type: r.target_type, target_id: r.target_id, body: r.body, created_at: r.created_at, handle: r.handle, decision: r.decision, onlyReviewer: alone,
         object: await targetObject(q, r.target_type, r.target_id) });
     }
     return { items, ...pageInfo(rows, CREATED_KEYS, input.limit) };
@@ -463,13 +474,16 @@ const run = {
     if (own) fail(403, 'forbidden');
     // Another person looks again: whoever made the decision under appeal may not decide the appeal.
     const [decision] = await q.query(`select staff_account_id, detail from feture.staff_action where id = $1`, [ap.staff_action_id]);
-    if (decision.staff_account_id === account.id) fail(403, 'forbidden', { rule: 'same_staff' });
+    // Another person looks again — unless there is nobody else who may (the first weeks: one senior moderator): then the
+    // same person decides, and the journal says they did.
+    const selfReview = decision.staff_account_id === account.id;
+    if (selfReview && !(await onlyReviewer(q, account.id, ap.account_id))) fail(403, 'forbidden', { rule: 'same_staff' });
     let restored = false;
     if (input.grant) restored = await restoreTarget(q, ap.target_type, ap.target_id, decision.detail?.from ?? null);
     await q.query(`update feture.appeal set state = $2, decided_by = $3, note = nullif($4, ''), decided_at = now() where id = $1`,
       [ap.id, input.grant ? 'granted' : 'denied', account.id, input.note]);
     await enqueue(q, 'appeal.decided', ap.profile_id, { appealId: ap.id, state: input.grant ? 'granted' : 'denied', targetType: ap.target_type, targetId: ap.target_id });
-    await journal(q, account.id, input.grant ? 'appeal.grant' : 'appeal.deny', ap.target_type, ap.target_id, { appealId: ap.id, note: input.note });
+    await journal(q, account.id, input.grant ? 'appeal.grant' : 'appeal.deny', ap.target_type, ap.target_id, { appealId: ap.id, note: input.note, ...(selfReview ? { selfReview: true } : {}) });
     return { state: input.grant ? 'granted' : 'denied', restored };
   },
 };

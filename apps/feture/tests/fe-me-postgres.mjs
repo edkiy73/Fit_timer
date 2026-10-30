@@ -283,7 +283,7 @@ test('«Обо мне» facts (owner 29.10.2026): validation, always visible to 
     assert.equal((await db.query('select height from feture.profile_details where profile_id = $1', [a]))[0].height, null);
 
     // Filled: the owner, a stranger and anyone else see every filled fact.
-    const all = { height: 174, smoking: 'sometimes', alcohol: 'rarely', kids: 'unsure', langs: ['ru', 'en', 'de'], zodiac: 'scorpio' };
+    const all = { height: 174, smoking: 'sometimes', alcohol: 'rarely', kids: 'want', langs: ['ru', 'en', 'de'], zodiac: 'scorpio' };
     assert.equal((await up(all)).status, 200);
     const own = (await call('ua', a, { action: 'profile.get', profileId: a })).profile;
     assert.deepEqual([own.about, own.aboutVis], [all, undefined]);
@@ -292,7 +292,7 @@ test('«Обо мне» facts (owner 29.10.2026): validation, always visible to 
 
     // Clearing a fact removes it for everyone.
     assert.equal((await up({ height: null, langs: [] })).status, 200);
-    assert.deepEqual((await call('ub', b, { action: 'profile.get', profileId: a })).profile.about, { smoking: 'sometimes', alcohol: 'rarely', kids: 'unsure', zodiac: 'scorpio' });
+    assert.deepEqual((await call('ub', b, { action: 'profile.get', profileId: a })).profile.about, { smoking: 'sometimes', alcohol: 'rarely', kids: 'want', zodiac: 'scorpio' });
 
     // Facts are personal: a couple profile has none and cannot set them.
     const pair = await coupleOf([a, b]);

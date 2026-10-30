@@ -240,3 +240,29 @@ test('staff see the whole thing a report is about, and where a waiting file is u
     assert.ok(queued.usedIn.startsWith('Заголовок: Очень длинная публикация.'));
   } finally { await pg.close(); }
 });
+
+test('appeals: with one senior reviewer the same person decides, on record; with a second one they may not', async () => {
+  const { pg, db, call, person } = await setup();
+  try {
+    const boss = await person('uo', 'Boss');
+    await db.query(`insert into feture.staff_role (account_id, role) select id, 'owner' from feture.account where person_profile_id = $1`, [boss]);
+    const a = await person('ua', 'Alex');
+    await call('uo', null, { action: 'staff.restrict', opId: op(), profileId: a, on: true, rule: 'spam' });
+    const ap = await call('ua', a, { action: 'appeal.create', opId: op(), targetType: 'profile', targetId: a, body: 'Это была ошибка, я не рассылаю спам' });
+    const item = async () => (await call('uo', null, { action: 'staff.appealQueue' })).items.find((/** @type {any} */ i) => i.id === ap.id);
+    assert.equal((await item()).onlyReviewer, true);
+
+    // A second senior moderator exists: the decision under appeal was the owner's own, so someone else must decide.
+    await person('ul', 'Lead');
+    await db.query(`insert into feture.staff_role (account_id, role) select id, 'lead' from feture.account where person_profile_id = (select id from feture.profile where handle = 'Lead')`);
+    assert.equal((await item()).onlyReviewer, false);
+    assert.equal((await call('uo', null, { action: 'staff.appealDecide', opId: op(), appealId: ap.id, grant: true, note: 'Ошибка' })).status, 403);
+
+    // The lead goes: the owner is the only reviewer again and may decide, and the journal says so.
+    await db.query(`update feture.staff_role set revoked_at = now() where role = 'lead'`);
+    assert.equal((await item()).onlyReviewer, true);
+    assert.equal((await call('uo', null, { action: 'staff.appealDecide', opId: op(), appealId: ap.id, grant: true, note: 'Ошибка' })).state, 'granted');
+    const [line] = await db.query(`select detail from feture.staff_action where action = 'appeal.grant' and target_id = $1`, [a]);
+    assert.equal(line.detail.selfReview, true);
+  } finally { await pg.close(); }
+});
