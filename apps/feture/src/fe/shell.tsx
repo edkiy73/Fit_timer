@@ -166,16 +166,20 @@ function FeLayout(){
  // and a screen while one of its modes asks for it (useHideDock: the gallery's selection mode).
  const [hiders,setHiders]=useState(0);
  const hideDock=useCallback((on:boolean)=>setHiders(n=>Math.max(0,n+(on?1:-1))),[]);
- // While a message or a reply is typed (the keyboard is up) the dock steps aside; it comes back a moment after the
- // input loses focus — not at once, so a tap on «Отправить» is not moved from under the finger.
- useEffect(()=>followPageTheme(),[]);
+ // While the keyboard is up (an input has focus and the viewport shrank) the dock steps aside; it comes back when the
+ // keyboard closes — also when the input keeps its focus (the back gesture closes the keyboard only).
  const [typing,setTyping]=useState(false);
- useEffect(()=>{let off=0;
-  const inBar=(n:EventTarget|null)=>n instanceof Element&&!!n.closest('.inputbar');
-  const on=(e:FocusEvent)=>{if(inBar(e.target)){clearTimeout(off);setTyping(true);}};
-  const out=(e:FocusEvent)=>{if(!inBar(e.target))return;clearTimeout(off);off=window.setTimeout(()=>{if(!inBar(document.activeElement))setTyping(false);},250);};
+ useEffect(()=>{
+  const field=(n:EventTarget|null)=>n instanceof Element&&n.matches('textarea,input:not([type=checkbox],[type=radio],[type=range],[type=file],[type=button],[type=submit],[type=hidden])');
+  const vv=window.visualViewport;const height=()=>Math.min(window.innerHeight,vv?.height??Infinity);
+  let base=Math.max(window.innerHeight,vv?.height??0);let off=0;
+  const open=()=>field(document.activeElement)&&height()<base-120;
+  const sync=()=>{if(!field(document.activeElement))base=Math.max(base,window.innerHeight,vv?.height??0);setTyping(open());};
+  const out=()=>{clearTimeout(off);off=window.setTimeout(sync,250);};
+  const on=()=>{clearTimeout(off);sync();window.setTimeout(sync,350);};
   document.addEventListener('focusin',on);document.addEventListener('focusout',out);
-  return ()=>{clearTimeout(off);document.removeEventListener('focusin',on);document.removeEventListener('focusout',out);};},[]);
+  window.addEventListener('resize',sync);vv?.addEventListener('resize',sync);
+  return ()=>{clearTimeout(off);document.removeEventListener('focusin',on);document.removeEventListener('focusout',out);window.removeEventListener('resize',sync);vv?.removeEventListener('resize',sync);};},[]);
  const nodock=current==='staff'||hiders>0||typing;
  const badge=useTabBadges();
  useNewVersion(pathname);
