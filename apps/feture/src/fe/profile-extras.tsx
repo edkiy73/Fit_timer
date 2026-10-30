@@ -413,16 +413,15 @@ export function cardRead(actingId:string,profileId:string){const hit=cardMemo.ge
 export function ProfilePage({p,preview,seg,onMore,menu,onRefresh,children}:{p:PersonProfile,preview?:'all'|'granted'|undefined,seg?:ReactNode,onMore?:(()=>void)|undefined,
  menu?:((rel:Relation|null,reload:()=>void)=>ReactNode)|undefined,/** Pull-to-refresh: reads the profile again. */ onRefresh?:(()=>unknown)|undefined,children?:ReactNode}){
  const {t}=useI18n();const navigate=useNavigate();const [rel,setRel,reloadRel]=useRelation(p.id);const [view,setView]=useState<number|null>(null);
- const bar=useRef<HTMLElement>(null);const scroller=useRef<HTMLDivElement>(null);const name=personName(p);const inert=!!preview;const list=photosOf(p);
- const onScroll=(e:React.UIEvent<HTMLDivElement>)=>{const h=e.currentTarget.querySelector('.hero');const b=bar.current;if(h&&b)b.classList.toggle('solid',h.getBoundingClientRect().bottom<b.getBoundingClientRect().bottom+8);};
+ const scroller=useRef<HTMLDivElement>(null);const name=personName(p);const inert=!!preview;const list=photosOf(p);
  return <>
-  <header ref={bar} className="bar overlay pbar">
+  <header className="bar overlay pbar">
    {/* Back to where the profile was opened (the deck, «Симпатии», a list, search); opened by a link, to «Люди». */}
    <IconBtn icon={ChevronLeft} kind="glass" label={t('fe.back')} onClick={()=>{if(((window.history.state as {idx?:number}|null)?.idx??0)>0)navigate(-1);else navigate('/n/people',{replace:true});}}/>
-   <span className="pbar-t" aria-hidden="true"><Av name={name} seed={p.id} src={mediaSrc(p.avatar)} size="sm"/><b>{name}</b></span>
+   <span className="k-grow"/>
    {onMore&&<IconBtn icon={Ellipsis} kind="glass" aria-haspopup="dialog" label={t('fe.px.menu.more')} onClick={onMore}/>}
   </header>
-  <div ref={scroller} className="view nodock top0 profile-page" onScroll={onScroll}><PullRefresh target={scroller} onRefresh={onRefresh&&(()=>{reloadRel();return onRefresh();})}>{seg}<div className="wrap">
+  <div ref={scroller} className="view nodock top0 profile-page"><PullRefresh target={scroller} onRefresh={onRefresh&&(()=>{reloadRel();return onRefresh();})}>{seg}<div className="wrap">
    <H level={1} className="sr-only" tabIndex={-1}>{name}</H>
    {children}
    <ProfileHero p={p} rel={rel} inert={inert} onOpen={setView}/>
