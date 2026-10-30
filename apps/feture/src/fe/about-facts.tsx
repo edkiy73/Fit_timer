@@ -3,7 +3,6 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Baby,Cigarette,CigaretteOff,Languages,Ruler,Sparkles,UserRound,Wine,WineOff} from 'lucide-react';
 import {ABOUT,ABOUT_FACTS} from '../../contracts/_about.mjs';
 import {AddCard,Card,FactChips,FactRow,Group,type FactItem} from './kit';
-import {ChipPick} from './kit/ChipPick';
 
 /** «Обо мне» (owner 29.10.2026): optional short facts of a person profile — height, smoking, alcohol, kids, languages,
  * zodiac sign — always visible to everyone (owner 29.10.2026: no per-fact audience), `profile.get` `about`. Couples have none: facts are personal, each partner keeps theirs on the
@@ -26,8 +25,9 @@ export function factItems(a:About,t:T):FactItem[]{
   else if(k==='langs'){const l=a.langs??[];out.push({id:k,icon:Languages,value:l.map(c=>c.toUpperCase()).join(' · '),label:t('fe.ab.l.langs',{list:l.map(c=>t('fe.ab.lang.'+c)).join(', ')})});}
   else if(k==='zodiac'){const v=t('fe.ab.zodiac.'+a.zodiac);out.push({id:k,icon:Sparkles,value:v,label:t('fe.ab.l.zodiac',{v})});}
   else{const v=String(a[k]);const icon=k==='smoking'?(v==='no'?CigaretteOff:Cigarette):k==='alcohol'?(v==='no'?WineOff:Wine):Baby;
-   // «Пока не знаю» alone does not say it is about kids: the chip names it (the editor's list keeps the short value).
-   out.push({id:k,icon,value:t(k==='kids'&&v==='unsure'?'fe.ab.chip.kids.unsure':'fe.ab.'+k+'.'+v),label:t('fe.ab.l.'+k+'.'+v)});}
+   // An answer this version does not know (one that was removed) is left out, never shown as a raw key.
+   const word=t('fe.ab.'+k+'.'+v);if(word==='fe.ab.'+k+'.'+v)continue;
+   out.push({id:k,icon,value:word,label:t('fe.ab.l.'+k+'.'+v)});}
  }
  return out;
 }
@@ -78,11 +78,8 @@ export function AboutEditor({d,onChange,titled=true}:{d:AboutDraft,onChange:(d:A
    options={[['',none],...HEIGHTS.map(n=>[String(n),t('fe.ab.cm',{n})] as const)]} onChange={v=>set('height',v?Number(v):null)}/>
   {SELECTS.map(([k,codes])=><FactRow key={k} icon={k==='smoking'?Cigarette:k==='alcohol'?Wine:Baby} label={t('fe.ab.f.'+k)} value={d.about[k]??''}
    options={[['',none],...codes.map(c=>[c,t('fe.ab.'+k+'.'+c)] as const)]} onChange={v=>set(k,v||null)}/>)}
-  <FactRow icon={Languages} label={t('fe.ab.f.langs')}>
-   <ChipPick label={t('fe.ab.f.langs')} max={ABOUT.langsMax} value={langs}
-    options={ABOUT.langs.map(c=>({code:c,label:t('fe.ab.lang.'+c),search:c}))}
-    onToggle={c=>set('langs',langs.includes(c)?langs.filter(x=>x!==c):langs.length>=ABOUT.langsMax?langs:[...langs,c])} onClear={()=>set('langs',[])}/>
-  </FactRow>
+  <FactRow icon={Languages} label={t('fe.ab.f.langs')} pick={{options:ABOUT.langs.map(c=>({code:c,label:t('fe.ab.lang.'+c),search:c})),value:langs,max:ABOUT.langsMax,none,
+   onToggle:c=>set('langs',langs.includes(c)?langs.filter(x=>x!==c):langs.length>=ABOUT.langsMax?langs:[...langs,c]),onClear:()=>set('langs',[])}}/>
   <FactRow icon={Sparkles} label={t('fe.ab.f.zodiac')} value={d.about.zodiac??''}
    options={[['',none],...ABOUT.zodiac.map(c=>[c,t('fe.ab.zodiac.'+c)] as const)]} onChange={v=>set('zodiac',v||null)}/>
  </Card></Group>;

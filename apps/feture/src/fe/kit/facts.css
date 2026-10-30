@@ -21,3 +21,6 @@
    знаю») instead of ending in «…» */
 .v21 .li.k-fact-row>.selrow>.selt{flex:0 0 auto;max-width:50%}
 .v21 .li.k-fact-row>.selrow>.selv{flex:1 1 auto;max-width:none;white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:normal}
+
+/* The multiple-choice row: the whole row is the button that opens the list, like a select row. */
+/* safe-t: ok — fills its own row, not the screen top */.v21 .selrow>.k-selrow-hit{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;border:0;background:transparent;cursor:pointer}

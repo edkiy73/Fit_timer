@@ -43,7 +43,7 @@ const reportItem=z.object({targetType:z.enum(['profile','post','reply','communit
  details:opt(z.array(z.string())),firstAt:ts,lastAt:ts,reported:z.unknown().optional(),excerpt:opt(z.string()),state:opt(z.string()),media:opt(z.number()),
  author:opt(z.object({id:z.string(),kind:z.string().optional(),handle:z.string().nullable().optional(),name:z.string().nullable().optional()}).passthrough()),
  evidence:opt(z.array(z.object({assetId:z.uuid(),kind:z.string(),seq:opt(z.number())}))),object:objectDto});
-const appealItem=z.object({id:z.uuid(),target_type:z.string(),target_id:z.string(),body:z.string(),created_at:ts,handle:opt(z.string()),object:objectDto,
+const appealItem=z.object({id:z.uuid(),target_type:z.string(),target_id:z.string(),body:z.string(),created_at:ts,handle:opt(z.string()),object:objectDto,onlyReviewer:z.boolean().optional(),
  decision:opt(z.object({action:z.string(),detail:z.unknown().optional(),at:ts,mine:z.boolean().optional()}).passthrough())});
 const noticeItem=z.object({id:z.uuid(),target_url:opt(z.string()),reason:z.string(),explanation:opt(z.string()),created_at:ts,answerable:opt(z.boolean())});
 const placeItem=z.object({id:z.uuid(),country:opt(z.string()),name_ru:opt(z.string()),name_en:opt(z.string()),created_at:ts,used:opt(z.number())});
@@ -865,7 +865,8 @@ function Measures({profileId,name,onClose,onApplied}:{profileId:string,name:stri
 function AppealCard({item,onDone}:{item:AppealItem,onDone:()=>void}){
  const {t}=useI18n();const when=useWhen();const val=useVal();const jw=useJournalWord();const d=useDecide(onDone);
  const [note,setNote]=useState('');const [ask,setAsk]=useState(false);
- const mine=!!item.decision?.mine;
+ // The decision under appeal was this person's own: another reviewer decides — unless there is none (then they do, on record).
+ const mine=!!item.decision?.mine&&!item.onlyReviewer;
  const decide=(grant:boolean)=>d.run('staff.appealDecide',{appealId:item.id,grant,note:note.trim()});
  const o=item.object;const kind=t('fe.staff.report.type.'+item.target_type);
  return <StCard title={t('fe.staff.what.appeal')} task={t('fe.staff.task.appeal')} meta={when(item.created_at)}>
@@ -875,6 +876,7 @@ function AppealCard({item,onDone}:{item:AppealItem,onDone:()=>void}){
   <ReviewObject kind={t('fe.staff.appeal.body')} text={item.body}/>
   {item.decision&&<Details data={item.decision.detail}/>}
   {mine&&<Alert kind="warn">{t('fe.staff.appeal.sameStaff')}</Alert>}
+  {!!item.decision?.mine&&!!item.onlyReviewer&&<Alert kind="info">{t('fe.staff.appeal.alone')}</Alert>}
   {!mine&&<TextField label={t('fe.staff.note')} value={note} onChange={setNote} max={500}/>}
   {!mine&&(ask?<Confirm text={t('fe.staff.appeal.confirmDeny')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>decide(false)}/>
    :<Actions><Btn icon={Check} disabled={d.busy} onClick={()=>decide(true)}>{t('fe.staff.appeal.grant')}</Btn>

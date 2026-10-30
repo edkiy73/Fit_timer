@@ -571,6 +571,9 @@ test('media av: video and voice limits, poster upload, scan (length, sound only,
     await db.tx(q => commitUpload(q, asA, cfg, l.assetId));
     assert.equal(await scanAsset(db, deps(pass), l.assetId), 'rejected');
     assert.equal((await row(l.assetId)).reject_reason, 'too_long');
+    // The scanner's own rejection tells the person, as a moderator's would (audit 30.10): a clip that is too long.
+    const told = await db.query(`select payload from feture.outbox where topic = 'media.decided' and payload->>'assetId' = $1`, [l.assetId]);
+    assert.deepEqual(told.map(x => [x.payload.state, x.payload.reason, x.payload.kind]), [['rejected', 'too_long', 'video']]);
     assert.equal(storage.objects.has(ORIGINAL_KEY(l.assetId)), false);
     // The removal job also deletes the poster upload.
     const purge = mediaHandlers(db, { scan: deps(pass) })['media.purge'];
