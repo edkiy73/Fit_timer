@@ -2307,7 +2307,10 @@
  .v21 .main.has-dock{--dock-space:calc(var(--dock) + 22px + var(--safe-b))}
  .v21 .main.has-dock>.view:not(.deckmode){padding-bottom:calc(var(--dock-space) + 18px)}
  .v21 .main.has-dock.hascta>.ctabar{margin-bottom:var(--dock-space);padding-bottom:8px}
- .v21 .main.has-dock>.inputbar{margin-bottom:var(--dock-space)}
+ /* --dock-space already holds the safe area: the bar's own bottom padding is just 8px (it was counted twice). */
+ .v21 .main.has-dock>.inputbar{margin-bottom:var(--dock-space);padding-bottom:8px}
+ /* A bar in the flow under the screen (the reply box) leaves nothing to reserve under the content above it. */
+ .v21 .main.has-dock:has(>.inputbar):not(:has(>.k-chat-pane))>.view:not(.deckmode){padding-bottom:16px}
  .v21 .main.has-dock.has-reply:not(.replying)>.inputbar{display:none}
  .v21 .main.has-dock.replying>.reply-launch{display:none}
  .v21.kb .main.has-dock>.ctabar,
@@ -2441,7 +2444,7 @@
 .v21 .hero>.vframe>video{pointer-events:none}
 
 /* activity rows: the picture of the event / community / post, like the cards they open */
-.v21 .actth{position:relative;flex:none;width:46px;height:46px;border-radius:var(--r-m);overflow:hidden;background:var(--raise);display:grid;place-items:center}
+.v21 .actth{position:relative;flex:none;width:64px;height:64px;border-radius:var(--r-m);overflow:hidden;background:var(--raise);display:grid;place-items:center}
 .v21 .actth>img,
 /* safe-t: ok — fills its own parent box, not the screen top */.v21 .actth>.evimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .v21 .actth>.plate,
@@ -2769,7 +2772,7 @@
 
 /* liked posts without a photo: text snippet, poll and interests tiles */
 .v21 .actc-th.txt{align-items:start;justify-items:start;padding:6px;background:var(--surf);border:1px solid var(--line);color:var(--mute);font-size:var(--fs-micro);line-height:1.25;text-align:left}
-.v21 .actc-th.txt span{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+.v21 .actc-th.txt span{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word;align-self:stretch;width:100%;-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 14px),transparent);mask-image:linear-gradient(to bottom,#000 calc(100% - 14px),transparent)}
 .v21 .actc-th.kind{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:var(--surf);border:1px solid var(--line);color:var(--accent)}.v21 .actc-th.kind svg{width:20px;height:20px}.v21 .actc-th.kind small{font-size:var(--fs-micro);font-weight:650;color:var(--mute)}
 .v21 .actth.ic svg,
 .v21 .actth.kind svg{width:20px;height:20px;color:var(--accent)}
@@ -2800,7 +2803,7 @@
 .v21 .actc-n b,
 .v21 .mcell .dur b,
 .v21 .upthumb .dur b{display:inline-flex;align-items:center;gap:2px;font-weight:700}
-.v21 .actc-n{padding:1px 5px 1px 4px;gap:4px}
+.v21 .actc-n{padding:1px 5px 1px 4px;gap:4px;white-space:nowrap}.v21 .actc-n b{white-space:nowrap}
 .v21 .mplay{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;padding:0;border:0;border-radius:50%;display:grid;place-items:center;background:rgba(10,6,10,.5);color:#fff;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);box-shadow:0 0 0 1.5px rgba(255,255,255,.35) inset;pointer-events:none}
 .v21 .mplay svg{width:24px;height:24px}
 .v21 .mgrid:not(.n1) .mplay{width:44px;height:44px;margin:-22px 0 0 -22px}.v21 .mgrid:not(.n1) .mplay svg{width:19px;height:19px}
@@ -3461,7 +3464,7 @@
 .v21 .av.xs,
 .v21 .msg-readers .av{width:24px;height:24px}
 .v21 .cr-av{width:36px;height:36px}
-.v21 .actth{width:44px;height:44px}
+.v21 .actth{width:64px;height:64px}
 .v21 .actc-th{width:56px;height:56px}
 .v21 .matches .ring2{width:60px;height:60px}
 /* V21.1 (VIS-007): one heading scale — the title of a person, couple, event or community is 28/700; empty states 21/700 */

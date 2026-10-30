@@ -362,6 +362,8 @@ button.pill{cursor:pointer}
    in the post); the author and two lines of the text at the bottom over a scrim; a tap on the text opens the post.
    Only the two buttons take taps: the rail's own box lets them through, so the right third pages everywhere else. */
 .v21 .vw-rail{position:absolute;right:var(--s-1);bottom:calc(var(--s-9) * 2 + var(--safe-b));z-index:3;display:grid;gap:var(--s-1);justify-items:center;pointer-events:none}
+/* A clip has its own controls along the bottom: the buttons sit above them. */
+.v21 .viewer[data-slide="video"] .vw-rail{bottom:calc(var(--s-9) * 3 + var(--safe-b))}
 .v21 .vw-rail>button{pointer-events:auto;display:grid;justify-items:center;gap:2px;min-width:44px;padding:var(--s-1) 0;border:0;background:none;color:#fff;font:var(--t-xs);font-weight:700;cursor:pointer;text-shadow:0 1px 3px rgba(0,0,0,.6)}
 .v21 .vw-rail>button>svg{width:24px;height:24px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))}
 .v21 .vw-rail>button.on{color:var(--accent)}
@@ -441,7 +443,8 @@ html:has(.fe-v21),html:has(.fe-v21) body{overscroll-behavior-y:none}
 /* Page layout grid (owner 29.10.2026, tokens --gut / --page-max / --block-gap): blocks of a screen column follow one
    rhythm — --block-gap between neighbours — with zero specificity, so a kit component's own spacing still wins and a
    screen never adds margins of its own (check:kit counts mt-N / mb-N classes in screens; the count only goes down). */
-.v21 :where(.view>.wrap)>:where(:not(:first-child,.ctabar,[hidden])){margin-top:var(--block-gap)}
+/* A comment thread (.th) keeps its own padding and divider: the page gap would double it. */
+.v21 :where(.view>.wrap)>:where(:not(:first-child,.ctabar,[hidden],.th)){margin-top:var(--block-gap)}
 /* Actions — the one row of buttons: equal widths, the full column, the same gap everywhere (Empty, sheets, cards). */
 .v21 .k-actions{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:var(--s-2);width:100%}
 .v21 .k-actions.k-actions-stack{grid-auto-flow:row}

@@ -166,7 +166,15 @@ function FeLayout(){
  const em=(n:number|'dot'|0)=>n==='dot'?<em className="dot"/>:n?<em>{n>99?'99+':n}</em>:null;
  const label=(id:string)=>{const n=badge(id);return t('fe.nav.'+id)+(n&&n!=='dot'?', '+n:'');};
  // A second tap on the active tab returns to its root (V21 A4).
- const go=(id:string)=>navigate('/n/'+id);
+ const go=(id:string)=>{
+  // A tap on the tab that is already open goes to the top of its screen (smoothly), instead of opening it again.
+  const here=pathname.replace(/\/$/,'');
+  if(here==='/n/'+id||(id==='feed'&&here==='/n')){
+   const view=main.current?.querySelector<HTMLElement>('.view');
+   if(view){view.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});return;}
+  }
+  navigate('/n/'+id);
+ };
  // V21 `hascta`: a screen with a pinned action bar (save / publish / continue) lifts it above the phone dock;
  // without the class the dock covers the bar. Screens render the bar themselves, so the frame watches for it.
  // The search screen's `.sbar` sits in the flow, not over the view: no room is kept for a floating `.bar` there.
