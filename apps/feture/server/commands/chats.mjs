@@ -10,6 +10,7 @@ import { withFaces } from './faces.mjs';
 import { otherProfile } from './access.mjs';
 import { lockPair } from './discover.mjs';
 import { typingTag } from '../realtime.mjs';
+import { photoVerifiedOf } from './verification.mjs';
 
 /** Slice G1: conversations and messages (S1 §12, extract/people-discover-chats.md §1.11–1.12, §2.5).
  * A conversation comes only with a match (a request, grant, follow or gift never opens one). Members are the accounts of
@@ -433,6 +434,13 @@ const run = {
          and not (${incomingRequest('c', 'cm')} and (c.request_state <> 'pending' or c.state <> 'active' or $2))
        order by coalesce(c.last_message_at, c.created_at) desc limit 200`, [account.id, input.archived, input.filter]);
     const assets = await q.query('select * from feture.media_asset where id = any($1)', [rows.map(r => r.avatar_asset_id).filter(Boolean)]);
+    // The header of a chat: the ages the other side shows and the verified-photo mark, the same as on a card.
+    const otherIds = [...new Set(rows.map(r => r.other_id))];
+    const verified = await photoVerifiedOf(q, otherIds);
+    const agesOf = new Map((await q.query(
+      `select p.id, (select coalesce(array_agg(extract(year from age(current_date, a.birth_date))::int) filter (where coalesce(pd.show_age, false)), '{}')
+          from feture.profile_member m join feture.account a on a.id = m.account_id left join feture.profile_details pd on pd.profile_id = a.person_profile_id
+          where m.profile_id = p.id and m.state = 'active') ages from feture.profile p where p.id = any($1)`, [otherIds])).map(r => [r.id, r.ages]));
     /** @type {any[]} */ const items = [];
     /** @type {any[]} */ const requests = [];
     for (const r of rows) {
@@ -441,6 +449,7 @@ const run = {
         id: r.id, state: r.state, side: { id: r.side, kind: r.side_kind }, newMatch: Number(r.last_seq) === 0,
         other: {
           id: r.other_id, kind: r.other_kind, handle: r.other_handle, name: r.other_name || r.other_handle,
+          ages: agesOf.get(r.other_id) ?? [], photoVerified: verified.get(r.other_id) ?? false,
           avatar: asset ? await mediaDto(cfg.media, asset, { viewerProfileId: r.side, place: 'public', showExplicit: false, staff: false }).catch(() => null) : null,
         },
         unread: r.incoming ? 0 : r.unread, muted: r.muted, archived: r.archived, last: r.last, at: r.last_message_at ?? r.created_at,

@@ -61,6 +61,7 @@
 /* PersonBar: the other side as the title (avatar, name, couple line). */
 .v21 .bar>.chat-who{gap:10px}
 .v21 .chat-who .cw-tx{display:grid;min-width:0}
+.v21 .chat-who .cw-n{display:flex;align-items:center;gap:var(--s-1);min-width:0}.v21 .chat-who .cw-n>b{flex:0 1 auto;min-width:0}.v21 .chat-who .cw-age{flex:none;color:var(--mute);font:var(--t-sm)}.v21 .chat-who .cw-ic{flex:none;display:inline-grid;place-items:center;color:var(--mute)}.v21 .chat-who .cw-ic svg{width:16px;height:16px}
 .v21 .chat-who .sk-av{width:36px;height:36px}
 /* Conversation starters are whole sentences: they wrap. */
 .v21 .chips.ice .chip{white-space:normal;text-align:left}
@@ -243,3 +244,8 @@
 .v21 .main>.bar>h1.k-bar-who .bar-who{pointer-events:auto}
 /* Once the screen scrolls, the fading title lets taps through to the content under it, like every tab's title. */
 .v21 .main.scrolled>.bar>h1.k-bar-who .bar-who{pointer-events:none}
+
+/* A request that may not be sent: the input stays, greyed out; a tap on it says why (owner 30.10.2026). */
+.v21 .inputbar.blocked>:not(.ib-block){opacity:.5}
+/* safe-t: ok — covers the input bar at the bottom of the screen */
+.v21 .inputbar .ib-block{position:absolute;top:0;right:0;bottom:0;left:0;z-index:2;border:0;background:transparent;padding:0}

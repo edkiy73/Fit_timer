@@ -34,12 +34,12 @@ export function CoverBar({title,onBack,children}:{title?:string|null|undefined,o
 
 /** The header of a conversation: ‹, the other side as the title (avatar, name, a line under it) that opens their
  * profile, then the actions. Without `name` it shows a placeholder while the chat loads. */
-export function PersonBar({name,av,sub,onOpen,onBack,children}:{name?:string|undefined,av?:ReactNode,sub?:ReactNode,onOpen?:(()=>void)|undefined,onBack:()=>void,children?:ReactNode}){
+export function PersonBar({name,av,sub,mark,onOpen,onBack,children}:{name?:string|undefined,av?:ReactNode,sub?:ReactNode,/** Age and the small marks (verified photo, access) right after the name. */ mark?:ReactNode,onOpen?:(()=>void)|undefined,onBack:()=>void,children?:ReactNode}){
  const {t}=useI18n();
  return <header className="bar solid">
   <IconBtn icon={ChevronLeft} kind="ghost" label={t('fe.back')} onClick={onBack}/>
   {name?<button type="button" className="row grow chat-who" onClick={onOpen}>{av}
-   <span className="cw-tx"><b className="k-strong one">{name}</b>{sub&&<small className="k-cap k-mute">{sub}</small>}</span>
+   <span className="cw-tx"><span className="cw-n"><b className="k-strong one">{name}</b>{mark}</span>{sub&&<small className="k-cap k-mute">{sub}</small>}</span>
   </button>:<span className="row grow chat-who"><i className="sk sk-av"/><i className="sk sk-l w40"/></span>}
   {children}
  </header>;
