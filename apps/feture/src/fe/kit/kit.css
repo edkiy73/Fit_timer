@@ -334,7 +334,10 @@ button.pill{cursor:pointer}
    bars, ‹ and ⋯ read on any photo, and «2 / 6» under the bars.
    Status bar (owner 29.10.2026): no fill and no clip at the top — a screen scrolls under the system bar like in any app; only the
    floating ‹ / ⋯ and bars sit below it (`.bar.overlay` padding, --safe-t). */
-/* Owner 30.10.2026: nothing at all over the status-bar strip — no fade, no fill. */
+/* Owner 30.10.2026 (the FitTimer look): the system bar is transparent, only a short soft gradient of the page colour under its
+   clock and icons so they read over any content; no fill. */
+.v21 .main::before{content:"";position:absolute;left:0;right:0;top:0;z-index:14;height:calc(var(--safe-t) + 16px);background:linear-gradient(color-mix(in srgb,var(--bg) 78%,transparent),transparent);pointer-events:none}
+.v21 .main:has(>.view>.hero:first-child)::before{display:none}
 .v21 .hero:has(>.pc-bars,>img)::after{content:"";position:absolute;left:0;right:0;top:0;z-index:2;height:calc(var(--s-9) * 2 + var(--safe-t));background:linear-gradient(rgba(6,4,6,.62),rgba(6,4,6,.28) 55%,transparent);pointer-events:none}
 .v21 .pc-bars.counted{flex-wrap:wrap;row-gap:var(--s-2)}
 .v21 .pc-bars>.pc-count{margin-left:auto;display:inline-flex;align-items:center;gap:var(--s-1);padding:var(--s-0) var(--s-2);border-radius:var(--r-full);background:rgba(6,4,6,.55);color:#fff;font:var(--t-xs);font-weight:700;font-variant-numeric:tabular-nums}

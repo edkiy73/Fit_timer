@@ -20,6 +20,7 @@ import {ActAsSheet} from './couple';
 import {CreateSheet} from './create-entry';
 import {AppUpdateProvider,UpdateRequired,UpdateSheet,useUpdateRequired} from './app-update';
 import {DockHide} from './dock';
+import {followPageTheme} from './system-bars';
 import {prefetchScreens} from '../lazy-screens';
 import './kit/base.css';
 import './kit/tokens.css';
@@ -160,6 +161,7 @@ function FeLayout(){
  const hideDock=useCallback((on:boolean)=>setHiders(n=>Math.max(0,n+(on?1:-1))),[]);
  // While a message or a reply is typed (the keyboard is up) the dock steps aside; it comes back a moment after the
  // input loses focus — not at once, so a tap on «Отправить» is not moved from under the finger.
+ useEffect(()=>followPageTheme(),[]);
  const [typing,setTyping]=useState(false);
  useEffect(()=>{let off=0;
   const inBar=(n:EventTarget|null)=>n instanceof Element&&!!n.closest('.inputbar');
