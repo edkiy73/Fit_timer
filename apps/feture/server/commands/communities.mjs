@@ -603,7 +603,7 @@ const run = {
         await q.query(`update feture.community set pending_change = null, reject_reason = $2 where id = $1`, [c.id, input.reason]);
       }
     } else fail(409, 'conflict', { state: c.state });
-    await enqueue(q, input.decision === 'approve' ? 'community.published' : 'community.rejected', c.owner_profile_id, { communityId: c.id });
+    await enqueue(q, input.decision === 'approve' ? 'community.published' : 'community.rejected', c.owner_profile_id, { communityId: c.id, ...(c.state === 'in_review' ? {} : { what: 'change' }) });
     await journal(q, account.id, 'community.' + input.decision, 'community', c.id, {
       rev: c.rev, reason: input.reason || null,
       decided: c.state === 'in_review' ? { name: c.name, description: c.description, privacy: c.privacy, rules: c.rules, cover: c.cover_asset_id } : c.pending_change,

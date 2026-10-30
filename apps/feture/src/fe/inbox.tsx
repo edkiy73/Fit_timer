@@ -2,12 +2,13 @@ import {Fragment,useCallback,useEffect,useRef,useState,type ReactNode} from 'rea
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {AtSign,Bell,Calendar,Check,CircleCheck,Clock,Crown,EyeOff,FileText,Filter,Heart,LifeBuoy,LockOpen,MessageCircle,Pencil,Shield,ShieldAlert,ShieldCheck,Trash2,Users,X,type LucideIcon} from 'lucide-react';
+import {AtSign,Bell,Calendar,Check,CircleCheck,Clock,Crown,EyeOff,FileText,Filter,Heart,Image as ImageIcon,LifeBuoy,LockOpen,MapPin,MessageCircle,Pencil,Shield,ShieldAlert,ShieldCheck,Trash2,Users,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Av,Bar,Btn,Card,Chip,Chips,Empty,IconBtn,PersonLine,RequestCard,Row,SectionLabel,Seg,Skel,View,plate} from './kit';
 import {useFe,useRealtime} from './session';
 import {useToast} from './toast';
 import {when} from './feed';
+import {statusText} from './note-status';
 import {faceFields,NameBadges,withAge} from './faces';
 import {useDecline} from './private';
 
@@ -44,7 +45,7 @@ export function BellButton(){
 type Kind='access'|'likes'|'matches'|'replies'|'events'|'groups'|'pair'|'follows'|'links'|'posts'|'other';
 const FILTERS:('all'|Kind)[]=['all','access','likes','matches','replies','events','groups','pair','follows','links','posts','other'];
 const NOTE_KIND:Record<string,Kind>={grant:'access',like:'likes',match:'matches',chatRequest:'matches',reply:'replies',mention:'replies',follow:'follows',
- postLike:'posts',notePublished:'posts',tagAnswered:'posts',postDisputed:'posts',postRestored:'posts',disputeResolved:'posts',revisionApproved:'posts',revisionRejected:'posts',contentRemoved:'posts',reportResolved:'posts',
+ postLike:'posts',mediaDecided:'posts',notePublished:'posts',tagAnswered:'posts',postDisputed:'posts',postRestored:'posts',disputeResolved:'posts',revisionApproved:'posts',revisionRejected:'posts',contentRemoved:'posts',reportResolved:'posts',
  communityApproved:'groups',communityDeclined:'groups',communityMember:'groups',communityPublished:'groups',communityRejected:'groups',communityClosed:'groups',discussionRemoved:'groups',
  eventPublished:'events',eventRejected:'events',eventHidden:'events',eventApplicationApproved:'events',eventApplicationDeclined:'events',
  linkAccepted:'links',linkDeclined:'links',linkChanged:'links',linkRemoved:'links'};
@@ -56,9 +57,9 @@ const NICO:Record<string,[LucideIcon,string]>={like:[Heart,'l'],match:[Heart,'l'
  communityApproved:[Users,'g'],communityDeclined:[Users,''],communityMember:[Users,'v'],communityPublished:[Check,'g'],communityRejected:[Shield,'l'],communityClosed:[Users,''],discussionRemoved:[Trash2,'l'],
  eventPublished:[Check,'g'],eventRejected:[Shield,'l'],eventHidden:[EyeOff,'l'],eventApplicationApproved:[Check,'g'],eventApplicationDeclined:[Calendar,''],
  linkAccepted:[Users,'g'],linkDeclined:[Users,''],linkChanged:[Users,'v'],linkRemoved:[Users,''],ageCheck:[ShieldCheck,'g'],photoCheck:[ShieldCheck,'g'],
- profileSuspended:[Shield,'l'],profileRestricted:[Shield,'l'],profileRestored:[Check,'g'],profileUnrestricted:[Check,'g'],appealDecided:[Shield,''],supportReply:[LifeBuoy,'v'],premiumGift:[Crown,'l'],signinNew:[ShieldAlert,'l']};
+ profileSuspended:[Shield,'l'],profileRestricted:[Shield,'l'],profileRestored:[Check,'g'],profileUnrestricted:[Check,'g'],appealDecided:[Shield,''],supportReply:[LifeBuoy,'v'],premiumGift:[Crown,'l'],premiumGranted:[Crown,'g'],premiumRevoked:[Crown,''],placeDecided:[MapPin,'g'],staffRole:[ShieldCheck,'v'],mediaDecided:[ImageIcon,'g'],signinNew:[ShieldAlert,'l']};
 const noteIcon=(n:Note):[LucideIcon,string]=>n.type==='tagAnswered'?(n.data.answer==='ok'?[Check,'g']:[EyeOff,'l'])
- :(n.type==='ageCheck'||n.type==='photoCheck')&&n.data.state!=='approved'?[Shield,'l']:n.type.startsWith('pair.')?[Users,'v']:NICO[n.type]??[Bell,''];
+ :(n.type==='ageCheck'||n.type==='photoCheck'||n.type==='mediaDecided')&&n.data.state!=='approved'?[Shield,'l']:n.type==='placeDecided'&&n.data.state!=='approved'?[MapPin,'']:n.type.startsWith('pair.')?[Users,'v']:NICO[n.type]??[Bell,''];
 
 /** «{name} …» with the name in bold, as the prototype's NTXT. */
 function rich(text:string,name:string):ReactNode{
@@ -114,7 +115,10 @@ export function InboxScreen(){
   if(n.type==='ageCheck'){navigate('/n/settings/age');return;}
   if(n.type==='photoCheck'){navigate('/n/settings/photo-check');return;}
   if(n.type==='supportReply'){navigate('/n/help'+(typeof n.data.ticketId==='string'?'?ticket='+encodeURIComponent(n.data.ticketId):''));return;}
-  if(n.type==='premiumGift'){navigate('/n/premium');return;}
+  if(n.type==='premiumGift'||n.type==='premiumGranted'||n.type==='premiumRevoked'){navigate('/n/premium');return;}
+  if(n.type==='staffRole'){navigate(n.data.grant===true?'/n/staff':'/n/me');return;}
+  if(n.type==='placeDecided'){navigate('/n/me');return;}
+  if(n.type==='mediaDecided'&&!n.object?.id){navigate('/n/me');return;}
   if(n.type==='signinNew'){navigate('/n/settings/security');return;}
   if(n.type.startsWith('pair.')){
    if(couple)setActing(couple.id);
@@ -143,6 +147,7 @@ export function InboxScreen(){
   const who=nameOf(n.actor);
   if(n.type==='tagAnswered')return t('fe.ibx.t.tagAnswered.'+(['ok','no','remove'].includes(String(n.data.answer))?String(n.data.answer):'ok'));
   if(n.type==='ageCheck'||n.type==='photoCheck')return t(`fe.ibx.t.${n.type}.${n.data.state==='approved'?'approved':'other'}`);
+  const status=statusText(n,t,locale);if(status!==null)return status;
   if(n.type==='premiumGift')return n.actor?rich(t('fe.ibx.t.premiumGiftFrom'),who):t('fe.ibx.t.premiumGift');
   if(n.type==='signinNew'){
    // «Вход с нового устройства: Android, Лиссабон, Португалия» — Core's device family and the edge network's place.
