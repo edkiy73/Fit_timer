@@ -1,10 +1,10 @@
-import {Children,Fragment,cloneElement,isValidElement,useCallback,useEffect,useId,useRef,useState,type ReactNode} from 'react';
+import {Children,cloneElement,isValidElement,useCallback,useEffect,useId,useRef,useState,type ReactNode} from 'react';
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {ArrowUpDown,BadgeCheck,Ban,CalendarDays,Check,ClipboardCheck,ChevronLeft,ChevronRight,Eye,FilePen,Flag,Gavel,IdCard,Image,ImageOff,Inbox,ListFilter,Lock,MapPin,Minus,RefreshCw,Scale,Search,ShieldAlert,ShieldCheck,UserX,Users,X,Ellipsis,Film,Mic,Camera,Image as ImageIcon,LifeBuoy,Crown,Wrench,ScrollText,KeyRound,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Actions,Alert,Btn,Card,ChoiceChips,Chips,Divider,Empty,ExpandRow,Field,Form,Group,IconBtn,Input,KeyValues,LoadMore,MoreInfo,Note,Pill,ReviewBar,ReviewCard,ReviewMedia,ReviewObject,ReviewPair,ReviewTiles,type Slide,useBackClose,Row,SectionLabel,Seg,Select,Sheet,Skel,Stack,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble} from './kit';
+import {Actions,Alert,Btn,Card,Chip,ChoiceChips,Chips,Divider,Empty,ExpandRow,Field,Form,Group,IconBtn,Input,KeyValues,LoadMore,MoreInfo,Note,Pill,ReviewBar,ReviewCard,ReviewMedia,ReviewObject,ReviewPair,ReviewTiles,type Slide,useBackClose,Row,SearchInput,SectionLabel,Seg,Select,Sheet,Skel,Stack,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble} from './kit';
 import {askFactor,useFe} from './session';
 import {useToast} from './toast';
 import {pullStaffCounts,useStaffCounts} from './staff-counts';
@@ -117,8 +117,8 @@ export function StaffScreen(){
  const {t}=useI18n();const {roles,factor,checked,reload}=useStaffMe({fresh:true});const navigate=useNavigate();
  const [section,setSection]=useState<Section>('queues');const [menu,setMenu]=useState(false);
  const ok:Section[]=roles?SECTIONS.filter(id=>can(roles,SECTION_ROLES[id])):[];const cur:Section=ok.includes(section)?section:ok[0]??'queues';
- // Daily work (queues, support) is on the switch; the rarer tools (Premium, maintenance, journal, access) in the menu.
- const daily:Section[]=ok.filter(id=>id==='queues'||id==='support');const tools:Section[]=ok.filter(id=>!daily.includes(id));
+ // Daily work (queues, support, the journal) is on the switch; the rarer tools (Premium, maintenance, access) in the menu.
+ const daily:Section[]=ok.filter(id=>id==='queues'||id==='support'||id==='journal');const tools:Section[]=ok.filter(id=>!daily.includes(id));
  const label=(id:Section)=>t(SECTION_LABEL[id]);
  const ready=!!roles?.length&&checked&&!(factor&&(!factor.enrolled||!factor.verified));
  const counts=useStaffCounts(ready);
@@ -173,8 +173,9 @@ function mergeLive(d:Loaded|null,id:QueueId,order:Order,r:PageOf):Loaded|null{
 function Queues(){
  const {call}=useFe();const {t}=useI18n();const toast=useToast();const roles=useStaffRoles();
  const [data,setData]=useState<Loaded|null>(null);const [tab,setTab]=useState<QueueId|'all'>('all');const [notice,setNotice]=useState('');
- // Within each group (urgent / overdue / the rest) the oldest waits first by default; «Сначала новые» turns it round.
- const [order,setOrder]=useState<Order>('old');
+ // One list by the time each item arrived, newest on top (a new arrival is where it is expected); the button turns it round.
+ const [order,setOrder]=useState<Order>('new');
+ const [only,setOnly]=useState<'all'|'urgent'|'late'>('all');
  const known=useRef(new Set<string>()); // what was in the list when it loaded: later arrivals are «Новое»
  const [focus,setFocus]=useState<number|null>(null);const [picking,setPicking]=useState(false);
  const [pageBusy,setPageBusy]=useState(false);const [pageError,setPageError]=useState<unknown>(null);
@@ -218,9 +219,11 @@ function Queues(){
  const totalOf=(id:QueueId)=>{const c=count(id);return typeof c==='number'?c:parseInt(c,10);};
  // The work list: one queue, or every queue together; urgent first, then what is past its time, then the oldest.
  const ids=tab==='all'?avail:[tab];
- const entries:Entry[]=ids.flatMap(id=>itemsOf(id).map(item=>({id,item,key:(QUEUES[id].key as (x:unknown)=>string)(item),...urgencyOf(id,item)})));
- entries.sort((x,y)=>rank(x)-rank(y)||(order==='old'?x.since-y.since:y.since-x.since));
- const urgentN=entries.filter(e=>e.level==='urgent').length;const lateN=entries.filter(e=>e.level==='late').length;
+ const every:Entry[]=ids.flatMap(id=>itemsOf(id).map(item=>({id,item,key:(QUEUES[id].key as (x:unknown)=>string)(item),...urgencyOf(id,item)})));
+ every.sort((x,y)=>order==='old'?x.since-y.since:y.since-x.since);
+ const urgentN=every.filter(e=>e.level==='urgent').length;const lateN=every.filter(e=>e.level==='late').length;
+ // «Срочно» and «Давно ждут» narrow the one list; they do not reorder it.
+ const entries=only==='urgent'?every.filter(e=>e.level==='urgent'):only==='late'?every.filter(e=>e.level==='late'):every;
  const allUrgent=avail.reduce((n,id)=>n+itemsOf(id).filter(x=>urgencyOf(id,x).level==='urgent').length,0);
  // Every queue pages: the next page starts after the cursor of the last item shown, appended without repeats.
  const loadMore=(id:QueueId)=>{
@@ -253,21 +256,28 @@ function Queues(){
    <IconBtn icon={ArrowUpDown} label={t(order==='old'?'fe.staff.sort.toNew':'fe.staff.sort.toOld')} onClick={()=>{setOrder(o=>o==='old'?'new':'old');setNotice('');setFocus(null);}}/>
    <IconBtn icon={RefreshCw} label={t('fe.staff.refresh')} onClick={()=>load(true)}/>
   </div>
-  {(urgentN>0||lateN>0)&&<Chips>{urgentN>0&&<Pill tone="bad">{t('fe.staff.urgentN',{n:String(urgentN)})}</Pill>}{lateN>0&&<Pill tone="wait">{t('fe.staff.lateN',{n:String(lateN)})}</Pill>}</Chips>}
+  {(urgentN>0||lateN>0)&&<Chips>
+   <Chip on={only==='all'} onClick={()=>{setOnly('all');setFocus(null);}}>{t('fe.staff.f.all')}</Chip>
+   {urgentN>0&&<Chip on={only==='urgent'} onClick={()=>{setOnly('urgent');setFocus(null);}}>{t('fe.staff.urgentN',{n:String(urgentN)})}</Chip>}
+   {lateN>0&&<Chip on={only==='late'} onClick={()=>{setOnly('late');setFocus(null);}}>{t('fe.staff.lateN',{n:String(lateN)})}</Chip>}
+  </Chips>}
+  {picking&&<Sheet title={t('fe.staff.queuesLabel')} onClose={()=>setPicking(false)}>
+   <BackCloses onClose={()=>setPicking(false)}/>
+   <Card list>
+    {[...(['all'] as const),...avail].map(id=>{const urg=id==='all'?allUrgent:itemsOf(id).filter(x=>urgencyOf(id,x).level==='urgent').length;
+     const n=id==='all'?avail.reduce((m,q)=>m+totalOf(q),0):count(id);
+     return <Row key={id} icon={id==='all'?Inbox:QUEUE_ICON[id]} title={id==='all'?t('fe.staff.q.all'):queueLabel(id,t)} pressed={tab===id}
+      sub={id!=='all'&&failed(id)?t('fe.error.title'):urg?t('fe.staff.urgentN',{n:String(urg)}):undefined} val={String(n)}
+      onClick={()=>{setTab(id);setNotice('');setFocus(null);setPicking(false);}}/>;})}
+   </Card>
+  </Sheet>}
   {notice&&<Alert kind="ok" icon={Check}>{notice}</Alert>}
   {errors.map(id=><Alert key={id} kind="err" action={<Btn kind="soft" size="sm" auto icon={RefreshCw} onClick={()=>load(true)}>{t('fe.retry')}</Btn>}>
    {t('fe.staff.q.'+id)}: {feErrorMessage((data[id] as {error:unknown}).error,t)}</Alert>)}
   {locked&&<Alert kind="info" icon={Lock} action={<Btn kind="soft" size="sm" auto onClick={()=>void askFactor('fresh').then(ok=>{if(ok)load(true);})}>{t('fe.sf.enterCode')}</Btn>}>{t('fe.sf.lockedMedia')}</Alert>}
   {single==='dispute'&&<FlaggedClaimants/>}
   {!entries.length?<Empty compact icon={Inbox} title={t('fe.staff.qEmpty')} text={t('fe.staff.qEmptyText')}/>
-   :(()=>{
-    // Groups say why the order is what it is: urgent first, then what is past its time, then the rest.
-    const groups=(['urgent','late','rest'] as const).map(g=>({g,part:entries.map((e,i)=>({e,i})).filter(x=>groupOf(x.e)===g)})).filter(x=>x.part.length);
-    return groups.map(({g,part})=><Fragment key={g}>
-     {groups.length>1&&<SectionLabel>{t('fe.staff.group.'+g,{n:String(part.length)})}</SectionLabel>}
-     <Card list>{part.map(({e,i})=><QueueRow key={e.id+':'+e.key} e={e} fresh={!known.current.has(e.id+':'+e.key)} onOpen={()=>{known.current.add(e.id+':'+e.key);setFocus(i);}}/>)}</Card>
-    </Fragment>);
-   })()}
+   :<Card list>{entries.map((e,i)=><QueueRow key={e.id+':'+e.key} e={e} fresh={!known.current.has(e.id+':'+e.key)} onOpen={()=>{known.current.add(e.id+':'+e.key);setFocus(i);}}/>)}</Card>}
   {/* One «Ещё» for the list: the next page of every queue in it that has more. */}
   <LoadMore more={ids.some(more)} busy={pageBusy} error={pageError} onMore={()=>ids.filter(more).forEach(loadMore)}/>
   {cur&&focus!==null&&<Sheet full className="st-focus" title={titleOf(cur,t)} sub={t('fe.staff.pos',{n:String(focus+1),all:String(entries.length)})+' · '+t('fe.staff.waits',{time:waited(cur.since,t)})}
@@ -302,10 +312,6 @@ function urgencyOf(id:QueueId,x:unknown):{level:Level,since:number}{
  return {level:urgent?'urgent':Date.now()-since>SLA[id]?'late':null,since};
 }
 const queueLabel=(id:QueueId,t:T)=>id==='photo'?t('fe.pc.staff.tab'):t('fe.staff.q.'+id);
-/** Minors and CSAM before any other urgent item, then other urgent, then overdue, then the rest. */
-const rank=(e:Entry)=>{const o=e.item as Record<string,unknown>;
- const grave=e.id==='report'?(o.reasons as string[]).includes('minor'):e.id==='media'?/minor|csam/.test(String(o.reason??'')):e.id==='notice'?o.reason==='minors':false;
- return e.level==='urgent'?(grave?0:1):e.level==='late'?2:3;};
 const QUEUE_ICON:Record<QueueId,LucideIcon>={dispute:UserX,report:Flag,revision:FilePen,media:Image,community:Users,event:CalendarDays,age:IdCard,photo:BadgeCheck,appeal:Scale,notice:Gavel,place:MapPin};
 type T=(k:string,v?:Record<string,string>)=>string;
 const nick=(h:unknown)=>typeof h==='string'&&h?'@'+h:'';
@@ -342,12 +348,11 @@ function gistOf(e:Entry,t:T):[string,string]{
 /** «3 ч», «2 дн»: how long it waits. */
 function waited(since:number,t:T){const m=Math.max(1,Math.round((Date.now()-since)/60000));
  return m<60?t('fe.staff.wait.m',{n:String(m)}):m<48*60?t('fe.staff.wait.h',{n:String(Math.round(m/60))}):t('fe.staff.wait.d',{n:String(Math.round(m/1440))});}
-const groupOf=(e:Entry):'urgent'|'late'|'rest'=>e.level==='urgent'?'urgent':e.level==='late'?'late':'rest';
 /** One row of the work list: what it is (the kind, in words), who and why, the thing itself in a line, how long it
  * waits; urgent and new marked. */
 function QueueRow({e,fresh,onOpen}:{e:Entry,fresh:boolean,onOpen:()=>void}){
  const {t}=useI18n();const [line1,line2]=gistOf(e,t);
- return <Row icon={QUEUE_ICON[e.id]} tone={e.level==='urgent'?'l':undefined} title={titleOf(e,t)} sub={line1||undefined}
+ return <Row icon={QUEUE_ICON[e.id]} tone={e.level==='urgent'?'l':undefined} title={<>{e.level==='urgent'&&<><Pill tone="bad">{t('fe.staff.urgent')}</Pill>{' '}</>}{titleOf(e,t)}</>} sub={line1||undefined}
   extra={line2?<small className="st-gist">{line2}</small>:undefined} onClick={onOpen}
   val={fresh?<Pill tone="v">{t('fe.staff.new')}</Pill>:waited(e.since,t)}/>;
 }
@@ -976,42 +981,50 @@ type JournalRow=z.infer<typeof journalItem>;
 function Journal(){
  const {call}=useFe();const {t}=useI18n();const when=useWhen();const jw=useJournalWord();
  // The object the list is narrowed to: its code (sent to the server) and a plain name of it for the reader.
- const [applied,setApplied]=useState<{id:string,label:string}|null>(null);const [code,setCode]=useState('');const [codeOpen,setCodeOpen]=useState(false);
+ const [applied,setApplied]=useState<{id:string,label:string}|null>(null);
+ const [open,setOpen]=useState<JournalRow|null>(null);const [code,setCode]=useState('');
  const [who,setWho]=useState('');const [what,setWhat]=useState('');
  // Staff for the «Кто» filter: everyone seen in the journal so far (the journal is the only place that names them).
  const [staffSeen,setStaffSeen]=useState<Record<string,string>>({});
- const name=(x:JournalRow)=>x.staff_name||(x.staff_handle?'@'+x.staff_handle:t('fe.staff.journal.unknownStaff'));
+ const name=(x:JournalRow)=>x.staff_account_id?(x.staff_name||(x.staff_handle?'@'+x.staff_handle:t('fe.staff.journal.unknownStaff'))):t('fe.staff.journal.auto');
  const targetId=applied?.id;
  const fetchPage=useCallback((after?:string)=>call('staff.journal',{limit:50,...(targetId?{targetId}:{}),...(who?{staffAccountId:who}:{}),...(what?{what}:{}),...(after?{after}:{})},journalPage,{asAccount:true})
   .then(r=>{setStaffSeen(m=>{const n={...m};for(const x of r.items)if(x.staff_account_id)n[x.staff_account_id]=x.staff_name||(x.staff_handle?'@'+x.staff_handle:t('fe.staff.journal.unknownStaff'));return n;});return r;}),[call,targetId,who,what,t]);
  const {items,error,reload:load,moreProps}=useStaffPage(fetchPage,x=>String(x.id));
- const valid=/^[0-9a-f-]{36}$/i.test(code.trim());
  const staffOptions:[string,string][]=[['',t('fe.staff.journal.anyone')],...Object.entries(staffSeen).map(([id,n])=>[id,n] as [string,string])];
  if(who&&!staffSeen[who])staffOptions.push([who,t('fe.staff.journal.unknownStaff')]);
+ // What the decision said, in words: the rule, the note, the term. Anything else stays in «Подробнее».
+ const facts=(x:JournalRow):[string,ReactNode][]=>{
+  const d=x.detail&&typeof x.detail==='object'?x.detail as Record<string,unknown>:{};const rows:[string,ReactNode][]=[];
+  if(typeof d.rule==='string'){const w=t('fe.staff.rule.'+d.rule);rows.push([t('fe.staff.journal.d.rule'),w.startsWith('fe.')?d.rule:w]);}
+  if(typeof d.note==='string'&&d.note)rows.push([t('fe.staff.journal.d.note'),d.note]);
+  if(typeof d.days==='number'){const w=t('fe.staff.m.days.'+d.days);rows.push([t('fe.staff.journal.d.days'),w.startsWith('fe.')?String(d.days):w]);}
+  if(typeof d.until==='string')rows.push([t('fe.staff.journal.d.until'),when(d.until)]);
+  if(d.selfReview===true)rows.push([t('fe.staff.journal.d.self'),t('fe.staff.journal.d.selfText')]);
+  return rows;
+ };
  return <>
+  <SearchInput label={t('fe.staff.journal.byCode')} value={code} placeholder={t('fe.staff.journal.byCode')} spellCheck={false}
+   onChange={e=>{const v=e.target.value.trim();if(/^[0-9a-f-]{36}$/i.test(v)){setApplied({id:v,label:t('fe.staff.journal.thatCode')});setCode('');}else setCode(e.target.value);}}/>
   <Form>
    <Field id="st-j-who" label={t('fe.staff.journal.who')}><Select id="st-j-who" label={t('fe.staff.journal.who')} value={who} options={staffOptions} onChange={setWho}/></Field>
    <Field id="st-j-what" label={t('fe.staff.journal.what')}><Select id="st-j-what" label={t('fe.staff.journal.what')} value={what} options={[['',t('fe.staff.journal.anything')],...JOURNAL_ACTIONS.map(a=>[a,jw('action',a)] as [string,string])]} onChange={setWhat}/></Field>
   </Form>
-  {applied?<Alert kind="info" icon={ListFilter} action={<Btn kind="soft" size="sm" auto onClick={()=>setApplied(null)}>{t('fe.staff.journal.showAll')}</Btn>}>{t('fe.staff.journal.onlyThis',{what:applied.label})}</Alert>
-   :<Card list><ExpandRow icon={Search} title={t('fe.staff.journal.byCode')} open={codeOpen} onToggle={()=>setCodeOpen(o=>!o)}>
-    <Form>
-     <LineField label={t('fe.staff.journal.filter')} value={code} max={36} spellCheck={false} onChange={setCode}/>
-     <Btn kind="soft" disabled={!valid} onClick={()=>{setApplied({id:code.trim(),label:t('fe.staff.journal.thatCode')});setCode('');setCodeOpen(false);}}>{t('fe.staff.journal.apply')}</Btn>
-    </Form>
-   </ExpandRow></Card>}
+  {applied&&<Alert kind="info" icon={ListFilter} action={<Btn kind="soft" size="sm" auto onClick={()=>setApplied(null)}>{t('fe.staff.journal.showAll')}</Btn>}>{t('fe.staff.journal.onlyThis',{what:applied.label})}</Alert>}
   {error?(forbidden(error)?<Empty compact icon={Lock} title={t('fe.staff.unavailable')} text={t('fe.staff.journal.forbidden')}/>
     :<Alert kind="err" action={<Btn kind="soft" size="sm" auto icon={RefreshCw} onClick={load}>{t('fe.retry')}</Btn>}>{feErrorMessage(error,t)}</Alert>)
    :items===null?<Skel kind="list"/>
    :!items.length?<Empty compact icon={Inbox} title={t('fe.staff.journal.empty')}/>
-   :<><Card list>{items.map(x=>{
-     const typeWord=x.target_type?jw('type',x.target_type):null;
-     const raw=x.target_id||(x.detail!==undefined&&x.detail!==null&&show(x.detail)!=='{}')?{...(x.target_id?{target:x.target_id}:{}),...(x.detail!==undefined&&x.detail!==null?{detail:x.detail}:{})}:null;
-     return <Row key={String(x.id)}
-      title={(x.staff_account_id?name(x):t('fe.staff.journal.auto'))+' · '+jw('action',x.action)}
-      sub={when(x.created_at)+(typeWord?' · '+typeWord:'')}
-      extra={raw?<Details data={raw}/>:undefined}
-      end={x.target_id?<IconBtn icon={ListFilter} kind="ghost" label={t('fe.staff.journal.sameObject')} onClick={()=>setApplied({id:x.target_id!,label:typeWord??t('fe.staff.journal.thatCode')})}/>:undefined}/>;})}</Card>
+   :<><Card list>{items.map(x=><Row key={String(x.id)} title={name(x)+' · '+jw('action',x.action)}
+     sub={when(x.created_at)+(x.target_type?' · '+jw('type',x.target_type):'')} onClick={()=>setOpen(x)}/>)}</Card>
     <LoadMore {...moreProps}/></>}
+  {open&&<Sheet title={jw('action',open.action)} sub={when(open.created_at)} onClose={()=>setOpen(null)}>
+   <BackCloses onClose={()=>setOpen(null)}/>
+   <Stack gap={4}>
+    <Kv rows={[[t('fe.staff.journal.who'),name(open)],[t('fe.staff.journal.what'),jw('action',open.action)],[t('fe.staff.journal.object'),open.target_type?jw('type',open.target_type):null],...facts(open)]}/>
+    {(open.target_id||(open.detail!==undefined&&open.detail!==null))&&<Details data={{...(open.target_id?{target:open.target_id}:{}),...(open.detail!==undefined&&open.detail!==null?{detail:open.detail}:{})}}/>}
+    {open.target_id&&<Btn kind="soft" icon={ListFilter} onClick={()=>{setApplied({id:open.target_id!,label:open.target_type?jw('type',open.target_type):t('fe.staff.journal.thatCode')});setOpen(null);}}>{t('fe.staff.journal.sameObject')}</Btn>}
+   </Stack>
+  </Sheet>}
  </>;
 }
