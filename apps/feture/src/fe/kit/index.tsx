@@ -17,8 +17,11 @@ export type {SegOption} from '../ui';
 
 /** `.ibtn` — a round icon button; the label is required (it is the only text a screen reader gets). */
 export const IconBtn=forwardRef<HTMLButtonElement,ButtonHTMLAttributes<HTMLButtonElement>&{icon:LucideIcon,label:string,kind?:''|'ghost'|'glass'|'add'|'send',size?:''|'sm',badge?:number|'dot'|undefined}>(
- function IconBtn({icon:Icon,label,kind='',size='',className,type='button',badge,...rest},ref){
- return <button ref={ref} type={type} className={['ibtn',kind,size,className].filter(Boolean).join(' ')} aria-label={label} {...rest}><Icon/>
+ function IconBtn({icon:Icon,label,kind='',size='',className,type='button',badge,onMouseDown,...rest},ref){
+ // «Отправить» must work at the first tap with the keyboard up: a press on a button would take the focus off the input, the
+ // keyboard would fold, the screen would grow and the tap would land on nothing. Keeping the focus where it is keeps all of it still.
+ const keep=kind==='send'?(e:React.MouseEvent<HTMLButtonElement>)=>{e.preventDefault();onMouseDown?.(e);}:onMouseDown;
+ return <button ref={ref} type={type} className={['ibtn',kind,size,className].filter(Boolean).join(' ')} aria-label={label} onMouseDown={keep} {...rest}><Icon/>
   {badge==='dot'?<b className="k-badge dot" aria-hidden="true"/>:badge?<b className="k-badge" aria-hidden="true">{badge>99?'99+':badge}</b>:null}</button>;
 });
 
