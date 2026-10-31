@@ -145,7 +145,7 @@ export function MediaGrid({media,onExpired,bar}:{media:MediaItem[],onExpired?:((
   const bg=m.src?.blur??mediaSrc(m,'card');
   grid=<div className="mgrid n1"><div className="mcell mv" style={r?{'--ar':fitAr(r,.8,1.91).toFixed(4)} as CSSProperties:undefined}>
    {bg&&<img className="mbg" src={bg} alt="" aria-hidden="true" draggable={false} loading="lazy" decoding="async"/>}
-   <VideoPlayer src={m.src!.file} poster={mediaSrc(m,'full')} w={m.w} h={m.h} durationMs={m.durationMs} fill onExpired={onExpired} onExpand={()=>{opener.current=null;setOpen(0);}}/></div></div>;}
+   <VideoPlayer src={m.src!.file} poster={mediaSrc(m,'card')} w={m.w} h={m.h} durationMs={m.durationMs} fill onExpired={onExpired} onExpand={()=>{opener.current=null;setOpen(0);}}/></div></div>;}
  else if(n===1){const m=shown[0]!;const r=rs[0];
   grid=<div className="mgrid n1"><button type="button" className="mcell mf" style={r?{'--ar':fitAr(r,.8,1.91).toFixed(4)} as CSSProperties:undefined} aria-label={m.kind==='video'?t('fe.kit.av.play'):label} onClick={go(0)}>
    <MfImg src={mediaSrc(m)!} blur={m.src?.blur} onRatio={learn(m.id)} onFail={onExpired}/>{m.kind==='video'&&<VideoBadge durationMs={m.durationMs}/>}</button></div>;}
