@@ -312,7 +312,7 @@ export function PhotoSlot({id,src,thumb,big,main,review,dragging,waiting,openLab
  main?:ReactNode,review?:ReactNode,dragging?:boolean|undefined,/** No served copy yet: it blinks. */ waiting?:boolean|undefined,openLabel:string,onOpen:()=>void,onPointerDown?:((e:React.PointerEvent<HTMLDivElement>)=>void)|undefined}){
  return <div data-id={id} className={'mi'+(big?' big':'')+(dragging?' mi-ph':'')+(waiting?' nosrc':'')+(thumb?' has-thumb':'')} onPointerDown={onPointerDown}
   style={thumb?{'--thumb':`url("${thumb}")`} as CSSProperties:undefined}>
-  {src&&<img src={src} alt="" draggable={false}/>}
+  {src&&<img src={src} alt="" draggable={false} loading="lazy" decoding="async"/>}
   {main&&<span className="mainph">{main}</span>}
   {review&&<span className="ph-rev"><Clock/><span>{review}</span></span>}
   <button type="button" className="vw" aria-label={openLabel} onClick={onOpen}/>
@@ -375,7 +375,7 @@ export function PhotoTrack({srcs,index,wm,onExpired,onStep,onClose}:{srcs:Slide[
   const dir=f<=1/3?-1:1;if((dir<0&&index>0)||(dir>0&&index<srcs.length-1))onStep(dir);
  };
  return <div ref={box} className="vw-track" style={{'--i':index} as CSSProperties} onPointerDownCapture={start} onPointerMove={move} onPointerUp={end} onPointerCancel={end} onClickCapture={tap}>{srcs.map((s,k)=><figure key={k}>
-  {typeof s==='string'?<img src={s} alt="" draggable={false}/>
+  {Math.abs(k-index)>1?null:typeof s==='string'?<img src={s} alt="" draggable={false} decoding="async"/>
    :k===index?<VideoPlayer src={s.video} poster={s.poster} durationMs={s.durationMs} fill autoPlay onExpired={onExpired}/>
    :s.poster?<img src={s.poster} alt="" draggable={false}/>:null}
   {wm&&<Watermark text={wm}/>}</figure>)}</div>;

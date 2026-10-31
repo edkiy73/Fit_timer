@@ -9,6 +9,29 @@ import {VOICE_MAX_MS,baseMime,fmtDur,voiceMime} from './media';
 
 const noMenu=(e:{preventDefault:()=>void})=>e.preventDefault();
 
+/** Keep remote bytes disconnected until playback is requested, including in WebViews that ignore preload hints.
+ * The URL stays short-lived; no persistent blob cache or new access grant is introduced. */
+function usePlaybackSource<T extends HTMLMediaElement>(src:string|null|undefined){
+ const ref=useRef<T>(null);
+ const load=useCallback(()=>{const el=ref.current;if(!el||!src)return null;
+  // Assign synchronously on the gesture (Safari's play permission must not wait for a React effect).
+  if(el.getAttribute('src')!==src)el.src=src;
+  return el;
+ },[src]);
+ useEffect(()=>{const el=ref.current;if(!el)return;
+  const pause=()=>el.pause();
+  const hidden=()=>{if(document.hidden)pause();};
+  const observer=typeof IntersectionObserver==='undefined'?null:new IntersectionObserver(entries=>{
+   if(entries.some(e=>!e.isIntersecting))pause();
+  });
+  observer?.observe(el.parentElement??el);document.addEventListener('visibilitychange',hidden);
+  return ()=>{observer?.disconnect();document.removeEventListener('visibilitychange',hidden);
+   pause();el.removeAttribute('src');el.load();};
+ },[src]);
+ // This hook owns the DOM src attribute: a React src update after play() would restart the request.
+ return {ref,load};
+}
+
 /** Play mark with the clip length, over a poster in grids, cells and tiles. */
 export function VideoBadge({durationMs}:{durationMs?:number|null|undefined}){
  return <span className="k-vbadge" aria-hidden="true"><Play/>{durationMs?fmtDur(durationMs):null}</span>;
@@ -34,14 +57,14 @@ export function VideoPlayer({src,poster,w,h,durationMs,autoPlay,fill,onExpired,o
  /** Fill the parent (viewer slide) instead of keeping the clip's own shape. */ fill?:boolean|undefined,onExpired?:(()=>void)|undefined,
  /** Playback really began (the `playing` event: a frame is on screen); may fire again after a pause or seek. */ onPlaying?:(()=>void)|undefined,label?:string|undefined,
  /** Opens the clip full screen (feed). */ onExpand?:(()=>void)|undefined}){
- const {t}=useI18n();const v=useRef<HTMLVideoElement>(null);
+ const {t}=useI18n();const {ref:v,load}=usePlaybackSource<HTMLVideoElement>(src);
  const [started,setStarted]=useState(false);const [playing,setPlaying]=useState(false);const [ready,setReady]=useState(false);
  const [pos,setPos]=useState(0);const [muted,setMuted]=useState(false);const [bar,setBar]=useState(true);
  // A poster that does not load (link ran out) is never a broken-image mark: the dark film instead.
  const [badPoster,setBadPoster]=useState<string|null>(null);
  const [len,setLen]=useState(Math.max(0,(durationMs??0)/1000));
  const failed=useRef(false);const raf=useRef(0);const hide=useRef<ReturnType<typeof setTimeout>|undefined>(undefined);
- useEffect(()=>{failed.current=false;},[src]);
+ useEffect(()=>{failed.current=false;setStarted(false);setPlaying(false);setReady(false);setPos(0);setLen(Math.max(0,(durationMs??0)/1000));},[src,durationMs]);
  const poke=useCallback((keep?:boolean)=>{setBar(true);clearTimeout(hide.current);if(!keep)hide.current=setTimeout(()=>setBar(false),2600);},[]);
  const measure=()=>{const el=v.current;if(!el)return;
   if(Number.isFinite(el.duration)&&el.duration>0)setLen(el.duration);};
@@ -50,14 +73,14 @@ export function VideoPlayer({src,poster,w,h,durationMs,autoPlay,fill,onExpired,o
   if(el.currentTime>0||el.readyState>=2)setReady(true);
   setPos(Math.max(0,el.currentTime));};
  const loop=()=>{tick();raf.current=requestAnimationFrame(loop);};
- useEffect(()=>()=>{cancelAnimationFrame(raf.current);clearTimeout(hide.current);if(playingNow===v.current)playingNow=null;v.current?.pause();},[]);
- const play=useCallback(async()=>{const el=v.current;if(!el||!src)return;setStarted(true);
+ useEffect(()=>{const el=v.current;return ()=>{cancelAnimationFrame(raf.current);clearTimeout(hide.current);if(playingNow===el)playingNow=null;};},[src]);
+ const play=useCallback(async()=>{const el=load();if(!el)return;setStarted(true);
   if(el.ended)el.currentTime=0;
   try{await el.play();}
   catch(e){
    // No sound without a tap (autoplay in the viewer): play silently; the sound button turns it on.
    if(e instanceof DOMException&&e.name==='NotAllowedError'&&!el.muted){el.muted=true;setMuted(true);try{await el.play();}catch{setPlaying(false);}}
-  }},[src]);
+  }},[load]);
  const toggle=()=>{const el=v.current;if(!el||!src)return;if(el.paused||!started)void play();else el.pause();poke();};
  useEffect(()=>{if(autoPlay&&src)void play();},[autoPlay,src,play]);
  const seek=(ms:number)=>{const el=v.current;if(!el)return;el.currentTime=ms/1000;setPos(ms/1000);poke();};
@@ -66,14 +89,14 @@ export function VideoPlayer({src,poster,w,h,durationMs,autoPlay,fill,onExpired,o
  const name=label??t('fe.kit.av.video');
  return <div className={'k-video'+(fill?' fill':'')+(started&&ready?' rdy':'')+(started?' on':'')+(playing?' playing':'')+(shown?'':' quiet')} style={style}
   onContextMenu={noMenu} onClick={src?e=>{e.stopPropagation();toggle();}:undefined} onPointerMove={playing?()=>poke():undefined}>
-  {src&&<video ref={v} src={src} poster={NO_POSTER} playsInline preload={autoPlay?'auto':'metadata'} muted={muted} disablePictureInPicture disableRemotePlayback
+  {src&&<video ref={v} poster={NO_POSTER} playsInline preload="none" muted={muted} disablePictureInPicture disableRemotePlayback
    controlsList="nodownload noremoteplayback noplaybackrate" aria-label={name} tabIndex={-1}
    onLoadedMetadata={measure} onDurationChange={measure} onSeeked={tick}
    onPlay={e=>{const el=e.currentTarget;if(playingNow&&playingNow!==el)playingNow.pause();playingNow=el;setPlaying(true);cancelAnimationFrame(raf.current);raf.current=requestAnimationFrame(loop);poke();}}
    onPlaying={()=>onPlaying?.()}
    onPause={()=>{setPlaying(false);cancelAnimationFrame(raf.current);poke(true);}} onEnded={stop} onTimeUpdate={tick} onVolumeChange={e=>setMuted(e.currentTarget.muted)}
    onError={()=>{if(failed.current)return;failed.current=true;setPlaying(false);setStarted(false);setReady(false);onExpired?.();}}/>}
-  {!(started&&ready)&&(poster&&badPoster!==poster?<img className="k-vposter" src={poster} alt="" draggable={false} onError={()=>setBadPoster(poster)}/>:<span className="k-vnone"/>)}
+  {!(started&&ready)&&(poster&&badPoster!==poster?<img className="k-vposter" src={poster} alt="" draggable={false} loading="lazy" decoding="async" onError={()=>setBadPoster(poster)}/>:<span className="k-vnone"/>)}
   {src?<>
    {<button type="button" className="k-vplay" aria-label={(playing?t('fe.kit.av.pause'):t('fe.kit.av.play'))+(!started&&len?' · '+fmtDur(len*1000):'')}
     onClick={e=>{e.stopPropagation();toggle();}}>{playing?<Pause/>:<Play/>}</button>}
@@ -116,14 +139,14 @@ function Wave({peaks,frac,onSeek}:{peaks:number[],frac:number,onSeek?:((f:number
  * recipient has heard most of it. Without `src` (still on its way) it shows the length only. */
 export function VoiceBubble({src,durationMs,peaks,mine,listened,onPlayed,onExpired}:{src?:string|null|undefined,durationMs?:number|null|undefined,
  peaks?:number[]|null|undefined,mine?:boolean|undefined,listened?:boolean|undefined,onPlayed?:(()=>void)|undefined,onExpired?:(()=>void)|undefined}){
- const {t}=useI18n();const a=useRef<HTMLAudioElement>(null);const [playing,setPlaying]=useState(false);const [pos,setPos]=useState(0);
+ const {t}=useI18n();const {ref:a,load}=usePlaybackSource<HTMLAudioElement>(src);const [playing,setPlaying]=useState(false);const [pos,setPos]=useState(0);
  const told=useRef(false);const failed=useRef(false);
  const total=Math.max(1,durationMs??0)/1000;
- const toggle=()=>{const el=a.current;if(!el||!src)return;if(el.paused){void el.play().catch(()=>setPlaying(false));}else el.pause();};
+ const toggle=()=>{const el=load();if(!el)return;if(el.paused){void el.play().catch(()=>setPlaying(false));}else el.pause();};
  const seek=(f:number)=>{const el=a.current;if(!el||!src)return;el.currentTime=f*total;setPos(el.currentTime);};
  const tick=()=>{const el=a.current;if(!el)return;setPos(el.currentTime);
   if(!told.current&&!mine&&el.currentTime>=Math.min(total*.8,total-.5)){told.current=true;onPlayed?.();}};
- useEffect(()=>()=>a.current?.pause(),[]);
+ useEffect(()=>{failed.current=false;setPlaying(false);setPos(0);},[src]);
  const frac=Math.min(1,pos/total);
  return <div className={'k-voice'+(mine?' mine':'')+(src?'':' wait')} onContextMenu={noMenu}>
   <IconBtn icon={playing?Pause:Play} kind="send" size="sm" label={playing?t('fe.kit.av.pause'):t('fe.kit.av.listen')} disabled={!src} onClick={e=>{e.stopPropagation();toggle();}}/>
@@ -132,7 +155,7 @@ export function VoiceBubble({src,durationMs,peaks,mine,listened,onPlayed,onExpir
    <span className="k-vmeta"><span>{playing||pos>0?fmtDur(pos*1000):fmtDur(durationMs)}</span>
     {mine?(listened?<span className="k-vheard">{t('fe.kit.av.listened')}</span>:null):(!listened&&<i className="k-vdot" aria-label={t('fe.kit.av.new')}/>)}</span>
   </span>
-  {src&&<audio ref={a} src={src} preload="metadata" controlsList="nodownload"
+  {src&&<audio ref={a} preload="none" controlsList="nodownload"
    onPlay={()=>setPlaying(true)} onPause={()=>setPlaying(false)} onEnded={()=>{setPlaying(false);setPos(0);if(!told.current&&!mine){told.current=true;onPlayed?.();}}}
    onTimeUpdate={tick} onError={()=>{if(failed.current)return;failed.current=true;setPlaying(false);onExpired?.();}}/>}
  </div>;
