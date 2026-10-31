@@ -86,6 +86,10 @@ services:
       BACKUP_STORAGE_KEY: ${BACKUP_STORAGE_KEY:-}
       BACKUP_STORAGE_HOST: ${BACKUP_STORAGE_HOST:-storage.bunnycdn.com}
       BACKUP_PASSPHRASE: ${BACKUP_PASSPHRASE:?}
+      BACKUP_SECRETS_DIR: /secrets
+    volumes:
+      - ./.env:/secrets/.env:ro
+      - ./app.env:/secrets/app.env:ro
     # Once a day at ~03:00 UTC; a failed run is logged and retried the next night.
     entrypoint: ["/bin/sh", "-c", "while true; do now=$$(date -u +%s); next=$$(date -u -d 'tomorrow 03:00' +%s); sleep $$((next-now)); backup.sh || echo 'backup FAILED'; done"]
 

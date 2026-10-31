@@ -16,7 +16,8 @@
 
 Никакой хостер не гарантирует, что не выгонит сервис 18+. Поэтому:
 
-1. **Только провайдеры с письменным «да» на легальный 18+.** Ответ поддержки сохраняем в `docs/infra/` (скрин/текст).
+1. **Только провайдеры, у которых легальный 18+ разрешён в опубликованных правилах** (решение владельца 31.10.2026: писем
+   не пишем). Ссылки на правила — в «Источниках».
 2. **Стек без проприетарных сервисов:** Postgres, PostgREST, Node, Caddy в Docker Compose. Любой VPS поднимает его за час.
 3. **Бэкапы у другого провайдера**, чем сервер: если хостер выгонит или потеряет диск — новый VPS + восстановление.
 4. **В приложении только свои домены** (`app.<домен>` — сайт и API вместе, `media.<домен>`). Никаких `*.vercel.app` и `*.supabase.co` в APK:
@@ -57,28 +58,28 @@ Core. Страна устройства (`x-vercel-ip-country` для «вход
 
 ## 4. Выбор VPS
 
-Требования: ЕС (не Германия — Hetzner отвечает противоречиво), письменное «да» на легальный 18+ (сообщество и
-знакомства, приватные фото, модерация до публикации), 4 vCPU / 8 ГБ / 160 ГБ NVMe, снапшоты, оплата картой не из РФ.
-Кандидаты проверить письмом: NovoServe (NL, правила прямо разрешают 18+ на выделенных), Leaseweb (NL), другие по
-ответам. Ответ сохранить сюда.
+**Hostinger VPS, тариф KVM 2** (2 vCPU, 8 ГБ, 100 ГБ NVMe), дата-центр **Литва или Франция**, образ Ubuntu 24.04.
+Почему: правила Hostinger прямо допускают легальный взрослый контент и для таких сайтов советуют VPS; оплата обычной
+картой; есть терминал в браузере (hPanel) — SSH-ключи владельцу не нужны. 8 ГБ хватает и на сборку образа.
+Запасные — NovoServe (NL), Leaseweb (NL). Hetzner — нет (ответы о 18+ противоречивы).
 
-Шаблон письма (EN):
-
-> We run an adults-only (18+) social community and dating service: user profiles, private photo sharing, pre-moderation
-> of all media, CSAM hash-matching, age verification, EU DSA compliance. All content is legal in the EU and in the
-> data-centre country. Is this permitted on your <VPS/dedicated> servers in <location>? Please confirm in writing.
+Сервер ставит один скрипт `deploy/install.sh` (§5): Docker, firewall, код, все секреты, Bunny (хранилище медиа, CDN с
+подписанными ссылками и блокировкой GB/US, хранилище бэкапов, DNS домена), Resend (домен отправки, записи DNS, ключ
+только на отправку). Ссылки на медиа идут с адреса Bunny `*.b-cdn.net`: свой поддомен для медиа не нужен — адреса
+медиа сервер выдаёт заново на каждый запрос, приложение их не хранит.
 
 ## 5. Порядок (неделя)
 
-| День | Кто | Что |
+| Шаг | Кто | Что |
 |---|---|---|
-| 0 | Владелец | Домен; письма VPS-хостеру, Bunny, Resend про 18+; аккаунт Bunny: Storage Zone `feture-media` (Frankfurt), Pull Zone `media.<домен>` с Token Authentication и блокировкой GB/US, Storage Zone `feture-backup` |
-| 1–2 | Агент | ✅ Core через свой PostgREST (`APPBASE_REST_URL`), ✅ адаптер Bunny и прокси загрузки, ✅ `server/host.mjs` (вместо Vercel и pg_cron+pg_net), ✅ `deploy/` (compose, Caddy, миграции, бэкап) |
-| 3 | Агент | ✅ Realtime: SSE на Node + клиент вместо Supabase Broadcast |
-| 4 | Владелец + агент | VPS: Docker, `deploy/README.md`; DNS; `.env` (секреты вставляет владелец) |
-| 5 | Агент | Прогон на сервере: вход по коду, лента, загрузка фото и видео, модерация, чат, push; бэкап и восстановление |
-| 6 | Агент | `config/product.json` → `https://app.<домен>`, APK; App Links (`/.well-known/assetlinks.json`) на новом домене |
-| 7 | Владелец | Выключить FetUre на Vercel (`feture-mvp`), удалить схему `feture` и бакет `feture-media` в Supabase FitT |
+| ✅ | Агент | Core через свой PostgREST, адаптер Bunny и прокси загрузки, `server/host.mjs`, realtime SSE, `deploy/` и `install.sh` |
+| 1 | Владелец | Ветка `feture/self-host` на GitHub (патчи агента) |
+| 2 | Владелец | Домен `.com` на Porkbun; аккаунт Bunny (карта, API key); API key Resend (Full access) |
+| 3 | Владелец | Hostinger KVM 2 → терминал → одна команда `install.sh` → ответить на 3 вопроса |
+| 4 | Владелец | У Porkbun: nameservers `kiki.bunny.net`, `coco.bunny.net`; пароль бэкапов — в менеджер паролей |
+| 5 | Агент | Проверка на живом сервере: вход по коду, лента, медиа, чат, push, бэкап и восстановление |
+| 6 | Агент | `config/product.json` → `https://app.<домен>`, сборка APK (Actions), App Links на новом домене |
+| 7 | Агент | Выключить FetUre на Vercel, удалить схему `feture` и бакет `feture-media` из Supabase FitT |
 
 ## 6. Что сознательно не переносим
 
@@ -108,7 +109,14 @@ Core. Страна устройства (`x-vercel-ip-country` для «вход
   `transport`, сквозной путь через `server/host.mjs`. `test:unit` 74/74, `test:smoke`, `test:security`, Postgres-тесты
   платформы, входящих, пушей, пар, чатов — зелёные.
 
-**Не проверено здесь (нет Docker в песочнице):** сборка образов и запуск compose целиком — первый запуск на сервере (день 4).
+- `install.sh` против поддельных API Bunny и Resend: создаёт хранилища, Pull Zone (проверяет источник и токены), DNS,
+  домен Resend с записями, ключ только на отправку; секреты 600; повторный запуск — ноль вызовов API; неверный ключ или
+  домен — остановка с понятной ошибкой. Получившийся `app.env` принимает `bunnyFromEnv`.
+- Потеря сервера: ночной бэкап (база + секреты) → новый IP → `install.sh` нашёл прежнюю установку, с неверным паролем
+  ничего не записал, с верным вернул `.env`/`app.env` байт в байт, не создал ни одной зоны, заменил (не добавил) A-запись;
+  `restore.sh latest` на чистом кластере — 110 миграций, 176 таблиц.
+
+**Не проверено здесь (нет Docker в песочнице и доступа к настоящим Bunny/Resend):** сборка образов и запуск compose целиком — первый запуск на сервере (день 4).
 
 ## Источники
 
@@ -116,5 +124,10 @@ Core. Страна устройства (`x-vercel-ip-country` для «вход
 - https://docs.bunny.net/cdn/security/token-authentication/advanced — токены HS256
 - https://github.com/BunnyWay/BunnyCDN.TokenAuthentication — официальные тест-векторы
 - https://docs.postgrest.org — PostgREST
+- https://www.hostinger.com/support/which-types-of-content-and-websites-are-allowed-at-hostinger/ — взрослый контент
+  разрешён, если законен
+- https://www.hostinger.com/support/?p=1516 — для таких сайтов советуют cloud/VPS
+- https://docs.bunny.net/api-reference/core/pull-zone/add-pull-zone — Pull Zone: OriginType 2, токены, BlockedCountries
+- https://docs.bunny.net/api-reference/core/dns-zone/add-dns-record — DNS: типы записей
 - https://novoserve.com/knowledge-base/what-is-your-policy-on-adult-content
 - https://supabase.com/docs/company/aup

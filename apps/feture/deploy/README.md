@@ -13,50 +13,39 @@
 | `caddy` | HTTPS (Let’s Encrypt) на `FETURE_DOMAIN`, единственный открытый порт |
 | `backup` | Каждую ночь ~03:00 UTC: зашифрованный дамп в отдельную Storage Zone Bunny, хранит 14 последних |
 
-## Владелец: один раз
+## Установка: одна команда
 
-1. **Bunny** (dash.bunny.net):
-   - Storage Zone `feture-media`, регион Frankfurt. Пароль из «FTP & API Access» → `BUNNY_STORAGE_KEY`.
-   - Pull Zone, источник — эта Storage Zone, свой домен `media.<домен>` → `BUNNY_CDN_ORIGIN`.
-     Security → Token Authentication: включить, ключ → `BUNNY_TOKEN_KEY`.
-     Security → Blocked countries: GB, US ([age-and-verification.md](../docs/infra/age-and-verification.md)).
-     Caching → query string не учитывать в ключе кеша (подпись ссылки меняется, файл — нет).
-   - Отдельная Storage Zone `feture-backup` **без** Pull Zone → `BACKUP_STORAGE_ZONE`, `BACKUP_STORAGE_KEY`.
-2. **VPS** (ЕС, письменное «да» на 18+, 4 vCPU / 8 ГБ): Ubuntu 24.04, Docker по инструкции docker.com, вход по
-   SSH-ключу, пароль выключен, firewall: открыть 22, 80, 443.
-3. **DNS** (Porkbun): `A app.<домен>` → IP сервера; `CNAME media.<домен>` → адрес Pull Zone Bunny.
-4. На сервере:
-   ```sh
-   git clone https://github.com/edkiy73/Fit_timer && cd Fit_timer/apps/feture/deploy
-   node make-env.mjs && chmod 600 .env app.env   # нет Node — docker run --rm -v "$PWD":/w -w /w node:22 node make-env.mjs
-   nano .env app.env                             # заполнить строки «вставить»
-   docker compose up -d --build
-   docker compose logs -f migrate app            # «migrations applied: 110», «feture host on :3000»
-   ```
-5. **`BACKUP_PASSPHRASE` из `.env` — в менеджер паролей.** Без неё бэкап не расшифровать.
-6. Проверить: `https://app.<домен>/healthz` → `ok`; `https://app.<домен>/api/health` → пробы `storage`, `accounts`,
-   `supabase` (это PostgREST) — `true`. UptimeRobot на `/healthz`.
+На свежем VPS (Ubuntu 24.04), от root — в Hostinger это «Browser terminal» в hPanel:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/edkiy73/Fit_timer/feture/self-host/apps/feture/deploy/install.sh | bash
+```
+
+Скрипт спросит домен, API key Bunny и API key Resend (Full access) и сделает остальное: Docker, firewall, код, секреты,
+Bunny (медиа, CDN с подписью и блокировкой GB/US, бэкапы, DNS), Resend (домен, записи, ключ на отправку), запуск.
+В конце скажет, какие nameservers поставить у регистратора, и покажет пароль бэкапов — его в менеджер паролей.
+Повторный запуск безопасен. Push (FCM, web push) — ключи из Vercel переносятся в `app.env` отдельно, без них вход,
+лента и чаты работают.
+
+Ручная установка без скрипта: `make-env.mjs`, заполнить `.env` и `app.env`, `docker compose up -d --build`.
 
 ## Обновление
 
 ```sh
-cd Fit_timer && git pull && cd apps/feture/deploy && docker compose up -d --build
+curl -fsSL https://raw.githubusercontent.com/edkiy73/Fit_timer/feture/self-host/apps/feture/deploy/install.sh | bash
 ```
 `migrate` накатывает только новые миграции; `app` перезапускается с новой сборкой.
 
 ## Бэкап и восстановление
 
+- Каждую ночь в отдельную Storage Zone Bunny уходят, зашифрованными паролем бэкапов: дамп базы (`db/`) и `.env` +
+  `app.env` (`secrets/`). Без секретов восстановленная база бесполезна: на `FETURE_ID_PEPPER` завязаны аккаунты.
 - Вручную сейчас: `docker compose exec backup backup.sh`.
-- Восстановить на новом сервере: шаги 2–4 выше, но до `up` всего стека:
-  ```sh
-  docker compose up -d db
-  docker compose run --rm --entrypoint restore.sh backup feture-<дата>.dump.enc
-  docker compose up -d --build
-  ```
-  Проверено 31.10.2026 на чистом кластере: 110 миграций, 176 таблиц, cron, вход роли `feture_api`.
 - Раз в месяц — пробное восстановление на отдельной машине. Непроверенный бэкап — не бэкап.
 
-## Если хостер выгонит
+## Если сервер потерян или хостер выгнал
 
-Новый VPS → шаги 2–4 → восстановление → DNS `app.<домен>` на новый IP. Приложение пересобирать не нужно: в нём
-только свой домен.
+Новый VPS → та же команда `install.sh` с тем же доменом и ключом Bunny. Скрипт найдёт прежнюю установку в Bunny,
+спросит пароль бэкапов, вернёт секреты и последнюю базу, переставит `app.<домен>` на новый IP (DNS уже в Bunny —
+у регистратора ничего менять не нужно). Медиа никуда не уходили: они в Bunny. Приложение пересобирать не нужно.
+Проверено 31.10.2026 на поддельных API: секреты байт в байт, ноль новых зон, одна A-запись с новым IP, база 110/176.
