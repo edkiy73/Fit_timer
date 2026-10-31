@@ -61,6 +61,7 @@ services:
       FETURE_API_ORIGIN: https://${FETURE_DOMAIN:?}
       FETURE_APP_URL: https://${FETURE_DOMAIN:?}
       CORS_ORIGINS: https://${FETURE_DOMAIN:?}
+      FETURE_REALTIME: sse
 
   caddy:
     image: caddy:2.10.2-alpine

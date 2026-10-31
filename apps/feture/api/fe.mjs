@@ -38,6 +38,7 @@ import { createSupabaseStorage } from '../server/media/supabase-storage.mjs';
 import { signedStorageDelivery, tokenDelivery } from '../server/media/delivery.mjs';
 import { createSharpRenderer } from '../server/media/render.mjs';
 import { broadcastSender, createSignals } from '../server/realtime.mjs';
+import { hub as sseHub } from '../server/realtime-sse.mjs';
 import { pushTransport } from '../server/push.mjs';
 import { webPushFromEnv } from '../server/webpush.mjs';
 import { appUrl, coreMailer } from '../server/core-guard.mjs';
@@ -100,11 +101,18 @@ const webPush = configured ? webPushFromEnv(env) : null;
  * JWT secret is needed. The URL and publishable key are public (they go to the client); the secret key only sends. */
 const supabaseUrl = String(env.SUPABASE_URL || '').trim().replace(/\/$/, '');
 const realtimeOn = /^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(supabaseUrl) && !!env.SUPABASE_PUBLISHABLE_KEY && !!env.SUPABASE_SECRET_KEY;
-const signals = db && realtimeOn ? createSignals({
+/* On our own server (FETURE_REALTIME=sse, server/host.mjs) the same signals go to the in-process SSE hub
+ * (server/realtime-sse.mjs) and the client listens on `<FETURE_API_ORIGIN>/api/fe-events`. */
+const sseOn = env.FETURE_REALTIME === 'sse' && /^https?:\/\/[^/\s]+$/.test(String(env.FETURE_API_ORIGIN || '').replace(/\/$/, ''));
+const signals = db && (sseOn || realtimeOn) ? createSignals({
   db, pepper: env.FETURE_ID_PEPPER ?? '',
-  sender: broadcastSender({ url: supabaseUrl, secret: String(env.SUPABASE_SECRET_KEY) }),
+  sender: sseOn ? sseHub.sender : broadcastSender({ url: supabaseUrl, secret: String(env.SUPABASE_SECRET_KEY) }),
   onError: code => console.warn('feture_fe_realtime', code),
 }) : null;
+/** What the client gets in `session.bootstrap` (server/commands/platform.mjs). */
+const realtimeCfg = !signals ? null : sseOn
+  ? { url: String(env.FETURE_API_ORIGIN).replace(/\/$/, ''), key: 'sse', transport: /** @type {const} */ ('sse') }
+  : { url: supabaseUrl, key: String(env.SUPABASE_PUBLISHABLE_KEY) };
 /** A verified Core session is reused for 30 s per warm instance (keyed by a hash of the identity headers), so most
  * requests skip one store round trip. A sign-out reaches every instance within 30 s. */
 const AUTH_TTL = 30000;
@@ -128,7 +136,7 @@ async function cachedAuth(req) {
 const handler = db && createFeHandler({
   db,
   pepper: env.FETURE_ID_PEPPER ?? '',
-  cfg: { media: { storage: media.storage, delivery: media.delivery }, realtime: signals ? { url: supabaseUrl, key: String(env.SUPABASE_PUBLISHABLE_KEY) } : null,
+  cfg: { media: { storage: media.storage, delivery: media.delivery }, realtime: realtimeCfg,
     push: webPush ? { webKey: webPush.publicKey } : null,
     // Payment providers plug in here once their keys exist (server/commands/premium.mjs «Payments»); none yet.
     billing: { providers: [] } },

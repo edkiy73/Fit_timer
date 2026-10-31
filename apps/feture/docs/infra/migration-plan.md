@@ -42,8 +42,11 @@
 **Почему не self-hosted Supabase:** 8 ГБ RAM, десяток контейнеров, и от него потом захотелось бы уйти — это и был бы
 второй переезд. Нам из Supabase нужны только Postgres и PostgREST, они и стоят.
 
-**Realtime (Supabase Broadcast)** на первом этапе выключен: сигналы несут только «что-то новое», приложение
-работает и без них. Отдельный шаг — свой SSE на Node (§5, день 3).
+**Realtime** — свой SSE вместо Supabase Broadcast (`server/realtime-sse.mjs`, `GET /api/fe-events`): та же модель —
+канал = непрозрачный токен из `session.bootstrap`, в сообщении только вид события. Включается `FETURE_REALTIME=sse`
+(в compose включено); клиент выбирает транспорт по `realtime.transport` и на Vercel продолжает работать по-старому.
+Ограничение: хаб в памяти одного процесса. Второй процесс приложения потребует общей шины (Postgres LISTEN/NOTIFY) —
+до десятков тысяч одновременных соединений не нужно.
 
 **Один домен для сайта и API:** веб вызывает API на том же адресе (`src/api-url.ts`), APK — по `config/product.json`
 (`defaultApiUrl`, `defaultPublicUrl`). Загрузка медиа тоже идёт на этот адрес (`/api/fe-upload`).
@@ -71,7 +74,7 @@ Core. Страна устройства (`x-vercel-ip-country` для «вход
 |---|---|---|
 | 0 | Владелец | Домен; письма VPS-хостеру, Bunny, Resend про 18+; аккаунт Bunny: Storage Zone `feture-media` (Frankfurt), Pull Zone `media.<домен>` с Token Authentication и блокировкой GB/US, Storage Zone `feture-backup` |
 | 1–2 | Агент | ✅ Core через свой PostgREST (`APPBASE_REST_URL`), ✅ адаптер Bunny и прокси загрузки, ✅ `server/host.mjs` (вместо Vercel и pg_cron+pg_net), ✅ `deploy/` (compose, Caddy, миграции, бэкап) |
-| 3 | Агент | Realtime: SSE на Node + клиент вместо Supabase Broadcast |
+| 3 | Агент | ✅ Realtime: SSE на Node + клиент вместо Supabase Broadcast |
 | 4 | Владелец + агент | VPS: Docker, `deploy/README.md`; DNS; `.env` (секреты вставляет владелец) |
 | 5 | Агент | Прогон на сервере: вход по коду, лента, загрузка фото и видео, модерация, чат, push; бэкап и восстановление |
 | 6 | Агент | `config/product.json` → `https://app.<домен>`, APK; App Links (`/.well-known/assetlinks.json`) на новом домене |
@@ -99,6 +102,11 @@ Core. Страна устройства (`x-vercel-ip-country` для «вход
 - Caddyfile проверен `caddy adapt` (2.10.2) без предупреждений.
 - Репо: `check:server`, `typecheck`, `test:smoke` (с `tests/bunny.test.mjs`), `test:security`, выборка Postgres-тестов,
   `packages/core` `npm run check` — зелёные.
+
+- Realtime SSE: хаб на реальном HTTP-сервере (доставка только своему каналу, тег «печатает», лимиты на адрес и
+  общий, уборка после отключения), клиент с поддельным EventSource (переподключение → обновление), bootstrap отдаёт
+  `transport`, сквозной путь через `server/host.mjs`. `test:unit` 74/74, `test:smoke`, `test:security`, Postgres-тесты
+  платформы, входящих, пушей, пар, чатов — зелёные.
 
 **Не проверено здесь (нет Docker в песочнице):** сборка образов и запуск compose целиком — первый запуск на сервере (день 4).
 

@@ -1,11 +1,12 @@
 /** Realtime «something new» signals (docs/server/S2-API.md §8): a tiny Phoenix-protocol client for Supabase Realtime
- * Broadcast, without supabase-js. The server names one public channel per profile with an opaque token only its
+ * Broadcast, without supabase-js — or, on our own server (`transport: 'sse'`), Server-Sent Events from
+ * `<url>/api/fe-events` (server/realtime-sse.mjs). The server names one public channel per profile with an opaque token only its
  * members get in `session.bootstrap`; a message carries only a kind (`{k}`), and screens then fetch with the normal
  * commands. Polling stays as the fallback, so a lost socket only makes updates slower, never wrong. */
 
 export type RtKind='chat'|'notify'|'decide'|'feed'|'typing';
 export const RT_KINDS:readonly RtKind[]=['chat','notify','decide','feed','typing'];
-export type RtConfig={url:string,key:string,channels:Record<string,string>};
+export type RtConfig={url:string,key:string,transport?:'sse'|undefined,channels:Record<string,string>};
 /** `kind` is null after a reconnect: signals may have been missed, so everyone refreshes once. */
 export type RtListener=(kind:RtKind|null,profileId:string|null,tag?:string)=>void;
 
@@ -26,6 +27,7 @@ export function socketUrl(cfg:Pick<RtConfig,'url'|'key'>){
 /** Opens the socket, joins every channel, keeps it alive and reconnects with backoff. Closes while the page has been
  * hidden for more than five minutes and comes back (with one refresh signal) when it is shown again. */
 export function connectRealtime(cfg:RtConfig,listener:RtListener):{close:()=>void}{
+ if(cfg.transport==='sse')return connectSse(cfg,listener);
  const byTopic=new Map(Object.entries(cfg.channels).map(([profile,topic])=>['realtime:'+topic,profile]));
  let ws:WebSocket|null=null;let ref=0;let attempt=0;let closed=false;let joinedOnce=false;
  let heartbeat:ReturnType<typeof setInterval>|undefined;let retry:ReturnType<typeof setTimeout>|undefined;
@@ -77,6 +79,54 @@ export function connectRealtime(cfg:RtConfig,listener:RtListener):{close:()=>voi
   }else{
    clearTimeout(hiddenTimer);
    if(paused){paused=false;attempt=0;open();}
+  }
+ };
+ if(typeof document!=='undefined')document.addEventListener('visibilitychange',onVisibility);
+ open();
+ return {close(){
+  closed=true;clearTimeout(hiddenTimer);stop();
+  if(typeof document!=='undefined')document.removeEventListener('visibilitychange',onVisibility);
+ }};
+}
+
+export function eventsUrl(cfg:Pick<RtConfig,'url'|'channels'>){
+ const u=new URL(cfg.url);
+ u.pathname=u.pathname.replace(/\/$/,'')+'/api/fe-events';
+ u.search=new URLSearchParams({c:Object.values(cfg.channels).join(',')}).toString();
+ return u.toString();
+}
+
+/** The same contract over SSE: the browser's EventSource reconnects by itself (the server sends `retry`), every
+ * (re)open after the first gives one refresh signal per profile, and the stream closes while the page has been hidden
+ * for more than five minutes. Without EventSource nothing happens: polling covers it. */
+function connectSse(cfg:RtConfig,listener:RtListener):{close:()=>void}{
+ const byTopic=new Map(Object.entries(cfg.channels).map(([profile,topic])=>[topic,profile]));
+ let es:EventSource|null=null;let closed=false;let paused=false;let openedOnce=false;
+ let hiddenTimer:ReturnType<typeof setTimeout>|undefined;
+ const stop=()=>{if(es){es.onopen=es.onmessage=es.onerror=null;es.close();es=null;}};
+ function open(){
+  stop();if(closed||paused||typeof EventSource==='undefined'||!byTopic.size)return;
+  es=new EventSource(eventsUrl(cfg));
+  es.onopen=()=>{
+   if(openedOnce)for(const profile of byTopic.values())listener(null,profile); // back after a drop: something may have been missed
+   openedOnce=true;
+  };
+  es.onmessage=e=>{
+   let m:{c?:unknown,k?:unknown,t?:unknown};try{m=JSON.parse(String(e.data));}catch{return;}
+   const profile=typeof m.c==='string'?byTopic.get(m.c):undefined;if(profile===undefined)return;
+   if(RT_KINDS.includes(m.k as RtKind))listener(m.k as RtKind,profile,typeof m.t==='string'?m.t:undefined);
+  };
+  es.onerror=()=>{/* EventSource retries by itself; a closed one (HTTP error) is reopened after the server's retry */
+   if(es&&es.readyState===2){stop();setTimeout(()=>{if(!closed&&!paused&&!es)open();},5_000);}
+  };
+ }
+ const onVisibility=()=>{
+  if(document.visibilityState==='hidden'){
+   clearTimeout(hiddenTimer);
+   hiddenTimer=setTimeout(()=>{paused=true;stop();},HIDDEN_PAUSE_MS);
+  }else{
+   clearTimeout(hiddenTimer);
+   if(paused){paused=false;open();}
   }
  };
  if(typeof document!=='undefined')document.addEventListener('visibilitychange',onVisibility);

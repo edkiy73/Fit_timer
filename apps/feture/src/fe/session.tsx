@@ -11,8 +11,9 @@ import {PullRefreshRunner} from './kit/pull';
 
 /** What `session.bootstrap` returns: the FetUre account and the profiles this account may act as. */
 const profileCard=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string(),state:z.string(),avatarAssetId:z.uuid().nullable(),avatar:z.string().nullable().optional()});
-/** realtime: the public socket address and the opaque per-profile channels (S2 §8); null when the server has none. */
-const realtimeCfg=z.object({url:z.url(),key:z.string().min(1),channels:z.record(z.uuid(),z.string().regex(/^fe:[A-Za-z0-9_-]{22,}$/))});
+/** realtime: the public socket address (or, with transport «sse», our own server's origin) and the opaque per-profile
+ * channels (S2 §8); null when the server has none. */
+const realtimeCfg=z.object({url:z.url(),key:z.string().min(1),transport:z.literal('sse').optional(),channels:z.record(z.uuid(),z.string().regex(/^fe:[A-Za-z0-9_-]{22,}$/))});
 export const bootstrapSchema=z.object({ok:z.literal(true),account:z.object({id:z.uuid(),locale:z.string(),onboarded:z.boolean()}),profiles:z.array(profileCard),realtime:realtimeCfg.nullable().optional(),
  /** Web push: the server's public VAPID key; null while the server sends none. */
  push:z.object({webKey:z.string().regex(/^[A-Za-z0-9_-]{80,100}$/)}).nullable().optional()});

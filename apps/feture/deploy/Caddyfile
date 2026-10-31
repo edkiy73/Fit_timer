@@ -4,7 +4,9 @@
 }
 
 {$FETURE_DOMAIN} {
-	encode zstd gzip
+	# Realtime signals stream (SSE): never compressed — a compressor holds bytes back and signals would arrive late.
+	@compressible not path /api/fe-events
+	encode @compressible zstd gzip
 
 	# Uploads stream through /api/fe-upload (a 100 MB clip at most); every other request is small.
 	@upload path /api/fe-upload
@@ -20,6 +22,8 @@
 		# Core's rate limits read the first X-Forwarded-For entry. Caddy sets it to the real client and drops a
 		# client-sent one (no trusted_proxies here) — keep it that way; do not add a CDN in front of the API.
 		header_up -X-Vercel-Ip-Country
+		# Stream every byte at once (SSE); ordinary responses are unaffected.
+		flush_interval -1
 		transport http {
 			read_timeout 15m
 			write_timeout 15m

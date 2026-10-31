@@ -177,3 +177,18 @@ test('a couple invite (addressed to the account) signals «decide» on the invit
     assert.ok(sent.flat().some(m => m.topic === want && m.payload.k === 'decide'), JSON.stringify(sent));
   } finally { await pg.close(); }
 });
+
+test('own server (SSE): bootstrap tells the client the transport; the channels stay the same opaque tokens', async () => {
+  const env = await baseSetup({
+    commands: { ...platform, ...me }, realtime: { url: 'https://app.example.com', key: 'sse', transport: 'sse' },
+    signals: db => createSignals({ db, pepper: PEPPER, sender: async () => {} }),
+  });
+  try {
+    const a = await env.person('ua', 'alex');
+    const boot = await env.call('ua', null, { action: 'session.bootstrap' });
+    assert.equal(boot.status, 200);
+    assert.deepEqual({ url: boot.realtime.url, key: boot.realtime.key, transport: boot.realtime.transport },
+      { url: 'https://app.example.com', key: 'sse', transport: 'sse' });
+    assert.match(boot.realtime.channels[a], /^fe:[A-Za-z0-9_-]{32}$/);
+  } finally { await env.pg.close(); }
+});

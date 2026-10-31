@@ -6,6 +6,7 @@
  *   - `/api/config` → `/api/admin?public_config=1` (vercel.json rewrite);
  *   - `PUT /api/fe-upload` → the media upload proxy (bytes streamed to Bunny, never buffered);
  *   - static `dist/` with the cache headers from vercel.json;
+ *   - `GET /api/fe-events` → realtime signals over SSE (server/realtime-sse.mjs; on Supabase it was Broadcast);
  *   - the queue worker tick once a minute (on Supabase it was pg_cron + pg_net + Vault).
  * Runs behind Caddy: `X-Forwarded-For` is whatever Caddy set (it drops a client-supplied one), so the first entry is
  * the real client address that Core's rate limits read. The port must stay inside the compose network.
@@ -17,6 +18,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { bunnyFromEnv } from './media/bunny.mjs';
 import { createUploadHandler } from './media/upload-proxy.mjs';
+import { hub } from './realtime-sse.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const env = process.env;
@@ -95,6 +97,7 @@ async function handle(req, res) {
   try { url = new URL(req.url || '/', 'http://local'); } catch { return fail(res, 400, 'bad_url'); }
   if (url.pathname === '/healthz') { res.statusCode = 200; res.setHeader('Cache-Control', 'no-store'); return res.end('ok'); }
   if (url.pathname === '/api/fe-upload') return upload ? upload(req, res) : fail(res, 503, 'unavailable');
+  if (url.pathname === '/api/fe-events') return env.FETURE_REALTIME === 'sse' ? hub.handle(req, res) : fail(res, 503, 'unavailable');
   if (url.pathname === '/api/config') { url = new URL('/api/admin?public_config=1', url); req.url = url.pathname + url.search; }
   const m = /^\/api\/([a-z0-9_-]+)$/.exec(url.pathname);
   if (m) {

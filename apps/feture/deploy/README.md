@@ -9,7 +9,7 @@
 | `db` | PostgreSQL 16 + pg_cron. Данные в томе `pgdata` |
 | `migrate` | Один раз при каждом запуске: новые миграции, пароли ролей, перезагрузка схемы PostgREST |
 | `rest` | PostgREST 12: вход Core (`kv_exec`) и старые вызовы `lib/feture`. Наружу не открыт |
-| `app` | `server/host.mjs`: сайт, `/api/*`, загрузка медиа, тик очереди раз в минуту |
+| `app` | `server/host.mjs`: сайт, `/api/*`, загрузка медиа, realtime (SSE `/api/fe-events`), тик очереди раз в минуту. Один процесс — не масштабировать копиями |
 | `caddy` | HTTPS (Let’s Encrypt) на `FETURE_DOMAIN`, единственный открытый порт |
 | `backup` | Каждую ночь ~03:00 UTC: зашифрованный дамп в отдельную Storage Zone Bunny, хранит 14 последних |
 

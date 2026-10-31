@@ -10,7 +10,7 @@
     "build": "npm run check:catalog && vite build && storybook build -o dist/kit --quiet",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.server.json",
-    "test:smoke": "node tests/smoke.js && node --test tests/vercel-ignore.test.mjs tests/bunny.test.mjs",
+    "test:smoke": "node tests/smoke.js && node --test tests/vercel-ignore.test.mjs tests/bunny.test.mjs tests/realtime-sse.test.mjs",
     "test:unit": "vitest run",
     "check": "npm run check:kit && npm run check:safe-top && npm run check:server && npm run check:catalog && npm run typecheck && npm run test:smoke && npm run test:unit && npm run test:security && npm run test:seed && npm run test:interests && npm run build",
     "mobile:sync": "node scripts/mobile.mjs android",
