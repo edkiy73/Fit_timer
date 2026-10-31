@@ -1,0 +1,35 @@
+# FetUre: one domain for the site and the API (src/api-url.ts). HTTPS from Let's Encrypt, renewed by Caddy.
+{
+	email {$ACME_EMAIL}
+}
+
+{$FETURE_DOMAIN} {
+	encode zstd gzip
+
+	# Uploads stream through /api/fe-upload (a 100 MB clip at most); every other request is small.
+	@upload path /api/fe-upload
+	request_body @upload {
+		max_size 120MB
+	}
+	@other not path /api/fe-upload
+	request_body @other {
+		max_size 5MB
+	}
+
+	reverse_proxy app:3000 {
+		# Core's rate limits read the first X-Forwarded-For entry. Caddy sets it to the real client and drops a
+		# client-sent one (no trusted_proxies here) — keep it that way; do not add a CDN in front of the API.
+		header_up -X-Vercel-Ip-Country
+		transport http {
+			read_timeout 15m
+			write_timeout 15m
+		}
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		-Server
+	}
+}

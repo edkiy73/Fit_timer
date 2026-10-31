@@ -1,0 +1,94 @@
+# FetUre on one server (docs/infra/migration-plan.md, deploy/README.md).
+#   cd apps/feture/deploy && docker compose up -d --build
+# Secrets: .env (compose) and app.env (app), created by make-env.mjs. Only Caddy is reachable from outside.
+name: feture
+
+x-db-image: &db-image
+  build: { context: ., dockerfile: db.Dockerfile }
+  image: feture-db:local
+
+services:
+  db:
+    <<: *db-image
+    restart: unless-stopped
+    command: ["postgres", "-c", "shared_preload_libraries=pg_cron", "-c", "cron.database_name=feture", "-c", "max_connections=100"]
+    environment:
+      POSTGRES_DB: feture
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d feture"]
+      interval: 5s
+      retries: 30
+
+  migrate:
+    <<: *db-image
+    restart: "no"
+    depends_on: { db: { condition: service_healthy } }
+    environment:
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:?}@db:5432/feture
+      AUTHENTICATOR_PASSWORD: ${AUTHENTICATOR_PASSWORD:?}
+      FETURE_API_DB_PASSWORD: ${FETURE_API_DB_PASSWORD:?}
+    volumes: ["../supabase/migrations:/migrations/feture:ro"]
+    entrypoint: ["migrate.sh", "/migrations/core", "/migrations/feture"]
+
+  rest:
+    image: postgrest/postgrest:v12.2.8
+    restart: unless-stopped
+    depends_on: { migrate: { condition: service_completed_successfully } }
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${AUTHENTICATOR_PASSWORD:?}@db:5432/feture
+      PGRST_DB_SCHEMAS: public
+      PGRST_JWT_SECRET: ${PGRST_JWT_SECRET:?}
+      PGRST_DB_POOL: "10"
+      # No anonymous role: a request without the server key is refused (401).
+
+  app:
+    build: { context: ../../.., dockerfile: apps/feture/deploy/Dockerfile }
+    image: feture-app:local
+    restart: unless-stopped
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      rest: { condition: service_started }
+    env_file: [app.env]
+    environment:
+      PORT: "3000"
+      FETURE_DATABASE_URL: postgres://feture_api:${FETURE_API_DB_PASSWORD:?}@db:5432/feture
+      APPBASE_STORE: supabase
+      APPBASE_REST_URL: http://rest:3000
+      APPBASE_REST_KEY: ${APPBASE_REST_KEY:?}
+      FETURE_API_ORIGIN: https://${FETURE_DOMAIN:?}
+      FETURE_APP_URL: https://${FETURE_DOMAIN:?}
+      CORS_ORIGINS: https://${FETURE_DOMAIN:?}
+
+  caddy:
+    image: caddy:2.10.2-alpine
+    restart: unless-stopped
+    depends_on: [app]
+    ports: ["80:80", "443:443", "443:443/udp"]
+    environment:
+      FETURE_DOMAIN: ${FETURE_DOMAIN:?}
+      ACME_EMAIL: ${ACME_EMAIL:?}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+  backup:
+    <<: *db-image
+    restart: unless-stopped
+    depends_on: { db: { condition: service_healthy } }
+    environment:
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:?}@db:5432/feture
+      BACKUP_STORAGE_ZONE: ${BACKUP_STORAGE_ZONE:-}
+      BACKUP_STORAGE_KEY: ${BACKUP_STORAGE_KEY:-}
+      BACKUP_STORAGE_HOST: ${BACKUP_STORAGE_HOST:-storage.bunnycdn.com}
+      BACKUP_PASSPHRASE: ${BACKUP_PASSPHRASE:?}
+    # Once a day at ~03:00 UTC; a failed run is logged and retried the next night.
+    entrypoint: ["/bin/sh", "-c", "while true; do now=$$(date -u +%s); next=$$(date -u -d 'tomorrow 03:00' +%s); sleep $$((next-now)); backup.sh || echo 'backup FAILED'; done"]
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

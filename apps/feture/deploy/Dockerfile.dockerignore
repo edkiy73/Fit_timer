@@ -1,0 +1,12 @@
+# Context is the repository root; only Core and FetUre go into the image.
+**/node_modules
+**/.git
+apps/*
+!apps/feture
+apps/feture/android
+apps/feture/ios
+apps/feture/dist
+apps/feture/dist-native
+apps/feture/deploy/.env
+apps/feture/deploy/app.env
+apps/feture/e2e

@@ -32,6 +32,8 @@ import { runJobs } from '../server/jobs.mjs';
 import { dsa, takeNotice } from '../server/commands/dsa.mjs';
 import { readJson } from '../server/handler.mjs';
 import { createR2Storage } from '../server/media/r2.mjs';
+import { bunnyFromEnv } from '../server/media/bunny.mjs';
+import { uploadUrlFor } from '../server/media/upload-proxy.mjs';
 import { createSupabaseStorage } from '../server/media/supabase-storage.mjs';
 import { signedStorageDelivery, tokenDelivery } from '../server/media/delivery.mjs';
 import { createSharpRenderer } from '../server/media/render.mjs';
@@ -56,9 +58,15 @@ const sql = configured
   ? postgres(env.FETURE_DATABASE_URL, { prepare: false, max: POOL, idle_timeout: 60, connect_timeout: 8, types: POSTGRES_TYPES })
   : null;
 
-/** Media backend: Cloudflare R2 + media domain when configured (after launch), otherwise the prelaunch
- * Supabase Storage bucket with signed URLs (owner decision 27.10.2026). */
+/** Media backend: bunny.net when configured (the self-hosted server), else Cloudflare R2 + media domain, else the
+ * prelaunch Supabase Storage bucket with signed URLs (owner decision 27.10.2026). */
 function mediaBackend() {
+  // bunny.net (docs/infra/migration-plan.md): Edge Storage + signed Pull Zone links; uploads go through our own
+  // `/api/fe-upload` (server/host.mjs), so this needs the API's public origin and the upload ticket secret.
+  if (env.FETURE_UPLOAD_SECRET && env.FETURE_API_ORIGIN) {
+    const storage = bunnyFromEnv(env, uploadUrlFor(env.FETURE_UPLOAD_SECRET, env.FETURE_API_ORIGIN));
+    if (storage) return { storage, delivery: signedStorageDelivery(storage), renderer: createSharpRenderer() };
+  }
   if (env.R2_ENDPOINT && env.R2_BUCKET && env.R2_ACCESS_KEY_ID && env.R2_SECRET_ACCESS_KEY && env.FETURE_MEDIA_TOKEN_SECRET && env.FETURE_MEDIA_ORIGIN) {
     const storage = createR2Storage({ endpoint: env.R2_ENDPOINT, bucket: env.R2_BUCKET, accessKeyId: env.R2_ACCESS_KEY_ID, secretAccessKey: env.R2_SECRET_ACCESS_KEY });
     return { storage, delivery: tokenDelivery(env.FETURE_MEDIA_TOKEN_SECRET, env.FETURE_MEDIA_ORIGIN), renderer: null };

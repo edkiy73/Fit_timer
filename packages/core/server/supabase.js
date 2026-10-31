@@ -19,8 +19,29 @@ const [urlKey,rawUrl]=firstEnv(URL_KEYS);
 const [secretKeyName,secret]=firstEnv(SECRET_KEYS);
 const baseUrl=normalizeBase(rawUrl);
 
+/* Self-hosted PostgREST instead of a Supabase project (apps/feture/docs/infra/migration-plan.md).
+   APPBASE_REST_URL is PostgREST's own root (e.g. http://rest:3000 inside the compose network) and
+   APPBASE_REST_KEY a JWT with role=service_role signed by its jwt-secret. Callers keep their
+   `/rest/v1/...` paths: the prefix is dropped here. Storage, Auth and Realtime do not exist there,
+   so any other path fails loudly (501) instead of reaching a wrong host. Without these two
+   variables nothing changes for the apps that stay on Supabase. */
+const restBase=normalizeBase(process.env.APPBASE_REST_URL);
+const restKey=String(process.env.APPBASE_REST_KEY||'').trim();
+function selfHosted(){
+  return /^https?:\/\/[^\s/]+(\/[^\s]*)?$/i.test(restBase) && !!restKey;
+}
+
 function configured(){
+  if(selfHosted()) return true;
   return /^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(baseUrl) && !!secret;
+}
+
+function target(path){
+  if(!selfHosted()) return {url:baseUrl+path, key:secret, rest:false};
+  const p=String(path);
+  if(p!=='/rest/v1' && !p.startsWith('/rest/v1/') && !p.startsWith('/rest/v1?'))
+    throw Object.assign(new Error('supabase_feature_unavailable'),{status:501});
+  return {url:restBase+(p.slice('/rest/v1'.length)||'/'), key:restKey, rest:true};
 }
 
 function info(){
@@ -29,6 +50,7 @@ function info(){
     .sort();
   return {
     configured:configured(),
+    selfHosted:selfHosted(),
     urlConfigured:!!baseUrl,
     secretConfigured:!!secret,
     urlVar:urlKey,
@@ -39,14 +61,14 @@ function info(){
 
 async function request(path, options={}){
   if(!configured()) throw Object.assign(new Error('supabase_not_configured'),{status:503});
+  const to=target(path);
   const ctl=new AbortController();
   const timer=setTimeout(()=>ctl.abort(), Math.max(1000, Number(options.timeoutMs)||8000));
   try{
-    const res=await fetch(baseUrl+path,{
+    const res=await fetch(to.url,{
       method:options.method||'GET',
-      headers:Object.assign({
-        apikey:secret,
-        Authorization:'Bearer '+secret,
+      headers:Object.assign(to.rest?{}:{apikey:to.key},{
+        Authorization:'Bearer '+to.key,
         Accept:'application/json'
       }, options.headers||{}),
       body:options.body,
@@ -78,4 +100,4 @@ async function selfTest(){
   return {ok:true,latencyMs:Date.now()-started};
 }
 
-module.exports={configured,info,request,selfTest};
+module.exports={configured,selfHosted,info,request,selfTest};
