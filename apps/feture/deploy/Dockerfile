@@ -3,6 +3,7 @@
 FROM node:22.20.0-bookworm-slim AS build
 WORKDIR /repo
 COPY packages/core packages/core
+COPY packages/ui-react packages/ui-react
 COPY apps/feture apps/feture
 WORKDIR /repo/apps/feture
 RUN npm ci --no-audit --no-fund && npm run build && npm prune --omit=dev
