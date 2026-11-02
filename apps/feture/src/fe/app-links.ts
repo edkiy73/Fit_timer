@@ -5,7 +5,7 @@ import {App} from '@capacitor/app';
 import product from '../../config/product.json';
 import {rememberPairLink} from './pair-link';
 
-/** Android App Links: a FetUre link (https://feture-mvp.vercel.app/#/n/...) tapped in a messenger or browser opens the
+/** Android App Links: a FetUre link (https://app.kinhaze.com/#/n/...) tapped in a messenger or browser opens the
  * app (intent filter with autoVerify in AndroidManifest.xml, proof in public/.well-known/assetlinks.json). The app
  * runs on its own local origin, so the link's hash route is replayed inside it. Only the public site's root counts,
  * and only /n routes (the V21 app) — anything else opens the feed. */

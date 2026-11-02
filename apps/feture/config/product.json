@@ -2,8 +2,8 @@
   "id": "ru.feture.app",
   "name": "FetUre",
   "slug": "feture",
-  "defaultApiUrl": "https://feture-mvp.vercel.app",
-  "defaultPublicUrl": "https://feture-mvp.vercel.app",
+  "defaultApiUrl": "https://app.kinhaze.com",
+  "defaultPublicUrl": "https://app.kinhaze.com",
   "brand": {
     "background": "#1a111c",
     "notificationAccent": "#e72c58",
@@ -46,7 +46,7 @@
   },
   "cors": {
     "origins": [
-      "https://feture-mvp.vercel.app",
+      "https://app.kinhaze.com",
       "https://localhost",
       "capacitor://localhost",
       "http://localhost"

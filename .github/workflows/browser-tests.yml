@@ -44,7 +44,7 @@ jobs:
     name: shard ${{ matrix.shard }}/4
     needs: scope
     if: ${{ needs.scope.outputs.run != 'false' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     strategy:
       fail-fast: false

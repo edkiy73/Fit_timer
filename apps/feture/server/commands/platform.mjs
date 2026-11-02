@@ -18,7 +18,8 @@ const run = {
       // Registered = A04 made the profile AND A05 was finished or skipped (onboarding.complete); a reload on A05 returns to A05.
       account: { id: account.id, locale: account.locale, onboarded: !!account.person_profile_id && (!mark?.has || mark.stamp != null) },
       profiles: await cardsWithAvatars(q, cfg, rows),
-      realtime: cfg.realtime && Object.keys(topics).length ? { url: cfg.realtime.url, key: cfg.realtime.key, channels: topics } : null,
+      realtime: cfg.realtime && Object.keys(topics).length
+        ? { url: cfg.realtime.url, key: cfg.realtime.key, ...(cfg.realtime.transport ? { transport: cfg.realtime.transport } : {}), channels: topics } : null,
       // Web push: only the public VAPID key (null while the server has no keys: the client offers nothing).
       push: cfg.push?.webKey ? { webKey: cfg.push.webKey } : null,
     };

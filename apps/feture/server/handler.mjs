@@ -14,7 +14,7 @@ import { SIGNIN_OPEN, noteSignin, sendSigninMail, sessionHash, signinBlocked } f
  * transaction, idempotency, error mapping and the access log.
  * @typedef {import('./db.mjs').Db} Db @typedef {import('./db.mjs').Q} Q
  * @typedef {import('./accounts.mjs').AccountRow} AccountRow @typedef {import('./profiles.mjs').Acting} Acting
- * @typedef {{media: import('./media/assets.mjs').MediaConfig, pepper?: string, realtime?: {url: string, key: string} | null,
+ * @typedef {{media: import('./media/assets.mjs').MediaConfig, pepper?: string, realtime?: {url: string, key: string, transport?: 'sse'} | null,
  *   push?: {webKey: string} | null, billing?: {providers: import('./commands/premium.mjs').PaymentProvider[]} | null}} Cfg
  *   pepper is filled in by the handler; realtime: the public Supabase URL and publishable key for the client socket;
  *   push.webKey: the public VAPID key browsers subscribe with (the private one never leaves the job worker);
@@ -59,7 +59,7 @@ export function inputIssues(issues) {
  *   maintenanceTtl: how long (ms) a warm instance trusts the last read of the maintenance switch;
  *   mail: sends the new-device email (signin.mjs) to the signed-in address — the address is never stored; appUrl: its link
  */
-export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota, cors, log, signals = null, maintenanceTtl = 15000, mail = null, appUrl = 'https://feture-mvp.vercel.app' }) {
+export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota, cors, log, signals = null, maintenanceTtl = 15000, mail = null, appUrl = 'https://app.kinhaze.com' }) {
   /** Maintenance (wave 8): while on, non-staff get 503 «maintenance» for everything but `platform.maintenance`.
    * Before its migration is applied the table is missing: then it is simply off. */
   let maint = { at: 0, active: false, message: /** @type {string | null} */ (null) };

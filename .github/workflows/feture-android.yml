@@ -218,7 +218,7 @@ jobs:
             echo "Если раньше стояла ТЕСТОВАЯ сборка FetUre (debug-ключ), один раз удали её: телефон не ставит версию с другой подписью поверх."
             echo "Дальше приложение обновляется само: когда в админке выпустят новую версию, FetUre предложит обновиться."
             echo
-            echo "Ссылки на FetUre (https://feture-mvp.vercel.app/#/n/...) открываются сразу в приложении."
+            echo "Ссылки на FetUre (https://app.kinhaze.com/#/n/...) открываются сразу в приложении."
             if [ -n "$RELEASE_NOTES" ]; then echo; echo "Что нового: $RELEASE_NOTES"; fi
             echo
             echo "Версия ${VERSION_NAME} (versionCode ${VERSION_CODE}), commit ${GITHUB_SHA}."
@@ -261,7 +261,7 @@ jobs:
             echo "Обновление внутри приложения в тестовой сборке не работает: оно ставит только версии с постоянным ключом FetUre."
             echo "Постоянной подписи пока нет: владелец ещё не добавил секреты FETURE_KEYSTORE_* (apps/feture/docs/android-release.md)."
             echo
-            echo "Работает с сайтом https://feture-mvp.vercel.app (те же аккаунты и данные). Вход — по коду из письма."
+            echo "Работает с сайтом https://app.kinhaze.com (те же аккаунты и данные). Вход — по коду из письма."
             if [ -n "$RELEASE_NOTES" ]; then echo; echo "Что проверить: $RELEASE_NOTES"; fi
             echo
             echo "Версия ${VERSION_NAME} (versionCode ${VERSION_CODE}), commit ${GITHUB_SHA}. Подпись: debug-ключ (тестовый)."
@@ -277,7 +277,7 @@ jobs:
         env:
           MODE: ${{ steps.keystore.outputs.mode }}
         run: |
-          LIVE=$(curl -fsSL https://feture-mvp.vercel.app/.well-known/assetlinks.json 2>/dev/null || true)
+          LIVE=$(curl -fsSL https://app.kinhaze.com/.well-known/assetlinks.json 2>/dev/null || true)
           {
             if [ "$MODE" = "release" ]; then
               echo "### FetUre ${VERSION_NAME} (versionCode ${VERSION_CODE}) — подписан ключом FetUre"
@@ -291,7 +291,7 @@ jobs:
               echo "$CERT_SHA256"
               echo '```'
               if printf '%s' "$LIVE" | grep -q "$CERT_SHA256"; then
-                echo "App Links: этот отпечаток уже стоит в https://feture-mvp.vercel.app/.well-known/assetlinks.json — ссылки открываются в приложении."
+                echo "App Links: этот отпечаток уже стоит в https://app.kinhaze.com/.well-known/assetlinks.json — ссылки открываются в приложении."
               else
                 echo "App Links: отпечатка ещё нет на сайте. Вставь строку выше в \`apps/feture/public/.well-known/assetlinks.json\` → \`sha256_cert_fingerprints\` (в кавычках) и выкати сайт — см. apps/feture/docs/android-release.md, шаг 4."
               fi

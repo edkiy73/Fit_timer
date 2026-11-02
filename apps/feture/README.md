@@ -2,7 +2,7 @@
 
 An 18+ community app: profiles and interests, posts with photo and video, communities and events, Discover, a
 private part opened by access, chats. One React + TypeScript + Vite app for the website and the Android app
-(Capacitor); iOS later. Pre-launch. Site: https://feture-mvp.vercel.app (the app is `/#/n/feed`).
+(Capacitor); iOS later. Pre-launch. Site: https://app.kinhaze.com (the app is `/#/n/feed`).
 
 **Rules for anyone changing it: [AGENTS.md](AGENTS.md).** Infrastructure decisions: [docs/infra/](docs/infra/README.md).
 

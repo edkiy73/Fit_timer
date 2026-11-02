@@ -3,10 +3,12 @@ import {readFileSync} from 'node:fs';
 import {PGlite} from '@electric-sql/pglite';
 
 const id=n=>'00000000-0000-4000-8000-'+String(n).padStart(12,'0');
+/* The event must start in the future whenever the test runs: «+08:00» wall-clock hour h, 60 days from now. */
+const at=h=>{const d=new Date(Date.now()+60*864e5);d.setUTCHours(h-8,0,0,0);return new Date(d.getTime()+8*3600e3).toISOString().slice(0,19)+'+08:00';};
 const draft={
  title:'Evening class',summary:'Small online group',description:'Education and discussion',
  conditions:'18+; consent required',format:'online',visibility:'private',
- startsAt:'2026-11-01T18:00:00+08:00',endsAt:'2026-11-01T20:00:00+08:00',
+ startsAt:at(18),endsAt:at(20),
  timeZone:'Asia/Makassar',language:'ru',city:'',publicLocation:'',
  privateLocation:null,privateJoinUrl:'https://meet.example.org/secret-room',
  ticketUrl:'https://tickets.example.org/event',price:{amountMinor:250000,currency:'IDR'}

@@ -29,7 +29,7 @@ export const op = () => `018f0000-0000-7000-8000-${String(++ops).padStart(12, '0
  * in the default test session, so tests about other staff work need no codes; true — the real thing
  * (tests/fe-second-factor-postgres.mjs).
  * mail: receives the new-device emails (server/signin.mjs); a request names its address with `x-fit-email`.
- * @param {{commands: Record<string, any>, migrations?: string[], signals?: (db: any) => any, realtime?: {url: string, key: string}, push?: {webKey: string}, billing?: any, staffFactor?: boolean, mail?: any}} opts */
+ * @param {{commands: Record<string, any>, migrations?: string[], signals?: (db: any) => any, realtime?: {url: string, key: string, transport?: string}, push?: {webKey: string}, billing?: any, staffFactor?: boolean, mail?: any}} opts */
 export async function setup({ commands, migrations = MIGRATIONS, signals, realtime, push, billing, staffFactor = false, mail }) {
   const pg = new PGlite();
   await pg.exec('create role anon; create role authenticated;');

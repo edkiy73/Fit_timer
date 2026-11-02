@@ -3,13 +3,15 @@
 const {documentDTO,uuid}=require('./documents');
 const {boundedJson}=require('./response-bounds');
 /** Public read uses only the published table/anon key. No draft or receipt read.
- * @param {string} base @param {string} key @param {URLSearchParams} query */
-async function publicDocuments(base,key,query) {
+ * `get(path)` replaces the anon-key fetch on the self-hosted server (Core PostgREST client, server key).
+ * @param {string} base @param {string} key @param {URLSearchParams} query @param {((path:string)=>Promise<Response>)=} get */
+async function publicDocuments(base,key,query,get) {
  const locale=query.get('locale')||'ru',id=query.get('id');
  if(!['ru','en'].includes(locale)||id!==null&&!uuid(id)||Array.from(query.keys()).some(k=>!['resource','locale','id'].includes(k)))return {status:422,body:{error:'invalid_request'}};
  const params=new URLSearchParams({select:'id,document_key,locale,version,title,blocks,content_hash,requires_accept,published_at,effective_at',locale:'eq.'+locale,order:'document_key.asc,version.desc',limit:'100'});
  if(id)params.set('id','eq.'+id);else params.set('effective_at','lte.'+new Date().toISOString());
- const response=await fetch(base+'/rest/v1/'+(id?'feture_document_versions':'feture_document_current')+'?'+params,{headers:{apikey:key,Accept:'application/json'},signal:AbortSignal.timeout(8000)});
+ const path='/rest/v1/'+(id?'feture_document_versions':'feture_document_current')+'?'+params;
+ const response=get?await get(path):await fetch(base+path,{headers:{apikey:key,Accept:'application/json'},signal:AbortSignal.timeout(8000)});
  if(!response.ok)throw Error('documents_unavailable');const rows=await boundedJson(response);
  if(!Array.isArray(rows)||rows.length>100)throw Error('documents_unavailable');
  const docs=rows.map(documentDTO);if(docs.some(d=>d.locale!==locale||id&&d.id!==id))throw Error('documents_unavailable');

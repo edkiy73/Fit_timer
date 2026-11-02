@@ -32,10 +32,13 @@ import { runJobs } from '../server/jobs.mjs';
 import { dsa, takeNotice } from '../server/commands/dsa.mjs';
 import { readJson } from '../server/handler.mjs';
 import { createR2Storage } from '../server/media/r2.mjs';
+import { bunnyFromEnv } from '../server/media/bunny.mjs';
+import { uploadUrlFor } from '../server/media/upload-proxy.mjs';
 import { createSupabaseStorage } from '../server/media/supabase-storage.mjs';
 import { signedStorageDelivery, tokenDelivery } from '../server/media/delivery.mjs';
 import { createSharpRenderer } from '../server/media/render.mjs';
 import { broadcastSender, createSignals } from '../server/realtime.mjs';
+import { hub as sseHub } from '../server/realtime-sse.mjs';
 import { pushTransport } from '../server/push.mjs';
 import { webPushFromEnv } from '../server/webpush.mjs';
 import { appUrl, coreMailer } from '../server/core-guard.mjs';
@@ -56,9 +59,15 @@ const sql = configured
   ? postgres(env.FETURE_DATABASE_URL, { prepare: false, max: POOL, idle_timeout: 60, connect_timeout: 8, types: POSTGRES_TYPES })
   : null;
 
-/** Media backend: Cloudflare R2 + media domain when configured (after launch), otherwise the prelaunch
- * Supabase Storage bucket with signed URLs (owner decision 27.10.2026). */
+/** Media backend: bunny.net when configured (the self-hosted server), else Cloudflare R2 + media domain, else the
+ * prelaunch Supabase Storage bucket with signed URLs (owner decision 27.10.2026). */
 function mediaBackend() {
+  // bunny.net (docs/infra/migration-plan.md): Edge Storage + signed Pull Zone links; uploads go through our own
+  // `/api/fe-upload` (server/host.mjs), so this needs the API's public origin and the upload ticket secret.
+  if (env.FETURE_UPLOAD_SECRET && env.FETURE_API_ORIGIN) {
+    const storage = bunnyFromEnv(env, uploadUrlFor(env.FETURE_UPLOAD_SECRET, env.FETURE_API_ORIGIN));
+    if (storage) return { storage, delivery: signedStorageDelivery(storage), renderer: createSharpRenderer() };
+  }
   if (env.R2_ENDPOINT && env.R2_BUCKET && env.R2_ACCESS_KEY_ID && env.R2_SECRET_ACCESS_KEY && env.FETURE_MEDIA_TOKEN_SECRET && env.FETURE_MEDIA_ORIGIN) {
     const storage = createR2Storage({ endpoint: env.R2_ENDPOINT, bucket: env.R2_BUCKET, accessKeyId: env.R2_ACCESS_KEY_ID, secretAccessKey: env.R2_SECRET_ACCESS_KEY });
     return { storage, delivery: tokenDelivery(env.FETURE_MEDIA_TOKEN_SECRET, env.FETURE_MEDIA_ORIGIN), renderer: null };
@@ -92,11 +101,18 @@ const webPush = configured ? webPushFromEnv(env) : null;
  * JWT secret is needed. The URL and publishable key are public (they go to the client); the secret key only sends. */
 const supabaseUrl = String(env.SUPABASE_URL || '').trim().replace(/\/$/, '');
 const realtimeOn = /^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(supabaseUrl) && !!env.SUPABASE_PUBLISHABLE_KEY && !!env.SUPABASE_SECRET_KEY;
-const signals = db && realtimeOn ? createSignals({
+/* On our own server (FETURE_REALTIME=sse, server/host.mjs) the same signals go to the in-process SSE hub
+ * (server/realtime-sse.mjs) and the client listens on `<FETURE_API_ORIGIN>/api/fe-events`. */
+const sseOn = env.FETURE_REALTIME === 'sse' && /^https?:\/\/[^/\s]+$/.test(String(env.FETURE_API_ORIGIN || '').replace(/\/$/, ''));
+const signals = db && (sseOn || realtimeOn) ? createSignals({
   db, pepper: env.FETURE_ID_PEPPER ?? '',
-  sender: broadcastSender({ url: supabaseUrl, secret: String(env.SUPABASE_SECRET_KEY) }),
+  sender: sseOn ? sseHub.sender : broadcastSender({ url: supabaseUrl, secret: String(env.SUPABASE_SECRET_KEY) }),
   onError: code => console.warn('feture_fe_realtime', code),
 }) : null;
+/** What the client gets in `session.bootstrap` (server/commands/platform.mjs). */
+const realtimeCfg = !signals ? null : sseOn
+  ? { url: String(env.FETURE_API_ORIGIN).replace(/\/$/, ''), key: 'sse', transport: /** @type {const} */ ('sse') }
+  : { url: supabaseUrl, key: String(env.SUPABASE_PUBLISHABLE_KEY) };
 /** A verified Core session is reused for 30 s per warm instance (keyed by a hash of the identity headers), so most
  * requests skip one store round trip. A sign-out reaches every instance within 30 s. */
 const AUTH_TTL = 30000;
@@ -120,7 +136,7 @@ async function cachedAuth(req) {
 const handler = db && createFeHandler({
   db,
   pepper: env.FETURE_ID_PEPPER ?? '',
-  cfg: { media: { storage: media.storage, delivery: media.delivery }, realtime: signals ? { url: supabaseUrl, key: String(env.SUPABASE_PUBLISHABLE_KEY) } : null,
+  cfg: { media: { storage: media.storage, delivery: media.delivery }, realtime: realtimeCfg,
     push: webPush ? { webKey: webPush.publicKey } : null,
     // Payment providers plug in here once their keys exist (server/commands/premium.mjs «Payments»); none yet.
     billing: { providers: [] } },
