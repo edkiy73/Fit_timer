@@ -3,7 +3,8 @@
 #   curl -fsSL https://raw.githubusercontent.com/edkiy73/Fit_timer/feture/self-host/apps/feture/deploy/push-setup.sh | bash
 # Web push: generates our own VAPID key pair (nothing to copy from Vercel — those values are write-only there).
 # Android/iOS push (FCM): asks for the Firebase service-account JSON (Firebase console → Project settings → Service
-# accounts → Generate new private key, the SAME project as the app's google-services.json). Enter skips it.
+# accounts → Generate new private key, the SAME project as the app's google-services.json). Paste it (many lines are fine)
+# and press Ctrl+D; or put the file at /opt/feture/firebase.json beforehand (Termius SFTP) — it is read and shredded.
 # Safe to run again: an existing VAPID pair is kept; an empty Firebase answer changes nothing.
 set -euo pipefail
 DIR="${DIR:-/opt/feture}"
@@ -28,12 +29,20 @@ if [ -z "$(getenv app.env FE_VAPID_PRIVATE_KEY)" ] || [ -z "$(getenv app.env FE_
   changed=1
 else echo "✓ Web push: ключи уже есть"; fi
 if [ -z "$(getenv app.env FIREBASE_SERVICE_ACCOUNT_BASE64)" ]; then
-  echo "▶ Android/iOS push (FCM): вставь JSON ключа сервисного аккаунта Firebase одной строкой (на экране не видно) или Enter, чтобы пропустить:"
-  read -r -s json </dev/tty || json=""; echo
+  json=""; file="$DIR/firebase.json"
+  if [ -f "$file" ]; then json=$(cat "$file"); echo "▶ FCM: беру ключ из $file"
+  else
+    echo "▶ Android/iOS push (FCM): вставь весь текст JSON (много строк — это нормально), затем на новой строке нажми Ctrl+D."
+    echo "  Только Ctrl+D, ничего не вставляя — пропустить."
+    stty -echo </dev/tty 2>/dev/null || true
+    json=$(cat </dev/tty) || json=""
+    stty echo </dev/tty 2>/dev/null || true; echo
+  fi
   if [ -n "$json" ]; then
     printf '%s' "$json" | docker compose exec -T app node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);if(!j.private_key||!j.client_email){console.error('не похоже на ключ сервисного аккаунта');process.exit(1)}})" \
       || { echo "✖ Это не JSON ключа сервисного аккаунта — ничего не записано"; exit 1; }
     setenv app.env FIREBASE_SERVICE_ACCOUNT_BASE64 "$(printf '%s' "$json" | base64 -w0)"
+    [ -f "$file" ] && shred -u "$file" 2>/dev/null || true
     changed=1
   else echo "– FCM пропущен"; fi
 else echo "✓ FCM: ключ уже есть"; fi
