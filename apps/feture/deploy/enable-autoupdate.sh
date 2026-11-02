@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # FetUre: automatic updates. Run once on the server (as root):
 #   curl -fsSL https://raw.githubusercontent.com/edkiy73/Fit_timer/feture/self-host/apps/feture/deploy/enable-autoupdate.sh | bash
-# Every 5 minutes the server checks the branch; if there is new code it pulls it and runs `docker compose up -d --build`
+# Every minute (EVERY=n to change) the server checks the branch; if there is new code it pulls it and runs `docker compose up -d --build`
 # (migrate applies new migrations, app restarts). Secrets stay in .env / app.env and are never touched.
 # Off: rm /etc/cron.d/feture-update. Log: /var/log/feture-update.log
 set -euo pipefail
 [ "$(id -u)" = "0" ] || { echo "Запусти от root"; exit 1; }
-DIR="${DIR:-/opt/feture}"; BRANCH="${BRANCH:-feture/self-host}"
+DIR="${DIR:-/opt/feture}"; BRANCH="${BRANCH:-feture/self-host}"; EVERY="${EVERY:-1}"
 [ -d "$DIR/repo/.git" ] || { echo "Нет $DIR/repo — сначала install.sh"; exit 1; }
 cat >"$DIR/update.sh" <<SCRIPT
 #!/usr/bin/env bash
@@ -23,6 +23,6 @@ docker image prune -f >/dev/null 2>&1 || true
 echo "\$(date -u +%FT%TZ) done"
 SCRIPT
 chmod 755 "$DIR/update.sh"
-echo "*/5 * * * * root $DIR/update.sh >>/var/log/feture-update.log 2>&1" >/etc/cron.d/feture-update
+echo "*/$EVERY * * * * root $DIR/update.sh >>/var/log/feture-update.log 2>&1" >/etc/cron.d/feture-update
 chmod 644 /etc/cron.d/feture-update
-echo "✅ Автообновление включено: раз в 5 минут. Лог: /var/log/feture-update.log"
+echo "✅ Автообновление включено: раз в $EVERY мин. Лог: /var/log/feture-update.log"
