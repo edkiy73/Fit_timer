@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # FetUre: the whole server in one command (docs/infra/migration-plan.md, deploy/README.md).
 # On a fresh Ubuntu 24.04 VPS, as root:
-#   curl -fsSL https://raw.githubusercontent.com/edkiy73/Fit_timer/feture/self-host/apps/feture/deploy/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/edkiy73/Fit_timer/main/apps/feture/deploy/install.sh | bash
 # It asks three things: the domain, the Bunny API key, the Resend API key (full access, only used here).
 # On a NEW server for an existing installation (the old one is gone) it finds the backups in the same Bunny account,
 # asks the backup passphrase, restores the secrets and the database, and moves the domain to the new server.
@@ -11,7 +11,7 @@
 # Safe to run again: every step that is already done is skipped.
 set -euo pipefail
 
-BRANCH="${BRANCH:-feture/self-host}"
+BRANCH="${BRANCH:-main}"
 REPO_URL="${REPO_URL:-https://github.com/edkiy73/Fit_timer}"
 DIR="${DIR:-/opt/feture}"
 BUNNY_API="${BUNNY_API:-https://api.bunny.net}"
