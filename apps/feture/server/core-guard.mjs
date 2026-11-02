@@ -29,7 +29,7 @@ export function database() {
   return pool;
 }
 
-export const appUrl = () => process.env.FETURE_APP_URL || 'https://feture-mvp.vercel.app';
+export const appUrl = () => process.env.FETURE_APP_URL || 'https://app.kinhaze.com';
 
 /** Core's mail when a real sending domain is set up (Resend's test domain reaches only its owner), else null. */
 export function coreMailer() {

@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import { totpCode } from '../server/second-factor.mjs';
 
-export const PROD = process.env.FE_API || 'https://feture-mvp.vercel.app';
+export const PROD = process.env.FE_API || 'https://app.kinhaze.com';
 const DIR = new URL('.', import.meta.url).pathname;
 // One session cache for every worktree and runner on this machine (E2E_SESSIONS overrides): sign-ins are limited per
 // address (120 / 15 min) and per account (20 / 15 min), and a cache per worktree signed every persona in again in each.

@@ -15,7 +15,7 @@
   `feture-apk-archive`, файл для Google Play (AAB) в артефактах запуска.
 - **Обновление** — сайт → Админка → «Обновление приложения» → «Выпустить последнюю сборку». У кого стоит FetUre из
   файла, приложение предложит обновиться, скачает новую версию само и откроет установку.
-- **Ссылки** `https://feture-mvp.vercel.app/#/n/...` открываются сразу в приложении — после шага 4 ниже.
+- **Ссылки** `https://app.kinhaze.com/#/n/...` открываются сразу в приложении — после шага 4 ниже.
 
 ## Как был сделан ключ UnMute
 
@@ -135,7 +135,7 @@ variables** → **Actions** → **New repository secret**. Добавь по о�
 - `FetUreUpdatePlugin` + `UpdateDownloadWorker` — порт `UnMuteUpdatePlugin`/`UpdateDownloadWorker` (без in-app review):
   загрузка в WorkManager с уведомлением и докачкой (`Range`), проверка пакета, точного `versionCode` и подписи, затем
   системный установщик.
-- App Links: в `MainActivity` intent filter `autoVerify` на `https://feture-mvp.vercel.app` с путём `/` и `/index.html`.
+- App Links: в `MainActivity` intent filter `autoVerify` на `https://app.kinhaze.com` с путём `/` и `/index.html`.
   Маршрут FetUre — во фрагменте `#/n/...`, который фильтры не видят, поэтому берётся только корень сайта (не `/api`,
   `/kit`, прототипы). Подтверждение — `public/.well-known/assetlinks.json` (в APK не копируется, `scripts/mobile.mjs`);
   `vercel.json` отдаёт его как `application/json`, rewrites его не задевают (единственный rewrite — `/api/config`).

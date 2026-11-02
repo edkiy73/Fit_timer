@@ -11,7 +11,7 @@ of hand-written pieces may only go down (`tools/fe-kit-baseline.json`). After mo
 ## Storybook
 
 Every kit component has a story (`src/fe/kit/*.stories.tsx`): description, Controls, all states, code; tokens
-under «Основа». Local: `npm run storybook`; published with the app at **/kit/** (https://feture-mvp.vercel.app/kit/).
+under «Основа». Local: `npm run storybook`; published with the app at **/kit/** (https://app.kinhaze.com/kit/).
 A new component or variant ships with its story in the same PR.
 
 ## Tokens (`base.css` top block + `tokens.css` — ours; the V21 prototype was only the starting point)

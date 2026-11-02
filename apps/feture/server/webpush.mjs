@@ -135,7 +135,7 @@ export function webPushFromEnv(env, warn = code => console.warn('feture_fe_webpu
   // The contact for push services (RFC 8292 «sub»): mailto: or https:. A bare e-mail gets «mailto:»; anything else
   // (empty, a stray paste) falls back to the site's own address, which the standard allows — the keys are what matter.
   const rawSubject = clean(env.FE_VAPID_SUBJECT);
-  const subject = /^(mailto:|https:)/.test(rawSubject) ? rawSubject : /^[^\s@:]+@[^\s@]+\.[^\s@]+$/.test(rawSubject) ? 'mailto:' + rawSubject : 'https://feture-mvp.vercel.app';
+  const subject = /^(mailto:|https:)/.test(rawSubject) ? rawSubject : /^[^\s@:]+@[^\s@]+\.[^\s@]+$/.test(rawSubject) ? 'mailto:' + rawSubject : 'https://app.kinhaze.com';
   const sender = publicKey && privateKey && subject ? createWebPush({ publicKey, privateKey, subject, ...(fetch ? { fetch } : {}) }) : null;
   if (!sender && !warned) {
     warned = true;

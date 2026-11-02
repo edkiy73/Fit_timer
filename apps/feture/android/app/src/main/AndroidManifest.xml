@@ -23,7 +23,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Android App Links: FetUre links (https://feture-mvp.vercel.app/#/n/...) open in the app. The route is in the
+            <!-- Android App Links: FetUre links (https://app.kinhaze.com/#/n/...) open in the app. The route is in the
                  #fragment, which intent filters do not see, so the filter takes the site root only, never /api, /kit or
                  the prototypes. Verified by /.well-known/assetlinks.json (public/.well-known, release key fingerprint);
                  src/fe/app-links.ts turns the URL into the hash route. Keep the host in sync with config/product.json. -->
@@ -31,8 +31,8 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="feture-mvp.vercel.app" android:path="/" />
-                <data android:scheme="https" android:host="feture-mvp.vercel.app" android:path="/index.html" />
+                <data android:scheme="https" android:host="app.kinhaze.com" android:path="/" />
+                <data android:scheme="https" android:host="app.kinhaze.com" android:path="/index.html" />
             </intent-filter>
         </activity>
 

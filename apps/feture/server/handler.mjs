@@ -59,7 +59,7 @@ export function inputIssues(issues) {
  *   maintenanceTtl: how long (ms) a warm instance trusts the last read of the maintenance switch;
  *   mail: sends the new-device email (signin.mjs) to the signed-in address — the address is never stored; appUrl: its link
  */
-export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota, cors, log, signals = null, maintenanceTtl = 15000, mail = null, appUrl = 'https://feture-mvp.vercel.app' }) {
+export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota, cors, log, signals = null, maintenanceTtl = 15000, mail = null, appUrl = 'https://app.kinhaze.com' }) {
   /** Maintenance (wave 8): while on, non-staff get 503 «maintenance» for everything but `platform.maintenance`.
    * Before its migration is applied the table is missing: then it is simply off. */
   let maint = { at: 0, active: false, message: /** @type {string | null} */ (null) };
