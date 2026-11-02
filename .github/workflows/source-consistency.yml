@@ -46,6 +46,10 @@ jobs:
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
 
+      - name: Install Core dependencies
+        # `setup:affected` installs apps only; Core's own check (tsc) needs its devDependencies when Core is affected.
+        run: npm ci --prefix packages/core --no-audit --no-fund
+
       - name: Test Vercel deployment filters
         run: node scripts/test-vercel-deployment-policy.mjs
 
