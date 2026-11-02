@@ -85,7 +85,7 @@ cd "${REPO_DIR:?}/apps/feture/deploy"
 RESTORE_DB=0
 if [ ! -f .env ]; then
   ask BUNNY_API_KEY "Bunny API key (dash.bunny.net → Account → API): " secret
-  bunny GET "/storagezone?page=1&perPage=1" >/dev/null || die "Bunny не принял ключ"
+  bunny GET "/storagezone?page=1&perPage=5" >/dev/null || die "Bunny не принял ключ"
   # An earlier installation in this Bunny account? Then this is a new server for it: bring back its secrets and data.
   old=$(bunny GET "/storagezone?page=1&perPage=1000&search=feture-backup-" \
     | jq -c '[(.Items // .)[] | select((.Name // "") | startswith("feture-backup-")) | select(.Deleted != true)]')
@@ -121,7 +121,7 @@ setenv .env FETURE_DOMAIN "$APP_HOST"
 # --- Bunny: media storage, CDN, backup storage, DNS ------------------------------------------------------------
 if [ -z "$(getenv app.env BUNNY_TOKEN_KEY)" ] || [ -z "$(getenv .env BACKUP_STORAGE_KEY)" ] || [ -z "$(getenv .env FETURE_BUNNY_DNS_ID)" ]; then
   ask BUNNY_API_KEY "Bunny API key (dash.bunny.net → Account → API): " secret
-  bunny GET "/storagezone?page=1&perPage=1" >/dev/null || die "Bunny не принял ключ"
+  bunny GET "/storagezone?page=1&perPage=5" >/dev/null || die "Bunny не принял ключ"
 fi
 SFX=$(getenv .env FETURE_ZONE_SUFFIX)
 if [ -z "$SFX" ]; then SFX=$(openssl rand -hex 3); setenv .env FETURE_ZONE_SUFFIX "$SFX"; fi
