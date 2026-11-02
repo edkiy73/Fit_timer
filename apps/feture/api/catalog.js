@@ -4,6 +4,7 @@ const {cors}=require('../../../packages/core/server/util');
 const editorial=require('../data/catalog-editorial.json');
 const {publicDocuments}=require('../lib/feture/public-documents');
 const {publishedRelease}=require('../lib/feture/catalog-public');
+const Core=require('../../../packages/core/server/supabase');
 
 /** Public, read-only taxonomy endpoint. Does not access any FetUre user data.
  * Uses the Supabase publishable (anon) key and 3 explicitly allowlisted RLS tables.
@@ -11,7 +12,9 @@ const {publishedRelease}=require('../lib/feture/catalog-public');
  */
 const BASE = String(process.env.SUPABASE_URL || '').trim().replace(/\/$/, '');
 const KEY = String(process.env.SUPABASE_PUBLISHABLE_KEY || '').trim();
-const validConfig = /^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(BASE) && KEY.startsWith('sb_publishable_');
+/* Self-hosted server: no Supabase project and no anon key; the same read-only queries go through Core's PostgREST client. */
+const selfHosted = Core.selfHosted();
+const validConfig = selfHosted || (/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(BASE) && KEY.startsWith('sb_publishable_'));
 
 const {boundedJson}=require('../lib/feture/response-bounds');
 
@@ -20,11 +23,13 @@ async function list(table, fields, order, limit) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
   try {
-    const response = await fetch(BASE + path, {
-      method: 'GET',
-      headers: {apikey: KEY, Accept: 'application/json'},
-      signal: controller.signal
-    });
+    const response = selfHosted
+      ? await Core.request(path, {timeoutMs: 8000}).catch((e) => { throw new Error('catalog_http_' + (e.status || 502)); })
+      : await fetch(BASE + path, {
+        method: 'GET',
+        headers: {apikey: KEY, Accept: 'application/json'},
+        signal: controller.signal
+      });
     if (!response.ok) throw new Error('catalog_http_' + response.status);
     const rows = await boundedJson(response);
     if (!Array.isArray(rows) || rows.length > limit) throw new Error('catalog_response_invalid');
@@ -51,7 +56,7 @@ module.exports = async function catalog(req, res) {
   try {
     const query=new URL(req.url||'/api/catalog','https://feture.invalid').searchParams;
     if(query.get('resource')==='documents'){
-      const result=await publicDocuments(BASE,KEY,query);res.setHeader('Cache-Control','no-store');res.statusCode=result.status;return res.end(JSON.stringify(result.body));
+      const result=await publicDocuments(BASE,KEY,query,selfHosted?(path)=>Core.request(path,{timeoutMs:8000}):undefined);res.setHeader('Cache-Control','no-store');res.statusCode=result.status;return res.end(JSON.stringify(result.body));
     }
     const [categories, interests, publications] = await Promise.all([
       list('feture_categories', 'id,title,short_title,icon,accent_color,position', 'position.asc', 100),
