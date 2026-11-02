@@ -68,18 +68,18 @@ Core. Страна устройства (`x-vercel-ip-country` для «вход
 только на отправку). Ссылки на медиа идут с адреса Bunny `*.b-cdn.net`: свой поддомен для медиа не нужен — адреса
 медиа сервер выдаёт заново на каждый запрос, приложение их не хранит.
 
-## 5. Порядок (неделя)
+## 5. Порядок
 
-| Шаг | Кто | Что |
-|---|---|---|
-| ✅ | Агент | Core через свой PostgREST, адаптер Bunny и прокси загрузки, `server/host.mjs`, realtime SSE, `deploy/` и `install.sh` |
-| 1 | Владелец | Ветка `feture/self-host` на GitHub (патчи агента) |
-| 2 | Владелец | Домен `.com` на Porkbun; аккаунт Bunny (карта, API key); API key Resend (Full access) |
-| 3 | Владелец | Hostinger KVM 2 → терминал → одна команда `install.sh` → ответить на 3 вопроса |
-| 4 | Владелец | У Porkbun: nameservers `kiki.bunny.net`, `coco.bunny.net`; пароль бэкапов — в менеджер паролей |
-| 5 | Агент | Проверка на живом сервере: вход по коду, лента, медиа, чат, push, бэкап и восстановление |
-| 6 | Агент | `config/product.json` → `https://app.<домен>`, сборка APK (Actions), App Links на новом домене |
-| 7 | Агент | Выключить FetUre на Vercel, удалить схему `feture` и бакет `feture-media` из Supabase FitT |
+Выполнено 2.11.2026: сервер на Hostinger KVM 1 (Франкфурт), домен `kinhaze.com` (регистратор Porkbun, DNS в Bunny),
+`app.kinhaze.com`, установка `deploy/install.sh`, автообновление из `main` (`deploy/enable-autoupdate.sh`),
+push-ключи (`deploy/push-setup.sh`), черновики правовых документов (`deploy/seed-documents.sql`), тестовый мир
+(`e2e/seed-world.mjs`, без видео-фазы), APK из Actions, приложение и App Links на `app.kinhaze.com`.
+FetUre на Vercel (`feture-mvp`) приостановлен, схемы `feture`/`feture_seed`, таблицы `public.feture_*`, cron и секреты
+Vault удалены из Supabase FitT (общий проект с FitTimer и UnMute остался нетронутым).
+
+Осталось: удалить бакеты `feture-media` и `feture-post-photos` в Supabase (Storage → Empty bucket → Delete; SQL тут не
+подходит — файлы остались бы в хранилище); правовые документы заменить текстами юриста; перед запуском — KVM 2 и
+проверка восстановления из бэкапа на новом сервере. Первые роли персонала выдаются один раз SQL-ом в `feture.staff_role`.
 
 ## 6. Что сознательно не переносим
 

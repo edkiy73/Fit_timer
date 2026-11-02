@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # FetUre: push notifications on the self-hosted server. Run on the server, as root:
-#   curl -fsSL https://raw.githubusercontent.com/edkiy73/Fit_timer/feture/self-host/apps/feture/deploy/push-setup.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/edkiy73/Fit_timer/main/apps/feture/deploy/push-setup.sh | bash
 # Web push: generates our own VAPID key pair (nothing to copy from Vercel — those values are write-only there).
 # Android/iOS push (FCM): asks for the Firebase service-account JSON (Firebase console → Project settings → Service
 # accounts → Generate new private key, the SAME project as the app's google-services.json). Paste it (many lines are fine)

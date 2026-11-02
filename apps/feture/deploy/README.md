@@ -18,7 +18,7 @@
 На свежем VPS (Ubuntu 24.04), от root — в Hostinger это «Browser terminal» в hPanel:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/edkiy73/Fit_timer/feture/self-host/apps/feture/deploy/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/edkiy73/Fit_timer/main/apps/feture/deploy/install.sh | bash
 ```
 
 Скрипт спросит домен, API key Bunny и API key Resend (Full access) и сделает остальное: Docker, firewall, код, секреты,
@@ -32,7 +32,7 @@ Bunny (медиа, CDN с подписью и блокировкой GB/US, бэ
 ## Обновление
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/edkiy73/Fit_timer/feture/self-host/apps/feture/deploy/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/edkiy73/Fit_timer/main/apps/feture/deploy/install.sh | bash
 ```
 `migrate` накатывает только новые миграции; `app` перезапускается с новой сборкой.
 
