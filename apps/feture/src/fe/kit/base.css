@@ -2577,6 +2577,8 @@
 .v21 .btn.text{min-height:44px;font-size:var(--fs-body)}
 .v21 .btn.sm{min-height:36px;font-size:var(--fs-sm)}
 .v21 .btn.icon{width:48px}
+/* `square` stays square at every size (a small one was 48 wide and 36 tall) */
+.v21 .btn.md.icon{width:44px}.v21 .btn.sm.icon{width:36px}
 .v21 .side .create{min-height:48px}
 .v21 .btn.oa{min-height:48px}
 .v21 .inp{min-height:48px}
