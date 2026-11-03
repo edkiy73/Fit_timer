@@ -54,7 +54,8 @@ export const Каналы:S={name:'Каналы категории (ChannelToggl
    <ChannelToggle icon={Smartphone} on={p} label="Пуш: Совпадения" onClick={()=>setP(v=>!v)}/><ChannelToggle icon={Mail} on={e} label="Почта: Совпадения" onClick={()=>setE(v=>!v)}/></>}/>
    <Row icon={MessageCircle} title="Почта выключена" sub="Колонка погашена" end={<><ChannelToggle icon={Smartphone} on label="Пуш" onClick={()=>{}}/><ChannelToggle icon={Mail} on disabled label="Почта" onClick={()=>{}}/></>}/></Card></div>;}};
 
-/** The brand (mark + KINHAZE) in each place it sits; the place sizes it. The sidebar shows the word only on a wide screen,
- * the sign-up card only on a computer. */
-export const Знак:StoryObj<typeof Brand>={name:'Знак KINHAZE',render:a=><div className="wrap"><Brand {...a}/></div>,args:{at:'maint'},
- argTypes:{at:{control:'radio',options:['side','welcome','auth','maint']}}};
+/** The brand in each place it sits; the place sizes it. The wordmark is black on the light theme and white on the dark
+ * one; `compact` shows only the K·N mark. The sidebar shows the wordmark only on a wide screen, the sign-up card only on
+ * a computer. */
+export const Знак:StoryObj<typeof Brand>={name:'Знак KINHAZE',render:a=><div className="wrap"><Brand {...a}/></div>,args:{at:'maint',compact:false},
+ argTypes:{at:{control:'radio',options:['side','welcome','auth','maint']},compact:{control:'boolean'}}};

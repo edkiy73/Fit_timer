@@ -12,9 +12,10 @@
         <item name="windowNoTitle">true</item>
     </style>
 
-    <!-- Splash (Android 12+ system splash, AndroidX compat below): brand background with the KINHAZE mark. -->
+    <!-- Splash (Android 12+ system splash, AndroidX compat below): the white KINHAZE mark
+         (drawable-*dpi/ic_launcher_foreground.png, inside the safe zone) centred on #111012. -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/feture_background</item>
+        <item name="windowSplashScreenBackground">@color/feture_icon_background</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
         <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>

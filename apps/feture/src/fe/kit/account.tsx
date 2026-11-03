@@ -50,12 +50,21 @@ export function Thread({messages,label}:{messages:ThreadMessage[],label:string})
  </div>)}</div>;
 }
 
-/** The KINHAZE brand: the mark (`public/kinhaze-mark.svg`) and the wordmark. `at` is the place, and the place sizes it:
- * the desktop sidebar (only the mark when the sidebar is narrow), the welcome header, the sign-up card on a computer,
- * the maintenance screen. Decorative: the page title already names the app. */
-export function Brand({at}:{at:'side'|'welcome'|'auth'|'maint'}){
+const logo=(name:string)=>import.meta.env.BASE_URL+name;
+/** One logo file in both inks: black on the light theme, white on the dark one (base.css picks by theme; the welcome
+ * stage and the lock screen are dark in both themes and always take the white one). */
+function BrandInk({kind}:{kind:'wordmark'|'mark'}){
+ return <span className={'kb-'+kind}><img className="kb-b" src={logo(`kinhaze-${kind}-black.png`)} alt=""/><img className="kb-w" src={logo(`kinhaze-${kind}-white.png`)} alt=""/></span>;
+}
+
+/** The KINHAZE brand: the wordmark (`public/kinhaze-wordmark-*.png`), or only the K·N mark (`public/kinhaze-mark-*.png`)
+ * when `compact`. `at` is the place, and the place sizes it: the desktop sidebar (the mark when the sidebar is narrow,
+ * the wordmark when wide), the welcome header, the sign-up card on a computer, the maintenance screen. Decorative: the
+ * page title already names the app. */
+export function Brand({at,compact}:{at:'side'|'welcome'|'auth'|'maint',compact?:boolean}){
  const cls={side:'brand',welcome:'w-brand',auth:'auth-logo',maint:'maint-brand'}[at];
- return <div className={'kbrand '+cls} aria-hidden="true"><img className={at==='welcome'?'w-logo':undefined} src={import.meta.env.BASE_URL+'kinhaze-mark.svg'} alt=""/><b>{BRAND}</b></div>;
+ return <div className={'kbrand '+cls+(compact?' compact':'')} aria-hidden="true">
+  {(compact||at==='side')&&<BrandInk kind="mark"/>}{!compact&&<BrandInk kind="wordmark"/>}</div>;
 }
 
 /** The brand every notification carries (push title, email, lock-screen line): KINHAZE and its mark. */
@@ -65,7 +74,7 @@ export const BRAND='KINHAZE';
  * exactly what the chosen mode sends (in «Безопасные» the title is `BRAND`). Decorative: the choice above it is the control. */
 export function LockPreview({items}:{items:readonly {title:ReactNode,body:ReactNode,time:ReactNode}[]}){
  return <div className="k-lock" aria-hidden="true">{items.map((x,i)=><div key={i} className="k-lock-n">
-  <span className="k-lock-app"><img src={import.meta.env.BASE_URL+'kinhaze-mark.svg'} alt=""/>{BRAND}<small>{x.time}</small></span><b>{x.title}</b><span>{x.body}</span></div>)}</div>;
+  <span className="k-lock-app"><img src={logo('kinhaze-mark-white.png')} alt=""/>{BRAND}<small>{x.time}</small></span><b>{x.title}</b><span>{x.body}</span></div>)}</div>;
 }
 
 /** The column heads over channel toggles («Пуш», «Почта»), set in a section label's action slot. */
