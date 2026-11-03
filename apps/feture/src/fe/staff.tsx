@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {ArrowUpDown,BadgeCheck,Ban,CalendarDays,Check,ClipboardCheck,ChevronLeft,ChevronRight,Eye,FilePen,Flag,Gavel,IdCard,Image,ImageOff,Inbox,ListFilter,Lock,MapPin,Minus,RefreshCw,Scale,Search,ShieldAlert,ShieldCheck,UserX,Users,X,Ellipsis,Film,Mic,Camera,Image as ImageIcon,LifeBuoy,Crown,Wrench,ScrollText,KeyRound,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Actions,Alert,Btn,Card,Chip,ChoiceChips,Chips,Divider,Empty,ExpandRow,Field,Form,Group,IconBtn,Input,KeyValues,LoadMore,MoreInfo,Note,Pill,ReviewBar,ReviewCard,ReviewMedia,ReviewObject,ReviewPair,ReviewTiles,type Slide,useBackClose,Row,SearchInput,SectionLabel,Seg,Select,Sheet,Skel,Stack,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble} from './kit';
+import {Actions,Alert,Btn,Card,Chip,ChoiceChips,Chips,Divider,Empty,ExpandRow,Field,Form,Group,IconBtn,Input,KeyValues,LoadMore,MoreInfo,Note,Pill,ReviewBar,ReviewCard,ReviewMedia,ReviewObject,ReviewPair,ReviewTiles,ReviewPreview,type Slide,useBackClose,Row,SearchInput,SectionLabel,Seg,Select,Sheet,Skel,Stack,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble} from './kit';
 import {askFactor,useFe,useLive} from './session';
 import {useToast} from './toast';
 import {pullStaffCounts,useStaffCounts} from './staff-counts';
@@ -753,24 +753,29 @@ function RevisionCard({item,onDone}:{item:RevisionItem,onDone:()=>void}){
  * per look), so the queue itself shows nothing private. */
 type Shown={slides:(Slide|null)[],thumbs:(string|null)[]};
 type Tile={label:string,icon?:LucideIcon|undefined,blur?:string|null|undefined};
-/** Media under review, one look everywhere: square tiles with a caption; a tap opens the full-screen viewer (swipe
+/** Media under review, one look everywhere: square tiles with a caption; a tap on a photo shows it large and sharp under
+ * the tiles (owner 04.11.2026), a tap on that opens the full-screen viewer; a clip opens it at once (swipe
  * between them, ✕ or «Назад» closes it). Private material comes through `load` only on that tap — one journal line per
  * look; what the queue already carries (public covers, photo checks) is `shown`. */
 function LookTiles({tiles,load,shown:given,onShown,note}:{tiles:Tile[],load?:(()=>Promise<Shown>)|undefined,shown?:Shown|undefined,onShown?:((s:Shown)=>void)|undefined,note?:string|undefined}){
  const {t}=useI18n();
  const [got,setGot]=useState<Shown|null>(null);const shown=given??got;
- const [busy,setBusy]=useState(false);const [err,setErr]=useState('');const [open,setOpen]=useState<number|null>(null);
+ const [busy,setBusy]=useState(false);const [err,setErr]=useState('');const [open,setOpen]=useState<number|null>(null);const [big,setBig]=useState<number|null>(null);
  const tap=async(i:number)=>{
   let s=shown;
   if(!s){if(!load)return;setBusy(true);setErr('');
    try{s=await load();setGot(s);onShown?.(s);}catch(e){setErr(feErrorMessage(e,t));return;}finally{setBusy(false);}}
-  if(s.slides[i])setOpen(i);else setErr(t('fe.staff.media.noCopies'));
+  const x=s.slides[i];
+  if(!x){setErr(t('fe.staff.media.noCopies'));return;}
+  if(typeof x==='string'&&big!==i)setBig(i);else setOpen(i);
  };
  const slides=(shown?.slides??[]).filter((x):x is Slide=>!!x);
  const at=open===null||!shown?0:shown.slides.slice(0,open).filter(Boolean).length;
  return <Stack gap={2}>
   <ReviewTiles tiles={tiles.map((x,i)=>({...x,thumb:shown?.thumbs[i]??null,busy}))} onOpen={i=>void tap(i)}/>
   {load&&!shown&&note&&<Note>{note}</Note>}
+  {big!==null&&typeof shown?.slides[big]==='string'&&<ReviewPreview key={big} src={shown.slides[big] as string} label={tiles[big]?.label??''}
+   openLabel={t('fe.staff.media.full')} closeLabel={t('fe.staff.media.fold')} onOpen={()=>setOpen(big)} onClose={()=>setBig(null)}/>}
   {err&&<Alert kind="err">{err}</Alert>}
   {open!==null&&slides.length>0&&<Viewer srcs={slides} index={at} onClose={()=>setOpen(null)}/>}
  </Stack>;

@@ -236,3 +236,18 @@ test('couple albums: either partner manages them; widening waits for the partner
     assert.deepEqual(await tiles(call, 'ua', pair, pair), []);
   } finally { await pg.close(); }
 });
+
+test('the gallery keeps «по доступу» and «только я» photos: the owner sees them, a stranger does not', async () => {
+  const { pg, db, call, person } = await setup();
+  try {
+    const a = await person('ua', 'Alex'), c = await person('uc', 'Noa');
+    const pub = await photoPost(db, call, 'ua', a, 'Всем');
+    const granted = await photoPost(db, call, 'ua', a, 'По доступу', { audience: 'granted' });
+    const only = await photoPost(db, call, 'ua', a, 'Только я', { audience: 'only' });
+    assert.deepEqual(await tiles(call, 'ua', a, a), [only.id, granted.id, pub.id]);
+    const own = (await call('ua', a, { action: 'gallery.list', profileId: a })).items;
+    assert.deepEqual(own.map((/** @type {any} */ t) => t.audience), ['only', 'granted', 'all']);
+    // Without access a stranger gets only the public one.
+    assert.deepEqual(await tiles(call, 'uc', c, a), [pub.id]);
+  } finally { await pg.close(); }
+});
