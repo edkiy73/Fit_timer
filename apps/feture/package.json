@@ -12,6 +12,7 @@
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.server.json",
     "test:smoke": "node tests/smoke.js && node --test tests/vercel-ignore.test.mjs tests/bunny.test.mjs tests/realtime-sse.test.mjs tests/assets-keep.test.mjs",
     "test:unit": "vitest run",
+    "check:client": "npm run check:kit && npm run check:safe-top && npm run check:catalog && npm run typecheck && npm run test:smoke && npm run test:unit && node --test tests/fe-notification-catalog.mjs && npm run build",
     "check": "npm run check:kit && npm run check:safe-top && npm run check:server && npm run check:catalog && npm run typecheck && npm run test:smoke && npm run test:unit && npm run test:security && npm run test:seed && npm run test:interests && npm run build",
     "mobile:sync": "node scripts/mobile.mjs android",
     "mobile:prepare:android": "node scripts/mobile.mjs android",

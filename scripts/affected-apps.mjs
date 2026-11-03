@@ -22,22 +22,18 @@ export function affectedApps(files, appNames){
 }
 
 /* Облегчённая проверка: если в приложении изменено ТОЛЬКО то, что описано в LIGHT_SCOPES
-   (автономные HTML-прототипы FetUre и пати-бар FitTimer), вместо полного `check` запускается его скрипт
-   `check:prototype`. Любой другой файл приложения, Core или корень возвращают полную проверку. */
+   (экраны и тексты FetUre, пати-бар FitTimer), вместо полного `check` запускается его облегчённый скрипт. Любой другой файл приложения, Core или корень возвращают полную проверку. */
 export const LIGHT_SCOPES = {
   /* Пати-бар /bar — автономная статическая страница без сборки и без кода FitTimer. */
   fittimer: {
     script: 'check:bar',
     paths: [/^apps\/fittimer\/bar\//]
   },
+  /* Только экраны и тексты (src/, public/): без сервера, контрактов, миграций и тестов базы — `check:client`
+     (kit, типы, юнит-тесты, каталог уведомлений, сборка) вместо полного `check` с тестами Postgres. */
   feture: {
-    script: 'check:prototype',
-    paths: [
-      /^apps\/feture\/prototype\//,
-      /^apps\/feture\/public\/prototype-v\d+(?:-notes)?\.html$/,
-      /^apps\/feture\/tools\/(?:build|qa)-prototype-v\d+\.mjs$/,
-      /^apps\/feture\/tests\/prototype-v\d+-[\w-]+\.mjs$/
-    ]
+    script: 'check:client',
+    paths: [/^apps\/feture\/src\//, /^apps\/feture\/public\//]
   }
 };
 
