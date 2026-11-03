@@ -41,6 +41,9 @@ export const Событие:StoryObj<typeof NoteEvent>={name:'Событие с�
  <NoteEvent icon={CalendarClock} tone="v" day="14" month="ноя" title="Вечер верёвки для новичков" when="14 ноя, 19:00 · Берлин (UTC+1)" text="В событии изменились детали" time="20 мин" unread onClick={fn()}/>
  <NoteEvent icon={CalendarX} tone="l" day="21" month="ноя" title="Очень длинное название события, которое не помещается в одну строку на телефоне" when="21 ноя, 22:30 · Тбилиси (UTC+4)" text="Событие отменено" time="2 ч" onClick={fn()}/>
  <NoteEvent icon={Calendar} tone="v" text="Новое объявление в событии" gone="Событие больше недоступно" time="3 дн" onClick={fn()}/>
+ {/* The longest short months: the badge sits on the tile's top corner, the month under the day stays whole at 360. */}
+ <NoteEvent icon={CalendarClock} tone="v" day="30" month="сент" title="Сентябрьская встреча" when="30 сент, 19:00 · Москва (UTC+3)" text="Скоро событие" time="1 ч" onClick={fn()}/>
+ <NoteEvent icon={CalendarClock} tone="v" day="28" month="февр" title="Встреча в феврале" when="28 февр, 18:00 · Берлин (UTC+1)" text="В событии изменились детали" time="2 ч" onClick={fn()}/>
 </div>};
 
 export const Сводка:StoryObj<typeof NoteSummary>={name:'Сводка',render:()=><div>

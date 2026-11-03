@@ -14,9 +14,12 @@ const seed = async body => { const r = await fetch(API + '/local/inbox-seed', { 
 
 /** The review screenshots of the screen as it is now: phone light and dark, tablet (the inbox), desktop. */
 async function shots(t, name, { tablet = false } = {}) {
-  if (!SHOTS) return;
+  // SHOTS_NAMES / SHOTS_ONLY (comma lists, e.g. `inbox-templates` / `390-light`) re-take only some of them.
+  if (!SHOTS || (process.env.SHOTS_NAMES && !process.env.SHOTS_NAMES.split(',').includes(name))) return;
   fs.mkdirSync(SHOTS, { recursive: true });
-  const sizes = [[390, 844, 'light'], [390, 844, 'dark'], ...(tablet ? [[768, 1024, 'light']] : []), [1280, 900, 'light']];
+  const only = process.env.SHOTS_ONLY?.split(',');
+  const sizes = [[390, 844, 'light'], [390, 844, 'dark'], ...(tablet ? [[768, 1024, 'light']] : []), [1280, 900, 'light']]
+    .filter(([w, , scheme]) => !only || only.includes(`${w}-${scheme}`));
   for (const [w, h, scheme] of sizes) {
     await t.page.emulateMedia({ colorScheme: scheme });
     await t.page.setViewportSize({ width: w, height: h });

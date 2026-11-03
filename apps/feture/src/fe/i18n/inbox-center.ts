@@ -2,6 +2,15 @@
  * moderation decision card. The rows' own words come from the catalog (contracts/notifications.mjs). */
 export const ru = {
   'fe.kit.note.unread': 'Не прочитано',
+  'fe.ibx.why.minors': 'Защита несовершеннолетних',
+  'fe.ibx.why.threats': 'Угрозы и шантаж',
+  'fe.ibx.why.private_material': 'Чужие приватные материалы',
+  'fe.ibx.why.spam': 'Спам',
+  'fe.ibx.why.illegal': 'Незаконный контент',
+  'fe.ibx.why.community_rules': 'Нарушение правил сообщества',
+  'fe.ibx.why.consent': 'Нет согласия людей на фото',
+  'fe.ibx.why.appeal_granted': 'Апелляция принята',
+  'fe.ibx.why.other': 'Нарушение правил',
   'fe.ac.in.this': 'Этот запрос',
   'fe.ibx.bellBoth': 'Уведомления: нужно решить — {d}, новых — {n}',
   'fe.ibx.andMore': '{name} и ещё {n}',
@@ -45,6 +54,15 @@ export const ru = {
 
 export const en = {
   'fe.kit.note.unread': 'Unread',
+  'fe.ibx.why.minors': 'Protection of minors',
+  'fe.ibx.why.threats': 'Threats and blackmail',
+  'fe.ibx.why.private_material': 'Other people’s private material',
+  'fe.ibx.why.spam': 'Spam',
+  'fe.ibx.why.illegal': 'Illegal content',
+  'fe.ibx.why.community_rules': 'Breaking the community rules',
+  'fe.ibx.why.consent': 'People in the photo did not consent',
+  'fe.ibx.why.appeal_granted': 'Appeal accepted',
+  'fe.ibx.why.other': 'Breaking the rules',
   'fe.ac.in.this': 'This request',
   'fe.ibx.bellBoth': 'Notifications: to decide — {d}, new — {n}',
   'fe.ibx.andMore': '{name} and {n} more',

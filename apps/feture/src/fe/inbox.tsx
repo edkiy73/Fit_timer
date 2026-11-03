@@ -74,6 +74,13 @@ const decideEntry=(d:Decision):Entry|null=>isJoint(d)?entryFor('decide.'+jointBa
 const decideKind=(d:Decision):Kind=>decideEntry(d)?.filter??'other';
 const MODERATION=['contentRemoved','reportResolved','profileSuspended','profileRestricted','profileRestored','profileUnrestricted','appealDecided'];
 
+/** A reason code as a label people read («Спам», «Угрозы и шантаж»): sentence case from the dictionary; a code this
+ * app does not know yet says «Нарушение правил», never the raw value. */
+const reasonLabel=(t:(k:string)=>string,code:unknown)=>{
+ if(typeof code!=='string'||!code)return null;
+ const k='fe.ibx.why.'+code;const s=t(k);return s===k?t('fe.ibx.why.other'):s;
+};
+
 /** «{name} …» / «{couple} · …» with the name in bold, as the prototype's NTXT. */
 function rich(text:string,names:Record<'name'|'couple',string>):ReactNode{
  return text.split(/(\{name\}|\{couple\})/).map((p,i)=>p==='{name}'?<b key={i}>{names.name}</b>:p==='{couple}'?<b key={i}>{names.couple}</b>:<Fragment key={i}>{p}</Fragment>);
@@ -177,6 +184,7 @@ export function InboxScreen(){
  /* ---- rows: the catalog's words, laid out by its card template ---- */
  const day=(v:unknown)=>{try{return new Date(String(v)).toLocaleDateString(locale==='en'?'en-GB':'ru-RU',{day:'numeric',month:'long'});}catch{return '';}};
  const known=(key:string,vars?:Record<string,string>)=>{const s=t(key,vars);return s===key?null:s;};
+ const whyOf=(code:unknown)=>reasonLabel(t,code);
  const coupleNameOf=(n:Note)=>n.coupleName||profiles.find(p=>p.id===(n.couple??n.addressee)&&p.kind==='couple')?.name||couple?.name||t('fe.inbox.whom.couple');
  const noteText=(n:Note,e:Entry|null):ReactNode=>{
   // A type this app does not know yet (a newer server): its generic line, never a blank row.
@@ -213,7 +221,7 @@ export function InboxScreen(){
   const text=noteText(n,e);
   switch(e?.card??'news'){
    case 'safety':{
-    const rule=typeof n.data.rule==='string'?known('fe.ibx.rule.'+n.data.rule):null;
+    const rule=whyOf(n.data.rule);
     const term=['profileSuspended','profileRestricted'].includes(n.type)?(n.data.until?null:t('fe.ibx.untilLifted')):null;
     return <NoteSafety {...base} text={text} reason={rule?t('fe.ibx.reason',{rule}):null} term={term} appeal={MODERATION.includes(n.type)?t('fe.ibx.details'):null}/>;
    }
@@ -331,12 +339,13 @@ export function InboxNoteScreen(){
  useLive('notify',load);
  const day=(v:unknown)=>{try{return new Date(String(v)).toLocaleDateString(locale==='en'?'en-GB':'ru-RU',{day:'numeric',month:'long',year:'numeric'});}catch{return '';}};
  const known=(key:string)=>{const s=t(key);return s===key?null:s;};
+ const whyOf=(code:unknown)=>reasonLabel(t,code);
  const body=()=>{
   if(error)return <Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>;
   if(!r)return <Skel kind="card" rows={1}/>;
   const n=r.item;const d=n.data;const e=entryFor(n.type,d);
   const title=e?noteLine(e,locale,{vars:{date:new Date(String(d.until)).toLocaleDateString(locale==='en'?'en-GB':'ru-RU',{day:'numeric',month:'long'})}}):t('fe.inbox.type.other');
-  const rule=typeof d.rule==='string'&&d.rule!=='expired'?known('fe.ibx.rule.'+d.rule):null;
+  const rule=d.rule!=='expired'?whyOf(d.rule):null;
   const what=typeof d.targetType==='string'&&n.type!=='reportResolved'?known('fe.ibx.target.'+d.targetType):null;
   const term=n.type==='profileSuspended'||n.type==='profileRestricted'?(d.until?t('fe.ibx.termUntil',{date:day(d.until)}):t('fe.ibx.untilLifted'))
    :(n.type==='profileRestored'||n.type==='profileUnrestricted')?(d.rule==='expired'?t('fe.ibx.termEnded'):t('fe.ibx.termLifted')):null;
