@@ -5,6 +5,7 @@ import { POSTER_UPLOAD_KEY } from './media/assets.mjs';
 import { deleteCouple } from './commands/couples.mjs';
 import { setSuspended } from './commands/moderation.mjs';
 import { journal } from './commands/staff.mjs';
+import { alertStaff } from './staff-alert.mjs';
 import { settlePublication } from './commands/posts.mjs';
 import { settleAvatarsOf } from './commands/photos.mjs';
 import { sweepEphemeral } from './commands/chats.mjs';
@@ -55,7 +56,9 @@ export function mediaHandlers(db, deps) {
     },
     // CSAM match or suspicion (S4 §5): the uploader's account and person profile, and the owning profile, are
     // suspended at once and their sessions end at the next request (resolveAccount refuses suspended accounts).
-    // The quarantined original stays as evidence (never purged while blocked); reporting is a staff step.
+    // The quarantined original stays as evidence (never purged while blocked); reporting is a staff step, so owner and
+    // lead are alerted at once (no name, no media: the alert only says a case waits). `by`: the staff member who
+    // escalated it by hand, never alerted about their own step.
     'safety.csamMatch': async (/** @type {any} */ item) => {
       await db.tx(async q => {
         const [m] = await q.query(`select owner_profile_id, uploaded_by, state from feture.media_asset where id = $1`, [id(item)]);
@@ -66,6 +69,7 @@ export function mediaHandlers(db, deps) {
            where state in ('active', 'paused') and (id = $1 or id = (select person_profile_id from feture.account where id = $2))`,
           [m.owner_profile_id, m.uploaded_by]);
         await enqueue(q, 'moderation.csamCase', m.owner_profile_id, { assetId: id(item), account: m.uploaded_by });
+        await alertStaff(q, 'csam', item.payload?.by ? { by: item.payload.by } : {});
       });
     },
     // Deletes the upload and copies of a removed or rejected asset — never of a blocked one (evidence, S4), and

@@ -165,6 +165,47 @@ test('staff learn that something waits: counts per queue, an alert for the serio
   } finally { await pg.close(); }
 });
 
+test('a CSAM match alerts owner and lead at once, with no name and no media; nobody else hears of it', async () => {
+  const { pg, db, call, member, waiting, deliver, rowsOf } = await world();
+  try {
+    const lead = await member('ul', 'Lena');
+    await call('uo', null, { action: 'staff.grant', opId: op(), handle: 'Lena', role: 'lead', grant: true });
+    const a = await member('ua', 'Alex'), b = await member('ub', 'Kira');
+    const [{ id: mod }] = await db.query(`select a.id from feture.account a join feture.profile p on p.id = a.person_profile_id where p.handle = 'Mira'`);
+    const [{ id: boss }] = await db.query(`select a.id from feture.account a join feture.profile p on p.id = a.person_profile_id where p.handle = 'Boss'`);
+    // Two scanner matches (blocked files) of the same uploader: one alert row with a count.
+    const { mediaHandlers } = await import('../server/jobs.mjs');
+    for (const n of [1, 2]) {
+      const asset = await waiting(b, 'post');
+      await db.query(`update feture.media_asset set state = 'blocked' where id = $1`, [asset]);
+      await mediaHandlers(db, { scan: null })['safety.csamMatch']({ id: 'x' + n, payload: { assetId: asset } });
+    }
+    await deliver();
+    const alerts = async (/** @type {string} */ account) => (await rowsOf(account)).filter((/** @type {any} */ n) => n.type === 'staffAlert');
+    for (const staffer of [boss, lead.account]) {
+      const got = await alerts(staffer);
+      assert.equal(got.length, 1);
+      assert.deepEqual(got[0].data, { what: 'csam', count: 2 }); // only the kind and a count: no account, asset or name
+    }
+    const [row] = await db.query(`select actor_profile_id, object_type, object_id from feture.notification where recipient_account_id = $1 and type = 'staffAlert'`, [boss]);
+    assert.deepEqual([row.actor_profile_id, row.object_type, row.object_id], [null, null, null]);
+    assert.ok(await db.query(`select 1 from feture.push_sent where key like $1`, [`q:%:${boss}`]).then(r => r.length), 'a push goes out with it');
+    // A moderator, an ordinary person and the suspended uploader hear nothing.
+    for (const other of [mod, a.account, b.account]) assert.deepEqual(await alerts(other), []);
+    // A lead who escalates a file by hand is not alerted about their own step; the owner is.
+    const c = await member('uc', 'Nika');
+    const asset = await waiting(c, 'post');
+    await call('ul', null, { action: 'staff.mediaDecide', opId: op(), assetId: asset, decision: 'reject', reason: 'csam_suspected' });
+    await db.query(`update feture.notification set read_at = now() where type = 'staffAlert'`);
+    const { drain } = await import('../server/outbox.mjs');
+    while ((await drain(db, mediaHandlers(db, { scan: null }), { limit: 50 })) > 0) { /* until empty */ }
+    await deliver();
+    const unread = async (/** @type {string} */ account) => (await db.query(
+      `select 1 from feture.notification where recipient_account_id = $1 and type = 'staffAlert' and read_at is null`, [account])).length;
+    assert.deepEqual([await unread(boss), await unread(lead.account)], [1, 0]);
+  } finally { await pg.close(); }
+});
+
 // The guard: a decision a staff member can make must tell somebody. A new handler without a notification fails here, so
 // it is either given one or named below with the reason it needs none.
 test('every staff decision handler enqueues a user notification (or is named as one that needs none)', () => {

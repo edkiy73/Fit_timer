@@ -52,6 +52,8 @@ describe('what staff decided, in plain words',()=>{
   expect(text('ru','staffAlert',{what:'support',count:3})).toBe('Новых обращений в поддержку: 3');
   expect(text('en','staffAlert',{what:'dispute'})).toContain('still visible');
   expect(text('ru','staffAlert',{what:'notice'})).toBe('Срочное юридическое обращение');
+  expect(text('ru','staffAlert',{what:'csam'})).toBe('Срочно: аккаунт заблокирован автоматически — нужно подтверждение');
+  expect(text('en','staffAlert',{what:'csam',count:2})).toBe('Automatic blocks waiting for confirmation: 2');
  });
  it('leaves every other row to the inbox',()=>{
   expect(text('ru','communityRejected',{})).toBeNull();
