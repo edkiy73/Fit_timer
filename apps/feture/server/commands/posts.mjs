@@ -211,8 +211,19 @@ export async function settlePublication(q, postId) {
 async function doPublish(q, postId, ownerProfileId) {
   const [p] = await q.query('select state from feture.post where id = $1 and owner_profile_id = $2 for update', [postId, ownerProfileId]);
   if (!p) fail(404, 'not_found');
-  if (p.state !== 'draft') fail(409, 'conflict', { state: p.state });
+  // A couple's archived post comes back through the same path (post.publish checked it can): draft, then settled.
+  if (p.state === 'archived') await q.query(`update feture.post set state = 'draft', updated_at = now() where id = $1`, [postId]);
+  else if (p.state !== 'draft') fail(409, 'conflict', { state: p.state });
   return { state: await settlePublication(q, postId) };
+}
+
+/** May the acting couple bring this archived post back: one of the couple's own (either partner), not removed by
+ * moderation and not under an open report (those stay hidden as evidence, S4 §3).
+ * @param {Q} q @param {Acting} acting @param {string} postId @param {{removed_reason: string | null}} p */
+async function checkRestore(q, acting, postId, p) {
+  if (acting.kind !== 'couple' || p.removed_reason) fail(404, 'not_found');
+  const [{ reported }] = await q.query(`select exists (select 1 from feture.report where target_type = 'post' and target_id = $1 and state = 'open') reported`, [postId]);
+  if (reported) fail(422, 'rule_violation', { rule: 'post_reported' });
 }
 
 /** Minor edits apply at once; a major edit of a post with media (new media, wider audience, many new words) goes to
@@ -669,9 +680,12 @@ const run = {
 
   async 'post.publish'(q, { acting: a, input }) {
     const acting = need(a);
-    const [p] = await q.query(`select state, created_by, rev, type, title, body, audience, community_id from feture.post where id = $1 and owner_profile_id = $2`, [input.postId, acting.profileId]);
-    if (!p || p.created_by !== acting.accountId) fail(404, 'not_found');
-    if (p.state !== 'draft') fail(409, 'conflict', { state: p.state });
+    const [p] = await q.query(`select state, created_by, rev, type, title, body, audience, community_id, removed_reason from feture.post where id = $1 and owner_profile_id = $2`, [input.postId, acting.profileId]);
+    if (!p) fail(404, 'not_found');
+    // A couple's archived post is brought back by either partner, with the same approval as a new one.
+    if (p.state === 'archived') await checkRestore(q, acting, input.postId, p);
+    else if (p.created_by !== acting.accountId) fail(404, 'not_found');
+    else if (p.state !== 'draft') fail(409, 'conflict', { state: p.state });
     await requireCommunityWriter(q, p.community_id, acting);
     if (needsPartner(acting, 'post.publish')) {
       const change = { postId: input.postId, rev: p.rev, type: p.type, title: p.title, body: p.body, audience: p.audience };
@@ -690,7 +704,8 @@ const run = {
     const acting = need(a);
     const state = await deletePost(q, acting, input.postId);
     await dropHiddenPostPhotos(q, acting.profileId); // its photos leave the profile with it (V21 galSelDel)
-    if (acting.kind === 'couple' && state === 'archived') await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: 'post_archived' });
+    // The post's id goes with it: the partner's notification opens that archived post.
+    if (acting.kind === 'couple' && state === 'archived') await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: 'post_archived', postId: input.postId });
     return { state };
   },
 
@@ -820,6 +835,11 @@ const run = {
     const [acc] = await q.query('select show_explicit from feture.account where id = $1', [account.id]);
     const items = [];
     items.push(...await postDtos(q, rows, viewer, cfg.media, !!acc.show_explicit));
+    // «Архив» of a couple: posts a partner deleted, for both partners (not the ones moderators removed).
+    const gone = viewer.kind === 'couple' ? await q.query(
+      `select p.*, true own from feture.post p where p.owner_profile_id = $1 and p.state = 'archived' and p.removed_reason is null
+       order by p.updated_at desc limit 100`, [viewer.profileId]) : [];
+    const archived = gone.length ? await postDtos(q, gone, viewer, cfg.media, !!acc.show_explicit) : [];
     // Saved, not yet published edits: only the partner who saved them sees them (like a couple's drafts).
     const saved = await q.query(
       `select e.post_id, e.payload, e.base_rev, e.saved_at from feture.post_saved_edit e join feture.post p on p.id = e.post_id
@@ -837,7 +857,7 @@ const run = {
       }
       pendingEdits.push({ postId: e.post_id, baseRev: e.base_rev, savedAt: e.saved_at, post, media });
     }
-    return { items, revisions, pendingEdits };
+    return { items, revisions, pendingEdits, archived };
   },
 
   async 'post.saveEdits'(q, { acting: a, input }) {

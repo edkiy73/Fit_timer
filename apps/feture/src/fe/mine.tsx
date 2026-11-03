@@ -3,7 +3,7 @@ import {useCallback,useEffect,useState} from 'react';
 import {useLocation,useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Bookmark,Calendar,Clock,LockOpen,MessageCircle,Newspaper,Pencil,Plus,Trash2,TriangleAlert,Users,X} from 'lucide-react';
+import {Archive,Bookmark,Calendar,Clock,LockOpen,MessageCircle,Newspaper,Pencil,Plus,Trash2,TriangleAlert,Users,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {ActingAv,Alert,Ask,Av,Bar,Btn,Card,DraftCard,Empty,Group,IconBtn,Note,Row,Skel,Stack,View,useRefreshable} from './kit';
 import {useFe,useLive} from './session';
@@ -164,7 +164,7 @@ function Saved(){
 
 // F10 / G04 (screens behind «Мои публикации» and «Сохранённое»).
 const postsRev=z.object({ok:z.literal(true),items:z.array(z.lazy(()=>postSchema)),revisions:z.array(z.object({id:z.uuid(),post_id:z.uuid(),created_at:z.string()}).passthrough()).optional(),
- pendingEdits:z.array(z.lazy(()=>savedEdit)).optional()});
+ pendingEdits:z.array(z.lazy(()=>savedEdit)).optional(),/** A couple's «Архив»: posts a partner deleted. */ archived:z.array(z.lazy(()=>postSchema)).optional()});
 const savedRes=saved;
 const onePost=z.object({ok:z.literal(true),post:z.lazy(()=>postSchema)});
 const oneEvent=z.object({ok:z.literal(true),event:z.object({id:z.uuid(),title:z.string(),kind:z.string(),format:z.enum(['online','offline']),area:z.string().nullable(),tz:z.string().nullable().optional(),placeId:z.string().nullable().optional(),startsAt:z.string(),state:z.string()}).passthrough()});
@@ -203,8 +203,12 @@ export function MyPostsScreen(){
   const drafts=data.items.filter(x=>x.state==='draft'&&!x.returned),returned=data.items.filter(x=>x.state==='draft'&&x.returned);
   const review=data.items.filter(x=>x.state==='review'),pub=data.items.filter(x=>x.state==='published');
   const revIds=new Set((data.revisions??[]).map(r=>r.post_id));const revs=pub.filter(x=>revIds.has(x.id));
-  body=!data.items.length?<Empty icon={Newspaper} title={couple?t('fe.fd.mine.emptyUs'):t('fe.fd.mine.empty')} text={couple?t('fe.fd.mine.emptyTextUs'):t('fe.fd.mine.emptyText')}>
-    <Btn onClick={()=>navigate('/n/feed/new')}>{couple?t('fe.fd.mine.createUs'):t('fe.fd.mine.create')}</Btn></Empty>
+  // «Архив» of a couple (both partners): each opens its post, where it can be brought back.
+  const archived=couple?data.archived??[]:[];
+  const archive=archived.length>0&&<Group title={t('fe.fd.mine.archive',{n:archived.length})} foot={t('fe.fd.mine.archiveFoot')}><Card list>{archived.map(p=><Row key={p.id} icon={Archive}
+   title={mdPlain(p.title||p.body).slice(0,60)||t('fe.fd.mine.noText')} sub={p.updatedAt?t('fe.fd.mine.archivedAt',{when:when(p.updatedAt,locale)}):undefined} onClick={()=>navigate('/n/feed/post/'+p.id)}/>)}</Card></Group>;
+  body=!data.items.length?<><Empty icon={Newspaper} title={couple?t('fe.fd.mine.emptyUs'):t('fe.fd.mine.empty')} text={couple?t('fe.fd.mine.emptyTextUs'):t('fe.fd.mine.emptyText')}>
+    <Btn onClick={()=>navigate('/n/feed/new')}>{couple?t('fe.fd.mine.createUs'):t('fe.fd.mine.create')}</Btn></Empty>{archive}</>
    :<>
     {returned.length>0&&<Group title={t('fe.fd.mine.returned',{n:returned.length})}><Card list>{returned.map(p=>row(p,TriangleAlert,t('fe.fd.mine.returnedSub')))}</Card></Group>}
     {drafts.length>0&&<Group title={t('fe.fd.mine.drafts',{n:drafts.length})}><div className="posts">{drafts.map(p=><DraftCard key={p.id}
@@ -218,6 +222,7 @@ export function MyPostsScreen(){
      onClick={()=>navigate('/n/feed/post/'+p.id)}/>)}</Card></Group>}
     {review.length>0&&<Group title={t('fe.fd.mine.review',{n:review.length})}><div className="posts">{review.map(card)}</div></Group>}
     {pub.length>0&&<Group title={t('fe.fd.mine.published',{n:pub.length})}><div className="posts">{pub.map(card)}</div></Group>}
+    {archive}
    </>;
  }
  return <>

@@ -328,10 +328,10 @@ export function CommunityMembersScreen(){
 /* ---------------- Events ---------------- */
 
 /** The application part of an event's «участие» block (`EventAnswer` status line): the state of my application —
- * none / pending / approved / declined, or a couple's one waiting for the partner — its line and «Отозвать». Null
- * for an event without an application. */
+ * none / pending / approved / declined, or a couple's one waiting for the partner — its line and «Отозвать» (a pending
+ * or an approved one; the screen asks first). Null for an event without an application. */
 export function useEventApplication(e:{requiresApplication:boolean,me:Record<string,unknown>}|null,{busy,onWithdraw,onCancelWait}:{busy?:boolean,
- /** Withdraw a pending application (asks first). */ onWithdraw?:()=>void,/** Take back a couple's application the partner has not approved yet. */ onCancelWait?:()=>void}){
+ /** Withdraw a pending or approved application (asks first). */ onWithdraw?:()=>void,/** Take back a couple's application the partner has not approved yet. */ onCancelWait?:()=>void}){
  const {t}=useI18n();const {acting}=useFe();
  if(!e?.requiresApplication)return null;
  const parsed=application.nullable().optional().safeParse(e.me.application);const app=parsed.success?parsed.data??null:null;
@@ -340,7 +340,7 @@ export function useEventApplication(e:{requiresApplication:boolean,me:Record<str
  const st=(wait?.kind==='event.apply'?'waiting':app&&['pending','approved','declined'].includes(app.state)?app.state:'none') as 'none'|'pending'|'approved'|'declined'|'waiting';
  const icon=({none:FileText,pending:Clock,approved:CircleCheck,declined:X,waiting:Users} as Record<string,LucideIcon>)[st]!;
  const tone=({pending:'wait',waiting:'wait',approved:'ok',declined:'bad'} as Record<string,'wait'|'ok'|'bad'>)[st];
- const act=st==='pending'?onWithdraw:st==='waiting'?onCancelWait:undefined;
+ const act=st==='pending'||st==='approved'?onWithdraw:st==='waiting'?onCancelWait:undefined;
  return {st,status:{tone,icon,title:t('fe.host.app.st.'+st+(st==='pending'&&acting?.kind==='couple'?'Us':'')),sub:t('fe.host.app.stText.'+st),
   action:act&&<Btn kind="soft" size="sm" auto fit disabled={busy} onClick={act}>{t('fe.host.join.withdraw')}</Btn>}};
 }

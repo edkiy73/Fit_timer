@@ -223,6 +223,27 @@ test('edits: minor applies, major goes to review; reports hide and can block; co
     assert.equal((await call('ub', pair, { action: 'post.get', postId: cp.id })).post.state, 'published');
     // Deleting a couple post archives it.
     assert.equal((await call('ub', pair, { action: 'post.delete', opId: op(), postId: cp.id })).state, 'archived');
+    // «Архив» of the couple: both partners see it there (not among the posts) and the partner's notice opens it.
+    for (const u of ['ua', 'ub']) {
+      const mine = await call(u, pair, { action: 'me.posts' });
+      assert.deepEqual(mine.archived.map((/** @type {any} */ x) => x.id), [cp.id], u);
+      assert.ok(!mine.items.some((/** @type {any} */ x) => x.id === cp.id), u);
+    }
+    assert.equal((await db.query(`select payload->>'postId' id from feture.outbox where topic = 'couple.changed' and payload->>'what' = 'post_archived'`))[0].id, cp.id);
+    // Bringing it back is a publication like any other: Alex asks, Kira (who approves his actions) agrees.
+    const back = await call('ua', pair, { action: 'post.publish', opId: op(), postId: cp.id });
+    assert.ok(back.pending?.approvalId, JSON.stringify(back));
+    assert.equal((await call('ua', pair, { action: 'post.get', postId: cp.id })).post.state, 'archived');
+    assert.equal((await call('ub', pair, { action: 'decide.approval', opId: op(), approvalId: back.pending.approvalId, choice: 'approve' })).applied, true);
+    assert.equal((await call('ub', pair, { action: 'post.get', postId: cp.id })).post.state, 'published');
+    assert.deepEqual((await call('ub', pair, { action: 'me.posts' })).archived, []);
+    // A person's archived post (reported, kept as evidence) has no archive and cannot be brought back.
+    const c = await person('uc', 'Noa');
+    const kept = await publish(call, 'uc', c, draft('Спорный пост'));
+    await call('ua', a, { action: 'report.create', opId: op(), targetType: 'post', targetId: kept.id, reason: 'spam', details: 'Подробности для модератора' });
+    assert.equal((await call('uc', c, { action: 'post.delete', opId: op(), postId: kept.id })).state, 'archived');
+    assert.deepEqual((await call('uc', c, { action: 'me.posts' })).archived, []);
+    assert.equal((await call('uc', c, { action: 'post.publish', opId: op(), postId: kept.id })).status, 404);
   } finally { await pg.close(); }
 });
 

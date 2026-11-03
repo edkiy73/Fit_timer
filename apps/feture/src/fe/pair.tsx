@@ -84,6 +84,8 @@ function PairMain({onOpen}:{onOpen:(id:string)=>void}){
  const [nick,setNick]=useState('');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [confirmStop,setConfirmStop]=useState(()=>q.get('stop')==='1');
  const [fresh,setFresh]=useState(false);const [askNew,setAskNew]=useState(false);
  const [link,setLink]=useState<{url:string,expiresAt:string}|null>(null);
+ // The token is shown once (only its hash is kept): a live link is not copied again, «Новая ссылка» replaces it after asking.
+ const [askLink,setAskLink]=useState(false);
  const [token,setToken]=useState<string|null>(()=>{const v=q.get('link');return v&&TOKEN.test(v)?v:pendingPairLink();});
  const op=useRef(newOpId());
  const lookup=usePartnerLookup(nick,person?.id,person?.handle);
@@ -176,14 +178,17 @@ function PairMain({onOpen}:{onOpen:(id:string)=>void}){
       <Btn disabled={busy||!lookup.hit} onClick={()=>act(async()=>{await call('couple.invite',{opId:op.current,handle:nick.trim(),...(couple&&fresh?{replacePaused:true}:{})},ok,{asAccount:true});op.current=newOpId();setNick('');if(couple&&fresh)reload();})}>{t('fe.pair.invite')}</Btn>
      </Card>}
     {!out&&!(couple&&fresh)&&<Group title={t('fe.c6.link.group')} foot={t('fe.c6.link.foot')}>
-     <Stack gap={3}>{inv.link&&<Card list><Row icon={LinkIcon} title={t('fe.c6.link.live')} sub={t('fe.c6.link.until',{date:new Date(inv.link.expiresAt).toLocaleDateString(locale==='en'?'en':'ru',{day:'numeric',month:'long'})})}
+     <Stack gap={3}>{inv.link&&<Card list><Row icon={LinkIcon} title={t('fe.c6.link.live')}
+      sub={t('fe.c6.link.until',{date:new Date(inv.link.expiresAt).toLocaleDateString(locale==='en'?'en':'ru',{day:'numeric',month:'long'})})+' · '+t('fe.c6.link.shownOnce')}
       end={<Btn kind="text" size="sm" auto disabled={busy} onClick={()=>{const id=inv.link!.id;void act(()=>call('couple.linkRevoke',{opId:newOpId(),linkId:id},ok,{asAccount:true}),()=>{setLink(null);toast(t('fe.c6.link.revoked'),{type:'ok'});});}}>{t('fe.c6.link.revoke')}</Btn>}/></Card>}
-     <Btn kind="soft" icon={LinkIcon} disabled={busy} onClick={()=>void makeLink()}>{inv.link?t('fe.c6.link.new'):t('fe.c6.link.copy')}</Btn></Stack>
+     <Btn kind="soft" icon={LinkIcon} disabled={busy} onClick={()=>{if(inv.link)setAskLink(true);else void makeLink();}}>{inv.link?t('fe.c6.link.new'):t('fe.c6.link.copy')}</Btn></Stack>
     </Group>}
    </>}
    {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
   </div></View>
   {guard.node}
+  {askLink&&<Ask icon={LinkIcon} title={t('fe.c6.link.newQ')} text={t('fe.c6.link.newText')} ok={t('fe.c6.link.newOk')} busy={busy}
+   onOk={()=>{setAskLink(false);void makeLink();}} onCancel={()=>setAskLink(false)}/>}
   {link&&<Sheet title={t('fe.c6.link.sheet')} onClose={()=>setLink(null)} foot={<Btn icon={Copy} onClick={()=>{void copyLink(link.url).then(ok=>toast(t(ok?'fe.c6.link.copied':'fe.c6.link.copyHand'),{type:ok?'ok':'info'}));}}>{t('fe.c6.link.copyBtn')}</Btn>}>
    <p className="lead">{t('fe.c6.link.lead')}</p>
    <Field id="fe-pair-link" label={t('fe.c6.link.label')}><Input id="fe-pair-link" name="pairLink" readOnly value={link.url} onFocus={e=>e.currentTarget.select()}/></Field>
