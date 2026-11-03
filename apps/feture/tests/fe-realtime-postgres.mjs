@@ -93,9 +93,12 @@ test('chat.send and chat.read signal the other side with the kind only, after co
     assert.equal((await call('uc', c, { action: 'chat.send', opId: op(), conversationId: conv, body: 'x' })).status, 404);
     assert.deepEqual(sent, []);
 
-    // Receipt: the sender's ticks update; reading again (nothing new) stays quiet.
+    // Reading again (nothing new) stays quiet.
+    // Receipt: the sender's ticks update; my other devices hear that the chat and the counters changed.
     await call('ub', b, { action: 'chat.read', conversationId: conv, upToSeq: 1 });
-    assert.deepEqual(sent, [[{ topic: channelFor(PEPPER, a, [await accountOf(a)]), event: 'new', payload: { k: 'chat' }, private: false }]]);
+    assert.deepEqual(sent, [[{ topic: channelFor(PEPPER, a, [await accountOf(a)]), event: 'new', payload: { k: 'chat' }, private: false },
+      { topic: toB, event: 'new', payload: { k: 'changed', t: 'chat' }, private: false },
+      { topic: toB, event: 'new', payload: { k: 'changed', t: 'counts' }, private: false }]]);
     sent.length = 0;
     await call('ub', b, { action: 'chat.read', conversationId: conv, upToSeq: 1 });
     assert.deepEqual(sent, []);

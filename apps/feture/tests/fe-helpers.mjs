@@ -29,8 +29,9 @@ export const op = () => `018f0000-0000-7000-8000-${String(++ops).padStart(12, '0
  * in the default test session, so tests about other staff work need no codes; true — the real thing
  * (tests/fe-second-factor-postgres.mjs).
  * mail: receives the new-device emails (server/signin.mjs); a request names its address with `x-fit-email`.
- * @param {{commands: Record<string, any>, migrations?: string[], signals?: (db: any) => any, realtime?: {url: string, key: string, transport?: string}, push?: {webKey: string}, billing?: any, staffFactor?: boolean, mail?: any}} opts */
-export async function setup({ commands, migrations = MIGRATIONS, signals, realtime, push, billing, staffFactor = false, mail }) {
+ * @param {{commands: Record<string, any>, migrations?: string[], signals?: (db: any) => any, realtime?: {url: string, key: string, transport?: string}, push?: {webKey: string}, billing?: any, staffFactor?: boolean, mail?: any, kick?: (() => void) | null}} opts
+ * kick: what the handler calls to ask for a worker tick soon (server/kick.mjs). */
+export async function setup({ commands, migrations = MIGRATIONS, signals, realtime, push, billing, staffFactor = false, mail, kick = null }) {
   const pg = new PGlite();
   await pg.exec('create role anon; create role authenticated;');
   await pg.exec(`
@@ -66,7 +67,7 @@ export async function setup({ commands, migrations = MIGRATIONS, signals, realti
       sessionKey: String(req.headers['x-test-session'] ?? 'test-session'), ...(req.headers['x-test-sid'] ? { sessionId: String(req.headers['x-test-sid']) } : {}),
       // The device family and when Core opened the sign-in (new-device notice): `x-test-label`, `x-test-at` (default: now).
       deviceLabel: String(req.headers['x-test-label'] ?? ''), signedInAt: String(req.headers['x-test-at'] ?? new Date().toISOString()) }),
-    quota: async () => true, cors: () => false, log: () => {}, maintenanceTtl: 0, mail: mail ?? null, appUrl: 'https://app.test',
+    quota: async () => true, cors: () => false, log: () => {}, maintenanceTtl: 0, mail: mail ?? null, appUrl: 'https://app.test', kick,
   });
   /** @param {string} user @param {string | null} profile @param {Record<string, unknown>} body @param {Record<string, string>} [headers] */
   const call = async (user, profile, body, headers = {}) => {

@@ -1,6 +1,6 @@
 import {useEffect,useState} from 'react';
 import {z} from 'zod';
-import {useFe,useRealtime} from './session';
+import {useFe,useLive} from './session';
 
 /** How much waits for the signed-in staff member (server/commands/staff-counts.mjs): per queue, in support, and in all.
  * Shared by the badge in the profile, the dock and the staff screen: one call serves them all (not again within 10 s),
@@ -30,6 +30,6 @@ export function useStaffCounts(enabled:boolean):StaffCounts|null{
   const id=setInterval(()=>{if(!document.hidden)void pullStaffCounts(call);},60000);
   return ()=>{subs.delete(setC);clearInterval(id);};
  },[call,enabled]);
- useRealtime(['notify'],()=>{if(enabled)void pullStaffCounts(call,true);});
+ useLive(['notify','counts'],()=>{if(enabled)void pullStaffCounts(call,true);});
  return enabled?c:null;
 }

@@ -81,7 +81,9 @@ export function createHub({ maxPerAddress = 20, maxTotal = 20_000 } = {}) {
     // retry: how long the browser waits before reconnecting by itself; the comment opens the stream at once.
     res.write('retry: 5000\n: ok\n\n');
     const unsubscribe = subscribe(topics, e => { res.write(`data: ${JSON.stringify(e)}\n\n`); });
-    const beat = setInterval(() => res.write(': hb\n\n'), HEARTBEAT_MS);
+    // A named event, not a comment: the app's watchdog sees it (EventSource hides comments) and reopens a stream that
+    // went quiet — after the phone slept, a dead connection still looks open (src/fe/realtime.ts).
+    const beat = setInterval(() => res.write('event: hb\ndata: 1\n\n'), HEARTBEAT_MS);
     let closed = false;
     const close = () => {
       if (closed) return;

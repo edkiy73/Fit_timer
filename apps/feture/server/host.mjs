@@ -7,7 +7,8 @@
  *   - `PUT /api/fe-upload` → the media upload proxy (bytes streamed to Bunny, never buffered);
  *   - static `dist/` with the cache headers from vercel.json;
  *   - `GET /api/fe-events` → realtime signals over SSE (server/realtime-sse.mjs; on Supabase it was Broadcast);
- *   - the queue worker tick once a minute (on Supabase it was pg_cron + pg_net + Vault).
+ *   - the queue worker tick once a minute (on Supabase it was pg_cron + pg_net + Vault), and a quick one soon after a
+ *     command queued something (server/kick.mjs).
  * Runs behind Caddy: `X-Forwarded-For` is whatever Caddy set (it drops a client-supplied one), so the first entry is
  * the real client address that Core's rate limits read. The port must stay inside the compose network.
  * Old builds' `/assets/*` keep being served after a deploy from ASSETS_KEEP_DIR (server/assets-keep.mjs).
@@ -21,6 +22,7 @@ import { bunnyFromEnv } from './media/bunny.mjs';
 import { createUploadHandler } from './media/upload-proxy.mjs';
 import { hub } from './realtime-sse.mjs';
 import { keepAssets } from './assets-keep.mjs';
+import { setJobKick } from './kick.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const env = process.env;
@@ -142,22 +144,43 @@ server.headersTimeout = 60 * 1000;
 server.keepAliveTimeout = 65 * 1000;
 server.listen(PORT, '0.0.0.0', () => console.log(`feture host on :${PORT}, static ${STATIC_DIR}, uploads ${upload ? 'on' : 'off'}`));
 
-/* Queue worker tick: once a minute, never two at a time. The same authenticated call pg_cron made. */
+/* Queue worker tick: once a minute, never two at a time. The same authenticated call pg_cron made.
+ * A command that queued something people are told about kicks a quick tick (server/kick.mjs, owner 03.11.2026:
+ * notifications and counters in seconds): debounced, so a burst of commands makes one tick, and run through the same
+ * `ticking` guard, so the outbox is never drained by two ticks at once; a kick during a tick runs one more after it. */
+const KICK_MS = 1500;
 let ticking = false;
-async function tick() {
-  if (ticking || !env.FETURE_JOBS_SECRET) return;
+let kickAgain = false;
+/** @type {ReturnType<typeof setTimeout> | null} */
+let kickTimer = null;
+/** @param {boolean} [quick] */
+async function tick(quick = false) {
+  if (!env.FETURE_JOBS_SECRET) return;
+  if (ticking) { if (quick) kickAgain = true; return; }
   ticking = true;
+  let again = false;
   try {
-    const res = await fetch(`http://127.0.0.1:${PORT}/api/fe?jobs=1`, {
+    const res = await fetch(`http://127.0.0.1:${PORT}/api/fe?jobs=1${quick ? '&quick=1' : ''}`, {
       method: 'POST', headers: { Authorization: `Bearer ${env.FETURE_JOBS_SECRET}`, 'Content-Type': 'application/json' }, body: '{}',
       signal: AbortSignal.timeout(55_000),
     });
     if (!res.ok) console.warn('feture_jobs_tick', res.status);
+    // The tick queued work the next one should take now (a scan's approval completes posts and avatars).
+    else again = (/** @type {any} */ (await res.json().catch(() => ({})))).again === true;
   } catch (error) {
     console.warn('feture_jobs_tick', /** @type {any} */ (error)?.name || 'error');
   } finally { ticking = false; }
+  if (kickAgain || again) { kickAgain = false; kick(); }
 }
-if (env.FETURE_JOBS_DISABLED !== '1') setInterval(tick, 60_000).unref();
+function kick() {
+  if (kickTimer) return;
+  kickTimer = setTimeout(() => { kickTimer = null; void tick(true); }, KICK_MS);
+  kickTimer.unref();
+}
+if (env.FETURE_JOBS_DISABLED !== '1') {
+  setInterval(tick, 60_000).unref();
+  setJobKick(kick);
+}
 
 const stop = () => { server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 10_000).unref(); };
 process.on('SIGTERM', stop);

@@ -29,6 +29,7 @@ import { verification } from '../server/commands/verification.mjs';
 import { accounts } from '../server/commands/account.mjs';
 import { support, takeHelp } from '../server/commands/support.mjs';
 import { runJobs } from '../server/jobs.mjs';
+import { kickJobs } from '../server/kick.mjs';
 import { dsa, takeNotice } from '../server/commands/dsa.mjs';
 import { readJson } from '../server/handler.mjs';
 import { createR2Storage } from '../server/media/r2.mjs';
@@ -159,6 +160,8 @@ const handler = db && createFeHandler({
   // The new-device email goes straight to the signed-in address (never stored): server/signin.mjs.
   mail: configured ? coreMailer() : null,
   appUrl: appUrl(),
+  // On our own server the host runs a quick worker tick a moment after a command queued something (server/kick.mjs).
+  kick: kickJobs,
 });
 
 /** @param {string} given @param {string} expected */
@@ -190,7 +193,8 @@ export default async function fe(/** @type {any} */ req, /** @type {any} */ res)
       const push = pushTransport({ native: info.android || info.ios ? CorePush.sendToDevice : null, web: webPush });
       // Only a real sending domain: Resend's test domain delivers to its owner alone.
       const mail = coreMailer();
-      return json(res, 200, { ok: true, ...(await runJobs(db, { scan, push, mail, signals })) });
+      // `quick=1`: a kicked tick (server/host.mjs) — the queues only; the sweeps stay with the minute tick.
+      return json(res, 200, { ok: true, ...(await runJobs(db, { scan, push, mail, signals, quick: flag(req, 'quick') })) });
     } catch {
       return json(res, 503, { ok: false, error: 'unavailable' });
     }

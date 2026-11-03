@@ -7,7 +7,7 @@ import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicBase} from '../api-url';
 import {copyLink} from './share';
 import {Actions,Alert,Av,Bar,Btn,Card,Field,Group,H,Input,Note,PersonLine,Pill,RadioList,RequestCard,Row,SelectRow,Sheet,Skel,Stack,View,Who,useLeaveGuard} from './kit';
-import {useFe} from './session';
+import {useFe,useLive} from './session';
 import {Ask} from './me';
 import {useToast} from './toast';
 import {when} from './feed';
@@ -81,6 +81,8 @@ export function PairScreen(){
   if(!couple||fresh)call('couple.invites',{},invitesRes,{asAccount:true,fresh:true}).then(setInv).catch(e=>setFailure(feErrorMessage(e,t)));
  },[call,couple,fresh,t]);
  useEffect(()=>{load();},[load]);
+ // The partner accepted, declined, stopped or restored (`changed:couple`, and `boot` brings the couple itself).
+ useLive(['couple','decide'],load);
  // Already in a couple: a partner link cannot be used — say so once and forget it.
  const inCouple=couple?.state==='active';
  useEffect(()=>{if(token&&inCouple){dropLink();setToken(null);toast(t('fe.pair.rule.already_in_couple'),{type:'warn'});}},[token,inCouple,toast,t]);
@@ -291,6 +293,7 @@ function CoupleSettings({c,coupleId,other,trustOpen,onChanged}:{c:Couple,coupleI
    .then(([st,grants,pendingDiscover])=>setS({mode:st.settings.discoverMode,req:st.settings.requestsFrom??'all',grants,pendingDiscover})).catch(()=>{});
  },[call,coupleId]);
  useEffect(()=>{load();},[load]);
+ useLive(['couple','profile','decide'],load);
  if(c.state!=='active')return null;
  const safe=async(key:string,fn:()=>Promise<unknown>,msg:string)=>{setBusy(key);try{await fn();toast(msg,{type:'ok'});load();onChanged();}catch(e){toast(feErrorMessage(e,t),{type:'err'});}finally{setBusy('');}};
  const hide=()=>void safe('hide',()=>call('profile.setVisibility',{opId:newOpId(),setting:'discoverMode',value:'off'},ok,{profileId:coupleId}),t('fe.c6.safe.hidden'));

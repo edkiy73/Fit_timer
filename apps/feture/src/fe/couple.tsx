@@ -7,7 +7,7 @@ import {Calendar,Check,Clock,Eye,MapPin,Pencil,Video,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {ActorCard,ActorCards,Alert,Av,Btn,Card,Counter,Empty,EventTile,Field,Group,Note,ReturnNote,ReviewMeta,ReviewPost,Row,Sheet,Spacer,Stack,TextArea,Who} from './kit';
 import {NamedPlate} from './comm-kit';
-import {useFe,useRealtime} from './session';
+import {useFe,useLive} from './session';
 import {useToast} from './toast';
 import {FIELD,textLength,useChecks} from './kit/validate';
 
@@ -47,12 +47,15 @@ const kindTitle=(a:Approval,t:(k:string)=>string)=>t('fe.cw.kind.'+(KINDS.includ
 function useCoupleMembers(coupleId?:string){
  const {call,acting}=useFe();const [members,setMembers]=useState<Member[]|null>(null);
  const id=coupleId??(acting?.kind==='couple'?acting.id:undefined);
+ const [n,setN]=useState(0);
  useEffect(()=>{
   if(!id)return;
   const ctl=new AbortController();
   call('couple.get',{},coupleRes,{profileId:id,signal:ctl.signal}).then(r=>setMembers(r.couple.members)).catch(()=>{});
   return ()=>ctl.abort();
- },[call,id]);
+ },[call,id,n]);
+ // A partner's change of approvals, a stop or a restore: `changed:couple`.
+ useLive('couple',()=>setN(x=>x+1));
  return members;
 }
 
@@ -64,7 +67,8 @@ function useApprovals(coupleId:string|undefined,tick=0){
   call('decide.approvals',{},approvalsRes,{profileId:coupleId,fresh:true}).then(r=>setItems(r.items)).catch(()=>{});
  },[call,coupleId]);
  useEffect(()=>{load();},[load,tick]);
- useRealtime(['decide'],load);
+ // Asked, decided or withdrawn on either side (`decide`), or the approval mode changed (`couple`, `notify`).
+ useLive(['decide','couple','notify'],load);
  return {items,load};
 }
 

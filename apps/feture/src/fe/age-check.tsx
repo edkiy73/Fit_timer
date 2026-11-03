@@ -6,7 +6,7 @@ import {Camera,CameraOff,Clock,FileUp,Hand,IdCard,ImagePlus,Info,Lock,RefreshCw,
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Actions,Alert,Bar,Btn,CaptureFrame,Card,Empty,FilePick,Group,RadioList,Row,Skel,Text,View} from './kit';
 import {useSendPhoto} from './media-upload';
-import {useFe,useShown} from './session';
+import {useFe,useLive,useShown} from './session';
 
 /** V21 A07 «Проверка возраста» on /api/fe (server/commands/premium.mjs). Two methods:
  * - selfie: the server picks a gesture (`verification.ageStart`), the person sends a selfie making it, staff compare
@@ -83,6 +83,8 @@ export function AgeCheckScreen(){
  const sendPhoto=useSendPhoto('verification',{},person?.id);
  const load=useCallback((fresh=false)=>{setError(null);call('verification.ageStatus',{},statusRes,{asAccount:true,fresh}).then(setS).catch(setError);},[call]);
  useEffect(()=>{load();},[load]);
+ // A staff decision reaches the open screen at once: `changed:check`.
+ useLive('check',()=>load());
  useEffect(()=>()=>{if(shot)URL.revokeObjectURL(shot.url);},[shot]);
 
  const c=s?.check??null;

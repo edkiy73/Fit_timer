@@ -125,3 +125,12 @@ export function onNativePushTap(open:(route:string)=>void):()=>void{
  }).then(h=>{if(gone)void h.remove();else handle=h;});
  return ()=>{gone=true;void handle?.remove();};
 }
+
+/** A push that arrives while the app is open is a hint that something changed: `fn` resyncs (session.tsx). The stream
+ * usually told the screens already; after a sleep it may not have. */
+export function onForegroundPush(fn:()=>void):()=>void{
+ if(!nativePushSupported())return ()=>{};
+ let handle:{remove:()=>Promise<void>}|null=null;let gone=false;
+ void PushNotifications.addListener('pushNotificationReceived',()=>fn()).then(h=>{if(gone)void h.remove();else handle=h;});
+ return ()=>{gone=true;void handle?.remove();};
+}

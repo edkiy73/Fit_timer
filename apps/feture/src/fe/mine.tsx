@@ -6,7 +6,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Bookmark,Calendar,Clock,LockOpen,MessageCircle,Newspaper,Pencil,Plus,Trash2,TriangleAlert,Users,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {ActingAv,Alert,Ask,Av,Bar,Btn,Card,DraftCard,Empty,Group,IconBtn,Note,Row,Skel,Stack,View,useRefreshable} from './kit';
-import {useFe} from './session';
+import {useFe,useLive} from './session';
 import {PostCard,SavedEditSheet,postSchema,savedEdit,when,type Post,type SavedEdit} from './feed';
 import {EventRow,type Ev} from './browse';
 import {CreateSheet} from './create-entry';
@@ -102,6 +102,8 @@ function useLoad<T>(fn:(fresh:(v:T)=>void)=>Promise<T>){
  const [data,setData]=useState<T|null>(null);const [error,setError]=useState<unknown>(null);
  const load=useCallback(()=>{setError(null);fn(setData).then(setData).catch(setError);},[fn]);
  useEffect(()=>{load();},[load]);useRefreshable(load);
+ // A post published after its review, returned, removed, or a file checked: the list follows (server/live.mjs).
+ useLive(['post','media'],load);
  return {data,setData,error,load};
 }
 function Failed({error,retry}:{error:unknown,retry:()=>void}){const {t}=useI18n();return <Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={retry}>{t('fe.retry')}</Btn></Empty>;}
