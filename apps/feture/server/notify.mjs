@@ -74,6 +74,17 @@ const TYPES = /** @type {Record<string, {type: string, actor?: string, object?: 
   // A sign-in from a new device (server/signin.mjs): to the account, always (no setting turns it off); opens «Мои устройства».
   'signin.new': { type: 'signinNew' },
 });
+
+/** Topics that are only history or staff markers: the worker marks them done without telling anyone, and the 7-day
+ * sweep removes them (some «told already today» checks read the outbox). Every enqueued topic is either handled or
+ * listed here (tests/fe-notify-topics-postgres.mjs).
+ * - `access.revoked`, `access.declined`, `match.ended`: silent by owner decision (the other side is not told).
+ *   `access.declined` waits out the undo window first (its `available_at`), so an undo still finds it undelivered.
+ * - `community.joined`: silent for now; a daily summary for the host comes later.
+ * - `moderation.*`: staff queues read their own tables (reports, revisions, checks, appeals); nobody reads the marker. */
+export const SILENT_TOPICS = Object.freeze(['access.revoked', 'access.declined', 'match.ended', 'community.joined',
+  'moderation.ageCheck', 'moderation.appeal', 'moderation.community', 'moderation.csamCase', 'moderation.event',
+  'moderation.mediaReview', 'moderation.photoCheck', 'moderation.postRevision', 'moderation.report']);
 /** Payload fields kept in `data` (codes and ids only, never free text; `device` / `place` of a new sign-in are Core's
  * device family and the edge network's «city|CC», never anything a person typed). */
 const KEEP = ['device', 'place', 'what', 'change', 'reason', 'state', 'kind', 'resolution', 'rule', 'targetType', 'targetId', 'answer', 'outcome', 'changes', 'approves', 'ticketId', 'days', 'until', 'target', 'purpose', 'count', 'role', 'grant'];
@@ -205,6 +216,8 @@ export function notifyHandlers(db, emit = () => {}) {
           [r.account, p.purpose, p.state, p.reason ?? '', p.kind ?? '', object?.[1] ?? null, r.profile]);
         if (prev) {
           await q.query(`update feture.notification set data = jsonb_set(data, '{count}', to_jsonb(coalesce((data->>'count')::int, 1) + 1)) where id = $1`, [prev.id]);
+          // Open screens still refresh: the row they show now counts one more.
+          const to = await signalTo(q, r); if (to) out.push({ profile: to, kind: 'notify' });
           continue;
         }
         await write(q, item, { type: 'mediaDecided', actor: null, objectType: object?.[0] ?? null, objectId: object?.[1] ?? null, data: pick(p) }, [r], out);
@@ -225,6 +238,7 @@ export function notifyHandlers(db, emit = () => {}) {
            order by created_at desc limit 1`, [r.account, p.what, p.reason ?? '']);
         if (prev) {
           await q.query(`update feture.notification set data = jsonb_set(data, '{count}', to_jsonb(coalesce((data->>'count')::int, 1) + 1)) where id = $1`, [prev.id]);
+          const to = await signalTo(q, r); if (to) out.push({ profile: to, kind: 'notify' });
           continue;
         }
         await write(q, item, { type: 'staffAlert', actor: null, data: pick(p) }, [r], out);
@@ -263,19 +277,21 @@ export function notifyHandlers(db, emit = () => {}) {
       for (const r of await recipientsOf(q, item.profile_id, p)) await queuePush(q, item, r, 'messages', undefined, message);
     });
   };
-  // Things to decide are in «Нужно решить», not in the inbox; the recipients get a push.
-  for (const topic of ['decide.created', 'access.requested', 'community.requested', 'event.applied', 'couple.invited', 'tag.requested']) {
-    handlers[topic] = async item => {
-      await tx(async (q, out) => {
-        for (const r of await recipientsOf(q, item.profile_id, item.payload)) {
-          const by = /** @type {any} */ (item.payload).from;
-          if (by && (await q.query(`select feture.blocked($1, $2) b`, [r.profile ?? by, by]))[0].b) continue;
-          await queuePush(q, item, r, 'decide');
-          const to = await signalTo(q, r); if (to) out.push({ profile: to, kind: 'decide' });
-        }
-      });
-    };
-  }
+  // Things to decide are in «Нужно решить», not in the inbox; the recipients get a push and their open screens a signal.
+  // `from` names who asks: nothing reaches someone who blocked them (or whom they blocked) since. An item addressed to
+  // the account (a couple invite) is checked against the account's own person profile.
+  /** @param {OutboxItem} item */
+  const toDecide = item => tx(async (q, out) => {
+    const by = /** @type {any} */ (item.payload).from;
+    for (const r of await recipientsOf(q, item.profile_id, item.payload)) {
+      const to = await signalTo(q, r);
+      if (by && to && (await q.query(`select feture.blocked($1, $2) b`, [to, by]))[0].b) continue;
+      await queuePush(q, item, r, 'decide');
+      if (to) out.push({ profile: to, kind: 'decide' });
+    }
+  });
+  for (const topic of ['decide.created', 'access.requested', 'community.requested', 'event.applied', 'couple.invited', 'tag.requested',
+    'link.proposed', 'link.changeProposed']) handlers[topic] = toDecide;
   // A like is announced only while it still stands (a retried item must not bring back a withdrawn one).
   const plain = handlers['like.received'];
   handlers['like.received'] = async item => {
@@ -283,9 +299,21 @@ export function notifyHandlers(db, emit = () => {}) {
       [/** @type {any} */ (item.payload).from, item.profile_id]);
     if (l) await plain(item);
   };
-  // A returned approval is already in «Нужно решить» of the one who asked; only other outcomes are news.
+  // A returned approval comes back to «Нужно решить» of the one who asked: a push and a signal there, no inbox row.
   const decided = handlers['decide.resolved'];
-  handlers['decide.resolved'] = async item => { if (/** @type {any} */ (item.payload).state !== 'returned') await decided(item); };
+  handlers['decide.resolved'] = async item => { await (/** @type {any} */ (item.payload).state === 'returned' ? toDecide(item) : decided(item)); };
+  // A post sent back to drafts after its photos were checked (posts.mjs settlePublication): its author is told, while it
+  // is still a draft (a couple's draft is its writer's alone — the post visibility check in write() keeps it so).
+  handlers['post.returned'] = async item => {
+    const p = /** @type {any} */ (item.payload);
+    await tx(async (q, out) => {
+      const [post] = await q.query(`select owner_profile_id from feture.post where id = $1 and state = 'draft'`, [p.postId]);
+      if (!post) return;
+      await write(q, item, { type: 'postReturned', actor: null, objectType: 'post', objectId: p.postId, data: pick(p) },
+        await recipientsOf(q, post.owner_profile_id, {}), out);
+    });
+  };
+  for (const topic of SILENT_TOPICS) handlers[topic] = async () => {};
   // A withdrawn like takes its notification back (V21: «они не узнают»).
   handlers['like.withdrawn'] = async item => {
     const p = /** @type {any} */ (item.payload);

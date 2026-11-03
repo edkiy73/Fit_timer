@@ -346,6 +346,7 @@ export const en: Record<keyof typeof ru, string> = {
   "fe.inbox.type.disputeResolved": "The dispute is resolved",
   "fe.inbox.type.revisionApproved": "Your edit was approved",
   "fe.inbox.type.revisionRejected": "Your edit wasn’t approved",
+  "fe.inbox.type.postReturned": "Your post came back from review",
   "fe.inbox.type.contentRemoved": "Removed by a moderator",
   "fe.inbox.type.reportResolved": "Your report was reviewed",
   "fe.inbox.type.communityApproved": "Your join request was approved",

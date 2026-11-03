@@ -29,7 +29,7 @@ Read this before adding or changing a command. Design background: `docs/server/S
 | Media in a response | `mediaDto` / `avatarSrc` (`media/assets.mjs`) — never sign URLs by hand |
 | Faces in lists | `withFaces` / `faces.mjs` |
 | Couple needs the partner | `needsPartner`, `requestApproval`, `registerApprovalKind` (`approvals.mjs`) |
-| Notify / push / inbox | `enqueue(q, topic, profileId, payload)` (`outbox.mjs`); account-addressed items set `for` |
+| Notify / push / inbox | `enqueue(q, topic, profileId, payload)` (`outbox.mjs`); account-addressed items set `for`; a new topic gets a handler (`notify.mjs`) or goes into `SILENT_TOPICS` — `tests/fe-notify-topics-postgres.mjs` fails otherwise |
 | Live update of the other side | `signal(profileId, kind)` from the handler context (sent after commit) |
 | Idempotent writes | the handler pipeline stores `opId` results; never add a second ledger |
 | Text from people in a contract | `field('<name>')` from `contracts/_text.mjs` (rules in `FIELD`, shared with the app's forms); `text(max)` / `line(max)` only for a one-off. Never `z.string()` for something people type and others see |

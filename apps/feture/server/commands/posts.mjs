@@ -181,14 +181,14 @@ async function announce(q, postId) {
 /** Publishes now or puts the post on review until its media are checked. Shared by the direct path, the couple
  * approval and the media.approved job. @param {Q} q @param {string} postId */
 export async function settlePublication(q, postId) {
-  const [p] = await q.query('select id, audience, state from feture.post where id = $1 for update', [postId]);
+  const [p] = await q.query('select id, audience, state, owner_profile_id from feture.post where id = $1 for update', [postId]);
   if (!p || !['draft', 'review'].includes(p.state)) return p?.state ?? 'missing';
   const media = await q.query(
     `select m.state, m.explicitness from feture.media_attachment a join feture.media_asset m on m.id = a.asset_id
      where a.target_type = 'post' and a.target_id = $1`, [postId]);
   if (media.some(m => ['rejected', 'blocked', 'removed'].includes(m.state))) {
     await q.query(`update feture.post set state = 'draft', removed_reason = 'media_rejected' where id = $1`, [postId]);
-    await enqueue(q, 'post.returned', null, { postId, reason: 'media_rejected' });
+    await enqueue(q, 'post.returned', p.owner_profile_id, { postId, reason: 'media_rejected' });
     return 'draft';
   }
   if (media.some(m => m.state !== 'approved')) {
@@ -198,7 +198,7 @@ export async function settlePublication(q, postId) {
   // Explicit media never go to public places (Q2): such a post goes back to its author.
   if (PUBLIC_AUD.has(p.audience) && media.some(m => m.explicitness !== 'safe')) {
     await q.query(`update feture.post set state = 'draft', removed_reason = 'explicit_in_public' where id = $1`, [postId]);
-    await enqueue(q, 'post.returned', null, { postId, reason: 'explicit_in_public' });
+    await enqueue(q, 'post.returned', p.owner_profile_id, { postId, reason: 'explicit_in_public' });
     return 'draft';
   }
   await q.query(`update feture.post set state = 'published', published_at = coalesce(published_at, now()), removed_reason = null where id = $1`, [postId]);
