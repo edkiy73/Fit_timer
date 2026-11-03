@@ -1,7 +1,7 @@
 /** «Обо мне» facts (owner 29.10.2026): height, smoking, alcohol, kids, languages, zodiac sign. */
 export const ru = {
   'fe.ab.title': 'Обо мне',
-  'fe.ab.add': 'Добавить факты',
+  'fe.ab.add': 'Рассказать о себе',
   'fe.ab.addSub': 'Рост, языки, курение — что захочешь',
   'fe.ab.foot': 'Всё по желанию. Видят все.',
   'fe.ab.none': 'Не указано',
@@ -73,7 +73,7 @@ export const ru = {
 
 export const en = {
   'fe.ab.title': 'About me',
-  'fe.ab.add': 'Add facts',
+  'fe.ab.add': 'Tell about yourself',
   'fe.ab.addSub': 'Height, languages, smoking — whatever you like',
   'fe.ab.foot': 'All optional. Everyone sees these.',
   'fe.ab.none': 'Not set',

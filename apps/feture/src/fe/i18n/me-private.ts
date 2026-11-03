@@ -1,7 +1,7 @@
 // «Я»: one «add» card for every empty block, and «Приватное» as the private part itself (owner, 29.10.2026).
 export const ru = {
-  'fe.mp.bioAdd': 'Добавить описание',
-  'fe.mp.bioAddUs': 'Добавить описание',
+  'fe.mp.bioAdd': 'Расскажи о себе',
+  'fe.mp.bioAddUs': 'Расскажите о себе',
   'fe.mp.bioAddSub': 'Пара фраз — кто ты и что тебе близко',
   'fe.mp.bioAddSubUs': 'Пара фраз — кто вы и что вам близко',
   'fe.mp.detailsAdd': 'Добавить данные',
@@ -25,8 +25,8 @@ export const ru = {
   'fe.mp.jarsAddSubUs': 'То, чем делитесь не со всеми',
 } as const;
 export const en = {
-  'fe.mp.bioAdd': 'Add a description',
-  'fe.mp.bioAddUs': 'Add a description',
+  'fe.mp.bioAdd': 'Tell about yourself',
+  'fe.mp.bioAddUs': 'Tell about yourselves',
   'fe.mp.bioAddSub': 'A few lines — who you are and what you like',
   'fe.mp.bioAddSubUs': 'A few lines — who you are and what you like',
   'fe.mp.detailsAdd': 'Add details',

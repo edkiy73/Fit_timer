@@ -321,12 +321,6 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged,askHere=true}:
    {askHere&&<Card list><SelectRow row label={t('fe.mx.pr.reqFrom')} value={requestsFrom} options={(['all','matches','none'] as const).map(v=>[v,t('fe.mx.pr.from.'+v)] as const)}
     onChange={v=>void act(()=>call('profile.setVisibility',{opId:newOpId(),setting:'requestsFrom',value:v},ok),t('fe.mx.saved'))}/></Card>}
   </section>
-  {/* Owner 04.11.2026: an empty part is one short list, not three «add» cards that look like the profile's own. */}
-  {empty?<Card list>
-   {!cp&&<Row icon={PenLine} title={t('fe.mp.desc')} sub={t('fe.mp.descAddSub')} onClick={()=>setSheet({k:'desc'})}/>}
-   {!cp&&<Row icon={Camera} title={t('fe.mp.media')} sub={t('fe.mp.mediaAddSub')} disabled={busy} onClick={()=>file.current?.click()}/>}
-   <Row icon={Sparkles} title={t('fe.mp.jars')} sub={t(cp?'fe.mp.jarsAddSubUs':'fe.mp.jarsAddSub')} disabled={!jars.items} onClick={addJar}/>
-  </Card>:<>
   {!cp&&<Group id="privDesc" title={t('fe.mp.desc')}>
    {txt?<Card className="blk-btn" label={t('fe.mx.editOf',{title:t('fe.mp.desc')})} onClick={()=>setSheet({k:'desc'})}><span className="blk-bio">{txt}</span><span className="chv"><ChevronRight/></span></Card>
     :<AddCard icon={PenLine} title={t('fe.mp.descAdd')} sub={t('fe.mp.descAddSub')} onClick={()=>setSheet({k:'desc'})}/>}
@@ -341,7 +335,6 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged,askHere=true}:
    {privJars.length?<Jars list={sortJars(privJars)} topics={jars.topics} onOpen={id=>setSheet({k:'jar',id})}/>
     :<AddCard icon={Sparkles} title={t('fe.mp.jarsAdd')} sub={t(cp?'fe.mp.jarsAddSubUs':'fe.mp.jarsAddSub')} disabled={!jars.items} onClick={addJar}/>}
   </Group>
-  </>}
   {/* Requests to me and who sees what live in the one «Доступы» screen (owner, 29.10.2026: no second copy here). */}
   <Group id="privWho"><Card list><Row icon={KeyRound} title={t('fe.ac.entry')} badge={reqs.items.length||undefined}
    sub={reqs.items.length?t('fe.ac.entryWait',{n:reqs.items.length}):given.length?t('fe.ac.entryOpen',{n:given.length}):t(cp?'fe.ac.entrySubUs':'fe.ac.entrySub')}
