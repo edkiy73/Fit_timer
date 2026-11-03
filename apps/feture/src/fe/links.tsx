@@ -1,11 +1,11 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {useNavigate,useParams} from 'react-router';
+import {useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {CircleAlert,Link2,Pencil,Plus,Trash2,User,Users,X} from 'lucide-react';
 import {useToast as useToastV21} from './toast';
 import {newOpId} from '../feture/fe-api';
-import {AddCard,Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,Group,IconBtn,Note,PersonLine,RadioList,RequestCard,Row,SearchInput,SectionLabel,Seg,SelectRow,Skel,Spacer,View,Who,useLeaveGuard} from './kit';
+import {AddCard,Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,Group,IconBtn,Note,PersonLine,RadioList,RequestCard,Row,SearchInput,SectionLabel,Seg,SelectRow,Skel,Spacer,View,Who,useLeaveGuard,useScrollTo} from './kit';
 import {useFe,useKeyChange,useShown} from './session';
 import {NameBadges,faceFields,withAge} from './faces';
 import {KINDS,SIDES,Sheet,linkLabel,linksMineRes,mediaSrc,personName,personProfileRes,pxError,type Kind,type LinkView,type LinksMine,type PersonProfile} from './profile-extras';
@@ -57,7 +57,7 @@ export function LinksBlock({onChanged}:{onChanged?:()=>void}){
 function LinkRequest({l,couple,small,busy,onAnswer}:{l:LinkView,couple:boolean,small?:boolean,busy:boolean,onAnswer:(accept:boolean)=>void}){
  const {t}=useI18n();const navigate=useNavigate();const name=nameOf(l);const go=()=>navigate('/n/people/'+l.other.id);
  const who=<>{withAge(name,l.other)}<NameBadges p={l.other}/></>;
- return <RequestCard className="lk-req" person={<PersonLine small={small} av={<Av name={name} seed={l.other.id} size={small?'sm':''} src={l.other.avatar}/>} label={name} onOpen={go} name={who}
+ return <RequestCard id={'link-'+l.id} className="lk-req" person={<PersonLine small={small} av={<Av name={name} seed={l.other.id} size={small?'sm':''} src={l.other.avatar}/>} label={name} onOpen={go} name={who}
   sub={l.change?fill(t('fe.ln.proposesChange'),{from:linkLabel(t,l.kind,l.side),to:t('fe.px.lk.k.'+l.change.kind)}):fill(couple?t('fe.ln.proposesCouple'):t('fe.ln.proposes'),{label:linkLabel(t,l.kind,l.side)})}/>}
   actions={<><Btn size="md" disabled={busy} onClick={()=>onAnswer(true)}>{t('fe.ln.confirm')}</Btn><Btn size="md" kind="soft" disabled={busy} onClick={()=>onAnswer(false)}>{t('fe.ln.decline')}</Btn></>}/>;
 }
@@ -117,6 +117,16 @@ export function LinksScreen(){
   :act(()=>call('link.answer',{opId:newOpId(),linkId:l.id,accept,vis:'all'},ok),accept?t('fe.ln.t.confirmed'):t('fe.ln.t.declined'));
  const couple=acting?.kind==='couple';
  const waiting=r?[...r.incoming,...r.confirmed.filter(l=>l.change&&!l.change.mine)]:[];
+ // `?link=` (a link proposal or its result, from the inbox or a push): a proposal to answer is scrolled to and lit;
+ // a confirmed or sent link opens its own sheet.
+ const [params]=useSearchParams();const lid=params.get('link');const opened=useRef('');
+ useEffect(()=>{
+  if(!r||!lid||opened.current===lid)return;opened.current=lid;
+  if(waiting.some(l=>l.id===lid))return;
+  const l=r.confirmed.find(x=>x.id===lid)??r.sent.find(x=>x.id===lid);if(l)setMenu({l,pend:r.sent.includes(l)});
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[r,lid]);
+ useScrollTo(lid&&waiting.some(l=>l.id===lid)?'link-'+lid:null,!!r);
  const visWord=(v:Vis)=>v==='us'?t('fe.ln.visUs'):v==='followers'?t('fe.ln.visFollowers'):'';
  const row=(l:LinkView,pend:boolean,extra:string)=>{const name=nameOf(l);
   return <Row key={l.id} av={<Av name={name} seed={l.other.id} size="sm" src={l.other.avatar}/>} title={<>{name}<NameBadges p={l.other}/></>}

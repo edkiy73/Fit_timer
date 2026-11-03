@@ -2,7 +2,7 @@ import {useCallback,useEffect,useState} from 'react';
 import {useNavigate,useSearchParams} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Lock,LockOpen,Send,X} from 'lucide-react';
-import {Av,Bar,Btn,Card,Chip,Empty,Group,LoadMore,Note,Pill,Row,Seg,Skel,Spacer,Stack,View} from './kit';
+import {Av,Bar,Btn,Card,Chip,Empty,Group,LoadMore,Note,Pill,Row,Seg,Skel,Spacer,Stack,View,useScrollTo} from './kit';
 import {useFe} from './session';
 import {NameBadges} from './faces';
 import {GrantCard,grantsRes,incomingRes,nameOf,outRes,RequestCards,useAccessWords,useCancelRequest,useGrantActions,type GrantItem,type IncomingList,type OutItem} from './private';
@@ -96,6 +96,11 @@ function WithMeTab(){
  * «Изменить» narrows, «Отозвать» after a question. */
 function ByMeTab(){
  const {call}=useFe();const {t}=useI18n();const w=useAccessWords();
+ // `?request=` (a «Нужно решить» push or card): that request by ID, first, whatever page it would be on.
+ const [params]=useSearchParams();const rid=params.get('request');
+ const [one,setOne]=useState<IncomingList|null>(null);
+ const loadOne=useCallback(()=>{if(!rid){setOne(null);return;}call('access.lists',{tab:'incoming',requestId:rid},incomingRes,{fresh:true}).then(setOne).catch(()=>setOne(null));},[call,rid]);
+ useEffect(()=>{loadOne();},[loadOne]);
  // Requests to me are paged like the grants below (a long list is no longer cut at the first page); the server gives no total.
  const fetchIn=useCallback((cursor?:string)=>call('access.lists',{tab:'incoming',...(cursor?{cursor}:{})},incomingRes,{fresh:true}),[call]);
  const inPg=usePaged<IncomingList['items'][number],Awaited<ReturnType<typeof fetchIn>>>(fetchIn);
@@ -103,15 +108,18 @@ function ByMeTab(){
  const fetch=useCallback((cursor?:string)=>call('access.lists',{tab:'byme',...(cursor?{cursor}:{})},grantsRes,{fresh:true}),[call]);
  const pg=usePaged<GrantItem,Awaited<ReturnType<typeof fetch>>>(fetch);
  const acts=useGrantActions(pg.load);
- const changed=()=>{reloadIn();pg.load();};
+ const changed=()=>{reloadIn();pg.load();loadOne();};
+ useScrollTo(rid&&one?.items.length?'req-'+rid:null,!!one&&!!pg.items&&!!inPg.items);
  if(pg.failed)return pg.failed;
  if(inPg.failed)return inPg.failed;
  if(!pg.items||!inPg.items||!inPg.first)return <Skel kind="card" rows={2}/>;
- const incoming:IncomingList={...inPg.first,items:inPg.items};
- const asks=incoming.items.length>0;
+ const incoming:IncomingList={...inPg.first,items:inPg.items.filter(r=>!one?.items.some(x=>x.id===r.id))};
+ const asked=one&&one.items.length>0?one:null;
+ const asks=incoming.items.length>0||!!asked;
  if(!asks&&!pg.items.length)return <Empty icon={Lock} title={t('fe.ac.by.empty')} text={t('fe.ac.by.emptyText')}/>;
  return <>
-  {asks&&<Group title={t('fe.ac.in.title')}><RequestCards data={incoming} onChanged={changed}/>{inPg.moreBtn}</Group>}
+  {asked&&<Group title={t('fe.ac.in.this')}><RequestCards data={asked} onChanged={changed}/></Group>}
+  {incoming.items.length>0&&<Group title={t('fe.ac.in.title')}><RequestCards data={incoming} onChanged={changed}/>{inPg.moreBtn}</Group>}
   {pg.items.length>0&&<Group title={asks?t('fe.ac.in.open'):undefined}><Stack gap={2}>{pg.items.map((g,i)=><GrantCard key={g.profile?.id??i} g={g} onEdit={()=>acts.edit(g)} onRevoke={()=>acts.revoke(g)}/>)}</Stack>{pg.moreBtn}</Group>}
   {acts.node}
  </>;

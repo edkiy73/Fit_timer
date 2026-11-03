@@ -6,12 +6,13 @@
 // The route rule of contracts/notifications.mjs (routeOk), copied line for line: a known /n screen, UUIDs only, known
 // query keys once each. tests/fe-notification-catalog.mjs checks both agree.
 const U = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
-const ROUTE_PATH = new RegExp(`^/n/(?:inbox|chats|chats/requests|chats/${U}|me|me/pair|me/links|me/access|me/posts|me/interests`
+const ROUTE_PATH = new RegExp(`^/n/(?:inbox|inbox/${U}|chats|chats/requests|chats/${U}|me|me/pair|me/links|me/access|me/posts|me/interests`
   + `|settings|settings/(?:security|age|photo-check|blocked|notifications)|help|premium|staff|people|feed`
   + `|feed/post/${U}(?:/edit)?|events/${U}(?:/applications)?|communities/${U}(?:/requests)?|people/${U}(?:/gallery)?)$`);
 const ROUTE_QUERY = {
   reply: new RegExp(`^${U}$`), approval: new RegExp(`^${U}$`), ticket: new RegExp(`^${U}$`), as: new RegExp(`^${U}$`),
-  part: /^private$/, tab: /^(?:byme|withme|out)$/, layer: /^(?:vis|priv|mine)$/,
+  part: /^private$/, tab: /^(?:byme|withme|out|todo|all)$/, layer: /^(?:vis|priv|mine)$/,
+  request: new RegExp(`^${U}$`), item: new RegExp(`^${U}$`), link: new RegExp(`^${U}$`),
 };
 function routeOk(route) {
   if (typeof route !== 'string' || route.length > 300) return false;

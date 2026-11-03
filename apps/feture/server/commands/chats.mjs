@@ -11,6 +11,7 @@ import { otherProfile } from './access.mjs';
 import { lockPair } from './discover.mjs';
 import { typingTag } from '../realtime.mjs';
 import { photoVerifiedOf } from './verification.mjs';
+import { readAbout } from '../notify.mjs';
 
 /** Slice G1: conversations and messages (S1 §12, extract/people-discover-chats.md §1.11–1.12, §2.5).
  * A conversation comes only with a match (a request, grant, follow or gift never opens one). Members are the accounts of
@@ -460,9 +461,16 @@ const run = {
     return { items, requests };
   },
 
-  async 'chat.messages'(q, { acting: a, input, account, cfg }) {
+  async 'chat.messages'(q, { acting: a, input, account, cfg, signal }) {
     const viewer = need(a);
     const c = await memberOf(q, input.conversationId, viewer);
+    // Opening the chat (its first page) reads its «это взаимно» and request rows in the inbox (docs/notifications.md
+    // «Счётчики»); the bell and my other devices update.
+    if (input.beforeSeq === undefined && input.afterSeq === undefined
+      && await readAbout(q, { account: viewer.accountId, types: ['match', 'chatRequest'], objectType: 'conversation', objectId: c.id })) {
+      signal(viewer.profileId, 'changed', 'counts');
+      signal(viewer.profileId, 'notify');
+    }
     const rows = await q.query(
       `select m.*, v.opened_at, v.done from feture.message m
        left join feture.message_media_view v on v.message_id = m.id and v.viewer_account_id = $2

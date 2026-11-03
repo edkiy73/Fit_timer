@@ -8,6 +8,7 @@ import { acceptsMention } from '../sql-rules.mjs';
 import { qaProfile, requireUnrestricted } from '../profiles.mjs';
 import { withFaces } from './faces.mjs';
 import { otherProfile } from './access.mjs';
+import { readAbout } from '../notify.mjs';
 
 /** Slice F2: people search, links between profiles, «Что у вас общего» (S1 §11, extract/people-discover-chats.md).
  * Search matches the start of a nickname or name, from two characters, never anyone hidden by a block (Q8). A link is
@@ -75,6 +76,7 @@ async function doAccept(q, acting, linkId, vis) {
   if ((await q.query('select feture.restricted($1) r', [l.other]))[0].r) fail(409, 'conflict', { rule: 'unavailable' });
   if (l.me !== 'b' || l.state !== 'pending') fail(409, 'conflict', { rule: 'not_pending' });
   await q.query(`update feture.profile_link set state = 'ok', b_vis = $2, confirmed_at = now(), updated_at = now() where id = $1`, [l.id, vis]);
+  await readAbout(q, { profile: acting.profileId, kind: 'task', objectType: 'link', objectId: l.id });
   await enqueue(q, 'link.accepted', l.a_profile_id, { linkId: l.id, from: acting.profileId });
   return { state: 'ok' };
 }
@@ -172,6 +174,7 @@ const run = {
       const l = await endpoint(q, input.linkId, acting);
       if (l.me !== 'b' || l.state !== 'pending') fail(409, 'conflict', { rule: 'not_pending' });
       await q.query('delete from feture.profile_link where id = $1', [l.id]);
+      await readAbout(q, { profile: acting.profileId, kind: 'task', objectType: 'link', objectId: l.id });
       await enqueue(q, 'link.declined', l.a_profile_id, { linkId: l.id, from: acting.profileId });
       return { state: 'declined' };
     }
@@ -207,6 +210,7 @@ const run = {
     } else {
       await q.query(`update feture.profile_link set change = null, updated_at = now() where id = $1`, [l.id]);
     }
+    await readAbout(q, { profile: acting.profileId, kind: 'task', objectType: 'link', objectId: l.id });
     await enqueue(q, 'link.changed', l.change.by, { linkId: l.id, from: acting.profileId, answer: input.accept ? 'yes' : 'no' });
     return { accepted: input.accept };
   },

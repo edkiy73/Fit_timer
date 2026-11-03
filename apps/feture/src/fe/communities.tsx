@@ -12,6 +12,7 @@ import {when} from './feed';
 import {Composer} from './create-entry';
 import {useCopyLink} from './share';
 import {BellButton} from './inbox';
+import {AppealSheet} from './appeal';
 import {useToast} from './toast';
 import {Field as FormField,placeName,shakeFirstErr,useCatalog} from './create-community';
 import {CommPlate,NamedPlate,ReportSheet,appUrl,fill,okRes,pl} from './comm-kit';
@@ -291,24 +292,6 @@ function EvFilterSheet({value,onApply,onClose}:{value:EvFilter,onApply:(f:EvFilt
 /* ---------------- C03: the community page ---------------- */
 
 type CTab='disc'|'events'|'members'|'rules';
-/** The author's appeal of a rejected community (the existing appeal.create; another staff member looks again). */
-function AppealSheet({id,onClose,onDone}:{id:string,onClose:()=>void,onDone:(msg:string)=>void}){
- const {call}=useFe();const {t}=useI18n();
- const [body,setBody]=useState('');const [err,setErr]=useState('');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
- const send=async()=>{
-  const e=textError(t,'appeal',body);setErr(e??'');if(e){shakeFirstErr();return;}
-  setBusy(true);setFailure('');
-  try{await call('appeal.create',{opId:newOpId(),targetType:'community',targetId:id,body:body.trim()},okRes);onDone(t('fe.cm.appealSent'));}
-  catch(x){setFailure(x instanceof FeError&&x.rule==='appeal_open'?t('fe.cm.appealOpen'):feErrorMessage(x,t));}finally{setBusy(false);}
- };
- return <Sheet title={t('fe.cm.appealTitle')} onClose={onClose} dirty={!busy&&!!body.trim()} foot={<Btn onClick={()=>void send()} busy={busy} disabled={busy}>{t('fe.cm.appealSend')}</Btn>}>
-  <Stack gap={4}>
-   <FormField name="appeal" label={t('fe.cm.appealLabel')} value={body} onChange={v=>{setBody(v);if(err)setErr('');}} err={err} textarea rows={5} check="appeal" ph={t('fe.cm.appealPh')}/>
-   {failure&&<Alert kind="err" icon={TriangleAlert}>{failure}</Alert>}
-  </Stack>
- </Sheet>;
-}
-
 export function CommunityScreen(){
  const {id=''}=useParams();const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();const cat=useCatalog();
  const [sp,setSp]=useSearchParams();const invite=sp.get('invite')??undefined;
@@ -414,7 +397,7 @@ export function CommunityScreen(){
    onOk={()=>void act(()=>call('community.requestWithdraw',{opId:newOpId(),requestId:c.request!.id},okRes),t('fe.host.join.withdrawn'))} onCancel={()=>setLayer('')}/>}
   {c&&layer==='unwait'&&c.waiting&&<Ask icon={FileText} danger title={t('fe.host.join.withdrawQ')} text={t('fe.cm.req.unwaitText')} ok={t('fe.host.join.withdraw')} busy={busy}
    onOk={()=>void act(()=>call('decide.cancel',{opId:newOpId(),approvalId:c.waiting!.id},okRes),t('fe.host.join.withdrawn'))} onCancel={()=>setLayer('')}/>}
-  {c&&layer==='appeal'&&<AppealSheet id={c.id} onClose={()=>setLayer('')} onDone={msg=>{setLayer('');toast(msg,{type:'ok'});}}/>}
+  {c&&layer==='appeal'&&<AppealSheet targetType="community" id={c.id} ph={t('fe.cm.appealPh')} onClose={()=>setLayer('')} onDone={msg=>{setLayer('');toast(msg,{type:'ok'});}}/>}
   {c&&layer==='report'&&<ReportSheet targetType="community" targetId={c.id} onClose={()=>setLayer('')} onDone={msg=>{setLayer('');toast(msg,{type:'ok'});}}/>}
   {hostTools&&<DiscussionHostSheet d={hostTools} host={host} onClose={()=>setHostTools(null)} onDone={(msg,change)=>{patchDisc(hostTools.id,change);setHostTools(null);toast(msg,{type:'ok'});load();}}
    onReport={acting&&hostTools.owner_profile_id!==acting.id?()=>{setReportPost(hostTools.id);setHostTools(null);}:undefined}/>}

@@ -10,7 +10,7 @@ export type Entry = {
   collapse: 'none' | 'object' | 'actor' | 'type', gone: Text,
 };
 export type NoteRef = {
-  type: string, data?: Record<string, unknown> | null, object?: { type: string, id: string | null } | null,
+  type: string, id?: string | null, data?: Record<string, unknown> | null, object?: { type: string, id: string | null } | null,
   sub?: { type: string, id: string | null } | null, actor?: string | null, addressee?: string | null, couple?: string | null,
 };
 export declare const SAFE_PUSH: Text;

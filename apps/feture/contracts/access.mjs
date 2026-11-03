@@ -32,7 +32,8 @@ export const accessCommands = {
   // запросы» (filter «Ждут ответа»). Keyset-paged.
   'access.lists': {
     profile: true, write: false,
-    input: z.strictObject({ tab: z.enum(['out', 'withme', 'byme', 'incoming']), filter: z.enum(['pending']).optional(), cursor: z.string().max(200).optional() }),
+    // `requestId` (incoming only): that one request, the place a «Нужно решить» push opens.
+    input: z.strictObject({ tab: z.enum(['out', 'withme', 'byme', 'incoming']), filter: z.enum(['pending']).optional(), cursor: z.string().max(200).optional(), requestId: id.optional() }),
   },
   // «Сегодня можно ещё N» for the request sheet: the account's rolling 24 h budget.
   'access.quota': { profile: true, write: false, input: z.strictObject({}) },

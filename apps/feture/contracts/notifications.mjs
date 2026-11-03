@@ -75,13 +75,13 @@ const RAW = /** @type {Record<string, any>} */ ({
     normal: T('Тебе открыли доступ', 'You got access'), email: 'now-if-unread', dest: 'actorPrivate', gone: GONE_PROFILE },
   linkAccepted: { kind: 'result', filter: 'links', icon: 'Users', tone: 'g', card: 'result',
     text: T(['{name} подтверждает связь — она есть в обоих профилях', '{name} подтверждают связь — она есть в обоих профилях'], '{name} confirmed the link — it’s on both profiles'),
-    normal: T('Связь подтверждена', 'Link confirmed'), named: true, dest: 'links' },
+    normal: T('Связь подтверждена', 'Link confirmed'), named: true, dest: 'link' },
   linkDeclined: { kind: 'result', filter: 'links', icon: 'Users', tone: '', card: 'result',
     text: T(['{name} не подтверждает связь', '{name} не подтверждают связь'], '{name} didn’t confirm the link'),
-    normal: T('Связь не подтверждена', 'Link not confirmed'), named: true, dest: 'links' },
+    normal: T('Связь не подтверждена', 'Link not confirmed'), named: true, dest: 'link' },
   linkChanged: { kind: 'result', filter: 'links', icon: 'Users', tone: 'v', card: 'result',
     text: T(['{name} отвечает на изменение связи', '{name} отвечают на изменение связи'], '{name} answered your link change'),
-    normal: T('Ответ на изменение связи', 'Your link change was answered'), named: true, dest: 'links' },
+    normal: T('Ответ на изменение связи', 'Your link change was answered'), named: true, dest: 'link' },
   'linkChanged.yes': { icon: 'Users', tone: 'g', text: T(['{name} соглашается изменить связь', '{name} соглашаются изменить связь'], '{name} agreed to change the link'),
     normal: T('Связь изменена', 'Link changed') },
   'linkChanged.no': { icon: 'Users', tone: '', text: T(['{name} не соглашается менять связь', '{name} не соглашаются менять связь'], '{name} didn’t agree to change the link'),
@@ -122,7 +122,7 @@ const RAW = /** @type {Record<string, any>} */ ({
   'mediaDecided.approved': { text: T('Файл одобрен', 'Your file was approved'), normal: T('Файл одобрен', 'Your file was approved') },
   'mediaDecided.rejected': { icon: 'Shield', tone: 'l', text: T('Файл не прошёл проверку', 'Your file didn’t pass review'), normal: T('Файл не прошёл проверку', 'Your file didn’t pass review') },
 
-  // ---- moderation decisions about the person (TODO stage 5: their own decision screen) ----
+  // ---- moderation decisions about the person: their own decision card (src/fe/inbox.tsx NoteScreen) ----
   contentRemoved: { kind: 'result', filter: 'posts', icon: 'Shield', tone: 'l', card: 'safety', text: T('Модераторы удалили твою публикацию', 'Moderators removed your post'),
     normal: T('Модераторы удалили твой материал', 'Moderators removed your content'), email: 'now', dest: 'moderation' },
   'contentRemoved.reply': { text: T('Модераторы удалили твой ответ', 'Moderators removed your reply') },
@@ -139,10 +139,10 @@ const RAW = /** @type {Record<string, any>} */ ({
   'profileRestricted.until': { text: T('Профиль ограничен до {date}', 'Your profile is restricted until {date}') },
   'profileRestricted.forever': { text: T('Профиль ограничен, пока модераторы не снимут ограничение', 'Your profile is restricted until moderators lift it') },
   profileRestored: { kind: 'result', filter: 'other', icon: 'Check', tone: 'g', card: 'safety', text: T('Блокировку сняли — профиль снова доступен', 'The suspension was lifted — your profile is available again'),
-    normal: T('Профиль снова доступен', 'Your profile is available again'), email: 'now', dest: 'me' },
+    normal: T('Профиль снова доступен', 'Your profile is available again'), email: 'now', dest: 'moderation' },
   'profileRestored.expired': { text: T('Срок блокировки закончился — профиль снова доступен', 'The suspension ended — your profile is available again') },
   profileUnrestricted: { kind: 'result', filter: 'other', icon: 'Check', tone: 'g', card: 'safety', text: T('Ограничение сняли', 'The restriction was lifted'),
-    normal: T('Ограничение снято', 'The restriction was lifted'), email: 'now', dest: 'me' },
+    normal: T('Ограничение снято', 'The restriction was lifted'), email: 'now', dest: 'moderation' },
   'profileUnrestricted.expired': { text: T('Срок ограничения закончился', 'The restriction ended') },
   appealDecided: { kind: 'result', filter: 'other', icon: 'Shield', tone: '', card: 'result', text: T('Апелляция рассмотрена', 'Your appeal was decided'),
     normal: T('Апелляция рассмотрена', 'Your appeal was decided'), email: 'now', dest: 'moderation' },
@@ -281,18 +281,18 @@ const RAW = /** @type {Record<string, any>} */ ({
 
   // ---- «Нужно решить» (tasks: live until decided, reading does not close them) ----
   'decide.pinv': { kind: 'task', card: 'decision', filter: 'pair', icon: 'Users', tone: 'v', text: T('{name} приглашает тебя связать профили в пару', '{name} invites you to link profiles as a couple'),
-    cat: 'decide', normal: T('Приглашение в пару', 'A couple invitation'), email: 'now-if-unread', dest: 'inbox' },
+    cat: 'decide', normal: T('Приглашение в пару', 'A couple invitation'), email: 'now-if-unread', dest: 'invite' },
   'decide.req': { kind: 'task', card: 'decision', filter: 'access', icon: 'LockOpen', tone: 'v', text: T('{name} просит открыть твою приватную часть', '{name} asks to see your private part'),
-    cat: 'decide', normal: T('Просят открыть приватную часть', 'Someone asks for access'), email: 'now-if-unread', dest: 'access' },
+    cat: 'decide', normal: T('Просят открыть приватную часть', 'Someone asks for access'), email: 'now-if-unread', dest: 'accessRequest' },
   'decide.req.couple': { text: T('{name} просит открыть приватную часть пары', '{name} asks to see the couple’s private part') },
   'decide.capp': { kind: 'task', card: 'decision', filter: 'groups', icon: 'Users', tone: 'v', text: T('{name} подаёт заявку в сообщество', '{name} asks to join the community'),
     cat: 'decide', normal: T('Новая заявка в сообщество', 'A new community request'), email: 'now-if-unread', dest: 'communityRequests', gone: GONE_COMMUNITY },
   'decide.eapp': { kind: 'task', card: 'decision', filter: 'events', icon: 'Calendar', tone: 'v', text: T('{name} подаёт заявку на событие', '{name} applied to the event'),
     cat: 'decide', normal: T('Новая заявка на событие', 'A new event application'), email: 'now-if-unread', dest: 'eventApplications', gone: GONE_EVENT },
   'decide.link': { kind: 'task', card: 'decision', filter: 'links', icon: 'Users', tone: 'v', text: T('{name} предлагает связь', '{name} proposes a link'),
-    cat: 'decide', normal: T('Тебе предлагают связь', 'Someone proposes a link'), email: 'now-if-unread', dest: 'links' },
+    cat: 'decide', normal: T('Тебе предлагают связь', 'Someone proposes a link'), email: 'now-if-unread', dest: 'link' },
   'decide.linkChange': { kind: 'task', card: 'decision', filter: 'links', icon: 'Users', tone: 'v', text: T('{name} предлагает изменить связь', '{name} proposes to change a link'),
-    cat: 'decide', normal: T('Тебе предлагают изменить связь', 'Someone proposes to change a link'), email: 'now-if-unread', dest: 'links' },
+    cat: 'decide', normal: T('Тебе предлагают изменить связь', 'Someone proposes to change a link'), email: 'now-if-unread', dest: 'link' },
   'decide.tag': { kind: 'task', card: 'decision', filter: 'posts', icon: 'Image', tone: 'v', text: T('{name} отмечает тебя на фото — без твоего согласия публикацию никто не увидит', '{name} marked you in a photo — nobody sees the post without your consent'),
     cat: 'decide', normal: T('Тебя отметили на фото', 'You were marked in a photo'), email: 'now-if-unread', dest: 'post', gone: GONE_POST },
   'decide.joint': { kind: 'task', card: 'decision', filter: 'pair', icon: 'Clock', tone: '', text: T('Партнёр: изменение на подтверждение', 'Partner: a change to approve'),
@@ -326,6 +326,9 @@ const SUB = /** @type {Record<string, (d: Record<string, any>) => unknown>} */ (
   eventPublished: d => (d.what === 'change' ? 'change' : undefined),
   eventRejected: d => (d.what === 'change' ? 'change' : undefined),
   'decide.req': d => (d.label === 'couple' ? 'couple' : undefined),
+  // A partner approval's own words per kind of change (`decide.joint.<kind>`), when the catalog has them.
+  'decide.joint': d => d.kind,
+  'decide.jointReturned': d => d.kind,
 });
 
 /** @param {any} o @returns {Entry} */
@@ -393,8 +396,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const isId = v => typeof v === 'string' && UUID.test(v);
 
 /**
- * @typedef {{type: string, data?: Record<string, any> | null, object?: {type: string, id: string | null} | null,
+ * @typedef {{type: string, id?: string | null, data?: Record<string, any> | null, object?: {type: string, id: string | null} | null,
  *   sub?: {type: string, id: string | null} | null, actor?: string | null, addressee?: string | null, couple?: string | null}} NoteRef
+ * `id`: the notification's own id (a moderation decision opens its own card).
  */
 
 /** Screens of an object type. @param {string | undefined} type @param {string} id */
@@ -412,7 +416,7 @@ const FIXED = /** @type {Record<string, string>} */ ({
   inbox: '/n/inbox', me: '/n/me', chats: '/n/chats', links: '/n/me/links', myPosts: '/n/me/posts', interests: '/n/me/interests',
   couple: '/n/me/pair', approval: '/n/me/pair', blocked: '/n/settings/blocked', security: '/n/settings/security', age: '/n/settings/age',
   photoCheck: '/n/settings/photo-check', help: '/n/help', premium: '/n/premium', staff: '/n/staff', people: '/n/people',
-  access: '/n/me/access', visibility: '/n/me',
+  access: '/n/me/access', visibility: '/n/me', accessRequest: '/n/me/access', invite: '/n/inbox', link: '/n/me/links', moderation: '/n/inbox',
 });
 
 /** Where a notification (or a «Нужно решить» item, or a chat message push) opens: a route of the /n screens, with the
@@ -449,16 +453,23 @@ export function destination(n) {
     case 'approval': { const id = obj?.type === 'approval' ? obj.id : d.approvalId; path = '/n/me/pair'; if (isId(id)) q.approval = id; break; }
     case 'coupleGallery': { const c = n.couple ?? n.addressee; if (isId(c)) path = `/n/people/${c}/gallery`; break; }
     case 'access': path = '/n/me/access'; q.tab = 'byme'; break;
+    // That request by ID: «Доступы → Открыто» shows it first.
+    case 'accessRequest': {
+      const id = obj?.type === 'accessRequest' ? obj.id : d.requestId;
+      path = '/n/me/access'; q.tab = 'byme'; if (isId(id)) q.request = id; break;
+    }
+    // The invitation's own card in «Нужно решить».
+    case 'invite': {
+      const id = obj?.type === 'invite' ? obj.id : d.inviteId;
+      path = '/n/inbox'; q.tab = 'todo'; if (isId(id)) q.item = id; break;
+    }
+    // That link in «Мои связи» (a proposal to answer, or the link a result is about).
+    case 'link': { const id = obj?.type === 'link' ? obj.id : d.linkId; path = '/n/me/links'; if (isId(id)) q.link = id; break; }
     case 'visibility': path = '/n/me'; q.layer = 'vis'; break;
     case 'help': path = '/n/help'; if (isId(d.ticketId)) q.ticket = d.ticketId; break;
-    // TODO stage 5: moderation decisions get their own decision card; until then the closest screen — the object
-    // itself when it is a post, community or event, else support (where a person asks about a block).
-    case 'moderation': {
-      const t = typeof d.targetType === 'string' ? d.targetType : obj?.type;
-      const id = isId(d.targetId) ? d.targetId : obj?.id;
-      path = (t === 'post' || t === 'community' || t === 'event') && isId(id) ? objectPath(t, id) : n.type === 'reportResolved' ? '/n/inbox' : '/n/help';
-      break;
-    }
+    // A moderation decision opens its own card: what was decided, why, until when, «Обжаловать» (never other
+    // reporters or the closed material). Without the row's id (an old push) the inbox.
+    case 'moderation': if (isId(n.id)) path = `/n/inbox/${n.id}`; break;
     default: path = FIXED[kind] ?? null;
   }
   if (!path) path = FIXED[kind] ?? '/n/inbox';
@@ -471,12 +482,13 @@ export function destination(n) {
 // ---- the one rule for a route that came from outside (a push payload): public/fe-sw.js keeps the same lines ----
 
 const U = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
-export const ROUTE_PATH = new RegExp(`^/n/(?:inbox|chats|chats/requests|chats/${U}|me|me/pair|me/links|me/access|me/posts|me/interests`
+export const ROUTE_PATH = new RegExp(`^/n/(?:inbox|inbox/${U}|chats|chats/requests|chats/${U}|me|me/pair|me/links|me/access|me/posts|me/interests`
   + `|settings|settings/(?:security|age|photo-check|blocked|notifications)|help|premium|staff|people|feed`
   + `|feed/post/${U}(?:/edit)?|events/${U}(?:/applications)?|communities/${U}(?:/requests)?|people/${U}(?:/gallery)?)$`);
 export const ROUTE_QUERY = Object.freeze(/** @type {Record<string, RegExp>} */ ({
   reply: new RegExp(`^${U}$`), approval: new RegExp(`^${U}$`), ticket: new RegExp(`^${U}$`), as: new RegExp(`^${U}$`),
-  part: /^private$/, tab: /^(?:byme|withme|out)$/, layer: /^(?:vis|priv|mine)$/,
+  part: /^private$/, tab: /^(?:byme|withme|out|todo|all)$/, layer: /^(?:vis|priv|mine)$/,
+  request: new RegExp(`^${U}$`), item: new RegExp(`^${U}$`), link: new RegExp(`^${U}$`),
 }));
 
 /** Is this an app route a push may open: a known /n screen, UUIDs only, known query keys once each.

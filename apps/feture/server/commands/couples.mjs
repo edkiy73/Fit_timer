@@ -8,6 +8,7 @@ import { closeAll } from './access.mjs';
 import { handleState, setVisibilityAs, writeIdentity } from './me.mjs';
 import { randomBytes } from 'node:crypto';
 import { sha256 } from '../hash.mjs';
+import { readAbout } from '../notify.mjs';
 
 /** Slice E: couples (S1 §5). An account is in at most one couple; the couple is its own profile that starts empty.
  * Either partner stops it at once; restoring needs both within 30 days, then it is deleted (jobs.sweepExpiredCouples).
@@ -209,6 +210,8 @@ const run = {
       `select * from feture.couple_invite where id = $1 and to_account = $2 for update`, [input.inviteId, account.id]);
     if (!inv) fail(404, 'not_found');
     if (inv.state !== 'pending' || new Date(inv.expires_at) < new Date()) fail(409, 'conflict', { state: inv.state === 'pending' ? 'expired' : inv.state });
+    // A decided task reads its own inbox row (docs/notifications.md «Счётчики»).
+    await readAbout(q, { account: account.id, kind: 'task', objectType: 'invite', objectId: inv.id });
     if (!input.accept) {
       await q.query(`update feture.couple_invite set state = 'declined', answered_at = now() where id = $1`, [inv.id]);
       await enqueue(q, 'couple.declined', null, { inviteId: inv.id, for: inv.from_account });

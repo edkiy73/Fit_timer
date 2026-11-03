@@ -65,9 +65,9 @@ const TYPES = /** @type {Record<string, {type: string, actor?: string, object?: 
   'profile.restricted': { type: 'profileRestricted' },
   'profile.unrestricted': { type: 'profileUnrestricted' },
   'appeal.decided': { type: 'appealDecided' },
-  'link.accepted': { type: 'linkAccepted', actor: 'from' },
-  'link.declined': { type: 'linkDeclined', actor: 'from' },
-  'link.changed': { type: 'linkChanged', actor: 'from' },
+  'link.accepted': { type: 'linkAccepted', actor: 'from', object: ['link', 'linkId'] },
+  'link.declined': { type: 'linkDeclined', actor: 'from', object: ['link', 'linkId'] },
+  'link.changed': { type: 'linkChanged', actor: 'from', object: ['link', 'linkId'] },
   'link.removed': { type: 'linkRemoved', actor: 'from' },
   'dating.launched': { type: 'datingLaunched' },
   'support.replied': { type: 'supportReply' },
@@ -162,7 +162,7 @@ async function write(q, item, n, recipients, out) {
       [r.account, r.profile, n.type, n.actor ?? null, n.objectType ?? null, n.objectId ?? null, JSON.stringify(data), item.id,
         key ? CATALOG[key].kind : 'notice', sub?.type ?? null, sub?.id ?? null, couple?.id ?? null, shownName(actor), shownName(couple), collapseKey(key, n)]);
     if (added[0]) {
-      const route = destination({ type: n.type, data, object: n.objectType ? { type: n.objectType, id: n.objectId ?? null } : null, sub,
+      const route = destination({ type: n.type, id: added[0].id, data, object: n.objectType ? { type: n.objectType, id: n.objectId ?? null } : null, sub,
         actor: n.actor ?? null, addressee: r.profile, couple: couple?.id ?? null });
       await queuePush(q, item, r, key ? CATALOG[key].push.cat : 'other', added[0].id, undefined, { key, url: pushUrl(route) });
       const to = await signalTo(q, r); if (to) out.push({ profile: to, kind: 'notify' });
@@ -213,6 +213,8 @@ const DECIDE_OBJECT = /** @type {Record<string, (p: any) => {type: string, id: s
   'decide.created': p => ({ type: 'approval', id: p.approvalId }), 'decide.resolved': p => ({ type: 'approval', id: p.approvalId }),
   'community.requested': p => ({ type: 'community', id: p.communityId }), 'event.applied': p => ({ type: 'event', id: p.eventId }),
   'tag.requested': p => ({ type: 'post', id: p.postId }),
+  'access.requested': p => ({ type: 'accessRequest', id: p.requestId }), 'couple.invited': p => ({ type: 'invite', id: p.inviteId }),
+  'link.proposed': p => ({ type: 'link', id: p.linkId }), 'link.changeProposed': p => ({ type: 'link', id: p.linkId }),
 });
 
 /** @param {Db} db @param {(s: Signal) => void} [emit] realtime signals of committed items (S2 §8), sent by the worker */
@@ -383,4 +385,19 @@ export function notifyHandlers(db, emit = () => {}) {
     if (gone.length && item.profile_id) emit({ profile: item.profile_id, kind: 'notify' });
   };
   return handlers;
+}
+
+/** Marks notifications about one object read (docs/notifications.md «Счётчики»): opening a chat reads its match and
+ * request rows (`account`, `types`), a decided task reads its own row for every member of the profile that decided
+ * (`profile`, `kind: 'task'`). Returns how many rows changed, so the caller can refresh the counters.
+ * @param {Q} q @param {{account?: string, profile?: string, types?: string[], kind?: string, objectType: string, objectId: string}} o */
+export async function readAbout(q, { account, profile, types, kind, objectType, objectId }) {
+  const rows = await q.query(
+    `update feture.notification n set read_at = now()
+     where n.read_at is null and n.object_type = $1 and n.object_id = $2
+       and ($3::uuid is null or n.recipient_account_id = $3)
+       and ($4::uuid is null or n.recipient_account_id in (select account_id from feture.profile_member where profile_id = $4 and state = 'active'))
+       and ($5::text[] is null or n.type = any($5)) and ($6::text is null or n.kind = $6)
+     returning n.id`, [objectType, objectId, account ?? null, profile ?? null, types ?? null, kind ?? null]);
+  return rows.length;
 }
