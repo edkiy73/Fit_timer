@@ -115,11 +115,12 @@ test('one «now» email per object; now-if-unread: 15 minutes later only if stil
     await notify();
     const [row] = await db.query(`select ref, mode, next_at > now() + interval '14 minutes' waits from feture.email_delivery where account_id = $1`, [b.account]);
     assert.deepEqual([row.ref, row.mode, row.waits], [`d:pinv:${inv.id}`, 'now-if-unread', true]);
-    // Seen in the app meanwhile (opened after it came): no email.
+    // The app open meanwhile (it polls in the background) does not cancel a still-open task: the email goes.
     await db.query(`update feture.email_address set seen_at = now() + interval '1 second' where account_id = $1`, [b.account]);
+    await db.query(`update feture.email_delivery set next_at = now() where account_id = $1`, [b.account]);
     await flush();
-    assert.equal(mails.length, 0);
-    assert.equal((await db.query(`select last_error from feture.email_delivery where account_id = $1`, [b.account]))[0].last_error, 'seen');
+    assert.equal(mails.length, 1);
+    mails.length = 0;
     await call('ua', null, { action: 'couple.inviteWithdraw', opId: op(), inviteId: inv.id });
 
     // Decided meanwhile: no email. Still open and not seen: the email goes (no names in «Безопасные»).
