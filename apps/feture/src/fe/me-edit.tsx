@@ -124,7 +124,7 @@ export function MeEditScreen(){
  };
 
  if(!acting)return null;
- const aud=only==='priv'?<AudTag k="granted"/>:only&&only!=='about'?<AudTag k={only==='details'?(p?.detailsVis??'all'):'all'}/>:null;
+ const aud=only==='priv'?<AudTag k="granted"/>:only&&only!=='about'?<AudTag k="all"/>:null;
  const slots=(k:'photos'|'privMedia',base:Ph[],max:number)=>{
   const list=drag.arrange(k,base);const ids=base.map(x=>x.id);
   const cells:ReactNode[]=list.map((ph,i)=><PhotoSlot key={ph.id} id={ph.id} big={k==='photos'&&i===0} dragging={drag.preview?.drag===ph.id} src={ph.src}

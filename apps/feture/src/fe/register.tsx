@@ -231,10 +231,6 @@ function AboutYou({profileId,onNext,onLeave,initial}:{profileId:string,onLeave:(
     <Stack gap={2}>{radio([['yes',t('fe.onb.partner.yes')],['no',t('fe.onb.partner.no')]],partner,v=>setPartner(p=>p===v?'':v),t('fe.onb.partner.title'))}
      {partner==='yes'&&<Note>{t('fe.onb.partner.note')}</Note>}</Stack>
    </section>
-   <section className="fin"><div className="fin-t"><b>{t('fe.reg.vis.title')}</b></div>
-    <Stack gap={2}>{radio([['only',t('fe.reg.vis.only')],['granted',t('fe.reg.vis.granted')],['all',t('fe.reg.vis.all')]],vis,setVis,t('fe.reg.vis.title'))}
-     <Note>{t('fe.reg.vis.note.'+vis)}</Note></Stack>
-   </section>
    {loadFailed?<Alert kind="err" action={<Btn kind="soft" size="sm" auto onClick={load}>{t('fe.retry')}</Btn>}>{t('fe.onb.optionsFailed')}</Alert>
     :options===null?<><Spacer size={4}/><Skel kind="card" rows={3}/></>:KINDS.map(group)}
   </div></div>
@@ -273,7 +269,7 @@ function FirstSteps({profileId,about,onBack,onLeave}:{profileId:string,about:Abo
  const done=async()=>{
   setBusy(true);setFailure('');const p=about.pick;
   try{
-   await call('onboarding.complete',{opId:opId.current,detailsVis:about.vis,genders:p.gender,orients:p.orient,roles:p.role,formats:p.format,seeks:p.seek,status:p.status[0]??null,discover:about.discover},onboarded,{profileId});
+   await call('onboarding.complete',{opId:opId.current,detailsVis:'all',genders:p.gender,orients:p.orient,roles:p.role,formats:p.format,seeks:p.seek,status:p.status[0]??null,discover:about.discover},onboarded,{profileId});
    let failed=0;
    for(const [communityId,j] of Object.entries(joins)){
     try{await call('community.join',{opId:newOpId(),communityId,rulesAccepted:true,answer:j.answer},z.object({ok:z.literal(true)}).passthrough(),{profileId});}catch{failed++;}
