@@ -33,6 +33,7 @@ export const LIGHT_SCOPES = {
      (kit, типы, юнит-тесты, каталог уведомлений, сборка) вместо полного `check` с тестами Postgres. */
   feture: {
     script: 'check:client',
+    deps: true, // kit, types, unit tests and the build need the app's node_modules
     paths: [/^apps\/feture\/src\//, /^apps\/feture\/public\//]
   }
 };
