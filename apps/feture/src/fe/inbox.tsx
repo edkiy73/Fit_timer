@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {AlarmClock,AtSign,Bell,Calendar,CalendarClock,CalendarX,Check,CircleCheck,Clock,Crown,EyeOff,Filter,Heart,Image as ImageIcon,LifeBuoy,Link2,LockOpen,MapPin,Megaphone,MessageCircle,Pencil,Shield,ShieldAlert,ShieldCheck,Trash2,TriangleAlert,UserCheck,UserMinus,Users,X,type LucideIcon} from 'lucide-react';
 import {DECIDE_KINDS,FILTERS as KINDS,actOf,destination,entryFor,noteLine,textOf,type Entry} from '../../contracts/notifications.mjs';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Actions,Answer,Av,Bar,Btn,Chip,Chips,Empty,IconBtn,LoadMore,NoteDecision,NoteEvent,NoteNews,NoteResult,NoteSafety,NoteSummary,PersonLine,Pill,SafetyDecision,SectionLabel,Seg,Skel,View,useScrollTo,type NoteTone} from './kit';
+import {Actions,Answer,Av,Bar,Btn,Card,Chip,Chips,Empty,IconBtn,LoadMore,NoteDecision,NoteEvent,NoteNews,NoteResult,NoteSafety,NoteSummary,PersonLine,Pill,Row,SafetyDecision,SectionLabel,Seg,Sheet,Skel,View,useScrollTo,type NoteTone} from './kit';
 import {useFe,useLive,useRealtime} from './session';
 import {useSideNav} from './wide';
 import {useToast} from './toast';
@@ -15,6 +15,7 @@ import {faceFields,NameBadges,withAge} from './faces';
 import {useDecline} from './private';
 import {evParts,evWhen} from './event-time';
 import {AppealSheet} from './appeal';
+import {plural} from './post-parts';
 import {groupRows,inboxScrollKey,inboxSearch,mergeRows,readInboxUrl,type InboxFilter,type InboxTab} from './inbox-url';
 
 /** The notification center (docs/notifications.md, stage 5): «Нужно решить» (tasks of every profile of the account,
@@ -43,6 +44,9 @@ const noteRes=z.object({ok:z.literal(true),item:note,appeal:z.enum(['available',
 export const countsRes=z.object({ok:z.literal(true),decide:z.number(),notifications:z.number(),bell:z.number(),chats:z.number(),newMatches:z.number(),requests:z.number().default(0),likes:z.number(),staff:z.boolean().default(false)});
 type Counts=z.infer<typeof countsRes>;
 const ok=z.object({ok:z.literal(true)}).passthrough();
+/** The people of a summary card, newest first, each once (one person may like twice); with the row they did it in. */
+const peopleOf=(group:Note[])=>{const seen=new Set<string>();const out:{a:NonNullable<Actor>,n:Note}[]=[];
+ for(const n of group)if(n.actor&&!seen.has(n.actor.id)){seen.add(n.actor.id);out.push({a:n.actor,n});}return out;};
 const nameOf=(a:Actor|undefined)=>a?(a.name||(a.handle?'@'+a.handle:'?')):'KINHAZE';
 
 /** The one tab control under its older name here. */
@@ -102,6 +106,7 @@ export function InboxScreen(){
  const [page,setPage]=useState<{items:Note[],next:string|null}|null>(()=>PAGES.get(filter)??null);
  const [counts,setCounts]=useState<Counts|null>(null);
  const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState('');const [readAllBusy,setReadAllBusy]=useState(false);
+ const [who,setWho]=useState<Note[]|null>(null);
  const [moreBusy,setMoreBusy]=useState(false);const [moreErr,setMoreErr]=useState<unknown>(null);
 
  const keep=(f:InboxFilter,p:{items:Note[],next:string|null})=>{PAGES.set(f,p);return p;};
@@ -214,12 +219,15 @@ export function InboxScreen(){
    gone:n.object?.gone&&e?textOf(e.gone,locale):undefined};
   const av=n.actor?<Av name={nameOf(n.actor)} seed={n.actor.id} src={n.actor.avatar}/>:undefined;
   if(group.length>1){
-   // «Алиса и ещё 3 ставят лайк твоей публикации»: the plural verb of the catalog's line.
-   const names=group.filter(x=>x.actor);const first=names[0]?.actor;
+   // «Алиса и ещё 3 ставят лайк твоей публикации»: the plural verb of the catalog's line. Several people: the card
+   // opens the list of all of them (owner 04.11.2026: «и ещё N» must say who); one person many times opens the place.
+   const people=peopleOf(group);const first=people[0]?.a;
    const verb=e?textOf(e.text,locale,true):'';
-   const text=first&&verb.includes('{name}')?rich(verb,{name:t('fe.ibx.andMore',{name:nameOf(first),n:String(group.length-1)}),couple:coupleNameOf(n)})
+   const many=people.length>1&&verb.includes('{name}');
+   const text=many&&first?rich(verb,{name:t('fe.ibx.andMore',{name:nameOf(first),n:String(people.length-1)}),couple:coupleNameOf(n)})
     :<>{noteText(n,e)} · {t('fe.ibx.times',{n:String(group.length)})}</>;
-   return <NoteSummary {...base} avs={names.slice(0,3).map(x=><Av key={x.id} name={nameOf(x.actor)} seed={x.actor!.id} src={x.actor!.avatar}/>)} text={text}/>;
+   return <NoteSummary {...base} {...(many?{onClick:()=>{markRead(group.filter(x=>!x.read).map(x=>x.id));setWho(group);}}:{})}
+    avs={people.slice(0,3).map(({a})=><Av key={a.id} name={nameOf(a)} seed={a.id} src={a.avatar}/>)} text={text}/>;
   }
   const text=noteText(n,e);
   switch(e?.card??'news'){
@@ -312,6 +320,20 @@ export function InboxScreen(){
    {old.length>0&&<div><SectionLabel>{t('fe.ibx.earlier')}</SectionLabel><div>{old.map(rowOf)}</div></div>}
    <LoadMore more={!!page?.next} busy={moreBusy} error={moreErr} onMore={()=>void more()} label={t('fe.ibx.loadingMore')}/></>;
  };
+ /** «Кто это»: every person of a summary card — name, age, badges; a row opens the profile, the foot the place. */
+ const whoSheet=(group:Note[])=>{
+  const n=group[0]!;const e=entryFor(n.type,n.data);const people=peopleOf(group);
+  const dest=destination({type:n.type,id:n.id,data:n.data,object:n.object,sub:n.sub??null,actor:n.actor?.id??null,addressee:n.addressee??null,couple:n.couple??null});
+  const toPlace=!dest.startsWith('/n/people/')&&!n.object?.gone;
+  const placeLabel=known('fe.ibx.who.open.'+(n.object?.type??''))??t('fe.ibx.who.open.other');
+  const close=()=>setWho(null);
+  return <Sheet title={e?actOf(e.text,locale,true):t('fe.ibx.who.title')} sub={plural(people.length,['человек','человека','человек'],['person','people'],locale)} onClose={close}
+   foot={toPlace?<Btn kind="soft" onClick={()=>{close();open(group);}}>{placeLabel}</Btn>:undefined}>
+   <Card list>{people.map(({a,n:x})=><Row key={a.id} av={<Av name={nameOf(a)} seed={a.id} src={a.avatar}/>}
+    title={<>{withAge(nameOf(a),a)}<NameBadges p={a}/></>} sub={when(x.at,locale)}
+    onClick={()=>{close();navigate('/n/people/'+a.id);}}/>)}</Card>
+  </Sheet>;
+ };
  const kinds=new Set<Kind>(k==='todo'?(decide??[]).map(decideKind):(page?.items??[]).map(noteKind));
  const loading=decide===null||(k==='all'?page===null:false);
  // A link to one task (`?item=`, an invitation from a push): scrolled to and lit; gone already — said once.
@@ -330,6 +352,7 @@ export function InboxScreen(){
     :loading?<Skel kind="list" rows={5}/>
     :k==='todo'?todo():everything()}
   </View>
+  {who&&whoSheet(who)}
  </>;
 }
 

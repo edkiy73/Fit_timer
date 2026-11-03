@@ -1,6 +1,6 @@
 import React,{useEffect,useRef,useState,type CSSProperties,type ReactNode} from 'react';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Check,ChevronLeft,Clock,Heart,Image as ImageIcon,Lock,Plus,Ticket,UserRound,Users,type LucideIcon} from 'lucide-react';
+import {Check,ChevronLeft,Clock,Heart,Image as ImageIcon,Lock,MessageCircle,Plus,Ticket,UserRound,Users,type LucideIcon} from 'lucide-react';
 import {Alert,Av,Btn,Card,IconBtn,Note,Row,Sheet,Skel,Stack,Switch,plate,useBack} from './index';
 import {VideoPlayer} from './av';
 import './domain.css';
@@ -205,6 +205,19 @@ export function PersonLine({av,name,sub,onOpen,label,small}:{av:ReactNode,name:R
 /** A request to answer (access, a link, a couple invite, an event application): who asks, details, the answers. */
 export function RequestCard({person,children,actions,className,id}:{person:ReactNode,children?:ReactNode,actions?:ReactNode,className?:string|undefined,/** For `useScrollTo` (a link to this very request). */ id?:string|undefined}){
  return <Card id={id} className={'rqcard'+(className?' '+className:'')}>{person}{children}{actions&&<div className="row g8 mt12">{actions}</div>}</Card>;
+}
+
+/** A chat request to answer, in the open chat (owner 04.11.2026): one short title, where they know each other from as
+ * small separate facts (never one paragraph), one quiet line, and ONE row of compact buttons that never wraps — the
+ * answers in `actions` (`Btn size="sm"`), the report as an icon button in `end`. */
+export function ChatRequest({title,facts,hint,actions,end,icon:Icon=MessageCircle}:{title:ReactNode,facts?:readonly {icon?:LucideIcon|undefined,text:ReactNode}[],
+ hint?:ReactNode,actions:ReactNode,/** Pushed to the right of the row: the report icon button. */ end?:ReactNode,icon?:LucideIcon}){
+ return <section className="k-chatreq">
+  <p className="k-chatreq-t"><Icon aria-hidden="true"/><b>{title}</b></p>
+  {facts&&facts.length>0&&<ul className="k-chatreq-facts">{facts.map((f,i)=><li key={i}>{f.icon&&<f.icon aria-hidden="true"/>}<span>{f.text}</span></li>)}</ul>}
+  {hint&&<p className="k-chatreq-hint">{hint}</p>}
+  <div className="k-chatreq-act">{actions}{end&&<span className="k-chatreq-end">{end}</span>}</div>
+ </section>;
 }
 
 /** One question of an application and the answer under it. */

@@ -2,9 +2,9 @@ import {Fragment,useCallback,useEffect,useLayoutEffect,useRef,useState,type CSSP
 import {useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Archive,ArchiveRestore,Ban,Camera,Check,ChevronDown,ChevronLeft,CircleAlert,Clock,Copy,Ellipsis,Eye,EyeOff,Film,Flag,Image as ImageIcon,Inbox,Info,Lock,LockOpen,MessageCircle,Plus,Search,SendHorizontal,Sparkles,Undo2,User,X} from 'lucide-react';
+import {Archive,ArchiveRestore,Ban,Calendar,Camera,Check,ChevronDown,ChevronLeft,CircleAlert,Clock,Copy,Ellipsis,Eye,EyeOff,Film,Flag,Image as ImageIcon,Inbox,Info,Lock,LockOpen,MessageCircle,Plus,Search,SendHorizontal,Sparkles,Undo2,User,UserCheck,Users,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {useBack,ActingAv,Actions,Alert,ChatList,ChatPane,ChatPick,ChatRow,CoupleTag,NewMatch,NewMatches,Av,Bar,Btn,Card,Check as CheckBox,Chip,Chips,Empty,Field,FilePick,Group,IconBtn,Layer,Note,PersonBar,Pill,RadioList,Row,SearchInput,SectionLabel,SelectRow,Sheet,Skel,Spacer,Text,TextArea,ToggleRow,Typing,VideoBadge,VideoPlayer,View,type Voice,VoiceBubble,VoiceRecorder} from './kit';
+import {useBack,ActingAv,Actions,Alert,ChatList,ChatPane,ChatPick,ChatRequest,ChatRow,CoupleTag,NewMatch,NewMatches,Av,Bar,Btn,Card,Check as CheckBox,Chip,Chips,Empty,Field,FilePick,Group,IconBtn,Layer,Note,PersonBar,Pill,RadioList,Row,SearchInput,SectionLabel,SelectRow,Sheet,Skel,Spacer,Text,TextArea,ToggleRow,Typing,VideoBadge,VideoPlayer,View,type Voice,VoiceBubble,VoiceRecorder} from './kit';
 import {VIDEO_TYPES} from './kit/media';
 import {Uploader,type SendPhoto,type SendVideo,type Uploaded} from './kit/Uploader';
 import {useSendPhoto,useSendVideo,useSendVoice} from './media-upload';
@@ -60,13 +60,17 @@ const nameOf=(o:{name?:string|null,handle?:string|null})=>o.name||(o.handle?'@'+
 type T=(k:string,v?:Record<string,string>)=>string;
 /** A request's sender as its recipient sees it: a couple shows as «Пара …». */
 const senderName=(o:{kind?:string,name?:string|null,handle?:string|null},t:T)=>o.kind==='couple'?t('fe.rq.couple',{name:nameOf(o)}):nameOf(o);
-/** «Участник сообщества «…» · Идёт на «…» 19.11 · Твой подписчик» — or «Пока не знакомы». */
-function contextLine(ctx:Ctx[]|undefined,t:T,locale:string,us:boolean){
- const parts=(ctx??[]).map(c=>c.kind==='follows'?t(us?'fe.rq.ctx.followsUs':'fe.rq.ctx.follows')
-  :c.kind==='community'?t('fe.rq.ctx.community',{name:c.name??''})
-  :c.kind==='event'?t('fe.rq.ctx.event',{title:c.title??'',date:c.startsAt?new Date(c.startsAt).toLocaleDateString(locale==='en'?'en-GB':'ru',{day:'2-digit',month:'2-digit'}):''}).trim():'').filter(Boolean);
- return parts.length?parts.join(' · '):t('fe.rq.ctx.none');
+/** Where they know each other from, one fact each: «Участник сообщества «…»», «Идёт на «…» 19.11», «Твой подписчик» —
+ * or «Пока не знакомы». */
+function contextFacts(ctx:Ctx[]|undefined,t:T,locale:string,us:boolean):{icon?:LucideIcon,text:string}[]{
+ const parts=(ctx??[]).map(c=>c.kind==='follows'?{icon:UserCheck,text:t(us?'fe.rq.ctx.followsUs':'fe.rq.ctx.follows')}
+  :c.kind==='community'?{icon:Users,text:t('fe.rq.ctx.community',{name:c.name??''})}
+  :c.kind==='event'?{icon:Calendar,text:t('fe.rq.ctx.event',{title:c.title??'',date:c.startsAt?new Date(c.startsAt).toLocaleDateString(locale==='en'?'en-GB':'ru',{day:'2-digit',month:'2-digit'}):''}).trim()}:null)
+  .filter((x):x is {icon:LucideIcon,text:string}=>!!x&&!!x.text);
+ return parts.length?parts:[{text:t('fe.rq.ctx.none')}];
 }
+/** The same facts on one line (the «Запросы» list row). */
+const contextLine=(ctx:Ctx[]|undefined,t:T,locale:string,us:boolean)=>contextFacts(ctx,t,locale,us).map(f=>f.text).join(' · ');
 function ago(iso:string,locale:string){const s=(Date.now()-Date.parse(iso))/1000;const ru=locale!=='en';
  if(s<3600)return Math.max(1,Math.floor(s/60))+(ru?' мин':' min');if(s<86400)return Math.floor(s/3600)+(ru?' ч':' h');
  return new Date(iso).toLocaleDateString(ru?'ru':'en',{day:'numeric',month:'short'});}
@@ -676,11 +680,11 @@ function ChatView({id,to}:{id:string,to:string}){
     {draft&&meta&&draft.canRequest&&<Alert kind="info" icon={MessageCircle}><b>{t('fe.rq.draft',{name:otherName})}</b>{t('fe.rq.draftOne')}
       {draft.left!==undefined&&draft.max!==undefined&&draft.left<=3?' '+t('fe.rq.left',{n:String(draft.left),max:String(draft.max)}):''}</Alert>}
     {req?.role==='sender'&&!ended&&<Alert kind="info" icon={Clock}><b>{t('fe.rq.wait')}</b>{canRenew?t('fe.rq.renew'):t('fe.rq.waitText',{name:otherName})}</Alert>}
-    {req?.role==='recipient'&&!ended&&meta&&<Alert kind="info" icon={MessageCircle} action={<><Actions>
-      <Btn busy={reqBusy==='accept'} disabled={!!reqBusy} onClick={()=>void answerReq('accept')}>{t('fe.rq.answer')}</Btn>
-      <Btn kind="soft" busy={reqBusy==='hide'} disabled={!!reqBusy} onClick={()=>void answerReq('hide')}>{t('fe.rq.hide')}</Btn></Actions>
-      <Btn kind="text" size="sm" auto icon={Flag} disabled={!!reqBusy} onClick={reportReq}>{t('fe.rq.reportBlock')}</Btn></>}>
-     <b>{t('fe.rq.in',{name:senderName(meta.other,t)})}</b>{contextLine(req.context,t,locale,meta.side.kind==='couple')}. {t('fe.rq.inText',{name:otherName})}</Alert>}
+    {req?.role==='recipient'&&!ended&&meta&&<ChatRequest title={t('fe.rq.in',{name:senderName(meta.other,t)})} facts={contextFacts(req.context,t,locale,meta.side.kind==='couple')}
+     hint={t('fe.rq.inText',{name:otherName})}
+     actions={<><Btn size="sm" busy={reqBusy==='accept'} disabled={!!reqBusy} onClick={()=>void answerReq('accept')}>{t('fe.rq.answer')}</Btn>
+      <Btn size="sm" kind="soft" busy={reqBusy==='hide'} disabled={!!reqBusy} onClick={()=>void answerReq('hide')}>{t('fe.rq.hide')}</Btn></>}
+     end={<IconBtn icon={Flag} kind="ghost" size="sm" label={t('fe.rq.reportBlock')} disabled={!!reqBusy} onClick={reportReq}/>}/>}
     {!ended&&canWrite&&!blocked&&!req&&all.length===0&&pend.length===0&&<><SectionLabel>{t('fe.chx.starters')}</SectionLabel><Chips className="ice">
      {[...starters.slice(0,2).map(n=>t('fe.w7.ice.topic',{topic:n})),t('fe.chx.ice1'),t('fe.chx.ice2')].map(s=><Chip key={s} onClick={()=>{setText(s);requestAnimationFrame(()=>{if(input.current){grow(input.current);input.current.focus();}});}}>{s}</Chip>)}
     </Chips></>}
