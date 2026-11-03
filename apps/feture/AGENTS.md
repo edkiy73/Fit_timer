@@ -86,6 +86,9 @@ or a helper defined twice (`tools/fe-server-baseline.json` only shrinks). Text i
 - **«Я» uses the same header as every tab** (29.10.2026): kit `Bar` with `lead` (avatar), `sub` and `onTitle`.
 - Media is reviewed before it is shown: `uploaded → scanning → needs_review → approved / rejected / blocked`.
   Staff roles: owner, lead, moderator, verifier, support, auditor — checked on the server only.
+- **The owner may do everything, to others and to themselves** (04.11.2026): Premium, own age and photo checks, own
+  media review, own roles, own second-factor reset (`ownerSelf` in `server/commands/staff.mjs`). Every action is still
+  journaled. Lower roles keep their limits, including never acting on themselves.
 
 ## Privacy and security invariants
 

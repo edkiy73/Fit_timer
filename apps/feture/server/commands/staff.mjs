@@ -13,7 +13,8 @@ const JOURNAL_KEYS = [{ name: 'created_at', type: 'timestamptz', dir: 'desc' }, 
 const MEDIA_KEYS = [{ name: 'created_at', type: 'timestamptz' }, { name: 'id', type: 'uuid' }];
 
 /** S4 steps 1–2: staff roles, journal, media review (docs/server/S4-MODERATION.md).
- * Staff are ordinary accounts with a role; a staff member never decides about their own profiles or couple.
+ * Staff are ordinary accounts with a role; a staff member never decides about their own profiles or couple — except the
+ * owner, who may do everything to themselves too (ownerSelf).
  * Every decision and every look at user media is written to the append-only journal.
  * @typedef {import('../handler.mjs').Command} Command @typedef {import('../db.mjs').Q} Q
  */
@@ -56,6 +57,11 @@ async function staffRoles(q, accountId, roles) {
 }
 export const ANY_STAFF = ['owner', 'lead', 'moderator', 'verifier', 'support', 'auditor'];
 
+/** The owner may do every staff action, to others and to themselves (owner 04.11.2026): Premium, age and photo checks,
+ * media review, roles, the second factor. Every action stays journaled. Other roles never act on their own profiles,
+ * couple, checks or Premium. @param {string[]} roles the caller's roles, as requireStaff returns them */
+export const ownerSelf = roles => roles.includes('owner');
+
 /** A staff command: one of `roles`, and the second factor in this sign-in (`fresh`: a code within FRESH_WINDOW).
  * @param {Q} q @param {import('../accounts.mjs').AccountRow} account @param {string[]} roles @param {{fresh?: boolean}} [opts]
  * @returns {Promise<string[]>} the staff member's roles */
@@ -93,13 +99,13 @@ export async function journal(q, staff, action, targetType, targetId, detail = {
     [staff, action, targetType, targetId, JSON.stringify(detail)]);
 }
 
-/** @param {Q} q @param {string} accountId @param {string} assetId @param {{lock?: boolean}} [opts] */
-async function reviewable(q, accountId, assetId, { lock = false } = {}) {
+/** @param {Q} q @param {string} accountId @param {string} assetId @param {{lock?: boolean, self?: boolean}} [opts] self: may be one's own (the owner) */
+async function reviewable(q, accountId, assetId, { lock = false, self = false } = {}) {
   const [a] = await q.query(
     `select m.*, exists (select 1 from feture.profile_member pm where pm.profile_id = m.owner_profile_id and pm.account_id = $2) own
      from feture.media_asset m where m.id = $1 ${lock ? 'for update of m' : ''}`, [assetId, accountId]);
   if (!a) fail(404, 'not_found');
-  if (a.own) fail(403, 'forbidden'); // never about one's own profiles or couple
+  if (a.own && !self) fail(403, 'forbidden'); // never about one's own profiles or couple (the owner may)
   return a;
 }
 
@@ -143,14 +149,14 @@ const run = {
   },
 
   // Lost phone: an owner or lead removes someone's factor; they enrol again at their next visit. Leads cannot reset
-  // the owner; nobody resets their own (that would bypass the factor).
+  // the owner; nobody but the owner resets their own (it needs a fresh code anyway).
   async 'staff.totpReset'(q, { account, input }) {
     const roles = await requireStaff(q, account, ['owner', 'lead'], { fresh: true });
     const [t] = await q.query(
       `select a.id from feture.profile p join feture.account a on a.person_profile_id = p.id
        where lower(p.handle) = lower($1) and p.kind = 'person'`, [String(input.handle).replace(/^@/, '')]);
     if (!t) fail(404, 'not_found');
-    if (t.id === account.id) fail(422, 'rule_violation', { rule: 'self' });
+    if (t.id === account.id && !ownerSelf(roles)) fail(422, 'rule_violation', { rule: 'self' });
     if (!roles.includes('owner')) {
       const [o] = await q.query(`select 1 from feture.staff_role where account_id = $1 and role = 'owner' and revoked_at is null`, [t.id]);
       if (o) fail(403, 'forbidden');
@@ -163,12 +169,12 @@ const run = {
 
   async 'staff.grant'(q, { account, input }) {
     await requireStaff(q, account, ['owner'], { fresh: true });
+    // Only the owner gives roles, to others and to themselves (the owner role itself is never given here).
     const [t] = await q.query(
       `select a.id from feture.profile p join feture.account a on a.person_profile_id = p.id
        where lower(p.handle) = lower($1) and p.kind = 'person' and a.state = 'active' and p.state = 'active'`,
       [String(input.handle).replace(/^@/, '')]);
     if (!t) fail(404, 'not_found');
-    if (t.id === account.id) fail(422, 'rule_violation', { rule: 'self' });
     const changed = input.grant
       ? await q.query(`insert into feture.staff_role (account_id, role, granted_by) values ($1, $2, $3) on conflict do nothing returning 1`, [t.id, input.role, account.id])
       : await q.query(`update feture.staff_role set revoked_at = now() where account_id = $1 and role = $2 and revoked_at is null returning 1`, [t.id, input.role]);
@@ -182,12 +188,13 @@ const run = {
   },
 
   async 'staff.mediaQueue'(q, { account, input, cfg }) {
-    await requireStaff(q, account, REVIEWERS);
+    const roles = await requireStaff(q, account, REVIEWERS);
     const { sql, params } = queuePageSql(input, MEDIA_KEYS,
       `select m.id, m.purpose, m.kind, m.explicitness, m.reject_reason reason, m.created_at, m.copies_at, m.width, m.height
        from feture.media_asset m
        where m.state = 'needs_review' and m.purpose <> 'verification'   -- selfies are decided in the age-check queue
-         and not exists (select 1 from feture.profile_member pm where pm.profile_id = m.owner_profile_id and pm.account_id = $1)`, [account.id]);
+         and not exists (select 1 from feture.profile_member pm where pm.profile_id = m.owner_profile_id and pm.account_id = $1::uuid)`,
+      [ownerSelf(roles) ? null : account.id]); // the owner's queue includes their own media
     const rows = await q.query(sql, params);
     const page = pageInfo(rows, MEDIA_KEYS, input.limit);
     // The queue shows blurred previews; the full picture opens through staff.mediaView, which is journalled.
@@ -214,8 +221,8 @@ const run = {
   },
 
   async 'staff.mediaView'(q, { account, input, cfg }) {
-    await requireStaff(q, account, REVIEWERS);
-    const a = await reviewable(q, account.id, input.assetId);
+    const roles = await requireStaff(q, account, REVIEWERS);
+    const a = await reviewable(q, account.id, input.assetId, { self: ownerSelf(roles) });
     // Age/photo-check selfies and identity documents open only in their own check queue, never by id from here.
     if (a.purpose === 'verification') fail(404, 'not_found');
     // Staff see content only for what is waiting for them (S4 §3): media on review, media of a post under open
@@ -240,8 +247,8 @@ const run = {
   },
 
   async 'staff.mediaDecide'(q, { account, input }) {
-    await requireStaff(q, account, REVIEWERS);
-    const a = await reviewable(q, account.id, input.assetId, { lock: true });
+    const roles = await requireStaff(q, account, REVIEWERS);
+    const a = await reviewable(q, account.id, input.assetId, { lock: true, self: ownerSelf(roles) });
     // Suspected CSAM can be escalated from any outcome (a later look, a report); everything else decides waiting media only.
     const escalate = input.decision === 'reject' && input.reason === 'csam_suspected';
     if (a.state === 'blocked' || (!escalate && a.state !== 'needs_review') || (escalate && !['needs_review', 'approved', 'rejected', 'removed'].includes(a.state))) {

@@ -5,7 +5,7 @@ import { fail, isUniqueViolation } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { avatarSrc, mediaDto } from '../media/assets.mjs';
 import { servedKeys } from '../media/scan.mjs';
-import { journal, requireStaff, staffCheck } from './staff.mjs';
+import { journal, ownerSelf, requireStaff, staffCheck } from './staff.mjs';
 import { pageInfo, queuePageSql, SUBMITTED_KEYS } from '../queue-page.mjs';
 
 /** Sort keys of the check queues: when the check was submitted, then its id. */
@@ -269,10 +269,10 @@ const run = {
 
   async 'staff.premiumGrant'(q, { account, input }) {
     // For trying the app on ourselves before payments exist; every grant is journaled.
-    await requireStaff(q, account, ['owner', 'lead']);
+    const roles = await requireStaff(q, account, ['owner', 'lead']);
     const [t] = await q.query(`select a.id from feture.account a join feture.profile p on p.id = a.person_profile_id where lower(p.handle) = lower($1) and a.state = 'active'`, [input.handle]);
     if (!t) fail(404, 'not_found');
-    if (t.id === account.id) fail(403, 'forbidden'); // never to oneself
+    if (t.id === account.id && !ownerSelf(roles)) fail(403, 'forbidden', { rule: 'self' }); // a lead never to oneself; the owner may
     const [e] = await q.query(
       `insert into feture.entitlement (account_id, source, starts_at, ends_at, granted_by, reason)
        select $1, 'staff', now(), greatest(now(), coalesce((select premium_until from feture.account where id = $1), now())) + make_interval(days => $2), $3, $4
@@ -350,14 +350,14 @@ const run = {
   },
 
   async 'staff.ageCheckQueue'(q, { account, input }) {
-    await requireStaff(q, account, ['owner', 'lead', 'moderator', 'verifier']);
+    const roles = await requireStaff(q, account, ['owner', 'lead', 'moderator', 'verifier']);
     // The queue lists who is waiting, never the pictures: a document or a selfie opens by itself (staff.ageCheckOpen),
     // so loading the staff area journals nothing. `locked`: no code from the last 10 minutes, opening will ask for one.
     const locked = !(await staffCheck(q, account)).fresh;
     const { sql, params } = queuePageSql(input, SUBMITTED_KEYS,
       `select c.id, c.method, c.gesture, c.submitted_at, p.id profile_id, p.handle
        from feture.age_check c join feture.account a on a.id = c.account_id join feture.profile p on p.id = a.person_profile_id
-       where c.state = 'submitted' and c.account_id <> $1`, [account.id]);
+       where c.state = 'submitted' and ($1::uuid is null or c.account_id <> $1)`, [ownerSelf(roles) ? null : account.id]); // the owner sees their own too
     const rows = await q.query(sql, params);
     const page = pageInfo(rows, SUBMITTED_KEYS, input.limit);
     const items = rows.map(r => ({
@@ -369,12 +369,12 @@ const run = {
 
   async 'staff.ageCheckOpen'(q, { account, input, cfg }) {
     // A look at a selfie or an identity document: a code from the last 10 minutes, and every look is journaled (S4 §3).
-    await requireStaff(q, account, ['owner', 'lead', 'moderator', 'verifier'], { fresh: true });
+    const roles = await requireStaff(q, account, ['owner', 'lead', 'moderator', 'verifier'], { fresh: true });
     const [c] = await q.query(
       `select c.id, c.state, c.method, c.asset_id, c.account_id, p.avatar_asset_id avatar_id from feture.age_check c
        join feture.account a on a.id = c.account_id join feture.profile p on p.id = a.person_profile_id where c.id = $1`, [input.checkId]);
     if (!c) fail(404, 'not_found');
-    if (c.account_id === account.id) fail(403, 'forbidden');
+    if (c.account_id === account.id && !ownerSelf(roles)) fail(403, 'forbidden');
     if (c.state !== 'submitted') fail(409, 'conflict', { state: c.state });
     const doc = c.method === 'document';
     const [shot] = c.asset_id ? await q.query(`select * from feture.media_asset where id = $1 and purpose = 'verification'`, [c.asset_id]) : [null];
@@ -390,10 +390,10 @@ const run = {
   },
 
   async 'staff.ageCheckDecide'(q, { account, input }) {
-    await requireStaff(q, account, ['owner', 'lead', 'moderator', 'verifier']);
+    const roles = await requireStaff(q, account, ['owner', 'lead', 'moderator', 'verifier']);
     const [c] = await q.query('select * from feture.age_check where id = $1 for update', [input.checkId]);
     if (!c) fail(404, 'not_found');
-    if (c.account_id === account.id) fail(403, 'forbidden');
+    if (c.account_id === account.id && !ownerSelf(roles)) fail(403, 'forbidden');
     if (c.state !== 'submitted') fail(409, 'conflict', { state: c.state });
     const doc = c.method === 'document';
     if (input.approve) {
