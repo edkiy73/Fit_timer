@@ -1,10 +1,10 @@
-import {Fragment,useCallback,useEffect,useMemo,useRef,useState,type ReactNode} from 'react';
+import {Fragment,useCallback,useEffect,useRef,useState,type ReactNode} from 'react';
 import type {LucideIcon} from 'lucide-react';
-import {useLocation,useNavigate,useParams} from 'react-router';
+import {useNavigate,useParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Ban,Check,ChevronDown,Crown,ChevronLeft,ChevronRight,Ellipsis,Eye,EyeOff,Flag,Heart,History,Info,KeyRound,Link as LinkIcon,Lock,MapPin,MessageCircle,ShieldCheck,Undo2,Users,X} from 'lucide-react';
+import {Ban,Check,Crown,ChevronLeft,ChevronRight,Ellipsis,Eye,EyeOff,Flag,Heart,History,Info,KeyRound,Link as LinkIcon,Lock,MapPin,MessageCircle,ShieldCheck,Undo2,Users,X} from 'lucide-react';
 import {ActingAv,Alert,Av,Bar,Btn,Card,Empty,Group,H,IconBtn,Layer,LoadMore,Note,PersonName,PhotoBars,PhotoTrack,PullRefresh,Row,Seg,Skel,Stack,Text,ToggleRow,View,coupleNames,plate} from './kit';
 import {onReadsDropped,useFe,useKeyChange,useShown} from './session';
 import {ReportSheet} from './report';
@@ -722,56 +722,6 @@ export function HistoryScreen(){
  </>;
 }
 
-/* ---------- «Как видят» (P03) ---------- */
-type Lv='all'|'granted'|'card';
-const ownSettingsRes=z.object({ok:z.literal(true),settings:z.object({discoverMode:z.string()}).passthrough()});
-function BackBtn(){const {t}=useI18n();const back=useBack();return <IconBtn icon={ChevronLeft} kind="ghost" label={t('fe.back')} onClick={back}/>;}
-
-/** `/n/me/preview`: the own profile as others see it, with the prototype's audience switch «Все / С доступом /
- * Знакомства». «Все» and «С доступом» are the profile page itself drawn as a viewer sees it (the server's own data,
- * filtered by the owner's settings; the private part from the own `private.get`); «Знакомства» is the Discover card
- * with the whole profile under it. Buttons are drawn but do nothing. */
-function useProposal(){
- const st=useLocation().state as {proposal?:Record<string,unknown>}|null;const c=st?.proposal;
- return useMemo(()=>{if(!c)return null;const o:{name?:string,bio?:string}={};
-  if(typeof c.name==='string')o.name=c.name;if(typeof c.bio==='string')o.bio=c.bio;return Object.keys(o).length?o:null;},[c]);
-}
-export function MePreviewScreen(){
- const {call,acting}=useFe();const {t,locale}=useI18n();
- const [lv,setLv]=useState<Lv>(()=>{const v=new URLSearchParams(location.hash.split('?')[1]??'').get('lv');return v==='granted'||v==='card'?v:'all';});
- const [p,setP]=useState<PersonProfile|null>(null);const [mode,setMode]=useState<string|null>(null);const [error,setError]=useState<unknown>(null);
- const [rel]=useRelation(acting?.id??'');
- // V21 pairReview «Весь профиль после изменений»: a couple's proposed name / bio drawn over the live profile.
- const proposal=useProposal();
- const load=useCallback(()=>{if(!acting)return;setError(null);
-  Promise.all([call('profile.get',{profileId:acting.id},personProfileRes),call('profile.settings',{},ownSettingsRes).catch(()=>null)])
-   .then(([a,s])=>{setP(proposal?{...a.profile,...proposal}:a.profile);setMode(s?.settings.discoverMode??null);}).catch(setError);},[call,acting,proposal]);
- useEffect(()=>{load();},[load]);
- const seg=<Seg small={false} value={lv} onChange={setLv} label={t('fe.px.pv.title')} options={(['all','granted','card'] as const).map(id=>({id,label:t('fe.ln.pv.'+id)}))}/>;
- if(p&&!error&&lv!=='card')return <>
-  {proposal&&<Alert kind="info" className="mt12">{t('fe.c6.previewNote')}</Alert>}
-  <ProfilePage p={viewedBy(p,lv)} preview={lv} seg={<div className="p3-seg">{seg}</div>}/>
- </>;
- const vp=p?viewedBy(p,'card'):null;
- const ph=p?mediaSrc(p.avatar):null;const city=vp?cityOf(vp,locale):null;
- const note=mode!=='visible'?t('fe.px.pv.cardOff'):!ph?t('fe.px.pv.cardNoPhoto'):t(acting?.kind==='couple'?'fe.px.pv.cardOnUs':'fe.px.pv.cardOn');
- return <>
-  <header className="bar"><BackBtn/><div className="bar-seg">{seg}</div><H level={1} className="sm" tabIndex={-1}><span className="sr-only">{t('fe.px.pv.title')}</span></H></header>
-  <View className="nodock">
-   {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={pxError(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
-    :!p?<div className="mt12"><Skel kind="card" rows={1}/></div>
-    :<>
-     <div className="mt12"><div className="card18">
-      {ph?<><img className="mbg" src={ph} alt="" aria-hidden="true" draggable={false}/><img src={ph} alt={personName(p)} draggable={false}/></>:<div className="plate" style={plate(p.id)}/>}
-      <div className="pc-info"><PersonName name={personName(p)} age={vp?.age||undefined}><NameBadges p={p}/></PersonName>
-       {city&&<div className="pc-who"><span className="pl"><MapPin/>{city}</span></div>}
-       <FollowCounts id={p.id} rel={rel} inert/>
-       <div className="pc-hint"><ChevronDown/>{t('fe.px.card.hint')}</div></div>
-     </div></div>
-     <Note className="center mt12">{note}</Note>
-     <div className="pc-body pc-full p3-card21"><PersonBio p={p}/><AboutGroup p={p} inert/><ProfileBody p={vp??p} inert preview="all" onOpen={()=>{}}/></div>
-    </>}
-  </View>
- </>;
-}
+/* ---------- «Как видят» (P03): the screen is in people.tsx (its «Знакомства» tab is the deck card itself) ---------- */
+export const ownSettingsRes=z.object({ok:z.literal(true),settings:z.object({discoverMode:z.string()}).passthrough()});
 

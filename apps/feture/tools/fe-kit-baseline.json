@@ -23,9 +23,6 @@
  "src/fe/mine.tsx": {
   "button row": 1
  },
- "src/fe/profile-extras.tsx": {
-  "margin class": 4
- },
  "src/fe/shell.css": {
   "stylesheet": 1
  },

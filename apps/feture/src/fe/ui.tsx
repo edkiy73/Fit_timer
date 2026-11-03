@@ -69,7 +69,9 @@ export function useBack(fallback?:string){
 
 /** `bar()` — the screen header; «‹» goes back where the person came from (`useBack`); a string `back` is the
  * fallback for a screen opened straight from a link. */
-export function Bar({title,back,onBack,small,children,lead,sub,mark,onTitle,titleLabel}:{title:string,back?:string|true,onBack?:()=>void,small?:boolean,children?:ReactNode,
+export function Bar({title,back,onBack,small,children,lead,sub,mark,onTitle,titleLabel,seg}:{title:string,back?:string|true,onBack?:()=>void,small?:boolean,children?:ReactNode,
+ /** A `Seg` in place of the title («Как видят»: Все / С доступом / Знакомства): it takes the whole width next to «‹»,
+  * the title stays for screen readers only. */ seg?:ReactNode,
  /** Small marks right after the title: the verified-photo and Premium badges (`NameBadges`) of the own profile. */ mark?:ReactNode,
  /** A tab's own profile («Я», owner 29.10.2026): the avatar left of the title — the same header, another set of pieces. */ lead?:ReactNode,
  /** A quiet second line under the title («Личный профиль»). */ sub?:ReactNode,
@@ -79,9 +81,9 @@ export function Bar({title,back,onBack,small,children,lead,sub,mark,onTitle,titl
  const inner=<>{lead&&<span className="bar-lead">{lead}</span>}{text}</>;
  return <header className="bar">
   {(back||onBack)&&<button type="button" className="ibtn ghost" aria-label={t('fe.back')} onClick={()=>onBack?onBack():goBack()}><ChevronLeft/></button>}
-  <h1 className={[small||back||onBack?'sm':'',lead||sub||onTitle||mark?'k-bar-who':''].filter(Boolean).join(' ')} tabIndex={-1}>
+  <h1 className={[small||back||onBack?'sm':'',lead||sub||onTitle||mark?'k-bar-who':'',seg?'sr-only':''].filter(Boolean).join(' ')} tabIndex={-1}>
    {onTitle?<button type="button" className="bar-who" aria-haspopup="dialog" aria-label={titleLabel} onClick={onTitle}>{inner}</button>:lead||sub||mark?inner:title}</h1>
-  {children}
+  {seg}{children}
  </header>;
 }
 

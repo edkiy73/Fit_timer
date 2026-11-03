@@ -5,11 +5,11 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Newspaper,BookOpen,ChevronLeft,ChevronRight,CircleCheck,Ellipsis,History,Pencil,Plus,Search as SearchIcon,SlidersHorizontal,User,UserMinus,Users,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {useBack,ActingAv,Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,H,IconBtn,LoadMore,Note,Pill,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Stack,View,plate,Who,nickShown} from './kit';
+import {useBack,ActingAv,Alert,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,H,IconBtn,LoadMore,Note,Pill,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Stack,View,plate,Who,nickShown} from './kit';
 import {useFe,useKeyChange} from './session';
 import {PostCard,postSchema,type Post} from './feed';
 import {InterestSheet,Jars,useInterests} from './interests';
-import {faceFields,NameBadges} from './faces';
+import {faceFields,PersonRow} from './faces';
 import {useToast} from './toast';
 import {FollowButton} from './follow';
 import {topicMatches} from './topic-search';
@@ -305,10 +305,9 @@ export function FollowsScreen(){
     :list===null?<Skel kind="list"/>
     :!list.length?<Empty icon={Users} title={tab==='following'?t('fe.br.noFollowing'):t('fe.br.noFollowers')}/>
     :<Card list>{list.map(k=>{const self=own.has(k.id);const fol=myFollows.has(k.id);
-     return <Row key={k.id} className="frow" onClick={()=>navigate(self?'/n/me':'/n/people/'+k.id)} av={<Av name={nameOf(k)} seed={k.id} src={k.avatar}/>}
-      title={<Who name={nameOf(k)} nick={k.handle}><NameBadges p={k}/></Who>}
-      end={self?<Note>{k.id===acting?.id?(asUs?t('fe.br.youUs'):t('fe.br.you')):k.kind==='person'?t('fe.br.yourOwn'):t('fe.br.yourCouple')}</Note>
-       :<><FollowButton size="sm" profileId={k.id} name={nameOf(k)} on={fol} back={mine&&tab==='followers'} disabled={busy===k.id}
+     return <PersonRow key={k.id} p={k} onClick={()=>navigate(self?'/n/me':'/n/people/'+k.id)}
+      end={self?<Note as="span">{k.id===acting?.id?(asUs?t('fe.br.youUs'):t('fe.br.you')):k.kind==='person'?t('fe.br.yourOwn'):t('fe.br.yourCouple')}</Note>
+       :<><FollowButton size="sm" profileId={k.id} name={nameOf(k)} on={fol} disabled={busy===k.id}
          onChange={on=>{setMyFollows(s=>{const n=new Set(s);if(on)n.add(k.id);else n.delete(k.id);return n;});if(mine)load();}}/>
         {mine&&tab==='followers'&&<IconBtn icon={Ellipsis} kind="ghost" size="sm" aria-haspopup="dialog" label={t('fe.w7.flw.menu').replace('{name}',nameOf(k))} disabled={busy===k.id} onClick={()=>setMenu(k)}/>}</>}/>;})}</Card>}
    {lists&&list&&list.length>=FOLLOW_PAGE&&<Note>{t('fe.br.firstN',{n:FOLLOW_PAGE})}</Note>}

@@ -13,7 +13,7 @@ import {Field,SelectRow,shakeFirstErr} from './create-community';
 import {FIELD,serverFields,textError,textErrorMessage,type FieldName} from './kit/validate';
 import {appUrl,copyLink,fill,okRes,pl,plWord} from './comm-kit';
 import {EventCard} from './communities';
-import {faceFields,NameBadges,withAge} from './faces';
+import {faceFields,NameBadges,PersonRow,withAge} from './faces';
 import {useCopyLink} from './share';
 
 /** Tools for community hosts and event organisers (V21 C04/C05 join, C03 «Участники» / C09, C10 manage, C11 requests;
@@ -76,13 +76,6 @@ function useLater(){
   const timer=window.setTimeout(()=>{jobs.current.delete(key);void run();},UNDO_MS+400);jobs.current.set(key,{timer,run});},[]);
  const cancel=useCallback((key:string)=>{const j=jobs.current.get(key);if(!j)return false;clearTimeout(j.timer);jobs.current.delete(key);return true;},[]);
  return {later,cancel};
-}
-
-/** `personRow()` — avatar, name, a line under it and the chevron (opens the profile). */
-function PersonRow({p,sub,end,onClick}:{p:Prof,sub?:string|undefined,end?:ReactNode,onClick?:()=>void}){
- const navigate=useNavigate();const {acting}=useFe();
- return <Row av={<Av name={pname(p)} seed={p.id} src={p.avatar}/>} title={<>{withAge(pname(p),p)}<NameBadges p={p}/></>} sub={sub||nickShown(p.handle,p.name)||undefined}
-  end={end} onClick={onClick??(()=>navigate(p.id===acting?.id?'/n/me':'/n/people/'+p.id))}/>;
 }
 
 /* ---------------- Communities ---------------- */

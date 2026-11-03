@@ -25,7 +25,7 @@ const InboxScreen=screen(inbox,'InboxScreen'),InboxNoteScreen=screen(inbox,'Inbo
 const SettingsScreen=screen(settings,'SettingsScreen'),NotificationSettingsScreen=screen(settings,'NotificationSettingsScreen'),DataScreen=screen(settings,'DataScreen');
 const HiddenFeedScreen=screen(settingsLists,'HiddenFeedScreen'),BlockedScreen=screen(settingsLists,'BlockedScreen');
 const PremiumScreen=screen(accountExtra,'PremiumScreen'),SecurityScreen=screen(accountExtra,'SecurityScreen'),HelpScreen=screen(accountExtra,'HelpScreen');
-const CompatScreen=screen(profileExtras,'CompatScreen'),HistoryScreen=screen(profileExtras,'HistoryScreen'),MePreviewScreen=screen(profileExtras,'MePreviewScreen');
+const CompatScreen=screen(profileExtras,'CompatScreen'),HistoryScreen=screen(profileExtras,'HistoryScreen'),MePreviewScreen=screen(people,'MePreviewScreen');
 const AccessScreen=screen(access,'AccessScreen'),LinksScreen=screen(links,'LinksScreen'),LinkEditScreen=screen(links,'LinkEditScreen');
 const FollowsScreen=screen(browse,'FollowsScreen'),GalleryScreen=screen(browse,'GalleryScreen'),SearchScreen=screen(browse,'SearchScreen'),TopicScreen=screen(browse,'TopicScreen');
 const InterestsScreen=screen(interests,'InterestsScreen'),StaffScreen=screen(staff,'StaffScreen');

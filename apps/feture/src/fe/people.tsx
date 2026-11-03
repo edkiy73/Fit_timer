@@ -1,6 +1,6 @@
-import {useCallback,useEffect,useRef,useState,type ReactNode} from 'react';
+import {useCallback,useEffect,useMemo,useRef,useState,type ReactNode} from 'react';
 import {openPaywall} from './premium';
-import {useNavigate,useParams,useSearchParams} from 'react-router';
+import {useLocation,useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
@@ -13,7 +13,7 @@ import {NameBadges} from './faces';
 import {BellButton} from './inbox';
 import {when} from './feed';
 import {FollowButton} from './follow';
-import {catalogRes,cardOneRead,cardRead,galleryList,CompatSummary,FollowCounts,MatchOverlay,PersonBio,PersonMenu,PhotoViewer,ProfileBody,ProfilePage,personName,personProfileRes,pxError,readCard,readCatalog,usePrivate,useRelation,type CardPre,
+import {catalogRes,cardOneRead,cardRead,galleryList,CompatSummary,FollowCounts,MatchOverlay,PersonBio,PersonMenu,PhotoViewer,ProfileBody,ProfilePage,mediaSrc,ownSettingsRes,personName,personProfileRes,pxError,readCard,readCatalog,usePrivate,useRelation,viewedBy,type CardPre,
  type Catalog,type MenuStep,type PersonProfile} from './profile-extras';
 import {AboutGroup} from './about-facts';
 import {topicMatches} from './topic-search';
@@ -341,14 +341,21 @@ function Discover({reloadKey,onOff,filterOn,openFilter,onLikes}:{reloadKey:numbe
   <div className="deck">
    {nx&&<NextCard key={nx.id} c={nx} cardRef={next}/>}
    <TopCard key={c.id} c={c} cardRef={top} nextRef={next} actsRef={acts} onDecide={decide}/>
-   <div className="acts onphoto" ref={acts}>
-    <button type="button" className={'act undo'+(made.length?'':' off')} aria-label={t('fe.people.undo')} onClick={undo}><Undo2/></button>
-    <button type="button" className="act pass" aria-label={t('fe.people.pass')} onClick={()=>void decide(-1)}><X/></button>
-    <KeyAct key={c.id} id={c.id} known={c.private} cardRef={top}/>
-    <button type="button" className="act like" aria-label={t(acting?.kind==='couple'?'fe.px.deck.likeUs':'fe.px.deck.like')} onClick={()=>void decide(1)}><HeartF/></button>
-   </div>
+   <DeckActs key={c.id} id={c.id} known={c.private} cardRef={top} actsRef={acts} canUndo={made.length>0} onUndo={()=>void undo()} onDecide={dir=>void decide(dir)}/>
   </div>
   {overlay}
+ </div>;
+}
+
+/** The deck's round buttons under the card: undo, pass, the key (a private part), like. `inert` in «Как видят». */
+function DeckActs({id,known,cardRef,actsRef,canUndo,onUndo,onDecide,inert}:{id:string,known?:{exists:boolean,open:boolean}|undefined,cardRef:React.RefObject<HTMLElement|null>,
+ actsRef:React.RefObject<HTMLDivElement|null>,canUndo:boolean,onUndo:()=>void,onDecide:(dir:1|-1)=>void,inert?:boolean|undefined}){
+ const {t}=useI18n();const {acting}=useFe();
+ return <div className="acts onphoto" ref={actsRef} inert={inert||undefined}>
+  <button type="button" className={'act undo'+(canUndo?'':' off')} aria-label={t('fe.people.undo')} onClick={onUndo}><Undo2/></button>
+  <button type="button" className="act pass" aria-label={t('fe.people.pass')} onClick={()=>onDecide(-1)}><X/></button>
+  <KeyAct id={id} known={known} cardRef={cardRef}/>
+  <button type="button" className="act like" aria-label={t(acting?.kind==='couple'?'fe.px.deck.likeUs':'fe.px.deck.like')} onClick={()=>onDecide(1)}><HeartF/></button>
  </div>;
 }
 
@@ -389,16 +396,17 @@ function NextCard({c,cardRef}:{c:Card,cardRef:React.RefObject<HTMLElement|null>}
 }
 
 /** The top card (deckInner/card): photo with bars and zones, tags, stamps, the info block and — scrolled — the whole
- * profile in its own layout with «Подписаться» and «Полный профиль». Horizontal drag decides, vertical scrolls. */
-function TopCard({c,cardRef,nextRef,actsRef,onDecide}:{c:Card,cardRef:React.RefObject<HTMLElement|null>,nextRef:React.RefObject<HTMLElement|null>,
- actsRef:React.RefObject<HTMLDivElement|null>,onDecide:(dir:1|-1)=>void}){
+ * profile in its own layout with «Подписаться» and «Полный профиль». Horizontal drag decides, vertical scrolls.
+ * `preview` is «Как видят → Знакомства»: the same card with the own profile under the photo, drawn but inert. */
+function TopCard({c,cardRef,nextRef,actsRef,onDecide,preview}:{c:Card,cardRef:React.RefObject<HTMLElement|null>,nextRef:React.RefObject<HTMLElement|null>,
+ actsRef:React.RefObject<HTMLDivElement|null>,onDecide:(dir:1|-1)=>void,/** The own profile as Discover shows it. */ preview?:PersonProfile|undefined}){
  const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const aid=acting?.id??'';
  const [ix,setIx]=useState(0);const [view,setView]=useState<number|null>(null);
  // Everything under the photo (bio, compatibility, details, interests, posts, the private part) comes in one read as
  // soon as the card is next in the deck (NextCard) — usually it is here before the card is on top, so the whole body
  // is drawn on the first frame. Until then its place is held by blocks of about its size; nothing loads on scroll.
  const [pre,setPre]=useState<CardPre|null>(()=>aid?cardRead(aid,c.id):null);
- useEffect(()=>{if(pre||!aid)return;let live=true;
+ useEffect(()=>{if(pre||!aid||preview)return;let live=true;
   // A server without the one read: the parts are asked only once someone stays on the card, so quick swipes stay cheap.
   const go=()=>readCard(call,aid,c.id).then(r=>{if(live)setPre(r);}).catch(()=>{});
   const timer=cardOneRead()===false?setTimeout(go,700):(go(),undefined);
@@ -419,6 +427,7 @@ function TopCard({c,cardRef,nextRef,actsRef,onDecide}:{c:Card,cardRef:React.RefO
   let sx=0,sy=0,t0=0,dx=0,mode:''|'x'|'y'='',pid:number|null=null;
   // Scrolling only flips a class on the buttons (no re-render per frame).
   const onScroll=()=>{actsRef.current?.classList.toggle('onphoto',el.scrollTop<el.clientHeight*.55);};
+  if(preview){el.addEventListener('scroll',onScroll,{passive:true});return ()=>el.removeEventListener('scroll',onScroll);}
   const down=(e:PointerEvent)=>{if(e.button>0||(e.target as HTMLElement).closest('button,a,input,textarea,select'))return;sx=e.clientX;sy=e.clientY;t0=e.timeStamp;dx=0;mode='';pid=e.pointerId;};
   const move=(e:PointerEvent)=>{if(pid!==e.pointerId)return;const mx=e.clientX-sx,my=e.clientY-sy;const nx=nextRef.current;
    if(!mode){if(Math.abs(mx)>10&&Math.abs(mx)>Math.abs(my)*1.2){mode='x';el.setPointerCapture(pid);el.classList.add('drag');nx?.classList.add('drag');}else if(Math.abs(my)>10&&Math.abs(my)>Math.abs(mx)*1.2)mode='y';}
@@ -437,7 +446,7 @@ function TopCard({c,cardRef,nextRef,actsRef,onDecide}:{c:Card,cardRef:React.RefO
   el.addEventListener('pointercancel',cancel);el.addEventListener('lostpointercapture',lost);el.addEventListener('click',click,true);el.addEventListener('dragstart',drag);
   return ()=>{el.removeEventListener('scroll',onScroll);el.removeEventListener('pointerdown',down);el.removeEventListener('pointermove',move);el.removeEventListener('pointerup',end);
    el.removeEventListener('pointercancel',cancel);el.removeEventListener('lostpointercapture',lost);el.removeEventListener('click',click,true);el.removeEventListener('dragstart',drag);};
- },[cardRef,nextRef,actsRef]);
+ },[cardRef,nextRef,actsRef,preview]);
  const name=cname(c);
  return <article ref={cardRef as React.RefObject<HTMLElement>} className="pc top" aria-label={name}>
   <div className="pc-ph">
@@ -449,14 +458,16 @@ function TopCard({c,cardRef,nextRef,actsRef,onDecide}:{c:Card,cardRef:React.RefO
    <div className="stamp l">{t('fe.px.deck.stampLike')}</div><div className="stamp n">{t('fe.px.deck.stampPass')}</div>
    <div className="pc-info"><PersonName name={name} age={c.ages.join(' · ')}><NameBadges p={c}/></PersonName>
     {city&&<div className="pc-who"><span className="pl"><MapPin/>{city}</span></div>}
-    <FollowCounts id={c.id} rel={rel}/>
+    <FollowCounts id={c.id} rel={rel} inert={!!preview}/>
     <div className="pc-hint"><ChevronDown/>{t('fe.px.card.hint')}</div>
    </div>
   </div>
   <div className="pc-body pc-full">
-   {pre?<><PersonBio p={pre.profile}/><AboutGroup p={pre.profile}/><CompatSummary profileId={c.id} pre={pre.compat}/><ProfileBody p={pre.profile} pre={pre} onOpen={setView}/></>
+   {preview?<><PersonBio p={preview}/><AboutGroup p={preview} inert/><ProfileBody p={preview} inert preview="all" onOpen={setView}/></>
+    :pre?<><PersonBio p={pre.profile}/><AboutGroup p={pre.profile}/><CompatSummary profileId={c.id} pre={pre.compat}/><ProfileBody p={pre.profile} pre={pre} onOpen={setView}/></>
     :<><Skel kind="card" rows={2}/><Skel kind="post" rows={1}/></>}
-   <div className="pc-foot"><FollowButton profileId={c.id} name={name} on={!!rel?.iFollow} disabled={!rel} onChange={on=>setRel(x=>x&&{...x,iFollow:on,followers:Math.max(0,x.followers+(on?1:-1))})}/><Btn kind="soft" onClick={()=>navigate('/n/people/'+c.id)}>{t('fe.px.deck.full')}</Btn></div>
+   <div className="pc-foot"><FollowButton profileId={c.id} name={name} on={!!rel?.iFollow} inert={!!preview} disabled={!rel} onChange={on=>setRel(x=>x&&{...x,iFollow:on,followers:Math.max(0,x.followers+(on?1:-1))})}/>
+    <Btn kind="soft" disabled={!!preview} onClick={()=>navigate('/n/people/'+c.id)}>{t('fe.px.deck.full')}</Btn></div>
   </div>
   {view!==null&&<PhotoViewer srcs={list.map(x=>x.full)} index={view} onClose={()=>setView(null)}/>}
  </article>;
@@ -620,3 +631,52 @@ export function PersonScreen(){
  </>;
 }
 
+/* ---------- «Как видят» (P03) ---------- */
+type Lv='all'|'granted'|'card';
+/** V21 pairReview «Весь профиль после изменений»: a couple's proposed name / bio drawn over the live profile. */
+function useProposal(){
+ const st=useLocation().state as {proposal?:Record<string,unknown>}|null;const c=st?.proposal;
+ return useMemo(()=>{if(!c)return null;const o:{name?:string,bio?:string}={};
+  if(typeof c.name==='string')o.name=c.name;if(typeof c.bio==='string')o.bio=c.bio;return Object.keys(o).length?o:null;},[c]);
+}
+/** The own profile as a Discover card (the deck's `Card`): the same photos, name, age, city and badges. */
+const asCard=(p:PersonProfile,rel:{followers:number,following:number,iFollow:boolean}|null):Card=>({id:p.id,kind:p.kind,handle:p.handle,name:p.name,
+ ages:(p as {ages?:number[]}).ages??(p.age!=null?[p.age]:[]),city:p.city?{ru:p.city.ru,en:p.city.en}:null,avatar:p.avatar,likedMe:false,shared:0,
+ ...(p.photoVerified!==undefined?{photoVerified:p.photoVerified}:{}),...(p.premium!==undefined?{premium:p.premium}:{}),photos:p.photos,
+ ...(rel?{followers:rel.followers,following:rel.following,iFollow:false}:{})});
+
+/** `/n/me/preview`: the own profile as others see it, with the prototype's audience switch «Все / С доступом /
+ * Знакомства». «Все» and «С доступом» are the profile page itself drawn as a viewer sees it (the server's own data,
+ * filtered by the owner's settings; the private part from the own `private.get`); «Знакомства» is the deck's own card
+ * (`TopCard` with its buttons) with the whole profile under it. Buttons are drawn but do nothing. */
+export function MePreviewScreen(){
+ const {call,acting}=useFe();const {t}=useI18n();
+ const [lv,setLv]=useState<Lv>(()=>{const v=new URLSearchParams(location.hash.split('?')[1]??'').get('lv');return v==='granted'||v==='card'?v:'all';});
+ const [p,setP]=useState<PersonProfile|null>(null);const [mode,setMode]=useState<string|null>(null);const [error,setError]=useState<unknown>(null);
+ const [rel]=useRelation(acting?.id??'');
+ const proposal=useProposal();
+ const top=useRef<HTMLElement|null>(null);const next=useRef<HTMLElement|null>(null);const acts=useRef<HTMLDivElement|null>(null);
+ const load=useCallback(()=>{if(!acting)return;setError(null);
+  Promise.all([call('profile.get',{profileId:acting.id},personProfileRes),call('profile.settings',{},ownSettingsRes).catch(()=>null)])
+   .then(([a,s])=>{setP(proposal?{...a.profile,...proposal}:a.profile);setMode(s?.settings.discoverMode??null);}).catch(setError);},[call,acting,proposal]);
+ useEffect(()=>{load();},[load]);
+ const seg=<Seg value={lv} onChange={setLv} label={t('fe.px.pv.title')} options={(['all','granted','card'] as const).map(id=>({id,label:t('fe.ln.pv.'+id)}))}/>;
+ if(p&&!error&&lv!=='card')return <>
+  {proposal&&<Alert kind="info">{t('fe.c6.previewNote')}</Alert>}
+  <ProfilePage p={viewedBy(p,lv)} preview={lv} seg={<div className="p3-seg">{seg}</div>}/>
+ </>;
+ const vp=p?viewedBy(p,'card'):null;
+ const note=mode!=='visible'?t('fe.px.pv.cardOff'):!mediaSrc(p?.avatar)?t('fe.px.pv.cardNoPhoto'):t(acting?.kind==='couple'?'fe.px.pv.cardOnUs':'fe.px.pv.cardOn');
+ return <>
+  <Bar title={t('fe.px.pv.title')} back seg={seg}/>
+  {error?<View><Empty icon={X} role="alert" title={t('fe.error.title')} text={pxError(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty></View>
+   :!p||!vp?<div className="view deckmode"><div className="deck"><div className="pc top fe-pc-skel"><div className="pc-ph"><i className="sk k-sk-fill"/></div></div></div></div>
+   :<div className="view deckmode">
+    <Note className="deck-tip">{note}</Note>
+    <div className="deck">
+     <TopCard c={asCard(vp,rel)} cardRef={top} nextRef={next} actsRef={acts} onDecide={()=>{}} preview={vp}/>
+     <DeckActs id={p.id} cardRef={top} actsRef={acts} canUndo={false} onUndo={()=>{}} onDecide={()=>{}} inert/>
+    </div>
+   </div>}
+ </>;
+}

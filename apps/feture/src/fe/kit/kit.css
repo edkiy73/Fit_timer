@@ -104,6 +104,8 @@
 /* Row with an end control: the main part is one button, the end control sits beside it. */
 .v21 .li.k-li-end{display:flex;align-items:center;gap:var(--s-2)}
 .v21 .li.k-li-end>.k-li-main{display:flex;align-items:center;gap:inherit;flex:1;min-width:0;text-align:left;background:none;border:0;padding:0;color:inherit}
+/* The control at the end (a small Follow, ⋯, a note) keeps its size; the name and @nick give way and ellipsize. */
+.v21 .li.k-li-end>:not(.k-li-main){flex:none}
 .v21 .li.k-li-sel{display:flex;align-items:center;gap:var(--s-3)}
 .v21 .li.k-li-sel>.selrow{flex:1;min-width:0}
 /* Uploader rows: thumb, name, state, progress, actions. */
@@ -535,6 +537,8 @@ html:has(.fe-v21),html:has(.fe-v21) body{overscroll-behavior-y:none}
 .v21 .btn.ghost{background:none;color:var(--ink);box-shadow:none}
 @media (hover:hover){.v21 .btn.quiet:hover{background:color-mix(in srgb,var(--ink) 10%,transparent)}.v21 .btn.ghost:hover{background:color-mix(in srgb,var(--ink) 6%,transparent)}}
 .v21 .btn.btn.on,.v21 .btn.btn[aria-pressed="true"]{background:var(--accent-soft);border-color:transparent;color:var(--accent);box-shadow:none}
+/* A quiet toggle stays quiet when on (a list row's «✓ Подписаны»): the tick says it, not a pink plate. */
+.v21 .btn.btn.quiet.on,.v21 .btn.btn.quiet[aria-pressed="true"]{background:color-mix(in srgb,var(--ink) 5%,transparent);color:var(--ink)}
 
 /* ChoiceCards (owner, 29.10.2026): equal cards side by side — same height, the same inner grid (mark, title, line),
    whatever the text length. Kept two (or three) across even on a narrow phone. */
@@ -639,3 +643,6 @@ html:has(.fe-v21),html:has(.fe-v21) body{overscroll-behavior-y:none}
 .v21 .ctx .k-ctx-link{color:var(--mute);font:inherit;padding:0}
 .v21 .ctx .k-ctx-link:hover{color:var(--ink)}
 .v21 .ctx.k-ctx-always{display:block;width:320px;padding:22px 18px 40px;border-left:1px solid var(--line)}
+/* A Seg in place of a header title (Bar `seg`, «Как видят» on the photo): on a 360 phone three full labels
+   («С доступом», «Знакомства») fit in the smaller caption size instead of being cut. */
+@media (max-width:374px){.v21 .bar>.seg.seg button,.v21 .p3-seg .seg.seg button{font-size:var(--fs-cap);padding:0 2px}}
