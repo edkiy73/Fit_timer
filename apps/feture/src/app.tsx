@@ -58,12 +58,12 @@ const productAdminSections:readonly AdminSection[]=[
   {id:'feture-catalog',label:'Темы каталога',group:'Редактура',render:context=><CatalogAdmin {...context}/>},
   {id:'feture-tests',label:'Опросники',group:'Редактура',render:context=><QuestionnairesAdmin {...context}/>},
   {id:'feture-documents',label:'Документы и согласия',group:'Редактура',render:context=><DocumentsAdmin {...context}/>},
-  {id:'feture-metrics',label:'Активность FetUre',group:'Наблюдение',render:context=><MetricsAdmin {...context}/>},
+  {id:'feture-metrics',label:'Активность KINHAZE',group:'Наблюдение',render:context=><MetricsAdmin {...context}/>},
   {id:'feture-app-update',label:'Обновление приложения',group:'Приложение',render:context=><UpdateAdmin {...context}/>}
 ];
 
 const hiddenFetureCoreTabs = ['overview','errors'] as const;
-const PRODUCT_NAME = 'FetUre';
+const PRODUCT_NAME = 'KINHAZE';
 function Localized({children}: {children: ReactNode}){
   return <I18nProvider dictionaries={dictionaries} config={i18nConfig} storageKey={LOCALE_KEY}>{children}</I18nProvider>;
 }

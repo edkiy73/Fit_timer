@@ -69,7 +69,7 @@ for (const kase of ['kept', 'reload', 'broken']) {
     if (kase === 'broken') {
       await page.getByText('Что-то пошло не так').waitFor({ timeout: 30000 });
       await page.waitForTimeout(3000); // a loop would reload again here
-    } else await page.getByText('Рабочий экран FetUre').waitFor({ timeout: 30000 });
+    } else await page.getByText('Рабочий экран KINHAZE').waitFor({ timeout: 30000 });
     const same = await page.evaluate(() => !!(/** @type {any} */ (window).__beforeDeploy));
     const reloads = loads - 1;
     const want = { kept: [true, 0], reload: [false, 1], broken: [false, 1] }[kase];

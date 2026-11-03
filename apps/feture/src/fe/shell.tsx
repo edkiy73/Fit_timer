@@ -8,7 +8,7 @@ import {Ban,Globe,Image as FeedIcon,LogOut,MessageCircle,Plus,User,Users,X,type 
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import {FeError} from '../feture/fe-api';
 import {feErrorMessage} from '../feture/fe-api';
-import {Av,Btn,Empty,H,Skel} from './kit';
+import {Av,Brand,Btn,Empty,H,Skel} from './kit';
 import {FeSessionProvider,useFe,useLive} from './session';
 import {sweepDrafts} from './drafts';
 import {countsRes} from './inbox';
@@ -107,7 +107,7 @@ function ShellSkeleton(){
  const {t}=useI18n();const {pathname}=useLocation();
  const current=pathname.split('/')[2]||'feed';const tab=FE_TABS.some(x=>x.id===current)?current:'feed';
  return <div className="stage"><div className="root">
-  <aside className="side"><div className="brand"><img src={import.meta.env.BASE_URL+'fe-logo.svg'} alt=""/><b>Fet<i>Ure</i></b></div>
+  <aside className="side"><Brand at="side"/>
    <nav aria-hidden="true">{FE_TABS.map(({id,icon:Icon})=><button key={id} type="button" tabIndex={-1} className={'navb'+(tab===id?' on':'')}><Icon/><span>{t('fe.nav.'+id)}</span></button>)}</nav></aside>
   <main className="main has-dock hasbar">
    <ScreenSkeleton/>
@@ -234,7 +234,7 @@ function FeLayout(){
   return ()=>{m.removeEventListener('scroll',on,{capture:true});o.disconnect();};},[]);
  return <div className="stage"><div className="root">
   <aside className="side">
-   <div className="brand"><img src={import.meta.env.BASE_URL+'fe-logo.svg'} alt=""/><b>Fet<i>Ure</i></b></div>
+   <Brand at="side"/>
    <nav aria-label={t('fe.nav.aria')}>{FE_TABS.map(({id,icon:Icon})=><button key={id} type="button" className={'navb'+(current===id?' on':'')} aria-current={current===id?'page':undefined} onClick={()=>go(id)}><Icon/><span>{t('fe.nav.'+id)}</span>{badge(id)==='dot'?<em className="dot"/>:badge(id)?<em>{badge(id)}</em>:null}</button>)}</nav>
    <Btn className="create" icon={Plus} aria-haspopup="dialog" onClick={()=>setCreate(true)} aria-label={t('fe.create')}><span>{t('fe.create')}</span></Btn>
    <div className="sp"/>

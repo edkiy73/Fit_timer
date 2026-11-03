@@ -39,7 +39,7 @@ export function DocumentsAdmin({client,adminKey}:AdminSectionContext){
  const choose=(next:DocumentKey)=>{if(!select(next))return;setView('edit');setOpen(true);};
  const visibleDocuments=(Object.entries(DOCUMENT_LABELS) as [DocumentKey,string][]).filter(([docKey,label])=>(label+' '+docKey).toLocaleLowerCase('ru').includes(query.trim().toLocaleLowerCase('ru')));
  return <section className="ft-documents-admin">
-  <div className="ab-admin-section-head"><div><h2>Документы FetUre</h2><p className="muted">Управляй черновиками и проверяй текст до публикации. Черновики не видны пользователям.</p></div></div>
+  <div className="ab-admin-section-head"><div><h2>Документы KINHAZE</h2><p className="muted">Управляй черновиками и проверяй текст до публикации. Черновики не видны пользователям.</p></div></div>
   <div className="ft-document-toolbar">
    <label>Поиск по документам<input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Название документа" aria-label="Найти документ"/></label>
    <label>Язык<select value={locale} disabled={busy} onChange={e=>{if(!dirty||window.confirm('Несохранённый текст будет потерян. Продолжить?'))setLocale(e.target.value as 'ru'|'en');}}><option value="ru">Русский</option><option value="en">English</option></select></label>

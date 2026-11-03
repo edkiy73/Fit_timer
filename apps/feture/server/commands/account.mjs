@@ -131,7 +131,7 @@ const run = {
 
   async 'account.factorStart'(q, { account, cfg }) {
     const [p] = await q.query('select handle from feture.profile where id = $1', [account.person_profile_id]);
-    return await startEnrol(q, account.id, cfg.pepper ?? '', p?.handle ? '@' + p.handle : 'FetUre');
+    return await startEnrol(q, account.id, cfg.pepper ?? '', p?.handle ? '@' + p.handle : 'KINHAZE');
   },
 
   async 'account.factorConfirm'(q, { account, input, cfg }) {

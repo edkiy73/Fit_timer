@@ -46,7 +46,7 @@ export function UpdateAdmin({client,adminKey}:AdminSectionContext){
    setBuild(latest.release as Build);setBuildError('');
   }catch{
    setBuild(null);
-   setBuildError('Подписанной сборки пока нет (или GitHub не ответил). Она появляется после запуска «FetUre — APK для установки» в GitHub Actions, когда заданы секреты FETURE_KEYSTORE_*.');
+   setBuildError('Подписанной сборки пока нет (или GitHub не ответил). Она появляется после запуска «KINHAZE — APK для установки» в GitHub Actions, когда заданы секреты FETURE_KEYSTORE_*.');
   }
  },[client,adminKey]);
 
@@ -80,7 +80,7 @@ export function UpdateAdmin({client,adminKey}:AdminSectionContext){
   <article className="ab-admin-panel">
    <h2>Скачать приложение</h2>
    <p className="ab-admin-empty">Постоянная ссылка на последнюю подписанную версию для Android: открой её на телефоне и установи или отправь тестировщику.</p>
-   <p><a href={LATEST_APK}>Скачать FetUre для Android (APK)</a></p>
+   <p><a href={LATEST_APK}>Скачать KINHAZE для Android (APK)</a></p>
   </article>
   <article className="ab-admin-panel">
    <h2>Обновление для установленных из файла</h2>

@@ -26,14 +26,14 @@ const RULES = {
 };
 const REPLY = {
   ru: {
-    subject: 'Ваше уведомление о контенте — FetUre',
+    subject: 'Ваше уведомление о контенте — KINHAZE',
     removed: (/** @type {string} */ rule) => `Спасибо за уведомление. Мы проверили материал и удалили его: ${rule}.`,
     kept: () => 'Спасибо за уведомление. Мы проверили материал и не нашли нарушения закона или наших правил, поэтому он остаётся.',
     not_actionable: () => 'Спасибо за уведомление. По указанной ссылке мы не смогли найти материал или понять, о чём речь.',
     footer: 'Если вы не согласны с решением или можете добавить подробности, отправьте новое уведомление через ту же форму — его рассмотрит другой сотрудник. Вы также можете обратиться в компетентный орган или суд своей страны.',
   },
   en: {
-    subject: 'Your notice about content — FetUre',
+    subject: 'Your notice about content — KINHAZE',
     removed: (/** @type {string} */ rule) => `Thank you for your notice. We reviewed the material and removed it: ${rule}.`,
     kept: () => 'Thank you for your notice. We reviewed the material and found no breach of the law or our rules, so it stays.',
     not_actionable: () => 'Thank you for your notice. We could not find the material at the link given or understand the concern.',

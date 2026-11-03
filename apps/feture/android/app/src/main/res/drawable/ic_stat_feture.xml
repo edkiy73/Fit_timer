@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Status-bar icon for notifications: the two FetUre rings in one colour (Android tints it). -->
+<!-- Status-bar icon for notifications: the KINHAZE K in one colour (Android tints it). -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="120"
-    android:viewportHeight="120">
-    <path android:pathData="M24,60a23,23 0 1,0 46,0a23,23 0 1,0 -46,0" android:strokeWidth="11" android:strokeColor="#FFFFFFFF" android:fillColor="#00000000" />
-    <path android:pathData="M50,60a23,23 0 1,0 46,0a23,23 0 1,0 -46,0" android:strokeWidth="11" android:strokeColor="#FFFFFFFF" android:fillColor="#00000000" />
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+    <path android:fillColor="#FFFFFFFF" android:pathData="M19,14h8v15l12,-15h10L35,31l15,19H40L30,37l-3,3.6V50h-8z" />
 </vector>

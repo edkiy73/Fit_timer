@@ -416,7 +416,7 @@ function downloadIcs(e:EventFull){
  const z2=(iso:string)=>new Date(iso).toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
  const esc=(s:string)=>s.replace(/[\\;,]/g,m=>'\\'+m).replace(/\n/g,'\\n');
  const where=e.joinUrl??e.exactAddress??e.area??'';
- const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//FetUre//EN','BEGIN:VEVENT',`UID:${e.id}@feture`,`DTSTAMP:${z2(new Date().toISOString())}`,`DTSTART:${z2(e.startsAt)}`,`DTEND:${z2(e.endsAt)}`,
+ const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//KINHAZE//EN','BEGIN:VEVENT',`UID:${e.id}@feture`,`DTSTAMP:${z2(new Date().toISOString())}`,`DTSTART:${z2(e.startsAt)}`,`DTEND:${z2(e.endsAt)}`,
   `SUMMARY:${esc(e.title)}`,...(where?[`LOCATION:${esc(where)}`]:[]),`URL:${appUrl('/n/events/'+e.id)}`,'END:VEVENT','END:VCALENDAR'].join('\r\n');
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([ics],{type:'text/calendar'}));a.download='event.ics';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
 }

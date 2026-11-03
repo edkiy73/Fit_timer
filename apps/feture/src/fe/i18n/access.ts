@@ -95,7 +95,7 @@ export const ru = {
  'fe.ac.sum.closedN': '{what} останутся закрытыми.',
  'fe.ac.sum.none': 'Ничего не выбрано — доступ не откроется.',
  'fe.ac.sum.noChat': 'Чат и симпатию это не открывает.',
- 'fe.ac.sum.revoke': 'Отозвать можно в любой момент. То, что уже увидели или сохранили вне FetUre, вернуть нельзя.',
+ 'fe.ac.sum.revoke': 'Отозвать можно в любой момент. То, что уже увидели или сохранили вне KINHAZE, вернуть нельзя.',
  'fe.ac.sum.couple': 'Открывает пара — сначала подтвердит партнёр.',
 
  'fe.ac.dec.done': 'Отказано. {name} увидит «решили не открывать» и сможет спросить снова через {d} дн.',
@@ -110,7 +110,7 @@ export const ru = {
  'fe.ac.nw.done': 'Доступ изменён',
 
  'fe.ac.rv.title': 'Отозвать доступ у {name}?',
- 'fe.ac.rv.text': 'Новые просмотры прекратятся сразу. То, что человек уже видел или сохранил вне FetUre, отозвать нельзя. Чат и симпатия не меняются.',
+ 'fe.ac.rv.text': 'Новые просмотры прекратятся сразу. То, что человек уже видел или сохранил вне KINHAZE, отозвать нельзя. Чат и симпатия не меняются.',
  'fe.ac.rv.ok': 'Отозвать',
 
  'fe.ac.rule.undo_expired': 'Уже поздно: отказ ушёл человеку.',
@@ -215,7 +215,7 @@ export const en: Record<keyof typeof ru, string> = {
  'fe.ac.sum.closedN': '{what} stay closed.',
  'fe.ac.sum.none': 'Nothing selected — no access will be shared.',
  'fe.ac.sum.noChat': 'This doesn’t open a chat or send a like.',
- 'fe.ac.sum.revoke': 'You can revoke it any time. What was already seen or saved outside FetUre can’t be recalled.',
+ 'fe.ac.sum.revoke': 'You can revoke it any time. What was already seen or saved outside KINHAZE can’t be recalled.',
  'fe.ac.sum.couple': 'Shared by the couple — your partner approves first.',
 
  'fe.ac.dec.done': 'Declined. {name} will see “decided not to share” and can ask again in {d} d.',
@@ -230,7 +230,7 @@ export const en: Record<keyof typeof ru, string> = {
  'fe.ac.nw.done': 'Access updated',
 
  'fe.ac.rv.title': 'Revoke access for {name}?',
- 'fe.ac.rv.text': 'New views stop immediately. What they already saw or saved outside FetUre can’t be recalled. Chat and likes stay as they are.',
+ 'fe.ac.rv.text': 'New views stop immediately. What they already saw or saved outside KINHAZE can’t be recalled. Chat and likes stay as they are.',
  'fe.ac.rv.ok': 'Revoke',
 
  'fe.ac.rule.undo_expired': 'Too late: the decline has reached them.',

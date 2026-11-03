@@ -45,7 +45,7 @@ test('optional factor: enrolment, every other sign-in refused everywhere until a
     assert.equal((await call('uu', null, { action: 'session.bootstrap' }, phone)).status, 200);
 
     const s = await call('uu', null, { action: 'account.factorStart' });
-    assert.match(s.uri, /^otpauth:\/\/totp\/FetUre%3A%40Alex\?secret=/);
+    assert.match(s.uri, /^otpauth:\/\/totp\/KINHAZE%3A%40Alex\?secret=/);
     // Not on before the first right code: other sign-ins are not asked yet.
     assert.equal((await call('uu', null, { action: 'session.bootstrap' }, phone)).status, 200);
     const bad = await call('uu', null, { action: 'account.factorConfirm', code: wrongOf(s.secret) });
@@ -190,7 +190,7 @@ test('new device: first sign-in quiet, known device or family quiet, a new one n
     assert.match(mails[1].text, /^Вход в KINHAZE с нового устройства: Android, Lisboa, Португалия, \d+ \S+ 2\d{3} г?\.?,? ?(в )?\d\d:\d\d UTC\.\n\nЭто не ты\? Открой «Мои устройства» и нажми «Выйти»:\nhttps:\/\/app\.test\/#\/n\/settings\/security\n/);
     assert.ok(!/<|http:\/\/(?!app)/.test(mails[1].text), 'plain text, no tracking');
 
-    // The inbox item (always, no setting) and the push: in «Безопасные» only «FetUre · Вход с нового устройства».
+    // The inbox item (always, no setting) and the push: in «Безопасные» only «KINHAZE · Вход с нового устройства».
     const sent = [];
     while ((await drain(db, { ...notifyHandlers(db), ...pushHandlers(db, { send: async (p, t, m) => { sent.push(m); } }) }, { limit: 50 })) > 0) { /* all */ }
     const items = (await call('uu', null, { action: 'notifications.list' })).items.filter(n => n.type === 'signinNew');

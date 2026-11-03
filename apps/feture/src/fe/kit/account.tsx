@@ -6,11 +6,11 @@ import {IconBtn,Pill} from './index';
  * maintenance screen and a support conversation. Styles come from base.css (pw-*, maintenance-screen, msgs) and the
  * tokens; screens use these instead of the markup. */
 
-/** The Premium header plate: crown, «FetUre Premium», one line. `onClose` puts a ✕ on it (the paywall sheet). */
+/** The Premium header plate: crown, «KINHAZE Premium», one line. `onClose` puts a ✕ on it (the paywall sheet). */
 export function PremiumHero({lead,onClose,closeLabel}:{lead:ReactNode,onClose?:(()=>void)|undefined,closeLabel?:string}){
  return <div className="pw-hero">
   {onClose&&<IconBtn icon={X} kind="ghost" size="sm" className="pw-x" label={closeLabel??''} onClick={onClose}/>}
-  <span className="pw-crown" aria-hidden="true"><Crown/></span><b>FetUre Premium</b><p>{lead}</p>
+  <span className="pw-crown" aria-hidden="true"><Crown/></span><b>{BRAND} Premium</b><p>{lead}</p>
  </div>;
 }
 
@@ -33,7 +33,7 @@ export function PlanCards<T extends string>({plans,value,onChange,label}:{plans:
 /** The whole-screen «Технические работы»: logo, icon, title, text, the staff message, a note and the retry action. */
 export function Maintenance({title,text,message,note,children}:{title:ReactNode,text:ReactNode,message?:ReactNode,note?:ReactNode,children?:ReactNode}){
  return <div className="view nodock"><div className="wrap maintenance-screen" role="status" aria-live="polite">
-  <div className="maint-brand"><img src={import.meta.env.BASE_URL+'fe-logo.svg'} alt=""/><b>Fet<i>Ure</i></b></div>
+  <Brand at="maint"/>
   <span className="maint-ic" aria-hidden="true"><Settings/></span>
   <h1>{title}</h1><p className="lead">{text}</p>
   {message&&<p className="lead"><b>{message}</b></p>}
@@ -48,6 +48,14 @@ export function Thread({messages,label}:{messages:ThreadMessage[],label:string})
  return <div className="msgs" role="list" aria-label={label}>{messages.map(m=><div key={m.id} role="listitem" className={'msg'+(m.mine?' me':'')}>
   <div className="mtx">{m.text}</div>{m.meta&&<div className="st">{m.meta}</div>}
  </div>)}</div>;
+}
+
+/** The KINHAZE brand: the mark (`public/kinhaze-mark.svg`) and the wordmark. `at` is the place, and the place sizes it:
+ * the desktop sidebar (only the mark when the sidebar is narrow), the welcome header, the sign-up card on a computer,
+ * the maintenance screen. Decorative: the page title already names the app. */
+export function Brand({at}:{at:'side'|'welcome'|'auth'|'maint'}){
+ const cls={side:'brand',welcome:'w-brand',auth:'auth-logo',maint:'maint-brand'}[at];
+ return <div className={'kbrand '+cls} aria-hidden="true"><img className={at==='welcome'?'w-logo':undefined} src={import.meta.env.BASE_URL+'kinhaze-mark.svg'} alt=""/><b>{BRAND}</b></div>;
 }
 
 /** The brand every notification carries (push title, email, lock-screen line): KINHAZE and its mark. */
