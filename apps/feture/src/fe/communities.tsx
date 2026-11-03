@@ -237,14 +237,15 @@ function StatusPill({s}:{s:MyStatus|undefined}){
  * says «Отменено» and, under it, the organizer's reason (lists show it only to people it concerns — server cancelledFor). */
 /** An event as a list gives it: `event.mine` rows have no kind, price or application flag (the tile then leaves them out). */
 export type EventRowLike=Omit<Ev,'kind'|'price'|'requires_application'>&Partial<Pick<Ev,'kind'|'price'|'requires_application'>>;
-export function EventCard({e,row,status,org,pill:own}:{e:EventRowLike,row?:boolean,status?:MyStatus|undefined,org?:string|undefined,/** A status label of the screen's own (the organiser panel). */ pill?:ReactNode}){
+export function EventCard({e,row,brief,status,org,pill:own}:{e:EventRowLike,row?:boolean,status?:MyStatus|undefined,org?:string|undefined,/** A status label of the screen's own (the organiser panel). */ pill?:ReactNode,
+ /** A short row (the desktop side column): the line above the title is only the city or «Онлайн», no time. */ brief?:boolean}){
  const {t,locale}=useI18n();const navigate=useNavigate();
  const pt=evParts(e,locale);const places=usePlaces();
  const cancelled=e.state==='cancelled';
  const pill=own??(cancelled?<Pill tone="bad">{t('fe.cm.st.cancelled')}</Pill>:<StatusPill s={status}/>);
- const place=evWhere(e,places,locale,t('fe.ev.online'),t('fe.ev.offline'));
+ const place=evWhere(brief?{...e,area:null}:e,places,locale,t('fe.ev.online'),t('fe.ev.offline'));
  return <EventTile row={row} cover={<NamedPlate k={e.plate} icon={Calendar}/>} day={pt.day} month={pt.month} place={place} placeIcon={e.format==='online'?Video:MapPin}
-  status={row||own?pill:cancelled||status?pill:undefined} kicker={e.kind?t('fe.ev.kind.'+e.kind):undefined} title={e.title} time={pt.time+' · '+pt.zone} {...(row?{org:org??(cancelled&&e.cancel_reason||undefined)}:e.price?{price:priceText(e.price,t,locale)}:{})}
+  status={row||own?pill:cancelled||status?pill:undefined} kicker={e.kind?t('fe.ev.kind.'+e.kind):undefined} title={e.title} time={brief?undefined:pt.time+' · '+pt.zone} {...(row?{org:org??(cancelled&&e.cancel_reason||undefined)}:e.price?{price:priceText(e.price,t,locale)}:{})}
   onClick={()=>navigate('/n/events/'+e.id)}/>;
 }
 
