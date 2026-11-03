@@ -2,7 +2,7 @@ import {useCallback,useEffect,useState} from 'react';
 import {useNavigate,useParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Bookmark,Calendar,Eye,Globe,Images,Inbox,KeyRound,Lock,Newspaper,Settings,UserRound,Users,X} from 'lucide-react';
+import {Bookmark,Calendar,Eye,Globe,Inbox,Newspaper,Settings,UserRound,Users,X} from 'lucide-react';
 import {feErrorMessage} from '../feture/fe-api';
 import {Av,Bar,Btn,Card,Empty,Group,IconBtn,Row,Skel,View} from './kit';
 import {useFe,useLive,useShown} from './session';
@@ -89,11 +89,6 @@ export function MeNewScreen(){
    {todo+stTodo>0&&<Card list><Row className="me-todo" icon={Inbox} tone="l" title={t('fe.mx.todo')} badge={todo+stTodo} onClick={go('/n/inbox')}/></Card>}
    <Group title={t('fe.m2.g.profile')}><Card list>
     <Row icon={UserRound} title={t('fe.m2.profile')} val={p?.photos.length?t('fe.m2.photosN',{n:String(p.photos.length)}):undefined} onClick={go('/n/me/new/profile')}/>
-    <Row icon={Images} title={t('fe.mx.gal')} onClick={go('/n/me/new/gallery')}/>
-   </Card></Group>
-   <Group title={t('fe.m2.g.private')}><Card list>
-    <Row icon={Lock} title={t('fe.m2.private')} val={privOn===undefined?undefined:t(privOn?'fe.m2.on':'fe.m2.off')} onClick={go('/n/me/new/private')}/>
-    <Row icon={KeyRound} title={t(cp?'fe.ac.titleUs':'fe.ac.title')} badge={c?.reqs||undefined} onClick={go('/n/me/access')}/>
    </Card></Group>
    <Group title={t('fe.m2.g.mine')}><Card list>
     <Row icon={Newspaper} title={t(cp?'fe.mx.mine.postsUs':'fe.mx.mine.posts')} val={num(c?.posts)} onClick={go('/n/me/posts')}/>
@@ -133,6 +128,8 @@ export function MeNewSection(){
      <LinksBlock key={'links'+p.id}/>
      <MeAboutBlock p={p}/>
      <MeJars key={p.id}/>
+     <MeGallery profileId={p.id} couple={cp} title={t('fe.mx.gal')}/>
+     <PrivateLayer profileId={p.id} on={settings.privateOn!==false} requestsFrom={settings.requestsFrom??'all'} onChanged={load} askHere={false}/>
     </>}
   </View>
  </>;
