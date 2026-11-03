@@ -43,6 +43,10 @@
 - Получить код: `POST https://app.kinhaze.com/api/admin`, заголовок `x-admin-key: <тестовый ключ>`, тело
   `{"action":"user_test_code","email":"world-mira@feture.test"}` → `{"code":"123456"}`. Дальше в приложении:
   почта → «У меня есть код» → код (действует 15 минут, один раз). Сессия остаётся на устройстве.
+- **Постоянный код** (для браузерных агентов, которым неудобно получать код каждый раз):
+  `bash /opt/feture/repo/apps/feture/deploy/test-login.sh code 123456` (или без числа — случайный). Пока он задан,
+  эти шесть цифр входят в любой тестовый аккаунт (`world-<имя>@feture.test`); не работает для настоящих адресов и для
+  `qa-*`. Убрать: `… test-login.sh code off`. Проверяется в `packages/core/tests/auth-test-static-code.mjs`.
 - Без обоих параметров (ключ ≥ 24 символов и домен) эта возможность выключена. Проверяется в
   `packages/core/tests/admin-test-login.mjs`.
 
