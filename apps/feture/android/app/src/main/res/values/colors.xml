@@ -2,7 +2,7 @@
 <resources>
     <!-- backgroundColor in capacitor.config.json: window behind the web app. -->
     <color name="feture_background">#241628</color>
-    <!-- Near-black behind the white KINHAZE mark: adaptive-icon background and the splash. -->
+    <!-- Near-black behind the white KINHAZE mark on the splash (the launcher icon sits on feture_accent). -->
     <color name="feture_icon_background">#111012</color>
     <color name="feture_accent">#DF234A</color>
 </resources>
