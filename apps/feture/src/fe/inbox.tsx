@@ -2,7 +2,7 @@ import {Fragment,useCallback,useEffect,useRef,useState,type ReactNode} from 'rea
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {AtSign,Bell,Calendar,Check,CircleCheck,Clock,Crown,EyeOff,FileText,Filter,Heart,Image as ImageIcon,LifeBuoy,LockOpen,MapPin,MessageCircle,Pencil,Shield,ShieldAlert,ShieldCheck,Trash2,Users,X,type LucideIcon} from 'lucide-react';
+import {AtSign,Bell,Calendar,Check,CircleCheck,Clock,Crown,EyeOff,FileText,Filter,Heart,Image as ImageIcon,LifeBuoy,LockOpen,MapPin,MessageCircle,Pencil,Shield,ShieldAlert,ShieldCheck,Trash2,TriangleAlert,Users,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Av,Bar,Btn,Card,Chip,Chips,Empty,IconBtn,PersonLine,RequestCard,Row,SectionLabel,Seg,Skel,View,plate} from './kit';
 import {useFe,useRealtime} from './session';
@@ -24,6 +24,7 @@ type Note=z.infer<typeof note>;
 const notesRes=z.object({ok:z.literal(true),items:z.array(note),next:z.string().nullable()});
 export const countsRes=z.object({ok:z.literal(true),decide:z.number(),notifications:z.number(),bell:z.number(),chats:z.number(),newMatches:z.number(),requests:z.number().default(0),likes:z.number(),staff:z.boolean().default(false)});
 const ok=z.object({ok:z.literal(true)}).passthrough();
+const postState=z.object({ok:z.literal(true),post:z.object({state:z.string().optional()}).passthrough()});
 const revList=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),rev:z.number()}).passthrough())});
 const nameOf=(a:z.infer<typeof actor>)=>a?(a.name||(a.handle?'@'+a.handle:'?')):'FetUre';
 
@@ -45,7 +46,7 @@ export function BellButton(){
 type Kind='access'|'likes'|'matches'|'replies'|'events'|'groups'|'pair'|'follows'|'links'|'posts'|'other';
 const FILTERS:('all'|Kind)[]=['all','access','likes','matches','replies','events','groups','pair','follows','links','posts','other'];
 const NOTE_KIND:Record<string,Kind>={grant:'access',like:'likes',match:'matches',chatRequest:'matches',reply:'replies',mention:'replies',follow:'follows',
- postLike:'posts',mediaDecided:'posts',notePublished:'posts',tagAnswered:'posts',postDisputed:'posts',postRestored:'posts',disputeResolved:'posts',revisionApproved:'posts',revisionRejected:'posts',contentRemoved:'posts',reportResolved:'posts',
+ postLike:'posts',mediaDecided:'posts',notePublished:'posts',tagAnswered:'posts',postDisputed:'posts',postRestored:'posts',disputeResolved:'posts',revisionApproved:'posts',revisionRejected:'posts',postReturned:'posts',contentRemoved:'posts',reportResolved:'posts',
  communityApproved:'groups',communityDeclined:'groups',communityMember:'groups',communityPublished:'groups',communityRejected:'groups',communityClosed:'groups',discussionRemoved:'groups',
  eventPublished:'events',eventRejected:'events',eventHidden:'events',eventApplicationApproved:'events',eventApplicationDeclined:'events',
  linkAccepted:'links',linkDeclined:'links',linkChanged:'links',linkRemoved:'links'};
@@ -53,7 +54,7 @@ const noteKind=(n:Note):Kind=>n.type.startsWith('pair.')?'pair':NOTE_KIND[n.type
 const DECIDE_KIND:Record<string,Kind>={pinv:'pair',req:'access',capp:'groups',eapp:'events',link:'links',linkChange:'links',tag:'posts',joint:'pair',jointReturned:'pair'};
 const decideKind=(d:Decision):Kind=>DECIDE_KIND[d.kind]??'other';
 const NICO:Record<string,[LucideIcon,string]>={like:[Heart,'l'],match:[Heart,'l'],chatRequest:[MessageCircle,'v'],postLike:[Heart,'l'],follow:[Users,'v'],reply:[MessageCircle,'g'],mention:[AtSign,'v'],notePublished:[FileText,'v'],
- grant:[LockOpen,'g'],postDisputed:[EyeOff,'l'],postRestored:[Check,'g'],disputeResolved:[Check,'g'],revisionApproved:[Check,'g'],revisionRejected:[Shield,'l'],contentRemoved:[Shield,'l'],reportResolved:[Shield,'g'],
+ grant:[LockOpen,'g'],postDisputed:[EyeOff,'l'],postRestored:[Check,'g'],disputeResolved:[Check,'g'],revisionApproved:[Check,'g'],revisionRejected:[Shield,'l'],postReturned:[TriangleAlert,'l'],contentRemoved:[Shield,'l'],reportResolved:[Shield,'g'],
  communityApproved:[Users,'g'],communityDeclined:[Users,''],communityMember:[Users,'v'],communityPublished:[Check,'g'],communityRejected:[Shield,'l'],communityClosed:[Users,''],discussionRemoved:[Trash2,'l'],
  eventPublished:[Check,'g'],eventRejected:[Shield,'l'],eventHidden:[EyeOff,'l'],eventApplicationApproved:[Check,'g'],eventApplicationDeclined:[Calendar,''],
  linkAccepted:[Users,'g'],linkDeclined:[Users,''],linkChanged:[Users,'v'],linkRemoved:[Users,''],ageCheck:[ShieldCheck,'g'],photoCheck:[ShieldCheck,'g'],
@@ -121,6 +122,9 @@ export function InboxScreen(){
   if(n.type==='placeDecided'){navigate('/n/me');return;}
   if(n.type==='mediaDecided'&&!n.object?.id){navigate('/n/me');return;}
   if(n.type==='signinNew'){navigate('/n/settings/security');return;}
+  // A post back from review: its draft opens in the editor while it is one, else the post itself.
+  if(n.type==='postReturned'&&n.object?.id){const id=n.object.id;
+   call('post.get',{postId:id},postState).then(r=>navigate('/n/feed/post/'+id+(r.post.state==='draft'?'/edit':'')),()=>navigate('/n/feed/post/'+id));return;}
   if(n.type.startsWith('pair.')){
    if(couple)setActing(couple.id);
    const what=typeof n.data.what==='string'?n.data.what:'';const target=typeof n.data.target==='string'?n.data.target:'';

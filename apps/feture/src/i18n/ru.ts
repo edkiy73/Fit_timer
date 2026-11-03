@@ -344,6 +344,7 @@ export const ru = {
   "fe.inbox.type.disputeResolved": "Спор решён",
   "fe.inbox.type.revisionApproved": "Правка одобрена",
   "fe.inbox.type.revisionRejected": "Правка не прошла проверку",
+  "fe.inbox.type.postReturned": "Публикация вернулась с проверки",
   "fe.inbox.type.contentRemoved": "Удалено модератором",
   "fe.inbox.type.reportResolved": "Жалоба рассмотрена",
   "fe.inbox.type.communityApproved": "Заявка в сообщество одобрена",

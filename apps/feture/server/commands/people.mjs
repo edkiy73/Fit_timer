@@ -59,6 +59,8 @@ async function doPropose(q, acting, c) {
       `insert into feture.profile_link (a_profile_id, b_profile_id, kind, a_side, b_side, a_vis, acted_by) values ($1, $2, $3, $4, $5, $6, $7) returning id`,
       [acting.profileId, t.id, c.kind, c.mySide ?? null, c.mySide ? OPPOSITE[/** @type {keyof typeof OPPOSITE} */ (c.mySide)] : null, c.vis, acting.accountId]);
     if (acting.kind === 'couple') await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: 'link' });
+    // The other side finds it in «Нужно решить»: a push and a live signal there.
+    await enqueue(q, 'link.proposed', t.id, { linkId: l.id, from: acting.profileId });
     return { id: l.id, state: 'pending' };
   } catch (error) {
     if (isUniqueViolation(error)) fail(409, 'conflict', { rule: 'link_exists' });
@@ -191,6 +193,7 @@ const run = {
     const mine = input.mySide ?? null, theirs = input.mySide ? OPPOSITE[/** @type {keyof typeof OPPOSITE} */ (input.mySide)] : null;
     const change = { kind: input.kind, aSide: l.me === 'a' ? mine : theirs, bSide: l.me === 'a' ? theirs : mine, by: acting.profileId };
     await q.query(`update feture.profile_link set change = $2, updated_at = now() where id = $1`, [l.id, JSON.stringify(change)]);
+    await enqueue(q, 'link.changeProposed', l.other, { linkId: l.id, from: acting.profileId });
     return { change: { kind: change.kind } };
   },
 

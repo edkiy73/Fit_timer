@@ -17,8 +17,9 @@ import { sweepSelfies, verificationHandlers } from './commands/premium.mjs';
 
 /** Queue worker (S2 §8, D7). Called every minute by pg_cron + pg_net (Vercel Hobby cron is daily only)
  * through `POST /api/fe?jobs=1` with the jobs secret. Every handler is idempotent.
- * Only topics with a handler here are claimed; others (notifications, moderation, safety) wait in the
- * outbox until their handlers ship, instead of being parked unread.
+ * Only topics with a handler here are claimed. Every enqueued topic has one: history and staff markers are marked
+ * done silently (notify.mjs SILENT_TOPICS; tests/fe-notify-topics-postgres.mjs fails on a topic nobody takes).
+ * Mail topics wait while mail is not set up.
  * @typedef {import('./db.mjs').Db} Db
  * @typedef {import('./media/scan.mjs').ScanDeps} ScanDeps
  * @typedef {{scan: ScanDeps | null, limit?: number, notifyLimit?: number, push?: import('./push.mjs').Transport | null,

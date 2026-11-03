@@ -173,7 +173,7 @@ const run = {
     if (await currentCouple(q, target.account_id)) fail(422, 'rule_violation', { rule: 'partner_in_couple' });
     try {
       const [inv] = await q.query(`insert into feture.couple_invite (from_account, to_account) values ($1, $2) returning id`, [account.id, target.account_id]);
-      await enqueue(q, 'couple.invited', null, { inviteId: inv.id, for: target.account_id });
+      await enqueue(q, 'couple.invited', null, { inviteId: inv.id, for: target.account_id, from: me.person_profile_id });
       return { id: inv.id };
     } catch (error) {
       if (isUniqueViolation(error)) fail(409, 'conflict', { rule: 'invite_pending' });
