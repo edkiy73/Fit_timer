@@ -4,7 +4,6 @@
 export const ru = {
   'fe.ap.by': 'Предлагает {name}',
   'fe.ap.byMe': 'Предлагаешь ты',
-  'fe.ap.version': 'Версия {n}',
   'fe.ap.loading': 'Согласование',
   'fe.ap.notFound': 'Это согласование больше недоступно',
   'fe.ap.retry': 'Повторить',
@@ -211,7 +210,6 @@ export const ru = {
 export const en = {
   'fe.ap.by': '{name} suggests it',
   'fe.ap.byMe': 'You suggest it',
-  'fe.ap.version': 'Version {n}',
   'fe.ap.loading': 'Approval',
   'fe.ap.notFound': 'This approval is no longer available',
   'fe.ap.retry': 'Try again',

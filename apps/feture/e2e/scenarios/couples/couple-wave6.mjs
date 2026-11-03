@@ -17,7 +17,7 @@ async function clean(t) {
 }
 
 export default [
- { name: 'A proposes (approval on): Q01 lists it with its version; dock «Я» opens «Действовать как»', persona: 'pair', run: async t => {
+ { name: 'A proposes (approval on): Q01 lists it; dock «Я» opens «Действовать как»', persona: 'pair', run: async t => {
    const cp = t.me.coupleId; expect(cp, 'pair persona has a couple');
    await clean(t);
    // A pause (couples/approvals.mjs) leaves Discover off; the safety rows below need the couple shown.

@@ -19,7 +19,7 @@ export const Две:S={name:'Я и пара, с подписью',render:a=><Act
 type AS=StoryObj<typeof ApprovalSheet>;
 const mia=<PersonLine av={<Av name="Mia" seed="mia" size="sm"/>} name="Mia" sub="Организатор · @mia"/>;
 export const СогласованиеПост:AS={name:'Согласование: публикация (весь текст и аудитория)',render:a=><ApprovalSheet {...a}/>,
- args:{title:'Публикация от пары',sub:'Mia и Tom',by:'Предлагает Tom',version:'Версия 2',onClose:fn(),consequence:'Пост выйдет от имени пары и его увидит выбранная аудитория.',
+ args:{title:'Публикация от пары',sub:'Mia и Tom',by:'Предлагает Tom',onClose:fn(),consequence:'Пост выйдет от имени пары и его увидит выбранная аудитория.',
   foot:<Actions stack><Btn>Разрешить публикацию</Btn><Btn kind="soft">Не публиковать</Btn></Actions>,
   children:<ReviewPost title="Вечер настолок" meta="Кто увидит: Подписчики · Файлов: 2"><p>Собираемся в субботу, берите любимые игры. Начинаем в семь, заканчиваем, когда надоест.</p></ReviewPost>}};
 export const СогласованиеЗаявка:AS={name:'Согласование: заявка на событие (ответы организатору)',render:a=><ApprovalSheet {...a}/>,

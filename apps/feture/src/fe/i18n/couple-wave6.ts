@@ -28,7 +28,6 @@ export const ru = {
   'fe.c6.nowMe': 'Теперь от себя',
 
   'fe.c6.work': 'Ждёт подтверждения',
-  'fe.c6.version': 'Версия {n}',
   'fe.c6.onRework': 'На доработке',
   'fe.c6.backMine': 'Изменения вернули на доработку',
   'fe.c6.backTheirs': 'Ждём новую версию',
@@ -188,7 +187,6 @@ export const en: typeof ru = {
   'fe.c6.nowMe': 'Now as yourself',
 
   'fe.c6.work': 'Waiting for approval',
-  'fe.c6.version': 'Version {n}',
   'fe.c6.onRework': 'Changes requested',
   'fe.c6.backMine': 'Your changes were sent back',
   'fe.c6.backTheirs': 'Waiting for a new version',

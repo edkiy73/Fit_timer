@@ -136,7 +136,7 @@ export function CoupleWork({coupleId,onOpen}:{coupleId:string,onOpen:(id:string)
  const date=(iso:string)=>new Date(iso).toLocaleDateString(locale==='en'?'en':'ru',{day:'numeric',month:'short'});
  return <Group title={t('fe.c6.work')}><Card list>
   {items.map(a=><Row key={a.id} icon={Clock} tone={!a.mine?'l':undefined} title={kindTitle(a,t)}
-   sub={[a.mine?me:other,a.version&&a.version>1?t('fe.c6.version',{n:a.version}):'',date(a.createdAt)].filter(Boolean).join(' · ')} onClick={()=>onOpen(a.id)}/>)}
+   sub={[a.mine?me:other,date(a.createdAt)].filter(Boolean).join(' · ')} onClick={()=>onOpen(a.id)}/>)}
  </Card></Group>;
 }
 
@@ -285,7 +285,7 @@ function ApprovalLoaded({a,reload,onClose,onDone}:{a:Approval,reload:()=>void,on
    :<Actions stack><Btn disabled={!!busy} busy={busy==='approve'} onClick={()=>void run('approve')}>{parts.yes}</Btn><Btn kind="soft" disabled={!!busy} onClick={()=>setRefusing(true)}>{parts.no}</Btn></Actions>
   :resend?<Btn icon={Pencil} onClick={()=>go(resend)}>{t('fe.ap.resend')}</Btn>:undefined;
  return <ApprovalSheetKit title={parts.title} sub={a.addressee?.name??undefined} state={open?'open':'closed'} status={status}
-  by={a.mine?t('fe.ap.byMe'):t('fe.ap.by',{name:initiator})} version={a.version&&a.version>1?t('fe.ap.version',{n:a.version}):undefined}
+  by={a.mine?t('fe.ap.byMe'):t('fe.ap.by',{name:initiator})}
   subject={parts.subject} changes={parts.changes} consequence={open?parts.consequence:undefined} objectNote={objectNote} foot={foot} onClose={onClose}>
   {parts.content}
   {open&&a.mine&&<Note>{t('fe.ap.waitTheirs',{name:nameOf(members?.find(m=>!m.me))})}</Note>}
