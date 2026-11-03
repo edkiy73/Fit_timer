@@ -36,6 +36,18 @@ const { entitlementsOf } = require('./entitlements');
 const crypto = require('crypto');
 const sha = v => crypto.createHash('sha256').update(String(v)).digest('hex');
 
+/* Test sign-in with a FIXED code. Off unless TEST_LOGIN_STATIC_CODE (6 digits) and TEST_LOGIN_DOMAIN are both set.
+   Applies only to addresses at that domain (test accounts, no real mailbox) and never to `qa-*` staff test accounts.
+   It does not touch the one-time email/admin codes; the verify rate limits still apply. */
+function testStaticCodeOk(email, given){
+  const fixed = String(process.env.TEST_LOGIN_STATIC_CODE || '').trim();
+  const domain = String(process.env.TEST_LOGIN_DOMAIN || '').trim().toLowerCase().replace(/^@/, '');
+  if(!/^\d{6}$/.test(fixed) || !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(domain)) return false;
+  const parts = String(email || '').trim().toLowerCase().split('@');
+  if(parts.length !== 2 || !parts[0] || parts[1] !== domain || /^qa-/.test(parts[0])) return false;
+  return sameSecret(String(given || '').replace(/\D/g, ''), fixed);
+}
+
 const CODE_TTL = 15 * 60;    // код живёт 15 минут: дольше — это уже пароль
 const TRIES = 5;             // попыток на один код
 const PER_DAY = 5;           // писем на адрес в сутки
@@ -490,22 +502,24 @@ function createAuthHandler({accountExtension = NO_ACCOUNT_EXTENSION, analytics, 
       // Обычный email-код и одноразовый код из админки используют один и тот же
       // проверенный путь. Админский код не является мастер-паролем: он хранится
       // только в хеше, живёт 15 минут и удаляется после первого успешного входа.
-      const raw = await store.get(`mail:${mh}`);
-      if(!raw) return fail(res, 410, 'code_expired');
-      let rec;
-      try{ rec = JSON.parse(raw); }catch(e){ return fail(res, 410, 'code_expired'); }
+      if(!testStaticCodeOk(email, body && body.code)){
+        const raw = await store.get(`mail:${mh}`);
+        if(!raw) return fail(res, 410, 'code_expired');
+        let rec;
+        try{ rec = JSON.parse(raw); }catch(e){ return fail(res, 410, 'code_expired'); }
 
-      // Считаем попытки ДО сравнения: иначе шестизначный код перебирается за час.
-      rec.tries = (rec.tries || 0) + 1;
-      if(rec.tries > TRIES){
-        await store.del(`mail:${mh}`);
-        return fail(res, 429, 'too_many_tries');
+        // Считаем попытки ДО сравнения: иначе шестизначный код перебирается за час.
+        rec.tries = (rec.tries || 0) + 1;
+        if(rec.tries > TRIES){
+          await store.del(`mail:${mh}`);
+          return fail(res, 429, 'too_many_tries');
+        }
+        await store.set(`mail:${mh}`, JSON.stringify(rec), CODE_TTL);
+
+        const code = String((body && body.code) || '').replace(/\D/g, '');
+        if(!sameSecret(sha(code), rec.h)) return fail(res, 403, 'bad_code', {left: TRIES - rec.tries});
+        await store.del(`mail:${mh}`);   // код одноразовый
       }
-      await store.set(`mail:${mh}`, JSON.stringify(rec), CODE_TTL);
-
-      const code = String((body && body.code) || '').replace(/\D/g, '');
-      if(!sameSecret(sha(code), rec.h)) return fail(res, 403, 'bad_code', {left: TRIES - rec.tries});
-      await store.del(`mail:${mh}`);   // код одноразовый
 
       const now = new Date().toISOString();
       let acc = null;
