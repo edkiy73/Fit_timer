@@ -55,9 +55,13 @@ describe('what staff decided, in plain words',()=>{
   expect(text('ru','staffAlert',{what:'csam'})).toBe('Срочно: аккаунт заблокирован автоматически — нужно подтверждение');
   expect(text('en','staffAlert',{what:'csam',count:2})).toBe('Automatic blocks waiting for confirmation: 2');
  });
- it('leaves every other row to the inbox',()=>{
-  expect(text('ru','communityRejected',{})).toBeNull();
-  expect(text('ru','profileRestored',{})).toBeNull();
+ it('names nobody: rows with a name or a couple are left to the inbox, unknown types too',()=>{
+  expect(text('ru','communityRejected',{})).toBe('Сообщество не прошло проверку');
+  expect(text('ru','profileRestored',{})).toBe('Блокировку сняли — профиль снова доступен');
+  expect(text('ru','communityMember',{change:'host'})).toBe('Тебя сделали ведущим сообщества');
+  expect(text('ru','eventCancelled',{})).toBe('Событие отменено');
   expect(text('ru','like',{})).toBeNull();
+  expect(text('ru','pair.acted',{what:'post'})).toBeNull();
+  expect(text('ru','notePublished',{})).toBeNull();
  });
 });

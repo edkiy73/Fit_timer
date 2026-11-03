@@ -1,5 +1,6 @@
 // @ts-check
 import { createECDH, createCipheriv, createHmac, createPrivateKey, randomBytes, sign } from 'node:crypto';
+import { routeOk } from '../contracts/notifications.mjs';
 
 /** Web Push sender (RFC 8030 delivery, RFC 8292 VAPID, RFC 8291 aes128gcm payload encryption) on node:crypto only —
  * no vendor account: the VAPID key pair is ours (FE_VAPID_PUBLIC_KEY / FE_VAPID_PRIVATE_KEY / FE_VAPID_SUBJECT).
@@ -88,10 +89,11 @@ function vapidKeys(keys) {
   } catch { return null; }
 }
 
-/** The only fields that leave the server: a neutral title and line and an in-app address. Never names or message text
- * (push.mjs builds them from fixed strings). @param {PushMessage} m */
+/** The only fields that leave the server: the title and line push.mjs chose and an in-app address that passes the
+ * route rule (contracts/notifications.mjs routeOk, the same as public/fe-sw.js). @param {PushMessage} m */
 export function webPayload(m) {
-  const url = typeof m.data?.url === 'string' && /^\/#\/n\/[a-z/]*$/.test(m.data.url) ? m.data.url : '/#/n/inbox';
+  const raw = m.data?.url;
+  const url = typeof raw === 'string' && raw.startsWith('/#') && routeOk(raw.slice(2)) ? raw : '/#/n/inbox';
   return { title: m.title, body: m.body, url };
 }
 

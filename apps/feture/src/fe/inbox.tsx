@@ -2,7 +2,8 @@ import {Fragment,useCallback,useEffect,useRef,useState,type ReactNode} from 'rea
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {AtSign,Bell,Calendar,Check,CircleCheck,Clock,Crown,EyeOff,FileText,Filter,Heart,Image as ImageIcon,LifeBuoy,LockOpen,MapPin,MessageCircle,Pencil,Shield,ShieldAlert,ShieldCheck,Trash2,TriangleAlert,Users,X,type LucideIcon} from 'lucide-react';
+import {AlarmClock,AtSign,Bell,Calendar,CalendarClock,CalendarX,Check,CircleCheck,Clock,Crown,EyeOff,Filter,Heart,Image as ImageIcon,LifeBuoy,LockOpen,MapPin,Megaphone,MessageCircle,Pencil,Shield,ShieldAlert,ShieldCheck,Trash2,TriangleAlert,UserCheck,UserMinus,Users,X,type LucideIcon} from 'lucide-react';
+import {FILTERS as KINDS,actOf,destination,entryFor,textOf,type Entry,type Filter as NoteFilter} from '../../contracts/notifications.mjs';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Av,Bar,Btn,Card,Chip,Chips,Empty,IconBtn,PersonLine,RequestCard,Row,SectionLabel,Seg,Skel,View,plate} from './kit';
 import {useFe,useRealtime} from './session';
@@ -19,12 +20,13 @@ const actor=z.object({id:z.uuid(),kind:z.enum(['person','couple']).optional(),ha
 const decision=z.object({kind:z.string(),id:z.uuid(),objectId:z.uuid().nullable(),actor,at:z.string(),label:z.string(),addressee:z.uuid().nullable().optional()});
 type Decision=z.infer<typeof decision>;
 const decideRes=z.object({ok:z.literal(true),items:z.array(decision)});
-const note=z.object({id:z.uuid(),type:z.string(),actor,data:z.record(z.string(),z.unknown()),label:z.string(),addressee:z.uuid().nullable().optional(),object:z.object({type:z.string(),id:z.uuid().nullable()}).nullable(),at:z.string(),read:z.boolean()});
+const ref=z.object({type:z.string(),id:z.uuid().nullable()});
+const note=z.object({id:z.uuid(),type:z.string(),actor,data:z.record(z.string(),z.unknown()),label:z.string(),addressee:z.uuid().nullable().optional(),object:ref.nullable(),
+ sub:ref.nullable().optional(),couple:z.uuid().nullable().optional(),coupleName:z.string().nullable().optional(),at:z.string(),read:z.boolean()});
 type Note=z.infer<typeof note>;
 const notesRes=z.object({ok:z.literal(true),items:z.array(note),next:z.string().nullable()});
 export const countsRes=z.object({ok:z.literal(true),decide:z.number(),notifications:z.number(),bell:z.number(),chats:z.number(),newMatches:z.number(),requests:z.number().default(0),likes:z.number(),staff:z.boolean().default(false)});
 const ok=z.object({ok:z.literal(true)}).passthrough();
-const postState=z.object({ok:z.literal(true),post:z.object({state:z.string().optional()}).passthrough()});
 const revList=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),rev:z.number()}).passthrough())});
 const nameOf=(a:z.infer<typeof actor>)=>a?(a.name||(a.handle?'@'+a.handle:'?')):'FetUre';
 
@@ -42,34 +44,23 @@ export function BellButton(){
  return <IconBtn icon={Bell} label={n?t('fe.inbox.bellN').replace('{n}',String(n)):t('fe.inbox.title')} badge={n>0?n:undefined} onClick={()=>navigate('/n/inbox')}/>;
 }
 
-/* ---- kinds (filters) and icons, as the prototype's inboxKind / NICO ---- */
-type Kind='access'|'likes'|'matches'|'replies'|'events'|'groups'|'pair'|'follows'|'links'|'posts'|'other';
-const FILTERS:('all'|Kind)[]=['all','access','likes','matches','replies','events','groups','pair','follows','links','posts','other'];
-const NOTE_KIND:Record<string,Kind>={grant:'access',like:'likes',match:'matches',chatRequest:'matches',reply:'replies',mention:'replies',follow:'follows',
- postLike:'posts',mediaDecided:'posts',notePublished:'posts',tagAnswered:'posts',postDisputed:'posts',postRestored:'posts',disputeResolved:'posts',revisionApproved:'posts',revisionRejected:'posts',postReturned:'posts',contentRemoved:'posts',reportResolved:'posts',
- communityApproved:'groups',communityDeclined:'groups',communityMember:'groups',communityPublished:'groups',communityRejected:'groups',communityClosed:'groups',discussionRemoved:'groups',
- eventPublished:'events',eventRejected:'events',eventHidden:'events',eventApplicationApproved:'events',eventApplicationDeclined:'events',
- linkAccepted:'links',linkDeclined:'links',linkChanged:'links',linkRemoved:'links'};
-const noteKind=(n:Note):Kind=>n.type.startsWith('pair.')?'pair':NOTE_KIND[n.type]??'other';
-const DECIDE_KIND:Record<string,Kind>={pinv:'pair',req:'access',capp:'groups',eapp:'events',link:'links',linkChange:'links',tag:'posts',joint:'pair',jointReturned:'pair'};
-const decideKind=(d:Decision):Kind=>DECIDE_KIND[d.kind]??'other';
-const NICO:Record<string,[LucideIcon,string]>={like:[Heart,'l'],match:[Heart,'l'],chatRequest:[MessageCircle,'v'],postLike:[Heart,'l'],follow:[Users,'v'],reply:[MessageCircle,'g'],mention:[AtSign,'v'],notePublished:[FileText,'v'],
- grant:[LockOpen,'g'],postDisputed:[EyeOff,'l'],postRestored:[Check,'g'],disputeResolved:[Check,'g'],revisionApproved:[Check,'g'],revisionRejected:[Shield,'l'],postReturned:[TriangleAlert,'l'],contentRemoved:[Shield,'l'],reportResolved:[Shield,'g'],
- communityApproved:[Users,'g'],communityDeclined:[Users,''],communityMember:[Users,'v'],communityPublished:[Check,'g'],communityRejected:[Shield,'l'],communityClosed:[Users,''],discussionRemoved:[Trash2,'l'],
- eventPublished:[Check,'g'],eventRejected:[Shield,'l'],eventHidden:[EyeOff,'l'],eventApplicationApproved:[Check,'g'],eventApplicationDeclined:[Calendar,''],
- linkAccepted:[Users,'g'],linkDeclined:[Users,''],linkChanged:[Users,'v'],linkRemoved:[Users,''],ageCheck:[ShieldCheck,'g'],photoCheck:[ShieldCheck,'g'],
- profileSuspended:[Shield,'l'],profileRestricted:[Shield,'l'],profileRestored:[Check,'g'],profileUnrestricted:[Check,'g'],appealDecided:[Shield,''],supportReply:[LifeBuoy,'v'],premiumGift:[Crown,'l'],premiumGranted:[Crown,'g'],staffAlert:[ShieldAlert,'l'],premiumRevoked:[Crown,''],placeDecided:[MapPin,'g'],staffRole:[ShieldCheck,'v'],mediaDecided:[ImageIcon,'g'],signinNew:[ShieldAlert,'l']};
-const noteIcon=(n:Note):[LucideIcon,string]=>n.type==='tagAnswered'?(n.data.answer==='ok'?[Check,'g']:[EyeOff,'l'])
- :(n.type==='ageCheck'||n.type==='photoCheck'||n.type==='mediaDecided')&&n.data.state!=='approved'?[Shield,'l']:n.type==='placeDecided'&&n.data.state!=='approved'?[MapPin,'']:n.type.startsWith('pair.')?[Users,'v']:NICO[n.type]??[Bell,''];
+/* ---- filters and icons: the catalog's (contracts/notifications.mjs), as the prototype's inboxKind / NICO ---- */
+type Kind=NoteFilter;
+const FILTERS:('all'|Kind)[]=['all',...KINDS];
+/** Lucide icons by the catalog's names. */
+const ICONS:Record<string,LucideIcon>={AlarmClock,AtSign,Bell,Calendar,CalendarClock,CalendarX,Check,Clock,Crown,EyeOff,Heart,Image:ImageIcon,LifeBuoy,LockOpen,MapPin,Megaphone,MessageCircle,Pencil,Shield,ShieldAlert,ShieldCheck,Trash2,TriangleAlert,UserCheck,UserMinus,Users};
+const noteKind=(n:Note):Kind=>entryFor(n.type,n.data)?.filter??'other';
+const decideEntry=(d:Decision):Entry|null=>entryFor('decide.'+d.kind,{label:d.label});
+const decideKind=(d:Decision):Kind=>decideEntry(d)?.filter??'other';
+const noteIcon=(n:Note):[LucideIcon,string]=>{const e=entryFor(n.type,n.data);return e?[ICONS[e.icon]??Bell,e.tone]:[Bell,''];};
 
-/** «{name} …» with the name in bold, as the prototype's NTXT. */
-function rich(text:string,name:string):ReactNode{
- const parts=text.split('{name}');
- return parts.map((p,i)=><Fragment key={i}>{p}{i<parts.length-1&&<b>{name}</b>}</Fragment>);
+/** «{name} …» / «{couple} · …» with the name in bold, as the prototype's NTXT. */
+function rich(text:string,names:Record<'name'|'couple',string>):ReactNode{
+ return text.split(/(\{name\}|\{couple\})/).map((p,i)=>p==='{name}'?<b key={i}>{names.name}</b>:p==='{couple}'?<b key={i}>{names.couple}</b>:<Fragment key={i}>{p}</Fragment>);
 }
 
 export function InboxScreen(){
- const {call,state,acting,setActing,reload}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
+ const {call,state,acting,reload}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
  const [tab,setTab]=useState<'todo'|'all'|null>(null);const [filter,setFilter]=useState<'all'|Kind>('all');
  const [decide,setDecide]=useState<Decision[]|null>(null);const [notes,setNotes]=useState<Note[]|null>(null);
  const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState('');const [readAllBusy,setReadAllBusy]=useState(false);
@@ -107,40 +98,14 @@ export function InboxScreen(){
   else{const r=await call('event.applications',{eventId:d.objectId},revList,asProfile(d));const x=r.items.find(i=>i.id===d.id);if(!x)throw new FeError('not_found',404);
    await call('event.applicationDecide',{opId:newOpId(),applicationId:d.id,rev:x.rev,approve},ok,asProfile(d));}
  },approve?t('fe.ibx.approved'):t('fe.ibx.declined'));
- /** Links and couple approvals are per profile: answer as the profile the item is addressed to (person or couple). */
- const asAddressee=(addressee?:string|null)=>{if(addressee&&addressee!==acting?.id&&profiles.some(p=>p.id===addressee))setActing(addressee);};
+ /** Where a decision's «Посмотреть» opens: the catalog's destination, as the profile it is addressed to. */
+ const goDecide=(d:Decision)=>navigate(destination({type:'decide.'+d.kind,data:{label:d.label},object:d.objectId?{type:d.kind==='tag'?'post':d.kind==='capp'?'community':'event',id:d.objectId}:null,addressee:d.addressee??null}));
 
+ /** One way to a screen: the catalog's destination (also what a push opens); `as=` there switches to the profile it
+  * is addressed to (shell.tsx ActAs). */
  const open=(n:Note)=>{
   if(!n.read){setNotes(list=>list?.map(x=>x.id===n.id?{...x,read:true}:x)??list);call('notifications.read',{id:n.id},ok,{asAccount:true}).catch(()=>{});}
-  if(n.type.startsWith('link')){asAddressee(n.addressee);navigate('/n/me/links');return;}
-  if(n.type==='ageCheck'){navigate('/n/settings/age');return;}
-  if(n.type==='photoCheck'){navigate('/n/settings/photo-check');return;}
-  if(n.type==='supportReply'){navigate('/n/help'+(typeof n.data.ticketId==='string'?'?ticket='+encodeURIComponent(n.data.ticketId):''));return;}
-  if(n.type==='premiumGift'||n.type==='premiumGranted'||n.type==='premiumRevoked'){navigate('/n/premium');return;}
-  if(n.type==='staffRole'){navigate(n.data.grant===true?'/n/staff':'/n/me');return;}
-  if(n.type==='staffAlert'){navigate('/n/staff');return;}
-  if(n.type==='placeDecided'){navigate('/n/me');return;}
-  if(n.type==='mediaDecided'&&!n.object?.id){navigate('/n/me');return;}
-  if(n.type==='signinNew'){navigate('/n/settings/security');return;}
-  // A post back from review: its draft opens in the editor while it is one, else the post itself.
-  if(n.type==='postReturned'&&n.object?.id){const id=n.object.id;
-   call('post.get',{postId:id},postState).then(r=>navigate('/n/feed/post/'+id+(r.post.state==='draft'?'/edit':'')),()=>navigate('/n/feed/post/'+id));return;}
-  if(n.type.startsWith('pair.')){
-   if(couple)setActing(couple.id);
-   const what=typeof n.data.what==='string'?n.data.what:'';const target=typeof n.data.target==='string'?n.data.target:'';
-   if(n.type==='pair.decided'){navigate('/n/inbox');return;}
-   if(n.type==='pair.acted'){
-    if(what==='post'||what==='post_archived'){navigate('/n/me/posts');return;}
-    if(what==='photos'||what==='album'){navigate(couple?'/n/people/'+couple.id+'/gallery':'/n/me');return;}
-    if(what==='chatRequest'){navigate('/n/chats');return;}
-    if(what==='like'||what==='follow'){navigate(target?'/n/people/'+target:'/n/me');return;}
-    if(what==='link'){navigate('/n/me/links');return;}
-    if(what==='location'){navigate('/n/me/pair');return;}
-    if(what==='block'){navigate('/n/settings/blocked');return;}
-   }
-   navigate('/n/me');return;}
-  const o=n.object;if(!o?.id){if(n.actor)navigate('/n/people/'+n.actor.id);return;}
-  navigate(o.type==='post'||o.type==='reply'?'/n/feed/post/'+(n.data.postId as string|undefined??o.id):o.type==='community'?'/n/communities/'+o.id:o.type==='event'?'/n/events/'+o.id:o.type==='conversation'?'/n/chats/'+o.id:o.type==='profile'?'/n/people/'+o.id:'/n/me');
+  navigate(destination({type:n.type,data:n.data,object:n.object,sub:n.sub??null,actor:n.actor?.id??null,addressee:n.addressee??null,couple:n.couple??null}));
  };
  const readAll=async()=>{
   if(readAllBusy)return;setReadAllBusy(true);
@@ -149,27 +114,22 @@ export function InboxScreen(){
  };
 
  const noteText=(n:Note):ReactNode=>{
-  const who=nameOf(n.actor);
-  if(n.type==='tagAnswered')return t('fe.ibx.t.tagAnswered.'+(['ok','no','remove'].includes(String(n.data.answer))?String(n.data.answer):'ok'));
-  if(n.type==='ageCheck'||n.type==='photoCheck')return t(`fe.ibx.t.${n.type}.${n.data.state==='approved'?'approved':'other'}`);
-  const status=statusText(n,t,locale);if(status!==null)return status;
-  if(n.type==='premiumGift')return n.actor?rich(t('fe.ibx.t.premiumGiftFrom'),who):t('fe.ibx.t.premiumGift');
+  const e=entryFor(n.type,n.data);
+  // A type this app does not know yet (a newer server): its generic line, never a blank row.
+  if(!e)return n.actor?<><b>{nameOf(n.actor)}</b> · {t('fe.inbox.type.other')}</>:t('fe.inbox.type.other');
   if(n.type==='signinNew'){
    // «Вход с нового устройства: Android, Лиссабон, Португалия» — Core's device family and the edge network's place.
    const [city='',cc='']=String(n.data.place??'').split('|');let country=cc;
    try{if(cc)country=new Intl.DisplayNames([locale],{type:'region'}).of(cc)??cc;}catch{/* the code then */}
    const what=[typeof n.data.device==='string'&&n.data.device?n.data.device:t('fe.w8.sec.unknownDevice'),[city,country].filter(Boolean).join(', ')].filter(Boolean).join(', ');
-   return <><b>{t('fe.ibx.t.signinNew')}</b>: {what}</>;
+   return <><b>{textOf(e.text,locale)}</b>: {what}</>;
   }
-  if(n.type.startsWith('pair.')){
-   // «Партнёр добавил фото пары»: the server says what was done (`data.what`) or how a change was answered (`data.state`).
-   const detail=n.type==='pair.acted'&&typeof n.data.what==='string'?'fe.inbox.pair.acted.'+n.data.what:n.type==='pair.decided'&&typeof n.data.state==='string'?'fe.inbox.pair.decided.'+n.data.state:'';
-   const own=detail&&t(detail)!==detail?t(detail):'';
-   return <><b>{couple?.name||t('fe.inbox.whom.couple')}</b> · {own||(t('fe.inbox.type.'+n.type)!=='fe.inbox.type.'+n.type?t('fe.inbox.type.'+n.type):t('fe.inbox.type.other'))}</>;}
-  const key='fe.ibx.t.'+n.type;const s=t(key);
-  if(s!==key)return rich(s,who);
-  const label=t('fe.inbox.type.'+n.type)!=='fe.inbox.type.'+n.type?t('fe.inbox.type.'+n.type):t('fe.inbox.type.other');
-  return n.actor?<><b>{who}</b> · {label}</>:label;
+  const status=statusText(n,t,locale);if(status!==null)return status;
+  // The couple as it was named then (an old row: the couple it is addressed to now, or the active one).
+  const coupleName=n.coupleName||profiles.find(p=>p.id===(n.couple??n.addressee)&&p.kind==='couple')?.name||couple?.name||t('fe.inbox.whom.couple');
+  const text=textOf(e.text,locale,n.actor?.kind==='couple');
+  if(text.includes('{name}')&&!n.actor)return e.alone?textOf(e.alone,locale):actOf(e.text,locale);
+  return rich(text,{name:nameOf(n.actor),couple:coupleName});
  };
  const whomTag=(label:string)=>couple?<span className={'whom'+(label==='couple'?' us':'')}>{label==='couple'?t('fe.ibx.tagCouple'):t('fe.ibx.tagMe')}</span>:null;
  const row=(n:Note)=>{const [Icon,tone]=noteIcon(n);
@@ -180,6 +140,8 @@ export function InboxScreen(){
   </button>;};
 
  /* ---- decisions (todoGroupHTML) ---- */
+ /** The card's line under the name: the catalog's words without the name («Просит открыть твою приватную часть»). */
+ const decideText=(d:Decision)=>{const e=decideEntry(d);return e?actOf(e.text,locale):'';};
  const card=(d:Decision,text:string,buttons:ReactNode)=><RequestCard key={d.kind+d.id} actions={buttons}
   person={<PersonLine av={<Av name={nameOf(d.actor)} seed={d.actor?.id??d.id} src={d.actor?.avatar}/>} label={nameOf(d.actor)} onOpen={d.actor?()=>navigate('/n/people/'+d.actor!.id):undefined}
    name={<>{d.kind==='tag'?nameOf(d.actor):withAge(nameOf(d.actor),d.actor)}<NameBadges p={d.actor}/></>} sub={<>{text} · {when(d.at,locale)}</>}/>}/>;
@@ -189,28 +151,29 @@ export function InboxScreen(){
  </>;
  const decisionCard=(d:Decision)=>{
   switch(d.kind){
-   case 'pinv':return card(d,t('fe.ibx.k.pinv'),two(d,
+   case 'pinv':return card(d,decideText(d),two(d,
     {label:t('fe.ibx.accept'),fn:()=>void act(d.id+'y',async()=>{await call('couple.inviteAnswer',{opId:newOpId(),inviteId:d.id,accept:true},ok,{asAccount:true});reload();navigate('/n/me/pair?setup=1');},t('fe.ibx.done'))},
     {label:t('fe.ibx.decline'),fn:()=>void act(d.id+'n',()=>call('couple.inviteAnswer',{opId:newOpId(),inviteId:d.id,accept:false},ok,{asAccount:true}),t('fe.ibx.declined'))}));
-   case 'req':return card(d,d.label==='couple'?t('fe.ibx.k.reqCouple'):t('fe.ibx.k.req'),two(d,
-    {label:t('fe.ibx.review'),fn:()=>{asAddressee(d.addressee);navigate('/n/me/access?tab=byme');}},
+   case 'req':return card(d,decideText(d),two(d,
+    {label:t('fe.ibx.review'),fn:()=>goDecide(d)},
     // Declining says what the person will see and offers «Отменить» while the server still allows it.
     {label:t('fe.ibx.decline'),fn:()=>{if(busy)return;setBusy(d.id+'n');void declineAccess(d.id,nameOf(d.actor),load,asProfile(d)).finally(()=>setBusy(''));}}));
-   case 'capp':case 'eapp':return card(d,d.kind==='capp'?t('fe.ibx.k.capp'):t('fe.ibx.k.eapp'),<>
+   case 'capp':case 'eapp':return card(d,decideText(d),<>
     {two(d,{label:t('fe.ibx.approve'),fn:()=>void decideApp(d,true)},{label:t('fe.ibx.decline'),fn:()=>void decideApp(d,false)})}
    </>);
    case 'link':case 'linkChange':{const cmd=d.kind==='link'?'link.answer':'link.answerChange';const extra=d.kind==='link'?{vis:'all'}:{};
-    return card(d,t('fe.ibx.k.'+d.kind),two(d,
+    return card(d,decideText(d),two(d,
      {label:t('fe.ibx.confirm'),fn:()=>void act(d.id+'y',()=>call(cmd,{opId:newOpId(),linkId:d.id,accept:true,...extra},ok,asProfile(d)),t('fe.ibx.done'))},
      {label:t('fe.ibx.decline'),fn:()=>void act(d.id+'n',()=>call(cmd,{opId:newOpId(),linkId:d.id,accept:false,...extra},ok,asProfile(d)),t('fe.ibx.declined'))}));}
-   case 'tag':return card(d,t('fe.ibx.k.tag'),two(d,
-    {label:t('fe.ibx.review'),fn:()=>navigate('/n/feed/post/'+(d.objectId??d.id))},
+   case 'tag':return card(d,decideText(d),two(d,
+    {label:t('fe.ibx.review'),fn:()=>goDecide(d)},
     {label:t('fe.ibx.against'),fn:()=>void act(d.id+'n',()=>call('tag.answer',{opId:newOpId(),postId:d.objectId??d.id,answer:'no'},ok,asProfile(d)),t('fe.ibx.declined'))}));
    default:return null;
   }
  };
- const jointRow=(d:Decision)=><Row key={d.kind+d.id} icon={d.kind==='jointReturned'?Pencil:Clock} noChev title={t('fe.ibx.k.'+d.kind)} sub={<>{t('fe.ibx.k.jointSub')} · {when(d.at,locale)}</>}
-  onClick={()=>navigate('/n/me/pair?approval='+d.id)}/>;
+ const jointRow=(d:Decision)=>{const e=decideEntry(d);
+  return <Row key={d.kind+d.id} icon={e?ICONS[e.icon]??Clock:Clock} noChev title={decideText(d)} sub={<>{t('fe.ibx.k.jointSub')} · {when(d.at,locale)}</>}
+   onClick={()=>navigate(destination({type:'decide.'+d.kind,data:{label:d.label},object:{type:'approval',id:d.id},addressee:d.addressee??null}))}/>;};
  const group=(items:Decision[])=>{
   const rest=items.filter(d=>d.kind==='joint'||d.kind==='jointReturned');
   const order=['pinv','link','linkChange','tag'];

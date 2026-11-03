@@ -518,6 +518,15 @@ export function PostScreen(){
    .then(([p,r])=>{setPost(p.post);take(r.items);}).catch(setError);
  },[call,id,take]);
  useEffect(()=>{load();},[load]);
+ // A notification opens the post at its reply (`?reply=<id>`, contracts/notifications.mjs destination): the branch and
+ // the page that hold it open, and it scrolls into view once.
+ const [params]=useSearchParams();const toReply=params.get('reply');const shownReply=useRef('');
+ useEffect(()=>{
+  if(!toReply||!list||shownReply.current===toReply||!list.some(r=>r.id===toReply))return;shownReply.current=toReply;
+  const root=rootOf(list,toReply);if(root&&root!==toReply)setOpen(o=>[...new Set([...o,root])]);
+  setLimit(l=>Math.max(l,list.length));
+  requestAnimationFrame(()=>requestAnimationFrame(()=>document.getElementById('reply-'+toReply)?.scrollIntoView({block:'center'})));
+ },[toReply,list]);
  const grow=(el:HTMLTextAreaElement|null)=>{if(!el)return;el.style.height='auto';const h=el.scrollHeight+2;el.style.height=Math.min(120,h)+'px';el.style.overflowY=h>120?'auto':'hidden';};
  const focusBox=()=>{box.current?.focus();};
  const send=async()=>{

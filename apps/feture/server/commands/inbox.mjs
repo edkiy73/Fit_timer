@@ -70,7 +70,8 @@ const run = {
       if (!Array.isArray(cur) || typeof cur[0] !== 'string' || !/^[0-9a-f-]{36}$/.test(cur[1]) || Number.isNaN(Date.parse(cur[0]))) fail(400, 'invalid_input', { fields: ['cursor'] });
     }
     const rows = await q.query(
-      `select n.id, n.type, n.object_type, n.object_id, n.data, n.created_at, n.created_at::text cursor_at, n.read_at, n.addressee_profile_id, adr.kind addressee_kind,
+      `select n.id, n.type, n.kind, n.object_type, n.object_id, n.sub_object_type, n.sub_object_id, n.couple_id, n.couple_name, n.data, n.created_at,
+         n.created_at::text cursor_at, n.read_at, n.addressee_profile_id, adr.kind addressee_kind,
          case when ap.id is null then null else ${ACTOR} end actor
        from feture.notification n left join feture.profile ap on ap.id = n.actor_profile_id left join feture.profile adr on adr.id = n.addressee_profile_id
        where n.recipient_account_id = $1 and n.retracted_at is null
@@ -83,8 +84,11 @@ const run = {
     await withFaces(q, cfg.media, { profileId: account.person_profile_id, accountId: account.id }, page, r => r.actor);
     return {
       // «Тебе» / «Паре» by the profile it is addressed to.
-      items: page.map(({ addressee_kind, addressee_profile_id, object_type, object_id, created_at, read_at, cursor_at: _, ...r }) => ({
+      // `couple` / `coupleName`: the couple it is addressed to and its name at the time (the actor's own name is never
+      // sent from the snapshot: someone gone is not named).
+      items: page.map(({ addressee_kind, addressee_profile_id, object_type, object_id, sub_object_type, sub_object_id, couple_id, couple_name, created_at, read_at, cursor_at: _, ...r }) => ({
         ...r, label: addressee_kind === 'couple' ? 'couple' : 'me', addressee: addressee_profile_id, object: object_type ? { type: object_type, id: object_id } : null,
+        sub: sub_object_type ? { type: sub_object_type, id: sub_object_id } : null, couple: couple_id, coupleName: couple_name,
         at: created_at, read: !!read_at,
       })),
       // Full microsecond precision: rows in the same millisecond as the page edge are not skipped.

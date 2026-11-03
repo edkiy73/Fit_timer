@@ -1,5 +1,6 @@
 // @ts-check
 import { NOTIFICATION_DEFAULTS } from '../contracts/me.mjs';
+import { actOf, CATALOG, entryFor, PUSH_SETTING, PUSH_WORDS, routeOk, SAFE_PUSH, textOf } from '../contracts/notifications.mjs';
 import { enqueue } from './outbox.mjs';
 
 /** Push delivery (S2 §8, extract/people-discover-chats.md §4.4). The queue sends it, never a command.
@@ -16,35 +17,15 @@ import { enqueue } from './outbox.mjs';
  *   platforms: the device kinds this transport can reach (all when absent)
  */
 
-export const PUSH_TEXT = {
-  ru: {
-    title: 'KINHAZE', safe: 'Новое уведомление', messages: 'Новое сообщение', likes: 'Новая симпатия', match: 'Новое совпадение',
-    decide: 'Есть, что решить', requests: 'Новый запрос на переписку', events: 'Новости события', replies: 'Новый ответ', follows: 'Новый подписчик', groups: 'Новое в сообществе', other: 'Новое уведомление',
-    security: 'Вход с нового устройства',
-    media: { image: 'Фото', video: 'Видео', audio: 'Голосовое' },
-    // What someone did, after their name in the title: [a person, a couple].
-    act: {
-      like: ['Ставит тебе симпатию', 'Ставят тебе симпатию'], match: ['Это взаимно! Можно написать', 'Это взаимно! Можно написать'],
-      chatRequest: ['Хочет начать переписку', 'Хотят начать переписку'], follow: ['Подписывается на тебя', 'Подписываются на тебя'],
-      reply: ['Отвечает на твою публикацию', 'Отвечают на твою публикацию'], postLike: ['Нравится твоя публикация', 'Нравится твоя публикация'],
-      mention: ['Упоминает тебя в публикации', 'Упоминают тебя в публикации'], notePublished: ['Новая статья', 'Новая статья'],
-    },
-  },
-  en: {
-    title: 'KINHAZE', safe: 'New notification', messages: 'New message', likes: 'New like', match: 'New match',
-    decide: 'Something to decide', requests: 'New message request', events: 'Event update', replies: 'New reply', follows: 'New follower', groups: 'New in a community', other: 'New notification',
-    security: 'New device signed in',
-    media: { image: 'Photo', video: 'Video', audio: 'Voice message' },
-    act: {
-      like: ['Sent you a like', 'Sent you a like'], match: ['It’s a match! Say hi', 'It’s a match! Say hi'],
-      chatRequest: ['Wants to start a conversation', 'Want to start a conversation'], follow: ['Started following you', 'Started following you'],
-      reply: ['Replied to your post', 'Replied to your post'], postLike: ['Liked your post', 'Liked your post'],
-      mention: ['Mentioned you in a post', 'Mentioned you in a post'], notePublished: ['New article', 'New article'],
-    },
-  },
-};
-/** Settings category of each push kind (V21 K05); kinds without one follow only the global switch. */
-const CATEGORY = { likes: 'likes', match: 'match', decide: 'req', requests: 'req', events: 'events', replies: 'replies', follows: 'follows', groups: 'groups' };
+/** Lock-screen words, all from the catalog (contracts/notifications.mjs): the title, the neutral line, the media kinds
+ * of a message, the sign-in line. @param {'ru' | 'en'} lang */
+function pushText(lang) {
+  return {
+    lang, title: PUSH_WORDS[lang].title, safe: textOf(SAFE_PUSH, lang), messages: textOf(CATALOG.message.push.normal, lang),
+    security: textOf(CATALOG.signinNew.push.safe, lang), media: PUSH_WORDS[lang].media,
+  };
+}
+export const PUSH_TEXT = { ru: pushText('ru'), en: pushText('en') };
 
 const SEND_TIMEOUT_MS = 10_000;
 /** Sends tried per device before it is given up (transient errors only; a final error stops at once). */
@@ -55,14 +36,16 @@ const LEASE_SECONDS = 60;
 
 /** Queues one push for a recipient of an outbox item, once (a retried handler never doubles it). Items older than a day
  * (a backlog after deploy, a long outage) make no push: it would only be noise by then. `message`: the chat message it
- * is about (ids only; the text is read at send time, and only in «normal» mode).
+ * is about (ids only; the text is read at send time, and only in «normal» mode). `note`: its catalog key and the push
+ * `url` the destination resolver chose (contracts/notifications.mjs), so a tap opens the exact place.
  * @param {Q} q @param {OutboxItem} item @param {{account: string, profile: string | null}} r @param {string} kind @param {string} [notificationId]
- * @param {{conversationId: string, seq: number}} [message] */
-export async function queuePush(q, item, r, kind, notificationId, message) {
+ * @param {{conversationId: string, seq: number}} [message] @param {{key?: string | null, url?: string}} [note] */
+export async function queuePush(q, item, r, kind, notificationId, message, note) {
   if (item.created_at && Date.now() - new Date(item.created_at).getTime() > 864e5) return;
   const fresh = await q.query(`insert into feture.push_sent (key) values ($1) on conflict do nothing returning key`, [`q:${item.id}:${r.account}`]);
   if (fresh[0]) await enqueue(q, 'push.deliver', r.profile, { account: r.account, kind, ...(notificationId ? { notificationId } : {}),
-    ...(message ? { conversationId: message.conversationId, seq: message.seq } : {}) });
+    ...(message ? { conversationId: message.conversationId, seq: message.seq } : {}),
+    ...(note?.key ? { key: note.key } : {}), ...(note?.url ? { url: note.url } : {}) });
 }
 
 const PREVIEW = 80;
@@ -77,7 +60,7 @@ export function clip(body) {
  * notification taken back, a block or a profile gone since makes no name. Only for a recipient profile (an item
  * addressed to the account names nobody).
  * @param {Db | Q} db @param {string | null} recipient profile the push is for
- * @param {{kind: string, notificationId?: string, conversationId?: string, seq?: number}} p @param {typeof PUSH_TEXT.ru} t
+ * @param {{kind: string, notificationId?: string, conversationId?: string, seq?: number}} p @param {ReturnType<typeof pushText>} t
  * @returns {Promise<{title: string, body: string} | null>} */
 export async function personalText(db, recipient, p, t) {
   if (!recipient) return null;
@@ -98,18 +81,16 @@ export async function personalText(db, recipient, p, t) {
   }
   if (p.notificationId) {
     const [n] = await db.query(
-      `select n.type, pr.name, pr.handle, pr.kind, feture.blocked($2, n.actor_profile_id) hidden
+      `select n.type, n.data, pr.name, pr.handle, pr.kind, feture.blocked($2, n.actor_profile_id) hidden
        from feture.notification n join feture.profile pr on pr.id = n.actor_profile_id and pr.state = 'active'
        where n.id = $1 and n.retracted_at is null`, [p.notificationId, recipient]);
-    const act = n && t.act[/** @type {keyof typeof t.act} */ (n.type)];
-    if (!act || n.hidden || !nameOf(n)) return null;
-    return { title: nameOf(n), body: act[n.kind === 'couple' ? 1 : 0] };
+    // Only types that name who did it (a grant of the private part never does).
+    const e = n && entryFor(n.type, n.data);
+    if (!e?.push.named || n.hidden || !nameOf(n)) return null;
+    return { title: nameOf(n), body: actOf(e.text, t.lang, n.kind === 'couple') };
   }
   return null;
 }
-
-/** Where a tap on the push opens the app (hash routes of the /n screens). Fixed addresses only: never an id. */
-const OPENS = { messages: '/#/n/chats', match: '/#/n/chats', requests: '/#/n/chats/requests', decide: '/#/n/inbox', security: '/#/n/settings/security' };
 
 /** One transport for every device kind: the web sender (webpush.mjs, our own VAPID keys) and the native one (Core's
  * FCM/APNs) side by side. null when neither is configured. A new native sender is one more entry here.
@@ -170,18 +151,8 @@ export async function sweepPushSent(db) {
   return n;
 }
 
-/** The push kind of a notification type. @param {string} type */
-export function pushKind(type) {
-  if (type === 'signinNew') return 'security';
-  if (type === 'like') return 'likes';
-  if (type === 'match') return 'match';
-  if (type === 'chatRequest') return 'requests';
-  if (type === 'follow') return 'follows';
-  if (['reply', 'mention', 'postLike', 'notePublished'].includes(type)) return 'replies';
-  if (type.startsWith('event')) return 'events';
-  if (type.startsWith('community') || type.startsWith('discussion')) return 'groups';
-  return 'other';
-}
+/** The push category of a notification type (the catalog's). @param {string} type @param {Record<string, unknown>} [data] */
+export const pushKind = (type, data) => entryFor(type, data)?.push.cat ?? 'other';
 
 /** Minutes since midnight in a time zone (UTC when the zone is unknown). @param {string} tz @param {Date} now */
 function minutesIn(tz, now) {
@@ -213,7 +184,7 @@ export function pushHandlers(db, transport, { timeoutMs = SEND_TIMEOUT_MS } = {}
       if (!transport) return;
       // A retry dragging on past a day would only be noise by then, like a backlog (queuePush).
       if (item.created_at && Date.now() - new Date(item.created_at).getTime() > 864e5) return;
-      const p = /** @type {{account: string, kind: string, notificationId?: string, conversationId?: string, seq?: number}} */ (/** @type {any} */ (item.payload));
+      const p = /** @type {{account: string, kind: string, notificationId?: string, conversationId?: string, seq?: number, key?: string, url?: string}} */ (/** @type {any} */ (item.payload));
       const [a] = await db.query(
         `select a.locale, a.state, s.settings from feture.account a left join feture.notification_settings s on s.account_id = a.id where a.id = $1`, [p.account]);
       if (!a || a.state !== 'active') return;
@@ -222,7 +193,7 @@ export function pushHandlers(db, transport, { timeoutMs = SEND_TIMEOUT_MS } = {}
       if (p.notificationId && !(await db.query(`select 1 from feture.notification where id = $1 and retracted_at is null`, [p.notificationId]))[0]) return;
       const settings = { ...NOTIFICATION_DEFAULTS, ...(a.settings ?? {}) };
       if (!settings.push) return;
-      const category = CATEGORY[/** @type {keyof typeof CATEGORY} */ (p.kind)];
+      const category = /** @type {Record<string, string | undefined>} */ (PUSH_SETTING)[p.kind];
       if (category && settings.categories?.[category]?.push === false) return;
       // A re-run of this item (a device failed before) already passed the hourly likes gate and counted itself.
       const [{ started, sentBefore }] = await db.query(
@@ -234,14 +205,17 @@ export function pushHandlers(db, transport, { timeoutMs = SEND_TIMEOUT_MS } = {}
         if (recent) return;
       }
       const t = PUSH_TEXT[String(a.locale).startsWith('en') ? 'en' : 'ru'];
-      const kindText = /** @type {string | undefined} */ (/** @type {any} */ (t)[p.kind]);
+      // The catalog entry it is about (an item queued before the catalog carries only its category).
+      const entry = p.key ? CATALOG[p.key] : p.kind === 'messages' ? CATALOG.message : null;
       const named = settings.mode === 'normal' ? await personalText(db, item.profile_id, p, t) : null;
       const title = named?.title ?? t.title;
       // A new sign-in says what it is in every mode («KINHAZE · Вход с нового устройства»): no device, no place.
-      const body = p.kind === 'security' ? t.security : named?.body ?? (settings.mode === 'normal' && typeof kindText === 'string' ? kindText : t.safe);
+      const body = p.kind === 'security' ? t.security : named?.body
+        ?? (entry ? textOf(settings.mode === 'normal' ? entry.push.normal : entry.push.safe, t.lang) : t.safe);
+      // The exact place the resolver chose when it was queued; the inbox for anything that does not pass.
+      const url = typeof p.url === 'string' && p.url.startsWith('/#') && routeOk(p.url.slice(2)) ? p.url : '/#/n/inbox';
       const message = { title, body, data: {
-        t: p.kind === 'messages' || p.kind === 'requests' ? 'chat' : p.kind === 'decide' ? 'decide' : 'notif',
-        url: OPENS[/** @type {keyof typeof OPENS} */ (p.kind)] ?? '/#/n/inbox',
+        t: p.kind === 'messages' || p.kind === 'requests' ? 'chat' : p.kind === 'decide' ? 'decide' : 'notif', url,
       } };
       const devices = await db.query(
         `select token_hash, platform, token, tz from feture.push_device where account_id = $1 and platform = any($2::text[]) and last_seen_at > now() - interval '60 days'`,

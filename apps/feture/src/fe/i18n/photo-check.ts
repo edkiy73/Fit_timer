@@ -54,7 +54,6 @@ export const ru = {
  'fe.pc.staff.approve': 'Подтвердить фото',
  'fe.pc.staff.confirmReject': 'Отклонить проверку фото? Человек увидит причину.',
  'fe.pc.staff.own': 'Свою проверку решает другой сотрудник.',
- 'fe.inbox.type.photoCheck': 'Фото-верификация',
 };
 export const en: Record<keyof typeof ru, string> = {
  'fe.pc.title': 'Photo verification',
@@ -110,5 +109,4 @@ export const en: Record<keyof typeof ru, string> = {
  'fe.pc.staff.approve': 'Verify photo',
  'fe.pc.staff.confirmReject': 'Reject the photo check? The person will see the reason.',
  'fe.pc.staff.own': 'Another staff member decides your own check.',
- 'fe.inbox.type.photoCheck': 'Photo verification',
 };
