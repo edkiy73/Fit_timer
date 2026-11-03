@@ -1,6 +1,6 @@
 import React,{useEffect,useRef,useState,type CSSProperties,type ReactNode} from 'react';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Check,ChevronLeft,Clock,Heart,Image as ImageIcon,Lock,MessageCircle,Plus,Ticket,UserRound,Users,type LucideIcon} from 'lucide-react';
+import {Check,ChevronLeft,Clock,Heart,Image as ImageIcon,Lock,MessageCircle,Pencil,Plus,Ticket,Users,type LucideIcon} from 'lucide-react';
 import {Alert,Av,Btn,Card,IconBtn,Note,Row,Sheet,Skel,Stack,Switch,plate,useBack} from './index';
 import {VideoPlayer} from './av';
 import './domain.css';
@@ -528,15 +528,14 @@ export function ReviewPair({children}:{children:ReactNode}){return <div classNam
 /* ---------------- Couple ---------------- */
 
 /** «Действовать как» (V21 dockMe): one card per profile the person may act as. The card itself chooses the profile
- * (`onPick`); the end button opens that profile (`onOpen`). `dot` puts the accent dot before the line under the name
+ * (`onPick`); the pencil at the end opens that profile to edit it (`onOpen`, owner 04.11.2026: no tick, no divider). `dot` puts the accent dot before the line under the name
  * (something waits there). Cards go inside `ActorCards`. */
 export function ActorCard({av,name,sub,dot,selected,onPick,onOpen,openLabel}:{av:ReactNode,name:ReactNode,sub?:ReactNode,dot?:boolean|undefined,selected?:boolean|undefined,
  onPick:()=>void,onOpen:()=>void,openLabel:string}){
  return <div className={'actor-card'+(selected?' selected':'')}>
   <button type="button" className="actor-select" role="menuitemradio" aria-checked={!!selected} onClick={onPick}>{av}
-   <span className="tx"><b>{name}</b>{sub!=null&&<small>{dot&&<i className="ar-dot"/>}{sub}</small>}</span>
-   <span className="ar-ck" aria-hidden="true">{selected&&<Check/>}</span></button>
-  <button type="button" className="actor-open" role="menuitem" aria-label={openLabel} title={openLabel} onClick={onOpen}><UserRound/></button>
+   <span className="tx"><b>{name}</b>{sub!=null&&<small>{dot&&<i className="ar-dot"/>}{sub}</small>}</span></button>
+  <button type="button" className="actor-open" role="menuitem" aria-label={openLabel} title={openLabel} onClick={onOpen}><Pencil/></button>
  </div>;
 }
 /** The cards of «Действовать как» and the line under them. */
