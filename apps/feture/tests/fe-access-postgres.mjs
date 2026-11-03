@@ -32,6 +32,10 @@ test('requests and grants: age check, available scopes, nothing before access, �
 
     const incoming = await call('ua', a, { action: 'access.lists', tab: 'incoming' });
     assert.deepEqual(incoming.items.map(i => i.profile.handle), ['Kira']);
+    // That request by ID (a «Нужно решить» push opens it); someone else's ID finds nothing.
+    assert.deepEqual((await call('ua', a, { action: 'access.lists', tab: 'incoming', requestId: req.id })).items.map(i => i.id), [req.id]);
+    assert.deepEqual((await call('ua', a, { action: 'access.lists', tab: 'incoming', requestId: '018f0000-0000-7000-8000-00000000dead' })).items, []);
+    assert.equal((await call('ua', a, { action: 'access.lists', tab: 'out', requestId: req.id })).status, 400);
     assert.equal((await call('ub', b, { action: 'access.grant', opId: op(), requestId: req.id, scopes: ['info'], term: '7d' })).status, 404); // only the owner
     const granted = await call('ua', a, { action: 'access.grant', opId: op(), requestId: req.id, scopes: ['info'], term: '1d' });
     assert.deepEqual([granted.status, granted.state], [200, 'granted']);

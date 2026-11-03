@@ -1,0 +1,77 @@
+/* The notification center's card templates (notes.tsx, Storybook «Домен/Уведомления»). Only tokens. The row frame is
+ * the prototype's `.nt` (base.css); these rules add what the templates carry on top of it. */
+
+/* Long names and unusual words wrap inside the row, never push the time or the dot out (360 px phones). */
+.v21 .k-note .tx{overflow-wrap:anywhere}
+.v21 .k-note .k-note-text{display:block}
+.v21 .k-note .k-note-text b{font-weight:650}
+.v21 .k-note:not(.unread) .k-note-text{color:var(--mute)}
+.v21 .k-note:not(.unread) .k-note-text b{color:var(--ink)}
+/* The type's icon badge in the catalog's tone. */
+.v21 .k-note .ntw .ico.l{color:var(--accent)}
+.v21 .k-note .ntw .ico.g{color:var(--ok)}
+.v21 .k-note .ntw .ico.v{color:var(--violet)}
+/* No face: the type's icon on a soft plate the size of an avatar. */
+.v21 .av.k-note-plate{display:grid;place-items:center;background:var(--raise);color:var(--mute)}
+.v21 .av.k-note-plate svg{width:var(--i-md);height:var(--i-md)}
+.v21 .av.k-note-plate.l{background:var(--accent-soft);color:var(--accent)}
+.v21 .av.k-note-plate.g{background:var(--ok-soft);color:var(--ok)}
+.v21 .av.k-note-plate.v{background:var(--violet-soft);color:var(--violet)}
+/* Lines under the text: a reason, a term, an event's name and time. */
+.v21 .k-note .k-note-line{display:flex;align-items:center;gap:var(--s-1);margin-top:2px;font-size:var(--fs-sm);color:var(--mute)}
+.v21 .k-note .k-note-line svg{flex:none;width:var(--i-xs);height:var(--i-xs)}
+.v21 .k-note .k-note-title{display:block;margin-top:2px;font-size:var(--fs-sm);font-weight:600;color:var(--ink)}
+.v21 .k-note .k-note-cancel{color:var(--danger)}
+.v21 .k-note .k-note-act{display:block;margin-top:2px;font-size:var(--fs-sm);font-weight:600;color:var(--accent)}
+.v21 .k-note .k-note-gone{display:block;margin-top:2px;font-size:var(--fs-sm);color:var(--faint);font-style:italic}
+/* A result's outcome word in its tone. */
+.v21 .k-note .k-note-out{display:inline-block;margin-top:var(--s-1);padding:0 var(--s-2);border-radius:var(--r-full);background:var(--raise);
+  font-size:var(--fs-cap);font-weight:600;line-height:20px;color:var(--mute)}
+.v21 .k-note .k-note-out.g{background:var(--ok-soft);color:var(--ok)}
+.v21 .k-note .k-note-out.l{background:var(--accent-soft);color:var(--accent)}
+.v21 .k-note .k-note-out.v{background:var(--violet-soft);color:var(--violet)}
+/* An event's date tile in place of a face. */
+.v21 .k-note-date{display:grid;place-items:center;align-content:center;width:44px;height:44px;border-radius:var(--r-m);background:var(--violet-soft);color:var(--violet);line-height:1}
+.v21 .k-note-date b{font-size:var(--fs-md);font-weight:700}
+.v21 .k-note-date small{font-size:var(--fs-micro);font-weight:600;margin-top:2px;max-width:40px;overflow:hidden;white-space:nowrap}
+/* A summary's faces, stacked. */
+.v21 .k-note-stack{display:flex;width:44px;height:44px;align-items:center}
+.v21 .k-note-stack .av{width:26px;height:26px;margin-left:-17px;box-shadow:0 0 0 2px var(--bg)}
+.v21 .k-note-stack .av:first-child{margin-left:0}
+.v21 .k-note-stack .av:only-child{width:44px;height:44px}
+
+/* «Нужно решить»: the middle of the card opens the request; the name above opens the person. */
+.v21 .k-note-dec .k-note-open{display:flex;align-items:center;gap:var(--s-2);width:100%;margin-top:var(--s-3);padding:0;border:0;background:none;
+  text-align:left;font:inherit;color:inherit;overflow-wrap:anywhere}
+.v21 .k-note-dec button.k-note-open{cursor:pointer}
+.v21 .k-note-dec .k-note-open>svg{flex:none;width:var(--i-sm);height:var(--i-sm);color:var(--faint)}
+.v21 .k-note-dec .k-note-open .grow{min-width:0;flex:1}
+.v21 .k-note-dec .k-note-text{display:block;font-size:var(--fs-body);line-height:1.4}
+.v21 .k-note-dec .k-note-obj{display:flex;align-items:center;gap:var(--s-1);margin-top:2px;font-size:var(--fs-sm);color:var(--mute);min-width:0}
+.v21 .k-note-dec .k-note-obj svg{flex:none;width:var(--i-xs);height:var(--i-xs)}
+.v21 .k-note-dec .k-note-obj b{font-weight:600;color:var(--ink);overflow-wrap:anywhere}
+.v21 .k-note-dec .k-note-tag{display:inline-block;margin-bottom:var(--s-1);padding:0 6px;border-radius:var(--r-full);background:var(--violet-soft);color:var(--violet);
+  font-size:var(--fs-micro);font-weight:600;line-height:17px}
+.v21 .k-note-dec .chips,
+.v21 .k-note-dec .application-answer{margin-top:var(--s-3)}
+.v21 .k-note-dec .k-note-gone{display:flex;align-items:center;gap:var(--s-1);margin-top:var(--s-3);color:var(--faint)}
+.v21 .k-note-dec .k-note-gone svg{flex:none;width:var(--i-xs);height:var(--i-xs)}
+
+/* A moderation decision opened: what was decided, the facts, the actions. */
+.v21 .k-safety{display:grid;gap:var(--s-4)}
+.v21 .k-safety-head{display:flex;align-items:center;gap:var(--s-3);overflow-wrap:anywhere}
+.v21 .k-safety-head b{font-size:var(--fs-md);font-weight:650;line-height:1.35}
+.v21 .k-safety-ico{flex:none;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--raise);color:var(--mute)}
+.v21 .k-safety-ico svg{width:var(--i-md);height:var(--i-md)}
+.v21 .k-safety-head.l .k-safety-ico{background:var(--danger-soft);color:var(--danger)}
+.v21 .k-safety-head.g .k-safety-ico{background:var(--ok-soft);color:var(--ok)}
+.v21 .k-safety-head.v .k-safety-ico{background:var(--violet-soft);color:var(--violet)}
+.v21 .k-safety-facts{display:grid;gap:var(--s-3);margin:0}
+.v21 .k-safety-facts>div{display:grid;gap:2px}
+.v21 .k-safety-facts dt{font-size:var(--fs-cap);color:var(--mute)}
+.v21 .k-safety-facts dd{margin:0;font-size:var(--fs-body);overflow-wrap:anywhere}
+
+/* The place a link points at, lit for a moment (useScrollTo). */
+.v21 .k-focus{animation:k-focus-lit 2.4s ease-out}
+@keyframes k-focus-lit{0%,40%{box-shadow:0 0 0 2px var(--accent)}100%{box-shadow:0 0 0 2px transparent}}
+@media (prefers-reduced-motion:reduce){.v21 .k-focus{animation:none;box-shadow:0 0 0 2px var(--accent)}}

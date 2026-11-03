@@ -8,6 +8,7 @@ import { mediaDto } from '../media/assets.mjs';
 import { availableScopes, grantedScopes, LIMITS, lockOwner, memberAccounts, related } from '../access.mjs';
 import { withFaces } from './faces.mjs';
 import { keysetPage, readKeyset } from '../cursor.mjs';
+import { readAbout } from '../notify.mjs';
 
 /** Slice C2: private part and access (S1 §6). Narrowing (decline, narrow, revoke, switch off) applies at once;
  * opening the private part of a couple to someone always needs both partners (V21 «только вдвоём»).
@@ -323,7 +324,10 @@ const run = {
       });
       return { pending };
     }
-    return applyGrant(q, { requestId: input.requestId, ownerId: acting.profileId, scopes: input.scopes, term: input.term, by: acting.accountId });
+    const done = await applyGrant(q, { requestId: input.requestId, ownerId: acting.profileId, scopes: input.scopes, term: input.term, by: acting.accountId });
+    // A decided task reads its own inbox row (docs/notifications.md «Счётчики»).
+    await readAbout(q, { profile: acting.profileId, kind: 'task', objectType: 'request', objectId: input.requestId });
+    return done;
   },
 
   async 'access.decline'(q, { acting: a, input }) {
@@ -334,6 +338,7 @@ const run = {
        returning requester_profile_id, decided_at + make_interval(secs => $4) undo_until`,
       [input.requestId, acting.profileId, acting.accountId, LIMITS.declineUndoSeconds]);
     if (!rows[0]) fail(404, 'not_found');
+    await readAbout(q, { profile: acting.profileId, kind: 'task', objectType: 'request', objectId: input.requestId });
     // The notice waits out the undo window; the requester's views treat the request as waiting until then (held()).
     await enqueue(q, 'access.declined', rows[0].requester_profile_id, { requestId: input.requestId, silent: true },
       { delaySeconds: LIMITS.declineUndoSeconds });
@@ -409,6 +414,7 @@ const run = {
   async 'access.lists'(q, { acting: a, input, cfg }) {
     const acting = need(a);
     if (input.filter && input.tab !== 'out' && input.tab !== 'incoming') fail(400, 'invalid_input', { fields: ['filter'] });
+    if (input.requestId && input.tab !== 'incoming') fail(400, 'invalid_input', { fields: ['requestId'] });
     const cur = readKeyset(input.cursor);
     const page = async (/** @type {any[]} */ rows) => {
       const { items, next } = keysetPage(rows, PAGE);
@@ -463,8 +469,9 @@ const run = {
            ${who('r.requester_profile_id')} profile
          from feture.access_request r
          where r.owner_profile_id = $1 and r.state = 'pending' and ${live('r.requester_profile_id')} and ${after('r.created_at', 'r.id')}
+           and ($5::uuid is null or r.id = $5)
          order by r.created_at desc, r.id desc limit $4`,
-        [acting.profileId, cur.at, cur.id, PAGE + 1]);
+        [acting.profileId, cur.at, cur.id, PAGE + 1, input.requestId ?? null]);
       const result = await page(rows);
       return { ...result, items: result.items.map(({ already_open, ...r }) => ({ ...r, alreadyOpen: already_open })),
         available: await availableScopes(q, acting.profileId) };

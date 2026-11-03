@@ -14,6 +14,7 @@ import { PREMIUM_SQL, withFaces } from './faces.mjs';
 import { hasPhotoCheck } from './verification.mjs';
 import { articlePlate } from '../../contracts/_plates.mjs';
 import { dropHiddenPostPhotos, settleAvatar } from './photos.mjs';
+import { readAbout } from '../notify.mjs';
 
 /** Slice B: posts and what hangs on them (S1 §8, extract/feed-content.md).
  * Rules: text without media publishes at once (Q1); media waits until every file is checked; explicit media only in
@@ -1027,6 +1028,8 @@ const run = {
       await q.query(`update feture.photo_tag set state = $3, decided_at = now() where post_id = $1 and profile_id = $2`, [input.postId, viewer.profileId, input.answer]);
     }
     await settleAvatar(q, t.owner_profile_id); // a post with an unconfirmed mark is not public: nor is its photo as an avatar
+    // A decided task reads its own inbox row (docs/notifications.md «Счётчики»).
+    await readAbout(q, { profile: viewer.profileId, kind: 'task', objectType: 'post', objectId: input.postId });
     await enqueue(q, 'tag.answered', t.owner_profile_id, { postId: input.postId, answer: input.answer });
     return { answer: input.answer };
   },

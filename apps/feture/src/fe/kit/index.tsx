@@ -271,7 +271,7 @@ export function Actions({children,stack,fit}:{children:ReactNode,/** One under a
 
 /** `.card` — the surface every block sits on. `list` holds Rows (dividers between them come with it); `form` holds
  * fields and has no surface of its own in V21 (fields sit on the page, 16 apart). Radius, fill and shadow are tokens, so changing the card here changes every card. */
-export function Card({children,list,form,className,id,onClick,label,tone}:{children:ReactNode,list?:boolean,form?:boolean,className?:string,id?:string,/** danger: the edge of something irreversible (delete account). */ tone?:'danger',/** A whole card that opens something. */ onClick?:()=>void,label?:string}){
+export function Card({children,list,form,className,id,onClick,label,tone}:{children:ReactNode,list?:boolean,form?:boolean,className?:string,id?:string|undefined,/** danger: the edge of something irreversible (delete account). */ tone?:'danger',/** A whole card that opens something. */ onClick?:()=>void,label?:string}){
  if(onClick)return <button type="button" id={id} aria-label={label} onClick={onClick} className={['card','k-card-btn',list?'list':'',className].filter(Boolean).join(' ')}>{children}</button>;
  return <div id={id} className={['card',list?'list':'',form?'form-card':'',tone?'k-card-'+tone:'',className].filter(Boolean).join(' ')}>{children}</div>;
 }
@@ -455,4 +455,5 @@ export * from './account';
 export * from './security';
 export * from './av';
 export * from './facts';
+export * from './notes';
 export {NewPill,PullRefresh,PullRefreshRunner,useRefreshable} from './pull';

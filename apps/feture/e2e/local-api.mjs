@@ -127,6 +127,34 @@ http.createServer(async (req, res) => {
                       where s.account_id = a.id and p.handle = $1`, [url.searchParams.get('handle')]);
       return json(res, 200, { ok: true });
     }
+    // Local only (the notification center's screenshots and scenarios, stage 5): a long history and rows of every card
+    // template for one handle, which no app command makes in seconds — online events (published or cancelled) and inbox
+    // rows by type, actor handle, object, data, age and read state. Never on production: this server is PGlite.
+    if (url.pathname === '/local/inbox-seed' && req.method === 'POST') {
+      const b = JSON.parse((await body(req)).toString() || '{}');
+      const [me] = await pg.query(`select p.id, m.account_id from feture.profile p join feture.profile_member m on m.profile_id = p.id where p.handle = $1 limit 1`, [b.handle]).then(r => r.rows);
+      if (!me) return json(res, 404, { ok: false });
+      const events = [];
+      for (const e of b.events ?? []) {
+        const starts = new Date(Date.now() + (e.inDays ?? 3) * 86400000); starts.setUTCHours(e.hour ?? 18, 0, 0, 0);
+        const [x] = (await pg.query(
+          `insert into feture.event (organizer_profile_id, created_by, title, kind, description, format, join_url, tz, starts_at, ends_at, state, published_at, cancelled_at)
+           values ($1, $2, $3, 'meetup', 'Описание события для проверки уведомлений.', 'online', 'https://example.org/meet', $4, $5, $6, $7, now(), case when $7 = 'cancelled' then now() end) returning id`,
+          [me.id, me.account_id, e.title, e.tz ?? 'Europe/Berlin', starts, new Date(starts.getTime() + 7200000), e.state ?? 'published'])).rows;
+        events.push(x.id);
+      }
+      let i = 0;
+      for (const r of b.rows ?? []) {
+        const [actor] = r.actor ? (await pg.query(`select id from feture.profile where handle = $1`, [r.actor])).rows : [];
+        await pg.query(
+          `insert into feture.notification (recipient_account_id, addressee_profile_id, type, actor_profile_id, object_type, object_id, data, source, kind, collapse_key, created_at, read_at)
+           values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now() - make_interval(mins => $11), case when $12 then now() end)`,
+          [me.account_id, me.id, r.type, actor?.id ?? null, r.objectType ?? null, r.objectId ?? (r.event != null ? events[r.event] : null), JSON.stringify(r.data ?? {}),
+            'seed-' + randomUUID(), r.kind ?? 'notice', r.collapse ?? null, r.minutesAgo ?? i, !!r.read]);
+        i++;
+      }
+      return json(res, 200, { ok: true, events });
+    }
     if (url.pathname === '/api/catalog' && url.searchParams.get('resource') === 'documents') {
       return json(res, 200, { ok: true, documents: DOCS.map(d => ({ id: d.id, key: d.key, hash: d.hash, requiresAccept: d.required, locale: 'ru' })) });
     }

@@ -21,7 +21,7 @@ const communities=()=>import('./fe/communities'),inbox=()=>import('./fe/inbox'),
 const CommunitiesTab=screen(communities,'CommunitiesTab'),CommunityScreen=screen(communities,'CommunityScreen'),EventScreen=screen(communities,'EventScreen');
 const ChatsTab=screen(chats,'ChatsTab'),ChatScreen=screen(chats,'ChatScreen'),RequestsScreen=screen(chats,'RequestsScreen'),PeopleTab=screen(people,'PeopleTab'),PersonScreen=screen(people,'PersonScreen');
 const MeTab=screen(meTab,'MeTab'),MeEditScreen=screen(meEdit,'MeEditScreen'),MinePartScreen=screen(mine,'MinePartScreen'),MyPostsScreen=screen(mine,'MyPostsScreen'),SavedScreen=screen(mine,'SavedScreen');
-const InboxScreen=screen(inbox,'InboxScreen'),PairScreen=screen(pair,'PairScreen');
+const InboxScreen=screen(inbox,'InboxScreen'),InboxNoteScreen=screen(inbox,'InboxNoteScreen'),PairScreen=screen(pair,'PairScreen');
 const SettingsScreen=screen(settings,'SettingsScreen'),NotificationSettingsScreen=screen(settings,'NotificationSettingsScreen'),DataScreen=screen(settings,'DataScreen');
 const HiddenFeedScreen=screen(settingsLists,'HiddenFeedScreen'),BlockedScreen=screen(settingsLists,'BlockedScreen');
 const PremiumScreen=screen(accountExtra,'PremiumScreen'),SecurityScreen=screen(accountExtra,'SecurityScreen'),HelpScreen=screen(accountExtra,'HelpScreen');
@@ -139,6 +139,7 @@ export const routes: RouteObject[] = [
         {path:'events/:id/attendees', element:<EventAttendeesScreen />},
         {path:'events/:id/apply', element:<EventApplyScreen />},
         {path:'inbox', element:<InboxScreen />},
+        {path:'inbox/:id', element:<InboxNoteScreen />},
         {path:'settings', element:<SettingsScreen />},
         {path:'settings/notifications', element:<NotificationSettingsScreen />},
         {path:'settings/data', element:<DataScreen />},

@@ -254,7 +254,7 @@ export function RequestCards({data,onChanged}:{data:IncomingList,onChanged:()=>v
  const {acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const decline=useDecline();
  const [grantFor,setGrantFor]=useState<Incoming|null>(null);const cp=acting?.kind==='couple';
  return <><Stack gap={2}>
-  {data.items.map(r=><RequestCard key={r.id}
+  {data.items.map(r=><RequestCard key={r.id} id={'req-'+r.id}
    person={<PersonLine av={<Av name={nameOf(r.profile)} seed={r.profile?.id??r.id} src={r.profile?.avatar}/>} label={nameOf(r.profile)} onOpen={()=>r.profile&&navigate('/n/people/'+r.profile.id)}
     name={<>{withAge(nameOf(r.profile),r.profile)}<NameBadges p={r.profile}/></>} sub={<>{cp?t('fe.mx.pr.asksUs'):t('fe.priv.asks')} · {when(r.created_at,locale)}</>}/>}
    actions={<><Btn size="md" onClick={()=>setGrantFor(r)}>{t('fe.priv.grant')}</Btn>

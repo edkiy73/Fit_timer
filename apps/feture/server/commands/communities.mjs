@@ -13,6 +13,7 @@ import { mediaDto } from '../media/assets.mjs';
 import { CREATED_KEYS, pageInfo, plainRows, queuePageSql } from '../queue-page.mjs';
 
 import { withFaces } from './faces.mjs';
+import { readAbout } from '../notify.mjs';
 
 /** Slice D1: communities and discussions (S1 §9, extract/communities-events.md).
  * A community is owned by a profile (a couple can run one) and goes to staff before it is published; major edits
@@ -408,6 +409,8 @@ const run = {
     await q.query(`update feture.community_request set state = $2, decided_by = $3, decided_at = now(), rev = rev + 1 where id = $1`,
       [r.id, input.approve ? 'approved' : 'declined', acting.accountId]);
     if (input.approve) await joinNow(q, r.community_id, r.profile_id, acting.accountId);
+    // A decided task reads its own inbox row (docs/notifications.md «Счётчики»).
+    await readAbout(q, { profile: acting.profileId, kind: 'task', objectType: 'request', objectId: r.id });
     await enqueue(q, input.approve ? 'community.approved' : 'community.declined', r.profile_id, { communityId: r.community_id });
     return { state: input.approve ? 'approved' : 'declined' };
   },

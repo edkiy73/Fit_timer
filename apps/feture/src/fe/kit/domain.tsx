@@ -204,8 +204,8 @@ export function PersonLine({av,name,sub,onOpen,label,small}:{av:ReactNode,name:R
 }
 
 /** A request to answer (access, a link, a couple invite, an event application): who asks, details, the answers. */
-export function RequestCard({person,children,actions,className}:{person:ReactNode,children?:ReactNode,actions?:ReactNode,className?:string|undefined}){
- return <Card className={'rqcard'+(className?' '+className:'')}>{person}{children}{actions&&<div className="row g8 mt12">{actions}</div>}</Card>;
+export function RequestCard({person,children,actions,className,id}:{person:ReactNode,children?:ReactNode,actions?:ReactNode,className?:string|undefined,/** For `useScrollTo` (a link to this very request). */ id?:string|undefined}){
+ return <Card id={id} className={'rqcard'+(className?' '+className:'')}>{person}{children}{actions&&<div className="row g8 mt12">{actions}</div>}</Card>;
 }
 
 /** One question of an application and the answer under it. */

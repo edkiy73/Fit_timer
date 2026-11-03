@@ -10,6 +10,7 @@ import { mediaDto } from '../media/assets.mjs';
 import { ageOn, withFaces } from './faces.mjs';
 import { cancelledFor, listedEvent } from '../sql-rules.mjs';
 import { CREATED_KEYS, pageInfo, plainRows, queuePageSql } from '../queue-page.mjs';
+import { readAbout } from '../notify.mjs';
 
 /** Slice D2: events (S1 §10, extract/communities-events.md §1.8–1.12).
  * An event belongs to the organizing profile (a couple can organize) and goes to staff before it is published; a couple
@@ -604,6 +605,8 @@ const run = {
       if (!ok) fail(409, 'conflict', { rule: 'applicant_unavailable' });
     }
     await q.query(`update feture.event_application set state = $2, decided_by = $3, decided_at = now(), rev = rev + 1 where id = $1`, [x.id, to, acting.accountId]);
+    // A decided task reads its own inbox row (docs/notifications.md «Счётчики»).
+    await readAbout(q, { profile: acting.profileId, kind: 'task', objectType: 'request', objectId: x.id });
     // A revoked admission takes the exact place with it, and the «иду» that came with it.
     if (to === 'declined') await q.query(`delete from feture.event_rsvp where event_id = $1 and profile_id = $2 and status = 'going'`, [e.id, x.profile_id]);
     await enqueue(q, to === 'approved' ? 'event.applicationApproved' : 'event.applicationDeclined', x.profile_id, { eventId: e.id });

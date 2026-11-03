@@ -18,8 +18,8 @@ export const LIVE_READS:Record<Exclude<LiveEntity,'boot'>,RegExp>={
  post:/^(feed\.list|post\.(get|replies|likers)|poll\.voters|profile\.(posts|activity)|activity\.items|me\.posts|gallery\.list|album\.list|discussions\.popular|community\.discussions|saved\.list)$/,
  counts:/^(inbox\.counts|decide\.list|staff\.counts)$/,
  chat:/^(chats\.list|chat\.(messages|starters)|inbox\.counts|matches\.list)$/,
- decide:/^(decide\.(list|approvals|approval)|inbox\.counts|couple\.(get|invites)|access\.lists|community\.requests|event\.applications|links\.mine)$/,
- notify:/^(notifications\.list|inbox\.counts|decide\.list|chats\.list|likes\.(incoming|outgoing)|matches\.list|staff\.counts)$/,
+ decide:/^(decide\.(list|get|approvals|approval)|inbox\.counts|couple\.(get|invites)|access\.lists|community\.requests|event\.applications|links\.mine)$/,
+ notify:/^(notifications\.(list|get)|inbox\.counts|decide\.list|chats\.list|likes\.(incoming|outgoing)|matches\.list|staff\.counts)$/,
 };
 
 /** What a signal changed: entities, or 'all' (a reconnect or a return: anything may have been missed; `boot`). */

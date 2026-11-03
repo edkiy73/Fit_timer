@@ -72,7 +72,7 @@ test('subtypes with their own words are picked from the data', () => {
 test('every entry is complete: texts, card, destination, push, email; no known type says only «Уведомление»', () => {
   const routes = new Set(['inbox', 'me', 'chats', 'links', 'myPosts', 'interests', 'couple', 'approval', 'blocked', 'security', 'age', 'photoCheck', 'help',
     'premium', 'staff', 'people', 'access', 'visibility', 'post', 'postEdit', 'event', 'eventApplications', 'community', 'communityRequests', 'chat', 'actor',
-    'actorPrivate', 'target', 'object', 'coupleGallery', 'moderation']);
+    'actorPrivate', 'target', 'object', 'coupleGallery', 'moderation', 'accessRequest', 'invite', 'link']);
   const icons = read('src/fe/inbox.tsx').match(/const ICONS:Record<string,LucideIcon>=\{([^}]*)\}/)?.[1].split(',').map(x => x.split(':')[0].trim());
   assert.ok(icons?.length, 'the inbox icon map');
   for (const [key, e] of Object.entries(CATALOG)) {
@@ -117,18 +117,18 @@ test('the resolver makes a precise route for every entry, and the service worker
     const type = Object.keys(CATALOG).filter(k => key === k || key.startsWith(k + '.')).sort((x, y) => x.length - y.length)[0];
     const e = CATALOG[key];
     const objectType = { post: 'post', postEdit: 'post', event: 'event', eventApplications: 'event', community: 'community', communityRequests: 'community', chat: 'conversation',
-      approval: 'approval', object: 'post' }[e.dest] ?? null;
+      approval: 'approval', object: 'post', accessRequest: 'accessRequest', invite: 'invite', link: 'link' }[e.dest] ?? null;
     const subPart = key.slice(type.length + 1);
     const data = { conversationId: ID, ticketId: ID, target: ID2, targetType: 'post', targetId: ID, change: subPart, what: subPart, state: subPart, answer: subPart,
       ...(type === 'pair.trust' ? { approves: subPart === 'on' } : {}), ...(type === 'decide.req' ? { label: subPart || 'me' } : {}) };
-    return { type, data, object: objectType ? { type: objectType, id: ID } : null, sub: type === 'reply' ? { type: 'reply', id: ID3 } : null, actor: ID2, addressee: ID3, couple: type.startsWith('pair.') ? ID3 : null };
+    return { type, id: ID3, data, object: objectType ? { type: objectType, id: ID } : null, sub: type === 'reply' ? { type: 'reply', id: ID3 } : null, actor: ID2, addressee: ID3, couple: type.startsWith('pair.') ? ID3 : null };
   };
   for (const key of Object.keys(CATALOG)) {
     const n = sample(key);
     const route = destination(n);
     assert.ok(routeOk(route), `${key}: ${route}`);
     assert.equal(sw('/#' + route), '/#' + route, `${key}: the service worker accepts ${route}`);
-    if (CATALOG[key].dest !== 'inbox' && key !== 'reportResolved') assert.notEqual(route.split('?')[0], '/n/inbox', `${key} opens its place, not the inbox`);
+    if (!['inbox', 'invite'].includes(CATALOG[key].dest)) assert.notEqual(route.split('?')[0], '/n/inbox', `${key} opens its place, not the inbox`);
   }
   // Precise places.
   assert.equal(destination({ type: 'reply', object: { type: 'post', id: ID }, sub: { type: 'reply', id: ID2 }, addressee: ID3 }), `/n/feed/post/${ID}?reply=${ID2}&as=${ID3}`);
@@ -138,6 +138,14 @@ test('the resolver makes a precise route for every entry, and the service worker
   assert.equal(destination({ type: 'decide.eapp', object: { type: 'event', id: ID } }), `/n/events/${ID}/applications`);
   assert.equal(destination({ type: 'supportReply', data: { ticketId: ID } }), `/n/help?ticket=${ID}`);
   assert.equal(destination({ type: 'pair.acted', data: { what: 'discoverMode' }, couple: ID3 }), `/n/me?layer=vis&as=${ID3}`);
+  // Stage 5: a moderation decision opens its own card; a request, an invitation and a link open that very one.
+  for (const t of ['contentRemoved', 'reportResolved', 'profileSuspended', 'profileRestricted', 'profileRestored', 'profileUnrestricted', 'appealDecided'])
+    assert.equal(destination({ type: t, id: ID, data: { targetType: 'post', targetId: ID2 } }), `/n/inbox/${ID}`, t);
+  assert.equal(destination({ type: 'profileRestored', data: { rule: 'expired' } }), '/n/inbox');
+  assert.equal(destination({ type: 'decide.req', object: { type: 'accessRequest', id: ID }, addressee: ID3 }), `/n/me/access?tab=byme&request=${ID}&as=${ID3}`);
+  assert.equal(destination({ type: 'decide.pinv', object: { type: 'invite', id: ID } }), `/n/inbox?tab=todo&item=${ID}`);
+  assert.equal(destination({ type: 'decide.link', object: { type: 'link', id: ID }, addressee: ID3 }), `/n/me/links?link=${ID}&as=${ID3}`);
+  assert.equal(destination({ type: 'linkAccepted', object: { type: 'link', id: ID }, actor: ID2 }), `/n/me/links?link=${ID}`);
   // Anything unknown or broken: the inbox. Nothing else passes either rule.
   assert.equal(destination({ type: 'nope' }), '/n/inbox');
   assert.equal(destination({ type: 'reply', object: { type: 'post', id: 'x' } }), '/n/inbox');

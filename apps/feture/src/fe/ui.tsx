@@ -1,4 +1,4 @@
-import {forwardRef,useLayoutEffect,useRef,useState,type ButtonHTMLAttributes,type CSSProperties,type ReactNode} from 'react';
+import {forwardRef,useEffect,useLayoutEffect,useRef,useState,type ButtonHTMLAttributes,type CSSProperties,type ReactNode} from 'react';
 import {createPortal} from 'react-dom';
 import {useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
@@ -105,8 +105,21 @@ export function Seg<T extends string>({value,options,onChange,label}:{value:T,op
 
 /** View body: `.view > .wrap`. `refresh` — pull-to-refresh on touch screens (kit/pull.tsx): a function runs on
  * release, and so does every `useRefreshable` inside; `true` when only those blocks read. */
-export function View({children,className,refresh}:{children:ReactNode,className?:string|undefined,refresh?:true|(()=>unknown)|undefined}){
+/** Scroll positions kept per route for this tab's life (`View keep`). */
+const SCROLLS=new Map<string,number>();
+
+export function View({children,className,refresh,keep}:{children:ReactNode,className?:string|undefined,refresh?:true|(()=>unknown)|undefined,
+ /** Keeps the scroll position under this key (the route with its tab and filter) and puts it back when the screen is
+  * opened again; `null` while the content is still loading (nothing is put back onto a skeleton). */
+ keep?:string|null|undefined}){
  const ref=useRef<HTMLDivElement>(null);
+ const restored=useRef<string|null>(null);
+ useEffect(()=>{
+  const el=ref.current;if(!el||!keep)return;
+  if(restored.current!==keep){restored.current=keep;const y=SCROLLS.get(keep);if(y)el.scrollTop=y;}
+  const on=()=>{SCROLLS.set(keep,el.scrollTop);};
+  el.addEventListener('scroll',on,{passive:true});return ()=>el.removeEventListener('scroll',on);
+ },[keep]);
  const body=<div className="wrap">{children}</div>;
  return <div ref={ref} className={'view'+(className?' '+className:'')}>{refresh?<PullRefresh target={ref} onRefresh={refresh===true?undefined:refresh}>{body}</PullRefresh>:body}</div>;
 }

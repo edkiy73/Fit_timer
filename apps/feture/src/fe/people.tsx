@@ -1,11 +1,11 @@
 import {useCallback,useEffect,useRef,useState,type ReactNode} from 'react';
 import {openPaywall} from './premium';
-import {useNavigate,useParams} from 'react-router';
+import {useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Search,Ban,Bell,CalendarDays,Check,ChevronDown,ChevronLeft,ChevronRight,EyeOff,Heart,Ellipsis,History,Info,KeyRound,LocateFixed,Lock,MapPin,MessageCircle,SlidersHorizontal,Sparkles,Undo2,Users,X} from 'lucide-react';
-import {Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,IconBtn,LikeTile,Note,PairArt,PersonName,PhotoBars,Pill,Radar,Range,RangeDual,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Soon,Stack,Text,View,plate} from './kit';
+import {Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,IconBtn,LikeTile,Note,PairArt,PersonName,PhotoBars,Pill,Radar,Range,RangeDual,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Soon,Stack,Text,View,plate,useScrollTo} from './kit';
 import {useFe,useShown} from './session';
 import {useToast} from './toast';
 import {DiscoverPhotoAsk} from './discover-photo';
@@ -597,6 +597,12 @@ export function PersonScreen(){
  // After «Разблокировать» the profile is loaded again.
  const setBlock=useCallback((b:boolean)=>{setBlocked(b);if(!b)load();},[load]);
  const name=personName(p);
+ // `?part=private` (an access just granted, from the inbox or a push): the private part is scrolled to and focused once
+ // it is on the page (it is read after the profile).
+ const [params]=useSearchParams();const toPriv=params.get('part')==='private';const [privShown,setPrivShown]=useState(false);
+ useEffect(()=>{if(!toPriv||!p||!ready||privShown)return;let n=0;
+  const tm=setInterval(()=>{if(document.getElementById('priv')||++n>25){clearInterval(tm);setPrivShown(true);}},200);return ()=>clearInterval(tm);},[toPriv,p,ready,privShown]);
+ useScrollTo(toPriv?'priv':null,privShown);
  if(p&&!blocked&&ready)return <>
   <ProfilePage p={p} {...(pre?{pre}:{})} gal={gal} onMore={()=>setMenu('menu')} onRefresh={load}
    menu={(rel,reload)=><PersonMenu profileId={id} name={name} handle={p.kind==='person'?p.handle:null} step={menu} setStep={setMenu} blocked={blocked} setBlocked={setBlock} rel={rel} onRel={reload}/>}/>

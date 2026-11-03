@@ -421,20 +421,11 @@ const run = {
   async 'appeal.create'(q, { acting: a, input }) {
     // The author appeals a removal (or a restriction of their profile); a lead who did not decide it looks again.
     if (!a) throw new Error('acting profile missing');
-    const own = {
-      post: `select owner_profile_id o, state = 'removed' hit from feture.post where id = $1`,
-      reply: `select author_profile_id o, state = 'removed' hit from feture.reply where id = $1`,
-      community: `select owner_profile_id o, state in ('hidden', 'rejected') hit from feture.community where id = $1`,
-      event: `select organizer_profile_id o, state = 'hidden' hit from feture.event where id = $1`,
-      profile: `select id o, restricted_at is not null hit from feture.profile where id = $1`,
-    }[/** @type {'post'} */ (input.targetType)];
-    const [t] = await q.query(own, [input.targetId]);
-    if (!t || t.o !== a.profileId) fail(404, 'not_found');
+    const t = await appealTarget(q, a.profileId, input.targetType, input.targetId);
+    if (!t) fail(404, 'not_found');
     if (!t.hit) fail(409, 'conflict', { rule: 'nothing_to_appeal' });
     // Only a staff decision is appealed here (a host's removal in a community is the community's own matter).
-    const [d] = await q.query(
-      `select id from feture.staff_action where target_type = $1 and target_id = $2 and action = any($3) order by created_at desc limit 1`,
-      [input.targetType, input.targetId, APPEALABLE[/** @type {keyof typeof APPEALABLE} */ (input.targetType)]]);
+    const d = t.decision;
     if (!d) fail(409, 'conflict', { rule: 'nothing_to_appeal' });
     try {
       const [r] = await q.query(`insert into feture.appeal (account_id, profile_id, target_type, target_id, body, staff_action_id) values ($1, $2, $3, $4, $5, $6) returning id`,
@@ -492,6 +483,45 @@ const run = {
 const APPEALABLE = {
   post: ['report.remove', 'dispute.remove'], reply: ['report.remove'], community: ['report.remove', 'community.reject'], event: ['report.remove', 'event.hide'], profile: ['restrict.on'],
 };
+/** Who owns a target and whether a decision still holds on it. */
+const APPEAL_OWN = {
+  post: `select owner_profile_id o, state = 'removed' hit from feture.post where id = $1`,
+  reply: `select author_profile_id o, state = 'removed' hit from feture.reply where id = $1`,
+  community: `select owner_profile_id o, state in ('hidden', 'rejected') hit from feture.community where id = $1`,
+  event: `select organizer_profile_id o, state = 'hidden' hit from feture.event where id = $1`,
+  profile: `select id o, restricted_at is not null hit from feture.profile where id = $1`,
+};
+
+/** A target of the profile that may be appealed: whether the decision still holds, the staff decision under appeal.
+ * Null for a target that is not the profile's (or an unknown kind). @param {Q} q @param {string} profileId @param {string} type @param {string} id
+ * @returns {Promise<{hit: boolean, decision: {id: string} | null} | null>} */
+async function appealTarget(q, profileId, type, id) {
+  const own = APPEAL_OWN[/** @type {keyof typeof APPEAL_OWN} */ (type)];
+  if (!own) return null;
+  const [t] = await q.query(own, [id]);
+  if (!t || t.o !== profileId) return null;
+  const [d] = await q.query(
+    `select id from feture.staff_action where target_type = $1 and target_id = $2 and action = any($3) order by created_at desc limit 1`,
+    [type, id, APPEALABLE[/** @type {keyof typeof APPEALABLE} */ (type)]]);
+  return { hit: t.hit, decision: d ?? null };
+}
+
+/** The appeal of a decision about the profile's own target, for its decision card (the inbox): `available` (the decision
+ * holds and nothing was appealed yet), `open`, `granted`, `denied`, or `none` (nothing to appeal). Never names who
+ * reported or decided. @param {Q} q @param {string} profileId @param {string} type @param {string} id
+ * @returns {Promise<'available' | 'open' | 'granted' | 'denied' | 'none'>} */
+export async function appealState(q, profileId, type, id) {
+  const t = await appealTarget(q, profileId, type, id);
+  if (!t) return 'none';
+  const [ap] = await q.query(`select state from feture.appeal where profile_id = $1 and target_type = $2 and target_id = $3 order by created_at desc limit 1`, [profileId, type, id]);
+  if (ap?.state === 'open') return 'open';
+  if (t.hit && t.decision) {
+    // One appeal per staff decision: a decided one is not appealed again.
+    const [done] = await q.query(`select state from feture.appeal where staff_action_id = $1 and state <> 'open' limit 1`, [t.decision.id]);
+    return done ? done.state : 'available';
+  }
+  return ap?.state ?? 'none';
+}
 
 /** Puts the target back where it was before the decision (never simply «published»): a post that was still being
  * checked goes through its checks again; a cancelled event stays cancelled.
