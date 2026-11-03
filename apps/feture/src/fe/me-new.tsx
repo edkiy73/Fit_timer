@@ -131,8 +131,8 @@ export function MeNewSection(){
      <PhotosBlock p={p} settings={settings} onChanged={load}/>
      <BasicsForm p={p} places={places} onSaved={load}/>
      <DetailsBlock p={p} label={label}/>
-     <MeJars key={p.id}/>
      <MeAboutBlock p={p}/>
+     <MeJars key={p.id}/>
     </>}
   </View>
  </>;

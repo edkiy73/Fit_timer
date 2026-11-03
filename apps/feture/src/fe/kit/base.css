@@ -3723,6 +3723,8 @@
 .v21 .me18-who small{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* V21 (ME-037): «Данные» — on a phone the label sits above the value; on wide screens a fixed label column */
 @container stage (max-width:480px){.v21 .kv{grid-template-columns:minmax(0,1fr);gap:0}.v21 .kv dt{font-size:var(--fs-cap)}.v21 .kv dd+dt{margin-top:10px}}
+/* `.side`: label left, value right on every width (own «Основное» / «Данные»); a `.wide` row still goes under its label */
+@container stage (max-width:480px){.v21 .kv.side{grid-template-columns:minmax(88px,.8fr) minmax(0,1fr);gap:10px 12px}.v21 .kv.side dt{font-size:inherit}.v21 .kv.side dd+dt{margin-top:0}.v21 .kv.side dt.wide{margin-top:4px}.v21 .kv.side dt.wide+dd.wide{margin-top:-6px}}
 @container stage (min-width:768px){.v21 .kv{grid-template-columns:180px minmax(0,1fr)}}
 /* V21 (ME-007, ME-008): the card preview with the profile under it; the neutral «общего» placeholder */
 .v21 .p3-card21{margin-top:16px}
