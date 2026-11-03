@@ -114,7 +114,7 @@ test('a like and a message reach only that account\'s browsers, encrypted, with 
       assert.ok(!p.body.toString('latin1').includes('Alex'));
     }
     const payload = kira.open(/** @type {any} */ (posts.find(p => p.url === kira.endpoint)).body);
-    assert.deepEqual(payload, { title: 'FetUre', body: 'Новое уведомление', url: '/#/n/inbox' });
+    assert.deepEqual(payload, { title: 'KINHAZE', body: 'Новое уведомление', url: '/#/n/inbox' });
     // The 410 subscription is gone; the phone and the live browser stay.
     assert.deepEqual((await db.query(`select platform from feture.push_device where account_id = $1 order by platform`, [b.account])).map((/** @type {any} */ r) => r.platform), ['android', 'web']);
 

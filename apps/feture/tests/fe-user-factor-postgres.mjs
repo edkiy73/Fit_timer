@@ -186,8 +186,8 @@ test('new device: first sign-in quiet, known device or family quiet, a new one n
     await call('uu', null, { action: 'session.bootstrap' }, H('s7', 'Chrome · Mac', 'PT'));
     assert.equal(mails.length, 3);
     assert.equal(mails[1].to, 'alex@mail.example');
-    assert.equal(mails[1].subject, 'Вход в FetUre с нового устройства');
-    assert.match(mails[1].text, /^Вход в FetUre с нового устройства: Android, Lisboa, Португалия, \d+ \S+ 2\d{3} г?\.?,? ?(в )?\d\d:\d\d UTC\.\n\nЭто не ты\? Открой «Мои устройства» и нажми «Выйти»:\nhttps:\/\/app\.test\/#\/n\/settings\/security\n/);
+    assert.equal(mails[1].subject, 'Вход в KINHAZE с нового устройства');
+    assert.match(mails[1].text, /^Вход в KINHAZE с нового устройства: Android, Lisboa, Португалия, \d+ \S+ 2\d{3} г?\.?,? ?(в )?\d\d:\d\d UTC\.\n\nЭто не ты\? Открой «Мои устройства» и нажми «Выйти»:\nhttps:\/\/app\.test\/#\/n\/settings\/security\n/);
     assert.ok(!/<|http:\/\/(?!app)/.test(mails[1].text), 'plain text, no tracking');
 
     // The inbox item (always, no setting) and the push: in «Безопасные» only «FetUre · Вход с нового устройства».
@@ -198,7 +198,7 @@ test('new device: first sign-in quiet, known device or family quiet, a new one n
     assert.deepEqual(items.map(n => n.data.device).sort(), ['Android', 'Chrome · Mac', 'Firefox · Linux']);
     assert.ok(items.some(n => n.data.place === 'Lisboa|PT'));
     assert.equal(sent.length, 3);
-    assert.deepEqual([sent[0].title, sent[0].body, sent[0].data.url], ['FetUre', 'Вход с нового устройства', '/#/n/settings/security']);
+    assert.deepEqual([sent[0].title, sent[0].body, sent[0].data.url], ['KINHAZE', 'Вход с нового устройства', '/#/n/settings/security']);
     // «Обычные»: still no device or place on the lock screen.
     await db.query(`update feture.notification_settings set settings = settings || '{"mode":"normal"}' where account_id = $1`, [id]);
     await call('uu', null, { action: 'session.bootstrap' }, H('s8', 'Edge · Windows', 'PT'));
@@ -233,8 +233,8 @@ test('new device: a sign-in waiting for its second step is still reported', asyn
 
 test('email text in English, and the guard for Core endpoints (sessions, email change, deletion, sync)', async () => {
   const m = signinMail('en', { device: 'iPhone', place: '|DE', at: '2026-10-29T10:05:00Z' }, { appUrl: 'https://x.test/', tz: 'Europe/Berlin' });
-  assert.equal(m.subject, 'New device signed in to FetUre');
-  assert.equal(m.text.split('\n')[0], 'Someone signed in to FetUre on a new device: iPhone, Germany, 29 October 2026 at 11:05.');
+  assert.equal(m.subject, 'New device signed in to KINHAZE');
+  assert.equal(m.text.split('\n')[0], 'Someone signed in to KINHAZE on a new device: iPhone, Germany, 29 October 2026 at 11:05.');
 
   const { pg, db, call } = await setup();
   try {

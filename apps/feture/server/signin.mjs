@@ -108,15 +108,15 @@ export async function noteSignin(db, account, core, place) {
 
 const MAIL = {
   ru: {
-    subject: 'Вход в FetUre с нового устройства',
-    line: 'Вход в FetUre с нового устройства: {what}.',
+    subject: 'Вход в KINHAZE с нового устройства',
+    line: 'Вход в KINHAZE с нового устройства: {what}.',
     unknown: 'неизвестное устройство',
     notYou: 'Это не ты? Открой «Мои устройства» и нажми «Выйти»:',
     you: 'Если это ты, ничего делать не нужно.',
   },
   en: {
-    subject: 'New device signed in to FetUre',
-    line: 'Someone signed in to FetUre on a new device: {what}.',
+    subject: 'New device signed in to KINHAZE',
+    line: 'Someone signed in to KINHAZE on a new device: {what}.',
     unknown: 'unknown device',
     notYou: 'Not you? Open «My devices» and tap «Sign out»:',
     you: 'If it was you, there is nothing to do.',

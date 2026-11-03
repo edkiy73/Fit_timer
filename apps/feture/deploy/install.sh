@@ -213,7 +213,7 @@ if [ -z "$(getenv app.env RESEND_API_KEY)" ]; then
     resend POST "/domains/$rid/verify" '{}' >/dev/null || true
     sk=$(resend POST /api-keys "{\"name\":\"feture-server\",\"permission\":\"sending_access\",\"domain_id\":\"$rid\"}") || die "Resend: не создался ключ отправки"
     setenv app.env RESEND_API_KEY "$(jq -r '.token' <<<"$sk")"
-    setenv app.env MAIL_FROM "FetUre <code@$MAIL_DOMAIN>"
+    setenv app.env MAIL_FROM "KINHAZE <code@$MAIL_DOMAIN>"
   fi
 fi
 
