@@ -3,9 +3,10 @@ import {z} from 'zod';
 import type {AuthSession} from '@appbase/core/auth.js';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import {feRequest,FeError} from '../feture/fe-api';
-import {connectRealtime,type RtKind,type RtListener} from './realtime';
+import {connectRealtime,watchWake,type RtConnection,type RtKind,type RtListener} from './realtime';
+import {COUNT_WRITES,legacyKind,readDependsOn,signalEntities,type LiveEntity} from './live';
 import {forgetWebPush,noteAction} from './push-web';
-import {forgetNativePush} from './push-native';
+import {forgetNativePush,onForegroundPush} from './push-native';
 import {linksExpireAt} from './kit/media';
 import {PullRefreshRunner} from './kit/pull';
 
@@ -46,8 +47,9 @@ const Ctx=createContext<FeSession|null>(null);
 const RtCtx=createContext<((l:RtListener)=>()=>void)|null>(null);
 const ACTING_KEY='feture.fe.acting';
 const BOOT_KEY='feture.fe.boot:';
-/** Reads (no opId) are kept so returning to a screen is instant; any write or realtime signal drops them all, so
- * nothing stale outlives a change. The server stays the source of truth. A read younger than READ_TTL is answered
+/** Reads (no opId) are kept so returning to a screen is instant; any write drops them all, and a realtime signal drops
+ * the reads of what it says changed (live.ts), so nothing stale outlives a change. The server stays the source of
+ * truth. A read younger than READ_TTL is answered
  * from memory; an older one (up to STALE_TTL) is answered from memory too — the screen appears at once, whole — while
  * it is asked again in the background, and the new answer is what the next visit shows.
  * The cache holds the server's raw answer per (account, profile, command, input): two screens that read the same
@@ -84,6 +86,16 @@ const WRITES_WITHOUT_OPID=new Set(['staff.totpStart','staff.totpConfirm','staff.
 const sameAnswer=(a:unknown,b:unknown)=>{const k=(_:string,v:unknown)=>_==='requestId'?undefined:typeof v==='string'&&/^https?:\/\//.test(v)?v.split('?')[0]:v;
  return JSON.stringify(a,k)===JSON.stringify(b,k);};
 export function dropReadCache(){readCache.clear();for(const f of dropListeners)f();}
+/** A realtime signal: forgets the reads that depend on what changed (`all`: everything). */
+export function dropReadsOf(entities:LiveEntity[]|'all'){
+ if(entities==='all'){dropReadCache();return;}
+ if(!entities.length)return;
+ for(const [k,v] of readCache)if(readDependsOn(v.action,entities))readCache.delete(k);
+ if(entities.includes('profile'))for(const f of dropListeners)f();
+}
+/** Counters are never answered from a stale memory: a poll or a signal must show the server's number, not the last
+ * poll's (owner 03.11.2026: the bell lagged one poll behind). */
+const NO_STALE=/^(inbox\.counts|staff\.counts)$/;
 /** Reads that go to the server while a refresh runs (`refreshReads`): it waits for them. */
 let capture:Set<Promise<unknown>>|null=null;
 /** Pull-to-refresh (kit `PullRefreshRunner`): every read `work` starts — and the reads its state changes start right
@@ -175,7 +187,10 @@ export function FeSessionProvider({children}:{children:ReactNode}){
   const session=cur&&[cur.email,cur.deviceId,cur.syncToken].join('\n')===sessionKey?cur:state.session;
   if('opId' in input||WRITES_WITHOUT_OPID.has(action)){ // a write: whatever was read before may have changed
    dropReads(action);
-   return feRequest(session,action,input,schema,{signal:opts.signal,profileId}).then(r=>{noteAction(action);return r;}).finally(()=>dropReads(action));
+   return feRequest(session,action,input,schema,{signal:opts.signal,profileId}).then(r=>{noteAction(action);return r;}).finally(()=>dropReads(action))
+    // Deciding, answering or reading moves the counters: the bell and the tabs ask again at once (the server tells the
+    // other devices).
+    .then(r=>{if(COUNT_WRITES.test(action))deliverRef.current('changed',null,'counts');return r;});
   }
   const key=JSON.stringify([session.email,profileId??'',action,input]);
   const cached=readCache.get(key);const hit=usable(cached)?cached:undefined;const age=hit?Date.now()-hit.at:Infinity;
@@ -195,7 +210,7 @@ export function FeSessionProvider({children}:{children:ReactNode}){
     if(sameAnswer(a,b))return;const r=schema.safeParse(b);if(r.success)onFresh(r.data);}).catch(()=>{});};
   if(hit&&!opts.fresh&&age<READ_TTL){value=hit.value;behind(value);}
   else if(hit&&!opts.fresh&&opts.onFresh&&hit.settled&&age<STALE_TTL){value=hit.value;behind(value);}
-  else if(hit&&!opts.fresh&&age<STALE_TTL&&hit.settled){
+  else if(hit&&!opts.fresh&&age<STALE_TTL&&hit.settled&&!NO_STALE.test(action)){
    // Stale: answer from memory now, ask the server in the background.
    value=hit.value;
    if(!hit.refreshing){hit.refreshing=true;
@@ -228,16 +243,49 @@ export function FeSessionProvider({children}:{children:ReactNode}){
   if(!lastBody.has(key))return null;const r=schema.safeParse(lastBody.get(key));return r.success?r.data:null;
  },[acting?.id]);
  const value=useMemo(()=>({state,acting,setActing,reload,call,peek}),[state,acting,setActing,reload,call,peek]);
+ /** Bootstrap again without a skeleton: profiles, couple status, the acting avatar and the channel tokens change in
+  * place and the open screen stays (`call` keeps its identity). One at a time; a signal during a read asks once more
+  * after it (that read may have started before the change committed). */
+ const booting=useRef<Promise<void>|null>(null);const bootAgain=useRef(false);
+ const refreshBoot=useCallback(()=>{
+  const cur=stateRef.current;if(cur.status!=='ready')return;
+  if(booting.current){bootAgain.current=true;return;}
+  const session=cur.session;
+  booting.current=feRequest(session,'session.bootstrap',{},bootstrapSchema).then(boot=>{
+   try{localStorage.setItem(BOOT_KEY+session.email,JSON.stringify(boot));}catch{/* no storage */}
+   setState(s=>s.status==='ready'&&s.session===session&&JSON.stringify(s.boot)!==JSON.stringify(boot)?{...s,boot}:s);
+  }).catch(()=>{/* the next call or signal tries again; a sign-out shows on the next command */})
+   .finally(()=>{booting.current=null;if(bootAgain.current){bootAgain.current=false;refreshBoot();}});
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[]);
  // One socket per signed-in session, joined to the channels of every profile this account may act as.
  const listeners=useRef(new Set<RtListener>());
+ /** Every signal goes here: the reads it changes are forgotten, `boot` and a resync read bootstrap again, then the
+  * screens hear it. «печатает…» changes no data. */
+ const deliver=useCallback<RtListener>((kind,profile,tag)=>{
+  const entities=signalEntities(kind,tag);
+  dropReadsOf(entities);
+  if(kind===null||(kind==='changed'&&tag==='boot'))refreshBoot();
+  for(const l of [...listeners.current]){try{l(kind,profile,tag);}catch{/* one screen never breaks another */}}
+ },[refreshBoot]);
+ const deliverRef=useRef(deliver);deliverRef.current=deliver;
  const rt=state.status==='ready'?state.boot.realtime??null:null;
  const rtKey=rt?JSON.stringify(rt):'';
+ const conn=useRef<RtConnection|null>(null);
  useEffect(()=>{
   if(!rt)return;
-  // «печатает…» changes no data: it never empties the read cache.
-  const conn=connectRealtime(rt,(kind,profile,tag)=>{if(kind!=='typing')readCache.clear();for(const l of [...listeners.current]){try{l(kind,profile,tag);}catch{/* one screen never breaks another */}}});
-  return ()=>conn.close();
+  const c=connectRealtime(rt,(kind,profile,tag)=>deliverRef.current(kind,profile,tag));conn.current=c;
+  return ()=>{c.close();if(conn.current===c)conn.current=null;};
  },[rtKey]);
+ // Back in the app (shown, focused, resumed after sleep) or the network back: a quiet stream is reopened (its open is
+ // the refresh), else everything is read again once — bootstrap included.
+ useEffect(()=>{
+  if(!ready)return;
+  const offWake=watchWake(()=>{if(!conn.current?.wake())deliverRef.current(null,null);},{minAwayMs:10_000});
+  // A push received with the app open (Android/iOS): read again once — the stream may have missed it after a sleep.
+  const offPush=onForegroundPush(()=>{if(!conn.current?.wake())deliverRef.current(null,null);});
+  return ()=>{offWake();offPush();};
+ },[ready]);
  const subscribe=useCallback((l:RtListener)=>{listeners.current.add(l);return ()=>{listeners.current.delete(l);};},[]);
  return <Ctx.Provider value={value}><RtCtx.Provider value={subscribe}><PullRefreshRunner value={refreshReads}>{children}</PullRefreshRunner></RtCtx.Provider></Ctx.Provider>;
 }
@@ -252,8 +300,29 @@ export function useRealtime(kinds:RtKind|readonly RtKind[],handler:()=>void){
  useEffect(()=>{
   if(!subscribe)return;
   const wanted=new Set(key.split(','));let timer:ReturnType<typeof setTimeout>|undefined;
-  const off=subscribe(kind=>{
+  const off=subscribe((raw,_p,tag)=>{
+   // `changed:chat|decide|counts|boot` also stand for the older kinds (live.ts legacyKind).
+   const kind=legacyKind(raw,tag);if(kind===undefined)return;
    if(kind!==null&&!wanted.has(kind))return;
+   clearTimeout(timer);timer=setTimeout(()=>latest.current(),250);
+  });
+  return ()=>{clearTimeout(timer);off();};
+ },[subscribe,key]);
+}
+
+/** Live data (owner 03.11.2026): calls `load` when a signal says one of `entities` changed (live.ts — the reads of that
+ * entity are already forgotten, so `load` reads the server), and after a resync (a reconnect, a return to the app,
+ * `boot`). A burst is one call (250 ms). `load` keeps what is on screen until its answer replaces it. */
+export function useLive(entities:LiveEntity|readonly LiveEntity[],load:()=>void){
+ const subscribe=useContext(RtCtx);
+ const latest=useRef(load);latest.current=load;
+ const key=[entities].flat().join(',');
+ useEffect(()=>{
+  if(!subscribe)return;
+  const wanted=key.split(',') as LiveEntity[];let timer:ReturnType<typeof setTimeout>|undefined;
+  const off=subscribe((kind,_p,tag)=>{
+   const changed=signalEntities(kind,tag);
+   if(changed!=='all'&&!changed.some(e=>wanted.includes(e)))return;
    clearTimeout(timer);timer=setTimeout(()=>latest.current(),250);
   });
   return ()=>{clearTimeout(timer);off();};
@@ -305,7 +374,7 @@ export function usePartnerApproves(){
   call('couple.get',{},approvalRes,{profileId:id,fresh}).then(r=>{if(live)setOn(!!r.couple.members.find(m=>!m.me)?.approvesPartner);}).catch(()=>{});
   return ()=>{live=false;};},[call,id]);
  useEffect(()=>{setOn(false);return read(false);},[read]);
- // A partner switching approval on or off reaches the couple as a notification.
- useRealtime(['decide','notify'],()=>{read(true);});
+ // A partner switching approval on or off: `changed:couple` (and the older kinds) reach the couple.
+ useLive(['couple','decide','notify'],()=>{read(true);});
  return on;
 }

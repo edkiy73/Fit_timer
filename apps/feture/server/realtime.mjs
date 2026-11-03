@@ -1,5 +1,6 @@
 // @ts-check
 import { b64url, hmac } from './hash.mjs';
+import { ENTITIES } from './live.mjs';
 
 /** Realtime «something new» signals (docs/server/S2-API.md §8). Data never travels here: a client that hears a
  * signal fetches with the normal commands. No JWT secret is needed: each profile listens on a public Supabase
@@ -13,13 +14,18 @@ import { b64url, hmac } from './hash.mjs';
  * `typing` (owner, 28.10: «печатает…») is the one kind with a second field: `t`, an opaque per-conversation tag
  * (typingTag) that only the conversation's members get in chat.messages, so a client can tell which chat it is
  * about; it is never stored and carries no ids, names or text either.
- * @typedef {'chat' | 'notify' | 'decide' | 'feed' | 'typing'} Kind
+ * `changed` (owner 03.11.2026, server/live.mjs) carries the entity that changed in `t` (profile, couple, check, media, post,
+ * counts, chat, decide, boot): a code from a fixed list, never an id.
+ * @typedef {'chat' | 'notify' | 'decide' | 'feed' | 'typing' | 'changed'} Kind
  * @typedef {{profile: string, kind: Kind, tag?: string | undefined}} Signal
  * @typedef {(messages: {topic: string, event: string, payload: {k: Kind, t?: string}, private: false}[]) => Promise<void>} Sender
  * @typedef {{send: (signals: Signal[]) => Promise<void>, channels: (q: Q, profileIds: string[]) => Promise<Record<string, string>>}} Signals
  */
 
-export const KINDS = /** @type {const} */ (['chat', 'notify', 'decide', 'feed', 'typing']);
+export const KINDS = /** @type {const} */ (['chat', 'notify', 'decide', 'feed', 'typing', 'changed']);
+/** The tag a signal of this kind may carry. @param {Kind} kind @param {unknown} tag */
+const tagOf = (kind, tag) => typeof tag !== 'string' ? undefined
+  : kind === 'typing' ? tag : kind === 'changed' && /** @type {readonly string[]} */ (ENTITIES).includes(tag) ? tag : undefined;
 
 /** The typing tag of a conversation: opaque, stable, only for its members. @param {string} pepper @param {string} conversationId */
 export function typingTag(pepper, conversationId) {
@@ -71,13 +77,14 @@ export function createSignals({ db, pepper, sender, onError = () => {} }) {
     async send(signals) {
       if (!sender || !signals.length) return;
       try {
-        const wanted = signals.filter(s => s.profile && KINDS.includes(s.kind));
+        // A `changed` signal without a known entity says nothing: it is dropped, never sent bare.
+        const wanted = signals.filter(s => s.profile && KINDS.includes(s.kind) && (s.kind !== 'changed' || tagOf(s.kind, s.tag)));
         const topics = await channels(db, wanted.map(s => s.profile));
         const seen = new Set();
         const messages = [];
         for (const s of wanted) {
           const topic = topics[s.profile];
-          const tag = s.kind === 'typing' && typeof s.tag === 'string' ? s.tag : undefined;
+          const tag = tagOf(s.kind, s.tag);
           if (!topic || seen.has(topic + s.kind + (tag ?? ''))) continue;
           seen.add(topic + s.kind + (tag ?? ''));
           messages.push({ topic, event: 'new', payload: tag ? { k: s.kind, t: tag } : { k: s.kind }, private: /** @type {const} */ (false) });

@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {BadgeCheck,Camera,Clock,ImagePlus,Info,Lock,RefreshCw,TriangleAlert,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,Bar,Btn,Card,Empty,FilePick,Note,Pose,Row,Skel,View} from './kit';
-import {useFe,useShown} from './session';
+import {useFe,useLive,useShown} from './session';
 import {toJpeg} from './age-check';
 
 /** V21 V01 «Фото-верификация» on /api/fe (server/commands/verification.mjs): the server picks a gesture
@@ -45,6 +45,8 @@ export function PhotoCheckScreen(){
  const person=state.status==='ready'?state.boot.profiles.find(p=>p.kind==='person'&&p.state!=='deleted'):undefined;
  const load=useCallback((fresh=false)=>{setError(null);call('verification.photoStatus',{},photoStatusRes,{asAccount:true,fresh}).then(setS).catch(setError);},[call]);
  useEffect(()=>{load();},[load]);
+ // A staff decision (or an expiry) reaches the open screen at once: `changed:check`.
+ useLive('check',()=>load());
  useEffect(()=>()=>{if(shot)URL.revokeObjectURL(shot.url);},[shot]);
  // V21 V01 shows the gesture as soon as the screen opens: the server picks it (`photoStart` reuses an open check).
  const auto=useRef(false);

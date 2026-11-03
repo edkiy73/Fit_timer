@@ -9,7 +9,7 @@ import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import {FeError} from '../feture/fe-api';
 import {feErrorMessage} from '../feture/fe-api';
 import {Av,Btn,Empty,H,Skel} from './kit';
-import {FeSessionProvider,useFe,useRealtime} from './session';
+import {FeSessionProvider,useFe,useLive} from './session';
 import {sweepDrafts} from './drafts';
 import {countsRes} from './inbox';
 import {useStaffCounts} from './staff-counts';
@@ -131,9 +131,10 @@ function useTabBadges(){
  const {call}=useFe();const [c,setC]=useState<{likes:number,chats:number,newMatches:number,requests:number,decide:number,staff:boolean}|null>(null);
  // Staff: what waits in the queues and in support counts on «Я» too (one shared call, only for people with a role).
  const staffN=useStaffCounts(!!c?.staff)?.total??0;
- const pull=useCallback(()=>{call('inbox.counts',{},countsRes,{asAccount:true}).then(setC).catch(()=>{});},[call]);
- useEffect(()=>{pull();const id=setInterval(pull,60000);return ()=>clearInterval(id);},[pull]);
- useRealtime(['notify','decide','chat'],pull);
+ // The poll asks the server itself (`fresh`): a stale memory showed the previous poll's numbers.
+ const pull=useCallback((fresh=false)=>{call('inbox.counts',{},countsRes,{asAccount:true,fresh}).then(setC).catch(()=>{});},[call]);
+ useEffect(()=>{pull();const id=setInterval(()=>pull(true),60000);return ()=>clearInterval(id);},[pull]);
+ useLive(['counts','chat','decide','notify'],pull);
  return (id:string):number|'dot'|0=>!c?0:id==='people'?c.likes:id==='chats'?((c.chats+c.requests)||(c.newMatches?'dot':0)):id==='me'?c.decide+staffN:0;
 }
 

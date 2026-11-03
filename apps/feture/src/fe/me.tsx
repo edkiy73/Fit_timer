@@ -6,7 +6,7 @@ import {Camera,ChevronRight,ClipboardList,Clock,Eye,HeartOff,Inbox,PenLine,Users
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Actions,AddCard,Alert,Ask as KitAsk,Av,Btn,Card,Empty,Group,H,IconBtn,PhotoAdd,PhotoSlot,PhotoSlots,PullRefresh,RadioList,Row,Seg,SelectRow,Sheet,Skel,ToggleRow,Bar} from './kit';
 import {AgeCheckLink,useAgeResume} from './age-check';
-import {dropReadCache,useFe,useRealtime,useShown} from './session';
+import {dropReadCache,useFe,useLive,useShown} from './session';
 import {PrivateLayer} from './private';
 import {BellButton,countsRes} from './inbox';
 import {MineLayer} from './mine';
@@ -87,6 +87,9 @@ export function MeTab(){
    .then(([a,b])=>{setP(a.profile);setSettings(b.settings);}).catch(setError);
  },[call,acting]);
  useEffect(()=>{load();},[load]);
+ // The profile, its photos (approved or rejected), settings, checks and the couple change elsewhere too: another
+ // device, the partner, staff. The layer follows without a restart; the avatar comes with `boot` (bootstrap).
+ useLive(['profile','media','check','couple'],load);
  // The settings screens' reads go out while «Я» is looked at, so opening one draws it whole (its `peek`).
  useEffect(()=>{const id=setTimeout(()=>{const any=z.unknown();for(const [a,o] of [['settings.get',{asAccount:true}],['verification.ageStatus',{asAccount:true}],['verification.photoStatus',{asAccount:true}],
   ['notifications.settings.get',{asAccount:true}],['premium.status',{}],['blocks.list',{}]] as const)call(a,{},any,o).catch(()=>{});},1200);return ()=>clearTimeout(id);},[call]);
@@ -100,7 +103,7 @@ export function MeTab(){
    .then(([links,reqs,vis])=>setDots({links,reqs,vis}));
  },[call,acting]);
  useEffect(()=>{pullCounts();},[pullCounts,tick]);
- useRealtime(['decide','notify'],pullCounts);
+ useLive(['counts','decide','notify'],pullCounts);
  const scroller=useRef<HTMLDivElement>(null);
  if(state.status!=='ready'||!acting)return null;
  const profiles=state.boot.profiles.filter(x=>x.state!=='deleted');

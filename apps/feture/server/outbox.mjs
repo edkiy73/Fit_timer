@@ -8,7 +8,17 @@
  *   attempts: number, lock_token: string, created_at?: Date | string}} OutboxItem
  */
 
+import { AsyncLocalStorage } from 'node:async_hooks';
+
 export const MAX_ATTEMPTS = 10;
+
+/** What `enqueue()` wrote while `collectEnqueued` runs: the handler and the worker tick turn it into live `changed`
+ * signals after commit (server/live.mjs), so no call site has to name its signals.
+ * @type {AsyncLocalStorage<{topic: string, profileId: string | null, for?: unknown}[]>} */
+const enqueued = new AsyncLocalStorage();
+/** Runs `fn` collecting every enqueued item into `into` (a retried transaction empties it itself).
+ * @template T @param {{topic: string, profileId: string | null, for?: unknown}[]} into @param {() => Promise<T>} fn */
+export function collectEnqueued(into, fn) { return enqueued.run(into, fn); }
 const CODE = /^[a-z][a-z0-9_.]{0,59}$/;
 
 /** @param {Q} q @param {string} topic @param {string | null} profileId @param {Record<string, unknown>} [payload]
@@ -18,6 +28,7 @@ export async function enqueue(q, topic, profileId, payload = {}, { delaySeconds 
     `insert into feture.outbox (topic, profile_id, payload, available_at)
      values ($1, $2, $3, now() + make_interval(secs => $4))`,
     [topic, profileId, JSON.stringify(payload), delaySeconds]);
+  enqueued.getStore()?.push({ topic, profileId, for: payload.for });
 }
 
 /** Claims ready items of the given topics; parallel workers never get the same item. Topics without a

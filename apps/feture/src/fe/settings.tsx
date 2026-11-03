@@ -7,7 +7,7 @@ import {Ban,Bell,Calendar,Camera,CircleHelp,Crown,Download,EyeOff,Globe,Heart,Im
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {getThemePreference,setThemePreference,type ThemePreference} from '../theme';
 import {Alert,Bar,Btn,Card,ChannelHeads,ChannelToggle,ChoiceCards,Empty,Field,Group,H,Input,LockPreview,Note,Row,SectionLabel,SelectRow,Skel,Stack,Switch,TimeSpan,ToggleRow,View} from './kit';
-import {useFe,useShown} from './session';
+import {useFe,useLive,useShown} from './session';
 import {useToast} from './toast';
 import {usePremiumStatus} from './account-extra';
 import {Sheet} from './profile-extras';
@@ -50,6 +50,8 @@ export function SettingsScreen(){
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[call]);
  useEffect(()=>{load();warmPushState();},[load]);
+ // Checks decided, settings changed on another device, a block from elsewhere: the rows follow.
+ useLive(['profile','check'],load);
  const update=async(patch:Record<string,unknown>,done?:string)=>{
   // Optimistic: the switch moves at once and comes back if the server says no.
   const before=s;if(s)setS({...s,...patch} as typeof s);

@@ -675,6 +675,9 @@ const run = {
     if (Number(r.last_read_seq) > Number(c.last_read_seq)) {
       await markRead(q, c.id, acting.accountId, Number(r.last_read_seq));
       signal(c.other, 'chat');
+      // My other devices: the chat is read there too, its unread mark and the counters go (owner 03.11.2026).
+      signal(acting.profileId, 'changed', 'chat');
+      signal(acting.profileId, 'changed', 'counts');
     }
     return { readSeq: Number(r.last_read_seq) };
   },

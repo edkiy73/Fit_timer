@@ -6,6 +6,9 @@ import { once } from './ops.mjs';
 import { actingProfile } from './profiles.mjs';
 import { limit } from './limits.mjs';
 import { noteSeen, placeOf } from './devices.mjs';
+import { collectEnqueued } from './outbox.mjs';
+import { actionEntities, liveSignals } from './live.mjs';
+import { SILENT_TOPICS } from './notify.mjs';
 import { SIGNIN_OPEN, noteSignin, sendSigninMail, sessionHash, signinBlocked } from './signin.mjs';
 
 /**
@@ -55,11 +58,13 @@ export function inputIssues(issues) {
  *   cors: (req: Req, res: Res) => boolean,
  *   log: (event: {requestId: string, action: string, outcome: string, ms: number, stages: Record<string, number>}) => void,
  *   signals?: import('./realtime.mjs').Signals | null, maintenanceTtl?: number,
- *   mail?: ((m: {to: string, subject: string, text: string}) => Promise<unknown>) | null, appUrl?: string}} deps
+ *   mail?: ((m: {to: string, subject: string, text: string}) => Promise<unknown>) | null, appUrl?: string,
+ *   kick?: (() => void) | null}} deps
  *   maintenanceTtl: how long (ms) a warm instance trusts the last read of the maintenance switch;
- *   mail: sends the new-device email (signin.mjs) to the signed-in address — the address is never stored; appUrl: its link
+ *   mail: sends the new-device email (signin.mjs) to the signed-in address — the address is never stored; appUrl: its link;
+ *   kick: asks for a worker tick soon (server/kick.mjs) after a command queued something someone is told about
  */
-export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota, cors, log, signals = null, maintenanceTtl = 15000, mail = null, appUrl = 'https://app.kinhaze.com' }) {
+export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota, cors, log, signals = null, maintenanceTtl = 15000, mail = null, appUrl = 'https://app.kinhaze.com', kick = null }) {
   /** Maintenance (wave 8): while on, non-staff get 503 «maintenance» for everything but `platform.maintenance`.
    * Before its migration is applied the table is missing: then it is simply off. */
   let maint = { at: 0, active: false, message: /** @type {string | null} */ (null) };
@@ -163,24 +168,41 @@ export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota
       // Realtime signals a command asks for go out only after its transaction committed (S2 §8).
       /** @type {import('./realtime.mjs').Signal[]} */
       let pending = [];
+      /** What the command queued (outbox.mjs collectEnqueued): its live `changed` signals go out after commit too. */
+      /** @type {{topic: string, profileId: string | null, for?: unknown}[]} */
+      const queued = [];
       /** @param {string | null | undefined} profile @param {import('./realtime.mjs').Kind} kind @param {string} [tag] */
       const signal = (profile, kind, tag) => { if (profile) pending.push(tag ? { profile, kind, tag } : { profile, kind }); };
       const channels = signals ? signals.channels : async () => ({});
+      /** The profile the command ran as (null for account-level commands). */
+      let actedAs = /** @type {string | null} */ (null);
       /** @param {Q} q */
       const exec = async q => {
-        pending = []; // a retried transaction starts over
+        pending = []; queued.length = 0; // a retried transaction starts over
         const acting = cmd.profile ? await actingProfile(q, account.id, profileId, { write: cmd.write, allowPaused: cmd.allowPaused }) : null;
+        actedAs = acting?.profileId ?? null;
         // coreAccountHash is stable across Core re-registrations; only for markers that must survive them (under-18).
         return cmd.run(q, { account, acting, input, cfg: { ...cfg, pepper }, coreAccountHash: core.accountHash, coreQa: core.qa === true, signal, channels });
       };
-      const result = !cmd.write ? await exec(db)
+      const result = await collectEnqueued(queued, async () => !cmd.write ? await exec(db)
         // The acting profile is part of the request: the same opId under another profile is a conflict, not a replay.
         : typeof input.opId === 'string' && cmd.ledger !== false ? await once(db, account.id, { opId: input.opId, action, input: { profileId, input } }, exec)
-        : await db.tx(exec);
+        : await db.tx(exec));
       if ('requestId' in result) throw new Error('reserved_result_field'); // the HTTP request id owns this name
+      // Live data (server/live.mjs): what the queued items change for the people they are addressed to, and what this
+      // write changed for the acting profile's other devices (or, as a couple, the partner's). A stored replay ran nothing.
+      if (signals && !result.replayed) {
+        pending.push(...await liveSignals(db, queued, { actorAccounts: [account.id] }));
+        if (cmd.write) {
+          const self = actedAs ?? account.person_profile_id;
+          for (const tag of actionEntities(action)) if (self) pending.push({ profile: self, kind: 'changed', tag });
+        }
+      }
       // Awaited (with the sender's short timeout) before answering: a serverless instance may freeze right after the
       // response. It never throws, so the committed command always answers ok.
       if (signals && pending.length) await signals.send(pending);
+      // Someone is to be told (an inbox row, a push, a scan): the worker runs in seconds, not at the next minute.
+      if (kick && queued.some(i => !SILENT_TOPICS.includes(i.topic))) kick();
       return send(200, { ok: true, ...result }, 'ok');
     } catch (error) {
       if (error instanceof FeError) return send(error.status, { ok: false, error: error.code, ...error.extra }, error.code);

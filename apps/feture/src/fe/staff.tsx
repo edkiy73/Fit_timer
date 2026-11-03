@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {ArrowUpDown,BadgeCheck,Ban,CalendarDays,Check,ClipboardCheck,ChevronLeft,ChevronRight,Eye,FilePen,Flag,Gavel,IdCard,Image,ImageOff,Inbox,ListFilter,Lock,MapPin,Minus,RefreshCw,Scale,Search,ShieldAlert,ShieldCheck,UserX,Users,X,Ellipsis,Film,Mic,Camera,Image as ImageIcon,LifeBuoy,Crown,Wrench,ScrollText,KeyRound,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Actions,Alert,Btn,Card,Chip,ChoiceChips,Chips,Divider,Empty,ExpandRow,Field,Form,Group,IconBtn,Input,KeyValues,LoadMore,MoreInfo,Note,Pill,ReviewBar,ReviewCard,ReviewMedia,ReviewObject,ReviewPair,ReviewTiles,type Slide,useBackClose,Row,SearchInput,SectionLabel,Seg,Select,Sheet,Skel,Stack,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble} from './kit';
-import {askFactor,useFe} from './session';
+import {askFactor,useFe,useLive} from './session';
 import {useToast} from './toast';
 import {pullStaffCounts,useStaffCounts} from './staff-counts';
 import {Viewer} from './post-parts';
@@ -101,6 +101,8 @@ function useStaffMe({fresh=false}:{fresh?:boolean}={}){
  useEffect(()=>{const ctl=new AbortController();
   call('staff.me',{},meRes,{asAccount:true,signal:ctl.signal,fresh:fresh||nonce>0}).then(r=>setMe({roles:r.roles,factor:r.factor??null,checked:true})).catch(()=>{if(!ctl.signal.aborted)setMe({roles:[],factor:null,checked:true});});
   return ()=>ctl.abort();},[call,nonce,fresh]);
+ // A role granted or revoked (`boot` to the account, server/live.mjs): the staff entry appears or goes without a restart.
+ useLive('profile',()=>setNonce(n=>n+1));
  return {...me,reload:useCallback(()=>setNonce(n=>n+1),[])};
 }
 

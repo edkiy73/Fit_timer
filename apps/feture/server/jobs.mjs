@@ -1,5 +1,6 @@
 // @ts-check
-import { drain, enqueue } from './outbox.mjs';
+import { collectEnqueued, drain, enqueue } from './outbox.mjs';
+import { PROCESSED_ENTITIES, liveSignals } from './live.mjs';
 import { scanAsset, servedKeys } from './media/scan.mjs';
 import { POSTER_UPLOAD_KEY } from './media/assets.mjs';
 import { deleteCouple } from './commands/couples.mjs';
@@ -24,7 +25,8 @@ import { sweepSelfies, verificationHandlers } from './commands/premium.mjs';
  * @typedef {import('./db.mjs').Db} Db
  * @typedef {import('./media/scan.mjs').ScanDeps} ScanDeps
  * @typedef {{scan: ScanDeps | null, limit?: number, notifyLimit?: number, push?: import('./push.mjs').Transport | null,
- *   mail?: import('./commands/dsa.mjs').Mailer | null, signals?: import('./realtime.mjs').Signals | null}} JobDeps
+ *   mail?: import('./commands/dsa.mjs').Mailer | null, signals?: import('./realtime.mjs').Signals | null, quick?: boolean}} JobDeps
+ *   quick: a kicked tick (server/kick.mjs) — the queues only, the sweeps wait for the minute tick
  */
 
 /** @param {Db} db @param {JobDeps} deps */
@@ -201,10 +203,37 @@ export async function sweepExpiredSanctions(db) {
   return due.length;
 }
 
-/** One worker tick. @param {Db} db @param {JobDeps} deps */
+/** Topics a tick may queue that the next tick should take at once (a scan's approval completes posts and avatars). */
+const FOLLOW_UP = new Set(['media.approved', 'media.hide', 'media.scan']);
+
+/** One worker tick. Live data (server/live.mjs): whatever the tick queued and whatever its media handlers changed sends
+ * `changed` signals once the tick is done (all its transactions committed by then). `again`: it queued work the next
+ * tick should take now. @param {Db} db @param {JobDeps} deps */
 export async function runJobs(db, deps) {
+  /** @type {{topic: string, profileId: string | null, for?: unknown}[]} */
+  const queued = [];
+  /** @type {{topic: string, profileId: string | null}[]} */
+  const processed = [];
+  const out = await collectEnqueued(queued, () => tickOnce(db, deps, processed));
+  if (deps.signals) {
+    const live = [
+      ...await liveSignals(db, queued),
+      ...await liveSignals(db, processed, { entitiesOf: t => PROCESSED_ENTITIES[t] ?? [] }),
+    ];
+    if (live.length) await deps.signals.send(live);
+  }
+  return { ...out, again: queued.some(i => FOLLOW_UP.has(i.topic)) };
+}
+
+/** @param {Db} db @param {JobDeps} deps @param {{topic: string, profileId: string | null}[]} processed */
+async function tickOnce(db, deps, processed) {
+  /** @param {Record<string, (item: any) => Promise<void>>} handlers */
+  const tracked = handlers => Object.fromEntries(Object.entries(handlers).map(([topic, fn]) => [topic, async (/** @type {any} */ item) => {
+    await fn(item);
+    if (PROCESSED_ENTITIES[topic]) processed.push({ topic, profileId: item.profile_id ?? null });
+  }]));
   // Media first with its own budget, so a burst of likes never delays scans and publication; then the inbox.
-  const media = await drain(db, { ...mediaHandlers(db, deps), ...verificationHandlers(db, deps) }, { limit: deps.limit ?? 10, lockSeconds: 120 });
+  const media = await drain(db, tracked({ ...mediaHandlers(db, deps), ...verificationHandlers(db, deps) }), { limit: deps.limit ?? 10, lockSeconds: 120 });
   /** @type {import('./realtime.mjs').Signal[]} */
   const signals = [];
   const inbox = await drain(db, notifyHandlers(db, s => signals.push(s)), { limit: deps.notifyLimit ?? 200, lockSeconds: 120 });
@@ -215,7 +244,8 @@ export async function runJobs(db, deps) {
   await drain(db, helpHandlers(db, deps.mail ?? null, supportEmail()), { limit: 10, lockSeconds: 300 });
   // Pushes in a small batch of their own, so a slow provider never outlives the claim.
   const pushes = await drain(db, pushHandlers(db, deps.push ?? null), { limit: 20, lockSeconds: 300 });
-  const processed = media + inbox + pushes;
+  const done = media + inbox + pushes;
+  if (deps.quick) return { processed: done };
   const expired = await sweepExpiredUploads(db);
   const ledger = await sweepOpLedger(db);
   const markers = await sweepMarkers(db);
@@ -229,5 +259,5 @@ export async function runJobs(db, deps) {
   await sweepPublicHelp(db);
   // Finished outbox items stay a week (some «told already today» checks read them), then go.
   await db.query(`delete from feture.outbox where done_at < now() - interval '7 days'`);
-  return { processed, expired, ledger, markers, couples, ephemeral, reminders, selfies };
+  return { processed: done, expired, ledger, markers, couples, ephemeral, reminders, selfies };
 }

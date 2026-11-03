@@ -9,7 +9,7 @@ import {VIDEO_TYPES} from './kit/media';
 import {Uploader,type SendPhoto,type SendVideo,type Uploaded} from './kit/Uploader';
 import {useSendPhoto,useSendVideo,useSendVoice} from './media-upload';
 import {AgeCheckLink,useAgeResume} from './age-check';
-import {useFe,useRealtime,useTypingSignal} from './session';
+import {useFe,useLive,useTypingSignal} from './session';
 import {readDraft,useDraftKey,writeDraft} from './drafts';
 import {ReportSheet} from './report';
 import {useToast} from './toast';
@@ -100,7 +100,7 @@ function ChatsSide({current}:{current:string}){
  const [data,setData]=useState(lastList);
  const load=useCallback(()=>{call('chats.list',{filter:'all',archived:false},list,{asAccount:true}).then(r=>{lastList={items:r.items,requests:r.requests??[]};setData(lastList);}).catch(()=>{});},[call]);
  useEffect(()=>{load();},[load]);
- useRealtime(['chat','notify'],load);
+ useLive(['chat','notify'],load);
  return <ChatPane title={t('fe.nav.chats')}>
   {data===null?<Skel kind="list" rows={6}/>:<>
    {data.requests.length>0&&<Card list><Row icon={Inbox} tone="v" title={t('fe.rq.folder')} badge={data.requests.length} onClick={()=>navigate('/n/chats/requests')}/></Card>}
@@ -122,7 +122,7 @@ export function ChatsTab(){
  const load=useCallback(()=>{setError(null);call('chats.list',{filter:'all',archived},list,{asAccount:true}).then(r=>{setItems(r.items);setRequests(r.requests??[]);if(!archived)lastList={items:r.items,requests:r.requests??[]};}).catch(setError);},[call,archived]);
  useEffect(()=>{setItems(null);},[archived]);
  useEffect(()=>{load();const id=setInterval(load,30000);return ()=>clearInterval(id);},[load]);
- useRealtime(['chat','notify'],load);
+ useLive(['chat','notify'],load);
  // «Отменить» on the archive toast runs after the chat closed: the list asks again.
  useEffect(()=>{addEventListener(RELOAD,load);return ()=>removeEventListener(RELOAD,load);},[load]);
  useEffect(()=>{if(searching)qRef.current?.focus();},[searching]);
@@ -183,7 +183,7 @@ export function RequestsScreen(){
  const [items,setItems]=useState<Chat[]|null>(null);const [error,setError]=useState<unknown>(null);
  const load=useCallback(()=>{setError(null);call('chats.list',{filter:'all'},list,{asAccount:true}).then(r=>setItems(r.requests??[])).catch(setError);},[call]);
  useEffect(()=>{load();const id=setInterval(load,30000);return ()=>clearInterval(id);},[load]);
- useRealtime(['chat','notify'],load);
+ useLive(['chat','notify'],load);
  const preview=(c:Chat)=>!c.last?'':c.last.media&&!c.last.body?t('fe.chats.photo'):c.last.body;
  return <>
   <Bar title={t('fe.rq.title')} back="/n/chats" small/>
@@ -312,7 +312,7 @@ function ChatView({id,to}:{id:string,to:string}){
  },[call,id,meta]);
  useEffect(()=>{if(!meta||!id)return;pull(true).catch(setError);const iv=setInterval(()=>{pull(false).catch(()=>{});},30000);return ()=>clearInterval(iv);},[meta,pull,id]);
  // The signal names no conversation (S2 §8): any «chat» signal asks this one for what is new after the last seq.
- useRealtime('chat',()=>{pull(false).catch(()=>{});setTyping(false);});
+ useLive('chat',()=>{pull(false).catch(()=>{});setTyping(false);});
  // «печатает…» (owner, 28.10): the other side's typing signal shows a line under the messages for ~5 s; mine goes out
  // at most every 4 s while I type. Nothing is stored anywhere.
  const [typing,setTyping]=useState(false);const typingTimer=useRef<ReturnType<typeof setTimeout>|undefined>(undefined);const lastTyping=useRef(0);
