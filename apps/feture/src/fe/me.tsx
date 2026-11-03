@@ -176,7 +176,7 @@ export function DetailsBlock({p,label}:{p:Profile,label:(kind:string,code:string
   return codes.length?[field,t(kind==='status'?'fe.mx.f.status':'fe.reg.kind.'+kind),codes.map(c=>label(kind,c)).join(', ')]:null;}).filter((x):x is string[]=>!!x);
  const title=cp?t('fe.mx.detailsCouple'):t('fe.me.details');
  return <Group id="meDet" title={title} action={rows.length?<button type="button" onClick={()=>navigate('/n/me/edit?only=details')}>{t('fe.mx.edit')}</button>:undefined}>
-  {rows.length?<Card><dl className="kv">{rows.map(([f,k,v])=><Fragment key={f}><dt>{k}</dt><dd>{v}</dd></Fragment>)}</dl></Card>
+  {rows.length?<Card><dl className="kv side">{rows.map(([f,k,v])=><Fragment key={f}><dt>{k}</dt><dd>{v}</dd></Fragment>)}</dl></Card>
    :<AddCard icon={ClipboardList} title={t('fe.mp.detailsAdd')} sub={cp?t('fe.mx.detailsEmptyCouple'):t('fe.mx.detailsEmpty')} onClick={()=>navigate('/n/me/edit?only=details')}/>}
  </Group>;
 }
