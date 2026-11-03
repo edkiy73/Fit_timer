@@ -535,7 +535,7 @@ export function ActorCard({av,name,sub,dot,selected,onPick,onOpen,openLabel}:{av
  return <div className={'actor-card'+(selected?' selected':'')}>
   <button type="button" className="actor-select" role="menuitemradio" aria-checked={!!selected} onClick={onPick}>{av}
    <span className="tx"><b>{name}</b>{sub!=null&&<small>{dot&&<i className="ar-dot"/>}{sub}</small>}</span></button>
-  <button type="button" className="actor-open" role="menuitem" aria-label={openLabel} title={openLabel} onClick={onOpen}><span className="ao-ic"><Pencil/></span></button>
+  <span className="actor-open"><Btn kind="quiet" size="sm" square icon={Pencil} role="menuitem" aria-label={openLabel} title={openLabel} onClick={onOpen}/></span>
  </div>;
 }
 /** The cards of «Действовать как» and the line under them. */

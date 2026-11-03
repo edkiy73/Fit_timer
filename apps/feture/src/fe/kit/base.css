@@ -2969,7 +2969,7 @@
 .v21 .ret-note{margin:4px 0 0;padding:10px 12px;border-left:3px solid var(--accent);border-radius:var(--r-xs);background:var(--raise);font-size:var(--fs-body);line-height:1.45;overflow-wrap:anywhere}.v21 .ret-banner{margin:0 0 16px}.v21 .ret-banner .btn{margin-top:6px;padding-inline:0;justify-content:flex-start}
 .v21 .pe-sums{display:grid;gap:6px;margin-top:8px}.v21 .pe-sum{font-size:var(--fs-xs);line-height:1.4;color:var(--mute)}.v21 .pe-sum b{display:inline;font-size:var(--fs-xs);font-weight:700;color:var(--ink);margin-right:4px}
 .v21 .pe-who .kv{margin-top:2px}.v21 .pe-own{margin-top:4px;padding-inline:0}
-.v21 .pe-who{background:var(--surf);border:1px solid var(--line);border-radius:var(--r-l);padding:0 16px}.v21 .pe-who>.li{border-top:0}.v21 .pe-who>.field{margin:0 0 16px}.v21 .pe-who>.li[aria-expanded="true"]{padding-bottom:8px}
+.v21 .pe-who{background:var(--surf);border:1px solid var(--line);border-radius:var(--r-l);padding:0 16px}.v21 .pe-who>.field:first-child{margin-top:16px}.v21 .pe-who>.li{border-top:0}.v21 .pe-who>.field{margin:0 0 16px}.v21 .pe-who>.li[aria-expanded="true"]{padding-bottom:8px}
 .v21 .video-fill-frame{position:relative;isolation:isolate;overflow:hidden}
 .v21 .video-fill-frame>video:not(.mbg){background:transparent!important;object-fit:contain}
 .v21 .video-fill-frame>.video-fill-bg{position:absolute!important;inset:-12%!important;width:124%!important;height:124%!important;max-width:none;object-fit:cover!important;filter:blur(26px) saturate(1.15) brightness(.85);opacity:.9;z-index:-1!important;pointer-events:none;transform:none!important}
@@ -3221,9 +3221,7 @@
 .v21 .actor-options .actor-card{display:flex;align-items:stretch}
 .v21 .actor-options .actor-select{flex:1;min-width:0;width:auto}
 .v21 .actor-options .actor-open{flex:none;width:58px;min-height:0;padding:0;border-top:0;border-left:0;justify-content:center;border-radius:0;color:var(--mute)}
-.v21 .actor-options .actor-open svg{width:18px;height:18px}
-/* the pencil sits on a secondary-button plate (owner 04.11.2026), the same look as the soft buttons */
-.v21 .actor-options .actor-open .ao-ic{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--surf);box-shadow:inset 0 0 0 1px var(--line2);color:var(--ink)}
+.v21 .actor-options .actor-open{display:grid;place-items:center;padding-right:12px}
 .v21 .actor-options .actor-card.selected .actor-open{border-left-color:color-mix(in srgb,var(--violet) 30%,transparent);color:var(--violet)}
 .v21 .author-menu.actor-pop .actor-card{display:flex}
 .v21 .author-menu.actor-pop .actor-open{width:52px}
