@@ -20,6 +20,7 @@ part opened by access, chats. Pre-launch: no real users yet.
 | Moderator test accounts | `docs/moderators.md` |
 | V21 prototype (frozen reference for comparison only) | `docs/v21/prototype-v21.html` (+ `CHANGELOG.md`, `PLATFORM-DECISIONS.md`) |
 | Open questions to the owner | `docs/QUESTIONS.md` (create when needed) |
+| Notifications, tasks, push, email — rules (owner, 03.11.2026) | `docs/notifications.md` |
 
 Old plans, audits and prototypes V5–V20 were removed on 29.10.2026; git history has them. Do not restore them.
 
