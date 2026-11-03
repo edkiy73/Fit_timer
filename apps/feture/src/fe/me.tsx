@@ -21,6 +21,7 @@ import {useDragOrder} from './reorder';
 import {MeGallery} from './gallery';
 import {Viewer} from './post-parts';
 import {MeAboutBlock} from './about-facts';
+import {BasicAge,BasicSheet,type BasicKey} from './me-basics';
 
 /** V21 X01 «Я» with the prototype's markup (`meHead18`, `meProfileLayer`, `meVisLayer`): the header with the avatar,
  * bell, «Как видят» and settings; «Нужно решить»; the four layers with their red dots; photos, basics, details,
@@ -135,7 +136,7 @@ export function MeTab(){
       {notice&&<Alert kind="ok" noIcon>{notice}</Alert>}
       {acting.kind==='couple'&&<><CouplePending base={p} tick={tick} onDecided={msg=>{setNotice(msg);load();}}/><CoupleMembers/></>}
       <PhotosBlock p={p} settings={settings} onChanged={load}/>
-      <BasicsBlock p={p} name={name}/>
+      <BasicsBlock p={p} name={name} onChanged={load}/>
       <MeAboutBlock p={p}/>
       <DetailsBlock p={p} label={label}/>
       {acting.kind==='person'&&couple&&<StatusHint p={p} coupleId={couple.id} onDone={load}/>}
@@ -152,15 +153,23 @@ export function MeTab(){
  </>;
 }
 
-/** «Основное»: name, age, city and the bio; a tap opens the editor. */
-export function BasicsBlock({p,name}:{p:Profile,name:string}){
- const {t,locale}=useI18n();const navigate=useNavigate();const cp=p.kind==='couple';
+/** «Основное» (owner 04.11.2026: no extra screen just to change a name or a city): name, nick, age, city and the
+ * description as rows with their values; a tap edits that one thing in a small sheet right here. */
+export function BasicsBlock({p,name,onChanged}:{p:Profile,name:string,onChanged?:(()=>void)|undefined}){
+ const {t,locale}=useI18n();const cp=p.kind==='couple';
+ const [edit,setEdit]=useState<BasicKey|null>(null);
+ const city=p.city?(locale==='en'?p.city.en:p.city.ru):null;
+ const bio=p.bio.replace(/[*_~`>#[\]()]/g,'');
  return <Group id="meBasics" title={t('fe.me.basics')} action={<AudTag k="all"/>}>
-  <Card className="blk-btn" label={t('fe.me.editBasics')} onClick={()=>navigate('/n/me/edit?only=basics')}>
-   <span className="blk-name">{name}{p.age&&p.showAge!==false?', '+p.age:''}{p.city&&(locale==='en'?p.city.en:p.city.ru)?' · '+(locale==='en'?p.city.en:p.city.ru):''}</span>
-   {p.bio&&<span className="blk-bio">{p.bio.replace(/[*_~`>#[\]()]/g,'').slice(0,240)}</span>}<span className="chv"><ChevronRight/></span>
+  <Card list>
+   <Row title={cp?t('fe.nn.nameUs'):t('fe.nn.name')} val={p.chosenName||name} onClick={()=>setEdit('name')}/>
+   <Row title={cp?t('fe.nn.nickUs'):t('fe.nn.nick')} val={p.handle?'@'+p.handle:undefined} onClick={()=>setEdit('handle')}/>
+   {!cp&&p.age&&<BasicAge p={p} onChanged={onChanged}/>}
+   <Row title={t('fe.mx.ed.city')} val={city||t('fe.mx.ed.noCity')} onClick={()=>setEdit('city')}/>
   </Card>
-  {!p.bio&&<AddCard icon={PenLine} title={t(cp?'fe.mp.bioAddUs':'fe.mp.bioAdd')} sub={t(cp?'fe.mp.bioAddSubUs':'fe.mp.bioAddSub')} onClick={()=>navigate('/n/me/edit?only=basics')}/>}
+  {p.bio?<Card className="blk-btn" label={t('fe.mx.ed.about')} onClick={()=>setEdit('bio')}><span className="blk-bio">{bio.slice(0,240)}</span><span className="chv"><ChevronRight/></span></Card>
+   :<AddCard icon={PenLine} title={t(cp?'fe.mp.bioAddUs':'fe.mp.bioAdd')} sub={t(cp?'fe.mp.bioAddSubUs':'fe.mp.bioAddSub')} onClick={()=>setEdit('bio')}/>}
+  {edit&&<BasicSheet k={edit} p={p} onClose={()=>setEdit(null)} onSaved={()=>{setEdit(null);onChanged?.();}}/>}
  </Group>;
 }
 
@@ -237,13 +246,13 @@ export function PhotosBlock({p,settings,onChanged}:{p:Profile,settings:Settings,
   catch(e){toast(feErrorMessage(e,t),{type:'err'});}finally{setBusy(false);}
  };
  const ids=items.map(x=>x.id);
- const nCells=items.length===1?2:Math.min(MAX_PHOTOS,Math.max(items.length+1,3));
+ const nCells=Math.min(MAX_PHOTOS,Math.max(items.length+1,3));
  // The small thumb paints first, so the slot never sits empty while the card-size picture loads.
  const slots:ReactNode[]=items.map((ph,i)=><PhotoSlot key={ph.id} id={ph.id} big={i===0} dragging={drag.preview?.drag===ph.id} waiting={!ph.src} thumb={ph.src?.thumb} src={photoSrc(ph)}
   main={i===0?t('fe.me.mainPhoto'):undefined} review={ph.pending?t('fe.mx.ph.review'):undefined} onPointerDown={busy?undefined:e=>drag.down(e,'ph',ids,ph.id)}
   openLabel={t('fe.mx.ph.nOf',{n:i+1,total:items.length})} onOpen={()=>setOpen(i)}/>);
  for(let i=items.length;i<nCells;i++)slots.push(i===items.length
-  ?<PhotoAdd key="add" tall={items.length===1} onClick={edit} label={t('fe.mx.ph.addAria')} hint={items.length===1?t('fe.me.morePhotos'):undefined}/>
+  ?<PhotoAdd key="add" onClick={edit} label={t('fe.mx.ph.addAria')} hint={t('fe.me.morePhotos')}/>
   :<PhotoAdd key={'g'+i} ghost/>);
  const x=open!==null?items[open]:undefined;
  return <Group className="ph20" id="mePh" title={t('fe.me.photos')} action={<><AudTag k="all"/><button type="button" onClick={edit}>{t('fe.mx.edit')}</button></>}>

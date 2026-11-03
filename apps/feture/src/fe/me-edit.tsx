@@ -130,10 +130,10 @@ export function MeEditScreen(){
   const cells:ReactNode[]=list.map((ph,i)=><PhotoSlot key={ph.id} id={ph.id} big={k==='photos'&&i===0} dragging={drag.preview?.drag===ph.id} src={ph.src}
    main={k==='photos'&&i===0?t('fe.me.mainPhoto'):undefined} review={ph.pending?t('fe.mx.ph.review'):undefined} onPointerDown={e=>drag.down(e,k,ids,ph.id)}
    openLabel={t('fe.mx.ph.nOf',{n:i+1,total:list.length})} onOpen={()=>setPhSheet({k,i})}/>);
-  const n=k==='photos'?(list.length===1?2:Math.min(max,Math.max(list.length+1,3))):list.length+(list.length<max?1:0);
+  const n=k==='photos'?Math.min(max,Math.max(list.length+1,3)):list.length+(list.length<max?1:0);
   for(let i=list.length;i<n;i++)cells.push(i===list.length
-   ?<PhotoAdd key="add" big={k==='photos'&&i===0} tall={k==='photos'&&list.length===1} disabled={!!uploading} busy={uploading===k} onClick={()=>pick(k)} label={t('fe.mx.ph.addAria')}
-    hint={k==='photos'&&i===0?(cp?t('fe.mx.ph.couplePhoto'):t('fe.mx.ph.mainSlot')):k==='photos'&&list.length===1?t('fe.me.morePhotos'):undefined}/>
+   ?<PhotoAdd key="add" big={k==='photos'&&i===0} disabled={!!uploading} busy={uploading===k} onClick={()=>pick(k)} label={t('fe.mx.ph.addAria')}
+    hint={k==='photos'&&i===0?(cp?t('fe.mx.ph.couplePhoto'):t('fe.mx.ph.mainSlot')):k==='photos'?t('fe.me.morePhotos'):undefined}/>
    :<PhotoAdd key={'g'+i} ghost/>);
   return <PhotoSlots priv={k!=='photos'}>{cells}</PhotoSlots>;
  };
