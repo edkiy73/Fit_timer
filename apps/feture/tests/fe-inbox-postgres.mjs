@@ -13,6 +13,7 @@ import { staff } from '../server/commands/staff.mjs';
 import { moderation } from '../server/commands/moderation.mjs';
 import { communities } from '../server/commands/communities.mjs';
 import { notifyHandlers } from '../server/notify.mjs';
+import { sweepMarkers } from '../server/jobs.mjs';
 import { drain } from '../server/outbox.mjs';
 import { setup as baseSetup, op } from './fe-helpers.mjs';
 
@@ -288,5 +289,25 @@ test('stage 5 moderation card: one row by ID with the appeal state; a resolved r
       ($1, $2, 'reportResolved', 'rep1', 'result', $3) returning id`, [kira, b, JSON.stringify({ targetType: 'post', targetId: a, resolution: 'removed' })]);
     const rc = await call('ub', null, { action: 'notifications.get', id: rep.id });
     assert.deepEqual([rc.item.data, rc.appeal], [{ resolution: 'removed' }, null]);
+  } finally { await pg.close(); }
+});
+
+test('stage 4 retention: read notices go after 180 days; unread ones and decision results after a year', async () => {
+  const { pg, db, person } = await world();
+  try {
+    const a = await person('ua', 'Alex');
+    const [{ id: acc }] = await db.query('select id from feture.account where person_profile_id = $1', [a]);
+    /** @type {[string, string, number, boolean][]} label, kind, age in days, read */
+    const rows = [['readOld', 'notice', 181, true], ['readFresh', 'notice', 179, true], ['unreadOld', 'notice', 300, false], ['unreadAncient', 'notice', 366, false],
+      ['resultOld', 'result', 300, true], ['resultAncient', 'result', 366, true]];
+    for (const [label, kind, days, read] of rows) {
+      await db.query(
+        `insert into feture.notification (recipient_account_id, addressee_profile_id, type, data, source, kind, created_at, read_at)
+         values ($1, $2, 'supportReply', jsonb_build_object('label', $3::text), $3, $4, now() - make_interval(days => $5), case when $6 then now() end)`,
+        [acc, a, label, kind, days, read]);
+    }
+    await sweepMarkers(db);
+    const left = (await db.query(`select data->>'label' l from feture.notification order by 1`)).map(r => r.l);
+    assert.deepEqual(left, ['readFresh', 'resultOld', 'unreadOld']);
   } finally { await pg.close(); }
 });

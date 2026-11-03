@@ -80,6 +80,8 @@ const run = {
     const state = input.close ? 'closed' : 'answered';
     await q.query(`update feture.support_ticket set state = $2, updated_at = now() where id = $1`, [t.id, state]);
     if (input.body) await enqueue(q, 'support.replied', t.person_profile_id, { for: t.account_id, ticketId: t.id, state });
+    // Closed without an answer: the person still hears that it is closed (owner decision 7).
+    else if (input.close) await enqueue(q, 'support.closed', t.person_profile_id, { for: t.account_id, ticketId: t.id });
     await journal(q, account.id, input.close ? 'support.close' : 'support.reply', 'support_ticket', t.id, { replied: !!input.body });
     return { state };
   },

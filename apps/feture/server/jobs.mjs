@@ -3,7 +3,7 @@ import { collectEnqueued, drain, enqueue } from './outbox.mjs';
 import { PROCESSED_ENTITIES, liveSignals } from './live.mjs';
 import { scanAsset, servedKeys } from './media/scan.mjs';
 import { POSTER_UPLOAD_KEY } from './media/assets.mjs';
-import { deleteCouple } from './commands/couples.mjs';
+import { deleteCouple, expireInvites } from './commands/couples.mjs';
 import { releaseWaitingEvents } from './commands/events.mjs';
 import { expireApprovals } from './approvals.mjs';
 import { setSuspended } from './commands/moderation.mjs';
@@ -140,12 +140,48 @@ export async function sweepOpLedger(db) {
   return rows.length;
 }
 
-/** Under-18 markers and lookup counters do not need to live forever. @param {Db} db */
+/** Under-18 markers, lookup counters and old notifications do not need to live forever. Notifications (docs/notifications.md
+ * «Хранение», owner decision 8): a read one goes after 180 days; an unread one, and the result of a decision read or not,
+ * after a year. In batches, so one tick never holds a long lock. @param {Db} db */
 export async function sweepMarkers(db) {
-  if (!(await db.query(`select to_regclass('feture.u18_event') is not null ok`))[0].ok) return 0;
+  let notes = 0;
+  if ((await db.query(`select exists (select 1 from information_schema.columns where table_schema = 'feture' and table_name = 'notification' and column_name = 'kind') ok`))[0].ok) {
+    notes = (await db.query(
+      `delete from feture.notification where id in (
+         select id from feture.notification
+         where created_at < now() - interval '1 year'
+            or created_at < now() - interval '180 days' and read_at is not null and kind not in ('result', 'task')
+         limit 5000)
+       returning 1`)).length;
+  }
+  if (!(await db.query(`select to_regclass('feture.u18_event') is not null ok`))[0].ok) return notes;
   const a = await db.query(`delete from feture.u18_event where created_at < now() - interval '1 year' returning 1`);
   const b = await db.query(`delete from feture.rate_event where created_at < now() - interval '2 days' returning 1`);
-  return a.length + b.length;
+  return notes + a.length + b.length;
+}
+
+/** New members of open communities (owner decision 7): on the first tick of a UTC day, one item per community that
+ * grew the day before, with the count; notify.mjs writes one summary row to its owner and hosts, without a push. People
+ * the hosts admitted from a request are not counted (they decided on them), nor hosts, nor anyone who left since.
+ * Once per community and day: the item of that day is looked up in the outbox (kept a week). @param {Db} db */
+export async function sweepCommunityJoins(db) {
+  if (!(await db.query(`select to_regclass('feture.community_request') is not null ok`))[0].ok) return 0;
+  return db.tx(async q => {
+    await q.query(`select pg_advisory_xact_lock(hashtextextended('fe-community-joins', 0))`);
+    const rows = await q.query(
+      `with d as (select (date_trunc('day', now() at time zone 'utc') - interval '1 day') at time zone 'utc' since,
+                         date_trunc('day', now() at time zone 'utc') at time zone 'utc' till,
+                         to_char(date_trunc('day', now() at time zone 'utc') - interval '1 day', 'YYYY-MM-DD') ymd)
+       select c.id, count(*)::int n, d.ymd from d, feture.community c
+       join feture.community_member cm on cm.community_id = c.id and cm.state = 'active' and cm.role = 'member'
+       where c.state = 'published' and c.privacy = 'open' and cm.joined_at >= d.since and cm.joined_at < d.till
+         and not exists (select 1 from feture.community_request r where r.community_id = c.id and r.profile_id = cm.profile_id and r.state = 'approved'
+                         and r.decided_at >= cm.joined_at - interval '1 minute')
+         and not exists (select 1 from feture.outbox o where o.topic = 'community.joins' and o.payload->>'communityId' = c.id::text and o.payload->>'day' = d.ymd)
+       group by c.id, d.ymd limit 500`);
+    for (const r of rows) await enqueue(q, 'community.joins', null, { communityId: r.id, count: r.n, day: r.ymd });
+    return rows.length;
+  });
 }
 
 /** A reminder the day before to the people admitted to an event («События: … напоминания за день»), once.
@@ -163,9 +199,11 @@ export async function sweepEventReminders(db) {
   });
 }
 
-/** Couples nobody restored within 30 days are deleted (S1 §5). @param {Db} db */
+/** Couples nobody restored within 30 days are deleted (S1 §5); couple invitations nobody answered in time expire and
+ * their inviters are told (couples.mjs expireInvites). @param {Db} db */
 export async function sweepExpiredCouples(db) {
   if (!(await db.query(`select to_regclass('feture.couple_restore') is not null ok`))[0].ok) return 0;
+  await db.tx(q => expireInvites(q));
   const due = await db.query(`select id from feture.profile where kind = 'couple' and state = 'paused' and restore_until < now() limit 50`);
   for (const c of due) {
     await db.tx(async q => {
@@ -266,6 +304,7 @@ async function tickOnce(db, deps, processed) {
   await sweepExpiredSanctions(db);
   const ephemeral = await sweepEphemeral(db);
   const reminders = await sweepEventReminders(db);
+  await sweepCommunityJoins(db);
   const selfies = await sweepSelfies(db);
   await sweepPushSent(db);
   await sweepNotices(db);

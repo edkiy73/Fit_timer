@@ -2,7 +2,7 @@
 import { peopleCommands } from '../../contracts/people.mjs';
 import { fail, isUniqueViolation } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
-import { needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
+import { needsPartner, partnerActed, registerApprovalKind, requestApproval } from '../approvals.mjs';
 import { cards } from './discover.mjs';
 import { acceptsMention } from '../sql-rules.mjs';
 import { qaProfile, requireUnrestricted } from '../profiles.mjs';
@@ -228,7 +228,9 @@ const run = {
       if (l.me !== 'b' || l.state !== 'pending') fail(409, 'conflict', { rule: 'not_pending' });
       return { pending: await requestApproval(q, acting, { kind: 'link.accept', targetType: 'link', targetId: l.id, change: { linkId: l.id, vis: input.vis }, summary: [l.kind] }) };
     }
-    return doAccept(q, acting, input.linkId, input.vis);
+    const done = await doAccept(q, acting, input.linkId, input.vis);
+    await partnerActed(q, acting, 'link');
+    return done;
   },
 
   async 'link.proposeChange'(q, { acting: a, input }) {
@@ -268,6 +270,7 @@ const run = {
       return { pending: await requestApproval(q, acting, { kind: 'link.visibility', targetType: 'link', targetId: l.id, change: { linkId: l.id, vis: input.vis }, summary: [input.vis] }) };
     }
     await q.query(`update feture.profile_link set ${l.me}_vis = $2, updated_at = now() where id = $1`, [l.id, input.vis]);
+    if (widening) await partnerActed(q, acting, 'linkShown');
     return { vis: input.vis };
   },
 

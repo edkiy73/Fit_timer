@@ -18,6 +18,8 @@ const TYPES = /** @type {Record<string, {type: string, actor?: string, object?: 
   'match.created': { type: 'match', actor: 'with', object: ['conversation', 'conversationId'] },
   // A message request (owner 29.10.2026): an inbox row and a push; a hide takes it back (chat.requestAnswer).
   'chat.requested': { type: 'chatRequest', actor: 'from', object: ['conversation', 'conversationId'] },
+  // The request was accepted (owner decision 7, 03.11.2026): its sender is told and the row opens the chat.
+  'chat.accepted': { type: 'chatAccepted', actor: 'from', object: ['conversation', 'conversationId'] },
   'follow.created': { type: 'follow', actor: 'from' },
   'reply.created': { type: 'reply', actor: 'from', object: ['post', 'postId'] },
   'reaction.created': { type: 'postLike', actor: 'from', object: ['post', 'postId'] },
@@ -47,6 +49,8 @@ const TYPES = /** @type {Record<string, {type: string, actor?: string, object?: 
   'profile.restored': { type: 'profileRestored' },
   'decide.resolved': { type: 'pair.decided', object: ['approval', 'approvalId'] },
   'couple.declined': { type: 'pair.declined', object: ['invite', 'inviteId'] },
+  // An invitation nobody answered in time (couples.mjs expireInvites): the inviter is told.
+  'couple.inviteExpired': { type: 'pair.inviteExpired', object: ['invite', 'inviteId'] },
   'couple.created': { type: 'pair.created' },
   'couple.deleted': { type: 'pair.deleted' },
   'couple.stopped': { type: 'pair.stopped' },
@@ -71,6 +75,8 @@ const TYPES = /** @type {Record<string, {type: string, actor?: string, object?: 
   'link.removed': { type: 'linkRemoved', actor: 'from' },
   'dating.launched': { type: 'datingLaunched' },
   'support.replied': { type: 'supportReply' },
+  // Closed by support without an answer: «Обращение закрыто».
+  'support.closed': { type: 'supportClosed' },
   'premium.gifted': { type: 'premiumGift', actor: 'from' },
   // A sign-in from a new device (server/signin.mjs): to the account, always (no setting turns it off); opens «Мои устройства».
   'signin.new': { type: 'signinNew' },
@@ -81,17 +87,22 @@ const TYPES = /** @type {Record<string, {type: string, actor?: string, object?: 
  * listed here (tests/fe-notify-topics-postgres.mjs).
  * - `access.revoked`, `access.declined`, `match.ended`: silent by owner decision (the other side is not told).
  *   `access.declined` waits out the undo window first (its `available_at`), so an undo still finds it undelivered.
- * - `community.joined`: silent for now; a daily summary for the host comes later.
  * - `moderation.*`: staff queues read their own tables (reports, revisions, checks, appeals); nobody reads the marker.
  *   A CSAM case alerts owner and lead through its own `staff.alert` (jobs.mjs `safety.csamMatch`). */
-export const SILENT_TOPICS = Object.freeze(['access.revoked', 'access.declined', 'match.ended', 'community.joined',
+export const SILENT_TOPICS = Object.freeze(['access.revoked', 'access.declined', 'match.ended',
   'moderation.ageCheck', 'moderation.appeal', 'moderation.community', 'moderation.csamCase', 'moderation.event',
   'moderation.mediaReview', 'moderation.photoCheck', 'moderation.postRevision', 'moderation.report']);
 /** Payload fields kept in `data` (codes and ids only, never free text; `device` / `place` of a new sign-in are Core's
  * device family and the edge network's «city|CC», never anything a person typed). `postId`, `replyId`, `communityId`:
  * what the destination resolver needs (a reply to highlight, the community of a removed discussion). */
 const KEEP = ['device', 'place', 'what', 'change', 'reason', 'state', 'kind', 'resolution', 'rule', 'targetType', 'targetId', 'answer', 'outcome', 'changes', 'approves', 'ticketId', 'days', 'until', 'target', 'purpose', 'count', 'role', 'grant',
-  'postId', 'replyId', 'communityId'];
+  'postId', 'replyId', 'communityId', 'eventId'];
+/** Results of a decision about the person's own report, claim or material (moderation, hosts): they reach the person even
+ * when the material is gone or hidden since — the right to hear one's own decision is not the right to open the
+ * material. The row keeps only the safe result (codes, ids); the inbox opens the object only while it is still
+ * accessible (inbox.mjs NOTE_ROWS `visible`, «Больше недоступно» otherwise). */
+const OWN_DECISIONS = new Set(['disputeResolved', 'postRestored', 'postDisputed', 'revisionApproved', 'revisionRejected', 'contentRemoved',
+  'reportResolved', 'discussionRemoved', 'tagAnswered', 'mediaDecided']);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 /** The collapse key of a row by its catalog rule: one per type, per object or per actor (null: never collapsed).
@@ -141,7 +152,7 @@ async function write(q, item, n, recipients, out) {
   const sub = typeof data.replyId === 'string' && UUID.test(data.replyId) ? { type: 'reply', id: data.replyId } : null;
   for (const r of recipients) {
     if (by && r.account === by) continue; // never to the account that caused it
-    if (n.objectType === 'post' && n.objectId && r.profile) {
+    if (n.objectType === 'post' && n.objectId && r.profile && !OWN_DECISIONS.has(n.type)) {
       // A post the recipient may not see is not announced either.
       const [v] = await q.query('select feture.post_visible(p, $2, $3) ok from feture.post p where p.id = $1', [n.objectId, r.profile, r.account]);
       if (!v?.ok) continue;
@@ -164,7 +175,8 @@ async function write(q, item, n, recipients, out) {
     if (added[0]) {
       const route = destination({ type: n.type, id: added[0].id, data, object: n.objectType ? { type: n.objectType, id: n.objectId ?? null } : null, sub,
         actor: n.actor ?? null, addressee: r.profile, couple: couple?.id ?? null });
-      await queuePush(q, item, r, key ? CATALOG[key].push.cat : 'other', added[0].id, undefined, { key, url: pushUrl(route) });
+      // History only (the catalog's `push.off`: a partner's everyday action in trust mode, a daily summary): no push.
+      if (!(key && CATALOG[key].push.off)) await queuePush(q, item, r, key ? CATALOG[key].push.cat : 'other', added[0].id, undefined, { key, url: pushUrl(route) });
       const to = await signalTo(q, r); if (to) out.push({ profile: to, kind: 'notify' });
     }
   }
@@ -295,6 +307,21 @@ export function notifyHandlers(db, emit = () => {}) {
         }
         await write(q, item, { type: 'staffAlert', actor: null, data: pick(p) }, [r], out);
       }
+    });
+  };
+  // New members of an open community: one summary row a day to its owner and hosts, no push (owner decision 7; the
+  // item comes from jobs.mjs sweepCommunityJoins with the day's count). An account in two host profiles gets one row.
+  handlers['community.joins'] = async item => {
+    const p = /** @type {any} */ (item.payload);
+    await tx(async (q, out) => {
+      const rows = await q.query(
+        `select distinct on (pm.account_id) pm.account_id, cm.profile_id from feture.community_member cm
+         join feture.community c on c.id = cm.community_id and c.state = 'published'
+         join feture.profile_member pm on pm.profile_id = cm.profile_id and pm.state = 'active'
+         where cm.community_id = $1 and cm.state = 'active' and cm.role in ('owner', 'host')
+         order by pm.account_id, case cm.role when 'owner' then 0 else 1 end, cm.profile_id`, [p.communityId]);
+      await write(q, item, { type: 'communityJoins', actor: null, objectType: 'community', objectId: p.communityId, data: pick(p) },
+        rows.map(r => ({ account: r.account_id, profile: r.profile_id })), out);
     });
   };
   // Event updates go to the people following the event, not to the organizer the item is addressed to.

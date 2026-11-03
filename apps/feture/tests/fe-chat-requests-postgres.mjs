@@ -386,3 +386,25 @@ test('couples: send as the couple (with and without partner approval), both part
     assert.equal((await call('ud', them, { action: 'chat.messages', conversationId: toCat.conversationId })).status, 404);
   } finally { await pg.close(); }
 });
+
+test('stage 4: an accepted request tells its sender with a row that opens the chat; a hide tells nothing; opening the chat reads it', async () => {
+  const { pg, db, call, member, follow, request, deliver } = await world();
+  try {
+    const kira = await member('uk', 'Kira'), alex = await member('ua', 'Alex'), noa = await member('un', 'Noa');
+    await follow('ua', alex, kira); await follow('un', noa, kira);
+    const conv = (await request('ua', alex, kira)).conversationId;
+    const hidden = (await request('un', noa, kira)).conversationId;
+    await call('uk', kira, { action: 'chat.requestAnswer', opId: op(), conversationId: conv, answer: 'accept' });
+    await call('uk', kira, { action: 'chat.requestAnswer', opId: op(), conversationId: hidden, answer: 'hide' });
+    await deliver();
+    const got = (await call('ua', null, { action: 'notifications.list' })).items.filter((/** @type {any} */ x) => x.type === 'chatAccepted');
+    assert.deepEqual(got.map((/** @type {any} */ x) => [x.object.type, x.object.id, x.actor.id, x.read]), [['conversation', conv, kira, false]]);
+    assert.equal((await call('un', null, { action: 'notifications.list' })).items.filter((/** @type {any} */ x) => x.type === 'chatAccepted').length, 0, 'a hide stays silent');
+    assert.equal((await call('uk', null, { action: 'notifications.list' })).items.filter((/** @type {any} */ x) => x.type === 'chatAccepted').length, 0, 'never to the one who accepted');
+    const [{ id: account }] = await db.query('select id from feture.account where person_profile_id = $1', [alex]);
+    assert.ok((await db.query(`select 1 from feture.outbox where topic = 'push.deliver' and payload->>'account' = $1 and payload->>'notificationId' = $2`, [account, got[0].id])).length, 'a push');
+    // Opening the chat reads it.
+    await call('ua', alex, { action: 'chat.messages', conversationId: conv });
+    assert.equal((await call('ua', null, { action: 'notifications.list' })).items.find((/** @type {any} */ x) => x.type === 'chatAccepted').read, true);
+  } finally { await pg.close(); }
+});

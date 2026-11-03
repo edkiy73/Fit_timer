@@ -4,7 +4,7 @@ import { eventsCommands } from '../../contracts/events.mjs';
 import { requireUnrestricted } from '../profiles.mjs';
 import { fail, isUniqueViolation } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
-import { closePending, needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
+import { closePending, needsPartner, partnerActed, registerApprovalKind, requestApproval } from '../approvals.mjs';
 import { journal, requireStaff } from './staff.mjs';
 import { mediaDto } from '../media/assets.mjs';
 import { ageOn, withFaces } from './faces.mjs';
@@ -595,12 +595,14 @@ const run = {
     // decides on that. Going down or hiding from the list applies at once.
     const [cur] = await q.query('select status, show_in_list from feture.event_rsvp where event_id = $1 and profile_id = $2', [e.id, acting.profileId]);
     const rank = (/** @type {string | null | undefined} */ v) => v ? RANK[/** @type {keyof typeof RANK} */ (v)] : 0;
-    const widening = (rank(input.status) > rank(cur?.status) || (input.showInList === true && !cur?.show_in_list)) && needsPartner(acting, 'event.rsvp');
-    if (widening) {
+    const up = rank(input.status) > rank(cur?.status) || (input.showInList === true && !cur?.show_in_list);
+    if (up && needsPartner(acting, 'event.rsvp')) {
       return { pending: await requestApproval(q, acting, { kind: 'event.rsvp', targetType: 'event', targetId: e.id, change: c, summary: [e.title, input.status] }) };
     }
     await dropPending(q, acting.profileId, 'event.rsvp', e.id);
     await writeRsvp(q, e.id, acting.profileId, acting.accountId, c);
+    // A couple's answer moving up in trust mode goes into the partner's couple history (with a push: participation).
+    if (up) await partnerActed(q, acting, 'event', { eventId: e.id });
     return { status: input.status };
   },
 
@@ -614,7 +616,9 @@ const run = {
     if (needsPartner(acting, 'event.apply')) {
       return { pending: await requestApproval(q, acting, { kind: 'event.apply', targetType: 'event', targetId: e.id, change: c, summary: [e.title] }) };
     }
-    return { id: await writeApplication(q, e, acting.profileId, acting.accountId, c), state: 'pending' };
+    const id = await writeApplication(q, e, acting.profileId, acting.accountId, c);
+    await partnerActed(q, acting, 'eventApply', { eventId: e.id });
+    return { id, state: 'pending' };
   },
 
   async 'event.applicationWithdraw'(q, { acting: a, input }) {
