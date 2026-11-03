@@ -238,7 +238,7 @@ export function LinkEditScreen(){
    <Btn onClick={update} busy={busy} disabled={busy||!sentChanged}>{t('fe.w7.ln.update')}</Btn></div>
   :<Btn onClick={send} disabled={busy}>{conf?changed?t(we?'fe.ln.p22.proposeChangeUs':'fe.ln.p22.proposeChange'):t('fe.ln.p22.save'):t(we?'fe.ln.p22.sendUs':'fe.ln.p22.send')}</Btn>;
  return <>
-  <Bar title={conf||ex?.st==='sent'?t('fe.ln.p22.edit'):t('fe.ln.p22.new')} onBack={()=>navigate(-1)}/>
+  <Bar title={conf||ex?.st==='sent'?t('fe.ln.p22.edit'):t('fe.ln.p22.new')} back/>
   <View className="nodock cta1">
    {error?<Empty icon={Users} role="alert" title={t('fe.feed.unavailable')} text={pxError(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :!p||!mine?<Skel kind="list"/>

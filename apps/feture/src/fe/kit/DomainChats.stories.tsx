@@ -1,6 +1,7 @@
 import type {Meta,StoryObj} from '@storybook/react-vite';
 import {fn} from 'storybook/test';
-import {Av,ChatList,ChatRow,CoupleTag,NewMatch,NewMatches} from './index';
+import {Archive,Search} from 'lucide-react';
+import {Av,ChatList,ChatPane,ChatRow,CoupleTag,IconBtn,NewMatch,NewMatches} from './index';
 
 const meta={title:'Домен/Чаты',component:ChatRow,tags:['autodocs'],
  parameters:{docs:{description:{component:'Строка диалога в списке чатов, архиве и «Запросах»: аватар, имя, последнее сообщение в одну строку, время, счётчик непрочитанного. `note` — вторая строка (откуда запрос), `tag` — метка «Чат пары», `ended` — общение завершено. Строки стоят в `ChatList`.'}}},
@@ -23,3 +24,12 @@ export const Список:S={name:'Список',render:()=><ChatList>
 export const НовыеСовпадения:StoryObj<typeof NewMatch>={name:'Новые совпадения',render:a=><NewMatches>
  <NewMatch {...a}/><NewMatch av={<Av name="Kai" seed="kai"/>} name="Kai" us="чат пары" onClick={fn()}/><NewMatch av={<Av name="Alexandra" seed="al"/>} name="Alexandra" onClick={fn()}/>
 </NewMatches>,args:{av:<Av name="Mia" seed="mia"/>,name:'Mia',onClick:fn()},argTypes:{av:{control:false}}};
+/** Desktop (≥ 1100 px): the list beside an open conversation keeps the header's buttons; the archive opens in the same pane with «‹». */
+const paneRows=<ChatList>
+ <ChatRow on av={<Av name="Mia" seed="mia" size="lg"/>} name="Mia" line="Привет! Как прошла суббота?" time="5 мин" onClick={fn()}/>
+ <ChatRow av={<Av name="Kai" seed="kai" size="lg"/>} name="Kai" line="Фото" time="2 ч" unread={1} onClick={fn()}/>
+</ChatList>;
+export const ПанельСписка:StoryObj<typeof ChatPane>={name:'Панель списка рядом с чатом (ПК)',
+ render:()=><ChatPane always title="Чаты" actions={<><IconBtn icon={Search} kind="ghost" label="Найти чат" onClick={fn()}/><IconBtn icon={Archive} kind="ghost" label="Архив" onClick={fn()}/></>}>{paneRows}</ChatPane>};
+export const ПанельАрхива:StoryObj<typeof ChatPane>={name:'Архив в панели (ПК)',
+ render:()=><ChatPane always title="Архив" onBack={fn()}>{paneRows}</ChatPane>};

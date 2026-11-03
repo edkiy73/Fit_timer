@@ -1,6 +1,6 @@
 import {forwardRef,useEffect,useLayoutEffect,useRef,useState,type ButtonHTMLAttributes,type CSSProperties,type ReactNode} from 'react';
 import {createPortal} from 'react-dom';
-import {useNavigate} from 'react-router';
+import {useLocation,useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {ChevronDown,ChevronLeft,type LucideIcon} from 'lucide-react';
 import {PLATE_KEYS,articlePlate,type PlateKey} from '../../contracts/_plates.mjs';
@@ -52,16 +52,32 @@ export function Av({name,src,size='',seed,couple}:{name:string,src?:string|null|
  return <span className={`av ini ${size}`}><div className="plate" style={plate(seed??name)}/><b style={{position:'relative'}}>{initial(name)}</b></span>;
 }
 
-/** `bar()` — the screen header; «‹» goes back within the tab's stack. */
+/** «Назад» everywhere (owner 04.11.2026: back returns where the person came from). With an earlier screen of the app in
+ * this tab's history it steps back to it — the notifications, a chat, whatever opened this screen. Only without one
+ * (a deep link, a push into a cold start) it goes to `fallback` — the screen's parent — replacing this entry, so a
+ * second «Назад» never bounces between the two. Without a fallback: the section's root, else the feed. */
+export function canGoBack(){return ((typeof window!=='undefined'?(window.history.state as {idx?:number}|null)?.idx:0)??0)>0;}
+export function useBack(fallback?:string){
+ const navigate=useNavigate();const {pathname}=useLocation();
+ return ()=>{
+  if(canGoBack()){navigate(-1);return;}
+  const parts=pathname.split('/').filter(Boolean);
+  const root=parts[1]==='events'?'/n/communities?sub=events':parts[1]==='topics'?'/n/feed':'/n/'+parts[1];
+  navigate(fallback??(parts.length>2?root:'/n/feed'),{replace:true});
+ };
+}
+
+/** `bar()` — the screen header; «‹» goes back where the person came from (`useBack`); a string `back` is the
+ * fallback for a screen opened straight from a link. */
 export function Bar({title,back,onBack,small,children,lead,sub,onTitle,titleLabel}:{title:string,back?:string|true,onBack?:()=>void,small?:boolean,children?:ReactNode,
  /** A tab's own profile («Я», owner 29.10.2026): the avatar left of the title — the same header, another set of pieces. */ lead?:ReactNode,
  /** A quiet second line under the title («Личный профиль»). */ sub?:ReactNode,
  /** The title opens something («Чей профиль»): it becomes a button with a chevron. */ onTitle?:(()=>void)|undefined,titleLabel?:string|undefined}){
- const navigate=useNavigate();const {t}=useI18n();
+ const {t}=useI18n();const goBack=useBack(typeof back==='string'?back:undefined);
  const text=<span className="bar-tt"><span className="bar-t">{title}{onTitle&&<ChevronDown aria-hidden="true"/>}</span>{sub&&<span className="sub">{sub}</span>}</span>;
  const inner=<>{lead&&<span className="bar-lead">{lead}</span>}{text}</>;
  return <header className="bar">
-  {(back||onBack)&&<button type="button" className="ibtn ghost" aria-label={t('fe.back')} onClick={()=>onBack?onBack():typeof back==='string'?navigate(back):navigate(-1)}><ChevronLeft/></button>}
+  {(back||onBack)&&<button type="button" className="ibtn ghost" aria-label={t('fe.back')} onClick={()=>onBack?onBack():goBack()}><ChevronLeft/></button>}
   <h1 className={[small||back||onBack?'sm':'',lead||sub||onTitle?'k-bar-who':''].filter(Boolean).join(' ')} tabIndex={-1}>
    {onTitle?<button type="button" className="bar-who" aria-haspopup="dialog" aria-label={titleLabel} onClick={onTitle}>{inner}</button>:lead||sub?inner:title}</h1>
   {children}

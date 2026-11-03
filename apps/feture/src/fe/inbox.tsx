@@ -7,6 +7,7 @@ import {DECIDE_KINDS,FILTERS as KINDS,actOf,destination,entryFor,noteLine,textOf
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Actions,Answer,Av,Bar,Btn,Chip,Chips,Empty,IconBtn,LoadMore,NoteDecision,NoteEvent,NoteNews,NoteResult,NoteSafety,NoteSummary,PersonLine,Pill,SafetyDecision,SectionLabel,Seg,Skel,View,useScrollTo,type NoteTone} from './kit';
 import {useFe,useLive,useRealtime} from './session';
+import {useSideNav} from './wide';
 import {useToast} from './toast';
 import {when} from './feed';
 import {statusText} from './note-status';
@@ -47,8 +48,10 @@ const nameOf=(a:Actor|undefined)=>a?(a.name||(a.handle?'@'+a.handle:'?')):'KINHA
 /** The one tab control under its older name here. */
 export const SegN=Seg;
 
-/** Bell with the shared count, for screen headers: tasks and unread notifications, each named in its label. */
-export function BellButton(){
+/** Bell with the shared count, for screen headers: tasks and unread notifications, each named in its label. Where the
+ * side menu is on screen its «Уведомления» item carries the same count, so the headers drop the bell (owner 04.11.2026). */
+export function BellButton(){return useSideNav()?null:<HeaderBell/>;}
+function HeaderBell(){
  const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const [c,setC]=useState<{decide:number,notifications:number}>({decide:0,notifications:0});
  const live=useRef(true);
  const pull=useCallback(()=>{call('inbox.counts',{},countsRes,{asAccount:true}).then(r=>{if(live.current)setC({decide:r.decide,notifications:r.notifications});}).catch(()=>{});},[call]);
@@ -91,7 +94,7 @@ function rich(text:string,names:Record<'name'|'couple',string>):ReactNode{
 const PAGES=new Map<InboxFilter,{items:Note[],next:string|null}>();
 
 export function InboxScreen(){
- const {call,state,acting,reload}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
+ const {call,state,acting,reload}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();const sideNav=useSideNav();
  const [params,setParams]=useSearchParams();const url=readInboxUrl(params);
  const [chosen,setChosen]=useState<InboxTab|null>(url.tab);
  const filter=url.filter;
@@ -317,7 +320,8 @@ export function InboxScreen(){
  useEffect(()=>{if(url.item&&decide&&told.current!==url.item&&!decide.some(d=>d.id===url.item)){told.current=url.item;toast(t('fe.ibx.itemGone'));}},[url.item,decide,toast,t]);
  const nTodo=counts?.decide??decide?.length??0;const nAll=counts?.notifications??(page?.items??[]).filter(n=>!n.read).length;
  return <>
-  <Bar title={t('fe.inbox.title')} back/>
+  {/* With the side menu «Уведомления» is a section of its own there: no «‹», like every other section. */}
+  <Bar title={t('fe.inbox.title')} {...(sideNav?{}:{back:true as const})}/>
   <View className="nodock" refresh={()=>load(true)} keep={loading?null:inboxScrollKey({tab:k,filter})}>
    <SegN small value={k} onChange={pickTab} options={[{id:'todo',label:t('fe.inbox.todo'),n:nTodo},{id:'all',label:t('fe.inbox.all'),n:nAll}]}/>
    {!loading&&!error&&<Chips scroll className="inbox-filters">{FILTERS.filter(v=>v==='all'||v===filter||kinds.has(v)).map(v=>

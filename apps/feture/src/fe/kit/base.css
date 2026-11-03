@@ -1277,6 +1277,8 @@
 .v21 .main>.bar>h1{pointer-events:none;opacity:calc(1 - var(--sc,0));transform:translateY(calc(var(--sc,0) * -8px))}
 .v21 .main.scrolled>.bar:not(.overlay){box-shadow:none}
 .v21 .main>.bar:not(.overlay) .ibtn:not(.glass):not(.add),
+/* the desktop chats pane's header (ChatPane) has the same buttons as the chats header */
+.v21 .k-chat-pane-h .ibtn,
 .v21 .main>.bar>.btn.text{background:color-mix(in srgb,var(--surf) 70%,transparent);-webkit-backdrop-filter:blur(16px) saturate(1.6);backdrop-filter:blur(16px) saturate(1.6);box-shadow:0 8px 20px -14px rgba(40,10,30,.55),inset 0 0 0 1px color-mix(in srgb,var(--line) 70%,transparent)}
 .v21 .main>.bar>.btn.text{border-radius:var(--r);min-height:40px;padding:0 12px}
 .v21 .main>.bar .seg{-webkit-backdrop-filter:blur(16px) saturate(1.6);backdrop-filter:blur(16px) saturate(1.6);background:color-mix(in srgb,var(--surf) 78%,transparent);box-shadow:0 8px 20px -14px rgba(40,10,30,.5)}

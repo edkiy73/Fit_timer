@@ -1,8 +1,8 @@
 import React,{forwardRef,useEffect,useRef,useState,type ButtonHTMLAttributes,type ReactNode} from 'react';
-import {useBlocker,useNavigate} from 'react-router';
+import {useBlocker} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Check as Check2,ChevronDown,ChevronLeft,ChevronRight,CircleAlert,CircleCheck,Info,Pencil,Plus,Search,TriangleAlert,X,type LucideIcon} from 'lucide-react';
-import {Btn,Layer} from '../ui';
+import {Btn,Layer,useBack} from '../ui';
 import './tokens.css';
 import './kit.css';
 
@@ -12,7 +12,7 @@ import './kit.css';
  * `npm run check:kit` (part of `npm run check`) fails when a screen hand-writes what the kit has.
  * Each piece keeps the prototype's markup and class names, so base.css styles it. */
 
-export {Av,Bar,Btn,Empty,Layer,Seg,Skel,View,plate,namedPlate,articlePlate,PLATE_KEYS,type PlateKey} from '../ui';
+export {Av,Bar,Btn,Empty,Layer,Seg,Skel,View,canGoBack,useBack,plate,namedPlate,articlePlate,PLATE_KEYS,type PlateKey} from '../ui';
 export type {SegOption} from '../ui';
 
 /** `.ibtn` — a round icon button; the label is required (it is the only text a screen reader gets). */
@@ -27,9 +27,9 @@ export const IconBtn=forwardRef<HTMLButtonElement,ButtonHTMLAttributes<HTMLButto
 
 /** A screen header with an optional second line (`SubBar` of the community screens). */
 export function SubBar({title,sub,back=true,onBack,children}:{title:string,sub?:string|null|undefined,back?:string|true|false,onBack?:()=>void,children?:ReactNode}){
- const navigate=useNavigate();const {t}=useI18n();
+ const {t}=useI18n();const goBack=useBack(typeof back==='string'?back:undefined);
  return <header className="bar">
-  {(back||onBack)&&<IconBtn icon={ChevronLeft} kind="ghost" label={t('fe.back')} onClick={()=>onBack?onBack():typeof back==='string'?navigate(back):navigate(-1)}/>}
+  {(back||onBack)&&<IconBtn icon={ChevronLeft} kind="ghost" label={t('fe.back')} onClick={()=>onBack?onBack():goBack()}/>}
   <h1 className="sm" tabIndex={-1}>{title}{sub&&<span className="sub">{sub}</span>}</h1>
   {children}
  </header>;

@@ -6,7 +6,7 @@ import {AtSign,Check,Copy,EyeOff,Heart,Link as LinkIcon,Lock,ShieldCheck,Users,X
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicBase} from '../api-url';
 import {copyLink} from './share';
-import {Actions,Alert,Av,Bar,Btn,Card,Empty,Field,Group,H,Input,Note,PersonLine,Pill,RadioList,RequestCard,Row,SelectRow,Sheet,Skel,Stack,View,Who,useLeaveGuard} from './kit';
+import {canGoBack,useBack,Actions,Alert,Av,Bar,Btn,Card,Empty,Field,Group,H,Input,Note,PersonLine,Pill,RadioList,RequestCard,Row,SelectRow,Sheet,Skel,Stack,View,Who,useLeaveGuard} from './kit';
 import {useFe,useLive} from './session';
 import {Ask} from './me';
 import {useToast} from './toast';
@@ -67,7 +67,8 @@ const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 export function PairScreen(){
  const {search}=useLocation();const navigate=useNavigate();
  const q=new URLSearchParams(search);const approval=q.get('approval');const restore=q.get('restore');
- const drop=(k:string)=>{const n=new URLSearchParams(search);n.delete(k);const rest=n.toString();navigate('/n/me/pair'+(rest?'?'+rest:''),{replace:true});};
+ // Closing the approval or the restore screen goes back where it was opened from (the inbox, a push, the pair screen).
+ const drop=(k:string)=>{if(canGoBack()){navigate(-1);return;}const n=new URLSearchParams(search);n.delete(k);const rest=n.toString();navigate('/n/me/pair'+(rest?'?'+rest:''),{replace:true});};
  return <>
   {restore&&UUID.test(restore)?<RestoreView coupleId={restore} onLeave={()=>drop('restore')}/>:<PairMain onOpen={id=>navigate('/n/me/pair?approval='+id)}/>}
   {approval&&UUID.test(approval)&&<ApprovalView key={approval} id={approval} onClose={()=>drop('approval')}/>}
@@ -106,7 +107,7 @@ function PairMain({onOpen}:{onOpen:(id:string)=>void}){
  const act=async(fn:()=>Promise<unknown>,after?:()=>void)=>{setBusy(true);setFailure('');try{await fn();after?.();load();}catch(e){setFailure(pairError(e));}finally{setBusy(false);}};
  const toSetup=()=>{reload();navigate('/n/me/pair?setup=1',{replace:true});};
  const meName=nameOf(person);
- const guard=useLeaveGuard(!busy&&!!nick.trim());
+ const guard=useLeaveGuard(!busy&&!!nick.trim());const toMe=useBack('/n/me');
  if(state.status!=='ready')return null;
  // A partner link: who invites, then accept (the couple forms at once) → Q09.
  if(token&&!inCouple)return <LinkLanding token={token} me={{name:meName,id:person?.id,src:person?.avatar}}
@@ -120,7 +121,7 @@ function PairMain({onOpen}:{onOpen:(id:string)=>void}){
  if(couple&&c&&c.state==='paused'&&!fresh){
   const [me,other]=[c.members.find(m=>m.me),c.members.find(m=>!m.me)];
   return <>
-   <RestoreView coupleId={couple.id} onLeave={()=>navigate('/n/me')} extra={<>
+   <RestoreView coupleId={couple.id} onLeave={toMe} extra={<>
     <Btn kind="soft" onClick={()=>setAskNew(true)}>{t('fe.pq.new')}</Btn>
     <Note className="center">{t('fe.pq.newNote')}</Note>
     {acting?.kind==='couple'&&person&&<Btn kind="text" onClick={()=>{setActing(person.id);navigate('/n/me');}}>{t('fe.pq.toPersonal')}</Btn>}

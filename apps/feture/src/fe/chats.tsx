@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Archive,ArchiveRestore,Ban,Camera,Check,ChevronDown,ChevronLeft,CircleAlert,Clock,Copy,Ellipsis,Eye,EyeOff,Film,Flag,Image as ImageIcon,Inbox,Info,Lock,LockOpen,MessageCircle,Plus,Search,SendHorizontal,Sparkles,Undo2,User,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {ActingAv,Actions,Alert,ChatList,ChatPane,ChatPick,ChatRow,CoupleTag,NewMatch,NewMatches,Av,Bar,Btn,Card,Check as CheckBox,Chip,Chips,Empty,Field,FilePick,Group,IconBtn,Layer,Note,PersonBar,Pill,RadioList,Row,SearchInput,SectionLabel,SelectRow,Sheet,Skel,Spacer,Text,TextArea,ToggleRow,Typing,VideoBadge,VideoPlayer,View,type Voice,VoiceBubble,VoiceRecorder} from './kit';
+import {useBack,ActingAv,Actions,Alert,ChatList,ChatPane,ChatPick,ChatRow,CoupleTag,NewMatch,NewMatches,Av,Bar,Btn,Card,Check as CheckBox,Chip,Chips,Empty,Field,FilePick,Group,IconBtn,Layer,Note,PersonBar,Pill,RadioList,Row,SearchInput,SectionLabel,SelectRow,Sheet,Skel,Spacer,Text,TextArea,ToggleRow,Typing,VideoBadge,VideoPlayer,View,type Voice,VoiceBubble,VoiceRecorder} from './kit';
 import {VIDEO_TYPES} from './kit/media';
 import {Uploader,type SendPhoto,type SendVideo,type Uploaded} from './kit/Uploader';
 import {useSendPhoto,useSendVideo,useSendVoice} from './media-upload';
@@ -88,19 +88,46 @@ const RELOAD='fe:chats-reload';
 const previewOf=(c:Chat,t:T)=>c.state==='ended'?t('fe.chx.endedRow'):!c.last?t('fe.chx.sayFirst'):c.last.media&&!c.last.body?(c.last.mode!=='normal'?t('fe.chats.ephemeral'):c.last.kind==='audio'?t('fe.av.voice'):c.last.kind==='video'?t('fe.av.video'):t('fe.chats.photo')):c.last.body;
 /** The list read last: the desktop list next to a conversation draws it at once while it asks again. */
 let lastList:{items:Chat[],requests:Chat[]}|null=null;
-/** The chats list beside an open conversation on desktop. */
-function ChatsSide({current}:{current:string}){
+/** The chats list's own buttons — search and the archive — in its header and in the desktop pane beside a chat (one
+ * component, owner 04.11.2026: the icons stay when a chat opens). */
+function ChatsTools({searching,onSearch,onArchive}:{searching:boolean,onSearch:()=>void,onArchive:()=>void}){
+ const {t}=useI18n();
+ return <>
+  <IconBtn icon={Search} label={t('fe.chx.search')} aria-pressed={searching} onClick={onSearch}/>
+  <IconBtn icon={Archive} label={t('fe.chx.archiveTitle')} onClick={onArchive}/>
+ </>;
+}
+/** The search field under the chats header (the list and the desktop pane). */
+function ChatsSearch({value,onChange,onClose,inputRef}:{value:string,onChange:(v:string)=>void,onClose:()=>void,inputRef?:React.Ref<HTMLInputElement>}){
+ const {t}=useI18n();
+ return <div className="chat-q"><SearchInput ref={inputRef} label={t('fe.chx.search')} placeholder={t('fe.chx.searchPh')} value={value} onChange={e=>onChange(e.target.value)}/>
+  <IconBtn icon={X} kind="ghost" size="sm" label={t('fe.chx.searchClose')} onClick={onClose}/></div>;
+}
+const matches=(c:Chat,needle:string)=>!needle||nameOf(c.other).toLowerCase().includes(needle)||(c.other.handle??'').toLowerCase().includes(needle);
+/** The chats list beside an open conversation on desktop: the same buttons as the list's header; the archive opens in
+ * this pane (with «‹» back to the chats), so the conversation stays on the right. */
+function ChatsSide({current,archived:inArchive}:{current:string,/** The open chat is archived: the pane starts in the archive. */ archived:boolean}){
  const {call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();
- const [data,setData]=useState(lastList);
- const load=useCallback(()=>{call('chats.list',{filter:'all',archived:false},list,{asAccount:true}).then(r=>{lastList={items:r.items,requests:r.requests??[]};setData(lastList);}).catch(()=>{});},[call]);
- useEffect(()=>{load();},[load]);
+ const [archived,setArchived]=useState(inArchive);
+ useEffect(()=>{if(inArchive)setArchived(true);},[inArchive]);
+ const [data,setData]=useState(archived?null:lastList);
+ const [searching,setSearching]=useState(false);const [q,setQ]=useState('');
+ const load=useCallback(()=>{call('chats.list',{filter:'all',archived},list,{asAccount:true}).then(r=>{const d={items:r.items,requests:r.requests??[]};if(!archived)lastList=d;setData(d);}).catch(()=>{});},[call,archived]);
+ useEffect(()=>{setData(archived?null:lastList);load();},[load,archived]);
  useLive(['chat','notify'],load);
- return <ChatPane title={t('fe.nav.chats')}>
+ const toggleSearch=()=>{setSearching(s=>!s);setQ('');};
+ const needle=q.trim().toLowerCase();
+ const rows=(data?.items??[]).filter(c=>matches(c,needle));
+ return <ChatPane title={archived?t('fe.chx.archiveTitle'):t('fe.nav.chats')} onBack={archived?()=>{setArchived(false);setQ('');}:undefined}
+  actions={archived?undefined:<ChatsTools searching={searching} onSearch={toggleSearch} onArchive={()=>{setArchived(true);setSearching(false);setQ('');}}/>}>
+  {searching&&!archived&&<ChatsSearch value={q} onChange={setQ} onClose={toggleSearch}/>}
   {data===null?<Skel kind="list" rows={6}/>:<>
-   {data.requests.length>0&&<Card list><Row icon={Inbox} tone="v" title={t('fe.rq.folder')} badge={data.requests.length} onClick={()=>navigate('/n/chats/requests')}/></Card>}
-   <ChatList>{data.items.map(c=><ChatRow key={c.id} on={c.id===current} av={<Av name={nameOf(c.other)} seed={c.other.id} size="lg" src={c.other.avatar?.src?.thumb}/>} name={nameOf(c.other)}
+   {!archived&&!needle&&data.requests.length>0&&<Card list><Row icon={Inbox} tone="v" title={t('fe.rq.folder')} badge={data.requests.length} onClick={()=>navigate('/n/chats/requests')}/></Card>}
+   {rows.length?<ChatList>{rows.map(c=><ChatRow key={c.id} on={c.id===current} av={<Av name={nameOf(c.other)} seed={c.other.id} size="lg" src={c.other.avatar?.src?.thumb}/>} name={nameOf(c.other)}
     tag={c.side.kind==='couple'&&<CoupleTag>{t('fe.chx.coupleChat')}</CoupleTag>} line={previewOf(c,t)} time={ago(c.at,locale)} unread={c.id===current?0:c.unread} ended={c.state==='ended'}
     onClick={()=>navigate('/n/chats/'+c.id,{replace:true})}/>)}</ChatList>
+    :needle?<Empty compact icon={Search} title={t('fe.chx.notFound',{q:q.trim()})}/>
+    :archived?<Empty compact icon={Archive} title={t('fe.chx.archiveEmpty')}/>:null}
   </>}
  </ChatPane>;
 }
@@ -123,7 +150,7 @@ export function ChatsTab(){
  const f=couple&&!archived?kind:'all';
  const side=(c:Chat)=>c.side.kind==='couple'?'couple':'me';
  const needle=q.trim().toLowerCase();
- const hit=(c:Chat)=>!needle||nameOf(c.other).toLowerCase().includes(needle)||(c.other.handle??'').toLowerCase().includes(needle);
+ const hit=(c:Chat)=>matches(c,needle);
  const mine=(items??[]).filter(c=>(f==='all'||side(c)===f)&&hit(c));
  // A contact without messages lives only in «Новые совпадения»; an ended chat without messages leaves the list (server).
  const fresh=archived?[]:mine.filter(c=>c.newMatch&&c.state==='active');const rows=mine.filter(c=>!fresh.includes(c));
@@ -140,19 +167,19 @@ export function ChatsTab(){
     :items===null?<Skel kind="list"/>
     :rows.length?<ChatList>{rows.map(row)}</ChatList>:<Empty icon={Archive} title={t('fe.chx.archiveEmpty')}/>}
   </View>
+  {/* Desktop: the archive is the same split as the chats — the archived list on the left, the empty right side. */}
+  {wide&&<ChatPick><Empty compact icon={MessageCircle} title={t('fe.chx.pick')}/></ChatPick>}
  </>;
  return <>
   <Bar title={t('fe.nav.chats')}>
-   <IconBtn icon={Search} label={t('fe.chx.search')} aria-pressed={searching} onClick={toggleSearch}/>
-   <IconBtn icon={Archive} label={t('fe.chx.archiveTitle')} onClick={()=>navigate('/n/chats?archived=1')}/>
+   <ChatsTools searching={searching} onSearch={toggleSearch} onArchive={()=>navigate('/n/chats?archived=1')}/>
    <BellButton/>
   </Bar>
   <View refresh={load}>
    {couple&&<SegN value={kind} onChange={setKind} options={[{id:'all',label:t('fe.chats.all')},{id:'me',label:t('fe.chats.personal'),n:unreadFor('me')},{id:'couple',label:t('fe.chats.couple'),n:unreadFor('couple')}]}/>}
    {couple&&kind==='couple'&&<Note>{t('fe.chx.coupleNote',{name:couple.name})}</Note>}
    {requests.length>0&&<Card list><Row icon={Inbox} tone="v" title={t('fe.rq.folder')} sub={t('fe.rq.folderSub')} badge={requests.length} onClick={()=>navigate('/n/chats/requests')}/></Card>}
-   {searching&&<div className="chat-q"><SearchInput ref={qRef} label={t('fe.chx.search')} placeholder={t('fe.chx.searchPh')} value={q} onChange={e=>setQ(e.target.value)}/>
-    <IconBtn icon={X} kind="ghost" size="sm" label={t('fe.chx.searchClose')} onClick={toggleSearch}/></div>}
+   {searching&&<ChatsSearch inputRef={qRef} value={q} onChange={setQ} onClose={toggleSearch}/>}
    {error&&!items?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :items===null?<Skel kind="list" rows={4}/>
     :<>
@@ -588,7 +615,9 @@ function ChatView({id,to}:{id:string,to:string}){
  const day=(iso:string)=>{const d=new Date(iso),n=new Date();return d.toDateString()===n.toDateString()?t('fe.chats.today'):d.toLocaleDateString(locale==='en'?'en':'ru',{day:'numeric',month:'short'});};
  const time=(iso:string)=>new Date(iso).toLocaleTimeString(locale==='en'?'en':'ru',{hour:'2-digit',minute:'2-digit'});
  const fill=(s:string)=>s.replace('{name}',meta?nameOf(meta.other):'');
- const back=()=>navigate(meta?.archived?'/n/chats?archived=1':'/n/chats');
+ // «‹» goes back where the chat was opened from (the list, the notifications, a profile); on desktop the list stays on
+ // the left, so the header has no «‹» (owner 04.11.2026).
+ const back=useBack(meta?.archived?'/n/chats?archived=1':'/n/chats');
  if(error)return <><Bar title={t('fe.nav.chats')} back="/n/chats"/><View className="nodock"><Empty icon={X} title={t('fe.feed.unavailable')} text={feErrorMessage(error,t)}>
   {!(error instanceof FeError&&error.code==='not_found')&&<Btn onClick={()=>{setError(null);if(meta)pull(true).catch(setError);else setTries(n=>n+1);}}>{t('fe.retry')}</Btn>}
   <Btn kind="soft" onClick={()=>navigate('/n/chats')}>{t('fe.chats.back')}</Btn></Empty></View></>;
@@ -609,7 +638,7 @@ function ChatView({id,to}:{id:string,to:string}){
  let lastDay='';
  const sep=(iso:string)=>{const d=day(iso);if(d===lastDay)return null;lastDay=d;return <div className="daysep">{d}</div>;};
  return <>
-  <PersonBar onBack={back} {...(meta?{name:otherName,onOpen:()=>navigate('/n/people/'+meta.other.id),av:<Av name={otherName} seed={meta.other.id} size="sm" src={meta.other.avatar?.src?.thumb}/>}:{})}
+  <PersonBar onBack={wide?undefined:back} {...(meta?{name:otherName,onOpen:()=>navigate('/n/people/'+meta.other.id),av:<Av name={otherName} seed={meta.other.id} size="sm" src={meta.other.avatar?.src?.thumb}/>}:{})}
    mark={meta?<>{meta.other.ages&&meta.other.ages.length>0&&<span className="cw-age">{meta.other.ages.join(' · ')}</span>}{meta.other.photoVerified&&<PhotoBadge/>}
     {state==='active'&&(grants.byMe||grants.withMe)&&<span className="cw-ic" role="img" aria-label={grants.byMe&&grants.withMe?t('fe.chx.pillBoth'):grants.withMe?t('fe.chx.pillTheirs'):t('fe.chx.pillMine')}>{grants.withMe?<LockOpen/>:<Eye/>}</span>}</>:undefined}
    sub={couple?<><CoupleTag>{t('fe.chx.coupleChat')}</CoupleTag>{t('fe.chx.coupleSees')}</>:undefined}>
@@ -677,7 +706,7 @@ function ChatView({id,to}:{id:string,to:string}){
    {text.trim()||!meta||asRequest?<IconBtn icon={SendHorizontal} kind="send" onClick={send} disabled={blocked||!meta||!text.trim()||overMax('chatMessage',text)||!!reqBusy} label={couple?t('fe.fd.sendUs'):t('fe.feed.send')}/>
     :<VoiceRecorder onSend={v=>void deliverVoice(v)} onError={voiceError} disabled={voiceOut?.status==='sending'}/>}
   </div>}
-  {wide&&<ChatsSide current={id}/>}
+  {wide&&<ChatsSide current={id} archived={!!meta?.archived}/>}
   <FilePick ref={gallery} accept={'image/*,'+VIDEO_TYPES.join(',')} onFiles={f=>pick([...f])}/>
   <FilePick ref={camera} accept="image/*" capture="environment" onFiles={f=>pick([...f])}/>
   <FilePick ref={videoPick} accept={VIDEO_TYPES.join(',')} onFiles={f=>pick([...f])}/>
