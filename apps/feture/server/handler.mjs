@@ -10,6 +10,7 @@ import { collectEnqueued } from './outbox.mjs';
 import { actionEntities, liveSignals } from './live.mjs';
 import { SILENT_TOPICS } from './notify.mjs';
 import { SIGNIN_OPEN, noteSignin, sendSigninMail, sessionHash, signinBlocked } from './signin.mjs';
+import { noteAddress } from './email.mjs';
 
 /**
  * `POST /api/fe` — the new command endpoint (docs/server/S2-API.md). Domains register commands;
@@ -61,7 +62,8 @@ export function inputIssues(issues) {
  *   mail?: ((m: {to: string, subject: string, text: string}) => Promise<unknown>) | null, appUrl?: string,
  *   kick?: (() => void) | null}} deps
  *   maintenanceTtl: how long (ms) a warm instance trusts the last read of the maintenance switch;
- *   mail: sends the new-device email (signin.mjs) to the signed-in address — the address is never stored; appUrl: its link;
+ *   mail: sends the new-device email (signin.mjs) to the signed-in address; appUrl: its link (notification email keeps
+ *   the address sealed, server/email.mjs);
  *   kick: asks for a worker tick soon (server/kick.mjs) after a command queued something someone is told about
  */
 export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota, cors, log, signals = null, maintenanceTtl = 15000, mail = null, appUrl = 'https://app.kinhaze.com', kick = null }) {
@@ -144,6 +146,9 @@ export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota
         const notice = await noteSignin(db, account, core, place);
         if (notice) await sendSigninMail(db, mail, header(req, 'x-fit-email').toLowerCase(), account, notice, appUrl);
         await noteSeen(db, account.id, core.sessionId, place);
+        // The signed-in address (Core proved it with the email code), the device's zone and «opened the app now», for
+        // notification email (server/email.mjs): sealed, at most one write every few minutes.
+        await noteAddress(db, pepper, account.id, header(req, 'x-fit-email'), header(req, 'x-fe-tz') || null);
         if (action !== 'platform.maintenance') {
           const m = await maintenance();
           if (m.active && !(await db.query('select 1 from feture.staff_role where account_id = $1 and revoked_at is null limit 1', [account.id])).length) {

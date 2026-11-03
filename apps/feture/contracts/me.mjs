@@ -44,31 +44,45 @@ export const notificationSettings = z.strictObject({
   mode: z.enum(['safe', 'normal']),
   push: z.boolean(),
   email: z.boolean(),
-  digest: z.enum(['instant', 'daily', 'weekly']),
+  // The digest of everything that is not urgent (docs/notifications.md «Email»): every morning, once a week, or never.
+  digest: z.enum(['daily', 'weekly', 'off']),
   quiet: z.strictObject({
     on: z.boolean(),
     from: z.string().regex(/^([01]\d|2[0-3]):(00|30)$/),
     to: z.string().regex(/^([01]\d|2[0-3]):(00|30)$/),
   }),
+  // contracts/notifications.mjs SETTING_CATS: the category of every catalog entry (PUSH_SETTING).
   categories: z.strictObject({
-    match: channel, likes: channel, req: channel, events: channel, replies: channel, follows: channel, groups: channel, news: channel,
+    messages: channel, match: channel, likes: channel, req: channel, decide: channel, pair: channel, events: channel, replies: channel,
+    follows: channel, groups: channel, news: channel,
   }),
   // V21 N02: the one-time «Не пропустить ответ?» offer was shown (never twice, on any device).
   offered: z.boolean().optional(),
 });
 /** K05 defaults (owner 29.10.2026): every category on, push and email; email comes as a daily digest; the lock screen
  * stays discreet («Безопасные»), quiet nights, likes grouped. An account that never saved its settings has no row and
- * follows these; one that saved keeps what it saved (20261029150000_fe_notification_defaults.sql moves untouched
- * category sets to the new defaults). */
+ * follows these; one that saved keeps what it saved (20261103230000_fe_notify_delivery.sql added «Сообщения»,
+ * «Решения», «Пара»). */
 export const NOTIFICATION_DEFAULTS = Object.freeze({
   mode: 'safe', push: true, email: true, digest: 'daily',
   quiet: { on: true, from: '23:00', to: '08:00' },
   categories: {
-    match: { push: true, email: true }, likes: { push: true, email: true }, req: { push: true, email: true },
-    events: { push: true, email: true }, replies: { push: true, email: true }, follows: { push: true, email: true },
-    groups: { push: true, email: true }, news: { push: true, email: true },
+    messages: { push: true, email: true }, match: { push: true, email: true }, likes: { push: true, email: true }, req: { push: true, email: true },
+    decide: { push: true, email: true }, pair: { push: true, email: true }, events: { push: true, email: true }, replies: { push: true, email: true },
+    follows: { push: true, email: true }, groups: { push: true, email: true }, news: { push: true, email: true },
   },
 });
+
+/** The settings in force for a stored row (or none): the defaults, with what the person saved on top; a category the
+ * row predates takes its default. One reading for the screen, push and email.
+ * @param {any} saved @returns {z.infer<typeof notificationSettings>} */
+export function notificationSettingsOf(saved) {
+  const s = saved && typeof saved === 'object' ? saved : {};
+  const digest = ['daily', 'weekly', 'off'].includes(s.digest) ? s.digest : NOTIFICATION_DEFAULTS.digest;
+  return /** @type {any} */ ({ ...NOTIFICATION_DEFAULTS, ...s, digest,
+    quiet: { ...NOTIFICATION_DEFAULTS.quiet, ...(s.quiet ?? {}) },
+    categories: Object.fromEntries(Object.entries(NOTIFICATION_DEFAULTS.categories).map(([k, v]) => [k, { ...v, ...(s.categories?.[k] ?? {}) }])) });
+}
 
 export const meCommands = {
   'catalog.get': { profile: false, write: false, input: z.strictObject({}) },

@@ -109,7 +109,7 @@ const run = {
     for (const t of ['notification', 'push_device', 'notification_settings']) await q.query(`delete from feture.${t} where ${t === 'notification' ? 'recipient_account_id' : 'account_id'} = $1`, [a.id]);
     await q.query(`update feture.staff_role set revoked_at = now() where account_id = $1 and revoked_at is null`, [a.id]);
     await removeFactor(q, a.id);
-    for (const t of ['staff_session', 'session_seen', 'account_signin']) await q.query(`delete from feture.${t} where account_id = $1`, [a.id]);
+    for (const t of ['staff_session', 'session_seen', 'account_signin', 'push_shown', 'email_address', 'email_delivery']) await q.query(`delete from feture.${t} where account_id = $1`, [a.id]);
     if (a.handle) {
       await q.query(`insert into feture.handle_hold (handle, profile_id, until) values (lower($1), $2, now() + make_interval(days => $3))
                      on conflict (handle) do update set until = excluded.until, profile_id = excluded.profile_id`, [a.handle, a.person_profile_id, HOLD_DAYS]);

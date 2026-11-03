@@ -163,22 +163,35 @@ test('settings and visibility: per profile, per account, notification defaults a
 test('notification defaults (owner 29.10.2026): every category on for a new account; a stored set left at the old defaults moves, a chosen one stays', async () => {
   const { pg, db, call, person } = await setup();
   try {
-    await person('ua', 'Alex'); await person('ub', 'Kira'); await person('uc', 'Noa');
+    const people = { alex: await person('ua', 'Alex'), kira: await person('ub', 'Kira'), noa: await person('uc', 'Noa') };
     const n = (await call('ua', null, { action: 'notifications.settings.get' })).settings;
     assert.ok(Object.values(n.categories).every((/** @type {any} */ c) => c.push && c.email));
     assert.deepEqual([n.mode, n.email, n.digest], ['safe', true, 'daily']);
     const old = { match: { push: true, email: true }, likes: { push: true, email: false }, req: { push: true, email: true }, events: { push: true, email: true },
       replies: { push: true, email: false }, follows: { push: true, email: false }, groups: { push: false, email: false }, news: { push: false, email: true } };
-    // Kira only saw the push offer (the app saved the old defaults with it); Noa turned community pushes on herself.
-    await call('ub', null, { action: 'notifications.settings.update', opId: op(), settings: { ...n, categories: old, offered: true } });
-    await call('uc', null, { action: 'notifications.settings.update', opId: op(), settings: { ...n, categories: { ...old, groups: { push: true, email: false } } } });
+    // Rows saved before «Сообщения», «Решения», «Пара» (eight categories, «instant» digests), written as they were stored.
+    // Kira only saw the push offer (the app saved the old defaults with it); Noa turned community pushes on herself;
+    // Alex had requests off for push and instant emails.
+    const store = (/** @type {'alex' | 'kira' | 'noa'} */ who, /** @type {any} */ settings) => db.query(
+      `insert into feture.notification_settings (account_id, settings) values ((select id from feture.account where person_profile_id = $1), $2)
+       on conflict (account_id) do update set settings = excluded.settings`, [people[who], JSON.stringify(settings)]);
+    await store('kira', { ...n, categories: old, offered: true });
+    await store('noa', { ...n, categories: { ...old, groups: { push: true, email: false } } });
+    await store('alex', { ...n, digest: 'instant', categories: { ...old, req: { push: false, email: true } } });
     await pg.exec(readFileSync(new URL('../supabase/migrations/20261029153000_fe_notification_defaults.sql', import.meta.url), 'utf8'));
+    await pg.exec(readFileSync(new URL('../supabase/migrations/20261103230000_fe_notify_delivery.sql', import.meta.url), 'utf8').split('-- Email (server/email.mjs).')[0]
+      .replace(/^alter table feture.push_delivery[^\n]*\n/gm, '').replace(/create table feture.push_shown[\s\S]*?create index push_shown_age[^\n]*\n/, ''));
     const kira = (await call('ub', null, { action: 'notifications.settings.get' })).settings;
     assert.deepEqual([kira.categories, kira.offered], [n.categories, true]);
     const noa = (await call('uc', null, { action: 'notifications.settings.get' })).settings;
     assert.deepEqual(noa.categories.groups, { push: true, email: false });
     assert.deepEqual(noa.categories.news, { push: false, email: true });
-    void db;
+    // «Решения» starts with what requests had, messages and the couple start on, «instant» becomes daily.
+    const alex = (await call('ua', null, { action: 'notifications.settings.get' })).settings;
+    assert.deepEqual([alex.categories.decide, alex.categories.req, alex.categories.messages, alex.categories.pair, alex.digest],
+      [{ push: false, email: true }, { push: false, email: true }, { push: true, email: true }, { push: true, email: true }, 'daily']);
+    // What the screen saves back passes the contract.
+    assert.equal((await call('ua', null, { action: 'notifications.settings.update', opId: op(), settings: alex })).status, 200);
   } finally { await pg.close(); }
 });
 

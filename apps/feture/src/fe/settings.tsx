@@ -3,10 +3,10 @@ import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
-import {Ban,Bell,Calendar,Camera,CircleHelp,Crown,Download,EyeOff,Globe,Heart,Image,KeyRound,LogOut,Mail,MessageCircle,Moon,ShieldCheck,Smartphone,Sparkles,Trash2,Users,X,type LucideIcon} from 'lucide-react';
+import {Ban,Bell,Calendar,Camera,CircleHelp,Crown,Download,EyeOff,Globe,Heart,HeartHandshake,Image,KeyRound,LogOut,Mail,MessageCircle,MessageCirclePlus,Moon,ShieldCheck,Smartphone,Sparkles,Trash2,UserPlus,Users,X,type LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {getThemePreference,setThemePreference,type ThemePreference} from '../theme';
-import {Alert,Bar,Btn,Card,ChannelHeads,ChannelToggle,ChoiceCards,Empty,Field,Group,H,Input,LockPreview,Note,Row,SectionLabel,SelectRow,Skel,Stack,Switch,TimeSpan,ToggleRow,View} from './kit';
+import {Alert,Bar,BRAND,Btn,Card,ChannelHeads,ChannelToggle,ChoiceCards,Empty,Field,Group,H,Input,LockPreview,Note,Row,SectionLabel,SelectRow,Skel,Stack,Switch,TimeSpan,ToggleRow,View} from './kit';
 import {useFe,useLive,useShown} from './session';
 import {useToast} from './toast';
 import {usePremiumStatus} from './account-extra';
@@ -20,10 +20,11 @@ import {usePushDevice,warmPushState} from './push';
 /** V21 K01 (settings), K05 (notifications), K07 (my data and deletion) on /api/fe. */
 const settingsRes=z.object({ok:z.literal(true),settings:z.object({locale:z.string(),chatBlur:z.boolean(),newsOptIn:z.boolean(),showExplicit:z.boolean()})});
 const channel=z.object({push:z.boolean(),email:z.boolean()});
-const notif=z.object({mode:z.enum(['safe','normal']),push:z.boolean(),email:z.boolean(),digest:z.enum(['instant','daily','weekly']),quiet:z.object({on:z.boolean(),from:z.string(),to:z.string()}),
- categories:z.object({match:channel,likes:channel,req:channel,events:channel,replies:channel,follows:channel,groups:channel,news:channel}),offered:z.boolean().optional()});
+const notif=z.object({mode:z.enum(['safe','normal']),push:z.boolean(),email:z.boolean(),digest:z.enum(['daily','weekly','off']),quiet:z.object({on:z.boolean(),from:z.string(),to:z.string()}),
+ categories:z.object({messages:channel,match:channel,likes:channel,req:channel,decide:channel,pair:channel,events:channel,replies:channel,follows:channel,groups:channel,news:channel}),offered:z.boolean().optional()});
 type Notif=z.infer<typeof notif>;
-const notifRes=z.object({ok:z.literal(true),settings:notif});
+// emailState «blocked»: the address bounced or complained, nothing is sent to it (server/email.mjs).
+const notifRes=z.object({ok:z.literal(true),settings:notif,emailState:z.enum(['none','ok','blocked']).optional()});
 const ageRes=z.object({ok:z.literal(true),verified:z.boolean(),check:z.object({state:z.string()}).passthrough().nullable().optional()}).passthrough();
 const photoRes=z.object({ok:z.literal(true),state:z.enum(['none','pending','approved','rejected'])}).passthrough();
 const ok=z.object({ok:z.literal(true)}).passthrough();
@@ -110,14 +111,17 @@ export function SettingsScreen(){
 }
 
 /* ---------- K05 ---------- */
-const CATS:[keyof Notif['categories'],LucideIcon][]=[['match',MessageCircle],['likes',Heart],['req',KeyRound],['events',Calendar],['replies',Image],['follows',Users],['groups',Globe],['news',Sparkles]];
+// The settings categories in contracts/notifications.mjs SETTING_CATS order: every switch here really does something.
+const CATS:[keyof Notif['categories'],LucideIcon][]=[['messages',MessageCircle],['match',HeartHandshake],['likes',Heart],['req',MessageCirclePlus],['decide',KeyRound],['pair',Users],
+ ['events',Calendar],['replies',Image],['follows',UserPlus],['groups',Globe],['news',Sparkles]];
 const HALF_HOURS=Array.from({length:48},(_,i)=>`${String(i>>1).padStart(2,'0')}:${i%2?'30':'00'}`);
 
 export function NotificationSettingsScreen(){
  const {call,peek,state}=useFe();const {t}=useI18n();const toast=useToast();
  const [n,setN]=useShown<Notif|null>('set.notif',()=>peek('notifications.settings.get',{},notifRes,{asAccount:true})?.settings??null);const [error,setError]=useState<unknown>(null);
+ const [blocked,setBlocked]=useShown<boolean>('set.notif.blocked',()=>peek('notifications.settings.get',{},notifRes,{asAccount:true})?.emailState==='blocked');
  const email=state.status==='ready'?state.session.email:'';
- const load=useCallback(()=>{setError(null);call('notifications.settings.get',{},notifRes,{asAccount:true}).then(r=>setN(r.settings)).catch(setError);},[call]);
+ const load=useCallback(()=>{setError(null);call('notifications.settings.get',{},notifRes,{asAccount:true}).then(r=>{setN(r.settings);setBlocked(r.emailState==='blocked');}).catch(setError);},[call,setBlocked]);
  useEffect(()=>{load();},[load]);
  // Every change is saved at once; a refusal brings the screen back to what the server has.
  const last=useRef(0);
@@ -133,16 +137,16 @@ export function NotificationSettingsScreen(){
     <SectionLabel>{t('fe.set.n.lock')}</SectionLabel>
     <ChoiceCards label={t('fe.set.n.lock')} value={n.mode} onChange={k=>void save({...n,mode:k},t('fe.set.n.modeDone.'+k))}
       options={(['normal','safe'] as const).map(k=>[k,t('fe.set.n.mode.'+k),t('fe.set.n.modeNote.'+k)] as const)}/>
-    <LockPreview app="FetUre" icon="/icon.svg" items={safe
-      ?[{title:'FetUre',body:t('fe.set.n.lsSafe'),time:t('fe.ax.sec.now')},{title:'FetUre',body:t('fe.set.n.lsSafe'),time:t('fe.set.n.lsAgo')}]
+    <LockPreview items={safe
+      ?[{title:BRAND,body:t('fe.set.n.lsSafe'),time:t('fe.ax.sec.now')},{title:BRAND,body:t('fe.set.n.lsSafe'),time:t('fe.set.n.lsAgo')}]
       :[{title:t('fe.set.n.lsMsgT'),body:t('fe.set.n.lsMsgB'),time:t('fe.ax.sec.now')},{title:t('fe.set.n.lsLikeT'),body:t('fe.set.n.lsLikeB'),time:t('fe.set.n.lsAgo')}]}/>
     <SectionLabel>{t('fe.set.n.channels')}</SectionLabel>
     <Card list>
      <ToggleRow title={t('fe.set.n.push')} sub={t('fe.set.n.pushSub')} on={n.push} onClick={()=>void save({...n,push:!n.push})}/>
      {n.push&&device.row}
-     <ToggleRow title={t('fe.set.n.email')} sub={email||t('fe.set.noEmail')} on={n.email} onClick={()=>void save({...n,email:!n.email})}/>
+     <ToggleRow title={t('fe.set.n.email')} sub={blocked?t('fe.set.n.emailBlocked'):email||t('fe.set.noEmail')} on={n.email} onClick={()=>void save({...n,email:!n.email})}/>
      {n.email&&<SelectRow row label={t('fe.set.n.digest')} sub={t('fe.set.n.digestSub')} value={n.digest}
-      options={(['instant','daily','weekly'] as const).map(v=>[v,t('fe.set.n.digest.'+v)] as const)} onChange={v=>void save({...n,digest:v})}/>}
+      options={(['daily','weekly','off'] as const).map(v=>[v,t('fe.set.n.digest.'+v)] as const)} onChange={v=>void save({...n,digest:v})}/>}
     </Card>
     {n.push&&device.note}
     <SectionLabel action={<ChannelHeads labels={[t('fe.set.n.colPush'),t('fe.set.n.colEmail')]}/>}>{t('fe.set.n.what')}</SectionLabel>

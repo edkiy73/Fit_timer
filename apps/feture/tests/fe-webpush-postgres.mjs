@@ -115,7 +115,8 @@ test('a like and a message reach only that account\'s browsers, encrypted, with 
     }
     const payload = kira.open(/** @type {any} */ (posts.find(p => p.url === kira.endpoint)).body);
     // Opens the profile of whoever liked, as the profile that was liked (contracts/notifications.mjs destination).
-    assert.deepEqual(payload, { title: 'KINHAZE', body: 'Новое уведомление', url: `/#/n/people/${a.id}?as=${b.id}` });
+    // The tag: one per kind for a noisy type (a newer like replaces this one, nothing else).
+    assert.deepEqual(payload, { title: 'KINHAZE', body: 'Новое уведомление', url: `/#/n/people/${a.id}?as=${b.id}`, tag: 's:like' });
     // The 410 subscription is gone; the phone and the live browser stay.
     assert.deepEqual((await db.query(`select platform from feture.push_device where account_id = $1 order by platform`, [b.account])).map((/** @type {any} */ r) => r.platform), ['android', 'web']);
 
@@ -128,7 +129,8 @@ test('a like and a message reach only that account\'s browsers, encrypted, with 
     await call('ua', a.id, { action: 'chat.send', opId: op(), conversationId: conv, body: 'Секретный текст' });
     await deliver();
     const msg = posts.filter(p => p.url === kira.endpoint).map(p => kira.open(p.body));
-    assert.deepEqual(msg.at(-1), { title: 'Alex', body: 'Секретный текст', url: `/#/n/chats/${conv}?as=${b.id}` });
+    // A chat's own tag: its next message replaces this notification, never another chat's.
+    assert.deepEqual(msg.at(-1), { title: 'Alex', body: 'Секретный текст', url: `/#/n/chats/${conv}?as=${b.id}`, tag: `c:${conv}` });
     assert.ok(posts.every(p => !p.body.toString('latin1').includes('Alex') && !p.body.includes(Buffer.from('Секрет'))));
 
     // Push off in the settings: nothing goes out.

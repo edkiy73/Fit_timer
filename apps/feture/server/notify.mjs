@@ -11,6 +11,7 @@
 
 import { CATALOG, destination, noteKey, pushUrl } from '../contracts/notifications.mjs';
 import { queuePush } from './push.mjs';
+import { queueEmail } from './email.mjs';
 
 /** topic → notification type, the payload key naming the actor profile, and the object. */
 const TYPES = /** @type {Record<string, {type: string, actor?: string, object?: [string, string]}>} */ ({
@@ -177,6 +178,9 @@ async function write(q, item, n, recipients, out) {
         actor: n.actor ?? null, addressee: r.profile, couple: couple?.id ?? null });
       // History only (the catalog's `push.off`: a partner's everyday action in trust mode, a daily summary): no push.
       if (!(key && CATALOG[key].push.off)) await queuePush(q, item, r, key ? CATALOG[key].push.cat : 'other', added[0].id, undefined, { key, url: pushUrl(route) });
+      // Its email by the catalog's mode (server/email.mjs); a new sign-in is mailed at once by server/signin.mjs.
+      if (key && key !== 'signinNew') await queueEmail(q, { account: r.account, ref: `n:${added[0].id}`, mode: CATALOG[key].email, url: pushUrl(route),
+        object: n.objectType && n.objectId ? `${n.type}:${n.objectType}:${n.objectId}` : null });
       const to = await signalTo(q, r); if (to) out.push({ profile: to, kind: 'notify' });
     }
   }
@@ -227,6 +231,13 @@ const DECIDE_OBJECT = /** @type {Record<string, (p: any) => {type: string, id: s
   'tag.requested': p => ({ type: 'post', id: p.postId }),
   'access.requested': p => ({ type: 'accessRequest', id: p.requestId }), 'couple.invited': p => ({ type: 'invite', id: p.inviteId }),
   'link.proposed': p => ({ type: 'link', id: p.linkId }), 'link.changeProposed': p => ({ type: 'link', id: p.linkId }),
+});
+
+/** The id of the «Нужно решить» item each decision topic makes (server/commands/inbox.mjs decisions() `id`). */
+const DECIDE_ID = /** @type {Record<string, (p: any) => unknown>} */ ({
+  'decide.created': p => p.approvalId, 'access.requested': p => p.requestId, 'community.requested': p => p.requestId,
+  'event.applied': p => p.applicationId, 'couple.invited': p => p.inviteId, 'tag.requested': p => p.postId,
+  'link.proposed': p => p.linkId, 'link.changeProposed': p => p.linkId,
 });
 
 /** @param {Db} db @param {(s: Signal) => void} [emit] realtime signals of committed items (S2 §8), sent by the worker */
@@ -377,7 +388,12 @@ export function notifyHandlers(db, emit = () => {}) {
         addressee: r.profile, couple: adr?.kind === 'couple' ? r.profile : null });
       // A partner's proposal names its kind («{name} предлагает опубликовать пост от пары»).
       const sub = { label: adr?.kind === 'couple' ? 'couple' : 'me', ...(item.topic === 'decide.created' ? { approvalKind: p.kind } : {}) };
-      await queuePush(q, item, r, 'decide', undefined, undefined, { key: noteKey(type, sub), url: pushUrl(route) });
+      // The item itself, so the push and the email are checked again when they would go (decided meanwhile: nothing).
+      const id = DECIDE_ID[item.topic]?.(p);
+      const decide = kind && typeof id === 'string' ? { kind, id } : null;
+      const key = noteKey(type, sub);
+      await queuePush(q, item, r, 'decide', undefined, undefined, { key, url: pushUrl(route), decide });
+      if (decide && key) await queueEmail(q, { account: r.account, ref: `d:${kind}:${id}`, object: `decide:${kind}:${id}`, mode: CATALOG[key].email, url: pushUrl(route) });
       if (to) out.push({ profile: to, kind: 'decide' });
     }
   });

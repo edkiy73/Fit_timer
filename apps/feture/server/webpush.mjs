@@ -1,13 +1,13 @@
 // @ts-check
 import { createECDH, createCipheriv, createHmac, createPrivateKey, randomBytes, sign } from 'node:crypto';
-import { routeOk } from '../contracts/notifications.mjs';
+import { routeOk, TAG } from '../contracts/notifications.mjs';
 
 /** Web Push sender (RFC 8030 delivery, RFC 8292 VAPID, RFC 8291 aes128gcm payload encryption) on node:crypto only —
  * no vendor account: the VAPID key pair is ours (FE_VAPID_PUBLIC_KEY / FE_VAPID_PRIVATE_KEY / FE_VAPID_SUBJECT).
  * The browser's push service (Google, Mozilla, Apple, Microsoft) only relays an encrypted blob it cannot read.
  * Native senders (APNs / FCM) live elsewhere and are routed next to this one by `pushTransport` (push.mjs).
  * @typedef {{endpoint: string, p256dh: string, auth: string}} WebSubscription
- * @typedef {{title: string, body: string, data: Record<string, string>}} PushMessage
+ * @typedef {{title: string, body: string, data: Record<string, string>, tag?: string}} PushMessage
  * @typedef {(url: string, init: {method: string, headers: Record<string, string>, body: Uint8Array, signal?: AbortSignal}) => Promise<{status: number}>} Fetch
  */
 
@@ -89,12 +89,16 @@ function vapidKeys(keys) {
   } catch { return null; }
 }
 
-/** The only fields that leave the server: the title and line push.mjs chose and an in-app address that passes the
- * route rule (contracts/notifications.mjs routeOk, the same as public/fe-sw.js). @param {PushMessage} m */
+/** The only fields that leave the server: the title and line push.mjs chose, an in-app address that passes the route
+ * rule (contracts/notifications.mjs routeOk, the same as public/fe-sw.js), the push's tag (one per object: it replaces
+ * only its own earlier notification) and the tags of shown notifications that are no longer actual (`close`).
+ * @param {PushMessage} m */
 export function webPayload(m) {
   const raw = m.data?.url;
   const url = typeof raw === 'string' && raw.startsWith('/#') && routeOk(raw.slice(2)) ? raw : '/#/n/inbox';
-  return { title: m.title, body: m.body, url };
+  const tag = typeof m.tag === 'string' && TAG.test(m.tag) ? m.tag : null;
+  const close = String(m.data?.close ?? '').split(' ').filter(c => TAG.test(c)).slice(0, 8);
+  return { title: m.title, body: m.body, url, ...(tag ? { tag } : {}), ...(close.length ? { close } : {}) };
 }
 
 /** A sender for one subscription token, or null when the keys are unusable.

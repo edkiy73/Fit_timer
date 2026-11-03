@@ -14,6 +14,7 @@ import { settleAvatarsOf } from './commands/photos.mjs';
 import { sweepEphemeral } from './commands/chats.mjs';
 import { notifyHandlers } from './notify.mjs';
 import { pushHandlers, sweepPushSent } from './push.mjs';
+import { queueDigests, sendDueEmails, sweepEmail } from './email.mjs';
 import { noticeHandlers, sweepNotices } from './commands/dsa.mjs';
 import { helpHandlers, sweepPublicHelp } from './commands/support.mjs';
 import { supportEmail } from './support-config.mjs';
@@ -27,7 +28,9 @@ import { sweepSelfies, verificationHandlers } from './commands/premium.mjs';
  * @typedef {import('./db.mjs').Db} Db
  * @typedef {import('./media/scan.mjs').ScanDeps} ScanDeps
  * @typedef {{scan: ScanDeps | null, limit?: number, notifyLimit?: number, push?: import('./push.mjs').Transport | null,
- *   mail?: import('./commands/dsa.mjs').Mailer | null, signals?: import('./realtime.mjs').Signals | null, quick?: boolean}} JobDeps
+ *   mail?: import('./commands/dsa.mjs').Mailer | null, email?: import('./email.mjs').Mailer | null, signals?: import('./realtime.mjs').Signals | null,
+ *   quick?: boolean}} JobDeps
+ *   email: the notification email sender (server/email.mjs; null: emails wait in their queue)
  *   quick: a kicked tick (server/kick.mjs) — the queues only, the sweeps wait for the minute tick
  */
 
@@ -294,7 +297,9 @@ async function tickOnce(db, deps, processed) {
   await drain(db, helpHandlers(db, deps.mail ?? null, supportEmail()), { limit: 10, lockSeconds: 300 });
   // Pushes in a small batch of their own, so a slow provider never outlives the claim.
   const pushes = await drain(db, pushHandlers(db, deps.push ?? null), { limit: 20, lockSeconds: 300 });
-  const done = media + inbox + pushes;
+  // Notification email: what is due (each row leased while it is sent), and the morning digests that are due.
+  const emails = await sendDueEmails(db, deps.email ?? null);
+  const done = media + inbox + pushes + emails;
   if (deps.quick) return { processed: done };
   const expired = await sweepExpiredUploads(db);
   const ledger = await sweepOpLedger(db);
@@ -307,6 +312,8 @@ async function tickOnce(db, deps, processed) {
   await sweepCommunityJoins(db);
   const selfies = await sweepSelfies(db);
   await sweepPushSent(db);
+  if (deps.email) await queueDigests(db);
+  await sweepEmail(db);
   await sweepNotices(db);
   await sweepPublicHelp(db);
   // Finished outbox items stay a week (some «told already today» checks read them), then go.

@@ -12,6 +12,7 @@ import {Av,Btn,Empty,H,Skel} from './kit';
 import {FeSessionProvider,useFe,useLive} from './session';
 import {sweepDrafts} from './drafts';
 import {countsRes} from './inbox';
+import {closeShown,setAppBadge} from './shown-push';
 import {useStaffCounts} from './staff-counts';
 import {Register} from './register';
 import {SignedOut} from './start';
@@ -146,7 +147,8 @@ function useTabBadges(){
  // Staff: what waits in the queues and in support counts on «Я» too (one shared call, only for people with a role).
  const staffN=useStaffCounts(!!c?.staff)?.total??0;
  // The poll asks the server itself (`fresh`): a stale memory showed the previous poll's numbers.
- const pull=useCallback((fresh=false)=>{call('inbox.counts',{},countsRes,{asAccount:true,fresh}).then(setC).catch(()=>{});},[call]);
+ // The app icon badge is the bell plus unread chats; with nothing left, the notifications still shown go too.
+ const pull=useCallback((fresh=false)=>{call('inbox.counts',{},countsRes,{asAccount:true,fresh}).then(r=>{setC(r);const n=r.bell+r.chats;setAppBadge(n);if(!n)closeShown('all');}).catch(()=>{});},[call]);
  useEffect(()=>{pull();const id=setInterval(()=>pull(true),60000);return ()=>clearInterval(id);},[pull]);
  useLive(['counts','chat','decide','notify'],pull);
  return (id:string):number|'dot'|0=>!c?0:id==='people'?c.likes:id==='chats'?((c.chats+c.requests)||(c.newMatches?'dot':0)):id==='me'?c.decide+staffN:0;

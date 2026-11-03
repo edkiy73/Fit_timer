@@ -31,9 +31,12 @@ async function googleAccessToken(){
   return {token:googleToken.token,projectId:a.project_id};
 }
 const stringData=data=>Object.fromEntries(Object.entries(data||{}).filter(([,v])=>v!=null).map(([k,v])=>[String(k),typeof v==='string'?v:JSON.stringify(v)]));
+/** An optional notification tag (FetUre: one per object): a newer push with the same tag replaces the older one on the
+ * phone instead of piling up. Short, plain characters only. */
+const androidTag=tag=>typeof tag==='string'&&/^[0-9A-Za-z:._-]{1,128}$/.test(tag);
 async function sendAndroid(token,message){
   const a=await googleAccessToken();
-  const res=await fetch('https://fcm.googleapis.com/v1/projects/'+encodeURIComponent(a.projectId)+'/messages:send',{method:'POST',headers:{Authorization:'Bearer '+a.token,'Content-Type':'application/json'},body:JSON.stringify({message:{token,notification:{title:String(message.title||productIdentity().name),body:String(message.body||'')},data:stringData(message.data),android:{priority:'high',notification:{sound:'default'}}}})});
+  const res=await fetch('https://fcm.googleapis.com/v1/projects/'+encodeURIComponent(a.projectId)+'/messages:send',{method:'POST',headers:{Authorization:'Bearer '+a.token,'Content-Type':'application/json'},body:JSON.stringify({message:{token,notification:{title:String(message.title||productIdentity().name),body:String(message.body||'')},data:stringData(message.data),android:{priority:'high',notification:{sound:'default',...(androidTag(message.tag)?{tag:message.tag}:{})}}}})});
   if(!res.ok){
     const detail=await res.text().catch(()=> '');
     const invalid=res.status===404 || /UNREGISTERED|registration-token-not-registered/i.test(detail);

@@ -7,6 +7,7 @@ import {connectRealtime,watchWake,type RtConnection,type RtKind,type RtListener}
 import {COUNT_WRITES,legacyKind,readDependsOn,signalEntities,type LiveEntity} from './live';
 import {forgetWebPush,noteAction} from './push-web';
 import {forgetNativePush,onForegroundPush} from './push-native';
+import {closeShown,tagsAfter} from './shown-push';
 import {linksExpireAt} from './kit/media';
 import {PullRefreshRunner} from './kit/pull';
 
@@ -190,7 +191,7 @@ export function FeSessionProvider({children}:{children:ReactNode}){
    return feRequest(session,action,input,schema,{signal:opts.signal,profileId}).then(r=>{noteAction(action);return r;}).finally(()=>dropReads(action))
     // Deciding, answering or reading moves the counters: the bell and the tabs ask again at once (the server tells the
     // other devices).
-    .then(r=>{if(COUNT_WRITES.test(action))deliverRef.current('changed',null,'counts');return r;});
+    .then(r=>{if(COUNT_WRITES.test(action)){deliverRef.current('changed',null,'counts');closeShown(tagsAfter(action,input));}return r;});
   }
   const key=JSON.stringify([session.email,profileId??'',action,input]);
   const cached=readCache.get(key);const hit=usable(cached)?cached:undefined;const age=hit?Date.now()-hit.at:Infinity;
