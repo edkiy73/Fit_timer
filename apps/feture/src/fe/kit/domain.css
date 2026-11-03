@@ -241,6 +241,9 @@
 .v21 .bar h1.k-bar-who .bar-tt{display:flex;flex-direction:column;min-width:0}
 .v21 .bar h1.k-bar-who .bar-t{display:flex;align-items:center;gap:4px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .v21 .bar h1.k-bar-who .bar-t>svg{width:18px;height:18px;flex:none;color:var(--mute)}
+/* `mark`: the name cuts with «…», the badges after it always stay whole (the kit's .nbadge look). */
+.v21 .bar h1.k-bar-who .bar-tn{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.v21 .bar h1.k-bar-who .bar-t>.nbadge{margin-left:0}
 .v21 .bar h1.k-bar-who .sub{margin-top:1px}
 .v21 .main>.bar>h1.k-bar-who .bar-who{pointer-events:auto}
 /* Once the screen scrolls, the fading title lets taps through to the content under it, like every tab's title. */

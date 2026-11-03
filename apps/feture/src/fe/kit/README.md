@@ -26,7 +26,7 @@ A new component or variant ships with its story in the same PR.
 
 | Need | Use |
 |---|---|
-| Screen header | `Bar` (title, back, actions; `lead` — an avatar left of the title, `sub` — a second line, `onTitle` — the title opens a sheet: «Я», owner 29.10.2026, the same header as every tab) / `SubBar` (+ second line). The header floats: glass round buttons over the content, the title fades on scroll; no band, fade or mask over the content (only the phone status-bar strip `--safe-t` is kept clear) |
+| Screen header | `Bar` (title, back, actions; `lead` — an avatar left of the title, `sub` — a second line, `mark` — the name badges right after the title (verified photo, Premium: `NameBadges`; the name cuts, the badges stay), `onTitle` — the title opens a sheet: «Я», owner 29.10.2026, the same header as every tab) / `SubBar` (+ second line). The header floats: glass round buttons over the content, the title fades on scroll; no band, fade or mask over the content (only the phone status-bar strip `--safe-t` is kept clear) |
 | Body | `View`, `Group` (titled section with action and footnote) |
 | Page layout grid | Tokens `--gut` (page gutter, 16), `--page-max` (content column, 680, centred on tablet/desktop), `--block-gap` (12 between blocks of a screen column, applied by kit.css with zero specificity). Screens add no margins, paddings or widths of their own; `check:kit` ratchets `mt*`/`mb*` classes. Check every changed screen at 390, 768 and 1280 px |
 | Row of buttons | `Actions` (`fit`: buttons as wide as their text, wrapping under each other) (equal widths across the column, one gap; `stack` — one under another). Never a `Stack row` of `Btn`s |
