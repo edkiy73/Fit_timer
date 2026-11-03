@@ -25,7 +25,7 @@
  * @typedef {{
  *   kind: RecordKind, filter: Filter, icon: string, tone: '' | 'l' | 'g' | 'v', card: Card,
  *   text: Text, alone?: Text,
- *   push: {cat: PushCat, safe: Text, normal: Text, named: boolean},
+ *   push: {cat: PushCat, safe: Text, normal: Text, named: boolean, off: boolean},
  *   email: Email, subject: Text, dest: string, collapse: Collapse, gone: Text,
  * }} Entry
  */
@@ -58,7 +58,8 @@ export const EMAILS = /** @type {const} */ (['none', 'now', 'now-if-unread', 'di
 export const DECIDE_KINDS = /** @type {const} */ (['pinv', 'req', 'capp', 'eapp', 'link', 'linkChange', 'tag', 'joint']);
 
 /** Raw entries. A key `type.sub` takes everything from `type` and changes what it names. Defaults: a notice, card
- * «news», filter «other», email in the digest, push category «other» with no name, no collapse, «Больше недоступно». */
+ * «news», filter «other», email in the digest, push category «other» with no name, no collapse, «Больше недоступно».
+ * `quiet: true`: history only, no push (a partner's everyday action in trust mode, a daily summary). */
 const RAW = /** @type {Record<string, any>} */ ({
   // ---- people ----
   like: { filter: 'likes', icon: 'Heart', tone: 'l', text: T(['{name} ставит тебе симпатию', '{name} ставят тебе симпатию'], '{name} liked you'),
@@ -67,6 +68,8 @@ const RAW = /** @type {Record<string, any>} */ ({
     cat: 'match', normal: T('Новое совпадение', 'New match'), named: true, dest: 'chat', collapse: 'object', gone: GONE_CHAT },
   chatRequest: { filter: 'matches', icon: 'MessageCircle', tone: 'v', text: T(['{name} хочет начать переписку', '{name} хотят начать переписку'], '{name} wants to start a conversation'),
     cat: 'requests', normal: T('Новый запрос на переписку', 'New message request'), named: true, dest: 'chat', collapse: 'object', gone: GONE_CHAT },
+  chatAccepted: { filter: 'matches', icon: 'MessageCircle', tone: 'g', text: T(['{name} принимает твой запрос на переписку', '{name} принимают твой запрос на переписку'], '{name} accepted your message request'),
+    cat: 'requests', normal: T('Запрос на переписку принят', 'Your message request was accepted'), named: true, dest: 'chat', collapse: 'object', gone: GONE_CHAT },
   follow: { filter: 'follows', icon: 'Users', tone: 'v', text: T(['{name} подписывается на тебя', '{name} подписываются на тебя'], '{name} followed you'),
     cat: 'follows', normal: T('Новый подписчик', 'New follower'), named: true, dest: 'actor', collapse: 'actor', gone: GONE_PROFILE },
   grant: { kind: 'result', filter: 'access', icon: 'LockOpen', tone: 'g', card: 'result',
@@ -167,6 +170,9 @@ const RAW = /** @type {Record<string, any>} */ ({
   communityRejected: { kind: 'result', filter: 'groups', icon: 'Shield', tone: 'l', card: 'result', text: T('Сообщество не прошло проверку', 'The community didn’t pass review'),
     cat: 'groups', normal: T('Сообщество не прошло проверку', 'The community didn’t pass review'), dest: 'community', gone: GONE_COMMUNITY },
   'communityRejected.change': { text: T('Правки сообщества не приняты', 'Community changes not accepted'), normal: T('Правки сообщества не приняты', 'Community changes not accepted') },
+  // New members of an open community: one summary row a day to the hosts, no push (owner decision 7).
+  communityJoins: { filter: 'groups', icon: 'Users', tone: 'v', card: 'summary', text: T('В сообществе новые участники за день', 'New members joined the community in the past day'),
+    cat: 'groups', quiet: true, normal: T('Новые участники в сообществе', 'New community members'), dest: 'community', collapse: 'object', gone: GONE_COMMUNITY },
   communityClosed: { filter: 'groups', icon: 'Users', tone: '', text: T('Сообщество закрыто', 'The community was closed'),
     cat: 'groups', normal: T('Сообщество закрыто', 'The community was closed'), dest: 'community', gone: T('Сообщество закрыто', 'The community was closed') },
   discussionRemoved: { filter: 'groups', icon: 'Trash2', tone: 'l', card: 'safety', text: T('Ведущие убрали твоё обсуждение', 'Hosts removed your discussion'),
@@ -199,6 +205,8 @@ const RAW = /** @type {Record<string, any>} */ ({
     normal: T('Пара создана', 'Your couple is set up'), dest: 'couple', gone: GONE_PAIR },
   'pair.declined': { kind: 'result', filter: 'pair', icon: 'Users', tone: '', card: 'result', text: T('Приглашение в пару отклонили', 'Your couple invitation was declined'),
     normal: T('Приглашение в пару отклонили', 'Your couple invitation was declined'), dest: 'couple' },
+  'pair.inviteExpired': { kind: 'result', filter: 'pair', icon: 'Users', tone: '', card: 'result', text: T('Приглашение в пару истекло — на него не ответили', 'Your couple invitation expired without an answer'),
+    normal: T('Приглашение в пару истекло', 'Your couple invitation expired'), dest: 'couple' },
   'pair.deleted': { filter: 'pair', icon: 'Users', tone: '', text: T('{couple} · Пара удалена', '{couple} · The couple was deleted'),
     normal: T('Пара удалена', 'The couple was deleted'), email: 'now-if-unread', dest: 'couple', gone: GONE_PAIR },
   // One pause, one row per side (couples.mjs couple.stop): not a «сузил видимость» next to it.
@@ -222,19 +230,25 @@ const RAW = /** @type {Record<string, any>} */ ({
   'pair.decided.expired': { tone: '', text: T('{couple} · Срок истёк', '{couple} · The time ran out'), normal: T('Срок истёк', 'The time ran out') },
   'pair.decided.superseded': { tone: '', text: T('{couple} · Заменено новым предложением', '{couple} · Replaced by a newer proposal'), normal: T('Заменено новым предложением', 'Replaced by a newer proposal') },
   'pair.decided.stale': { tone: '', text: T('{couple} · Не применено: пока ждали, всё изменилось', '{couple} · Not applied: it changed while waiting'), normal: T('Изменение устарело', 'The change is out of date') },
-  // A partner's action for the couple: in the couple's history, never by email (owner 03.11.2026).
+  // A partner's action for the couple in trust mode: in the couple's history, never by email (owner 03.11.2026). A push
+  // only for what matters — a post, an event answer or application, access, a link; everyday actions stay quiet.
   'pair.acted': { filter: 'pair', icon: 'Users', tone: 'v', text: T('{couple} · Партнёр сделал действие от пары', '{couple} · Your partner acted for the couple'),
-    normal: T('Партнёр сделал действие от пары', 'Your partner acted for the couple'), email: 'none', dest: 'couple', collapse: 'type', gone: GONE_PAIR },
-  'pair.acted.follow': { text: T('{couple} · Партнёр подписался от пары', '{couple} · Your partner followed someone for the couple'), dest: 'couple' },
+    normal: T('Партнёр сделал действие от пары', 'Your partner acted for the couple'), quiet: true, email: 'none', dest: 'couple', collapse: 'type', gone: GONE_PAIR },
+  'pair.acted.follow': { text: T('{couple} · Партнёр подписался от пары', '{couple} · Your partner followed someone for the couple'), dest: 'target' },
   'pair.acted.photos': { text: T('{couple} · Партнёр добавил фото пары', '{couple} · Your partner added couple photos'), dest: 'coupleGallery' },
   'pair.acted.album': { text: T('{couple} · Партнёр изменил альбом пары', '{couple} · Your partner changed the couple’s album'), dest: 'coupleGallery' },
-  'pair.acted.post': { text: T('{couple} · Партнёр опубликовал от пары', '{couple} · Your partner posted for the couple'), dest: 'myPosts' },
+  'pair.acted.post': { text: T('{couple} · Партнёр опубликовал от пары', '{couple} · Your partner posted for the couple'), quiet: false, dest: 'myPosts' },
+  'pair.acted.event': { text: T('{couple} · Партнёр ответил на событие от пары', '{couple} · Your partner answered an event for the couple'), quiet: false, dest: 'event', gone: GONE_EVENT },
+  'pair.acted.eventApply': { text: T('{couple} · Партнёр подал заявку на событие от пары', '{couple} · Your partner applied to an event for the couple'), quiet: false, dest: 'event', gone: GONE_EVENT },
+  'pair.acted.community': { text: T('{couple} · Партнёр вступил в сообщество от пары', '{couple} · Your partner joined a community for the couple'), dest: 'community', gone: GONE_COMMUNITY },
+  'pair.acted.access': { text: T('{couple} · Партнёр включил приватную часть пары', '{couple} · Your partner turned on the couple’s private part'), quiet: false, dest: 'access' },
   'pair.acted.post_archived': { text: T('{couple} · Партнёр убрал публикацию пары в архив', '{couple} · Your partner archived a couple post'), dest: 'myPosts' },
   'pair.acted.chatRequest': { text: T('{couple} · Партнёр отправил запрос на переписку от пары', '{couple} · Your partner sent a chat request for the couple'), dest: 'chats' },
   'pair.acted.like': { text: T('{couple} · Партнёр лайкнул профиль от пары', '{couple} · Your partner liked a profile for the couple'), dest: 'target' },
   'pair.acted.location': { text: T('{couple} · Партнёр изменил город пары', '{couple} · Your partner changed the couple’s city'), dest: 'couple' },
   'pair.acted.block': { text: T('{couple} · Партнёр заблокировал профиль от пары', '{couple} · Your partner blocked a profile for the couple'), dest: 'blocked' },
-  'pair.acted.link': { text: T('{couple} · Партнёр связал профиль с парой', '{couple} · Your partner linked a profile to the couple'), dest: 'links' },
+  'pair.acted.link': { text: T('{couple} · Партнёр связал профиль с парой', '{couple} · Your partner linked a profile to the couple'), quiet: false, dest: 'links' },
+  'pair.acted.linkShown': { text: T('{couple} · Партнёр показал связь пары шире', '{couple} · Your partner showed a couple link more widely'), quiet: false, dest: 'links' },
   'pair.acted.profile': { text: T('{couple} · Партнёр изменил профиль пары', '{couple} · Your partner edited the couple’s profile'), dest: 'me' },
   'pair.acted.interests': { text: T('{couple} · Партнёр изменил интересы пары', '{couple} · Your partner changed the couple’s interests'), dest: 'interests' },
   'pair.acted.discoverMode': { text: T('{couple} · Партнёр изменил показ пары в Знакомствах', '{couple} · Your partner changed how the couple shows in Discover'), dest: 'visibility' },
@@ -276,6 +290,8 @@ const RAW = /** @type {Record<string, any>} */ ({
     cat: 'security', safe: T('Вход с нового устройства', 'New device signed in'), normal: T('Вход с нового устройства', 'New device signed in'), email: 'now', dest: 'security' },
   supportReply: { filter: 'other', icon: 'LifeBuoy', tone: 'v', text: T('Поддержка ответила на твоё обращение', 'Support answered your request'),
     normal: T('Поддержка ответила', 'Support answered'), email: 'now-if-unread', dest: 'help' },
+  supportClosed: { filter: 'other', icon: 'LifeBuoy', tone: '', text: T('Обращение закрыто', 'Your request was closed'),
+    normal: T('Обращение закрыто', 'Your request was closed'), dest: 'help' },
   datingLaunched: { filter: 'other', icon: 'Heart', tone: 'v', text: T('Знакомства открылись — можно смотреть анкеты', 'Discover is open — you can look at profiles now'),
     normal: T('Знакомства открылись', 'Discover is open'), dest: 'people' },
 
@@ -359,7 +375,7 @@ function build(o) {
   return Object.freeze({
     kind: o.kind ?? 'notice', filter: o.filter ?? 'other', icon: o.icon ?? 'Bell', tone: o.tone ?? '', card: o.card ?? 'news',
     text: o.text, ...(o.alone ? { alone: o.alone } : {}),
-    push: Object.freeze({ cat: o.cat ?? 'other', safe: o.safe ?? SAFE_PUSH, normal: o.normal, named: !!o.named }),
+    push: Object.freeze({ cat: o.cat ?? 'other', safe: o.safe ?? SAFE_PUSH, normal: o.normal, named: !!o.named, off: !!o.quiet }),
     email: o.email ?? 'digest', subject: o.subject ?? o.normal, dest: o.dest ?? 'inbox', collapse: o.collapse ?? 'none', gone: o.gone ?? GONE,
   });
 }

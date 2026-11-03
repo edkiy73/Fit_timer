@@ -154,3 +154,18 @@ test('public help: anyone can write without an account; validated; mailed once t
     assert.equal(await sweepPublicHelp(db), 1);
   } finally { await pg.close(); }
 });
+
+test('stage 4: a ticket closed without an answer says «Обращение закрыто»; a closing answer says only that support answered', async () => {
+  const { pg, call, person, deliver } = await world();
+  try {
+    await person('ua', 'Alex');
+    const t1 = (await call('ua', null, { action: 'support.create', opId: op(), topic: 'account', body: 'Не приходит код из письма' })).ticket.id;
+    const t2 = (await call('ua', null, { action: 'support.create', opId: op(), topic: 'account', body: 'Второй вопрос про профиль' })).ticket.id;
+    assert.equal((await call('us', null, { action: 'staff.supportReply', opId: op(), ticketId: t1, close: true })).state, 'closed');
+    assert.equal((await call('us', null, { action: 'staff.supportReply', opId: op(), ticketId: t2, body: 'Всё исправили, закрываю.', close: true })).state, 'closed');
+    await deliver();
+    const items = (await call('ua', null, { action: 'notifications.list' })).items;
+    assert.deepEqual(items.filter((/** @type {any} */ x) => x.type === 'supportClosed').map((/** @type {any} */ x) => x.data.ticketId), [t1]);
+    assert.deepEqual(items.filter((/** @type {any} */ x) => x.type === 'supportReply').map((/** @type {any} */ x) => x.data.ticketId), [t2]);
+  } finally { await pg.close(); }
+});

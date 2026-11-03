@@ -61,6 +61,15 @@ export function needsPartner(acting, kind) {
   return acting.kind === 'couple' && !!acting.partnerAccountId && (def.always === true || acting.partnerApproves);
 }
 
+/** A couple's action applied at once (trust mode): a line in the partner's couple history (notify.mjs `pair.acted`; the
+ * catalog decides whether it also pushes — docs/notifications.md «Push»). Nothing for a person or a couple without a
+ * partner. `extra`: the ids the row opens (an event, a community, a profile as `target`).
+ * @param {Q} q @param {Acting} acting @param {string} what @param {Record<string, unknown>} [extra] */
+export async function partnerActed(q, acting, what, extra = {}) {
+  if (acting.kind !== 'couple' || !acting.partnerAccountId) return;
+  await enqueue(q, 'couple.changed', acting.profileId, { ...extra, for: acting.partnerAccountId, what });
+}
+
 const COLUMNS = `a.id, a.profile_id, a.kind, a.target_type, a.target_id, a.change, a.summary, a.state, a.requested_by, a.base_rev, a.comment,
   a.outcome, a.couple_name, a.decided_by, a.created_at, a.expires_at, a.decided_at`;
 

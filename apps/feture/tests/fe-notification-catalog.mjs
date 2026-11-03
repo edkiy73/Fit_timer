@@ -58,9 +58,13 @@ test('subtypes with their own words are picked from the data', () => {
   // Every `what` a partner's action for the couple can carry (the enqueue calls, and every visibility setting).
   const whats = new Set(Object.keys(PROFILE_SETTINGS));
   for (const f of ['server/commands/social.mjs', 'server/commands/photos.mjs', 'server/commands/people.mjs', 'server/commands/posts.mjs', 'server/commands/chats.mjs',
-    'server/commands/me.mjs', 'server/commands/discover.mjs', 'server/commands/gallery.mjs', 'server/commands/couples.mjs']) {
+    'server/commands/me.mjs', 'server/commands/discover.mjs', 'server/commands/gallery.mjs', 'server/commands/couples.mjs', 'server/commands/events.mjs',
+    'server/commands/access.mjs', 'server/commands/communities.mjs']) {
     for (const m of read(f).matchAll(/'couple\.changed'[^\n]*what: '(\w+)'/g)) whats.add(m[1]);
+    // The trust-mode helper (server/approvals.mjs partnerActed) names its `what` second.
+    for (const m of read(f).matchAll(/partnerActed\(q, \w+, '(\w+)'/g)) whats.add(m[1]);
   }
+  for (const w of ['event', 'eventApply', 'community', 'access', 'linkShown']) assert.ok(whats.has(w), w);
   assert.ok(whats.size >= 20, [...whats].join());
   for (const w of whats) sub('pair.acted', { what: w }, 'pair.acted.' + w);
   for (const s of ['approved', 'rejected', 'cancelled', 'expired', 'superseded', 'stale']) sub('pair.decided', { state: s }, 'pair.decided.' + s);
@@ -103,12 +107,19 @@ test('every entry is complete: texts, card, destination, push, email; no known t
   for (const t of ['signinNew', 'profileSuspended', 'profileRestricted', 'contentRemoved', 'appealDecided', 'premiumGranted', 'premiumRevoked']) assert.equal(CATALOG[t].email, 'now', t);
   for (const t of ['supportReply', 'eventCancelled', 'eventChanged', 'eventApplicationApproved', 'eventApplicationDeclined', ...DECIDE_KINDS.map(k => 'decide.' + k)]) assert.equal(CATALOG[t].email, 'now-if-unread', t);
   for (const t of ['message', 'pair.acted', 'pair.acted.post']) assert.equal(CATALOG[t].email, 'none', t);
+  // A partner's action in trust mode pushes only when it matters (docs/notifications.md «Push»); summaries never push.
+  const pushing = Object.keys(CATALOG).filter(k => k.startsWith('pair.acted') && !CATALOG[k].push.off).sort();
+  assert.deepEqual(pushing, ['pair.acted.access', 'pair.acted.event', 'pair.acted.eventApply', 'pair.acted.link', 'pair.acted.linkShown', 'pair.acted.post']);
+  assert.equal(CATALOG.communityJoins.push.off, true);
+  for (const t of ['chatAccepted', 'pair.inviteExpired', 'supportClosed']) assert.equal(CATALOG[t].push.off, false, t);
 });
 
 test('the migration fills the record kind the catalog says', () => {
   const sql = read('supabase/migrations/20261103120000_fe_notification_shape.sql');
   const listed = new Set([...sql.slice(sql.indexOf('when type in')).matchAll(/'([a-zA-Z.]+)'/g)].map(m => m[1]).filter(t => !['result', 'notice'].includes(t)));
-  const results = new Set([...writtenTypes()].filter(t => CATALOG[t].kind === 'result'));
+  // Types added after that migration had no rows to fill.
+  const later = ['pair.inviteExpired'];
+  const results = new Set([...writtenTypes()].filter(t => CATALOG[t].kind === 'result' && !later.includes(t)));
   assert.deepEqual([...listed].sort(), [...results].sort());
 });
 

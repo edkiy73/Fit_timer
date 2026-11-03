@@ -133,7 +133,8 @@ const run = {
       [input.profileId, acting.profileId]);
     if (rows.length && !told) {
       await enqueue(q, 'follow.created', input.profileId, { from: acting.profileId });
-      if (acting.kind === 'couple') await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: 'follow' });
+      // The partner's row opens that person (`target`), not the couple's own page.
+      if (acting.kind === 'couple') await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: 'follow', target: input.profileId });
     }
     return { following: true };
   },

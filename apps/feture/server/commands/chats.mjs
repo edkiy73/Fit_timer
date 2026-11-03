@@ -212,6 +212,8 @@ function requestView(c, profileId) {
 async function acceptRequest(q, c, acting) {
   await q.query(`update feture.conversation set request_state = 'accepted', answered_at = now() where id = $1`, [c.id]);
   c.request_state = 'accepted';
+  // Its sender is told (owner decision 7): a row that opens the chat.
+  await enqueue(q, 'chat.accepted', c.request_from, { from: acting.profileId, conversationId: c.id, by: acting.accountId });
   const [r] = await q.query(
     `update feture.conversation_member set last_read_seq = $3 where conversation_id = $1 and account_id = $2 and last_read_seq < $3 returning 1`,
     [c.id, acting.accountId, c.last_seq]);
@@ -473,7 +475,7 @@ const run = {
     // Opening the chat (its first page) reads its «это взаимно» and request rows in the inbox (docs/notifications.md
     // «Счётчики»); the bell and my other devices update.
     if (input.beforeSeq === undefined && input.afterSeq === undefined
-      && await readAbout(q, { account: viewer.accountId, types: ['match', 'chatRequest'], objectType: 'conversation', objectId: c.id })) {
+      && await readAbout(q, { account: viewer.accountId, types: ['match', 'chatRequest', 'chatAccepted'], objectType: 'conversation', objectId: c.id })) {
       signal(viewer.profileId, 'changed', 'counts');
       signal(viewer.profileId, 'notify');
     }

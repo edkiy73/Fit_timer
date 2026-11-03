@@ -8,10 +8,13 @@ import { social } from '../server/commands/social.mjs';
 import { posts } from '../server/commands/posts.mjs';
 import { staff } from '../server/commands/staff.mjs';
 import { moderation } from '../server/commands/moderation.mjs';
+import { inbox } from '../server/commands/inbox.mjs';
+import { notifyHandlers } from '../server/notify.mjs';
+import { drain } from '../server/outbox.mjs';
 import { DISPUTE_LIMITS as L } from '../contracts/posts.mjs';
 import { setup as baseSetup, op, photoVerified as verified } from './fe-helpers.mjs';
 
-const setup = () => baseSetup({ commands: { ...platform, ...me, ...social, ...posts, ...staff, ...moderation } });
+const setup = () => baseSetup({ commands: { ...platform, ...me, ...social, ...posts, ...staff, ...moderation, ...inbox } });
 const draft = (body, extra = {}) => ({ type: 'post', body, audience: 'all', inFeed: true, topics: [], mediaIds: [], interests: [], tags: [], ...extra });
 
 async function asset(db, profileId, purpose = 'post') {
@@ -208,5 +211,32 @@ test('a dispute card carries the whole post and its files, and staff may open th
     // Decided → nothing to look at any more.
     await call('uo', null, { action: 'staff.disputeDecide', opId: op(), postId: post, restore: true, note: '' });
     assert.equal((await call('uo', null, { action: 'staff.mediaView', assetId: item.evidence[0].assetId })).status, 409);
+  } finally { await pg.close(); }
+});
+
+test('stage 4: the claimant hears the decision even when the post is gone; the row keeps the result, not the post', async () => {
+  const { pg, db, call, person } = await setup();
+  try {
+    await staffSetup(db, person);
+    const a = await person('ua', 'Alex'), v = await person('uv', 'Vera'), n = await person('un', 'Nina');
+    await verified(db, v, 40);
+    const p = await photoPost(call, db, 'ua', a, 'Озеро');
+    assert.equal((await object(call, 'uv', v, p)).hidden, true);
+    // A claim that only reached the queue; the author deletes the post before the result is delivered.
+    const q = await photoPost(call, db, 'ua', a, 'Пляж');
+    assert.equal((await object(call, 'un', n, q)).queued, true);
+    assert.equal((await call('uo', null, { action: 'staff.disputeDecide', opId: op(), postId: p, restore: false })).state, 'removed');
+    assert.equal((await call('uo', null, { action: 'staff.disputeDecide', opId: op(), postId: q, restore: true })).state, 'published');
+    assert.equal((await call('ua', a, { action: 'post.delete', opId: op(), postId: q })).status, 200);
+    while ((await drain(db, notifyHandlers(db), { limit: 50 })) > 0) { /* until empty */ }
+    const got = (await call('uv', null, { action: 'notifications.list' })).items.find((/** @type {any} */ x) => x.type === 'disputeResolved');
+    assert.ok(got, 'the claimant is told although the post was removed');
+    assert.deepEqual([got.data.outcome, got.object.type, got.object.gone], ['removed', 'post', true]);
+    assert.ok(!('title' in got.object), 'nothing of the material');
+    const other = (await call('un', null, { action: 'notifications.list' })).items.find((/** @type {any} */ x) => x.type === 'disputeResolved');
+    assert.deepEqual([other?.data.outcome, other?.object.gone], ['restored', true], 'her own decision; the deleted post stays closed');
+    assert.equal((await call('un', n, { action: 'post.get', postId: q })).status, 404);
+    // The author's own removal notice too.
+    assert.ok((await call('ua', null, { action: 'notifications.list' })).items.some((/** @type {any} */ x) => x.type === 'contentRemoved'));
   } finally { await pg.close(); }
 });

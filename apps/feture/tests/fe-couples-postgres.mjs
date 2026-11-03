@@ -221,3 +221,26 @@ test('couple nick (owner 29.10.2026): suggested from the partners’ nicks, uniq
     assert.ok(b);
   } finally { await pg.close(); }
 });
+
+test('stage 4: an invitation nobody answered expires and its inviter is told once — by the job or by the next read', async () => {
+  const { pg, db, call, person } = await setup();
+  try {
+    await person('ua', 'Alex'); await person('ub', 'Kira'); await person('uc', 'Noa'); await person('ud', 'Dana');
+    const i1 = await call('ua', null, { action: 'couple.invite', opId: op(), handle: 'Kira' });
+    const i2 = await call('uc', null, { action: 'couple.invite', opId: op(), handle: 'Dana' });
+    await db.query(`update feture.couple_invite set expires_at = now() - interval '1 minute' where id = any($1)`, [[i1.id, i2.id]]);
+    // Noa reads her invitations first: hers expires there; the job takes Alex's. Each inviter is told once.
+    await call('uc', null, { action: 'couple.invites' });
+    await runJobs(db, { scan: null });
+    await runJobs(db, { scan: null });
+    const rows = await db.query(
+      `select a.person_profile_id, n.object_id, n.kind from feture.notification n join feture.account a on a.id = n.recipient_account_id
+       where n.type = 'pair.inviteExpired' order by n.created_at`);
+    assert.equal(rows.length, 2, JSON.stringify(rows));
+    assert.deepEqual(rows.map(r => r.object_id).sort(), [i1.id, i2.id].sort());
+    assert.ok(rows.every(r => r.kind === 'result'));
+    const inviters = (await db.query(`select id from feture.profile where handle in ('Alex', 'Noa')`)).map(r => r.id).sort();
+    assert.deepEqual(rows.map(r => r.person_profile_id).sort(), inviters, 'only the inviters');
+    assert.equal((await call('ua', null, { action: 'couple.invites' })).outgoing[0].state, 'expired');
+  } finally { await pg.close(); }
+});

@@ -6,6 +6,9 @@ import { me } from '../server/commands/me.mjs';
 import { social } from '../server/commands/social.mjs';
 import { inbox } from '../server/commands/inbox.mjs';
 import { people } from '../server/commands/people.mjs';
+import { notifyHandlers } from '../server/notify.mjs';
+import { drain } from '../server/outbox.mjs';
+import { noteKey } from '../contracts/notifications.mjs';
 import { setup as baseSetup, op } from './fe-helpers.mjs';
 
 const setup = () => baseSetup({ commands: { ...platform, ...me, ...social, ...inbox, ...people } });
@@ -183,5 +186,27 @@ test('links.mine and link.remove: own links by direction, either side removes, o
     assert.equal((await call('ua', a, { action: 'link.remove', opId: op(), linkId: incoming.id })).status, 404);
     assert.deepEqual((await call('ua', a, { action: 'links.mine' })).incoming, []);
     assert.equal((await call('uc', c, { action: 'link.remove', opId: op(), linkId: l2.id })).removed, true);
+  } finally { await pg.close(); }
+});
+
+test('stage 4: a change of link kind — a «no» keeps the link exactly as it was, a «yes» changes it; the proposer hears which', async () => {
+  const { pg, call, person, db } = await setup();
+  try {
+    const a = await person('ua', 'Alex'), b = await person('ub', 'Kira');
+    const l = await call('ua', a, { action: 'link.propose', opId: op(), profileId: b, kind: 'ds', mySide: 'dom' });
+    await call('ub', b, { action: 'link.answer', opId: op(), linkId: l.id, accept: true, vis: 'all' });
+    const row = async () => (await db.query('select kind, a_side, b_side, state, change from feture.profile_link where id = $1', [l.id]))[0];
+    const before = await row();
+    await call('ua', a, { action: 'link.proposeChange', opId: op(), linkId: l.id, kind: 'friend' });
+    assert.equal((await call('ub', b, { action: 'link.answerChange', opId: op(), linkId: l.id, accept: false })).accepted, false);
+    assert.deepEqual(await row(), { ...before, change: null }, 'declined: kind and sides stay');
+    assert.equal((await call('ub', b, { action: 'link.answerChange', opId: op(), linkId: l.id, accept: true })).rule, 'no_change', 'nothing left to accept');
+    await call('ua', a, { action: 'link.proposeChange', opId: op(), linkId: l.id, kind: 'friend' });
+    await call('ub', b, { action: 'link.answerChange', opId: op(), linkId: l.id, accept: true });
+    assert.deepEqual([(await row()).kind, (await row()).a_side, (await row()).b_side], ['friend', null, null]);
+    while ((await drain(db, notifyHandlers(db), { limit: 50 })) > 0) { /* until empty */ }
+    const told = (await call('ua', null, { action: 'notifications.list' })).items.filter((/** @type {any} */ x) => x.type === 'linkChanged');
+    assert.deepEqual(told.map((/** @type {any} */ x) => noteKey(x.type, x.data)).sort(), ['linkChanged.no', 'linkChanged.yes']);
+    assert.ok(told.every((/** @type {any} */ x) => x.object.type === 'link' && x.object.id === l.id));
   } finally { await pg.close(); }
 });

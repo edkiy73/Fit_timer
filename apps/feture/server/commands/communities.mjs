@@ -7,7 +7,7 @@ import { communitiesCommands } from '../../contracts/communities.mjs';
 import { fail, isUniqueViolation } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { sha256 } from '../hash.mjs';
-import { needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
+import { needsPartner, partnerActed, registerApprovalKind, requestApproval } from '../approvals.mjs';
 import { journal, requireStaff } from './staff.mjs';
 import { mediaDto } from '../media/assets.mjs';
 import { CREATED_KEYS, pageInfo, plainRows, queuePageSql } from '../queue-page.mjs';
@@ -162,12 +162,32 @@ async function createCommunity(q, ownerProfileId, accountId, f) {
   return { id: c.id, state: 'in_review' };
 }
 
-/** @param {Q} q @param {string} communityId @param {string} profileId @param {string} accountId */
-async function joinNow(q, communityId, profileId, accountId) {
+/** Membership now. The hosts hear about new members of an open community in one daily summary (jobs.mjs
+ * sweepCommunityJoins reads `joined_at`), never one by one. @param {Q} q @param {string} communityId @param {string} profileId */
+async function joinNow(q, communityId, profileId) {
   await q.query(
     `insert into feture.community_member (community_id, profile_id) values ($1, $2)
      on conflict (community_id, profile_id) do update set state = 'active', joined_at = now(), removed_at = null`, [communityId, profileId]);
-  await enqueue(q, 'community.joined', profileId, { communityId, by: accountId });
+}
+
+/** A request to join that the hosts decide on, for the direct path and an approved couple proposal alike: every current
+ * owner and host who may decide gets one «Нужно решить» task (a push and a live signal) — one per account, even when an
+ * account is in two host profiles, and never the requester's own people (they do not decide on their own request).
+ * @param {Q} q @param {string} communityId @param {string} profileId @param {string} answer @param {string} accountId */
+async function requestToJoin(q, communityId, profileId, answer, accountId) {
+  const [r] = await q.query(`insert into feture.community_request (community_id, profile_id, answer, acted_by) values ($1, $2, $3, $4) returning id`,
+    [communityId, profileId, answer, accountId]);
+  const hosts = await q.query(
+    `select distinct on (pm.account_id) pm.account_id, cm.profile_id from feture.community_member cm
+     join feture.profile_member pm on pm.profile_id = cm.profile_id and pm.state = 'active'
+     where cm.community_id = $1 and cm.state = 'active' and cm.role in ('owner', 'host')
+       and not exists (select 1 from feture.profile_member x where x.profile_id = $2 and x.account_id = pm.account_id and x.state = 'active')
+     order by pm.account_id, case cm.role when 'owner' then 0 else 1 end, cm.profile_id`, [communityId, profileId]);
+  /** @type {Map<string, string[]>} */
+  const byProfile = new Map();
+  for (const h of hosts) byProfile.set(h.profile_id, [...(byProfile.get(h.profile_id) ?? []), h.account_id]);
+  for (const [host, accounts] of byProfile) await enqueue(q, 'community.requested', host, { communityId, requestId: r.id, from: profileId, for: accounts });
+  return /** @type {string} */ (r.id);
 }
 
 registerApprovalKind('community.create', {
@@ -204,8 +224,8 @@ registerApprovalKind('community.join', {
     const m = await membership(q, c.communityId, row.profile_id);
     if (m?.state === 'active') fail(409, 'conflict');
     if (await declinedUntil(q, c.communityId, row.profile_id)) fail(409, 'conflict', { rule: 'declined_recently' });
-    if (cm.privacy === 'open' && !banned) await joinNow(q, c.communityId, row.profile_id, row.requested_by);
-    else await q.query(`insert into feture.community_request (community_id, profile_id, answer, acted_by) values ($1, $2, $3, $4)`, [c.communityId, row.profile_id, c.answer, row.requested_by]);
+    if (cm.privacy === 'open' && !banned) await joinNow(q, c.communityId, row.profile_id);
+    else await requestToJoin(q, c.communityId, row.profile_id, cm.privacy === 'open' ? '' : c.answer, row.requested_by);
   },
   version: async (q, row) => {
     const [r] = await q.query(
@@ -400,15 +420,14 @@ const run = {
     if (needsPartner(acting, 'community.join')) {
       return { pending: await requestApproval(q, acting, { kind: 'community.join', targetType: 'community', targetId: c.id, change: { communityId: c.id, answer: input.answer, inviteHash: input.invite ? sha256(input.invite).toString('hex') : null }, summary: [c.name] }) };
     }
+    // A couple's join in trust mode goes into the partner's couple history.
+    await partnerActed(q, acting, 'community', { communityId: c.id });
     if (c.privacy === 'open' && !banned) {
-      await joinNow(q, c.id, acting.profileId, acting.accountId);
+      await joinNow(q, c.id, acting.profileId);
       return { state: 'member' };
     }
     // Closed, hidden, or removed before (a ban): a request the hosts decide on.
-    const [r] = await q.query(`insert into feture.community_request (community_id, profile_id, answer, acted_by) values ($1, $2, $3, $4) returning id`,
-      [c.id, acting.profileId, c.privacy === 'open' ? '' : input.answer, acting.accountId]);
-    await enqueue(q, 'community.requested', c.owner_profile_id, { communityId: c.id, requestId: r.id });
-    return { state: 'requested', id: r.id };
+    return { state: 'requested', id: await requestToJoin(q, c.id, acting.profileId, c.privacy === 'open' ? '' : input.answer, acting.accountId) };
   },
 
   async 'community.requestWithdraw'(q, { acting: a, input }) {
@@ -448,7 +467,7 @@ const run = {
     if (own) fail(403, 'forbidden'); // hosts do not decide on their own requests
     await q.query(`update feture.community_request set state = $2, decided_by = $3, decided_at = now(), rev = rev + 1 where id = $1`,
       [r.id, input.approve ? 'approved' : 'declined', acting.accountId]);
-    if (input.approve) await joinNow(q, r.community_id, r.profile_id, acting.accountId);
+    if (input.approve) await joinNow(q, r.community_id, r.profile_id);
     // A decided task reads its own inbox row (docs/notifications.md «Счётчики»).
     await readAbout(q, { profile: acting.profileId, kind: 'task', objectType: 'request', objectId: r.id });
     await enqueue(q, input.approve ? 'community.approved' : 'community.declined', r.profile_id, { communityId: r.community_id });

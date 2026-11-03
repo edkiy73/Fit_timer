@@ -25,7 +25,7 @@ const CHECK = /** @type {const} */ (['check', 'profile', 'counts']);
 export const TOPIC_ENTITIES = /** @type {Record<string, readonly Entity[]>} */ (Object.freeze({
   ...NONE,
   'like.received': ['counts'], 'like.withdrawn': ['counts'],
-  'match.created': ['chat', 'counts'], 'match.ended': ['chat', 'counts'], 'chat.requested': ['chat', 'counts'],
+  'match.created': ['chat', 'counts'], 'match.ended': ['chat', 'counts'], 'chat.requested': ['chat', 'counts'], 'chat.accepted': ['chat', 'counts'],
   'message.created': [], // chats signal `chat` themselves (server/commands/chats.mjs)
   'follow.created': ['profile', 'counts'],
   'reply.created': POST, 'reaction.created': POST, 'mention.created': POST, 'mention.removed': POST, 'tag.answered': POST,
@@ -38,7 +38,7 @@ export const TOPIC_ENTITIES = /** @type {Record<string, readonly Entity[]>} */ (
   'access.granted': ['profile', 'counts'], 'access.revoked': ['profile'], 'access.declined': ['profile'],
   'link.accepted': ['profile', 'counts'], 'link.declined': ['profile', 'counts'], 'link.changed': ['profile', 'counts'], 'link.removed': ['profile', 'counts'],
   'profile.suspended': STATE, 'profile.restored': STATE, 'profile.restricted': STATE, 'profile.unrestricted': STATE,
-  'couple.invited': ['decide', 'couple', 'counts'], 'couple.declined': ['couple', 'counts'],
+  'couple.invited': ['decide', 'couple', 'counts'], 'couple.declined': ['couple', 'counts'], 'couple.inviteExpired': ['couple', 'counts'],
   'couple.created': BOOT, 'couple.deleted': BOOT, 'couple.stopped': BOOT, 'couple.restored': BOOT, 'couple.narrowed': BOOT,
   'couple.approvalChanged': BOOT,
   'couple.restoreRequested': ['couple', 'decide', 'counts'], 'couple.changed': ['couple', 'profile', 'counts'],
@@ -49,7 +49,7 @@ export const TOPIC_ENTITIES = /** @type {Record<string, readonly Entity[]>} */ (
   'staff.role': ['profile', 'boot', 'counts'],
   // Plumbing and staff-only markers: nobody's screen shows them.
   'media.scan': [], 'media.purge': [], 'push.deliver': [], 'safety.csamMatch': [], 'staff.alert': [], 'notice.decided': [],
-  'support.public': [], 'verification.dropDocument': [], 'community.joined': [],
+  'support.public': [], 'verification.dropDocument': [],
 }));
 
 /** @param {string} topic @returns {readonly Entity[]} */

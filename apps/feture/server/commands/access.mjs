@@ -3,7 +3,7 @@ import { accessCommands } from '../../contracts/access.mjs';
 import { requireUnrestricted } from '../profiles.mjs';
 import { fail } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
-import { needsPartner, narrowCouple, registerApprovalKind, requestApproval } from '../approvals.mjs';
+import { needsPartner, narrowCouple, partnerActed, registerApprovalKind, requestApproval } from '../approvals.mjs';
 import { mediaDto } from '../media/assets.mjs';
 import { availableScopes, grantedScopes, LIMITS, lockOwner, memberAccounts, related } from '../access.mjs';
 import { withFaces } from './faces.mjs';
@@ -245,6 +245,7 @@ const run = {
         return { pending: await requestApproval(q, acting, { kind: 'private.on', targetType: 'private', targetId: null, change: { on: true }, summary: ['Включить приватную часть'] }) };
       }
       await q.query(`update feture.profile_settings set private_on = true, updated_at = now() where profile_id = $1`, [acting.profileId]);
+      await partnerActed(q, acting, 'access');
       return { on: true };
     }
     // Switching off revokes every access and closes every request (V21 ME-003/022): say how many first.

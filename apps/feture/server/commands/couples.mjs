@@ -103,6 +103,19 @@ async function formCouple(q, fromAccount, toAccount) {
   return /** @type {string} */ (couple.id);
 }
 
+/** Couple invitations nobody answered in time are closed as expired and the inviter is told (owner decision 7): the job
+ * (jobs.mjs sweepExpiredCouples) for everyone, `couple.invites` for one account before it reads them. One item per
+ * invitation: a row moves to `expired` once. @param {Q} q @param {string | null} [accountId] */
+export async function expireInvites(q, accountId = null) {
+  const rows = await q.query(
+    `update feture.couple_invite set state = 'expired', answered_at = now()
+     where id in (select id from feture.couple_invite where state = 'pending' and expires_at < now() and ($1::uuid is null or from_account = $1 or to_account = $1)
+                  order by expires_at limit 200 for update skip locked)
+     returning id, from_account`, [accountId]);
+  for (const r of rows) await enqueue(q, 'couple.inviteExpired', null, { inviteId: r.id, for: r.from_account });
+  return rows.length;
+}
+
 /** Ends the couple's own outgoing side: its pending requests to others are cancelled and access others gave it is
  * revoked (it does not come back on restore). @param {Q} q @param {string} profileId */
 export async function closeOutgoing(q, profileId) {
@@ -183,7 +196,7 @@ const run = {
   },
 
   async 'couple.invites'(q, { account }) {
-    await q.query(`update feture.couple_invite set state = 'expired', answered_at = now() where state = 'pending' and expires_at < now() and (from_account = $1 or to_account = $1)`, [account.id]);
+    await expireInvites(q, account.id);
     const card = (/** @type {string} */ col) => `(select json_build_object('id', p.id, 'handle', p.handle, 'name', p.name)
       from feture.account a join feture.profile p on p.id = a.person_profile_id where a.id = i.${col} and a.state = 'active' and p.state = 'active')`;
     const outgoing = await q.query(

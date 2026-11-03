@@ -8,6 +8,9 @@ import { posts } from '../server/commands/posts.mjs';
 import { staff } from '../server/commands/staff.mjs';
 import { moderation } from '../server/commands/moderation.mjs';
 import { communities } from '../server/commands/communities.mjs';
+import { sweepCommunityJoins } from '../server/jobs.mjs';
+import { notifyHandlers } from '../server/notify.mjs';
+import { drain } from '../server/outbox.mjs';
 import { setup as baseSetup, op } from './fe-helpers.mjs';
 
 const setup = () => baseSetup({ commands: { ...platform, ...me, ...social, ...posts, ...staff, ...moderation, ...communities } });
@@ -429,5 +432,30 @@ test('staff queue carries the current and the proposed cover without staff.media
     assert.equal((await db.query(`select count(*)::int n from feture.staff_action`))[0].n, before); // nothing journalled at load
     // staff.mediaView is not widened: an approved cover is not media waiting for review.
     assert.equal((await call('um', null, { action: 'staff.mediaView', assetId: cov.id })).status, 409);
+  } finally { await pg.close(); }
+});
+
+test('stage 4: new members of an open club — one summary row a day to each host, no push, no row per join', async () => {
+  const { pg, db, call, person, a, b, c, make } = await world();
+  try {
+    const open = await make('ua', a, { name: 'Открытый клуб', privacy: 'open' });
+    const d = await person('ud', 'Dana'), e = await person('ue', 'Eli');
+    await call('uc', c, { action: 'community.join', opId: op(), communityId: open, rulesAccepted: true });
+    await call('ua', a, { action: 'community.member', opId: op(), communityId: open, profileId: c, change: 'host' });
+    for (const [u, p] of [['ub', b], ['ud', d]]) assert.equal((await call(u, p, { action: 'community.join', opId: op(), communityId: open, rulesAccepted: true })).state, 'member');
+    // Joined yesterday (UTC); Eli joins today and waits for tomorrow's summary.
+    await db.query(`update feture.community_member set joined_at = date_trunc('day', now() at time zone 'utc') at time zone 'utc' - interval '2 hours' where community_id = $1 and profile_id = any($2)`, [open, [b, d]]);
+    await call('ue', e, { action: 'community.join', opId: op(), communityId: open, rulesAccepted: true });
+    const deliver = async () => { while ((await drain(db, notifyHandlers(db), { limit: 50 })) > 0) { /* until empty */ } };
+    await deliver();
+    assert.equal((await db.query(`select 1 from feture.notification where type = 'communityJoins'`)).length, 0, 'nothing per join');
+    assert.equal(await sweepCommunityJoins(db), 1);
+    assert.equal(await sweepCommunityJoins(db), 0, 'once a day');
+    await deliver();
+    const rows = await db.query(
+      `select a.person_profile_id who, n.data, n.object_id, n.id from feture.notification n join feture.account a on a.id = n.recipient_account_id where n.type = 'communityJoins'`);
+    assert.deepEqual(rows.map(r => r.who).sort(), [a, c].sort(), 'the owner and the host');
+    assert.ok(rows.every(r => r.data.count === 2 && r.object_id === open), JSON.stringify(rows));
+    assert.equal((await db.query(`select 1 from feture.outbox where topic = 'push.deliver' and payload->>'notificationId' = any($1)`, [rows.map(r => r.id)])).length, 0, 'no push');
   } finally { await pg.close(); }
 });

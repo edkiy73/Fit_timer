@@ -21,6 +21,7 @@ import { discover } from '../server/commands/discover.mjs';
 import { chats } from '../server/commands/chats.mjs';
 import { photos } from '../server/commands/photos.mjs';
 import { APPROVAL_KINDS } from '../server/approvals.mjs';
+import { destination } from '../contracts/notifications.mjs';
 import { sweepExpiredApprovals } from '../server/jobs.mjs';
 import { notifyHandlers } from '../server/notify.mjs';
 import { drain } from '../server/outbox.mjs';
@@ -503,5 +504,74 @@ test('pause: one «Пара на паузе» per side; restore brings back the 
     const s = await w.one(`select discover_mode from feture.profile_settings where profile_id = $1`, [w.pair]);
     assert.equal(s.discover_mode, 'off', 'dating stays off');
     assert.equal(await w.one(`select 1 from feture.access_grant where owner_profile_id = $1 and revoked_at is null`, [w.pair]), undefined, 'access stays closed');
+  } finally { await w.pg.close(); }
+});
+
+/** The account of a person profile. @param {W} w @param {string} profile */
+const accountOf = async (w, profile) => (await w.one(`select id from feture.account where person_profile_id = $1`, [profile])).id;
+/** Push kinds queued for an account. @param {W} w @param {string} account */
+const pushKinds = async (w, account) => (await w.db.query(`select payload->>'kind' kind from feture.outbox where topic = 'push.deliver' and payload->>'account' = $1 order by id`, [account])).map(r => r.kind);
+
+test('stage 4: a couple’s request to a closed club reaches every host once — only after the partner agrees', async () => {
+  const w = await world();
+  try {
+    const noa = await w.person('un', 'Noa');
+    const r = await w.call('um', w.mia, { action: 'community.create', opId: op(), name: 'Закрытый клуб', privacy: 'closed', joinQuestion: 'Что вас привело?', ...clubBase });
+    await w.db.query(`update feture.community set state = 'published', published_at = now() where id = $1`, [r.id]);
+    // Noa hosts the club; Mia and Noa also host it as a couple of their own: each account still gets one task.
+    const hosts = await w.coupleOf([w.mia, noa]);
+    await w.db.query(`insert into feture.community_member (community_id, profile_id, role) values ($1, $2, 'host'), ($1, $3, 'host')`, [r.id, noa, hosts]);
+    const um = await accountOf(w, w.mia), un = await accountOf(w, noa);
+    const ap = pendingId(await w.call('ua', w.pair, { action: 'community.join', opId: op(), communityId: r.id, rulesAccepted: true, answer: 'Хотим учиться вместе' }));
+    await w.notify();
+    // Before the partner agrees the hosts get nothing: no request, no task, no push.
+    assert.equal(await w.one(`select 1 from feture.community_request where community_id = $1`, [r.id]), undefined);
+    for (const u of ['um', 'un']) assert.equal((await w.call(u, null, { action: 'decide.list' })).items.filter((/** @type {any} */ x) => x.kind === 'capp').length, 0);
+    assert.deepEqual([...await pushKinds(w, um), ...await pushKinds(w, un)].filter(k => k === 'decide'), []);
+    assert.equal((await w.call('ub', w.pair, { action: 'decide.approval', opId: op(), approvalId: ap, choice: 'approve' })).state, 'approved');
+    await w.notify();
+    assert.deepEqual(await pushKinds(w, um), ['decide'], 'the owner: one push');
+    assert.deepEqual(await pushKinds(w, un), ['decide'], 'the host: one push, although in two host profiles');
+    for (const u of ['um', 'un']) assert.ok((await w.call(u, null, { action: 'decide.list' })).items.some((/** @type {any} */ x) => x.kind === 'capp'), u);
+    // The direct path takes the same helper: one push per host account.
+    await w.call('ua', w.a, { action: 'community.join', opId: op(), communityId: r.id, rulesAccepted: true, answer: 'Хочу учиться тоже' });
+    await w.notify();
+    assert.deepEqual(await pushKinds(w, um), ['decide', 'decide']);
+    assert.deepEqual(await pushKinds(w, un), ['decide', 'decide']);
+  } finally { await w.pg.close(); }
+});
+
+test('stage 4: trust mode — the partner gets a history row for what matters, a push only for an event, access or a link; follow opens that person', async () => {
+  const w = await world();
+  try {
+    await w.call('ub', w.pair, { action: 'couple.setApproval', opId: op(), approvesPartner: false });
+    const ub = await accountOf(w, w.b), ua = await accountOf(w, w.a);
+    const e = await w.call('um', w.mia, { action: 'event.submit', opId: op(), event: w.ev() });
+    const e2 = await w.call('um', w.mia, { action: 'event.submit', opId: op(), event: w.ev({ requiresApplication: true, questions: ['Почему хотите прийти?'] }) });
+    await w.db.query(`update feture.event set state = 'published', published_at = now() where id = any($1)`, [[e.id, e2.id]]);
+    const club = await w.call('um', w.mia, { action: 'community.create', opId: op(), name: 'Открытый клуб', privacy: 'open', ...clubBase });
+    await w.db.query(`update feture.community set state = 'published', published_at = now() where id = $1`, [club.id]);
+    await w.db.query(`update feture.profile_settings set private_on = false where profile_id = $1`, [w.pair]);
+    const done = async (/** @type {any} */ r) => { assert.ok(r.ok !== false && !r.code && !r.pending, 'applies at once: ' + JSON.stringify(r)); };
+    await done(await w.call('ua', w.pair, { action: 'event.rsvp', opId: op(), eventId: e.id, status: 'going' }));
+    await done(await w.call('ua', w.pair, { action: 'event.apply', opId: op(), eventId: e2.id, answers: ['Хотим познакомиться с людьми'], note: 'Мы спокойные', requirementsAccepted: true }));
+    await done(await w.call('ua', w.pair, { action: 'community.join', opId: op(), communityId: club.id, rulesAccepted: true }));
+    await done(await w.call('ua', w.pair, { action: 'private.setOn', opId: op(), on: true }));
+    await done(await w.call('ua', w.pair, { action: 'follow.set', opId: op(), profileId: w.mia, on: true }));
+    // Going down needs nobody and is no news.
+    await done(await w.call('ua', w.pair, { action: 'event.rsvp', opId: op(), eventId: e.id, status: 'not_going' }));
+    await w.notify();
+    const rows = await w.db.query(`select id, data from feture.notification where recipient_account_id = $1 and type = 'pair.acted' order by created_at, id`, [ub]);
+    assert.deepEqual(rows.map(r => r.data.what).sort(), ['access', 'community', 'event', 'eventApply', 'follow']);
+    assert.equal((await w.db.query(`select 1 from feture.notification where recipient_account_id = $1 and type = 'pair.acted'`, [ua])).length, 0, 'never to the one who did it');
+    const pushed = (await w.db.query(`select payload->>'notificationId' n from feture.outbox where topic = 'push.deliver' and payload->>'account' = $1`, [ub])).map(r => r.n);
+    const what = Object.fromEntries(rows.map(r => [r.data.what, r]));
+    for (const k of ['event', 'eventApply', 'access']) assert.ok(pushed.includes(what[k].id), `${k}: a push`);
+    for (const k of ['community', 'follow']) assert.ok(!pushed.includes(what[k].id), `${k}: history only`);
+    // Each row opens its place; a follow opens the person followed, as the couple.
+    assert.equal(what.follow.data.target, w.mia);
+    assert.equal(destination({ type: 'pair.acted', data: what.follow.data, couple: w.pair }), `/n/people/${w.mia}?as=${w.pair}`);
+    assert.equal(destination({ type: 'pair.acted', data: what.event.data, couple: w.pair }), `/n/events/${e.id}?as=${w.pair}`);
+    assert.equal(destination({ type: 'pair.acted', data: what.community.data, couple: w.pair }), `/n/communities/${club.id}?as=${w.pair}`);
   } finally { await w.pg.close(); }
 });

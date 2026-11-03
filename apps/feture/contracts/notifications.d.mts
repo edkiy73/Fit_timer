@@ -5,7 +5,7 @@ export type Entry = {
   kind: 'notice' | 'task' | 'result', filter: Filter, icon: string, tone: '' | 'l' | 'g' | 'v',
   card: 'news' | 'decision' | 'result' | 'safety' | 'event' | 'summary',
   text: Text, alone?: Text,
-  push: { cat: string, safe: Text, normal: Text, named: boolean },
+  push: { cat: string, safe: Text, normal: Text, named: boolean, off: boolean },
   email: 'none' | 'now' | 'now-if-unread' | 'digest', subject: Text, dest: string,
   collapse: 'none' | 'object' | 'actor' | 'type', gone: Text,
 };
