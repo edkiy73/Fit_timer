@@ -4,14 +4,14 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Bell,Calendar,Heart,Users} from 'lucide-react';
 import {destination,entryFor,noteLine} from '../../contracts/notifications.mjs';
-import {Av,Btn,ContextColumn,CtxBlock,CtxRow} from './kit';
+import {Av,Btn,ContextColumn,CtxBlock,CtxRow,Who} from './kit';
 import {useFe,useLive} from './session';
 import type {LiveEntity} from './live';
 import {EventCard,eventRow} from './communities';
 import {CommPlate,pl} from './comm-kit';
 import {countsRes} from './inbox';
 import {when} from './feed';
-import {faceFields} from './faces';
+import {NameBadges,faceFields} from './faces';
 
 /** The desktop context column (V21 CTX): a few blocks about the open tab, from the reads the tabs already use —
  * «Лента»: upcoming events and communities to join; «Люди»: who likes the acting profile; «События»: upcoming and community
@@ -48,7 +48,8 @@ const mineComm=z.object({ok:z.literal(true),hosting:z.array(mineRow),member:z.ar
 const mineEvRow=z.object({id:z.uuid(),title:z.string(),format:z.enum(['online','offline']),area:z.string().nullable(),place_id:z.string().nullable().optional(),tz:z.string().nullable().optional(),
  starts_at:z.string(),ends_at:z.string(),state:z.string(),plate:z.string().nullable().optional()}).passthrough();
 const mineEv=z.object({ok:z.literal(true),going:z.array(mineEvRow),waiting:z.array(mineEvRow),applications:z.array(mineEvRow),interested:z.array(mineEvRow),organizing:z.array(mineEvRow)}).passthrough();
-const likeCard=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),avatar:media.nullable()}).passthrough();
+const likeCard=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),avatar:media.nullable(),
+ ages:z.array(z.number()).optional(),photoVerified:z.boolean().optional(),premium:z.boolean().optional()}).passthrough();
 const incoming=z.object({ok:z.literal(true),items:z.array(z.object({profile:likeCard,at:z.string().nullable().optional()}).passthrough())}).passthrough();
 const actor=z.object({id:z.uuid(),kind:z.enum(['person','couple']).optional(),handle:z.string().nullable().optional(),name:z.string().nullable().optional(),...faceFields}).passthrough().nullable();
 const ref=z.object({type:z.string(),id:z.uuid().nullable()}).passthrough();
@@ -63,7 +64,7 @@ const coverOf=(c:z.infer<typeof commCard>)=>c.cover?.src?(c.cover.src.thumb??c.c
 function Soon(){
  const {t}=useI18n();const r=useRead('event.soon',{},soonRes,['post','decide']);
  return <CtxBlock title={t('fe.ctx.soon')} loading={r.loading} empty={{icon:Calendar,title:t('fe.ctx.none')}}>
-  {r.data?.items.map(e=><EventCard key={e.id} e={e} row/>)}
+  {r.data?.items.map(e=><EventCard key={e.id} e={e} row brief/>)}
  </CtxBlock>;
 }
 
@@ -83,7 +84,7 @@ function Likes(){
  const items=r.data?.items.slice(0,6)??[];
  return <CtxBlock rows title={t(us?'fe.ctx.likesUs':'fe.ctx.likes')} loading={r.loading} empty={{icon:Heart,title:t('fe.ctx.likesEmpty')}}
   more={(r.data?.items.length??0)>items.length?<Btn kind="text" auto onClick={()=>navigate('/n/people?sub=likes')}>{t('fe.ctx.all',{n:String(r.data!.items.length)})}</Btn>:null}>
-  {items.map(({profile:p,at})=><CtxRow key={p.id} av={<Av name={pname(p)} seed={p.id} size="sm" src={p.avatar?.src?.thumb}/>} title={pname(p)}
+  {items.map(({profile:p,at})=><CtxRow key={p.id} av={<Av name={pname(p)} seed={p.id} size="sm" src={p.avatar?.src?.thumb}/>} title={<Who name={pname(p)} age={p.ages?.length?p.ages.join(' · '):undefined}><NameBadges p={p}/></Who>}
    sub={[p.kind==='couple'?t('fe.ctx.couple'):null,at?when(at,locale):null].filter(Boolean).join(' · ')||undefined} onClick={()=>navigate('/n/people/'+p.id)}/>)}
  </CtxBlock>;
 }
@@ -103,7 +104,7 @@ function CommunityEvents(){
  const {t}=useI18n();const r=useRead('event.catalog',{},evList,['decide','notify']);
  const items=r.data?.items.filter(e=>e.community_id&&e.state==='published').slice(0,3)??[];
  return <CtxBlock title={t('fe.ctx.commEvents')} loading={r.loading} empty={{icon:Calendar,title:t('fe.ctx.none')}}>
-  {items.map(e=><EventCard key={e.id} e={e} row/>)}
+  {items.map(e=><EventCard key={e.id} e={e} row brief/>)}
  </CtxBlock>;
 }
 
@@ -116,7 +117,7 @@ function MyEvents(){
  return <CtxBlock title={t(us?'fe.ce.mineCouple':'fe.ce.mine')} loading={r.loading}
   empty={{icon:Calendar,title:t('fe.ctx.none'),action:<Btn kind="soft" onClick={()=>navigate('/n/communities?sub=events')}>{t('fe.ctx.browse')}</Btn>}}
   more={up.length>3?<Btn kind="text" auto onClick={()=>navigate('/n/me/events')}>{t('fe.ctx.all',{n:String(up.length)})}</Btn>:null}>
-  {up.slice(0,3).map(e=><EventCard key={e.id} e={e} row/>)}
+  {up.slice(0,3).map(e=><EventCard key={e.id} e={e} row brief/>)}
  </CtxBlock>;
 }
 

@@ -277,7 +277,8 @@ const ownSrc=(m:{src:Record<string,string>|null})=>m.src?(m.src.thumb??m.src.car
  * card; an interest is added right here with «По доступу» preset) — then one «Доступы» row (waiting requests counted)
  * that opens the one «Доступы» screen on «Открыто», where requests are answered and access changed. A couple's
  * part holds interests only. */
-export function PrivateLayer({profileId,on,requestsFrom,onChanged}:{profileId:string,on:boolean,requestsFrom:'all'|'matches'|'none',onChanged:()=>void}){
+export function PrivateLayer({profileId,on,requestsFrom,onChanged,askHere=true}:{profileId:string,on:boolean,requestsFrom:'all'|'matches'|'none',onChanged:()=>void,
+ /** Off on the new «Я»: «Кто может просить доступ» lives in Settings → «Кто может…». */ askHere?:boolean}){
  const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();const w=useAccessWords();
  const [mine,setMine]=useState<Priv|null>(null);const [reqs,setReqs]=useState<z.infer<typeof incoming>|null>(null);const [given,setGiven]=useState<GrantItem[]>([]);
  const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);
@@ -317,8 +318,8 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged}:{profileId:st
  return <>
   <section className={'vault'+(on&&!empty?'':' off')} id="privHead">
    <VaultHead title={t('fe.priv.title')} label={t('fe.priv.title')} sub={sub} on={on&&!empty} disabled={empty||busy} onToggle={toggle}/>
-   <Card list><SelectRow row label={t('fe.mx.pr.reqFrom')} value={requestsFrom} options={(['all','matches','none'] as const).map(v=>[v,t('fe.mx.pr.from.'+v)] as const)}
-    onChange={v=>void act(()=>call('profile.setVisibility',{opId:newOpId(),setting:'requestsFrom',value:v},ok),t('fe.mx.saved'))}/></Card>
+   {askHere&&<Card list><SelectRow row label={t('fe.mx.pr.reqFrom')} value={requestsFrom} options={(['all','matches','none'] as const).map(v=>[v,t('fe.mx.pr.from.'+v)] as const)}
+    onChange={v=>void act(()=>call('profile.setVisibility',{opId:newOpId(),setting:'requestsFrom',value:v},ok),t('fe.mx.saved'))}/></Card>}
   </section>
   {!cp&&<Group id="privDesc" title={t('fe.mp.desc')}>
    {txt?<Card className="blk-btn" label={t('fe.mx.editOf',{title:t('fe.mp.desc')})} onClick={()=>setSheet({k:'desc'})}><span className="blk-bio">{txt}</span><span className="chv"><ChevronRight/></span></Card>

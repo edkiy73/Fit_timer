@@ -1,6 +1,6 @@
 import type {Meta,StoryObj} from '@storybook/react-vite';
 import {useState} from 'react';
-import {Settings} from 'lucide-react';
+import {BadgeCheck,Crown,Settings} from 'lucide-react';
 import {Av,Bar,IconBtn,Seg,SubBar} from './index';
 
 const meta={title:'Навигация/Вкладки',component:Seg,tags:['autodocs'],
@@ -21,5 +21,10 @@ export const ШапкаСАватаркой:StoryObj<typeof Bar>={name:'Шапк
  parameters:{docs:{description:{story:'Та же шапка, что у «Ленты» и «Комьюнити» (большой заголовок, стеклянные круглые кнопки, заголовок гаснет при прокрутке), с аватаркой слева от имени и второй строкой. `onTitle` — имя открывает «Чей профиль» (есть пара).'}}},
  render:a=><Bar {...a}><IconBtn icon={Settings} label="Настройки"/></Bar>,
  args:{title:'Бромэн',lead:<Av name="Бромэн" seed="me" size="sm"/>,sub:'Личный профиль',onTitle:()=>{},titleLabel:'Чей профиль'},argTypes:{lead:{control:false}}};
+export const ШапкаСоЗначками:StoryObj<typeof Bar>={name:'Шапка «Я» со значками у имени',
+ parameters:{docs:{description:{story:'`mark` — значки сразу после имени: синяя галочка «Фото подтверждено» и золотая корона Premium (`NameBadges`). Длинное имя обрезается «…», значки остаются целыми.'}}},
+ render:a=><Bar {...a}><IconBtn icon={Settings} label="Настройки"/></Bar>,
+ args:{title:'Александра-Виктория',lead:<Av name="Александра" seed="me" size="sm"/>,sub:'Личный профиль',
+  mark:<><span className="nbadge v" role="img" aria-label="Фото подтверждено"><BadgeCheck aria-hidden="true"/></span><span className="nbadge p" role="img" aria-label="Premium"><Crown aria-hidden="true"/></span></>},argTypes:{lead:{control:false},mark:{control:false}}};
 export const ШапкаНазад:StoryObj<typeof Bar>={name:'Шапка с «назад»',render:a=><Bar {...a}/>,args:{title:'Новая публикация',back:true}};
 export const ШапкаДвеСтроки:StoryObj<typeof SubBar>={name:'Шапка с подзаголовком',render:a=><SubBar {...a}/>,args:{title:'Круг о границах',sub:'Сообщество · 128 участников'}};
