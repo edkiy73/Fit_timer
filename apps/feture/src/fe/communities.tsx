@@ -551,6 +551,8 @@ export function EventScreen(){
   {cta&&<div className="ctabar"><div className="wrap">{cta}</div></div>}
   {e&&layer==='menu'&&<Sheet title={t('fe.cm.event')} onClose={()=>setLayer('')}><Card list>
    <Row icon={CalendarPlus} title={t('fe.cm.addCal')} noChev onClick={()=>{setLayer('');downloadIcs(e);toast(t('fe.cm.calDone'),{type:'ok'});}}/>
+   {/* An approved application is withdrawn here too (the API takes pending and approved ones). */}
+   {application?.st==='approved'&&<Row icon={FileText} danger title={t('fe.host.app.withdraw')} noChev onClick={()=>setLayer('withdraw')}/>}
    {!orgMe&&<Row icon={Flag} danger title={t('fe.cm.report')} noChev onClick={()=>setLayer('report')}/>}
   </Card></Sheet>}
   {e&&layer==='venue'&&<Sheet title={t(e.format==='online'?'fe.cm.joinT':'fe.cm.addressT')} onClose={()=>setLayer('')}
@@ -572,7 +574,8 @@ export function EventScreen(){
    <Alert kind="warn">{t('fe.w7.tk.outside')}</Alert>
    <Note>{ticketed?t('fe.w7.tk.showAtDoor'):t(couple?'fe.w7.tk.boughtHintCouple':'fe.w7.tk.boughtHint')}</Note></Stack>
   </Sheet>}
-  {e&&layer==='withdraw'&&<Ask icon={FileText} danger title={t('fe.host.app.withdrawQ')} text={t('fe.host.app.withdrawText')} ok={t('fe.host.app.withdrawOk')} busy={busy} onOk={()=>void withdraw()} onCancel={()=>setLayer('')}/>}
+  {e&&layer==='withdraw'&&<Ask icon={FileText} danger title={t('fe.host.app.withdrawQ')}
+   text={t(app?.state==='approved'?(e.format==='online'?'fe.host.app.withdrawTextApprovedOnline':'fe.host.app.withdrawTextApproved'):'fe.host.app.withdrawText')} ok={t('fe.host.app.withdrawOk')} busy={busy} onOk={()=>void withdraw()} onCancel={()=>setLayer('')}/>}
   {e&&layer==='unwait'&&<Ask icon={FileText} danger title={t('fe.host.app.withdrawQ')} text={t('fe.cm.req.unwaitText')} ok={t('fe.host.app.withdrawOk')} busy={busy} onOk={()=>void unwait()} onCancel={()=>setLayer('')}/>}
   {e&&layer==='report'&&<ReportSheet targetType="event" targetId={e.id} onClose={()=>setLayer('')} onDone={msg=>{setLayer('');toast(msg,{type:'ok'});}}/>}
  </>;

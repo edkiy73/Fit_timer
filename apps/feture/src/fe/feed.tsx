@@ -2,7 +2,7 @@ import {Fragment,useCallback,useEffect,useMemo,useRef,useState,type CSSPropertie
 import {useLocation,useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {AtSign,Bell,BellOff,Bookmark,Check,Calendar,ChartColumn,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,FileText,Globe,Hash,Heart,Image as ImageIcon,KeyRound,Lock,MessageCircle,MessageSquareText,Newspaper,Pencil,Plus,Search,SendHorizontal,Share,SlidersHorizontal,Sparkles,Trash2,User,Users,X} from 'lucide-react';
+import {Archive,AtSign,Bell,BellOff,Bookmark,Check,Calendar,ChartColumn,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,FileText,Globe,Hash,Heart,Image as ImageIcon,KeyRound,Lock,MessageCircle,MessageSquareText,Newspaper,Pencil,Plus,Search,SendHorizontal,Share,SlidersHorizontal,Sparkles,Trash2,User,Users,X} from 'lucide-react';
 import type {LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {Actions,AddCard,articlePlate,ActionLine,ActivityCard,ActivityItem,Alert,ArticleCard,ArticleImage,Ask,Av,ExpandRow,useLeaveGuard,BAD_CHARS,NewPill,Bar,Btn,Card,Chip,Chips,Counter,Empty,FeedEvents,Field,FilePick,Group,H,IconBtn,LoadMore,Input,LikesLine,Note,QuickStart,RichEditor,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,VideoBadge,View,ViewerPostBar,hasLongWord,mdImages,type RichEditorHandle,Who} from './kit';
@@ -493,6 +493,24 @@ function PostInterests({list,preview,author}:{list:z.infer<typeof interest>[],pr
 
 /* ---------- F05: post + replies ---------- */
 
+/** A couple's archived post on its screen: only the partners see it; «Вернуть» publishes it again the usual way —
+ * through the partner when they approve (post.publish makes a post.publish proposal). A post moderators removed
+ * has no «Вернуть». */
+function ArchivedNotice({post,onDone}:{post:Post,onDone:()=>void}){
+ const {call,acting}=useFe();const {t}=useI18n();const toast=useToast();const toPartner=usePartnerApproves();
+ const [asking,setAsking]=useState(false);const [busy,setBusy]=useState(false);
+ const restore=async()=>{setBusy(true);
+  try{const r=await call('post.publish',{opId:newOpId(),postId:post.id},published);setAsking(false);
+   toast(r.pending?t('fe.fd.sentPartner'):r.state==='review'?t('fe.fd.sentReview'):t('fe.fd.published'),{type:'ok'});onDone();}
+  catch(e){setAsking(false);toast(feErrorMessage(e,t),{type:'err'});}finally{setBusy(false);}};
+ return <>
+  <Alert kind="info" icon={Archive} action={acting?.kind==='couple'&&!post.returned?<Btn size="sm" fit busy={busy} disabled={busy} onClick={()=>setAsking(true)}>{t('fe.fd.arch.restore')}</Btn>:undefined}>
+   <b>{t('fe.fd.arch.title')}</b> {t('fe.fd.arch.text')}</Alert>
+  {asking&&<Ask icon={Archive} title={t('fe.fd.arch.restoreQ')} text={t(toPartner?'fe.fd.arch.restoreTextPartner':'fe.fd.arch.restoreText')}
+   ok={toPartner?t('fe.ca.toPartner'):t('fe.fd.arch.restore')} busy={busy} onOk={()=>void restore()} onCancel={()=>setAsking(false)}/>}
+ </>;
+}
+
 export function PostScreen(){
  const {id=''}=useParams();const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const location=useLocation();const toast=useToast();
  // The edit screen passes what happened to the edit as `state.notice`.
@@ -561,13 +579,16 @@ export function PostScreen(){
   try{await call('reaction.set',{opId:newOpId(),targetType:'reply',targetId:r.id,on},okOnly);await loadReplies();}
   catch(e){setLiked(s=>{const n=new Set(s);if(on)n.delete(r.id);else n.add(r.id);return n;});setDelta(x=>({...x,[r.id]:(x[r.id]??0)-d}));toast(feErrorMessage(e,t),{type:'err'});}};
  const couple=acting?.kind==='couple';
+ // A couple's archived post (only the partners open it): no replies, the notice with «Вернуть» on top.
+ const archived=post?.state==='archived';
  return <>
-  <Bar title={post?.type==='note'?t('fe.fd.article'):t('fe.feed.post')} back="/n/feed" small/>
-  <View className="nodock cta1">
+  <Bar title={post?.type==='note'?t('fe.fd.article'):t('fe.feed.post')} back={archived?'/n/me/posts':'/n/feed'} small/>
+  <View className={'nodock'+(archived?'':' cta1')}>
    {error?<Empty icon={Lock} title={t('fe.feed.unavailable')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>navigate('/n/feed')}>{t('fe.feed.toFeed')}</Btn></Empty>
     :!post||!list?<Skel kind="post" rows={1}/>
     :<>
      {typeof notice==='string'&&notice&&<Alert kind="ok">{notice}</Alert>}
+     {archived&&<ArchivedNotice post={post} onDone={load}/>}
      <PostCard post={post} onChange={setPost} full onReply={focusBox} onExpired={()=>{call('post.get',{postId:id},onePost,{fresh:true}).then(r=>setPost(r.post)).catch(()=>{});}} onRemove={r=>{
       navigate('/n/feed',{replace:true});const undo=r.undo;
       toast(r.notice,{type:'ok',action:undo?{label:t('fe.tl.undo'),fn:()=>{undo().then(()=>navigate('/n/feed/post/'+id),e=>toast(feErrorMessage(e,t),{type:'err'}));}}:null});
@@ -578,14 +599,14 @@ export function PostScreen(){
       onChange={s=>{setSort(s);setLimit(REPLY_PAGE);}} options={[['top',t('fe.fd.sortTop')],['new',t('fe.fd.sortNew')]] as const}/></span>}>{plural(post.replies,['ответ','ответа','ответов'],['reply','replies'],locale)}</SectionLabel>
      {list.some(r=>!r.deleted)?<ReplyTree list={list} sort={sort} open={open} setOpen={setOpen} liked={liked} delta={delta}
        onLike={likeReply} onReply={r=>{setEditing(null);setTarget(r);focusBox();}} onMore={setMenu} limit={limit} onPage={()=>setLimit(n=>n+REPLY_PAGE)}/>
-      :!failed.length&&<button type="button" className="note-empty" onClick={focusBox}>{t('fe.feed.noReplies')}</button>}
+      :!failed.length&&!archived&&<button type="button" className="note-empty" onClick={focusBox}>{t('fe.feed.noReplies')}</button>}
      {failed.map(f=><Alert key={f.opId} kind="err" role="status" action={<Actions>
       <Btn size="sm" fit busy={busy} disabled={busy} onClick={()=>retry(f)}>{t('fe.w3.retry.again')}</Btn>
       <Btn size="sm" kind="text" fit onClick={()=>{setFailed(l=>l.filter(x=>x.opId!==f.opId));setText(f.body);focusBox();}}>{t('fe.w3.retry.edit')}</Btn></Actions>}>
       <b>{t('fe.w3.retry.notSent')}</b> {f.body.length>140?f.body.slice(0,140)+'…':f.body}</Alert>)}
     </>}
   </View>
-  {post&&<div className="inputbar">
+  {post&&!archived&&<div className="inputbar">
    {target&&<div className="reply-target"><span>{t('fe.fd.replyTo')} <b>{nameOf(target.author)}</b></span><IconBtn icon={X} size="sm" label={t('fe.fd.cancelReply')} onClick={()=>setTarget(null)}/></div>}
    {editing&&<div className="reply-target"><span>{t('fe.fd.editingReply')}</span><IconBtn icon={X} size="sm" label={t('fe.pm.cancel')} onClick={()=>{setEditing(null);setText('');}}/></div>}
    <TextArea bare ref={box} rows={1} maxLength={1000} enterKeyHint="enter" value={text} onChange={e=>{setText(e.target.value);grow(e.target);}} placeholder={couple?t('fe.fd.replyPhCouple'):t('fe.fd.replyPh')} aria-label={couple?t('fe.fd.replyAsCouple'):t('fe.fd.reply')}

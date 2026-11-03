@@ -1,6 +1,6 @@
 // Every way into an event (owner check of join flows, 28.10.2026), lane `jn`: a free event (Интересно / Иду / Не иду,
 // «Снять ответ» with «Отменить»), an event by application (apply, the pending card with «Отозвать», approval opens the
-// join link, a decline is final), a ticket at the organizer, a cancelled event, and a couple (answers that wait for the
+// join link, an approved one is withdrawn from «Ещё», a decline is final), a ticket at the organizer, a cancelled event, and a couple (answers that wait for the
 // partner). The organizer is persona `host` (its `eventId`, `appEventId`, `ticketEventId`, `cancelledEventId`); guests
 // are `basic`, `temp` (fresh: a declined application cannot be sent again) and `pair`. Every step reads the result back
 // through the API and the guest's answers are removed at the end. There is no capacity / waiting list in events, and a
@@ -68,6 +68,12 @@ export default [
      await t.see('.k-status:has-text("Заявка одобрена")');
      await t.tap('.ctabar .btn:has-text("Как подключиться")'); await t.see(sheet + ':has-text("meet.example.org")');
      expect((await get(t, h.appEventId)).joinUrl === 'https://meet.example.org/qa', 'link on the server');
+     // An approved application is withdrawn too (B12): from «Ещё», after a question that says the link closes.
+     await t.page.keyboard.press('Escape'); await t.wait(300);
+     await t.tap('.ibtn[aria-label="Ещё"]'); await t.tap(sheet + ' .li:has-text("Отозвать заявку")');
+     await t.see(dialog + ':has-text("Ссылка на встречу закроется")'); await t.page.locator(dialog + ' .btn.danger').click();
+     await toast(t, 'Заявка отозвана');
+     const w = await get(t, h.appEventId); expect(w.me.application?.state === 'withdrawn' && !w.joinUrl, 'withdrawn, the link closed');
    } finally { await noApp(t, h.appEventId); await clear(t, h.appEventId); }
  } },
 

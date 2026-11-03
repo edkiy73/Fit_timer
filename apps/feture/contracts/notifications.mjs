@@ -480,6 +480,8 @@ export function destination(n) {
       break;
     }
     case 'postEdit': if (postId) path = `/n/feed/post/${postId}/edit`; break;
+    // A couple post (an archived one too: the owner can still open it); without its id «Публикации пары» with «Архив».
+    case 'myPosts': path = postId ? `/n/feed/post/${postId}` : '/n/me/posts'; break;
     case 'event': { const id = obj?.type === 'event' ? obj.id : d.eventId; if (isId(id)) path = `/n/events/${id}`; break; }
     case 'eventApplications': { const id = obj?.type === 'event' ? obj.id : d.eventId; if (isId(id)) path = `/n/events/${id}/applications`; break; }
     case 'community': { const id = obj?.type === 'community' ? obj.id : d.communityId; if (isId(id)) path = `/n/communities/${id}`; break; }
