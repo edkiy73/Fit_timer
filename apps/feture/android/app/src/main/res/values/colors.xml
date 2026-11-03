@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- backgroundColor in capacitor.config.json: window and splash behind the web app. -->
+    <!-- backgroundColor in capacitor.config.json: window behind the web app. -->
     <color name="feture_background">#241628</color>
-    <!-- The red square behind the K in public/kinhaze-mark.svg. -->
-    <color name="feture_icon_background">#DF234A</color>
+    <!-- Near-black behind the white KINHAZE mark: adaptive-icon background and the splash. -->
+    <color name="feture_icon_background">#111012</color>
     <color name="feture_accent">#DF234A</color>
 </resources>

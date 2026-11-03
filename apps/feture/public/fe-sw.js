@@ -56,7 +56,7 @@ self.addEventListener('push', event => {
   // Every push shows a notification (never a silent one); it first closes what the server says is no longer actual.
   event.waitUntil((async () => {
     if (close.length) await closeTags(close.filter(c => c !== tag)).catch(() => {});
-    await self.registration.showNotification(title, { body, icon: '/icon.svg', tag, renotify: true, data: { url } });
+    await self.registration.showNotification(title, { body, icon: '/icon-192.png', badge: '/kinhaze-badge.png', tag, renotify: true, data: { url } });
   })());
 });
 
