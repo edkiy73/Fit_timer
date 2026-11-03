@@ -479,16 +479,15 @@ function TagReviewSheet({post,busy,onClose,onAnswer}:{post:Post,busy:boolean,onC
  </Sheet>;
 }
 
-/** The «Мои интересы» card of a post: a snapshot of the author's public interests. Someone else's jar opens the
- * comparison (what it is, their answer, yours); your own opens the topic. */
+/** The «Мои интересы» part of a post: a snapshot of the author's public interests, drawn as on a profile (the same
+ * capsules, no box of its own). Someone else's jar opens the comparison (what it is, their answer, yours); your own opens the topic. */
 function PostInterests({list,preview,author}:{list:z.infer<typeof interest>[],preview:boolean,author:Post['author']}){
  const {t}=useI18n();const navigate=useNavigate();const {topics}=useTopics();const {acting}=useFe();const [open,setOpen]=useState<string|null>(null);
  const own=author.id===acting?.id;
  const shown=open?list.find(j=>j.topicId===open):undefined;
- return <>{open&&<CompareSheet topicId={open} name={nameOf(author)} avatar={author?.avatar} personId={author?.id} theirs={shown?asInterest(shown):undefined} onClose={()=>setOpen(null)}/>} <div className="testcard" style={{'--n':Math.min(4,list.length)} as React.CSSProperties} aria-label={t('fe.fd.myInterests')}>
-  <b className="attachment-title">{t('fe.fd.myInterests')}</b>
+ return <>{open&&<CompareSheet topicId={open} name={nameOf(author)} avatar={author?.avatar} personId={author?.id} theirs={shown?asInterest(shown):undefined} onClose={()=>setOpen(null)}/>} <Group title={t('fe.fd.myInterests')}>
   <Jars list={list.map(j=>({...j,vis:'public'}) as unknown as Interest)} topics={topics as never} onOpen={id=>{if(preview)return;if(own)navigate('/n/topics/'+id);else setOpen(id);}}/>
- </div></>;
+ </Group></>;
 }
 
 /* ---------- F05: post + replies ---------- */

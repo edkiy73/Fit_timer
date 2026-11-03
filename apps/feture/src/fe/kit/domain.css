@@ -85,8 +85,6 @@
 .v21 .sheet .int-step{margin:0 0 var(--s-2)}
 /* Compose «Интересы»: one capsule per row, so adding or removing one never re-flows the others. */
 .v21 .cmp-ints .card{padding:14px}
-.v21 .cmp-ints .testcard{margin:0 0 14px}
-.v21 .cmp-ints .testcard .jars{grid-template-columns:minmax(0,1fr);gap:var(--s-2)}
 .v21 .cmp-ints .chips.mt12{margin-top:0}
 
 /* ---- Staff review (ReviewCard & co.; was staff.css) ---- */

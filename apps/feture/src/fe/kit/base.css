@@ -566,9 +566,6 @@
 .v21 .sharecard{padding:16px;border-radius:var(--r-xl);background:var(--surf);border:1px solid var(--line)}
 .v21 .sharecard .sc-top{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-weight:700;font-size:var(--fs-sm)}
 .v21 .sharecard .sc-top img{width:24px;border-radius:var(--r-xs)}
-.v21 .testcard{margin-top:12px;padding:14px;border-radius:var(--r-l);background:var(--raise);display:flex;gap:14px;align-items:center}
-.v21 .testcard .jars{grid-template-columns:repeat(2,minmax(72px,1fr));min-width:150px}
-.v21 .testcard>div:last-child{min-width:0}
 .v21 .result-hero{text-align:center;padding:4px 0 16px}
 .v21 .result-hero .big{font:700 44px/1 var(--font);letter-spacing:-.04em;margin:6px 0}
 
@@ -1412,11 +1409,6 @@
 .v21 .jar .jw{font-weight:600}
 .v21 .jar.taboo .jw{color:var(--danger)}.v21 .jar.discuss .jw{color:var(--warn)}
 /* quiz result inside a post: only the jars, as many per row as fit */
-.v21 .testcard{display:block;padding:12px}
-.v21 .testcard .jars{grid-template-columns:repeat(var(--n,4),minmax(0,1fr));min-width:0;gap:12px 2px}
-.v21 .testcard .jar .jn{font-size:var(--fs-cap)}
-@container col (max-width:260px){.v21 .testcard .jars{grid-template-columns:repeat(min(2,var(--n,4)),minmax(0,1fr))}}
-.v21 .testcard .jar .vessel{width:44px;height:76px}
 .v21 .tc-res{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 2px}
 .v21 .tc-res i{display:inline-flex;align-items:center;gap:4px;max-width:100%;padding:2px 8px 2px 6px;border-radius:var(--r-full);background:var(--raise);font-style:normal;font-size:var(--fs-cap);color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .v21 .tc-res i::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:var(--jc)}
@@ -2866,7 +2858,8 @@
 .v21 .jars.caps{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:8px!important;min-width:0}
 .v21 .sc{position:relative;display:block;width:100%;height:44px;border-radius:var(--r-full);background:var(--trk);overflow:hidden;border:0;padding:0;margin:0;font:inherit;color:inherit;text-align:left;isolation:isolate;--lv:5}
 .v21 button.sc{cursor:pointer}.v21 button.sc:active{transform:scale(.985)}
-.v21 .sc{--fw:min(max(36px,calc((100% - 8px) * var(--v) / 10)),calc(100% - 86px))}.v21 .sc.full{--fw:calc(100% - 8px)}
+/* the fill stops before the level and its role words («даю · получаю»), so they never sit on it */
+.v21 .sc{--fw:min(max(36px,calc((100% - 8px) * var(--v) / 10)),calc(100% - 108px))}.v21 .sc.full{--fw:calc(100% - 8px)}
 .v21 .sc-f{position:absolute;left:4px;top:4px;bottom:4px;width:var(--fw);border-radius:var(--r-full);background:linear-gradient(90deg,var(--fill0),color-mix(in srgb,var(--accent) var(--fa),transparent));animation:capGrow 1.1s var(--ease) both;animation-delay:var(--d,0s)}
 /* safe-t: ok — fills its own parent box, not the screen top */.v21 .sc-l{position:absolute;inset:0;display:flex;align-items:center;gap:6px;padding:0 14px 0 16px;font-size:var(--fs-sm);font-weight:650;color:var(--ink);z-index:2;pointer-events:none}
 .v21 .sc-l.c{justify-content:center;color:var(--mute);font-weight:650}
