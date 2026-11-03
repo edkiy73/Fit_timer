@@ -147,7 +147,7 @@ export function ApprovalSheet({a,base,coupleId,partner,onClose,onDone}:{a:Approv
    const r=action==='cancel'?await call('decide.cancel',{opId:op.current,approvalId:a.id},decided,{profileId:coupleId})
     :await call('decide.approval',{opId:op.current,approvalId:a.id,choice:'approve'},decided,{profileId:coupleId});
    const state=r.state??(action==='cancel'?'cancelled':'approved');
-   onDone(t('fe.cw.done.'+(['approved','returned','cancelled','expired'].includes(state)?state:'cancelled')));
+   onDone(t('fe.cw.done.'+(['approved','rejected','cancelled','expired','stale'].includes(state)?state:'cancelled')));
   }catch(e){setFailure(feErrorMessage(e,t));op.current=newOpId();}finally{setBusy(false);}
  };
  // Editing happens as the couple: the editor and the profile preview read the acting profile.
@@ -233,8 +233,8 @@ function ReturnSheet({a,coupleId,onClose,onDone}:{a:Approval,coupleId:string,onC
  const send=async()=>{
   if(busy||!checks.submit())return;setBusy(true);setFailure('');
   try{const comment=note.trim();
-   const r=await call('decide.approval',{opId:op.current,approvalId:a.id,choice:'return',...(comment?{comment}:{})},decided,{profileId:coupleId});
-   const state=r.state??'returned';onDone(t('fe.cw.done.'+(['returned','expired','cancelled'].includes(state)?state:'returned')));}
+   const r=await call('decide.approval',{opId:op.current,approvalId:a.id,choice:'reject',...(comment?{comment}:{})},decided,{profileId:coupleId});
+   const state=r.state??'rejected';onDone(t('fe.cw.done.'+(['rejected','expired','cancelled','stale'].includes(state)?state:'rejected')));}
   catch(e){if(!checks.fromServer(e,{comment:'note'}))setFailure(feErrorMessage(e,t));op.current=newOpId();}finally{setBusy(false);}
  };
  return <Sheet title={rsvp?t('fe.c6.ret.titleRsvp'):t('fe.c6.ret.title')} sub={kindTitle(a,t)} onClose={onClose} dirty={!busy&&!!note.trim()}

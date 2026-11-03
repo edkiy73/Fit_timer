@@ -4,6 +4,8 @@ import { PROCESSED_ENTITIES, liveSignals } from './live.mjs';
 import { scanAsset, servedKeys } from './media/scan.mjs';
 import { POSTER_UPLOAD_KEY } from './media/assets.mjs';
 import { deleteCouple } from './commands/couples.mjs';
+import { releaseWaitingEvents } from './commands/events.mjs';
+import { expireApprovals } from './approvals.mjs';
 import { setSuspended } from './commands/moderation.mjs';
 import { journal } from './commands/staff.mjs';
 import { alertStaff } from './staff-alert.mjs';
@@ -174,6 +176,16 @@ export async function sweepExpiredCouples(db) {
   return due.length;
 }
 
+/** Couple approvals past their date are closed as expired (docs/notifications.md: «Истечение — фоновая работа»): the
+ * author gets «Срок истёк», the partner's task goes, an event waiting for the partner goes back to drafts. Events left
+ * waiting with nothing pending (closed before this job existed) go back to drafts too. @param {Db} db */
+export async function sweepExpiredApprovals(db) {
+  if (!(await db.query(`select exists (select 1 from information_schema.columns where table_schema = 'feture' and table_name = 'partner_approval' and column_name = 'base_rev') ok`))[0].ok) return 0;
+  const expired = await db.tx(q => expireApprovals(q));
+  if ((await db.query(`select to_regclass('feture.event') is not null ok`))[0].ok) await db.tx(q => releaseWaitingEvents(q));
+  return expired;
+}
+
 /** Timed suspensions and restrictions that ran out are lifted (audit 30.10, item 9): the person is told, and the journal
  * keeps a line without a staff member. @param {Db} db */
 export async function sweepExpiredSanctions(db) {
@@ -250,6 +262,7 @@ async function tickOnce(db, deps, processed) {
   const ledger = await sweepOpLedger(db);
   const markers = await sweepMarkers(db);
   const couples = await sweepExpiredCouples(db);
+  const approvals = await sweepExpiredApprovals(db);
   await sweepExpiredSanctions(db);
   const ephemeral = await sweepEphemeral(db);
   const reminders = await sweepEventReminders(db);
@@ -259,5 +272,5 @@ async function tickOnce(db, deps, processed) {
   await sweepPublicHelp(db);
   // Finished outbox items stay a week (some «told already today» checks read them), then go.
   await db.query(`delete from feture.outbox where done_at < now() - interval '7 days'`);
-  return { processed: done, expired, ledger, markers, couples, ephemeral, reminders, selfies };
+  return { processed: done, expired, ledger, markers, couples, approvals, ephemeral, reminders, selfies };
 }

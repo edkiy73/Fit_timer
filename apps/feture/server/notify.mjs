@@ -206,11 +206,11 @@ async function eventFollowers(q, eventId, admittedOnly, saved = false) {
 
 /** The «Нужно решить» kind each decision topic makes (server/commands/inbox.mjs decisions()), and its object. */
 const DECIDE_OF = /** @type {Record<string, string>} */ ({
-  'decide.created': 'joint', 'decide.resolved': 'jointReturned', 'access.requested': 'req', 'community.requested': 'capp',
+  'decide.created': 'joint', 'access.requested': 'req', 'community.requested': 'capp',
   'event.applied': 'eapp', 'couple.invited': 'pinv', 'tag.requested': 'tag', 'link.proposed': 'link', 'link.changeProposed': 'linkChange',
 });
 const DECIDE_OBJECT = /** @type {Record<string, (p: any) => {type: string, id: string} | null>} */ ({
-  'decide.created': p => ({ type: 'approval', id: p.approvalId }), 'decide.resolved': p => ({ type: 'approval', id: p.approvalId }),
+  'decide.created': p => ({ type: 'approval', id: p.approvalId }),
   'community.requested': p => ({ type: 'community', id: p.communityId }), 'event.applied': p => ({ type: 'event', id: p.eventId }),
   'tag.requested': p => ({ type: 'post', id: p.postId }),
   'access.requested': p => ({ type: 'accessRequest', id: p.requestId }), 'couple.invited': p => ({ type: 'invite', id: p.inviteId }),
@@ -348,7 +348,9 @@ export function notifyHandlers(db, emit = () => {}) {
       const type = kind ? `decide.${kind}` : 'decide.pinv';
       const route = destination({ type, data: { ...p, label: adr?.kind === 'couple' ? 'couple' : 'me' }, object: DECIDE_OBJECT[item.topic]?.(p) ?? null,
         addressee: r.profile, couple: adr?.kind === 'couple' ? r.profile : null });
-      await queuePush(q, item, r, 'decide', undefined, undefined, { key: noteKey(type, { label: adr?.kind === 'couple' ? 'couple' : 'me' }), url: pushUrl(route) });
+      // A partner's proposal names its kind («{name} предлагает опубликовать пост от пары»).
+      const sub = { label: adr?.kind === 'couple' ? 'couple' : 'me', ...(item.topic === 'decide.created' ? { approvalKind: p.kind } : {}) };
+      await queuePush(q, item, r, 'decide', undefined, undefined, { key: noteKey(type, sub), url: pushUrl(route) });
       if (to) out.push({ profile: to, kind: 'decide' });
     }
   });
@@ -361,9 +363,10 @@ export function notifyHandlers(db, emit = () => {}) {
       [/** @type {any} */ (item.payload).from, item.profile_id]);
     if (l) await plain(item);
   };
-  // A returned approval comes back to «Нужно решить» of the one who asked: a push and a signal there, no inbox row.
+  // How an approval ended is a result row for the one it concerns (server/approvals.mjs close()); none when the caller's
+  // own notice covers it (`silent`: the approvals a pause or a narrowing voided — one «Пара на паузе», not three).
   const decided = handlers['decide.resolved'];
-  handlers['decide.resolved'] = async item => { await (/** @type {any} */ (item.payload).state === 'returned' ? toDecide(item) : decided(item)); };
+  handlers['decide.resolved'] = async item => { if (!(/** @type {any} */ (item.payload).silent)) await decided(item); };
   // A post sent back to drafts after its photos were checked (posts.mjs settlePublication): its author is told, while it
   // is still a draft (a couple's draft is its writer's alone — the post visibility check in write() keeps it so).
   handlers['post.returned'] = async item => {

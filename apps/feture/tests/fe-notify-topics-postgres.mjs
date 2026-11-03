@@ -158,7 +158,7 @@ test('a link proposal and a proposed change reach the other side; a returned app
     assert.ok((await pushes(ua)).includes('decide'));
     assert.ok(signals.some(s => s.profile === a && s.kind === 'decide'));
 
-    // A partner's change returned for rework: the asker gets a push and a signal, no inbox row.
+    // A partner's change refused: final — the asker gets a result row (pair.decided · rejected) and a signal, no task.
     const c = await person('uc', 'Noa');
     const pair = await coupleOf([b, c]);
     await db.query('update feture.profile_member set approves_partner = true where profile_id = $1', [pair]);
@@ -166,11 +166,13 @@ test('a link proposal and a proposed change reach the other side; a returned app
     await deliver();
     const before = (await pushes(ub)).length;
     signals.length = 0;
-    assert.equal((await call('uc', pair, { action: 'decide.approval', opId: op(), approvalId: p.pending.approvalId, choice: 'return' })).state, 'returned');
+    assert.equal((await call('uc', pair, { action: 'decide.approval', opId: op(), approvalId: p.pending.approvalId, choice: 'reject' })).state, 'rejected');
     await deliver();
-    assert.deepEqual((await pushes(ub)).slice(before), ['decide']);
-    assert.ok(signals.some(s => s.profile === pair && s.kind === 'decide'));
-    assert.ok(!(await call('ub', null, { action: 'notifications.list' })).items.some((/** @type {any} */ n) => n.type === 'pair.decided'));
+    assert.equal((await pushes(ub)).slice(before).length, 1);
+    assert.ok(signals.some(s => s.profile === pair));
+    const row = (await call('ub', null, { action: 'notifications.list' })).items.find((/** @type {any} */ n) => n.type === 'pair.decided');
+    assert.deepEqual([row?.data.state, row?.object?.id], ['rejected', p.pending.approvalId]);
+    assert.ok(!(await call('ub', null, { action: 'decide.list' })).items.some((/** @type {any} */ x) => x.kind === 'joint'), 'no task for the author');
   } finally { await pg.close(); }
 });
 

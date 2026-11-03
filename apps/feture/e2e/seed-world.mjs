@@ -410,7 +410,7 @@ async function couples() {
       const d = must(await api(email('gleb'), 'post.saveDraft', { opId: uuid7(), post: { type: 'post', body: 'Наконец-то съездили в Вильнюс на тематический фестиваль! Рассказываем, как это было и что взяли на заметку.', audience: 'all', topics: [] } }, c.id), 'couple draft');
       const p = must(await api(email('gleb'), 'post.publish', { opId: uuid7(), postId: d.id ?? d.postId }, c.id), 'couple publish');
       const approvalId = p.pending?.approvalId;
-      if (approvalId) must(await api(email('olya'), 'decide.approval', { opId: uuid7(), approvalId, choice: 'return', comment: 'Давай сначала уберём название фестиваля и город — не хочу, чтобы нас узнали коллеги.' }, c.id), 'return');
+      if (approvalId) must(await api(email('olya'), 'decide.approval', { opId: uuid7(), approvalId, choice: 'reject', comment: 'Давай сначала уберём название фестиваля и город — не хочу, чтобы нас узнали коллеги.' }, c.id), 'reject');
     }
     if (!items.some(x => x.kind === 'profile.update' && x.state === 'pending')) {
       const prof = (await api(email('gleb'), 'profile.get', { profileId: c.id }, c.id)).profile;

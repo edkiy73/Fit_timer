@@ -5,7 +5,7 @@ import { acceptsMention, popularScore, qaHidden } from '../sql-rules.mjs';
 import { fail, isUniqueViolation } from '../errors.mjs';
 import { alertStaff } from '../staff-alert.mjs';
 import { enqueue } from '../outbox.mjs';
-import { needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
+import { closePending, needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
 import { avatarSrc, mediaDto } from '../media/assets.mjs';
 import { blockProfile } from './social.mjs';
 import { markRequestReported } from './chats.mjs';
@@ -302,7 +302,7 @@ export async function deletePost(q, acting, postId) {
   const [p] = await q.query(`select state, created_by from feture.post where id = $1 and owner_profile_id = $2 for update`, [postId, acting.profileId]);
   // A couple's draft is the partner's who wrote it (me.posts shows it only to them): the other partner cannot touch it.
   if (!p || (p.state === 'draft' && p.created_by !== acting.accountId)) fail(404, 'not_found');
-  await q.query(`update feture.partner_approval set state = 'cancelled', decided_at = now() where target_type = 'post' and target_id = $1 and state = 'pending'`, [postId]);
+  await closePending(q, `a.target_type = 'post' and a.target_id = $1`, [postId], 'cancelled', { by: acting.accountId, hooks: false });
   // A post removed by moderation or under open reports is only hidden, so the evidence stays for staff (S4 §3).
   const [{ reported }] = await q.query(`select exists (select 1 from feture.report where target_type = 'post' and target_id = $1 and state = 'open') reported`, [postId]);
   if ((acting.kind === 'couple' && p.state !== 'draft') || p.state === 'removed' || reported) {
@@ -318,6 +318,21 @@ export async function deletePost(q, acting, postId) {
   return 'deleted';
 }
 
+/** A couple's own post as both partners see it while deciding: the whole text, the audience, how many files.
+ * @param {Q} q @param {string | null} postId @param {string} profileId */
+async function ownPostCard(q, postId, profileId) {
+  const [p] = await q.query(
+    `select p.id, p.type, p.title, p.body, p.audience, p.rev, p.state, p.in_feed, p.community_id, c.name community_name,
+       (select count(*)::int from feture.media_attachment ma where ma.target_type = 'post' and ma.target_id = p.id) media
+     from feture.post p left join feture.community c on c.id = p.community_id where p.id = $1 and p.owner_profile_id = $2`, [postId, profileId]);
+  return p ?? null;
+}
+
+/** @param {any} p a post row or null @param {string | null} id @param {string | null} title */
+const postObject = (p, id, title) => ({ type: 'post', id, title: p ? (p.title || cutLine(p.body)) : title, state: p ? (['removed', 'hidden'].includes(p.state) ? 'unavailable' : 'ok') : 'deleted' });
+/** @param {unknown} s */
+const cutLine = s => (typeof s === 'string' && s.trim() ? s.trim().split('\n')[0].slice(0, 80) : null);
+
 registerApprovalKind('post.publish', {
   apply: async (q, row) => {
     // The partner approved exactly this version: if the draft changed since, nothing is published.
@@ -328,13 +343,15 @@ registerApprovalKind('post.publish', {
     await requireCommunityWriter(q, d.community_id, /** @type {Acting} */ ({ profileId: row.profile_id, accountId: row.requested_by, kind: d.kind }));
     await doPublish(q, String(row.target_id), row.profile_id);
   },
-  // The draft as it is now; `changed` when it was edited after the request (approving would then fail).
+  version: async (q, row) => { const [p] = await q.query('select rev, state from feture.post where id = $1', [row.target_id]); return p ? `${p.state}:${p.rev}` : 'gone'; },
+  // The draft in full as it would go out, with its audience; `changed` when it was edited after the request.
   preview: async (q, row) => {
-    const [p] = await q.query(
-      `select p.type, p.title, left(p.body, 300) body, p.audience, p.rev,
-         (select count(*)::int from feture.media_attachment ma where ma.target_type = 'post' and ma.target_id = p.id) media
-       from feture.post p where p.id = $1 and p.owner_profile_id = $2`, [row.target_id, row.profile_id]);
-    return p ? { post: { type: p.type, title: p.title, body: p.body, audience: p.audience, media: p.media, rev: p.rev, changed: p.rev !== /** @type {any} */ (row.change).rev } } : null;
+    const p = await ownPostCard(q, row.target_id, row.profile_id);
+    const c = /** @type {any} */ (row.change);
+    const post = p ? { type: p.type, title: p.title, body: p.body, audience: p.audience, inFeed: p.in_feed, media: p.media, rev: p.rev, changed: p.rev !== c.rev,
+      community: p.community_id ? { id: p.community_id, name: p.community_name } : null }
+      : { type: c.type ?? 'post', title: c.title ?? null, body: c.body ?? '', audience: c.audience ?? null, media: 0, rev: c.rev, changed: false, community: null };
+    return { object: postObject(p, row.target_id, cutLine(c.title || c.body)), post, rows: [] };
   },
 });
 registerApprovalKind('post.edit', {
@@ -342,10 +359,21 @@ registerApprovalKind('post.edit', {
     const c = /** @type {any} */ (row.change);
     await doEdit(q, String(row.target_id), { profileId: row.profile_id, accountId: row.requested_by }, c.rev, c.post);
   },
-  // The proposed version, not the live one.
-  preview: async (_q, row) => {
+  version: async (q, row) => { const [p] = await q.query('select rev, state from feture.post where id = $1', [row.target_id]); return p ? `${p.state}:${p.rev}` : 'gone'; },
+  // The proposed version in full (not cut), and what it changes against the live one.
+  preview: async (q, row) => {
     const c = /** @type {any} */ (row.change);
-    return { post: { type: c.post.type, title: c.post.title ?? null, body: String(c.post.body).slice(0, 300), audience: c.post.audience, media: c.post.mediaIds.length, rev: c.rev } };
+    const p = await ownPostCard(q, row.target_id, row.profile_id);
+    const post = { type: c.post.type, title: c.post.title ?? null, body: String(c.post.body ?? ''), audience: c.post.audience, inFeed: c.post.inFeed, media: c.post.mediaIds?.length ?? 0, rev: c.rev,
+      community: p?.community_id ? { id: p.community_id, name: p.community_name } : null };
+    /** @type {{field: string, before: unknown, after: unknown}[]} */
+    const rows = [];
+    if (p) {
+      for (const [k, before, after] of /** @type {[string, unknown, unknown][]} */ ([['title', p.title, post.title], ['body', p.body, post.body], ['audience', p.audience, post.audience], ['media', p.media, post.media], ['inFeed', p.in_feed, post.inFeed]])) {
+        if (after !== undefined && JSON.stringify(before ?? null) !== JSON.stringify(after ?? null)) rows.push({ field: k, before: before ?? null, after: after ?? null });
+      }
+    }
+    return { object: postObject(p, row.target_id, cutLine(post.title || post.body)), post, before: p ? { title: p.title, body: p.body, audience: p.audience, media: p.media } : null, rows };
   },
 });
 
@@ -622,8 +650,8 @@ const run = {
       if (!p || p.created_by !== acting.accountId) fail(404, 'not_found'); // a couple's draft belongs to the partner who wrote it
       if (p.state !== 'draft') fail(409, 'conflict', { state: p.state });
       f = asDiscussion(f, p.community_id); // a draft stays where it was started
-      // Changing a draft the partner is asked to approve withdraws that request: they must see the final version.
-      await q.query(`update feture.partner_approval set state = 'cancelled', decided_at = now() where target_type = 'post' and target_id = $1 and state = 'pending'`, [postId]);
+      // Changing a draft the partner is asked to approve makes that request stale: they must see the final version.
+      await closePending(q, `a.target_type = 'post' and a.target_id = $1`, [postId], 'stale', { by: acting.accountId });
       await q.query(`update feture.post set type = $2, title = $3, body = $4, in_feed = $5, topics = $6, album_id = $7, rev = rev + 1, updated_at = now() where id = $1`,
         [postId, f.type, f.title ?? null, f.body, f.inFeed, f.topics, f.albumId ?? null]);
     } else {

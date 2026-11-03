@@ -226,9 +226,7 @@ async function doProfileUpdate(q, profileId, accountId, input) {
   }
   /** @type {[string, unknown][]} */
   const sets = [];
-  const map = { bio: 'bio', cityId: 'city_id', showAge: 'show_age', detailsVis: 'details_vis', genders: 'genders', orients: 'orients', roles: 'roles', formats: 'formats', seeks: 'seeks', status: 'status',
-    height: 'height', smoking: 'smoking', alcohol: 'alcohol', kids: 'kids', langs: 'langs', zodiac: 'zodiac' };
-  for (const [k, col] of Object.entries(map)) if (input[k] !== undefined) sets.push([col, input[k]]);
+  for (const [k, col] of Object.entries(DETAIL_COLUMN)) if (input[k] !== undefined) sets.push([col, input[k]]);
   if (sets.length) {
     await q.query(
       `update feture.profile_details set ${sets.map(([col], i) => `${col} = $${i + 2}, `).join('')}updated_at = now() where profile_id = $1`,
@@ -298,11 +296,61 @@ export async function setVisibilityAs(q, acting, setting, value) {
 }
 
 // Couple changes waiting for the partner are applied by the same code, as the partner who asked.
-registerApprovalKind('profile.update', { apply: async (q, row) => { await doProfileUpdate(q, row.profile_id, row.requested_by, row.change); } });
+const DETAIL_COLUMN = /** @type {Record<string, string>} */ ({ bio: 'bio', cityId: 'city_id', showAge: 'show_age', detailsVis: 'details_vis', genders: 'genders', orients: 'orients',
+  roles: 'roles', formats: 'formats', seeks: 'seeks', status: 'status', height: 'height', smoking: 'smoking', alcohol: 'alcohol', kids: 'kids', langs: 'langs', zodiac: 'zodiac' });
+
+/** A city as both languages. @param {Q} q @param {unknown} id */
+async function cityName(q, id) {
+  if (typeof id !== 'string') return null;
+  const [c] = await q.query(`select name_ru, name_en from feture.place where id = $1`, [id]);
+  return c ? { ru: c.name_ru, en: c.name_en } : null;
+}
+
+registerApprovalKind('profile.update', {
+  apply: async (q, row) => { await doProfileUpdate(q, row.profile_id, row.requested_by, row.change); },
+  version: async (q, row) => { const [p] = await q.query(`select rev from feture.profile where id = $1`, [row.profile_id]); return String(p?.rev ?? 'gone'); },
+  // Field by field, what it is now and what it would be (the city by name).
+  preview: async (q, row) => {
+    const [p] = await q.query(`select p.chosen_name, p.handle, to_jsonb(d) d from feture.profile p left join feture.profile_details d on d.profile_id = p.id where p.id = $1`, [row.profile_id]);
+    /** @type {{field: string, before: unknown, after: unknown}[]} */
+    const rows = [];
+    for (const [k, after] of Object.entries(row.change)) {
+      if (k === 'rev') continue;
+      const before = k === 'name' ? p?.chosen_name ?? '' : k === 'handle' ? p?.handle ?? null : DETAIL_COLUMN[k] ? p?.d?.[DETAIL_COLUMN[k]] ?? null : null;
+      rows.push(k === 'cityId' ? { field: k, before: await cityName(q, before), after: await cityName(q, after) } : { field: k, before, after });
+    }
+    return { object: { type: 'profile', id: row.profile_id, title: null, state: 'ok' }, rows };
+  },
+});
 registerApprovalKind('profile.setVisibility', {
   apply: async (q, row) => { await doSetVisibility(q, row.profile_id, /** @type {any} */ (row.change.setting), row.change.value); },
+  version: async (q, row) => {
+    const col = SETTING_COLUMN[/** @type {keyof typeof SETTING_COLUMN} */ (row.change.setting)];
+    const [s] = await q.query(`select ${col} v from feture.profile_settings where profile_id = $1`, [row.profile_id]);
+    return JSON.stringify(s?.v ?? null);
+  },
+  preview: async (q, row) => {
+    const col = SETTING_COLUMN[/** @type {keyof typeof SETTING_COLUMN} */ (row.change.setting)];
+    const [s] = await q.query(`select ${col} v from feture.profile_settings where profile_id = $1`, [row.profile_id]);
+    return { object: { type: 'setting', id: null, title: null, state: 'ok' }, rows: [{ field: String(row.change.setting), before: s?.v ?? null, after: row.change.value }] };
+  },
 });
-registerApprovalKind('interests.set', { apply: async (q, row) => { await doInterestSet(q, row.profile_id, row.requested_by, row.change); } });
+registerApprovalKind('interests.set', {
+  apply: async (q, row) => { await doInterestSet(q, row.profile_id, row.requested_by, row.change); },
+  version: async (q, row) => {
+    const [i] = await q.query(`select value, mark, dir, vis from feture.interest where profile_id = $1 and topic_id = $2`, [row.profile_id, row.change.topicId]);
+    return JSON.stringify(i ?? null);
+  },
+  // The topic, its mark now and after (value or «обсуждаем» / «нет», direction, who sees it).
+  preview: async (q, row) => {
+    const c = /** @type {any} */ (row.change);
+    const [t] = await q.query(`select id, category_id from feture.topic where id = $1`, [c.topicId]);
+    const [i] = await q.query(`select value, mark, dir, vis from feture.interest where profile_id = $1 and topic_id = $2`, [row.profile_id, c.topicId]);
+    const after = { value: c.value ?? null, mark: c.mark ?? null, dir: c.mark ? [] : (c.dir ?? []), vis: c.vis };
+    return { object: { type: 'topic', id: null, title: c.topicId, state: t ? 'ok' : 'deleted' }, topic: t ? { id: t.id, category: t.category_id } : null,
+      rows: [{ field: 'interest', before: i ?? null, after }] };
+  },
+});
 
 /** @type {Record<keyof typeof meCommands, Command['run']>} */
 const run = {

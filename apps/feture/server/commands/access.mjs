@@ -125,25 +125,41 @@ async function applyGrant(q, { requestId, ownerId, scopes, term, by }) {
   return { state: partial ? 'partial' : 'granted', scopes, until: g.until };
 }
 
-// Opening a couple's private part to someone is always decided by both partners.
+// Opening a couple's private part to someone is always decided by both partners — in trust mode too.
 registerApprovalKind('access.grant', {
   always: true,
   apply: async (q, row) => {
     const c = /** @type {{requestId: string, scopes: Scope[], term: keyof typeof TERM}} */ (row.change);
     await applyGrant(q, { requestId: c.requestId, ownerId: row.profile_id, scopes: c.scopes, term: c.term, by: row.requested_by });
   },
-  // Who would get access (while still active and not blocked), what and for how long.
+  version: async (q, row) => {
+    const [r] = await q.query(`select state from feture.access_request where id = $1 and owner_profile_id = $2`, [row.change.requestId, row.profile_id]);
+    return r?.state ?? 'gone';
+  },
+  // Who would get access (while still active and not blocked), what, for how long — `term` and the date it would end.
   preview: async (q, row) => {
-    const c = /** @type {{requestId: string, scopes: Scope[], term: string}} */ (row.change);
+    const c = /** @type {{requestId: string, scopes: Scope[], term: keyof typeof TERM}} */ (row.change);
     const [p] = await q.query(
-      `select p.id, p.kind, p.handle, p.name from feture.access_request r join feture.profile p on p.id = r.requester_profile_id
+      `select p.id, p.kind, p.handle, p.name, r.state from feture.access_request r join feture.profile p on p.id = r.requester_profile_id
        where r.id = $1 and r.owner_profile_id = $2 and p.state = 'active' and not feture.blocked($2, p.id)`, [c.requestId, row.profile_id]);
-    return { profile: p ?? null, scopes: c.scopes, term: c.term };
+    const days = { none: null, '1d': 1, '7d': 7, '30d': 30 }[c.term] ?? null;
+    const subject = p ? { id: p.id, kind: p.kind, handle: p.handle, name: p.name } : null;
+    return {
+      object: { type: 'access_request', id: c.requestId, title: subject ? subject.name || '@' + subject.handle : null, state: !p ? 'unavailable' : p.state === 'pending' ? 'ok' : 'unavailable' },
+      subject, profile: subject, scopes: c.scopes,
+      access: { scopes: c.scopes, term: c.term, days, until: days ? new Date(Date.now() + days * 86400e3).toISOString() : null },
+      rows: [],
+    };
   },
 });
 registerApprovalKind('private.on', {
   apply: async (q, row) => {
     await q.query(`update feture.profile_settings set private_on = true, updated_at = now() where profile_id = $1`, [row.profile_id]);
+  },
+  version: async (q, row) => { const [s] = await q.query(`select private_on from feture.profile_settings where profile_id = $1`, [row.profile_id]); return String(!!s?.private_on); },
+  preview: async (q, row) => {
+    const [s] = await q.query(`select private_on from feture.profile_settings where profile_id = $1`, [row.profile_id]);
+    return { object: { type: 'private', id: row.profile_id, title: null, state: 'ok' }, rows: [{ field: 'privateOn', before: !!s?.private_on, after: true }] };
   },
 });
 

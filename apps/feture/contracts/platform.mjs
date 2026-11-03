@@ -51,12 +51,14 @@ export const platformCommands = {
   'decide.approvals': { profile: true, write: false, input: z.strictObject({}) },
   'decide.approval': {
     profile: true, write: true,
-    // «Вернуть на доработку» may carry a note (≤300, V21 returnSend); approving never does.
+    // Approve or reject — both final (owner 03.11.2026: no «на доработку»). A refusal may carry a comment (≤300).
     input: z.strictObject({
-      opId, approvalId: id, choice: z.enum(['approve', 'return']),
+      opId, approvalId: id, choice: z.enum(['approve', 'reject']),
       comment: field('returnNote').optional(),
-    }).refine(v => v.choice === 'return' || v.comment === undefined, { message: 'comment_only_when_returning', path: ['comment'] }),
+    }).refine(v => v.choice === 'reject' || v.comment === undefined, { message: 'comment_only_when_rejecting', path: ['comment'] }),
   },
+  // One approval by id in any state, for a current member of its couple (the result card, an old link, a push).
+  'approval.get': { profile: false, write: false, input: z.strictObject({ id }) },
   'decide.cancel': { profile: true, write: true, input: z.strictObject({ opId, approvalId: id }) },
 };
 

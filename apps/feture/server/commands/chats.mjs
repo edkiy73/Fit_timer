@@ -405,11 +405,17 @@ registerApprovalKind('chat.request', {
     const acting = /** @type {Acting} */ ({ profileId: row.profile_id, accountId: row.requested_by, kind: p.kind, partnerAccountId: p.partner ?? null, partnerApproves: true, state: 'active', writable: true });
     await startRequest(q, acting, { profileId: c.profileId, body: c.body ?? '', assetId: c.assetId }, () => {}, { approved: true });
   },
-  // Who would get it (while still there and not blocked) and the message.
+  // A conversation that started meanwhile (they wrote first, a match) makes the request stale.
+  version: async (q, row) => {
+    const [c] = await q.query(`select state from feture.conversation where profile_a = least($1::uuid, $2::uuid) and profile_b = greatest($1::uuid, $2::uuid)`, [row.profile_id, row.change.profileId]);
+    return c?.state ?? 'none';
+  },
+  // Who would get it (while still there and not blocked) and the first message as it will go.
   preview: async (q, row) => {
     const c = /** @type {any} */ (row.change);
     const [p] = await q.query(`select id, kind, handle, name from feture.profile where id = $1 and state = 'active' and not feture.blocked($2, id)`, [c.profileId, row.profile_id]);
-    return { profile: p ?? null, message: { body: c.body ?? '', photo: !!c.assetId } };
+    return { object: { type: 'profile', id: p?.id ?? null, title: p ? p.name || '@' + p.handle : null, state: p ? 'ok' : 'unavailable' },
+      subject: p ?? null, profile: p ?? null, message: { body: c.body ?? '', photo: !!c.assetId }, rows: [] };
   },
 });
 

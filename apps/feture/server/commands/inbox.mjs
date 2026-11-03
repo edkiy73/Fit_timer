@@ -5,13 +5,14 @@ import { fail } from '../errors.mjs';
 import { sha256 } from '../hash.mjs';
 import { keysetPage, readKeyset } from '../cursor.mjs';
 import { withFaces } from './faces.mjs';
+import { decideItems } from '../approvals.mjs';
 import { appealState } from './moderation.mjs';
 import { incomingRequest } from '../sql-rules.mjs';
 import { canonicalToken, webSubscription } from '../webpush.mjs';
 
 /** Slice G2 + stage 5 (docs/notifications.md): the inbox of an account (S1 §13). Notifications are stored per account
  * and paged by a cursor over the whole history; «Нужно решить» is computed from its source rows every time (couple
- * invitations, access requests, partner approvals waiting or returned, community join requests and event applications
+ * invitations, access requests, partner approvals waiting, community join requests and event applications
  * to decide, photo marks), with no limit, each item with its initiator, object and revision. A partner never sees the
  * other's personal items; people hidden by a block are left out everywhere. One number everywhere: the same predicates
  * feed the lists and the counters.
@@ -48,10 +49,9 @@ function decisionUnion() {
        from feture.access_request r join feture.profile ap on ap.id = r.requester_profile_id
        where r.owner_profile_id in (${mine}) and r.state = 'pending' and ap.state = 'active' and not feture.blocked(r.owner_profile_id, ap.id)
        union all
-       select case when a.state = 'pending' then 'joint' else 'jointReturned' end, a.id, a.profile_id, null, a.target_id, a.created_at, null, null, null, null
+       select 'joint', a.id, a.profile_id, null, a.target_id, a.created_at, null, null, null, null
        from feture.partner_approval a join feture.profile p on p.id = a.profile_id
-       where a.profile_id in (${mine}) and (a.state = 'pending' and a.requested_by <> $1 and a.expires_at > now() and a.safety_epoch = p.safety_epoch
-                                          or a.state = 'returned' and a.requested_by = $1 and a.decided_at > now() - interval '14 days')
+       where a.profile_id in (${mine}) and a.state = 'pending' and a.requested_by <> $1 and a.expires_at > now() and a.safety_epoch = p.safety_epoch
        union all
        select 'capp', r.id, cm.profile_id, ${ACTOR}, r.community_id, r.created_at, 'community', c.name, r.rev,
          jsonb_build_object('question', c.join_question, 'answer', r.answer)
@@ -102,6 +102,24 @@ function decisionDto(r, kinds) {
     ...(r.kind === 'req' ? { scopes: d.scopes ?? [] } : {}),
     ...(r.kind === 'link' || r.kind === 'linkChange' ? { link: { kind: d.kind, to: d.to ?? null } } : {}),
   };
+}
+
+/** A partner's proposal with its own fields (server/approvals.mjs decideItems — the contract the inbox renders):
+ * `approvalKind` (one of the 19), `actor` {id, name} (the author), `addressee` (the couple's id, as on every item) with
+ * `addresseeName` (its name then), `object` {type, id, title}, `summary` (one short safe line), `approvalId`, `rev`
+ * (a number, when the object's version is one) and `baseRev` (the version string the proposal was made on).
+ * @param {Q} q @param {string} accountId @param {any[]} items decisionDto rows */
+async function withApprovals(q, accountId, items) {
+  const joint = await decideItems(q, items.filter(x => x.kind === 'joint').map(x => x.id), accountId);
+  return items.map(x => {
+    const j = x.kind === 'joint' ? joint.get(x.id) : null;
+    if (!j) return x;
+    // `rev` stays a number on every item (the inbox parses it so): the object's version when it is one, and always the
+    // proposal's own version string as `baseRev`; no `summary` when there is nothing safe to say.
+    const { rev: _, ...rest } = x;
+    return { ...rest, approvalKind: j.kind, actor: j.actor, addresseeName: j.addressee?.name ?? null, object: j.object, approvalId: j.approvalId,
+      ...(j.summary ? { summary: j.summary } : {}), ...(typeof j.rev === 'string' && /^\d+$/.test(j.rev) ? { rev: Number(j.rev) } : {}), baseRev: j.rev ?? null };
+  });
 }
 
 /** @param {Q} q @param {any[]} rows */
@@ -206,7 +224,7 @@ const run = {
     const rows = await decisions(q, account.id);
     await withFaces(q, cfg.media, { profileId: account.person_profile_id, accountId: account.id }, rows, r => r.actor);
     const kinds = await addresseeKinds(q, rows);
-    return { items: rows.map(r => decisionDto(r, kinds)) };
+    return { items: await withApprovals(q, account.id, rows.map(r => decisionDto(r, kinds))) };
   },
 
   async 'decide.get'(q, { account, input, cfg }) {
@@ -214,7 +232,7 @@ const run = {
     const rows = await decisions(q, account.id, { kind: input.kind, id: input.id });
     if (!rows[0]) fail(404, 'not_found');
     await withFaces(q, cfg.media, { profileId: account.person_profile_id, accountId: account.id }, rows, r => r.actor);
-    return { item: decisionDto(rows[0], await addresseeKinds(q, rows)) };
+    return { item: (await withApprovals(q, account.id, [decisionDto(rows[0], await addresseeKinds(q, rows))]))[0] };
   },
 
   async 'inbox.counts'(q, { account }) {
