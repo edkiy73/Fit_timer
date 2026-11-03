@@ -249,9 +249,10 @@ export function GalleryScreen(){
      {a&&!inAlbum?<Skel kind="list"/>
       :items.length||(own&&!sel)?<GalleryGrid label={cur?.title??title}>
        {own&&!sel&&<GalleryAdd label={t('fe.gal.add')} onClick={()=>navigate('/n/feed/new?x=media'+(a?'&album='+a:''))}/>}
-       {items.map((x,i)=>{const on=!!sel?.has(x.postId);
+       {/* Selecting (album, audience, delete, «В профиль») works on «всем» / «подписчикам» posts; «по доступу» and «только я» stay out of it. */}
+       {(sel?items.filter(x=>!x.audience||x.audience==='all'||x.audience==='followers'):items).map((x,i)=>{const on=!!sel?.has(x.postId);
         return <GalleryTile key={x.postId} id={x.postId} flash={flash===x.postId} src={tileSrc(x.media)} label={t('fe.gal.tile',{n:i+1,total:items.length})} count={x.count}
-         followers={x.audience==='followers'?t('fe.gal.followersOnly'):undefined} review={x.media.pending?t('fe.br.inReview'):undefined}
+         followers={x.audience==='followers'?t('fe.gal.followersOnly'):x.audience==='granted'?t('fe.gal.grantedOnly'):x.audience==='only'?t('fe.gal.onlyMe'):undefined} review={x.media.pending?t('fe.br.inReview'):undefined}
          selected={sel?on:undefined} onClick={()=>{if(!sel){navigate('/n/feed/post/'+x.postId);return;}
           setSel(s=>{const n=new Set(s);if(on)n.delete(x.postId);else n.add(x.postId);return n;});}}/>;})}
       </GalleryGrid>

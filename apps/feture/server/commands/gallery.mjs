@@ -23,7 +23,9 @@ import { currentPhotos, dropHiddenPostPhotos, setProfilePhotos } from './photos.
 const need = acting => { if (!acting) throw new Error('acting profile missing'); return acting; };
 
 /** A gallery post as the viewer may see it ($1 viewer profile, $2 viewer account; `p` is the post). */
-const TILE = `p.state = 'published' and p.community_id is null and p.audience in ('all', 'followers')
+// Every audience: post_visible decides who sees a post, so «по доступу» photos stay in the owner's gallery and show to
+// people with access, «только я» to the owner only (owner 04.11.2026: such photos «пропадали» after review).
+const TILE = `p.state = 'published' and p.community_id is null
   and exists (select 1 from feture.media_attachment a where a.target_type = 'post' and a.target_id = p.id)
   and feture.post_visible(p, $1, $2)`;
 

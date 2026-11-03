@@ -1,6 +1,6 @@
 import React,{useEffect,useRef,useState,type CSSProperties,type ReactNode} from 'react';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Check,ChevronLeft,Clock,Heart,Image as ImageIcon,Lock,MessageCircle,Plus,Ticket,UserRound,Users,type LucideIcon} from 'lucide-react';
+import {Check,ChevronLeft,X,Clock,Heart,Image as ImageIcon,Lock,MessageCircle,Plus,Ticket,UserRound,Users,type LucideIcon} from 'lucide-react';
 import {Alert,Av,Btn,Card,IconBtn,Note,Row,Sheet,Skel,Stack,Switch,plate,useBack} from './index';
 import {VideoPlayer} from './av';
 import './domain.css';
@@ -521,6 +521,14 @@ export function ReviewTiles({tiles,onOpen}:{tiles:{label:string,thumb?:string|nu
   return <button key={i} type="button" className="st-tile" aria-label={x.label} aria-busy={x.busy||undefined} disabled={!!x.busy} onClick={()=>onOpen(i)}>
    {x.thumb?<img src={x.thumb} alt="" draggable={false}/>:x.blur?<img className="st-blur" src={x.blur} alt="" draggable={false}/>:null}
    {!x.thumb&&I&&<span className="st-tile-ico"><I/></span>}<span className="st-tile-cap">{x.label}</span></button>;})}</div>;
+}
+/** The tapped review photo, large and sharp under the tiles (owner 04.11.2026): it grows in smoothly; a tap on it opens
+ * the full-screen viewer, ✕ folds it back. One look first, full screen only when asked. */
+export function ReviewPreview({src,label,openLabel,closeLabel,onOpen,onClose}:{src:string,label:string,openLabel:string,closeLabel:string,onOpen:()=>void,onClose:()=>void}){
+ return <div className="st-preview">
+  <button type="button" className="st-preview-img" aria-label={openLabel} title={openLabel} onClick={onOpen}><img src={src} alt={label} draggable={false}/></button>
+  <IconBtn icon={X} kind="glass" size="sm" className="st-preview-x" label={closeLabel} onClick={onClose}/>
+ </div>;
 }
 /** Two or more pictures side by side (a selfie and the profile photos). */
 export function ReviewPair({children}:{children:ReactNode}){return <div className="st-pair">{children}</div>;}

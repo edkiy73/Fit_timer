@@ -124,6 +124,13 @@
 .v21 .st-tile-ico svg{width:20px;height:20px}
 .v21 .st-tile-cap{position:absolute;left:0;right:0;bottom:0;padding:18px 8px 6px;font-size:var(--fs-cap);color:#fff;text-align:left;background:linear-gradient(transparent,rgba(0,0,0,.6))}
 .v21 .st-tile[aria-busy]{opacity:.6}
+/* ReviewPreview: the tapped photo grows in under the tiles; tap → full screen */
+.v21 .st-preview{position:relative;border-radius:var(--r);overflow:hidden;background:var(--surf);border:1px solid var(--line);animation:st-grow .28s cubic-bezier(.2,.8,.2,1)}
+.v21 .st-preview-img{display:block;width:100%;padding:0;border:0;background:none;cursor:zoom-in}
+.v21 .st-preview-img>img{display:block;width:100%;max-height:70vh;object-fit:contain}
+.v21 .st-preview-x{position:absolute;top:8px;right:8px}
+@keyframes st-grow{from{opacity:0;transform:scale(.6);transform-origin:50% 0}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.v21 .st-preview{animation:none}}
 .v21 .st-filterrow{display:flex;gap:var(--s-2);align-items:stretch}
 .v21 .st-filterrow>.btn{flex:1 1 auto;width:auto;min-width:0}
 .v21 .st-filterrow>.ibtn{flex:none;width:48px;height:auto;min-height:48px;border-radius:var(--r);background:var(--surf);border:1px solid var(--line)}
