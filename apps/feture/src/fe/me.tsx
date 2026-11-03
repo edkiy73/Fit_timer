@@ -172,17 +172,14 @@ export function MeSkel(){
  return <div aria-busy="true"><Group className="ph20"><PhotoSlots loading/></Group><Skel kind="card" rows={2}/></div>;
 }
 
-/** «Данные» — the filled rows only; the audience comes from the profile's `detailsVis`. */
+/** «Данные» — the filled rows only, «Изменить» in the header like «Обо мне» (owner 04.11.2026); everyone sees them. */
 export function DetailsBlock({p,label}:{p:Profile,label:(kind:string,code:string)=>string}){
  const {t}=useI18n();const navigate=useNavigate();const cp=p.kind==='couple';
  const rows=DETAIL_ROWS.filter(([f])=>!cp||COUPLE_ROWS.includes(f)).map(([field,kind])=>{const v=p.details[field];const codes=Array.isArray(v)?v as string[]:typeof v==='string'?[v]:[];
   return codes.length?[field,t(kind==='status'?'fe.mx.f.status':'fe.reg.kind.'+kind),codes.map(c=>label(kind,c)).join(', ')]:null;}).filter((x):x is string[]=>!!x);
  const title=cp?t('fe.mx.detailsCouple'):t('fe.me.details');
- return <Group id="meDet" title={title}>
-  {rows.length?<Card className="blk-btn" label={t('fe.mx.editOf',{title})} onClick={()=>navigate('/n/me/edit?only=details')}>
-   <dl className="kv">{rows.map(([f,k,v])=><Fragment key={f}><dt>{k}</dt><dd>{v}</dd></Fragment>)}</dl>
-   <span className="chv"><ChevronRight/></span>
-  </Card>
+ return <Group id="meDet" title={title} action={rows.length?<button type="button" onClick={()=>navigate('/n/me/edit?only=details')}>{t('fe.mx.edit')}</button>:undefined}>
+  {rows.length?<Card><dl className="kv">{rows.map(([f,k,v])=><Fragment key={f}><dt>{k}</dt><dd>{v}</dd></Fragment>)}</dl></Card>
    :<AddCard icon={ClipboardList} title={t('fe.mp.detailsAdd')} sub={cp?t('fe.mx.detailsEmptyCouple'):t('fe.mx.detailsEmpty')} onClick={()=>navigate('/n/me/edit?only=details')}/>}
  </Group>;
 }

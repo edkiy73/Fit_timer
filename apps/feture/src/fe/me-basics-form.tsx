@@ -1,4 +1,4 @@
-import {useEffect,useId,useState} from 'react';
+import {Fragment,useEffect,useId,useState} from 'react';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {AtSign,Cake} from 'lucide-react';
@@ -11,14 +11,30 @@ import {useToast} from './toast';
 import {NICK,nickAnswer} from './register';
 import type {Profile} from './me';
 
-/** «Мой профиль» → the basics right on the screen (owner 04.11.2026): name, nick, city, age (shown or hidden, picked like
- * the city) and «О себе», with «Сохранить» under them. The server keeps its rules (name and nick limits, a couple's
- * change waiting for the partner). */
+/** «Мой профиль» → «Основное» (owner 04.11.2026): name, nick, city, age and «О себе» shown like «Данные», «Изменить» in the
+ * header opens them as a form in a sheet (age shown or hidden, picked like the city). The server keeps its rules (name
+ * and nick limits, a couple's change waiting for the partner). */
 const done=z.object({ok:z.literal(true)}).passthrough();
 type Draft={name:string,handle:string,cityId:string|null,showAge:boolean,bio:string};
 const draftOf=(p:Profile):Draft=>({name:p.chosenName??'',handle:p.handle??'',cityId:typeof p.cityId==='string'?p.cityId:p.city?.id??null,showAge:p.showAge!==false,bio:p.bio});
 
 export function BasicsForm({p,places,onSaved}:{p:Profile,places:Place[],onSaved:()=>void}){
+ const {t,locale}=useI18n();const cp=p.kind==='couple';const [open,setOpen]=useState(false);
+ const city=p.city?(locale==='en'?p.city.en:p.city.ru):null;
+ const rows:[string,string][]=[
+  [cp?t('fe.nn.nameUs'):t('fe.nn.name'),p.name||p.handle||'—'],
+  [cp?t('fe.nn.nickUs'):t('fe.nn.nick'),p.handle?'@'+p.handle:'—'],
+  [t('fe.mx.ed.city'),city||'—'],
+  ...(!cp&&p.age?[[t('fe.mb.age'),p.showAge!==false?String(p.age):t('fe.mb.ageHidden',{n:String(p.age)})] as [string,string]]:[]),
+  [t('fe.mx.ed.about'),p.bio||'—'],
+ ];
+ return <Group id="meBasics" title={t('fe.me.basics')} action={<button type="button" onClick={()=>setOpen(true)}>{t('fe.mx.edit')}</button>}>
+  <Card><dl className="kv">{rows.map(([k,v])=><Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>)}</dl></Card>
+  {open&&<BasicsSheet p={p} places={places} onClose={()=>setOpen(false)} onSaved={()=>{setOpen(false);onSaved();}}/>}
+ </Group>;
+}
+
+function BasicsSheet({p,places,onClose,onSaved}:{p:Profile,places:Place[],onClose:()=>void,onSaved:()=>void}){
  const {call}=useFe();const {t,locale}=useI18n();const toast=useToast();const id=useId();const cp=p.kind==='couple';
  const [base,setBase]=useState(()=>draftOf(p));const [d,setD]=useState(base);
  useEffect(()=>{const b=draftOf(p);setBase(b);setD(b);},[p]);
@@ -51,7 +67,8 @@ export function BasicsForm({p,places,onSaved}:{p:Profile,places:Place[],onSaved:
   catch(e){if(e instanceof FeError&&e.fields?.includes('handle'))setNickErr(t('fe.reg.nick.taken'));else setFailure(feErrorMessage(e,t));}
   finally{setBusy(false);}
  };
- return <Group id="meBasics" title={t('fe.me.basics')}>
+ return <Sheet title={t('fe.me.basics')} onClose={onClose} dirty={dirty&&!busy}
+  foot={<Btn onClick={()=>void save()} disabled={!dirty||busy} busy={busy}>{t('fe.me.save')}</Btn>}>
   <Card form className="pe-form">
    <Field id={id+'n'} name="name" label={cp?t('fe.nn.nameUs'):t('fe.nn.name')} optional={t('fe.reg.optional')}
     hint={p.nameAt?t('fe.nn.nameAt',{date:dayMonth(p.nameAt)}):cp?t('fe.nn.nameHintUs'):t('fe.nn.nameHint')}>
@@ -65,12 +82,11 @@ export function BasicsForm({p,places,onSaved}:{p:Profile,places:Place[],onSaved:
    <Field id={id+'b'} name="bio" label={t('fe.mx.ed.about')}>
     <TextArea id={id+'b'} rows={4} value={d.bio} maxLength={FIELD.bio.max} placeholder={t('fe.mx.ed.aboutPh')} onChange={e=>set({bio:e.target.value})}/><Counter n={textLength(d.bio)} max={FIELD.bio.max}/></Field>
    {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
-   <Btn onClick={()=>void save()} disabled={!dirty||busy} busy={busy}>{t('fe.me.save')}</Btn>
   </Card>
   {city&&<PlacePicker places={places} current={d.cityId} clear={t('fe.mx.ed.noCity')} add={addPlace} onPick={x=>{set({cityId:x?.id??null});setCity(false);}} onClose={()=>setCity(false)}/>}
   {age&&<Sheet title={t('fe.mb.age')} onClose={()=>setAge(false)}>
    <RadioList label={t('fe.mb.age')} value={d.showAge?'show':'hide'} onChange={v=>{set({showAge:v==='show'});setAge(false);}}
     options={[['show',t('fe.mb.ageShow',{n:String(p.age)})],['hide',t('fe.mb.ageHide')]] as const}/>
   </Sheet>}
- </Group>;
+ </Sheet>;
 }
