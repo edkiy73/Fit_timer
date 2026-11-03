@@ -30,6 +30,9 @@ const PORT = Number(env.PORT || 3000);
 const STATIC_DIR = path.resolve(here, env.STATIC_DIR || '../dist');
 const MAX_BODY = 4 * 1024 * 1024; // Core's own ceiling; FetUre commands cap far lower themselves
 const require = createRequire(import.meta.url);
+// Mail goes out as KINHAZE (owner 03.11.2026). Installs made before the rename keep `FetUre <…>` in app.env, which
+// nothing here can edit: the sender's name is corrected at start, the address stays as configured.
+if (env.MAIL_FROM && /^\s*FetUre\s*</.test(env.MAIL_FROM)) env.MAIL_FROM = env.MAIL_FROM.replace(/^\s*FetUre\s*</, 'KINHAZE <');
 /** Earlier builds' hashed files: a tab opened before a deploy still loads the screens it has not opened yet. */
 let KEEP_DIR = env.ASSETS_KEEP_DIR ? path.resolve(env.ASSETS_KEEP_DIR) : '';
 if (KEEP_DIR) {
