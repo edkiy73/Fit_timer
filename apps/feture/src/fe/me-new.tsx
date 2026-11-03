@@ -2,13 +2,13 @@ import {useCallback,useEffect,useState} from 'react';
 import {useNavigate,useParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Bookmark,Calendar,Eye,Globe,Images,Inbox,KeyRound,Link2,Lock,Newspaper,Settings,UserRound,Users,X} from 'lucide-react';
+import {Bookmark,Calendar,Eye,Globe,Images,Inbox,KeyRound,Lock,Newspaper,Settings,UserRound,Users,X} from 'lucide-react';
 import {feErrorMessage} from '../feture/fe-api';
 import {Av,Bar,Btn,Card,Empty,Group,IconBtn,Row,Skel,View} from './kit';
 import {useFe,useLive,useShown} from './session';
 import {BellButton,countsRes} from './inbox';
 import {StaffEntry} from './staff';
-import {waitingCount} from './links';
+import {LinksBlock,waitingCount} from './links';
 import {linksMineRes} from './profile-extras';
 import {ActAsSheet} from './couple';
 import {PairEntry} from './pair';
@@ -90,7 +90,6 @@ export function MeNewScreen(){
    <Group title={t('fe.m2.g.profile')}><Card list>
     <Row icon={UserRound} title={t('fe.m2.profile')} val={p?.photos.length?t('fe.m2.photosN',{n:String(p.photos.length)}):undefined} onClick={go('/n/me/new/profile')}/>
     <Row icon={Images} title={t('fe.mx.gal')} onClick={go('/n/me/new/gallery')}/>
-    <Row icon={Link2} title={t(cp?'fe.ln.titleCouple':'fe.ln.title')} badge={c?.links||undefined} onClick={go('/n/me/links')}/>
    </Card></Group>
    <Group title={t('fe.m2.g.private')}><Card list>
     <Row icon={Lock} title={t('fe.m2.private')} val={privOn===undefined?undefined:t(privOn?'fe.m2.on':'fe.m2.off')} onClick={go('/n/me/new/private')}/>
@@ -131,6 +130,7 @@ export function MeNewSection(){
      <PhotosBlock p={p} settings={settings} onChanged={load}/>
      <BasicsForm p={p} places={places} onSaved={load}/>
      <DetailsBlock p={p} label={label}/>
+     <LinksBlock key={'links'+p.id}/>
      <MeAboutBlock p={p}/>
      <MeJars key={p.id}/>
     </>}
