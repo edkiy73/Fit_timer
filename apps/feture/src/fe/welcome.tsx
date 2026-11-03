@@ -2,12 +2,10 @@ import {useEffect,useRef,useState,type CSSProperties,type ReactNode} from 'react
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Check,ChevronLeft,ChevronRight,EyeOff,Globe,Heart,KeyRound,LockOpen,MapPin,MessageCircle} from 'lucide-react';
 import {BRAND,Brand,Btn,H,IconBtn,plate} from './kit';
-import {TermsSheet} from './terms-sheet';
-import {SignInHelp} from './support';
 
 /** V21 A01 «Приветствие» with the prototype's markup (`.welcome.wv`): the hero, six slides that cross-fade as the
  * active bar fills (CSS animation; hover/focus pauses it, reduced motion stops it), swipe and arrow keys, then
- * «Создать аккаунт» / «У меня уже есть аккаунт» → A02 in that mode; «условиями» opens the terms sheet. */
+ * one «Начать» → A02 (owner 04.11.2026: the two buttons led to the same place; help and the terms live on A02). */
 
 const N=6;
 /** `wFit()` — each slide's picture as large as its space allows (up to 1.12 on a desktop), never cut. */
@@ -28,13 +26,11 @@ function Ava({name,cls}:{name:string,cls:string}){
  return <span className={'av ini '+cls}><div className="plate" style={plate(name)}/><b className="k-anchor">{name[0]}</b></span>;
 }
 
-export function Welcome({onStart}:{onStart:(mode:'up'|'in')=>void}){
+export function Welcome({onStart}:{onStart:()=>void}){
  const {t,locale,canSwitch,setPreference}=useI18n();
  const [cur,setCur]=useState(0);const x0=useRef<{x:number,y:number}|null>(null);const box=useRef<HTMLDivElement>(null);
  useEffect(()=>{const el=box.current;if(!el)return;const go=()=>fit(el);go();addEventListener('resize',go);return ()=>removeEventListener('resize',go);},[locale]);
- const [terms,setTerms]=useState(false);
  const show=(i:number)=>setCur(((i%N)+N)%N);
- const start=(mode:'up'|'in')=>onStart(mode);
  const role=(d:string[])=>d.length===3?t('fe.int.role.all'):d.map(x=>t('fe.int.role.'+x)).join(' · ');
  const jars:[string,number,string[]][]=[['shibari',10,['give']],['aftercare',8,['get']],['roleplay',6,['give','get','watch']],['latex',3,['watch']]];
  const visuals:ReactNode[]=[
@@ -81,12 +77,10 @@ export function Welcome({onStart}:{onStart:(mode:'up'|'in')=>void}){
       <IconBtn icon={ChevronRight} label={t('fe.cw.w.next')} onClick={()=>show(cur+1)}/></span></div>
     </section>
     <div className="w-act">
-     <div className="w-cta"><Btn onClick={()=>start('up')}>{t('fe.cw.w.create')}</Btn><Btn kind="soft" onClick={()=>start('in')}>{t('fe.cw.w.haveAccount')}</Btn></div>
-     <SignInHelp/>
-     <div className="w-age">{t('fe.cw.w.age')} <a href="#" onClick={e=>{e.preventDefault();setTerms(true);}}>{t('fe.cw.w.terms')}</a>.</div>
+     <div className="w-cta"><Btn onClick={onStart}>{t('fe.cw.w.start')}</Btn></div>
+     <div className="w-age">{t('fe.cw.w.adults')}</div>
     </div>
    </div>
   </div>
-  {terms&&<TermsSheet onClose={()=>setTerms(false)}/>}
  </main></div></div>;
 }

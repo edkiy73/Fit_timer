@@ -51,17 +51,17 @@ export function SupportSheet({onClose,onSent}:{onClose:()=>void,onSent:(t:Ticket
 
 /** «Нужна помощь со входом» — the one entry for signed-out screens (welcome, e-mail, code): a text link that opens the
  * public form. No account needed: the message goes to the support mailbox (`POST /api/fe?help=1`). */
-export function SignInHelp({className}:{className?:string}){
+export function SignInHelp({className,email}:{className?:string,/** The address typed on the sign-in screen: the reply goes there. */ email?:string}){
  const {t}=useI18n();const [open,setOpen]=useState(false);
  return <>
   <Btn kind="text" auto {...(className?{className}:{})} aria-haspopup="dialog" onClick={()=>setOpen(true)}>{t('fe.hp.link')}</Btn>
-  {open&&<SignInHelpSheet onClose={()=>setOpen(false)}/>}
+  {open&&<SignInHelpSheet email={email??''} onClose={()=>setOpen(false)}/>}
  </>;
 }
 
-function SignInHelpSheet({onClose}:{onClose:()=>void}){
+function SignInHelpSheet({email,onClose}:{email:string,onClose:()=>void}){
  const {t,locale}=useI18n();
- const [body,setBody]=useState('');const [contact,setContact]=useState('');const [err,setErr]=useState('');const [busy,setBusy]=useState(false);const [done,setDone]=useState(false);
+ const [body,setBody]=useState('');const [contact,setContact]=useState(email);const [err,setErr]=useState('');const [busy,setBusy]=useState(false);const [done,setDone]=useState(false);
  const checks=useChecks({body:'support'},{body},{body:{too_short:t('fe.w8.sup.short'),empty:t('fe.w8.sup.short')}});
  const send=async()=>{
   if(!checks.submit())return;
@@ -79,7 +79,7 @@ function SignInHelpSheet({onClose}:{onClose:()=>void}){
    {checks.counter('body')}
   </Field>
   <Field id="fe-hp-contact" label={t('fe.hp.contact')} optional={t('fe.reg.optional')} hint={t('fe.hp.contactHint')}>
-   <Input id="fe-hp-contact" value={contact} maxLength={120} autoComplete="email" onChange={e=>setContact(e.target.value)}/>
+   <Input id="fe-hp-contact" type="email" inputMode="email" placeholder="name@mail.com" value={contact} maxLength={120} autoComplete="email" onChange={e=>setContact(e.target.value)}/>
   </Field>
  </Sheet>;
 }
