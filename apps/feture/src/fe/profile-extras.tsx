@@ -59,10 +59,10 @@ export type PersonProfile=z.infer<typeof personProfile>;
  * (server/commands/me.mjs): no age while «Показывать возраст» is off, «Данные» only when their audience reaches the
  * viewer (everyone: «Всем»; with access: «Всем» and «С доступом»), no city that is still waiting for a check. */
 export function viewedBy(p:PersonProfile,lv:'all'|'granted'|'card'):PersonProfile{
- const x=p as PersonProfile&{showAge?:boolean,detailsVis?:string|null};const vis=x.detailsVis??'all';
- const open=p.kind==='couple'||vis==='all'||(vis==='granted'&&lv==='granted');
+ // Owner 04.11.2026: «Данные» are seen by everyone, like «Обо мне» (no audience of their own any more).
+ const x=p as PersonProfile&{showAge?:boolean};
  const city=p.city&&(p.city as {pending?:boolean}).pending?null:p.city;
- return {...p,age:p.kind==='person'&&x.showAge===false?null:p.age,details:open?p.details:{},city};
+ return {...p,age:p.kind==='person'&&x.showAge===false?null:p.age,details:p.details,city};
 }
 export const mediaSrc=(m:z.infer<typeof media>|null|undefined)=>m&&!m.pending?m.src?.card??m.src?.full??m.src?.thumb??null:null;
 export const personName=(p:{name:string|null,handle:string|null}|null)=>p?.name||(p?.handle?'@'+p.handle:'');

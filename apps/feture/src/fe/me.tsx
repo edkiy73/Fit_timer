@@ -175,7 +175,7 @@ export function DetailsBlock({p,label}:{p:Profile,label:(kind:string,code:string
  const rows=DETAIL_ROWS.filter(([f])=>!cp||COUPLE_ROWS.includes(f)).map(([field,kind])=>{const v=p.details[field];const codes=Array.isArray(v)?v as string[]:typeof v==='string'?[v]:[];
   return codes.length?[field,t(kind==='status'?'fe.mx.f.status':'fe.reg.kind.'+kind),codes.map(c=>label(kind,c)).join(', ')]:null;}).filter((x):x is string[]=>!!x);
  const title=cp?t('fe.mx.detailsCouple'):t('fe.me.details');
- return <Group id="meDet" title={title} action={<AudTag k={p.detailsVis??'all'}/>}>
+ return <Group id="meDet" title={title} action={<AudTag k="all"/>}>
   {rows.length?<Card className="blk-btn" label={t('fe.mx.editOf',{title})} onClick={()=>navigate('/n/me/edit?only=details')}>
    <dl className="kv">{rows.map(([f,k,v])=><Fragment key={f}><dt>{k}</dt><dd>{v}</dd></Fragment>)}</dl>
    <span className="chv"><ChevronRight/></span>
@@ -305,8 +305,6 @@ export function Visibility({p,settings,onChanged,part}:{p:Profile,settings:Setti
     options={(['all','followers','off'] as const).map(v=>[v,t('fe.mx.v.act.'+v)] as const)}/>
    <SelectRow row label={cp?t('fe.mx.v.mentionUs'):t('fe.mx.v.mention')} sub={t('fe.mx.v.mentionSub')} value={settings.mentionsFrom??'all'} onChange={v=>void set('mentionsFrom',v)}
     options={(['all','follow','none'] as const).map(v=>[v,t('fe.mx.v.from.'+v+(v==='follow'&&cp?'Us':''))] as const)}/>
-   {!cp&&<SelectRow row label={t('fe.mx.v.details')} sub={t('fe.mx.v.detailsSub')} value={(p.detailsVis??'all') as 'all'|'granted'|'only'} onChange={v=>void set('detailsVis',v)}
-    options={(['all','granted','only'] as const).map(v=>[v,t('fe.reg.vis.'+v)] as const)}/>}
    {toggle('showLikes',cp?t('fe.mx.v.showLikesUs'):t('fe.mx.v.showLikes'),cp?t('fe.mx.v.showLikesSubUs'):t('fe.mx.v.showLikesSub'),settings.showLikes!==false)}
   </Card></Group>
   {/* «Кто может мне писать» (owner 29.10.2026, message requests); the server enforces it. */}
