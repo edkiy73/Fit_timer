@@ -2,7 +2,7 @@ import type {Meta,StoryObj} from '@storybook/react-vite';
 import {useState} from 'react';
 import {fn} from 'storybook/test';
 import {History,Mail,MessageCircle,RefreshCw,Smartphone,Undo2} from 'lucide-react';
-import {BRAND,Btn,Card,ChannelHeads,ChannelToggle,ChoiceCards,LockPreview,Maintenance,PlanCards,PremiumFeats,PremiumHero,Row,SectionLabel,Thread} from './index';
+import {BRAND,Brand,Btn,Card,ChannelHeads,ChannelToggle,ChoiceCards,LockPreview,Maintenance,PlanCards,PremiumFeats,PremiumHero,Row,SectionLabel,Thread} from './index';
 import {UpdateRequired,UpdateStateProvider,type UpdateState} from '../app-update';
 
 const meta={title:'Домен/Аккаунт',component:PremiumHero,tags:['autodocs'],
@@ -27,8 +27,8 @@ export const СрокПодарка:StoryObj<typeof PlanCards<Gift>>={name:'Ср
  args:{label:'Срок',value:'m1',onChange:()=>{},plans:[{id:'m1',title:'1 месяц',price:'11,99 €'},{id:'m3',title:'3 месяца',price:'29,99 €'},{id:'m12',title:'12 месяцев',price:'79,99 €'}]},argTypes:{plans:{control:false}}};
 
 export const Техработы:StoryObj<typeof Maintenance>={name:'Экран техработ',render:a=><Maintenance {...a}><Btn kind="soft" auto icon={RefreshCw}>Проверить ещё раз</Btn></Maintenance>,
- args:{title:'Скоро вернёмся',text:'В FetUre идут технические работы. Попробуй зайти немного позже.',message:'Обновляем базу, вернёмся к 15:00',note:'Твои данные и переписка сохранятся.'}};
-export const ТехработыБезСообщения:StoryObj<typeof Maintenance>={name:'Техработы без сообщения',render:a=><Maintenance {...a}/>,args:{title:'Скоро вернёмся',text:'В FetUre идут технические работы.'}};
+ args:{title:'Скоро вернёмся',text:'В KINHAZE идут технические работы. Попробуй зайти немного позже.',message:'Обновляем базу, вернёмся к 15:00',note:'Твои данные и переписка сохранятся.'}};
+export const ТехработыБезСообщения:StoryObj<typeof Maintenance>={name:'Техработы без сообщения',render:a=><Maintenance {...a}/>,args:{title:'Скоро вернёмся',text:'В KINHAZE идут технические работы.'}};
 
 export const Переписка:StoryObj<typeof Thread>={name:'Переписка с поддержкой',render:a=><Thread {...a}/>,
  args:{label:'Обращение',messages:[{id:'1',mine:true,text:'Не приходит код из письма',meta:'28 окт, 14:02'},{id:'2',mine:false,text:'Проверь папку «Спам»: код живёт 15 минут.',meta:'Поддержка · 28 окт, 14:20'}]},argTypes:{messages:{control:false}}};
@@ -53,3 +53,8 @@ export const Каналы:S={name:'Каналы категории (ChannelToggl
   <Card list className="ncats"><Row icon={MessageCircle} title="Сообщения" sub="Новые сообщения. В письме — только сколько их" end={<>
    <ChannelToggle icon={Smartphone} on={p} label="Пуш: Совпадения" onClick={()=>setP(v=>!v)}/><ChannelToggle icon={Mail} on={e} label="Почта: Совпадения" onClick={()=>setE(v=>!v)}/></>}/>
    <Row icon={MessageCircle} title="Почта выключена" sub="Колонка погашена" end={<><ChannelToggle icon={Smartphone} on label="Пуш" onClick={()=>{}}/><ChannelToggle icon={Mail} on disabled label="Почта" onClick={()=>{}}/></>}/></Card></div>;}};
+
+/** The brand (mark + KINHAZE) in each place it sits; the place sizes it. The sidebar shows the word only on a wide screen,
+ * the sign-up card only on a computer. */
+export const Знак:StoryObj<typeof Brand>={name:'Знак KINHAZE',render:a=><div className="wrap"><Brand {...a}/></div>,args:{at:'maint'},
+ argTypes:{at:{control:'radio',options:['side','welcome','auth','maint']}}};

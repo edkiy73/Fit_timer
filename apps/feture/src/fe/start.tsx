@@ -3,7 +3,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import type {AuthResponseError} from '@appbase/core/auth.js';
 import {CircleAlert,Mail} from 'lucide-react';
-import {Alert,Bar,Btn,CodeInput,Field,H,Input,Seg,Spacer,Stack} from './kit';
+import {Alert,Bar,Brand,Btn,CodeInput,Field,H,Input,Seg,Spacer,Stack} from './kit';
 import {pendingPairLink} from './pair-link';
 import {ToastProvider} from './toast';
 import {Welcome} from './welcome';
@@ -26,7 +26,7 @@ export function AuthBar({onBack,onLeave,lang}:{onBack?:()=>void,/** «Выйти
 
 /** V21 AUTH-021: the logo on the sign-up forms (shown as the card header on a computer, hidden on a phone). */
 export function AuthLogo(){
- return <div className="auth-logo" aria-hidden="true"><img src={import.meta.env.BASE_URL+'fe-logo.svg'} alt=""/><b>Fet<i>Ure</i></b></div>;
+ return <Brand at="auth"/>;
 }
 
 type Mode='up'|'in';

@@ -37,9 +37,9 @@ function Workspace({session}:{session:AuthSession}){
 export function OperatorPage(){
  const auth=useOptionalAuth();
  return <section className="card ft-access ft-operator-page" aria-labelledby="operator-title">
-  <h2 id="operator-title">Рабочий экран FetUre</h2>
+  <h2 id="operator-title">Рабочий экран KINHAZE</h2>
   <p>Публикации, временные допуски 18+ и журнал решений. Вход через личный аккаунт; общий админ-ключ не требуется.</p>
   {auth.loading?<p role="status">Проверяю вход…</p>:auth.session?<Workspace key={JSON.stringify([auth.session.email,auth.session.deviceId,auth.session.syncToken])} session={auth.session}/>:<><p>Войди в аккаунт, которому управляющий назначил рабочую роль.</p><SignInForm locale="ru" productName="FetUre" askHandle variant="inline"/></>}
-  <p><Link to="/account">Аккаунт и выход</Link> · <Link to="/">Вернуться в FetUre</Link></p>
+  <p><Link to="/account">Аккаунт и выход</Link> · <Link to="/">Вернуться в KINHAZE</Link></p>
  </section>;
 }

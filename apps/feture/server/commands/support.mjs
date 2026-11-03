@@ -130,7 +130,7 @@ export function helpHandlers(db, mailer, to) {
       const [m] = await db.query(`update feture.support_public set mailed_at = now() where id = $1 and mailed_at is null returning body, contact, locale`, [id]);
       if (!m) return;
       try {
-        await Promise.race([mailer({ to, subject: 'FetUre: помощь со входом', text: `${m.body}\n\n— Как ответить: ${m.contact ?? 'не указано'}\n— Язык: ${m.locale}` }),
+        await Promise.race([mailer({ to, subject: 'KINHAZE: помощь со входом', text: `${m.body}\n\n— Как ответить: ${m.contact ?? 'не указано'}\n— Язык: ${m.locale}` }),
           new Promise((_, reject) => setTimeout(() => reject(new Error('mail_timeout')), 15_000))]);
       } catch (error) {
         await db.query('update feture.support_public set mailed_at = null where id = $1', [id]);

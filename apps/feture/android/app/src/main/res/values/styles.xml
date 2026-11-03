@@ -12,7 +12,7 @@
         <item name="windowNoTitle">true</item>
     </style>
 
-    <!-- Splash (Android 12+ system splash, AndroidX compat below): brand background with the FetUre mark. -->
+    <!-- Splash (Android 12+ system splash, AndroidX compat below): brand background with the KINHAZE mark. -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/feture_background</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>

@@ -3,7 +3,7 @@ import {fn} from 'storybook/test';
 import {Globe,Smartphone} from 'lucide-react';
 import {Btn,Card,CodeInput,Field,QrCode,RecoveryCodes,Row,SecretKey,Stack} from './index';
 
-const URI='otpauth://totp/FetUre%3A%40mod_alisa?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP&issuer=FetUre&algorithm=SHA1&digits=6&period=30';
+const URI='otpauth://totp/KINHAZE%3A%40mod_alisa?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP&issuer=KINHAZE&algorithm=SHA1&digits=6&period=30';
 const CODES=['k7m2p-q9xr4','a3fhn-8wt2c','zp4rk-m6s9d','h2qv7-tnx3e','c9wkd-4mfp7','r6tz2-ybk8n','m3pxe-w7q2h','d8nv4-sf6ka','u2hcy-9rm5t','t5kwa-3pzd8'];
 const meta={title:'Домен/Безопасность',component:QrCode,tags:['autodocs'],
  parameters:{docs:{description:{component:'Второй фактор (2FA) сотрудников и «Мои устройства»: QR для приложения-аутентификатора (рисуется здесь, без внешних сервисов), ключ для ручного ввода, коды восстановления (показываются один раз), строки устройств — это `Row`.'}}},

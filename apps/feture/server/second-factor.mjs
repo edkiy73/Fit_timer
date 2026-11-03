@@ -16,7 +16,7 @@ import { hmac } from './hash.mjs';
  *   lockedNow: this wrong code started the lock (journalled once)
  */
 
-export const TOTP = { digits: 6, period: 30, window: 1, issuer: 'FetUre' };
+export const TOTP = { digits: 6, period: 30, window: 1, issuer: 'KINHAZE' };
 export const FACTOR_LIMIT = { wrong: 5, minutes: 15 };
 const RECOVERY_COUNT = 10;
 const B32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';

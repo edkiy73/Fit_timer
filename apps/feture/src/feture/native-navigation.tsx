@@ -34,5 +34,5 @@ export function NativeNavigation(){
     void registration.then(listener=>{if(removed)void listener.remove();else handle=listener;});
     return ()=>{removed=true;if(handle)void handle.remove();};
   },[]);
-  return exitPrompt?<AppDialog title="Закрыть FetUre?" onClose={()=>setExitPrompt(false)}><p className="ft-muted">Всё сохранено в твоём аккаунте.</p><div className="ft-dialog-actions"><ActionButton onClick={()=>setExitPrompt(false)}>Остаться</ActionButton><button type="button" className="ft-textbtn" onClick={()=>void App.exitApp()}>Закрыть приложение</button></div></AppDialog>:null;
+  return exitPrompt?<AppDialog title="Закрыть KINHAZE?" onClose={()=>setExitPrompt(false)}><p className="ft-muted">Всё сохранено в твоём аккаунте.</p><div className="ft-dialog-actions"><ActionButton onClick={()=>setExitPrompt(false)}>Остаться</ActionButton><button type="button" className="ft-textbtn" onClick={()=>void App.exitApp()}>Закрыть приложение</button></div></AppDialog>:null;
 }

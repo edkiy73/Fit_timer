@@ -1,10 +1,10 @@
 /* In-app Android update (src/fe/app-update.tsx): the offer sheet and the screen below the minimum version. */
 export const ru = {
- 'fe.upd.title': 'Вышла новая версия FetUre',
- 'fe.upd.titleVersion': 'Вышла версия FetUre {version}',
+ 'fe.upd.title': 'Вышла новая версия KINHAZE',
+ 'fe.upd.titleVersion': 'Вышла версия KINHAZE {version}',
  'fe.upd.directText': 'Обновление скачается прямо в приложении, потом телефон попросит подтвердить установку. Аккаунт и переписки останутся на месте.',
  'fe.upd.storeText': 'Обновление уже ждёт в магазине приложений.',
- 'fe.upd.requiredTitle': 'Нужно обновить FetUre',
+ 'fe.upd.requiredTitle': 'Нужно обновить KINHAZE',
  'fe.upd.requiredText': 'Эта версия приложения больше не поддерживается. Обнови её — аккаунт и переписки сохранятся.',
  'fe.upd.update': 'Обновить',
  'fe.upd.downloading': 'Скачиваем…',
@@ -16,15 +16,15 @@ export const ru = {
  'fe.upd.openStore': 'Открыть магазин',
  'fe.upd.cancel': 'Отменить загрузку',
  'fe.upd.later': 'Позже',
- 'fe.upd.permissionHint': 'Телефон открыл настройки: разреши FetUre устанавливать приложения, вернись сюда и нажми «Установить».',
+ 'fe.upd.permissionHint': 'Телефон открыл настройки: разреши KINHAZE устанавливать приложения, вернись сюда и нажми «Установить».',
  'fe.upd.error': 'Не получилось скачать или проверить обновление. Проверь интернет и нажми «Повторить».',
 };
 export const en = {
- 'fe.upd.title': 'A new FetUre version is out',
- 'fe.upd.titleVersion': 'FetUre {version} is out',
+ 'fe.upd.title': 'A new KINHAZE version is out',
+ 'fe.upd.titleVersion': 'KINHAZE {version} is out',
  'fe.upd.directText': 'The update downloads right in the app, then your phone asks you to confirm the install. Your account and chats stay as they are.',
  'fe.upd.storeText': 'The update is waiting in the app store.',
- 'fe.upd.requiredTitle': 'Please update FetUre',
+ 'fe.upd.requiredTitle': 'Please update KINHAZE',
  'fe.upd.requiredText': 'This version of the app is no longer supported. Update it — your account and chats are kept.',
  'fe.upd.update': 'Update',
  'fe.upd.downloading': 'Downloading…',
@@ -36,6 +36,6 @@ export const en = {
  'fe.upd.openStore': 'Open the store',
  'fe.upd.cancel': 'Cancel download',
  'fe.upd.later': 'Later',
- 'fe.upd.permissionHint': 'Your phone opened its settings: allow FetUre to install apps, come back here and tap “Install”.',
+ 'fe.upd.permissionHint': 'Your phone opened its settings: allow KINHAZE to install apps, come back here and tap “Install”.',
  'fe.upd.error': 'Couldn’t download or check the update. Check your connection and tap “Try again”.',
 };

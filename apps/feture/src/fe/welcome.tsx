@@ -1,7 +1,7 @@
 import {useEffect,useRef,useState,type CSSProperties,type ReactNode} from 'react';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Check,ChevronLeft,ChevronRight,EyeOff,Globe,Heart,KeyRound,LockOpen,MapPin,MessageCircle} from 'lucide-react';
-import {Btn,H,IconBtn,plate} from './kit';
+import {BRAND,Brand,Btn,H,IconBtn,plate} from './kit';
 import {TermsSheet} from './terms-sheet';
 import {SignInHelp} from './support';
 
@@ -54,8 +54,8 @@ export function Welcome({onStart}:{onStart:(mode:'up'|'in')=>void}){
  ];
  const k=(n:number)=>t(`fe.cw.w.s${n}.k`);
  return <div className="stage"><div className="root auth"><main className="main" data-screen="A01">
-  <div ref={box} className="welcome wv"><div className="w-aura" aria-hidden="true"><i/><i/><i/></div><div className="w-mark" aria-hidden="true">FetUre</div>
-   <header className="w-top"><div className="w-brand"><img className="w-logo" src={import.meta.env.BASE_URL+'fe-logo.svg'} alt=""/><b>Fet<i>Ure</i></b></div>
+  <div ref={box} className="welcome wv"><div className="w-aura" aria-hidden="true"><i/><i/><i/></div><div className="w-mark" aria-hidden="true">{BRAND}</div>
+   <header className="w-top"><Brand at="welcome"/>
     {canSwitch&&<div className="langsw" role="group" aria-label="Language">{(['ru','en'] as const).map(l=><button key={l} type="button" className={locale===l?'on':''} aria-pressed={locale===l} onClick={()=>setPreference(l)}>{l.toUpperCase()}</button>)}</div>}
    </header>
    <div className="w-grid">

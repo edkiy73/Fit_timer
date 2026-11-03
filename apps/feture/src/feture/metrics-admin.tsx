@@ -34,7 +34,7 @@ export function MetricsAdmin({client,adminKey}:AdminSectionContext){
   return()=>controller.abort();
  },[adminKey,client,days,refresh]);
  return <section className="ft-access" aria-labelledby="ft-metrics-title">
-  <h2 id="ft-metrics-title">Активность FetUre</h2>
+  <h2 id="ft-metrics-title">Активность KINHAZE</h2>
   <p>Только агрегированные сервером действия, без аккаунтов, текстов, ответов, интересов, приватных кодов и ссылок. Числа от 1 до 4 скрываются, чтобы не раскрывать активность отдельных людей.</p>
   <div className="ft-form-actions"><label>Период <select value={days} onChange={e=>setDays(Number(e.target.value) as 7|30)}><option value={7}>7 дней</option><option value={30}>30 дней</option></select></label><button type="button" disabled={loading} onClick={()=>setRefresh(n=>n+1)}>Обновить</button></div>
   {loading&&<p role="status">Загружаем…</p>}{error&&<p role="alert">{error}</p>}

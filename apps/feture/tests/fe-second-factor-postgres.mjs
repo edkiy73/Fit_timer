@@ -44,7 +44,7 @@ test('second factor: enrolment, secret sealed, codes once, replay refused, wrong
 
     const s = await call('um', null, { action: 'staff.totpStart' });
     assert.match(s.secret, /^[A-Z2-7]{32}$/);
-    assert.match(s.uri, /^otpauth:\/\/totp\/FetUre%3A%40Mira\?secret=[A-Z2-7]{32}&issuer=FetUre&algorithm=SHA1&digits=6&period=30$/);
+    assert.match(s.uri, /^otpauth:\/\/totp\/KINHAZE%3A%40Mira\?secret=[A-Z2-7]{32}&issuer=KINHAZE&algorithm=SHA1&digits=6&period=30$/);
     const [row] = await db.query('select secret_sealed, enabled_at from feture.account_totp where account_id = $1', [modId]);
     assert.ok(!row.secret_sealed.includes(s.secret) && row.secret_sealed.startsWith('v1.'), 'secret is sealed at rest');
     assert.equal(row.enabled_at, null);

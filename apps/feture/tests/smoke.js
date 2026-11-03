@@ -12,7 +12,7 @@ function fakeRes(){
   require('../lib/product');
   const { productIdentity } = require('../../../packages/core/server/product-core');
   const { registry } = require('../lib/app-sync-schema');
-  ok('product identity is registered', productIdentity().name === 'FetUre');
+  ok('product identity is registered', productIdentity().name === 'KINHAZE');
   ok('starter owns only neutral account sync doc', registry.accepts('account','settings') && !registry.accepts('profile','task:1') && !registry.accepts('account','interest-map'));
 
   const app = fs.readFileSync(require('path').join(__dirname,'../src/app.tsx'),'utf8');

@@ -81,7 +81,7 @@ export function PaywallSheet({kind,onClose}:{kind:Feat|null,onClose:()=>void}){
  const {t}=useI18n();const navigate=useNavigate();const feats=useFeats();const plans=usePlans();
  const {status,load}=usePremiumStatus();const [plan,setPlan]=useState<Plan>('year');const [buy,setBuy]=useState(false);
  if(buy)return <BuySheet plan={plan} payments={!!status?.payments} onClose={()=>setBuy(false)} onDone={()=>{load(true);onClose();}}/>;
- return <Sheet title="FetUre Premium" onClose={onClose}
+ return <Sheet title="KINHAZE Premium" onClose={onClose}
   foot={<><Btn onClick={()=>setBuy(true)}>{t('fe.ax.prem.buy',{price:t('fe.ax.prem.'+plan+'Price')})}</Btn>
    <Note>{t('fe.w8.pw.note')}</Note>
    <Btn kind="text" onClick={()=>{onClose();navigate('/n/premium'+(kind?'?for='+kind:''));}}>{t('fe.w8.buy.more')}</Btn></>}>
