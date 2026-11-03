@@ -43,6 +43,7 @@ import { hub as sseHub } from '../server/realtime-sse.mjs';
 import { pushTransport } from '../server/push.mjs';
 import { webPushFromEnv } from '../server/webpush.mjs';
 import { appUrl, coreMailer } from '../server/core-guard.mjs';
+import { emailFromEnv, takeResendEvent, unsubscribe, unsubscribePage, readUnsubToken } from '../server/email.mjs';
 
 const require = createRequire(import.meta.url);
 const { store } = require('../../../packages/core/server/store');
@@ -87,13 +88,16 @@ export function cors(/** @type {any} */ req, /** @type {any} */ res) {
   const origin = allowedOrigin(req);
   if (origin) res.setHeader('Access-Control-Allow-Origin', origin);
   if (origin && origin !== '*') res.setHeader('Vary', 'Origin');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Fit-Email, X-Fit-Device, X-Fit-Token, X-Fe-Profile');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Fit-Email, X-Fit-Device, X-Fit-Token, X-Fe-Profile, X-Fe-Tz');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   if (req.method === 'OPTIONS') { res.statusCode = 204; res.end(); return true; }
   return false;
 }
 
 const db = sql ? fromPostgres(sql, POOL) : null;
+
+/** Notification email (server/email.mjs): Resend with MAIL_FROM_NOTIFY (MAIL_FROM when unset); off without a key. */
+const email = configured ? emailFromEnv(env) : null;
 
 /** Web push with our own VAPID keys (FE_VAPID_PUBLIC_KEY / FE_VAPID_PRIVATE_KEY / FE_VAPID_SUBJECT); off without them. */
 const webPush = configured ? webPushFromEnv(env) : null;
@@ -178,6 +182,22 @@ function json(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
+/** The exact body text (a signed webhook is checked over it): the host's `rawBody`, or the stream. null when only a
+ * parsed body is left (then the signature cannot be checked: refused). @param {any} req @returns {Promise<string | null>} */
+async function rawBody(req) {
+  if (typeof req.rawBody === 'string') return req.rawBody;
+  if (Buffer.isBuffer(req.rawBody)) return req.rawBody.toString('utf8');
+  if (typeof req.body === 'string') return req.body;
+  if (Buffer.isBuffer(req.body)) return req.body.toString('utf8');
+  if (req.body === undefined && req[Symbol.asyncIterator]) {
+    const chunks = [];
+    let size = 0;
+    for await (const c of req) { size += c.length; if (size > 256 * 1024) return null; chunks.push(Buffer.from(c)); }
+    return Buffer.concat(chunks).toString('utf8');
+  }
+  return null;
+}
+
 /** @param {any} req @param {string} name */
 const flag = (req, name) => new URL(String(req.url || '/'), 'http://x').searchParams.get(name) === '1';
 
@@ -194,10 +214,44 @@ export default async function fe(/** @type {any} */ req, /** @type {any} */ res)
       // Only a real sending domain: Resend's test domain delivers to its owner alone.
       const mail = coreMailer();
       // `quick=1`: a kicked tick (server/host.mjs) — the queues only; the sweeps stay with the minute tick.
-      return json(res, 200, { ok: true, ...(await runJobs(db, { scan, push, mail, signals, quick: flag(req, 'quick') })) });
+      return json(res, 200, { ok: true, ...(await runJobs(db, { scan, push, mail, email, signals, quick: flag(req, 'quick') })) });
     } catch {
       return json(res, 503, { ok: false, error: 'unavailable' });
     }
+  }
+  if (flag(req, 'email-events')) {
+    // Resend's webhook (bounces and complaints → no more mail to that address). Svix-signed with RESEND_WEBHOOK_SECRET;
+    // without the secret the endpoint is off (404). The signature is checked over the exact body text.
+    if (req.method !== 'POST') return json(res, 405, { ok: false });
+    if (!db || !env.RESEND_WEBHOOK_SECRET) return json(res, 404, { ok: false });
+    try {
+      const out = await takeResendEvent(db, env.FETURE_ID_PEPPER ?? '', env.RESEND_WEBHOOK_SECRET, req.headers ?? {}, await rawBody(req));
+      return json(res, out.status, out.body);
+    } catch { return json(res, 503, { ok: false, error: 'unavailable' }); }
+  }
+  if (flag(req, 'unsubscribe')) {
+    // The one-click unsubscribe of a notification email (RFC 8058): a mail client POSTs `List-Unsubscribe=One-Click`;
+    // a person opening the link gets one button (a GET never changes anything, so link checkers do not unsubscribe).
+    const token = new URL(String(req.url || '/'), 'http://x').searchParams.get('t') ?? '';
+    const pepper = env.FETURE_ID_PEPPER ?? '';
+    const page = (/** @type {number} */ status, /** @type {string} */ html) => {
+      res.statusCode = status;
+      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'");
+      res.setHeader('Referrer-Policy', 'no-referrer');
+      res.end(html);
+    };
+    if (!db) return page(503, unsubscribePage('bad', 'ru', null));
+    const t = readUnsubToken(pepper, token);
+    if (req.method === 'GET' || req.method === 'HEAD') {
+      return page(t ? 200 : 400, unsubscribePage(t ? 'ask' : 'bad', 'ru', t?.what ?? null, `/api/fe?unsubscribe=1&t=${encodeURIComponent(token)}`));
+    }
+    if (req.method !== 'POST') return json(res, 405, { ok: false });
+    try {
+      const done = await unsubscribe(db, pepper, token);
+      return page(done ? 200 : 400, unsubscribePage(done ? 'done' : 'bad', done?.lang ?? 'ru', done?.what ?? null));
+    } catch { return page(503, unsubscribePage('bad', 'ru', null)); }
   }
   if (flag(req, 'notice')) {
     // The public notice form (DSA art. 16): no account needed. JSON only (so another site cannot post it through its

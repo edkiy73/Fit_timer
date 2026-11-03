@@ -20,14 +20,18 @@
 /** @typedef {'none' | 'now' | 'now-if-unread' | 'digest'} Email */
 /** @typedef {'none' | 'object' | 'actor' | 'type'} Collapse */
 /** @typedef {'access' | 'likes' | 'matches' | 'replies' | 'events' | 'groups' | 'pair' | 'follows' | 'links' | 'posts' | 'other'} Filter */
-/** @typedef {'messages' | 'likes' | 'match' | 'decide' | 'requests' | 'events' | 'replies' | 'follows' | 'groups' | 'security' | 'other'} PushCat */
+/** @typedef {'messages' | 'likes' | 'match' | 'decide' | 'requests' | 'events' | 'replies' | 'follows' | 'groups' | 'pair' | 'news' | 'security' | 'other'} PushCat */
 /**
  * @typedef {{
  *   kind: RecordKind, filter: Filter, icon: string, tone: '' | 'l' | 'g' | 'v', card: Card,
  *   text: Text, alone?: Text,
- *   push: {cat: PushCat, safe: Text, normal: Text, named: boolean, off: boolean},
+ *   push: {cat: PushCat, safe: Text, normal: Text, named: boolean, important: boolean, noisy: boolean, off: boolean, summary?: Text},
  *   email: Email, subject: Text, dest: string, collapse: Collapse, gone: Text,
  * }} Entry
+ * push.important: in quiet hours it waits for the morning (if still actual) instead of being dropped (owner decision 4:
+ * tasks, an event cancelled or moved, security). push.noisy: at most one push an hour per type; what came meanwhile is
+ * one `summary` push at the end of the hour. push.off: in the history only, never a push (a partner's trust-mode
+ * actions, docs/notifications.md «Push»).
  */
 
 /** @param {string | readonly [string, string]} ru @param {string | readonly [string, string]} en @returns {Text} */
@@ -47,9 +51,16 @@ export const PUSH_WORDS = Object.freeze({
   ru: { title: 'KINHAZE', media: { image: 'Фото', video: 'Видео', audio: 'Голосовое' } },
   en: { title: 'KINHAZE', media: { image: 'Photo', video: 'Video', audio: 'Voice message' } },
 });
-/** Settings category of each push category (V21 K05); the rest follow only the global switch. */
-export const PUSH_SETTING = Object.freeze({ likes: 'likes', match: 'match', decide: 'req', requests: 'req', events: 'events', replies: 'replies', follows: 'follows', groups: 'groups' });
-export const PUSH_CATS = /** @type {const} */ (['messages', 'likes', 'match', 'decide', 'requests', 'events', 'replies', 'follows', 'groups', 'security', 'other']);
+/** Settings category of each push category (V21 K05, owner 03.11.2026: «Сообщения», «Решения» и «Пара» отдельно); the
+ * rest (security, account and moderation decisions) follow only the global switches. Email uses the same categories. */
+export const PUSH_SETTING = Object.freeze({ messages: 'messages', likes: 'likes', match: 'match', decide: 'decide', requests: 'req', events: 'events',
+  replies: 'replies', follows: 'follows', groups: 'groups', pair: 'pair', news: 'news' });
+export const PUSH_CATS = /** @type {const} */ (['messages', 'likes', 'match', 'decide', 'requests', 'events', 'replies', 'follows', 'groups', 'pair', 'news', 'security', 'other']);
+/** The settings categories in screen order (contracts/me.mjs notificationSettings): every one has a push and an email
+ * switch that really does something (tests/fe-notification-catalog.mjs checks each is some entry's category). */
+export const SETTING_CATS = /** @type {const} */ (['messages', 'match', 'likes', 'req', 'decide', 'pair', 'events', 'replies', 'follows', 'groups', 'news']);
+/** The settings category of an entry, or null (only the global switches hold it back). @param {Entry} e @returns {string | null} */
+export const settingOf = e => /** @type {Record<string, string | undefined>} */ (PUSH_SETTING)[e.push.cat] ?? null;
 /** Inbox filters in chip order (V21 inboxKind). */
 export const FILTERS = /** @type {const} */ (['access', 'likes', 'matches', 'replies', 'events', 'groups', 'pair', 'follows', 'links', 'posts', 'other']);
 export const CARDS = /** @type {const} */ (['news', 'decision', 'result', 'safety', 'event', 'summary']);
@@ -62,7 +73,7 @@ export const DECIDE_KINDS = /** @type {const} */ (['pinv', 'req', 'capp', 'eapp'
  * `quiet: true`: history only, no push (a partner's everyday action in trust mode, a daily summary). */
 const RAW = /** @type {Record<string, any>} */ ({
   // ---- people ----
-  like: { filter: 'likes', icon: 'Heart', tone: 'l', text: T(['{name} ставит тебе симпатию', '{name} ставят тебе симпатию'], '{name} liked you'),
+  like: { noisy: true, summary: T('Новые симпатии: {n}', 'New likes: {n}'), filter: 'likes', icon: 'Heart', tone: 'l', text: T(['{name} ставит тебе симпатию', '{name} ставят тебе симпатию'], '{name} liked you'),
     cat: 'likes', normal: T('Новая симпатия', 'New like'), named: true, dest: 'actor', collapse: 'type', gone: GONE_PROFILE },
   match: { filter: 'matches', icon: 'Heart', tone: 'l', text: T('{name} — это взаимно! Можно написать', '{name} — it’s mutual! You can chat now'),
     cat: 'match', normal: T('Новое совпадение', 'New match'), named: true, dest: 'chat', collapse: 'object', gone: GONE_CHAT },
@@ -70,7 +81,7 @@ const RAW = /** @type {Record<string, any>} */ ({
     cat: 'requests', normal: T('Новый запрос на переписку', 'New message request'), named: true, dest: 'chat', collapse: 'object', gone: GONE_CHAT },
   chatAccepted: { filter: 'matches', icon: 'MessageCircle', tone: 'g', text: T(['{name} принимает твой запрос на переписку', '{name} принимают твой запрос на переписку'], '{name} accepted your message request'),
     cat: 'requests', normal: T('Запрос на переписку принят', 'Your message request was accepted'), named: true, dest: 'chat', collapse: 'object', gone: GONE_CHAT },
-  follow: { filter: 'follows', icon: 'Users', tone: 'v', text: T(['{name} подписывается на тебя', '{name} подписываются на тебя'], '{name} followed you'),
+  follow: { noisy: true, summary: T('Новые подписчики: {n}', 'New followers: {n}'), filter: 'follows', icon: 'Users', tone: 'v', text: T(['{name} подписывается на тебя', '{name} подписываются на тебя'], '{name} followed you'),
     cat: 'follows', normal: T('Новый подписчик', 'New follower'), named: true, dest: 'actor', collapse: 'actor', gone: GONE_PROFILE },
   grant: { kind: 'result', filter: 'access', icon: 'LockOpen', tone: 'g', card: 'result',
     text: T(['{name} открывает тебе приватную часть', '{name} открывают тебе приватную часть'], '{name} opened their private part to you'),
@@ -95,7 +106,7 @@ const RAW = /** @type {Record<string, any>} */ ({
   // ---- posts ----
   reply: { filter: 'replies', icon: 'MessageCircle', tone: 'g', text: T(['{name} отвечает на твою публикацию', '{name} отвечают на твою публикацию'], '{name} replied to your post'),
     cat: 'replies', normal: T('Новый ответ', 'New reply'), named: true, dest: 'post', collapse: 'object', gone: GONE_POST },
-  postLike: { filter: 'posts', icon: 'Heart', tone: 'l', text: T(['{name} ставит лайк твоей публикации', '{name} ставят лайк твоей публикации'], '{name} liked your post'),
+  postLike: { noisy: true, summary: T('Лайки твоих публикаций: {n}', 'Likes on your posts: {n}'), filter: 'posts', icon: 'Heart', tone: 'l', text: T(['{name} ставит лайк твоей публикации', '{name} ставят лайк твоей публикации'], '{name} liked your post'),
     cat: 'replies', normal: T('Твоя публикация понравилась', 'Someone liked your post'), named: true, dest: 'post', collapse: 'object', gone: GONE_POST },
   mention: { filter: 'replies', icon: 'AtSign', tone: 'v', text: T(['{name} упоминает тебя в публикации', '{name} упоминают тебя в публикации'], '{name} mentioned you in a post'),
     cat: 'replies', normal: T('Тебя упомянули', 'You were mentioned'), named: true, dest: 'post', gone: GONE_POST },
@@ -126,18 +137,18 @@ const RAW = /** @type {Record<string, any>} */ ({
   'mediaDecided.rejected': { icon: 'Shield', tone: 'l', text: T('Файл не прошёл проверку', 'Your file didn’t pass review'), normal: T('Файл не прошёл проверку', 'Your file didn’t pass review') },
 
   // ---- moderation decisions about the person: their own decision card (src/fe/inbox.tsx NoteScreen) ----
-  contentRemoved: { kind: 'result', filter: 'posts', icon: 'Shield', tone: 'l', card: 'safety', text: T('Модераторы удалили твою публикацию', 'Moderators removed your post'),
+  contentRemoved: { important: true, kind: 'result', filter: 'posts', icon: 'Shield', tone: 'l', card: 'safety', text: T('Модераторы удалили твою публикацию', 'Moderators removed your post'),
     normal: T('Модераторы удалили твой материал', 'Moderators removed your content'), email: 'now', dest: 'moderation' },
   'contentRemoved.reply': { text: T('Модераторы удалили твой ответ', 'Moderators removed your reply') },
   'contentRemoved.community': { text: T('Модераторы скрыли твоё сообщество', 'Moderators hid your community') },
   'contentRemoved.event': { text: T('Модераторы скрыли твоё событие', 'Moderators hid your event') },
   reportResolved: { kind: 'result', filter: 'posts', icon: 'Shield', tone: 'g', card: 'result', text: T('Жалоба рассмотрена. Спасибо, что сообщаешь', 'Report reviewed. Thanks for reporting'),
     normal: T('Жалоба рассмотрена', 'Your report was reviewed'), dest: 'moderation' },
-  profileSuspended: { filter: 'other', icon: 'Shield', tone: 'l', card: 'safety', text: T('Профиль заблокирован', 'Your profile is suspended'),
+  profileSuspended: { important: true, filter: 'other', icon: 'Shield', tone: 'l', card: 'safety', text: T('Профиль заблокирован', 'Your profile is suspended'),
     normal: T('Профиль заблокирован', 'Your profile is suspended'), email: 'now', dest: 'moderation' },
   'profileSuspended.until': { text: T('Профиль заблокирован до {date}', 'Your profile is suspended until {date}') },
   'profileSuspended.forever': { text: T('Профиль заблокирован, пока модераторы не снимут блокировку', 'Your profile is suspended until moderators lift it') },
-  profileRestricted: { filter: 'other', icon: 'Shield', tone: 'l', card: 'safety', text: T('Профиль ограничен', 'Your profile is restricted'),
+  profileRestricted: { important: true, filter: 'other', icon: 'Shield', tone: 'l', card: 'safety', text: T('Профиль ограничен', 'Your profile is restricted'),
     normal: T('Профиль ограничен', 'Your profile is restricted'), email: 'now', dest: 'moderation' },
   'profileRestricted.until': { text: T('Профиль ограничен до {date}', 'Your profile is restricted until {date}') },
   'profileRestricted.forever': { text: T('Профиль ограничен, пока модераторы не снимут ограничение', 'Your profile is restricted until moderators lift it') },
@@ -191,9 +202,9 @@ const RAW = /** @type {Record<string, any>} */ ({
     cat: 'events', normal: T('Заявку на событие одобрили', 'Your event application is approved'), email: 'now-if-unread', dest: 'event', gone: GONE_EVENT },
   eventApplicationDeclined: { kind: 'result', filter: 'events', icon: 'Calendar', tone: '', card: 'result', text: T('Заявку на событие отклонили', 'Your event application was declined'),
     cat: 'events', normal: T('Заявку на событие отклонили', 'Your event application was declined'), email: 'now-if-unread', dest: 'event', gone: GONE_EVENT },
-  eventCancelled: { filter: 'events', icon: 'CalendarX', tone: 'l', card: 'event', text: T('Событие отменено', 'The event was cancelled'),
+  eventCancelled: { important: true, filter: 'events', icon: 'CalendarX', tone: 'l', card: 'event', text: T('Событие отменено', 'The event was cancelled'),
     cat: 'events', normal: T('Событие отменено', 'The event was cancelled'), email: 'now-if-unread', dest: 'event', collapse: 'object', gone: T('Событие отменено', 'The event was cancelled') },
-  eventChanged: { filter: 'events', icon: 'CalendarClock', tone: 'v', card: 'event', text: T('В событии изменились детали', 'The event details changed'),
+  eventChanged: { important: true, filter: 'events', icon: 'CalendarClock', tone: 'v', card: 'event', text: T('В событии изменились детали', 'The event details changed'),
     cat: 'events', normal: T('В событии изменились детали', 'The event details changed'), email: 'now-if-unread', dest: 'event', collapse: 'object', gone: GONE_EVENT },
   eventAnnouncement: { filter: 'events', icon: 'Megaphone', tone: 'v', card: 'event', text: T('Новое объявление в событии', 'A new announcement in the event'),
     cat: 'events', normal: T('Новое объявление в событии', 'A new announcement in the event'), dest: 'event', gone: GONE_EVENT },
@@ -201,28 +212,28 @@ const RAW = /** @type {Record<string, any>} */ ({
     cat: 'events', normal: T('Скоро событие', 'An event starts soon'), email: 'none', dest: 'event', collapse: 'object', gone: GONE_EVENT },
 
   // ---- couple (addressed to the couple; {couple} is its name at the time) ----
-  'pair.created': { filter: 'pair', icon: 'Users', tone: 'v', text: T('{couple} · Пара создана', '{couple} · Your couple is set up'),
+  'pair.created': { cat: 'pair', filter: 'pair', icon: 'Users', tone: 'v', text: T('{couple} · Пара создана', '{couple} · Your couple is set up'),
     normal: T('Пара создана', 'Your couple is set up'), dest: 'couple', gone: GONE_PAIR },
-  'pair.declined': { kind: 'result', filter: 'pair', icon: 'Users', tone: '', card: 'result', text: T('Приглашение в пару отклонили', 'Your couple invitation was declined'),
+  'pair.declined': { cat: 'pair', kind: 'result', filter: 'pair', icon: 'Users', tone: '', card: 'result', text: T('Приглашение в пару отклонили', 'Your couple invitation was declined'),
     normal: T('Приглашение в пару отклонили', 'Your couple invitation was declined'), dest: 'couple' },
-  'pair.inviteExpired': { kind: 'result', filter: 'pair', icon: 'Users', tone: '', card: 'result', text: T('Приглашение в пару истекло — на него не ответили', 'Your couple invitation expired without an answer'),
+  'pair.inviteExpired': { cat: 'pair', kind: 'result', filter: 'pair', icon: 'Users', tone: '', card: 'result', text: T('Приглашение в пару истекло — на него не ответили', 'Your couple invitation expired without an answer'),
     normal: T('Приглашение в пару истекло', 'Your couple invitation expired'), dest: 'couple' },
-  'pair.deleted': { filter: 'pair', icon: 'Users', tone: '', text: T('{couple} · Пара удалена', '{couple} · The couple was deleted'),
+  'pair.deleted': { cat: 'pair', filter: 'pair', icon: 'Users', tone: '', text: T('{couple} · Пара удалена', '{couple} · The couple was deleted'),
     normal: T('Пара удалена', 'The couple was deleted'), email: 'now-if-unread', dest: 'couple', gone: GONE_PAIR },
   // One pause, one row per side (couples.mjs couple.stop): not a «сузил видимость» next to it.
-  'pair.stopped': { filter: 'pair', icon: 'Users', tone: '', text: T('{couple} · Пара на паузе', '{couple} · The couple is paused'),
+  'pair.stopped': { cat: 'pair', filter: 'pair', icon: 'Users', tone: '', text: T('{couple} · Пара на паузе', '{couple} · The couple is paused'),
     normal: T('Пара на паузе', 'The couple is paused'), email: 'now-if-unread', dest: 'coupleRestore', gone: GONE_PAIR },
-  'pair.restored': { filter: 'pair', icon: 'Users', tone: 'g', text: T('{couple} · Пара восстановлена', '{couple} · The couple was restored'),
+  'pair.restored': { cat: 'pair', filter: 'pair', icon: 'Users', tone: 'g', text: T('{couple} · Пара восстановлена', '{couple} · The couple was restored'),
     normal: T('Пара восстановлена', 'The couple was restored'), dest: 'couple', gone: GONE_PAIR },
-  'pair.restoreRequested': { filter: 'pair', icon: 'Users', tone: 'v', text: T('{couple} · Партнёр хочет восстановить пару', '{couple} · Your partner wants to restore the couple'),
+  'pair.restoreRequested': { cat: 'pair', filter: 'pair', icon: 'Users', tone: 'v', text: T('{couple} · Партнёр хочет восстановить пару', '{couple} · Your partner wants to restore the couple'),
     normal: T('Партнёр хочет восстановить пару', 'Your partner wants to restore the couple'), email: 'now-if-unread', dest: 'coupleRestore', gone: GONE_PAIR },
-  'pair.narrowed': { filter: 'pair', icon: 'Users', tone: 'v', text: T('{couple} · Партнёр сузил видимость пары', '{couple} · Your partner narrowed the couple’s visibility'),
+  'pair.narrowed': { cat: 'pair', filter: 'pair', icon: 'Users', tone: 'v', text: T('{couple} · Партнёр сузил видимость пары', '{couple} · Your partner narrowed the couple’s visibility'),
     normal: T('Партнёр сузил видимость пары', 'Your partner narrowed the couple’s visibility'), dest: 'couple', gone: GONE_PAIR },
-  'pair.trust': { filter: 'pair', icon: 'Users', tone: 'v', text: T('{couple} · Изменилось согласие партнёра', '{couple} · Partner approval changed'),
+  'pair.trust': { cat: 'pair', filter: 'pair', icon: 'Users', tone: 'v', text: T('{couple} · Изменилось согласие партнёра', '{couple} · Partner approval changed'),
     normal: T('Изменилось согласие партнёра', 'Partner approval changed'), dest: 'couple', gone: GONE_PAIR },
   'pair.trust.on': { text: T('{couple} · Партнёр теперь подтверждает твои изменения пары', '{couple} · Your partner now approves your couple changes') },
   'pair.trust.off': { text: T('{couple} · Партнёр доверяет: твои изменения пары применяются сразу', '{couple} · Your partner trusts you: your couple changes apply at once') },
-  'pair.decided': { kind: 'result', filter: 'pair', icon: 'Users', tone: 'v', card: 'result', text: T('{couple} · Партнёр ответил на изменение', '{couple} · Your partner answered a change'),
+  'pair.decided': { cat: 'pair', kind: 'result', filter: 'pair', icon: 'Users', tone: 'v', card: 'result', text: T('{couple} · Партнёр ответил на изменение', '{couple} · Your partner answered a change'),
     normal: T('Партнёр ответил на изменение', 'Your partner answered a change'), dest: 'approval', gone: GONE_PAIR },
   'pair.decided.approved': { tone: 'g', text: T('{couple} · Партнёр согласился', '{couple} · Your partner agreed'), normal: T('Партнёр согласился', 'Your partner agreed') },
   'pair.decided.rejected': { tone: '', text: T('{couple} · Партнёр отказался', '{couple} · Your partner declined'), normal: T('Партнёр отказался', 'Your partner declined') },
@@ -232,7 +243,7 @@ const RAW = /** @type {Record<string, any>} */ ({
   'pair.decided.stale': { tone: '', text: T('{couple} · Не применено: пока ждали, всё изменилось', '{couple} · Not applied: it changed while waiting'), normal: T('Изменение устарело', 'The change is out of date') },
   // A partner's action for the couple in trust mode: in the couple's history, never by email (owner 03.11.2026). A push
   // only for what matters — a post, an event answer or application, access, a link; everyday actions stay quiet.
-  'pair.acted': { filter: 'pair', icon: 'Users', tone: 'v', text: T('{couple} · Партнёр сделал действие от пары', '{couple} · Your partner acted for the couple'),
+  'pair.acted': { cat: 'pair', filter: 'pair', icon: 'Users', tone: 'v', text: T('{couple} · Партнёр сделал действие от пары', '{couple} · Your partner acted for the couple'),
     normal: T('Партнёр сделал действие от пары', 'Your partner acted for the couple'), quiet: true, email: 'none', dest: 'couple', collapse: 'type', gone: GONE_PAIR },
   'pair.acted.follow': { text: T('{couple} · Партнёр подписался от пары', '{couple} · Your partner followed someone for the couple'), dest: 'target' },
   'pair.acted.photos': { text: T('{couple} · Партнёр добавил фото пары', '{couple} · Your partner added couple photos'), dest: 'coupleGallery' },
@@ -284,15 +295,15 @@ const RAW = /** @type {Record<string, any>} */ ({
   'staffRole.grant': { text: T('Тебе выдана роль: {role}', 'You were given a role: {role}'), dest: 'staff' },
   'staffRole.revoke': { tone: '', text: T('Роль снята: {role}', 'A role was taken away: {role}') },
   // Staff alerts: the row's words come from the kind of alert (src/fe/note-status.ts, fe.ibx.staff.*).
-  staffAlert: { filter: 'other', icon: 'ShieldAlert', tone: 'l', card: 'safety', text: T('Срочное в модерации', 'Urgent in moderation'),
+  staffAlert: { important: true, filter: 'other', icon: 'ShieldAlert', tone: 'l', card: 'safety', text: T('Срочное в модерации', 'Urgent in moderation'),
     normal: T('Срочное в модерации', 'Urgent in moderation'), email: 'now-if-unread', dest: 'staff', collapse: 'type' },
-  signinNew: { filter: 'other', icon: 'ShieldAlert', tone: 'l', card: 'safety', text: T('Вход с нового устройства', 'New device signed in'),
+  signinNew: { important: true, filter: 'other', icon: 'ShieldAlert', tone: 'l', card: 'safety', text: T('Вход с нового устройства', 'New device signed in'),
     cat: 'security', safe: T('Вход с нового устройства', 'New device signed in'), normal: T('Вход с нового устройства', 'New device signed in'), email: 'now', dest: 'security' },
   supportReply: { filter: 'other', icon: 'LifeBuoy', tone: 'v', text: T('Поддержка ответила на твоё обращение', 'Support answered your request'),
     normal: T('Поддержка ответила', 'Support answered'), email: 'now-if-unread', dest: 'help' },
   supportClosed: { filter: 'other', icon: 'LifeBuoy', tone: '', text: T('Обращение закрыто', 'Your request was closed'),
     normal: T('Обращение закрыто', 'Your request was closed'), dest: 'help' },
-  datingLaunched: { filter: 'other', icon: 'Heart', tone: 'v', text: T('Знакомства открылись — можно смотреть анкеты', 'Discover is open — you can look at profiles now'),
+  datingLaunched: { cat: 'news', filter: 'other', icon: 'Heart', tone: 'v', text: T('Знакомства открылись — можно смотреть анкеты', 'Discover is open — you can look at profiles now'),
     normal: T('Знакомства открылись', 'Discover is open'), dest: 'people' },
 
   // ---- chat messages: a push and the chat's unread count, never an inbox row ----
@@ -375,7 +386,9 @@ function build(o) {
   return Object.freeze({
     kind: o.kind ?? 'notice', filter: o.filter ?? 'other', icon: o.icon ?? 'Bell', tone: o.tone ?? '', card: o.card ?? 'news',
     text: o.text, ...(o.alone ? { alone: o.alone } : {}),
-    push: Object.freeze({ cat: o.cat ?? 'other', safe: o.safe ?? SAFE_PUSH, normal: o.normal, named: !!o.named, off: !!o.quiet }),
+    push: Object.freeze({ cat: o.cat ?? 'other', safe: o.safe ?? SAFE_PUSH, normal: o.normal, named: !!o.named,
+      // Every task waits for the morning in quiet hours; so do the entries marked important. `quiet`: history only, no push.
+      important: o.important ?? o.kind === 'task', noisy: !!o.noisy, off: !!o.quiet, ...(o.summary ? { summary: o.summary } : {}) }),
     email: o.email ?? 'digest', subject: o.subject ?? o.normal, dest: o.dest ?? 'inbox', collapse: o.collapse ?? 'none', gone: o.gone ?? GONE,
   });
 }
@@ -554,3 +567,70 @@ export function routeOk(route) {
 /** The push payload's `url` for a route (hash routes of the /n screens); the inbox when it does not pass.
  * @param {string} route */
 export const pushUrl = route => '/#' + (routeOk(route) ? route : '/n/inbox');
+
+// ---- push tags: one per object or collapse key, so a new push replaces only its own kind (public/fe-sw.js) ----
+
+export const TAG = /^[a-z]{1,2}:[0-9a-zA-Z:._-]{1,120}$/;
+/** @param {string} s */
+const tagged = s => (TAG.test(s) ? s : null);
+/** The tag of a chat's pushes. @param {string} conversationId */
+export const chatTag = conversationId => `c:${conversationId}`;
+/** The tag of a «Нужно решить» item's push. @param {string} kind @param {string} id */
+export const decideTag = (kind, id) => `d:${kind}:${id}`;
+/** The tag of a push (web push `tag`, Android notification tag): a chat, a task, a noisy type's one summary, the
+ * notification's collapse key, its object, or the notification itself. Ids and catalog keys only. null: none fits.
+ * @param {{key?: string | null, notificationId?: string | null, collapseKey?: string | null, object?: {type: string, id: string} | null,
+ *   decide?: {kind: string, id: string} | null, conversationId?: string | null}} r @returns {string | null} */
+export function pushTag(r) {
+  if (r.conversationId && isId(r.conversationId)) return chatTag(r.conversationId);
+  if (r.decide && isId(r.decide.id)) return tagged(decideTag(r.decide.kind, r.decide.id));
+  const e = r.key ? CATALOG[r.key] : null;
+  if (e?.push.noisy && r.key) return tagged(`s:${r.key.split('.')[0]}`);
+  if (r.collapseKey) return tagged(`k:${r.collapseKey}`);
+  if (r.object && isId(r.object.id)) return tagged(`o:${r.object.type}:${r.object.id}`);
+  if (r.notificationId && isId(r.notificationId)) return `n:${r.notificationId}`;
+  return null;
+}
+
+// ---- email words (server/email.mjs): the one template's chrome, the digest, the unsubscribe page ----
+
+/** Russian plural: 1 решение, 2 решения, 5 решений. @param {number} n @param {readonly [string, string, string]} f */
+export function ruPlural(n, f) {
+  const a = Math.abs(n) % 100, b = a % 10;
+  return a > 10 && a < 20 ? f[2] : b === 1 ? f[0] : b >= 2 && b <= 4 ? f[1] : f[2];
+}
+
+export const EMAIL_WORDS = Object.freeze({
+  ru: {
+    brand: 'KINHAZE', open: 'Открыть', digestSubject: 'Что нового в KINHAZE', digestOpen: 'Открыть KINHAZE',
+    youHave: 'У тебя', and: 'и', more: 'И ещё {n} в приложении',
+    tasks: /** @type {const} */ (['решение', 'решения', 'решений']),
+    notes: /** @type {const} */ (['новое уведомление', 'новых уведомления', 'новых уведомлений']),
+    chats: /** @type {const} */ (['непрочитанный чат', 'непрочитанных чата', 'непрочитанных чатов']),
+    why: 'Это письмо пришло, потому что в KINHAZE включены уведомления на почту.',
+    unsubscribe: 'Отписаться', settings: 'Настроить уведомления',
+    unsubTitle: 'Отписаться от писем?', unsubText: 'Больше не присылать: {what}.', unsubButton: 'Отписаться',
+    unsubDone: 'Готово. Письма «{what}» больше не придут. Включить их снова можно в настройках уведомлений.',
+    unsubBad: 'Ссылка не подходит. Настроить письма можно в приложении: Настройки → Уведомления.',
+    what: {
+      all: 'все письма KINHAZE', digest: 'сводка', messages: 'Сообщения', match: 'Совпадения', likes: 'Симпатии', req: 'Запросы на переписку',
+      decide: 'Решения', pair: 'Пара', events: 'События', replies: 'Ответы и реакции', follows: 'Подписчики', groups: 'Сообщества', news: 'Новости KINHAZE',
+    },
+  },
+  en: {
+    brand: 'KINHAZE', open: 'Open', digestSubject: 'What’s new on KINHAZE', digestOpen: 'Open KINHAZE',
+    youHave: 'You have', and: 'and', more: 'And {n} more in the app',
+    tasks: /** @type {const} */ (['decision', 'decisions', 'decisions']),
+    notes: /** @type {const} */ (['new notification', 'new notifications', 'new notifications']),
+    chats: /** @type {const} */ (['unread chat', 'unread chats', 'unread chats']),
+    why: 'You get this email because email notifications are on in KINHAZE.',
+    unsubscribe: 'Unsubscribe', settings: 'Notification settings',
+    unsubTitle: 'Unsubscribe?', unsubText: 'Stop sending: {what}.', unsubButton: 'Unsubscribe',
+    unsubDone: 'Done. You won’t get “{what}” emails any more. You can turn them back on in notification settings.',
+    unsubBad: 'This link doesn’t work. You can change emails in the app: Settings → Notifications.',
+    what: {
+      all: 'all KINHAZE emails', digest: 'the digest', messages: 'Messages', match: 'Matches', likes: 'Likes', req: 'Message requests',
+      decide: 'Decisions', pair: 'Couple', events: 'Events', replies: 'Replies and reactions', follows: 'Followers', groups: 'Communities', news: 'KINHAZE news',
+    },
+  },
+});

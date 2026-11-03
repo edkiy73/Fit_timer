@@ -1,5 +1,6 @@
 // @ts-check
-import { ABOUT_FACTS, meCommands, NOTIFICATION_DEFAULTS, PROFILE_SETTINGS } from '../../contracts/me.mjs';
+import { ABOUT_FACTS, meCommands, notificationSettingsOf, PROFILE_SETTINGS } from '../../contracts/me.mjs';
+import { emailState } from '../email.mjs';
 import { fail, isUniqueViolation } from '../errors.mjs';
 import { hmac } from '../hash.mjs';
 import { mediaDto } from '../media/assets.mjs';
@@ -492,7 +493,8 @@ const run = {
 
   async 'notifications.settings.get'(q, { account }) {
     const [r] = await q.query('select settings from feture.notification_settings where account_id = $1', [account.id]);
-    return { settings: r?.settings ?? NOTIFICATION_DEFAULTS };
+    // `emailState`: «blocked» when the address bounced or complained (the screen says «Адрес не принимает письма»).
+    return { settings: notificationSettingsOf(r?.settings), emailState: await emailState(q, account.id) };
   },
 
   async 'notifications.settings.update'(q, { account, input }) {

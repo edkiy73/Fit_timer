@@ -29,6 +29,20 @@ Bunny (медиа, CDN с подписью и блокировкой GB/US, бэ
 
 Ручная установка без скрипта: `make-env.mjs`, заполнить `.env` и `app.env`, `docker compose up -d --build`.
 
+## Письма-уведомления
+
+Уведомления на почту (`server/email.mjs`, правила — `../docs/notifications.md` «Email») идут через тот же Resend, но
+от отдельного отправителя, не от кодов входа. В `app.env`:
+
+| Переменная | Что | Если не задана |
+|---|---|---|
+| `MAIL_FROM_NOTIFY` | `KINHAZE <notify@mail.kinhaze.com>` — адрес на том же подтверждённом домене Resend | берётся `MAIL_FROM` |
+| `RESEND_WEBHOOK_SECRET` | Signing secret вебхука Resend (`whsec_…`) | вебхук выключен: отказы и жалобы не останавливают письма |
+
+Вебхук в Resend → Webhooks → Add endpoint: `https://app.kinhaze.com/api/fe?email-events=1`, события
+`email.bounced` и `email.complained`. Подпись (Svix) проверяется; без секрета адрес отвечает 404. Без `RESEND_API_KEY`
+или с тестовым доменом `resend.dev` письма ждут в очереди и не уходят.
+
 ## Обновление
 
 ```sh

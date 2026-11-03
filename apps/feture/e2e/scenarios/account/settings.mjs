@@ -91,18 +91,20 @@ export default [
      await push.click(); await until(async () => eq((await notif(t)).push, orig.push, 'push back'));
      const mail = t.page.locator('button[role=switch]:has-text("Письма на почту")');
      if (!orig.email) { await mail.click(); await until(async () => eq((await notif(t)).email, true, 'email on')); }
-     await sel(t, 'Как присылать письма').selectOption('weekly'); await until(async () => eq((await notif(t)).digest, 'weekly', 'digest'));
-     await sel(t, 'Как присылать письма').selectOption('instant'); await until(async () => eq((await notif(t)).digest, 'instant', 'digest'));
+     await sel(t, 'Сводка').selectOption('weekly'); await until(async () => eq((await notif(t)).digest, 'weekly', 'digest'));
+     await sel(t, 'Сводка').selectOption('off'); await until(async () => eq((await notif(t)).digest, 'off', 'digest'));
      await mail.click(); await until(async () => eq((await notif(t)).email, false, 'email off'));
-     await t.notSee('select[aria-label="Как присылать письма"]', 300);
+     await t.notSee('select[aria-label="Сводка"]', 300);
      await mail.click(); await until(async () => eq((await notif(t)).email, true, 'email on again'));
-     for (const cat of ['Совпадения и сообщения', 'Новые симпатии', 'Сообщества', 'Новости и акции FetUre']) {
+     // Every category of the catalog (contracts/notifications.mjs SETTING_CATS), «Сообщения», «Решения», «Пара» too.
+     for (const cat of ['Сообщения', 'Совпадения', 'Новые симпатии', 'Решения', 'Пара', 'Сообщества', 'Новости KINHAZE']) {
        const b = t.page.locator(`.nt-t[aria-label="Почта: ${cat}"]`); const was = await b.getAttribute('aria-pressed');
        await b.click(); await until(async () => eq(await b.getAttribute('aria-pressed'), String(was !== 'true'), cat + ' pressed'));
        const p = t.page.locator(`.nt-t[aria-label="Пуш: ${cat}"]`); const wasP = await p.getAttribute('aria-pressed');
        await p.click(); await until(async () => eq(await p.getAttribute('aria-pressed'), String(wasP !== 'true'), cat + ' push pressed'));
      }
-     await until(async () => { const n = await notif(t); eq(n.categories.groups.email, !orig.categories.groups.email, 'groups email'); eq(n.categories.match.push, !orig.categories.match.push, 'match push'); });
+     await until(async () => { const n = await notif(t); eq(n.categories.groups.email, !orig.categories.groups.email, 'groups email'); eq(n.categories.match.push, !orig.categories.match.push, 'match push');
+       eq(n.categories.decide.email, !orig.categories.decide.email, 'decide email'); eq(n.categories.pair.push, !orig.categories.pair.push, 'pair push'); });
      const quiet = t.page.locator('button[role=switch][aria-label="Не беспокоить"]');
      if (!orig.quiet.on) { await quiet.click(); await until(async () => eq((await notif(t)).quiet.on, true, 'quiet on')); }
      // «Не беспокоить с 23:00 до 08:00» on one row: two selects in the row, the switch at its end.

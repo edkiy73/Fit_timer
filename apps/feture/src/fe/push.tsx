@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {Bell} from 'lucide-react';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {newOpId} from '../feture/fe-api';
-import {Alert,Btn,Card,Note,Row,Sheet,Spacer,ToggleRow} from './kit';
+import {Alert,BRAND,Btn,Card,Note,Row,Sheet,Spacer,ToggleRow} from './kit';
 import {useFe} from './session';
 import {useToast} from './toast';
 import {disableWebPush,enableWebPush,needsHomeScreen,onUseful,refreshWebPush,webPushState,webPushSupported,type WebPushState} from './push-web';
@@ -78,7 +78,7 @@ export function PushOffer(){
  const close=()=>setSheet(false);
  return <Sheet title={t('fe.push.offerTitle')} lead={<span className="ico l"><Bell/></span>} onClose={close}
   foot={<><Btn onClick={()=>{close();void turnOn();}}>{t('fe.push.offerOk')}</Btn><Btn kind="text" onClick={close}>{t('fe.push.later')}</Btn></>}>
-  <Card list><Row icon={Bell} title="FetUre" sub={t('fe.push.preview')}/></Card>
+  <Card list><Row icon={Bell} title={BRAND} sub={t('fe.push.preview')}/></Card>
   <Spacer size={2}/><Note>{t('fe.push.offerText')}</Note>
  </Sheet>;
 }

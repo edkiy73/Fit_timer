@@ -36,12 +36,17 @@ export async function sendPublicHelp(input:{body:string,contact?:string|undefine
  if(!response.ok)throw new FeError(response.status===429?'rate_limited':response.status===400?'invalid_input':'unavailable',response.status);
 }
 
+let zoneName:string|null|undefined;
+function deviceZone(){if(zoneName===undefined){try{zoneName=Intl.DateTimeFormat().resolvedOptions().timeZone||null;}catch{zoneName=null;}}return zoneName;}
+
 export async function feRequest<T>(session:AuthSession,action:string,input:Record<string,unknown>,schema:z.ZodType<T>,
  opts:{profileId?:string|undefined,signal?:AbortSignal|undefined}={}):Promise<T>{
  const {signal,profileId}=opts;
  await requireCurrentSession(session,signal);
  const headers:Record<string,string>={'Content-Type':'application/json','x-fit-email':session.email,'x-fit-device':session.deviceId,'x-fit-token':session.syncToken};
  if(profileId)headers['x-fe-profile']=profileId;
+ // The device's time zone: the morning email digest goes by it (server/email.mjs).
+ const zone=deviceZone();if(zone)headers['x-fe-tz']=zone;
  let response:Response;
  try{
   response=await fetch(apiUrl('/api/fe'),{method:'POST',cache:'no-store',headers,body:JSON.stringify({...input,action}),

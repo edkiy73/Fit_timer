@@ -6,7 +6,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
-import { CARDS, CATALOG, DECIDE_KINDS, EMAILS, FILTERS, PUSH_CATS, destination, entryFor, noteKey, routeOk, textOf } from '../contracts/notifications.mjs';
+import { CARDS, CATALOG, DECIDE_KINDS, EMAILS, FILTERS, PUSH_CATS, SETTING_CATS, destination, entryFor, noteKey, pushTag, routeOk, settingOf, textOf } from '../contracts/notifications.mjs';
 import { PROFILE_SETTINGS } from '../contracts/me.mjs';
 import { APPROVAL_KINDS } from '../server/approvals.mjs';
 import { platform } from '../server/commands/platform.mjs';
@@ -112,6 +112,27 @@ test('every entry is complete: texts, card, destination, push, email; no known t
   assert.deepEqual(pushing, ['pair.acted.access', 'pair.acted.event', 'pair.acted.eventApply', 'pair.acted.link', 'pair.acted.linkShown', 'pair.acted.post']);
   assert.equal(CATALOG.communityJoins.push.off, true);
   for (const t of ['chatAccepted', 'pair.inviteExpired', 'supportClosed']) assert.equal(CATALOG[t].push.off, false, t);
+});
+
+test('push and email rules of stages 6 and 6B: settings categories that work, important, noisy, partner trust actions, tags', () => {
+  // Every settings switch the screen shows is some entry's category; «Сообщения», «Решения», «Пара» are their own.
+  const used = new Set(Object.values(CATALOG).map(e => settingOf(e)).filter(Boolean));
+  for (const c of SETTING_CATS) assert.ok(used.has(c), `settings category ${c} is used`);
+  assert.deepEqual([settingOf(CATALOG.message), settingOf(CATALOG['decide.req']), settingOf(CATALOG.chatRequest), settingOf(CATALOG['pair.stopped'])],
+    ['messages', 'decide', 'req', 'pair']);
+  const screen = read('src/fe/settings.tsx').match(/const CATS:[^=]*=\[([\s\S]*?)\];/)?.[1] ?? '';
+  assert.deepEqual([...screen.matchAll(/\['(\w+)'/g)].map(m => m[1]), [...SETTING_CATS], 'the screen lists exactly the categories, in order');
+  // Owner decision 4: tasks, an event cancelled or moved, security wait for the morning; social pushes do not.
+  for (const t of [...DECIDE_KINDS.map(k => 'decide.' + k), 'eventCancelled', 'eventChanged', 'signinNew']) assert.ok(CATALOG[t].push.important, t);
+  for (const t of ['like', 'follow', 'postLike', 'reply', 'match', 'message']) assert.ok(!CATALOG[t].push.important, t);
+  for (const t of ['like', 'follow', 'postLike']) assert.ok(CATALOG[t].push.noisy && CATALOG[t].push.summary, t);
+  // Tags: one per chat, task, noisy kind, collapse key or object; ids only.
+  assert.equal(pushTag({ conversationId: ID }), `c:${ID}`);
+  assert.equal(pushTag({ decide: { kind: 'eapp', id: ID } }), `d:eapp:${ID}`);
+  assert.equal(pushTag({ key: 'like', notificationId: ID }), 's:like');
+  assert.equal(pushTag({ key: 'reply', collapseKey: `reply:${ID}`, notificationId: ID2 }), `k:reply:${ID}`);
+  assert.equal(pushTag({ key: 'eventCancelled', object: { type: 'event', id: ID }, notificationId: ID2 }), `o:event:${ID}`);
+  assert.equal(pushTag({ key: 'premiumGranted', notificationId: ID2 }), `n:${ID2}`);
 });
 
 test('the migration fills the record kind the catalog says', () => {

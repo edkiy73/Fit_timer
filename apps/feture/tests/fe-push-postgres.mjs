@@ -7,6 +7,8 @@ import { me } from '../server/commands/me.mjs';
 import { discover } from '../server/commands/discover.mjs';
 import { chats } from '../server/commands/chats.mjs';
 import { inbox } from '../server/commands/inbox.mjs';
+import { couples } from '../server/commands/couples.mjs';
+import { social } from '../server/commands/social.mjs';
 import { notifyHandlers } from '../server/notify.mjs';
 import { pushHandlers, inQuietHours, personalText, clip, PUSH_TEXT } from '../server/push.mjs';
 import { NOTIFICATION_DEFAULTS } from '../contracts/me.mjs';
@@ -245,7 +247,7 @@ test('push retries: a transient failure is retried for that device only (likes g
     assert.deepEqual(tr.calls, { 'tok-okay-1': 1, 'tok-flaky-1': 3, 'tok-gone-1': 1 });
     assert.equal((await deliveries(db))[0].state, 'sent');
     assert.ok((await db.query(`select done_at from feture.outbox where topic = 'push.deliver'`))[0].done_at);
-    assert.equal((await db.query(`select count(*)::int n from feture.rate_event where kind = 'push.likes'`))[0].n, 1);
+    assert.equal((await db.query(`select count(*)::int n from feture.rate_event where kind = 'push.like'`))[0].n, 1);
     // The tokens and the text are never stored with the delivery.
     assert.ok(!JSON.stringify(await db.query('select * from feture.push_delivery')).match(/tok-|Новое/));
   } finally { await pg.close(); }
@@ -304,5 +306,134 @@ test('push retries: a re-claim after «sent» never re-sends; a second worker ne
     await drainAll(db, pushHandlers(db, transport));
     assert.deepEqual(delivered, ['tok-one-1']);
     assert.deepEqual((await deliveries(db)).map(x => [x.state, x.attempts]), [['sent', 1]]);
+  } finally { await pg.close(); }
+});
+
+// Stage 6 (docs/notifications.md «Push», owner 03.11.2026): actuality at send time, quiet hours, tags, noisy summaries.
+/** A world with couples and blocks too; every device records what it got. */
+async function world6() {
+  const env = await baseSetup({ commands: { ...platform, ...me, ...discover, ...chats, ...inbox, ...couples, ...social } });
+  const { db, person } = env;
+  /** @type {{token: string, message: any}[]} */
+  const sent = [];
+  const transport = { send: async (/** @type {string} */ _p, /** @type {string} */ token, /** @type {any} */ message) => { sent.push({ token, message }); } };
+  const handlers = { ...notifyHandlers(db), ...pushHandlers(db, transport) };
+  const notify = async () => { while ((await drain(db, notifyHandlers(db), { limit: 100 })) > 0) { /* inbox rows and queued pushes only */ } };
+  const deliver = async () => { while ((await drain(db, handlers, { limit: 100 })) > 0) { /* until empty */ } };
+  const member = async (/** @type {string} */ user, /** @type {string} */ handle, /** @type {any} */ quiet = { on: false, from: '23:00', to: '08:00' }) => {
+    const id = await person(user, handle);
+    const [{ account_id }] = await db.query('select account_id from feture.profile_member where profile_id = $1 limit 1', [id]);
+    await db.query(`insert into feture.notification_settings (account_id, settings) values ($1, $2)`, [account_id, JSON.stringify({ quiet })]);
+    await env.call(user, null, { action: 'push.register', opId: op(), platform: 'ios', token: `tok-${handle}`, tz: 'UTC' });
+    return { id, account: account_id };
+  };
+  return { ...env, sent, notify, deliver, member, handlers };
+}
+
+test('actuality at send time: nothing for a read or withdrawn notification, a decided task, a read, muted or blocked chat; a skipped push names nobody', async () => {
+  const { pg, db, call, sent, notify, deliver, member } = await world6();
+  try {
+    const a = await member('ua', 'Alex'), b = await member('ub', 'Kira');
+    await db.query(`update feture.profile set chosen_name = 'Алекс' where id = $1`, [a.id]);
+    // A like read in the app before its push went: no push.
+    await call('ua', a.id, { action: 'like.send', opId: op(), profileId: b.id, source: 'profile' });
+    await notify();
+    await db.query(`update feture.notification set read_at = now() where recipient_account_id = $1`, [b.account]);
+    await deliver();
+    assert.equal(sent.length, 0);
+    // A couple invitation withdrawn before its push went: no push. One still open does push, with its own tag.
+    const inv = await call('ua', null, { action: 'couple.invite', opId: op(), handle: 'Kira' });
+    await notify();
+    assert.equal((await call('ua', null, { action: 'couple.inviteWithdraw', opId: op(), inviteId: inv.id })).status, 200);
+    await deliver();
+    assert.equal(sent.length, 0);
+    const inv2 = await call('ua', null, { action: 'couple.invite', opId: op(), handle: 'Kira' });
+    await deliver();
+    assert.deepEqual([sent.length, sent[0].message.tag], [1, `d:pinv:${inv2.id}`]);
+    await call('ua', null, { action: 'couple.inviteWithdraw', opId: op(), inviteId: inv2.id });
+
+    // Chats: a match, then messages.
+    await call('ub', b.id, { action: 'like.send', opId: op(), profileId: a.id, source: 'likes' });
+    await deliver();
+    const conv = (await db.query(`select id from feture.conversation limit 1`))[0].id;
+    const msg = async (/** @type {string} */ body) => { await call('ua', a.id, { action: 'chat.send', opId: op(), conversationId: conv, body }); await notify(); };
+    sent.length = 0;
+    // Read before the push went.
+    await msg('Прочитано');
+    const [{ last_seq: s1 }] = await db.query(`select last_seq from feture.conversation where id = $1`, [conv]);
+    await call('ub', b.id, { action: 'chat.read', conversationId: conv, upToSeq: Number(s1) });
+    await deliver();
+    assert.equal(sent.length, 0);
+    // Muted after it was queued (the queue-time check missed it): no push.
+    await msg('Заглушено');
+    await call('ub', b.id, { action: 'chat.mute', conversationId: conv, on: true });
+    await deliver();
+    assert.equal(sent.length, 0);
+    await call('ub', b.id, { action: 'chat.mute', conversationId: conv, on: false });
+    // The sender blocked after it was queued: no push, no name anywhere.
+    await msg('Заблокировано');
+    await call('ub', b.id, { action: 'block.set', opId: op(), profileId: a.id, on: true });
+    await deliver();
+    assert.equal(sent.length, 0);
+    assert.ok(!JSON.stringify(sent).match(/Алекс|Alex|Прочитано|Заглушено|Заблокировано/));
+  } finally { await pg.close(); }
+});
+
+test('quiet hours (owner decision 4): an important push waits for the morning and is checked again; a social one is dropped', async () => {
+  const { pg, db, call, sent, notify, deliver, member } = await world6();
+  try {
+    // Quiet hours around «now» in the device's zone (UTC).
+    const h = new Date().getUTCHours();
+    const hh = (/** @type {number} */ x) => `${String((x + 24) % 24).padStart(2, '0')}:00`;
+    const quiet = { on: true, from: hh(h - 1), to: hh(h + 2) };
+    const a = await member('ua', 'Alex'), b = await member('ub', 'Kira', quiet);
+    assert.ok(inQuietHours(quiet, 'UTC'));
+    // A like at night: dropped (nothing now, nothing later).
+    await call('ua', a.id, { action: 'like.send', opId: op(), profileId: b.id, source: 'profile' });
+    // A task at night (a couple invitation): waits for the end of quiet hours on that device.
+    const inv = await call('ua', null, { action: 'couple.invite', opId: op(), handle: 'Kira' });
+    await deliver();
+    assert.equal(sent.length, 0);
+    const later = await db.query(`select payload, available_at > now() + interval '30 minutes' waits from feture.outbox where topic = 'push.deliver' and done_at is null`);
+    assert.equal(later.length, 1);
+    assert.deepEqual([later[0].payload.decide, later[0].payload.deferrals, later[0].waits], [{ kind: 'pinv', id: inv.id }, 1, true]);
+    assert.deepEqual((await db.query(`select state from feture.push_delivery`)).map((/** @type {any} */ r) => r.state), ['deferred']);
+    // Morning: the invitation is still open — one push.
+    await db.query(`update feture.notification_settings set settings = settings || '{"quiet": {"on": false, "from": "23:00", "to": "08:00"}}' where account_id = $1`, [b.account]);
+    await db.query(`update feture.outbox set available_at = now() where topic = 'push.deliver' and done_at is null`);
+    await deliver();
+    assert.deepEqual(sent.map(s => s.message.tag), [`d:pinv:${inv.id}`]);
+
+    // A task decided before the morning: nothing then.
+    await call('ua', null, { action: 'couple.inviteWithdraw', opId: op(), inviteId: inv.id });
+    await db.query(`update feture.notification_settings set settings = settings || $2::jsonb where account_id = $1`, [b.account, JSON.stringify({ quiet })]);
+    const inv2 = await call('ua', null, { action: 'couple.invite', opId: op(), handle: 'Kira' });
+    await notify();
+    await deliver();
+    await call('ua', null, { action: 'couple.inviteWithdraw', opId: op(), inviteId: inv2.id });
+    await db.query(`update feture.outbox set available_at = now() where topic = 'push.deliver' and done_at is null`);
+    await db.query(`update feture.notification_settings set settings = settings || '{"quiet": {"on": false, "from": "23:00", "to": "08:00"}}' where account_id = $1`, [b.account]);
+    await deliver();
+    assert.equal(sent.length, 1);
+  } finally { await pg.close(); }
+});
+
+test('noisy types: the first like pushes, the rest of the hour is one summary push with its count, under the same tag', async () => {
+  const { pg, db, call, sent, deliver, member } = await world6();
+  try {
+    const b = await member('ub', 'Kira');
+    await db.query(`update feture.notification_settings set settings = settings || '{"mode": "normal"}' where account_id = $1`, [b.account]);
+    const fans = [await member('u1', 'Ann'), await member('u2', 'Bea'), await member('u3', 'Cid')];
+    for (const f of fans) await call(f.id === fans[0].id ? 'u1' : f.id === fans[1].id ? 'u2' : 'u3', f.id, { action: 'like.send', opId: op(), profileId: b.id, source: 'profile' });
+    await deliver();
+    assert.equal(sent.filter(s => s.token === 'tok-Kira').length, 1);
+    // The summary waits for the end of the hour; let it come due now.
+    const [summary] = await db.query(`select payload from feture.outbox where topic = 'push.deliver' and done_at is null`);
+    assert.equal(summary.payload.key, 'like');
+    await db.query(`update feture.rate_event set created_at = now() - interval '61 minutes' where kind = 'push.like'`);
+    await db.query(`update feture.outbox set available_at = now() where topic = 'push.deliver' and done_at is null`);
+    await deliver();
+    const mine = sent.filter(s => s.token === 'tok-Kira');
+    assert.deepEqual(mine.map(s => [s.message.title, s.message.body, s.message.tag]), [['Ann', 'Ставит тебе симпатию', 's:like'], ['KINHAZE', 'Новые симпатии: 2', 's:like']]);
   } finally { await pg.close(); }
 });

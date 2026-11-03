@@ -5,7 +5,7 @@ export type Entry = {
   kind: 'notice' | 'task' | 'result', filter: Filter, icon: string, tone: '' | 'l' | 'g' | 'v',
   card: 'news' | 'decision' | 'result' | 'safety' | 'event' | 'summary',
   text: Text, alone?: Text,
-  push: { cat: string, safe: Text, normal: Text, named: boolean, off: boolean },
+  push: { cat: string, safe: Text, normal: Text, named: boolean, important: boolean, noisy: boolean, off: boolean, summary?: Text },
   email: 'none' | 'now' | 'now-if-unread' | 'digest', subject: Text, dest: string,
   collapse: 'none' | 'object' | 'actor' | 'type', gone: Text,
 };
@@ -32,3 +32,12 @@ export declare const ROUTE_PATH: RegExp;
 export declare const ROUTE_QUERY: Readonly<Record<string, RegExp>>;
 export declare function routeOk(route: unknown): route is string;
 export declare function pushUrl(route: string): string;
+export declare const SETTING_CATS: readonly ['messages', 'match', 'likes', 'req', 'decide', 'pair', 'events', 'replies', 'follows', 'groups', 'news'];
+export declare function settingOf(e: Entry): string | null;
+export declare const TAG: RegExp;
+export declare function chatTag(conversationId: string): string;
+export declare function decideTag(kind: string, id: string): string;
+export declare function pushTag(r: { key?: string | null, notificationId?: string | null, collapseKey?: string | null, object?: { type: string, id: string } | null,
+  decide?: { kind: string, id: string } | null, conversationId?: string | null }): string | null;
+export declare function ruPlural(n: number, f: readonly [string, string, string]): string;
+export declare const EMAIL_WORDS: Readonly<Record<'ru' | 'en', Record<string, any>>>;

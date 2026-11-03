@@ -50,12 +50,14 @@ export function Thread({messages,label}:{messages:ThreadMessage[],label:string})
  </div>)}</div>;
 }
 
-/** What a notification looks like on a locked phone (Settings → Notifications): the app line, the title, the text and
- * the time, dark in both themes like a lock screen. `items` stack as on the phone; the screen passes exactly what the
- * chosen mode sends. Decorative: the choice above it is the control. */
-export function LockPreview({app,icon,items}:{app:string,icon:string,items:readonly {title:ReactNode,body:ReactNode,time:ReactNode}[]}){
+/** The brand every notification carries (push title, email, lock-screen line): KINHAZE and its mark. */
+export const BRAND='KINHAZE';
+/** What a notification looks like on a locked phone (Settings → Notifications): the KINHAZE line with its mark, the
+ * title, the text and the time, dark in both themes like a lock screen. `items` stack as on the phone; the screen passes
+ * exactly what the chosen mode sends (in «Безопасные» the title is `BRAND`). Decorative: the choice above it is the control. */
+export function LockPreview({items}:{items:readonly {title:ReactNode,body:ReactNode,time:ReactNode}[]}){
  return <div className="k-lock" aria-hidden="true">{items.map((x,i)=><div key={i} className="k-lock-n">
-  <span className="k-lock-app"><img src={icon} alt=""/>{app}<small>{x.time}</small></span><b>{x.title}</b><span>{x.body}</span></div>)}</div>;
+  <span className="k-lock-app"><img src={import.meta.env.BASE_URL+'kinhaze-mark.svg'} alt=""/>{BRAND}<small>{x.time}</small></span><b>{x.title}</b><span>{x.body}</span></div>)}</div>;
 }
 
 /** The column heads over channel toggles («Пуш», «Почта»), set in a section label's action slot. */

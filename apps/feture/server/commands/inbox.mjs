@@ -28,7 +28,7 @@ const MINE = `select m.profile_id from feture.profile_member m join feture.profi
 
 /** Everything waiting for the account to decide, newest first — all of it (docs/notifications.md «Счётчики»: no limit);
  * with `one`, only that item. @param {Q} q @param {string} accountId @param {{kind: string, id: string}} [one] */
-async function decisions(q, accountId, one) {
+export async function decisions(q, accountId, one) {
   return q.query(
     `select * from (${decisionUnion()}) d where ($2::text is null or d.kind = $2 and d.id = $3::uuid) order by at desc, id desc`,
     [accountId, one?.kind ?? null, one?.id ?? null]);
