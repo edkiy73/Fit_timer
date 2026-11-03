@@ -2,6 +2,7 @@ import {z} from 'zod';
 import {Capacitor} from '@capacitor/core';
 import {PushNotifications} from '@capacitor/push-notifications';
 import {newOpId} from '../feture/fe-api';
+import {routeOk} from '../../contracts/notifications.mjs';
 
 /** V21 N02 push in the Android/iOS app: Firebase Cloud Messaging through @capacitor/push-notifications instead of the
  * browser's web push (push-web.ts stays the website's). The FCM token is the device row on the server
@@ -108,11 +109,13 @@ export async function refreshNativePush(call:Call){
  }catch{/* next time */}
 }
 
-/** Only the app's own /n screens, as the server sends them (`/#/n/chats`, `/#/n/inbox`): never another site. */
+/** Only the app's own /n screens the destination resolver makes (`/#/n/chats/<id>`, `/#/n/me/pair?approval=<id>&as=<id>`),
+ * by the one route rule (contracts/notifications.mjs routeOk, the same as the web service worker): never another site. */
 export function pushRoute(url:unknown):string|null{
- const u=String(url??'');
- const m=/^\/#(\/n\/[A-Za-z0-9/_-]*)$/.exec(u);
- return m?m[1]!:null;
+ const u=typeof url==='string'?url:'';
+ if(!u.startsWith('/#'))return null;
+ const route=u.slice(2);
+ return routeOk(route)?route:null;
 }
 
 /** A tap on a notification (also the one that started the app: the plugin keeps it until a listener comes). */

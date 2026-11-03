@@ -9,7 +9,8 @@
  * @typedef {import('./realtime.mjs').Signal} Signal
  */
 
-import { pushKind, queuePush } from './push.mjs';
+import { CATALOG, destination, noteKey, pushUrl } from '../contracts/notifications.mjs';
+import { queuePush } from './push.mjs';
 
 /** topic → notification type, the payload key naming the actor profile, and the object. */
 const TYPES = /** @type {Record<string, {type: string, actor?: string, object?: [string, string]}>} */ ({
@@ -87,8 +88,23 @@ export const SILENT_TOPICS = Object.freeze(['access.revoked', 'access.declined',
   'moderation.ageCheck', 'moderation.appeal', 'moderation.community', 'moderation.csamCase', 'moderation.event',
   'moderation.mediaReview', 'moderation.photoCheck', 'moderation.postRevision', 'moderation.report']);
 /** Payload fields kept in `data` (codes and ids only, never free text; `device` / `place` of a new sign-in are Core's
- * device family and the edge network's «city|CC», never anything a person typed). */
-const KEEP = ['device', 'place', 'what', 'change', 'reason', 'state', 'kind', 'resolution', 'rule', 'targetType', 'targetId', 'answer', 'outcome', 'changes', 'approves', 'ticketId', 'days', 'until', 'target', 'purpose', 'count', 'role', 'grant'];
+ * device family and the edge network's «city|CC», never anything a person typed). `postId`, `replyId`, `communityId`:
+ * what the destination resolver needs (a reply to highlight, the community of a removed discussion). */
+const KEEP = ['device', 'place', 'what', 'change', 'reason', 'state', 'kind', 'resolution', 'rule', 'targetType', 'targetId', 'answer', 'outcome', 'changes', 'approves', 'ticketId', 'days', 'until', 'target', 'purpose', 'count', 'role', 'grant',
+  'postId', 'replyId', 'communityId'];
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/** The collapse key of a row by its catalog rule: one per type, per object or per actor (null: never collapsed).
+ * @param {string | null} key @param {{objectId?: string | null, actor?: string | null}} n */
+function collapseKey(key, n) {
+  const rule = key ? CATALOG[key].collapse : 'none';
+  if (rule === 'type') return key;
+  if (rule === 'object') return n.objectId ? `${key}:${n.objectId}` : null;
+  if (rule === 'actor') return n.actor ? `${key}:${n.actor}` : null;
+  return null;
+}
+/** @param {{name?: string | null, handle?: string | null} | null} p */
+const shownName = p => (p ? p.name || (p.handle ? '@' + p.handle : null) : null);
 
 /** @param {any} payload */
 const pick = payload => Object.fromEntries(KEEP.filter(k => payload[k] !== undefined).map(k => [k, payload[k]]));
@@ -102,13 +118,27 @@ async function signalTo(q, r) {
   return a?.person_profile_id ?? null;
 }
 
-/** Writes one notification per recipient account. @param {Q} q @param {OutboxItem} item
- * @param {{type: string, actor?: string | null, objectType?: string | null, objectId?: string | null, data?: object}} n
+/** Writes one notification per recipient account, shaped by the catalog (contracts/notifications.mjs): its record kind,
+ * the nested object (a reply), the couple it is addressed to with the couple's and the actor's names as they are now
+ * (an old row keeps them after a rename, a pause or a break-up), its collapse key; and queues the push with the route
+ * the destination resolver chose. @param {Q} q @param {OutboxItem} item
+ * @param {{type: string, actor?: string | null, objectType?: string | null, objectId?: string | null, data?: Record<string, any>, couple?: string | null}} n
  * @param {{account: string, profile: string | null}[]} recipients @param {Signal[]} out realtime signals, sent after commit */
 async function write(q, item, n, recipients, out) {
   const by = /** @type {any} */ (item.payload).by;
+  /** @type {Map<string, any>} */
+  const seen = new Map();
+  const profile = async (/** @type {string | null | undefined} */ id) => {
+    if (!id) return null;
+    if (!seen.has(id)) seen.set(id, (await q.query(`select id, kind, name, handle, state from feture.profile where id = $1`, [id]))[0] ?? null);
+    return seen.get(id);
+  };
+  const actor = await profile(n.actor);
   // Nothing about someone who is gone or no longer active: nobody would see it.
-  if (n.actor && !(await q.query(`select 1 from feture.profile where id = $1 and state = 'active'`, [n.actor]))[0]) return;
+  if (n.actor && actor?.state !== 'active') return;
+  const data = n.data ?? {};
+  const key = noteKey(n.type, data);
+  const sub = typeof data.replyId === 'string' && UUID.test(data.replyId) ? { type: 'reply', id: data.replyId } : null;
   for (const r of recipients) {
     if (by && r.account === by) continue; // never to the account that caused it
     if (n.objectType === 'post' && n.objectId && r.profile) {
@@ -123,12 +153,18 @@ async function write(q, item, n, recipients, out) {
            or ($3::uuid is not null and feture.blocked($3, $1)) skip`, [n.actor, r.account, r.profile]);
       if (skip) continue;
     }
+    const addressee = await profile(r.profile);
+    const couple = addressee?.kind === 'couple' ? addressee : n.couple ? await profile(n.couple) : null;
     const added = await q.query(
-      `insert into feture.notification (recipient_account_id, addressee_profile_id, type, actor_profile_id, object_type, object_id, data, source)
-       values ($1, $2, $3, $4, $5, $6, $7, $8) on conflict (source, recipient_account_id) do nothing returning id`,
-      [r.account, r.profile, n.type, n.actor ?? null, n.objectType ?? null, n.objectId ?? null, JSON.stringify(n.data ?? {}), item.id]);
+      `insert into feture.notification (recipient_account_id, addressee_profile_id, type, actor_profile_id, object_type, object_id, data, source,
+         kind, sub_object_type, sub_object_id, couple_id, actor_name, couple_name, collapse_key)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) on conflict (source, recipient_account_id) do nothing returning id`,
+      [r.account, r.profile, n.type, n.actor ?? null, n.objectType ?? null, n.objectId ?? null, JSON.stringify(data), item.id,
+        key ? CATALOG[key].kind : 'notice', sub?.type ?? null, sub?.id ?? null, couple?.id ?? null, shownName(actor), shownName(couple), collapseKey(key, n)]);
     if (added[0]) {
-      await queuePush(q, item, r, pushKind(n.type), added[0].id);
+      const route = destination({ type: n.type, data, object: n.objectType ? { type: n.objectType, id: n.objectId ?? null } : null, sub,
+        actor: n.actor ?? null, addressee: r.profile, couple: couple?.id ?? null });
+      await queuePush(q, item, r, key ? CATALOG[key].push.cat : 'other', added[0].id, undefined, { key, url: pushUrl(route) });
       const to = await signalTo(q, r); if (to) out.push({ profile: to, kind: 'notify' });
     }
   }
@@ -168,6 +204,17 @@ async function eventFollowers(q, eventId, admittedOnly, saved = false) {
   return rows.map(r => ({ account: r.account_id, profile: r.profile_id }));
 }
 
+/** The «Нужно решить» kind each decision topic makes (server/commands/inbox.mjs decisions()), and its object. */
+const DECIDE_OF = /** @type {Record<string, string>} */ ({
+  'decide.created': 'joint', 'decide.resolved': 'jointReturned', 'access.requested': 'req', 'community.requested': 'capp',
+  'event.applied': 'eapp', 'couple.invited': 'pinv', 'tag.requested': 'tag', 'link.proposed': 'link', 'link.changeProposed': 'linkChange',
+});
+const DECIDE_OBJECT = /** @type {Record<string, (p: any) => {type: string, id: string} | null>} */ ({
+  'decide.created': p => ({ type: 'approval', id: p.approvalId }), 'decide.resolved': p => ({ type: 'approval', id: p.approvalId }),
+  'community.requested': p => ({ type: 'community', id: p.communityId }), 'event.applied': p => ({ type: 'event', id: p.eventId }),
+  'tag.requested': p => ({ type: 'post', id: p.postId }),
+});
+
 /** @param {Db} db @param {(s: Signal) => void} [emit] realtime signals of committed items (S2 §8), sent by the worker */
 export function notifyHandlers(db, emit = () => {}) {
   /** A transaction whose realtime signals are emitted only once it committed.
@@ -188,6 +235,8 @@ export function notifyHandlers(db, emit = () => {}) {
         await write(q, item, {
           type: def.type, actor: def.actor ? p[def.actor] ?? null : null,
           objectType: def.object?.[0] ?? null, objectId: def.object ? p[def.object[1]] ?? null : null, data: pick(p),
+          // A deleted couple is named by the payload: the item is addressed to the account, the couple is gone.
+          couple: def.type === 'pair.deleted' && typeof p.profileId === 'string' ? p.profileId : null,
         }, recipients, out);
       });
     };
@@ -275,7 +324,11 @@ export function notifyHandlers(db, emit = () => {}) {
     await db.tx(async q => {
       const p = /** @type {any} */ (item.payload);
       const message = p.conversationId && p.seq != null ? { conversationId: p.conversationId, seq: Number(p.seq) } : undefined;
-      for (const r of await recipientsOf(q, item.profile_id, p)) await queuePush(q, item, r, 'messages', undefined, message);
+      for (const r of await recipientsOf(q, item.profile_id, p)) {
+        // The chat itself, as the profile that is in it.
+        const url = pushUrl(destination({ type: 'message', data: { conversationId: p.conversationId }, addressee: r.profile }));
+        await queuePush(q, item, r, 'messages', undefined, message, { key: 'message', url });
+      }
     });
   };
   // Things to decide are in «Нужно решить», not in the inbox; the recipients get a push and their open screens a signal.
@@ -283,11 +336,17 @@ export function notifyHandlers(db, emit = () => {}) {
   // the account (a couple invite) is checked against the account's own person profile.
   /** @param {OutboxItem} item */
   const toDecide = item => tx(async (q, out) => {
-    const by = /** @type {any} */ (item.payload).from;
+    const p = /** @type {any} */ (item.payload);
+    const by = p.from;
+    const kind = DECIDE_OF[item.topic] ?? null;
     for (const r of await recipientsOf(q, item.profile_id, item.payload)) {
       const to = await signalTo(q, r);
       if (by && to && (await q.query(`select feture.blocked($1, $2) b`, [to, by]))[0].b) continue;
-      await queuePush(q, item, r, 'decide');
+      const [adr] = r.profile ? await q.query(`select kind from feture.profile where id = $1`, [r.profile]) : [];
+      const type = kind ? `decide.${kind}` : 'decide.pinv';
+      const route = destination({ type, data: { ...p, label: adr?.kind === 'couple' ? 'couple' : 'me' }, object: DECIDE_OBJECT[item.topic]?.(p) ?? null,
+        addressee: r.profile, couple: adr?.kind === 'couple' ? r.profile : null });
+      await queuePush(q, item, r, 'decide', undefined, undefined, { key: noteKey(type, { label: adr?.kind === 'couple' ? 'couple' : 'me' }), url: pushUrl(route) });
       if (to) out.push({ profile: to, kind: 'decide' });
     }
   });

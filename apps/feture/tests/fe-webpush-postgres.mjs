@@ -114,12 +114,13 @@ test('a like and a message reach only that account\'s browsers, encrypted, with 
       assert.ok(!p.body.toString('latin1').includes('Alex'));
     }
     const payload = kira.open(/** @type {any} */ (posts.find(p => p.url === kira.endpoint)).body);
-    assert.deepEqual(payload, { title: 'KINHAZE', body: 'Новое уведомление', url: '/#/n/inbox' });
+    // Opens the profile of whoever liked, as the profile that was liked (contracts/notifications.mjs destination).
+    assert.deepEqual(payload, { title: 'KINHAZE', body: 'Новое уведомление', url: `/#/n/people/${a.id}?as=${b.id}` });
     // The 410 subscription is gone; the phone and the live browser stay.
     assert.deepEqual((await db.query(`select platform from feture.push_device where account_id = $1 order by platform`, [b.account])).map((/** @type {any} */ r) => r.platform), ['android', 'web']);
 
     // A message in «normal» mode («Обычные», owner 29.10.2026): the sender's name and the start of the text, only inside
-    // the encrypted payload; opens the chats.
+    // the encrypted payload; opens that chat.
     await db.query(`update feture.notification_settings set settings = settings || '{"mode": "normal"}' where account_id = $1`, [b.account]);
     await call('ub', b.id, { action: 'like.send', opId: op(), profileId: a.id, source: 'likes' });
     const conv = (await db.query(`select id from feture.conversation limit 1`))[0].id;
@@ -127,7 +128,7 @@ test('a like and a message reach only that account\'s browsers, encrypted, with 
     await call('ua', a.id, { action: 'chat.send', opId: op(), conversationId: conv, body: 'Секретный текст' });
     await deliver();
     const msg = posts.filter(p => p.url === kira.endpoint).map(p => kira.open(p.body));
-    assert.deepEqual(msg.at(-1), { title: 'Alex', body: 'Секретный текст', url: '/#/n/chats' });
+    assert.deepEqual(msg.at(-1), { title: 'Alex', body: 'Секретный текст', url: `/#/n/chats/${conv}?as=${b.id}` });
     assert.ok(posts.every(p => !p.body.toString('latin1').includes('Alex') && !p.body.includes(Buffer.from('Секрет'))));
 
     // Push off in the settings: nothing goes out.

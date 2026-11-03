@@ -50,7 +50,6 @@ export const ru = {
   'fe.rq.set.none': 'Никто',
   'fe.rq.set.noneSub': 'Только после взаимной симпатии',
   // Elsewhere: the inbox row, the couple's approval.
-  'fe.ibx.t.chatRequest': '{name} хочет начать переписку',
   'fe.cw.kind.chat.request': 'Запрос на переписку от пары',
   'fe.cw.field.messagesFrom': 'Кто может написать первым',
   'fe.cw.val.known': 'Подписчики и участники общих сообществ и событий',
@@ -102,7 +101,6 @@ export const en = {
   'fe.rq.set.knownUs': 'Followers and people from shared communities and events',
   'fe.rq.set.none': 'Nobody',
   'fe.rq.set.noneSub': 'Only after a mutual like',
-  'fe.ibx.t.chatRequest': '{name} wants to start a conversation',
   'fe.cw.kind.chat.request': 'A message request from the couple',
   'fe.cw.field.messagesFrom': 'Who can message first',
   'fe.cw.val.known': 'Followers and people from shared communities and events',

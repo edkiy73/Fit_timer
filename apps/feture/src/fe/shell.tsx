@@ -70,6 +70,20 @@ function Hello(){
  return null;
 }
 
+/** A link with `as=<profile id>` (a notification row, a push: contracts/notifications.mjs destination) opens as that
+ * profile when it is one of this account's — a couple's item opens as the couple from any chosen profile — and the key
+ * then leaves the address. Anything else is dropped silently. */
+function ActAs(){
+ const {state,acting,setActing}=useFe();const location=useLocation();const navigate=useNavigate();
+ useEffect(()=>{
+  const sp=new URLSearchParams(location.search);const as=sp.get('as');if(as===null)return;
+  if(state.status==='ready'&&acting?.id!==as&&state.boot.profiles.some(p=>p.id===as&&p.state!=='deleted'))setActing(as);
+  sp.delete('as');const rest=sp.toString();
+  navigate(location.pathname+(rest?'?'+rest:''),{replace:true,state:location.state});
+ },[location,state,acting,setActing,navigate]);
+ return null;
+}
+
 function Center({children}:{children:React.ReactNode}){
  return <div className="stage"><div className="root"><main className="main"><div className="view"><div className="wrap fe-center">{children}</div></div></main></div></div>;
 }
@@ -228,7 +242,7 @@ function FeLayout(){
   </aside>
   <main ref={main} className={(nodock?'main':'main has-dock')+(sbar?'':' hasbar')+(cta?' hascta':'')}>
    <DockHide.Provider value={hideDock}><ToastProvider nodock={nodock}>
-   <Hello/>
+   <Hello/><ActAs/>
    <PushOffer/>
    <UpdateSheet/>
    <PaywallHost/>

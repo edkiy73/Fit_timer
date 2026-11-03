@@ -19,7 +19,13 @@ const ls = (d, re) => readdirSync(join(ROOT, d)).filter(f => re.test(f)).map(f =
 const INTERNAL_JOBS = new Set(['notice.decided', 'verification.expire', 'support.public']);
 
 const actions = new Set();
-for (const f of ls('contracts', /\.mjs$/)) for (const m of read(f).matchAll(/^\s+'([a-z][A-Za-z]*\.[A-Za-z.]+)':\s*\{/gm)) actions.add(m[1]);
+// Command contracts are the files that export `<area>Commands`; the others (text rules, plates, the notification
+// catalog) only share data with the app.
+for (const f of ls('contracts', /\.mjs$/)) {
+  const src = read(f);
+  if (!/export const \w+Commands\b/.test(src)) continue;
+  for (const m of src.matchAll(/^\s+'([a-z][A-Za-z]*\.[A-Za-z.]+)':\s*\{/gm)) actions.add(m[1]);
+}
 const handled = new Set();const defs = {};
 for (const f of ls('server/commands', /\.mjs$/)) {
   const src = read(f);

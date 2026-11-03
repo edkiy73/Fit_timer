@@ -70,7 +70,6 @@ export const ru = {
   'fe.uf.signinTitle': 'Код из приложения',
   'fe.uf.signinLead': 'Вход защищён. Введи 6 цифр из приложения-аутентификатора.',
   'fe.uf.signinOut': 'Выйти',
-  'fe.ibx.t.signinNew': 'Вход с нового устройства',
 };
 
 export const en = {
@@ -143,5 +142,4 @@ export const en = {
   'fe.uf.signinTitle': 'Code from your app',
   'fe.uf.signinLead': 'Sign-in is protected. Enter the 6 digits from your authenticator app.',
   'fe.uf.signinOut': 'Sign out',
-  'fe.ibx.t.signinNew': 'New device signed in',
 };
