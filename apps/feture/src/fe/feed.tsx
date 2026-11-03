@@ -438,7 +438,7 @@ export function PostCard({post,onChange,onRemove,onExpired,full=false,onReply,pr
    <span><b>{declined.length?t('fe.fd.tag.declinedBy',{names:declined.join(', ')}):t('fe.fd.tag.waiting',{names:waiting.join(', ')})}</b>{declined.length?t('fe.fd.tag.declinedText'):t('fe.fd.tag.waitingText')}</span>
    {declined.length>0&&<div className="row g8"><Btn size="sm" kind="soft" onClick={()=>navigate('/n/feed/post/'+post.id+'/edit')}>{t('fe.fd.tag.replace')}</Btn></div>}</div>}
   {mine&&!preview&&post.dispute&&<DisputeNotice post={post} onChange={onChange}/>}
-  <div className="body" onClick={open} role={full||preview?undefined:'link'} tabIndex={full||preview?undefined:0} onKeyDown={e=>{if(e.key==='Enter'&&e.target===e.currentTarget)open();}}>
+  <div className={'body'+(full||preview?'':' go')} {...(full||preview?{}:{onClick:open,role:'link',tabIndex:0,onKeyDown:(e:React.KeyboardEvent<HTMLDivElement>)=>{if(e.key==='Enter'&&e.target===e.currentTarget)open();}})}>
    {art?<ArticleCard cover={art.cover} plate={articlePlate(post.id)} kicker={<>{t('fe.fd.article')} · {t('fe.fd.minRead',{n:words})}</>} title={post.title} full={full}
      excerpt={<>{plain.slice(0,220)}{plain.length>220?'…':''}</>} more={t('fe.fd.readMore')}>
      <RichText text={post.body} mentions={post.mentions??[]} images={id=>{const k=art.slides.findIndex(x=>x.id===id);const m=art.shown[k];

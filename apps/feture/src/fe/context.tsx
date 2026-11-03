@@ -14,15 +14,14 @@ import {when} from './feed';
 import {faceFields} from './faces';
 
 /** The desktop context column (V21 CTX): a few blocks about the open tab, from the reads the tabs already use —
- * «Лента»: upcoming events and communities to join; «Люди»: who likes the acting profile; «Комьюнити»: its
- * communities and community events; «Чаты» / «Я»: the latest notifications and its own upcoming events. Everything
+ * «Лента»: upcoming events and communities to join; «Люди»: who likes the acting profile; «События»: upcoming and community
+ * events; «Сообщества»: its communities and ones to join; «Чаты» / «Я»: the latest notifications and its own upcoming events. Everything
  * is the acting profile's (a couple sees the couple's), refreshed by live signals. The shell mounts it only on desktop. */
 
-type Tab='feed'|'people'|'communities'|'chats'|'me'|'inbox';
+type Tab='feed'|'people'|'events'|'communities'|'chats'|'me'|'inbox';
 /** Which blocks a section of the app shows; screens outside the five tabs take the nearest one. */
 export function ctxTab(current:string):Tab{
- if(current==='people'||current==='communities'||current==='chats'||current==='me'||current==='inbox')return current;
- if(current==='events')return 'communities';
+ if(current==='people'||current==='events'||current==='communities'||current==='chats'||current==='me'||current==='inbox')return current;
  if(current==='settings'||current==='premium')return 'me';
  return 'feed';
 }
@@ -143,7 +142,8 @@ function Notifications(){
 const BLOCKS:Record<Tab,()=>ReactNode>={
  feed:()=><><Soon/><ForYou/></>,
  people:()=><Likes/>,
- communities:()=><><MyCommunities/><CommunityEvents/></>,
+ events:()=><><Soon/><CommunityEvents/></>,
+ communities:()=><><MyCommunities/><ForYou/></>,
  chats:()=><><Notifications/><MyEvents/></>,
  me:()=><><MyEvents/><Notifications/></>,
  inbox:()=><MyEvents/>,

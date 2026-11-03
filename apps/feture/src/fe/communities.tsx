@@ -4,6 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,ChartColumn,Bell,BellOff,Bookmark,BookmarkCheck,Calendar,CalendarCheck,CalendarPlus,Check,ChevronLeft,Clock,Ellipsis,Eye,ExternalLink,FileText,Flag,Globe,Image as ImageIcon,Link as LinkIcon,Lock,Map as MapIcon,MapPin,MessageCircle,Plus,Search,Settings,Share,SlidersHorizontal,Ticket,TriangleAlert,Users,Video,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
+import {useSideNav} from './wide';
 import {Actions,Alert,Announcement,Ask,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,CommunityHead,CoverBar,Discussion,Empty,EventAnswer,EventHero,EventTile,Fact,Group,IconBtn,LinkBtn,Note,Pill,Row,Rsvp,SectionLabel,Seg,Sheet,Skel,Spacer,Stack,StatusCard,Text,ToggleRow,Veil,View,useRefreshable} from './kit';
 import {useFe,useKeyChange} from './session';
 import {mdPlain,RichText} from './post-parts';
@@ -81,14 +82,15 @@ export function priceText(p:{kind:string,amount?:number|undefined,currency?:stri
 /* ---------------- C01: the tab ---------------- */
 
 export function CommunitiesTab(){
- const {t}=useI18n();const navigate=useNavigate();const [sp,setSp]=useSearchParams();
+ const {t}=useI18n();const side=useSideNav();const navigate=useNavigate();const [sp,setSp]=useSearchParams();
  const tab=sp.get('sub')==='events'?'events':'discover';
  return <>
-  <Bar title={t('fe.nav.communities')}>
+  <Bar title={t(side?(tab==='events'?'fe.nav.events':'fe.nav.groups'):'fe.nav.communities')}>
    <IconBtn icon={Search} label={t('fe.cm.search')} onClick={()=>navigate('/n/search'+(tab==='events'?'?scope=events':'?scope=groups'))}/><BellButton/>
   </Bar>
   <View refresh>
-   <Seg small={false} value={tab} onChange={v=>setSp(v==='events'?{sub:'events'}:{},{replace:true})} options={[{id:'discover',label:t('fe.comm.catalog')},{id:'events',label:t('fe.comm.events')}]}/>
+   {/* The side menu already chooses between the two lists; the switch is for the phone's one tab. */}
+   {!side&&<Seg small={false} value={tab} onChange={v=>setSp(v==='events'?{sub:'events'}:{},{replace:true})} options={[{id:'discover',label:t('fe.comm.catalog')},{id:'events',label:t('fe.comm.events')}]}/>}
    {tab==='discover'?<Catalog/>:<EventList/>}
   </View>
  </>;

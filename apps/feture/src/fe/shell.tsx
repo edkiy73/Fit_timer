@@ -4,7 +4,7 @@ import {MaintenanceGate} from './maintenance';
 import {PaywallHost} from './premium';
 import {Outlet,useLocation,useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Ban,Globe,Image as FeedIcon,LogOut,MessageCircle,Plus,User,Users,X,type LucideIcon} from 'lucide-react';
+import {Ban,Calendar,Globe,Image as FeedIcon,LogOut,MessageCircle,Plus,User,Users,X,type LucideIcon} from 'lucide-react';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import {FeError} from '../feture/fe-api';
 import {feErrorMessage} from '../feture/fe-api';
@@ -40,6 +40,18 @@ const ContextPanel=page(()=>import('./context'),'ContextPanel');
 export const FE_TABS:{id:string,icon:LucideIcon}[]=[
  {id:'feed',icon:FeedIcon},{id:'people',icon:Users},{id:'communities',icon:Globe},{id:'chats',icon:MessageCircle},{id:'me',icon:User},
 ];
+/** The side menu (rail and full menu): «Комьюнити» is two items there, each opening its own list. `go` — where it leads
+ * (the phone dock keeps the one tab with the inner switch); `label` — its name key when it differs from `fe.nav.<id>`. */
+export const SIDE_TABS:{id:string,icon:LucideIcon,label?:string,go?:string}[]=[
+ {id:'feed',icon:FeedIcon},{id:'people',icon:Users},{id:'events',icon:Calendar,go:'/n/communities?sub=events'},
+ {id:'communities',icon:Globe,label:'fe.nav.groups',go:'/n/communities'},{id:'chats',icon:MessageCircle},{id:'me',icon:User},
+];
+/** The menu item that is lit: «События» on the events list and on every event page, «Сообщества» elsewhere in the
+ * communities section; the other tabs keep `current`. */
+export function sideCurrent(current:string,parts:string[],search:string){
+ if(current==='events'||(current==='communities'&&(parts[2]==='events'||new URLSearchParams(search).get('sub')==='events')))return 'events';
+ return current;
+}
 
 /** Pictures fade in when loaded instead of popping into an empty box (owner, 27.10.2026). Every <img> under .fe-v21
  * gets `.ld` once loaded or failed; CSS keeps it transparent until then while its box blinks softly. */
@@ -110,9 +122,10 @@ function ScreenSkeleton(){
 function ShellSkeleton(){
  const {t}=useI18n();const {pathname}=useLocation();
  const current=pathname.split('/')[2]||'feed';const tab=FE_TABS.some(x=>x.id===current)?current:'feed';const wide=useWide();
+ const sideTab=sideCurrent(tab,pathname.split('/'),useLocation().search);
  return <div className="stage"><div className="root">
   <aside className="side"><Brand at="side"/>
-   <nav aria-hidden="true">{FE_TABS.map(({id,icon:Icon})=><button key={id} type="button" tabIndex={-1} className={'navb'+(tab===id?' on':'')}><Icon/><span>{t('fe.nav.'+id)}</span></button>)}</nav></aside>
+   <nav aria-hidden="true">{SIDE_TABS.map(({id,icon:Icon,label})=><button key={id} type="button" tabIndex={-1} className={'navb'+(sideTab===id?' on':'')}><Icon/><span>{t(label||'fe.nav.'+id)}</span></button>)}</nav></aside>
   <main className="main has-dock hasbar">
    <ScreenSkeleton/>
    <nav className="dock" aria-hidden="true">
@@ -177,7 +190,7 @@ function useNewVersion(pathname:string){
 }
 
 function FeLayout(){
- const {acting,state}=useFe();const {t}=useI18n();const navigate=useNavigate();const {pathname}=useLocation();
+ const {acting,state}=useFe();const {t}=useI18n();const navigate=useNavigate();const {pathname,search}=useLocation();
  const name=acting?.name||acting?.handle||'?';
  // V21 dockMe: with an active couple «Я» opens «Действовать как» (the person and the couple, what waits on each).
  const pair=state.status==='ready'&&state.boot.profiles.some(p=>p.kind==='couple'&&p.state==='active');const [actAs,setActAs]=useState(false);
@@ -204,6 +217,7 @@ function FeLayout(){
   document.addEventListener('focusin',on);document.addEventListener('focusout',out);
   window.addEventListener('resize',sync);vv?.addEventListener('resize',sync);
   return ()=>{clearTimeout(off);document.removeEventListener('focusin',on);document.removeEventListener('focusout',out);window.removeEventListener('resize',sync);vv?.removeEventListener('resize',sync);};},[]);
+ const side=sideCurrent(current,parts,search);
  const nodock=current==='staff'||hiders>0||typing;
  const badge=useTabBadges();
  useNewVersion(pathname);
@@ -220,6 +234,16 @@ function FeLayout(){
    if(view){view.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});return;}
   }
   navigate('/n/'+id);
+ };
+ // The side menu: «События» and «Сообщества» open their own list; a tap on the one already lit scrolls to the top.
+ const goSide=(id:string)=>{
+  const to=SIDE_TABS.find(x=>x.id===id)?.go;
+  if(!to)return go(id);
+  if(side===id&&pathname.replace(/\/$/,'')==='/n/communities'){
+   const view=main.current?.querySelector<HTMLElement>('.view');
+   if(view){view.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});return;}
+  }
+  navigate(to);
  };
  // V21 `hascta`: a screen with a pinned action bar (save / publish / continue) lifts it above the phone dock;
  // without the class the dock covers the bar. Screens render the bar themselves, so the frame watches for it.
@@ -245,7 +269,7 @@ function FeLayout(){
  return <div className="stage"><div className="root">
   <aside className="side">
    <Brand at="side"/>
-   <nav aria-label={t('fe.nav.aria')}>{FE_TABS.map(({id,icon:Icon})=><button key={id} type="button" className={'navb'+(current===id?' on':'')} aria-current={current===id?'page':undefined} onClick={()=>go(id)}><Icon/><span>{t('fe.nav.'+id)}</span>{badge(id)==='dot'?<em className="dot"/>:badge(id)?<em>{badge(id)}</em>:null}</button>)}</nav>
+   <nav aria-label={t('fe.nav.aria')}>{SIDE_TABS.map(({id,icon:Icon,label})=><button key={id} type="button" className={'navb'+(side===id?' on':'')} aria-current={side===id?'page':undefined} onClick={()=>goSide(id)}><Icon/><span>{t(label||'fe.nav.'+id)}</span>{badge(id)==='dot'?<em className="dot"/>:badge(id)?<em>{badge(id)}</em>:null}</button>)}</nav>
    <Btn className="create" icon={Plus} aria-haspopup="dialog" onClick={()=>setCreate(true)} aria-label={t('fe.create')}><span>{t('fe.create')}</span></Btn>
    <div className="sp"/>
    {acting&&<button type="button" className="mebtn" aria-haspopup={pair?'dialog':undefined} onClick={()=>pair?setActAs(true):navigate('/n/me')}>
@@ -269,6 +293,6 @@ function FeLayout(){
    {create&&<CreateSheet onClose={()=>setCreate(false)}/>}
    </ToastProvider></DockHide.Provider>
   </main>
-  {wide&&!split&&current!=='staff'&&<Suspense fallback={<CtxSkeleton/>}><ContextPanel key={acting?.id} current={current}/></Suspense>}
+  {wide&&!split&&current!=='staff'&&<Suspense fallback={<CtxSkeleton/>}><ContextPanel key={acting?.id} current={side}/></Suspense>}
  </div></div>;
 }
