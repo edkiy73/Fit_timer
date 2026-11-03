@@ -27,4 +27,8 @@ export const ШапкаСоЗначками:StoryObj<typeof Bar>={name:'Шапк
  args:{title:'Александра-Виктория',lead:<Av name="Александра" seed="me" size="sm"/>,sub:'Личный профиль',
   mark:<><span className="nbadge v" role="img" aria-label="Фото подтверждено"><BadgeCheck aria-hidden="true"/></span><span className="nbadge p" role="img" aria-label="Premium"><Crown aria-hidden="true"/></span></>},argTypes:{lead:{control:false},mark:{control:false}}};
 export const ШапкаНазад:StoryObj<typeof Bar>={name:'Шапка с «назад»',render:a=><Bar {...a}/>,args:{title:'Новая публикация',back:true}};
+export const ШапкаСВкладками:StoryObj<typeof Bar>={name:'Шапка с вкладками вместо заголовка',
+ parameters:{docs:{description:{story:'`seg` — вкладки на месте заголовка («Как видят»: Все / С доступом / Знакомства): занимают всю ширину рядом с «‹», заголовок остаётся только для экранного диктора. На телефоне 360 подписи мельче, но целиком.'}}},
+ render:a=>{const [v,setV]=useState('card');return <Bar {...a} seg={<Seg value={v} onChange={setV} label="Как видят" options={[{id:'all',label:'Все'},{id:'granted',label:'С доступом'},{id:'card',label:'Знакомства'}]}/>}/>;},
+ args:{title:'Как видят',back:true}};
 export const ШапкаДвеСтроки:StoryObj<typeof SubBar>={name:'Шапка с подзаголовком',render:a=><SubBar {...a}/>,args:{title:'Круг о границах',sub:'Сообщество · 128 участников'}};

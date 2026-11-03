@@ -25,13 +25,14 @@ export function useFollow({profileId,name,onChange,inert}:{profileId:string,name
 }
 
 /** The one «Подписаться» button of the app (owner 29.10.2026: one action — one component): a profile page, a Discover
- * card, a followers list. Off — «Подписаться» («… от пары» as the couple, `back` — «Подписаться в ответ»); on — «✓ Вы
- * подписаны»; a tap flips it through `useFollow`. `size="sm"` in a list row; `inert` in «Как видят другие» (looks
- * real, does nothing). The screen keeps the state and gets it back in `onChange`. */
-export function FollowButton({profileId,name,on,onChange,size,back,inert,disabled}:{profileId:string,name:string,on:boolean,onChange:(on:boolean)=>void,
- size?:'sm'|undefined,back?:boolean|undefined,inert?:boolean|undefined,disabled?:boolean|undefined}){
- const {t}=useI18n();const {busy,us,toggle}=useFollow({profileId,name,onChange,inert});
- return <Btn kind="soft" size={size??''} busy={busy} aria-pressed={on} disabled={!!disabled||!!inert||busy} onClick={()=>void toggle(!on)}
+ * card, a followers list. Off — «Подписаться» («Подписать пару» as the couple); on — «✓ В подписках»; a tap flips it
+ * through `useFollow`. `size="sm"` is the compact one of a list row: off — a small main «Подписаться», on — a small quiet
+ * «✓ Подписаны». `inert` in «Как видят другие» (looks real, does nothing). The screen keeps the state and gets it back
+ * in `onChange`. */
+export function FollowButton({profileId,name,on,onChange,size,inert,disabled}:{profileId:string,name:string,on:boolean,onChange:(on:boolean)=>void,
+ size?:'sm'|undefined,inert?:boolean|undefined,disabled?:boolean|undefined}){
+ const {t}=useI18n();const {busy,us,toggle}=useFollow({profileId,name,onChange,inert});const sm=size==='sm';
+ return <Btn kind={sm?(on?'quiet':'primary'):'soft'} size={size??''} busy={busy} aria-pressed={on} disabled={!!disabled||!!inert||busy} onClick={()=>void toggle(!on)}
   title={on?t(us?'fe.px.act.unfollowHintUs':'fe.px.act.unfollowHint'):undefined}>
-  {on?<><Check/>{t(us?'fe.px.act.followingUs':'fe.px.act.following')}</>:us?t('fe.px.act.followUs'):back?t('fe.br.followBack'):t('fe.people.follow')}</Btn>;
+  {on?<><Check/>{t(us?'fe.px.act.followingUs':sm?'fe.px.act.followingSm':'fe.px.act.following')}</>:us?t('fe.px.act.followUs'):t('fe.people.follow')}</Btn>;
 }
