@@ -73,8 +73,11 @@ services:
     environment:
       FETURE_DOMAIN: ${FETURE_DOMAIN:?}
       ACME_EMAIL: ${ACME_EMAIL:?}
+      # Landing page domain (bare domain + www); the app lives on FETURE_DOMAIN.
+      FETURE_LANDING_DOMAIN: ${FETURE_LANDING_DOMAIN:-kinhaze.com}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../landing:/srv/landing:ro
       - caddy_data:/data
       - caddy_config:/config
 

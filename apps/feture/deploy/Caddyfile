@@ -37,3 +37,19 @@
 		-Server
 	}
 }
+
+# The landing page on the bare domain (apps/feture/landing, served as files: a push to main updates it, no rebuild).
+# Needs DNS A records for the domain and www → this server; until they exist Caddy just keeps retrying the certificate,
+# the app above is unaffected.
+{$FETURE_LANDING_DOMAIN}, www.{$FETURE_LANDING_DOMAIN} {
+	encode zstd gzip
+	root * /srv/landing
+	file_server
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		Cache-Control "public, max-age=300"
+		-Server
+	}
+}
