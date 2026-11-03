@@ -320,7 +320,8 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged,askHere=true}:
    <VaultHead title={t('fe.priv.title')} label={t('fe.priv.title')} sub={sub} on={on&&!empty} disabled={empty||busy} onToggle={toggle}/>
    {askHere&&<Card list><SelectRow row label={t('fe.mx.pr.reqFrom')} value={requestsFrom} options={(['all','matches','none'] as const).map(v=>[v,t('fe.mx.pr.from.'+v)] as const)}
     onChange={v=>void act(()=>call('profile.setVisibility',{opId:newOpId(),setting:'requestsFrom',value:v},ok),t('fe.mx.saved'))}/></Card>}
-  </section>
+  {/* Owner 04.11.2026: what the part holds and «Доступы» sit inside its block, not under it. */}
+  <div className="vault-b">
   {/* Owner 04.11.2026: an empty part is one short list, not three «add» cards that look like the profile's own. */}
   {empty?<Card list>
    {!cp&&<Row icon={PenLine} title={t('fe.mp.desc')} sub={t('fe.mp.descAddSub')} onClick={()=>setSheet({k:'desc'})}/>}
@@ -346,6 +347,8 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged,askHere=true}:
   <Group id="privWho"><Card list><Row icon={KeyRound} title={t('fe.ac.entry')} badge={reqs.items.length||undefined}
    sub={reqs.items.length?t('fe.ac.entryWait',{n:reqs.items.length}):given.length?t('fe.ac.entryOpen',{n:given.length}):t(cp?'fe.ac.entrySubUs':'fe.ac.entrySub')}
    onClick={()=>navigate('/n/me/access?tab=byme')}/></Card></Group>
+  </div>
+  </section>
   {asking==='off'&&<Ask icon={Lock} danger title={t('fe.mx.pr.offTitle')} busy={busy}
    text={[given.length||reqs.items.length?t('fe.mx.pr.offWhat',{g:given.length,q:reqs.items.length}):t('fe.mx.pr.offAll'),t('fe.mx.pr.offRest')].join(' ')} ok={t('fe.mx.pr.offOk')}
    onCancel={()=>setAsking(null)} onOk={async()=>{if(await act(()=>call('private.setOn',{opId:newOpId(),on:false,confirm:true},ok),t(cp?'fe.mx.pr.offDoneUs':'fe.mx.pr.offDone')))setAsking(null);}}/>}
