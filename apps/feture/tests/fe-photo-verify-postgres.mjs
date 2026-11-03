@@ -156,3 +156,18 @@ test('a selfie serves one check only, and approval needs it in front of staff', 
     assert.equal((await call('um', null, { action: 'staff.photoCheckDecide', opId: op(), checkId: s.id, approve: true })).rule, 'selfie_missing');
   } finally { await pg.close(); }
 });
+
+test('the owner sees and decides their own photo check, journaled', async () => {
+  const env = await world();
+  const { pg, db, call } = env;
+  try {
+    const { a, s } = await submitted(env, 'uq', 'Quinn');
+    await db.query(`insert into feture.staff_role (account_id, role) select id, 'owner' from feture.account where person_profile_id = $1`, [a]);
+    assert.deepEqual((await call('uq', null, { action: 'staff.photoCheckQueue' })).items.map(i => i.id), [s.id]);
+    const dec = await call('uq', null, { action: 'staff.photoCheckDecide', opId: op(), checkId: s.id, approve: true });
+    assert.equal(dec.state, 'approved', JSON.stringify(dec));
+    const [{ n }] = await db.query(`select count(*)::int n from feture.staff_action where action = 'photo.approve' and target_id = $1
+      and staff_account_id = (select id from feture.account where person_profile_id = $1)`, [a]);
+    assert.equal(n, 1);
+  } finally { await pg.close(); }
+});

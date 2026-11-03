@@ -936,7 +936,7 @@ function Premium(){
  const [handle,setHandle]=useState('');const [days,setDays]=useState('30');const [reason,setReason]=useState('');
  const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [granted,setGranted]=useState<{id:string,until:string}|null>(null);
  const [entitlement,setEntitlement]=useState('');const [revokeReason,setRevokeReason]=useState('');const [ask,setAsk]=useState(false);const [revoked,setRevoked]=useState('');
- const err=(e:unknown)=>setFailure(forbidden(e)?t('fe.staff.premium.forbidden'):feErrorMessage(e,t));
+ const err=(e:unknown)=>setFailure(forbidden(e)?t((e as FeError).rule==='self'?'fe.staff.premium.self':'fe.staff.premium.forbidden'):feErrorMessage(e,t));
  const n=Number(days);const h=handle.trim().replace(/^@/,'');
  const canGrant=h.length>=3&&Number.isInteger(n)&&n>=1&&n<=400&&reason.trim().length>=3;
  const grant=async()=>{setBusy(true);setFailure('');setRevoked('');
