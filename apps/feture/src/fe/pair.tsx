@@ -1,4 +1,4 @@
-import {useCallback,useEffect,useRef,useState} from 'react';
+import {useCallback,useEffect,useRef,useState,type ReactNode} from 'react';
 import {useLocation,useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
@@ -6,12 +6,12 @@ import {AtSign,Check,Copy,EyeOff,Heart,Link as LinkIcon,Lock,ShieldCheck,Users,X
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicBase} from '../api-url';
 import {copyLink} from './share';
-import {Actions,Alert,Av,Bar,Btn,Card,Field,Group,H,Input,Note,PersonLine,Pill,RadioList,RequestCard,Row,SelectRow,Sheet,Skel,Stack,View,Who,useLeaveGuard} from './kit';
+import {Actions,Alert,Av,Bar,Btn,Card,Empty,Field,Group,H,Input,Note,PersonLine,Pill,RadioList,RequestCard,Row,SelectRow,Sheet,Skel,Stack,View,Who,useLeaveGuard} from './kit';
 import {useFe,useLive} from './session';
 import {Ask} from './me';
 import {useToast} from './toast';
 import {when} from './feed';
-import {CoupleWork} from './couple';
+import {ApprovalView,CoupleWork} from './couple';
 import {NICK as REG_NICK} from './register';
 import {shakeFirstErr,useChecks} from './kit/validate';
 import {PAIR_TOKEN as TOKEN,dropPairLink as dropLink,pendingPairLink} from './pair-link';
@@ -60,7 +60,21 @@ function Scene({me,other,state}:{me:{name:string,id?:string|undefined,src?:strin
   <span className="ps-av ot">{other?<Av name={other.name} seed={other.id} src={other.src}/>:<span className="av ini"><b>?</b></span>}</span></div>;
 }
 
+const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/** `/n/me/pair`: `?approval=<id>` opens that approval in any state over whatever the pair screen shows (a cold start,
+ * a push, the inbox row, another id while one is open); `?restore=<coupleId>` is the restore screen of that couple. */
 export function PairScreen(){
+ const {search}=useLocation();const navigate=useNavigate();
+ const q=new URLSearchParams(search);const approval=q.get('approval');const restore=q.get('restore');
+ const drop=(k:string)=>{const n=new URLSearchParams(search);n.delete(k);const rest=n.toString();navigate('/n/me/pair'+(rest?'?'+rest:''),{replace:true});};
+ return <>
+  {restore&&UUID.test(restore)?<RestoreView coupleId={restore} onLeave={()=>drop('restore')}/>:<PairMain onOpen={id=>navigate('/n/me/pair?approval='+id)}/>}
+  {approval&&UUID.test(approval)&&<ApprovalView key={approval} id={approval} onClose={()=>drop('approval')}/>}
+ </>;
+}
+
+function PairMain({onOpen}:{onOpen:(id:string)=>void}){
  const {state,acting,call,reload,setActing}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();
  const toast=useToast();const {search}=useLocation();
  const q=new URLSearchParams(search);
@@ -100,27 +114,15 @@ export function PairScreen(){
   return <SetupView c={c} coupleId={couple.id} onDone={()=>{load();navigate('/n/me/pair',{replace:true});}}/>;
  }
  if(couple&&!fresh&&!c&&!failure)return <><Bar title={t('fe.pair.title')} back="/n/me"/><View><Skel kind="list"/></View></>;
- // V21 Q07: a stopped couple — agree to restore (both within 30 days), or start a new couple, which ends the old one.
+ // V21 Q07: a stopped couple — the restore screen (both within 30 days), or start a new couple, which ends the old one.
  if(couple&&c&&c.state==='paused'&&!fresh){
-  const [me,other]=[c.members.find(m=>m.me),c.members.find(m=>!m.me)];const agreed=c.members.filter(m=>m.restoreAgreed).length;
-  const until=c.restoreUntil?new Date(c.restoreUntil).toLocaleDateString(locale==='en'?'en':'ru',{day:'numeric',month:'long'}):'';
+  const [me,other]=[c.members.find(m=>m.me),c.members.find(m=>!m.me)];
   return <>
-   <Bar title={t('fe.pq.stopped')} back="/n/me"/>
-   <View className="nodock"><div className="pair-wrap">
-    <Scene me={{name:nameOf(me),id:me?.profileId}} other={{name:nameOf(other),id:other?.profileId}}/>
-    <H level={2} className="t center">{t('fe.pq.stoppedTitle')}</H>
-    <p className="lead center">{t('fe.pq.stoppedLead')}</p>
-    <Note className="center">{t('fe.pq.agreed',{n:agreed,date:until})}</Note>
-    <Actions stack>
-     {me?.restoreAgreed?<Btn icon={Check} disabled>{t('fe.pq.waitPartner',{name:nameOf(other)})}</Btn>
-      :<Btn disabled={busy} busy={busy} onClick={()=>act(async()=>{const r=await call('couple.restore',{opId:newOpId()},z.object({ok:z.literal(true),state:z.string().optional()}).passthrough(),{profileId:couple.id});
-        toast(r.state==='active'?t('fe.pq.restored'):t('fe.pq.waitPartner',{name:nameOf(other)}),{type:'ok'});if(r.state==='active')reload();})}>{t('fe.pq.restore')}</Btn>}
-     <Btn kind="soft" disabled={busy} onClick={()=>setAskNew(true)}>{t('fe.pq.new')}</Btn>
-     <Note className="center">{t('fe.pq.newNote')}</Note>
-     {acting?.kind==='couple'&&person&&<Btn kind="text" onClick={()=>{setActing(person.id);navigate('/n/me');}}>{t('fe.pq.toPersonal')}</Btn>}
-    </Actions>
-    {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
-   </div></View>
+   <RestoreView coupleId={couple.id} onLeave={()=>navigate('/n/me')} extra={<>
+    <Btn kind="soft" onClick={()=>setAskNew(true)}>{t('fe.pq.new')}</Btn>
+    <Note className="center">{t('fe.pq.newNote')}</Note>
+    {acting?.kind==='couple'&&person&&<Btn kind="text" onClick={()=>{setActing(person.id);navigate('/n/me');}}>{t('fe.pq.toPersonal')}</Btn>}
+   </>}/>
    {askNew&&<Ask icon={Users} danger title={t('fe.pq.newTitle')} text={t('fe.pq.newText',{name:c.name||`${nameOf(me)} ${t('fe.pair.and')} ${nameOf(other)}`})} ok={t('fe.pq.newOk')}
     onCancel={()=>setAskNew(false)} onOk={()=>{setAskNew(false);if(acting?.kind==='couple'&&person)setActing(person.id);setFresh(true);}}/>}
   </>;
@@ -134,7 +136,7 @@ export function PairScreen(){
     <H level={2} className="t center">{c.name||`${nameOf(me)} ${t('fe.pair.and')} ${nameOf(other)}`}</H>
     <Note className="center">{t('fe.pair.since').replace('{date}',new Date(c.since).toLocaleDateString(locale==='en'?'en':'ru',{day:'numeric',month:'long',year:'numeric'}))}</Note>
     <div className="pair-sets">
-     <CoupleWork coupleId={couple.id} openId={q.get('approval')}/>
+     <CoupleWork coupleId={couple.id} onOpen={onOpen}/>
      <CoupleSettings c={c} coupleId={couple.id} other={nameOf(other)} trustOpen={q.get('trust')==='1'} onChanged={load}/>
      <Group title={t('fe.pair.act')}>
       <Btn kind="soft" onClick={()=>{setActing(couple.id);navigate('/n/me');}}>{t('fe.pair.actAsUs')}</Btn></Group>
@@ -188,6 +190,53 @@ export function PairScreen(){
    <Alert kind="info">{t('fe.c6.link.atOnce')}</Alert>
    <Note>{t('fe.c6.link.until',{date:new Date(link.expiresAt).toLocaleDateString(locale==='en'?'en':'ru',{day:'numeric',month:'long'})})} · {t('fe.c6.link.once')}</Note>
   </Sheet>}
+ </>;
+}
+
+/** Restore of a paused couple, by its id (a «Пара на паузе» or «Партнёр хочет восстановить пару» row opens it): who
+ * already agreed, until when, and — plainly — the approval mode that comes back (owner decision 2); visibility,
+ * Discover and access do not. `extra`: what else the screen offers (start a new couple). */
+function RestoreView({coupleId,extra,onLeave}:{coupleId:string,extra?:ReactNode,onLeave:()=>void}){
+ const {call,reload}=useFe();const {t,locale}=useI18n();const toast=useToast();
+ const [c,setC]=useState<Couple|null>(null);const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const load=useCallback(()=>{call('couple.get',{},coupleRes,{profileId:coupleId,fresh:true}).then(r=>{setC(r.couple);setError(null);}).catch(setError);},[call,coupleId]);
+ useEffect(()=>{load();},[load]);
+ useLive(['couple','decide'],load);
+ const bar=<Bar title={t('fe.ap.restore.title')} onBack={onLeave}/>;
+ if(error&&!c)return <>{bar}<View className="nodock"><Empty icon={Users} title={error instanceof FeError&&(error.status===404||error.status===403)?t('fe.ap.restore.gone'):feErrorMessage(error,t)}>
+  {!(error instanceof FeError&&(error.status===404||error.status===403))&&<Btn kind="soft" onClick={load}>{t('fe.ap.retry')}</Btn>}</Empty></View></>;
+ if(!c)return <>{bar}<View className="nodock"><Skel kind="list"/></View></>;
+ const [me,other]=[c.members.find(m=>m.me),c.members.find(m=>!m.me)];
+ const until=c.restoreUntil?new Date(c.restoreUntil).toLocaleDateString(locale==='en'?'en':'ru',{day:'numeric',month:'long'}):'';
+ const agreed=c.members.filter(m=>m.restoreAgreed).map(m=>m.me?t('fe.ap.restore.you'):nameOf(m));
+ const otherName=nameOf(other);
+ // The modes that come back: mine (do I approve the partner's actions) and theirs.
+ const modes=[me?.approvesPartner?t('fe.ap.restore.modeMine',{name:otherName}):t('fe.ap.restore.modeMineOff',{name:otherName}),
+  other?.approvesPartner?t('fe.ap.restore.modeTheirs',{name:otherName}):t('fe.ap.restore.modeTheirsOff')];
+ const agree=async()=>{setBusy(true);setFailure('');
+  try{const r=await call('couple.restore',{opId:newOpId()},z.object({ok:z.literal(true),state:z.string().optional()}).passthrough(),{profileId:coupleId});
+   toast(r.state==='active'?t('fe.pq.restored')+'. '+modes[0]:t('fe.pq.waitPartner',{name:otherName}),{type:'ok'});
+   if(r.state==='active'){reload();onLeave();}else load();}
+  catch(e){setFailure(pairErrorText(e,t));}finally{setBusy(false);}};
+ return <>
+  {bar}
+  <View className="nodock"><div className="pair-wrap">
+   <Scene me={{name:nameOf(me),id:me?.profileId}} other={{name:otherName,id:other?.profileId}}/>
+   <H level={2} className="t center">{c.name||`${nameOf(me)} ${t('fe.pair.and')} ${otherName}`}</H>
+   {c.state==='paused'?<>
+    <p className="lead center">{t('fe.ap.restore.lead',{date:until})}</p>
+    <Note className="center">{t('fe.ap.restore.agreed',{who:agreed.length?agreed.join(', '):t('fe.ap.restore.nobody')})}</Note>
+    <Alert kind="info" role="status">{modes[0]} {modes[1]}</Alert>
+    <Note>{t('fe.ap.restore.notBack')}</Note>
+    <Actions stack>
+     {me?.restoreAgreed?<Btn icon={Check} disabled>{t('fe.ap.restore.waiting',{name:otherName})}</Btn>
+      :<Btn disabled={busy} busy={busy} onClick={()=>void agree()}>{t('fe.ap.restore.agree')}</Btn>}
+     {!me?.restoreAgreed&&<Btn kind="soft" disabled={busy} onClick={onLeave}>{t('fe.ap.restore.decline')}</Btn>}
+     {extra}
+    </Actions>
+   </>:<Note className="center">{t('fe.pq.restored')}</Note>}
+   {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
+  </div></View>
  </>;
 }
 

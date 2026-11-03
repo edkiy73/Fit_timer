@@ -1,4 +1,4 @@
-// Backlog wave 6 «Пара»: approvals with a «на доработку» note both ways, Q01 (work list, Discover row, «Моё
+// Backlog wave 6 «Пара»: a final refusal with a comment and its result card, Q01 (work list, Discover row, «Моё
 // подтверждение», safety rows), Q09 set-up, «Действовать как» from the dock, the partner link (create / peek / revoke)
 // and its landing. Every step reads the result back through the API.
 import { expect, until } from '../helpers.mjs';
@@ -17,9 +17,11 @@ async function clean(t) {
 }
 
 export default [
- { name: 'A proposes (approval on): Q01 lists it with its version; dock «Я» opens «Действовать как»', persona: 'pair', run: async t => {
+ { name: 'A proposes (approval on): Q01 lists it; dock «Я» opens «Действовать как»', persona: 'pair', run: async t => {
    const cp = t.me.coupleId; expect(cp, 'pair persona has a couple');
    await clean(t);
+   // A pause (couples/approvals.mjs) leaves Discover off; the safety rows below need the couple shown.
+   await t.api('profile.setVisibility', { opId: t.uuid7(), setting: 'discoverMode', value: 'visible' }, t.me.email, cp);
    await t.api('couple.setApproval', { opId: t.uuid7(), approvesPartner: true }, B(t), cp);
    const prof = (await t.api('profile.get', { profileId: cp }, t.me.email, cp)).profile;
    const r = await t.api('profile.update', { opId: t.uuid7(), rev: prof.rev, bio: BIO }, t.me.email, cp);
@@ -27,7 +29,6 @@ export default [
    approvalId = r.pending.approvalId;
    await t.go('/n/me/pair');
    await t.see('text=Ждёт подтверждения');
-   await t.see('text=Версия');
    await t.see('text=Пара в знакомствах'); await t.see('text=Моё подтверждение');
    await t.see('text=Скрыть из знакомств'); await t.see('text=Закрыть приватную часть');
    // Dock «Я» with an active couple: the act-as sheet with both cards.
@@ -38,34 +39,30 @@ export default [
    await t.page.waitForURL(/#\/n\/me$/, { timeout: 15000 });
    await t.shot('w6-dock-actas');
  } },
- { name: 'B returns it «на доработку» with a comment → returned, note stored', as: 'qa-w6-pb@feture.test', run: async t => {
+ { name: 'B refuses it with a comment → final: rejected, comment stored, no task left', persona: 'pb', run: async t => {
    expect(approvalId, 'previous step made the approval');
    const cp = (await t.boot()).profiles.find(p => p.kind === 'couple' && p.state === 'active').id;
    await t.go('/n/me/pair?approval=' + approvalId);
    await t.see('.sheet.on .pair-review-meta');
-   await t.see('.sheet.on button:has-text("Весь профиль после изменений")');
-   await t.tap('.sheet.on .sh-f button:has-text("Вернуть на доработку")');
+   await t.see(`.sheet.on >> text=${BIO}`);
+   await t.tap('.sheet.on .sh-f button:has-text("Отклонить изменения")');
    await t.fill('.sheet.on textarea', NOTE);
-   await t.tap('.sheet.on .sh-f button:has-text("Вернуть")');
-   const a = await until(async () => (await t.api('decide.approvals', {}, undefined, cp)).items?.find(x => x.id === approvalId && x.state === 'returned'), 'returned with the note', 20000);
+   // The second press is the final refusal (the comment step keeps the same words on the button).
+   await t.tap('.sheet.on .sh-f button:has-text("Отклонить изменения")');
+   const a = await until(async () => { const x = (await t.api('approval.get', { id: approvalId })).approval; return x?.state === 'rejected' && x; }, 'rejected with the comment', 20000);
    expect(a.comment === NOTE, 'comment read back: ' + a.comment);
+   expect(!(await t.api('decide.approvals', {}, undefined, cp)).items?.some(x => x.id === approvalId), 'nothing open left');
  } },
- { name: 'A sees the returned change: note, sent version, «Изменить» opens the editor as the couple', persona: 'pair', run: async t => {
-   await t.go('/n/me/pair');
-   await t.see(`text=${NOTE}`);
-   await t.tap(`.li:has-text("${NOTE}")`);
-   await t.see('.sheet.on .ret-note');
-   await t.see('.sheet.on .sh-f button:has-text("Отменить изменения")');
-   await t.tap('.sheet.on button:has-text("Посмотреть отправленную версию")');
-   await t.see(`text=${BIO}`); await t.see('text=после изменений');
+ { name: 'A opens the result: «Отклонено», the comment, «Изменить и отправить снова» opens the editor filled in', persona: 'pair', run: async t => {
    await t.go('/n/me/pair?approval=' + approvalId);
-   await t.tap('.sheet.on .sh-f button:has-text("Изменить")');
+   await t.see('.sheet.on >> text=Отклонено');
+   await t.see(`.sheet.on >> text=${NOTE}`);
+   expect(!(await t.page.locator('.sheet.on .sh-f button:has-text("Принять изменения")').count()), 'no decision buttons');
+   await t.tap('.sheet.on .sh-f button:has-text("Изменить и отправить снова")');
    await t.page.waitForURL(/#\/n\/me\/edit/, { timeout: 15000 });
-   await t.shot('w6-returned-edit');
-   // The author drops it: nothing open stays behind.
-   await t.go('/n/me/pair?approval=' + approvalId);
-   await t.tap('.sheet.on .sh-f button:has-text("Отменить изменения")');
-   await until(async () => !(await approvals(t)).some(x => x.id === approvalId), 'cancelled', 20000);
+   await t.see('css=textarea');
+   expect(await t.page.locator('textarea').evaluateAll((xs, bio) => xs.some(x => x.value === bio), BIO), 'the proposed bio is filled in');
+   await t.shot('w6-resend-edit');
  } },
  { name: 'Q09 set-up: my approval + who asks → Q01, read back', persona: 'pair', route: '/n/me/pair?setup=1', run: async t => {
    const cp = t.me.coupleId;

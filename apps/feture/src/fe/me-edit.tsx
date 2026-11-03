@@ -1,5 +1,5 @@
 import {useCallback,useEffect,useId,useRef,useState,type ReactNode} from 'react';
-import {useNavigate,useSearchParams} from 'react-router';
+import {useLocation,useNavigate,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {AtSign,Camera,ChevronDown,ChevronRight,Clock,Lock,Plus,Sparkles,Star,Trash2,X} from 'lucide-react';
@@ -37,7 +37,9 @@ const toPh=(m:{id:string,src?:Record<string,string>|null|undefined,pending?:bool
 
 export function MeEditScreen(){
  const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
- const [params]=useSearchParams();const o=params.get('only');const only:Only=o==='media'||o==='basics'||o==='details'||o==='priv'||o==='about'?o:null;
+ const [params]=useSearchParams();const o=params.get('only');
+ // «Изменить и отправить снова» of a refused couple change: the form opens with what was proposed, over the live values.
+ const resend=(useLocation().state as {resend?:Record<string,unknown>}|null)?.resend??null;const only:Only=o==='media'||o==='basics'||o==='details'||o==='priv'||o==='about'?o:null;
  const [p,setP]=useState<Profile|null>(null);const [base,setBase]=useState<Draft|null>(null);const [d,setD]=useState<Draft|null>(null);
  const [cat,setCat]=useState<z.infer<typeof catalogRes>|null>(null);const [jars,setJars]=useState({all:0,granted:0});const [grants,setGrants]=useState(0);
  const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
@@ -61,10 +63,12 @@ export function MeEditScreen(){
      showAge:pr.showAge!==false,details:det,
      photos:pr.photos.map(toPh),privOn:b.on!==false,privText:b.text??'',privMedia:(b.media??[]).map(toPh)};
     if(pr.kind==='person'){const x=aboutDraft(pr);setAb({base:x,d:structuredClone(x)});}
-    setP(pr);setBase(draft);setD(structuredClone(draft));setCat(c);setGrants(b.counts?.grants??0);
+    const next=structuredClone(draft);
+    if(resend){for(const k of ['name','bio','cityId'] as const)if(typeof resend[k]==='string')next[k]=resend[k] as string;if(typeof resend.showAge==='boolean')next.showAge=resend.showAge;}
+    setP(pr);setBase(draft);setD(next);setCat(c);setGrants(b.counts?.grants??0);
     setJars({all:e.items.length,granted:e.items.filter(j=>j.vis==='granted').length});
    }).catch(setError);
- },[call,acting]);
+ },[call,acting,resend]);
  useEffect(()=>{load();},[load]);
  const label=(kind:string,code:string)=>{const x=cat?.options.find(y=>y.kind===kind&&y.code===code);return x?(locale==='en'?x.en:x.ru):code;};
  const aboutDirty=!!ab&&Object.keys(aboutPatch(ab.base,ab.d)).length>0;

@@ -2,7 +2,7 @@ import React,{useEffect,useRef,useState,type CSSProperties,type ReactNode} from 
 import {useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Check,ChevronLeft,Clock,Heart,Image as ImageIcon,Lock,Plus,Ticket,UserRound,Users,type LucideIcon} from 'lucide-react';
-import {Av,Btn,Card,IconBtn,Note,Row,Skel,Switch,plate} from './index';
+import {Alert,Av,Btn,Card,IconBtn,Note,Row,Sheet,Skel,Stack,Switch,plate} from './index';
 import {VideoPlayer} from './av';
 import './domain.css';
 
@@ -548,9 +548,49 @@ export function ReviewPost({byline,title,children,meta}:{byline?:ReactNode,title
  return <div className="joint-review-post">{byline&&<div className="review-byline">{byline}</div>}
   <div className="body">{title&&<p><b>{title}</b></p>}{children}</div>{meta&&<Note>{meta}</Note>}</div>;
 }
-/** The partner's note on a change sent back «на доработку» (V21 returnNoteHTML). */
+/** The partner's comment on a refused change (shown on the result card). */
 export function ReturnNote({children}:{children:ReactNode}){
  return <blockquote className="ret-note">{children}</blockquote>;
+}
+
+/** One line of what a couple's change does: the field, what it is now (struck through) and what it would be. */
+export type ApprovalChange={key:string,label:ReactNode,before?:ReactNode,after:ReactNode};
+/** Field by field, before → after. Empty when there is nothing to compare (the content below says it all). */
+export function ApprovalChanges({rows}:{rows:ApprovalChange[]}){
+ if(!rows.length)return null;
+ return <dl className="diff k-ap-diff">{rows.map(r=><div key={r.key}><dt>{r.label}</dt><dd>{r.before!=null&&r.before!==''&&<div className="was">{r.before}</div>}<div className="now">{r.after}</div></dd></div>)}</dl>;
+}
+
+/** One sheet for every couple approval (docs/notifications.md «Согласования пары и задачи»; 19 kinds, one component).
+ * Open: who proposes and which version, whom or what it concerns (`subject`), what changes (`changes`, before → after),
+ * the content as it would go (`children`: the post in full, the event card, the club with its rules and the answer, the
+ * answers to the organizer, the term of access), what follows (`consequence`) and the decision (`foot`: the kind's own
+ * button pair). Closed (the result card): the same content under the outcome (`status`: who, what, when) with no
+ * decision — only «Изменить и отправить снова» for the author of a refused or outdated change. `objectNote`: the object
+ * now (no longer available, deleted). Loading and error are states of the same sheet, so an id opened from a link never
+ * shows an empty one. */
+export function ApprovalSheet({title,sub,by,version,state='open',status,error,onRetry,retryLabel,subject,changes=[],children,consequence,objectNote,foot,onClose}:{
+ title:string,sub?:ReactNode,by?:ReactNode,version?:ReactNode,
+ state?:'open'|'closed'|'loading'|'error',
+ /** The outcome on a closed one: tone, the line («Kira отказалась · 3 ноября»), an optional comment under it. */
+ status?:{tone:'ok'|'warn'|'plain',title:ReactNode,text?:ReactNode,comment?:ReactNode}|undefined,
+ error?:ReactNode,onRetry?:(()=>void)|undefined,retryLabel?:string|undefined,
+ subject?:ReactNode,changes?:ApprovalChange[],children?:ReactNode,consequence?:ReactNode,objectNote?:ReactNode,foot?:ReactNode,onClose:()=>void}){
+ if(state==='loading')return <Sheet title={title} onClose={onClose}><Skel kind="card" rows={2}/></Sheet>;
+ if(state==='error')return <Sheet title={title} onClose={onClose} foot={onRetry&&retryLabel?<Btn kind="soft" onClick={onRetry}>{retryLabel}</Btn>:undefined}>
+  <Alert kind="err">{error}</Alert></Sheet>;
+ return <Sheet title={title} sub={sub} onClose={onClose} foot={foot} className={'k-ap'+(state==='closed'?' k-ap-closed':'')}>
+  <Stack gap={4}>
+   {status&&<Alert kind={status.tone==='ok'?'ok':status.tone==='warn'?'warn':'plain'} role="status"><b>{status.title}</b>{status.text&&<> {status.text}</>}</Alert>}
+   {status?.comment&&<ReturnNote>{status.comment}</ReturnNote>}
+   {by!=null&&<ReviewMeta by={by} version={version}/>}
+   {subject}
+   <ApprovalChanges rows={changes}/>
+   {children}
+   {objectNote&&<Alert kind="warn">{objectNote}</Alert>}
+   {consequence&&<Note className="k-ap-cons">{consequence}</Note>}
+  </Stack>
+ </Sheet>;
 }
 
 /** One short verdict under a comparison (an interest compared with someone's): a small icon in the verdict's tone,
