@@ -135,13 +135,7 @@ export function MeTab(){
       {notice&&<Alert kind="ok" noIcon>{notice}</Alert>}
       {acting.kind==='couple'&&<><CouplePending base={p} tick={tick} onDecided={msg=>{setNotice(msg);load();}}/><CoupleMembers/></>}
       <PhotosBlock p={p} settings={settings} onChanged={load}/>
-      <Group id="meBasics" title={t('fe.me.basics')} action={<AudTag k="all"/>}>
-       <Card className="blk-btn" label={t('fe.me.editBasics')} onClick={()=>navigate('/n/me/edit?only=basics')}>
-        <span className="blk-name">{name}{p.age&&p.showAge!==false?', '+p.age:''}{p.city&&(locale==='en'?p.city.en:p.city.ru)?' · '+(locale==='en'?p.city.en:p.city.ru):''}</span>
-        {p.bio&&<span className="blk-bio">{p.bio.replace(/[*_~`>#[\]()]/g,'').slice(0,240)}</span>}<span className="chv"><ChevronRight/></span>
-       </Card>
-       {!p.bio&&<AddCard icon={PenLine} title={t(acting.kind==='couple'?'fe.mp.bioAddUs':'fe.mp.bioAdd')} sub={t(acting.kind==='couple'?'fe.mp.bioAddSubUs':'fe.mp.bioAddSub')} onClick={()=>navigate('/n/me/edit?only=basics')}/>}
-      </Group>
+      <BasicsBlock p={p} name={name}/>
       <MeAboutBlock p={p}/>
       <DetailsBlock p={p} label={label}/>
       {acting.kind==='person'&&couple&&<StatusHint p={p} coupleId={couple.id} onDone={load}/>}
@@ -158,13 +152,25 @@ export function MeTab(){
  </>;
 }
 
+/** «Основное»: name, age, city and the bio; a tap opens the editor. */
+export function BasicsBlock({p,name}:{p:Profile,name:string}){
+ const {t,locale}=useI18n();const navigate=useNavigate();const cp=p.kind==='couple';
+ return <Group id="meBasics" title={t('fe.me.basics')} action={<AudTag k="all"/>}>
+  <Card className="blk-btn" label={t('fe.me.editBasics')} onClick={()=>navigate('/n/me/edit?only=basics')}>
+   <span className="blk-name">{name}{p.age&&p.showAge!==false?', '+p.age:''}{p.city&&(locale==='en'?p.city.en:p.city.ru)?' · '+(locale==='en'?p.city.en:p.city.ru):''}</span>
+   {p.bio&&<span className="blk-bio">{p.bio.replace(/[*_~`>#[\]()]/g,'').slice(0,240)}</span>}<span className="chv"><ChevronRight/></span>
+  </Card>
+  {!p.bio&&<AddCard icon={PenLine} title={t(cp?'fe.mp.bioAddUs':'fe.mp.bioAdd')} sub={t(cp?'fe.mp.bioAddSubUs':'fe.mp.bioAddSub')} onClick={()=>navigate('/n/me/edit?only=basics')}/>}
+ </Group>;
+}
+
 /** The loading state shaped like the profile layer: the photo grid, then two cards. */
-function MeSkel(){
+export function MeSkel(){
  return <div aria-busy="true"><Group className="ph20"><PhotoSlots loading/></Group><Skel kind="card" rows={2}/></div>;
 }
 
 /** «Данные» — the filled rows only; the audience comes from the profile's `detailsVis`. */
-function DetailsBlock({p,label}:{p:Profile,label:(kind:string,code:string)=>string}){
+export function DetailsBlock({p,label}:{p:Profile,label:(kind:string,code:string)=>string}){
  const {t}=useI18n();const navigate=useNavigate();const cp=p.kind==='couple';
  const rows=DETAIL_ROWS.filter(([f])=>!cp||COUPLE_ROWS.includes(f)).map(([field,kind])=>{const v=p.details[field];const codes=Array.isArray(v)?v as string[]:typeof v==='string'?[v]:[];
   return codes.length?[field,t(kind==='status'?'fe.mx.f.status':'fe.reg.kind.'+kind),codes.map(c=>label(kind,c)).join(', ')]:null;}).filter((x):x is string[]=>!!x);
@@ -179,7 +185,7 @@ function DetailsBlock({p,label}:{p:Profile,label:(kind:string,code:string)=>stri
 }
 
 /** V21.1 ME-047: a person in a couple whose status says «single» or nothing gets one sentence and one tap to fix it. */
-function StatusHint({p,coupleId,onDone}:{p:Profile,coupleId:string,onDone:()=>void}){
+export function StatusHint({p,coupleId,onDone}:{p:Profile,coupleId:string,onDone:()=>void}){
  const {call}=useFe();const {t}=useI18n();const toast=useToast();
  const [off,setOff]=useState(()=>{try{return localStorage.getItem(STAT_HINT_KEY)===p.id;}catch{return false;}});
  const [partner,setPartner]=useState('');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
@@ -204,7 +210,7 @@ export const photoSrc=(m:{src:Record<string,string>|null},size:'card'|'thumb'|'f
 
 /** `mePhotos20()` — the grid of profile photos: the main one big, «Ещё фото» next to it; a tap opens what can be done
  * with that photo; «Изменить» opens the photo editor (P02 `only:'media'`). */
-function PhotosBlock({p,settings,onChanged}:{p:Profile,settings:Settings,onChanged:()=>void}){
+export function PhotosBlock({p,settings,onChanged}:{p:Profile,settings:Settings,onChanged:()=>void}){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();
  const [open,setOpen]=useState<number|null>(null);const [busy,setBusy]=useState(false);const [viewing,setViewing]=useState<number|null>(null);
  const cp=p.kind==='couple';
@@ -263,8 +269,10 @@ function GalleryBlock({p}:{p:Profile}){
  return <MeGallery profileId={p.id} couple={p.kind==='couple'} title={t('fe.mx.gal')}/>;
 }
 
-/** `meVisLayer()` — Discover, the profile card, likes, activity, mentions; the couple's own group comes after. */
-function Visibility({p,settings,onChanged}:{p:Profile,settings:Settings,onChanged:()=>void}){
+/** `meVisLayer()` — Discover, the profile card, likes, activity, mentions; the couple's own group comes after.
+ * `part` draws one half (the «Знакомства» or the «Кто может…» section of the new settings); `who` adds the other
+ * «кто может» choices kept elsewhere today (access requests, links). */
+export function Visibility({p,settings,onChanged,part}:{p:Profile,settings:Settings,onChanged:()=>void,part?:'discover'|'who'|undefined}){
  const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();
  const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [ageIntent,setAgeIntent]=useState('');const [askOff,setAskOff]=useState(false);
  const cp=p.kind==='couple';
@@ -286,13 +294,13 @@ function Visibility({p,settings,onChanged}:{p:Profile,settings:Settings,onChange
  const toggle=(k:string,title:string,sub:string,on:boolean)=><ToggleRow title={title} sub={sub} on={on} disabled={busy} onClick={()=>void set(k,!on)}/>;
  const modeSub=mode==='visible'&&!hasPhoto?(p.photos.length?t(cp?'fe.mx.v.photoReviewUs':'fe.mx.v.photoReview'):cp?t('fe.mx.v.noPhotoCouple'):t('fe.mx.v.noPhoto')):mode==='off'&&cp?t('fe.mx.v.offCouple'):cp?t('fe.mx.v.offNow'):t('fe.mx.v.modeSub');
  return <>
-  <Group title={t('fe.reg.discover.title')}><Card list>
+  {part!=='who'&&<Group title={t('fe.reg.discover.title')}><Card list>
    <SelectRow row label={t('fe.mx.v.mode')} sub={modeSub} value={mode} onChange={v=>{if(v==='off'&&mode!=='off')setAskOff(true);else if(v==='visible'&&!p.photos.length)setAskPhoto(true);else void set('discoverMode',v);}}
     options={(['visible','hidden','off'] as const).map(v=>[v,t('fe.mx.v.mode.'+v+(cp?'Us':''))] as const)}/>
    <Row title={cp?t('fe.mx.v.cardUs'):t('fe.mx.v.card')} sub={cp?t('fe.mx.v.cardSubUs'):t('fe.mx.v.cardSub')} onClick={()=>navigate('/n/me/preview')}/>
    {toggle('acceptProfileLikes',t('fe.mx.v.likes'),cp?t('fe.mx.v.likesSubUs'):t('fe.mx.v.likesSub'),settings.acceptProfileLikes!==false)}
-  </Card></Group>
-  <Group title={t('fe.me.layer.profile')} foot={cp?t('fe.mx.v.footUs'):undefined}><Card list>
+  </Card></Group>}
+  {part!=='discover'&&<><Group title={t('fe.me.layer.profile')} foot={cp?t('fe.mx.v.footUs'):undefined}><Card list>
    <SelectRow row label={t('fe.mx.v.activity')} sub={t('fe.mx.v.activitySub')} value={settings.activityVis??'all'} onChange={v=>void set('activityVis',v)}
     options={(['all','followers','off'] as const).map(v=>[v,t('fe.mx.v.act.'+v)] as const)}/>
    <SelectRow row label={cp?t('fe.mx.v.mentionUs'):t('fe.mx.v.mention')} sub={t('fe.mx.v.mentionSub')} value={settings.mentionsFrom??'all'} onChange={v=>void set('mentionsFrom',v)}
@@ -306,6 +314,12 @@ function Visibility({p,settings,onChanged}:{p:Profile,settings:Settings,onChange
    <RadioList label={cp?t('fe.rq.set.titleUs'):t('fe.rq.set.title')} value={settings.messagesFrom??'known'} onChange={v=>{if(v!==(settings.messagesFrom??'known'))void set('messagesFrom',v);}}
     options={(['all','known','none'] as const).map(v=>[v,t('fe.rq.set.'+v+(v==='known'&&cp?'Us':'')),v==='none'?t('fe.rq.set.noneSub'):undefined] as const)}/>
   </Group>
+  {part==='who'&&<Group title={t('fe.m2.who.more')}><Card list>
+   <SelectRow row label={t('fe.mx.pr.reqFrom')} value={settings.requestsFrom??'all'} onChange={v=>void set('requestsFrom',v)}
+    options={(['all','matches','none'] as const).map(v=>[v,t('fe.mx.pr.from.'+v)] as const)}/>
+   <SelectRow row label={t('fe.ln.from')} value={(settings.linksFrom??'all') as 'all'|'follow'|'none'} onChange={v=>void set('linksFrom',v)}
+    options={(['all','follow','none'] as const).map(v=>[v,t('fe.ln.from.'+v)] as const)}/>
+  </Card></Group>}</>}
   {failure&&<Alert kind="err" noIcon>{failure}{failure===t('fe.age.couple')&&<><br/><AgeCheckLink intent={ageIntent||undefined}/></>}</Alert>}
   {/* V21 k4off: switching Discover off is asked first — matches, chats and access stay. */}
   {askOff&&<KitAsk icon={HeartOff} danger title={t(cp?'fe.w7.k4off.titleUs':'fe.w7.k4off.title')} text={t(cp?'fe.w7.k4off.textUs':'fe.w7.k4off.text')} ok={t('fe.w7.k4off.ok')} busy={busy}

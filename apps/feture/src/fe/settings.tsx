@@ -32,17 +32,17 @@ const blocksRes=z.object({ok:z.literal(true),items:z.array(z.unknown())}).passth
 
 type AgeState='ok'|'pending'|'none';
 
-export function SettingsScreen(){
- const {call,peek,state,acting}=useFe();const {t,preference,setPreference,canSwitch}=useI18n();const auth=useOptionalAuth();const navigate=useNavigate();const toast=useToast();
+/** What the settings screens read: account settings, the two checks, Premium and the block list, one wave of reads.
+ * Shared by «Настройки» and the section screens of the new settings (settings-v2.tsx). */
+export function useAccountSettings(){
+ const {call,peek}=useFe();const {t}=useI18n();const toast=useToast();
  // What the screen showed last (or the last answers) on the first frame; one wave of reads replaces them together.
  const ageOf=(r:z.infer<typeof ageRes>):AgeState=>r.verified?'ok':r.check?.state==='submitted'?'pending':'none';
  const [blocked,setBlocked]=useShown<number|null>('set.blocked',()=>peek('blocks.list',{},blocksRes)?.items.length??null);
  const [s,setS]=useShown<z.infer<typeof settingsRes>['settings']|null>('set.s',()=>peek('settings.get',{},settingsRes,{asAccount:true})?.settings??null);
  const [age,setAge]=useShown<AgeState|null>('set.age',()=>{const r=peek('verification.ageStatus',{},ageRes,{asAccount:true});return r?ageOf(r):null;});
  const [photo,setPhoto]=useShown<z.infer<typeof photoRes>['state']|null>('set.photo',()=>peek('verification.photoStatus',{},photoRes,{asAccount:true})?.state??null);
- const [theme,setTheme]=useState<ThemePreference>(getThemePreference());
  const [error,setError]=useState<unknown>(null);const premium=usePremiumStatus().status;
- const [layer,setLayer]=useState<'hidden'|'logout'|null>(null);const [leaving,setLeaving]=useState(false);
  const load=useCallback(()=>{setError(null);
   void Promise.allSettled([call('settings.get',{},settingsRes,{asAccount:true}),call('verification.ageStatus',{},ageRes,{asAccount:true}),
    call('verification.photoStatus',{},photoRes,{asAccount:true}),call('blocks.list',{},blocksRes)]).then(([a,b,c,d])=>{
@@ -58,12 +58,64 @@ export function SettingsScreen(){
   const before=s;if(s)setS({...s,...patch} as typeof s);
   try{await call('settings.update',{opId:newOpId(),...patch},ok,{asAccount:true});if(done)toast(done,{type:'ok'});}
   catch(e){setS(before);toast(feErrorMessage(e,t),{type:'err'});}};
+ return {s,age,photo,blocked,premium,error,load,update};
+}
+type AccountSettings=ReturnType<typeof useAccountSettings>;
+
+/** Age check and photo verification rows with their states. */
+export function CheckRows({a}:{a:AccountSettings}){
+ const {t}=useI18n();const navigate=useNavigate();
+ return <>
+  <LinkRow icon={ShieldCheck} tone={a.age==='ok'?'g':''} title={t('fe.set.age')} sub={t('fe.set.ageNote')} val={a.age&&t('fe.set.ageVal.'+a.age)} onClick={()=>navigate('/n/settings/age')}/>
+  <LinkRow icon={Camera} tone="v" title={t('fe.pc.row')} sub={t('fe.set.pcSub')} val={a.photo&&t('fe.set.pcVal.'+a.photo)} onClick={()=>navigate('/n/settings/photo-check')}/>
+ </>;
+}
+
+/** Language (when it can be switched) and theme. */
+export function AppRows({a}:{a:AccountSettings}){
+ const {t,preference,setPreference,canSwitch}=useI18n();const toast=useToast();
+ const [theme,setTheme]=useState<ThemePreference>(getThemePreference());
+ return <>
+  {canSwitch&&<SelectRow icon={Globe} label={t('fe.set.lang')} sub={t('fe.set.langNote')} value={preference} options={(['system','ru','en'] as const).map(v=>[v,t('fe.set.lang.'+v)] as const)}
+   onChange={v=>{setPreference(v);toast(t('fe.set.langDone.'+(v==='system'?'system':v)),{type:'ok'});void a.update({locale:v});}}/>}
+  <SelectRow icon={Moon} label={t('fe.set.theme')} sub={t('fe.set.themeNote')} value={theme} options={(['light','dark','system'] as const).map(v=>[v,t('fe.set.theme.'+v)] as const)}
+   onChange={v=>{setTheme(v);setThemePreference(v);}}/>
+ </>;
+}
+
+/** «Размывать входящие фото и видео в чатах». */
+export function BlurRow({a}:{a:AccountSettings}){
+ const {t}=useI18n();const s=a.s;
+ return <ToggleRow icon={EyeOff} title={t('fe.set.blur')} sub={t('fe.set.blurNote')} on={!!s?.chatBlur} disabled={!s}
+  onClick={()=>s&&void a.update({chatBlur:!s.chatBlur},t(s.chatBlur?'fe.set.blurOff':'fe.set.blurOn'))}/>;
+}
+
+/** Hidden in the feed (a sheet) and the block list. */
+export function ListRows({a,onHidden}:{a:AccountSettings,onHidden:()=>void}){
+ const {t}=useI18n();const navigate=useNavigate();const {acting}=useFe();
+ return <>
+  <LinkRow icon={EyeOff} title={t('fe.tl.set.hidden')} sub={t('fe.tl.set.hiddenNote')} onClick={onHidden}/>
+  <LinkRow icon={Ban} title={t('fe.tl.set.blocked')} sub={acting?.kind==='couple'?t('fe.tl.set.blockedNoteCouple').replace('{name}',acting.name||acting.handle||''):t('fe.tl.set.blockedNote')}
+   val={a.blocked===null?undefined:String(a.blocked)} onClick={()=>navigate('/n/settings/blocked')}/>
+ </>;
+}
+
+/** «Выйти из аккаунта»: the question, then push off on this device and sign out. */
+export function useLogout(){
+ const {call}=useFe();const {t}=useI18n();const auth=useOptionalAuth();const navigate=useNavigate();const toast=useToast();
+ const [asking,setAsking]=useState(false);const [leaving,setLeaving]=useState(false);
+ const logout=async()=>{setLeaving(true);try{await disableWebPush(call);await disableNativePush(call);await auth.logout();navigate('/n/feed',{replace:true});}catch{setLeaving(false);setAsking(false);toast(t('fe.ax.sec.logoutFailed'),{type:'err'});}};
+ const node=asking?<Ask icon={LogOut} title={t('fe.set.logoutTitle')} text={t('fe.set.logoutText')} ok={t('fe.set.logout')} danger busy={leaving} onOk={()=>void logout()} onCancel={()=>setAsking(false)}/>:null;
+ return {ask:()=>setAsking(true),node};
+}
+
+export function SettingsScreen(){
+ const {state}=useFe();const {t}=useI18n();const navigate=useNavigate();
+ const a=useAccountSettings();const {s,premium,error,load}=a;
+ const [layer,setLayer]=useState<'hidden'|null>(null);const out=useLogout();
  const couple=state.status==='ready'?state.boot.profiles.find(p=>p.kind==='couple'&&p.state!=='deleted'):undefined;
  const email=state.status==='ready'?state.session.email:'';
  const closeLayer=useCallback(()=>setLayer(null),[]);
- const logout=async()=>{setLeaving(true);try{await disableWebPush(call);await disableNativePush(call);await auth.logout();navigate('/n/feed',{replace:true});}catch{setLeaving(false);setLayer(null);toast(t('fe.ax.sec.logoutFailed'),{type:'err'});}};
- const ageVal=age&&t('fe.set.ageVal.'+age);
- const photoVal=photo&&t('fe.set.pcVal.'+photo);
  return <>
   <Bar title={t('fe.set.title')} back="/n/me"/>
   <View className="nodock compact">
@@ -72,41 +124,34 @@ export function SettingsScreen(){
     <SectionLabel>{t('fe.set.account')}</SectionLabel>
     <Card list>
      <LinkRow icon={KeyRound} title={t('fe.set.signIn')} sub={email||t('fe.set.noEmail')} onClick={()=>navigate('/n/settings/security')}/>
-     <LinkRow icon={ShieldCheck} tone={age==='ok'?'g':''} title={t('fe.set.age')} sub={t('fe.set.ageNote')} val={ageVal} onClick={()=>navigate('/n/settings/age')}/>
-     <LinkRow icon={Camera} tone="v" title={t('fe.pc.row')} sub={t('fe.set.pcSub')} val={photoVal} onClick={()=>navigate('/n/settings/photo-check')}/>
+     <CheckRows a={a}/>
      <LinkRow icon={Crown} tone="l" title="Premium" sub={t('fe.set.premSub')} val={premium?t(premium.premium?'fe.set.premOn':'fe.set.premOff'):undefined} onClick={()=>navigate('/n/premium')}/>
      {couple?<LinkRow icon={Users} tone="v" title={t('fe.set.pair')} sub={t('fe.set.pairSub',{name:couple.name||couple.handle||''})} onClick={()=>navigate('/n/me/pair')}/>
       :<LinkRow icon={Users} tone="v" title={t('fe.set.pairNew')} sub={t('fe.set.pairNewSub')} onClick={()=>navigate('/n/me/pair')}/>}
     </Card>
     <SectionLabel>{t('fe.set.app')}</SectionLabel>
     <Card list>
-     {canSwitch&&<SelectRow icon={Globe} label={t('fe.set.lang')} sub={t('fe.set.langNote')} value={preference} options={(['system','ru','en'] as const).map(v=>[v,t('fe.set.lang.'+v)] as const)}
-      onChange={v=>{setPreference(v);toast(t('fe.set.langDone.'+(v==='system'?'system':v)),{type:'ok'});void update({locale:v});}}/>}
-     <SelectRow icon={Moon} label={t('fe.set.theme')} sub={t('fe.set.themeNote')} value={theme} options={(['light','dark','system'] as const).map(v=>[v,t('fe.set.theme.'+v)] as const)}
-      onChange={v=>{setTheme(v);setThemePreference(v);}}/>
+     <AppRows a={a}/>
      <LinkRow icon={Bell} title={t('fe.set.notifications')} sub={t('fe.set.notificationsNote')} onClick={()=>navigate('/n/settings/notifications')}/>
     </Card>
     <SectionLabel>{t('fe.nav.chats')}</SectionLabel>
     <Card list>
-     <ToggleRow icon={EyeOff} title={t('fe.set.blur')} sub={t('fe.set.blurNote')} on={!!s?.chatBlur} disabled={!s}
-      onClick={()=>s&&void update({chatBlur:!s.chatBlur},t(s.chatBlur?'fe.set.blurOff':'fe.set.blurOn'))}/>
+     <BlurRow a={a}/>
     </Card>
     <SectionLabel>{t('fe.set.data')}</SectionLabel>
     <Card list>
-     <LinkRow icon={EyeOff} title={t('fe.tl.set.hidden')} sub={t('fe.tl.set.hiddenNote')} onClick={()=>setLayer('hidden')}/>
-     <LinkRow icon={Ban} title={t('fe.tl.set.blocked')} sub={acting?.kind==='couple'?t('fe.tl.set.blockedNoteCouple').replace('{name}',acting.name||acting.handle||''):t('fe.tl.set.blockedNote')}
-      val={blocked===null?undefined:String(blocked)} onClick={()=>navigate('/n/settings/blocked')}/>
+     <ListRows a={a} onHidden={()=>setLayer('hidden')}/>
      <LinkRow icon={Download} title={t('fe.set.myData')} sub={t('fe.set.myDataNote')} onClick={()=>navigate('/n/settings/data')}/>
     </Card>
     <SectionLabel>{t('fe.set.support')}</SectionLabel>
     <Card list>
      <LinkRow icon={CircleHelp} title={t('fe.ax.help.entry')} sub={t('fe.ax.help.entryNote')} onClick={()=>navigate('/n/help')}/>
-     <LinkRow icon={LogOut} danger title={t('fe.set.logout')} onClick={()=>setLayer('logout')}/>
+     <LinkRow icon={LogOut} danger title={t('fe.set.logout')} onClick={out.ask}/>
     </Card>
    </>}
   </View>
   {layer==='hidden'&&<HiddenFeedSheet onClose={closeLayer}/>}
-  {layer==='logout'&&<Ask icon={LogOut} title={t('fe.set.logoutTitle')} text={t('fe.set.logoutText')} ok={t('fe.set.logout')} danger busy={leaving} onOk={()=>void logout()} onCancel={closeLayer}/>}
+  {out.node}
  </>;
 }
 
