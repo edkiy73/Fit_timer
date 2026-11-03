@@ -49,7 +49,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     'BUNNY_TOKEN_KEY=',
     '# Почта, push, web push (вставить; перенести из Vercel → feture-mvp → Environment Variables)',
     'RESEND_API_KEY=',
-    'MAIL_FROM=FetUre <code@mail.example.com>',
+    'MAIL_FROM=KINHAZE <code@mail.example.com>',
     'FIREBASE_SERVICE_ACCOUNT_BASE64=',
     'FE_VAPID_PUBLIC_KEY=',
     'FE_VAPID_PRIVATE_KEY=',

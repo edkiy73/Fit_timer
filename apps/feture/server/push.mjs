@@ -18,7 +18,7 @@ import { enqueue } from './outbox.mjs';
 
 export const PUSH_TEXT = {
   ru: {
-    title: 'FetUre', safe: 'Новое уведомление', messages: 'Новое сообщение', likes: 'Новая симпатия', match: 'Новое совпадение',
+    title: 'KINHAZE', safe: 'Новое уведомление', messages: 'Новое сообщение', likes: 'Новая симпатия', match: 'Новое совпадение',
     decide: 'Есть, что решить', requests: 'Новый запрос на переписку', events: 'Новости события', replies: 'Новый ответ', follows: 'Новый подписчик', groups: 'Новое в сообществе', other: 'Новое уведомление',
     security: 'Вход с нового устройства',
     media: { image: 'Фото', video: 'Видео', audio: 'Голосовое' },
@@ -31,7 +31,7 @@ export const PUSH_TEXT = {
     },
   },
   en: {
-    title: 'FetUre', safe: 'New notification', messages: 'New message', likes: 'New like', match: 'New match',
+    title: 'KINHAZE', safe: 'New notification', messages: 'New message', likes: 'New like', match: 'New match',
     decide: 'Something to decide', requests: 'New message request', events: 'Event update', replies: 'New reply', follows: 'New follower', groups: 'New in a community', other: 'New notification',
     security: 'New device signed in',
     media: { image: 'Photo', video: 'Video', audio: 'Voice message' },
@@ -47,6 +47,11 @@ export const PUSH_TEXT = {
 const CATEGORY = { likes: 'likes', match: 'match', decide: 'req', requests: 'req', events: 'events', replies: 'replies', follows: 'follows', groups: 'groups' };
 
 const SEND_TIMEOUT_MS = 10_000;
+/** Sends tried per device before it is given up (transient errors only; a final error stops at once). */
+export const PUSH_ATTEMPTS = 5;
+/** How long a worker holds a device while sending: longer than the send timeout, so a second worker that re-claims the
+ * item meanwhile waits instead of sending again; short enough that a dead worker's device is retried soon. */
+const LEASE_SECONDS = 60;
 
 /** Queues one push for a recipient of an outbox item, once (a retried handler never doubles it). Items older than a day
  * (a backlog after deploy, a long outage) make no push: it would only be noise by then. `message`: the chat message it
@@ -121,23 +126,48 @@ export function pushTransport({ native = null, web = null }) {
   };
 }
 
-/** A token the store says is gone for good. Anything else (a wrong project or bundle id) keeps the token.
+/** A token the store says is gone for good. Anything else (a wrong project or bundle id) keeps the token. Core's
+ * senders (packages/core/server/push.js) throw `{invalidToken, status, detail}`: FCM v1 answers 404 + UNREGISTERED
+ * (a project mismatch is 404 without it: the token stays), APNs 410 / BadDeviceToken / Unregistered.
  * @param {any} error */
 function goneToken(error) {
   if (!error?.invalidToken) return false;
   if (error.gone === true) return true; // web push: 404 / 410 from the push service, or a subscription we cannot use
-  return error.status === 410 || /Unregistered|BadDeviceToken|UNREGISTERED/.test(String(error.detail ?? ''));
+  return error.status === 410 || /Unregistered|BadDeviceToken|UNREGISTERED|registration-token-not-registered/.test(String(error.detail ?? ''));
 }
 
-/** @param {Promise<unknown>} p */
-function withTimeout(p) {
-  return Promise.race([p, new Promise((_, reject) => setTimeout(() => reject(new Error('push_timeout')), SEND_TIMEOUT_MS))]);
+/** Why a send failed, as a short code (never the token or the provider's text), and whether trying again may help:
+ * a timeout, a network error (no status), 408, 429 and 5xx are transient; a gone token, a missing sender and any other
+ * refusal are final. @param {any} error @returns {{code: string, retry: boolean, gone?: boolean}} */
+function pushFailure(error) {
+  if (goneToken(error)) return { code: 'gone', retry: false, gone: true };
+  const message = String(error?.message ?? '');
+  if (message === 'push_timeout' || error?.name === 'TimeoutError' || error?.name === 'AbortError') return { code: 'timeout', retry: true };
+  if (/not_configured|^push_no_/.test(message)) return { code: 'no_sender', retry: false };
+  const status = Number(error?.status) || 0;
+  if (!status) return { code: 'network', retry: true };
+  return { code: `http_${Math.min(999, Math.max(100, status))}`, retry: status === 408 || status === 429 || status >= 500 };
 }
 
-/** Push bookkeeping older than a week goes. @param {Db} db */
+/** @param {Promise<unknown>} p @param {number} ms */
+async function withTimeout(p, ms) {
+  /** @type {ReturnType<typeof setTimeout> | undefined} */
+  let timer;
+  try {
+    return await Promise.race([p, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('push_timeout')), ms); })]);
+  } finally { clearTimeout(timer); }
+}
+
+/** Push bookkeeping older than a week goes: the «queued once» keys and the per-device delivery rows. @param {Db} db */
 export async function sweepPushSent(db) {
-  if (!(await db.query(`select to_regclass('feture.push_sent') is not null ok`))[0].ok) return 0;
-  return (await db.query(`delete from feture.push_sent where created_at < now() - interval '7 days' returning 1`)).length;
+  let n = 0;
+  if ((await db.query(`select to_regclass('feture.push_sent') is not null ok`))[0].ok) {
+    n += (await db.query(`delete from feture.push_sent where created_at < now() - interval '7 days' returning 1`)).length;
+  }
+  if ((await db.query(`select to_regclass('feture.push_delivery') is not null ok`))[0].ok) {
+    n += (await db.query(`delete from feture.push_delivery where updated_at < now() - interval '7 days' returning 1`)).length;
+  }
+  return n;
 }
 
 /** The push kind of a notification type. @param {string} type */
@@ -170,11 +200,19 @@ export function inQuietHours(quiet, tz, now = new Date()) {
   return from <= to ? t >= from && t < to : t >= from || t < to;
 }
 
-/** @param {Db} db @param {Transport | null} transport null: no provider configured, nothing is sent */
-export function pushHandlers(db, transport) {
+/** Delivery per device (feture.push_delivery). A device is taken with one atomic upsert that sets a lease (`queued`,
+ * next_at in the future), so two workers never send to it at once, and it becomes `sent` only after the provider
+ * accepted it. A transient failure leaves it `queued` and due, and the handler throws: the outbox retries the item with
+ * its own backoff (2^attempts s), and the re-run skips devices already `sent` or `failed`. At most PUSH_ATTEMPTS sends
+ * per device. A worker dying between the provider's answer and the `sent` mark can make one repeat after the lease.
+ * @param {Db} db @param {Transport | null} transport null: no provider configured, nothing is sent
+ * @param {{timeoutMs?: number}} [opts] timeoutMs: per send (tests shorten it) */
+export function pushHandlers(db, transport, { timeoutMs = SEND_TIMEOUT_MS } = {}) {
   return {
     'push.deliver': async (/** @type {OutboxItem} */ item) => {
       if (!transport) return;
+      // A retry dragging on past a day would only be noise by then, like a backlog (queuePush).
+      if (item.created_at && Date.now() - new Date(item.created_at).getTime() > 864e5) return;
       const p = /** @type {{account: string, kind: string, notificationId?: string, conversationId?: string, seq?: number}} */ (/** @type {any} */ (item.payload));
       const [a] = await db.query(
         `select a.locale, a.state, s.settings from feture.account a left join feture.notification_settings s on s.account_id = a.id where a.id = $1`, [p.account]);
@@ -186,7 +224,10 @@ export function pushHandlers(db, transport) {
       if (!settings.push) return;
       const category = CATEGORY[/** @type {keyof typeof CATEGORY} */ (p.kind)];
       if (category && settings.categories?.[category]?.push === false) return;
-      if (p.kind === 'likes') {
+      // A re-run of this item (a device failed before) already passed the hourly likes gate and counted itself.
+      const [{ started, sentBefore }] = await db.query(
+        `select count(*) > 0 started, count(*) filter (where state = 'sent') > 0 "sentBefore" from feture.push_delivery where item_id = $1`, [item.id]);
+      if (p.kind === 'likes' && !started) {
         // Likes are grouped: at most one push an hour (counted only when one really went out).
         const [{ recent }] = await db.query(
           `select exists (select 1 from feture.rate_event where account_id = $1 and kind = 'push.likes' and created_at > now() - interval '1 hour') recent`, [p.account]);
@@ -196,28 +237,52 @@ export function pushHandlers(db, transport) {
       const kindText = /** @type {string | undefined} */ (/** @type {any} */ (t)[p.kind]);
       const named = settings.mode === 'normal' ? await personalText(db, item.profile_id, p, t) : null;
       const title = named?.title ?? t.title;
-      // A new sign-in says what it is in every mode («FetUre · Вход с нового устройства»): no device, no place.
+      // A new sign-in says what it is in every mode («KINHAZE · Вход с нового устройства»): no device, no place.
       const body = p.kind === 'security' ? t.security : named?.body ?? (settings.mode === 'normal' && typeof kindText === 'string' ? kindText : t.safe);
+      const message = { title, body, data: {
+        t: p.kind === 'messages' || p.kind === 'requests' ? 'chat' : p.kind === 'decide' ? 'decide' : 'notif',
+        url: OPENS[/** @type {keyof typeof OPENS} */ (p.kind)] ?? '/#/n/inbox',
+      } };
       const devices = await db.query(
         `select token_hash, platform, token, tz from feture.push_device where account_id = $1 and platform = any($2::text[]) and last_seen_at > now() - interval '60 days'`,
         [p.account, transport.platforms ?? ['ios', 'android', 'web']]);
-      let sent = 0;
+      let sent = 0, pending = 0;
       for (const d of devices) {
         if (inQuietHours(settings.quiet, d.tz)) continue;
-        // One send per (push, device), even if this item is claimed again while a slow send is still running.
-        const first = await db.query(`insert into feture.push_sent (key) values ($1) on conflict do nothing returning key`, [`d:${item.id}:${Buffer.from(d.token_hash).toString('hex')}`]);
-        if (!first[0]) continue;
-        try {
-          await withTimeout(transport.send(d.platform, d.token, { title, body, data: {
-            t: p.kind === 'messages' || p.kind === 'requests' ? 'chat' : p.kind === 'decide' ? 'decide' : 'notif',
-            url: OPENS[/** @type {keyof typeof OPENS} */ (p.kind)] ?? '/#/n/inbox',
-          } }));
-          sent++;
-        } catch (error) {
-          if (goneToken(error)) await db.query('delete from feture.push_device where token_hash = $1', [d.token_hash]);
+        // Take the device in one statement: new, or queued and due with attempts left. The lease (next_at) keeps any
+        // other worker off it while this send runs. Sent or failed: skip; held by another worker: wait for it.
+        const [taken] = await db.query(
+          `insert into feture.push_delivery (item_id, token_hash, attempts, next_at)
+           values ($1, $2, 1, now() + make_interval(secs => $3))
+           on conflict (item_id, token_hash) do update set attempts = push_delivery.attempts + 1,
+             next_at = now() + make_interval(secs => $3), updated_at = now()
+           where push_delivery.state = 'queued' and push_delivery.next_at <= now() and push_delivery.attempts < $4
+           returning attempts`, [item.id, d.token_hash, LEASE_SECONDS, PUSH_ATTEMPTS]);
+        if (!taken) {
+          const [held] = await db.query(
+            `select 1 from feture.push_delivery where item_id = $1 and token_hash = $2 and state = 'queued' and attempts < $3`, [item.id, d.token_hash, PUSH_ATTEMPTS]);
+          if (held) pending++;
+          continue;
         }
+        try {
+          await withTimeout(transport.send(d.platform, d.token, message), timeoutMs);
+        } catch (error) {
+          // One broken device never stops the others.
+          const f = pushFailure(error);
+          const again = f.retry && taken.attempts < PUSH_ATTEMPTS;
+          await db.query(
+            `update feture.push_delivery set state = $3, last_error = $4, next_at = now(), updated_at = now() where item_id = $1 and token_hash = $2`,
+            [item.id, d.token_hash, again ? 'queued' : 'failed', f.code]);
+          if (f.gone) await db.query('delete from feture.push_device where token_hash = $1', [d.token_hash]);
+          if (again) pending++;
+          continue;
+        }
+        await db.query(`update feture.push_delivery set state = 'sent', last_error = null, updated_at = now() where item_id = $1 and token_hash = $2`, [item.id, d.token_hash]);
+        sent++;
       }
-      if (sent && p.kind === 'likes') await db.query(`insert into feture.rate_event (account_id, kind) values ($1, 'push.likes')`, [p.account]);
+      if (sent && !sentBefore && p.kind === 'likes') await db.query(`insert into feture.rate_event (account_id, kind) values ($1, 'push.likes')`, [p.account]);
+      // Some device may still get it: the outbox retries the item with its backoff, and only queued devices are tried.
+      if (pending) throw new Error('push_retry');
     },
   };
 }

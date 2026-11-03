@@ -52,7 +52,7 @@ test('a like: one neutral push (no names), grouped hourly; «normal» names who 
     await call('uc', c, { action: 'like.send', opId: op(), profileId: b, source: 'profile' });
     await deliver();
     assert.equal(sent.length, 1); // two likes, one push this hour
-    assert.deepEqual([sent[0].message.title, sent[0].message.body], ['FetUre', 'Новое уведомление']);
+    assert.deepEqual([sent[0].message.title, sent[0].message.body], ['KINHAZE', 'Новое уведомление']);
     assert.ok(!JSON.stringify(sent[0]).includes('Alex'));
     const [{ n }] = await db.query(`select count(*)::int n from feture.push_device where token = 'gone-kira-2'`);
     assert.equal(n, 0);
@@ -108,7 +108,7 @@ test('«Обычные»: name and the first 80 characters; media-only says its 
     const long = 'Привет! Видела тебя на встрече в субботу — ты рассказывала про поход, расскажешь подробнее? Очень хочется пойти тоже';
     await call('ua', a, { action: 'chat.send', opId: op(), conversationId: conv, body: long });
     await deliver();
-    assert.deepEqual([sent.at(-1).message.title, sent.at(-1).message.body], ['FetUre', 'Новое уведомление']);
+    assert.deepEqual([sent.at(-1).message.title, sent.at(-1).message.body], ['KINHAZE', 'Новое уведомление']);
     assert.ok(!JSON.stringify(sent).includes('Мира') && !JSON.stringify(sent).includes('Привет'));
 
     const [{ account_id: kira }] = await db.query('select account_id from feture.profile_member where profile_id = $1', [b]);
@@ -183,5 +183,126 @@ test('review fixes: a retried item never pushes twice; nothing is pushed about s
     assert.equal(pushes.length, 1);
     for (const it of pushes) { await handlers['push.deliver'](it); await handlers['push.deliver'](it); }
     assert.equal(sent.length, 1);
+  } finally { await pg.close(); }
+});
+
+// Delivery per device (push_delivery): retries of transient failures, gone tokens, timeouts, re-claims, two workers.
+/** A transport scripted per token: each call takes the next step (`ok`, `fail` = 503, `net` = no status, `gone`, `hang`). */
+function scripted(/** @type {Record<string, string[]>} */ plan) {
+  /** @type {{token: string, message: any}[]} */
+  const delivered = [];
+  /** @type {Record<string, number>} */
+  const calls = {};
+  return { delivered, calls, send: async (/** @type {string} */ _p, /** @type {string} */ token, /** @type {any} */ message) => {
+    calls[token] = (calls[token] ?? 0) + 1;
+    const step = plan[token]?.[calls[token] - 1] ?? 'ok';
+    if (step === 'fail') throw Object.assign(new Error('fcm_failed'), { status: 503, detail: 'UNAVAILABLE' });
+    if (step === 'net') throw new Error('socket hang up');
+    if (step === 'gone') throw Object.assign(new Error('fcm_failed'), { invalidToken: true, status: 404, detail: '{"error":{"status":"NOT_FOUND","details":[{"errorCode":"UNREGISTERED"}]}}' });
+    if (step === 'hang') return new Promise(() => {});
+    delivered.push({ token, message });
+  } };
+}
+
+/** Drains until nothing is left, letting retries come due at once (the outbox backoff is seconds). */
+async function drainAll(/** @type {any} */ db, /** @type {any} */ handlers) {
+  for (let round = 0; round < 30; round++) {
+    if ((await drain(db, handlers, { limit: 100 })) > 0) continue;
+    const due = await db.query(`update feture.outbox set available_at = now() where done_at is null and available_at > now() and available_at <> 'infinity' returning id`);
+    await db.query(`update feture.push_delivery set next_at = now() where state = 'queued'`);
+    if (!due.length) return;
+  }
+  throw new Error('drainAll: still busy');
+}
+
+const deliveries = (/** @type {any} */ db) => db.query(
+  `select d.token, x.state, x.attempts, x.last_error from feture.push_delivery x left join feture.push_device d on d.token_hash = x.token_hash order by d.token nulls last`);
+
+test('push retries: a transient failure is retried for that device only (likes gate kept); gone tokens go and never block the others', async () => {
+  const { pg, db, call, member } = await world();
+  try {
+    const a = await member('ua', 'Alex'), b = await member('ub', 'Kira');
+    await call('ub', null, { action: 'push.register', opId: op(), platform: 'ios', token: 'tok-okay-1', tz: 'UTC' });
+    await call('ub', null, { action: 'push.register', opId: op(), platform: 'android', token: 'tok-flaky-1', tz: 'UTC' });
+    await call('ub', null, { action: 'push.register', opId: op(), platform: 'android', token: 'tok-gone-1', tz: 'UTC' });
+    const tr = scripted({ 'tok-flaky-1': ['fail', 'net'], 'tok-gone-1': ['gone'] });
+    const handlers = { ...notifyHandlers(db), ...pushHandlers(db, tr) };
+    await call('ua', a, { action: 'like.send', opId: op(), profileId: b, source: 'profile' });
+    // First pass: the good device gets it, the flaky one waits for a retry, the gone one is dropped.
+    while ((await drain(db, handlers, { limit: 100 })) > 0) { /* until nothing is due */ }
+    assert.deepEqual(tr.delivered.map(x => x.token), ['tok-okay-1']);
+    assert.deepEqual(await deliveries(db), [
+      { token: 'tok-flaky-1', state: 'queued', attempts: 1, last_error: 'http_503' },
+      { token: 'tok-okay-1', state: 'sent', attempts: 1, last_error: null },
+      { token: null, state: 'failed', attempts: 1, last_error: 'gone' },
+    ]);
+    assert.equal((await db.query(`select count(*)::int n from feture.push_device where token = 'tok-gone-1'`))[0].n, 0);
+    const [item] = await db.query(`select done_at, last_error from feture.outbox where topic = 'push.deliver'`);
+    assert.deepEqual([item.done_at, item.last_error], [null, 'push_retry']);
+    // The retries: the hourly likes gate (already counted by this push) does not stop them; the good device gets nothing more.
+    await drainAll(db, handlers);
+    assert.deepEqual(tr.delivered.map(x => x.token), ['tok-okay-1', 'tok-flaky-1']);
+    assert.deepEqual(tr.calls, { 'tok-okay-1': 1, 'tok-flaky-1': 3, 'tok-gone-1': 1 });
+    assert.equal((await deliveries(db))[0].state, 'sent');
+    assert.ok((await db.query(`select done_at from feture.outbox where topic = 'push.deliver'`))[0].done_at);
+    assert.equal((await db.query(`select count(*)::int n from feture.rate_event where kind = 'push.likes'`))[0].n, 1);
+    // The tokens and the text are never stored with the delivery.
+    assert.ok(!JSON.stringify(await db.query('select * from feture.push_delivery')).match(/tok-|Новое/));
+  } finally { await pg.close(); }
+});
+
+test('push retries: a timeout is retried; a device that keeps failing is given up after 5 sends and the item ends', async () => {
+  const { pg, db, call, member } = await world();
+  try {
+    const a = await member('ua', 'Alex'), b = await member('ub', 'Kira');
+    await call('ub', null, { action: 'push.register', opId: op(), platform: 'ios', token: 'tok-slow-1', tz: 'UTC' });
+    await call('ub', null, { action: 'push.register', opId: op(), platform: 'android', token: 'tok-down-1', tz: 'UTC' });
+    const tr = scripted({ 'tok-slow-1': ['hang'], 'tok-down-1': ['fail', 'fail', 'fail', 'fail', 'fail', 'fail', 'fail'] });
+    const handlers = { ...notifyHandlers(db), ...pushHandlers(db, tr, { timeoutMs: 30 }) };
+    await call('ua', a, { action: 'like.send', opId: op(), profileId: b, source: 'profile' });
+    while ((await drain(db, handlers, { limit: 100 })) > 0) { /* until nothing is due */ }
+    assert.deepEqual((await deliveries(db)).map(x => [x.token, x.state, x.last_error]), [['tok-down-1', 'queued', 'http_503'], ['tok-slow-1', 'queued', 'timeout']]);
+    await drainAll(db, handlers);
+    assert.deepEqual(tr.delivered.map(x => x.token), ['tok-slow-1']);
+    assert.deepEqual(tr.calls, { 'tok-slow-1': 2, 'tok-down-1': 5 });
+    assert.deepEqual((await deliveries(db)).map(x => [x.token, x.state, x.attempts]), [['tok-down-1', 'failed', 5], ['tok-slow-1', 'sent', 2]]);
+    assert.ok((await db.query(`select done_at from feture.outbox where topic = 'push.deliver'`))[0].done_at);
+    assert.equal((await db.query(`select count(*)::int n from feture.push_device`))[0].n, 2); // a failing device is not a gone one
+  } finally { await pg.close(); }
+});
+
+test('push retries: a re-claim after «sent» never re-sends; a second worker never sends while the first one is still sending', async () => {
+  const { pg, db, call, member } = await world();
+  try {
+    const a = await member('ua', 'Alex'), b = await member('ub', 'Kira');
+    await call('ub', null, { action: 'push.register', opId: op(), platform: 'ios', token: 'tok-one-1', tz: 'UTC' });
+    /** @type {() => void} */
+    let release = () => {};
+    let first = true;
+    /** @type {string[]} */
+    const delivered = [];
+    const transport = { send: async (/** @type {string} */ _p, /** @type {string} */ token) => {
+      if (first) { first = false; await new Promise(r => { release = () => r(undefined); }); }
+      delivered.push(token);
+    } };
+    await call('ua', a, { action: 'like.send', opId: op(), profileId: b, source: 'profile' });
+    await drain(db, notifyHandlers(db), { limit: 100 });
+    const [item] = await db.query(`select id::text, topic, profile_id, payload, attempts, lock_token::text, created_at from feture.outbox where topic = 'push.deliver'`);
+    const worker = pushHandlers(db, transport)['push.deliver'];
+    // Worker A is stuck in the provider; worker B gets the same item (an expired claim): it waits, it does not send.
+    const slow = worker(item);
+    for (let i = 0; first && i < 1000; i++) await new Promise(r => setTimeout(r, 5));
+    assert.equal(first, false);
+    await assert.rejects(worker(item), /push_retry/);
+    assert.deepEqual(delivered, []);
+    release();
+    await slow;
+    assert.deepEqual(delivered, ['tok-one-1']);
+    // Re-claims after it went out: nothing more, and no error.
+    await worker(item);
+    await db.query(`update feture.outbox set done_at = null, available_at = now(), locked_until = null where id = $1`, [item.id]);
+    await drainAll(db, pushHandlers(db, transport));
+    assert.deepEqual(delivered, ['tok-one-1']);
+    assert.deepEqual((await deliveries(db)).map(x => [x.state, x.attempts]), [['sent', 1]]);
   } finally { await pg.close(); }
 });
