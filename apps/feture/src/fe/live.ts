@@ -12,13 +12,13 @@ const SERVER_ENTITIES:readonly string[]=['profile','couple','check','media','pos
  * screen's revisit after 30 s, and after any write. */
 export const LIVE_READS:Record<Exclude<LiveEntity,'boot'>,RegExp>={
  profile:/^(profile\.(get|settings|mine|compat|followers|activity)|settings\.get|interests\.list|links\.(mine|ofProfile)|private\.get|premium\.status|dating\.status|location\.get|blocks\.list|people\.byNick|access\.(lists|quota)|staff\.me|discover\.filter|notifications\.settings\.get)$/,
- couple:/^(couple\.(get|invites)|decide\.(approvals|approval)|profile\.(get|settings|mine))$/,
+ couple:/^(couple\.(get|invites)|decide\.approvals|approval\.get|profile\.(get|settings|mine))$/,
  check:/^(verification\.(ageStatus|photoStatus)|profile\.(get|settings|mine)|settings\.get|premium\.status|discover\.(deck|count|card))$/,
  media:/^(profile\.(get|mine|posts)|gallery\.list|album\.list|me\.posts|post\.get|feed\.list|verification\.(ageStatus|photoStatus))$/,
  post:/^(feed\.list|post\.(get|replies|likers)|poll\.voters|profile\.(posts|activity)|activity\.items|me\.posts|gallery\.list|album\.list|discussions\.popular|community\.discussions|saved\.list)$/,
  counts:/^(inbox\.counts|decide\.list|staff\.counts)$/,
  chat:/^(chats\.list|chat\.(messages|starters)|inbox\.counts|matches\.list)$/,
- decide:/^(decide\.(list|get|approvals|approval)|inbox\.counts|couple\.(get|invites)|access\.lists|community\.requests|event\.applications|links\.mine)$/,
+ decide:/^(decide\.(list|get|approvals)|approval\.get|inbox\.counts|couple\.(get|invites)|access\.lists|community\.requests|event\.applications|links\.mine)$/,
  notify:/^(notifications\.(list|get)|inbox\.counts|decide\.list|chats\.list|likes\.(incoming|outgoing)|matches\.list|staff\.counts)$/,
 };
 

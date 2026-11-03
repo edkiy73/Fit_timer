@@ -696,7 +696,13 @@ const mentionRes=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(
 const thumbOf=(a:unknown):string|null=>{const src=(a as {src?:Record<string,string>|null}|null)?.src;return src?(src.thumb??src.card??null):null;};
 
 /** A fresh form every time «Новая публикация» is opened (the same route again kept the old mode and text). */
-export function ComposeScreen({edit,fromSaved}:{edit?:Post,fromSaved?:boolean}={}){const {key}=useLocation();return <ComposeForm key={edit?.id??key} edit={edit} fromSaved={!!fromSaved}/>;}
+export function ComposeScreen({edit,fromSaved}:{edit?:Post,fromSaved?:boolean}={}){
+ const {key,state}=useLocation();
+ // «Изменить и отправить снова» of a refused couple edit: the editor opens with the version that was proposed.
+ const r=(state as {resend?:{title?:unknown,body?:unknown,audience?:unknown}}|null)?.resend;
+ const e=edit&&r?{...edit,...(typeof r.title==='string'||r.title===null?{title:r.title}:{}),...(typeof r.body==='string'?{body:r.body}:{}),...(typeof r.audience==='string'?{audience:r.audience}:{})} as Post:edit;
+ return <ComposeForm key={edit?.id??key} edit={e} fromSaved={!!fromSaved}/>;
+}
 function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boolean}){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const [params]=useSearchParams();const toast=useToast();
  // One editor everywhere (owner 29.10.2026): in a community only «Кто видит» (a fixed line by its privacy) and the

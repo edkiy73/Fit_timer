@@ -256,3 +256,8 @@
 /* The profile's main buttons while the relation is still being read: the same row, held in place (no jump when they arrive). */
 .v21 .pa-hold{display:grid;grid-template-columns:1fr 1fr 48px;gap:var(--s-2);height:48px}
 .v21 .pa-hold .sk{display:block;height:100%;border-radius:var(--r-l)}
+
+/* Couple approval sheet (ApprovalSheet): the field list starts flush, the consequence is a quiet line. */
+.v21 .k-ap-diff{margin:0}
+.v21 .k-ap-diff>div:first-child dt{margin-top:0}
+.v21 .k-ap-cons{margin:0}
