@@ -16,6 +16,7 @@ import {useDecline} from './private';
 import {evParts,evWhen} from './event-time';
 import {AppealSheet} from './appeal';
 import {plural} from './post-parts';
+import {StatusDecision,useStatusTodo} from './status-todo';
 import {groupRows,inboxScrollKey,inboxSearch,mergeRows,readInboxUrl,type InboxFilter,type InboxTab} from './inbox-url';
 
 /** The notification center (docs/notifications.md, stage 5): «Нужно решить» (tasks of every profile of the account,
@@ -134,8 +135,9 @@ export function InboxScreen(){
  const person=profiles.find(p=>p.kind==='person')??null;
  // V21 `inboxTab`: opens on «Нужно решить» when something waits, else on all notifications — chosen once, on the
  // first read; deciding the last card keeps «Нужно решить» (its own empty state) instead of jumping away.
- useEffect(()=>{if(chosen===null&&decide!==null)setChosen(decide.length?'todo':'all');},[chosen,decide]);
- const k:InboxTab=chosen??(decide&&decide.length===0?'all':'todo');
+ const st=useStatusTodo().show;
+ useEffect(()=>{if(chosen===null&&decide!==null)setChosen(decide.length||st?'todo':'all');},[chosen,decide,st]);
+ const k:InboxTab=chosen??(decide&&decide.length===0&&!st?'all':'todo');
  const go=(tab:InboxTab,f:InboxFilter)=>{setChosen(tab);setParams(inboxSearch(params,{tab,filter:f}),{replace:true});};
  const pickTab=(v:InboxTab)=>go(v,'all');
  const pickFilter=(f:InboxFilter)=>go(k,f);
@@ -304,10 +306,12 @@ export function InboxScreen(){
  const filteredEmpty=<Empty icon={Filter} title={t('fe.ibx.filteredEmpty')}><Btn kind="text" auto onClick={()=>pickFilter('all')}>{t('fe.ibx.resetFilter')}</Btn></Empty>;
  const todo=()=>{
   const all=decide??[];const items=all.filter(d=>filter==='all'||decideKind(d)===filter);
-  if(!items.length)return all.length?filteredEmpty:<Empty icon={CircleCheck} title={t('fe.ibx.allDone')} text={t('fe.ibx.allDoneText')}/>;
-  if(!couple)return group(items);
+  // The relationship status (status-todo.tsx) is the person's own task: first, under «Мне», whatever the filter.
+  const own=st&&filter==='all'?<StatusDecision/>:null;
+  if(!items.length)return own??(all.length?filteredEmpty:<Empty icon={CircleCheck} title={t('fe.ibx.allDone')} text={t('fe.ibx.allDoneText')}/>);
+  if(!couple)return <>{own}{group(items)}</>;
   const mine=items.filter(d=>d.label!=='couple'),ours=items.filter(d=>d.label==='couple');
-  const me=mine.length?<>{whomHead('me',mine.length)}{group(mine)}</>:null,us=ours.length?<>{whomHead('couple',ours.length)}{group(ours)}</>:null;
+  const me=mine.length||own?<>{whomHead('me',mine.length+(own?1:0))}{own}{group(mine)}</>:null,us=ours.length?<>{whomHead('couple',ours.length)}{group(ours)}</>:null;
   return acting?.kind==='couple'?<>{us}{me}</>:<>{me}{us}</>;
  };
  const everything=()=>{
@@ -341,7 +345,7 @@ export function InboxScreen(){
  useScrollTo(url.item?'item-'+url.item:null,k==='todo'&&decide!==null);
  const told=useRef('');
  useEffect(()=>{if(url.item&&decide&&told.current!==url.item&&!decide.some(d=>d.id===url.item)){told.current=url.item;toast(t('fe.ibx.itemGone'));}},[url.item,decide,toast,t]);
- const nTodo=counts?.decide??decide?.length??0;const nAll=counts?.notifications??(page?.items??[]).filter(n=>!n.read).length;
+ const nTodo=(counts?.decide??decide?.length??0)+(st?1:0);const nAll=counts?.notifications??(page?.items??[]).filter(n=>!n.read).length;
  return <>
   {/* With the side menu «Уведомления» is a section of its own there: no «‹», like every other section. */}
   <Bar title={t('fe.inbox.title')} {...(sideNav?{}:{back:true as const})}/>
