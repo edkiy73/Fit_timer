@@ -258,7 +258,7 @@ const run = {
       // Suspected CSAM without a scanner match: blocked like a match and escalated (S4 §5); evidence is kept.
       await q.query(`update feture.media_asset set state = 'blocked', reject_reason = 'csam_suspected' where id = $1`, [a.id]);
       await enqueue(q, 'media.hide', a.owner_profile_id, { assetId: a.id, force: true });
-      await enqueue(q, 'safety.csamMatch', a.owner_profile_id, { assetId: a.id, source: 'staff' });
+      await enqueue(q, 'safety.csamMatch', a.owner_profile_id, { assetId: a.id, source: 'staff', by: account.id });
     } else {
       await q.query(`update feture.media_asset set state = 'rejected', reject_reason = $2 where id = $1`, [a.id, input.reason]);
       await enqueue(q, 'media.hide', a.owner_profile_id, { assetId: a.id });

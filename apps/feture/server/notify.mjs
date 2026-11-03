@@ -81,7 +81,8 @@ const TYPES = /** @type {Record<string, {type: string, actor?: string, object?: 
  * - `access.revoked`, `access.declined`, `match.ended`: silent by owner decision (the other side is not told).
  *   `access.declined` waits out the undo window first (its `available_at`), so an undo still finds it undelivered.
  * - `community.joined`: silent for now; a daily summary for the host comes later.
- * - `moderation.*`: staff queues read their own tables (reports, revisions, checks, appeals); nobody reads the marker. */
+ * - `moderation.*`: staff queues read their own tables (reports, revisions, checks, appeals); nobody reads the marker.
+ *   A CSAM case alerts owner and lead through its own `staff.alert` (jobs.mjs `safety.csamMatch`). */
 export const SILENT_TOPICS = Object.freeze(['access.revoked', 'access.declined', 'match.ended', 'community.joined',
   'moderation.ageCheck', 'moderation.appeal', 'moderation.community', 'moderation.csamCase', 'moderation.event',
   'moderation.mediaReview', 'moderation.photoCheck', 'moderation.postRevision', 'moderation.report']);

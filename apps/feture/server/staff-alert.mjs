@@ -11,6 +11,8 @@ export const ALERT_ROLES = {
   dispute: ['owner', 'lead', 'moderator'],
   notice: ['owner', 'lead', 'moderator'],
   support: ['owner', 'lead', 'moderator', 'support'],
+  // An account suspended after a CSAM match (S4 §5): `lead` confirms and reports it, evidence is owner/lead only.
+  csam: ['owner', 'lead'],
 };
 
 /** @param {Q} q @param {keyof typeof ALERT_ROLES} what @param {Record<string, unknown>} [data] `by`: the account that caused it (never told) */
