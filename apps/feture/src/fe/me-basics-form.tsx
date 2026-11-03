@@ -30,7 +30,7 @@ export function BasicsForm({p,places,onSaved}:{p:Profile,places:Place[],onSaved:
  ];
  return <Group id="meBasics" title={t('fe.me.basics')} action={<button type="button" onClick={()=>setOpen(true)}>{t('fe.mx.edit')}</button>}>
   {/* «О себе» last, under its label at full width, with its line breaks, lists and emphasis as on the profile. */}
-  <Card><dl className="kv">{rows.map(([k,v])=><Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>)}
+  <Card><dl className="kv side">{rows.map(([k,v])=><Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>)}
    <dt className="wide">{t('fe.mx.ed.about')}</dt><dd className="wide">{p.bio?<RichText text={p.bio} className="bio"/>:<Note as="span">{t('fe.mb.noBio')}</Note>}</dd></dl></Card>
   {open&&<BasicsSheet p={p} places={places} onClose={()=>setOpen(false)} onSaved={()=>{setOpen(false);onSaved();}}/>}
  </Group>;
