@@ -78,9 +78,12 @@ or a helper defined twice (`tools/fe-server-baseline.json` only shrinks). Text i
   `chosen_name`, `handle` and the partners); writes go to `chosen_name`. Limits on the server: a nick once per 6 months,
   the first change after sign-up (or after a couple forms) free; a name once per 2 weeks, the first fill and one
   correction free; refusals carry `until`. A couple's nick is suggested from both nicks (`anya_max`) and can be changed
-  in the setup right after it forms; couples take @mentions like people. Feed, comments, chats, notifications and
+  once for free in the profile editor; couples take @mentions like people. Feed, comments, chats, notifications and
   likes show the name only; the grey @nick (kit `PersonName nick` / `Who`) only in the profile header, search,
   @mention suggestions, the pair invite and follow lists.
+- **No couple set-up step** (04.11.2026). Accepting an invitation or a link forms the couple at once with defaults:
+  nick from both nicks, no name, nobody's approval needed, anyone may ask for access, Discover off. Both partners then
+  see «Пара создана» (what is on, «Перейти в настройки пары», «Готово»); everything changes in the pair settings.
 - **«Обо мне» facts are always visible to everyone** (29.10.2026): no per-fact audience; on a person's profile they
   sit under the bio and under the main buttons (Нравится / Подписаться / Написать).
 - **«Я» uses the same header as every tab** (29.10.2026): kit `Bar` with `lead` (avatar), `sub` and `onTitle`.

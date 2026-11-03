@@ -5,7 +5,7 @@ import { fail, isUniqueViolation } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { closePending, narrowCouple } from '../approvals.mjs';
 import { closeAll } from './access.mjs';
-import { handleState, setVisibilityAs, writeIdentity } from './me.mjs';
+import { handleState } from './me.mjs';
 import { randomBytes } from 'node:crypto';
 import { sha256 } from '../hash.mjs';
 import { readAbout } from '../notify.mjs';
@@ -55,7 +55,7 @@ async function liveLink(q, token, accountId, lock) {
 }
 
 /** A free nick for a new couple from the partners' nicks (owner 29.10.2026): anya_max, then anya_max2 …; the partners
- * may change it once for free (couple.setup or the profile editor). @param {Q} q @param {string[]} handles */
+ * may change it once for free in the profile editor. @param {Q} q @param {string[]} handles */
 async function coupleNick(q, handles) {
   const part = (/** @type {string} */ h) => String(h ?? '').toLowerCase().slice(0, 9).replace(/[._]+$/, '');
   let base = handles.map(part).filter(Boolean).join('_');
@@ -92,7 +92,9 @@ async function formCouple(q, fromAccount, toAccount) {
     await q.query(`insert into feture.profile_member (profile_id, profile_kind, account_id, joined_at) values ($1, 'couple', $2, now())`, [couple.id, acc]);
   }
   // A new couple starts empty and outside Discover (owner 28.10.2026: switched on with a photo), nobody's content copied (CPL-003).
-  await q.query(`insert into feture.profile_settings (profile_id, discover_mode) values ($1, 'off')`, [couple.id]);
+  // Accepting is the whole set-up (owner 04.11.2026): no approval by either partner (profile_member default), anyone may
+  // ask for access; both change it later in the pair settings.
+  await q.query(`insert into feture.profile_settings (profile_id, discover_mode, requests_from) values ($1, 'off', 'all')`, [couple.id]);
   await q.query(`insert into feture.profile_details (profile_id) values ($1)`, [couple.id]);
   // Other pending invitations and live links of either partner are void now.
   await q.query(
@@ -271,25 +273,6 @@ const run = {
       `insert into feture.couple_invite (from_account, to_account, state, answered_at, couple_profile_id) values ($1, $2, 'accepted', now(), $3)`,
       [l.from_account, account.id, profileId]);
     return { state: 'accepted', profileId };
-  },
-
-  async 'couple.setup'(q, { acting: a, input }) {
-    const acting = need(a);
-    coupleOnly(acting);
-    // My own mode (each partner chooses independently), then who may ask for access — a widening of that waits for the
-    // partner only when the partner asked to approve my changes.
-    const approves = input.mode === 'approve';
-    // The couple's nick (suggested when it formed) and name, within the same limits as the profile editor.
-    if (input.handle !== undefined || input.name !== undefined) {
-      await writeIdentity(q, acting.profileId, { ...(input.handle !== undefined ? { handle: input.handle } : {}), ...(input.name !== undefined ? { name: input.name } : {}) });
-      await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: 'profile' });
-    }
-    const [m] = await q.query(
-      `update feture.profile_member set approves_partner = $3 where profile_id = $1 and account_id = $2 and approves_partner <> $3 returning 1`,
-      [acting.profileId, acting.accountId, approves]);
-    if (m) await enqueue(q, 'couple.approvalChanged', acting.profileId, { for: acting.partnerAccountId, approves });
-    const requests = await setVisibilityAs(q, acting, 'requestsFrom', input.requestsFrom);
-    return { approvesPartner: approves, requestsFrom: 'pending' in requests ? null : input.requestsFrom, ...('pending' in requests ? { pending: requests.pending } : {}) };
   },
 
   async 'couple.get'(q, { acting: a }) {

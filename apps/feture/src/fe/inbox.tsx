@@ -270,7 +270,7 @@ export function InboxScreen(){
   let actions:ReactNode=null;
   if(joint)actions=two({label:t('fe.ibx.review'),fn:()=>goDecide(d)});
   else switch(d.kind){
-   case 'pinv':actions=two({label:t('fe.ibx.accept'),fn:()=>void act(d.id+'y',async()=>{await call('couple.inviteAnswer',{opId:newOpId(),inviteId:d.id,accept:true},ok,{asAccount:true});reload();navigate('/n/me/pair?setup=1');},t('fe.ibx.done'))},
+   case 'pinv':actions=two({label:t('fe.ibx.accept'),fn:()=>void act(d.id+'y',async()=>{await call('couple.inviteAnswer',{opId:newOpId(),inviteId:d.id,accept:true},ok,{asAccount:true});reload();navigate('/n/me/pair?created=1');},t('fe.ibx.done'))},
     {label:t('fe.ibx.decline'),fn:()=>void act(d.id+'n',()=>call('couple.inviteAnswer',{opId:newOpId(),inviteId:d.id,accept:false},ok,{asAccount:true}),t('fe.ibx.declined'))});break;
    // Declining says what the person will see and offers «Отменить» while the server still allows it.
    case 'req':actions=two({label:t('fe.ibx.review'),fn:()=>goDecide(d)},

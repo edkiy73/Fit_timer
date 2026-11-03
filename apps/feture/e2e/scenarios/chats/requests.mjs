@@ -250,7 +250,7 @@ export default [
  { name: 'couple sends with the partner approving first contacts: waits, the partner approves, it arrives', persona: 'pair', run: async t => {
    const to = await t.persona('temp'); await setFrom(t, to, 'all');
    const pb = t.me.partner;
-   await t.api('couple.setup', { opId: t.uuid7(), mode: 'approve', requestsFrom: 'all' }, pb.email, t.me.coupleId);
+   await t.api('couple.setApproval', { opId: t.uuid7(), approvesPartner: true }, pb.email, t.me.coupleId);
    try {
      await actAs(t, t.me.coupleId);
      await t.go('/n/chats/new/' + to.personId);
@@ -262,7 +262,7 @@ export default [
      expect(ap, 'the partner has it to decide');
      expect((await t.api('decide.approval', { opId: t.uuid7(), approvalId: ap.id, choice: 'approve' }, pb.email, t.me.coupleId)).state === 'approved', 'approved');
      expect(await until(() => requestFrom(t, to, t.me.coupleId), 'arrived'), 'arrived after approval');
-   } finally { await t.api('couple.setup', { opId: t.uuid7(), mode: 'trust', requestsFrom: 'all' }, pb.email, t.me.coupleId); }
+   } finally { await t.api('couple.setApproval', { opId: t.uuid7(), approvesPartner: false }, pb.email, t.me.coupleId); }
  } },
 
  { name: 'couple receives: both partners see it; the other partner answers; both sides write', persona: 'pb', run: async t => {
