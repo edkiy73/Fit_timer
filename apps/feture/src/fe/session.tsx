@@ -13,9 +13,9 @@ import {PullRefreshRunner} from './kit/pull';
 
 /** What `session.bootstrap` returns: the FetUre account and the profiles this account may act as. */
 const profileCard=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string(),state:z.string(),avatarAssetId:z.uuid().nullable(),avatar:z.string().nullable().optional()});
-/** realtime: the public socket address (or, with transport «sse», our own server's origin) and the opaque per-profile
- * channels (S2 §8); null when the server has none. */
-const realtimeCfg=z.object({url:z.url(),key:z.string().min(1),transport:z.literal('sse').optional(),channels:z.record(z.uuid(),z.string().regex(/^fe:[A-Za-z0-9_-]{22,}$/))});
+/** realtime: our server's origin for the SSE stream and the opaque per-profile channels (S2 §8); null when the server
+ * has none. (The server also sends `key` and `transport` for older app builds; they are not needed here.) */
+const realtimeCfg=z.object({url:z.url(),channels:z.record(z.uuid(),z.string().regex(/^fe:[A-Za-z0-9_-]{22,}$/))});
 export const bootstrapSchema=z.object({ok:z.literal(true),account:z.object({id:z.uuid(),locale:z.string(),onboarded:z.boolean()}),profiles:z.array(profileCard),realtime:realtimeCfg.nullable().optional(),
  /** Web push: the server's public VAPID key; null while the server sends none. */
  push:z.object({webKey:z.string().regex(/^[A-Za-z0-9_-]{80,100}$/)}).nullable().optional()});
@@ -259,7 +259,7 @@ export function FeSessionProvider({children}:{children:ReactNode}){
    .finally(()=>{booting.current=null;if(bootAgain.current){bootAgain.current=false;refreshBoot();}});
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[]);
- // One socket per signed-in session, joined to the channels of every profile this account may act as.
+ // One stream per signed-in session, listening on the channels of every profile this account may act as.
  const listeners=useRef(new Set<RtListener>());
  /** Every signal goes here: the reads it changes are forgotten, `boot` and a resync read bootstrap again, then the
   * screens hear it. «печатает…» changes no data. */

@@ -15,7 +15,23 @@ const FROM = () => process.env.MAIL_FROM || `${productIdentity().name} <onboardi
 // заранее — иначе «письмо не пришло» разбирают часами, а причина одна и та же.
 const testDomain = () => /@resend\.dev>?\s*$/.test(FROM());
 
+/* Адреса тестового домена (TEST_LOGIN_DOMAIN, например feture.test) — тестовые аккаунты без почтового ящика:
+   письмо туда только отскочит и испортит репутацию отправителя. Такие письма не отправляются вовсе, а вход
+   работает фиксированным тестовым кодом или кодом из админки. Без TEST_LOGIN_DOMAIN правило выключено. */
+function testLoginDomain(){
+  const domain = String(process.env.TEST_LOGIN_DOMAIN || '').trim().toLowerCase().replace(/^@/, '');
+  return /^[a-z0-9.-]+\.[a-z]{2,}$/.test(domain) ? domain : '';
+}
+function isTestAddress(to){
+  const domain = testLoginDomain();
+  if(!domain) return false;
+  const parts = String(to || '').trim().toLowerCase().split('@');
+  return parts.length === 2 && parts[1] === domain;
+}
+
+/* Возвращает ответ Resend или {skipped:'test_address'} — письмо на тестовый адрес не отправлялось. */
 async function sendMail({to, subject, text, html}){
+  if(isTestAddress(to)) return {skipped: 'test_address'};
   if(!KEY()) throw Object.assign(new Error('no_mail_key'), {code: 'no_mail_key'});
   let res, data;
   try{
@@ -50,4 +66,4 @@ const mailInfo = () => ({
   seen: Object.keys(process.env).filter(k => /^(RESEND_|MAIL_)/.test(k)).sort()
 });
 
-module.exports = { sendMail, mailInfo, testDomain };
+module.exports = { sendMail, mailInfo, testDomain, isTestAddress };

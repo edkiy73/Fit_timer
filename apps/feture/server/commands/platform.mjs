@@ -12,7 +12,7 @@ const run = {
     // to_jsonb: the A05 mark comes with a later migration; stage-0 schemas simply have none.
     const [mark] = await q.query(`select to_jsonb(a) ? 'onboarded_at' has, to_jsonb(a) ->> 'onboarded_at' stamp from feture.account a where a.id = $1`, [account.id]);
     const rows = await myProfiles(q, account.id);
-    // Realtime (S2 §8): the public socket address and, per profile, the opaque channel only its members get.
+    // Realtime (S2 §8): the SSE stream's origin and, per profile, the opaque channel only its members get.
     const topics = cfg.realtime ? await channels(q, rows.map(p => p.id)) : {};
     return {
       // Registered = A04 made the profile AND A05 was finished or skipped (onboarding.complete); a reload on A05 returns to A05.

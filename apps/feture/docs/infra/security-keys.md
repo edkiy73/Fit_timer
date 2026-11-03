@@ -58,7 +58,7 @@ Robokassa/NOWPayments. Резервные коды сохранить в мен�
 | `SUPABASE_SECRET_KEY` | Полный доступ к базе Supabase | При подозрении на утечку |
 | `FETURE_DATABASE_URL` | Вход ограниченной роли `feture_api` | При подозрении |
 | `FETURE_ID_PEPPER` | Скрытые идентификаторы | **Не менять** без миграции: сломает ссылки и хэши |
-| `FETURE_JOBS_SECRET` | Запуск фоновых задач (также в Vault Supabase) | При подозрении, вместе с Vault |
+| `FETURE_JOBS_SECRET` | Запуск фоновых задач (тик очереди на сервере) | При подозрении |
 | `FETURE_SUPPORT_EMAIL` | Куда приходят сообщения «Нужна помощь со входом» (не секрет) | Перед запуском: рабочая почта |
 | `FETURE_MEDIA_TOKEN_SECRET`, `R2_*`, `RESEND_API_KEY`, `FIREBASE_SERVICE_ACCOUNT_*`, `FE_VAPID_*` | Медиа, письма и push от нашего имени | При подозрении |
 | `FETURE_KEYSTORE_*` (GitHub) | Подпись приложения | Никогда (смена = новое приложение) |

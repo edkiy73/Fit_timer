@@ -95,9 +95,8 @@ async function handleAdminCampaigns(action, body, res){
         try{
           const text=msg.body+'\n\n'+productName();
           const html=`<div style="font:16px/1.55 -apple-system,Segoe UI,Roboto,sans-serif;color:#1B1630"><h2 style="font-size:22px">${escMail(msg.title)}</h2><p>${escMail(msg.body).replace(/\n/g,'<br>')}</p><p style="color:#6C6785;font-size:13px">Настройки рассылок можно изменить в ${escMail(productName())} → Аккаунт → Уведомления.</p></div>`;
-          await sendMail({to:acc.email,subject:msg.title,text,html});
-          emailSent++;
-          delivered=true;
+          const sent=await sendMail({to:acc.email,subject:msg.title,text,html});
+          if(!(sent&&sent.skipped)){emailSent++;delivered=true;}
         }catch(_){failed++;}
       }
 

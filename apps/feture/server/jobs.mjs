@@ -20,8 +20,8 @@ import { helpHandlers, sweepPublicHelp } from './commands/support.mjs';
 import { supportEmail } from './support-config.mjs';
 import { sweepSelfies, verificationHandlers } from './commands/premium.mjs';
 
-/** Queue worker (S2 §8, D7). Called every minute by pg_cron + pg_net (Vercel Hobby cron is daily only)
- * through `POST /api/fe?jobs=1` with the jobs secret. Every handler is idempotent.
+/** Queue worker (S2 §8, D7). Called every minute by server/host.mjs (and soon after a command queued something,
+ * server/kick.mjs) through `POST /api/fe?jobs=1` with the jobs secret. Every handler is idempotent.
  * Only topics with a handler here are claimed. Every enqueued topic has one: history and staff markers are marked
  * done silently (notify.mjs SILENT_TOPICS; tests/fe-notify-topics-postgres.mjs fails on a topic nobody takes).
  * Mail topics wait while mail is not set up.
@@ -126,7 +126,7 @@ async function settlePosts(db, assetId) {
 }
 
 /** Upload intents that were never committed are closed; their quarantine key is handled by media.purge three
- * hours later (Supabase signed upload URLs live about two hours), which also scans anything that did arrive.
+ * hours later (well past any upload link's life), which also scans anything that did arrive.
  * @param {Db} db */
 export async function sweepExpiredUploads(db) {
   return db.tx(async q => {

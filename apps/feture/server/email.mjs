@@ -11,7 +11,8 @@ import { staleReason } from './push.mjs';
  * - **Address.** The one a person signs in with: Core proves it with the email code, so only verified addresses are
  *   kept, one per account (each partner of a couple gets their own). It is written by the command handler
  *   (`noteAddress`), sealed with a key derived from FETURE_ID_PEPPER plus a keyed hash (bounces, complaints), so a
- *   database copy alone is not a list of emails (S1 D2). Reserved test domains (`.test`) get nothing.
+ *   database copy alone is not a list of emails (S1 D2). Test addresses (TEST_LOGIN_DOMAIN, any `.test`)
+ *   are never kept, so nothing is queued for them (`testAddress`).
  * - **Queue.** `email_delivery` holds one row per (item, address): `now` items at once, `now-if-unread` 15 minutes later,
  *   the morning `digest`. `sendDueEmails` (every worker tick) takes due rows with a lease, checks them again at send time
  *   and sends; a transient error (network, timeout, 429, 5xx) retries with a backoff, a refusal fails for good.
@@ -77,14 +78,33 @@ export function zoneOk(tz) {
   try { new Intl.DateTimeFormat('en', { timeZone: tz }); return true; } catch { return false; }
 }
 
+/** A test account's address: the test sign-in domain (TEST_LOGIN_DOMAIN, the same env Core's mail skips) or any
+ * reserved `.test` domain. No mailbox there: mail would only bounce and hurt the sender, so none is ever queued.
+ * @param {string} address @param {Record<string, string | undefined>} [env] */
+export function testAddress(address, env = process.env) {
+  const domain = norm(address).split('@')[1] ?? '';
+  const test = norm(env.TEST_LOGIN_DOMAIN).replace(/^@/, '');
+  return /\.test$/.test(domain) || (!!test && domain === test);
+}
+
 /** @type {Map<string, {key: string, at: number}>} what this warm instance wrote last per account */
 const noted = new Map();
 /** Keeps the signed-in (verified) address, the device's zone and «the app was opened now» for an account. At most one
- * write every few minutes per account and instance; never fails the request.
+ * write every few minutes per account and instance; never fails the request. A test address is never kept (and one
+ * kept before is dropped with its queued mail), so nothing is ever queued for it.
  * @param {Db} db @param {string} pepper @param {string} accountId @param {string} email @param {unknown} tz */
 export async function noteAddress(db, pepper, accountId, email, tz) {
   const address = norm(email);
   if (!EMAIL.test(address) || address.length > 254 || !pepper) return;
+  if (testAddress(address)) {
+    if (noted.get(accountId)?.key === 'test') return;
+    noted.set(accountId, { key: 'test', at: Date.now() });
+    try {
+      await db.query(`delete from feture.email_delivery where account_id = $1 and state = 'queued'`, [accountId]);
+      await db.query(`delete from feture.email_address where account_id = $1`, [accountId]);
+    } catch { /* before the migration, or a hiccup: next time */ }
+    return;
+  }
   const zone = zoneOk(tz) ? /** @type {string} */ (tz) : null;
   const hash = addressHash(pepper, address);
   const key = hash.toString('hex') + '|' + (zone ?? '');
@@ -218,7 +238,7 @@ async function sendOne(db, mail, r) {
   if (!settings.email) return skip('off');
   const to = openAddress(mail.pepper, a.address_sealed);
   if (!to) return skip('address');
-  if (/\.test$/i.test(to)) return skip('test_address');
+  if (testAddress(to)) return skip('test_address');
   const lang = langOf(a);
   const content = r.mode === 'digest' ? await digestContent(db, r.account_id, a, settings, lang) : await itemContent(db, r, a, settings, lang);
   if (typeof content === 'string') return skip(content);

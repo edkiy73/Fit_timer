@@ -30,7 +30,6 @@ export function signalEntities(kind:RtKind|null,tag?:string):LiveEntity[]|'all'{
   case 'chat':return ['chat','counts'];
   case 'notify':return ['notify','counts'];
   case 'decide':return ['decide','counts'];
-  case 'feed':return ['post'];
   case 'changed':return tag==='boot'?'all':tag&&SERVER_ENTITIES.includes(tag)?[tag as LiveEntity]:[];
  }
  return [];

@@ -1,9 +1,8 @@
 // @ts-check
-/** Realtime «something new» signals over Server-Sent Events, on our own server (docs/infra/migration-plan.md, day 3).
- * Replaces Supabase Broadcast with the same model (server/realtime.mjs, S2 §8): a channel is an opaque token only its
- * profile's current members get in `session.bootstrap`, a message carries only the kind (and the opaque typing tag),
- * and the client then fetches with the normal commands. Holding the token is the whole permission — as with the public
- * Broadcast channels — so no session is needed here and nothing private ever travels on this stream.
+/** Realtime «something new» signals over Server-Sent Events, on our own server (server/realtime.mjs, S2 §8): a channel
+ * is an opaque token only its profile's current members get in `session.bootstrap`, a message carries only the kind
+ * (and the opaque typing or entity tag), and the client then fetches with the normal commands. Holding the token is the
+ * whole permission, so no session is needed here and nothing private ever travels on this stream.
  *
  * One Node process (server/host.mjs) holds every connection, so the hub is a module-level singleton: api/fe.mjs sends
  * into it, the host serves `GET /api/fe-events?c=<token>,<token>` from it, and the queue worker tick (a request to the
@@ -42,7 +41,7 @@ export function createHub({ maxPerAddress = 20, maxTotal = 20_000 } = {}) {
     };
   }
 
-  /** The `Sender` of `createSignals` (same message shape as Broadcast). @type {Sender} */
+  /** The `Sender` of `createSignals`. @type {Sender} */
   const sender = async messages => {
     for (const m of messages) {
       const set = byTopic.get(m.topic);
