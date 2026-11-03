@@ -124,7 +124,7 @@ export function MeEditScreen(){
  };
 
  if(!acting)return null;
- const aud=only==='priv'?<AudTag k="granted"/>:only&&only!=='about'?<AudTag k="all"/>:null;
+ const aud=only==='priv'?<AudTag k="granted"/>:null;
  const slots=(k:'photos'|'privMedia',base:Ph[],max:number)=>{
   const list=drag.arrange(k,base);const ids=base.map(x=>x.id);
   const cells:ReactNode[]=list.map((ph,i)=><PhotoSlot key={ph.id} id={ph.id} big={k==='photos'&&i===0} dragging={drag.preview?.drag===ph.id} src={ph.src}
@@ -165,7 +165,7 @@ export function MeEditScreen(){
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :!d||!p?<Skel kind="card" rows={3}/>
     :<>
-     {show('media')&&<Group className="ph20" id="peMedia" title={only?undefined:t('fe.me.photos')} action={only?undefined:<AudTag k="all"/>} foot={t('fe.mx.ed.photoHint')}>
+     {show('media')&&<Group className="ph20" id="peMedia" title={only?undefined:t('fe.me.photos')} foot={t('fe.mx.ed.photoHint')}>
       {slots('photos',d.photos,MAX_PHOTOS)}</Group>}
      {show('media')&&<PostPhotoPicker profileId={acting.id} chosen={d.photos.map(x=>x.id)} onToggle={m=>{
       // V21 phToggle: a photo of an own post goes on the profile or comes off it (up to six); «Сохранить» writes it.
