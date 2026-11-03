@@ -2,7 +2,7 @@ import { readdir, readFile, access } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { spawn, spawnSync } from 'node:child_process';
 import path from 'node:path';
-import { affectedApps, lightChecks } from './affected-apps.mjs';
+import { affectedApps, lightChecks, LIGHT_SCOPES } from './affected-apps.mjs';
 
 const ROOT = process.cwd();
 const APPS_DIR = path.join(ROOT, 'apps');
@@ -50,8 +50,8 @@ if(!all.length) throw new Error('No apps with package.json found under apps/');
 
 if(mode === 'setup' || mode === 'setup:affected'){
   const target = mode === 'setup:affected' ? resolveAffected(scriptName, all.map(a=>a.name)) : null;
-  // Облегчённой проверке (только node) зависимости приложения не нужны.
-  const selected = target ? all.filter(a=>target.apps.includes(a.name) && !target.light[a.name]) : all;
+  // Облегчённой проверке зависимости приложения нужны, только если её область это требует (LIGHT_SCOPES[app].deps).
+  const selected = target ? all.filter(a=>target.apps.includes(a.name) && (!target.light[a.name] || LIGHT_SCOPES[a.name]?.deps)) : all;
   console.log('Установка зависимостей: ' + (selected.map(a=>a.name).join(', ') || 'нет приложений'));
   for(const app of selected){
     const lock = path.join(app.dir, 'package-lock.json');
