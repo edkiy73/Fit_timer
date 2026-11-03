@@ -18,7 +18,9 @@ import {MeAboutBlock} from './about-facts';
 import {PrivateLayer} from './private';
 import {NameBadges} from './faces';
 import {usePremiumStatus} from './account-extra';
-import {BasicsBlock,DetailsBlock,MeSkel,PhotosBlock,StatusHint,catalogRes,profileRes,settingsRes,type Profile,type Settings as MeSettings,type option} from './me';
+import {BasicsForm} from './me-basics-form';
+import type {Place} from './kit/Place';
+import {DetailsBlock,MeSkel,PhotosBlock,StatusHint,catalogRes,profileRes,settingsRes,type Profile,type Settings as MeSettings,type option} from './me';
 
 /** The new «Я» (owner's layout, 04.11.2026), shown next to the current one at /n/me/new until the owner picks it:
  * the same header with the name badges, «Нужно решить», then one short list of sections. Every row opens an existing
@@ -110,14 +112,13 @@ export function MeNewScreen(){
 export function MeNewSection(){
  const {section}=useParams();const {state,acting,call}=useFe();const {t,locale}=useI18n();
  const {p,settings,error,load}=useMe();
- const [options,setOptions]=useState<z.infer<typeof option>[]>([]);
- useEffect(()=>{if(section==='profile')call('catalog.get',{},catalogRes,{asAccount:true}).then(r=>setOptions(r.options)).catch(()=>{});},[call,section]);
+ const [options,setOptions]=useState<z.infer<typeof option>[]>([]);const [places,setPlaces]=useState<Place[]>([]);
+ useEffect(()=>{if(section==='profile')call('catalog.get',{},catalogRes,{asAccount:true}).then(r=>{setOptions(r.options);setPlaces(r.places??[]);}).catch(()=>{});},[call,section]);
  if(state.status!=='ready'||!acting)return null;
  const cp=acting.kind==='couple';
  const couple=state.boot.profiles.find(x=>x.kind==='couple'&&x.state!=='deleted');
  const title=section==='gallery'?t('fe.mx.gal'):section==='private'?t('fe.m2.private'):t('fe.m2.profile');
  const label=(kind:string,code:string)=>{const o=options.find(x=>x.kind===kind&&x.code===code);return o?(locale==='en'?o.en:o.ru):code;};
- const name=p?.name||acting.name||acting.handle||'?';
  return <>
   <Bar title={title} back="/n/me/new"/>
   <View refresh={load}>
@@ -127,7 +128,7 @@ export function MeNewSection(){
     :section==='private'?<PrivateLayer profileId={p.id} on={settings.privateOn!==false} requestsFrom={settings.requestsFrom??'all'} onChanged={load} askHere={false}/>
     :<>
      <PhotosBlock p={p} settings={settings} onChanged={load}/>
-     <BasicsBlock p={p} name={name}/>
+     <BasicsForm p={p} places={places} onSaved={load}/>
      <MeAboutBlock p={p}/>
      <DetailsBlock p={p} label={label}/>
      {!cp&&couple&&<StatusHint p={p} coupleId={couple.id} onDone={load}/>}

@@ -1,5 +1,8 @@
 /** Copy of the new «Я» and «Настройки» (src/fe/me-new.tsx, src/fe/settings-new.tsx); the rows reuse the current keys. */
 export const ru = {
+  'fe.mb.age': 'Возраст',
+  'fe.mb.ageShow': 'Показывать · {n}',
+  'fe.mb.ageHide': 'Скрыть',
   'fe.m2.g.profile': 'Профиль',
   'fe.m2.g.private': 'Приватное',
   'fe.m2.g.mine': 'Моё',
@@ -21,6 +24,9 @@ export const ru = {
   'fe.m2.checks.todo': 'не пройдены',
 };
 export const en = {
+  'fe.mb.age': 'Age',
+  'fe.mb.ageShow': 'Show · {n}',
+  'fe.mb.ageHide': 'Hide',
   'fe.m2.g.profile': 'Profile',
   'fe.m2.g.private': 'Private',
   'fe.m2.g.mine': 'Mine',
