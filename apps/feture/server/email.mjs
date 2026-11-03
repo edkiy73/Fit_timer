@@ -280,8 +280,8 @@ async function itemContent(db, r, a, settings, lang) {
     if (!e) return 'gone';
     if (!settings.categories.decide.email) return 'off';
     if ((await staleReason(db, r.account_id, { decide: { kind: id, id: id2 } })).stale) return 'resolved';
-    // A task is seen once the app was opened after it came (it waits in «Нужно решить» on every screen).
-    if (a.seen_at && new Date(a.seen_at) > new Date(r.created_at)) return 'seen';
+    // Still open after 15 minutes: it goes. Having the app open is not «read» — the app talks to the server in the
+    // background (counters, live signals), so «opened since» would cancel every task email (owner test 03.11.2026).
     return { subject: textOf(e.subject, lang), title: textOf(settings.mode === 'normal' ? e.push.normal : e.subject, lang), button: w.open, what: 'decide' };
   }
   if (kindOf !== 'n') return 'gone';
