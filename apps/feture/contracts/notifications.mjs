@@ -55,7 +55,7 @@ export const FILTERS = /** @type {const} */ (['access', 'likes', 'matches', 'rep
 export const CARDS = /** @type {const} */ (['news', 'decision', 'result', 'safety', 'event', 'summary']);
 export const EMAILS = /** @type {const} */ (['none', 'now', 'now-if-unread', 'digest']);
 /** «Нужно решить» kinds (server/commands/inbox.mjs decisions()); their entries are `decide.<kind>`. */
-export const DECIDE_KINDS = /** @type {const} */ (['pinv', 'req', 'capp', 'eapp', 'link', 'linkChange', 'tag', 'joint', 'jointReturned']);
+export const DECIDE_KINDS = /** @type {const} */ (['pinv', 'req', 'capp', 'eapp', 'link', 'linkChange', 'tag', 'joint']);
 
 /** Raw entries. A key `type.sub` takes everything from `type` and changes what it names. Defaults: a notice, card
  * «news», filter «other», email in the digest, push category «other» with no name, no collapse, «Больше недоступно». */
@@ -201,12 +201,13 @@ const RAW = /** @type {Record<string, any>} */ ({
     normal: T('Приглашение в пару отклонили', 'Your couple invitation was declined'), dest: 'couple' },
   'pair.deleted': { filter: 'pair', icon: 'Users', tone: '', text: T('{couple} · Пара удалена', '{couple} · The couple was deleted'),
     normal: T('Пара удалена', 'The couple was deleted'), email: 'now-if-unread', dest: 'couple', gone: GONE_PAIR },
-  'pair.stopped': { filter: 'pair', icon: 'Users', tone: '', text: T('{couple} · Пара остановлена', '{couple} · The couple was stopped'),
-    normal: T('Пара остановлена', 'The couple was stopped'), email: 'now-if-unread', dest: 'couple', gone: GONE_PAIR },
+  // One pause, one row per side (couples.mjs couple.stop): not a «сузил видимость» next to it.
+  'pair.stopped': { filter: 'pair', icon: 'Users', tone: '', text: T('{couple} · Пара на паузе', '{couple} · The couple is paused'),
+    normal: T('Пара на паузе', 'The couple is paused'), email: 'now-if-unread', dest: 'coupleRestore', gone: GONE_PAIR },
   'pair.restored': { filter: 'pair', icon: 'Users', tone: 'g', text: T('{couple} · Пара восстановлена', '{couple} · The couple was restored'),
     normal: T('Пара восстановлена', 'The couple was restored'), dest: 'couple', gone: GONE_PAIR },
   'pair.restoreRequested': { filter: 'pair', icon: 'Users', tone: 'v', text: T('{couple} · Партнёр хочет восстановить пару', '{couple} · Your partner wants to restore the couple'),
-    normal: T('Партнёр хочет восстановить пару', 'Your partner wants to restore the couple'), email: 'now-if-unread', dest: 'couple', gone: GONE_PAIR },
+    normal: T('Партнёр хочет восстановить пару', 'Your partner wants to restore the couple'), email: 'now-if-unread', dest: 'coupleRestore', gone: GONE_PAIR },
   'pair.narrowed': { filter: 'pair', icon: 'Users', tone: 'v', text: T('{couple} · Партнёр сузил видимость пары', '{couple} · Your partner narrowed the couple’s visibility'),
     normal: T('Партнёр сузил видимость пары', 'Your partner narrowed the couple’s visibility'), dest: 'couple', gone: GONE_PAIR },
   'pair.trust': { filter: 'pair', icon: 'Users', tone: 'v', text: T('{couple} · Изменилось согласие партнёра', '{couple} · Partner approval changed'),
@@ -216,8 +217,11 @@ const RAW = /** @type {Record<string, any>} */ ({
   'pair.decided': { kind: 'result', filter: 'pair', icon: 'Users', tone: 'v', card: 'result', text: T('{couple} · Партнёр ответил на изменение', '{couple} · Your partner answered a change'),
     normal: T('Партнёр ответил на изменение', 'Your partner answered a change'), dest: 'approval', gone: GONE_PAIR },
   'pair.decided.approved': { tone: 'g', text: T('{couple} · Партнёр согласился', '{couple} · Your partner agreed'), normal: T('Партнёр согласился', 'Your partner agreed') },
+  'pair.decided.rejected': { tone: '', text: T('{couple} · Партнёр отказался', '{couple} · Your partner declined'), normal: T('Партнёр отказался', 'Your partner declined') },
   'pair.decided.cancelled': { tone: '', text: T('{couple} · Изменение отменено', '{couple} · The change was cancelled'), normal: T('Изменение отменено', 'The change was cancelled') },
-  'pair.decided.expired': { tone: '', text: T('{couple} · Срок согласия истёк', '{couple} · The approval expired'), normal: T('Срок согласия истёк', 'The approval expired') },
+  'pair.decided.expired': { tone: '', text: T('{couple} · Срок истёк', '{couple} · The time ran out'), normal: T('Срок истёк', 'The time ran out') },
+  'pair.decided.superseded': { tone: '', text: T('{couple} · Заменено новым предложением', '{couple} · Replaced by a newer proposal'), normal: T('Заменено новым предложением', 'Replaced by a newer proposal') },
+  'pair.decided.stale': { tone: '', text: T('{couple} · Не применено: пока ждали, всё изменилось', '{couple} · Not applied: it changed while waiting'), normal: T('Изменение устарело', 'The change is out of date') },
   // A partner's action for the couple: in the couple's history, never by email (owner 03.11.2026).
   'pair.acted': { filter: 'pair', icon: 'Users', tone: 'v', text: T('{couple} · Партнёр сделал действие от пары', '{couple} · Your partner acted for the couple'),
     normal: T('Партнёр сделал действие от пары', 'Your partner acted for the couple'), email: 'none', dest: 'couple', collapse: 'type', gone: GONE_PAIR },
@@ -295,10 +299,30 @@ const RAW = /** @type {Record<string, any>} */ ({
     cat: 'decide', normal: T('Тебе предлагают изменить связь', 'Someone proposes to change a link'), email: 'now-if-unread', dest: 'link' },
   'decide.tag': { kind: 'task', card: 'decision', filter: 'posts', icon: 'Image', tone: 'v', text: T('{name} отмечает тебя на фото — без твоего согласия публикацию никто не увидит', '{name} marked you in a photo — nobody sees the post without your consent'),
     cat: 'decide', normal: T('Тебя отметили на фото', 'You were marked in a photo'), email: 'now-if-unread', dest: 'post', gone: GONE_POST },
-  'decide.joint': { kind: 'task', card: 'decision', filter: 'pair', icon: 'Clock', tone: '', text: T('Партнёр: изменение на подтверждение', 'Partner: a change to approve'),
+  'decide.joint': { kind: 'task', card: 'decision', filter: 'pair', icon: 'Clock', tone: '', text: T('{name} предлагает изменение', '{name} suggests a change'),
+    alone: T('Партнёр предлагает изменение', 'Your partner suggests a change'),
     cat: 'decide', normal: T('Партнёр ждёт твоего согласия', 'Your partner waits for your approval'), email: 'now-if-unread', dest: 'approval', gone: GONE_PAIR },
-  'decide.jointReturned': { kind: 'task', card: 'decision', filter: 'pair', icon: 'Pencil', tone: '', text: T('Изменение вернули на доработку', 'A change was sent back'),
-    cat: 'decide', normal: T('Изменение вернули на доработку', 'A change was sent back'), email: 'now-if-unread', dest: 'approval', gone: GONE_PAIR },
+  // «{name} предлагает {action}» per approval kind (server/approvals.mjs APPROVAL_KINDS): the decide card line, the
+  // same words on both sides (decide.list carries `approval.kind`).
+  'decide.joint.profile.update': { text: T('{name} предлагает изменить профиль пары', '{name} suggests editing the couple’s profile') },
+  'decide.joint.profile.photos': { text: T('{name} предлагает добавить фото пары', '{name} suggests adding couple photos') },
+  'decide.joint.profile.setVisibility': { text: T('{name} предлагает изменить видимость пары', '{name} suggests changing the couple’s visibility') },
+  'decide.joint.interests.set': { text: T('{name} предлагает изменить интересы пары', '{name} suggests changing the couple’s interests') },
+  'decide.joint.post.publish': { text: T('{name} предлагает опубликовать пост от пары', '{name} suggests posting for the couple') },
+  'decide.joint.post.edit': { text: T('{name} предлагает изменить пост пары', '{name} suggests editing a couple post') },
+  'decide.joint.event.submit': { text: T('{name} предлагает отправить событие на проверку', '{name} suggests sending an event for review') },
+  'decide.joint.event.update': { text: T('{name} предлагает изменить событие пары', '{name} suggests changing a couple event') },
+  'decide.joint.event.rsvp': { text: T('{name} предлагает ответить на событие от пары', '{name} suggests answering an event for the couple') },
+  'decide.joint.event.apply': { text: T('{name} предлагает подать заявку на событие', '{name} suggests applying to an event') },
+  'decide.joint.access.grant': { text: T('{name} предлагает открыть приватную часть пары', '{name} suggests opening the couple’s private part') },
+  'decide.joint.private.on': { text: T('{name} предлагает включить приватную часть пары', '{name} suggests turning on the couple’s private part') },
+  'decide.joint.community.create': { text: T('{name} предлагает создать сообщество от пары', '{name} suggests creating a community for the couple') },
+  'decide.joint.community.join': { text: T('{name} предлагает вступить в сообщество', '{name} suggests joining a community') },
+  'decide.joint.link.propose': { text: T('{name} предлагает связь с профилем', '{name} suggests a link with a profile') },
+  'decide.joint.link.accept': { text: T('{name} предлагает подтвердить связь', '{name} suggests confirming a link') },
+  'decide.joint.link.visibility': { text: T('{name} предлагает показать связь шире', '{name} suggests showing a link more widely') },
+  'decide.joint.location.set': { text: T('{name} предлагает поделиться местом пары', '{name} suggests sharing the couple’s location') },
+  'decide.joint.chat.request': { text: T('{name} предлагает написать от пары', '{name} suggests messaging for the couple') },
 });
 
 /** Which data field picks a subtype of a type (`type.sub` in the catalog). */
@@ -326,9 +350,8 @@ const SUB = /** @type {Record<string, (d: Record<string, any>) => unknown>} */ (
   eventPublished: d => (d.what === 'change' ? 'change' : undefined),
   eventRejected: d => (d.what === 'change' ? 'change' : undefined),
   'decide.req': d => (d.label === 'couple' ? 'couple' : undefined),
-  // A partner approval's own words per kind of change (`decide.joint.<kind>`), when the catalog has them.
-  'decide.joint': d => d.kind,
-  'decide.jointReturned': d => d.kind,
+  // A partner approval's own words per kind of change (`decide.joint.<kind>`): the decide item's `approvalKind`.
+  'decide.joint': d => d.approvalKind ?? d.kind,
 });
 
 /** @param {any} o @returns {Entry} */
@@ -416,7 +439,7 @@ const FIXED = /** @type {Record<string, string>} */ ({
   inbox: '/n/inbox', me: '/n/me', chats: '/n/chats', links: '/n/me/links', myPosts: '/n/me/posts', interests: '/n/me/interests',
   couple: '/n/me/pair', approval: '/n/me/pair', blocked: '/n/settings/blocked', security: '/n/settings/security', age: '/n/settings/age',
   photoCheck: '/n/settings/photo-check', help: '/n/help', premium: '/n/premium', staff: '/n/staff', people: '/n/people',
-  access: '/n/me/access', visibility: '/n/me', accessRequest: '/n/me/access', invite: '/n/inbox', link: '/n/me/links', moderation: '/n/inbox',
+  access: '/n/me/access', visibility: '/n/me', accessRequest: '/n/me/access', invite: '/n/inbox', link: '/n/me/links', moderation: '/n/inbox', coupleRestore: '/n/me/pair',
 });
 
 /** Where a notification (or a «Нужно решить» item, or a chat message push) opens: a route of the /n screens, with the
@@ -451,6 +474,8 @@ export function destination(n) {
     case 'target': path = isId(d.target) ? `/n/people/${d.target}` : '/n/me'; break;
     case 'object': path = obj ? objectPath(obj.type, obj.id) : '/n/me'; break;
     case 'approval': { const id = obj?.type === 'approval' ? obj.id : d.approvalId; path = '/n/me/pair'; if (isId(id)) q.approval = id; break; }
+    // The restore screen of that couple (by id), not whichever profile is active.
+    case 'coupleRestore': { const c = n.couple ?? n.addressee; path = '/n/me/pair'; if (isId(c)) q.restore = c; break; }
     case 'coupleGallery': { const c = n.couple ?? n.addressee; if (isId(c)) path = `/n/people/${c}/gallery`; break; }
     case 'access': path = '/n/me/access'; q.tab = 'byme'; break;
     // That request by ID: «Доступы → Открыто» shows it first.
@@ -486,7 +511,7 @@ export const ROUTE_PATH = new RegExp(`^/n/(?:inbox|inbox/${U}|chats|chats/reques
   + `|settings|settings/(?:security|age|photo-check|blocked|notifications)|help|premium|staff|people|feed`
   + `|feed/post/${U}(?:/edit)?|events/${U}(?:/applications)?|communities/${U}(?:/requests)?|people/${U}(?:/gallery)?)$`);
 export const ROUTE_QUERY = Object.freeze(/** @type {Record<string, RegExp>} */ ({
-  reply: new RegExp(`^${U}$`), approval: new RegExp(`^${U}$`), ticket: new RegExp(`^${U}$`), as: new RegExp(`^${U}$`),
+  reply: new RegExp(`^${U}$`), approval: new RegExp(`^${U}$`), ticket: new RegExp(`^${U}$`), as: new RegExp(`^${U}$`), restore: new RegExp(`^${U}$`),
   part: /^private$/, tab: /^(?:byme|withme|out|todo|all)$/, layer: /^(?:vis|priv|mine)$/,
   request: new RegExp(`^${U}$`), item: new RegExp(`^${U}$`), link: new RegExp(`^${U}$`),
 }));

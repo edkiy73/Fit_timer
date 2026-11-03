@@ -8,6 +8,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { CARDS, CATALOG, DECIDE_KINDS, EMAILS, FILTERS, PUSH_CATS, destination, entryFor, noteKey, routeOk, textOf } from '../contracts/notifications.mjs';
 import { PROFILE_SETTINGS } from '../contracts/me.mjs';
+import { APPROVAL_KINDS } from '../server/approvals.mjs';
 import { platform } from '../server/commands/platform.mjs';
 import { me } from '../server/commands/me.mjs';
 import { posts } from '../server/commands/posts.mjs';
@@ -62,7 +63,9 @@ test('subtypes with their own words are picked from the data', () => {
   }
   assert.ok(whats.size >= 20, [...whats].join());
   for (const w of whats) sub('pair.acted', { what: w }, 'pair.acted.' + w);
-  for (const s of ['approved', 'cancelled', 'expired']) sub('pair.decided', { state: s }, 'pair.decided.' + s);
+  for (const s of ['approved', 'rejected', 'cancelled', 'expired', 'superseded', 'stale']) sub('pair.decided', { state: s }, 'pair.decided.' + s);
+  // Every approval kind has its own card line («{name} предлагает …»).
+  for (const k of APPROVAL_KINDS) sub('decide.joint', { approvalKind: k }, 'decide.joint.' + k);
   sub('linkChanged', { answer: 'yes' }, 'linkChanged.yes'); sub('linkChanged', { answer: 'no' }, 'linkChanged.no');
   sub('pair.trust', { approves: true }, 'pair.trust.on'); sub('pair.trust', { approves: false }, 'pair.trust.off');
   sub('decide.req', { label: 'couple' }, 'decide.req.couple'); sub('decide.req', { label: 'me' }, 'decide.req');
@@ -72,7 +75,7 @@ test('subtypes with their own words are picked from the data', () => {
 test('every entry is complete: texts, card, destination, push, email; no known type says only «Уведомление»', () => {
   const routes = new Set(['inbox', 'me', 'chats', 'links', 'myPosts', 'interests', 'couple', 'approval', 'blocked', 'security', 'age', 'photoCheck', 'help',
     'premium', 'staff', 'people', 'access', 'visibility', 'post', 'postEdit', 'event', 'eventApplications', 'community', 'communityRequests', 'chat', 'actor',
-    'actorPrivate', 'target', 'object', 'coupleGallery', 'moderation', 'accessRequest', 'invite', 'link']);
+    'actorPrivate', 'target', 'object', 'coupleGallery', 'moderation', 'accessRequest', 'invite', 'link', 'coupleRestore']);
   const icons = read('src/fe/inbox.tsx').match(/const ICONS:Record<string,LucideIcon>=\{([^}]*)\}/)?.[1].split(',').map(x => x.split(':')[0].trim());
   assert.ok(icons?.length, 'the inbox icon map');
   for (const [key, e] of Object.entries(CATALOG)) {

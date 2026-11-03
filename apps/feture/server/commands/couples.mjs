@@ -3,7 +3,7 @@ import { couplesCommands } from '../../contracts/couples.mjs';
 import { endConversations } from './chats.mjs';
 import { fail, isUniqueViolation } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
-import { narrowCouple } from '../approvals.mjs';
+import { closePending, narrowCouple } from '../approvals.mjs';
 import { closeAll } from './access.mjs';
 import { handleState, setVisibilityAs, writeIdentity } from './me.mjs';
 import { randomBytes } from 'node:crypto';
@@ -117,7 +117,7 @@ export async function closeOutgoing(q, profileId) {
 export async function deleteCouple(q, profileId, reason) {
   await closeAll(q, profileId, 'couple_stopped');
   await closeOutgoing(q, profileId);
-  await q.query(`update feture.partner_approval set state = 'cancelled', decided_at = now() where profile_id = $1 and state = 'pending'`, [profileId]);
+  await closePending(q, `a.profile_id = $1`, [profileId], 'cancelled', { silent: true });
   for (const t of ['interest', 'private_part', 'profile_location']) await q.query(`delete from feture.${t} where profile_id = $1`, [profileId]);
   await q.query(`update feture.profile_details set bio = '', city_id = null, roles = '{}', formats = '{}', seeks = '{}' where profile_id = $1`, [profileId]);
   const media = await q.query(
@@ -284,7 +284,7 @@ const run = {
     coupleOnly(acting);
     const [p] = await q.query(`select id, handle, name, chosen_name, state, paused_at, restore_until, created_at from feture.profile where id = $1`, [acting.profileId]);
     const members = await q.query(
-      `select m.account_id = $2 me, m.approves_partner, pp.id profile_id, pp.handle, pp.name,
+      `select m.account_id = $2 me, coalesce(m.approves_before_pause, m.approves_partner) approves_partner, pp.id profile_id, pp.handle, pp.name,
          exists (select 1 from feture.couple_restore r where r.profile_id = m.profile_id and r.account_id = m.account_id) restore_agreed
        from feture.profile_member m join feture.account a on a.id = m.account_id join feture.profile pp on pp.id = a.person_profile_id
        where m.profile_id = $1 and m.state = 'active' order by m.account_id = $2 desc`, [acting.profileId, acting.accountId]);
@@ -308,11 +308,12 @@ const run = {
     const acting = need(a);
     coupleOnly(acting);
     // A safety action: immediate, by either partner; nothing pending can reopen anything afterwards.
-    await narrowCouple(q, acting, 'couple_stopped');
+    // One pause, one notice per side: «Пара на паузе» (couple.stopped), not a «сузил видимость» next to it.
+    await narrowCouple(q, acting, 'couple_stopped', { notify: false });
     const closed = await closeAll(q, acting.profileId, 'couple_stopped');
     await closeOutgoing(q, acting.profileId);
-    // Approval settings start over if the couple is restored (V21 dissolvePair).
-    await q.query(`update feture.profile_member set approves_partner = false where profile_id = $1`, [acting.profileId]);
+    // Each partner's approval mode is kept for a restore (owner 03.11.2026, decision 2); nothing waits while paused.
+    await q.query(`update feture.profile_member set approves_before_pause = approves_partner, approves_partner = false where profile_id = $1 and state = 'active'`, [acting.profileId]);
     await q.query(`update feture.profile_settings set discover_mode = 'off', updated_at = now() where profile_id = $1`, [acting.profileId]);
     const [p] = await q.query(
       `update feture.profile set state = 'paused', paused_at = now(), restore_until = now() + interval '30 days', updated_at = now()
@@ -336,8 +337,10 @@ const run = {
       await enqueue(q, 'couple.restoreRequested', acting.profileId, { for: acting.partnerAccountId });
       return { state: 'paused', waitingForPartner: true };
     }
-    // Restored with Discover off: being shown again is a fresh decision (V21 4524).
+    // Restored with the approval modes from before the pause; Discover stays off, visibility and access stay as the
+    // pause left them: being shown again is a fresh decision (V21 4524, owner 03.11.2026).
     await q.query(`update feture.profile set state = 'active', paused_at = null, restore_until = null, updated_at = now() where id = $1`, [acting.profileId]);
+    await q.query(`update feture.profile_member set approves_partner = coalesce(approves_before_pause, approves_partner), approves_before_pause = null where profile_id = $1 and state = 'active'`, [acting.profileId]);
     await q.query(`delete from feture.couple_restore where profile_id = $1`, [acting.profileId]);
     await enqueue(q, 'couple.restored', acting.profileId, { for: acting.partnerAccountId });
     return { state: 'active' };

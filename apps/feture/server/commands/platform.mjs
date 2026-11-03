@@ -1,6 +1,6 @@
 // @ts-check
 import { platformCommands } from '../../contracts/platform.mjs';
-import { cancelApproval, decideApproval, listApprovals } from '../approvals.mjs';
+import { cancelApproval, decideApproval, getApproval, listApprovals } from '../approvals.mjs';
 import { avatarSrc, commitUpload, removeAsset, uploadIntent } from '../media/assets.mjs';
 import { myProfiles } from '../profiles.mjs';
 
@@ -31,6 +31,7 @@ const run = {
   'decide.approvals': async (q, { acting }) => ({ items: await listApprovals(q, need(acting)) }),
   'decide.approval': (q, { acting, input }) => decideApproval(q, need(acting), input),
   'decide.cancel': (q, { acting, input }) => cancelApproval(q, need(acting), input.approvalId),
+  'approval.get': async (q, { account, input }) => ({ approval: await getApproval(q, account.id, input.id) }),
 };
 
 /** @type {Record<string, Command>} */

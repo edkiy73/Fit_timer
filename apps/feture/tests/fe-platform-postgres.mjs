@@ -32,6 +32,12 @@ async function setup() {
   await pg.exec(MIGRATION);
   // The partner approvals of approvals.mjs also store the note of a return (wave 6, 20261028180000_fe_waves67.sql).
   await pg.exec(readFileSync(new URL('../supabase/migrations/20261028180000_fe_waves67.sql', import.meta.url), 'utf8').split('\n').find(l => l.startsWith('alter table feture.partner_approval')));
+  // The inbox rows a decided approval reads (approvals.mjs → notify.mjs readAbout): the notification table and its shape.
+  for (const f of ['20261027230000_fe_notifications.sql', '20261103120000_fe_notification_shape.sql', '20261103200000_fe_inbox_center.sql']) {
+    await pg.exec(readFileSync(new URL('../supabase/migrations/' + f, import.meta.url), 'utf8'));
+  }
+  // Stage 3 outcomes: rejected / superseded / stale, the object's version, the couple's name then (20261103130000).
+  await pg.exec(readFileSync(new URL('../supabase/migrations/20261103210000_fe_approval_outcomes.sql', import.meta.url), 'utf8'));
   // Video and voice on media_asset (the media part of 20261028190000_fe_media_av.sql; the chat part needs the chat tables).
   await pg.exec(readFileSync(new URL('../supabase/migrations/20261028190000_fe_media_av.sql', import.meta.url), 'utf8').split('-- «Прослушано»')[0]);
   await pg.exec(readFileSync(new URL('../supabase/migrations/20261028231000_fe_video_edit.sql', import.meta.url), 'utf8'));
@@ -222,7 +228,7 @@ test('/api/fe media.commit, media.remove and decide.cancel: the owner only, idem
     assert.equal((await call('core-a', pa, { action: 'decide.cancel', opId: opId(), approvalId })).status, 404); // not this profile's
     assert.equal((await call('core-b', pc, { action: 'decide.cancel', opId: opId(), approvalId })).status, 404); // the partner decides, not cancels
     assert.equal((await call('core-a', pc, { action: 'decide.cancel', opId: opId(), approvalId })).state, 'cancelled');
-    assert.equal((await call('core-a', pc, { action: 'decide.cancel', opId: opId(), approvalId })).status, 404);
+    assert.equal((await call('core-a', pc, { action: 'decide.cancel', opId: opId(), approvalId })).status, 409); // closed already
     assert.equal((await call('core-b', pc, { action: 'decide.approval', opId: opId(), approvalId, choice: 'approve' })).status, 409);
     assert.deepEqual((await call('core-b', pc, { action: 'decide.approvals' })).items, []);
     const [told] = await db.query(`select payload from feture.outbox where topic = 'decide.resolved'`);
@@ -243,8 +249,12 @@ test('partner approvals: partner decides, stored states, stale and expired never
     const req = { kind: 'test.publish', targetType: 'post', targetId: target, change: { aud: 'all' }, summary: ['Видят все'] };
     const state = async id => (await db.query('select state from feture.partner_approval where id = $1', [id]))[0].state;
 
+    // A newer proposal of the same kind for the same object replaces the waiting one («заменено новым»).
+    const first = await db.tx(q => requestApproval(q, asA, req));
     const { approvalId } = await db.tx(q => requestApproval(q, asA, req));
-    await reject(db.tx(q => requestApproval(q, asA, req)), 'approval_pending');
+    assert.equal(await state(first.approvalId), 'superseded');
+    assert.equal((await db.query('select superseded_by from feture.partner_approval where id = $1', [first.approvalId]))[0].superseded_by, approvalId);
+    await reject(db.tx(q => decideApproval(q, asB, { approvalId: first.approvalId, choice: 'approve' })), 'conflict');
     assert.deepEqual((await listApprovals(db, asB)).map(x => [x.id, x.mine]), [[approvalId, false]]);
     await reject(db.tx(q => decideApproval(q, asA, { approvalId, choice: 'approve' })), 'forbidden');
     assert.deepEqual(await db.tx(q => decideApproval(q, asB, { approvalId, choice: 'approve' })), { state: 'approved', applied: true });

@@ -81,15 +81,60 @@ async function doAccept(q, acting, linkId, vis) {
   return { state: 'ok' };
 }
 
-registerApprovalKind('link.propose', { apply: async (q, row) => { await doPropose(q, await actingOf(q, row), row.change); } });
+/** The other side of a link as the couple may see it: active and not blocked either way, else nobody.
+ * @param {Q} q @param {string} coupleId @param {string | null} otherId */
+async function linkSide(q, coupleId, otherId) {
+  const [p] = await q.query(`select id, kind, handle, name from feture.profile where id = $1 and state = 'active' and not feture.blocked($2, id)`, [otherId, coupleId]);
+  return p ?? null;
+}
+/** @param {Q} q @param {string} linkId @param {string} coupleId */
+async function linkRow(q, linkId, coupleId) {
+  const [l] = await q.query(`select * from feture.profile_link where id = $1 and $2 in (a_profile_id, b_profile_id)`, [linkId, coupleId]);
+  return l ?? null;
+}
+/** @param {any} p */
+const sideObject = p => ({ type: 'profile', id: p?.id ?? null, title: p ? p.name || '@' + p.handle : null, state: p ? 'ok' : 'unavailable' });
+
+registerApprovalKind('link.propose', {
+  apply: async (q, row) => { await doPropose(q, await actingOf(q, row), row.change); },
+  version: async (q, row) => {
+    const [l] = await q.query(`select state from feture.profile_link where (a_profile_id = $1 and b_profile_id = $2) or (a_profile_id = $2 and b_profile_id = $1)`, [row.profile_id, row.change.profileId]);
+    return l?.state ?? 'none';
+  },
+  // To whom, which link, which side the couple takes, who will see it.
+  preview: async (q, row) => {
+    const c = /** @type {any} */ (row.change);
+    const p = await linkSide(q, row.profile_id, c.profileId);
+    return { object: sideObject(p), subject: p, link: { kind: c.kind, side: c.mySide ?? null, vis: c.vis ?? 'all' }, rows: [] };
+  },
+});
 registerApprovalKind('link.accept', {
   apply: async (q, row) => { const c = /** @type {any} */ (row.change); await doAccept(q, await actingOf(q, row), c.linkId, c.vis); },
+  version: async (q, row) => { const l = await linkRow(q, row.change.linkId, row.profile_id); return l ? `${l.state}:${l.kind}` : 'gone'; },
+  preview: async (q, row) => {
+    const c = /** @type {any} */ (row.change);
+    const l = await linkRow(q, c.linkId, row.profile_id);
+    const p = l ? await linkSide(q, row.profile_id, l.a_profile_id === row.profile_id ? l.b_profile_id : l.a_profile_id) : null;
+    return { object: { ...sideObject(p), state: !l ? 'deleted' : p ? 'ok' : 'unavailable' }, subject: p,
+      link: l ? { kind: l.kind, side: l.a_profile_id === row.profile_id ? l.a_side : l.b_side, vis: c.vis ?? 'all' } : null, rows: [] };
+  },
 });
 registerApprovalKind('link.visibility', {
   apply: async (q, row) => {
     const c = /** @type {any} */ (row.change);
     const l = await endpoint(q, c.linkId, await actingOf(q, row));
     await q.query(`update feture.profile_link set ${l.me}_vis = $2, updated_at = now() where id = $1`, [l.id, c.vis]);
+  },
+  version: async (q, row) => {
+    const l = await linkRow(q, row.change.linkId, row.profile_id);
+    return l ? String(l.a_profile_id === row.profile_id ? l.a_vis : l.b_vis) : 'gone';
+  },
+  preview: async (q, row) => {
+    const c = /** @type {any} */ (row.change);
+    const l = await linkRow(q, c.linkId, row.profile_id);
+    const p = l ? await linkSide(q, row.profile_id, l.a_profile_id === row.profile_id ? l.b_profile_id : l.a_profile_id) : null;
+    return { object: { ...sideObject(p), state: !l ? 'deleted' : p ? 'ok' : 'unavailable' }, subject: p, link: l ? { kind: l.kind, vis: c.vis } : null,
+      rows: [{ field: 'linkVis', before: l ? (l.a_profile_id === row.profile_id ? l.a_vis : l.b_vis) : null, after: c.vis }] };
   },
 });
 

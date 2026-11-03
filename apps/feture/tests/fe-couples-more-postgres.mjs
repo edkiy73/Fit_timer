@@ -1,4 +1,4 @@
-// Backlog wave 6 on PGlite as feture_api: «Вернуть на доработку» with a note and what the author then sees, the
+// Backlog wave 6 on PGlite as feture_api: a final refusal with an optional comment and what the author then sees, the
 // invitation link for a partner without an account, Q09 setup in one call, «Перестать делиться».
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -25,55 +25,54 @@ async function pairWorld() {
   return { ...env, a, b, d, pair };
 }
 
-test('returned with a note: the author sees it with the preview and version, a new version replaces it, dropping it ends it', async () => {
+test('a refusal is final: an optional comment, nothing changes, the author gets a result and no task; a new proposal starts over', async () => {
   const { pg, call, pair } = await pairWorld();
   try {
     const p = await call('ua', pair, { action: 'profile.update', opId: op(), rev: 1, bio: 'Нас двое' });
     const id = p.pending.approvalId;
-    // A note only when returning, at most 300 characters.
+    // A comment only with a refusal, at most 300 characters; «return» is gone.
     assert.equal((await call('ub', pair, { action: 'decide.approval', opId: op(), approvalId: id, choice: 'approve', comment: 'ok' })).status, 400);
-    assert.equal((await call('ub', pair, { action: 'decide.approval', opId: op(), approvalId: id, choice: 'return', comment: 'x'.repeat(301) })).status, 400);
-    assert.equal((await call('ua', pair, { action: 'decide.approval', opId: op(), approvalId: id, choice: 'return' })).status, 403); // not the author
-    assert.equal((await call('ub', pair, { action: 'decide.approval', opId: op(), approvalId: id, choice: 'return', comment: '  Короче, пожалуйста  ' })).state, 'returned');
+    assert.equal((await call('ub', pair, { action: 'decide.approval', opId: op(), approvalId: id, choice: 'return' })).status, 400);
+    assert.equal((await call('ub', pair, { action: 'decide.approval', opId: op(), approvalId: id, choice: 'reject', comment: 'x'.repeat(301) })).status, 400);
+    assert.equal((await call('ua', pair, { action: 'decide.approval', opId: op(), approvalId: id, choice: 'reject' })).status, 403); // not the author
+    assert.equal((await call('ub', pair, { action: 'decide.approval', opId: op(), approvalId: id, choice: 'reject', comment: '  Короче, пожалуйста  ' })).state, 'rejected');
 
-    const mine = (await call('ua', pair, { action: 'decide.approvals' })).items;
-    assert.equal(mine.length, 1);
-    assert.deepEqual([mine[0].state, mine[0].comment, mine[0].mine, mine[0].version, mine[0].change.bio], ['returned', 'Короче, пожалуйста', true, 1, 'Нас двое']);
-    const theirs = (await call('ub', pair, { action: 'decide.approvals' })).items;
-    assert.deepEqual([theirs[0].state, theirs[0].mine], ['returned', false]);
-    // «Нужно решить» of the author shows it as returned; nothing is left for the partner to decide.
-    assert.ok((await call('ua', null, { action: 'decide.list' })).items.some((/** @type {any} */ x) => x.kind === 'jointReturned'));
+    // Nothing open is left for either side; the profile is as it was.
+    assert.equal((await call('ua', pair, { action: 'decide.approvals' })).items.length, 0);
+    assert.ok(!(await call('ua', null, { action: 'decide.list' })).items.some((/** @type {any} */ x) => x.kind === 'joint'));
+    assert.equal((await call('ua', pair, { action: 'profile.get', profileId: pair })).profile.bio ?? '', '');
+    // The result by id: state, who decided, the comment, the proposal to send again.
+    const r = (await call('ua', null, { action: 'approval.get', id })).approval;
+    assert.deepEqual([r.state, r.comment, r.mine, r.decidedBy?.name, r.change.bio], ['rejected', 'Короче, пожалуйста', true, 'Kira', 'Нас двое']);
     // Nobody else sees the couple's changes.
     assert.equal((await call('ud', pair, { action: 'decide.approvals' })).status, 403);
+    assert.equal((await call('ud', null, { action: 'approval.get', id })).status, 404);
 
-    // The next version replaces the returned one and counts as version 2.
+    // «Изменить и отправить снова»: a new proposal, version 2; it can be withdrawn.
     const p2 = await call('ua', pair, { action: 'profile.update', opId: op(), rev: 1, bio: 'Мы' });
-    let list = (await call('ua', pair, { action: 'decide.approvals' })).items;
+    const list = (await call('ua', pair, { action: 'decide.approvals' })).items;
     assert.deepEqual(list.map((/** @type {any} */ x) => [x.id, x.state, x.version]), [[p2.pending.approvalId, 'pending', 2]]);
-    assert.equal((await call('ub', pair, { action: 'decide.approval', opId: op(), approvalId: p2.pending.approvalId, choice: 'return' })).state, 'returned');
-    list = (await call('ua', pair, { action: 'decide.approvals' })).items;
-    assert.deepEqual([list[0].state, list[0].comment], ['returned', null]);
-    // Only the author drops a returned change; then it is gone for both.
     assert.equal((await call('ub', pair, { action: 'decide.cancel', opId: op(), approvalId: p2.pending.approvalId })).status, 404);
     assert.equal((await call('ua', pair, { action: 'decide.cancel', opId: op(), approvalId: p2.pending.approvalId })).state, 'cancelled');
     assert.equal((await call('ub', pair, { action: 'decide.approvals' })).items.length, 0);
   } finally { await pg.close(); }
 });
 
-test('a joint post carries its preview; an edited draft shows that it changed since', async () => {
+test('a joint post carries its full text and audience; editing the draft makes the waiting request stale', async () => {
   const { pg, call, pair } = await pairWorld();
   try {
-    const d = await call('ua', pair, { action: 'post.saveDraft', opId: op(), post: draft('Совместный пост') });
+    const long = ('Совместный пост. ' + 'Очень длинный текст. '.repeat(30)).trim();
+    const d = await call('ua', pair, { action: 'post.saveDraft', opId: op(), post: draft(long) });
     const r = await call('ua', pair, { action: 'post.publish', opId: op(), postId: d.id });
     let item = (await call('ub', pair, { action: 'decide.approvals' })).items.find((/** @type {any} */ x) => x.id === r.pending.approvalId);
-    assert.deepEqual([item.preview.post.body, item.preview.post.changed, item.version], ['Совместный пост', false, 1]);
-    await call('ub', pair, { action: 'decide.approval', opId: op(), approvalId: r.pending.approvalId, choice: 'return', comment: 'Добавь фото' });
+    assert.deepEqual([item.preview.post.body, item.preview.post.audience, item.preview.post.changed, item.version], [long, 'all', false, 1]);
+    assert.ok(long.length > 300);
     await call('ua', pair, { action: 'post.saveDraft', opId: op(), postId: d.id, post: draft('Совместный пост, версия два') });
-    item = (await call('ua', pair, { action: 'decide.approvals' })).items[0];
-    assert.deepEqual([item.state, item.comment, item.preview.post.body, item.preview.post.changed], ['returned', 'Добавь фото', 'Совместный пост, версия два', true]);
+    item = (await call('ua', null, { action: 'approval.get', id: r.pending.approvalId })).approval;
+    assert.equal(item.state, 'stale');
     const r2 = await call('ua', pair, { action: 'post.publish', opId: op(), postId: d.id });
     item = (await call('ub', pair, { action: 'decide.approvals' })).items[0];
-    assert.deepEqual([item.id, item.version, item.preview.post.changed], [r2.pending.approvalId, 2, false]);
+    assert.deepEqual([item.id, item.version, item.preview.post.body], [r2.pending.approvalId, 2, 'Совместный пост, версия два']);
   } finally { await pg.close(); }
 });
 

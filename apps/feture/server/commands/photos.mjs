@@ -95,6 +95,14 @@ registerApprovalKind('profile.photos', {
     const now = await currentPhotos(q, row.profile_id);
     await doPhotosSet(q, row.profile_id, c.assetIds.filter((/** @type {string} */ i) => now.includes(i) || c.adds.includes(i)));
   },
+  // Photos still there (added ones may be gone meanwhile): how many now, how many after, how many new.
+  preview: async (q, row) => {
+    const c = /** @type {any} */ (row.change);
+    const now = await currentPhotos(q, row.profile_id);
+    const [{ n }] = await q.query(`select count(*)::int n from feture.media_asset where id = any($1) and owner_profile_id = $2 and state not in ('removed', 'blocked')`, [c.adds, row.profile_id]);
+    return { object: { type: 'profile', id: row.profile_id, title: null, state: 'ok' }, photos: { now: now.length, after: c.assetIds.length, adds: n },
+      rows: [{ field: 'photos', before: now.length, after: c.assetIds.length }] };
+  },
 });
 
 /** The profile photo list as the owner sets it (profile.photosSet, and «В профиль» of the gallery selection).

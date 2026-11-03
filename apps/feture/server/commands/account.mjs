@@ -2,6 +2,7 @@
 import { accountCommands } from '../../contracts/account.mjs';
 import { fail } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
+import { closePending } from '../approvals.mjs';
 import { deleteCouple } from './couples.mjs';
 import { endConversations } from './chats.mjs';
 import { checkCode, confirmEnrol, factorState, newRecoveryCodes, removeFactor, startEnrol } from '../second-factor.mjs';
@@ -101,7 +102,7 @@ const run = {
       await closeOwned(q, c.id);
       await deleteCouple(q, c.id, 'member_deleted');
     }
-    await q.query(`update feture.partner_approval set state = 'cancelled', decided_at = now() where requested_by = $1 and state = 'pending'`, [a.id]);
+    await closePending(q, `a.requested_by = $1`, [a.id], 'cancelled', { silent: true });
     await clearPerson(q, a.person_profile_id);
     // The account itself: no way back in, nothing personal left on it.
     await q.query(`delete from feture.conversation_member where account_id = $1`, [a.id]);

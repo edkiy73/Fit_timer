@@ -86,6 +86,17 @@ async function writeLocation(q, profileId, accountId, lat, lon) {
 // Sharing a couple's location is a widening: it waits for the partner who asks to approve changes.
 registerApprovalKind('location.set', {
   apply: async (q, row) => { const c = /** @type {any} */ (row.change); await writeLocation(q, row.profile_id, row.requested_by, c.lat, c.lon); },
+  version: async (q, row) => { const [l] = await q.query(`select lat, lon from feture.profile_location where profile_id = $1`, [row.profile_id]); return l ? `${l.lat},${l.lon}` : 'none'; },
+  // Only whether the couple shares a place and the nearest city — never coordinates.
+  preview: async (q, row) => {
+    const c = /** @type {any} */ (row.change);
+    const [l] = await q.query(`select 1 from feture.profile_location where profile_id = $1`, [row.profile_id]);
+    const [near] = await q.query(
+      `select name_ru, name_en from feture.place where state = 'approved' and lat is not null and lon is not null
+       order by (lat - $1) * (lat - $1) + (lon - $2) * (lon - $2) limit 1`, [c.lat, c.lon]);
+    return { object: { type: 'location', id: null, title: null, state: 'ok' }, location: { near: near ? { ru: near.name_ru, en: near.name_en } : null },
+      rows: [{ field: 'location', before: !!l, after: true }] };
+  },
 });
 
 /** Serializes everything that changes likes or the match between two profiles (two likes at the same moment must

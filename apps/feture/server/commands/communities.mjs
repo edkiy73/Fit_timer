@@ -172,6 +172,22 @@ async function joinNow(q, communityId, profileId, accountId) {
 
 registerApprovalKind('community.create', {
   apply: async (q, row) => { await createCommunity(q, row.profile_id, row.requested_by, row.change); },
+  // Taken by someone else meanwhile → stale.
+  version: async (q, row) => {
+    const [{ n }] = await q.query(`select count(*)::int n from feture.community where lower(name) = lower($1) and state <> 'deleted'`, [row.change.name]);
+    return n ? 'taken' : 'free';
+  },
+  // The community as it would go to staff: name, description, privacy, the question for newcomers, the rules.
+  preview: async (q, row) => {
+    const c = /** @type {any} */ (row.change);
+    const [pl] = c.placeId ? await q.query(`select name_ru, name_en from feture.place where id = $1`, [c.placeId]) : [];
+    return {
+      object: { type: 'community', id: null, title: c.name, state: 'ok' },
+      community: { name: c.name, description: c.description, privacy: c.privacy, question: c.joinQuestion ?? null, rules: c.rules ?? [], topics: c.topics ?? [],
+        city: pl ? { ru: pl.name_ru, en: pl.name_en } : null },
+      rows: [],
+    };
+  },
 });
 registerApprovalKind('community.join', {
   apply: async (q, row) => {
@@ -190,6 +206,30 @@ registerApprovalKind('community.join', {
     if (await declinedUntil(q, c.communityId, row.profile_id)) fail(409, 'conflict', { rule: 'declined_recently' });
     if (cm.privacy === 'open' && !banned) await joinNow(q, c.communityId, row.profile_id, row.requested_by);
     else await q.query(`insert into feture.community_request (community_id, profile_id, answer, acted_by) values ($1, $2, $3, $4)`, [c.communityId, row.profile_id, c.answer, row.requested_by]);
+  },
+  version: async (q, row) => {
+    const [r] = await q.query(
+      `select coalesce((select state || ':' || privacy || ':' || rev from feture.community where id = $1), 'gone')
+         || '/' || coalesce((select state from feture.community_member where community_id = $1 and profile_id = $2), 'none') v`, [row.change.communityId, row.profile_id]);
+    return r.v;
+  },
+  // The club, its rules, and — when it asks — the question with the answer that goes to the host. `direct`: an open
+  // club takes the couple at once; otherwise this is a request the hosts decide on.
+  preview: async (q, row) => {
+    const c = /** @type {any} */ (row.change);
+    const [cm] = await q.query(
+      `select c.id, c.name, c.description, c.privacy, c.join_question, c.rules, c.state, o.id org_id, o.kind org_kind, o.handle org_handle, o.name org_name
+       from feture.community c join feture.profile o on o.id = c.owner_profile_id where c.id = $1 and c.state <> 'deleted'`, [c.communityId]);
+    if (!cm) return { object: { type: 'community', id: c.communityId, title: row.summary?.[0] ? String(row.summary[0]) : null, state: 'deleted' }, rows: [] };
+    const { out, banned } = await keptOut(q, { id: cm.id, owner_profile_id: cm.org_id }, row.profile_id);
+    if (out) return { object: { type: 'community', id: cm.id, title: null, state: 'unavailable' }, rows: [] };
+    return {
+      object: { type: 'community', id: cm.id, title: cm.name, state: cm.state === 'published' ? 'ok' : 'unavailable' },
+      subject: { id: cm.org_id, kind: cm.org_kind, handle: cm.org_handle, name: cm.org_name },
+      community: { id: cm.id, name: cm.name, description: cm.description, privacy: cm.privacy, rules: cm.rules ?? [], question: cm.join_question ?? null,
+        answer: c.answer || null, direct: cm.privacy === 'open' && !banned },
+      rows: [],
+    };
   },
 });
 

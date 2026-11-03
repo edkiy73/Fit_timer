@@ -4,7 +4,7 @@ import { eventsCommands } from '../../contracts/events.mjs';
 import { requireUnrestricted } from '../profiles.mjs';
 import { fail, isUniqueViolation } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
-import { needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
+import { closePending, needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
 import { journal, requireStaff } from './staff.mjs';
 import { mediaDto } from '../media/assets.mjs';
 import { ageOn, withFaces } from './faces.mjs';
@@ -140,8 +140,7 @@ async function notDeclined(q, eventId, profileId) {
 /** Cancels the profile's pending partner approvals of one kind for a target (a replaced or withdrawn answer).
  * @param {Q} q @param {string} profileId @param {string} kind @param {string} targetId */
 async function dropPending(q, profileId, kind, targetId) {
-  await q.query(`update feture.partner_approval set state = 'cancelled', decided_at = now() where profile_id = $1 and kind = $2 and target_id = $3 and state = 'pending'`,
-    [profileId, kind, targetId]);
+  await closePending(q, `a.profile_id = $1 and a.kind = $2 and a.target_id = $3`, [profileId, kind, targetId], 'cancelled', { hooks: false, silent: true });
 }
 
 /** @param {Q} q @param {string} eventId @param {string} ownerProfileId */
@@ -215,7 +214,7 @@ async function doUpdate(q, acting, eventId, rev, f) {
     }
   } else if (needsPartner(acting, 'event.submit')) {
     // Before publication a couple event changes only with the partner: they see and approve the new version.
-    await dropPending(q, acting.profileId, 'event.submit', e.id);
+    // A newer version replaces the waiting one («заменено новым», approvals.mjs).
     await q.query(`update feture.event set state = 'pending_partner' where id = $1`, [e.id]);
     await requestApproval(q, acting, { kind: 'event.submit', targetType: 'event', targetId: e.id, change: { rev: e.rev + 1 }, summary: [f.title] });
   } else if (e.state !== 'in_review') {
@@ -225,24 +224,83 @@ async function doUpdate(q, acting, eventId, rev, f) {
 }
 
 /** The event card a partner decides on (V21 jointReview: «Открыть событие»); for an edit, the proposed fields over the
- * stored ones. The couple's own event, or someone else's event it answers while it may still see it.
+ * stored ones, with what changes. The couple's own event, or someone else's event it answers while it may still see it.
+ * Never the exact address (admitted people only) — an edit that moves it says only that it moves.
  * @param {Q} q @param {import('../approvals.mjs').ApprovalRow} row */
 async function approvalEventCard(q, row) {
   const [x] = await q.query(
-    `select e.id, e.title, e.kind, e.format, e.area, e.tz, e.starts_at, e.ends_at, e.state, e.rev, pl.name_ru city_ru, pl.name_en city_en
-     from feture.event e left join feture.place pl on pl.id = e.place_id
+    `select e.id, e.title, e.kind, e.format, e.area, e.tz, e.starts_at, e.ends_at, e.state, e.rev, e.price, e.requires_application, e.questions,
+       e.organizer_profile_id, e.description, e.exact_address, pl.name_ru city_ru, pl.name_en city_en, o.handle org_handle, o.name org_name, o.kind org_kind,
+       e.organizer_profile_id = $2 own
+     from feture.event e left join feture.place pl on pl.id = e.place_id join feture.profile o on o.id = e.organizer_profile_id
      where e.id = $1 and (e.organizer_profile_id = $2 or feture.event_visible(e, $2, $3))`, [row.target_id, row.profile_id, row.requested_by]);
-  if (!x) return null;
+  if (!x) {
+    const [gone] = await q.query(`select 1 from feture.event where id = $1`, [row.target_id]);
+    const draftId = row.outcome?.eventDraftId;
+    const [draft] = draftId ? await q.query(`select form->>'title' title from feture.event_draft where id = $1 and owner_profile_id = $2`, [draftId, row.profile_id]) : [];
+    return { object: { type: 'event', id: row.target_id, title: draft?.title ?? (row.summary?.[0] ? String(row.summary[0]) : null), state: gone ? 'unavailable' : 'deleted' } };
+  }
   const c = /** @type {any} */ (row.change);
   const f = row.kind === 'event.update' ? c.event : {};
-  return {
-    event: {
-      id: x.id, title: f.title ?? x.title, kind: f.kind ?? x.kind, format: f.format ?? x.format, area: f.area !== undefined ? f.area : x.area, tz: f.tz ?? x.tz,
-      startsAt: f.startsAt ?? x.starts_at, endsAt: f.endsAt ?? x.ends_at, state: x.state, rev: row.kind === 'event.update' ? c.rev : x.rev,
-      city: x.city_ru ? { ru: x.city_ru, en: x.city_en } : null,
-    },
-    ...(row.kind === 'event.rsvp' ? { rsvp: c.status ?? null } : {}),
+  const event = {
+    id: x.id, title: f.title ?? x.title, kind: f.kind ?? x.kind, format: f.format ?? x.format, area: f.area !== undefined ? f.area : x.area, tz: f.tz ?? x.tz,
+    startsAt: f.startsAt ?? x.starts_at, endsAt: f.endsAt ?? x.ends_at, state: x.state, rev: row.kind === 'event.update' ? c.rev : x.rev,
+    city: x.city_ru ? { ru: x.city_ru, en: x.city_en } : null, price: f.price !== undefined ? f.price : x.price,
+    requiresApplication: f.requiresApplication ?? x.requires_application, description: f.description ?? x.description,
   };
+  /** @type {{field: string, before: unknown, after: unknown}[]} */
+  const rows = [];
+  if (row.kind === 'event.update') {
+    const was = /** @type {Record<string, unknown>} */ ({ title: x.title, description: x.description, startsAt: iso(x.starts_at), endsAt: iso(x.ends_at), format: x.format, area: x.area, price: x.price, requiresApplication: x.requires_application });
+    for (const [k, v] of Object.entries(was)) if (f[k] !== undefined && JSON.stringify(f[k]) !== JSON.stringify(v)) rows.push({ field: k, before: v, after: f[k] });
+    if (f.exactAddress !== undefined && f.exactAddress !== x.exact_address) rows.push({ field: 'exactAddress', before: null, after: null });
+  }
+  const subject = x.own ? null : { id: x.organizer_profile_id, kind: x.org_kind, handle: x.org_handle, name: x.org_name };
+  const out = /** @type {Record<string, unknown>} */ ({ object: { type: 'event', id: x.id, title: event.title, state: x.state === 'cancelled' || x.state === 'hidden' ? 'unavailable' : 'ok' }, subject, event, rows });
+  if (row.kind === 'event.rsvp') {
+    const [cur] = await q.query(`select status, show_in_list from feture.event_rsvp where event_id = $1 and profile_id = $2`, [x.id, row.profile_id]);
+    out.rsvp = c.status ?? null;
+    rows.push({ field: 'rsvp', before: cur?.status ?? null, after: c.status ?? null });
+    if (c.showInList !== undefined && c.showInList !== null && c.showInList !== !!cur?.show_in_list) rows.push({ field: 'showInList', before: !!cur?.show_in_list, after: c.showInList });
+  }
+  // What goes to the organizer: each question with the answer, and the note.
+  if (row.kind === 'event.apply') {
+    out.application = { answers: (x.questions ?? []).map((/** @type {string} */ question, /** @type {number} */ i) => ({ question, answer: c.answers?.[i] ?? '' })), note: c.note ?? '' };
+  }
+  return out;
+}
+
+/** The state of an event a proposal's version names. @param {Q} q @param {import('../approvals.mjs').ApprovalRow} row */
+async function eventVersion(q, row) {
+  const [e] = await q.query(`select rev, state from feture.event where id = $1`, [row.target_id]);
+  return e ? `${e.state}:${e.rev}` : 'gone';
+}
+
+/** An event still waiting for the partner goes back to its author's drafts when the partner refuses, the author
+ * withdraws or the time runs out (nobody saw it). @param {Q} q @param {import('../approvals.mjs').ApprovalRow} row */
+async function eventBack(q, row) {
+  const [e] = await q.query(`select * from feture.event where id = $1 and state = 'pending_partner' for update`, [row.target_id]);
+  if (!e) return;
+  return { eventDraftId: await toEventDraft(q, e) };
+}
+
+/** @param {Q} q @param {any} e an event row */
+async function toEventDraft(q, e) {
+  const [d] = await q.query(`insert into feture.event_draft (owner_profile_id, created_by, form, step) values ($1, $2, $3, 4) returning id`,
+    [e.organizer_profile_id, e.created_by, JSON.stringify(formOf(e))]);
+  await q.query('delete from feture.event where id = $1', [e.id]);
+  return /** @type {string} */ (d.id);
+}
+
+/** Events left in `pending_partner` with nothing waiting (closed before stage 3, or a race) go back to drafts (jobs.mjs).
+ * @param {Q} q */
+export async function releaseWaitingEvents(q) {
+  const rows = await q.query(
+    `select e.* from feture.event e where e.state = 'pending_partner'
+       and not exists (select 1 from feture.partner_approval a where a.target_id = e.id and a.kind = 'event.submit' and a.state = 'pending')
+     order by e.updated_at limit 50 for update skip locked`);
+  for (const e of rows) await toEventDraft(q, e);
+  return rows.length;
 }
 
 registerApprovalKind('event.submit', {
@@ -259,7 +317,7 @@ registerApprovalKind('event.submit', {
     }
     await toStaff(q, String(row.target_id), row.profile_id);
   },
-  preview: approvalEventCard,
+  version: eventVersion, preview: approvalEventCard, onReject: eventBack, onCancel: eventBack, onExpire: eventBack,
 });
 registerApprovalKind('event.update', {
   apply: async (q, row) => {
@@ -267,7 +325,7 @@ registerApprovalKind('event.update', {
     const [p] = await q.query(`select kind from feture.profile where id = $1`, [row.profile_id]);
     await doUpdate(q, /** @type {Acting} */ ({ profileId: row.profile_id, accountId: row.requested_by, kind: p.kind }), String(row.target_id), c.rev, c.event);
   },
-  preview: approvalEventCard,
+  version: eventVersion, preview: approvalEventCard,
 });
 registerApprovalKind('event.rsvp', {
   apply: async (q, row) => {
@@ -275,6 +333,12 @@ registerApprovalKind('event.rsvp', {
     const e = await openFor(q, String(row.target_id), row.profile_id, row.requested_by);
     await checkRsvp(q, e, row.profile_id, c);
     await writeRsvp(q, e.id, row.profile_id, row.requested_by, c);
+  },
+  version: async (q, row) => {
+    const [r] = await q.query(
+      `select coalesce((select status || ':' || show_in_list from feture.event_rsvp where event_id = $1 and profile_id = $2), 'none')
+         || '/' || coalesce((select state from feture.event where id = $1), 'gone') v`, [row.target_id, row.profile_id]);
+    return r.v;
   },
   preview: approvalEventCard,
 });
@@ -284,6 +348,12 @@ registerApprovalKind('event.apply', {
     checkApplication(e, row.change);
     await notDeclined(q, e.id, row.profile_id);
     await writeApplication(q, e, row.profile_id, row.requested_by, row.change);
+  },
+  version: async (q, row) => {
+    const [r] = await q.query(
+      `select coalesce((select state from feture.event_application where event_id = $1 and profile_id = $2 order by created_at desc limit 1), 'none')
+         || '/' || coalesce((select state || ':' || array_to_string(questions, '|') from feture.event where id = $1), 'gone') v`, [row.target_id, row.profile_id]);
+    return r.v;
   },
   preview: approvalEventCard,
 });
@@ -350,10 +420,7 @@ const run = {
     const e = await ownEvent(q, input.eventId, acting);
     if (!['pending_partner', 'in_review', 'rejected'].includes(e.state)) fail(409, 'conflict', { state: e.state });
     await dropPending(q, acting.profileId, 'event.submit', e.id);
-    const [d] = await q.query(`insert into feture.event_draft (owner_profile_id, created_by, form, step) values ($1, $2, $3, 4) returning id`,
-      [acting.profileId, acting.accountId, JSON.stringify(formOf(e))]);
-    await q.query('delete from feture.event where id = $1', [e.id]);
-    return { draftId: d.id };
+    return { draftId: await toEventDraft(q, { ...e, created_by: acting.accountId }) };
   },
 
   async 'event.update'(q, { acting: a, input }) {
@@ -374,7 +441,7 @@ const run = {
     if (e.state !== 'published') fail(409, 'conflict', { state: e.state });
     await q.query(`update feture.event set state = 'cancelled', cancel_reason = nullif($2, ''), cancelled_at = now(), rev = rev + 1, updated_at = now() where id = $1`, [e.id, input.reason]);
     await q.query(`update feture.event_application set state = 'closed', decided_at = now(), rev = rev + 1 where event_id = $1 and state = 'pending'`, [e.id]);
-    await q.query(`update feture.partner_approval set state = 'cancelled', decided_at = now() where kind in ('event.rsvp', 'event.apply', 'event.update') and target_id = $1 and state = 'pending'`, [e.id]);
+    await closePending(q, `a.kind in ('event.rsvp', 'event.apply', 'event.update') and a.target_id = $1`, [e.id], 'stale', { by: acting.accountId, hooks: false });
     await enqueue(q, 'event.cancelled', e.organizer_profile_id, { eventId: e.id });
     return { state: 'cancelled' };
   },
@@ -530,7 +597,6 @@ const run = {
     const rank = (/** @type {string | null | undefined} */ v) => v ? RANK[/** @type {keyof typeof RANK} */ (v)] : 0;
     const widening = (rank(input.status) > rank(cur?.status) || (input.showInList === true && !cur?.show_in_list)) && needsPartner(acting, 'event.rsvp');
     if (widening) {
-      await dropPending(q, acting.profileId, 'event.rsvp', e.id); // a new answer replaces the waiting one
       return { pending: await requestApproval(q, acting, { kind: 'event.rsvp', targetType: 'event', targetId: e.id, change: c, summary: [e.title, input.status] }) };
     }
     await dropPending(q, acting.profileId, 'event.rsvp', e.id);
