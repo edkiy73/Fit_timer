@@ -1,3 +1,4 @@
+import {RichText} from './post-parts';
 import {Fragment,useCallback,useEffect,useRef,useState,type ReactNode} from 'react';
 import type {LucideIcon} from 'lucide-react';
 import {useNavigate,useParams} from 'react-router';
@@ -67,7 +68,8 @@ export function viewedBy(p:PersonProfile,lv:'all'|'granted'|'card'):PersonProfil
 export const mediaSrc=(m:z.infer<typeof media>|null|undefined)=>m&&!m.pending?m.src?.card??m.src?.full??m.src?.thumb??null:null;
 export const personName=(p:{name:string|null,handle:string|null}|null)=>p?.name||(p?.handle?'@'+p.handle:'');
 
-export function PersonBio({p}:{p:PersonProfile}){return p.bio?<div className="p-bio"><div className="md bio">{p.bio.split(/\n{2,}/).map((x,i)=><p key={i}>{x}</p>)}</div></div>:null;}
+/** The bio with its line breaks, lists and emphasis (owner 04.11.2026), the same as in «Я». */
+export function PersonBio({p}:{p:PersonProfile}){return p.bio?<div className="p-bio"><RichText text={p.bio} className="bio"/></div>:null;}
 const cityOf=(p:{city:{ru:string|null,en:string|null}|null},locale:string)=>p.city?(locale==='en'?p.city.en||p.city.ru:p.city.ru||p.city.en):null;
 const photosOf=(p:PersonProfile)=>{const list=p.photos.filter(ph=>mediaSrc(ph));const a=mediaSrc(p.avatar);return list.length?list:a&&p.avatar?[p.avatar]:[];};
 

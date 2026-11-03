@@ -413,6 +413,8 @@
 .v21 .stat-row:first-child{border-top:0}
 .v21 .kv{display:grid;grid-template-columns:minmax(96px,.7fr) minmax(0,1fr);gap:10px 16px;margin:0;font-size:var(--fs-body)}
 .v21 .kv dt{color:var(--mute)}.v21 .kv dd{margin:0;font-weight:500;overflow-wrap:anywhere}
+/* `.wide`: a long value (a bio) under its label across the whole card, on every width */
+.v21 .kv dt.wide,.v21 .kv dd.wide{grid-column:1/-1}.v21 .kv dd.wide{font-weight:400}
 .v21 .prog{height:6px;border-radius:var(--r-2xs);background:var(--line);overflow:hidden}
 .v21 .prog i{display:block;height:100%;border-radius:var(--r-2xs);background:var(--accent);transition:width .6s var(--ease)}
 .v21 .qprog{flex:1;height:4px;border-radius:var(--r-2xs);background:var(--line);overflow:hidden}
