@@ -3,9 +3,9 @@ import {useCallback,useEffect,useState} from 'react';
 import {useLocation,useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Archive,Bookmark,Calendar,Clock,LockOpen,MessageCircle,Newspaper,Pencil,Plus,Trash2,TriangleAlert,Users,X} from 'lucide-react';
+import {Archive,Bookmark,Calendar,Clock,MessageCircle,Newspaper,Pencil,Plus,Trash2,TriangleAlert,Users,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {ActingAv,Alert,Ask,Av,Bar,Btn,Card,DraftCard,Empty,Group,IconBtn,Note,Row,Skel,Stack,View,useRefreshable} from './kit';
+import {ActingAv,Ask,Bar,Btn,Card,DraftCard,Empty,Group,IconBtn,Note,Row,Skel,Stack,View,useRefreshable} from './kit';
 import {useFe,useLive} from './session';
 import {PostCard,SavedEditSheet,postSchema,savedEdit,when,type Post,type SavedEdit} from './feed';
 import {EventRow,type Ev} from './browse';
@@ -13,8 +13,6 @@ import {CreateSheet} from './create-entry';
 import {mdPlain,mediaSrc,plural} from './post-parts';
 import {PostMenu} from './post-menu';
 import {useToast} from './toast';
-import {PairEntry} from './pair';
-import {faceFields,NameBadges} from './faces';
 
 /** V21 X01 «Моё» (`meMineLayer()`): only lists — posts (drafts on the second line), events, followers, saved and what
  * others shared with me; each row opens its own screen (F10, E10, P10, G04, P07) with the counts from the server. */
@@ -23,41 +21,7 @@ const ev=z.object({id:z.uuid(),title:z.string(),format:z.string(),tz:z.string().
 const evs=z.object({ok:z.literal(true),going:z.array(ev),interested:z.array(ev),organizing:z.array(ev),applications:z.array(ev),cancelled:z.array(ev).optional()}).passthrough();
 const saved=z.object({ok:z.literal(true),items:z.array(z.object({kind:z.string(),target_id:z.string(),created_at:z.string()}))});
 const followers=z.object({ok:z.literal(true),items:z.array(z.unknown())}).passthrough();
-const who=z.object({id:z.uuid(),kind:z.string().optional(),handle:z.string().nullable(),name:z.string().nullable(),...faceFields}).nullable();
-const withMe=z.object({ok:z.literal(true),items:z.array(z.object({scopes:z.array(z.string()),until:z.string().nullable(),profile:who}).passthrough())});
-const outReqs=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),scopes:z.array(z.string()),state:z.string(),created_at:z.string(),profile:who}).passthrough())});
-const nameOf=(p:z.infer<typeof who>)=>p?(p.name||(p.handle?'@'+p.handle:'?')):'—';
 
-type Counts={posts:number,drafts:number,events:number,followers:number,following:number,saved:number,withMe:number,out:number};
-export function MineLayer(){
- const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const location=useLocation();
- const [c,setC]=useState<Counts|null>(null);
- const notice=(location.state as {notice?:unknown}|null)?.notice;
- // Old links `?layer=mine&part=…` (after creating an event or a post) open the matching list screen.
- useEffect(()=>{const part=new URLSearchParams(location.search).get('part');if(part==='events'||part==='posts'||part==='saved'||part==='communities')navigate('/n/me/'+part,{replace:true,state:location.state});},[location.search,location.state,navigate]);
- useEffect(()=>{if(!acting)return;const n=<T,>(p:Promise<T>,f:(r:T)=>number)=>p.then(f).catch(()=>0);
-  Promise.all([call('me.posts',{},posts).then(r=>r.items).catch(()=>[] as Post[]),
-   n(call('event.mine',{},evs),r=>new Set([...r.going,...r.interested,...r.organizing,...r.applications,...r.cancelled??[]].map(e=>e.id)).size),
-   n(call('profile.followers',{profileId:acting.id},followers),r=>r.items.length),n(call('profile.followers',{profileId:acting.id,following:true},followers),r=>r.items.length),
-   n(call('saved.list',{},saved),r=>r.items.length),n(call('access.lists',{tab:'withme'},withMe),r=>r.items.length),
-   n(call('access.lists',{tab:'out'},outReqs),r=>r.items.filter(x=>x.state==='pending').length)])
-   .then(([p,events,fo,fi,sv,wm,out])=>setC({posts:p.filter(x=>x.state==='published').length,drafts:p.filter(x=>x.state==='draft').length,events,followers:fo,following:fi,saved:sv,withMe:wm,out}));
- },[call,acting]);
- if(!acting)return null;
- const cp=acting.kind==='couple';
- const row=(icon:typeof Users,title:string,to:string,val:string|null,sub?:string)=><Row icon={icon} title={title} sub={sub||undefined} val={val} onClick={()=>navigate(to)}/>;
- return <>
-  {typeof notice==='string'&&notice&&<Alert kind="ok" noIcon>{notice}</Alert>}
-  {!cp&&<PairEntry/>}
-  {!c?<Skel kind="list" rows={5}/>:<Group><Card list>
-   {row(Newspaper,cp?t('fe.mx.mine.postsUs'):t('fe.mx.mine.posts'),'/n/me/posts',String(c.posts),c.drafts?t('fe.mx.mine.drafts',{n:c.drafts}):'')}
-   {row(Calendar,cp?t('fe.mx.mine.eventsUs'):t('fe.mx.mine.events'),'/n/me/events',String(c.events))}
-   {row(Users,t('fe.mx.mine.follows'),'/n/me/follows?tab=followers',`${c.followers} · ${c.following}`)}
-   {row(Bookmark,t('fe.mx.mine.saved'),'/n/me/saved',String(c.saved),cp?t('fe.mx.mine.savedSubUs'):'')}
-   {row(LockOpen,cp?t('fe.mx.mine.sharedUs'):t('fe.mx.mine.shared'),'/n/me/access?tab=withme',String(c.withMe),c.out?t(cp?'fe.mx.mine.outUs':'fe.mx.mine.out',{n:c.out}):t(cp?'fe.mx.mine.sharedSubUs':'fe.mx.mine.sharedSub'))}
-  </Card></Group>}
- </>;
-}
 
 /** The screens behind the «Моё» rows: F10 posts, E10 events, G04 saved, C02 communities («Мне открыли» is the access centre, access.tsx). */
 export function MinePartScreen({part}:{part:'posts'|'events'|'saved'|'communities'}){

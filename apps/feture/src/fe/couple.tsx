@@ -151,10 +151,10 @@ function resendRoute(a:Approval):{to:string,state?:unknown}|null{
   case 'event.update':return id?{to:`/n/events/${id}/edit`}:null;
   case 'event.rsvp':case 'event.apply':return id?{to:`/n/events/${id}`}:null;
   case 'access.grant':return {to:'/n/me/access?tab=byme'};
-  case 'private.on':return {to:'/n/me?layer=priv'};
+  case 'private.on':return {to:'/n/me/private'};
   case 'profile.update':return {to:'/n/me/edit?only=basics',state:{resend:c}};
   case 'profile.photos':return {to:'/n/me/edit?only=media'};
-  case 'profile.setVisibility':return {to:'/n/me?layer=vis'};
+  case 'profile.setVisibility':return {to:'/n/settings/discover'};
   case 'interests.set':return {to:'/n/me/interests'};
   case 'community.create':return {to:'/n/communities/new',state:{resend:c}};
   case 'community.join':return typeof c.communityId==='string'?{to:'/n/communities/'+c.communityId}:null;

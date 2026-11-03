@@ -24,7 +24,7 @@ export default [
      await t.tap(`.me18-seg button:has-text("${tab}")`); await t.see(sel);
      expect(layer ? t.page.url().includes('layer=' + layer) : !t.page.url().includes('layer='), 'url for ' + tab + ': ' + t.page.url());
    }
-   await t.go('/n/me?layer=vis'); await t.see('select[aria-label="Кто видит «Данные»"]');
+   await t.go('/n/settings/discover'); await t.see('select[aria-label="Кто видит «Данные»"]');
  } },
  { name: 'P02 basics: bio, show age, city → Сохранить pinned → persisted', persona: 'full', route: '/n/me', run: async t => {
    const bio = 'e2e bio ' + Date.now().toString(36);
@@ -105,7 +105,7 @@ export default [
      if (JSON.stringify(p.photos.map(x => x.id)) !== JSON.stringify(orig)) await t.api('profile.photosSet', { opId: t.uuid7(), assetIds: orig });
    }
  } },
- { name: 'Visibility: Discover mode, details audience, likes toggle persisted', persona: 'full', route: '/n/me?layer=vis', run: async t => {
+ { name: 'Visibility: Discover mode, details audience, likes toggle persisted', persona: 'full', route: '/n/settings/discover', run: async t => {
    try {
      await t.see('select[aria-label="Режим"]');
      await pick(t, 'Кто видит «Данные»', 'По доступу');
@@ -121,7 +121,7 @@ export default [
      await t.api('profile.setVisibility', { opId: t.uuid7(), setting: 'acceptProfileLikes', value: true });
    }
  } },
- { name: 'Visibility (owner 28.10.2026): «Показываюсь» without a photo asks for one; the photo goes to review, then Discover is on', persona: 'basic', route: '/n/me?layer=vis', run: async t => {
+ { name: 'Visibility (owner 28.10.2026): «Показываюсь» without a photo asks for one; the photo goes to review, then Discover is on', persona: 'basic', route: '/n/settings/discover', run: async t => {
    const before = (await t.api('profile.settings', {})).settings.discoverMode;
    const orig = (await prof(t)).photos.map(x => x.id);
    try {
@@ -144,9 +144,9 @@ export default [
      await t.api('profile.setVisibility', { opId: t.uuid7(), setting: 'discoverMode', value: before });
    }
  } },
- { name: 'Моё: every row opens its screen', persona: 'full', route: '/n/me?layer=mine', allow4xx: true, run: async t => {
+ { name: 'Моё: every row opens its screen', persona: 'full', route: '/n/me', allow4xx: true, run: async t => {
    for (const [row, path] of [['Публикации и статьи', '/n/me/posts'], ['Мои события', '/n/me/events'], ['Подписчики и подписки', '/n/me/follows'], ['Сохранённое', '/n/me/saved'], ['Мне открыли', '/n/me/access?tab=withme'], ['Создать пару', '/n/me/pair']]) {
-     await t.go('/n/me?layer=mine'); await t.tap(`.li:has-text("${row}")`); await t.wait(1500);
+     await t.go('/n/me'); await t.tap(`.li:has-text("${row}")`); await t.wait(1500);
      expect(t.page.url().includes(path), row + ' → ' + t.page.url());
      expect(!(await t.page.locator('.empty[role="alert"]').count()), row + ' shows an error');
    }

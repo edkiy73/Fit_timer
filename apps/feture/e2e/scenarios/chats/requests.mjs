@@ -178,7 +178,7 @@ export default [
    const s = await t.persona('temp');
    await t.api('follow.set', { opId: t.uuid7(), profileId: t.me.personId, on: true }, s.email);
    try {
-     await t.go('/n/me?layer=vis');
+     await t.go('/n/settings/discover');
      await t.see('.k-radios[aria-label="Кто может написать первым"]');
      await t.page.locator('.k-radios[aria-label="Кто может написать первым"]').scrollIntoViewIfNeeded();
      await t.tap('.k-radios[aria-label="Кто может написать первым"] .radio:has-text("Никто")');

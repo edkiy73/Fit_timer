@@ -79,7 +79,7 @@ export function MeEditScreen(){
  const checks=useChecks({...(show('basics')?{...(d?.name.trim()?{name:'profileName' as const}:{}),bio:'bio' as const}:{}),...(show('priv')&&!cp&&d?.privOn?{privText:'privateText' as const}:{})},
   {name:d?.name??'',bio:d?.bio??'',privText:d?.privText??''});
  // Opened by a link (no app history behind it), back and «Сохранить» return to «Я» instead of leaving the app.
- const home='/n/me'+(only==='priv'?'?layer=priv':'');const canBack=((history.state as {idx?:number}|null)?.idx??0)>0;
+ const home=only==='priv'?'/n/me/private':'/n/me';const canBack=((history.state as {idx?:number}|null)?.idx??0)>0;
  const guard=useLeaveGuard(dirty&&!busy);
  const leave=()=>guard.pass(()=>{if(canBack)navigate(-1);else navigate(home,{replace:true});});
  const fields=DETAIL_ROWS.filter(([f])=>!cp||COUPLE_ROWS.includes(f));

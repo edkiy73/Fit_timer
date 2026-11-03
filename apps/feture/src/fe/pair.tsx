@@ -337,7 +337,7 @@ function CoupleSettings({c,coupleId,other,trustOpen,onChanged}:{c:Couple,coupleI
  const dating=!s?'':s.pendingDiscover?t('fe.cw.waitPartner'):t('fe.c6.vis.'+(['visible','hidden','off'].includes(s.mode)?s.mode:'off'));
  return <>
   <Group title={t('fe.c6.dating')}><Card list>
-   <Row icon={Heart} tone="l" title={t('fe.c6.vis.title')} sub={dating||'…'} onClick={()=>{setActing(coupleId);navigate('/n/me?layer=vis');}}/>
+   <Row icon={Heart} tone="l" title={t('fe.c6.vis.title')} sub={dating||'…'} onClick={()=>{setActing(coupleId);navigate('/n/settings/discover');}}/>
   </Card></Group>
   <Group title={t('fe.pair.approval')}><Card list>
    <Row icon={Check} title={t('fe.c6.trust.title')} sub={me?.approvesPartner?t('fe.c6.trust.on'):t('fe.c6.trust.off')} onClick={()=>setTrust(true)}/>

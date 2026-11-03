@@ -160,12 +160,12 @@ export function PersonActions({p,rel,setRel,inert}:{p:PersonProfile,rel:Relation
     {!rel?.mutual&&<Btn kind="soft" square icon={MessageCircle} aria-label={t(asUs&&!inert?'fe.px.act.writeUs':'fe.px.act.write')} title={t(asUs&&!inert?'fe.px.act.writeUs':'fe.px.act.write')}
      busy={writeTo.busy===p.id} onClick={inert?undefined:write} disabled={inert}/>}
   </div>
-  {why&&<p className="profile-like-note"><Heart/><span>{why==='couples_via_discover_only'?<>{t('fe.px.act.coupleVia')} <button type="button" className="linkbtn" onClick={()=>navigate('/n/me?layer=vis')}>{t('fe.px.act.turnOn')}</button></>
-   :why==='own_discover_off'?<>{t('fe.px.act.ownOff')} <button type="button" className="linkbtn" onClick={()=>navigate('/n/me?layer=vis')}>{t('fe.px.act.turnOn')}</button></>:t('fe.px.act.likesOff')}</span></p>}
+  {why&&<p className="profile-like-note"><Heart/><span>{why==='couples_via_discover_only'?<>{t('fe.px.act.coupleVia')} <button type="button" className="linkbtn" onClick={()=>navigate('/n/settings/discover')}>{t('fe.px.act.turnOn')}</button></>
+   :why==='own_discover_off'?<>{t('fe.px.act.ownOff')} <button type="button" className="linkbtn" onClick={()=>navigate('/n/settings/discover')}>{t('fe.px.act.turnOn')}</button></>:t('fe.px.act.likesOff')}</span></p>}
   {match&&<MatchOverlay other={{id:p.id,name,src:mediaSrc(p.avatar)}} conversationId={match.conversationId} onClose={()=>setMatch(null)}/>}
   {explain&&<Sheet title={t('fe.w7.offLike.title')} onClose={()=>setExplain(false)}
    foot={<><Btn icon={Heart} busy={busy==='like'} disabled={busy==='like'} onClick={confirmLike}>{t('fe.w7.offLike.send')}</Btn>
-    <Btn kind="text" onClick={()=>{setExplain(false);navigate('/n/me?layer=vis');}}>{t('fe.w7.offLike.turnOn')}</Btn></>}>
+    <Btn kind="text" onClick={()=>{setExplain(false);navigate('/n/settings/discover');}}>{t('fe.w7.offLike.turnOn')}</Btn></>}>
    <Card list>
     <Row icon={MessageCircle} tone="l" title={t('fe.w7.offLike.chat')} sub={fill(t('fe.w7.offLike.chatSub'),{name})}/>
     <Row icon={EyeOff} title={t('fe.w7.offLike.hidden')} sub={t(asUs?'fe.w7.offLike.hiddenSubUs':'fe.w7.offLike.hiddenSub')}/>

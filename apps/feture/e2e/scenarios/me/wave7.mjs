@@ -19,7 +19,7 @@ export default [
    const after = (await t.api('interests.list', { profileId: t.me.personId })).items?.length ?? 0;
    expect(after === before, 'nothing saved: ' + before + ' → ' + after);
  } },
- { name: 'X01 Видимость: switching Discover off asks first; «Отмена» keeps it on', persona: 'full', route: '/n/me?layer=vis', run: async t => {
+ { name: 'X01 Видимость: switching Discover off asks first; «Отмена» keeps it on', persona: 'full', route: '/n/settings/discover', run: async t => {
    await t.see('select[aria-label="Режим"]');
    await t.page.locator('select[aria-label="Режим"]').selectOption({ label: 'Выключены' });
    await t.see(dialog + ':has-text("Выключить знакомства?")');

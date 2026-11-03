@@ -1,5 +1,5 @@
 import {useCallback,useEffect,useState} from 'react';
-import {useNavigate,useParams} from 'react-router';
+import {useLocation,useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Bookmark,Calendar,Camera,ClipboardList,Eye,Globe,Heart,Images,Inbox,KeyRound,Lock,PenLine,Settings,Sparkles,UserRound,Users,X} from 'lucide-react';
@@ -17,7 +17,7 @@ import {AboutGroup} from './about-facts';
 import {Activity,DetailsGroup,GalleryGroup,InterestsGroup,LinksSection,PersonBio,ProfileHero,PhotoViewer,personProfileRes,useRelation,type PersonProfile} from './profile-extras';
 import {settingsRes,type Settings as MeSettings} from './me';
 
-/** The new «Я» (owner 04.11.2026), at /n/me/new until the owner picks it: the own profile exactly as other people see
+/** «Я» (owner 04.11.2026): the own profile exactly as other people see
  * it (the same parts as someone else's profile page, in the same order), plus the few controls to change it —
  * «Изменить профиль» where others have Нравится / Подписаться, «Изменить» in a section's header, and one
  * «Заполни профиль» card that lists only what is missing. In a couple the two profiles are two tabs on top. */
@@ -35,6 +35,11 @@ export function MeNewScreen(){
  const [todo,setTodo]=useShown('me.todo',()=>0);const [x,setX]=useState<Extra|null>(null);const [view,setView]=useState<number|null>(null);
  const [verified,setVerified]=useState(false);const premium=usePremiumStatus().status;
  const [rel]=useRelation(acting?.id??'');
+ // Links made for the old «Я» with its tabs (`?layer=`, in notifications and older screens) land where that part lives now.
+ const {search}=useLocation();
+ useEffect(()=>{const q=new URLSearchParams(search);const l=q.get('layer');const part=q.get('part');if(!l)return;
+  const to=l==='vis'?'/n/settings/discover':l==='priv'?'/n/me/private':l==='mine'&&part&&['events','posts','saved','communities'].includes(part)?'/n/me/'+part:'/n/me';
+  navigate(to,{replace:true});},[search,navigate]);
  const load=useCallback(()=>{if(!acting)return;setError(null);setTick(n=>n+1);
   call('profile.get',{profileId:acting.id},personProfileRes,{fresh:true}).then(r=>setP(r.profile)).catch(setError);
  },[call,acting]);
@@ -83,7 +88,7 @@ export function MeNewScreen(){
    <StaffEntry/>
    <BellButton/>
    <IconBtn icon={Eye} label={t('fe.mx.howSeen')} title={t('fe.mx.howSeen')} onClick={go('/n/me/preview')}/>
-   <IconBtn icon={Settings} label={t('fe.me.settings')} onClick={go('/n/settings/new')}/>
+   <IconBtn icon={Settings} label={t('fe.me.settings')} onClick={go('/n/settings')}/>
   </Bar>
   <View refresh={()=>{load();pull();}}>
    {couple&&person&&<Seg value={cp?'couple':'person'} label={t('fe.mx.whose')}
@@ -110,7 +115,7 @@ export function MeNewScreen(){
      <InterestsGroup profileId={p.id} name={name} action={edit('/n/me/interests')}/>
      <GalleryGroup p={p}/>
      <Group><Card list>
-      <Row icon={Lock} title={t('fe.m2.private')} val={t(x.privOn?'fe.m2.on':'fe.m2.off')} onClick={go('/n/me/new/private')}/>
+      <Row icon={Lock} title={t('fe.m2.private')} val={t(x.privOn?'fe.m2.on':'fe.m2.off')} onClick={go('/n/me/private')}/>
       <Row icon={KeyRound} title={t(cp?'fe.ac.titleUs':'fe.ac.title')} badge={x.reqs||undefined} onClick={go('/n/me/access')}/>
      </Card></Group>
      <Activity profileId={p.id}/>
@@ -119,7 +124,7 @@ export function MeNewScreen(){
       <Row icon={Globe} title={t('fe.m2.communities')} onClick={go('/n/me/communities')}/>
       <Row icon={Users} title={t('fe.mx.mine.follows')} onClick={go('/n/me/follows?tab=followers')}/>
       <Row icon={Bookmark} title={t('fe.mx.mine.saved')} val={x.saved?String(x.saved):undefined} onClick={go('/n/me/saved')}/>
-      <Row icon={Images} title={t('fe.mx.gal')} onClick={go('/n/me/new/gallery')}/>
+      <Row icon={Images} title={t('fe.mx.gal')} onClick={go('/n/me/gallery')}/>
      </Card></Group>
     </div>}
   </View>
@@ -129,15 +134,15 @@ export function MeNewScreen(){
 }
 
 /** «Приватная часть» and «Галерея» of the new «Я»: the current blocks on their own screen, one level down. */
-export function MeNewSection(){
- const {section}=useParams();const {acting,call}=useFe();const {t}=useI18n();
+export function MeNewSection({section}:{section:'private'|'gallery'}){
+ const {acting,call}=useFe();const {t}=useI18n();
  const [settings,setSettings]=useState<MeSettings|null>(null);
  const load=useCallback(()=>{call('profile.settings',{},settingsRes).then(r=>setSettings(r.settings)).catch(()=>{});},[call]);
  useEffect(()=>{load();},[load]);
  if(!acting)return null;
  const gallery=section==='gallery';
  return <>
-  <Bar title={gallery?t('fe.mx.gal'):t('fe.m2.private')} back="/n/me/new"/>
+  <Bar title={gallery?t('fe.mx.gal'):t('fe.m2.private')} back="/n/me"/>
   <View refresh={load}>
    {gallery?<MeGallery profileId={acting.id} couple={acting.kind==='couple'} title={t('fe.mx.gal')}/>
     :!settings?<Skel kind="card" rows={2}/>

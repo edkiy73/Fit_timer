@@ -3,7 +3,7 @@ import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
-import {Ban,Bell,Calendar,Camera,CircleHelp,Crown,Download,EyeOff,Globe,Heart,HeartHandshake,Image,KeyRound,LogOut,Mail,MessageCircle,MessageCirclePlus,Moon,ShieldCheck,Smartphone,Sparkles,Trash2,UserPlus,Users,X,type LucideIcon} from 'lucide-react';
+import {Ban,Calendar,Camera,Download,EyeOff,Globe,Heart,HeartHandshake,Image,KeyRound,LogOut,Mail,MessageCircle,MessageCirclePlus,Moon,ShieldCheck,Smartphone,Sparkles,Trash2,UserPlus,Users,X,type LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {getThemePreference,setThemePreference,type ThemePreference} from '../theme';
 import {Alert,Bar,BRAND,Btn,Card,ChannelHeads,ChannelToggle,ChoiceCards,Empty,Field,Group,H,Input,LockPreview,Note,Row,SectionLabel,SelectRow,Skel,Stack,Switch,TimeSpan,ToggleRow,View} from './kit';
@@ -11,7 +11,6 @@ import {useFe,useLive,useShown} from './session';
 import {useToast} from './toast';
 import {usePremiumStatus} from './account-extra';
 import {Sheet} from './profile-extras';
-import {HiddenFeedSheet} from './settings-lists';
 import {Ask,LinkRow} from './settings-ui';
 import {disableWebPush} from './push-web';
 import {disableNativePush} from './push-native';
@@ -107,52 +106,6 @@ export function useLogout(){
  const logout=async()=>{setLeaving(true);try{await disableWebPush(call);await disableNativePush(call);await auth.logout();navigate('/n/feed',{replace:true});}catch{setLeaving(false);setAsking(false);toast(t('fe.ax.sec.logoutFailed'),{type:'err'});}};
  const node=asking?<Ask icon={LogOut} title={t('fe.set.logoutTitle')} text={t('fe.set.logoutText')} ok={t('fe.set.logout')} danger busy={leaving} onOk={()=>void logout()} onCancel={()=>setAsking(false)}/>:null;
  return {ask:()=>setAsking(true),node};
-}
-
-export function SettingsScreen(){
- const {state}=useFe();const {t}=useI18n();const navigate=useNavigate();
- const a=useAccountSettings();const {s,premium,error,load}=a;
- const [layer,setLayer]=useState<'hidden'|null>(null);const out=useLogout();
- const couple=state.status==='ready'?state.boot.profiles.find(p=>p.kind==='couple'&&p.state!=='deleted'):undefined;
- const email=state.status==='ready'?state.session.email:'';
- const closeLayer=useCallback(()=>setLayer(null),[]);
- return <>
-  <Bar title={t('fe.set.title')} back="/n/me"/>
-  <View className="nodock compact">
-   {error&&!s?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
-    :!s?<><SectionLabel>{t('fe.set.account')}</SectionLabel><Skel kind="list" rows={6}/><SectionLabel>{t('fe.set.app')}</SectionLabel><Skel kind="list" rows={3}/></>:<>
-    <SectionLabel>{t('fe.set.account')}</SectionLabel>
-    <Card list>
-     <LinkRow icon={KeyRound} title={t('fe.set.signIn')} sub={email||t('fe.set.noEmail')} onClick={()=>navigate('/n/settings/security')}/>
-     <CheckRows a={a}/>
-     <LinkRow icon={Crown} tone="l" title="Premium" sub={t('fe.set.premSub')} val={premium?t(premium.premium?'fe.set.premOn':'fe.set.premOff'):undefined} onClick={()=>navigate('/n/premium')}/>
-     {couple?<LinkRow icon={Users} tone="v" title={t('fe.set.pair')} sub={t('fe.set.pairSub',{name:couple.name||couple.handle||''})} onClick={()=>navigate('/n/me/pair')}/>
-      :<LinkRow icon={Users} tone="v" title={t('fe.set.pairNew')} sub={t('fe.set.pairNewSub')} onClick={()=>navigate('/n/me/pair')}/>}
-    </Card>
-    <SectionLabel>{t('fe.set.app')}</SectionLabel>
-    <Card list>
-     <AppRows a={a}/>
-     <LinkRow icon={Bell} title={t('fe.set.notifications')} sub={t('fe.set.notificationsNote')} onClick={()=>navigate('/n/settings/notifications')}/>
-    </Card>
-    <SectionLabel>{t('fe.nav.chats')}</SectionLabel>
-    <Card list>
-     <BlurRow a={a}/>
-    </Card>
-    <SectionLabel>{t('fe.set.data')}</SectionLabel>
-    <Card list>
-     <ListRows a={a} onHidden={()=>setLayer('hidden')}/>
-     <LinkRow icon={Download} title={t('fe.set.myData')} sub={t('fe.set.myDataNote')} onClick={()=>navigate('/n/settings/data')}/>
-    </Card>
-    <SectionLabel>{t('fe.set.support')}</SectionLabel>
-    <Card list>
-     <LinkRow icon={CircleHelp} title={t('fe.ax.help.entry')} sub={t('fe.ax.help.entryNote')} onClick={()=>navigate('/n/help')}/>
-     <LinkRow icon={LogOut} danger title={t('fe.set.logout')} onClick={out.ask}/>
-    </Card>
-   </>}
-  </View>
-  {layer==='hidden'&&<HiddenFeedSheet onClose={closeLayer}/>}
-  {out.node}
- </>;
 }
 
 /* ---------- K05 ---------- */

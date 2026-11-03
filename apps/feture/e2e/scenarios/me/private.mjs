@@ -13,7 +13,7 @@ export default [
    const a = await asker(t);
    try {
      // «Я → Приватное» shows one «Доступы» row with the waiting count; it opens the screen on «Открыто».
-     await t.go('/n/me?layer=priv'); await t.see('#privWho .li:has-text("Ждут ответа")'); await t.tap('#privWho .li');
+     await t.go('/n/me/private'); await t.see('#privWho .li:has-text("Ждут ответа")'); await t.tap('#privWho .li');
      expect(t.page.url().includes('/n/me/access') && t.page.url().includes('tab=byme'), 'opened «Доступы → Открыто»: ' + t.page.url());
      const card = t.page.locator('.rqcard', { hasText: a.name });
      await card.waitFor({ timeout: 30000 }); await card.locator('button:has-text("Открыть доступ")').click();
@@ -34,7 +34,7 @@ export default [
    await card.locator('button:has-text("Отказать")').click();
    await until(async () => !(await incoming(t)).some(x => x.profile?.id === a.id), 'declined');
  } },
- { name: 'X01 private description: edit in place → Сохранить → shown and persisted', persona: 'full', route: '/n/me?layer=priv', run: async t => {
+ { name: 'X01 private description: edit in place → Сохранить → shown and persisted', persona: 'full', route: '/n/me/private', run: async t => {
    const me = await t.pid(); const before = (await t.api('private.get', { profileId: me })).text ?? '';
    const txt = 'e2e private ' + Date.now().toString(36);
    try {
@@ -44,7 +44,7 @@ export default [
      await until(async () => (await t.api('private.get', { profileId: me })).text === txt, 'text saved');
    } finally { await t.api('private.setText', { opId: t.uuid7(), text: before }); }
  } },
- { name: 'X01 empty private part: add description, photo and a private interest in the tab — all three listed there', persona: 'basic', route: '/n/me?layer=priv', run: async t => {
+ { name: 'X01 empty private part: add description, photo and a private interest in the tab — all three listed there', persona: 'basic', route: '/n/me/private', run: async t => {
    const me = await t.pid(); const p0 = await t.api('private.get', { profileId: me }); let topic = null;
    expect(!p0.text && !(p0.media ?? []).length, 'basic starts with an empty private part: ' + JSON.stringify(p0).slice(0, 200));
    try {
@@ -79,7 +79,7 @@ export default [
  { name: 'P04 private editor opened by link: back returns to «Я»', persona: 'full', route: '/n/me/edit?only=priv', run: async t => {
    await t.see('#privEdit'); await t.tap('.bar button[aria-label="Назад"]'); await t.see('.me18-seg'); expect(t.page.url().includes('/n/me'), t.page.url());
  } },
- { name: 'X01 private part off (confirm) and on again; who may ask', persona: 'full', route: '/n/me?layer=priv', allow4xx: true, run: async t => {
+ { name: 'X01 private part off (confirm) and on again; who may ask', persona: 'full', route: '/n/me/private', allow4xx: true, run: async t => {
    try {
      const sw = '#privHead button[role="switch"][aria-label="Приватная часть"]';
      await t.tap(sw); await t.see('.dialog.on');

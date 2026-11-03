@@ -1,27 +1,14 @@
-import {Fragment,useCallback,useEffect,useRef,useState,type CSSProperties,type ReactNode} from 'react';
-import {useLocation,useNavigate} from 'react-router';
+import {useState} from 'react';
+import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Camera,ChevronRight,ClipboardList,Clock,Eye,HeartOff,Inbox,PenLine,Users,Newspaper,Settings,Star,Trash2,X} from 'lucide-react';
+import {HeartOff,Settings} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Actions,AddCard,Alert,Ask as KitAsk,Av,Btn,Card,Empty,Group,H,IconBtn,PhotoAdd,PhotoSlot,PhotoSlots,PullRefresh,RadioList,Row,Seg,SelectRow,Sheet,Skel,ToggleRow,Bar} from './kit';
+import {Alert,Ask as KitAsk,Card,Group,RadioList,Row,SelectRow,ToggleRow} from './kit';
 import {AgeCheckLink,useAgeResume} from './age-check';
-import {dropReadCache,useFe,useLive,useShown} from './session';
-import {PrivateLayer} from './private';
-import {BellButton,countsRes} from './inbox';
-import {MineLayer} from './mine';
-import {MeJars} from './interests';
-import {StaffEntry} from './staff';
-import {LinksBlock,waitingCount} from './links';
-import {ActAsSheet,CoupleMembers,CouplePending,CoupleVisGroup} from './couple';
-import {linksMineRes} from './profile-extras';
+import {useFe} from './session';
 import {useToast} from './toast';
 import {DiscoverPhotoAsk} from './discover-photo';
-import {useDragOrder} from './reorder';
-import {MeGallery} from './gallery';
-import {Viewer} from './post-parts';
-import {MeAboutBlock} from './about-facts';
-import {BasicAge,BasicSheet,type BasicKey} from './me-basics';
 
 /** V21 X01 «Я» with the prototype's markup (`meHead18`, `meProfileLayer`, `meVisLayer`): the header with the avatar,
  * bell, «Как видят» and settings; «Нужно решить»; the four layers with their red dots; photos, basics, details,
@@ -40,243 +27,17 @@ export const option=z.object({kind:z.string(),code:z.string(),ru:z.string(),en:z
 export const place=z.object({id:z.string(),code:z.string().nullable().optional(),country:z.string().optional(),ru:z.string(),en:z.string()});
 export const catalogRes=z.object({ok:z.literal(true),options:z.array(option),places:z.array(place).optional()});
 export const ok=z.object({ok:z.literal(true)}).passthrough();
-const accessIn=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid()}).passthrough())});
-const approvalsRes=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),kind:z.string()}).passthrough())});
-const coupleRes=z.object({ok:z.literal(true),couple:z.object({members:z.array(z.object({me:z.boolean(),handle:z.string().nullable(),name:z.string().nullable()}).passthrough())}).passthrough()});
 export type Profile=z.infer<typeof profile>;
 export type Settings=z.infer<typeof settingsShape>;
-type Layer='profile'|'priv'|'vis'|'mine';
 /** Profile fields → catalog option kinds; a couple keeps only the shared ones (prototype COUPLE_FIELDS). */
 export const DETAIL_ROWS:[string,string][]=[['genders','gender'],['orients','orient'],['roles','role'],['status','status'],['formats','format'],['seeks','seek']];
 export const COUPLE_ROWS=['roles','formats','seeks'];
 export const MAX_PHOTOS=6;
-const STAT_HINT_KEY='feture.fe.statHintOff';
+export const photoSrc=(m:{src:Record<string,string>|null},size:'card'|'thumb'|'full'='card')=>m.src?(m.src[size]??m.src.card??m.src.thumb??m.src.blur??null):null;
 
 // AudTag and Ask live in me-parts.tsx: screens that only need them do not pull the whole «Я» tab into the first load.
 import {Ask,AudTag} from './me-parts';
 export {Ask,AudTag};
-
-/** The «Я» layers on the one tab control, with their red dots. */
-function LayerSeg({value,onChange,dots}:{value:Layer,onChange:(v:Layer)=>void,dots:Record<Layer,string>}){
- const {t}=useI18n();
- return <Seg value={value} onChange={onChange} label={t('fe.nav.me')} options={(['profile','priv','vis','mine'] as const).map(id=>({id,label:t('fe.me.layer.'+id),dot:dots[id]||undefined}))}/>;
-}
-
-export function MeTab(){
- const {state,acting,setActing,call,peek}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();
- // A revisit draws what «Я» showed last on its first frame (per acting profile); the one wave of reads replaces it.
- const [p,setP]=useShown<Profile|null>('me.p',()=>acting?peek('profile.get',{profileId:acting.id},profileRes)?.profile??null:null);
- const [settings,setSettings]=useShown<Settings|null>('me.settings',()=>peek('profile.settings',{},settingsRes)?.settings??null);
- const [options,setOptions]=useShown<z.infer<typeof option>[]>('me.options',()=>peek('catalog.get',{},catalogRes,{asAccount:true})?.options??[]);
- const [error,setError]=useState<unknown>(null);
- const [layer,setLayerState]=useState<Layer>(()=>{const l=new URLSearchParams(location.hash.split('?')[1]??'').get('layer');return l==='priv'||l==='mine'||l==='vis'?l:'profile';});
- const [notice,setNotice]=useState('');const [tick,setTick]=useState(0);const [switching,setSwitching]=useState(false);
- const [todo,setTodo]=useShown('me.todo',()=>0);const [dots,setDots]=useShown<{links:number,reqs:number,vis:number}>('me.dots',()=>({links:0,reqs:0,vis:0}));
- // A link to «Я» with `?layer=` while «Я» is already open (notifications, «Моё» redirects) switches the layer too.
- const {search}=useLocation();
- useEffect(()=>{const l=new URLSearchParams(search).get('layer');setLayerState(l==='priv'||l==='mine'||l==='vis'?l:'profile');},[search]);
- const setLayer=(l:Layer)=>{setLayerState(l);setNotice('');const base=location.hash.split('?')[0]||'#/n/me';history.replaceState(history.state,'',l==='profile'?base:base+'?layer='+l);document.querySelector('.me18')?.scrollTo({top:0});};
- const load=useCallback(()=>{
-  if(!acting)return;setError(null);setTick(n=>n+1);
-  // Everything the first layer shows is asked in one wave and the layer appears whole (owner 28.10.2026: no rows
-  // popping in later): the blocks below (interests, gallery, links, the staff button, «Нужно решить») read the same
-  // commands and get these answers from the session's read cache at once. Their failures stay theirs.
-  const id=acting.id;const any=z.unknown();
-  const parts=[call('interests.list',{profileId:id},any),call('album.list',{profileId:id},any),call('gallery.list',{profileId:id},any),
-   call('links.mine',{},any),call('staff.me',{},any,{asAccount:true}),call('inbox.counts',{},any,{asAccount:true}),call('catalog.get',{},any,{asAccount:true})];
-  Promise.all([call('profile.get',{profileId:id},profileRes),call('profile.settings',{},settingsRes),Promise.allSettled(parts)])
-   .then(([a,b])=>{setP(a.profile);setSettings(b.settings);}).catch(setError);
- },[call,acting]);
- useEffect(()=>{load();},[load]);
- // The profile, its photos (approved or rejected), settings, checks and the couple change elsewhere too: another
- // device, the partner, staff. The layer follows without a restart; the avatar comes with `boot` (bootstrap).
- useLive(['profile','media','check','couple'],load);
- // The settings screens' reads go out while «Я» is looked at, so opening one draws it whole (its `peek`).
- useEffect(()=>{const id=setTimeout(()=>{const any=z.unknown();for(const [a,o] of [['settings.get',{asAccount:true}],['verification.ageStatus',{asAccount:true}],['verification.photoStatus',{asAccount:true}],
-  ['notifications.settings.get',{asAccount:true}],['premium.status',{}],['blocks.list',{}]] as const)call(a,{},any,o).catch(()=>{});},1200);return ()=>clearTimeout(id);},[call]);
- useEffect(()=>{call('catalog.get',{},catalogRes,{asAccount:true}).then(r=>setOptions(r.options)).catch(()=>{});},[call]);
- // «Нужно решить» and the layers' dots: proposals of links, access requests, couple settings waiting for a partner.
- const pullCounts=useCallback(()=>{
-  call('inbox.counts',{},countsRes,{asAccount:true}).then(r=>setTodo(r.decide)).catch(()=>{});
-  if(!acting)return;
-  Promise.all([call('links.mine',{},linksMineRes).then(waitingCount).catch(()=>0),call('access.lists',{tab:'incoming'},accessIn).then(r=>r.items.length).catch(()=>0),
-   acting.kind==='couple'?call('decide.approvals',{},approvalsRes).then(r=>r.items.filter(a=>a.kind==='profile.setVisibility').length).catch(()=>0):Promise.resolve(0)])
-   .then(([links,reqs,vis])=>setDots({links,reqs,vis}));
- },[call,acting]);
- useEffect(()=>{pullCounts();},[pullCounts,tick]);
- useLive(['counts','decide','notify'],pullCounts);
- const scroller=useRef<HTMLDivElement>(null);
- if(state.status!=='ready'||!acting)return null;
- const profiles=state.boot.profiles.filter(x=>x.state!=='deleted');
- const couple=profiles.find(x=>x.kind==='couple');const person=profiles.find(x=>x.kind==='person');
- const name=p?.name||acting.name||acting.handle||'?';
- const label=(kind:string,code:string)=>{const o=options.find(x=>x.kind===kind&&x.code===code);return o?(locale==='en'?o.en:o.ru):code;};
- const avatarSrc=p?(p.photos[0]?.src?.thumb??p.photos[0]?.src?.card??p.avatar?.src?.thumb):acting.avatar;
- const privOn=settings?.privateOn!==false;
- const layerDots:Record<Layer,string>={profile:dots.links?t('fe.mx.dot.links'):'',priv:privOn&&dots.reqs?t('fe.mx.dot.reqs'):'',vis:dots.vis?t('fe.mx.dot.vis'):'',mine:''};
- return <>
-  {/* Owner 29.10.2026: the same floating header as every tab — the avatar left of the name, glass round buttons. */}
-  <Bar title={name} lead={<Av name={name} seed={acting.id} src={avatarSrc}/>}
-   sub={couple?(acting.kind==='couple'?t('fe.me.weCouple'):t('fe.me.iPersonal')):t('fe.me.personalProfile')}
-   {...(couple?{onTitle:()=>setSwitching(true),titleLabel:t('fe.mx.whose')}:{})}>
-   <StaffEntry/>
-   <BellButton/>
-   <IconBtn icon={Eye} label={t('fe.mx.howSeen')} title={t('fe.mx.howSeen')} onClick={()=>navigate('/n/me/preview')}/>
-   <IconBtn icon={Settings} label={t('fe.me.settings')} onClick={()=>navigate('/n/settings')}/>
-  </Bar>
-  <div ref={scroller} className="view me18 me-x01"><PullRefresh target={scroller} onRefresh={()=>{load();pullCounts();}}>
-   <div className="wrap">
-    {todo>0&&<Card list><Row className="me-todo" icon={Inbox} tone="l" title={t('fe.mx.todo')} badge={todo} onClick={()=>navigate('/n/inbox')}/></Card>}
-    <div className="me18-seg me4"><LayerSeg value={layer} onChange={setLayer} dots={layerDots}/></div>
-   </div>
-   <div className="wrap">
-    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
-     :!p||!settings?<MeSkel/>
-     :layer==='profile'?<>
-      {notice&&<Alert kind="ok" noIcon>{notice}</Alert>}
-      {acting.kind==='couple'&&<><CouplePending base={p} tick={tick} onDecided={msg=>{setNotice(msg);load();}}/><CoupleMembers/></>}
-      <PhotosBlock p={p} settings={settings} onChanged={load}/>
-      <BasicsBlock p={p} name={name} onChanged={load}/>
-      <MeAboutBlock p={p}/>
-      <DetailsBlock p={p} label={label}/>
-      {acting.kind==='person'&&couple&&<StatusHint p={p} coupleId={couple.id} onDone={load}/>}
-      <MeJars key={p.id}/>
-      <GalleryBlock p={p}/>
-      <LinksBlock key={'links'+p.id} onChanged={pullCounts}/>
-     </>
-     :layer==='priv'?<PrivateLayer profileId={p.id} on={privOn} requestsFrom={settings.requestsFrom??'all'} onChanged={()=>{load();pullCounts();}}/>
-     :layer==='mine'?<MineLayer/>
-     :<>{acting.kind==='couple'&&<CouplePending base={p} tick={tick} onDecided={()=>{load();pullCounts();}}/>}<Visibility p={p} settings={settings} onChanged={load}/>{acting.kind==='couple'&&<CoupleVisGroup/>}</>}
-   </div>
-  </PullRefresh></div>
-  {switching&&<ActAsSheet onClose={()=>setSwitching(false)}/>}
- </>;
-}
-
-/** «Основное» (owner 04.11.2026: no extra screen just to change a name or a city): name, nick, age, city and the
- * description as rows with their values; a tap edits that one thing in a small sheet right here. */
-export function BasicsBlock({p,name,onChanged}:{p:Profile,name:string,onChanged?:(()=>void)|undefined}){
- const {t,locale}=useI18n();const cp=p.kind==='couple';
- const [edit,setEdit]=useState<BasicKey|null>(null);
- const city=p.city?(locale==='en'?p.city.en:p.city.ru):null;
- const bio=p.bio.replace(/[*_~`>#[\]()]/g,'');
- return <Group id="meBasics" title={t('fe.me.basics')} action={<AudTag k="all"/>}>
-  <Card list>
-   <Row title={cp?t('fe.nn.nameUs'):t('fe.nn.name')} val={p.chosenName||name} onClick={()=>setEdit('name')}/>
-   <Row title={cp?t('fe.nn.nickUs'):t('fe.nn.nick')} val={p.handle?'@'+p.handle:undefined} onClick={()=>setEdit('handle')}/>
-   {!cp&&p.age&&<BasicAge p={p} onChanged={onChanged}/>}
-   <Row title={t('fe.mx.ed.city')} val={city||t('fe.mx.ed.noCity')} onClick={()=>setEdit('city')}/>
-  </Card>
-  {p.bio?<Card className="blk-btn" label={t('fe.mx.ed.about')} onClick={()=>setEdit('bio')}><span className="blk-bio">{bio.slice(0,240)}</span><span className="chv"><ChevronRight/></span></Card>
-   :<AddCard icon={PenLine} title={t(cp?'fe.mp.bioAddUs':'fe.mp.bioAdd')} sub={t(cp?'fe.mp.bioAddSubUs':'fe.mp.bioAddSub')} onClick={()=>setEdit('bio')}/>}
-  {edit&&<BasicSheet k={edit} p={p} onClose={()=>setEdit(null)} onSaved={()=>{setEdit(null);onChanged?.();}}/>}
- </Group>;
-}
-
-/** The loading state shaped like the profile layer: the photo grid, then two cards. */
-export function MeSkel(){
- return <div aria-busy="true"><Group className="ph20"><PhotoSlots loading/></Group><Skel kind="card" rows={2}/></div>;
-}
-
-/** «Данные» — the filled rows only; the audience comes from the profile's `detailsVis`. */
-export function DetailsBlock({p,label}:{p:Profile,label:(kind:string,code:string)=>string}){
- const {t}=useI18n();const navigate=useNavigate();const cp=p.kind==='couple';
- const rows=DETAIL_ROWS.filter(([f])=>!cp||COUPLE_ROWS.includes(f)).map(([field,kind])=>{const v=p.details[field];const codes=Array.isArray(v)?v as string[]:typeof v==='string'?[v]:[];
-  return codes.length?[field,t(kind==='status'?'fe.mx.f.status':'fe.reg.kind.'+kind),codes.map(c=>label(kind,c)).join(', ')]:null;}).filter((x):x is string[]=>!!x);
- const title=cp?t('fe.mx.detailsCouple'):t('fe.me.details');
- return <Group id="meDet" title={title} action={<AudTag k={p.detailsVis??'all'}/>}>
-  {rows.length?<Card className="blk-btn" label={t('fe.mx.editOf',{title})} onClick={()=>navigate('/n/me/edit?only=details')}>
-   <dl className="kv">{rows.map(([f,k,v])=><Fragment key={f}><dt>{k}</dt><dd>{v}</dd></Fragment>)}</dl>
-   <span className="chv"><ChevronRight/></span>
-  </Card>
-   :<AddCard icon={ClipboardList} title={t('fe.mp.detailsAdd')} sub={cp?t('fe.mx.detailsEmptyCouple'):t('fe.mx.detailsEmpty')} onClick={()=>navigate('/n/me/edit?only=details')}/>}
- </Group>;
-}
-
-/** V21.1 ME-047: a person in a couple whose status says «single» or nothing gets one sentence and one tap to fix it. */
-export function StatusHint({p,coupleId,onDone}:{p:Profile,coupleId:string,onDone:()=>void}){
- const {call}=useFe();const {t}=useI18n();const toast=useToast();
- const [off,setOff]=useState(()=>{try{return localStorage.getItem(STAT_HINT_KEY)===p.id;}catch{return false;}});
- const [partner,setPartner]=useState('');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
- const status=typeof p.details.status==='string'?p.details.status:null;
- const show=!off&&(!status||status==='single');
- useEffect(()=>{if(!show)return;call('couple.get',{},coupleRes,{profileId:coupleId}).then(r=>{const o=r.couple.members.find(m=>!m.me);setPartner(o?(o.name||(o.handle?'@'+o.handle:'')):'');}).catch(()=>{});},[call,coupleId,show]);
- if(!show)return null;
- // «Отменить» in the toast puts the old status back (V21 meStatFix21); the profile's new rev comes from the server.
- const fix=async()=>{setBusy(true);setFailure('');
-  try{await call('profile.update',{opId:newOpId(),rev:p.rev,status:'partnered'},ok);onDone();
-   toast(t('fe.w7.stat.done'),{type:'ok',action:{label:t('fe.mx.undo'),fn:()=>void(async()=>{
-    try{const cur=await call('profile.get',{profileId:p.id},profileRes);await call('profile.update',{opId:newOpId(),rev:cur.profile.rev,status},ok);toast(t('fe.w7.stat.undone'),{type:'ok'});onDone();}
-    catch(e){toast(feErrorMessage(e,t),{type:'err'});}})()}});}
-  catch(e){setFailure(feErrorMessage(e,t));}finally{setBusy(false);}};
- const keep=()=>{try{localStorage.setItem(STAT_HINT_KEY,p.id);}catch{/* per-viewer convenience only */}setOff(true);};
- return <Alert kind="info" role="none" icon={Users} className="me-stat"
-  action={<Actions><Btn size="sm" onClick={fix} disabled={busy} busy={busy}>{t('fe.mx.stat.fix')}</Btn><Btn size="sm" kind="soft" onClick={keep}>{t('fe.mx.stat.keep')}</Btn></Actions>}>
-  {t(status?'fe.mx.stat.single':'fe.mx.stat.none',{name:partner||t('fe.mx.stat.partner')})}{failure&&<><br/>{failure}</>}</Alert>;
-}
-
-export const photoSrc=(m:{src:Record<string,string>|null},size:'card'|'thumb'|'full'='card')=>m.src?(m.src[size]??m.src.card??m.src.thumb??m.src.blur??null):null;
-
-/** `mePhotos20()` — the grid of profile photos: the main one big, «Ещё фото» next to it; a tap opens what can be done
- * with that photo; «Изменить» opens the photo editor (P02 `only:'media'`). */
-export function PhotosBlock({p,settings,onChanged}:{p:Profile,settings:Settings,onChanged:()=>void}){
- const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();
- const [open,setOpen]=useState<number|null>(null);const [busy,setBusy]=useState(false);const [viewing,setViewing]=useState<number|null>(null);
- const cp=p.kind==='couple';
- // Press and drag a photo to change the order; it is saved at once, with «Отменить».
- const drag=useDragOrder<'ph'>((_,ids)=>{void write(ids,t('fe.mx.ph.orderSaved'),p.photos.map(x=>x.id));});
- const items=drag.arrange('ph',p.photos);
- // A fresh upload has no served copies for a few seconds (it is being checked): its slot blinks and the profile is
- // asked again until the picture is there, instead of staying an empty grey box.
- const waiting=p.photos.some(x=>!x.src);
- useEffect(()=>{
-  if(!waiting)return;let n=0,id=0,live=true;
-  const poll=()=>{id=window.setTimeout(()=>{n++;dropReadCache();
-   call('profile.get',{profileId:p.id},profileRes).then(r=>{if(!live)return;if(r.profile.photos.every(x=>x.src))onChanged();else if(n<20)poll();}).catch(()=>{if(live&&n<20)poll();});},4000);};
-  poll();return ()=>{live=false;window.clearTimeout(id);};
- },[waiting,p.id,call,onChanged]);
- const edit=()=>navigate('/n/me/edit?only=media');
- if(!items.length)return <Group className="ph20" id="mePh" title={t('fe.me.photos')} action={<AudTag k="all"/>}>
-  <AddCard icon={Camera} title={cp?t('fe.mx.ph.addCouple'):t('fe.me.photoAdd')} sub={settings.discoverMode==='visible'?(cp?t('fe.mx.ph.needCouple'):t('fe.mx.ph.need')):t('fe.mx.ph.mainHint')} onClick={edit}/>
- </Group>;
- const write=async(ids:string[],msg:string,prev?:string[])=>{
-  setBusy(true);
-  try{const r=await call('profile.photosSet',{opId:newOpId(),assetIds:ids},ok);onChanged();
-   toast(r.pending?t('fe.cw.waitPartner'):msg,{type:'ok',...(prev&&!r.pending?{action:{label:t('fe.mx.undo'),fn:()=>{void call('profile.photosSet',{opId:newOpId(),assetIds:prev},ok).then(onChanged).catch(e=>toast(feErrorMessage(e,t),{type:'err'}));}}}:{})});}
-  catch(e){toast(feErrorMessage(e,t),{type:'err'});}finally{setBusy(false);}
- };
- const ids=items.map(x=>x.id);
- const nCells=Math.min(MAX_PHOTOS,Math.max(items.length+1,3));
- // The small thumb paints first, so the slot never sits empty while the card-size picture loads.
- const slots:ReactNode[]=items.map((ph,i)=><PhotoSlot key={ph.id} id={ph.id} big={i===0} dragging={drag.preview?.drag===ph.id} waiting={!ph.src} thumb={ph.src?.thumb} src={photoSrc(ph)}
-  main={i===0?t('fe.me.mainPhoto'):undefined} review={ph.pending?t('fe.mx.ph.review'):undefined} onPointerDown={busy?undefined:e=>drag.down(e,'ph',ids,ph.id)}
-  openLabel={t('fe.mx.ph.nOf',{n:i+1,total:items.length})} onOpen={()=>setOpen(i)}/>);
- for(let i=items.length;i<nCells;i++)slots.push(i===items.length
-  ?<PhotoAdd key="add" onClick={edit} label={t('fe.mx.ph.addAria')} hint={t('fe.me.morePhotos')}/>
-  :<PhotoAdd key={'g'+i} ghost/>);
- const x=open!==null?items[open]:undefined;
- return <Group className="ph20" id="mePh" title={t('fe.me.photos')} action={<><AudTag k="all"/><button type="button" onClick={edit}>{t('fe.mx.edit')}</button></>}>
-  <PhotoSlots>{slots}</PhotoSlots>
-  {x&&open!==null&&<Sheet title={open===0?t('fe.mx.ph.main'):t('fe.mx.ph.nOf',{n:open+1,total:items.length})} onClose={()=>setOpen(null)}>
-   <div className="ph-sheet-prev">{photoSrc(x)&&<img src={photoSrc(x)!} alt="" draggable={false}/>}{x.pending&&<span className="ph-rev"><Clock/><span>{t('fe.mx.ph.review')}</span></span>}</div>
-   <Card list>
-    <Row icon={Eye} title={t('fe.mx.ph.view')} noChev onClick={()=>{const i=open;setOpen(null);setViewing(i);}}/>
-    {open>0&&!x.pending&&<Row icon={Star} title={t('fe.mx.ph.makeMain')} sub={t('fe.mx.ph.makeMainSub')} noChev disabled={busy}
-     onClick={()=>{const i=open;setOpen(null);void write([ids[i]!,...ids.filter((_,k)=>k!==i)],t('fe.mx.ph.mainDone'),ids);}}/>}
-    {x.postId&&<Row icon={Newspaper} title={t('fe.gal.openPost')} sub={t('fe.gal.openPostSub')} noChev onClick={()=>{setOpen(null);navigate('/n/feed/post/'+x.postId);}}/>}
-    <Row icon={Trash2} title={t('fe.mx.ph.remove')} sub={x.postId?t('fe.gal.postStays'):undefined} danger disabled={busy} onClick={()=>{const i=open;setOpen(null);void write(ids.filter((_,k)=>k!==i),t('fe.mx.ph.removed'),ids);}}/>
-   </Card>
-  </Sheet>}
-  {viewing!==null&&<Viewer srcs={items.map(ph=>photoSrc(ph,'full')).filter((s):s is string=>!!s)} index={viewing} onClose={()=>setViewing(null)}/>}
- </Group>;
-}
-
-/** `galleryOwn20()` — «Все» and the albums (wave 5, src/fe/gallery.tsx), «Загрузить» to the composer with photos;
- * empty — the one «add» card, no header action (like every empty block of «Я»). */
-function GalleryBlock({p}:{p:Profile}){
- const {t}=useI18n();
- return <MeGallery profileId={p.id} couple={p.kind==='couple'} title={t('fe.mx.gal')}/>;
-}
 
 /** `meVisLayer()` — Discover, the profile card, likes, activity, mentions; the couple's own group comes after.
  * `part` draws one half (the «Знакомства» or the «Кто может…» section of the new settings); `who` adds the other

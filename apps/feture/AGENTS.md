@@ -87,6 +87,10 @@ or a helper defined twice (`tools/fe-server-baseline.json` only shrinks). Text i
 - **«Обо мне» facts are always visible to everyone** (29.10.2026): no per-fact audience; on a person's profile they
   sit under the bio and under the main buttons (Нравится / Подписаться / Написать).
 - **«Я» uses the same header as every tab** (29.10.2026): kit `Bar` with `lead` (avatar), `sub` and `onTitle`.
+- **«Я» is the own profile as others see it** (04.11.2026): the same parts as someone else's profile page, in the
+  same order, plus controls — «Изменить» / «Фото» (couple: «Настройки пары») where others have Нравится / Подписаться,
+  «Изменить» in a section's header, one «Заполни профиль» card for what is missing. Personal and couple profile are two
+  tabs on top. Visibility and «кто может…» live in «Настройки» (/n/settings/:section), not in «Я».
 - Media is reviewed before it is shown: `uploaded → scanning → needs_review → approved / rejected / blocked`.
   Staff roles: owner, lead, moderator, verifier, support, auditor — checked on the server only.
 - **The owner may do everything, to others and to themselves** (04.11.2026): Premium, own age and photo checks, own
