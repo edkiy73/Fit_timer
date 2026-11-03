@@ -29,12 +29,16 @@ function archivedApkUrl(url,versionCode,cfg){
   return String(url||'')===want?want:'';
 }
 
-async function latestAndroidRelease(input){
+/* opts (optional, for a server job): fetch — the fetch to use (tests pass a fake), signal — aborts a slow GitHub. */
+async function latestAndroidRelease(input,opts){
   const cfg=releaseConfig(input);
+  const o=opts&&typeof opts==='object'?opts:{};
+  const get=typeof o.fetch==='function'?o.fetch:fetch;
   const base=`https://github.com/${cfg.repo}/releases/download/${cfg.tag}`;
-  const metaRes=await fetch(`${base}/${cfg.metaName}`,{
+  const metaRes=await get(`${base}/${cfg.metaName}`,{
     redirect:'follow',
-    headers:{'User-Agent':cfg.userAgent}
+    headers:{'User-Agent':cfg.userAgent},
+    ...(o.signal?{signal:o.signal}:{})
   });
   if(!metaRes.ok) throw new Error('release_metadata_'+metaRes.status);
   const meta=await metaRes.json().catch(()=>null);
@@ -47,7 +51,8 @@ async function latestAndroidRelease(input){
     apkUrl:archivedApkUrl(meta&&meta.apkUrl,versionCode,cfg)||`${base}/${cfg.latestAsset}`,
     releaseUrl:`https://github.com/${cfg.repo}/releases/tag/${cfg.tag}`,
     commit:clampLine(meta&&meta.commit,80),
-    builtAt:clampLine(meta&&meta.builtAt,80)
+    builtAt:clampLine(meta&&meta.builtAt,80),
+    notes:clampLine(meta&&meta.notes,500)
   };
 }
 
