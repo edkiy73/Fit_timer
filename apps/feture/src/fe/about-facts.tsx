@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Baby,Cigarette,CigaretteOff,Languages,Ruler,Sparkles,UserRound,Wine,WineOff} from 'lucide-react';
@@ -34,12 +33,12 @@ export function factItems(a:About,t:T):FactItem[]{
 }
 
 /** «Обо мне» on a profile page: under the bio and the main buttons (owner 29.10.2026); everyone sees the same facts. */
-export function AboutGroup({p,inert,action}:{p:WithAbout,inert?:boolean|undefined,/** «Изменить» on one's own «Я». */ action?:ReactNode}){
+export function AboutGroup({p,inert}:{p:WithAbout,inert?:boolean|undefined}){
  const {t}=useI18n();
  if(p.kind!=='person')return null;
  const items=factItems(asAbout(p.about),t);
  if(!items.length)return null;
- return <Group id="pAbout" title={t('fe.ab.title')} action={action}><FactChips items={items} label={t('fe.ab.title')} inert={inert}/></Group>;
+ return <Group id="pAbout" title={t('fe.ab.title')}><FactChips items={items} label={t('fe.ab.title')} inert={inert}/></Group>;
 }
 
 /** «Обо мне» on «Я»: the own facts and «Изменить»; empty — the one «add» card. */

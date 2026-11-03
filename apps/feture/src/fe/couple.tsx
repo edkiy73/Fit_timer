@@ -109,7 +109,7 @@ export function CoupleMembers(){
 
 /** Banners of the couple's open changes on the Me tab; `tick` changes after every own write so a new `pending` shows
  * at once. */
-export function CouplePending({tick,onDecided}:{base?:CoupleBase,tick:number,onDecided:(msg:string)=>void}){
+export function CouplePending({tick,onDecided}:{base:CoupleBase,tick:number,onDecided:(msg:string)=>void}){
  const {acting}=useFe();const {t}=useI18n();const members=useCoupleMembers();
  const coupleId=acting?.kind==='couple'?acting.id:undefined;
  const {items,load}=useApprovals(coupleId,tick);const [open,setOpen]=useState<string|null>(null);

@@ -21,7 +21,6 @@ import {useDragOrder} from './reorder';
 import {MeGallery} from './gallery';
 import {Viewer} from './post-parts';
 import {MeAboutBlock} from './about-facts';
-import {BasicAge,BasicSheet,type BasicKey} from './me-basics';
 
 /** V21 X01 «Я» with the prototype's markup (`meHead18`, `meProfileLayer`, `meVisLayer`): the header with the avatar,
  * bell, «Как видят» and settings; «Нужно решить»; the four layers with their red dots; photos, basics, details,
@@ -136,7 +135,7 @@ export function MeTab(){
       {notice&&<Alert kind="ok" noIcon>{notice}</Alert>}
       {acting.kind==='couple'&&<><CouplePending base={p} tick={tick} onDecided={msg=>{setNotice(msg);load();}}/><CoupleMembers/></>}
       <PhotosBlock p={p} settings={settings} onChanged={load}/>
-      <BasicsBlock p={p} name={name} onChanged={load}/>
+      <BasicsBlock p={p} name={name}/>
       <MeAboutBlock p={p}/>
       <DetailsBlock p={p} label={label}/>
       {acting.kind==='person'&&couple&&<StatusHint p={p} coupleId={couple.id} onDone={load}/>}
@@ -153,23 +152,15 @@ export function MeTab(){
  </>;
 }
 
-/** «Основное» (owner 04.11.2026: no extra screen just to change a name or a city): name, nick, age, city and the
- * description as rows with their values; a tap edits that one thing in a small sheet right here. */
-export function BasicsBlock({p,name,onChanged}:{p:Profile,name:string,onChanged?:(()=>void)|undefined}){
- const {t,locale}=useI18n();const cp=p.kind==='couple';
- const [edit,setEdit]=useState<BasicKey|null>(null);
- const city=p.city?(locale==='en'?p.city.en:p.city.ru):null;
- const bio=p.bio.replace(/[*_~`>#[\]()]/g,'');
+/** «Основное»: name, age, city and the bio; a tap opens the editor. */
+export function BasicsBlock({p,name}:{p:Profile,name:string}){
+ const {t,locale}=useI18n();const navigate=useNavigate();const cp=p.kind==='couple';
  return <Group id="meBasics" title={t('fe.me.basics')} action={<AudTag k="all"/>}>
-  <Card list>
-   <Row title={cp?t('fe.nn.nameUs'):t('fe.nn.name')} val={p.chosenName||name} onClick={()=>setEdit('name')}/>
-   <Row title={cp?t('fe.nn.nickUs'):t('fe.nn.nick')} val={p.handle?'@'+p.handle:undefined} onClick={()=>setEdit('handle')}/>
-   {!cp&&p.age&&<BasicAge p={p} onChanged={onChanged}/>}
-   <Row title={t('fe.mx.ed.city')} val={city||t('fe.mx.ed.noCity')} onClick={()=>setEdit('city')}/>
+  <Card className="blk-btn" label={t('fe.me.editBasics')} onClick={()=>navigate('/n/me/edit?only=basics')}>
+   <span className="blk-name">{name}{p.age&&p.showAge!==false?', '+p.age:''}{p.city&&(locale==='en'?p.city.en:p.city.ru)?' · '+(locale==='en'?p.city.en:p.city.ru):''}</span>
+   {p.bio&&<span className="blk-bio">{p.bio.replace(/[*_~`>#[\]()]/g,'').slice(0,240)}</span>}<span className="chv"><ChevronRight/></span>
   </Card>
-  {p.bio?<Card className="blk-btn" label={t('fe.mx.ed.about')} onClick={()=>setEdit('bio')}><span className="blk-bio">{bio.slice(0,240)}</span><span className="chv"><ChevronRight/></span></Card>
-   :<AddCard icon={PenLine} title={t(cp?'fe.mp.bioAddUs':'fe.mp.bioAdd')} sub={t(cp?'fe.mp.bioAddSubUs':'fe.mp.bioAddSub')} onClick={()=>setEdit('bio')}/>}
-  {edit&&<BasicSheet k={edit} p={p} onClose={()=>setEdit(null)} onSaved={()=>{setEdit(null);onChanged?.();}}/>}
+  {!p.bio&&<AddCard icon={PenLine} title={t(cp?'fe.mp.bioAddUs':'fe.mp.bioAdd')} sub={t(cp?'fe.mp.bioAddSubUs':'fe.mp.bioAddSub')} onClick={()=>navigate('/n/me/edit?only=basics')}/>}
  </Group>;
 }
 
