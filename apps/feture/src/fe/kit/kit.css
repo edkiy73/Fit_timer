@@ -615,3 +615,24 @@ html:has(.fe-v21),html:has(.fe-v21) body{overscroll-behavior-y:none}
 .v21 .k-form>*,.v21 .k-form .field,.v21 .k-form>.row,.v21 .k-form>[data-field]{margin:0}
 .v21 .cov-or{display:flex;align-items:center;gap:var(--s-3);flex-wrap:wrap;margin-top:var(--s-3);color:var(--mute);font:var(--t-sm)}
 .v21 .cov-or>span{flex:none}.v21 .cov-or>.k-swatches{flex:1 1 220px;min-width:0}
+/* Context column (kit ContextColumn / CtxBlock / CtxRow, desktop ≥ 1100): mini rows share one card, event tiles stack
+   with the small gap, a square picture for communities, an accent dot for an unread notification, quiet footer links. */
+.v21 .ctx .card.k-ctx-list{padding:var(--s-1) 14px}
+.v21 .ctx .k-ctx-list>.mini+.mini{border-top:1px solid var(--line)}
+.v21 .ctx .k-ctx-tiles{display:grid;gap:var(--s-2)}
+.v21 .ctx .k-ctx-tiles+.btn,.v21 .ctx .k-ctx-list+.btn,.v21 .ctx .empty+.btn{margin-top:var(--s-2)}
+.v21 .ctx .mini .k-ctx-pic{position:relative;flex:none;width:36px;height:36px;border-radius:var(--r-s);overflow:hidden}
+/* safe-t: ok — fills the row picture, not the screen top */.v21 .ctx .mini .k-ctx-pic>.plate{position:absolute;inset:0}
+.v21 .ctx .mini>.av,.v21 .ctx .mini>.ico{flex:none}
+.v21 .ctx .mini .grow{flex:1}
+.v21 .ctx .mini.k-ctx-unread .grow b::before{content:'';display:inline-block;width:7px;height:7px;margin-right:6px;border-radius:50%;background:var(--accent);vertical-align:middle}
+/* an empty block in the column is one quiet line with its icon (V21 `.ctx .note`), the action under it */
+.v21 .ctx .empty.k-empty-compact{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;column-gap:var(--s-3);row-gap:var(--s-3);padding:var(--s-1) 0;text-align:left}
+.v21 .ctx .empty.k-empty-compact>.em-ic{width:36px;height:36px;margin:0}
+.v21 .ctx .empty.k-empty-compact>.em-ic svg{width:18px;height:18px}
+.v21 .ctx .empty.k-empty-compact>h3{margin:0;font:400 var(--fs-sm)/1.35 var(--font);color:var(--mute)}
+.v21 .ctx .empty.k-empty-compact>.btns{grid-column:1/-1;margin:0;max-width:none}
+.v21 .ctx .k-ctx-link{color:var(--mute);font:inherit;padding:0}
+.v21 .ctx .k-ctx-link:hover{color:var(--ink)}
+@media (hover:hover){.v21 .ctx .mini:hover b{color:var(--accent)}}
+.v21 .ctx.k-ctx-always{display:block;width:320px;padding:22px 18px 40px;border-left:1px solid var(--line)}

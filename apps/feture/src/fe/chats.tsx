@@ -9,6 +9,7 @@ import {VIDEO_TYPES} from './kit/media';
 import {Uploader,type SendPhoto,type SendVideo,type Uploaded} from './kit/Uploader';
 import {useSendPhoto,useSendVideo,useSendVoice} from './media-upload';
 import {AgeCheckLink,useAgeResume} from './age-check';
+import {useWide} from './wide';
 import {useFe,useLive,useTypingSignal} from './session';
 import {readDraft,useDraftKey,writeDraft} from './drafts';
 import {ReportSheet} from './report';
@@ -87,13 +88,6 @@ const RELOAD='fe:chats-reload';
 const previewOf=(c:Chat,t:T)=>c.state==='ended'?t('fe.chx.endedRow'):!c.last?t('fe.chx.sayFirst'):c.last.media&&!c.last.body?(c.last.mode!=='normal'?t('fe.chats.ephemeral'):c.last.kind==='audio'?t('fe.av.voice'):c.last.kind==='video'?t('fe.av.video'):t('fe.chats.photo')):c.last.body;
 /** The list read last: the desktop list next to a conversation draws it at once while it asks again. */
 let lastList:{items:Chat[],requests:Chat[]}|null=null;
-const WIDE='(min-width:1100px)';
-/** Desktop, where chats are a list and a conversation side by side (kit `ChatPane` / `ChatPick`). */
-function useWide(){
- const [w,setW]=useState(()=>typeof matchMedia==='function'&&matchMedia(WIDE).matches);
- useEffect(()=>{if(typeof matchMedia!=='function')return;const m=matchMedia(WIDE);const on=()=>setW(m.matches);m.addEventListener('change',on);return ()=>m.removeEventListener('change',on);},[]);
- return w;
-}
 /** The chats list beside an open conversation on desktop. */
 function ChatsSide({current}:{current:string}){
  const {call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();

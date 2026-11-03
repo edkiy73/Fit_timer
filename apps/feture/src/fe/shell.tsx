@@ -24,12 +24,16 @@ import {CreateSheet} from './create-entry';
 import {AppUpdateProvider,UpdateRequired,UpdateSheet,useUpdateRequired} from './app-update';
 import {DockHide} from './dock';
 import {followPageTheme} from './system-bars';
-import {prefetchScreens} from '../lazy-screens';
+import {page,prefetchScreens} from '../lazy-screens';
+import {useWide} from './wide';
 import './kit/base.css';
 import './kit/tokens.css';
 import './kit/kit.css';
 import './kit/loading.css';
 import './shell.css';
+
+/** The desktop context column (context.tsx): its code and its reads only when the window is wide enough. */
+const ContextPanel=page(()=>import('./context'),'ContextPanel');
 
 /** V21 shell with the prototype's markup: `.stage > .root > aside.side + main.main(.bar, .view, nav.dock)`.
  * Dock on phones, rail and sidebar on wider screens — all from the kit base.css. */
@@ -105,7 +109,7 @@ function ScreenSkeleton(){
  * inside, so nothing jumps when the screen arrives. */
 function ShellSkeleton(){
  const {t}=useI18n();const {pathname}=useLocation();
- const current=pathname.split('/')[2]||'feed';const tab=FE_TABS.some(x=>x.id===current)?current:'feed';
+ const current=pathname.split('/')[2]||'feed';const tab=FE_TABS.some(x=>x.id===current)?current:'feed';const wide=useWide();
  return <div className="stage"><div className="root">
   <aside className="side"><div className="brand"><img src={import.meta.env.BASE_URL+'fe-logo.svg'} alt=""/><b>Fet<i>Ure</i></b></div>
    <nav aria-hidden="true">{FE_TABS.map(({id,icon:Icon})=><button key={id} type="button" tabIndex={-1} className={'navb'+(tab===id?' on':'')}><Icon/><span>{t('fe.nav.'+id)}</span></button>)}</nav></aside>
@@ -115,8 +119,11 @@ function ShellSkeleton(){
     {FE_TABS.map(({id,icon:Icon})=><button key={id} type="button" tabIndex={-1} className={(tab===id?'on':'')+(id==='me'?' me-tab':'')}>{id==='me'?<span className="dock-av"><span className="av"><i className="sk fe-sk-av"/></span></span>:<Icon/>}<span>{t('fe.nav.'+id)}</span></button>)}
    </nav>
   </main>
+  {wide&&<CtxSkeleton/>}
  </div></div>;
 }
+/** The context column while its code or the session loads: the same column, blinking in place. */
+function CtxSkeleton(){return <aside className="ctx" aria-hidden="true"><Skel kind="list" rows={3}/></aside>;}
 
 function FeGate(){
  const {state,reload}=useFe();const {t}=useI18n();const auth=useOptionalAuth();
@@ -219,10 +226,13 @@ function FeLayout(){
  // The search screen's `.sbar` sits in the flow, not over the view: no room is kept for a floating `.bar` there.
  const [create,setCreate]=useState(false);
  const main=useRef<HTMLElement>(null);const [cta,setCta]=useState(false);const [sbar,setSbar]=useState(false);
+ // Desktop: the context column, unless the chats split (kit ChatPane / ChatPick) takes the right side itself.
+ const wide=useWide();const [split,setSplit]=useState(false);
  // Applied before the next paint (flushSync in the observer's microtask): a frame without the class moved the bar
  // up under the reader on every screen with one (owner 28.10.2026: «все прыгает при переходах»).
- useLayoutEffect(()=>{const m=main.current;if(!m)return;const sync=()=>{const c=!!m.querySelector(':scope>.ctabar'),b=!!m.querySelector(':scope>.sbar');flushSync(()=>{setCta(c);setSbar(b);});};
-  setCta(!!m.querySelector(':scope>.ctabar'));setSbar(!!m.querySelector(':scope>.sbar'));
+ useLayoutEffect(()=>{const m=main.current;if(!m)return;const SPLIT=':scope>.k-chat-pane,:scope>.k-chat-pick';
+  const sync=()=>{const c=!!m.querySelector(':scope>.ctabar'),b=!!m.querySelector(':scope>.sbar'),x=!!m.querySelector(SPLIT);flushSync(()=>{setCta(c);setSbar(b);setSplit(x);});};
+  setCta(!!m.querySelector(':scope>.ctabar'));setSbar(!!m.querySelector(':scope>.sbar'));setSplit(!!m.querySelector(SPLIT));
   const o=new MutationObserver(sync);o.observe(m,{childList:true});return ()=>o.disconnect();},[]);
  // The floating header's title fades as the screen's view scrolls (--sc 0→1 over the first 48px), so it never sits on
  // top of the posts; a new screen starts at the top again.
@@ -259,5 +269,6 @@ function FeLayout(){
    {create&&<CreateSheet onClose={()=>setCreate(false)}/>}
    </ToastProvider></DockHide.Provider>
   </main>
+  {wide&&!split&&current!=='staff'&&<Suspense fallback={<CtxSkeleton/>}><ContextPanel key={acting?.id} current={current}/></Suspense>}
  </div></div>;
 }
