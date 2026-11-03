@@ -34,7 +34,7 @@ export const ru = {
   'fe.rq.renew': 'Ответа нет больше месяца — можно написать ещё раз.',
   // The recipient.
   'fe.rq.in': '{name} хочет начать переписку',
-  'fe.rq.inText': '{name} не узнает, что сообщение прочитано, пока ты не ответишь.',
+  'fe.rq.inText': '{name} не узнает о прочтении, пока ты не ответишь',
   'fe.rq.answer': 'Ответить',
   'fe.rq.hide': 'Скрыть',
   'fe.rq.reportBlock': 'Пожаловаться',
@@ -87,7 +87,7 @@ export const en = {
   'fe.rq.waitText': '{name} will see the request and decide whether to reply.',
   'fe.rq.renew': 'No reply for over a month — you can write once more.',
   'fe.rq.in': '{name} wants to start a conversation',
-  'fe.rq.inText': '{name} won’t know the message was read until you reply.',
+  'fe.rq.inText': '{name} won’t see it was read until you reply',
   'fe.rq.answer': 'Reply',
   'fe.rq.hide': 'Hide',
   'fe.rq.reportBlock': 'Report',
