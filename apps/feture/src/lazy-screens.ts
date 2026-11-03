@@ -1,14 +1,17 @@
 import {lazy,type ComponentType} from 'react';
+import {withChunkReload} from './chunk-reload';
 
 /** Screens loaded on demand (app.tsx). Navigations run in a React transition, so a tap keeps the current screen until
- * the next one's code is there; the `<Suspense>` fallback in the shell shows only when the app opens on such a screen. */
+ * the next one's code is there; the `<Suspense>` fallback in the shell shows only when the app opens on such a screen.
+ * Code gone after a deploy reloads the page once (chunk-reload.ts); the background prefetch never does. */
 const loaders:(()=>Promise<unknown>)[]=[];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function screen<M>(load:()=>Promise<M>,name:keyof M&string):ComponentType<any>{
  if(!loaders.includes(load))loaders.push(load);
+ const open=withChunkReload(load);
  // eslint-disable-next-line @typescript-eslint/no-explicit-any
- return lazy(async()=>({default:(await load())[name] as ComponentType<any>}));
+ return lazy(async()=>({default:(await open())[name] as ComponentType<any>}));
 }
 
 let started=false;
@@ -29,6 +32,7 @@ function idle(fn:()=>void){
 /** A page of the earlier screens (outside /n) or the admin: loaded only when opened, never in the background. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function page<M>(load:()=>Promise<M>,name:keyof M&string):ComponentType<any>{
+ const open=withChunkReload(load);
  // eslint-disable-next-line @typescript-eslint/no-explicit-any
- return lazy(async()=>({default:(await load())[name] as ComponentType<any>}));
+ return lazy(async()=>({default:(await open())[name] as ComponentType<any>}));
 }

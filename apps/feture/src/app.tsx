@@ -10,6 +10,7 @@ import './feture/staff.css';
 import { FeRoot } from './fe/shell';
 import { FeedTab } from './fe/feed';
 import { page, screen } from './lazy-screens';
+import { ScreenError } from './fe/screen-error';
 // Every /n screen but the feed (the first one) is its own chunk: the first screen ships less script, and the rest is
 // fetched in the background once it shows (lazy-screens.ts → prefetchScreens), so a tap later never waits for it.
 const communities=()=>import('./fe/communities'),inbox=()=>import('./fe/inbox'),pair=()=>import('./fe/pair'),settings=()=>import('./fe/settings'),
@@ -107,7 +108,8 @@ export const routes: RouteObject[] = [
     children:[{
       // The app: V21 screens on /api/fe.
       path:'n', element:<FeRoot />,
-      children:[
+      // A screen that fails shows ScreenError in its place, inside the app frame (the tabs stay).
+      children:[{errorElement:<ScreenError />, children:[
         {index:true, element:<Navigate to="/n/feed" replace/>},
         {path:'feed', element:<FeedTab />},
         {path:'feed/new', element:<ComposeScreen />},
@@ -166,7 +168,7 @@ export const routes: RouteObject[] = [
         {path:'me/interests', element:<InterestsScreen />},
         {path:'staff', element:<StaffScreen />},
         {path:'*', element:<Navigate to="/n/feed" replace/>}
-      ]
+      ]}]
     },{
       element:<Shell />,
       children:[{path:'operator', element:<OperatorPage />}]

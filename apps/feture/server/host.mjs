@@ -10,7 +10,8 @@
  *   - the queue worker tick once a minute (on Supabase it was pg_cron + pg_net + Vault).
  * Runs behind Caddy: `X-Forwarded-For` is whatever Caddy set (it drops a client-supplied one), so the first entry is
  * the real client address that Core's rate limits read. The port must stay inside the compose network.
- * Env: PORT (3000), STATIC_DIR (../dist), plus everything api/*.js read. */
+ * Old builds' `/assets/*` keep being served after a deploy from ASSETS_KEEP_DIR (server/assets-keep.mjs).
+ * Env: PORT (3000), STATIC_DIR (../dist), ASSETS_KEEP_DIR (unset = only this build), plus everything api/*.js read. */
 import { createServer } from 'node:http';
 import { createReadStream, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -19,6 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { bunnyFromEnv } from './media/bunny.mjs';
 import { createUploadHandler } from './media/upload-proxy.mjs';
 import { hub } from './realtime-sse.mjs';
+import { keepAssets } from './assets-keep.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const env = process.env;
@@ -26,6 +28,17 @@ const PORT = Number(env.PORT || 3000);
 const STATIC_DIR = path.resolve(here, env.STATIC_DIR || '../dist');
 const MAX_BODY = 4 * 1024 * 1024; // Core's own ceiling; FetUre commands cap far lower themselves
 const require = createRequire(import.meta.url);
+/** Earlier builds' hashed files: a tab opened before a deploy still loads the screens it has not opened yet. */
+let KEEP_DIR = env.ASSETS_KEEP_DIR ? path.resolve(env.ASSETS_KEEP_DIR) : '';
+if (KEEP_DIR) {
+  try {
+    const r = keepAssets({ assetsDir: path.join(STATIC_DIR, 'assets'), keepDir: KEEP_DIR });
+    console.log(`feture assets: build ${r.build}, ${r.copied} new, ${r.kept} kept, ${r.removed} removed`);
+  } catch (error) {
+    console.warn('feture_assets_keep', /** @type {any} */ (error)?.code || /** @type {any} */ (error)?.message);
+    KEEP_DIR = '';
+  }
+}
 
 /** @type {Record<string, (req: any, res: any) => any>} */
 const api = {};
@@ -74,10 +87,15 @@ function serveStatic(url, res) {
   let rel;
   try { rel = decodeURIComponent(url.pathname); } catch { return fail(res, 400, 'bad_url'); }
   if (rel === '/' || rel === '') rel = '/index.html';
-  const file = path.resolve(STATIC_DIR, '.' + rel);
+  let file = path.resolve(STATIC_DIR, '.' + rel);
   if (!file.startsWith(STATIC_DIR + path.sep)) return fail(res, 404, 'not_found');
   let stat;
   try { stat = statSync(file); } catch { /* missing */ }
+  // Not in this build: a chunk of an earlier one (only flat hashed names, never a path out of the directory).
+  if (!stat && KEEP_DIR && /^\/assets\/[\w.-]+$/.test(rel) && !rel.startsWith('/assets/.')) {
+    file = path.join(KEEP_DIR, rel.slice('/assets/'.length));
+    try { stat = statSync(file); } catch { /* missing */ }
+  }
   if (!stat || !stat.isFile()) return fail(res, 404, 'not_found');
   res.statusCode = 200;
   res.setHeader('Content-Type', TYPES[path.extname(file).toLowerCase()] || 'application/octet-stream');

@@ -21,6 +21,10 @@ COPY --from=build /repo/apps/feture/data apps/feture/data
 COPY --from=build /repo/apps/feture/dist apps/feture/dist
 COPY --from=build /repo/apps/feture/node_modules apps/feture/node_modules
 COPY --from=build /repo/apps/feture/package.json apps/feture/package.json
+# Earlier builds' /assets/* live on the compose volume `assets` (server/assets-keep.mjs); a new empty volume takes this
+# directory's owner, so the app (user node) can write there.
+RUN mkdir -p /var/lib/feture/assets && chown node:node /var/lib/feture/assets
+ENV ASSETS_KEEP_DIR=/var/lib/feture/assets
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s CMD node -e "fetch('http://127.0.0.1:3000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"

@@ -62,6 +62,8 @@ services:
       FETURE_APP_URL: https://${FETURE_DOMAIN:?}
       CORS_ORIGINS: https://${FETURE_DOMAIN:?}
       FETURE_REALTIME: sse
+    # Script chunks of the last builds (≥ 3 builds and 7 days): a tab opened before a deploy still opens new screens.
+    volumes: [assets:/var/lib/feture/assets]
 
   caddy:
     image: caddy:2.10.2-alpine
@@ -95,5 +97,6 @@ services:
 
 volumes:
   pgdata:
+  assets:
   caddy_data:
   caddy_config:
