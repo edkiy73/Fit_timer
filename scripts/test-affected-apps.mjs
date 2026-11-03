@@ -26,13 +26,15 @@ for(const [files, want] of cases) assert.deepEqual(affectedApps(files, APPS), wa
 console.log(`ok  affected-apps (${cases.length} случаев)`);
 
 const light = [
-  [[F + 'prototype/v10/s-chats.js', F + 'prototype/v10/styles.css', F + 'public/prototype-v10.html', F + 'public/prototype-v10-notes.html'], {feture: 'check:prototype'}],
-  [[F + 'tools/build-prototype-v10.mjs', F + 'tests/prototype-v10-followup-contract.mjs', F + 'docs/design-reference/V10-CHANGELOG.md'], {feture: 'check:prototype'}],
-  [[F + 'prototype/v10/data.js', F + 'src/app.tsx'], {}],
-  [[F + 'prototype/v10/data.js', 'apps/task-mini/src/app.tsx'], {feture: 'check:prototype'}],
-  [[F + 'prototype/v10/data.js', 'packages/core/src/core/ui.ts'], {}],
-  [[F + 'prototype/v10/data.js', 'package.json'], {}],
-  [[F + 'public/images/v10-content/x.webp'], {}],
+  [[F + 'src/fe/inbox.tsx', F + 'src/fe/i18n/approvals.ts'], {feture: 'check:client'}],
+  [[F + 'src/i18n/ru.ts', F + 'public/fe-sw.js', F + 'docs/why.md'], {feture: 'check:client'}],
+  [[F + 'src/fe/inbox.tsx', F + 'server/notify.mjs'], {}],
+  [[F + 'src/fe/inbox.tsx', F + 'contracts/notifications.mjs'], {}],
+  [[F + 'src/fe/inbox.tsx', F + 'supabase/migrations/x.sql'], {}],
+  [[F + 'src/fe/inbox.tsx', F + 'tests/fe-inbox-postgres.mjs'], {}],
+  [[F + 'src/fe/inbox.tsx', 'apps/task-mini/src/app.tsx'], {feture: 'check:client'}],
+  [[F + 'src/fe/inbox.tsx', 'packages/core/src/core/ui.ts'], {}],
+  [[F + 'src/fe/inbox.tsx', 'package.json'], {}],
   [[F + 'package.json'], {}],
   [[F + 'docs/why.md'], {}],
   [['apps/task-mini/src/app.tsx'], {}],
