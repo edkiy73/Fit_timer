@@ -1,5 +1,14 @@
 /** Copy of the new «Я» and «Настройки» (src/fe/me-new.tsx, src/fe/settings-new.tsx); the rows reuse the current keys. */
 export const ru = {
+  'fe.m3.edit': 'Изменить',
+  'fe.m3.photos': 'Фото',
+  'fe.m3.pair': 'Настройки пары',
+  'fe.m3.fill': 'Заполни профиль',
+  'fe.m3.miss.photo': 'Добавить фото',
+  'fe.m3.miss.bio': 'Написать пару слов о себе',
+  'fe.m3.miss.facts': 'Рост, языки и другие факты',
+  'fe.m3.miss.details': 'Роль, формат, что ищешь',
+  'fe.m3.miss.jars': 'Интересы',
   'fe.m2.g.profile': 'Профиль',
   'fe.m2.g.private': 'Приватное',
   'fe.m2.g.mine': 'Моё',
@@ -26,6 +35,15 @@ export const ru = {
   'fe.m2.checks.todo': 'не пройдены',
 };
 export const en = {
+  'fe.m3.edit': 'Edit',
+  'fe.m3.photos': 'Photos',
+  'fe.m3.pair': 'Couple settings',
+  'fe.m3.fill': 'Fill in your profile',
+  'fe.m3.miss.photo': 'Add a photo',
+  'fe.m3.miss.bio': 'A few words about you',
+  'fe.m3.miss.facts': 'Height, languages and other facts',
+  'fe.m3.miss.details': 'Role, format, what you look for',
+  'fe.m3.miss.jars': 'Interests',
   'fe.m2.g.profile': 'Profile',
   'fe.m2.g.private': 'Private',
   'fe.m2.g.mine': 'Mine',
