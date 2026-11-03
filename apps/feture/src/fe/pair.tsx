@@ -6,19 +6,17 @@ import {AtSign,Check,Copy,EyeOff,Heart,Link as LinkIcon,Lock,ShieldCheck,Users,X
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicBase} from '../api-url';
 import {copyLink} from './share';
-import {canGoBack,useBack,Actions,Alert,Av,Bar,Btn,Card,Empty,Field,Group,H,Input,Note,PersonLine,Pill,RadioList,RequestCard,Row,SelectRow,Sheet,Skel,Stack,View,Who,useLeaveGuard} from './kit';
+import {canGoBack,useBack,Actions,Alert,Av,Bar,Btn,Card,Empty,Field,Group,H,Input,Note,PersonLine,Pill,RadioList,RequestCard,Row,Sheet,Skel,Stack,View,Who,useLeaveGuard} from './kit';
 import {useFe,useLive} from './session';
 import {Ask} from './me';
 import {useToast} from './toast';
 import {when} from './feed';
 import {ApprovalView,CoupleWork} from './couple';
-import {NICK as REG_NICK} from './register';
-import {shakeFirstErr,useChecks} from './kit/validate';
 import {PAIR_TOKEN as TOKEN,dropPairLink as dropLink,pendingPairLink} from './pair-link';
 
-/** Slice E (V21 Q01, Q06, Q07, Q09): a couple starts by an invitation to an exact nickname, or by a single-use link for
- * a partner without an account (the link survives the sign-up in this tab); both partners must be free. Right after
- * the couple forms each partner chooses their own approval mode and who may ask for access (Q09). On Q01: what waits
+/** Slice E (V21 Q01, Q06, Q07): a couple starts by an invitation to an exact nickname, or by a single-use link for
+ * a partner without an account (the link survives the sign-up in this tab); both partners must be free. Accepting forms
+ * the couple with defaults and shows «Пара создана» (owner 04.11.2026: no set-up step). On Q01: what waits
  * for approval, the couple in Discover, «Моё подтверждение», the quick safety actions and stopping the couple. */
 const who=z.object({id:z.uuid(),handle:z.string().nullable(),name:z.string().nullable()}).nullable();
 const invitesRes=z.object({ok:z.literal(true),outgoing:z.array(z.object({id:z.uuid(),state:z.string(),created_at:z.string(),profile:who})),incoming:z.array(z.object({id:z.uuid(),created_at:z.string(),profile:who})),
@@ -105,16 +103,20 @@ function PairMain({onOpen}:{onOpen:(id:string)=>void}){
  useEffect(()=>{if(token&&inCouple){dropLink();setToken(null);toast(t('fe.pair.rule.already_in_couple'),{type:'warn'});}},[token,inCouple,toast,t]);
  const pairError=(e:unknown)=>pairErrorText(e,t);
  const act=async(fn:()=>Promise<unknown>,after?:()=>void)=>{setBusy(true);setFailure('');try{await fn();after?.();load();}catch(e){setFailure(pairError(e));}finally{setBusy(false);}};
- const toSetup=()=>{reload();navigate('/n/me/pair?setup=1',{replace:true});};
+ const toCreated=()=>{reload();navigate('/n/me/pair?created=1',{replace:true});};
+ // The inviter waiting on this screen sees the same «Пара создана» when the partner accepts.
+ const waiting=useRef(false);
+ useEffect(()=>{if(!couple)waiting.current=!!inv?.outgoing.some(o=>o.state==='pending');
+  else if(waiting.current&&couple.state==='active'){waiting.current=false;navigate('/n/me/pair?created=1',{replace:true});}},[couple,inv,navigate]);
  const meName=nameOf(person);
  const guard=useLeaveGuard(!busy&&!!nick.trim());const toMe=useBack('/n/me');
  if(state.status!=='ready')return null;
  // A partner link: who invites, then accept (the couple forms at once) → Q09.
  if(token&&!inCouple)return <LinkLanding token={token} me={{name:meName,id:person?.id,src:person?.avatar}}
-  auto={q.get('auto')==='1'} onClose={()=>{dropLink();setToken(null);navigate('/n/me/pair',{replace:true});}} onAccepted={()=>{dropLink();setToken(null);toSetup();}}/>;
- if(q.get('setup')==='1'){
-  if(!couple||couple.state!=='active'||!c)return <><Bar title={t('fe.c6.q9.title')} back="/n/me"/><View><Skel kind="list"/></View></>;
-  return <SetupView c={c} coupleId={couple.id} onDone={()=>{load();navigate('/n/me/pair',{replace:true});}}/>;
+  auto={q.get('auto')==='1'} onClose={()=>{dropLink();setToken(null);navigate('/n/me/pair',{replace:true});}} onAccepted={()=>{dropLink();setToken(null);toCreated();}}/>;
+ if(q.get('created')==='1'){
+  if(!couple||couple.state!=='active'||!c)return <><Bar title={t('fe.c6.made.title')} back="/n/me"/><View><Skel kind="list"/></View></>;
+  return <CreatedView c={c} onSettings={()=>navigate('/n/me/pair',{replace:true})} onDone={toMe}/>;
  }
  if(couple&&!fresh&&!c&&!failure)return <><Bar title={t('fe.pair.title')} back="/n/me"/><View><Skel kind="list"/></View></>;
  // V21 Q07: a stopped couple — the restore screen (both within 30 days), or start a new couple, which ends the old one.
@@ -169,7 +171,7 @@ function PairMain({onOpen}:{onOpen:(id:string)=>void}){
    <Note className="center">{t('fe.pair.inviteText')}</Note>
    {inv===null?<Skel kind="list"/>:<>
     {inv.incoming.map(i=><RequestCard key={i.id} person={<PersonLine av={<Av name={nameOf(i.profile)} seed={i.profile?.id??i.id}/>} name={nameOf(i.profile)} sub={<>{t('fe.inbox.kind.pinv')} · {when(i.created_at,locale)}</>}/>}
-     actions={<><Btn size="md" disabled={busy} onClick={()=>act(()=>call('couple.inviteAnswer',{opId:newOpId(),inviteId:i.id,accept:true},ok,{asAccount:true}),toSetup)}>{t('fe.inbox.accept')}</Btn>
+     actions={<><Btn size="md" disabled={busy} onClick={()=>act(()=>call('couple.inviteAnswer',{opId:newOpId(),inviteId:i.id,accept:true},ok,{asAccount:true}),toCreated)}>{t('fe.inbox.accept')}</Btn>
       <Btn size="md" kind="soft" disabled={busy} onClick={()=>act(()=>call('couple.inviteAnswer',{opId:newOpId(),inviteId:i.id,accept:false},ok,{asAccount:true}))}>{t('fe.priv.decline')}</Btn></>}/>)}
     {out?<Btn kind="soft" disabled={busy} onClick={()=>act(()=>call('couple.inviteWithdraw',{opId:newOpId(),inviteId:out.id},ok,{asAccount:true}))}>{t('fe.pair.withdraw')}</Btn>
      :<Card form>
@@ -288,48 +290,26 @@ function LinkLanding({token,me,auto,onClose,onAccepted}:{token:string,auto:boole
  </>;
 }
 
-/** V21 Q09 right after the couple forms: the couple's nick (suggested from both nicks, owner 29.10.2026) and optional
- * name, my approval mode and who may ask for access, saved in one call → Q01. */
-function SetupView({c,coupleId,onDone}:{c:Couple,coupleId:string,onDone:()=>void}){
- const {call}=useFe();const {t}=useI18n();const toast=useToast();
- const [nick,setNick]=useState(c.handle??'');const [cname,setCname]=useState(c.chosenName??'');const [nickErr,setNickErr]=useState('');
- const checks=useChecks(cname.trim()?{name:'profileName' as const}:{},{name:cname});
+/** Right after the couple forms, for both partners (owner 04.11.2026): it already works with the defaults — nobody
+ * approves the other, anyone may ask for access, hidden from Discover; all of it changes in the pair settings. */
+function CreatedView({c,onSettings,onDone}:{c:Couple,onSettings:()=>void,onDone:()=>void}){
+ const {t}=useI18n();
  const me=c.members.find(m=>m.me);const other=c.members.find(m=>!m.me);
- const [mode,setMode]=useState<'trust'|'approve'>(me?.approvesPartner?'approve':'trust');
- const [req,setReq]=useState<'all'|'matches'|'none'>('all');
- const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const op=useRef(newOpId());
- const guard=useLeaveGuard(!busy&&(nick.trim().replace(/^@/,'')!==(c.handle??'')||cname.trim()!==(c.chosenName??'')));
- useEffect(()=>{call('profile.settings',{},settingsRes,{profileId:coupleId}).then(r=>setReq(r.settings.requestsFrom??'all')).catch(()=>{});},[call,coupleId]);
- const done=async()=>{setBusy(true);setFailure('');
-  const h=nick.trim().replace(/^@/,'');
-  if(h!==c.handle&&(!REG_NICK.test(h)||/\.\./.test(h)||!/[A-Za-z]/.test(h))){setNickErr(t('fe.reg.nick.format'));setBusy(false);setTimeout(shakeFirstErr);return;}
-  if(!checks.submit()){setBusy(false);return;}
-  try{const r=await call('couple.setup',{opId:op.current,mode,requestsFrom:req,...(h!==c.handle?{handle:h}:{}),...(cname.trim()!==(c.chosenName??'')?{name:cname.trim()}:{})},ok,{profileId:coupleId});
-   toast(r.pending?t('fe.c6.q9.pending'):t('fe.c6.q9.saved'),{type:'ok'});guard.pass(onDone);}
-  catch(e){if(e instanceof FeError&&e.fields?.includes('handle')){setNickErr(t('fe.reg.nick.taken'));setTimeout(shakeFirstErr);}else if(!checks.fromServer(e))setFailure(feErrorMessage(e,t));op.current=newOpId();}finally{setBusy(false);}};
- const partners=`${nameOf(me)} ${t('fe.pair.and')} ${nameOf(other)}`;
+ const name=c.name||`${nameOf(me)} ${t('fe.pair.and')} ${nameOf(other)}`;
  return <>
-  <Bar title={t('fe.c6.q9.title')} back="/n/me/pair"/>
-  {guard.node}
-  <View className="nodock">
-   <Scene me={{name:nameOf(me),id:me?.profileId}} other={{name:nameOf(other),id:other?.profileId}} state="on"/>
-   <H level={2} className="t center">{t('fe.c6.q9.head')}</H>
-   <p className="lead center">{t('fe.c6.q9.lead')}</p>
-   <Group title={t('fe.nn.group')}><Card form>
-    <Field id="fe-cp-nick" name="handle" label={t('fe.nn.nick')} hint={t('fe.nn.nickUsHint')} error={nickErr||undefined}>
-     <div className="inwrap"><AtSign/><Input id="fe-cp-nick" value={nick} maxLength={20} autoCapitalize="off" spellCheck={false} invalid={!!nickErr} onChange={e=>{setNick(e.target.value.replace(/^@/,''));setNickErr('');}}/></div></Field>
-    <Field id="fe-cp-name" name="name" label={t('fe.nn.nameUs')} optional={t('fe.reg.optional')} hint={t('fe.nn.nameHintUs')} error={checks.error('name')}>
-     <Input id="fe-cp-name" value={cname} placeholder={partners} {...checks.input('name')} onChange={e=>setCname(e.target.value)}/>{checks.counter('name')}</Field>
-   </Card></Group>
-   <Group title={t('fe.c6.q9.rules')} foot={t('fe.c6.q9.foot')}><Card list>
-    <SelectRow icon={Check} label={t('fe.c6.trust.title')} sub={mode==='approve'?t('fe.c6.q9.modeOn'):t('fe.c6.q9.modeOff')} value={mode} onChange={setMode}
-     options={[['approve',t('fe.c6.q9.need')],['trust',t('fe.c6.q9.noNeed')]] as const}/>
-    <SelectRow icon={Lock} label={t('fe.c6.q9.req')} sub={t('fe.c6.q9.req.'+req)} value={req} onChange={setReq}
-     options={(['all','matches','none'] as const).map(v=>[v,t('fe.c6.q9.reqv.'+v)] as const)}/>
-   </Card></Group>
-   {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
-  </View>
-  <div className="ctabar"><div className="wrap"><Btn disabled={busy} busy={busy} onClick={()=>void done()}>{t('fe.c6.q9.done')}</Btn></div></div>
+  <Bar title={t('fe.c6.made.title')} onBack={onDone}/>
+  <View className="nodock"><Stack gap={3}>
+   <Card list><Row av={<Av name={name} seed={c.id} couple={[nameOf(me),nameOf(other)]}/>} title={name} sub={c.handle?'@'+c.handle:undefined}/></Card>
+   <Card list>
+    <Row icon={Check} title={t('fe.c6.made.approval')} sub={t('fe.c6.made.approvalSub')}/>
+    <Row icon={Lock} title={t('fe.c6.made.access')} sub={t('fe.c6.made.accessSub')}/>
+    <Row icon={EyeOff} title={t('fe.c6.made.discover')} sub={t('fe.c6.made.discoverSub')}/>
+   </Card>
+   <Actions stack>
+    <Btn onClick={onDone}>{t('fe.c6.made.done')}</Btn>
+    <Btn kind="soft" onClick={onSettings}>{t('fe.c6.made.settings')}</Btn>
+   </Actions>
+  </Stack></View>
  </>;
 }
 

@@ -64,17 +64,17 @@ export default [
    expect(await t.page.locator('textarea').evaluateAll((xs, bio) => xs.some(x => x.value === bio), BIO), 'the proposed bio is filled in');
    await t.shot('w6-resend-edit');
  } },
- { name: 'Q09 set-up: my approval + who asks → Q01, read back', persona: 'pair', route: '/n/me/pair?setup=1', run: async t => {
+ { name: '«Пара создана» after accepting: defaults read back, «Перейти в настройки пары» opens Q01', persona: 'pair', route: '/n/me/pair?created=1', run: async t => {
    const cp = t.me.coupleId;
-   await t.see('text=Настройте пару');
-   await t.page.locator('select[aria-label="Моё подтверждение"]').selectOption('approve');
-   await t.page.locator('select[aria-label="Кто просит доступ"]').selectOption('matches');
-   await t.tap('.ctabar button:has-text("Готово")');
+   await t.see('text=Пара скрыта из знакомств. Можно включить');
+   await t.shot('w6-created');
+   await t.tap('button:has-text("Перейти в настройки пары")');
    await t.page.waitForURL(/#\/n\/me\/pair$/, { timeout: 15000 });
-   const me = (await t.api('couple.get', {}, undefined, cp)).couple.members.find(m => m.me);
-   expect(me.approvesPartner === true, 'approval on');
-   const s = (await t.api('profile.settings', {}, undefined, cp)).settings;
-   expect(s.requestsFrom === 'matches', 'requestsFrom matches: ' + s.requestsFrom);
+   // «Моё подтверждение» sheet: turn it on.
+   await t.tap('.li:has-text("Моё подтверждение")');
+   await t.tap('.sheet.on button[role="radio"]:has-text("С моим подтверждением")');
+   await t.tap('.sheet.on .sh-f button:has-text("Сохранить")');
+   await until(async () => (await t.api('couple.get', {}, undefined, cp)).couple.members.find(m => m.me).approvesPartner, 'approval on');
    // «Моё подтверждение» sheet: turn it off again with the explanation in view.
    await t.tap('.li:has-text("Моё подтверждение")');
    await t.see('.sheet.on >> text=Приватную часть открываете только вдвоём');

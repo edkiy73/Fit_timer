@@ -189,7 +189,7 @@ test('invitations: a week of quiet after a decline, twenty a day, deleted couple
   } finally { await pg.close(); }
 });
 
-test('couple nick (owner 29.10.2026): suggested from the partners’ nicks, unique, changeable once in setup, then the same limits; default name follows the partners', async () => {
+test('couple nick (owner 29.10.2026): suggested from the partners’ nicks, unique, changeable once for free, then the same limits; default name follows the partners', async () => {
   const { pg, db, call, person } = await setup();
   try {
     const a = await person('ua', 'Anya'), b = await person('ub', 'Max');
@@ -202,9 +202,10 @@ test('couple nick (owner 29.10.2026): suggested from the partners’ nicks, uniq
     const pa = (await call('ua', a, { action: 'profile.get', profileId: a })).profile;
     await call('ua', a, { action: 'profile.update', opId: op(), rev: pa.rev, name: 'Аня' });
     assert.equal((await call('ub', pair, { action: 'couple.get' })).couple.name, 'Аня и Max');
-    // Setup: the nick must stay unique; a free one and a name are taken; the first change was the free one.
-    assert.equal((await call('ub', pair, { action: 'couple.setup', opId: op(), mode: 'trust', requestsFrom: 'all', handle: 'Max' })).field, 'handle');
-    assert.equal((await call('ub', pair, { action: 'couple.setup', opId: op(), mode: 'trust', requestsFrom: 'all', handle: 'two_of_us', name: 'Мы' })).status, 200);
+    // The profile editor: the nick must stay unique; a free one and a name are taken; the first change was the free one.
+    const pc = (await call('ub', pair, { action: 'profile.get', profileId: pair })).profile;
+    assert.equal((await call('ub', pair, { action: 'profile.update', opId: op(), rev: pc.rev, handle: 'Max' })).field, 'handle');
+    assert.equal((await call('ub', pair, { action: 'profile.update', opId: op(), rev: pc.rev, handle: 'two_of_us', name: 'Мы' })).status, 200);
     c = (await call('ub', pair, { action: 'couple.get' })).couple;
     assert.deepEqual([c.handle, c.name], ['two_of_us', 'Мы']);
     const own = (await call('ua', pair, { action: 'profile.get', profileId: pair })).profile;

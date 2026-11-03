@@ -394,7 +394,6 @@ async function couples() {
   await step('couple nord', async () => {
     const c = await formCouple('sasha', 'nika');
     await coupleProfile('sasha', c.id, { name: 'Саша и Ника', bio: 'Пара из Гамбурга. Ищем друзей на вечеринки с дресс-кодом и долгие разговоры после. Пишем вдвоём.', cityId: 'Гамбург' }, 'p1');
-    for (const k of ['sasha', 'nika']) must(await api(email(k), 'couple.setup', { opId: uuid7(), mode: 'trust', requestsFrom: 'all' }, c.id), 'setup ' + k);
     const st = (await api(email('sasha'), 'profile.settings', {}, c.id)).settings ?? {};
     if (st.discoverMode !== 'visible') await api(email('sasha'), 'profile.setVisibility', { opId: uuid7(), setting: 'discoverMode', value: 'visible' }, c.id);
   });
@@ -402,8 +401,9 @@ async function couples() {
   await step('couple tea', async () => {
     const c = await formCouple('gleb', 'olya');
     await coupleProfile('gleb', c.id, { name: 'Глеб и Оля', bio: 'Минск. Женаты девять лет, открываем для себя новое — бережно и вдвоём.', cityId: 'Минск' }, 'p2');
-    must(await api(email('olya'), 'couple.setup', { opId: uuid7(), mode: 'approve', requestsFrom: 'matches' }, c.id), 'olya setup');
-    must(await api(email('gleb'), 'couple.setup', { opId: uuid7(), mode: 'trust', requestsFrom: 'matches' }, c.id), 'gleb setup');
+    // A narrowing applies at once; Оля turns on her approval after it.
+    must(await api(email('olya'), 'profile.setVisibility', { opId: uuid7(), setting: 'requestsFrom', value: 'matches' }, c.id), 'couple requestsFrom');
+    must(await api(email('olya'), 'couple.setApproval', { opId: uuid7(), approvesPartner: true }, c.id), 'olya approval');
     const pend = (await api(email('olya'), 'decide.approvals', {}, c.id));
     const items = [...(pend.items ?? []), ...(pend.pending ?? []), ...(pend.returned ?? []), ...(pend.mine ?? [])];
     if (!items.some(x => x.kind === 'post.publish')) {

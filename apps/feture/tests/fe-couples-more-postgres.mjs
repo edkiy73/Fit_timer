@@ -120,20 +120,29 @@ test('invitation link: single use, revocable, expires, never one’s own, blocke
   } finally { await pg.close(); }
 });
 
-test('Q09 setup in one call after forming; requests widening waits for a partner who approves; stop sharing closes all', async () => {
+test('accepting forms the couple with the defaults (owner 04.11.2026); requests widening waits for a partner who approves; stop sharing closes all', async () => {
   const { pg, db, call, person } = await setup();
   try {
     const a = await person('ua', 'Alex'); await person('ub', 'Kira'); const d = await person('ud', 'Mia');
-    assert.equal((await call('ua', a, { action: 'couple.setup', opId: op(), mode: 'trust', requestsFrom: 'all' })).rule, 'not_a_couple');
+    assert.equal((await call('ua', a, { action: 'couple.setApproval', opId: op(), approvesPartner: true })).rule, 'not_a_couple');
     const l = await call('ua', null, { action: 'couple.linkCreate', opId: op() });
     const pair = (await call('ub', null, { action: 'couple.linkAccept', opId: op(), token: l.token })).profileId;
+    // Nothing to set up: a nick from both nicks, no name, nobody approves the other, anyone may ask, outside Discover.
+    const c = (await call('ua', pair, { action: 'couple.get' })).couple;
+    assert.deepEqual([c.state, typeof c.handle, c.chosenName, c.members.map((/** @type {any} */ m) => m.approvesPartner)], ['active', 'string', '', [false, false]]);
+    const st = (await call('ub', pair, { action: 'profile.settings' })).settings;
+    assert.deepEqual([st.requestsFrom, st.discoverMode], ['all', 'off']);
+    // Both partners are told the couple exists.
+    const told = await db.query(`select count(*)::int n from feture.outbox where topic = 'couple.created' and profile_id = $1`, [pair]);
+    assert.equal(told[0].n, 2);
 
-    const s = await call('ub', pair, { action: 'couple.setup', opId: op(), mode: 'approve', requestsFrom: 'none' });
-    assert.deepEqual([s.approvesPartner, s.requestsFrom], [true, 'none']);
+    // Kira approves Alex's changes and closes requests (a narrowing applies at once).
+    assert.equal((await call('ub', pair, { action: 'couple.setApproval', opId: op(), approvesPartner: true })).approvesPartner, true);
+    await call('ub', pair, { action: 'profile.setVisibility', opId: op(), setting: 'requestsFrom', value: 'none' });
     assert.equal((await call('ua', pair, { action: 'profile.settings' })).settings.requestsFrom, 'none');
     // Alex widens it: Kira approves Alex's changes, so it waits.
-    const w = await call('ua', pair, { action: 'couple.setup', opId: op(), mode: 'trust', requestsFrom: 'all' });
-    assert.deepEqual([w.approvesPartner, w.requestsFrom, !!w.pending?.approvalId], [false, null, true]);
+    const w = await call('ua', pair, { action: 'profile.setVisibility', opId: op(), setting: 'requestsFrom', value: 'all' });
+    assert.ok(w.pending?.approvalId, JSON.stringify(w));
     await call('ub', pair, { action: 'decide.approval', opId: op(), approvalId: w.pending.approvalId, choice: 'approve' });
     assert.equal((await call('ua', pair, { action: 'profile.settings' })).settings.requestsFrom, 'all');
 

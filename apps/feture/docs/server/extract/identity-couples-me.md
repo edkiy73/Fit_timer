@@ -95,7 +95,7 @@ Lifecycle:
 ### 1.7 `couple_invitation` — owner: inviter account
 Fields: id, inviter_account, invitee_account (resolved by **exact** personal nick, `@` stripped, case‑insensitive) or link token for a not‑yet‑registered partner (`pairShareLink` 8489, implied token), status `pending` → `accepted` | `declined` | `withdrawn` (+ `expired` implied, none in V21), created_at, answered_at.
 Rules (`pairInviteIssue` 8487, `v6PairInvite` 8488): not own nick; format check before existence (CPL-012); not a couple profile; invitee not already in a couple; inviter has no active couple; one pending outgoing per inviter; visible + withdrawable (Q01 8472, `v6PairCancel` 8490); decline is stored and shown to the inviter («приглашение отклонено» 8476, `pairDeclined` 8578, CPL-013); invitee answers in «Нужно решить» (`todoItems` 7939) with the defaults shown (`pairDefaultsHTML` 8465). Incoming invite is hidden if the inviter is blocked (7939) — server must also refuse sending to/from blocked (not checked in 8487, Q15).
-On accept → `couple` created, both get `pairCreated`; acceptor goes to Q09 «Настройка пары» (my approval + who may ask for access) (8577, 8567).
+On accept → `couple` created, both get `pairCreated`; the couple works at once with defaults (no approval, anyone may ask, Discover off) and both see «Пара создана»; Q09 set-up removed (owner 04.11.2026).
 
 ### 1.8 `partner_approval` (jointQueue + profile proposal) — owner: couple profile
 | Field | Type | Evidence |
@@ -237,7 +237,6 @@ Common for all: `operation_id` (idempotency receipt, payload hash; replay return
 | `couple.invite.link` | — | same | returns invite token URL (sign‑up then auto‑invite) | — |
 | `couple.invite.withdraw` | invitation_id | inviter | withdrawn | — |
 | `couple.invite.answer` | invitation_id, accept\|decline | invitee | accept → couple active with defaults (dating on/visible, approvals off, empty content, name «A и B»), both notified `pairCreated`; decline stored, inviter notified `pairDeclined` | `stale` (inviter now in couple/blocked) |
-| `couple.setup` | my_approval_required, requests_from | member after create | Q09; requests_from via normal path | — |
 | `couple.approval_setting.set` | required bool | member | sets own flag; approval_epoch++; partner notified trustOn/Off | — |
 | `couple.proposal.submit` | (implicit in couple profile writes) | member | 1 pending; payload snapshot + base_revision | `approval_pending`, `revision_conflict` |
 | `approval.approve` | approval_id, version | the other member | applies payload (re‑validated: blocks, community rights, revision/safety epoch); notifies author `workApproved`/`profileApproved` | `version_changed`, `self_approval` |

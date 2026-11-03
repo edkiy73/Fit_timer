@@ -102,7 +102,7 @@ async function checkIdentity(q, profileId, input, p) {
 }
 
 /** Writes a new nick and / or chosen name within the limits; `name` (what everyone sees) follows by trigger.
- * Shared by profile.update (also an approved couple change) and couple.setup.
+ * Used by profile.update (also an approved couple change).
  * @param {Q} q @param {string} profileId @param {{handle?: string, name?: string}} input */
 export async function writeIdentity(q, profileId, input) {
   const p = await identityRow(q, profileId, true);
@@ -274,7 +274,7 @@ async function doInterestSet(q, profileId, _accountId, input) {
 
 /** One visibility setting as the acting profile: a person's applies at once; a couple's narrowing applies at once (hiding
  * from Discover voids pending widenings), a widening waits for the partner when they ask to approve. Shared by
- * profile.setVisibility and couple.setup. @param {Q} q @param {Acting} acting @param {keyof typeof PROFILE_SETTINGS} setting @param {any} value */
+ * profile.setVisibility. @param {Q} q @param {Acting} acting @param {keyof typeof PROFILE_SETTINGS} setting @param {any} value */
 export async function setVisibilityAs(q, acting, setting, value) {
   if (acting.kind === 'couple') {
     const [cur] = await q.query(`select ${SETTING_COLUMN[setting]} v from feture.profile_settings where profile_id = $1`, [acting.profileId]);
