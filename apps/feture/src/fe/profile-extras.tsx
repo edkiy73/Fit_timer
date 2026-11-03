@@ -231,12 +231,13 @@ function useOptions(){
  return (kind:string,code:string)=>{const o=opts.find(x=>x.kind===kind&&x.code===code);return o?((locale==='en'?o.en||o.ru:o.ru||o.en)??code):code;};
 }
 /** detailsGroup: every chosen detail in one card; a couple shows role, format and «в поиске». */
-export function DetailsGroup({p}:{p:PersonProfile}){
+/** `action`: «Изменить» in the header on one's own «Я». */
+export function DetailsGroup({p,action}:{p:PersonProfile,action?:ReactNode}){
  const {t}=useI18n();const label=useOptions();
  const rows=DETAILS.filter(([f])=>p.kind==='person'||COUPLE_DETAILS.has(f)).map(([f,kind])=>{const v=p.details[f];const codes=Array.isArray(v)?v as string[]:typeof v==='string'?[v]:[];
   return codes.length?[t('fe.px.f.'+kind),codes.map(c=>label(kind,c)).join(', ')] as const:null;}).filter(x=>!!x);
  if(!rows.length)return null;
- return <Group title={t(p.kind==='couple'?'fe.px.f.titleCouple':'fe.px.f.title')}>
+ return <Group title={t(p.kind==='couple'?'fe.px.f.titleCouple':'fe.px.f.title')} action={action}>
   <Card><dl className="kv">{rows.map(([k,v])=><Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>)}</dl></Card></Group>;
 }
 
@@ -277,7 +278,7 @@ const ownVis=z.object({ok:z.literal(true),settings:z.object({activityVis:z.enum(
  * активность» and the viewer's relation (the server decides); on one's own profile it says who else sees it. «Как
  * видят» (`preview`) shows it only when everyone may. */
 const actsOf=(r:z.infer<typeof actRes>)=>r.items.flatMap(x=>{const a=activitySchema.safeParse(x);return a.success?[a.data]:[];});
-function Activity({profileId,inert,preview,pre}:{profileId:string,inert?:boolean|undefined,preview?:boolean|undefined,pre?:CardPre|undefined}){
+export function Activity({profileId,inert,preview,pre}:{profileId:string,inert?:boolean|undefined,preview?:boolean|undefined,pre?:CardPre|undefined}){
  const {call,acting}=useFe();const {t}=useI18n();const [items,setItems]=useState<Post[]|null>(()=>pre?pre.posts?.items??[]:null);const [tab,setTab]=useState<'posts'|'notes'|'acts'>('posts');
  const [acts,setActs]=useState<Act[]|null>(()=>pre?pre.activity?actsOf(pre.activity):[]:null);const own=profileId===acting?.id;const [vis,setVis]=useState<string|null>(null);
  const given=!!pre;
@@ -320,7 +321,7 @@ function Activity({profileId,inert,preview,pre}:{profileId:string,inert?:boolean
  * counter, the thumbnails and what opens always agree; a tile and «Все · N» both open that gallery. In «Как видят»
  * only what everyone sees is drawn. */
 type GalleryData=z.infer<typeof galleryList>;
-function GalleryGroup({p,inert,preview,gal}:{p:PersonProfile,inert?:boolean|undefined,preview?:boolean|undefined,gal?:GalleryData|null|undefined}){
+export function GalleryGroup({p,inert,preview,gal}:{p:PersonProfile,inert?:boolean|undefined,preview?:boolean|undefined,gal?:GalleryData|null|undefined}){
  const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();
  const [g,setG]=useShown<z.infer<typeof galleryList>|null>('px.gal:'+p.id,()=>gal??null);
  useEffect(()=>{let live=true;call('gallery.list',{profileId:p.id},galleryList).then(r=>{if(live)setG(r);}).catch(()=>{});return ()=>{live=false;};},[call,p.id,setG]);
@@ -335,7 +336,7 @@ function GalleryGroup({p,inert,preview,gal}:{p:PersonProfile,inert?:boolean|unde
 export const galleryList=z.object({ok:z.literal(true),items:z.array(z.object({postId:z.string(),media:z.object({src:z.record(z.string(),z.string()).nullable()}).passthrough(),audience:z.string().optional()}).passthrough()),next:z.string().nullable()});
 
 /** Interests group of another profile (pubJars → jarShelf, six then «Ещё N»). */
-function InterestsGroup({profileId,name,avatar,inert,pre,preview}:{profileId:string,name:string,avatar?:string|null|undefined,inert?:boolean|undefined,pre?:CardPre|undefined,preview?:'all'|'granted'|undefined}){
+export function InterestsGroup({profileId,name,avatar,inert,pre,preview,action}:{profileId:string,name:string,avatar?:string|null|undefined,inert?:boolean|undefined,pre?:CardPre|undefined,preview?:'all'|'granted'|undefined,action?:ReactNode}){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const topic=useTopics();
  // «Как видят» reads the own list (every audience): keep only what that audience gets — public ones, plus «По доступу»
  // with access; «Только я» never; a hard limit only as a limit, as the server sends it to others.
@@ -350,7 +351,7 @@ function InterestsGroup({profileId,name,avatar,inert,pre,preview}:{profileId:str
  // Someone else's interest opens the comparison (V21 openTopic); the acting profile's own opens the topic.
  const own=profileId===acting?.id;
  const theirs=(id:string)=>{const j=items.find(x=>x.topicId===id);return j?asInterest(j):undefined;};
- return <Group title={t('fe.px.int.title')}>
+ return <Group title={t('fe.px.int.title')} action={action}>
   <Card><Jars items={items} topic={topic} max={6} {...(inert?{}:{onTopic:(id:string)=>own?navigate('/n/topics/'+id):setOpen(id)})}/></Card>
   {open&&<CompareSheet key={open} topicId={open} name={name} avatar={avatar} personId={profileId} theirs={theirs(open)} onClose={()=>setOpen(null)}/>}</Group>;
 }
@@ -587,7 +588,7 @@ const linksRes=z.object({ok:z.literal(true),items:z.array(z.object({id:z.string(
  other:linkOther}).passthrough())});
 
 /** Confirmed links of a profile as far as both endpoints' visibility allows (linksBlock as another person sees it). */
-export function LinksSection({profileId,inert,pre}:{profileId:string,inert?:boolean|undefined,pre?:CardPre|undefined}){
+export function LinksSection({profileId,inert,pre,action}:{profileId:string,inert?:boolean|undefined,pre?:CardPre|undefined,action?:ReactNode}){
  const {call,acting,state}=useFe();const {t}=useI18n();const navigate=useNavigate();
  const [items,setItems]=useState<z.infer<typeof linksRes>['items']>(()=>pre?.links?.items??[]);const [all,setAll]=useState(false);const given=!!pre;
  useEffect(()=>{if(given)return;call('links.ofProfile',{profileId},linksRes).then(r=>setItems(r.items)).catch(()=>{});},[call,profileId,given]);
@@ -595,7 +596,7 @@ export function LinksSection({profileId,inert,pre}:{profileId:string,inert?:bool
  if(!items.length)return null;
  const own=new Set(state.status==='ready'?state.boot.profiles.map(p=>p.id):[]);
  const shown=all?items:items.slice(0,4);
- return <Group title={t('fe.px.lk.title')} action={items.length>4&&!all&&<button type="button" onClick={()=>setAll(true)}>{t('fe.px.all')} · {items.length}</button>}>
+ return <Group title={t('fe.px.lk.title')} action={action??(items.length>4&&!all&&<button type="button" onClick={()=>setAll(true)}>{t('fe.px.all')} · {items.length}</button>)}>
   <Card list>{shown.map(l=>{const name=l.other.name||(l.other.handle?'@'+l.other.handle:'?');
    // `side` is this profile's side; the row names the other one's, as in the prototype's linkLabel.
    const label=linkLabel(t,l.kind,l.side);const mine=own.has(l.other.id);
