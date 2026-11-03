@@ -141,7 +141,7 @@ export const routes: RouteObject[] = [
         {path:'chats/requests', element:<RequestsScreen />},
         {path:'chats/new/:to', element:<ChatScreen />},
         {path:'chats/:id', element:<ChatScreen />},
-        {path:'me', element:<MeTab />},
+        {path:'me', element:<MeNewScreen />}, // LOCAL PREVIEW ONLY — not committed
         {path:'me/new', element:<MeNewScreen />}, // the owner's new layout, by address only until it replaces «Я»
         {path:'me/new/:section', element:<MeNewSection />},
         {path:'me/preview', element:<MePreviewScreen />},
