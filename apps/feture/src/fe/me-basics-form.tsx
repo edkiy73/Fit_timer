@@ -3,12 +3,13 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {AtSign,Cake} from 'lucide-react';
 import {FeError,dayMonth,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Btn,Card,Counter,Field,Group,Input,RadioList,Sheet,TextArea} from './kit';
+import {Alert,Btn,Card,Counter,Field,Group,Input,Note,RadioList,Sheet,TextArea} from './kit';
 import {PickField,PlacePicker,type Place} from './kit/Place';
 import {FIELD,textLength} from './kit/validate';
 import {useFe} from './session';
 import {useToast} from './toast';
 import {NICK,nickAnswer} from './register';
+import {RichText} from './post-parts';
 import type {Profile} from './me';
 
 /** «Мой профиль» → «Основное» (owner 04.11.2026): name, nick, city, age and «О себе» shown like «Данные», «Изменить» in the
@@ -26,10 +27,11 @@ export function BasicsForm({p,places,onSaved}:{p:Profile,places:Place[],onSaved:
   [cp?t('fe.nn.nickUs'):t('fe.nn.nick'),p.handle?'@'+p.handle:'—'],
   [t('fe.mx.ed.city'),city||'—'],
   ...(!cp&&p.age?[[t('fe.mb.age'),p.showAge!==false?String(p.age):t('fe.mb.ageHidden',{n:String(p.age)})] as [string,string]]:[]),
-  [t('fe.mx.ed.about'),p.bio||'—'],
  ];
  return <Group id="meBasics" title={t('fe.me.basics')} action={<button type="button" onClick={()=>setOpen(true)}>{t('fe.mx.edit')}</button>}>
-  <Card><dl className="kv">{rows.map(([k,v])=><Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>)}</dl></Card>
+  {/* «О себе» last, under its label at full width, with its line breaks, lists and emphasis as on the profile. */}
+  <Card><dl className="kv">{rows.map(([k,v])=><Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>)}
+   <dt className="wide">{t('fe.mx.ed.about')}</dt><dd className="wide">{p.bio?<RichText text={p.bio} className="bio"/>:<Note as="span">{t('fe.mb.noBio')}</Note>}</dd></dl></Card>
   {open&&<BasicsSheet p={p} places={places} onClose={()=>setOpen(false)} onSaved={()=>{setOpen(false);onSaved();}}/>}
  </Group>;
 }
