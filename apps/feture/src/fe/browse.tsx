@@ -5,7 +5,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Newspaper,BookOpen,ChevronLeft,ChevronRight,CircleCheck,Ellipsis,History,Pencil,Plus,Search as SearchIcon,SlidersHorizontal,User,UserMinus,Users,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {ActingAv,Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,H,IconBtn,LoadMore,Note,Pill,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Stack,View,plate,Who,nickShown} from './kit';
+import {useBack,ActingAv,Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,H,IconBtn,LoadMore,Note,Pill,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Stack,View,plate,Who,nickShown} from './kit';
 import {useFe,useKeyChange} from './session';
 import {PostCard,postSchema,type Post} from './feed';
 import {InterestSheet,Jars,useInterests} from './interests';
@@ -146,7 +146,7 @@ const sfCount=(f:SearchFilters,k:'posts'|'events'|'communities')=>k==='posts'?f.
 const POST_TYPES=['note','text','photo','poll','interests'] as const;
 
 export function SearchScreen(){
- const {call,state}=useFe();const account=state.status==='ready'?state.boot.account.id:'';const {t,locale}=useI18n();const navigate=useNavigate();const [params,setParams]=useSearchParams();
+ const {call,state}=useFe();const account=state.status==='ready'?state.boot.account.id:'';const {t,locale}=useI18n();const navigate=useNavigate();const goBack=useBack();const [params,setParams]=useSearchParams();
  const scope:Scope=(SCOPES as readonly string[]).includes(params.get('scope')??'')?params.get('scope') as Scope:'all';
  const [q,setQ]=useState(()=>params.get('q')??'');const [recent,setRecent]=useState(()=>readRecent(account));
  const {data:catalog}=useCatalog();const topics=useMemo(()=>catalog?.topics??[],[catalog]);
@@ -213,7 +213,7 @@ export function SearchScreen(){
  return <>
   <H level={1} className="sr-only" tabIndex={-1}>{t('fe.br.search')}</H>
   <div className="sbar">
-   <IconBtn icon={ChevronLeft} kind="ghost" label={t('fe.back')} onClick={()=>navigate(-1)}/>
+   <IconBtn icon={ChevronLeft} kind="ghost" label={t('fe.back')} onClick={goBack}/>
    <SearchInput ref={input} value={q} label={t('fe.br.searchPh')}
     autoCapitalize="off" spellCheck={false} onChange={e=>setQ(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')commit();}}/>
   </div>

@@ -1,8 +1,7 @@
 import React,{useEffect,useRef,useState,type CSSProperties,type ReactNode} from 'react';
-import {useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Check,ChevronLeft,Clock,Heart,Image as ImageIcon,Lock,Plus,Ticket,UserRound,Users,type LucideIcon} from 'lucide-react';
-import {Alert,Av,Btn,Card,IconBtn,Note,Row,Sheet,Skel,Stack,Switch,plate} from './index';
+import {Alert,Av,Btn,Card,IconBtn,Note,Row,Sheet,Skel,Stack,Switch,plate,useBack} from './index';
 import {VideoPlayer} from './av';
 import './domain.css';
 
@@ -16,7 +15,7 @@ import './domain.css';
 /** A header that floats over a cover picture (community, event): glass round buttons; the title shows only once the
  * cover scrolls away. `children` are the actions on the right. */
 export function CoverBar({title,onBack,children}:{title?:string|null|undefined,onBack?:(()=>void)|undefined,children?:ReactNode}){
- const {t}=useI18n();const navigate=useNavigate();const ref=useRef<HTMLElement>(null);
+ const {t}=useI18n();const goBack=useBack();const ref=useRef<HTMLElement>(null);
  // Once the cover has scrolled under the header it becomes the glass bar with the title (base.css `.ev-bar.solid`).
  useEffect(()=>{const bar=ref.current,main=bar?.parentElement;if(!bar||!main)return;
   // A title on the cover (event) turns it as soon as it would slide under the buttons; else the cover's bottom edge.
@@ -26,7 +25,7 @@ export function CoverBar({title,onBack,children}:{title?:string|null|undefined,o
   main.addEventListener('scroll',on,{capture:true,passive:true});on();
   return ()=>main.removeEventListener('scroll',on,{capture:true});},[]);
  return <header ref={ref} className="bar overlay ev-bar">
-  <IconBtn icon={ChevronLeft} kind="glass" label={t('fe.back')} onClick={()=>onBack?onBack():navigate(-1)}/>
+  <IconBtn icon={ChevronLeft} kind="glass" label={t('fe.back')} onClick={()=>onBack?onBack():goBack()}/>
   <b className="ev-bar-t" aria-hidden="true">{title}</b><span className="k-grow"/>
   {children}
  </header>;
@@ -34,10 +33,10 @@ export function CoverBar({title,onBack,children}:{title?:string|null|undefined,o
 
 /** The header of a conversation: ‹, the other side as the title (avatar, name, a line under it) that opens their
  * profile, then the actions. Without `name` it shows a placeholder while the chat loads. */
-export function PersonBar({name,av,sub,mark,onOpen,onBack,children}:{name?:string|undefined,av?:ReactNode,sub?:ReactNode,/** Age and the small marks (verified photo, access) right after the name. */ mark?:ReactNode,onOpen?:(()=>void)|undefined,onBack:()=>void,children?:ReactNode}){
+export function PersonBar({name,av,sub,mark,onOpen,onBack,children}:{name?:string|undefined,av?:ReactNode,sub?:ReactNode,/** Age and the small marks (verified photo, access) right after the name. */ mark?:ReactNode,onOpen?:(()=>void)|undefined,/** «‹»; without it no back button (desktop: the chats list stays on the left). */ onBack?:(()=>void)|undefined,children?:ReactNode}){
  const {t}=useI18n();
  return <header className="bar solid">
-  <IconBtn icon={ChevronLeft} kind="ghost" label={t('fe.back')} onClick={onBack}/>
+  {onBack&&<IconBtn icon={ChevronLeft} kind="ghost" label={t('fe.back')} onClick={onBack}/>}
   {name?<button type="button" className="row grow chat-who" onClick={onOpen}>{av}
    <span className="cw-tx"><span className="cw-n"><b className="k-strong one">{name}</b>{mark}</span>{sub&&<small className="k-cap k-mute">{sub}</small>}</span>
   </button>:<span className="row grow chat-who"><i className="sk sk-av"/><i className="sk sk-l w40"/></span>}
@@ -275,8 +274,12 @@ export function ChatList({children}:{children:ReactNode}){
  * empty right column too. `ChatPane` is the list next to an open conversation (title, then the rows, scrolling on its
  * own); `ChatPick` is the right side of the chats list while nothing is open. Both are hidden below 1100 px, so a phone
  * and a tablet keep one screen at a time. */
-export function ChatPane({title,children}:{title:string,children:ReactNode}){
- return <aside className="k-chat-pane" aria-label={title}><div className="k-chat-pane-h"><b>{title}</b></div><div className="k-chat-pane-b">{children}</div></aside>;
+export function ChatPane({title,actions,onBack,always,children}:{title:string,/** Shown at any width (Storybook); the app never passes it. */ always?:boolean,/** The list's own buttons (search, archive) — the same as in the chats header. */ actions?:ReactNode,
+ /** «‹» before the title: the archive inside the pane goes back to the chats. */ onBack?:(()=>void)|undefined,children:ReactNode}){
+ const {t}=useI18n();
+ return <aside className={'k-chat-pane'+(always?' k-chat-pane-always':'')} aria-label={title}><div className="k-chat-pane-h">
+  {onBack&&<IconBtn icon={ChevronLeft} kind="ghost" label={t('fe.back')} onClick={onBack}/>}<b>{title}</b>{actions&&<span className="k-chat-pane-a">{actions}</span>}
+ </div><div className="k-chat-pane-b">{children}</div></aside>;
 }
 export function ChatPick({children}:{children:ReactNode}){
  return <div className="k-chat-pick">{children}</div>;

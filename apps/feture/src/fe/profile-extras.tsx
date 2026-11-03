@@ -45,7 +45,7 @@ export function pxError(e:unknown,t:T){
 }
 
 /** `div.layer > div.scrim.on + div.sheet.on` — the prototype's sheet; Esc, ✕ and the scrim close it. */
-import {Sheet} from './kit';
+import {Sheet,useBack} from './kit';
 import {FollowButton} from './follow';
 export {Sheet};
 
@@ -413,12 +413,12 @@ export function cardRead(actingId:string,profileId:string){const hit=cardMemo.ge
  * nothing pressable. */
 export function ProfilePage({p,preview,seg,onMore,menu,onRefresh,pre,gal,children}:{p:PersonProfile,/** Everything under the photo, read before the page is drawn: nothing pops in later. */ pre?:CardPre|undefined,gal?:GalleryData|null|undefined,preview?:'all'|'granted'|undefined,seg?:ReactNode,onMore?:(()=>void)|undefined,
  menu?:((rel:Relation|null,reload:()=>void)=>ReactNode)|undefined,/** Pull-to-refresh: reads the profile again. */ onRefresh?:(()=>unknown)|undefined,children?:ReactNode}){
- const {t}=useI18n();const navigate=useNavigate();const [rel,setRel,reloadRel]=useRelation(p.id);const [view,setView]=useState<number|null>(null);
+ const {t}=useI18n();const navigate=useNavigate();const goPeople=useBack('/n/people');const [rel,setRel,reloadRel]=useRelation(p.id);const [view,setView]=useState<number|null>(null);
  const scroller=useRef<HTMLDivElement>(null);const name=personName(p);const inert=!!preview;const list=photosOf(p);
  return <>
   <header className="bar overlay pbar">
    {/* Back to where the profile was opened (the deck, «Симпатии», a list, search); opened by a link, to «Люди». */}
-   <IconBtn icon={ChevronLeft} kind="glass" label={t('fe.back')} onClick={()=>{if(((window.history.state as {idx?:number}|null)?.idx??0)>0)navigate(-1);else navigate('/n/people',{replace:true});}}/>
+   <IconBtn icon={ChevronLeft} kind="glass" label={t('fe.back')} onClick={goPeople}/>
    <span className="k-grow"/>
    {onMore&&<IconBtn icon={Ellipsis} kind="glass" aria-haspopup="dialog" label={t('fe.px.menu.more')} onClick={onMore}/>}
   </header>
@@ -725,7 +725,7 @@ export function HistoryScreen(){
 /* ---------- «Как видят» (P03) ---------- */
 type Lv='all'|'granted'|'card';
 const ownSettingsRes=z.object({ok:z.literal(true),settings:z.object({discoverMode:z.string()}).passthrough()});
-function BackBtn(){const {t}=useI18n();const navigate=useNavigate();return <IconBtn icon={ChevronLeft} kind="ghost" label={t('fe.back')} onClick={()=>navigate(-1)}/>;}
+function BackBtn(){const {t}=useI18n();const back=useBack();return <IconBtn icon={ChevronLeft} kind="ghost" label={t('fe.back')} onClick={back}/>;}
 
 /** `/n/me/preview`: the own profile as others see it, with the prototype's audience switch «Все / С доступом /
  * Знакомства». «Все» and «С доступом» are the profile page itself drawn as a viewer sees it (the server's own data,

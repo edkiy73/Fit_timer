@@ -4,7 +4,7 @@ import {MaintenanceGate} from './maintenance';
 import {PaywallHost} from './premium';
 import {Outlet,useLocation,useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Ban,Calendar,Globe,Image as FeedIcon,LogOut,MessageCircle,Plus,User,Users,X,type LucideIcon} from 'lucide-react';
+import {Ban,Bell,Calendar,Globe,Image as FeedIcon,LogOut,MessageCircle,Plus,User,Users,X,type LucideIcon} from 'lucide-react';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import {FeError} from '../feture/fe-api';
 import {feErrorMessage} from '../feture/fe-api';
@@ -40,11 +40,14 @@ const ContextPanel=page(()=>import('./context'),'ContextPanel');
 export const FE_TABS:{id:string,icon:LucideIcon}[]=[
  {id:'feed',icon:FeedIcon},{id:'people',icon:Users},{id:'communities',icon:Globe},{id:'chats',icon:MessageCircle},{id:'me',icon:User},
 ];
-/** The side menu (rail and full menu): «Комьюнити» is two items there, each opening its own list. `go` — where it leads
- * (the phone dock keeps the one tab with the inner switch); `label` — its name key when it differs from `fe.nav.<id>`. */
+/** The side menu (rail and full menu): «Комьюнити» is two items there, each opening its own list, and «Уведомления»
+ * (with «Нужно решить» inside) replaces the bell of the screen headers (owner 04.11.2026; the phone keeps the bell).
+ * `go` — where it leads (the phone dock keeps the one tab with the inner switch); `label` — its name key when it
+ * differs from `fe.nav.<id>`. */
 export const SIDE_TABS:{id:string,icon:LucideIcon,label?:string,go?:string}[]=[
  {id:'feed',icon:FeedIcon},{id:'people',icon:Users},{id:'events',icon:Calendar,go:'/n/communities?sub=events'},
- {id:'communities',icon:Globe,label:'fe.nav.groups',go:'/n/communities'},{id:'chats',icon:MessageCircle},{id:'me',icon:User},
+ {id:'communities',icon:Globe,label:'fe.nav.groups',go:'/n/communities'},{id:'chats',icon:MessageCircle},
+ {id:'inbox',icon:Bell,label:'fe.inbox.title',go:'/n/inbox'},{id:'me',icon:User},
 ];
 /** The menu item that is lit: «События» on the events list and on every event page, «Сообщества» elsewhere in the
  * communities section; the other tabs keep `current`. */
@@ -161,9 +164,10 @@ function FeGate(){
 }
 
 /** Tab badges as in the prototype's TABDEF: «Люди» — likes to you, «Чаты» — unread chats and message requests (a dot for new matches),
- * «Я» — things to decide. One `inbox.counts` call, refreshed by realtime signals and a slow poll. */
+ * «Я» — things to decide. In the side menu «Уведомления» counts the tasks and the unread notifications (the header bell's
+ * number), so «Я» keeps only the staff queues there. One `inbox.counts` call, refreshed by realtime signals and a slow poll. */
 function useTabBadges(){
- const {call}=useFe();const [c,setC]=useState<{likes:number,chats:number,newMatches:number,requests:number,decide:number,staff:boolean}|null>(null);
+ const {call}=useFe();const [c,setC]=useState<{likes:number,chats:number,newMatches:number,requests:number,decide:number,notifications:number,staff:boolean}|null>(null);
  // Staff: what waits in the queues and in support counts on «Я» too (one shared call, only for people with a role).
  const staffN=useStaffCounts(!!c?.staff)?.total??0;
  // The poll asks the server itself (`fresh`): a stale memory showed the previous poll's numbers.
@@ -171,7 +175,8 @@ function useTabBadges(){
  const pull=useCallback((fresh=false)=>{call('inbox.counts',{},countsRes,{asAccount:true,fresh}).then(r=>{setC(r);const n=r.bell+r.chats;setAppBadge(n);if(!n)closeShown('all');}).catch(()=>{});},[call]);
  useEffect(()=>{pull();const id=setInterval(()=>pull(true),60000);return ()=>clearInterval(id);},[pull]);
  useLive(['counts','chat','decide','notify'],pull);
- return (id:string):number|'dot'|0=>!c?0:id==='people'?c.likes:id==='chats'?((c.chats+c.requests)||(c.newMatches?'dot':0)):id==='me'?c.decide+staffN:0;
+ return (id:string,side=false):number|'dot'|0=>!c?0:id==='people'?c.likes:id==='chats'?((c.chats+c.requests)||(c.newMatches?'dot':0))
+  :id==='inbox'?c.decide+c.notifications:id==='me'?(side?0:c.decide)+staffN:0;
 }
 
 /** An app left open across a release keeps running the old build. On screen changes (at most once a minute) it reads
@@ -225,6 +230,7 @@ function FeLayout(){
  useEffect(()=>{const id=setTimeout(prefetchScreens,1500);return ()=>clearTimeout(id);},[]);
  const em=(n:number|'dot'|0)=>n==='dot'?<em className="dot"/>:n?<em>{n>99?'99+':n}</em>:null;
  const label=(id:string)=>{const n=badge(id);return t('fe.nav.'+id)+(n&&n!=='dot'?', '+n:'');};
+ const sideLabel=(id:string,key?:string)=>{const n=badge(id,true);return t(key||'fe.nav.'+id)+(n&&n!=='dot'?', '+n:'');};
  // A second tap on the active tab returns to its root (V21 A4).
  const go=(id:string)=>{
   // A tap on the tab that is already open goes to the top of its screen (smoothly), instead of opening it again.
@@ -235,11 +241,11 @@ function FeLayout(){
   }
   navigate('/n/'+id);
  };
- // The side menu: «События» and «Сообщества» open their own list; a tap on the one already lit scrolls to the top.
+ // The side menu: «События», «Сообщества» and «Уведомления» open their own screen; a tap on the one already lit scrolls to the top.
  const goSide=(id:string)=>{
   const to=SIDE_TABS.find(x=>x.id===id)?.go;
   if(!to)return go(id);
-  if(side===id&&pathname.replace(/\/$/,'')==='/n/communities'){
+  if(side===id&&pathname.replace(/\/$/,'')===to.split('?')[0]){
    const view=main.current?.querySelector<HTMLElement>('.view');
    if(view){view.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});return;}
   }
@@ -269,7 +275,7 @@ function FeLayout(){
  return <div className="stage"><div className="root">
   <aside className="side">
    <Brand at="side"/>
-   <nav aria-label={t('fe.nav.aria')}>{SIDE_TABS.map(({id,icon:Icon,label})=><button key={id} type="button" className={'navb'+(side===id?' on':'')} aria-current={side===id?'page':undefined} onClick={()=>goSide(id)}><Icon/><span>{t(label||'fe.nav.'+id)}</span>{badge(id)==='dot'?<em className="dot"/>:badge(id)?<em>{badge(id)}</em>:null}</button>)}</nav>
+   <nav aria-label={t('fe.nav.aria')}>{SIDE_TABS.map(({id,icon:Icon,label})=><button key={id} type="button" className={'navb'+(side===id?' on':'')} aria-current={side===id?'page':undefined} aria-label={sideLabel(id,label)} onClick={()=>goSide(id)}><Icon/><span>{t(label||'fe.nav.'+id)}</span>{em(badge(id,true))}</button>)}</nav>
    <Btn className="create" icon={Plus} aria-haspopup="dialog" onClick={()=>setCreate(true)} aria-label={t('fe.create')}><span>{t('fe.create')}</span></Btn>
    <div className="sp"/>
    {acting&&<button type="button" className="mebtn" aria-haspopup={pair?'dialog':undefined} onClick={()=>pair?setActAs(true):navigate('/n/me')}>
