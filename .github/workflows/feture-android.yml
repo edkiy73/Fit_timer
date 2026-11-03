@@ -176,7 +176,8 @@ jobs:
             versionName,
             apkUrl: `https://github.com/${repo}/releases/download/feture-apk-archive/FetUre-${versionCode}.apk`,
             commit: process.env.GITHUB_SHA || '',
-            builtAt: new Date().toISOString()
+            builtAt: new Date().toISOString(),
+            notes: String(process.env.RELEASE_NOTES || '')
           }, null, 2) + '\n');
           NODE
           else
