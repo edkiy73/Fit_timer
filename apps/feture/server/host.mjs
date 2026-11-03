@@ -6,8 +6,8 @@
  *   - `/api/config` → `/api/admin?public_config=1` (vercel.json rewrite);
  *   - `PUT /api/fe-upload` → the media upload proxy (bytes streamed to Bunny, never buffered);
  *   - static `dist/` with the cache headers from vercel.json;
- *   - `GET /api/fe-events` → realtime signals over SSE (server/realtime-sse.mjs; on Supabase it was Broadcast);
- *   - the queue worker tick once a minute (on Supabase it was pg_cron + pg_net + Vault), and a quick one soon after a
+ *   - `GET /api/fe-events` → realtime signals over SSE (server/realtime-sse.mjs);
+ *   - the queue worker tick once a minute, and a quick one soon after a
  *     command queued something (server/kick.mjs).
  * Runs behind Caddy: `X-Forwarded-For` is whatever Caddy set (it drops a client-supplied one), so the first entry is
  * the real client address that Core's rate limits read. The port must stay inside the compose network.
@@ -147,7 +147,7 @@ server.headersTimeout = 60 * 1000;
 server.keepAliveTimeout = 65 * 1000;
 server.listen(PORT, '0.0.0.0', () => console.log(`feture host on :${PORT}, static ${STATIC_DIR}, uploads ${upload ? 'on' : 'off'}`));
 
-/* Queue worker tick: once a minute, never two at a time. The same authenticated call pg_cron made.
+/* Queue worker tick: once a minute, never two at a time, through the authenticated `POST /api/fe?jobs=1`.
  * A command that queued something people are told about kicks a quick tick (server/kick.mjs, owner 03.11.2026:
  * notifications and counters in seconds): debounced, so a burst of commands makes one tick, and run through the same
  * `ticking` guard, so the outbox is never drained by two ticks at once; a kick during a tick runs one more after it. */

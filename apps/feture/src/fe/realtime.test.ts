@@ -17,7 +17,7 @@ class FakeEventSource{
 }
 
 const A='fe:'+'a'.repeat(32), B='fe:'+'b'.repeat(32);
-const cfg={url:'https://app.example.com',key:'sse',transport:'sse' as const,channels:{'p-a':A,'p-b':B}};
+const cfg={url:'https://app.example.com',channels:{'p-a':A,'p-b':B}};
 
 describe('realtime over SSE (own server)',()=>{
  afterEach(()=>{vi.unstubAllGlobals();vi.useRealTimers();FakeEventSource.all=[];});

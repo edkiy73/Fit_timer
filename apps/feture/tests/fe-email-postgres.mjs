@@ -13,7 +13,7 @@ import { couples } from '../server/commands/couples.mjs';
 import { social } from '../server/commands/social.mjs';
 import { notifyHandlers } from '../server/notify.mjs';
 import { drain, enqueue } from '../server/outbox.mjs';
-import { DAILY_CAP, addressHash, openAddress, queueDigests, readUnsubToken, renderEmail, sendDueEmails, svixOk, takeResendEvent, unsubToken, unsubscribe } from '../server/email.mjs';
+import { DAILY_CAP, addressHash, openAddress, queueDigests, readUnsubToken, renderEmail, sendDueEmails, svixOk, takeResendEvent, testAddress, unsubToken, unsubscribe } from '../server/email.mjs';
 import { setup as baseSetup, op, PEPPER } from './fe-helpers.mjs';
 
 const SECRET = 'whsec_' + Buffer.from('k'.repeat(32)).toString('base64');
@@ -57,6 +57,32 @@ test('the address: kept sealed from the signed-in session with its zone; setting
     assert.equal((await call('ua', null, { action: 'notifications.settings.get' })).emailState, 'ok');
     await db.query(`insert into feture.email_suppression (address_hash, reason) values ($1, 'bounce')`, [row.address_hash]);
     assert.equal((await call('ua', null, { action: 'notifications.settings.get' })).emailState, 'blocked');
+  } finally { await pg.close(); }
+});
+
+test('test addresses (TEST_LOGIN_DOMAIN, .test) are never kept, so no mail is ever queued for them', async () => {
+  assert.equal(testAddress('world-mira@feture.test', {}), true, 'any reserved .test domain');
+  assert.equal(testAddress('qa-staff@Test.Example', { TEST_LOGIN_DOMAIN: 'test.example' }), true, 'the configured test domain');
+  assert.equal(testAddress('a@test.example.com', { TEST_LOGIN_DOMAIN: 'test.example' }), false);
+  assert.equal(testAddress('a@example.com', { TEST_LOGIN_DOMAIN: 'feture.test' }), false);
+  const { pg, db, call, person, notify, flush, mails } = await world();
+  try {
+    const id = await person('uw', 'world_mira');
+    const [{ account_id }] = await db.query('select account_id from feture.profile_member where profile_id = $1 limit 1', [id]);
+    const signIn = (/** @type {string} */ email) => call('uw', null, { action: 'notifications.settings.get' }, { 'x-fit-email': email });
+    // Kept before (an earlier build), with mail waiting: the next request from the test address drops both.
+    await signIn('mira@example.com');
+    await db.tx(q => enqueue(q, 'profile.suspended', id, { until: '2026-12-01T00:00:00Z' }));
+    await notify();
+    assert.equal((await db.query(`select count(*)::int n from feture.email_delivery where account_id = $1 and state = 'queued'`, [account_id]))[0].n, 1);
+    assert.equal((await signIn('world-mira@feture.test')).emailState, 'none');
+    assert.deepEqual(await db.query(`select 1 from feture.email_address where account_id = $1`, [account_id]), []);
+    assert.deepEqual(await db.query(`select 1 from feture.email_delivery where account_id = $1`, [account_id]), []);
+    // New items queue nothing; nothing is sent.
+    await db.tx(q => enqueue(q, 'profile.restricted', id, {}));
+    await notify(); await flush();
+    assert.deepEqual(await db.query(`select 1 from feture.email_delivery where account_id = $1`, [account_id]), []);
+    assert.equal(mails.length, 0);
   } finally { await pg.close(); }
 });
 

@@ -48,8 +48,8 @@ test('a signal reaches exactly the streams of its channel, with only kind and ta
     assert.match(String(one.res.headers.get('content-type')), /^text\/event-stream/);
     assert.equal(one.res.headers.get('access-control-allow-origin'), '*');
     await tick();
-    await hub.sender([{ topic: A, event: 'new', payload: { k: 'chat' }, private: false },
-      { topic: A, event: 'new', payload: { k: 'typing', t: 'abcdefgh12345678' }, private: false }]);
+    await hub.sender([{ topic: A, event: 'new', payload: { k: 'chat' } },
+      { topic: A, event: 'new', payload: { k: 'typing', t: 'abcdefgh12345678' } }]);
     await tick();
     assert.deepEqual(one.events, [{ c: A, k: 'chat' }, { c: A, k: 'typing', t: 'abcdefgh12345678' }]);
     assert.deepEqual(both.events, one.events);
@@ -83,12 +83,12 @@ test('only well-formed channels, a few at a time; per-address and total caps', a
   } finally { server.closeAllConnections(); server.close(); }
 });
 
-test('createSignals with the hub as sender: the same signals as Broadcast, de-duplicated', async () => {
+test('createSignals with the hub as sender: kind-only signals, de-duplicated', async () => {
   const hub = createHub();
   /** @type {any[]} */ const got = [];
   hub.subscribe([A], e => got.push(e));
   const db = { query: async () => [{ profile_id: 'profile-a', members: ['acc-1'] }] };
   const signals = createSignals({ db: /** @type {any} */ (db), pepper: 'p'.repeat(40), sender: hub.sender });
-  await signals.send([{ profile: 'profile-a', kind: 'notify' }, { profile: 'profile-a', kind: 'notify' }, { profile: 'profile-a', kind: 'feed' }]);
-  assert.deepEqual(got, [{ c: A, k: 'notify' }, { c: A, k: 'feed' }]);
+  await signals.send([{ profile: 'profile-a', kind: 'notify' }, { profile: 'profile-a', kind: 'notify' }, { profile: 'profile-a', kind: 'decide' }]);
+  assert.deepEqual(got, [{ c: A, k: 'notify' }, { c: A, k: 'decide' }]);
 });

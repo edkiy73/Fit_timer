@@ -12,7 +12,6 @@ describe('live data registry',()=>{
   expect(signalEntities('typing','tag')).toEqual([]);
   expect(signalEntities('chat')).toEqual(['chat','counts']);
   expect(signalEntities('notify')).toEqual(['notify','counts']);
-  expect(signalEntities('feed')).toEqual(['post']);
  });
 
  it('a signal forgets only the reads of its entity',()=>{

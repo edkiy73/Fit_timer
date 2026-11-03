@@ -45,4 +45,30 @@ assert.equal((await verify('world-timur@feture.test', sent.body.devCode)).status
 const sent2 = await call({action:'send', email:'person@example.com'});
 assert.equal((await verify('person@example.com', sent2.body.devCode)).statusCode, 200, 'normal code for a real address');
 
+// No mail ever goes to the test domain (no mailbox there: it would only bounce); real addresses still get theirs.
+const realFetch = globalThis.fetch;
+const mailed = [];
+globalThis.fetch = async (url, init) => { mailed.push(JSON.parse(init.body).to[0]); return {ok:true, status:200, json: async () => ({id:'m1'})}; };
+process.env.RESEND_API_KEY = 're_test_key';
+try{
+  const { sendMail, isTestAddress } = require('../server/mail');
+  const test = await call({action:'send', email:'world-ira@feture.test'});
+  assert.equal(test.statusCode, 200, 'sign-in still answers for a test address');
+  assert.equal((await verify('world-ira@feture.test', test.body.devCode)).statusCode, 200, 'its code still works');
+  assert.equal((await verify('world-ira@feture.test', '424242')).statusCode, 200, 'and the fixed code too');
+  assert.equal((await call({action:'send', email:'qa-staff@Feture.Test'})).statusCode, 200);
+  assert.deepEqual(mailed, [], 'no mail to the test domain, qa-* included');
+  assert.deepEqual(await sendMail({to:'world-ira@feture.test', subject:'s', text:'t'}), {skipped:'test_address'});
+  assert.equal((await call({action:'send', email:'someone@example.com'})).statusCode, 200);
+  assert.deepEqual(mailed, ['someone@example.com'], 'a real address is mailed');
+  for(const email of ['a@feture.test.evil.com', 'a@evilfeture.test', 'feture.test@example.com']) assert.equal(isTestAddress(email), false, email);
+  // Off without TEST_LOGIN_DOMAIN: other apps on Core mail every address as before.
+  delete process.env.TEST_LOGIN_DOMAIN;
+  assert.equal(isTestAddress('world-ira@feture.test'), false, 'off without the env');
+  await sendMail({to:'world-ira@feture.test', subject:'s', text:'t'});
+  assert.deepEqual(mailed, ['someone@example.com', 'world-ira@feture.test']);
+}finally{
+  globalThis.fetch = realFetch; delete process.env.RESEND_API_KEY;
+}
+
 console.log('Fixed test code OK');

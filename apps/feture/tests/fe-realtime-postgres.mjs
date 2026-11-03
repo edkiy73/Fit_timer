@@ -8,12 +8,12 @@ import { social } from '../server/commands/social.mjs';
 import { discover } from '../server/commands/discover.mjs';
 import { chats } from '../server/commands/chats.mjs';
 import { couples } from '../server/commands/couples.mjs';
-import { channelFor, createSignals, broadcastSender, typingTag } from '../server/realtime.mjs';
+import { channelFor, createSignals, typingTag } from '../server/realtime.mjs';
 import { runJobs } from '../server/jobs.mjs';
 import { setup as baseSetup, op } from './fe-helpers.mjs';
 
 const PEPPER = 'p'.repeat(40); // the helper's handler pepper
-const REALTIME = { url: 'https://abc.supabase.co', key: 'sb_publishable_test' };
+const REALTIME = { url: 'https://app.example.com', key: 'sse', transport: 'sse' };
 
 async function world({ failing = false } = {}) {
   /** @type {any[][]} */
@@ -52,7 +52,8 @@ test('bootstrap gives each own profile an opaque channel bound to its members; n
     const couple = await coupleOf([a, b]);
     const boot = await call('ua', null, { action: 'session.bootstrap' });
     assert.equal(boot.status, 200);
-    assert.deepEqual([boot.realtime.url, boot.realtime.key], [REALTIME.url, REALTIME.key]);
+    // The transport is always SSE on our own server; older app builds still read `key` and `transport`.
+    assert.deepEqual([boot.realtime.url, boot.realtime.key, boot.realtime.transport], [REALTIME.url, REALTIME.key, REALTIME.transport]);
     const ua = await accountOf(a), ub = await accountOf(b);
     assert.deepEqual(boot.realtime.channels, { [a]: channelFor(PEPPER, a, [ua]), [couple]: channelFor(PEPPER, couple, [ua, ub]) });
     for (const t of Object.values(boot.realtime.channels)) {
@@ -78,7 +79,7 @@ test('chat.send and chat.read signal the other side with the kind only, after co
     const id = op();
     assert.equal((await call('ua', a, { action: 'chat.send', opId: id, conversationId: conv, body: 'Секретный текст' })).status, 200);
     const toB = channelFor(PEPPER, b, [await accountOf(b)]);
-    assert.deepEqual(sent, [[{ topic: toB, event: 'new', payload: { k: 'chat' }, private: false }]]);
+    assert.deepEqual(sent, [[{ topic: toB, event: 'new', payload: { k: 'chat' } }]]);
     // No text, no names, no ids anywhere in what goes out.
     const wire = JSON.stringify(sent);
     for (const leak of ['Секретный', 'alex', 'kira', conv, a, b]) assert.ok(!wire.includes(leak), leak);
@@ -96,9 +97,9 @@ test('chat.send and chat.read signal the other side with the kind only, after co
     // Reading again (nothing new) stays quiet.
     // Receipt: the sender's ticks update; my other devices hear that the chat and the counters changed.
     await call('ub', b, { action: 'chat.read', conversationId: conv, upToSeq: 1 });
-    assert.deepEqual(sent, [[{ topic: channelFor(PEPPER, a, [await accountOf(a)]), event: 'new', payload: { k: 'chat' }, private: false },
-      { topic: toB, event: 'new', payload: { k: 'changed', t: 'chat' }, private: false },
-      { topic: toB, event: 'new', payload: { k: 'changed', t: 'counts' }, private: false }]]);
+    assert.deepEqual(sent, [[{ topic: channelFor(PEPPER, a, [await accountOf(a)]), event: 'new', payload: { k: 'chat' } },
+      { topic: toB, event: 'new', payload: { k: 'changed', t: 'chat' } },
+      { topic: toB, event: 'new', payload: { k: 'changed', t: 'counts' } }]]);
     sent.length = 0;
     await call('ub', b, { action: 'chat.read', conversationId: conv, upToSeq: 1 });
     assert.deepEqual(sent, []);
@@ -115,7 +116,7 @@ test('«печатает…»: the other side hears typing with the conversation
     assert.equal((await call('ua', a, { action: 'chat.messages', conversationId: conv })).typingTag, tag);
     sent.length = 0;
     assert.equal((await call('ua', a, { action: 'chat.typing', conversationId: conv })).sent, true);
-    assert.deepEqual(sent, [[{ topic: channelFor(PEPPER, b, [await accountOf(b)]), event: 'new', payload: { k: 'typing', t: tag }, private: false }]]);
+    assert.deepEqual(sent, [[{ topic: channelFor(PEPPER, b, [await accountOf(b)]), event: 'new', payload: { k: 'typing', t: tag } }]]);
     for (const leak of [conv, a, b, 'alex']) assert.ok(!JSON.stringify(sent).includes(leak), leak);
     sent.length = 0;
     assert.equal((await call('uc', c, { action: 'chat.typing', conversationId: conv })).status, 404);
@@ -144,7 +145,7 @@ test('the worker tick signals new notifications in one batch after they are writ
     const topics = sent.flat().map(m => m.topic);
     // The match notification reaches the side that did not complete the match (the other caused it).
     assert.ok(topics.includes(channelFor(PEPPER, a, [await accountOf(a)])), JSON.stringify(sent));
-    for (const m of sent.flat()) assert.deepEqual([m.event, m.private, Object.keys(m.payload)], ['new', false, ['k']]);
+    for (const m of sent.flat()) assert.deepEqual([m.event, Object.keys(m.payload)], ['new', ['k']]);
     assert.ok(sent.flat().every(m => ['notify', 'decide'].includes(m.payload.k)));
     // Nothing new: the next tick is quiet.
     sent.length = 0;
@@ -152,21 +153,6 @@ test('the worker tick signals new notifications in one batch after they are writ
     assert.deepEqual(sent, []);
     void call;
   } finally { await pg.close(); }
-});
-
-test('REST sender: Supabase batch broadcast shape, secret only in headers, short timeout', async () => {
-  /** @type {any} */
-  let got;
-  const send = broadcastSender({ url: 'https://abc.supabase.co/', secret: 'sb_secret_x', timeoutMs: 50,
-    fetch: /** @type {any} */ (async (/** @type {string} */ url, /** @type {any} */ init) => { got = { url, init }; return { ok: true, status: 202 }; }) });
-  await send([{ topic: 'fe:abc', event: 'new', payload: { k: 'chat' }, private: false }]);
-  assert.equal(got.url, 'https://abc.supabase.co/realtime/v1/api/broadcast');
-  assert.equal(got.init.method, 'POST');
-  assert.equal(got.init.headers.apikey, 'sb_secret_x');
-  assert.deepEqual(JSON.parse(got.init.body), { messages: [{ topic: 'fe:abc', event: 'new', payload: { k: 'chat' }, private: false }] });
-  const slow = broadcastSender({ url: 'https://abc.supabase.co', secret: 's', timeoutMs: 20,
-    fetch: /** @type {any} */ ((/** @type {string} */ _u, /** @type {any} */ init) => new Promise((_, reject) => init.signal.addEventListener('abort', () => reject(new Error('aborted'))))) });
-  await assert.rejects(slow([]), /aborted/); // createSignals swallows it; the sender itself reports
 });
 
 test('a couple invite (addressed to the account) signals «decide» on the invitee’s own profile', async () => {
@@ -179,19 +165,4 @@ test('a couple invite (addressed to the account) signals «decide» on the invit
     const want = channelFor(PEPPER, b, [await accountOf(b)]);
     assert.ok(sent.flat().some(m => m.topic === want && m.payload.k === 'decide'), JSON.stringify(sent));
   } finally { await pg.close(); }
-});
-
-test('own server (SSE): bootstrap tells the client the transport; the channels stay the same opaque tokens', async () => {
-  const env = await baseSetup({
-    commands: { ...platform, ...me }, realtime: { url: 'https://app.example.com', key: 'sse', transport: 'sse' },
-    signals: db => createSignals({ db, pepper: PEPPER, sender: async () => {} }),
-  });
-  try {
-    const a = await env.person('ua', 'alex');
-    const boot = await env.call('ua', null, { action: 'session.bootstrap' });
-    assert.equal(boot.status, 200);
-    assert.deepEqual({ url: boot.realtime.url, key: boot.realtime.key, transport: boot.realtime.transport },
-      { url: 'https://app.example.com', key: 'sse', transport: 'sse' });
-    assert.match(boot.realtime.channels[a], /^fe:[A-Za-z0-9_-]{32}$/);
-  } finally { await env.pg.close(); }
 });
