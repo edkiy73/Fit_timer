@@ -50,6 +50,7 @@ const { store } = require('../../../packages/core/server/store');
 const { allowedOrigin, rateOkScoped, ipHash } = require('../../../packages/core/server/util');
 const Supabase = require('../../../packages/core/server/supabase');
 const CorePush = require('../../../packages/core/server/push');
+const { publishLatestBuild } = require('../lib/app-update');
 const { authenticate } = require('../lib/feture/identity');
 
 const env = process.env;
@@ -214,7 +215,9 @@ export default async function fe(/** @type {any} */ req, /** @type {any} */ res)
       // Only a real sending domain: Resend's test domain delivers to its owner alone.
       const mail = coreMailer();
       // `quick=1`: a kicked tick (server/host.mjs) — the queues only; the sweeps stay with the minute tick.
-      return json(res, 200, { ok: true, ...(await runJobs(db, { scan, push, mail, email, signals, quick: flag(req, 'quick') })) });
+      // New APK builds publish themselves as required updates (lib/app-update.js; FETURE_AUTO_PUBLISH_APK=0 stops it).
+      const apkUpdate = () => publishLatestBuild(store);
+      return json(res, 200, { ok: true, ...(await runJobs(db, { scan, push, mail, email, signals, apkUpdate, quick: flag(req, 'quick') })) });
     } catch {
       return json(res, 503, { ok: false, error: 'unavailable' });
     }

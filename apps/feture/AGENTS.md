@@ -67,7 +67,9 @@ or a helper defined twice (`tools/fe-server-baseline.json` only shrinks). Text i
 - **Personas are hidden** (28.10.2026). Whatever a persona account (`qa-…` login) creates never reaches people who are
   not personas (`feture.qa_hidden()`); personas see each other so scenarios keep working.
 - **APK updates are required before launch.** Every APK build is published in-app as a required update
-  (`POST /api/admin {action:'feture.update.publish', …, minimumCode = latestCode}`), otherwise phones never see it.
+  (`minimumCode = latestCode`), otherwise phones never see it. The server does it itself: the jobs tick runs
+  `lib/app-update.js` `publishLatestBuild` (GitHub looked at every ≤5 min, newer build only, archive APK must answer
+  200, same `saveChannel` path as `feture.update.publish`); `FETURE_AUTO_PUBLISH_APK=0` stops it. No admin button needed.
   Before real users, switch to a soft banner except for breaking changes. Signing keys come only from the
   `FETURE_KEYSTORE_*` secrets; agents never create or read keys.
 - **Name and @nick** (29.10.2026). Every profile — person and couple — has a unique @nick (latin, the old rules) and an

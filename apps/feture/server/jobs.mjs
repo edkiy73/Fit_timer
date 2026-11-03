@@ -29,9 +29,11 @@ import { sweepSelfies, verificationHandlers } from './commands/premium.mjs';
  * @typedef {import('./media/scan.mjs').ScanDeps} ScanDeps
  * @typedef {{scan: ScanDeps | null, limit?: number, notifyLimit?: number, push?: import('./push.mjs').Transport | null,
  *   mail?: import('./commands/dsa.mjs').Mailer | null, email?: import('./email.mjs').Mailer | null, signals?: import('./realtime.mjs').Signals | null,
- *   quick?: boolean}} JobDeps
+ *   quick?: boolean, apkUpdate?: (() => Promise<unknown>) | null}} JobDeps
  *   email: the notification email sender (server/email.mjs; null: emails wait in their queue)
  *   quick: a kicked tick (server/kick.mjs) — the queues only, the sweeps wait for the minute tick
+ *   apkUpdate: publishes a new APK build as a required update (lib/app-update.js publishLatestBuild; it looks at GitHub
+ *     at most every 5 minutes itself and never throws)
  */
 
 /** @param {Db} db @param {JobDeps} deps */
@@ -316,6 +318,7 @@ async function tickOnce(db, deps, processed) {
   await sweepEmail(db);
   await sweepNotices(db);
   await sweepPublicHelp(db);
+  if (deps.apkUpdate) await deps.apkUpdate().catch(() => null);
   // Finished outbox items stay a week (some «told already today» checks read them), then go.
   await db.query(`delete from feture.outbox where done_at < now() - interval '7 days'`);
   return { processed: done, expired, ledger, markers, couples, approvals, ephemeral, reminders, selfies };
