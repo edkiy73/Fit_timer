@@ -3,7 +3,8 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import type {AuthResponseError} from '@appbase/core/auth.js';
 import {CircleAlert,Mail} from 'lucide-react';
-import {Alert,Bar,Brand,Btn,CodeInput,Field,H,Input,Seg,Spacer,Stack} from './kit';
+import {Alert,Bar,Brand,Btn,CodeInput,Field,H,Input,Spacer,Stack} from './kit';
+import {TermsSheet} from './terms-sheet';
 import {pendingPairLink} from './pair-link';
 import {ToastProvider} from './toast';
 import {Welcome} from './welcome';
@@ -29,28 +30,27 @@ export function AuthLogo(){
  return <Brand at="auth"/>;
 }
 
-type Mode='up'|'in';
-type Step={id:'A01'}|{id:'A02',mode:Mode}|{id:'A03',mode:Mode,email:string,sent:boolean};
+type Step={id:'A01'}|{id:'A02'}|{id:'A03',email:string,sent:boolean};
 
 /** Signed out: A01 welcome → A02 sign-up / sign-in by email → A03 the 6-digit code. The existing account server
  * (packages/core auth: send → verify) does the work; a verified session reloads the FetUre session, which then
  * shows the app or the sign-up form (A04). */
 export function SignedOut(){
  const [step,setStep]=useState<Step>({id:'A01'});
- if(step.id==='A01')return <Welcome onStart={mode=>setStep({id:'A02',mode})}/>;
- if(step.id==='A02')return <AuthFrame screen="A02"><EmailStep mode={step.mode} onBack={()=>setStep({id:'A01'})} onMode={mode=>setStep({id:'A02',mode})}
-  onCode={(email,sent)=>setStep({id:'A03',mode:step.mode,email,sent})}/></AuthFrame>;
- return <AuthFrame screen="A03"><CodeStep email={step.email} sent={step.sent} onBack={()=>setStep({id:'A02',mode:step.mode})}/></AuthFrame>;
+ if(step.id==='A01')return <Welcome onStart={()=>setStep({id:'A02'})}/>;
+ if(step.id==='A02')return <AuthFrame screen="A02"><EmailStep onBack={()=>setStep({id:'A01'})}
+  onCode={(email,sent)=>setStep({id:'A03',email,sent})}/></AuthFrame>;
+ return <AuthFrame screen="A03"><CodeStep email={step.email} sent={step.sent} onBack={()=>setStep({id:'A02'})}/></AuthFrame>;
 }
 
 const EMAIL=/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const codeOf=(e:unknown)=>String((e as AuthResponseError|undefined)?.code||(e as Error|undefined)?.message||'');
 let lastEmail='';
 
-function EmailStep({mode,onBack,onMode,onCode}:{mode:Mode,onBack:()=>void,onMode:(m:Mode)=>void,onCode:(email:string,sent:boolean)=>void}){
+function EmailStep({onBack,onCode}:{onBack:()=>void,onCode:(email:string,sent:boolean)=>void}){
  const {client}=useOptionalAuth();const {t,locale}=useI18n();
  const [email,setEmail]=useState(lastEmail);const [error,setError]=useState('');const [busy,setBusy]=useState(false);const [noMail,setNoMail]=useState(false);
- const field=useRef<HTMLDivElement>(null);
+ const field=useRef<HTMLDivElement>(null);const [terms,setTerms]=useState(false);
  const fail=(m:string)=>{setError(m);const f=field.current;if(f){f.classList.remove('shake');void f.offsetWidth;f.classList.add('shake');}};
  const send=async()=>{
   const v=email.trim().toLowerCase();
@@ -67,8 +67,8 @@ function EmailStep({mode,onBack,onMode,onCode}:{mode:Mode,onBack:()=>void,onMode
   <AuthBar onBack={onBack} lang/>
   <div className="view nodock"><div className="auth-wrap">
    <AuthLogo/>
-   <Seg small={false} value={mode} onChange={onMode} options={[{id:'up',label:t('fe.onb.up')},{id:'in',label:t('fe.onb.in')}]}/>
-   <H level={2} className="t">{mode==='up'?t('fe.onb.upTitle'):t('fe.onb.inTitle')}</H>
+   {/* Owner 04.11.2026: one way in — the code to the email signs in or creates the account, no «Регистрация / Вход». */}
+   <H level={2} className="t">{t('fe.onb.oneTitle')}</H>
    {/* A partner link (V21 pairShareLink): the couple forms right after the sign-up — said before, not after (owner). */}
    {pendingPairLink()&&<Alert kind="info">{t('fe.c6.land.signup')}</Alert>}
    <div ref={field} data-field="email"><Field id="fe-email" label={t('fe.onb.email')} error={error||undefined}>
@@ -78,8 +78,10 @@ function EmailStep({mode,onBack,onMode,onCode}:{mode:Mode,onBack:()=>void,onMode
    </Field></div>
    <Btn onClick={send} disabled={busy} busy={busy}>{t('fe.onb.getCode')}</Btn>
    {noMail&&<Btn kind="text" onClick={()=>{const v=email.trim().toLowerCase();lastEmail=v;onCode(v,false);}}>{t('fe.onb.haveCode')}</Btn>}
-   <SignInHelp/>
+   <SignInHelp email={email.trim()}/>
+   <p className="w-age">{t('fe.onb.agree')} <a href="#" onClick={e=>{e.preventDefault();setTerms(true);}}>{t('fe.cw.w.terms')}</a>.</p>
   </div></div>
+  {terms&&<TermsSheet onClose={()=>setTerms(false)}/>}
  </>;
 }
 
@@ -131,7 +133,7 @@ function CodeStep({email,sent,onBack}:{email:string,sent:boolean,onBack:()=>void
      <Btn kind="text" auto onClick={onBack}>{t('fe.onb.code.change')}</Btn>
      <Btn kind="text" auto onClick={resend} disabled={!!left||busy}>{left?t('fe.onb.code.resendIn').replace('{n}',String(left)):t('fe.onb.code.resend')}</Btn>
     </div>
-    <SignInHelp/>
+    <SignInHelp email={email}/>
    </Stack>
   </div></div>
  </>;
