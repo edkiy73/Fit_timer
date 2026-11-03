@@ -237,6 +237,8 @@ export function InboxScreen(){
  };
 
  /* ---- «Нужно решить»: who asks, what, about what; the name opens the person, the card opens the request ---- */
+ // A couple approval's summary names the changed fields by key («bio»): the same words as the approval sheet.
+ const fieldLabel=(f:string)=>{for(const k of [`fe.ap.f.${f}`,`fe.cw.field.${f}`]){const s=t(k);if(s!==k)return s;}return t('fe.ap.f.other');};
  const decisionCard=(d:Decision)=>{
   const e=decideEntry(d);const joint=isJoint(d);
   // A couple approval without its initiator yet (the approvals PR adds it): the couple it is addressed to.
@@ -247,7 +249,7 @@ export function InboxScreen(){
   const obj=d.object;
   const objLine=d.kind==='eapp'&&obj?.title?<>{obj.title}{obj.startsAt?<> · {evWhen({startsAt:obj.startsAt,tz:obj.tz},locale)}</>:null}</>
    :d.kind==='link'||d.kind==='linkChange'?(d.link?t('fe.px.lk.k.'+(d.kind==='linkChange'&&d.link.to?d.link.to:d.link.kind)):null)
-   :joint?(typeof d.summary==='string'?d.summary:Array.isArray(d.summary)?d.summary.join(', '):obj?.title??null)
+   :joint?(d.summary!=null?[d.summary].flat().map(fieldLabel).join(', '):obj?.title??null)
    :obj?.title??null;
   const objIcon=d.kind==='capp'?Users:d.kind==='eapp'?Calendar:d.kind==='link'||d.kind==='linkChange'?Link2:d.kind==='tag'?ImageIcon:undefined;
   const two=(yes:{label:string,fn:()=>void},no?:{label:string,fn:()=>void})=><>
