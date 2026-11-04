@@ -449,11 +449,10 @@
 .v21 .grp.dim{opacity:.4;pointer-events:none}
 .v21 .sheet .grp:first-child{margin-top:4px}
 .v21 .sheet .card{background:var(--surf)}
-/* `k-step`: a sheet that is one step of several (answering topics in turn) slides its head and body in on every step —
-   from the right going on (`fwd`), from the left going back (`back`); the footer stays put */
-@keyframes kStepFwd{from{opacity:0;transform:translateX(28px)}}@keyframes kStepBack{from{opacity:0;transform:translateX(-28px)}}
-.v21 .sheet.k-step.fwd :is(.sh-ht,.sh-b){animation:kStepFwd .3s var(--ease) both}.v21 .sheet.k-step.back :is(.sh-ht,.sh-b){animation:kStepBack .3s var(--ease) both}
-@media (prefers-reduced-motion:reduce){.v21 .sheet.k-step :is(.sh-ht,.sh-b){animation:none}}
+/* Sheet `step`: the head and body of each step slide in — from the right going on, from the left going back */
+@keyframes kStepFwd{from{opacity:0;transform:translateX(20px)}}@keyframes kStepBack{from{opacity:0;transform:translateX(-20px)}}
+.v21 .k-step-in.fwd{animation:kStepFwd .26s cubic-bezier(.2,.8,.2,1) both}.v21 .k-step-in.back{animation:kStepBack .26s cubic-bezier(.2,.8,.2,1) both}
+@media (prefers-reduced-motion:reduce){.v21 .k-step-in{animation:none}}
 /* a form in a sheet has no plate of its own (Card `form`: fields sit on the page, 16 apart) — the sheet is the surface */
 .v21 .sheet .card.form-card{background:none;border-color:transparent;box-shadow:none;padding:0}
 .v21 .sheet.full{top:0;max-height:none;border-radius:0}
