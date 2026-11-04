@@ -6,7 +6,8 @@ import { id, opId } from './platform.mjs';
 export const socialCommands = {
   'block.set': {
     profile: true, write: true,
-    input: z.strictObject({ opId, profileId: id, on: z.boolean(), alsoFor: z.enum(['partner', 'me']).optional() }),
+    // keepCouple: a block from the personal profile covers its couples too unless asked to leave the couple open (audit 19).
+    input: z.strictObject({ opId, profileId: id, on: z.boolean(), alsoFor: z.enum(['partner', 'me']).optional(), keepCouple: z.boolean().default(false) }),
   },
   'blocks.list': { profile: true, write: false, input: z.strictObject({}) },
   'follow.set': { profile: true, write: true, rate: { kind: 'follow.set', max: 1000, window: '1 day' }, input: z.strictObject({ opId, profileId: id, on: z.boolean() }) },

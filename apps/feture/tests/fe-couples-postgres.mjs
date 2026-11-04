@@ -273,7 +273,7 @@ test('a partner is never blocked (audit item 42): from the personal profile or t
     assert.equal((await call('ua', a, { action: 'profile.get', profileId: b })).profile.partner, true);
     assert.equal((await call('uc', c, { action: 'profile.get', profileId: b })).profile.partner, false);
     // Someone else is blocked as before.
-    assert.equal((await block('ua', a, c)).blocked, true);
+    assert.equal((await call('ua', a, { action: 'block.set', opId: op(), profileId: c, on: true, keepCouple: true })).blocked, true);
     // A paused couple: still partners.
     await db.query(`update feture.profile set state = 'paused', paused_at = now(), restore_until = now() + interval '30 days' where id = $1`, [pair]);
     assert.equal((await block('ua', a, b)).rule, 'partner_block');

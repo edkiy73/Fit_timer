@@ -93,6 +93,13 @@ async function formCouple(q, fromAccount, toAccount) {
   for (const acc of [fromAccount, toAccount]) {
     await q.query(`insert into feture.profile_member (profile_id, profile_kind, account_id, joined_at) values ($1, 'couple', $2, now())`, [couple.id, acc]);
   }
+  // The new couple keeps the partners' blocks (В4): what either blocked from the personal profile is blocked from it too
+  // (lifted together when unblocked there).
+  await q.query(
+    `insert into feture.block (blocker_profile_id, blocked_profile_id, acted_by, via_profile_id)
+     select $1, b.blocked_profile_id, b.acted_by, b.blocker_profile_id from feture.block b
+     where b.blocker_profile_id in (select person_profile_id from feture.account where id = any($2)) and b.blocked_profile_id <> $1
+     on conflict do nothing`, [couple.id, [fromAccount, toAccount]]);
   // A new couple starts empty and outside Discover (owner 28.10.2026: switched on with a photo), nobody's content copied (CPL-003).
   // Accepting is the whole set-up (owner 04.11.2026): no approval by either partner (profile_member default), anyone may
   // ask for access; both change it later in the pair settings.
