@@ -21,6 +21,8 @@ async function asset(db, profileId, purpose, state = 'approved') {
   const [a] = await db.query(
     `insert into feture.media_asset (owner_profile_id, uploaded_by, kind, purpose, storage_key, mime, declared_bytes, state, explicitness, copies_at)
      values ($1, $2, 'image', $3, 'u/' || gen_random_uuid(), 'image/jpeg', 10, $4, $5, now()) returning id`, [profileId, account_id, purpose, state, state === 'approved' ? 'safe' : 'unknown']);
+  // In use (a profile photo): a file nobody uses any more is not reviewed (staff.mjs IN_USE).
+  if (state === 'needs_review') await db.query(`insert into feture.media_attachment (asset_id, target_type, target_id) values ($1, 'avatar', $2)`, [a.id, profileId]);
   return a.id;
 }
 

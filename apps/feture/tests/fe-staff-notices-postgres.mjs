@@ -40,9 +40,14 @@ async function world() {
     return { id, account: account_id };
   };
   /** A file waiting for review, owned by `m`. */
-  const waiting = async (/** @type {{id: string, account: string}} */ m, /** @type {string} */ purpose, kind = 'image') => (await db.query(
-    `insert into feture.media_asset (owner_profile_id, uploaded_by, kind, purpose, storage_key, mime, declared_bytes, state, explicitness, copies_at)
-     values ($1, $2, $3, $4, 'u/' || gen_random_uuid(), 'image/jpeg', 10, 'needs_review', 'safe', now()) returning id`, [m.id, m.account, kind, purpose]))[0].id;
+  const waiting = async (/** @type {{id: string, account: string}} */ m, /** @type {string} */ purpose, kind = 'image') => {
+    const [{ id }] = await db.query(
+      `insert into feture.media_asset (owner_profile_id, uploaded_by, kind, purpose, storage_key, mime, declared_bytes, state, explicitness, copies_at)
+       values ($1, $2, $3, $4, 'u/' || gen_random_uuid(), 'image/jpeg', 10, 'needs_review', 'safe', now()) returning id`, [m.id, m.account, kind, purpose]);
+    // In use (a profile photo): a file nobody uses any more is not reviewed (staff.mjs IN_USE).
+    await db.query(`insert into feture.media_attachment (asset_id, target_type, target_id) values ($1, 'avatar', $2)`, [id, m.id]);
+    return id;
+  };
   const deliver = async () => { while ((await drain(db, notifyHandlers(db), { limit: 50 })) > 0) { /* until empty */ } };
   const notes = async (/** @type {string} */ user) => (await call(user, null, { action: 'notifications.list' })).items;
   /** The rows of an account, straight from the table. */
@@ -75,6 +80,7 @@ test('a decided file opens what it belongs to: the post it is attached to', asyn
     const b = await member('ub', 'Kira');
     const dr = await call('ub', b.id, { action: 'post.saveDraft', opId: op(), post: { type: 'post', body: 'С фото', audience: 'all', inFeed: true, topics: [], mediaIds: [], interests: [], tags: [] } });
     const m = await waiting(b, 'post');
+    await db.query(`delete from feture.media_attachment where asset_id = $1`, [m]); // only in the post
     await db.query(`insert into feture.media_attachment (asset_id, target_type, target_id) values ($1, 'post', $2)`, [m, dr.id]);
     await call('um', null, { action: 'staff.mediaDecide', opId: op(), assetId: m, decision: 'approve', explicit: false });
     await deliver();

@@ -309,7 +309,9 @@ const run = {
     const { sql, params } = queuePageSql(input, CREATED_KEYS,
       `select r.id, r.post_id, r.created_at, r.payload, left(coalesce(p.title || ': ', '') || p.body, 300) live
        from feture.post_revision r join feture.post p on p.id = r.post_id
-       where r.state = 'review' and not exists (select 1 from feture.profile_member m where m.profile_id = p.owner_profile_id and m.account_id = $1)`, [account.id]);
+       -- a post its author hid (archived) or that was removed is not live: its proposed edit cannot be decided (revisionDecide)
+       where r.state = 'review' and p.state in ('published', 'review')
+         and not exists (select 1 from feture.profile_member m where m.profile_id = p.owner_profile_id and m.account_id = $1)`, [account.id]);
     const rows = await q.query(sql, params);
     return { items: rows.map(r => ({ id: r.id, postId: r.post_id, createdAt: r.created_at, live: r.live, proposed: r.payload })), ...pageInfo(rows, CREATED_KEYS, input.limit) };
   },
