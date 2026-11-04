@@ -99,7 +99,6 @@ export async function journal(q, staff, action, targetType, targetId, detail = {
     [staff, action, targetType, targetId, JSON.stringify(detail)]);
 }
 
-/** @param {Q} q @param {string} accountId @param {string} assetId @param {{lock?: boolean, self?: boolean}} [opts] self: may be one's own (the owner) */
 /** A post photo, profile photo or private-part file needs a look only while it is still used: a post (not archived
  * or removed) or the profile. Removed by its author (post deleted, photo taken off the profile) it leaves the queue and
  * can no longer be decided, so nobody is told about a file that is gone. (`m` is the media_asset row.) */
@@ -107,6 +106,7 @@ const IN_USE = `(m.purpose not in ('post', 'avatar', 'private') or exists (
   select 1 from feture.media_attachment ua left join feture.post up on ua.target_type = 'post' and up.id = ua.target_id
   where ua.asset_id = m.id and (ua.target_type <> 'post' or up.state not in ('archived', 'removed'))))`;
 
+/** @param {Q} q @param {string} accountId @param {string} assetId @param {{lock?: boolean, self?: boolean}} [opts] self: may be one's own (the owner) */
 async function reviewable(q, accountId, assetId, { lock = false, self = false } = {}) {
   const [a] = await q.query(
     `select m.*, exists (select 1 from feture.profile_member pm where pm.profile_id = m.owner_profile_id and pm.account_id = $2) own,
