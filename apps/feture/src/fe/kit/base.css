@@ -540,6 +540,10 @@
 .v21 .ans-scale button.on{background:var(--accent);color:#fff}
 .v21 .ans-marks{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
 /* with lanes the marks are as tall as a lane (owner 05.11.2026) */
+/* while a lane is open the rest fade; once a lane holds the answer, the others' names go quiet (owner 05.11.2026) */
+.v21 .ans-rows .ans-row,.v21 .ans-marks .ans-m{transition:opacity .18s var(--ease)}
+.v21 .ans-rows.busy .ans-row:not(.open),.v21 .ans-marks.dim .ans-m{opacity:.4}
+.v21 .ans-rows.chosen .ans-row:not(.on) .ans-row-l{color:var(--mute)}
 .v21 .ans-rows~.ans-marks .ans-m{min-height:76px}
 /* lanes: one full-width button per lane; the open one is the 1–10 scale in its place (tap, or hold and slide) */
 .v21 .ans-rows{display:grid;gap:8px;touch-action:none;-webkit-user-select:none;user-select:none}
