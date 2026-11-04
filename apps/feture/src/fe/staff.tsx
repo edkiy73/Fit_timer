@@ -46,7 +46,8 @@ const reportItem=z.object({targetType:z.enum(['profile','post','reply','communit
  evidence:opt(z.array(z.object({assetId:z.uuid(),kind:z.string(),seq:opt(z.number())}))),object:objectDto});
 const appealItem=z.object({id:z.uuid(),target_type:z.string(),target_id:z.string(),body:z.string(),created_at:ts,handle:opt(z.string()),object:objectDto,onlyReviewer:z.boolean().optional(),
  decision:opt(z.object({action:z.string(),detail:z.unknown().optional(),at:ts,mine:z.boolean().optional()}).passthrough())});
-const noticeItem=z.object({id:z.uuid(),target_url:opt(z.string()),reason:z.string(),explanation:opt(z.string()),created_at:ts,answerable:opt(z.boolean())});
+const noticeItem=z.object({id:z.uuid(),target_url:opt(z.string()),reason:z.string(),explanation:opt(z.string()),created_at:ts,answerable:opt(z.boolean()),
+ target:opt(z.object({type:z.string(),id:z.string()})),object:objectDto});
 const placeItem=z.object({id:z.uuid(),country:opt(z.string()),name_ru:opt(z.string()),name_en:opt(z.string()),created_at:ts,used:opt(z.number())});
 const journalItem=z.object({id:z.union([z.string(),z.number()]),staff_account_id:opt(z.string()),staff_name:opt(z.string()),staff_handle:opt(z.string()),action:z.string(),target_type:opt(z.string()),target_id:opt(z.string()),detail:z.unknown().optional(),created_at:ts});
 const disputeClaim=z.object({tagged:z.boolean(),hid:z.boolean().optional(),at:ts,trust:z.string(),strikes:z.number()});
@@ -922,7 +923,8 @@ function AppealCard({item,onDone}:{item:AppealItem,onDone:()=>void}){
 
 const NOTICE_RULES=[...RULES,'ip'] as const;
 function NoticeCard({item,onDone}:{item:NoticeItem,onDone:()=>void}){
- const {t}=useI18n();const when=useWhen();const d=useDecide(onDone);
+ const {t}=useI18n();const when=useWhen();const val=useVal();
+ const d=useDecide(onDone,e=>e instanceof FeError&&(e.rule==='notice_no_target'||e.rule==='notice_not_live')?t('fe.staff.notice.'+e.rule):null);
  const [rule,setRule]=useState<typeof NOTICE_RULES[number]|''>('');const [note,setNote]=useState('');const [ask,setAsk]=useState(false);
  const decide=(outcome:'removed'|'kept'|'not_actionable')=>d.run('staff.noticeDecide',{noticeId:item.id,outcome,note:note.trim(),...(outcome==='removed'?{rule}:{})});
  const csam=item.reason==='csam';
@@ -930,6 +932,8 @@ function NoticeCard({item,onDone}:{item:NoticeItem,onDone:()=>void}){
  return <StCard task={t('fe.staff.task.notice')} title={reason.startsWith('fe.')?t('fe.staff.notice.reason.other'):reason} danger={csam||item.reason==='minors'} meta={when(item.created_at)}>
   {csam&&<Alert kind="err" icon={ShieldAlert}><b>{t('fe.staff.csam.flag')}</b></Alert>}
   <Kv rows={[[t('fe.staff.notice.url'),item.target_url],[t('fe.staff.notice.explanation'),item.explanation]]}/>
+  {item.object?<ReviewObject kind={t('fe.staff.report.type.'+item.target!.type)} title={item.object.title} meta={factsLine(item.object,t,when,val)} text={item.object.body}/>
+   :<Alert kind="info">{t('fe.staff.notice.noTarget')}</Alert>}
   <Note>{item.answerable?t('fe.staff.notice.answerable'):t('fe.staff.notice.anonymous')}</Note>
   <Choice label={t('fe.staff.rule')} value={rule} onChange={setRule} disabled={d.busy} options={NOTICE_RULES.map(id=>({id,label:t('fe.staff.rule.'+id)}))}/>
   <TextField label={t('fe.staff.note')} value={note} onChange={setNote} max={500}/>
@@ -937,7 +941,7 @@ function NoticeCard({item,onDone}:{item:NoticeItem,onDone:()=>void}){
    :<Actions stack>
     <Btn icon={Check} disabled={d.busy} onClick={()=>decide('kept')}>{t('fe.staff.notice.kept')}</Btn>
     <Btn kind="soft" icon={Minus} disabled={d.busy} onClick={()=>decide('not_actionable')}>{t('fe.staff.notice.not_actionable')}</Btn>
-    <Btn kind="danger" icon={Ban} disabled={d.busy||!rule} onClick={()=>setAsk(true)}>{t('fe.staff.notice.removed')}</Btn></Actions>}
+    <Btn kind="danger" icon={Ban} disabled={d.busy||!rule||!item.object} onClick={()=>setAsk(true)}>{t('fe.staff.notice.removeAnswer')}</Btn></Actions>}
   <Failure text={d.failure}/>
  </StCard>;
 }

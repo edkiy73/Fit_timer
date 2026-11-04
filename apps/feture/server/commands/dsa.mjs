@@ -4,6 +4,8 @@ import { dsaCommands, noticeInput } from '../../contracts/dsa.mjs';
 import { fail } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { journal, requireStaff } from './staff.mjs';
+import { LIVE, removeContent, targetObject, targetOwner } from './moderation.mjs';
+import { closeReports } from '../reports.mjs';
 import { pageInfo, plainRows, queuePageSql } from '../queue-page.mjs';
 
 /** S4 steps 5–6 (S4-MODERATION §6–7). Anyone, with or without an account, can send a notice about illegal content
@@ -95,6 +97,21 @@ export async function sweepNotices(db) {
   return cleared.length;
 }
 
+const UUID_RE = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
+/** What in the app a notice's link points at (audit item 30): a post (or a reply on it), a community, an event — or
+ * nothing (another site, a screen that is not content). @param {string | null} url */
+export function noticeTarget(url) {
+  if (!url) return null;
+  const m = (/** @type {string} */ re) => String(url).match(new RegExp(re, 'i'));
+  const reply = m(`/n/feed/post/${UUID_RE}[^#]*[?&]reply=(${UUID_RE})`);
+  if (reply) return { type: 'reply', id: reply[1].toLowerCase() };
+  for (const [type, re] of /** @type {const} */ ([['post', `/n/feed/post/(${UUID_RE})`], ['event', `/n/events/(${UUID_RE})`], ['community', `/n/communities/(${UUID_RE})`]])) {
+    const x = m(re);
+    if (x) return { type, id: x[1].toLowerCase() };
+  }
+  return null;
+}
+
 /** @type {Record<keyof typeof dsaCommands, Command['run']>} */
 const run = {
   async 'staff.noticeQueue'(q, { account, input }) {
@@ -105,17 +122,36 @@ const run = {
       `select id, target_url, reason, explanation, created_at, sender_email is not null answerable, (${PRIORITY})::int prio
        from feture.dsa_notice where state = 'open'`, []);
     const rows = await q.query(sql, params);
-    return { items: plainRows(rows), ...pageInfo(rows, NOTICE_KEYS, input.limit) };
+    // What the link points at, so staff see the material and «Удалить и ответить» removes exactly it.
+    const items = [];
+    for (const r of plainRows(rows)) {
+      const t = noticeTarget(r.target_url);
+      items.push({ ...r, target: t, object: t ? await targetObject(q, t.type, t.id) : null });
+    }
+    return { items, ...pageInfo(rows, NOTICE_KEYS, input.limit) };
   },
 
   async 'staff.noticeDecide'(q, { account, input }) {
     await requireStaff(q, account, ['owner', 'lead', 'moderator']);
+    // «Удалить и ответить» (audit item 30): the material the link points at is taken down first, as a report removal
+    // would (appealable, reports and disputes close); if it cannot be, nothing is decided and no answer goes out.
+    if (input.outcome === 'removed') {
+      const [n] = await q.query(`select target_url from feture.dsa_notice where id = $1 and state = 'open' for update`, [input.noticeId]);
+      if (!n) fail(409, 'conflict');
+      const t = noticeTarget(n.target_url);
+      if (!t) fail(422, 'rule_violation', { rule: 'notice_no_target' });
+      const o = await targetOwner(q, account.id, t.type, t.id);
+      if (!(LIVE[t.type] ?? []).includes(o.state)) fail(409, 'conflict', { rule: 'notice_not_live', state: o.state });
+      await removeContent(q, t.type, t.id, o.owner, /** @type {string} */ (input.rule));
+      await closeReports(q, t.type, [t.id], 'removed');
+      await journal(q, account.id, 'notice.removed', t.type, t.id, { noticeId: input.noticeId, from: o.state, rule: input.rule, author: o.owner, note: input.note });
+    }
     const rows = await q.query(
       `update feture.dsa_notice set state = 'decided', outcome = $2, rule = $3, decided_by = $4, decided_at = now()
        where id = $1 and state = 'open' returning id`, [input.noticeId, input.outcome, input.rule ?? null, account.id]);
     if (!rows[0]) fail(409, 'conflict');
     await enqueue(q, 'notice.decided', null, { noticeId: input.noticeId });
-    await journal(q, account.id, 'notice.' + input.outcome, 'notice', input.noticeId, { rule: input.rule ?? null, note: input.note });
+    if (input.outcome !== 'removed') await journal(q, account.id, 'notice.' + input.outcome, 'notice', input.noticeId, { rule: input.rule ?? null, note: input.note });
     return { outcome: input.outcome };
   },
 

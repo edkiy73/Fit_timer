@@ -6,7 +6,7 @@ import { sha256 } from '../hash.mjs';
 import { keysetPage, readKeyset } from '../cursor.mjs';
 import { withFaces } from './faces.mjs';
 import { decideItems } from '../approvals.mjs';
-import { appealState } from './moderation.mjs';
+import { appealState, materialOf } from './moderation.mjs';
 import { incomingRequest } from '../sql-rules.mjs';
 import { canonicalToken, webSubscription } from '../webpush.mjs';
 
@@ -205,7 +205,10 @@ const run = {
     if (['contentRemoved', 'appealDecided'].includes(row.type) && typeof d.targetType === 'string' && typeof d.targetId === 'string') appeal = await appealState(q, profile, d.targetType, d.targetId);
     else if (row.type === 'profileRestricted') appeal = await appealState(q, profile, 'profile', profile);
     if (row.type === 'reportResolved') item.data = { resolution: d.resolution ?? null };
-    return { item, appeal };
+    // Which material it was (an excerpt and its date): never in a push or an email, only here for its own author.
+    const material = ['contentRemoved', 'appealDecided'].includes(row.type) && typeof d.targetType === 'string' && typeof d.targetId === 'string'
+      ? await materialOf(q, account.id, profile, d.targetType, d.targetId) : null;
+    return { item, appeal, material };
   },
 
   async 'notifications.read'(q, { account, input }) {

@@ -32,9 +32,32 @@ const DAY = 24 * 60 * 60 * 1000;
 // Queue order (S4 §2): minors first, then threats, private material, spam, the rest.
 const PRIORITY = `case reason when 'minor' then 0 when 'threat' then 2 when 'private' then 3 when 'spam' then 5 else 6 end`;
 
+/** Takes live content down by a staff decision (a report, a legal notice): a post is removed, a reply too, a community
+ * or an event is hidden; disputes on the post close, pending event applications close, a community's waiting change
+ * goes; the author is told what and under which rule, and how to appeal (DSA art. 17).
+ * @param {Q} q @param {string} type @param {string} id @param {string} owner @param {string} rule */
+export async function removeContent(q, type, id, owner, rule) {
+  if (type === 'post') {
+    await q.query(`update feture.post set state = 'removed', removed_reason = $2, updated_at = now() where id = $1`, [id, rule]);
+    await settleAvatar(q, owner); // a profile photo taken from the post goes with it (restored on appeal)
+    await closeDisputes(q, [id]);
+  }
+  if (type === 'reply') await q.query(`update feture.reply set state = 'removed' where id = $1`, [id]);
+  // A change waiting for staff goes with it (audit item 18).
+  if (type === 'community') await q.query(`update feture.community set state = 'hidden', reject_reason = $2, pending_change = null, updated_at = now() where id = $1`, [id, rule]);
+  if (type === 'event') {
+    await q.query(`update feture.event set state = 'hidden', reject_reason = $2, rev = rev + 1, updated_at = now() where id = $1`, [id, rule]);
+    await q.query(`update feture.event_application set state = 'closed', decided_at = now(), rev = rev + 1 where event_id = $1 and state = 'pending'`, [id]);
+  }
+  await enqueue(q, 'content.removed', owner, { targetType: type, targetId: id, rule });
+}
+
+/** What staff may take down, by state (staff.reportDecide, staff.noticeDecide). */
+export const LIVE = /** @type {Record<string, string[]>} */ ({ post: ['published', 'review'], reply: ['published'], community: ['published'], event: ['published', 'cancelled'] });
+
 /** Owner profile of a report target, refusing the staff member's own (their profiles, their couple, a partner — staffOwn).
  * @param {Q} q @param {string} staffAccount @param {string} type @param {string} id */
-async function targetOwner(q, staffAccount, type, id) {
+export async function targetOwner(q, staffAccount, type, id) {
   const [t] = await q.query(
     type === 'post' ? `select owner_profile_id owner, state from feture.post where id = $1 for update`
       : type === 'reply' ? `select author_profile_id owner, state from feture.reply where id = $1 for update`
@@ -106,7 +129,7 @@ async function onlyReviewer(q, account, appellant) {
 /** What a moderator needs to judge a reported or appealed thing, whole (S4 §3): the text in full (up to 4000
  * characters) and the plain facts around it. Values are raw (codes, ISO dates); the screen words them.
  * @param {Q} q @param {string} type @param {string} id */
-async function targetObject(q, type, id) {
+export async function targetObject(q, type, id) {
   const one = async (/** @type {string} */ sql) => (await q.query(sql, [id]))[0] ?? null;
   if (type === 'post') {
     const p = await one(`select p.title, left(p.body, 4000) body, p.type kind, p.audience, p.topics, p.state, coalesce(p.published_at, p.created_at) "at" from feture.post p where p.id = $1`);
@@ -200,8 +223,7 @@ const run = {
     const [{ open }] = await q.query(`select count(*)::int open from feture.report where target_type = $1 and target_id = $2 and state = 'open' and ($3::uuid is null or reported_profile_id = $3)`,
       [input.targetType, input.targetId, side]);
     if (!open) fail(409, 'conflict', { rule: 'no_open_reports' });
-    const live = input.targetType === 'post' ? ['published', 'review'] : input.targetType === 'reply' ? ['published']
-      : input.targetType === 'community' ? ['published'] : input.targetType === 'event' ? ['published', 'cancelled'] : ['active'];
+    const live = LIVE[input.targetType] ?? ['active'];
     // Taken away by its author (a post hidden into the archive, a deleted reply), also with a deleted account: nothing is
     // left to remove, but the violation is recorded against the author (the journal) and the reports close as confirmed
     // (audit item 3). A couple's archived post can no longer be brought back from the archive.
@@ -211,22 +233,7 @@ const run = {
     if (input.decision === 'remove' && gone && input.targetType === 'post') {
       await q.query(`update feture.post set removed_reason = $2, updated_at = now() where id = $1`, [input.targetId, input.rule]);
     }
-    if (input.decision === 'remove' && !gone) {
-      if (input.targetType === 'post') {
-        await q.query(`update feture.post set state = 'removed', removed_reason = $2, updated_at = now() where id = $1`, [input.targetId, input.rule]);
-        await settleAvatar(q, t.owner); // a profile photo taken from the post goes with it (restored on appeal)
-        await closeDisputes(q, [input.targetId]);
-      }
-      if (input.targetType === 'reply') await q.query(`update feture.reply set state = 'removed' where id = $1`, [input.targetId]);
-      // A change waiting for staff goes with it (audit item 18).
-      if (input.targetType === 'community') await q.query(`update feture.community set state = 'hidden', reject_reason = $2, pending_change = null, updated_at = now() where id = $1`, [input.targetId, input.rule]);
-      if (input.targetType === 'event') {
-        await q.query(`update feture.event set state = 'hidden', reject_reason = $2, rev = rev + 1, updated_at = now() where id = $1`, [input.targetId, input.rule]);
-        await q.query(`update feture.event_application set state = 'closed', decided_at = now(), rev = rev + 1 where event_id = $1 and state = 'pending'`, [input.targetId]);
-      }
-      // The author learns what was removed and under which rule, and how to appeal (DSA art. 17).
-      await enqueue(q, 'content.removed', t.owner, { targetType: input.targetType, targetId: input.targetId, rule: input.rule });
-    }
+    if (input.decision === 'remove' && !gone) await removeContent(q, input.targetType, input.targetId, t.owner, input.rule);
     const resolved = await closeReports(q, input.targetType, [input.targetId], input.decision === 'remove' ? 'removed' : 'kept', side);
     // `author`: whose violation it is, so a person's history of decisions can be read from the journal (audit item 3).
     await journal(q, account.id, 'report.' + input.decision, input.targetType, input.targetId,
@@ -517,14 +524,15 @@ const run = {
 
 /** Staff decisions that may be appealed, per target. */
 const APPEALABLE = {
-  post: ['report.remove', 'dispute.remove'], reply: ['report.remove'], community: ['report.remove', 'community.reject'], event: ['report.remove', 'event.hide'], profile: ['restrict.on'],
+  post: ['report.remove', 'dispute.remove', 'notice.removed'], reply: ['report.remove', 'notice.removed'], community: ['report.remove', 'community.reject', 'notice.removed'],
+  event: ['report.remove', 'event.hide', 'event.reject', 'notice.removed'], profile: ['restrict.on'],
 };
 /** Who owns a target and whether a decision still holds on it. */
 const APPEAL_OWN = {
   post: `select owner_profile_id o, state = 'removed' hit from feture.post where id = $1`,
   reply: `select author_profile_id o, state = 'removed' hit from feture.reply where id = $1`,
   community: `select owner_profile_id o, state in ('hidden', 'rejected') hit from feture.community where id = $1`,
-  event: `select organizer_profile_id o, state = 'hidden' hit from feture.event where id = $1`,
+  event: `select organizer_profile_id o, state in ('hidden', 'rejected') hit from feture.event where id = $1`,
   profile: `select id o, restricted_at is not null hit from feture.profile where id = $1`,
 };
 
@@ -540,6 +548,25 @@ async function appealTarget(q, profileId, type, id) {
     `select id from feture.staff_action where target_type = $1 and target_id = $2 and action = any($3) order by created_at desc limit 1`,
     [type, id, APPEALABLE[/** @type {keyof typeof APPEALABLE} */ (type)]]);
   return { hit: t.hit, decision: d ?? null };
+}
+
+/** Which material a decision was about, for its card (audit item 29): the first 120 characters and when it was made.
+ * Only the profile's own target, and only while the account still acts as that profile (an ex-partner sees nothing).
+ * @param {Q} q @param {string} accountId @param {string} profileId @param {string} type @param {string} id */
+export async function materialOf(q, accountId, profileId, type, id) {
+  const sql = /** @type {Record<string, string>} */ ({
+    post: `select owner_profile_id o, coalesce(nullif(title, ''), body) txt, coalesce(published_at, created_at) at from feture.post where id = $1`,
+    reply: `select author_profile_id o, body txt, created_at at from feture.reply where id = $1`,
+    community: `select owner_profile_id o, name txt, created_at at from feture.community where id = $1`,
+    event: `select organizer_profile_id o, title txt, created_at at from feture.event where id = $1`,
+  })[type];
+  if (!sql) return null;
+  const [t] = await q.query(sql, [id]);
+  if (!t || t.o !== profileId) return null;
+  const [{ mine }] = await q.query(`select exists (select 1 from feture.profile_member where profile_id = $1 and account_id = $2 and state = 'active') mine`, [profileId, accountId]);
+  if (!mine) return null;
+  const txt = String(t.txt ?? '').replace(/\s+/g, ' ').trim();
+  return { excerpt: txt.length > 120 ? txt.slice(0, 119) + '…' : txt, at: t.at };
 }
 
 /** The appeal of a decision about the profile's own target, for its decision card (the inbox): `available` (the decision
@@ -578,6 +605,11 @@ async function restoreTarget(q, type, id, from) {
   // A rejected community that wins its appeal is published (its cover is checked like any other; it stays as it was).
   if (type === 'community') return (await q.query(`update feture.community set state = 'published', published_at = coalesce(published_at, now()), reject_reason = null, updated_at = now() where id = $1 and state in ('hidden', 'rejected') returning id`, [id])).length > 0;
   if (type === 'event') {
+    // A rejected event that wins its appeal is published, while its start is still ahead (audit item 38).
+    if (from === 'in_review') {
+      return (await q.query(`update feture.event set state = 'published', published_at = coalesce(published_at, now()), reject_reason = null, rev = rev + 1, updated_at = now()
+        where id = $1 and state = 'rejected' and starts_at > now() returning id`, [id])).length > 0;
+    }
     const back = from === 'cancelled' ? 'cancelled' : 'published';
     return (await q.query(`update feture.event set state = $2, reject_reason = null, rev = rev + 1, updated_at = now() where id = $1 and state = 'hidden' returning id`, [id, back])).length > 0;
   }

@@ -1201,6 +1201,20 @@ const run = {
       `select $1::uuid = $3::uuid or exists (select 1 from feture.profile_member where profile_id = $1 and account_id = $2 and state = 'active') own`,
       [ownerProfile, viewer.accountId, viewer.profileId]);
     if (own) fail(422, 'rule_violation', { rule: 'own_content' });
+    // Already looked at: the same person (from any of their profiles) reporting the same, unchanged material again after
+    // staff kept it is refused (audit item 31). Changed since = a new revision, a newer edit, or new messages in a chat.
+    const [{ checked }] = await q.query(
+      `select exists (select 1 from feture.report r where r.reporter_account = $1 and r.target_type = $2 and r.target_id = $3
+         and r.state = 'resolved' and r.resolution = 'kept'
+         and not case $2
+           when 'post' then (select x.rev from feture.post x where x.id = $3) is distinct from r.target_rev
+           when 'reply' then (select x.rev from feture.reply x where x.id = $3) is distinct from r.target_rev
+           when 'event' then (select x.rev from feture.event x where x.id = $3) is distinct from r.target_rev
+           when 'community' then exists (select 1 from feture.community x where x.id = $3 and x.updated_at > r.resolved_at)
+           when 'profile' then exists (select 1 from feture.profile x where x.id = $3 and x.updated_at > r.resolved_at)
+           when 'conversation' then exists (select 1 from feture.message m where m.conversation_id = $3 and m.created_at > r.resolved_at)
+           else true end) checked`, [viewer.accountId, input.targetType, input.targetId]);
+    if (checked) fail(409, 'conflict', { rule: 'already_checked' });
     // One open report per target and reporter. Repeating it never fails the transaction; for a chat, newly selected
     // messages are added to the evidence.
     const [r] = await q.query(

@@ -4,6 +4,7 @@ import { eventsCommands } from '../../contracts/events.mjs';
 import { requireUnrestricted } from '../profiles.mjs';
 import { fail, isUniqueViolation } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
+import { closeAppealOn } from '../reports.mjs';
 import { closePending, needsPartner, partnerActed, registerApprovalKind, requestApproval } from '../approvals.mjs';
 import { journal, requireStaff } from './staff.mjs';
 import { mediaDto } from '../media/assets.mjs';
@@ -183,6 +184,7 @@ async function doUpdate(q, acting, eventId, rev, f) {
   if (e.rev !== rev) fail(409, 'conflict', { rev: e.rev });
   if (!['pending_partner', 'in_review', 'rejected', 'published'].includes(e.state)) fail(409, 'conflict', { state: e.state });
   if ((f.communityId ?? null) !== e.community_id) fail(400, 'invalid_input', { fields: ['communityId'] }); // the community link stays
+  if (e.state === 'rejected') await closeAppealOn(q, 'event', e.id); // edited after the rejection: the appeal no longer applies
   // Who is admitted depends on these: once published they stay, so nobody's «иду» or approval silently stops counting.
   if (e.state === 'published' && (f.requiresApplication !== e.requires_application || !same(f.questions, e.questions))) {
     fail(422, 'rule_violation', { rule: 'admission_frozen' });
@@ -432,6 +434,7 @@ const run = {
     const e = await ownEvent(q, input.eventId, acting);
     if (!['pending_partner', 'in_review', 'rejected'].includes(e.state)) fail(409, 'conflict', { state: e.state });
     await dropPending(q, acting.profileId, 'event.submit', e.id);
+    await closeAppealOn(q, 'event', e.id);
     return { draftId: await toEventDraft(q, { ...e, created_by: acting.accountId }) };
   },
 
