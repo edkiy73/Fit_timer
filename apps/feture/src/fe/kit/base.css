@@ -449,6 +449,8 @@
 .v21 .grp.dim{opacity:.4;pointer-events:none}
 .v21 .sheet .grp:first-child{margin-top:4px}
 .v21 .sheet .card{background:var(--surf)}
+/* `k-one-line`: a list whose rows' second lines stay one line («…» when longer), so every row is the same height */
+.v21 .card.list.k-one-line .li small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* Sheet `step`: the head and body of each step slide in — from the right going on, from the left going back */
 @keyframes kStepFwd{from{opacity:0;transform:translateX(20px)}}@keyframes kStepBack{from{opacity:0;transform:translateX(-20px)}}
 .v21 .k-step-in.fwd{animation:kStepFwd .26s cubic-bezier(.2,.8,.2,1) both}.v21 .k-step-in.back{animation:kStepBack .26s cubic-bezier(.2,.8,.2,1) both}
