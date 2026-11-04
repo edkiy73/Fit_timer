@@ -214,7 +214,7 @@ function PairMain({onOpen}:{onOpen:(id:string)=>void}){
 function RestoreView({coupleId,extra,onLeave}:{coupleId:string,extra?:ReactNode,onLeave:()=>void}){
  const {call,reload,state,setActing}=useFe();const {t,locale}=useI18n();const toast=useToast();const navigate=useNavigate();
  const [c,setC]=useState<Couple|null>(null);const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
- const [askDecline,setAskDecline]=useState(false);
+ const [askDecline,setAskDecline]=useState(false);const [askPurge,setAskPurge]=useState(false);
  const load=useCallback(()=>{call('couple.get',{},coupleRes,{profileId:coupleId,fresh:true}).then(r=>{setC(r.couple);setError(null);}).catch(setError);},[call,coupleId]);
  useEffect(()=>{load();},[load]);
  useLive(['couple','decide'],load);
@@ -241,7 +241,6 @@ function RestoreView({coupleId,extra,onLeave}:{coupleId:string,extra?:ReactNode,
    if(person)setActing(person.id);reload();toast(t('fe.ap.restore.declined'),{type:'ok'});navigate('/n/me',{replace:true});}
   catch(e){setFailure(pairErrorText(e,t));setAskDecline(false);}finally{setBusy(false);}};
  // An archive (owner 04.11.2026): read-only for both until it is deleted; «Удалить сейчас» takes both.
- const [askPurge,setAskPurge]=useState(false);
  const purge=async()=>{setBusy(true);setFailure('');
   try{const r=await call('couple.purge',{opId:newOpId()},z.object({ok:z.literal(true),state:z.string()}).passthrough(),{profileId:coupleId});setAskPurge(false);
    if(r.state==='deleted'){const person=state.status==='ready'?state.boot.profiles.find(p=>p.kind==='person'):undefined;
