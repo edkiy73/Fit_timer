@@ -272,6 +272,7 @@ async function pairConversation(q, a, b, lock = false) {
 async function requestContext(q, from, to) {
   const [r] = await q.query(
     `select exists (select 1 from feture.follow where follower_profile_id = $1 and target_profile_id = $2) follows,
+       exists (select 1 from feture.follow where follower_profile_id = $2 and target_profile_id = $1) followed,
        (select coalesce(json_agg(x), '[]') from (select c.id, c.name from feture.community c
           join feture.community_member a on a.community_id = c.id and a.profile_id = $1 and a.state = 'active'
           join feture.community_member b on b.community_id = c.id and b.profile_id = $2 and b.state = 'active'
@@ -283,11 +284,17 @@ async function requestContext(q, from, to) {
             and (e.organizer_profile_id = $2 or exists (select 1 from feture.event_rsvp r where r.event_id = e.id and r.profile_id = $2 and r.status in ('going', 'interested'))
                  or exists (select 1 from feture.event_application p where p.event_id = e.id and p.profile_id = $2 and p.state = 'approved'))
           order by e.starts_at limit 2) x) events`, [from, to]);
-  return [
+  const context = [
     ...r.communities.map((/** @type {any} */ c) => ({ kind: 'community', id: c.id, name: c.name })),
     ...r.events.map((/** @type {any} */ e) => ({ kind: 'event', id: e.id, title: e.title, startsAt: e.startsAt })),
     ...(r.follows ? [{ kind: 'follows' }] : []),
   ];
+  // Which of «Кто может написать первым» the sender is to the recipient (audit item 50).
+  const points = new Set([
+    ...(r.follows ? ['followers'] : []), ...(r.followed ? ['following'] : []), ...(r.follows && r.followed ? ['mutual'] : []),
+    ...(r.communities.length ? ['community'] : []), ...(r.events.length ? ['event'] : []),
+  ]);
+  return Object.assign(context, { points });
 }
 
 /** New requests the profile may still send today: 10 a day, 3 once several of its requests were hidden or reported
@@ -316,15 +323,16 @@ async function chatRequestBlocker(q, acting, t) {
          where m.profile_id in ($1, $2) and m.state = 'active' and (a.state <> 'active' or a.birth_date is null or a.birth_date > current_date - interval '18 years')) adults,
        exists (select 1 from feture.conversation c where c.profile_a = least($1::uuid, $2::uuid) and c.profile_b = greatest($1::uuid, $2::uuid)
          and c.state = 'ended' and c.ended_reason in ('unmatch', 'block') and c.ended_at > now() - make_interval(days => $3)) ended,
-       (select messages_from from feture.profile_settings where profile_id = $2) messages_from`, [acting.profileId, t.id, REQUEST_LIMITS.reaskDays]);
+       (select messages_open from feture.profile_settings where profile_id = $2) messages_open`, [acting.profileId, t.id, REQUEST_LIMITS.reaskDays]);
   /** @param {string} rule */
   const no = rule => ({ rule, context, quota: null });
   if (x.me_restricted) return no('restricted');
   if (t.related) return no('related');
   if (x.restricted || x.hidden || !x.adults) return no('unavailable');
   if (x.ended) return no('request_wait');
-  if (x.messages_from === 'none') return no('messages_closed');
-  if (x.messages_from !== 'all' && !context.length) return no('messages_known');
+  const open = /** @type {string[]} */ (x.messages_open ?? []);
+  if (!open.length) return no('messages_closed');
+  if (!open.includes('all') && !open.some(p => context.points.has(p))) return no('messages_known');
   const quota = await requestQuota(q, acting.profileId);
   return { rule: quota.left > 0 ? null : 'requests_day', context, quota };
 }

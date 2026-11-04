@@ -1,6 +1,7 @@
 // @ts-check
 /** Slice C «Я» commands of `POST /api/fe` (docs/server/S2-CATALOG.md «C»). Shared by server and client. */
 import * as z from 'zod';
+import { MESSAGE_POINTS } from './_messages.mjs';
 import { id, opId } from './platform.mjs';
 import { field, fieldOrEmpty } from './_text.mjs';
 import { ABOUT, ABOUT_FACTS } from './_about.mjs';
@@ -34,9 +35,10 @@ export const PROFILE_SETTINGS = /** @type {const} */ ({
   mentionsFrom: z.enum(['all', 'follow', 'none']),
   activityVis: z.enum(['all', 'followers', 'off']),
   showLikes: z.boolean(),
-  // «Кто может мне писать» (owner 29.10.2026): message requests from everyone / followers and people of my communities
-  // and events / nobody (then only a mutual like opens a chat).
-  messagesFrom: z.enum(['all', 'known', 'none']),
+  // «Кто может написать первым» (audit item 50): who may send a message request — any of these, or «Все» alone;
+  // none picked: only a mutual like opens a chat (it always does).
+  messagesFrom: z.array(z.enum(MESSAGE_POINTS)).max(MESSAGE_POINTS.length)
+    .refine(v => new Set(v).size === v.length, { message: 'duplicates' }).refine(v => !v.includes('all') || v.length === 1, { message: 'all_alone' }),
 });
 
 const channel = z.strictObject({ push: z.boolean(), email: z.boolean() });

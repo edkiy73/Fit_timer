@@ -55,7 +55,7 @@ async function world(migrations = MIGRATIONS) {
     await db.query(`insert into feture.private_part (profile_id, text) values ($1, 'О нас подробнее') on conflict (profile_id) do update set text = excluded.text`, [pair]);
   };
   // Mia takes messages from anyone (the couple writes first in chat.request).
-  await db.query(`update feture.profile_settings set messages_from = 'all' where profile_id = $1`, [mia]);
+  await db.query(`update feture.profile_settings set messages_open = '{all}' where profile_id = $1`, [mia]);
   const one = async (/** @type {string} */ sql, /** @type {unknown[]} */ params = []) => (await db.query(sql, params))[0];
   return { ...env, a, b, mia, pair, berlin, ev, notify, one, openPrivate };
 }

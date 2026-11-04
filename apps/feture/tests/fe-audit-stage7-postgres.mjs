@@ -62,7 +62,7 @@ test('item 21: a link change is answered to the kind seen; a change since is ref
 test('item 41: a chat with a paused couple says so in the list and the chat, and refuses messages with its own reason', async () => {
   const { pg, db, call, mia, pair } = await world();
   try {
-    await db.query(`update feture.profile_settings set messages_from = 'all' where profile_id = $1`, [mia]);
+    await db.query(`update feture.profile_settings set messages_open = '{all}' where profile_id = $1`, [mia]);
     const r = await call('ua', pair, { action: 'chat.request', opId: op(), profileId: mia, body: 'Привет от пары, давай познакомимся' });
     const conv = r.conversationId;
     await call('um', mia, { action: 'chat.requestAnswer', opId: op(), conversationId: conv, answer: 'accept' });
