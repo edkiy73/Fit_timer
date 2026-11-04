@@ -16,7 +16,7 @@ import {useDecline} from './private';
 import {evParts,evWhen} from './event-time';
 import {AppealSheet} from './appeal';
 import {plural} from './post-parts';
-import {StatusDecision,useStatusTodo} from './status-todo';
+import {StatusDecision,onStatusAnswered,useStatusTodo} from './status-todo';
 import {groupRows,inboxScrollKey,inboxSearch,mergeRows,readInboxUrl,type InboxFilter,type InboxTab} from './inbox-url';
 
 /** The notification center (docs/notifications.md, stage 5): «Нужно решить» (tasks of every profile of the account,
@@ -60,6 +60,7 @@ function HeaderBell(){
  const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const [c,setC]=useState<{decide:number,notifications:number}>({decide:0,notifications:0});
  const live=useRef(true);
  const pull=useCallback(()=>{call('inbox.counts',{},countsRes,{asAccount:true}).then(r=>{if(live.current)setC({decide:r.decide,notifications:r.notifications});}).catch(()=>{});},[call]);
+ useEffect(()=>onStatusAnswered(pull),[pull]);
  // Realtime signals refresh the count at once; the 30 s poll stays as the fallback.
  useEffect(()=>{live.current=true;pull();const id=setInterval(pull,30000);return ()=>{live.current=false;clearInterval(id);};},[pull]);
  useRealtime(['notify','decide','chat'],pull);
@@ -118,7 +119,7 @@ export function InboxScreen(){
    return keep(filter,{items:mergeRows(had?.items??[],r.items),next});});
  }),[call,filter]);
  const load=useCallback((fresh=false)=>{setError(null);
-  Promise.all([call('decide.list',{},decideRes,{asAccount:true,fresh}).then(r=>setDecide(r.items)),loadNotes(fresh),
+  Promise.all([call('decide.list',{},decideRes,{asAccount:true,fresh}).then(r=>setDecide(r.items.filter(d=>d.kind!=='status'))),loadNotes(fresh),
    call('inbox.counts',{},countsRes,{asAccount:true,fresh}).then(setCounts)]).catch(setError);},[call,loadNotes]);
  useEffect(()=>{setPage(PAGES.get(filter)??null);setMoreErr(null);load();},[load,filter]);
  // Live data: another device, the partner or staff changed something (live.ts).
@@ -345,7 +346,7 @@ export function InboxScreen(){
  useScrollTo(url.item?'item-'+url.item:null,k==='todo'&&decide!==null);
  const told=useRef('');
  useEffect(()=>{if(url.item&&decide&&told.current!==url.item&&!decide.some(d=>d.id===url.item)){told.current=url.item;toast(t('fe.ibx.itemGone'));}},[url.item,decide,toast,t]);
- const nTodo=(counts?.decide??decide?.length??0)+(st?1:0);const nAll=counts?.notifications??(page?.items??[]).filter(n=>!n.read).length;
+ const nTodo=counts?.decide??(decide?.length??0)+(st?1:0);/* the server's number holds the status card too */const nAll=counts?.notifications??(page?.items??[]).filter(n=>!n.read).length;
  return <>
   {/* With the side menu «Уведомления» is a section of its own there: no «‹», like every other section. */}
   <Bar title={t('fe.inbox.title')} {...(sideNav?{}:{back:true as const})}/>

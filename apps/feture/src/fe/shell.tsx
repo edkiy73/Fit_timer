@@ -1,3 +1,4 @@
+import {onStatusAnswered} from './status-todo';
 import {Suspense,useCallback,useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {flushSync} from 'react-dom';
 import {MaintenanceGate} from './maintenance';
@@ -177,6 +178,7 @@ function useTabBadges(){
  // The app icon badge is the bell plus unread chats; with nothing left, the notifications still shown go too.
  const pull=useCallback((fresh=false)=>{call('inbox.counts',{},countsRes,{asAccount:true,fresh}).then(r=>{setC(r);const n=r.bell+r.chats;setAppBadge(n);if(!n)closeShown('all');}).catch(()=>{});},[call]);
  useEffect(()=>{pull();const id=setInterval(()=>pull(true),60000);return ()=>clearInterval(id);},[pull]);
+ useEffect(()=>onStatusAnswered(()=>pull(true)),[pull]);
  useLive(['counts','chat','decide','notify'],pull);
  return (id:string,side=false):number|'dot'|0=>!c?0:id==='people'?c.likes:id==='chats'?((c.chats+c.requests)||(c.newMatches?'dot':0))
   :id==='inbox'?c.decide+c.notifications:id==='me'?(side?0:c.decide)+staffN:0;

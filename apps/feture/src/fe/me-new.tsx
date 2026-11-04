@@ -19,7 +19,7 @@ import {PrivateLayer} from './private';
 import {NameBadges} from './faces';
 import {usePremiumStatus} from './account-extra';
 import {BasicsForm} from './me-basics-form';
-import {useStatusTodo} from './status-todo';
+import {onStatusAnswered} from './status-todo';
 import type {Place} from './kit/Place';
 import {DetailsBlock,MeSkel,PhotosBlock,catalogRes,profileRes,settingsRes,type Profile,type Settings as MeSettings,type option} from './me';
 
@@ -52,7 +52,7 @@ export function MeNewScreen(){
  const {state,acting,call}=useFe();const {t}=useI18n();const navigate=useNavigate();
  const {p,settings}=useMe();
  const [switching,setSwitching]=useState(false);
- const [todo,setTodo]=useShown('me.todo',()=>0);const stTodo=useStatusTodo().show?1:0;
+ const [todo,setTodo]=useShown('me.todo',()=>0);
  const [c,setC]=useState<Counts|null>(null);
  const [verified,setVerified]=useState(false);const premium=usePremiumStatus().status;
  const pull=useCallback(()=>{
@@ -67,6 +67,7 @@ export function MeNewScreen(){
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[call,acting]);
  useEffect(()=>{pull();},[pull]);
+ useEffect(()=>onStatusAnswered(pull),[pull]);
  useLive(['counts','decide','notify'],pull);
  if(state.status!=='ready'||!acting)return null;
  const couple=state.boot.profiles.find(x=>x.kind==='couple'&&x.state!=='deleted');const cp=acting.kind==='couple';
@@ -86,7 +87,7 @@ export function MeNewScreen(){
    <IconBtn icon={Settings} label={t('fe.me.settings')} onClick={go('/n/settings/new')}/>
   </Bar>
   <View refresh={pull}>
-   {todo+stTodo>0&&<Card list><Row className="me-todo" icon={Inbox} tone="l" title={t('fe.mx.todo')} badge={todo+stTodo} onClick={go('/n/inbox')}/></Card>}
+   {todo>0&&<Card list><Row className="me-todo" icon={Inbox} tone="l" title={t('fe.mx.todo')} badge={todo} onClick={go('/n/inbox')}/></Card>}
    <Group title={t('fe.m2.g.profile')}><Card list>
     <Row icon={UserRound} title={t('fe.m2.profile')} val={p?.photos.length?t('fe.m2.photosN',{n:String(p.photos.length)}):undefined} onClick={go('/n/me/new/profile')}/>
    </Card></Group>

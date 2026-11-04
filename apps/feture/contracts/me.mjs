@@ -150,6 +150,8 @@ export const meCommands = {
   },
   'notifications.settings.get': { profile: false, write: false, input: z.strictObject({}) },
   'notifications.settings.update': { profile: false, write: true, input: z.strictObject({ opId, settings: notificationSettings }) },
+  // «Нужно решить» → the relationship status: «Оставить» as it is (the card goes, on every device).
+  'profile.statusKeep': { profile: false, write: true, input: z.strictObject({ opId }) },
   'place.submit': {
     profile: false, write: true, rate: { kind: 'place.submit', max: 10, window: '1 day' },
     input: z.strictObject({ opId, country: z.string().regex(/^[A-Z]{2}$/), name: field('placeName') }),
