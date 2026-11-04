@@ -3194,11 +3194,12 @@
 .v21 .ph-slots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 /* a phone: the main photo big, at most three places while there are few photos (empty ones past the third hide) */
 .v21 .ph-slots>.ph-add.ghost:nth-child(n+4){display:none}
-/* wide (owner 05.11.2026: the 520 px grid left a hole on the right): all six places in one even row, the main one marked */
+/* wide (owner 05.11.2026: the capped grid left a hole on the right, six in a row were too small): four columns —
+   the main photo big on the left, a 2×2 of the others on the right (five places; a sixth photo starts a row below) */
 @container stage (min-width:560px){
- .v21 .ph-slots:not(.priv){grid-template-columns:repeat(6,minmax(0,1fr))}
- .v21 .ph-slots:not(.priv)>.big{grid-column:auto;grid-row:auto;aspect-ratio:4/5}
+ .v21 .ph-slots:not(.priv){grid-template-columns:repeat(4,minmax(0,1fr))}
  .v21 .ph-slots:not(.priv)>.ph-add.ghost:nth-child(n+4){display:block}
+ .v21 .ph-slots:not(.priv)>.ph-add.ghost:nth-child(n+6){display:none}
 }
 .v21 .ph-slots>.mi,
 .v21 .ph-slots>.ph-add{position:relative;aspect-ratio:4/5;border-radius:var(--r);overflow:hidden;min-width:0}
