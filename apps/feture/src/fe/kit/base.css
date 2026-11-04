@@ -1054,7 +1054,9 @@
 .v21 .acts:not(.onphoto) .act:not(.like){background:var(--ink);color:var(--bg)}
 .v21 .match{position:absolute;inset:0;z-index:65;display:flex;flex-direction:column;justify-content:flex-start;align-items:center;overflow-y:auto;padding:calc(30px + var(--safe-t)) 24px calc(30px + var(--safe-b));background:color-mix(in srgb,var(--bg) 88%,transparent);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);text-align:center;animation:fade .3s;pointer-events:auto}
 .v21 .match>*{max-width:380px;width:100%}
-.v21 .match .pair{position:relative;flex:none;height:160px;margin:clamp(0px,6vh,50px) 0 10px}
+.v21 .match .pair{position:relative;flex:none;height:160px;margin:0 0 10px}
+/* Centred on the screen; on a short one the first and last blocks keep it scrollable instead of clipping the top. */
+.v21 .match>.pair:first-child{margin-top:auto}.v21 .match>:last-child{margin-bottom:auto}
 /* safe-t: ok — fills its own parent box, not the screen top */.v21 .match .pair .av{position:absolute;top:0;width:140px;height:140px;border:4px solid var(--bg)}
 .v21 .match .pair .av:first-child{left:calc(50% - 120px)}.v21 .match .pair .av:last-child{right:calc(50% - 120px)}
 .v21 .match .pair .heart{position:absolute;left:50%;top:52px;width:42px;height:42px;margin-left:-21px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;z-index:2;box-shadow:0 0 0 4px var(--bg)}
