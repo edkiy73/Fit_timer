@@ -48,6 +48,8 @@ const TYPES = /** @type {Record<string, {type: string, actor?: string, object?: 
   'event.hide': { type: 'eventHidden', object: ['event', 'eventId'] },
   'community.ownerChanged': { type: 'communityOwner', object: ['community', 'communityId'] },
   'event.applicationApproved': { type: 'eventApplicationApproved', object: ['event', 'eventId'] },
+  // The partner marked the couple while this person is marked alone (audit item 56): they decide (В11).
+  'event.pairGoing': { type: 'eventPairGoing', actor: 'from', object: ['event', 'eventId'] },
   'event.applicationDeclined': { type: 'eventApplicationDeclined', object: ['event', 'eventId'] },
   'profile.suspended': { type: 'profileSuspended' },
   'profile.restored': { type: 'profileRestored' },

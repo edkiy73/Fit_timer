@@ -476,6 +476,7 @@ html:has(.fe-v21),html:has(.fe-v21) body{overscroll-behavior-y:none}
 .v21 .rsvp.rsvp button.r-not{grid-column:1/-1;min-height:var(--h-sm);font-weight:550}
 .v21 .rsvp.rsvp button.r-not svg{width:16px;height:16px}
 .v21 .rsvp.rsvp.has button:not(.on){color:var(--mute)}
+.v21 .rsvp.rsvp button.off{color:var(--mute);box-shadow:inset 0 0 0 1px var(--line2);background:none;cursor:not-allowed}
 .v21 .rsvp.rsvp button.r-interested.on{background:var(--violet-soft);color:var(--violet);box-shadow:inset 0 0 0 1.5px currentColor}
 .v21 .rsvp.rsvp button.r-going.on{background:var(--ok);color:var(--surf);box-shadow:none}
 .v21 .rsvp.rsvp button.r-not.on{background:color-mix(in srgb,var(--ink) 12%,transparent);color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--line2)}

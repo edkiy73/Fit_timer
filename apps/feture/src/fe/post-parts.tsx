@@ -34,15 +34,17 @@ export function useTopics(){
 /* ---------- md(): safe Markdown, FetLife-like ---------- */
 const INLINE=/(`[^`\n]+`)|(!?\[[^\]\n]{1,120}\]\(https?:\/\/[^\s()<>"']{1,400}\))|((?:^|(?<=[\s(]))@[a-z0-9_.]{2,30})|(\*\*[^*\n]+\*\*|__[^_\n]+__)|(~~[^~\n]+~~)|((?:^|(?<=[\s(]))[*_][^*_\n]+[*_](?=$|[\s).,!?:;]))/gi;
 
-/** A mention that is a link: the server lists them per post / reply (V21 unmentionMe — a removed one stays text). */
-export type MentionRef={id:string,handle:string|null};
+/** A mention that is a link: the server lists them per post / reply (V21 unmentionMe — a removed one stays text).
+ * `written`: the nickname as written in the text; `handle`: the person's nickname now, shown instead (audit item 43). */
+export type MentionRef={id:string,handle:string|null,written?:string|null|undefined};
+const mentionOf=(mentions:MentionRef[]|undefined,word:string)=>{const h=word.toLowerCase();return mentions?.find(x=>(x.written??x.handle)?.toLowerCase()===h);};
 function Inline({s,onLink,mentions}:{s:string,onLink:(u:string)=>void,mentions:MentionRef[]|undefined}){
  const out:ReactNode[]=[];let last=0;let k=0;
  for(const m of s.matchAll(INLINE)){
   const i=m.index??0;if(i>last)out.push(s.slice(last,i));const v=m[0];
   if(m[1])out.push(<code key={k++}>{v.slice(1,-1)}</code>);
   else if(m[2]){const mm=/\[([^\]]+)\]\(([^)]+)\)/.exec(v)!;const u=mm[2]!;out.push(<a key={k++} href={u} rel="noopener noreferrer nofollow" onClick={e=>{e.preventDefault();e.stopPropagation();onLink(u);}}>{mm[1]}</a>);}
-  else if(m[3]){const h=v.slice(1).toLowerCase();const ref=mentions?.find(x=>x.handle?.toLowerCase()===h);out.push(ref?<Mention key={k++} handle={v.slice(1)} id={ref.id}/>:v);}
+  else if(m[3]){const ref=mentionOf(mentions,v.slice(1));out.push(ref?<Mention key={k++} handle={ref.handle??v.slice(1)} id={ref.id}/>:v);}
   else if(m[4])out.push(<b key={k++}>{v.slice(2,-2)}</b>);
   else if(m[5])out.push(<s key={k++}>{v.slice(2,-2)}</s>);
   else if(m[6])out.push(<i key={k++}>{v.slice(1,-1)}</i>);
@@ -58,6 +60,17 @@ function Mention({handle,id}:{handle:string,id:string}){
  const {acting}=useFe();const navigate=useNavigate();
  const open=(e:{stopPropagation:()=>void})=>{e.stopPropagation();navigate(id===acting?.id?'/n/me':'/n/people/'+id);};
  return <span className="mention" role="link" tabIndex={0} onClick={open} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();open(e);}}}>@{handle}</span>;
+}
+
+/** Plain text with its mentions as links (a reply): no other markup. */
+export function MentionText({text,mentions}:{text:string,mentions?:MentionRef[]|undefined}){
+ const out:ReactNode[]=[];let last=0;let k=0;
+ for(const m of text.matchAll(/(?:^|(?<=[\s(]))@([a-z0-9_.]{2,30})/gi)){
+  const ref=mentionOf(mentions,m[1]!);if(!ref)continue;const i=m.index??0;
+  if(i>last)out.push(text.slice(last,i));out.push(<Mention key={k++} handle={ref.handle??m[1]!} id={ref.id}/>);last=i+m[0].length;
+ }
+ if(last<text.length)out.push(text.slice(last));
+ return <>{out}</>;
 }
 
 /** `images`: an article's pictures (`![](media:<id>)` lines) — the caller draws the post's own media by id; a line

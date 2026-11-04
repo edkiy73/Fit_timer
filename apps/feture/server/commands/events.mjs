@@ -28,7 +28,7 @@ const MAJOR = ['title', 'description', 'coverAssetId', 'joinUrl', 'price', 'requ
 const COLS = {
   title: 'title', kind: 'kind', description: 'description', format: 'format', placeId: 'place_id', area: 'area', exactAddress: 'exact_address',
   joinUrl: 'join_url', tz: 'tz', startsAt: 'starts_at', endsAt: 'ends_at', price: 'price', requiresApplication: 'requires_application',
-  questions: 'questions', requirements: 'requirements', coverAssetId: 'cover_asset_id', plate: 'plate',
+  questions: 'questions', requirements: 'requirements', coverAssetId: 'cover_asset_id', plate: 'plate', seats: 'seats',
 };
 const LIVE = `state in ('uploaded', 'scanning', 'needs_review', 'approved')`;
 
@@ -50,7 +50,7 @@ function formOf(e) {
   return {
     title: e.title, kind: e.kind, description: e.description, format: e.format, placeId: e.place_id, area: e.area, exactAddress: e.exact_address,
     joinUrl: e.join_url, tz: e.tz, startsAt: iso(e.starts_at), endsAt: iso(e.ends_at), price: e.price, requiresApplication: e.requires_application,
-    questions: e.questions, requirements: e.requirements, coverAssetId: e.cover_asset_id, plate: e.plate, communityId: e.community_id,
+    questions: e.questions, requirements: e.requirements, coverAssetId: e.cover_asset_id, plate: e.plate, communityId: e.community_id, seats: e.seats ?? null,
   };
 }
 
@@ -123,6 +123,79 @@ async function checkRsvp(q, e, profileId, c) {
     const [ok] = await q.query(`select 1 from feture.event_application where event_id = $1 and profile_id = $2 and state = 'approved'`, [e.id, profileId]);
     if (!ok) fail(422, 'rule_violation', { rule: 'application_first' });
   }
+  if (c.status === 'going' && !e.requires_application) {
+    const [cur] = await q.query(`select status from feture.event_rsvp where event_id = $1 and profile_id = $2`, [e.id, profileId]);
+    if (cur?.status !== 'going') await requireSeats(q, e, profileId);
+  }
+}
+
+/** How many people come (audit item 53): the persons of the going profiles, each once — someone marked alone and with
+ * the couple too is one. `viewer`: leave out profiles hidden from them by a block (the page and the list); seats count
+ * everyone. @param {Q} q @param {string} eventId @param {string | null} [viewer] */
+async function goingCount(q, eventId, viewer = null) {
+  const [{ n }] = await q.query(
+    `select count(distinct g.account_id)::int n from feture.event_going($1) g where $2::uuid is null or not feture.blocked($2, g.profile_id)`, [eventId, viewer]);
+  return n;
+}
+
+/** «Мест» (audit item 36): the places `profileId` would take (a couple two, minus anyone already coming) must be free.
+ * One answer at a time per event, so two people never take the last place together. @param {Q} q @param {any} e @param {string} profileId */
+async function requireSeats(q, e, profileId) {
+  if (e.seats == null) return;
+  await q.query(`select pg_advisory_xact_lock(hashtextextended('fe-seats:' || $1, 0))`, [e.id]);
+  const [{ taken, needed }] = await q.query(
+    `select (select count(distinct account_id) from feture.event_going($1))::int taken,
+       (select count(*) from feture.profile_member m where m.profile_id = $2 and m.state = 'active'
+          and m.account_id not in (select account_id from feture.event_going($1)))::int needed`, [e.id, profileId]);
+  if (taken + needed > e.seats) fail(422, 'rule_violation', { rule: 'no_seats' });
+}
+
+/** Who of a couple is already coming alone, or which of a person's couples comes (audit item 56): the personal
+ * «иду» or an open application. `mine`: the acting person's own personal profile (or, for a person, a couple of
+ * theirs); `partner`: the partner's personal profile when they are marked alone; `me`: the acting person's own. @param {Q} q @param {string} eventId @param {Acting} acting */
+async function comingApart(q, eventId, acting) {
+  const marked = `(exists (select 1 from feture.event_rsvp r where r.event_id = $1 and r.profile_id = %s and r.status = 'going')
+     or exists (select 1 from feture.event_application x where x.event_id = $1 and x.profile_id = %s and x.state in ('pending', 'approved')))`;
+  if (acting.kind === 'couple') {
+    const rows = await q.query(
+      `select m.account_id, a.person_profile_id, ${marked.replaceAll('%s', 'a.person_profile_id')} marked
+       from feture.profile_member m join feture.account a on a.id = m.account_id where m.profile_id = $2 and m.state = 'active'`, [eventId, acting.profileId]);
+    const mine = rows.find(r => r.account_id === acting.accountId);
+    const partner = rows.find(r => r.account_id !== acting.accountId && r.marked);
+    return { mine: mine?.marked ? mine.person_profile_id : null, partner: partner ? partner.person_profile_id : null, me: mine?.person_profile_id ?? null };
+  }
+  const [c] = await q.query(
+    `select m.profile_id from feture.profile_member m join feture.profile p on p.id = m.profile_id and p.kind = 'couple' and p.state = 'active'
+     where m.account_id = $2 and m.state = 'active' and ${marked.replaceAll('%s', 'm.profile_id')} limit 1`, [eventId, acting.accountId]);
+  return { mine: c?.profile_id ?? null, partner: null, me: null };
+}
+
+/** A couple coming together (audit item 56): «Идём парой» takes the acting person's own mark off — the answer that
+ * came with an application too. @param {Q} q @param {string} eventId @param {string} personProfileId */
+async function dropAlone(q, eventId, personProfileId) {
+  await q.query(`delete from feture.event_rsvp where event_id = $1 and profile_id = $2 and status = 'going'`, [eventId, personProfileId]);
+  await q.query(`update feture.event_application set state = 'withdrawn', decided_at = now(), rev = rev + 1
+    where event_id = $1 and profile_id = $2 and state in ('pending', 'approved')`, [eventId, personProfileId]);
+}
+
+/** Asks before a double mark (audit item 56): a couple whose acting partner is coming alone answers «Идём парой»
+ * (`together`) or keeps it apart (no mark); a person whose couple comes answers «Отметиться всё равно» (`alone`).
+ * The partner coming alone is asked themselves (В11: nobody sees the other's personal mark). @param {Q} q @param {any} e
+ * @param {Acting} acting @param {{together?: boolean, alone?: boolean}} input */
+async function askApart(q, e, acting, input) {
+  const apart = await comingApart(q, e.id, acting);
+  if (acting.kind === 'couple') {
+    if (apart.mine && !input.together) fail(409, 'conflict', { rule: 'going_alone' });
+  } else if (apart.mine && !input.alone) fail(409, 'conflict', { rule: 'going_as_couple' });
+  return apart;
+}
+
+/** After a couple's mark: the person of it themselves marked alone hears that the couple comes, and decides
+ * (audit item 56), on their personal profile, from the partner who marked. @param {Q} q @param {any} e @param {Acting} acting
+ * @param {{mine: string | null, partner: string | null, me: string | null}} apart @param {boolean} together */
+async function afterCoupleMark(q, e, acting, apart, together) {
+  if (together && apart.mine) await dropAlone(q, e.id, apart.mine);
+  if (apart.partner) await enqueue(q, 'event.pairGoing', apart.partner, { eventId: e.id, from: apart.me });
 }
 
 /** @param {any} e @param {any} c */
@@ -190,6 +263,8 @@ async function doUpdate(q, acting, eventId, rev, f) {
     fail(422, 'rule_violation', { rule: 'admission_frozen' });
   }
   await checkEventRefs(q, acting, { ...f, communityId: null });
+  // «Мест» never below the people already coming (В13).
+  if (e.state === 'published' && f.seats != null && f.seats < await goingCount(q, e.id)) fail(422, 'rule_violation', { rule: 'seats_below_going' });
   const timeChanged = Date.parse(f.startsAt) !== new Date(e.starts_at).getTime() || Date.parse(f.endsAt) !== new Date(e.ends_at).getTime();
   if (timeChanged && Date.parse(f.startsAt) <= Date.now()) fail(400, 'invalid_input', { fields: ['startsAt'] });
   // Offline → online on a published event (audit item 17): the format, the link and dropping the place wait for staff
@@ -399,7 +474,12 @@ registerApprovalKind('event.rsvp', {
     const c = /** @type {any} */ (row.change);
     const e = await openFor(q, String(row.target_id), row.profile_id, row.requested_by);
     await checkRsvp(q, e, row.profile_id, c);
+    const acting = /** @type {Acting} */ ({ kind: 'couple', profileId: row.profile_id, accountId: row.requested_by });
+    // The partner said yes to coming as a couple: the personal marks as they are now (audit item 56).
+    const apart = c.status === 'going' ? await comingApart(q, e.id, acting) : null;
+    if (apart?.mine && !c.together) fail(409, 'conflict', { rule: 'going_alone' });
     await writeRsvp(q, e.id, row.profile_id, row.requested_by, c);
+    if (apart) await afterCoupleMark(q, e, acting, apart, c.together === true);
   },
   version: async (q, row) => {
     const [r] = await q.query(
@@ -414,7 +494,11 @@ registerApprovalKind('event.apply', {
     const e = await openFor(q, String(row.target_id), row.profile_id, row.requested_by);
     checkApplication(e, row.change);
     await notDeclined(q, e.id, row.profile_id);
+    const acting = /** @type {Acting} */ ({ kind: 'couple', profileId: row.profile_id, accountId: row.requested_by });
+    const apart = await comingApart(q, e.id, acting);
+    if (apart.mine && !row.change.together) fail(409, 'conflict', { rule: 'going_alone' });
     await writeApplication(q, e, row.profile_id, row.requested_by, row.change);
+    await afterCoupleMark(q, e, acting, apart, row.change.together === true);
   },
   version: async (q, row) => {
     const [r] = await q.query(
@@ -544,6 +628,8 @@ const run = {
         startsAt: iso(e.starts_at), endsAt: iso(e.ends_at), price: e.price, requiresApplication: e.requires_application, questions: e.questions,
         requirements: e.requirements, plate: e.plate, cover, communityId: e.community_id, state: e.state, past: e.past,
         cancelReason: e.state === 'cancelled' ? e.cancel_reason : null, organizer: org[0], going: counts.going, interested: counts.interested,
+        // «Мест» (audit item 36): the limit and whether a place is free; the organizer sees «12 из 20» (taken).
+        seats: e.seats ?? null, full: e.seats != null && counts.taken >= e.seats, ...(e.own && e.seats != null ? { taken: counts.taken } : {}),
         // Only admitted people get the exact place; everyone else gets a hint while the event is open.
         exactAddress: e.admitted ? e.exact_address : null, joinUrl: e.admitted ? e.join_url : null,
         locked: !e.admitted && e.state === 'published' && !e.past,
@@ -660,16 +746,19 @@ const run = {
     // Clearing the answer clears the ticket mark too (EVT-028).
     const c = { status: input.status, showInList: input.status === null ? null : input.showInList, ticketMarked: input.status === null ? null : input.ticketMarked };
     await checkRsvp(q, e, acting.profileId, c);
+    const apart = input.status === 'going' ? await askApart(q, e, acting, input) : null;
     // A couple moving up (to «интересно» or «идём») or showing itself in the list widens what others see: the partner
     // decides on that. Going down or hiding from the list applies at once.
     const [cur] = await q.query('select status, show_in_list from feture.event_rsvp where event_id = $1 and profile_id = $2', [e.id, acting.profileId]);
     const rank = (/** @type {string | null | undefined} */ v) => v ? RANK[/** @type {keyof typeof RANK} */ (v)] : 0;
     const up = rank(input.status) > rank(cur?.status) || (input.showInList === true && !cur?.show_in_list);
     if (up && needsPartner(acting, 'event.rsvp')) {
-      return { pending: await requestApproval(q, acting, { kind: 'event.rsvp', targetType: 'event', targetId: e.id, change: c, summary: [e.title, input.status] }) };
+      return { pending: await requestApproval(q, acting, { kind: 'event.rsvp', targetType: 'event', targetId: e.id,
+        change: { ...c, ...(input.together ? { together: true } : {}) }, summary: [e.title, input.status] }) };
     }
     await dropPending(q, acting.profileId, 'event.rsvp', e.id);
     await writeRsvp(q, e.id, acting.profileId, acting.accountId, c);
+    if (apart && acting.kind === 'couple') await afterCoupleMark(q, e, acting, apart, input.together === true);
     // A couple's answer moving up in trust mode goes into the partner's couple history (with a push: participation).
     if (up) await partnerActed(q, acting, 'event', { eventId: e.id });
     return { status: input.status };
@@ -682,10 +771,13 @@ const run = {
     const c = { answers: input.answers, note: input.note };
     checkApplication(e, c);
     await notDeclined(q, e.id, acting.profileId);
+    const apart = await askApart(q, e, acting, input);
     if (needsPartner(acting, 'event.apply')) {
-      return { pending: await requestApproval(q, acting, { kind: 'event.apply', targetType: 'event', targetId: e.id, change: c, summary: [e.title] }) };
+      return { pending: await requestApproval(q, acting, { kind: 'event.apply', targetType: 'event', targetId: e.id,
+        change: { ...c, ...(input.together ? { together: true } : {}) }, summary: [e.title] }) };
     }
     const id = await writeApplication(q, e, acting.profileId, acting.accountId, c);
+    if (acting.kind === 'couple') await afterCoupleMark(q, e, acting, apart, input.together === true);
     await partnerActed(q, acting, 'eventApply', { eventId: e.id });
     return { id, state: 'pending' };
   },
@@ -742,6 +834,8 @@ const run = {
     if (to === 'approved') {
       const [{ ok }] = await q.query(`select p.state = 'active' and not feture.blocked(p.id, $2) ok from feture.profile p where p.id = $1`, [x.profile_id, e.organizer_profile_id]);
       if (!ok) fail(409, 'conflict', { rule: 'applicant_unavailable' });
+      // An application may wait while there are no places; it is approved once one is free (В13).
+      await requireSeats(q, e, x.profile_id);
     }
     await q.query(`update feture.event_application set state = $2, decided_by = $3, decided_at = now(), rev = rev + 1 where id = $1`, [x.id, to, acting.accountId]);
     // A decided task reads its own inbox row (docs/notifications.md «Счётчики»).
@@ -774,7 +868,11 @@ const run = {
         : `select p.id, p.kind, p.handle, p.name, r.show_in_list shown from feture.event_rsvp r join feture.profile p on p.id = r.profile_id
            where r.event_id = $1 and r.status = $3 and p.state = 'active' and not feture.blocked($2, p.id)`,
       input.kind === 'going' && e.requires_application ? [e.id, viewer.profileId] : [e.id, viewer.profileId, input.kind]);
-    const people = (/** @type {any[]} */ list) => list.reduce((n, r) => n + (r.kind === 'couple' ? 2 : 1), 0);
+    // «Идут»: persons, each once (audit item 53, the same number as the page); «интересно»: a couple counts as two.
+    const going = input.kind === 'going' ? await q.query(`select profile_id, account_id from feture.event_going($1)`, [e.id]) : [];
+    const people = (/** @type {any[]} */ list) => input.kind === 'going'
+      ? new Set(going.filter(g => list.some(r => r.id === g.profile_id)).map(g => g.account_id)).size
+      : list.reduce((n, r) => n + (r.kind === 'couple' ? 2 : 1), 0);
     await withFaces(q, cfg.media, viewer, e.own ? rows : rows.filter(r => r.shown), r => r);
     if (e.own) return { count: people(rows), hidden: 0, items: rows.map(({ shown: _, ...r }) => r) };
     const shown = rows.filter(r => r.shown);
@@ -845,14 +943,13 @@ const run = {
 };
 
 /** Counts for the event page: «идут» never includes pending applications; people hidden by a block are not counted
- * (as in event.attendees). @param {Q} q @param {any} e @param {string} viewer */
+ * (as in event.attendees), a person coming alone and with the couple once (audit item 53). `taken`: places taken. @param {Q} q @param {any} e @param {string} viewer */
 async function crowd(q, e, viewer) {
   const [c] = await q.query(
-    `select
-       (case when $2 then (select coalesce(sum(case when p.kind = 'couple' then 2 else 1 end), 0) from feture.event_application x join feture.profile p on p.id = x.profile_id where x.event_id = $1 and x.state = 'approved' and p.state = 'active' and not feture.blocked($3, p.id))
-             else (select coalesce(sum(case when p.kind = 'couple' then 2 else 1 end), 0) from feture.event_rsvp r join feture.profile p on p.id = r.profile_id where r.event_id = $1 and r.status = 'going' and p.state = 'active' and not feture.blocked($3, p.id)) end)::int going,
-       (select coalesce(sum(case when p.kind = 'couple' then 2 else 1 end), 0) from feture.event_rsvp r join feture.profile p on p.id = r.profile_id where r.event_id = $1 and r.status = 'interested' and p.state = 'active' and not feture.blocked($3, p.id))::int interested,
-       (select count(*) from feture.event_application x where x.event_id = $1 and x.state = 'pending')::int pending`, [e.id, e.requires_application, viewer]);
+    `select (select count(distinct account_id) from feture.event_going($1))::int taken,
+       (select count(distinct g.account_id) from feture.event_going($1) g where not feture.blocked($2, g.profile_id))::int going,
+       (select coalesce(sum(case when p.kind = 'couple' then 2 else 1 end), 0) from feture.event_rsvp r join feture.profile p on p.id = r.profile_id where r.event_id = $1 and r.status = 'interested' and p.state = 'active' and not feture.blocked($2, p.id))::int interested,
+       (select count(*) from feture.event_application x where x.event_id = $1 and x.state = 'pending')::int pending`, [e.id, viewer]);
   return c;
 }
 

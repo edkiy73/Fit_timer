@@ -682,8 +682,12 @@ const run = {
     const page = rows.slice(0, 20);
     const last = page[page.length - 1];
     const items = page.map(({ rank: _r, joined_at: _j, joined_text: _t, ...r }) => r);
+    // The full number, and how many of it chose not to be in the list (В10, audit item 53): hosts see everyone.
+    const [{ unlisted }] = host ? [{ unlisted: 0 }] : await q.query(
+      `select count(*)::int unlisted from feture.community_member where community_id = $1 and state = 'active' and role = 'member' and not listed and profile_id <> $2`,
+      [c.id, viewer.profileId]);
     return {
-      count: n, items: await withFaces(q, cfg.media, viewer, items, r => r),
+      count: n, hidden: unlisted, items: await withFaces(q, cfg.media, viewer, items, r => r),
       next: rows.length > 20 ? Buffer.from(JSON.stringify([last.rank, last.joined_text, last.id])).toString('base64url') : null,
     };
   },
