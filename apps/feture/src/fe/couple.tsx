@@ -190,6 +190,7 @@ function useSheetParts(a:Approval){
   if(f==='interest'&&typeof v==='object'){const x=v as {value?:number|null,mark?:string|null};return x.mark?t('fe.ap.mark.'+x.mark):x.value?t('fe.ap.mark.value',{n:x.value}):t('fe.ap.empty');}
   if(f==='cityId'&&typeof v==='object'){const c=v as {ru?:string|null,en?:string|null};return (locale==='en'?c.en:c.ru)??t('fe.ap.empty');}
   if(Array.isArray(v))return v.map(x=>val(f,x)).join(', ');
+  if(f==='messagesFrom'&&typeof v==='string')return t('fe.rq.set.'+v);
   if(typeof v==='string'&&VALUES.includes(v))return t('fe.cw.val.'+v);
   if(typeof v==='object')return t('fe.cw.changed');
   return String(v);

@@ -25,7 +25,7 @@ const COUPLE_DETAILS = new Set(['roles', 'formats', 'seeks']);
 const SETTING_COLUMN = /** @type {Record<keyof typeof PROFILE_SETTINGS, string>} */ ({
   discoverMode: 'discover_mode', acceptProfileLikes: 'accept_profile_likes', requestsFrom: 'requests_from',
   linksFrom: 'links_from', mentionsFrom: 'mentions_from', activityVis: 'activity_vis', showLikes: 'show_likes',
-  messagesFrom: 'messages_from',
+  messagesFrom: 'messages_open',
 });
 
 /** Most generous reading of a birth date: the person counts as 18 if it is their 18th birthday anywhere on Earth
@@ -245,7 +245,6 @@ async function doProfileUpdate(q, profileId, accountId, input) {
 const OPENNESS = /** @type {Record<string, unknown[]>} */ ({
   discoverMode: ['off', 'hidden', 'visible'], acceptProfileLikes: [false, true], requestsFrom: ['none', 'matches', 'all'],
   linksFrom: ['none', 'follow', 'all'], mentionsFrom: ['none', 'follow', 'all'], activityVis: ['off', 'followers', 'all'], showLikes: [false, true],
-  messagesFrom: ['none', 'known', 'all'],
 });
 
 /** What a setting change needs first: a couple shows up in Discover only when both partners confirmed they are adults
@@ -288,8 +287,10 @@ async function doInterestSet(q, profileId, _accountId, input) {
 export async function setVisibilityAs(q, acting, setting, value) {
   if (acting.kind === 'couple') {
     const [cur] = await q.query(`select ${SETTING_COLUMN[setting]} v from feture.profile_settings where profile_id = $1`, [acting.profileId]);
-    const order = OPENNESS[setting];
-    const widening = order.indexOf(value) > order.indexOf(cur.v);
+    // A list (who may write first): wider when it adds a point, or «Все», to what was there.
+    const widening = Array.isArray(value)
+      ? !cur.v.includes('all') && value.some((/** @type {string} */ x) => !cur.v.includes(x))
+      : OPENNESS[setting].indexOf(value) > OPENNESS[setting].indexOf(cur.v);
     if (!widening) {
       if (setting === 'discoverMode') await narrowCouple(q, acting, 'discover_narrowed');
       const out = await doSetVisibility(q, acting.profileId, setting, value);
@@ -500,7 +501,7 @@ const run = {
       settings: {
         discoverMode: s.discover_mode, acceptProfileLikes: s.accept_profile_likes, requestsFrom: s.requests_from,
         linksFrom: s.links_from, mentionsFrom: s.mentions_from, activityVis: s.activity_vis, showLikes: s.show_likes, privateOn: s.private_on,
-        messagesFrom: s.messages_from,
+        messagesFrom: s.messages_open,
       },
     };
   },

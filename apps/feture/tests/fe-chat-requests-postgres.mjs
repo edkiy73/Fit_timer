@@ -33,7 +33,9 @@ async function world() {
   const request = (/** @type {string} */ u, /** @type {string} */ from, /** @type {string} */ to, body = 'Привет! Видел тебя в сообществе', extra = {}) =>
     call(u, from, { action: 'chat.request', opId: op(), profileId: to, body, ...extra });
   const lists = async (/** @type {string} */ u) => call(u, null, { action: 'chats.list' });
-  const setting = (/** @type {string} */ u, /** @type {string} */ p, /** @type {string} */ value) => call(u, p, { action: 'profile.setVisibility', opId: op(), setting: 'messagesFrom', value });
+  // «Кто может написать первым» is a list (audit item 50): 'all' is «Все», 'none' nothing picked.
+  const setting = (/** @type {string} */ u, /** @type {string} */ p, /** @type {string | string[]} */ value) => call(u, p, { action: 'profile.setVisibility', opId: op(), setting: 'messagesFrom',
+    value: Array.isArray(value) ? value : value === 'none' ? [] : [value] });
   const deliver = async () => { while ((await drain(db, notifyHandlers(db), { limit: 50 })) > 0) { /* until empty */ } };
   /** A published community both profiles are active members of. */
   const community = async (/** @type {string[]} */ ids, name = 'Книжный клуб') => {
@@ -67,18 +69,21 @@ async function world() {
   return { ...env, member, follow, request, lists, setting, deliver, community, event, photo };
 }
 
-test('who may write: «known» by default (follower, community, event), «all», «none»; context names where they met', async () => {
+test('who may write: by default mutual follows, a community, an event (one follow is not enough), «all», «none»; context names where they met', async () => {
   const { pg, call, member, follow, request, setting, community, event } = await world();
   try {
     const kira = await member('uk', 'Kira'), alex = await member('ua', 'Alex'), noa = await member('un', 'Noa'), eva = await member('ue', 'Eva'), max = await member('um', 'Max');
     // A stranger: the default «Подписчики и люди из моих сообществ и событий» refuses, and «Написать» says so first.
-    assert.deepEqual((await call('ua', alex, { action: 'profile.settings' })).settings.messagesFrom, 'known');
+    assert.deepEqual((await call('ua', alex, { action: 'profile.settings' })).settings.messagesFrom, ['mutual', 'community', 'event']);
     const w = await call('um', max, { action: 'chat.with', profileId: kira });
     assert.deepEqual([w.conversationId, w.canRequest, w.rule], [null, false, 'messages_known']);
     assert.equal((await request('um', max, kira)).rule, 'messages_known');
 
-    // A follower, a member of the same community, someone going to the same event.
+    // A follower alone may not (audit item 50); following each other may. A member of the same community, someone
+    // going to the same event.
     await follow('ua', alex, kira);
+    assert.equal((await request('ua', alex, kira)).rule, 'messages_known');
+    await follow('uk', kira, alex);
     await community([kira, noa]);
     await event(kira, [eva]);
     const wa = await call('ua', alex, { action: 'chat.with', profileId: kira });
@@ -108,10 +113,10 @@ test('who may write: «known» by default (follower, community, event), «all»,
 });
 
 test('one first message, «Подожди ответа», reading does not tell the sender, answering makes a normal chat both write in', async () => {
-  const { pg, db, call, member, follow, request, lists, deliver } = await world();
+  const { setting, pg, db, call, member, follow, request, lists, deliver } = await world();
   try {
     const kira = await member('uk', 'Kira'), alex = await member('ua', 'Alex');
-    await follow('ua', alex, kira);
+    await setting('uk', kira, ['followers']); await follow('ua', alex, kira);
     signals = [];
     const r = await request('ua', alex, kira);
     const conv = r.conversationId;
@@ -164,7 +169,7 @@ test('one first message, «Подожди ответа», reading does not tell 
 
     // A block and unblock does not reset the wait — for either side.
     const noa = await member('un', 'Noa');
-    await follow('un', noa, kira);
+    await setting('uk', kira, ['followers']); await follow('un', noa, kira);
     const n = await request('un', noa, kira);
     assert.equal((await call('uk', kira, { action: 'chat.requestAnswer', opId: op(), conversationId: n.conversationId, answer: 'accept' })).state, 'accepted');
     await call('uk', kira, { action: 'block.set', opId: op(), profileId: noa, on: true });
@@ -179,7 +184,7 @@ test('writing back answers the request; a photo request goes with its photo; the
   const { pg, db, call, member, follow, request, lists, setting, photo } = await world();
   try {
     const kira = await member('uk', 'Kira'), alex = await member('ua', 'Alex'), noa = await member('un', 'Noa');
-    await follow('ua', alex, kira);
+    await setting('uk', kira, ['followers']); await follow('ua', alex, kira);
     const asset = await photo(alex);
     const r = await request('ua', alex, kira, '', { assetId: asset });
     const msg = (await call('uk', kira, { action: 'chat.messages', conversationId: r.conversationId })).items[0];
@@ -205,10 +210,10 @@ test('writing back answers the request; a photo request goes with its photo; the
 });
 
 test('«Скрыть»: gone for the recipient, the sender sees it waiting as before and may ask again only after 30 days', async () => {
-  const { pg, db, call, member, follow, request, lists, deliver } = await world();
+  const { setting, pg, db, call, member, follow, request, lists, deliver } = await world();
   try {
     const kira = await member('uk', 'Kira'), alex = await member('ua', 'Alex');
-    await follow('ua', alex, kira);
+    await setting('uk', kira, ['followers']); await follow('ua', alex, kira);
     const { conversationId: conv } = await request('ua', alex, kira);
     await deliver();
     const before = (await lists('ua')).items[0];
@@ -360,7 +365,7 @@ test('couples: send as the couple (with and without partner approval), both part
     const us = await coupleOf([ann, ben]), them = await coupleOf([cat, dan]);
     await setting('uk', kira, 'all');
     // A couple's widening of «Кто может мне писать» waits for the partner (audit item 20): set directly here.
-    await db.query(`update feture.profile_settings set messages_from = 'all' where profile_id = $1`, [them]);
+    await db.query(`update feture.profile_settings set messages_open = '{all}' where profile_id = $1`, [them]);
 
     // Without approval: Ann writes as the couple at once; Kira sees the couple; Ben sees the waiting request too.
     const r = await request('ua', us, kira, 'Привет от нас');
@@ -400,10 +405,10 @@ test('couples: send as the couple (with and without partner approval), both part
 });
 
 test('stage 4: an accepted request tells its sender with a row that opens the chat; a hide tells nothing; opening the chat reads it', async () => {
-  const { pg, db, call, member, follow, request, deliver } = await world();
+  const { setting, pg, db, call, member, follow, request, deliver } = await world();
   try {
     const kira = await member('uk', 'Kira'), alex = await member('ua', 'Alex'), noa = await member('un', 'Noa');
-    await follow('ua', alex, kira); await follow('un', noa, kira);
+    await setting('uk', kira, ['followers']); await follow('ua', alex, kira); await follow('un', noa, kira);
     const conv = (await request('ua', alex, kira)).conversationId;
     const hidden = (await request('un', noa, kira)).conversationId;
     await call('uk', kira, { action: 'chat.requestAnswer', opId: op(), conversationId: conv, answer: 'accept' });
@@ -418,5 +423,22 @@ test('stage 4: an accepted request tells its sender with a row that opens the ch
     // Opening the chat reads it.
     await call('ua', alex, { action: 'chat.messages', conversationId: conv });
     assert.equal((await call('ua', null, { action: 'notifications.list' })).items.find((/** @type {any} */ x) => x.type === 'chatAccepted').read, true);
+  } finally { await pg.close(); }
+});
+
+test('item 50: «Кто может написать первым» — each point opens to its people, «Все» stands alone, nothing picked is only a like', async () => {
+  const { pg, call, member, follow, request, setting } = await world();
+  try {
+    const kira = await member('uk', 'Kira'), alex = await member('ua', 'Alex'), noa = await member('un', 'Noa');
+    assert.equal((await setting('uk', kira, ['all', 'mutual'])).status, 400);
+    // «Мои подписки»: people Kira follows may write; her followers may not.
+    await setting('uk', kira, ['following']);
+    await follow('uk', kira, alex);
+    await follow('un', noa, kira);
+    assert.equal((await request('ua', alex, kira)).state, 'request');
+    assert.equal((await request('un', noa, kira)).rule, 'messages_known');
+    await setting('uk', kira, []);
+    assert.deepEqual((await call('uk', kira, { action: 'profile.settings' })).settings.messagesFrom, []);
+    assert.equal((await request('un', noa, kira)).rule, 'messages_closed');
   } finally { await pg.close(); }
 });

@@ -224,6 +224,8 @@ button.pill{cursor:pointer}
 .v21 .radio.k-chk i svg{width:14px;height:14px;opacity:0;color:var(--accent-ink)}
 .v21 .radio.k-chk.on i{border:2px solid var(--accent);background:var(--accent)}
 .v21 .radio.k-chk.on i svg{opacity:1}
+.v21 .radio.k-chk.fixed{cursor:default}
+.v21 .radio.k-chk.fixed i{opacity:.55}
 /* Video and voice (av.tsx). Dark film behind clips in both themes (the camera tokens); controls on --accent. */
 .v21 .k-vbadge{position:absolute;left:var(--s-2);bottom:var(--s-2);z-index:1;display:inline-flex;align-items:center;gap:var(--s-1);padding:var(--s-0) var(--s-2);
  border-radius:var(--r-full);background:color-mix(in srgb,var(--cam-bg) 62%,transparent);color:var(--cam-ink);font:var(--t-micro);pointer-events:none}

@@ -4,7 +4,8 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Camera,ChevronRight,ClipboardList,Clock,Eye,HeartOff,Inbox,PenLine,Users,Newspaper,Settings,Star,Trash2,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Actions,AddCard,Alert,Ask as KitAsk,Av,Btn,Card,Empty,Group,H,IconBtn,PhotoAdd,PhotoSlot,PhotoSlots,PullRefresh,RadioList,Row,Seg,SelectRow,Sheet,Skel,ToggleRow,Bar} from './kit';
+import {Actions,AddCard,Alert,Ask as KitAsk,Av,Btn,Card,Empty,Group,H,IconBtn,PhotoAdd,PhotoSlot,PhotoSlots,PullRefresh,CheckList,RadioList,Row,Seg,SelectRow,Sheet,Skel,ToggleRow,Bar} from './kit';
+import {MESSAGE_POINTS,MESSAGES_DEFAULT} from '../../contracts/_messages.mjs';
 import {AgeCheckLink,useAgeResume} from './age-check';
 import {dropReadCache,useFe,useLive,useShown} from './session';
 import {PrivateLayer} from './private';
@@ -33,7 +34,7 @@ export const profile=z.object({id:z.uuid(),kind:z.enum(['person','couple']),hand
 export const profileRes=z.object({ok:z.literal(true),profile});
 export const settingsShape=z.object({discoverMode:z.enum(['visible','hidden','off']),privateOn:z.boolean(),acceptProfileLikes:z.boolean().optional(),requestsFrom:z.enum(['all','matches','none']).optional(),
  linksFrom:z.string().optional(),mentionsFrom:z.enum(['all','follow','none']).optional(),activityVis:z.enum(['all','followers','off']).optional(),showLikes:z.boolean().optional(),
- messagesFrom:z.enum(['all','known','none']).optional()}).passthrough();
+ messagesFrom:z.array(z.enum(MESSAGE_POINTS)).optional()}).passthrough();
 export const settingsRes=z.object({ok:z.literal(true),settings:settingsShape});
 export const option=z.object({kind:z.string(),code:z.string(),ru:z.string(),en:z.string()});
 export const place=z.object({id:z.string(),code:z.string().nullable().optional(),country:z.string().optional(),ru:z.string(),en:z.string()});
@@ -278,7 +279,7 @@ export function Visibility({p,settings,onChanged,part}:{p:Profile,settings:Setti
  const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();
  const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [ageIntent,setAgeIntent]=useState('');const [askOff,setAskOff]=useState(false);
  const cp=p.kind==='couple';
- const set=async(setting:string,value:string|boolean,done?:string)=>{
+ const set=async(setting:string,value:string|boolean|readonly string[],done?:string)=>{
   if(busy)return;setBusy(true);setFailure('');
   try{const r=await call(setting==='detailsVis'?'profile.update':'profile.setVisibility',setting==='detailsVis'?{opId:newOpId(),rev:p.rev,detailsVis:value}:{opId:newOpId(),setting,value},ok);
    toast(r.pending?t('fe.cw.waitPartner'):done??t('fe.mx.saved'),{type:'ok'});onChanged();}
@@ -313,8 +314,10 @@ export function Visibility({p,settings,onChanged,part}:{p:Profile,settings:Setti
   </Card></Group>
   {/* «Кто может мне писать» (owner 29.10.2026, message requests); the server enforces it. */}
   <Group title={cp?t('fe.rq.set.titleUs'):t('fe.rq.set.title')}>
-   <RadioList label={cp?t('fe.rq.set.titleUs'):t('fe.rq.set.title')} value={settings.messagesFrom??'known'} onChange={v=>{if(v!==(settings.messagesFrom??'known'))void set('messagesFrom',v);}}
-    options={(['all','known','none'] as const).map(v=>[v,t('fe.rq.set.'+v+(v==='known'&&cp?'Us':'')),v==='none'?t('fe.rq.set.noneSub'):undefined] as const)}/>
+   {/* A list (audit item 50): a mutual like always opens a chat; «Все» stands alone; nothing picked — only a like. */}
+   <CheckList label={cp?t('fe.rq.set.titleUs'):t('fe.rq.set.title')} value={settings.messagesFrom??[...MESSAGES_DEFAULT]} only="all" onChange={v=>void set('messagesFrom',v)}
+    fixed={[[t('fe.rq.set.match'),t('fe.rq.set.matchSub')]]}
+    options={MESSAGE_POINTS.map(v=>[v,t('fe.rq.set.'+v+(cp&&(v==='followers'||v==='following')?'Us':'')),v==='all'?t('fe.rq.set.allSub'):undefined] as const)}/>
   </Group>
   {part==='who'&&<Group title={t('fe.m2.who.more')}><Card list>
    <SelectRow row label={t('fe.mx.pr.reqFrom')} value={settings.requestsFrom??'all'} onChange={v=>void set('requestsFrom',v)}
