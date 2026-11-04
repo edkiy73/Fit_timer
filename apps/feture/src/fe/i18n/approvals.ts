@@ -203,7 +203,11 @@ export const ru = {
   'fe.ap.restore.notBack': 'Видимость, знакомства и выданные доступы сами не вернутся — их можно включить потом.',
   'fe.ap.restore.agree': 'Согласиться восстановить',
   'fe.ap.restore.decline': 'Не восстанавливать',
-  'fe.ap.restore.waiting': 'Ты уже согласились — ждём {name}',
+  'fe.ap.restore.declineTitle': 'Не восстанавливать пару?',
+  'fe.ap.restore.declineText': 'Пара удалится для вас обоих, вернуть её будет нельзя. {name} получит уведомление. Ваши личные профили останутся.',
+  'fe.ap.restore.declineOk': 'Удалить пару',
+  'fe.ap.restore.declined': 'Пара удалена',
+  'fe.ap.restore.waiting': 'Твоё согласие есть — ждём {name}',
   'fe.ap.restore.gone': 'Эта пара больше недоступна',
 } as const;
 
@@ -409,6 +413,10 @@ export const en = {
   'fe.ap.restore.notBack': 'Visibility, Discover and access you gave don’t come back on their own — you can turn them on later.',
   'fe.ap.restore.agree': 'Agree to restore',
   'fe.ap.restore.decline': 'Don’t restore',
+  'fe.ap.restore.declineTitle': 'Not restore the couple?',
+  'fe.ap.restore.declineText': 'The couple will be deleted for you both and can’t come back. {name} will be notified. Your personal profiles stay.',
+  'fe.ap.restore.declineOk': 'Delete the couple',
+  'fe.ap.restore.declined': 'The couple was deleted',
   'fe.ap.restore.waiting': 'You agreed — waiting for {name}',
   'fe.ap.restore.gone': 'This couple is no longer available',
 } as const;

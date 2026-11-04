@@ -327,6 +327,17 @@ const run = {
     return { state: 'paused', restoreUntil: p.restore_until, ...closed };
   },
 
+  async 'couple.decline'(q, { acting: a }) {
+    // A paused couple comes back only if both agree: one partner's «Не восстанавливать» ends it now (both are free
+    // again, the partner is told «Пара удалена»), instead of a pause nobody can leave for 30 days (owner 04.11.2026).
+    const acting = need(a);
+    coupleOnly(acting);
+    const [p] = await q.query(`select state from feture.profile where id = $1 for update`, [acting.profileId]);
+    if (p.state !== 'paused') fail(409, 'conflict', { state: p.state });
+    await deleteCouple(q, acting.profileId, 'declined');
+    return { state: 'deleted' };
+  },
+
   async 'couple.restore'(q, { acting: a }) {
     const acting = need(a);
     coupleOnly(acting);
