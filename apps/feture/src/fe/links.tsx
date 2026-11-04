@@ -2,10 +2,10 @@ import {useCallback,useEffect,useRef,useState} from 'react';
 import {useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {CircleAlert,Link2,Pencil,Plus,Trash2,User,Users,X} from 'lucide-react';
+import {CircleAlert,Link2,Pencil,Trash2,User,Users,X} from 'lucide-react';
 import {useToast as useToastV21} from './toast';
 import {newOpId} from '../feture/fe-api';
-import {AddCard,Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,Group,IconBtn,Note,PersonLine,RadioList,RequestCard,Row,SearchInput,SectionLabel,Seg,SelectRow,Skel,Spacer,View,Who,useLeaveGuard,useScrollTo} from './kit';
+import {AddBtn,AddCard,Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,Group,Note,PersonLine,RadioList,RequestCard,Row,SearchInput,SectionLabel,Seg,SelectRow,Skel,Spacer,useLeaveGuard,useScrollTo,View,Who} from './kit';
 import {useFe,useKeyChange,useShown} from './session';
 import {NameBadges,faceFields,withAge} from './faces';
 import {KINDS,SIDES,Sheet,linkLabel,linksMineRes,mediaSrc,personName,personProfileRes,pxError,type Kind,type LinkView,type LinksMine,type PersonProfile} from './profile-extras';
@@ -134,7 +134,7 @@ export function LinksScreen(){
  const m=menu?.l;
  return <>
   <Bar title={couple?t('fe.ln.titleCouple'):t('fe.ln.title')} back>
-   <IconBtn icon={Plus} kind="ghost" aria-haspopup="dialog" label={t('fe.w7.lp.add')} disabled={!r} onClick={()=>setPicking(true)}/>
+   <AddBtn aria-haspopup="dialog" label={t('fe.w7.lp.add')} disabled={!r} onClick={()=>setPicking(true)}/>
   </Bar>
   {picking&&r&&<LinkPicker mine={r} onClose={()=>setPicking(false)}/>}
   <View className="nodock">

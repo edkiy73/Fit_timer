@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Archive,AtSign,Bell,BellOff,Bookmark,Check,Calendar,ChartColumn,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,FileText,Globe,Hash,Heart,Image as ImageIcon,KeyRound,Lock,MessageCircle,MessageSquareText,Newspaper,Pencil,Plus,Search,SendHorizontal,Share,SlidersHorizontal,Sparkles,Trash2,User,Users,X} from 'lucide-react';
 import type {LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Actions,AddCard,articlePlate,ActionLine,ActivityCard,ActivityItem,Alert,ArticleCard,ArticleImage,Ask,Av,ExpandRow,useLeaveGuard,BAD_CHARS,NewPill,Bar,Btn,Card,Chip,Chips,Counter,Empty,FeedEvents,Field,FilePick,Group,H,IconBtn,LoadMore,Input,LikesLine,Note,QuickStart,RichEditor,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,VideoBadge,View,ViewerPostBar,hasLongWord,mdImages,type RichEditorHandle,Who} from './kit';
+import {ActionLine,Actions,ActivityCard,ActivityItem,AddBtn,AddCard,Alert,ArticleCard,ArticleImage,articlePlate,Ask,Av,BAD_CHARS,Bar,Btn,Card,Chip,Chips,Counter,Empty,ExpandRow,FeedEvents,Field,FilePick,Group,H,hasLongWord,IconBtn,Input,LikesLine,LoadMore,mdImages,NewPill,Note,QuickStart,RichEditor,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,type RichEditorHandle,useLeaveGuard,VideoBadge,View,ViewerPostBar,Who} from './kit';
 import {shakeFirstErr} from './kit/validate';
 import {refreshReads,useFe,usePartnerApproves} from './session';
 import {useNewerPosts} from './feed-newer';
@@ -250,7 +250,7 @@ export function FeedTab(){
   {!!hidden&&<button type="button" className="linkbtn feed-hid" onClick={()=>navigate('/n/settings/hidden')}><EyeOff/>{t('fe.fd.hiddenN',{n:hidden})}</button>}
  </>;
  return <>
-  <Bar title={t('fe.nav.feed')}><IconBtn icon={Plus} label={t('fe.fd.createPub')} aria-haspopup="dialog" onClick={()=>setSheet('create')}/><IconBtn icon={Search} label={t('fe.br.search')} onClick={()=>navigate('/n/search?scope=posts')}/><BellButton/></Bar>
+  <Bar title={t('fe.nav.feed')}><AddBtn label={t('fe.fd.createPub')} aria-haspopup="dialog" onClick={()=>setSheet('create')}/><IconBtn icon={Search} label={t('fe.br.search')} onClick={()=>navigate('/n/search?scope=posts')}/><BellButton/></Bar>
   <View refresh={refresh}>
    <div><Seg value={tab} onChange={v=>{setNotice('');setTab(v);}} options={[{id:'forYou',label:t('fe.feed.tab.forYou')},{id:'following',label:t('fe.feed.tab.following')},{id:'popular',label:t('fe.fd.tab.popular')}]}/></div>
    {notice&&<Alert kind="ok">{notice}</Alert>}

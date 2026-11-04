@@ -3,9 +3,9 @@ import {useCallback,useEffect,useState} from 'react';
 import {useLocation,useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Archive,Bookmark,Calendar,Clock,LockOpen,MessageCircle,Newspaper,Pencil,Plus,Trash2,TriangleAlert,Users,X} from 'lucide-react';
+import {Archive,Bookmark,Calendar,Clock,LockOpen,MessageCircle,Newspaper,Pencil,Trash2,TriangleAlert,Users,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {ActingAv,Alert,Ask,Av,Bar,Btn,Card,DraftCard,Empty,Group,IconBtn,Note,Row,Skel,Stack,View,useRefreshable} from './kit';
+import {ActingAv,AddBtn,Alert,Ask,Av,Bar,Btn,Card,DraftCard,Empty,Group,IconBtn,Note,Row,Skel,Stack,useRefreshable,View} from './kit';
 import {useFe,useLive} from './session';
 import {PostCard,SavedEditSheet,postSchema,savedEdit,when,type Post,type SavedEdit} from './feed';
 import {EventRow,type Ev} from './browse';
@@ -71,7 +71,7 @@ export function MinePartScreen({part}:{part:'posts'|'events'|'saved'|'communitie
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[]);
  return <>
-  <Bar title={title} back>{create&&<IconBtn icon={Plus} kind="ghost" label={t(part==='events'?'fe.ce.create':'fe.cc.create')} onClick={()=>navigate(create)}/>}</Bar>
+  <Bar title={title} back>{create&&<AddBtn label={t(part==='events'?'fe.ce.create':'fe.cc.create')} onClick={()=>navigate(create)}/>}</Bar>
   <View className="nodock" refresh>{part==='posts'?<MyPosts/>:part==='events'?<MyEvents/>:part==='saved'?<Saved/>:<MyCommunities/>}</View>
  </>;
 }
@@ -226,7 +226,7 @@ export function MyPostsScreen(){
    </>;
  }
  return <>
-  <Bar title={couple?t('fe.fd.mine.titleUs'):t('fe.fd.mine.title')} back small><IconBtn icon={Plus} label={t('fe.create')} aria-haspopup="dialog" onClick={()=>setCreate(true)}/></Bar>
+  <Bar title={couple?t('fe.fd.mine.titleUs'):t('fe.fd.mine.title')} back small><AddBtn label={t('fe.create')} aria-haspopup="dialog" onClick={()=>setCreate(true)}/></Bar>
   <View className="nodock" refresh>{body}</View>
   {create&&<CreateSheet onClose={()=>setCreate(false)}/>}
   {menu&&<PostMenu post={menu} onClose={()=>setMenu(null)} onRemove={r=>{setMenu(null);setData(d=>d?{...d,items:d.items.filter(x=>x.id!==r.postId)}:d);toast(r.notice,{type:'ok'});}}/>}

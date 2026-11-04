@@ -2,10 +2,10 @@ import {useCallback,useEffect,useMemo,useRef,useState,type ReactNode} from 'reac
 import {useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Ban,ChartColumn,Bell,BellOff,Bookmark,BookmarkCheck,Calendar,CalendarCheck,CalendarPlus,Check,ChevronLeft,Clock,Ellipsis,Eye,ExternalLink,FileText,Flag,Globe,Image as ImageIcon,Link as LinkIcon,Lock,Map as MapIcon,MapPin,MessageCircle,Plus,Search,Settings,Share,SlidersHorizontal,Ticket,TriangleAlert,Users,Video,X} from 'lucide-react';
+import {Ban,ChartColumn,Bell,BellOff,Bookmark,BookmarkCheck,Calendar,CalendarCheck,CalendarPlus,Check,ChevronLeft,Clock,Ellipsis,Eye,ExternalLink,FileText,Flag,Globe,Image as ImageIcon,Link as LinkIcon,Lock,Map as MapIcon,MapPin,MessageCircle,Search,Settings,Share,SlidersHorizontal,Ticket,TriangleAlert,Users,Video,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {useSideNav} from './wide';
-import {Actions,Alert,Announcement,Ask,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,CommunityHead,CoverBar,Discussion,Empty,EventAnswer,EventHero,EventTile,Fact,Group,IconBtn,LinkBtn,Note,Pill,Row,Rsvp,SectionLabel,Seg,Sheet,Skel,Spacer,Stack,StatusCard,Text,ToggleRow,Veil,View,useRefreshable} from './kit';
+import {Actions,AddBtn,Alert,Announcement,Ask,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,CommunityHead,CoverBar,Discussion,Empty,EventAnswer,EventHero,EventTile,Fact,Group,IconBtn,LinkBtn,Note,Pill,Row,Rsvp,SectionLabel,Seg,Sheet,Skel,Spacer,Stack,StatusCard,Text,ToggleRow,useRefreshable,Veil,View} from './kit';
 import {useFe,useKeyChange,useOwnProfiles} from './session';
 import {mdPlain,RichText} from './post-parts';
 import {evParts,evRange,evTz,evWhere,inTz,usePlaces} from './event-time';
@@ -102,7 +102,7 @@ function MyShortcut({kind,count}:{kind:'communities'|'events',count:number}){
  const k=kind==='communities'?'fe.cc':'fe.ce';const Icon=kind==='communities'?Users:Calendar;
  return <div className="myev">
   <button type="button" className="myev-main" onClick={()=>navigate('/n/me/'+kind)}><span className="ico g"><Icon/></span><span className="tx"><b>{t(k+(couple?'.mineCouple':'.mine'))}{count?<em>{count}</em>:null}</b></span></button>
-  <IconBtn icon={Plus} kind="add" label={t(k+'.create')} onClick={()=>navigate(kind==='communities'?'/n/communities/new':'/n/events/new')}/>
+  <AddBtn label={t(k+'.create')} onClick={()=>navigate(kind==='communities'?'/n/communities/new':'/n/events/new')}/>
  </div>;
 }
 
