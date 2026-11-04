@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,EyeOff,KeyRound,MessageCircle,Pencil,Plus,Sparkles,Trash2,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {AddBtn,AddCard,Alert,AnswerScale,Bar,Btn,Card,Chip,Chips,Empty,Group,IconBtn,Note,Progress,Row,SearchInput,SectionLabel,Sheet,Skel,View} from './kit';
+import {AddBtn,AddCard,Alert,AnswerScale,Bar,Btn,Card,Chip,Empty,Group,IconBtn,Note,Progress,Row,SearchInput,SectionLabel,Sheet,Skel,View} from './kit';
 import {useFe,usePartnerApproves,useShown} from './session';
 import {when} from './feed';
 import {topicMatches} from './topic-search';
@@ -12,6 +12,8 @@ import {topicMatches} from './topic-search';
 /** Interests (V21 X01 #meJars, X02, X04) with the prototype's markup: one capsule per interest — the fill is the
  * level 1–10; «обсудить» and «граница» are marks, never levels. Everything comes from the server. */
 const VIS=['public','granted','only'] as const;
+/** The lanes of the answer: «Всё» (every direction) or one of them. */
+const LANES=['all','give','get','watch'] as const;type Lane=typeof LANES[number];
 const DIRS=['give','get','watch'] as const;
 type Vis=typeof VIS[number];type Dir=typeof DIRS[number];
 type Answer=number|'discuss'|'hard'|null;
@@ -127,21 +129,18 @@ export function InterestSheet({topicId,topics,cats,current,defaultVis='public',o
  </Sheet>;
 }
 
-/** How you like it (not for limits), then the answer — the same fields when adding one or several. Every interest is
- * seen by everyone (owner 05.11.2026), so there is no «Кто видит». */
+/** The answer — the same fields when adding one or several: a level in one of the lanes («Всё», «Давать», «Получать»,
+ * «Смотреть»; limits have none) picked with one tap, or a mark. Every interest is seen by everyone (owner 05.11.2026),
+ * so there is no «Кто видит». */
 function InterestFields({limit,couple,v,setV,dir,setDir,vis,setVis}:{limit:boolean,couple:boolean,v:Answer,setV:(v:Answer)=>void,dir:Dir[],setDir:(f:(d:Dir[])=>Dir[])=>void,vis:Vis,setVis:(v:Vis)=>void}){
  const {t}=useI18n();
- const mark=v==='discuss'||v==='hard';const n=typeof v==='number'?v:null;
+ const mark=v==='discuss'||v==='hard';
  const allDir=dir.length===DIRS.length;
- const toggleDir=(k:'all'|Dir)=>{if(mark)return;
-  setDir(d=>{if(k==='all')return [...DIRS];if(d.length===DIRS.length)return [k];const next=d.includes(k)?d.filter(x=>x!==k):[...d,k];return next.length?DIRS.filter(x=>next.includes(x)):[...DIRS];});};
  return <>
-    {!limit&&<Group bare className={mark?'dim':''} title={t('fe.int.ed.dir')}><Card><Chips>
-     {(['all',...DIRS] as const).map(k=>{const pressed=k==='all'?allDir:!allDir&&dir.includes(k);
-      return <Chip key={k} on={pressed} inactive={mark} onClick={()=>toggleDir(k)}>{t('fe.int.ed.dir.'+k)}</Chip>;})}
-    </Chips></Card></Group>}
     <Group bare title={t(limit?'fe.int.ed.qLimit':'fe.int.ed.q')}><Card><div className="ans">
      <AnswerScale value={v} onChange={setV} label={t('fe.int.ed.scale')}
+      {...(limit?{}:{lanes:LANES.map(id=>({id,label:t('fe.int.ed.dir.'+id)})),laneOn:(id:Lane)=>!mark&&(id==='all'?allDir:!allDir&&dir.includes(id)),
+       onLane:(n:number,id:Lane)=>{setDir(()=>id==='all'?[...DIRS]:[id]);setV(n);}})}
       marks={[{id:'discuss',label:t('fe.int.ed.discuss'),icon:MessageCircle},{id:'hard',label:t('fe.int.ed.hard'),icon:Ban,taboo:true}] as const}/>
     </div></Card></Group>
  </>;
