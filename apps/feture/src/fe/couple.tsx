@@ -319,9 +319,11 @@ const decideList=z.object({ok:z.literal(true),items:z.array(z.object({kind:z.str
 
 /** V21 dockMe / meSwitch: «Действовать как» — the person and the couple as cards with what waits on each; the card
  * switches to that profile (the chosen one opens it), the end button switches and opens it. */
-/** The couple one can act as: only an active one (session.tsx falls back to the person otherwise). The one rule for
- * every «Действовать как» entry — the dock's «Я» and the «Я» header — so they never disagree. */
-export function activeCouple<T extends {kind:string,state?:string|undefined}>(profiles:readonly T[]):T|undefined{return profiles.find(p=>p.kind==='couple'&&p.state==='active');}
+/** The couple one can act as: an active one, or its read-only archive — never a paused one (session.tsx falls back to
+ * the person then). The one rule for every «Действовать как» entry — the dock's «Я» and the «Я» header. */
+export function actAsCouple<T extends {kind:string,state?:string|undefined,ended?:boolean|undefined}>(profiles:readonly T[]):T|undefined{
+ return profiles.find(p=>p.kind==='couple'&&p.state==='active')??profiles.find(p=>p.kind==='couple'&&!!p.ended);
+}
 
 export function ActAsSheet({onClose}:{onClose:()=>void}){
  const {state,acting,setActing,call}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();

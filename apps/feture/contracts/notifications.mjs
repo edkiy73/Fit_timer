@@ -66,7 +66,7 @@ export const FILTERS = /** @type {const} */ (['access', 'likes', 'matches', 'rep
 export const CARDS = /** @type {const} */ (['news', 'decision', 'result', 'safety', 'event', 'summary']);
 export const EMAILS = /** @type {const} */ (['none', 'now', 'now-if-unread', 'digest']);
 /** «Нужно решить» kinds (server/commands/inbox.mjs decisions()); their entries are `decide.<kind>`. */
-export const DECIDE_KINDS = /** @type {const} */ (['pinv', 'req', 'capp', 'eapp', 'link', 'linkChange', 'tag', 'joint']);
+export const DECIDE_KINDS = /** @type {const} */ (['pinv', 'req', 'capp', 'eapp', 'link', 'linkChange', 'tag', 'joint', 'status']);
 
 /** Raw entries. A key `type.sub` takes everything from `type` and changes what it names. Defaults: a notice, card
  * «news», filter «other», email in the digest, push category «other» with no name, no collapse, «Больше недоступно».
@@ -358,6 +358,9 @@ const RAW = /** @type {Record<string, any>} */ ({
   'decide.joint': { kind: 'task', card: 'decision', filter: 'pair', icon: 'Clock', tone: '', text: T('{name} предлагает изменение', '{name} suggests a change'),
     alone: T('Партнёр предлагает изменение', 'Your partner suggests a change'),
     cat: 'decide', normal: T('Партнёр ждёт твоего согласия', 'Your partner waits for your approval'), email: 'now-if-unread', dest: 'approval', gone: GONE_PAIR },
+  // The relationship status of a person in a couple (owner 04.11.2026): nothing enqueues it, so only the counters and the card.
+  'decide.status': { kind: 'task', card: 'decision', filter: 'pair', icon: 'Heart', tone: 'v', text: T('Вы в паре — поменять статус в «Данных»?', 'You’re in a couple — change the status in your details?'),
+    cat: 'decide', normal: T('Статус в профиле', 'Your profile status'), email: 'now-if-unread', dest: 'me' },
   // «{name} предлагает {action}» per approval kind (server/approvals.mjs APPROVAL_KINDS): the decide card line, the
   // same words on both sides (decide.list carries `approval.kind`).
   'decide.joint.profile.update': { text: T('{name} предлагает изменить профиль пары', '{name} suggests editing the couple’s profile') },

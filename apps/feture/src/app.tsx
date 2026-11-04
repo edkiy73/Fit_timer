@@ -142,8 +142,8 @@ export const routes: RouteObject[] = [
         {path:'chats/requests', element:<RequestsScreen />},
         {path:'chats/new/:to', element:<ChatScreen />},
         {path:'chats/:id', element:<ChatScreen />},
-        {path:'me', element:<MeV3Screen />}, // LOCAL PREVIEW ONLY — not committed
-        {path:'me/v3', element:<MeV3Screen />}, // the owner's account prototype, by address only until it replaces «Я»
+        {path:'me', element:<MeV3Screen />}, // «Я» (owner's account prototype, 05.11.2026): Профиль · Приватность · Моё, settings behind the gear
+        {path:'me/v3', element:<MeV3Screen />}, // the same «Я» (older links)
         {path:'me/v3/settings', element:<MeV3SettingsScreen />},
         {path:'me/new', element:<MeNewScreen />}, // the owner's new layout, by address only until it replaces «Я»
         {path:'me/new/:section', element:<MeNewSection />},

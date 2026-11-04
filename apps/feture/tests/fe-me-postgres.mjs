@@ -71,7 +71,7 @@ test('registration: catalog, nickname rules, under-18 keeps only a marker, docum
     const [s] = await db.query('select * from feture.profile_settings where profile_id = $1', [ok.profileId]);
     assert.deepEqual([s.discover_mode, s.private_on, s.requests_from], ['off', true, 'all']); // defaults; Discover off until switched on with a photo (owner 28.10.2026)
     const [d] = await db.query('select details_vis from feture.profile_details where profile_id = $1', [ok.profileId]);
-    assert.equal(d.details_vis, 'only'); // AUTH-016: «О тебе» starts private
+    assert.equal(d.details_vis, 'all'); // «Данные» are public (owner 05.11.2026; was AUTH-016 «starts private»)
 
     // A mandatory document unpublished → registration closes.
     await pg.exec(`reset role; delete from public.feture_document_versions where document_key = 'community'; set role feture_api`);
@@ -107,9 +107,9 @@ test('onboarding and profile views: own vs others, details visibility, age, nick
     assert.equal((await call('ua', null, { action: 'session.bootstrap' })).account.onboarded, true);
 
     const own = (await call('ua', a, { action: 'profile.get', profileId: a })).profile;
-    assert.deepEqual([own.own, own.handle, own.details.genders, own.detailsVis], [true, 'Alex', ['woman'], 'only']);
+    assert.deepEqual([own.own, own.handle, own.details.genders, own.detailsVis], [true, 'Alex', ['woman'], 'all']); // an older client's «only» is ignored
     const seen = (await call('ub', b, { action: 'profile.get', profileId: a })).profile;
-    assert.deepEqual([seen.own, seen.details, seen.rev], [false, {}, undefined]); // details «Только ты»
+    assert.deepEqual([seen.own, seen.details.genders, seen.rev], [false, ['woman'], undefined]); // «Данные» are public
     assert.equal((await call('ub', a, { action: 'profile.get', profileId: a })).status, 403); // not my profile to act as
 
     const upd = await call('ua', a, { action: 'profile.update', opId: op(), rev: own.rev, bio: '  Пишу медленно.́  ', detailsVis: 'all', showAge: false });
@@ -209,7 +209,10 @@ test('interests: scale or mark, direction rules, visibility for others, remove',
     assert.equal((await set('bondage', { value: 9, dir: ['get', 'watch'], vis: 'granted' })).status, 200);
 
     assert.equal((await call('ua', a, { action: 'interests.list', profileId: a })).items.length, 3);
-    assert.deepEqual((await call('ub', b, { action: 'interests.list', profileId: a })).items, [{ topicId: 'filming', mark: 'hard' }]);
+    // Always public (owner 05.11.2026): an older client's «only»/«granted» changes nothing; a hard limit shows only as a limit.
+    const seenI = (await call('ub', b, { action: 'interests.list', profileId: a })).items;
+    assert.deepEqual(seenI.map(i => i.topicId).sort(), ['bondage', 'filming', 'shibari']);
+    assert.deepEqual(seenI.find(i => i.topicId === 'filming'), { topicId: 'filming', mark: 'hard' });
 
     assert.equal((await call('ua', a, { action: 'interests.remove', opId: op(), topicId: 'shibari' })).removed, true);
     assert.equal((await call('ua', a, { action: 'interests.list', profileId: a })).items.length, 2);

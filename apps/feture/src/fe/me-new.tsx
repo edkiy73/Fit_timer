@@ -10,7 +10,7 @@ import {BellButton,countsRes} from './inbox';
 import {StaffEntry} from './staff';
 import {LinksBlock,waitingCount} from './links';
 import {linksMineRes} from './profile-extras';
-import {ActAsSheet,activeCouple} from './couple';
+import {ActAsSheet,actAsCouple} from './couple';
 import {PairEntry} from './pair';
 import {MeJars} from './interests';
 import {MeGallery} from './gallery';
@@ -70,7 +70,7 @@ export function MeNewScreen(){
  useEffect(()=>onStatusAnswered(pull),[pull]);
  useLive(['counts','decide','notify'],pull);
  if(state.status!=='ready'||!acting)return null;
- const couple=activeCouple(state.boot.profiles);const cp=acting.kind==='couple';
+ const couple=actAsCouple(state.boot.profiles);const cp=acting.kind==='couple';
  const name=p?.name||acting.name||acting.handle||'?';
  const avatarSrc=p?(p.photos[0]?.src?.thumb??p.photos[0]?.src?.card??p.avatar?.src?.thumb):acting.avatar;
  const go=(to:string)=>()=>navigate(to);

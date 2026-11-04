@@ -185,7 +185,7 @@ test('read times and disappearing-photo states go only to the sender; a couple o
   } finally { await pg.close(); }
 });
 
-test('chat starters: only topics both show publicly, never a hidden interest or a hard limit; members only', async () => {
+test('chat starters: only topics both have, never a hard limit; members only', async () => {
   const { pg, call, person, converse } = await world();
   try {
     const a = await person('ua', 'Alex'), b = await person('ub', 'Kira'), c = await person('uc', 'Noa');
@@ -193,8 +193,7 @@ test('chat starters: only topics both show publicly, never a hidden interest or 
     const set = (/** @type {string} */ u, /** @type {string} */ p, /** @type {any} */ x) => call(u, p, { action: 'interests.set', opId: op(), ...x });
     await set('ua', a, { topicId: 'shibari', value: 8, vis: 'public' });
     await set('ub', b, { topicId: 'shibari', value: 6, vis: 'public' });
-    await set('ua', a, { topicId: 'bondage', value: 9, vis: 'public' });
-    await set('ub', b, { topicId: 'bondage', value: 9, vis: 'only' }); // Kira hid it
+    await set('ua', a, { topicId: 'bondage', value: 9 }); // only one side has it
     await set('ua', a, { topicId: 'spanking', value: 5, vis: 'public' });
     await set('ub', b, { topicId: 'spanking', mark: 'hard', vis: 'public' }); // a limit is not a conversation starter
     assert.deepEqual((await call('ua', a, { action: 'chat.starters', conversationId: conv })).topics, ['shibari']);

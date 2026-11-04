@@ -8,7 +8,7 @@ import {useFe,useLive,useShown} from './session';
 import {BellButton,countsRes} from './inbox';
 import {StaffEntry} from './staff';
 import {waitingCount} from './links';
-import {ActAsSheet,activeCouple} from './couple';
+import {ActAsSheet,actAsCouple} from './couple';
 import {NameBadges} from './faces';
 import {usePremiumStatus} from './account-extra';
 import {onStatusAnswered} from './status-todo';
@@ -47,14 +47,14 @@ export function MeV3Screen(){
  useEffect(()=>onStatusAnswered(pull),[pull]);
  useLive(['counts','decide','notify'],pull);
  if(state.status!=='ready'||!acting)return null;
- const couple=activeCouple(state.boot.profiles);const cp=acting.kind==='couple';
+ const couple=actAsCouple(state.boot.profiles);const cp=acting.kind==='couple';
  const name=p?.name||acting.name||acting.handle||'?';
  const avatarSrc=p?(p.photos[0]?.src?.thumb??p.photos[0]?.src?.card??p.avatar?.src?.thumb):acting.avatar;
  const refresh=()=>{pull();load();};
  return <>
   <Bar title={name} lead={<ActingAv p={{...acting,name,avatar:avatarSrc??null}} size=""/>}
    mark={cp?undefined:<NameBadges p={{photoVerified:verified,premium:!!premium?.premium}}/>}
-   sub={couple?(cp?t('fe.me.weCouple'):t('fe.me.iPersonal')):t('fe.me.personalProfile')}
+   sub={couple?(cp?(acting.ended?t('fe.me.coupleArchive'):t('fe.me.weCouple')):t('fe.me.iPersonal')):t('fe.me.personalProfile')}
    {...(couple?{onTitle:()=>setSwitching(true),titleLabel:t('fe.mx.whose')}:{})}>
    <StaffEntry/>
    <BellButton/>
@@ -101,7 +101,8 @@ function useSums(profileId:string|undefined){
 function ProfileZone({p,settings,load,cp,links}:{p:MeData['p'],settings:MeData['settings'],load:()=>void,cp:boolean,links:number|undefined}){
  const {t,locale}=useI18n();const navigate=useNavigate();const go=(to:string)=>()=>navigate(to);const {state}=useFe();
  const sums=useSums(p?.id);
- const pair=state.status==='ready'?state.boot.profiles.find(x=>x.kind==='couple'&&x.state!=='deleted'):undefined;
+ const mine=state.status==='ready'?state.boot.profiles:[];
+ const pair=mine.find(x=>x.kind==='couple'&&x.state!=='deleted'&&!x.ended);const archive=!pair&&mine.some(x=>x.kind==='couple'&&x.ended);
  const list=(xs:string[])=>xs.length?xs.map((x,i)=>i?x.toLowerCase():x).join(', '):t('fe.v3.s.empty');
  const city=p?.city?(locale==='en'?p.city.en:p.city.ru):null;
  const basics=p?[city,p.age?(p.showAge!==false?String(p.age):t('fe.v3.s.ageHid',{n:p.age})):null,p.bio.trim()?null:t('fe.v3.s.noBio')].filter(Boolean).join(' · '):undefined;
@@ -125,7 +126,7 @@ function ProfileZone({p,settings,load,cp,links}:{p:MeData['p'],settings:MeData['
   <Group title={t('fe.v3.g.profileData')}><Card list className="k-one-line">
    <Row icon={UserRound} title={t('fe.me.basics')} sub={basics} onClick={go('/n/me/edit?only=basics')}/>
    {/* the pair where the public profile shows it, under the name (owner 05.11.2026): «Ваша пара», its name and nick */}
-   <Row icon={Heart} tone="v" title={t(pair?'fe.v3.pair':'fe.pair.entry')} sub={pair?[pair.name,pair.handle?'@'+pair.handle:null,pair.state==='paused'?t('fe.v3.pairPaused'):null].filter(Boolean).join(' · '):t('fe.pair.entryOff')} onClick={go('/n/me/pair')}/>
+   <Row icon={Heart} tone="v" title={t(pair?'fe.v3.pair':'fe.pair.entry')} sub={pair?[pair.name,pair.handle?'@'+pair.handle:null,pair.state==='paused'?t('fe.v3.pairPaused'):null].filter(Boolean).join(' · '):archive?t('fe.pair.entryArchive'):t('fe.pair.entryOff')} onClick={go('/n/me/pair')}/>
    {!cp&&<Row icon={Info} title={t('fe.ab.title')} sub={about} onClick={go('/n/me/edit?only=about')}/>}
    <Row icon={ListChecks} title={t(cp?'fe.v3.us.details':'fe.me.details')} sub={details} onClick={go('/n/me/edit?only=details')}/>
    <Row icon={Link2} title={t('fe.v3.links')} sub={linksSub} badge={sums?.links.wait||links||undefined} onClick={go('/n/me/links')}/>

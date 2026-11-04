@@ -8,7 +8,7 @@ import { setup as baseSetup, op } from './fe-helpers.mjs';
 
 const setup = () => baseSetup({ commands: { ...platform, ...me, ...access } });
 
-test('requests and grants: age check, available scopes, nothing before access, «Описание» opens details, «Интересы» the private interests, terms', async () => {
+test('requests and grants: age check, available scopes, nothing before access, interests and «Данные» stay public (owner 05.11.2026), terms', async () => {
   const { pg, db, call, person } = await setup();
   try {
     const a = await person('ua', 'Alex'), b = await person('ub', 'Kira');
@@ -22,13 +22,13 @@ test('requests and grants: age check, available scopes, nothing before access, �
     await call('ua', a, { action: 'profile.update', opId: op(), rev: 1, detailsVis: 'granted', genders: ['woman'] });
 
     const veil = await call('ub', b, { action: 'private.get', profileId: a });
-    assert.deepEqual([veil.exists, veil.available, veil.canRequest, veil.text, veil.interests, veil.age], [true, ['info', 'interests'], true, undefined, undefined, 'ok']); // no real data before access
+    assert.deepEqual([veil.exists, veil.available, veil.canRequest, veil.text, veil.interests, veil.age], [true, ['info'], true, undefined, undefined, 'ok']); // no real data before access; interests are no part of it
     assert.equal((await call('uc', unverified, { action: 'private.get', profileId: a })).age, 'me'); // the screen sends them to the age check first
     assert.equal((await call('ub', b, { action: 'access.request', opId: op(), profileId: a, scopes: ['photos'] })).rule, 'scope_not_available');
     const req = await call('ub', b, { action: 'access.request', opId: op(), profileId: a, scopes: ['info'] });
     assert.equal(req.status, 200);
     assert.equal((await call('ub', b, { action: 'access.request', opId: op(), profileId: a, scopes: ['info'] })).rule, 'pending');
-    assert.equal((await call('ub', b, { action: 'interests.list', profileId: a })).items.length, 0);
+    assert.deepEqual((await call('ub', b, { action: 'interests.list', profileId: a })).items.map(i => i.topicId), ['bondage']); // public, whatever was asked
 
     const incoming = await call('ua', a, { action: 'access.lists', tab: 'incoming' });
     assert.deepEqual(incoming.items.map(i => i.profile.handle), ['Kira']);
@@ -40,23 +40,17 @@ test('requests and grants: age check, available scopes, nothing before access, �
     const granted = await call('ua', a, { action: 'access.grant', opId: op(), requestId: req.id, scopes: ['info'], term: '1d' });
     assert.deepEqual([granted.status, granted.state], [200, 'granted']);
 
-    let open = await call('ub', b, { action: 'private.get', profileId: a });
-    assert.deepEqual([open.text, open.scopes, open.interests], ['Перед встречей — звонок.', ['info'], []]); // «Описание» alone keeps the interests closed
+    const open = await call('ub', b, { action: 'private.get', profileId: a });
+    assert.deepEqual([open.text, open.scopes, open.interests], ['Перед встречей — звонок.', ['info'], []]);
     assert.ok(new Date(open.until) > new Date());
-    assert.equal((await call('ub', b, { action: 'interests.list', profileId: a })).items.length, 0);
-    const more = await call('ub', b, { action: 'access.request', opId: op(), profileId: a, scopes: ['interests'] });
-    assert.equal((await call('ua', a, { action: 'access.grant', opId: op(), requestId: more.id, scopes: ['info', 'interests'], term: '1d' })).state, 'granted');
-    open = await call('ub', b, { action: 'private.get', profileId: a });
-    assert.deepEqual(open.scopes, ['info', 'interests']);
-    assert.deepEqual((await call('ub', b, { action: 'interests.list', profileId: a })).items.map(i => i.topicId), ['bondage']);
-    assert.deepEqual(open.interests.map(i => [i.topicId, i.value]), [['bondage', 8]]); // the private part lists its interests
+    assert.equal((await call('ub', b, { action: 'access.request', opId: op(), profileId: a, scopes: ['interests'] })).rule, 'scope_not_available');
     const mine = await call('ua', a, { action: 'private.get', profileId: a });
-    assert.deepEqual([mine.text, mine.interests.map(i => [i.topicId, i.vis])], ['Перед встречей — звонок.', [['bondage', 'granted']]]);
+    assert.deepEqual([mine.text, mine.interests], ['Перед встречей — звонок.', []]);
     assert.deepEqual((await call('ub', b, { action: 'profile.get', profileId: a })).profile.details.genders, ['woman']);
     // Expired: nothing is open any more.
     await db.query(`update feture.access_grant set until = now() - interval '1 second'`);
     assert.equal((await call('ub', b, { action: 'private.get', profileId: a })).text, undefined);
-    assert.deepEqual((await call('ub', b, { action: 'profile.get', profileId: a })).profile.details, {});
+    assert.deepEqual((await call('ub', b, { action: 'profile.get', profileId: a })).profile.details.genders, ['woman']); // «Данные» are public
   } finally { await pg.close(); }
 });
 
@@ -189,11 +183,11 @@ test('private.setMedia: own live private uploads only, in order, within limits; 
     for (let i = 0; i < 13; i++) many.push(await asset(a));
     assert.equal((await set('ua', a, many)).rule, 'private_media_limit');
     assert.equal((await call('ua', a, { action: 'private.get', profileId: a })).media.length, 3);
-    // Someone else cannot fill Alex's private part, even with Alex's files; a couple has no media of its own here.
+    // Someone else cannot fill Alex's private part, even with Alex's files; a couple has its own (its members' files).
     assert.equal((await call('ub', a, { action: 'private.setMedia', opId: op(), assetIds: [p1] })).status, 403);
     assert.deepEqual((await set('ub', b, [p1])).fields, ['assetIds']);
     const pair = await coupleOf([b, c]);
-    assert.equal((await set('ub', pair, [])).rule, 'couple_changes_not_available');
+    assert.equal((await set('ub', pair, [])).status, 200);
 
     // Before access a viewer gets no media at all; with «Фото» only the photos, never the video.
     const veil = await call('ub', b, { action: 'private.get', profileId: a });

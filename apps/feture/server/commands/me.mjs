@@ -466,7 +466,7 @@ const run = {
       throw error;
     }
     await q.query(`insert into feture.profile_member (profile_id, profile_kind, account_id, joined_at) values ($1, 'person', $2, now())`, [profileId, account.id]);
-    await q.query(`insert into feture.profile_details (profile_id, show_age, details_vis) values ($1, true, 'only')`, [profileId]);
+    await q.query(`insert into feture.profile_details (profile_id, show_age, details_vis) values ($1, true, 'all')`, [profileId]);
     // Owner 28.10.2026: a new account starts outside Discover; it is switched on with a photo (onboarding or «Видимость»).
     await q.query(`insert into feture.profile_settings (profile_id, discover_mode) values ($1, 'off')`, [profileId]);
     await q.query(
@@ -488,7 +488,7 @@ const run = {
     await q.query(
       `update feture.profile_details set details_vis = $2, genders = $3, orients = $4, roles = $5, formats = $6, seeks = $7, status = $8, updated_at = now()
        where profile_id = $1`,
-      [acting.profileId, input.detailsVis, input.genders, input.orients, input.roles, input.formats, input.seeks, input.status]);
+      [acting.profileId, 'all', input.genders, input.orients, input.roles, input.formats, input.seeks, input.status]);
     await q.query(`update feture.profile_settings set discover_mode = $2, updated_at = now() where profile_id = $1`, [acting.profileId, input.discover]);
     await q.query(`update feture.account set onboarded_at = coalesce(onboarded_at, now()), updated_at = now() where id = $1`, [account.id]);
     const [{ photo }] = await q.query(
@@ -505,6 +505,8 @@ const run = {
   async 'profile.update'(q, { acting: a, input }) {
     const acting = need(a);
     const { opId: _, ...change } = input;
+    // «Данные» are always seen by everyone (owner 04.11.2026): an older client's other choice is stored as 'all'.
+    if (change.detailsVis !== undefined) change.detailsVis = 'all';
     if (acting.kind === 'couple') {
       const personal = PERSON_FIELDS.filter(k => change[k] !== undefined);
       if (personal.length) fail(400, 'invalid_input', { fields: personal });
@@ -605,15 +607,12 @@ const run = {
     const acting = need(a);
     const { opId: _, ...change } = input;
     change.vis = 'public'; // interests are always public (owner 05.11.2026)
-    // For a couple, a change that only closes (the interest becomes less visible) never waits for the partner.
-    const VIS = ['only', 'granted', 'public'];
+    // For a couple, new content waits for the partner; saving what is already there changes nothing and never waits.
     const [prev] = acting.kind === 'couple'
       ? await q.query('select value, mark, dir, vis from feture.interest where profile_id = $1 and topic_id = $2', [acting.profileId, change.topicId]) : [];
-    // Narrowing = the same content shown to fewer people, or the interest becomes private; new content always counts as a change.
-    const sameContent = !!prev && prev.value === (change.value ?? null) && prev.mark === (change.mark ?? null)
+    const sameContent = !!prev && prev.vis === 'public' && prev.value === (change.value ?? null) && prev.mark === (change.mark ?? null)
       && JSON.stringify([...prev.dir].sort()) === JSON.stringify([...(change.mark ? [] : change.dir ?? [])].sort());
-    const narrowing = !!prev && (change.vis === 'only' || (sameContent && VIS.indexOf(change.vis) < VIS.indexOf(prev.vis)));
-    if (acting.kind === 'couple' && !narrowing && needsPartner(acting, 'interests.set')) {
+    if (acting.kind === 'couple' && !sameContent && needsPartner(acting, 'interests.set')) {
       const [t] = await q.query('select 1 from feture.topic where id = $1 and not hidden', [change.topicId]);
       if (!t) fail(400, 'invalid_input', { fields: ['topicId'] });
       return { pending: await requestApproval(q, acting, { kind: 'interests.set', targetType: 'interest:' + change.topicId, targetId: null, change, summary: [change.topicId] }) };
