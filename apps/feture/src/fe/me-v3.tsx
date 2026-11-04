@@ -2,8 +2,8 @@ import {useCallback,useEffect,useState} from 'react';
 import {useNavigate,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Ban,Bell,Bookmark,Calendar,CircleHelp,Crown,Download,Eye,Globe,Heart,Images,Inbox,KeyRound,Link2,Lock,LogOut,Newspaper,PenLine,Pencil,ShieldCheck,Smartphone,Sparkles,UserCog,Users} from 'lucide-react';
-import {Actions,AddCard,Av,Bar,Btn,Card,Group,Note,Row,Seg,Skel,View} from './kit';
+import {Ban,Bell,Bookmark,Calendar,CircleHelp,Crown,Download,Eye,Globe,Heart,Images,Inbox,KeyRound,Link2,Lock,LogOut,Newspaper,PenLine,Pencil,Settings,ShieldCheck,Smartphone,Sparkles,UserCog,Users} from 'lucide-react';
+import {Actions,AddCard,Av,Bar,Btn,Card,Group,IconBtn,Row,Seg,Skel,View} from './kit';
 import {useFe,useLive,useShown} from './session';
 import {BellButton,countsRes} from './inbox';
 import {StaffEntry} from './staff';
@@ -13,16 +13,17 @@ import {ActAsSheet} from './couple';
 import {PairEntry} from './pair';
 import {NameBadges} from './faces';
 import {usePremiumStatus} from './account-extra';
-import {useStatusTodo} from './status-todo';
+import {onStatusAnswered} from './status-todo';
 import {useAccountSettings,useLogout} from './settings';
 import {useMe} from './me-new';
 import {MeSkel,PhotosBlock} from './me';
 
 /** «Я» v3 (owner's account prototype, 05.11.2026), by address only (/n/me/v3) until the owner picks it: one header,
- * then three zones — «Профиль» (what others see), «Приватность» (who reaches this profile), «Настройки» (the whole
- * account). Every row opens an existing screen; nothing here owns data of its own. The zone sits in `?tab=`. */
-type Tab='profile'|'privacy'|'account';
-const TABS:Tab[]=['profile','privacy','account'];
+ * then two zones of the acting profile — «Профиль» (what others see) and «Приватность» (who reaches it). The account's
+ * own settings are behind the gear in the header (owner: they are not the profile's, so not a tab). Every row opens an
+ * existing screen; nothing here owns data of its own. The zone sits in `?tab=`. */
+type Tab='profile'|'privacy';
+const TABS:Tab[]=['profile','privacy'];
 const photoRes=z.object({ok:z.literal(true),state:z.enum(['none','pending','approved','rejected'])}).passthrough();
 const accessIn=z.object({ok:z.literal(true),items:z.array(z.unknown())});
 
@@ -31,7 +32,7 @@ export function MeV3Screen(){
  const [params,setParams]=useSearchParams();const raw=params.get('tab');const tab:Tab=TABS.includes(raw as Tab)?raw as Tab:'profile';
  const {p,settings,load}=useMe();
  const [switching,setSwitching]=useState(false);
- const [todo,setTodo]=useShown('me.todo',()=>0);const stTodo=useStatusTodo().show?1:0;
+ const [todo,setTodo]=useShown('me.todo',()=>0);
  const [verified,setVerified]=useState(false);const premium=usePremiumStatus().status;
  const [waiting,setWaiting]=useState<{links:number,reqs:number}|null>(null);
  const pull=useCallback(()=>{
@@ -43,6 +44,7 @@ export function MeV3Screen(){
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[call,acting]);
  useEffect(()=>{pull();},[pull]);
+ useEffect(()=>onStatusAnswered(pull),[pull]);
  useLive(['counts','decide','notify'],pull);
  if(state.status!=='ready'||!acting)return null;
  const couple=state.boot.profiles.find(x=>x.kind==='couple'&&x.state!=='deleted');const cp=acting.kind==='couple';
@@ -56,15 +58,15 @@ export function MeV3Screen(){
    {...(couple?{onTitle:()=>setSwitching(true),titleLabel:t('fe.mx.whose')}:{})}>
    <StaffEntry/>
    <BellButton/>
+   <IconBtn icon={Settings} label={t('fe.me.settings')} onClick={()=>navigate('/n/me/v3/settings')}/>
   </Bar>
   <View refresh={refresh}>
-   {todo+stTodo>0&&<Group><Card list><Row className="me-todo" icon={Inbox} tone="l" title={t('fe.mx.todo')} badge={todo+stTodo} onClick={()=>navigate('/n/inbox')}/></Card></Group>}
+   {todo>0&&<Group><Card list><Row className="me-todo" icon={Inbox} tone="l" title={t('fe.mx.todo')} badge={todo} onClick={()=>navigate('/n/inbox')}/></Card></Group>}
    {/* every block of the screen is a Group, so they all stand 24 apart (the tabs too) */}
    <Group><Seg value={tab} label={t('fe.mx.whose')} onChange={v=>setParams(v==='profile'?{}:{tab:v},{replace:true})}
     options={TABS.map(id=>({id,label:t('fe.v3.tab.'+id),...(id==='privacy'&&waiting?.reqs?{n:waiting.reqs}:{})}))}/></Group>
    {tab==='profile'?<ProfileZone p={p} settings={settings} load={load} cp={cp} links={waiting?.links}/>
-    :tab==='privacy'?<PrivacyZone privOn={settings?settings.privateOn!==false:undefined} discover={settings?.discoverMode} cp={cp} reqs={waiting?.reqs}/>
-    :<AccountZone couple={!!couple}/>}
+    :<PrivacyZone privOn={settings?settings.privateOn!==false:undefined} discover={settings?.discoverMode} cp={cp} reqs={waiting?.reqs}/>}
   </View>
   {switching&&<ActAsSheet onClose={()=>setSwitching(false)}/>}
  </>;
@@ -88,7 +90,7 @@ function ProfileZone({p,settings,load,cp,links}:{p:MeData['p'],settings:MeData['
    <Row icon={Images} title={t('fe.mx.gal')} onClick={go('/n/me/new/gallery')}/>
    <Row icon={Sparkles} title={t('fe.v3.interests')} onClick={go('/n/me/interests')}/>
    <Row icon={Link2} title={t('fe.v3.links')} badge={links||undefined} onClick={go('/n/me/links')}/>
-   <Row icon={Bookmark} title={t('fe.v3.mine')} onClick={go('/n/me/v3/mine')}/>
+   <Row icon={Bookmark} title={t(cp?'fe.v3.mineUs':'fe.v3.mine')} onClick={go('/n/me/v3/mine')}/>
   </Card></Group>
   <PairEntry plain/>
  </>;
@@ -111,14 +113,21 @@ function PrivacyZone({privOn,discover,cp,reqs}:{privOn:boolean|undefined,discove
  </>;
 }
 
-/** «Настройки»: what holds for the whole account, in three groups. */
-function AccountZone({couple}:{couple:boolean}){
+/** «Настройки» behind the gear: what holds for the whole account (the person's own, whichever profile acts). */
+export function MeV3SettingsScreen(){
+ const {t}=useI18n();
+ return <>
+  <Bar title={t('fe.v3.settings')} back="/n/me/v3"/>
+  <View><AccountZone/></View>
+ </>;
+}
+
+function AccountZone(){
  const {t}=useI18n();const navigate=useNavigate();const go=(to:string)=>()=>navigate(to);
  const a=useAccountSettings();const out=useLogout();
  const prem=a.premium?t(a.premium.premium?'fe.set.premOn':'fe.set.premOff'):undefined;
  const checks=a.age&&a.photo?(a.age==='ok'&&a.photo==='approved'?t('fe.m2.checks.done'):a.age==='pending'||a.photo==='pending'?t('fe.set.ageVal.pending'):t('fe.m2.checks.todo')):undefined;
  return <>
-  {couple&&<Group><Note>{t('fe.v3.accountNote')}</Note></Group>}
   <Group title={t('fe.v3.g.login')}><Card list>
    <Row icon={KeyRound} title={t('fe.m2.s.security')} onClick={go('/n/settings/security')}/>
    <Row icon={ShieldCheck} title={t('fe.m2.s.checks')} val={checks} onClick={go('/n/settings/new/checks')}/>
@@ -143,12 +152,12 @@ export function MeV3MineScreen(){
  if(!acting)return <Skel kind="card" rows={3}/>;
  const cp=acting.kind==='couple';
  return <>
-  <Bar title={t('fe.v3.mine')} back="/n/me/v3"/>
+  <Bar title={t(cp?'fe.v3.mineUs':'fe.v3.mine')} back="/n/me/v3"/>
   <View>
    <Card list>
-    <Row icon={Newspaper} title={t(cp?'fe.mx.mine.postsUs':'fe.mx.mine.posts')} onClick={go('/n/me/posts')}/>
-    <Row icon={Calendar} title={t(cp?'fe.mx.mine.eventsUs':'fe.mx.mine.events')} onClick={go('/n/me/events')}/>
-    <Row icon={Globe} title={t('fe.m2.communities')} onClick={go('/n/me/communities')}/>
+    <Row icon={Newspaper} title={t(cp?'fe.v3.us.posts':'fe.mx.mine.posts')} onClick={go('/n/me/posts')}/>
+    <Row icon={Calendar} title={t(cp?'fe.v3.us.events':'fe.mx.mine.events')} onClick={go('/n/me/events')}/>
+    <Row icon={Globe} title={t(cp?'fe.v3.us.communities':'fe.m2.communities')} onClick={go('/n/me/communities')}/>
     <Row icon={Users} title={t('fe.mx.mine.follows')} onClick={go('/n/me/follows?tab=followers')}/>
     <Row icon={Bookmark} title={t('fe.mx.mine.saved')} onClick={go('/n/me/saved')}/>
    </Card>

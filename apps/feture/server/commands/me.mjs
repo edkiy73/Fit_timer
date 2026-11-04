@@ -148,7 +148,7 @@ async function profileView(q, viewer, profileId, media) {
   const [p] = await q.query(
     `select p.id, p.kind, p.handle, p.name, p.state, p.rev, p.avatar_asset_id, p.chosen_name, p.handle_changes, ${LIMITS_SQL('p')},
        d.bio, d.show_age, d.details_vis, d.genders, d.orients, d.roles, d.formats, d.seeks, d.status,
-       d.height, d.smoking, d.alcohol, d.kids, d.langs, d.zodiac,
+       d.height, d.smoking, d.alcohol, d.kids, d.langs, d.zodiac, d.status_kept,
        pl.id city_id, pl.name_ru city_ru, pl.name_en city_en, pl.state city_state,
        a.birth_date, ${PREMIUM_SQL} premium,
        exists (select 1 from feture.profile_member m where m.profile_id = p.id and m.account_id = $2 and m.state = 'active') own,
@@ -196,6 +196,8 @@ async function profileView(q, viewer, profileId, media) {
       rev: p.rev, showAge: !!p.show_age, detailsVis: p.details_vis ?? null, state: p.state,
       // The edit screen: what the person typed (empty — the nick is shown) and when the nick / name may change next.
       chosenName: p.chosen_name, nickAt: ahead(p.nick_at, p.now_at), nameAt: ahead(p.name_at, p.now_at), nickFirst: p.handle_changes === 0,
+      // «Нужно решить» → the relationship status was left as it is («Оставить»).
+      ...(p.kind === 'person' ? { statusKept: !!p.status_kept } : {}),
     } : {}),
   };
 }
@@ -534,6 +536,11 @@ const run = {
       `insert into feture.notification_settings (account_id, settings) values ($1, $2)
        on conflict (account_id) do update set settings = excluded.settings, updated_at = now()`,
       [account.id, JSON.stringify(input.settings)]);
+    return { ok: true };
+  },
+
+  async 'profile.statusKeep'(q, { account }) {
+    await q.query('update feture.profile_details set status_kept = true where profile_id = $1', [account.person_profile_id]);
     return { ok: true };
   },
 

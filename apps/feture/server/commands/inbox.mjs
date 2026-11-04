@@ -77,7 +77,14 @@ function decisionUnion() {
        union all
        select 'tag', t.post_id, t.profile_id, ${ACTOR}, t.post_id, coalesce(t.asked_at, p.published_at), 'post', null, null, null
        from feture.photo_tag t join feture.post p on p.id = t.post_id and p.state = 'published' join feture.profile ap on ap.id = p.owner_profile_id
-       where t.profile_id in (${mine}) and t.state = 'pending' and ap.state = 'active' and not feture.blocked(t.profile_id, ap.id)`;
+       where t.profile_id in (${mine}) and t.state = 'pending' and ap.state = 'active' and not feture.blocked(t.profile_id, ap.id)
+       union all
+       -- In a couple while the own «Данные» say «не в отношениях» or nothing, until «Поменять» or «Оставить».
+       select 'status', a.person_profile_id, a.person_profile_id, null, null, d.updated_at, null, null, null, null
+       from feture.account a join feture.profile_details d on d.profile_id = a.person_profile_id
+       where a.id = $1 and not d.status_kept and (d.status is null or d.status = 'single')
+         and exists (select 1 from feture.profile_member m join feture.profile c on c.id = m.profile_id
+                     where m.account_id = $1 and m.state = 'active' and c.kind = 'couple' and c.state in ('active', 'paused'))`;
 }
 
 /** How many items wait for the account: the same predicates as the list, counted in SQL. @param {Q} q @param {string} accountId */

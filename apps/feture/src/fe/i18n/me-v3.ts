@@ -1,8 +1,8 @@
-/** Copy of «Я» v3 (src/fe/me-v3.tsx): three zones — the profile, its privacy, the account; the rows reuse current keys. */
+/** Copy of «Я» v3 (src/fe/me-v3.tsx): two zones of the profile and the account settings behind the gear; «наш» forms for a couple. */
 export const ru = {
   'fe.v3.tab.profile': 'Профиль',
   'fe.v3.tab.privacy': 'Приватность',
-  'fe.v3.tab.account': 'Настройки',
+  'fe.v3.settings': 'Настройки',
   'fe.v3.edit': 'Редактировать',
   'fe.v3.g.content': 'Содержимое',
   'fe.v3.g.private': 'Приватное',
@@ -13,13 +13,16 @@ export const ru = {
   'fe.v3.interests': 'Интересы',
   'fe.v3.links': 'Связи',
   'fe.v3.mine': 'Моё',
+  'fe.v3.mineUs': 'Наше',
+  'fe.v3.us.posts': 'Наши публикации',
+  'fe.v3.us.events': 'Наши события',
+  'fe.v3.us.communities': 'Наши сообщества',
   'fe.v3.who': 'Кто может писать и упоминать',
-  'fe.v3.accountNote': 'Общие для личного профиля и пары.',
 };
 export const en = {
   'fe.v3.tab.profile': 'Profile',
   'fe.v3.tab.privacy': 'Privacy',
-  'fe.v3.tab.account': 'Settings',
+  'fe.v3.settings': 'Settings',
   'fe.v3.edit': 'Edit',
   'fe.v3.g.content': 'Content',
   'fe.v3.g.private': 'Private',
@@ -30,6 +33,9 @@ export const en = {
   'fe.v3.interests': 'Interests',
   'fe.v3.links': 'Connections',
   'fe.v3.mine': 'Mine',
+  'fe.v3.mineUs': 'Ours',
+  'fe.v3.us.posts': 'Our posts',
+  'fe.v3.us.events': 'Our events',
+  'fe.v3.us.communities': 'Our communities',
   'fe.v3.who': 'Who can message and mention',
-  'fe.v3.accountNote': 'Shared by the personal profile and the couple.',
 };
