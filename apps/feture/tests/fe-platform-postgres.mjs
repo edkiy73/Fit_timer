@@ -49,6 +49,8 @@ async function setup() {
     grant execute on function feture.restricted_in(uuid, text) to feture_api`);
   // What each partner approves is a list of points (audit item 20).
   await pg.exec(readFileSync(new URL('../supabase/migrations/20261104600000_fe_audit_stage7.sql', import.meta.url), 'utf8').split('\n').filter(l => l.startsWith('alter table feture.profile_member')).join('\n'));
+  // A couple's archive (20261105100000): the profile switcher and the acting profile read these.
+  await pg.exec(readFileSync(new URL('../supabase/migrations/20261105100000_fe_couple_archive.sql', import.meta.url), 'utf8').split('\n').filter(l => /^alter table feture\.profile(_member)? add/.test(l)).join('\n'));
   await pg.exec('set role feture_api');
   return { pg, db: fromPglite(pg) };
 }
