@@ -40,7 +40,7 @@ const note=z.object({id:z.uuid(),type:z.string(),actor,data:z.record(z.string(),
  sub:ref.nullable().optional(),couple:z.uuid().nullable().optional(),coupleName:z.string().nullable().optional(),collapse:z.string().nullable().optional(),at:z.string(),read:z.boolean()});
 type Note=z.infer<typeof note>;
 const notesRes=z.object({ok:z.literal(true),items:z.array(note),next:z.string().nullable()});
-const noteRes=z.object({ok:z.literal(true),item:note,appeal:z.enum(['available','open','granted','denied','none']).nullable()});
+const noteRes=z.object({ok:z.literal(true),item:note,appeal:z.enum(['available','open','granted','denied','none']).nullable(),material:z.object({excerpt:z.string(),at:z.string().nullable()}).nullable().optional()});
 export const countsRes=z.object({ok:z.literal(true),decide:z.number(),notifications:z.number(),bell:z.number(),chats:z.number(),newMatches:z.number(),requests:z.number().default(0),likes:z.number(),staff:z.boolean().default(false)});
 type Counts=z.infer<typeof countsRes>;
 const ok=z.object({ok:z.literal(true)}).passthrough();
@@ -381,7 +381,8 @@ export function InboxNoteScreen(){
   const effect=n.type==='profileRestricted'?t('fe.ibx.restrictedEffectLong'):n.type==='profileSuspended'?t('fe.ibx.suspendedEffect'):null;
   const outcome=n.type==='reportResolved'?(d.resolution==='removed'?t('fe.ibx.report.removed'):d.resolution==='kept'?t('fe.ibx.report.kept'):d.resolution==='unavailable'?t('fe.ibx.report.unavailable'):null):null;
   const appeal=r.appeal&&r.appeal!=='none'&&r.appeal!=='available'?t('fe.ibx.appeal.'+r.appeal):null;
-  const facts:[string,ReactNode][]=[[t('fe.ibx.f2.what'),what],[t('fe.ibx.f2.reason'),rule],[t('fe.ibx.f2.term'),term],[t('fe.ibx.f2.effect'),effect],
+  const material=r.material?(r.material.excerpt?'«'+r.material.excerpt+'»':'')+(r.material.at?' · '+day(r.material.at):''):null;
+  const facts:[string,ReactNode][]=[[t('fe.ibx.f2.what'),what],[t('fe.ibx.f2.material'),material||null],[t('fe.ibx.f2.reason'),rule],[t('fe.ibx.f2.term'),term],[t('fe.ibx.f2.effect'),effect],
    [t('fe.ibx.f2.outcome'),outcome],[t('fe.ibx.f2.appeal'),appeal],[t('fe.ibx.f2.when'),when(n.at,locale)]];
   const profile=n.addressee??(state.status==='ready'?state.boot.profiles.find(p=>p.kind==='person')?.id:null)??null;
   const target=n.type==='profileRestricted'?{type:'profile' as const,id:profile}:typeof d.targetType==='string'&&typeof d.targetId==='string'&&['post','reply','community','event'].includes(d.targetType)

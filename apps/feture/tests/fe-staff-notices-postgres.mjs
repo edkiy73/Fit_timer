@@ -234,7 +234,9 @@ test('every staff decision handler enqueues a user notification (or is named as 
       const body = src.slice(h.index, i + 1 < heads.length ? heads[i + 1].index : src.length);
       const topics = [...body.matchAll(/enqueue\(q, ([^\n]*?),\s*[a-zA-Z$.[\]?]+/g)].flatMap(m => [...m[1].matchAll(/'([a-z]+\.[a-zA-Z]+)'/g)].map(x => x[1]));
       const prefixed = [...body.matchAll(/enqueue\(q, '([a-z]+\.)' \+/g)].map(m => m[1]);
-      const reached = topics.some(t => told.has(t)) || prefixed.some(p => [...told].some(t => t.startsWith(p)));
+      // Shared helpers that notify: removeContent (content.removed), closeReports (report.resolved).
+      const helpers = /removeContent\(|closeReports\(/.test(body);
+      const reached = helpers || topics.some(t => told.has(t)) || prefixed.some(p => [...told].some(t => t.startsWith(p)));
       if (!reached) missing.push(`${f}: ${name}`);
     });
   }

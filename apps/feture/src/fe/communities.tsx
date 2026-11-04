@@ -431,7 +431,7 @@ export function EventScreen(){
  const {id=''}=useParams();const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
  const [e,setE]=useState<EventFull|null>(null);const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);
  const [comm,setComm]=useState<{id:string,name:string,plate?:string|null|undefined,cover?:z.infer<typeof media>|null|undefined}|null>(null);const [saved,setSaved]=useState(false);const [faces,setFaces]=useState<z.infer<typeof prof>[]>([]);
- const [layer,setLayer]=useState<''|'menu'|'venue'|'report'|'withdraw'|'unwait'|'ticket'>('');
+ const [layer,setLayer]=useState<''|'menu'|'venue'|'report'|'withdraw'|'unwait'|'ticket'|'appeal'>('');
  const op=useRef(newOpId());
  const load=useCallback(()=>{setError(null);call('event.get',{eventId:id},evRes).then(r=>{setE(r.event);
   const cid=r.event.communityId;if(cid)call('community.get',{communityId:cid},commRes).then(x=>setComm(x.community)).catch(()=>setComm(null));
@@ -505,7 +505,8 @@ export function EventScreen(){
  const answer=!e||(!orgMe&&!review&&!showRsvp&&!application)?null:orgMe
   ?<EventAnswer label={t(couple?'fe.cm.st.organizerCouple':'fe.cm.st.organizer')} title={t(couple?'fe.cm.st.organizerCouple':'fe.cm.st.organizer')}
     status={review} foot={review?undefined:<Note>{t('fe.evp.hostSub'+(e.requiresApplication?'App':'')+(e.format==='online'?'Online':''))}</Note>}>
-    <Actions><Btn kind="soft" icon={Settings} onClick={()=>navigate(`/n/events/${e.id}/manage`)}>{t('fe.host.manage')}</Btn></Actions>
+    <Actions><Btn kind="soft" icon={Settings} onClick={()=>navigate(`/n/events/${e.id}/manage`)}>{t('fe.host.manage')}</Btn>
+     {e.state==='rejected'&&<Btn kind="soft" onClick={()=>setLayer('appeal')}>{t('fe.cm.appeal')}</Btn>}</Actions>
    </EventAnswer>
   :<EventAnswer label={t('fe.host.ev.attendance')} title={review?undefined:showRsvp?t(couple?'fe.cm.rsvpQCouple':'fe.ev.question'):application?t('fe.evp.byApp'):undefined}
     aside={showRsvp?(waiting?<Pill tone="wait" icon={Clock}>{t('fe.cm.st.waiting')}</Pill>:st?<Btn kind="text" auto onClick={()=>void rsvp(null)} disabled={busy}>{t('fe.cm.clearAnswer')}</Btn>:null):null}
@@ -584,5 +585,6 @@ export function EventScreen(){
    text={t(app?.state==='approved'?(e.format==='online'?'fe.host.app.withdrawTextApprovedOnline':'fe.host.app.withdrawTextApproved'):'fe.host.app.withdrawText')} ok={t('fe.host.app.withdrawOk')} busy={busy} onOk={()=>void withdraw()} onCancel={()=>setLayer('')}/>}
   {e&&layer==='unwait'&&<Ask icon={FileText} danger title={t('fe.host.app.withdrawQ')} text={t('fe.cm.req.unwaitText')} ok={t('fe.host.app.withdrawOk')} busy={busy} onOk={()=>void unwait()} onCancel={()=>setLayer('')}/>}
   {e&&layer==='report'&&<ReportSheet targetType="event" targetId={e.id} onClose={()=>setLayer('')} onDone={msg=>{setLayer('');toast(msg,{type:'ok'});}}/>}
+  {e&&layer==='appeal'&&<AppealSheet targetType="event" id={e.id} ph={t('fe.cm.appealPh')} onClose={()=>setLayer('')} onDone={msg=>{setLayer('');toast(msg,{type:'ok'});}}/>}
  </>;
 }

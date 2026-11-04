@@ -37,3 +37,10 @@ export async function closeAppeals(q, profileIds) {
   if (!profileIds.length) return;
   await q.query(`update feture.appeal set state = 'closed', decided_at = now() where profile_id = any($1::uuid[]) and state = 'open'`, [profileIds]);
 }
+
+/** Closes the open appeal on one target its author changed or withdrew meanwhile (a rejected event edited or taken back
+ * to drafts): the decision under appeal no longer stands for what is there now (audit item 38).
+ * @param {Q} q @param {string} targetType @param {string} targetId */
+export async function closeAppealOn(q, targetType, targetId) {
+  await q.query(`update feture.appeal set state = 'closed', decided_at = now() where target_type = $1 and target_id = $2 and state = 'open'`, [targetType, targetId]);
+}
