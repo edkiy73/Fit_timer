@@ -34,7 +34,7 @@ const evsRes=z.object({ok:z.literal(true)}).catchall(z.unknown());
 type Counts={posts:number,events:number,followers:number,following:number,saved:number,links:number,reqs:number};
 
 /** The own profile and its settings (the same reads and first-frame memory as «Я»). */
-function useMe(){
+export function useMe(){
  const {acting,call,peek}=useFe();
  const [p,setP]=useShown<Profile|null>('me.p',()=>acting?peek('profile.get',{profileId:acting.id},profileRes)?.profile??null:null);
  const [settings,setSettings]=useShown<MeSettings|null>('me.settings',()=>peek('profile.settings',{},settingsRes)?.settings??null);
