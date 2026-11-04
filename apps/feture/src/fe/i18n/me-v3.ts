@@ -13,8 +13,6 @@ export const ru = {
   'fe.v3.interests': 'Интересы',
   'fe.v3.links': 'Связи',
   'fe.v3.mine': 'Моё',
-  'fe.v3.mineSub': 'Публикации, события, сообщества, подписки',
-  'fe.v3.mineSubUs': 'Наши публикации, события, сообщества, подписки',
   'fe.v3.who': 'Кто может писать и упоминать',
   'fe.v3.accountNote': 'Общие для личного профиля и пары.',
 };
@@ -32,8 +30,6 @@ export const en = {
   'fe.v3.interests': 'Interests',
   'fe.v3.links': 'Connections',
   'fe.v3.mine': 'Mine',
-  'fe.v3.mineSub': 'Posts, events, communities, follows',
-  'fe.v3.mineSubUs': 'Our posts, events, communities, follows',
   'fe.v3.who': 'Who can message and mention',
   'fe.v3.accountNote': 'Shared by the personal profile and the couple.',
 };
