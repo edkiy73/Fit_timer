@@ -539,12 +539,16 @@
 .v21 .ans-scale button.fill{background:color-mix(in srgb,var(--accent) 22%,var(--surf));box-shadow:none;color:var(--ink)}
 .v21 .ans-scale button.on{background:var(--accent);color:#fff}
 .v21 .ans-marks{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
-/* «нажать и потянуть»: holding a number shows the lanes over it; the finger slides onto one */
-.v21 .ans-scale.ans-hold{position:relative;touch-action:none;-webkit-user-select:none;user-select:none}
-.v21 .ans-scale button.held{transform:scale(1.08);box-shadow:0 0 0 2px var(--accent)}
-.v21 .ans-pop{position:absolute;bottom:calc(100% + 10px);left:clamp(0px,calc(var(--x) - 130px),calc(100% - 260px));width:260px;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;padding:4px;border-radius:var(--r-m);background:var(--surf);box-shadow:var(--shadow),inset 0 0 0 1px var(--line2);z-index:3}
-.v21 .ans-pop span{display:grid;place-items:center;min-height:44px;border-radius:var(--r-s);font-size:var(--fs-sm);font-weight:600;color:var(--ink)}
-.v21 .ans-pop span.on{background:var(--accent);color:#fff}
+/* lanes: one full-width button per lane; the open one is the 1–10 scale in its place (tap, or hold and slide) */
+.v21 .ans-rows{display:grid;gap:8px;touch-action:none;-webkit-user-select:none;user-select:none}
+.v21 .ans-row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;padding:0 16px;border-radius:var(--r-m);background:var(--surf);box-shadow:inset 0 0 0 1px var(--line2);font-size:var(--fs-body);font-weight:600;color:var(--ink);text-align:left}
+.v21 .ans-row.on{box-shadow:inset 0 0 0 2px var(--accent)}.v21 .ans-row b{font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
+.v21 .ans-row-scale .ans-scale button{height:48px}
+.v21 .ans-scale button.held{background:var(--accent);color:#fff;box-shadow:none}
+/* the marks in the colours of the interest capsules: «обсуждаемо» a dashed amber edge, «табу» red stripes */
+.v21 .ans-m.soft{border:1.5px dashed color-mix(in srgb,var(--warn) 65%,transparent);box-shadow:none;color:var(--warn)}.v21 .ans-m.soft svg{color:var(--warn)}
+.v21 .ans-m.soft.on{background:color-mix(in srgb,var(--warn) 20%,var(--surf));color:var(--ink)}.v21 .ans-m.soft.on svg{color:var(--warn)}
+.v21 .ans-m.taboo{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--danger) 18%,transparent) 0 6px,var(--trk) 6px 12px);box-shadow:none;color:var(--danger)}.v21 .ans-m.taboo svg{color:var(--danger)}
 .v21 .ans-m{display:flex;align-items:center;justify-content:center;gap:8px;min-height:46px;border-radius:var(--r-m);background:var(--surf);box-shadow:inset 0 0 0 1px var(--line2);font-size:var(--fs-body);font-weight:600}
 .v21 .ans-m svg{width:18px;height:18px;color:var(--mute)}
 .v21 .ans-m.on{background:var(--ink);color:var(--bg);box-shadow:none}.v21 .ans-m.on svg{color:var(--bg)}
