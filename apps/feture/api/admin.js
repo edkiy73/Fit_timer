@@ -3,21 +3,17 @@ const { createAdminHandler } = require('../../../packages/core/server/admin-hand
 const { analyticsStats } = require('../lib/app-analytics');
 const Supabase = require('../../../packages/core/server/supabase');
 const {createDocumentsAdmin}=require('../lib/feture/documents-admin');
-const {createModerationAdmin}=require('../lib/feture/moderation-admin');
 const {createTestsAdmin}=require('../lib/feture/questionnaires-admin');
 const {createCatalogAdmin}=require('../lib/feture/catalog-admin');
 const {store}=require('../../../packages/core/server/store');
 const {createPrivateMetrics}=require('../lib/feture/private-metrics');
 const {createMetricsAdmin}=require('../lib/feture/private-metrics-admin');
-const {createOperatorEndpoint}=require('../lib/feture/operators');
 const {createUpdateAdmin,sendPublicUpdate}=require('../lib/app-update');
 const {createStaffFactorAdmin}=require('../lib/feture/staff-factor-admin');
 const {cors,fail,rateOkScoped,readBody}=require('../../../packages/core/server/util');
 
-const coreAdmin = createAdminHandler({analyticsStats,handlers:[createCatalogAdmin(Supabase),createTestsAdmin(Supabase),createDocumentsAdmin(Supabase),createModerationAdmin(Supabase,store),createMetricsAdmin(createPrivateMetrics(store)),createUpdateAdmin(store),createStaffFactorAdmin()]});
+const coreAdmin = createAdminHandler({analyticsStats,handlers:[createCatalogAdmin(Supabase),createTestsAdmin(Supabase),createDocumentsAdmin(Supabase),createMetricsAdmin(createPrivateMetrics(store)),createUpdateAdmin(store),createStaffFactorAdmin()]});
 
-const {secondStepGuard}=require('../lib/feture/second-step');
-const operators=createOperatorEndpoint({transport:Supabase,accounts:store,cors,guard:secondStepGuard,quota:(req,owner)=>rateOkScoped(req,'feture-operators',120,owner,60,true)});
 module.exports=async(req,res)=>{
  // /api/config (vercel.json rewrite): the published Android update, read by the installed app. Public, no secrets.
  if(req.method==='GET'&&req.query&&req.query.public_config==='1'){if(cors(req,res))return;return sendPublicUpdate(store,res);}
@@ -35,6 +31,5 @@ module.exports=async(req,res)=>{
   res.setHeader('Cache-Control','no-store');
   return fail(res,404,'unsupported_feture_observability');
  }
- if(typeof action==='string'&&(action.startsWith('feture.qa.')||action.startsWith('feture.operators.')||action.startsWith('feture.posts.')||action.startsWith('feture.events.')))return operators(req,res);
  return coreAdmin(req,res);
 };
