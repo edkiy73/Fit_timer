@@ -173,6 +173,11 @@ export function StatusCard({tone,icon,title,sub,action}:{tone?:'wait'|'ok'|'bad'
 
 /* ---------------- Interests ---------------- */
 
+/** Where the mouse last was: a control drawn anew under a still pointer (the next step) gets no pointerenter until the
+ * mouse moves, so it looks there itself. */
+let MOUSE:{x:number,y:number}|null=null;
+if(typeof window!=='undefined')window.addEventListener('pointermove',e=>{if(e.pointerType==='mouse')MOUSE={x:e.clientX,y:e.clientY};},{passive:true});
+
 /** The interest answer: a level 1–10 or one of two marks — «обсуждаемо» and «табу» (a taboo is never a low number),
  * coloured like the interest capsules; no words under the scale (owner 05.11.2026: the numbers say it).
  * `lanes` (owner 05.11.2026): one full-width button per lane («Всё», «Давать», «Получать», «Смотреть»); a tap turns that
@@ -188,6 +193,14 @@ export function AnswerScale<M extends string,L extends string=string>({value,onC
  const opened=useRef(0);
  // The mark a mouse points at: it alone stays bright, everything else fades (owner 05.11.2026).
  const [hot,setHot]=useState<M|null>(null);
+ const rootMarks=useRef<HTMLDivElement>(null);
+ useEffect(()=>{ // a new step under a still mouse: light what it stands on, as a pointerenter would
+  const look=()=>{if(!MOUSE)return;const el=document.elementFromPoint(MOUSE.x,MOUSE.y);if(!el)return;
+   const ln=el.closest<HTMLElement>('[data-lane-row]');if(ln&&rootMarks.current?.parentElement?.contains(ln)){setOpen(ln.dataset.laneRow as L);return;}
+   const mk=el.closest<HTMLElement>('[data-mark]');if(mk&&rootMarks.current?.contains(mk))setHot(mk.dataset.mark as M);};
+  look();const id=window.setTimeout(look,280);return ()=>window.clearTimeout(id);
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[]);
  const cellAt=(x:number,y:number,id:L)=>{const el=document.elementFromPoint(x,y)?.closest<HTMLElement>('[data-k]');return el&&el.dataset.lane===id?Number(el.dataset.k):null;};
  const pick=(k:number,id:L)=>{setOpen(null);setDrag(null);onLane?.(k,id);};
  // The lane holding the answer stays open with its number marked (owner 05.11.2026: no folded «Получать · 8» button).
@@ -209,13 +222,13 @@ export function AnswerScale<M extends string,L extends string=string>({value,onC
     return <div key={l.id} className={'ans-row'+(isOpen?' open':'')}>
      <span className="ans-row-l">{l.label}</span>
      {isOpen?scale(label+': '+l.label,()=>lane===l.id,k=>pick(k,l.id),l.id)
-      :<button type="button" className="ans-row-b" aria-label={l.label} aria-expanded={false} onPointerEnter={e=>{if(e.pointerType==='mouse')setOpen(l.id);}}
+      :<button type="button" className="ans-row-b" data-lane-row={l.id} aria-label={l.label} aria-expanded={false} onPointerEnter={e=>{if(e.pointerType==='mouse')setOpen(l.id);}}
         onPointerDown={e=>{try{e.currentTarget.closest('.ans-rows')?.setPointerCapture(e.pointerId);}catch{/* gone */}opened.current=Date.now();setOpen(l.id);setDrag({id:l.id,x:e.clientX,y:e.clientY,moved:false,over:null});}}
         onClick={e=>{if(e.detail===0)setOpen(l.id);}}/>}
     </div>;})}
   </div>:scale(label,()=>true,k=>onChange(k))}
   {/* one thing is bright at a time: what the pointer is on, else what is chosen (nothing chosen — all bright) */}
-  <div className="ans-marks">{marks.map(m=><button key={m.id} type="button" className={'ans-m'+(m.taboo?' taboo':'')+(m.soft?' soft':'')+(value===m.id?' on':'')+((hot?hot!==m.id:open?true:value!=null&&value!==m.id)?' dim':'')} aria-pressed={value===m.id}
+  <div className="ans-marks" ref={rootMarks}>{marks.map(m=><button key={m.id} type="button" data-mark={m.id} className={'ans-m'+(m.taboo?' taboo':'')+(m.soft?' soft':'')+(value===m.id?' on':'')+((hot?hot!==m.id:open?true:value!=null&&value!==m.id)?' dim':'')} aria-pressed={value===m.id}
    onPointerEnter={e=>{if(e.pointerType==='mouse'){setOpen(null);setHot(m.id);}}} onPointerLeave={()=>setHot(null)}
    onClick={()=>{setOpen(null);onChange(m.id);}}><m.icon/><span>{m.label}</span></button>)}</div>
  </>;

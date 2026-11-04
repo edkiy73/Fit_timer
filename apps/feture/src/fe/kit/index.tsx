@@ -55,8 +55,10 @@ function useModal(ref:React.RefObject<HTMLElement|null>,onClose:()=>void,first?:
  * Escape, ✕ and the scrim close it. `full` is the tall variant. `dirty`: something is picked or typed and not saved
  * yet — ✕, the scrim and Escape first ask «Закрыть без сохранения?» (the sheet's own «Готово» / «Сохранить» buttons
  * close it as usual). */
-export function Sheet({title,sub,lead,head,search,onClose,children,foot,full,className,dirty}:{title:string,sub?:ReactNode,lead?:ReactNode,head?:ReactNode,search?:ReactNode,onClose:()=>void,children:ReactNode,
- foot?:ReactNode,full?:boolean,className?:string,/** Unsaved choices: ✕, the scrim and Escape ask before closing. */ dirty?:boolean}){
+export function Sheet({title,sub,lead,head,search,onClose,children,foot,full,className,dirty,step}:{title:string,sub?:ReactNode,lead?:ReactNode,head?:ReactNode,search?:ReactNode,onClose:()=>void,children:ReactNode,
+ foot?:ReactNode,full?:boolean,className?:string,/** Unsaved choices: ✕, the scrim and Escape ask before closing. */ dirty?:boolean,
+ /** One step of several (answering topics in turn): the sheet stays, its head and body slide in anew for every `key` —
+  from the right going on (`fwd`), from the left going back; the footer stays put (owner 05.11.2026). */ step?:{key:string|number,way:'fwd'|'back'}}){
  const {t}=useI18n();const ref=useRef<HTMLDivElement>(null);const [asking,setAsking]=useState(false);
  const tryClose=()=>{if(dirty)setAsking(true);else onClose();};
  useModal(ref,asking?()=>{}:tryClose);
@@ -64,9 +66,9 @@ export function Sheet({title,sub,lead,head,search,onClose,children,foot,full,cla
   <div className="scrim on" onClick={tryClose}/>
   <div ref={ref} className={['sheet on',full?'full':'',className].filter(Boolean).join(' ')} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}>
    <div className="grab"/>
-   <div className="sh-h">{lead}<div className="sh-ht"><h2>{title}</h2>{sub&&<p>{sub}</p>}</div>{head}<IconBtn icon={X} kind="ghost" size="sm" label={t('fe.px.close')} onClick={tryClose}/></div>
+   <div className="sh-h">{lead}<div key={step?.key} className={'sh-ht'+(step?' k-step-in '+step.way:'')}><h2>{title}</h2>{sub&&<p>{sub}</p>}</div>{head}<IconBtn icon={X} kind="ghost" size="sm" label={t('fe.px.close')} onClick={tryClose}/></div>
    {search&&<div className="sh-search">{search}</div>}
-   <div className="sh-b">{children}</div>
+   <div key={step?.key} className={'sh-b'+(step?' k-step-in '+step.way:'')}>{children}</div>
    {foot&&<div className="sh-f">{foot}</div>}
   </div>
   {asking&&<Ask tone="a" title={t('fe.kit.sheet.dirtyTitle')} text={t('fe.kit.sheet.dirtyText')} ok={t('fe.kit.sheet.dirtyOk')} cancel={t('fe.kit.sheet.dirtyStay')} danger
