@@ -20,7 +20,7 @@ import {SignedOut} from './start';
 import {SigninFactor} from './factor';
 import {ToastProvider,useToast} from './toast';
 import {PushOffer} from './push';
-import {ActAsSheet,canActAs} from './couple';
+import {ActAsSheet,activeCouple} from './couple';
 import {CreateSheet} from './create-entry';
 import {AppUpdateProvider,UpdateRequired,UpdateSheet,useUpdateRequired} from './app-update';
 import {DockHide} from './dock';
@@ -203,7 +203,7 @@ function FeLayout(){
  const {acting,state}=useFe();const {t}=useI18n();const navigate=useNavigate();const {pathname,search}=useLocation();
  const name=acting?.name||acting?.handle||'?';
  // V21 dockMe: with an active couple «Я» opens «Действовать как» (the person and the couple, what waits on each).
- const pair=state.status==='ready'&&canActAs(state.boot.profiles,acting);const [actAs,setActAs]=useState(false);
+ const pair=state.status==='ready'&&!!activeCouple(state.boot.profiles);const [actAs,setActAs]=useState(false);
  // The active section follows where the person came from (location state `tab`), and a screen of their own profile
  // (a gallery at /n/people/<own id>) belongs to «Я», not «Люди».
  const parts=pathname.split('/');const fromTab=(useLocation().state as {tab?:unknown}|null)?.tab;

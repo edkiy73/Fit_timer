@@ -170,7 +170,8 @@ export function FeSessionProvider({children}:{children:ReactNode}){
   return ()=>ctl.abort();
  },[auth.loading,sessionKey,nonce]);
  const profiles=state.status==='ready'?state.boot.profiles.filter(p=>p.state!=='deleted'):[];
- const acting=profiles.find(p=>p.id===actingId)??profiles.find(p=>p.kind==='person')??null;
+ // One acts as oneself or as an active couple only: a paused couple acts as nobody, so the choice falls back to the person.
+ const acting=profiles.find(p=>p.id===actingId&&(p.kind==='person'||p.state==='active'))??profiles.find(p=>p.kind==='person')??null;
  const setActing=useCallback((id:string)=>{setActingId(id);try{sessionStorage.setItem(ACTING_KEY,id);}catch{/* this tab only */}},[]);
  const reload=useCallback(()=>setNonce(n=>n+1),[]);
  // `call` keeps its identity while the same login acts as the same profile: screens load with `useEffect(…,[call])`,
