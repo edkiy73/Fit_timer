@@ -1,11 +1,12 @@
 // @ts-check
 import { fail } from './errors.mjs';
+import { OLD_MODE } from '../contracts/_approve.mjs';
 
 /** @typedef {import('./db.mjs').Q} Q */
 /**
  * The acting profile of a request: who owns what this request writes or reads as «своё».
  * @typedef {Readonly<{accountId: string, profileId: string, kind: 'person' | 'couple',
- *   state: string, partnerAccountId: string | null, partnerApproves: boolean, writable: boolean}>} Acting
+ *   state: string, partnerAccountId: string | null, partnerApproves: boolean, partnerScope?: readonly string[], writable: boolean}>} Acting
  */
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -18,7 +19,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 export async function actingProfile(q, accountId, profileId, { write, allowPaused = false }) {
   if (typeof profileId !== 'string' || !UUID.test(profileId)) fail(400, 'profile_required');
   const [row] = await q.query(
-    `select p.id, p.kind, p.state, o.account_id partner, coalesce(o.approves_partner, false) partner_approves
+    `select p.id, p.kind, p.state, o.account_id partner, coalesce(o.approves_partner, false) partner_approves, coalesce(o.approves_scope, '{}') partner_scope
      from feture.profile p
      join feture.profile_member m on m.profile_id = p.id and m.account_id = $2 and m.state = 'active'
      left join feture.profile_member o on o.profile_id = p.id and o.account_id <> m.account_id and o.state = 'active'
@@ -34,6 +35,9 @@ export async function actingProfile(q, accountId, profileId, { write, allowPause
     state: row.state,
     partnerAccountId: row.partner ?? null,
     partnerApproves: row.kind === 'couple' && row.partner_approves === true,
+    // What the partner asks to approve (audit item 20): the points of contracts/_approve.mjs.
+    // An on/off mode set without points (an older path) counts as the points the old mode covered.
+    partnerScope: Object.freeze(row.kind !== 'couple' ? [] : row.partner_scope?.length ? [...row.partner_scope] : row.partner_approves ? [...OLD_MODE] : []),
     writable,
   });
 }

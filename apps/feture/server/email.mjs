@@ -1,4 +1,5 @@
 // @ts-check
+import { coupleNameNow } from './sql-rules.mjs';
 import { createCipheriv, createDecipheriv, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { notificationSettingsOf } from '../contracts/me.mjs';
 import { CATALOG, EMAIL_WORDS, entryFor, noteLine, routeOk, ruPlural, SETTING_CATS, settingOf, textOf } from '../contracts/notifications.mjs';
@@ -315,7 +316,7 @@ async function itemContent(db, r, a, settings, lang) {
   }
   if (kindOf !== 'n') return 'gone';
   const [n] = await db.query(
-    `select id, type, data, actor_profile_id, addressee_profile_id, couple_name, read_at from feture.notification where id = $1 and recipient_account_id = $2`,
+    `select id, type, data, actor_profile_id, addressee_profile_id, ${coupleNameNow('couple_id', 'couple_name')} couple_name, read_at from feture.notification where id = $1 and recipient_account_id = $2`,
     [id, r.account_id]);
   const e = n && entryFor(n.type, n.data);
   if (!e || e.email === 'none') return 'gone';
@@ -343,7 +344,7 @@ async function digestContent(db, account, a, settings, lang) {
   const { decisions, inbox } = await import('./commands/inbox.mjs');
   const counts = /** @type {any} */ (await inbox['inbox.counts'].run(/** @type {any} */ (db), /** @type {any} */ ({ account: { id: account } })));
   const notes = (await db.query(
-    `select n.id, n.type, n.data, n.actor_profile_id, n.addressee_profile_id, n.couple_name, n.created_at
+    `select n.id, n.type, n.data, n.actor_profile_id, n.addressee_profile_id, ${coupleNameNow('n.couple_id', 'n.couple_name')} couple_name, n.created_at
      from feture.notification n left join feture.profile ap on ap.id = n.actor_profile_id
      where n.recipient_account_id = $1 and n.read_at is null and n.retracted_at is null
        and (ap.id is null or ap.state = 'active' and (n.addressee_profile_id is null or not feture.blocked(n.addressee_profile_id, ap.id)))

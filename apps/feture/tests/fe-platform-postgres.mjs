@@ -47,6 +47,8 @@ async function setup() {
   // Uploads check the uploader's restriction (audit item 6); the moderation schema is not here, so nobody is restricted.
   await pg.exec(`create function feture.restricted_in(p uuid, point text) returns boolean language sql stable as $$ select false $$;
     grant execute on function feture.restricted_in(uuid, text) to feture_api`);
+  // What each partner approves is a list of points (audit item 20).
+  await pg.exec(readFileSync(new URL('../supabase/migrations/20261104600000_fe_audit_stage7.sql', import.meta.url), 'utf8').split('\n').filter(l => l.startsWith('alter table feture.profile_member')).join('\n'));
   await pg.exec('set role feture_api');
   return { pg, db: fromPglite(pg) };
 }
@@ -226,7 +228,7 @@ test('/api/fe media.commit, media.remove and decide.cancel: the owner only, idem
     assert.deepEqual((await db.query(`select topic from feture.outbox where topic in ('media.hide', 'media.purge') order by topic`)).map(r => r.topic), ['media.hide', 'media.purge']);
 
     // decide.cancel: only the partner who asked, only while pending; the other partner hears it was cancelled.
-    registerApprovalKind('test.cancelViaApi', { apply: async () => {} });
+    registerApprovalKind('test.cancelViaApi', { apply: async () => {}, point: 'posts' });
     const pc = await couple(db, accA, accB);
     const asA = await actingProfile(db, accA, pc, { write: true });
     const { approvalId } = await db.tx(q => requestApproval(q, asA, { kind: 'test.cancelViaApi', targetType: 'post', targetId: up.assetId, change: {}, summary: ['x'] }));
@@ -246,7 +248,7 @@ test('partner approvals: partner decides, stored states, stale and expired never
   const { pg, db } = await setup();
   try {
     const applied = [];
-    registerApprovalKind('test.publish', { apply: async (q, row) => { applied.push(row.change); } });
+    registerApprovalKind('test.publish', { apply: async (q, row) => { applied.push(row.change); }, point: 'posts' });
     registerApprovalKind('test.openPrivate', { apply: async () => {}, always: true });
     const [a, b] = await Promise.all(['a', 'b'].map(h => resolveAccount(db, PEPPER, core(h))));
     const pc = await couple(db, a.id, b.id);

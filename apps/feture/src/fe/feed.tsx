@@ -552,9 +552,12 @@ export function PostScreen(){
   const body=text.trim();if(!body||busy)return;if(body.length>1000){toast(t('fe.fd.max1000'),{type:'err'});return;}setBusy(true);
   try{
    if(editing){await call('reply.edit',{opId:opId.current,replyId:editing.id,rev:editing.rev??1,body},okOnly);setEditing(null);}
-   else{await call('reply.create',{opId:opId.current,postId:id,body,...(target?{parentId:target.id}:{})},okOnly);
-    if(target){const root=rootOf(list??[],target.id);if(root)setOpen(o=>[...new Set([...o,root])]);}
-    setPost(p=>p&&{...p,replies:p.replies+1});setTarget(null);}
+   else{const r=await call('reply.create',{opId:opId.current,postId:id,body,...(target?{parentId:target.id}:{})},okOnly) as {pending?:unknown};
+    // The partner approves the couple's replies first (audit item 20): it shows once they agree.
+    if(r.pending)toast(t('fe.gal.pendingPartner'),{type:'info'});
+    else{if(target){const root=rootOf(list??[],target.id);if(root)setOpen(o=>[...new Set([...o,root])]);}
+     setPost(p=>p&&{...p,replies:p.replies+1});}
+    setTarget(null);}
    setText('');opId.current=newOpId();requestAnimationFrame(()=>grow(box.current));await loadReplies();
   }catch(e){
    if(editing){toast(t('fe.fd.replyFailed')+' '+feErrorMessage(e,t),{type:'err'});opId.current=newOpId();}

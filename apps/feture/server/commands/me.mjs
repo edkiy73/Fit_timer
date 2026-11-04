@@ -248,16 +248,22 @@ const OPENNESS = /** @type {Record<string, unknown[]>} */ ({
   messagesFrom: ['none', 'known', 'all'],
 });
 
-/** @param {Q} q @param {string} profileId @param {keyof typeof PROFILE_SETTINGS} setting @param {unknown} value */
-async function doSetVisibility(q, profileId, setting, value) {
+/** What a setting change needs first: a couple shows up in Discover only when both partners confirmed they are adults
+ * (pairMode). Checked before a couple's change waits for the partner too. @param {Q} q @param {string} profileId
+ * @param {keyof typeof PROFILE_SETTINGS} setting @param {unknown} value */
+async function visibilityChecks(q, profileId, setting, value) {
   if (setting === 'discoverMode' && value === 'visible') {
-    // A couple shows up in Discover only when both partners confirmed they are adults (pairMode).
     const [x] = await q.query(
       `select p.kind, coalesce(bool_and(coalesce(a.age_verified_until > now(), false)), false) ok from feture.profile p
        join feture.profile_member m on m.profile_id = p.id and m.state = 'active' join feture.account a on a.id = m.account_id
        where p.id = $1 group by p.kind`, [profileId]);
     if (x?.kind === 'couple' && !x.ok) fail(422, 'rule_violation', { rule: 'age_not_verified' });
   }
+}
+
+/** @param {Q} q @param {string} profileId @param {keyof typeof PROFILE_SETTINGS} setting @param {unknown} value */
+async function doSetVisibility(q, profileId, setting, value) {
+  await visibilityChecks(q, profileId, setting, value);
   await q.query(`update feture.profile_settings set ${SETTING_COLUMN[setting]} = $2, updated_at = now() where profile_id = $1`, [profileId, value]);
   return { setting, value };
 }
@@ -291,6 +297,7 @@ export async function setVisibilityAs(q, acting, setting, value) {
       return out;
     }
     if (needsPartner(acting, 'profile.setVisibility')) {
+      await visibilityChecks(q, acting.profileId, setting, value);
       return { pending: await requestApproval(q, acting, { kind: 'profile.setVisibility', targetType: 'setting:' + setting, targetId: null, change: { setting, value }, summary: [setting] }) };
     }
     const out = await doSetVisibility(q, acting.profileId, setting, value);

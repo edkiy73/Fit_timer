@@ -359,7 +359,8 @@ test('couples: send as the couple (with and without partner approval), both part
     const cat = await member('uc', 'Cat'), dan = await member('ud', 'Dan');
     const us = await coupleOf([ann, ben]), them = await coupleOf([cat, dan]);
     await setting('uk', kira, 'all');
-    await setting('uc', them, 'all');
+    // A couple's widening of «Кто может мне писать» waits for the partner (audit item 20): set directly here.
+    await db.query(`update feture.profile_settings set messages_from = 'all' where profile_id = $1`, [them]);
 
     // Without approval: Ann writes as the couple at once; Kira sees the couple; Ben sees the waiting request too.
     const r = await request('ua', us, kira, 'Привет от нас');

@@ -30,7 +30,7 @@ type Ctx=z.infer<typeof ctxItem>;
 const reqView=z.object({role:z.enum(['sender','recipient']),renewAt:z.string().optional(),context:z.array(ctxItem).optional(),at:z.string().nullable().optional()}).nullable().optional();
 type Req=NonNullable<z.infer<typeof reqView>>;
 const chat=z.object({request:reqView,origin:z.string().optional(),id:z.uuid(),state:z.string(),side:z.object({id:z.uuid(),kind:z.enum(['person','couple'])}),newMatch:z.boolean(),
- other:z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),avatar:media.nullable(),ages:z.array(z.number()).optional(),photoVerified:z.boolean().optional()}),
+ other:z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),avatar:media.nullable(),ages:z.array(z.number()).optional(),photoVerified:z.boolean().optional(),paused:z.boolean().optional()}),
  unread:z.number(),muted:z.boolean(),archived:z.boolean().optional(),last:z.object({body:z.string(),media:z.boolean(),mode:z.string(),mine:z.boolean(),kind:z.string().nullable().optional()}).nullable(),at:z.string()});
 type Chat=z.infer<typeof chat>;
 const list=z.object({ok:z.literal(true),items:z.array(chat),requests:z.array(chat).optional()});
@@ -45,7 +45,7 @@ const msg=z.object({id:z.uuid(),seq:z.number(),mine:z.boolean(),body:z.string(),
 const startersRes=z.object({ok:z.literal(true),topics:z.array(z.string())});
 const topicsRes=z.object({ok:z.literal(true),topics:z.array(z.object({id:z.string(),ru:z.string().nullable(),en:z.string().nullable()}).passthrough())}).passthrough();
 type Msg=z.infer<typeof msg>;
-const msgs=z.object({ok:z.literal(true),state:z.string(),items:z.array(msg),otherRead:z.number(),lastSeq:z.number(),typingTag:z.string().optional(),request:reqView});
+const msgs=z.object({ok:z.literal(true),state:z.string(),otherPaused:z.boolean().optional(),items:z.array(msg),otherRead:z.number(),lastSeq:z.number(),typingTag:z.string().optional(),request:reqView});
 const withRes=z.object({ok:z.literal(true),conversationId:z.uuid().nullable(),canRequest:z.boolean().optional(),rule:z.string().optional(),answers:z.boolean().optional(),
  context:z.array(ctxItem).optional(),left:z.number().optional(),max:z.number().optional()}).passthrough();
 const profileRes=z.object({ok:z.literal(true),profile:z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),avatar:media.nullable()}).passthrough()});
@@ -89,7 +89,7 @@ function useCouple(){
 /* ================= H01 chats / H05 archive ================= */
 const RELOAD='fe:chats-reload';
 /** The last line of a chat in a list: the message, «Фото», «Голосовое»… or why there is none. */
-const previewOf=(c:Chat,t:T)=>c.state==='ended'?t('fe.chx.endedRow'):!c.last?t('fe.chx.sayFirst'):c.last.media&&!c.last.body?(c.last.mode!=='normal'?t('fe.chats.ephemeral'):c.last.kind==='audio'?t('fe.av.voice'):c.last.kind==='video'?t('fe.av.video'):t('fe.chats.photo')):c.last.body;
+const previewOf=(c:Chat,t:T)=>c.state==='ended'?t('fe.chx.endedRow'):c.other.paused?t('fe.chx.pausedRow'):!c.last?t('fe.chx.sayFirst'):c.last.media&&!c.last.body?(c.last.mode!=='normal'?t('fe.chats.ephemeral'):c.last.kind==='audio'?t('fe.av.voice'):c.last.kind==='video'?t('fe.av.video'):t('fe.chats.photo')):c.last.body;
 /** The list read last: the desktop list next to a conversation draws it at once while it asks again. */
 let lastList:{items:Chat[],requests:Chat[]}|null=null;
 /** The chats list's own buttons — search and the archive — in its header and in the desktop pane beside a chat (one
@@ -128,7 +128,7 @@ function ChatsSide({current,archived:inArchive}:{current:string,/** The open cha
   {data===null?<Skel kind="list" rows={6}/>:<>
    {!archived&&!needle&&data.requests.length>0&&<Card list><Row icon={Inbox} tone="v" title={t('fe.rq.folder')} badge={data.requests.length} onClick={()=>navigate('/n/chats/requests')}/></Card>}
    {rows.length?<ChatList>{rows.map(c=><ChatRow key={c.id} on={c.id===current} av={<Av name={nameOf(c.other)} seed={c.other.id} size="lg" src={c.other.avatar?.src?.thumb}/>} name={nameOf(c.other)}
-    tag={c.side.kind==='couple'&&<CoupleTag>{t('fe.chx.coupleChat')}</CoupleTag>} line={previewOf(c,t)} time={ago(c.at,locale)} unread={c.id===current?0:c.unread} ended={c.state==='ended'}
+    tag={c.side.kind==='couple'&&<CoupleTag>{t('fe.chx.coupleChat')}</CoupleTag>} line={previewOf(c,t)} time={ago(c.at,locale)} unread={c.id===current?0:c.unread} ended={c.state==='ended'||!!c.other.paused}
     onClick={()=>navigate('/n/chats/'+c.id,{replace:true})}/>)}</ChatList>
     :needle?<Empty compact icon={Search} title={t('fe.chx.notFound',{q:q.trim()})}/>
     :archived?<Empty compact icon={Archive} title={t('fe.chx.archiveEmpty')}/>:null}
@@ -161,7 +161,7 @@ export function ChatsTab(){
  const unreadFor=(s:'me'|'couple')=>(items??[]).filter(c=>side(c)===s&&c.unread>0).length;
  const preview=(c:Chat)=>previewOf(c,t);const wide=useWide();
  const row=(c:Chat)=><ChatRow key={c.id} av={<Av name={nameOf(c.other)} seed={c.other.id} size="lg" src={c.other.avatar?.src?.thumb}/>} name={nameOf(c.other)}
-  tag={c.side.kind==='couple'&&<CoupleTag>{t('fe.chx.coupleChat')}</CoupleTag>} line={preview(c)} time={ago(c.at,locale)} unread={c.unread} ended={c.state==='ended'} onClick={()=>navigate('/n/chats/'+c.id)}/>;
+  tag={c.side.kind==='couple'&&<CoupleTag>{t('fe.chx.coupleChat')}</CoupleTag>} line={preview(c)} time={ago(c.at,locale)} unread={c.unread} ended={c.state==='ended'||!!c.other.paused} onClick={()=>navigate('/n/chats/'+c.id)}/>;
  const toggleSearch=()=>{setSearching(s=>!s);setQ('');};
 
  if(archived)return <>
@@ -267,7 +267,7 @@ function ChatView({id,to}:{id:string,to:string}){
  const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();const wide=useWide();
  useScreenTag('H02');
  const [draft,setDraft]=useState<Draft|null>(null);const [req,setReq]=useState<Req|null>(null);const [reqBusy,setReqBusy]=useState('');
- const [meta,setMeta]=useState<Chat|null>(null);const [items,setItems]=useState<Msg[]|null>(null);const [state,setState]=useState('active');const [otherRead,setOtherRead]=useState(0);const [tag,setTag]=useState<string|null>(null);
+ const [meta,setMeta]=useState<Chat|null>(null);const [items,setItems]=useState<Msg[]|null>(null);const [state,setState]=useState('active');const [paused,setPaused]=useState(false);const [otherRead,setOtherRead]=useState(0);const [tag,setTag]=useState<string|null>(null);
  // An unsent text (and the message it answers) is kept per account and acting profile (drafts.ts), so it survives leaving
  // the screen or signing out and never shows to another account.
  const dk=useDraftKey();const draftSlot=dk.key(id||'new:'+to);
@@ -324,7 +324,7 @@ function ChatView({id,to}:{id:string,to:string}){
  const pull=useCallback(async(initial:boolean)=>{
   if(!meta||!id)return;
   const r=await call('chat.messages',initial?{conversationId:id}:{conversationId:id,afterSeq:last.current},msgs,{profileId:meta.side.id});
-  setState(r.state);setOtherRead(r.otherRead);if(r.typingTag)setTag(r.typingTag);setReq(r.request??null);
+  setState(r.state);setPaused(!!r.otherPaused);setOtherRead(r.otherRead);if(r.typingTag)setTag(r.typingTag);setReq(r.request??null);
   // A refresh after an ephemeral view also needs the states of older messages: the initial pull replaces the list.
   if(initial)setItems(r.items);
   else if(r.items.length)setItems(prev=>{const p=prev??[];const seenIds=new Set(p.map(m=>m.id));return [...p,...r.items.filter(m=>!seenIds.has(m.id))].sort((a,b)=>a.seq-b.seq);});
@@ -625,7 +625,8 @@ function ChatView({id,to}:{id:string,to:string}){
  if(error)return <><Bar title={t('fe.nav.chats')} back="/n/chats"/><View className="nodock"><Empty icon={X} title={t('fe.feed.unavailable')} text={feErrorMessage(error,t)}>
   {!(error instanceof FeError&&error.code==='not_found')&&<Btn onClick={()=>{setError(null);if(meta)pull(true).catch(setError);else setTries(n=>n+1);}}>{t('fe.retry')}</Btn>}
   <Btn kind="soft" onClick={()=>navigate('/n/chats')}>{t('fe.chats.back')}</Btn></Empty></View></>;
- const ended=state!=='active';
+ // A couple on pause (audit item 41): no input, a note instead; the conversation goes on if it is restored.
+ const ended=state!=='active'||paused;
  // The input shows in a chat, in a request composer that may send, and for a waiting sender once a month passed.
  const canWrite=draft?true:!req||canRenew;
  // A request that may not be sent keeps the input, greyed out; a tap says why (the profile's privacy settings).
@@ -688,7 +689,8 @@ function ChatView({id,to}:{id:string,to:string}){
     {!ended&&canWrite&&!blocked&&!req&&all.length===0&&pend.length===0&&<><SectionLabel>{t('fe.chx.starters')}</SectionLabel><Chips className="ice">
      {[...starters.slice(0,2).map(n=>t('fe.w7.ice.topic',{topic:n})),t('fe.chx.ice1'),t('fe.chx.ice2')].map(s=><Chip key={s} onClick={()=>{setText(s);requestAnimationFrame(()=>{if(input.current){grow(input.current);input.current.focus();}});}}>{s}</Chip>)}
     </Chips></>}
-    {ended&&<Alert kind="info" icon={Ban}><b>{t('fe.chx.endedTitle')}</b>{t(couple?'fe.chx.endedTextUs':'fe.chx.endedText')}</Alert>}
+    {paused&&state==='active'?<Alert kind="info" icon={Clock}><b>{t('fe.chx.pausedTitle')}</b>{t('fe.chx.pausedText')}</Alert>
+     :ended&&<Alert kind="info" icon={Ban}><b>{t('fe.chx.endedTitle')}</b>{t(couple?'fe.chx.endedTextUs':'fe.chx.endedText')}</Alert>}
     {out?.pending&&<Alert kind="info" icon={Clock} action={<Actions><Btn kind="soft" size="sm" busy={busy} disabled={busy} onClick={()=>void retryPending(false)}>{t('fe.chx.retry')}</Btn>
      <Btn kind="text" size="sm" onClick={()=>dropOut(out)}>{t('fe.chx.drop')}</Btn></Actions>}><b>{out.video?t('fe.av.videoPending'):t('fe.chx.pending')}</b></Alert>}
     {failure&&<Alert kind="err" noIcon action={out&&!out.pending?<Actions><Btn kind="soft" size="sm" busy={busy} disabled={busy} onClick={()=>void retryPending(false)}>{t('fe.chx.retry')}</Btn>

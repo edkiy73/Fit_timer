@@ -75,8 +75,8 @@ test('a new couple starts empty, outside Discover, readable by both; approvals a
     await call('ua', pair, { action: 'private.setOn', opId: op(), on: false });
     const pend = await call('ua', pair, { action: 'private.setOn', opId: op(), on: true });
     assert.ok(pend.pending?.approvalId);
-    // Kira's own changes do not wait: Alex does not ask to approve them.
-    assert.equal((await call('ub', pair, { action: 'private.setOn', opId: op(), on: true })).on, true);
+    // The private part always waits for the partner (audit item 20), whoever turns it on.
+    assert.ok((await call('ub', pair, { action: 'private.setOn', opId: op(), on: true })).pending?.approvalId);
   } finally { await pg.close(); }
 });
 

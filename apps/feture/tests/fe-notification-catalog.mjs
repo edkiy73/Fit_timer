@@ -215,10 +215,10 @@ test('a written row has its shape: a reply to highlight, the couple by ID and na
     assert.equal(row.data.replyId, r.id);
     const [push] = await db.query(`select payload from feture.outbox where topic = 'push.deliver' and payload->>'key' = 'reply' limit 1`);
     assert.equal(push.payload.url, `/#/n/feed/post/${d.id}?reply=${r.id}&as=${pair}`);
-    // The list hands the screen the reply and the couple (its name as it was then), never the actor's snapshot.
+    // The list hands the screen the reply and the couple (its name as it is now, audit item 46), never the actor's snapshot.
     await db.query(`update feture.profile set chosen_name = 'Новое имя' where id = $1`, [pair]);
     const [item] = (await call('uc', null, { action: 'notifications.list' })).items.filter((/** @type {any} */ n) => n.type === 'reply');
-    assert.deepEqual([item.sub, item.couple, item.coupleName, item.actorName], [{ type: 'reply', id: r.id }, pair, 'Кира и Ноа', undefined]);
+    assert.deepEqual([item.sub, item.couple, item.coupleName, item.actorName], [{ type: 'reply', id: r.id }, pair, 'Новое имя', undefined]);
   } finally { await pg.close(); }
 });
 

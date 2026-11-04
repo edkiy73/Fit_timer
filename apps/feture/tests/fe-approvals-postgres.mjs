@@ -21,6 +21,7 @@ import { discover } from '../server/commands/discover.mjs';
 import { chats } from '../server/commands/chats.mjs';
 import { photos } from '../server/commands/photos.mjs';
 import { APPROVAL_KINDS } from '../server/approvals.mjs';
+import { SWITCHABLE } from '../contracts/_approve.mjs';
 import { destination } from '../contracts/notifications.mjs';
 import { sweepExpiredApprovals } from '../server/jobs.mjs';
 import { notifyHandlers } from '../server/notify.mjs';
@@ -40,7 +41,8 @@ async function world(migrations = MIGRATIONS) {
   const a = await person('ua', 'Alex'), b = await person('ub', 'Kira'), mia = await person('um', 'Mia');
   const inv = await call('ua', null, { action: 'couple.invite', opId: op(), handle: 'Kira' });
   const pair = (await call('ub', null, { action: 'couple.inviteAnswer', opId: op(), inviteId: inv.id, accept: true })).profileId;
-  await call('ub', pair, { action: 'couple.setApproval', opId: op(), approvesPartner: true });
+  // Every point (audit item 20), so each kind below waits for Kira.
+  await call('ub', pair, { action: 'couple.setApproval', opId: op(), scope: [...SWITCHABLE] });
   const [{ id: berlin }] = await db.query(`select id from feture.place where code = 'berlin'`);
   const ev = (extra = {}) => ({
     title: 'Вечер знакомств', kind: 'meetup', description: 'Спокойный вечер для знакомства, без спешки и давления.',
@@ -66,6 +68,68 @@ async function world(migrations = MIGRATIONS) {
  *   touch?: (w: W, ctx: any) => Promise<void>, again?: boolean}>}
  */
 const KIND = {
+  // «Что подтверждает партнёр» (audit items 20, 21, 40)
+  'reply.create': {
+    prep: async w => {
+      const d = await w.call('um', w.mia, { action: 'post.saveDraft', opId: op(), post: draft('Пост Миры для ответа') });
+      await w.call('um', w.mia, { action: 'post.publish', opId: op(), postId: d.id });
+      return { post: d.id };
+    },
+    make: (w, c, n) => w.call('ua', w.pair, { action: 'reply.create', opId: op(), postId: c.post, body: `Ответ от пары ${n}` }),
+    effect: async (w, c) => !!(await w.one(`select 1 from feture.reply where post_id = $1 and author_profile_id = $2`, [c.post, w.pair])),
+    touch: async (w, c) => { await w.db.query(`update feture.post set state = 'archived' where id = $1`, [c.post]); },
+    again: true,
+  },
+  'like.send': {
+    make: w => w.call('ua', w.pair, { action: 'like.send', opId: op(), profileId: w.mia, source: 'profile' }),
+    effect: async w => !!(await w.one(`select 1 from feture.profile_like where from_profile_id = $1 and to_profile_id = $2 and state = 'active'`, [w.pair, w.mia])),
+    again: true,
+  },
+  'follow.set': {
+    make: w => w.call('ua', w.pair, { action: 'follow.set', opId: op(), profileId: w.mia, on: true }),
+    effect: async w => !!(await w.one(`select 1 from feture.follow where follower_profile_id = $1 and target_profile_id = $2`, [w.pair, w.mia])),
+    again: true,
+  },
+  'link.change': {
+    prep: async w => {
+      const [{ id: acc }] = await w.db.query(`select id from feture.account where person_profile_id = $1`, [w.mia]);
+      const [{ id }] = await w.db.query(`insert into feture.profile_link (a_profile_id, b_profile_id, kind, state, acted_by, confirmed_at) values ($1, $2, 'friend', 'ok', $3, now()) returning id`, [w.mia, w.pair, acc]);
+      return { link: id };
+    },
+    make: (w, c) => w.call('ua', w.pair, { action: 'link.proposeChange', opId: op(), linkId: c.link, kind: 'play' }),
+    effect: async (w, c) => !!(await w.one(`select 1 from feture.profile_link where id = $1 and change is not null`, [c.link])),
+    touch: async (w, c) => { await w.db.query(`update feture.profile_link set kind = 'meta' where id = $1`, [c.link]); },
+    again: true,
+  },
+  'link.changeAnswer': {
+    prep: async w => {
+      const [{ id: acc }] = await w.db.query(`select id from feture.account where person_profile_id = $1`, [w.mia]);
+      const change = { kind: 'play', aSide: null, bSide: null, by: w.mia };
+      const [{ id }] = await w.db.query(`insert into feture.profile_link (a_profile_id, b_profile_id, kind, state, acted_by, confirmed_at, change) values ($1, $2, 'friend', 'ok', $3, now(), $4) returning id`,
+        [w.mia, w.pair, acc, JSON.stringify(change)]);
+      return { link: id, change };
+    },
+    make: (w, c) => w.call('ua', w.pair, { action: 'link.answerChange', opId: op(), linkId: c.link, accept: true, kind: 'play' }),
+    effect: async (w, c) => (await w.one(`select kind from feture.profile_link where id = $1`, [c.link])).kind === 'play',
+    touch: async (w, c) => { await w.db.query(`update feture.profile_link set change = $2 where id = $1`, [c.link, JSON.stringify({ ...c.change, aSide: 'top' })]); },
+    again: true,
+  },
+  'community.update': {
+    prep: async w => {
+      const [{ id: acc }] = await w.db.query(`select id from feture.account where person_profile_id = $1`, [w.a]);
+      const [{ id }] = await w.db.query(`insert into feture.community (owner_profile_id, created_by, name, description, topics, privacy, rules, plate, state, published_at)
+        values ($1, $2, 'Клуб пары', 'Встречи и разговоры о верёвке для новичков', '{shibari}', 'open', '{"Уважать границы"}', 'rose', 'published', now()) returning id`, [w.pair, acc]);
+      await w.db.query(`insert into feture.community_member (community_id, profile_id, role) values ($1, $2, 'owner')`, [id, w.pair]);
+      return { community: id };
+    },
+    make: async (w, c, n) => {
+      const { rev } = await w.one('select rev from feture.community where id = $1', [c.community]);
+      return w.call('ua', w.pair, { action: 'community.update', opId: op(), communityId: c.community, rev, description: `Новое описание клуба пары, версия ${n}` });
+    },
+    effect: async (w, c) => !!(await w.one(`select 1 from feture.community where id = $1 and pending_change is not null`, [c.community])),
+    touch: async (w, c) => { await w.db.query(`update feture.community set rev = rev + 1 where id = $1`, [c.community]); },
+    again: true,
+  },
   'profile.update': {
     make: async (w, _c, n) => w.call('ua', w.pair, { action: 'profile.update', opId: op(), rev: (await w.one(`select rev from feture.profile where id = $1`, [w.pair])).rev, bio: 'Мы вдвоём ' + n }),
     effect: async w => (await w.one(`select bio from feture.profile_details where profile_id = $1`, [w.pair])).bio.startsWith('Мы вдвоём'),
@@ -243,7 +307,7 @@ const jointTasks = async (w, user) => (await w.call(user, null, { action: 'decid
 const pendingId = r => { assert.ok(r.pending?.approvalId, 'waits for the partner: ' + JSON.stringify(r).slice(0, 300)); return /** @type {string} */ (r.pending.approvalId); };
 
 test('the 19 kinds are all registered and covered here', () => {
-  assert.equal(APPROVAL_KINDS.length, 19);
+  assert.equal(APPROVAL_KINDS.length, 25);
   assert.deepEqual(Object.keys(KIND).sort(), [...APPROVAL_KINDS].sort());
 });
 
@@ -300,6 +364,9 @@ for (const kind of APPROVAL_KINDS) {
         assert.equal(await stateOf(w, r4), 'stale');
         // Put things back the way the approval below expects (a fresh world would be slower).
         if (['community.create', 'link.propose', 'chat.request', 'location.set', 'event.rsvp'].includes(kind)) return;
+        if (kind === 'reply.create') await w.db.query(`update feture.post set state = 'published' where id = $1`, [ctx.post]);
+        if (kind === 'link.change') await w.db.query(`update feture.profile_link set kind = 'friend', change = null where id = $1`, [ctx.link]);
+        if (kind === 'link.changeAnswer') await w.db.query(`update feture.profile_link set change = $2 where id = $1`, [ctx.link, JSON.stringify(ctx.change)]);
         if (kind === 'access.grant') { await w.db.query(`update feture.access_request set state = 'pending', decided_at = null where id = $1`, [ctx.request]); }
         if (kind === 'private.on') await w.db.query(`update feture.profile_settings set private_on = false where profile_id = $1`, [w.pair]);
         if (kind === 'profile.setVisibility') await w.db.query(`update feture.profile_settings set requests_from = 'none' where profile_id = $1`, [w.pair]);
@@ -556,17 +623,19 @@ test('stage 4: trust mode — the partner gets a history row for what matters, a
     await done(await w.call('ua', w.pair, { action: 'event.rsvp', opId: op(), eventId: e.id, status: 'going' }));
     await done(await w.call('ua', w.pair, { action: 'event.apply', opId: op(), eventId: e2.id, answers: ['Хотим познакомиться с людьми'], note: 'Мы спокойные', requirementsAccepted: true }));
     await done(await w.call('ua', w.pair, { action: 'community.join', opId: op(), communityId: club.id, rulesAccepted: true }));
-    await done(await w.call('ua', w.pair, { action: 'private.setOn', opId: op(), on: true }));
+    // The private part always waits for the partner (audit item 20), trust or not.
+    assert.ok((await w.call('ua', w.pair, { action: 'private.setOn', opId: op(), on: true })).pending?.approvalId);
     await done(await w.call('ua', w.pair, { action: 'follow.set', opId: op(), profileId: w.mia, on: true }));
     // Going down needs nobody and is no news.
     await done(await w.call('ua', w.pair, { action: 'event.rsvp', opId: op(), eventId: e.id, status: 'not_going' }));
     await w.notify();
     const rows = await w.db.query(`select id, data from feture.notification where recipient_account_id = $1 and type = 'pair.acted' order by created_at, id`, [ub]);
-    assert.deepEqual(rows.map(r => r.data.what).sort(), ['access', 'community', 'event', 'eventApply', 'follow']);
+    // Turning the private part on waits for the partner now (audit item 20): no «access» history row here.
+    assert.deepEqual(rows.map(r => r.data.what).sort(), ['community', 'event', 'eventApply', 'follow']);
     assert.equal((await w.db.query(`select 1 from feture.notification where recipient_account_id = $1 and type = 'pair.acted'`, [ua])).length, 0, 'never to the one who did it');
     const pushed = (await w.db.query(`select payload->>'notificationId' n from feture.outbox where topic = 'push.deliver' and payload->>'account' = $1`, [ub])).map(r => r.n);
     const what = Object.fromEntries(rows.map(r => [r.data.what, r]));
-    for (const k of ['event', 'eventApply', 'access']) assert.ok(pushed.includes(what[k].id), `${k}: a push`);
+    for (const k of ['event', 'eventApply']) assert.ok(pushed.includes(what[k].id), `${k}: a push`);
     for (const k of ['community', 'follow']) assert.ok(!pushed.includes(what[k].id), `${k}: history only`);
     // Each row opens its place; a follow opens the person followed, as the couple.
     assert.equal(what.follow.data.target, w.mia);

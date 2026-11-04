@@ -1,6 +1,7 @@
 // @ts-check
 import { socialCommands } from '../../contracts/social.mjs';
 import { requireUnrestricted } from '../profiles.mjs';
+import { needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
 import { fail } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { lockPair } from './discover.mjs';
@@ -121,6 +122,38 @@ export async function blockProfile(q, acting, target, alsoFor, { keepCouple = fa
   return targets.length;
 }
 
+/** Follows `target` as the acting profile (follow.set, and its approval once the partner agrees). Follow, unfollow,
+ * follow again: the other side is told once a day. @param {Q} q @param {Acting} acting @param {string} target */
+async function follow(q, acting, target) {
+  const rows = await q.query(
+    `insert into feture.follow (follower_profile_id, target_profile_id, acted_by) values ($1, $2, $3) on conflict do nothing returning 1`,
+    [acting.profileId, target, acting.accountId]);
+  const [{ told }] = await q.query(
+    `select exists (select 1 from feture.outbox where topic = 'follow.created' and profile_id = $1 and payload->>'from' = $2 and created_at > now() - interval '1 day') told`,
+    [target, acting.profileId]);
+  if (rows.length && !told) {
+    await enqueue(q, 'follow.created', target, { from: acting.profileId });
+    // The partner's row opens that person (`target`), not the couple's own page.
+    if (acting.kind === 'couple') await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: 'follow', target });
+  }
+  return { following: true };
+}
+
+registerApprovalKind('follow.set', {
+  apply: async (q, row) => {
+    const acting = /** @type {Acting} */ (Object.freeze({ profileId: row.profile_id, accountId: row.requested_by, kind: 'couple', state: 'active', partnerAccountId: null, partnerApproves: false, writable: true }));
+    const [{ b }] = await q.query('select feture.blocked($1, $2) b', [row.profile_id, row.target_id]);
+    if (b) fail(404, 'not_found');
+    await follow(q, acting, /** @type {string} */ (row.target_id));
+  },
+  // Gone or blocked since: nothing to follow.
+  version: async (q, row) => ((await q.query(`select state from feture.profile where id = $1`, [row.target_id]))[0]?.state ?? 'gone'),
+  preview: async (q, row) => {
+    const [p] = await q.query(`select id, kind, handle, name from feture.profile where id = $1`, [row.target_id]);
+    return { object: { type: 'profile', id: row.target_id, title: p?.name ?? null, state: p ? 'ok' : 'deleted' }, subject: p ?? null, rows: [] };
+  },
+});
+
 /** @type {Record<keyof typeof socialCommands, Command['run']>} */
 const run = {
   async 'block.set'(q, { acting: a, input }) {
@@ -152,19 +185,11 @@ const run = {
     await socialTarget(q, acting, input.profileId);
     const [{ b }] = await q.query('select feture.blocked($1, $2) b', [acting.profileId, input.profileId]);
     if (b) fail(404, 'not_found');
-    const rows = await q.query(
-      `insert into feture.follow (follower_profile_id, target_profile_id, acted_by) values ($1, $2, $3) on conflict do nothing returning 1`,
-      [acting.profileId, input.profileId, acting.accountId]);
-    // Follow, unfollow, follow again: told once a day per person.
-    const [{ told }] = await q.query(
-      `select exists (select 1 from feture.outbox where topic = 'follow.created' and profile_id = $1 and payload->>'from' = $2 and created_at > now() - interval '1 day') told`,
-      [input.profileId, acting.profileId]);
-    if (rows.length && !told) {
-      await enqueue(q, 'follow.created', input.profileId, { from: acting.profileId });
-      // The partner's row opens that person (`target`), not the couple's own page.
-      if (acting.kind === 'couple') await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: 'follow', target: input.profileId });
+    // A couple's follow may wait for the partner («Подписки», audit item 20); the other side sees nothing meanwhile.
+    if (needsPartner(acting, 'follow.set')) {
+      return { following: false, pending: await requestApproval(q, acting, { kind: 'follow.set', targetType: 'profile', targetId: input.profileId, change: {}, summary: [] }) };
     }
-    return { following: true };
+    return follow(q, acting, input.profileId);
   },
 
   async 'follower.remove'(q, { acting: a, input }) {

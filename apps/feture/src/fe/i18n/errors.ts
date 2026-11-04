@@ -3,6 +3,7 @@
 export const ru = {
   'fe.rule.ended': 'Чат завершён — написать в него уже нельзя.',
   'fe.rule.no_match': 'Мэтча больше нет — чат закрыт.',
+  'fe.rule.pair_paused': 'Пара на паузе. Если её восстановят, переписка продолжится.',
   'fe.rule.pair_inactive': 'Собеседник сейчас недоступен.',
   'fe.rule.already_sent': 'Этот файл уже отправлен.',
   'fe.rule.request_pending': 'Запрос уже отправлен. Дождись ответа.',
@@ -10,6 +11,8 @@ export const ru = {
   'fe.rule.request_quota': 'На сегодня запросов достаточно. Попробуй завтра.',
   'fe.rule.restricted': 'Сейчас нельзя: профиль ограничен до {date}.',
   'fe.rule.restricted.forever': 'Сейчас нельзя: профиль ограничен, пока модераторы не снимут ограничение.',
+  'fe.rule.change_changed': 'Предложение изменилось, посмотри ещё раз.',
+  'fe.rule.links_busy': 'Сейчас предложить связь не получится.',
   'fe.rule.link_exists': 'Связь уже предложена.',
   'fe.rule.change_pending': 'Сначала ответь на изменение, которое предложили тебе.',
   'fe.rule.links_closed': 'Этот человек не принимает предложения связи.',
@@ -53,6 +56,7 @@ export const ru = {
 export const en = {
   'fe.rule.ended': 'This chat has ended — you can’t write in it.',
   'fe.rule.no_match': 'The match is over — the chat is closed.',
+  'fe.rule.pair_paused': 'The couple is on pause. If it’s restored, the conversation goes on.',
   'fe.rule.pair_inactive': 'The other side isn’t available right now.',
   'fe.rule.already_sent': 'This file has already been sent.',
   'fe.rule.request_pending': 'The request has already been sent. Wait for an answer.',
@@ -60,6 +64,8 @@ export const en = {
   'fe.rule.request_quota': 'That’s enough requests for today. Try tomorrow.',
   'fe.rule.restricted': 'Not now: the profile is restricted until {date}.',
   'fe.rule.restricted.forever': 'Not now: the profile is restricted until moderators lift it.',
+  'fe.rule.change_changed': 'The proposal changed — take another look.',
+  'fe.rule.links_busy': 'You can’t propose a link right now.',
   'fe.rule.link_exists': 'A link has already been proposed.',
   'fe.rule.change_pending': 'First answer the change proposed to you.',
   'fe.rule.links_closed': 'This person doesn’t accept link proposals.',

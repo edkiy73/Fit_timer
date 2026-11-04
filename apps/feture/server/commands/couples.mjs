@@ -1,5 +1,6 @@
 // @ts-check
 import { couplesCommands } from '../../contracts/couples.mjs';
+import { OLD_MODE } from '../../contracts/_approve.mjs';
 import { endConversations } from './chats.mjs';
 import { fail, isUniqueViolation } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
@@ -307,14 +308,15 @@ const run = {
     coupleOnly(acting);
     const [p] = await q.query(`select id, handle, name, chosen_name, state, paused_at, restore_until, created_at from feture.profile where id = $1`, [acting.profileId]);
     const members = await q.query(
-      `select m.account_id = $2 me, coalesce(m.approves_before_pause, m.approves_partner) approves_partner, pp.id profile_id, pp.handle, pp.name,
+      `select m.account_id = $2 me, coalesce(m.approves_before_pause, m.approves_partner) approves_partner,
+         coalesce(m.approves_scope_before_pause, m.approves_scope) approves_scope, pp.id profile_id, pp.handle, pp.name,
          exists (select 1 from feture.couple_restore r where r.profile_id = m.profile_id and r.account_id = m.account_id) restore_agreed
        from feture.profile_member m join feture.account a on a.id = m.account_id join feture.profile pp on pp.id = a.person_profile_id
        where m.profile_id = $1 and m.state = 'active' order by m.account_id = $2 desc`, [acting.profileId, acting.accountId]);
     return {
       couple: {
         id: p.id, handle: p.handle, name: p.name, chosenName: p.chosen_name, state: p.state, since: p.created_at, pausedAt: p.paused_at, restoreUntil: p.restore_until,
-        members: members.map(m => ({ me: m.me, profileId: m.profile_id, handle: m.handle, name: m.name, approvesPartner: m.approves_partner, restoreAgreed: m.restore_agreed })),
+        members: members.map(m => ({ me: m.me, profileId: m.profile_id, handle: m.handle, name: m.name, approvesPartner: m.approves_partner, approvesScope: m.approves_scope ?? [], restoreAgreed: m.restore_agreed })),
       },
     };
   },
@@ -322,9 +324,12 @@ const run = {
   async 'couple.setApproval'(q, { acting: a, input }) {
     const acting = need(a);
     coupleOnly(acting);
-    await q.query(`update feture.profile_member set approves_partner = $3 where profile_id = $1 and account_id = $2`, [acting.profileId, acting.accountId, input.approvesPartner]);
-    await enqueue(q, 'couple.approvalChanged', acting.profileId, { for: acting.partnerAccountId, approves: input.approvesPartner });
-    return { approvesPartner: input.approvesPartner };
+    // The list of points; the old on/off (an older app) is the old mode's points or none.
+    const scope = input.scope ?? (input.approvesPartner ? [...OLD_MODE] : []);
+    await q.query(`update feture.profile_member set approves_scope = $3, approves_partner = cardinality($3::text[]) > 0 where profile_id = $1 and account_id = $2`,
+      [acting.profileId, acting.accountId, scope]);
+    await enqueue(q, 'couple.approvalChanged', acting.profileId, { for: acting.partnerAccountId, approves: scope.length > 0 });
+    return { approvesPartner: scope.length > 0, scope };
   },
 
   async 'couple.stop'(q, { acting: a }) {
@@ -336,7 +341,8 @@ const run = {
     const closed = await closeAll(q, acting.profileId, 'couple_stopped');
     await closeOutgoing(q, acting.profileId);
     // Each partner's approval mode is kept for a restore (owner 03.11.2026, decision 2); nothing waits while paused.
-    await q.query(`update feture.profile_member set approves_before_pause = approves_partner, approves_partner = false where profile_id = $1 and state = 'active'`, [acting.profileId]);
+    await q.query(`update feture.profile_member set approves_before_pause = approves_partner, approves_partner = false,
+      approves_scope_before_pause = approves_scope, approves_scope = '{}' where profile_id = $1 and state = 'active'`, [acting.profileId]);
     await q.query(`update feture.profile_settings set discover_mode = 'off', updated_at = now() where profile_id = $1`, [acting.profileId]);
     const [p] = await q.query(
       `update feture.profile set state = 'paused', paused_at = now(), restore_until = now() + interval '30 days', updated_at = now()
@@ -375,7 +381,8 @@ const run = {
     // Restored with the approval modes from before the pause; Discover stays off, visibility and access stay as the
     // pause left them: being shown again is a fresh decision (V21 4524, owner 03.11.2026).
     await q.query(`update feture.profile set state = 'active', paused_at = null, restore_until = null, updated_at = now() where id = $1`, [acting.profileId]);
-    await q.query(`update feture.profile_member set approves_partner = coalesce(approves_before_pause, approves_partner), approves_before_pause = null where profile_id = $1 and state = 'active'`, [acting.profileId]);
+    await q.query(`update feture.profile_member set approves_partner = coalesce(approves_before_pause, approves_partner), approves_before_pause = null,
+      approves_scope = coalesce(approves_scope_before_pause, approves_scope), approves_scope_before_pause = null where profile_id = $1 and state = 'active'`, [acting.profileId]);
     await q.query(`delete from feture.couple_restore where profile_id = $1`, [acting.profileId]);
     await enqueue(q, 'couple.restored', acting.profileId, { for: acting.partnerAccountId });
     return { state: 'active' };

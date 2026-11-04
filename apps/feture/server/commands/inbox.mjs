@@ -1,4 +1,5 @@
 // @ts-check
+import { coupleNameNow } from '../sql-rules.mjs';
 import { inboxCommands } from '../../contracts/inbox.mjs';
 import { CATALOG, FILTERS } from '../../contracts/notifications.mjs';
 import { fail } from '../errors.mjs';
@@ -134,7 +135,7 @@ const ALL_TYPES = Object.keys(CATALOG);
 /** The rows of the inbox (S1 §13): the account's, not taken back, not about someone gone or blocked, and only while
  * the account is still a member of the profile they are addressed to. The object comes with its name and whether the
  * addressee may still see it (an event's time and zone, a cancelled one); a post is never named. */
-const NOTE_ROWS = `select n.id, n.type, n.kind, n.object_type, n.object_id, n.sub_object_type, n.sub_object_id, n.couple_id, n.couple_name, n.data, n.created_at,
+const NOTE_ROWS = `select n.id, n.type, n.kind, n.object_type, n.object_id, n.sub_object_type, n.sub_object_id, n.couple_id, ${coupleNameNow('n.couple_id', 'n.couple_name')} couple_name, n.data, n.created_at,
          n.created_at::text cursor_at, n.id cursor_id, n.read_at, n.addressee_profile_id, n.collapse_key, adr.kind addressee_kind,
          case when ap.id is null then null else ${ACTOR} end actor,
          case n.object_type

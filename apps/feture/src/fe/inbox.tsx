@@ -276,7 +276,8 @@ export function InboxScreen(){
    case 'req':actions=two({label:t('fe.ibx.review'),fn:()=>goDecide(d)},
     {label:t('fe.ibx.decline'),fn:()=>{if(busy)return;setBusy(d.id+'n');void declineAccess(d.id,name,()=>load(true),asProfile(d)).finally(()=>setBusy(''));}});break;
    case 'capp':case 'eapp':actions=two({label:t('fe.ibx.approve'),fn:()=>void decideApp(d,true)},{label:t('fe.ibx.decline'),fn:()=>void decideApp(d,false)});break;
-   case 'link':case 'linkChange':{const cmd=d.kind==='link'?'link.answer':'link.answerChange';const extra=d.kind==='link'?{vis:'all'}:{};
+   // A change is answered with the kind seen here (audit item 21): changed since, the server asks to look again.
+   case 'link':case 'linkChange':{const cmd=d.kind==='link'?'link.answer':'link.answerChange';const extra=d.kind==='link'?{vis:'all'}:{kind:d.link?.kind};
     actions=two({label:t('fe.ibx.confirm'),fn:()=>void act(d.id+'y',()=>call(cmd,{opId:newOpId(),linkId:d.id,accept:true,...extra},ok,asProfile(d)),t('fe.ibx.done'))},
      {label:t('fe.ibx.decline'),fn:()=>void act(d.id+'n',()=>call(cmd,{opId:newOpId(),linkId:d.id,accept:false,...extra},ok,asProfile(d)),t('fe.ibx.declined'))});break;}
    case 'tag':actions=two({label:t('fe.ibx.review'),fn:()=>goDecide(d)},
