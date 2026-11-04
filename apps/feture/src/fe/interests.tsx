@@ -221,7 +221,8 @@ export function TopicPicker({cats,topics,have,presetVis,onClose,onDone}:{cats:Ca
    :<Note className="mt12">{left.length?t('fe.int.notFound'):t('fe.int.allAdded')}</Note>}
  </Sheet>;
  if(stage==='answer'&&cur&&d){const tp=topics.find(x=>x.id===cur);const desc=tp?(locale==='en'?tp.descEn:tp.descRu):null;
-  return <Sheet key={cur} title={tp?label(tp):cur} onClose={onClose} full dirty
+  // A bottom sheet like «Проверь» (owner 05.11.2026): the answer buttons stay at the bottom from one topic to the next.
+  return <Sheet key={cur} title={tp?label(tp):cur} onClose={onClose} dirty
    foot={fromReview?<Btn onClick={next}>{t('fe.int.toReview')}</Btn>
     :<div className="row g8"><Btn kind="soft" onClick={back}>{t('fe.back')}</Btn>
      {d.v!=null&&<Btn onClick={next}>{step===sel.length-1?t('fe.int.review'):t('fe.int.next')}</Btn>}</div>}>
