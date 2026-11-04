@@ -541,14 +541,15 @@
 .v21 .ans-marks{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
 /* lanes: one full-width button per lane; the open one is the 1–10 scale in its place (tap, or hold and slide) */
 .v21 .ans-rows{display:grid;gap:8px;touch-action:none;-webkit-user-select:none;user-select:none}
-.v21 .ans-row{position:relative;min-height:52px;border-radius:var(--r-m);background:var(--surf);box-shadow:inset 0 0 0 1px var(--line2);transition:padding .18s var(--ease)}
+.v21 .ans-row{position:relative;height:64px;border-radius:var(--r-m);background:var(--surf);box-shadow:inset 0 0 0 1px var(--line2)}
 .v21 .ans-row.on{box-shadow:inset 0 0 0 2px var(--accent)}
 .v21 .ans-row-b{position:absolute;inset:0;width:100%;display:flex;align-items:center;justify-content:flex-end;padding:0 16px;border:0;border-radius:inherit;background:none;color:var(--ink)}
 .v21 .ans-row-b b{font-size:var(--fs-body);font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
-/* the name: in the middle while closed; open — small, on the top border (a floating label, the frame stays) */
-.v21 .ans-row-l{position:absolute;left:12px;top:26px;transform:translateY(-50%);padding:0 4px;border-radius:4px;background:var(--surf);font-size:var(--fs-body);font-weight:600;line-height:1.2;color:var(--ink);pointer-events:none;z-index:1;transition:top .18s var(--ease),font-size .18s var(--ease),color .18s var(--ease)}
-.v21 .ans-row.open{padding:12px 6px 6px}.v21 .ans-row.open .ans-row-l{top:0;font-size:var(--fs-cap);color:var(--mute)}.v21 .ans-row.open.on .ans-row-l{color:var(--accent)}
-.v21 .ans-row.open .ans-scale{gap:3px}.v21 .ans-row.open .ans-scale button{height:40px}
+/* one height open or closed (owner 05.11.2026: nothing stretches); open — the name shrinks into the top-left corner
+   inside the frame and the 1–10 sits under it */
+.v21 .ans-row-l{position:absolute;left:16px;top:32px;transform:translateY(-50%);font-size:var(--fs-body);font-weight:600;line-height:1.2;color:var(--ink);pointer-events:none;z-index:1;transition:top .18s var(--ease),font-size .18s var(--ease),color .18s var(--ease)}
+.v21 .ans-row.open{padding:24px 6px 6px}.v21 .ans-row.open .ans-row-l{left:12px;top:13px;font-size:var(--fs-micro);color:var(--mute)}.v21 .ans-row.open.on .ans-row-l{color:var(--accent)}
+.v21 .ans-row.open .ans-scale{gap:3px}.v21 .ans-row.open .ans-scale button{height:34px;border-radius:var(--r-xs)}
 .v21 .ans-scale button.held{background:var(--accent);color:#fff;box-shadow:none}
 /* the marks in the colours of the interest capsules: «обсуждаемо» a dashed amber edge, «табу» red stripes */
 .v21 .ans-m.soft{border:1.5px dashed color-mix(in srgb,var(--warn) 65%,transparent);box-shadow:none;color:var(--warn)}.v21 .ans-m.soft svg{color:var(--warn)}
