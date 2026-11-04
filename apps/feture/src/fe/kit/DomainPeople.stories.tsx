@@ -44,11 +44,11 @@ export const РадарМалый:StoryObj<typeof Radar>={name:'Радар ко�
 type Mark='discuss'|'hard';
 export const Шкала:StoryObj<typeof AnswerScale<Mark>>={name:'Шкала ответа 1–10',
  render:a=>{const [v,setV]=useState<number|Mark|null>(a.value??null);return <AnswerScale<Mark> {...a} value={v} onChange={setV}/>;},
- args:{label:'Насколько нравится',low:'чуть-чуть',high:'очень',value:6,onChange:()=>{},
-  marks:[{id:'discuss',label:'обсудить',icon:MessageCircle},{id:'hard',label:'граница',icon:Ban,taboo:true}]},
+ args:{label:'Насколько нравится',value:6,onChange:()=>{},
+  marks:[{id:'discuss',label:'Обсуждаемо',icon:MessageCircle},{id:'hard',label:'Табу',icon:Ban,taboo:true}]},
  argTypes:{value:{control:'select',options:[null,1,2,3,4,5,6,7,8,9,10,'discuss','hard']},marks:{control:false}}};
-export const ШкалаГраница:StoryObj<typeof AnswerScale<Mark>>={name:'Шкала: выбрана граница',render:a=><AnswerScale<Mark> {...a}/>,
- args:{label:'Насколько нравится',low:'чуть-чуть',high:'очень',value:'hard',onChange:()=>{},marks:[{id:'discuss',label:'обсудить',icon:MessageCircle},{id:'hard',label:'граница',icon:Ban,taboo:true}]}};
+export const ШкалаТабу:StoryObj<typeof AnswerScale<Mark>>={name:'Шкала: выбрано табу',render:a=><AnswerScale<Mark> {...a}/>,
+ args:{label:'Насколько нравится',value:'hard',onChange:()=>{},marks:[{id:'discuss',label:'Обсуждаемо',icon:MessageCircle},{id:'hard',label:'Табу',icon:Ban,taboo:true}]}};
 export const Направления:StoryObj<typeof Chip>={name:'Чипы недоступны (inactive)',render:a=><div className="dim"><Chips><Chip {...a}>Делать</Chip><Chip {...a} on>Получать</Chip></Chips></div>,args:{inactive:true,onClick:fn(),children:''}};
 
 export const ПолоскиФото:StoryObj<typeof PhotoBars>={name:'Полоски фото на шапке профиля (со счётчиком)',render:a=><div className="hero" style={{height:240}}><div className="plate" style={plate('mia')}/><PhotoBars {...a}/></div>,

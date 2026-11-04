@@ -175,14 +175,14 @@ export function StatusCard({tone,icon,title,sub,action}:{tone?:'wait'|'ok'|'bad'
 
 /** The interest answer: 1–10 (the cells up to the answer fill), the words at both ends, and two marks instead of a
  * number — «обсудить» and «граница» (a boundary is never a low number). */
-export function AnswerScale<M extends string>({value,onChange,label,low,high,marks}:{value:number|M|null|undefined,onChange:(v:number|M)=>void,label:string,low:string,high:string,
+/** The 1–10 scale and the marks — no words under it (owner 05.11.2026: the numbers say it). */
+export function AnswerScale<M extends string>({value,onChange,label,marks}:{value:number|M|null|undefined,onChange:(v:number|M)=>void,label:string,
  marks:readonly {id:M,label:string,icon:LucideIcon,taboo?:boolean|undefined}[]}){
  const n=typeof value==='number'?value:null;
  return <>
   <div className="ans-scale" role="radiogroup" aria-label={label}>
    {[1,2,3,4,5,6,7,8,9,10].map(k=><button key={k} type="button" className={[n&&k<=n?'fill':'',n===k?'on':''].filter(Boolean).join(' ')} role="radio" aria-checked={n===k} onClick={()=>onChange(k)}>{k}</button>)}
   </div>
-  <div className="ans-l"><span>{low}</span><span>{high}</span></div>
   <div className="ans-marks">{marks.map(m=><button key={m.id} type="button" className={'ans-m'+(m.taboo?' taboo':'')+(value===m.id?' on':'')} aria-pressed={value===m.id} onClick={()=>onChange(m.id)}><m.icon/><span>{m.label}</span></button>)}</div>
  </>;
 }
