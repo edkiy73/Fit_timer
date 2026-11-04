@@ -2,8 +2,8 @@
 // one «Доступы» screen P07 («Открыто» with requests to answer / «Мне открыли» / «Мои запросы»), the grant sheet (P09), decline with undo, revoke
 // (P11) and narrowing.
 export const ru = {
- 'fe.ac.title': 'Доступы',
- 'fe.ac.titleUs': 'Доступы пары',
+ 'fe.ac.title': 'Доступы к приватной части',
+ 'fe.ac.titleUs': 'Доступы к нашей приватной части',
  'fe.ac.tab.byme': 'Открыто',
  'fe.ac.tab.bymeUs': 'Открыто',
  'fe.ac.tab.withme': 'Мне открыли',
@@ -31,7 +31,7 @@ export const ru = {
  'fe.ac.age.partner': 'Партнёр ещё не подтвердил возраст',
  'fe.ac.in.title': 'Ждут ответа',
  'fe.ac.in.open': 'Кому открыто',
- 'fe.ac.entry': 'Доступы',
+ 'fe.ac.entry': 'Доступы к приватной части',
  'fe.ac.entrySub': 'Запросы к тебе, кому открыто и твои запросы',
  'fe.ac.entrySubUs': 'Запросы к вам, кому открыто и ваши запросы',
  'fe.ac.entryWait': 'Ждут ответа: {n}',
@@ -122,8 +122,8 @@ export const ru = {
 };
 
 export const en: Record<keyof typeof ru, string> = {
- 'fe.ac.title': 'Access',
- 'fe.ac.titleUs': 'Couple access',
+ 'fe.ac.title': 'Access to the private part',
+ 'fe.ac.titleUs': 'Access to our private part',
  'fe.ac.tab.byme': 'Shared by me',
  'fe.ac.tab.bymeUs': 'Shared by us',
  'fe.ac.tab.withme': 'Shared with me',
@@ -151,7 +151,7 @@ export const en: Record<keyof typeof ru, string> = {
  'fe.ac.age.partner': 'Your partner hasn’t verified their age yet',
  'fe.ac.in.title': 'Waiting for you',
  'fe.ac.in.open': 'Who sees it',
- 'fe.ac.entry': 'Access',
+ 'fe.ac.entry': 'Access to the private part',
  'fe.ac.entrySub': 'Requests to you, who sees it, your requests',
  'fe.ac.entrySubUs': 'Requests to you two, who sees it, your requests',
  'fe.ac.entryWait': 'Waiting: {n}',
