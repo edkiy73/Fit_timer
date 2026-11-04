@@ -188,6 +188,15 @@ const run = {
     return { reset: removed };
   },
 
+  async 'staff.team'(q, { account }) {
+    await requireStaff(q, account, ['owner']);
+    const rows = await q.query(
+      `select a.id account_id, p.id profile_id, p.handle, p.name, array_agg(r.role order by r.role) roles
+       from feture.staff_role r join feture.account a on a.id = r.account_id left join feture.profile p on p.id = a.person_profile_id
+       where r.revoked_at is null group by a.id, p.id, p.handle, p.name order by p.name nulls last, p.handle`);
+    return { items: rows.map(r => ({ accountId: r.account_id, profileId: r.profile_id, handle: r.handle, name: r.name, roles: r.roles })) };
+  },
+
   async 'staff.grant'(q, { account, input }) {
     await requireStaff(q, account, ['owner'], { fresh: true });
     // Only the owner gives roles, to others and to themselves (the owner role itself is never given here).

@@ -2,9 +2,9 @@ import {Children,cloneElement,createContext,Fragment,isValidElement,useCallback,
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {ArrowUpDown,BadgeCheck,Ban,CalendarDays,Check,ClipboardCheck,ChevronLeft,ChevronRight,Eye,FilePen,Flag,Gavel,IdCard,Image,ImageOff,Inbox,ListFilter,Lock,MapPin,Minus,RefreshCw,Scale,Search,ShieldAlert,ShieldCheck,User,UserX,Users,X,Ellipsis,Film,Mic,Camera,Image as ImageIcon,LifeBuoy,Crown,Wrench,ScrollText,KeyRound,type LucideIcon} from 'lucide-react';
+import {ArrowUpDown,BadgeCheck,Ban,CalendarDays,Check,ClipboardCheck,ChevronLeft,ChevronRight,Eye,FilePen,Flag,Gavel,IdCard,Image,ImageOff,Inbox,ListFilter,Lock,MapPin,Minus,RefreshCw,Scale,Search,ShieldAlert,ShieldCheck,User,UserPlus,UserX,Users,X,Ellipsis,Film,Mic,Camera,Image as ImageIcon,LifeBuoy,Crown,Wrench,ScrollText,KeyRound,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Actions,Alert,Btn,Swipe,Card,RadioList,Chip,ChoiceChips,MultiChips,Chips,Divider,Empty,ExpandRow,Field,Form,Group,IconBtn,Input,KeyValues,LoadMore,MoreInfo,Note,Pill,ReviewBar,ReviewCard,ReviewMedia,ReviewObject,ReviewPair,ReviewTiles,ReviewPreview,type Slide,useBackClose,Row,SearchInput,SectionLabel,Seg,Select,Sheet,Skel,Stack,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble} from './kit';
+import {Actions,Alert,Btn,Swipe,Card,CheckList,RadioList,Chip,ChoiceChips,MultiChips,Chips,Divider,Empty,ExpandRow,Field,Form,Group,IconBtn,Input,KeyValues,LoadMore,MoreInfo,Note,Pill,ReviewBar,ReviewCard,ReviewMedia,ReviewObject,ReviewPair,ReviewTiles,ReviewPreview,type Slide,useBackClose,Row,SearchInput,SectionLabel,Seg,Select,Sheet,Skel,Stack,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble} from './kit';
 import {askFactor,useFe,useLive} from './session';
 import {useToast} from './toast';
 import {pullStaffCounts,useStaffCounts} from './staff-counts';
@@ -88,8 +88,8 @@ const QUEUE_IDS=Object.keys(QUEUES) as QueueId[];
 /** Who may open what (the server's requireStaff lists); the screen only asks for what the roles allow. Queues not
  * listed are open to every staff role that has a queue. */
 const QUEUE_ROLES:Partial<Record<QueueId,string[]>>={appeal:['owner','lead']};
-const SECTION_ROLES={queues:['owner','lead','moderator','verifier'],support:['owner','lead','moderator','support'],measures:['owner','lead','moderator'],premium:['owner','lead'],maintenance:['owner','lead'],journal:['owner','lead','auditor'],access:['owner','lead']} as const;
-const SECTIONS=['queues','measures','journal','support','premium','maintenance','access'] as const;
+const SECTION_ROLES={queues:['owner','lead','moderator','verifier'],support:['owner','lead','moderator','support'],measures:['owner','lead','moderator'],premium:['owner','lead'],maintenance:['owner','lead'],journal:['owner','lead','auditor'],access:['owner','lead'],team:['owner']} as const;
+const SECTIONS=['queues','measures','journal','support','team','premium','maintenance','access'] as const;
 type Section=typeof SECTIONS[number];
 const can=(roles:readonly string[],need:readonly string[]|undefined)=>!need||roles.some(r=>need.includes(r));
 const LIMIT=50;
@@ -146,7 +146,7 @@ export function StaffScreen(){
      {daily.length>1&&daily.includes(cur)&&<Seg<Section> small={false} value={cur} onChange={setSection}
       // Four tabs on a phone: a dot says something waits (the number is on the shield in «Я»).
       options={daily.map(id=>{const n=id==='queues'?(counts?counts.total-counts.support:0):id==='support'?(counts?.support??0):0;return {id,label:label(id),...(n>0?{dot:t('fe.staff.entryN',{n:String(n)})}:{})};})}/>}
-     {cur==='queues'?<Queues/>:cur==='support'?<StaffSupport/>:cur==='measures'?<People/>:cur==='premium'?<Premium/>:cur==='maintenance'?<StaffMaintenance/>:cur==='journal'?<Journal/>:cur==='access'?<FactorReset/>:null}
+     {cur==='queues'?<Queues/>:cur==='support'?<StaffSupport/>:cur==='measures'?<People/>:cur==='premium'?<Premium/>:cur==='maintenance'?<StaffMaintenance/>:cur==='journal'?<Journal/>:cur==='access'?<FactorReset/>:cur==='team'?<Team/>:null}
     </>}
   </View>
   {menu&&<Sheet title={t('fe.staff.tools')} sub={roles?.length?t('fe.staff.roles')+': '+roles.map(r=>t('fe.staff.role.'+r)).join(', '):undefined} onClose={()=>setMenu(false)}>
@@ -157,8 +157,8 @@ export function StaffScreen(){
 }
 /** The system «Назад» closes the sheet it sits in instead of leaving the staff area. */
 function BackCloses({onClose}:{onClose:()=>void}){useBackClose(onClose);return null;}
-const SECTION_LABEL:Record<Section,string>={queues:'fe.staff.section.queues',measures:'fe.staff.section.measures',support:'fe.w8.staff.support',premium:'fe.staff.section.premium',maintenance:'fe.w8.staff.maint',journal:'fe.staff.section.journal',access:'fe.staff.section.access'};
-const SECTION_ICON:Record<Section,LucideIcon>={queues:Inbox,measures:Gavel,support:LifeBuoy,premium:Crown,maintenance:Wrench,journal:ScrollText,access:KeyRound};
+const SECTION_LABEL:Record<Section,string>={queues:'fe.staff.section.queues',measures:'fe.staff.section.measures',support:'fe.w8.staff.support',premium:'fe.staff.section.premium',maintenance:'fe.w8.staff.maint',journal:'fe.staff.section.journal',access:'fe.staff.section.access',team:'fe.staff.section.team'};
+const SECTION_ICON:Record<Section,LucideIcon>={queues:Inbox,measures:Gavel,support:LifeBuoy,premium:Crown,maintenance:Wrench,journal:ScrollText,access:KeyRound,team:Users};
 
 type Order='old'|'new';
 type PageOf={items:unknown[],locked?:boolean|undefined,next?:string|null|undefined,tail?:string|null|undefined,total?:number|undefined};
@@ -1096,6 +1096,56 @@ function PersonSheet({profileId,onClose}:{profileId:string,onClose:()=>void}){
     {history.length?<Card list>{history.map(x=><Row key={String(x.id)} noChev title={jw('action',x.action)} sub={staffName(x)+' · '+when(x.created_at)}/>)}</Card>
      :<Empty compact icon={Inbox} title={t('fe.staff.people.noHistory')}/>}</Group>}
   </Stack>}
+ </Sheet>;
+}
+
+// ——— Сотрудники ———
+
+const ROLES_GIVEN=['lead','moderator','verifier','auditor','support'] as const;
+const teamRes=z.object({ok:z.literal(true),items:z.array(z.object({accountId:z.string(),profileId:z.string().nullable(),handle:z.string().nullable(),name:z.string().nullable(),roles:z.array(z.string())}))});
+type Member=z.infer<typeof teamRes>['items'][number];
+
+/** «Сотрудники» (owner 05.11.2026): who has which role; the owner gives and takes roles by @nick (a fresh code, journalled). */
+function Team(){
+ const {call}=useFe();const {t}=useI18n();const toast=useToast();
+ const [items,setItems]=useState<Member[]|null>(null);const [error,setError]=useState<unknown>(null);
+ const [open,setOpen]=useState<Member|'new'|null>(null);
+ const load=useCallback(()=>{call('staff.team',{},teamRes,{asAccount:true}).then(r=>{setItems(r.items);setError(null);}).catch(setError);},[call]);
+ useEffect(load,[load]);
+ const roleWord=(r:string)=>t('fe.staff.role.'+r);
+ return <>
+  {error&&!items?<Alert kind="err">{feErrorMessage(error,t)}</Alert>:!items?<Skel kind="list"/>:<>
+   <Card list>{items.map(m=><Row key={m.accountId} title={personName({handle:m.handle,name:m.name})??t('fe.staff.noName')} sub={m.roles.map(roleWord).join(', ')}
+    onClick={m.roles.includes('owner')?undefined:()=>setOpen(m)} noChev={m.roles.includes('owner')}/>)}</Card>
+   <Btn kind="soft" icon={UserPlus} onClick={()=>setOpen('new')}>{t('fe.staff.team.add')}</Btn>
+  </>}
+  {open&&<TeamSheet member={open==='new'?null:open} onClose={()=>setOpen(null)} onDone={()=>{setOpen(null);toast(t('fe.staff.team.saved'),{type:'ok'});load();}}/>}
+ </>;
+}
+
+function TeamSheet({member,onClose,onDone}:{member:Member|null,onClose:()=>void,onDone:()=>void}){
+ const {call}=useFe();const {t}=useI18n();
+ const [handle,setHandle]=useState('');const [roles,setRoles]=useState<string[]>(member?.roles??[]);
+ const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const nick=(member?.handle??handle.trim()).replace(/^@/,'');
+ const save=async()=>{setBusy(true);setFailure('');
+  try{
+   for(const r of ROLES_GIVEN){const was=!!member?.roles.includes(r),now=roles.includes(r);
+    if(was!==now)await call('staff.grant',{opId:newOpId(),handle:nick,role:r,grant:now},ok,{asAccount:true});}
+   onDone();
+  }catch(e){setFailure(e instanceof FeError&&e.code==='not_found'?t('fe.staff.measures.notFound'):feErrorMessage(e,t));}finally{setBusy(false);}};
+ return <Sheet className="st-sheet" title={member?personName({handle:member.handle,name:member.name})??'':t('fe.staff.team.add')} onClose={onClose}
+  foot={<Btn icon={Check} disabled={busy||!nick} busy={busy} onClick={()=>void save()}>{t('fe.staff.team.save')}</Btn>}>
+  <BackCloses onClose={onClose}/>
+  <Stack gap={4}>
+   {!member&&<LineField label={t('fe.staff.premium.handle')} value={handle} max={41} autoCapitalize="none" onChange={setHandle}/>}
+   <Field label={t('fe.staff.team.roles')}>
+    <CheckList label={t('fe.staff.team.roles')} value={roles.filter(r=>(ROLES_GIVEN as readonly string[]).includes(r)) as typeof ROLES_GIVEN[number][]} onChange={v=>setRoles(v)}
+     options={ROLES_GIVEN.map(r=>[r,t('fe.staff.role.'+r).replace(/^./,c=>c.toUpperCase()),t('fe.staff.team.sub.'+r)] as const)}/>
+   </Field>
+   <Note>{t('fe.staff.team.note')}</Note>
+   <Failure text={failure}/>
+  </Stack>
  </Sheet>;
 }
 
