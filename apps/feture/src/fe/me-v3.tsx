@@ -2,8 +2,8 @@ import {useCallback,useEffect,useState} from 'react';
 import {useNavigate,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Ban,Bell,Bookmark,Calendar,CircleHelp,Crown,Download,Eye,Globe,Heart,Images,Inbox,KeyRound,Link2,Lock,LogOut,Newspaper,PenLine,Pencil,Settings,ShieldCheck,Smartphone,Sparkles,UserCog,Users} from 'lucide-react';
-import {Actions,AddCard,Av,Bar,Btn,Card,Group,IconBtn,Row,Seg,Skel,View} from './kit';
+import {Ban,Bell,Bookmark,Calendar,CircleHelp,Crown,Download,Eye,Globe,Heart,Images,Inbox,KeyRound,Link2,Lock,LogOut,Newspaper,Pencil,Settings,ShieldCheck,Smartphone,Sparkles,UserCog,Users} from 'lucide-react';
+import {Actions,Av,Bar,Btn,Card,Group,IconBtn,Row,Seg,Skel,View} from './kit';
 import {useFe,useLive,useShown} from './session';
 import {BellButton,countsRes} from './inbox';
 import {StaffEntry} from './staff';
@@ -17,7 +17,7 @@ import {onStatusAnswered} from './status-todo';
 import {useAccountSettings,useLogout} from './settings';
 import {useMe} from './me-new';
 import {DetailsBlock,MeSkel,PhotosBlock,catalogRes,type option} from './me';
-import {BasicsForm,BasicsSheet} from './me-basics-form';
+import {BasicsForm} from './me-basics-form';
 import {MeAboutBlock} from './about-facts';
 import type {Place} from './kit/Place';
 
@@ -77,11 +77,9 @@ export function MeV3Screen(){
 
 type MeData=ReturnType<typeof useMe>;
 
-/** «Профиль»: the two main actions, the photos, one next step, what the profile holds, the pair and «Моё». */
+/** «Профиль»: the two main actions, the photos, what the profile holds and the pair (the bio is edited in «Редактировать»). */
 function ProfileZone({p,settings,load,cp,links}:{p:MeData['p'],settings:MeData['settings'],load:()=>void,cp:boolean,links:number|undefined}){
  const {t}=useI18n();const navigate=useNavigate();const go=(to:string)=>()=>navigate(to);
- // «Добавить описание» opens just «О себе» (the «Основное» sheet's bio-only form) over this screen.
- const [bio,setBio]=useState(false);const openBio=()=>setBio(true);
  return <>
   <Group><Actions>
    <Btn icon={Pencil} onClick={go('/n/me/v3/edit')}>{t('fe.v3.edit')}</Btn>
@@ -89,8 +87,6 @@ function ProfileZone({p,settings,load,cp,links}:{p:MeData['p'],settings:MeData['
   </Actions></Group>
   {!p||!settings?<MeSkel/>:<>
    <PhotosBlock p={p} settings={settings} onChanged={load}/>
-   {p.photos.length>0&&!p.bio&&<Group><AddCard icon={PenLine} title={t(cp?'fe.mp.bioAddUs':'fe.mp.bioAdd')} sub={t(cp?'fe.mp.bioAddSubUs':'fe.mp.bioAddSub')} onClick={openBio}/></Group>}
-   {bio&&<BasicsSheet p={p} places={[]} bioOnly onClose={()=>setBio(false)} onSaved={()=>{setBio(false);load();}}/>}
   </>}
   <Group title={t('fe.v3.g.content')}><Card list>
    <Row icon={Images} title={t('fe.mx.gal')} onClick={go('/n/me/new/gallery')}/>
