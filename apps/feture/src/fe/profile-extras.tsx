@@ -638,11 +638,12 @@ function Block({profileId,name,onClose,onDone}:{profileId:string,name:string,onC
  const alsoFor:'partner'|'me'|null=acting?.kind==='person'&&others.some(p=>p.kind==='couple')?'partner':acting?.kind==='couple'&&others.some(p=>p.kind==='person')?'me':null;
  const [also,setAlso]=useState(false);const [busy,setBusy]=useState(false);const [err,setErr]=useState('');
  const go=async()=>{setBusy(true);setErr('');
-  try{await call('block.set',{opId:newOpId(),profileId,on:true,...(also&&alsoFor?{alsoFor}:{})},ok);onDone(t(acting?.kind==='couple'?'fe.ca.blocked':'fe.px.bl.done'));}
+  // From the personal profile the couple is covered by default; «Оставить пару открытой» keeps it out (audit item 19).
+  try{await call('block.set',{opId:newOpId(),profileId,on:true,...(alsoFor==='partner'?{keepCouple:also}:also&&alsoFor?{alsoFor}:{})},ok);onDone(t(acting?.kind==='couple'?'fe.ca.blocked':'fe.px.bl.done'));}
   catch(e){setErr(pxError(e,t));}finally{setBusy(false);}};
  return <Sheet title={fill(t('fe.px.bl.title'),{name})} onClose={onClose} foot={<><Btn kind="danger" onClick={go} disabled={busy}>{t(acting?.kind==='couple'?'fe.ca.block':'fe.px.bl.ok')}</Btn><Btn kind="text" onClick={onClose}>{t('fe.px.cancel')}</Btn></>}>
   <Stack><p className="lead">{t(acting?.kind==='couple'?'fe.ca.blockText':'fe.px.bl.text')}</p>
-  {alsoFor&&<Card list><ToggleRow title={t(alsoFor==='partner'?'fe.px.bl.alsoPartner':'fe.px.bl.alsoMe')} sub={t(alsoFor==='partner'?'fe.px.bl.alsoPartnerSub':'fe.px.bl.alsoMeSub')}
+  {alsoFor&&<Card list><ToggleRow title={t(alsoFor==='partner'?'fe.px.bl.keepCouple':'fe.px.bl.alsoMe')} sub={t(alsoFor==='partner'?'fe.px.bl.keepCoupleSub':'fe.px.bl.alsoMeSub')}
    on={also} onClick={()=>setAlso(v=>!v)}/></Card>}
   {err&&<Alert kind="err" noIcon>{err}</Alert>}</Stack>
  </Sheet>;

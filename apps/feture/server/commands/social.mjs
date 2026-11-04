@@ -68,32 +68,56 @@ async function cutPair(q, blocker, blocked) {
   if (ended[0]) await enqueue(q, 'match.ended', blocker, { matchId: ended[0].id, with: blocked });
   await endConversations(q, blocker, blocked, 'block');
   await q.query(`delete from feture.profile_link where least(a_profile_id, b_profile_id) = least($1::uuid, $2::uuid) and greatest(a_profile_id, b_profile_id) = greatest($1::uuid, $2::uuid)`, [blocker, blocked]);
+  // Each other's future events (audit item 54, В5): «иду» / «интересно» and applications go, both ways; past ones stay.
+  for (const [who, org] of [[blocked, blocker], [blocker, blocked]]) {
+    await q.query(`delete from feture.event_rsvp r using feture.event e where r.event_id = e.id and r.profile_id = $1 and e.organizer_profile_id = $2 and e.ends_at > now()`, [who, org]);
+    await q.query(
+      `update feture.event_application a set state = 'closed', decided_at = now(), rev = a.rev + 1 from feture.event e
+       where a.event_id = e.id and a.profile_id = $1 and e.organizer_profile_id = $2 and e.ends_at > now() and a.state in ('pending', 'approved')`, [who, org]);
+  }
+  // Each other's communities (audit item 11, В14): the member leaves the owner's community quietly, requests close; back
+  // only by a new request.
+  for (const [who, owner] of [[blocked, blocker], [blocker, blocked]]) {
+    await q.query(
+      `update feture.community_member m set state = 'left', role = 'member' from feture.community c
+       where c.id = m.community_id and c.owner_profile_id = $2 and m.profile_id = $1 and m.state = 'active' and m.role <> 'owner'`, [who, owner]);
+    await q.query(
+      `update feture.community_request r set state = 'withdrawn', decided_at = now(), rev = r.rev + 1 from feture.community c
+       where c.id = r.community_id and c.owner_profile_id = $2 and r.profile_id = $1 and r.state = 'pending'`, [who, owner]);
+  }
 }
 
 /** Blocks `target` from the acting profile (and, explicitly, from the account's other profile).
  * @param {Q} q @param {Acting} acting @param {string} target @param {'partner' | 'me'} [alsoFor] */
-export async function blockProfile(q, acting, target, alsoFor) {
+export async function blockProfile(q, acting, target, alsoFor, { keepCouple = false } = {}) {
   await socialTarget(q, acting, target);
   // A partner is never blocked, from the personal profile or from the couple.
   const [{ partner }] = await q.query(`select ${partnerOf('$1::uuid', '$2::uuid')} partner`, [target, acting.accountId]);
   if (partner) fail(422, 'rule_violation', { rule: 'partner_block' });
   const targets = [acting.profileId];
-  if (alsoFor) {
-    // «И для пары / И для меня»: the account's other profile, explicitly.
-    const [other] = await q.query(
-      `select p.id from feture.profile_member m join feture.profile p on p.id = m.profile_id
+  // From the personal profile the person's couples are covered too (audit item 19), unless the couple stays open.
+  const wide = alsoFor ?? (acting.kind === 'person' && !keepCouple ? 'partner' : undefined);
+  /** @type {{id: string, partner: string | null}[]} */
+  const also = [];
+  if (wide) {
+    // «И для пары / И для меня»: the account's other profile(s).
+    const rows = await q.query(
+      `select p.id, (select x.account_id from feture.profile_member x where x.profile_id = p.id and x.state = 'active' and x.account_id <> $1 limit 1) partner
+       from feture.profile_member m join feture.profile p on p.id = m.profile_id
        where m.account_id = $1 and m.state = 'active' and p.state in ('active', 'paused') and p.id <> $2 and p.kind = $3`,
-      [acting.accountId, acting.profileId, alsoFor === 'partner' ? 'couple' : 'person']);
-    if (other) targets.push(other.id);
+      [acting.accountId, acting.profileId, wide === 'partner' ? 'couple' : 'person']);
+    for (const r of rows) { targets.push(r.id); also.push(r); }
   }
   for (const blocker of targets) {
+    // A block set for another profile remembers where it came from: unblocking there lifts it too (В4).
     await q.query(
-      `insert into feture.block (blocker_profile_id, blocked_profile_id, acted_by) values ($1, $2, $3) on conflict do nothing`,
-      [blocker, target, acting.accountId]);
+      `insert into feture.block (blocker_profile_id, blocked_profile_id, acted_by, via_profile_id) values ($1, $2, $3, $4) on conflict do nothing`,
+      [blocker, target, acting.accountId, blocker === acting.profileId ? null : acting.profileId]);
     await cutTies(q, blocker, target);
   }
   // The blocked side is never told; a partner learns that the couple blocked someone.
   if (acting.kind === 'couple') await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: 'block' });
+  for (const c of also) if (c.partner && acting.kind === 'person') await enqueue(q, 'couple.changed', c.id, { for: c.partner, what: 'block' });
   return targets.length;
 }
 
@@ -102,11 +126,12 @@ const run = {
   async 'block.set'(q, { acting: a, input }) {
     const acting = need(a);
     if (!input.on) {
-      // Unblocking restores nothing: follows, access and requests stay ended.
-      await q.query(`delete from feture.block where blocker_profile_id = $1 and blocked_profile_id = $2`, [acting.profileId, input.profileId]);
+      // Unblocking restores nothing: follows, access and requests stay ended. A block this profile set for its couple goes
+      // with it (В4).
+      await q.query(`delete from feture.block where blocked_profile_id = $2 and (blocker_profile_id = $1 or via_profile_id = $1)`, [acting.profileId, input.profileId]);
       return { blocked: false };
     }
-    return { blocked: true, profiles: await blockProfile(q, acting, input.profileId, input.alsoFor) };
+    return { blocked: true, profiles: await blockProfile(q, acting, input.profileId, input.alsoFor, { keepCouple: input.keepCouple }) };
   },
 
   async 'blocks.list'(q, { acting: a }) {
