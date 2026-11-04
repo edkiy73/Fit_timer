@@ -15,6 +15,18 @@ export const staffCommands = {
   'staff.totpConfirm': { profile: false, write: true, ledger: false, input: z.strictObject({ code: factorCode }), rate: { kind: 'factor.check', max: 60, window: '1 hour' } },
   'staff.totpVerify': { profile: false, write: true, ledger: false, input: z.strictObject({ code: factorCode }), rate: { kind: 'factor.check', max: 60, window: '1 hour' } },
   'staff.totpReset': { profile: false, write: true, input: z.strictObject({ opId, handle: z.string().trim().min(1).max(40) }) },
+  // «Темы» (owner 05.11.2026): the interests catalog, edited in the staff area instead of migrations.
+  'staff.topics': { profile: false, write: false, input: z.strictObject({}) },
+  'staff.topicSave': {
+    profile: false, write: true,
+    input: z.strictObject({
+      opId, id: z.string().regex(/^[a-z][a-z0-9_-]{1,31}$/), create: z.boolean().default(false),
+      categoryId: z.string().regex(/^[a-z][a-z0-9_-]{1,31}$/),
+      ru: z.string().trim().min(1).max(40), en: z.string().trim().min(1).max(40),
+      descRu: z.string().trim().max(300).nullable().default(null), descEn: z.string().trim().max(300).nullable().default(null),
+      hidden: z.boolean(),
+    }),
+  },
   // «Сотрудники» (owner 05.11.2026): who has which role; only the owner reads it.
   'staff.team': { profile: false, write: false, input: z.strictObject({}) },
   'staff.grant': {
