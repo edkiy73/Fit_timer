@@ -209,7 +209,7 @@ export function ProfileHero({p,rel,inert,onOpen}:{p:PersonProfile,rel:Relation|n
  const src=list[i]?mediaSrc(list[i]):null;const city=cityOf(p,locale);
  return <div className="hero">
   {src?<><img className="mbg" src={src} alt="" aria-hidden="true" draggable={false}/><img src={src} alt={name} draggable={false}/></>
-   :p.kind==='couple'?<><div className="plate" style={plate(p.id)}/><div className="hero-pairav"><Av name={name} seed={p.id} size="xl" couple={coupleNames(name)}/></div></>
+   :p.kind==='couple'?<><div className="plate" style={plate(p.id)}/><div className="hero-pairav"><Av name={name} seed={p.id} size="xl" couple={coupleNames(name)} halves={p.members?.length===2?p.members.map(m=>({name:m.name||m.handle||'?',src:m.avatar??null})):undefined}/></div></>
    :<div className="plate" style={plate(p.id)}/>}
   <PhotoBars n={list.length} i={i} label={fill(t('fe.px.ph.n'),{i:i+1,n:list.length})} count/>
   {list.length>1&&<><button type="button" className="pc-zone l" aria-label={t('fe.px.ph.prev')} onClick={()=>setIx(Math.max(0,i-1))}/><button type="button" className="pc-zone r" aria-label={t('fe.px.ph.next')} onClick={()=>setIx(Math.min(list.length-1,i+1))}/></>}

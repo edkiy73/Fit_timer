@@ -76,6 +76,9 @@ test('the pair on both profiles, never across a block; the boot draws a couple a
     assert.deepEqual((await call('uc', c, { action: 'profile.get', profileId: pair })).profile.members.map(m => m.handle), ['alex']);
     // own profiles: the other one is marked own (no like / follow / write on the page)
     assert.equal((await call('ua', pair, { action: 'profile.get', profileId: a })).profile.own, true);
+    // The pair screen draws each partner's face (no photo here: the key is there, null).
+    const own = (await call('ua', pair, { action: 'couple.get' })).couple;
+    assert.deepEqual(own.members.map(m => [m.handle, m.avatar]), [['alex', null], ['kira', null]]);
     const boot = await call('ua', null, { action: 'session.bootstrap' });
     const card = boot.profiles.find(p => p.kind === 'couple');
     assert.deepEqual(card.halves.map(h => h.name).sort(), ['alex', 'kira']);
