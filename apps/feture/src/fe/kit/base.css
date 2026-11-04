@@ -538,14 +538,11 @@
 .v21 .ans-scale button{display:grid;place-items:center;padding:0;height:44px;border-radius:var(--r-s);background:var(--surf);box-shadow:inset 0 0 0 1px var(--line2);font-size:var(--fs-sm);font-weight:600;color:var(--mute);transition:background .12s,color .12s,box-shadow .12s}
 .v21 .ans-scale button.fill{background:color-mix(in srgb,var(--accent) 22%,var(--surf));box-shadow:none;color:var(--ink)}
 .v21 .ans-scale button.on{background:var(--accent);color:#fff}
-.v21 .ans-l{display:flex;justify-content:space-between;font-size:var(--fs-cap);color:var(--faint);padding:0 2px}
 .v21 .ans-marks{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
 .v21 .ans-m{display:flex;align-items:center;justify-content:center;gap:8px;min-height:46px;border-radius:var(--r-m);background:var(--surf);box-shadow:inset 0 0 0 1px var(--line2);font-size:var(--fs-body);font-weight:600}
 .v21 .ans-m svg{width:18px;height:18px;color:var(--mute)}
 .v21 .ans-m.on{background:var(--ink);color:var(--bg);box-shadow:none}.v21 .ans-m.on svg{color:var(--bg)}
 .v21 .ans-m.taboo.on{background:var(--danger);color:#fff}.v21 .ans-m.taboo.on svg{color:#fff}
-.v21 .ans-word{margin:4px 2px 0;min-height:40px;font-size:var(--fs-sm);line-height:1.45;color:var(--mute)}
-.v21 .ans-word b{color:var(--ink);font-size:var(--fs-body)}
 /* tests */
 .v21 .tests{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 .v21 .tcard{display:grid;align-content:start;min-width:0;border-radius:var(--r-l);background:var(--surf);border:1px solid var(--line);overflow:hidden;text-align:left}
@@ -1752,9 +1749,6 @@
 @keyframes jarBubFull{0%{transform:translateY(0);opacity:0}12%{opacity:1}85%{opacity:.75}100%{transform:translateY(-70px);opacity:0}}
 .v21 .jar .jd{max-width:100%;margin-top:-1px;font-size:var(--fs-cap);line-height:1.2;font-weight:550;color:var(--mute);overflow-wrap:anywhere}
 /* answer control: each level has its own word + one sentence; optional direction chips */
-.v21 .ans-word{display:grid;gap:2px}
-.v21 .ans-word b{font-size:var(--fs-body)}
-.v21 .ans-word span{color:var(--mute)}
 .v21 .ans-dir{display:grid;gap:8px;margin-top:6px;padding-top:12px;border-top:1px solid var(--line)}
 .v21 .ans-dt{margin:0;font-size:var(--fs-sm);font-weight:650;color:var(--ink)}
 .v21 .ans-dt small{font-weight:450;color:var(--faint);font-size:var(--fs-cap)}

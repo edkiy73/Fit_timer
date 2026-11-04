@@ -143,9 +143,8 @@ function InterestFields({limit,couple,v,setV,dir,setDir,vis,setVis}:{limit:boole
      {VIS.map(k=><Chip key={k} on={vis===k} onClick={()=>setVis(k)}>{t('fe.int.ed.vis.'+(k==='only'&&couple?'onlyUs':k))}</Chip>)}
     </div>{vis==='public'&&v==='hard'&&<Note className="mt8">{t('fe.int.ed.hardPublic')}</Note>}</Card></Group>
     <Group bare title={t(limit?'fe.int.ed.qLimit':'fe.int.ed.q')}><Card><div className="ans">
-     <AnswerScale value={v} onChange={setV} label={t('fe.int.ed.scale')} low={t('fe.int.ed.low')} high={t('fe.int.ed.high')}
+     <AnswerScale value={v} onChange={setV} label={t('fe.int.ed.scale')}
       marks={[{id:'discuss',label:t('fe.int.ed.discuss'),icon:MessageCircle},{id:'hard',label:t('fe.int.ed.hard'),icon:Ban,taboo:true}] as const}/>
-     <p className="ans-word" aria-live="polite">{v==null?t('fe.int.ed.pick'):n?<><b>{t('fe.int.ed.level',{n})}</b><span>{t('fe.int.ed.levelText')}</span></>:t(v==='hard'?'fe.int.ed.hardText':'fe.int.ed.discussText')}</p>
     </div></Card></Group>
  </>;
 }
