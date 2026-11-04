@@ -9,6 +9,7 @@ import { handleState } from './me.mjs';
 import { randomBytes } from 'node:crypto';
 import { sha256 } from '../hash.mjs';
 import { readAbout } from '../notify.mjs';
+import { closeAppeals, closeDisputes, closeReports } from '../reports.mjs';
 
 /** Slice E: couples (S1 §5). An account is in at most one couple; the couple is its own profile that starts empty.
  * Either partner stops it at once; restoring needs both within 30 days, then it is deleted (jobs.sweepExpiredCouples).
@@ -154,6 +155,10 @@ export async function deleteCouple(q, profileId, reason) {
   await q.query(
     `update feture.profile set state = 'deleted', restore_until = null, paused_at = null, handle = null, chosen_name = '', updated_at = now() where id = $1`, [profileId]);
   for (const m of members) await enqueue(q, 'couple.deleted', null, { profileId, for: m.account_id, reason });
+  // Nothing about the couple is left to decide: reports on its profile and its appeals close, disputes on its posts too.
+  await closeReports(q, 'profile', [profileId], 'unavailable');
+  await closeAppeals(q, [profileId]);
+  await closeDisputes(q, (await q.query(`select id from feture.post where owner_profile_id = $1`, [profileId])).map(r => r.id));
 }
 
 /** @type {Record<keyof typeof couplesCommands, Command['run']>} */

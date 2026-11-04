@@ -5,6 +5,7 @@ import { acceptsMention, popularScore, qaHidden } from '../sql-rules.mjs';
 import { fail, isUniqueViolation } from '../errors.mjs';
 import { alertStaff } from '../staff-alert.mjs';
 import { enqueue } from '../outbox.mjs';
+import { closeDisputes } from '../reports.mjs';
 import { closePending, needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
 import { avatarSrc, mediaDto } from '../media/assets.mjs';
 import { blockProfile } from './social.mjs';
@@ -307,16 +308,23 @@ export async function postFieldsOf(q, postId) {
   };
 }
 
-/** Deletes an own post (post.delete and the gallery selection): a couple's post, a removed one or one under open
- * reports is archived instead. @param {Q} q @param {Acting} acting @param {string} postId */
+/** Deletes an own post (post.delete and the gallery selection): a couple's post or one under open reports is archived
+ * instead; one moderators removed stays removed (so it can still be appealed) and only leaves the author's lists
+ * (`author_hidden`, audit item 4) — the answer is then 'removed'. @param {Q} q @param {Acting} acting @param {string} postId */
 export async function deletePost(q, acting, postId) {
   const [p] = await q.query(`select state, created_by from feture.post where id = $1 and owner_profile_id = $2 for update`, [postId, acting.profileId]);
   // A couple's draft is the partner's who wrote it (me.posts shows it only to them): the other partner cannot touch it.
   if (!p || (p.state === 'draft' && p.created_by !== acting.accountId)) fail(404, 'not_found');
   await closePending(q, `a.target_type = 'post' and a.target_id = $1`, [postId], 'cancelled', { by: acting.accountId, hooks: false });
-  // A post removed by moderation or under open reports is only hidden, so the evidence stays for staff (S4 §3).
+  if (p.state === 'removed') {
+    await q.query(`update feture.post set author_hidden = true, updated_at = now() where id = $1`, [postId]);
+    return 'removed';
+  }
+  // Out of sight either way: a «это я на фото» dispute on it has nothing left to decide.
+  await closeDisputes(q, [postId]);
+  // A post under open reports is only hidden, so the evidence stays for staff (S4 §3).
   const [{ reported }] = await q.query(`select exists (select 1 from feture.report where target_type = 'post' and target_id = $1 and state = 'open') reported`, [postId]);
-  if ((acting.kind === 'couple' && p.state !== 'draft') || p.state === 'removed' || reported) {
+  if ((acting.kind === 'couple' && p.state !== 'draft') || reported) {
     // A couple's post is hidden into the couple's archive, not destroyed by one partner (V21 «Скрыть совместную»); a
     // draft nobody else has seen is simply deleted.
     await q.query(`update feture.post set state = 'archived', updated_at = now() where id = $1`, [postId]);
@@ -828,7 +836,7 @@ const run = {
     const viewer = need(a);
     // Drafts of a couple are visible only to the partner who wrote them.
     const rows = await q.query(
-      `select p.*, true own from feture.post p where p.owner_profile_id = $1 and p.state <> 'archived'
+      `select p.*, true own from feture.post p where p.owner_profile_id = $1 and p.state <> 'archived' and not p.author_hidden
          and (p.state <> 'draft' or p.created_by = $2) order by coalesce(p.published_at, p.updated_at) desc limit 100`, [viewer.profileId, viewer.accountId]);
     const revisions = await q.query(
       `select r.id, r.post_id, r.created_at from feture.post_revision r join feture.post p on p.id = r.post_id where p.owner_profile_id = $1 and r.state = 'review'`, [viewer.profileId]);

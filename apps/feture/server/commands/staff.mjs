@@ -6,6 +6,7 @@ import { checkCode, confirmEnrol, factorState, removeFactor, startEnrol } from '
 import { passSignin } from '../signin.mjs';
 import { staffFactorRequired } from '../staff-factor-switch.mjs';
 import { pageInfo, plainRows, queuePageSql } from '../queue-page.mjs';
+import { staffOwn } from '../sql-rules.mjs';
 
 /** Media queue sort: the upload time, then the id (unique). */
 /** The journal reads newest first, always. */
@@ -109,7 +110,7 @@ const IN_USE = `(m.purpose not in ('post', 'avatar', 'private') or exists (
 /** @param {Q} q @param {string} accountId @param {string} assetId @param {{lock?: boolean, self?: boolean}} [opts] self: may be one's own (the owner) */
 async function reviewable(q, accountId, assetId, { lock = false, self = false } = {}) {
   const [a] = await q.query(
-    `select m.*, exists (select 1 from feture.profile_member pm where pm.profile_id = m.owner_profile_id and pm.account_id = $2) own,
+    `select m.*, ${staffOwn('m.owner_profile_id', '$2::uuid')} own,
        ${IN_USE} in_use
      from feture.media_asset m where m.id = $1 ${lock ? 'for update of m' : ''}`, [assetId, accountId]);
   if (!a) fail(404, 'not_found');
@@ -203,7 +204,7 @@ const run = {
        from feture.media_asset m left join feture.profile o on o.id = m.owner_profile_id
        where m.state = 'needs_review' and m.purpose <> 'verification'   -- selfies are decided in the age-check queue
          and ${IN_USE}
-         and not exists (select 1 from feture.profile_member pm where pm.profile_id = m.owner_profile_id and pm.account_id = $1::uuid)`,
+         and not ${staffOwn('m.owner_profile_id', '$1::uuid')}`,
       [ownerSelf(roles) ? null : account.id]); // the owner's queue includes their own media
     const rows = await q.query(sql, params);
     const page = pageInfo(rows, MEDIA_KEYS, input.limit);

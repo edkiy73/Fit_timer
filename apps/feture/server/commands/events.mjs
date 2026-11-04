@@ -8,7 +8,7 @@ import { closePending, needsPartner, partnerActed, registerApprovalKind, request
 import { journal, requireStaff } from './staff.mjs';
 import { mediaDto } from '../media/assets.mjs';
 import { ageOn, withFaces } from './faces.mjs';
-import { cancelledFor, listedEvent } from '../sql-rules.mjs';
+import { cancelledFor, listedEvent, staffOwn } from '../sql-rules.mjs';
 import { CREATED_KEYS, pageInfo, plainRows, queuePageSql } from '../queue-page.mjs';
 import { readAbout } from '../notify.mjs';
 
@@ -290,6 +290,18 @@ async function toEventDraft(q, e) {
     [e.organizer_profile_id, e.created_by, JSON.stringify(formOf(e))]);
   await q.query('delete from feture.event where id = $1', [e.id]);
   return /** @type {string} */ (d.id);
+}
+
+/** Events whose start passed while they waited for staff go back to drafts and the organizer is told; a change of a
+ * published event waiting for staff is dropped once the event is over (audit item 32; jobs.mjs). @param {Q} q */
+export async function releaseLateEvents(q) {
+  const late = await q.query(`select e.* from feture.event e where e.state = 'in_review' and e.starts_at <= now() order by e.starts_at limit 50 for update skip locked`);
+  for (const e of late) {
+    const draftId = await toEventDraft(q, e);
+    await enqueue(q, 'event.lateDraft', e.organizer_profile_id, { draftId });
+  }
+  await q.query(`update feture.event set pending_change = null where state = 'published' and pending_change is not null and ends_at <= now()`);
+  return late.length;
 }
 
 /** Events left in `pending_partner` with nothing waiting (closed before stage 3, or a race) go back to drafts (jobs.mjs).
@@ -721,8 +733,9 @@ const run = {
          e.requirements, e.questions, e.cover_asset_id, e.community_id, e.state, e.pending_change, e.created_at,
          json_build_object('id', o.id, 'kind', o.kind, 'handle', o.handle) organizer
        from feture.event e join feture.profile o on o.id = e.organizer_profile_id
-       where (e.state = 'in_review' or e.state = 'published' and e.pending_change is not null)
-         and not exists (select 1 from feture.profile_member m where m.profile_id = e.organizer_profile_id and m.account_id = $1)`, [account.id]);
+       -- not one whose start already passed (it goes back to drafts) nor a change of an event that is over (audit item 32)
+       where (e.state = 'in_review' and e.starts_at > now() or e.state = 'published' and e.pending_change is not null and e.ends_at > now())
+         and not ${staffOwn('e.organizer_profile_id', '$1::uuid')}`, [account.id]);
     const rows = await q.query(sql, params);
     return { items: plainRows(rows), ...pageInfo(rows, CREATED_KEYS, input.limit) };
   },
@@ -731,7 +744,7 @@ const run = {
     await requireStaff(q, account, ['owner', 'lead', 'moderator']);
     const [e] = await q.query('select * from feture.event where id = $1 for update', [input.eventId]);
     if (!e) fail(404, 'not_found');
-    const [{ own }] = await q.query('select exists (select 1 from feture.profile_member where profile_id = $1 and account_id = $2) own', [e.organizer_profile_id, account.id]);
+    const [{ own }] = await q.query(`select ${staffOwn('$1::uuid', '$2::uuid')} own`, [e.organizer_profile_id, account.id]);
     if (own) fail(403, 'forbidden');
     if (e.rev !== input.rev) fail(409, 'conflict', { rev: e.rev }); // staff decide on exactly what they saw
     const change = Object.fromEntries(Object.entries(e.pending_change ?? {}).filter(([k]) => Object.hasOwn(COLS, k)));

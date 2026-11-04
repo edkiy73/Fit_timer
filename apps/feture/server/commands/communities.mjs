@@ -1,11 +1,12 @@
 // @ts-check
 import { likePattern } from '../search.mjs';
-import { popularScore } from '../sql-rules.mjs';
+import { popularScore, staffOwn } from '../sql-rules.mjs';
 import { randomBytes } from 'node:crypto';
 import { requireUnrestricted } from '../profiles.mjs';
 import { communitiesCommands } from '../../contracts/communities.mjs';
 import { fail, isUniqueViolation } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
+import { closeDisputes } from '../reports.mjs';
 import { sha256 } from '../hash.mjs';
 import { needsPartner, partnerActed, registerApprovalKind, requestApproval } from '../approvals.mjs';
 import { journal, requireStaff } from './staff.mjs';
@@ -621,7 +622,10 @@ const run = {
     if (input.change === 'remove' && p.owner_profile_id === p.community_owner && me.role !== 'owner') fail(403, 'forbidden');
     const sets = { pin: 'pinned = true', unpin: 'pinned = false', excludePopular: 'popular_excluded = true', includePopular: 'popular_excluded = false', remove: `state = 'removed', removed_reason = 'host'` };
     await q.query(`update feture.post set ${sets[/** @type {keyof typeof sets} */ (input.change)]}, updated_at = now() where id = $1`, [p.id]);
-    if (input.change === 'remove') await enqueue(q, 'discussion.removed', p.owner_profile_id, { postId: p.id, communityId: p.community_id });
+    if (input.change === 'remove') {
+      await enqueue(q, 'discussion.removed', p.owner_profile_id, { postId: p.id, communityId: p.community_id });
+      await closeDisputes(q, [p.id]);
+    }
     return { change: input.change };
   },
 
@@ -633,8 +637,9 @@ const run = {
          (select to_jsonb(m) from feture.media_asset m where m.id = c.cover_asset_id) cover_asset,
          (select to_jsonb(m) from feture.media_asset m where m.id = case when jsonb_typeof(c.pending_change -> 'coverAssetId') = 'string' then (c.pending_change ->> 'coverAssetId')::uuid end) new_cover_asset
        from feture.community c
-       where (c.state = 'in_review' or c.pending_change is not null)
-         and not exists (select 1 from feture.profile_member m where m.profile_id = c.owner_profile_id and m.account_id = $1)`, [account.id]);
+       -- a change waits only on a published community: a hidden or closed one has nothing live to change (audit item 18)
+       where (c.state = 'in_review' or (c.state = 'published' and c.pending_change is not null))
+         and not ${staffOwn('c.owner_profile_id', '$1::uuid')}`, [account.id]);
     const rows = await q.query(sql, params);
     // The cover (current and the proposed one) comes straight in the item as staff see media, not through staff.mediaView:
     // a community cover is public content its owner proposes, so the look is not a private-material look and is not journalled.
@@ -651,7 +656,7 @@ const run = {
     await requireStaff(q, account, ['owner', 'lead', 'moderator']);
     const [c] = await q.query(`select * from feture.community where id = $1 for update`, [input.communityId]);
     if (!c) fail(404, 'not_found');
-    const [{ own }] = await q.query(`select exists (select 1 from feture.profile_member where profile_id = $1 and account_id = $2) own`, [c.owner_profile_id, account.id]);
+    const [{ own }] = await q.query(`select ${staffOwn('$1::uuid', '$2::uuid')} own`, [c.owner_profile_id, account.id]);
     if (own) fail(403, 'forbidden');
     // Staff decide on exactly what they saw: any edit since bumps rev.
     if (c.rev !== input.rev) fail(409, 'conflict', { rev: c.rev });
@@ -672,7 +677,7 @@ const run = {
           ? `update feture.community set state = 'published', published_at = now(), reject_reason = null where id = $1`
           : `update feture.community set state = 'rejected', reject_reason = $2, rejected_rev = rev where id = $1`,
         input.decision === 'approve' ? [c.id] : [c.id, input.reason]);
-    } else if (c.pending_change) {
+    } else if (c.pending_change && c.state === 'published') {
       if (input.decision === 'approve') {
         const keys = Object.keys(c.pending_change).filter(k => Object.hasOwn(COLS, k));
         if (keys.length) {

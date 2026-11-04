@@ -128,6 +128,7 @@ const run = {
       period: { from: input.from, to: input.to },
       reports: await by(
         `select reason, count(*)::int received, count(*) filter (where resolution = 'removed')::int removed, count(*) filter (where resolution = 'kept')::int kept,
+           count(*) filter (where resolution = 'unavailable')::int unavailable,
            percentile_cont(0.5) within group (order by extract(epoch from resolved_at - created_at) / 3600) filter (where resolved_at is not null) median_hours
          from feture.report where created_at >= $1::date and created_at < $2::date + 1 group by reason order by reason`),
       notices: await by(
@@ -141,7 +142,8 @@ const run = {
            and action ~ '^(report|media|revision|sanction|restrict|community|event|notice|appeal|dispute)[.]' and action not like '%.view'
          group by action order by action`),
       appeals: await by(
-        `select target_type, count(*)::int received, count(*) filter (where state = 'granted')::int granted, count(*) filter (where state = 'denied')::int denied
+        `select target_type, count(*)::int received, count(*) filter (where state = 'granted')::int granted, count(*) filter (where state = 'denied')::int denied,
+           count(*) filter (where state = 'closed')::int closed
          from feture.appeal where created_at >= $1::date and created_at < $2::date + 1 group by target_type order by target_type`),
     };
   },

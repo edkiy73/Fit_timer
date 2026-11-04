@@ -43,6 +43,8 @@ const TYPES = /** @type {Record<string, {type: string, actor?: string, object?: 
   'discussion.removed': { type: 'discussionRemoved', object: ['post', 'postId'] },
   'event.approve': { type: 'eventPublished', object: ['event', 'eventId'] },
   'event.reject': { type: 'eventRejected', object: ['event', 'eventId'] },
+  // Its time passed while it waited for staff: it is a draft again (audit item 32). The event row is gone; the draft opens.
+  'event.lateDraft': { type: 'eventLate' },
   'event.hide': { type: 'eventHidden', object: ['event', 'eventId'] },
   'event.applicationApproved': { type: 'eventApplicationApproved', object: ['event', 'eventId'] },
   'event.applicationDeclined': { type: 'eventApplicationDeclined', object: ['event', 'eventId'] },
@@ -97,7 +99,7 @@ export const SILENT_TOPICS = Object.freeze(['access.revoked', 'access.declined',
  * device family and the edge network's «city|CC», never anything a person typed). `postId`, `replyId`, `communityId`:
  * what the destination resolver needs (a reply to highlight, the community of a removed discussion). */
 const KEEP = ['device', 'place', 'what', 'change', 'reason', 'state', 'kind', 'resolution', 'rule', 'targetType', 'targetId', 'answer', 'outcome', 'changes', 'approves', 'ticketId', 'days', 'until', 'target', 'purpose', 'count', 'role', 'grant',
-  'postId', 'replyId', 'communityId', 'eventId'];
+  'postId', 'replyId', 'communityId', 'eventId', 'draftId'];
 /** Results of a decision about the person's own report, claim or material (moderation, hosts): they reach the person even
  * when the material is gone or hidden since — the right to hear one's own decision is not the right to open the
  * material. The row keeps only the safe result (codes, ids); the inbox opens the object only while it is still
