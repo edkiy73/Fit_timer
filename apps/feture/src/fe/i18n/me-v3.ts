@@ -1,4 +1,4 @@
-/** Copy of «Я» v3 (src/fe/me-v3.tsx): two zones of the profile and the account settings behind the gear; «наш» forms for a couple. */
+/** Copy of «Я» v3 (src/fe/me-v3.tsx): three tabs (Профиль · Приватность · Моё/Наше), the account settings behind the gear; «наш» forms for a couple. */
 export const ru = {
   'fe.v3.tab.profile': 'Профиль',
   'fe.v3.tab.privacy': 'Приватность',

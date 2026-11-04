@@ -22,8 +22,8 @@ import {MeSkel,PhotosBlock} from './me';
  * then two zones of the acting profile — «Профиль» (what others see) and «Приватность» (who reaches it). The account's
  * own settings are behind the gear in the header (owner: they are not the profile's, so not a tab). Every row opens an
  * existing screen; nothing here owns data of its own. The zone sits in `?tab=`. */
-type Tab='profile'|'privacy';
-const TABS:Tab[]=['profile','privacy'];
+type Tab='profile'|'privacy'|'mine';
+const TABS:Tab[]=['profile','privacy','mine'];
 const photoRes=z.object({ok:z.literal(true),state:z.enum(['none','pending','approved','rejected'])}).passthrough();
 const accessIn=z.object({ok:z.literal(true),items:z.array(z.unknown())});
 
@@ -64,9 +64,10 @@ export function MeV3Screen(){
    {todo>0&&<Group><Card list><Row className="me-todo" icon={Inbox} tone="l" title={t('fe.mx.todo')} badge={todo} onClick={()=>navigate('/n/inbox')}/></Card></Group>}
    {/* every block of the screen is a Group, so they all stand 24 apart (the tabs too) */}
    <Group><Seg value={tab} label={t('fe.mx.whose')} onChange={v=>setParams(v==='profile'?{}:{tab:v},{replace:true})}
-    options={TABS.map(id=>({id,label:t('fe.v3.tab.'+id),...(id==='privacy'&&waiting?.reqs?{n:waiting.reqs}:{})}))}/></Group>
+    options={TABS.map(id=>({id,label:id==='mine'?t(cp?'fe.v3.mineUs':'fe.v3.mine'):t('fe.v3.tab.'+id),...(id==='privacy'&&waiting?.reqs?{n:waiting.reqs}:{})}))}/></Group>
    {tab==='profile'?<ProfileZone p={p} settings={settings} load={load} cp={cp} links={waiting?.links}/>
-    :<PrivacyZone privOn={settings?settings.privateOn!==false:undefined} discover={settings?.discoverMode} cp={cp} reqs={waiting?.reqs}/>}
+    :tab==='privacy'?<PrivacyZone privOn={settings?settings.privateOn!==false:undefined} discover={settings?.discoverMode} cp={cp} reqs={waiting?.reqs}/>
+    :<MineZone cp={cp}/>}
   </View>
   {switching&&<ActAsSheet onClose={()=>setSwitching(false)}/>}
  </>;
@@ -75,7 +76,7 @@ export function MeV3Screen(){
 type MeData=ReturnType<typeof useMe>;
 
 /** «Профиль» (owner 05.11.2026): «Как видят», the photos, then one list in the order the public profile shows it —
- * Основное · Обо мне · Данные · Связи · Интересы · Галерея · Моё; each part edits on its own screen, no «Редактировать». */
+ * Основное · Обо мне · Данные · Связи · Интересы · Галерея; each part edits on its own screen, no «Редактировать». */
 function ProfileZone({p,settings,load,cp,links}:{p:MeData['p'],settings:MeData['settings'],load:()=>void,cp:boolean,links:number|undefined}){
  const {t}=useI18n();const navigate=useNavigate();const go=(to:string)=>()=>navigate(to);
  return <>
@@ -90,7 +91,6 @@ function ProfileZone({p,settings,load,cp,links}:{p:MeData['p'],settings:MeData['
    <Row icon={Link2} title={t('fe.v3.links')} badge={links||undefined} onClick={go('/n/me/links')}/>
    <Row icon={Sparkles} title={t('fe.v3.interests')} onClick={go('/n/me/interests')}/>
    <Row icon={Images} title={t('fe.mx.gal')} onClick={go('/n/me/new/gallery')}/>
-   <Row icon={Bookmark} title={t(cp?'fe.v3.mineUs':'fe.v3.mine')} onClick={go('/n/me/v3/mine')}/>
   </Card></Group>
   <PairEntry plain/>
  </>;
@@ -146,22 +146,15 @@ function AccountZone(){
  </>;
 }
 
-/** «Моё»: one list of what this profile has done — no tabs inside tabs, no counters (they counted one page only). */
-export function MeV3MineScreen(){
- const {acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const go=(to:string)=>()=>navigate(to);
- if(!acting)return <Skel kind="card" rows={3}/>;
- const cp=acting.kind==='couple';
- return <>
-  <Bar title={t(cp?'fe.v3.mineUs':'fe.v3.mine')} back="/n/me/v3"/>
-  <View>
-   <Card list>
-    <Row icon={Newspaper} title={t(cp?'fe.v3.us.posts':'fe.mx.mine.posts')} onClick={go('/n/me/posts')}/>
-    <Row icon={Calendar} title={t(cp?'fe.v3.us.events':'fe.mx.mine.events')} onClick={go('/n/me/events')}/>
-    <Row icon={Globe} title={t(cp?'fe.v3.us.communities':'fe.m2.communities')} onClick={go('/n/me/communities')}/>
-    <Row icon={Users} title={t('fe.mx.mine.follows')} onClick={go('/n/me/follows?tab=followers')}/>
-    <Row icon={Bookmark} title={t('fe.mx.mine.saved')} onClick={go('/n/me/saved')}/>
-   </Card>
-  </View>
- </>;
+/** «Моё» / «Наше» — the third tab: one list of what this profile has done (no tabs inside, no counters: they counted
+ * one page only). */
+function MineZone({cp}:{cp:boolean}){
+ const {t}=useI18n();const navigate=useNavigate();const go=(to:string)=>()=>navigate(to);
+ return <Group><Card list>
+  <Row icon={Newspaper} title={t(cp?'fe.v3.us.posts':'fe.mx.mine.posts')} onClick={go('/n/me/posts')}/>
+  <Row icon={Calendar} title={t(cp?'fe.v3.us.events':'fe.mx.mine.events')} onClick={go('/n/me/events')}/>
+  <Row icon={Globe} title={t(cp?'fe.v3.us.communities':'fe.m2.communities')} onClick={go('/n/me/communities')}/>
+  <Row icon={Users} title={t('fe.mx.mine.follows')} onClick={go('/n/me/follows?tab=followers')}/>
+  <Row icon={Bookmark} title={t('fe.mx.mine.saved')} onClick={go('/n/me/saved')}/>
+ </Card></Group>;
 }
-
