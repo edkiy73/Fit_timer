@@ -449,6 +449,11 @@
 .v21 .grp.dim{opacity:.4;pointer-events:none}
 .v21 .sheet .grp:first-child{margin-top:4px}
 .v21 .sheet .card{background:var(--surf)}
+/* `k-step`: a sheet that is one step of several (answering topics in turn) slides its head and body in on every step —
+   from the right going on (`fwd`), from the left going back (`back`); the footer stays put */
+@keyframes kStepFwd{from{opacity:0;transform:translateX(28px)}}@keyframes kStepBack{from{opacity:0;transform:translateX(-28px)}}
+.v21 .sheet.k-step.fwd :is(.sh-ht,.sh-b){animation:kStepFwd .3s var(--ease) both}.v21 .sheet.k-step.back :is(.sh-ht,.sh-b){animation:kStepBack .3s var(--ease) both}
+@media (prefers-reduced-motion:reduce){.v21 .sheet.k-step :is(.sh-ht,.sh-b){animation:none}}
 /* a form in a sheet has no plate of its own (Card `form`: fields sit on the page, 16 apart) — the sheet is the surface */
 .v21 .sheet .card.form-card{background:none;border-color:transparent;box-shadow:none;padding:0}
 .v21 .sheet.full{top:0;max-height:none;border-radius:0}
@@ -2889,6 +2894,7 @@
 .v21 .sc{--fw:min(max(36px,calc((100% - 8px) * var(--v) / 10)),calc(100% - 108px))}.v21 .sc.full{--fw:calc(100% - 8px)}
 .v21 .sc-f{position:absolute;left:4px;top:4px;bottom:4px;width:var(--fw);transition:width .32s var(--ease);border-radius:var(--r-full);background:linear-gradient(90deg,var(--fill0),color-mix(in srgb,var(--accent) var(--fa),transparent));animation:capGrow 1.1s var(--ease) backwards;animation-delay:var(--d,0s)}
 /* `backwards`, not `both`: once grown the fill lets go of its width, so a new level eases instead of jumping */
+.v21 .jars.still .sc-f{animation:none}
 /* safe-t: ok — fills its own parent box, not the screen top */.v21 .sc-l{position:absolute;inset:0;display:flex;align-items:center;gap:6px;padding:0 14px 0 16px;font-size:var(--fs-sm);font-weight:650;color:var(--ink);z-index:2;pointer-events:none}
 .v21 .sc-l.c{justify-content:center;color:var(--mute);font-weight:650}
 .v21 .sc-l.c svg{width:16px;height:16px}
