@@ -198,7 +198,7 @@ export function AnswerScale<M extends string,L extends string=string>({value,onC
    role="radio" aria-checked={on(k)&&n===k} onClick={()=>{if(id&&Date.now()-opened.current<450)return;act(k);}}>{k}</button>)}
  </div>;
  return <>
-  {lanes&&onLane?<div className={'ans-rows'+(shown?' busy':'')+(hot?' hot':'')}
+  {lanes&&onLane?<div className={'ans-rows'+(shown?' busy':'')+(hot||(!shown&&value!=null&&typeof value!=='number')?' hot':'')}
     onPointerMove={e=>{if(!drag)return;const moved=drag.moved||Math.abs(e.clientX-drag.x)>8||Math.abs(e.clientY-drag.y)>8;setDrag({...drag,moved,over:cellAt(e.clientX,e.clientY,drag.id)});}}
     onPointerUp={e=>{if(!drag)return;const k=cellAt(e.clientX,e.clientY,drag.id);if(drag.moved&&k)pick(k,drag.id);else setDrag(null);}}
     onPointerCancel={()=>setDrag(null)}
@@ -214,8 +214,8 @@ export function AnswerScale<M extends string,L extends string=string>({value,onC
         onClick={e=>{if(e.detail===0)setOpen(l.id);}}/>}
     </div>;})}
   </div>:scale(label,()=>true,k=>onChange(k))}
-  {/* one thing is bright at a time: an open lane fades both marks; a mark pointed at fades the other one and the lanes */}
-  <div className="ans-marks">{marks.map(m=><button key={m.id} type="button" className={'ans-m'+(m.taboo?' taboo':'')+(m.soft?' soft':'')+(value===m.id?' on':'')+((hot?hot!==m.id:!!open)?' dim':'')} aria-pressed={value===m.id}
+  {/* one thing is bright at a time: what the pointer is on, else what is chosen (nothing chosen — all bright) */}
+  <div className="ans-marks">{marks.map(m=><button key={m.id} type="button" className={'ans-m'+(m.taboo?' taboo':'')+(m.soft?' soft':'')+(value===m.id?' on':'')+((hot?hot!==m.id:open?true:value!=null&&value!==m.id)?' dim':'')} aria-pressed={value===m.id}
    onPointerEnter={e=>{if(e.pointerType==='mouse'){setOpen(null);setHot(m.id);}}} onPointerLeave={()=>setHot(null)}
    onClick={()=>{setOpen(null);onChange(m.id);}}><m.icon/><span>{m.label}</span></button>)}</div>
  </>;
