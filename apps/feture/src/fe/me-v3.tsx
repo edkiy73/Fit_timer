@@ -9,7 +9,7 @@ import {BellButton,countsRes} from './inbox';
 import {StaffEntry} from './staff';
 import {waitingCount} from './links';
 import {linksMineRes} from './profile-extras';
-import {ActAsSheet} from './couple';
+import {ActAsSheet,activeCouple} from './couple';
 import {PairEntry} from './pair';
 import {NameBadges} from './faces';
 import {usePremiumStatus} from './account-extra';
@@ -47,7 +47,7 @@ export function MeV3Screen(){
  useEffect(()=>onStatusAnswered(pull),[pull]);
  useLive(['counts','decide','notify'],pull);
  if(state.status!=='ready'||!acting)return null;
- const couple=state.boot.profiles.find(x=>x.kind==='couple'&&x.state!=='deleted');const cp=acting.kind==='couple';
+ const couple=activeCouple(state.boot.profiles);const cp=acting.kind==='couple';
  const name=p?.name||acting.name||acting.handle||'?';
  const avatarSrc=p?(p.photos[0]?.src?.thumb??p.photos[0]?.src?.card??p.avatar?.src?.thumb):acting.avatar;
  const refresh=()=>{pull();load();};
