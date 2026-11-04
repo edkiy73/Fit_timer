@@ -46,6 +46,7 @@ const TYPES = /** @type {Record<string, {type: string, actor?: string, object?: 
   // Its time passed while it waited for staff: it is a draft again (audit item 32). The event row is gone; the draft opens.
   'event.lateDraft': { type: 'eventLate' },
   'event.hide': { type: 'eventHidden', object: ['event', 'eventId'] },
+  'community.ownerChanged': { type: 'communityOwner', object: ['community', 'communityId'] },
   'event.applicationApproved': { type: 'eventApplicationApproved', object: ['event', 'eventId'] },
   'event.applicationDeclined': { type: 'eventApplicationDeclined', object: ['event', 'eventId'] },
   'profile.suspended': { type: 'profileSuspended' },
@@ -99,7 +100,7 @@ export const SILENT_TOPICS = Object.freeze(['access.revoked', 'access.declined',
 /** Payload fields kept in `data` (codes and ids only, never free text; `device` / `place` of a new sign-in are Core's
  * device family and the edge network's «city|CC», never anything a person typed). `postId`, `replyId`, `communityId`:
  * what the destination resolver needs (a reply to highlight, the community of a removed discussion). */
-const KEEP = ['scope', 'device', 'place', 'what', 'change', 'reason', 'state', 'kind', 'resolution', 'rule', 'targetType', 'targetId', 'answer', 'outcome', 'changes', 'approves', 'ticketId', 'days', 'until', 'target', 'purpose', 'count', 'role', 'grant',
+const KEEP = ['why', 'scope', 'device', 'place', 'what', 'change', 'reason', 'state', 'kind', 'resolution', 'rule', 'targetType', 'targetId', 'answer', 'outcome', 'changes', 'approves', 'ticketId', 'days', 'until', 'target', 'purpose', 'count', 'role', 'grant',
   'postId', 'replyId', 'communityId', 'eventId', 'draftId'];
 /** Results of a decision about the person's own report, claim or material (moderation, hosts): they reach the person even
  * when the material is gone or hidden since — the right to hear one's own decision is not the right to open the
@@ -207,7 +208,7 @@ async function recipientsOf(q, profileId, payload) {
  * `admittedOnly`: the organizer's own words go only to admitted people. `saved`: also those who saved it and did not
  * answer «Не иду» — a cancel reaches everyone who still sees the cancelled event (sql-rules.mjs cancelledFor).
  * @param {Q} q @param {string} eventId @param {boolean} admittedOnly @param {boolean} [saved] */
-async function eventFollowers(q, eventId, admittedOnly, saved = false) {
+async function eventFollowers(q, eventId, admittedOnly, saved = false, seeing = false) {
   const rows = await q.query(
     `select distinct pm.account_id, x.profile_id from (
        select r.profile_id from feture.event_rsvp r join feture.event e on e.id = r.event_id
@@ -219,7 +220,8 @@ async function eventFollowers(q, eventId, admittedOnly, saved = false) {
        select s.profile_id from feture.saved_item s
        where $3 and s.kind = 'event' and s.target_id = $1::text
          and not exists (select 1 from feture.event_rsvp r where r.event_id = $1 and r.profile_id = s.profile_id and r.status = 'not_going')) x
-     join feture.profile_member pm on pm.profile_id = x.profile_id and pm.state = 'active'`, [eventId, admittedOnly, saved]);
+     join feture.profile_member pm on pm.profile_id = x.profile_id and pm.state = 'active'
+     where not $4 or exists (select 1 from feture.event e where e.id = $1 and feture.event_visible(e, x.profile_id, pm.account_id))`, [eventId, admittedOnly, saved, seeing]);
   return rows.map(r => ({ account: r.account_id, profile: r.profile_id }));
 }
 
@@ -340,7 +342,7 @@ export function notifyHandlers(db, emit = () => {}) {
   };
   // Event updates go to the people following the event, not to the organizer the item is addressed to.
   for (const [topic, type, admittedOnly] of /** @type {const} */ ([['event.cancelled', 'eventCancelled', false], ['event.changed', 'eventChanged', false],
-    ['event.announcement', 'eventAnnouncement', true], ['event.reminder', 'eventReminder', true]])) {
+    ['event.announcement', 'eventAnnouncement', true], ['event.reminder', 'eventReminder', true], ['event.unavailable', 'eventUnavailable', false]])) {
     handlers[topic] = async item => {
       const p = /** @type {any} */ (item.payload);
       if (topic === 'event.reminder') {
@@ -349,17 +351,36 @@ export function notifyHandlers(db, emit = () => {}) {
         if (!e) return;
       }
       // An event cancelled because its organizer deleted the account names nobody.
-      await tx(async (q, out) => write(q, item, { type, actor: p.organizerGone ? null : item.profile_id, objectType: 'event', objectId: p.eventId, data: pick(p) }, await eventFollowers(q, p.eventId, admittedOnly, topic === 'event.cancelled'), out));
+      // «Отменено» and «недоступно» reach everyone who followed it; the rest only people who still see the event (audit 35).
+      const gone = topic === 'event.cancelled' || topic === 'event.unavailable';
+      await tx(async (q, out) => write(q, item, { type, actor: p.organizerGone || topic === 'event.unavailable' ? null : item.profile_id, objectType: 'event', objectId: p.eventId, data: pick(p) },
+        await eventFollowers(q, p.eventId, admittedOnly, gone, !gone), out));
     };
   }
   // A community closed because its owner deleted the account: members are told, nobody is named.
-  handlers['community.closed'] = async item => {
+  // Closed by its owner, or with the owner's account; or hidden by staff («больше недоступно»): members are told, and for
+  // an owner's close also people whose request was waiting (audit items 14, 33). Nobody is named.
+  for (const [topic, type] of /** @type {const} */ ([['community.closed', 'communityClosed'], ['community.unavailable', 'communityUnavailable']])) {
+    handlers[topic] = async item => {
+      const p = /** @type {any} */ (item.payload);
+      await tx(async (q, out) => {
+        const rows = await q.query(
+          `select distinct pm.account_id, x.profile_id from (
+             select cm.profile_id from feture.community_member cm where cm.community_id = $1 and cm.state = 'active' and cm.profile_id <> $2
+             union select unnest($3::uuid[])) x
+           join feture.profile_member pm on pm.profile_id = x.profile_id and pm.state = 'active'`, [p.communityId, item.profile_id, Array.isArray(p.waiting) ? p.waiting : []]);
+        await write(q, item, { type, actor: null, objectType: 'community', objectId: p.communityId, data: pick(p) }, rows.map(r => ({ account: r.account_id, profile: r.profile_id })), out);
+      });
+    };
+  }
+  // The rules changed (audit item 39): members other than whoever changed them.
+  handlers['community.rulesChanged'] = async item => {
     const p = /** @type {any} */ (item.payload);
     await tx(async (q, out) => {
       const rows = await q.query(
         `select pm.account_id, cm.profile_id from feture.community_member cm join feture.profile_member pm on pm.profile_id = cm.profile_id and pm.state = 'active'
-         where cm.community_id = $1 and cm.state = 'active' and cm.profile_id <> $2`, [p.communityId, item.profile_id]);
-      await write(q, item, { type: 'communityClosed', actor: null, objectType: 'community', objectId: p.communityId }, rows.map(r => ({ account: r.account_id, profile: r.profile_id })), out);
+         where cm.community_id = $1 and cm.state = 'active' and pm.account_id <> $2 and not cm.muted`, [p.communityId, p.by]);
+      await write(q, item, { type: 'communityRules', actor: null, objectType: 'community', objectId: p.communityId }, rows.map(r => ({ account: r.account_id, profile: r.profile_id })), out);
     });
   };
   // Chat messages make no inbox row, only a push to the members who did not mute the conversation.

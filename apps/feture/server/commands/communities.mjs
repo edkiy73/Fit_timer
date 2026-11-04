@@ -6,9 +6,10 @@ import { requireUnrestricted } from '../profiles.mjs';
 import { communitiesCommands } from '../../contracts/communities.mjs';
 import { fail, isUniqueViolation } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
-import { closeDisputes } from '../reports.mjs';
+import { closeDisputes, closeReports } from '../reports.mjs';
 import { sha256 } from '../hash.mjs';
-import { needsPartner, partnerActed, registerApprovalKind, requestApproval } from '../approvals.mjs';
+import { closePending, needsPartner, partnerActed, registerApprovalKind, requestApproval } from '../approvals.mjs';
+import { cancelEvent, releaseCommunityEvents } from './events.mjs';
 import { journal, requireStaff } from './staff.mjs';
 import { mediaDto } from '../media/assets.mjs';
 import { CREATED_KEYS, pageInfo, plainRows, queuePageSql } from '../queue-page.mjs';
@@ -174,6 +175,59 @@ async function createCommunity(q, ownerProfileId, accountId, f) {
   return { id: c.id, state: 'in_review' };
 }
 
+/** Closes a community — one path for every reason (audit items 13, 14, 15, 33): `closed` by its owner, `gone` with its
+ * owner's account or couple, `hidden` by staff. Its future events are cancelled (any organizer; «Событие отменено:
+ * сообщество закрыто»), events not yet published go back to drafts without it, requests and waiting approvals close,
+ * a change waiting for staff goes; members (and people waiting on a request, for `closed`) are told, nobody named.
+ * @param {Q} q @param {string} communityId @param {'closed' | 'gone' | 'hidden'} mode @param {{reason?: string | null}} [o] */
+export async function closeCommunity(q, communityId, mode, { reason = null } = {}) {
+  const [c] = await q.query(
+    `update feture.community set state = $2, reject_reason = case when $2 = 'hidden' then $3 else reject_reason end, pending_change = null, updated_at = now()
+     where id = $1 and state <> 'deleted' returning id, owner_profile_id`, [communityId, mode === 'hidden' ? 'hidden' : 'deleted', reason]);
+  if (!c) return false;
+  const events = await q.query(`select * from feture.event where community_id = $1 and state = 'published' and ends_at > now() for update`, [communityId]);
+  for (const e of events) await cancelEvent(q, e, { why: 'community_closed' });
+  await releaseCommunityEvents(q, communityId);
+  const waiting = await q.query(`update feture.community_request set state = 'withdrawn', decided_at = now(), rev = rev + 1 where community_id = $1 and state = 'pending' returning profile_id`, [communityId]);
+  await closePending(q, `a.kind like 'community.%' and a.target_id = $1`, [communityId], 'stale', { hooks: false });
+  if (mode === 'hidden') await enqueue(q, 'community.unavailable', c.owner_profile_id, { communityId });
+  else await enqueue(q, 'community.closed', c.owner_profile_id, { communityId, ...(mode === 'gone' ? { organizerGone: true } : { why: 'owner', waiting: waiting.map(w => w.profile_id) }) });
+  if (mode !== 'hidden') await closeReports(q, 'community', [communityId], 'unavailable');
+  return true;
+}
+
+/** Hands a community to one of its hosts (audit item 14): the host becomes the owner, the old owner a host (В12) — or
+ * leaves, when it is going away — and the cover goes with the community. @param {Q} q @param {string} communityId
+ * @param {string} from @param {string} to @param {{leave?: boolean}} [o] */
+export async function transferCommunity(q, communityId, from, to, { leave = false } = {}) {
+  const [c] = await q.query(`update feture.community set owner_profile_id = $2, updated_at = now() where id = $1 returning cover_asset_id`, [communityId, to]);
+  await q.query(`update feture.community_member set role = 'owner' where community_id = $1 and profile_id = $2`, [communityId, to]);
+  await q.query(`update feture.community_member set role = $3, state = case when $4 then 'left' else state end where community_id = $1 and profile_id = $2`,
+    [communityId, from, leave ? 'member' : 'host', leave]);
+  // The cover is the community's: the new owner manages it (it was the old owner's file).
+  if (c.cover_asset_id) await q.query(`update feture.media_asset set owner_profile_id = $2 where id = $1`, [c.cover_asset_id, to]);
+  await enqueue(q, 'community.ownerChanged', to, { communityId });
+}
+
+/** What a profile that is going away owns (an account or a couple deleted): each community goes to its longest-serving
+ * host who is not one of the leaving accounts, or closes when there is none; its future events are cancelled; events
+ * nobody saw yet go (audit items 13, 14). @param {Q} q @param {string} owner @param {string[]} leaving accounts */
+export async function closeOwned(q, owner, leaving) {
+  for (const c of await q.query(`select id from feture.community where owner_profile_id = $1 and state <> 'deleted'`, [owner])) {
+    const [host] = await q.query(
+      `select cm.profile_id from feture.community_member cm join feture.profile p on p.id = cm.profile_id and p.state = 'active'
+       where cm.community_id = $1 and cm.state = 'active' and cm.role = 'host'
+         and not exists (select 1 from feture.profile_member m where m.profile_id = cm.profile_id and m.account_id = any($2) and m.state = 'active')
+       order by cm.joined_at, cm.profile_id limit 1`, [c.id, leaving]);
+    if (host) await transferCommunity(q, c.id, owner, host.profile_id, { leave: true });
+    else await closeCommunity(q, c.id, 'gone');
+  }
+  for (const e of await q.query(`select * from feture.event where organizer_profile_id = $1 and state = 'published' and ends_at > now() for update`, [owner])) {
+    await cancelEvent(q, e, { why: 'organizer_gone' });
+  }
+  await q.query(`delete from feture.event where organizer_profile_id = $1 and state in ('pending_partner', 'in_review', 'rejected')`, [owner]);
+}
+
 /** Membership now. The hosts hear about new members of an open community in one daily summary (jobs.mjs
  * sweepCommunityJoins reads `joined_at`), never one by one. @param {Q} q @param {string} communityId @param {string} profileId */
 async function joinNow(q, communityId, profileId) {
@@ -320,6 +374,11 @@ const run = {
       await q.query(`update feture.community set pending_change = coalesce(pending_change, '{}'::jsonb) || $2::jsonb, rev = rev + 1 where id = $1`, [c.id, JSON.stringify(later)]);
       await enqueue(q, 'moderation.community', c.owner_profile_id, { communityId: c.id, change: true });
     }
+    // Members hear that the rules changed (audit item 39); the order of the points does not count as a change.
+    const sorted = (/** @type {unknown} */ r) => JSON.stringify([...(Array.isArray(r) ? r : [])].map(String).sort());
+    if (c.state === 'published' && 'rules' in now && sorted(now.rules) !== sorted(c.rules)) {
+      await enqueue(q, 'community.rulesChanged', c.owner_profile_id, { communityId: c.id, by: acting.accountId });
+    }
     const [{ rev }] = await q.query('select rev from feture.community where id = $1', [c.id]);
     return { rev, review: Object.keys(later) };
   },
@@ -369,6 +428,8 @@ const run = {
       community: {
         id: c.id, name: c.name, description: c.description, topics: c.topics, privacy: c.privacy, joinQuestion: c.privacy === 'open' ? null : c.join_question,
         rules: c.rules, placeId: c.place_id, plate: c.plate, cover, members: counts.members, hosts,
+        // Its owner is a couple on pause (audit item 13): it stays open, marked so.
+        ownerPaused: (await q.query(`select state = 'paused' p from feture.profile where id = $1`, [c.owner_profile_id]))[0]?.p ?? false,
         lastTalkAt: iso(pulse.last_talk_at), nextEventAt: iso(pulse.next_event_at),
         me: m ? { role: m.role, state: m.state, listed: m.listed, readOnly: m.read_only, muted: m.muted } : null,
         request: req?.state === 'pending' ? { id: req.id, at: iso(req.created_at) } : null,
@@ -517,6 +578,28 @@ const run = {
     }
     await enqueue(q, 'community.member', input.profileId, { communityId: input.communityId, change: input.change });
     return { change: input.change };
+  },
+
+  async 'community.transfer'(q, { acting: a, input }) {
+    const acting = need(a);
+    await requireHost(q, input.communityId, acting, 'owner');
+    const t = await membership(q, input.communityId, input.profileId);
+    // Only to a host who is there now; the old owner stays as a host (В12).
+    if (!t || t.state !== 'active' || t.role !== 'host') fail(422, 'rule_violation', { rule: 'not_a_host' });
+    const [c] = await q.query(`select state from feture.community where id = $1 for update`, [input.communityId]);
+    if (c.state === 'hidden') fail(409, 'conflict', { rule: 'community_hidden' });
+    await transferCommunity(q, input.communityId, acting.profileId, input.profileId);
+    return { owner: input.profileId };
+  },
+
+  async 'community.close'(q, { acting: a, input }) {
+    const acting = need(a);
+    await requireHost(q, input.communityId, acting, 'owner');
+    const [c] = await q.query(`select state from feture.community where id = $1 for update`, [input.communityId]);
+    // Hidden by staff it is not closed by its owner: that would be a way around the decision (and its appeal).
+    if (c.state === 'hidden') fail(409, 'conflict', { rule: 'community_hidden' });
+    await closeCommunity(q, input.communityId, 'closed');
+    return { state: 'closed' };
   },
 
   async 'community.self'(q, { acting: a, input }) {

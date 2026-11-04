@@ -187,6 +187,16 @@ const RAW = /** @type {Record<string, any>} */ ({
     cat: 'groups', quiet: true, normal: T('Новые участники в сообществе', 'New community members'), dest: 'community', collapse: 'object', gone: GONE_COMMUNITY },
   communityClosed: { filter: 'groups', icon: 'Users', tone: '', text: T('Сообщество закрыто', 'The community was closed'),
     cat: 'groups', normal: T('Сообщество закрыто', 'The community was closed'), dest: 'community', gone: T('Сообщество закрыто', 'The community was closed') },
+  'communityClosed.owner': { text: T('Владелец закрыл сообщество', 'The owner closed the community') },
+  // Staff hid it (audit item 33): no reason, no staff name.
+  communityUnavailable: { filter: 'groups', icon: 'EyeOff', tone: '', text: T('Сообщество больше недоступно', 'The community is no longer available'),
+    cat: 'groups', normal: T('Сообщество больше недоступно', 'The community is no longer available'), dest: 'community', gone: T('Сообщество больше недоступно', 'The community is no longer available') },
+  // A host who became the owner (audit item 14).
+  communityOwner: { filter: 'groups', icon: 'UserCheck', tone: 'g', text: T('Теперь ты владелец сообщества', 'You’re now the owner of the community'),
+    cat: 'groups', normal: T('Ты теперь владелец сообщества', 'You’re now the owner of the community'), dest: 'community', gone: GONE_COMMUNITY },
+  // Its rules changed (audit item 39): the link opens «Правила»; nobody is asked to agree again.
+  communityRules: { filter: 'groups', icon: 'Users', tone: 'v', text: T('Правила сообщества изменились', 'The community rules changed'),
+    cat: 'groups', normal: T('Правила сообщества изменились', 'The community rules changed'), dest: 'community', collapse: 'object', gone: GONE_COMMUNITY },
   discussionRemoved: { filter: 'groups', icon: 'Trash2', tone: 'l', card: 'safety', text: T('Ведущие убрали твоё обсуждение', 'Hosts removed your discussion'),
     cat: 'groups', normal: T('Ведущие убрали твоё обсуждение', 'Hosts removed your discussion'), dest: 'community', gone: GONE_COMMUNITY },
 
@@ -199,6 +209,9 @@ const RAW = /** @type {Record<string, any>} */ ({
   'eventRejected.change': { text: T('Правки события не приняты', 'Event changes not accepted'), normal: T('Правки события не приняты', 'Event changes not accepted') },
   eventLate: { kind: 'result', filter: 'events', icon: 'CalendarClock', tone: 'l', card: 'result', text: T('Время события прошло, пока оно ждало проверки — оно в черновиках', 'The event’s time passed while it waited for review — it’s back in drafts'),
     cat: 'events', normal: T('Событие вернулось в черновики', 'The event is back in drafts'), dest: 'eventDraft' },
+  // Staff hid an event people follow (audit item 33): no reason, no staff name.
+  eventUnavailable: { important: true, filter: 'events', icon: 'EyeOff', tone: 'l', card: 'event', text: T('Событие больше недоступно', 'The event is no longer available'),
+    cat: 'events', normal: T('Событие больше недоступно', 'The event is no longer available'), email: 'now-if-unread', dest: 'event', collapse: 'object', gone: T('Событие больше недоступно', 'The event is no longer available') },
   eventHidden: { filter: 'events', icon: 'EyeOff', tone: 'l', card: 'safety', text: T('Модераторы скрыли событие', 'Moderators hid the event'),
     cat: 'events', normal: T('Модераторы скрыли событие', 'Moderators hid the event'), email: 'now', dest: 'event', gone: GONE_EVENT },
   eventApplicationApproved: { kind: 'result', filter: 'events', icon: 'Check', tone: 'g', card: 'result', text: T('Заявку на событие одобрили — адрес и детали открыты', 'Your event application is approved — address and details are open'),
@@ -207,6 +220,7 @@ const RAW = /** @type {Record<string, any>} */ ({
     cat: 'events', normal: T('Заявку на событие отклонили', 'Your event application was declined'), email: 'now-if-unread', dest: 'event', gone: GONE_EVENT },
   eventCancelled: { important: true, filter: 'events', icon: 'CalendarX', tone: 'l', card: 'event', text: T('Событие отменено', 'The event was cancelled'),
     cat: 'events', normal: T('Событие отменено', 'The event was cancelled'), email: 'now-if-unread', dest: 'event', collapse: 'object', gone: T('Событие отменено', 'The event was cancelled') },
+  'eventCancelled.community': { text: T('Событие отменено: сообщество закрыто', 'The event was cancelled: its community closed') },
   eventChanged: { important: true, filter: 'events', icon: 'CalendarClock', tone: 'v', card: 'event', text: T('В событии изменились детали', 'The event details changed'),
     cat: 'events', normal: T('В событии изменились детали', 'The event details changed'), email: 'now-if-unread', dest: 'event', collapse: 'object', gone: GONE_EVENT },
   eventAnnouncement: { filter: 'events', icon: 'Megaphone', tone: 'v', card: 'event', text: T('Новое объявление в событии', 'A new announcement in the event'),
@@ -360,6 +374,8 @@ const RAW = /** @type {Record<string, any>} */ ({
 /** Which data field picks a subtype of a type (`type.sub` in the catalog). */
 const SUB = /** @type {Record<string, (d: Record<string, any>) => unknown>} */ ({
   communityMember: d => d.change,
+  communityClosed: d => (d.why === 'owner' ? 'owner' : undefined),
+  eventCancelled: d => (d.why === 'community_closed' ? 'community' : undefined),
   'pair.acted': d => d.what,
   'pair.decided': d => d.state,
   'pair.trust': d => (d.approves === true ? 'on' : d.approves === false ? 'off' : undefined),
