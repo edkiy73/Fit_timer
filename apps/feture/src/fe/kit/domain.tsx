@@ -195,10 +195,15 @@ export function AnswerScale<M extends string,L extends string=string>({value,onC
     onPointerMove={e=>{if(!drag)return;const moved=drag.moved||Math.abs(e.clientX-drag.x)>8||Math.abs(e.clientY-drag.y)>8;setDrag({...drag,moved,over:cellAt(e.clientX,e.clientY,drag.id)});}}
     onPointerUp={e=>{if(!drag)return;const k=cellAt(e.clientX,e.clientY,drag.id);if(drag.moved&&k)pick(k,drag.id);else setDrag(null);}}
     onPointerCancel={()=>setDrag(null)}>
-   {lanes.map(l=>open===l.id?<div key={l.id} className="ans-row-scale">{scale(label+': '+l.label,()=>lane===l.id,k=>pick(k,l.id),l.id)}</div>
-    :<button key={l.id} type="button" className={'ans-row'+(lane===l.id&&n?' on':'')} aria-expanded={false}
-      onPointerDown={e=>{try{e.currentTarget.parentElement?.setPointerCapture(e.pointerId);}catch{/* gone */}setOpen(l.id);setDrag({id:l.id,x:e.clientX,y:e.clientY,moved:false,over:null});}}
-      onClick={e=>{if(e.detail===0)setOpen(l.id);}}><span>{l.label}</span>{lane===l.id&&n?<b>{n}</b>:null}</button>)}
+   {/* the lane keeps its frame when it opens: its name floats up onto the border, the 1–10 fills the inside */}
+   {lanes.map(l=>{const isOpen=open===l.id,mine=lane===l.id&&!!n;
+    return <div key={l.id} className={'ans-row'+(isOpen?' open':'')+(mine?' on':'')}>
+     <span className="ans-row-l">{l.label}</span>
+     {isOpen?scale(label+': '+l.label,()=>lane===l.id,k=>pick(k,l.id),l.id)
+      :<button type="button" className="ans-row-b" aria-label={l.label+(mine?', '+n:'')} aria-expanded={false}
+        onPointerDown={e=>{try{e.currentTarget.closest('.ans-rows')?.setPointerCapture(e.pointerId);}catch{/* gone */}setOpen(l.id);setDrag({id:l.id,x:e.clientX,y:e.clientY,moved:false,over:null});}}
+        onClick={e=>{if(e.detail===0)setOpen(l.id);}}>{mine?<b>{n}</b>:null}</button>}
+    </div>;})}
   </div>:scale(label,()=>true,k=>onChange(k))}
   <div className="ans-marks">{marks.map(m=><button key={m.id} type="button" className={'ans-m'+(m.taboo?' taboo':'')+(m.soft?' soft':'')+(value===m.id?' on':'')} aria-pressed={value===m.id} onClick={()=>{setOpen(null);onChange(m.id);}}><m.icon/><span>{m.label}</span></button>)}</div>
  </>;
