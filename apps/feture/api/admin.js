@@ -2,9 +2,6 @@ require('../lib/product');
 const { createAdminHandler } = require('../../../packages/core/server/admin-handler');
 const { analyticsStats } = require('../lib/app-analytics');
 const Supabase = require('../../../packages/core/server/supabase');
-const {createDocumentsAdmin}=require('../lib/feture/documents-admin');
-const {createTestsAdmin}=require('../lib/feture/questionnaires-admin');
-const {createCatalogAdmin}=require('../lib/feture/catalog-admin');
 const {store}=require('../../../packages/core/server/store');
 const {createPrivateMetrics}=require('../lib/feture/private-metrics');
 const {createMetricsAdmin}=require('../lib/feture/private-metrics-admin');
@@ -12,7 +9,7 @@ const {createUpdateAdmin,sendPublicUpdate}=require('../lib/app-update');
 const {createStaffFactorAdmin}=require('../lib/feture/staff-factor-admin');
 const {cors,fail,rateOkScoped,readBody}=require('../../../packages/core/server/util');
 
-const coreAdmin = createAdminHandler({analyticsStats,handlers:[createCatalogAdmin(Supabase),createTestsAdmin(Supabase),createDocumentsAdmin(Supabase),createMetricsAdmin(createPrivateMetrics(store)),createUpdateAdmin(store),createStaffFactorAdmin()]});
+const coreAdmin = createAdminHandler({analyticsStats,handlers:[createMetricsAdmin(createPrivateMetrics(store)),createUpdateAdmin(store),createStaffFactorAdmin()]});
 
 module.exports=async(req,res)=>{
  // /api/config (vercel.json rewrite): the published Android update, read by the installed app. Public, no secrets.

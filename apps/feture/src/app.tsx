@@ -40,18 +40,12 @@ import { NativeNavigation } from './feture/native-navigation';
 import { AppLinks } from './fe/app-links';
 import type {AdminSection} from '@appbase/ui-react/admin.js';
 const AdminPanel=page(()=>import('@appbase/ui-react/admin.js'),'AdminPanel');
-const QuestionnairesAdmin=page(()=>import('./feture/questionnaire-admin'),'QuestionnairesAdmin');
-const DocumentsAdmin=page(()=>import('./feture/documents-admin'),'DocumentsAdmin');
-const CatalogAdmin=page(()=>import('./feture/catalog-admin'),'CatalogAdmin');
 const MetricsAdmin=page(()=>import('./feture/metrics-admin'),'MetricsAdmin');
 const UpdateAdmin=page(()=>import('./feture/update-admin'),'UpdateAdmin');
 const StaffFactorAdmin=page(()=>import('./feture/staff-factor-admin'),'StaffFactorAdmin');
 const productAdminSections:readonly AdminSection[]=[
   // Keep IDs stable: AppBase persists the last selected tab in sessionStorage.
   {id:'feture-staff-factor',label:'2FA для сотрудников',group:'Проверка и доступ',render:context=><StaffFactorAdmin {...context}/>},
-  {id:'feture-catalog',label:'Темы каталога',group:'Редактура',render:context=><CatalogAdmin {...context}/>},
-  {id:'feture-tests',label:'Опросники',group:'Редактура',render:context=><QuestionnairesAdmin {...context}/>},
-  {id:'feture-documents',label:'Документы и согласия',group:'Редактура',render:context=><DocumentsAdmin {...context}/>},
   {id:'feture-metrics',label:'Активность KINHAZE',group:'Наблюдение',render:context=><MetricsAdmin {...context}/>},
   {id:'feture-app-update',label:'Обновление приложения',group:'Приложение',render:context=><UpdateAdmin {...context}/>}
 ];
