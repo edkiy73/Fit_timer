@@ -84,7 +84,7 @@ export function PostMenu({post,onClose,onChange,onRemove}:{post:Post,onClose:()=
  });
  const del=()=>run('delete',async opId=>{
   const r=await call('post.delete',{opId,postId:post.id},deleted);
-  return {postId:post.id,notice:draft?t('fe.pm.done.draftDeleted'):r.state==='archived'?t('fe.pm.done.archived'):t('fe.pm.done.deleted')};
+  return {postId:post.id,notice:draft?t('fe.pm.done.draftDeleted'):r.state==='archived'?t('fe.pm.done.archived'):r.state==='removed'?t('fe.pm.done.removedHidden'):t('fe.pm.done.deleted')};
  });
  const copyLink=useCopyLink();const copy=()=>{onClose();void copyLink('/n/feed/post/'+post.id);};
  // A photo mark of the acting profile on someone else's post.

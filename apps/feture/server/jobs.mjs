@@ -4,7 +4,7 @@ import { PROCESSED_ENTITIES, liveSignals } from './live.mjs';
 import { scanAsset, servedKeys } from './media/scan.mjs';
 import { POSTER_UPLOAD_KEY } from './media/assets.mjs';
 import { deleteCouple, expireInvites } from './commands/couples.mjs';
-import { releaseWaitingEvents } from './commands/events.mjs';
+import { releaseLateEvents, releaseWaitingEvents } from './commands/events.mjs';
 import { expireApprovals } from './approvals.mjs';
 import { setSuspended } from './commands/moderation.mjs';
 import { journal } from './commands/staff.mjs';
@@ -225,7 +225,10 @@ export async function sweepExpiredCouples(db) {
 export async function sweepExpiredApprovals(db) {
   if (!(await db.query(`select exists (select 1 from information_schema.columns where table_schema = 'feture' and table_name = 'partner_approval' and column_name = 'base_rev') ok`))[0].ok) return 0;
   const expired = await db.tx(q => expireApprovals(q));
-  if ((await db.query(`select to_regclass('feture.event') is not null ok`))[0].ok) await db.tx(q => releaseWaitingEvents(q));
+  if ((await db.query(`select to_regclass('feture.event') is not null ok`))[0].ok) {
+    await db.tx(q => releaseWaitingEvents(q));
+    await db.tx(q => releaseLateEvents(q));
+  }
   return expired;
 }
 

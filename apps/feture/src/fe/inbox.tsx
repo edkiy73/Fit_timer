@@ -379,7 +379,7 @@ export function InboxNoteScreen(){
   const term=n.type==='profileSuspended'||n.type==='profileRestricted'?(d.until?t('fe.ibx.termUntil',{date:day(d.until)}):t('fe.ibx.untilLifted'))
    :(n.type==='profileRestored'||n.type==='profileUnrestricted')?(d.rule==='expired'?t('fe.ibx.termEnded'):t('fe.ibx.termLifted')):null;
   const effect=n.type==='profileRestricted'?t('fe.ibx.restrictedEffectLong'):n.type==='profileSuspended'?t('fe.ibx.suspendedEffect'):null;
-  const outcome=n.type==='reportResolved'?(d.resolution==='removed'?t('fe.ibx.report.removed'):d.resolution==='kept'?t('fe.ibx.report.kept'):null):null;
+  const outcome=n.type==='reportResolved'?(d.resolution==='removed'?t('fe.ibx.report.removed'):d.resolution==='kept'?t('fe.ibx.report.kept'):d.resolution==='unavailable'?t('fe.ibx.report.unavailable'):null):null;
   const appeal=r.appeal&&r.appeal!=='none'&&r.appeal!=='available'?t('fe.ibx.appeal.'+r.appeal):null;
   const facts:[string,ReactNode][]=[[t('fe.ibx.f2.what'),what],[t('fe.ibx.f2.reason'),rule],[t('fe.ibx.f2.term'),term],[t('fe.ibx.f2.effect'),effect],
    [t('fe.ibx.f2.outcome'),outcome],[t('fe.ibx.f2.appeal'),appeal],[t('fe.ibx.f2.when'),when(n.at,locale)]];

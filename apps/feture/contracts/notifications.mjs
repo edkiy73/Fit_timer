@@ -125,6 +125,7 @@ const RAW = /** @type {Record<string, any>} */ ({
     normal: T('Спор об отметке на фото решён', 'The photo mark dispute was resolved'), dest: 'post', gone: GONE_POST },
   'disputeResolved.removed': { text: T('Твоя жалоба «это я на фото» подтвердилась — публикацию удалили', 'Your “that’s me in the photo” report was confirmed — the post was removed') },
   'disputeResolved.restored': { text: T('Публикацию оставили: жалоба «это я на фото» не подтвердилась', 'The post stays: your “that’s me in the photo” report was not confirmed') },
+  'disputeResolved.gone': { text: T('Публикации больше нет — спор «это я на фото» закрыт', 'The post is gone — your “that’s me in the photo” dispute is closed') },
   revisionApproved: { kind: 'result', filter: 'posts', icon: 'Check', tone: 'g', card: 'result', text: T('Правка прошла проверку и видна в ленте', 'Your edit passed review and is in the feed'),
     normal: T('Правка прошла проверку', 'Your edit passed review'), dest: 'post', gone: GONE_POST },
   revisionRejected: { kind: 'result', filter: 'posts', icon: 'Shield', tone: 'l', card: 'result', text: T('Правка не прошла проверку', 'Your edit didn’t pass review'),
@@ -196,6 +197,8 @@ const RAW = /** @type {Record<string, any>} */ ({
   eventRejected: { kind: 'result', filter: 'events', icon: 'Shield', tone: 'l', card: 'result', text: T('Событие не прошло проверку', 'The event didn’t pass review'),
     cat: 'events', normal: T('Событие не прошло проверку', 'The event didn’t pass review'), dest: 'event', gone: GONE_EVENT },
   'eventRejected.change': { text: T('Правки события не приняты', 'Event changes not accepted'), normal: T('Правки события не приняты', 'Event changes not accepted') },
+  eventLate: { kind: 'result', filter: 'events', icon: 'CalendarClock', tone: 'l', card: 'result', text: T('Время события прошло, пока оно ждало проверки — оно в черновиках', 'The event’s time passed while it waited for review — it’s back in drafts'),
+    cat: 'events', normal: T('Событие вернулось в черновики', 'The event is back in drafts'), dest: 'eventDraft' },
   eventHidden: { filter: 'events', icon: 'EyeOff', tone: 'l', card: 'safety', text: T('Модераторы скрыли событие', 'Moderators hid the event'),
     cat: 'events', normal: T('Модераторы скрыли событие', 'Moderators hid the event'), email: 'now', dest: 'event', gone: GONE_EVENT },
   eventApplicationApproved: { kind: 'result', filter: 'events', icon: 'Check', tone: 'g', card: 'result', text: T('Заявку на событие одобрили — адрес и детали открыты', 'Your event application is approved — address and details are open'),
@@ -364,7 +367,7 @@ const SUB = /** @type {Record<string, (d: Record<string, any>) => unknown>} */ (
   photoCheck: d => (d.state === 'approved' ? 'approved' : 'other'),
   mediaDecided: d => (d.state === 'approved' ? 'approved' : 'rejected'),
   placeDecided: d => (d.state === 'approved' ? 'approved' : 'rejected'),
-  disputeResolved: d => (d.outcome === 'removed' ? 'removed' : d.outcome === 'restored' ? 'restored' : undefined),
+  disputeResolved: d => (d.outcome === 'removed' ? 'removed' : d.outcome === 'restored' ? 'restored' : d.outcome === 'gone' ? 'gone' : undefined),
   appealDecided: d => (d.state === 'granted' ? 'granted' : d.state === 'denied' ? 'denied' : undefined),
   staffRole: d => (d.grant === true ? 'grant' : d.grant === false ? 'revoke' : undefined),
   contentRemoved: d => d.targetType,
@@ -496,6 +499,7 @@ export function destination(n) {
     // A couple post (an archived one too: the owner can still open it); without its id «Публикации пары» with «Архив».
     case 'myPosts': path = postId ? `/n/feed/post/${postId}` : '/n/me/posts'; break;
     case 'event': { const id = obj?.type === 'event' ? obj.id : d.eventId; if (isId(id)) path = `/n/events/${id}`; break; }
+    case 'eventDraft': path = isId(d.draftId) ? `/n/events/new?draft=${d.draftId}` : '/n/me/events'; break;
     case 'eventApplications': { const id = obj?.type === 'event' ? obj.id : d.eventId; if (isId(id)) path = `/n/events/${id}/applications`; break; }
     case 'community': { const id = obj?.type === 'community' ? obj.id : d.communityId; if (isId(id)) path = `/n/communities/${id}`; break; }
     case 'communityRequests': { const id = obj?.type === 'community' ? obj.id : d.communityId; if (isId(id)) path = `/n/communities/${id}/requests`; break; }
@@ -540,11 +544,11 @@ export function destination(n) {
 const U = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 export const ROUTE_PATH = new RegExp(`^/n/(?:inbox|inbox/${U}|chats|chats/requests|chats/${U}|me|me/pair|me/links|me/access|me/posts|me/interests`
   + `|settings|settings/(?:security|age|photo-check|blocked|notifications)|help|premium|staff|people|feed`
-  + `|feed/post/${U}(?:/edit)?|events/${U}(?:/applications)?|communities/${U}(?:/requests)?|people/${U}(?:/gallery)?)$`);
+  + `|feed/post/${U}(?:/edit)?|events/new|me/events|events/${U}(?:/applications)?|communities/${U}(?:/requests)?|people/${U}(?:/gallery)?)$`);
 export const ROUTE_QUERY = Object.freeze(/** @type {Record<string, RegExp>} */ ({
   reply: new RegExp(`^${U}$`), approval: new RegExp(`^${U}$`), ticket: new RegExp(`^${U}$`), as: new RegExp(`^${U}$`), restore: new RegExp(`^${U}$`),
   part: /^private$/, tab: /^(?:byme|withme|out|todo|all)$/, layer: /^(?:vis|priv|mine)$/,
-  request: new RegExp(`^${U}$`), item: new RegExp(`^${U}$`), link: new RegExp(`^${U}$`),
+  request: new RegExp(`^${U}$`), item: new RegExp(`^${U}$`), link: new RegExp(`^${U}$`), draft: new RegExp(`^${U}$`),
 }));
 
 /** Is this an app route a push may open: a known /n screen, UUIDs only, known query keys once each.

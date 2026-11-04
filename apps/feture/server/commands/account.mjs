@@ -2,6 +2,7 @@
 import { accountCommands } from '../../contracts/account.mjs';
 import { fail } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
+import { closeAppeals, closeDisputes, closeReports } from '../reports.mjs';
 import { closePending } from '../approvals.mjs';
 import { deleteCouple } from './couples.mjs';
 import { endConversations } from './chats.mjs';
@@ -24,8 +25,9 @@ const HOLD_DAYS = 30;
  * told); events nobody saw yet go. Used for the person and for each couple deleted with the account.
  * @param {Q} q @param {string} owner */
 async function closeOwned(q, owner) {
-  const closed = await q.query(`update feture.community set state = 'deleted', updated_at = now() where owner_profile_id = $1 and state <> 'deleted' returning id, state`, [owner]);
+  const closed = await q.query(`update feture.community set state = 'deleted', pending_change = null, updated_at = now() where owner_profile_id = $1 and state <> 'deleted' returning id, state`, [owner]);
   for (const c of closed) await enqueue(q, 'community.closed', owner, { communityId: c.id, organizerGone: true });
+  await closeReports(q, 'community', closed.map(c => c.id), 'unavailable');
   const cancelled = await q.query(
     `update feture.event set state = 'cancelled', cancelled_at = now(), rev = rev + 1, updated_at = now() where organizer_profile_id = $1 and state = 'published' and ends_at > now() returning id`, [owner]);
   for (const e of cancelled) {
@@ -103,6 +105,11 @@ const run = {
       await deleteCouple(q, c.id, 'member_deleted');
     }
     await closePending(q, `a.requested_by = $1`, [a.id], 'cancelled', { silent: true });
+    // Reports on the profile and its appeals have nothing left to decide; disputes on its posts close (audit 22, 24, 25).
+    // Reports on its posts and replies stay: staff may still record a violation (audit item 3).
+    await closeReports(q, 'profile', [a.person_profile_id], 'unavailable');
+    await closeAppeals(q, [a.person_profile_id]);
+    await closeDisputes(q, (await q.query(`select id from feture.post where owner_profile_id = $1`, [a.person_profile_id])).map(r => r.id));
     // Age and photo checks nobody will finish: out of the staff queues (and their counts) now.
     for (const t of ['age_check', 'photo_check']) await q.query(`update feture.${t} set state = 'expired' where account_id = $1 and state in ('started', 'submitted')`, [a.id]);
     await clearPerson(q, a.person_profile_id);

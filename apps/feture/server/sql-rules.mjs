@@ -64,3 +64,17 @@ export const partnerOf = (person, account) => `exists (select 1 from feture.acco
   join feture.profile pc on pc.id = pm.profile_id and pc.state in ('active', 'paused', 'suspended')
   join feture.profile_member mm on mm.profile_id = pc.id and mm.account_id = ${account} and mm.state = 'active'
   where pa.person_profile_id = ${person} and pa.id <> ${account})`;
+
+/** «Своё» for staff (audit 04.11.2026 item 7): a profile the staff `account` acts as (its own, its couple) or a partner's
+ * personal profile — staff never review, decide or count it. The owner's exception stays where it is: pass NULL as the
+ * account and nothing is «своё».
+ * @param {string} profile profile id expression @param {string} account the staff account id (`$n`, may be NULL) */
+export const staffOwn = (profile, account) => `(exists (select 1 from feture.profile_member so where so.profile_id = ${profile} and so.account_id = ${account})
+  or ${partnerOf(profile, account)})`;
+
+/** The same for an account-level item (an age or photo check): the staff account itself or a partner's account.
+ * @param {string} other account id expression @param {string} account the staff account id (`$n`, may be NULL) */
+export const staffOwnAccount = (other, account) => `(${other} = ${account} or exists (select 1 from feture.profile_member sx
+  join feture.profile sc on sc.id = sx.profile_id and sc.kind = 'couple' and sc.state in ('active', 'paused', 'suspended')
+  join feture.profile_member sy on sy.profile_id = sx.profile_id and sy.account_id = ${account} and sy.state = 'active'
+  where sx.account_id = ${other} and sx.state = 'active'))`;

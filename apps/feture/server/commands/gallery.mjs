@@ -316,7 +316,8 @@ const run = {
 
     if (input.change === 'delete') {
       let deleted = 0, archived = 0;
-      for (const p of posts) { if ((await deletePost(q, acting, p.id)) === 'deleted') deleted++; else archived++; }
+      // A post moderators removed only leaves the author's lists (it stays appealable): for the author it is gone.
+      for (const p of posts) { if (['deleted', 'removed'].includes(await deletePost(q, acting, p.id))) deleted++; else archived++; }
       await dropHiddenPostPhotos(q, acting.profileId);
       if (acting.kind === 'couple') await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: 'post_archived' });
       return { deleted, archived };

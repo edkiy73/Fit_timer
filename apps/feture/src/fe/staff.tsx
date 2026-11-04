@@ -821,6 +821,8 @@ function ReportCard({item,onDone}:{item:ReportItem,onDone:()=>void}){
  const people=item.targetType==='profile'||item.targetType==='conversation';
  const base={targetType:item.targetType,targetId:item.targetId,note:note.trim(),...(item.targetType==='conversation'&&item.author?{reportedProfileId:item.author.id}:{})};
  const author=personName(item.author);const toast=useToast();
+ // Taken away by its author (or with their account): nothing to remove, the violation is recorded (staff.reportDecide).
+ const gone=(item.targetType==='post'&&item.state==='archived')||(item.targetType==='reply'&&item.state==='deleted');
  // Whom a measure is for: the reported profile, or in a chat the side it was reported about.
  // A post, reply, community or event: its author.
  const target=item.targetType==='profile'?{id:item.targetId,name:author??''}:item.author?{id:item.author.id,name:author??''}:null;
@@ -829,6 +831,7 @@ function ReportCard({item,onDone}:{item:ReportItem,onDone:()=>void}){
  const o=item.object;const under=typeof o?.facts?.under==='string'?o.facts.under:null;
  const reasons=item.reasons.map(r=>{const x=t('fe.staff.report.reason.'+r);return x.startsWith('fe.')?t('fe.staff.report.reason.other'):x;});
  return <StCard title={t('fe.staff.what.report.'+item.targetType)} task={t('fe.staff.task.report.'+item.targetType)} danger={item.reasons.includes('minor')} meta={when(item.firstAt)}>
+  {gone&&<Alert kind="info">{t('fe.staff.report.gone')}</Alert>}
   <Kv rows={[[t('fe.staff.report.why'),<>{item.reasons.map((r,i)=><Pill key={r} tone={r==='minor'?'bad':undefined}>{reasons[i]}</Pill>)}</>],[t('fe.staff.report.times'),String(item.reports)],
    [t('fe.staff.author'),author],[t('fe.staff.report.under'),under],[t('fe.staff.report.details'),item.details?.length?item.details.join(' · '):null]]}/>
   {(o||item.excerpt)&&<ReviewObject kind={t('fe.staff.report.type.'+item.targetType)} title={o?.title} meta={factsLine(o,t,when,val)} text={o?.body??item.excerpt}>
@@ -841,9 +844,9 @@ function ReportCard({item,onDone}:{item:ReportItem,onDone:()=>void}){
   <Details data={item.reported}/>
   {!people&&<Choice label={t('fe.staff.rule')} value={rule} onChange={setRule} disabled={d.busy} options={RULES.map(id=>({id,label:t('fe.staff.rule.'+id)}))}/>}
   <TextField label={t('fe.staff.note')} value={note} onChange={setNote} max={500}/>
-  {ask?<Confirm text={t('fe.staff.report.confirmRemove')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>d.run('staff.reportDecide',{...base,decision:'remove',rule})}/>
+  {ask?<Confirm text={t(gone?'fe.staff.report.confirmRecord':'fe.staff.report.confirmRemove')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>d.run('staff.reportDecide',{...base,decision:'remove',rule})}/>
    :<Actions><Btn icon={Check} disabled={d.busy} onClick={()=>d.run('staff.reportDecide',{...base,decision:'keep'})}>{t('fe.staff.report.keep')}</Btn>
-    {!people&&<Btn kind="danger" icon={Ban} disabled={d.busy||!rule} onClick={()=>setAsk(true)}>{t('fe.staff.report.remove.'+item.targetType)}</Btn>}
+    {!people&&<Btn kind="danger" icon={Ban} disabled={d.busy||!rule} onClick={()=>setAsk(true)}>{gone?t('fe.staff.report.record'):t('fe.staff.report.remove.'+item.targetType)}</Btn>}
     {target&&<Btn kind={people?'danger':'soft'} icon={Gavel} disabled={d.busy} onClick={()=>setMeasures(true)}>{t('fe.staff.m.open')}</Btn>}</Actions>}
   <Failure text={d.failure}/>
   {measures&&target&&<Measures profileId={target.id} name={target.name} onClose={()=>setMeasures(false)}

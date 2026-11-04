@@ -79,7 +79,7 @@ test('subtypes with their own words are picked from the data', () => {
 test('every entry is complete: texts, card, destination, push, email; no known type says only «Уведомление»', () => {
   const routes = new Set(['inbox', 'me', 'chats', 'links', 'myPosts', 'interests', 'couple', 'approval', 'blocked', 'security', 'age', 'photoCheck', 'help',
     'premium', 'staff', 'people', 'access', 'visibility', 'post', 'postEdit', 'event', 'eventApplications', 'community', 'communityRequests', 'chat', 'actor',
-    'actorPrivate', 'target', 'object', 'coupleGallery', 'moderation', 'accessRequest', 'invite', 'link', 'coupleRestore']);
+    'actorPrivate', 'target', 'object', 'coupleGallery', 'moderation', 'accessRequest', 'invite', 'link', 'coupleRestore', 'eventDraft']);
   const icons = read('src/fe/inbox.tsx').match(/const ICONS:Record<string,LucideIcon>=\{([^}]*)\}/)?.[1].split(',').map(x => x.split(':')[0].trim());
   assert.ok(icons?.length, 'the inbox icon map');
   for (const [key, e] of Object.entries(CATALOG)) {
@@ -139,7 +139,7 @@ test('the migration fills the record kind the catalog says', () => {
   const sql = read('supabase/migrations/20261103120000_fe_notification_shape.sql');
   const listed = new Set([...sql.slice(sql.indexOf('when type in')).matchAll(/'([a-zA-Z.]+)'/g)].map(m => m[1]).filter(t => !['result', 'notice'].includes(t)));
   // Types added after that migration had no rows to fill.
-  const later = ['pair.inviteExpired'];
+  const later = ['pair.inviteExpired', 'eventLate'];
   const results = new Set([...writtenTypes()].filter(t => CATALOG[t].kind === 'result' && !later.includes(t)));
   assert.deepEqual([...listed].sort(), [...results].sort());
 });
@@ -171,6 +171,8 @@ test('the resolver makes a precise route for every entry, and the service worker
   assert.equal(destination({ type: 'match', object: { type: 'conversation', id: ID } }), `/n/chats/${ID}`);
   assert.equal(destination({ type: 'grant', actor: ID2 }), `/n/people/${ID2}?part=private`);
   assert.equal(destination({ type: 'decide.eapp', object: { type: 'event', id: ID } }), `/n/events/${ID}/applications`);
+  assert.equal(destination({ type: 'eventLate', data: { draftId: ID } }), `/n/events/new?draft=${ID}`);
+  assert.equal(destination({ type: 'eventLate', data: {} }), '/n/me/events');
   assert.equal(destination({ type: 'supportReply', data: { ticketId: ID } }), `/n/help?ticket=${ID}`);
   assert.equal(destination({ type: 'pair.acted', data: { what: 'discoverMode' }, couple: ID3 }), `/n/me?layer=vis&as=${ID3}`);
   // Stage 5: a moderation decision opens its own card; a request, an invitation and a link open that very one.

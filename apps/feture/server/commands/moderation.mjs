@@ -9,6 +9,8 @@ import { narrowCouple } from '../approvals.mjs';
 import { closeAll } from './access.mjs';
 import { settleAvatar } from './photos.mjs';
 import { CREATED_KEYS, pageInfo, queuePageSql } from '../queue-page.mjs';
+import { staffOwn, staffOwnAccount } from '../sql-rules.mjs';
+import { closeDisputes, closeReports } from '../reports.mjs';
 
 /** Sort keys of the queues here (each unique last key; `order` follows the reader's choice). */
 const REPORT_KEYS = [{ name: 'priority', type: 'int', dir: 'asc' }, { name: 'first_at', type: 'timestamptz' },
@@ -30,7 +32,8 @@ const DAY = 24 * 60 * 60 * 1000;
 // Queue order (S4 §2): minors first, then threats, private material, spam, the rest.
 const PRIORITY = `case reason when 'minor' then 0 when 'threat' then 2 when 'private' then 3 when 'spam' then 5 else 6 end`;
 
-/** Owner profile of a report target, refusing the staff member's own. @param {Q} q @param {string} staffAccount @param {string} type @param {string} id */
+/** Owner profile of a report target, refusing the staff member's own (their profiles, their couple, a partner — staffOwn).
+ * @param {Q} q @param {string} staffAccount @param {string} type @param {string} id */
 async function targetOwner(q, staffAccount, type, id) {
   const [t] = await q.query(
     type === 'post' ? `select owner_profile_id owner, state from feture.post where id = $1 for update`
@@ -41,7 +44,7 @@ async function targetOwner(q, staffAccount, type, id) {
               : `select id owner, state from feture.profile where id = $1 for update`, [id]);
   if (!t) fail(404, 'not_found');
   const [{ own }] = await q.query(
-    `select exists (select 1 from feture.profile_member where profile_id in ($1, $3) and account_id = $2) own`, [t.owner, staffAccount, t.other ?? t.owner]);
+    `select ${staffOwn('$1::uuid', '$2::uuid')} or ${staffOwn('$3::uuid', '$2::uuid')} own`, [t.owner, staffAccount, t.other ?? t.owner]);
   if (own) fail(403, 'forbidden');
   return t;
 }
@@ -139,7 +142,14 @@ const run = {
          array_remove(array_agg(nullif(r.details, '')), null) details,
          (array_agg(r.snapshot order by r.created_at) filter (where r.snapshot is not null))[1] snapshot,
          (array_agg(r.reporter_profile_id order by r.created_at))[1] first_reporter, r.reported_profile_id
-       from feture.report r where r.state = 'open' group by r.target_type, r.target_id, r.reported_profile_id`, []);
+       from feture.report r where r.state = 'open'
+         -- never the reviewer's own (staffOwn), filtered here so the page and the queue count agree (audit item 23)
+         and not ${staffOwn(`case r.target_type when 'post' then (select x.owner_profile_id from feture.post x where x.id = r.target_id)
+           when 'reply' then (select x.author_profile_id from feture.reply x where x.id = r.target_id)
+           when 'community' then (select x.owner_profile_id from feture.community x where x.id = r.target_id)
+           when 'event' then (select x.organizer_profile_id from feture.event x where x.id = r.target_id)
+           when 'conversation' then r.reported_profile_id else r.target_id end`, '$1::uuid')}
+       group by r.target_type, r.target_id, r.reported_profile_id`, [account.id]);
     const groups = await q.query(sql, params);
     const page = pageInfo(groups, REPORT_KEYS, input.limit);
     const items = [];
@@ -163,8 +173,6 @@ const run = {
                from feture.profile p left join feture.profile_details d on d.profile_id = p.id where p.id = $1`,
         g.target_type === 'conversation' ? [g.target_id, g.reported_profile_id] : [g.target_id]);
       if (!snap) continue;
-      const [{ own }] = await q.query(`select exists (select 1 from feture.profile_member where profile_id = $1 and account_id = $2) own`, [snap.owner, account.id]);
-      if (own) continue;
       const [author] = await q.query(`select id, kind, handle, name, state from feture.profile where id = $1`, [snap.owner]);
       // What a moderator may open (staff.mediaView, journaled per look): a post's attachments, or the media of the chat
       // messages picked in open reports. Ids and kinds only; the pictures come on request.
@@ -194,14 +202,24 @@ const run = {
     if (!open) fail(409, 'conflict', { rule: 'no_open_reports' });
     const live = input.targetType === 'post' ? ['published', 'review'] : input.targetType === 'reply' ? ['published']
       : input.targetType === 'community' ? ['published'] : input.targetType === 'event' ? ['published', 'cancelled'] : ['active'];
-    if (input.decision === 'remove' && !live.includes(t.state)) fail(409, 'conflict', { state: t.state });
-    if (input.decision === 'remove') {
+    // Taken away by its author (a post hidden into the archive, a deleted reply), also with a deleted account: nothing is
+    // left to remove, but the violation is recorded against the author (the journal) and the reports close as confirmed
+    // (audit item 3). A couple's archived post can no longer be brought back from the archive.
+    const GONE = /** @type {Record<string, string[]>} */ ({ post: ['archived'], reply: ['deleted'] });
+    const gone = (GONE[input.targetType] ?? []).includes(t.state);
+    if (input.decision === 'remove' && !live.includes(t.state) && !gone) fail(409, 'conflict', { state: t.state });
+    if (input.decision === 'remove' && gone && input.targetType === 'post') {
+      await q.query(`update feture.post set removed_reason = $2, updated_at = now() where id = $1`, [input.targetId, input.rule]);
+    }
+    if (input.decision === 'remove' && !gone) {
       if (input.targetType === 'post') {
         await q.query(`update feture.post set state = 'removed', removed_reason = $2, updated_at = now() where id = $1`, [input.targetId, input.rule]);
         await settleAvatar(q, t.owner); // a profile photo taken from the post goes with it (restored on appeal)
+        await closeDisputes(q, [input.targetId]);
       }
       if (input.targetType === 'reply') await q.query(`update feture.reply set state = 'removed' where id = $1`, [input.targetId]);
-      if (input.targetType === 'community') await q.query(`update feture.community set state = 'hidden', reject_reason = $2, updated_at = now() where id = $1`, [input.targetId, input.rule]);
+      // A change waiting for staff goes with it (audit item 18).
+      if (input.targetType === 'community') await q.query(`update feture.community set state = 'hidden', reject_reason = $2, pending_change = null, updated_at = now() where id = $1`, [input.targetId, input.rule]);
       if (input.targetType === 'event') {
         await q.query(`update feture.event set state = 'hidden', reject_reason = $2, rev = rev + 1, updated_at = now() where id = $1`, [input.targetId, input.rule]);
         await q.query(`update feture.event_application set state = 'closed', decided_at = now(), rev = rev + 1 where event_id = $1 and state = 'pending'`, [input.targetId]);
@@ -209,13 +227,11 @@ const run = {
       // The author learns what was removed and under which rule, and how to appeal (DSA art. 17).
       await enqueue(q, 'content.removed', t.owner, { targetType: input.targetType, targetId: input.targetId, rule: input.rule });
     }
-    const reporters = await q.query(
-      `update feture.report set state = 'resolved', resolution = $3, resolved_at = now()
-       where target_type = $1 and target_id = $2 and state = 'open' and ($4::uuid is null or reported_profile_id = $4) returning reporter_profile_id`,
-      [input.targetType, input.targetId, input.decision === 'remove' ? 'removed' : 'kept', side]);
-    for (const r of reporters) await enqueue(q, 'report.resolved', r.reporter_profile_id, { targetType: input.targetType, resolution: input.decision === 'remove' ? 'removed' : 'kept' });
-    await journal(q, account.id, 'report.' + input.decision, input.targetType, input.targetId, { from: t.state, rule: input.rule ?? null, reports: reporters.length, note: input.note });
-    return { resolved: reporters.length, action: input.decision };
+    const resolved = await closeReports(q, input.targetType, [input.targetId], input.decision === 'remove' ? 'removed' : 'kept', side);
+    // `author`: whose violation it is, so a person's history of decisions can be read from the journal (audit item 3).
+    await journal(q, account.id, 'report.' + input.decision, input.targetType, input.targetId,
+      { from: t.state, rule: input.rule ?? null, reports: resolved, note: input.note, author: side ?? t.owner, ...(gone ? { gone: true } : {}) });
+    return { resolved, action: input.decision };
   },
 
   async 'staff.disputeQueue'(q, { account, input }) {
@@ -232,7 +248,7 @@ const run = {
          json_agg(json_build_object('account', d.claimant_account, 'tagged', d.tagged, 'hid', d.hid, 'at', d.created_at) order by d.created_at) claims
        from feture.photo_dispute d join feture.post p on p.id = d.post_id
        where d.state = 'open' and p.state = 'published'
-         and not exists (select 1 from feture.profile_member m where m.profile_id = p.owner_profile_id and m.account_id = $1)
+         and not ${staffOwn('p.owner_profile_id', '$1::uuid')}
        group by p.id`, [account.id]);
     const rows = await q.query(sql, params);
     const page = pageInfo(rows, DISPUTE_KEYS, input.limit);
@@ -255,7 +271,7 @@ const run = {
     const flagged = await q.query(
       `select p.id "profileId", p.handle, a.dispute_strikes strikes, a.dispute_flagged_at "flaggedAt"
        from feture.account a join feture.profile p on p.id = a.person_profile_id
-       where a.dispute_flagged_at is not null and (a.dispute_reviewed_at is null or a.dispute_reviewed_at < a.dispute_flagged_at) and a.id <> $1
+       where a.dispute_flagged_at is not null and (a.dispute_reviewed_at is null or a.dispute_reviewed_at < a.dispute_flagged_at) and not ${staffOwnAccount('a.id', '$1::uuid')}
        order by a.dispute_flagged_at limit 20`, [account.id]);
     return { items, flagged, ...page };
   },
@@ -289,6 +305,8 @@ const run = {
       await settleAvatar(q, t.owner);
       await enqueue(q, 'content.removed', t.owner, { targetType: 'post', targetId: input.postId, rule: 'consent' });
       for (const c of claims) if (c.claimant_profile_id) await enqueue(q, 'dispute.resolved', c.claimant_profile_id, { postId: input.postId, outcome: 'removed' });
+      // Reports on the same post are answered by this removal (audit item 26).
+      await closeReports(q, 'post', [input.postId], 'removed');
     }
     await journal(q, account.id, input.restore ? 'dispute.restore' : 'dispute.remove', 'post', input.postId, { from: t.state, claims: claims.length, note: input.note });
     return { state: input.restore ? 'published' : 'removed' };
@@ -311,7 +329,7 @@ const run = {
        from feture.post_revision r join feture.post p on p.id = r.post_id
        -- a post its author hid (archived) or that was removed is not live: its proposed edit cannot be decided (revisionDecide)
        where r.state = 'review' and p.state in ('published', 'review')
-         and not exists (select 1 from feture.profile_member m where m.profile_id = p.owner_profile_id and m.account_id = $1)`, [account.id]);
+         and not ${staffOwn('p.owner_profile_id', '$1::uuid')}`, [account.id]);
     const rows = await q.query(sql, params);
     return { items: rows.map(r => ({ id: r.id, postId: r.post_id, createdAt: r.created_at, live: r.live, proposed: r.payload })), ...pageInfo(rows, CREATED_KEYS, input.limit) };
   },
@@ -463,7 +481,7 @@ const run = {
          (select json_build_object('action', s.action, 'detail', s.detail, 'at', s.created_at, 'mine', s.staff_account_id = $1) from feture.staff_action s
           where s.id = ap.staff_action_id) decision
        from feture.appeal ap join feture.profile p on p.id = ap.profile_id
-       where ap.state = 'open' and not exists (select 1 from feture.profile_member m where m.profile_id = ap.profile_id and m.account_id = $1)`, [account.id]);
+       where ap.state = 'open' and not ${staffOwn('ap.profile_id', '$1::uuid')}`, [account.id]);
     const rows = await q.query(sql, params);
     const alone = await onlyReviewer(q, account.id, null);
     const items = [];
@@ -479,7 +497,7 @@ const run = {
     const [ap] = await q.query('select * from feture.appeal where id = $1 for update', [input.appealId]);
     if (!ap) fail(404, 'not_found');
     if (ap.state !== 'open') fail(409, 'conflict', { state: ap.state });
-    const [{ own }] = await q.query(`select exists (select 1 from feture.profile_member where profile_id = $1 and account_id = $2) own`, [ap.profile_id, account.id]);
+    const [{ own }] = await q.query(`select ${staffOwn('$1::uuid', '$2::uuid')} own`, [ap.profile_id, account.id]);
     if (own) fail(403, 'forbidden');
     // Another person looks again: whoever made the decision under appeal may not decide the appeal.
     const [decision] = await q.query(`select staff_account_id, detail from feture.staff_action where id = $1`, [ap.staff_action_id]);
@@ -535,10 +553,11 @@ export async function appealState(q, profileId, type, id) {
   if (ap?.state === 'open') return 'open';
   if (t.hit && t.decision) {
     // One appeal per staff decision: a decided one is not appealed again.
-    const [done] = await q.query(`select state from feture.appeal where staff_action_id = $1 and state <> 'open' limit 1`, [t.decision.id]);
+    // An appeal closed because its account or couple is gone (audit item 24) was never decided: it does not count.
+    const [done] = await q.query(`select state from feture.appeal where staff_action_id = $1 and state in ('granted', 'denied') limit 1`, [t.decision.id]);
     return done ? done.state : 'available';
   }
-  return ap?.state ?? 'none';
+  return ap && ap.state !== 'closed' ? ap.state : 'none';
 }
 
 /** Puts the target back where it was before the decision (never simply «published»): a post that was still being
@@ -547,11 +566,11 @@ export async function appealState(q, profileId, type, id) {
 async function restoreTarget(q, type, id, from) {
   if (type === 'post') {
     if (from === 'review') {
-      const rows = await q.query(`update feture.post set state = 'review', removed_reason = null, updated_at = now() where id = $1 and state = 'removed' returning id`, [id]);
+      const rows = await q.query(`update feture.post set state = 'review', removed_reason = null, author_hidden = false, updated_at = now() where id = $1 and state = 'removed' returning id`, [id]);
       if (rows[0]) await settlePublication(q, id);
       return rows.length > 0;
     }
-    const rows = await q.query(`update feture.post set state = 'published', removed_reason = null, updated_at = now() where id = $1 and state = 'removed' returning owner_profile_id`, [id]);
+    const rows = await q.query(`update feture.post set state = 'published', removed_reason = null, author_hidden = false, updated_at = now() where id = $1 and state = 'removed' returning owner_profile_id`, [id]);
     if (rows[0]) await settleAvatar(q, rows[0].owner_profile_id); // its profile photo comes back with it
     return rows.length > 0;
   }

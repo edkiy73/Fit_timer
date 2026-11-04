@@ -197,3 +197,30 @@ test('«Пожаловаться» on one’s own: never on one’s couple from 
     assert.equal((await report('uc', c, 'profile', a)).status, 200);
   } finally { await pg.close(); }
 });
+
+test('staff «своё» (audit items 7, 23): a moderator in a couple never sees or decides reports on the partner, the couple or themself; the queue count agrees', async () => {
+  const { pg, db, call, person, coupleOf } = await setup();
+  try {
+    const boss = await person('uo', 'Boss'), mira = await person('um', 'Mira'), petya = await person('up', 'Petya'), c = await person('uc', 'Noa');
+    await db.query(`insert into feture.staff_role (account_id, role) select id, 'owner' from feture.account where person_profile_id = $1`, [boss]);
+    await call('uo', null, { action: 'staff.grant', opId: op(), handle: 'Mira', role: 'moderator', grant: true });
+    const pair = await coupleOf([mira, petya]);
+    const pub = async (user, prof, body) => {
+      const d = await call(user, prof, { action: 'post.saveDraft', opId: op(), post: draft(body) });
+      await call(user, prof, { action: 'post.publish', opId: op(), postId: d.id });
+      return d.id;
+    };
+    const partners = await pub('up', petya, 'Пост Пети'), ours = await pub('up', pair, 'Пост пары'), mine = await pub('um', mira, 'Пост Миры');
+    for (const id of [partners, ours, mine]) {
+      await call('uc', c, { action: 'report.create', opId: op(), targetType: 'post', targetId: id, reason: 'spam', details: 'Подробности для модератора' });
+    }
+    await call('uc', c, { action: 'report.create', opId: op(), targetType: 'profile', targetId: petya, reason: 'spam', details: 'Подробности для модератора' });
+    const q = await call('um', null, { action: 'staff.reportQueue' });
+    assert.deepEqual([q.items.length, q.total ?? q.items.length], [0, 0]);
+    assert.equal((await call('um', null, { action: 'staff.reportDecide', opId: op(), targetType: 'post', targetId: partners, decision: 'keep' })).status, 403);
+    assert.equal((await call('um', null, { action: 'staff.restrict', opId: op(), profileId: petya, on: true, rule: 'spam' })).status, 403);
+    assert.equal((await call('um', null, { action: 'staff.profileMeasures', handle: 'Petya' })).status, 403);
+    // The owner sees all four.
+    assert.equal((await call('uo', null, { action: 'staff.reportQueue' })).items.length, 4);
+  } finally { await pg.close(); }
+});
