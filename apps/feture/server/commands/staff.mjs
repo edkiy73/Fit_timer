@@ -190,8 +190,9 @@ const run = {
   async 'staff.mediaQueue'(q, { account, input, cfg }) {
     const roles = await requireStaff(q, account, REVIEWERS);
     const { sql, params } = queuePageSql(input, MEDIA_KEYS,
-      `select m.id, m.purpose, m.kind, m.explicitness, m.reject_reason reason, m.created_at, m.copies_at, m.width, m.height
-       from feture.media_asset m
+      `select m.id, m.purpose, m.kind, m.explicitness, m.reject_reason reason, m.created_at, m.copies_at, m.width, m.height,
+              o.id owner_id, o.kind owner_kind, o.handle owner_handle, o.name owner_name
+       from feture.media_asset m left join feture.profile o on o.id = m.owner_profile_id
        where m.state = 'needs_review' and m.purpose <> 'verification'   -- selfies are decided in the age-check queue
          and not exists (select 1 from feture.profile_member pm where pm.profile_id = m.owner_profile_id and pm.account_id = $1::uuid)`,
       [ownerSelf(roles) ? null : account.id]); // the owner's queue includes their own media
@@ -215,6 +216,8 @@ const run = {
       items.push({
         id: r.id, purpose: r.purpose, kind: r.kind, authorLabel: r.explicitness, reason: r.reason, createdAt: r.created_at, w: r.width, h: r.height,
         blur: covered(r) ? blur[i++] : null, usedIn: used ?? null,
+        // Whose file it is, so a measure («Принять меры») can be taken against them from the card.
+        owner: r.owner_id ? { id: r.owner_id, kind: r.owner_kind, handle: r.owner_handle, name: r.owner_name } : null,
       });
     }
     return { items, ...page };

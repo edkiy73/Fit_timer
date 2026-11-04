@@ -238,6 +238,8 @@ test('staff see the whole thing a report is about, and where a waiting file is u
     await db.query(`insert into feture.media_attachment (asset_id, target_type, target_id) values ($1, 'post', $2)`, [m.id, d.id]);
     const queued = (await call('um', null, { action: 'staff.mediaQueue' })).items.find((/** @type {any} */ i) => i.id === m.id);
     assert.ok(queued.usedIn.startsWith('Заголовок: Очень длинная публикация.'));
+    // …and whose file it is, for «Принять меры» from the card.
+    assert.equal(queued.owner.id, b);
   } finally { await pg.close(); }
 });
 

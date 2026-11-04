@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {ArrowUpDown,BadgeCheck,Ban,CalendarDays,Check,ClipboardCheck,ChevronLeft,ChevronRight,Eye,FilePen,Flag,Gavel,IdCard,Image,ImageOff,Inbox,ListFilter,Lock,MapPin,Minus,RefreshCw,Scale,Search,ShieldAlert,ShieldCheck,UserX,Users,X,Ellipsis,Film,Mic,Camera,Image as ImageIcon,LifeBuoy,Crown,Wrench,ScrollText,KeyRound,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Actions,Alert,Btn,Card,Chip,ChoiceChips,Chips,Divider,Empty,ExpandRow,Field,Form,Group,IconBtn,Input,KeyValues,LoadMore,MoreInfo,Note,Pill,ReviewBar,ReviewCard,ReviewMedia,ReviewObject,ReviewPair,ReviewTiles,ReviewPreview,type Slide,useBackClose,Row,SearchInput,SectionLabel,Seg,Select,Sheet,Skel,Stack,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble} from './kit';
+import {Actions,Alert,Btn,Card,RadioList,Chip,ChoiceChips,Chips,Divider,Empty,ExpandRow,Field,Form,Group,IconBtn,Input,KeyValues,LoadMore,MoreInfo,Note,Pill,ReviewBar,ReviewCard,ReviewMedia,ReviewObject,ReviewPair,ReviewTiles,ReviewPreview,type Slide,useBackClose,Row,SearchInput,SectionLabel,Seg,Select,Sheet,Skel,Stack,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble} from './kit';
 import {askFactor,useFe,useLive} from './session';
 import {useToast} from './toast';
 import {pullStaffCounts,useStaffCounts} from './staff-counts';
@@ -27,7 +27,8 @@ const opt=<T extends z.ZodType>(s:T)=>s.nullable().optional();
 
 const objectDto=z.object({kind:z.string(),title:z.string().nullable().optional(),body:z.string().nullable().optional(),facts:z.record(z.string(),z.unknown()).optional()}).nullable().optional();
 type ObjectDto=z.infer<typeof objectDto>;
-const mediaItem=z.object({id:z.uuid(),purpose:z.string(),kind:z.string(),usedIn:opt(z.string()),authorLabel:opt(z.string()),reason:opt(z.string()),createdAt:ts,w:opt(z.number()),h:opt(z.number()),blur:opt(z.string())});
+const mediaItem=z.object({id:z.uuid(),purpose:z.string(),kind:z.string(),usedIn:opt(z.string()),authorLabel:opt(z.string()),reason:opt(z.string()),createdAt:ts,w:opt(z.number()),h:opt(z.number()),blur:opt(z.string()),
+ owner:opt(z.object({id:z.string(),kind:z.string().optional(),handle:z.string().nullable().optional(),name:z.string().nullable().optional()}).passthrough())});
 const viewRes=z.object({ok:z.literal(true),src:z.object({card:z.string().optional(),full:z.string().optional(),file:z.string().optional()}).nullable()});
 const commItem=z.object({id:z.uuid(),rev:z.number(),name:z.string(),description:opt(z.string()),topics:opt(z.array(z.string())),privacy:opt(z.string()),join_question:opt(z.string()),
  rules:z.unknown().optional(),state:z.string(),pending_change:z.record(z.string(),z.unknown()).nullable().optional(),created_at:ts,
@@ -518,6 +519,8 @@ function Failure({text}:{text:string}){return text?<Alert kind="err">{text}</Ale
 
 
 const RULES=['minors','threats','private_material','spam','illegal','community_rules'] as const;
+/** «Имя @ник» of a profile on a card. */
+const personName=(p:{name?:string|null|undefined,handle?:string|null|undefined}|null|undefined)=>p?[p.name,p.handle&&'@'+p.handle].filter(Boolean).join(' ')||null:null;
 
 // ——— photos ———
 
@@ -527,7 +530,8 @@ function MediaCard({item,onDone}:{item:MediaItem,onDone:()=>void}){
  const {call}=useFe();const {t}=useI18n();const when=useWhen();const val=useVal();
  const [src,setSrc]=useState<{card?:string|undefined,full?:string|undefined,file?:string|undefined}|null|undefined>(undefined);
  const [reason,setReason]=useState<typeof MEDIA_REASONS[number]|''>('');const [ask,setAsk]=useState<'reject'|'csam'|null>(null);
- const d=useDecide(onDone);
+ const d=useDecide(onDone);const toast=useToast();const [measures,setMeasures]=useState(false);
+ const owner=personName(item.owner);
  // The full picture only through staff.mediaView: it returns short-lived URLs and journals the look.
  const open=async():Promise<Shown>=>{const r=await call('staff.mediaView',{assetId:item.id},viewRes,{asAccount:true});setSrc(r.src);
   return {slides:[slideOf(item.kind,r.src)],thumbs:[thumbOf(r.src)]};};
@@ -537,7 +541,7 @@ function MediaCard({item,onDone}:{item:MediaItem,onDone:()=>void}){
   <LookTiles tiles={[{label:t(item.kind==='video'?'fe.staff.tile.video':item.kind==='audio'?'fe.staff.tile.audio':'fe.staff.tile.photo',{n:'1'}),icon:tileIcon(item.kind),blur:item.blur}]}
    load={open} note={t('fe.staff.media.openNote')}/>
   {src&&item.kind==='audio'&&src.file&&<VoiceBubble src={src.file} durationMs={null} mine/>}
-  <Kv rows={[[t('fe.staff.media.purposeLabel'),purpose.startsWith('fe.')?null:purpose],[t('fe.staff.media.authorLabel'),item.authorLabel],[t('fe.staff.media.scanner'),val(item.reason)]]}/>
+  <Kv rows={[[t('fe.staff.media.purposeLabel'),purpose.startsWith('fe.')?null:purpose],[t('fe.staff.author'),owner],[t('fe.staff.media.authorLabel'),item.authorLabel],[t('fe.staff.media.scanner'),val(item.reason)]]}/>
   {item.usedIn&&<ReviewObject kind={t('fe.staff.obj.usedIn')} text={item.usedIn}/>}
   {src!==undefined&&!ask&&<>
    {src&&!explicit&&<Note>{t('fe.staff.media.publicOnly')}</Note>}
@@ -546,11 +550,13 @@ function MediaCard({item,onDone}:{item:MediaItem,onDone:()=>void}){
     {src&&<Btn icon={Check} disabled={d.busy} onClick={()=>d.run('staff.mediaDecide',{assetId:item.id,decision:'approve',explicit:false})}>{t('fe.staff.media.approveSafe')}</Btn>}
     {src&&explicit&&<Btn kind="soft" icon={Check} disabled={d.busy} onClick={()=>d.run('staff.mediaDecide',{assetId:item.id,decision:'approve',explicit:true})}>{t('fe.staff.media.approveExplicit')}</Btn>}
     <Btn kind="soft" icon={Ban} disabled={d.busy||!reason} onClick={()=>setAsk('reject')}>{t('fe.staff.reject')}</Btn>
+    {item.owner&&<Btn kind="danger" icon={Gavel} disabled={d.busy} onClick={()=>setMeasures(true)}>{t('fe.staff.m.open')}</Btn>}
    </Actions>
   </>}
   {ask==='reject'&&<Confirm text={t('fe.staff.media.confirmReject')} busy={d.busy} onNo={()=>setAsk(null)} onYes={()=>d.run('staff.mediaDecide',{assetId:item.id,decision:'reject',reason})}/>}
   <Csam busy={d.busy} asking={ask==='csam'} onAsk={()=>setAsk('csam')} onNo={()=>setAsk(null)} onYes={()=>d.run('staff.mediaDecide',{assetId:item.id,decision:'reject',reason:'csam_suspected'})}/>
   <Failure text={d.failure}/>
+  {measures&&item.owner&&<Measures profileId={item.owner.id} name={owner??''} onClose={()=>setMeasures(false)} onApplied={()=>{setMeasures(false);toast(t('fe.staff.m.done'),{type:'ok'});}}/>}
  </StCard>;
 }
 
@@ -808,9 +814,10 @@ function ReportCard({item,onDone}:{item:ReportItem,onDone:()=>void}){
  const [rule,setRule]=useState<typeof RULES[number]|''>('');const [note,setNote]=useState('');const [ask,setAsk]=useState(false);
  const people=item.targetType==='profile'||item.targetType==='conversation';
  const base={targetType:item.targetType,targetId:item.targetId,note:note.trim(),...(item.targetType==='conversation'&&item.author?{reportedProfileId:item.author.id}:{})};
- const author=item.author?[item.author.name,item.author.handle&&'@'+item.author.handle].filter(Boolean).join(' '):null;
+ const author=personName(item.author);const toast=useToast();
  // Whom a measure is for: the reported profile, or in a chat the side it was reported about.
- const target=item.targetType==='profile'?{id:item.targetId,name:author??''}:item.targetType==='conversation'&&item.author?{id:item.author.id,name:author??''}:null;
+ // A post, reply, community or event: its author.
+ const target=item.targetType==='profile'?{id:item.targetId,name:author??''}:item.author?{id:item.author.id,name:author??''}:null;
  const [measures,setMeasures]=useState(false);
  const messages=Array.isArray((item.reported as {messages?:unknown})?.messages)?(item.reported as {messages:{seq:number,body:string,media:boolean,at:string}[]}).messages:null;
  const o=item.object;const under=typeof o?.facts?.under==='string'?o.facts.under:null;
@@ -831,10 +838,11 @@ function ReportCard({item,onDone}:{item:ReportItem,onDone:()=>void}){
   {ask?<Confirm text={t('fe.staff.report.confirmRemove')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>d.run('staff.reportDecide',{...base,decision:'remove',rule})}/>
    :<Actions><Btn icon={Check} disabled={d.busy} onClick={()=>d.run('staff.reportDecide',{...base,decision:'keep'})}>{t('fe.staff.report.keep')}</Btn>
     {!people&&<Btn kind="danger" icon={Ban} disabled={d.busy||!rule} onClick={()=>setAsk(true)}>{t('fe.staff.report.remove.'+item.targetType)}</Btn>}
-    {people&&target&&<Btn kind="danger" icon={Gavel} disabled={d.busy} onClick={()=>setMeasures(true)}>{t('fe.staff.m.open')}</Btn>}</Actions>}
+    {target&&<Btn kind={people?'danger':'soft'} icon={Gavel} disabled={d.busy} onClick={()=>setMeasures(true)}>{t('fe.staff.m.open')}</Btn>}</Actions>}
   <Failure text={d.failure}/>
   {measures&&target&&<Measures profileId={target.id} name={target.name} onClose={()=>setMeasures(false)}
-   onApplied={()=>{setMeasures(false);void d.run('staff.reportDecide',{...base,decision:'keep',note:(note.trim()||t('fe.staff.m.reportNote')).slice(0,500)});}}/>}
+   // A person or a chat: the measure answers the report. A post and the like still wait for keep / remove.
+   onApplied={()=>{setMeasures(false);if(people)void d.run('staff.reportDecide',{...base,decision:'keep',note:(note.trim()||t('fe.staff.m.reportNote')).slice(0,500)});else toast(t('fe.staff.m.done'),{type:'ok'});}}/>}
  </StCard>;
 }
 
@@ -858,19 +866,25 @@ function Measures({profileId,name,onClose,onApplied}:{profileId:string,name:stri
  const apply=()=>{const timed=forever?{}:{days:Number(days)};
   void d.run(kind==='restrict'?'staff.restrict':'staff.sanction',kind==='restrict'
    ?{profileId,on:true,rule,note:note.trim(),...timed}:{profileId,decision:'suspend',rule,note:note.trim(),...timed});};
- return <Sheet title={t('fe.staff.m.title',{name})} onClose={onClose}>
+ // Built like «Пожаловаться» (report.tsx): rows with a short line under each, the action in the sheet's foot.
+ return <Sheet title={t('fe.staff.m.title',{name})} onClose={onClose} dirty={!!rule||!!note.trim()}
+  foot={ask?undefined:<Btn kind="danger" icon={Gavel} disabled={d.busy||!rule||blocked} onClick={()=>setAsk(true)}>{t(kind==='restrict'?'fe.staff.m.doRestrict':'fe.staff.m.doSuspend')}</Btn>}>
   <BackCloses onClose={onClose}/>
-  <Form>
-   <Choice label={t('fe.staff.rule')} value={rule} onChange={v=>{setRule(v);if(GRAVE.has(v))setDays('0');}} disabled={d.busy} options={RULES.map(id=>({id,label:t('fe.staff.rule.'+id)}))}/>
-   <Choice label={t('fe.staff.m.kind')} value={kind} onChange={v=>{setKind(v);if(v==='suspend'&&!lead&&days==='0')setDays('7');}} disabled={d.busy}
-    options={[{id:'restrict' as const,label:t('fe.staff.m.restrict')},{id:'suspend' as const,label:t('fe.staff.m.suspend')}]}/>
-   {dayOpts.length>1&&<Choice label={t('fe.staff.m.for')} value={grave?'0':days} onChange={setDays} disabled={d.busy} options={dayOpts}/>}
-   {blocked?<Alert kind="warn">{t('fe.staff.m.leadOnly')}</Alert>:rule&&<Note>{effect}</Note>}
+  <Stack gap={4}>
+   <Field label={t('fe.staff.m.kind')}>
+    <RadioList label={t('fe.staff.m.kind')} value={kind} onChange={v=>{setKind(v);setAsk(false);if(v==='suspend'&&!lead&&days==='0')setDays('7');}}
+     options={[['restrict',t('fe.staff.m.restrict'),t('fe.staff.m.sub.restrict')],['suspend',t('fe.staff.m.suspend'),t('fe.staff.m.sub.suspend')]] as const}/>
+   </Field>
+   <Field label={t('fe.staff.rule')}>
+    <RadioList label={t('fe.staff.rule')} value={rule||null} onChange={v=>{setRule(v);setAsk(false);if(GRAVE.has(v))setDays('0');}}
+     options={RULES.map(id=>[id,t('fe.staff.rule.'+id)] as const)}/>
+   </Field>
+   {dayOpts.length>1&&<Choice label={t('fe.staff.m.for')} value={grave?'0':days} onChange={v=>{setDays(v);setAsk(false);}} disabled={d.busy} options={dayOpts}/>}
+   {blocked&&<Alert kind="warn">{t('fe.staff.m.leadOnly')}</Alert>}
    <TextField label={t('fe.staff.note')} value={note} onChange={setNote} max={500}/>
-   {ask?<Confirm text={effect} danger busy={d.busy} onNo={()=>setAsk(false)} onYes={apply}/>
-    :<Btn kind="danger" icon={Gavel} disabled={d.busy||!rule||blocked} onClick={()=>setAsk(true)}>{t(kind==='restrict'?'fe.staff.m.doRestrict':'fe.staff.m.doSuspend')}</Btn>}
+   {ask&&<Confirm text={effect} danger busy={d.busy} onNo={()=>setAsk(false)} onYes={apply}/>}
    <Failure text={d.failure}/>
-  </Form>
+  </Stack>
  </Sheet>;
 }
 
