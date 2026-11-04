@@ -57,7 +57,7 @@ function useAppUpdate(){
    const next=decideUpdate(config.update?.android,build.channel,Number(build.versionCode)||0,locale);
    setOffer(next);
    if(next?.channel==='direct'){
-    const s=await native.getUpdateState().catch(()=>null);
+    const s=await native.getUpdateState({expectedVersionCode:next.versionCode}).catch(()=>null);
     if(s?.status==='downloading'){setStatus('downloading');watch(next);}
     else if(s?.status==='ready')setStatus('ready');
    }
@@ -76,7 +76,12 @@ function useAppUpdate(){
  const start=async()=>{
   const native=plugin();if(!native||!offer)return;
   if(offer.channel==='store'){await native.openExternal({url:offer.url}).catch(()=>undefined);return;}
-  if(status==='ready'||status==='permission'){await install(offer);return;}
+  if(status==='ready'||status==='permission'){
+   // A file that no longer installs (an older app kept it from an earlier update) is not an error to show: download again.
+   const r=await native.installUpdate({expectedVersionCode:offer.versionCode}).catch(()=>({status:'error'}));
+   if(r.status==='installer_opened'){setStatus('ready');return;}
+   if(r.status==='permission_required'){setStatus('permission');return;}
+  }
   setStatus('downloading');setProgress(-1);
   const r=await native.downloadUpdate({url:offer.url,expectedVersionCode:offer.versionCode}).catch(()=>({status:'error'}));
   if(r.status==='error'){setStatus('error');return;}

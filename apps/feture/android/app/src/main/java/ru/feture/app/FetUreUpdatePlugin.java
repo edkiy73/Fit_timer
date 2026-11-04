@@ -157,11 +157,15 @@ public class FetUreUpdatePlugin extends Plugin {
     /** Polled by the app: the download lives in WorkManager and survives closing the screen. */
     @PluginMethod
     public void getUpdateState(PluginCall call) {
+        final int expectedVersionCode = Math.max(0, call.getInt("expectedVersionCode", 0));
         updateExecutor.execute(() -> {
             JSObject result = new JSObject();
             try {
                 WorkInfo info = latestUpdateWork();
                 File apk = UpdateDownloadWorker.updateFile(getContext());
+                // A file left from an earlier update (already installed, or not the version on offer now) is not
+                // «ready»: the first «Установить» would fail on it. It goes, and the update downloads afresh.
+                if (apk.isFile() && staleUpdateApk(apk, expectedVersionCode)) apk.delete();
                 if (info == null) {
                     boolean ready = apk.isFile();
                     result.put("running", false);
@@ -250,6 +254,20 @@ public class FetUreUpdatePlugin extends Plugin {
         Set<String> archiveSigners = signerDigests(archive);
         Set<String> currentSigners = signerDigests(current);
         if (archiveSigners.isEmpty() || !archiveSigners.equals(currentSigners)) throw new Exception("signature_mismatch");
+    }
+
+    /** The downloaded APK is not the update to install now: unreadable, not newer than this app, or another version than offered. */
+    private boolean staleUpdateApk(File apk, int expectedVersionCode) {
+        try {
+            PackageManager pm = getContext().getPackageManager();
+            PackageInfo archive = pm.getPackageArchiveInfo(apk.getAbsolutePath(), 0);
+            if (archive == null) return true;
+            long archiveVersion = versionCode(archive);
+            if (archiveVersion <= versionCode(pm.getPackageInfo(getContext().getPackageName(), 0))) return true;
+            return expectedVersionCode > 0 && archiveVersion != expectedVersionCode;
+        } catch (Exception e) {
+            return true;
+        }
     }
 
     @SuppressWarnings("deprecation")
