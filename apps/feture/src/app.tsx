@@ -30,7 +30,7 @@ const AccessScreen=screen(access,'AccessScreen'),LinksScreen=screen(links,'Links
 const FollowsScreen=screen(browse,'FollowsScreen'),GalleryScreen=screen(browse,'GalleryScreen'),SearchScreen=screen(browse,'SearchScreen'),TopicScreen=screen(browse,'TopicScreen');
 const InterestsScreen=screen(interests,'InterestsScreen'),StaffScreen=screen(staff,'StaffScreen');
 const AgeCheckScreen=screen(ageCheck,'AgeCheckScreen'),PhotoCheckScreen=screen(photoCheck,'PhotoCheckScreen');
-const MeV3Screen=screen(meV3,'MeV3Screen'),MeV3MineScreen=screen(meV3,'MeV3MineScreen'),MeV3SettingsScreen=screen(meV3,'MeV3SettingsScreen');
+const MeV3Screen=screen(meV3,'MeV3Screen'),MeV3SettingsScreen=screen(meV3,'MeV3SettingsScreen');
 const MeNewScreen=screen(meNew,'MeNewScreen'),MeNewSection=screen(meNew,'MeNewSection'),SettingsNewScreen=screen(settingsNew,'SettingsNewScreen'),SettingsNewSection=screen(settingsNew,'SettingsNewSection');
 const PostScreen=screen(feed,'PostScreen'),ComposeScreen=screen(feed,'ComposeScreen'),EditPostScreen=screen(feed,'EditPostScreen');
 const CreateCommunityScreen=screen(createCommunity,'CreateCommunityScreen'),EditCommunityScreen=screen(createCommunity,'EditCommunityScreen');
@@ -160,7 +160,6 @@ export const routes: RouteObject[] = [
         {path:'chats/:id', element:<ChatScreen />},
         {path:'me', element:<MeV3Screen />}, // LOCAL PREVIEW ONLY — not committed
         {path:'me/v3', element:<MeV3Screen />}, // the owner's account prototype, by address only until it replaces «Я»
-        {path:'me/v3/mine', element:<MeV3MineScreen />},
         {path:'me/v3/settings', element:<MeV3SettingsScreen />},
         {path:'me/new', element:<MeNewScreen />}, // the owner's new layout, by address only until it replaces «Я»
         {path:'me/new/:section', element:<MeNewSection />},
