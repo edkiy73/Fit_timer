@@ -3,6 +3,8 @@ import { ABOUT_FACTS, meCommands, notificationSettingsOf, PROFILE_SETTINGS } fro
 import { emailState } from '../email.mjs';
 import { fail, isUniqueViolation } from '../errors.mjs';
 import { hmac } from '../hash.mjs';
+import { journal } from './staff.mjs';
+import { setSuspended } from './moderation.mjs';
 import { mediaDto } from '../media/assets.mjs';
 import { photosFor } from './photos.mjs';
 import { photoVerifiedOf } from './verification.mjs';
@@ -355,6 +357,25 @@ registerApprovalKind('interests.set', {
   },
 });
 
+/** A sanction the login had when its previous account was deleted comes back on the new one until the same end (audit
+ * item 28): journalled without a staff member, told to the person, appealable as any other.
+ * @param {Q} q @param {string} pepper @param {string} coreAccountHash @param {string} profileId */
+async function applyCarriedSanction(q, pepper, coreAccountHash, profileId) {
+  const [c] = await q.query(`select kind, rule, until, scope from feture.sanction_carry where key_hmac = $1 and (until is null or until > now())`,
+    [hmac(pepper, 'feture-sanction:v1:' + coreAccountHash)]);
+  if (!c) return;
+  const until = c.until ? new Date(c.until).toISOString() : null;
+  if (c.kind === 'suspend') {
+    await setSuspended(q, profileId, true, c.rule, c.until);
+    await enqueue(q, 'profile.suspended', profileId, { rule: c.rule, ...(until ? { until } : {}) });
+    await journal(q, null, 'sanction.suspend', 'profile', profileId, { rule: c.rule, carried: true, ...(until ? { until } : {}) });
+  } else {
+    await q.query(`update feture.profile set restricted_at = now(), restriction_rule = $2, restricted_until = $3, restriction_scope = $4 where id = $1`, [profileId, c.rule, c.until, c.scope]);
+    await enqueue(q, 'profile.restricted', profileId, { rule: c.rule, ...(until ? { until } : {}), ...(c.scope ? { scope: c.scope } : {}) });
+    await journal(q, null, 'restrict.on', 'profile', profileId, { rule: c.rule, carried: true, ...(until ? { until } : {}), ...(c.scope ? { scope: c.scope } : {}) });
+  }
+}
+
 /** @type {Record<keyof typeof meCommands, Command['run']>} */
 const run = {
   async 'catalog.get'(q) {
@@ -419,6 +440,7 @@ const run = {
         `insert into feture.consent (account_id, document_version_id, document_key, content_hash, locale) values ($1, $2, $3, $4, $5) on conflict do nothing`,
         [account.id, d.id, d.document_key, d.content_hash, input.locale]);
     }
+    await applyCarriedSanction(q, String(cfg.pepper), coreAccountHash, profileId);
     return { ok: true, profileId };
   },
 

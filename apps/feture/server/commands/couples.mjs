@@ -33,7 +33,7 @@ async function currentCouple(q, accountId) {
 /** The registered, unrestricted account that invites or accepts, with its current couple.
  * @param {Q} q @param {{id: string, person_profile_id?: string | null}} account */
 async function inviter(q, account) {
-  if (account.person_profile_id && (await q.query('select feture.restricted($1) r', [account.person_profile_id]))[0].r) fail(403, 'forbidden', { rule: 'restricted' });
+  if (account.person_profile_id && (await q.query(`select feture.restricted_in($1, 'links') r`, [account.person_profile_id]))[0].r) fail(403, 'forbidden', { rule: 'restricted' });
   const [me] = await q.query(
     `select a.person_profile_id from feture.account a join feture.profile p on p.id = a.person_profile_id
      where a.id = $1 and a.state = 'active' and p.state = 'active'`, [account.id]);
@@ -165,7 +165,7 @@ export async function deleteCouple(q, profileId, reason) {
 const run = {
   async 'couple.invite'(q, { account, input }) {
     // Limited by the handler (20 a day, failures included) so invitations cannot pester or probe who is in a couple.
-    if (account.person_profile_id && (await q.query('select feture.restricted($1) r', [account.person_profile_id]))[0].r) fail(403, 'forbidden', { rule: 'restricted' });
+    if (account.person_profile_id && (await q.query(`select feture.restricted_in($1, 'links') r`, [account.person_profile_id]))[0].r) fail(403, 'forbidden', { rule: 'restricted' });
     const [me] = await q.query(
       `select a.person_profile_id, p.name, p.handle from feture.account a join feture.profile p on p.id = a.person_profile_id
        where a.id = $1 and a.state = 'active' and p.state = 'active'`, [account.id]);

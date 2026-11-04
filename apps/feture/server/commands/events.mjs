@@ -412,6 +412,7 @@ const run = {
 
   async 'event.submit'(q, { acting: a, input }) {
     const acting = need(a);
+    await requireUnrestricted(q, acting, 'events');
     const f = input.event;
     if (Date.parse(f.startsAt) <= Date.now()) fail(400, 'invalid_input', { fields: ['startsAt'] });
     await checkEventRefs(q, acting, f);
@@ -440,6 +441,7 @@ const run = {
 
   async 'event.update'(q, { acting: a, input }) {
     const acting = need(a);
+    await requireUnrestricted(q, acting, 'events');
     const e = await ownEvent(q, input.eventId, acting);
     // A published couple event changes when the partner agrees (if they asked to); before that the submit approval covers it.
     if (e.state === 'published' && needsPartner(acting, 'event.update')) {
@@ -603,7 +605,7 @@ const run = {
 
   async 'event.rsvp'(q, { acting: a, input }) {
     const acting = need(a);
-    if (input.status === 'going' || input.status === 'interested') await requireUnrestricted(q, acting);
+    if (input.status === 'going' || input.status === 'interested') await requireUnrestricted(q, acting, 'events');
     const e = await openFor(q, input.eventId, acting.profileId, acting.accountId);
     // Clearing the answer clears the ticket mark too (EVT-028).
     const c = { status: input.status, showInList: input.status === null ? null : input.showInList, ticketMarked: input.status === null ? null : input.ticketMarked };
@@ -625,7 +627,7 @@ const run = {
 
   async 'event.apply'(q, { acting: a, input }) {
     const acting = need(a);
-    await requireUnrestricted(q, acting);
+    await requireUnrestricted(q, acting, 'events');
     const e = await openFor(q, input.eventId, acting.profileId, acting.accountId);
     const c = { answers: input.answers, note: input.note };
     checkApplication(e, c);

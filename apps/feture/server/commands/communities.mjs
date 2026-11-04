@@ -1,6 +1,6 @@
 // @ts-check
 import { likePattern } from '../search.mjs';
-import { popularScore, staffOwn } from '../sql-rules.mjs';
+import { activeActor, popularScore, staffOwn } from '../sql-rules.mjs';
 import { randomBytes } from 'node:crypto';
 import { requireUnrestricted } from '../profiles.mjs';
 import { communitiesCommands } from '../../contracts/communities.mjs';
@@ -280,6 +280,7 @@ function resubmitState(c) {
 const run = {
   async 'community.create'(q, { acting: a, input }) {
     const acting = need(a);
+    await requireUnrestricted(q, acting, 'communities');
     const { opId: _, ...f } = input;
     if (await nameTaken(q, f.name)) fail(409, 'conflict', NAME_TAKEN);
     if (needsPartner(acting, 'community.create')) {
@@ -290,6 +291,7 @@ const run = {
 
   async 'community.update'(q, { acting: a, input }) {
     const acting = need(a);
+    await requireUnrestricted(q, acting, 'communities');
     await requireHost(q, input.communityId, acting, 'owner');
     const [c] = await q.query(`select * from feture.community where id = $1 for update`, [input.communityId]);
     if (c.rev !== input.rev) fail(409, 'conflict', { rev: c.rev });
@@ -420,7 +422,7 @@ const run = {
 
   async 'community.join'(q, { acting: a, input }) {
     const acting = need(a);
-    await requireUnrestricted(q, acting);
+    await requireUnrestricted(q, acting, 'communities');
     const c = await visible(q, input.communityId, acting, input.invite);
     if (c.state !== 'published') fail(409, 'conflict', { state: c.state });
     const m = await membership(q, c.id, acting.profileId);
@@ -468,6 +470,8 @@ const run = {
 
   async 'community.requestDecide'(q, { acting: a, input }) {
     const acting = need(a);
+    // A restricted host takes in nobody new (В3); declining stays possible.
+    if (input.approve) await requireUnrestricted(q, acting, 'communities');
     const [r] = await q.query(`select * from feture.community_request where id = $1 for update`, [input.requestId]);
     if (!r) fail(404, 'not_found');
     await requireHost(q, r.community_id, acting, 'host');
@@ -572,8 +576,8 @@ const run = {
        from feture.post p join feture.community c on c.id = p.community_id
        cross join lateral (
          select count(r.*)::int replies, count(distinct r.author_profile_id)::int repliers,
-           (select count(*)::int from feture.reaction x where x.target_type = 'post' and x.target_id = p.id) likes
-         from feture.reply r where r.post_id = p.id and r.state = 'published' and not feture.blocked($1, r.author_profile_id)) s
+           (select count(*)::int from feture.reaction x where x.target_type = 'post' and x.target_id = p.id and ${activeActor('x.profile_id')}) likes
+         from feture.reply r where r.post_id = p.id and r.state = 'published' and not feture.blocked($1, r.author_profile_id) and ${activeActor('r.author_profile_id')}) s
        where p.community_id is not null and p.state = 'published' and not p.popular_excluded and p.published_at > now() - interval '7 days'
          and ($3::uuid is null or p.community_id = $3) and ($4::text is null or $4 = any(p.topics) or $4 = any(c.topics))
          and feture.post_visible(p, $1, $2)
@@ -585,7 +589,7 @@ const run = {
 
   async 'community.invite'(q, { acting: a, input }) {
     const acting = need(a);
-    await requireUnrestricted(q, acting);
+    await requireUnrestricted(q, acting, 'communities');
     await requireHost(q, input.communityId, acting, 'host');
     if (input.revokeAll) {
       await q.query(`update feture.community_invite set revoked_at = now() where community_id = $1 and revoked_at is null`, [input.communityId]);
@@ -602,7 +606,7 @@ const run = {
     const c = await visible(q, input.communityId, viewer);
     const rows = await q.query(
       `select p.id, p.title, left(p.body, 300) excerpt, p.pinned, p.published_at, p.owner_profile_id, p.popular_excluded,
-         (select count(*)::int from feture.reply r where r.post_id = p.id and r.state = 'published') replies
+         (select count(*)::int from feture.reply r where r.post_id = p.id and r.state = 'published' and ${activeActor('r.author_profile_id')}) replies
        from feture.post p where p.community_id = $1 and p.state = 'published' and feture.post_visible(p, $2, $3)
        order by p.pinned desc, p.published_at desc limit 50`, [c.id, viewer.profileId, viewer.accountId]);
     const locked = c.privacy !== 'open' && !c.own && !(await isReader(q, c.id, viewer.profileId));

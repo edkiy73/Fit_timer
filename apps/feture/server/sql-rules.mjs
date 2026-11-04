@@ -19,9 +19,10 @@ export const qaHidden = (owner, viewer) => `(${qaProfile(owner)} and not ${qaPro
  * @param {string} p post alias @param {string} viewer the viewer's profile id (`$n`) */
 export const popularScore = (p, viewer) => `(
   (select 3 * count(distinct r.author_profile_id) + count(*) from feture.reply r
-    where r.post_id = ${p}.id and r.state = 'published' and r.author_profile_id <> ${p}.owner_profile_id and not feture.blocked(${viewer}, r.author_profile_id))
+    where r.post_id = ${p}.id and r.state = 'published' and r.author_profile_id <> ${p}.owner_profile_id and not feture.blocked(${viewer}, r.author_profile_id)
+      and ${activeActor('r.author_profile_id')})
   + 0.5 * (select count(*) from feture.reaction x where x.target_type = 'post' and x.target_id = ${p}.id and x.profile_id <> ${p}.owner_profile_id
-      and not feture.blocked(${viewer}, x.profile_id))
+      and not feture.blocked(${viewer}, x.profile_id) and ${activeActor('x.profile_id')})
 ) * power(0.5, extract(epoch from now() - ${p}.published_at) / 345600.0)`;
 
 /** Whether `target` (a profile) takes mentions from `author` («Кто может упоминать»): people only, active, not the
@@ -78,3 +79,8 @@ export const staffOwnAccount = (other, account) => `(${other} = ${account} or ex
   join feture.profile sc on sc.id = sx.profile_id and sc.kind = 'couple' and sc.state in ('active', 'paused', 'suspended')
   join feture.profile_member sy on sy.profile_id = sx.profile_id and sy.account_id = ${account} and sy.state = 'active'
   where sx.account_id = ${other} and sx.state = 'active'))`;
+
+/** `profile` is active: its likes, replies and votes count and show (audit item 5). A suspended person (their couple
+ * with them) or a paused couple counts nowhere while it lasts; nothing is deleted, so it all comes back when lifted.
+ * @param {string} profile profile id expression */
+export const activeActor = profile => `exists (select 1 from feture.profile ap where ap.id = ${profile} and ap.state = 'active')`;

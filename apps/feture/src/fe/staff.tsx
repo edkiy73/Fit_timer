@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {ArrowUpDown,BadgeCheck,Ban,CalendarDays,Check,ClipboardCheck,ChevronLeft,ChevronRight,Eye,FilePen,Flag,Gavel,IdCard,Image,ImageOff,Inbox,ListFilter,Lock,MapPin,Minus,RefreshCw,Scale,Search,ShieldAlert,ShieldCheck,UserX,Users,X,Ellipsis,Film,Mic,Camera,Image as ImageIcon,LifeBuoy,Crown,Wrench,ScrollText,KeyRound,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Actions,Alert,Btn,Card,RadioList,Chip,ChoiceChips,Chips,Divider,Empty,ExpandRow,Field,Form,Group,IconBtn,Input,KeyValues,LoadMore,MoreInfo,Note,Pill,ReviewBar,ReviewCard,ReviewMedia,ReviewObject,ReviewPair,ReviewTiles,ReviewPreview,type Slide,useBackClose,Row,SearchInput,SectionLabel,Seg,Select,Sheet,Skel,Stack,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble} from './kit';
+import {Actions,Alert,Btn,Card,RadioList,Chip,ChoiceChips,MultiChips,Chips,Divider,Empty,ExpandRow,Field,Form,Group,IconBtn,Input,KeyValues,LoadMore,MoreInfo,Note,Pill,ReviewBar,ReviewCard,ReviewMedia,ReviewObject,ReviewPair,ReviewTiles,ReviewPreview,type Slide,useBackClose,Row,SearchInput,SectionLabel,Seg,Select,Sheet,Skel,Stack,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble} from './kit';
 import {askFactor,useFe,useLive} from './session';
 import {useToast} from './toast';
 import {pullStaffCounts,useStaffCounts} from './staff-counts';
@@ -17,6 +17,7 @@ import {evRange,evTz,inTz} from './event-time';
 import {StaffMaintenance} from './maintenance';
 import {textError,textRule} from './kit/validate';
 import {fill} from './comm-kit';
+import {RESTRICT_PRESETS,RESTRICT_SCOPES,type RestrictScope} from '../../contracts/_restrict.mjs';
 
 /** Staff area (/n/staff, S4 moderation): review queues with decisions, Premium for dogfooding, the journal.
  * Roles are enforced by the server only; a queue the server refuses (403) is simply not shown. */
@@ -867,18 +868,22 @@ function Measures({profileId,name,onClose,onApplied}:{profileId:string,name:stri
  const d=useDecide(onApplied);
  const [rule,setRule]=useState<typeof RULES[number]|''>('');const [kind,setKind]=useState<'restrict'|'suspend'>('restrict');
  const [days,setDays]=useState<string>('7');const [note,setNote]=useState('');const [ask,setAsk]=useState(false);
+ // What a restriction limits (audit item 6): a preset, then the points themselves.
+ const [scope,setScope]=useState<RestrictScope[]>([...RESTRICT_PRESETS.standard]);
+ const preset=(Object.keys(RESTRICT_PRESETS) as (keyof typeof RESTRICT_PRESETS)[]).find(k=>RESTRICT_PRESETS[k].length===scope.length&&RESTRICT_PRESETS[k].every(x=>scope.includes(x)))??null;
  const grave=!!rule&&GRAVE.has(rule);
  // Until lifted only: grave rules. A moderator's suspension is always timed.
  const forever=grave||days==='0';const blocked=kind==='suspend'&&forever&&!lead;
  const dayOpts=[...(grave?[]:DAYS.map(n=>({id:String(n),label:t('fe.staff.m.days.'+n)}))),...(kind==='restrict'||lead?[{id:'0',label:t('fe.staff.m.forever')}]:[])];
  const until=forever?null:new Date(Date.now()+Number(days)*864e5).toLocaleDateString(locale==='en'?'en-GB':'ru-RU',{day:'numeric',month:'long'});
- const effect=t(kind==='restrict'?'fe.staff.m.effect.restrict':'fe.staff.m.effect.suspend',{name})+' '+(until?t('fe.staff.m.until',{date:until}):t('fe.staff.m.untilLifted'));
+ const effect=t(kind==='restrict'?'fe.staff.m.effect.restrict':'fe.staff.m.effect.suspend',{name})+' '+(until?t('fe.staff.m.until',{date:until}):t('fe.staff.m.untilLifted'))
+  +(kind==='restrict'?' '+t('fe.staff.m.limits',{list:scope.map(x=>t('fe.staff.m.pt.'+x)).join(', ')}):'');
  const apply=()=>{const timed=forever?{}:{days:Number(days)};
   void d.run(kind==='restrict'?'staff.restrict':'staff.sanction',kind==='restrict'
-   ?{profileId,on:true,rule,note:note.trim(),...timed}:{profileId,decision:'suspend',rule,note:note.trim(),...timed});};
+   ?{profileId,on:true,rule,note:note.trim(),scope,...timed}:{profileId,decision:'suspend',rule,note:note.trim(),...timed});};
  // Built like «Пожаловаться» (report.tsx): rows with a short line under each, the action in the sheet's foot.
  return <Sheet title={t('fe.staff.m.title',{name})} onClose={onClose} dirty={!!rule||!!note.trim()}
-  foot={ask?undefined:<Btn kind="danger" icon={Gavel} disabled={d.busy||!rule||blocked} onClick={()=>setAsk(true)}>{t(kind==='restrict'?'fe.staff.m.doRestrict':'fe.staff.m.doSuspend')}</Btn>}>
+  foot={ask?undefined:<Btn kind="danger" icon={Gavel} disabled={d.busy||!rule||blocked||(kind==='restrict'&&!scope.length)} onClick={()=>setAsk(true)}>{t(kind==='restrict'?'fe.staff.m.doRestrict':'fe.staff.m.doSuspend')}</Btn>}>
   <BackCloses onClose={onClose}/>
   <Stack gap={4}>
    <Field label={t('fe.staff.m.kind')}>
@@ -889,6 +894,12 @@ function Measures({profileId,name,onClose,onApplied}:{profileId:string,name:stri
     <RadioList label={t('fe.staff.rule')} value={rule||null} onChange={v=>{setRule(v);setAsk(false);if(GRAVE.has(v))setDays('0');}}
      options={RULES.map(id=>[id,t('fe.staff.rule.'+id)] as const)}/>
    </Field>
+   {kind==='restrict'&&<Field label={t('fe.staff.m.scope')}>
+    <ChoiceChips label={t('fe.staff.m.scope')} value={preset} onChange={k=>{setScope([...RESTRICT_PRESETS[k]]);setAsk(false);}}
+     options={(['soft','standard','strict'] as const).map(k=>[k,t('fe.staff.m.preset.'+k)] as const)}/>
+    <MultiChips label={t('fe.staff.m.points')} value={scope} onChange={v=>{setScope(v);setAsk(false);}}
+     options={RESTRICT_SCOPES.map(x=>[x,t('fe.staff.m.pt.'+x)] as const)}/>
+   </Field>}
    {dayOpts.length>1&&<Choice label={t('fe.staff.m.for')} value={grave?'0':days} onChange={v=>{setDays(v);setAsk(false);}} disabled={d.busy} options={dayOpts}/>}
    {blocked&&<Alert kind="warn">{t('fe.staff.m.leadOnly')}</Alert>}
    <TextField label={t('fe.staff.note')} value={note} onChange={setNote} max={500}/>

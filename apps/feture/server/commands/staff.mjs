@@ -283,13 +283,14 @@ const run = {
     } else {
       await q.query(`update feture.media_asset set state = 'rejected', reject_reason = $2 where id = $1`, [a.id, input.reason]);
       await enqueue(q, 'media.hide', a.owner_profile_id, { assetId: a.id });
-      await enqueue(q, 'media.purge', a.owner_profile_id, { assetId: a.id }, { delaySeconds: 30 * 24 * 3600 }); // kept 30 days for an appeal
+      await enqueue(q, 'media.purge', a.owner_profile_id, { assetId: a.id }, { delaySeconds: 30 * 24 * 3600 }); // kept 30 days for an appeal (longer while one is open: jobs.mjs)
     }
     await journal(q, account.id, 'media.' + input.decision, 'media', a.id, { explicit: input.explicit ?? null, reason: input.reason ?? null });
     // The owner learns the outcome (audit 30.10) — except a suspected CSAM case, which nobody is tipped off about.
     if (!escalate && a.purpose !== 'verification') {
       await enqueue(q, 'media.decided', a.owner_profile_id, {
-        assetId: a.id, purpose: a.purpose, kind: a.kind, state: input.decision === 'approve' ? 'approved' : 'rejected', ...(input.decision === 'approve' ? {} : { reason: input.reason }),
+        assetId: a.id, purpose: a.purpose, kind: a.kind, state: input.decision === 'approve' ? 'approved' : 'rejected',
+        ...(input.decision === 'approve' ? {} : { reason: input.reason, targetType: 'media', targetId: a.id }), // appealable (audit item 9)
       });
     }
     return { state: input.decision === 'approve' ? 'approved' : input.reason === 'csam_suspected' ? 'blocked' : 'rejected' };

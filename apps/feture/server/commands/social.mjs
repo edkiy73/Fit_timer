@@ -119,7 +119,7 @@ const run = {
 
   async 'follow.set'(q, { acting: a, input }) {
     const acting = need(a);
-    if (input.on) await requireUnrestricted(q, acting);
+    if (input.on) await requireUnrestricted(q, acting, 'follows');
     if (!input.on) {
       await q.query(`delete from feture.follow where follower_profile_id = $1 and target_profile_id = $2`, [acting.profileId, input.profileId]);
       return { following: false };

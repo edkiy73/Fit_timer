@@ -87,16 +87,18 @@ test('deletion: confirmed by nickname; the couple goes (partner stays), ties end
   } finally { await pg.close(); }
 });
 
-test('review fixes: no self-deletion under a restriction or a suspended couple; attendees see the cancellation; the old nickname hold moves to the deleted profile', async () => {
+test('review fixes: deletion under a restriction or with a suspended couple is possible (audit item 28); attendees see the cancellation; the old nickname hold moves to the deleted profile', async () => {
   const { pg, db, call, coupleOf, member } = await world();
   try {
     const a = await member('ua', 'Alex'), b = await member('ub', 'Kira'), c = await member('uc', 'Noa');
-    await db.query(`update feture.profile set restricted_at = now(), restriction_rule = 'spam' where id = $1`, [c]);
-    assert.equal((await call('uc', null, { action: 'account.delete', opId: op(), confirmHandle: 'Noa' })).rule, 'support_required');
+    const d = await member('ud', 'Lev'), e = await member('ue', 'Mia');
+    await db.query(`update feture.profile set restricted_at = now(), restriction_rule = 'spam' where id = $1`, [d]);
+    assert.equal((await call('ud', null, { action: 'account.delete', opId: op(), confirmHandle: 'Lev' })).deleted, true);
+    const stopped = await coupleOf([e, c]);
+    await db.query(`update feture.profile set state = 'suspended' where id = $1`, [stopped]);
+    assert.equal((await call('ue', null, { action: 'account.delete', opId: op(), confirmHandle: 'Mia' })).deleted, true);
+    assert.equal((await db.query('select state from feture.profile where id = $1', [stopped]))[0].state, 'deleted');
     const pair = await coupleOf([a, b]);
-    await db.query(`update feture.profile set state = 'suspended' where id = $1`, [pair]);
-    assert.equal((await call('ub', null, { action: 'account.delete', opId: op(), confirmHandle: 'Kira' })).rule, 'support_required');
-    await db.query(`update feture.profile set state = 'active' where id = $1`, [pair]);
 
     // An event Alex organises: Kira's cancellation notice is visible in her inbox, naming nobody.
     const [{ id: ev }] = await db.query(

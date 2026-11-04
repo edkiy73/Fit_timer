@@ -202,7 +202,8 @@ const run = {
     const profile = row.addressee_profile_id ?? account.person_profile_id;
     /** @type {string | null} */
     let appeal = null;
-    if (['contentRemoved', 'appealDecided'].includes(row.type) && typeof d.targetType === 'string' && typeof d.targetId === 'string') appeal = await appealState(q, profile, d.targetType, d.targetId);
+    // A rejected file or edit (audit item 9) is appealed from its card too.
+    if (['contentRemoved', 'appealDecided', 'mediaDecided', 'revisionRejected'].includes(row.type) && typeof d.targetType === 'string' && typeof d.targetId === 'string') appeal = await appealState(q, profile, d.targetType, d.targetId);
     else if (row.type === 'profileRestricted') appeal = await appealState(q, profile, 'profile', profile);
     if (row.type === 'reportResolved') item.data = { resolution: d.resolution ?? null };
     // Which material it was (an excerpt and its date): never in a push or an email, only here for its own author.

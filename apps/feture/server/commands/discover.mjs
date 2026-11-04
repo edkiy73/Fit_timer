@@ -208,11 +208,11 @@ async function decide(q, acting, target, decision, source) {
 /** Sends a like, or makes a match when the target already likes the sender (V21 likePerson, canLikeFrom).
  * @param {Q} q @param {Acting} acting @param {string} target @param {'discover' | 'profile' | 'likes'} source */
 async function sendLike(q, acting, target, source) {
-  await requireUnrestricted(q, acting);
+  await requireUnrestricted(q, acting, 'likes');
   const [t] = await q.query(
     `select p.id, p.kind, p.state, feture.blocked($1, p.id) blocked, feture.related($1, p.id) related from feture.profile p where p.id = $2 for share`, [acting.profileId, target]);
   if (!t || t.state !== 'active' || t.blocked) fail(404, 'not_found');
-  if ((await q.query('select feture.restricted($1) r', [target]))[0].r) fail(404, 'not_found'); // a restricted profile takes no new likes or matches
+  if ((await q.query(`select feture.restricted_in($1, 'likes') r`, [target]))[0].r) fail(404, 'not_found'); // a restricted profile takes no new likes or matches
   if (t.related) fail(422, 'rule_violation', { rule: 'related' });
   const [m] = await q.query(`select 1 from feture.profile_match where ended_at is null and profile_a = least($1::uuid, $2::uuid) and profile_b = greatest($1::uuid, $2::uuid)`, [acting.profileId, target]);
   if (m) fail(409, 'conflict', { rule: 'already_matched' });

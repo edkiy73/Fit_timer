@@ -3,6 +3,9 @@ import { notificationSettingsOf } from '../contracts/me.mjs';
 import { actOf, CATALOG, entryFor, PUSH_WORDS, pushTag, routeOk, SAFE_PUSH, settingOf, TAG, textOf } from '../contracts/notifications.mjs';
 import { enqueue } from './outbox.mjs';
 
+/** What a suspended account is still told (audit item 2): its suspension and the appeal's outcome — push and email alike. */
+export const TOLD_WHILE_SUSPENDED = Object.freeze(['profileSuspended', 'appealDecided']);
+
 /** Push delivery (S2 §8, extract/people-discover-chats.md §4.4). The queue sends it, never a command.
  * «safe» (the default, «Безопасные») shows only that something new is there: no names, no text. «normal» («Обычные»,
  * owner 29.10.2026) names who it is from and starts the message: «Мира · Привет! Видела тебя…», «Sofi · Ставит тебе
@@ -285,7 +288,7 @@ export function pushHandlers(db, transport, { timeoutMs = SEND_TIMEOUT_MS } = {}
       const p = /** @type {PushPayload} */ (/** @type {any} */ (item.payload));
       const [a] = await db.query(
         `select a.locale, a.state, s.settings from feture.account a left join feture.notification_settings s on s.account_id = a.id where a.id = $1`, [p.account]);
-      if (!a || a.state !== 'active') return;
+      if (!a || (a.state !== 'active' && !(a.state === 'suspended' && TOLD_WHILE_SUSPENDED.includes(String(p.key ?? '').split('.')[0])))) return;
       // Still true at send time: a member of the profile it is for.
       if (item.profile_id && !(await db.query(`select 1 from feture.profile_member where profile_id = $1 and account_id = $2 and state = 'active'`, [item.profile_id, p.account]))[0]) return;
       const settings = notificationSettingsOf(a.settings);

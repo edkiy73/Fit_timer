@@ -28,6 +28,7 @@ import {CompareSheet,asInterest} from './compare';
 
 /** A phone or tablet (a touch screen): Enter is a new line in a reply, as in the chat; on a computer it sends. */
 const coarse=typeof matchMedia==='function'&&matchMedia('(pointer:coarse)').matches;
+import {RestrictionNotice} from './restriction';
 import {topicMatches} from './topic-search';
 
 /** Slice B (V21 F01, F05, F07, F09) with the prototype's markup: feed tabs, composer row, topic chips and filters,
@@ -55,7 +56,7 @@ export const postSchema=z.object({id:z.uuid(),type:z.enum(['post','note']),title
 export type Post=z.infer<typeof postSchema>;
 const page=z.object({ok:z.literal(true),items:z.array(postSchema),next:z.string().nullable()});
 const okOnly=z.object({ok:z.literal(true)}).passthrough();
-const reply=z.object({id:z.uuid(),parentId:z.uuid().nullable().optional(),deleted:z.boolean().optional(),hidden:z.boolean().optional(),body:z.string().optional(),
+const reply=z.object({id:z.uuid(),parentId:z.uuid().nullable().optional(),deleted:z.boolean().optional(),hidden:z.boolean().optional(),unavailable:z.boolean().optional(),body:z.string().optional(),
  author:author.nullable().optional(),mine:z.boolean().optional(),liked:z.boolean().optional(),createdAt:z.string().optional(),editedAt:z.string().nullable().optional(),likes:z.number().optional(),rev:z.number().optional(),
  mentions:z.array(z.object({id:z.uuid(),handle:z.string().nullable()})).optional()});
 export type Reply=z.infer<typeof reply>;
@@ -232,6 +233,7 @@ export function FeedTab(){
   :tab==='following'?<Empty icon={Users} title={t('fe.fd.noFollows')} text={t('fe.fd.noFollowsText')}><Btn onClick={()=>navigate('/n/search?scope=people')}>{t('fe.fd.findPeople')}</Btn></Empty>
   :<Empty icon={Newspaper} title={t('fe.fd.noPosts')} text={t('fe.fd.noPostsText')}><Btn onClick={()=>navigate('/n/search?scope=people')}>{t('fe.fd.findPeople')}</Btn></Empty>;
  else body=<>
+  <RestrictionNotice/>
   {newer&&<NewPill label={t('fe.kit.newPosts')} onClick={()=>{seen();void refreshReads(()=>load());}}/>}
   <div className="posts">{items.flatMap((p,i)=>[isAct(p)?<ActivityCardOf key={p.id} a={p} onMenu={()=>setActMenu(p)}/>
    :gone[p.id]?<Alert key={p.id} kind="info" icon={EyeOff} action={<Actions><Btn size="sm" kind="soft" fit onClick={()=>restore(p.id,gone[p.id]!)}>{t('fe.tl.undo')}</Btn>
@@ -636,15 +638,15 @@ function ReplyTree({list,sort,open,setOpen,liked,delta,onLike,onReply,onMore,lim
  const flat=(root:Reply)=>{const out:Reply[]=[];const seen=new Set([root.id]);const walk=(pid:string)=>kids(pid).forEach(c=>{if(seen.has(c.id))return;seen.add(c.id);out.push(c);walk(c.id);});walk(root.id);return out;};
  const lk=(r:Reply)=>Math.max(0,(r.likes??0)+(delta[r.id]??0));const score=(r:Reply)=>{const l=lk(r),n=flat(r).length;return (l>=100?l:0)+(n>=10?n*5:0);};
  const time=(r:Reply)=>new Date(r.createdAt??0).getTime();
- const gone=(r:Reply)=>r.deleted||r.hidden?1:0;
+ const gone=(r:Reply)=>r.deleted||r.hidden||r.unavailable?1:0;
  const ordered=[...roots].sort((a,b)=>(gone(a)-gone(b))||(sort==='top'?score(b)-score(a):0)||(time(b)-time(a)));
  const go=(a:Reply['author'])=>{if(a)navigate(a.id===acting?.id?'/n/me':'/n/people/'+a.id);};
- const one=(c:Reply,root:Reply,child:boolean)=>{const hidden=c.deleted||c.hidden;const parent=c.parentId?by.get(c.parentId):undefined;
-  const to=child&&parent&&parent.id!==root.id&&!parent.deleted&&!parent.hidden;const on=liked.has(c.id);
+ const one=(c:Reply,root:Reply,child:boolean)=>{const hidden=c.deleted||c.hidden||c.unavailable;const parent=c.parentId?by.get(c.parentId):undefined;
+  const to=child&&parent&&parent.id!==root.id&&!parent.deleted&&!parent.hidden&&!parent.unavailable;const on=liked.has(c.id);
   return <article key={c.id} className={'cm'+(child?' child':'')+(hidden?' removed':'')} id={'reply-'+c.id}>
    <div className="cm-l">{hidden?<span className="av cm-ghost" aria-hidden="true">{c.deleted?<Trash2/>:<Lock/>}</span>
     :<button type="button" className="plink" aria-label={t('fe.fd.profileOf',{name:nameOf(c.author)})} onClick={()=>go(c.author)}><Av name={nameOf(c.author)} seed={c.author?.id??c.id} size={child?'xs':'sm'} src={c.author?.avatar}/></button>}</div>
-   <div className="cm-b">{hidden?<Note>{c.deleted?t('fe.feed.replyDeleted'):t('fe.fd.replyBlocked')}</Note>:<>
+   <div className="cm-b">{hidden?<Note>{c.deleted?t('fe.feed.replyDeleted'):c.unavailable?t('fe.fd.replyUnavailable'):t('fe.fd.replyBlocked')}</Note>:<>
     <div className="cm-h"><button type="button" className="plink pnm" onClick={()=>go(c.author)}><span className="nmt">{nameOf(c.author)}</span></button><time>{when(c.createdAt,locale)}{c.editedAt?' · '+t('fe.fd.edited'):''}</time></div>
     {to&&<small className="cm-to">{t('fe.fd.replyingTo')} <button type="button" className="plink" onClick={()=>go(parent!.author)}>{nameOf(parent!.author)}</button></small>}
     <p className="reply-text">{c.body}</p>

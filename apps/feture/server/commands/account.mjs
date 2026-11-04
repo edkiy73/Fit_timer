@@ -9,6 +9,7 @@ import { endConversations } from './chats.mjs';
 import { checkCode, confirmEnrol, factorState, newRecoveryCodes, removeFactor, startEnrol } from '../second-factor.mjs';
 import { keepOnlyThisSignin, passSignin } from '../signin.mjs';
 import { ANY_STAFF, journal, openStaffSession, refused } from './staff.mjs';
+import { hmac } from '../hash.mjs';
 
 /** Account deletion and data export (S1 §16).
  * Deleting: every couple of the account is deleted (the partner stays with a text archive), the person profile and its
@@ -78,36 +79,60 @@ async function clearPerson(q, pp) {
   }
 }
 
+/** The login's key for a carried sanction: like the under-18 marker, without the login's generation (a re-created login
+ * keeps it). @param {string} pepper @param {string} coreAccountHash */
+export const sanctionKey = (pepper, coreAccountHash) => hmac(pepper, 'feture-sanction:v1:' + coreAccountHash);
+
+/** Remembers a sanction in force for the login before its account is deleted (audit item 28). @param {Q} q
+ * @param {string} pepper @param {string} coreAccountHash @param {string} accountId @param {string} pp person profile */
+async function carrySanction(q, pepper, coreAccountHash, accountId, pp) {
+  const [s] = await q.query(
+    `select a.state, a.suspension_rule, p.suspended_until, p.restricted_at, p.restricted_until, p.restriction_rule, p.restriction_scope
+     from feture.account a join feture.profile p on p.id = a.person_profile_id where a.id = $1`, [accountId]);
+  const suspended = s.state === 'suspended';
+  const restricted = !!s.restricted_at && (!s.restricted_until || new Date(s.restricted_until) > new Date());
+  if (!suspended && !restricted) return;
+  await q.query(
+    `insert into feture.sanction_carry (key_hmac, kind, rule, until, scope) values ($1, $2, $3, $4, $5)
+     on conflict (key_hmac) do update set kind = excluded.kind, rule = excluded.rule, until = excluded.until, scope = excluded.scope, created_at = now()`,
+    [sanctionKey(pepper, coreAccountHash), suspended ? 'suspend' : 'restrict', suspended ? s.suspension_rule : s.restriction_rule,
+      suspended ? s.suspended_until : s.restricted_until, suspended ? null : s.restriction_scope]);
+  await journal(q, null, 'sanction.carried', 'profile', pp, { kind: suspended ? 'suspend' : 'restrict' });
+}
+
 /** @param {Q} q @param {string} accountId */
 const isStaff = async (q, accountId) => (await q.query(`select 1 from feture.staff_role where account_id = $1 and role = any($2) and revoked_at is null limit 1`, [accountId, ANY_STAFF])).length > 0;
 
 /** @type {Record<keyof typeof accountCommands, Command['run']>} */
 const run = {
-  async 'account.delete'(q, { account, input }) {
+  async 'account.delete'(q, { account, input, cfg, coreAccountHash }) {
     const [a] = await q.query(
       `select a.id, a.person_profile_id, p.handle from feture.account a left join feture.profile p on p.id = a.person_profile_id where a.id = $1 for update of a`, [account.id]);
     if (!a.person_profile_id || (a.handle ?? '').toLowerCase() !== input.confirmHandle.toLowerCase()) fail(400, 'invalid_input', { fields: ['confirmHandle'] });
-    // Under a moderation decision (a restriction, a suspended couple) deletion goes through support, so it never
-    // becomes a way out of the decision or a way to destroy what it is about.
-    const [{ held }] = await q.query(
-      `select feture.restricted($1) or exists (select 1 from feture.profile_member m join feture.profile p on p.id = m.profile_id
-         where m.account_id = $2 and m.state = 'active' and p.kind = 'couple' and p.state = 'suspended') held`, [a.person_profile_id, a.id]);
-    if (held) fail(409, 'conflict', { rule: 'support_required' });
+    // Deleting is always possible, under a sanction too (audit item 28): the sanction in force is remembered for this
+    // login (sanction_carry, keyed like the under-18 marker) and a new account of it gets it until the same end.
+    await carrySanction(q, String(cfg.pepper), coreAccountHash, a.id, a.person_profile_id);
     // Out of reach first: a like, an invitation answer or a request racing this deletion waits for it and then fails.
     await q.query(`update feture.profile set state = 'deleted', updated_at = now() where id = $1`, [a.person_profile_id]);
     await q.query(`update feture.couple_invite set state = 'withdrawn', answered_at = now() where (from_account = $1 or to_account = $1) and state = 'pending'`, [a.id]);
     // Couples next (also one created by an invitation accepted a moment ago): the partner keeps their own profile.
     const couples = await q.query(
       `select p.id from feture.profile_member m join feture.profile p on p.id = m.profile_id
-       where m.account_id = $1 and m.state = 'active' and p.kind = 'couple' and p.state in ('active', 'paused')`, [a.id]);
+       where m.account_id = $1 and m.state = 'active' and p.kind = 'couple' and p.state in ('active', 'paused', 'suspended')`, [a.id]);
     for (const c of couples) {
       await closeOwned(q, c.id);
       await deleteCouple(q, c.id, 'member_deleted');
     }
     await closePending(q, `a.requested_by = $1`, [a.id], 'cancelled', { silent: true });
-    // Reports on the profile and its appeals have nothing left to decide; disputes on its posts close (audit 22, 24, 25).
-    // Reports on its posts and replies stay: staff may still record a violation (audit item 3).
-    await closeReports(q, 'profile', [a.person_profile_id], 'unavailable');
+    // Every open report about the person closes as «unavailable» — profile, posts, replies, chats (audit items 22, 28);
+    // its appeals close and disputes on its posts too (24, 25). The evidence stays until then; blocked files never go.
+    const pp = a.person_profile_id;
+    await closeReports(q, 'profile', [pp], 'unavailable');
+    await closeReports(q, 'post', (await q.query(`select id from feture.post where owner_profile_id = $1`, [pp])).map(r => r.id), 'unavailable');
+    await closeReports(q, 'reply', (await q.query(`select id from feture.reply where author_profile_id = $1`, [pp])).map(r => r.id), 'unavailable');
+    for (const c of await q.query(`select distinct target_id from feture.report where target_type = 'conversation' and reported_profile_id = $1 and state = 'open'`, [pp])) {
+      await closeReports(q, 'conversation', [c.target_id], 'unavailable', pp);
+    }
     await closeAppeals(q, [a.person_profile_id]);
     await closeDisputes(q, (await q.query(`select id from feture.post where owner_profile_id = $1`, [a.person_profile_id])).map(r => r.id));
     // Age and photo checks nobody will finish: out of the staff queues (and their counts) now.

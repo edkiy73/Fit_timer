@@ -3,7 +3,7 @@ import { createCipheriv, createDecipheriv, createHmac, randomBytes, timingSafeEq
 import { notificationSettingsOf } from '../contracts/me.mjs';
 import { CATALOG, EMAIL_WORDS, entryFor, noteLine, routeOk, ruPlural, SETTING_CATS, settingOf, textOf } from '../contracts/notifications.mjs';
 import { hmac } from './hash.mjs';
-import { staleReason } from './push.mjs';
+import { staleReason, TOLD_WHILE_SUSPENDED } from './push.mjs';
 
 /** Email notifications (docs/notifications.md «Email», owner 03.11.2026; stage 6B). Built on the same catalog as push:
  * each entry's `email` is none | now | now-if-unread | digest, its `subject`, its settings category and destination.
@@ -223,6 +223,14 @@ export async function sendDueEmails(db, mail, { limit = 20 } = {}) {
 /** @param {any} r an account row @returns {'ru' | 'en'} */
 const langOf = r => (String(r?.locale ?? '').startsWith('en') ? 'en' : 'ru');
 
+/** @param {Db} db @param {any} r an email_delivery row */
+async function toldWhileSuspended(db, r) {
+  const [kind, id] = String(r.ref).split(':');
+  if (kind !== 'n') return false;
+  const [n] = await db.query('select type from feture.notification where id = $1 and recipient_account_id = $2', [id, r.account_id]);
+  return !!n && TOLD_WHILE_SUSPENDED.includes(n.type);
+}
+
 /** One due row. @param {Db} db @param {Mailer} mail @param {any} r */
 async function sendOne(db, mail, r) {
   const skip = (/** @type {string} */ code) => db.query(`update feture.email_delivery set state = 'skipped', last_error = $2, updated_at = now() where id = $1`, [r.id, code]);
@@ -231,7 +239,8 @@ async function sendOne(db, mail, r) {
        exists (select 1 from feture.email_suppression x where x.address_hash = e.address_hash) suppressed
      from feture.account a left join feture.notification_settings s on s.account_id = a.id left join feture.email_address e on e.account_id = a.id
      where a.id = $1`, [r.account_id]);
-  if (!a || a.state !== 'active') return skip('account');
+  // A suspended person still hears about the suspension itself and the appeal (audit item 2), nothing else.
+  if (!a || (a.state !== 'active' && !(a.state === 'suspended' && await toldWhileSuspended(db, r)))) return skip('account');
   if (!a.address_sealed || !Buffer.from(a.address_hash).equals(Buffer.from(r.address_hash))) return skip('address');
   if (a.suppressed) return skip('suppressed');
   const settings = notificationSettingsOf(a.settings);

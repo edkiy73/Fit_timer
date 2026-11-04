@@ -307,7 +307,7 @@ async function requestQuota(q, profileId) {
 async function chatRequestBlocker(q, acting, t) {
   const context = await requestContext(q, acting.profileId, t.id);
   const [x] = await q.query(
-    `select feture.restricted($1) me_restricted, feture.restricted($2) restricted,
+    `select feture.restricted_in($1, 'messages') me_restricted, feture.restricted_in($2, 'messages') restricted,
        -- Hidden from the recipient (a persona writing to a real person): never reaches them.
        feture.blocked($2, $1) hidden,
        not exists (select 1 from feture.profile_member m join feture.account a on a.id = m.account_id
@@ -333,7 +333,7 @@ async function chatRequestBlocker(q, acting, t) {
  * @param {Q} q @param {Acting} acting @param {{profileId: string, body: string, assetId?: string | null}} input
  * @param {(profile: string | null | undefined, kind: any) => void} signal @param {{approved?: boolean}} [opts] */
 async function startRequest(q, acting, input, signal, { approved = false } = {}) {
-  await requireUnrestricted(q, acting);
+  await requireUnrestricted(q, acting, 'messages');
   const t = await otherProfile(q, acting, input.profileId);
   await lockPair(q, acting.profileId, t.id);
   await q.query(`select pg_advisory_xact_lock(hashtextextended('fe-chatreq:' || $1, 0))`, [acting.profileId]);
@@ -554,7 +554,7 @@ const run = {
 
   async 'chat.send'(q, { acting: a, input, signal }) {
     const acting = need(a);
-    await requireUnrestricted(q, acting);
+    await requireUnrestricted(q, acting, 'messages');
     const c = await memberOf(q, input.conversationId, acting, { lock: true });
     await requireOpen(q, c, acting);
     const out = await append(q, c, acting, { body: input.body, replyTo: input.replyTo });
@@ -564,7 +564,7 @@ const run = {
 
   async 'chat.sendMedia'(q, { acting: a, input, signal }) {
     const acting = need(a);
-    await requireUnrestricted(q, acting);
+    await requireUnrestricted(q, acting, 'messages');
     const c = await memberOf(q, input.conversationId, acting, { lock: true });
     await requireOpen(q, c, acting);
     const out = await sendMediaInto(q, c, acting, input);

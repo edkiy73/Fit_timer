@@ -44,6 +44,9 @@ async function setup() {
   await pg.exec(readFileSync(new URL('../supabase/migrations/20261028233000_fe_video_edit_drop.sql', import.meta.url), 'utf8'));
   // The account read checks whether a second factor is on; the handler checks the sign-in second step and new devices.
   for (const f of ['20261029140000_fe_second_factor.sql', '20261029180000_fe_user_second_factor.sql']) await pg.exec(readFileSync(new URL('../supabase/migrations/' + f, import.meta.url), 'utf8'));
+  // Uploads check the uploader's restriction (audit item 6); the moderation schema is not here, so nobody is restricted.
+  await pg.exec(`create function feture.restricted_in(p uuid, point text) returns boolean language sql stable as $$ select false $$;
+    grant execute on function feture.restricted_in(uuid, text) to feture_api`);
   await pg.exec('set role feture_api');
   return { pg, db: fromPglite(pg) };
 }
@@ -117,7 +120,10 @@ test('accounts: keyed core link with generation, created once under a race, re-r
     assert.notEqual(reborn.id, x.id);
     assert.throws(() => coreKeyHmac(PEPPER, { accountHash: 'core-1' }), e => e.code === 'auth_required');
     assert.throws(() => coreKeyHmac('short', core('core-1')), e => e.code === 'unavailable');
+    // A suspended account still signs in for its decision and appeal (audit item 2); a deleted one never.
     await db.query(`update feture.account set state = 'suspended' where id = $1`, [x.id]);
+    assert.equal((await resolveAccount(db, PEPPER, core('core-1'))).state, 'suspended');
+    await db.query(`update feture.account set state = 'deleted' where id = $1`, [x.id]);
     await reject(resolveAccount(db, PEPPER, core('core-1')), 'account_unavailable');
   } finally { await pg.close(); }
 });
