@@ -15,6 +15,8 @@ export const staffCommands = {
   'staff.totpConfirm': { profile: false, write: true, ledger: false, input: z.strictObject({ code: factorCode }), rate: { kind: 'factor.check', max: 60, window: '1 hour' } },
   'staff.totpVerify': { profile: false, write: true, ledger: false, input: z.strictObject({ code: factorCode }), rate: { kind: 'factor.check', max: 60, window: '1 hour' } },
   'staff.totpReset': { profile: false, write: true, input: z.strictObject({ opId, handle: z.string().trim().min(1).max(40) }) },
+  // «Сотрудники» (owner 05.11.2026): who has which role; only the owner reads it.
+  'staff.team': { profile: false, write: false, input: z.strictObject({}) },
   'staff.grant': {
     profile: false, write: true,
     input: z.strictObject({ opId, handle: z.string().trim().max(40), role: z.enum(['lead', 'moderator', 'verifier', 'auditor', 'support']), grant: z.boolean() }),

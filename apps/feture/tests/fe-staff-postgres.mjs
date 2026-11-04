@@ -30,6 +30,9 @@ test('staff: roles are server-side, owner grants, queue excludes own media, deci
     assert.deepEqual((await call('uo', null, { action: 'staff.me' })).roles, ['owner']);
     assert.equal((await call('um', null, { action: 'staff.grant', opId: op(), handle: 'Alex', role: 'moderator', grant: true })).status, 403);
     assert.equal((await call('uo', null, { action: 'staff.grant', opId: op(), handle: 'Mira', role: 'moderator', grant: true })).status, 200);
+    // «Сотрудники»: the owner sees who has which role; nobody else does.
+    assert.deepEqual((await call('uo', null, { action: 'staff.team' })).items.map((/** @type {any} */ x) => [x.handle, x.roles]), [['Boss', ['owner']], ['Mira', ['moderator']]]);
+    assert.equal((await call('um', null, { action: 'staff.team' })).status, 403);
 
     const theirs = await pendingAsset(db, user);
     const avatar = await pendingAsset(db, user, 'avatar');
