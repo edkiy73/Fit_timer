@@ -87,10 +87,11 @@ test('«Нужно решить»: couple invitation, partner approval for the p
 
     await call('ua', a, { action: 'like.send', opId: op(), profileId: c, source: 'profile' });
     await deliver();
+    // The partner approval and the relationship status («в паре» but «Данные» say nothing yet; owner 04.11.2026).
     const counts = await call('uc', null, { action: 'inbox.counts' });
-    assert.deepEqual([counts.decide, counts.notifications, counts.bell], [2, 1, 3]);
+    assert.deepEqual([counts.decide, counts.notifications, counts.bell], [3, 1, 4]);
     await call('uc', null, { action: 'notifications.readAll' });
-    assert.equal((await call('uc', null, { action: 'inbox.counts' })).bell, 2);
+    assert.equal((await call('uc', null, { action: 'inbox.counts' })).bell, 3);
 
     assert.equal((await call('uc', null, { action: 'push.register', opId: op(), platform: 'ios', token: 'device-token-123' })).registered, true);
     await call('ua', null, { action: 'push.register', opId: op(), platform: 'ios', token: 'device-token-123' });

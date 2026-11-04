@@ -150,6 +150,8 @@ export const meCommands = {
   },
   'notifications.settings.get': { profile: false, write: false, input: z.strictObject({}) },
   'notifications.settings.update': { profile: false, write: true, input: z.strictObject({ opId, settings: notificationSettings }) },
+  // «Нужно решить» → the relationship status: «Оставить» as it is (the card goes, on every device).
+  'profile.statusKeep': { profile: false, write: true, input: z.strictObject({ opId }) },
   'place.submit': {
     profile: false, write: true, rate: { kind: 'place.submit', max: 10, window: '1 day' },
     input: z.strictObject({ opId, country: z.string().regex(/^[A-Z]{2}$/), name: field('placeName') }),
@@ -163,7 +165,8 @@ export const meCommands = {
       value: z.int().min(1).max(10).optional(),
       mark: z.enum(['discuss', 'hard']).optional(),
       dir: z.array(z.enum(['give', 'get', 'watch'])).max(3).optional(),
-      vis: z.enum(['public', 'granted', 'only']),
+      // Ignored: every interest is public (owner 05.11.2026); kept for clients that still send it.
+      vis: z.enum(['public', 'granted', 'only']).optional(),
     }).refine(v => (v.value === undefined) !== (v.mark === undefined), { message: 'value_or_mark', path: ['value'] })
       .refine(v => v.mark === undefined || !v.dir?.length, { message: 'dir_with_mark', path: ['dir'] }),
   },

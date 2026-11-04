@@ -5,7 +5,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Calendar,Check,Clock,MapPin,Pencil,Video,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Actions,ActorCard,ActorCards,Alert,ApprovalSheet as ApprovalSheetKit,Av,Btn,Card,Counter,EventTile,Field,Group,KeyValues,Note,PersonLine,ReviewPost,Row,Sheet,TextArea,Who} from './kit';
+import {ActingAv,Actions,ActorCard,ActorCards,Alert,ApprovalSheet as ApprovalSheetKit,Av,Btn,Card,Counter,EventTile,Field,Group,KeyValues,Note,PersonLine,ReviewPost,Row,Sheet,TextArea,Who} from './kit';
 import {NamedPlate} from './comm-kit';
 import {useFe,useLive} from './session';
 import {useToast} from './toast';
@@ -319,6 +319,12 @@ const decideList=z.object({ok:z.literal(true),items:z.array(z.object({kind:z.str
 
 /** V21 dockMe / meSwitch: «Действовать как» — the person and the couple as cards with what waits on each; the card
  * switches to that profile (the chosen one opens it), the end button switches and opens it. */
+/** The couple one can act as: an active one, or its read-only archive — never a paused one (session.tsx falls back to
+ * the person then). The one rule for every «Действовать как» entry — the dock's «Я» and the «Я» header. */
+export function actAsCouple<T extends {kind:string,state?:string|undefined,ended?:boolean|undefined}>(profiles:readonly T[]):T|undefined{
+ return profiles.find(p=>p.kind==='couple'&&p.state==='active')??profiles.find(p=>p.kind==='couple'&&!!p.ended);
+}
+
 export function ActAsSheet({onClose}:{onClose:()=>void}){
  const {state,acting,setActing,call}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();
  const [waits,setWaits]=useState<Record<string,number>>({});
@@ -338,7 +344,7 @@ export function ActAsSheet({onClose}:{onClose:()=>void}){
  return <Sheet title={t('fe.c6.actAs')} onClose={onClose}>
   <ActorCards label={t('fe.c6.actAs')}>
    {cards.map(x=>{const n=(waits[x.id]??0)+(x.kind==='person'?(waits.me??0):0);const on=x.id===acting.id;
-    return <ActorCard key={x.id} selected={on} av={<Av name={x.name||x.handle||'?'} seed={x.id} src={x.avatar}/>} name={x.name||x.handle||'?'}
+    return <ActorCard key={x.id} selected={on} av={<ActingAv p={x} size=""/>} name={x.name||x.handle||'?'}
      dot={n>0} sub={n>0?t('fe.c6.waits',{n}):x.ended?t('fe.me.coupleArchive'):x.kind==='couple'?t('fe.me.coupleProfile'):t('fe.me.personalProfile')}
      onPick={()=>pick(x.id)} onOpen={()=>open(x.id)} openLabel={on?t('fe.c6.openProfile'):x.kind==='couple'?t('fe.c6.openCouple'):t('fe.c6.openMine')}/>;})}
   </ActorCards>

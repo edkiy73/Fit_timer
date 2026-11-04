@@ -65,7 +65,7 @@ test('links: propose, settings gate, answer in «Нужно решить», the 
   } finally { await pg.close(); }
 });
 
-test('«Что у вас общего»: only public interests, groups without a score, few when either side has under two', async () => {
+test('«Что у вас общего»: interests (all public), groups without a score, few when either side has under two', async () => {
   const { pg, call, person } = await setup();
   try {
     const a = await person('ua', 'Alex'), b = await person('ub', 'Kira');
@@ -75,8 +75,6 @@ test('«Что у вас общего»: only public interests, groups without a
     assert.equal((await call('ua', a, { action: 'profile.compat', profileId: b })).few, true);
     await set('ua', a, { topicId: 'filming', mark: 'hard', vis: 'public' });
     await set('ub', b, { topicId: 'filming', value: 5, vis: 'public' });
-    await set('ub', b, { topicId: 'substances', value: 9, vis: 'only' }); // private: never compared
-    await set('ua', a, { topicId: 'substances', value: 9, vis: 'public' });
     const r = await call('ua', a, { action: 'profile.compat', profileId: b });
     assert.deepEqual([r.few, r.count, r.items.map((/** @type {any} */ i) => [i.topicId, i.group])], [false, 1, [['filming', 'bound'], ['shibari', 'match']]]);
     assert.equal(r.score, undefined);

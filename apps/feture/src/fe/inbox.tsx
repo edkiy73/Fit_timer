@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {AlarmClock,AtSign,Bell,Calendar,CalendarClock,CalendarX,Check,CircleCheck,Clock,Crown,EyeOff,Filter,Heart,Image as ImageIcon,LifeBuoy,Link2,LockOpen,MapPin,Megaphone,MessageCircle,Pencil,Shield,ShieldAlert,ShieldCheck,Trash2,TriangleAlert,UserCheck,UserMinus,Users,X,type LucideIcon} from 'lucide-react';
 import {DECIDE_KINDS,FILTERS as KINDS,actOf,destination,entryFor,noteLine,textOf,type Entry} from '../../contracts/notifications.mjs';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Actions,Answer,Av,Bar,Btn,Card,Chip,Chips,Empty,IconBtn,LoadMore,NoteDecision,NoteEvent,NoteNews,NoteResult,NoteSafety,NoteSummary,PersonLine,Pill,Row,SafetyDecision,SectionLabel,Seg,Sheet,Skel,View,useScrollTo,type NoteTone} from './kit';
+import {ActingAv,Actions,Answer,Av,Bar,Btn,Card,Chip,Chips,Empty,IconBtn,LoadMore,NoteDecision,NoteEvent,NoteNews,NoteResult,NoteSafety,NoteSummary,PersonLine,Pill,Row,SafetyDecision,SectionLabel,Seg,Sheet,Skel,type NoteTone,useScrollTo,View} from './kit';
 import {useFe,useLive,useRealtime} from './session';
 import {useSideNav} from './wide';
 import {useToast} from './toast';
@@ -16,6 +16,7 @@ import {useDecline} from './private';
 import {evParts,evWhen} from './event-time';
 import {AppealSheet} from './appeal';
 import {plural} from './post-parts';
+import {StatusDecision,onStatusAnswered,useStatusTodo} from './status-todo';
 import {groupRows,inboxScrollKey,inboxSearch,mergeRows,readInboxUrl,type InboxFilter,type InboxTab} from './inbox-url';
 
 /** The notification center (docs/notifications.md, stage 5): «Нужно решить» (tasks of every profile of the account,
@@ -59,6 +60,7 @@ function HeaderBell(){
  const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const [c,setC]=useState<{decide:number,notifications:number}>({decide:0,notifications:0});
  const live=useRef(true);
  const pull=useCallback(()=>{call('inbox.counts',{},countsRes,{asAccount:true}).then(r=>{if(live.current)setC({decide:r.decide,notifications:r.notifications});}).catch(()=>{});},[call]);
+ useEffect(()=>onStatusAnswered(pull),[pull]);
  // Realtime signals refresh the count at once; the 30 s poll stays as the fallback.
  useEffect(()=>{live.current=true;pull();const id=setInterval(pull,30000);return ()=>{live.current=false;clearInterval(id);};},[pull]);
  useRealtime(['notify','decide','chat'],pull);
@@ -117,7 +119,7 @@ export function InboxScreen(){
    return keep(filter,{items:mergeRows(had?.items??[],r.items),next});});
  }),[call,filter]);
  const load=useCallback((fresh=false)=>{setError(null);
-  Promise.all([call('decide.list',{},decideRes,{asAccount:true,fresh}).then(r=>setDecide(r.items)),loadNotes(fresh),
+  Promise.all([call('decide.list',{},decideRes,{asAccount:true,fresh}).then(r=>setDecide(r.items.filter(d=>d.kind!=='status'))),loadNotes(fresh),
    call('inbox.counts',{},countsRes,{asAccount:true,fresh}).then(setCounts)]).catch(setError);},[call,loadNotes]);
  useEffect(()=>{setPage(PAGES.get(filter)??null);setMoreErr(null);load();},[load,filter]);
  // Live data: another device, the partner or staff changed something (live.ts).
@@ -134,8 +136,9 @@ export function InboxScreen(){
  const person=profiles.find(p=>p.kind==='person')??null;
  // V21 `inboxTab`: opens on «Нужно решить» when something waits, else on all notifications — chosen once, on the
  // first read; deciding the last card keeps «Нужно решить» (its own empty state) instead of jumping away.
- useEffect(()=>{if(chosen===null&&decide!==null)setChosen(decide.length?'todo':'all');},[chosen,decide]);
- const k:InboxTab=chosen??(decide&&decide.length===0?'all':'todo');
+ const st=useStatusTodo().show;
+ useEffect(()=>{if(chosen===null&&decide!==null)setChosen(decide.length||st?'todo':'all');},[chosen,decide,st]);
+ const k:InboxTab=chosen??(decide&&decide.length===0&&!st?'all':'todo');
  const go=(tab:InboxTab,f:InboxFilter)=>{setChosen(tab);setParams(inboxSearch(params,{tab,filter:f}),{replace:true});};
  const pickTab=(v:InboxTab)=>go(v,'all');
  const pickFilter=(f:InboxFilter)=>go(k,f);
@@ -298,16 +301,18 @@ export function InboxScreen(){
   return <>{first.map(decisionCard)}{items.filter(d=>!ORDER.includes(d.kind)).map(decisionCard)}</>;
  };
  const whomHead=(w:'me'|'couple',n:number)=><div className={'sec whom-sec'+(w==='couple'?' us':'')}>
-  {w==='couple'?<Av name={couple?.name??'?'} seed={couple?.id} size="xs" src={couple?.avatar}/>:<Av name={person?.name??'?'} seed={person?.id} size="xs" src={person?.avatar}/>}
+  {w==='couple'?(couple?<ActingAv p={couple} size="xs"/>:null):<Av name={person?.name??'?'} seed={person?.id} size="xs" src={person?.avatar}/>}
   <span>{w==='couple'?t('fe.ibx.whomCouple').replace('{name}',couple?.name??''):t('fe.ibx.whomMe')}</span><b>{n}</b>
  </div>;
  const filteredEmpty=<Empty icon={Filter} title={t('fe.ibx.filteredEmpty')}><Btn kind="text" auto onClick={()=>pickFilter('all')}>{t('fe.ibx.resetFilter')}</Btn></Empty>;
  const todo=()=>{
   const all=decide??[];const items=all.filter(d=>filter==='all'||decideKind(d)===filter);
-  if(!items.length)return all.length?filteredEmpty:<Empty icon={CircleCheck} title={t('fe.ibx.allDone')} text={t('fe.ibx.allDoneText')}/>;
-  if(!couple)return group(items);
+  // The relationship status (status-todo.tsx) is the person's own task: first, under «Мне», whatever the filter.
+  const own=st&&filter==='all'?<StatusDecision/>:null;
+  if(!items.length)return own??(all.length?filteredEmpty:<Empty icon={CircleCheck} title={t('fe.ibx.allDone')} text={t('fe.ibx.allDoneText')}/>);
+  if(!couple)return <>{own}{group(items)}</>;
   const mine=items.filter(d=>d.label!=='couple'),ours=items.filter(d=>d.label==='couple');
-  const me=mine.length?<>{whomHead('me',mine.length)}{group(mine)}</>:null,us=ours.length?<>{whomHead('couple',ours.length)}{group(ours)}</>:null;
+  const me=mine.length||own?<>{whomHead('me',mine.length+(own?1:0))}{own}{group(mine)}</>:null,us=ours.length?<>{whomHead('couple',ours.length)}{group(ours)}</>:null;
   return acting?.kind==='couple'?<>{us}{me}</>:<>{me}{us}</>;
  };
  const everything=()=>{
@@ -341,7 +346,7 @@ export function InboxScreen(){
  useScrollTo(url.item?'item-'+url.item:null,k==='todo'&&decide!==null);
  const told=useRef('');
  useEffect(()=>{if(url.item&&decide&&told.current!==url.item&&!decide.some(d=>d.id===url.item)){told.current=url.item;toast(t('fe.ibx.itemGone'));}},[url.item,decide,toast,t]);
- const nTodo=counts?.decide??decide?.length??0;const nAll=counts?.notifications??(page?.items??[]).filter(n=>!n.read).length;
+ const nTodo=counts?.decide??(decide?.length??0)+(st?1:0);/* the server's number holds the status card too */const nAll=counts?.notifications??(page?.items??[]).filter(n=>!n.read).length;
  return <>
   {/* With the side menu «Уведомления» is a section of its own there: no «‹», like every other section. */}
   <Bar title={t('fe.inbox.title')} {...(sideNav?{}:{back:true as const})}/>

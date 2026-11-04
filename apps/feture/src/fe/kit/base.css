@@ -413,6 +413,8 @@
 .v21 .stat-row:first-child{border-top:0}
 .v21 .kv{display:grid;grid-template-columns:minmax(96px,.7fr) minmax(0,1fr);gap:10px 16px;margin:0;font-size:var(--fs-body)}
 .v21 .kv dt{color:var(--mute)}.v21 .kv dd{margin:0;font-weight:500;overflow-wrap:anywhere}
+/* `.wide`: a long value (a bio) under its label across the whole card, on every width */
+.v21 .kv dt.wide,.v21 .kv dd.wide{grid-column:1/-1}.v21 .kv dd.wide,.v21 .kv dd.wide .md,.v21 .kv dd.wide .md :is(p,li,h4){font-weight:400;color:var(--ink)}
 .v21 .prog{height:6px;border-radius:var(--r-2xs);background:var(--line);overflow:hidden}
 .v21 .prog i{display:block;height:100%;border-radius:var(--r-2xs);background:var(--accent);transition:width .6s var(--ease)}
 .v21 .qprog{flex:1;height:4px;border-radius:var(--r-2xs);background:var(--line);overflow:hidden}
@@ -447,6 +449,19 @@
 .v21 .grp.dim{opacity:.4;pointer-events:none}
 .v21 .sheet .grp:first-child{margin-top:4px}
 .v21 .sheet .card{background:var(--surf)}
+/* `k-one-line`: a list whose rows' second lines stay one line («…» when longer), so every row is the same height */
+.v21 .card.list.k-one-line .li small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Sheet `step`: the head and body of each step slide in — from the right going on, from the left going back */
+@keyframes kStepFwd{from{opacity:0;transform:translateX(20px)}}@keyframes kStepBack{from{opacity:0;transform:translateX(-20px)}}
+.v21 .k-step-in.fwd{animation:kStepFwd .26s cubic-bezier(.2,.8,.2,1) both}.v21 .k-step-in.back{animation:kStepBack .26s cubic-bezier(.2,.8,.2,1) both}
+@media (prefers-reduced-motion:reduce){.v21 .k-step-in{animation:none}}
+/* a step sheet keeps one height from step to step (its edges stay still while the content slides); the last block of the
+   body — the answer — sits at the bottom */
+.v21 .sheet.k-steps{height:min(86dvh,760px)}.v21 .sheet.k-steps .sh-b{display:flex;flex-direction:column}.v21 .sheet.k-steps .sh-b>:last-child{margin-top:auto}
+/* a mouse over a number of an open lane shows where the click lands */
+@media (hover:hover){.v21 .ans-row.open .ans-scale button:not(.on):hover{background:color-mix(in srgb,var(--accent) 28%,var(--surf));color:var(--ink)}}
+/* a form in a sheet has no plate of its own (Card `form`: fields sit on the page, 16 apart) — the sheet is the surface */
+.v21 .sheet .card.form-card{background:none;border-color:transparent;box-shadow:none;padding:0}
 .v21 .sheet.full{top:0;max-height:none;border-radius:0}
 /* A full-height sheet reaches the status bar: its header is the kit Bar (same height as page titles, below --safe-t), no grab. */
 .v21 .sheet.full .grab{display:none}
@@ -534,14 +549,34 @@
 .v21 .ans-scale button{display:grid;place-items:center;padding:0;height:44px;border-radius:var(--r-s);background:var(--surf);box-shadow:inset 0 0 0 1px var(--line2);font-size:var(--fs-sm);font-weight:600;color:var(--mute);transition:background .12s,color .12s,box-shadow .12s}
 .v21 .ans-scale button.fill{background:color-mix(in srgb,var(--accent) 22%,var(--surf));box-shadow:none;color:var(--ink)}
 .v21 .ans-scale button.on{background:var(--accent);color:#fff}
-.v21 .ans-l{display:flex;justify-content:space-between;font-size:var(--fs-cap);color:var(--faint);padding:0 2px}
 .v21 .ans-marks{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
+/* with lanes the marks are as tall as a lane (owner 05.11.2026) */
+/* one thing bright at a time: the open lane (or the mark pointed at); the other lanes and marks fade */
+.v21 .ans-rows .ans-row,.v21 .ans-marks .ans-m{transition:opacity .18s var(--ease)}
+.v21 .ans-rows.busy .ans-row:not(.open),.v21 .ans-rows.hot .ans-row,.v21 .ans-m.dim{opacity:.4}
+.v21 .ans-rows~.ans-marks .ans-m{min-height:76px}
+/* lanes: one full-width button per lane; the open one is the 1–10 scale in its place (tap, or hold and slide) */
+.v21 .ans-rows{display:grid;gap:8px;touch-action:none;-webkit-user-select:none;user-select:none}
+.v21 .ans-row{position:relative;height:76px;border-radius:var(--r-m);background:var(--surf);box-shadow:inset 0 0 0 1px var(--line2)}
+/* safe-t: ok — fills its own lane, not the screen top */.v21 .ans-row-b{position:absolute;inset:0;width:100%;display:flex;align-items:center;justify-content:flex-end;padding:0 16px;border:0;border-radius:inherit;background:none;color:var(--ink)}
+/* one height open or closed (owner 05.11.2026: nothing stretches); open — the name shrinks into the top-left corner
+   inside the frame, the 1–10 under it: 44 px cells (a thumb on a 360 px phone), 8 px on every side */
+.v21 .ans-row-l{position:absolute;left:16px;top:38px;transform:translateY(-50%);font-size:var(--fs-body);font-weight:600;line-height:1.2;color:var(--ink);pointer-events:none;z-index:1;transition:top .18s var(--ease),font-size .18s var(--ease),color .18s var(--ease)}
+.v21 .ans-row.open{padding:24px 8px 8px}.v21 .ans-row.open .ans-row-l{left:10px;top:13px;font-size:var(--fs-micro);color:var(--mute)}
+/* no tap flash and no fade-in on the numbers that appear under the finger */
+.v21 .ans-rows button{-webkit-tap-highlight-color:transparent}.v21 .ans-row.open .ans-scale button{transition:none}
+.v21 .ans-row.open .ans-scale{gap:3px}.v21 .ans-row.open .ans-scale button{height:44px;border-radius:var(--r-xs);box-shadow:none;background:var(--raise)}
+.v21 .ans-row.open .ans-scale button.fill{background:color-mix(in srgb,var(--accent) 22%,var(--surf))}.v21 .ans-row.open .ans-scale button.on,.v21 .ans-row.open .ans-scale button.held{background:var(--accent);color:#fff}
+.v21 .ans-scale button.held{background:var(--accent);color:#fff;box-shadow:none}
+/* the marks in the colours of the interest capsules: «обсуждаемо» a dashed amber edge, «табу» red stripes */
+.v21 .ans-m.soft{border:1.5px dashed color-mix(in srgb,var(--warn) 65%,transparent);box-shadow:none;color:var(--warn)}.v21 .ans-m.soft svg{color:var(--warn)}
+.v21 .ans-m.soft.on{border:2px solid var(--warn);background:color-mix(in srgb,var(--warn) 16%,var(--surf));color:var(--warn)}.v21 .ans-m.soft.on svg{color:var(--warn)}
+.v21 .ans-m.taboo{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--danger) 18%,transparent) 0 6px,var(--trk) 6px 12px);box-shadow:none;color:var(--danger)}.v21 .ans-m.taboo svg{color:var(--danger)}
 .v21 .ans-m{display:flex;align-items:center;justify-content:center;gap:8px;min-height:46px;border-radius:var(--r-m);background:var(--surf);box-shadow:inset 0 0 0 1px var(--line2);font-size:var(--fs-body);font-weight:600}
 .v21 .ans-m svg{width:18px;height:18px;color:var(--mute)}
 .v21 .ans-m.on{background:var(--ink);color:var(--bg);box-shadow:none}.v21 .ans-m.on svg{color:var(--bg)}
-.v21 .ans-m.taboo.on{background:var(--danger);color:#fff}.v21 .ans-m.taboo.on svg{color:#fff}
-.v21 .ans-word{margin:4px 2px 0;min-height:40px;font-size:var(--fs-sm);line-height:1.45;color:var(--mute)}
-.v21 .ans-word b{color:var(--ink);font-size:var(--fs-body)}
+/* a chosen mark keeps its look and gains a 2px edge in its colour (owner 05.11.2026: no solid red slab) */
+.v21 .ans-m.taboo.on{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--danger) 32%,transparent) 0 6px,var(--trk) 6px 12px);box-shadow:inset 0 0 0 2px var(--danger);color:var(--danger)}.v21 .ans-m.taboo.on svg{color:var(--danger)}
 /* tests */
 .v21 .tests{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 .v21 .tcard{display:grid;align-content:start;min-width:0;border-radius:var(--r-l);background:var(--surf);border:1px solid var(--line);overflow:hidden;text-align:left}
@@ -1748,9 +1783,6 @@
 @keyframes jarBubFull{0%{transform:translateY(0);opacity:0}12%{opacity:1}85%{opacity:.75}100%{transform:translateY(-70px);opacity:0}}
 .v21 .jar .jd{max-width:100%;margin-top:-1px;font-size:var(--fs-cap);line-height:1.2;font-weight:550;color:var(--mute);overflow-wrap:anywhere}
 /* answer control: each level has its own word + one sentence; optional direction chips */
-.v21 .ans-word{display:grid;gap:2px}
-.v21 .ans-word b{font-size:var(--fs-body)}
-.v21 .ans-word span{color:var(--mute)}
 .v21 .ans-dir{display:grid;gap:8px;margin-top:6px;padding-top:12px;border-top:1px solid var(--line)}
 .v21 .ans-dt{margin:0;font-size:var(--fs-sm);font-weight:650;color:var(--ink)}
 .v21 .ans-dt small{font-weight:450;color:var(--faint);font-size:var(--fs-cap)}
@@ -2866,7 +2898,9 @@
 .v21 button.sc{cursor:pointer}.v21 button.sc:active{transform:scale(.985)}
 /* the fill stops before the level and its role words («даю · получаю»), so they never sit on it */
 .v21 .sc{--fw:min(max(36px,calc((100% - 8px) * var(--v) / 10)),calc(100% - 108px))}.v21 .sc.full{--fw:calc(100% - 8px)}
-.v21 .sc-f{position:absolute;left:4px;top:4px;bottom:4px;width:var(--fw);border-radius:var(--r-full);background:linear-gradient(90deg,var(--fill0),color-mix(in srgb,var(--accent) var(--fa),transparent));animation:capGrow 1.1s var(--ease) both;animation-delay:var(--d,0s)}
+.v21 .sc-f{position:absolute;left:4px;top:4px;bottom:4px;width:var(--fw);transition:width .32s var(--ease);border-radius:var(--r-full);background:linear-gradient(90deg,var(--fill0),color-mix(in srgb,var(--accent) var(--fa),transparent));animation:capGrow 1.1s var(--ease) backwards;animation-delay:var(--d,0s)}
+/* `backwards`, not `both`: once grown the fill lets go of its width, so a new level eases instead of jumping */
+.v21 .jars.still .sc-f{animation:none}
 /* safe-t: ok — fills its own parent box, not the screen top */.v21 .sc-l{position:absolute;inset:0;display:flex;align-items:center;gap:6px;padding:0 14px 0 16px;font-size:var(--fs-sm);font-weight:650;color:var(--ink);z-index:2;pointer-events:none}
 .v21 .sc-l.c{justify-content:center;color:var(--mute);font-weight:650}
 .v21 .sc-l.c svg{width:16px;height:16px}
@@ -3159,8 +3193,16 @@
 .v21 .mebtn>span.mebtn-sw{display:grid}
 .v21.as-couple::before{background:var(--violet)}
 /* V20 — profile photo slots, picker, select mode, drop zones */
-.v21 .ph-slots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;max-width:520px}
-@container stage (min-width:768px){.v21 .ph-slots{grid-template-columns:repeat(5,minmax(0,1fr));max-width:none}}
+.v21 .ph-slots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+/* a phone: the main photo big, at most three places while there are few photos (empty ones past the third hide) */
+.v21 .ph-slots>.ph-add.ghost:nth-child(n+4){display:none}
+/* wide (owner 05.11.2026: the capped grid left a hole on the right, six in a row were too small): four columns —
+   the main photo big on the left, a 2×2 of the others on the right (five places; a sixth photo starts a row below) */
+@container stage (min-width:560px){
+ .v21 .ph-slots:not(.priv){grid-template-columns:repeat(4,minmax(0,1fr))}
+ .v21 .ph-slots:not(.priv)>.ph-add.ghost:nth-child(n+4){display:block}
+ .v21 .ph-slots:not(.priv)>.ph-add.ghost:nth-child(n+6){display:none}
+}
 .v21 .ph-slots>.mi,
 .v21 .ph-slots>.ph-add{position:relative;aspect-ratio:4/5;border-radius:var(--r);overflow:hidden;min-width:0}
 .v21 .ph-slots>.big{grid-column:span 2;grid-row:span 2;aspect-ratio:auto}
@@ -3410,6 +3452,8 @@
 .v21 .composer .ibtn.add,
 .v21 .myev .ibtn.add,
 .v21 .ibtn.add{width:44px;height:44px;min-height:44px;aspect-ratio:auto;border-radius:var(--r)}
+/* in a header the «+» is one of the header's buttons (owner 05.11.2026): round and their size, only the colour is ours */
+.v21 .bar .ibtn.add{width:40px;height:40px;min-height:40px;border-radius:50%}
 .v21 .myev{align-items:center}
 /* V21 (GEN-003): the review tool is a slim tab on the right edge, out of the way of product buttons */
 .v21 .qa-fab{left:auto!important;right:0!important;bottom:38%!important;width:20px!important;height:52px!important;border-radius:var(--r-s) 0 0 var(--r-s)!important;border-right:0!important;writing-mode:vertical-rl;font-size:var(--fs-micro)!important;letter-spacing:.06em;opacity:.6}
@@ -3704,7 +3748,7 @@
 /* · */
 /* ==== V21 · me · CSS start ==== */
 /* V21 (ME-012): on wide screens the profile photos keep the phone layout — one big 4:5 main photo and the small ones beside it, width-capped */
-@container stage (min-width:768px){.v21 .ph-slots{grid-template-columns:repeat(3,minmax(0,1fr));max-width:560px}}
+@container stage (min-width:768px){.v21 .ph-slots.priv{grid-template-columns:repeat(3,minmax(0,1fr));max-width:560px}}
 /* V21 (ME-013): an empty slot looks like a place for a photo, not a picture that failed to load */
 .v21 .ph-add.ghost{border:1.5px dashed var(--line2,var(--line));background:transparent;opacity:.45}
 /* V21 (ME-018): album names wrap to two lines instead of being cut */
@@ -3721,6 +3765,8 @@
 .v21 .me18-who small{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* V21 (ME-037): «Данные» — on a phone the label sits above the value; on wide screens a fixed label column */
 @container stage (max-width:480px){.v21 .kv{grid-template-columns:minmax(0,1fr);gap:0}.v21 .kv dt{font-size:var(--fs-cap)}.v21 .kv dd+dt{margin-top:10px}}
+/* `.side`: label left, value right on every width (own «Основное» / «Данные»); a `.wide` row still goes under its label */
+@container stage (max-width:480px){.v21 .kv.side{grid-template-columns:minmax(88px,.8fr) minmax(0,1fr);gap:10px 12px}.v21 .kv.side dt{font-size:inherit}.v21 .kv.side dd+dt{margin-top:0}.v21 .kv.side dt.wide{margin-top:4px}.v21 .kv.side dt.wide+dd.wide{margin-top:-6px}}
 @container stage (min-width:768px){.v21 .kv{grid-template-columns:180px minmax(0,1fr)}}
 /* V21 (ME-007, ME-008): the card preview with the profile under it; the neutral «общего» placeholder */
 .v21 .p3-card21{margin-top:16px}

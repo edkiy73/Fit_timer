@@ -2,9 +2,9 @@ import {useCallback,useEffect,useId,useRef,useState,type ReactNode} from 'react'
 import {useLocation,useNavigate,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {AtSign,Camera,ChevronDown,ChevronRight,Clock,Lock,Plus,Sparkles,Star,Trash2,X} from 'lucide-react';
+import {AtSign,Cake,Camera,ChevronDown,ChevronRight,Clock,Lock,Plus,Sparkles,Star,Trash2,X} from 'lucide-react';
 import {FeError,dayMonth,feErrorMessage,newOpId} from '../feture/fe-api';
-import {AddCard,Alert,Bar,Btn,Card,Counter,Empty,Field,FilePick,Group,Input,Note,PhotoAdd,PhotoSlot,PhotoSlots,Row,Sheet,Skel,TextArea,ToggleRow,VaultHead,useLeaveGuard} from './kit';
+import {AddCard,Alert,Bar,Btn,Card,Counter,Empty,Field,FilePick,Group,Input,Note,PhotoAdd,PhotoSlot,PhotoSlots,RadioList,Row,Sheet,Skel,TextArea,VaultHead,useLeaveGuard} from './kit';
 import {useFe,usePartnerApproves} from './session';
 import {Uploader} from './kit/Uploader';
 import {PickField,PlacePicker,type Place} from './kit/Place';
@@ -43,7 +43,7 @@ export function MeEditScreen(){
  const [p,setP]=useState<Profile|null>(null);const [base,setBase]=useState<Draft|null>(null);const [d,setD]=useState<Draft|null>(null);
  const [cat,setCat]=useState<z.infer<typeof catalogRes>|null>(null);const [jars,setJars]=useState({all:0,granted:0});const [grants,setGrants]=useState(0);
  const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
- const [whoOpen,setWhoOpen]=useState<boolean|null>(null);const [city,setCity]=useState(false);const [phSheet,setPhSheet]=useState<{k:'photos'|'privMedia',i:number}|null>(null);
+ const [whoOpen,setWhoOpen]=useState<boolean|null>(null);const [city,setCity]=useState(false);const [ageSheet,setAgeSheet]=useState(false);const [phSheet,setPhSheet]=useState<{k:'photos'|'privMedia',i:number}|null>(null);
  const [askOff,setAskOff]=useState(false);const [nickErr,setNickErr]=useState('');const [askLast,setAskLast]=useState<number|null>(null);const [discoverOn,setDiscoverOn]=useState(false);const [added,setAdded]=useState<Place|null>(null);const [uploading,setUploading]=useState<'photos'|'privMedia'|null>(null);
  // «Обо мне» (person only) keeps its own draft next to the rest; «Сохранить» writes it with the profile.
  const [ab,setAb]=useState<{base:AboutDraft,d:AboutDraft}|null>(null);
@@ -76,7 +76,7 @@ export function MeEditScreen(){
  const set=(patch:Partial<Draft>)=>setD(v=>v?{...v,...patch}:v);
  const show=(k:Exclude<Only,null>)=>!only||only===k;
  // Kit validation layer: the fields on screen, by the server's rules (contracts/_text.mjs).
- const checks=useChecks({...(show('basics')?{...(d?.name.trim()?{name:'profileName' as const}:{}),bio:'bio' as const}:{}),...(show('priv')&&!cp&&d?.privOn?{privText:'privateText' as const}:{})},
+ const checks=useChecks({...(show('basics')?{...(d?.name.trim()?{name:'profileName' as const}:{}),bio:'bio' as const}:{}),...(show('priv')&&d?.privOn?{privText:'privateText' as const}:{})},
   {name:d?.name??'',bio:d?.bio??'',privText:d?.privText??''});
  // Opened by a link (no app history behind it), back and «Сохранить» return to «Я» instead of leaving the app.
  const home='/n/me'+(only==='priv'?'?layer=priv':'');const canBack=((history.state as {idx?:number}|null)?.idx??0)>0;
@@ -116,15 +116,15 @@ export function MeEditScreen(){
    if(JSON.stringify(d.photos.map(x=>x.id))!==JSON.stringify(base.photos.map(x=>x.id))){const r=await call('profile.photosSet',{opId:newOpId(),assetIds:d.photos.map(x=>x.id)},ok);pending||=!!r.pending;}
    if(d.privOn!==base.privOn&&!d.privOn)await call('private.setOn',{opId:newOpId(),on:false,confirm:true},ok);
    if(d.privOn!==base.privOn&&d.privOn){const r=await call('private.setOn',{opId:newOpId(),on:true},ok);pending||=!!r.pending;}
-   if(!cp&&d.privOn&&d.privText.trim()!==base.privText)await call('private.setText',{opId:newOpId(),text:d.privText.trim()},ok);
-   if(!cp&&d.privOn&&JSON.stringify(d.privMedia.map(x=>x.id))!==JSON.stringify(base.privMedia.map(x=>x.id)))await call('private.setMedia',{opId:newOpId(),assetIds:d.privMedia.map(x=>x.id)},ok);
+   if(d.privOn&&d.privText.trim()!==base.privText)await call('private.setText',{opId:newOpId(),text:d.privText.trim()},ok);
+   if(d.privOn&&JSON.stringify(d.privMedia.map(x=>x.id))!==JSON.stringify(base.privMedia.map(x=>x.id)))await call('private.setMedia',{opId:newOpId(),assetIds:d.privMedia.map(x=>x.id)},ok);
    toast(pending?t('fe.me.pending'):only==='media'?t('fe.mx.ed.photosSaved'):t(cp?'fe.me.savedUs':'fe.me.saved'),{type:'ok'});
    leave();
   }catch(e){if(e instanceof FeError&&e.fields?.includes('handle')){setNickErr(t('fe.reg.nick.taken'));setTimeout(shakeFirstErr);}else if(!checks.fromServer(e,{text:'privText'}))setFailure(feErrorMessage(e,t));}finally{setBusy(false);}
  };
 
  if(!acting)return null;
- const aud=only==='priv'?<AudTag k="granted"/>:only&&only!=='about'?<AudTag k={only==='details'?(p?.detailsVis??'all'):'all'}/>:null;
+ const aud=only==='priv'?<AudTag k="granted"/>:null;
  const slots=(k:'photos'|'privMedia',base:Ph[],max:number)=>{
   const list=drag.arrange(k,base);const ids=base.map(x=>x.id);
   const cells:ReactNode[]=list.map((ph,i)=><PhotoSlot key={ph.id} id={ph.id} big={k==='photos'&&i===0} dragging={drag.preview?.drag===ph.id} src={ph.src}
@@ -165,7 +165,7 @@ export function MeEditScreen(){
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :!d||!p?<Skel kind="card" rows={3}/>
     :<>
-     {show('media')&&<Group className="ph20" id="peMedia" title={only?undefined:t('fe.me.photos')} action={only?undefined:<AudTag k="all"/>} foot={t('fe.mx.ed.photoHint')}>
+     {show('media')&&<Group className="ph20" id="peMedia" title={only?undefined:t('fe.me.photos')} foot={t('fe.mx.ed.photoHint')}>
       {slots('photos',d.photos,MAX_PHOTOS)}</Group>}
      {show('media')&&<PostPhotoPicker profileId={acting.id} chosen={d.photos.map(x=>x.id)} onToggle={m=>{
       // V21 phToggle: a photo of an own post goes on the profile or comes off it (up to six); «Сохранить» writes it.
@@ -182,9 +182,9 @@ export function MeEditScreen(){
        <Field id={fid+'h'} name="handle" label={cp?t('fe.nn.nickUs'):t('fe.nn.nick')} error={nickErr||undefined}
         hint={p.nickAt?t('fe.nn.nickAt',{date:dayMonth(p.nickAt)}):p.nickFirst?t('fe.nn.nickFirst'):t('fe.nn.nickEvery')}>
         <div className="inwrap"><AtSign/><Input id={fid+'h'} value={d.handle} maxLength={20} autoCapitalize="off" spellCheck={false} disabled={!!p.nickAt} invalid={!!nickErr} onChange={e=>{set({handle:e.target.value.replace(/^@/,'')});setNickErr('');}}/></div></Field>
-       {!cp&&<ToggleRow title={t('fe.mx.ed.showAge')} on={d.showAge} onClick={()=>set({showAge:!d.showAge})}/>}
-       <Field id={fid+'b'} name="bio" label={t('fe.mx.ed.about')} error={checks.error('bio')}><TextArea id={fid+'b'} rows={4} {...checks.input('bio')} value={d.bio} placeholder={t('fe.mx.ed.aboutPh')} onChange={e=>set({bio:e.target.value})}/><Counter n={textLength(d.bio)} max={FIELD.bio.max}/></Field>
        <PickField label={t('fe.mx.ed.city')} value={placeName(d.cityId)} placeholder={t('fe.mx.ed.noCity')} onClick={()=>setCity(true)}/>
+       {!cp&&p.age&&<PickField label={t('fe.mb.age')} icon={Cake} value={d.showAge?t('fe.mb.ageShow',{n:String(p.age)}):t('fe.mb.ageHide')} placeholder="" onClick={()=>setAgeSheet(true)}/>}
+       <Field id={fid+'b'} name="bio" label={t('fe.mx.ed.about')} error={checks.error('bio')}><TextArea id={fid+'b'} rows={4} {...checks.input('bio')} value={d.bio} placeholder={t('fe.mx.ed.aboutPh')} onChange={e=>set({bio:e.target.value})}/><Counter n={textLength(d.bio)} max={FIELD.bio.max}/></Field>
       </>}
       {show('details')&&<div className="pe-who" id="peWho">
        {only!=='details'&&<Row expanded={who} onClick={()=>setWhoOpen(!who)} title={cp?t('fe.mx.detailsCouple'):t('fe.mx.ed.yourDetails')}
@@ -200,14 +200,11 @@ export function MeEditScreen(){
      {show('priv')&&<section className={'vault'+(d.privOn?'':' off')} id="privEdit">
       <VaultHead title={t('fe.priv.title')} label={t('fe.priv.title')} on={d.privOn} onToggle={()=>d.privOn&&base?.privOn?setAskOff(true):set({privOn:!d.privOn})}/>
       {d.privOn&&<div className="vault-b">
-       {!cp&&<Group title={t('fe.mx.ed.privText')}><Card form>
+       <Group title={t('fe.mx.ed.privText')}><Card form>
         <Field name="privText" error={checks.error('privText')}><TextArea rows={5} {...checks.input('privText')} value={d.privText} placeholder={t('fe.mx.ed.privPh')} aria-label={t('fe.mx.ed.privText')} onChange={e=>set({privText:e.target.value})}/><Counter n={textLength(d.privText)} max={FIELD.privateText.max}/></Field>
-       </Card></Group>}
-       <Group title={<>{t('fe.mx.ed.privJars')}{jars.granted?' · '+jars.granted:''}</>} foot={t('fe.mx.ed.privJarsFoot')}
-        action={jars.granted>0&&<button type="button" onClick={()=>navigate('/n/me/interests?add=1&vis=granted')}><Plus/>{t('fe.mx.ed.add')}</button>}>
-        {jars.granted===0&&<AddCard icon={Sparkles} title={t('fe.int.add')} sub={t(cp?'fe.mp.jarsAddSubUs':'fe.mp.jarsAddSub')} onClick={()=>navigate('/n/me/interests?add=1&vis=granted')}/>}</Group>
-       {!cp&&<Group title={t('fe.mx.ed.privMedia')} action={<Note as="span">{d.privMedia.length}/{PRIV_MAX}</Note>}>
-        {d.privMedia.length?slots('privMedia',d.privMedia,PRIV_MAX):<AddCard icon={Camera} title={t('fe.mp.mediaAdd')} sub={t('fe.mp.mediaAddSub')} disabled={!!uploading} busy={uploading==='privMedia'} onClick={()=>pick('privMedia')}/>}</Group>}
+       </Card></Group>
+       <Group title={t('fe.mx.ed.privMedia')} action={<Note as="span">{d.privMedia.length}/{PRIV_MAX}</Note>}>
+        {d.privMedia.length?slots('privMedia',d.privMedia,PRIV_MAX):<AddCard icon={Camera} title={t('fe.mp.mediaAdd')} sub={t('fe.mp.mediaAddSub')} disabled={!!uploading} busy={uploading==='privMedia'} onClick={()=>pick('privMedia')}/>}</Group>
       </div>}
      </section>}
      {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
@@ -218,6 +215,10 @@ export function MeEditScreen(){
   {picked&&d&&<Uploader files={picked.files} aspects={picked.k==='photos'?['4:5']:['orig','4:5','1:1']} max={(picked.k==='photos'?MAX_PHOTOS:PRIV_MAX)-d[picked.k].length}
    send={picked.k==='photos'?sendAvatar:sendPrivate} onClose={()=>setPicked(null)}
    onDone={got=>{const k=picked.k;setPicked(null);setD(v=>v?{...v,[k]:[...v[k],...got.map(g=>({id:g.id,src:g.url,pending:true}))]}:v);}}/>}
+  {ageSheet&&d&&p?.age&&<Sheet title={t('fe.mb.age')} onClose={()=>setAgeSheet(false)}>
+   <RadioList label={t('fe.mb.age')} value={d.showAge?'show':'hide'} onChange={v=>{set({showAge:v==='show'});setAgeSheet(false);}}
+    options={[['show',t('fe.mb.ageShow',{n:String(p.age)})],['hide',t('fe.mb.ageHide')]] as const}/>
+  </Sheet>}
   {city&&d&&<PlacePicker places={cat?.places??[]} current={d.cityId} clear={t('fe.mx.ed.noCity')} add={addPlace}
    onPick={x=>{set({cityId:x?.id??null});setCity(false);}} onClose={()=>setCity(false)}/>}
   {phSheet&&sheetPh&&<Sheet title={phSheet.k==='photos'&&phSheet.i===0?t('fe.mx.ph.main'):t('fe.mx.ph.nOf',{n:phSheet.i+1,total:sheetList.length})} onClose={()=>setPhSheet(null)}>

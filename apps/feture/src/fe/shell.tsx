@@ -1,3 +1,4 @@
+import {onStatusAnswered} from './status-todo';
 import {Suspense,useCallback,useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {flushSync} from 'react-dom';
 import {MaintenanceGate} from './maintenance';
@@ -8,7 +9,7 @@ import {Ban,Bell,Calendar,Globe,Image as FeedIcon,LogOut,MessageCircle,Plus,User
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import {FeError} from '../feture/fe-api';
 import {feErrorMessage} from '../feture/fe-api';
-import {Av,Brand,Btn,Empty,H,Skel} from './kit';
+import {ActingAv,Av,Brand,Btn,Empty,H,Skel} from './kit';
 import {FeSessionProvider,useFe,useLive} from './session';
 import {sweepDrafts} from './drafts';
 import {countsRes} from './inbox';
@@ -19,7 +20,7 @@ import {SignedOut} from './start';
 import {SigninFactor} from './factor';
 import {ToastProvider,useToast} from './toast';
 import {PushOffer} from './push';
-import {ActAsSheet} from './couple';
+import {ActAsSheet,actAsCouple} from './couple';
 import {CreateSheet} from './create-entry';
 import {AppUpdateProvider,UpdateRequired,UpdateSheet,useUpdateRequired} from './app-update';
 import {DockHide} from './dock';
@@ -177,6 +178,7 @@ function useTabBadges(){
  // The app icon badge is the bell plus unread chats; with nothing left, the notifications still shown go too.
  const pull=useCallback((fresh=false)=>{call('inbox.counts',{},countsRes,{asAccount:true,fresh}).then(r=>{setC(r);const n=r.bell+r.chats;setAppBadge(n);if(!n)closeShown('all');}).catch(()=>{});},[call]);
  useEffect(()=>{pull();const id=setInterval(()=>pull(true),60000);return ()=>clearInterval(id);},[pull]);
+ useEffect(()=>onStatusAnswered(()=>pull(true)),[pull]);
  useLive(['counts','chat','decide','notify'],pull);
  return (id:string,side=false):number|'dot'|0=>!c?0:id==='people'?c.likes:id==='chats'?((c.chats+c.requests)||(c.newMatches?'dot':0))
   :id==='inbox'?c.decide+c.notifications:id==='me'?(side?0:c.decide)+staffN:0;
@@ -201,7 +203,7 @@ function FeLayout(){
  const {acting,state}=useFe();const {t}=useI18n();const navigate=useNavigate();const {pathname,search}=useLocation();
  const name=acting?.name||acting?.handle||'?';
  // V21 dockMe: with an active couple «Я» opens «Действовать как» (the person and the couple, what waits on each).
- const pair=state.status==='ready'&&state.boot.profiles.some(p=>p.kind==='couple'&&p.state==='active');const [actAs,setActAs]=useState(false);
+ const pair=state.status==='ready'&&!!actAsCouple(state.boot.profiles);const [actAs,setActAs]=useState(false);
  // The active section follows where the person came from (location state `tab`), and a screen of their own profile
  // (a gallery at /n/people/<own id>) belongs to «Я», not «Люди».
  const parts=pathname.split('/');const fromTab=(useLocation().state as {tab?:unknown}|null)?.tab;
@@ -282,7 +284,7 @@ function FeLayout(){
    <Btn className="create" icon={Plus} aria-haspopup="dialog" onClick={()=>setCreate(true)} aria-label={t('fe.create')}><span>{t('fe.create')}</span></Btn>
    <div className="sp"/>
    {acting&&<button type="button" className="mebtn" aria-haspopup={pair?'dialog':undefined} onClick={()=>pair?setActAs(true):navigate('/n/me')}>
-    <Av name={name} seed={acting.id} src={acting.avatar}/><span>{name}<small>{acting.kind==='couple'?t('fe.me.coupleProfile'):t('fe.me.personalProfile')}</small></span>
+    <ActingAv p={acting} size=""/><span>{name}<small>{acting.kind==='couple'?t('fe.me.coupleProfile'):t('fe.me.personalProfile')}</small></span>
    </button>}
   </aside>
   <main ref={main} className={(nodock?'main':'main has-dock')+(sbar?'':' hasbar')+(cta?' hascta':'')}>
@@ -295,7 +297,7 @@ function FeLayout(){
    {/* The dock's five columns come from base.css (.dock: repeat(5,1fr)) — FE_TABS has five tabs. */}
    {!nodock&&<nav className="dock" aria-label={t('fe.nav.aria')}>
     {FE_TABS.map(({id,icon:Icon})=><button key={id} type="button" className={(current===id?'on':'')+(id==='me'?' me-tab':'')} aria-label={label(id)} aria-current={current===id?'page':undefined} aria-haspopup={id==='me'&&pair?'dialog':undefined} onClick={()=>id==='me'&&pair?setActAs(true):go(id)}>
-     {id==='me'&&acting?<span className="dock-av"><Av name={name} seed={acting.id} src={acting.avatar}/></span>:<Icon/>}<span>{t('fe.nav.'+id)}</span>{em(badge(id))}
+     {id==='me'&&acting?<span className="dock-av"><ActingAv p={acting} size=""/></span>:<Icon/>}<span>{t('fe.nav.'+id)}</span>{em(badge(id))}
     </button>)}
    </nav>}
    {actAs&&<ActAsSheet onClose={()=>setActAs(false)}/>}

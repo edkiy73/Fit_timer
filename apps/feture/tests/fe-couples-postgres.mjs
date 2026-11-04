@@ -142,13 +142,12 @@ test('review fixes: partner sees values, stop closes the couple’s outgoing sid
     const list = (await call('ub', pair, { action: 'decide.approvals' })).items;
     assert.equal(list.find(x => x.id === p.pending.approvalId).change.bio, 'Нас двое');
 
-    // Narrowing an interest never waits; widening does.
-    await call('ub', pair, { action: 'interests.set', opId: op(), topicId: 'bondage', value: 6, vis: 'public' }); // Kira: Alex does not ask
-    assert.equal((await call('ua', pair, { action: 'interests.set', opId: op(), topicId: 'bondage', value: 6, vis: 'only' })).vis, 'only');
-    await call('ub', pair, { action: 'interests.set', opId: op(), topicId: 'shibari', value: 4, vis: 'public' });
-    // Showing it to fewer people but with new content is a change the partner decides on.
-    assert.ok((await call('ua', pair, { action: 'interests.set', opId: op(), topicId: 'shibari', value: 9, vis: 'granted' })).pending);
-    assert.ok((await call('ua', pair, { action: 'interests.set', opId: op(), topicId: 'bondage', value: 6, vis: 'public' })).pending);
+    // Interests are always public (owner 05.11.2026): an older client's «only» changes nothing, a new value waits for the partner.
+    await call('ub', pair, { action: 'interests.set', opId: op(), topicId: 'bondage', value: 6 }); // Kira: Alex does not ask
+    const same = await call('ua', pair, { action: 'interests.set', opId: op(), topicId: 'bondage', value: 6, vis: 'only' });
+    assert.deepEqual([same.status, same.pending], [200, undefined]);
+    assert.equal((await db.query(`select vis from feture.interest where profile_id = $1 and topic_id = 'bondage'`, [pair]))[0].vis, 'public');
+    assert.ok((await call('ua', pair, { action: 'interests.set', opId: op(), topicId: 'bondage', value: 9 })).pending);
 
     // The couple's outgoing request and the access Mia gave it end when it stops, and do not come back.
     await call('ud', d, { action: 'private.setText', opId: op(), text: 'Мой текст' });

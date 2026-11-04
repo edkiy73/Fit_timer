@@ -2,9 +2,6 @@
  "src/fe/age-check.tsx": {
   "margin class": 1
  },
- "src/fe/browse.tsx": {
-  "margin class": 1
- },
  "src/fe/feed.tsx": {
   "button row": 3
  },
@@ -13,7 +10,7 @@
   "empty note": 1
  },
  "src/fe/interests.tsx": {
-  "margin class": 4,
+  "margin class": 3,
   "button row": 3
  },
  "src/fe/links.tsx": {

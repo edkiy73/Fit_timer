@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Camera,ChevronRight,ClipboardList,Clock,Eye,HeartOff,Inbox,PenLine,Users,Newspaper,Settings,Star,Trash2,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Actions,AddCard,Alert,Ask as KitAsk,Av,Btn,Card,Empty,Group,H,IconBtn,PhotoAdd,PhotoSlot,PhotoSlots,PullRefresh,CheckList,RadioList,Row,Seg,SelectRow,Sheet,Skel,ToggleRow,Bar} from './kit';
+import {ActingAv,Actions,AddCard,Alert,Ask as KitAsk,Av,Bar,Btn,Card,CheckList,Empty,Group,H,IconBtn,PhotoAdd,PhotoSlot,PhotoSlots,PullRefresh,RadioList,Row,Seg,SelectRow,Sheet,Skel,ToggleRow} from './kit';
 import {MESSAGE_POINTS,MESSAGES_DEFAULT} from '../../contracts/_messages.mjs';
 import {AgeCheckLink,useAgeResume} from './age-check';
 import {dropReadCache,useFe,useLive,useShown} from './session';
@@ -117,7 +117,7 @@ export function MeTab(){
  const layerDots:Record<Layer,string>={profile:dots.links?t('fe.mx.dot.links'):'',priv:privOn&&dots.reqs?t('fe.mx.dot.reqs'):'',vis:dots.vis?t('fe.mx.dot.vis'):'',mine:''};
  return <>
   {/* Owner 29.10.2026: the same floating header as every tab — the avatar left of the name, glass round buttons. */}
-  <Bar title={name} lead={<Av name={name} seed={acting.id} src={avatarSrc}/>}
+  <Bar title={name} lead={<ActingAv p={{...acting,name,avatar:avatarSrc??null}} size=""/>}
    sub={couple?(acting.kind==='couple'?(acting.ended?t('fe.me.coupleArchive'):t('fe.me.weCouple')):t('fe.me.iPersonal')):t('fe.me.personalProfile')}
    {...(couple?{onTitle:()=>setSwitching(true),titleLabel:t('fe.mx.whose')}:{})}>
    <StaffEntry/>
@@ -158,7 +158,7 @@ export function MeTab(){
 /** «Основное»: name, age, city and the bio; a tap opens the editor. */
 export function BasicsBlock({p,name}:{p:Profile,name:string}){
  const {t,locale}=useI18n();const navigate=useNavigate();const cp=p.kind==='couple';
- return <Group id="meBasics" title={t('fe.me.basics')} action={<AudTag k="all"/>}>
+ return <Group id="meBasics" title={t('fe.me.basics')}>
   <Card className="blk-btn" label={t('fe.me.editBasics')} onClick={()=>navigate('/n/me/edit?only=basics')}>
    <span className="blk-name">{name}{p.age&&p.showAge!==false?', '+p.age:''}{p.city&&(locale==='en'?p.city.en:p.city.ru)?' · '+(locale==='en'?p.city.en:p.city.ru):''}</span>
    {p.bio&&<span className="blk-bio">{p.bio.replace(/[*_~`>#[\]()]/g,'').slice(0,240)}</span>}<span className="chv"><ChevronRight/></span>
@@ -172,17 +172,14 @@ export function MeSkel(){
  return <div aria-busy="true"><Group className="ph20"><PhotoSlots loading/></Group><Skel kind="card" rows={2}/></div>;
 }
 
-/** «Данные» — the filled rows only; the audience comes from the profile's `detailsVis`. */
+/** «Данные» — the filled rows only, «Изменить» in the header like «Обо мне» (owner 04.11.2026); everyone sees them. */
 export function DetailsBlock({p,label}:{p:Profile,label:(kind:string,code:string)=>string}){
  const {t}=useI18n();const navigate=useNavigate();const cp=p.kind==='couple';
  const rows=DETAIL_ROWS.filter(([f])=>!cp||COUPLE_ROWS.includes(f)).map(([field,kind])=>{const v=p.details[field];const codes=Array.isArray(v)?v as string[]:typeof v==='string'?[v]:[];
   return codes.length?[field,t(kind==='status'?'fe.mx.f.status':'fe.reg.kind.'+kind),codes.map(c=>label(kind,c)).join(', ')]:null;}).filter((x):x is string[]=>!!x);
  const title=cp?t('fe.mx.detailsCouple'):t('fe.me.details');
- return <Group id="meDet" title={title} action={<AudTag k={p.detailsVis??'all'}/>}>
-  {rows.length?<Card className="blk-btn" label={t('fe.mx.editOf',{title})} onClick={()=>navigate('/n/me/edit?only=details')}>
-   <dl className="kv">{rows.map(([f,k,v])=><Fragment key={f}><dt>{k}</dt><dd>{v}</dd></Fragment>)}</dl>
-   <span className="chv"><ChevronRight/></span>
-  </Card>
+ return <Group id="meDet" title={title} action={rows.length?<button type="button" onClick={()=>navigate('/n/me/edit?only=details')}>{t('fe.mx.edit')}</button>:undefined}>
+  {rows.length?<Card><dl className="kv side">{rows.map(([f,k,v])=><Fragment key={f}><dt>{k}</dt><dd>{v}</dd></Fragment>)}</dl></Card>
    :<AddCard icon={ClipboardList} title={t('fe.mp.detailsAdd')} sub={cp?t('fe.mx.detailsEmptyCouple'):t('fe.mx.detailsEmpty')} onClick={()=>navigate('/n/me/edit?only=details')}/>}
  </Group>;
 }
@@ -230,7 +227,7 @@ export function PhotosBlock({p,settings,onChanged}:{p:Profile,settings:Settings,
   poll();return ()=>{live=false;window.clearTimeout(id);};
  },[waiting,p.id,call,onChanged]);
  const edit=()=>navigate('/n/me/edit?only=media');
- if(!items.length)return <Group className="ph20" id="mePh" title={t('fe.me.photos')} action={<AudTag k="all"/>}>
+ if(!items.length)return <Group className="ph20" id="mePh" title={t('fe.me.photos')}>
   <AddCard icon={Camera} title={cp?t('fe.mx.ph.addCouple'):t('fe.me.photoAdd')} sub={settings.discoverMode==='visible'?(cp?t('fe.mx.ph.needCouple'):t('fe.mx.ph.need')):t('fe.mx.ph.mainHint')} onClick={edit}/>
  </Group>;
  const write=async(ids:string[],msg:string,prev?:string[])=>{
@@ -240,7 +237,8 @@ export function PhotosBlock({p,settings,onChanged}:{p:Profile,settings:Settings,
   catch(e){toast(feErrorMessage(e,t),{type:'err'});}finally{setBusy(false);}
  };
  const ids=items.map(x=>x.id);
- const nCells=Math.min(MAX_PHOTOS,Math.max(items.length+1,3));
+ // Every place is drawn: a wide screen shows all six in one row; a phone hides the empty ones past the third (kit CSS).
+ const nCells=MAX_PHOTOS;
  // The small thumb paints first, so the slot never sits empty while the card-size picture loads.
  const slots:ReactNode[]=items.map((ph,i)=><PhotoSlot key={ph.id} id={ph.id} big={i===0} dragging={drag.preview?.drag===ph.id} waiting={!ph.src} thumb={ph.src?.thumb} src={photoSrc(ph)}
   main={i===0?t('fe.me.mainPhoto'):undefined} review={ph.pending?t('fe.mx.ph.review'):undefined} onPointerDown={busy?undefined:e=>drag.down(e,'ph',ids,ph.id)}
@@ -249,7 +247,8 @@ export function PhotosBlock({p,settings,onChanged}:{p:Profile,settings:Settings,
   ?<PhotoAdd key="add" onClick={edit} label={t('fe.mx.ph.addAria')} hint={t('fe.me.morePhotos')}/>
   :<PhotoAdd key={'g'+i} ghost/>);
  const x=open!==null?items[open]:undefined;
- return <Group className="ph20" id="mePh" title={t('fe.me.photos')} action={<><AudTag k="all"/><button type="button" onClick={edit}>{t('fe.mx.edit')}</button></>}>
+ // No «Изменить» (owner 05.11.2026: nobody saw it): a tap on a photo opens what it can do, a hold moves it, «+» adds.
+ return <Group className="ph20" id="mePh" title={t('fe.me.photos')}>
   <PhotoSlots>{slots}</PhotoSlots>
   {x&&open!==null&&<Sheet title={open===0?t('fe.mx.ph.main'):t('fe.mx.ph.nOf',{n:open+1,total:items.length})} onClose={()=>setOpen(null)}>
    <div className="ph-sheet-prev">{photoSrc(x)&&<img src={photoSrc(x)!} alt="" draggable={false}/>}{x.pending&&<span className="ph-rev"><Clock/><span>{t('fe.mx.ph.review')}</span></span>}</div>
@@ -308,8 +307,6 @@ export function Visibility({p,settings,onChanged,part}:{p:Profile,settings:Setti
     options={(['all','followers','off'] as const).map(v=>[v,t('fe.mx.v.act.'+v)] as const)}/>
    <SelectRow row label={cp?t('fe.mx.v.mentionUs'):t('fe.mx.v.mention')} sub={t('fe.mx.v.mentionSub')} value={settings.mentionsFrom??'all'} onChange={v=>void set('mentionsFrom',v)}
     options={(['all','follow','none'] as const).map(v=>[v,t('fe.mx.v.from.'+v+(v==='follow'&&cp?'Us':''))] as const)}/>
-   {!cp&&<SelectRow row label={t('fe.mx.v.details')} sub={t('fe.mx.v.detailsSub')} value={(p.detailsVis??'all') as 'all'|'granted'|'only'} onChange={v=>void set('detailsVis',v)}
-    options={(['all','granted','only'] as const).map(v=>[v,t('fe.reg.vis.'+v)] as const)}/>}
    {toggle('showLikes',cp?t('fe.mx.v.showLikesUs'):t('fe.mx.v.showLikes'),cp?t('fe.mx.v.showLikesSubUs'):t('fe.mx.v.showLikesSub'),settings.showLikes!==false)}
   </Card></Group>
   {/* «Кто может мне писать» (owner 29.10.2026, message requests); the server enforces it. */}

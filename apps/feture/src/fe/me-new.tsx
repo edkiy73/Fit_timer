@@ -2,15 +2,15 @@ import {useCallback,useEffect,useState} from 'react';
 import {useNavigate,useParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Bookmark,Calendar,Eye,Globe,Images,Inbox,KeyRound,Link2,Lock,Newspaper,Settings,UserRound,Users,X} from 'lucide-react';
+import {Bookmark,Calendar,Eye,Globe,Inbox,Newspaper,Settings,UserRound,Users,X} from 'lucide-react';
 import {feErrorMessage} from '../feture/fe-api';
-import {Av,Bar,Btn,Card,Empty,Group,IconBtn,Row,Skel,View} from './kit';
+import {ActingAv,AddBtn,Av,Bar,Btn,Card,Empty,Group,IconBtn,Row,Skel,View} from './kit';
 import {useFe,useLive,useShown} from './session';
 import {BellButton,countsRes} from './inbox';
 import {StaffEntry} from './staff';
-import {waitingCount} from './links';
+import {LinksBlock,waitingCount} from './links';
 import {linksMineRes} from './profile-extras';
-import {ActAsSheet} from './couple';
+import {ActAsSheet,actAsCouple} from './couple';
 import {PairEntry} from './pair';
 import {MeJars} from './interests';
 import {MeGallery} from './gallery';
@@ -18,7 +18,10 @@ import {MeAboutBlock} from './about-facts';
 import {PrivateLayer} from './private';
 import {NameBadges} from './faces';
 import {usePremiumStatus} from './account-extra';
-import {BasicsBlock,DetailsBlock,MeSkel,PhotosBlock,StatusHint,catalogRes,profileRes,settingsRes,type Profile,type Settings as MeSettings,type option} from './me';
+import {BasicsForm} from './me-basics-form';
+import {onStatusAnswered} from './status-todo';
+import type {Place} from './kit/Place';
+import {DetailsBlock,MeSkel,PhotosBlock,catalogRes,profileRes,settingsRes,type Profile,type Settings as MeSettings,type option} from './me';
 
 /** The new «Я» (owner's layout, 04.11.2026), shown next to the current one at /n/me/new until the owner picks it:
  * the same header with the name badges, «Нужно решить», then one short list of sections. Every row opens an existing
@@ -31,7 +34,7 @@ const evsRes=z.object({ok:z.literal(true)}).catchall(z.unknown());
 type Counts={posts:number,events:number,followers:number,following:number,saved:number,links:number,reqs:number};
 
 /** The own profile and its settings (the same reads and first-frame memory as «Я»). */
-function useMe(){
+export function useMe(){
  const {acting,call,peek}=useFe();
  const [p,setP]=useShown<Profile|null>('me.p',()=>acting?peek('profile.get',{profileId:acting.id},profileRes)?.profile??null:null);
  const [settings,setSettings]=useShown<MeSettings|null>('me.settings',()=>peek('profile.settings',{},settingsRes)?.settings??null);
@@ -64,16 +67,17 @@ export function MeNewScreen(){
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[call,acting]);
  useEffect(()=>{pull();},[pull]);
+ useEffect(()=>onStatusAnswered(pull),[pull]);
  useLive(['counts','decide','notify'],pull);
  if(state.status!=='ready'||!acting)return null;
- const couple=state.boot.profiles.find(x=>x.kind==='couple'&&x.state!=='deleted');const cp=acting.kind==='couple';
+ const couple=actAsCouple(state.boot.profiles);const cp=acting.kind==='couple';
  const name=p?.name||acting.name||acting.handle||'?';
  const avatarSrc=p?(p.photos[0]?.src?.thumb??p.photos[0]?.src?.card??p.avatar?.src?.thumb):acting.avatar;
  const go=(to:string)=>()=>navigate(to);
  const num=(v:number|undefined)=>v===undefined?undefined:String(v);
  const privOn=settings?settings.privateOn!==false:undefined;
  return <>
-  <Bar title={name} lead={<Av name={name} seed={acting.id} src={avatarSrc}/>}
+  <Bar title={name} lead={<ActingAv p={{...acting,name,avatar:avatarSrc??null}} size=""/>}
    mark={cp?undefined:<NameBadges p={{photoVerified:verified,premium:!!premium?.premium}}/>}
    sub={couple?(cp?t('fe.me.weCouple'):t('fe.me.iPersonal')):t('fe.me.personalProfile')}
    {...(couple?{onTitle:()=>setSwitching(true),titleLabel:t('fe.mx.whose')}:{})}>
@@ -86,12 +90,6 @@ export function MeNewScreen(){
    {todo>0&&<Card list><Row className="me-todo" icon={Inbox} tone="l" title={t('fe.mx.todo')} badge={todo} onClick={go('/n/inbox')}/></Card>}
    <Group title={t('fe.m2.g.profile')}><Card list>
     <Row icon={UserRound} title={t('fe.m2.profile')} val={p?.photos.length?t('fe.m2.photosN',{n:String(p.photos.length)}):undefined} onClick={go('/n/me/new/profile')}/>
-    <Row icon={Images} title={t('fe.mx.gal')} onClick={go('/n/me/new/gallery')}/>
-    <Row icon={Link2} title={t(cp?'fe.ln.titleCouple':'fe.ln.title')} badge={c?.links||undefined} onClick={go('/n/me/links')}/>
-   </Card></Group>
-   <Group title={t('fe.m2.g.private')}><Card list>
-    <Row icon={Lock} title={t('fe.m2.private')} val={privOn===undefined?undefined:t(privOn?'fe.m2.on':'fe.m2.off')} onClick={go('/n/me/new/private')}/>
-    <Row icon={KeyRound} title={t(cp?'fe.ac.titleUs':'fe.ac.title')} badge={c?.reqs||undefined} onClick={go('/n/me/access')}/>
    </Card></Group>
    <Group title={t('fe.m2.g.mine')}><Card list>
     <Row icon={Newspaper} title={t(cp?'fe.mx.mine.postsUs':'fe.mx.mine.posts')} val={num(c?.posts)} onClick={go('/n/me/posts')}/>
@@ -108,30 +106,31 @@ export function MeNewScreen(){
 
 /** One section of the new «Я»: «Мой профиль», «Галерея», «Приватная часть» — the current blocks, one level down. */
 export function MeNewSection(){
- const {section}=useParams();const {state,acting,call}=useFe();const {t,locale}=useI18n();
+ const {section}=useParams();const {state,acting,call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();
  const {p,settings,error,load}=useMe();
- const [options,setOptions]=useState<z.infer<typeof option>[]>([]);
- useEffect(()=>{if(section==='profile')call('catalog.get',{},catalogRes,{asAccount:true}).then(r=>setOptions(r.options)).catch(()=>{});},[call,section]);
+ const [options,setOptions]=useState<z.infer<typeof option>[]>([]);const [places,setPlaces]=useState<Place[]>([]);
+ useEffect(()=>{if(section==='profile')call('catalog.get',{},catalogRes,{asAccount:true}).then(r=>{setOptions(r.options);setPlaces(r.places??[]);}).catch(()=>{});},[call,section]);
  if(state.status!=='ready'||!acting)return null;
  const cp=acting.kind==='couple';
  const couple=state.boot.profiles.find(x=>x.kind==='couple'&&x.state!=='deleted');
  const title=section==='gallery'?t('fe.mx.gal'):section==='private'?t('fe.m2.private'):t('fe.m2.profile');
  const label=(kind:string,code:string)=>{const o=options.find(x=>x.kind===kind&&x.code===code);return o?(locale==='en'?o.en:o.ru):code;};
- const name=p?.name||acting.name||acting.handle||'?';
  return <>
-  <Bar title={title} back="/n/me/new"/>
+  <Bar title={title} back="/n/me/new">{section==='gallery'&&<AddBtn label={t('fe.mx.gal.upload')} onClick={()=>navigate('/n/feed/new?x=media')}/>}</Bar>
   <View refresh={load}>
    {error&&!p?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :!p||!settings?(section==='profile'?<MeSkel/>:<Skel kind="card" rows={2}/>)
-    :section==='gallery'?<MeGallery profileId={p.id} couple={cp} title={t('fe.mx.gal')}/>
-    :section==='private'?<PrivateLayer profileId={p.id} on={settings.privateOn!==false} requestsFrom={settings.requestsFrom??'all'} onChanged={load} askHere={false}/>
+    :section==='gallery'?<MeGallery profileId={p.id} couple={cp} title={t('fe.mx.gal')} own/>
+    :section==='private'?<PrivateLayer profileId={p.id} on={settings.privateOn!==false} requestsFrom={settings.requestsFrom??'all'} onChanged={load} askHere={false} accessHere={false}/>
     :<>
      <PhotosBlock p={p} settings={settings} onChanged={load}/>
-     <BasicsBlock p={p} name={name}/>
-     <MeAboutBlock p={p}/>
+     <BasicsForm p={p} places={places} onSaved={load}/>
      <DetailsBlock p={p} label={label}/>
-     {!cp&&couple&&<StatusHint p={p} coupleId={couple.id} onDone={load}/>}
+     <LinksBlock key={'links'+p.id}/>
+     <MeAboutBlock p={p}/>
      <MeJars key={p.id}/>
+     <MeGallery profileId={p.id} couple={cp} title={t('fe.mx.gal')}/>
+     <PrivateLayer profileId={p.id} on={settings.privateOn!==false} requestsFrom={settings.requestsFrom??'all'} onChanged={load} askHere={false}/>
     </>}
   </View>
  </>;

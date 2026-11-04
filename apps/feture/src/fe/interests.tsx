@@ -1,10 +1,11 @@
-import {useCallback,useEffect,useRef,useState,type CSSProperties} from 'react';
+import {useCallback,useEffect,useLayoutEffect,useRef,useState,type CSSProperties} from 'react';
 import {useNavigate,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,EyeOff,KeyRound,MessageCircle,Pencil,Plus,Sparkles,Trash2,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {AddCard,Alert,AnswerScale,Bar,Btn,Card,Chip,Chips,Empty,Group,IconBtn,Note,Progress,Row,SearchInput,SectionLabel,Sheet,Skel,View} from './kit';
+import {AddBtn,AddCard,Alert,AnswerScale,Bar,Btn,Card,Chip,Empty,Group,IconBtn,Note,Progress,Row,SearchInput,SectionLabel,Sheet,Skel,View} from './kit';
+import {useToast} from './toast';
 import {useFe,usePartnerApproves,useShown} from './session';
 import {when} from './feed';
 import {topicMatches} from './topic-search';
@@ -12,6 +13,8 @@ import {topicMatches} from './topic-search';
 /** Interests (V21 X01 #meJars, X02, X04) with the prototype's markup: one capsule per interest — the fill is the
  * level 1–10; «обсудить» and «граница» are marks, never levels. Everything comes from the server. */
 const VIS=['public','granted','only'] as const;
+/** The lanes of the answer: «Всё» (every direction) or one of them. */
+const LANES=['all','give','get','watch'] as const;type Lane=typeof LANES[number];
 const DIRS=['give','get','watch'] as const;
 type Vis=typeof VIS[number];type Dir=typeof DIRS[number];
 type Answer=number|'discuss'|'hard'|null;
@@ -55,20 +58,40 @@ function useTopicName(topics:Topic[]){
  return (id:string)=>{const x=topics.find(o=>o.id===id);return x?(locale==='en'?x.en:x.ru):id;};
 }
 
+/** Where every capsule stood at the last paint (by topic, within its scrolling view): one that moves — a new level,
+ * another group — slides from there instead of jumping (owner 05.11.2026). */
+const JAR_AT=new Map<string,{x:number,y:number,view:Element|null,fw:number|null}>();
+
 /** `jarsHTML()` — capsules; a tap opens the interest sheet. */
-export function Jars({list,topics,onOpen,onAdd}:{list:Interest[],topics:Topic[],onOpen:(topicId:string)=>void,onAdd?:()=>void}){
+export function Jars({list,topics,onOpen,onAdd,still}:{list:Interest[],topics:Topic[],onOpen:(topicId:string)=>void,onAdd?:()=>void,
+ /** Drawn again (the check after an edit): no grow-in, only what changed moves (owner 05.11.2026). */ still?:boolean}){
  const {t}=useI18n();const name=useTopicName(topics);
+ const box=useRef<HTMLDivElement>(null);
+ useLayoutEffect(()=>{
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  box.current?.querySelectorAll<HTMLElement>('[data-jar]').forEach(b=>{
+   const r=b.getBoundingClientRect();const view=b.closest('.view');const f=b.querySelector<HTMLElement>('.sc-f');
+   const at={x:r.left,y:r.top+(view?.scrollTop??0),view,fw:f?f.getBoundingClientRect().width:null};
+   const was=JAR_AT.get(b.dataset.jar!);JAR_AT.set(b.dataset.jar!,at);
+   // only within the same screen: arriving from another one draws in place
+   if(!was||was.view!==view||reduce)return;
+   // a list drawn anew (the check) eases a changed fill from its old width; a kept one does it with its CSS transition
+   if(f&&was.fw!=null&&at.fw!=null&&Math.abs(was.fw-at.fw)>1&&f.getAnimations().length===0)f.animate([{width:was.fw+'px'},{width:at.fw+'px'}],{duration:320,easing:'cubic-bezier(.2,.8,.2,1)'});
+   if(Math.abs(was.x-at.x)<1&&Math.abs(was.y-at.y)<1)return;
+   b.animate([{transform:`translate(${was.x-at.x}px,${was.y-at.y}px)`},{transform:'none'}],{duration:320,easing:'cubic-bezier(.2,.8,.2,1)'});
+  });
+ });
  const limitTopic=(id:string)=>topics.find(x=>x.id===id)?.categoryId===LIMITS;
  const role=(j:Interest)=>{const d=dirsOf(j.dir);if(!d.length||limitTopic(j.topicId))return '';return d.length===DIRS.length?t('fe.int.role.all'):d.map(x=>t('fe.int.role.'+x)).join(' · ');};
  const vis=(j:Interest)=>j.vis==='granted'?<span className="sc-vis"><KeyRound/></span>:j.vis==='only'?<span className="sc-vis"><EyeOff/></span>:null;
- return <div className="jars caps">
+ return <div className={'jars caps'+(still?' still':'')} ref={box}>
   {list.map((j,i)=>{
    const n=name(j.topicId);
    if(j.mark){const word=t('fe.int.mark.'+j.mark);
-    return <button key={j.topicId} type="button" className={'sc '+(j.mark==='hard'?'hard':'soft')} aria-label={`${n}: ${word}`} onClick={()=>onOpen(j.topicId)}>
+    return <button key={j.topicId} data-jar={j.topicId} type="button" className={'sc '+(j.mark==='hard'?'hard':'soft')} aria-label={`${n}: ${word}`} onClick={()=>onOpen(j.topicId)}>
      <span className="sc-l"><span className="sc-n">{n}</span>{vis(j)}<span className={'sc-lim '+(j.mark==='hard'?'t':'s')}>{word}</span></span></button>;}
    const lv=j.value??1;const rw=role(j);
-   return <button key={j.topicId} type="button" className={'sc'+(lv>=10?' full':'')} aria-label={`${n}: ${t('fe.int.ed.level',{n:lv})}${rw?', '+rw:''}`}
+   return <button key={j.topicId} data-jar={j.topicId} type="button" className={'sc'+(lv>=10?' full':'')} aria-label={`${n}: ${t('fe.int.ed.level',{n:lv})}${rw?', '+rw:''}`}
     style={{'--v':lv,'--lv':lv,'--d':`${(i%8)*.04}s`} as CSSProperties} onClick={()=>onOpen(j.topicId)}>
     <span className="sc-f"/><span className="sc-l"><span className="sc-n">{n}</span>{vis(j)}<span className="sc-v"><b>{lv}</b>{rw&&<em>{rw}</em>}</span></span></button>;
   })}
@@ -83,8 +106,8 @@ export function JarLegend({couple,extra}:{couple:boolean,extra?:string}){
 }
 
 /** `openJar()` — the interest sheet: what it is → how you like it → who sees → the answer. */
-export function InterestSheet({topicId,topics,cats,current,defaultVis='public',onClose,onDone}:{topicId:string,topics:Topic[],cats:Category[],current:Interest|undefined,defaultVis?:Vis,onClose:()=>void,onDone:(msg:string)=>void}){
- const {call,acting}=useFe();const {t,locale}=useI18n();
+export function InterestSheet({topicId,topics,cats,current,defaultVis='public',onClose,onDone}:{topicId:string,topics:Topic[],cats:Category[],current:Interest|undefined,defaultVis?:Vis,onClose:()=>void,onDone:()=>void}){
+ const {call,acting}=useFe();const {t,locale}=useI18n();const toast=useToast();
  const tp=topics.find(x=>x.id===topicId);const cat=cats.find(c=>c.id===tp?.categoryId);
  const limit=tp?.categoryId===LIMITS;const couple=acting?.kind==='couple';const toPartner=usePartnerApproves();
  const name=tp?(locale==='en'?tp.en:tp.ru):topicId;const desc=tp?(locale==='en'?tp.descEn:tp.descRu):null;
@@ -93,60 +116,50 @@ export function InterestSheet({topicId,topics,cats,current,defaultVis='public',o
  const [vis,setVis]=useState<Vis>(current?visOf(current):defaultVis);
  const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [asking,setAsking]=useState(false);
  const opId=useRef(newOpId());
- const save=async()=>{
+ // A pick saves at once (owner 05.11.2026: no «Сохранить»); the sheet closes with the toast.
+ const save=async(v:Answer,dir:Dir[])=>{
   if(v==null)return;setBusy(true);setFailure('');
   try{
    const input:Record<string,unknown>={opId:opId.current,topicId,vis,...(typeof v==='number'?{value:v,...(limit?{}:{dir})}:{mark:v})};
-   const r=await call('interests.set',input,setRes);onDone(r.pending?t('fe.int.pending'):t(couple?'fe.int.savedUs':'fe.int.saved'));
+   // No «Сохранено» (owner 05.11.2026); only a couple's change that waits for the partner says so, in a toast.
+   const r=await call('interests.set',input,setRes);if(r.pending)toast(t('fe.int.pending'),{type:'ok'});onDone();
   }catch(e){setFailure(feErrorMessage(e,t));opId.current=newOpId();}finally{setBusy(false);}
  };
  const remove=async()=>{
   setBusy(true);setFailure('');
-  try{await call('interests.remove',{opId:newOpId(),topicId},ok);onDone(t('fe.int.removed'));}
+  try{await call('interests.remove',{opId:newOpId(),topicId},ok);onDone();}
   catch(e){setFailure(feErrorMessage(e,t));setAsking(false);}finally{setBusy(false);}
  };
- // The kit sheet (in the app layer, above the phone dock); Escape, ✕ and the scrim close it — after asking, when
- // something was changed and not saved (V21 editJar).
- const init=useRef({v,dir:dir.join(),vis});
- const dirty=!busy&&(v!==init.current.v||dir.join()!==init.current.dir||vis!==init.current.vis);
- return <Sheet title={name} sub={cat?(locale==='en'?cat.en:cat.ru):undefined} onClose={onClose} dirty={dirty} foot={<>
+ const pick=(nv:Answer,nd:Dir[])=>{setV(nv);setDir(nd);void save(nv,nd);};
+ // The kit sheet (in the app layer, above the phone dock); Escape, ✕ and the scrim close it. Only «Удалить» stays at
+ // the bottom; it asks once more as «Точно удалить» / «Отмена».
+ return <Sheet title={name} sub={cat?(locale==='en'?cat.en:cat.ru):undefined} onClose={onClose} foot={failure||current?<>
   {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
-  {asking?<>
-   <Note><b>{t('fe.int.ed.removeQ',{topic:name})}</b> {t('fe.int.ed.removeText')}</Note>
-   <div className="row g8"><Btn kind="soft" onClick={()=>setAsking(false)} disabled={busy}>{t('fe.cancel')}</Btn><Btn kind="danger" onClick={remove} disabled={busy}>{t('fe.int.ed.remove')}</Btn></div>
-  </>:<>
-   {v==null&&<Note className="jar-need">{t('fe.int.ed.need')}</Note>}
-   <div className="row g8">
-    {current&&<Btn kind="soft" square icon={Trash2} aria-label={t('fe.int.ed.remove')} onClick={()=>setAsking(true)} disabled={busy}/>}
-    <Btn className={v==null?'off':undefined} busy={busy} onClick={save} disabled={v==null||busy} aria-disabled={v==null||undefined}>{toPartner?t('fe.ca.toPartner'):current?t('fe.int.ed.save'):t('fe.int.ed.addOne')}</Btn>
-   </div>
-  </>}
- </>}>
+  {/* «Удалить» turns into «Точно удалить» next to «Отмена» — no question line (owner 05.11.2026) */}
+  {current&&(asking?<div className="row g8"><Btn kind="soft" onClick={()=>setAsking(false)} disabled={busy}>{t('fe.cancel')}</Btn><Btn kind="danger" icon={Trash2} busy={busy} onClick={remove} disabled={busy}>{t('fe.int.ed.removeSure')}</Btn></div>
+   :<Btn kind="soft" icon={Trash2} onClick={()=>setAsking(true)} disabled={busy}>{t('fe.int.ed.remove')}</Btn>)}
+ </>:undefined}>
   {desc&&<p className="topic-desc">{desc}</p>}
-  <InterestFields limit={limit} couple={couple} v={v} setV={setV} dir={dir} setDir={setDir} vis={vis} setVis={setVis}/>
+  <InterestFields limit={limit} couple={couple} v={v} setV={setV} dir={dir} setDir={setDir} vis={vis} setVis={setVis} onPick={pick}/>
  </Sheet>;
 }
 
-/** How you like it (not for limits), who sees, then the answer — the same fields when adding one or several. */
-function InterestFields({limit,couple,v,setV,dir,setDir,vis,setVis}:{limit:boolean,couple:boolean,v:Answer,setV:(v:Answer)=>void,dir:Dir[],setDir:(f:(d:Dir[])=>Dir[])=>void,vis:Vis,setVis:(v:Vis)=>void}){
+/** The answer — the same fields when adding one or several: a lane («Всё», «Давать», «Получать», «Смотреть») opens
+ * its 1–10 in place, a number picks it (or hold the lane and slide to the number); limits have one scale; or a mark. Every interest is seen by everyone (owner 05.11.2026),
+ * so there is no «Кто видит». */
+function InterestFields({limit,couple,v,setV,dir,setDir,vis,setVis,onPick}:{limit:boolean,couple:boolean,v:Answer,setV:(v:Answer)=>void,dir:Dir[],setDir:(f:(d:Dir[])=>Dir[])=>void,vis:Vis,setVis:(v:Vis)=>void,
+ /** The whole answer in one call (the interest sheet saves it at once); without it the fields set `v` and `dir`. */ onPick?:(v:Answer,dir:Dir[])=>void}){
  const {t}=useI18n();
- const mark=v==='discuss'||v==='hard';const n=typeof v==='number'?v:null;
+ const mark=v==='discuss'||v==='hard';
  const allDir=dir.length===DIRS.length;
- const toggleDir=(k:'all'|Dir)=>{if(mark)return;
-  setDir(d=>{if(k==='all')return [...DIRS];if(d.length===DIRS.length)return [k];const next=d.includes(k)?d.filter(x=>x!==k):[...d,k];return next.length?DIRS.filter(x=>next.includes(x)):[...DIRS];});};
  return <>
-    {!limit&&<Group bare className={mark?'dim':''} title={t('fe.int.ed.dir')}><Card><Chips>
-     {(['all',...DIRS] as const).map(k=>{const pressed=k==='all'?allDir:!allDir&&dir.includes(k);
-      return <Chip key={k} on={pressed} inactive={mark} onClick={()=>toggleDir(k)}>{t('fe.int.ed.dir.'+k)}</Chip>;})}
-    </Chips></Card></Group>}
-    <Group bare title={t('fe.int.ed.vis')}><Card><div className="chips">
-     {VIS.map(k=><Chip key={k} on={vis===k} onClick={()=>setVis(k)}>{t('fe.int.ed.vis.'+(k==='only'&&couple?'onlyUs':k))}</Chip>)}
-    </div>{vis==='public'&&v==='hard'&&<Note className="mt8">{t('fe.int.ed.hardPublic')}</Note>}</Card></Group>
-    <Group bare title={t(limit?'fe.int.ed.qLimit':'fe.int.ed.q')}><Card><div className="ans">
-     <AnswerScale value={v} onChange={setV} label={t('fe.int.ed.scale')} low={t('fe.int.ed.low')} high={t('fe.int.ed.high')}
-      marks={[{id:'discuss',label:t('fe.int.ed.discuss'),icon:MessageCircle},{id:'hard',label:t('fe.int.ed.hard'),icon:Ban,taboo:true}] as const}/>
-     <p className="ans-word" aria-live="polite">{v==null?t('fe.int.ed.pick'):n?<><b>{t('fe.int.ed.level',{n})}</b><span>{t('fe.int.ed.levelText')}</span></>:t(v==='hard'?'fe.int.ed.hardText':'fe.int.ed.discussText')}</p>
-    </div></Card></Group>
+    {/* no card around the answer: each lane has its own frame (a frame in a frame took 32 px from the numbers) */}
+    <Group bare title={t(limit?'fe.int.ed.qLimit':'fe.int.ed.q')}><div className="ans">
+     <AnswerScale value={v} onChange={x=>onPick?onPick(x,typeof x==='number'?dir:[]):setV(x)} label={t('fe.int.ed.scale')}
+      {...(limit?{}:{lanes:LANES.map(id=>({id,label:t('fe.int.ed.dir.'+id)})),lane:mark?null:allDir?'all':dir.length===1?dir[0]:null,
+       onLane:(n:number,id:Lane)=>{const d=id==='all'?[...DIRS]:[id];if(onPick)onPick(n,d);else{setDir(()=>d);setV(n);}}})}
+      marks={[{id:'discuss',label:t('fe.int.ed.discuss'),icon:MessageCircle,soft:true},{id:'hard',label:t('fe.int.ed.hard'),icon:Ban,taboo:true}] as const}/>
+    </div></Group>
  </>;
 }
 
@@ -155,32 +168,31 @@ function InterestFields({limit,couple,v,setV,dir,setDir,vis,setVis}:{limit:boole
 export function InterestsScreen(){
  const {acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const [params,setParams]=useSearchParams();
  const {items,cats,topics,error,load}=useInterests();
- const [open,setOpen]=useState<string|null>(null);const [notice,setNotice]=useState('');
+ const [open,setOpen]=useState<string|null>(null);
  const picking=params.get('add')==='1';const presetVis:Vis=params.get('vis')==='granted'?'granted':params.get('vis')==='only'?'only':'public';
  const setPicking=(on:boolean)=>setParams(p=>{const n=new URLSearchParams(p);if(on)n.set('add','1');else{n.delete('add');n.delete('vis');}return n;},{replace:true});
  if(!acting)return null;
  const couple=acting.kind==='couple';
  const all=sortJars(items??[]);const have=new Set(all.map(j=>j.topicId));
  const groups=([['level',all.filter(j=>!j.mark)],['discuss',all.filter(j=>j.mark==='discuss')],['hard',all.filter(j=>j.mark==='hard')]] as const).filter(g=>g[1].length);
- const toAdd=()=>{setNotice('');setPicking(true);};
+ const toAdd=()=>setPicking(true);
  return <>
   <Bar title={t(couple?'fe.int.screenCouple':'fe.int.screen')} back="/n/me">
-   <IconBtn icon={Plus} label={t('fe.int.add')} onClick={toAdd}/>
+   <AddBtn label={t('fe.int.add')} onClick={toAdd}/>
   </Bar>
   <View className="nodock">
-   {notice&&<Alert kind="ok" noIcon>{notice}</Alert>}
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
-    :!items?<Skel kind="list"/>
+    // The names come with the catalog: until it is here the list waits (its ids would flash in English).
+    :!items||(items.length>0&&!topics.length)?<Skel kind="list"/>
     :all.length?<>
      {groups.map(([g,l])=><Group key={g} title={<>{t('fe.int.group.'+g)} · {l.length}</>}>
       <Card><Jars list={l} topics={topics} onOpen={setOpen}/></Card></Group>)}
-     <JarLegend couple={couple} extra={t('fe.int.hardNote')}/>
     </>
     :<Empty icon={Sparkles} title={t('fe.int.empty.title')} text={t(couple?'fe.int.empty.textCouple':'fe.int.empty.text')}><Btn onClick={toAdd}>{t('fe.int.add')}</Btn></Empty>}
   </View>
-  {picking&&items&&!open&&<TopicPicker cats={cats} topics={topics} have={have} presetVis={presetVis} onClose={()=>setPicking(false)} onDone={msg=>{setPicking(false);setNotice(msg);load();}}/>}
+  {picking&&items&&!open&&<TopicPicker cats={cats} topics={topics} have={have} presetVis={presetVis} onClose={()=>setPicking(false)} onDone={()=>{setPicking(false);load();}}/>}
   {open&&<InterestSheet key={open} topicId={open} topics={topics} cats={cats} current={items?.find(j=>j.topicId===open)} defaultVis={presetVis}
-   onClose={()=>setOpen(null)} onDone={msg=>{setOpen(null);setPicking(false);setNotice(msg);load();}}/>}
+   onClose={()=>setOpen(null)} onDone={()=>{setOpen(null);setPicking(false);load();}}/>}
  </>;
 }
 
@@ -188,8 +200,8 @@ export function InterestsScreen(){
  * turn (progress bar; an answer moves on), check them as jars, then save all. A tap on a jar in the check goes back to
  * that one. Each topic keeps its own opId, so a retry after a failure never saves twice. */
 type Draft={v:Answer,dir:Dir[],vis:Vis};
-export function TopicPicker({cats,topics,have,presetVis,onClose,onDone}:{cats:Category[],topics:Topic[],have:Set<string>,presetVis:Vis,onClose:()=>void,onDone:(msg:string)=>void}){
- const {call,acting}=useFe();const {t,locale}=useI18n();const [q,setQ]=useState('');
+export function TopicPicker({cats,topics,have,presetVis,onClose,onDone}:{cats:Category[],topics:Topic[],have:Set<string>,presetVis:Vis,onClose:()=>void,onDone:()=>void}){
+ const {call,acting}=useFe();const {t,locale}=useI18n();const toast=useToast();const [q,setQ]=useState('');
  const [sel,setSel]=useState<string[]>([]);const [stage,setStage]=useState<'pick'|'answer'|'review'>('pick');const [step,setStep]=useState(0);
  const [fromReview,setFromReview]=useState(false);const [drafts,setDrafts]=useState<Record<string,Draft>>({});
  const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const ops=useRef<Record<string,string>>({});
@@ -200,11 +212,16 @@ export function TopicPicker({cats,topics,have,presetVis,onClose,onDone}:{cats:Ca
  const toggle=(id:string)=>setSel(l=>l.includes(id)?l.filter(x=>x!==id):[...l,id]);
  const cur=sel[step];const d=cur?drafts[cur]??{v:null,dir:[...DIRS],vis:presetVis}:null;
  const put=(f:(d:Draft)=>Draft)=>{if(!cur)return;setDrafts(all=>({...all,[cur]:f(all[cur]??{v:null,dir:[...DIRS],vis:presetVis})}));};
- const next=()=>{if(fromReview){setFromReview(false);setStage('review');}else if(step<sel.length-1)setStep(step+1);else setStage('review');};
- const back=()=>{if(stage==='review'){setStage('answer');setStep(sel.length-1);}else if(fromReview){setFromReview(false);setStage('review');}else if(step>0)setStep(step-1);else setStage('pick');};
+ const next=()=>{setWay('fwd');if(fromReview){setFromReview(false);setStage('review');}else if(step<sel.length-1)setStep(step+1);else setStage('review');};
+ const back=()=>{setWay('back');if(stage==='review'){setStage('answer');setStep(sel.length-1);}else if(fromReview){setFromReview(false);setStage('review');}else if(step>0)setStep(step-1);else setStage('pick');};
  const stepRef=useRef(step);stepRef.current=step;const stageRef=useRef(stage);stageRef.current=stage;const nextRef=useRef(next);nextRef.current=next;
  // Answering moves on after a short pause, so the choice is visible.
- const answer=(v:Answer)=>{put(x=>({...x,v}));const at=step;window.setTimeout(()=>{if(stepRef.current===at&&stageRef.current==='answer')nextRef.current();},260);};
+ // «Далее» stays hidden while a fresh answer moves on by itself (owner 05.11.2026: it blinked for a moment).
+ const [moving,setMoving]=useState(false);useEffect(()=>{setMoving(false);},[step,stage]);
+ // Which way the steps moved: the next topic slides in from the right, a step back from the left (owner 05.11.2026).
+ const [way,setWay]=useState<'fwd'|'back'>('fwd');
+ const [edited,setEdited]=useState(false); // the check came back from an edit: drawn as it was, only the change moves
+ const answer=(v:Answer)=>{setMoving(true);put(x=>({...x,v}));const at=step;window.setTimeout(()=>{if(stepRef.current===at&&stageRef.current==='answer')nextRef.current();},260);};
  const save=async()=>{
   setBusy(true);setFailure('');let pending=0;
   try{
@@ -212,7 +229,7 @@ export function TopicPicker({cats,topics,have,presetVis,onClose,onDone}:{cats:Ca
     ops.current[id]??=newOpId();
     const r=await call('interests.set',{opId:ops.current[id],topicId:id,vis:x.vis,...(typeof x.v==='number'?{value:x.v,...(limit?{}:{dir:x.dir})}:{mark:x.v})},setRes);
     if(r.pending)pending++;}
-   onDone(pending?t('fe.int.pending'):t('fe.int.addedN',{n:sel.length}));
+   if(pending)toast(t('fe.int.pending'),{type:'ok'});onDone();
   }catch(e){setFailure(feErrorMessage(e,t));}finally{setBusy(false);}
  };
  if(stage==='pick')return <Sheet title={t('fe.int.addMany')} onClose={onClose} full dirty={sel.length>0}
@@ -225,10 +242,11 @@ export function TopicPicker({cats,topics,have,presetVis,onClose,onDone}:{cats:Ca
    :<Note className="mt12">{left.length?t('fe.int.notFound'):t('fe.int.allAdded')}</Note>}
  </Sheet>;
  if(stage==='answer'&&cur&&d){const tp=topics.find(x=>x.id===cur);const desc=tp?(locale==='en'?tp.descEn:tp.descRu):null;
-  return <Sheet key={cur} title={tp?label(tp):cur} onClose={onClose} full dirty
+  // A bottom sheet like «Проверь» (owner 05.11.2026): the answer buttons stay at the bottom from one topic to the next.
+  return <Sheet step={{key:cur,way}} title={tp?label(tp):cur} onClose={onClose} dirty
    foot={fromReview?<Btn onClick={next}>{t('fe.int.toReview')}</Btn>
     :<div className="row g8"><Btn kind="soft" onClick={back}>{t('fe.back')}</Btn>
-     {d.v!=null&&<Btn onClick={next}>{step===sel.length-1?t('fe.int.review'):t('fe.int.next')}</Btn>}</div>}>
+     {d.v!=null&&!moving&&<Btn onClick={next}>{step===sel.length-1?t('fe.int.review'):t('fe.int.next')}</Btn>}</div>}>
    <Note className="int-step">{t('fe.int.stepOf',{i:step+1,n:sel.length})}</Note>
    <Progress value={(step+1)/sel.length}/>
    {desc&&<p className="topic-desc">{desc}</p>}
@@ -239,7 +257,7 @@ export function TopicPicker({cats,topics,have,presetVis,onClose,onDone}:{cats:Ca
   foot={<>{failure&&<Alert kind="err" noIcon>{failure}</Alert>}
    <div className="row g8"><Btn kind="soft" fit onClick={back} disabled={busy}>{t('fe.back')}</Btn><Btn busy={busy} onClick={save}>{toPartner?t('fe.ca.toPartner'):t('fe.int.saveAll')}</Btn></div></>}>
   <Note>{t('fe.int.checkHint',{n:sel.length})}</Note>
-  <Card className="mt12"><Jars list={sortJars(list)} topics={topics} onOpen={id=>{setStep(sel.indexOf(id));setFromReview(true);setStage('answer');}}/></Card>
+  <Card className="mt12"><Jars still={edited} list={sortJars(list)} topics={topics} onOpen={id=>{setEdited(true);setStep(sel.indexOf(id));setFromReview(true);setStage('answer');}}/></Card>
  </Sheet>;
 }
 
@@ -247,8 +265,8 @@ export function TopicPicker({cats,topics,have,presetVis,onClose,onDone}:{cats:Ca
 export function MeJars(){
  const {acting}=useFe();const {t}=useI18n();const navigate=useNavigate();
  const {items,cats,topics,load}=useInterests();
- const [f,setF]=useState<'all'|Vis>('all');const [openAll,setOpenAll]=useState(false);const [open,setOpen]=useState<string|null>(null);const [notice,setNotice]=useState('');
- if(!acting||!items)return null;
+ const [f,setF]=useState<'all'|Vis>('all');const [openAll,setOpenAll]=useState(false);const [open,setOpen]=useState<string|null>(null);
+ if(!acting||!items||(items.length>0&&!topics.length))return null; // no English ids before the names arrive
  const couple=acting.kind==='couple';
  const title=t(couple?'fe.int.titleCouple':'fe.int.title');
  const add=()=>navigate('/n/me/interests?add=1');
@@ -259,11 +277,10 @@ export function MeJars(){
  const list=sortJars(f==='all'||!multi?items:items.filter(j=>visOf(j)===f));const shown=openAll?list:list.slice(0,8);
  const chips:[('all'|Vis),string][]=[['all',t('fe.int.filter.all',{n:items.length})],...kinds.map(k=>[k,t('fe.int.filter.'+(k==='only'&&couple?'onlyUs':k),{n:n(k)})] as [Vis,string])];
  return <Group bare id="meJars" title={<>{title}{multi?'':` · ${items.length}`}</>} action={<button type="button" onClick={()=>navigate('/n/me/interests')}>{t('fe.int.all')}</button>}>
-  {notice&&<Alert kind="ok" noIcon>{notice}</Alert>}
   {multi&&<div className="jar-f"><div className="chips" role="group" aria-label={t('fe.int.filterAria')}>{chips.map(([id,l])=><Chip key={id} on={f===id} onClick={()=>setF(id)}>{l}</Chip>)}</div></div>}
   <Jars list={shown} topics={topics} onOpen={setOpen} onAdd={add}/>
   {list.length>8&&<Btn kind="text" auto className="jar-more" onClick={()=>setOpenAll(o=>!o)}>{openAll?t('fe.int.less'):t('fe.int.more',{n:list.length-8})}</Btn>}
   {(n('granted')>0||n('only')>0)&&<JarLegend couple={couple}/>}
-  {open&&<InterestSheet key={open} topicId={open} topics={topics} cats={cats} current={items.find(j=>j.topicId===open)} onClose={()=>setOpen(null)} onDone={msg=>{setOpen(null);setNotice(msg);load();}}/>}
+  {open&&<InterestSheet key={open} topicId={open} topics={topics} cats={cats} current={items.find(j=>j.topicId===open)} onClose={()=>setOpen(null)} onDone={()=>{setOpen(null);load();}}/>}
  </Group>;
 }

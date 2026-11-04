@@ -73,11 +73,10 @@ export function SettingsNewSection(){
     :!ready?<Skel kind="list" rows={5}/>
     :section==='who'?<>
      <Visibility p={ps.p!} settings={ps.settings!} onChanged={ps.load} part="who"/>
-     <Group title={t('fe.nav.chats')}><Card list><BlurRow a={a}/></Card></Group>
     </>
     :section==='discover'?<Visibility p={ps.p!} settings={ps.settings!} onChanged={ps.load} part="discover"/>
     :section==='checks'?<Card list><CheckRows a={a}/></Card>
-    :section==='app'?<Card list><AppRows a={a}/></Card>
+    :section==='app'?<Card list><AppRows a={a}/><BlurRow a={a}/></Card>
     :section==='lists'?<Card list><ListRows a={a} onHidden={()=>setLayer('hidden')}/></Card>
     :<Card list>
      <Row icon={CircleHelp} title={t('fe.ax.help.entry')} onClick={()=>navigate('/n/help')}/>

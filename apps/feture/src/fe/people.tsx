@@ -665,7 +665,8 @@ export function MePreviewScreen(){
  const seg=<Seg value={lv} onChange={setLv} label={t('fe.px.pv.title')} options={(['all','granted','card'] as const).map(id=>({id,label:t('fe.ln.pv.'+id)}))}/>;
  if(p&&!error&&lv!=='card')return <>
   {proposal&&<Alert kind="info">{t('fe.c6.previewNote')}</Alert>}
-  <ProfilePage p={viewedBy(p,lv)} preview={lv} seg={<div className="p3-seg">{seg}</div>}/>
+  {/* one header on every tab (owner 05.11.2026: the tabs sat over the cover on two tabs and in a bar on the third) */}
+  <ProfilePage p={viewedBy(p,lv)} preview={lv} bar={<Bar title={t('fe.px.pv.title')} back seg={seg}/>}/>
  </>;
  const vp=p?viewedBy(p,'card'):null;
  const note=mode!=='visible'?t('fe.px.pv.cardOff'):!mediaSrc(p?.avatar)?t('fe.px.pv.cardNoPhoto'):t(acting?.kind==='couple'?'fe.px.pv.cardOnUs':'fe.px.pv.cardOn');

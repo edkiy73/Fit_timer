@@ -20,7 +20,7 @@ export declare const PUSH_CATS: readonly string[];
 export declare const FILTERS: readonly Filter[];
 export declare const CARDS: readonly string[];
 export declare const EMAILS: readonly string[];
-export declare const DECIDE_KINDS: readonly ['pinv', 'req', 'capp', 'eapp', 'link', 'linkChange', 'tag', 'joint'];
+export declare const DECIDE_KINDS: readonly ['pinv', 'req', 'capp', 'eapp', 'link', 'linkChange', 'tag', 'joint', 'status'];
 export declare const CATALOG: Readonly<Record<string, Entry>>;
 export declare function noteKey(type: string, data?: Record<string, unknown> | null): string | null;
 export declare function entryFor(type: string, data?: Record<string, unknown> | null): Entry | null;

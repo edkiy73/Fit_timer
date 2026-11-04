@@ -66,7 +66,7 @@ export const FILTERS = /** @type {const} */ (['access', 'likes', 'matches', 'rep
 export const CARDS = /** @type {const} */ (['news', 'decision', 'result', 'safety', 'event', 'summary']);
 export const EMAILS = /** @type {const} */ (['none', 'now', 'now-if-unread', 'digest']);
 /** «Нужно решить» kinds (server/commands/inbox.mjs decisions()); their entries are `decide.<kind>`. */
-export const DECIDE_KINDS = /** @type {const} */ (['pinv', 'req', 'capp', 'eapp', 'link', 'linkChange', 'tag', 'joint']);
+export const DECIDE_KINDS = /** @type {const} */ (['pinv', 'req', 'capp', 'eapp', 'link', 'linkChange', 'tag', 'joint', 'status']);
 
 /** Raw entries. A key `type.sub` takes everything from `type` and changes what it names. Defaults: a notice, card
  * «news», filter «other», email in the digest, push category «other» with no name, no collapse, «Больше недоступно».
@@ -280,6 +280,7 @@ const RAW = /** @type {Record<string, any>} */ ({
   'pair.acted.event': { text: T('{couple} · Партнёр ответил на событие от пары', '{couple} · Your partner answered an event for the couple'), quiet: false, dest: 'event', gone: GONE_EVENT },
   'pair.acted.eventApply': { text: T('{couple} · Партнёр подал заявку на событие от пары', '{couple} · Your partner applied to an event for the couple'), quiet: false, dest: 'event', gone: GONE_EVENT },
   'pair.acted.community': { text: T('{couple} · Партнёр вступил в сообщество от пары', '{couple} · Your partner joined a community for the couple'), dest: 'community', gone: GONE_COMMUNITY },
+  'pair.acted.privateContent': { text: T('{couple} · Партнёр изменил приватную часть пары', '{couple} · Your partner changed the couple’s private part'), dest: 'access' },
   'pair.acted.access': { text: T('{couple} · Партнёр включил приватную часть пары', '{couple} · Your partner turned on the couple’s private part'), quiet: false, dest: 'access' },
   'pair.acted.post_archived': { text: T('{couple} · Партнёр убрал публикацию пары в архив', '{couple} · Your partner archived a couple post'), dest: 'myPosts' },
   'pair.acted.chatRequest': { text: T('{couple} · Партнёр отправил запрос на переписку от пары', '{couple} · Your partner sent a chat request for the couple'), dest: 'chats' },
@@ -357,6 +358,9 @@ const RAW = /** @type {Record<string, any>} */ ({
   'decide.joint': { kind: 'task', card: 'decision', filter: 'pair', icon: 'Clock', tone: '', text: T('{name} предлагает изменение', '{name} suggests a change'),
     alone: T('Партнёр предлагает изменение', 'Your partner suggests a change'),
     cat: 'decide', normal: T('Партнёр ждёт твоего согласия', 'Your partner waits for your approval'), email: 'now-if-unread', dest: 'approval', gone: GONE_PAIR },
+  // The relationship status of a person in a couple (owner 04.11.2026): nothing enqueues it, so only the counters and the card.
+  'decide.status': { kind: 'task', card: 'decision', filter: 'pair', icon: 'Heart', tone: 'v', text: T('Вы в паре — поменять статус в «Данных»?', 'You’re in a couple — change the status in your details?'),
+    cat: 'decide', normal: T('Статус в профиле', 'Your profile status'), email: 'now-if-unread', dest: 'me' },
   // «{name} предлагает {action}» per approval kind (server/approvals.mjs APPROVAL_KINDS): the decide card line, the
   // same words on both sides (decide.list carries `approval.kind`).
   'decide.joint.profile.update': { text: T('{name} предлагает изменить профиль пары', '{name} suggests editing the couple’s profile') },

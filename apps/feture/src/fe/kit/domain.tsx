@@ -173,17 +173,64 @@ export function StatusCard({tone,icon,title,sub,action}:{tone?:'wait'|'ok'|'bad'
 
 /* ---------------- Interests ---------------- */
 
-/** The interest answer: 1–10 (the cells up to the answer fill), the words at both ends, and two marks instead of a
- * number — «обсудить» and «граница» (a boundary is never a low number). */
-export function AnswerScale<M extends string>({value,onChange,label,low,high,marks}:{value:number|M|null|undefined,onChange:(v:number|M)=>void,label:string,low:string,high:string,
- marks:readonly {id:M,label:string,icon:LucideIcon,taboo?:boolean|undefined}[]}){
+/** Where the mouse last was: a control drawn anew under a still pointer (the next step) gets no pointerenter until the
+ * mouse moves, so it looks there itself. */
+let MOUSE:{x:number,y:number}|null=null;
+if(typeof window!=='undefined')window.addEventListener('pointermove',e=>{if(e.pointerType==='mouse')MOUSE={x:e.clientX,y:e.clientY};},{passive:true});
+
+/** The interest answer: a level 1–10 or one of two marks — «обсуждаемо» and «табу» (a taboo is never a low number),
+ * coloured like the interest capsules; no words under the scale (owner 05.11.2026: the numbers say it).
+ * `lanes` (owner 05.11.2026): one full-width button per lane («Всё», «Давать», «Получать», «Смотреть»); a tap turns that
+ * button into the 1–10 scale and a tap on a number picks it — two taps in one place; or hold the button, the scale
+ * appears under the finger, slide along it and let go on the number — one gesture. `lane` is the lane holding `value`. */
+export function AnswerScale<M extends string,L extends string=string>({value,onChange,label,marks,lanes,lane,onLane}:{value:number|M|null|undefined,onChange:(v:number|M)=>void,label:string,
+ marks:readonly {id:M,label:string,icon:LucideIcon,taboo?:boolean|undefined,soft?:boolean|undefined}[],lanes?:readonly {id:L,label:string}[]|undefined,
+ lane?:L|null|undefined,onLane?:((n:number,lane:L)=>void)|undefined}){
  const n=typeof value==='number'?value:null;
+ const [open,setOpen]=useState<L|null>(null);
+ const [drag,setDrag]=useState<{id:L,x:number,y:number,moved:boolean,over:number|null}|null>(null);
+ // The press that opened a lane must not land on the number that appears under the finger (owner 05.11.2026: it blinked).
+ const opened=useRef(0);
+ // The mark a mouse points at: it alone stays bright, everything else fades (owner 05.11.2026).
+ const [hot,setHot]=useState<M|null>(null);
+ const rootMarks=useRef<HTMLDivElement>(null);
+ useEffect(()=>{ // a new step under a still mouse: light what it stands on, as a pointerenter would
+  const look=()=>{if(!MOUSE)return;const el=document.elementFromPoint(MOUSE.x,MOUSE.y);if(!el)return;
+   const ln=el.closest<HTMLElement>('[data-lane-row]');if(ln&&rootMarks.current?.parentElement?.contains(ln)){setOpen(ln.dataset.laneRow as L);return;}
+   const mk=el.closest<HTMLElement>('[data-mark]');if(mk&&rootMarks.current?.contains(mk))setHot(mk.dataset.mark as M);};
+  look();const id=window.setTimeout(look,280);return ()=>window.clearTimeout(id);
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[]);
+ const cellAt=(x:number,y:number,id:L)=>{const el=document.elementFromPoint(x,y)?.closest<HTMLElement>('[data-k]');return el&&el.dataset.lane===id?Number(el.dataset.k):null;};
+ const pick=(k:number,id:L)=>{setOpen(null);setDrag(null);onLane?.(k,id);};
+ // The lane holding the answer stays open with its number marked (owner 05.11.2026: no folded «Получать · 8» button).
+ const shown=open??(lane&&n?lane:null);
+ // In a lane only the chosen number is marked (owner 05.11.2026); the single scale still fills up to it.
+ const scale=(aria:string,on:(k:number)=>boolean,act:(k:number)=>void,id?:L)=><div className="ans-scale" role="radiogroup" aria-label={aria}>
+  {[1,2,3,4,5,6,7,8,9,10].map(k=><button key={k} type="button" data-k={k} data-lane={id} className={[!id&&on(k)&&n&&k<=n?'fill':'',on(k)&&n===k?'on':'',drag&&drag.id===id&&drag.over===k?'held':''].filter(Boolean).join(' ')}
+   role="radio" aria-checked={on(k)&&n===k} onClick={()=>{if(id&&Date.now()-opened.current<450)return;act(k);}}>{k}</button>)}
+ </div>;
  return <>
-  <div className="ans-scale" role="radiogroup" aria-label={label}>
-   {[1,2,3,4,5,6,7,8,9,10].map(k=><button key={k} type="button" className={[n&&k<=n?'fill':'',n===k?'on':''].filter(Boolean).join(' ')} role="radio" aria-checked={n===k} onClick={()=>onChange(k)}>{k}</button>)}
-  </div>
-  <div className="ans-l"><span>{low}</span><span>{high}</span></div>
-  <div className="ans-marks">{marks.map(m=><button key={m.id} type="button" className={'ans-m'+(m.taboo?' taboo':'')+(value===m.id?' on':'')} aria-pressed={value===m.id} onClick={()=>onChange(m.id)}><m.icon/><span>{m.label}</span></button>)}</div>
+  {lanes&&onLane?<div className={'ans-rows'+(shown?' busy':'')+(hot||(!shown&&value!=null&&typeof value!=='number')?' hot':'')}
+    onPointerMove={e=>{if(!drag)return;const moved=drag.moved||Math.abs(e.clientX-drag.x)>8||Math.abs(e.clientY-drag.y)>8;setDrag({...drag,moved,over:cellAt(e.clientX,e.clientY,drag.id)});}}
+    onPointerUp={e=>{if(!drag)return;const k=cellAt(e.clientX,e.clientY,drag.id);if(drag.moved&&k)pick(k,drag.id);else setDrag(null);}}
+    onPointerCancel={()=>setDrag(null)}
+    // A mouse needs no tap: pointing at a lane shows its scale, leaving the block shows the answer again (owner 05.11.2026).
+    onPointerLeave={e=>{if(e.pointerType==='mouse'&&!drag)setOpen(null);}}>
+   {/* the lane keeps its frame when it opens: its name floats up onto the border, the 1–10 fills the inside */}
+   {lanes.map(l=>{const isOpen=shown===l.id;
+    return <div key={l.id} className={'ans-row'+(isOpen?' open':'')}>
+     <span className="ans-row-l">{l.label}</span>
+     {isOpen?scale(label+': '+l.label,()=>lane===l.id,k=>pick(k,l.id),l.id)
+      :<button type="button" className="ans-row-b" data-lane-row={l.id} aria-label={l.label} aria-expanded={false} onPointerEnter={e=>{if(e.pointerType==='mouse')setOpen(l.id);}}
+        onPointerDown={e=>{try{e.currentTarget.closest('.ans-rows')?.setPointerCapture(e.pointerId);}catch{/* gone */}opened.current=Date.now();setOpen(l.id);setDrag({id:l.id,x:e.clientX,y:e.clientY,moved:false,over:null});}}
+        onClick={e=>{if(e.detail===0)setOpen(l.id);}}/>}
+    </div>;})}
+  </div>:scale(label,()=>true,k=>onChange(k))}
+  {/* one thing is bright at a time: what the pointer is on, else what is chosen (nothing chosen — all bright) */}
+  <div className="ans-marks" ref={rootMarks}>{marks.map(m=><button key={m.id} type="button" data-mark={m.id} className={'ans-m'+(m.taboo?' taboo':'')+(m.soft?' soft':'')+(value===m.id?' on':'')+((hot?hot!==m.id:open?true:value!=null&&value!==m.id)?' dim':'')} aria-pressed={value===m.id}
+   onPointerEnter={e=>{if(e.pointerType==='mouse'){setOpen(null);setHot(m.id);}}} onPointerLeave={()=>setHot(null)}
+   onClick={()=>{setOpen(null);onChange(m.id);}}><m.icon/><span>{m.label}</span></button>)}</div>
  </>;
 }
 
@@ -590,9 +637,11 @@ export function coupleNames(name:string):[string,string]|undefined{
 /** Who you act as, on every place you write from (the feed's «Что нового», a reply box, the chat input, a community's
  * «Новая тема»): the acting profile's picture — or, for a couple without one, both initials on the couple's plate.
  * Owner rule: there is no «от кого» picker anywhere; the dock's «Действовать как» decides, entries only show it. */
-export function ActingAv({p,size='sm'}:{p:{id:string,kind:string,name?:string|null|undefined,handle?:string|null|undefined,avatar?:string|null|undefined},size?:'xs'|'sm'|''}){
+export function ActingAv({p,size='sm'}:{p:{id:string,kind:string,name?:string|null|undefined,handle?:string|null|undefined,avatar?:string|null|undefined,
+ /** A couple's partners, for the two halves: each one's photo, or their initial (owner 05.11.2026: it showed one letter). */ halves?:{name:string|null,avatar?:string|null}[]|undefined},size?:'xs'|'sm'|''|'lg'|'xl'}){
  const name=p.name||(p.handle?'@'+p.handle:'?');
- return <Av name={name} seed={p.id} size={size} src={p.avatar} couple={p.kind==='couple'?coupleNames(name):undefined}/>;
+ const halves=p.kind==='couple'&&p.halves?.length===2?p.halves.map(h=>({name:h.name||'?',src:h.avatar??null})):undefined;
+ return <Av name={name} seed={p.id} size={size} src={p.avatar} halves={halves} couple={p.kind==='couple'?coupleNames(name):undefined}/>;
 }
 /** Who proposed a couple's change and which version of it this is (V21 jointReview / pairReview head). */
 export function ReviewMeta({by,version}:{by:ReactNode,version?:ReactNode}){

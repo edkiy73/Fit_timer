@@ -93,7 +93,7 @@ export function TopicScreen(){
  const tname=useCallback((x:string)=>{const v=topics.find(o=>o.id===x);return v?(locale==='en'?v.en:v.ru):x;},[topics,locale]);
  const [posts,setPosts]=useState<Post[]|null>(null);const [next,setNext]=useState<string|null>(null);const [more,setMore]=useState(false);
  const [comms,setComms]=useState<Comm[]>([]);const [error,setError]=useState<unknown>(null);
- const [sheet,setSheet]=useState(false);const [notice,setNotice]=useState('');const opener=useRef<HTMLButtonElement>(null);
+ const [sheet,setSheet]=useState(false);const opener=useRef<HTMLButtonElement>(null);
  const load=useCallback((cursor?:string)=>{
   setError(null);if(!cursor)setPosts(null);else setMore(true);
   call('feed.list',{tab:'forYou',topics:[id],...(cursor?{cursor}:{})},postPage).then(r=>{setPosts(prev=>cursor&&prev?[...prev,...r.items]:r.items);setNext(r.next);})
@@ -115,7 +115,6 @@ export function TopicScreen(){
      {mine===null?null:current?<Jars list={[current]} topics={topics} onOpen={()=>setSheet(true)}/>
       :tp&&<Btn kind="soft" icon={Plus} onClick={e=>{opener.current=e.currentTarget;setSheet(true);}}>{couple?t('fe.br.topic.addCouple'):t('fe.br.topic.add')}</Btn>}
     </div>
-    {notice&&<Alert kind="ok" className="mb12">{notice}</Alert>}
     {comms.length>0&&<><SectionLabel>{t('fe.br.communities')}</SectionLabel>{comms.map(c=><CommunityCard key={c.id} c={c} tname={tname}/>)}</>}
     <SectionLabel>{t('fe.br.posts')}</SectionLabel>
     {error&&!posts?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>load()}>{t('fe.retry')}</Btn></Empty>
@@ -125,7 +124,7 @@ export function TopicScreen(){
       <LoadMore more={!!next} busy={more} error={error} onMore={()=>{if(next)load(next);}}/></>}
    </>}
   </View>
-  {sheet&&tp&&<InterestSheet topicId={id} topics={topics} cats={cats} current={current} onClose={close} onDone={msg=>{close();setNotice(msg);reloadMine();}}/>}
+  {sheet&&tp&&<InterestSheet topicId={id} topics={topics} cats={cats} current={current} onClose={close} onDone={()=>{close();reloadMine();}}/>}
  </>;
 }
 

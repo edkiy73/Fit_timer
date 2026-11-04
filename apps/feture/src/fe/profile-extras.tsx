@@ -1,3 +1,4 @@
+import {RichText} from './post-parts';
 import {Fragment,useCallback,useEffect,useRef,useState,type ReactNode} from 'react';
 import type {LucideIcon} from 'lucide-react';
 import {useNavigate,useParams} from 'react-router';
@@ -53,6 +54,10 @@ export {Sheet};
 const media=z.object({src:z.record(z.string(),z.string()).nullable(),pending:z.boolean().optional()}).passthrough();
 export const personProfile=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),bio:z.string(),
  /** My partner (one couple with me): never blocked (audit item 42). */partner:z.boolean().optional(),
+ /** One of this account's own profiles (my person while acting as the couple, or the reverse): nothing to like, follow or write. */own:z.boolean().optional(),
+ /** A couple: who is in it; a person: their couple (active ones only, never across a block). */
+ members:z.array(z.object({id:z.uuid(),handle:z.string().nullable(),name:z.string().nullable(),avatar:z.string().nullable().optional()}).passthrough()).optional(),
+ couple:z.object({id:z.uuid(),handle:z.string().nullable(),name:z.string().nullable(),avatar:z.string().nullable().optional()}).passthrough().nullable().optional(),
  age:z.number().nullable(),city:z.object({ru:z.string().nullable(),en:z.string().nullable()}).nullable(),avatar:media.nullable(),photos:z.array(media),details:z.record(z.string(),z.unknown()),photoVerified:z.boolean().optional(),premium:z.boolean().optional()}).passthrough();
 export const personProfileRes=z.object({ok:z.literal(true),profile:personProfile});
 export type PersonProfile=z.infer<typeof personProfile>;
@@ -60,15 +65,16 @@ export type PersonProfile=z.infer<typeof personProfile>;
  * (server/commands/me.mjs): no age while «Показывать возраст» is off, «Данные» only when their audience reaches the
  * viewer (everyone: «Всем»; with access: «Всем» and «С доступом»), no city that is still waiting for a check. */
 export function viewedBy(p:PersonProfile,lv:'all'|'granted'|'card'):PersonProfile{
- const x=p as PersonProfile&{showAge?:boolean,detailsVis?:string|null};const vis=x.detailsVis??'all';
- const open=p.kind==='couple'||vis==='all'||(vis==='granted'&&lv==='granted');
+ // Owner 04.11.2026: «Данные» are seen by everyone, like «Обо мне» (no audience of their own any more).
+ const x=p as PersonProfile&{showAge?:boolean};
  const city=p.city&&(p.city as {pending?:boolean}).pending?null:p.city;
- return {...p,age:p.kind==='person'&&x.showAge===false?null:p.age,details:open?p.details:{},city};
+ return {...p,age:p.kind==='person'&&x.showAge===false?null:p.age,details:p.details,city};
 }
 export const mediaSrc=(m:z.infer<typeof media>|null|undefined)=>m&&!m.pending?m.src?.card??m.src?.full??m.src?.thumb??null:null;
 export const personName=(p:{name:string|null,handle:string|null}|null)=>p?.name||(p?.handle?'@'+p.handle:'');
 
-export function PersonBio({p}:{p:PersonProfile}){return p.bio?<div className="p-bio"><div className="md bio">{p.bio.split(/\n{2,}/).map((x,i)=><p key={i}>{x}</p>)}</div></div>:null;}
+/** The bio with its line breaks, lists and emphasis (owner 04.11.2026), the same as in «Я». */
+export function PersonBio({p}:{p:PersonProfile}){return p.bio?<div className="p-bio"><RichText text={p.bio} className="bio"/></div>:null;}
 const cityOf=(p:{city:{ru:string|null,en:string|null}|null},locale:string)=>p.city?(locale==='en'?p.city.en||p.city.ru:p.city.ru||p.city.en):null;
 const photosOf=(p:PersonProfile)=>{const list=p.photos.filter(ph=>mediaSrc(ph));const a=mediaSrc(p.avatar);return list.length?list:a&&p.avatar?[p.avatar]:[];};
 
@@ -432,31 +438,46 @@ export function cardRead(actingId:string,profileId:string){const hit=cardMemo.ge
 /** SC.P01 profileView: the floating ‹ and ⋯ sit on the photo and turn into a solid bar with the name past it
  * (PRF-007); hero, description, buttons, «что общего», then the body. `preview` is «Как видят» — everything drawn,
  * nothing pressable. */
-export function ProfilePage({p,preview,seg,onMore,menu,onRefresh,pre,gal,children}:{p:PersonProfile,/** Everything under the photo, read before the page is drawn: nothing pops in later. */ pre?:CardPre|undefined,gal?:GalleryData|null|undefined,preview?:'all'|'granted'|undefined,seg?:ReactNode,onMore?:(()=>void)|undefined,
+export function ProfilePage({p,preview,seg,bar,onMore,menu,onRefresh,pre,gal,children}:{p:PersonProfile,/** The screen's own header («Как видят»: back and the tabs, the same on every tab) instead of the one over the cover. */ bar?:ReactNode,/** Everything under the photo, read before the page is drawn: nothing pops in later. */ pre?:CardPre|undefined,gal?:GalleryData|null|undefined,preview?:'all'|'granted'|undefined,seg?:ReactNode,onMore?:(()=>void)|undefined,
  menu?:((rel:Relation|null,reload:()=>void)=>ReactNode)|undefined,/** Pull-to-refresh: reads the profile again. */ onRefresh?:(()=>unknown)|undefined,children?:ReactNode}){
  const {t}=useI18n();const navigate=useNavigate();const goPeople=useBack('/n/people');const [rel,setRel,reloadRel]=useRelation(p.id);const [view,setView]=useState<number|null>(null);
  const scroller=useRef<HTMLDivElement>(null);const name=personName(p);const inert=!!preview;const list=photosOf(p);
+ // My other profile (owner 05.11.2026: from the couple one could like, follow or write to oneself and get errors).
+ const self=!!p.own&&!preview;
  return <>
-  <header className="bar overlay pbar">
+  {bar??<header className="bar overlay pbar">
    {/* Back to where the profile was opened (the deck, «Симпатии», a list, search); opened by a link, to «Люди». */}
    <IconBtn icon={ChevronLeft} kind="glass" label={t('fe.back')} onClick={goPeople}/>
    <span className="k-grow"/>
-   {onMore&&<IconBtn icon={Ellipsis} kind="glass" aria-haspopup="dialog" label={t('fe.px.menu.more')} onClick={onMore}/>}
-  </header>
-  <div ref={scroller} className="view nodock top0 profile-page"><PullRefresh target={scroller} onRefresh={onRefresh&&(()=>{reloadRel();return onRefresh();})}>{seg}<div className="wrap">
+   {onMore&&!self&&<IconBtn icon={Ellipsis} kind="glass" aria-haspopup="dialog" label={t('fe.px.menu.more')} onClick={onMore}/>}
+  </header>}
+  <div ref={scroller} className={'view nodock profile-page'+(bar?'':' top0')}><PullRefresh target={scroller} onRefresh={onRefresh&&(()=>{reloadRel();return onRefresh();})}>{seg}<div className="wrap">
    <H level={1} className="sr-only" tabIndex={-1}>{name}</H>
    {children}
    <ProfileHero p={p} rel={rel} inert={inert} onOpen={setView}/>
    <PersonBio p={p}/>
-   {rel||inert?<PersonActions p={p} rel={rel} setRel={setRel} inert={inert}/>:<div className="pa-hold" aria-hidden="true"><i className="sk"/><i className="sk"/><i className="sk"/></div>}
+   {self?null:rel||inert?<PersonActions p={p} rel={rel} setRel={setRel} inert={inert}/>:<div className="pa-hold" aria-hidden="true"><i className="sk"/><i className="sk"/><i className="sk"/></div>}
+   <PairGroup p={p} inert={inert}/>
    {/* Owner 29.10.2026: «Обо мне» under the bio and under the main buttons. */}
    <AboutGroup p={p} inert={inert}/>
-   {!preview&&<CompatSummary profileId={p.id} {...(pre?{pre:pre.compat}:{})}/>}
+   {!preview&&!self&&<CompatSummary profileId={p.id} {...(pre?{pre:pre.compat}:{})}/>}
    <ProfileBody p={p} inert={inert} preview={preview} onOpen={setView} {...(pre?{pre}:{})} {...(gal!==undefined?{gal}:{})}/>
   </div></PullRefresh></div>
   {view!==null&&<PhotoViewer srcs={list.map(m=>m.src?.full??mediaSrc(m)!)} index={view} onClose={()=>setView(null)}/>}
   {menu?.(rel,reloadRel)}
  </>;
+}
+
+/** The pair on a profile (owner 05.11.2026): a couple lists who is in it, a person shows their couple; a row opens it. */
+function PairGroup({p,inert}:{p:PersonProfile,inert?:boolean|undefined}){
+ const {t}=useI18n();const navigate=useNavigate();
+ const people=p.kind==='couple'?p.members??[]:p.couple?[p.couple]:[];
+ if(!people.length)return null;
+ return <Group title={t(p.kind==='couple'?'fe.px.pair.members':'fe.px.pair.couple')}><Card list>
+  {people.map(x=>{const name=x.name||x.handle||'?';
+   return <Row key={x.id} av={<Av name={name} seed={x.id} size="sm" src={x.avatar??null}/>} title={name} sub={x.handle?'@'+x.handle:undefined}
+    {...(inert?{}:{onClick:()=>navigate('/n/people/'+x.id)})}/>;})}
+ </Card></Group>;
 }
 
 /* ---------- «Что у вас общего» (P05) ---------- */
