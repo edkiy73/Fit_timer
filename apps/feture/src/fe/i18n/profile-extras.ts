@@ -146,6 +146,9 @@ export const ru = {
   'fe.px.h.emptyText': 'Здесь появятся анкеты, пролистанные в подборке.',
   'fe.px.h.restore': 'Вернуть {name} в подборку',
   'fe.px.h.back': '{name} снова в подборке',
+  'fe.px.h.removed': 'Убран из симпатий',
+  'fe.px.h.restoreLikes': 'Вернуть {name} в симпатии',
+  'fe.px.h.backLikes': '{name} снова в симпатиях',
   'fe.px.h.payTitle': 'Вся история за неделю',
   'fe.px.h.payText': 'Бесплатно видна последняя анкета. Premium хранит 7 дней просмотров.',
 
@@ -457,6 +460,9 @@ export const en = {
   'fe.px.h.emptyText': 'Profiles you’ve viewed will show up here.',
   'fe.px.h.restore': 'Bring {name} back to Discover',
   'fe.px.h.back': '{name} is back in Discover',
+  'fe.px.h.removed': 'Removed from likes',
+  'fe.px.h.restoreLikes': 'Put {name} back in likes',
+  'fe.px.h.backLikes': '{name} is back in likes',
   'fe.px.h.payTitle': 'The whole week of history',
   'fe.px.h.payText': 'The last profile is free. Premium keeps 7 days of views.',
 

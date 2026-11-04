@@ -284,6 +284,16 @@ async function spendUndo(q, accountId, profileId) {
   await q.query(`insert into feture.rate_event (account_id, kind) values ($1, 'discover.undo')`, [accountId]);
 }
 
+/** A dismissed like comes back to the Likes list (undo, and «Вернуть» in the history). @param {Q} q @param {string} from the sender @param {string} to who dismissed it */
+async function reviveDismissedLike(q, from, to) {
+  await q.query(
+    `update feture.profile_like set state = 'active', updated_at = now()
+     where id = (select id from feture.profile_like where from_profile_id = $1 and to_profile_id = $2 and state = 'dismissed' order by updated_at desc limit 1)
+       and not exists (select 1 from feture.profile_like where from_profile_id = $1 and to_profile_id = $2 and state = 'active')
+       and not feture.blocked($1, $2)`,
+    [from, to]);
+}
+
 /** @type {Record<keyof typeof discoverCommands, Command['run']>} */
 const run = {
   async 'discover.filter'(q, { acting }) {
@@ -384,26 +394,21 @@ const run = {
     await spendUndo(q, acting.accountId, acting.profileId);
     await q.query('delete from feture.discover_decision where profile_id = $1 and target_profile_id = $2', [acting.profileId, last.target_profile_id]);
     if (last.decision === 'like') await withdrawLike(q, acting.profileId, last.target_profile_id);
-    if (last.decision === 'pass' && last.source === 'likes') {
-      // A dismissed like comes back to the Likes list.
-      await q.query(
-        `update feture.profile_like set state = 'active', updated_at = now()
-         where id = (select id from feture.profile_like where from_profile_id = $1 and to_profile_id = $2 and state = 'dismissed' order by updated_at desc limit 1)
-           and not exists (select 1 from feture.profile_like where from_profile_id = $1 and to_profile_id = $2 and state = 'active')
-           and not feture.blocked($1, $2)`,
-        [last.target_profile_id, acting.profileId]);
-    }
+    if (last.decision === 'pass' && last.source === 'likes') await reviveDismissedLike(q, last.target_profile_id, acting.profileId);
     return { profileId: last.target_profile_id, decision: last.decision };
   },
 
   async 'discover.restore'(q, { acting: a, input }) {
-    // «Вернуть» from the history is an undo too: the same daily allowance (Q6).
+    // «Вернуть» from the history is an undo too: the same daily allowance (Q6). A pass from the deck puts the person back
+    // into the deck; a like removed in «Симпатии» comes back to that list instead.
     const acting = need(a);
-    const [d] = await q.query(`select 1 from feture.discover_decision where profile_id = $1 and target_profile_id = $2 and decision = 'pass' and source = 'discover' for update`, [acting.profileId, input.profileId]);
+    const [d] = await q.query(`select source from feture.discover_decision where profile_id = $1 and target_profile_id = $2 and decision = 'pass' for update`, [acting.profileId, input.profileId]);
     if (!d) fail(404, 'not_found');
+    await lockPair(q, acting.profileId, input.profileId);
     await spendUndo(q, acting.accountId, acting.profileId);
     await q.query(`delete from feture.discover_decision where profile_id = $1 and target_profile_id = $2`, [acting.profileId, input.profileId]);
-    return { restored: true };
+    if (d.source === 'likes') await reviveDismissedLike(q, input.profileId, acting.profileId);
+    return { restored: true, source: d.source };
   },
 
   async 'discover.history'(q, { acting: a, input, cfg }) {
@@ -411,12 +416,12 @@ const run = {
     const viewer = need(a);
     const premium = await isPremium(q, viewer.accountId, viewer.profileId);
     const rows = await q.query(
-      `select x.target_profile_id id, x.decision, x.decided_at from feture.discover_decision x join feture.profile p on p.id = x.target_profile_id
+      `select x.target_profile_id id, x.decision, x.source, x.decided_at from feture.discover_decision x join feture.profile p on p.id = x.target_profile_id
        where x.profile_id = $1 and ($2 = 'all' or x.decision = $2) and p.state = 'active' and not feture.blocked($1, p.id)
          and (not $3 or x.decided_at > now() - interval '7 days')
        order by x.decided_at desc limit $4`, [viewer.profileId, input.kind, premium, premium ? 200 : 1]);
     const people = await cards(q, viewer, rows.map(r => r.id), cfg.media);
-    return { premium, items: rows.map(r => ({ decision: r.decision, decidedAt: r.decided_at, profile: people.find(c => c.id === r.id) ?? null })).filter(x => x.profile) };
+    return { premium, items: rows.map(r => ({ decision: r.decision, source: r.source, decidedAt: r.decided_at, profile: people.find(c => c.id === r.id) ?? null })).filter(x => x.profile) };
   },
 
   async 'like.send'(q, { acting: a, input }) {

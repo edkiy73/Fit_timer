@@ -688,7 +688,7 @@ export type {MenuStep};
 
 /* ---------- «Просмотренные» (D09) ---------- */
 const card=z.object({id:z.uuid(),kind:z.string(),handle:z.string().nullable(),name:z.string().nullable(),avatar:media.nullable()}).passthrough();
-const historyRes=z.object({ok:z.literal(true),premium:z.boolean(),items:z.array(z.object({decision:z.enum(['like','pass']),decidedAt:z.string().optional(),profile:card}).passthrough())});
+const historyRes=z.object({ok:z.literal(true),premium:z.boolean(),items:z.array(z.object({decision:z.enum(['like','pass']),source:z.string().optional(),decidedAt:z.string().optional(),profile:card}).passthrough())});
 
 /** `/n/people/history`: free accounts see the newest decision, Premium seven days (the server decides). */
 export function HistoryScreen(){
@@ -697,8 +697,8 @@ export function HistoryScreen(){
  const [back,setBack]=useState<Set<string>>(new Set());const [busy,setBusy]=useState(false);
  const load=useCallback(()=>{setError(null);setR(null);call('discover.history',{kind:k},historyRes).then(setR).catch(setError);},[call,k]);
  useEffect(()=>{load();},[load]);
- const restore=async(id:string,name:string)=>{setBusy(true);
-  try{await call('discover.restore',{opId:newOpId(),profileId:id},ok);setBack(s=>new Set(s).add(id));toast(fill(t('fe.px.h.back'),{name}));}
+ const restore=async(id:string,name:string,fromLikes:boolean)=>{setBusy(true);
+  try{await call('discover.restore',{opId:newOpId(),profileId:id},ok);setBack(s=>new Set(s).add(id));toast(fill(t(fromLikes?'fe.px.h.backLikes':'fe.px.h.back'),{name}));}
   catch(e){toast(pxError(e,t),{type:'err'});}finally{setBusy(false);}};
  return <>
   <Bar title={t('fe.px.h.title')} back/>
@@ -707,15 +707,15 @@ export function HistoryScreen(){
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={pxError(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :!r?<Skel kind="list"/>
     :!r.items.length?<Empty icon={History} title={t('fe.px.h.empty')} text={t('fe.px.h.emptyText')}/>
-    :<div className="hist">{r.items.map(h=>{const p=h.profile;const name=personName(p)||'?';const ph=mediaSrc(p.avatar);const done=back.has(p.id);
+    :<div className="hist">{r.items.map(h=>{const p=h.profile;const name=personName(p)||'?';const ph=mediaSrc(p.avatar);const done=back.has(p.id);const fromLikes=h.source==='likes';const goneLabel=t(fromLikes?'fe.px.h.backLikes':'fe.px.h.back',{name});const restoreLabel=t(fromLikes?'fe.px.h.restoreLikes':'fe.px.h.restore',{name});
      return <div key={p.id} className="hwrap">
       <button type="button" className="hcard" onClick={()=>navigate('/n/people/'+p.id)}>
        {ph?<img src={ph} alt="" draggable={false}/>:<div className="plate" style={plate(p.id)}/>}
-       <span className={'mk'+(h.decision==='like'?' l':'')} aria-label={t(h.decision==='like'?'fe.px.h.liked':'fe.px.h.passed')}>{h.decision==='like'?<Heart/>:<X/>}</span>
+       <span className={'mk'+(h.decision==='like'?' l':'')} aria-label={t(h.decision==='like'?'fe.px.h.liked':fromLikes?'fe.px.h.removed':'fe.px.h.passed')}>{h.decision==='like'?<Heart/>:<X/>}</span>
        <span className="history-name">{name}</span>
       </button>
-      {h.decision==='pass'&&<button type="button" className="hrest" disabled={done||busy} onClick={()=>restore(p.id,name)}
-       aria-label={done?fill(t('fe.px.h.back'),{name}):fill(t('fe.px.h.restore'),{name})} title={done?fill(t('fe.px.h.back'),{name}):fill(t('fe.px.h.restore'),{name})}>{done?<Check/>:<Undo2/>}</button>}
+      {h.decision==='pass'&&<button type="button" className="hrest" disabled={done||busy} onClick={()=>restore(p.id,name,fromLikes)}
+       aria-label={done?goneLabel:restoreLabel} title={done?goneLabel:restoreLabel}>{done?<Check/>:<Undo2/>}</button>}
      </div>;})}</div>}
    {r&&!r.premium&&r.items.length>0&&<div className="paywall"><b>{t('fe.px.h.payTitle')}</b><p>{t('fe.px.h.payText')}</p><Btn onClick={()=>openPaywall('history')}>{t('fe.ax.prem.open')}</Btn></div>}
   </View>
