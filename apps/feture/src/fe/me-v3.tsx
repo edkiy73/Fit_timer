@@ -109,7 +109,7 @@ function PrivacyZone({privOn,discover,cp,reqs}:{privOn:boolean|undefined,discove
  return <>
   <Group title={t('fe.v3.g.private')}><Card list>
    <Row icon={Lock} tone="v" title={t('fe.m2.private')} val={privOn===undefined?undefined:t(privOn?'fe.m2.on':'fe.m2.off')} onClick={go('/n/me/new/private')}/>
-   <Row icon={KeyRound} title={t('fe.ac.title')} badge={reqs||undefined} onClick={go('/n/me/access')}/>
+   <Row icon={KeyRound} title={t(cp?'fe.ac.titleUs':'fe.ac.title')} badge={reqs||undefined} onClick={go('/n/me/access')}/>
   </Card></Group>
   <Group title={t('fe.v3.g.reach')}><Card list>
    <Row icon={UserCog} title={t('fe.m2.s.who')} onClick={go('/n/settings/new/who')}/>
