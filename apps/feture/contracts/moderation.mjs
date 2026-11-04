@@ -65,7 +65,11 @@ export const moderationCommands = {
     }),
   },
   // «Меры» in the staff area: what is in force for a profile found by @nick, so it can be lifted.
-  'staff.profileMeasures': { profile: false, write: false, input: z.strictObject({ handle: z.string().trim().min(1).max(40) }) },
+  // A person in the staff area («Люди», owner 05.11.2026): by @nick (search) or by id (a link from a card or the journal).
+  'staff.profileMeasures': {
+    profile: false, write: false,
+    input: z.strictObject({ handle: z.string().trim().min(1).max(40).optional(), profileId: id.optional() }).refine(v => !!v.handle !== !!v.profileId, { message: 'handle_or_id' }),
+  },
   'staff.placeQueue': { profile: false, write: false, input: z.strictObject({ ...queuePaging }) },
   'staff.placeDecide': {
     profile: false, write: true,

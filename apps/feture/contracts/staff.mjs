@@ -36,7 +36,9 @@ export const staffCommands = {
   'staff.journal': {
     profile: false, write: false,
     input: z.strictObject({
-      targetId: id.optional(), staffAccountId: id.optional(), what: z.string().regex(/^[a-z]+(\.[a-zA-Z]+)+$/).max(60).optional(),
+      targetId: id.optional(), staffAccountId: id.optional(),
+      // Everything about one person (owner 05.11.2026): entries whose object is theirs.
+      personId: id.optional(), what: z.string().regex(/^[a-z]+(\.[a-zA-Z]+)+$/).max(60).optional(),
       limit: z.int().min(1).max(100).default(50), after: z.string().max(400).optional(),
     }),
   },

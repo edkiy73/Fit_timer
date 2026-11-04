@@ -198,9 +198,16 @@ async function announce(q, postId) {
 export async function settlePublication(q, postId) {
   const [p] = await q.query('select id, audience, state, owner_profile_id from feture.post where id = $1 for update', [postId]);
   if (!p || !['draft', 'review'].includes(p.state)) return p?.state ?? 'missing';
-  const media = await q.query(
-    `select m.state, m.explicitness from feture.media_attachment a join feture.media_asset m on m.id = a.asset_id
+  let media = await q.query(
+    `select m.id, m.state, m.explicitness from feture.media_attachment a join feture.media_asset m on m.id = a.asset_id
      where a.target_type = 'post' and a.target_id = $1`, [postId]);
+  // A file staff rejected leaves a post on review that still has others (owner 05.11.2026): the post goes out without it
+  // and its author hears about that file (media.decided). Nothing left, a blocked file or a removed one: back to drafts.
+  const rejected = media.filter(m => m.state === 'rejected');
+  if (p.state === 'review' && rejected.length && rejected.length < media.length && !media.some(m => ['blocked', 'removed'].includes(m.state))) {
+    await q.query(`delete from feture.media_attachment where target_type = 'post' and target_id = $1 and asset_id = any($2::uuid[])`, [postId, rejected.map(m => m.id)]);
+    media = media.filter(m => m.state !== 'rejected');
+  }
   if (media.some(m => ['rejected', 'blocked', 'removed'].includes(m.state))) {
     await q.query(`update feture.post set state = 'draft', removed_reason = 'media_rejected' where id = $1`, [postId]);
     await enqueue(q, 'post.returned', p.owner_profile_id, { postId, reason: 'media_rejected' });

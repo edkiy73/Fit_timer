@@ -1,6 +1,6 @@
 // @ts-check
 import { likePattern } from '../search.mjs';
-import { activeActor, popularScore, staffOwn } from '../sql-rules.mjs';
+import { activeActor, popularScore, staffOwn, staffPerson } from '../sql-rules.mjs';
 import { randomBytes } from 'node:crypto';
 import { requireUnrestricted } from '../profiles.mjs';
 import { communitiesCommands } from '../../contracts/communities.mjs';
@@ -766,7 +766,7 @@ const run = {
     await requireStaff(q, account, ['owner', 'lead', 'moderator']);
     const { sql, params } = queuePageSql(input, CREATED_KEYS,
       `select c.id, c.rev, c.name, c.description, c.topics, c.privacy, c.join_question, c.rules, c.cover_asset_id, c.place_id, c.state, c.pending_change, c.created_at,
-         c.resubmits, c.prev_reject_reason,
+         c.resubmits, c.prev_reject_reason, ${staffPerson('c.owner_profile_id')} person,
          (select to_jsonb(m) from feture.media_asset m where m.id = c.cover_asset_id) cover_asset,
          (select to_jsonb(m) from feture.media_asset m where m.id = case when jsonb_typeof(c.pending_change -> 'coverAssetId') = 'string' then (c.pending_change ->> 'coverAssetId')::uuid end) new_cover_asset
        from feture.community c

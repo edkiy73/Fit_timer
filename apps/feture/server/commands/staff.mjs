@@ -10,6 +10,18 @@ import { staffOwn } from '../sql-rules.mjs';
 
 /** Media queue sort: the upload time, then the id (unique). */
 /** The journal reads newest first, always. */
+/** The person a journal entry is about: the profile itself, an account's personal profile, or the owner of the media,
+ * post, reply, community or event; for a report, its author. SQL over `s` (feture.staff_action). */
+const JOURNAL_PERSON = `case
+  when s.target_type in ('profile', 'couple') then s.target_id
+  when s.target_type = 'account' then (select x.person_profile_id from feture.account x where x.id = s.target_id)
+  when s.target_type = 'media' then (select x.owner_profile_id from feture.media_asset x where x.id = s.target_id)
+  when s.target_type = 'post' then (select x.owner_profile_id from feture.post x where x.id = s.target_id)
+  when s.target_type = 'reply' then (select x.author_profile_id from feture.reply x where x.id = s.target_id)
+  when s.target_type = 'community' then (select x.owner_profile_id from feture.community x where x.id = s.target_id)
+  when s.target_type = 'event' then (select x.organizer_profile_id from feture.event x where x.id = s.target_id)
+  when s.detail ->> 'author' ~ '^[0-9a-f-]{36}$' then (s.detail ->> 'author')::uuid
+end`;
 const JOURNAL_KEYS = [{ name: 'created_at', type: 'timestamptz', dir: 'desc' }, { name: 'id', type: 'uuid', dir: 'desc' }];
 const MEDIA_KEYS = [{ name: 'created_at', type: 'timestamptz' }, { name: 'id', type: 'uuid' }];
 
@@ -213,19 +225,36 @@ const run = {
     const blur = cfg.media.delivery && rows.some(covered)
       ? await cfg.media.delivery.urls(rows.filter(covered).map(r => ({ assetId: r.id, variant: /** @type {const} */ ('blur'), viewerProfileId: staffProfile(account), ttlSeconds: 300 })))
       : [];
+    const blurOf = new Map();
     let i = 0;
+    for (const r of rows) if (covered(r)) blurOf.set(r.id, blur[i++]);
+    // One card per upload (owner 05.11.2026): the files of one post come together, in the post's order — its other files
+    // waiting for review are added even when this page did not reach them; a file not in a post is a card of its own.
     const items = [];
+    const seen = new Set();
     for (const r of rows) {
       // Where the file is used, so a moderator judges it in context: the post's text, the community or event it is the
       // cover of; a chat file names no conversation (private).
       const [at] = await q.query(`select target_type, target_id from feture.media_attachment where asset_id = $1 order by created_at limit 1`, [r.id]);
+      const group = at?.target_type === 'post' ? 'post:' + at.target_id : r.id;
+      if (seen.has(group)) continue;
+      seen.add(group);
       const used = !at ? null
         : at.target_type === 'post' ? (await q.query(`select left(coalesce(title || ': ', '') || body, 300) text from feture.post where id = $1`, [at.target_id]))[0]?.text
         : at.target_type === 'community' ? (await q.query(`select name text from feture.community where id = $1`, [at.target_id]))[0]?.text
         : at.target_type === 'event' ? (await q.query(`select title text from feture.event where id = $1`, [at.target_id]))[0]?.text : null;
+      const siblings = at?.target_type === 'post' ? await q.query(
+        `select m.id, m.kind, m.width, m.height, m.copies_at from feture.media_attachment a join feture.media_asset m on m.id = a.asset_id
+         where a.target_type = 'post' and a.target_id = $1 and m.state = 'needs_review' and m.purpose <> 'verification' order by a.position`, [at.target_id]) : [r];
+      const missing = siblings.filter(x => covered(x) && !blurOf.has(x.id));
+      if (missing.length && cfg.media.delivery) {
+        const more = await cfg.media.delivery.urls(missing.map(x => ({ assetId: x.id, variant: /** @type {const} */ ('blur'), viewerProfileId: staffProfile(account), ttlSeconds: 300 })));
+        missing.forEach((x, k) => blurOf.set(x.id, more[k]));
+      }
       items.push({
-        id: r.id, purpose: r.purpose, kind: r.kind, authorLabel: r.explicitness, reason: r.reason, createdAt: r.created_at, w: r.width, h: r.height,
-        blur: covered(r) ? blur[i++] : null, usedIn: used ?? null,
+        id: r.id, group, purpose: r.purpose, kind: r.kind, authorLabel: r.explicitness, reason: r.reason, createdAt: r.created_at, w: r.width, h: r.height,
+        blur: blurOf.get(r.id) ?? null, usedIn: used ?? null,
+        assets: siblings.map(x => ({ id: x.id, kind: x.kind, w: x.width, h: x.height, blur: blurOf.get(x.id) ?? null })),
         // Whose file it is, so a measure («Принять меры») can be taken against them from the card.
         owner: r.owner_id ? { id: r.owner_id, kind: r.owner_kind, handle: r.owner_handle, name: r.owner_name } : null,
       });
@@ -314,13 +343,19 @@ const run = {
   async 'staff.journal'(q, { account, input }) {
     await requireStaff(q, account, ['owner', 'lead', 'auditor']);
     const { sql, params } = queuePageSql(input, JOURNAL_KEYS,
-      `select s.id, s.staff_account_id, p.name as staff_name, p.handle as staff_handle, s.action, s.target_type, s.target_id, s.detail, s.created_at
-       from feture.staff_action s
-       left join feture.account a on a.id = s.staff_account_id left join feture.profile p on p.id = a.person_profile_id
-       where ($1::uuid is null or s.target_id = $1) and ($2::uuid is null or s.staff_account_id = $2) and ($3::text is null or s.action = $3)`,
-      [input.targetId ?? null, input.staffAccountId ?? null, input.what ?? null]);
+      `select * from (
+         select s.id, s.staff_account_id, p.name as staff_name, p.handle as staff_handle, s.action, s.target_type, s.target_id, s.detail, s.created_at,
+           ${JOURNAL_PERSON} person_id
+         from feture.staff_action s
+         left join feture.account a on a.id = s.staff_account_id left join feture.profile p on p.id = a.person_profile_id
+         where ($1::uuid is null or s.target_id = $1) and ($2::uuid is null or s.staff_account_id = $2) and ($3::text is null or s.action = $3)) j
+       where $4::uuid is null or j.person_id = $4`,
+      [input.targetId ?? null, input.staffAccountId ?? null, input.what ?? null, input.personId ?? null]);
     const rows = await q.query(sql, params);
-    return { items: plainRows(rows), ...pageInfo(rows, JOURNAL_KEYS, input.limit) };
+    // Whom each entry is about, by name (owner 05.11.2026: «кого заблокировали» is the first thing staff look for).
+    const ids = [...new Set(rows.map(r => r.person_id).filter(Boolean))];
+    const people = ids.length ? await q.query(`select id, kind, handle, name from feture.profile where id = any($1::uuid[])`, [ids]) : [];
+    return { items: plainRows(rows).map(({ person_id, ...r }) => ({ ...r, person: people.find(x => x.id === person_id) ?? null })), ...pageInfo(rows, JOURNAL_KEYS, input.limit) };
   },
 };
 
