@@ -188,6 +188,36 @@ const run = {
     return { reset: removed };
   },
 
+  async 'staff.documents'(q, { account }) {
+    await requireStaff(q, account, ['owner', 'lead']);
+    if (!(await q.query(`select to_regclass('public.feture_document_drafts') is not null ok`))[0].ok) fail(503, 'unavailable');
+    const [drafts, current] = await Promise.all([
+      q.query('select document_key key, locale, title, blocks, requires_accept "requiresAccept", revision, updated_at "updatedAt" from public.feture_document_drafts'),
+      q.query(`select document_key key, locale, version, title, blocks, requires_accept "requiresAccept", effective_at "effectiveAt",
+         (select v.source_revision from public.feture_document_versions v where v.id = c.id) "sourceRevision"
+       from public.feture_document_current c`),
+    ]);
+    return { drafts, current };
+  },
+
+  async 'staff.documentSave'(q, { account, input }) {
+    await requireStaff(q, account, ['owner', 'lead']);
+    const [{ r }] = await q.query('select public.feture_document_save($1, $2, $3, $4, $5::jsonb, $6) r',
+      [input.key, input.locale, input.expectedRevision, input.title, JSON.stringify(input.blocks), input.requiresAccept]);
+    if (!r.ok) fail(r.error === 'revision_conflict' ? 409 : 422, r.error === 'revision_conflict' ? 'conflict' : 'rule_violation', { rule: r.error });
+    await journal(q, account.id, 'document.save', 'document', null, { key: input.key, locale: input.locale, revision: r.draft.revision });
+    return { revision: r.draft.revision };
+  },
+
+  async 'staff.documentPublish'(q, { account, input }) {
+    // What people accept: published only by an owner or a lead who has just entered their code; it applies now.
+    await requireStaff(q, account, ['owner', 'lead'], { fresh: true });
+    const [{ r }] = await q.query('select public.feture_document_publish($1, $2, $3, true, now()) r', [input.key, input.locale, input.revision]);
+    if (!r.ok) fail(409, 'conflict', { rule: r.error });
+    await journal(q, account.id, 'document.publish', 'document', r.document.id, { key: input.key, locale: input.locale, version: r.document.version });
+    return { version: r.document.version };
+  },
+
   async 'staff.topics'(q, { account }) {
     await requireStaff(q, account, ['owner', 'lead']);
     const [categories, topics] = await Promise.all([
