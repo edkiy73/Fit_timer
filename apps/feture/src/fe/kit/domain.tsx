@@ -199,13 +199,15 @@ export function AnswerScale<M extends string,L extends string=string>({value,onC
   {lanes&&onLane?<div className={'ans-rows'+(shown?' busy':'')}
     onPointerMove={e=>{if(!drag)return;const moved=drag.moved||Math.abs(e.clientX-drag.x)>8||Math.abs(e.clientY-drag.y)>8;setDrag({...drag,moved,over:cellAt(e.clientX,e.clientY,drag.id)});}}
     onPointerUp={e=>{if(!drag)return;const k=cellAt(e.clientX,e.clientY,drag.id);if(drag.moved&&k)pick(k,drag.id);else setDrag(null);}}
-    onPointerCancel={()=>setDrag(null)}>
+    onPointerCancel={()=>setDrag(null)}
+    // A mouse needs no tap: pointing at a lane shows its scale, leaving the block shows the answer again (owner 05.11.2026).
+    onPointerLeave={e=>{if(e.pointerType==='mouse'&&!drag)setOpen(null);}}>
    {/* the lane keeps its frame when it opens: its name floats up onto the border, the 1–10 fills the inside */}
    {lanes.map(l=>{const isOpen=shown===l.id;
     return <div key={l.id} className={'ans-row'+(isOpen?' open':'')}>
      <span className="ans-row-l">{l.label}</span>
      {isOpen?scale(label+': '+l.label,()=>lane===l.id,k=>pick(k,l.id),l.id)
-      :<button type="button" className="ans-row-b" aria-label={l.label} aria-expanded={false}
+      :<button type="button" className="ans-row-b" aria-label={l.label} aria-expanded={false} onPointerEnter={e=>{if(e.pointerType==='mouse')setOpen(l.id);}}
         onPointerDown={e=>{try{e.currentTarget.closest('.ans-rows')?.setPointerCapture(e.pointerId);}catch{/* gone */}opened.current=Date.now();setOpen(l.id);setDrag({id:l.id,x:e.clientX,y:e.clientY,moved:false,over:null});}}
         onClick={e=>{if(e.detail===0)setOpen(l.id);}}/>}
     </div>;})}
