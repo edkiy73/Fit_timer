@@ -250,7 +250,9 @@ test('stage 5 «Нужно решить» with context: a join request names its
     assert.deepEqual([item.object, item.answers, item.actor.handle, typeof item.rev], [{ type: 'community', id: club, title: 'Закрытый клуб' },
       [{ q: 'Почему вам интересно?', a: 'Хочу научиться безопасно' }], 'Kira', 'number']);
     const one = await call('ua', null, { action: 'decide.get', kind: 'capp', id: item.id });
-    assert.deepEqual(one.item, item);
+    // The same item read by ID; avatar links are signed when read, so a second between the two reads changes them.
+    const unsigned = (/** @type {any} */ x) => JSON.parse(JSON.stringify(x).replace(/\?t=[^"]*/g, ''));
+    assert.deepEqual(unsigned(one.item), unsigned(item));
     assert.equal((await call('uc', null, { action: 'decide.get', kind: 'capp', id: item.id })).status, 404);
     assert.equal((await call('ua', null, { action: 'decide.get', kind: 'eapp', id: item.id })).status, 404);
     // The decision carries the revision read by ID; a stale one is refused; once decided, the item is gone.
