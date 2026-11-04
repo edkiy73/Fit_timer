@@ -86,7 +86,7 @@ function useSums(profileId:string|undefined){
  const [s,setS]=useShown<Sums|null>('v3.sums:'+profileId,()=>null);
  const load=useCallback(()=>{if(!profileId)return;
   Promise.all([call('links.mine',{},linksMineRes),call('interests.list',{profileId},countRes),call('album.list',{profileId},countRes),call('gallery.list',{profileId},pagedRes),call('private.get',{profileId},privRes)])
-   .then(([l,i,a,g,pv])=>setS({links:{ok:l.confirmed.length,wait:l.incoming.length},interests:i.items.length,albums:a.items.length,pics:g.items.length+(g.next?'+':''),
+   .then(([l,i,a,g,pv])=>setS({links:{ok:l.confirmed.length,wait:waitingCount(l)},interests:i.items.length,albums:a.items.length,pics:g.items.length+(g.next?'+':''),
     priv:{text:!!pv.text?.trim(),media:!!pv.media?.length,interests:!!pv.interests?.length}})).catch(()=>{});
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[call,profileId]);
@@ -122,7 +122,7 @@ function ProfileZone({p,settings,load,cp,links}:{p:MeData['p'],settings:MeData['
    <Row icon={UserRound} title={t('fe.me.basics')} sub={basics} onClick={go('/n/me/edit?only=basics')}/>
    {!cp&&<Row icon={Info} title={t('fe.ab.title')} sub={about} onClick={go('/n/me/edit?only=about')}/>}
    <Row icon={ListChecks} title={t(cp?'fe.v3.us.details':'fe.me.details')} sub={details} onClick={go('/n/me/edit?only=details')}/>
-   <Row icon={Link2} title={t('fe.v3.links')} sub={linksSub} onClick={go('/n/me/links')}/>
+   <Row icon={Link2} title={t('fe.v3.links')} sub={linksSub} badge={sums?.links.wait||links||undefined} onClick={go('/n/me/links')}/>
    <Row icon={Sparkles} title={t('fe.v3.interests')} sub={sums?(sums.interests?plural(t,locale,'fe.v3.n.interest',sums.interests):t('fe.v3.s.empty')):undefined} onClick={go('/n/me/interests')}/>
    <Row icon={Images} title={t('fe.mx.gal')} sub={galSub} onClick={go('/n/me/new/gallery')}/>
    <Row icon={Lock} tone="v" title={t('fe.m2.private')} sub={cap(privSub)} onClick={go('/n/me/new/private')}/>
