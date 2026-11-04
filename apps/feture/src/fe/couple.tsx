@@ -36,6 +36,7 @@ const preview=z.object({
  photos:z.object({now:z.number(),after:z.number(),adds:z.number()}).optional(),
  location:z.object({near:z.object({ru:z.string().nullable(),en:z.string().nullable()}).nullable()}).optional(),
  message:z.object({body:z.string(),photo:z.boolean()}).optional(),
+ /** A reply waiting for the partner (audit item 20). */ reply:z.object({body:z.string()}).optional(),
 }).passthrough().nullable();
 const person=z.object({id:z.uuid(),name:z.string().nullable()}).nullable();
 const STATES=['pending','approved','rejected','cancelled','expired','superseded','stale'] as const;
@@ -51,7 +52,8 @@ export type Approval=z.infer<typeof approval>;
 /** What the Me tab passes in (kept for its call; the server now sends before → after itself). */
 export type CoupleBase={name:string|null,bio:string,photos:{id:string}[]};
 
-const KINDS=['profile.update','profile.photos','profile.setVisibility','interests.set','post.publish','post.edit','event.submit','event.update','event.rsvp','event.apply','access.grant','private.on','community.create','community.join','link.propose','link.accept','link.visibility','location.set','chat.request'];
+const KINDS=['profile.update','profile.photos','profile.setVisibility','interests.set','post.publish','post.edit','event.submit','event.update','event.rsvp','event.apply','access.grant','private.on','community.create','community.join','link.propose','link.accept','link.visibility','location.set','chat.request',
+ 'reply.create','like.send','follow.set','link.change','link.changeAnswer','community.update'];
 const FIELDS=['name','bio','handle','cityId','showAge','detailsVis','photos','discoverMode','acceptProfileLikes','requestsFrom','linksFrom','mentionsFrom','activityVis','showLikes','messagesFrom'];
 const VALUES=['visible','hidden','all','matches','follow','followers','none','known'];
 const nameOf=(m:{name?:string|null|undefined,handle?:string|null|undefined}|undefined|null)=>m?(m.name||(m.handle?'@'+m.handle:'?')):'?';
@@ -225,6 +227,7 @@ function useSheetParts(a:Approval){
  }else if(p?.access){const x=p.access;
   content=<KeyValues rows={[[t('fe.ap.access.what'),x.scopes.map(s=>has('fe.ap.scope.'+s)?t('fe.ap.scope.'+s):s).join(', ')],
    [t('fe.ap.access.term'),(has('fe.ap.access.term.'+x.term)?t('fe.ap.access.term.'+x.term):x.term)+(x.until?' · '+t('fe.ap.access.until',{date:date(x.until)}):'')]]}/>;
+ }else if(p?.reply){content=<ReviewPost title={t('fe.ap.title.reply.create')}><p>{p.reply.body}</p></ReviewPost>;
  }else if(p?.message){content=<ReviewPost title={t('fe.ap.msg')} meta={p.message.photo?t('fe.ap.msgPhoto'):undefined}>{p.message.body?<p>{p.message.body}</p>:null}</ReviewPost>;
  }else if(p?.link){content=<KeyValues rows={[[t('fe.ap.link.kind'),has('fe.lk.kind.'+p.link.kind)?t('fe.lk.kind.'+p.link.kind):p.link.kind]]}/>;
  }else if(p?.photos){content=<Note>{t('fe.ap.photos',{now:p.photos.now,after:p.photos.after,adds:p.photos.adds})}</Note>;

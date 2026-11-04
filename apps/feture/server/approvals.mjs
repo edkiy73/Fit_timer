@@ -1,7 +1,9 @@
 // @ts-check
+import { coupleNameNow } from './sql-rules.mjs';
 import { FeError, fail } from './errors.mjs';
 import { enqueue } from './outbox.mjs';
 import { readAbout } from './notify.mjs';
+import { KIND_POINT } from '../contracts/_approve.mjs';
 
 /** @typedef {import('./db.mjs').Q} Q @typedef {import('./profiles.mjs').Acting} Acting */
 /**
@@ -27,7 +29,7 @@ import { readAbout } from './notify.mjs';
  * - `onReject` / `onCancel` / `onExpire(q, row)`: give back what waited (an object in `pending_partner`); may return
  *   an object stored as `outcome` (e.g. `{eventDraftId}`) that the result card uses for «Изменить и отправить снова».
  * @typedef {(q: Q, row: ApprovalRow) => Promise<Record<string, unknown> | void>} Hook
- * @typedef {{apply: (q: Q, row: ApprovalRow) => Promise<void>, always?: boolean, version?: (q: Q, row: ApprovalRow) => Promise<string | null>,
+ * @typedef {{apply: (q: Q, row: ApprovalRow) => Promise<void>, always?: boolean, point?: string, version?: (q: Q, row: ApprovalRow) => Promise<string | null>,
  *   preview?: (q: Q, row: ApprovalRow) => Promise<Preview | null>, onReject?: Hook, onCancel?: Hook, onExpire?: Hook}} ApprovalKind
  * @typedef {{type: string, id: string | null, title: string | null, state?: string}} ObjectRef  state: ok | unavailable | deleted
  * @typedef {{object?: ObjectRef | null, subject?: {id: string, kind?: string, handle: string | null, name: string | null} | null,
@@ -38,10 +40,12 @@ import { readAbout } from './notify.mjs';
  *   created_at?: string, expires_at?: string, decided_at?: string | null}} ApprovalRow
  */
 
-/** The 19 kinds the app knows (src/fe/kit approval sheet, contracts/notifications.mjs decide.joint.<kind>). */
+/** The 25 kinds the app knows (src/fe/kit approval sheet, contracts/notifications.mjs decide.joint.<kind>). */
 export const APPROVAL_KINDS = Object.freeze(['profile.update', 'profile.photos', 'profile.setVisibility', 'interests.set', 'post.publish', 'post.edit',
   'event.submit', 'event.update', 'event.rsvp', 'event.apply', 'access.grant', 'private.on', 'community.create', 'community.join',
-  'link.propose', 'link.accept', 'link.visibility', 'location.set', 'chat.request']);
+  'link.propose', 'link.accept', 'link.visibility', 'location.set', 'chat.request',
+  // «Что подтверждает партнёр» (audit items 20, 21, 40)
+  'reply.create', 'like.send', 'follow.set', 'link.change', 'link.changeAnswer', 'community.update']);
 export const CLOSED_STATES = Object.freeze(['approved', 'rejected', 'cancelled', 'expired', 'superseded', 'stale']);
 
 /** @type {Map<string, ApprovalKind>} */
@@ -53,12 +57,15 @@ export function registerApprovalKind(kind, def) {
   KINDS.set(kind, def);
 }
 
-/** True when this widening change must wait for the partner. Narrowing changes never call this.
- * Otherwise the change applies at once and the partner is only notified. @param {Acting} acting @param {string} kind */
+/** True when this widening change must wait for the partner: always for the private part and visibility, otherwise when
+ * the partner asks to approve the kind's point («Что подтверждает партнёр», audit item 20). Narrowing changes never call
+ * this. Otherwise the change applies at once and the partner is only notified. @param {Acting} acting @param {string} kind */
 export function needsPartner(acting, kind) {
   const def = KINDS.get(kind);
   if (!def) fail(500, 'approval_kind_unknown');
-  return acting.kind === 'couple' && !!acting.partnerAccountId && (def.always === true || acting.partnerApproves);
+  if (acting.kind !== 'couple' || !acting.partnerAccountId) return false;
+  const point = KIND_POINT[kind] ?? def.point;
+  return def.always === true || point === 'private' || (!!point && (acting.partnerScope ?? []).includes(point));
 }
 
 /** A couple's action applied at once (trust mode): a line in the partner's couple history (notify.mjs `pair.acted`; the
@@ -71,7 +78,7 @@ export async function partnerActed(q, acting, what, extra = {}) {
 }
 
 const COLUMNS = `a.id, a.profile_id, a.kind, a.target_type, a.target_id, a.change, a.summary, a.state, a.requested_by, a.base_rev, a.comment,
-  a.outcome, a.couple_name, a.decided_by, a.created_at, a.expires_at, a.decided_at`;
+  a.outcome, ${coupleNameNow('a.profile_id', 'a.couple_name')} couple_name, a.decided_by, a.created_at, a.expires_at, a.decided_at`;
 
 /** Opens a pending change. A pending one of the same kind for the same object is replaced («заменено новым»).
  * @param {Q} q @param {Acting} acting

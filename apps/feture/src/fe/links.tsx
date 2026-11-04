@@ -39,7 +39,7 @@ export function LinksBlock({onChanged}:{onChanged?:()=>void}){
  const list=r.confirmed;
  const manage=()=>navigate('/n/me/links');
  const answer=async(l:LinkView,accept:boolean)=>{setBusy(true);
-  try{const res=await (l.change?call('link.answerChange',{opId:newOpId(),linkId:l.id,accept},ok):call('link.answer',{opId:newOpId(),linkId:l.id,accept,vis:'all'},ok));
+  try{const res=await (l.change?call('link.answerChange',{opId:newOpId(),linkId:l.id,accept,kind:l.change.kind},ok):call('link.answer',{opId:newOpId(),linkId:l.id,accept,vis:'all'},ok));
    toast(res.pending?t('fe.ln.t.pending'):accept?(l.change?t('fe.ln.t.changeOk'):t('fe.ln.t.confirmed')):t('fe.ln.t.declined'),{type:'ok'});load();onChanged?.();}
   catch(e){toast(pxError(e,t),{type:'err'});}finally{setBusy(false);}};
  const title=inc.length?fill(t(inc.length===1?'fe.mx.lk.titleNew1':'fe.mx.lk.titleNew'),{n:inc.length}):t('fe.mx.lk.title');
@@ -113,7 +113,7 @@ export function LinksScreen(){
   try{const res=await fn();toast(res.pending?t('fe.ln.t.pending'):msg);load();return true;}catch(e){toast(pxError(e,t),{type:'err'});load();return false;}finally{setBusy(false);}};
  const closeMenu=useCallback(()=>setMenu(null),[]);const closeRemove=useCallback(()=>setRemoving(null),[]);
  const answer=(l:LinkView,accept:boolean)=>l.change
-  ?act(()=>call('link.answerChange',{opId:newOpId(),linkId:l.id,accept},ok),accept?t('fe.ln.t.changeOk'):t('fe.ln.t.declined'))
+  ?act(()=>call('link.answerChange',{opId:newOpId(),linkId:l.id,accept,kind:l.change!.kind},ok),accept?t('fe.ln.t.changeOk'):t('fe.ln.t.declined'))
   :act(()=>call('link.answer',{opId:newOpId(),linkId:l.id,accept,vis:'all'},ok),accept?t('fe.ln.t.confirmed'):t('fe.ln.t.declined'));
  const couple=acting?.kind==='couple';
  const waiting=r?[...r.incoming,...r.confirmed.filter(l=>l.change&&!l.change.mine)]:[];

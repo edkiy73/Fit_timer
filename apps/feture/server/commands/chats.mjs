@@ -96,8 +96,10 @@ async function requireOpen(q, c, acting) {
     const [m] = await q.query(`select 1 from feture.profile_match where id = $1 and ended_at is null`, [c.match_id]);
     if (!m) fail(409, 'conflict', { rule: 'no_match' });
   }
-  const [{ n }] = await q.query(`select count(*)::int n from feture.profile where id in ($1, $2) and state = 'active'`, [c.profile_a, c.profile_b]);
-  if (n !== 2) fail(409, 'conflict', { rule: 'pair_inactive' });
+  const sides = await q.query(`select state from feture.profile where id in ($1, $2)`, [c.profile_a, c.profile_b]);
+  // A couple on pause: its own reason (audit item 41); the conversation goes on if it is restored.
+  if (sides.some(x => x.state === 'paused')) fail(409, 'conflict', { rule: 'pair_paused' });
+  if (sides.filter(x => x.state === 'active').length !== 2) fail(409, 'conflict', { rule: 'pair_inactive' });
 }
 
 /** Appends a message with the next seq and tells the other side's members (push in slice G2); the first message of a
@@ -430,7 +432,7 @@ const run = {
     const rows = await q.query(
       `select c.id, c.state, c.last_seq, c.last_message_at, c.created_at, cm.profile_id side, sp.kind side_kind, cm.muted, cm.archived,
          c.origin, c.request_state, c.request_from, c.request_at, c.request_context, ${incomingRequest('c', 'cm')} incoming,
-         o.id other_id, o.kind other_kind, o.handle other_handle, o.name other_name, o.avatar_asset_id,
+         o.id other_id, o.kind other_kind, o.handle other_handle, o.name other_name, o.avatar_asset_id, o.state other_state,
          (select count(*)::int from feture.message m where m.conversation_id = c.id and m.seq > cm.last_read_seq and m.sender_account_id is distinct from $1) unread,
          (select json_build_object('body', left(m.body, 80), 'media', m.media_asset_id is not null, 'mode', m.media_mode, 'mine', m.sender_account_id = $1,
             'kind', (select a.kind from feture.media_asset a where a.id = m.media_asset_id))
@@ -459,7 +461,7 @@ const run = {
         id: r.id, state: r.state, side: { id: r.side, kind: r.side_kind }, newMatch: Number(r.last_seq) === 0,
         other: {
           id: r.other_id, kind: r.other_kind, handle: r.other_handle, name: r.other_name || r.other_handle,
-          ages: agesOf.get(r.other_id) ?? [], photoVerified: verified.get(r.other_id) ?? false,
+          ages: agesOf.get(r.other_id) ?? [], photoVerified: verified.get(r.other_id) ?? false, paused: r.other_state === 'paused',
           avatar: asset ? await mediaDto(cfg.media, asset, { viewerProfileId: r.side, place: 'public', showExplicit: false, staff: false }).catch(() => null) : null,
         },
         unread: r.incoming ? 0 : r.unread, muted: r.muted, archived: r.archived, last: r.last, at: r.last_message_at ?? r.created_at,
@@ -548,7 +550,8 @@ const run = {
     // Receipts: how far the other side has read (the furthest of its members).
     const [{ read }] = await q.query(
       `select coalesce(max(last_read_seq), 0)::bigint read from feture.conversation_member where conversation_id = $1 and profile_id <> $2`, [c.id, viewer.profileId]);
-    return { state: c.state, endedReason: c.ended_reason, items, otherRead: Number(read), lastSeq: Number(c.last_seq), typingTag: typingTag(String(cfg.pepper), c.id),
+    const [os] = await q.query(`select state from feture.profile where id = $1`, [c.profile_a === viewer.profileId ? c.profile_b : c.profile_a]);
+    return { state: c.state, endedReason: c.ended_reason, otherPaused: os?.state === 'paused', items, otherRead: Number(read), lastSeq: Number(c.last_seq), typingTag: typingTag(String(cfg.pepper), c.id),
       request: requestView(c, viewer.profileId) };
   },
 

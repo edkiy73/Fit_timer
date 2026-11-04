@@ -6,12 +6,13 @@ import {AtSign,Check,Copy,EyeOff,Heart,Link as LinkIcon,Lock,ShieldCheck,Users,X
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicBase} from '../api-url';
 import {copyLink} from './share';
-import {canGoBack,useBack,Actions,Alert,Av,Bar,Btn,Card,Empty,Field,Group,H,Input,Note,PersonLine,Pill,RadioList,RequestCard,Row,Sheet,Skel,Stack,View,Who,useLeaveGuard} from './kit';
+import {canGoBack,useBack,ToggleRow,Actions,Alert,Av,Bar,Btn,Card,Empty,Field,Group,H,Input,Note,PersonLine,Pill,RadioList,RequestCard,Row,Sheet,Skel,Stack,View,Who,useLeaveGuard} from './kit';
 import {useFe,useLive} from './session';
 import {Ask} from './me';
 import {useToast} from './toast';
 import {when} from './feed';
 import {ApprovalView,CoupleWork} from './couple';
+import {OLD_MODE,SWITCHABLE} from '../../contracts/_approve.mjs';
 import {PAIR_TOKEN as TOKEN,dropPairLink as dropLink,pendingPairLink} from './pair-link';
 
 /** Slice E (V21 Q01, Q06, Q07): a couple starts by an invitation to an exact nickname, or by a single-use link for
@@ -22,7 +23,7 @@ const who=z.object({id:z.uuid(),handle:z.string().nullable(),name:z.string().nul
 const invitesRes=z.object({ok:z.literal(true),outgoing:z.array(z.object({id:z.uuid(),state:z.string(),created_at:z.string(),profile:who})),incoming:z.array(z.object({id:z.uuid(),created_at:z.string(),profile:who})),
  link:z.object({id:z.uuid(),createdAt:z.string(),expiresAt:z.string()}).nullable().optional()});
 const coupleRes=z.object({ok:z.literal(true),couple:z.object({id:z.uuid(),handle:z.string().nullable().optional(),name:z.string().nullable(),chosenName:z.string().optional(),state:z.string(),since:z.string(),restoreUntil:z.string().nullable(),
- members:z.array(z.object({me:z.boolean(),profileId:z.uuid(),handle:z.string().nullable(),name:z.string().nullable(),approvesPartner:z.boolean(),restoreAgreed:z.boolean()}))})});
+ members:z.array(z.object({me:z.boolean(),profileId:z.uuid(),handle:z.string().nullable(),name:z.string().nullable(),approvesPartner:z.boolean(),approvesScope:z.array(z.string()).optional(),restoreAgreed:z.boolean()}))})});
 const ok=z.object({ok:z.literal(true)}).passthrough();
 const settingsRes=z.object({ok:z.literal(true),settings:z.object({discoverMode:z.string(),requestsFrom:z.enum(['all','matches','none']).optional()}).passthrough()});
 const listRes=z.object({ok:z.literal(true),items:z.array(z.unknown())}).passthrough();
@@ -361,23 +362,29 @@ function CoupleSettings({c,coupleId,other,trustOpen,onChanged}:{c:Couple,coupleI
    {closed?<Row icon={Lock} title={t('fe.c6.safe.closedTitle')} sub={t('fe.c6.safe.closedSub')} val={<Check/>}/>
     :<Row icon={Lock} noChev title={t('fe.c6.safe.close')} sub={t('fe.c6.safe.closeSub')} disabled={!s||!!busy} onClick={()=>setAskClose(true)}/>}
   </Card></Group>
-  {trust&&me&&<TrustSheet coupleId={coupleId} on={me.approvesPartner} other={other} otherOn={!!partner?.approvesPartner} onClose={()=>setTrust(false)} onDone={()=>{setTrust(false);onChanged();}}/>}
+  {trust&&me&&<TrustSheet coupleId={coupleId} scope={me.approvesScope??(me.approvesPartner?[...OLD_MODE]:[])} other={other} otherOn={!!partner?.approvesPartner} onClose={()=>setTrust(false)} onDone={()=>{setTrust(false);onChanged();}}/>}
   {askClose&&<Ask icon={Lock} danger title={t('fe.c6.safe.askTitle')} text={t('fe.c6.safe.askText',{n:s?.grants??0})} ok={t('fe.c6.safe.askOk')} onCancel={()=>setAskClose(false)} onOk={close}/>}
  </>;
 }
 
-/** V21 pairTrustOpen: «Моё подтверждение» — the choice as two options with what each means, and what stays shared. */
-function TrustSheet({coupleId,on,other,otherOn,onClose,onDone}:{coupleId:string,on:boolean,other:string,otherOn:boolean,onClose:()=>void,onDone:()=>void}){
+/** «Что подтверждает партнёр» (audit item 20): what I approve before my partner's action as the couple applies — a
+ * switch per point with a short line under it; the private part and visibility always wait (shown on, not switchable). */
+function TrustSheet({coupleId,scope,other,otherOn,onClose,onDone}:{coupleId:string,scope:string[],other:string,otherOn:boolean,onClose:()=>void,onDone:()=>void}){
  const {call}=useFe();const {t}=useI18n();const toast=useToast();
- const [v,setV]=useState<'on'|'off'>(on?'on':'off');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
- const save=async()=>{if(v===(on?'on':'off')){onClose();return;}setBusy(true);setFailure('');
-  try{await call('couple.setApproval',{opId:newOpId(),approvesPartner:v==='on'},ok,{profileId:coupleId});toast(t('fe.c6.trust.saved'),{type:'ok'});onDone();}
+ const [v,setV]=useState<string[]>(scope.filter(x=>(SWITCHABLE as readonly string[]).includes(x)));const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const same=v.length===scope.length&&v.every(x=>scope.includes(x));
+ const save=async()=>{if(same){onClose();return;}setBusy(true);setFailure('');
+  try{await call('couple.setApproval',{opId:newOpId(),scope:v},ok,{profileId:coupleId});toast(t('fe.c6.trust.saved'),{type:'ok'});onDone();}
   catch(e){setFailure(feErrorMessage(e,t));}finally{setBusy(false);}};
- return <Sheet title={t('fe.c6.trust.title')} onClose={onClose} foot={<Btn disabled={busy} busy={busy} onClick={()=>void save()}>{t('fe.c6.trust.save')}</Btn>}>
+ const flip=(k:string)=>setV(x=>x.includes(k)?x.filter(y=>y!==k):[...x,k]);
+ return <Sheet title={t('fe.c6.trust.title2')} onClose={onClose} foot={<Btn disabled={busy} busy={busy} onClick={()=>void save()}>{t('fe.c6.trust.save')}</Btn>}>
   <Stack gap={3}>
-   <p className="lead">{t('fe.c6.trust.lead',{name:other})}</p>
-   <RadioList bare label={t('fe.c6.trust.title')} value={v} onChange={setV} options={[['off',t('fe.c6.trust.offT'),t('fe.c6.trust.offS')],['on',t('fe.c6.trust.onT'),t('fe.c6.trust.onS')]] as const}/>
-   <Note>{t('fe.c6.trust.note')} {otherOn?t('fe.c6.trust.otherOn',{name:other}):t('fe.c6.trust.otherOff',{name:other})}</Note>
+   <p className="lead">{t('fe.c6.trust.lead2',{name:other})}</p>
+   <Card list>
+    {SWITCHABLE.map(k=><ToggleRow key={k} title={t('fe.c6.pt.'+k)} sub={t('fe.c6.pt.'+k+'.sub')} on={v.includes(k)} onClick={()=>flip(k)} disabled={busy}/>)}
+    <ToggleRow title={t('fe.c6.pt.private')} sub={t('fe.c6.pt.private.sub')} on disabled onClick={()=>{}}/>
+   </Card>
+   <Note>{otherOn?t('fe.c6.trust.otherOn',{name:other}):t('fe.c6.trust.otherOff',{name:other})}</Note>
    {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
   </Stack>
  </Sheet>;

@@ -156,6 +156,8 @@ export function PersonActions({p,rel,setRel,inert}:{p:PersonProfile,rel:Relation
  const like=async()=>{if(busy)return;setBusy('like');
   try{const r=await call('like.send',{opId:op.current,profileId:p.id,source:'profile'},likeRes);op.current=newOpId();
    if(r.state==='matched'){setRel(x=>x&&{...x,mutual:true});setMatch(r.conversationId?{conversationId:r.conversationId}:{});}
+   // The partner approves the couple's likes first (audit item 20): nothing is sent yet.
+   else if(r.state==='pending')toast(t('fe.gal.pendingPartner'),{type:'info'});
    else{setRel(x=>x&&{...x,liked:true});toast(fill(t(asUs?'fe.px.lkd.sentUs':'fe.px.lkd.sent'),{name}));}}
   catch(e){op.current=newOpId();const rule=e instanceof FeError?e.rule:undefined;
    if(rule==='likes_not_accepted'||rule==='couples_via_discover_only'||rule==='own_discover_off')setWhy(rule);

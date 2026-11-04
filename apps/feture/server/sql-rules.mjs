@@ -84,3 +84,7 @@ export const staffOwnAccount = (other, account) => `(${other} = ${account} or ex
  * with them) or a paused couple counts nowhere while it lasts; nothing is deleted, so it all comes back when lifted.
  * @param {string} profile profile id expression */
 export const activeActor = profile => `exists (select 1 from feture.profile ap where ap.id = ${profile} and ap.state = 'active')`;
+
+/** A couple's name as shown now in notifications, approvals and emails (audit item 46): its current name; the name
+ * kept at the time only once the couple is deleted. @param {string} coupleId expr @param {string} kept the stored name expr */
+export const coupleNameNow = (coupleId, kept) => `coalesce((select cn.name from feture.profile cn where cn.id = ${coupleId} and cn.state <> 'deleted'), ${kept})`;

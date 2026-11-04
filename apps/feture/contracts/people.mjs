@@ -28,7 +28,8 @@ export const peopleCommands = {
     profile: true, write: true,
     input: z.strictObject({ opId, linkId: id, kind, mySide: side.optional() }).refine(sideFits, { message: 'side_rules', path: ['mySide'] }),
   },
-  'link.answerChange': { profile: true, write: true, input: z.strictObject({ opId, linkId: id, accept: z.boolean() }) },
+  // `kind`: the new kind the person saw; a proposal changed since is refused (audit item 21), for «нет» too.
+  'link.answerChange': { profile: true, write: true, input: z.strictObject({ opId, linkId: id, accept: z.boolean(), kind }) },
   'link.setVisibility': { profile: true, write: true, input: z.strictObject({ opId, linkId: id, vis }) },
   'link.remove': { profile: true, write: true, input: z.strictObject({ opId, linkId: id }) },
   'links.ofProfile': { profile: true, write: false, input: z.strictObject({ profileId: id }) },

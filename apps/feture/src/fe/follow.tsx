@@ -16,7 +16,10 @@ export function useFollow({profileId,name,onChange,inert}:{profileId:string,name
  const {call,acting}=useFe();const {t}=useI18n();const toast=useToast();const [busy,setBusy]=useState(false);
  const us=acting?.kind==='couple'&&!inert;
  const set=async(next:boolean,undo:boolean):Promise<boolean>=>{
-  try{await call('follow.set',{opId:newOpId(),profileId,on:next},ok);onChange(next);
+  try{const r=await call('follow.set',{opId:newOpId(),profileId,on:next},ok) as {pending?:unknown};
+   // The partner approves follows first (audit item 20): nothing changes yet, the partner decides.
+   if(r.pending){toast(t('fe.gal.pendingPartner'),{type:'info'});return true;}
+   onChange(next);
    if(!undo)toast(t((next?'fe.px.fl.on':'fe.px.fl.off')+(us?'Us':'')).replace('{name}',name),{type:'ok',action:{label:t('fe.mx.undo'),fn:()=>void set(!next,true)}});
    return true;}
   catch(e){toast(feErrorMessage(e,t),{type:'err'});return false;}};

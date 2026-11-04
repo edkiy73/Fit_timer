@@ -556,7 +556,9 @@ function Likes({onCount,toDiscover}:{onCount:(n:number)=>void,toDiscover:()=>voi
   try{await call('like.send',{opId:newOpId(),profileId:c.id,source:source==='profile'?'profile':'likes'},likeRes);load();}catch(e){toast(pxError(e,t),{type:'err'});}};
  const back=async(c:Card)=>{if(busy)return;setBusy(c.id);
   try{const r=await call('like.send',{opId:newOpId(),profileId:c.id,source:'likes'},likeRes);setInc(l=>{const n=l?.filter(x=>x.profile.id!==c.id)??null;onCount(n?.length??0);return n;});
-   if(r.state==='matched')setMatch({card:c,...(r.conversationId?{conversationId:r.conversationId}:{})});else toast(fill(t(us?'fe.px.lkd.sentUs':'fe.px.lkd.sent'),{name:cname(c)}));}
+   if(r.state==='matched')setMatch({card:c,...(r.conversationId?{conversationId:r.conversationId}:{})});
+   else if(r.state==='pending')toast(t('fe.gal.pendingPartner'),{type:'info'});
+   else toast(fill(t(us?'fe.px.lkd.sentUs':'fe.px.lkd.sent'),{name:cname(c)}));}
   catch(e){toast(pxError(e,t),{type:'err'});}finally{setBusy('');}};
  const takeBack=useTakeBackLike();
  const unlike=async(c:Card,source?:string|null)=>{if(busy)return;setBusy(c.id);

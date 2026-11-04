@@ -2,6 +2,7 @@
 /** Slice E: couple commands of `POST /api/fe` (S2-CATALOG «E. Пары»). Invitations belong to accounts (no acting
  * profile); everything done as the couple needs `X-Fe-Profile` of the couple. */
 import * as z from 'zod';
+import { OLD_MODE, SWITCHABLE } from './_approve.mjs';
 import { id, opId } from './platform.mjs';
 
 /** 32 random bytes, base64url. */
@@ -16,7 +17,12 @@ export const couplesCommands = {
   'couple.inviteWithdraw': { profile: false, write: true, input: z.strictObject({ opId, inviteId: id }) },
   'couple.inviteAnswer': { profile: false, write: true, input: z.strictObject({ opId, inviteId: id, accept: z.boolean() }) },
   'couple.get': { profile: true, write: false, allowPaused: true, input: z.strictObject({}) },
-  'couple.setApproval': { profile: true, write: true, input: z.strictObject({ opId, approvesPartner: z.boolean() }) },
+  // What I approve before my partner's action as the couple applies (audit item 20): the points, or the old on/off.
+  'couple.setApproval': {
+    profile: true, write: true,
+    input: z.strictObject({ opId, approvesPartner: z.boolean().optional(), scope: z.array(z.enum(SWITCHABLE)).max(SWITCHABLE.length).transform(v => [...new Set(v)]).optional() })
+      .refine(v => v.scope !== undefined || v.approvesPartner !== undefined, { message: 'scope_required', path: ['scope'] }),
+  },
   'couple.stop': { profile: true, write: true, input: z.strictObject({ opId, confirm: z.literal(true) }) },
   'couple.restore': { profile: true, write: true, allowPaused: true, input: z.strictObject({ opId }) },
   // «Не восстанавливать» on a paused couple: it can come back only if both agree, so one «no» ends it for good.

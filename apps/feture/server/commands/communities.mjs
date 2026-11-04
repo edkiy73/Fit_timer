@@ -330,6 +330,67 @@ function resubmitState(c) {
   };
 }
 
+/** Applies an owner's edit of a community: minor fields now, name / description / cover / wider privacy wait for staff
+ * while the published version stays (community.update, and its partner approval once agreed). @param {Q} q
+ * @param {Acting} acting @param {any} input */
+async function updateCommunity(q, acting, input) {
+  const [c] = await q.query(`select * from feture.community where id = $1 for update`, [input.communityId]);
+  if (c.rev !== input.rev) fail(409, 'conflict', { rev: c.rev });
+  const { opId: _, communityId: __, rev: ___, ...f } = input;
+  await checkCommunityRefs(q, c.owner_profile_id, acting.accountId, f);
+  // A new name must be free now, among other communities' names and their renames waiting for staff too.
+  if (f.name !== undefined && f.name.toLowerCase() !== String(c.name).toLowerCase() && await nameTaken(q, f.name, c.id)) fail(409, 'conflict', NAME_TAKEN);
+  if (f.privacy === 'open') f.joinQuestion = null; // an open community has no join question
+  /** @type {Record<string, unknown>} */
+  const now = /** @type {Record<string, unknown>} */ ({}), later = /** @type {Record<string, unknown>} */ ({});
+  for (const [k, v] of Object.entries(f)) {
+    if (v === undefined) continue;
+    const major = c.state === 'published' && (MAJOR.includes(k) || (k === 'privacy' && PRIVACY.indexOf(String(v)) > PRIVACY.indexOf(c.privacy)));
+    (major ? later : now)[k] = v;
+  }
+  // A join question that comes with opening the community waits together with the privacy change.
+  if ('privacy' in later && 'joinQuestion' in now) { later.joinQuestion = now.joinQuestion; delete now.joinQuestion; }
+  if (Object.keys(now).length) {
+    const keys = Object.keys(now);
+    await q.query(
+      `update feture.community set ${keys.map((k, i) => `${COLS[/** @type {keyof typeof COLS} */ (k)]} = $${i + 2}`).join(', ')}, rev = rev + 1, updated_at = now() where id = $1`,
+      [c.id, ...keys.map(k => now[k])]);
+  }
+  if (Object.keys(later).length) {
+    // The published version stays until staff check the new name, description, cover or wider privacy.
+    await q.query(`update feture.community set pending_change = coalesce(pending_change, '{}'::jsonb) || $2::jsonb, rev = rev + 1 where id = $1`, [c.id, JSON.stringify(later)]);
+    await enqueue(q, 'moderation.community', c.owner_profile_id, { communityId: c.id, change: true });
+  }
+  // Members hear that the rules changed (audit item 39); the order of the points does not count as a change.
+  const sorted = (/** @type {unknown} */ r) => JSON.stringify([...(Array.isArray(r) ? r : [])].map(String).sort());
+  if (c.state === 'published' && 'rules' in now && sorted(now.rules) !== sorted(c.rules)) {
+    await enqueue(q, 'community.rulesChanged', c.owner_profile_id, { communityId: c.id, by: acting.accountId });
+  }
+  const [{ rev }] = await q.query('select rev from feture.community where id = $1', [c.id]);
+  return { rev, review: Object.keys(later) };
+}
+
+/** What a couple's community edit asks the partner first (audit item 40). */
+const PARTNER_FIELDS = ['name', 'description', 'coverAssetId', 'rules', 'privacy', 'joinQuestion'];
+
+registerApprovalKind('community.update', {
+  apply: async (q, row) => {
+    const c = /** @type {any} */ (row.change);
+    const acting = /** @type {Acting} */ (Object.freeze({ profileId: row.profile_id, accountId: row.requested_by, kind: 'couple', state: 'active', partnerAccountId: null, partnerApproves: false, writable: true }));
+    const { rev, ...fields } = c;
+    await updateCommunity(q, acting, { communityId: row.target_id, rev, ...fields });
+  },
+  // Changed while the partner was deciding: the agreement is stale (by design).
+  version: async (q, row) => String((await q.query('select rev from feture.community where id = $1', [row.target_id]))[0]?.rev ?? 'gone'),
+  preview: async (q, row) => {
+    const [c] = await q.query(`select name, description, rules, privacy, join_question from feture.community where id = $1`, [row.target_id]);
+    const ch = /** @type {any} */ (row.change);
+    const was = /** @type {Record<string, unknown>} */ ({ name: c?.name, description: c?.description, rules: c?.rules, privacy: c?.privacy, joinQuestion: c?.join_question, coverAssetId: undefined });
+    return { object: { type: 'community', id: row.target_id, title: c?.name ?? null, state: c ? 'ok' : 'deleted' },
+      rows: PARTNER_FIELDS.filter(k => ch[k] !== undefined).map(k => ({ field: k, before: was[k] ?? null, after: ch[k] })) };
+  },
+});
+
 /** @type {Record<keyof typeof communitiesCommands, Command['run']>} */
 const run = {
   async 'community.create'(q, { acting: a, input }) {
@@ -347,41 +408,22 @@ const run = {
     const acting = need(a);
     await requireUnrestricted(q, acting, 'communities');
     await requireHost(q, input.communityId, acting, 'owner');
-    const [c] = await q.query(`select * from feture.community where id = $1 for update`, [input.communityId]);
-    if (c.rev !== input.rev) fail(409, 'conflict', { rev: c.rev });
-    const { opId: _, communityId: __, rev: ___, ...f } = input;
-    await checkCommunityRefs(q, c.owner_profile_id, acting.accountId, f);
-    // A new name must be free now, among other communities' names and their renames waiting for staff too.
-    if (f.name !== undefined && f.name.toLowerCase() !== String(c.name).toLowerCase() && await nameTaken(q, f.name, c.id)) fail(409, 'conflict', NAME_TAKEN);
-    if (f.privacy === 'open') f.joinQuestion = null; // an open community has no join question
-    /** @type {Record<string, unknown>} */
-    const now = /** @type {Record<string, unknown>} */ ({}), later = /** @type {Record<string, unknown>} */ ({});
-    for (const [k, v] of Object.entries(f)) {
-      if (v === undefined) continue;
-      const major = c.state === 'published' && (MAJOR.includes(k) || (k === 'privacy' && PRIVACY.indexOf(String(v)) > PRIVACY.indexOf(c.privacy)));
-      (major ? later : now)[k] = v;
+    // A couple's community: its name, description, cover, rules and privacy wait for the partner first («Правки
+    // сообщества», audit item 40), then go to staff as usual; topics, place and plate apply now.
+    const asked = PARTNER_FIELDS.filter(k => input[k] !== undefined);
+    if (asked.length && needsPartner(acting, 'community.update')) {
+      const [c0] = await q.query(`select rev from feture.community where id = $1 for update`, [input.communityId]);
+      if (c0.rev !== input.rev) fail(409, 'conflict', { rev: c0.rev });
+      const rest = Object.fromEntries(Object.entries(input).filter(([k]) => !PARTNER_FIELDS.includes(k)));
+      const minor = Object.keys(rest).filter(k => !['opId', 'communityId', 'rev'].includes(k)).length
+        ? await updateCommunity(q, acting, /** @type {any} */ (rest)) : { rev: input.rev };
+      const change = Object.fromEntries(asked.map(k => [k, input[k]]));
+      return { rev: minor.rev, review: [], pending: await requestApproval(q, acting, { kind: 'community.update', targetType: 'community', targetId: input.communityId,
+        change: { ...change, rev: minor.rev }, summary: asked }) };
     }
-    // A join question that comes with opening the community waits together with the privacy change.
-    if ('privacy' in later && 'joinQuestion' in now) { later.joinQuestion = now.joinQuestion; delete now.joinQuestion; }
-    if (Object.keys(now).length) {
-      const keys = Object.keys(now);
-      await q.query(
-        `update feture.community set ${keys.map((k, i) => `${COLS[/** @type {keyof typeof COLS} */ (k)]} = $${i + 2}`).join(', ')}, rev = rev + 1, updated_at = now() where id = $1`,
-        [c.id, ...keys.map(k => now[k])]);
-    }
-    if (Object.keys(later).length) {
-      // The published version stays until staff check the new name, description, cover or wider privacy.
-      await q.query(`update feture.community set pending_change = coalesce(pending_change, '{}'::jsonb) || $2::jsonb, rev = rev + 1 where id = $1`, [c.id, JSON.stringify(later)]);
-      await enqueue(q, 'moderation.community', c.owner_profile_id, { communityId: c.id, change: true });
-    }
-    // Members hear that the rules changed (audit item 39); the order of the points does not count as a change.
-    const sorted = (/** @type {unknown} */ r) => JSON.stringify([...(Array.isArray(r) ? r : [])].map(String).sort());
-    if (c.state === 'published' && 'rules' in now && sorted(now.rules) !== sorted(c.rules)) {
-      await enqueue(q, 'community.rulesChanged', c.owner_profile_id, { communityId: c.id, by: acting.accountId });
-    }
-    const [{ rev }] = await q.query('select rev from feture.community where id = $1', [c.id]);
-    return { rev, review: Object.keys(later) };
+    return updateCommunity(q, acting, input);
   },
+
 
   async 'community.resubmit'(q, { acting: a, input }) {
     const acting = need(a);

@@ -369,6 +369,12 @@ const RAW = /** @type {Record<string, any>} */ ({
   'decide.joint.link.visibility': { text: T('{name} предлагает показать связь шире', '{name} suggests showing a link more widely') },
   'decide.joint.location.set': { text: T('{name} предлагает поделиться местом пары', '{name} suggests sharing the couple’s location') },
   'decide.joint.chat.request': { text: T('{name} предлагает написать от пары', '{name} suggests messaging for the couple') },
+  'decide.joint.reply.create': { text: T('{name} предлагает ответить от пары', '{name} suggests replying for the couple') },
+  'decide.joint.like.send': { text: T('{name} предлагает поставить лайк от пары', '{name} suggests a like for the couple') },
+  'decide.joint.follow.set': { text: T('{name} предлагает подписаться от пары', '{name} suggests following for the couple') },
+  'decide.joint.link.change': { text: T('{name} предлагает изменить вид связи', '{name} suggests changing a link’s kind') },
+  'decide.joint.link.changeAnswer': { text: T('{name} предлагает согласиться на новый вид связи', '{name} suggests agreeing to a link’s new kind') },
+  'decide.joint.community.update': { text: T('{name} предлагает изменить сообщество пары', '{name} suggests editing the couple’s community') },
 });
 
 /** Which data field picks a subtype of a type (`type.sub` in the catalog). */

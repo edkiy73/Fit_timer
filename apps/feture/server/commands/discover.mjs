@@ -84,6 +84,21 @@ async function writeLocation(q, profileId, accountId, lat, lon) {
 }
 
 // Sharing a couple's location is a widening: it waits for the partner who asks to approve changes.
+registerApprovalKind('like.send', {
+  // The other side sees nothing while it waits; once the partner agrees it goes as if sent now (a match, if mutual).
+  apply: async (q, row) => {
+    const acting = /** @type {Acting} */ (Object.freeze({ profileId: row.profile_id, accountId: row.requested_by, kind: 'couple', state: 'active', partnerAccountId: null, partnerApproves: false, writable: true }));
+    // sendLike records a Discover decision itself; a like from the deck already left one.
+    await q.query(`delete from feture.discover_decision where profile_id = $1 and target_profile_id = $2 and decision = 'like'`, [row.profile_id, row.target_id]);
+    await sendLike(q, acting, /** @type {string} */ (row.target_id), /** @type {any} */ (row.change).source ?? 'profile');
+  },
+  version: async (q, row) => ((await q.query(`select state from feture.profile where id = $1`, [row.target_id]))[0]?.state ?? 'gone'),
+  preview: async (q, row) => {
+    const [p] = await q.query(`select id, kind, handle, name from feture.profile where id = $1`, [row.target_id]);
+    return { object: { type: 'profile', id: row.target_id, title: p?.name ?? null, state: p ? 'ok' : 'deleted' }, subject: p ?? null, rows: [] };
+  },
+});
+
 registerApprovalKind('location.set', {
   apply: async (q, row) => { const c = /** @type {any} */ (row.change); await writeLocation(q, row.profile_id, row.requested_by, c.lat, c.lon); },
   version: async (q, row) => { const [l] = await q.query(`select lat, lon from feture.profile_location where profile_id = $1`, [row.profile_id]); return l ? `${l.lat},${l.lon}` : 'none'; },
@@ -378,6 +393,11 @@ const run = {
       await decide(q, acting, input.profileId, 'pass', 'discover');
       return { decision: 'pass' };
     }
+    // A couple's like may wait for the partner («Лайки», audit item 20): the card leaves the deck, the like waits.
+    if (needsPartner(acting, 'like.send')) {
+      await decide(q, acting, input.profileId, 'like', 'discover');
+      return { decision: 'like', pending: await requestApproval(q, acting, { kind: 'like.send', targetType: 'profile', targetId: input.profileId, change: { source: 'discover' }, summary: [] }) };
+    }
     return { decision: 'like', ...(await sendLike(q, acting, input.profileId, 'discover')) };
   },
 
@@ -425,7 +445,11 @@ const run = {
   },
 
   async 'like.send'(q, { acting: a, input }) {
-    return sendLike(q, need(a), input.profileId, input.source);
+    const acting = need(a);
+    if (needsPartner(acting, 'like.send')) {
+      return { state: 'pending', pending: await requestApproval(q, acting, { kind: 'like.send', targetType: 'profile', targetId: input.profileId, change: { source: input.source }, summary: [] }) };
+    }
+    return sendLike(q, acting, input.profileId, input.source);
   },
 
   async 'like.withdraw'(q, { acting: a, input }) {

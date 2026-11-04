@@ -47,7 +47,7 @@ test('links: propose, settings gate, answer in «Нужно решить», the 
     // A change of kind waits for the other side.
     await call('ub', b, { action: 'link.proposeChange', opId: op(), linkId: l.id, kind: 'friend' });
     assert.ok((await call('ua', null, { action: 'decide.list' })).items.some((/** @type {any} */ x) => x.kind === 'linkChange'));
-    await call('ua', a, { action: 'link.answerChange', opId: op(), linkId: l.id, accept: true });
+    await call('ua', a, { action: 'link.answerChange', opId: op(), linkId: l.id, accept: true, kind: 'friend' });
     assert.equal((await call('uc', c, { action: 'links.ofProfile', profileId: a })).items[0].kind, 'friend');
 
     // Settings: closed, or only from people one follows. Never with one's own partner.
@@ -198,11 +198,11 @@ test('stage 4: a change of link kind — a «no» keeps the link exactly as it w
     const row = async () => (await db.query('select kind, a_side, b_side, state, change from feture.profile_link where id = $1', [l.id]))[0];
     const before = await row();
     await call('ua', a, { action: 'link.proposeChange', opId: op(), linkId: l.id, kind: 'friend' });
-    assert.equal((await call('ub', b, { action: 'link.answerChange', opId: op(), linkId: l.id, accept: false })).accepted, false);
+    assert.equal((await call('ub', b, { action: 'link.answerChange', opId: op(), linkId: l.id, accept: false, kind: 'friend' })).accepted, false);
     assert.deepEqual(await row(), { ...before, change: null }, 'declined: kind and sides stay');
-    assert.equal((await call('ub', b, { action: 'link.answerChange', opId: op(), linkId: l.id, accept: true })).rule, 'no_change', 'nothing left to accept');
+    assert.equal((await call('ub', b, { action: 'link.answerChange', opId: op(), linkId: l.id, accept: true, kind: 'friend' })).rule, 'no_change', 'nothing left to accept');
     await call('ua', a, { action: 'link.proposeChange', opId: op(), linkId: l.id, kind: 'friend' });
-    await call('ub', b, { action: 'link.answerChange', opId: op(), linkId: l.id, accept: true });
+    await call('ub', b, { action: 'link.answerChange', opId: op(), linkId: l.id, accept: true, kind: 'friend' });
     assert.deepEqual([(await row()).kind, (await row()).a_side, (await row()).b_side], ['friend', null, null]);
     while ((await drain(db, notifyHandlers(db), { limit: 50 })) > 0) { /* until empty */ }
     const told = (await call('ua', null, { action: 'notifications.list' })).items.filter((/** @type {any} */ x) => x.type === 'linkChanged');

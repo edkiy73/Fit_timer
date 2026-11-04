@@ -667,6 +667,57 @@ export function readCursor(c) {
   fail(400, 'invalid_input', { fields: ['cursor'] });
 }
 
+/** What a reply needs before it goes (reply.create, and its approval once the partner agrees): a published post the
+ * profile may see and write under, a published parent it is not blocked from. @param {Q} q @param {Acting} viewer
+ * @param {{postId: string, parentId?: string | null}} input @returns {Promise<{p: any, parentAuthor: string | null}>} */
+async function replyChecks(q, viewer, input) {
+  const p = await visiblePost(q, input.postId, viewer);
+  if (p.state !== 'published') fail(409, 'conflict', { state: p.state });
+  if (p.community_id) await requireCommunityWriter(q, p.community_id, viewer);
+  let parentAuthor = null;
+  if (input.parentId) {
+    const [parent] = await q.query(`select author_profile_id from feture.reply where id = $1 and post_id = $2 and state = 'published'`, [input.parentId, input.postId]);
+    if (!parent) fail(404, 'not_found');
+    const [{ b }] = await q.query('select feture.blocked($1, $2) b', [viewer.profileId, parent.author_profile_id]);
+    if (b) fail(404, 'not_found');
+    parentAuthor = parent.author_profile_id;
+  }
+  return { p, parentAuthor };
+}
+
+/** Writes a reply and tells the post's author, the replied-to author and the people mentioned. @param {Q} q
+ * @param {Acting} viewer @param {{postId: string, parentId?: string | null, body: string}} input */
+async function createReply(q, viewer, input) {
+  const { p, parentAuthor } = await replyChecks(q, viewer, input);
+  const [r] = await q.query(
+    `insert into feture.reply (post_id, parent_id, author_profile_id, sent_by, body) values ($1, $2, $3, $4, $5) returning id`,
+    [input.postId, input.parentId ?? null, viewer.profileId, viewer.accountId, input.body]);
+  const told = new Set([viewer.profileId]);
+  for (const to of [parentAuthor, p.owner_profile_id]) {
+    if (to && !told.has(to)) { told.add(to); await enqueue(q, 'reply.created', to, { postId: input.postId, replyId: r.id, from: viewer.profileId }); }
+  }
+  for (const m of await writeMentions(q, 'reply', r.id, input.body, viewer.profileId)) {
+    await q.query(`update feture.mention set notified = true where source_type = 'reply' and source_id = $1 and profile_id = $2`, [r.id, m]);
+    await enqueue(q, 'mention.created', m, { postId: input.postId, replyId: r.id, from: viewer.profileId });
+  }
+  return { id: r.id };
+}
+
+registerApprovalKind('reply.create', {
+  apply: async (q, row) => {
+    const c = /** @type {any} */ (row.change);
+    const viewer = /** @type {Acting} */ (Object.freeze({ profileId: row.profile_id, accountId: row.requested_by, kind: 'couple', state: 'active', partnerAccountId: null, partnerApproves: false, writable: true }));
+    await createReply(q, viewer, { postId: c.postId, parentId: c.parentId, body: c.body });
+  },
+  // The post (or the reply answered) gone or changed state since: it no longer applies.
+  version: async (q, row) => ((await q.query(`select state from feture.post where id = $1`, [row.target_id]))[0]?.state ?? 'gone'),
+  preview: async (q, row) => {
+    const c = /** @type {any} */ (row.change);
+    const [p] = await q.query(`select id, coalesce(nullif(title, ''), left(body, 120)) title, state from feture.post where id = $1`, [row.target_id]);
+    return { object: { type: 'post', id: row.target_id, title: p?.title ?? null, state: p?.state === 'published' ? 'ok' : 'unavailable' }, reply: { body: c.body }, rows: [] };
+  },
+});
+
 /** @type {Record<keyof typeof postsCommands, Command['run']>} */
 const run = {
   async 'post.saveDraft'(q, { acting: a, input }) {
@@ -1013,29 +1064,13 @@ const run = {
   async 'reply.create'(q, { acting: a, input }) {
     const viewer = need(a);
     await requireUnrestricted(q, viewer, 'comments');
-    const p = await visiblePost(q, input.postId, viewer);
-    if (p.state !== 'published') fail(409, 'conflict', { state: p.state });
-    if (p.community_id) await requireCommunityWriter(q, p.community_id, viewer);
-    let parentAuthor = null;
-    if (input.parentId) {
-      const [parent] = await q.query(`select author_profile_id from feture.reply where id = $1 and post_id = $2 and state = 'published'`, [input.parentId, input.postId]);
-      if (!parent) fail(404, 'not_found');
-      const [{ b }] = await q.query('select feture.blocked($1, $2) b', [viewer.profileId, parent.author_profile_id]);
-      if (b) fail(404, 'not_found');
-      parentAuthor = parent.author_profile_id;
+    // A couple's reply may wait for the partner («Комментарии», audit item 20); its mentions go only once it is out.
+    if (needsPartner(viewer, 'reply.create')) {
+      await replyChecks(q, viewer, input);
+      return { pending: await requestApproval(q, viewer, { kind: 'reply.create', targetType: 'post', targetId: input.postId,
+        change: { postId: input.postId, parentId: input.parentId ?? null, body: input.body }, summary: [input.body.slice(0, 80)] }) };
     }
-    const [r] = await q.query(
-      `insert into feture.reply (post_id, parent_id, author_profile_id, sent_by, body) values ($1, $2, $3, $4, $5) returning id`,
-      [input.postId, input.parentId ?? null, viewer.profileId, viewer.accountId, input.body]);
-    const told = new Set([viewer.profileId]);
-    for (const to of [parentAuthor, p.owner_profile_id]) {
-      if (to && !told.has(to)) { told.add(to); await enqueue(q, 'reply.created', to, { postId: input.postId, replyId: r.id, from: viewer.profileId }); }
-    }
-    for (const m of await writeMentions(q, 'reply', r.id, input.body, viewer.profileId)) {
-      await q.query(`update feture.mention set notified = true where source_type = 'reply' and source_id = $1 and profile_id = $2`, [r.id, m]);
-      await enqueue(q, 'mention.created', m, { postId: input.postId, replyId: r.id, from: viewer.profileId });
-    }
-    return { id: r.id };
+    return createReply(q, viewer, input);
   },
 
   async 'reply.edit'(q, { acting: a, input }) {
