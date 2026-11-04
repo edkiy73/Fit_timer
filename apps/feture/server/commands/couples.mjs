@@ -7,6 +7,7 @@ import { enqueue } from '../outbox.mjs';
 import { closePending, narrowCouple } from '../approvals.mjs';
 import { closeAll } from './access.mjs';
 import { handleState } from './me.mjs';
+import { withFaces } from './faces.mjs';
 import { randomBytes } from 'node:crypto';
 import { sha256 } from '../hash.mjs';
 import { readAbout } from '../notify.mjs';
@@ -319,21 +320,23 @@ const run = {
     return { state: 'accepted', profileId };
   },
 
-  async 'couple.get'(q, { acting: a }) {
+  async 'couple.get'(q, { acting: a, cfg }) {
     const acting = need(a);
     coupleOnly(acting);
     const [p] = await q.query(`select id, handle, name, chosen_name, state, paused_at, restore_until, ended_at, created_at from feture.profile where id = $1`, [acting.profileId]);
     const members = await q.query(
       `select m.account_id = $2 me, coalesce(m.approves_before_pause, m.approves_partner) approves_partner,
-         coalesce(m.approves_scope_before_pause, m.approves_scope) approves_scope, pp.id profile_id, pp.handle, pp.name,
+         coalesce(m.approves_scope_before_pause, m.approves_scope) approves_scope, pp.id, pp.id profile_id, pp.handle, pp.name,
          exists (select 1 from feture.couple_restore r where r.profile_id = m.profile_id and r.account_id = m.account_id) restore_agreed,
          exists (select 1 from feture.couple_purge x where x.profile_id = m.profile_id and x.account_id = m.account_id) purge_agreed
        from feture.profile_member m join feture.account a on a.id = m.account_id join feture.profile pp on pp.id = a.person_profile_id
        where m.profile_id = $1 and m.state = 'active' order by m.account_id = $2 desc`, [acting.profileId, acting.accountId]);
+    // Each partner's face (owner 05.11.2026: the pair screen showed initials while both had photos).
+    await withFaces(q, cfg.media, { profileId: acting.profileId, accountId: acting.accountId }, members, m => m);
     return {
       couple: {
         id: p.id, handle: p.handle, name: p.name, chosenName: p.chosen_name, state: p.state, since: p.created_at, pausedAt: p.paused_at, restoreUntil: p.restore_until, endedAt: p.ended_at,
-        members: members.map(m => ({ me: m.me, profileId: m.profile_id, handle: m.handle, name: m.name, approvesPartner: m.approves_partner, approvesScope: m.approves_scope ?? [], restoreAgreed: m.restore_agreed, purgeAgreed: m.purge_agreed })),
+        members: members.map(m => ({ me: m.me, profileId: m.profile_id, handle: m.handle, name: m.name, avatar: m.avatar ?? null, approvesPartner: m.approves_partner, approvesScope: m.approves_scope ?? [], restoreAgreed: m.restore_agreed, purgeAgreed: m.purge_agreed })),
       },
     };
   },

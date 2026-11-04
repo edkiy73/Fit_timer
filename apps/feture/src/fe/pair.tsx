@@ -23,7 +23,7 @@ const who=z.object({id:z.uuid(),handle:z.string().nullable(),name:z.string().nul
 const invitesRes=z.object({ok:z.literal(true),outgoing:z.array(z.object({id:z.uuid(),state:z.string(),created_at:z.string(),profile:who})),incoming:z.array(z.object({id:z.uuid(),created_at:z.string(),profile:who})),
  link:z.object({id:z.uuid(),createdAt:z.string(),expiresAt:z.string()}).nullable().optional()});
 const coupleRes=z.object({ok:z.literal(true),couple:z.object({id:z.uuid(),handle:z.string().nullable().optional(),name:z.string().nullable(),chosenName:z.string().optional(),state:z.string(),since:z.string(),restoreUntil:z.string().nullable(),endedAt:z.string().nullable().optional(),
- members:z.array(z.object({me:z.boolean(),profileId:z.uuid(),handle:z.string().nullable(),name:z.string().nullable(),approvesPartner:z.boolean(),approvesScope:z.array(z.string()).optional(),restoreAgreed:z.boolean(),purgeAgreed:z.boolean().optional()}))})});
+ members:z.array(z.object({me:z.boolean(),profileId:z.uuid(),handle:z.string().nullable(),name:z.string().nullable(),avatar:z.string().nullable().optional(),approvesPartner:z.boolean(),approvesScope:z.array(z.string()).optional(),restoreAgreed:z.boolean(),purgeAgreed:z.boolean().optional()}))})});
 const ok=z.object({ok:z.literal(true)}).passthrough();
 const settingsRes=z.object({ok:z.literal(true),settings:z.object({discoverMode:z.string(),requestsFrom:z.enum(['all','matches','none']).optional()}).passthrough()});
 const listRes=z.object({ok:z.literal(true),items:z.array(z.unknown())}).passthrough();
@@ -140,7 +140,7 @@ function PairMain({onOpen}:{onOpen:(id:string)=>void}){
   return <>
    <Bar title={t('fe.pair.settings')} back="/n/me"/>
    <View><div className="pair-wrap">
-    <Scene me={{name:nameOf(me),id:me?.profileId}} other={{name:nameOf(other),id:other?.profileId}} state="on"/>
+    <Scene me={{name:nameOf(me),id:me?.profileId,src:me?.avatar??null}} other={{name:nameOf(other),id:other?.profileId,src:other?.avatar??null}} state="on"/>
     <H level={2} className="t center">{c.name||`${nameOf(me)} ${t('fe.pair.and')} ${nameOf(other)}`}</H>
     <Note className="center">{t('fe.pair.since').replace('{date}',new Date(c.since).toLocaleDateString(locale==='en'?'en':'ru',{day:'numeric',month:'long',year:'numeric'}))}</Note>
     <div className="pair-sets">
@@ -254,7 +254,7 @@ function RestoreView({coupleId,extra,onLeave}:{coupleId:string,extra?:ReactNode,
   {askDecline&&<Ask icon={Users} danger title={t('fe.ap.restore.declineTitle')} text={t('fe.ap.restore.declineText',{name:otherName})} ok={t('fe.ap.restore.declineOk')}
    busy={busy} onOk={()=>void decline()} onCancel={()=>setAskDecline(false)}/>}
   <View className="nodock"><div className="pair-wrap">
-   <Scene me={{name:nameOf(me),id:me?.profileId}} other={{name:otherName,id:other?.profileId}}/>
+   <Scene me={{name:nameOf(me),id:me?.profileId,src:me?.avatar??null}} other={{name:otherName,id:other?.profileId,src:other?.avatar??null}}/>
    <H level={2} className="t center">{c.name||`${nameOf(me)} ${t('fe.pair.and')} ${otherName}`}</H>
    {c.state==='paused'&&c.endedAt?<>
     <p className="lead center">{t('fe.ap.archive.lead',{date:until})}</p>
@@ -333,7 +333,7 @@ function CreatedView({c,onSettings,onDone}:{c:Couple,onSettings:()=>void,onDone:
  return <>
   <Bar title={t('fe.c6.made.title')} onBack={onDone}/>
   <View className="nodock"><Stack gap={3}>
-   <Card list><Row av={<Av name={name} seed={c.id} couple={[nameOf(me),nameOf(other)]}/>} title={name} sub={c.handle?'@'+c.handle:undefined}/></Card>
+   <Card list><Row av={<Av name={name} seed={c.id} couple={[nameOf(me),nameOf(other)]} halves={me&&other?[{name:nameOf(me),src:me.avatar??null},{name:nameOf(other),src:other.avatar??null}]:undefined}/>} title={name} sub={c.handle?'@'+c.handle:undefined}/></Card>
    <Card list>
     <Row icon={Check} title={t('fe.c6.made.approval')} sub={t('fe.c6.made.approvalSub')}/>
     <Row icon={Lock} title={t('fe.c6.made.access')} sub={t('fe.c6.made.accessSub')}/>
