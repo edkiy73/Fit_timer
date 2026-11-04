@@ -9,7 +9,7 @@ import {Ban,Bell,Calendar,Globe,Image as FeedIcon,LogOut,MessageCircle,Plus,User
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import {FeError} from '../feture/fe-api';
 import {feErrorMessage} from '../feture/fe-api';
-import {Av,Brand,Btn,Empty,H,Skel} from './kit';
+import {ActingAv,Av,Brand,Btn,Empty,H,Skel} from './kit';
 import {FeSessionProvider,useFe,useLive} from './session';
 import {sweepDrafts} from './drafts';
 import {countsRes} from './inbox';
@@ -284,7 +284,7 @@ function FeLayout(){
    <Btn className="create" icon={Plus} aria-haspopup="dialog" onClick={()=>setCreate(true)} aria-label={t('fe.create')}><span>{t('fe.create')}</span></Btn>
    <div className="sp"/>
    {acting&&<button type="button" className="mebtn" aria-haspopup={pair?'dialog':undefined} onClick={()=>pair?setActAs(true):navigate('/n/me')}>
-    <Av name={name} seed={acting.id} src={acting.avatar}/><span>{name}<small>{acting.kind==='couple'?t('fe.me.coupleProfile'):t('fe.me.personalProfile')}</small></span>
+    <ActingAv p={acting} size=""/><span>{name}<small>{acting.kind==='couple'?t('fe.me.coupleProfile'):t('fe.me.personalProfile')}</small></span>
    </button>}
   </aside>
   <main ref={main} className={(nodock?'main':'main has-dock')+(sbar?'':' hasbar')+(cta?' hascta':'')}>
@@ -297,7 +297,7 @@ function FeLayout(){
    {/* The dock's five columns come from base.css (.dock: repeat(5,1fr)) — FE_TABS has five tabs. */}
    {!nodock&&<nav className="dock" aria-label={t('fe.nav.aria')}>
     {FE_TABS.map(({id,icon:Icon})=><button key={id} type="button" className={(current===id?'on':'')+(id==='me'?' me-tab':'')} aria-label={label(id)} aria-current={current===id?'page':undefined} aria-haspopup={id==='me'&&pair?'dialog':undefined} onClick={()=>id==='me'&&pair?setActAs(true):go(id)}>
-     {id==='me'&&acting?<span className="dock-av"><Av name={name} seed={acting.id} src={acting.avatar}/></span>:<Icon/>}<span>{t('fe.nav.'+id)}</span>{em(badge(id))}
+     {id==='me'&&acting?<span className="dock-av"><ActingAv p={acting} size=""/></span>:<Icon/>}<span>{t('fe.nav.'+id)}</span>{em(badge(id))}
     </button>)}
    </nav>}
    {actAs&&<ActAsSheet onClose={()=>setActAs(false)}/>}

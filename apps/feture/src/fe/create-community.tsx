@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {CircleAlert,Clock,Image as ImageIcon,Lock,RefreshCw,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,AddCard,Av,Bar,Btn,Card,Chip,Chips,Counter,Empty,FilePick,Group,Input,Note,SelectRow as KitSelectRow,Skel,Stack,Swatches,TextArea,View,useLeaveGuard} from './kit';
+import {ActingAv,AddCard,Alert,Av,Bar,Btn,Card,Chip,Chips,Counter,Empty,FilePick,Group,Input,Note,SelectRow as KitSelectRow,Skel,Stack,Swatches,TextArea,useLeaveGuard,View} from './kit';
 import {useFe} from './session';
 import {Uploader} from './kit/Uploader';
 import {PhotoTiles} from './kit/PhotoTiles';
@@ -237,7 +237,7 @@ function CommunityForm({edit,reload}:{edit?:EditableCommunity&{rev:number},reloa
   {guard.node}
   <Bar title={edit?t('fe.ece.c.title'):t('fe.cc.title')} back small/>
   <div className="view nodock cta1"><div className="wrap">
-   {!edit&&couple&&acting&&<p className="as-line full"><Av name={acting.name} seed={acting.id} size="xs" src={acting.avatar}/><span>{t('fe.cc.asCouple')} <b>{acting.name}</b></span></p>}
+   {!edit&&couple&&acting&&<p className="as-line full"><ActingAv p={acting} size="xs"/><span>{t('fe.cc.asCouple')} <b>{acting.name}</b></span></p>}
    {edit&&published&&<Alert icon={Clock}>{t('fe.ece.c.reviewHint')}</Alert>}
    {edit&&edit.pendingChange!=null&&<Alert kind="warn" role="none" icon={Clock}>{t('fe.ece.c.pendingChange')}</Alert>}
    <Group><Card form>

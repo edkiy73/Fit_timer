@@ -47,7 +47,20 @@ export const platform = Object.fromEntries(
 /** Own profiles with their photo (the owner sees it while it is still being checked). @param {any} q @param {any} cfg @param {any[]} rows */
 async function cardsWithAvatars(q, cfg, rows) {
   const out = [];
-  for (const p of rows) out.push({ ...profileCard(p), avatar: await avatarSrc(q, cfg.media, p.avatar_asset_id, p.id) });
+  for (const p of rows) {
+    /** @type {Record<string, unknown>} */
+    const card = { ...profileCard(p), avatar: await avatarSrc(q, cfg.media, p.avatar_asset_id, p.id) };
+    // A couple without its own photo is drawn as two halves, each partner's photo or initial (owner 05.11.2026).
+    if (p.kind === 'couple') {
+      const ms = await q.query(
+        `select coalesce(nullif(pp.name, ''), pp.handle) "name", pp.avatar_asset_id
+         from feture.profile_member m join feture.account a on a.id = m.account_id
+         join feture.profile pp on pp.id = a.person_profile_id
+         where m.profile_id = $1 and m.state = 'active' order by m.joined_at nulls last`, [p.id]);
+      card.halves = await Promise.all(ms.map(async (/** @type {any} */ m) => ({ name: m.name, avatar: await avatarSrc(q, cfg.media, m.avatar_asset_id, p.id) })));
+    }
+    out.push(card);
+  }
   return out;
 }
 

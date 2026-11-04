@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Camera,ChevronRight,ClipboardList,Clock,Eye,HeartOff,Inbox,PenLine,Users,Newspaper,Settings,Star,Trash2,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Actions,AddCard,Alert,Ask as KitAsk,Av,Btn,Card,Empty,Group,H,IconBtn,PhotoAdd,PhotoSlot,PhotoSlots,PullRefresh,CheckList,RadioList,Row,Seg,SelectRow,Sheet,Skel,ToggleRow,Bar} from './kit';
+import {ActingAv,Actions,AddCard,Alert,Ask as KitAsk,Av,Bar,Btn,Card,CheckList,Empty,Group,H,IconBtn,PhotoAdd,PhotoSlot,PhotoSlots,PullRefresh,RadioList,Row,Seg,SelectRow,Sheet,Skel,ToggleRow} from './kit';
 import {MESSAGE_POINTS,MESSAGES_DEFAULT} from '../../contracts/_messages.mjs';
 import {AgeCheckLink,useAgeResume} from './age-check';
 import {dropReadCache,useFe,useLive,useShown} from './session';
@@ -117,7 +117,7 @@ export function MeTab(){
  const layerDots:Record<Layer,string>={profile:dots.links?t('fe.mx.dot.links'):'',priv:privOn&&dots.reqs?t('fe.mx.dot.reqs'):'',vis:dots.vis?t('fe.mx.dot.vis'):'',mine:''};
  return <>
   {/* Owner 29.10.2026: the same floating header as every tab — the avatar left of the name, glass round buttons. */}
-  <Bar title={name} lead={<Av name={name} seed={acting.id} src={avatarSrc}/>}
+  <Bar title={name} lead={<ActingAv p={{...acting,name,avatar:avatarSrc??null}} size=""/>}
    sub={couple?(acting.kind==='couple'?t('fe.me.weCouple'):t('fe.me.iPersonal')):t('fe.me.personalProfile')}
    {...(couple?{onTitle:()=>setSwitching(true),titleLabel:t('fe.mx.whose')}:{})}>
    <StaffEntry/>

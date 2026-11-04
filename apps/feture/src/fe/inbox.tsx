@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {AlarmClock,AtSign,Bell,Calendar,CalendarClock,CalendarX,Check,CircleCheck,Clock,Crown,EyeOff,Filter,Heart,Image as ImageIcon,LifeBuoy,Link2,LockOpen,MapPin,Megaphone,MessageCircle,Pencil,Shield,ShieldAlert,ShieldCheck,Trash2,TriangleAlert,UserCheck,UserMinus,Users,X,type LucideIcon} from 'lucide-react';
 import {DECIDE_KINDS,FILTERS as KINDS,actOf,destination,entryFor,noteLine,textOf,type Entry} from '../../contracts/notifications.mjs';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Actions,Answer,Av,Bar,Btn,Card,Chip,Chips,Empty,IconBtn,LoadMore,NoteDecision,NoteEvent,NoteNews,NoteResult,NoteSafety,NoteSummary,PersonLine,Pill,Row,SafetyDecision,SectionLabel,Seg,Sheet,Skel,View,useScrollTo,type NoteTone} from './kit';
+import {ActingAv,Actions,Answer,Av,Bar,Btn,Card,Chip,Chips,Empty,IconBtn,LoadMore,NoteDecision,NoteEvent,NoteNews,NoteResult,NoteSafety,NoteSummary,PersonLine,Pill,Row,SafetyDecision,SectionLabel,Seg,Sheet,Skel,type NoteTone,useScrollTo,View} from './kit';
 import {useFe,useLive,useRealtime} from './session';
 import {useSideNav} from './wide';
 import {useToast} from './toast';
@@ -301,7 +301,7 @@ export function InboxScreen(){
   return <>{first.map(decisionCard)}{items.filter(d=>!ORDER.includes(d.kind)).map(decisionCard)}</>;
  };
  const whomHead=(w:'me'|'couple',n:number)=><div className={'sec whom-sec'+(w==='couple'?' us':'')}>
-  {w==='couple'?<Av name={couple?.name??'?'} seed={couple?.id} size="xs" src={couple?.avatar}/>:<Av name={person?.name??'?'} seed={person?.id} size="xs" src={person?.avatar}/>}
+  {w==='couple'?(couple?<ActingAv p={couple} size="xs"/>:null):<Av name={person?.name??'?'} seed={person?.id} size="xs" src={person?.avatar}/>}
   <span>{w==='couple'?t('fe.ibx.whomCouple').replace('{name}',couple?.name??''):t('fe.ibx.whomMe')}</span><b>{n}</b>
  </div>;
  const filteredEmpty=<Empty icon={Filter} title={t('fe.ibx.filteredEmpty')}><Btn kind="text" auto onClick={()=>pickFilter('all')}>{t('fe.ibx.resetFilter')}</Btn></Empty>;

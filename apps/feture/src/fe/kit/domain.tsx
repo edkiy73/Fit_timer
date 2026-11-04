@@ -607,9 +607,11 @@ export function coupleNames(name:string):[string,string]|undefined{
 /** Who you act as, on every place you write from (the feed's «Что нового», a reply box, the chat input, a community's
  * «Новая тема»): the acting profile's picture — or, for a couple without one, both initials on the couple's plate.
  * Owner rule: there is no «от кого» picker anywhere; the dock's «Действовать как» decides, entries only show it. */
-export function ActingAv({p,size='sm'}:{p:{id:string,kind:string,name?:string|null|undefined,handle?:string|null|undefined,avatar?:string|null|undefined},size?:'xs'|'sm'|''}){
+export function ActingAv({p,size='sm'}:{p:{id:string,kind:string,name?:string|null|undefined,handle?:string|null|undefined,avatar?:string|null|undefined,
+ /** A couple's partners, for the two halves: each one's photo, or their initial (owner 05.11.2026: it showed one letter). */ halves?:{name:string|null,avatar?:string|null}[]|undefined},size?:'xs'|'sm'|''|'lg'|'xl'}){
  const name=p.name||(p.handle?'@'+p.handle:'?');
- return <Av name={name} seed={p.id} size={size} src={p.avatar} couple={p.kind==='couple'?coupleNames(name):undefined}/>;
+ const halves=p.kind==='couple'&&p.halves?.length===2?p.halves.map(h=>({name:h.name||'?',src:h.avatar??null})):undefined;
+ return <Av name={name} seed={p.id} size={size} src={p.avatar} halves={halves} couple={p.kind==='couple'?coupleNames(name):undefined}/>;
 }
 /** Who proposed a couple's change and which version of it this is (V21 jointReview / pairReview head). */
 export function ReviewMeta({by,version}:{by:ReactNode,version?:ReactNode}){
