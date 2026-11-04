@@ -66,7 +66,7 @@ export function MeV3Screen(){
    <Group><Seg value={tab} label={t('fe.mx.whose')} onChange={v=>setParams(v==='profile'?{}:{tab:v},{replace:true})}
     options={TABS.map(id=>({id,label:id==='mine'?t(cp?'fe.v3.mineUs':'fe.v3.mine'):t('fe.v3.tab.'+id),...(id==='privacy'&&waiting?.reqs?{n:waiting.reqs}:{})}))}/></Group>
    {tab==='profile'?<ProfileZone p={p} settings={settings} load={load} cp={cp} links={waiting?.links}/>
-    :tab==='privacy'?<PrivacyZone privOn={settings?settings.privateOn!==false:undefined} discover={settings?.discoverMode} cp={cp} reqs={waiting?.reqs}/>
+    :tab==='privacy'?<PrivacyZone discover={settings?.discoverMode} cp={cp} reqs={waiting?.reqs}/>
     :<MineZone cp={cp}/>}
   </View>
   {switching&&<ActAsSheet onClose={()=>setSwitching(false)}/>}
@@ -76,7 +76,7 @@ export function MeV3Screen(){
 type MeData=ReturnType<typeof useMe>;
 
 /** «Профиль» (owner 05.11.2026): «Как видят», the photos, then one list in the order the public profile shows it —
- * Основное · Обо мне · Данные · Связи · Интересы · Галерея; each part edits on its own screen, no «Редактировать». */
+ * Основное · Обо мне · Данные · Связи · Интересы · Галерея · Приватная часть; each part edits on its own screen. */
 function ProfileZone({p,settings,load,cp,links}:{p:MeData['p'],settings:MeData['settings'],load:()=>void,cp:boolean,links:number|undefined}){
  const {t}=useI18n();const navigate=useNavigate();const go=(to:string)=>()=>navigate(to);
  return <>
@@ -91,26 +91,22 @@ function ProfileZone({p,settings,load,cp,links}:{p:MeData['p'],settings:MeData['
    <Row icon={Link2} title={t('fe.v3.links')} badge={links||undefined} onClick={go('/n/me/links')}/>
    <Row icon={Sparkles} title={t('fe.v3.interests')} onClick={go('/n/me/interests')}/>
    <Row icon={Images} title={t('fe.mx.gal')} onClick={go('/n/me/new/gallery')}/>
+   <Row icon={Lock} tone="v" title={t('fe.m2.private')} val={settings?t(settings.privateOn!==false?'fe.m2.on':'fe.m2.off'):undefined} onClick={go('/n/me/new/private')}/>
   </Card></Group>
   <PairEntry plain/>
  </>;
 }
 
-/** «Приватность»: the private part and its accesses, then who can reach this profile. */
-function PrivacyZone({privOn,discover,cp,reqs}:{privOn:boolean|undefined,discover:string|undefined,cp:boolean,reqs:number|undefined}){
+/** «Приватность»: who reaches this profile and who sees its private part, one list (the part itself is a row of «Профиль»). */
+function PrivacyZone({discover,cp,reqs}:{discover:string|undefined,cp:boolean,reqs:number|undefined}){
  const {t}=useI18n();const navigate=useNavigate();const go=(to:string)=>()=>navigate(to);
  const a=useAccountSettings();
- return <>
-  <Group title={t('fe.v3.g.private')}><Card list>
-   <Row icon={Lock} tone="v" title={t('fe.m2.private')} val={privOn===undefined?undefined:t(privOn?'fe.m2.on':'fe.m2.off')} onClick={go('/n/me/new/private')}/>
-   <Row icon={KeyRound} title={t(cp?'fe.ac.titleUs':'fe.ac.title')} badge={reqs||undefined} onClick={go('/n/me/access')}/>
-  </Card></Group>
-  <Group title={t('fe.v3.g.reach')}><Card list>
-   <Row icon={UserCog} title={t('fe.m2.s.who')} onClick={go('/n/settings/new/who')}/>
-   <Row icon={Heart} title={t('fe.m2.s.discover')} val={discover?t('fe.mx.v.mode.'+discover+(cp?'Us':'')):undefined} onClick={go('/n/settings/new/discover')}/>
-   <Row icon={Ban} title={t('fe.m2.s.lists')} val={a.blocked?String(a.blocked):undefined} onClick={go('/n/settings/new/lists')}/>
-  </Card></Group>
- </>;
+ return <Group><Card list>
+  <Row icon={KeyRound} title={t(cp?'fe.ac.titleUs':'fe.ac.title')} badge={reqs||undefined} onClick={go('/n/me/access')}/>
+  <Row icon={UserCog} title={t('fe.m2.s.who')} onClick={go('/n/settings/new/who')}/>
+  <Row icon={Heart} title={t('fe.m2.s.discover')} val={discover?t('fe.mx.v.mode.'+discover+(cp?'Us':'')):undefined} onClick={go('/n/settings/new/discover')}/>
+  <Row icon={Ban} title={t('fe.m2.s.lists')} val={a.blocked?String(a.blocked):undefined} onClick={go('/n/settings/new/lists')}/>
+ </Card></Group>;
 }
 
 /** «Настройки» behind the gear: what holds for the whole account (the person's own, whichever profile acts). */
