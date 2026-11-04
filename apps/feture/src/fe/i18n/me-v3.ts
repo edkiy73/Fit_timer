@@ -4,6 +4,7 @@ export const ru = {
   'fe.v3.tab.privacy': 'Приватность',
   'fe.v3.settings': 'Настройки',
   'fe.v3.edit': 'Редактировать',
+  'fe.v3.editTitle': 'Редактирование',
   'fe.v3.g.content': 'Содержимое',
   'fe.v3.g.private': 'Приватное',
   'fe.v3.g.reach': 'Видимость и общение',
@@ -17,13 +18,13 @@ export const ru = {
   'fe.v3.us.posts': 'Наши публикации',
   'fe.v3.us.events': 'Наши события',
   'fe.v3.us.communities': 'Наши сообщества',
-  'fe.v3.who': 'Кто может писать и упоминать',
 };
 export const en = {
   'fe.v3.tab.profile': 'Profile',
   'fe.v3.tab.privacy': 'Privacy',
   'fe.v3.settings': 'Settings',
   'fe.v3.edit': 'Edit',
+  'fe.v3.editTitle': 'Edit profile',
   'fe.v3.g.content': 'Content',
   'fe.v3.g.private': 'Private',
   'fe.v3.g.reach': 'Visibility and contact',
@@ -37,5 +38,4 @@ export const en = {
   'fe.v3.us.posts': 'Our posts',
   'fe.v3.us.events': 'Our events',
   'fe.v3.us.communities': 'Our communities',
-  'fe.v3.who': 'Who can message and mention',
 };

@@ -16,8 +16,10 @@ import {usePremiumStatus} from './account-extra';
 import {onStatusAnswered} from './status-todo';
 import {useAccountSettings,useLogout} from './settings';
 import {useMe} from './me-new';
-import {MeSkel,PhotosBlock} from './me';
-import {BasicsSheet} from './me-basics-form';
+import {DetailsBlock,MeSkel,PhotosBlock,catalogRes,type option} from './me';
+import {BasicsForm,BasicsSheet} from './me-basics-form';
+import {MeAboutBlock} from './about-facts';
+import type {Place} from './kit/Place';
 
 /** «Я» v3 (owner's account prototype, 05.11.2026), by address only (/n/me/v3) until the owner picks it: one header,
  * then two zones of the acting profile — «Профиль» (what others see) and «Приватность» (who reaches it). The account's
@@ -82,7 +84,7 @@ function ProfileZone({p,settings,load,cp,links}:{p:MeData['p'],settings:MeData['
  const [bio,setBio]=useState(false);const openBio=()=>setBio(true);
  return <>
   <Group><Actions>
-   <Btn icon={Pencil} onClick={go('/n/me/new/profile')}>{t('fe.v3.edit')}</Btn>
+   <Btn icon={Pencil} onClick={go('/n/me/v3/edit')}>{t('fe.v3.edit')}</Btn>
    <Btn kind="soft" icon={Eye} onClick={go('/n/me/preview')}>{t('fe.mx.howSeen')}</Btn>
   </Actions></Group>
   {!p||!settings?<MeSkel/>:<>
@@ -110,7 +112,7 @@ function PrivacyZone({privOn,discover,cp,reqs}:{privOn:boolean|undefined,discove
    <Row icon={KeyRound} title={t('fe.ac.title')} badge={reqs||undefined} onClick={go('/n/me/access')}/>
   </Card></Group>
   <Group title={t('fe.v3.g.reach')}><Card list>
-   <Row icon={UserCog} title={t('fe.v3.who')} onClick={go('/n/settings/new/who')}/>
+   <Row icon={UserCog} title={t('fe.m2.s.who')} onClick={go('/n/settings/new/who')}/>
    <Row icon={Heart} title={t('fe.m2.s.discover')} val={discover?t('fe.mx.v.mode.'+discover+(cp?'Us':'')):undefined} onClick={go('/n/settings/new/discover')}/>
    <Row icon={Ban} title={t('fe.m2.s.lists')} val={a.blocked?String(a.blocked):undefined} onClick={go('/n/settings/new/lists')}/>
   </Card></Group>
@@ -165,6 +167,26 @@ export function MeV3MineScreen(){
     <Row icon={Users} title={t('fe.mx.mine.follows')} onClick={go('/n/me/follows?tab=followers')}/>
     <Row icon={Bookmark} title={t('fe.mx.mine.saved')} onClick={go('/n/me/saved')}/>
    </Card>
+  </View>
+ </>;
+}
+
+/** «Редактировать» (the prototype's editor): only what the profile says about itself — «Основное», «Обо мне», «Данные»,
+ * one column, no tabs. Photos, gallery, interests, links and the private part are rows of «Я», each in one place. */
+export function MeV3EditScreen(){
+ const {call}=useFe();const {t,locale}=useI18n();
+ const {p,load}=useMe();
+ const [options,setOptions]=useState<z.infer<typeof option>[]>([]);const [places,setPlaces]=useState<Place[]>([]);
+ useEffect(()=>{call('catalog.get',{},catalogRes,{asAccount:true}).then(r=>{setOptions(r.options);setPlaces(r.places??[]);}).catch(()=>{});},[call]);
+ const label=(kind:string,code:string)=>{const o=options.find(x=>x.kind===kind&&x.code===code);return o?(locale==='en'?o.en:o.ru):code;};
+ return <>
+  <Bar title={t('fe.v3.editTitle')} back="/n/me/v3"/>
+  <View refresh={load}>
+   {!p?<MeSkel/>:<>
+    <BasicsForm p={p} places={places} onSaved={load}/>
+    <MeAboutBlock p={p}/>
+    <DetailsBlock p={p} label={label}/>
+   </>}
   </View>
  </>;
 }
