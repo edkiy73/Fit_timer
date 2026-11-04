@@ -60,26 +60,31 @@ function useTopicName(topics:Topic[]){
 
 /** Where every capsule stood at the last paint (by topic, within its scrolling view): one that moves — a new level,
  * another group — slides from there instead of jumping (owner 05.11.2026). */
-const JAR_AT=new Map<string,{x:number,y:number,view:Element|null}>();
+const JAR_AT=new Map<string,{x:number,y:number,view:Element|null,fw:number|null}>();
 
 /** `jarsHTML()` — capsules; a tap opens the interest sheet. */
-export function Jars({list,topics,onOpen,onAdd}:{list:Interest[],topics:Topic[],onOpen:(topicId:string)=>void,onAdd?:()=>void}){
+export function Jars({list,topics,onOpen,onAdd,still}:{list:Interest[],topics:Topic[],onOpen:(topicId:string)=>void,onAdd?:()=>void,
+ /** Drawn again (the check after an edit): no grow-in, only what changed moves (owner 05.11.2026). */ still?:boolean}){
  const {t}=useI18n();const name=useTopicName(topics);
  const box=useRef<HTMLDivElement>(null);
  useLayoutEffect(()=>{
-  const still=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
   box.current?.querySelectorAll<HTMLElement>('[data-jar]').forEach(b=>{
-   const r=b.getBoundingClientRect();const view=b.closest('.view');const at={x:r.left,y:r.top+(view?.scrollTop??0),view};
+   const r=b.getBoundingClientRect();const view=b.closest('.view');const f=b.querySelector<HTMLElement>('.sc-f');
+   const at={x:r.left,y:r.top+(view?.scrollTop??0),view,fw:f?f.getBoundingClientRect().width:null};
    const was=JAR_AT.get(b.dataset.jar!);JAR_AT.set(b.dataset.jar!,at);
    // only within the same screen: arriving from another one draws in place
-   if(!was||was.view!==view||still||(Math.abs(was.x-at.x)<1&&Math.abs(was.y-at.y)<1))return;
+   if(!was||was.view!==view||reduce)return;
+   // a list drawn anew (the check) eases a changed fill from its old width; a kept one does it with its CSS transition
+   if(f&&was.fw!=null&&at.fw!=null&&Math.abs(was.fw-at.fw)>1&&f.getAnimations().length===0)f.animate([{width:was.fw+'px'},{width:at.fw+'px'}],{duration:320,easing:'cubic-bezier(.2,.8,.2,1)'});
+   if(Math.abs(was.x-at.x)<1&&Math.abs(was.y-at.y)<1)return;
    b.animate([{transform:`translate(${was.x-at.x}px,${was.y-at.y}px)`},{transform:'none'}],{duration:320,easing:'cubic-bezier(.2,.8,.2,1)'});
   });
  });
  const limitTopic=(id:string)=>topics.find(x=>x.id===id)?.categoryId===LIMITS;
  const role=(j:Interest)=>{const d=dirsOf(j.dir);if(!d.length||limitTopic(j.topicId))return '';return d.length===DIRS.length?t('fe.int.role.all'):d.map(x=>t('fe.int.role.'+x)).join(' · ');};
  const vis=(j:Interest)=>j.vis==='granted'?<span className="sc-vis"><KeyRound/></span>:j.vis==='only'?<span className="sc-vis"><EyeOff/></span>:null;
- return <div className="jars caps" ref={box}>
+ return <div className={'jars caps'+(still?' still':'')} ref={box}>
   {list.map((j,i)=>{
    const n=name(j.topicId);
    if(j.mark){const word=t('fe.int.mark.'+j.mark);
@@ -207,11 +212,16 @@ export function TopicPicker({cats,topics,have,presetVis,onClose,onDone}:{cats:Ca
  const toggle=(id:string)=>setSel(l=>l.includes(id)?l.filter(x=>x!==id):[...l,id]);
  const cur=sel[step];const d=cur?drafts[cur]??{v:null,dir:[...DIRS],vis:presetVis}:null;
  const put=(f:(d:Draft)=>Draft)=>{if(!cur)return;setDrafts(all=>({...all,[cur]:f(all[cur]??{v:null,dir:[...DIRS],vis:presetVis})}));};
- const next=()=>{if(fromReview){setFromReview(false);setStage('review');}else if(step<sel.length-1)setStep(step+1);else setStage('review');};
- const back=()=>{if(stage==='review'){setStage('answer');setStep(sel.length-1);}else if(fromReview){setFromReview(false);setStage('review');}else if(step>0)setStep(step-1);else setStage('pick');};
+ const next=()=>{setWay('fwd');if(fromReview){setFromReview(false);setStage('review');}else if(step<sel.length-1)setStep(step+1);else setStage('review');};
+ const back=()=>{setWay('back');if(stage==='review'){setStage('answer');setStep(sel.length-1);}else if(fromReview){setFromReview(false);setStage('review');}else if(step>0)setStep(step-1);else setStage('pick');};
  const stepRef=useRef(step);stepRef.current=step;const stageRef=useRef(stage);stageRef.current=stage;const nextRef=useRef(next);nextRef.current=next;
  // Answering moves on after a short pause, so the choice is visible.
- const answer=(v:Answer)=>{put(x=>({...x,v}));const at=step;window.setTimeout(()=>{if(stepRef.current===at&&stageRef.current==='answer')nextRef.current();},260);};
+ // «Далее» stays hidden while a fresh answer moves on by itself (owner 05.11.2026: it blinked for a moment).
+ const [moving,setMoving]=useState(false);useEffect(()=>{setMoving(false);},[step,stage]);
+ // Which way the steps moved: the next topic slides in from the right, a step back from the left (owner 05.11.2026).
+ const [way,setWay]=useState<'fwd'|'back'>('fwd');
+ const [edited,setEdited]=useState(false); // the check came back from an edit: drawn as it was, only the change moves
+ const answer=(v:Answer)=>{setMoving(true);put(x=>({...x,v}));const at=step;window.setTimeout(()=>{if(stepRef.current===at&&stageRef.current==='answer')nextRef.current();},260);};
  const save=async()=>{
   setBusy(true);setFailure('');let pending=0;
   try{
@@ -233,10 +243,10 @@ export function TopicPicker({cats,topics,have,presetVis,onClose,onDone}:{cats:Ca
  </Sheet>;
  if(stage==='answer'&&cur&&d){const tp=topics.find(x=>x.id===cur);const desc=tp?(locale==='en'?tp.descEn:tp.descRu):null;
   // A bottom sheet like «Проверь» (owner 05.11.2026): the answer buttons stay at the bottom from one topic to the next.
-  return <Sheet key={cur} title={tp?label(tp):cur} onClose={onClose} dirty
+  return <Sheet key={cur} className={'k-step '+way} title={tp?label(tp):cur} onClose={onClose} dirty
    foot={fromReview?<Btn onClick={next}>{t('fe.int.toReview')}</Btn>
     :<div className="row g8"><Btn kind="soft" onClick={back}>{t('fe.back')}</Btn>
-     {d.v!=null&&<Btn onClick={next}>{step===sel.length-1?t('fe.int.review'):t('fe.int.next')}</Btn>}</div>}>
+     {d.v!=null&&!moving&&<Btn onClick={next}>{step===sel.length-1?t('fe.int.review'):t('fe.int.next')}</Btn>}</div>}>
    <Note className="int-step">{t('fe.int.stepOf',{i:step+1,n:sel.length})}</Note>
    <Progress value={(step+1)/sel.length}/>
    {desc&&<p className="topic-desc">{desc}</p>}
@@ -247,7 +257,7 @@ export function TopicPicker({cats,topics,have,presetVis,onClose,onDone}:{cats:Ca
   foot={<>{failure&&<Alert kind="err" noIcon>{failure}</Alert>}
    <div className="row g8"><Btn kind="soft" fit onClick={back} disabled={busy}>{t('fe.back')}</Btn><Btn busy={busy} onClick={save}>{toPartner?t('fe.ca.toPartner'):t('fe.int.saveAll')}</Btn></div></>}>
   <Note>{t('fe.int.checkHint',{n:sel.length})}</Note>
-  <Card className="mt12"><Jars list={sortJars(list)} topics={topics} onOpen={id=>{setStep(sel.indexOf(id));setFromReview(true);setStage('answer');}}/></Card>
+  <Card className="mt12"><Jars still={edited} list={sortJars(list)} topics={topics} onOpen={id=>{setEdited(true);setStep(sel.indexOf(id));setFromReview(true);setStage('answer');}}/></Card>
  </Sheet>;
 }
 
