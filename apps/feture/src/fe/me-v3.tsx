@@ -88,9 +88,9 @@ function ProfileZone({p,settings,load,cp,links}:{p:MeData['p'],settings:MeData['
    <Row icon={Images} title={t('fe.mx.gal')} onClick={go('/n/me/new/gallery')}/>
    <Row icon={Sparkles} title={t('fe.v3.interests')} onClick={go('/n/me/interests')}/>
    <Row icon={Link2} title={t('fe.v3.links')} badge={links||undefined} onClick={go('/n/me/links')}/>
-   <Row icon={Bookmark} title={t('fe.v3.mine')} sub={t(cp?'fe.v3.mineSubUs':'fe.v3.mineSub')} onClick={go('/n/me/v3/mine')}/>
+   <Row icon={Bookmark} title={t('fe.v3.mine')} onClick={go('/n/me/v3/mine')}/>
   </Card></Group>
-  <PairEntry/>
+  <PairEntry plain/>
  </>;
 }
 
