@@ -45,15 +45,15 @@ type Mark='discuss'|'hard';
 export const Шкала:StoryObj<typeof AnswerScale<Mark>>={name:'Шкала ответа 1–10',
  render:a=>{const [v,setV]=useState<number|Mark|null>(a.value??null);return <AnswerScale<Mark> {...a} value={v} onChange={setV}/>;},
  args:{label:'Насколько нравится',value:6,onChange:()=>{},
-  marks:[{id:'discuss',label:'Обсуждаемо',icon:MessageCircle},{id:'hard',label:'Табу',icon:Ban,taboo:true}]},
+  marks:[{id:'discuss',label:'Обсуждаемо',icon:MessageCircle,soft:true},{id:'hard',label:'Табу',icon:Ban,taboo:true}]},
  argTypes:{value:{control:'select',options:[null,1,2,3,4,5,6,7,8,9,10,'discuss','hard']},marks:{control:false}}};
 export const ШкалаТабу:StoryObj<typeof AnswerScale<Mark>>={name:'Шкала: выбрано табу',render:a=><AnswerScale<Mark> {...a}/>,
- args:{label:'Насколько нравится',value:'hard',onChange:()=>{},marks:[{id:'discuss',label:'Обсуждаемо',icon:MessageCircle},{id:'hard',label:'Табу',icon:Ban,taboo:true}]}};
-export const ШкалаНаправления:StoryObj<typeof AnswerScale<Mark>>={name:'Шкала: нажать и потянуть к направлению',
+ args:{label:'Насколько нравится',value:'hard',onChange:()=>{},marks:[{id:'discuss',label:'Обсуждаемо',icon:MessageCircle,soft:true},{id:'hard',label:'Табу',icon:Ban,taboo:true}]}};
+export const ШкалаНаправления:StoryObj<typeof AnswerScale<Mark>>={name:'Шкала: направление → 1–10 в той же кнопке',
  render:a=>{const [v,setV]=useState<number|Mark|null>(null);const [lane,setLane]=useState<string|null>(null);
-  return <><AnswerScale<Mark> {...a} value={v} onChange={setV} lanes={[{id:'give',label:'Давать'},{id:'get',label:'Получать'},{id:'watch',label:'Смотреть'}]}
-   onLane={(n,id)=>{setLane(id);setV(n);}}/><p>{v==null?'—':String(v)+' · '+(lane??'всё')}</p></>;},
- args:{label:'Насколько нравится',value:null,onChange:()=>{},marks:[{id:'discuss',label:'Обсуждаемо',icon:MessageCircle},{id:'hard',label:'Табу',icon:Ban,taboo:true}]}};
+  return <AnswerScale<Mark> {...a} value={v} onChange={x=>{setLane(null);setV(x);}} lanes={[{id:'all',label:'Всё'},{id:'give',label:'Давать'},{id:'get',label:'Получать'},{id:'watch',label:'Смотреть'}]}
+   lane={lane} onLane={(n,id)=>{setLane(id);setV(n);}}/>;},
+ args:{label:'Насколько нравится',value:null,onChange:()=>{},marks:[{id:'discuss',label:'Обсуждаемо',icon:MessageCircle,soft:true},{id:'hard',label:'Табу',icon:Ban,taboo:true}]}};
 export const Направления:StoryObj<typeof Chip>={name:'Чипы недоступны (inactive)',render:a=><div className="dim"><Chips><Chip {...a}>Делать</Chip><Chip {...a} on>Получать</Chip></Chips></div>,args:{inactive:true,onClick:fn(),children:''}};
 
 export const ПолоскиФото:StoryObj<typeof PhotoBars>={name:'Полоски фото на шапке профиля (со счётчиком)',render:a=><div className="hero" style={{height:240}}><div className="plate" style={plate('mia')}/><PhotoBars {...a}/></div>,

@@ -173,45 +173,34 @@ export function StatusCard({tone,icon,title,sub,action}:{tone?:'wait'|'ok'|'bad'
 
 /* ---------------- Interests ---------------- */
 
-/** The interest answer: 1–10 (the cells up to the answer fill) and two marks instead of a number — «обсуждаемо» and
- * «табу» (a taboo is never a low number); no words under the scale (owner 05.11.2026: the numbers say it).
- * `lanes` + `onLane` (owner 05.11.2026, «нажать и потянуть»): a short tap on a number is `onLane(n,null)` — every
- * direction; holding a number shows the lanes over the finger, sliding onto one and letting go is `onLane(n,lane)`,
- * letting go elsewhere changes nothing. One gesture either way; the keyboard picks the number with every direction. */
-export function AnswerScale<M extends string,L extends string=string>({value,onChange,label,marks,lanes,onLane}:{value:number|M|null|undefined,onChange:(v:number|M)=>void,label:string,
- marks:readonly {id:M,label:string,icon:LucideIcon,taboo?:boolean|undefined}[],lanes?:readonly {id:L,label:string}[]|undefined,
- onLane?:((n:number,lane:L|null)=>void)|undefined}){
+/** The interest answer: a level 1–10 or one of two marks — «обсуждаемо» and «табу» (a taboo is never a low number),
+ * coloured like the interest capsules; no words under the scale (owner 05.11.2026: the numbers say it).
+ * `lanes` (owner 05.11.2026): one full-width button per lane («Всё», «Давать», «Получать», «Смотреть»); a tap turns that
+ * button into the 1–10 scale and a tap on a number picks it — two taps in one place; or hold the button, the scale
+ * appears under the finger, slide along it and let go on the number — one gesture. `lane` is the lane holding `value`. */
+export function AnswerScale<M extends string,L extends string=string>({value,onChange,label,marks,lanes,lane,onLane}:{value:number|M|null|undefined,onChange:(v:number|M)=>void,label:string,
+ marks:readonly {id:M,label:string,icon:LucideIcon,taboo?:boolean|undefined,soft?:boolean|undefined}[],lanes?:readonly {id:L,label:string}[]|undefined,
+ lane?:L|null|undefined,onLane?:((n:number,lane:L)=>void)|undefined}){
  const n=typeof value==='number'?value:null;
- const box=useRef<HTMLDivElement>(null);
- const [press,setPress]=useState<{k:number,x:number,y:number,open:boolean,over:L|null}|null>(null);
- const timer=useRef(0);
- const laneAt=(x:number,y:number)=>{const el=document.elementFromPoint(x,y)?.closest<HTMLElement>('[data-lane]');return (el?.dataset.lane as L|undefined)??null;};
- useEffect(()=>()=>window.clearTimeout(timer.current),[]);
- const down=(k:number)=>(e:React.PointerEvent<HTMLButtonElement>)=>{
-  if(!lanes||!onLane)return;
-  try{box.current?.setPointerCapture(e.pointerId);}catch{/* a pointer that is already gone */}
-  setPress({k,x:e.clientX,y:e.clientY,open:false,over:null});
-  window.clearTimeout(timer.current);timer.current=window.setTimeout(()=>setPress(p=>p&&{...p,open:true}),280);
- };
- const move=(e:React.PointerEvent)=>{if(!press)return;
-  const far=Math.abs(e.clientY-press.y)>10||Math.abs(e.clientX-press.x)>10;
-  setPress(p=>p&&{...p,open:p.open||far,over:laneAt(e.clientX,e.clientY)});};
- const up=(e:React.PointerEvent)=>{if(!press||!onLane)return;window.clearTimeout(timer.current);
-  const over=laneAt(e.clientX,e.clientY);
-  if(!press.open)onLane(press.k,null);else if(over)onLane(press.k,over);
-  setPress(null);};
- const btns=box.current?[...box.current.querySelectorAll('button')]:[];
- const cell=press?btns[press.k-1]:undefined;
- const left=cell&&box.current?cell.offsetLeft+cell.offsetWidth/2:0;
+ const [open,setOpen]=useState<L|null>(null);
+ const [drag,setDrag]=useState<{id:L,x:number,y:number,moved:boolean,over:number|null}|null>(null);
+ const cellAt=(x:number,y:number,id:L)=>{const el=document.elementFromPoint(x,y)?.closest<HTMLElement>('[data-k]');return el&&el.dataset.lane===id?Number(el.dataset.k):null;};
+ const pick=(k:number,id:L)=>{setOpen(null);setDrag(null);onLane?.(k,id);};
+ const scale=(aria:string,on:(k:number)=>boolean,act:(k:number)=>void,id?:L)=><div className="ans-scale" role="radiogroup" aria-label={aria}>
+  {[1,2,3,4,5,6,7,8,9,10].map(k=><button key={k} type="button" data-k={k} data-lane={id} className={[on(k)&&n&&k<=n?'fill':'',on(k)&&n===k?'on':'',drag&&drag.id===id&&drag.over===k?'held':''].filter(Boolean).join(' ')}
+   role="radio" aria-checked={on(k)&&n===k} onClick={()=>act(k)}>{k}</button>)}
+ </div>;
  return <>
-  <div className={'ans-scale'+(lanes?' ans-hold':'')} role="radiogroup" aria-label={label} ref={box} onPointerMove={move} onPointerUp={up} onPointerCancel={()=>{window.clearTimeout(timer.current);setPress(null);}}>
-   {[1,2,3,4,5,6,7,8,9,10].map(k=><button key={k} type="button" className={[n&&k<=n?'fill':'',n===k?'on':'',press?.k===k?'held':''].filter(Boolean).join(' ')} role="radio" aria-checked={n===k}
-    onPointerDown={down(k)} onClick={e=>{if(!lanes||!onLane)onChange(k);else if(e.detail===0)onLane(k,null);}}>{k}</button>)}
-   {press?.open&&lanes&&<div className="ans-pop" style={{'--x':left+'px'} as CSSProperties}>
-    {lanes.map(l=><span key={l.id} data-lane={l.id} className={press.over===l.id?'on':undefined}>{l.label}</span>)}
-   </div>}
-  </div>
-  <div className="ans-marks">{marks.map(m=><button key={m.id} type="button" className={'ans-m'+(m.taboo?' taboo':'')+(value===m.id?' on':'')} aria-pressed={value===m.id} onClick={()=>onChange(m.id)}><m.icon/><span>{m.label}</span></button>)}</div>
+  {lanes&&onLane?<div className="ans-rows"
+    onPointerMove={e=>{if(!drag)return;const moved=drag.moved||Math.abs(e.clientX-drag.x)>8||Math.abs(e.clientY-drag.y)>8;setDrag({...drag,moved,over:cellAt(e.clientX,e.clientY,drag.id)});}}
+    onPointerUp={e=>{if(!drag)return;const k=cellAt(e.clientX,e.clientY,drag.id);if(drag.moved&&k)pick(k,drag.id);else setDrag(null);}}
+    onPointerCancel={()=>setDrag(null)}>
+   {lanes.map(l=>open===l.id?<div key={l.id} className="ans-row-scale">{scale(label+': '+l.label,()=>lane===l.id,k=>pick(k,l.id),l.id)}</div>
+    :<button key={l.id} type="button" className={'ans-row'+(lane===l.id&&n?' on':'')} aria-expanded={false}
+      onPointerDown={e=>{try{e.currentTarget.parentElement?.setPointerCapture(e.pointerId);}catch{/* gone */}setOpen(l.id);setDrag({id:l.id,x:e.clientX,y:e.clientY,moved:false,over:null});}}
+      onClick={e=>{if(e.detail===0)setOpen(l.id);}}><span>{l.label}</span>{lane===l.id&&n?<b>{n}</b>:null}</button>)}
+  </div>:scale(label,()=>true,k=>onChange(k))}
+  <div className="ans-marks">{marks.map(m=><button key={m.id} type="button" className={'ans-m'+(m.taboo?' taboo':'')+(m.soft?' soft':'')+(value===m.id?' on':'')} aria-pressed={value===m.id} onClick={()=>{setOpen(null);onChange(m.id);}}><m.icon/><span>{m.label}</span></button>)}</div>
  </>;
 }
 
