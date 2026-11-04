@@ -1,5 +1,7 @@
 /** Profile extras (V21 P05 «Что у вас общего», person menu S02, links F2, D09 «Просмотренные», P03 «Как видят»). */
 export const ru = {
+  'fe.px.pair.members': 'Кто в паре',
+  'fe.px.pair.couple': 'Пара',
   'fe.px.close': 'Закрыть',
   'fe.px.cancel': 'Отмена',
   'fe.px.topic1': '{n} общая тема',
@@ -318,6 +320,8 @@ export const ru = {
 } as const;
 
 export const en = {
+  'fe.px.pair.members': 'In this couple',
+  'fe.px.pair.couple': 'Couple',
   'fe.px.close': 'Close',
   'fe.px.cancel': 'Cancel',
   'fe.px.topic1': '{n} shared topic',

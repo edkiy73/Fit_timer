@@ -55,6 +55,9 @@ const media=z.object({src:z.record(z.string(),z.string()).nullable(),pending:z.b
 export const personProfile=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),bio:z.string(),
  /** My partner (one couple with me): never blocked (audit item 42). */partner:z.boolean().optional(),
  /** One of this account's own profiles (my person while acting as the couple, or the reverse): nothing to like, follow or write. */own:z.boolean().optional(),
+ /** A couple: who is in it; a person: their couple (active ones only, never across a block). */
+ members:z.array(z.object({id:z.uuid(),handle:z.string().nullable(),name:z.string().nullable(),avatar:z.string().nullable().optional()}).passthrough()).optional(),
+ couple:z.object({id:z.uuid(),handle:z.string().nullable(),name:z.string().nullable(),avatar:z.string().nullable().optional()}).passthrough().nullable().optional(),
  age:z.number().nullable(),city:z.object({ru:z.string().nullable(),en:z.string().nullable()}).nullable(),avatar:media.nullable(),photos:z.array(media),details:z.record(z.string(),z.unknown()),photoVerified:z.boolean().optional(),premium:z.boolean().optional()}).passthrough();
 export const personProfileRes=z.object({ok:z.literal(true),profile:personProfile});
 export type PersonProfile=z.infer<typeof personProfile>;
@@ -454,6 +457,7 @@ export function ProfilePage({p,preview,seg,bar,onMore,menu,onRefresh,pre,gal,chi
    <ProfileHero p={p} rel={rel} inert={inert} onOpen={setView}/>
    <PersonBio p={p}/>
    {self?null:rel||inert?<PersonActions p={p} rel={rel} setRel={setRel} inert={inert}/>:<div className="pa-hold" aria-hidden="true"><i className="sk"/><i className="sk"/><i className="sk"/></div>}
+   <PairGroup p={p} inert={inert}/>
    {/* Owner 29.10.2026: «Обо мне» under the bio and under the main buttons. */}
    <AboutGroup p={p} inert={inert}/>
    {!preview&&!self&&<CompatSummary profileId={p.id} {...(pre?{pre:pre.compat}:{})}/>}
@@ -462,6 +466,18 @@ export function ProfilePage({p,preview,seg,bar,onMore,menu,onRefresh,pre,gal,chi
   {view!==null&&<PhotoViewer srcs={list.map(m=>m.src?.full??mediaSrc(m)!)} index={view} onClose={()=>setView(null)}/>}
   {menu?.(rel,reloadRel)}
  </>;
+}
+
+/** The pair on a profile (owner 05.11.2026): a couple lists who is in it, a person shows their couple; a row opens it. */
+function PairGroup({p,inert}:{p:PersonProfile,inert?:boolean|undefined}){
+ const {t}=useI18n();const navigate=useNavigate();
+ const people=p.kind==='couple'?p.members??[]:p.couple?[p.couple]:[];
+ if(!people.length)return null;
+ return <Group title={t(p.kind==='couple'?'fe.px.pair.members':'fe.px.pair.couple')}><Card list>
+  {people.map(x=>{const name=x.name||x.handle||'?';
+   return <Row key={x.id} av={<Av name={name} seed={x.id} size="sm" src={x.avatar??null}/>} title={name} sub={x.handle?'@'+x.handle:undefined}
+    {...(inert?{}:{onClick:()=>navigate('/n/people/'+x.id)})}/>;})}
+ </Card></Group>;
 }
 
 /* ---------- «Что у вас общего» (P05) ---------- */

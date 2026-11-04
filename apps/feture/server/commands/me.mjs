@@ -9,7 +9,7 @@ import { setSuspended } from './moderation.mjs';
 import { mediaDto } from '../media/assets.mjs';
 import { photosFor } from './photos.mjs';
 import { photoVerifiedOf } from './verification.mjs';
-import { PREMIUM_SQL, ageOn } from './faces.mjs';
+import { PREMIUM_SQL, ageOn, withFaces } from './faces.mjs';
 import { partnerOf } from '../sql-rules.mjs';
 import { grantedScopes } from '../access.mjs';
 import { enqueue } from '../outbox.mjs';
@@ -181,8 +181,28 @@ async function profileView(q, viewer, profileId, media) {
     const [asset] = await q.query('select * from feture.media_asset where id = $1', [p.avatar_asset_id]);
     if (asset) avatar = await mediaDto(media, asset, { viewerProfileId: viewer.profileId, place: 'public', showExplicit: false, staff: false }).catch(() => null);
   }
+  // The pair on both sides (owner 05.11.2026: a person's profile did not say they are in a couple, a couple's did not
+  // say who is in it). Only an active couple, never across a block; faces as in every list.
+  const face = { profileId: viewer.profileId, accountId: viewer.accountId };
+  let members, couple;
+  if (p.kind === 'couple') {
+    members = await withFaces(q, media, face, await q.query(
+      `select pp.id, pp.handle, coalesce(nullif(pp.name, ''), pp.handle) "name"
+       from feture.profile_member m join feture.account a on a.id = m.account_id
+       join feture.profile pp on pp.id = a.person_profile_id and pp.state = 'active'
+       where m.profile_id = $1 and m.state = 'active' and ($2::uuid is null or not feture.blocked($2, pp.id))
+       order by m.joined_at nulls last`, [p.id, viewer.profileId]), r => r);
+  } else {
+    const [c] = await q.query(
+      `select c.id, c.handle, coalesce(nullif(c.name, ''), c.handle) "name"
+       from feture.account a join feture.profile_member m on m.account_id = a.id and m.state = 'active'
+       join feture.profile c on c.id = m.profile_id and c.kind = 'couple' and c.state = 'active'
+       where a.person_profile_id = $1 and ($2::uuid is null or not feture.blocked($2, c.id)) limit 1`, [p.id, viewer.profileId]);
+    couple = c ? (await withFaces(q, media, face, [c], r => r))[0] : null;
+  }
   return {
     id: p.id, kind: p.kind, handle: p.handle, name: p.name || p.handle, own, partner: p.partner,
+    ...(members ? { members } : {}), ...(couple !== undefined ? { couple } : {}),
     bio: p.bio ?? '',
     age: p.kind === 'person' && p.birth_date && (own || p.show_age) ? ageOn(String(p.birth_date instanceof Date ? p.birth_date.toISOString().slice(0, 10) : p.birth_date)) : null,
     city,
