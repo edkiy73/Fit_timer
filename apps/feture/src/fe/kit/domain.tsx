@@ -186,6 +186,8 @@ export function AnswerScale<M extends string,L extends string=string>({value,onC
  const [drag,setDrag]=useState<{id:L,x:number,y:number,moved:boolean,over:number|null}|null>(null);
  // The press that opened a lane must not land on the number that appears under the finger (owner 05.11.2026: it blinked).
  const opened=useRef(0);
+ // The mark a mouse points at: it alone stays bright, everything else fades (owner 05.11.2026).
+ const [hot,setHot]=useState<M|null>(null);
  const cellAt=(x:number,y:number,id:L)=>{const el=document.elementFromPoint(x,y)?.closest<HTMLElement>('[data-k]');return el&&el.dataset.lane===id?Number(el.dataset.k):null;};
  const pick=(k:number,id:L)=>{setOpen(null);setDrag(null);onLane?.(k,id);};
  // The lane holding the answer stays open with its number marked (owner 05.11.2026: no folded «Получать · 8» button).
@@ -196,7 +198,7 @@ export function AnswerScale<M extends string,L extends string=string>({value,onC
    role="radio" aria-checked={on(k)&&n===k} onClick={()=>{if(id&&Date.now()-opened.current<450)return;act(k);}}>{k}</button>)}
  </div>;
  return <>
-  {lanes&&onLane?<div className={'ans-rows'+(shown?' busy':'')}
+  {lanes&&onLane?<div className={'ans-rows'+(shown?' busy':'')+(hot?' hot':'')}
     onPointerMove={e=>{if(!drag)return;const moved=drag.moved||Math.abs(e.clientX-drag.x)>8||Math.abs(e.clientY-drag.y)>8;setDrag({...drag,moved,over:cellAt(e.clientX,e.clientY,drag.id)});}}
     onPointerUp={e=>{if(!drag)return;const k=cellAt(e.clientX,e.clientY,drag.id);if(drag.moved&&k)pick(k,drag.id);else setDrag(null);}}
     onPointerCancel={()=>setDrag(null)}
@@ -212,8 +214,10 @@ export function AnswerScale<M extends string,L extends string=string>({value,onC
         onClick={e=>{if(e.detail===0)setOpen(l.id);}}/>}
     </div>;})}
   </div>:scale(label,()=>true,k=>onChange(k))}
-  {/* the marks fade only under a finger that is picking, never on a mouse pointing at a lane (owner 05.11.2026) */}
-  <div className={'ans-marks'+(drag?' dim':'')}>{marks.map(m=><button key={m.id} type="button" className={'ans-m'+(m.taboo?' taboo':'')+(m.soft?' soft':'')+(value===m.id?' on':'')} aria-pressed={value===m.id} onClick={()=>{setOpen(null);onChange(m.id);}}><m.icon/><span>{m.label}</span></button>)}</div>
+  {/* one thing is bright at a time: an open lane fades both marks; a mark pointed at fades the other one and the lanes */}
+  <div className="ans-marks">{marks.map(m=><button key={m.id} type="button" className={'ans-m'+(m.taboo?' taboo':'')+(m.soft?' soft':'')+(value===m.id?' on':'')+((hot?hot!==m.id:!!open)?' dim':'')} aria-pressed={value===m.id}
+   onPointerEnter={e=>{if(e.pointerType==='mouse'){setOpen(null);setHot(m.id);}}} onPointerLeave={()=>setHot(null)}
+   onClick={()=>{setOpen(null);onChange(m.id);}}><m.icon/><span>{m.label}</span></button>)}</div>
  </>;
 }
 
