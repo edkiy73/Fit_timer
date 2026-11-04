@@ -96,6 +96,14 @@ test('likes: mutual makes a match, withdraw and dismiss stay private, undo once 
     await call('ua', a, { action: 'like.dismiss', opId: op(), profileId: c });
     assert.deepEqual((await call('ua', a, { action: 'likes.incoming' })).items, []);
     assert.equal((await call('uc', c, { action: 'likes.outgoing' })).items.length, 1);
+    // «Вернуть» in the history brings a dismissed like back to the Likes list (not into the deck).
+    const hist = (await call('ua', a, { action: 'discover.history' })).items;
+    assert.deepEqual([hist[0].decision, hist[0].source], ['pass', 'likes']);
+    const back = await call('ua', a, { action: 'discover.restore', opId: op(), profileId: c });
+    assert.deepEqual([back.restored, back.source], [true, 'likes']);
+    assert.deepEqual((await call('ua', a, { action: 'likes.incoming' })).items.map((/** @type {any} */ i) => i.profile.handle), ['Noa']);
+    await call('ua', a, { action: 'like.dismiss', opId: op(), profileId: c });
+    assert.deepEqual((await call('ua', a, { action: 'likes.incoming' })).items, []);
     assert.equal((await call('uc', c, { action: 'like.send', opId: op(), profileId: a, source: 'profile' })).state, 'liked');
     assert.deepEqual((await call('ua', a, { action: 'likes.incoming' })).items, []);
     assert.equal((await call('uc', c, { action: 'like.withdraw', opId: op(), profileId: a })).withdrawn, true);
