@@ -9,7 +9,6 @@ import {BellButton,countsRes} from './inbox';
 import {StaffEntry} from './staff';
 import {waitingCount} from './links';
 import {ActAsSheet,activeCouple} from './couple';
-import {PairEntry} from './pair';
 import {NameBadges} from './faces';
 import {usePremiumStatus} from './account-extra';
 import {onStatusAnswered} from './status-todo';
@@ -97,11 +96,12 @@ function useSums(profileId:string|undefined){
 }
 
 /** «Профиль» (owner 05.11.2026): «Как видят», the photos, then one list in the order the public profile shows it —
- * Основное · Обо мне · Данные · Связи · Интересы · Галерея · Приватная часть, each with a line of what it holds
+ * Основное · Ваша пара · Обо мне · Данные · Связи · Интересы · Галерея · Приватная часть, each with a line of what it holds
  * (owner: under the title, so they read in a row); each part edits on its own screen. */
 function ProfileZone({p,settings,load,cp,links}:{p:MeData['p'],settings:MeData['settings'],load:()=>void,cp:boolean,links:number|undefined}){
- const {t,locale}=useI18n();const navigate=useNavigate();const go=(to:string)=>()=>navigate(to);
+ const {t,locale}=useI18n();const navigate=useNavigate();const go=(to:string)=>()=>navigate(to);const {state}=useFe();
  const sums=useSums(p?.id);
+ const pair=state.status==='ready'?state.boot.profiles.find(x=>x.kind==='couple'&&x.state!=='deleted'):undefined;
  const list=(xs:string[])=>xs.length?xs.map((x,i)=>i?x.toLowerCase():x).join(', '):t('fe.v3.s.empty');
  const city=p?.city?(locale==='en'?p.city.en:p.city.ru):null;
  const basics=p?[city,p.age?(p.showAge!==false?String(p.age):t('fe.v3.s.ageHid',{n:p.age})):null,p.bio.trim()?null:t('fe.v3.s.noBio')].filter(Boolean).join(' · '):undefined;
@@ -122,8 +122,10 @@ function ProfileZone({p,settings,load,cp,links}:{p:MeData['p'],settings:MeData['
    <Btn kind="soft" icon={Eye} onClick={go('/n/me/preview')}>{t('fe.mx.howSeen')}</Btn>
   </Actions></Group>
   {!p||!settings?<MeSkel/>:<PhotosBlock p={p} settings={settings} onChanged={load}/>}
-  <Group><Card list>
+  <Group title={t('fe.v3.g.profileData')}><Card list className="k-one-line">
    <Row icon={UserRound} title={t('fe.me.basics')} sub={basics} onClick={go('/n/me/edit?only=basics')}/>
+   {/* the pair where the public profile shows it, under the name (owner 05.11.2026): «Ваша пара», its name and nick */}
+   <Row icon={Heart} tone="v" title={t(pair?'fe.v3.pair':'fe.pair.entry')} sub={pair?[pair.name,pair.handle?'@'+pair.handle:null,pair.state==='paused'?t('fe.v3.pairPaused'):null].filter(Boolean).join(' · '):t('fe.pair.entryOff')} onClick={go('/n/me/pair')}/>
    {!cp&&<Row icon={Info} title={t('fe.ab.title')} sub={about} onClick={go('/n/me/edit?only=about')}/>}
    <Row icon={ListChecks} title={t(cp?'fe.v3.us.details':'fe.me.details')} sub={details} onClick={go('/n/me/edit?only=details')}/>
    <Row icon={Link2} title={t('fe.v3.links')} sub={linksSub} badge={sums?.links.wait||links||undefined} onClick={go('/n/me/links')}/>
@@ -131,7 +133,6 @@ function ProfileZone({p,settings,load,cp,links}:{p:MeData['p'],settings:MeData['
    <Row icon={Images} title={t('fe.mx.gal')} sub={galSub} onClick={go('/n/me/new/gallery')}/>
    <Row icon={Lock} tone="v" title={t('fe.m2.private')} sub={cap(privSub)} onClick={go('/n/me/new/private')}/>
   </Card></Group>
-  <PairEntry plain/>
  </>;
 }
 

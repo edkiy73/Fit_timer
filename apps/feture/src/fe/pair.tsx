@@ -411,12 +411,11 @@ function TrustSheet({coupleId,scope,other,otherOn,onClose,onDone}:{coupleId:stri
  </Sheet>;
 }
 
-/** `plain`: the row without its hint line, on screens whose rows carry none («Я» v3). */
-export function PairEntry({plain}:{plain?:boolean}={}){
+export function PairEntry(){
  const {state}=useFe();const {t}=useI18n();const navigate=useNavigate();
  if(state.status!=='ready')return null;
  const couple=state.boot.profiles.find(p=>p.kind==='couple'&&!p.ended);const archive=!couple&&state.boot.profiles.find(p=>p.kind==='couple'&&p.ended);
  return <Group title={t('fe.pair.section')}><Card list>
-  <Row icon={Heart} tone="v" noChev={!plain} title={couple?(couple.name||t('fe.pair.ourProfile')):t('fe.pair.entry')} sub={plain?undefined:couple?t('fe.pair.entryOn'):archive?t('fe.pair.entryArchive'):t('fe.pair.entryOff')} onClick={()=>navigate('/n/me/pair')}/>
+  <Row icon={Heart} tone="v" noChev title={couple?(couple.name||t('fe.pair.ourProfile')):t('fe.pair.entry')} sub={couple?t('fe.pair.entryOn'):archive?t('fe.pair.entryArchive'):t('fe.pair.entryOff')} onClick={()=>navigate('/n/me/pair')}/>
  </Card></Group>;
 }
