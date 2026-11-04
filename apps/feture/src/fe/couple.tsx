@@ -332,7 +332,7 @@ export function ActAsSheet({onClose}:{onClose:()=>void}){
  const profiles=state.boot.profiles.filter(p=>p.state!=='deleted');
  const person=profiles.find(p=>p.kind==='person');const couple=profiles.find(p=>p.kind==='couple');
  const cards=[person,couple].filter((x):x is NonNullable<typeof x>=>!!x);
- const open=(id:string)=>{setActing(id);onClose();navigate('/n/me/v3/edit');};
+ const open=(id:string)=>{setActing(id);onClose();navigate('/n/me');};
  const pick=(id:string)=>{
   if(id===acting.id){open(id);return;}
   setActing(id);onClose();

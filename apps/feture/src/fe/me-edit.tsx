@@ -2,9 +2,9 @@ import {useCallback,useEffect,useId,useRef,useState,type ReactNode} from 'react'
 import {useLocation,useNavigate,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {AtSign,Camera,ChevronDown,ChevronRight,Clock,Lock,Plus,Sparkles,Star,Trash2,X} from 'lucide-react';
+import {AtSign,Cake,Camera,ChevronDown,ChevronRight,Clock,Lock,Plus,Sparkles,Star,Trash2,X} from 'lucide-react';
 import {FeError,dayMonth,feErrorMessage,newOpId} from '../feture/fe-api';
-import {AddCard,Alert,Bar,Btn,Card,Counter,Empty,Field,FilePick,Group,Input,Note,PhotoAdd,PhotoSlot,PhotoSlots,Row,Sheet,Skel,TextArea,ToggleRow,VaultHead,useLeaveGuard} from './kit';
+import {AddCard,Alert,Bar,Btn,Card,Counter,Empty,Field,FilePick,Group,Input,Note,PhotoAdd,PhotoSlot,PhotoSlots,RadioList,Row,Sheet,Skel,TextArea,VaultHead,useLeaveGuard} from './kit';
 import {useFe,usePartnerApproves} from './session';
 import {Uploader} from './kit/Uploader';
 import {PickField,PlacePicker,type Place} from './kit/Place';
@@ -43,7 +43,7 @@ export function MeEditScreen(){
  const [p,setP]=useState<Profile|null>(null);const [base,setBase]=useState<Draft|null>(null);const [d,setD]=useState<Draft|null>(null);
  const [cat,setCat]=useState<z.infer<typeof catalogRes>|null>(null);const [jars,setJars]=useState({all:0,granted:0});const [grants,setGrants]=useState(0);
  const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
- const [whoOpen,setWhoOpen]=useState<boolean|null>(null);const [city,setCity]=useState(false);const [phSheet,setPhSheet]=useState<{k:'photos'|'privMedia',i:number}|null>(null);
+ const [whoOpen,setWhoOpen]=useState<boolean|null>(null);const [city,setCity]=useState(false);const [ageSheet,setAgeSheet]=useState(false);const [phSheet,setPhSheet]=useState<{k:'photos'|'privMedia',i:number}|null>(null);
  const [askOff,setAskOff]=useState(false);const [nickErr,setNickErr]=useState('');const [askLast,setAskLast]=useState<number|null>(null);const [discoverOn,setDiscoverOn]=useState(false);const [added,setAdded]=useState<Place|null>(null);const [uploading,setUploading]=useState<'photos'|'privMedia'|null>(null);
  // «Обо мне» (person only) keeps its own draft next to the rest; «Сохранить» writes it with the profile.
  const [ab,setAb]=useState<{base:AboutDraft,d:AboutDraft}|null>(null);
@@ -182,9 +182,9 @@ export function MeEditScreen(){
        <Field id={fid+'h'} name="handle" label={cp?t('fe.nn.nickUs'):t('fe.nn.nick')} error={nickErr||undefined}
         hint={p.nickAt?t('fe.nn.nickAt',{date:dayMonth(p.nickAt)}):p.nickFirst?t('fe.nn.nickFirst'):t('fe.nn.nickEvery')}>
         <div className="inwrap"><AtSign/><Input id={fid+'h'} value={d.handle} maxLength={20} autoCapitalize="off" spellCheck={false} disabled={!!p.nickAt} invalid={!!nickErr} onChange={e=>{set({handle:e.target.value.replace(/^@/,'')});setNickErr('');}}/></div></Field>
-       {!cp&&<ToggleRow title={t('fe.mx.ed.showAge')} on={d.showAge} onClick={()=>set({showAge:!d.showAge})}/>}
-       <Field id={fid+'b'} name="bio" label={t('fe.mx.ed.about')} error={checks.error('bio')}><TextArea id={fid+'b'} rows={4} {...checks.input('bio')} value={d.bio} placeholder={t('fe.mx.ed.aboutPh')} onChange={e=>set({bio:e.target.value})}/><Counter n={textLength(d.bio)} max={FIELD.bio.max}/></Field>
        <PickField label={t('fe.mx.ed.city')} value={placeName(d.cityId)} placeholder={t('fe.mx.ed.noCity')} onClick={()=>setCity(true)}/>
+       {!cp&&p.age&&<PickField label={t('fe.mb.age')} icon={Cake} value={d.showAge?t('fe.mb.ageShow',{n:String(p.age)}):t('fe.mb.ageHide')} placeholder="" onClick={()=>setAgeSheet(true)}/>}
+       <Field id={fid+'b'} name="bio" label={t('fe.mx.ed.about')} error={checks.error('bio')}><TextArea id={fid+'b'} rows={4} {...checks.input('bio')} value={d.bio} placeholder={t('fe.mx.ed.aboutPh')} onChange={e=>set({bio:e.target.value})}/><Counter n={textLength(d.bio)} max={FIELD.bio.max}/></Field>
       </>}
       {show('details')&&<div className="pe-who" id="peWho">
        {only!=='details'&&<Row expanded={who} onClick={()=>setWhoOpen(!who)} title={cp?t('fe.mx.detailsCouple'):t('fe.mx.ed.yourDetails')}
@@ -218,6 +218,10 @@ export function MeEditScreen(){
   {picked&&d&&<Uploader files={picked.files} aspects={picked.k==='photos'?['4:5']:['orig','4:5','1:1']} max={(picked.k==='photos'?MAX_PHOTOS:PRIV_MAX)-d[picked.k].length}
    send={picked.k==='photos'?sendAvatar:sendPrivate} onClose={()=>setPicked(null)}
    onDone={got=>{const k=picked.k;setPicked(null);setD(v=>v?{...v,[k]:[...v[k],...got.map(g=>({id:g.id,src:g.url,pending:true}))]}:v);}}/>}
+  {ageSheet&&d&&p?.age&&<Sheet title={t('fe.mb.age')} onClose={()=>setAgeSheet(false)}>
+   <RadioList label={t('fe.mb.age')} value={d.showAge?'show':'hide'} onChange={v=>{set({showAge:v==='show'});setAgeSheet(false);}}
+    options={[['show',t('fe.mb.ageShow',{n:String(p.age)})],['hide',t('fe.mb.ageHide')]] as const}/>
+  </Sheet>}
   {city&&d&&<PlacePicker places={cat?.places??[]} current={d.cityId} clear={t('fe.mx.ed.noCity')} add={addPlace}
    onPick={x=>{set({cityId:x?.id??null});setCity(false);}} onClose={()=>setCity(false)}/>}
   {phSheet&&sheetPh&&<Sheet title={phSheet.k==='photos'&&phSheet.i===0?t('fe.mx.ph.main'):t('fe.mx.ph.nOf',{n:phSheet.i+1,total:sheetList.length})} onClose={()=>setPhSheet(null)}>
