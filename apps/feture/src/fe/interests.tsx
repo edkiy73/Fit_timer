@@ -137,12 +137,13 @@ function InterestFields({limit,couple,v,setV,dir,setDir,vis,setVis}:{limit:boole
  const mark=v==='discuss'||v==='hard';
  const allDir=dir.length===DIRS.length;
  return <>
-    <Group bare title={t(limit?'fe.int.ed.qLimit':'fe.int.ed.q')}><Card><div className="ans">
+    {/* no card around the answer: each lane has its own frame (a frame in a frame took 32 px from the numbers) */}
+    <Group bare title={t(limit?'fe.int.ed.qLimit':'fe.int.ed.q')}><div className="ans">
      <AnswerScale value={v} onChange={setV} label={t('fe.int.ed.scale')}
       {...(limit?{}:{lanes:LANES.map(id=>({id,label:t('fe.int.ed.dir.'+id)})),lane:mark?null:allDir?'all':dir.length===1?dir[0]:null,
        onLane:(n:number,id:Lane)=>{setDir(()=>id==='all'?[...DIRS]:[id]);setV(n);}})}
       marks={[{id:'discuss',label:t('fe.int.ed.discuss'),icon:MessageCircle,soft:true},{id:'hard',label:t('fe.int.ed.hard'),icon:Ban,taboo:true}] as const}/>
-    </div></Card></Group>
+    </div></Group>
  </>;
 }
 
