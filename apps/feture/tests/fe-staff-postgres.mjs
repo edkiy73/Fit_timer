@@ -15,6 +15,8 @@ async function pendingAsset(db, profileId, purpose = 'post', copies = true) {
     `insert into feture.media_asset (owner_profile_id, uploaded_by, kind, purpose, storage_key, mime, declared_bytes, state, copies_at, reject_reason)
      values ($1, $2, 'image', $3, 'u/' || gen_random_uuid(), 'image/jpeg', 10, 'needs_review', $4, 'scanner_not_configured') returning id`,
     [profileId, account_id, purpose, copies ? new Date() : null]);
+  // In use (a profile photo): a file nobody uses any more is not reviewed (staff.mjs IN_USE).
+  await db.query(`insert into feture.media_attachment (asset_id, target_type, target_id) values ($1, 'avatar', $2)`, [a.id, profileId]);
   return a.id;
 }
 

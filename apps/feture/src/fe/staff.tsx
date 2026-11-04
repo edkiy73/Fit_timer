@@ -382,11 +382,14 @@ function QueueList({id,items,onDone}:{id:QueueId,items:unknown[],onDone:(key:str
 // ——— shared pieces ———
 
 function useDecide(onDone:()=>void,mapError?:(e:unknown)=>string|null){
- const {call}=useFe();const {t}=useI18n();const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const {call}=useFe();const {t}=useI18n();const toast=useToast();const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
  const run=async(action:string,input:Record<string,unknown>)=>{
   setBusy(true);setFailure('');
   try{await call(action,{opId:newOpId(),...input},ok,{asAccount:true});setBusy(false);onDone();}
-  catch(e){setFailure(mapError?.(e)??feErrorMessage(e,t));setBusy(false);}
+  catch(e){setBusy(false);
+   // The item is no longer waiting (its author deleted it, or it was decided meanwhile): the card leaves the queue.
+   if(e instanceof FeError&&e.code==='conflict'&&(e.rule==='gone'||!!e.state)){toast(t('fe.staff.gone'),{type:'info'});onDone();return;}
+   setFailure(mapError?.(e)??feErrorMessage(e,t));}
  };
  return {busy,failure,setFailure,run};
 }

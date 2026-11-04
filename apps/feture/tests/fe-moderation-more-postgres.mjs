@@ -240,6 +240,12 @@ test('staff see the whole thing a report is about, and where a waiting file is u
     assert.ok(queued.usedIn.startsWith('Заголовок: Очень длинная публикация.'));
     // …and whose file it is, for «Принять меры» from the card.
     assert.equal(queued.owner.id, b);
+
+    // The author deletes the post: the file is no longer used, so it leaves the queue and cannot be approved.
+    await call('ub', b, { action: 'post.delete', opId: op(), postId: d.id });
+    assert.ok(!(await call('um', null, { action: 'staff.mediaQueue' })).items.some((/** @type {any} */ i) => i.id === m.id));
+    const late = await call('um', null, { action: 'staff.mediaDecide', opId: op(), assetId: m.id, decision: 'approve', explicit: false });
+    assert.deepEqual([late.status, late.rule], [409, 'gone']);
   } finally { await pg.close(); }
 });
 

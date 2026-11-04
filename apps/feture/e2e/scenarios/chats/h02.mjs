@@ -242,17 +242,17 @@ const scenarios = [
     const m = (await lastMsgs(t)).find(x => x.id === id);
     if (m.media.state !== 'open') throw new Error('server state ' + m.media.state);
   } },
-  { name: 'H02 menu: mute on → off, persisted', persona: 'chats', route: '/n/chats/@KAI', run: async t => {
+  { name: 'H02 menu: notifications off → on, persisted', persona: 'chats', route: '/n/chats/@KAI', run: async t => {
     await ready(t);
     try {
       await openMenu(t);
-      await t.tap('.sheet [role=switch]:has-text("Без звука")');
-      await t.see('.sheet [role=switch][aria-checked=true]:has-text("Без звука")');
+      await t.tap('.sheet [role=switch]:has-text("Уведомления")');
+      await t.see('.sheet [role=switch][aria-checked=false]:has-text("Уведомления")');
       let c = (await t.api('chats.list', { filter: 'all', archived: false })).items.find(x => x.id === KAI);
       if (!c.muted) throw new Error('mute not stored');
-      await t.tap('.sheet [role=switch]:has-text("Без звука")');
-      await t.see('Звук включён');
-      await t.see('.sheet [role=switch][aria-checked=false]:has-text("Без звука")');
+      await t.tap('.sheet [role=switch]:has-text("Уведомления")');
+      await t.see('Уведомления включены');
+      await t.see('.sheet [role=switch][aria-checked=true]:has-text("Уведомления")');
       c = (await t.api('chats.list', { filter: 'all', archived: false })).items.find(x => x.id === KAI);
       if (c.muted) throw new Error('unmute not stored');
     } finally { await t.api('chat.mute', { conversationId: KAI, on: false }); }

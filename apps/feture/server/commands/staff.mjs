@@ -99,10 +99,18 @@ export async function journal(q, staff, action, targetType, targetId, detail = {
     [staff, action, targetType, targetId, JSON.stringify(detail)]);
 }
 
+/** A post photo, profile photo or private-part file needs a look only while it is still used: a post (not archived
+ * or removed) or the profile. Removed by its author (post deleted, photo taken off the profile) it leaves the queue and
+ * can no longer be decided, so nobody is told about a file that is gone. (`m` is the media_asset row.) */
+const IN_USE = `(m.purpose not in ('post', 'avatar', 'private') or exists (
+  select 1 from feture.media_attachment ua left join feture.post up on ua.target_type = 'post' and up.id = ua.target_id
+  where ua.asset_id = m.id and (ua.target_type <> 'post' or up.state not in ('archived', 'removed'))))`;
+
 /** @param {Q} q @param {string} accountId @param {string} assetId @param {{lock?: boolean, self?: boolean}} [opts] self: may be one's own (the owner) */
 async function reviewable(q, accountId, assetId, { lock = false, self = false } = {}) {
   const [a] = await q.query(
-    `select m.*, exists (select 1 from feture.profile_member pm where pm.profile_id = m.owner_profile_id and pm.account_id = $2) own
+    `select m.*, exists (select 1 from feture.profile_member pm where pm.profile_id = m.owner_profile_id and pm.account_id = $2) own,
+       ${IN_USE} in_use
      from feture.media_asset m where m.id = $1 ${lock ? 'for update of m' : ''}`, [assetId, accountId]);
   if (!a) fail(404, 'not_found');
   if (a.own && !self) fail(403, 'forbidden'); // never about one's own profiles or couple (the owner may)
@@ -194,6 +202,7 @@ const run = {
               o.id owner_id, o.kind owner_kind, o.handle owner_handle, o.name owner_name
        from feture.media_asset m left join feture.profile o on o.id = m.owner_profile_id
        where m.state = 'needs_review' and m.purpose <> 'verification'   -- selfies are decided in the age-check queue
+         and ${IN_USE}
          and not exists (select 1 from feture.profile_member pm where pm.profile_id = m.owner_profile_id and pm.account_id = $1::uuid)`,
       [ownerSelf(roles) ? null : account.id]); // the owner's queue includes their own media
     const rows = await q.query(sql, params);
@@ -257,6 +266,7 @@ const run = {
     if (a.state === 'blocked' || (!escalate && a.state !== 'needs_review') || (escalate && !['needs_review', 'approved', 'rejected', 'removed'].includes(a.state))) {
       fail(409, 'conflict', { state: a.state });
     }
+    if (!escalate && !a.in_use) fail(409, 'conflict', { rule: 'gone' }); // its author removed it meanwhile
     if (input.decision === 'approve') {
       if (input.explicit && PUBLIC_ONLY.has(a.purpose)) fail(422, 'rule_violation', { rule: 'explicit_not_allowed' });
       if (!a.copies_at) fail(422, 'rule_violation', { rule: 'no_copies' }); // nothing to show yet; it must be re-scanned
