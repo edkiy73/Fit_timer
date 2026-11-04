@@ -152,10 +152,7 @@ export function LinksScreen(){
      {r.sent.length>0&&<Group title={fill(t('fe.ln.sent'),{n:r.sent.length})}>
       <Card list>{r.sent.map(l=>row(l,true,t('fe.ln.awaiting')))}</Card>
      </Group>}
-     {from&&<Group title={t('fe.ln.requests')} foot={t('fe.ln.fromFoot')}>
-      <Card list><SelectRow row label={t('fe.ln.from')} value={from} options={(['all','follow','none'] as const).map(v=>[v,t('fe.ln.from.'+v)] as const)}
-       onChange={v=>{if(busy)return;setFrom(v);void act(()=>call('profile.setVisibility',{opId:newOpId(),setting:'linksFrom',value:v},ok),t('fe.ln.t.saved'));}}/></Card>
-     </Group>}
+     {/* «Кто может предлагать связь» lives once, in «Кто может писать и упоминать» (owner 05.11.2026: one place) */}
     </>}
   </View>
   {menu&&m&&<Sheet title={nameOf(m)} onClose={closeMenu}>
