@@ -58,9 +58,10 @@ export function MeV3Screen(){
    <BellButton/>
   </Bar>
   <View refresh={refresh}>
-   {todo+stTodo>0&&<Card list><Row className="me-todo" icon={Inbox} tone="l" title={t('fe.mx.todo')} badge={todo+stTodo} onClick={()=>navigate('/n/inbox')}/></Card>}
-   <Seg value={tab} label={t('fe.mx.whose')} onChange={v=>setParams(v==='profile'?{}:{tab:v},{replace:true})}
-    options={TABS.map(id=>({id,label:t('fe.v3.tab.'+id),...(id==='privacy'&&waiting?.reqs?{n:waiting.reqs}:{})}))}/>
+   {todo+stTodo>0&&<Group><Card list><Row className="me-todo" icon={Inbox} tone="l" title={t('fe.mx.todo')} badge={todo+stTodo} onClick={()=>navigate('/n/inbox')}/></Card></Group>}
+   {/* every block of the screen is a Group, so they all stand 24 apart (the tabs too) */}
+   <Group><Seg value={tab} label={t('fe.mx.whose')} onChange={v=>setParams(v==='profile'?{}:{tab:v},{replace:true})}
+    options={TABS.map(id=>({id,label:t('fe.v3.tab.'+id),...(id==='privacy'&&waiting?.reqs?{n:waiting.reqs}:{})}))}/></Group>
    {tab==='profile'?<ProfileZone p={p} settings={settings} load={load} cp={cp} links={waiting?.links}/>
     :tab==='privacy'?<PrivacyZone privOn={settings?settings.privateOn!==false:undefined} discover={settings?.discoverMode} cp={cp} reqs={waiting?.reqs}/>
     :<AccountZone couple={!!couple}/>}
@@ -75,21 +76,21 @@ type MeData=ReturnType<typeof useMe>;
 function ProfileZone({p,settings,load,cp,links}:{p:MeData['p'],settings:MeData['settings'],load:()=>void,cp:boolean,links:number|undefined}){
  const {t}=useI18n();const navigate=useNavigate();const go=(to:string)=>()=>navigate(to);
  return <>
-  <Actions>
+  <Group><Actions>
    <Btn icon={Pencil} onClick={go('/n/me/new/profile')}>{t('fe.v3.edit')}</Btn>
    <Btn kind="soft" icon={Eye} onClick={go('/n/me/preview')}>{t('fe.mx.howSeen')}</Btn>
-  </Actions>
+  </Actions></Group>
   {!p||!settings?<MeSkel/>:<>
    <PhotosBlock p={p} settings={settings} onChanged={load}/>
-   {p.photos.length>0&&!p.bio&&<AddCard icon={PenLine} title={t(cp?'fe.mp.bioAddUs':'fe.mp.bioAdd')} sub={t(cp?'fe.mp.bioAddSubUs':'fe.mp.bioAddSub')} onClick={go('/n/me/new/profile')}/>}
+   {p.photos.length>0&&!p.bio&&<Group><AddCard icon={PenLine} title={t(cp?'fe.mp.bioAddUs':'fe.mp.bioAdd')} sub={t(cp?'fe.mp.bioAddSubUs':'fe.mp.bioAddSub')} onClick={go('/n/me/new/profile')}/></Group>}
   </>}
   <Group title={t('fe.v3.g.content')}><Card list>
    <Row icon={Images} title={t('fe.mx.gal')} onClick={go('/n/me/new/gallery')}/>
    <Row icon={Sparkles} title={t('fe.v3.interests')} onClick={go('/n/me/interests')}/>
    <Row icon={Link2} title={t('fe.v3.links')} badge={links||undefined} onClick={go('/n/me/links')}/>
+   <Row icon={Bookmark} title={t('fe.v3.mine')} sub={t(cp?'fe.v3.mineSubUs':'fe.v3.mineSub')} onClick={go('/n/me/v3/mine')}/>
   </Card></Group>
   <PairEntry/>
-  <Card list><Row icon={Bookmark} title={t('fe.v3.mine')} sub={t(cp?'fe.v3.mineSubUs':'fe.v3.mineSub')} onClick={go('/n/me/v3/mine')}/></Card>
  </>;
 }
 
@@ -117,7 +118,7 @@ function AccountZone({couple}:{couple:boolean}){
  const prem=a.premium?t(a.premium.premium?'fe.set.premOn':'fe.set.premOff'):undefined;
  const checks=a.age&&a.photo?(a.age==='ok'&&a.photo==='approved'?t('fe.m2.checks.done'):a.age==='pending'||a.photo==='pending'?t('fe.set.ageVal.pending'):t('fe.m2.checks.todo')):undefined;
  return <>
-  {couple&&<Note>{t('fe.v3.accountNote')}</Note>}
+  {couple&&<Group><Note>{t('fe.v3.accountNote')}</Note></Group>}
   <Group title={t('fe.v3.g.login')}><Card list>
    <Row icon={KeyRound} title={t('fe.m2.s.security')} onClick={go('/n/settings/security')}/>
    <Row icon={ShieldCheck} title={t('fe.m2.s.checks')} val={checks} onClick={go('/n/settings/new/checks')}/>
@@ -131,7 +132,7 @@ function AccountZone({couple}:{couple:boolean}){
    <Row icon={Download} title={t('fe.set.myData')} onClick={go('/n/settings/data')}/>
    <Row icon={CircleHelp} title={t('fe.m2.s.help')} onClick={go('/n/settings/new/help')}/>
   </Card></Group>
-  <Card list><Row icon={LogOut} danger title={t('fe.set.logout')} onClick={out.ask}/></Card>
+  <Group><Card list><Row icon={LogOut} danger title={t('fe.set.logout')} onClick={out.ask}/></Card></Group>
   {out.node}
  </>;
 }
