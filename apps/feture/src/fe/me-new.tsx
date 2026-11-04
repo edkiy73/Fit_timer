@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Bookmark,Calendar,Eye,Globe,Inbox,Newspaper,Settings,UserRound,Users,X} from 'lucide-react';
 import {feErrorMessage} from '../feture/fe-api';
-import {AddBtn,Av,Bar,Btn,Card,Empty,Group,IconBtn,Row,Skel,View} from './kit';
+import {ActingAv,AddBtn,Av,Bar,Btn,Card,Empty,Group,IconBtn,Row,Skel,View} from './kit';
 import {useFe,useLive,useShown} from './session';
 import {BellButton,countsRes} from './inbox';
 import {StaffEntry} from './staff';
@@ -77,7 +77,7 @@ export function MeNewScreen(){
  const num=(v:number|undefined)=>v===undefined?undefined:String(v);
  const privOn=settings?settings.privateOn!==false:undefined;
  return <>
-  <Bar title={name} lead={<Av name={name} seed={acting.id} src={avatarSrc}/>}
+  <Bar title={name} lead={<ActingAv p={{...acting,name,avatar:avatarSrc??null}} size=""/>}
    mark={cp?undefined:<NameBadges p={{photoVerified:verified,premium:!!premium?.premium}}/>}
    sub={couple?(cp?t('fe.me.weCouple'):t('fe.me.iPersonal')):t('fe.me.personalProfile')}
    {...(couple?{onTitle:()=>setSwitching(true),titleLabel:t('fe.mx.whose')}:{})}>

@@ -3,7 +3,7 @@ import {useNavigate,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,Bell,Bookmark,Calendar,CircleHelp,Crown,Download,Eye,Globe,Heart,Images,Inbox,Info,KeyRound,Link2,ListChecks,Lock,LogOut,Newspaper,Settings,ShieldCheck,Smartphone,Sparkles,UserCog,UserRound,Users} from 'lucide-react';
-import {Actions,Av,Bar,Btn,Card,Group,IconBtn,Row,Seg,Skel,View} from './kit';
+import {ActingAv,Actions,Av,Bar,Btn,Card,Group,IconBtn,Row,Seg,Skel,View} from './kit';
 import {useFe,useLive,useShown} from './session';
 import {BellButton,countsRes} from './inbox';
 import {StaffEntry} from './staff';
@@ -53,7 +53,7 @@ export function MeV3Screen(){
  const avatarSrc=p?(p.photos[0]?.src?.thumb??p.photos[0]?.src?.card??p.avatar?.src?.thumb):acting.avatar;
  const refresh=()=>{pull();load();};
  return <>
-  <Bar title={name} lead={<Av name={name} seed={acting.id} src={avatarSrc}/>}
+  <Bar title={name} lead={<ActingAv p={{...acting,name,avatar:avatarSrc??null}} size=""/>}
    mark={cp?undefined:<NameBadges p={{photoVerified:verified,premium:!!premium?.premium}}/>}
    sub={couple?(cp?t('fe.me.weCouple'):t('fe.me.iPersonal')):t('fe.me.personalProfile')}
    {...(couple?{onTitle:()=>setSwitching(true),titleLabel:t('fe.mx.whose')}:{})}>

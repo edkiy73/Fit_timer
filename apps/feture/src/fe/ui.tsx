@@ -44,10 +44,14 @@ function steady(src:string){
  shown.set(key,{src,at:now,until:(linkExpiresAt(src)??now+600e3)-60e3});return src;
 }
 /** A photo that does not load (its link ran out, the photo was removed) is never a broken-image mark: the initials. */
-export function Av({name,src,size='',seed,couple}:{name:string,src?:string|null|undefined,size?:''|'xs'|'sm'|'lg'|'xl',seed?:string|undefined,couple?:[string,string]|undefined}){
+export function Av({name,src,size='',seed,couple,halves}:{name:string,src?:string|null|undefined,size?:''|'xs'|'sm'|'lg'|'xl',seed?:string|undefined,couple?:[string,string]|undefined,
+ /** A couple without its own photo: each partner's half — their photo, or their initial on a plate. */ halves?:{name:string,src?:string|null|undefined}[]|undefined}){
  const [bad,setBad]=useState<string|null>(null);
  const pic=src?steady(src):null;
  if(pic&&bad!==pic)return <span className={`av ${size}`}><img src={pic} alt="" loading="lazy" draggable={false} onError={()=>{shown.delete(pic.split('?')[0]!);setBad(pic);}}/></span>;
+ if(halves&&halves.length===2)return <span className={`av split ${size}`}>{halves.map((h,i)=>h.src
+  ?<span key={i} className="avs"><img src={steady(h.src)} alt="" loading="lazy" draggable={false}/></span>
+  :<span key={i} className="avs ini"><div className="plate" style={plate((seed??h.name)+i)}/><b>{initial(h.name)}</b></span>)}</span>;
  if(couple)return <span className={`av split ${size}`}>{couple.map((n,i)=><span key={i} className="avs ini"><div className="plate" style={plate((seed??n)+i)}/><b>{initial(n)}</b></span>)}</span>;
  return <span className={`av ini ${size}`}><div className="plate" style={plate(seed??name)}/><b style={{position:'relative'}}>{initial(name)}</b></span>;
 }

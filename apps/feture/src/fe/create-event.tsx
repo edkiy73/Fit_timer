@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Calendar,Check,ChevronLeft,CircleAlert,Clock,EyeOff,Link as LinkIcon,Lock,MapPin,RefreshCw,Ticket,Unlock,Video} from 'lucide-react';
 import {FeError,feErrorMessage} from '../feture/fe-api';
-import {Alert,Av,Bar,Btn,Card,Chip,Chips,Counter,Empty,EventHero,Fact,Group,Note,RichEditor,Row,Seg,Select,Skel,Stack,Steps,ToggleRow,View,useLeaveGuard} from './kit';
+import {ActingAv,Alert,Av,Bar,Btn,Card,Chip,Chips,Counter,Empty,EventHero,Fact,Group,Note,RichEditor,Row,Seg,Select,Skel,Stack,Steps,ToggleRow,useLeaveGuard,View} from './kit';
 import {NamedPlate} from './comm-kit';
 import {RichText} from './post-parts';
 import {PickField,PlacePicker} from './kit/Place';
@@ -307,7 +307,7 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
 
  let body:ReactNode=null;
  if(step===1)body=<>
-  {couple&&acting&&<p className="as-line full"><Av name={acting.name} seed={acting.id} size="xs" src={acting.avatar}/><span>{t('fe.ce.organiser')} <b>{acting.name}</b></span></p>}
+  {couple&&acting&&<p className="as-line full"><ActingAv p={acting} size="xs"/><span>{t('fe.ce.organiser')} <b>{acting.name}</b></span></p>}
   <CoverField purpose="event" plate={f.plate} setPlate={k=>set('plate',k)} cover={f.cover} setCover={c=>set('cover',c)}/>
   {err.cover&&<FErr>{err.cover}</FErr>}
   <Field name="title" label={t('fe.ce.name')} ph={t('fe.ce.namePh')} check="eventTitle" value={f.title} onChange={v=>set('title',v)} err={err.title}/>
@@ -367,7 +367,7 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
    {/* The same skeleton as the event's own page: the cover with the title, who organises, when / where / price, about. */}
    <EventHero cover={f.cover?<img className="evimg" src={f.cover.preview} alt="" draggable={false}/>:<NamedPlate k={f.plate} icon={Calendar}/>} title={f.title.trim()}
     tags={[<>{f.format==='online'?<Video/>:<MapPin/>}{area}</>,...(f.kind?[t('fe.ce.kind.'+f.kind)]:[])]}/>
-   {acting&&<Card list><Row av={<Av name={acting.name} seed={acting.id} size="sm" src={acting.avatar}/>} title={acting.name} sub={t('fe.ev.organizer')} noChev/></Card>}
+   {acting&&<Card list><Row av={<ActingAv p={acting} size="sm"/>} title={acting.name} sub={t('fe.ev.organizer')} noChev/></Card>}
    <Card list>
     <Row icon={Calendar} tone="l" title={ok?fmt(start,{weekday:'short',day:'numeric',month:'long'}):''}
      sub={ok?`${fmt(start,{hour:'2-digit',minute:'2-digit'})}–${fmt(end,{hour:'2-digit',minute:'2-digit'})} · ${zoneLabel(f.tz,new Date(start).toISOString(),locale)}`:''}/>

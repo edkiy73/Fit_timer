@@ -3,7 +3,7 @@ import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Av,Btn,NoteDecision,PersonLine} from './kit';
+import {ActingAv,Av,Btn,NoteDecision,PersonLine} from './kit';
 import {useFe,useLive} from './session';
 import {useToast} from './toast';
 
@@ -51,7 +51,7 @@ export function StatusDecision(){
   try{await call('profile.statusKeep',{opId:newOpId()},ok,{asAccount:true});changed();}
   catch(e){toast(feErrorMessage(e,t),{type:'err'});}finally{setBusy('');}};
  return <NoteDecision id="item-status" openLabel={t('fe.mx.stat.rowTitle')} onOpen={()=>navigate('/n/me/edit?only=details')}
-  person={<PersonLine av={<Av name={couple.name||'?'} seed={couple.id} src={couple.avatar}/>} name={t('fe.mx.stat.rowTitle')} sub={couple.name||undefined}/>}
+  person={<PersonLine av={<ActingAv p={couple} size=""/>} name={t('fe.mx.stat.rowTitle')} sub={couple.name||undefined}/>}
   action={t(status?'fe.mx.stat.single':'fe.mx.stat.none',{name})}
   actions={<><Btn size="md" busy={busy==='y'} disabled={!!busy} onClick={()=>void fix()}>{t('fe.mx.stat.fix')}</Btn>
    <Btn size="md" kind="soft" busy={busy==='n'} disabled={!!busy} onClick={()=>void keep()}>{t('fe.mx.stat.keep')}</Btn></>}/>;
