@@ -110,13 +110,12 @@ export function InterestSheet({topicId,topics,cats,current,defaultVis='public',o
  };
  const pick=(nv:Answer,nd:Dir[])=>{setV(nv);setDir(nd);void save(nv,nd);};
  // The kit sheet (in the app layer, above the phone dock); Escape, ✕ and the scrim close it. Only «Удалить» stays at
- // the bottom, and it asks first: «Удалить» / «Отмена».
+ // the bottom; it asks once more as «Точно удалить» / «Отмена».
  return <Sheet title={name} sub={cat?(locale==='en'?cat.en:cat.ru):undefined} onClose={onClose} foot={failure||current?<>
   {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
-  {current&&(asking?<>
-   <Note><b>{t('fe.int.ed.removeQ',{topic:name})}</b></Note>
-   <div className="row g8"><Btn kind="soft" onClick={()=>setAsking(false)} disabled={busy}>{t('fe.cancel')}</Btn><Btn kind="danger" busy={busy} onClick={remove} disabled={busy}>{t('fe.int.ed.remove')}</Btn></div>
-  </>:<Btn kind="soft" icon={Trash2} onClick={()=>setAsking(true)} disabled={busy}>{t('fe.int.ed.remove')}</Btn>)}
+  {/* «Удалить» turns into «Точно удалить» next to «Отмена» — no question line (owner 05.11.2026) */}
+  {current&&(asking?<div className="row g8"><Btn kind="soft" onClick={()=>setAsking(false)} disabled={busy}>{t('fe.cancel')}</Btn><Btn kind="danger" icon={Trash2} busy={busy} onClick={remove} disabled={busy}>{t('fe.int.ed.removeSure')}</Btn></div>
+   :<Btn kind="soft" icon={Trash2} onClick={()=>setAsking(true)} disabled={busy}>{t('fe.int.ed.remove')}</Btn>)}
  </>:undefined}>
   {desc&&<p className="topic-desc">{desc}</p>}
   <InterestFields limit={limit} couple={couple} v={v} setV={setV} dir={dir} setDir={setDir} vis={vis} setVis={setVis} onPick={pick}/>
@@ -162,7 +161,8 @@ export function InterestsScreen(){
   <View className="nodock">
    {notice&&<Alert kind="ok" noIcon>{notice}</Alert>}
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
-    :!items?<Skel kind="list"/>
+    // The names come with the catalog: until it is here the list waits (its ids would flash in English).
+    :!items||(items.length>0&&!topics.length)?<Skel kind="list"/>
     :all.length?<>
      {groups.map(([g,l])=><Group key={g} title={<>{t('fe.int.group.'+g)} · {l.length}</>}>
       <Card><Jars list={l} topics={topics} onOpen={setOpen}/></Card></Group>)}
@@ -240,7 +240,7 @@ export function MeJars(){
  const {acting}=useFe();const {t}=useI18n();const navigate=useNavigate();
  const {items,cats,topics,load}=useInterests();
  const [f,setF]=useState<'all'|Vis>('all');const [openAll,setOpenAll]=useState(false);const [open,setOpen]=useState<string|null>(null);const [notice,setNotice]=useState('');
- if(!acting||!items)return null;
+ if(!acting||!items||(items.length>0&&!topics.length))return null; // no English ids before the names arrive
  const couple=acting.kind==='couple';
  const title=t(couple?'fe.int.titleCouple':'fe.int.title');
  const add=()=>navigate('/n/me/interests?add=1');
