@@ -1,8 +1,9 @@
 import {Children,cloneElement,createContext,Fragment,isValidElement,useCallback,useContext,useEffect,useId,useRef,useState,type ReactNode} from 'react';
+import {copyLink} from './share';
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {ArrowUpDown,BadgeCheck,Ban,CalendarDays,Check,ClipboardCheck,ChevronLeft,ChevronRight,Eye,FilePen,Flag,Gavel,IdCard,Image,ImageOff,Inbox,ListFilter,Lock,MapPin,Minus,RefreshCw,Scale,Search,ShieldAlert,ShieldCheck,User,UserPlus,Tags,Plus,FileText,UserX,Users,X,Ellipsis,Film,Mic,Camera,Image as ImageIcon,LifeBuoy,Crown,Wrench,ScrollText,KeyRound,type LucideIcon} from 'lucide-react';
+import {ArrowUpDown,BadgeCheck,Ban,CalendarDays,Check,ClipboardCheck,ChevronLeft,ChevronRight,Eye,FilePen,Flag,Gavel,IdCard,Image,ImageOff,Inbox,ListFilter,Lock,MapPin,Minus,RefreshCw,Scale,Search,ShieldAlert,ShieldCheck,User,UserPlus,Tags,Plus,FileText,EyeOff,ChartColumn,Copy,Filter,UserX,Users,X,Ellipsis,Film,Mic,Camera,Image as ImageIcon,LifeBuoy,Crown,Wrench,ScrollText,KeyRound,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Actions,Alert,Btn,Swipe,Card,CheckList,ToggleRow,RadioList,Chip,ChoiceChips,MultiChips,Chips,Divider,Empty,ExpandRow,Field,Form,Group,IconBtn,Input,KeyValues,LoadMore,MoreInfo,Note,Pill,ReviewBar,ReviewCard,ReviewMedia,ReviewObject,ReviewPair,ReviewTiles,ReviewPreview,type Slide,useBackClose,Row,SearchInput,SectionLabel,Seg,Select,Sheet,Skel,Stack,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble} from './kit';
 import {askFactor,useFe,useLive} from './session';
@@ -43,7 +44,7 @@ const mediaDto=z.object({src:z.record(z.string(),z.string()).nullable().optional
 const checkItem=z.object({id:z.uuid(),gesture:z.string(),submittedAt:ts,profile:z.object({id:z.string(),handle:z.string().nullable()}),selfie:mediaDto,photo:mediaDto});
 const ageItem=checkItem.extend({method:z.enum(['selfie','document']).optional().default('selfie'),gesture:z.string().nullable(),document:mediaDto});
 const photoItem=checkItem.extend({photos:z.array(mediaDto).optional()});
-const reportItem=z.object({targetType:z.enum(['profile','post','reply','community','event','conversation']),targetId:z.uuid(),reports:z.number(),reasons:z.array(z.string()),
+const reportItem=z.object({targetType:z.enum(['profile','post','reply','community','event','conversation','announcement']),targetId:z.uuid(),reports:z.number(),reasons:z.array(z.string()),
  details:opt(z.array(z.string())),firstAt:ts,lastAt:ts,reported:z.unknown().optional(),excerpt:opt(z.string()),state:opt(z.string()),media:opt(z.number()),
  author:opt(z.object({id:z.string(),kind:z.string().optional(),handle:z.string().nullable().optional(),name:z.string().nullable().optional()}).passthrough()),
  evidence:opt(z.array(z.object({assetId:z.uuid(),kind:z.string(),seq:opt(z.number())}))),object:objectDto});
@@ -61,7 +62,7 @@ const flaggedRes=z.object({ok:z.literal(true),flagged:z.array(z.object({profileI
 const revisionItem=z.object({person,id:z.uuid(),postId:z.uuid(),createdAt:ts,live:opt(z.string()),proposed:z.unknown().optional()});
 const grantRes=z.object({ok:z.literal(true),id:z.string(),until:z.string()});
 const measure=z.object({rule:z.string().nullable(),until:ts}).nullable();
-const measuresRes=z.object({ok:z.literal(true),profileId:z.uuid(),kind:z.string(),handle:z.string().nullable(),name:z.string().nullable(),state:z.string().optional(),createdAt:z.string().nullable().optional(),openReports:z.number().optional(),restricted:measure,suspended:measure});
+const measuresRes=z.object({ok:z.literal(true),profileId:z.uuid(),kind:z.string(),handle:z.string().nullable(),name:z.string().nullable(),state:z.string().optional(),createdAt:z.string().nullable().optional(),openReports:z.number().optional(),watched:z.object({at:z.string(),note:z.string().nullable(),by:z.string().nullable()}).nullable().optional(),restricted:measure,suspended:measure});
 
 type MediaItem=z.infer<typeof mediaItem>;type CommItem=z.infer<typeof commItem>;type EventItem=z.infer<typeof eventItem>;type AgeItem=z.infer<typeof ageItem>;type PhotoItem=z.infer<typeof photoItem>;
 type DisputeItem=z.infer<typeof disputeItem>;type RevisionItem=z.infer<typeof revisionItem>;type ReportItem=z.infer<typeof reportItem>;type AppealItem=z.infer<typeof appealItem>;type NoticeItem=z.infer<typeof noticeItem>;type PlaceItem=z.infer<typeof placeItem>;
@@ -88,8 +89,8 @@ const QUEUE_IDS=Object.keys(QUEUES) as QueueId[];
 /** Who may open what (the server's requireStaff lists); the screen only asks for what the roles allow. Queues not
  * listed are open to every staff role that has a queue. */
 const QUEUE_ROLES:Partial<Record<QueueId,string[]>>={appeal:['owner','lead']};
-const SECTION_ROLES={queues:['owner','lead','moderator','verifier'],support:['owner','lead','moderator','support'],measures:['owner','lead','moderator'],premium:['owner','lead'],maintenance:['owner','lead'],journal:['owner','lead','auditor'],access:['owner','lead'],team:['owner'],topics:['owner','lead'],documents:['owner','lead']} as const;
-const SECTIONS=['queues','measures','journal','support','team','topics','documents','premium','maintenance','access'] as const;
+const SECTION_ROLES={queues:['owner','lead','moderator','verifier'],support:['owner','lead','moderator','support'],measures:['owner','lead','moderator'],premium:['owner','lead'],maintenance:['owner','lead'],journal:['owner','lead','auditor'],access:['owner','lead'],team:['owner'],topics:['owner','lead'],documents:['owner','lead'],transparency:['owner','lead','auditor'],words:['owner','lead']} as const;
+const SECTIONS=['queues','measures','journal','support','team','topics','documents','words','transparency','premium','maintenance','access'] as const;
 type Section=typeof SECTIONS[number];
 const can=(roles:readonly string[],need:readonly string[]|undefined)=>!need||roles.some(r=>need.includes(r));
 const LIMIT=50;
@@ -146,7 +147,7 @@ export function StaffScreen(){
      {daily.length>1&&daily.includes(cur)&&<Seg<Section> small={false} value={cur} onChange={setSection}
       // Four tabs on a phone: a dot says something waits (the number is on the shield in «Я»).
       options={daily.map(id=>{const n=id==='queues'?(counts?counts.total-counts.support:0):id==='support'?(counts?.support??0):0;return {id,label:label(id),...(n>0?{dot:t('fe.staff.entryN',{n:String(n)})}:{})};})}/>}
-     {cur==='queues'?<Queues/>:cur==='support'?<StaffSupport/>:cur==='measures'?<People/>:cur==='premium'?<Premium/>:cur==='maintenance'?<StaffMaintenance/>:cur==='journal'?<Journal/>:cur==='access'?<FactorReset/>:cur==='team'?<Team/>:cur==='topics'?<Topics/>:cur==='documents'?<Documents/>:null}
+     {cur==='queues'?<Queues/>:cur==='support'?<StaffSupport/>:cur==='measures'?<People/>:cur==='premium'?<Premium/>:cur==='maintenance'?<StaffMaintenance/>:cur==='journal'?<Journal/>:cur==='access'?<FactorReset/>:cur==='team'?<Team/>:cur==='topics'?<Topics/>:cur==='documents'?<Documents/>:cur==='transparency'?<Transparency/>:cur==='words'?<Words/>:null}
     </>}
   </View>
   {menu&&<Sheet title={t('fe.staff.tools')} sub={roles?.length?t('fe.staff.roles')+': '+roles.map(r=>t('fe.staff.role.'+r)).join(', '):undefined} onClose={()=>setMenu(false)}>
@@ -157,8 +158,8 @@ export function StaffScreen(){
 }
 /** The system «Назад» closes the sheet it sits in instead of leaving the staff area. */
 function BackCloses({onClose}:{onClose:()=>void}){useBackClose(onClose);return null;}
-const SECTION_LABEL:Record<Section,string>={queues:'fe.staff.section.queues',measures:'fe.staff.section.measures',support:'fe.w8.staff.support',premium:'fe.staff.section.premium',maintenance:'fe.w8.staff.maint',journal:'fe.staff.section.journal',access:'fe.staff.section.access',team:'fe.staff.section.team',topics:'fe.staff.section.topics',documents:'fe.staff.section.documents'};
-const SECTION_ICON:Record<Section,LucideIcon>={queues:Inbox,measures:Gavel,support:LifeBuoy,premium:Crown,maintenance:Wrench,journal:ScrollText,access:KeyRound,team:Users,topics:Tags,documents:FileText};
+const SECTION_LABEL:Record<Section,string>={queues:'fe.staff.section.queues',measures:'fe.staff.section.measures',support:'fe.w8.staff.support',premium:'fe.staff.section.premium',maintenance:'fe.w8.staff.maint',journal:'fe.staff.section.journal',access:'fe.staff.section.access',team:'fe.staff.section.team',topics:'fe.staff.section.topics',documents:'fe.staff.section.documents',transparency:'fe.staff.section.transparency',words:'fe.staff.section.words'};
+const SECTION_ICON:Record<Section,LucideIcon>={queues:Inbox,measures:Gavel,support:LifeBuoy,premium:Crown,maintenance:Wrench,journal:ScrollText,access:KeyRound,team:Users,topics:Tags,documents:FileText,transparency:ChartColumn,words:Filter};
 
 type Order='old'|'new';
 type PageOf={items:unknown[],locked?:boolean|undefined,next?:string|null|undefined,tail?:string|null|undefined,total?:number|undefined};
@@ -293,6 +294,7 @@ function Queues(){
   {cur&&focus!==null&&<Sheet full className="st-focus" title={titleOf(cur,t)} sub={t('fe.staff.pos',{n:String(focus+1),all:String(entries.length)})+' · '+t('fe.staff.waits',{time:waited(cur.since,t)})}
    onClose={()=>setFocus(null)}>
    <BackCloses onClose={()=>setFocus(null)}/>
+   <Claim item={cur.id+':'+cur.key}/>
    {cur.id==='dispute'&&<Note>{t('fe.staff.howText')}</Note>}
    <ReviewNavCtx.Provider value={{prev:focus>0?()=>setFocus(focus-1):undefined,next:focus<entries.length-1?()=>setFocus(focus+1):undefined,prevLabel:t('fe.staff.prev'),nextLabel:t('fe.staff.next')}}>
     {/* On a phone the next and the previous item come with a swipe; ‹ › stay for a mouse (owner 05.11.2026). */}
@@ -302,6 +304,18 @@ function Queues(){
    </ReviewNavCtx.Provider>
   </Sheet>}
  </>;
+}
+
+/** «Взять в работу» (owner 05.11.2026): the open item is this moderator's for ten minutes (renewed while it stays open);
+ * someone else's item says who has it — a hint, not a lock. */
+function Claim({item}:{item:string}){
+ const {call}=useFe();const {t}=useI18n();const [by,setBy]=useState<string|null>(null);
+ useEffect(()=>{let live=true;const claimRes=z.object({ok:z.literal(true),claimed:z.boolean(),by:z.string().nullable().optional()});
+  const take=()=>call('staff.claim',{opId:newOpId(),item,on:true},claimRes,{asAccount:true}).then(r=>{if(live)setBy(r.claimed?null:(r.by??t('fe.staff.noName')));}).catch(()=>{});
+  void take();const timer=window.setInterval(()=>void take(),5*60*1000);
+  return()=>{live=false;clearInterval(timer);void call('staff.claim',{opId:newOpId(),item,on:false},claimRes,{asAccount:true}).catch(()=>{});};
+ },[call,item,t]);
+ return by?<Alert kind="warn" icon={Users}>{t('fe.staff.claimedBy',{name:by})}</Alert>:null;
 }
 
 type Level='urgent'|'late'|null;
@@ -1032,6 +1046,10 @@ function People(){
  const {call}=useFe();const {t}=useI18n();
  const [handle,setHandle]=useState('');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [open,setOpen]=useState<string|null>(null);
  const h=handle.trim().replace(/^@/,'');
+ // «Под наблюдением»: the people staff marked to look at again.
+ const [watched,setWatched]=useState<z.infer<typeof watchRes>['items']|null>(null);
+ const loadWatched=useCallback(()=>{call('staff.watchList',{},watchRes,{asAccount:true}).then(r=>setWatched(r.items)).catch(()=>setWatched(null));},[call]);
+ useEffect(loadWatched,[loadWatched]);
  const find=async()=>{if(!h)return;setBusy(true);setFailure('');
   try{const r=await call('staff.profileMeasures',{handle:h},measuresRes,{asAccount:true});setOpen(r.profileId);}
   catch(e){setFailure(e instanceof FeError&&e.code==='not_found'?t('fe.staff.measures.notFound'):e instanceof FeError&&e.code==='forbidden'?t('fe.staff.measures.forbidden'):feErrorMessage(e,t));}
@@ -1042,9 +1060,12 @@ function People(){
    <Btn icon={Search} disabled={busy||!h} busy={busy} onClick={()=>void find()}>{t('fe.staff.measures.find')}</Btn>
   </form>
   <Failure text={failure}/>
-  {open&&<PersonSheet profileId={open} onClose={()=>setOpen(null)}/>}
+  {watched&&watched.length>0&&<Group title={t('fe.staff.people.watched')}><Card list>{watched.map(x=><Row key={x.id} title={personName(x)??''} sub={x.note??undefined} onClick={()=>setOpen(x.id)}/>)}</Card></Group>}
+  {open&&<PersonSheet profileId={open} onClose={()=>{setOpen(null);loadWatched();}}/>}
  </>;
 }
+
+const watchRes=z.object({ok:z.literal(true),items:z.array(z.object({id:z.string(),kind:z.string(),handle:z.string().nullable(),name:z.string().nullable(),note:z.string().nullable()}))});
 
 /** A name in a staff card or the journal that opens the person's page (owner 05.11.2026). */
 function PersonLink({who}:{who:{id:string,handle?:string|null|undefined,name?:string|null|undefined}|null|undefined}){
@@ -1061,7 +1082,12 @@ function PersonSheet({profileId,onClose}:{profileId:string,onClose:()=>void}){
  const {call}=useFe();const {t}=useI18n();const when=useWhen();const jw=useJournalWord();const toast=useToast();const navigate=useNavigate();
  const [p,setP]=useState<z.infer<typeof measuresRes>|null>(null);const [error,setError]=useState<unknown>(null);
  const [history,setHistory]=useState<JournalRow[]|null|undefined>(undefined);
- const [busy,setBusy]=useState(false);const [ask,setAsk]=useState<'restricted'|'suspended'|null>(null);const [failure,setFailure]=useState('');
+ const [busy,setBusy]=useState(false);const [ask,setAsk]=useState<'restricted'|'suspended'|'watch'|null>(null);const [failure,setFailure]=useState('');
+ const [note,setNote]=useState('');
+ const watch=async(on:boolean)=>{if(!p)return;setBusy(true);setFailure('');
+  try{await call('staff.watch',{opId:newOpId(),profileId:p.profileId,on,note:note.trim()},ok,{asAccount:true});setAsk(null);setNote('');
+   toast(t(on?'fe.staff.people.watchOn':'fe.staff.people.watchOff'),{type:'ok'});load();}
+  catch(e){setFailure(feErrorMessage(e,t));}finally{setBusy(false);}};
  const load=useCallback(()=>{
   call('staff.profileMeasures',{profileId},measuresRes,{asAccount:true}).then(setP).catch(setError);
   // The journal is for owners, leads and auditors: anyone else sees the page without the history.
@@ -1082,6 +1108,8 @@ function PersonSheet({profileId,onClose}:{profileId:string,onClose:()=>void}){
   foot={p&&!ask?<ReviewBar main={<MeasuresBtn who={{id:p.profileId,handle:p.handle,name:p.name}}/>}
    more={[...(p.restricted?[<Btn key="r" kind="soft" icon={Check} disabled={busy} onClick={()=>setAsk('restricted')}>{t('fe.staff.people.liftR')}</Btn>]:[]),
     ...(p.suspended?[<Btn key="s" kind="soft" icon={Check} disabled={busy} onClick={()=>setAsk('suspended')}>{t('fe.staff.people.liftS')}</Btn>]:[]),
+    p.watched?<Btn key="w" kind="soft" icon={EyeOff} disabled={busy} onClick={()=>void watch(false)}>{t('fe.staff.people.unwatch')}</Btn>
+     :<Btn key="w" kind="soft" icon={Eye} disabled={busy} onClick={()=>setAsk('watch')}>{t('fe.staff.people.watch')}</Btn>,
     <Btn key="p" kind="soft" icon={User} onClick={()=>{onClose();navigate('/n/people/'+p.profileId);}}>{t('fe.staff.people.profile')}</Btn>]}/>:undefined}>
   <BackCloses onClose={onClose}/>
   {error&&!p?<Alert kind="err">{feErrorMessage(error,t)}</Alert>:!p?<Skel kind="list"/>:<Stack gap={4}>
@@ -1089,14 +1117,82 @@ function PersonSheet({profileId,onClose}:{profileId:string,onClose:()=>void}){
     [t('fe.staff.people.since'),p.createdAt?when(p.createdAt):null],
     [t('fe.staff.measures.restricted'),p.restricted?line(p.restricted):t('fe.staff.measures.none')],
     [t('fe.staff.measures.suspended'),p.suspended?line(p.suspended):t('fe.staff.measures.none')],
-    [t('fe.staff.people.reports'),String(p.openReports??0)]]}/>
-   {ask&&<Confirm text={t(ask==='restricted'?'fe.staff.measures.confirmRestricted':'fe.staff.measures.confirmSuspended',{name})} busy={busy} onNo={()=>setAsk(null)} onYes={()=>void lift(ask)}/>}
+    [t('fe.staff.people.reports'),String(p.openReports??0)],
+    [t('fe.staff.people.watched'),p.watched?[p.watched.note,p.watched.by,when(p.watched.at)].filter(Boolean).join(' · '):t('fe.staff.measures.none')]]}/>
+   {ask==='watch'&&<Stack gap={3}><TextField label={t('fe.staff.people.watchNote')} value={note} max={300} onChange={setNote}/>
+    <Confirm text={t('fe.staff.people.watchQ')} busy={busy} onNo={()=>setAsk(null)} onYes={()=>void watch(true)}/></Stack>}
+   {ask&&ask!=='watch'&&<Confirm text={t(ask==='restricted'?'fe.staff.measures.confirmRestricted':'fe.staff.measures.confirmSuspended',{name})} busy={busy} onNo={()=>setAsk(null)} onYes={()=>void lift(ask)}/>}
    <Failure text={failure}/>
    {history===undefined?<Skel kind="list" rows={2}/>:history&&<Group title={t('fe.staff.people.history')}>
     {history.length?<Card list>{history.map(x=><Row key={String(x.id)} noChev title={jw('action',x.action)} sub={staffName(x)+' · '+when(x.created_at)}/>)}</Card>
      :<Empty compact icon={Inbox} title={t('fe.staff.people.noHistory')}/>}</Group>}
   </Stack>}
  </Sheet>;
+}
+
+// ——— Слова ———
+
+const wordsRes=z.object({ok:z.literal(true),items:z.array(z.object({word:z.string(),addedAt:z.string()}))});
+
+/** The word filter (owner 05.11.2026): a post, a comment, a profile or an event update with one of these words goes to
+ * the report queue («Автофильтр»); it is not held back. Whole words, any case. */
+function Words(){
+ const {call}=useFe();const {t}=useI18n();const toast=useToast();
+ const [items,setItems]=useState<z.infer<typeof wordsRes>['items']|null>(null);const [error,setError]=useState<unknown>(null);
+ const [word,setWord]=useState('');const [busy,setBusy]=useState(false);
+ const load=useCallback(()=>{call('staff.words',{},wordsRes,{asAccount:true}).then(r=>{setItems(r.items);setError(null);}).catch(setError);},[call]);
+ useEffect(load,[load]);
+ const set=async(w:string,on:boolean)=>{setBusy(true);
+  try{await call('staff.wordSet',{opId:newOpId(),word:w,on},ok,{asAccount:true});if(on)setWord('');load();toast(t(on?'fe.staff.words.added':'fe.staff.words.removed'),{type:'ok'});}
+  catch(e){toast(feErrorMessage(e,t),{type:'err'});}finally{setBusy(false);}};
+ const w=word.trim().toLowerCase();const valid=/^[\p{L}\p{N} -]{2,60}$/u.test(w);
+ return <>
+  <Note>{t('fe.staff.words.lead')}</Note>
+  <form className="st-filterrow" onSubmit={e=>{e.preventDefault();if(valid)void set(w,true);}}>
+   <Input aria-label={t('fe.staff.words.new')} placeholder={t('fe.staff.words.new')} value={word} maxLength={60} onChange={e=>setWord(e.target.value)}/>
+   <IconBtn icon={Plus} label={t('fe.staff.words.add')} disabled={busy||!valid} onClick={()=>void set(w,true)}/>
+  </form>
+  {error&&!items?<Alert kind="err">{feErrorMessage(error,t)}</Alert>:!items?<Skel kind="list"/>:!items.length?<Empty compact icon={Filter} title={t('fe.staff.words.empty')}/>
+   :<Card list>{items.map(x=><Row key={x.word} noChev title={x.word} end={<IconBtn icon={X} kind="ghost" size="sm" label={t('fe.staff.words.remove',{word:x.word})} disabled={busy} onClick={()=>void set(x.word,false)}/>}/>)}</Card>}
+ </>;
+}
+
+// ——— Отчёт DSA ———
+
+const numRow=z.object({received:z.number().optional(),removed:z.number().optional(),kept:z.number().optional(),unavailable:z.number().optional(),not_actionable:z.number().optional(),
+ granted:z.number().optional(),denied:z.number().optional(),closed:z.number().optional(),median_hours:z.number().nullable().optional()}).passthrough();
+const reportRes=z.object({ok:z.literal(true),reports:z.array(numRow.extend({reason:z.string()})),notices:z.array(numRow.extend({reason:z.string()})),
+ decisions:z.array(z.object({action:z.string(),n:z.number()})),appeals:z.array(numRow.extend({target_type:z.string()}))});
+
+/** «Отчёт DSA» (owner 05.11.2026): the numbers of the transparency report for a period (at least four weeks): reports
+ * and notices by reason with their outcomes and median time, staff decisions, appeals. «Скопировать» gives them as text. */
+function Transparency(){
+ const {call}=useFe();const {t}=useI18n();const jw=useJournalWord();const toast=useToast();
+ const day=(d:Date)=>d.toISOString().slice(0,10);
+ const [months,setMonths]=useState<'6'|'12'>('6');
+ const to=day(new Date()),from=day(new Date(Date.now()-Number(months)*30.5*864e5));
+ const [data,setData]=useState<z.infer<typeof reportRes>|null>(null);const [error,setError]=useState<unknown>(null);
+ useEffect(()=>{setData(null);call('staff.transparency',{from,to},reportRes,{asAccount:true}).then(r=>{setData(r);setError(null);}).catch(setError);},[call,from,to]);
+ const hours=(h:number|null|undefined)=>h==null?'—':h<48?t('fe.staff.dsa.hours',{n:Math.round(h)}):t('fe.staff.dsa.days',{n:Math.round(h/24)});
+ const outcome=(r:z.infer<typeof numRow>)=>[t('fe.staff.dsa.received',{n:r.received??0}),r.removed!=null?t('fe.staff.dsa.removed',{n:r.removed}):null,r.kept!=null?t('fe.staff.dsa.kept',{n:r.kept}):null,
+  r.granted!=null?t('fe.staff.dsa.granted',{n:r.granted}):null,r.denied!=null?t('fe.staff.dsa.denied',{n:r.denied}):null].filter(Boolean).join(' · ');
+ // Report reasons have their own words; notice reasons use the notice queue's.
+ const reason=(k:string)=>{for(const p of ['fe.staff.dsa.reason.','fe.staff.notice.reason.']){const x=t(p+k);if(!x.startsWith('fe.'))return x;}return k;};
+ const text=()=>!data?'':[t('fe.staff.dsa.title',{from,to}),'',t('fe.staff.dsa.reports'),...data.reports.map(r=>`${reason(r.reason)}: ${outcome(r)} · ${hours(r.median_hours)}`),'',
+  t('fe.staff.dsa.notices'),...data.notices.map(r=>`${reason(r.reason)}: ${outcome(r)} · ${hours(r.median_hours)}`),'',
+  t('fe.staff.dsa.decisions'),...data.decisions.map(d=>`${jw('action',d.action)}: ${d.n}`),'',t('fe.staff.dsa.appeals'),...data.appeals.map(a=>`${jw('type',a.target_type)}: ${outcome(a)}`)].join('\n');
+ const copy=async()=>{const ok=await copyLink(text());toast(t(ok?'fe.staff.dsa.copied':'fe.staff.dsa.copyFail'),{type:ok?'ok':'err'});};
+ const block=(title:string,rows:[string,ReactNode][])=><Group title={title}>{rows.length?<Kv rows={rows}/>:<Empty compact icon={Inbox} title={t('fe.staff.dsa.nothing')}/>}</Group>;
+ return <>
+  <Seg<'6'|'12'> value={months} onChange={setMonths} label={t('fe.staff.dsa.period')} options={[{id:'6',label:t('fe.staff.dsa.m6')},{id:'12',label:t('fe.staff.dsa.m12')}]}/>
+  {error&&!data?<Alert kind="err">{feErrorMessage(error,t)}</Alert>:!data?<Skel kind="list"/>:<>
+   {block(t('fe.staff.dsa.reports'),data.reports.map(r=>[reason(r.reason),outcome(r)+' · '+hours(r.median_hours)]))}
+   {block(t('fe.staff.dsa.notices'),data.notices.map(r=>[reason(r.reason),outcome(r)+' · '+hours(r.median_hours)]))}
+   {block(t('fe.staff.dsa.decisions'),data.decisions.map(d=>[jw('action',d.action),String(d.n)]))}
+   {block(t('fe.staff.dsa.appeals'),data.appeals.map(a=>[jw('type',a.target_type).replace(/^./,c=>c.toUpperCase()),outcome(a)]))}
+   <Btn kind="soft" icon={Copy} onClick={()=>void copy()}>{t('fe.staff.dsa.copy')}</Btn>
+  </>}
+ </>;
 }
 
 // ——— Документы ———
@@ -1317,7 +1413,7 @@ function Premium(){
 
 // ——— journal ———
 
-const JOURNAL_ACTIONS=['age.view','age.approve','age.reject','photo.view','photo.approve','photo.reject','community.approve','community.reject','event.approve','event.reject','event.hide',
+const JOURNAL_ACTIONS=['words.add','words.remove','person.watch','person.unwatch','topic.create','topic.save','document.save','document.publish','age.view','age.approve','age.reject','photo.view','photo.approve','photo.reject','community.approve','community.reject','event.approve','event.reject','event.hide',
  'media.view','media.approve','media.reject','notice.removed','notice.kept','notice.not_actionable','place.approve','place.reject','premium.grant','premium.revoke','report.keep','report.remove',
  'revision.approve','revision.reject','sanction.suspend','sanction.lift','sanction.expired','restrict.on','restrict.off','restrict.expired','staff.grant','staff.revoke','staff.factorOn','staff.factorLocked',
  'staff.factorReset','staff.recoveryUsed','support.reply','support.close','appeal.grant','appeal.deny','dating.on','dating.off','maintenance.on','maintenance.off',

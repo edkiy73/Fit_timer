@@ -12,7 +12,7 @@ import {FIELD,serverFields,shakeFirstErr,softMax,textError,textErrorMessage,text
  * checks the same), «Также заблокировать» where blocking makes sense. */
 export const REPORT_REASONS=['threat','private','minor','spam','other'] as const;
 export type ReportReason=typeof REPORT_REASONS[number];
-export type ReportTarget='post'|'reply'|'profile'|'community'|'event'|'conversation';
+export type ReportTarget='post'|'reply'|'profile'|'community'|'event'|'conversation'|'announcement';
 /** The server's rule (contracts/_text.mjs FIELD.reportDetails): 10–500, the shared characters / lines / runs checks. */
 export const DETAILS_MIN=FIELD.reportDetails.min;
 const ok=z.object({ok:z.literal(true)}).passthrough();

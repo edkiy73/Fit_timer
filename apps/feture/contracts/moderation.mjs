@@ -15,7 +15,7 @@ export const moderationCommands = {
     profile: false, write: true,
     input: z.strictObject({
       opId,
-      targetType: z.enum(['profile', 'post', 'reply', 'community', 'event', 'conversation']),
+      targetType: z.enum(['profile', 'post', 'reply', 'community', 'event', 'conversation', 'announcement']),
       targetId: id,
       reportedProfileId: id.optional(),   // a chat: which side's reports this decides
       decision: z.enum(['keep', 'remove']),
@@ -70,6 +70,11 @@ export const moderationCommands = {
     profile: false, write: false,
     input: z.strictObject({ handle: z.string().trim().min(1).max(40).optional(), profileId: id.optional() }).refine(v => !!v.handle !== !!v.profileId, { message: 'handle_or_id' }),
   },
+  // «Под наблюдением» (owner 05.11.2026): a staff mark with a note; the list of marked people.
+  'staff.watch': { profile: false, write: true, input: z.strictObject({ opId, profileId: id, on: z.boolean(), note: z.string().trim().max(300).default('') }) },
+  'staff.watchList': { profile: false, write: false, input: z.strictObject({}) },
+  // «Взять в работу»: the item open on this moderator's screen; others see who has it.
+  'staff.claim': { profile: false, write: true, input: z.strictObject({ opId, item: z.string().min(3).max(200), on: z.boolean() }) },
   'staff.placeQueue': { profile: false, write: false, input: z.strictObject({ ...queuePaging }) },
   'staff.placeDecide': {
     profile: false, write: true,

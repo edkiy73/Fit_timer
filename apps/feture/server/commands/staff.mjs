@@ -218,6 +218,19 @@ const run = {
     return { version: r.document.version };
   },
 
+  async 'staff.words'(q, { account }) {
+    await requireStaff(q, account, ['owner', 'lead']);
+    return { items: await q.query('select word, added_at "addedAt" from feture.word_filter order by word') };
+  },
+
+  async 'staff.wordSet'(q, { account, input }) {
+    await requireStaff(q, account, ['owner', 'lead']);
+    if (input.on) await q.query('insert into feture.word_filter (word, added_by) values ($1, $2) on conflict do nothing', [input.word, account.id]);
+    else await q.query('delete from feture.word_filter where word = $1', [input.word]);
+    await journal(q, account.id, input.on ? 'words.add' : 'words.remove', 'platform', null, { word: input.word });
+    return { word: input.word, on: input.on };
+  },
+
   async 'staff.topics'(q, { account }) {
     await requireStaff(q, account, ['owner', 'lead']);
     const [categories, topics] = await Promise.all([

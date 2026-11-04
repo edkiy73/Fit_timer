@@ -223,6 +223,7 @@ test('every staff decision handler enqueues a user notification (or is named as 
     'staff.disputeClaimantReviewed': 'an internal flag on a claimant, nothing for them',
     'staff.noticeDecide': 'a DSA notice from outside the app: answered by mail (notice.decided)',
     'staff.maintenanceSet': 'a banner everyone sees (support.public)',
+    'staff.wordSet': 'the word filter list: about no one in particular (a match files a report, owner 05.11.2026)',
   };
   const missing = [];
   for (const f of readdirSync(new URL('commands/', ROOT)).filter(x => x.endsWith('.mjs'))) {

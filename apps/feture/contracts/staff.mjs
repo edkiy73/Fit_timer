@@ -36,6 +36,12 @@ export const staffCommands = {
     profile: false, write: true,
     input: z.strictObject({ opId, key: z.enum(DOCUMENT_KEYS), locale: z.enum(['ru', 'en']), revision: z.int().positive(), reviewed: z.literal(true) }),
   },
+  // The word filter (owner 05.11.2026): words that send a text to the report queue.
+  'staff.words': { profile: false, write: false, input: z.strictObject({}) },
+  'staff.wordSet': {
+    profile: false, write: true,
+    input: z.strictObject({ opId, word: z.string().trim().toLowerCase().min(2).max(60).regex(/^[\p{L}\p{N} -]+$/u), on: z.boolean() }),
+  },
   // «Темы» (owner 05.11.2026): the interests catalog, edited in the staff area instead of migrations.
   'staff.topics': { profile: false, write: false, input: z.strictObject({}) },
   'staff.topicSave': {

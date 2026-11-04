@@ -316,6 +316,6 @@
 .v21 .st-preview-foot{display:flex;justify-content:center;padding:6px 8px;border-top:1px solid var(--line)}
 
 /* A person's name in a staff card or the journal: opens their page in the staff area. */
-.v21 .st-link{padding:0;border:0;background:none;font:inherit;color:var(--accent-ink,var(--accent));text-align:inherit;cursor:pointer}
+.v21 .st-link{padding:0;border:0;background:none;font:inherit;color:var(--accent);text-align:inherit;cursor:pointer}
 /* The decision bar as a sheet's foot (a person's page): the foot already has its own edge. */
 .v21 .sheet .sh-f .st-bar{position:static;border-top:0;padding:0;background:none}

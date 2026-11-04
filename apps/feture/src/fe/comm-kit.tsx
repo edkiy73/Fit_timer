@@ -25,7 +25,7 @@ export function NamedPlate({k,icon:Icon}:{k:string|null|undefined,icon?:LucideIc
 export const CommPlate=({k}:{k:string|null|undefined})=><NamedPlate k={k} icon={Users}/>;
 
 /** «Пожаловаться» on a community, an event or a community post: the app's one report sheet (./report). */
-export function ReportSheet({targetType,targetId,onClose,onDone}:{targetType:'community'|'event'|'post',targetId:string,onClose:()=>void,onDone:(msg:string)=>void}){
+export function ReportSheet({targetType,targetId,onClose,onDone}:{targetType:'community'|'event'|'post'|'announcement',targetId:string,onClose:()=>void,onDone:(msg:string)=>void}){
  const {t}=useI18n();const {acting}=useFe();
  return <AppReportSheet targetType={targetType} targetId={targetId} onClose={onClose} onDone={()=>onDone(t(acting?.kind==='couple'?'fe.ca.reported':'fe.cm.reported'))}/>;
 }

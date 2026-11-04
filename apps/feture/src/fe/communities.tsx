@@ -458,6 +458,7 @@ export function EventScreen(){
    if(x instanceof FeError&&(x.rule==='going_alone'||x.rule==='going_as_couple')){setApart({rule:x.rule,input});return false;}
    toast(feErrorMessage(x,t),{type:'err'});return false;}finally{setBusy(false);}
  };
+ const [reportAnn,setReportAnn]=useState<string|null>(null);
  const [apart,setApart]=useState<{rule:'going_alone'|'going_as_couple',input:{status:Status|null,showInList?:boolean,ticketMarked?:boolean}}|null>(null);
  // The answer as it is now, to put back from «Отменить».
  const restore=(was:z.infer<typeof rsvpObj>|null|undefined)=>()=>{const s=was?.status as Status|null|undefined;if(!s)return;
@@ -554,7 +555,8 @@ export function EventScreen(){
       <RichText text={e.description}/>
       {!!reqs.length&&<Stack gap={1}><Text size="sm" tone="ink" bold>{t('fe.ev.requirements')}</Text>{reqs.map((r,i)=><Fact key={i} icon={Check}>{r}</Fact>)}<Note>{t('fe.cm.reqNote')}</Note></Stack>}
      </Stack></Card></Group>
-     {!!e.announcements?.length&&<Group title={t('fe.cm.orgUpdates')}><Card list>{e.announcements.map(a=><Announcement key={a.id} icon={Bell} body={a.body} meta={<>{a.automatic?t('fe.cm.auto'):''}{when(a.created_at,locale)}</>}/>)}</Card></Group>}
+     {!!e.announcements?.length&&<Group title={t('fe.cm.orgUpdates')}><Card list>{e.announcements.map(a=><Announcement key={a.id} icon={Bell} body={a.body} meta={<>{a.automatic?t('fe.cm.auto'):''}{when(a.created_at,locale)}</>}
+      end={!orgMe&&!a.automatic?<IconBtn icon={Flag} kind="ghost" size="sm" label={t('fe.cm.reportUpdate')} onClick={()=>setReportAnn(a.id)}/>:undefined}/>)}</Card></Group>}
      {cancelled&&!orgMe?null:going+interested===0?(orgMe&&!cancelled&&!e.past&&<Group title={t('fe.cm.crowd')}><Empty compact icon={Users} title={t('fe.cm.nobodyYet')}/></Group>)
       :<Group title={e.past?t('fe.cm.whoWas'):t('fe.cm.crowd')}><Card list>
        <Row av={faces.length?<span className="av-stack">{faces.map(f=><Av key={f.id} name={pname(f)} seed={f.id} size="sm" src={f.avatar}/>)}</span>:undefined}
@@ -595,6 +597,7 @@ export function EventScreen(){
   {e&&layer==='withdraw'&&<Ask icon={FileText} danger title={t('fe.host.app.withdrawQ')}
    text={t(app?.state==='approved'?(e.format==='online'?'fe.host.app.withdrawTextApprovedOnline':'fe.host.app.withdrawTextApproved'):'fe.host.app.withdrawText')} ok={t('fe.host.app.withdrawOk')} busy={busy} onOk={()=>void withdraw()} onCancel={()=>setLayer('')}/>}
   {e&&layer==='unwait'&&<Ask icon={FileText} danger title={t('fe.host.app.withdrawQ')} text={t('fe.cm.req.unwaitText')} ok={t('fe.host.app.withdrawOk')} busy={busy} onOk={()=>void unwait()} onCancel={()=>setLayer('')}/>}
+  {reportAnn&&<ReportSheet targetType="announcement" targetId={reportAnn} onClose={()=>setReportAnn(null)} onDone={msg=>{setReportAnn(null);toast(msg,{type:'ok'});}}/>}
   {e&&layer==='report'&&<ReportSheet targetType="event" targetId={e.id} onClose={()=>setLayer('')} onDone={msg=>{setLayer('');toast(msg,{type:'ok'});}}/>}
   {e&&layer==='appeal'&&<AppealSheet targetType="event" id={e.id} ph={t('fe.cm.appealPh')} onClose={()=>setLayer('')} onDone={msg=>{setLayer('');toast(msg,{type:'ok'});}}/>}
  </>;

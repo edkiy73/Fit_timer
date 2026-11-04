@@ -1,4 +1,5 @@
 // @ts-check
+import { checkWords } from '../word-filter.mjs';
 import { likePattern } from '../search.mjs';
 import { eventsCommands } from '../../contracts/events.mjs';
 import { requireUnrestricted } from '../profiles.mjs';
@@ -614,7 +615,7 @@ const run = {
     const follows = ['going', 'interested'].includes(mine.rsvp?.status) || ['pending', 'approved'].includes(mine.application?.state);
     const announcements = e.own || e.admitted || follows
       ? await q.query(
-        `select id, body, automatic, changes, created_at from feture.event_announcement where event_id = $1 and ($2 or automatic) order by created_at desc limit 50`,
+        `select id, body, automatic, changes, created_at from feture.event_announcement where event_id = $1 and ($2 or automatic) and removed_at is null order by created_at desc limit 50`,
         [e.id, e.own || e.admitted])
       : [];
     let cover = null;
@@ -852,6 +853,7 @@ const run = {
     const e = await ownEvent(q, input.eventId, acting);
     if (e.state !== 'published' || new Date(e.ends_at).getTime() <= Date.now()) fail(409, 'conflict', { state: e.state });
     const [n] = await q.query(`insert into feture.event_announcement (event_id, body, created_by) values ($1, $2, $3) returning id`, [e.id, input.body, acting.accountId]);
+    await checkWords(q, 'announcement', n.id, input.body, e.organizer_profile_id);
     await enqueue(q, 'event.announcement', e.organizer_profile_id, { eventId: e.id, announcementId: n.id });
     return { id: n.id };
   },
