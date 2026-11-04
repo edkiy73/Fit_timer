@@ -539,8 +539,12 @@
 .v21 .ans-scale button.fill{background:color-mix(in srgb,var(--accent) 22%,var(--surf));box-shadow:none;color:var(--ink)}
 .v21 .ans-scale button.on{background:var(--accent);color:#fff}
 .v21 .ans-marks{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
-/* one scale per lane («Всё», «Давать», «Получать», «Смотреть»): the lane's name over its 1–10 */
-.v21 .ans-lane{display:grid;gap:6px}.v21 .ans-lane-l{font-size:var(--fs-sm);font-weight:600;color:var(--mute);padding:0 2px}
+/* «нажать и потянуть»: holding a number shows the lanes over it; the finger slides onto one */
+.v21 .ans-scale.ans-hold{position:relative;touch-action:none;-webkit-user-select:none;user-select:none}
+.v21 .ans-scale button.held{transform:scale(1.08);box-shadow:0 0 0 2px var(--accent)}
+.v21 .ans-pop{position:absolute;bottom:calc(100% + 10px);left:clamp(0px,calc(var(--x) - 130px),calc(100% - 260px));width:260px;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;padding:4px;border-radius:var(--r-m);background:var(--surf);box-shadow:var(--shadow),inset 0 0 0 1px var(--line2);z-index:3}
+.v21 .ans-pop span{display:grid;place-items:center;min-height:44px;border-radius:var(--r-s);font-size:var(--fs-sm);font-weight:600;color:var(--ink)}
+.v21 .ans-pop span.on{background:var(--accent);color:#fff}
 .v21 .ans-m{display:flex;align-items:center;justify-content:center;gap:8px;min-height:46px;border-radius:var(--r-m);background:var(--surf);box-shadow:inset 0 0 0 1px var(--line2);font-size:var(--fs-body);font-weight:600}
 .v21 .ans-m svg{width:18px;height:18px;color:var(--mute)}
 .v21 .ans-m.on{background:var(--ink);color:var(--bg);box-shadow:none}.v21 .ans-m.on svg{color:var(--bg)}

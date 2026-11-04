@@ -12,8 +12,6 @@ import {topicMatches} from './topic-search';
 /** Interests (V21 X01 #meJars, X02, X04) with the prototype's markup: one capsule per interest — the fill is the
  * level 1–10; «обсудить» and «граница» are marks, never levels. Everything comes from the server. */
 const VIS=['public','granted','only'] as const;
-/** The lanes of the answer: «Всё» (every direction) or one of them. */
-const LANES=['all','give','get','watch'] as const;type Lane=typeof LANES[number];
 const DIRS=['give','get','watch'] as const;
 type Vis=typeof VIS[number];type Dir=typeof DIRS[number];
 type Answer=number|'discuss'|'hard'|null;
@@ -129,18 +127,18 @@ export function InterestSheet({topicId,topics,cats,current,defaultVis='public',o
  </Sheet>;
 }
 
-/** The answer — the same fields when adding one or several: a level in one of the lanes («Всё», «Давать», «Получать»,
- * «Смотреть»; limits have none) picked with one tap, or a mark. Every interest is seen by everyone (owner 05.11.2026),
+/** The answer — the same fields when adding one or several: a tap on a number is that level for every direction,
+ * holding it and sliding onto «Давать» / «Получать» / «Смотреть» picks one (limits have no directions), or a mark. Every interest is seen by everyone (owner 05.11.2026),
  * so there is no «Кто видит». */
 function InterestFields({limit,couple,v,setV,dir,setDir,vis,setVis}:{limit:boolean,couple:boolean,v:Answer,setV:(v:Answer)=>void,dir:Dir[],setDir:(f:(d:Dir[])=>Dir[])=>void,vis:Vis,setVis:(v:Vis)=>void}){
  const {t}=useI18n();
  const mark=v==='discuss'||v==='hard';
  const allDir=dir.length===DIRS.length;
  return <>
-    <Group bare title={t(limit?'fe.int.ed.qLimit':'fe.int.ed.q')}><Card><div className="ans">
+    {/* the chosen direction reads in the title («· Получать»); «Всё» says nothing */}
+    <Group bare title={<>{t(limit?'fe.int.ed.qLimit':'fe.int.ed.q')}{!limit&&!mark&&v!=null&&!allDir?' · '+dir.map(d=>t('fe.int.ed.dir.'+d)).join(', '):''}</>}><Card><div className="ans">
      <AnswerScale value={v} onChange={setV} label={t('fe.int.ed.scale')}
-      {...(limit?{}:{lanes:LANES.map(id=>({id,label:t('fe.int.ed.dir.'+id)})),laneOn:(id:Lane)=>!mark&&(id==='all'?allDir:!allDir&&dir.includes(id)),
-       onLane:(n:number,id:Lane)=>{setDir(()=>id==='all'?[...DIRS]:[id]);setV(n);}})}
+      {...(limit?{}:{lanes:DIRS.map(id=>({id,label:t('fe.int.ed.dir.'+id)})),onLane:(n:number,id:Dir|null)=>{setDir(()=>id?[id]:[...DIRS]);setV(n);}})}
       marks={[{id:'discuss',label:t('fe.int.ed.discuss'),icon:MessageCircle},{id:'hard',label:t('fe.int.ed.hard'),icon:Ban,taboo:true}] as const}/>
     </div></Card></Group>
  </>;
