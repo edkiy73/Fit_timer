@@ -2,7 +2,7 @@ import {Children,cloneElement,createContext,Fragment,isValidElement,useCallback,
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {ArrowUpDown,BadgeCheck,Ban,CalendarDays,Check,ClipboardCheck,ChevronLeft,ChevronRight,Eye,FilePen,Flag,Gavel,IdCard,Image,ImageOff,Inbox,ListFilter,Lock,MapPin,Minus,RefreshCw,Scale,Search,ShieldAlert,ShieldCheck,User,UserPlus,Tags,Plus,UserX,Users,X,Ellipsis,Film,Mic,Camera,Image as ImageIcon,LifeBuoy,Crown,Wrench,ScrollText,KeyRound,type LucideIcon} from 'lucide-react';
+import {ArrowUpDown,BadgeCheck,Ban,CalendarDays,Check,ClipboardCheck,ChevronLeft,ChevronRight,Eye,FilePen,Flag,Gavel,IdCard,Image,ImageOff,Inbox,ListFilter,Lock,MapPin,Minus,RefreshCw,Scale,Search,ShieldAlert,ShieldCheck,User,UserPlus,Tags,Plus,FileText,UserX,Users,X,Ellipsis,Film,Mic,Camera,Image as ImageIcon,LifeBuoy,Crown,Wrench,ScrollText,KeyRound,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Actions,Alert,Btn,Swipe,Card,CheckList,ToggleRow,RadioList,Chip,ChoiceChips,MultiChips,Chips,Divider,Empty,ExpandRow,Field,Form,Group,IconBtn,Input,KeyValues,LoadMore,MoreInfo,Note,Pill,ReviewBar,ReviewCard,ReviewMedia,ReviewObject,ReviewPair,ReviewTiles,ReviewPreview,type Slide,useBackClose,Row,SearchInput,SectionLabel,Seg,Select,Sheet,Skel,Stack,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble} from './kit';
 import {askFactor,useFe,useLive} from './session';
@@ -88,8 +88,8 @@ const QUEUE_IDS=Object.keys(QUEUES) as QueueId[];
 /** Who may open what (the server's requireStaff lists); the screen only asks for what the roles allow. Queues not
  * listed are open to every staff role that has a queue. */
 const QUEUE_ROLES:Partial<Record<QueueId,string[]>>={appeal:['owner','lead']};
-const SECTION_ROLES={queues:['owner','lead','moderator','verifier'],support:['owner','lead','moderator','support'],measures:['owner','lead','moderator'],premium:['owner','lead'],maintenance:['owner','lead'],journal:['owner','lead','auditor'],access:['owner','lead'],team:['owner'],topics:['owner','lead']} as const;
-const SECTIONS=['queues','measures','journal','support','team','topics','premium','maintenance','access'] as const;
+const SECTION_ROLES={queues:['owner','lead','moderator','verifier'],support:['owner','lead','moderator','support'],measures:['owner','lead','moderator'],premium:['owner','lead'],maintenance:['owner','lead'],journal:['owner','lead','auditor'],access:['owner','lead'],team:['owner'],topics:['owner','lead'],documents:['owner','lead']} as const;
+const SECTIONS=['queues','measures','journal','support','team','topics','documents','premium','maintenance','access'] as const;
 type Section=typeof SECTIONS[number];
 const can=(roles:readonly string[],need:readonly string[]|undefined)=>!need||roles.some(r=>need.includes(r));
 const LIMIT=50;
@@ -146,7 +146,7 @@ export function StaffScreen(){
      {daily.length>1&&daily.includes(cur)&&<Seg<Section> small={false} value={cur} onChange={setSection}
       // Four tabs on a phone: a dot says something waits (the number is on the shield in «Я»).
       options={daily.map(id=>{const n=id==='queues'?(counts?counts.total-counts.support:0):id==='support'?(counts?.support??0):0;return {id,label:label(id),...(n>0?{dot:t('fe.staff.entryN',{n:String(n)})}:{})};})}/>}
-     {cur==='queues'?<Queues/>:cur==='support'?<StaffSupport/>:cur==='measures'?<People/>:cur==='premium'?<Premium/>:cur==='maintenance'?<StaffMaintenance/>:cur==='journal'?<Journal/>:cur==='access'?<FactorReset/>:cur==='team'?<Team/>:cur==='topics'?<Topics/>:null}
+     {cur==='queues'?<Queues/>:cur==='support'?<StaffSupport/>:cur==='measures'?<People/>:cur==='premium'?<Premium/>:cur==='maintenance'?<StaffMaintenance/>:cur==='journal'?<Journal/>:cur==='access'?<FactorReset/>:cur==='team'?<Team/>:cur==='topics'?<Topics/>:cur==='documents'?<Documents/>:null}
     </>}
   </View>
   {menu&&<Sheet title={t('fe.staff.tools')} sub={roles?.length?t('fe.staff.roles')+': '+roles.map(r=>t('fe.staff.role.'+r)).join(', '):undefined} onClose={()=>setMenu(false)}>
@@ -157,8 +157,8 @@ export function StaffScreen(){
 }
 /** The system «Назад» closes the sheet it sits in instead of leaving the staff area. */
 function BackCloses({onClose}:{onClose:()=>void}){useBackClose(onClose);return null;}
-const SECTION_LABEL:Record<Section,string>={queues:'fe.staff.section.queues',measures:'fe.staff.section.measures',support:'fe.w8.staff.support',premium:'fe.staff.section.premium',maintenance:'fe.w8.staff.maint',journal:'fe.staff.section.journal',access:'fe.staff.section.access',team:'fe.staff.section.team',topics:'fe.staff.section.topics'};
-const SECTION_ICON:Record<Section,LucideIcon>={queues:Inbox,measures:Gavel,support:LifeBuoy,premium:Crown,maintenance:Wrench,journal:ScrollText,access:KeyRound,team:Users,topics:Tags};
+const SECTION_LABEL:Record<Section,string>={queues:'fe.staff.section.queues',measures:'fe.staff.section.measures',support:'fe.w8.staff.support',premium:'fe.staff.section.premium',maintenance:'fe.w8.staff.maint',journal:'fe.staff.section.journal',access:'fe.staff.section.access',team:'fe.staff.section.team',topics:'fe.staff.section.topics',documents:'fe.staff.section.documents'};
+const SECTION_ICON:Record<Section,LucideIcon>={queues:Inbox,measures:Gavel,support:LifeBuoy,premium:Crown,maintenance:Wrench,journal:ScrollText,access:KeyRound,team:Users,topics:Tags,documents:FileText};
 
 type Order='old'|'new';
 type PageOf={items:unknown[],locked?:boolean|undefined,next?:string|null|undefined,tail?:string|null|undefined,total?:number|undefined};
@@ -1096,6 +1096,80 @@ function PersonSheet({profileId,onClose}:{profileId:string,onClose:()=>void}){
     {history.length?<Card list>{history.map(x=><Row key={String(x.id)} noChev title={jw('action',x.action)} sub={staffName(x)+' · '+when(x.created_at)}/>)}</Card>
      :<Empty compact icon={Inbox} title={t('fe.staff.people.noHistory')}/>}</Group>}
   </Stack>}
+ </Sheet>;
+}
+
+// ——— Документы ———
+
+type DocBlock={type:'heading'|'paragraph',text:string}|{type:'list',items:string[]};
+const docBlock=z.union([z.object({type:z.enum(['heading','paragraph']),text:z.string()}),z.object({type:z.literal('list'),items:z.array(z.string())})]);
+const docRow=z.object({key:z.string(),locale:z.string(),title:z.string(),blocks:z.array(docBlock),requiresAccept:z.boolean()});
+const docsRes=z.object({ok:z.literal(true),drafts:z.array(docRow.extend({revision:z.number()})),current:z.array(docRow.extend({version:z.number(),effectiveAt:z.string(),sourceRevision:z.number().nullable()}))});
+const DOC_KEYS=['terms','privacy','community','adult-content','complaints','age','retention','cookies','copyright'] as const;
+const MUST_ACCEPT=new Set(['terms','privacy','community','adult-content']);
+/** A document as plain text for editing: «## » a heading, «- » list items, a blank line between paragraphs. */
+const docText=(blocks:DocBlock[])=>blocks.map(b=>b.type==='heading'?'## '+b.text:b.type==='list'?b.items.map(i=>'- '+i).join('\n'):b.text).join('\n\n');
+const docBlocks=(text:string):DocBlock[]=>{
+ const out:DocBlock[]=[];let para:string[]=[];let list:string[]|null=null;
+ const flush=()=>{if(para.length){out.push({type:'paragraph',text:para.join('\n')});para=[];}if(list){out.push({type:'list',items:list});list=null;}};
+ for(const raw of text.split('\n')){const l=raw.trimEnd();
+  if(!l.trim()){flush();continue;}
+  if(l.startsWith('## ')){flush();out.push({type:'heading',text:l.slice(3).trim()});continue;}
+  if(/^[-•] /.test(l)){if(para.length){out.push({type:'paragraph',text:para.join('\n')});para=[];}(list??=[]).push(l.slice(2).trim());continue;}
+  if(list){out.push({type:'list',items:list});list=null;}para.push(l);
+ }
+ flush();return out;
+};
+
+/** «Документы» (owner 05.11.2026): the legal texts people accept. A draft is saved freely; publishing makes it the
+ * version new accounts accept (a fresh code); published versions never change. */
+function Documents(){
+ const {call}=useFe();const {t,locale}=useI18n();const toast=useToast();const when=useWhen();
+ const [data,setData]=useState<z.infer<typeof docsRes>|null>(null);const [error,setError]=useState<unknown>(null);
+ const [lang,setLang]=useState<'ru'|'en'>(locale==='en'?'en':'ru');const [open,setOpen]=useState<string|null>(null);
+ const load=useCallback(()=>{call('staff.documents',{},docsRes,{asAccount:true}).then(r=>{setData(r);setError(null);}).catch(setError);},[call]);
+ useEffect(load,[load]);
+ return <>
+  <Seg<'ru'|'en'> value={lang} onChange={setLang} label={t('fe.staff.docs.lang')} options={[{id:'ru',label:'Русский'},{id:'en',label:'English'}]}/>
+  {error&&!data?<Alert kind="err">{feErrorMessage(error,t)}</Alert>:!data?<Skel kind="list"/>:<Card list>{DOC_KEYS.map(k=>{
+   const cur=data.current.find(d=>d.key===k&&d.locale===lang);const dr=data.drafts.find(d=>d.key===k&&d.locale===lang);
+   const changed=!!dr&&dr.revision!==cur?.sourceRevision;
+   return <Row key={k} title={cur?.title??dr?.title??t('fe.staff.docs.key.'+k)}
+    sub={[cur?t('fe.staff.docs.version',{n:cur.version,date:when(cur.effectiveAt)}):t('fe.staff.docs.none'),changed?t('fe.staff.docs.draft'):null].filter(Boolean).join(' · ')} onClick={()=>setOpen(k)}/>;})}</Card>}
+  {open&&data&&<DocumentSheet docKey={open} locale={lang} data={data} onClose={()=>setOpen(null)} onDone={msg=>{toast(msg,{type:'ok'});load();}}/>}
+ </>;
+}
+
+function DocumentSheet({docKey,locale,data,onClose,onDone}:{docKey:string,locale:'ru'|'en',data:z.infer<typeof docsRes>,onClose:()=>void,onDone:(msg:string)=>void}){
+ const {call}=useFe();const {t}=useI18n();
+ const cur=data.current.find(d=>d.key===docKey&&d.locale===locale);const dr=data.drafts.find(d=>d.key===docKey&&d.locale===locale);
+ const base=dr??cur;
+ const [title,setTitle]=useState(base?.title??'');const [text,setText]=useState(base?docText(base.blocks as DocBlock[]):'');
+ const [must,setMust]=useState(base?.requiresAccept??MUST_ACCEPT.has(docKey));
+ const [rev,setRev]=useState(dr?.revision??0);const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [ask,setAsk]=useState(false);
+ const dirty=!base||title!==base.title||text!==docText(base.blocks as DocBlock[])||must!==base.requiresAccept;
+ const unpublished=rev>0&&rev!==cur?.sourceRevision;
+ const save=async()=>{setBusy(true);setFailure('');
+  try{const r=await call('staff.documentSave',{opId:newOpId(),key:docKey,locale,expectedRevision:rev,title:title.trim(),requiresAccept:must,blocks:docBlocks(text)},
+    z.object({ok:z.literal(true),revision:z.number()}),{asAccount:true});setRev(r.revision);onDone(t('fe.staff.docs.saved'));return r.revision;}
+  catch(e){setFailure(e instanceof FeError&&e.rule==='revision_conflict'?t('fe.staff.docs.conflict'):feErrorMessage(e,t));return null;}finally{setBusy(false);}};
+ const publish=async()=>{setBusy(true);setFailure('');
+  try{const r=await call('staff.documentPublish',{opId:newOpId(),key:docKey,locale,revision:rev,reviewed:true},z.object({ok:z.literal(true),version:z.number()}),{asAccount:true});
+   setAsk(false);onDone(t('fe.staff.docs.published',{n:r.version}));onClose();}
+  catch(e){setFailure(feErrorMessage(e,t));setAsk(false);}finally{setBusy(false);}};
+ return <Sheet full className="st-sheet" title={t('fe.staff.docs.key.'+docKey)} sub={locale==='en'?'English':'Русский'} onClose={onClose} dirty={dirty}
+  foot={ask?undefined:<ReviewBar main={dirty?<Btn icon={Check} disabled={busy||!title.trim()||!text.trim()} busy={busy} onClick={()=>void save()}>{t('fe.staff.docs.save')}</Btn>
+   :<Btn icon={Check} disabled={busy||!unpublished} onClick={()=>setAsk(true)}>{t('fe.staff.docs.publish')}</Btn>}/>}>
+  <BackCloses onClose={onClose}/>
+  <Stack gap={4}>
+   <LineField label={t('fe.staff.docs.title')} value={title} max={160} onChange={setTitle}/>
+   <TextField label={t('fe.staff.docs.text')} value={text} max={60000} rows={14} onChange={setText}/>
+   <Note>{t('fe.staff.docs.howTo')}</Note>
+   <Card list><ToggleRow title={t('fe.staff.docs.must')} sub={MUST_ACCEPT.has(docKey)?t('fe.staff.docs.mustAlways'):t('fe.staff.docs.mustSub')} on={must} disabled={MUST_ACCEPT.has(docKey)} onClick={()=>setMust(!must)}/></Card>
+   {cur&&<Kv rows={[[t('fe.staff.docs.live'),t('fe.staff.docs.liveN',{n:cur.version})]]}/>}
+   {ask&&<Confirm text={t('fe.staff.docs.publishQ')} busy={busy} onNo={()=>setAsk(false)} onYes={()=>void publish()}/>}
+   <Failure text={failure}/>
+  </Stack>
  </Sheet>;
 }
 

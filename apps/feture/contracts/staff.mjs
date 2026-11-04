@@ -6,6 +6,9 @@ import { id, opId, queuePaging } from './platform.mjs';
 /** Six digits from the authenticator app, or a recovery code (xxxxx-xxxxx); spaces are dropped. */
 export const factorCode =z.string().max(40).transform(v => v.replace(/\s/g, '')).pipe(z.string().regex(/^(\d{6}|[A-Za-z0-9]{5}-?[A-Za-z0-9]{5})$/));
 
+/** The legal documents (public.feture_document_*): their keys as the database checks them. */
+export const DOCUMENT_KEYS = /** @type {const} */ (['terms', 'privacy', 'community', 'adult-content', 'complaints', 'age', 'retention', 'cookies', 'copyright']);
+
 export const staffCommands = {
   'staff.me': { profile: false, write: false, input: z.strictObject({}) },
   // Second factor (server/second-factor.mjs). Never in the replay ledger (`ledger: false`): the secret and the recovery
@@ -15,6 +18,24 @@ export const staffCommands = {
   'staff.totpConfirm': { profile: false, write: true, ledger: false, input: z.strictObject({ code: factorCode }), rate: { kind: 'factor.check', max: 60, window: '1 hour' } },
   'staff.totpVerify': { profile: false, write: true, ledger: false, input: z.strictObject({ code: factorCode }), rate: { kind: 'factor.check', max: 60, window: '1 hour' } },
   'staff.totpReset': { profile: false, write: true, input: z.strictObject({ opId, handle: z.string().trim().min(1).max(40) }) },
+  // «Документы» (owner 05.11.2026): legal documents — a draft is saved, a reviewed version is published (fresh code).
+  'staff.documents': { profile: false, write: false, input: z.strictObject({}) },
+  'staff.documentSave': {
+    profile: false, write: true,
+    input: z.strictObject({
+      opId, key: z.enum(DOCUMENT_KEYS), locale: z.enum(['ru', 'en']), expectedRevision: z.int().min(0),
+      title: z.string().trim().min(1).max(160), requiresAccept: z.boolean(),
+      blocks: z.array(z.discriminatedUnion('type', [
+        z.strictObject({ type: z.literal('heading'), text: z.string().min(1).max(4000) }),
+        z.strictObject({ type: z.literal('paragraph'), text: z.string().min(1).max(4000) }),
+        z.strictObject({ type: z.literal('list'), items: z.array(z.string().min(1).max(1200)).min(1).max(30) }),
+      ])).min(1).max(200),
+    }),
+  },
+  'staff.documentPublish': {
+    profile: false, write: true,
+    input: z.strictObject({ opId, key: z.enum(DOCUMENT_KEYS), locale: z.enum(['ru', 'en']), revision: z.int().positive(), reviewed: z.literal(true) }),
+  },
   // «Темы» (owner 05.11.2026): the interests catalog, edited in the staff area instead of migrations.
   'staff.topics': { profile: false, write: false, input: z.strictObject({}) },
   'staff.topicSave': {
