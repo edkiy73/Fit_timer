@@ -237,7 +237,8 @@ export function PhotosBlock({p,settings,onChanged}:{p:Profile,settings:Settings,
   catch(e){toast(feErrorMessage(e,t),{type:'err'});}finally{setBusy(false);}
  };
  const ids=items.map(x=>x.id);
- const nCells=Math.min(MAX_PHOTOS,Math.max(items.length+1,3));
+ // Every place is drawn: a wide screen shows all six in one row; a phone hides the empty ones past the third (kit CSS).
+ const nCells=MAX_PHOTOS;
  // The small thumb paints first, so the slot never sits empty while the card-size picture loads.
  const slots:ReactNode[]=items.map((ph,i)=><PhotoSlot key={ph.id} id={ph.id} big={i===0} dragging={drag.preview?.drag===ph.id} waiting={!ph.src} thumb={ph.src?.thumb} src={photoSrc(ph)}
   main={i===0?t('fe.me.mainPhoto'):undefined} review={ph.pending?t('fe.mx.ph.review'):undefined} onPointerDown={busy?undefined:e=>drag.down(e,'ph',ids,ph.id)}
@@ -246,7 +247,8 @@ export function PhotosBlock({p,settings,onChanged}:{p:Profile,settings:Settings,
   ?<PhotoAdd key="add" onClick={edit} label={t('fe.mx.ph.addAria')} hint={t('fe.me.morePhotos')}/>
   :<PhotoAdd key={'g'+i} ghost/>);
  const x=open!==null?items[open]:undefined;
- return <Group className="ph20" id="mePh" title={t('fe.me.photos')} action={<button type="button" onClick={edit}>{t('fe.mx.edit')}</button>}>
+ // No «Изменить» (owner 05.11.2026: nobody saw it): a tap on a photo opens what it can do, a hold moves it, «+» adds.
+ return <Group className="ph20" id="mePh" title={t('fe.me.photos')}>
   <PhotoSlots>{slots}</PhotoSlots>
   {x&&open!==null&&<Sheet title={open===0?t('fe.mx.ph.main'):t('fe.mx.ph.nOf',{n:open+1,total:items.length})} onClose={()=>setOpen(null)}>
    <div className="ph-sheet-prev">{photoSrc(x)&&<img src={photoSrc(x)!} alt="" draggable={false}/>}{x.pending&&<span className="ph-rev"><Clock/><span>{t('fe.mx.ph.review')}</span></span>}</div>
