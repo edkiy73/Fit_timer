@@ -449,6 +449,8 @@
 .v21 .grp.dim{opacity:.4;pointer-events:none}
 .v21 .sheet .grp:first-child{margin-top:4px}
 .v21 .sheet .card{background:var(--surf)}
+/* a form in a sheet has no plate of its own (Card `form`: fields sit on the page, 16 apart) — the sheet is the surface */
+.v21 .sheet .card.form-card{background:none;border-color:transparent;box-shadow:none;padding:0}
 .v21 .sheet.full{top:0;max-height:none;border-radius:0}
 /* A full-height sheet reaches the status bar: its header is the kit Bar (same height as page titles, below --safe-t), no grab. */
 .v21 .sheet.full .grab{display:none}
