@@ -280,6 +280,7 @@ const RAW = /** @type {Record<string, any>} */ ({
   'pair.acted.event': { text: T('{couple} · Партнёр ответил на событие от пары', '{couple} · Your partner answered an event for the couple'), quiet: false, dest: 'event', gone: GONE_EVENT },
   'pair.acted.eventApply': { text: T('{couple} · Партнёр подал заявку на событие от пары', '{couple} · Your partner applied to an event for the couple'), quiet: false, dest: 'event', gone: GONE_EVENT },
   'pair.acted.community': { text: T('{couple} · Партнёр вступил в сообщество от пары', '{couple} · Your partner joined a community for the couple'), dest: 'community', gone: GONE_COMMUNITY },
+  'pair.acted.privateContent': { text: T('{couple} · Партнёр изменил приватную часть пары', '{couple} · Your partner changed the couple’s private part'), dest: 'access' },
   'pair.acted.access': { text: T('{couple} · Партнёр включил приватную часть пары', '{couple} · Your partner turned on the couple’s private part'), quiet: false, dest: 'access' },
   'pair.acted.post_archived': { text: T('{couple} · Партнёр убрал публикацию пары в архив', '{couple} · Your partner archived a couple post'), dest: 'myPosts' },
   'pair.acted.chatRequest': { text: T('{couple} · Партнёр отправил запрос на переписку от пары', '{couple} · Your partner sent a chat request for the couple'), dest: 'chats' },

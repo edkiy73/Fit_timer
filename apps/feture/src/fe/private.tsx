@@ -321,19 +321,19 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged,askHere=true,a
   <div className="vault-b">
   {/* Owner 04.11.2026: an empty part is one short list, not three «add» cards that look like the profile's own. */}
   {empty?<Card list>
-   {!cp&&<Row icon={PenLine} title={t('fe.mp.desc')} sub={t('fe.mp.descAddSub')} onClick={()=>setSheet({k:'desc'})}/>}
-   {!cp&&<Row icon={Camera} title={t('fe.mp.media')} sub={t('fe.mp.mediaAddSub')} disabled={busy} onClick={()=>file.current?.click()}/>}
+   <Row icon={PenLine} title={t('fe.mp.desc')} sub={t('fe.mp.descAddSub')} onClick={()=>setSheet({k:'desc'})}/>
+   <Row icon={Camera} title={t('fe.mp.media')} sub={t('fe.mp.mediaAddSub')} disabled={busy} onClick={()=>file.current?.click()}/>
   </Card>:<>
-  {!cp&&<Group id="privDesc" title={t('fe.mp.desc')}>
+  <Group id="privDesc" title={t('fe.mp.desc')}>
    {txt?<Card className="blk-btn" label={t('fe.mx.editOf',{title:t('fe.mp.desc')})} onClick={()=>setSheet({k:'desc'})}><span className="blk-bio">{txt}</span><span className="chv"><ChevronRight/></span></Card>
     :<AddCard icon={PenLine} title={t('fe.mp.descAdd')} sub={t('fe.mp.descAddSub')} onClick={()=>setSheet({k:'desc'})}/>}
-  </Group>}
-  {!cp&&<Group id="privMedia" title={<>{t('fe.mp.media')}{media.length?' · '+media.length:''}</>}>
+  </Group>
+  <Group id="privMedia" title={<>{t('fe.mp.media')}{media.length?' · '+media.length:''}</>}>
    {media.length?<PhotoSlots priv>{[...media.map((m,i)=><PhotoSlot key={m.id??i} id={m.id??String(i)} src={ownSrc(m)} waiting={!m.src} review={m.pending?t('fe.mx.ph.review'):undefined}
      openLabel={t('fe.mx.ph.nOf',{n:i+1,total:media.length})} onOpen={()=>setSheet({k:'media',i})}/>),
      ...(media.length<PRIV_MAX?[<PhotoAdd key="add" disabled={busy} busy={busy} onClick={()=>file.current?.click()} label={t('fe.mp.mediaAdd')}/>]:[])]}</PhotoSlots>
     :<AddCard icon={Camera} title={t('fe.mp.mediaAdd')} sub={t('fe.mp.mediaAddSub')} disabled={busy} busy={busy} onClick={()=>file.current?.click()}/>}
-  </Group>}
+  </Group>
   </>}
   {/* Requests to me and who sees what live in the one «Доступы» screen (owner, 29.10.2026: no second copy here). */}
   {accessHere&&<Group id="privWho"><Card list><Row icon={KeyRound} title={t('fe.ac.entry')} badge={reqs.items.length||undefined}

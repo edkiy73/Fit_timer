@@ -27,7 +27,6 @@ const held = (r = '') => `(${r}state = 'declined' and ${r}decided_at > now() - m
 /** @param {Acting | null} acting @returns {Acting} */
 const need = acting => { if (!acting) throw new Error('acting profile missing'); return acting; };
 /** @param {Acting} acting */
-const personOnly = acting => { if (acting.kind !== 'person') fail(422, 'rule_violation', { rule: 'couple_changes_not_available' }); };
 
 /** Someone else's profile, if it exists for the viewer: active, not the viewer, no block either way (a block looks the
  * same as missing). `related` says whether it is one of the viewer's own people or couples (server/README.md).
@@ -261,16 +260,16 @@ const run = {
 
   async 'private.setText'(q, { acting: a, input }) {
     const acting = need(a);
-    personOnly(acting);
+    // A couple has its own text and media too (owner 05.11.2026: the private part is words and media, interests are public).
     await q.query(
       `insert into feture.private_part (profile_id, text) values ($1, $2)
        on conflict (profile_id) do update set text = excluded.text, updated_at = now()`, [acting.profileId, input.text]);
+    await partnerActed(q, acting, 'privateContent');
     return { ok: true };
   },
 
   async 'private.setMedia'(q, { acting: a, input }) {
     const acting = need(a);
-    personOnly(acting);
     const ids = /** @type {string[]} */ (input.assetIds);
     if (new Set(ids).size !== ids.length) fail(400, 'invalid_input', { fields: ['assetIds'] });
     const rows = ids.length ? await q.query(
@@ -284,6 +283,7 @@ const run = {
     for (const [i, assetId] of ids.entries()) {
       await q.query(`insert into feture.media_attachment (asset_id, target_type, target_id, position) values ($1, 'private', $2, $3)`, [assetId, acting.profileId, i]);
     }
+    await partnerActed(q, acting, 'privateContent');
     return { count: ids.length };
   },
 
