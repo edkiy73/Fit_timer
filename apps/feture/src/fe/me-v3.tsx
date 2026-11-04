@@ -78,15 +78,16 @@ type MeData=ReturnType<typeof useMe>;
 
 /** What each row of «Профиль» holds, read for its summary line (counts are whole lists, a paged one says «+»). */
 const countRes=z.object({ok:z.literal(true),items:z.array(z.unknown())}).passthrough();
+const intRes=z.object({ok:z.literal(true),items:z.array(z.object({mark:z.string().nullable().optional()}).passthrough())});
 const pagedRes=z.object({ok:z.literal(true),items:z.array(z.unknown()),next:z.string().nullable()}).passthrough();
 const privRes=z.object({ok:z.literal(true),text:z.string().nullable().optional(),media:z.array(z.unknown()).optional(),interests:z.array(z.unknown()).optional()}).passthrough();
-type Sums={links:{ok:number,wait:number},interests:number,albums:number,pics:string,priv:{text:boolean,media:boolean,interests:boolean}};
+type Sums={links:{ok:number,wait:number},interests:{level:number,discuss:number,hard:number},albums:number,pics:string,priv:{text:boolean,media:boolean,interests:boolean}};
 function useSums(profileId:string|undefined){
  const {call}=useFe();
  const [s,setS]=useShown<Sums|null>('v3.sums:'+profileId,()=>null);
  const load=useCallback(()=>{if(!profileId)return;
-  Promise.all([call('links.mine',{},linksMineRes),call('interests.list',{profileId},countRes),call('album.list',{profileId},countRes),call('gallery.list',{profileId},pagedRes),call('private.get',{profileId},privRes)])
-   .then(([l,i,a,g,pv])=>setS({links:{ok:l.confirmed.length,wait:waitingCount(l)},interests:i.items.length,albums:a.items.length,pics:g.items.length+(g.next?'+':''),
+  Promise.all([call('links.mine',{},linksMineRes),call('interests.list',{profileId},intRes),call('album.list',{profileId},countRes),call('gallery.list',{profileId},pagedRes),call('private.get',{profileId},privRes)])
+   .then(([l,i,a,g,pv])=>setS({links:{ok:l.confirmed.length,wait:waitingCount(l)},interests:{level:i.items.filter(x=>!x.mark).length,discuss:i.items.filter(x=>x.mark==='discuss').length,hard:i.items.filter(x=>x.mark==='hard').length},albums:a.items.length,pics:g.items.length+(g.next?'+':''),
     priv:{text:!!pv.text?.trim(),media:!!pv.media?.length,interests:!!pv.interests?.length}})).catch(()=>{});
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[call,profileId]);
@@ -109,6 +110,9 @@ function ProfileZone({p,settings,load,cp,links}:{p:MeData['p'],settings:MeData['
   .map(([,kind])=>t('fe.v3.d.'+kind))):undefined;
  const linksSub=sums?[sums.links.ok?plural(t,locale,'fe.v3.n.link',sums.links.ok):t('fe.v3.s.noLinks'),sums.links.wait?plural(t,locale,'fe.v3.n.wait',sums.links.wait):null].filter(Boolean).join(' · '):undefined;
  const galSub=sums?(sums.albums||sums.pics!=='0'?[sums.albums?plural(t,locale,'fe.v3.n.album',sums.albums):null,sums.pics!=='0'?t('fe.v3.n.pics',{n:sums.pics}):null].filter(Boolean).join(' · '):t('fe.v3.s.empty')):undefined;
+ // «Интересно 3 · Обсуждаемо 1 · Табу 1» — the three groups of «Мои интересы», only those that have any
+ const intSub=sums?([['level',sums.interests.level],['discuss',sums.interests.discuss],['hard',sums.interests.hard]] as const).filter(([,n])=>n>0)
+  .map(([k,n])=>t('fe.int.group.'+k)+' '+n).join(' · ')||t('fe.v3.s.empty'):undefined;
  const privOn=settings?settings.privateOn!==false:undefined;
  const privParts=sums?[sums.priv.text?t('fe.v3.s.pText'):null,sums.priv.media?t('fe.v3.s.pMedia'):null,sums.priv.interests?t('fe.v3.s.pInt'):null].filter((x):x is string=>!!x):[];
  const privSub=privOn===undefined?undefined:!privOn?t('fe.m2.off'):[t('fe.m2.on'),privParts.length?privParts.join(', '):t('fe.v3.s.emptyLow')].join(' · ');
@@ -123,7 +127,7 @@ function ProfileZone({p,settings,load,cp,links}:{p:MeData['p'],settings:MeData['
    {!cp&&<Row icon={Info} title={t('fe.ab.title')} sub={about} onClick={go('/n/me/edit?only=about')}/>}
    <Row icon={ListChecks} title={t(cp?'fe.v3.us.details':'fe.me.details')} sub={details} onClick={go('/n/me/edit?only=details')}/>
    <Row icon={Link2} title={t('fe.v3.links')} sub={linksSub} badge={sums?.links.wait||links||undefined} onClick={go('/n/me/links')}/>
-   <Row icon={Sparkles} title={t('fe.v3.interests')} sub={sums?(sums.interests?plural(t,locale,'fe.v3.n.interest',sums.interests):t('fe.v3.s.empty')):undefined} onClick={go('/n/me/interests')}/>
+   <Row icon={Sparkles} title={t('fe.v3.interests')} sub={intSub} onClick={go('/n/me/interests')}/>
    <Row icon={Images} title={t('fe.mx.gal')} sub={galSub} onClick={go('/n/me/new/gallery')}/>
    <Row icon={Lock} tone="v" title={t('fe.m2.private')} sub={cap(privSub)} onClick={go('/n/me/new/private')}/>
   </Card></Group>
