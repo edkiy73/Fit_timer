@@ -80,15 +80,15 @@ type MeData=ReturnType<typeof useMe>;
 const countRes=z.object({ok:z.literal(true),items:z.array(z.unknown())}).passthrough();
 const intRes=z.object({ok:z.literal(true),items:z.array(z.object({mark:z.string().nullable().optional()}).passthrough())});
 const pagedRes=z.object({ok:z.literal(true),items:z.array(z.unknown()),next:z.string().nullable()}).passthrough();
-const privRes=z.object({ok:z.literal(true),text:z.string().nullable().optional(),media:z.array(z.unknown()).optional(),interests:z.array(z.unknown()).optional()}).passthrough();
-type Sums={links:{ok:number,wait:number},interests:{level:number,discuss:number,hard:number},albums:number,pics:string,priv:{text:boolean,media:boolean,interests:boolean}};
+const privRes=z.object({ok:z.literal(true),text:z.string().nullable().optional(),media:z.array(z.unknown()).optional()}).passthrough();
+type Sums={links:{ok:number,wait:number},interests:{level:number,discuss:number,hard:number},albums:number,pics:string,priv:{text:boolean,media:boolean}};
 function useSums(profileId:string|undefined){
  const {call}=useFe();
  const [s,setS]=useShown<Sums|null>('v3.sums:'+profileId,()=>null);
  const load=useCallback(()=>{if(!profileId)return;
   Promise.all([call('links.mine',{},linksMineRes),call('interests.list',{profileId},intRes),call('album.list',{profileId},countRes),call('gallery.list',{profileId},pagedRes),call('private.get',{profileId},privRes)])
    .then(([l,i,a,g,pv])=>setS({links:{ok:l.confirmed.length,wait:waitingCount(l)},interests:{level:i.items.filter(x=>!x.mark).length,discuss:i.items.filter(x=>x.mark==='discuss').length,hard:i.items.filter(x=>x.mark==='hard').length},albums:a.items.length,pics:g.items.length+(g.next?'+':''),
-    priv:{text:!!pv.text?.trim(),media:!!pv.media?.length,interests:!!pv.interests?.length}})).catch(()=>{});
+    priv:{text:!!pv.text?.trim(),media:!!pv.media?.length}})).catch(()=>{});
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[call,profileId]);
  useEffect(()=>{load();},[load]);
@@ -114,7 +114,7 @@ function ProfileZone({p,settings,load,cp,links}:{p:MeData['p'],settings:MeData['
  const intSub=sums?([['level',sums.interests.level],['discuss',sums.interests.discuss],['hard',sums.interests.hard]] as const).filter(([,n])=>n>0)
   .map(([k,n])=>t('fe.int.group.'+k)+' '+n).join(' · ')||t('fe.v3.s.empty'):undefined;
  const privOn=settings?settings.privateOn!==false:undefined;
- const privParts=sums?[sums.priv.text?t('fe.v3.s.pText'):null,sums.priv.media?t('fe.v3.s.pMedia'):null,sums.priv.interests?t('fe.v3.s.pInt'):null].filter((x):x is string=>!!x):[];
+ const privParts=sums?[sums.priv.text?t('fe.v3.s.pText'):null,sums.priv.media?t('fe.v3.s.pMedia'):null].filter((x):x is string=>!!x):[];
  const privSub=privOn===undefined?undefined:!privOn?t('fe.m2.off'):[t('fe.m2.on'),privParts.length?privParts.join(', '):t('fe.v3.s.emptyLow')].join(' · ');
  const cap=(x:string|undefined)=>x&&x[0]!.toUpperCase()+x.slice(1);
  return <>

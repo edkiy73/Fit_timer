@@ -127,7 +127,8 @@ export function InterestSheet({topicId,topics,cats,current,defaultVis='public',o
  </Sheet>;
 }
 
-/** How you like it (not for limits), who sees, then the answer — the same fields when adding one or several. */
+/** How you like it (not for limits), then the answer — the same fields when adding one or several. Every interest is
+ * seen by everyone (owner 05.11.2026), so there is no «Кто видит». */
 function InterestFields({limit,couple,v,setV,dir,setDir,vis,setVis}:{limit:boolean,couple:boolean,v:Answer,setV:(v:Answer)=>void,dir:Dir[],setDir:(f:(d:Dir[])=>Dir[])=>void,vis:Vis,setVis:(v:Vis)=>void}){
  const {t}=useI18n();
  const mark=v==='discuss'||v==='hard';const n=typeof v==='number'?v:null;
@@ -139,9 +140,6 @@ function InterestFields({limit,couple,v,setV,dir,setDir,vis,setVis}:{limit:boole
      {(['all',...DIRS] as const).map(k=>{const pressed=k==='all'?allDir:!allDir&&dir.includes(k);
       return <Chip key={k} on={pressed} inactive={mark} onClick={()=>toggleDir(k)}>{t('fe.int.ed.dir.'+k)}</Chip>;})}
     </Chips></Card></Group>}
-    <Group bare title={t('fe.int.ed.vis')}><Card><div className="chips">
-     {VIS.map(k=><Chip key={k} on={vis===k} onClick={()=>setVis(k)}>{t('fe.int.ed.vis.'+(k==='only'&&couple?'onlyUs':k))}</Chip>)}
-    </div>{vis==='public'&&v==='hard'&&<Note className="mt8">{t('fe.int.ed.hardPublic')}</Note>}</Card></Group>
     <Group bare title={t(limit?'fe.int.ed.qLimit':'fe.int.ed.q')}><Card><div className="ans">
      <AnswerScale value={v} onChange={setV} label={t('fe.int.ed.scale')}
       marks={[{id:'discuss',label:t('fe.int.ed.discuss'),icon:MessageCircle},{id:'hard',label:t('fe.int.ed.hard'),icon:Ban,taboo:true}] as const}/>
@@ -173,7 +171,6 @@ export function InterestsScreen(){
     :all.length?<>
      {groups.map(([g,l])=><Group key={g} title={<>{t('fe.int.group.'+g)} · {l.length}</>}>
       <Card><Jars list={l} topics={topics} onOpen={setOpen}/></Card></Group>)}
-     <JarLegend couple={couple} extra={t('fe.int.hardNote')}/>
     </>
     :<Empty icon={Sparkles} title={t('fe.int.empty.title')} text={t(couple?'fe.int.empty.textCouple':'fe.int.empty.text')}><Btn onClick={toAdd}>{t('fe.int.add')}</Btn></Empty>}
   </View>
