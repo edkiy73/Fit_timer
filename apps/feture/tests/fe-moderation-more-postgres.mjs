@@ -274,3 +274,22 @@ test('appeals: with one senior reviewer the same person decides, on record; with
     assert.equal(line.detail.selfReview, true);
   } finally { await pg.close(); }
 });
+
+test('stage 5 (owner 05.11.2026): «под наблюдением» with a note, listed and journalled; «взять в работу» keeps an item for one moderator', async () => {
+  const { pg, db, call, person } = await setup();
+  try {
+    const boss = await person('uo', 'Boss'), mod = await person('um', 'Mira'), lev = await person('ul', 'Lev');
+    await db.query(`insert into feture.staff_role (account_id, role) select id, 'owner' from feture.account where person_profile_id = $1`, [boss]);
+    await db.query(`insert into feture.staff_role (account_id, role) select id, 'moderator' from feture.account where person_profile_id = $1`, [mod]);
+    assert.equal((await call('um', null, { action: 'staff.watch', opId: op(), profileId: lev, on: true, note: 'Спамит после блокировки' })).watched, true);
+    assert.deepEqual((await call('uo', null, { action: 'staff.watchList' })).items.map((/** @type {any} */ x) => [x.handle, x.note]), [['Lev', 'Спамит после блокировки']]);
+    assert.equal((await call('uo', null, { action: 'staff.profileMeasures', profileId: lev })).watched.note, 'Спамит после блокировки');
+    await call('um', null, { action: 'staff.watch', opId: op(), profileId: lev, on: false });
+    assert.equal((await call('uo', null, { action: 'staff.watchList' })).items.length, 0);
+    // Claims: Mira takes it, Boss is told who has it; once Mira lets go, Boss takes it.
+    assert.equal((await call('um', null, { action: 'staff.claim', opId: op(), item: 'report:x', on: true })).claimed, true);
+    assert.deepEqual(await call('uo', null, { action: 'staff.claim', opId: op(), item: 'report:x', on: true }).then((/** @type {any} */ r) => [r.claimed, r.by]), [false, 'Mira']);
+    await call('um', null, { action: 'staff.claim', opId: op(), item: 'report:x', on: false });
+    assert.equal((await call('uo', null, { action: 'staff.claim', opId: op(), item: 'report:x', on: true })).claimed, true);
+  } finally { await pg.close(); }
+});

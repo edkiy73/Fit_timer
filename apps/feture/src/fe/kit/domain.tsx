@@ -119,8 +119,8 @@ export function Discussion({pinned,title,excerpt,meta,onClick,tools}:{pinned?:Re
 }
 
 /** An organiser's update on an event: icon, text, when. */
-export function Announcement({icon:I,body,meta}:{icon:LucideIcon,body:ReactNode,meta:ReactNode}){
- return <div className="upd"><span className="ico l"><I/></span><span className="tx"><p className="k-upd-body">{body}</p><small>{meta}</small></span></div>;
+export function Announcement({icon:I,body,meta,end}:{icon:LucideIcon,body:ReactNode,meta:ReactNode,/** A small action at the end («Пожаловаться»). */ end?:ReactNode}){
+ return <div className="upd"><span className="ico l"><I/></span><span className="tx"><p className="k-upd-body">{body}</p><small>{meta}</small></span>{end}</div>;
 }
 
 /** «Интересно / Иду / Не иду» — the answer to an event: three radio buttons; the chosen one is filled. */

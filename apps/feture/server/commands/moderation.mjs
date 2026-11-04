@@ -63,11 +63,12 @@ export async function removeContent(q, type, id, owner, rule) {
   // A change waiting for staff goes with it (audit item 18); its future events are cancelled, members told (15, 33).
   if (type === 'community') await closeCommunity(q, id, 'hidden', { reason: rule });
   if (type === 'event') await hideEvent(q, id, rule);
+  if (type === 'announcement') await q.query(`update feture.event_announcement set removed_at = now() where id = $1`, [id]);
   await enqueue(q, 'content.removed', owner, { targetType: type, targetId: id, rule });
 }
 
 /** What staff may take down, by state (staff.reportDecide, staff.noticeDecide). */
-export const LIVE = /** @type {Record<string, string[]>} */ ({ post: ['published', 'review'], reply: ['published'], community: ['published'], event: ['published', 'cancelled'] });
+export const LIVE = /** @type {Record<string, string[]>} */ ({ post: ['published', 'review'], reply: ['published'], community: ['published'], event: ['published', 'cancelled'], announcement: ['live'] });
 
 /** Owner profile of a report target, refusing the staff member's own (their profiles, their couple, a partner — staffOwn).
  * @param {Q} q @param {string} staffAccount @param {string} type @param {string} id */
@@ -77,6 +78,8 @@ export async function targetOwner(q, staffAccount, type, id) {
       : type === 'reply' ? `select author_profile_id owner, state from feture.reply where id = $1 for update`
         : type === 'community' ? `select owner_profile_id owner, state from feture.community where id = $1 for update`
           : type === 'event' ? `select organizer_profile_id owner, state from feture.event where id = $1 for update`
+          : type === 'announcement' ? `select e.organizer_profile_id owner, case when n.removed_at is null then 'live' else 'removed' end state
+               from feture.event_announcement n join feture.event e on e.id = n.event_id where n.id = $1 for update of n`
             : type === 'conversation' ? `select profile_a owner, profile_b other, state from feture.conversation where id = $1 for update`
               : `select id owner, state from feture.profile where id = $1 for update`, [id]);
   if (!t) fail(404, 'not_found');
@@ -167,6 +170,11 @@ export async function targetObject(q, type, id) {
     const e = await one(`select e.title, left(e.description, 4000) body, e.format, e.area, e.starts_at, e.tz, e.state, e.created_at "at" from feture.event e where e.id = $1`);
     return e && { kind: 'event', title: e.title, body: e.body, facts: { format: e.format, area: e.area, startsAt: e.starts_at, tz: e.tz, state: e.state, at: e.at } };
   }
+  if (type === 'announcement') {
+    const n = await one(`select e.title, n.body, n.created_at "at", case when n.removed_at is null then 'live' else 'removed' end state
+      from feture.event_announcement n join feture.event e on e.id = n.event_id where n.id = $1`);
+    return n && { kind: 'announcement', title: n.title, body: n.body, facts: { state: n.state, at: n.at } };
+  }
   if (type === 'profile') {
     const p = await one(`select p.name, p.handle, left(coalesce(d.bio, ''), 4000) body, p.state from feture.profile p left join feture.profile_details d on d.profile_id = p.id where p.id = $1`);
     return p && { kind: 'profile', title: [p.name, p.handle && '@' + p.handle].filter(Boolean).join(' '), body: p.body, facts: { state: p.state } };
@@ -191,6 +199,7 @@ const run = {
            when 'reply' then (select x.author_profile_id from feture.reply x where x.id = r.target_id)
            when 'community' then (select x.owner_profile_id from feture.community x where x.id = r.target_id)
            when 'event' then (select x.organizer_profile_id from feture.event x where x.id = r.target_id)
+           when 'announcement' then (select e.organizer_profile_id from feture.event_announcement x join feture.event e on e.id = x.event_id where x.id = r.target_id)
            when 'conversation' then r.reported_profile_id else r.target_id end`, '$1::uuid')}
        group by r.target_type, r.target_id, r.reported_profile_id`, [account.id]);
     const groups = await q.query(sql, params);
@@ -209,6 +218,9 @@ const run = {
               ? `select owner_profile_id owner, name || ' — ' || left(description, 300) excerpt, state, 0 media from feture.community where id = $1`
               : g.target_type === 'event'
                 ? `select organizer_profile_id owner, title || ' — ' || left(description, 300) excerpt, state, 0 media from feture.event where id = $1`
+              : g.target_type === 'announcement'
+                ? `select e.organizer_profile_id owner, e.title || ' — ' || left(n.body, 300) excerpt, case when n.removed_at is null then 'live' else 'removed' end state, 0 media
+                   from feture.event_announcement n join feture.event e on e.id = n.event_id where n.id = $1`
                 // A chat: the side reported by the first reporter; the evidence is the copied messages.
                 : g.target_type === 'conversation'
                   ? `select $2::uuid owner, '' excerpt, state, 0 media from feture.conversation where id = $1`
@@ -450,16 +462,57 @@ const run = {
       `select p.id, p.kind, p.handle, p.name, p.state, p.suspended_until, p.restriction_rule,
          case when p.restricted_at is not null and coalesce(p.restricted_until > now(), true) then p.restricted_at end restricted_at,
          p.restricted_until, (select a.suspension_rule from feture.account a where a.person_profile_id = p.id) suspension_rule, p.created_at,
-         (select count(*)::int from feture.report r where r.state = 'open' and r.target_type = 'profile' and r.target_id = p.id) open_reports
+         (select count(*)::int from feture.report r where r.state = 'open' and r.target_type = 'profile' and r.target_id = p.id) open_reports,
+         p.watched_at, p.watch_note, (select coalesce(wp.name, wp.handle) from feture.account wa join feture.profile wp on wp.id = wa.person_profile_id where wa.id = p.watched_by) watched_by
        from feture.profile p where (lower(p.handle) = lower($1) or p.id = $2::uuid) and p.kind in ('person', 'couple') and p.state <> 'deleted'`,
       [input.handle?.replace(/^@/, '') ?? null, input.profileId ?? null]);
     if (!p) fail(404, 'not_found');
     await targetOwner(q, account.id, 'profile', p.id);
     return {
       profileId: p.id, kind: p.kind, handle: p.handle, name: p.name, state: p.state, createdAt: p.created_at, openReports: p.open_reports,
+      watched: p.watched_at ? { at: p.watched_at, note: p.watch_note, by: p.watched_by } : null,
       restricted: p.restricted_at ? { rule: p.restriction_rule, until: p.restricted_until } : null,
       suspended: p.state === 'suspended' ? { rule: p.suspension_rule, until: p.suspended_until } : null,
     };
+  },
+
+  async 'staff.watch'(q, { account, input }) {
+    await requireStaff(q, account, MODERATORS);
+    await targetOwner(q, account.id, 'profile', input.profileId);
+    const rows = await q.query(
+      `update feture.profile set watched_at = case when $2 then now() end, watched_by = case when $2 then $3::uuid end,
+         watch_note = case when $2 then nullif($4, '') end where id = $1 and state <> 'deleted' returning id`,
+      [input.profileId, input.on, account.id, input.note]);
+    if (!rows[0]) fail(404, 'not_found');
+    await journal(q, account.id, input.on ? 'person.watch' : 'person.unwatch', 'profile', input.profileId, input.note ? { note: input.note } : {});
+    return { watched: input.on };
+  },
+
+  async 'staff.watchList'(q, { account }) {
+    await requireStaff(q, account, MODERATORS);
+    const rows = await q.query(
+      `select p.id, p.kind, p.handle, p.name, p.watched_at "watchedAt", p.watch_note note from feture.profile p
+       where p.watched_at is not null and p.state <> 'deleted' and not ${staffOwn('p.id', '$1::uuid')} order by p.watched_at desc limit 100`, [account.id]);
+    return { items: rows };
+  },
+
+  async 'staff.claim'(q, { account, input }) {
+    await requireStaff(q, account, [...MODERATORS, 'verifier']);
+    if (!input.on) {
+      await q.query('delete from feture.staff_claim where item = $1 and account_id = $2', [input.item, account.id]);
+      return { claimed: false };
+    }
+    // Ten minutes, renewed while the item stays open; someone else's live claim is told, not taken over.
+    const [c] = await q.query(
+      `insert into feture.staff_claim (item, account_id, until) values ($1, $2, now() + interval '10 minutes')
+       on conflict (item) do update set account_id = excluded.account_id, until = excluded.until
+         where feture.staff_claim.account_id = excluded.account_id or feture.staff_claim.until < now()
+       returning account_id`, [input.item, account.id]);
+    if (c) return { claimed: true };
+    const [o] = await q.query(
+      `select coalesce(p.name, p.handle) name from feture.staff_claim s join feture.account a on a.id = s.account_id
+       left join feture.profile p on p.id = a.person_profile_id where s.item = $1`, [input.item]);
+    return { claimed: false, by: o?.name ?? null };
   },
 
   async 'staff.placeQueue'(q, { account, input }) {

@@ -143,6 +143,7 @@ const RAW = /** @type {Record<string, any>} */ ({
   'contentRemoved.reply': { text: T('Модераторы удалили твой ответ', 'Moderators removed your reply') },
   'contentRemoved.community': { text: T('Модераторы скрыли твоё сообщество', 'Moderators hid your community') },
   'contentRemoved.event': { text: T('Модераторы скрыли твоё событие', 'Moderators hid your event') },
+  'contentRemoved.announcement': { text: T('Модераторы удалили твоё объявление к событию', 'Moderators removed your event update') },
   reportResolved: { kind: 'result', filter: 'posts', icon: 'Shield', tone: 'g', card: 'result', text: T('Жалоба рассмотрена. Спасибо, что сообщаешь', 'Report reviewed. Thanks for reporting'),
     normal: T('Жалоба рассмотрена', 'Your report was reviewed'), dest: 'moderation' },
   profileSuspended: { important: true, filter: 'other', icon: 'Shield', tone: 'l', card: 'safety', text: T('Профиль заблокирован', 'Your profile is suspended'),

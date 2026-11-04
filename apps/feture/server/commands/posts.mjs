@@ -1,4 +1,5 @@
 // @ts-check
+import { checkWords } from '../word-filter.mjs';
 import { ACTIVITY_KINDS, DISPUTE_LIMITS, postFields, postsCommands } from '../../contracts/posts.mjs';
 import { likePattern, writeCursor } from '../search.mjs';
 import { acceptsMention, activeActor, popularScore, qaHidden } from '../sql-rules.mjs';
@@ -181,7 +182,9 @@ async function writeMentions(q, sourceType, sourceId, text, authorProfileId) {
 /** Notifies people once a post is out: mentions and photo-mark requests (only after media are checked, Q11).
  * @param {Q} q @param {string} postId */
 async function announce(q, postId) {
-  const [p] = await q.query('select owner_profile_id, type from feture.post where id = $1', [postId]);
+  const [p] = await q.query('select owner_profile_id, type, title, body from feture.post where id = $1', [postId]);
+  // The word filter (stage 5): a listed word sends the post to the report queue; it stays out.
+  await checkWords(q, 'post', postId, `${p.title ?? ''}\n${p.body ?? ''}`, p.owner_profile_id);
   // Only people who can see the post hear about it (no hint of a post they may not read).
   const mentions = await q.query(
     `update feture.mention m set notified = true from feture.post p
@@ -715,6 +718,7 @@ async function createReply(q, viewer, input) {
 /** A reply's mentions, written or edited: each person newly mentioned hears it once. @param {Q} q @param {string} replyId
  * @param {string} postId @param {string} body @param {string} from */
 async function replyMentions(q, replyId, postId, body, from) {
+  await checkWords(q, 'reply', replyId, body, from);
   for (const m of await writeMentions(q, 'reply', replyId, body, from)) {
     await q.query(`update feture.mention set notified = true where source_type = 'reply' and source_id = $1 and profile_id = $2`, [replyId, m]);
     await enqueue(q, 'mention.created', m, { postId, replyId, from });
@@ -1256,6 +1260,14 @@ const run = {
         [input.targetId, viewer.profileId, viewer.accountId]);
       if (!e) fail(404, 'not_found');
       ownerProfile = e.organizer_profile_id; rev = e.rev; snapshot = { title: e.title, description: e.description, area: e.area };
+    }
+    if (input.targetType === 'announcement') {
+      // An organizer's announcement (stage 5): reported by someone who sees its event.
+      const [n] = await q.query(
+        `select e.organizer_profile_id, e.title, n.body from feture.event_announcement n join feture.event e on e.id = n.event_id
+         where n.id = $1 and n.removed_at is null and not n.automatic and feture.event_visible(e, $2, $3)`, [input.targetId, viewer.profileId, viewer.accountId]);
+      if (!n) fail(404, 'not_found');
+      ownerProfile = n.organizer_profile_id; snapshot = { title: n.title, body: n.body };
     }
     if (input.targetType === 'conversation') {
       // Only a member reports a chat, and only the other side's messages, which are copied as evidence.

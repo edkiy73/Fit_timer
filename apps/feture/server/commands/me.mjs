@@ -1,4 +1,5 @@
 // @ts-check
+import { checkWords } from '../word-filter.mjs';
 import { ABOUT_FACTS, meCommands, notificationSettingsOf, PROFILE_SETTINGS } from '../../contracts/me.mjs';
 import { emailState } from '../email.mjs';
 import { fail, isUniqueViolation } from '../errors.mjs';
@@ -238,6 +239,11 @@ async function doProfileUpdate(q, profileId, accountId, input) {
       [profileId, ...sets.map(([, v]) => v)]);
   }
   const [{ rev }] = await q.query('update feture.profile set rev = rev + 1, updated_at = now() where id = $1 returning rev', [profileId]);
+  // The word filter (stage 5): a listed word in the name or «о себе» sends the profile to the report queue.
+  if (input.name !== undefined || input.bio !== undefined) {
+    const [t] = await q.query(`select p.chosen_name, d.bio from feture.profile p left join feture.profile_details d on d.profile_id = p.id where p.id = $1`, [profileId]);
+    await checkWords(q, 'profile', profileId, `${t?.chosen_name ?? ''}\n${t?.bio ?? ''}`, profileId);
+  }
   return { rev };
 }
 

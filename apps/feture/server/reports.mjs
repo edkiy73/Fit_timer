@@ -16,7 +16,8 @@ export async function closeReports(q, targetType, targetIds, resolution, side = 
      where target_type = $1 and target_id = any($2::uuid[]) and state = 'open' and ($4::uuid is null or reported_profile_id = $4)
      returning reporter_profile_id`,
     [targetType, targetIds, resolution, side]);
-  for (const r of reporters) await enqueue(q, 'report.resolved', r.reporter_profile_id, { targetType, resolution });
+  // An automatic report (the word filter) has no reporter to tell.
+  for (const r of reporters) if (r.reporter_profile_id) await enqueue(q, 'report.resolved', r.reporter_profile_id, { targetType, resolution });
   return reporters.length;
 }
 
