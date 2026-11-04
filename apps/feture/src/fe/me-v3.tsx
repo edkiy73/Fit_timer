@@ -8,7 +8,6 @@ import {useFe,useLive,useShown} from './session';
 import {BellButton,countsRes} from './inbox';
 import {StaffEntry} from './staff';
 import {waitingCount} from './links';
-import {linksMineRes} from './profile-extras';
 import {ActAsSheet,activeCouple} from './couple';
 import {PairEntry} from './pair';
 import {NameBadges} from './faces';
@@ -16,7 +15,9 @@ import {usePremiumStatus} from './account-extra';
 import {onStatusAnswered} from './status-todo';
 import {useAccountSettings,useLogout} from './settings';
 import {useMe} from './me-new';
-import {MeSkel,PhotosBlock} from './me';
+import {COUPLE_ROWS,DETAIL_ROWS,MeSkel,PhotosBlock} from './me';
+import {filledFacts} from './about-facts';
+import {linksMineRes,plural} from './profile-extras';
 
 /** «Я» v3 (owner's account prototype, 05.11.2026), by address only (/n/me/v3) until the owner picks it: one header,
  * then two zones of the acting profile — «Профиль» (what others see) and «Приватность» (who reaches it). The account's
@@ -75,23 +76,56 @@ export function MeV3Screen(){
 
 type MeData=ReturnType<typeof useMe>;
 
+/** What each row of «Профиль» holds, read for its summary line (counts are whole lists, a paged one says «+»). */
+const countRes=z.object({ok:z.literal(true),items:z.array(z.unknown())}).passthrough();
+const pagedRes=z.object({ok:z.literal(true),items:z.array(z.unknown()),next:z.string().nullable()}).passthrough();
+const privRes=z.object({ok:z.literal(true),text:z.string().nullable().optional(),media:z.array(z.unknown()).optional(),interests:z.array(z.unknown()).optional()}).passthrough();
+type Sums={links:{ok:number,wait:number},interests:number,albums:number,pics:string,priv:{text:boolean,media:boolean,interests:boolean}};
+function useSums(profileId:string|undefined){
+ const {call}=useFe();
+ const [s,setS]=useShown<Sums|null>('v3.sums:'+profileId,()=>null);
+ const load=useCallback(()=>{if(!profileId)return;
+  Promise.all([call('links.mine',{},linksMineRes),call('interests.list',{profileId},countRes),call('album.list',{profileId},countRes),call('gallery.list',{profileId},pagedRes),call('private.get',{profileId},privRes)])
+   .then(([l,i,a,g,pv])=>setS({links:{ok:l.confirmed.length,wait:l.incoming.length},interests:i.items.length,albums:a.items.length,pics:g.items.length+(g.next?'+':''),
+    priv:{text:!!pv.text?.trim(),media:!!pv.media?.length,interests:!!pv.interests?.length}})).catch(()=>{});
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[call,profileId]);
+ useEffect(()=>{load();},[load]);
+ useLive(['profile','media','post','decide'],load);
+ return s;
+}
+
 /** «Профиль» (owner 05.11.2026): «Как видят», the photos, then one list in the order the public profile shows it —
- * Основное · Обо мне · Данные · Связи · Интересы · Галерея · Приватная часть; each part edits on its own screen. */
+ * Основное · Обо мне · Данные · Связи · Интересы · Галерея · Приватная часть, each with a line of what it holds
+ * (owner: under the title, so they read in a row); each part edits on its own screen. */
 function ProfileZone({p,settings,load,cp,links}:{p:MeData['p'],settings:MeData['settings'],load:()=>void,cp:boolean,links:number|undefined}){
- const {t}=useI18n();const navigate=useNavigate();const go=(to:string)=>()=>navigate(to);
+ const {t,locale}=useI18n();const navigate=useNavigate();const go=(to:string)=>()=>navigate(to);
+ const sums=useSums(p?.id);
+ const list=(xs:string[])=>xs.length?xs.map((x,i)=>i?x.toLowerCase():x).join(', '):t('fe.v3.s.empty');
+ const city=p?.city?(locale==='en'?p.city.en:p.city.ru):null;
+ const basics=p?[city,p.age?(p.showAge!==false?String(p.age):t('fe.v3.s.ageHid',{n:p.age})):null,p.bio.trim()?null:t('fe.v3.s.noBio')].filter(Boolean).join(' · '):undefined;
+ const about=p?list(filledFacts(p.about).map(k=>t('fe.ab.f.'+k))):undefined;
+ const details=p?list(DETAIL_ROWS.filter(([f])=>!cp||COUPLE_ROWS.includes(f)).filter(([f])=>{const v=p.details[f];return Array.isArray(v)?v.length>0:!!v;})
+  .map(([,kind])=>t('fe.v3.d.'+kind))):undefined;
+ const linksSub=sums?[sums.links.ok?plural(t,locale,'fe.v3.n.link',sums.links.ok):t('fe.v3.s.noLinks'),sums.links.wait?plural(t,locale,'fe.v3.n.wait',sums.links.wait):null].filter(Boolean).join(' · '):undefined;
+ const galSub=sums?(sums.albums||sums.pics!=='0'?[sums.albums?plural(t,locale,'fe.v3.n.album',sums.albums):null,sums.pics!=='0'?t('fe.v3.n.pics',{n:sums.pics}):null].filter(Boolean).join(' · '):t('fe.v3.s.empty')):undefined;
+ const privOn=settings?settings.privateOn!==false:undefined;
+ const privParts=sums?[sums.priv.text?t('fe.v3.s.pText'):null,sums.priv.media?t('fe.v3.s.pMedia'):null,sums.priv.interests?t('fe.v3.s.pInt'):null].filter((x):x is string=>!!x):[];
+ const privSub=privOn===undefined?undefined:!privOn?t('fe.m2.off'):[t('fe.m2.on'),privParts.length?privParts.join(', '):t('fe.v3.s.emptyLow')].join(' · ');
+ const cap=(x:string|undefined)=>x&&x[0]!.toUpperCase()+x.slice(1);
  return <>
   <Group><Actions>
    <Btn kind="soft" icon={Eye} onClick={go('/n/me/preview')}>{t('fe.mx.howSeen')}</Btn>
   </Actions></Group>
   {!p||!settings?<MeSkel/>:<PhotosBlock p={p} settings={settings} onChanged={load}/>}
   <Group><Card list>
-   <Row icon={UserRound} title={t('fe.me.basics')} onClick={go('/n/me/edit?only=basics')}/>
-   {!cp&&<Row icon={Info} title={t('fe.ab.title')} onClick={go('/n/me/edit?only=about')}/>}
-   <Row icon={ListChecks} title={t(cp?'fe.v3.us.details':'fe.me.details')} onClick={go('/n/me/edit?only=details')}/>
-   <Row icon={Link2} title={t('fe.v3.links')} badge={links||undefined} onClick={go('/n/me/links')}/>
-   <Row icon={Sparkles} title={t('fe.v3.interests')} onClick={go('/n/me/interests')}/>
-   <Row icon={Images} title={t('fe.mx.gal')} onClick={go('/n/me/new/gallery')}/>
-   <Row icon={Lock} tone="v" title={t('fe.m2.private')} val={settings?t(settings.privateOn!==false?'fe.m2.on':'fe.m2.off'):undefined} onClick={go('/n/me/new/private')}/>
+   <Row icon={UserRound} title={t('fe.me.basics')} sub={basics} onClick={go('/n/me/edit?only=basics')}/>
+   {!cp&&<Row icon={Info} title={t('fe.ab.title')} sub={about} onClick={go('/n/me/edit?only=about')}/>}
+   <Row icon={ListChecks} title={t(cp?'fe.v3.us.details':'fe.me.details')} sub={details} onClick={go('/n/me/edit?only=details')}/>
+   <Row icon={Link2} title={t('fe.v3.links')} sub={linksSub} onClick={go('/n/me/links')}/>
+   <Row icon={Sparkles} title={t('fe.v3.interests')} sub={sums?(sums.interests?plural(t,locale,'fe.v3.n.interest',sums.interests):t('fe.v3.s.empty')):undefined} onClick={go('/n/me/interests')}/>
+   <Row icon={Images} title={t('fe.mx.gal')} sub={galSub} onClick={go('/n/me/new/gallery')}/>
+   <Row icon={Lock} tone="v" title={t('fe.m2.private')} sub={cap(privSub)} onClick={go('/n/me/new/private')}/>
   </Card></Group>
   <PairEntry plain/>
  </>;

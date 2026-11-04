@@ -16,6 +16,9 @@ type WithAbout={kind:string,about?:unknown};
 const asAbout=(v:unknown):About=>v&&typeof v==='object'?v as About:{};
 const filled=(a:About,k:Fact)=>{const v=a[k];return Array.isArray(v)?v.length>0:v!==null&&v!==undefined&&v!=='';};
 
+/** The facts that are filled, in the fixed order (the summary line of «Обо мне» on «Я»). */
+export function filledFacts(v:unknown):Fact[]{const a=asAbout(v);return ABOUT_FACTS.filter(k=>filled(a,k));}
+
 /** The pills of the facts that are there, in the fixed order. */
 export function factItems(a:About,t:T):FactItem[]{
  const out:FactItem[]=[];
