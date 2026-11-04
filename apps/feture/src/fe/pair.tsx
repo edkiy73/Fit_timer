@@ -2,7 +2,7 @@ import {useCallback,useEffect,useRef,useState,type ReactNode} from 'react';
 import {useLocation,useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {AtSign,Check,Copy,EyeOff,Heart,Link as LinkIcon,Lock,ShieldCheck,Users,X} from 'lucide-react';
+import {AtSign,Check,Copy,EyeOff,Heart,Link as LinkIcon,Lock,Pause,ShieldCheck,Users,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicBase} from '../api-url';
 import {copyLink} from './share';
@@ -146,10 +146,9 @@ function PairMain({onOpen}:{onOpen:(id:string)=>void}){
     <div className="pair-sets">
      <CoupleWork coupleId={couple.id} onOpen={onOpen}/>
      <CoupleSettings c={c} coupleId={couple.id} other={nameOf(other)} trustOpen={q.get('trust')==='1'} onChanged={load}/>
-     <Group title={t('fe.pair.act')}>
-      <Btn kind="soft" onClick={()=>{setActing(couple.id);navigate('/n/me');}}>{t('fe.pair.actAsUs')}</Btn></Group>
-     {c.state==='active'&&<Group title={t('fe.pair.careful')}>
-      {!confirmStop?<Card list><Row icon={X} danger title={t('fe.pair.stop')} onClick={()=>setConfirmStop(true)}/></Card>
+     {/* owner 05.11.2026: no «От имени пары» here (the dock's «Я» switches), no «Осторожно» title; the pause is the last row */}
+     {c.state==='active'&&<Group>
+      {!confirmStop?<Card list><Row icon={Pause} danger title={t('fe.pair.stop')} onClick={()=>setConfirmStop(true)}/></Card>
        :<Card><Stack gap={3}><p>{t('fe.pair.stopText')}</p><Actions stack>
         <Btn kind="danger" disabled={busy} onClick={()=>act(()=>call('couple.stop',{opId:newOpId(),confirm:true},ok,{profileId:couple.id}),()=>{setConfirmStop(false);reload();})}>{t('fe.pair.stop')}</Btn>
         <Btn kind="text" onClick={()=>setConfirmStop(false)}>{t('fe.cancel')}</Btn></Actions></Stack></Card>}
@@ -371,13 +370,10 @@ function CoupleSettings({c,coupleId,other,trustOpen,onChanged}:{c:Couple,coupleI
  const off=s?.mode==='off';const closed=s?.req==='none'&&s.grants===0;
  const dating=!s?'':s.pendingDiscover?t('fe.cw.waitPartner'):t('fe.c6.vis.'+(['visible','hidden','off'].includes(s.mode)?s.mode:'off'));
  return <>
-  <Group title={t('fe.c6.dating')}><Card list>
-   <Row icon={Heart} tone="l" title={t('fe.c6.vis.title')} sub={dating||'…'} onClick={()=>{setActing(coupleId);navigate('/n/me?layer=vis');}}/>
-  </Card></Group>
-  <Group title={t('fe.pair.approval')}><Card list>
+  {/* one «Настройки» list (owner 05.11.2026): dating, my approval, the safety actions */}
+  <Group title={t('fe.v3.settings')}><Card list>
+   <Row icon={Heart} tone="l" title={t('fe.c6.vis.title')} sub={dating||'…'} onClick={()=>{setActing(coupleId);navigate('/n/settings/new/discover');}}/>
    <Row icon={Check} title={t('fe.c6.trust.title')} sub={me?.approvesPartner?t('fe.c6.trust.on'):t('fe.c6.trust.off')} onClick={()=>setTrust(true)}/>
-  </Card></Group>
-  <Group title={t('fe.c6.safe.group')}><Card list>
    {/* Hidden already: «Знакомства» above says so — no second status line for the same thing. */}
    {!off&&<Row icon={EyeOff} noChev title={t('fe.c6.safe.hide')} sub={t('fe.c6.safe.hideSub')} disabled={!s||!!busy} onClick={hide}/>}
    {closed?<Row icon={Lock} title={t('fe.c6.safe.closedTitle')} sub={t('fe.c6.safe.closedSub')} val={<Check/>}/>
