@@ -1,5 +1,5 @@
 import { Suspense, type ReactNode } from 'react';
-import { Link, Outlet, type RouteObject, Navigate } from 'react-router';
+import { Outlet, type RouteObject, Navigate } from 'react-router';
 import { AuthProvider } from '@appbase/ui-react/auth.js';
 import { I18nProvider, sharedUiLocale, useI18n } from '@appbase/ui-react/i18n.js';
 import { authClient } from './auth';
@@ -43,19 +43,12 @@ const AdminPanel=page(()=>import('@appbase/ui-react/admin.js'),'AdminPanel');
 const QuestionnairesAdmin=page(()=>import('./feture/questionnaire-admin'),'QuestionnairesAdmin');
 const DocumentsAdmin=page(()=>import('./feture/documents-admin'),'DocumentsAdmin');
 const CatalogAdmin=page(()=>import('./feture/catalog-admin'),'CatalogAdmin');
-const ModerationAdmin=page(()=>import('./feture/moderation-admin'),'ModerationAdmin');
-const OperatorsAdmin=page(()=>import('./feture/operators-admin'),'OperatorsAdmin');
 const MetricsAdmin=page(()=>import('./feture/metrics-admin'),'MetricsAdmin');
 const UpdateAdmin=page(()=>import('./feture/update-admin'),'UpdateAdmin');
 const StaffFactorAdmin=page(()=>import('./feture/staff-factor-admin'),'StaffFactorAdmin');
-const QaAdultAdmin=page(()=>import('./feture/qa-adult-admin'),'QaAdultAdmin');
-const OperatorPage=page(()=>import('./feture/operator-page'),'OperatorPage');
 const productAdminSections:readonly AdminSection[]=[
   // Keep IDs stable: AppBase persists the last selected tab in sessionStorage.
-  {id:'feture-moderation',label:'Модерация публикаций',group:'Проверка и доступ',render:context=><ModerationAdmin {...context}/>},
-  {id:'feture-qa-adult',label:'Временный доступ 18+',group:'Проверка и доступ',render:context=><QaAdultAdmin {...context}/>},
   {id:'feture-staff-factor',label:'2FA для сотрудников',group:'Проверка и доступ',render:context=><StaffFactorAdmin {...context}/>},
-  {id:'feture-operators',label:'Роли операторов',group:'Проверка и доступ',render:context=><OperatorsAdmin {...context}/>},
   {id:'feture-catalog',label:'Темы каталога',group:'Редактура',render:context=><CatalogAdmin {...context}/>},
   {id:'feture-tests',label:'Опросники',group:'Редактура',render:context=><QuestionnairesAdmin {...context}/>},
   {id:'feture-documents',label:'Документы и согласия',group:'Редактура',render:context=><DocumentsAdmin {...context}/>},
@@ -81,19 +74,10 @@ function Root(){
   );
 }
 
-/** While the code of the operator page or the admin loads. */
+/** While the code of the admin loads. */
 function PageLoading(){
   const {t}=useI18n();
   return <div className="ft-welcome-loading" role="status">{t('account.appLoading')}</div>;
-}
-
-/** The staff workspace (/operator): a plain card page outside the app screens. */
-function Shell(){
-  const {t}=useI18n();
-  return <main className="app"><header className="app-header">
-    <div><div className="eyebrow">{t('app.eyebrow')}</div><h1>{PRODUCT_NAME}</h1></div>
-    <Link className="link-button" to="/n/feed">{t('route.home')}</Link>
-  </header><Suspense fallback={<PageLoading/>}><Outlet /></Suspense></main>;
 }
 
 function Admin(){
@@ -175,10 +159,9 @@ export const routes: RouteObject[] = [
         {path:'staff', element:<StaffScreen />},
         {path:'*', element:<Navigate to="/n/feed" replace/>}
       ]}]
-    },{
-      element:<Shell />,
-      children:[{path:'operator', element:<OperatorPage />}]
     },
+    // The old staff page (/operator) is gone: moderation is in the app (/n/staff).
+    {path:'operator', element:<Navigate to="/n/staff" replace/>},
     {index:true, element:<Navigate to="/n/feed" replace/>},
     {path:'*', element:<Navigate to="/n/feed" replace/>}]
   },
