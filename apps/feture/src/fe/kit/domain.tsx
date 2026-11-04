@@ -212,7 +212,8 @@ export function AnswerScale<M extends string,L extends string=string>({value,onC
         onClick={e=>{if(e.detail===0)setOpen(l.id);}}/>}
     </div>;})}
   </div>:scale(label,()=>true,k=>onChange(k))}
-  <div className={'ans-marks'+(open?' dim':'')}>{marks.map(m=><button key={m.id} type="button" className={'ans-m'+(m.taboo?' taboo':'')+(m.soft?' soft':'')+(value===m.id?' on':'')} aria-pressed={value===m.id} onClick={()=>{setOpen(null);onChange(m.id);}}><m.icon/><span>{m.label}</span></button>)}</div>
+  {/* the marks fade only under a finger that is picking, never on a mouse pointing at a lane (owner 05.11.2026) */}
+  <div className={'ans-marks'+(drag?' dim':'')}>{marks.map(m=><button key={m.id} type="button" className={'ans-m'+(m.taboo?' taboo':'')+(m.soft?' soft':'')+(value===m.id?' on':'')} aria-pressed={value===m.id} onClick={()=>{setOpen(null);onChange(m.id);}}><m.icon/><span>{m.label}</span></button>)}</div>
  </>;
 }
 

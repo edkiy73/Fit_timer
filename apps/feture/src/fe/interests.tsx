@@ -95,7 +95,8 @@ export function InterestSheet({topicId,topics,cats,current,defaultVis='public',o
  const [vis,setVis]=useState<Vis>(current?visOf(current):defaultVis);
  const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [asking,setAsking]=useState(false);
  const opId=useRef(newOpId());
- const save=async()=>{
+ // A pick saves at once (owner 05.11.2026: no «Сохранить»); the sheet closes with the toast.
+ const save=async(v:Answer,dir:Dir[])=>{
   if(v==null)return;setBusy(true);setFailure('');
   try{
    const input:Record<string,unknown>={opId:opId.current,topicId,vis,...(typeof v==='number'?{value:v,...(limit?{}:{dir})}:{mark:v})};
@@ -107,41 +108,35 @@ export function InterestSheet({topicId,topics,cats,current,defaultVis='public',o
   try{await call('interests.remove',{opId:newOpId(),topicId},ok);onDone(t('fe.int.removed'));}
   catch(e){setFailure(feErrorMessage(e,t));setAsking(false);}finally{setBusy(false);}
  };
- // The kit sheet (in the app layer, above the phone dock); Escape, ✕ and the scrim close it — after asking, when
- // something was changed and not saved (V21 editJar).
- const init=useRef({v,dir:dir.join(),vis});
- const dirty=!busy&&(v!==init.current.v||dir.join()!==init.current.dir||vis!==init.current.vis);
- return <Sheet title={name} sub={cat?(locale==='en'?cat.en:cat.ru):undefined} onClose={onClose} dirty={dirty} foot={<>
+ const pick=(nv:Answer,nd:Dir[])=>{setV(nv);setDir(nd);void save(nv,nd);};
+ // The kit sheet (in the app layer, above the phone dock); Escape, ✕ and the scrim close it. Only «Удалить» stays at
+ // the bottom, and it asks first: «Удалить» / «Отмена».
+ return <Sheet title={name} sub={cat?(locale==='en'?cat.en:cat.ru):undefined} onClose={onClose} foot={failure||current?<>
   {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
-  {asking?<>
-   <Note><b>{t('fe.int.ed.removeQ',{topic:name})}</b> {t('fe.int.ed.removeText')}</Note>
-   <div className="row g8"><Btn kind="soft" onClick={()=>setAsking(false)} disabled={busy}>{t('fe.cancel')}</Btn><Btn kind="danger" onClick={remove} disabled={busy}>{t('fe.int.ed.remove')}</Btn></div>
-  </>:<>
-   {v==null&&<Note className="jar-need">{t('fe.int.ed.need')}</Note>}
-   <div className="row g8">
-    {current&&<Btn kind="soft" square icon={Trash2} aria-label={t('fe.int.ed.remove')} onClick={()=>setAsking(true)} disabled={busy}/>}
-    <Btn className={v==null?'off':undefined} busy={busy} onClick={save} disabled={v==null||busy} aria-disabled={v==null||undefined}>{toPartner?t('fe.ca.toPartner'):current?t('fe.int.ed.save'):t('fe.int.ed.addOne')}</Btn>
-   </div>
-  </>}
- </>}>
+  {current&&(asking?<>
+   <Note><b>{t('fe.int.ed.removeQ',{topic:name})}</b></Note>
+   <div className="row g8"><Btn kind="soft" onClick={()=>setAsking(false)} disabled={busy}>{t('fe.cancel')}</Btn><Btn kind="danger" busy={busy} onClick={remove} disabled={busy}>{t('fe.int.ed.remove')}</Btn></div>
+  </>:<Btn kind="soft" icon={Trash2} onClick={()=>setAsking(true)} disabled={busy}>{t('fe.int.ed.remove')}</Btn>)}
+ </>:undefined}>
   {desc&&<p className="topic-desc">{desc}</p>}
-  <InterestFields limit={limit} couple={couple} v={v} setV={setV} dir={dir} setDir={setDir} vis={vis} setVis={setVis}/>
+  <InterestFields limit={limit} couple={couple} v={v} setV={setV} dir={dir} setDir={setDir} vis={vis} setVis={setVis} onPick={pick}/>
  </Sheet>;
 }
 
 /** The answer — the same fields when adding one or several: a lane («Всё», «Давать», «Получать», «Смотреть») opens
  * its 1–10 in place, a number picks it (or hold the lane and slide to the number); limits have one scale; or a mark. Every interest is seen by everyone (owner 05.11.2026),
  * so there is no «Кто видит». */
-function InterestFields({limit,couple,v,setV,dir,setDir,vis,setVis}:{limit:boolean,couple:boolean,v:Answer,setV:(v:Answer)=>void,dir:Dir[],setDir:(f:(d:Dir[])=>Dir[])=>void,vis:Vis,setVis:(v:Vis)=>void}){
+function InterestFields({limit,couple,v,setV,dir,setDir,vis,setVis,onPick}:{limit:boolean,couple:boolean,v:Answer,setV:(v:Answer)=>void,dir:Dir[],setDir:(f:(d:Dir[])=>Dir[])=>void,vis:Vis,setVis:(v:Vis)=>void,
+ /** The whole answer in one call (the interest sheet saves it at once); without it the fields set `v` and `dir`. */ onPick?:(v:Answer,dir:Dir[])=>void}){
  const {t}=useI18n();
  const mark=v==='discuss'||v==='hard';
  const allDir=dir.length===DIRS.length;
  return <>
     {/* no card around the answer: each lane has its own frame (a frame in a frame took 32 px from the numbers) */}
     <Group bare title={t(limit?'fe.int.ed.qLimit':'fe.int.ed.q')}><div className="ans">
-     <AnswerScale value={v} onChange={setV} label={t('fe.int.ed.scale')}
+     <AnswerScale value={v} onChange={x=>onPick?onPick(x,typeof x==='number'?dir:[]):setV(x)} label={t('fe.int.ed.scale')}
       {...(limit?{}:{lanes:LANES.map(id=>({id,label:t('fe.int.ed.dir.'+id)})),lane:mark?null:allDir?'all':dir.length===1?dir[0]:null,
-       onLane:(n:number,id:Lane)=>{setDir(()=>id==='all'?[...DIRS]:[id]);setV(n);}})}
+       onLane:(n:number,id:Lane)=>{const d=id==='all'?[...DIRS]:[id];if(onPick)onPick(n,d);else{setDir(()=>d);setV(n);}}})}
       marks={[{id:'discuss',label:t('fe.int.ed.discuss'),icon:MessageCircle,soft:true},{id:'hard',label:t('fe.int.ed.hard'),icon:Ban,taboo:true}] as const}/>
     </div></Group>
  </>;
